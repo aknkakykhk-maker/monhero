@@ -977,7 +977,7 @@ function BattleScreen({
               //   ★高さを持つのは出ているあいだだけ。空けておく場所は作らない(舞台が低い端末で
               //     いちばん困るのは敵の絵なので、使わないときは敵へ返す)
               //   ★2つは**横に並べて**折り返す。縦に積むと出た瞬間に舞台が46px縮む
-              <div data-battle-total-preview className="shrink-0 w-full flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pb-0.5 pointer-events-none">
+              <div data-battle-total-preview className={`${tacticsDebugLayout?'absolute left-1/2 -translate-x-1/2 bottom-0 z-[55] w-auto max-w-[78%] whitespace-nowrap':'shrink-0 w-full pb-0.5'} flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none`}>
                 {showDmg&&(
                 <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showProjected?'bg-yellow-950/90 border-yellow-500/70':'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`}>
                   <Sword size={11} className={showProjected?'text-yellow-400':'text-red-400'}/>
@@ -1244,7 +1244,7 @@ function BattleScreen({
                     const gv=tacticsSlotGuardValue(guardPlanBySlot,i);
                     if(!(gv>0)) return null;
                     return <div data-tactics-guard-total={gv} data-tactics-guard-kind={slotRushGuard?'rush':'spread'}
-                      className={`absolute ${tacticsDebugLayout?'left-full bottom-[43px] ml-2':'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
+                      className={`absolute ${tacticsDebugLayout?'left-1 top-[22px]':'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
                       style={{fontSize:'7px'}}>🛡 {slotRushGuard?'連撃ガード':'全体'} {gv}</div>;
                   })()}
                   {/* ★枠の中に出すものは、ぜんぶこの1本の縦積みに入れる(2026-09-22 ユーザー指摘
@@ -1257,7 +1257,7 @@ function BattleScreen({
                   {/* ★EXスキルの札も同じ縦積みの先頭に入れる。名前の行へ入れると名前が切れる
                       (2026-09-23 ユーザー指摘「名前が切れてる」)。二刀流／片手持ちのような「いまの状態」をここで出す */}
                   {(slotAssignedCards.length>0||previewDmg>0||previewGuard>0||slotAimHit||slotExInfo)&&(
-                    <div data-tactics-slot-marks className={`${tacticsDebugLayout?'absolute top-1 left-full bottom-[43px] w-[150%] overflow-y-auto mh-scroll items-stretch justify-end px-2':'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`}>
+                    <div data-tactics-slot-marks className={`${tacticsDebugLayout?'absolute top-1 left-full bottom-[35px] w-[150%] overflow-hidden items-stretch justify-end px-2':'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`}>
                       {tacticsDebugLayout&&assignedCount>0&&<div data-tactics-assigned-count={assignedCount} className="self-end rounded bg-indigo-950/85 px-1 py-0.5 text-[7px] font-black leading-none text-indigo-200 ring-1 ring-indigo-400/40">カード×{assignedCount}</div>}{!tacticsDebugLayout&&slotExInfo&&(<div data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text}
                         className={`flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>
                         <span style={{fontSize:'7px'}} className="shrink-0 font-black">EX</span>
@@ -1285,7 +1285,7 @@ function BattleScreen({
                       })}
                       {/* 数字の段。左＝こちらが出すぶん、右＝相手から受けるぶん。
                           横に並べて場所を分けるので、両方出ても重ならない */}
-                      {(previewDmg>0||previewGuard>0||slotAimHit)&&(
+                      {!tacticsDebugLayout&&(previewDmg>0||previewGuard>0||slotAimHit)&&(
                         <div className="flex w-full flex-wrap items-start justify-between gap-0.5">
                           {/* ★枠は4つ並ぶので1つ87pxしかない。字を8pxまで落として、
                               出すぶんと受けるぶんが**横1行に収まる**ようにしてある。
@@ -1312,7 +1312,7 @@ function BattleScreen({
                       ))}
                     </div>
                   )}
-                  {/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
+                  {tacticsDebugLayout&&(previewDmg>0||previewGuard>0||slotAimHit)&&(<div data-tactics-image-previews className="absolute left-1 top-1 z-[63] flex max-w-[calc(100%-6px)] flex-wrap items-start gap-0.5 pointer-events-none">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} className="rounded border border-red-300 bg-red-950 px-1 py-0.5 text-[8px] font-black leading-none text-red-100 shadow">🎯{slotAimHit.taken>0?`-${slotAimHit.taken}`:''}{slotAimHit.parts.length>1?<span className="ml-0.5 text-[7px] text-red-200/90">{slotAimHit.parts.join('・')}</span>:null}</span>}</div>)}{/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
                   {(()=>{const totalBonus=distTotalBonus(i); return(<div className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
                   {s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsDebugLayout?'58px':'64px',height:tacticsDebugLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
@@ -1366,7 +1366,7 @@ function BattleScreen({
                       data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}
                       data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}
                       data-tactics-downed={tacticsUnit.downed?'true':'false'}
-                      className={`${tacticsDebugLayout?'col-start-2 row-start-2 self-stretch min-w-0 border-l flex flex-col justify-end pb-1 px-2':'shrink-0 border-t px-1'} z-20 border-white/10 bg-black/55${battleTutorialSpotClass('tacticsParty')}`}>
+                      className={`${tacticsDebugLayout?'col-start-2 row-start-2 self-stretch min-w-0 border-l flex flex-col justify-end pb-0.5 px-2':'shrink-0 border-t px-1'} z-20 border-white/10 bg-black/55${battleTutorialSpotClass('tacticsParty')}`}>
                       {/* ★「♥ 500 /500」と左右へ散らしていたのを、ラベルと数値の2つにそろえた
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
@@ -1374,14 +1374,14 @@ function BattleScreen({
                         <span className="text-[8px] font-black tracking-wider text-pink-300">HP</span>
                         <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
                       </div>
-                      <div className="mt-[1px] h-[5px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
+                      <div className="mt-px h-[4px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-hp-bar className={`h-full transition-all duration-1000 ${tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300':'bg-gradient-to-r from-rose-500 to-pink-300'}`} style={{width:`${hpPct}%`,boxShadow:'0 0 6px rgba(244,114,182,.55)'}}></div>
                       </div>
-                      <div className="mt-[1px] flex items-baseline justify-between leading-none">
+                      <div className="mt-px flex items-baseline justify-between leading-none">
                         <span className="text-[8px] font-black tracking-wider text-amber-300">GUTS</span>
                         <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.guts}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxGuts}</span></span>
                       </div>
-                      <div className="mt-[1px] h-[5px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
+                      <div className="mt-px h-[4px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
                         <div data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-500" style={{width:`${gutsPct}%`,boxShadow:'0 0 6px rgba(251,191,36,.55)'}}></div>
                       </div>
                     </div>
