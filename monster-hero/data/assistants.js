@@ -702,6 +702,13 @@ const ASSISTANT_SCENES = {
     help: 'home/roster',
     lines: [],
   },
+  // タクティクスのEXスキル(2026-09-23 β版でお試し公開)。距離枠をタップすると開く、は
+  // 遊んでいるだけでは気づけないので、EXを持つ子が盤面にいる最初のバトルで1度だけ伝える。
+  // 本文は下の addAssistantLinePack から合流する
+  tacticsExIntro: {
+    help: 'basics/tactics-ex-skills',
+    lines: [],
+  },
   quickRhythmBackground: {
     help: 'home/roster',
     lines: [],
@@ -1342,6 +1349,64 @@ const addAssistantLinePack = (pack) => { if (pack && pack.id && (pack.lines || p
 // クイック∞周回とモンビーの行き来(docs/spec/QUICK_RHYTHM_LINK.md PR8)。
 // 「バトル画面から移れる」「移っても裏で進む」「演奏中だけ止まる」の3つだけを、
 // 出るべき場面で1つずつ伝える。詳しい話はヘルプに任せる。
+// タクティクスのEXスキルの入口(2026-09-23)。「距離枠をタップ」「タップだけでは使わない」だけを伝える。
+// 回数や効き目の細かい話はヘルプに任せる
+addAssistantLinePack({
+  id: 'tacticsExGuide',
+  label: 'タクティクスEXスキル案内',
+  lines: {
+    tacticsExIntro: [
+      { e:'excited', t:'「EX」の印がある子は、距離枠をタップするとEXスキルが見られるよ！' },
+      { e:'normal', t:'タップしただけでは使わないよ。「EXスキルを使用」で発動なんだ♪' },
+      { e:'wink', t:'EXスキルはカードとは別枠！ カードの枚数は減らないよ。' },
+      { e:'normal', t:'子によっては、使ったターンにカードが使えなくなるから気をつけてね。' },
+      { e:'happy', t:'{name}、EXスキルはβ版のお試しなんだ。感想待ってるね( \'ω\')' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'tacticsExGuideKiki',
+  assistantId: 'kiki',
+  label: 'きき・タクティクスEXスキル案内',
+  lines: {
+    tacticsExIntro: [
+      { e:'normal',  t:'「EX」の印がある子は、距離枠をタップするとEXスキルが見られまつ。' },
+      { e:'normal',  t:'タップしただけでは使わないでつ。「EXスキルを使用」で発動。' },
+      { e:'happy',   t:'EXスキルはカードとは別枠。カードの枚数は減らないの。' },
+      { e:'normal',  t:'子によっては、使ったターンにカードが使えなくなりまつ。' },
+      { e:'wink',    t:'{name}、EXスキルはβ版のお試し。気づいたこと教えてね♪' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'tacticsExGuideMomosuke',
+  assistantId: 'momosuke',
+  label: 'ももすけ・タクティクスEXスキル案内',
+  lines: {
+    tacticsExIntro: [
+      { e:'excited', t:'「EX」の印、見えた？ 距離枠をタップするとEXスキルが見られるよ！' },
+      { e:'normal',  t:'タップだけじゃ発動しないから安心して。「EXスキルを使用」で使うんだ。' },
+      { e:'wink',    t:'EXはカードと別枠！ カードの枚数は減らないんだよね。' },
+      { e:'normal',  t:'ただ、使ったターンにカードが使えなくなる子もいるから注意ね。' },
+      { e:'happy',   t:'{name}、β版のお試しだってさ。いろいろ試してみようよw' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'tacticsExGuideDra',
+  assistantId: 'dra',
+  label: 'ドラ・タクティクスEXスキル案内',
+  lines: {
+    tacticsExIntro: [
+      { e:'happy',   t:'「EX」の印がある子は、距離枠をタップしたらEXスキルが見られるで' },
+      { e:'normal',  t:'タップしただけでは使わへん。「EXスキルを使用」で発動や' },
+      { e:'normal',  t:'EXはカードとは別枠や。カードの枚数は減らんで' },
+      { e:'wink',    t:'使ったターンにカードが使えんようになる子もおるから気ぃつけや' },
+      { e:'happy',   t:'{name}、β版のお試しらしいわ。遠慮なく試してみ' },
+    ],
+  },
+});
+
 addAssistantLinePack({
   id: 'quickRhythmLinkGuide',
   label: '∞周回×モンヒロビート案内',

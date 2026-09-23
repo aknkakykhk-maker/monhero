@@ -43,6 +43,8 @@ const makeIncoming = (deps) => new Function('d', `
   const {getWaveBuff,mainHero,isTacticsMode,runMode,heroDist,tacticsUnitsRef,
     resolveEffectiveMaxStat,normalizeTacticsUnit,effectiveDef,getPermaBuff,
     soulBattleParty,iceLockEnemyDamageMult} = d;
+  // 新モードの1体ぶんは tacticsBattleUnit で読む(EXスキルの上乗せはここでは無いものとして盤面の値を返す)
+  const tacticsBattleUnit = d.tacticsBattleUnit || ((slot) => (tacticsUnitsRef.current || [])[slot]);
   return (intent, targetSlot=null) => {${incomingBody}};
 `)(deps);
 

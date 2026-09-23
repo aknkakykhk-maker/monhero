@@ -215,9 +215,15 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     if (pub === 'ok') {
       const s = await heroSlot();
       const marks = await page.locator('[data-tactics-ex-mark]').count();
+      const intro = await page.locator('[data-tactics-ex-intro]').count();
+      if (released) check('公開後は、EXを持つ子がいる最初のバトルで使い方案内が出る', intro === 1);
+      else check('公開前は使い方案内も出さない', intro === 0);
       await tapSlot(s);
       const p = await panel();
-      if (released) check('公開後は本番でも距離枠からEXを開ける', !!p && marks > 0);
+      if (released) {
+        check('公開後は本番でも距離枠からEXを開ける', !!p && marks > 0);
+        check('距離枠から自分で開けたら、使い方案内は閉じる', await page.locator('[data-tactics-ex-intro]').count() === 0);
+      }
       else check('公開前は、本番のタクティクスで距離枠をタップしてもEXが開かず、EXの印も出ない', !p && marks === 0, `枠${s}`);
       await closePanel();
     }
@@ -267,8 +273,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     let p = await panel();
     check('距離枠をタップすると、その子のEX詳細が開く', !!p && p.slot === gSlot && p.mon.includes('ゴーレム') && p.name === '捨て身',
       JSON.stringify(p));
-    check('詳細に 残り回数/最大・併用可否・効果時間・開発中 が出る', !!p && /3 \/ 3/.test(p.uses) && p.withCards === 'no'
-      && /WAVE/.test(p.text) && p.dev, p && p.text.slice(0, 160));
+    check('詳細に 残り回数/最大・併用可否・効果時間・力と丈夫さ が出る', !!p && /3 \/ 3/.test(p.uses) && p.withCards === 'no'
+      && /WAVE/.test(p.text) && p.dev === !released && /220／150/.test(p.text), p && p.text.slice(0, 200));
     check('使用ボタンが狭いiPhoneの画面の中に収まる', !!p && p.useBottom != null && p.useBottom <= p.vh, p && `${p.useBottom}/${p.vh}`);
     await closePanel();
     check('タップしただけでは発動しない(閉じても回数は減らず、カードも選べる)', await (async () => {
@@ -297,6 +303,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await tapSlot(gSlot);
     p = await panel();
     check('使うと残りが 3→2 に減る', !!p && /2 \/ 3/.test(p.uses), p && p.uses);
+    if (released) check('捨て身: 力220/丈夫さ150 → 力295/丈夫さ0 になる', !!p && /295／0/.test(p.text), p && p.text.slice(0, 220));
     check('同じターンにもう一度は使えない', !!p && !p.canUse, p && p.why);
     await closePanel();
     const cardLimitAfter = await page.evaluate(() => (document.body.innerText.match(/Action Cards\s*\d+\/(\d+)/i) || [])[1]);
@@ -320,7 +327,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await unselectAll();
     await tapSlot(gSlot);
     p = await panel();
-    check('次のターンは、残りがあればもう一度使える(2/3のまま)', !!p && p.canUse && /2 \/ 3/.test(p.uses), p && p.uses);
+    // ★捨て身は「効果が続いているあいだは使えない」(同じWAVEのあいだは丈夫さがもう0なので、回数だけ減るのを防ぐ)
+    check('次のターンも同じWAVEなら、捨て身は効果中なので使えない(2/3のまま減らない)', !!p && !p.canUse && /2 \/ 3/.test(p.uses) && /効果/.test(p.why), p && `${p.uses} ${p.why}`);
     await closePanel();
 
     // --- ② あきらめて、モノリスで新しいランを始める ---

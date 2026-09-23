@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 18c6b416afe563f1
+// generated-sha256: 4e1766997d5727cd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-23 10:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 11:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -741,10 +741,10 @@ const battleSystemBeta = (systemId, { debugBattle = false } = {}) => !debugBattl
   && systemId === BATTLE_SYSTEM_TACTICS && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE;
 // タクティクス専用の EXスキル(設計: docs/spec/TACTICS_EX_SKILLS.md)を、プレイヤーへ出すかどうか。
 // false のあいだは**デバッグのバトル(バトルモード入口)でだけ**距離枠から開ける。
-// STEP1 は「回数・併用の決まり」だけを動かす共通基盤で、3体の効果そのものはまだ入っていない。
-// 「使ったのに何も起きない」をβ版で遊んでいる人へ出さないため、効果がそろうまで立てない。
+// 2026-09-23 ユーザー指示「β版だし公開していいよ」で、お試しとして公開した
+// (モノリス・ゴーレム・剣士モッチーの3体。不具合や変更があることを前提にしたβの公開)。
 // ★タクティクスの公開フラグ(TACTICS_BETA_PRO_RELEASE ほか)とは別のスイッチ。あちらは触らない
-const TACTICS_EX_SKILLS_RELEASE = false;
+const TACTICS_EX_SKILLS_RELEASE = true;
 // EXスキルをいま出してよいか。見るのはここ1か所だけ(画面も本体も検査もここを通す)。
 // ★タクティクス以外のモードでは、フラグやデバッグに関係なく必ず false
 // ★練習(バトルのれんしゅう)では出さない。台本どおりに進める場面なので、別の操作を増やさない
@@ -6800,7 +6800,9 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 // ★tacticsBattle は「β公開のあいだも開く枠」。ヘルプは、β版で遊べる人にも要る
 //   (tactics は本公開だけ。両方を1つのフラグにすると、本公開前の告知まで出てしまう)
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
-  tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
+  // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -9234,6 +9236,16 @@ const helpDataRows = (id) => {
           action.multiplier > 0
             ? `威力 ×${action.multiplier}${action.hits > 1 ? `（${action.hits}ヒット）` : ''}`
             : 'ダメージなし']);
+    // タクティクスのEXスキル(2026-09-23)。持っている子・名前・回数・カードとの併用・効果時間を定義から作る。
+    // ★EXを足したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く(help-render-check)
+    case 'tacticsExSkills':
+      return Object.keys((typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS) || {}).map(monId => {
+        const def = tacticsExDefOf(monId);
+        const monName = ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId]) || {}).name || monId;
+        const duration = { turn:'そのターン', wave:'そのWAVE', toggle:'切り替え' }[def.duration] || '';
+        return [`${monName}「${def.name}」`,
+          `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'そのターンはカード不可'} ／ ${duration}`];
+      });
     // プロモードのランぶんに入るクイック周回数(2026-09-21)。
     // 難易度ごとの重さ(power)と同じ式から作るので、難易度を調整したときも自動で追随する
     // (ヘルプへ9行書き写すと、必ずどこかが古いままになる)
@@ -9461,6 +9473,7 @@ const helpDataRows = (id) => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
+  tacticsExSkills: 'タクティクスバトルのEXスキル',
   proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
@@ -10158,7 +10171,7 @@ const KENSHI_COMBO_POWER_MAX = 3;
 //   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
 //     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
 //     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
-const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1 }) => {
+const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
@@ -10197,7 +10210,9 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);
   if (kenshiHero && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiHeroUnique) combo(rate + comboDmgBonus);
   // 固有効果「ソードスキル」: 技の出自が剣士モッチーなら誰が使っても(合体で引き継いだ場合も)
-  if (isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
+  // ★swordSkill:false … タクティクスのEX「武器チェンジ」で片手持ちの剣士モッチーが使ったとき。
+  //   固有技そのものは使えるが、ソードスキルの連撃は出ない(ほかのモードは渡さないので常に true)
+  if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
   // ソードスキルの連撃パワーが3充填されるたびに1本ずつ増える永久連撃。
   // 本数に上限は設けない。率にも連撃ダメージ補正(comboDmgBonus)が乗る
   if (attackerId === 'KenshiMocchi') {
@@ -16793,6 +16808,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
     name: '捨て身',
     desc: '丈夫さを0にし、0にした丈夫さの50%を力へ加える。',
     maxUses: 3, unlimited: false, withCards: false, duration: 'wave',
+    // ★効果中にもう一度使っても何も変わらない(丈夫さはもう0)。回数だけ減るのを防ぐ
+    conditions: Object.freeze(['notActive']),
     effect: 'allIn',
   }),
   KenshiMocchi: Object.freeze({
@@ -16813,7 +16830,9 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze([]);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange']);
+// 捨て身で力へ移す割合(0にした丈夫さの50%)
+const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'toggle']);
 
 // 定義を安全な形へそろえる。壊れた項目があっても落とさず、いちばん控えめな既定値へ倒す
@@ -16914,7 +16933,8 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
 };
 // 使ったあとの状態を返す(渡された state は書き換えない)。
 // ★回数を減らすのは無制限でないときだけ。無制限は数えるが、残りには効かない
-const applyTacticsExUse = (state, { def, slot, monId, now } = {}) => {
+// snapshot … 使った瞬間の値(捨て身なら使ったときの丈夫さ)。効果の計算はこの値から出す
+const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null } = {}) => {
   const safe = normalizeTacticsExState(state);
   if (!def || !Number.isInteger(slot)) return safe;
   const stamp = { wave: tacticsSafeInt(now && now.wave, 0), turn: tacticsSafeInt(now && now.turn, 0) };
@@ -16923,8 +16943,9 @@ const applyTacticsExUse = (state, { def, slot, monId, now } = {}) => {
   const wasOn = !!(prev && prev.monId === monId && prev.duration === 'toggle' && prev.on === true);
   return {
     uses: { ...safe.uses, [slot]: { monId, count } },
-    effects: { ...safe.effects, [slot]: { monId, exId: def.id, duration: def.duration, wave: stamp.wave, turn: stamp.turn,
-      on: def.duration === 'toggle' ? !wasOn : true } },
+    effects: { ...safe.effects, [slot]: { monId, exId: def.id, effect: def.effect, duration: def.duration, wave: stamp.wave, turn: stamp.turn,
+      on: def.duration === 'toggle' ? !wasOn : true,
+      snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
     cardLock: def.withCards ? safe.cardLock : stamp,
@@ -16935,6 +16956,49 @@ const tacticsExToggleLabel = (def, state, slot, monId) => {
   if (!def || def.duration !== 'toggle') return null;
   return def.toggleLabels[isTacticsExEffectActive(state, slot, monId, null) ? 1 : 0];
 };
+// その枠で、いま効いている効果の種類(effect)。効いていなければ null。
+// ★戦闘の計算側はモンスターのidではなく、これを見る(モンスターごとの if を増やさない)
+const tacticsExActiveEffect = (state, slot, monId, now) => {
+  const effect = normalizeTacticsExState(state).effects[slot];
+  if (!effect || !isTacticsExEffectActive(state, slot, monId, now)) return null;
+  return typeof effect.effect === 'string' ? effect.effect : null;
+};
+// EXで変わる力・丈夫さを乗せた1体ぶんを返す(盤面の値そのものは書き換えない)。
+// ★読むときに上乗せするだけなので、効果が切れた瞬間(WAVEが変わる・切り替えで戻す)に
+//   何もしなくても元の値へ戻る。トレーニングで伸ばした値も失われない
+//   捨て身(allIn)     … 丈夫さ0。使ったときの丈夫さの50%を力へ足す
+//   武器チェンジ(weaponChange) の片手持ち … いまの力と同じ数値を丈夫さへ足す(力は減らない)
+const applyTacticsExStats = (unit, state, slot, now) => {
+  if (!unit || typeof unit !== 'object') return unit;
+  const kind = tacticsExActiveEffect(state, slot, unit.id, now);
+  if (kind === 'allIn') {
+    const snap = normalizeTacticsExState(state).effects[slot].snapshot;
+    const usedDef = Math.max(0, tacticsSafeInt(snap && snap.def, tacticsSafeInt(unit.def, 0)));
+    return { ...unit, atk: Math.max(0, tacticsSafeInt(unit.atk, 0)) + Math.floor(usedDef * TACTICS_EX_ALL_IN_ATK_RATE), def: 0 };
+  }
+  if (kind === 'weaponChange') {
+    const atk = Math.max(0, tacticsSafeInt(unit.atk, 0));
+    return { ...unit, def: Math.max(0, tacticsSafeInt(unit.def, 0)) + atk };
+  }
+  return unit;
+};
+// 「みんなをかばう」が効いている枠(立っている子だけ)。無ければ null
+const tacticsExCoverSlot = (state, units, now) => {
+  const safe = normalizeTacticsExState(state);
+  const alive = tacticsAliveSlots(units);
+  for (const key of Object.keys(safe.effects)) {
+    const slot = Number(key);
+    const unit = Array.isArray(units) ? units[slot] : null;
+    if (!unit || !alive.includes(slot)) continue;
+    if (tacticsExActiveEffect(safe, slot, unit.id, now) === 'coverAll') return slot;
+  }
+  return null;
+};
+// 敵の攻撃の当たり先を、かばう子へ集める。★当たる回数はそのまま
+// (全体攻撃で3体に当たるはずなら、かばう子が3回受ける。連撃は連撃のまま)。
+// 攻撃の性質(貫通ならガードが効かない、など)は変えない
+const coverTacticsTargets = (targets, coverSlot) => (Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length
+  ? targets.map(() => coverSlot) : (Array.isArray(targets) ? targets : []));
 // ==== タクティクス専用 EXスキルここまで ====
 
 // ---- part: 40-screen-effects.jsx ----
@@ -21970,7 +22034,8 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
-  tacticsExInfo, activateTacticsEx, tacticsExCardLocked, tacticsExTurnUsed, passTacticsTurn,
+  tacticsExInfo, activateTacticsEx, tacticsExCardLocked, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
+  tacticsExIntroVisible, dismissTacticsExIntro,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
@@ -21992,9 +22057,15 @@ function BattleScreen({
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
   // ★数え方は本番と同じ tacticsIntentTargets を通す。別に書くと、距離撃でずらしたときに
   //   予告と実際がずれる(「当たらないはずの枠が光る」)
-  const aimedSlots = Array.isArray(tacticsUnits) && enemyIntent
+  const rawAimedSlots = Array.isArray(tacticsUnits) && enemyIntent
     ? tacticsIntentTargets(enemyIntent, tacticsUnits, enemyDist) : [];
-  const aimedName = enemyIntent?.targetName
+  // ★EX「みんなをかばう」が効いているターンは、狙いがかばう子へまとまる(本番と同じ coverTacticsTargets)。
+  //   全体攻撃なら、本来当たるはずだった人数ぶんをその子が受ける
+  const coverActive = Number.isInteger(tacticsCoverSlot) && rawAimedSlots.length > 0;
+  const coverHitCount = coverActive ? rawAimedSlots.length : 1;
+  const aimedSlots = coverActive ? [tacticsCoverSlot] : rawAimedSlots;
+  const aimedName = (coverActive ? `${tacticsTargetName(tacticsUnits, tacticsCoverSlot)}（かばう）` : null)
+    || enemyIntent?.targetName
     || (aimedSlots.length ? aimedSlots.map(idx => tacticsTargetName(tacticsUnits, idx)).join('・')
       : (enemyIntent?.variant === 'sweep' ? 'だれもいない' : ''));
   // 1体ぶんの「このターン減る量」。予告の吹き出しと、枠ごとの表示の両方がここを通る。
@@ -22073,7 +22144,14 @@ function BattleScreen({
     //   「結局いくつ食らうのか」が読めなかった(2026-09-22 ユーザー指摘)
     return { taken, raw, parts: hits > 1 ? scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), taken) : [taken] };
   };
-  const plannedDamageFor = (slotIdx) => plannedHitFor(slotIdx).taken;
+  // かばう子は、まとめて引き受けたぶん(人数ぶん)を受ける
+  const plannedHitWithCover = (slotIdx) => {
+    const hit = plannedHitFor(slotIdx);
+    if (!coverActive || slotIdx !== tacticsCoverSlot || coverHitCount <= 1 || !(hit.taken > 0)) return hit;
+    return { taken: hit.taken * coverHitCount, raw: hit.raw * coverHitCount,
+      parts: Array.from({ length: coverHitCount }, () => hit.parts).flat() };
+  };
+  const plannedDamageFor = (slotIdx) => plannedHitWithCover(slotIdx).taken;
   // ★敵が次に何をするかの札(「3連撃！」など)。作りはここ1か所にして、置き場所だけ変える。
   //   ムーは丸枠の外、ほかの敵は丸枠の右上へ出すので、下の2か所から呼ぶ
   // ★貫通技準備もこの札で出す(2026-09-22 ユーザー指摘「必殺技のためると必殺準備が被って出てる。
@@ -22271,11 +22349,11 @@ function BattleScreen({
             // 出すと必ず0になり、ガードを構える判断の邪魔になる
             // 新モードは「狙われた子の丈夫さ」で受け、「その子が構えたガード」だけが効く。
             // ★targetSlot が無いモードでは今までどおりパーティの値で出る
-            const aimedSlot=Number.isInteger(enemyIntent.targetSlot)?enemyIntent.targetSlot:null;
+            const aimedSlot=coverActive?tacticsCoverSlot:(Number.isInteger(enemyIntent.targetSlot)?enemyIntent.targetSlot:null);
             const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent,aimedSlot);
             // ★数え方は plannedDamageFor に1か所だけ置く(枠ごとの表示と同じ関数を通す)。
             //   2か所に書くと、ガードの数え方を直したときに片方だけ古くなる
-            const plannedHit=plannedHitFor(aimedSlot);
+            const plannedHit=plannedHitWithCover(aimedSlot);
             const plannedDmg=plannedHit.taken;
             // 連撃は「129・130」と1発ずつ。1発の技は今までどおり数字ひとつ
             const plannedText=plannedHit.parts.join('・');
@@ -22285,7 +22363,8 @@ function BattleScreen({
             const plannedTotalText=plannedHit.raw>plannedDmg?`${plannedHit.raw}→${plannedDmg}`:`${plannedDmg}`;
             // ★全体攻撃は受ける量が1体ずつ違う。1つの数字にまとめると、
             //   どの子がどれだけ減るのか分からなくなるので、吹き出しには出さず枠ごとに出す
-            const showPlannedInBubble=!enemyIntent.targetsAll;
+            // かばっているターンは受けるのが1体だけなので、全体攻撃でも吹き出しに出せる
+            const showPlannedInBubble=coverActive||!enemyIntent.targetsAll;
             // ★再生も「いくつ戻るか」を数字で出す(2026-09-22 ユーザー指示「敵の回復時で
             //   いくつ回復するかも数値を予測で出してほしい」)。ダメージだけ数字が出て、
             //   回復は「回復」としか出ないので、あと何ターンで削り切れるかが読めなかった。
@@ -23034,7 +23113,7 @@ function BattleScreen({
               //   (2026-09-21 ユーザー依頼)。ガードを置けばその枠の数字だけが減る。
               //   ★連撃は1発ずつ並べると合計が読めない(2026-09-22 ユーザー指摘)ので、
               //     合計を先に出し、1発ずつの内訳を小さく添える
-              const slotAimHit=slotAimed?plannedHitFor(i):null;
+              const slotAimHit=slotAimed?plannedHitWithCover(i):null;
               return(<button key={i} data-slot-index={i} data-tactics-aimed={slotAimed?'true':undefined} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
                 if(isBusy||autoBattleRef.current)return;
                 if(pendingCard!=null && canAssign){
@@ -23048,6 +23127,8 @@ function BattleScreen({
                   // ★カードを置く途中でないときだけ、その子のEXスキルの詳細を開く(タクティクス専用)。
                   //   カードの置き先を選んでいるときのタップは、今までどおりカードの置き場所の操作にする
                   setExPanelSlot(i);
+                  // 自分で開けたなら、使い方案内はもう要らない
+                  if(tacticsExIntroVisible&&dismissTacticsExIntro) dismissTacticsExIntro();
                 }
               }} disabled={isBusy||autoBattle} className={`relative rounded-2xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].slotGlow||''} ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`,...(slotHitShake||{})}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:(slotHitShake||undefined)))}>
                 {/* ★狙われている枠。カードを置ける黄色の輪・ドラッグ中の緑の輪と重ならないよう、
@@ -23273,6 +23354,13 @@ function BattleScreen({
             })}
           </div>
         </div>
+        {/* タクティクスのEXスキルを持つ子がいる最初のバトルで1度だけ、距離枠から開けることを伝える */}
+        {tacticsExIntroVisible&&<div data-tactics-ex-intro className="shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1">
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1"><AssistantBubble scene="tacticsExIntro" compact/></div>
+            <button type="button" onClick={dismissTacticsExIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+          </div>
+        </div>}
         {/* ∞周回にした最初の1回だけ、モンビーへ行けることを伝える(PR8) */}
         {quickRhythmIntroVisible&&<div data-quick-rhythm-intro className="shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1">
           <div className="flex items-start gap-1">
@@ -23401,6 +23489,7 @@ function BattleScreen({
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
                 {exPanel.toggleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-toggle className="font-black text-fuchsia-200">{exPanel.toggleLabel}</dd></>}
                 {!exPanel.toggleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
+                {exPanel.stats&&<><dt className="font-bold text-slate-400">力／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
               <div className="mt-3 flex gap-2">
@@ -25728,7 +25817,7 @@ function MonsterHeroGame() {
   // 挙動をまったく書き換えずに済む(ガード・反射・吸収の分岐もそのまま)
   const tacticsDamage = (damage, intent, actingDist) => {
     if (!isTacticsMode(runMode)) return null;
-    const targets = tacticsIntentTargets(intent, tacticsUnitsRef.current, actingDist);
+    const targets = tacticsTargetsNow(intent, actingDist);
     return commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current, targets, damage));
   };
   const tacticsHeal = (amount) => isTacticsMode(runMode)
@@ -28253,6 +28342,13 @@ function MonsterHeroGame() {
   const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
   const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
   const dismissAutoEnhanceIntro = () => { setAutoEnhanceIntroSeen(true); storeSet(AUTO_ENHANCE_INTRO_KEY, true, false); };
+  // ---- タクティクスEXスキルの使い方案内(CLAUDE.md ⑤。2026-09-23 β版でお試し公開) ----
+  // 「距離枠をタップするとEXが開く」は遊んでいるだけでは気づけないので、EXを持つ子が
+  // 盤面にいるバトルで1度だけ伝える。出す条件は tacticsExIntroVisible(EXの判定のあと)で決める。
+  // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。公開フラグ(tacticsExSkills)と同じで出し入れする
+  const TACTICS_EX_INTRO_KEY = 'mh_tactics_ex_intro_seen_v1';
+  const [tacticsExIntroSeen, setTacticsExIntroSeen] = useState(true);
+  const dismissTacticsExIntro = () => { setTacticsExIntroSeen(true); storeSet(TACTICS_EX_INTRO_KEY, true, false); };
   // ---- 曲えらびでの「今週の対象曲」案内(docs/spec/RHYTHM_RANKING.md §10.2) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。週間ランキングは
   // 「開いて初めて気づく」仕組みなので、曲えらびでも1度だけみゅあが伝える(CLAUDE.md ⑤)。
@@ -29327,6 +29423,7 @@ function MonsterHeroGame() {
       // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
       //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
       setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
+      setTacticsExIntroSeen(await storeGet(TACTICS_EX_INTRO_KEY, false, false) === true);
       // イベントの会話ストーリーを見たかどうか。流すかどうかの判定は、
       // wasOnboarded が決まったあと(きき・ももすけの会話と同じところ)で行う
       {
@@ -33594,7 +33691,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   呼び出しが無いので実害は出ていないが、増えた瞬間に既存モードの被ダメが変わる。
     //   isTacticsMode で締めて、既存モードは必ず effectiveDef(パーティの丈夫さ)を通す
     const targetUnit = isTacticsMode(runMode) && Number.isInteger(targetSlot)
-      ? tacticsUnitsRef.current[targetSlot] : null;
+      ? tacticsBattleUnit(targetSlot) : null;
     const defVal = targetUnit
       ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
@@ -33742,8 +33839,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const tacticsExEnabled = tacticsExSkillsEnabled(runMode, { debugBattle:debugBattle||debugMonsterPreviewRef.current, tutorial:!!battleScenarioRef.current });
   // 「いま」= このWAVEの何ターン目か。EXの効果の長さと「このターン」の判定はこれで数える
   const tacticsExNow = { wave, turn:turnCount };
+  // ★ダメージの式は useCallback で古い描画の関数が残ることがある(依存に wave・turnCount が無いものもある)。
+  //   EXの効き目は「いま」を ref から読むので、どの描画の関数から呼ばれても同じ答えになる
+  const tacticsExLiveRef = useRef({ enabled:false, now:{ wave:1, turn:1 } });
+  tacticsExLiveRef.current = { enabled:tacticsExEnabled, now:tacticsExNow };
   const tacticsExCardLocked = tacticsExEnabled && isTacticsExCardLocked(tacticsExState, tacticsExNow);
   const tacticsExTurnUsed = tacticsExEnabled && isTacticsExTurnUsed(tacticsExState, tacticsExNow);
+  // ★EXの効き目を戦闘の計算へ渡す入口。モンスターのidではなく「いま効いている効果の種類」を見る。
+  //   ref の最新値を読む(使った直後の同じ操作の中でも古い値を見ない)
+  const tacticsExEffectAt = (slotIdx) => {
+    const live=tacticsExLiveRef.current;
+    if(!live.enabled||!Number.isInteger(slotIdx)) return null;
+    const unit=tacticsUnitsRef.current?.[slotIdx];
+    return unit ? tacticsExActiveEffect(tacticsExStateRef.current,slotIdx,unit.id,live.now) : null;
+  };
+  // 戦闘で使う1体ぶん(捨て身・片手持ちの力と丈夫さを乗せる)。盤面の値そのものは書き換えない
+  const tacticsBattleUnit = (slotIdx) => {
+    const unit=tacticsUnitsRef.current?.[slotIdx];
+    if(!unit) return unit;
+    const live=tacticsExLiveRef.current;
+    return live.enabled ? applyTacticsExStats(normalizeTacticsUnit(unit),tacticsExStateRef.current,slotIdx,live.now) : unit;
+  };
+  // 敵の攻撃の当たり先。「みんなをかばう」が効いていれば、当たる回数はそのままでかばう子へ集める
+  const tacticsCoverSlotNow = () => { const live=tacticsExLiveRef.current;
+    return live.enabled ? tacticsExCoverSlot(tacticsExStateRef.current,tacticsUnitsRef.current,live.now) : null; };
+  // 使い方案内を出すか。EXを持つ子が盤面にいるバトルで、まだ見ていないときだけ
+  const tacticsExIntroVisible = RELEASE_FLAGS.tacticsExSkills === true && !tacticsExIntroSeen
+    && gameState === 'BATTLE' && tacticsExEnabled && slots.some(mon => mon && tacticsExDefOf(mon.id));
+  const tacticsTargetsNow = (intent, dist) => coverTacticsTargets(tacticsIntentTargets(intent,tacticsUnitsRef.current,dist), tacticsCoverSlotNow());
   const tacticsUsableSlots = (card, excludeHandIndex = null) => {
     if(!isTacticsMode(runMode)||!card) return [];
     const spent={}, used={};
@@ -33969,7 +34092,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   //   パーティの平均で出していた。硬い子が構えれば実際はもっと受け止めるので、数字が合わない
   const guardDefFor = (slotIdx = null) => {
     if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;
-    const unit = tacticsUnitsRef.current?.[slotIdx];
+    const unit = tacticsBattleUnit(slotIdx);
     return unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff('defPct')) : effectiveDef;
   };
   const guardValueOf = (flat, mult, slotIdx = null) =>
@@ -34081,7 +34204,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]
-      ? Math.max(0,normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]).atk) : atk;
+      ? Math.max(0,normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk;
     let finalDmg=Math.floor(attackerAtk*distMult*baseDmgMult*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
@@ -34109,7 +34232,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(mon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
-      comboFinalMultiplier:soulAttack.comboFinalMultiplier });
+      comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExEffectAt(slotIdx)!=='weaponChange' });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
@@ -34361,7 +34484,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         //   こうすると「表を引いた子」と「避けた子」が必ず同じになる。
         //   魂格由来のぶんは編成全体のものなので、誰が受けても乗る
         const aimedSlots = isTacticsMode(runMode)
-          ? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;
+          ? tacticsTargetsNow(intent,actingEnemyDist) : null;
         const defenseSlot = aimedSlots && aimedSlots.length
           ? aimedSlots[Math.floor(Math.random()*aimedSlots.length)] : null;
         const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id
@@ -34414,7 +34537,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           //   実際に受ける量とずれる。吸収と同じ数え方にそろえる。
           //   全体攻撃なら狙われた全員ぶんを足して返す(誰にも当たらなければ0)
           const reflectSlots=isTacticsMode(runMode)
-            ? tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist) : null;
+            ? tacticsTargetsNow(intent,actingEnemyDist) : null;
           const reflectDmg=reflectSlots
             ? reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx),0)
             : incomingDmg;
@@ -34471,7 +34594,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           //   誰かが構えたガードが全員を守ってしまうと、狙いを読む意味が消える。
           // ★全体攻撃は狙われた全員が、それぞれ自分のガードで受ける。
           tookEnemyAttack=true;
-          const targets=tacticsIntentTargets(intent,tacticsUnitsRef.current,actingEnemyDist);
+          const targets=tacticsTargetsNow(intent,actingEnemyDist);
+          const coverSlot=tacticsCoverSlotNow();
+          if(coverSlot!=null&&targets.length){
+            addPopup(`かばう！ ${tacticsTargetName(tacticsUnitsRef.current,coverSlot)}`,'hero','text-sky-300 font-black text-xl drop-shadow-md');
+            pushBattleLog(`${battleActorName(coverSlot)}が攻撃をすべて引き受けた`);
+            await battleWait(600);
+          }
           if(!targets.length){
             addPopup('当たらなかった！','hero','text-cyan-300 font-black text-xl drop-shadow-md');
             await battleWait(700);
@@ -34770,6 +34899,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       toggleLabel:tacticsExToggleLabel(def,state,slotIdx,mon.id),
       durationText:TACTICS_EX_DURATION_TEXT[def.duration]||null,
       implemented:isTacticsExEffectImplemented(def),
+      // いまの力・丈夫さ(EXが乗っていればそのぶんも)。捨て身・片手持ちの効き目を数字で確かめられるように
+      stats:(()=>{ const u=tacticsUnits[slotIdx]; if(!u) return null;
+        const b=applyTacticsExStats(normalizeTacticsUnit(u),state,slotIdx,tacticsExNow);
+        return { atk:b.atk, def:b.def, changed:b.atk!==u.atk||b.def!==u.def }; })(),
     };
   };
   // 効果ごとの発動口。STEP2 ではここへ効果の中身を入れる(効果の種類ごとに1つ。モンスターごとの if にしない)。
@@ -34786,13 +34919,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       alive:canTacticsSlotAct(tacticsUnitsRef.current,slotIdx), selectedCount:selectedCards.length,
       now:tacticsExNow, busy:false });
     if(!check.ok) return false;
-    const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow });
+    // 使った瞬間の値を控える(捨て身は「使ったときの丈夫さ」から力へ移す量を決める)
+    const usedUnit=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
+    const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
+      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null });
     commitTacticsExState(next);
     Audio_.se.card();
     const toggled=def.duration==='toggle'?`（${tacticsExToggleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
     const onUse=TACTICS_EX_ON_USE[def.effect];
-    if(isTacticsExEffectImplemented(def)&&typeof onUse==='function') onUse({ def, slotIdx, mon, state:next });
+    if(isTacticsExEffectImplemented(def)){
+      addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md');
+      if(typeof onUse==='function') onUse({ def, slotIdx, mon, state:next });
+    }
     else pushBattleLog('（開発中）このEXの効果はまだ出ない。回数と併用のルールだけ動いている', 'info');
     if(!def.withCards){ setPendingCard(null); setFocusedCard(null); }
     return true;
@@ -35020,6 +35159,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // それに加えて「連撃パワー」を1貯め、3たまるごとに永久10%連撃(kenshiExtraCombo)を1本増やして0へ戻す。
           // どちらも addPermaBuff / writePermaBuffs なので「永続・重複可・次のターンから」になり、
           // 本数にも +3% の回数にも上限は設けない。ヒット列側(buildAttackHits)がこの本数を読む
+          // ★タクティクスのEX「武器チェンジ」で片手持ちの剣士モッチー本人が使ったときは、ソードスキルが出ない
+          else if(card.monId==='KenshiMocchi'&&tacticsExEffectAt(slotIdx)==='weaponChange'){
+            addPopup('片手持ち：ソードスキルなし','hero','text-slate-300 text-sm font-bold');
+          }
           else if(card.monId==='KenshiMocchi'){
             addPermaBuff('comboDmgPct',0.03*effMul);
             const nextPower=livePermaBuff('kenshiComboPower')+1;
@@ -35041,7 +35184,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+critRateBonus),
-          globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier });
+          globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
+          swordSkill:tacticsExEffectAt(slotIdx)!=='weaponChange' });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
@@ -41053,7 +41197,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCardLocked={tacticsExCardLocked}
-            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn}
+            tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro}
+            tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
             hp={hp} iceLockActive={iceLockActive} iceLockPreparing={iceLockPreparing} iceLockTurns={iceLockTurns}
             isAssistCard={isAssistCard} isAttackCard={isAttackCard} isBusy={isBusy} isHeroSlotMon={isHeroSlotMon}
