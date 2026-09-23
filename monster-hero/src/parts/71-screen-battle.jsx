@@ -77,9 +77,8 @@ function BattleScreen({
   //   中身は毎回 tacticsExInfo から引き直す(回数・使えるかは開いたあとも変わるため、開いた時点の値を持たない)
   const [exPanelSlot, setExPanelSlot] = useState(null);
   const exPanel = exPanelSlot!=null&&tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
-  // 新タクティクスUIの確認版。デバッグ戦だけで有効にし、通常プレイの表示・挙動は一切変えない。
-  // タクティクス自体が現在はデバッグのバトルモード入口からだけ起動できるため、
-  // 途中で debugBattle が解除されても確認UIを維持する。公開時は専用フラグへ切り替える。
+  // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
+  // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
