@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 83573a4f6d545e64
+// source-sha256: 0745a1fcc7649771
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3bc4ec79664e8be3
+// generated-sha256: 475b113167439f8c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -163,7 +163,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-23 13:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 14:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -30531,7 +30531,43 @@ function MonsterDexDetailScreen({
     className: "text-[10px] font-black text-amber-300/90 mb-1 text-center tracking-widest"
   }, "\u56FA\u6709\u6280\uFF08\u9032\u5316\u6BB5\u968E\uFF09"), skillPills(getUniqueSkillLevels(mon), 'border-white/10 bg-amber-950/30'), /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-slate-300 font-bold leading-relaxed mt-1.5 italic break-words"
-  }, "\"", mon.unique?.effectDesc || '', "\""))))) : /*#__PURE__*/React.createElement("div", {
+  }, "\"", mon.unique?.effectDesc || '', "\"")), (() => {
+    const exDef = typeof tacticsExDefOf === 'function' ? tacticsExDefOf(mon.id) : null;
+    if (!exDef) return null;
+    const durationLabel = {
+      turn: 'そのターン',
+      wave: 'そのWAVE',
+      toggle: '再使用まで'
+    }[exDef.duration] || String(exDef.duration || '—');
+    return /*#__PURE__*/React.createElement("div", {
+      "data-dex-ex-skill": true,
+      className: "rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-black text-violet-300 tracking-widest"
+    }, "EX\u30B9\u30AD\u30EB"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-black text-violet-200/80"
+    }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u5C02\u7528")), /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 text-[12px] font-black text-white"
+    }, "EX\u300A", exDef.name, "\u300B"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-200"
+    }, exDef.desc), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "rounded-lg bg-black/30 px-1.5 py-1"
+    }, "\u56DE\u6570 ", /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, exDef.unlimited ? '無制限' : `${exDef.maxUses}回`)), /*#__PURE__*/React.createElement("span", {
+      className: "rounded-lg bg-black/30 px-1.5 py-1"
+    }, "\u52B9\u679C\u6642\u9593 ", /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, durationLabel)), /*#__PURE__*/React.createElement("span", {
+      className: "rounded-lg bg-black/30 px-1.5 py-1"
+    }, "\u901A\u5E38\u30AB\u30FC\u30C9 ", /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, exDef.withCards ? '併用可' : '併用不可'))));
+  })()))) : /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 flex items-center justify-center"
   }, /*#__PURE__*/React.createElement(ScreenEmpty, {
     emoji: "\u2753",
@@ -59970,7 +60006,43 @@ function MonsterHeroGame() {
       }, cell) : cell, aptExtra ? aptExtra(idx, grade) : null);
     })), openAptEntry && renderGrowthAptDetail(openAptEntry), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-500 font-bold mt-1 leading-tight"
-    }, "\u7F6E\u304F\u8DDD\u96E2\u306B\u95A2\u4FC2\u306A\u304F\u3001\u3053\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u88DC\u6B63\u304C4\u8DDD\u96E2\u3059\u3079\u3066\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059")), renderSkillSection(mon), renderDetailSectionLabel('選び方で決まる効果', '総合力には含みません'), /*#__PURE__*/React.createElement("div", {
+    }, "\u7F6E\u304F\u8DDD\u96E2\u306B\u95A2\u4FC2\u306A\u304F\u3001\u3053\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u88DC\u6B63\u304C4\u8DDD\u96E2\u3059\u3079\u3066\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059")), renderSkillSection(mon), (() => {
+      const exDef = typeof tacticsExDefOf === 'function' ? tacticsExDefOf(mon.id) : null;
+      if (!exDef) return null;
+      const durationLabel = {
+        turn: 'そのターン',
+        wave: 'そのWAVE',
+        toggle: '再使用まで'
+      }[exDef.duration] || String(exDef.duration || '—');
+      return /*#__PURE__*/React.createElement("div", {
+        "data-monster-detail-ex": true,
+        className: "rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-black uppercase tracking-widest text-violet-300"
+      }, "EX\u30B9\u30AD\u30EB"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-violet-200/80"
+      }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u5C02\u7528")), /*#__PURE__*/React.createElement("div", {
+        className: "mt-0.5 text-[12px] font-black text-white"
+      }, "EX\u300A", exDef.name, "\u300B"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-200"
+      }, exDef.desc), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1.5 grid grid-cols-3 gap-1 text-center text-[9px] font-black"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "rounded-lg bg-black/30 px-1 py-1 text-slate-300"
+      }, "\u56DE\u6570", /*#__PURE__*/React.createElement("span", {
+        className: "block text-white"
+      }, exDef.unlimited ? '無制限' : `${exDef.maxUses}回`)), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-lg bg-black/30 px-1 py-1 text-slate-300"
+      }, "\u52B9\u679C\u6642\u9593", /*#__PURE__*/React.createElement("span", {
+        className: "block text-white"
+      }, durationLabel)), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-lg bg-black/30 px-1 py-1 text-slate-300"
+      }, "\u901A\u5E38\u30AB\u30FC\u30C9", /*#__PURE__*/React.createElement("span", {
+        className: "block text-white"
+      }, exDef.withCards ? '併用可' : '併用不可'))));
+    })(), renderDetailSectionLabel('選び方で決まる効果', '総合力には含みません'), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2 shrink-0"
     }, /*#__PURE__*/React.createElement("div", {
       className: "bg-black/40 p-2 rounded-xl border border-indigo-500/30"
