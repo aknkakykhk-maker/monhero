@@ -1558,8 +1558,8 @@ check('固有技の効果も枠の印に出る',
     battleScreen.includes("focusedCard&&!tacticsDebugLayout?'invisible':'visible'"));
   check('タクティクス確認UIは細い枠と半透明HUDで表示する',
     battleScreen.includes("rounded-[18px] border grid grid-cols-[40%_60%]")
-      && battleScreen.includes("bg-slate-950/72 backdrop-blur-[2px]")
-      && battleScreen.includes("tacticsDebugLayout?'rounded-[14px] border':'rounded-xl border-2'"));
+      && battleScreen.includes("bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px]")
+      && battleScreen.includes("tacticsDebugLayout?'rounded-[12px] border':'rounded-xl border-2'"));
   check('HP/GUTS帯の上枠線を重ねない',
     battleScreen.includes("w-[60%] min-w-0 border-l flex flex-col justify-end")
       && !battleScreen.includes("w-[60%] min-w-0 border-l border-t flex flex-col justify-end"));
@@ -1567,6 +1567,10 @@ check('固有技の効果も枠の印に出る',
     battleScreen.includes("isAnimating&&!tacticsDebugLayout?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}")
       && battleScreen.includes("data-tactics-attack-content={tacticsDebugLayout?'content-only':undefined}")
       && battleScreen.includes("isAnimating&&tacticsDebugLayout?{zIndex:9999,animation:attackMotionAnimation(attackAnim)}:undefined"));
+  check('タクティクス操作帯とカードの装飾を統一する',
+    battleScreen.includes("rounded-[10px] border border-blue-300/55 bg-blue-500/10")
+      && battleScreen.includes("tacticsDebugLayout?'rounded-[12px] border':'rounded-xl border-2'")
+      && battleScreen.includes("rounded-[11px] border border-white/[.16] bg-black/20"));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
