@@ -1366,7 +1366,7 @@ function BattleScreen({
                       data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}
                       data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}
                       data-tactics-downed={tacticsUnit.downed?'true':'false'}
-                      className={`${tacticsDebugLayout?'absolute right-0 bottom-0 w-[60%] min-w-0 border-l border-t flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm':'shrink-0 border-t px-1'} z-20 border-white/[.08] bg-slate-950/72${battleTutorialSpotClass('tacticsParty')}`}>
+                      className={`${tacticsDebugLayout?'absolute right-0 bottom-0 w-[60%] min-w-0 border-l flex flex-col justify-end py-px px-2 gap-0 backdrop-blur-sm':'shrink-0 border-t px-1'} z-20 border-white/[.08] bg-slate-950/72${battleTutorialSpotClass('tacticsParty')}`}>
                       {/* ★「♥ 500 /500」と左右へ散らしていたのを、ラベルと数値の2つにそろえた
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
