@@ -285,6 +285,18 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     check('詳細に 残り回数/最大・併用可否・効果時間・力と丈夫さ が出る', !!p && /3 \/ 3/.test(p.uses) && p.withCards === 'no'
       && /WAVE/.test(p.text) && p.dev === !released && /220／150/.test(p.text), p && p.text.slice(0, 200));
     check('使用ボタンが狭いiPhoneの画面の中に収まる', !!p && p.useBottom != null && p.useBottom <= p.vh, p && `${p.useBottom}/${p.vh}`);
+    // ★詳細は画面の真ん中に出すカード(2026-09-23 ユーザー指摘「枠のサイズ感おかしくない？」)。
+    //   横幅いっぱいだと枠線が画面の端で切れ、下の余白が二重になってボタンの下が大きく空いていた
+    const card = await page.evaluate(() => {
+      const c = document.querySelector('[data-tactics-ex-card]');
+      const u = document.querySelector('[data-tactics-ex-use]');
+      if (!c || !u) return null;
+      const r = c.getBoundingClientRect(), b = u.getBoundingClientRect();
+      return { left: Math.round(r.left), right: Math.round(window.innerWidth - r.right), gapBelowButton: Math.round(r.bottom - b.bottom) };
+    });
+    check('詳細のカードは左右に余白があり、ボタンの下が空きすぎない', !!card && card.left >= 12 && card.right >= 12 && card.gapBelowButton <= 24,
+      JSON.stringify(card));
+    if (process.env.EX_SHOT) await page.screenshot({ path: process.env.EX_SHOT });
     await closePanel();
     check('タップしただけでは発動しない(閉じても回数は減らず、カードも選べる)', await (async () => {
       await tapSlot(gSlot);
