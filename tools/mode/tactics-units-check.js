@@ -1539,5 +1539,15 @@ check('固有技の効果も枠の印に出る',
     && legacy({ id: 'Pandora' }, 1) === 1);
 }
 
+// --- ㊴ デバッグ入口の途中で debugBattle が解除されても新UI確認を失わない ---
+// タクティクスは現在デバッグのバトルモード入口からだけ起動できるため、
+// BattleScreen 側は tacticsUnits の存在を確認UIの条件にする。
+{
+  const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  check('タクティクス戦では2x2確認UIを維持する',
+    battleScreen.includes('const tacticsDebugLayout = Array.isArray(tacticsUnits);')
+      && battleScreen.includes('data-tactics-debug-layout={tacticsDebugLayout?\'2x2\':undefined}'));
+}
+
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
