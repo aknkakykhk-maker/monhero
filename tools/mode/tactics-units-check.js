@@ -1560,6 +1560,9 @@ check('固有技の効果も枠の印に出る',
     battleScreen.includes("rounded-[18px] border grid grid-cols-[40%_60%]")
       && battleScreen.includes("bg-slate-950/72 backdrop-blur-[2px]")
       && battleScreen.includes("tacticsDebugLayout?'rounded-[14px] border':'rounded-xl border-2'"));
+  check('HP/GUTS帯の上枠線を重ねない',
+    battleScreen.includes("w-[60%] min-w-0 border-l flex flex-col justify-end")
+      && !battleScreen.includes("w-[60%] min-w-0 border-l border-t flex flex-col justify-end"));
 }
 
 console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
