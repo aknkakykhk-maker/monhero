@@ -1579,7 +1579,9 @@ check('固有技の効果も枠の印に出る',
   check('カード詳細中も合計予測をバフ帯上へ残す',
     battleScreen.includes("focusedCard&&!tacticsDebugLayout?'invisible':'visible'")
       && battleScreen.includes("focusedCard&&tacticsDebugLayout?'invisible':'visible'")
-      && battleScreen.includes("absolute left-1/2 top-0 z-[65] w-max max-w-[94vw] -translate-x-1/2 -translate-y-full pb-1"));
+      && battleScreen.includes("absolute left-1/2 top-0 z-[65] w-max max-w-[78%] -translate-x-1/2 -translate-y-full pb-1"));
+  check('タクティクス合計DMGと軽減を縦積みにする',
+    battleScreen.includes("flex ${tacticsDebugLayout?'flex-col':'flex-wrap'} items-center justify-center"));
   check('選択済みカードの文字を暗くしすぎない',
     battleScreen.includes("opacity-90 saturate-[0.95]"));
 

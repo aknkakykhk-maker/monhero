@@ -957,7 +957,7 @@ function BattleScreen({
               //   ★高さを持つのは出ているあいだだけ。空けておく場所は作らない(舞台が低い端末で
               //     いちばん困るのは敵の絵なので、使わないときは敵へ返す)
               //   ★2つは**横に並べて**折り返す。縦に積むと出た瞬間に舞台が46px縮む
-              <div data-battle-total-preview data-tactics-preview-band={tacticsDebugLayout?'buff-overlay':undefined} className={`${tacticsDebugLayout?'absolute left-1/2 top-0 z-[65] w-max max-w-[94vw] -translate-x-1/2 -translate-y-full pb-1':'mt-1 w-full'} flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none`}>
+              <div data-battle-total-preview data-tactics-preview-band={tacticsDebugLayout?'buff-overlay':undefined} className={`${tacticsDebugLayout?'absolute left-1/2 top-0 z-[65] w-max max-w-[78%] -translate-x-1/2 -translate-y-full pb-1':'mt-1 w-full'} flex ${tacticsDebugLayout?'flex-col':'flex-wrap'} items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none`}>
                 {showDmg&&(
                 <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showProjected?'bg-yellow-950/90 border-yellow-500/70':'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`}>
                   <Sword size={11} className={showProjected?'text-yellow-400':'text-red-400'}/>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2c76ac0fe0d67158
+// generated-sha256: d7b3e4c9f857f445
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-23 20:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 20:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22944,7 +22944,7 @@ function BattleScreen({
               //   ★高さを持つのは出ているあいだだけ。空けておく場所は作らない(舞台が低い端末で
               //     いちばん困るのは敵の絵なので、使わないときは敵へ返す)
               //   ★2つは**横に並べて**折り返す。縦に積むと出た瞬間に舞台が46px縮む
-              <div data-battle-total-preview data-tactics-preview-band={tacticsDebugLayout?'buff-overlay':undefined} className={`${tacticsDebugLayout?'absolute left-1/2 top-0 z-[65] w-max max-w-[94vw] -translate-x-1/2 -translate-y-full pb-1':'mt-1 w-full'} flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none`}>
+              <div data-battle-total-preview data-tactics-preview-band={tacticsDebugLayout?'buff-overlay':undefined} className={`${tacticsDebugLayout?'absolute left-1/2 top-0 z-[65] w-max max-w-[78%] -translate-x-1/2 -translate-y-full pb-1':'mt-1 w-full'} flex ${tacticsDebugLayout?'flex-col':'flex-wrap'} items-center justify-center gap-x-2 gap-y-0.5 pointer-events-none`}>
                 {showDmg&&(
                 <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border shadow-lg ${showProjected?'bg-yellow-950/90 border-yellow-500/70':'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`}>
                   <Sword size={11} className={showProjected?'text-yellow-400':'text-red-400'}/>
