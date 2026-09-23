@@ -31,7 +31,7 @@ assert(source.includes("const kenshiSplitNormal = kenshiHero && ['atk', 'range_a
 }
 assert(source.includes("if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);") && source.includes('pandoraSplitNormal: 0.5,'), 'パンドラ通常攻撃の連撃を分割前ダメージ基準で積む');
 assert(source.includes('if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);') && source.includes('kenshiSplitNormal: 0.5,'), '剣士モッチー通常攻撃の連撃を分割前ダメージ基準で積む');
-// ★swordSkill はタクティクスのEX「武器チェンジ」(片手持ち)だけが false にする。既存5モードは渡さないので常に true
+// ★swordSkill はタクティクスのEX「ソード・コンバージョン」(片手持ち)だけが false にする。既存5モードは渡さないので常に true
 assert(source.includes("if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);")
   && source.includes('kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true }) => {'), 'ソードスキルの連撃');
 // 永久追加連撃の本数は永続バフから読む。予測(getAttackPredictedDmg)にも同じ本数を渡していないと

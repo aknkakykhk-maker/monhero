@@ -920,7 +920,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
   }),
   KenshiMocchi: Object.freeze({
     id: 'kenshi_mocchi_weapon_change',
-    name: '武器チェンジ',
+    name: 'ソード・コンバージョン',
     desc: '二刀流と片手持ちを切り替える。片手持ちのあいだは力と同じ数値を丈夫さへ加える。固有技は使えるが、ソードスキルの効果は出ない。',
     maxUses: 0, unlimited: true, withCards: false, duration: 'toggle',
     toggleLabels: Object.freeze(['二刀流', '片手持ち']),
@@ -1077,7 +1077,7 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
 // ★読むときに上乗せするだけなので、効果が切れた瞬間(WAVEが変わる・切り替えで戻す)に
 //   何もしなくても元の値へ戻る。トレーニングで伸ばした値も失われない
 //   捨て身(allIn)     … 丈夫さ0。使ったときの丈夫さの50%を力へ足す
-//   武器チェンジ(weaponChange) の片手持ち … いまの力と同じ数値を丈夫さへ足す(力は減らない)
+//   ソード・コンバージョン(weaponChange) の片手持ち … いまの力と同じ数値を丈夫さへ足す(力は減らない)
 const applyTacticsExStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);

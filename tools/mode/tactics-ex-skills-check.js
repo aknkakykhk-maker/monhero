@@ -102,8 +102,8 @@ check('ゴーレム「捨て身」: ラン3回・使ったターンは他カー�
   golem && golem.name === '捨て身' && golem.maxUses === 3 && !golem.unlimited && !golem.withCards && golem.duration === 'wave'
     && golem.conditions.includes('notActive'),
   JSON.stringify(golem));
-check('剣士モッチー「武器チェンジ」: 無制限・使ったターンは他カード不可・再使用まで続く',
-  kenshi && kenshi.name === '武器チェンジ' && kenshi.unlimited && !kenshi.withCards && kenshi.duration === 'toggle'
+check('剣士モッチー「ソード・コンバージョン」: 無制限・使ったターンは他カード不可・再使用まで続く',
+  kenshi && kenshi.name === 'ソード・コンバージョン' && kenshi.unlimited && !kenshi.withCards && kenshi.duration === 'toggle'
     && kenshi.toggleLabels[0] === '二刀流' && kenshi.toggleLabels[1] === '片手持ち',
   JSON.stringify(kenshi));
 check('EXを持たない子は null', ex.tacticsExDefOf('Ham') === null && ex.tacticsExDefOf(null) === null
@@ -222,12 +222,12 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('捨て身: 効果中はもう一度使えない(回数が無駄に減らない)', !again.ok, again.reason);
   const nextWave = ex.checkTacticsExUse({ def: golem, state: g, slot: 0, monId: 'Golem', alive: true, now: T(3, 1) });
   check('捨て身: 次のWAVEではまた使える', nextWave.ok);
-  // 武器チェンジ: 仮仕様の例(二刀流 力185/丈夫さ25 → 片手持ち 力185/丈夫さ210)
+  // ソード・コンバージョン: 仮仕様の例(二刀流 力185/丈夫さ25 → 片手持ち 力185/丈夫さ210)
   const mUnit = { id: 'KenshiMocchi', hp: 300, maxHp: 300, atk: 185, def: 25, guts: 10, maxGuts: 20, downed: false };
   const k1 = ex.applyTacticsExUse(s0, { def: kenshi, slot: 1, monId: 'KenshiMocchi', now: T(1, 1) });
   const one = ex.applyTacticsExStats(mUnit, k1, 1, T(4, 9));
   check('片手持ち: 力185/丈夫さ25 → 力185/丈夫さ210(WAVEをまたいでも続く)', one.atk === 185 && one.def === 210, `${one.atk}/${one.def}`);
-  check('片手持ちのあいだは「武器チェンジ」の効果が効いている(ソードスキルを止める手がかり)',
+  check('片手持ちのあいだは「ソード・コンバージョン」の効果が効いている(ソードスキルを止める手がかり)',
     ex.tacticsExActiveEffect(k1, 1, 'KenshiMocchi', T(4, 9)) === 'weaponChange');
   const k2 = ex.applyTacticsExUse(k1, { def: kenshi, slot: 1, monId: 'KenshiMocchi', now: T(4, 9) });
   const two = ex.applyTacticsExStats(mUnit, k2, 1, T(4, 10));

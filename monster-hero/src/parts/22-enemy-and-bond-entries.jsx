@@ -504,7 +504,7 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);
   if (kenshiHero && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiHeroUnique) combo(rate + comboDmgBonus);
   // 固有効果「ソードスキル」: 技の出自が剣士モッチーなら誰が使っても(合体で引き継いだ場合も)
-  // ★swordSkill:false … タクティクスのEX「武器チェンジ」で片手持ちの剣士モッチーが使ったとき。
+  // ★swordSkill:false … タクティクスのEX「ソード・コンバージョン」で片手持ちの剣士モッチーが使ったとき。
   //   固有技そのものは使えるが、ソードスキルの連撃は出ない(ほかのモードは渡さないので常に true)
   if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
   // ソードスキルの連撃パワーが3充填されるたびに1本ずつ増える永久連撃。
