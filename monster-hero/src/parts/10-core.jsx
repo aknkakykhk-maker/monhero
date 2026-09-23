@@ -80,12 +80,11 @@ const UPDATE_NOTICE_STYLES = ['FULL', 'MINI', 'OFF'];
 const normalizeUpdateNoticeStyle = (value) =>
   UPDATE_NOTICE_STYLES.includes(String(value)) ? String(value) : 'FULL';
 const UPDATE_NOTICE_STYLE_KEY = 'mh_update_notice_style_v1';
-const BATTLE_SCREEN_STYLES = ['CLASSIC', 'TACTICS_OLD', 'TACTICS_NEW'];
+const BATTLE_SCREEN_STYLES = ['TACTICS_OLD', 'TACTICS_NEW'];
 const normalizeBattleScreenStyle = (value) =>
   BATTLE_SCREEN_STYLES.includes(String(value)) ? String(value) : 'TACTICS_NEW';
 const BATTLE_SCREEN_STYLE_KEY = 'mh_battle_screen_style_v1';
 const BATTLE_SCREEN_STYLE_LABELS = Object.freeze([
-  { id:'CLASSIC', label:'クラシック', note:'従来のバトル画面' },
   { id:'TACTICS_OLD', label:'タクティクス旧', note:'従来のタクティクス表示' },
   { id:'TACTICS_NEW', label:'タクティクス新', note:'2×2の新しい表示' },
 ]);
