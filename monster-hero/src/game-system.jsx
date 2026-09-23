@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d7b3e4c9f857f445
+// generated-sha256: 8cc41d8f570b6e26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92,7 +92,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-23 20:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-23 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23472,7 +23472,7 @@ function BattleScreen({
                   const scope=tacticsCardScope?tacticsCardScope(c):null;
                   const text=genre?(scope&&scope!=='敵へ'?`${genre}・${scope}`:genre):'';
                   return text?<div data-card-genre={genre} data-card-scope={scope||undefined} className="w-full truncate rounded-[5px] bg-black/30 px-0.5 text-[8px] font-black leading-[11px] text-white/85">{text}</div>:null;
-                })()}<div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button>{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
+                })()}<div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button>{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{isDragging&&ReactDOM.createPortal(<div data-tactics-drag-card-ghost className={`fixed w-[72px] rounded-[12px] border p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]`} style={{left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,pointerEvents:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))',...(TYPE_INLINE_STYLE[c.type]||{})}}><div data-decoration className="mt-1.5 flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20">{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5"><div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5">{c.name}</div><div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></div>,document.body)}{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
             })}
           </div>
         </div>
