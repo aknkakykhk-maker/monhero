@@ -1323,7 +1323,7 @@ function BattleScreen({
                     <RefreshCcw size={7} className="text-white"/><span className="text-[10px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
                   </div>);
                 })()}
-                <div data-tactics-attack-content={tacticsNewLayout?'content-only':undefined} className={`${tacticsNewLayout?'col-start-1 row-start-2 min-h-0':'flex-1'} flex flex-col items-center justify-center relative`} style={isAnimating&&tacticsNewLayout?{zIndex:9999,animation:attackMotionAnimation(attackAnim)}:undefined}>
+                <div data-tactics-attack-content={tacticsNewLayout?'content-only':undefined} className={`${tacticsNewLayout?'col-start-1 row-start-2 min-h-0':'flex-1'} flex flex-col items-center justify-center relative`}>
                   {slotSettle===i&&(
                     <div className="absolute inset-0 z-[60] pointer-events-none flex items-center justify-center overflow-visible">
                       <div className="absolute rounded-full border-4 border-cyan-300" style={{width:'40px',height:'40px',animation:'setRing 500ms ease-out forwards'}}></div>
@@ -1421,7 +1421,10 @@ function BattleScreen({
                   )}
                   {/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
                   {(()=>{const totalBonus=distTotalBonus(i); return(<div className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
-                  {s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
+                  {/* ★新しい盤面では攻撃モーションを**絵だけ**に掛ける(2026-09-24 ユーザー選択「攻撃時に札を跳ねさせない」)。
+                      それまでは絵のある左の列ごと動かしていたので、距離補正の札や置いたカードの札まで
+                      大きくなって飛び、名前の行を隠していた。古い盤面は今までどおり枠ごと動かす */}
+                  <div data-tactics-attack-image={tacticsNewLayout?i:undefined} className="relative flex items-center justify-center" style={isAnimating&&tacticsNewLayout?{zIndex:9999,animation:attackMotionAnimation(attackAnim)}:undefined}>{s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
                       ?<ArkHolyRainMotion
@@ -1438,7 +1441,7 @@ function BattleScreen({
                         image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>}
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
-                      :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
+                      :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}</div>
                   {/* 倒れた子。カードを置けないことが一目で分かるように覆う */}
                   {tacticsUnit&&tacticsUnit.downed&&(()=>{
                     const revivePct=tacticsUnit.maxHp>0?Math.floor((tacticsUnit.hp/tacticsUnit.maxHp)*100):0;
