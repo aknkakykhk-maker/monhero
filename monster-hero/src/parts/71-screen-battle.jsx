@@ -419,8 +419,12 @@ function BattleScreen({
   const emSpec = emSet && enemySkillNow ? (emSet.skills[enemySkillNow] || null) : null;
   const emFxStyle = emSpec && emSpec[2] ? { '--em-e': JSON.stringify(emSpec[2]) } : undefined;
   const enemyHurtNow = !!(enemyMotion && attackAnim && !enemyAttackAnim);
-  // 敵の絵と同じ形に切り抜いた光の板(data-enemy-flash)。絵を明るく光らせるとき、filter を使わずに濃さだけを変える
-  const enemyFlashMask = enemyMotion && enemy?.imgUrl ? { WebkitMaskImage: `url("${enemy.imgUrl}")`, maskImage: `url("${enemy.imgUrl}")` } : undefined;
+  // 絵を明るく光らせる板(data-enemy-flash)。同じ絵を明るくした複製を重ね、濃さだけを変える。
+  // ★切り抜き(mask)と重ね方(mix-blend-mode)は使わない。iPhone で切り抜きが外れると、光るたびに四角い板が出てしまう
+  //   (2026-09-24 ユーザー報告「他にも絶対バグる要因あるからちゃんと見つけてなおして」)。
+  //   ふだんは置かない(光るあいだだけ置く)ので、層も増えない
+  const enemyFlashOn = !!(enemyMotion && enemy?.imgUrl && (enemySkillNow || enemyHurtNow));
+  const enemyFlashNode = enemyFlashOn ? <img data-enemy-flash src={enemy.imgUrl} alt="" aria-hidden="true" draggable={false}/> : null;
   // 技の実際の長さ(戦闘の速さを掛けたもの)。CSS の動きは --em-dur を見るので、2倍速・4倍速でも途中で切れない
   const emDurStyle = enemySkillNow && Number.isFinite(enemyAttackFx?.ms) && enemyAttackFx.ms > 0 ? { '--em-dur': `${enemyAttackFx.ms}ms` } : {};
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
@@ -562,7 +566,7 @@ function BattleScreen({
   };
   return (
 
-      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRest?'true':undefined}>
+      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRest?'true':undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined}>
         {/* 舞台の照明(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい。
             イメージ画みたいにかっこよくできないかな？」)。
             ★画像は足さない。スマホの通信量に直に効くうえ、敵ごとに背景を用意すると際限がない
@@ -888,7 +892,7 @@ function BattleScreen({
                 <div data-moo-body={emSet?'true':undefined} className="relative w-full h-full">
                 {emSet&&<i aria-hidden="true" data-enemy-glow/>}
                 <img src={enemy.imgUrl} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',animation:(liteBattleView||emSpec||enemyHurtNow||(emSet&&!enemyAttackAnim))?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
-                {emSet&&<i aria-hidden="true" data-enemy-flash style={enemyFlashMask}/>}
+                {emSet&&enemyFlashNode}
                 </div>
               </div>
             )}
@@ -916,7 +920,7 @@ function BattleScreen({
                 寄せ先は画面の右端ではなく遊ぶ列(最大600px)の右端にして、広い画面でも列に収める */}
             {enemyNoticeShown&&isMooBoss(enemy?.id)&&(
               <div data-enemy-notice-moo className="fixed left-1/2 pointer-events-none"
-                style={{top:'max(112px,16dvh)',transform:'translateX(calc(min(50vw, 300px) - 100% - 6px))',zIndex:focusedCard?5:40}}>
+                style={{top:'max(112px,16dvh)',transform:'translateX(calc(min(50vw, 300px) - 100% - 76px))',zIndex:focusedCard?5:40}}>
                 {enemyNoticeCard()}
               </div>
             )}
@@ -937,7 +941,7 @@ function BattleScreen({
               {/* data-em-fx-el: カワズモー以外の敵の技の飾り。::before が形(data-em-fx)、::after が絵文字(--em-e) */}
               {emSet&&!enemyIsMoo&&<i aria-hidden="true" data-em-fx-el style={emFxStyle}/>}
               {!ecoBattleView&&<div aria-hidden="true" data-enemy-shadow className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2" style={{bottom:'11%',width:'64%',height:'13%',borderRadius:'50%',background:'radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.62) 0%, rgba(0,0,0,.28) 52%, rgba(0,0,0,0) 76%)'}}></div>}
-              {enemy?.imgUrl?(isMooBoss(enemy?.id)?<div style={{width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}>{enemyMotion&&<i aria-hidden="true" data-enemy-glow/>}<img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>{enemyMotion&&<i aria-hidden="true" data-enemy-flash style={enemyFlashMask}/>}</span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,10.5dvh,96px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
+              {enemy?.imgUrl?(isMooBoss(enemy?.id)?<div style={{width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}>{enemyMotion&&<i aria-hidden="true" data-enemy-glow/>}<img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>{enemyFlashNode}</span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,10.5dvh,96px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
               {/* 味方の攻撃が敵に当たった瞬間の着弾(体当たり・突進・ザン/エイキの斬撃)。攻撃中だけ出る */}
               {!ecoBattleView&&attackAnim&&<AttackTargetFx anim={attackAnim} attackerId={slots[attackAnim.slotIndex]?.id}/>}
               {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
@@ -1379,7 +1383,7 @@ function BattleScreen({
             (2026-09-24 ユーザー指摘「スネグーラチカも消えてる・ほかもあやしい」)。
             攻撃モーションは枠の外へ飛び出して敵まで届くので、z-10 のままだとライフの帯や強化の札の
             裏を通り、パンドラの分身・突進する子・斬り込む子がその間だけ隠れていた */}
-        <div className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)',...((tacticsNewLayout&&popups.some(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)))||(attackAnim&&!ecoBattleView)?{zIndex:60}:{})}}>
+        <div data-tactics-board-band className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)',...((tacticsNewLayout&&popups.some(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot)))||(attackAnim&&!ecoBattleView)?{zIndex:60}:{})}}>
           {/* ★新しい盤面(2×2)では、ここ(盤面のまんなか)へ出すと4枠の境目に乗り、
               どの子のライフも読めなくなっていた(2026-09-23 ユーザー指示「敵への効果は敵の辺り、
               味方への効果は対象の味方や使ったモンスター」)。
