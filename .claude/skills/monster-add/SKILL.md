@@ -29,7 +29,9 @@ description: Add a new playable ally monster (味方モンスター) to モン�
 
 ## 1. 必要なデータの全体像
 
-**1体につき、次の9か所すべてに登録が要る。** どれか1つ抜けても画面はふつうに動いてしまう。
+**どの子にも必ず要るのが次の9か所。** どれか1つ抜けても画面はふつうに動いてしまう。
+専用モーションや特殊な効果を付けると、ここに**載っていない場所が増える**(§5)。
+「9か所で終わり」と思って進めないこと。
 
 | # | ファイル | 何を足すか |
 | --- | --- | --- |
@@ -126,19 +128,51 @@ node tools/image/monster-image-quality-check.js
 ## 5. 攻撃モーションと、特性・固有技の実効果
 
 **表示テキストを足しただけでは何も起きない。** `trait` / `unique.effectDesc` は説明文であって、
-効き目は本体のID分岐が作る。
+効き目は本体のID分岐が作る。**分岐の置き場所は1つではない。** 効果の種類ごとに散っている。
+
+| 置き場所 | そこにあるもの | 例 |
+| --- | --- | --- |
+| `60-app.jsx` | 勇者特性の倍率、カード使用時の効果 | ミーアの「次ターン消費0」(`card.monId==='Pixie'||card.monId==='Mia'`) |
+| `22-enemy-and-bond-entries.jsx` | 連撃ルール・氷結など戦闘の計算 | 永輝の連撃(`ATTACK_COMBO_RULES.eiki*`)、氷結3種(`ICE_LOCK_MONSTER_IDS`) |
+| `13-bgm-and-rhythm-settings.jsx` | 勇者ごとのボス専用BGM | パンドラ・永輝(`heroId==='Eiki' && …'eiki_boss'`) |
+| `71-screen-battle.jsx` | バトル画面への演出の差し込み | `<PandoraDualThunder>` `<EikiSakuraPetals/>` |
+| `27-result-widgets.jsx` | 結果画面の演出 | パンドラ・剣士モッチー |
+| `32-tactics-units.jsx` | タクティクスのユニット定義 | 剣士モッチー |
+
+**だから列挙を信じず、似た子を追う。**
 
 ```bash
 node tools/where.js --text "monId==='Pixie'"      # 似た効果の子を探して、その分岐へ id を足す
+node tools/where.js --text "Eiki"                 # 専用演出を持つ子が、どこに何行あるか
 ```
 
-- 例: ミーアの「次ターン カード消費ガッツ0」は `60-app.jsx` の
-  `card.monId==='Pixie'||card.monId==='Mia'` という分岐で効いている
-- 勇者特性の倍率も同じ形(`mainHero?.id==='Golem'?1.2:1.0` のような並び)
-- **専用モーションを作るなら3か所**。`24-battle-fx.jsx`(見た目) /
-  `23-rpg-debug.jsx`(プレビューの待ち時間) / `60-app.jsx`(本番の待ち時間)。
-  ミーアの `miaSongNotes` が手本で、`MIA_SONG_NOTES_MOTION_MS` を3か所が参照している。
-  作らないなら `atkMotion:'default'`
+### 専用モーションを作るとき
+
+**最低4か所。子によってもっと増える。** ミーアの `miaSongNotes` が手本。
+
+| ファイル | 何を書くか |
+| --- | --- |
+| `24-battle-fx.jsx` | 見た目の本体(`MIA_SONG_NOTES` / `MIA_SONG_SPARKLES` とそれを描くコンポーネント) |
+| `70-bootstrap.jsx` | **CSSの `@keyframes`**。動きの実体はここ。忘れやすい |
+| `23-rpg-debug.jsx` | プレビューの待ち時間 |
+| `60-app.jsx` | 本番の待ち時間(`MIA_SONG_NOTES_MOTION_MS` を3か所が参照する) |
+| `71-screen-battle.jsx` | 画面へ差し込む必要がある演出のとき(パンドラ・永輝はここにもある) |
+
+専用モーションを作らないなら `atkMotion:'default'` と書くだけでよい。
+
+### 血統を**新しく**作るとき
+
+既存の血統(`pixie` `mocchi` など)を使うなら、この節は不要。新設するときだけ次も要る。
+
+- `data/rhythm-mode.js` の `RHYTHM_MONSTER_ABILITY_BY_LINEAGE` … モンヒロビートの
+  モンスターノーツの能力は**主血統で決まる**。新しい血統を割り当てないと能力が出ない
+- 種族チャレンジは主血統で候補を作るので、新しい血統はそのまま新しい種族になる
+
+### 能力値を**あとから**変えるとき
+
+`parts/11-masu-progression.jsx` の `LEGACY_REGENERATION_STAT_BASELINES` へ、
+変更前と変更後の値を並べて足す(神殿の再生が古い個体を正しく見分けるため)。
+新規追加のときは不要。
 
 ## 6. 検査
 
@@ -169,13 +203,42 @@ node tools/run-checks.js --area monster,image 2>&1 | tail -25
 
 **`changelog-help-update` スキルへ。** ここでは要点だけ。
 
-- モンスターの一覧・図鑑・マーケットは `{t:'data', id:'…'}` が実データから作るので
-  **ヘルプへ手で書き写さない**(`monsterLineages` / `monsterPower` などのidがある)
+- 一覧になるもの(モンスター・図鑑・マーケット・総合力)は `{t:'data', id:'…'}` が
+  実データから作るので**手で書き写さない**(`monsterLineages` / `monsterPower` などのidがある)
+- **ただし、専用モーションや固有技の特殊な効果はヘルプに手で書く。**
+  実データから表にできないため。ミーアには「ミーアの歌う攻撃モーション」という
+  囲み(`{t:'note'}`)があり、固有技の説明にも「ピクシー・ミーアの『次ターン消費0』」と
+  名指しで入っている。`grep -n "ミーア" monster-hero/data/help.js` で実例を見てから書く
 - マーケットに円盤石を並べたので、更新履歴へ
   `assistantNotice:{id:'update_notice_◯◯_v1', type:'market'}` を**必ず**付ける
   (`node tools/boot/market-notice-check.js` が見張る)
 
-## 8. 落とし穴
+## 8. 登録漏れを機械的に見つける
+
+§1 の9か所を埋めても、**その子に要る場所が全部とは限らない**。
+実装し終えたら、既存の子と登録先を突き合わせて差を見る。
+
+```bash
+# ローマ字id で。data 側の3ファイルは全員に出るので、出ない子がいたらそこが漏れ
+for id in <新しいid> Mia Pandora Eiki KenshiMocchi Undine; do
+  echo "$id => $(grep -rln "'$id'\|\"$id\"\|\b$id:" --include='*.js' --include='*.jsx' \
+    monster-hero/data monster-hero/src/parts | grep -v 'game-system\|compiled' | tr '\n' ' ')"
+done
+
+# 表示名(日本語)でも同じことをする。ヘルプ・CSS・コメントは日本語で書いてあるので、
+# ローマ字だけで探すと help.js と 70-bootstrap.jsx の分が丸ごと見えない
+for n in <新しい表示名> ミーア パンドラ 剣士モッチー; do
+  echo "### $n"; grep -rln "$n" --include='*.js' --include='*.jsx' \
+    monster-hero/data monster-hero/src/parts | grep -v 'game-system\|compiled\|changelog' | tr '\n' ' '; echo
+done
+```
+
+**このスキルを書いたときも、ローマ字だけで数えて help.js と 70-bootstrap.jsx を取りこぼした。**
+日本語名でも必ず引くこと。日本語のほうはコメント中の言及(「ピクシー種ならピクシー・ミーア・
+パンドラが候補」など)も一緒に拾うので、出たファイルは `grep -n` で行を見て、
+本当に登録が要るのかを1つずつ判断する。
+
+## 9. 落とし穴
 
 ### 画面はふつうに動いてしまう
 血統を書き忘れる・マーケットの3件のうち1件だけ足す・`MARKET_ICON_FRAMING` を書かない、
