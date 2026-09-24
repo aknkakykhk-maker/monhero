@@ -201,6 +201,9 @@ node tools/where.js --text "Eiki"                 # 専用演出を持つ子が�
 | `71-screen-battle.jsx` | 画面へ差し込む必要がある演出のとき(パンドラ・永輝はここにもある) |
 
 専用モーションを作らないなら `atkMotion:'default'` と書くだけでよい。
+`'default'` のままでも、`src/parts/24-battle-fx.jsx` の `DEFAULT_ATTACK_THEMES` へ1行足せば
+用意済みの型(`stomp` 踏みつけ / `beam` ビーム / `rocks` 岩 / `claw` 爪 / `punch` パンチ / `magic` 魔法の玉 /
+`crush` 押しつぶし / `petals` 花びら / `vine` つる / `fire` 炎)から選んで、体当たり以外の動きにできる。
 
 ### 血統を**新しく**作るとき
 

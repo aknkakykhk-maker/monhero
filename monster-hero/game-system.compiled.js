@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 977dfa81e1a268c3
+// source-sha256: 340ef5d5ef5cd300
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ff622e5b354d9899
+// generated-sha256: a42415fcaf2438d7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 18:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 18:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17940,10 +17940,288 @@ const ATTACK_TARGET_SLASHES = Object.freeze({
     delay: '254ms'
   }]
 });
+// ==== 体当たりだった初期モンスターの攻撃(2026-09-24 ユーザー指示「初期からいるモンスターは攻撃アクションが
+// 体当たりだけだから、モンスターのイメージにあわせたアクションを作って」) ====
+// データの atkMotion は 'default' のまま変えない(待ち時間・RPG表示・検査が atkMotion を見ているため)。
+// 見た目だけを、攻撃する子の種族でここから選ぶ。尺は体当たりと同じ(通常450ms・固有技500ms)に収める。
+// 新しいモンスターを 'default' で足すときは、ここへ1行足せば型を選べる(足さなければ今までどおり体当たり)。
+const DEFAULT_ATTACK_THEMES = Object.freeze({
+  Mocchi: 'stomp',
+  // 高く跳んで、敵の上からのしかかる
+  Suezo: 'beam',
+  // 大きな目から光線
+  Golem: 'rocks',
+  // 地面を叩いて、岩を飛ばす
+  Tiger: 'claw',
+  // 飛びかかって、爪で3本ひっかく
+  Ham: 'punch',
+  // 詰め寄って、連続パンチ
+  Pixie: 'magic',
+  // 魔法陣を出して、魔法の弾を3発
+  Monol: 'crush',
+  // 敵の真上へ浮かんで、押しつぶす
+  Oboro: 'petals',
+  // 青い花びらを吹きつける
+  Plant: 'vine',
+  // つるを伸ばして、はたく
+  Mitarashi: 'fire' // 炎を吐く
+});
+const themedAttackKindOf = (anim, baseId) => anim && anim.charge !== true && !anim.zanCombo && !anim.twinBlade && (!anim.motion || anim.motion === 'default') ? DEFAULT_ATTACK_THEMES[baseId] || null : null;
+// 飛ぶもの・着弾の小片。x/y は敵の位置からのずれ、d はずらす時間(ms)
+const THEMED_ATTACK_BITS = Object.freeze({
+  stomp: {
+    hit: [{
+      x: -34,
+      y: 10
+    }, {
+      x: -22,
+      y: -16
+    }, {
+      x: 0,
+      y: -24
+    }, {
+      x: 22,
+      y: -16
+    }, {
+      x: 34,
+      y: 10
+    }, {
+      x: 0,
+      y: 18
+    }]
+  },
+  rocks: {
+    fly: [{
+      x: -18,
+      y: -4,
+      d: 120
+    }, {
+      x: 0,
+      y: 6,
+      d: 160
+    }, {
+      x: 18,
+      y: -2,
+      d: 200
+    }],
+    hit: [{
+      x: -30,
+      y: -20
+    }, {
+      x: -10,
+      y: -32
+    }, {
+      x: 14,
+      y: -30
+    }, {
+      x: 30,
+      y: -14
+    }, {
+      x: 0,
+      y: 14
+    }]
+  },
+  claw: {
+    hit: [{
+      x: -12,
+      d: 180
+    }, {
+      x: 0,
+      d: 205
+    }, {
+      x: 12,
+      d: 230
+    }]
+  },
+  punch: {
+    hit: [{
+      x: -14,
+      y: -10,
+      d: 145
+    }, {
+      x: 12,
+      y: 4,
+      d: 205
+    }, {
+      x: -4,
+      y: 12,
+      d: 262
+    }]
+  },
+  magic: {
+    fly: [{
+      x: -10,
+      y: -40,
+      d: 120
+    }, {
+      x: 12,
+      y: -56,
+      d: 175
+    }, {
+      x: -4,
+      y: -30,
+      d: 230
+    }],
+    hit: [{
+      x: -26,
+      y: -18
+    }, {
+      x: 24,
+      y: -22
+    }, {
+      x: -20,
+      y: 20
+    }, {
+      x: 26,
+      y: 16
+    }, {
+      x: 0,
+      y: -30
+    }]
+  },
+  crush: {
+    hit: [{
+      a: -20
+    }, {
+      a: 35
+    }, {
+      a: 150
+    }, {
+      a: 205
+    }]
+  },
+  petals: {
+    fly: [{
+      x: -22,
+      y: -30,
+      d: 60
+    }, {
+      x: 16,
+      y: -48,
+      d: 100
+    }, {
+      x: -10,
+      y: -60,
+      d: 140
+    }, {
+      x: 24,
+      y: -24,
+      d: 180
+    }, {
+      x: -26,
+      y: -44,
+      d: 220
+    }, {
+      x: 8,
+      y: -36,
+      d: 250
+    }, {
+      x: -4,
+      y: -52,
+      d: 280
+    }]
+  },
+  vine: {
+    hit: [{
+      x: -22,
+      y: -14
+    }, {
+      x: 20,
+      y: -18
+    }, {
+      x: -14,
+      y: 16
+    }, {
+      x: 18,
+      y: 12
+    }]
+  },
+  fire: {
+    fly: [{
+      x: -8,
+      y: -6,
+      d: 110
+    }, {
+      x: 10,
+      y: 6,
+      d: 145
+    }, {
+      x: -12,
+      y: 10,
+      d: 180
+    }, {
+      x: 6,
+      y: -10,
+      d: 215
+    }, {
+      x: -4,
+      y: 4,
+      d: 250
+    }, {
+      x: 12,
+      y: -4,
+      d: 285
+    }]
+  }
+});
+const ThemedAttackMotion = ({
+  kind,
+  image,
+  lunge = false
+}) => {
+  const bits = THEMED_ATTACK_BITS[kind] || {};
+  const px = v => `${v || 0}px`;
+  return /*#__PURE__*/React.createElement("span", {
+    className: `thm-atk thm-atk--${kind}${lunge ? ' thm-atk--lunge' : ''}`
+  }, kind === 'magic' && /*#__PURE__*/React.createElement("span", {
+    className: "thm-atk__circle",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null)), kind === 'rocks' && /*#__PURE__*/React.createElement("span", {
+    className: "thm-atk__quake",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "thm-atk__monster"
+  }, image), (kind === 'beam' || kind === 'vine') && /*#__PURE__*/React.createElement("span", {
+    className: "thm-atk__line",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("i", null)), bits.fly && /*#__PURE__*/React.createElement("span", {
+    className: "thm-atk__flys",
+    "aria-hidden": "true"
+  }, bits.fly.map((b, i) => /*#__PURE__*/React.createElement("i", {
+    key: i,
+    className: "thm-atk__fly",
+    style: {
+      '--fx': px(b.x),
+      '--fy': px(b.y),
+      animationDelay: `${b.d}ms`
+    }
+  }))), /*#__PURE__*/React.createElement("span", {
+    className: "thm-atk__hit",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "thm-atk__core"
+  }), /*#__PURE__*/React.createElement("i", {
+    className: "thm-atk__ring"
+  }), (bits.hit || []).map((b, i) => /*#__PURE__*/React.createElement("i", {
+    key: i,
+    className: "thm-atk__bit",
+    style: {
+      '--bx': px(b.x),
+      '--by': px(b.y),
+      '--ba': `${b.a || 0}deg`,
+      ...(b.d != null ? {
+        animationDelay: `${b.d}ms`
+      } : {})
+    }
+  }))));
+};
 const AttackTargetFx = ({
-  anim
+  anim,
+  attackerId
 }) => {
   if (!anim || anim.charge === true || anim.twinBlade) return null;
+  // 種族ごとの攻撃(ThemedAttackMotion)は、自分で敵の位置へ着弾を描く
+  if (themedAttackKindOf(anim, attackerId)) return null;
   if (anim.zanCombo) {
     const kind = anim.sakura ? 'eiki' : 'zan';
     return /*#__PURE__*/React.createElement("span", {
@@ -19114,11 +19392,27 @@ const PandoraDualThunder = ({
 const BattleAttackMotionPreview = ({
   image,
   anim,
-  compact = false
+  compact = false,
+  baseId = null
 }) => {
   const aimVars = compact ? attackAimVars(0, -70, {
     spread: 30
   }) : attackAimVars(0, -120);
+  // 体当たりだった初期モンスターは、種族ごとの攻撃を同じ部品で再生する(baseId が要る)
+  const themedKind = themedAttackKindOf(anim, baseId);
+  if (themedKind) {
+    return /*#__PURE__*/React.createElement("div", {
+      className: "relative h-full w-full flex items-center justify-center",
+      style: {
+        isolation: 'isolate',
+        ...aimVars
+      }
+    }, /*#__PURE__*/React.createElement(ThemedAttackMotion, {
+      kind: themedKind,
+      image: image,
+      lunge: anim?.charge === false
+    }));
+  }
   if (anim?.motion === 'arkHolyRain') {
     return /*#__PURE__*/React.createElement("div", {
       className: "relative h-full w-full flex items-center justify-center",
@@ -31615,7 +31909,8 @@ function MonsterAttackPreviewScreen({
       mon: mon,
       alt: mon.name
     }),
-    anim: previewAnim
+    anim: previewAnim,
+    baseId: mon.id
   })), /*#__PURE__*/React.createElement("span", {
     className: "absolute bottom-2 left-0 right-0 text-center text-[10px] font-bold text-slate-400"
   }, "\u30D0\u30C8\u30EB\u3068\u540C\u3058\u6F14\u51FA\u3067\u3059\uFF08\u30C0\u30E1\u30FC\u30B8\u3084\u6027\u80FD\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("div", {
@@ -41842,7 +42137,8 @@ function BattleScreen({
     },
     className: `relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
   }, enemy?.emoji)), !ecoBattleView && attackAnim && /*#__PURE__*/React.createElement(AttackTargetFx, {
-    anim: attackAnim
+    anim: attackAnim,
+    attackerId: slots[attackAnim.slotIndex]?.id
   }), !ecoBattleView && isMooBoss(enemy?.id) && /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible",
     style: {
@@ -42790,6 +43086,8 @@ function BattleScreen({
       baseId: s?.id,
       image: img
     }) : img;
+    // 体当たりだった初期モンスターは、種族ごとの攻撃(ThemedAttackMotion)で見せる。枠は飛ばさない
+    const themedAttack = isAnimating ? themedAttackKindOf(attackAnim, s?.id) : null;
     const slotArtBox = {
       width: tacticsNewLayout ? '58px' : '64px',
       height: tacticsNewLayout ? '58px' : '64px',
@@ -42855,7 +43153,7 @@ function BattleScreen({
       style: {
         ...((isAnimating && !tacticsNewLayout ? {
           zIndex: 9999,
-          animation: attackMotionAnimation(attackAnim),
+          animation: themedAttack ? undefined : attackMotionAnimation(attackAnim),
           ...attackAimStyle
         } : distanceBroken ? {
           backgroundColor: distanceBreakLevel >= 2 ? 'rgb(12,2,5)' : 'rgb(24,5,25)',
@@ -43213,7 +43511,7 @@ function BattleScreen({
         ...(s ? slotArtBox : {}),
         ...(isAnimating && tacticsNewLayout ? {
           zIndex: 9999,
-          animation: attackMotionAnimation(attackAnim),
+          animation: themedAttack ? undefined : attackMotionAnimation(attackAnim),
           ...attackAimStyle
         } : {})
       }
@@ -43271,6 +43569,20 @@ function BattleScreen({
       })),
       lunge: attackAnim.charge === false,
       charging: attackAnim.charge === true
+    }) : themedAttack ? /*#__PURE__*/React.createElement(ThemedAttackMotion, {
+      kind: themedAttack,
+      lunge: attackAnim.charge === false,
+      image: slotArt(/*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: s.id,
+        src: s.imgUrl,
+        alt: s.name,
+        masuColors: s.colors,
+        style: {
+          width: tacticsNewLayout ? '58px' : '64px',
+          height: tacticsNewLayout ? '58px' : '64px'
+        },
+        className: "z-10 object-contain drop-shadow-md"
+      }))
     }) : slotArt(/*#__PURE__*/React.createElement(DyedMonsterImage, {
       baseId: s.id,
       src: s.imgUrl,
@@ -45152,7 +45464,8 @@ function MonsterCheckDebugScreen({
       }
     }, /*#__PURE__*/React.createElement(BattleAttackMotionPreview, {
       image: dyedArt('h-full w-full object-contain'),
-      anim: playing ? playing.anim : null
+      anim: playing ? playing.anim : null,
+      baseId: mon?.id
     })), /*#__PURE__*/React.createElement("span", {
       className: "absolute bottom-2 left-0 right-0 text-center text-[8px] font-bold text-slate-500"
     }, "\u30D0\u30C8\u30EB\u3068\u540C\u3058\u6F14\u51FA\u3067\u3059\uFF08\u30C0\u30E1\u30FC\u30B8\u3084\u6027\u80FD\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("div", {
@@ -76436,6 +76749,248 @@ const createAnimationStyle = () => {
         transform: translate(0,0) scale(1) rotate(360deg) skewX(0deg);
         filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
+    }
+    /* ==== 体当たりだった初期モンスターの攻撃(24-battle-fx.jsx の ThemedAttackMotion) ====
+       距離枠は動かさず、本体(.thm-atk__monster)と飛ぶもの・着弾だけを動かす。敵の位置は --atk-dx/dy。
+       尺は体当たりと同じ450ms(固有技は本体だけ500ms)に収め、どの小片もその中で消える。 */
+    .thm-atk { position:absolute; inset:0; overflow:visible; pointer-events:none; z-index:26; isolation:isolate;
+      --c1:#fff7d6; --c2:#fb923c; --c3:rgba(234,88,12,0); }
+    .thm-atk__monster { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:4;
+      transform-origin:50% 80%; will-change:transform,filter; animation-duration:450ms; animation-fill-mode:forwards; animation-timing-function:ease-in-out; }
+    .thm-atk--lunge .thm-atk__monster { animation-duration:500ms; filter:drop-shadow(0 0 14px rgba(217,70,239,.9)); }
+    .thm-atk__hit { position:absolute; left:50%; top:50%; width:0; height:0; z-index:8; translate:var(--atk-dx) var(--atk-dy); }
+    .thm-atk__core { position:absolute; left:-42px; top:-42px; width:84px; height:84px; border-radius:50%; opacity:0;
+      background:radial-gradient(circle,#fff 0 10%,var(--c1) 24%,var(--c2) 46%,var(--c3) 72%);
+      animation:thmHitCore 180ms ease-out forwards; animation-delay:var(--hit-at,260ms); }
+    .thm-atk__ring { position:absolute; left:-22px; top:-22px; width:44px; height:44px; border-radius:50%; opacity:0;
+      border:4px solid var(--c1); box-shadow:0 0 10px #fff,0 0 20px var(--c2);
+      animation:thmHitRing 190ms ease-out forwards; animation-delay:var(--hit-at,260ms); }
+    .thm-atk--lunge .thm-atk__core { left:-58px; top:-58px; width:116px; height:116px; }
+    @keyframes thmHitCore { 0% { opacity:0; transform:scale(.3); } 30% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.6); } }
+    @keyframes thmHitRing { 0% { opacity:0; transform:scale(.3); } 30% { opacity:1; } 100% { opacity:0; transform:scale(2.6); } }
+    .thm-atk__bit { position:absolute; left:-4px; top:-4px; width:8px; height:8px; border-radius:50%; opacity:0; background:var(--c1);
+      box-shadow:0 0 6px var(--c2); animation:thmBit 190ms ease-out forwards; animation-delay:var(--hit-at,260ms); }
+    @keyframes thmBit { 0% { opacity:0; transform:translate3d(0,0,0) scale(.4); } 25% { opacity:1; } 100% { opacity:0; transform:translate3d(var(--bx),var(--by),0) scale(1); } }
+    .thm-atk__flys { position:absolute; inset:0; z-index:6; }
+    .thm-atk__fly { position:absolute; left:50%; top:40%; width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%; opacity:0;
+      animation-duration:200ms; animation-fill-mode:forwards; animation-timing-function:ease-in; }
+    .thm-atk__line { position:absolute; left:50%; top:40%; width:0; height:0; z-index:5; rotate:var(--atk-rot); }
+    .thm-atk__line i { position:absolute; left:-6px; bottom:0; width:12px; height:var(--atk-len); opacity:0; transform-origin:50% 100%;
+      animation-duration:450ms; animation-fill-mode:forwards; }
+
+    /* モッチー: ぴょんと高く跳び、敵の真上からのしかかって、ぐしゃっとつぶれて跳ね返る */
+    .thm-atk--stomp { --c1:#ffe4ef; --c2:#f472b6; --c3:rgba(236,72,153,0); --hit-at:265ms; }
+    .thm-atk--stomp .thm-atk__monster { animation-name:thmStomp; }
+    @keyframes thmStomp {
+      0% { transform:translate3d(0,0,0) scale(1); }
+      12% { transform:translate3d(0,6px,0) scale(1.15,.8); }
+      40% { transform:translate3d(calc(var(--atk-dx) * .55),calc(var(--atk-dy) * .55 - 70px),0) scale(.92,1.12) rotate(-8deg); }
+      52% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 46px),0) scale(1,1.05) rotate(0deg); }
+      60% { transform:translate3d(calc(var(--atk-dx) * .97),calc(var(--atk-dy) * .97 + 4px),0) scale(1.4,.68); }
+      72% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9 - 16px),0) scale(.95,1.08); }
+      86% { transform:translate3d(calc(var(--atk-dx) * .3),calc(var(--atk-dy) * .3 - 18px),0) scale(1); }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+
+    /* スエゾー: 大きな目に光をためて、敵へまっすぐ光線を撃つ(本体は反動で小さく震える) */
+    .thm-atk--beam { --c1:#fef9c3; --c2:#facc15; --c3:rgba(250,204,21,0); --hit-at:140ms; }
+    .thm-atk--beam .thm-atk__monster { animation-name:thmBeamBody; }
+    .thm-atk--beam .thm-atk__line { top:38%; }
+    .thm-atk--beam .thm-atk__line i { width:14px; left:-7px; border-radius:999px;
+      background:linear-gradient(90deg,rgba(250,204,21,0),#fde047 22%,#fff 50%,#fde047 78%,rgba(250,204,21,0));
+      box-shadow:0 0 12px #fde047,0 0 24px rgba(250,204,21,.8); animation-name:thmBeam; }
+    .thm-atk--beam .thm-atk__core, .thm-atk--beam .thm-atk__ring { animation-duration:300ms; }
+    @keyframes thmBeamBody {
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      18% { transform:translate3d(0,4px,0) scale(1.1,.92); filter:drop-shadow(0 0 14px #fde047); }
+      30% { transform:translate3d(calc(var(--atk-dx) * -.04),calc(var(--atk-dy) * -.04),0) scale(1.08); filter:drop-shadow(0 0 20px #fff); }
+      42% { transform:translate3d(calc(var(--atk-dx) * -.03 + 2px),calc(var(--atk-dy) * -.03),0) scale(1.08); }
+      54% { transform:translate3d(calc(var(--atk-dx) * -.04 - 2px),calc(var(--atk-dy) * -.04),0) scale(1.08); }
+      70% { transform:translate3d(0,0,0) scale(1.02); filter:drop-shadow(0 0 10px #fde047); }
+      100% { transform:translate3d(0,0,0) scale(1); filter:none; }
+    }
+    @keyframes thmBeam {
+      0%,22% { opacity:0; transform:scaleY(0) scaleX(.4); }
+      30% { opacity:1; transform:scaleY(1) scaleX(1.5); }
+      40% { opacity:1; transform:scaleY(1) scaleX(.8); }
+      50% { opacity:1; transform:scaleY(1) scaleX(1.3); }
+      62% { opacity:1; transform:scaleY(1) scaleX(1); }
+      74%,100% { opacity:0; transform:scaleY(1) scaleX(.1); }
+    }
+
+    /* ゴーレム: 両腕を上げて地面を叩き、足元から岩を3つ敵へ投げ飛ばす */
+    .thm-atk--rocks { --c1:#e7d7c1; --c2:#a8865f; --c3:rgba(120,90,60,0); --hit-at:330ms; }
+    .thm-atk--rocks .thm-atk__monster { animation-name:thmRocksBody; }
+    .thm-atk--rocks .thm-atk__core, .thm-atk--rocks .thm-atk__ring, .thm-atk--rocks .thm-atk__bit { animation-duration:120ms; }
+    .thm-atk__quake { position:absolute; left:50%; top:88%; width:60px; height:16px; margin:-8px 0 0 -30px; border-radius:50%; opacity:0; z-index:3;
+      border:3px solid rgba(231,215,193,.9); box-shadow:0 0 10px rgba(168,134,95,.9); animation:thmQuake 250ms ease-out 110ms forwards; }
+    @keyframes thmQuake { 0% { opacity:0; transform:scale(.3); } 30% { opacity:1; } 100% { opacity:0; transform:scale(2,1.4); } }
+    @keyframes thmRocksBody {
+      0% { transform:translate3d(0,0,0) scale(1); }
+      15% { transform:translate3d(0,-12px,0) scale(1.06,1.1); }
+      28% { transform:translate3d(0,6px,0) scale(1.14,.86); }
+      40% { transform:translate3d(0,0,0) scale(1); }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .thm-atk--rocks .thm-atk__fly { top:84%; width:16px; height:14px; margin:-7px 0 0 -8px; border-radius:30%;
+      clip-path:polygon(20% 0,80% 8%,100% 55%,72% 100%,18% 92%,0 40%);
+      background:linear-gradient(135deg,#e7d7c1,#a8865f 55%,#6b4f33); animation-name:thmRock; animation-duration:230ms; animation-timing-function:linear; }
+    @keyframes thmRock {
+      0% { opacity:0; transform:translate3d(var(--fx),0,0) rotate(0deg) scale(.5); }
+      10% { opacity:1; }
+      50% { opacity:1; transform:translate3d(calc(var(--atk-dx) * .5 + var(--fx) * .5),calc(var(--atk-dy) * .5 - 50px),0) rotate(200deg) scale(1.2); }
+      92% { opacity:1; transform:translate3d(calc(var(--atk-dx) + var(--fx) * .4),calc(var(--atk-dy) + var(--fy)),0) rotate(380deg) scale(1); }
+      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--fx) * .4),calc(var(--atk-dy) + var(--fy)),0) rotate(400deg) scale(.6); }
+    }
+
+    /* ライガー: 身を低くして敵へ飛びかかり、爪で3本ひっかく */
+    .thm-atk--claw { --c1:#fee2e2; --c2:#ef4444; --c3:rgba(239,68,68,0); --hit-at:190ms; }
+    .thm-atk--claw .thm-atk__monster { animation-name:thmClawBody; }
+    .thm-atk--claw .thm-atk__core { width:60px; height:60px; left:-30px; top:-30px; }
+    .thm-atk--claw .thm-atk__bit { left:-3px; top:-34px; width:6px; height:68px; border-radius:999px; rotate:28deg; translate:var(--bx) 0;
+      background:linear-gradient(180deg,rgba(255,255,255,0),#fff 30%,#fecaca 60%,rgba(239,68,68,0)); box-shadow:0 0 8px #ef4444;
+      animation-name:thmClaw; animation-duration:150ms; }
+    @keyframes thmClaw { 0% { opacity:0; transform:scaleY(.1); } 35% { opacity:1; transform:scaleY(1); } 100% { opacity:0; transform:scaleY(1.1) scaleX(.4); } }
+    @keyframes thmClawBody {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      12% { transform:translate3d(calc(var(--atk-dx) * -.05),calc(var(--atk-dy) * -.05 + 6px),0) scale(1.1,.88); }
+      32% { transform:translate3d(calc(var(--atk-dx) * .82),calc(var(--atk-dy) * .82),0) scale(1.2) rotate(calc(var(--atk-rot) * .3)); }
+      42% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9),0) scale(1.25,1.1) rotate(calc(var(--atk-rot) * .3 - 14deg)); }
+      55% { transform:translate3d(calc(var(--atk-dx) * .86),calc(var(--atk-dy) * .86),0) scale(1.2) rotate(calc(var(--atk-rot) * .3 + 10deg)); }
+      72% { transform:translate3d(calc(var(--atk-dx) * .55),calc(var(--atk-dy) * .55 - 14px),0) scale(1.05) rotate(0deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+    }
+
+    /* ハム: 敵へ詰め寄って、すばやく3発パンチ */
+    .thm-atk--punch { --c1:#fff7ed; --c2:#f59e0b; --c3:rgba(245,158,11,0); --hit-at:145ms; }
+    .thm-atk--punch .thm-atk__monster { animation-name:thmPunchBody; }
+    .thm-atk--punch .thm-atk__core, .thm-atk--punch .thm-atk__ring { animation-duration:300ms; }
+    .thm-atk--punch .thm-atk__bit { left:-11px; top:-11px; width:22px; height:22px; border-radius:0; translate:var(--bx) var(--by);
+      clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+      background:radial-gradient(circle,#fff 0 30%,#fde68a 60%,#f59e0b); animation-name:thmStar; animation-duration:110ms; }
+    @keyframes thmStar { 0% { opacity:0; transform:scale(.3) rotate(0deg); } 40% { opacity:1; transform:scale(1.2) rotate(20deg); } 100% { opacity:0; transform:scale(1.5) rotate(40deg); } }
+    @keyframes thmPunchBody {
+      0% { transform:translate3d(0,0,0) scale(1); }
+      10% { transform:translate3d(0,6px,0) scale(1.08,.9); }
+      26% { transform:translate3d(calc(var(--atk-dx) * .78),calc(var(--atk-dy) * .78),0) scale(1.1); }
+      33% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9),0) scale(1.2,1.05); }
+      39% { transform:translate3d(calc(var(--atk-dx) * .78),calc(var(--atk-dy) * .78),0) scale(1.08); }
+      46% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.2,1.05); }
+      52% { transform:translate3d(calc(var(--atk-dx) * .78),calc(var(--atk-dy) * .78),0) scale(1.08); }
+      59% { transform:translate3d(calc(var(--atk-dx) * .93),calc(var(--atk-dy) * .93),0) scale(1.24,1.06); }
+      72% { transform:translate3d(calc(var(--atk-dx) * .6),calc(var(--atk-dy) * .6 - 12px),0) scale(1.04); }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+
+    /* ピクシー: 少し浮いて魔法陣を広げ、魔法の弾を3発、ゆらしながら敵へ飛ばす */
+    .thm-atk--magic { --c1:#fae8ff; --c2:#d946ef; --c3:rgba(217,70,239,0); --hit-at:300ms; }
+    .thm-atk--magic .thm-atk__monster { animation-name:thmMagicBody; }
+    .thm-atk--magic .thm-atk__core, .thm-atk--magic .thm-atk__ring, .thm-atk--magic .thm-atk__bit { animation-duration:150ms; }
+    .thm-atk__circle { position:absolute; left:50%; top:50%; width:74px; height:74px; margin:-37px 0 0 -37px; z-index:2; opacity:0;
+      animation:thmCircle 420ms ease-out forwards; }
+    .thm-atk__circle i { position:absolute; inset:0; border:2px solid rgba(240,171,252,.95); border-radius:50%; box-shadow:0 0 10px #d946ef, inset 0 0 8px #f0abfc; }
+    .thm-atk__circle i:nth-child(2) { inset:10px; border-style:dashed; }
+    @keyframes thmCircle { 0% { opacity:0; transform:scale(.3) rotate(0deg); } 20% { opacity:1; transform:scale(1) rotate(80deg); } 75% { opacity:.9; transform:scale(1.05) rotate(260deg); } 100% { opacity:0; transform:scale(1.3) rotate(320deg); } }
+    @keyframes thmMagicBody {
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      20% { transform:translate3d(0,-10px,0) scale(1.06); filter:drop-shadow(0 0 14px #f0abfc); }
+      60% { transform:translate3d(0,-12px,0) scale(1.06); filter:drop-shadow(0 0 18px #d946ef); }
+      100% { transform:translate3d(0,0,0) scale(1); filter:none; }
+    }
+    .thm-atk--magic .thm-atk__fly { top:42%; background:radial-gradient(circle,#fff 0 25%,#f0abfc 50%,#d946ef 75%,rgba(217,70,239,0));
+      box-shadow:0 0 10px #d946ef,0 0 18px #f0abfc; animation-name:thmOrb; }
+    @keyframes thmOrb {
+      0% { opacity:0; transform:translate3d(0,0,0) scale(.4); }
+      15% { opacity:1; }
+      50% { opacity:1; transform:translate3d(calc(var(--atk-dx) * .5 + var(--fx)),calc(var(--atk-dy) * .5 + var(--fy) * .3),0) scale(1.1); }
+      100% { opacity:.2; transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(.9); }
+    }
+
+    /* モノリス: 敵の真上まで浮かび上がり、まっすぐ落ちて押しつぶす */
+    .thm-atk--crush { --c1:#ede9fe; --c2:#6d28d9; --c3:rgba(76,29,149,0); --hit-at:265ms; }
+    .thm-atk--crush .thm-atk__monster { animation-name:thmCrush; }
+    .thm-atk--crush .thm-atk__bit { left:-2px; top:-2px; width:4px; height:34px; border-radius:2px; transform-origin:50% 0; rotate:var(--ba);
+      background:linear-gradient(180deg,#ede9fe,#6d28d9); animation-name:thmCrack; }
+    @keyframes thmCrack { 0% { opacity:0; transform:scaleY(0); } 30% { opacity:1; transform:scaleY(1); } 100% { opacity:0; transform:scaleY(1.2); } }
+    @keyframes thmCrush {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      12% { transform:translate3d(0,6px,0) scale(1.05,.92); }
+      38% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 95px),0) scale(1.1) rotate(-4deg); }
+      50% { transform:translate3d(calc(var(--atk-dx) + 3px),calc(var(--atk-dy) - 100px),0) scale(1.1) rotate(4deg); }
+      60% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 8px),0) scale(1.18,.86) rotate(0deg); }
+      72% { transform:translate3d(calc(var(--atk-dx) * .95),calc(var(--atk-dy) * .95 - 26px),0) scale(1); }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+
+    /* オボロゲソウ: 体を揺らして、青い花びらを7枚、うずを巻くように敵へ吹きつける */
+    .thm-atk--petals { --c1:#dbeafe; --c2:#3b82f6; --c3:rgba(59,130,246,0); --hit-at:260ms; }
+    .thm-atk--petals .thm-atk__monster { animation-name:thmPetalsBody; }
+    @keyframes thmPetalsBody {
+      0% { transform:rotate(0deg) scale(1); }
+      20% { transform:rotate(-8deg) scale(1.05); }
+      45% { transform:rotate(8deg) scale(1.06); }
+      70% { transform:rotate(-5deg) scale(1.03); }
+      100% { transform:rotate(0deg) scale(1); }
+    }
+    .thm-atk--petals .thm-atk__fly { top:34%; width:20px; height:13px; margin:-6px 0 0 -10px; border-radius:80% 10% 80% 10%;
+      background:linear-gradient(135deg,#eff6ff,#60a5fa 60%,#1d4ed8); box-shadow:0 0 8px #93c5fd; animation-name:thmPetal; animation-duration:200ms; }
+    @keyframes thmPetal {
+      0% { opacity:0; transform:translate3d(0,0,0) rotate(0deg) scale(.5); }
+      15% { opacity:1; }
+      55% { opacity:1; transform:translate3d(calc(var(--atk-dx) * .5 + var(--fx)),calc(var(--atk-dy) * .5 + var(--fy) * .4),0) rotate(260deg) scale(1.2); }
+      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--fx) * .3),calc(var(--atk-dy) + var(--fy) * .2),0) rotate(520deg) scale(.8); }
+    }
+
+    /* プラント: 茎からつるを敵まで伸ばして、ぴしっとはたく */
+    .thm-atk--vine { --c1:#dcfce7; --c2:#22c55e; --c3:rgba(34,197,94,0); --hit-at:180ms; }
+    .thm-atk--vine .thm-atk__monster { animation-name:thmVineBody; }
+    .thm-atk--vine .thm-atk__line { top:46%; }
+    .thm-atk--vine .thm-atk__line i { width:8px; left:-4px; border-radius:999px;
+      background:linear-gradient(90deg,#14532d,#22c55e 40%,#86efac 55%,#16a34a); box-shadow:0 0 6px rgba(34,197,94,.8); animation-name:thmVine; }
+    .thm-atk--vine .thm-atk__bit { left:-6px; top:-4px; width:12px; height:8px; border-radius:80% 10% 80% 10%; background:linear-gradient(135deg,#bbf7d0,#16a34a); }
+    @keyframes thmVineBody {
+      0% { transform:translate3d(0,0,0) scale(1); }
+      15% { transform:translate3d(0,4px,0) scale(1.05,.94); }
+      38% { transform:translate3d(0,0,0) scale(1.08) rotate(calc(var(--atk-rot) * .1)); }
+      62% { transform:translate3d(0,0,0) scale(1.04) rotate(0deg); }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    @keyframes thmVine {
+      0%,10% { opacity:0; transform:scaleY(0) rotate(0deg); }
+      14% { opacity:1; }
+      38% { opacity:1; transform:scaleY(1.02) rotate(0deg); }
+      46% { transform:scaleY(1) rotate(-7deg); }
+      54% { transform:scaleY(1) rotate(6deg); }
+      62% { opacity:1; transform:scaleY(1) rotate(0deg); }
+      82% { opacity:1; transform:scaleY(0) rotate(0deg); }
+      100% { opacity:0; transform:scaleY(0); }
+    }
+
+    /* ミタラシ: 息を吸い込んで、口から炎を吐く */
+    .thm-atk--fire { --c1:#fef3c7; --c2:#f97316; --c3:rgba(220,38,38,0); --hit-at:270ms; }
+    .thm-atk--fire .thm-atk__monster { animation-name:thmFireBody; }
+    .thm-atk--fire .thm-atk__core { width:100px; height:100px; left:-50px; top:-50px; }
+    @keyframes thmFireBody {
+      0% { transform:translate3d(0,0,0) scale(1); }
+      18% { transform:translate3d(calc(var(--atk-dx) * -.04),calc(var(--atk-dy) * -.04 + 3px),0) scale(1.05,1.1); }
+      30% { transform:translate3d(calc(var(--atk-dx) * .06),calc(var(--atk-dy) * .06),0) scale(1.1,.95); }
+      50% { transform:translate3d(calc(var(--atk-dx) * .05 + 1px),calc(var(--atk-dy) * .05),0) scale(1.1,.95); }
+      70% { transform:translate3d(calc(var(--atk-dx) * .06 - 1px),calc(var(--atk-dy) * .06),0) scale(1.1,.95); }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .thm-atk--fire .thm-atk__fly { top:30%; width:30px; height:30px; margin:-15px 0 0 -15px;
+      background:radial-gradient(circle,#fff 0 18%,#fde047 38%,#f97316 62%,rgba(220,38,38,0)); animation-name:thmFlame; animation-duration:190ms; }
+    @keyframes thmFlame {
+      0% { opacity:0; transform:translate3d(0,0,0) scale(.3); }
+      15% { opacity:1; }
+      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--fx)),calc(var(--atk-dy) + var(--fy)),0) scale(2.2); }
+    }
+
+    /* 動きを減らす設定: 本体は光るだけ、飛ぶもの・線は出さず、着弾の光だけ */
+    @media (prefers-reduced-motion: reduce) {
+      .thm-atk__monster { animation:thmReduced 450ms ease-out forwards !important; }
+      .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__quake, .thm-atk__bit { display:none; }
+      @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
     }
     /* 敵の側に出す着弾(24-battle-fx.jsx の AttackTargetFx)。敵の丸枠の中心に重ね、攻撃の尺の中で消える。 */
     .atk-target-fx { position:absolute; left:50%; top:50%; width:0; height:0; z-index:9500; pointer-events:none; overflow:visible; }
