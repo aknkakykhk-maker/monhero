@@ -726,6 +726,8 @@ function MonsterHeroGame() {
   //   味方への効果は対象の味方や使ったモンスター」)。カードの効果は40か所以上から addPopup を呼ぶので、
   //   1つずつ枠を渡さず、カードを1枚処理しているあいだだけここへ使った子の枠を置く
   const popupSlotRef = useRef(null);
+  // 手札のカードを最後に押した時刻(ダブルタップで説明を出すため)。{ i:手札の位置, t:時刻 }
+  const cardTapRef = useRef({ i: null, t: 0 });
   const [effect, setEffect] = useState(null);
   const [enemyIntent, setEnemyIntent] = useState(null);
   // 直前に敵が実行した行動。SCANが「ためた直後なので次は必殺技で確定」「移動した直後なので
@@ -9265,10 +9267,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // カード選択(タップ/ドラッグ共通)。
   // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
   // 合計DMG・合計軽減の表示が隠れてしまうため、スワイプではパネルを出さない。
+  // ★説明のパネルは**ダブルタップ**で出す(2026-09-24 ユーザー指示「カードタップ後の詳細画面が
+  //   毎回出るのが鬱陶しい」「長押しはカードをモンスターに移動してはめると相性が悪い。ダブルタップのほうが良さそう」)。
+  //   1回目のタップはいつもどおり選ぶ・外すだけで、パネルは閉じる。同じカードを CARD_DOUBLE_TAP_MS 以内に
+  //   もう一度押したら、選び直さずにパネルだけ出す(2回目で選択が外れないように)
   const selectCardAt = (i, showDetail = true) => {
     if(isBusy||autoBattleRef.current) return;
     const c=hand[i]; if(!c) return;
-    const focus=(card)=>setFocusedCard(showDetail?card:null);
+    if(showDetail){
+      const now=Date.now(), last=cardTapRef.current;
+      if(last.i===i&&now-last.t<=CARD_DOUBLE_TAP_MS){ cardTapRef.current={ i:null, t:0 }; setFocusedCard(c); return; }
+      cardTapRef.current={ i, t:now };
+    }
+    const focus=()=>setFocusedCard(null);
     if(pendingCard!==null && pendingCard!==i){ focus(c); return; }
     const isSel=selectedCards.includes(i);
     if(isSel){
