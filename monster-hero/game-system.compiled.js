@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4a70c631e6a91ddb
+// source-sha256: 088e559ac0900c6f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 00959f8a2648bf73
+// generated-sha256: 69c7229ceadb9ec4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -168,15 +168,45 @@ const BATTLE_SCREEN_STYLE_LABELS = Object.freeze([{
 // 見た目だけに効き、戦闘の計算・進行・ランキングには触れない。保存は新しいキー1つに項目をまとめる。
 // ★読むときは必ず normalizeBattleFxSettings を通す。項目を足しても、足す前に保存した人は既定値で補われる
 const BATTLE_FX_SETTINGS_KEY = 'mh_battle_fx_v1';
+// 画面の軽さの段階。軽いほど動きと飾りを減らす(見た目だけ。戦闘の計算・進行・ランキングには触れない)
+//   RICH     … 豪華。すべての飾りと演出(いままでの見た目)
+//   STANDARD … 標準。枠・カード・輪の飾りの動き(光の筋・またたき・回転)を止める。飾りの見た目・モンスターの待機・攻撃の演出は残す
+//   LIGHT    … 軽め。さらに敵と味方の待機の動きを止め、敵の攻撃の全画面の演出を当たりの光と技名だけにする
+//   MINIMAL  … 最軽量。省エネの「軽量」と同じ表示をバトルで使う
+const BATTLE_FX_LOADS = Object.freeze(['RICH', 'STANDARD', 'LIGHT', 'MINIMAL']);
 const normalizeBattleFxSettings = value => {
   const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return {
     idleMotion: v.idleMotion === 'OFF' ? 'OFF' : 'ON',
-    shake: v.shake === 'OFF' ? 'OFF' : 'ON'
+    shake: v.shake === 'OFF' ? 'OFF' : 'ON',
+    // 画面の軽さ(2026-09-24 ユーザー指示「バトル設定で軽い画面でも出来るの作って 4種類ぐらい」)。
+    // ★足す前に保存した人(load が無い)は RICH(いままでの見た目)で始まる
+    load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH'
   };
 };
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
 const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
+  key: 'load',
+  title: '画面の軽さ',
+  desc: 'バトル画面の飾りと演出の量です。スマホが熱くなる・動きがかくつくときは、軽いほうを選んでください。ダメージや進行は変わりません。',
+  options: [{
+    id: 'RICH',
+    label: '豪華',
+    note: 'すべての飾りと演出'
+  }, {
+    id: 'STANDARD',
+    label: '標準',
+    note: '飾りの動きを止める'
+  }, {
+    id: 'LIGHT',
+    label: '軽め',
+    note: '待機の動きも止める'
+  }, {
+    id: 'MINIMAL',
+    label: '最軽量',
+    note: 'いちばん軽い表示'
+  }]
+}, {
   key: 'idleMotion',
   title: '待機中の動き',
   desc: '待っているあいだのモンスターの動き（翼の羽ばたき・しっぽや花の揺れなど）と、タクティクス新画面の枠の飾り・敵の待機の動き、WAVEのあとの画面の飾りの動きです。攻撃の演出はどちらでも出ます。',
@@ -216,7 +246,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 23:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 23:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -41343,12 +41373,14 @@ const TACTICS_CRACK_PATHS = Object.freeze(['M0 0 L40 -22 L78 -18 L120 -52 L170 -
 // 敵の技の、画面全体に重ねる演出(body の直下へ出す)。攻撃が狙われた味方の枠まで飛んで当たる / 必殺技は画面を暗くする /
 // 覚醒ムーは技名のカットイン・技ごとの全画面の演出・ひび割れも出す。
 // ★位置は出す瞬間に1回だけ測る(敵の丸枠と味方の枠)。動きの途中で測り直すと、跳ねている絵の位置を拾ってしまう
+// lite: 画面の軽さ「軽め」。飛ばすもの・画面を暗くする・覚醒ムーの全画面の演出を省き、当たりの光と技名だけにする
 const TacticsEnemyStageFx = ({
   fx,
   motion,
   isMoo,
   enemyId,
-  skillLabel
+  skillLabel,
+  lite = false
 }) => {
   const [geo, setGeo] = useState(null);
   React.useLayoutEffect(() => {
@@ -41419,7 +41451,7 @@ const TacticsEnemyStageFx = ({
       '--sx': `${sx}px`,
       '--sy': `${sy}px`
     }
-  }, (skill === 'special' || isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill)) && /*#__PURE__*/React.createElement("div", {
+  }, !lite && (skill === 'special' || isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill)) && /*#__PURE__*/React.createElement("div", {
     "data-stage-dim": true,
     style: {
       background: `radial-gradient(circle at ${sx}px ${sy}px, transparent ${Math.round(sr * 1.15)}px, rgba(0,0,0,.74) ${Math.round(sr * 1.15 + 110)}px)`
@@ -41432,7 +41464,7 @@ const TacticsEnemyStageFx = ({
     const from = Math.max(0, h - 0.22);
     return /*#__PURE__*/React.createElement(React.Fragment, {
       key: `${t.i}-${k}`
-    }, /*#__PURE__*/React.createElement("i", {
+    }, !lite && /*#__PURE__*/React.createElement("i", {
       "data-strike": trail,
       "data-big": big ? 'true' : undefined,
       style: {
@@ -41460,14 +41492,14 @@ const TacticsEnemyStageFx = ({
     "data-moo-cutin": true
   }, /*#__PURE__*/React.createElement("div", {
     "data-moo-cutin-band": true
-  }, /*#__PURE__*/React.createElement("span", null, skillLabel))), isMoo && skill === 'normal' && [0, 1, 2].map(k => /*#__PURE__*/React.createElement("i", {
+  }, /*#__PURE__*/React.createElement("span", null, skillLabel))), isMoo && !lite && skill === 'normal' && [0, 1, 2].map(k => /*#__PURE__*/React.createElement("i", {
     key: k,
     "data-moo-claw": true,
     style: {
       top: `${46 + k * 7}%`,
       animationDelay: at(0.5 + k * 0.04)
     }
-  })), isMoo && skill === 'rush' && geo.all.concat(geo.all).map((t, k) => /*#__PURE__*/React.createElement("i", {
+  })), isMoo && !lite && skill === 'rush' && geo.all.concat(geo.all).map((t, k) => /*#__PURE__*/React.createElement("i", {
     key: k,
     "data-impact": "nova",
     "data-big": "true",
@@ -41478,21 +41510,21 @@ const TacticsEnemyStageFx = ({
       animationDelay: at(0.25 + k * 0.07),
       animationDuration: '380ms'
     }
-  })), isMoo && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map(k => /*#__PURE__*/React.createElement("i", {
+  })), isMoo && !lite && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map(k => /*#__PURE__*/React.createElement("i", {
     key: k,
     "data-moo-meteor": true,
     style: {
       left: `${8 + k * 29 % 90}%`,
       animationDelay: at(0.18 + k * 0.07)
     }
-  }, "\u2604\uFE0F")), isMoo && skill === 'allout' && [0, 1, 2].map(k => /*#__PURE__*/React.createElement("i", {
+  }, "\u2604\uFE0F")), isMoo && !lite && skill === 'allout' && [0, 1, 2].map(k => /*#__PURE__*/React.createElement("i", {
     key: k,
     "data-moo-tornado": true,
     style: {
       top: `${44 + k * 14}%`,
       animationDelay: at(0.22 + k * 0.1)
     }
-  }, "\uD83C\uDF2A\uFE0F")), isMoo && skill === 'roar' && [0, 1, 2, 3, 4, 5].map(k => /*#__PURE__*/React.createElement("i", {
+  }, "\uD83C\uDF2A\uFE0F")), isMoo && !lite && skill === 'roar' && [0, 1, 2, 3, 4, 5].map(k => /*#__PURE__*/React.createElement("i", {
     key: k,
     "data-moo-bolt": true,
     style: {
@@ -41500,7 +41532,7 @@ const TacticsEnemyStageFx = ({
       top: `${8 + k * 53 % 70}%`,
       animationDelay: at(0.18 + k * 0.08)
     }
-  }, "\u26A1")), isMoo && skill === 'regen' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("i", {
+  }, "\u26A1")), isMoo && !lite && skill === 'regen' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("i", {
     "data-moo-heaven": true
   }), [0, 1, 2, 3, 4, 5].map(k => /*#__PURE__*/React.createElement("i", {
     key: k,
@@ -41509,7 +41541,7 @@ const TacticsEnemyStageFx = ({
       left: `${20 + k * 12}%`,
       animationDelay: at(0.1 + k * 0.08)
     }
-  }, k % 2 ? '✨' : '🪶'))), isMoo && skill === 'charge' && [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => /*#__PURE__*/React.createElement("i", {
+  }, k % 2 ? '✨' : '🪶'))), isMoo && !lite && skill === 'charge' && [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => /*#__PURE__*/React.createElement("i", {
     key: k,
     "data-moo-gather": true,
     style: {
@@ -41517,7 +41549,7 @@ const TacticsEnemyStageFx = ({
       '--gy': `${Math.sin(k * 0.63) * 200}px`,
       animationDelay: at(k * 0.06)
     }
-  })), isMoo && skill === 'pierceCharge' && geo.all.map((t, k) => /*#__PURE__*/React.createElement("i", {
+  })), isMoo && !lite && skill === 'pierceCharge' && geo.all.map((t, k) => /*#__PURE__*/React.createElement("i", {
     key: k,
     "data-moo-reticle": true,
     style: {
@@ -41530,7 +41562,7 @@ const TacticsEnemyStageFx = ({
     style: {
       animationDelay: at(skill === 'special' ? 0.78 : hit)
     }
-  }), isMoo && TACTICS_MOO_CRACK_SKILLS.includes(skill) && (() => {
+  }), isMoo && !lite && TACTICS_MOO_CRACK_SKILLS.includes(skill) && (() => {
     const t = geo.slots[0] || geo.all[0] || {
       x: geo.vw / 2,
       y: geo.vh * 0.6
@@ -41740,7 +41772,10 @@ function BattleScreen({
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
   // 設定の「待機中の動き：止める」と「画面の揺れ：揺らさない」(見た目だけ。攻撃の演出と情報は消さない)
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
-  const idleMotionOff = battleFx.idleMotion === 'OFF';
+  // 画面の軽さ(豪華/標準/軽め/最軽量)。最軽量は 60-app が liteBattleView(軽量表示)にしてから渡してくる。
+  // 軽めは「待機中の動き：止める」と同じく、敵と味方の待機の動きを止める
+  const fxLoad = battleFx.load;
+  const idleMotionOff = battleFx.idleMotion === 'OFF' || fxLoad === 'LIGHT';
   const shakeOff = battleFx.shake === 'OFF';
   // 敵の攻撃(ためるを含む)を絵だけで動かす場面。移動とムーは今までどおり丸枠ごと
   const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
@@ -41966,6 +42001,7 @@ function BattleScreen({
     "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off',
     "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined,
     "data-fx-rest": tacticsNewLayout && fxRest ? 'true' : undefined,
+    "data-fx-level": tacticsNewLayout ? fxLoad : undefined,
     "data-moo-front": tacticsNewLayout && enemyIsMoo && !enemyAttackAnim ? 'true' : undefined
   }, /*#__PURE__*/React.createElement("div", {
     "data-battle-stage-bg": true,
@@ -42409,7 +42445,8 @@ function BattleScreen({
     motion: enemyMotion,
     isMoo: enemyIsMoo,
     enemyId: enemy?.id,
-    skillLabel: enemySkillName?.label || null
+    skillLabel: enemySkillName?.label || null,
+    lite: fxLoad === 'LIGHT'
   }), enemySkillName && !(enemyIsMoo && emSet && enemyAttackFx?.skill && TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill)) && ReactDOM.createPortal(/*#__PURE__*/React.createElement("div", {
     className: "fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap",
     style: {
@@ -47351,7 +47388,10 @@ function MonsterHeroGame() {
     const currentIndex = ECO_MODES.indexOf(ecoModeRef.current);
     return setEcoModeSafe(ECO_MODES[(currentIndex + 1) % ECO_MODES.length]);
   };
-  const liteBattleView = gameState === 'BATTLE' && ecoMode === 'lite';
+  const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
+  // バトル設定の「画面の軽さ」。最軽量は、省エネの「軽量」と同じ表示をバトルで使う
+  const battleFxLoad = normalizeBattleFxSettings(battleFxSettings).load;
+  const liteBattleView = gameState === 'BATTLE' && (ecoMode === 'lite' || battleFxLoad === 'MINIMAL');
   // 表示・音声だけに使う超省エネ∞セッション。BATTLEを離れる中間画面や最終リザルトでも維持する。
   const ultraEcoSession = ecoMode === 'ultra' && autoRepeat === true;
   const ultraBattleView = gameState === 'BATTLE' && ultraEcoSession;
@@ -48498,8 +48538,8 @@ function MonsterHeroGame() {
     setBattleScreenStyleState(value);
     storeSet(BATTLE_SCREEN_STYLE_KEY, value, false);
   };
-  // バトル設定(待機中の動き・画面の揺れ)。1項目ずつ変えても、ほかの項目はそのまま残す
-  const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
+  // バトル設定(待機中の動き・画面の揺れ・画面の軽さ)。1項目ずつ変えても、ほかの項目はそのまま残す。
+  // ★宣言は上(liteBattleView の手前)にある。「画面の軽さ：最軽量」で軽量表示を使うため
   const setBattleFxSetting = (key, value) => {
     setBattleFxSettingsState(prev => {
       const next = normalizeBattleFxSettings({
@@ -65493,7 +65533,8 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       "data-mh-view-rotation": forcedRotationStyle ? 'true' : 'false',
       "data-mh-portrait-layout": portraitOnlyScreen ? 'true' : 'false',
-      "data-phase-look": ecoMode === 'lite' || ultraEcoSession || normalizeBattleFxSettings(battleFxSettings).idleMotion === 'OFF' ? 'calm' : 'rich',
+      "data-phase-look": ecoMode === 'lite' || ultraEcoSession || normalizeBattleFxSettings(battleFxSettings).idleMotion === 'OFF' || battleFxLoad === 'LIGHT' || battleFxLoad === 'MINIMAL' ? 'calm' : 'rich',
+      "data-fx-level": battleFxLoad,
       onPointerDown: rippleOnPointerDown,
       onPointerMove: rippleOnPointerMove,
       onPointerUp: rippleOnPointerEnd,
@@ -77830,6 +77871,21 @@ const createAnimationStyle = () => {
        ② 動き続ける層に付いた影(filter)を外す。iPhone では、動く層の影は毎コマ GPU でぼかし直しになる。
           外すのは見た目にほとんど効いていないもの(味方の影は濃さ 7%)と、足元の影・光の輪で代わりが出ているものだけ */
     [data-tactics-look][data-fx-rest] *, [data-tactics-look][data-fx-rest] *::before, [data-tactics-look][data-fx-rest] *::after { animation-play-state: paused !important; }
+    /* ==== 画面の軽さ(バトル設定。data-fx-level)(2026-09-24 ユーザー指示「バトル設定で軽い画面でも出来るの作って 4種類ぐらい」) ====
+       標準: 枠・カード・輪の飾りの動き(光の筋・またたき・回転・ライフの帯の光)を止める。見た目は止まった形で残る。
+             モンスターの待機の動き・攻撃の演出はそのまま
+       軽め: data-tactics-look が calm になり、待機の動きも止まる(ここではすりガラスも外す)
+       最軽量: 60-app が軽量表示(liteBattleView)にする */
+    [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-ring], [data-card-shine], [data-enemy-ring])::before,
+    [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-index], [data-card-gem], [data-enemy-hpbar])::after,
+    [data-tactics-look][data-fx-level="STANDARD"] [data-slot-circle] { animation: none !important; }
+    [data-tactics-look]:is([data-fx-level="LIGHT"], [data-fx-level="MINIMAL"]) * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+    /* 最軽量は、次の行動の札・狙われている枠の点滅(animate-pulse)も止め、何も動き続けない画面にする */
+    [data-tactics-look][data-fx-level="MINIMAL"] .animate-pulse { animation: none !important; }
+    /* WAVEのあとの画面(強化フェーズ)も、標準では飾りの動きだけを止める(軽め・最軽量は data-phase-look が calm になる) */
+    /* ★:is() の中に ::before などを書くと規則ごと無効になるので、擬似要素は外に出す */
+    [data-fx-level="STANDARD"] :is(.mh-ph-sparkle, .mh-ph-rune, .mh-ph-floor, .mh-ph-pip[data-next]),
+    [data-fx-level="STANDARD"] :is(.mh-ph-shine, .mh-ph-btn-gold)::before, [data-fx-level="STANDARD"] :is(.mh-ph-gem, .mh-ph-btn-gold)::after { animation: none !important; }
     [data-tactics-look] .mon-idle--rig { filter: none !important; }
     /* 味方の絵の影(drop-shadow-md。濃さ 6〜7%)も外す。待機の動きで揺れているので、4体ぶん毎コマ影を描き直していた */
     [data-tactics-look] .mon-idle img { filter: none !important; }
