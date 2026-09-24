@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6befed9cc012a465
+// generated-sha256: 93a9ccb2f3d2b0eb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -122,7 +122,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 17:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 17:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9099,9 +9099,20 @@ const DexLineageChip = ({ lineage, iconUrl }) => (
     <span className="text-[11px] font-black text-amber-100 truncate">{lineage.name}</span>
   </span>
 );
+// 立ち絵の <img> そのもの。待機アニメ(withMonsterIdleArt)は絵の要素を複製して重ねるので、
+// 部品(DexMonsterArt)ではなくこの要素を渡す
+const dexMonsterArtImage = (mon, alt, hidden=false) => (
+  <DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt={alt} masuColors={[]} draggable={false} className="w-full h-full object-contain" style={hidden?{filter:'brightness(0)',opacity:0.65}:undefined}/>
+);
 const DexMonsterArt = ({ mon, alt, hidden=false }) => mon.imgUrl
-  ? <DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt={alt} masuColors={[]} draggable={false} className="w-full h-full object-contain" style={hidden?{filter:'brightness(0)',opacity:0.65}:undefined}/>
+  ? dexMonsterArtImage(mon, alt, hidden)
   : <div className="text-6xl">{hidden?'？':mon.emoji}</div>;
+// 図鑑の立ち絵に待機アニメを重ねたもの(バトルと同じ MonsterIdleArt)。持たない子・まだ出会っていない子は今までの絵。
+// 待機アニメは正方形の箱の中で軸を合わせるので、正方形の箱(fill)に入れて渡す。
+// 軽量表示・「待機中の動き：止める」では画面全体の data-phase-look="calm" で CSS が止める
+const DexMonsterIdleArt = ({ mon, alt }) => (mon.imgUrl && monsterIdleRigOf(mon.id))
+  ? <span data-dex-idle-art className="relative block h-full aspect-square max-w-full">{withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt), {fill:true})}</span>
+  : <DexMonsterArt mon={mon} alt={alt}/>;
 const MarketProductIcon = ({ item, onZoom, disabled=false }) => {
   const content=item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>;
   const cls=`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${disabled?'':'active:scale-90'}`;
@@ -10990,11 +11001,14 @@ const MONSTER_IDLE_MASK_STYLE = (url) => ({
   WebkitMaskPosition:'center', maskPosition:'center',
   WebkitMaskRepeat:'no-repeat', maskRepeat:'no-repeat',
 });
-const MonsterIdleArt = ({baseId, image}) => {
-  const rig = MONSTER_IDLE_RIGS[baseId];
+// fill: 入れ物いっぱいに広げる(図鑑の立ち絵のように、絵が w-full h-full で大きさを持たないとき)。
+//   バトルの絵は幅・高さを px で持っているので要らない
+const MonsterIdleArt = ({baseId, image, fill = false}) => {
+  const rig = monsterIdleRigOf(baseId);
+  const fillClass = fill ? ' mon-idle--fill' : '';
   if (!rig || !image) return image || null;
   if (!rig.parts.length) {
-    return <span className={`mon-idle mon-idle--${rig.body}`}>{image}</span>;
+    return <span className={`mon-idle mon-idle--${rig.body}${fillClass}`} data-monster-idle={baseId}>{image}</span>;
   }
   // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと「体」の層に部分の影が残り、
   //   部分を動かしたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体に1回だけ付ける
@@ -11008,13 +11022,28 @@ const MonsterIdleArt = ({baseId, image}) => {
     </span>
   );
   return (
-    <span className={`mon-idle mon-idle--${rig.body} mon-idle--rig`}>
+    <span className={`mon-idle mon-idle--${rig.body} mon-idle--rig${fillClass}`} data-monster-idle={baseId}>
       {rig.parts.filter(p => p.layer === 'back').map(partNode)}
       <span className="mon-idle__body">{layer(rig.bodyMask, null)}</span>
       {rig.parts.filter(p => p.layer !== 'back').map(partNode)}
     </span>
   );
 };
+// ==== 図鑑でもバトルと同じ待機アニメを出す入口(2026-09-24 ユーザー指示「モンスター図鑑にも同じ動きが出来る基盤を作っといて」) ====
+// 図鑑の詳細の立ち絵(DexMonsterIdleArt)と攻撃アクションの画面は、ここを通すだけにする。
+// 動かし方の正本は上の MONSTER_IDLE_RIGS(idle-rig-build.js が書く)なので、そこへ1体足せば
+// バトルと図鑑の両方で動き出す。図鑑の側でモンスターの名前を見て分岐しない。
+// ・軸の % は「正方形の枠」での値なので、図鑑は正方形の箱に入れて渡す(DexMonsterIdleArt)
+// ・軽量表示・「待機中の動き：止める」では、図鑑は画面全体の data-phase-look="calm" を見て CSS が止める
+const monsterIdleRigOf = (monsterId) => (monsterId && Object.prototype.hasOwnProperty.call(MONSTER_IDLE_RIGS, monsterId)) ? MONSTER_IDLE_RIGS[monsterId] : null;
+const withMonsterIdleArt = (monsterId, image, {enabled = true, fill = false} = {}) => (
+  enabled && monsterIdleRigOf(monsterId) ? <MonsterIdleArt baseId={monsterId} image={image} fill={fill}/> : image
+);
+// 図鑑の攻撃アクションで、動きの最中も待機アニメを重ねてよいか。バトル(71-screen-battle.jsx)は
+// 聖光・水・歌・通常の動きでは slotArt を通して重ね、パンドラの雷だけは重ねない(分身へ絵を複製するため)。
+// それに合わせる。バトル側の分け方を変えたら、ここも合わせる
+const MONSTER_IDLE_OFF_MOTIONS = Object.freeze(['pandoraDualThunder']);
+const monsterIdleAllowedDuring = (anim) => !anim || !MONSTER_IDLE_OFF_MOTIONS.includes(anim.motion);
 // エイキの攻撃中だけ重ねる桜の花びら。
 // 常時アニメーションにはせず、攻撃モーションが出ているあいだ(isAnimating)だけ描く。
 // スマホの負荷を増やしすぎないよう、要素は固定12枚・CSSアニメーション1本だけにして、
@@ -18647,7 +18676,8 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
               ここを大きくしないと図鑑の枠と同じ大きさのままになる)。
               拡大の基準は足元にして、伸びるぶんはすべて上の余白へ向ける */}
           <div data-attack-preview-art className="absolute left-1/2" style={{bottom:'11%',width:'clamp(132px, 44vw, 184px)',height:'clamp(132px, 44vw, 184px)',transform:'translateX(-50%) scale(1.15)',transformOrigin:'bottom center'}}>
-            <BattleAttackMotionPreview image={<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>
+            {/* 待機アニメ(翼の羽ばたきなど)もバトルと同じ場面で重ねる。持たない子は今までどおり1枚の絵 */}
+            <BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {enabled:monsterIdleAllowedDuring(previewAnim), fill:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>
           </div>
           <span className="absolute bottom-2 left-0 right-0 text-center text-[10px] font-bold text-slate-400">バトルと同じ演出です（ダメージや性能は変わりません）</span>
         </div>
@@ -18771,7 +18801,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, getA
           onTouchStart={e=>{swipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
           onTouchEnd={e=>{const from=swipeRef.current; swipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
           {unlocked
-            ? <DexMonsterArt mon={mon} alt={mon.name}/>
+            ? <DexMonsterIdleArt mon={mon} alt={mon.name}/>
             : <DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>}
           <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
           <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
@@ -44395,6 +44425,8 @@ const createAnimationStyle = () => {
     .mon-idle__part { position:absolute; inset:0; display:block; z-index:0; will-change:transform;
       animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
     .mon-idle__part--front { z-index:2; }
+    /* 図鑑の立ち絵は大きさを持たない(w-full h-full)ので、入れ物いっぱいに広げる */
+    .mon-idle--fill, .mon-idle--fill > .mon-idle__body { width:100%; height:100%; }
     .mon-idle__part--flapL, .mon-idle__part--flapR { animation-name:monIdleFlap; animation-timing-function:cubic-bezier(.45,0,.35,1); }
     .mon-idle__part--flapR { --idle-flip:-1; }
     .mon-idle__part--swing { animation-name:monIdleSwing; }
@@ -44465,6 +44497,8 @@ const createAnimationStyle = () => {
     }
     /* 軽量な見た目(タクティクスの calm)と「動きを減らす」設定では止める(絵はそのまま見える) */
     [data-tactics-look="calm"] .mon-idle, [data-tactics-look="calm"] .mon-idle__part { animation:none; }
+    /* 画面全体の calm(軽量表示・「待機中の動き：止める」)。バトルの外(図鑑)はこれで止まる */
+    [data-phase-look="calm"] .mon-idle, [data-phase-look="calm"] .mon-idle__part { animation:none; }
     @media (prefers-reduced-motion: reduce) {
       .mon-idle, .mon-idle__part { animation:none; }
     }
