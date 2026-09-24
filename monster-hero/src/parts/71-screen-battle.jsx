@@ -1246,6 +1246,8 @@ function BattleScreen({
               // ★絵の入れ物は絵と同じ大きさに固定する(2026-09-24 ユーザー指摘「ミーアの攻撃中、姿が消えてる」)。
               //   ミーア・水・聖光の攻撃演出は入れ物いっぱいに重ねる絶対配置なので、大きさを持たないと
               //   入れ物が0×0につぶれ、本体の絵が幅数pxまで押しつぶされてマイクも見えなくなっていた
+              // ミーアだけ待機中も翼を羽ばたかせる(試作。MiaIdleArt)。軽量表示では今までどおり1枚の絵
+              const slotArt = (img) => (s?.id==='Mia'&&!ecoBattleView ? <MiaIdleArt image={img}/> : img);
               const slotArtBox = {width:tacticsNewLayout?'58px':'64px', height:tacticsNewLayout?'58px':'64px', flexShrink:0};
               // このスロットに固有技カードが割り当てられているか（セット中は常時エフェクト）
               const hasUniqueSet = selectedCards.some(idx=>cardAssignments[idx]===i && hand[idx]?.type==='unique');
@@ -1505,10 +1507,10 @@ function BattleScreen({
                         charging={attackAnim.charge===true}/>
                     :isAnimating&&attackAnim.motion==='miaSongNotes'
                       ?<MiaSongNotesMotion
-                        image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>}
+                        image={slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
-                      :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
+                      :slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                   {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる。
                       ★動く絵の中に置く。新しい盤面は絵だけが敵へ飛ぶので、枠の側に置くと斬撃が枠に残って敵に届かない */}
                   {isAnimating&&attackAnim.twinBlade&&<KenshiTwinSlash/>}
