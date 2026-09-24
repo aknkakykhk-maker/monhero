@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 25f3f991726ddad2
+// source-sha256: fe42850c55a06b58
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1535142c49aba716
+// generated-sha256: 3c89b2870af19ac9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 16:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 17:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -25058,6 +25058,8 @@ const RhythmTapTest = ({
   const [pausedSongMs, setPausedSongMs] = useState(0);
   // 曲の進みぐあいのバー。毎フレーム setState せず、要素の幅を直接書き換える
   const songProgressRef = useRef(null);
+  // 経過時間の文字(「0:48/2:25」)。秒が変わったときだけ毎フレームの処理が書き換える
+  const songTimeRef = useRef(null);
   // 100コンボごとの演出。
   // 「段階(tier)が変わったときだけ」effectを動かすのが肝心で、以前は view.combo(=ノーツを取るたび
   // 毎回変わる値)を依存にしていたため、100→101など非節目の増加でも毎回effectが再実行され、
@@ -26057,13 +26059,22 @@ const RhythmTapTest = ({
         }
       }
       const playEndTimeMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;
-      /* 曲の進みぐあい(画面のいちばん下の細いバー)。0.1%より動いたときだけ書き換える */
+      /* 曲の進みぐあい(右上・ライフの下の細いバーと経過時間)。バーは0.1%より動いたときだけ、時間は秒が変わったときだけ書き換える */
       const progressEl = songProgressRef.current;
       if (progressEl) {
         const ratio = playEndTimeMs > 0 ? Math.max(0, Math.min(1, songTimeMs / playEndTimeMs)) : 0;
         if (Math.abs(ratio - (progressEl._mhRatio || 0)) >= .001 || ratio === 1) {
           progressEl._mhRatio = ratio;
           progressEl.style.transform = `scaleX(${ratio.toFixed(4)})`;
+        }
+      }
+      const timeEl = songTimeRef.current;
+      if (timeEl) {
+        const shownMs = Math.max(0, Math.min(playEndTimeMs, songTimeMs)),
+          second = Math.floor(shownMs / 1000);
+        if (timeEl._mhSecond !== second) {
+          timeEl._mhSecond = second;
+          timeEl.textContent = `${rhythmClockLabel(shownMs)}/${rhythmClockLabel(playEndTimeMs)}`;
         }
       }
       /* 譜面より音源のほうが長い曲(デュラハンの2曲は音源をバトルと共用しているので切れない)は、
@@ -27098,7 +27109,26 @@ const RhythmTapTest = ({
     "aria-label": "\u30DD\u30FC\u30BA",
     className: "pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0",
     onClick: pause
-  }, "\u2161")), /*#__PURE__*/React.createElement("b", {
+  }, "\u2161")), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-song-clock": true,
+    className: "flex w-full items-center justify-end gap-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative h-[3px] w-12 shrink-0 overflow-hidden rounded-full bg-slate-950/80"
+  }, /*#__PURE__*/React.createElement("i", {
+    ref: songProgressRef,
+    className: "absolute inset-y-0 left-0 w-full rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400",
+    style: {
+      transform: 'scaleX(0)',
+      transformOrigin: 'left center'
+    }
+  })), /*#__PURE__*/React.createElement("b", {
+    ref: songTimeRef,
+    "data-rhythm-song-time": true,
+    className: "shrink-0 text-[9px] font-black leading-none tabular-nums text-slate-300",
+    style: {
+      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+    }
+  }, "0:00")), /*#__PURE__*/React.createElement("b", {
     ref: abilityBadgeRef,
     "data-rhythm-ability-badge": true,
     hidden: true,
@@ -27110,17 +27140,7 @@ const RhythmTapTest = ({
     "data-rhythm-down-vignette": true,
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-0 z-20"
-  }), /*#__PURE__*/React.createElement("div", {
-    "data-rhythm-song-progress": true,
-    "aria-hidden": "true",
-    className: "pointer-events-none absolute inset-x-2 bottom-[2px] z-10 h-[3px] overflow-hidden rounded-full bg-white/10"
-  }, /*#__PURE__*/React.createElement("i", {
-    ref: songProgressRef,
-    className: "absolute inset-0 block origin-left rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400",
-    style: {
-      transform: 'scaleX(0)'
-    }
-  })), lifeDownSlam && /*#__PURE__*/React.createElement("div", {
+  }), lifeDownSlam && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-life-down-slam": true,
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"

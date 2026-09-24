@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1535142c49aba716
+// generated-sha256: 3c89b2870af19ac9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -122,7 +122,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 16:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 17:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15254,6 +15254,8 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const [pausedSongMs,setPausedSongMs]=useState(0);
   // 曲の進みぐあいのバー。毎フレーム setState せず、要素の幅を直接書き換える
   const songProgressRef=useRef(null);
+  // 経過時間の文字(「0:48/2:25」)。秒が変わったときだけ毎フレームの処理が書き換える
+  const songTimeRef=useRef(null);
   // 100コンボごとの演出。
   // 「段階(tier)が変わったときだけ」effectを動かすのが肝心で、以前は view.combo(=ノーツを取るたび
   // 毎回変わる値)を依存にしていたため、100→101など非節目の増加でも毎回effectが再実行され、
@@ -15802,9 +15804,11 @@ if(settings.sideMonsterAbilityHighlight&&sideMonsterRefs.current.length){
   }
 }
 const playEndTimeMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;
-/* 曲の進みぐあい(画面のいちばん下の細いバー)。0.1%より動いたときだけ書き換える */
+/* 曲の進みぐあい(右上・ライフの下の細いバーと経過時間)。バーは0.1%より動いたときだけ、時間は秒が変わったときだけ書き換える */
 const progressEl=songProgressRef.current;
 if(progressEl){const ratio=playEndTimeMs>0?Math.max(0,Math.min(1,songTimeMs/playEndTimeMs)):0;if(Math.abs(ratio-(progressEl._mhRatio||0))>=.001||ratio===1){progressEl._mhRatio=ratio;progressEl.style.transform=`scaleX(${ratio.toFixed(4)})`;}}
+const timeEl=songTimeRef.current;
+if(timeEl){const shownMs=Math.max(0,Math.min(playEndTimeMs,songTimeMs)),second=Math.floor(shownMs/1000);if(timeEl._mhSecond!==second){timeEl._mhSecond=second;timeEl.textContent=`${rhythmClockLabel(shownMs)}/${rhythmClockLabel(playEndTimeMs)}`;}}
 /* 譜面より音源のほうが長い曲(デュラハンの2曲は音源をバトルと共用しているので切れない)は、
    終わりの手前から音量をなめらかに落とす。何もしないと曲の途中でぶつっと止まる。
    音源が譜面とほぼ同時に終わる曲では何もしない(自然な終わりをいじらない)。 */
@@ -16092,14 +16096,14 @@ scheduleTick();};
      文字列の並びをそのまま見ているので、あいだに挟むと「1画面になっていない」と落ちる。 */
   return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div data-rhythm-hud-left className="min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center gap-1.5"><div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rhythmRankForScore(view.score)}</b></div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(view.score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6vw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{view.score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestRecord?.bestScore||0).toLocaleString()}</small></div></div><div className="mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div><div data-rhythm-hud-song className="mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0" style={{display:'-webkit-box',WebkitLineClamp:isLandscape?'1':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div><div data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"><div className="landscape:flex landscape:items-center landscape:gap-2"><div ref={lifeBoxRef} data-rhythm-life data-life-state={lifeState} data-life-wide={isLandscape?'1':''} style={{'--mh-life-scale':rhythmFiniteInRange(settings.lifeDisplaySize,RHYTHM_LIFE_SIZE_MIN,RHYTHM_LIFE_SIZE_MAX,150)/100}} className="relative flex flex-nowrap items-center justify-end gap-x-1"><span aria-hidden="true" data-rhythm-life-heart className="leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'💔':'♥'}</span>{/* ★太さ・幅は「小さい端末(320px)でも台形の外の空きへ収まる」ところで止めてある。
         これ以上太く・広くすると tools/mode/rhythm-hud-wedge-check.js が落ちる。
-        気づきやすさは大きさではなく、色・点滅・ひび割れ・減った量の数字で出す */}<div data-rhythm-life-track className="relative rounded-full border bg-slate-950/80"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(lifeRatio*100).toFixed(1)}%`,background:lifeRatio>.5?'linear-gradient(90deg,#34d399,#22d3ee)':lifeRatio>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'DOWN':view.life}</b>{/* 減った量(「-50」)を、減ったその場に一瞬だけ出す。中身はapplyJudgmentが直接書く */}<b ref={lifeDamageRef} data-rhythm-life-damage aria-hidden="true" className="pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"/></div><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{/* ===== ライフ0(DOWN)の強調(2026-09-12・ユーザー指示) ===== */}
+        気づきやすさは大きさではなく、色・点滅・ひび割れ・減った量の数字で出す */}<div data-rhythm-life-track className="relative rounded-full border bg-slate-950/80"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(lifeRatio*100).toFixed(1)}%`,background:lifeRatio>.5?'linear-gradient(90deg,#34d399,#22d3ee)':lifeRatio>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'DOWN':view.life}</b>{/* 減った量(「-50」)を、減ったその場に一瞬だけ出す。中身はapplyJudgmentが直接書く */}<b ref={lifeDamageRef} data-rhythm-life-damage aria-hidden="true" className="pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"/></div><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div>{/* 曲の進みぐあいと経過時間(2026-09-24・ユーザー指摘「画面下部は指と被って見えない / ライフの下辺りにつけるといい」)。
+    最初は画面のいちばん下に置いたが、叩く指で隠れていた。
+    ★HUDの検査(rhythm-hud-wedge-check)がこのJSXを写して測るので、式を書かず ref から中身を書く */}
+<div data-rhythm-song-clock className="flex w-full items-center justify-end gap-1"><div className="relative h-[3px] w-12 shrink-0 overflow-hidden rounded-full bg-slate-950/80"><i ref={songProgressRef} className="absolute inset-y-0 left-0 w-full rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400" style={{transform:'scaleX(0)',transformOrigin:'left center'}}/></div><b ref={songTimeRef} data-rhythm-song-time className="shrink-0 text-[9px] font-black leading-none tabular-nums text-slate-300" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>0:00</b></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{/* ===== ライフ0(DOWN)の強調(2026-09-12・ユーザー指示) ===== */}
 {/* 倒れているあいだ、画面のふちをずっと赤く縁取る。HUDの小さなバーだけでは
     「いつの間にか0だった」に気づけないため。指の当たり判定には関わらない(pointer-events-none) */}
 {lifeState==='down'&&<div data-rhythm-down-vignette aria-hidden="true" className="pointer-events-none absolute inset-0 z-20"/>}
 {/* 0になったその瞬間だけ、大きく1度だけ出す(1.4秒で消える) */}
-{/* 曲の進みぐあい。プレイエリアの下の余白(mb-2)に細く引くだけで、レーンにも判定ラインにも重ならない。
-    幅は毎フレームの処理(scheduleTick)が songProgressRef へ直接書く */}
-<div data-rhythm-song-progress aria-hidden="true" className="pointer-events-none absolute inset-x-2 bottom-[2px] z-10 h-[3px] overflow-hidden rounded-full bg-white/10"><i ref={songProgressRef} className="absolute inset-0 block origin-left rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400" style={{transform:'scaleX(0)'}}/></div>
 {lifeDownSlam&&<div data-rhythm-life-down-slam aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"><b className="block text-5xl font-black leading-none">LIFE 0</b><small className="mt-1 block text-xs font-black tracking-[0.34em]">DOWN</small></div>}
 <div ref={playAreaRef} data-rhythm-play-area data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
     置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
