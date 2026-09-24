@@ -30,15 +30,17 @@ const battleLoop = src.slice(start, end) + LOOP_TAIL;
 // --- プレビュー側の手順 ---
 const ctx = { WATER_BURST_MOTION_MS:680, ARK_HOLY_RAIN_MOTION_MS:900, MIA_SONG_NOTES_MOTION_MS:760 };
 vm.createContext(ctx);
-vm.runInContext(src.slice(src.indexOf('const attackMotionAnimation ='), src.indexOf('const rpgMotionName ='))
-  + '\nglobalThis.__p={attackMotionAnimation,attackMotionPreviewSequence,attackMotionUniquePreviewSequence};', ctx);
-const { attackMotionAnimation:animOf, attackMotionPreviewSequence:normalSeq, attackMotionUniquePreviewSequence:uniqueSeq } = ctx.__p;
+// 体当たりだった初期モンスターの型と尺(DEFAULT_ATTACK_THEMES / themedAttackMotionMs)も同じ区間に置いてある
+vm.runInContext(src.slice(src.indexOf('const DEFAULT_ATTACK_THEMES ='), src.indexOf('const rpgMotionName ='))
+  + '\nglobalThis.DEFAULT_ATTACK_THEMES=DEFAULT_ATTACK_THEMES;globalThis.__p={attackMotionAnimation,attackMotionPreviewSequence,attackMotionUniquePreviewSequence,themedAttackMotionMs};', ctx);
+const { attackMotionAnimation:animOf, attackMotionPreviewSequence:normalSeq, attackMotionUniquePreviewSequence:uniqueSeq, themedAttackMotionMs } = ctx.__p;
 
 // 本番のループを1体ぶんだけ流し、setAttackAnim へ渡った anim を順に集める。
 // 表示・音・待ち時間はスタブにする(戦闘の計算には触らない)
-const battleAnims = (atkMotion, isUnique) => {
+const battleAnims = (atkMotion, isUnique, monId = 'TestMon') => {
   const anims = [];
-  const monId = 'TestMon';
+  const waits = [];
+  anims.waits = waits;
   const env = {
     ALL_PLAYER_MONSTERS: { [monId]: { id:monId, atkMotion } },
     slots: [{ id:monId, atkMotion, name:'テスト', imgUrl:'x' }, null, null, null],
@@ -46,14 +48,15 @@ const battleAnims = (atkMotion, isUnique) => {
     hitIdx: 0,
     attackHits: [{ slotIdx:0, monId, isUnique, isSpecial:false, isCrit:false, skillName:isUnique?'固有技':'こうげき', dmg:100 }],
     totalDmg: 100, multiHit: false,
-    setAttackAnim: (a) => { if(a) anims.push({...a}); },
+    setAttackAnim: (a) => { if(a) { anims.push({...a}); anims.motionWaitAt = waits.length; } },
     setSlotSkill: ()=>{}, setEnemy: ()=>{}, setEnemyDist: ()=>{}, syncAtkTierForDist: ()=>{},
-    addPopup: ()=>{}, triggerShake: ()=>{}, battleWait: async()=>{},
+    addPopup: ()=>{}, triggerShake: ()=>{}, battleWait: async(ms)=>{ waits.push(ms); },
     // ★戦いの記録(ログ)は表示だけ。切り出したループが呼ぶので、素通しのスタブを置く
     pushBattleLog: ()=>{}, battleActorName: ()=>'テスト',
     Audio_: { se: new Proxy({}, { get: () => () => {} }) },
     RANGE_LABELS: ['零','近','中','遠'],
     WATER_BURST_MOTION_MS:680, ARK_HOLY_RAIN_MOTION_MS:900, MIA_SONG_NOTES_MOTION_MS:760,
+    themedAttackMotionMs,
   };
   vm.createContext(env);
   vm.runInContext(babel.transformSync(`(async()=>{\n${battleLoop}\n})().then(()=>{globalThis.__done=true;},e=>{globalThis.__err=e;});`).code, env);
@@ -83,6 +86,20 @@ const shape = (anim) => animOf(anim) || `専用演出(${anim.motion||'-'})`;
     const real = await battleAnims(kind, true);
     check(`${kind}: 固有技はバトルもプレビューも共通のタメから始まる`,
       real[0]?.charge === true && uniqueSeq(kind)[0]?.anim?.charge === true && uniqueSeq(kind)[0]?.ms === 650);
+  }
+  // 体当たりだった初期モンスターは、型によって尺が延びる(モッチーは押しつぶし＋モッチ砲)。
+  // 本番の待ち時間とプレビューの長さがずれると、動きの途中で切れたり、終わってから間が空いたりする
+  const themeIds = Object.keys(ctx.DEFAULT_ATTACK_THEMES || {});
+  check('体当たりだった初期モンスターの型が読める', themeIds.length >= 10, themeIds.join(' / '));
+  for (const monId of themeIds) {
+    for (const [isUnique, label] of [[false,'通常攻撃'],[true,'固有技']]) {
+      const real = await battleAnims('default', isUnique, monId);
+      // 最後の動きを出した直後の待ち = その動きを見せている長さ
+      const last = real.waits[real.motionWaitAt];
+      const seq = isUnique ? uniqueSeq('default', monId) : normalSeq('default', monId);
+      const prevMs = seq[seq.length - 1].ms;
+      check(`${monId}: ${label}の尺がバトルとプレビューで同じ`, last === prevMs, `本番 ${last}ms / プレビュー ${prevMs}ms`);
+    }
   }
   check('通常攻撃のプレビューにはタメを入れない',
     kinds.every(kind => normalSeq(kind).every(step => step.anim?.charge !== true)));

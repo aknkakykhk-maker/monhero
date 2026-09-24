@@ -305,7 +305,7 @@ function MonsterCheckDebugScreen({
           {/* 立ち絵も演出もまとめて少しだけ拡大する。演出の移動量はpx固定なので、
               ここを大きくしないと詳細の枠と同じ大きさのままになる */}
           <div data-monster-check-art className="absolute left-1/2" style={{ bottom: '11%', width: 'clamp(132px, 44vw, 184px)', height: 'clamp(132px, 44vw, 184px)', transform: 'translateX(-50%) scale(1.15)', transformOrigin: 'bottom center' }}>
-            <BattleAttackMotionPreview image={dyedArt('h-full w-full object-contain')} anim={playing ? playing.anim : null}/>
+            <BattleAttackMotionPreview image={dyedArt('h-full w-full object-contain')} anim={playing ? playing.anim : null} baseId={mon?.id}/>
           </div>
           <span className="absolute bottom-2 left-0 right-0 text-center text-[8px] font-bold text-slate-500">バトルと同じ演出です（ダメージや性能は変わりません）</span>
         </div>

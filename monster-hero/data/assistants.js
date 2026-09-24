@@ -5342,9 +5342,9 @@ const ASSISTANT_SYMPHONY_EVENT = [
   { who:'mua',      e:'surprise', t:'あれっ！？ ドラケンじゃん！' },
   { who:'dra',      e:'normal',   t:'おいおい、その反応なんなんだよ。おでは前からいるだろ。アシストカードに' },
   { who:'mua',      e:'happy',    t:'いや、それはそうなんだけど！ こうやって普通に出てくるのなんか新鮮なんだって！' },
-  { who:'kiki',     e:'happy',    t:'ドラさん、ちゃんとお話しするのはほとんど初めてですね！' },
+  { who:'kiki',     e:'happy',    t:'ドラさん、ちゃんとお話しするのはほとんど初めてでつね！' },
   { who:'dra',      e:'happy',    t:'そうなんよ、靴下さん。今までは膝ばっか働かされてたからな' },
-  { who:'kiki',     e:'angry',    t:'誰が靴下さんですか！' },
+  { who:'kiki',     e:'angry',    t:'誰が靴下さんでつか！' },
   { who:'dra',      e:'normal',   t:'何言ってんだよ。おでら同じニオイを背負ってる仲だろ？' },
   { who:'kiki',     e:'angry',    t:'そんな仲になった覚えありません！' },
   { who:'mua',      e:'happy',    t:'出た、足臭い仲間' },
@@ -5364,7 +5364,7 @@ const ASSISTANT_SYMPHONY_EVENT = [
   { who:'dra',      e:'troubled', t:'ももが言うと否定できねぇんよ……' },
   // SCENE 3 ドラが持ってきたもの
   { who:'dra',      e:'normal',   t:'まあ今日は、みんなに会いに来ただけじゃないんよ' },
-  { who:'kiki',     e:'normal',   t:'何かあるんですか？' },
+  { who:'kiki',     e:'normal',   t:'何かあるんでつか？' },
   { who:'dra',      e:'happy',    t:'モンヒロビートの第2回イベントな' },
   { who:'mua',      e:'surprise', t:'もう第2回やるの！？' },
   { who:'dra',      e:'happy',    t:'やるよ。しかも今回は3曲ある' },
@@ -5372,7 +5372,7 @@ const ASSISTANT_SYMPHONY_EVENT = [
   { who:'dra',      e:'normal',   t:'まず一つ目が――「もう一つの世界へ」' },
   { who:'mua',      e:'normal',   t:'あ、この曲もうモンビーに入ってるよね？' },
   { who:'dra',      e:'happy',    t:'そうそう。これ、おでが作ってるゲーム「CREATE MONSTERS」で使ってる曲なんよ' },
-  { who:'kiki',     e:'surprise', t:'ドラさん、ゲームも作ってるんですか？' },
+  { who:'kiki',     e:'surprise', t:'ドラさん、ゲームも作ってるんでつか？' },
   { who:'dra',      e:'happy',    t:'作ってるよ。おで、こういうのちまちま作るの好きなんよ' },
   { who:'momosuke', e:'wink',     t:'ドラちゃん意外とそういうことできるんだ〜♡' },
   { who:'dra',      e:'angry',    t:'おい、もも。“意外と”はいらんだろ' },
@@ -5385,7 +5385,7 @@ const ASSISTANT_SYMPHONY_EVENT = [
   { who:'dra',      e:'normal',   t:'二つ目は、いちかさんの「Stay With Me ～Locked Fate～ remix」' },
   { who:'mua',      e:'excited',  t:'おおー！' },
   { who:'dra',      e:'normal',   t:'で、三つ目が仙夜玖子さんの「The City Beneath the Comets」' },
-  { who:'kiki',     e:'happy',    t:'この3曲が今回のイベント対象曲なんですね！' },
+  { who:'kiki',     e:'happy',    t:'この3曲が今回のイベント対象曲なんでつね！' },
   { who:'dra',      e:'happy',    t:'そういうこと。3曲とも雰囲気違うし、好きなのから遊んでくれればいいよ' },
   { who:'momosuke', e:'wink',     t:'私はドラちゃんの曲からやってあげよっかな〜♡' },
   { who:'dra',      e:'excited',  t:'ももぉ！ マジ！？' },
@@ -5404,18 +5404,18 @@ const ASSISTANT_SYMPHONY_EVENT = [
   { who:'dra',      e:'happy',    t:'ビートP' },
   { who:'kiki',     e:'surprise', t:'ビートP？' },
   { who:'dra',      e:'normal',   t:'イベント期間中にモンヒロビートを遊ぶと貯まっていくポイントなんよ' },
-  { who:'kiki',     e:'normal',   t:'イベント対象曲だけですか？' },
+  { who:'kiki',     e:'normal',   t:'イベント対象曲だけでつか？' },
   { who:'dra',      e:'normal',   t:'いや。そこは違うんよ、靴下さん' },
-  { who:'kiki',     e:'angry',    t:'だから靴下さんじゃありません！' },
+  { who:'kiki',     e:'angry',    t:'だから靴下さんじゃないでつ！' },
   { who:'dra',      e:'happy',    t:'イベント開催中なら、公開されてる普通の曲でもビートPは貰える' },
   { who:'mua',      e:'surprise', t:'じゃあ好きな曲やってもいいんだ！' },
   { who:'dra',      e:'normal',   t:'そうそう。ただし――今回のイベント対象3曲はビートPが1.5倍' },
-  { who:'kiki',     e:'excited',  t:'対象曲のほうが貯まりやすいんですね！' },
+  { who:'kiki',     e:'excited',  t:'対象曲のほうが貯まりやすいんでつね！' },
   { who:'dra',      e:'happy',    t:'そういうこと' },
   // SCENE 7 スコアとビートP
   { who:'mua',      e:'normal',   t:'どれくらい貰えるの？' },
   { who:'dra',      e:'normal',   t:'スコアで変わる。たとえば普通の曲なら、80万点で80P、95万点で95P' },
-  { who:'kiki',     e:'normal',   t:'そこまでは比較的ゆっくり増えるんですね' },
+  { who:'kiki',     e:'normal',   t:'そこまでは比較的ゆっくり増えるんでつね' },
   { who:'dra',      e:'happy',    t:'そう。でも95万点を超えてから伸びが大きくなる' },
   { who:'dra',      e:'normal',   t:'100万点なら基本200P' },
   { who:'kiki',     e:'surprise', t:'じゃあ今回のイベント曲で100万点なら……' },
@@ -5435,7 +5435,7 @@ const ASSISTANT_SYMPHONY_EVENT = [
   { who:'momosuke', e:'normal',   t:'膝？' },
   { who:'dra',      e:'troubled', t:'ももぉ……人間として見てくれよぉ……' },
   // SCENE 9 ビートP交換所
-  { who:'kiki',     e:'normal',   t:'貯めたビートPはどうするんですか？' },
+  { who:'kiki',     e:'normal',   t:'貯めたビートPはどうするんでつか？' },
   { who:'dra',      e:'normal',   t:'マーケットにある「ビートP交換所」で使える' },
   { who:'dra',      e:'happy',    t:'貯めたビートPを使って、好きなアイテムと交換するんよ' },
   { who:'momosuke', e:'normal',   t:'イベントが終わったら余ったポイント消えちゃう？' },
@@ -5447,7 +5447,7 @@ const ASSISTANT_SYMPHONY_EVENT = [
   { who:'dra',      e:'happy',    t:'正解、靴下さん' },
   { who:'kiki',     e:'angry',    t:'その呼び方で褒めないでください！' },
   { who:'dra',      e:'normal',   t:'照れんなって。同じ足臭仲間なんだから' },
-  { who:'kiki',     e:'angry',    t:'違います！！' },
+  { who:'kiki',     e:'angry',    t:'違いまつ！！' },
   // SCENE 10 イベント開始
   { who:'dra',      e:'happy',    t:'まあ説明はこんなもんだな' },
   { who:'dra',      e:'normal',   t:'今回は3曲。ランキング狙うのもよし、ビートP集めるのもよし。好きに遊んでくれ' },
@@ -5458,7 +5458,7 @@ const ASSISTANT_SYMPHONY_EVENT = [
   { who:'momosuke', e:'wink',     t:'じゃあ考えとく♡' },
   { who:'dra',      e:'troubled', t:'ももぉぉ……！' },
   { who:'mua',      e:'happy',    t:'はいはい。そろそろ始めるよ、ドラケン！' },
-  { who:'kiki',     e:'excited',  t:'私もやります！ ドラさん！' },
+  { who:'kiki',     e:'excited',  t:'私もやりまつ！ ドラさん！' },
   { who:'dra',      e:'happy',    t:'おう、靴下さん。足でリズム取るなよ' },
   { who:'kiki',     e:'angry',    t:'ドラさん！！' },
   // SCENE 11 ドラ助手加入
@@ -5466,9 +5466,9 @@ const ASSISTANT_SYMPHONY_EVENT = [
   { who:'dra',      e:'normal',   t:'ん？' },
   { who:'mua',      e:'happy',    t:'これから助手もやれば？' },
   { who:'dra',      e:'surprise', t:'おでが？' },
-  { who:'kiki',     e:'happy',    t:'いいじゃないですか！ ドラさん、説明も分かりやすかったですし' },
+  { who:'kiki',     e:'happy',    t:'いいじゃないでつか！ ドラさん、説明も分かりやすかったでつし' },
   { who:'dra',      e:'troubled', t:'靴下さんにまともに褒められると、なんか調子狂うな……' },
-  { who:'kiki',     e:'angry',    t:'余計な一言です！' },
+  { who:'kiki',     e:'angry',    t:'余計な一言でつ！' },
   { who:'momosuke', e:'wink',     t:'ドラちゃん助手になるの？' },
   { who:'dra',      e:'normal',   t:'まあ……ももがいてほしいって言うなら' },
   { who:'momosuke', e:'happy',    t:'いてほしい♡' },
@@ -5486,18 +5486,19 @@ const ASSISTANT_SYMPHONY_EVENT_CALLS = { mua: 'ドラケン', kiki: 'ドラさ�
 //   その回かぎりで決めたもので、毎回やると付いていない回が不満になる。
 //   ここで知らせるのは「終わったこと」と「受け取りのしかた」の2つだけ。
 // ★開幕(ASSISTANT_SYMPHONY_EVENT)で助手になったばかりのドラが、はじめて締めをやる。
+// ★ききは「〜でつ」「〜まつ」で話す(2026-09-24・ユーザー指摘で開幕・閉幕とも直した)。
 const ASSISTANT_SYMPHONY_THANKS = [
   // 閉幕
   { who:'dra',      e:'normal',   t:'……よし。異世界交響祭、これにて閉幕だ' },
   { who:'mua',      e:'happy',    t:'おつかれー、ドラケン。ちゃんと締まってたじゃん' },
   { who:'dra',      e:'happy',    t:'おでだって助手だからな。締めるとこは締めるわ' },
-  { who:'kiki',     e:'normal',   t:'はじめてのお仕事にしては、上出来だと思います' },
+  { who:'kiki',     e:'normal',   t:'はじめてのお仕事にしては、上出来だと思いまつ' },
   { who:'dra',      e:'troubled', t:'靴下さん、それ褒めてるのか？' },
-  { who:'kiki',     e:'angry',    t:'褒めてます！' },
+  { who:'kiki',     e:'angry',    t:'褒めてまつ！' },
   // 振り返り
   { who:'momosuke', e:'happy',    t:'3曲とも、ずいぶん賑やかだったねぇ♡' },
   { who:'mua',      e:'excited',  t:'ランキング、最後の日にめちゃくちゃ動いてたよね！' },
-  { who:'kiki',     e:'happy',    t:'終わりぎわに記録を伸ばした方が、たくさんいました' },
+  { who:'kiki',     e:'happy',    t:'終わりぎわに記録を伸ばした方が、たくさんいたでつね' },
   { who:'dra',      e:'excited',  t:'そうそう！ おで、ずっと見てたんだけど最後の追い上げがすごくてな' },
   { who:'dra',      e:'happy',    t:'何回も何回も叩き直してる人がいてさ。ああいうの、見てて胸が熱くなるわ' },
   { who:'momosuke', e:'wink',     t:'ドラちゃん、すっかり主催者の顔してる♡' },
@@ -5505,29 +5506,83 @@ const ASSISTANT_SYMPHONY_THANKS = [
   { who:'mua',      e:'normal',   t:'チョロい' },
   { who:'dra',      e:'angry',    t:'うるさいぞみゅあ！' },
   // 受け取り
-  { who:'kiki',     e:'normal',   t:'では、受け取りのご案内をしましょう' },
+  { who:'kiki',     e:'normal',   t:'では、受け取りのご案内をしまつね' },
   { who:'dra',      e:'normal',   t:'おう。対象の3曲ぜんぶを遊んだ人には参加賞だ。順位に関係なくもらえる' },
   { who:'mua',      e:'normal',   t:'入賞したぶんは別だよね？' },
   { who:'dra',      e:'happy',    t:'別だな。どっちも当てはまるなら両方もらえる' },
-  { who:'kiki',     e:'happy',    t:'受け取りは、このあと出る画面の「受け取る」からです' },
+  { who:'kiki',     e:'happy',    t:'受け取りは、このあと出る画面の「受け取る」からでつ' },
   { who:'momosuke', e:'normal',   t:'受け取れるのは2週間だからね。そこだけ忘れないで〜' },
   { who:'mua',      e:'troubled', t:'……もし何も出なかったら？' },
-  { who:'kiki',     e:'normal',   t:'条件に届かなかったときは出ません。順位は終わった時点で決まっています' },
+  { who:'kiki',     e:'normal',   t:'条件に届かなかったときは出ません。順位は終わった時点で決まっていまつ' },
   { who:'dra',      e:'normal',   t:'記録のほうは消えないから、あとから見返せるぞ' },
   // 次回へ
   { who:'mua',      e:'excited',  t:'ねえドラケン、次もやるの？' },
   { who:'dra',      e:'troubled', t:'おでに聞かれてもな……そこはももの管轄だろ' },
   { who:'momosuke', e:'wink',     t:'ふふ。ドラちゃんが手伝ってくれるなら、考えてもいいかも♡' },
   { who:'dra',      e:'excited',  t:'やる！ おでやる！ なんでもやる！' },
-  { who:'kiki',     e:'troubled', t:'……即答でしたね' },
+  { who:'kiki',     e:'troubled', t:'……即答でつね' },
   { who:'mua',      e:'happy',    t:'ドラケンって分かりやすくていいよね' },
   // 締め
   { who:'dra',      e:'happy',    t:'{name}、遊んでくれてありがとうな。おでの初仕事、付き合ってくれて助かった' },
-  { who:'kiki',     e:'happy',    t:'{name}、おつかれさまでした。記録はぜんぶ残っていますよ' },
+  { who:'kiki',     e:'happy',    t:'{name}、おつかれさまでつ。記録はぜんぶ残っていまつよ' },
   { who:'momosuke', e:'happy',    t:'{name}、またモンヒロビートで会おうね♡' },
   { who:'mua',      e:'excited',  t:'次もぜったい叩きに来てよ！ 待ってるからね！' },
 ];
 const ASSISTANT_SYMPHONY_THANKS_CALLS = { mua: 'ドラケン', kiki: 'ドラさん', momosuke: 'ドラちゃん', dra: 'みゅあ／靴下さん／もも' };
+
+// ---------- ビートPがいつでも貯まるように(2026-09-24) ----------
+// 2026-09-24・ユーザー指示「イベント限定でもらえるポイントをいつでももらえるように変更。
+// ただしイベント時の1/5。今後ビートポイントで円盤石やアシカみたいなレアアイテムも実装予定。
+// ストーリー含めて作って」。
+//
+// HOMEで1度だけ流す(開催中のイベントとは関係なく)。伝えるのは3つだけ。
+//   ① イベントが無い日もビートPが貯まる
+//   ② ただしイベント中の5分の1(イベント中の貯まり方は変わらない)
+//   ③ ビートP交換所に、円盤石やアシストカードのような珍しい品を並べる準備をしている
+// ★③は「準備中」までしか言わない。いつ・何Pで並ぶかは決まっていないので約束しない。
+// ★「アシカ」はアシストカードの略。みゅあが海のアシカと取り違えるのは、略称の説明を兼ねている。
+// ★正式名称は「モンヒロビート」。「モンビー」はももすけ・みゅあが愛称として呼ぶところだけ。
+// ★ききは「〜でつ」「〜まつ」で話し、みゅあを「みゅあちん」と呼ぶ(2026-09-24・ユーザー指摘)。
+const ASSISTANT_BEAT_POINT_ALWAYS = [
+  // 導入: ドラが交換所の前でうろうろしている
+  { who:'dra',      e:'troubled', t:'うーん……うーん……' },
+  { who:'mua',      e:'surprise', t:'ドラケン、交換所の前で何うなってるの？' },
+  { who:'dra',      e:'troubled', t:'いやな、ビートPがな。イベントが終わると、ぜんぜん増えなくなるだろ' },
+  { who:'dra',      e:'normal',   t:'交換所はずっと開いてるのに、貯める手段がイベントの間だけってのは、なんか寂しくてな' },
+  { who:'kiki',     e:'normal',   t:'たしかに、イベントのない週は交換所を眺めるだけでつね。' },
+  // 知らせ: ももすけから
+  { who:'momosuke', e:'wink',     t:'ふふ〜。そんなドラちゃんに、いいお知らせがあります♡' },
+  { who:'dra',      e:'surprise', t:'えっ、なんだ？' },
+  { who:'momosuke', e:'excited',  t:'今日から、イベントがない日もモンビーを遊べばビートPが貯まるようになりました〜♪' },
+  { who:'kiki',     e:'normal',   t:'モンヒロビート、でつね。最後まで遊べば、どの公開曲でも貯まるんでつか？' },
+  { who:'momosuke', e:'happy',    t:'そう！ いつもの曲なら、どれでもOKだよ♡' },
+  { who:'dra',      e:'excited',  t:'ほんとか！ もも、それ最高じゃないか！' },
+  // 条件: 5分の1
+  { who:'momosuke', e:'normal',   t:'ただし〜、イベントのない日はイベント中の5分の1だけね' },
+  { who:'mua',      e:'troubled', t:'えー、5分の1かぁ……' },
+  { who:'momosuke', e:'wink',     t:'だって、いつでも同じだけ貯まったら、イベントの楽しみが減っちゃうでしょ？' },
+  { who:'kiki',     e:'happy',    t:'イベント中の貯まり方はこれまでと同じなんでつね。対象曲の1.5倍もそのままでつ。' },
+  { who:'mua',      e:'normal',   t:'そっか。ふだんはコツコツ、イベントのときはガッツリってことね' },
+  { who:'dra',      e:'happy',    t:'コツコツでも、ゼロよりずっといいぞ。おで、毎日叩く' },
+  { who:'kiki',     e:'normal',   t:'スコアが高いほど多くもらえるのも、イベント中と同じでつ。' },
+  // 予告: 交換所のこれから
+  { who:'momosuke', e:'excited',  t:'それとね……ここからは内緒の話なんだけど♡' },
+  { who:'mua',      e:'surprise', t:'ん？ なになに？' },
+  { who:'momosuke', e:'wink',     t:'ビートP交換所に、そのうち円盤石とか、アシカとか……珍しいものも並べようと思ってるの♪' },
+  { who:'mua',      e:'surprise', t:'アシカ！？ 交換所で海の生き物もらえるの！？' },
+  { who:'kiki',     e:'troubled', t:'みゅあちん……アシストカードの略でつ。' },
+  { who:'mua',      e:'troubled', t:'あ、そっちか……ちょっと飼う気になってた' },
+  { who:'dra',      e:'excited',  t:'円盤石もか！ それ、ビートPを貯めとく理由になるじゃないか' },
+  { who:'momosuke', e:'normal',   t:'まだ準備中だから、いつ並ぶかはお楽しみね〜' },
+  { who:'kiki',     e:'normal',   t:'それまでに貯めておいたぶんは、そのまま使えまつ。消えたりしないでつよ。' },
+  // 締め
+  { who:'dra',      e:'happy',    t:'よし決めた。おで、並んだ日に一番乗りできるように、今から貯めとく' },
+  { who:'mua',      e:'angry',    t:'あたしだって負けないからね！' },
+  { who:'momosuke', e:'happy',    t:'{name}も、ふだんのモンビーでコツコツ貯めておいてね♡' },
+  { who:'kiki',     e:'happy',    t:'{name}、交換所に何が並ぶか、一緒に楽しみに待ちましょ♪' },
+  { who:'dra',      e:'happy',    t:'{name}、並んだらちゃんと知らせるからな。えへへ' },
+];
+const ASSISTANT_BEAT_POINT_ALWAYS_CALLS = { mua: 'もも／ドラケン', kiki: 'みゅあちん／ももさん／ドラさん', momosuke: 'ドラちゃん', dra: 'みゅあ／もも' };
 
 // ---------- タクティクスバトル登場(2026-09-21) ----------
 // β公開に合わせて1度だけ流す導入。「今までのバトルと何が違うか」を4つだけ伝える。
@@ -5606,6 +5661,8 @@ const EVENT_REPLAYS = [
   // 第2回の閉幕の会話(2026-09-20)。**イベントが終わった時刻に自動で流れる**。
   // 報酬の上乗せは無いので、知らせるのは終わったことと受け取りのしかただけ
   { id: 'symphony_2026_09_17_thanks', title: '異世界交響祭 ～閉幕とお礼～', script: ASSISTANT_SYMPHONY_THANKS, calls: ASSISTANT_SYMPHONY_THANKS_CALLS, unlockedKey: 'symphonyThanksSeen' },
+  // ビートPがいつでも貯まるようになった知らせ(2026-09-24)。HOMEで1度だけ流れ、そのあとは回想から見返せる
+  { id: 'beat_point_always_2026_09_24', title: 'いつでもビートP ～交換所のこれから～', script: ASSISTANT_BEAT_POINT_ALWAYS, calls: ASSISTANT_BEAT_POINT_ALWAYS_CALLS, unlockedKey: 'beatPointAlwaysSeen' },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------

@@ -13,7 +13,130 @@ const useDexIdleMotion = () => {
   return [motion, toggle];
 };
 
-function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMonsterIds, getAtkSkillLevels, getUniqueSkillLevels, onMissing, onBackToDetail, onStopPreview, onPlayPreview }) {
+// ==== 図鑑でマスモンの染色を見る(2026-09-24 ユーザー指示「図鑑の表示でマスモンで染色してるカラーも見れるようにしたい」) ====
+// 同日「マスモン選択式にしたら？」「この画面で染色も出来てどんな色か見れるようにする機能もあるといいね」で作り替えた。
+//   ・色の見本は、その種のマスモンを一覧から1体選んで決める(マスモンが増えても横に並び続けない)
+//   ・「染めてみる」で、図鑑の中だけで好きな色を試せる
+// どちらも見た目だけに使い、保存しない(図鑑を開き直す・ほかの種へ移ると元の色へ戻る)。
+// 読み取りだけで、マスモンのデータには一切触れない。
+//
+// 選んでいる見本(dexColorKey)の形:
+//   null            … 元の色
+//   { masuId }      … そのマスモンの色(居なくなっていたら元の色)
+//   { colors:[…] }  … 「染めてみる」で決めた色
+const dexMasuListOf = (masuMons, monId) => {
+  if (!Array.isArray(masuMons) || !monId) return [];
+  const list = masuMons.filter(masu => masu && masu.baseId === monId);
+  // 色を付けた子を先に出す(並びはマスモン一覧の順のまま)
+  const colored = (masu) => { const c = getMasuColors(masu); return Array.isArray(c) && c.some(x => typeof x === 'string' && x); };
+  return [...list.filter(colored), ...list.filter(masu => !colored(masu))];
+};
+const dexHasColors = (colors) => Array.isArray(colors) && colors.some(c => typeof c === 'string' && c);
+// いま見本にしている配色(見つからなければ null=元の色)
+const dexSelectedColors = (masuMons, monId, colorKey) => {
+  if (!colorKey || typeof colorKey !== 'object') return null;
+  if (Array.isArray(colorKey.colors)) return dexHasColors(colorKey.colors) ? colorKey.colors : null;
+  if (colorKey.masuId == null) return null;
+  const masu = dexMasuListOf(masuMons, monId).find(m => String(m.id) === String(colorKey.masuId));
+  const colors = masu ? getMasuColors(masu) : null;
+  return dexHasColors(colors) ? colors : null;
+};
+// 見本の名前(ボタンに出す)
+const dexColorLabel = (masuMons, monId, colorKey) => {
+  if (!dexSelectedColors(masuMons, monId, colorKey)) return '元の色';
+  if (Array.isArray(colorKey.colors)) return '染めてみた色';
+  const masu = dexMasuListOf(masuMons, monId).find(m => String(m.id) === String(colorKey.masuId));
+  return masu?.name || 'マスモン';
+};
+const DexColorSwatches = ({ colors }) => dexHasColors(colors)
+  ? <span className="flex -space-x-1 shrink-0" aria-hidden="true">{colors.filter(Boolean).slice(0, 5).map((c, i) => <span key={i} className="w-3.5 h-3.5 rounded-full border border-black/40" style={{ background: getColorSwatchHex(c) }}/>)}</span>
+  : <span className="w-3.5 h-3.5 rounded-full border border-white/40 bg-gradient-to-br from-white/70 to-slate-500 shrink-0" aria-hidden="true"/>;
+// 立ち絵の左右の列のボタンの文字。列の幅が狭い(スマホで90px前後)ので、記号と名前を2段に分け、
+// 名前は折り返さない(「動きを止/める」のような切れ方をさせない)。text は「記号 名前」の形
+const DexSideLabel = ({ text }) => {
+  const i = String(text).indexOf(' ');
+  const icon = i > 0 ? text.slice(0, i) : '';
+  const label = i > 0 ? text.slice(i + 1) : text;
+  return <>{icon&&<span className="text-[12px] leading-none" aria-hidden="true">{icon}</span>}<span className="text-[10px] leading-tight whitespace-nowrap">{label}</span></>;
+};
+// 立ち絵の左下に置く「色」のボタン。いまの見本の色と名前を出し、押すとマスモンの一覧を開く
+const DexColorPickButton = ({ masuMons, mon, value, onOpen }) => (
+  <button type="button" data-dex-color-open aria-label={`色の見本: ${dexColorLabel(masuMons, mon.id, value)}(押すとマスモンを選べます)`} onClick={() => { Audio_.se.tap(); onOpen(); }}
+    className={`w-full max-w-[124px] min-h-[44px] px-1.5 rounded-xl border flex flex-col items-center justify-center gap-0.5 font-black active:scale-95 ${dexSelectedColors(masuMons, mon.id, value) ? 'border-amber-300 bg-amber-700 text-white' : 'border-white/15 bg-slate-900 text-amber-100/90'}`}>
+    <span className="flex items-center gap-1 text-[10px] text-amber-200/90"><DexColorSwatches colors={dexSelectedColors(masuMons, mon.id, value)}/>色 ▾</span>
+    <span className="block w-full truncate text-[10px] leading-tight">{dexColorLabel(masuMons, mon.id, value)}</span>
+  </button>
+);
+// マスモンの一覧(色の見本を選ぶ)。その種のマスモンだけを出す。色を付けていない子は押せない
+const DexMasuColorSheet = ({ masuMons, mon, value, onSelect, onClose }) => {
+  const list = dexMasuListOf(masuMons, mon.id);
+  const current = dexSelectedColors(masuMons, mon.id, value) ? value : null;
+  const row = (key, on, disabled, icon, title, sub, onClick) => (
+    <button key={key} type="button" data-dex-color-choice={key} aria-pressed={on} disabled={disabled} onClick={onClick}
+      className={`w-full min-h-[56px] px-3 py-2 rounded-2xl border flex items-center gap-3 text-left active:scale-[.98] ${on ? 'border-amber-300 bg-amber-700/70' : 'border-white/10 bg-slate-900'} ${disabled ? 'opacity-45' : ''}`}>
+      <span className="w-11 h-11 rounded-full overflow-hidden border border-white/20 bg-black/40 shrink-0 flex items-center justify-center">{icon}</span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[13px] font-black text-white truncate">{title}</span>
+        <span className="mt-0.5 flex items-center gap-1.5 text-[10px] font-bold text-slate-300 min-w-0">{sub}</span>
+      </span>
+      {on && <span className="shrink-0 text-amber-200 text-[11px] font-black">表示中</span>}
+    </button>
+  );
+  const face = (colors, alt) => <DyedMonsterImage baseId={mon.id} src={mon.iconUrl || mon.imgUrl} alt={alt} masuColors={dexHasColors(colors) ? colors : []} draggable={false} className="w-full h-full object-cover"/>;
+  const pick = (key) => { Audio_.se.tap(); onSelect(key); onClose(); };
+  return (
+    <div data-dex-color-sheet className="fixed inset-0 flex items-end justify-center" style={{ position:'fixed', inset:0, backgroundColor:'rgba(0,0,0,0.8)', zIndex:31400 }}
+      role="dialog" aria-modal="true" aria-label="色の見本にするマスモンを選ぶ" onClick={onClose}>
+      <div className="w-full max-w-md max-h-[75dvh] flex flex-col rounded-t-3xl border-2 border-b-0 border-amber-500/70 bg-slate-950 p-4 gap-3"
+        style={{ paddingBottom:'calc(1rem + env(safe-area-inset-bottom))' }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between shrink-0">
+          <h3 className="text-sm font-black text-amber-100">色の見本にするマスモン</h3>
+          <button type="button" aria-label="閉じる" onClick={onClose} className="min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90">✕</button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-1.5">
+          {row('base', !current, false, face(null, mon.name), '元の色', <span>もとのイラストの色</span>, () => pick(null))}
+          {Array.isArray(value?.colors) && dexHasColors(value.colors) && row('try', true, false, face(value.colors, '染めてみた色'), '染めてみた色', <><DexColorSwatches colors={value.colors}/><span>「染めてみる」で決めた色</span></>, () => pick(value))}
+          {list.map(masu => {
+            const colors = getMasuColors(masu);
+            const has = dexHasColors(colors);
+            const on = !!current && current.masuId != null && String(current.masuId) === String(masu.id);
+            return row(`masu-${masu.id}`, on, !has, face(colors, masu.name || mon.name), masu.name || mon.name,
+              has ? <><DexColorSwatches colors={colors}/><span className="truncate">このマスモンの色</span></> : <span>まだ色を付けていません</span>,
+              () => pick({ masuId: masu.id }));
+          })}
+          {list.length === 0 && <p className="text-center text-[11px] font-bold text-slate-400 py-3">この種のマスモンはまだいません。「染めてみる」で好きな色を試せます。</p>}
+        </div>
+      </div>
+    </div>
+  );
+};
+// 「染めてみる」。マスモンの染色と同じ色の選び方(DyeRegionColorControls)で、図鑑の中だけ色を試す。
+// 決めた色は図鑑の立ち絵と攻撃アクションに使うだけで、保存もしないし染色アイテムも使わない
+const DexTryDyeSheet = ({ mon, draft, onChange, onCustom, onApply, onReset, onClose }) => (
+  <div data-dex-try-dye className="fixed inset-0 flex items-center justify-center p-4" style={{ position:'fixed', inset:0, backgroundColor:'rgba(0,0,0,0.9)', zIndex:31500,
+    paddingTop:'calc(1rem + env(safe-area-inset-top))', paddingBottom:'calc(1rem + env(safe-area-inset-bottom))' }} role="dialog" aria-modal="true" aria-label={`${mon.name}を染めてみる`}>
+    <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2.5 shadow-2xl max-h-full overflow-hidden">
+      <div className="flex items-center justify-between shrink-0">
+        <h3 className="text-sm font-black text-white">🎨 {mon.name}を染めてみる</h3>
+        <button type="button" aria-label="閉じる" onClick={onClose} className="min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90">✕</button>
+      </div>
+      <div className="h-36 shrink-0 flex items-center justify-center rounded-2xl bg-black/30 border border-white/5">
+        <DyedMonsterImage baseId={mon.id} src={mon.imgUrl || mon.iconUrl} alt={mon.name} masuColors={draft} draggable={false} className="h-full aspect-square max-w-full object-contain"/>
+      </div>
+      <div className="text-[10px] text-fuchsia-200 font-bold text-center shrink-0">見るだけの機能です。マスモンの色は変わらず、アイテムも使いません。</div>
+      {dyeRegionCount(mon.id) === 1 && <div className="text-[9px] text-slate-400 font-bold text-center shrink-0">このモンスターは全身をまとめて染めます</div>}
+      <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+        <DyeRegionColorControls baseId={mon.id} colors={draft} onChange={onChange} onCustom={onCustom}/>
+      </div>
+      <div className="flex gap-2 shrink-0">
+        <button type="button" onClick={onReset} className="flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs">元の色に戻す</button>
+        <button type="button" data-dex-try-apply onClick={onApply} className="flex-1 min-h-[44px] rounded-xl font-black text-xs bg-fuchsia-600 text-white active:scale-95">この色で見る</button>
+      </div>
+    </div>
+  </div>
+);
+
+function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMonsterIds, masuMons, dexColorKey, getAtkSkillLevels, getUniqueSkillLevels, onMissing, onBackToDetail, onStopPreview, onPlayPreview }) {
       const [idleMotion]=useDexIdleMotion();
       const monsters=dexMonsterList();
       const mon=monsters.find(m=>m.id===dexMonsterId)||null;
@@ -45,7 +168,7 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
               拡大の基準は足元にして、伸びるぶんはすべて上の余白へ向ける */}
           <div data-attack-preview-art className="absolute left-1/2" style={{bottom:'11%',width:'clamp(132px, 44vw, 184px)',height:'clamp(132px, 44vw, 184px)',transform:'translateX(-50%) scale(1.15)',transformOrigin:'bottom center'}}>
             {/* 待機アニメ(翼の羽ばたきなど)もバトルと同じ場面で重ねる。持たない子は今までどおり1枚の絵 */}
-            <BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>
+            <BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name, false, dexSelectedColors(masuMons, mon.id, dexColorKey)), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim} baseId={mon.id}/>
           </div>
           <span className="absolute bottom-2 left-0 right-0 text-center text-[10px] font-bold text-slate-400">バトルと同じ演出です（ダメージや性能は変わりません）</span>
         </div>
@@ -100,9 +223,10 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
         </div>
       </div>);}
 
-function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, getAtkSkillLevels, getUniqueSkillLevels, swipeRef, onMissing, onBackToList, onOpenAttackPreview, onSelectMonster, onSelectTab, onStopPreview }) {
+function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masuMons, dexColorKey, onSelectColor, tryDyeDraft, onOpenTryDye, onTryDyeChange, onTryDyeCustom, onTryDyeReset, onCloseTryDye, getAtkSkillLevels, getUniqueSkillLevels, swipeRef, onMissing, onBackToList, onOpenAttackPreview, onSelectMonster, onSelectTab, onStopPreview }) {
       const [idleMotion,toggleIdleMotion]=useDexIdleMotion();
       const monsters=dexMonsterList();
+      const [colorSheetOpen,setColorSheetOpen]=useState(false); // 色の見本にするマスモンの一覧(開いているあいだだけ)
       const index=monsters.findIndex(m=>m.id===dexMonsterId);
       const mon=index>=0?monsters[index]:null;
       if(!mon){ onMissing(); return null; }
@@ -162,34 +286,64 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, getA
           onBack={()=>{stopDexAttackPreview();onBackToList();}} backLabel="図鑑一覧へ戻る"
           right={<span className="text-[11px] font-mono font-black text-amber-200/80 tabular-nums">{index+1} / {monsters.length}</span>}/>
         {/* 上半分: 立ち絵。左右のボタンと横スワイプで前後へ移る */}
-        {/* 立ち絵の枠。高さをここで決め、絵は枠に合わせて縮尺する。
-            元画像は160px四方のものと1024px四方のものが混ざっており、
-            寸法を指定しないと「小さい元画像はそのままの大きさ、大きい元画像は枠いっぱい」となって
-            モンスターごとに見た目の大きさが2倍近く変わってしまう(ザンだけ極端に大きく見えた)。 */}
-        <div data-dex-art className="relative shrink-0 flex items-center justify-center px-14" style={{height:'clamp(150px, 20dvh, 180px)'}}
+        {/* 立ち絵の左右の空きに、前後へ移る矢印と操作ボタンを縦に並べる(2026-09-24 ユーザー指摘
+            「ボタン追加してるから図鑑の説明画面が小さくなってる。両サイドの空いたスペース使って説明画面の縦幅は小さくしないで」)。
+            以前は立ち絵の下に「動きを止める・攻撃アクション」「色」の2行を足していて、そのぶん下の情報カードが縮んでいた。
+            そのあと「圧迫感ありすぎるからもうすこし下の縦幅縮めてもいいよ」で、この段を少し高くし(絵は少しだけ大きく)、
+            ボタンと矢印のあいだと、下の情報カードとのあいだに余白を取った。
+              左: 動きを止める / ← / 色(マスモンを選ぶ)
+              右: 攻撃アクション / → / 染めてみる
+            ボタンは立ち絵の枠(data-dex-art)の外の列に置くので、絵には重ならない。 */}
+        <div data-dex-stage className="shrink-0 w-full max-w-md mx-auto flex items-center gap-1 px-1.5 py-1.5" style={{height:'clamp(176px, 26dvh, 226px)'}}
           onTouchStart={e=>{swipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
           onTouchEnd={e=>{const from=swipeRef.current; swipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
-          {unlocked
-            ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion}/>
-            : <DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>}
-          <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
-          <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
+          <div data-dex-side="left" className="flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1">
+            {unlocked&&monsterIdleRigOf(mon.id)
+              ? <button type="button" data-dex-idle-toggle aria-pressed={idleMotion} onClick={()=>{Audio_.se.tap();toggleIdleMotion();}}
+                  className={`w-full max-w-[124px] min-h-[44px] px-1 rounded-xl border flex flex-col items-center justify-center gap-0.5 font-black shadow-lg active:scale-95 ${idleMotion?'border-amber-300/60 bg-slate-950/85 text-amber-100':'border-white/20 bg-slate-800 text-slate-300'}`}>
+                  <DexSideLabel text={idleMotion?'⏸ 動きを止める':'▶ 動かす'}/>
+                </button>
+              : <span className="min-h-[44px]" aria-hidden="true"/>}
+            <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="w-11 min-h-[44px] shrink-0 rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
+            {/* 色を変えて見る(マスモンを選んでその子の色) */}
+            {unlocked
+              ? <DexColorPickButton masuMons={masuMons} mon={mon} value={dexColorKey} onOpen={()=>setColorSheetOpen(true)}/>
+              : <span className="min-h-[44px]" aria-hidden="true"/>}
+          </div>
+          {/* 立ち絵の枠。高さをここで決め、絵は枠に合わせて縮尺する。
+              元画像は160px四方のものと1024px四方のものが混ざっており、
+              寸法を指定しないと「小さい元画像はそのままの大きさ、大きい元画像は枠いっぱい」となって
+              モンスターごとに見た目の大きさが2倍近く変わってしまう(ザンだけ極端に大きく見えた)。 */}
+          <div data-dex-art className="relative shrink-0 aspect-square flex items-center justify-center" style={{height:'clamp(152px, 22dvh, 190px)'}}>
+            {unlocked
+              ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion} colors={dexSelectedColors(masuMons, mon.id, dexColorKey)}/>
+              : <DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>}
+          </div>
+          {/* 攻撃アクションの入口。立ち絵の上に重ねると絵が隠れてしまうので、枠の外(右の列)に置く。
+              演出は上へ大きく飛ぶため、ここでは再生せず専用画面(MONSTER_ATTACK_PREVIEW)へ移る */}
+          <div data-dex-side="right" className="flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1">
+            {unlocked
+              ? <button type="button" data-dex-attack-preview onClick={()=>{stopDexAttackPreview();Audio_.se.tap();onOpenAttackPreview();}}
+                  className="w-full max-w-[124px] min-h-[44px] px-1.5 rounded-xl border border-cyan-300/60 bg-slate-950/85 font-black text-cyan-100 shadow-lg active:scale-95 flex flex-col items-center justify-center gap-0.5">
+                  <DexSideLabel text="▶ 攻撃アクション"/>
+                </button>
+              : <span className="min-h-[44px]" aria-hidden="true"/>}
+            <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="w-11 min-h-[44px] shrink-0 rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
+            {/* 図鑑の中だけで染めてみる */}
+            {unlocked
+              ? <button type="button" data-dex-color-try onClick={()=>{Audio_.se.tap();onOpenTryDye(dexSelectedColors(masuMons, mon.id, dexColorKey)||[]);}}
+                  className="w-full max-w-[124px] min-h-[44px] px-1.5 rounded-xl border border-fuchsia-400/60 bg-slate-950/85 font-black text-fuchsia-100 active:scale-95 flex flex-col items-center justify-center gap-0.5">
+                  <DexSideLabel text="🎨 染めてみる"/>
+                </button>
+              : <span className="min-h-[44px]" aria-hidden="true"/>}
+          </div>
         </div>
-        {/* 攻撃アクションの入口。立ち絵の上に重ねると絵が隠れてしまうので、枠の外に1行で置く。
-            演出は上へ大きく飛ぶため、ここでは再生せず専用画面(MONSTER_ATTACK_PREVIEW)へ移る */}
-        {/* 立ち絵の動きの切り替えも同じ行に置く(1回押すたびに 動かす⇔止める。最初は動く) */}
-        {unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center gap-2">
-          {monsterIdleRigOf(mon.id)&&<button type="button" data-dex-idle-toggle aria-pressed={idleMotion} onClick={()=>{Audio_.se.tap();toggleIdleMotion();}}
-            className={`min-h-[44px] px-4 rounded-xl border text-[12px] font-black shadow-lg active:scale-95 ${idleMotion?'border-amber-300/60 bg-slate-950/85 text-amber-100':'border-white/20 bg-slate-800 text-slate-300'}`}>
-            {idleMotion?'⏸ 動きを止める':'▶ 動かす'}
-          </button>}
-          <button type="button" data-dex-attack-preview onClick={()=>{stopDexAttackPreview();Audio_.se.tap();onOpenAttackPreview();}}
-            className="min-h-[44px] px-5 rounded-xl border border-cyan-300/60 bg-slate-950/85 text-[12px] font-black text-cyan-100 shadow-lg active:scale-95">
-            ▶ 攻撃アクション
-          </button>
-        </div>}
+        {unlocked&&colorSheetOpen&&<DexMasuColorSheet masuMons={masuMons} mon={mon} value={dexColorKey} onSelect={onSelectColor} onClose={()=>setColorSheetOpen(false)}/>}
+        {unlocked&&Array.isArray(tryDyeDraft)&&<DexTryDyeSheet mon={mon} draft={tryDyeDraft} onChange={onTryDyeChange} onCustom={onTryDyeCustom}
+          onReset={()=>{Audio_.se.tap();onTryDyeReset();}} onClose={onCloseTryDye}
+          onApply={()=>{Audio_.se.tap();onSelectColor(dexHasColors(tryDyeDraft)?{colors:tryDyeDraft.slice()}:null);onCloseTryDye();}}/>}
         {/* 下半分: 情報カード */}
-        <div className="flex-1 min-h-0 pt-2">
+        <div className="flex-1 min-h-0 pt-3">
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
             <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{unlocked?mon.name:'？？？'}</div>
             {unlocked?(<>

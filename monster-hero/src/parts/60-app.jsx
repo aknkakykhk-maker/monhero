@@ -125,7 +125,7 @@ function MonsterHeroGame() {
     storeSet(RHYTHM_SELECT_VIEW_KEY,value,false);
   };
   const openRhythmDemo = async () => {
-    const settings=normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false));
+    const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
     const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
@@ -134,7 +134,7 @@ function MonsterHeroGame() {
     setGameState('RHYTHM_DEMO_HOME');
   };
   const openRhythmDebug = async () => {
-    const settings=normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false));
+    const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
     const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
@@ -1359,6 +1359,8 @@ function MonsterHeroGame() {
   const [dexLineageFilter, setDexLineageFilter] = useState('all'); // モンスター図鑑: 主血統の絞り込み('all'または血統id)
   const [dexMonsterId, setDexMonsterId] = useState(null);          // モンスター図鑑: 詳細で見ているモンスターのid
   const [dexTab, setDexTab] = useState('basic');                   // モンスター図鑑の詳細タブ(basic/stats/skills)
+  const [dexColorKey, setDexColorKey] = useState(null);            // モンスター図鑑: 見本にしている配色(null=元の色 / {masuId} / {colors}。保存しない)
+  const [dexTryDyeDraft, setDexTryDyeDraft] = useState(null);      // モンスター図鑑: 「染めてみる」で選んでいる途中の色(null=閉じている。保存しない)
   const dexSwipeRef = useRef(null);                                // 図鑑詳細の横スワイプ(指を置いた位置)
   const [dexAttackPreview, setDexAttackPreview] = useState(null);  // 図鑑詳細の攻撃アクション再生中だけ使う {monsterId,anim}
   const dexAttackPreviewRunRef = useRef(0);                         // 左右移動/戻るで非同期プレビューを確実に止める世代番号
@@ -1368,7 +1370,7 @@ function MonsterHeroGame() {
   const stopDexAttackPreview = () => { dexAttackPreviewRunRef.current+=1; setDexAttackPreview(null); };
   const playDexAttackPreview = async (mon, kind, atkMotion) => {
     const run=++dexAttackPreviewRunRef.current;
-    const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion):attackMotionPreviewSequence(atkMotion);
+    const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id):attackMotionPreviewSequence(atkMotion, mon?.id);
     for(const step of steps){
       if(run!==dexAttackPreviewRunRef.current)return;
       setDexAttackPreview({monsterId:mon.id,kind,anim:step.anim});
@@ -3729,7 +3731,11 @@ function MonsterHeroGame() {
   // 第2回の閉幕の会話(2026-09-20)。第1回と同じく、終了の時刻に自動で流れる。
   // 報酬の上乗せは無いので、知らせるのは終わったことと受け取りのしかただけ
   const SYMPHONY_THANKS_STORY_ID = 'symphony_2026_09_17_thanks';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID];
+  // ビートPがいつでも貯まるようになった知らせ(2026-09-24・ユーザー指示「ストーリー含めて作って」)。
+  // イベントの開催とは関係なく、HOMEで1度だけ流す。見たかどうかは同じ保存キーの配列へ入れる
+  // (新しいキーは作らない)。ビートPの公開フラグが立っているときだけ並べる
+  const BEAT_POINT_ALWAYS_STORY_ID = 'beat_point_always_2026_09_24';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -3815,12 +3821,18 @@ function MonsterHeroGame() {
         .map(rhythmEventThanksStoryIdFor).find(id => id && notPlayedYet(id)) || null;
       if (endedThanksId) setRhythmEventStoryPending(prev => prev || endedThanksId);
       const liveEvent = rhythmLimitedEventAt(Date.now());
-      if (!liveEvent) return;
+      // ビートPの知らせ。イベントの会話が先に並んでいれば、そちらが終わったあとの見回りで並ぶ
+      const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
+      if (!liveEvent) {
+        if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+        return;
+      }
       // ① 会話。まだ見ていなければ、HOMEに着いたところで流す
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
       }
+      else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
       // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
       //    組み直すのは起動時とまったく同じ道すじ(planUpdateNoticesForLogin)なので、
       //    すでに見たものが未読へ戻ることはない
@@ -5120,6 +5132,11 @@ function MonsterHeroGame() {
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootThanksId) {
         setRhythmEventStoryPending(bootThanksId);
       }
+      // ビートPの知らせ。イベントの会話(開催・閉幕)が並んでいればそちらを先にする
+      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && RELEASE_FLAGS.rhythmEventPoints === true && wasOnboarded
+        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(BEAT_POINT_ALWAYS_STORY_ID)) {
+        setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+      }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
       // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
@@ -6125,6 +6142,7 @@ function MonsterHeroGame() {
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
+    beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -9755,7 +9773,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 新モードの咆哮。このターンはダメージが無く、次のターンから敵の攻撃が上がる。
         // 重ねがけの上限は行動の抽選側(evaluateEnemyActions)が見るので、ここでは数えるだけ
         Audio_.se.enemyCharge();
-        setEnemyAttackFx({kind:'charge',skill:'roar'});
+        setEnemyAttackFx({kind:'charge',skill:'roar',ms:battleMs(1100)});
         setEnemyAttackAnim(true);
         tacticsRoarStacksRef.current += 1;
         // ★段数は敵にも持たせる(2026-09-20 ユーザー指摘「咆哮の効果が分からない」)。
@@ -9777,7 +9795,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         addPopup(`再生 +${healed}`,'enemy','text-emerald-300 font-black text-2xl drop-shadow-md');
         // ★技ごとの動き(カワズモーの「かえるのうた」など)を出すために、何の技かだけを渡す。
         //   enemyAttackAnim は立てない(立てると丸枠・絵が攻撃の動きをしてしまう)
-        setEnemyAttackFx({kind:'regen',skill:'regen'});
+        setEnemyAttackFx({kind:'regen',skill:'regen',ms:battleMs(1000)});
         await battleWait(1000);
         setEnemyAttackFx(null);
       } else if (intent.type==='WAIT') {
@@ -9787,7 +9805,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 突進モーションと炸裂音は必殺技を撃つターンのものなので、ここでは使わない
         // (使うと「準備しただけなのに殴られた」ように見えてしまう)
         Audio_.se.enemyCharge();
-        setEnemyAttackFx({kind:'charge',skill:'charge'});
+        setEnemyAttackFx({kind:'charge',skill:'charge',ms:battleMs(1100)});
         setEnemyAttackAnim(true);
         addPopup("必殺技の準備をしている…！",'enemy','text-amber-300 font-black text-xl drop-shadow-md');
         await battleWait(1100);
@@ -9799,7 +9817,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ガードが効かない技なので、この1ターンで「距離を取る」「回避を用意する」を決めてもらう
         // (2026-09-21 ユーザー指示「貫通は必殺級の技だからこれもためると同じように1ターン経由」)
         Audio_.se.enemyCharge();
-        setEnemyAttackFx({kind:'charge',skill:'pierceCharge'});
+        setEnemyAttackFx({kind:'charge',skill:'pierceCharge',ms:battleMs(1100)});
         setEnemyAttackAnim(true);
         addPopup("貫通撃の構え…！ ガードは効かない",'enemy','text-rose-300 font-black text-xl drop-shadow-md');
         await battleWait(1100);
@@ -9878,12 +9896,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const fxKind = isMooBoss(enemy?.id) ? 'moo' : (intent.type==='SPECIAL' ? 'special' : 'normal');
         // skill: 何の技か(画面が技ごとの動きを選ぶのに使う。カワズモーの張り手・上手投げなど)
         const fxSkill = intent.variant || (intent.type==='SPECIAL' ? 'special' : 'normal');
-        setEnemyAttackFx({kind: fxKind, skill: fxSkill});
+        // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)。
+        //   ムーも動きを持つときは技ごとの長さ(全画面の演出を見せきる長さ)になる
+        const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? enemy?.id : null;
+        const fxMs = tacticsEnemyMotionMs(motionEnemyId, fxSkill, fxKind==='moo' ? 900 : (intent.type==='SPECIAL' ? 1100 : 450));
+        // targets: 狙われた枠(画面が攻撃を味方の枠まで飛ばすのに使う) / ms: 速さの設定を掛けた実際の長さ(動きをこれに合わせる)
+        setEnemyAttackFx({kind: fxKind, skill: fxSkill, targets: Array.isArray(aimedSlots) ? aimedSlots.slice() : [], ms: battleMs(fxMs)});
         if(intent.type==='SPECIAL') Audio_.se.enemySpecial(); else Audio_.se.enemyAttack();
         setEnemyAttackAnim(true);
-        if(fxKind==='moo') triggerShake(true);
-        // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)
-        await battleWait(fxKind==='moo' ? 900 : tacticsEnemyMotionMs(isTacticsMode(runMode)&&!ecoBattleView?enemy?.id:null, fxSkill, intent.type==='SPECIAL' ? 1100 : 450));
+        if(fxKind==='moo') {
+          // 動きを持つムーは、技が当たる瞬間に揺らす(はじめに揺らすと、溜めのあいだに揺れが終わってしまう)
+          if (motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId]) setTimeout(()=>triggerShake(true), battleMs(Math.round(fxMs*tacticsEnemyHitFrac(motionEnemyId, fxSkill))));
+          else triggerShake(true);
+        }
+        await battleWait(fxMs);
         setEnemyAttackAnim(false);
         await battleWait(fxKind==='moo' ? 250 : (intent.type==='SPECIAL' ? 300 : 100));
         setEnemyAttackFx(null);
@@ -10724,7 +10750,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(115); triggerShake();
                 await battleWait(130);
               }else{
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500)))));
+                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))));
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
@@ -10736,7 +10762,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(130);
               }else{
                 if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)))));
+                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))));
               }
             }
             setAttackAnim(null);
@@ -13368,6 +13394,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dexMonsterId={dexMonsterId}
             dexAttackPreview={dexAttackPreview}
             unlockedMonsterIds={unlockedMonsterIds}
+            masuMons={masuMons}
+            dexColorKey={dexColorKey}
             getAtkSkillLevels={getAtkSkillLevels}
             getUniqueSkillLevels={getUniqueSkillLevels}
             onMissing={()=>setGameState('MONSTER_DEX')}
@@ -13382,7 +13410,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dexLineageFilter={dexLineageFilter}
             unlockedMonsterIds={unlockedMonsterIds}
             onSelectLineage={setDexLineageFilter}
-            onOpenDetail={(monId)=>{stopDexAttackPreview();setDexMonsterId(monId);setDexTab('basic');setGameState('MONSTER_DEX_DETAIL');}}
+            onOpenDetail={(monId)=>{stopDexAttackPreview();setDexMonsterId(monId);setDexTab('basic');setDexColorKey(null);setDexTryDyeDraft(null);setGameState('MONSTER_DEX_DETAIL');}}
             onBackToManagement={()=>setGameState('MB_MANAGEMENT')}
           />
         )}
@@ -13395,13 +13423,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dexMonsterId={dexMonsterId}
             dexTab={dexTab}
             unlockedMonsterIds={unlockedMonsterIds}
+            masuMons={masuMons}
+            dexColorKey={dexColorKey}
+            onSelectColor={setDexColorKey}
+            tryDyeDraft={dexTryDyeDraft}
+            onOpenTryDye={(colors)=>setDexTryDyeDraft(Array.isArray(colors)?colors.slice():[])}
+            onTryDyeChange={(idx,colorId)=>setDexTryDyeDraft(prev=>{const next=[...(prev||[])];next[idx]=colorId;return next;})}
+            onTryDyeCustom={(idx)=>{const parsed=_parseCustomColorId(dexTryDyeDraft?.[idx]);setCustomColorPicker({mode:'dex',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}
+            onTryDyeReset={()=>setDexTryDyeDraft([])}
+            onCloseTryDye={()=>{setDexTryDyeDraft(null);setCustomColorPicker(null);}}
             getAtkSkillLevels={getAtkSkillLevels}
             getUniqueSkillLevels={getUniqueSkillLevels}
             swipeRef={dexSwipeRef}
             onMissing={()=>setGameState('MONSTER_DEX')}
             onBackToList={()=>setGameState('MONSTER_DEX')}
             onOpenAttackPreview={()=>setGameState('MONSTER_ATTACK_PREVIEW')}
-            onSelectMonster={(monId)=>{setDexMonsterId(monId);setDexTab('basic');}}
+            onSelectMonster={(monId)=>{setDexMonsterId(monId);setDexTab('basic');setDexColorKey(null);setDexTryDyeDraft(null);}}
             onSelectTab={setDexTab}
             onStopPreview={stopDexAttackPreview}
           />
@@ -16271,12 +16308,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // パンドラはまだマスモンでもベースモンでもないので、個体を引かずDEBUG定義をそのまま使う。
           // mode==='monsterCheck' は新モンスター確認からの呼び出しで、所持していない種も塗れる必要がある。
           // そこだけは個体を探さず、選んでいる種から表示用の一時データを作る(保存には触れない)
+          // mode==='dex' は図鑑の「染めてみる」。こちらも個体を探さず、見ている種から表示用の一時データを作る
           const masu = mode==='monsterCheck'
             ? (ALL_PLAYER_MONSTERS[monsterCheckDebugId] ? {id:`monster-check-${monsterCheckDebugId}`,baseId:monsterCheckDebugId,name:ALL_PLAYER_MONSTERS[monsterCheckDebugId].name,colors:[]} : null)
+            : mode==='dex'
+            ? (ALL_PLAYER_MONSTERS[dexMonsterId] ? {id:`dex-try-${dexMonsterId}`,baseId:dexMonsterId,name:ALL_PLAYER_MONSTERS[dexMonsterId].name,colors:[]} : null)
             : mode==='debug' ? masuMons.find(m=>String(m.id)===String(monsterImageDebugId)) : getMasuMon(dyeTargetMasuId);
           const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
           const applyCustom = () => {
-            const setter=mode==='monsterCheck'?setMonsterCheckDebugColors:mode==='debug'?setMonsterImageDebugColors:setDyePreviewColors;
+            const setter=mode==='monsterCheck'?setMonsterCheckDebugColors:mode==='dex'?setDexTryDyeDraft:mode==='debug'?setMonsterImageDebugColors:setDyePreviewColors;
             // 濃さ(@NN)は色を作り直しても引き継ぐ
             setter(prev => { const next = [...(prev||(mode==='debug'?getMasuColors(masu):[]))]; next[idx] = withColorAlpha(_encodeCustomColorId(h, s, v), colorAlphaOf(next[idx])); return next; });
             setCustomColorPicker(null);
@@ -16284,7 +16324,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ドラッグ中は毎フレームcolorIdが変わり染色エンジンの再描画(Canvas処理)が大量発生するため、
           // プレビュー表示だけは色相/彩度/明度を粗く丸めて再描画の頻度を抑える(確定時は元の値をそのまま使う)
           const previewColorId = _encodeCustomColorId(Math.round(h / 4) * 4, Math.round(s * 20) / 20, Math.round(v * 20) / 20);
-          const sourceColors=mode==='monsterCheck'?(monsterCheckDebugColors||[]):mode==='debug'?(monsterImageDebugColors||getMasuColors(masu)):dyePreviewColors;
+          const sourceColors=mode==='monsterCheck'?(monsterCheckDebugColors||[]):mode==='dex'?(dexTryDyeDraft||[]):mode==='debug'?(monsterImageDebugColors||getMasuColors(masu)):dyePreviewColors;
           const previewColors = sourceColors.map((c, i) => i === idx ? withColorAlpha(previewColorId, colorAlphaOf(c)) : c);
           return (
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:32000}}>
