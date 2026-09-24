@@ -289,13 +289,15 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
         {/* 立ち絵の左右の空きに、前後へ移る矢印と操作ボタンを縦に並べる(2026-09-24 ユーザー指摘
             「ボタン追加してるから図鑑の説明画面が小さくなってる。両サイドの空いたスペース使って説明画面の縦幅は小さくしないで」)。
             以前は立ち絵の下に「動きを止める・攻撃アクション」「色」の2行を足していて、そのぶん下の情報カードが縮んでいた。
+            そのあと「圧迫感ありすぎるからもうすこし下の縦幅縮めてもいいよ」で、この段を少し高くし(絵は少しだけ大きく)、
+            ボタンと矢印のあいだと、下の情報カードとのあいだに余白を取った。
               左: 動きを止める / ← / 色(マスモンを選ぶ)
               右: 攻撃アクション / → / 染めてみる
             ボタンは立ち絵の枠(data-dex-art)の外の列に置くので、絵には重ならない。 */}
-        <div data-dex-stage className="shrink-0 w-full max-w-md mx-auto flex items-stretch gap-1 px-1.5" style={{height:'clamp(150px, 20dvh, 180px)'}}
+        <div data-dex-stage className="shrink-0 w-full max-w-md mx-auto flex items-center gap-1 px-1.5 py-1.5" style={{height:'clamp(176px, 26dvh, 226px)'}}
           onTouchStart={e=>{swipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
           onTouchEnd={e=>{const from=swipeRef.current; swipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
-          <div data-dex-side="left" className="flex-1 min-w-0 flex flex-col items-center justify-between py-0.5">
+          <div data-dex-side="left" className="flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1">
             {unlocked&&monsterIdleRigOf(mon.id)
               ? <button type="button" data-dex-idle-toggle aria-pressed={idleMotion} onClick={()=>{Audio_.se.tap();toggleIdleMotion();}}
                   className={`w-full max-w-[124px] min-h-[44px] px-1 rounded-xl border flex flex-col items-center justify-center gap-0.5 font-black shadow-lg active:scale-95 ${idleMotion?'border-amber-300/60 bg-slate-950/85 text-amber-100':'border-white/20 bg-slate-800 text-slate-300'}`}>
@@ -312,14 +314,14 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
               元画像は160px四方のものと1024px四方のものが混ざっており、
               寸法を指定しないと「小さい元画像はそのままの大きさ、大きい元画像は枠いっぱい」となって
               モンスターごとに見た目の大きさが2倍近く変わってしまう(ザンだけ極端に大きく見えた)。 */}
-          <div data-dex-art className="relative shrink-0 h-full aspect-square flex items-center justify-center" style={{height:'clamp(150px, 20dvh, 180px)'}}>
+          <div data-dex-art className="relative shrink-0 aspect-square flex items-center justify-center" style={{height:'clamp(152px, 22dvh, 190px)'}}>
             {unlocked
               ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion} colors={dexSelectedColors(masuMons, mon.id, dexColorKey)}/>
               : <DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>}
           </div>
           {/* 攻撃アクションの入口。立ち絵の上に重ねると絵が隠れてしまうので、枠の外(右の列)に置く。
               演出は上へ大きく飛ぶため、ここでは再生せず専用画面(MONSTER_ATTACK_PREVIEW)へ移る */}
-          <div data-dex-side="right" className="flex-1 min-w-0 flex flex-col items-center justify-between py-0.5">
+          <div data-dex-side="right" className="flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1">
             {unlocked
               ? <button type="button" data-dex-attack-preview onClick={()=>{stopDexAttackPreview();Audio_.se.tap();onOpenAttackPreview();}}
                   className="w-full max-w-[124px] min-h-[44px] px-1.5 rounded-xl border border-cyan-300/60 bg-slate-950/85 font-black text-cyan-100 shadow-lg active:scale-95 flex flex-col items-center justify-center gap-0.5">
@@ -341,7 +343,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
           onReset={()=>{Audio_.se.tap();onTryDyeReset();}} onClose={onCloseTryDye}
           onApply={()=>{Audio_.se.tap();onSelectColor(dexHasColors(tryDyeDraft)?{colors:tryDyeDraft.slice()}:null);onCloseTryDye();}}/>}
         {/* 下半分: 情報カード */}
-        <div className="flex-1 min-h-0 pt-2">
+        <div className="flex-1 min-h-0 pt-3">
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
             <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{unlocked?mon.name:'？？？'}</div>
             {unlocked?(<>
