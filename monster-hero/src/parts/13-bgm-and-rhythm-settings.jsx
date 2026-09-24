@@ -280,6 +280,13 @@ const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控�
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','最大'],['LOW','多め'],['LIGHT','標準'],['MINIMAL','最小']]);
+// 演奏中に1秒あたり何回描くか(2026-09-24・ユーザーと相談して決めた)。
+// POWER_SAVE … 120Hz以上の画面では1回おきに描き、毎秒60回ほどに抑える。発熱と電池を抑える。
+//   90Hzの画面は抑えない(60へ落とすと 11ms/22ms が交互に並び、かえってガタついて見える)。
+// DEVICE     … 画面の速さに合わせてそのまま描く(これまでの動き)。
+// ★判定は指が触れた時刻と曲の時刻で決めているので、どちらでも判定の正確さは変わらない
+const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE','DEVICE']);
+const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE','省電力'],['DEVICE','端末に合わせる']]);
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -320,6 +327,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // ブラウザから通知そのものは止められないので、全画面と画面ロック防止でできる範囲だけ行う。
   // 既定はOFF。勝手に全画面へ入ると「戻れない」と感じる人がいるため
   quietDuringPlay:false,
+  // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定(省電力)で補われる
+  frameRateMode:'POWER_SAVE',
 });
 const rhythmFiniteInRange = (value,min,max,fallback) => {
   const number=Number(value); return Number.isFinite(number)&&number>=min&&number<=max?number:fallback;
@@ -364,6 +373,7 @@ const normalizeRhythmSettings = value => {
     sideMonsterAbilityHighlight:bool('sideMonsterAbilityHighlight'),
     songPreviewEnabled:bool('songPreviewEnabled'),
     quietDuringPlay:bool('quietDuringPlay'),
+    frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});
