@@ -319,6 +319,32 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "senjou_no_shippuu": {
+   "audio": "monster-hero/audio/bgm-senjou-no-shippuu.mp3",
+   "chartRevision": 2,
+   "audioSha256": "dfcd5d833fec961569e2d8c82ad79f4db89c6c8fb58331817027c266c07639fe",
+   "durationMs": 193593,
+   "analyzedTiming": {
+    "bpm": 139.966,
+    "beatZeroMs": 321.3,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "makutsu_no_senritsu": {
+   "audio": "monster-hero/audio/bgm-makutsu-no-senritsu.mp3",
+   "chartRevision": 2,
+   "audioSha256": "8db199451f0b9a9d1d6bd3a3f0c249601e49f403c464dae16d7dbe6362adb998",
+   "durationMs": 148584,
+   "analyzedTiming": {
+    "bpm": 143.903,
+    "beatZeroMs": 38,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }
