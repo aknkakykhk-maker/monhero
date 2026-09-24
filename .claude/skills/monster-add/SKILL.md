@@ -1,6 +1,6 @@
 ---
 name: monster-add
-description: Add a new playable ally monster (味方モンスター) to モンスターヒーロー — the 20th-and-beyond entry in ALL_PLAYER_MONSTERS. Use when the user drops a monster illustration or says 新モンスター実装 / モンスター追加 / この子を実装して / 新しい味方モンスター. Lists every place one monster must be registered (stats, 9 attack names, unique skill, images, 立ち絵・顔アイコン・円盤石アイコン, lineage, dex text, market discs, market icon framing, dye regions, attack motion, idle-animation rig), which values must be asked rather than invented, how the 3 dye-region styles differ (3 parts is the rule, KenshiMocchi's 5 is the exception), and the checks that catch a missing registration.
+description: Add a new playable ally monster (味方モンスター) to モンスターヒーロー — the 20th-and-beyond entry in ALL_PLAYER_MONSTERS. Use when the user drops a monster illustration or says 新モンスター実装 / モンスター追加 / この子を実装して / 新しい味方モンスター. Lists every place one monster must be registered (stats, 9 attack names, unique skill, images, 立ち絵・顔アイコン・円盤石アイコン, lineage, dex text, market discs, market icon framing, dye regions, attack motion, idle-animation rig), which values must be asked rather than invented (and how to ask — show the existing 20-monster spread with tools/monster/monster-stats-table.js, propose a draft, then confirm), how the 3 dye-region styles differ (3 parts is the rule, KenshiMocchi's 5 is the exception), and the checks that catch a missing registration.
 ---
 
 # 味方モンスターを1体足す
@@ -8,24 +8,65 @@ description: Add a new playable ally monster (味方モンスター) to モン�
 **参照実装は「ミーア」(`Mia`)。** 必要なものがひととおり揃っている唯一の例なので、
 新しい子を足すときは `grep -n "Mia" <ファイル>` で当たりを取ってから同じ場所へ1行ずつ足す。
 
-## 0. 聞き返す場所
+## 0. 数値を決めてもらう(比較を出してから聞く)
 
-絵だけ渡されたときに**勝手に決めてはいけないもの**。まとめて1回で聞く。
+**絵はユーザーが用意する。** 数値のほうは勝手に決めない。
+ただし「ライフいくつにしますか」とだけ聞かない — **既存の帯を数字で見せてから聞く**
+(2026-09-24 ユーザー指示「こっちで設定するものは比較対象を出してもらうと分かりやすい /
+場合によって質問系で聞いてもらうときもあると思う」)。
 
-| 決めるもの | 例(ミーア) |
-| --- | --- |
-| モンスターid・表示名・絵文字 | `Mia` / ミーア / 🧚 |
-| 勇者特性と説明 | 魔力開放 / 勇者モン選択時：固有技のダメージが2倍 |
-| 基礎能力4つ | ライフ300 / ガッツ180 / ちから175 / 丈夫さ60 |
-| 供モン加算4つ(`plusStats`) | hp120 / atk30 / def10 / guts65 |
-| 間合い適性4つ(零・近・中・遠) | `['G','C','A','B']` |
-| 固有技の名前・倍率・消費ガッツ・効果 | バン / 2.1倍 / 42 / 魔法空間：次ターン、カード消費ガッツ0 |
-| 血統(`main`/`sub`)と区分 | `pixie` / `unknown` |
-| 円盤石の値段 | 1500 |
+### ① まず比較表を出す
 
-能力値はバランスに直結する(ゴーレムの合掌の消費68のように、ユーザーが決めた数字が
-コメントで固定されている例がある)。**指定があればそのとおりに入れ、無ければ聞く。**
-絵・アイコン・図鑑の文面・染色の部位分けは、聞かずに進めてよい。
+```bash
+node tools/monster/monster-stats-table.js               # 全20種を合計順に＋各項目の幅
+node tools/monster/monster-stats-table.js --like Pixie  # 近い4種だけ
+```
+
+絵から受ける印象(素早そう・重そう・魔法使い)に近い子を `--like` で並べると話が早い。
+
+### ② 案を1つ作って、表へ差し込んで見せる
+
+**白紙で聞かない。こちらの案を出す。** 仮の値を差し込むと、順位と「下から何番目か」が出る。
+
+```bash
+node tools/monster/monster-stats-table.js --hp 420 --guts 140 --atk 200 --def 40 \
+  --apt BACD --mult 2.6 --cost 52 --name <新しい子の名前>
+```
+
+```
+★ 800  テスト            420   140   200    40  BACD  ×2.6 消 52
+   780  アーク            440   120   130    90  EBCB  ×2.8 消 56
+  ちから: 90 〜 220（まんなか 140） / 新しい子 200（下から20番目）
+```
+
+この形で「**ちからは20種中2番目に高く、そのぶん丈夫さは下から4番目**」と言えば、
+強すぎ・弱すぎがその場で分かる。
+
+### ③ 決めてもらうもの
+
+| 決めるもの | 例(ミーア) | 聞き方 |
+| --- | --- | --- |
+| モンスターid・表示名・絵文字 | `Mia` / ミーア / 🧚 | 絵と名前から案を出して確認 |
+| 基礎能力4つ | ライフ300 / ガッツ180 / ちから175 / 丈夫さ60 | ①②の表で |
+| 供モン加算4つ(`plusStats`) | hp120 / atk30 / def10 / guts65 | 表の幅(hp100〜620 など)を見せて |
+| 間合い適性4つ(零・近・中・遠) | `['G','C','A','B']` | 各段の分布を見せて |
+| 勇者特性と説明 | 魔力開放 / 固有技のダメージが2倍 | **選択肢を2〜3案**出して選んでもらう |
+| 固有技の名前・倍率・消費ガッツ・効果 | バン / 2.1倍 / 42 / 次ターン、カード消費ガッツ0 | 倍率と消費は連動する(下記) |
+| 血統(`main`/`sub`)と区分 | `pixie` / `unknown` | 既存の血統一覧を見せて |
+| 円盤石の値段 | 1500 | だいたい1500で固定 |
+
+**答えが分かれそうなもの・好みで決まるもの(特性の方向性、固有技の効果、名前)は
+選択肢を並べて質問の形で聞く。** 数値は②の表を添えて聞く。
+
+> **固有技の消費ガッツは「倍率 × 20」。** 20種中17種がちょうどこの値で、
+> 外れているのは3種だけ(スエゾー 19.2 / ゴーレム 21.3 / パンドラ 22.6。
+> ゴーレムの68はユーザーが決めた値で、コメントで固定されている)。
+> 倍率が決まったら消費は ×20 で案を出し、外すときは理由をひとこと添える。
+
+### ④ 聞かずに進めてよいもの
+
+絵の加工・顔と円盤石のアイコン・図鑑の文面・染色の部位分け・待機アニメのリグ・
+更新履歴とヘルプ。**止まるのは③だけ。**
 
 ## 1. 必要なデータの全体像
 
