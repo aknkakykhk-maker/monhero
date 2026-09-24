@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 961280adf5539e35
+// generated-sha256: 84ef27796650d47a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87,6 +87,8 @@ const UPDATE_NOTICE_STYLES = ['FULL', 'MINI', 'OFF'];
 const normalizeUpdateNoticeStyle = (value) =>
   UPDATE_NOTICE_STYLES.includes(String(value)) ? String(value) : 'FULL';
 const UPDATE_NOTICE_STYLE_KEY = 'mh_update_notice_style_v1';
+// 手札のカードのダブルタップとみなす間隔(ミリ秒)。1回目で選び、この間に同じカードを押すと説明を出す
+const CARD_DOUBLE_TAP_MS = 350;
 const BATTLE_SCREEN_STYLES = ['TACTICS_OLD', 'TACTICS_NEW'];
 const normalizeBattleScreenStyle = (value) =>
   BATTLE_SCREEN_STYLES.includes(String(value)) ? String(value) : 'TACTICS_NEW';
@@ -100,7 +102,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 11:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 12:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23608,8 +23610,15 @@ function BattleScreen({
                   const scope=tacticsCardScope?tacticsCardScope(c):null;
                   const text=genre?(scope&&scope!=='敵へ'?`${genre}・${scope}`:genre):'';
                   return text?<div data-card-genre={genre} data-card-scope={scope||undefined} className="w-full truncate rounded-[5px] bg-black/30 px-0.5 text-[8px] font-black leading-[11px] text-white/85">{text}</div>:null;
-                })()}{['atk','range_atk','unique'].includes(c.type)&&(<div role="button" aria-label={`${c.name}の技を変える`} data-skill-change={i} onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}}
-                  style={{height:HAND_CARD_FIT.band}} className={`flex w-full shrink-0 items-center justify-center gap-0.5 rounded-[5px] border border-white/30 bg-white/15 text-[9px] font-black leading-none text-white active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}><span aria-hidden="true">⇄</span>技変更</div>)}<div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] flex items-center justify-center gap-0.5" style={{paddingTop:HAND_CARD_FIT.gutsPad,paddingBottom:HAND_CARD_FIT.gutsPad}}><Zap size={9}/>{curGuts}</div></div></button>{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{isDragging&&ReactDOM.createPortal(<div data-tactics-drag-card-ghost className={`fixed w-[72px] rounded-[12px] border p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]`} style={{left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,pointerEvents:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))',...(TYPE_INLINE_STYLE[c.type]||{})}}><div data-decoration className="mt-1.5 flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20">{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5" style={{containerType:'inline-size'}}><div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5" style={handCardNameFit(c.name)}>{c.name}</div><div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></div>,document.body)}{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
+                })()}{/* ★「⇄技変更」とガッツの段をまとめて1つのボタンにする(2026-09-24 ユーザー指示「どこを押せば反応するかを
+                    見た目でわかるようにして」「ガッツ表示含む下部ラインをタップ領域にする」)。
+                    帯だけだと高さ13〜16pxで押しにくく、どこまでが押し場所かも見えなかった。
+                    明るい枠で囲んだ範囲がそのまま押せる範囲になる。攻撃以外のカードはガッツの段だけ(押しても技の一覧は出ない) */}
+                {['atk','range_atk','unique'].includes(c.type)?(<div role="button" aria-label={`${c.name}の技を変える`} data-skill-change={i} onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}}
+                  className={`flex w-full shrink-0 flex-col overflow-hidden rounded-[7px] border border-white/60 bg-white/[.12] shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>
+                  <div style={{height:HAND_CARD_FIT.band}} className="flex shrink-0 items-center justify-center gap-0.5 text-[9px] font-black leading-none text-white"><span aria-hidden="true">⇄</span>技変更</div>
+                  <div className="text-[10px] font-black bg-black/30 text-white rounded-[5px] flex items-center justify-center gap-0.5" style={{paddingTop:HAND_CARD_FIT.gutsPad,paddingBottom:HAND_CARD_FIT.gutsPad}}><Zap size={9}/>{curGuts}</div>
+                </div>):<div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] flex items-center justify-center gap-0.5" style={{paddingTop:HAND_CARD_FIT.gutsPad,paddingBottom:HAND_CARD_FIT.gutsPad}}><Zap size={9}/>{curGuts}</div>}</div></button>{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{isDragging&&ReactDOM.createPortal(<div data-tactics-drag-card-ghost className={`fixed w-[72px] rounded-[12px] border p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]`} style={{left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,pointerEvents:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))',...(TYPE_INLINE_STYLE[c.type]||{})}}><div data-decoration className="mt-1.5 flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20">{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5" style={{containerType:'inline-size'}}><div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5" style={handCardNameFit(c.name)}>{c.name}</div><div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></div>,document.body)}{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
             })}
           </div>
         </div>
@@ -25589,6 +25598,8 @@ function MonsterHeroGame() {
   //   味方への効果は対象の味方や使ったモンスター」)。カードの効果は40か所以上から addPopup を呼ぶので、
   //   1つずつ枠を渡さず、カードを1枚処理しているあいだだけここへ使った子の枠を置く
   const popupSlotRef = useRef(null);
+  // 手札のカードを最後に押した時刻(ダブルタップで説明を出すため)。{ i:手札の位置, t:時刻 }
+  const cardTapRef = useRef({ i: null, t: 0 });
   const [effect, setEffect] = useState(null);
   const [enemyIntent, setEnemyIntent] = useState(null);
   // 直前に敵が実行した行動。SCANが「ためた直後なので次は必殺技で確定」「移動した直後なので
@@ -34128,10 +34139,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // カード選択(タップ/ドラッグ共通)。
   // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
   // 合計DMG・合計軽減の表示が隠れてしまうため、スワイプではパネルを出さない。
+  // ★説明のパネルは**ダブルタップ**で出す(2026-09-24 ユーザー指示「カードタップ後の詳細画面が
+  //   毎回出るのが鬱陶しい」「長押しはカードをモンスターに移動してはめると相性が悪い。ダブルタップのほうが良さそう」)。
+  //   1回目のタップはいつもどおり選ぶ・外すだけで、パネルは閉じる。同じカードを CARD_DOUBLE_TAP_MS 以内に
+  //   もう一度押したら、選び直さずにパネルだけ出す(2回目で選択が外れないように)
   const selectCardAt = (i, showDetail = true) => {
     if(isBusy||autoBattleRef.current) return;
     const c=hand[i]; if(!c) return;
-    const focus=(card)=>setFocusedCard(showDetail?card:null);
+    if(showDetail){
+      const now=Date.now(), last=cardTapRef.current;
+      if(last.i===i&&now-last.t<=CARD_DOUBLE_TAP_MS){ cardTapRef.current={ i:null, t:0 }; setFocusedCard(c); return; }
+      cardTapRef.current={ i, t:now };
+    }
+    const focus=()=>setFocusedCard(null);
     if(pendingCard!==null && pendingCard!==i){ focus(c); return; }
     const isSel=selectedCards.includes(i);
     if(isSel){
