@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bf96a7833278eca0
+// source-sha256: acb3471c329433a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fa9473d9943fb5c4
+// generated-sha256: e295b3eba25e6fe7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -177,7 +177,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 13:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 13:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -41251,7 +41251,17 @@ function BattleScreen({
       className: `flex w-full shrink-0 items-center justify-center gap-0.5 rounded-[7px] border border-white/60 bg-white/[.14] text-[10px] font-black leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
     }, /*#__PURE__*/React.createElement("span", {
       "aria-hidden": "true"
-    }, "\u21C4"), "\u6280\u5909\u66F4") : null : ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
+    }, "\u21C4"), "\u6280\u5909\u66F4")
+    // ★攻撃以外のカードにも同じ高さの空きを取る(2026-09-24 ユーザー指摘「攻撃カードだけ技変更で上にずれるのがださい」)。
+    //   無いと攻撃カードだけ名前と種類の段が上へ押し上がり、手札の並びがそろわない。押しても何も起きない
+    : /*#__PURE__*/React.createElement("div", {
+      "aria-hidden": "true",
+      "data-skill-change-spacer": true,
+      style: {
+        height: HAND_CARD_FIT.skill
+      },
+      className: "w-full shrink-0 pointer-events-none"
+    }) : ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
       role: "button",
       "aria-label": `${c.name}の技を変える`,
       "data-skill-change": i,

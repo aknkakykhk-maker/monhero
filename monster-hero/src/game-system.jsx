@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fa9473d9943fb5c4
+// generated-sha256: e295b3eba25e6fe7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -102,7 +102,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 13:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 13:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23624,7 +23624,10 @@ function BattleScreen({
                     帯だけだと高さ13〜16pxで押しにくく、どこまでが押し場所かも見えなかった。
                     明るい枠で囲んだ範囲がそのまま押せる範囲になる。攻撃以外のカードはガッツの段だけ(押しても技の一覧は出ない) */}
                 {tacticsNewLayout?(['atk','range_atk','unique'].includes(c.type)?(<div role="button" aria-label={`${c.name}の技を変える`} data-skill-change={i} onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}}
-                  style={{height:HAND_CARD_FIT.skill}} className={`flex w-full shrink-0 items-center justify-center gap-0.5 rounded-[7px] border border-white/60 bg-white/[.14] text-[10px] font-black leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}><span aria-hidden="true">⇄</span>技変更</div>):null)
+                  style={{height:HAND_CARD_FIT.skill}} className={`flex w-full shrink-0 items-center justify-center gap-0.5 rounded-[7px] border border-white/60 bg-white/[.14] text-[10px] font-black leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}><span aria-hidden="true">⇄</span>技変更</div>)
+                  // ★攻撃以外のカードにも同じ高さの空きを取る(2026-09-24 ユーザー指摘「攻撃カードだけ技変更で上にずれるのがださい」)。
+                  //   無いと攻撃カードだけ名前と種類の段が上へ押し上がり、手札の並びがそろわない。押しても何も起きない
+                  :<div aria-hidden="true" data-skill-change-spacer style={{height:HAND_CARD_FIT.skill}} className="w-full shrink-0 pointer-events-none"/>)
                 :(['atk','range_atk','unique'].includes(c.type)?(<div role="button" aria-label={`${c.name}の技を変える`} data-skill-change={i} onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}}
                   className={`flex w-full shrink-0 flex-col overflow-hidden rounded-[7px] border border-white/60 bg-white/[.12] shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>
                   <div style={{height:HAND_CARD_FIT.band}} className="flex shrink-0 items-center justify-center gap-0.5 text-[9px] font-black leading-none text-white"><span aria-hidden="true">⇄</span>技変更</div>
