@@ -48,7 +48,7 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,rhythmEventsAwaitingReward,'
   +'normalizeRhythmEventRewardClaims,rhythmEventDivisionIds,rhythmEventParticipationReward,rhythmEventParticipationCleared,'
   +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION,'
-  +'RHYTHM_EVENT_POINT_TARGET_MULTIPLIER,rhythmEventPointBaseForScore,rhythmEventPointAwardAt,'
+  +'RHYTHM_EVENT_POINT_TARGET_MULTIPLIER,RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER,rhythmEventPointBaseForScore,rhythmEventPointAwardAt,'
   +'RHYTHM_EVENT_POINT_SHOP_OFFERS,rhythmEventPointExchangePreview,'
   +'rhythmPreviousLimitedEvent,rhythmNextLimitedEvent,rhythmHistoryEvents};',context);
 const O=context.out;
@@ -637,7 +637,15 @@ if(limited.length){
   const normalAward=normal?O.rhythmEventPointAwardAt(mid,normal,1000000):null;
   check('イベント対象曲だけ1.5倍になる',!!targetAward&&targetAward.amount===300&&targetAward.multiplier===1.5&&targetAward.target===true
     &&(!normal||!!normalAward&&normalAward.amount===200&&normalAward.multiplier===1&&normalAward.target===false));
-  check('公開後もイベント期間外はビートPを出さない',O.rhythmEventPointAwardAt(Date.parse(e.endAt),target,1000000)===null);
+  // 2026-09-24・ユーザー指示「いつでももらえるように。ただしイベント時の1/5」
+  {
+    const off=O.rhythmEventPointAwardAt(Date.parse(e.endAt),target,1000000);
+    const off95=O.rhythmEventPointAwardAt(Date.parse(e.endAt),target,950000);
+    check('イベント期間外は開催中(通常曲)の1/5のビートPを出す',!!off&&off.amount===40&&off.offEvent===true&&off.target===false
+      &&off.eventId===null&&!!off95&&off95.amount===19,off?`100万点→${off.amount}P / 95万点→${off95&&off95.amount}P`:'null');
+    check('開催中の付与は期間外の印を持たない',!!targetAward&&targetAward.offEvent===false);
+    check('期間外の倍率は0.2',O.RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER===0.2);
+  }
   check('DEBUG専用など公開曲でないIDはビートP対象外',O.rhythmEventPointAwardAt(mid,'atsu_cup_theme_debug_short',1000000)===null);
 }
 check('ビートPは既存の後方互換キーへ保存する',
@@ -730,14 +738,16 @@ check('STEP3の更新履歴も開発メモとして隠す',(()=>{
 })());
 
 // --- ビートP STEP4（正式公開・表示・案内） ---
-check('曲選択の獲得案内は開催中だけビートPとして出す',
-  screen.includes("const beatPointEvent=RELEASE_FLAGS.rhythmEventPoints===true?rhythmLimitedEventAt(Date.now()):null;")
+check('曲選択の獲得案内は開催中と期間外で出し分ける',
+  screen.includes("const beatPointEvent=beatPointReleased?rhythmLimitedEventAt(Date.now()):null;")
+  &&screen.includes('data-rhythm-beat-point-always')
   &&screen.includes('data-rhythm-beat-point-active')
   &&screen.includes('ビートP獲得期間中'));
 check('リザルトは獲得したときだけビートPと対象曲倍率を出す',
   game.includes('data-rhythm-result-beat-points')
   &&game.includes('ビートP獲得')
-  &&game.includes('result.eventPointAward.target'));
+  &&game.includes('result.eventPointAward.target')
+  &&game.includes('result.eventPointAward.offEvent'));
 check('プレイヤー向け主要画面はビートP表記へ統一する',
   ![marketScreen,screen,read('monster-hero/src/parts/30-rhythm-play.jsx'),app,help].some(source=>source.includes('イベントP')));
 check('正式公開の更新履歴と助手告知を同じ公開フラグで出す',(()=>{
@@ -748,11 +758,11 @@ check('正式公開の更新履歴と助手告知を同じ公開フラグで出�
     &&entry.includes("assistantNotice: { id:'update_notice_rhythm_beat_point_shop_v1', type:'market' }")
     &&!entry.includes('dev:true');
 })());
-check('正式仕様は名称・常設・非開催時獲得なし・保存互換・アイコン未実装を明記する',(()=>{
+check('正式仕様は名称・常設・非開催時は1/5・保存互換・アイコン未実装を明記する',(()=>{
   const pointSpec=read('docs/spec/RHYTHM_EVENT_POINTS.md');
   return /STEP4[^\n]*正式公開済み/.test(pointSpec)
     &&pointSpec.includes('ビートP交換所は常設する')
-    &&pointSpec.includes('イベント非開催中は新規ビートPを獲得しない')
+    &&pointSpec.includes('イベント非開催中もビートPを獲得する')&&pointSpec.includes('RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER = 0.2')
     &&pointSpec.includes('保存キー `mh_rhythm_event_points_v1` は変更・削除せず')
     &&pointSpec.includes('対象が決まっていないアイコン商品は未実装');
 })());
