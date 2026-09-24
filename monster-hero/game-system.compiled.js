@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: daffa1154c375f7d
+// source-sha256: f3fca785a44a1964
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 825ae738f0beae85
+// generated-sha256: 5bf3d2d3d511ddb6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 19:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 19:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -32021,43 +32021,43 @@ const DexColorSwatches = ({
   className: "w-3.5 h-3.5 rounded-full border border-white/40 bg-gradient-to-br from-white/70 to-slate-500 shrink-0",
   "aria-hidden": "true"
 });
-// 詳細の「色」の行。左は見本の切り替え(押すとマスモンの一覧)、右は「染めてみる」
-const DexColorRow = ({
+// 立ち絵の左右の列のボタンの文字。列の幅が狭い(スマホで90px前後)ので、記号と名前を2段に分け、
+// 名前は折り返さない(「動きを止/める」のような切れ方をさせない)。text は「記号 名前」の形
+const DexSideLabel = ({
+  text
+}) => {
+  const i = String(text).indexOf(' ');
+  const icon = i > 0 ? text.slice(0, i) : '';
+  const label = i > 0 ? text.slice(i + 1) : text;
+  return /*#__PURE__*/React.createElement(React.Fragment, null, icon && /*#__PURE__*/React.createElement("span", {
+    className: "text-[12px] leading-none",
+    "aria-hidden": "true"
+  }, icon), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] leading-tight whitespace-nowrap"
+  }, label));
+};
+// 立ち絵の左下に置く「色」のボタン。いまの見本の色と名前を出し、押すとマスモンの一覧を開く
+const DexColorPickButton = ({
   masuMons,
   mon,
   value,
-  onOpenList,
-  onOpenTry
-}) => /*#__PURE__*/React.createElement("div", {
-  "data-dex-color-row": true,
-  className: "shrink-0 w-full max-w-md mx-auto px-3 pt-1.5 flex items-center gap-1.5",
-  role: "group",
-  "aria-label": "\u8272\u3092\u5909\u3048\u3066\u898B\u308B"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "shrink-0 text-[10px] font-black text-amber-300"
-}, "\u8272"), /*#__PURE__*/React.createElement("button", {
+  onOpen
+}) => /*#__PURE__*/React.createElement("button", {
   type: "button",
   "data-dex-color-open": true,
+  "aria-label": `色の見本: ${dexColorLabel(masuMons, mon.id, value)}(押すとマスモンを選べます)`,
   onClick: () => {
     Audio_.se.tap();
-    onOpenList();
+    onOpen();
   },
-  className: `flex-1 min-w-0 min-h-[44px] px-2.5 rounded-xl border flex items-center gap-1.5 text-[11px] font-black active:scale-95 ${dexSelectedColors(masuMons, mon.id, value) ? 'border-amber-300 bg-amber-700 text-white' : 'border-white/15 bg-slate-900 text-amber-100/90'}`
+  className: `w-full max-w-[124px] min-h-[44px] px-1.5 rounded-xl border flex flex-col items-center justify-center gap-0.5 font-black active:scale-95 ${dexSelectedColors(masuMons, mon.id, value) ? 'border-amber-300 bg-amber-700 text-white' : 'border-white/15 bg-slate-900 text-amber-100/90'}`
+}, /*#__PURE__*/React.createElement("span", {
+  className: "flex items-center gap-1 text-[10px] text-amber-200/90"
 }, /*#__PURE__*/React.createElement(DexColorSwatches, {
   colors: dexSelectedColors(masuMons, mon.id, value)
-}), /*#__PURE__*/React.createElement("span", {
-  className: "truncate min-w-0 flex-1 text-left"
-}, dexColorLabel(masuMons, mon.id, value)), /*#__PURE__*/React.createElement("span", {
-  className: "shrink-0 text-[10px] text-amber-200/80"
-}, "\u9078\u3076 \u25BE")), /*#__PURE__*/React.createElement("button", {
-  type: "button",
-  "data-dex-color-try": true,
-  onClick: () => {
-    Audio_.se.tap();
-    onOpenTry();
-  },
-  className: "shrink-0 min-h-[44px] px-3 rounded-xl border border-fuchsia-400/60 bg-slate-900 text-[11px] font-black text-fuchsia-100 active:scale-95"
-}, "\uD83C\uDFA8 \u67D3\u3081\u3066\u307F\u308B"));
+}), "\u8272 \u25BE"), /*#__PURE__*/React.createElement("span", {
+  className: "block w-full truncate text-[10px] leading-tight"
+}, dexColorLabel(masuMons, mon.id, value)));
 // マスモンの一覧(色の見本を選ぶ)。その種のマスモンだけを出す。色を付けていない子は押せない
 const DexMasuColorSheet = ({
   masuMons,
@@ -32490,8 +32490,8 @@ function MonsterDexDetailScreen({
       className: "text-[11px] font-mono font-black text-amber-200/80 tabular-nums"
     }, index + 1, " / ", monsters.length)
   }), /*#__PURE__*/React.createElement("div", {
-    "data-dex-art": true,
-    className: "relative shrink-0 flex items-center justify-center px-14",
+    "data-dex-stage": true,
+    className: "shrink-0 w-full max-w-md mx-auto flex items-stretch gap-1 px-1.5",
     style: {
       height: 'clamp(150px, 20dvh, 180px)'
     },
@@ -32506,6 +32506,45 @@ function MonsterDexDetailScreen({
       const dx = to - from;
       if (Math.abs(dx) >= 48) go(dx < 0 ? 1 : -1);
     }
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-dex-side": "left",
+    className: "flex-1 min-w-0 flex flex-col items-center justify-between py-0.5"
+  }, unlocked && monsterIdleRigOf(mon.id) ? /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-dex-idle-toggle": true,
+    "aria-pressed": idleMotion,
+    onClick: () => {
+      Audio_.se.tap();
+      toggleIdleMotion();
+    },
+    className: `w-full max-w-[124px] min-h-[44px] px-1 rounded-xl border flex flex-col items-center justify-center gap-0.5 font-black shadow-lg active:scale-95 ${idleMotion ? 'border-amber-300/60 bg-slate-950/85 text-amber-100' : 'border-white/20 bg-slate-800 text-slate-300'}`
+  }, /*#__PURE__*/React.createElement(DexSideLabel, {
+    text: idleMotion ? '⏸ 動きを止める' : '▶ 動かす'
+  })) : /*#__PURE__*/React.createElement("span", {
+    className: "min-h-[44px]",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-dex-prev": true,
+    "aria-label": "\u524D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
+    onClick: () => go(-1),
+    className: "w-11 min-h-[44px] shrink-0 rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
+  }, /*#__PURE__*/React.createElement(ChevronLeft, {
+    size: 22
+  })), unlocked ? /*#__PURE__*/React.createElement(DexColorPickButton, {
+    masuMons: masuMons,
+    mon: mon,
+    value: dexColorKey,
+    onOpen: () => setColorSheetOpen(true)
+  }) : /*#__PURE__*/React.createElement("span", {
+    className: "min-h-[44px]",
+    "aria-hidden": "true"
+  })), /*#__PURE__*/React.createElement("div", {
+    "data-dex-art": true,
+    className: "relative shrink-0 h-full aspect-square flex items-center justify-center",
+    style: {
+      height: 'clamp(150px, 20dvh, 180px)'
+    }
   }, unlocked ? /*#__PURE__*/React.createElement(DexMonsterIdleArt, {
     mon: mon,
     alt: mon.name,
@@ -32515,34 +32554,10 @@ function MonsterDexDetailScreen({
     mon: mon,
     alt: "\u307E\u3060\u51FA\u4F1A\u3063\u3066\u3044\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC",
     hidden: true
-  }), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    "data-dex-prev": true,
-    "aria-label": "\u524D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
-    onClick: () => go(-1),
-    className: "absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
-  }, /*#__PURE__*/React.createElement(ChevronLeft, {
-    size: 22
-  })), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    "data-dex-next": true,
-    "aria-label": "\u6B21\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
-    onClick: () => go(1),
-    className: "absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
-  }, /*#__PURE__*/React.createElement(ChevronRight, {
-    size: 22
-  }))), unlocked && /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 px-3 pt-1 flex justify-center gap-2"
-  }, monsterIdleRigOf(mon.id) && /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    "data-dex-idle-toggle": true,
-    "aria-pressed": idleMotion,
-    onClick: () => {
-      Audio_.se.tap();
-      toggleIdleMotion();
-    },
-    className: `min-h-[44px] px-4 rounded-xl border text-[12px] font-black shadow-lg active:scale-95 ${idleMotion ? 'border-amber-300/60 bg-slate-950/85 text-amber-100' : 'border-white/20 bg-slate-800 text-slate-300'}`
-  }, idleMotion ? '⏸ 動きを止める' : '▶ 動かす'), /*#__PURE__*/React.createElement("button", {
+  })), /*#__PURE__*/React.createElement("div", {
+    "data-dex-side": "right",
+    className: "flex-1 min-w-0 flex flex-col items-center justify-between py-0.5"
+  }, unlocked ? /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-dex-attack-preview": true,
     onClick: () => {
@@ -32550,14 +32565,34 @@ function MonsterDexDetailScreen({
       Audio_.se.tap();
       onOpenAttackPreview();
     },
-    className: "min-h-[44px] px-5 rounded-xl border border-cyan-300/60 bg-slate-950/85 text-[12px] font-black text-cyan-100 shadow-lg active:scale-95"
-  }, "\u25B6 \u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3")), unlocked && /*#__PURE__*/React.createElement(DexColorRow, {
-    masuMons: masuMons,
-    mon: mon,
-    value: dexColorKey,
-    onOpenList: () => setColorSheetOpen(true),
-    onOpenTry: () => onOpenTryDye(dexSelectedColors(masuMons, mon.id, dexColorKey) || [])
-  }), unlocked && colorSheetOpen && /*#__PURE__*/React.createElement(DexMasuColorSheet, {
+    className: "w-full max-w-[124px] min-h-[44px] px-1.5 rounded-xl border border-cyan-300/60 bg-slate-950/85 font-black text-cyan-100 shadow-lg active:scale-95 flex flex-col items-center justify-center gap-0.5"
+  }, /*#__PURE__*/React.createElement(DexSideLabel, {
+    text: "\u25B6 \u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3"
+  })) : /*#__PURE__*/React.createElement("span", {
+    className: "min-h-[44px]",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-dex-next": true,
+    "aria-label": "\u6B21\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
+    onClick: () => go(1),
+    className: "w-11 min-h-[44px] shrink-0 rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
+  }, /*#__PURE__*/React.createElement(ChevronRight, {
+    size: 22
+  })), unlocked ? /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-dex-color-try": true,
+    onClick: () => {
+      Audio_.se.tap();
+      onOpenTryDye(dexSelectedColors(masuMons, mon.id, dexColorKey) || []);
+    },
+    className: "w-full max-w-[124px] min-h-[44px] px-1.5 rounded-xl border border-fuchsia-400/60 bg-slate-950/85 font-black text-fuchsia-100 active:scale-95 flex flex-col items-center justify-center gap-0.5"
+  }, /*#__PURE__*/React.createElement(DexSideLabel, {
+    text: "\uD83C\uDFA8 \u67D3\u3081\u3066\u307F\u308B"
+  })) : /*#__PURE__*/React.createElement("span", {
+    className: "min-h-[44px]",
+    "aria-hidden": "true"
+  }))), unlocked && colorSheetOpen && /*#__PURE__*/React.createElement(DexMasuColorSheet, {
     masuMons: masuMons,
     mon: mon,
     value: dexColorKey,
