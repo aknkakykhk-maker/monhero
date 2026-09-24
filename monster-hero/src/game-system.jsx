@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a6e270a15109a773
+// generated-sha256: d3d886d716c046a8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -122,7 +122,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 19:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 20:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21991,7 +21991,7 @@ function PickHeroAllyScreen({
           );
           // 供モンの候補は順に出てくる(--i が並び順)。勇者モン選びは一覧が長いので動かさない
           const enterStyle=pickMode==='ally'?{'--i':cardIndex}:null;
-          return(<button key={m.id} disabled={pickMode==='hero'&&!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} style={allyCarousel?{...MONSTER_CARD_STYLE,...enterStyle,flex:'0 0 64%'}:{...MONSTER_CARD_STYLE,...enterStyle}} data-ph-kind={pickMode==='ally'?'ally':undefined} data-ph-on={pickMode==='ally'&&isSel?'':undefined} className={`${MONSTER_CARD_CLASS}${pickMode==='ally'?' mh-phase-enter mh-ph-frame':''} bg-slate-900 transition-all disabled:opacity-25${pickMode!=='hero'||scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}${allyCarousel?` snap-center shrink-0 ${focused?'scale-100 opacity-100':'scale-[.92] opacity-55'}`:''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`}>
+          return(<button key={m.id} disabled={pickMode==='hero'&&!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} style={allyCarousel?{...MONSTER_CARD_STYLE,...enterStyle,flex:'0 0 64%'}:{...MONSTER_CARD_STYLE,...enterStyle}} data-ph-kind={pickMode==='ally'?'ally':undefined} data-ph-on={pickMode==='ally'&&isSel?'':undefined} className={`${MONSTER_CARD_CLASS}${pickMode==='ally'?' mh-phase-enter mh-ph-frame':''} bg-slate-900 transition-all disabled:opacity-25${pickMode!=='hero'||scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}${allyCarousel?` snap-center shrink-0 ${focused?'scale-100 opacity-100':'scale-[.92] opacity-55'}`:''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`}><i aria-hidden="true" className="mh-ph-ring"/>
           {renderMonsterCardBody({
             masu: pickMasu, base: pickBase, mon: m,
             badge: m.debugOnly?<div className="absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white">DEBUG専用</div>:isSel?<div className="absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>:null,
@@ -22229,7 +22229,7 @@ function PickSlotScreen({
         {slots.map((s,i)=>{const grade=getDistAptitude(mon,i); const now=distTotalBonus(i); const after=now+aptGradeToPct(grade); const open=s===null; const allowed=scenarioPicksSlot(i);
           return(<button key={i} disabled={!open||!allowed} onClick={()=>setupMon(mon,i)} style={{'--i':i}}
             data-ph-range={i} data-ph-on={open&&allowed?'':undefined}
-            className={`mh-phase-enter mh-phase-card mh-ph-frame relative overflow-hidden min-h-[96px] rounded-2xl border-2 flex flex-col items-center justify-center gap-1 px-1 py-2 transition-all active:scale-90${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''} ${open?(allowed?'':'opacity-20'):'opacity-75 saturate-50'}`}>
+            className={`mh-phase-enter mh-phase-card mh-ph-frame relative overflow-hidden min-h-[96px] rounded-2xl border-2 flex flex-col items-center justify-center gap-1 px-1 py-2 transition-all active:scale-90${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''} ${open?(allowed?'':'opacity-20'):'opacity-75 saturate-50'}`}><i aria-hidden="true" className="mh-ph-ring"/>
           <span aria-hidden="true" className="mh-ph-sparkle"/>
           <span className={`relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/30 shadow-md`} style={{boxShadow:'0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'}}>{RANGE_LABELS[i]}距離</span>
           {open?(<>
@@ -22306,7 +22306,7 @@ function PickTeachingScreen({
           // 強化できるカードは縁が回って光る(タクティクスの選んだ枠と同じ)。新規=緑・強化=紫・MAX=金の縁と模様
           return(<button key={t.id} disabled={!scenarioPicksTeaching(t.id)} onClick={()=>setSelectedTeachingCard(t)} style={{'--i':cardIndex}}
             data-ph-kind={kindOf(owned,isMax)} data-ph-on={owned&&!isMax?'':undefined}
-            className={`mh-phase-enter mh-ph-frame relative p-3 pt-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all min-h-[176px] active:scale-95 disabled:opacity-20${scenarioPicksTeaching(t.id)?battleTutorialSpotClass('teachings'):''}`}>
+            className={`mh-phase-enter mh-ph-frame relative p-3 pt-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all min-h-[176px] active:scale-95 disabled:opacity-20${scenarioPicksTeaching(t.id)?battleTutorialSpotClass('teachings'):''}`}><i aria-hidden="true" className="mh-ph-ring"/>
             <span aria-hidden="true" className="mh-ph-sparkle"/>
             {owned&&!isMax&&<span aria-hidden="true" className="mh-ph-shine"/>}
             <span style={{fontSize:'44px'}} className="mh-ph-medal relative rounded-2xl p-1 leading-none">{cardIconNode(t.icon,52,t.id)}</span>
@@ -22323,7 +22323,7 @@ function PickTeachingScreen({
       {selectedTeachingCard&&(
         <div className="fixed inset-0 z-[3100] flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.85)',zIndex:31000}}>
           <div data-ph-kind={(()=>{const o=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); return kindOf(o,!!o&&o.evoLevel>=TEACHING_MAX_LEVEL);})()} data-ph-on=""
-            className="mh-phase-pop mh-ph-frame relative rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 h-auto max-h-full">
+            className="mh-phase-pop mh-ph-frame relative rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 h-auto max-h-full"><i aria-hidden="true" className="mh-ph-ring"/>
             <span aria-hidden="true" className="mh-ph-sparkle"/>
             {/* 絵の後ろでルーンの輪が回る */}
             <div className="relative shrink-0 flex items-center justify-center" style={{'--ph':'243,210,122'}}>
@@ -22595,7 +22595,7 @@ function RewardPickScreen({
               <button key={`${i}-${picked.id}`} type="button" disabled={!!effect} onClick={()=>removePick(i)}
                 aria-label={`${i+1}回目の${picked.name}を取り消す`}
                 data-ph-kind={picked.id} data-ph-on=""
-                className="mh-phase-pop mh-ph-frame flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40" style={{maxWidth:'42%'}}>
+                className="mh-phase-pop mh-ph-frame flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40" style={{maxWidth:'42%'}}><i aria-hidden="true" className="mh-ph-ring"/>
                 <span className="shrink-0 text-[9px] text-slate-300">{i+1}回目</span>
                 <span className={`shrink-0 ${st.tint}`}>{cardIconNode(st.icon)}</span><span className="truncate">{picked.name}</span>
                 <span aria-hidden="true" className="shrink-0 text-[10px] text-slate-300">×</span>
@@ -22672,7 +22672,7 @@ function RewardPickScreen({
               aria-label={`${option.name} ${option.effect}${count>0?` 選択中${count}回`:''}`}
               data-ph-kind={option.id} data-ph-on={count>0?'':undefined}
               className="mh-phase-card mh-phase-enter mh-ph-frame relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40"
-              style={{'--i':optionIndex}}>
+              style={{'--i':optionIndex}}><i aria-hidden="true" className="mh-ph-ring"/>
               {/* 地の光の粒と、選んだ枠を横切る光の筋(飾り。押す範囲や文字には関わらない) */}
               <span aria-hidden="true" className="mh-ph-sparkle"/>
               {count>0&&<span aria-hidden="true" className="mh-ph-shine"/>}
@@ -23442,6 +23442,8 @@ function BattleScreen({
   const emSpec = emSet && enemySkillNow ? (emSet.skills[enemySkillNow] || null) : null;
   const emFxStyle = emSpec && emSpec[2] ? { '--em-e': JSON.stringify(emSpec[2]) } : undefined;
   const enemyHurtNow = !!(enemyMotion && attackAnim && !enemyAttackAnim);
+  // 敵の絵と同じ形に切り抜いた光の板(data-enemy-flash)。絵を明るく光らせるとき、filter を使わずに濃さだけを変える
+  const enemyFlashMask = enemyMotion && enemy?.imgUrl ? { WebkitMaskImage: `url("${enemy.imgUrl}")`, maskImage: `url("${enemy.imgUrl}")` } : undefined;
   // 技の実際の長さ(戦闘の速さを掛けたもの)。CSS の動きは --em-dur を見るので、2倍速・4倍速でも途中で切れない
   const emDurStyle = enemySkillNow && Number.isFinite(enemyAttackFx?.ms) && enemyAttackFx.ms > 0 ? { '--em-dur': `${enemyAttackFx.ms}ms` } : {};
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
@@ -23905,7 +23907,12 @@ function BattleScreen({
               <div data-enemy-motion={enemyMotion||undefined} data-moo-stage={enemyMotion?'true':undefined} data-enemy-skill={enemySkillNow||undefined} data-em-body={emSpec?.[0]||undefined} data-em-fx={emSpec?.[1]||undefined} data-em-emo={emSpec?.[3]||undefined} data-enemy-hurt={enemyHurtNow?'true':undefined} className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{...emDurStyle,top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
                 {/* ★技の動き・やられの動き・待機の威圧(data-em-body / data-enemy-hurt / data-moo-stage)は CSS が掛けるので、そのあいだは style の animation を外す(style が勝ってしまう) */}
                 {emSet&&<i aria-hidden="true" data-em-fx-el style={emFxStyle}/>}
+                {/* data-moo-body: 絵と光(後ろの光の輪・絵の形の光の板)をひとまとめにして、動きはこの箱に掛ける(光が絵について動く) */}
+                <div data-moo-body={emSet?'true':undefined} className="relative w-full h-full">
+                {emSet&&<i aria-hidden="true" data-enemy-glow/>}
                 <img src={enemy.imgUrl} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',animation:(liteBattleView||emSpec||enemyHurtNow||(emSet&&!enemyAttackAnim))?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
+                {emSet&&<i aria-hidden="true" data-enemy-flash style={enemyFlashMask}/>}
+                </div>
               </div>
             )}
             {/* ムー攻撃時: 全画面の破壊的演出 */}
@@ -23953,7 +23960,7 @@ function BattleScreen({
               {/* data-em-fx-el: カワズモー以外の敵の技の飾り。::before が形(data-em-fx)、::after が絵文字(--em-e) */}
               {emSet&&!enemyIsMoo&&<i aria-hidden="true" data-em-fx-el style={emFxStyle}/>}
               {!ecoBattleView&&<div aria-hidden="true" data-enemy-shadow className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2" style={{bottom:'11%',width:'64%',height:'13%',borderRadius:'50%',background:'radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.62) 0%, rgba(0,0,0,.28) 52%, rgba(0,0,0,0) 76%)'}}></div>}
-              {enemy?.imgUrl?(isMooBoss(enemy?.id)?<div style={{width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}>{enemyMotion&&<i aria-hidden="true" data-enemy-glow/>}<img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/></span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,10.5dvh,96px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
+              {enemy?.imgUrl?(isMooBoss(enemy?.id)?<div style={{width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}>{enemyMotion&&<i aria-hidden="true" data-enemy-glow/>}<img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>{enemyMotion&&<i aria-hidden="true" data-enemy-flash style={enemyFlashMask}/>}</span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,10.5dvh,96px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
               {/* 味方の攻撃が敵に当たった瞬間の着弾(体当たり・突進・ザン/エイキの斬撃)。攻撃中だけ出る */}
               {!ecoBattleView&&attackAnim&&<AttackTargetFx anim={attackAnim} attackerId={slots[attackAnim.slotIndex]?.id}/>}
               {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
@@ -46591,25 +46598,25 @@ const createAnimationStyle = () => {
     [data-tactics-look="rich"] [data-em-idle="writhe"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation-name: emIdleWrithe; animation-duration: 5s; }
     [data-tactics-look="rich"] [data-em-idle="menace"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation-name: emIdleMenace; animation-duration: 5s; }
     /* 体の動き。丸枠の生の攻撃の動き([data-enemy-attack] > span)より強くするため [data-enemy-skill] も付ける */
-    [data-tactics-look] [data-enemy-skill][data-em-body] > :is(span, img) { z-index: 9999; animation-duration: var(--em-dur); animation-timing-function: ease-in-out; animation-fill-mode: forwards; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="jab"] > :is(span, img) { animation-name: emJab; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="lunge"] > :is(span, img) { animation-name: emLunge; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="dash"] > :is(span, img) { animation-name: emDash; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="flurry"] > :is(span, img) { animation-name: emFlurry; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="spin"] > :is(span, img) { animation-name: emSpin; transform-origin: 50% 55%; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="windup"] > :is(span, img) { animation-name: emWindup; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="swing"] > :is(span, img) { animation-name: emSwing; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="leap"] > :is(span, img) { animation-name: emLeap; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="press"] > :is(span, img) { animation-name: emPress; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="rise"] > :is(span, img) { animation-name: emRise; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="roar"] > :is(span, img) { animation-name: emRoar; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="power"] > :is(span, img) { animation-name: emPower; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="stance"] > :is(span, img) { animation-name: emStance; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="heal"] > :is(span, img) { animation-name: emHeal; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="sway"] > :is(span, img) { animation-name: emSway; }
-    [data-tactics-look] [data-moo-stage] > img { transform-origin: 50% 60%; }
+    [data-tactics-look] [data-enemy-skill][data-em-body] > :is(span, [data-moo-body]) { z-index: 9999; animation-duration: var(--em-dur); animation-timing-function: ease-in-out; animation-fill-mode: forwards; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="jab"] > :is(span, [data-moo-body]) { animation-name: emJab; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="lunge"] > :is(span, [data-moo-body]) { animation-name: emLunge; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="dash"] > :is(span, [data-moo-body]) { animation-name: emDash; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="flurry"] > :is(span, [data-moo-body]) { animation-name: emFlurry; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="spin"] > :is(span, [data-moo-body]) { animation-name: emSpin; transform-origin: 50% 55%; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="windup"] > :is(span, [data-moo-body]) { animation-name: emWindup; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="swing"] > :is(span, [data-moo-body]) { animation-name: emSwing; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="leap"] > :is(span, [data-moo-body]) { animation-name: emLeap; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="press"] > :is(span, [data-moo-body]) { animation-name: emPress; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="rise"] > :is(span, [data-moo-body]) { animation-name: emRise; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="roar"] > :is(span, [data-moo-body]) { animation-name: emRoar; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="power"] > :is(span, [data-moo-body]) { animation-name: emPower; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="stance"] > :is(span, [data-moo-body]) { animation-name: emStance; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="heal"] > :is(span, [data-moo-body]) { animation-name: emHeal; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="sway"] > :is(span, [data-moo-body]) { animation-name: emSway; }
+    [data-tactics-look] [data-moo-stage] > [data-moo-body] { transform-origin: 50% 60%; }
     /* やられ(カワズモーと同じのけぞり) */
-    [data-tactics-look] [data-enemy-ring][data-em-idle][data-enemy-hurt] > span, [data-tactics-look] [data-moo-stage][data-enemy-hurt] > img { animation: kzHurt 520ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-em-idle][data-enemy-hurt] > span, [data-tactics-look] [data-moo-stage][data-enemy-hurt] > [data-moo-body] { animation: kzHurt 520ms ease-out forwards; }
     /* 技の光(2026-09-24 ユーザー指摘「バトル画面にかくつき」で作り直した)。
        ★もとは体の動きの中で filter(drop-shadow / brightness)を変えていた。大きな絵を毎コマぼかし直すので、攻撃のたびにかくついた。
          いまは絵の後ろに置いた光の輪(data-enemy-glow。絵と一緒に動く)の濃さ(opacity)だけを変える */
@@ -46619,10 +46626,35 @@ const createAnimationStyle = () => {
     @keyframes emGlowCharge { 0% { opacity: 0; } 50% { opacity: .55; } 80% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes emGlowSoft { 0% { opacity: 0; } 50% { opacity: .8; } 100% { opacity: 0; } }
     @keyframes emGlowHurt { 0% { opacity: 0; } 12% { opacity: .95; } 100% { opacity: 0; } }
-    [data-tactics-look] [data-enemy-ring][data-enemy-skill] > span > [data-enemy-glow] { animation: emGlowHit var(--em-dur, 450ms) ease-out forwards; }
-    [data-tactics-look] [data-enemy-ring]:is([data-enemy-skill="charge"], [data-enemy-skill="pierceCharge"], [data-enemy-skill="roar"]) > span > [data-enemy-glow] { animation-name: emGlowCharge; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-skill="regen"] > span > [data-enemy-glow] { --em-glow: 52,211,153; animation-name: emGlowSoft; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-hurt] > span > [data-enemy-glow] { --em-glow: 255,255,255; animation: emGlowHurt 520ms ease-out forwards; }
+    [data-tactics-look] :is([data-enemy-ring][data-enemy-skill] > span, [data-moo-stage][data-enemy-skill] > [data-moo-body]) > [data-enemy-glow] { animation: emGlowHit var(--em-dur, 450ms) ease-out forwards; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage]):is([data-enemy-skill="charge"], [data-enemy-skill="pierceCharge"], [data-enemy-skill="roar"]) > :is(span, [data-moo-body]) > [data-enemy-glow] { animation-name: emGlowCharge; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-skill="regen"] > :is(span, [data-moo-body]) > [data-enemy-glow] { --em-glow: 52,211,153; animation-name: emGlowSoft; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-hurt] > :is(span, [data-moo-body]) > [data-enemy-glow] { --em-glow: 255,255,255; animation: emGlowHurt 520ms ease-out forwards; }
+    /* 絵と同じ形に切り抜いた光の板(data-enemy-flash)。もとの filter: brightness の「絵そのものが明るくなる」光り方を、
+       濃さ(opacity)だけで再現する。切り抜き(mask)は絵の URL を style で渡している */
+    /* ★重ね方は color-dodge(灰色の板で明るさを掛け算で上げる)。もとの filter: brightness(1.3) に近い。
+         ふつうに重ねたり screen(足し算)にすると、暗いところまで持ち上がって白っぽく濁る。
+         やられ(もとは brightness(2.2))は板を明るい灰色(140)にして、掛け算の倍率を上げる */
+    [data-tactics-look] [data-enemy-flash] { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; mix-blend-mode: color-dodge;
+      background: rgb(90,90,90);
+      -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+    @keyframes emFlashHit { 0%, 35% { opacity: 0; } 55% { opacity: 1; } 72% { opacity: .55; } 100% { opacity: 0; } }
+    @keyframes emFlashCharge { 0% { opacity: 0; } 55% { opacity: .45; } 80% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes emFlashSoft { 0% { opacity: 0; } 50% { opacity: .7; } 100% { opacity: 0; } }
+    @keyframes emFlashHurt { 0% { opacity: 0; } 16% { opacity: 1; } 36% { opacity: .35; } 100% { opacity: 0; } }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-skill] > :is(span, [data-moo-body]) > [data-enemy-flash] { animation: emFlashHit var(--em-dur, 450ms) ease-out forwards; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage]):is([data-enemy-skill="charge"], [data-enemy-skill="pierceCharge"], [data-enemy-skill="roar"]) > :is(span, [data-moo-body]) > [data-enemy-flash] { animation-name: emFlashCharge; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-skill="regen"] > :is(span, [data-moo-body]) > [data-enemy-flash] { --em-glow: 52,211,153; animation-name: emFlashSoft; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-hurt] > :is(span, [data-moo-body]) > [data-enemy-flash] { background: rgb(140,140,140); animation: emFlashHurt 520ms ease-out forwards; }
+    /* 待機中の光(もとは待機の動きの中の filter)。ドクドクの脈・ニャルラトホテプのうごめき・覚醒ムーの吠える瞬間に合わせて灯す */
+    @keyframes emGlowIdlePulse { 0%, 34%, 100% { opacity: 0; } 20% { opacity: .6; } }
+    @keyframes emGlowIdleWrithe { 0%, 20%, 60%, 100% { opacity: 0; } 40% { opacity: .45; } 80% { opacity: .6; } }
+    @keyframes mooGlowIdle { 0%, 60%, 86%, 100% { opacity: 0; } 68%, 76% { opacity: .9; } }
+    @keyframes mooFlashIdle { 0%, 60%, 86%, 100% { opacity: 0; } 68%, 76% { opacity: .8; } }
+    [data-tactics-look="rich"] [data-em-idle="pulse"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > [data-enemy-glow] { animation: emGlowIdlePulse 2.6s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-em-idle="writhe"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > [data-enemy-glow] { animation: emGlowIdleWrithe 5s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-moo-stage]:not([data-enemy-skill]):not([data-enemy-hurt]) > [data-moo-body] > [data-enemy-glow] { --em-glow: 220,38,38; animation: mooGlowIdle 4.2s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-moo-stage]:not([data-enemy-skill]):not([data-enemy-hurt]) > [data-moo-body] > [data-enemy-flash] { animation: mooFlashIdle 4.2s ease-in-out infinite; }
     /* カワズモーは技ごとに光の色を変える(はり手・連続はり手=赤 / かわずつき=緑 / 上手投げ・構え=紅 / 大回転落とし・準備・大投げたまや=金) */
     [data-enemy-motion="kawazumo"]:is([data-enemy-skill="normal"], [data-enemy-skill="rush"]) { --em-glow: 239,68,68; }
     [data-enemy-motion="kawazumo"]:is([data-enemy-skill="pierce"], [data-enemy-skill="pierceCharge"]) { --em-glow: 244,63,94; }
@@ -46807,7 +46839,7 @@ const createAnimationStyle = () => {
     }
     @keyframes mooIdleSmoke { 0% { opacity: 0; transform: translateY(20%) scale(.9); } 30% { opacity: .85; } 100% { opacity: 0; transform: translateY(-18%) scale(1.15); } }
     @keyframes mooIdleEye { 0%, 55%, 100% { opacity: .35; transform: scale(.8); } 68%, 80% { opacity: 1; transform: scale(1.3); } }
-    [data-tactics-look="rich"] [data-moo-stage]:not([data-enemy-skill]):not([data-enemy-hurt]) > img { animation: mooIdleMenace 4.2s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-moo-stage]:not([data-enemy-skill]):not([data-enemy-hurt]) > [data-moo-body] { animation: mooIdleMenace 4.2s ease-in-out infinite; }
     [data-tactics-look="rich"] [data-moo-stage]::before { content: ''; position: absolute; inset: 8% 14% 10%; border-radius: 50%; pointer-events: none; z-index: 0; opacity: 0;
       background: radial-gradient(18% 26% at 30% 70%, rgba(40,0,60,.8), transparent 70%), radial-gradient(20% 30% at 70% 65%, rgba(60,0,40,.8), transparent 70%),
         radial-gradient(30% 34% at 50% 40%, rgba(88,28,135,.6), transparent 70%); filter: blur(6px); animation: mooIdleSmoke 3.2s ease-out infinite; }
@@ -46815,16 +46847,16 @@ const createAnimationStyle = () => {
       background: radial-gradient(closest-side at 32% 50%, rgba(255,60,60,.95), transparent), radial-gradient(closest-side at 68% 50%, rgba(255,60,60,.95), transparent);
       mix-blend-mode: screen; filter: blur(2px); animation: mooIdleEye 4.2s ease-in-out infinite; }
     @media (prefers-reduced-motion: reduce) {
-      [data-tactics-look] [data-moo-stage] > img, [data-tactics-look] [data-moo-stage]::before, [data-tactics-look] [data-moo-stage]::after { animation: none !important; }
+      [data-tactics-look] [data-moo-stage] > [data-moo-body], [data-tactics-look] [data-moo-stage] > [data-moo-body] > *, [data-tactics-look] [data-moo-stage]::before, [data-tactics-look] [data-moo-stage]::after { animation: none !important; }
     }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
     [data-tactics-look] [data-enemy-ring="0"] { --mh-rc: 239,68,68; } [data-tactics-look] [data-enemy-ring="1"] { --mh-rc: 245,158,11; }
     [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
     [data-tactics-look] [data-enemy-ring] { background: radial-gradient(closest-side, rgba(var(--mh-rc),.22), rgba(0,0,0,.4) 70%) !important;
-      box-shadow: 0 0 0 3px rgba(243,210,122,.55), 0 0 0 5px rgba(20,12,4,.85), 0 0 40px rgba(var(--mh-rc),.55), inset 0 0 30px rgba(var(--mh-rc),.35) !important; }
+      box-shadow: 0 0 0 3px rgba(243,210,122,.55), 0 0 0 5px rgba(20,12,4,.85), 0 0 16px rgba(var(--mh-rc),.85), 0 0 40px rgba(var(--mh-rc),.55), inset 0 0 30px rgba(var(--mh-rc),.35) !important; }
     /* ★丸枠の filter(距離の色の drop-shadow)は外す(2026-09-24 ユーザー指摘「バトル画面にかくつき」)。
        丸枠の中では敵の絵と魔法陣がずっと動いているので、丸枠ごとぼかした影を毎コマ描き直していた。
-       同じ色の光は上の box-shadow(0 0 40px)が出している */
+       同じ色の光は上の box-shadow(縁にぴったりの 16px と、広がる 40px)で出す */
     [data-tactics-look] [data-enemy-ring] { filter: none !important; }
     [data-tactics-look] [data-enemy-ring]::before { content: ''; position: absolute; inset: -16px; border-radius: 50%; pointer-events: none; z-index: 0;
       background: repeating-conic-gradient(rgba(var(--mh-rc),.9) 0 3deg, transparent 3deg 12deg, rgba(255,240,200,.8) 12deg 13deg, transparent 13deg 30deg);
@@ -47053,9 +47085,10 @@ const createAnimationStyle = () => {
       0%,100% { opacity: 0.2; transform: scale(0.8) rotate(var(--r,0deg)) translateY(clamp(-92px, -12dvh, -58px)); }
       50% { opacity: 1; }
     }
+    /* ★光(drop-shadow)は要素の固定の指定に任せ、動かすのは大きさだけ(filter を毎コマ変えると描き直しになる) */
     @keyframes specialThrob {
-      0%,100% { transform: scale(1); filter: drop-shadow(0 0 12px rgba(251,191,36,0.9)); }
-      50% { transform: scale(1.25); filter: drop-shadow(0 0 22px rgba(239,68,68,1)); }
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.25); }
     }
     @keyframes idleExclaim {
       0%,100% { transform: scale(0.95) translateY(0) rotate(-4deg); opacity: 0.85; }
@@ -47096,9 +47129,10 @@ const createAnimationStyle = () => {
       45% { transform: scale(1.1) rotate(2deg); }
       60% { transform: scale(1.04) rotate(-1deg); }
     }
+    /* ★明るさ(filter)は変えない。札を毎コマ描き直すことになる(2026-09-24 かくつきの見直し) */
     @keyframes noticeCharge {
-      0%,100% { transform: scale(0.96); filter: brightness(0.95); }
-      50% { transform: scale(1.12); filter: brightness(1.25); }
+      0%,100% { transform: scale(0.96); opacity: .92; }
+      50% { transform: scale(1.12); opacity: 1; }
     }
     @keyframes noticeHeal {
       0%,100% { transform: translateY(2px) scale(1); }
@@ -47213,10 +47247,20 @@ const createAnimationStyle = () => {
       background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
         radial-gradient(90% 60% at 50% 0%, rgba(var(--mh-rc),.28), transparent 70%) padding-box,
         linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
-        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+        conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
           rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important;
       box-shadow: 0 0 18px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.18) !important; }
-    [data-phase-look="rich"] .mh-ph-frame[data-ph-on] { animation: mhAng 4.5s linear infinite; }
+    /* 縁を回る光(2026-09-24 ユーザー指摘「かくつき」「まだ手が回ってないところも」)。
+       バトルの枠(data-slot-ring)と同じく、縁の角度(--mh-ang)を毎コマ変えるのをやめ、
+       縁の形に切り抜いた箱(.mh-ph-ring)の中で光の輪を transform で回す */
+    .mh-ph-frame[data-ph-on] { position: relative; }
+    .mh-ph-ring { display: none; }
+    .mh-ph-frame[data-ph-on] > .mh-ph-ring { display: block; position: absolute; inset: -2px; border-radius: inherit; padding: 2px; pointer-events: none; z-index: 1; overflow: hidden;
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+    .mh-ph-frame[data-ph-on] > .mh-ph-ring::before { content: ''; position: absolute; inset: -100%;
+      background: conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+        rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%); }
+    [data-phase-look="rich"] .mh-ph-frame[data-ph-on] > .mh-ph-ring::before { animation: mhSpin 4.5s linear infinite; }
     /* 枠の中の光の粒 */
     .mh-ph-sparkle { position: absolute; inset: 3px; border-radius: inherit; pointer-events: none;
       background: radial-gradient(1.5px 1.5px at 14% 30%, rgba(var(--mh-rc2),.95), transparent 70%), radial-gradient(1.5px 1.5px at 52% 72%, rgba(var(--mh-rc2),.85), transparent 70%),
@@ -47259,7 +47303,11 @@ const createAnimationStyle = () => {
     .mh-ph-gem { display: inline-flex; align-items: center; justify-content: center; padding-top: 2px; font-weight: 900; line-height: 1; color: #fff;
       text-shadow: 0 1px 2px rgba(0,0,0,.9); clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
       background: radial-gradient(circle at 35% 30%, #fff 0 8%, rgba(var(--mh-rc2,200,225,255),1) 18%, rgba(var(--mh-rc,31,111,209),1) 55%, rgba(8,10,30,1) 100%); }
-    [data-phase-look="rich"] .mh-ph-gem { animation: mhGem 2.2s ease-in-out infinite; }
+    /* 宝石のまたたきは、明るさ(filter)ではなく重ねた光の濃さ(opacity)で出す(バトルの宝石と同じ) */
+    .mh-ph-gem { position: relative; }
+    .mh-ph-gem::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.75), rgba(255,255,255,0) 60%); }
+    [data-phase-look="rich"] .mh-ph-gem::after { animation: mhGemGlow 2.2s ease-in-out infinite; }
     /* 絵を収める金の額(アシストカードの顔・固有技の絵) */
     .mh-ph-medal { border: 2px solid #f3d27a !important; background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.22), rgba(0,0,0,.4)) !important;
       box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.5), inset 0 0 10px rgba(0,0,0,.5) !important; }
@@ -47308,7 +47356,7 @@ const createAnimationStyle = () => {
     .mh-ph-pip[data-next] { border-color: #f3d27a; background: rgba(243,210,122,.35); box-shadow: 0 0 6px rgba(243,210,122,.7); }
     [data-phase-look="rich"] .mh-ph-pip[data-next] { animation: mhTwinkle 1.6s ease-in-out infinite; }
     @media (prefers-reduced-motion: reduce) {
-      .mh-ph-frame[data-ph-on], .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
+      .mh-ph-ring::before, .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem::after, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
     }
     @keyframes specialShockwave {
       0% { transform: scale(0.4); opacity: 0.9; }
@@ -47597,7 +47645,7 @@ const createAnimationStyle = () => {
     .mh-breakthrough-cap b{display:block;font-size:30px;color:#fff;text-shadow:0 0 16px #f59e0b}
     /* 最後に星が1つ増える。増えたぶんだけ大きく光ってから元の大きさに落ち着く */
     /* EXTREMEは透過画像の輪郭へdrop-shadowを重ね、敵枠ではなくモンスター本体から邪気を漏らす。 */
-    .mh-extreme-enemy-aura-shell{position:relative;display:inline-flex;align-items:center;justify-content:center;isolation:isolate;overflow:visible}.mh-extreme-enemy-aura-shell::before{content:"";position:absolute;z-index:0;inset:-38% -48% -22%;border-radius:44% 56% 48% 52%;pointer-events:none;background:radial-gradient(ellipse at 50% 62%,#050008ee 0 25%,#240034e8 38%,#581c87bb 52%,#a21caf88 64%,transparent 78%);filter:blur(7px);animation:mhExtremeEnemyMist 3.7s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-aura-shell::after{content:"";position:absolute;z-index:2;left:-35%;right:-35%;bottom:-15%;height:35%;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse,#140018ee 0 24%,#701a75cc 48%,#be185d88 62%,transparent 76%);filter:blur(5px);animation:mhExtremeEnemyFloor 3.1s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-image{filter:drop-shadow(0 0 4px #030006) drop-shadow(0 0 9px #3b0764) drop-shadow(-7px -3px 13px #6b21a8ee) drop-shadow(8px 2px 15px #a21cafdd) drop-shadow(1px -7px 18px #be123caa);animation:mhExtremeEnemyAura 2.8s ease-in-out infinite;will-change:filter}
+    .mh-extreme-enemy-aura-shell{position:relative;display:inline-flex;align-items:center;justify-content:center;isolation:isolate;overflow:visible}.mh-extreme-enemy-aura-shell::before{content:"";position:absolute;z-index:0;inset:-38% -48% -22%;border-radius:44% 56% 48% 52%;pointer-events:none;background:radial-gradient(ellipse at 50% 62%,#050008ee 0 25%,#240034e8 38%,#581c87bb 52%,#a21caf88 64%,transparent 78%);filter:blur(7px);animation:mhExtremeEnemyMist 3.7s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-aura-shell::after{content:"";position:absolute;z-index:2;left:-35%;right:-35%;bottom:-15%;height:35%;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse,#140018ee 0 24%,#701a75cc 48%,#be185d88 62%,transparent 76%);filter:blur(5px);animation:mhExtremeEnemyFloor 3.1s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-image{filter:drop-shadow(0 0 4px #030006) drop-shadow(0 0 9px #3b0764) drop-shadow(-7px -3px 13px #6b21a8ee) drop-shadow(8px 2px 15px #a21cafdd) drop-shadow(1px -7px 18px #be123caa);}
     @keyframes mhExtremeEnemyAura{0%,100%{filter:drop-shadow(0 0 4px #030006) drop-shadow(0 0 9px #3b0764) drop-shadow(-7px -3px 13px #6b21a8ee) drop-shadow(8px 2px 15px #a21cafdd) drop-shadow(1px -7px 18px #be123c99)}47%{filter:drop-shadow(0 0 6px #08000d) drop-shadow(0 0 13px #4c1d95) drop-shadow(-10px 3px 17px #7e22ceff) drop-shadow(10px -4px 19px #c026d3ee) drop-shadow(-3px -9px 22px #e11d48bb)}}@keyframes mhExtremeEnemyMist{0%,100%{opacity:.76;transform:scale(.94,1.01) translate(-2px,3px) rotate(-2deg)}41%{opacity:1;transform:scale(1.09,1.14) translate(4px,-7px) rotate(2deg)}73%{opacity:.84;transform:scale(1.02,1.08) translate(-3px,-2px) rotate(-1deg)}}@keyframes mhExtremeEnemyFloor{0%,100%{opacity:.68;transform:scaleX(.9)}55%{opacity:1;transform:scaleX(1.12)}}
     /* NIGHTMAREは暗い青の霊気と霧で、赤紫のEXTREMEから区別する。 */
     .mh-nightmare-enemy-aura-shell{position:relative;display:inline-flex;align-items:center;justify-content:center;isolation:isolate;overflow:visible}.mh-nightmare-enemy-aura-shell::before{content:"";position:absolute;z-index:0;inset:-42% -55% -28%;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse at 50% 52%,#020617ee 0 23%,#172554cc 42%,#312e81a8 58%,#bfdbfe55 69%,transparent 80%);filter:blur(8px);animation:mhNightmareMist 4.8s ease-in-out infinite}.mh-nightmare-enemy-aura-shell::after{content:"";position:absolute;z-index:2;inset:-30% -45% 4%;border-radius:46%;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 38%,#60a5fa44 58%,#0f172a99 71%,transparent 82%);filter:blur(6px);animation:mhNightmarePulse 3.9s ease-in-out infinite}.mh-nightmare-enemy-image{filter:drop-shadow(0 0 5px #020617) drop-shadow(0 0 11px #1e3a8a) drop-shadow(0 0 18px #818cf899) drop-shadow(0 -5px 20px #dbeafe77);animation:mhNightmarePulse 3.9s ease-in-out infinite}

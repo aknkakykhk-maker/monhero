@@ -2230,25 +2230,25 @@ const createAnimationStyle = () => {
     [data-tactics-look="rich"] [data-em-idle="writhe"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation-name: emIdleWrithe; animation-duration: 5s; }
     [data-tactics-look="rich"] [data-em-idle="menace"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation-name: emIdleMenace; animation-duration: 5s; }
     /* 体の動き。丸枠の生の攻撃の動き([data-enemy-attack] > span)より強くするため [data-enemy-skill] も付ける */
-    [data-tactics-look] [data-enemy-skill][data-em-body] > :is(span, img) { z-index: 9999; animation-duration: var(--em-dur); animation-timing-function: ease-in-out; animation-fill-mode: forwards; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="jab"] > :is(span, img) { animation-name: emJab; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="lunge"] > :is(span, img) { animation-name: emLunge; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="dash"] > :is(span, img) { animation-name: emDash; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="flurry"] > :is(span, img) { animation-name: emFlurry; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="spin"] > :is(span, img) { animation-name: emSpin; transform-origin: 50% 55%; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="windup"] > :is(span, img) { animation-name: emWindup; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="swing"] > :is(span, img) { animation-name: emSwing; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="leap"] > :is(span, img) { animation-name: emLeap; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="press"] > :is(span, img) { animation-name: emPress; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="rise"] > :is(span, img) { animation-name: emRise; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="roar"] > :is(span, img) { animation-name: emRoar; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="power"] > :is(span, img) { animation-name: emPower; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="stance"] > :is(span, img) { animation-name: emStance; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="heal"] > :is(span, img) { animation-name: emHeal; }
-    [data-tactics-look] [data-enemy-skill][data-em-body="sway"] > :is(span, img) { animation-name: emSway; }
-    [data-tactics-look] [data-moo-stage] > img { transform-origin: 50% 60%; }
+    [data-tactics-look] [data-enemy-skill][data-em-body] > :is(span, [data-moo-body]) { z-index: 9999; animation-duration: var(--em-dur); animation-timing-function: ease-in-out; animation-fill-mode: forwards; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="jab"] > :is(span, [data-moo-body]) { animation-name: emJab; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="lunge"] > :is(span, [data-moo-body]) { animation-name: emLunge; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="dash"] > :is(span, [data-moo-body]) { animation-name: emDash; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="flurry"] > :is(span, [data-moo-body]) { animation-name: emFlurry; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="spin"] > :is(span, [data-moo-body]) { animation-name: emSpin; transform-origin: 50% 55%; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="windup"] > :is(span, [data-moo-body]) { animation-name: emWindup; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="swing"] > :is(span, [data-moo-body]) { animation-name: emSwing; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="leap"] > :is(span, [data-moo-body]) { animation-name: emLeap; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="press"] > :is(span, [data-moo-body]) { animation-name: emPress; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="rise"] > :is(span, [data-moo-body]) { animation-name: emRise; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="roar"] > :is(span, [data-moo-body]) { animation-name: emRoar; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="power"] > :is(span, [data-moo-body]) { animation-name: emPower; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="stance"] > :is(span, [data-moo-body]) { animation-name: emStance; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="heal"] > :is(span, [data-moo-body]) { animation-name: emHeal; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="sway"] > :is(span, [data-moo-body]) { animation-name: emSway; }
+    [data-tactics-look] [data-moo-stage] > [data-moo-body] { transform-origin: 50% 60%; }
     /* やられ(カワズモーと同じのけぞり) */
-    [data-tactics-look] [data-enemy-ring][data-em-idle][data-enemy-hurt] > span, [data-tactics-look] [data-moo-stage][data-enemy-hurt] > img { animation: kzHurt 520ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-em-idle][data-enemy-hurt] > span, [data-tactics-look] [data-moo-stage][data-enemy-hurt] > [data-moo-body] { animation: kzHurt 520ms ease-out forwards; }
     /* 技の光(2026-09-24 ユーザー指摘「バトル画面にかくつき」で作り直した)。
        ★もとは体の動きの中で filter(drop-shadow / brightness)を変えていた。大きな絵を毎コマぼかし直すので、攻撃のたびにかくついた。
          いまは絵の後ろに置いた光の輪(data-enemy-glow。絵と一緒に動く)の濃さ(opacity)だけを変える */
@@ -2258,10 +2258,35 @@ const createAnimationStyle = () => {
     @keyframes emGlowCharge { 0% { opacity: 0; } 50% { opacity: .55; } 80% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes emGlowSoft { 0% { opacity: 0; } 50% { opacity: .8; } 100% { opacity: 0; } }
     @keyframes emGlowHurt { 0% { opacity: 0; } 12% { opacity: .95; } 100% { opacity: 0; } }
-    [data-tactics-look] [data-enemy-ring][data-enemy-skill] > span > [data-enemy-glow] { animation: emGlowHit var(--em-dur, 450ms) ease-out forwards; }
-    [data-tactics-look] [data-enemy-ring]:is([data-enemy-skill="charge"], [data-enemy-skill="pierceCharge"], [data-enemy-skill="roar"]) > span > [data-enemy-glow] { animation-name: emGlowCharge; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-skill="regen"] > span > [data-enemy-glow] { --em-glow: 52,211,153; animation-name: emGlowSoft; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-hurt] > span > [data-enemy-glow] { --em-glow: 255,255,255; animation: emGlowHurt 520ms ease-out forwards; }
+    [data-tactics-look] :is([data-enemy-ring][data-enemy-skill] > span, [data-moo-stage][data-enemy-skill] > [data-moo-body]) > [data-enemy-glow] { animation: emGlowHit var(--em-dur, 450ms) ease-out forwards; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage]):is([data-enemy-skill="charge"], [data-enemy-skill="pierceCharge"], [data-enemy-skill="roar"]) > :is(span, [data-moo-body]) > [data-enemy-glow] { animation-name: emGlowCharge; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-skill="regen"] > :is(span, [data-moo-body]) > [data-enemy-glow] { --em-glow: 52,211,153; animation-name: emGlowSoft; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-hurt] > :is(span, [data-moo-body]) > [data-enemy-glow] { --em-glow: 255,255,255; animation: emGlowHurt 520ms ease-out forwards; }
+    /* 絵と同じ形に切り抜いた光の板(data-enemy-flash)。もとの filter: brightness の「絵そのものが明るくなる」光り方を、
+       濃さ(opacity)だけで再現する。切り抜き(mask)は絵の URL を style で渡している */
+    /* ★重ね方は color-dodge(灰色の板で明るさを掛け算で上げる)。もとの filter: brightness(1.3) に近い。
+         ふつうに重ねたり screen(足し算)にすると、暗いところまで持ち上がって白っぽく濁る。
+         やられ(もとは brightness(2.2))は板を明るい灰色(140)にして、掛け算の倍率を上げる */
+    [data-tactics-look] [data-enemy-flash] { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; mix-blend-mode: color-dodge;
+      background: rgb(90,90,90);
+      -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+    @keyframes emFlashHit { 0%, 35% { opacity: 0; } 55% { opacity: 1; } 72% { opacity: .55; } 100% { opacity: 0; } }
+    @keyframes emFlashCharge { 0% { opacity: 0; } 55% { opacity: .45; } 80% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes emFlashSoft { 0% { opacity: 0; } 50% { opacity: .7; } 100% { opacity: 0; } }
+    @keyframes emFlashHurt { 0% { opacity: 0; } 16% { opacity: 1; } 36% { opacity: .35; } 100% { opacity: 0; } }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-skill] > :is(span, [data-moo-body]) > [data-enemy-flash] { animation: emFlashHit var(--em-dur, 450ms) ease-out forwards; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage]):is([data-enemy-skill="charge"], [data-enemy-skill="pierceCharge"], [data-enemy-skill="roar"]) > :is(span, [data-moo-body]) > [data-enemy-flash] { animation-name: emFlashCharge; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-skill="regen"] > :is(span, [data-moo-body]) > [data-enemy-flash] { --em-glow: 52,211,153; animation-name: emFlashSoft; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-hurt] > :is(span, [data-moo-body]) > [data-enemy-flash] { background: rgb(140,140,140); animation: emFlashHurt 520ms ease-out forwards; }
+    /* 待機中の光(もとは待機の動きの中の filter)。ドクドクの脈・ニャルラトホテプのうごめき・覚醒ムーの吠える瞬間に合わせて灯す */
+    @keyframes emGlowIdlePulse { 0%, 34%, 100% { opacity: 0; } 20% { opacity: .6; } }
+    @keyframes emGlowIdleWrithe { 0%, 20%, 60%, 100% { opacity: 0; } 40% { opacity: .45; } 80% { opacity: .6; } }
+    @keyframes mooGlowIdle { 0%, 60%, 86%, 100% { opacity: 0; } 68%, 76% { opacity: .9; } }
+    @keyframes mooFlashIdle { 0%, 60%, 86%, 100% { opacity: 0; } 68%, 76% { opacity: .8; } }
+    [data-tactics-look="rich"] [data-em-idle="pulse"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > [data-enemy-glow] { animation: emGlowIdlePulse 2.6s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-em-idle="writhe"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > [data-enemy-glow] { animation: emGlowIdleWrithe 5s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-moo-stage]:not([data-enemy-skill]):not([data-enemy-hurt]) > [data-moo-body] > [data-enemy-glow] { --em-glow: 220,38,38; animation: mooGlowIdle 4.2s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-moo-stage]:not([data-enemy-skill]):not([data-enemy-hurt]) > [data-moo-body] > [data-enemy-flash] { animation: mooFlashIdle 4.2s ease-in-out infinite; }
     /* カワズモーは技ごとに光の色を変える(はり手・連続はり手=赤 / かわずつき=緑 / 上手投げ・構え=紅 / 大回転落とし・準備・大投げたまや=金) */
     [data-enemy-motion="kawazumo"]:is([data-enemy-skill="normal"], [data-enemy-skill="rush"]) { --em-glow: 239,68,68; }
     [data-enemy-motion="kawazumo"]:is([data-enemy-skill="pierce"], [data-enemy-skill="pierceCharge"]) { --em-glow: 244,63,94; }
@@ -2446,7 +2471,7 @@ const createAnimationStyle = () => {
     }
     @keyframes mooIdleSmoke { 0% { opacity: 0; transform: translateY(20%) scale(.9); } 30% { opacity: .85; } 100% { opacity: 0; transform: translateY(-18%) scale(1.15); } }
     @keyframes mooIdleEye { 0%, 55%, 100% { opacity: .35; transform: scale(.8); } 68%, 80% { opacity: 1; transform: scale(1.3); } }
-    [data-tactics-look="rich"] [data-moo-stage]:not([data-enemy-skill]):not([data-enemy-hurt]) > img { animation: mooIdleMenace 4.2s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-moo-stage]:not([data-enemy-skill]):not([data-enemy-hurt]) > [data-moo-body] { animation: mooIdleMenace 4.2s ease-in-out infinite; }
     [data-tactics-look="rich"] [data-moo-stage]::before { content: ''; position: absolute; inset: 8% 14% 10%; border-radius: 50%; pointer-events: none; z-index: 0; opacity: 0;
       background: radial-gradient(18% 26% at 30% 70%, rgba(40,0,60,.8), transparent 70%), radial-gradient(20% 30% at 70% 65%, rgba(60,0,40,.8), transparent 70%),
         radial-gradient(30% 34% at 50% 40%, rgba(88,28,135,.6), transparent 70%); filter: blur(6px); animation: mooIdleSmoke 3.2s ease-out infinite; }
@@ -2454,16 +2479,16 @@ const createAnimationStyle = () => {
       background: radial-gradient(closest-side at 32% 50%, rgba(255,60,60,.95), transparent), radial-gradient(closest-side at 68% 50%, rgba(255,60,60,.95), transparent);
       mix-blend-mode: screen; filter: blur(2px); animation: mooIdleEye 4.2s ease-in-out infinite; }
     @media (prefers-reduced-motion: reduce) {
-      [data-tactics-look] [data-moo-stage] > img, [data-tactics-look] [data-moo-stage]::before, [data-tactics-look] [data-moo-stage]::after { animation: none !important; }
+      [data-tactics-look] [data-moo-stage] > [data-moo-body], [data-tactics-look] [data-moo-stage] > [data-moo-body] > *, [data-tactics-look] [data-moo-stage]::before, [data-tactics-look] [data-moo-stage]::after { animation: none !important; }
     }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
     [data-tactics-look] [data-enemy-ring="0"] { --mh-rc: 239,68,68; } [data-tactics-look] [data-enemy-ring="1"] { --mh-rc: 245,158,11; }
     [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
     [data-tactics-look] [data-enemy-ring] { background: radial-gradient(closest-side, rgba(var(--mh-rc),.22), rgba(0,0,0,.4) 70%) !important;
-      box-shadow: 0 0 0 3px rgba(243,210,122,.55), 0 0 0 5px rgba(20,12,4,.85), 0 0 40px rgba(var(--mh-rc),.55), inset 0 0 30px rgba(var(--mh-rc),.35) !important; }
+      box-shadow: 0 0 0 3px rgba(243,210,122,.55), 0 0 0 5px rgba(20,12,4,.85), 0 0 16px rgba(var(--mh-rc),.85), 0 0 40px rgba(var(--mh-rc),.55), inset 0 0 30px rgba(var(--mh-rc),.35) !important; }
     /* ★丸枠の filter(距離の色の drop-shadow)は外す(2026-09-24 ユーザー指摘「バトル画面にかくつき」)。
        丸枠の中では敵の絵と魔法陣がずっと動いているので、丸枠ごとぼかした影を毎コマ描き直していた。
-       同じ色の光は上の box-shadow(0 0 40px)が出している */
+       同じ色の光は上の box-shadow(縁にぴったりの 16px と、広がる 40px)で出す */
     [data-tactics-look] [data-enemy-ring] { filter: none !important; }
     [data-tactics-look] [data-enemy-ring]::before { content: ''; position: absolute; inset: -16px; border-radius: 50%; pointer-events: none; z-index: 0;
       background: repeating-conic-gradient(rgba(var(--mh-rc),.9) 0 3deg, transparent 3deg 12deg, rgba(255,240,200,.8) 12deg 13deg, transparent 13deg 30deg);
@@ -2692,9 +2717,10 @@ const createAnimationStyle = () => {
       0%,100% { opacity: 0.2; transform: scale(0.8) rotate(var(--r,0deg)) translateY(clamp(-92px, -12dvh, -58px)); }
       50% { opacity: 1; }
     }
+    /* ★光(drop-shadow)は要素の固定の指定に任せ、動かすのは大きさだけ(filter を毎コマ変えると描き直しになる) */
     @keyframes specialThrob {
-      0%,100% { transform: scale(1); filter: drop-shadow(0 0 12px rgba(251,191,36,0.9)); }
-      50% { transform: scale(1.25); filter: drop-shadow(0 0 22px rgba(239,68,68,1)); }
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.25); }
     }
     @keyframes idleExclaim {
       0%,100% { transform: scale(0.95) translateY(0) rotate(-4deg); opacity: 0.85; }
@@ -2735,9 +2761,10 @@ const createAnimationStyle = () => {
       45% { transform: scale(1.1) rotate(2deg); }
       60% { transform: scale(1.04) rotate(-1deg); }
     }
+    /* ★明るさ(filter)は変えない。札を毎コマ描き直すことになる(2026-09-24 かくつきの見直し) */
     @keyframes noticeCharge {
-      0%,100% { transform: scale(0.96); filter: brightness(0.95); }
-      50% { transform: scale(1.12); filter: brightness(1.25); }
+      0%,100% { transform: scale(0.96); opacity: .92; }
+      50% { transform: scale(1.12); opacity: 1; }
     }
     @keyframes noticeHeal {
       0%,100% { transform: translateY(2px) scale(1); }
@@ -2852,10 +2879,20 @@ const createAnimationStyle = () => {
       background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
         radial-gradient(90% 60% at 50% 0%, rgba(var(--mh-rc),.28), transparent 70%) padding-box,
         linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
-        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+        conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
           rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important;
       box-shadow: 0 0 18px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.18) !important; }
-    [data-phase-look="rich"] .mh-ph-frame[data-ph-on] { animation: mhAng 4.5s linear infinite; }
+    /* 縁を回る光(2026-09-24 ユーザー指摘「かくつき」「まだ手が回ってないところも」)。
+       バトルの枠(data-slot-ring)と同じく、縁の角度(--mh-ang)を毎コマ変えるのをやめ、
+       縁の形に切り抜いた箱(.mh-ph-ring)の中で光の輪を transform で回す */
+    .mh-ph-frame[data-ph-on] { position: relative; }
+    .mh-ph-ring { display: none; }
+    .mh-ph-frame[data-ph-on] > .mh-ph-ring { display: block; position: absolute; inset: -2px; border-radius: inherit; padding: 2px; pointer-events: none; z-index: 1; overflow: hidden;
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+    .mh-ph-frame[data-ph-on] > .mh-ph-ring::before { content: ''; position: absolute; inset: -100%;
+      background: conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+        rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%); }
+    [data-phase-look="rich"] .mh-ph-frame[data-ph-on] > .mh-ph-ring::before { animation: mhSpin 4.5s linear infinite; }
     /* 枠の中の光の粒 */
     .mh-ph-sparkle { position: absolute; inset: 3px; border-radius: inherit; pointer-events: none;
       background: radial-gradient(1.5px 1.5px at 14% 30%, rgba(var(--mh-rc2),.95), transparent 70%), radial-gradient(1.5px 1.5px at 52% 72%, rgba(var(--mh-rc2),.85), transparent 70%),
@@ -2898,7 +2935,11 @@ const createAnimationStyle = () => {
     .mh-ph-gem { display: inline-flex; align-items: center; justify-content: center; padding-top: 2px; font-weight: 900; line-height: 1; color: #fff;
       text-shadow: 0 1px 2px rgba(0,0,0,.9); clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
       background: radial-gradient(circle at 35% 30%, #fff 0 8%, rgba(var(--mh-rc2,200,225,255),1) 18%, rgba(var(--mh-rc,31,111,209),1) 55%, rgba(8,10,30,1) 100%); }
-    [data-phase-look="rich"] .mh-ph-gem { animation: mhGem 2.2s ease-in-out infinite; }
+    /* 宝石のまたたきは、明るさ(filter)ではなく重ねた光の濃さ(opacity)で出す(バトルの宝石と同じ) */
+    .mh-ph-gem { position: relative; }
+    .mh-ph-gem::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.75), rgba(255,255,255,0) 60%); }
+    [data-phase-look="rich"] .mh-ph-gem::after { animation: mhGemGlow 2.2s ease-in-out infinite; }
     /* 絵を収める金の額(アシストカードの顔・固有技の絵) */
     .mh-ph-medal { border: 2px solid #f3d27a !important; background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.22), rgba(0,0,0,.4)) !important;
       box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.5), inset 0 0 10px rgba(0,0,0,.5) !important; }
@@ -2947,7 +2988,7 @@ const createAnimationStyle = () => {
     .mh-ph-pip[data-next] { border-color: #f3d27a; background: rgba(243,210,122,.35); box-shadow: 0 0 6px rgba(243,210,122,.7); }
     [data-phase-look="rich"] .mh-ph-pip[data-next] { animation: mhTwinkle 1.6s ease-in-out infinite; }
     @media (prefers-reduced-motion: reduce) {
-      .mh-ph-frame[data-ph-on], .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
+      .mh-ph-ring::before, .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem::after, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
     }
     @keyframes specialShockwave {
       0% { transform: scale(0.4); opacity: 0.9; }
@@ -3236,7 +3277,7 @@ const createAnimationStyle = () => {
     .mh-breakthrough-cap b{display:block;font-size:30px;color:#fff;text-shadow:0 0 16px #f59e0b}
     /* 最後に星が1つ増える。増えたぶんだけ大きく光ってから元の大きさに落ち着く */
     /* EXTREMEは透過画像の輪郭へdrop-shadowを重ね、敵枠ではなくモンスター本体から邪気を漏らす。 */
-    .mh-extreme-enemy-aura-shell{position:relative;display:inline-flex;align-items:center;justify-content:center;isolation:isolate;overflow:visible}.mh-extreme-enemy-aura-shell::before{content:"";position:absolute;z-index:0;inset:-38% -48% -22%;border-radius:44% 56% 48% 52%;pointer-events:none;background:radial-gradient(ellipse at 50% 62%,#050008ee 0 25%,#240034e8 38%,#581c87bb 52%,#a21caf88 64%,transparent 78%);filter:blur(7px);animation:mhExtremeEnemyMist 3.7s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-aura-shell::after{content:"";position:absolute;z-index:2;left:-35%;right:-35%;bottom:-15%;height:35%;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse,#140018ee 0 24%,#701a75cc 48%,#be185d88 62%,transparent 76%);filter:blur(5px);animation:mhExtremeEnemyFloor 3.1s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-image{filter:drop-shadow(0 0 4px #030006) drop-shadow(0 0 9px #3b0764) drop-shadow(-7px -3px 13px #6b21a8ee) drop-shadow(8px 2px 15px #a21cafdd) drop-shadow(1px -7px 18px #be123caa);animation:mhExtremeEnemyAura 2.8s ease-in-out infinite;will-change:filter}
+    .mh-extreme-enemy-aura-shell{position:relative;display:inline-flex;align-items:center;justify-content:center;isolation:isolate;overflow:visible}.mh-extreme-enemy-aura-shell::before{content:"";position:absolute;z-index:0;inset:-38% -48% -22%;border-radius:44% 56% 48% 52%;pointer-events:none;background:radial-gradient(ellipse at 50% 62%,#050008ee 0 25%,#240034e8 38%,#581c87bb 52%,#a21caf88 64%,transparent 78%);filter:blur(7px);animation:mhExtremeEnemyMist 3.7s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-aura-shell::after{content:"";position:absolute;z-index:2;left:-35%;right:-35%;bottom:-15%;height:35%;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse,#140018ee 0 24%,#701a75cc 48%,#be185d88 62%,transparent 76%);filter:blur(5px);animation:mhExtremeEnemyFloor 3.1s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-image{filter:drop-shadow(0 0 4px #030006) drop-shadow(0 0 9px #3b0764) drop-shadow(-7px -3px 13px #6b21a8ee) drop-shadow(8px 2px 15px #a21cafdd) drop-shadow(1px -7px 18px #be123caa);}
     @keyframes mhExtremeEnemyAura{0%,100%{filter:drop-shadow(0 0 4px #030006) drop-shadow(0 0 9px #3b0764) drop-shadow(-7px -3px 13px #6b21a8ee) drop-shadow(8px 2px 15px #a21cafdd) drop-shadow(1px -7px 18px #be123c99)}47%{filter:drop-shadow(0 0 6px #08000d) drop-shadow(0 0 13px #4c1d95) drop-shadow(-10px 3px 17px #7e22ceff) drop-shadow(10px -4px 19px #c026d3ee) drop-shadow(-3px -9px 22px #e11d48bb)}}@keyframes mhExtremeEnemyMist{0%,100%{opacity:.76;transform:scale(.94,1.01) translate(-2px,3px) rotate(-2deg)}41%{opacity:1;transform:scale(1.09,1.14) translate(4px,-7px) rotate(2deg)}73%{opacity:.84;transform:scale(1.02,1.08) translate(-3px,-2px) rotate(-1deg)}}@keyframes mhExtremeEnemyFloor{0%,100%{opacity:.68;transform:scaleX(.9)}55%{opacity:1;transform:scaleX(1.12)}}
     /* NIGHTMAREは暗い青の霊気と霧で、赤紫のEXTREMEから区別する。 */
     .mh-nightmare-enemy-aura-shell{position:relative;display:inline-flex;align-items:center;justify-content:center;isolation:isolate;overflow:visible}.mh-nightmare-enemy-aura-shell::before{content:"";position:absolute;z-index:0;inset:-42% -55% -28%;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse at 50% 52%,#020617ee 0 23%,#172554cc 42%,#312e81a8 58%,#bfdbfe55 69%,transparent 80%);filter:blur(8px);animation:mhNightmareMist 4.8s ease-in-out infinite}.mh-nightmare-enemy-aura-shell::after{content:"";position:absolute;z-index:2;inset:-30% -45% 4%;border-radius:46%;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 38%,#60a5fa44 58%,#0f172a99 71%,transparent 82%);filter:blur(6px);animation:mhNightmarePulse 3.9s ease-in-out infinite}.mh-nightmare-enemy-image{filter:drop-shadow(0 0 5px #020617) drop-shadow(0 0 11px #1e3a8a) drop-shadow(0 0 18px #818cf899) drop-shadow(0 -5px 20px #dbeafe77);animation:mhNightmarePulse 3.9s ease-in-out infinite}

@@ -240,7 +240,7 @@ function RewardPickScreen({
               <button key={`${i}-${picked.id}`} type="button" disabled={!!effect} onClick={()=>removePick(i)}
                 aria-label={`${i+1}回目の${picked.name}を取り消す`}
                 data-ph-kind={picked.id} data-ph-on=""
-                className="mh-phase-pop mh-ph-frame flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40" style={{maxWidth:'42%'}}>
+                className="mh-phase-pop mh-ph-frame flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40" style={{maxWidth:'42%'}}><i aria-hidden="true" className="mh-ph-ring"/>
                 <span className="shrink-0 text-[9px] text-slate-300">{i+1}回目</span>
                 <span className={`shrink-0 ${st.tint}`}>{cardIconNode(st.icon)}</span><span className="truncate">{picked.name}</span>
                 <span aria-hidden="true" className="shrink-0 text-[10px] text-slate-300">×</span>
@@ -317,7 +317,7 @@ function RewardPickScreen({
               aria-label={`${option.name} ${option.effect}${count>0?` 選択中${count}回`:''}`}
               data-ph-kind={option.id} data-ph-on={count>0?'':undefined}
               className="mh-phase-card mh-phase-enter mh-ph-frame relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40"
-              style={{'--i':optionIndex}}>
+              style={{'--i':optionIndex}}><i aria-hidden="true" className="mh-ph-ring"/>
               {/* 地の光の粒と、選んだ枠を横切る光の筋(飾り。押す範囲や文字には関わらない) */}
               <span aria-hidden="true" className="mh-ph-sparkle"/>
               {count>0&&<span aria-hidden="true" className="mh-ph-shine"/>}
