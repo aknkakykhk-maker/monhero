@@ -171,7 +171,7 @@ if (REWARD_PICK_HEAD.test(component)) {
     jsx.replace(REWARD_PICK_HEAD, 'const Screen = ({ gameState, trainingPicks, setTrainingPicks, atk, def, maxHp, maxGuts, waveResult, effect,\n'
     + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep, ULTIMATE_SETTING, extremeRuleNumber, trainingGainRate, compactPercent, specialRulePercent, extremeSpecialRule, quickGrowthRateForRun, isQuickMode,\n'
     + '  TRAINING_PICK_COUNT, TRAINING_OPTIONS, handleTraining, AssistantBubble, battleTutorialSpotClass, cardIconNode,\n'
-    + '  slots, tacticsUnits,\n'
+    + '  slots, tacticsUnits, phasePlan, PhaseSteps,\n'
     + '  Trophy, Heart, Sword, ShieldCheck, Sparkles }) => {')
     + '\nmodule.exports = { Screen };',
     { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'training-reward-check.jsx' });
@@ -248,6 +248,13 @@ if (REWARD_PICK_HEAD.test(component)) {
     !tacticsAllDowned.includes('data-training-status'));
   check('既存5モードでは今までどおりステータス欄を出す',
     render([]).includes('data-training-status'));
+  // ★強化フェーズの並び(PhaseSteps)と、選んだ1回だけを取り消す枠
+  const stubSteps = (props) => React.createElement('i', { 'data-stub-steps': props.current });
+  const withPlan = render(['hp'], { phasePlan: ['training', 'teaching'], PhaseSteps: stubSteps });
+  check('強化フェーズの並びをトレーニングの段で出す', withPlan.includes('data-stub-steps="training"'));
+  check('並びが無いときは出さない', !render(['hp'], { PhaseSteps: stubSteps }).includes('data-stub-steps'));
+  check('選んだ1回を「1回目」の枠から取り消せる', withPlan.includes('aria-label="1回目の走り込みを取り消す"'));
+  check('まだ選んでいない枠は押せるボタンにしない', !withPlan.includes('2回目の') );
 
   const empty = render([]);
   check('画面が落ちずに描ける', empty.length > 0);
