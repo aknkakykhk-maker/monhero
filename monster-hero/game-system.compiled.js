@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 088e559ac0900c6f
+// source-sha256: 258c608740d14e7d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 69c7229ceadb9ec4
+// generated-sha256: 7cb0238f70bbe294
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -246,7 +246,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 23:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 00:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24315,7 +24315,7 @@ const RhythmOptions = ({
     suffix: '%'
   }), 'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。', {
     full: true
-  }), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだは COMBO の下に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、右上の経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+  }), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだは COMBO の下に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、レーンの右のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
   }), field('コンボ数', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: wide ? 'mt-1.5' : 'mt-2'
@@ -28106,11 +28106,32 @@ const RhythmTapTest = ({
     "aria-label": "\u30DD\u30FC\u30BA",
     className: "pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0",
     onClick: pause
-  }, "\u2161")), /*#__PURE__*/React.createElement("div", {
+  }, "\u2161")), /*#__PURE__*/React.createElement("b", {
+    ref: abilityBadgeRef,
+    "data-rhythm-ability-badge": true,
+    hidden: true,
+    className: "mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5",
+    style: {
+      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-song-clock": true,
-    className: "flex w-full items-center justify-end gap-1"
+    "data-clock-wide": isLandscape ? '1' : '',
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute z-30 flex flex-col items-start gap-1",
+    style: isLandscape ? {
+      left: 'calc(64.5% + 4px)',
+      top: '46px',
+      width: 'max-content'
+    } : {
+      left: 'calc(64% + 4px)',
+      right: '12px',
+      top: '82px'
+    }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "relative h-[3px] w-12 shrink-0 overflow-hidden rounded-full bg-slate-950/80"
+    className: "flex w-full min-w-0 items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative h-[5px] w-12 min-w-0 shrink overflow-hidden rounded-full border border-white/25 bg-slate-950/80"
   }, /*#__PURE__*/React.createElement("i", {
     ref: songProgressRef,
     className: "absolute inset-y-0 left-0 w-full rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400",
@@ -28121,27 +28142,19 @@ const RhythmTapTest = ({
   })), /*#__PURE__*/React.createElement("b", {
     ref: songTimeRef,
     "data-rhythm-song-time": true,
-    className: "shrink-0 text-[9px] font-black leading-none tabular-nums text-slate-300",
+    className: "shrink-0 text-[11px] font-black leading-none tabular-nums text-white",
     style: {
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+      textShadow: '0 1px 3px rgba(2,6,23,1),0 0 6px rgba(2,6,23,.9)'
     }
   }, "0:00")), /*#__PURE__*/React.createElement("b", {
     ref: paceRef,
     "data-rhythm-pace": true,
     hidden: true,
-    className: "w-full truncate text-right text-[9px] font-black leading-none tabular-nums text-slate-300",
+    className: "max-w-full truncate text-[10px] font-black leading-none tabular-nums text-slate-200",
     style: {
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+      textShadow: '0 1px 3px rgba(2,6,23,1),0 0 6px rgba(2,6,23,.9)'
     }
-  }), /*#__PURE__*/React.createElement("b", {
-    ref: abilityBadgeRef,
-    "data-rhythm-ability-badge": true,
-    hidden: true,
-    className: "mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5",
-    style: {
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
-    }
-  }))), lifeState === 'down' && /*#__PURE__*/React.createElement("div", {
+  })), lifeState === 'down' && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-down-vignette": true,
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-0 z-20"
