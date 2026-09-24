@@ -935,6 +935,9 @@ const createAnimationStyle = () => {
     /* 敵の絵の右上の技の札(3連撃！など)。色と光(box-shadow)は技の種類のまま残し、金の縁は outline で重ねる */
     [data-tactics-look] [data-enemy-notice] { outline: 1.5px solid rgba(243,210,122,.9); outline-offset: 1px;
       background-image: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 50%) !important; }
+    /* 敵の攻撃・ためるは絵だけを動かす(丸枠とルーンの輪はその場に残す)。> span は敵の絵を包む要素 */
+    [data-tactics-look] [data-enemy-ring][data-enemy-attack="fly"] > span { display: block; position: relative; z-index: 9999; animation: enemyAttackFly 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-attack="charge"] > span { display: block; position: relative; animation: enemyChargeShake 1100ms ease-in-out forwards; }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
     [data-tactics-look] [data-enemy-ring="0"] { --mh-rc: 239,68,68; } [data-tactics-look] [data-enemy-ring="1"] { --mh-rc: 245,158,11; }
     [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
