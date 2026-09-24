@@ -169,9 +169,9 @@ const DexMonsterArt = ({ mon, alt, hidden=false }) => mon.imgUrl
   : <div className="text-6xl">{hidden?'？':mon.emoji}</div>;
 // 図鑑の立ち絵に待機アニメを重ねたもの(バトルと同じ MonsterIdleArt)。持たない子・まだ出会っていない子は今までの絵。
 // 待機アニメは正方形の箱の中で軸を合わせるので、正方形の箱(fill)に入れて渡す。
-// 軽量表示・「待機中の動き：止める」では画面全体の data-phase-look="calm" で CSS が止める
-const DexMonsterIdleArt = ({ mon, alt }) => (mon.imgUrl && monsterIdleRigOf(mon.id))
-  ? <span data-dex-idle-art className="relative block h-full aspect-square max-w-full">{withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt), {fill:true})}</span>
+// 動かすかどうかは図鑑のページのボタン(motion。useDexIdleMotion)だけで決める。止めたら1枚の絵
+const DexMonsterIdleArt = ({ mon, alt, motion = true }) => (motion && mon.imgUrl && monsterIdleRigOf(mon.id))
+  ? <span data-dex-idle-art className="relative block h-full aspect-square max-w-full">{withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt), {fill:true, own:true})}</span>
   : <DexMonsterArt mon={mon} alt={alt}/>;
 const MarketProductIcon = ({ item, onZoom, disabled=false }) => {
   const content=item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>;

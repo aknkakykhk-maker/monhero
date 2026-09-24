@@ -713,11 +713,12 @@ const createAnimationStyle = () => {
       50% { transform:translate3d(0,-3%,0) rotate(1.5deg); }
     }
     /* 軽量な見た目(タクティクスの calm)と「動きを減らす」設定では止める(絵はそのまま見える) */
-    [data-tactics-look="calm"] .mon-idle, [data-tactics-look="calm"] .mon-idle__part { animation:none; }
-    /* 画面全体の calm(軽量表示・「待機中の動き：止める」)。バトルの外(図鑑)はこれで止まる */
-    [data-phase-look="calm"] .mon-idle, [data-phase-look="calm"] .mon-idle__part { animation:none; }
+    /* data-idle-own(図鑑)は自分のページのボタンで止めるので、ここでは止めない */
+    [data-tactics-look="calm"] .mon-idle:not([data-idle-own]), [data-tactics-look="calm"] .mon-idle:not([data-idle-own]) .mon-idle__part { animation:none; }
+    /* 画面全体の calm(軽量表示・「待機中の動き：止める」) */
+    [data-phase-look="calm"] .mon-idle:not([data-idle-own]), [data-phase-look="calm"] .mon-idle:not([data-idle-own]) .mon-idle__part { animation:none; }
     @media (prefers-reduced-motion: reduce) {
-      .mon-idle, .mon-idle__part { animation:none; }
+      .mon-idle:not([data-idle-own]), .mon-idle:not([data-idle-own]) .mon-idle__part { animation:none; }
     }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
        常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。
