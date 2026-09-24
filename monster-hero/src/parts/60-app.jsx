@@ -16451,7 +16451,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <span className="text-lg" aria-hidden="true">🔒</span>
                         <span className="min-w-0 flex-1">
                           <b className="block text-[12px] font-black text-slate-400">？？？</b>
-                          <small className="block text-[9px] text-slate-600">まだ見ていません</small>
+                          <small className="block text-[9px] text-slate-600">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}まだ見ていません</small>
                         </span>
                       </div>
                     );
@@ -16462,7 +16462,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <Play size={16} className="text-fuchsia-300 shrink-0"/>
                       <span className="min-w-0 flex-1">
                         <b className="block text-[12px] font-black text-white">{event.title}</b>
-                        <small className="block text-[9px] text-fuchsia-300/70">タップして見返す</small>
+                        <small className="block text-[9px] text-fuchsia-300/70">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}タップして見返す</small>
                       </span>
                     </button>
                   );
