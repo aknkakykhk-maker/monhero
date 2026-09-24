@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a5205f72e0273196
+// source-sha256: 889b6468ea0e8d62
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ab0ec625207d0058
+// generated-sha256: 210aaed458e543c2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -175,7 +175,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 10:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 10:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38440,12 +38440,31 @@ const tacticsAimNum = (value, limit = 100000) => {
   const v = n / unit[0];
   return `${v < 10 ? Math.floor(v * 10) / 10 : Math.floor(v)}${unit[1]}`;
 };
-// 連撃の内訳。全部同じなら「27×3」、違えば「27・27・0」
-const tacticsAimParts = parts => {
-  const list = Array.isArray(parts) ? parts : [];
+// 連撃の内訳。全部同じなら「27×3」、違えば「63〜65×3」(いちばん小さい〜大きい)。
+// ★1発ずつ「63・63・65」と並べると、枠の右の列(幅100pxほど)でも5桁で入らない
+//   (2026-09-24 ユーザー了承「内訳を短くしていい」)。1発ずつの数字は「次の行動」の札に出ている
+// ★合計と合わせて13字をこえると右の列でも切れるので、そのときは回数だけ(「×3」)にする
+const tacticsAimParts = (parts, totalText = '') => {
+  const list = (Array.isArray(parts) ? parts : []).map(v => Math.max(0, Math.floor(Number(v) || 0)));
   if (list.length <= 1) return '';
-  const same = list.every(v => v === list[0]);
-  return same ? `${tacticsAimNum(list[0], 10000)}×${list.length}` : list.map(v => tacticsAimNum(v, 10000)).join('・');
+  const lo = Math.min(...list),
+    hi = Math.max(...list);
+  const text = lo === hi ? `${tacticsAimNum(lo, 10000)}×${list.length}` : `${tacticsAimNum(lo, 10000)}〜${tacticsAimNum(hi, 10000)}×${list.length}`;
+  return String(totalText).length + text.length > 13 ? `×${list.length}` : text;
+};
+// 手札の技名を、カードの幅に合わせて1〜3行へ収める(2026-09-24 ユーザー指摘「技名がおさまってない」)。
+// ★箱は高さ30pxで固定。11px のまま折り返すと「ホリゾンタル・スクエア」が3行になって上下が切れ、
+//   「エッジもんた」は「エッジもん／た」と1字だけ次の行へ落ちていた。
+//   6字までは1行、12字までは2行、それより長いときは3行に割り、1行の字数でカードの幅(100cqw)を
+//   割った大きさまで字を小さくする(箱の左右の余白4pxと字の丸めのぶん、6px引いてから割る)。cqw が使えない端末では、この指定が捨てられて今までの 11px になる
+const handCardNameFit = name => {
+  const n = [...String(name || '')].length || 1;
+  const lines = n <= 6 ? 1 : n <= 12 ? 2 : 3;
+  const perLine = Math.ceil(n / lines);
+  return {
+    fontSize: `min(${lines === 3 ? 9 : 11}px, calc((100cqw - 6px) / ${perLine}))`,
+    lineHeight: lines === 3 ? '1.08' : '1.15'
+  };
 };
 const kindOfTacticsSlotFx = fx => {
   if (!fx) return null;
@@ -40674,11 +40693,14 @@ function BattleScreen({
       }, "\uD83D\uDEE1 ", slotRushGuard ? '連撃ガード' : '全体', " ", gv);
     })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit || slotExInfo) && /*#__PURE__*/React.createElement("div", {
       "data-tactics-slot-marks": true,
-      className: `${tacticsNewLayout ? 'absolute top-1 left-full h-[42px] w-[150%] overflow-hidden items-stretch justify-start px-2' : 'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`
-    }, tacticsNewLayout && assignedCount > 0 && /*#__PURE__*/React.createElement("div", {
-      "data-tactics-assigned-count": assignedCount,
-      className: "self-end rounded bg-indigo-950/85 px-1 py-0.5 text-[7px] font-black leading-none text-indigo-200 ring-1 ring-indigo-400/40"
-    }, "\u30AB\u30FC\u30C9\xD7", assignedCount), !tacticsNewLayout && slotExInfo && /*#__PURE__*/React.createElement("div", {
+      className: `${tacticsNewLayout ? 'absolute top-px left-full h-[calc(100%-31px)] w-[150%] overflow-hidden items-stretch justify-start px-1.5' : 'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`
+    }, tacticsNewLayout && slotAimHit && /*#__PURE__*/React.createElement("span", {
+      "data-tactics-aimed-damage": slotAimHit.taken,
+      "data-tactics-aimed-parts": slotAimHit.parts.length > 1 ? slotAimHit.parts.join('/') : undefined,
+      className: "inline-flex h-[13px] max-w-full min-w-0 shrink-0 items-center gap-0.5 self-center overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 text-[9px] font-black leading-none text-red-100 shadow"
+    }, "\uD83C\uDFAF", slotAimHit.taken > 0 ? `-${tacticsAimNum(slotAimHit.taken)}` : '', slotAimHit.parts.length > 1 ? /*#__PURE__*/React.createElement("span", {
+      className: "min-w-0 truncate text-[7px] font-bold text-red-200/85"
+    }, tacticsAimParts(slotAimHit.parts, tacticsAimNum(slotAimHit.taken))) : null), !tacticsNewLayout && slotExInfo && /*#__PURE__*/React.createElement("div", {
       "data-tactics-ex-mark": i,
       "data-tactics-ex-state": slotExInfo.badge.text,
       className: `flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
@@ -40692,47 +40714,53 @@ function BattleScreen({
         fontSize: '8px'
       },
       className: "truncate min-w-0 font-black"
-    }, slotExInfo.badge.text)), slotAssignedCards.map(({
-      idx,
-      card
-    }) => {
-      // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
-      const gw = guardCardWeight(card),
-        ge = cardEffectMultiplier(card, halvedByIdx[idx]);
-      const gv = gw > 0 ? guardValueOf(GUARD_EVOLUTION[guardLevel].flat * gw * ge, GUARD_EVOLUTION[guardLevel].mult * gw * ge, i) : 0;
-      // ★ガードが連撃・全体に変わったら、札に印を付ける(2026-09-22 ユーザー選択
-      //   「名前＋印に分ける」)。段階の名前は9つあり、後半は「ガード」が付かない
-      //   (金剛不壊・万象拒絶…)ので、名前そのものは変えずにとなりへ印を出す。
-      // ★全体ガードの枠は、軽減量を上の🛡が立っている子全員に出すので札には数字を重ねない。
-      //   連撃ガードの枠だけは1枚ずつの値が要る(合計は🛡に出るため)ので今までどおり
-      const guardMark = gw > 0 ? slotRushGuard ? '連撃' : slotSpreadGuard ? '全体' : '' : '';
-      const spreadGuardCard = gw > 0 && slotSpreadGuard && !slotRushGuard;
-      return /*#__PURE__*/React.createElement("div", {
-        key: idx,
-        className: `flex items-center gap-0.5 px-1 rounded w-full justify-center min-w-0 ${cardNeedsMonster(card) ? 'bg-red-600/85' : 'bg-emerald-600/85'}`
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: '7px'
-        },
-        className: "leading-none shrink-0"
-      }, cardIconNode(card.icon, 9, card.id)), guardMark && /*#__PURE__*/React.createElement("span", {
-        "data-tactics-guard-mark": guardMark,
-        style: {
-          fontSize: '6px'
-        },
-        className: "shrink-0 rounded-sm border border-amber-200/70 bg-black/60 px-0.5 font-black leading-none text-amber-200"
-      }, guardMark), /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: '7px'
-        },
-        className: "font-black text-white leading-none truncate min-w-0"
-      }, halvedByIdx[idx] ? '½' : '', card.name), gv > 0 && !spreadGuardCard && /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: '7px'
-        },
-        className: "font-black text-emerald-100 leading-none shrink-0"
-      }, "-", gv));
-    }), !tacticsNewLayout && (previewDmg > 0 || previewGuard > 0 || slotAimHit) && /*#__PURE__*/React.createElement("div", {
+    }, slotExInfo.badge.text)), (() => {
+      const chipEls = slotAssignedCards.map(({
+        idx,
+        card
+      }) => {
+        // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
+        const gw = guardCardWeight(card),
+          ge = cardEffectMultiplier(card, halvedByIdx[idx]);
+        const gv = gw > 0 ? guardValueOf(GUARD_EVOLUTION[guardLevel].flat * gw * ge, GUARD_EVOLUTION[guardLevel].mult * gw * ge, i) : 0;
+        // ★ガードが連撃・全体に変わったら、札に印を付ける(2026-09-22 ユーザー選択
+        //   「名前＋印に分ける」)。段階の名前は9つあり、後半は「ガード」が付かない
+        //   (金剛不壊・万象拒絶…)ので、名前そのものは変えずにとなりへ印を出す。
+        // ★全体ガードの枠は、軽減量を上の🛡が立っている子全員に出すので札には数字を重ねない。
+        //   連撃ガードの枠だけは1枚ずつの値が要る(合計は🛡に出るため)ので今までどおり
+        const guardMark = gw > 0 ? slotRushGuard ? '連撃' : slotSpreadGuard ? '全体' : '' : '';
+        const spreadGuardCard = gw > 0 && slotSpreadGuard && !slotRushGuard;
+        return /*#__PURE__*/React.createElement("div", {
+          key: idx,
+          className: `flex items-center gap-0.5 rounded w-full min-w-0 ${tacticsNewLayout ? 'h-[9px] justify-start overflow-hidden px-0.5' : 'px-1 justify-center'} ${cardNeedsMonster(card) ? 'bg-red-600/85' : 'bg-emerald-600/85'}`
+        }, /*#__PURE__*/React.createElement("span", {
+          style: {
+            fontSize: '7px'
+          },
+          className: "leading-none shrink-0"
+        }, cardIconNode(card.icon, tacticsNewLayout ? 8 : 9, card.id)), guardMark && /*#__PURE__*/React.createElement("span", {
+          "data-tactics-guard-mark": guardMark,
+          style: {
+            fontSize: '6px'
+          },
+          className: "shrink-0 rounded-sm border border-amber-200/70 bg-black/60 px-0.5 font-black leading-none text-amber-200"
+        }, guardMark), /*#__PURE__*/React.createElement("span", {
+          style: {
+            fontSize: '7px'
+          },
+          className: "font-black text-white leading-none truncate min-w-0"
+        }, halvedByIdx[idx] ? '½' : '', card.name), gv > 0 && !spreadGuardCard && /*#__PURE__*/React.createElement("span", {
+          style: {
+            fontSize: '7px'
+          },
+          className: "font-black text-emerald-100 leading-none shrink-0"
+        }, "-", gv));
+      });
+      return tacticsNewLayout ? chipEls.length > 0 && /*#__PURE__*/React.createElement("div", {
+        "data-tactics-slot-chips": chipEls.length,
+        className: "grid w-full grid-cols-2 gap-px"
+      }, chipEls) : chipEls;
+    })(), !tacticsNewLayout && (previewDmg > 0 || previewGuard > 0 || slotAimHit) && /*#__PURE__*/React.createElement("div", {
       className: "flex w-full flex-wrap items-start justify-between gap-0.5"
     }, previewGuard > 0 && /*#__PURE__*/React.createElement("div", {
       "data-tactics-guard-preview": previewGuard,
@@ -40772,7 +40800,7 @@ function BattleScreen({
         animation: 'idleSpark 900ms ease-in-out infinite',
         animationDelay: `${deg * 2}ms`
       }
-    }, "\u26A1"))), tacticsNewLayout && (previewDmg > 0 || previewGuard > 0 || slotAimHit) && /*#__PURE__*/React.createElement("div", {
+    }, "\u26A1"))), tacticsNewLayout && (previewDmg > 0 || previewGuard > 0) && /*#__PURE__*/React.createElement("div", {
       "data-tactics-image-previews": true,
       className: "absolute left-1 top-1 z-[63] flex max-w-[calc(100%-6px)] flex-wrap items-start gap-0.5 pointer-events-none"
     }, previewDmg > 0 && /*#__PURE__*/React.createElement("span", {
@@ -40781,13 +40809,7 @@ function BattleScreen({
     }, isPendingPreview && isPendingHalved ? '½' : '', "\u653B", previewDmg), previewGuard > 0 && /*#__PURE__*/React.createElement("span", {
       "data-tactics-guard-preview": previewGuard,
       className: "rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200"
-    }, isPendingGuardHalved ? '½' : '', "\u5B88", previewGuard), slotAimHit && /*#__PURE__*/React.createElement("span", {
-      "data-tactics-aimed-damage": slotAimHit.taken,
-      "data-tactics-aimed-parts": slotAimHit.parts.length > 1 ? slotAimHit.parts.join('/') : undefined,
-      className: "inline-flex max-w-full items-baseline gap-0.5 overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 py-0.5 text-[9px] font-black leading-none text-red-100 shadow"
-    }, "\uD83C\uDFAF", slotAimHit.taken > 0 ? `-${tacticsAimNum(slotAimHit.taken)}` : '', slotAimHit.parts.length > 1 ? /*#__PURE__*/React.createElement("span", {
-      className: "min-w-0 truncate text-[7px] font-bold text-red-200/85"
-    }, tacticsAimParts(slotAimHit.parts)) : null)), (() => {
+    }, isPendingGuardHalved ? '½' : '', "\u5B88", previewGuard)), (() => {
       const totalBonus = distTotalBonus(i);
       return /*#__PURE__*/React.createElement("div", {
         className: `absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : totalBonus < 0 ? 'text-red-300 border-red-400/30' : 'text-slate-300 border-white/20'}`
@@ -41139,7 +41161,10 @@ function BattleScreen({
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.35)'
       }
     }, cardIconNode(c.icon, 26, c.id)), /*#__PURE__*/React.createElement("div", {
-      className: "w-full text-center flex flex-col justify-end gap-0.5"
+      className: "w-full text-center flex flex-col justify-end gap-0.5",
+      style: {
+        containerType: 'inline-size'
+      }
     }, ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
       onClick: ev => {
         ev.stopPropagation();
@@ -41148,9 +41173,11 @@ function BattleScreen({
           handIndex: i
         });
       },
-      className: `text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
+      className: `text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`,
+      style: handCardNameFit(c.name)
     }, c.name) : /*#__PURE__*/React.createElement("div", {
-      className: "text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5"
+      className: "text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5",
+      style: handCardNameFit(c.name)
     }, c.name), (() => {
       // カードの表に「ジャンル」と「誰に効くか」を出す(仕様: BATTLE_NEW_MODE_PLAN.md 4.4
       // 「単体効果と全体効果が分かるようにカード説明に表示するようにしたい」)。
@@ -41189,9 +41216,13 @@ function BattleScreen({
       "data-decoration": true,
       className: "mt-1.5 flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20"
     }, cardIconNode(c.icon, 26, c.id)), /*#__PURE__*/React.createElement("div", {
-      className: "w-full text-center flex flex-col justify-end gap-0.5"
+      className: "w-full text-center flex flex-col justify-end gap-0.5",
+      style: {
+        containerType: 'inline-size'
+      }
     }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5"
+      className: "text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5",
+      style: handCardNameFit(c.name)
     }, c.name), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"
     }, /*#__PURE__*/React.createElement(Zap, {
