@@ -17707,7 +17707,10 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           </div>
         );
       })()}
-      {focusedCard&&(
+      {/* ★技の一覧(skillPicker)を開いているあいだは出さない。一覧より手前に出るので、
+          一覧の見出しと×が隠れていた(2026-09-24 ユーザー選択「一覧を出すときは説明を消す」)。
+          一覧には技ごとの威力・消費が並ぶので、説明が無くても選べる。閉じれば元に戻る */}
+      {focusedCard&&!skillPicker&&(
         <div data-tactics-card-detail={isTacticsMode(runMode)?'raised':undefined} className="fixed left-1/2 -translate-x-1/2 bg-slate-900/98 border-2 border-indigo-400 p-2.5 rounded-2xl w-[90%] max-w-[260px] shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-md" style={isTacticsMode(runMode)?{top:'max(calc(env(safe-area-inset-top) + 96px),14dvh)',zIndex:110000}:{bottom:'calc(34% + 80px)',zIndex:110000}} onClick={()=>setFocusedCard(null)}>
           <div className="flex items-center gap-2.5 mb-1 border-b border-white/10 pb-1"><span className="text-xl bg-indigo-500/20 p-1 rounded-xl">{cardIconNode(focusedCard.icon,22,focusedCard.id)}</span><div className="text-left flex-1 overflow-hidden"><div className="text-[9px] font-black text-white uppercase truncate">{focusedCard.name||focusedCard.baseName}</div><div className="text-[7px] font-bold text-indigo-400 flex items-center gap-1"><Zap size={7}/> {getCardGuts(focusedCard)} Guts</div></div></div>
           <div className="text-[8px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1">

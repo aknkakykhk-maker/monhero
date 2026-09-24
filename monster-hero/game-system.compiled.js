@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a4cd957df3aad65a
+// source-sha256: a5205f72e0273196
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 39b3d76d72801fe1
+// generated-sha256: ab0ec625207d0058
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -175,7 +175,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 08:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 10:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -71917,7 +71917,7 @@ function MonsterHeroGame() {
       }, "\u6575\u3068\u540C\u3058\u8DDD\u96E2\u67A0\u306B\u3044\u308B\u5473\u65B9\u306E\u8DDD\u96E2\u9069\u6027\u30FB\u8DDD\u96E2\u30C0\u30E1\u30FC\u30B8\u88DC\u6B63\u306E\u5408\u8A08\u5024\u3092\u4E0A\u3052\u308B\u3068\u3001\u4E0A\u4F4D\u30EC\u30D9\u30EB\u304C\u89E3\u653E\u3055\u308C\u307E\u3059"), card.type === 'unique' && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 text-center pt-1 shrink-0"
       }, "\u56FA\u6709\u6280\u306E\u5F37\u5316(\u5F37\u5316\u30DD\u30A4\u30F3\u30C8)\u3067\u4E0A\u4F4D\u30EC\u30D9\u30EB\u304C\u89E3\u653E\u3055\u308C\u307E\u3059")));
-    })(), focusedCard && /*#__PURE__*/React.createElement("div", {
+    })(), focusedCard && !skillPicker && /*#__PURE__*/React.createElement("div", {
       "data-tactics-card-detail": isTacticsMode(runMode) ? 'raised' : undefined,
       className: "fixed left-1/2 -translate-x-1/2 bg-slate-900/98 border-2 border-indigo-400 p-2.5 rounded-2xl w-[90%] max-w-[260px] shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-md",
       style: isTacticsMode(runMode) ? {
