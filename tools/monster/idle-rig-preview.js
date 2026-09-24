@@ -10,8 +10,8 @@
 // どちらも 58px のバトルの枠では気づきにくく、図鑑の大きな立ち絵で初めて見える。
 // ブラウザで止めて撮るより、ここで同じ計算をして合成するほうが速く、全員を同じ条件で見比べられる。
 //
-// 【1枚の中身】左上: 元の絵 / 右上: 体だけ(部分を抜いた残り。部分の取りこぼしがここに残る)
-//              下の2枚: 部分をいちばん振った2つの姿勢。元の絵にはあるのに合成で抜けた所を赤紫で塗る
+// 【1枚の中身】1段目: 元の絵 / 体だけ(部分を抜いた残り。部分の取りこぼしがここに残る)
+//              2段目以降: 止まっているとき・部分をいちばん振った2つの姿勢。元の絵より薄くなった所を赤紫で塗る
 // 表示と同じく、正方形の枠へ絵とマスクを contain で置き、軸は MONSTER_IDLE_RIGS の origin(枠の %)を使う。
 // 全体の動き(浮く・弾む…)は絵全体が一緒に動くだけで切れ目を作らないので、ここでは動かさない。
 'use strict';
@@ -22,7 +22,8 @@ const sharp = require('sharp');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const GAME = path.join(ROOT, 'monster-hero');
-const S = 480; // 合成する枠の大きさ(px)
+// 合成する枠の大きさ(px)。図鑑の立ち絵はスマホで 540px 前後(CSS 180px × 3倍)で描かれるので、それに合わせる
+const S = Number(process.env.IDLE_PREVIEW_SIZE) || 600;
 const BG = [34, 44, 70];
 const HOLE = [255, 0, 200];
 
@@ -45,6 +46,7 @@ const inBox = async (file) => sharp(file).resize(S, S, { fit: 'contain', backgro
 // 部分をいちばん振った姿勢(角度・横の縮み・縦のずれ)。keyframes(70-bootstrap.jsx)の極の値
 const posesOf = (part, flip) => {
   const a = part.amp;
+  if (part.rest) return [{ rot: 0, sx: 1 }, { rot: 0, sx: 1 }];
   switch (part.anim) {
     case 'flapL': return [{ rot: a * -0.2, sx: 1 }, { rot: a, sx: 0.9 }];
     case 'flapR': return [{ rot: -a * -0.2, sx: 1 }, { rot: -a, sx: 0.9 }];
@@ -104,7 +106,9 @@ const compose = (img, body, parts, poseIndex) => {
   for (const p of layers('front')) over(out, transform(p.img, originPx(p.origin), posesOf(p)[poseIndex]));
   let holes = 0;
   const hole = Buffer.alloc(S * S);
-  for (let i = 0; i < S * S; i++) if (img[i * 4 + 3] > 200 && out[i * 4 + 3] < 120) { hole[i] = 1; holes++; }
+  // ★元は不透明なのに合成で薄くなった画素。境目で体と部分の両方が半透明になると、止まっていても細い線が見える
+  //   (2026-09-24 ユーザー指摘「まだ切れがある」)。その薄さも拾う
+  for (let i = 0; i < S * S; i++) if (img[i * 4 + 3] > 200 && out[i * 4 + 3] < img[i * 4 + 3] - 25) { hole[i] = 1; holes++; }
   return { out, hole, holes };
 };
 const flatten = (rgba, hole) => {
@@ -121,7 +125,8 @@ const buildOne = async (id, rig, mon) => {
   const parts = [];
   for (const p of rig.parts) parts.push({ ...p, img: masked(img, await inBox(fileOf(p.mask))) });
   const body = rig.bodyMask ? masked(img, await inBox(fileOf(rig.bodyMask))) : img;
-  const poses = parts.length ? [compose(img, body, parts, 0), compose(img, body, parts, 1)] : [];
+  const rest = parts.map(p => ({ ...p, rest: true }));
+  const poses = parts.length ? [compose(img, body, rest, 0), compose(img, body, parts, 0), compose(img, body, parts, 1)] : [];
   return { img, body, poses };
 };
 
@@ -148,6 +153,6 @@ const buildOne = async (id, rig, mon) => {
     await sharp({ create: { width: S * cols, height: S * rowsN, channels: 3, background: { r: 10, g: 12, b: 20 } } })
       .composite(tiles.map((input, i) => ({ input, left: (i % cols) * S, top: Math.floor(i / cols) * S }))).png().toFile(file);
   }
-  console.log('ID            部分  抜け(姿勢1 / 姿勢2 の画素数。枠480px)');
+  console.log(`ID            部分  抜け(止まっているとき / 姿勢1 / 姿勢2 の画素数。枠${S}px)`);
   for (const r of rows) console.log(`${r.id.padEnd(13)} ${String(r.parts).padStart(3)}   ${r.holes.length ? r.holes.join(' / ') : '—'}`);
 })();

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c7215afa8368793c
+// generated-sha256: ff622e5b354d9899
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -122,7 +122,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 18:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 18:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10989,7 +10989,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Golem: { body:'breathe', bodyMask:null, parts:[] },
   Tiger: { body:'breathe', bodyMask:IDLE_TIGER_BODY_MASK, parts:[{ mask:IDLE_TIGER_TAIL_MASK, origin:'65.5% 53%', anim:'wag', amp:8, dur:1100, delay:0, layer:'back' }] },
   Ham: { body:'breathe', bodyMask:IDLE_HAM_BODY_MASK, parts:[{ mask:IDLE_HAM_EAR_L_MASK, origin:'40% 32.5%', anim:'twitch', amp:-9, dur:3200, delay:0, layer:'back' }, { mask:IDLE_HAM_EAR_R_MASK, origin:'59.5% 33%', anim:'twitch', amp:9, dur:3200, delay:1300, layer:'back' }] },
-  Pixie: { body:'hover', bodyMask:IDLE_PIXIE_BODY_MASK, parts:[{ mask:IDLE_PIXIE_WING_L_MASK, origin:'41.8% 41.5%', anim:'flapL', amp:12, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_WING_R_MASK, origin:'58.2% 42.3%', anim:'flapR', amp:12, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_TAIL_MASK, origin:'57.2% 67.5%', anim:'wag', amp:7, dur:1600, delay:0, layer:'back' }] },
+  Pixie: { body:'hover', bodyMask:IDLE_PIXIE_BODY_MASK, parts:[{ mask:IDLE_PIXIE_WING_L_MASK, origin:'41.8% 41.5%', anim:'flapL', amp:12, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_WING_R_MASK, origin:'58.2% 42.3%', anim:'flapR', amp:12, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_TAIL_MASK, origin:'57.8% 67.5%', anim:'wag', amp:7, dur:1600, delay:0, layer:'back' }] },
   Mia: { body:'hover', bodyMask:IDLE_MIA_BODY_MASK, parts:[{ mask:IDLE_MIA_WING_L_MASK, origin:'44.3% 38.1%', anim:'flapL', amp:16, dur:1300, delay:0, layer:'back' }, { mask:IDLE_MIA_WING_R_MASK, origin:'55.7% 38.1%', anim:'flapR', amp:16, dur:1300, delay:0, layer:'back' }] },
   Pandora: { body:'hover', bodyMask:IDLE_PANDORA_BODY_MASK, parts:[{ mask:IDLE_PANDORA_WING_L_MASK, origin:'39% 34%', anim:'flapL', amp:12, dur:1200, delay:0, layer:'back' }, { mask:IDLE_PANDORA_WING_R_MASK, origin:'61.7% 36%', anim:'flapR', amp:12, dur:1200, delay:0, layer:'back' }, { mask:IDLE_PANDORA_TAIL_L_MASK, origin:'40.1% 61.2%', anim:'swing', amp:7, dur:2000, delay:0, layer:'back' }, { mask:IDLE_PANDORA_TAIL_R_MASK, origin:'61.7% 63%', anim:'swing', amp:-7, dur:2200, delay:400, layer:'back' }] },
   Monol: { body:'hover', bodyMask:null, parts:[] },
