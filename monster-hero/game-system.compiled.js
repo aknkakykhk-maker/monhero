@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6d0671709993fb42
+// source-sha256: a5f51935d44a6cae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9c1ad88ff4778877
+// generated-sha256: dcb4a4f709d8931b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 18:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 18:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15183,11 +15183,12 @@ const DexLineageChip = ({
 }, lineage.name));
 // 立ち絵の <img> そのもの。待機アニメ(withMonsterIdleArt)は絵の要素を複製して重ねるので、
 // 部品(DexMonsterArt)ではなくこの要素を渡す
-const dexMonsterArtImage = (mon, alt, hidden = false) => /*#__PURE__*/React.createElement(DyedMonsterImage, {
+// colors: 見本にするマスモンの染色(DexMasuColorPicker で選ぶ)。無ければ元の色
+const dexMonsterArtImage = (mon, alt, hidden = false, colors = null) => /*#__PURE__*/React.createElement(DyedMonsterImage, {
   baseId: mon.id,
   src: mon.imgUrl,
   alt: alt,
-  masuColors: [],
+  masuColors: !hidden && Array.isArray(colors) ? colors : [],
   draggable: false,
   className: "w-full h-full object-contain",
   style: hidden ? {
@@ -15198,8 +15199,9 @@ const dexMonsterArtImage = (mon, alt, hidden = false) => /*#__PURE__*/React.crea
 const DexMonsterArt = ({
   mon,
   alt,
-  hidden = false
-}) => mon.imgUrl ? dexMonsterArtImage(mon, alt, hidden) : /*#__PURE__*/React.createElement("div", {
+  hidden = false,
+  colors = null
+}) => mon.imgUrl ? dexMonsterArtImage(mon, alt, hidden, colors) : /*#__PURE__*/React.createElement("div", {
   className: "text-6xl"
 }, hidden ? '？' : mon.emoji);
 // 図鑑の立ち絵に待機アニメを重ねたもの(バトルと同じ MonsterIdleArt)。持たない子・まだ出会っていない子は今までの絵。
@@ -15208,16 +15210,18 @@ const DexMonsterArt = ({
 const DexMonsterIdleArt = ({
   mon,
   alt,
-  motion = true
+  motion = true,
+  colors = null
 }) => motion && mon.imgUrl && monsterIdleRigOf(mon.id) ? /*#__PURE__*/React.createElement("span", {
   "data-dex-idle-art": true,
   className: "relative block h-full aspect-square max-w-full"
-}, withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt), {
+}, withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt, false, colors), {
   fill: true,
   own: true
 })) : /*#__PURE__*/React.createElement(DexMonsterArt, {
   mon: mon,
-  alt: alt
+  alt: alt,
+  colors: colors
 });
 const MarketProductIcon = ({
   item,
@@ -18411,9 +18415,9 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     bodyMask: IDLE_TIGER_BODY_MASK,
     parts: [{
       mask: IDLE_TIGER_TAIL_MASK,
-      origin: '65.5% 53%',
+      origin: '67.8% 53%',
       anim: 'wag',
-      amp: 8,
+      amp: 7,
       dur: 1100,
       delay: 0,
       layer: 'back'
@@ -31963,10 +31967,84 @@ const useDexIdleMotion = () => {
   });
   return [motion, toggle];
 };
+
+// ==== 図鑑でマスモンの染色を見る(2026-09-24 ユーザー指示「図鑑の表示でマスモンで染色してるカラーも見れるようにしたい」) ====
+// 持っているマスモンのうち、その種で色を付けた子の配色を候補にする。同じ配色の子は1つにまとめる。
+// 選んだ配色は見た目だけに使い、保存しない(図鑑を開き直す・ほかの種へ移ると元の色へ戻る)。
+// 読み取りだけで、マスモンのデータには一切触れない
+const dexMasuColorChoices = (masuMons, monId) => {
+  if (!Array.isArray(masuMons) || !monId) return [];
+  const byKey = new Map();
+  for (const masu of masuMons) {
+    if (!masu || masu.baseId !== monId) continue;
+    const colors = getMasuColors(masu);
+    if (!Array.isArray(colors) || !colors.some(c => typeof c === 'string' && c)) continue;
+    const key = colors.map(c => typeof c === 'string' ? c : '').join('|');
+    const hit = byKey.get(key);
+    if (hit) hit.names.push(masu.name || '');else byKey.set(key, {
+      key,
+      colors: colors.slice(),
+      names: [masu.name || '']
+    });
+  }
+  return [...byKey.values()];
+};
+// いま選んでいる配色(見つからなければ null=元の色)
+const dexSelectedColors = (masuMons, monId, colorKey) => {
+  if (!colorKey) return null;
+  const hit = dexMasuColorChoices(masuMons, monId).find(choice => choice.key === colorKey);
+  return hit ? hit.colors : null;
+};
+// 「元の色」と、マスモンの配色のチップを横に並べる。配色の子が居なければ何も出さない
+const DexMasuColorPicker = ({
+  choices,
+  value,
+  onChange
+}) => {
+  if (!choices.length) return null;
+  const chip = (key, label, colors) => {
+    const on = (value || null) === key;
+    return /*#__PURE__*/React.createElement("button", {
+      key: key || 'base',
+      type: "button",
+      "data-dex-color-choice": key || 'base',
+      "aria-pressed": on,
+      onClick: () => {
+        Audio_.se.tap();
+        onChange(key);
+      },
+      className: `shrink-0 min-h-[44px] max-w-[12rem] px-2.5 rounded-xl border flex items-center gap-1.5 text-[11px] font-black active:scale-95 ${on ? 'border-amber-300 bg-amber-700 text-white' : 'border-white/15 bg-slate-900 text-amber-100/90'}`
+    }, colors ? /*#__PURE__*/React.createElement("span", {
+      className: "flex -space-x-1 shrink-0",
+      "aria-hidden": "true"
+    }, colors.filter(Boolean).slice(0, 4).map((c, i) => /*#__PURE__*/React.createElement("span", {
+      key: i,
+      className: "w-3.5 h-3.5 rounded-full border border-black/40",
+      style: {
+        background: getColorSwatchHex(c)
+      }
+    }))) : /*#__PURE__*/React.createElement("span", {
+      className: "w-3.5 h-3.5 rounded-full border border-white/40 bg-gradient-to-br from-white/70 to-slate-500 shrink-0",
+      "aria-hidden": "true"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "truncate min-w-0"
+    }, label));
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    "data-dex-color-picker": true,
+    className: "shrink-0 w-full max-w-md mx-auto px-3 pt-1.5 flex items-center gap-1.5 overflow-x-auto",
+    role: "group",
+    "aria-label": "\u30DE\u30B9\u30E2\u30F3\u306E\u8272\u3067\u898B\u308B"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-[10px] font-black text-amber-300"
+  }, "\u8272"), chip(null, '元の色', null), choices.map(choice => chip(choice.key, choice.names.length > 1 ? `${choice.names[0] || 'マスモン'} ほか${choice.names.length - 1}体` : choice.names[0] || 'マスモン', choice.colors)));
+};
 function MonsterAttackPreviewScreen({
   dexMonsterId,
   dexAttackPreview,
   unlockedMonsterIds,
+  masuMons,
+  dexColorKey,
   getAtkSkillLevels,
   getUniqueSkillLevels,
   onMissing,
@@ -32029,7 +32107,7 @@ function MonsterAttackPreviewScreen({
       transformOrigin: 'bottom center'
     }
   }, /*#__PURE__*/React.createElement(BattleAttackMotionPreview, {
-    image: mon.imgUrl ? withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {
+    image: mon.imgUrl ? withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name, false, dexSelectedColors(masuMons, mon.id, dexColorKey)), {
       enabled: idleMotion && monsterIdleAllowedDuring(previewAnim),
       fill: true,
       own: true
@@ -32127,6 +32205,9 @@ function MonsterDexDetailScreen({
   dexMonsterId,
   dexTab,
   unlockedMonsterIds,
+  masuMons,
+  dexColorKey,
+  onSelectColor,
   getAtkSkillLevels,
   getUniqueSkillLevels,
   swipeRef,
@@ -32246,7 +32327,8 @@ function MonsterDexDetailScreen({
   }, unlocked ? /*#__PURE__*/React.createElement(DexMonsterIdleArt, {
     mon: mon,
     alt: mon.name,
-    motion: idleMotion
+    motion: idleMotion,
+    colors: dexSelectedColors(masuMons, mon.id, dexColorKey)
   }) : /*#__PURE__*/React.createElement(DexMonsterArt, {
     mon: mon,
     alt: "\u307E\u3060\u51FA\u4F1A\u3063\u3066\u3044\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC",
@@ -32287,7 +32369,11 @@ function MonsterDexDetailScreen({
       onOpenAttackPreview();
     },
     className: "min-h-[44px] px-5 rounded-xl border border-cyan-300/60 bg-slate-950/85 text-[12px] font-black text-cyan-100 shadow-lg active:scale-95"
-  }, "\u25B6 \u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("div", {
+  }, "\u25B6 \u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3")), unlocked && /*#__PURE__*/React.createElement(DexMasuColorPicker, {
+    choices: dexMasuColorChoices(masuMons, mon.id),
+    value: dexSelectedColors(masuMons, mon.id, dexColorKey) ? dexColorKey : null,
+    onChange: onSelectColor
+  }), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 pt-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"
@@ -47693,6 +47779,7 @@ function MonsterHeroGame() {
   const [dexLineageFilter, setDexLineageFilter] = useState('all'); // モンスター図鑑: 主血統の絞り込み('all'または血統id)
   const [dexMonsterId, setDexMonsterId] = useState(null); // モンスター図鑑: 詳細で見ているモンスターのid
   const [dexTab, setDexTab] = useState('basic'); // モンスター図鑑の詳細タブ(basic/stats/skills)
+  const [dexColorKey, setDexColorKey] = useState(null); // モンスター図鑑: 見本にしているマスモンの配色(null=元の色。保存しない)
   const dexSwipeRef = useRef(null); // 図鑑詳細の横スワイプ(指を置いた位置)
   const [dexAttackPreview, setDexAttackPreview] = useState(null); // 図鑑詳細の攻撃アクション再生中だけ使う {monsterId,anim}
   const dexAttackPreviewRunRef = useRef(0); // 左右移動/戻るで非同期プレビューを確実に止める世代番号
@@ -65606,6 +65693,8 @@ function MonsterHeroGame() {
       dexMonsterId: dexMonsterId,
       dexAttackPreview: dexAttackPreview,
       unlockedMonsterIds: unlockedMonsterIds,
+      masuMons: masuMons,
+      dexColorKey: dexColorKey,
       getAtkSkillLevels: getAtkSkillLevels,
       getUniqueSkillLevels: getUniqueSkillLevels,
       onMissing: () => setGameState('MONSTER_DEX'),
@@ -65620,6 +65709,7 @@ function MonsterHeroGame() {
         stopDexAttackPreview();
         setDexMonsterId(monId);
         setDexTab('basic');
+        setDexColorKey(null);
         setGameState('MONSTER_DEX_DETAIL');
       },
       onBackToManagement: () => setGameState('MB_MANAGEMENT')
@@ -65627,6 +65717,9 @@ function MonsterHeroGame() {
       dexMonsterId: dexMonsterId,
       dexTab: dexTab,
       unlockedMonsterIds: unlockedMonsterIds,
+      masuMons: masuMons,
+      dexColorKey: dexColorKey,
+      onSelectColor: setDexColorKey,
       getAtkSkillLevels: getAtkSkillLevels,
       getUniqueSkillLevels: getUniqueSkillLevels,
       swipeRef: dexSwipeRef,
@@ -65636,6 +65729,7 @@ function MonsterHeroGame() {
       onSelectMonster: monId => {
         setDexMonsterId(monId);
         setDexTab('basic');
+        setDexColorKey(null);
       },
       onSelectTab: setDexTab,
       onStopPreview: stopDexAttackPreview
