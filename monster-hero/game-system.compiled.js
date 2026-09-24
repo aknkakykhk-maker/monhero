@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1995c9958c106165
+// source-sha256: a5f51935d44a6cae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a123bc9ad6b16f4b
+// generated-sha256: dcb4a4f709d8931b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 18:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 18:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17691,6 +17691,42 @@ const RPG_MOTION_BY_ATK = Object.freeze({
 const WATER_BURST_MOTION_MS = 680;
 const MIA_SONG_NOTES_MOTION_MS = 760;
 const ARK_HOLY_RAIN_MOTION_MS = 900;
+// 体当たり(atkMotion:'default')だった初期モンスターの攻撃の型。見た目は 24-battle-fx.jsx の ThemedAttackMotion、
+// 動きは 70-bootstrap.jsx の .thm-atk--◯◯。ここに無い子は従来の体当たり(attackFly)のまま。
+const DEFAULT_ATTACK_THEMES = Object.freeze({
+  Mocchi: 'stomp',
+  // 高く跳んで押しつぶし、戻った位置からモッチ砲(ビーム)
+  Suezo: 'beam',
+  // 大きな目から光線
+  Golem: 'rocks',
+  // 敵を直接殴り、岩のかけらが飛び散る
+  Tiger: 'claw',
+  // カクカクと高速で詰めて、爪で3回ひっかく
+  Ham: 'punch',
+  // 詰め寄って、ワンツーパンチ
+  Pixie: 'magic',
+  // 魔法陣を出して、魔法の弾を3発
+  Monol: 'crush',
+  // 敵の真上へ浮かんで、押しつぶす
+  Oboro: 'petals',
+  // 青い花びらを吹きつける
+  Plant: 'vine',
+  // つるを伸ばして、はたく
+  Mitarashi: 'fire' // 口から炎のビーム
+});
+// 型ごとの尺(ms)。体当たりと同じ 450ms(固有技 500ms)に収まらない型だけ書く。
+// 本番バトルの待ち時間・図鑑のプレビュー・CSSの長さ(--thm-ms)の3つがここを見る。
+const THEMED_ATTACK_MS = Object.freeze({
+  stomp: 900,
+  rocks: 520,
+  claw: 600,
+  punch: 580,
+  fire: 560
+});
+const themedAttackMotionMs = (monId, motion) => {
+  if (motion && motion !== 'default') return null;
+  return THEMED_ATTACK_MS[DEFAULT_ATTACK_THEMES[monId]] || null;
+};
 // DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
 const attackMotionAnimation = anim => {
   if (!anim) return undefined;
@@ -17719,7 +17755,7 @@ const attackMotionAnimation = anim => {
 // 図鑑・画像デバッグで、本番の atkMotion を「1回の攻撃アクション」として見せるための共通手順。
 // 動かし方そのものは attackMotionAnimation / PandoraDualThunder 等の本番演出を使い、
 // ここでは「どの状態を何ms見せるか」だけを返す。保存や戦闘計算には触れない。
-const attackMotionPreviewSequence = (atkMotion = 'default') => {
+const attackMotionPreviewSequence = (atkMotion = 'default', baseId = null) => {
   const motion = atkMotion || 'default';
   const isTwin = motion === 'kenshiTwinBlade';
   const isComboDash = motion === 'zanCombo' || motion === 'eikiSakuraCombo' || isTwin;
@@ -17737,14 +17773,14 @@ const attackMotionPreviewSequence = (atkMotion = 'default') => {
       twinBlade: isTwin,
       sakura: motion === 'eikiSakuraCombo'
     },
-    ms: motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450
+    ms: themedAttackMotionMs(baseId, motion) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450)
   }];
 };
 // 固有技のほうの見せ方。本番の固有技とまったく同じ順で、
 // 「共通のタメ(下に沈む specialCharge・650ms)→ 専用モーション」を返す。
 // 通常攻撃用の attackMotionPreviewSequence とは分けてあるので、
 // 図鑑の一覧側や既存のプレビューへタメが混ざることはない。
-const attackMotionUniquePreviewSequence = (atkMotion = 'default') => {
+const attackMotionUniquePreviewSequence = (atkMotion = 'default', baseId = null) => {
   const motion = atkMotion || 'default';
   const isTwin = motion === 'kenshiTwinBlade';
   // ザン・エイキ・剣士モッチーは固有技でも、本番と同じく通常攻撃と同じ残像ダッシュへ移る
@@ -17775,7 +17811,7 @@ const attackMotionUniquePreviewSequence = (atkMotion = 'default') => {
       twinBlade: false,
       sakura: false
     },
-    ms: motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 500
+    ms: themedAttackMotionMs(baseId, motion) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 500)
   }];
 };
 const rpgMotionName = (side, monId, isSkill) => {
@@ -17947,31 +17983,12 @@ const ATTACK_TARGET_SLASHES = Object.freeze({
 // ==== 体当たりだった初期モンスターの攻撃(2026-09-24 ユーザー指示「初期からいるモンスターは攻撃アクションが
 // 体当たりだけだから、モンスターのイメージにあわせたアクションを作って」) ====
 // データの atkMotion は 'default' のまま変えない(待ち時間・RPG表示・検査が atkMotion を見ているため)。
-// 見た目だけを、攻撃する子の種族でここから選ぶ。尺は体当たりと同じ(通常450ms・固有技500ms)に収める。
-// 新しいモンスターを 'default' で足すときは、ここへ1行足せば型を選べる(足さなければ今までどおり体当たり)。
-const DEFAULT_ATTACK_THEMES = Object.freeze({
-  Mocchi: 'stomp',
-  // 高く跳んで、敵の上からのしかかる
-  Suezo: 'beam',
-  // 大きな目から光線
-  Golem: 'rocks',
-  // 地面を叩いて、岩を飛ばす
-  Tiger: 'claw',
-  // 飛びかかって、爪で3本ひっかく
-  Ham: 'punch',
-  // 詰め寄って、連続パンチ
-  Pixie: 'magic',
-  // 魔法陣を出して、魔法の弾を3発
-  Monol: 'crush',
-  // 敵の真上へ浮かんで、押しつぶす
-  Oboro: 'petals',
-  // 青い花びらを吹きつける
-  Plant: 'vine',
-  // つるを伸ばして、はたく
-  Mitarashi: 'fire' // 炎を吐く
-});
+// 見た目だけを、攻撃する子の種族で選ぶ。種族→型の表(DEFAULT_ATTACK_THEMES)と型ごとの尺(THEMED_ATTACK_MS)は、
+// 本番バトルの待ち時間と図鑑のプレビューも使うので 23-rpg-debug.jsx に置いてある。
+// 新しいモンスターを 'default' で足すときは、そこへ1行足せば型を選べる(足さなければ今までどおり体当たり)。
 const themedAttackKindOf = (anim, baseId) => anim && anim.charge !== true && !anim.zanCombo && !anim.twinBlade && (!anim.motion || anim.motion === 'default') ? DEFAULT_ATTACK_THEMES[baseId] || null : null;
-// 飛ぶもの・着弾の小片。x/y は敵の位置からのずれ、d はずらす時間(ms)
+// 飛ぶもの・着弾の小片。x/y は敵の位置からのずれ、d はずらす時間(ms)、a は向き(deg)、s は大きさの倍率。
+// hit2 は2回目の着弾(モッチーのモッチ砲)。型ごとの尺は 23-rpg-debug.jsx の THEMED_ATTACK_MS
 const THEMED_ATTACK_BITS = Object.freeze({
   stomp: {
     hit: [{
@@ -17992,64 +18009,137 @@ const THEMED_ATTACK_BITS = Object.freeze({
     }, {
       x: 0,
       y: 18
+    }],
+    hit2: [{
+      x: -30,
+      y: -22
+    }, {
+      x: -8,
+      y: -36
+    }, {
+      x: 18,
+      y: -30
+    }, {
+      x: 34,
+      y: -4
+    }, {
+      x: -26,
+      y: 16
+    }, {
+      x: 22,
+      y: 20
     }]
   },
   rocks: {
-    fly: [{
-      x: -18,
-      y: -4,
-      d: 120
-    }, {
-      x: 0,
-      y: 6,
-      d: 160
-    }, {
-      x: 18,
-      y: -2,
-      d: 200
-    }],
     hit: [{
-      x: -30,
-      y: -20
+      x: -64,
+      y: -36,
+      a: 20
     }, {
-      x: -10,
-      y: -32
+      x: -40,
+      y: -70,
+      a: -40,
+      s: 1.3
     }, {
-      x: 14,
-      y: -30
+      x: -6,
+      y: -84,
+      a: 60
     }, {
       x: 30,
-      y: -14
+      y: -74,
+      a: -20,
+      s: 1.4
     }, {
-      x: 0,
-      y: 14
+      x: 64,
+      y: -34,
+      a: 45
+    }, {
+      x: -58,
+      y: 14,
+      a: -60,
+      s: .8
+    }, {
+      x: 56,
+      y: 18,
+      a: 30,
+      s: 1.1
+    }, {
+      x: 4,
+      y: 34,
+      a: 90,
+      s: .8
     }]
   },
   claw: {
     hit: [{
       x: -12,
-      d: 180
+      a: 28,
+      d: 235
     }, {
       x: 0,
-      d: 205
+      a: 28,
+      d: 245
     }, {
       x: 12,
-      d: 230
+      a: 28,
+      d: 255
+    }, {
+      x: -12,
+      a: -28,
+      d: 295
+    }, {
+      x: 0,
+      a: -28,
+      d: 305
+    }, {
+      x: 12,
+      a: -28,
+      d: 315
+    }, {
+      x: -12,
+      a: 62,
+      d: 355
+    }, {
+      x: 0,
+      a: 62,
+      d: 365
+    }, {
+      x: 12,
+      a: 62,
+      d: 375
     }]
   },
   punch: {
     hit: [{
-      x: -14,
-      y: -10,
-      d: 145
+      x: -10,
+      y: -8,
+      d: 186,
+      s: .7
     }, {
-      x: 12,
-      y: 4,
-      d: 205
+      x: -22,
+      y: -20,
+      d: 196,
+      s: .4
     }, {
-      x: -4,
-      y: 12,
-      d: 262
+      x: 6,
+      y: 0,
+      d: 314,
+      s: 1.7
+    }, {
+      x: 30,
+      y: -22,
+      d: 330,
+      s: .8
+    }, {
+      x: -24,
+      y: -28,
+      d: 340,
+      s: .7
+    }, {
+      x: 22,
+      y: 24,
+      d: 350,
+      s: .6
     }]
   },
   magic: {
@@ -18144,48 +18234,86 @@ const THEMED_ATTACK_BITS = Object.freeze({
     fly: [{
       x: -8,
       y: -6,
-      d: 110
+      d: 130
     }, {
       x: 10,
       y: 6,
-      d: 145
+      d: 170
     }, {
       x: -12,
       y: 10,
-      d: 180
+      d: 210
     }, {
       x: 6,
       y: -10,
-      d: 215
+      d: 250
     }, {
       x: -4,
       y: 4,
-      d: 250
+      d: 290
     }, {
       x: 12,
       y: -4,
-      d: 285
+      d: 330
+    }],
+    hit: [{
+      x: -30,
+      y: -26,
+      d: 230
+    }, {
+      x: 26,
+      y: -30,
+      d: 280
+    }, {
+      x: -22,
+      y: 22,
+      d: 330
+    }, {
+      x: 30,
+      y: 14,
+      d: 380
     }]
   }
 });
+const THEMED_ATTACK_LINE_KINDS = Object.freeze(['beam', 'vine', 'stomp', 'fire']);
+const ThemedAttackBits = ({
+  list
+}) => (list || []).map((b, i) => /*#__PURE__*/React.createElement("i", {
+  key: i,
+  className: "thm-atk__bit",
+  style: {
+    '--bx': `${b.x || 0}px`,
+    '--by': `${b.y || 0}px`,
+    '--ba': `${b.a || 0}deg`,
+    '--bs': b.s || 1,
+    ...(b.d != null ? {
+      animationDelay: `${b.d}ms`
+    } : {})
+  }
+}));
 const ThemedAttackMotion = ({
   kind,
   image,
   lunge = false
 }) => {
   const bits = THEMED_ATTACK_BITS[kind] || {};
+  const ms = THEMED_ATTACK_MS[kind];
   const px = v => `${v || 0}px`;
   return /*#__PURE__*/React.createElement("span", {
-    className: `thm-atk thm-atk--${kind}${lunge ? ' thm-atk--lunge' : ''}`
+    className: `thm-atk thm-atk--${kind}${lunge ? ' thm-atk--lunge' : ''}`,
+    style: ms ? {
+      '--thm-ms': `${ms}ms`
+    } : undefined
   }, kind === 'magic' && /*#__PURE__*/React.createElement("span", {
     className: "thm-atk__circle",
     "aria-hidden": "true"
-  }, /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null)), kind === 'rocks' && /*#__PURE__*/React.createElement("span", {
-    className: "thm-atk__quake",
+  }, /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null)), kind === 'claw' && [1, 2].map(n => /*#__PURE__*/React.createElement("span", {
+    key: n,
+    className: `thm-atk__ghost thm-atk__ghost--${n}`,
     "aria-hidden": "true"
-  }), /*#__PURE__*/React.createElement("span", {
+  }, image)), /*#__PURE__*/React.createElement("span", {
     className: "thm-atk__monster"
-  }, image), (kind === 'beam' || kind === 'vine') && /*#__PURE__*/React.createElement("span", {
+  }, image), THEMED_ATTACK_LINE_KINDS.includes(kind) && /*#__PURE__*/React.createElement("span", {
     className: "thm-atk__line",
     "aria-hidden": "true"
   }, /*#__PURE__*/React.createElement("i", null)), bits.fly && /*#__PURE__*/React.createElement("span", {
@@ -18206,18 +18334,18 @@ const ThemedAttackMotion = ({
     className: "thm-atk__core"
   }), /*#__PURE__*/React.createElement("i", {
     className: "thm-atk__ring"
-  }), (bits.hit || []).map((b, i) => /*#__PURE__*/React.createElement("i", {
-    key: i,
-    className: "thm-atk__bit",
-    style: {
-      '--bx': px(b.x),
-      '--by': px(b.y),
-      '--ba': `${b.a || 0}deg`,
-      ...(b.d != null ? {
-        animationDelay: `${b.d}ms`
-      } : {})
-    }
-  }))));
+  }), /*#__PURE__*/React.createElement(ThemedAttackBits, {
+    list: bits.hit
+  })), bits.hit2 && /*#__PURE__*/React.createElement("span", {
+    className: "thm-atk__hit thm-atk__hit--2",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "thm-atk__core"
+  }), /*#__PURE__*/React.createElement("i", {
+    className: "thm-atk__ring"
+  }), /*#__PURE__*/React.createElement(ThemedAttackBits, {
+    list: bits.hit2
+  })));
 };
 const AttackTargetFx = ({
   anim,
@@ -47664,7 +47792,7 @@ function MonsterHeroGame() {
   };
   const playDexAttackPreview = async (mon, kind, atkMotion) => {
     const run = ++dexAttackPreviewRunRef.current;
-    const steps = kind === 'unique' ? attackMotionUniquePreviewSequence(atkMotion) : attackMotionPreviewSequence(atkMotion);
+    const steps = kind === 'unique' ? attackMotionUniquePreviewSequence(atkMotion, mon?.id) : attackMotionPreviewSequence(atkMotion, mon?.id);
     for (const step of steps) {
       if (run !== dexAttackPreviewRunRef.current) return;
       setDexAttackPreview({
@@ -60737,7 +60865,7 @@ function MonsterHeroGame() {
                 triggerShake();
                 await battleWait(130);
               } else {
-                await battleWait(motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 500);
+                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 500));
               }
             } else {
               const isKenshiTwin = motion === 'kenshiTwinBlade';
@@ -60757,7 +60885,7 @@ function MonsterHeroGame() {
                 await battleWait(130);
               } else {
                 if (hit.isSpecial) Audio_.se.special();else if (hit.isCrit) Audio_.se.crit();else Audio_.se.attack();
-                await battleWait(motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450);
+                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450));
               }
             }
             setAttackAnim(null);
@@ -76846,12 +76974,14 @@ const createAnimationStyle = () => {
     }
     /* ==== 体当たりだった初期モンスターの攻撃(24-battle-fx.jsx の ThemedAttackMotion) ====
        距離枠は動かさず、本体(.thm-atk__monster)と飛ぶもの・着弾だけを動かす。敵の位置は --atk-dx/dy。
-       尺は体当たりと同じ450ms(固有技は本体だけ500ms)に収め、どの小片もその中で消える。 */
+       尺はふだん体当たりと同じ450ms(固有技は本体だけ500ms)。長い型は --thm-ms(23-rpg-debug.jsx の THEMED_ATTACK_MS)。
+       どの小片もその尺の中で消える。 */
     .thm-atk { position:absolute; inset:0; overflow:visible; pointer-events:none; z-index:26; isolation:isolate;
       --c1:#fff7d6; --c2:#fb923c; --c3:rgba(234,88,12,0); }
     .thm-atk__monster { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:4;
-      transform-origin:50% 80%; will-change:transform,filter; animation-duration:450ms; animation-fill-mode:forwards; animation-timing-function:ease-in-out; }
-    .thm-atk--lunge .thm-atk__monster { animation-duration:500ms; filter:drop-shadow(0 0 14px rgba(217,70,239,.9)); }
+      transform-origin:50% 80%; will-change:transform,filter; animation-duration:var(--thm-ms,450ms); animation-fill-mode:forwards; animation-timing-function:ease-in-out; }
+    .thm-atk--lunge .thm-atk__monster { animation-duration:var(--thm-ms,500ms); filter:drop-shadow(0 0 14px rgba(217,70,239,.9)); }
+    .thm-atk__hit--2 { --hit-at:var(--hit-at2,600ms); }
     .thm-atk__hit { position:absolute; left:50%; top:50%; width:0; height:0; z-index:8; translate:var(--atk-dx) var(--atk-dy); }
     .thm-atk__core { position:absolute; left:-42px; top:-42px; width:84px; height:84px; border-radius:50%; opacity:0;
       background:radial-gradient(circle,#fff 0 10%,var(--c1) 24%,var(--c2) 46%,var(--c3) 72%);
@@ -76863,27 +76993,46 @@ const createAnimationStyle = () => {
     @keyframes thmHitCore { 0% { opacity:0; transform:scale(.3); } 30% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.6); } }
     @keyframes thmHitRing { 0% { opacity:0; transform:scale(.3); } 30% { opacity:1; } 100% { opacity:0; transform:scale(2.6); } }
     .thm-atk__bit { position:absolute; left:-4px; top:-4px; width:8px; height:8px; border-radius:50%; opacity:0; background:var(--c1);
-      box-shadow:0 0 6px var(--c2); animation:thmBit 190ms ease-out forwards; animation-delay:var(--hit-at,260ms); }
+      box-shadow:0 0 6px var(--c2); scale:var(--bs,1); animation:thmBit 190ms ease-out forwards; animation-delay:var(--hit-at,260ms); }
     @keyframes thmBit { 0% { opacity:0; transform:translate3d(0,0,0) scale(.4); } 25% { opacity:1; } 100% { opacity:0; transform:translate3d(var(--bx),var(--by),0) scale(1); } }
     .thm-atk__flys { position:absolute; inset:0; z-index:6; }
     .thm-atk__fly { position:absolute; left:50%; top:40%; width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%; opacity:0;
       animation-duration:200ms; animation-fill-mode:forwards; animation-timing-function:ease-in; }
     .thm-atk__line { position:absolute; left:50%; top:40%; width:0; height:0; z-index:5; rotate:var(--atk-rot); }
     .thm-atk__line i { position:absolute; left:-6px; bottom:0; width:12px; height:var(--atk-len); opacity:0; transform-origin:50% 100%;
-      animation-duration:450ms; animation-fill-mode:forwards; }
+      animation-duration:var(--thm-ms,450ms); animation-fill-mode:forwards; }
 
-    /* モッチー: ぴょんと高く跳び、敵の真上からのしかかって、ぐしゃっとつぶれて跳ね返る */
-    .thm-atk--stomp { --c1:#ffe4ef; --c2:#f472b6; --c3:rgba(236,72,153,0); --hit-at:265ms; }
+    /* モッチー: 高く跳んで敵を押しつぶし、跳ね返って元の場所へ戻ってから、口からモッチ砲(ビーム)を撃つ(900ms) */
+    .thm-atk--stomp { --c1:#ffe4ef; --c2:#f472b6; --c3:rgba(236,72,153,0); --hit-at:300ms; --hit-at2:680ms; }
     .thm-atk--stomp .thm-atk__monster { animation-name:thmStomp; }
+    .thm-atk--stomp .thm-atk__hit--2 .thm-atk__core { left:-50px; top:-50px; width:100px; height:100px; }
     @keyframes thmStomp {
-      0% { transform:translate3d(0,0,0) scale(1); }
-      12% { transform:translate3d(0,6px,0) scale(1.15,.8); }
-      40% { transform:translate3d(calc(var(--atk-dx) * .55),calc(var(--atk-dy) * .55 - 70px),0) scale(.92,1.12) rotate(-8deg); }
-      52% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 46px),0) scale(1,1.05) rotate(0deg); }
-      60% { transform:translate3d(calc(var(--atk-dx) * .97),calc(var(--atk-dy) * .97 + 4px),0) scale(1.4,.68); }
-      72% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9 - 16px),0) scale(.95,1.08); }
-      86% { transform:translate3d(calc(var(--atk-dx) * .3),calc(var(--atk-dy) * .3 - 18px),0) scale(1); }
-      100% { transform:translate3d(0,0,0) scale(1); }
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      6% { transform:translate3d(0,6px,0) scale(1.18,.78); }
+      22% { transform:translate3d(calc(var(--atk-dx) * .6),calc(var(--atk-dy) * .6 - 120px),0) scale(.9,1.14) rotate(-10deg); }
+      30% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 80px),0) scale(1.05,1.08) rotate(0deg); }
+      34% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) + 4px),0) scale(1.5,.6); }
+      40% { transform:translate3d(calc(var(--atk-dx) * .97),calc(var(--atk-dy) * .97 - 8px),0) scale(1.15,.88); }
+      50% { transform:translate3d(calc(var(--atk-dx) * .5),calc(var(--atk-dy) * .5 - 70px),0) scale(.95,1.08) rotate(12deg); }
+      59% { transform:translate3d(0,6px,0) scale(1.18,.82) rotate(0deg); }
+      64% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      72% { transform:translate3d(calc(var(--atk-dx) * -.03),calc(var(--atk-dy) * -.03 + 3px),0) scale(1.12,1.04); filter:drop-shadow(0 0 16px #f9a8d4) drop-shadow(0 0 6px #fff); }
+      76% { transform:translate3d(calc(var(--atk-dx) * -.07),calc(var(--atk-dy) * -.07),0) scale(1.08,.94); filter:drop-shadow(0 0 20px #f472b6); }
+      82% { transform:translate3d(calc(var(--atk-dx) * -.06 + 2px),calc(var(--atk-dy) * -.06),0) scale(1.08,.94); }
+      88% { transform:translate3d(calc(var(--atk-dx) * -.06 - 2px),calc(var(--atk-dy) * -.06),0) scale(1.06,.96); filter:drop-shadow(0 0 12px #f472b6); }
+      100% { transform:translate3d(0,0,0) scale(1); filter:none; }
+    }
+    .thm-atk--stomp .thm-atk__line { top:46%; }
+    .thm-atk--stomp .thm-atk__line i { width:22px; left:-11px; border-radius:999px;
+      background:linear-gradient(90deg,rgba(244,114,182,0),#f9a8d4 18%,#fff 42%,#fff 58%,#f9a8d4 82%,rgba(244,114,182,0));
+      box-shadow:0 0 14px #f472b6,0 0 30px rgba(244,114,182,.85); animation-name:thmMocchiCannon; }
+    @keyframes thmMocchiCannon {
+      0%,72% { opacity:0; transform:scaleY(0) scaleX(.4); }
+      76% { opacity:1; transform:scaleY(1) scaleX(1.7); }
+      80% { opacity:1; transform:scaleY(1) scaleX(.9); }
+      84% { opacity:1; transform:scaleY(1) scaleX(1.35); }
+      88% { opacity:1; transform:scaleY(1) scaleX(1); }
+      95%,100% { opacity:0; transform:scaleY(1) scaleX(.1); }
     }
 
     /* スエゾー: 大きな目に光をためて、敵へまっすぐ光線を撃つ(本体は反動で小さく震える) */
@@ -76912,68 +77061,81 @@ const createAnimationStyle = () => {
       74%,100% { opacity:0; transform:scaleY(1) scaleX(.1); }
     }
 
-    /* ゴーレム: 両腕を上げて地面を叩き、足元から岩を3つ敵へ投げ飛ばす */
-    .thm-atk--rocks { --c1:#e7d7c1; --c2:#a8865f; --c3:rgba(120,90,60,0); --hit-at:330ms; }
+    /* ゴーレム: 腕を振りかぶって敵へのしのしと詰め、直接殴る。当たった所から岩のかけらが飛び散る(520ms) */
+    .thm-atk--rocks { --c1:#f5e6d0; --c2:#a8865f; --c3:rgba(120,90,60,0); --hit-at:240ms; }
     .thm-atk--rocks .thm-atk__monster { animation-name:thmRocksBody; }
-    .thm-atk--rocks .thm-atk__core, .thm-atk--rocks .thm-atk__ring, .thm-atk--rocks .thm-atk__bit { animation-duration:120ms; }
-    .thm-atk__quake { position:absolute; left:50%; top:88%; width:60px; height:16px; margin:-8px 0 0 -30px; border-radius:50%; opacity:0; z-index:3;
-      border:3px solid rgba(231,215,193,.9); box-shadow:0 0 10px rgba(168,134,95,.9); animation:thmQuake 250ms ease-out 110ms forwards; }
-    @keyframes thmQuake { 0% { opacity:0; transform:scale(.3); } 30% { opacity:1; } 100% { opacity:0; transform:scale(2,1.4); } }
+    .thm-atk--rocks .thm-atk__core { left:-56px; top:-56px; width:112px; height:112px; animation-duration:220ms; }
+    .thm-atk--rocks .thm-atk__ring { border-color:#e7d7c1; animation-duration:240ms; }
+    .thm-atk--rocks .thm-atk__bit { left:-8px; top:-8px; width:16px; height:15px; border-radius:25%; rotate:var(--ba);
+      clip-path:polygon(20% 0,80% 8%,100% 55%,72% 100%,18% 92%,0 40%); box-shadow:none;
+      background:linear-gradient(135deg,#efe2cf,#a8865f 55%,#5c4330); animation-name:thmRockBurst; animation-duration:270ms; animation-timing-function:linear; }
+    @keyframes thmRockBurst {
+      0% { opacity:0; transform:translate3d(0,0,0) rotate(0deg) scale(.4); }
+      12% { opacity:1; }
+      55% { opacity:1; transform:translate3d(calc(var(--bx) * .75),calc(var(--by) * .75),0) rotate(220deg) scale(1); }
+      100% { opacity:0; transform:translate3d(var(--bx),calc(var(--by) + 46px),0) rotate(400deg) scale(.8); }
+    }
     @keyframes thmRocksBody {
-      0% { transform:translate3d(0,0,0) scale(1); }
-      15% { transform:translate3d(0,-12px,0) scale(1.06,1.1); }
-      28% { transform:translate3d(0,6px,0) scale(1.14,.86); }
-      40% { transform:translate3d(0,0,0) scale(1); }
-      100% { transform:translate3d(0,0,0) scale(1); }
-    }
-    .thm-atk--rocks .thm-atk__fly { top:84%; width:16px; height:14px; margin:-7px 0 0 -8px; border-radius:30%;
-      clip-path:polygon(20% 0,80% 8%,100% 55%,72% 100%,18% 92%,0 40%);
-      background:linear-gradient(135deg,#e7d7c1,#a8865f 55%,#6b4f33); animation-name:thmRock; animation-duration:230ms; animation-timing-function:linear; }
-    @keyframes thmRock {
-      0% { opacity:0; transform:translate3d(var(--fx),0,0) rotate(0deg) scale(.5); }
-      10% { opacity:1; }
-      50% { opacity:1; transform:translate3d(calc(var(--atk-dx) * .5 + var(--fx) * .5),calc(var(--atk-dy) * .5 - 50px),0) rotate(200deg) scale(1.2); }
-      92% { opacity:1; transform:translate3d(calc(var(--atk-dx) + var(--fx) * .4),calc(var(--atk-dy) + var(--fy)),0) rotate(380deg) scale(1); }
-      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--fx) * .4),calc(var(--atk-dy) + var(--fy)),0) rotate(400deg) scale(.6); }
-    }
-
-    /* ライガー: 身を低くして敵へ飛びかかり、爪で3本ひっかく */
-    .thm-atk--claw { --c1:#fee2e2; --c2:#ef4444; --c3:rgba(239,68,68,0); --hit-at:190ms; }
-    .thm-atk--claw .thm-atk__monster { animation-name:thmClawBody; }
-    .thm-atk--claw .thm-atk__core { width:60px; height:60px; left:-30px; top:-30px; }
-    .thm-atk--claw .thm-atk__bit { left:-3px; top:-34px; width:6px; height:68px; border-radius:999px; rotate:28deg; translate:var(--bx) 0;
-      background:linear-gradient(180deg,rgba(255,255,255,0),#fff 30%,#fecaca 60%,rgba(239,68,68,0)); box-shadow:0 0 8px #ef4444;
-      animation-name:thmClaw; animation-duration:150ms; }
-    @keyframes thmClaw { 0% { opacity:0; transform:scaleY(.1); } 35% { opacity:1; transform:scaleY(1); } 100% { opacity:0; transform:scaleY(1.1) scaleX(.4); } }
-    @keyframes thmClawBody {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
-      12% { transform:translate3d(calc(var(--atk-dx) * -.05),calc(var(--atk-dy) * -.05 + 6px),0) scale(1.1,.88); }
-      32% { transform:translate3d(calc(var(--atk-dx) * .82),calc(var(--atk-dy) * .82),0) scale(1.2) rotate(calc(var(--atk-rot) * .3)); }
-      42% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9),0) scale(1.25,1.1) rotate(calc(var(--atk-rot) * .3 - 14deg)); }
-      55% { transform:translate3d(calc(var(--atk-dx) * .86),calc(var(--atk-dy) * .86),0) scale(1.2) rotate(calc(var(--atk-rot) * .3 + 10deg)); }
-      72% { transform:translate3d(calc(var(--atk-dx) * .55),calc(var(--atk-dy) * .55 - 14px),0) scale(1.05) rotate(0deg); }
+      14% { transform:translate3d(calc(var(--atk-dx) * -.08),calc(var(--atk-dy) * -.08 - 6px),0) scale(1.08,1.12) rotate(-7deg); }
+      26% { transform:translate3d(calc(var(--atk-dx) * .3),calc(var(--atk-dy) * .3 + 4px),0) scale(1.1,.95) rotate(-4deg); }
+      38% { transform:translate3d(calc(var(--atk-dx) * .66),calc(var(--atk-dy) * .66 - 4px),0) scale(1.12,1.04) rotate(-6deg); }
+      46% { transform:translate3d(calc(var(--atk-dx) * .86),calc(var(--atk-dy) * .86),0) scale(1.3,1.08) rotate(6deg); }
+      52% { transform:translate3d(calc(var(--atk-dx) * .84 + 4px),calc(var(--atk-dy) * .84),0) scale(1.26,1.06) rotate(5deg); }
+      58% { transform:translate3d(calc(var(--atk-dx) * .85 - 4px),calc(var(--atk-dy) * .85),0) scale(1.24,1.06) rotate(5deg); }
+      66% { transform:translate3d(calc(var(--atk-dx) * .78),calc(var(--atk-dy) * .78),0) scale(1.12) rotate(0deg); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
     }
 
-    /* ハム: 敵へ詰め寄って、すばやく3発パンチ */
-    .thm-atk--punch { --c1:#fff7ed; --c2:#f59e0b; --c3:rgba(245,158,11,0); --hit-at:145ms; }
+    /* ライガー: コマ落としのようにカクカクと左右へ跳びながら高速で詰め、爪で3回ひっかいて同じように戻る(600ms)。
+       steps(1,end) で各コマの間をつながずに瞬間移動させ、残像(.thm-atk__ghost)が少し遅れて追いかける */
+    .thm-atk--claw { --c1:#fee2e2; --c2:#ef4444; --c3:rgba(239,68,68,0); --hit-at:235ms; }
+    .thm-atk--claw .thm-atk__monster { animation-name:thmClawBody; animation-timing-function:steps(1,end); }
+    .thm-atk__ghost { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:3; opacity:0;
+      transform-origin:50% 80%; pointer-events:none; filter:sepia(1) saturate(4) hue-rotate(-30deg) brightness(1.2);
+      animation:thmClawBody var(--thm-ms,450ms) steps(1,end) forwards, thmClawGhost var(--thm-ms,450ms) linear forwards; }
+    .thm-atk__ghost--1 { animation-delay:35ms,0ms; --ghost-a:.5; }
+    .thm-atk__ghost--2 { animation-delay:70ms,0ms; --ghost-a:.28; }
+    @keyframes thmClawGhost { 0%,8% { opacity:0; } 14%,84% { opacity:var(--ghost-a,.4); } 92%,100% { opacity:0; } }
+    .thm-atk--claw .thm-atk__core { width:70px; height:70px; left:-35px; top:-35px; animation-duration:260ms; }
+    .thm-atk--claw .thm-atk__bit { left:-3px; top:-36px; width:6px; height:72px; border-radius:999px; rotate:var(--ba); translate:var(--bx) 0;
+      background:linear-gradient(180deg,rgba(255,255,255,0),#fff 30%,#fecaca 60%,rgba(239,68,68,0)); box-shadow:0 0 8px #ef4444;
+      animation-name:thmClaw; animation-duration:140ms; }
+    @keyframes thmClaw { 0% { opacity:0; transform:scaleY(.1); } 35% { opacity:1; transform:scaleY(1); } 100% { opacity:0; transform:scaleY(1.1) scaleX(.4); } }
+    @keyframes thmClawBody {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      6% { transform:translate3d(0,6px,0) scale(1.1,.86); }
+      14% { transform:translate3d(calc(var(--atk-dx) * .28 - 34px),calc(var(--atk-dy) * .28),0) scale(1.08) rotate(-8deg); }
+      22% { transform:translate3d(calc(var(--atk-dx) * .52 + 34px),calc(var(--atk-dy) * .52),0) scale(1.1) rotate(8deg); }
+      30% { transform:translate3d(calc(var(--atk-dx) * .74 - 26px),calc(var(--atk-dy) * .74),0) scale(1.14) rotate(-8deg); }
+      39% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.26) rotate(-14deg); }
+      49% { transform:translate3d(calc(var(--atk-dx) + 26px),calc(var(--atk-dy) * .95 - 10px),0) scale(1.24) rotate(14deg); }
+      59% { transform:translate3d(calc(var(--atk-dx) - 26px),calc(var(--atk-dy) * .95 + 6px),0) scale(1.26) rotate(-12deg); }
+      68% { transform:translate3d(calc(var(--atk-dx) * .6 + 30px),calc(var(--atk-dy) * .6),0) scale(1.1) rotate(8deg); }
+      78% { transform:translate3d(calc(var(--atk-dx) * .3 - 26px),calc(var(--atk-dy) * .3),0) scale(1.05) rotate(-6deg); }
+      88%,100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+    }
+
+    /* ハム: 敵へ駆け寄って、左のジャブ(小)→ 体をひねって右ストレート(大)のワンツー(580ms) */
+    .thm-atk--punch { --c1:#fff7ed; --c2:#f59e0b; --c3:rgba(245,158,11,0); --hit-at:314ms; }
     .thm-atk--punch .thm-atk__monster { animation-name:thmPunchBody; }
-    .thm-atk--punch .thm-atk__core, .thm-atk--punch .thm-atk__ring { animation-duration:300ms; }
-    .thm-atk--punch .thm-atk__bit { left:-11px; top:-11px; width:22px; height:22px; border-radius:0; translate:var(--bx) var(--by);
+    .thm-atk--punch .thm-atk__core { left:-54px; top:-54px; width:108px; height:108px; animation-duration:240ms; }
+    .thm-atk--punch .thm-atk__ring { animation-duration:240ms; }
+    .thm-atk--punch .thm-atk__bit { left:-11px; top:-11px; width:22px; height:22px; border-radius:0; translate:var(--bx) var(--by); box-shadow:none;
       clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
-      background:radial-gradient(circle,#fff 0 30%,#fde68a 60%,#f59e0b); animation-name:thmStar; animation-duration:110ms; }
+      background:radial-gradient(circle,#fff 0 30%,#fde68a 60%,#f59e0b); animation-name:thmStar; animation-duration:150ms; }
     @keyframes thmStar { 0% { opacity:0; transform:scale(.3) rotate(0deg); } 40% { opacity:1; transform:scale(1.2) rotate(20deg); } 100% { opacity:0; transform:scale(1.5) rotate(40deg); } }
     @keyframes thmPunchBody {
-      0% { transform:translate3d(0,0,0) scale(1); }
-      10% { transform:translate3d(0,6px,0) scale(1.08,.9); }
-      26% { transform:translate3d(calc(var(--atk-dx) * .78),calc(var(--atk-dy) * .78),0) scale(1.1); }
-      33% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9),0) scale(1.2,1.05); }
-      39% { transform:translate3d(calc(var(--atk-dx) * .78),calc(var(--atk-dy) * .78),0) scale(1.08); }
-      46% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.2,1.05); }
-      52% { transform:translate3d(calc(var(--atk-dx) * .78),calc(var(--atk-dy) * .78),0) scale(1.08); }
-      59% { transform:translate3d(calc(var(--atk-dx) * .93),calc(var(--atk-dy) * .93),0) scale(1.24,1.06); }
-      72% { transform:translate3d(calc(var(--atk-dx) * .6),calc(var(--atk-dy) * .6 - 12px),0) scale(1.04); }
-      100% { transform:translate3d(0,0,0) scale(1); }
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      8% { transform:translate3d(0,6px,0) scale(1.08,.9); }
+      26% { transform:translate3d(calc(var(--atk-dx) * .74),calc(var(--atk-dy) * .74),0) scale(1.08) rotate(0deg); }
+      32% { transform:translate3d(calc(var(--atk-dx) * .86),calc(var(--atk-dy) * .86),0) scale(1.14,1.04) rotate(-10deg); }
+      38% { transform:translate3d(calc(var(--atk-dx) * .76),calc(var(--atk-dy) * .76),0) scale(1.04,1.08) rotate(-3deg); }
+      46% { transform:translate3d(calc(var(--atk-dx) * .7),calc(var(--atk-dy) * .7 + 3px),0) scale(1.06,1.02) rotate(9deg); }
+      54% { transform:translate3d(calc(var(--atk-dx) * .95),calc(var(--atk-dy) * .95),0) scale(1.32,1.08) rotate(-14deg); }
+      64% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.24,1.06) rotate(-10deg); }
+      78% { transform:translate3d(calc(var(--atk-dx) * .5),calc(var(--atk-dy) * .5 - 12px),0) scale(1.04) rotate(0deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
     }
 
     /* ピクシー: 少し浮いて魔法陣を広げ、魔法の弾を3発、ゆらしながら敵へ飛ばす */
@@ -77060,30 +77222,58 @@ const createAnimationStyle = () => {
       100% { opacity:0; transform:scaleY(0); }
     }
 
-    /* ミタラシ: 息を吸い込んで、口から炎を吐く */
-    .thm-atk--fire { --c1:#fef3c7; --c2:#f97316; --c3:rgba(220,38,38,0); --hit-at:270ms; }
+    /* ミタラシ: 息を吸い込んで、口から敵まで炎のビームを吐き続ける。炎はビームの中を流れ、敵の上で燃え上がる(560ms) */
+    .thm-atk--fire { --c1:#fef3c7; --c2:#f97316; --c3:rgba(220,38,38,0); --hit-at:200ms; }
     .thm-atk--fire .thm-atk__monster { animation-name:thmFireBody; }
-    .thm-atk--fire .thm-atk__core { width:100px; height:100px; left:-50px; top:-50px; }
+    .thm-atk--fire .thm-atk__core { width:110px; height:110px; left:-55px; top:-55px; animation-duration:320ms; }
+    .thm-atk--fire .thm-atk__ring { border-color:#fde047; animation-duration:260ms; }
+    .thm-atk--fire .thm-atk__bit { left:-7px; top:-7px; width:14px; height:14px; box-shadow:0 0 8px #f97316;
+      background:radial-gradient(circle,#fff 0 20%,#fde047 45%,#f97316 70%,rgba(220,38,38,0)); animation-name:thmEmber; animation-duration:200ms; }
+    @keyframes thmEmber { 0% { opacity:0; transform:translate3d(0,0,0) scale(.5); } 25% { opacity:1; } 100% { opacity:0; transform:translate3d(var(--bx),calc(var(--by) - 20px),0) scale(1.3); } }
     @keyframes thmFireBody {
-      0% { transform:translate3d(0,0,0) scale(1); }
-      18% { transform:translate3d(calc(var(--atk-dx) * -.04),calc(var(--atk-dy) * -.04 + 3px),0) scale(1.05,1.1); }
-      30% { transform:translate3d(calc(var(--atk-dx) * .06),calc(var(--atk-dy) * .06),0) scale(1.1,.95); }
-      50% { transform:translate3d(calc(var(--atk-dx) * .05 + 1px),calc(var(--atk-dy) * .05),0) scale(1.1,.95); }
-      70% { transform:translate3d(calc(var(--atk-dx) * .06 - 1px),calc(var(--atk-dy) * .06),0) scale(1.1,.95); }
-      100% { transform:translate3d(0,0,0) scale(1); }
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      16% { transform:translate3d(calc(var(--atk-dx) * -.05),calc(var(--atk-dy) * -.05 + 3px),0) scale(1.06,1.12); filter:drop-shadow(0 0 10px #fb923c); }
+      24% { transform:translate3d(calc(var(--atk-dx) * .05),calc(var(--atk-dy) * .05),0) scale(1.12,.94); filter:drop-shadow(0 0 16px #f97316); }
+      36% { transform:translate3d(calc(var(--atk-dx) * .04 + 2px),calc(var(--atk-dy) * .04),0) scale(1.1,.95); }
+      48% { transform:translate3d(calc(var(--atk-dx) * .05 - 2px),calc(var(--atk-dy) * .05),0) scale(1.1,.95); }
+      60% { transform:translate3d(calc(var(--atk-dx) * .04 + 2px),calc(var(--atk-dy) * .04),0) scale(1.1,.95); }
+      72% { transform:translate3d(calc(var(--atk-dx) * .05 - 1px),calc(var(--atk-dy) * .05),0) scale(1.08,.96); filter:drop-shadow(0 0 12px #f97316); }
+      100% { transform:translate3d(0,0,0) scale(1); filter:none; }
     }
-    .thm-atk--fire .thm-atk__fly { top:30%; width:30px; height:30px; margin:-15px 0 0 -15px;
+    /* ビーム本体: 口の側が細く、敵の側へ行くほど広がる炎の帯。縞の模様を流して、炎が敵へ押し寄せて見えるようにする */
+    .thm-atk--fire .thm-atk__line { top:40%; }
+    .thm-atk--fire .thm-atk__line i { width:34px; left:-17px;
+      clip-path:polygon(0 0,100% 0,64% 100%,36% 100%);
+      background:
+        linear-gradient(90deg,rgba(220,38,38,0),rgba(249,115,22,.9) 20%,rgba(254,240,138,.95) 42%,#fff 50%,rgba(254,240,138,.95) 58%,rgba(249,115,22,.9) 80%,rgba(220,38,38,0)),
+        repeating-linear-gradient(0deg,rgba(255,255,255,.0) 0 10px,rgba(255,255,255,.35) 10px 16px);
+      background-blend-mode:screen; background-size:100% 100%,100% 26px;
+      filter:drop-shadow(0 0 8px #f97316) drop-shadow(0 0 16px rgba(239,68,68,.8));
+      animation:thmFireBeam var(--thm-ms,450ms) ease-out forwards, thmFireFlow 140ms linear infinite; }
+    @keyframes thmFireBeam {
+      0%,18% { opacity:0; transform:scaleY(0) scaleX(.3); }
+      26% { opacity:1; transform:scaleY(1) scaleX(1.3); }
+      34% { opacity:1; transform:scaleY(1) scaleX(.9); }
+      42% { opacity:1; transform:scaleY(1) scaleX(1.2); }
+      50% { opacity:1; transform:scaleY(1) scaleX(.95); }
+      58% { opacity:1; transform:scaleY(1) scaleX(1.25); }
+      66% { opacity:1; transform:scaleY(1) scaleX(1); }
+      74% { opacity:.9; transform:scaleY(1) scaleX(1.1); }
+      86%,100% { opacity:0; transform:scaleY(1) scaleX(.1); }
+    }
+    @keyframes thmFireFlow { from { background-position:0 0,0 0; } to { background-position:0 0,0 -26px; } }
+    .thm-atk--fire .thm-atk__fly { top:40%; width:26px; height:26px; margin:-13px 0 0 -13px; border-radius:50%;
       background:radial-gradient(circle,#fff 0 18%,#fde047 38%,#f97316 62%,rgba(220,38,38,0)); animation-name:thmFlame; animation-duration:190ms; }
     @keyframes thmFlame {
-      0% { opacity:0; transform:translate3d(0,0,0) scale(.3); }
+      0% { opacity:0; transform:translate3d(0,0,0) scale(.4); }
       15% { opacity:1; }
-      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--fx)),calc(var(--atk-dy) + var(--fy)),0) scale(2.2); }
+      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--fx)),calc(var(--atk-dy) + var(--fy)),0) scale(2); }
     }
 
     /* 動きを減らす設定: 本体は光るだけ、飛ぶもの・線は出さず、着弾の光だけ */
     @media (prefers-reduced-motion: reduce) {
-      .thm-atk__monster { animation:thmReduced 450ms ease-out forwards !important; }
-      .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__quake, .thm-atk__bit { display:none; }
+      .thm-atk__monster { animation:thmReduced var(--thm-ms,450ms) ease-out forwards !important; }
+      .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit { display:none; }
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
     }
     /* 敵の側に出す着弾(24-battle-fx.jsx の AttackTargetFx)。敵の丸枠の中心に重ね、攻撃の尺の中で消える。 */
