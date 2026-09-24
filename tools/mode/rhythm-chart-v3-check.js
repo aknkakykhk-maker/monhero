@@ -98,8 +98,13 @@ for(const difficulty of DIFFICULTIES){
   check('区切りの一発は「大きな一発（FULL）」から選んでいる',
     accents.length>0&&accents.every(note=>note.sourceCharacter==='FULL'),
     `${accents.length}個 / ${[...new Set(accents.map(n=>n.sourceCharacter))].join('/')}`);
-  check('どのノーツにも「どの音から作ったか」が残っている',
-    charts.MASTER.notes.every(note=>note.chord||typeof note.sourceCharacter==='string'));
+  // 押さえノーツの同時押さえ(生成器の 15.5〜15.7)が足す2本目は、打点から作らないので出どころを持たない。
+  // かわりに「どの組の2本目か」(heldPair)を持つ。2026-09-24 に設計資料を作り直すまで、
+  // ここは同時押さえより前の古い設計資料を読んでいたので、この例外が無くても通っていた。
+  const unsourced=charts.MASTER.notes.filter(note=>!note.chord&&typeof note.sourceCharacter!=='string');
+  check('どのノーツにも「どの音から作ったか」が残っている（同時押さえの2本目は組の印を持つ）',
+    unsourced.every(note=>note.heldPair&&typeof note.heldPairShape==='string'),
+    `出どころ無し ${unsourced.length}本（組の印なし ${unsourced.filter(note=>!note.heldPair).length}本）`);
 }
 
 // (c) HOLDの長さが「実際に伸びている区間」から来ているか
