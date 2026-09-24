@@ -632,35 +632,92 @@ const createAnimationStyle = () => {
         100% { opacity:0; transform:scale(1.4); }
       }
     }
-    /* ミーアの待機アニメ(試作。24-battle-fx.jsx の MiaIdleArt)。
-       同じ絵を「翼以外」「左翼」「右翼」に切り抜いて重ね、翼を肩の付け根を軸に羽ばたかせる。
-       翼は体の後ろ(下の層)。動かすのは transform だけなので、レイアウトを作り直さない。
-       軸の位置: 正方形の枠へ 2:3 の絵を contain で置いたとき、元絵の (425,585) と (599,585) に当たる所 */
-    .mia-idle { position:relative; display:block; transform-origin:50% 96%; will-change:transform;
-      filter:drop-shadow(0 4px 3px rgb(0 0 0 / .07)) drop-shadow(0 2px 2px rgb(0 0 0 / .06));
-      animation:miaIdleHover 2600ms ease-in-out infinite; }
-    .mia-idle__body { position:relative; display:block; z-index:1; }
-    .mia-idle__wing { position:absolute; inset:0; display:block; z-index:0; will-change:transform; }
-    .mia-idle__wing--l { transform-origin:44.3% 38.1%; animation:miaIdleWingL 1300ms cubic-bezier(.45,0,.35,1) infinite; }
-    .mia-idle__wing--r { transform-origin:55.7% 38.1%; animation:miaIdleWingR 1300ms cubic-bezier(.45,0,.35,1) infinite; }
-    /* 宙に浮いているので、ゆっくり上下してわずかに伸び縮みする(呼吸) */
-    @keyframes miaIdleHover {
+    /* 味方モンスターの待機アニメ(24-battle-fx.jsx の MonsterIdleArt)。
+       同じ絵を「体」と「部分(翼・しっぽ・耳・花…)」に切り抜いて重ね、部分を付け根(transform-origin)を軸に動かす。
+       全体の動きは種ごとに1つ(mon-idle--hover など)。動かすのは transform だけなので、レイアウトを作り直さない。
+       部分ごとの大きさ(--idle-amp)・周期・ずらしは MONSTER_IDLE_RIGS から style で渡る */
+    .mon-idle { position:relative; display:block; will-change:transform; transform-origin:50% 96%; }
+    .mon-idle--rig { filter:drop-shadow(0 4px 3px rgb(0 0 0 / .07)) drop-shadow(0 2px 2px rgb(0 0 0 / .06)); }
+    .mon-idle__body { position:relative; display:block; z-index:1; }
+    .mon-idle__part { position:absolute; inset:0; display:block; z-index:0; will-change:transform;
+      animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+    .mon-idle__part--front { z-index:2; }
+    /* 図鑑の立ち絵は大きさを持たない(w-full h-full)ので、入れ物いっぱいに広げる */
+    .mon-idle--fill, .mon-idle--fill > .mon-idle__body { width:100%; height:100%; }
+    .mon-idle__part--flapL, .mon-idle__part--flapR { animation-name:monIdleFlap; animation-timing-function:cubic-bezier(.45,0,.35,1); }
+    .mon-idle__part--flapR { --idle-flip:-1; }
+    .mon-idle__part--swing { animation-name:monIdleSwing; }
+    .mon-idle__part--wag { animation-name:monIdleWag; }
+    .mon-idle__part--twitch { animation-name:monIdleTwitch; }
+    .mon-idle__part--bob { animation-name:monIdleBob; }
+    /* 羽ばたき。すばやく振り上げてゆっくり下ろす。振り上げたときは奥へ倒れるぶん少し細くする。
+       右の翼は --idle-flip で向きを逆にする(同じ keyframes を左右で使う) */
+    @keyframes monIdleFlap {
+      0%,100% { transform:rotate(calc(var(--idle-amp) * -.2 * var(--idle-flip, 1))) scaleX(1); }
+      38% { transform:rotate(calc(var(--idle-amp) * var(--idle-flip, 1))) scaleX(.9); }
+    }
+    /* ゆったり揺れる(花・ヒレ・腕の刃)。amp の符号で揺れ始めの向きが変わる */
+    @keyframes monIdleSwing {
+      0%,100% { transform:rotate(calc(var(--idle-amp) * -.4)); }
+      50% { transform:rotate(var(--idle-amp)); }
+    }
+    /* しっぽ振り。左右へ同じだけ */
+    @keyframes monIdleWag {
+      0%,100% { transform:rotate(calc(var(--idle-amp) * -1)); }
+      50% { transform:rotate(var(--idle-amp)); }
+    }
+    /* ときどきピクッと動く(耳)。ほとんどの時間は止まっている */
+    @keyframes monIdleTwitch {
+      0%,78%,100% { transform:rotate(0deg); }
+      82% { transform:rotate(var(--idle-amp)); }
+      86% { transform:rotate(0deg); }
+      90% { transform:rotate(calc(var(--idle-amp) * .6)); }
+      94% { transform:rotate(0deg); }
+    }
+    /* 上下にふわふわ(浮いている玉など)。--idle-bob は枠に対する % */
+    @keyframes monIdleBob {
+      0%,100% { transform:translate3d(0,0,0); }
+      50% { transform:translate3d(0,var(--idle-bob),0); }
+    }
+    /* 全体の動き */
+    .mon-idle--hover { animation:monIdleHover 2600ms ease-in-out infinite; }
+    .mon-idle--bounce { animation:monIdleBounce 1800ms ease-in-out infinite; }
+    .mon-idle--breathe { animation:monIdleBreathe 3200ms ease-in-out infinite; }
+    .mon-idle--sway { animation:monIdleSway 3000ms ease-in-out infinite; }
+    .mon-idle--swim { animation:monIdleSwim 2800ms ease-in-out infinite; }
+    /* 宙に浮いている子。ゆっくり上下してわずかに伸び縮みする */
+    @keyframes monIdleHover {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
       50% { transform:translate3d(0,-4%,0) scale(.99,1.015); }
     }
-    /* 羽ばたき。すばやく振り上げ、ゆっくり下ろす。振り上げたときは奥へ倒れるぶん少し細くする */
-    @keyframes miaIdleWingL {
-      0%,100% { transform:rotate(-3deg) scaleX(1); }
-      38% { transform:rotate(13deg) scaleX(.9); }
+    /* 地面に立っている丸い子。足元を軸に、つぶれて・伸びて・小さく弾む */
+    @keyframes monIdleBounce {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      20% { transform:translate3d(0,0,0) scale(1.04,.95); }
+      45% { transform:translate3d(0,-3%,0) scale(.97,1.04); }
+      65% { transform:translate3d(0,0,0) scale(1.02,.98); }
     }
-    @keyframes miaIdleWingR {
-      0%,100% { transform:rotate(3deg) scaleX(1); }
-      38% { transform:rotate(-13deg) scaleX(.9); }
+    /* どっしり立っている子。胸がふくらむように、縦へわずかに伸び縮みする */
+    @keyframes monIdleBreathe {
+      0%,100% { transform:scale(1,1); }
+      50% { transform:scale(1.01,1.025); }
+    }
+    /* 植物の子。足元を軸に、左右へゆっくり傾く */
+    @keyframes monIdleSway {
+      0%,100% { transform:rotate(-2deg); }
+      50% { transform:rotate(2deg); }
+    }
+    /* 人魚の子。水の中にいるように、上下しながら少し傾く */
+    @keyframes monIdleSwim {
+      0%,100% { transform:translate3d(0,0,0) rotate(-1.5deg); }
+      50% { transform:translate3d(0,-3%,0) rotate(1.5deg); }
     }
     /* 軽量な見た目(タクティクスの calm)と「動きを減らす」設定では止める(絵はそのまま見える) */
-    [data-tactics-look="calm"] .mia-idle, [data-tactics-look="calm"] .mia-idle__wing { animation:none; }
+    [data-tactics-look="calm"] .mon-idle, [data-tactics-look="calm"] .mon-idle__part { animation:none; }
+    /* 画面全体の calm(軽量表示・「待機中の動き：止める」)。バトルの外(図鑑)はこれで止まる */
+    [data-phase-look="calm"] .mon-idle, [data-phase-look="calm"] .mon-idle__part { animation:none; }
     @media (prefers-reduced-motion: reduce) {
-      .mia-idle, .mia-idle__wing { animation:none; }
+      .mon-idle, .mon-idle__part { animation:none; }
     }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
        常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。
