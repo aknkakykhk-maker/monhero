@@ -156,6 +156,8 @@ function BattleScreen({
   // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
+  // 敵の攻撃(ためるを含む)を絵だけで動かす場面。移動とムーは今までどおり丸枠ごと
+  const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
@@ -410,7 +412,7 @@ function BattleScreen({
             強化の札が増えて舞台が絵より低くなったときは、safe が上そろえへ戻してくれる
             (中央のままだと上へスクロールできず、頭の「!」や技名が読めなくなる)。
             safe を知らないブラウザは宣言ごと捨てるので、クラスの justify-start が残る */}
-        <main className="flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0" style={{justifyContent:'safe center'}}>
+        <main className="flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0" style={{justifyContent:'safe center',...(enemyImageOnlyAttack?{overflow:'visible',zIndex:70}:{})}}>
           {/* 敵のまわりのボタンは左の1列にまとめる(2026-09-22 ユーザー指示
               「敵周りのボタンを整理したほうがいい。添付イメージ画像のように左にきれいに並べるなど」)。
               ★もとは左(ステータス・緊急)と右(解析・ログ・魂格効果)に分かれていて、敵の絵を両側から
@@ -636,8 +638,11 @@ function BattleScreen({
               </div>
             )}
             {/* 行動予測ラベルはmain下部に移動 */}
+            {/* ★新しい盤面では、攻撃・ためるの動きは丸枠ではなく**敵の絵だけ**に掛ける(2026-09-24 ユーザー指示
+                「敵も攻撃時は距離枠じゃなくてモンスターだけ動かしたほうがいい」)。動きは data-enemy-attack を見て CSS が絵へ掛ける。
+                移動(距離が変わる)は立ち位置ごと動く動きなので、今までどおり丸枠ごと動かす。ムーは作りが別なので対象外 */}
             {/* data-attack-target: 味方の攻撃モーションが狙う場所(measureAttackAim)。名前は変えない */}
-            <div data-enemy-ring={enemyDist} className={`rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} data-attack-target style={enemyAttackAnim&&!ecoBattleView?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{top:'3dvh'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{top:'3dvh'}:{})}}>
+            <div data-enemy-ring={enemyDist} data-enemy-attack={enemyImageOnlyAttack?(enemyAttackFx?.kind==='charge'?'charge':'fly'):undefined} className={`rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} data-attack-target style={enemyAttackAnim&&!ecoBattleView&&!enemyImageOnlyAttack?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{top:'3dvh'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{top:'3dvh'}:{})}}>
               {/* 足元の影(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
                   丸枠の塗りを落としたぶん、影が無いと宙に浮いて見える。絵(z-[1])より下へ敷く。
                   ★丸枠は transform を持つので重ね順の島になる。この中に置けば絵の下に必ず入る */}
