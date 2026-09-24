@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 18f7903282d1f0d3
+// source-sha256: 5220378bec5ccaec
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 669ff9c50553652b
+// generated-sha256: 0ee4f2bab0abd7cc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -179,7 +179,7 @@ const normalizeBattleFxSettings = value => {
 const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
   key: 'idleMotion',
   title: '待機中の動き',
-  desc: '待っているあいだのモンスターの動き（ミーアの羽ばたきなど）と、タクティクス新画面の枠の飾り・敵の待機の動き、WAVEのあとの画面の飾りの動きです。攻撃の演出はどちらでも出ます。',
+  desc: '待っているあいだのモンスターの動き（ミーアの羽ばたきなど）と、タクティクス新画面の枠の飾り・敵の待機の動きです。攻撃の演出はどちらでも出ます。',
   options: [{
     id: 'ON',
     label: '動かす',
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 16:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 16:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5634,6 +5634,14 @@ const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多�
 // ★判定は指が触れた時刻と曲の時刻で決めているので、どちらでも判定の正確さは変わらない
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
+// 演奏中の背景の演出(2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」)。
+// VIVID  … 曲のジャケットをぼかして敷き、ノーツのタイミングで背景が光り、光の粒とサーチライトが動く
+// CALM   … ジャケットとノーツのタイミングの光だけ(動き続けるものは出さない)
+// SIMPLE … これまでの見た目のまま(何も足さない)
+// ★軽量モードのときは、ここの値に関わらず SIMPLE として扱う(rhythmStageLevel)
+const RHYTHM_STAGE_EFFECTS = Object.freeze(['VIVID', 'CALM', 'SIMPLE']);
+const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
+const rhythmStageLevel = settings => settings && settings.lightweightMode ? 'SIMPLE' : RHYTHM_STAGE_EFFECTS.includes(settings && settings.stageEffect) ? settings.stageEffect : 'VIVID';
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -5702,7 +5710,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // 既定はOFF。勝手に全画面へ入ると「戻れない」と感じる人がいるため
   quietDuringPlay: false,
   // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定(省電力)で補われる
-  frameRateMode: 'POWER_SAVE'
+  frameRateMode: 'POWER_SAVE',
+  // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定(派手)で補われる
+  stageEffect: 'VIVID'
 });
 const rhythmFiniteInRange = (value, min, max, fallback) => {
   const number = Number(value);
@@ -5750,7 +5760,8 @@ const normalizeRhythmSettings = value => {
     sideMonsterAbilityHighlight: bool('sideMonsterAbilityHighlight'),
     songPreviewEnabled: bool('songPreviewEnabled'),
     quietDuringPlay: bool('quietDuringPlay'),
-    frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode
+    frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode,
+    stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -16093,14 +16104,14 @@ const QuickStepScreen = ({
       role: "button",
       tabIndex: 0,
       "aria-label": label,
-      className: "mh-ph-bg absolute inset-0 overflow-y-auto mh-scroll"
-      // 見た目は強化フェーズのほかの画面と同じ mh-ph-bg(70-bootstrap.jsx)。--ph に識別色(accent は #rrggbb)を渡す
-      ,
+      className: "absolute inset-0 overflow-y-auto mh-scroll",
       style: {
         position: 'absolute',
         inset: 0,
+        backgroundColor: '#020617',
         zIndex: 30000,
-        '--ph': /^#[0-9a-f]{6}$/i.test(accent) ? [1, 3, 5].map(i => parseInt(accent.slice(i, i + 2), 16)).join(',') : '45,212,191'
+        // 上から識別色の光を差す(強化フェーズのほかの画面とそろえる)。accent は #rrggbb
+        backgroundImage: `radial-gradient(ellipse 90% 45% at 50% 0%, ${accent}2e, transparent 70%)`
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "min-h-full flex flex-col items-center justify-center p-6 text-center"
@@ -23446,6 +23457,8 @@ const RhythmOptions = ({
     className: wide ? grid : `mt-3 ${grid}`
   }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
     full: true
+  }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「派手」です。判定・スコアはどれでも変わりません。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライトと光の粒は出しません。', {
+    full: true
   }), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「省電力」です。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
   }), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
@@ -24916,6 +24929,36 @@ const RhythmTapTest = ({
   // lifeBoxRef … 減った瞬間にHUDのライフ表示を揺らす／lifeDamageRef … 減った量(「-50」)を一瞬出す
   const lifeBoxRef = useRef(null),
     lifeDamageRef = useRef(null);
+  // ===== 背景の演出(ライブ背景。2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」) =====
+  // 置くのはプレイエリアのいちばん奥(z-index:-1)。レーン・ノーツ・判定ライン・HUDより必ず後ろなので、
+  // 入力にも判定にも触らない(pointer-events:none)。
+  // ★重さに気をつける。ぼかしは CSS の filter を使わず、ジャケットを 24×24 の canvas へ一度だけ縮めて描き、
+  //   それを引き伸ばして「ぼけた絵」にする(引き伸ばしの補間でぼける。毎フレームの作り直しが起きない)。
+  //   動かすのは transform と opacity だけ(合成だけで済むもの)。
+  const stageLevel = rhythmStageLevel(settings);
+  const stageArtRef = useRef(null),
+    stagePulseRef = useRef(null);
+  const stageArtSrc = stageLevel !== 'SIMPLE' && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+  useEffect(() => {
+    const canvas = stageArtRef.current;
+    if (!canvas || !stageArtSrc) return;
+    let alive = true;
+    const img = new Image();
+    img.onload = () => {
+      if (!alive) return;
+      try {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.dataset.ready = '1';
+      } catch (_) {}
+    };
+    img.src = stageArtSrc;
+    return () => {
+      alive = false;
+      img.onload = null;
+    };
+  }, [stageArtSrc]);
   const sideMonsterElements = useMemo(() => {
     if (settings.sideMonsterOpacity === 'OFF') return null;
     const opacity = rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -25627,6 +25670,7 @@ const RhythmTapTest = ({
        ★飛ばすのは描くことだけ。判定は指の入力のたびに曲の時刻で決めているので変わらない。
          取り逃しのMISSや長押しの終わりも、次に描くフレーム(8ms後)でいつもどおり数える */
     const powerSave = settings.frameRateMode !== 'DEVICE';
+    const stagePulseOn = rhythmStageLevel(settings) !== 'SIMPLE';
     let prevFrameMs = 0,
       avgFrameMs = 1000 / 60,
       lastDrawnMs = 0;
@@ -25654,6 +25698,37 @@ const RhythmTapTest = ({
       let perfScanned = 0,
         perfDrawn = 0;
       updateJudgmentBand(travel, travelMs);
+      /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
+         取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
+         間隔が110ms未満の連打では光らせ直さない(光りっぱなしで何も分からなくなるため)。
+         光らせ方は Web Animations の opacity だけ(合成だけで済む) */
+      if (stagePulseOn) {
+        const pulseEl = stagePulseRef.current,
+          notes = run.notes;
+        let index = run._stageNoteIndex || 0,
+          count = 0,
+          monster = false;
+        while (index < notes.length && notes[index].timeMs <= visualTime) {
+          count++;
+          if (rhythmNoteMonsterSlot(notes[index])) monster = true;
+          index++;
+        }
+        run._stageNoteIndex = index;
+        if (count && pulseEl && typeof pulseEl.animate === 'function' && visualTime - (run._stagePulseAt ?? -1e9) >= 110) {
+          run._stagePulseAt = visualTime;
+          pulseEl.dataset.stagePulseKind = monster ? 'monster' : 'note';
+          try {
+            pulseEl.animate([{
+              opacity: monster ? 1 : count > 1 ? .9 : .62
+            }, {
+              opacity: 0
+            }], {
+              duration: monster ? 620 : count > 1 ? 440 : 340,
+              easing: 'cubic-bezier(.2,.7,.3,1)'
+            });
+          } catch (_) {}
+        }
+      }
       // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
       const placeable = !!travel && travel.ready !== false;
       // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
@@ -26003,7 +26078,7 @@ const RhythmTapTest = ({
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
-  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.frameRateMode, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial, updateJudgmentBand]);
+  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.frameRateMode, settings.stageEffect, settings.lightweightMode, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial, updateJudgmentBand]);
   const disposeRun = useCallback(() => {
     stopFrame();
     clearJudgmentTimer();
@@ -27083,7 +27158,29 @@ const RhythmTapTest = ({
       '--mh-judgment-line-bottom': `${rhythmFiniteStep(settings.judgmentLineHeight, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
-  }, laneElements, sideMonsterElements, /*#__PURE__*/React.createElement("div", {
+  }, laneElements, stageLevel !== 'SIMPLE' && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-stage": stageLevel,
+    "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
+    "aria-hidden": "true"
+  }, stageArtSrc && /*#__PURE__*/React.createElement("canvas", {
+    ref: stageArtRef,
+    "data-rhythm-stage-art": true,
+    width: "24",
+    height: "24"
+  }), stageLevel === 'VIVID' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-stage-beam": "left"
+  }), /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-stage-beam": "right"
+  }), /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-stage-sparks": "far"
+  }), /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-stage-sparks": "near"
+  }))), stageLevel !== 'SIMPLE' && /*#__PURE__*/React.createElement("i", {
+    ref: stagePulseRef,
+    "data-rhythm-stage-pulse": true,
+    "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
+    "aria-hidden": "true"
+  }), sideMonsterElements, /*#__PURE__*/React.createElement("div", {
     ref: screenFlashRef,
     "data-rhythm-screen-flash": true,
     "aria-hidden": "true"
@@ -29220,6 +29317,11 @@ const PHASE_ACCENT_RGB = Object.freeze({
   teaching: '192,132,252'
 });
 const phaseAccentRgb = id => PHASE_ACCENT_RGB[id] || '148,163,184';
+// 画面の根の背景。上から識別色の光を差す
+const phaseBackdropStyle = id => ({
+  backgroundColor: '#020617',
+  backgroundImage: `radial-gradient(ellipse 90% 45% at 50% 0%, rgba(${phaseAccentRgb(id)},.16), transparent 70%)`
+});
 // 手順の並び。plan に current が無いとき(ラン開始時の配置・アシストカードなど)は何も出さない。
 //   plan     … ['training','ally',…](postWavePhasePlan の戻り値)
 //   current  … いまの画面の id
@@ -29235,22 +29337,19 @@ const PhaseSteps = ({
   if (!Array.isArray(plan) || !plan.includes(current)) return null;
   const at = plan.indexOf(current);
   const showNext = Number(nextWave) > 0 && plan.length <= 3;
-  // 見た目は 70-bootstrap.jsx の mh-ph-step-*(いま=識別色の光る札 / 済み=緑の菱形の宝石 / まだ=夜色の札)
+  const accent = phaseAccentRgb(current);
   const line = (on, key) => /*#__PURE__*/React.createElement("span", {
     key: key,
     "aria-hidden": "true",
-    className: `block h-px w-1.5 shrink-0${on ? ' mh-ph-step-line' : ''}`,
-    style: on ? undefined : {
-      background: 'rgba(243,210,122,.16)'
+    className: "block h-px w-1.5 shrink-0",
+    style: {
+      background: on ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.14)'
     }
   });
   return /*#__PURE__*/React.createElement("nav", {
     "aria-label": `強化フェーズ ${at + 1}/${plan.length}：${PHASE_STEP_LABELS[current] || current}`,
     "data-phase-steps": `${current}:${at + 1}/${plan.length}`,
-    className: `flex flex-wrap items-center justify-center gap-x-1 gap-y-1 ${className}`,
-    style: {
-      '--ph': phaseAccentRgb(current)
-    }
+    className: `flex flex-wrap items-center justify-center gap-x-1 gap-y-1 ${className}`
   }, plan.map((id, i) => {
     const state = i < at ? 'done' : i === at ? 'now' : 'todo';
     return /*#__PURE__*/React.createElement(React.Fragment, {
@@ -29258,16 +29357,40 @@ const PhaseSteps = ({
     }, i > 0 && line(i <= at, `line-${id}`), state === 'done' ? /*#__PURE__*/React.createElement("span", {
       title: PHASE_STEP_LABELS[id] || id,
       "aria-label": `${PHASE_STEP_LABELS[id] || id}（済み）`,
-      className: "mh-ph-step-done mx-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[8px] font-black"
-    }, /*#__PURE__*/React.createElement("span", null, "\u2713")) : /*#__PURE__*/React.createElement("span", {
+      className: "flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-black text-emerald-300",
+      style: {
+        background: 'rgba(52,211,153,.14)',
+        border: '1px solid rgba(52,211,153,.4)'
+      }
+    }, "\u2713") : /*#__PURE__*/React.createElement("span", {
       "aria-current": state === 'now' ? 'step' : undefined,
-      className: `shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-black leading-tight ${state === 'now' ? 'mh-ph-step-now' : 'mh-ph-step-todo'}`
+      className: `shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-black leading-tight ${state === 'now' ? 'text-slate-950' : 'text-slate-500'}`,
+      style: state === 'now' ? {
+        background: `rgb(${accent})`,
+        boxShadow: `0 0 10px rgba(${accent},.55)`
+      } : {
+        border: '1px solid rgba(255,255,255,.14)'
+      }
     }, PHASE_STEP_LABELS[id] || id));
   }), showNext && /*#__PURE__*/React.createElement(React.Fragment, null, line(false, 'line-next'), /*#__PURE__*/React.createElement("span", {
-    className: "shrink-0 whitespace-nowrap text-[9px] font-black text-[#c9ae6a]"
+    className: "shrink-0 whitespace-nowrap text-[9px] font-black text-slate-500"
   }, "\u2694 WAVE ", nextWave)));
 };
-// ==== 強化フェーズの共通部品ここまで ====
+// 見出しの上の小さな札(「WAVE 2 CLEAR」「ASSIST CARD」など)。識別色で縁取る
+const PhaseEyebrow = ({
+  id,
+  children
+}) => {
+  const accent = phaseAccentRgb(id);
+  return /*#__PURE__*/React.createElement("span", {
+    className: "inline-block rounded-full px-2.5 py-0.5 text-[9px] font-black tracking-[.2em]",
+    style: {
+      border: `1px solid rgba(${accent},.45)`,
+      background: `rgba(${accent},.1)`,
+      color: `rgb(${accent})`
+    }
+  }, children);
+};
 
 // ---- part: 50-error-boundary.jsx ----
 // ==== 画面のエラー境界 ====
@@ -37031,455 +37154,445 @@ function PickHeroAllyScreen({
   }) : /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] leading-none"
   }, mon.emoji));
-  return (
-    /*#__PURE__*/
-    // 供モン合流は強化フェーズの1枚なので、タクティクス新盤面と同じ飾り(mh-ph-*)を着せる。勇者モン選びは今までどおり
-    React.createElement("div", {
-      style: pickMode === 'ally' ? {
-        position: "absolute",
-        inset: 0,
-        zIndex: 30000,
-        '--ph': '129,140,248'
-      } : {
-        position: "absolute",
-        inset: 0,
-        backgroundColor: "#020617",
-        zIndex: 30000
-      },
-      className: `absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode === 'ally' ? ' mh-phase mh-ph-bg' : ''}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mb-2 text-center flex items-center justify-between px-2 shrink-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      disabled: !!battleTutorial,
-      onClick: onBack,
-      className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 20
-    })), /*#__PURE__*/React.createElement("h2", {
-      className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
-    }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), /*#__PURE__*/React.createElement("div", {
-      className: "w-10"
-    })), pickMode === 'ally' && /*#__PURE__*/React.createElement("div", {
-      className: "-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5"
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      backgroundColor: "#020617",
+      backgroundImage: pickMode === 'ally' ? 'radial-gradient(ellipse 90% 40% at 50% 0%, rgba(129,140,248,.18), transparent 70%)' : undefined,
+      zIndex: 30000
+    },
+    className: `absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode === 'ally' ? ' mh-phase' : ''}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 text-center flex items-center justify-between px-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: !!battleTutorial,
+    onClick: onBack,
+    className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
+  }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), /*#__PURE__*/React.createElement("div", {
+    className: "w-10"
+  })), pickMode === 'ally' && /*#__PURE__*/React.createElement("div", {
+    className: "-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "rounded-full border border-indigo-300/40 bg-indigo-400/10 px-2.5 py-0.5 text-[9px] font-black tracking-[.2em] text-indigo-200"
+  }, waveResult?.wave > 0 ? `WAVE ${waveResult.wave} CLEAR ・ ` : '', "\u65B0\u3057\u3044\u4EF2\u9593\u304C\u5408\u6D41"), phasePlan && /*#__PURE__*/React.createElement(PhaseSteps, {
+    plan: phasePlan,
+    current: "ally",
+    nextWave: wave > 0 ? wave + 1 : null
+  })), /*#__PURE__*/React.createElement("div", {
+    className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}`
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    key: pickMode,
+    scene: pickMode === 'hero' ? 'pickHero' : 'pickAlly',
+    compact: true
+  })), pickMode === 'ally' && /*#__PURE__*/React.createElement("div", {
+    className: "mh-phase-tall shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5",
+    "data-join-status": true
+  }, (() => {
+    const joinRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    if (extremeRuleNumber(joinRule, 'allyJoinPenaltyRate') == null) return null;
+    const totalTurns = waveResult?.totalTurnCount || 0;
+    const multiplier = ultimateAllyJoinMultiplier(totalTurns, joinRule);
+    const floorValue = extremeRuleNumber(joinRule, 'minimumAllyJoinBonus');
+    return /*#__PURE__*/React.createElement("div", {
+      "data-ultimate-join-status": joinRule,
+      className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "mh-ph-plate"
-    }, waveResult?.wave > 0 ? `WAVE ${waveResult.wave} CLEAR ・ ` : '', "\u65B0\u3057\u3044\u4EF2\u9593\u304C\u5408\u6D41"), phasePlan && /*#__PURE__*/React.createElement(PhaseSteps, {
-      plan: phasePlan,
-      current: "ally",
-      nextWave: wave > 0 ? wave + 1 : null
-    })), /*#__PURE__*/React.createElement("div", {
-      className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}`
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      key: pickMode,
-      scene: pickMode === 'hero' ? 'pickHero' : 'pickAlly',
-      compact: true
-    })), pickMode === 'ally' && /*#__PURE__*/React.createElement("div", {
-      className: "mh-phase-tall mh-ph-panel shrink-0 w-full max-w-md mx-auto mb-2 px-2 py-1.5",
-      "data-join-status": true
-    }, (() => {
-      const joinRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      if (extremeRuleNumber(joinRule, 'allyJoinPenaltyRate') == null) return null;
-      const totalTurns = waveResult?.totalTurnCount || 0;
-      const multiplier = ultimateAllyJoinMultiplier(totalTurns, joinRule);
-      const floorValue = extremeRuleNumber(joinRule, 'minimumAllyJoinBonus');
-      return /*#__PURE__*/React.createElement("div", {
-        "data-ultimate-join-status": joinRule,
-        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, joinRule, "\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", precisePercent(multiplier), "\uFF08-", precisePercent(1 - multiplier), "\uFF09", floorValue != null ? `／最低${specialRulePercent(floorValue)}` : ''));
-    })(), (() => {
-      const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      if (rule === NIGHTMARE_SETTING.id) return /*#__PURE__*/React.createElement("div", {
-        "data-nightmare-join-status": true,
-        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, "NIGHTMARE\u88DC\u6B63"), "\u3000\u9593\u5408\u3044\u9069\u6027\uFF1A\uFF0B", specialRulePercent(extremeSpecialRule(rule, 'positiveModifier')), " / \uFF0D", specialRulePercent(extremeSpecialRule(rule, 'negativeModifier')));
-      if (rule === CHAOS_SETTING.id) return /*#__PURE__*/React.createElement("div", {
-        "data-chaos-join-status": true,
-        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, "CHAOS\u88DC\u6B63"), "\u3000\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", specialRulePercent(extremeSpecialRule(rule, 'allyJoinBonus')));
-      return null;
-    })(), Array.isArray(tacticsUnits) ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-panel-label text-[8px] font-black text-left mb-1"
-    }, "\u3044\u307E\u306E\u76E4\u9762\uFF081\u4F53\u305A\u3064\uFF09"), /*#__PURE__*/React.createElement("div", {
-      "data-tactics-board-status": true,
-      className: "grid grid-cols-4 gap-1"
-    }, RANGE_LABELS.map((label, idx) => {
-      const mon = slots[idx];
-      const unit = tacticsUnits[idx];
-      const apt = distTotalBonus(idx);
-      return /*#__PURE__*/React.createElement("div", {
-        key: label,
-        "data-tactics-board-slot": idx,
-        className: `rounded-lg px-1 py-1 text-center ${mon && unit ? 'mh-ph-cell' : 'bg-black/20'}`
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "block text-[8px] font-black text-slate-500 leading-none"
-      }, label), mon && unit ? /*#__PURE__*/React.createElement(React.Fragment, null, partyFace(mon, 'mx-auto my-0.5'), /*#__PURE__*/React.createElement("span", {
-        className: "block truncate text-[8px] font-black text-white leading-tight"
-      }, mon.masuName || mon.name), /*#__PURE__*/React.createElement("span", {
-        className: "block text-[10px] font-black font-mono leading-tight text-pink-300"
-      }, unit.hp, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-500"
-      }, "/", unit.maxHp)), /*#__PURE__*/React.createElement("span", {
-        className: "block text-[9px] font-black font-mono leading-tight text-red-300"
-      }, "\u529B ", unit.atk), /*#__PURE__*/React.createElement("span", {
-        className: "block text-[9px] font-black font-mono leading-tight text-emerald-300"
-      }, "\u9632 ", unit.def), /*#__PURE__*/React.createElement("span", {
-        className: "block text-[9px] font-black font-mono leading-tight text-amber-300"
-      }, "G ", unit.guts, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-500"
-      }, "/", unit.maxGuts)), /*#__PURE__*/React.createElement("span", {
-        className: `block text-[9px] font-black font-mono leading-tight ${apt > 0 ? 'text-cyan-300' : apt < 0 ? 'text-red-300' : 'text-slate-500'}`
-      }, formatAptPct(apt))) :
-      /*#__PURE__*/
-      /* ★空いている間合いを 0% と出すと「適性が0なのか、誰もいないのか」が
-         見分けられない(2026-09-21 ユーザー指示) */
-      React.createElement("span", {
-        className: "block py-2 text-[9px] font-black leading-tight text-slate-600"
-      }, "\u7A7A\u304D"));
-    }))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-panel-label text-[8px] font-black text-left mb-1"
-    }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-4 gap-1"
-    }, [['ライフ', maxHp, 'text-pink-300'], ['ちから', atk, 'text-red-300'], ['丈夫さ', def, 'text-emerald-300'], ['ガッツ', maxGuts, 'text-amber-300']].map(([label, value, tint]) => /*#__PURE__*/React.createElement("div", {
+      className: "text-amber-300"
+    }, joinRule, "\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", precisePercent(multiplier), "\uFF08-", precisePercent(1 - multiplier), "\uFF09", floorValue != null ? `／最低${specialRulePercent(floorValue)}` : ''));
+  })(), (() => {
+    const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    if (rule === NIGHTMARE_SETTING.id) return /*#__PURE__*/React.createElement("div", {
+      "data-nightmare-join-status": true,
+      className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-300"
+    }, "NIGHTMARE\u88DC\u6B63"), "\u3000\u9593\u5408\u3044\u9069\u6027\uFF1A\uFF0B", specialRulePercent(extremeSpecialRule(rule, 'positiveModifier')), " / \uFF0D", specialRulePercent(extremeSpecialRule(rule, 'negativeModifier')));
+    if (rule === CHAOS_SETTING.id) return /*#__PURE__*/React.createElement("div", {
+      "data-chaos-join-status": true,
+      className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-300"
+    }, "CHAOS\u88DC\u6B63"), "\u3000\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", specialRulePercent(extremeSpecialRule(rule, 'allyJoinBonus')));
+    return null;
+  })(), Array.isArray(tacticsUnits) ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
+  }, "\u3044\u307E\u306E\u76E4\u9762\uFF081\u4F53\u305A\u3064\uFF09"), /*#__PURE__*/React.createElement("div", {
+    "data-tactics-board-status": true,
+    className: "grid grid-cols-4 gap-1"
+  }, RANGE_LABELS.map((label, idx) => {
+    const mon = slots[idx];
+    const unit = tacticsUnits[idx];
+    const apt = distTotalBonus(idx);
+    return /*#__PURE__*/React.createElement("div", {
       key: label,
-      className: "mh-ph-cell rounded-lg px-1 py-1 text-center"
+      "data-tactics-board-slot": idx,
+      className: `rounded-lg px-1 py-1 text-center ${mon && unit ? 'bg-black/40' : 'bg-black/20'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "block text-[8px] font-black text-slate-500 leading-none"
-    }, label), /*#__PURE__*/React.createElement("span", {
-      className: `block text-[13px] font-black font-mono leading-tight ${tint}`
-    }, value)))), /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-panel-label text-[8px] font-black text-left mt-1.5 mb-1"
-    }, "\u9593\u5408\u3044\u9069\u6027\uFF08\u8DDD\u96E2\u88DC\u6B63\uFF09", /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-600"
-    }, "\u30FB\u3044\u307E\u306E\u968A\u5217")), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-4 gap-1"
-    }, RANGE_LABELS.map((label, idx) => {
-      const cur = distTotalBonus(idx);
-      return /*#__PURE__*/React.createElement("div", {
-        key: label,
-        className: "mh-ph-cell rounded-lg px-1 py-1 text-center"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "flex items-center justify-center gap-1"
-      }, partyFace(slots[idx]), /*#__PURE__*/React.createElement("span", {
-        className: "text-[8px] font-black text-slate-500 leading-none"
-      }, label)), /*#__PURE__*/React.createElement("span", {
-        className: `block text-[12px] font-black font-mono leading-tight ${cur > 0 ? 'text-cyan-300' : cur < 0 ? 'text-red-300' : 'text-slate-400'}`
-      }, formatAptPct(cur)));
-    })))), pickMode === 'hero' && /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-full max-w-md mx-auto mb-2"
-    }, !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-1.5"
-    }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, label]) => /*#__PURE__*/React.createElement("button", {
-      key: key,
-      onClick: () => {
-        setHeroPickTab(key);
-        setCurrentPickingMon(null);
-      },
-      "aria-pressed": heroPickTab === key,
-      className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
-    }, label))), /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
-    }, isProMode(runMode) ? 'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `w-full${pickMode === 'ally' ? ' m-auto' : ''}`
-    }, pickMode === 'ally' && !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
-      className: "mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-[#c9ae6a]"
-    }, /*#__PURE__*/React.createElement("span", null, "\u5408\u6D41\u3067\u304D\u308B\u5019\u88DC ", (monSelection || []).filter(m => m && !slots.some(x => x && x.id === m.id)).length, "\u4F53"), /*#__PURE__*/React.createElement("span", null, "\u30AB\u30FC\u30C9\u3092\u62BC\u3059\u3068\u8A73\u7D30")), (() => {
-      const allyCarousel = pickMode === 'ally' && isProMode(runMode);
-      // 念のため、すでに編成にいる子は一覧にも出さない(勇者モンがもう一度出ないようにする)
-      const inParty = slots.filter(x => x).map(x => x.id);
-      const savedRawList = pickMode === 'hero' && (heroPickTab === 'base' || isProMode(runMode)) ? getUnlockedBaseMonsterList() : monSelection;
-      const rawList = pickMode === 'hero' ? debugHeroMonsterList(savedRawList) : savedRawList;
-      const list = (pickMode === 'ally' ? rawList.filter(m => m && !inParty.includes(m.id)) : rawList) || [];
-      const stepAlly = delta => {
-        const root = allyCarouselRef.current;
-        if (!root) return;
-        const next = Math.max(0, Math.min(list.length - 1, allyCardIndex + delta));
-        setAllyCardIndex(next);
-        centerCarouselChild(root, next, 'smooth');
-      };
-      return /*#__PURE__*/React.createElement(React.Fragment, null, allyCarousel && /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1"
-      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u4F9B\u30E2\u30F3\u3092\u9078\u629E"), allyCarousel && /*#__PURE__*/React.createElement("div", {
-        className: "relative h-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u524D\u306E\u4F9B\u30E2\u30F3",
-        disabled: allyCardIndex === 0,
-        onClick: () => stepAlly(-1),
-        className: "absolute left-0 top-[70px] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
-      }, /*#__PURE__*/React.createElement(ChevronLeft, null)), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u6B21\u306E\u4F9B\u30E2\u30F3",
-        disabled: allyCardIndex >= list.length - 1,
-        onClick: () => stepAlly(1),
-        className: "absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
-      }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
-        ref: allyCarousel ? allyCarouselRef : null,
-        onScroll: allyCarousel ? e => {
-          const root = e.currentTarget,
-            c = root.scrollLeft + root.clientWidth / 2;
-          let best = 0,
-            d = Infinity;
-          [...root.children].forEach((card, i) => {
-            const n = Math.abs(card.offsetLeft + card.offsetWidth / 2 - c);
-            if (n < d) {
-              d = n;
-              best = i;
-            }
-          });
-          if (best !== allyCardIndex) setAllyCardIndex(best);
-        } : undefined,
-        className: allyCarousel ? 'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll' : 'grid grid-cols-2 gap-2.5',
-        style: allyCarousel ? {
-          paddingLeft: '18%',
-          paddingRight: '18%',
-          touchAction: 'pan-x pinch-zoom'
-        } : pickMode === 'hero' && isProMode(runMode) ? {
-          display: 'flex',
-          flexDirection: 'column'
-        } : undefined
-      }, list.map((m, cardIndex) => {
-        const isSel = currentPickingMon?.id === m.id;
-        const focused = allyCarousel && cardIndex === allyCardIndex;
-        // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
-        // 以前はこの画面だけ独自に組んでいたため、絆レベルも総合力も限界突破の★も出ず、
-        // 同じマスモンが画面によって違う見た目になっていた。
-        // この画面だけの情報(固有技名・ステータス・詳細への案内)はextraで足す。
-        const pickMasu = m.masuId ? getMasuMon(m.masuId) : null;
-        const pickBase = m.debugOnly ? m : ALL_PLAYER_MONSTERS[m.id] || m;
-        // カードの見た目は「供モンの候補」と同じ共通部品(renderProMonsterRow)を通す
-        if (pickMode === 'hero' && isProMode(runMode)) return /*#__PURE__*/React.createElement(React.Fragment, {
-          key: m.id
-        }, renderProMonsterRow({
-          mon: m,
-          selected: proHeroPreset?.heroBaseId === m.id,
-          disabled: !scenarioPicksHero(m.id),
-          onSelect: () => {
-            setProHeroPreset(null);
-            setCurrentPickingMon(m);
-            advanceRunStage('PICK_SLOT');
-          },
-          onDetail: () => setCurrentPickingMon(m),
-          selectLabel: `${m.name}を勇者モンに選ぶ`,
-          activeClass: 'active:bg-indigo-900/30',
-          extraButtonClass: scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''
-        }));
-        // 供モンの候補は順に出てくる(--i が並び順)。勇者モン選びは一覧が長いので動かさない
-        const enterStyle = pickMode === 'ally' ? {
-          '--i': cardIndex
-        } : null;
-        return /*#__PURE__*/React.createElement("button", {
-          key: m.id,
-          disabled: pickMode === 'hero' && !scenarioPicksHero(m.id),
-          onClick: () => setCurrentPickingMon(m),
-          style: allyCarousel ? {
-            ...MONSTER_CARD_STYLE,
-            ...enterStyle,
-            flex: '0 0 64%'
-          } : {
-            ...MONSTER_CARD_STYLE,
-            ...enterStyle
-          },
-          "data-ph-kind": pickMode === 'ally' ? 'ally' : undefined,
-          "data-ph-on": pickMode === 'ally' && isSel ? '' : undefined,
-          className: `${MONSTER_CARD_CLASS}${pickMode === 'ally' ? ' mh-phase-enter mh-ph-frame' : ''} bg-slate-900 transition-all disabled:opacity-25${pickMode !== 'hero' || scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''}${allyCarousel ? ` snap-center shrink-0 ${focused ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}` : ''} ${isSel ? 'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]' : 'border-slate-800'}`
-        }, renderMonsterCardBody({
-          masu: pickMasu,
-          base: pickBase,
-          mon: m,
-          badge: m.debugOnly ? /*#__PURE__*/React.createElement("div", {
-            className: "absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white"
-          }, "DEBUG\u5C02\u7528") : isSel ? /*#__PURE__*/React.createElement("div", {
-            className: "absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"
-          }, /*#__PURE__*/React.createElement(Check, {
-            size: 12,
-            className: "text-white"
-          })) : null,
-          extra: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-            className: "text-amber-400 font-black flex items-center gap-1 leading-tight",
-            style: {
-              fontSize: '9px'
-            }
-          }, /*#__PURE__*/React.createElement(Zap, {
-            size: 9
-          }), " ", m.unique.name), pickMode === 'hero' ? /*#__PURE__*/React.createElement("div", {
-            className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono",
-            style: {
-              fontSize: '9px'
-            }
-          }, /*#__PURE__*/React.createElement("div", {
-            className: "flex justify-between"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-slate-500"
-          }, "HP"), /*#__PURE__*/React.createElement("span", {
-            className: "text-pink-400 font-bold"
-          }, m.baseHp)), /*#__PURE__*/React.createElement("div", {
-            className: "flex justify-between"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-slate-500"
-          }, "\u529B"), /*#__PURE__*/React.createElement("span", {
-            className: "text-red-400 font-bold"
-          }, m.baseAtk)), /*#__PURE__*/React.createElement("div", {
-            className: "flex justify-between"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-slate-500"
-          }, "\u9632"), /*#__PURE__*/React.createElement("span", {
-            className: "text-emerald-400 font-bold"
-          }, m.baseDef)), /*#__PURE__*/React.createElement("div", {
-            className: "flex justify-between"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-slate-500"
-          }, "G"), /*#__PURE__*/React.createElement("span", {
-            className: "text-amber-400 font-bold"
-          }, m.baseGuts))) : (() => {
-            const preview = allyJoinPreview(m);
-            return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-              className: "mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
-              style: {
-                fontSize: '8px'
-              }
-            }, preview.stats.map(stat => /*#__PURE__*/React.createElement("span", {
-              key: stat.key,
-              className: "min-w-0 block"
-            }, /*#__PURE__*/React.createElement("span", {
-              className: "block text-slate-500 font-black leading-none"
-            }, stat.short), preview.tactics ? stat.diff > 0 ? /*#__PURE__*/React.createElement("span", {
-              className: "block leading-none text-slate-500"
-            }, stat.before, " \u2192") : null : [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
-              className: "block leading-none text-slate-500"
-            }, "\u672C\u6765 +", stat.normalDiff) : null, /*#__PURE__*/React.createElement("b", {
-              className: `block leading-tight ${stat.diff > 0 ? stat.tint : 'text-slate-400'}`,
-              style: {
-                fontSize: '9px'
-              }
-            }, stat.after), preview.tactics ? null : /*#__PURE__*/React.createElement("span", {
-              className: `block leading-none ${stat.diff > 0 ? 'text-emerald-400' : 'text-slate-700'}`
-            }, stat.diff > 0 ? `実際 +${stat.diff}` : '実際 ±0')))), preview.tactics && /*#__PURE__*/React.createElement("div", {
-              "data-tactics-join-catchup": Math.round((preview.catchUp - 1) * 100),
-              "data-tactics-join-turns": preview.catchUpTurns,
-              className: `w-full text-center leading-none font-black ${preview.catchUp > 1 ? 'text-emerald-300' : 'text-slate-500'}`,
-              style: {
-                fontSize: '8px'
-              }
-            }, preview.catchUp > 1 ? `追いつき +${Math.round((preview.catchUp - 1) * 100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）` : '追いつき なし（まだWAVEを抜けていません）'), preview.tactics && /*#__PURE__*/React.createElement("div", {
-              "data-tactics-join-dist-catchup": Math.round((preview.distCatchUp || 0) * 1000) / 10,
-              className: `w-full text-center leading-none font-black ${preview.distCatchUp > 0 ? 'text-cyan-300' : 'text-slate-500'}`,
-              style: {
-                fontSize: '8px'
-              }
-            }, preview.distCatchUp > 0 ? `立つ間合いのボーナスを +${((preview.distCatchUp || 0) * 100).toFixed(1)}% まで引き上げ` : '間合いのボーナスの引き上げ なし'), /*#__PURE__*/React.createElement("div", {
-              className: "mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
-              style: {
-                fontSize: '8px'
-              }
-            }, preview.apt.map(range => /*#__PURE__*/React.createElement("span", {
-              key: range.idx,
-              className: "min-w-0 block"
-            }, /*#__PURE__*/React.createElement("span", {
-              className: "block text-slate-500 font-black leading-none"
-            }, range.label), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === NIGHTMARE_SETTING.id && range.normalDiff !== range.diff ? /*#__PURE__*/React.createElement("span", {
-              className: "block leading-none text-slate-500"
-            }, "\u901A\u5E38 ", formatAptPct(range.normalDiff), " \u2192") : null, /*#__PURE__*/React.createElement("b", {
-              className: `block leading-tight ${range.diff > 0 ? 'text-cyan-300' : range.diff < 0 ? 'text-red-300' : 'text-slate-400'}`
-            }, formatAptPct(range.after)), preview.tactics ? null : /*#__PURE__*/React.createElement("span", {
-              className: `block leading-none ${range.diff > 0 ? 'text-emerald-400' : range.diff < 0 ? 'text-red-400' : 'text-slate-700'}`
-            }, range.diff !== 0 ? `${range.normalDiff !== range.diff ? '実際 ' : ''}${formatAptPct(range.diff)}` : '±0')))));
-          })(), /*#__PURE__*/React.createElement("div", {
-            className: `min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode === 'ally' ? 'mh-ph-btn' : 'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`,
-            style: {
-              fontSize: '10px'
-            }
-          }, "\u8A73\u7D30\u3092\u898B\u308B ", /*#__PURE__*/React.createElement(ChevronRight, {
-            size: 11
-          })))
-        }));
-      })), allyCarousel && /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-center gap-1 py-1 shrink-0"
-      }, list.map((m, i) => /*#__PURE__*/React.createElement("button", {
+    }, label), mon && unit ? /*#__PURE__*/React.createElement(React.Fragment, null, partyFace(mon, 'mx-auto my-0.5'), /*#__PURE__*/React.createElement("span", {
+      className: "block truncate text-[8px] font-black text-white leading-tight"
+    }, mon.masuName || mon.name), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[10px] font-black font-mono leading-tight text-pink-300"
+    }, unit.hp, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500"
+    }, "/", unit.maxHp)), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[9px] font-black font-mono leading-tight text-red-300"
+    }, "\u529B ", unit.atk), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[9px] font-black font-mono leading-tight text-emerald-300"
+    }, "\u9632 ", unit.def), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[9px] font-black font-mono leading-tight text-amber-300"
+    }, "G ", unit.guts, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500"
+    }, "/", unit.maxGuts)), /*#__PURE__*/React.createElement("span", {
+      className: `block text-[9px] font-black font-mono leading-tight ${apt > 0 ? 'text-cyan-300' : apt < 0 ? 'text-red-300' : 'text-slate-500'}`
+    }, formatAptPct(apt))) :
+    /*#__PURE__*/
+    /* ★空いている間合いを 0% と出すと「適性が0なのか、誰もいないのか」が
+       見分けられない(2026-09-21 ユーザー指示) */
+    React.createElement("span", {
+      className: "block py-2 text-[9px] font-black leading-tight text-slate-600"
+    }, "\u7A7A\u304D"));
+  }))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
+  }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, [['ライフ', maxHp, 'text-pink-300'], ['ちから', atk, 'text-red-300'], ['丈夫さ', def, 'text-emerald-300'], ['ガッツ', maxGuts, 'text-amber-300']].map(([label, value, tint]) => /*#__PURE__*/React.createElement("div", {
+    key: label,
+    className: "rounded-lg bg-black/40 px-1 py-1 text-center"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[8px] font-black text-slate-500 leading-none"
+  }, label), /*#__PURE__*/React.createElement("span", {
+    className: `block text-[13px] font-black font-mono leading-tight ${tint}`
+  }, value)))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black tracking-widest text-slate-500 text-left mt-1.5 mb-1"
+  }, "\u9593\u5408\u3044\u9069\u6027\uFF08\u8DDD\u96E2\u88DC\u6B63\uFF09", /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-600"
+  }, "\u30FB\u3044\u307E\u306E\u968A\u5217")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-1"
+  }, RANGE_LABELS.map((label, idx) => {
+    const cur = distTotalBonus(idx);
+    return /*#__PURE__*/React.createElement("div", {
+      key: label,
+      className: "rounded-lg bg-black/40 px-1 py-1 text-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "flex items-center justify-center gap-1"
+    }, partyFace(slots[idx]), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black text-slate-500 leading-none"
+    }, label)), /*#__PURE__*/React.createElement("span", {
+      className: `block text-[12px] font-black font-mono leading-tight ${cur > 0 ? 'text-cyan-300' : cur < 0 ? 'text-red-300' : 'text-slate-400'}`
+    }, formatAptPct(cur)));
+  })))), pickMode === 'hero' && /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2"
+  }, !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1.5"
+  }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, label]) => /*#__PURE__*/React.createElement("button", {
+    key: key,
+    onClick: () => {
+      setHeroPickTab(key);
+      setCurrentPickingMon(null);
+    },
+    "aria-pressed": heroPickTab === key,
+    className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
+  }, label))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
+  }, isProMode(runMode) ? 'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `w-full${pickMode === 'ally' ? ' m-auto' : ''}`
+  }, pickMode === 'ally' && !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
+    className: "mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-slate-500"
+  }, /*#__PURE__*/React.createElement("span", null, "\u5408\u6D41\u3067\u304D\u308B\u5019\u88DC ", (monSelection || []).filter(m => m && !slots.some(x => x && x.id === m.id)).length, "\u4F53"), /*#__PURE__*/React.createElement("span", null, "\u30AB\u30FC\u30C9\u3092\u62BC\u3059\u3068\u8A73\u7D30")), (() => {
+    const allyCarousel = pickMode === 'ally' && isProMode(runMode);
+    // 念のため、すでに編成にいる子は一覧にも出さない(勇者モンがもう一度出ないようにする)
+    const inParty = slots.filter(x => x).map(x => x.id);
+    const savedRawList = pickMode === 'hero' && (heroPickTab === 'base' || isProMode(runMode)) ? getUnlockedBaseMonsterList() : monSelection;
+    const rawList = pickMode === 'hero' ? debugHeroMonsterList(savedRawList) : savedRawList;
+    const list = (pickMode === 'ally' ? rawList.filter(m => m && !inParty.includes(m.id)) : rawList) || [];
+    const stepAlly = delta => {
+      const root = allyCarouselRef.current;
+      if (!root) return;
+      const next = Math.max(0, Math.min(list.length - 1, allyCardIndex + delta));
+      setAllyCardIndex(next);
+      centerCarouselChild(root, next, 'smooth');
+    };
+    return /*#__PURE__*/React.createElement(React.Fragment, null, allyCarousel && /*#__PURE__*/React.createElement("div", {
+      className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1"
+    }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u4F9B\u30E2\u30F3\u3092\u9078\u629E"), allyCarousel && /*#__PURE__*/React.createElement("div", {
+      className: "relative h-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      "aria-label": "\u524D\u306E\u4F9B\u30E2\u30F3",
+      disabled: allyCardIndex === 0,
+      onClick: () => stepAlly(-1),
+      className: "absolute left-0 top-[70px] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
+    }, /*#__PURE__*/React.createElement(ChevronLeft, null)), /*#__PURE__*/React.createElement("button", {
+      "aria-label": "\u6B21\u306E\u4F9B\u30E2\u30F3",
+      disabled: allyCardIndex >= list.length - 1,
+      onClick: () => stepAlly(1),
+      className: "absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
+    }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
+      ref: allyCarousel ? allyCarouselRef : null,
+      onScroll: allyCarousel ? e => {
+        const root = e.currentTarget,
+          c = root.scrollLeft + root.clientWidth / 2;
+        let best = 0,
+          d = Infinity;
+        [...root.children].forEach((card, i) => {
+          const n = Math.abs(card.offsetLeft + card.offsetWidth / 2 - c);
+          if (n < d) {
+            d = n;
+            best = i;
+          }
+        });
+        if (best !== allyCardIndex) setAllyCardIndex(best);
+      } : undefined,
+      className: allyCarousel ? 'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll' : 'grid grid-cols-2 gap-2.5',
+      style: allyCarousel ? {
+        paddingLeft: '18%',
+        paddingRight: '18%',
+        touchAction: 'pan-x pinch-zoom'
+      } : pickMode === 'hero' && isProMode(runMode) ? {
+        display: 'flex',
+        flexDirection: 'column'
+      } : undefined
+    }, list.map((m, cardIndex) => {
+      const isSel = currentPickingMon?.id === m.id;
+      const focused = allyCarousel && cardIndex === allyCardIndex;
+      // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
+      // 以前はこの画面だけ独自に組んでいたため、絆レベルも総合力も限界突破の★も出ず、
+      // 同じマスモンが画面によって違う見た目になっていた。
+      // この画面だけの情報(固有技名・ステータス・詳細への案内)はextraで足す。
+      const pickMasu = m.masuId ? getMasuMon(m.masuId) : null;
+      const pickBase = m.debugOnly ? m : ALL_PLAYER_MONSTERS[m.id] || m;
+      // カードの見た目は「供モンの候補」と同じ共通部品(renderProMonsterRow)を通す
+      if (pickMode === 'hero' && isProMode(runMode)) return /*#__PURE__*/React.createElement(React.Fragment, {
+        key: m.id
+      }, renderProMonsterRow({
+        mon: m,
+        selected: proHeroPreset?.heroBaseId === m.id,
+        disabled: !scenarioPicksHero(m.id),
+        onSelect: () => {
+          setProHeroPreset(null);
+          setCurrentPickingMon(m);
+          advanceRunStage('PICK_SLOT');
+        },
+        onDetail: () => setCurrentPickingMon(m),
+        selectLabel: `${m.name}を勇者モンに選ぶ`,
+        activeClass: 'active:bg-indigo-900/30',
+        extraButtonClass: scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''
+      }));
+      // 供モンの候補は順に出てくる(--i が並び順)。勇者モン選びは一覧が長いので動かさない
+      const enterStyle = pickMode === 'ally' ? {
+        '--i': cardIndex
+      } : null;
+      return /*#__PURE__*/React.createElement("button", {
         key: m.id,
-        "aria-label": `${i + 1}体目`,
-        onClick: () => stepAlly(i - allyCardIndex),
-        className: `w-1.5 h-1.5 rounded-full ${i === allyCardIndex ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
-      }))));
-    })())), currentPickingMon && (() => {
-      // ★合流の見せ方は allyJoinPreview に1か所だけ置く。ここで何度も呼ぶと、
-      //   タクティクスかどうかの分岐が増えて食い違う
-      const joinPreview = pickMode === 'hero' ? null : allyJoinPreview(currentPickingMon);
-      return renderMonsterDetailModal({
-        mon: currentPickingMon,
-        masu: currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId) : null,
-        onClose: () => setCurrentPickingMon(null),
-        zIndex: 31000,
-        // 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする
-        paddingTop: battleTutorial ? 'calc(4.25rem + env(safe-area-inset-top))' : undefined,
-        detailOpts: {
-          // 一覧カードと同じ allyJoinPreview を通す。以前はここだけ plusStats をそのまま足していたため、
-          // ULTIMATE(累計ターンで加算が下がる)では詳細の数値と実際に増える量が食い違っていた
-          // ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
-          //   before は素の値・after は盤面に入る値(追いつき補正込み)。見出しもそう書く
-          statValues: joinPreview ? joinPreview.stats.map(stat => [stat.label, `${stat.before} → ${stat.after}${stat.diff > 0 ? `（+${stat.diff}）` : ''}`, stat.diff > 0 ? stat.tint : 'text-slate-400']) : null,
-          statTitle: pickMode === 'hero' ? '基本ステータス' : joinPreview?.tactics ? '基本ステータス(素の値 → 盤面に入る値)' : '基本ステータス(現在 → 合流後)',
-          // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる。
-          // ★タクティクスは合算しないので、いまの値は 0 から始めて「その子のぶん」を出す
-          aptCurrentPct: joinPreview?.tactics ? [0, 0, 0, 0] : [0, 1, 2, 3].map(i => distTotalBonus(i)),
-          // 加算量も実際に足される値(NIGHTMAREの半減込み)で出す
-          aptDeltaPct: joinPreview ? joinPreview.apt.map(range => range.diff) : null,
-          aptPointsLabel: currentPickingMon.masuId ? /*#__PURE__*/React.createElement("div", {
-            className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
-          }, /*#__PURE__*/React.createElement(Sparkles, {
-            size: 9
-          }), "\u5F37\u5316P: ", getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) : null,
-          aptExtra: (idx, grade) => {
-            const pts = currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0 : 0;
-            const canUp = pts > 0 && DIST_APTITUDE_GRADES.indexOf(grade) < DIST_APTITUDE_GRADES.length - 1;
-            return canUp ? /*#__PURE__*/React.createElement("button", {
-              onClick: () => {
-                const updated = spendAptPoint(currentPickingMon.masuId, idx);
-                if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
-              },
-              className: "w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95"
-            }, "+1") : null;
-          },
-          extraAfterApt: /*#__PURE__*/React.createElement(React.Fragment, null, currentPickingMon.masuId && (getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("div", {
-            className: "bg-black/40 p-2 rounded-xl border border-emerald-500/30"
-          }, /*#__PURE__*/React.createElement("div", {
-            className: "text-[7px] text-emerald-400 uppercase font-bold mb-1"
-          }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316(\u5F37\u5316P 1\u3064\u306B\u3064\u304D\u4F7F\u7528\u30FB\u8ABF\u6574\u4E2D)"), /*#__PURE__*/React.createElement("div", {
-            className: "grid grid-cols-4 gap-1"
-          }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => /*#__PURE__*/React.createElement("button", {
-            key: key,
+        disabled: pickMode === 'hero' && !scenarioPicksHero(m.id),
+        onClick: () => setCurrentPickingMon(m),
+        style: allyCarousel ? {
+          ...MONSTER_CARD_STYLE,
+          ...enterStyle,
+          flex: '0 0 64%'
+        } : {
+          ...MONSTER_CARD_STYLE,
+          ...enterStyle
+        },
+        className: `${MONSTER_CARD_CLASS}${pickMode === 'ally' ? ' mh-phase-enter' : ''} bg-slate-900 transition-all disabled:opacity-25${pickMode !== 'hero' || scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''}${allyCarousel ? ` snap-center shrink-0 ${focused ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}` : ''} ${isSel ? 'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]' : 'border-slate-800'}`
+      }, renderMonsterCardBody({
+        masu: pickMasu,
+        base: pickBase,
+        mon: m,
+        badge: m.debugOnly ? /*#__PURE__*/React.createElement("div", {
+          className: "absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white"
+        }, "DEBUG\u5C02\u7528") : isSel ? /*#__PURE__*/React.createElement("div", {
+          className: "absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"
+        }, /*#__PURE__*/React.createElement(Check, {
+          size: 12,
+          className: "text-white"
+        })) : null,
+        extra: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+          className: "text-amber-400 font-black flex items-center gap-1 leading-tight",
+          style: {
+            fontSize: '9px'
+          }
+        }, /*#__PURE__*/React.createElement(Zap, {
+          size: 9
+        }), " ", m.unique.name), pickMode === 'hero' ? /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono",
+          style: {
+            fontSize: '9px'
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500"
+        }, "HP"), /*#__PURE__*/React.createElement("span", {
+          className: "text-pink-400 font-bold"
+        }, m.baseHp)), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500"
+        }, "\u529B"), /*#__PURE__*/React.createElement("span", {
+          className: "text-red-400 font-bold"
+        }, m.baseAtk)), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500"
+        }, "\u9632"), /*#__PURE__*/React.createElement("span", {
+          className: "text-emerald-400 font-bold"
+        }, m.baseDef)), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500"
+        }, "G"), /*#__PURE__*/React.createElement("span", {
+          className: "text-amber-400 font-bold"
+        }, m.baseGuts))) : (() => {
+          const preview = allyJoinPreview(m);
+          return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+            className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
+            style: {
+              fontSize: '8px'
+            }
+          }, preview.stats.map(stat => /*#__PURE__*/React.createElement("span", {
+            key: stat.key,
+            className: "min-w-0 block"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "block text-slate-500 font-black leading-none"
+          }, stat.short), preview.tactics ? stat.diff > 0 ? /*#__PURE__*/React.createElement("span", {
+            className: "block leading-none text-slate-500"
+          }, stat.before, " \u2192") : null : [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
+            className: "block leading-none text-slate-500"
+          }, "\u672C\u6765 +", stat.normalDiff) : null, /*#__PURE__*/React.createElement("b", {
+            className: `block leading-tight ${stat.diff > 0 ? stat.tint : 'text-slate-400'}`,
+            style: {
+              fontSize: '9px'
+            }
+          }, stat.after), preview.tactics ? null : /*#__PURE__*/React.createElement("span", {
+            className: `block leading-none ${stat.diff > 0 ? 'text-emerald-400' : 'text-slate-700'}`
+          }, stat.diff > 0 ? `実際 +${stat.diff}` : '実際 ±0')))), preview.tactics && /*#__PURE__*/React.createElement("div", {
+            "data-tactics-join-catchup": Math.round((preview.catchUp - 1) * 100),
+            "data-tactics-join-turns": preview.catchUpTurns,
+            className: `w-full text-center leading-none font-black ${preview.catchUp > 1 ? 'text-emerald-300' : 'text-slate-500'}`,
+            style: {
+              fontSize: '8px'
+            }
+          }, preview.catchUp > 1 ? `追いつき +${Math.round((preview.catchUp - 1) * 100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）` : '追いつき なし（まだWAVEを抜けていません）'), preview.tactics && /*#__PURE__*/React.createElement("div", {
+            "data-tactics-join-dist-catchup": Math.round((preview.distCatchUp || 0) * 1000) / 10,
+            className: `w-full text-center leading-none font-black ${preview.distCatchUp > 0 ? 'text-cyan-300' : 'text-slate-500'}`,
+            style: {
+              fontSize: '8px'
+            }
+          }, preview.distCatchUp > 0 ? `立つ間合いのボーナスを +${((preview.distCatchUp || 0) * 100).toFixed(1)}% まで引き上げ` : '間合いのボーナスの引き上げ なし'), /*#__PURE__*/React.createElement("div", {
+            className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
+            style: {
+              fontSize: '8px'
+            }
+          }, preview.apt.map(range => /*#__PURE__*/React.createElement("span", {
+            key: range.idx,
+            className: "min-w-0 block"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "block text-slate-500 font-black leading-none"
+          }, range.label), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === NIGHTMARE_SETTING.id && range.normalDiff !== range.diff ? /*#__PURE__*/React.createElement("span", {
+            className: "block leading-none text-slate-500"
+          }, "\u901A\u5E38 ", formatAptPct(range.normalDiff), " \u2192") : null, /*#__PURE__*/React.createElement("b", {
+            className: `block leading-tight ${range.diff > 0 ? 'text-cyan-300' : range.diff < 0 ? 'text-red-300' : 'text-slate-400'}`
+          }, formatAptPct(range.after)), preview.tactics ? null : /*#__PURE__*/React.createElement("span", {
+            className: `block leading-none ${range.diff > 0 ? 'text-emerald-400' : range.diff < 0 ? 'text-red-400' : 'text-slate-700'}`
+          }, range.diff !== 0 ? `${range.normalDiff !== range.diff ? '実際 ' : ''}${formatAptPct(range.diff)}` : '±0')))));
+        })(), /*#__PURE__*/React.createElement("div", {
+          className: "min-h-[32px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black mt-1 flex items-center justify-center gap-1",
+          style: {
+            fontSize: '10px'
+          }
+        }, "\u8A73\u7D30\u3092\u898B\u308B ", /*#__PURE__*/React.createElement(ChevronRight, {
+          size: 11
+        })))
+      }));
+    })), allyCarousel && /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-center gap-1 py-1 shrink-0"
+    }, list.map((m, i) => /*#__PURE__*/React.createElement("button", {
+      key: m.id,
+      "aria-label": `${i + 1}体目`,
+      onClick: () => stepAlly(i - allyCardIndex),
+      className: `w-1.5 h-1.5 rounded-full ${i === allyCardIndex ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+    }))));
+  })())), currentPickingMon && (() => {
+    // ★合流の見せ方は allyJoinPreview に1か所だけ置く。ここで何度も呼ぶと、
+    //   タクティクスかどうかの分岐が増えて食い違う
+    const joinPreview = pickMode === 'hero' ? null : allyJoinPreview(currentPickingMon);
+    return renderMonsterDetailModal({
+      mon: currentPickingMon,
+      masu: currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId) : null,
+      onClose: () => setCurrentPickingMon(null),
+      zIndex: 31000,
+      // 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする
+      paddingTop: battleTutorial ? 'calc(4.25rem + env(safe-area-inset-top))' : undefined,
+      detailOpts: {
+        // 一覧カードと同じ allyJoinPreview を通す。以前はここだけ plusStats をそのまま足していたため、
+        // ULTIMATE(累計ターンで加算が下がる)では詳細の数値と実際に増える量が食い違っていた
+        // ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
+        //   before は素の値・after は盤面に入る値(追いつき補正込み)。見出しもそう書く
+        statValues: joinPreview ? joinPreview.stats.map(stat => [stat.label, `${stat.before} → ${stat.after}${stat.diff > 0 ? `（+${stat.diff}）` : ''}`, stat.diff > 0 ? stat.tint : 'text-slate-400']) : null,
+        statTitle: pickMode === 'hero' ? '基本ステータス' : joinPreview?.tactics ? '基本ステータス(素の値 → 盤面に入る値)' : '基本ステータス(現在 → 合流後)',
+        // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる。
+        // ★タクティクスは合算しないので、いまの値は 0 から始めて「その子のぶん」を出す
+        aptCurrentPct: joinPreview?.tactics ? [0, 0, 0, 0] : [0, 1, 2, 3].map(i => distTotalBonus(i)),
+        // 加算量も実際に足される値(NIGHTMAREの半減込み)で出す
+        aptDeltaPct: joinPreview ? joinPreview.apt.map(range => range.diff) : null,
+        aptPointsLabel: currentPickingMon.masuId ? /*#__PURE__*/React.createElement("div", {
+          className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
+        }, /*#__PURE__*/React.createElement(Sparkles, {
+          size: 9
+        }), "\u5F37\u5316P: ", getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) : null,
+        aptExtra: (idx, grade) => {
+          const pts = currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0 : 0;
+          const canUp = pts > 0 && DIST_APTITUDE_GRADES.indexOf(grade) < DIST_APTITUDE_GRADES.length - 1;
+          return canUp ? /*#__PURE__*/React.createElement("button", {
             onClick: () => {
-              const updated = spendStatPoint(currentPickingMon.masuId, key);
+              const updated = spendAptPoint(currentPickingMon.masuId, idx);
               if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
             },
-            className: "flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-[7px] text-emerald-300 font-black"
-          }, label), /*#__PURE__*/React.createElement("span", {
-            className: "text-[10px] text-white font-black"
-          }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && !currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
-            className: "bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center"
-          }, pickMode === 'hero' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'), currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
-            className: "rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/50 p-2 text-center text-[9px] font-black text-fuchsia-200"
-          }, "DEBUG\u5C02\u7528\u30FB\u4FDD\u5B58\u3001\u80B2\u6210\u3001\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u306E\u5BFE\u8C61\u5916"))
+            className: "w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95"
+          }, "+1") : null;
         },
-        footer: /*#__PURE__*/React.createElement("div", {
-          className: "flex gap-2 shrink-0"
-        }, /*#__PURE__*/React.createElement("button", {
-          onClick: () => setCurrentPickingMon(null),
-          className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95"
-        }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-          onClick: () => advanceRunStage('PICK_SLOT'),
-          className: `flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`
-        }, pickMode === 'hero' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
-      });
-    })())
-  );
+        extraAfterApt: /*#__PURE__*/React.createElement(React.Fragment, null, currentPickingMon.masuId && (getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("div", {
+          className: "bg-black/40 p-2 rounded-xl border border-emerald-500/30"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "text-[7px] text-emerald-400 uppercase font-bold mb-1"
+        }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316(\u5F37\u5316P 1\u3064\u306B\u3064\u304D\u4F7F\u7528\u30FB\u8ABF\u6574\u4E2D)"), /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-4 gap-1"
+        }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => /*#__PURE__*/React.createElement("button", {
+          key: key,
+          onClick: () => {
+            const updated = spendStatPoint(currentPickingMon.masuId, key);
+            if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
+          },
+          className: "flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-[7px] text-emerald-300 font-black"
+        }, label), /*#__PURE__*/React.createElement("span", {
+          className: "text-[10px] text-white font-black"
+        }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && !currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
+          className: "bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center"
+        }, pickMode === 'hero' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'), currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
+          className: "rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/50 p-2 text-center text-[9px] font-black text-fuchsia-200"
+        }, "DEBUG\u5C02\u7528\u30FB\u4FDD\u5B58\u3001\u80B2\u6210\u3001\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u306E\u5BFE\u8C61\u5916"))
+      },
+      footer: /*#__PURE__*/React.createElement("div", {
+        className: "flex gap-2 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setCurrentPickingMon(null),
+        className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95"
+      }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+        onClick: () => advanceRunStage('PICK_SLOT'),
+        className: `flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`
+      }, pickMode === 'hero' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
+    });
+  })());
 }
 function PickProAlliesScreen({
   advanceRunStage,
@@ -37659,15 +37772,15 @@ function PickSlotScreen({
   return (
     /*#__PURE__*/
     // mh-phase … 背の低い器(横持ち)で、吹き出しと説明を畳んで4つの枠を残す(70-bootstrap.jsx)
-    // mh-ph-* … タクティクス新盤面と同じ飾り。4つの枠は盤面と同じ距離の色(零=赤・近=黄・中=緑・遠=青)と模様
     React.createElement("div", {
       style: {
         position: "absolute",
         inset: 0,
-        zIndex: 30000,
-        '--ph': '129,140,248'
+        backgroundColor: "#020617",
+        backgroundImage: 'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(129,140,248,.18), transparent 70%)',
+        zIndex: 30000
       },
-      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-4 text-center overflow-hidden"
+      className: "mh-phase absolute inset-0 z-[3000] flex flex-col items-center p-4 text-center overflow-hidden"
     }, phasePlan && /*#__PURE__*/React.createElement(PhaseSteps, {
       plan: phasePlan,
       current: "slot",
@@ -37675,47 +37788,37 @@ function PickSlotScreen({
       className: "shrink-0 mb-2"
     }), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 flex flex-col items-center"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "relative mb-2 flex items-center justify-center"
-    }, /*#__PURE__*/React.createElement("span", {
-      "aria-hidden": "true",
-      className: "mh-ph-rune"
-    }), /*#__PURE__*/React.createElement("span", {
-      "aria-hidden": "true",
-      className: "mh-ph-floor"
-    }), mon?.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    }, mon?.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
       baseId: mon.id,
       src: mon.imgUrl,
       alt: "mon",
       masuColors: mon.colors,
-      className: "mh-phase-hero relative z-10 shrink-0 w-24 h-24 object-contain animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]"
+      className: "mh-phase-hero shrink-0 w-24 h-24 mb-2 object-contain animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]"
     }) : /*#__PURE__*/React.createElement("div", {
-      className: "mh-phase-hero relative z-10 text-6xl animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]"
-    }, mon?.emoji)), monName && /*#__PURE__*/React.createElement("div", {
+      className: "mh-phase-hero text-6xl mb-2 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]"
+    }, mon?.emoji), monName && /*#__PURE__*/React.createElement("div", {
       className: "text-[12px] font-black text-white leading-tight"
     }, monName, /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400"
-    }, "\u3092\u3069\u3053\u306B\u7F6E\u304F\uFF1F")), /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-heading mt-0.5"
-    }, /*#__PURE__*/React.createElement("h2", {
-      className: "mh-ph-title text-lg font-black italic uppercase tracking-widest"
-    }, "\u914D\u7F6E\u5834\u6240\u3092\u6C7A\u5B9A\u305B\u3088"))), /*#__PURE__*/React.createElement("div", {
+    }, "\u3092\u3069\u3053\u306B\u7F6E\u304F\uFF1F")), /*#__PURE__*/React.createElement("h2", {
+      className: "text-lg font-black mt-0.5 italic uppercase tracking-widest text-indigo-400"
+    }, "\u914D\u7F6E\u5834\u6240\u3092\u6C7A\u5B9A\u305B\u3088")), /*#__PURE__*/React.createElement("div", {
       className: "mh-phase-tall shrink-0 w-full max-w-xs mt-1 mb-1 text-left"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "pickSlot",
       compact: true
     })), /*#__PURE__*/React.createElement("div", {
       "data-slot-aptitude": true,
-      className: "mh-phase-tall mh-ph-panel shrink-0 w-full max-w-xs mt-1 px-2 py-1.5"
+      className: "mh-phase-tall shrink-0 w-full max-w-xs mt-1 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-panel-label text-[9px] font-black text-left mb-1"
+      className: "text-[9px] font-black tracking-widest text-slate-500 text-left mb-1"
     }, "\u3053\u306E\u5B50\u306E\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-1"
     }, RANGE_LABELS.map((label, i) => {
       const grade = getDistAptitude(mon, i);
       return /*#__PURE__*/React.createElement("span", {
         key: label,
-        className: "mh-ph-cell rounded-lg px-1 py-1"
+        className: "rounded-lg bg-black/40 px-1 py-1"
       }, /*#__PURE__*/React.createElement("span", {
         className: "block text-[9px] font-black text-slate-400 leading-none"
       }, label), /*#__PURE__*/React.createElement("span", {
@@ -37740,39 +37843,31 @@ function PickSlotScreen({
         style: {
           '--i': i
         },
-        "data-ph-range": i,
-        "data-ph-on": open && allowed ? '' : undefined,
-        className: `mh-phase-enter mh-phase-card mh-ph-frame relative overflow-hidden min-h-[96px] rounded-2xl border-2 flex flex-col items-center justify-center gap-1 px-1 py-2 transition-all active:scale-90${scenarioPicksSlot(i) ? battleTutorialSpotClass('slots') : ''} ${open ? allowed ? '' : 'opacity-20' : 'opacity-75 saturate-50'}`
+        className: `mh-phase-enter mh-phase-card relative min-h-[96px] rounded-2xl border-2 flex flex-col items-center justify-center gap-1 px-1 py-2 transition-all active:scale-90${scenarioPicksSlot(i) ? battleTutorialSpotClass('slots') : ''} ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${open ? allowed ? 'ring-2 ring-white/25 shadow-[0_0_18px_rgba(255,255,255,.12)]' : 'opacity-20' : 'opacity-70 saturate-50'}`
       }, /*#__PURE__*/React.createElement("span", {
-        "aria-hidden": "true",
-        className: "mh-ph-sparkle"
-      }), /*#__PURE__*/React.createElement("span", {
-        className: `relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/30 shadow-md`,
-        style: {
-          boxShadow: '0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'
-        }
+        className: `text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`
       }, RANGE_LABELS[i], "\u8DDD\u96E2"), open ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(PlusCircle, {
-        className: `relative text-white/70${allowed ? ' animate-pulse' : ''}`,
+        className: `text-white/60${allowed ? ' animate-pulse' : ''}`,
         size: 20
       }), /*#__PURE__*/React.createElement("span", {
-        className: `relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`
+        className: `text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`
       }, grade, " \u5408\u6D41\u5F8C ", formatAptPct(after))) : /*#__PURE__*/React.createElement(React.Fragment, null, s.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
         masuColors: s.colors,
-        className: "relative w-10 h-10 object-contain drop-shadow-md"
+        className: "w-10 h-10 object-contain drop-shadow-md"
       }) : /*#__PURE__*/React.createElement("span", {
-        className: "relative text-2xl drop-shadow-md"
+        className: "text-2xl drop-shadow-md"
       }, s.emoji), /*#__PURE__*/React.createElement("span", {
-        className: "relative max-w-full truncate text-[9px] font-black text-white/90"
+        className: "max-w-full truncate text-[9px] font-black text-white/90"
       }, s.masuName || s.name, /*#__PURE__*/React.createElement("span", {
         className: "text-white/50"
       }, "\u30FB\u914D\u7F6E\u305A\u307F"))));
     })), /*#__PURE__*/React.createElement("button", {
       disabled: !!battleTutorial,
       onClick: onRepick,
-      className: "mh-ph-btn shrink-0 mt-2 min-h-[44px] px-4 rounded-full flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"
+      className: "shrink-0 mt-2 min-h-[44px] px-4 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"
     }, /*#__PURE__*/React.createElement(ArrowLeft, {
       size: 14
     }), " \u30E2\u30F3\u30B9\u30BF\u30FC\u3092\u9078\u3073\u76F4\u3059"))
@@ -37792,32 +37887,28 @@ function PickTeachingScreen({
 }) {
   // レベルは 0〜2 の3段。カードにも詳細にも同じ段の点を出して、どこまで育つかを見せる
   const TEACHING_MAX_LEVEL = 2;
-  // 段は菱形の宝石(70-bootstrap.jsx の mh-ph-pip)。色は近くの data-ph-kind(新規=緑・強化=紫・MAX=金)から取る
   const levelPips = (filled, next) => /*#__PURE__*/React.createElement("span", {
-    className: "flex items-center justify-center gap-2 py-0.5",
+    className: "flex items-center justify-center gap-1",
     "aria-hidden": "true"
   }, Array.from({
     length: TEACHING_MAX_LEVEL + 1
   }).map((_, i) => /*#__PURE__*/React.createElement("i", {
     key: i,
-    className: "mh-ph-pip",
-    "data-on": i < filled ? '' : undefined,
-    "data-next": i === next ? '' : undefined
+    className: `block h-1.5 w-4 rounded-full ${i < filled ? 'bg-purple-300' : i === next ? 'bg-amber-300 animate-pulse' : 'bg-slate-700'}`
   })));
-  const kindOf = (owned, isMax) => owned ? isMax ? 'max' : 'up' : 'new';
   return (
     /*#__PURE__*/
     // mh-phase … 背の低い器(横持ち)で吹き出しと説明を畳む目印(70-bootstrap.jsx の @container)。
     // safe-area は body が持っているので、ここでは足さない(41-screen-ui.jsx の注意書き)
-    // mh-ph-* … タクティクス新盤面と同じ飾り(濃紺の地・金の縁・回る光の縁・宝石)。--ph は画面の識別色
     React.createElement("div", {
       style: {
         position: "absolute",
         inset: 0,
-        zIndex: 30000,
-        '--ph': '192,132,252'
+        backgroundColor: "#020617",
+        backgroundImage: 'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(192,132,252,.18), transparent 70%)',
+        zIndex: 30000
       },
-      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] px-4 py-3 flex flex-col items-center overflow-hidden"
+      className: "mh-phase absolute inset-0 z-[3000] px-4 py-3 flex flex-col items-center overflow-hidden"
     }, /*#__PURE__*/React.createElement("div", {
       className: "mb-2 text-center shrink-0 flex flex-col items-center gap-1"
     }, phasePlan ? /*#__PURE__*/React.createElement(PhaseSteps, {
@@ -37825,12 +37916,10 @@ function PickTeachingScreen({
       current: "teaching",
       nextWave: wave > 0 ? wave + 1 : null
     }) : /*#__PURE__*/React.createElement("span", {
-      className: "mh-ph-plate"
-    }, "ASSIST CARD"), /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-heading"
-    }, /*#__PURE__*/React.createElement("h2", {
-      className: "mh-ph-title text-xl font-black italic"
-    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u306E\u7D99\u627F\u30FB\u5F37\u5316")), /*#__PURE__*/React.createElement("p", {
+      className: "rounded-full border border-purple-300/40 bg-purple-400/10 px-2.5 py-0.5 text-[9px] font-black tracking-[.2em] text-purple-200"
+    }, "ASSIST CARD"), /*#__PURE__*/React.createElement("h2", {
+      className: "text-xl font-black text-purple-300 italic drop-shadow-[0_0_10px_rgba(192,132,252,.5)]"
+    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u306E\u7D99\u627F\u30FB\u5F37\u5316"), /*#__PURE__*/React.createElement("p", {
       className: "mh-phase-tall text-[10px] font-bold text-slate-400"
     }, "1\u679A\u3048\u3089\u3093\u3067\u3001\u65B0\u3057\u304F\u899A\u3048\u308B\u304B\u3001\u6301\u3063\u3066\u3044\u308B\u30AB\u30FC\u30C9\u3092\u5F37\u5316\u3057\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
       className: "mh-phase-tall shrink-0 w-full max-w-sm mb-2"
@@ -37839,16 +37928,16 @@ function PickTeachingScreen({
       compact: true
     })), ownedTeachings.length > 0 && /*#__PURE__*/React.createElement("div", {
       "data-teaching-owned": true,
-      className: "mh-ph-panel shrink-0 w-full max-w-sm mb-2 px-2 py-1.5"
+      className: "shrink-0 w-full max-w-sm mb-2 rounded-2xl border border-purple-400/20 bg-slate-900/60 px-2 py-1.5"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-panel-label text-[8px] font-black mb-1"
+      className: "text-[8px] font-black tracking-widest text-slate-500 mb-1"
     }, "\u6240\u6301\u4E2D\u306E\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9"), /*#__PURE__*/React.createElement("div", {
       className: "flex flex-wrap gap-1.5"
     }, ownedTeachings.map(ot => /*#__PURE__*/React.createElement("span", {
       key: ot.uid || ot.id,
-      className: "mh-ph-cell flex min-w-0 items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2"
+      className: "flex min-w-0 items-center gap-1 rounded-full bg-black/40 py-0.5 pl-0.5 pr-2"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "mh-ph-medal flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full"
+      className: "flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full"
     }, cardIconNode(ot.icon, 22, ot.id)), /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-black text-purple-100 truncate max-w-[6.5rem]"
     }, BREEDER_EVO_NAMES[ot.id]?.[ot.evoLevel] || ot.name), /*#__PURE__*/React.createElement("span", {
@@ -37864,7 +37953,6 @@ function PickTeachingScreen({
       // カードに出す効果は「選んだあとの段」のもの。MAXは今の段のまま
       const shownLevel = owned ? isMax ? level : level + 1 : 0;
       const shownDesc = getFullEvolutionDetails(t)[shownLevel]?.desc || '';
-      // 強化できるカードは縁が回って光る(タクティクスの選んだ枠と同じ)。新規=緑・強化=紫・MAX=金の縁と模様
       return /*#__PURE__*/React.createElement("button", {
         key: t.id,
         disabled: !scenarioPicksTeaching(t.id),
@@ -37872,31 +37960,20 @@ function PickTeachingScreen({
         style: {
           '--i': cardIndex
         },
-        "data-ph-kind": kindOf(owned, isMax),
-        "data-ph-on": owned && !isMax ? '' : undefined,
-        className: `mh-phase-enter mh-ph-frame relative p-3 pt-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all min-h-[176px] active:scale-95 disabled:opacity-20${scenarioPicksTeaching(t.id) ? battleTutorialSpotClass('teachings') : ''}`
+        className: `mh-phase-enter relative p-3 pt-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all min-h-[176px] disabled:opacity-20${scenarioPicksTeaching(t.id) ? battleTutorialSpotClass('teachings') : ''} ${owned ? isMax ? 'bg-amber-950/30 border-amber-400/70' : 'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]' : 'bg-slate-900/80 border-slate-700 active:scale-95'}`
       }, /*#__PURE__*/React.createElement("span", {
-        "aria-hidden": "true",
-        className: "mh-ph-sparkle"
-      }), owned && !isMax && /*#__PURE__*/React.createElement("span", {
-        "aria-hidden": "true",
-        className: "mh-ph-shine"
-      }), /*#__PURE__*/React.createElement("span", {
         style: {
           fontSize: '44px'
         },
-        className: "mh-ph-medal relative rounded-2xl p-1 leading-none"
+        className: "leading-none"
       }, cardIconNode(t.icon, 52, t.id)), /*#__PURE__*/React.createElement("div", {
-        className: "relative text-[11px] font-black leading-tight flex flex-col items-center justify-center",
-        style: {
-          textShadow: '0 1px 0 rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.6)'
-        }
+        className: "text-[11px] font-black leading-tight flex flex-col items-center justify-center"
       }, owned && !isMax && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-amber-400 mb-0.5 line-through"
       }, BREEDER_EVO_NAMES[t.id][level]), /*#__PURE__*/React.createElement("div", {
         className: owned ? "text-white" : "text-slate-100"
       }, owned ? isMax ? BREEDER_EVO_NAMES[t.id][level] : BREEDER_EVO_NAMES[t.id][level + 1] : BREEDER_EVO_NAMES[t.id][0])), levelPips(owned ? level + 1 : 0, isMax ? -1 : shownLevel), /*#__PURE__*/React.createElement("div", {
-        className: "mh-ph-cell relative w-full flex-1 rounded-lg px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-200",
+        className: "w-full flex-1 rounded-lg bg-black/30 px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-300",
         style: {
           display: '-webkit-box',
           WebkitLineClamp: 3,
@@ -37904,13 +37981,7 @@ function PickTeachingScreen({
           overflow: 'hidden'
         }
       }, shownDesc), /*#__PURE__*/React.createElement("span", {
-        className: "absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[8px] font-black text-white",
-        style: {
-          border: '1px solid #f3d27a',
-          background: 'linear-gradient(180deg, rgb(var(--mh-rc2)), rgb(var(--mh-rc)) 55%, rgba(var(--mh-rc),.7))',
-          boxShadow: '0 0 0 1px rgba(30,18,4,.9), 0 0 10px rgba(var(--mh-rc),.7)',
-          textShadow: '0 1px 2px rgba(0,0,0,.9)'
-        }
+        className: `absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[8px] font-black shadow-lg ${owned ? isMax ? 'bg-amber-500 text-slate-950' : 'bg-purple-500 text-white' : 'bg-emerald-500 text-slate-950'}`
       }, owned ? isMax ? "MAXレベル" : `強化 Lv.${level}→${level + 1}` : "新規習得"));
     }))), selectedTeachingCard && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[3100] flex items-center justify-center p-6",
@@ -37921,27 +37992,14 @@ function PickTeachingScreen({
         zIndex: 31000
       }
     }, /*#__PURE__*/React.createElement("div", {
-      "data-ph-kind": (() => {
-        const o = ownedTeachings.find(ot => ot.id === selectedTeachingCard.id);
-        return kindOf(o, !!o && o.evoLevel >= TEACHING_MAX_LEVEL);
-      })(),
-      "data-ph-on": "",
-      className: "mh-phase-pop mh-ph-frame relative rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 h-auto max-h-full"
-    }, /*#__PURE__*/React.createElement("span", {
-      "aria-hidden": "true",
-      className: "mh-ph-sparkle"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "relative shrink-0 flex items-center justify-center",
+      className: "mh-phase-pop bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 shadow-[0_0_40px_rgba(168,85,247,.35)] h-auto max-h-full",
       style: {
-        '--ph': '243,210,122'
+        backgroundImage: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(192,132,252,.18), transparent 70%)'
       }
-    }, /*#__PURE__*/React.createElement("span", {
-      "aria-hidden": "true",
-      className: "mh-ph-rune"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "mh-ph-medal relative z-10 rounded-2xl p-1.5 text-6xl leading-none"
-    }, cardIconNode(selectedTeachingCard.icon, 76, selectedTeachingCard.id))), /*#__PURE__*/React.createElement("h3", {
-      className: "mh-ph-title relative text-lg font-black shrink-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-6xl shrink-0"
+    }, cardIconNode(selectedTeachingCard.icon, 76, selectedTeachingCard.id)), /*#__PURE__*/React.createElement("h3", {
+      className: "text-lg font-black text-white shrink-0"
     }, (() => {
       const t = selectedTeachingCard;
       const owned = ownedTeachings.find(ot => ot.id === t.id);
@@ -37956,7 +38014,7 @@ function PickTeachingScreen({
         className: `text-[10px] font-black ${isMax ? 'text-amber-300' : owned ? 'text-purple-200' : 'text-emerald-300'}`
       }, owned ? isMax ? 'MAXレベルです' : `Lv.${level} → Lv.${level + 1} に強化` : '新しく習得します'));
     })(), /*#__PURE__*/React.createElement("div", {
-      className: "relative w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1"
+      className: "w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1"
     }, getFullEvolutionDetails(selectedTeachingCard).map(info => {
       const owned = ownedTeachings.find(ot => ot.id === selectedTeachingCard.id);
       const currentLvl = owned ? owned.evoLevel : -1;
@@ -37964,7 +38022,7 @@ function PickTeachingScreen({
       const isNext = info.lvl === currentLvl + 1;
       return /*#__PURE__*/React.createElement("div", {
         key: info.lvl,
-        className: `p-2 rounded-xl border ${isCurrent ? 'bg-purple-900/50 border-purple-400' : isNext ? 'bg-amber-900/30 border-amber-400/70 shadow-[0_0_12px_rgba(243,210,122,.3)]' : 'mh-ph-cell border-white/5'}`
+        className: `p-2 rounded-xl border ${isCurrent ? 'bg-purple-900/50 border-purple-400' : isNext ? 'bg-amber-900/30 border-amber-500/50' : 'bg-black/30 border-white/5'}`
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between items-center mb-1"
       }, /*#__PURE__*/React.createElement("span", {
@@ -37977,13 +38035,13 @@ function PickTeachingScreen({
         className: "text-[8px] text-slate-300"
       }, info.desc));
     })), /*#__PURE__*/React.createElement("div", {
-      className: "relative flex gap-2 w-full mt-auto shrink-0"
+      className: "flex gap-2 w-full mt-auto shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setSelectedTeachingCard(null),
-      className: "mh-ph-btn flex-1 min-h-[44px] py-3 rounded-xl font-bold text-xs"
+      className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
     }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: () => confirmPickTeaching(),
-      className: "mh-ph-btn-gold flex-1 min-h-[44px] py-3 rounded-xl font-black text-sm"
+      className: "flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs"
     }, ownedTeachings.find(ot => ot.id === selectedTeachingCard.id) ? "強化する" : "習得する")))))
   );
 }
@@ -38020,38 +38078,29 @@ function UpgradeSkillScreen({
   return (
     /*#__PURE__*/
     // mh-phase … 背の低い器(横持ち)で説明を畳む目印(70-bootstrap.jsx の @container)
-    // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・宝石)。--ph は画面の識別色
     React.createElement("div", {
       style: {
         position: "absolute",
         inset: 0,
-        zIndex: 30000,
-        '--ph': '245,158,11'
+        backgroundColor: "#020617",
+        backgroundImage: 'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(245,158,11,.16), transparent 70%)',
+        zIndex: 30000
       },
-      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden"
+      className: "mh-phase absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden"
     }, /*#__PURE__*/React.createElement("div", {
       className: "mb-2 shrink-0 w-full max-w-sm flex flex-col items-center gap-1.5"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-heading"
     }, /*#__PURE__*/React.createElement("h2", {
-      className: "mh-ph-title text-2xl font-black italic uppercase"
-    }, "\u56FA\u6709\u6280\u306E\u5F37\u5316")), phasePlan && /*#__PURE__*/React.createElement(PhaseSteps, {
+      className: "text-xl font-black text-amber-400 italic uppercase drop-shadow-[0_0_10px_rgba(245,158,11,.45)]"
+    }, "\u56FA\u6709\u6280\u306E\u5F37\u5316"), phasePlan && /*#__PURE__*/React.createElement(PhaseSteps, {
       plan: phasePlan,
       current: "skill",
       nextWave: wave > 0 ? wave + 1 : null
     }), /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-plate flex items-center justify-center gap-2 !tracking-normal"
+      className: "flex items-center justify-center gap-2 rounded-full border border-amber-400/40 bg-amber-950/40 px-3 py-1"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] uppercase tracking-widest"
+      className: "text-[9px] text-slate-300 uppercase tracking-widest"
     }, "Remaining Points: ", /*#__PURE__*/React.createElement("b", {
-      className: "mh-ph-gem ml-1 h-8 w-8 align-middle font-mono text-[14px]",
-      style: upgradePoints > 0 ? {
-        '--mh-rc': '245,158,11',
-        '--mh-rc2': '255,240,160'
-      } : {
-        '--mh-rc': '71,85,105',
-        '--mh-rc2': '203,213,225'
-      }
+      className: `ml-0.5 inline-block min-w-[1.6em] rounded-full px-1.5 font-mono text-[15px] leading-tight ${upgradePoints > 0 ? 'bg-amber-500 text-slate-950' : 'bg-slate-700 text-slate-300'}`
     }, upgradePoints))), /*#__PURE__*/React.createElement("p", {
       className: "mh-phase-mid text-[10px] font-bold text-slate-400 leading-snug"
     }, "\u30DD\u30A4\u30F3\u30C81\u3064\u3067\u56FA\u6709\u6280\u304C1\u6BB5\u4E0A\u304C\u308A\u307E\u3059\u3002\u4F7F\u308F\u306A\u304B\u3063\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u6B21\u306B\u6301\u3061\u8D8A\u305B\u307E\u3059")), (() => {
@@ -38064,11 +38113,11 @@ function UpgradeSkillScreen({
       const noPoint = upgradePoints < GUTS_RECOVERY_POINT_COST;
       return /*#__PURE__*/React.createElement("div", {
         "data-guts-recovery": true,
-        className: "mh-ph-panel w-full max-w-sm shrink-0 mb-2 px-3 py-2 flex items-center gap-2"
+        className: "w-full max-w-sm shrink-0 mb-2 rounded-2xl border border-amber-500/40 bg-amber-950/25 px-3 py-2 flex items-center gap-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-w-0 text-left"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "mh-ph-panel-label block text-[8px] font-black leading-none"
+        className: "block text-[8px] font-black tracking-widest text-amber-300/80 leading-none"
       }, "\u73FE\u5728\u30AC\u30C3\u30C4"), tacticsMode ? /*#__PURE__*/React.createElement("span", {
         "data-tactics-guts-recovery": true,
         className: "block font-mono font-black leading-tight"
@@ -38118,7 +38167,7 @@ function UpgradeSkillScreen({
         disabled: !canRecoverGutsWithPoint,
         onClick: recoverGutsWithPoint,
         "aria-label": `強化ポイント${GUTS_RECOVERY_POINT_COST}つでガッツを${GUTS_RECOVERY_AMOUNT}回復する`,
-        className: `shrink-0 min-h-[44px] px-3 rounded-xl font-black leading-tight active:scale-95 ${canRecoverGutsWithPoint ? 'mh-ph-btn-gold' : 'mh-ph-btn-off'}`
+        className: "shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-600 text-white font-black leading-tight active:scale-95 disabled:opacity-30"
       }, gutsFull ? /*#__PURE__*/React.createElement("span", {
         className: "block",
         style: {
@@ -38130,7 +38179,7 @@ function UpgradeSkillScreen({
           fontSize: '12px'
         }
       }, GUTS_RECOVERY_POINT_COST, "P \u3067 +", GUTS_RECOVERY_AMOUNT), /*#__PURE__*/React.createElement("span", {
-        className: "block opacity-80",
+        className: "block text-amber-100/90",
         style: {
           fontSize: '8px'
         }
@@ -38146,7 +38195,7 @@ function UpgradeSkillScreen({
       className: "contents"
     }, uniqueUpgradeRow(e))))), /*#__PURE__*/React.createElement("button", {
       onClick: continueAfterUniqueUpgrade,
-      className: "mh-ph-btn-gold w-full max-w-sm min-h-[52px] rounded-2xl font-black active:scale-95 transition-transform mt-auto shrink-0 flex items-center justify-center gap-1"
+      className: "w-full max-w-sm min-h-[52px] bg-white text-black rounded-2xl font-black shadow-[0_0_20px_rgba(255,255,255,0.25)] active:scale-95 transition-transform mt-auto shrink-0 flex items-center justify-center gap-1"
     }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u3078", /*#__PURE__*/React.createElement(ChevronRight, {
       size: 18
     })))
@@ -38417,36 +38466,60 @@ function RewardPickScreen({
   const remaining = TRAINING_PICK_COUNT - activePicks.length;
   const ready = tacticsMode ? trainableSlots.length > 0 && trainableSlots.every(index => picksOf(index).length === TRAINING_PICK_COUNT) : trainingPicks.length === TRAINING_PICK_COUNT;
   const doneSlots = tacticsMode ? trainableSlots.filter(index => picksOf(index).length === TRAINING_PICK_COUNT).length : 0;
-  // 枠の色と模様は data-ph-kind(70-bootstrap.jsx の mh-ph-*)が持つ。ここは文字の色と伸び幅の棒だけ。
+  // idle は選ぶ前の枠の色、badge はアイコンの台、bar は伸び幅の棒。
   // 選ぶ前から4項目を色で見分けられるようにする(以前は選ぶまで4枚とも同じ灰色だった)
   const STYLES = {
     hp: {
       icon: /*#__PURE__*/React.createElement(Heart, {
         size: 18
       }),
+      ring: 'border-pink-400',
+      bg: 'bg-pink-900/40',
       tint: 'text-pink-300',
-      bar: 'bg-pink-400'
+      chip: 'bg-pink-500',
+      idle: 'border-pink-400/25',
+      badge: 'bg-pink-500/20 text-pink-300',
+      bar: 'bg-pink-400',
+      glow: 'rgba(244,114,182,.35)'
     },
     atk: {
       icon: /*#__PURE__*/React.createElement(Sword, {
         size: 18
       }),
+      ring: 'border-red-400',
+      bg: 'bg-red-900/40',
       tint: 'text-red-300',
-      bar: 'bg-red-400'
+      chip: 'bg-red-500',
+      idle: 'border-red-400/25',
+      badge: 'bg-red-500/20 text-red-300',
+      bar: 'bg-red-400',
+      glow: 'rgba(248,113,113,.35)'
     },
     def: {
       icon: /*#__PURE__*/React.createElement(ShieldCheck, {
         size: 18
       }),
+      ring: 'border-emerald-400',
+      bg: 'bg-emerald-900/40',
       tint: 'text-emerald-300',
-      bar: 'bg-emerald-400'
+      chip: 'bg-emerald-500',
+      idle: 'border-emerald-400/25',
+      badge: 'bg-emerald-500/20 text-emerald-300',
+      bar: 'bg-emerald-400',
+      glow: 'rgba(52,211,153,.35)'
     },
     guts: {
       icon: /*#__PURE__*/React.createElement(Sparkles, {
         size: 18
       }),
+      ring: 'border-amber-400',
+      bg: 'bg-amber-900/40',
       tint: 'text-amber-300',
-      bar: 'bg-amber-400'
+      chip: 'bg-amber-500',
+      idle: 'border-amber-400/25',
+      badge: 'bg-amber-500/20 text-amber-300',
+      bar: 'bg-amber-400',
+      glow: 'rgba(251,191,36,.35)'
     }
   };
   const optionById = id => TRAINING_OPTIONS.find(option => option.id === id);
@@ -38465,15 +38538,15 @@ function RewardPickScreen({
   return (
     /*#__PURE__*/
     // mh-phase … 器の高さで中身を畳む目印(70-bootstrap.jsx の @container)
-    // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・回る光の縁・宝石)。--ph は画面の識別色
     React.createElement("div", {
       style: {
         position: "absolute",
         inset: 0,
-        zIndex: 30000,
-        '--ph': '251,191,36'
+        backgroundColor: "#020617",
+        backgroundImage: 'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(251,191,36,.16), transparent 70%)',
+        zIndex: 30000
       },
-      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden",
+      className: "mh-phase absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden",
       "data-screen": "training"
     }, /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-sm",
@@ -38483,14 +38556,14 @@ function RewardPickScreen({
     }, waveResult?.wave > 0 && /*#__PURE__*/React.createElement("div", {
       className: "mb-1 flex justify-center"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "mh-ph-plate"
+      className: "rounded-full border border-amber-300/40 bg-amber-400/10 px-2.5 py-0.5 text-[9px] font-black tracking-[.2em] text-amber-200"
     }, "WAVE ", waveResult.wave, " CLEAR")), /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-heading"
+      className: "flex items-center justify-center gap-2"
     }, /*#__PURE__*/React.createElement(Trophy, {
-      className: "text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,.7)]",
+      className: "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,.6)]",
       size: 22
     }), /*#__PURE__*/React.createElement("h2", {
-      className: "mh-ph-title text-2xl font-black italic uppercase tracking-tighter leading-none"
+      className: "text-xl font-black italic uppercase tracking-tighter text-white leading-none"
     }, "\u30C8\u30EC\u30FC\u30CB\u30F3\u30B0")), phasePlan && /*#__PURE__*/React.createElement(PhaseSteps, {
       plan: phasePlan,
       current: "training",
@@ -38507,7 +38580,7 @@ function RewardPickScreen({
       const st = picked ? STYLES[picked.id] || STYLES.hp : null;
       if (!picked) return /*#__PURE__*/React.createElement("span", {
         key: i,
-        className: "mh-ph-step-todo flex min-w-0 items-center gap-1 rounded-full border-dashed px-2 py-1 text-[10px] font-black",
+        className: "flex min-w-0 items-center gap-1 rounded-full border border-dashed border-slate-600 px-2 py-1 text-[10px] font-black text-slate-500",
         style: {
           maxWidth: '42%'
         }
@@ -38520,9 +38593,7 @@ function RewardPickScreen({
         disabled: !!effect,
         onClick: () => removePick(i),
         "aria-label": `${i + 1}回目の${picked.name}を取り消す`,
-        "data-ph-kind": picked.id,
-        "data-ph-on": "",
-        className: "mh-phase-pop mh-ph-frame flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40",
+        className: `mh-phase-pop flex min-w-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40 ${st.ring} ${st.bg}`,
         style: {
           maxWidth: '42%'
         }
@@ -38537,7 +38608,7 @@ function RewardPickScreen({
         className: "shrink-0 text-[10px] text-slate-300"
       }, "\xD7"));
     }), /*#__PURE__*/React.createElement("span", {
-      className: "shrink-0 text-[11px] font-black font-mono text-[#f3d27a]"
+      className: "shrink-0 text-[11px] font-black font-mono text-amber-300"
     }, activePicks.length, " / ", TRAINING_PICK_COUNT)), tacticsMode && /*#__PURE__*/React.createElement("div", {
       "data-tactics-training-progress": `${doneSlots}/${trainableSlots.length}`,
       className: "mt-1.5 flex flex-wrap items-center justify-center gap-1 text-center text-[10px] font-black text-indigo-300"
@@ -38549,7 +38620,7 @@ function RewardPickScreen({
       const active = slotIdx === currentSlot && pickable;
       return /*#__PURE__*/React.createElement("span", {
         key: slotIdx,
-        className: `flex max-w-[32%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active ? 'mh-ph-step-now' : done ? 'border-emerald-400/60 bg-emerald-950/60 text-emerald-200' : 'mh-ph-step-todo'}`
+        className: `flex max-w-[32%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active ? 'border-amber-300 bg-amber-400/15 text-amber-100 shadow-[0_0_10px_rgba(251,191,36,.35)]' : done ? 'border-emerald-400/50 bg-emerald-950/50 text-emerald-200' : 'border-slate-700 bg-slate-900/60 text-slate-400'}`
       }, /*#__PURE__*/React.createElement("span", {
         className: "truncate"
       }, unitName(slotIdx)), /*#__PURE__*/React.createElement("span", {
@@ -38576,10 +38647,10 @@ function RewardPickScreen({
       scene: "rewardPick",
       compact: true
     })), (!tacticsMode || currentUnit) && /*#__PURE__*/React.createElement("div", {
-      className: "mh-phase-tall mh-ph-panel shrink-0 w-full max-w-sm px-2 py-1.5 mt-2",
+      className: "mh-phase-tall shrink-0 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5 mt-2",
       "data-training-status": true
     }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-panel-label text-[8px] font-black text-left mb-1"
+      className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
     }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9", trainingPicks.length > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-amber-300"
     }, "\uFF08\u9078\u629E\u4E2D\u306E\u5909\u5316\uFF09")), /*#__PURE__*/React.createElement("div", {
@@ -38591,9 +38662,9 @@ function RewardPickScreen({
       const diff = afterAll - beforeAll;
       return /*#__PURE__*/React.createElement("div", {
         key: option.id,
-        className: "mh-ph-cell rounded-lg px-1 py-1 text-center"
+        className: "rounded-lg bg-black/40 px-1 py-1 text-center"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "block text-[8px] font-black text-slate-400 leading-none"
+        className: "block text-[8px] font-black text-slate-500 leading-none"
       }, option.statLabel), /*#__PURE__*/React.createElement("span", {
         className: `block text-[13px] font-black font-mono leading-tight ${diff > 0 ? st.tint : 'text-slate-300'}`
       }, afterAll), /*#__PURE__*/React.createElement("span", {
@@ -38621,22 +38692,23 @@ function RewardPickScreen({
           }];
         }),
         "aria-label": `${option.name} ${option.effect}${count > 0 ? ` 選択中${count}回` : ''}`,
-        "data-ph-kind": option.id,
-        "data-ph-on": count > 0 ? '' : undefined,
-        className: "mh-phase-card mh-phase-enter mh-ph-frame relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40",
+        className: `mh-phase-card mh-phase-enter relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40 ${count > 0 ? `${st.bg} ${st.ring}` : `bg-slate-900/70 ${st.idle}`}`,
         style: {
-          '--i': optionIndex
+          '--i': optionIndex,
+          ...(count > 0 ? {
+            boxShadow: `0 0 22px ${st.glow}`
+          } : {})
         }
       }, /*#__PURE__*/React.createElement("span", {
         "aria-hidden": "true",
-        className: "mh-ph-sparkle"
-      }), count > 0 && /*#__PURE__*/React.createElement("span", {
-        "aria-hidden": "true",
-        className: "mh-ph-shine"
+        className: "pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl",
+        style: {
+          background: st.glow
+        }
       }), /*#__PURE__*/React.createElement("span", {
         className: "relative flex items-center gap-2"
       }, /*#__PURE__*/React.createElement("span", {
-        className: `mh-phase-card-icon mh-ph-medal shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${st.tint}`
+        className: `mh-phase-card-icon shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${st.badge}`
       }, cardIconNode(st.icon)), /*#__PURE__*/React.createElement("span", {
         className: "min-w-0"
       }, /*#__PURE__*/React.createElement("b", {
@@ -38654,12 +38726,9 @@ function RewardPickScreen({
       })()))), /*#__PURE__*/React.createElement("span", {
         className: "relative flex flex-1 items-center justify-center font-mono font-black leading-none"
       }, /*#__PURE__*/React.createElement("span", {
-        className: `mh-phase-gain ${after > before ? st.tint : 'text-slate-500'}`,
-        style: after > before ? {
-          textShadow: '0 0 14px rgba(var(--mh-rc),.75), 0 2px 0 rgba(0,0,0,.7)'
-        } : undefined
+        className: `mh-phase-gain ${after > before ? st.tint : 'text-slate-500'}`
       }, "+", Math.max(0, after - before))), /*#__PURE__*/React.createElement("span", {
-        className: "mh-ph-cell relative w-full rounded-lg px-1.5 py-1 font-mono leading-tight"
+        className: "relative w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight"
       }, /*#__PURE__*/React.createElement("span", {
         className: "flex items-baseline justify-between gap-1"
       }, /*#__PURE__*/React.createElement("span", {
@@ -38684,7 +38753,7 @@ function RewardPickScreen({
         }
       }))), count > 0 && /*#__PURE__*/React.createElement("span", {
         key: `count-${count}`,
-        className: "mh-phase-pop mh-phase-count mh-ph-gem absolute top-1.5 right-1.5 h-7 w-8 text-[11px]"
+        className: `mh-phase-pop mh-phase-count absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`
       }, "\xD7", count));
     })), tacticsMode && downedSlots.length > 0 && /*#__PURE__*/React.createElement("div", {
       "data-tactics-training-revive": true,
@@ -38699,8 +38768,7 @@ function RewardPickScreen({
           revive: slotIdx
         });
       },
-      "data-ph-kind": "revive",
-      className: "mh-ph-frame w-full min-h-[44px] rounded-2xl border-2 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40"
+      className: "w-full min-h-[44px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/60 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40"
     }, /*#__PURE__*/React.createElement("span", {
       className: "block text-[12px] leading-tight"
     }, slots?.[slotIdx]?.masuName || slots?.[slotIdx]?.name || `${slotIdx + 1}番目の子`, "\u3092\u8D77\u3053\u3059", /*#__PURE__*/React.createElement("span", {
@@ -38714,7 +38782,7 @@ function RewardPickScreen({
       type: "button",
       disabled: trainingPicks.length === 0 || !!effect,
       onClick: () => setTrainingPicks([]),
-      className: "mh-ph-btn min-h-[52px] px-4 rounded-2xl font-black text-[11px] active:scale-95 disabled:opacity-30"
+      className: "min-h-[52px] px-4 rounded-2xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30"
     }, "\u9078\u3073\u76F4\u3059"), /*#__PURE__*/React.createElement("button", {
       type: "button",
       disabled: !ready || !!effect,
@@ -38723,7 +38791,7 @@ function RewardPickScreen({
         setTrainingPicks([]);
         handleTraining(picks);
       },
-      className: `min-h-[52px] rounded-2xl font-black text-base uppercase active:scale-95 transition-all ${ready && !effect ? 'mh-phase-ready mh-ph-btn-gold' : 'mh-ph-btn-off'}`
+      className: `min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready && !effect ? 'mh-phase-ready bg-gradient-to-r from-amber-300 to-yellow-200 text-slate-950 shadow-[0_0_24px_rgba(251,191,36,0.45)]' : 'bg-slate-800 text-slate-600'}`
     }, ready ? '決定する' : `あと${remaining}つ選ぶ`)))
   );
 }
@@ -45240,8 +45308,6 @@ function MonsterHeroGame() {
   const ultraEcoSession = ecoMode === 'ultra' && autoRepeat === true;
   const ultraBattleView = gameState === 'BATTLE' && ultraEcoSession;
   const ecoBattleView = liteBattleView || ultraBattleView;
-  // 強化フェーズの画面(WAVEのあと)の飾りの動きも、省エネのときと、バトル設定の「待機中の動き：止める」のときは止める
-  // (data-phase-look。70-bootstrap.jsx の mh-ph-*。タクティクス新画面の枠の飾りと同じ扱い)
   // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
   const stopAutoBattle = () => {
     autoBattleRef.current = false;
@@ -61180,92 +61246,82 @@ function MonsterHeroGame() {
     // 別に持っていて、技が3つ並ぶと背の低い端末で2つしか見えなかった。
     // ★ボタンは1行に2つ(－ が先・＋ が後)。検査が「引き継ぎ」の行の2つ目を＋として押す。
     //   見た目は flex-col-reverse で ＋ を上に置く(押す回数の多いほうを親指に近く)
-    return (
-      /*#__PURE__*/
-      // 見た目は強化フェーズ共通の mh-ph-*(70-bootstrap.jsx)。自分の技は金、引き継いだ技は水色の縁
-      React.createElement("div", {
-        key: rowKey,
-        "data-ph-kind": inherited ? 'inherit' : 'own',
-        className: "mh-phase-enter mh-ph-frame relative overflow-hidden p-2.5 rounded-2xl border shrink-0"
-      }, /*#__PURE__*/React.createElement("span", {
-        "aria-hidden": "true",
-        className: "mh-ph-sparkle"
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "relative flex items-center gap-2.5"
-      }, ownerMon?.iconUrl ? /*#__PURE__*/React.createElement("img", {
-        src: ownerMon.iconUrl,
-        alt: ownerMon.name,
-        style: monsterArtFitStyle(ownerMon.id),
-        className: "mh-ph-medal w-11 h-11 rounded-full object-cover shrink-0"
-      }) : /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: '30px'
-        }
-      }, cardIconNode(u.icon, 40)), /*#__PURE__*/React.createElement("div", {
-        className: "text-left flex-1 min-w-0"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: `text-[9px] font-black tracking-wider flex items-center gap-1 truncate ${inherited ? 'text-cyan-300' : 'text-indigo-300'}`
-      }, inherited && /*#__PURE__*/React.createElement("span", {
-        className: "bg-cyan-600 text-white px-1 rounded-sm not-italic shrink-0"
-      }, "\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("span", {
-        className: "truncate"
-      }, heading)), /*#__PURE__*/React.createElement("div", {
-        className: "font-black text-white leading-tight truncate",
-        style: {
-          fontSize: '13px'
-        }
-      }, u.names[Math.min(lvl, u.names.length - 1)], " ", /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "Lv.", lvl), maxed ? /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-400"
-      }, " MAX") : /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-400"
-      }, " \u2192 ", lvl + 1)), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1.5 mb-0.5 flex items-center gap-[5px] pl-0.5",
-        "aria-hidden": "true"
-      }, Array.from({
-        length: 8
-      }).map((_, i) => /*#__PURE__*/React.createElement("i", {
-        key: i,
-        className: "mh-ph-pip",
-        "data-on": i < lvl ? '' : undefined,
-        "data-next": i === lvl && !maxed ? '' : undefined
-      }))), !maxed ? /*#__PURE__*/React.createElement("div", {
-        className: "text-slate-400 font-mono flex flex-wrap gap-x-2.5 gap-y-0.5 mt-1",
-        style: {
-          fontSize: '9px'
-        }
-      }, /*#__PURE__*/React.createElement("div", null, "\u6280\u5A01\u529B ", Math.floor(currentMult * 100), " \u2192 ", /*#__PURE__*/React.createElement("span", {
-        className: "text-red-400 font-bold"
-      }, Math.floor(nextMult * 100))), /*#__PURE__*/React.createElement("div", null, "\u6D88\u8CBB ", currentGuts, " \u2192 ", /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-400 font-bold"
-      }, nextGuts)), /*#__PURE__*/React.createElement("div", null, "\u4F1A\u5FC3 ", curCrit, "% \u2192 ", /*#__PURE__*/React.createElement("span", {
-        className: "text-yellow-400 font-bold"
-      }, nextCrit, "%"))) : /*#__PURE__*/React.createElement("div", {
-        className: "text-slate-400 font-mono flex flex-wrap gap-x-2.5 gap-y-0.5 mt-1",
-        style: {
-          fontSize: '9px'
-        }
-      }, /*#__PURE__*/React.createElement("div", null, "\u6280\u5A01\u529B ", Math.floor(currentMult * 100)), /*#__PURE__*/React.createElement("div", null, "\u6D88\u8CBB ", currentGuts), /*#__PURE__*/React.createElement("div", {
-        className: "text-yellow-400"
-      }, "\u4F1A\u5FC3 ", curCrit, "%"))), /*#__PURE__*/React.createElement("div", {
-        className: "flex flex-col-reverse gap-1.5 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        disabled: lvl <= 0,
-        onClick: () => onStep(-1),
-        "aria-label": `${u.names[Math.min(lvl, u.names.length - 1)]}のレベルを1つ下げる`,
-        className: "mh-ph-btn w-10 h-9 flex items-center justify-center rounded-lg disabled:opacity-20 active:scale-90"
-      }, /*#__PURE__*/React.createElement(MinusCircle, {
-        size: 18
-      })), /*#__PURE__*/React.createElement("button", {
-        disabled: upgradePoints <= 0 || maxed,
-        onClick: () => onStep(1),
-        "aria-label": `${u.names[Math.min(lvl, u.names.length - 1)]}のレベルを1つ上げる`,
-        className: `w-10 h-11 flex items-center justify-center rounded-lg active:scale-90 ${upgradePoints > 0 && !maxed ? 'mh-ph-btn-gold' : 'mh-ph-btn-off'}`
-      }, /*#__PURE__*/React.createElement(PlusCircle, {
-        size: 20
-      })))))
-    );
+    return /*#__PURE__*/React.createElement("div", {
+      key: rowKey,
+      className: `mh-phase-enter p-2.5 rounded-2xl border shrink-0 ${inherited ? 'bg-cyan-950/40 border-cyan-700/60' : 'bg-slate-900/80 border-slate-700/70'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2.5"
+    }, ownerMon?.iconUrl ? /*#__PURE__*/React.createElement("img", {
+      src: ownerMon.iconUrl,
+      alt: ownerMon.name,
+      style: monsterArtFitStyle(ownerMon.id),
+      className: "w-11 h-11 rounded-full object-cover border border-white/10 shrink-0"
+    }) : /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '30px'
+      }
+    }, cardIconNode(u.icon, 40)), /*#__PURE__*/React.createElement("div", {
+      className: "text-left flex-1 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `text-[9px] font-black tracking-wider flex items-center gap-1 truncate ${inherited ? 'text-cyan-300' : 'text-indigo-300'}`
+    }, inherited && /*#__PURE__*/React.createElement("span", {
+      className: "bg-cyan-600 text-white px-1 rounded-sm not-italic shrink-0"
+    }, "\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("span", {
+      className: "truncate"
+    }, heading)), /*#__PURE__*/React.createElement("div", {
+      className: "font-black text-white leading-tight truncate",
+      style: {
+        fontSize: '13px'
+      }
+    }, u.names[Math.min(lvl, u.names.length - 1)], " ", /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, "Lv.", lvl), maxed ? /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-400"
+    }, " MAX") : /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-400"
+    }, " \u2192 ", lvl + 1)), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 flex gap-0.5",
+      "aria-hidden": "true"
+    }, Array.from({
+      length: 8
+    }).map((_, i) => /*#__PURE__*/React.createElement("i", {
+      key: i,
+      className: `block h-1.5 flex-1 rounded-full ${i < lvl ? inherited ? 'bg-cyan-400' : 'bg-amber-400' : i === lvl && !maxed ? 'bg-white/40 animate-pulse' : 'bg-slate-700'}`
+    }))), !maxed ? /*#__PURE__*/React.createElement("div", {
+      className: "text-slate-400 font-mono flex flex-wrap gap-x-2.5 gap-y-0.5 mt-1",
+      style: {
+        fontSize: '9px'
+      }
+    }, /*#__PURE__*/React.createElement("div", null, "\u6280\u5A01\u529B ", Math.floor(currentMult * 100), " \u2192 ", /*#__PURE__*/React.createElement("span", {
+      className: "text-red-400 font-bold"
+    }, Math.floor(nextMult * 100))), /*#__PURE__*/React.createElement("div", null, "\u6D88\u8CBB ", currentGuts, " \u2192 ", /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-400 font-bold"
+    }, nextGuts)), /*#__PURE__*/React.createElement("div", null, "\u4F1A\u5FC3 ", curCrit, "% \u2192 ", /*#__PURE__*/React.createElement("span", {
+      className: "text-yellow-400 font-bold"
+    }, nextCrit, "%"))) : /*#__PURE__*/React.createElement("div", {
+      className: "text-slate-400 font-mono flex flex-wrap gap-x-2.5 gap-y-0.5 mt-1",
+      style: {
+        fontSize: '9px'
+      }
+    }, /*#__PURE__*/React.createElement("div", null, "\u6280\u5A01\u529B ", Math.floor(currentMult * 100)), /*#__PURE__*/React.createElement("div", null, "\u6D88\u8CBB ", currentGuts), /*#__PURE__*/React.createElement("div", {
+      className: "text-yellow-400"
+    }, "\u4F1A\u5FC3 ", curCrit, "%"))), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-col-reverse gap-1.5 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      disabled: lvl <= 0,
+      onClick: () => onStep(-1),
+      "aria-label": `${u.names[Math.min(lvl, u.names.length - 1)]}のレベルを1つ下げる`,
+      className: "w-10 h-9 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90"
+    }, /*#__PURE__*/React.createElement(MinusCircle, {
+      size: 18
+    })), /*#__PURE__*/React.createElement("button", {
+      disabled: upgradePoints <= 0 || maxed,
+      onClick: () => onStep(1),
+      "aria-label": `${u.names[Math.min(lvl, u.names.length - 1)]}のレベルを1つ上げる`,
+      className: `w-10 h-11 flex items-center justify-center rounded-lg text-white disabled:opacity-20 active:scale-90 ${inherited ? 'bg-cyan-600' : 'bg-amber-600'} ${upgradePoints > 0 && !maxed ? 'shadow-[0_0_12px_rgba(245,158,11,.45)]' : ''}`
+    }, /*#__PURE__*/React.createElement(PlusCircle, {
+      size: 20
+    })))));
   };
   const uniqueUpgradeEntries = () => {
     const rows = ownedUniques.map(u => ({
@@ -63334,7 +63390,6 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       "data-mh-view-rotation": forcedRotationStyle ? 'true' : 'false',
       "data-mh-portrait-layout": portraitOnlyScreen ? 'true' : 'false',
-      "data-phase-look": ecoMode === 'lite' || ultraEcoSession || normalizeBattleFxSettings(battleFxSettings).idleMotion === 'OFF' ? 'calm' : 'rich',
       onPointerDown: rippleOnPointerDown,
       onPointerMove: rippleOnPointerMove,
       onPointerUp: rippleOnPointerEnd,
@@ -71686,14 +71741,15 @@ function MonsterHeroGame() {
       plan: phasePlan,
       current: "growth",
       className: "mb-2"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-heading"
-    }, /*#__PURE__*/React.createElement("h2", {
-      className: "mh-ph-title text-2xl font-black italic"
-    }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u30A2\u30C3\u30D7\uFF01")), /*#__PURE__*/React.createElement("p", {
+    }), /*#__PURE__*/React.createElement("h2", {
+      className: "text-2xl font-black italic",
+      style: {
+        color: '#2dd4bf'
+      }
+    }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u30A2\u30C3\u30D7\uFF01"), /*#__PURE__*/React.createElement("p", {
       className: "text-[10px] font-black text-slate-400 mt-1"
     }, "WAVE ", quickGrowth.nextWave - 1, " \u30AF\u30EA\u30A2\uFF0F\u5168\u30B9\u30C6\u30FC\u30BF\u30B9 +10%"), /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-panel mt-4 w-full overflow-hidden"
+      className: "mt-4 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden"
     }, quickGrowth.stats.map((st, i) => /*#__PURE__*/React.createElement("div", {
       key: st.label,
       className: `flex items-center gap-2 px-4 py-2 ${i > 0 ? 'border-t border-white/5' : ''}`
@@ -71714,27 +71770,27 @@ function MonsterHeroGame() {
         color: st.after > st.before ? '#5eead4' : '#64748b'
       }
     }, st.after > st.before ? `+${(st.after - st.before).toLocaleString()}` : '±0')))), /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-plate mt-3 !tracking-normal text-[11px]",
+      className: "mt-3 rounded-2xl px-3 py-2 text-[11px] font-black",
       style: {
-        color: '#99f6e4'
+        backgroundColor: 'rgba(45,212,191,.12)',
+        color: '#5eead4'
       }
     }, "\u30E9\u30A4\u30D5\u30FB\u30AC\u30C3\u30C4\u5168\u56DE\u5FA9\uFF01")), gameState === 'QUICK_JOIN' && quickJoin && /*#__PURE__*/React.createElement(QuickStepScreen, {
       onDone: finishQuickJoin,
       accent: "#2dd4bf",
       label: "\u30BF\u30C3\u30D7\u3057\u3066\u6B21\u3078"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-heading"
     }, /*#__PURE__*/React.createElement("h2", {
-      className: "mh-ph-title text-2xl font-black italic"
-    }, "\u4F9B\u30E2\u30F3\u52A0\u5165\uFF01")), /*#__PURE__*/React.createElement("div", {
+      className: "text-2xl font-black italic",
+      style: {
+        color: '#2dd4bf'
+      }
+    }, "\u4F9B\u30E2\u30F3\u52A0\u5165\uFF01"), /*#__PURE__*/React.createElement("div", {
       className: "mt-3 flex items-center justify-center gap-2"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "relative flex items-center justify-center"
-    }, /*#__PURE__*/React.createElement("span", {
-      "aria-hidden": "true",
-      className: "mh-ph-rune"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "mh-phase-pop mh-ph-medal relative z-10 w-20 h-20 rounded-full overflow-hidden flex items-center justify-center"
+      className: "mh-phase-pop w-20 h-20 rounded-full overflow-hidden border-2 flex items-center justify-center bg-black/40 shadow-[0_0_24px_rgba(45,212,191,.45)]",
+      style: {
+        borderColor: '#2dd4bf'
+      }
     }, quickJoin.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
       baseId: quickJoin.baseId,
       src: quickJoin.imgUrl,
@@ -71743,10 +71799,10 @@ function MonsterHeroGame() {
       className: "w-full h-full object-contain"
     }) : /*#__PURE__*/React.createElement("span", {
       className: "text-3xl"
-    }, quickJoin.emoji))), /*#__PURE__*/React.createElement("p", {
+    }, quickJoin.emoji)), /*#__PURE__*/React.createElement("p", {
       className: "text-sm font-black text-white"
     }, quickJoin.name, "\u304C\u4EF2\u9593\u306B\u306A\u3063\u305F\uFF01")), quickJoin.stats.length > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-panel mt-3 w-full overflow-hidden"
+      className: "mt-3 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden"
     }, quickJoin.stats.map((st, i) => /*#__PURE__*/React.createElement("div", {
       key: st.label,
       className: `flex items-center gap-2 px-4 py-2 ${i > 0 ? 'border-t border-white/5' : ''}`
@@ -71769,7 +71825,11 @@ function MonsterHeroGame() {
     }, st.after > st.before ? `+${(st.after - st.before).toLocaleString()}` : '±0')))), quickJoin.aptLabel && /*#__PURE__*/React.createElement("div", {
       className: "mt-2 rounded-full border border-cyan-400/40 bg-cyan-950/40 px-3 py-1 text-[10px] font-black text-cyan-200"
     }, "\u9593\u5408\u3044\u9069\u6027 ", quickJoin.aptLabel), quickJoin.unique ? /*#__PURE__*/React.createElement("div", {
-      className: "mh-ph-panel mt-3 w-full px-3 py-2.5"
+      className: "mt-3 w-full rounded-2xl border px-3 py-2.5",
+      style: {
+        borderColor: 'rgba(251,191,36,.5)',
+        backgroundColor: 'rgba(0,0,0,.5)'
+      }
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] font-black text-amber-300"
     }, "\u56FA\u6709\u6280\u30A2\u30C3\u30D7\uFF01"), /*#__PURE__*/React.createElement("div", {
@@ -75781,8 +75841,7 @@ const createAnimationStyle = () => {
       /* 1枚の幅が90px前後になるので、名前・数字・×1 の札を一回り小さくして重ならないようにする */
       .mh-phase-card-name { font-size: 12px !important; }
       .mh-phase-card-nums { font-size: 9px !important; }
-      /* ×1 の宝石は名前にかぶらないよう、伸び幅の横(下の数字の欄の上)へ移す */
-      .mh-phase-count { top: auto !important; bottom: 30px !important; right: 3px !important; width: 22px !important; height: 20px !important; padding: 2px 0 0 !important; font-size: 8px !important; }
+      .mh-phase-count { top: 3px !important; right: 3px !important; padding: 0 5px !important; font-size: 9px !important; }
     }
     /* 並んだカードが順に出てくる動き。--i に並び順を入れる。
        fill-mode は backwards にする(both / forwards だと終わったあとも transform を握り続け、
@@ -75797,154 +75856,6 @@ const createAnimationStyle = () => {
     @keyframes mhPhaseReady { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }
     @media (prefers-reduced-motion: reduce) {
       .mh-phase-enter, .mh-phase-pop, .mh-phase-ready { animation: none; }
-    }
-    /* ==== 強化フェーズの画面の見た目(2026-09-24 ユーザー指示「やすっぽい見た目も改善して」
-       「タクティクスバトルを参考に見た目を強くしてほしい」)。
-       タクティクス新盤面の飾り(濃紺の地・金の細い縁・回る光の縁・距離や種類ごとの模様・宝石・魔法陣・光の筋)を
-       同じ言葉で使う。@keyframes mhAng / mhShine / mhTwinkle / mhRuneSpin / mhGem はタクティクスの節で定義済み。
-       ★動き(回る縁・きらめき・光の筋・魔法陣・宝石の明滅)は data-phase-look="rich" のときだけ。
-         省エネ(lite / 超省エネ∞)では calm になり、「動きを減らす」設定でも止める。見た目は残す。
-       ★色は変数で渡す。--ph … 画面の識別色 / --mh-rc・--mh-rc2 … 枠1つぶんの色(濃い・明るい) ==== */
-    .mh-ph-bg {
-      background:
-        radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.55), transparent 60%),
-        radial-gradient(1px 1px at 78% 12%, rgba(255,255,255,.45), transparent 60%),
-        radial-gradient(1.5px 1.5px at 64% 34%, rgba(var(--ph,148,163,184),.8), transparent 60%),
-        radial-gradient(1px 1px at 28% 58%, rgba(255,255,255,.3), transparent 60%),
-        radial-gradient(1px 1px at 90% 66%, rgba(255,255,255,.3), transparent 60%),
-        radial-gradient(1.5px 1.5px at 8% 84%, rgba(var(--ph,148,163,184),.6), transparent 60%),
-        radial-gradient(ellipse 95% 40% at 50% -6%, rgba(var(--ph,148,163,184),.30), transparent 72%),
-        radial-gradient(ellipse 130% 55% at 50% 112%, rgba(var(--ph,148,163,184),.12), transparent 70%),
-        repeating-linear-gradient(135deg, rgba(255,255,255,.02) 0 1px, transparent 1px 9px),
-        linear-gradient(180deg, #0c1126 0%, #060916 55%, #03040b 100%) !important;
-    }
-    /* 見出しの金の文字と、左右の飾り線(◆) */
-    .mh-ph-title { background: linear-gradient(180deg, #fffbe8 0%, #f6d98a 46%, #c8962e 100%); -webkit-background-clip: text; background-clip: text;
-      color: transparent !important; padding-right: .18em; filter: drop-shadow(0 2px 0 rgba(0,0,0,.65)) drop-shadow(0 0 10px rgba(var(--ph,243,210,122),.45)); }
-    .mh-ph-heading { display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .mh-ph-heading::before, .mh-ph-heading::after { content: '◆'; flex: none; font-size: 7px; line-height: 1; color: #f3d27a; text-shadow: 0 0 6px rgba(243,210,122,.8); }
-    .mh-ph-heading::before { padding-left: 26px; background: linear-gradient(90deg, transparent, rgba(243,210,122,.85)) left center / 24px 1px no-repeat; }
-    .mh-ph-heading::after { padding-right: 26px; background: linear-gradient(270deg, transparent, rgba(243,210,122,.85)) right center / 24px 1px no-repeat; }
-    /* 金の縁の札(WAVE CLEAR など) */
-    .mh-ph-plate { display: inline-block; border: 1px solid transparent; border-radius: 999px; padding: 2px 12px; font-size: 9px; font-weight: 900; letter-spacing: .22em; color: #fde9b0;
-      background: linear-gradient(180deg, #1c2446, #0b0f22) padding-box, linear-gradient(90deg, #6b4a14, #fff0b0 30%, #c8962e 60%, #6b4a14) border-box;
-      box-shadow: 0 0 0 1px rgba(20,12,4,.85), 0 2px 8px rgba(0,0,0,.5), 0 0 14px rgba(var(--ph,243,210,122),.28); text-shadow: 0 1px 2px rgba(0,0,0,.9); }
-    /* 金の細い縁のパネル(ステータスの欄・所持カードなど) */
-    .mh-ph-panel { border: 1px solid transparent !important; border-radius: 16px;
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 38%) padding-box,
-        linear-gradient(170deg, rgba(18,22,46,.95), rgba(6,8,18,.97)) padding-box,
-        linear-gradient(160deg, rgba(243,210,122,.6), rgba(243,210,122,.12) 38%, rgba(243,210,122,.08) 62%, rgba(243,210,122,.5)) border-box !important;
-      box-shadow: 0 6px 18px rgba(0,0,0,.45), 0 0 0 1px rgba(10,6,2,.6); }
-    .mh-ph-panel-label { color: #d9bf7a !important; letter-spacing: .18em; }
-    /* パネルの中の升目 */
-    .mh-ph-cell { background: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.28)) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 0 1px rgba(243,210,122,.08); }
-    /* 選ぶ枠: 地の模様 + 濃紺 + 枠の色の縁(タクティクスのモンスター枠と同じ作り)。選んでいない枠は落ち着いた縁、
-       data-ph-on の枠は明るい縁が回り、外へ光がにじむ */
-    .mh-ph-frame { border: 2px solid transparent !important;
-      background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
-        linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0) 30%) padding-box,
-        linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
-        linear-gradient(160deg, rgba(var(--mh-rc),.75), rgba(var(--mh-rc),.22) 40%, rgba(243,210,122,.18) 60%, rgba(var(--mh-rc),.6)) border-box !important; }
-    .mh-ph-frame[data-ph-on] {
-      background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
-        radial-gradient(90% 60% at 50% 0%, rgba(var(--mh-rc),.28), transparent 70%) padding-box,
-        linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
-        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
-          rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important;
-      box-shadow: 0 0 18px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.18) !important; }
-    [data-phase-look="rich"] .mh-ph-frame[data-ph-on] { animation: mhAng 4.5s linear infinite; }
-    /* 枠の中の光の粒 */
-    .mh-ph-sparkle { position: absolute; inset: 3px; border-radius: inherit; pointer-events: none;
-      background: radial-gradient(1.5px 1.5px at 14% 30%, rgba(var(--mh-rc2),.95), transparent 70%), radial-gradient(1.5px 1.5px at 52% 72%, rgba(var(--mh-rc2),.85), transparent 70%),
-        radial-gradient(1px 1px at 80% 42%, #fff, transparent 70%), radial-gradient(1px 1px at 36% 16%, #fff, transparent 70%), radial-gradient(1px 1px at 88% 86%, rgba(var(--mh-rc2),.8), transparent 70%); }
-    [data-phase-look="rich"] .mh-ph-sparkle { animation: mhTwinkle 2.6s ease-in-out infinite; }
-    /* 枠を横切る光の筋 */
-    .mh-ph-shine { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
-    .mh-ph-shine::before { content: ''; position: absolute; top: -10%; bottom: -10%; left: 0; width: 40%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent); transform: translateX(-160%) skewX(-18deg); }
-    [data-phase-look="rich"] .mh-ph-shine::before { animation: mhShine 3.6s ease-in-out infinite; }
-    /* 種類ごとの地の模様(タクティクスの手札・枠と同じ模様の言葉) */
-    [data-ph-kind="hp"] { --mh-rc: 236,72,153; --mh-rc2: 255,200,230;
-      --mh-pat: radial-gradient(circle at 80% 18%, rgba(255,140,200,.22), transparent 45%), repeating-radial-gradient(circle at 80% 18%, rgba(255,160,210,.10) 0 2px, transparent 2px 10px); }
-    [data-ph-kind="atk"] { --mh-rc: 239,68,68; --mh-rc2: 255,210,190;
-      --mh-pat: radial-gradient(120% 60% at 50% 115%, rgba(255,120,40,.32), transparent 70%), repeating-linear-gradient(135deg, rgba(255,90,40,.10) 0 2px, transparent 2px 9px); }
-    [data-ph-kind="def"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
-      --mh-pat: radial-gradient(circle, rgba(167,243,208,.16) 1.5px, transparent 2px) 0 0 / 9px 9px, radial-gradient(80% 50% at 50% 20%, rgba(52,211,153,.18), transparent 70%); }
-    [data-ph-kind="guts"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
-      --mh-pat: repeating-conic-gradient(from 0deg at 50% 30%, rgba(255,210,80,.06) 0 8deg, transparent 8deg 24deg), radial-gradient(60% 50% at 50% 30%, rgba(255,200,60,.2), transparent 70%); }
-    [data-ph-kind="new"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
-      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(167,243,208,.05) 0 10deg, transparent 10deg 30deg); }
-    [data-ph-kind="up"] { --mh-rc: 168,85,247; --mh-rc2: 233,213,255;
-      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(216,180,254,.07) 0 10deg, transparent 10deg 30deg), radial-gradient(70% 50% at 50% 30%, rgba(168,85,247,.22), transparent 70%); }
-    [data-ph-kind="max"] { --mh-rc: 234,179,8; --mh-rc2: 255,243,196;
-      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(255,230,150,.08) 0 10deg, transparent 10deg 30deg), radial-gradient(70% 50% at 50% 30%, rgba(234,179,8,.22), transparent 70%); }
-    [data-ph-kind="own"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160; }
-    [data-ph-kind="inherit"] { --mh-rc: 6,182,212; --mh-rc2: 207,250,254; }
-    [data-ph-kind="ally"] { --mh-rc: 129,140,248; --mh-rc2: 224,231,255; }
-    [data-ph-kind="revive"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220; }
-    /* 距離ごと(配置)。タクティクスの零=赤・近=黄・中=緑・遠=青 と模様をそのまま使う */
-    [data-ph-range="0"] { --mh-rc: 239,68,68; --mh-rc2: 255,210,190;
-      --mh-pat: radial-gradient(120% 60% at 50% 115%, rgba(255,120,40,.5), rgba(200,30,20,.22) 45%, transparent 70%), repeating-linear-gradient(115deg, rgba(255,90,40,.10) 0 3px, transparent 3px 14px); }
-    [data-ph-range="1"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
-      --mh-pat: repeating-conic-gradient(from 0deg at 20% 62%, rgba(255,210,80,.15) 0 6deg, transparent 6deg 18deg), radial-gradient(60% 60% at 20% 62%, rgba(255,200,60,.32), transparent 70%); }
-    [data-ph-range="2"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
-      --mh-pat: repeating-linear-gradient(98deg, rgba(52,211,153,.30) 0 1.5px, transparent 1.5px 6px) bottom / 100% 34% no-repeat, radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.26), transparent 70%); }
-    [data-ph-range="3"] { --mh-rc: 59,130,246; --mh-rc2: 200,225,255;
-      --mh-pat: repeating-radial-gradient(circle at 20% 140%, rgba(90,160,255,.17) 0 3px, transparent 3px 11px), radial-gradient(70% 60% at 20% 62%, rgba(80,150,255,.32), transparent 70%); }
-    /* 宝石(×1 の数・残りポイントなど)。タクティクスの手札の消費ガッツと同じ形 */
-    .mh-ph-gem { display: inline-flex; align-items: center; justify-content: center; padding-top: 2px; font-weight: 900; line-height: 1; color: #fff;
-      text-shadow: 0 1px 2px rgba(0,0,0,.9); clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
-      background: radial-gradient(circle at 35% 30%, #fff 0 8%, rgba(var(--mh-rc2,200,225,255),1) 18%, rgba(var(--mh-rc,31,111,209),1) 55%, rgba(8,10,30,1) 100%); }
-    [data-phase-look="rich"] .mh-ph-gem { animation: mhGem 2.2s ease-in-out infinite; }
-    /* 絵を収める金の額(アシストカードの顔・固有技の絵) */
-    .mh-ph-medal { border: 2px solid #f3d27a !important; background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.22), rgba(0,0,0,.4)) !important;
-      box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.5), inset 0 0 10px rgba(0,0,0,.5) !important; }
-    /* 絵の後ろで回るルーンの輪 */
-    .mh-ph-rune { position: absolute; left: 50%; top: 50%; width: 150%; height: 150%; margin: -75% 0 0 -75%; border-radius: 50%; pointer-events: none; z-index: 0;
-      background: repeating-conic-gradient(rgba(243,210,122,.85) 0 3deg, transparent 3deg 15deg), radial-gradient(circle, rgba(var(--ph,243,210,122),.25), transparent 70%);
-      -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
-      mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
-      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),.9)); }
-    [data-phase-look="rich"] .mh-ph-rune { animation: mhRuneSpin 16s linear infinite; }
-    /* 足元の魔法陣(タクティクスの枠の足元と同じ) */
-    .mh-ph-floor { position: absolute; left: 50%; bottom: -14px; width: 96px; height: 96px; margin-left: -48px; pointer-events: none; z-index: 0;
-      transform: rotateX(68deg);
-      background: radial-gradient(circle, transparent 52%, rgba(255,240,200,.95) 53%, rgba(255,240,200,.95) 55%, transparent 56%, transparent 66%, rgba(var(--ph,243,210,122),.9) 67%, rgba(var(--ph,243,210,122),.9) 70%, transparent 71%),
-        repeating-conic-gradient(rgba(255,240,200,.8) 0 4deg, transparent 4deg 30deg);
-      -webkit-mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%); mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%);
-      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),1)); }
-    [data-phase-look="rich"] .mh-ph-floor { animation: mhPhFloor 7s linear infinite; }
-    @keyframes mhPhFloor { to { transform: rotateX(68deg) rotate(360deg); } }
-    /* ボタン。金 = 決めるボタン(押せるとき)、夜 = そのほか。ボタンの意味の色は変えず、縁と照りを重ねる */
-    .mh-ph-btn-gold { position: relative; overflow: hidden; color: #2a1a04 !important; text-shadow: 0 1px 0 rgba(255,255,255,.5);
-      background: linear-gradient(180deg, #fff6d0 0%, #f4d57c 24%, #d8a640 62%, #9a6d22 100%) !important;
-      box-shadow: 0 0 0 1px rgba(40,26,6,.9), 0 0 0 3px rgba(243,210,122,.3), 0 6px 18px rgba(0,0,0,.5), 0 0 22px rgba(255,210,120,.45),
-        inset 0 2px 0 rgba(255,255,255,.75), inset 0 -2px 0 rgba(90,60,10,.55) !important; }
-    .mh-ph-btn-gold::after { content: ''; position: absolute; top: -20%; bottom: -20%; left: 0; width: 30%; pointer-events: none;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); transform: translateX(-160%) skewX(-18deg); }
-    [data-phase-look="rich"] .mh-ph-btn-gold::after { animation: mhShine 3s ease-in-out infinite; }
-    .mh-ph-btn { color: #e2e8f0 !important; border: 1px solid rgba(243,210,122,.45) !important;
-      background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0) 45%, rgba(0,0,0,.25)), linear-gradient(180deg, #1c2446, #0b0f22) !important;
-      box-shadow: 0 0 0 1px rgba(20,12,4,.85), 0 4px 12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,240,200,.3) !important; }
-    .mh-ph-btn:disabled { opacity: .45; }
-    .mh-ph-btn-off { color: #64748b !important; border: 1px solid rgba(243,210,122,.18) !important;
-      background: linear-gradient(180deg, #151a33, #0a0d1d) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important; }
-    /* 強化フェーズの並び(PhaseSteps) */
-    .mh-ph-step-now { color: #1a1204 !important; border: 1px solid rgba(255,240,200,.9);
-      background: linear-gradient(180deg, #fff, rgb(var(--ph,243,210,122)) 55%, rgba(var(--ph,243,210,122),.75)) !important;
-      box-shadow: 0 0 0 1px rgba(20,12,4,.8), 0 0 12px rgba(var(--ph,243,210,122),.7), inset 0 1px 0 rgba(255,255,255,.8) !important; }
-    .mh-ph-step-todo { color: #8b93a8 !important; border: 1px solid rgba(243,210,122,.22) !important; background: linear-gradient(180deg, #151a33, #0a0d1d) !important; }
-    .mh-ph-step-done { color: #ecfdf5 !important; border: 1px solid rgba(167,243,208,.9) !important; transform: rotate(45deg); border-radius: 3px !important;
-      background: radial-gradient(circle at 35% 30%, #fff 0 10%, #6ee7b7 30%, #059669 70%, #064e3b 100%) !important; box-shadow: 0 0 8px rgba(52,211,153,.7); }
-    .mh-ph-step-done > span { display: block; transform: rotate(-45deg); }
-    .mh-ph-step-line { height: 1px; background: linear-gradient(90deg, rgba(243,210,122,.2), rgba(243,210,122,.7), rgba(243,210,122,.2)) !important; }
-    /* 菱形の段(アシストカードのレベル) */
-    .mh-ph-pip { display: block; width: 8px; height: 8px; transform: rotate(45deg); border-radius: 1.5px; border: 1px solid rgba(243,210,122,.35); background: #11152b; }
-    .mh-ph-pip[data-on] { border-color: rgba(255,240,200,.9); background: radial-gradient(circle at 35% 30%, #fff 0 12%, rgba(var(--mh-rc2),1) 35%, rgba(var(--mh-rc),1) 80%); box-shadow: 0 0 6px rgba(var(--mh-rc),.8); }
-    .mh-ph-pip[data-next] { border-color: #f3d27a; background: rgba(243,210,122,.35); box-shadow: 0 0 6px rgba(243,210,122,.7); }
-    [data-phase-look="rich"] .mh-ph-pip[data-next] { animation: mhTwinkle 1.6s ease-in-out infinite; }
-    @media (prefers-reduced-motion: reduce) {
-      .mh-ph-frame[data-ph-on], .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
     }
     @keyframes specialShockwave {
       0% { transform: scale(0.4); opacity: 0.9; }

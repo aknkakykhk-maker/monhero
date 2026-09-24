@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 669ff9c50553652b
+// generated-sha256: 0ee4f2bab0abd7cc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -111,7 +111,7 @@ const normalizeBattleFxSettings = (value) => {
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
 const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'idleMotion', title:'待機中の動き',
-    desc:'待っているあいだのモンスターの動き（ミーアの羽ばたきなど）と、タクティクス新画面の枠の飾り・敵の待機の動き、WAVEのあとの画面の飾りの動きです。攻撃の演出はどちらでも出ます。',
+    desc:'待っているあいだのモンスターの動き（ミーアの羽ばたきなど）と、タクティクス新画面の枠の飾り・敵の待機の動きです。攻撃の演出はどちらでも出ます。',
     options:[{ id:'ON', label:'動かす', note:'いつもの見た目' }, { id:'OFF', label:'止める', note:'画面が軽くなる' }] },
   { key:'shake', title:'画面の揺れ',
     desc:'会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
@@ -122,7 +122,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 16:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 16:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4024,6 +4024,15 @@ const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','最大'],['LOW','多め']
 // ★判定は指が触れた時刻と曲の時刻で決めているので、どちらでも判定の正確さは変わらない
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE','DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE','省電力'],['DEVICE','端末に合わせる']]);
+// 演奏中の背景の演出(2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」)。
+// VIVID  … 曲のジャケットをぼかして敷き、ノーツのタイミングで背景が光り、光の粒とサーチライトが動く
+// CALM   … ジャケットとノーツのタイミングの光だけ(動き続けるものは出さない)
+// SIMPLE … これまでの見た目のまま(何も足さない)
+// ★軽量モードのときは、ここの値に関わらず SIMPLE として扱う(rhythmStageLevel)
+const RHYTHM_STAGE_EFFECTS = Object.freeze(['VIVID','CALM','SIMPLE']);
+const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
+const rhythmStageLevel = settings => settings&&settings.lightweightMode?'SIMPLE'
+  :(RHYTHM_STAGE_EFFECTS.includes(settings&&settings.stageEffect)?settings.stageEffect:'VIVID');
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -4066,6 +4075,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   quietDuringPlay:false,
   // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定(省電力)で補われる
   frameRateMode:'POWER_SAVE',
+  // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定(派手)で補われる
+  stageEffect:'VIVID',
 });
 const rhythmFiniteInRange = (value,min,max,fallback) => {
   const number=Number(value); return Number.isFinite(number)&&number>=min&&number<=max?number:fallback;
@@ -4111,6 +4122,7 @@ const normalizeRhythmSettings = value => {
     songPreviewEnabled:bool('songPreviewEnabled'),
     quietDuringPlay:bool('quietDuringPlay'),
     frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
+    stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});
@@ -9752,10 +9764,10 @@ const QuickStepScreen = ({ onDone, accent = '#2dd4bf', label = 'タップして�
     //   「タップして次へ」の前の文が読めなくなる(2026-09-11・layout-consistency-check)。
     //   中身が収まるときの見た目は今までとまったく同じ。
     <div onClick={finish} role="button" tabIndex={0} aria-label={label}
-         className="mh-ph-bg absolute inset-0 overflow-y-auto mh-scroll"
-         // 見た目は強化フェーズのほかの画面と同じ mh-ph-bg(70-bootstrap.jsx)。--ph に識別色(accent は #rrggbb)を渡す
-         style={{ position:'absolute', inset:0, zIndex:30000,
-           '--ph': /^#[0-9a-f]{6}$/i.test(accent) ? [1,3,5].map(i=>parseInt(accent.slice(i,i+2),16)).join(',') : '45,212,191' }}>
+         className="absolute inset-0 overflow-y-auto mh-scroll"
+         style={{ position:'absolute', inset:0, backgroundColor:'#020617', zIndex:30000,
+           // 上から識別色の光を差す(強化フェーズのほかの画面とそろえる)。accent は #rrggbb
+           backgroundImage:`radial-gradient(ellipse 90% 45% at 50% 0%, ${accent}2e, transparent 70%)` }}>
       <div className="min-h-full flex flex-col items-center justify-center p-6 text-center">
         <div className="mh-phase-enter w-full max-w-sm flex flex-col items-center">{children}</div>
         <div className="mt-5 text-[11px] font-black tracking-widest animate-pulse" style={{ color:accent }}>{label}</div>
@@ -14244,6 +14256,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。',{full:true})}
             {/* 1秒に描く回数(2026-09-24・ユーザーと相談して既定を省電力にした)。
                 120Hz以上の画面でだけ効く。60Hz・90Hzの画面ではどちらを選んでも同じ */}
+            {/* 背景の演出(2026-09-24・ユーザー指示「設定ありきで派手な感じにしたい」)。既定は派手 */}
+            {field('ライブ背景',segments('stageEffect',RHYTHM_STAGE_EFFECT_LABELS),
+              '演奏中のレーンの後ろの演出です。既定は「派手」です。判定・スコアはどれでも変わりません。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライトと光の粒は出しません。',{full:true})}
             {field('描く回数',segments('frameRateMode',RHYTHM_FRAME_RATE_LABELS),
               '演奏中に1秒あたり何回画面を描くかです。既定は「省電力」です。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。',{full:true})}
             {/* モンスターノーツだけを軽くしたい人向け(2026-09-13・ユーザー依頼
@@ -15168,6 +15183,23 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // ライフの強調(2026-09-12)。DOM へ data 属性を書くだけで、判定・スコア・ライフの数値には触らない。
   // lifeBoxRef … 減った瞬間にHUDのライフ表示を揺らす／lifeDamageRef … 減った量(「-50」)を一瞬出す
   const lifeBoxRef=useRef(null),lifeDamageRef=useRef(null);
+  // ===== 背景の演出(ライブ背景。2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」) =====
+  // 置くのはプレイエリアのいちばん奥(z-index:-1)。レーン・ノーツ・判定ライン・HUDより必ず後ろなので、
+  // 入力にも判定にも触らない(pointer-events:none)。
+  // ★重さに気をつける。ぼかしは CSS の filter を使わず、ジャケットを 24×24 の canvas へ一度だけ縮めて描き、
+  //   それを引き伸ばして「ぼけた絵」にする(引き伸ばしの補間でぼける。毎フレームの作り直しが起きない)。
+  //   動かすのは transform と opacity だけ(合成だけで済むもの)。
+  const stageLevel=rhythmStageLevel(settings);
+  const stageArtRef=useRef(null),stagePulseRef=useRef(null);
+  const stageArtSrc=stageLevel!=='SIMPLE'&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
+  useEffect(()=>{
+    const canvas=stageArtRef.current;
+    if(!canvas||!stageArtSrc)return;
+    let alive=true;const img=new Image();
+    img.onload=()=>{if(!alive)return;try{const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);canvas.dataset.ready='1';}catch(_){}};
+    img.src=stageArtSrc;
+    return()=>{alive=false;img.onload=null;};
+  },[stageArtSrc]);
   const sideMonsterElements=useMemo(()=>{
     if(settings.sideMonsterOpacity==='OFF')return null;
     const opacity=rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -15603,9 +15635,14 @@ const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,c
    90Hzは抑えない(60へ落とすと間隔が 11ms/22ms と交互になり、かえってガタついて見える)。
    ★飛ばすのは描くことだけ。判定は指の入力のたびに曲の時刻で決めているので変わらない。
      取り逃しのMISSや長押しの終わりも、次に描くフレーム(8ms後)でいつもどおり数える */
-const powerSave=settings.frameRateMode!=='DEVICE';let prevFrameMs=0,avgFrameMs=1000/60,lastDrawnMs=0;
+const powerSave=settings.frameRateMode!=='DEVICE';const stagePulseOn=rhythmStageLevel(settings)!=='SIMPLE';let prevFrameMs=0,avgFrameMs=1000/60,lastDrawnMs=0;
 const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();const run=runRef.current;if(!run||run.finished||run.paused)return;
 if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
+/* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
+   取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
+   間隔が110ms未満の連打では光らせ直さない(光りっぱなしで何も分からなくなるため)。
+   光らせ方は Web Animations の opacity だけ(合成だけで済む) */
+if(stagePulseOn){const pulseEl=stagePulseRef.current,notes=run.notes;let index=run._stageNoteIndex||0,count=0,monster=false;while(index<notes.length&&notes[index].timeMs<=visualTime){count++;if(rhythmNoteMonsterSlot(notes[index]))monster=true;index++;}run._stageNoteIndex=index;if(count&&pulseEl&&typeof pulseEl.animate==='function'&&visualTime-(run._stagePulseAt??-1e9)>=110){run._stagePulseAt=visualTime;pulseEl.dataset.stagePulseKind=monster?'monster':'note';try{pulseEl.animate([{opacity:monster?1:count>1?.9:.62},{opacity:0}],{duration:monster?620:count>1?440:340,easing:'cubic-bezier(.2,.7,.3,1)'});}catch(_){}}}
 // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
@@ -15777,7 +15814,7 @@ if(!run.fadedOut&&audioDurationMs>playEndTimeMs+RHYTHM_END_FADE_MARGIN_MS
   run.fadedOut=true;
   run.audio.fadeOut?.(RHYTHM_END_FADE_MS);
 }
-if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.frameRateMode,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial,updateJudgmentBand]);
+if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.frameRateMode,settings.stageEffect,settings.lightweightMode,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial,updateJudgmentBand]);
   const disposeRun=useCallback(()=>{stopFrame();clearJudgmentTimer();clearAbilityTimer();clearCountdown();RHYTHM_GESTURE_RUNTIME.clear();rhythmFloatingNotesClear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearCountdown,clearJudgmentTimer,stopFrame]);
   /* プレイエリアが「遊べる大きさ」になるまで待つ。
      毎フレーム測り直し、整ったらすぐ返す。整わないまま上限に達したら、
@@ -16072,7 +16109,16 @@ scheduleTick();};
        (2026-09-13・ユーザー依頼「下過ぎて使いづらいという声があり」)。
        ★ノーツが流れ着く先は measureTravel が**ラインを実測**して決めるので、
          ここを動かすだけで譜面も判定もそのままついてくる */
-    '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
+    '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{/* ライブ背景。いちばん奥(z-index:-1)。見た目は index.html の [data-rhythm-stage] が持つ */}
+{stageLevel!=='SIMPLE'&&<div data-rhythm-stage={stageLevel} data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true">
+  {stageArtSrc&&<canvas ref={stageArtRef} data-rhythm-stage-art width="24" height="24"/>}
+  {stageLevel==='VIVID'&&<><i data-rhythm-stage-beam="left"/><i data-rhythm-stage-beam="right"/>
+    {/* 光の粒は1粒ずつ動かさず、粒を並べた層を2枚(奥と手前)だけ動かす。
+        1粒ずつ別のアニメーションにしていたころは、それだけで毎フレームの計算が倍以上に増えた */}
+    <i data-rhythm-stage-sparks="far"/><i data-rhythm-stage-sparks="near"/></>}
+</div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
+    背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
+{stageLevel!=='SIMPLE'&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
     「コンボももう少し目立つように段階的に / あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
     右上のHUDから**プレイエリアの真ん中**へ移した。
     ★HUDの左右の列は、レーンの台形の外側の空きに置いてある。その空きは上へ行くほど広く、
@@ -17633,6 +17679,11 @@ const PHASE_ACCENT_RGB = Object.freeze({
   training:'251,191,36', growth:'45,212,191', ally:'129,140,248', slot:'129,140,248', skill:'245,158,11', teaching:'192,132,252',
 });
 const phaseAccentRgb = (id) => PHASE_ACCENT_RGB[id] || '148,163,184';
+// 画面の根の背景。上から識別色の光を差す
+const phaseBackdropStyle = (id) => ({
+  backgroundColor:'#020617',
+  backgroundImage:`radial-gradient(ellipse 90% 45% at 50% 0%, rgba(${phaseAccentRgb(id)},.16), transparent 70%)`,
+});
 // 手順の並び。plan に current が無いとき(ラン開始時の配置・アシストカードなど)は何も出さない。
 //   plan     … ['training','ally',…](postWavePhasePlan の戻り値)
 //   current  … いまの画面の id
@@ -17643,13 +17694,12 @@ const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
   if (!Array.isArray(plan) || !plan.includes(current)) return null;
   const at = plan.indexOf(current);
   const showNext = Number(nextWave) > 0 && plan.length <= 3;
-  // 見た目は 70-bootstrap.jsx の mh-ph-step-*(いま=識別色の光る札 / 済み=緑の菱形の宝石 / まだ=夜色の札)
-  const line = (on, key) => <span key={key} aria-hidden="true" className={`block h-px w-1.5 shrink-0${on ? ' mh-ph-step-line' : ''}`} style={on ? undefined : {background:'rgba(243,210,122,.16)'}}/>;
+  const accent = phaseAccentRgb(current);
+  const line = (on, key) => <span key={key} aria-hidden="true" className="block h-px w-1.5 shrink-0" style={{background:on?'rgba(255,255,255,.45)':'rgba(255,255,255,.14)'}}/>;
   return (
     <nav aria-label={`強化フェーズ ${at + 1}/${plan.length}：${PHASE_STEP_LABELS[current] || current}`}
       data-phase-steps={`${current}:${at + 1}/${plan.length}`}
-      className={`flex flex-wrap items-center justify-center gap-x-1 gap-y-1 ${className}`}
-      style={{'--ph': phaseAccentRgb(current)}}>
+      className={`flex flex-wrap items-center justify-center gap-x-1 gap-y-1 ${className}`}>
       {plan.map((id, i) => {
         const state = i < at ? 'done' : i === at ? 'now' : 'todo';
         return (
@@ -17657,11 +17707,12 @@ const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
             {i > 0 && line(i <= at, `line-${id}`)}
             {state === 'done'
               ? <span title={PHASE_STEP_LABELS[id] || id} aria-label={`${PHASE_STEP_LABELS[id] || id}（済み）`}
-                  className="mh-ph-step-done mx-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[8px] font-black">
-                  <span>✓</span>
-                </span>
+                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-black text-emerald-300"
+                  style={{background:'rgba(52,211,153,.14)', border:'1px solid rgba(52,211,153,.4)'}}>✓</span>
               : <span aria-current={state === 'now' ? 'step' : undefined}
-                  className={`shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-black leading-tight ${state === 'now' ? 'mh-ph-step-now' : 'mh-ph-step-todo'}`}>
+                  className={`shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-black leading-tight ${state === 'now' ? 'text-slate-950' : 'text-slate-500'}`}
+                  style={state === 'now' ? {background:`rgb(${accent})`, boxShadow:`0 0 10px rgba(${accent},.55)`}
+                    : {border:'1px solid rgba(255,255,255,.14)'}}>
                   {PHASE_STEP_LABELS[id] || id}
                 </span>}
           </React.Fragment>
@@ -17669,12 +17720,19 @@ const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
       })}
       {showNext && <>
         {line(false, 'line-next')}
-        <span className="shrink-0 whitespace-nowrap text-[9px] font-black text-[#c9ae6a]">⚔ WAVE {nextWave}</span>
+        <span className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-500">⚔ WAVE {nextWave}</span>
       </>}
     </nav>
   );
 };
-// ==== 強化フェーズの共通部品ここまで ====
+// 見出しの上の小さな札(「WAVE 2 CLEAR」「ASSIST CARD」など)。識別色で縁取る
+const PhaseEyebrow = ({ id, children }) => {
+  const accent = phaseAccentRgb(id);
+  return (
+    <span className="inline-block rounded-full px-2.5 py-0.5 text-[9px] font-black tracking-[.2em]"
+      style={{border:`1px solid rgba(${accent},.45)`, background:`rgba(${accent},.1)`, color:`rgb(${accent})`}}>{children}</span>
+  );
+};
 
 // ---- part: 50-error-boundary.jsx ----
 // ==== 画面のエラー境界 ====
@@ -21410,14 +21468,13 @@ function PickHeroAllyScreen({
     </span>;
   return (
 
-    // 供モン合流は強化フェーズの1枚なので、タクティクス新盤面と同じ飾り(mh-ph-*)を着せる。勇者モン選びは今までどおり
-    <div style={pickMode==='ally'?{position:"absolute",inset:0,zIndex:30000,'--ph':'129,140,248'}:{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className={`absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode==='ally'?' mh-phase mh-ph-bg':''}`}>
+    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",backgroundImage:pickMode==='ally'?'radial-gradient(ellipse 90% 40% at 50% 0%, rgba(129,140,248,.18), transparent 70%)':undefined,zIndex:30000}} className={`absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode==='ally'?' mh-phase':''}`}>
       {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
           供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
-      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button disabled={!!battleTutorial} onClick={onBack} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
+      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button disabled={!!battleTutorial} onClick={onBack} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
       {pickMode==='ally'&&<div className="-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5">
-        <span className="mh-ph-plate">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
+        <span className="rounded-full border border-indigo-300/40 bg-indigo-400/10 px-2.5 py-0.5 text-[9px] font-black tracking-[.2em] text-indigo-200">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
         {/* このあと何枚の画面を通ってバトルへ戻るのか */}
         {phasePlan&&<PhaseSteps plan={phasePlan} current="ally" nextWave={wave>0?wave+1:null}/>}
       </div>}
@@ -21427,7 +21484,7 @@ function PickHeroAllyScreen({
           基準になる現在値をここに固定表示する。各カードは自分の変動しか出さないため、
           ここが無いと「合流後の値」だけを見て比べることになり、どれが得か分からなかった */}
       {pickMode==='ally'&&(
-        <div className="mh-phase-tall mh-ph-panel shrink-0 w-full max-w-md mx-auto mb-2 px-2 py-1.5" data-join-status>
+        <div className="mh-phase-tall shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5" data-join-status>
           {(()=>{
             const joinRule=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
             if(extremeRuleNumber(joinRule,'allyJoinPenaltyRate')==null)return null;
@@ -21441,14 +21498,14 @@ function PickHeroAllyScreen({
               並べても読み取れないので、**立っている子ごと**に出す
               (2026-09-21 ユーザー指示)。バトル画面の盤面と同じ並び(零・近・中・遠) */}
           {Array.isArray(tacticsUnits)?(<>
-            <div className="mh-ph-panel-label text-[8px] font-black text-left mb-1">いまの盤面（1体ずつ）</div>
+            <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">いまの盤面（1体ずつ）</div>
             <div data-tactics-board-status className="grid grid-cols-4 gap-1">
               {RANGE_LABELS.map((label,idx)=>{
                 const mon=slots[idx];
                 const unit=tacticsUnits[idx];
                 const apt=distTotalBonus(idx);
                 return (
-                  <div key={label} data-tactics-board-slot={idx} className={`rounded-lg px-1 py-1 text-center ${mon&&unit?'mh-ph-cell':'bg-black/20'}`}>
+                  <div key={label} data-tactics-board-slot={idx} className={`rounded-lg px-1 py-1 text-center ${mon&&unit?'bg-black/40':'bg-black/20'}`}>
                     <span className="block text-[8px] font-black text-slate-500 leading-none">{label}</span>
                     {mon&&unit?(<>
                       {partyFace(mon,'mx-auto my-0.5')}
@@ -21468,19 +21525,19 @@ function PickHeroAllyScreen({
               })}
             </div>
           </>):(<>
-          <div className="mh-ph-panel-label text-[8px] font-black text-left mb-1">現在のステータス</div>
+          <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス</div>
           <div className="grid grid-cols-4 gap-1">
             {[['ライフ',maxHp,'text-pink-300'],['ちから',atk,'text-red-300'],['丈夫さ',def,'text-emerald-300'],['ガッツ',maxGuts,'text-amber-300']].map(([label,value,tint])=>(
-              <div key={label} className="mh-ph-cell rounded-lg px-1 py-1 text-center">
+              <div key={label} className="rounded-lg bg-black/40 px-1 py-1 text-center">
                 <span className="block text-[8px] font-black text-slate-500 leading-none">{label}</span>
                 <span className={`block text-[13px] font-black font-mono leading-tight ${tint}`}>{value}</span>
               </div>
             ))}
           </div>
-          <div className="mh-ph-panel-label text-[8px] font-black text-left mt-1.5 mb-1">間合い適性（距離補正）<span className="text-slate-600">・いまの隊列</span></div>
+          <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mt-1.5 mb-1">間合い適性（距離補正）<span className="text-slate-600">・いまの隊列</span></div>
           <div className="grid grid-cols-4 gap-1">
             {RANGE_LABELS.map((label,idx)=>{const cur=distTotalBonus(idx); return (
-              <div key={label} className="mh-ph-cell rounded-lg px-1 py-1 text-center">
+              <div key={label} className="rounded-lg bg-black/40 px-1 py-1 text-center">
                 {/* だれがどの間合いに立っているかを顔で出す。合流した子は空いている間合いへ入る */}
                 <span className="flex items-center justify-center gap-1">{partyFace(slots[idx])}<span className="text-[8px] font-black text-slate-500 leading-none">{label}</span></span>
                 <span className={`block text-[12px] font-black font-mono leading-tight ${cur>0?'text-cyan-300':cur<0?'text-red-300':'text-slate-400'}`}>{formatAptPct(cur)}</span>
@@ -21506,7 +21563,7 @@ function PickHeroAllyScreen({
           内側を m-auto で寄せておけば、余っているときだけ中央、あふれたら先頭からたどれる */}
       <div className="flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col">
        <div className={`w-full${pickMode==='ally'?' m-auto':''}`}>
-        {pickMode==='ally'&&!isProMode(runMode)&&<div className="mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-[#c9ae6a]">
+        {pickMode==='ally'&&!isProMode(runMode)&&<div className="mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-slate-500">
           <span>合流できる候補 {(monSelection||[]).filter(m=>m&&!slots.some(x=>x&&x.id===m.id)).length}体</span><span>カードを押すと詳細</span>
         </div>}
         {/* バトルチュートリアル中は一覧の外枠ではなくカード1枚ずつを光らせる。
@@ -21551,7 +21608,7 @@ function PickHeroAllyScreen({
           );
           // 供モンの候補は順に出てくる(--i が並び順)。勇者モン選びは一覧が長いので動かさない
           const enterStyle=pickMode==='ally'?{'--i':cardIndex}:null;
-          return(<button key={m.id} disabled={pickMode==='hero'&&!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} style={allyCarousel?{...MONSTER_CARD_STYLE,...enterStyle,flex:'0 0 64%'}:{...MONSTER_CARD_STYLE,...enterStyle}} data-ph-kind={pickMode==='ally'?'ally':undefined} data-ph-on={pickMode==='ally'&&isSel?'':undefined} className={`${MONSTER_CARD_CLASS}${pickMode==='ally'?' mh-phase-enter mh-ph-frame':''} bg-slate-900 transition-all disabled:opacity-25${pickMode!=='hero'||scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}${allyCarousel?` snap-center shrink-0 ${focused?'scale-100 opacity-100':'scale-[.92] opacity-55'}`:''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`}>
+          return(<button key={m.id} disabled={pickMode==='hero'&&!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} style={allyCarousel?{...MONSTER_CARD_STYLE,...enterStyle,flex:'0 0 64%'}:{...MONSTER_CARD_STYLE,...enterStyle}} className={`${MONSTER_CARD_CLASS}${pickMode==='ally'?' mh-phase-enter':''} bg-slate-900 transition-all disabled:opacity-25${pickMode!=='hero'||scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}${allyCarousel?` snap-center shrink-0 ${focused?'scale-100 opacity-100':'scale-[.92] opacity-55'}`:''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`}>
           {renderMonsterCardBody({
             masu: pickMasu, base: pickBase, mon: m,
             badge: m.debugOnly?<div className="absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white">DEBUG専用</div>:isSel?<div className="absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>:null,
@@ -21574,7 +21631,7 @@ function PickHeroAllyScreen({
                 {/* ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
                     パーティが増えるわけではない。増分(+130)を出すと嘘になるため、
                     **素の値 → 盤面に入る値** を出す(2026-09-21 ユーザー指示) */}
-                <div className="mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
+                <div className="w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
                   {preview.stats.map(stat=>(
                     <span key={stat.key} className="min-w-0 block">
                       <span className="block text-slate-500 font-black leading-none">{stat.short}</span>
@@ -21593,7 +21650,7 @@ function PickHeroAllyScreen({
                 {/* ★間合いのボーナスの追いつき。あとから埋まった間合いは0から始まるので、
                     合計ダメージから出した値まで引き上げる(すでに上ならそのまま) */}
                 {preview.tactics&&<div data-tactics-join-dist-catchup={Math.round((preview.distCatchUp||0)*1000)/10} className={`w-full text-center leading-none font-black ${preview.distCatchUp>0?'text-cyan-300':'text-slate-500'}`} style={{fontSize:'8px'}}>{preview.distCatchUp>0?`立つ間合いのボーナスを +${((preview.distCatchUp||0)*100).toFixed(1)}% まで引き上げ`:'間合いのボーナスの引き上げ なし'}</div>}
-                <div className="mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
+                <div className="w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
                   {preview.apt.map(range=>(
                     <span key={range.idx} className="min-w-0 block">
                       <span className="block text-slate-500 font-black leading-none">{range.label}</span>
@@ -21608,7 +21665,7 @@ function PickHeroAllyScreen({
                   ))}
                 </div>
               </>);})()}
-              <div className={`min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode==='ally'?'mh-ph-btn':'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`} style={{fontSize:'10px'}}>詳細を見る <ChevronRight size={11}/></div>
+              <div className="min-h-[32px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black mt-1 flex items-center justify-center gap-1" style={{fontSize:'10px'}}>詳細を見る <ChevronRight size={11}/></div>
             </>),
           })}
         </button>);})}
@@ -21749,28 +21806,22 @@ function PickSlotScreen({
   return (
 
     // mh-phase … 背の低い器(横持ち)で、吹き出しと説明を畳んで4つの枠を残す(70-bootstrap.jsx)
-    // mh-ph-* … タクティクス新盤面と同じ飾り。4つの枠は盤面と同じ距離の色(零=赤・近=黄・中=緑・遠=青)と模様
-    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'129,140,248'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-4 text-center overflow-hidden">
+    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",backgroundImage:'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(129,140,248,.18), transparent 70%)',zIndex:30000}} className="mh-phase absolute inset-0 z-[3000] flex flex-col items-center p-4 text-center overflow-hidden">
       {/* 供モンの合流では、強化フェーズのどこにいるかを出す(ラン開始時の配置では出さない) */}
       {phasePlan&&<PhaseSteps plan={phasePlan} current="slot" nextWave={wave>0?wave+1:null} className="shrink-0 mb-2"/>}
       <div className="shrink-0 flex flex-col items-center">
-        {/* 合流する子の後ろでルーンの輪が回り、足元に魔法陣(タクティクスの枠の足元と同じ) */}
-        <div className="relative mb-2 flex items-center justify-center">
-          <span aria-hidden="true" className="mh-ph-rune"/>
-          <span aria-hidden="true" className="mh-ph-floor"/>
-          {mon?.imgUrl?(<DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt="mon" masuColors={mon.colors} className="mh-phase-hero relative z-10 shrink-0 w-24 h-24 object-contain animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]"/>):(<div className="mh-phase-hero relative z-10 text-6xl animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]">{mon?.emoji}</div>)}
-        </div>
+        {mon?.imgUrl?(<DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt="mon" masuColors={mon.colors} className="mh-phase-hero shrink-0 w-24 h-24 mb-2 object-contain animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]"/>):(<div className="mh-phase-hero text-6xl mb-2 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]">{mon?.emoji}</div>)}
         {monName&&<div className="text-[12px] font-black text-white leading-tight">{monName}<span className="text-slate-400">をどこに置く？</span></div>}
-        <div className="mh-ph-heading mt-0.5"><h2 className="mh-ph-title text-lg font-black italic uppercase tracking-widest">配置場所を決定せよ</h2></div>
+        <h2 className="text-lg font-black mt-0.5 italic uppercase tracking-widest text-indigo-400">配置場所を決定せよ</h2>
       </div>
       <div className="mh-phase-tall shrink-0 w-full max-w-xs mt-1 mb-1 text-left"><AssistantBubble scene="pickSlot" compact/></div>
       {/* この子の間合い適性を4つまとめて。枠の中にも出すが、置いてある枠には出ないので、
           ここで4距離ぶんを見比べられるようにする */}
-      <div data-slot-aptitude className="mh-phase-tall mh-ph-panel shrink-0 w-full max-w-xs mt-1 px-2 py-1.5">
-        <div className="mh-ph-panel-label text-[9px] font-black text-left mb-1">この子の間合い適性</div>
+      <div data-slot-aptitude className="mh-phase-tall shrink-0 w-full max-w-xs mt-1 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5">
+        <div className="text-[9px] font-black tracking-widest text-slate-500 text-left mb-1">この子の間合い適性</div>
         <div className="grid grid-cols-4 gap-1">
           {RANGE_LABELS.map((label,i)=>{const grade=getDistAptitude(mon,i); return (
-            <span key={label} className="mh-ph-cell rounded-lg px-1 py-1">
+            <span key={label} className="rounded-lg bg-black/40 px-1 py-1">
               <span className="block text-[9px] font-black text-slate-400 leading-none">{label}</span>
               <span className={`mt-0.5 inline-block rounded-full border px-1.5 text-[10px] font-black leading-tight ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>
               <span className="block text-[9px] font-black font-mono text-slate-300 leading-tight">{formatAptPct(aptGradeToPct(grade))}</span>
@@ -21788,23 +21839,21 @@ function PickSlotScreen({
       <div className="grid grid-cols-2 gap-3 w-full max-w-xs overflow-y-auto min-h-0 p-1 mt-2 flex-1 content-center mh-scroll">
         {slots.map((s,i)=>{const grade=getDistAptitude(mon,i); const now=distTotalBonus(i); const after=now+aptGradeToPct(grade); const open=s===null; const allowed=scenarioPicksSlot(i);
           return(<button key={i} disabled={!open||!allowed} onClick={()=>setupMon(mon,i)} style={{'--i':i}}
-            data-ph-range={i} data-ph-on={open&&allowed?'':undefined}
-            className={`mh-phase-enter mh-phase-card mh-ph-frame relative overflow-hidden min-h-[96px] rounded-2xl border-2 flex flex-col items-center justify-center gap-1 px-1 py-2 transition-all active:scale-90${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''} ${open?(allowed?'':'opacity-20'):'opacity-75 saturate-50'}`}>
-          <span aria-hidden="true" className="mh-ph-sparkle"/>
-          <span className={`relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/30 shadow-md`} style={{boxShadow:'0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'}}>{RANGE_LABELS[i]}距離</span>
+            className={`mh-phase-enter mh-phase-card relative min-h-[96px] rounded-2xl border-2 flex flex-col items-center justify-center gap-1 px-1 py-2 transition-all active:scale-90${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''} ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${open?(allowed?'ring-2 ring-white/25 shadow-[0_0_18px_rgba(255,255,255,.12)]':'opacity-20'):'opacity-70 saturate-50'}`}>
+          <span className={`text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`}>{RANGE_LABELS[i]}距離</span>
           {open?(<>
-            <PlusCircle className={`relative text-white/70${allowed?' animate-pulse':''}`} size={20}/>
-            <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} 合流後 {formatAptPct(after)}</span>
+            <PlusCircle className={`text-white/60${allowed?' animate-pulse':''}`} size={20}/>
+            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} 合流後 {formatAptPct(after)}</span>
           </>):(<>
-            {s.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="relative w-10 h-10 object-contain drop-shadow-md"/>:<span className="relative text-2xl drop-shadow-md">{s.emoji}</span>}
-            <span className="relative max-w-full truncate text-[9px] font-black text-white/90">{s.masuName||s.name}<span className="text-white/50">・配置ずみ</span></span>
+            {s.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="w-10 h-10 object-contain drop-shadow-md"/>:<span className="text-2xl drop-shadow-md">{s.emoji}</span>}
+            <span className="max-w-full truncate text-[9px] font-black text-white/90">{s.masuName||s.name}<span className="text-white/50">・配置ずみ</span></span>
           </>)}
         </button>);})}
       </div>
       {/* 種族チャレンジは通常の勇者選択(PICK_HERO)を持たないので、選び直しは
           種族チャレンジの編成画面(出撃確認)へ戻す。ここを分けないと、種族の縛りが
           外れた通常の勇者選択へ入り込んでしまう */}
-      <button disabled={!!battleTutorial} onClick={onRepick} className="mh-ph-btn shrink-0 mt-2 min-h-[44px] px-4 rounded-full flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"><ArrowLeft size={14}/> モンスターを選び直す</button>
+      <button disabled={!!battleTutorial} onClick={onRepick} className="shrink-0 mt-2 min-h-[44px] px-4 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"><ArrowLeft size={14}/> モンスターを選び直す</button>
     </div>
   
   );
@@ -21816,38 +21865,35 @@ function PickTeachingScreen({
 }) {
   // レベルは 0〜2 の3段。カードにも詳細にも同じ段の点を出して、どこまで育つかを見せる
   const TEACHING_MAX_LEVEL=2;
-  // 段は菱形の宝石(70-bootstrap.jsx の mh-ph-pip)。色は近くの data-ph-kind(新規=緑・強化=紫・MAX=金)から取る
   const levelPips=(filled,next)=>(
-    <span className="flex items-center justify-center gap-2 py-0.5" aria-hidden="true">
+    <span className="flex items-center justify-center gap-1" aria-hidden="true">
       {Array.from({length:TEACHING_MAX_LEVEL+1}).map((_,i)=>(
-        <i key={i} className="mh-ph-pip" data-on={i<filled?'':undefined} data-next={i===next?'':undefined}/>
+        <i key={i} className={`block h-1.5 w-4 rounded-full ${i<filled?'bg-purple-300':i===next?'bg-amber-300 animate-pulse':'bg-slate-700'}`}/>
       ))}
     </span>
   );
-  const kindOf=(owned,isMax)=>owned?(isMax?'max':'up'):'new';
   return (
 
     // mh-phase … 背の低い器(横持ち)で吹き出しと説明を畳む目印(70-bootstrap.jsx の @container)。
     // safe-area は body が持っているので、ここでは足さない(41-screen-ui.jsx の注意書き)
-    // mh-ph-* … タクティクス新盤面と同じ飾り(濃紺の地・金の縁・回る光の縁・宝石)。--ph は画面の識別色
-    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'192,132,252'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] px-4 py-3 flex flex-col items-center overflow-hidden">
+    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",backgroundImage:'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(192,132,252,.18), transparent 70%)',zIndex:30000}} className="mh-phase absolute inset-0 z-[3000] px-4 py-3 flex flex-col items-center overflow-hidden">
       <div className="mb-2 text-center shrink-0 flex flex-col items-center gap-1">
         {/* WAVEのあとは強化フェーズの並び、ラン開始時は札だけ */}
         {phasePlan
           ? <PhaseSteps plan={phasePlan} current="teaching" nextWave={wave>0?wave+1:null}/>
-          : <span className="mh-ph-plate">ASSIST CARD</span>}
-        <div className="mh-ph-heading"><h2 className="mh-ph-title text-xl font-black italic">アシストカードの継承・強化</h2></div>
+          : <span className="rounded-full border border-purple-300/40 bg-purple-400/10 px-2.5 py-0.5 text-[9px] font-black tracking-[.2em] text-purple-200">ASSIST CARD</span>}
+        <h2 className="text-xl font-black text-purple-300 italic drop-shadow-[0_0_10px_rgba(192,132,252,.5)]">アシストカードの継承・強化</h2>
         <p className="mh-phase-tall text-[10px] font-bold text-slate-400">1枚えらんで、新しく覚えるか、持っているカードを強化します</p>
       </div>
       <div className="mh-phase-tall shrink-0 w-full max-w-sm mb-2"><AssistantBubble scene="pickTeaching" compact/></div>
       {/* 持っているカードとそのレベル。どれを伸ばすか決めるときに、今の手持ちを見比べられるようにする */}
       {ownedTeachings.length>0&&(
-        <div data-teaching-owned className="mh-ph-panel shrink-0 w-full max-w-sm mb-2 px-2 py-1.5">
-          <div className="mh-ph-panel-label text-[8px] font-black mb-1">所持中のアシストカード</div>
+        <div data-teaching-owned className="shrink-0 w-full max-w-sm mb-2 rounded-2xl border border-purple-400/20 bg-slate-900/60 px-2 py-1.5">
+          <div className="text-[8px] font-black tracking-widest text-slate-500 mb-1">所持中のアシストカード</div>
           <div className="flex flex-wrap gap-1.5">
             {ownedTeachings.map(ot=>(
-              <span key={ot.uid||ot.id} className="mh-ph-cell flex min-w-0 items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2">
-                <span className="mh-ph-medal flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full">{cardIconNode(ot.icon,22,ot.id)}</span>
+              <span key={ot.uid||ot.id} className="flex min-w-0 items-center gap-1 rounded-full bg-black/40 py-0.5 pl-0.5 pr-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full">{cardIconNode(ot.icon,22,ot.id)}</span>
                 <span className="text-[9px] font-black text-purple-100 truncate max-w-[6.5rem]">{BREEDER_EVO_NAMES[ot.id]?.[ot.evoLevel]||ot.name}</span>
                 <span className={`shrink-0 text-[8px] font-black font-mono ${ot.evoLevel>=TEACHING_MAX_LEVEL?'text-amber-300':'text-slate-400'}`}>{ot.evoLevel>=TEACHING_MAX_LEVEL?'MAX':`Lv.${ot.evoLevel}`}</span>
               </span>
@@ -21863,34 +21909,22 @@ function PickTeachingScreen({
           // カードに出す効果は「選んだあとの段」のもの。MAXは今の段のまま
           const shownLevel=owned?(isMax?level:level+1):0;
           const shownDesc=getFullEvolutionDetails(t)[shownLevel]?.desc||'';
-          // 強化できるカードは縁が回って光る(タクティクスの選んだ枠と同じ)。新規=緑・強化=紫・MAX=金の縁と模様
-          return(<button key={t.id} disabled={!scenarioPicksTeaching(t.id)} onClick={()=>setSelectedTeachingCard(t)} style={{'--i':cardIndex}}
-            data-ph-kind={kindOf(owned,isMax)} data-ph-on={owned&&!isMax?'':undefined}
-            className={`mh-phase-enter mh-ph-frame relative p-3 pt-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all min-h-[176px] active:scale-95 disabled:opacity-20${scenarioPicksTeaching(t.id)?battleTutorialSpotClass('teachings'):''}`}>
-            <span aria-hidden="true" className="mh-ph-sparkle"/>
-            {owned&&!isMax&&<span aria-hidden="true" className="mh-ph-shine"/>}
-            <span style={{fontSize:'44px'}} className="mh-ph-medal relative rounded-2xl p-1 leading-none">{cardIconNode(t.icon,52,t.id)}</span>
-            <div className="relative text-[11px] font-black leading-tight flex flex-col items-center justify-center" style={{textShadow:'0 1px 0 rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.6)'}}>{owned&&!isMax&&<div className="text-[8px] text-amber-400 mb-0.5 line-through">{BREEDER_EVO_NAMES[t.id][level]}</div>}<div className={owned?"text-white":"text-slate-100"}>{owned?(isMax?BREEDER_EVO_NAMES[t.id][level]:BREEDER_EVO_NAMES[t.id][level+1]):BREEDER_EVO_NAMES[t.id][0]}</div></div>
+          return(<button key={t.id} disabled={!scenarioPicksTeaching(t.id)} onClick={()=>setSelectedTeachingCard(t)} style={{'--i':cardIndex}} className={`mh-phase-enter relative p-3 pt-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all min-h-[176px] disabled:opacity-20${scenarioPicksTeaching(t.id)?battleTutorialSpotClass('teachings'):''} ${owned?(isMax?'bg-amber-950/30 border-amber-400/70':'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]'):'bg-slate-900/80 border-slate-700 active:scale-95'}`}>
+            <span style={{fontSize:'44px'}} className="leading-none">{cardIconNode(t.icon,52,t.id)}</span>
+            <div className="text-[11px] font-black leading-tight flex flex-col items-center justify-center">{owned&&!isMax&&<div className="text-[8px] text-amber-400 mb-0.5 line-through">{BREEDER_EVO_NAMES[t.id][level]}</div>}<div className={owned?"text-white":"text-slate-100"}>{owned?(isMax?BREEDER_EVO_NAMES[t.id][level]:BREEDER_EVO_NAMES[t.id][level+1]):BREEDER_EVO_NAMES[t.id][0]}</div></div>
             {levelPips(owned?level+1:0, isMax?-1:shownLevel)}
-            <div className="mh-ph-cell relative w-full flex-1 rounded-lg px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-200" style={{display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{shownDesc}</div>
+            <div className="w-full flex-1 rounded-lg bg-black/30 px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-300" style={{display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{shownDesc}</div>
             {/* 新規 / 強化 / MAX の札。文字はカード名の後ろに置く(名前で探す検査がある) */}
-            <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[8px] font-black text-white"
-              style={{border:'1px solid #f3d27a',background:'linear-gradient(180deg, rgb(var(--mh-rc2)), rgb(var(--mh-rc)) 55%, rgba(var(--mh-rc),.7))',boxShadow:'0 0 0 1px rgba(30,18,4,.9), 0 0 10px rgba(var(--mh-rc),.7)',textShadow:'0 1px 2px rgba(0,0,0,.9)'}}>{owned?(isMax?"MAXレベル":`強化 Lv.${level}→${level+1}`):"新規習得"}</span>
+            <span className={`absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[8px] font-black shadow-lg ${owned?(isMax?'bg-amber-500 text-slate-950':'bg-purple-500 text-white'):'bg-emerald-500 text-slate-950'}`}>{owned?(isMax?"MAXレベル":`強化 Lv.${level}→${level+1}`):"新規習得"}</span>
           </button>);
         })}
       </div>
       </div>
       {selectedTeachingCard&&(
         <div className="fixed inset-0 z-[3100] flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.85)',zIndex:31000}}>
-          <div data-ph-kind={(()=>{const o=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); return kindOf(o,!!o&&o.evoLevel>=TEACHING_MAX_LEVEL);})()} data-ph-on=""
-            className="mh-phase-pop mh-ph-frame relative rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 h-auto max-h-full">
-            <span aria-hidden="true" className="mh-ph-sparkle"/>
-            {/* 絵の後ろでルーンの輪が回る */}
-            <div className="relative shrink-0 flex items-center justify-center" style={{'--ph':'243,210,122'}}>
-              <span aria-hidden="true" className="mh-ph-rune"/>
-              <span className="mh-ph-medal relative z-10 rounded-2xl p-1.5 text-6xl leading-none">{cardIconNode(selectedTeachingCard.icon,76,selectedTeachingCard.id)}</span>
-            </div>
-            <h3 className="mh-ph-title relative text-lg font-black shrink-0">{(()=>{const t=selectedTeachingCard; const owned=ownedTeachings.find(ot=>ot.id===t.id); return BREEDER_EVO_NAMES[t.id][owned?owned.evoLevel:0];})()}</h3>
+          <div className="mh-phase-pop bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 shadow-[0_0_40px_rgba(168,85,247,.35)] h-auto max-h-full" style={{backgroundImage:'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(192,132,252,.18), transparent 70%)'}}>
+            <div className="text-6xl shrink-0">{cardIconNode(selectedTeachingCard.icon,76,selectedTeachingCard.id)}</div>
+            <h3 className="text-lg font-black text-white shrink-0">{(()=>{const t=selectedTeachingCard; const owned=ownedTeachings.find(ot=>ot.id===t.id); return BREEDER_EVO_NAMES[t.id][owned?owned.evoLevel:0];})()}</h3>
             {/* 選ぶと何が起きるか(新しく覚える / 何段目へ上がる)を、段の点と一緒に出す */}
             {(()=>{const owned=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); const level=owned?owned.evoLevel:0; const isMax=!!owned&&level>=TEACHING_MAX_LEVEL; return (
               <div className="-mt-1 mb-1 flex shrink-0 flex-col items-center gap-1">
@@ -21898,12 +21932,12 @@ function PickTeachingScreen({
                 <span className={`text-[10px] font-black ${isMax?'text-amber-300':owned?'text-purple-200':'text-emerald-300'}`}>{owned?(isMax?'MAXレベルです':`Lv.${level} → Lv.${level+1} に強化`):'新しく習得します'}</span>
               </div>
             );})()}
-            <div className="relative w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
+            <div className="w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
               {getFullEvolutionDetails(selectedTeachingCard).map(info=>{const owned=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); const currentLvl=owned?owned.evoLevel:-1; const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
-                return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-400/70 shadow-[0_0_12px_rgba(243,210,122,.3)]':'mh-ph-cell border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[7px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{isNext&&<span className="text-[8px] bg-amber-600 text-white px-1.5 rounded">{owned?'強化後':'習得後'}</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
+                return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[7px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{isNext&&<span className="text-[8px] bg-amber-600 text-white px-1.5 rounded">{owned?'強化後':'習得後'}</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
               })}
             </div>
-            <div className="relative flex gap-2 w-full mt-auto shrink-0"><button onClick={()=>setSelectedTeachingCard(null)} className="mh-ph-btn flex-1 min-h-[44px] py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={()=>confirmPickTeaching()} className="mh-ph-btn-gold flex-1 min-h-[44px] py-3 rounded-xl font-black text-sm">{ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id)?"強化する":"習得する"}</button></div>
+            <div className="flex gap-2 w-full mt-auto shrink-0"><button onClick={()=>setSelectedTeachingCard(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={()=>confirmPickTeaching()} className="flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs">{ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id)?"強化する":"習得する"}</button></div>
           </div>
         </div>
       )}
@@ -21934,16 +21968,14 @@ function UpgradeSkillScreen({
   return (
 
     // mh-phase … 背の低い器(横持ち)で説明を畳む目印(70-bootstrap.jsx の @container)
-    // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・宝石)。--ph は画面の識別色
-    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'245,158,11'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden">
+    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",backgroundImage:'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(245,158,11,.16), transparent 70%)',zIndex:30000}} className="mh-phase absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden">
       <div className="mb-2 shrink-0 w-full max-w-sm flex flex-col items-center gap-1.5">
-        <div className="mh-ph-heading"><h2 className="mh-ph-title text-2xl font-black italic uppercase">固有技の強化</h2></div>
+        <h2 className="text-xl font-black text-amber-400 italic uppercase drop-shadow-[0_0_10px_rgba(245,158,11,.45)]">固有技の強化</h2>
         {/* このあと何枚の画面を通ってバトルへ戻るのか */}
         {phasePlan&&<PhaseSteps plan={phasePlan} current="skill" nextWave={wave>0?wave+1:null}/>}
         {/* 残りポイントを大きく。★「Remaining Points: 数」の並びは検査が読む(大小は問わない) */}
-        <div className="mh-ph-plate flex items-center justify-center gap-2 !tracking-normal">
-          <span className="text-[9px] uppercase tracking-widest">Remaining Points: <b className="mh-ph-gem ml-1 h-8 w-8 align-middle font-mono text-[14px]"
-            style={upgradePoints>0?{'--mh-rc':'245,158,11','--mh-rc2':'255,240,160'}:{'--mh-rc':'71,85,105','--mh-rc2':'203,213,225'}}>{upgradePoints}</b></span>
+        <div className="flex items-center justify-center gap-2 rounded-full border border-amber-400/40 bg-amber-950/40 px-3 py-1">
+          <span className="text-[9px] text-slate-300 uppercase tracking-widest">Remaining Points: <b className={`ml-0.5 inline-block min-w-[1.6em] rounded-full px-1.5 font-mono text-[15px] leading-tight ${upgradePoints>0?'bg-amber-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>{upgradePoints}</b></span>
         </div>
         <p className="mh-phase-mid text-[10px] font-bold text-slate-400 leading-snug">ポイント1つで固有技が1段上がります。使わなかったポイントは次に持ち越せます</p>
       </div>
@@ -21959,9 +21991,9 @@ function UpgradeSkillScreen({
           ? tacticsUnits.map((unit,index)=>(unit&&!unit.downed?index:-1)).filter(index=>index>=0) : [];
         const gutsFull=tacticsMode?!canRecoverGutsWithPoint&&upgradePoints>=GUTS_RECOVERY_POINT_COST:guts>=effectiveMaxGuts;
         const noPoint=upgradePoints<GUTS_RECOVERY_POINT_COST; return (
-      <div data-guts-recovery className="mh-ph-panel w-full max-w-sm shrink-0 mb-2 px-3 py-2 flex items-center gap-2">
+      <div data-guts-recovery className="w-full max-w-sm shrink-0 mb-2 rounded-2xl border border-amber-500/40 bg-amber-950/25 px-3 py-2 flex items-center gap-2">
         <div className="flex-1 min-w-0 text-left">
-          <span className="mh-ph-panel-label block text-[8px] font-black leading-none">現在ガッツ</span>
+          <span className="block text-[8px] font-black tracking-widest text-amber-300/80 leading-none">現在ガッツ</span>
           {tacticsMode
             ? <span data-tactics-guts-recovery className="block font-mono font-black leading-tight">
                 {gutsSlots.length===0
@@ -21985,12 +22017,12 @@ function UpgradeSkillScreen({
           disabled={!canRecoverGutsWithPoint}
           onClick={recoverGutsWithPoint}
           aria-label={`強化ポイント${GUTS_RECOVERY_POINT_COST}つでガッツを${GUTS_RECOVERY_AMOUNT}回復する`}
-          className={`shrink-0 min-h-[44px] px-3 rounded-xl font-black leading-tight active:scale-95 ${canRecoverGutsWithPoint?'mh-ph-btn-gold':'mh-ph-btn-off'}`}>
+          className="shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-600 text-white font-black leading-tight active:scale-95 disabled:opacity-30">
           {gutsFull
             ? <span className="block" style={{fontSize:'13px'}}>MAX</span>
             : (<>
                 <span className="block" style={{fontSize:'12px'}}>{GUTS_RECOVERY_POINT_COST}P で +{GUTS_RECOVERY_AMOUNT}</span>
-                <span className="block opacity-80" style={{fontSize:'8px'}}>{noPoint?'ポイント不足':'ガッツ回復'}</span>
+                <span className="block text-amber-100/90" style={{fontSize:'8px'}}>{noPoint?'ポイント不足':'ガッツ回復'}</span>
               </>)}
         </button>
       </div>);})()}
@@ -21998,7 +22030,7 @@ function UpgradeSkillScreen({
         {uniqueUpgradeEntries().map((e,i)=><React.Fragment key={e.rowKey}><div style={{'--i':i}} className="contents">{uniqueUpgradeRow(e)}</div></React.Fragment>)}
       </div>
       {/* 次はアシストカードの画面。以前は「ブリーダー継承へ」と書いてあり、次の画面の名前と合っていなかった */}
-      <button onClick={continueAfterUniqueUpgrade} className="mh-ph-btn-gold w-full max-w-sm min-h-[52px] rounded-2xl font-black active:scale-95 transition-transform mt-auto shrink-0 flex items-center justify-center gap-1">アシストカードへ<ChevronRight size={18}/></button>
+      <button onClick={continueAfterUniqueUpgrade} className="w-full max-w-sm min-h-[52px] bg-white text-black rounded-2xl font-black shadow-[0_0_20px_rgba(255,255,255,0.25)] active:scale-95 transition-transform mt-auto shrink-0 flex items-center justify-center gap-1">アシストカードへ<ChevronRight size={18}/></button>
     </div>
   
   );
@@ -22103,13 +22135,13 @@ function RewardPickScreen({
       ? (trainableSlots.length>0&&trainableSlots.every(index=>picksOf(index).length===TRAINING_PICK_COUNT))
       : trainingPicks.length===TRAINING_PICK_COUNT;
     const doneSlots=tacticsMode?trainableSlots.filter(index=>picksOf(index).length===TRAINING_PICK_COUNT).length:0;
-    // 枠の色と模様は data-ph-kind(70-bootstrap.jsx の mh-ph-*)が持つ。ここは文字の色と伸び幅の棒だけ。
+    // idle は選ぶ前の枠の色、badge はアイコンの台、bar は伸び幅の棒。
     // 選ぶ前から4項目を色で見分けられるようにする(以前は選ぶまで4枚とも同じ灰色だった)
     const STYLES={
-      hp:  {icon:<Heart size={18}/>,       tint:'text-pink-300',    bar:'bg-pink-400'},
-      atk: {icon:<Sword size={18}/>,       tint:'text-red-300',     bar:'bg-red-400'},
-      def: {icon:<ShieldCheck size={18}/>, tint:'text-emerald-300', bar:'bg-emerald-400'},
-      guts:{icon:<Sparkles size={18}/>,    tint:'text-amber-300',   bar:'bg-amber-400'},
+      hp:  {icon:<Heart size={18}/>,      ring:'border-pink-400',    bg:'bg-pink-900/40',    tint:'text-pink-300',    chip:'bg-pink-500',    idle:'border-pink-400/25',    badge:'bg-pink-500/20 text-pink-300',       bar:'bg-pink-400',    glow:'rgba(244,114,182,.35)'},
+      atk: {icon:<Sword size={18}/>,      ring:'border-red-400',     bg:'bg-red-900/40',     tint:'text-red-300',     chip:'bg-red-500',     idle:'border-red-400/25',     badge:'bg-red-500/20 text-red-300',         bar:'bg-red-400',     glow:'rgba(248,113,113,.35)'},
+      def: {icon:<ShieldCheck size={18}/>,ring:'border-emerald-400', bg:'bg-emerald-900/40', tint:'text-emerald-300', chip:'bg-emerald-500', idle:'border-emerald-400/25', badge:'bg-emerald-500/20 text-emerald-300', bar:'bg-emerald-400', glow:'rgba(52,211,153,.35)'},
+      guts:{icon:<Sparkles size={18}/>,   ring:'border-amber-400',   bg:'bg-amber-900/40',   tint:'text-amber-300',   chip:'bg-amber-500',   idle:'border-amber-400/25',   badge:'bg-amber-500/20 text-amber-300',     bar:'bg-amber-400',   glow:'rgba(251,191,36,.35)'},
     };
     const optionById=(id)=>TRAINING_OPTIONS.find(option=>option.id===id);
     const unitName=(slotIdx)=>slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`;
@@ -22126,16 +22158,15 @@ function RewardPickScreen({
     });
     return (
     // mh-phase … 器の高さで中身を畳む目印(70-bootstrap.jsx の @container)
-    // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・回る光の縁・宝石)。--ph は画面の識別色
-    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden" data-screen="training">
+    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",backgroundImage:'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(251,191,36,.16), transparent 70%)',zIndex:30000}} className="mh-phase absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden" data-screen="training">
       <div className="shrink-0 w-full max-w-sm" style={{paddingTop:'calc(.25rem + env(safe-area-inset-top))'}}>
         {/* どのWAVEを抜けたごほうびなのかを見出しの上に出す */}
         {waveResult?.wave>0&&<div className="mb-1 flex justify-center">
-          <span className="mh-ph-plate">WAVE {waveResult.wave} CLEAR</span>
+          <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-2.5 py-0.5 text-[9px] font-black tracking-[.2em] text-amber-200">WAVE {waveResult.wave} CLEAR</span>
         </div>}
-        <div className="mh-ph-heading">
-          <Trophy className="text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,.7)]" size={22}/>
-          <h2 className="mh-ph-title text-2xl font-black italic uppercase tracking-tighter leading-none">トレーニング</h2>
+        <div className="flex items-center justify-center gap-2">
+          <Trophy className="text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,.6)]" size={22}/>
+          <h2 className="text-xl font-black italic uppercase tracking-tighter text-white leading-none">トレーニング</h2>
         </div>
         {/* このあと何枚の画面を通ってバトルへ戻るのか */}
         {phasePlan&&<PhaseSteps plan={phasePlan} current="training" nextWave={waveResult?.wave>0?waveResult.wave+1:null} className="mt-1.5"/>}
@@ -22147,22 +22178,21 @@ function RewardPickScreen({
             const picked=optionById(activePicks[i]);
             const st=picked?(STYLES[picked.id]||STYLES.hp):null;
             if(!picked) return (
-              <span key={i} className="mh-ph-step-todo flex min-w-0 items-center gap-1 rounded-full border-dashed px-2 py-1 text-[10px] font-black" style={{maxWidth:'42%'}}>
+              <span key={i} className="flex min-w-0 items-center gap-1 rounded-full border border-dashed border-slate-600 px-2 py-1 text-[10px] font-black text-slate-500" style={{maxWidth:'42%'}}>
                 <span className="shrink-0 text-[9px] text-slate-400">{i+1}回目</span><span>―</span>
               </span>
             );
             return (
               <button key={`${i}-${picked.id}`} type="button" disabled={!!effect} onClick={()=>removePick(i)}
                 aria-label={`${i+1}回目の${picked.name}を取り消す`}
-                data-ph-kind={picked.id} data-ph-on=""
-                className="mh-phase-pop mh-ph-frame flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40" style={{maxWidth:'42%'}}>
+                className={`mh-phase-pop flex min-w-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40 ${st.ring} ${st.bg}`} style={{maxWidth:'42%'}}>
                 <span className="shrink-0 text-[9px] text-slate-300">{i+1}回目</span>
                 <span className={`shrink-0 ${st.tint}`}>{cardIconNode(st.icon)}</span><span className="truncate">{picked.name}</span>
                 <span aria-hidden="true" className="shrink-0 text-[10px] text-slate-300">×</span>
               </button>
             );
           })}
-          <span className="shrink-0 text-[11px] font-black font-mono text-[#f3d27a]">{activePicks.length} / {TRAINING_PICK_COUNT}</span>
+          <span className="shrink-0 text-[11px] font-black font-mono text-amber-300">{activePicks.length} / {TRAINING_PICK_COUNT}</span>
         </div>
         {/* 何体ぶん終わったか。1体ずつ選ぶので、どこまで進んだのかが分からないと迷子になる。
             名前の札を並べ、いま選んでいる子を光らせる */}
@@ -22175,7 +22205,7 @@ function RewardPickScreen({
               const done=count>=TRAINING_PICK_COUNT;
               const active=slotIdx===currentSlot&&pickable;
               return (
-                <span key={slotIdx} className={`flex max-w-[32%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active?'mh-ph-step-now':done?'border-emerald-400/60 bg-emerald-950/60 text-emerald-200':'mh-ph-step-todo'}`}>
+                <span key={slotIdx} className={`flex max-w-[32%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active?'border-amber-300 bg-amber-400/15 text-amber-100 shadow-[0_0_10px_rgba(251,191,36,.35)]':done?'border-emerald-400/50 bg-emerald-950/50 text-emerald-200':'border-slate-700 bg-slate-900/60 text-slate-400'}`}>
                   <span className="truncate">{unitName(slotIdx)}</span>
                   <span className="shrink-0 font-mono">{done?'✓':`${count}/${TRAINING_PICK_COUNT}`}</span>
                 </span>
@@ -22194,8 +22224,8 @@ function RewardPickScreen({
       <div className={`${tacticsMode?'mh-phase-mid':'mh-phase-tall'} shrink-0 w-full max-w-sm mt-2 text-left`}><AssistantBubble scene="rewardPick" compact/></div>
       {/* いま選んでいるぶんを反映した4ステータス。選ぶ前は現在値だけ、選ぶと増える量も出る。
           各項目のカードは自分のステータスしか出さないので、ここで全体を見比べられるようにする */}
-      {(!tacticsMode||currentUnit)&&<div className="mh-phase-tall mh-ph-panel shrink-0 w-full max-w-sm px-2 py-1.5 mt-2" data-training-status>
-        <div className="mh-ph-panel-label text-[8px] font-black text-left mb-1">現在のステータス{trainingPicks.length>0&&<span className="text-amber-300">（選択中の変化）</span>}</div>
+      {(!tacticsMode||currentUnit)&&<div className="mh-phase-tall shrink-0 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5 mt-2" data-training-status>
+        <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス{trainingPicks.length>0&&<span className="text-amber-300">（選択中の変化）</span>}</div>
         <div className="grid grid-cols-4 gap-1">
           {TRAINING_OPTIONS.map(option=>{
             const st=STYLES[option.id]||STYLES.hp;
@@ -22203,8 +22233,8 @@ function RewardPickScreen({
             const afterAll=current[option.stat];
             const diff=afterAll-beforeAll;
             return (
-              <div key={option.id} className="mh-ph-cell rounded-lg px-1 py-1 text-center">
-                <span className="block text-[8px] font-black text-slate-400 leading-none">{option.statLabel}</span>
+              <div key={option.id} className="rounded-lg bg-black/40 px-1 py-1 text-center">
+                <span className="block text-[8px] font-black text-slate-500 leading-none">{option.statLabel}</span>
                 <span className={`block text-[13px] font-black font-mono leading-tight ${diff>0?st.tint:'text-slate-300'}`}>{afterAll}</span>
                 <span className={`block text-[8px] font-black font-mono leading-none ${diff>0?'text-emerald-400':'text-slate-700'}`}>{diff>0?`+${diff}`:'±0'}</span>
               </div>
@@ -22230,16 +22260,14 @@ function RewardPickScreen({
                 return [...prev,{slot:currentSlot,id:option.id}];
               })}
               aria-label={`${option.name} ${option.effect}${count>0?` 選択中${count}回`:''}`}
-              data-ph-kind={option.id} data-ph-on={count>0?'':undefined}
-              className="mh-phase-card mh-phase-enter mh-ph-frame relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40"
-              style={{'--i':optionIndex}}>
-              {/* 地の光の粒と、選んだ枠を横切る光の筋(飾り。押す範囲や文字には関わらない) */}
-              <span aria-hidden="true" className="mh-ph-sparkle"/>
-              {count>0&&<span aria-hidden="true" className="mh-ph-shine"/>}
+              className={`mh-phase-card mh-phase-enter relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40 ${count>0?`${st.bg} ${st.ring}`:`bg-slate-900/70 ${st.idle}`}`}
+              style={{'--i':optionIndex,...(count>0?{boxShadow:`0 0 22px ${st.glow}`}:{})}}>
+              {/* 角の色だまり。4枚を色で見分けるための飾りで、押す範囲や文字には関わらない */}
+              <span aria-hidden="true" className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl" style={{background:st.glow}}/>
               {/* ★ボタンの文字は項目名から始める(検査がボタンを「^走り込み」で探す)。
                   アイコンは絵だけなので前に置いても文字には入らない */}
               <span className="relative flex items-center gap-2">
-                <span className={`mh-phase-card-icon mh-ph-medal shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${st.tint}`}>{cardIconNode(st.icon)}</span>
+                <span className={`mh-phase-card-icon shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${st.badge}`}>{cardIconNode(st.icon)}</span>
                 <span className="min-w-0">
                   <b className="mh-phase-card-name block text-[14px] font-black text-white leading-tight">{option.name}</b>
                   <span className={`block text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{(extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null||extremeRuleNumber(specialRule,'waveEnhancement')!=null)&&(()=>{
@@ -22252,9 +22280,9 @@ function RewardPickScreen({
               </span>
               {/* いちばん知りたい「どれだけ伸びるか」を大きく出す。カードが縦に伸びたぶんの空きもここで埋まる */}
               <span className="relative flex flex-1 items-center justify-center font-mono font-black leading-none">
-                <span className={`mh-phase-gain ${after>before?st.tint:'text-slate-500'}`} style={after>before?{textShadow:'0 0 14px rgba(var(--mh-rc),.75), 0 2px 0 rgba(0,0,0,.7)'}:undefined}>+{Math.max(0,after-before)}</span>
+                <span className={`mh-phase-gain ${after>before?st.tint:'text-slate-500'}`}>+{Math.max(0,after-before)}</span>
               </span>
-              <span className="mh-ph-cell relative w-full rounded-lg px-1.5 py-1 font-mono leading-tight">
+              <span className="relative w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight">
                 <span className="flex items-baseline justify-between gap-1">
                   <span className="mh-phase-stat-label text-[8px] text-slate-500 font-black">{option.statLabel}</span>
                   <span className="mh-phase-card-nums whitespace-nowrap text-[11px] font-black text-slate-300">{before} <span className="text-slate-600">→</span> <b className={st.tint}>{after}</b></span>
@@ -22266,7 +22294,7 @@ function RewardPickScreen({
                 </span>
               </span>
               {/* 何回選んだかを ×1 / ×2 で明確に出す */}
-              {count>0&&<span key={`count-${count}`} className="mh-phase-pop mh-phase-count mh-ph-gem absolute top-1.5 right-1.5 h-7 w-8 text-[11px]">×{count}</span>}
+              {count>0&&<span key={`count-${count}`} className={`mh-phase-pop mh-phase-count absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
             </button>
           );
         })}
@@ -22277,8 +22305,7 @@ function RewardPickScreen({
           {downedSlots.map(slotIdx=>(
             <button key={slotIdx} type="button" disabled={!!effect}
               onClick={()=>{setTrainingPicks([]); handleTraining({revive:slotIdx});}}
-              data-ph-kind="revive"
-              className="mh-ph-frame w-full min-h-[44px] rounded-2xl border-2 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40">
+              className="w-full min-h-[44px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/60 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40">
               <span className="block text-[12px] leading-tight">{slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`}を起こす<span className="text-[9px] font-black text-emerald-400/90">　このWAVEの強化はなし</span></span>
             </button>
           ))}
@@ -22287,9 +22314,9 @@ function RewardPickScreen({
       {/* 決定は2回そろうまで押せない。確定前ならいつでも選び直せる */}
       <div className="shrink-0 w-full max-w-sm mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-2" style={{paddingBottom:'calc(.25rem + env(safe-area-inset-bottom))'}}>
         <button type="button" disabled={trainingPicks.length===0||!!effect} onClick={()=>setTrainingPicks([])}
-          className="mh-ph-btn min-h-[52px] px-4 rounded-2xl font-black text-[11px] active:scale-95 disabled:opacity-30">選び直す</button>
+          className="min-h-[52px] px-4 rounded-2xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30">選び直す</button>
         <button type="button" disabled={!ready||!!effect} onClick={()=>{const picks=trainingPicks; setTrainingPicks([]); handleTraining(picks);}}
-          className={`min-h-[52px] rounded-2xl font-black text-base uppercase active:scale-95 transition-all ${ready&&!effect?'mh-phase-ready mh-ph-btn-gold':'mh-ph-btn-off'}`}>{ready?'決定する':`あと${remaining}つ選ぶ`}</button>
+          className={`min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready&&!effect?'mh-phase-ready bg-gradient-to-r from-amber-300 to-yellow-200 text-slate-950 shadow-[0_0_24px_rgba(251,191,36,0.45)]':'bg-slate-800 text-slate-600'}`}>{ready?'決定する':`あと${remaining}つ選ぶ`}</button>
       </div>
     </div>);
   
@@ -26237,8 +26264,6 @@ function MonsterHeroGame() {
   const ultraEcoSession = ecoMode==='ultra'&&autoRepeat===true;
   const ultraBattleView = gameState==='BATTLE'&&ultraEcoSession;
   const ecoBattleView = liteBattleView||ultraBattleView;
-  // 強化フェーズの画面(WAVEのあと)の飾りの動きも、省エネのときと、バトル設定の「待機中の動き：止める」のときは止める
-  // (data-phase-look。70-bootstrap.jsx の mh-ph-*。タクティクス新画面の枠の飾りと同じ扱い)
   // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
   const stopAutoBattle = () => {
     autoBattleRef.current = false;
@@ -37828,20 +37853,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★ボタンは1行に2つ(－ が先・＋ が後)。検査が「引き継ぎ」の行の2つ目を＋として押す。
     //   見た目は flex-col-reverse で ＋ を上に置く(押す回数の多いほうを親指に近く)
     return(
-      // 見た目は強化フェーズ共通の mh-ph-*(70-bootstrap.jsx)。自分の技は金、引き継いだ技は水色の縁
-      <div key={rowKey} data-ph-kind={inherited?'inherit':'own'} className="mh-phase-enter mh-ph-frame relative overflow-hidden p-2.5 rounded-2xl border shrink-0">
-        <span aria-hidden="true" className="mh-ph-sparkle"/>
-        <div className="relative flex items-center gap-2.5">
-          {ownerMon?.iconUrl?(<img src={ownerMon.iconUrl} alt={ownerMon.name} style={monsterArtFitStyle(ownerMon.id)} className="mh-ph-medal w-11 h-11 rounded-full object-cover shrink-0"/>):(<span style={{fontSize:'30px'}}>{cardIconNode(u.icon,40)}</span>)}
+      <div key={rowKey} className={`mh-phase-enter p-2.5 rounded-2xl border shrink-0 ${inherited?'bg-cyan-950/40 border-cyan-700/60':'bg-slate-900/80 border-slate-700/70'}`}>
+        <div className="flex items-center gap-2.5">
+          {ownerMon?.iconUrl?(<img src={ownerMon.iconUrl} alt={ownerMon.name} style={monsterArtFitStyle(ownerMon.id)} className="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0"/>):(<span style={{fontSize:'30px'}}>{cardIconNode(u.icon,40)}</span>)}
           <div className="text-left flex-1 min-w-0">
             <div className={`text-[9px] font-black tracking-wider flex items-center gap-1 truncate ${inherited?'text-cyan-300':'text-indigo-300'}`}>
               {inherited&&<span className="bg-cyan-600 text-white px-1 rounded-sm not-italic shrink-0">引き継ぎ</span>}<span className="truncate">{heading}</span>
             </div>
             <div className="font-black text-white leading-tight truncate" style={{fontSize:'13px'}}>{u.names[Math.min(lvl,u.names.length-1)]} <span className="text-slate-400">Lv.{lvl}</span>{maxed?<span className="text-amber-400"> MAX</span>:<span className="text-amber-400"> → {lvl+1}</span>}</div>
-            {/* レベルの目盛り(0〜8)。菱形の宝石で、次に上がる1段を光らせる */}
-            <div className="mt-1.5 mb-0.5 flex items-center gap-[5px] pl-0.5" aria-hidden="true">
+            {/* レベルの目盛り(0〜8)。次に上がる1段を光らせる */}
+            <div className="mt-1 flex gap-0.5" aria-hidden="true">
               {Array.from({length:8}).map((_,i)=>(
-                <i key={i} className="mh-ph-pip" data-on={i<lvl?'':undefined} data-next={i===lvl&&!maxed?'':undefined}/>
+                <i key={i} className={`block h-1.5 flex-1 rounded-full ${i<lvl?(inherited?'bg-cyan-400':'bg-amber-400'):(i===lvl&&!maxed?'bg-white/40 animate-pulse':'bg-slate-700')}`}/>
               ))}
             </div>
             {!maxed?(
@@ -37851,8 +37874,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             )}
           </div>
           <div className="flex flex-col-reverse gap-1.5 shrink-0">
-            <button disabled={lvl<=0} onClick={()=>onStep(-1)} aria-label={`${u.names[Math.min(lvl,u.names.length-1)]}のレベルを1つ下げる`} className="mh-ph-btn w-10 h-9 flex items-center justify-center rounded-lg disabled:opacity-20 active:scale-90"><MinusCircle size={18}/></button>
-            <button disabled={upgradePoints<=0||maxed} onClick={()=>onStep(1)} aria-label={`${u.names[Math.min(lvl,u.names.length-1)]}のレベルを1つ上げる`} className={`w-10 h-11 flex items-center justify-center rounded-lg active:scale-90 ${upgradePoints>0&&!maxed?'mh-ph-btn-gold':'mh-ph-btn-off'}`}><PlusCircle size={20}/></button>
+            <button disabled={lvl<=0} onClick={()=>onStep(-1)} aria-label={`${u.names[Math.min(lvl,u.names.length-1)]}のレベルを1つ下げる`} className="w-10 h-9 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90"><MinusCircle size={18}/></button>
+            <button disabled={upgradePoints<=0||maxed} onClick={()=>onStep(1)} aria-label={`${u.names[Math.min(lvl,u.names.length-1)]}のレベルを1つ上げる`} className={`w-10 h-11 flex items-center justify-center rounded-lg text-white disabled:opacity-20 active:scale-90 ${inherited?'bg-cyan-600':'bg-amber-600'} ${upgradePoints>0&&!maxed?'shadow-[0_0_12px_rgba(245,158,11,.45)]':''}`}><PlusCircle size={20}/></button>
           </div>
         </div>
       </div>
@@ -38802,7 +38825,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         器を増やさず**同じ要素のstyleを差し替えるだけ**にしてあるのは、
         切り替えた瞬間に中身が作り直されると演奏中の状態(音の時計・スコア・押している指)が
         飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
-    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF')?'calm':'rich'} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
+    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
       <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
         {ripples.map(r=>(
@@ -42399,9 +42422,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <QuickStepScreen onDone={finishQuickGrowth} accent="#2dd4bf" label="タップして次へ">
           {/* 供モンが来るWAVEでは、このあと供モン選び・配置へ続くことを先に見せる */}
           {phasePlan&&phasePlan.length>1&&<PhaseSteps plan={phasePlan} current="growth" className="mb-2"/>}
-          <div className="mh-ph-heading"><h2 className="mh-ph-title text-2xl font-black italic">ステータスアップ！</h2></div>
+          <h2 className="text-2xl font-black italic" style={{color:'#2dd4bf'}}>ステータスアップ！</h2>
           <p className="text-[10px] font-black text-slate-400 mt-1">WAVE {quickGrowth.nextWave-1} クリア／全ステータス +10%</p>
-          <div className="mh-ph-panel mt-4 w-full overflow-hidden">
+          <div className="mt-4 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden">
             {quickGrowth.stats.map((st,i)=>(
               <div key={st.label} className={`flex items-center gap-2 px-4 py-2 ${i>0?'border-t border-white/5':''}`}>
                 <span className="w-14 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
@@ -42412,26 +42435,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             ))}
           </div>
-          <div className="mh-ph-plate mt-3 !tracking-normal text-[11px]" style={{color:'#99f6e4'}}>ライフ・ガッツ全回復！</div>
+          <div className="mt-3 rounded-2xl px-3 py-2 text-[11px] font-black" style={{backgroundColor:'rgba(45,212,191,.12)',color:'#5eead4'}}>ライフ・ガッツ全回復！</div>
         </QuickStepScreen>
       )}
 
       {/* クイックモード: 供モン加入。加入ステータスと固有技アップを1画面でまとめて出す */}
       {gameState==='QUICK_JOIN'&&quickJoin&&(
         <QuickStepScreen onDone={finishQuickJoin} accent="#2dd4bf" label="タップして次へ">
-          <div className="mh-ph-heading"><h2 className="mh-ph-title text-2xl font-black italic">供モン加入！</h2></div>
+          <h2 className="text-2xl font-black italic" style={{color:'#2dd4bf'}}>供モン加入！</h2>
           <div className="mt-3 flex items-center justify-center gap-2">
-            {/* 加わった子の後ろでルーンの輪が回る(強化フェーズのほかの画面と同じ飾り) */}
-            <div className="relative flex items-center justify-center">
-              <span aria-hidden="true" className="mh-ph-rune"/>
-              <div className="mh-phase-pop mh-ph-medal relative z-10 w-20 h-20 rounded-full overflow-hidden flex items-center justify-center">
-                {quickJoin.imgUrl?<DyedMonsterImage baseId={quickJoin.baseId} src={quickJoin.imgUrl} alt={quickJoin.name} masuColors={quickJoin.colors} className="w-full h-full object-contain"/>:<span className="text-3xl">{quickJoin.emoji}</span>}
-              </div>
+            <div className="mh-phase-pop w-20 h-20 rounded-full overflow-hidden border-2 flex items-center justify-center bg-black/40 shadow-[0_0_24px_rgba(45,212,191,.45)]" style={{borderColor:'#2dd4bf'}}>
+              {quickJoin.imgUrl?<DyedMonsterImage baseId={quickJoin.baseId} src={quickJoin.imgUrl} alt={quickJoin.name} masuColors={quickJoin.colors} className="w-full h-full object-contain"/>:<span className="text-3xl">{quickJoin.emoji}</span>}
             </div>
             <p className="text-sm font-black text-white">{quickJoin.name}が仲間になった！</p>
           </div>
           {quickJoin.stats.length>0&&(
-            <div className="mh-ph-panel mt-3 w-full overflow-hidden">
+            <div className="mt-3 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden">
               {quickJoin.stats.map((st,i)=>(
                 <div key={st.label} className={`flex items-center gap-2 px-4 py-2 ${i>0?'border-t border-white/5':''}`}>
                   <span className="w-14 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
@@ -42446,7 +42465,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           )}
           {quickJoin.aptLabel&&<div className="mt-2 rounded-full border border-cyan-400/40 bg-cyan-950/40 px-3 py-1 text-[10px] font-black text-cyan-200">間合い適性 {quickJoin.aptLabel}</div>}
           {quickJoin.unique?(
-            <div className="mh-ph-panel mt-3 w-full px-3 py-2.5">
+            <div className="mt-3 w-full rounded-2xl border px-3 py-2.5" style={{borderColor:'rgba(251,191,36,.5)',backgroundColor:'rgba(0,0,0,.5)'}}>
               <div className="text-[11px] font-black text-amber-300">固有技アップ！</div>
               <div className="text-[12px] font-black text-white mt-0.5">{quickJoin.unique.monName}</div>
               <div className="text-[11px] text-slate-300 mt-0.5">「{quickJoin.unique.skillName}」 Lv.{quickJoin.unique.before} → <b className="text-amber-300">Lv.{quickJoin.unique.after}</b></div>
@@ -45289,8 +45308,7 @@ const createAnimationStyle = () => {
       /* 1枚の幅が90px前後になるので、名前・数字・×1 の札を一回り小さくして重ならないようにする */
       .mh-phase-card-name { font-size: 12px !important; }
       .mh-phase-card-nums { font-size: 9px !important; }
-      /* ×1 の宝石は名前にかぶらないよう、伸び幅の横(下の数字の欄の上)へ移す */
-      .mh-phase-count { top: auto !important; bottom: 30px !important; right: 3px !important; width: 22px !important; height: 20px !important; padding: 2px 0 0 !important; font-size: 8px !important; }
+      .mh-phase-count { top: 3px !important; right: 3px !important; padding: 0 5px !important; font-size: 9px !important; }
     }
     /* 並んだカードが順に出てくる動き。--i に並び順を入れる。
        fill-mode は backwards にする(both / forwards だと終わったあとも transform を握り続け、
@@ -45305,154 +45323,6 @@ const createAnimationStyle = () => {
     @keyframes mhPhaseReady { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }
     @media (prefers-reduced-motion: reduce) {
       .mh-phase-enter, .mh-phase-pop, .mh-phase-ready { animation: none; }
-    }
-    /* ==== 強化フェーズの画面の見た目(2026-09-24 ユーザー指示「やすっぽい見た目も改善して」
-       「タクティクスバトルを参考に見た目を強くしてほしい」)。
-       タクティクス新盤面の飾り(濃紺の地・金の細い縁・回る光の縁・距離や種類ごとの模様・宝石・魔法陣・光の筋)を
-       同じ言葉で使う。@keyframes mhAng / mhShine / mhTwinkle / mhRuneSpin / mhGem はタクティクスの節で定義済み。
-       ★動き(回る縁・きらめき・光の筋・魔法陣・宝石の明滅)は data-phase-look="rich" のときだけ。
-         省エネ(lite / 超省エネ∞)では calm になり、「動きを減らす」設定でも止める。見た目は残す。
-       ★色は変数で渡す。--ph … 画面の識別色 / --mh-rc・--mh-rc2 … 枠1つぶんの色(濃い・明るい) ==== */
-    .mh-ph-bg {
-      background:
-        radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.55), transparent 60%),
-        radial-gradient(1px 1px at 78% 12%, rgba(255,255,255,.45), transparent 60%),
-        radial-gradient(1.5px 1.5px at 64% 34%, rgba(var(--ph,148,163,184),.8), transparent 60%),
-        radial-gradient(1px 1px at 28% 58%, rgba(255,255,255,.3), transparent 60%),
-        radial-gradient(1px 1px at 90% 66%, rgba(255,255,255,.3), transparent 60%),
-        radial-gradient(1.5px 1.5px at 8% 84%, rgba(var(--ph,148,163,184),.6), transparent 60%),
-        radial-gradient(ellipse 95% 40% at 50% -6%, rgba(var(--ph,148,163,184),.30), transparent 72%),
-        radial-gradient(ellipse 130% 55% at 50% 112%, rgba(var(--ph,148,163,184),.12), transparent 70%),
-        repeating-linear-gradient(135deg, rgba(255,255,255,.02) 0 1px, transparent 1px 9px),
-        linear-gradient(180deg, #0c1126 0%, #060916 55%, #03040b 100%) !important;
-    }
-    /* 見出しの金の文字と、左右の飾り線(◆) */
-    .mh-ph-title { background: linear-gradient(180deg, #fffbe8 0%, #f6d98a 46%, #c8962e 100%); -webkit-background-clip: text; background-clip: text;
-      color: transparent !important; padding-right: .18em; filter: drop-shadow(0 2px 0 rgba(0,0,0,.65)) drop-shadow(0 0 10px rgba(var(--ph,243,210,122),.45)); }
-    .mh-ph-heading { display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .mh-ph-heading::before, .mh-ph-heading::after { content: '◆'; flex: none; font-size: 7px; line-height: 1; color: #f3d27a; text-shadow: 0 0 6px rgba(243,210,122,.8); }
-    .mh-ph-heading::before { padding-left: 26px; background: linear-gradient(90deg, transparent, rgba(243,210,122,.85)) left center / 24px 1px no-repeat; }
-    .mh-ph-heading::after { padding-right: 26px; background: linear-gradient(270deg, transparent, rgba(243,210,122,.85)) right center / 24px 1px no-repeat; }
-    /* 金の縁の札(WAVE CLEAR など) */
-    .mh-ph-plate { display: inline-block; border: 1px solid transparent; border-radius: 999px; padding: 2px 12px; font-size: 9px; font-weight: 900; letter-spacing: .22em; color: #fde9b0;
-      background: linear-gradient(180deg, #1c2446, #0b0f22) padding-box, linear-gradient(90deg, #6b4a14, #fff0b0 30%, #c8962e 60%, #6b4a14) border-box;
-      box-shadow: 0 0 0 1px rgba(20,12,4,.85), 0 2px 8px rgba(0,0,0,.5), 0 0 14px rgba(var(--ph,243,210,122),.28); text-shadow: 0 1px 2px rgba(0,0,0,.9); }
-    /* 金の細い縁のパネル(ステータスの欄・所持カードなど) */
-    .mh-ph-panel { border: 1px solid transparent !important; border-radius: 16px;
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 38%) padding-box,
-        linear-gradient(170deg, rgba(18,22,46,.95), rgba(6,8,18,.97)) padding-box,
-        linear-gradient(160deg, rgba(243,210,122,.6), rgba(243,210,122,.12) 38%, rgba(243,210,122,.08) 62%, rgba(243,210,122,.5)) border-box !important;
-      box-shadow: 0 6px 18px rgba(0,0,0,.45), 0 0 0 1px rgba(10,6,2,.6); }
-    .mh-ph-panel-label { color: #d9bf7a !important; letter-spacing: .18em; }
-    /* パネルの中の升目 */
-    .mh-ph-cell { background: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.28)) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 0 1px rgba(243,210,122,.08); }
-    /* 選ぶ枠: 地の模様 + 濃紺 + 枠の色の縁(タクティクスのモンスター枠と同じ作り)。選んでいない枠は落ち着いた縁、
-       data-ph-on の枠は明るい縁が回り、外へ光がにじむ */
-    .mh-ph-frame { border: 2px solid transparent !important;
-      background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
-        linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0) 30%) padding-box,
-        linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
-        linear-gradient(160deg, rgba(var(--mh-rc),.75), rgba(var(--mh-rc),.22) 40%, rgba(243,210,122,.18) 60%, rgba(var(--mh-rc),.6)) border-box !important; }
-    .mh-ph-frame[data-ph-on] {
-      background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
-        radial-gradient(90% 60% at 50% 0%, rgba(var(--mh-rc),.28), transparent 70%) padding-box,
-        linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
-        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
-          rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important;
-      box-shadow: 0 0 18px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.18) !important; }
-    [data-phase-look="rich"] .mh-ph-frame[data-ph-on] { animation: mhAng 4.5s linear infinite; }
-    /* 枠の中の光の粒 */
-    .mh-ph-sparkle { position: absolute; inset: 3px; border-radius: inherit; pointer-events: none;
-      background: radial-gradient(1.5px 1.5px at 14% 30%, rgba(var(--mh-rc2),.95), transparent 70%), radial-gradient(1.5px 1.5px at 52% 72%, rgba(var(--mh-rc2),.85), transparent 70%),
-        radial-gradient(1px 1px at 80% 42%, #fff, transparent 70%), radial-gradient(1px 1px at 36% 16%, #fff, transparent 70%), radial-gradient(1px 1px at 88% 86%, rgba(var(--mh-rc2),.8), transparent 70%); }
-    [data-phase-look="rich"] .mh-ph-sparkle { animation: mhTwinkle 2.6s ease-in-out infinite; }
-    /* 枠を横切る光の筋 */
-    .mh-ph-shine { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
-    .mh-ph-shine::before { content: ''; position: absolute; top: -10%; bottom: -10%; left: 0; width: 40%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent); transform: translateX(-160%) skewX(-18deg); }
-    [data-phase-look="rich"] .mh-ph-shine::before { animation: mhShine 3.6s ease-in-out infinite; }
-    /* 種類ごとの地の模様(タクティクスの手札・枠と同じ模様の言葉) */
-    [data-ph-kind="hp"] { --mh-rc: 236,72,153; --mh-rc2: 255,200,230;
-      --mh-pat: radial-gradient(circle at 80% 18%, rgba(255,140,200,.22), transparent 45%), repeating-radial-gradient(circle at 80% 18%, rgba(255,160,210,.10) 0 2px, transparent 2px 10px); }
-    [data-ph-kind="atk"] { --mh-rc: 239,68,68; --mh-rc2: 255,210,190;
-      --mh-pat: radial-gradient(120% 60% at 50% 115%, rgba(255,120,40,.32), transparent 70%), repeating-linear-gradient(135deg, rgba(255,90,40,.10) 0 2px, transparent 2px 9px); }
-    [data-ph-kind="def"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
-      --mh-pat: radial-gradient(circle, rgba(167,243,208,.16) 1.5px, transparent 2px) 0 0 / 9px 9px, radial-gradient(80% 50% at 50% 20%, rgba(52,211,153,.18), transparent 70%); }
-    [data-ph-kind="guts"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
-      --mh-pat: repeating-conic-gradient(from 0deg at 50% 30%, rgba(255,210,80,.06) 0 8deg, transparent 8deg 24deg), radial-gradient(60% 50% at 50% 30%, rgba(255,200,60,.2), transparent 70%); }
-    [data-ph-kind="new"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
-      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(167,243,208,.05) 0 10deg, transparent 10deg 30deg); }
-    [data-ph-kind="up"] { --mh-rc: 168,85,247; --mh-rc2: 233,213,255;
-      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(216,180,254,.07) 0 10deg, transparent 10deg 30deg), radial-gradient(70% 50% at 50% 30%, rgba(168,85,247,.22), transparent 70%); }
-    [data-ph-kind="max"] { --mh-rc: 234,179,8; --mh-rc2: 255,243,196;
-      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(255,230,150,.08) 0 10deg, transparent 10deg 30deg), radial-gradient(70% 50% at 50% 30%, rgba(234,179,8,.22), transparent 70%); }
-    [data-ph-kind="own"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160; }
-    [data-ph-kind="inherit"] { --mh-rc: 6,182,212; --mh-rc2: 207,250,254; }
-    [data-ph-kind="ally"] { --mh-rc: 129,140,248; --mh-rc2: 224,231,255; }
-    [data-ph-kind="revive"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220; }
-    /* 距離ごと(配置)。タクティクスの零=赤・近=黄・中=緑・遠=青 と模様をそのまま使う */
-    [data-ph-range="0"] { --mh-rc: 239,68,68; --mh-rc2: 255,210,190;
-      --mh-pat: radial-gradient(120% 60% at 50% 115%, rgba(255,120,40,.5), rgba(200,30,20,.22) 45%, transparent 70%), repeating-linear-gradient(115deg, rgba(255,90,40,.10) 0 3px, transparent 3px 14px); }
-    [data-ph-range="1"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
-      --mh-pat: repeating-conic-gradient(from 0deg at 20% 62%, rgba(255,210,80,.15) 0 6deg, transparent 6deg 18deg), radial-gradient(60% 60% at 20% 62%, rgba(255,200,60,.32), transparent 70%); }
-    [data-ph-range="2"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
-      --mh-pat: repeating-linear-gradient(98deg, rgba(52,211,153,.30) 0 1.5px, transparent 1.5px 6px) bottom / 100% 34% no-repeat, radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.26), transparent 70%); }
-    [data-ph-range="3"] { --mh-rc: 59,130,246; --mh-rc2: 200,225,255;
-      --mh-pat: repeating-radial-gradient(circle at 20% 140%, rgba(90,160,255,.17) 0 3px, transparent 3px 11px), radial-gradient(70% 60% at 20% 62%, rgba(80,150,255,.32), transparent 70%); }
-    /* 宝石(×1 の数・残りポイントなど)。タクティクスの手札の消費ガッツと同じ形 */
-    .mh-ph-gem { display: inline-flex; align-items: center; justify-content: center; padding-top: 2px; font-weight: 900; line-height: 1; color: #fff;
-      text-shadow: 0 1px 2px rgba(0,0,0,.9); clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
-      background: radial-gradient(circle at 35% 30%, #fff 0 8%, rgba(var(--mh-rc2,200,225,255),1) 18%, rgba(var(--mh-rc,31,111,209),1) 55%, rgba(8,10,30,1) 100%); }
-    [data-phase-look="rich"] .mh-ph-gem { animation: mhGem 2.2s ease-in-out infinite; }
-    /* 絵を収める金の額(アシストカードの顔・固有技の絵) */
-    .mh-ph-medal { border: 2px solid #f3d27a !important; background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.22), rgba(0,0,0,.4)) !important;
-      box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.5), inset 0 0 10px rgba(0,0,0,.5) !important; }
-    /* 絵の後ろで回るルーンの輪 */
-    .mh-ph-rune { position: absolute; left: 50%; top: 50%; width: 150%; height: 150%; margin: -75% 0 0 -75%; border-radius: 50%; pointer-events: none; z-index: 0;
-      background: repeating-conic-gradient(rgba(243,210,122,.85) 0 3deg, transparent 3deg 15deg), radial-gradient(circle, rgba(var(--ph,243,210,122),.25), transparent 70%);
-      -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
-      mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
-      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),.9)); }
-    [data-phase-look="rich"] .mh-ph-rune { animation: mhRuneSpin 16s linear infinite; }
-    /* 足元の魔法陣(タクティクスの枠の足元と同じ) */
-    .mh-ph-floor { position: absolute; left: 50%; bottom: -14px; width: 96px; height: 96px; margin-left: -48px; pointer-events: none; z-index: 0;
-      transform: rotateX(68deg);
-      background: radial-gradient(circle, transparent 52%, rgba(255,240,200,.95) 53%, rgba(255,240,200,.95) 55%, transparent 56%, transparent 66%, rgba(var(--ph,243,210,122),.9) 67%, rgba(var(--ph,243,210,122),.9) 70%, transparent 71%),
-        repeating-conic-gradient(rgba(255,240,200,.8) 0 4deg, transparent 4deg 30deg);
-      -webkit-mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%); mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%);
-      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),1)); }
-    [data-phase-look="rich"] .mh-ph-floor { animation: mhPhFloor 7s linear infinite; }
-    @keyframes mhPhFloor { to { transform: rotateX(68deg) rotate(360deg); } }
-    /* ボタン。金 = 決めるボタン(押せるとき)、夜 = そのほか。ボタンの意味の色は変えず、縁と照りを重ねる */
-    .mh-ph-btn-gold { position: relative; overflow: hidden; color: #2a1a04 !important; text-shadow: 0 1px 0 rgba(255,255,255,.5);
-      background: linear-gradient(180deg, #fff6d0 0%, #f4d57c 24%, #d8a640 62%, #9a6d22 100%) !important;
-      box-shadow: 0 0 0 1px rgba(40,26,6,.9), 0 0 0 3px rgba(243,210,122,.3), 0 6px 18px rgba(0,0,0,.5), 0 0 22px rgba(255,210,120,.45),
-        inset 0 2px 0 rgba(255,255,255,.75), inset 0 -2px 0 rgba(90,60,10,.55) !important; }
-    .mh-ph-btn-gold::after { content: ''; position: absolute; top: -20%; bottom: -20%; left: 0; width: 30%; pointer-events: none;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); transform: translateX(-160%) skewX(-18deg); }
-    [data-phase-look="rich"] .mh-ph-btn-gold::after { animation: mhShine 3s ease-in-out infinite; }
-    .mh-ph-btn { color: #e2e8f0 !important; border: 1px solid rgba(243,210,122,.45) !important;
-      background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0) 45%, rgba(0,0,0,.25)), linear-gradient(180deg, #1c2446, #0b0f22) !important;
-      box-shadow: 0 0 0 1px rgba(20,12,4,.85), 0 4px 12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,240,200,.3) !important; }
-    .mh-ph-btn:disabled { opacity: .45; }
-    .mh-ph-btn-off { color: #64748b !important; border: 1px solid rgba(243,210,122,.18) !important;
-      background: linear-gradient(180deg, #151a33, #0a0d1d) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important; }
-    /* 強化フェーズの並び(PhaseSteps) */
-    .mh-ph-step-now { color: #1a1204 !important; border: 1px solid rgba(255,240,200,.9);
-      background: linear-gradient(180deg, #fff, rgb(var(--ph,243,210,122)) 55%, rgba(var(--ph,243,210,122),.75)) !important;
-      box-shadow: 0 0 0 1px rgba(20,12,4,.8), 0 0 12px rgba(var(--ph,243,210,122),.7), inset 0 1px 0 rgba(255,255,255,.8) !important; }
-    .mh-ph-step-todo { color: #8b93a8 !important; border: 1px solid rgba(243,210,122,.22) !important; background: linear-gradient(180deg, #151a33, #0a0d1d) !important; }
-    .mh-ph-step-done { color: #ecfdf5 !important; border: 1px solid rgba(167,243,208,.9) !important; transform: rotate(45deg); border-radius: 3px !important;
-      background: radial-gradient(circle at 35% 30%, #fff 0 10%, #6ee7b7 30%, #059669 70%, #064e3b 100%) !important; box-shadow: 0 0 8px rgba(52,211,153,.7); }
-    .mh-ph-step-done > span { display: block; transform: rotate(-45deg); }
-    .mh-ph-step-line { height: 1px; background: linear-gradient(90deg, rgba(243,210,122,.2), rgba(243,210,122,.7), rgba(243,210,122,.2)) !important; }
-    /* 菱形の段(アシストカードのレベル) */
-    .mh-ph-pip { display: block; width: 8px; height: 8px; transform: rotate(45deg); border-radius: 1.5px; border: 1px solid rgba(243,210,122,.35); background: #11152b; }
-    .mh-ph-pip[data-on] { border-color: rgba(255,240,200,.9); background: radial-gradient(circle at 35% 30%, #fff 0 12%, rgba(var(--mh-rc2),1) 35%, rgba(var(--mh-rc),1) 80%); box-shadow: 0 0 6px rgba(var(--mh-rc),.8); }
-    .mh-ph-pip[data-next] { border-color: #f3d27a; background: rgba(243,210,122,.35); box-shadow: 0 0 6px rgba(243,210,122,.7); }
-    [data-phase-look="rich"] .mh-ph-pip[data-next] { animation: mhTwinkle 1.6s ease-in-out infinite; }
-    @media (prefers-reduced-motion: reduce) {
-      .mh-ph-frame[data-ph-on], .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
     }
     @keyframes specialShockwave {
       0% { transform: scale(0.4); opacity: 0.9; }
