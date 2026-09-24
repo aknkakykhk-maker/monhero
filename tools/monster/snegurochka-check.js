@@ -61,8 +61,9 @@ const checks = [
     && game.includes('setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura:')],
   ['水攻撃は距離枠を動かさず本体だけ横移動', game.includes("if (anim.motion==='waterBurst') return undefined")
     && game.includes('const WaterBurstMotion =')
-    && game.includes('translate3d(-44px,-2px,0)')
-    && game.includes('translate3d(46px,-8px,0)')],
+    // 2026-09-24: 左右の滑りを敵のいる側(--atk-side)へ寄せた。端の枠で画面の外へはみ出して消えて見えたため
+    && game.includes('translate3d(calc(-44px + var(--atk-side) * 30px),-2px,0)')
+    && game.includes('translate3d(calc(46px + var(--atk-side) * 30px),-8px,0)')],
   ['水弾は3発・着弾飛沫つき', waterShotCount === 3
     && game.includes('water-burst-motion__impact-core')
     && game.includes('water-burst-motion__impact-ring')],

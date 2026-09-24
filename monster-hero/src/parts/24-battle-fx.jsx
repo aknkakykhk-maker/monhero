@@ -38,6 +38,8 @@ const attackAimVars = (dx, dy, {spread = 56} = {}) => {
   const deg = (v) => `${Math.round(v * 10) / 10}deg`;
   return {
     '--atk-dx': px(dx), '--atk-dy': px(dy), '--atk-len': px(main.len), '--atk-rot': deg(main.rot),
+    // 敵が右にいれば1・左なら-1・ほぼ真上なら0(水攻撃の左右の滑りを敵の側へ寄せるのに使う)
+    '--atk-side': String(dx > 12 ? 1 : (dx < -12 ? -1 : 0)),
     '--pd-l-x': px(dx * PANDORA_CLONE_REACH - spread), '--pd-r-x': px(dx * PANDORA_CLONE_REACH + spread),
     '--pd-y': px(dy * PANDORA_CLONE_REACH),
     // 分身は撃つあいだ .95 倍に縮むので、雷はそのぶん長くして敵まで届かせる
@@ -286,7 +288,7 @@ const WaterBurstMotion = ({image, lunge=false, charging=false, compact=false}) =
   </span>
 );
 // ミーア専用の歌攻撃演出。
-// 距離枠は動かさず、本体だけがくるっと回って敵のほうへ身を乗り出し、マイクスタンドの前で歌う。
+// 距離枠は動かさず、本体だけが跳ねて体をひねり、敵のほうへ身を乗り出し、マイクスタンドの前で歌う。
 // 音符は5つ、左右に揺れながら敵の位置(--atk-dx/dy)まで飛び、敵の向きへ音の波を3つ走らせる。
 // x は飛ぶ途中の左右の揺れ、y は途中でふくらむ高さ。追加画像・追加音源は使わず、攻撃中だけDOMへ出る
 // 固定数のCSS要素で描く(常時アニメーションにはしない)。
