@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fe42850c55a06b58
+// source-sha256: d10fd7dfc42b1669
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3c89b2870af19ac9
+// generated-sha256: 6befed9cc012a465
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -179,7 +179,7 @@ const normalizeBattleFxSettings = value => {
 const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
   key: 'idleMotion',
   title: '待機中の動き',
-  desc: '待っているあいだのモンスターの動き（ミーアの羽ばたきなど）と、タクティクス新画面の枠の飾り・敵の待機の動き、WAVEのあとの画面の飾りの動きです。攻撃の演出はどちらでも出ます。',
+  desc: '待っているあいだのモンスターの動き（翼の羽ばたき・しっぽや花の揺れなど）と、タクティクス新画面の枠の飾り・敵の待機の動き、WAVEのあとの画面の飾りの動きです。攻撃の演出はどちらでも出ます。',
   options: [{
     id: 'ON',
     label: '動かす',
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 17:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 17:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17939,14 +17939,374 @@ const AttackTargetFx = ({
     }
   })));
 };
-// ==== ミーアの待機アニメ(試作・2026-09-24 ユーザー指示「試しにミーアでやってみて」) ====
-// 絵は1枚のPNGなので描き足しはしない。同じ絵を「翼以外」「左の翼」「右の翼」の3枚に切り抜いて重ね
-// (切り抜きは images/monsters/mia-wing-*.png のマスク)、翼だけを肩の付け根を軸に回して羽ばたかせる。
-// 翼は体の後ろにあるので、動かしても穴が見えない。全体はゆっくり浮き沈みして呼吸する。
-// ・image はバトルで使う実際の絵(染色つき DyedMonsterImage)をそのまま受け取り、3回複製する
-// ・軸の位置は「正方形の枠に2:3の絵を contain で置いた」ときの座標。バトルの枠(58/64pxの正方形)専用
-// ・軽量表示・動きを減らす設定では止める(呼び出し側と CSS の両方で)
-const MIA_IDLE_MASK_STYLE = url => ({
+// ==== 味方モンスターの待機アニメ(2026-09-24 ユーザー指示「ミーアで試して」→「他の味方モンスターもアニメーション実装よろしく」) ====
+// 絵は1枚のPNGなので描き足しはしない。同じ絵を「体」と「動かす部分(翼・しっぽ・耳・花…)」にマスクで切り抜いて重ね、
+// 部分だけを付け根を軸に回す。全体の動き(浮く・跳ねる・呼吸・揺れる・泳ぐ)は種ごとに1つ。
+// ・どこを切り抜いてどう動かすかは tools/monster/idle-rig-build.js の RIGS が正本。下の表はそこから自動で書かれる
+// ・image はバトルで使う実際の絵(染色つき DyedMonsterImage)をそのまま受け取り、部分の数だけ複製する
+// ・軸の位置は「正方形の枠に絵を contain で置いた」ときの %。バトルの枠(58/64pxの正方形)専用
+// ・軽量表示・設定の「待機中の動き：止める」では呼び出し側が使わない。calm と「動きを減らす」は CSS で止める
+// ==== MONSTER_IDLE_RIGS(tools/monster/idle-rig-build.js が書く。手で直さない) ====
+const MONSTER_IDLE_RIGS = Object.freeze({
+  Mocchi: {
+    body: 'bounce',
+    bodyMask: null,
+    parts: []
+  },
+  Suezo: {
+    body: 'bounce',
+    bodyMask: null,
+    parts: []
+  },
+  Golem: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Tiger: {
+    body: 'breathe',
+    bodyMask: IDLE_TIGER_BODY_MASK,
+    parts: [{
+      mask: IDLE_TIGER_TAIL_MASK,
+      origin: '68% 52%',
+      anim: 'wag',
+      amp: 8,
+      dur: 1100,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Ham: {
+    body: 'breathe',
+    bodyMask: IDLE_HAM_BODY_MASK,
+    parts: [{
+      mask: IDLE_HAM_EAR_L_MASK,
+      origin: '43% 27%',
+      anim: 'twitch',
+      amp: -9,
+      dur: 3200,
+      delay: 0,
+      layer: 'front'
+    }, {
+      mask: IDLE_HAM_EAR_R_MASK,
+      origin: '57% 27%',
+      anim: 'twitch',
+      amp: 9,
+      dur: 3200,
+      delay: 1300,
+      layer: 'front'
+    }]
+  },
+  Pixie: {
+    body: 'hover',
+    bodyMask: IDLE_PIXIE_BODY_MASK,
+    parts: [{
+      mask: IDLE_PIXIE_WING_L_MASK,
+      origin: '36% 32%',
+      anim: 'flapL',
+      amp: 14,
+      dur: 900,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_PIXIE_WING_R_MASK,
+      origin: '64% 32%',
+      anim: 'flapR',
+      amp: 14,
+      dur: 900,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_PIXIE_TAIL_MASK,
+      origin: '58% 62%',
+      anim: 'wag',
+      amp: 7,
+      dur: 1600,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Mia: {
+    body: 'hover',
+    bodyMask: MIA_WING_BODY_MASK,
+    parts: [{
+      mask: MIA_WING_LEFT_MASK,
+      origin: '44.3% 38.1%',
+      anim: 'flapL',
+      amp: 16,
+      dur: 1300,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: MIA_WING_RIGHT_MASK,
+      origin: '55.7% 38.1%',
+      anim: 'flapR',
+      amp: 16,
+      dur: 1300,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Pandora: {
+    body: 'hover',
+    bodyMask: IDLE_PANDORA_BODY_MASK,
+    parts: [{
+      mask: IDLE_PANDORA_WING_L_MASK,
+      origin: '36.7% 33%',
+      anim: 'flapL',
+      amp: 12,
+      dur: 1200,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_PANDORA_WING_R_MASK,
+      origin: '62% 32%',
+      anim: 'flapR',
+      amp: 12,
+      dur: 1200,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_PANDORA_TAIL_L_MASK,
+      origin: '31.3% 58%',
+      anim: 'swing',
+      amp: 7,
+      dur: 2000,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_PANDORA_TAIL_R_MASK,
+      origin: '64.7% 58%',
+      anim: 'swing',
+      amp: -7,
+      dur: 2200,
+      delay: 400,
+      layer: 'back'
+    }]
+  },
+  Monol: {
+    body: 'hover',
+    bodyMask: null,
+    parts: []
+  },
+  Oboro: {
+    body: 'sway',
+    bodyMask: IDLE_OBORO_BODY_MASK,
+    parts: [{
+      mask: IDLE_OBORO_FLOWER_T_MASK,
+      origin: '50% 50%',
+      anim: 'swing',
+      amp: 6,
+      dur: 2600,
+      delay: 0,
+      layer: 'front'
+    }, {
+      mask: IDLE_OBORO_FLOWER_L_MASK,
+      origin: '33% 54%',
+      anim: 'swing',
+      amp: -7,
+      dur: 2300,
+      delay: 500,
+      layer: 'front'
+    }, {
+      mask: IDLE_OBORO_FLOWER_R_MASK,
+      origin: '67% 54%',
+      anim: 'swing',
+      amp: 7,
+      dur: 2500,
+      delay: 900,
+      layer: 'front'
+    }]
+  },
+  Plant: {
+    body: 'sway',
+    bodyMask: IDLE_PLANT_BODY_MASK,
+    parts: [{
+      mask: IDLE_PLANT_FLOWER_T_MASK,
+      origin: '50% 50%',
+      anim: 'swing',
+      amp: 6,
+      dur: 2600,
+      delay: 0,
+      layer: 'front'
+    }, {
+      mask: IDLE_PLANT_FLOWER_L_MASK,
+      origin: '31% 52%',
+      anim: 'swing',
+      amp: -7,
+      dur: 2300,
+      delay: 500,
+      layer: 'front'
+    }, {
+      mask: IDLE_PLANT_FLOWER_R_MASK,
+      origin: '69% 52%',
+      anim: 'swing',
+      amp: 7,
+      dur: 2500,
+      delay: 900,
+      layer: 'front'
+    }]
+  },
+  Zan: {
+    body: 'hover',
+    bodyMask: IDLE_ZAN_BODY_MASK,
+    parts: [{
+      mask: IDLE_ZAN_BLADE_L_MASK,
+      origin: '30% 30%',
+      anim: 'swing',
+      amp: -5,
+      dur: 1800,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_ZAN_BLADE_R_MASK,
+      origin: '70% 30%',
+      anim: 'swing',
+      amp: 5,
+      dur: 1800,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Mitarashi: {
+    body: 'breathe',
+    bodyMask: IDLE_MITARASHI_BODY_MASK,
+    parts: [{
+      mask: IDLE_MITARASHI_WING_L_MASK,
+      origin: '26% 40%',
+      anim: 'flapL',
+      amp: 14,
+      dur: 1000,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_MITARASHI_WING_R_MASK,
+      origin: '74% 40%',
+      anim: 'flapR',
+      amp: 14,
+      dur: 1000,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Ark: {
+    body: 'hover',
+    bodyMask: IDLE_ARK_BODY_MASK,
+    parts: [{
+      mask: IDLE_ARK_WING_L_MASK,
+      origin: '34% 52%',
+      anim: 'flapL',
+      amp: 6,
+      dur: 1300,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_ARK_WING_R_MASK,
+      origin: '66% 52%',
+      anim: 'flapR',
+      amp: 6,
+      dur: 1300,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Iblis: {
+    body: 'hover',
+    bodyMask: IDLE_IBLIS_BODY_MASK,
+    parts: [{
+      mask: IDLE_IBLIS_WING_L_MASK,
+      origin: '30% 56%',
+      anim: 'flapL',
+      amp: 10,
+      dur: 1400,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_IBLIS_WING_R_MASK,
+      origin: '70% 56%',
+      anim: 'flapR',
+      amp: 10,
+      dur: 1400,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_IBLIS_ORB_MASK,
+      origin: '48% 8%',
+      anim: 'bob',
+      amp: -6,
+      dur: 1900,
+      delay: 0,
+      layer: 'front'
+    }]
+  },
+  Snegurochka: {
+    body: 'swim',
+    bodyMask: IDLE_SNEGUROCHKA_BODY_MASK,
+    parts: [{
+      mask: IDLE_SNEGUROCHKA_FIN_MASK,
+      origin: '58.5% 80%',
+      anim: 'swing',
+      amp: 7,
+      dur: 1500,
+      delay: 0,
+      layer: 'front'
+    }]
+  },
+  Undine: {
+    body: 'swim',
+    bodyMask: IDLE_UNDINE_BODY_MASK,
+    parts: [{
+      mask: IDLE_UNDINE_FIN_MASK,
+      origin: '58% 80%',
+      anim: 'swing',
+      amp: 8,
+      dur: 1500,
+      delay: 0,
+      layer: 'front'
+    }]
+  },
+  Yaobikuni: {
+    body: 'swim',
+    bodyMask: IDLE_YAOBIKUNI_BODY_MASK,
+    parts: [{
+      mask: IDLE_YAOBIKUNI_FIN_MASK,
+      origin: '60.7% 82%',
+      anim: 'swing',
+      amp: 8,
+      dur: 1500,
+      delay: 0,
+      layer: 'front'
+    }]
+  },
+  Eiki: {
+    body: 'hover',
+    bodyMask: IDLE_EIKI_BODY_MASK,
+    parts: [{
+      mask: IDLE_EIKI_WING_L_MASK,
+      origin: '23.1% 40%',
+      anim: 'flapL',
+      amp: 4,
+      dur: 1600,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_EIKI_WING_R_MASK,
+      origin: '76.9% 40%',
+      anim: 'flapR',
+      amp: 4,
+      dur: 1600,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  KenshiMocchi: {
+    body: 'bounce',
+    bodyMask: null,
+    parts: []
+  }
+});
+// ==== MONSTER_IDLE_RIGS ここまで ====
+const MONSTER_IDLE_MASK_STYLE = url => ({
   WebkitMaskImage: `url(${url})`,
   maskImage: `url(${url})`,
   WebkitMaskSize: 'contain',
@@ -17956,36 +18316,48 @@ const MIA_IDLE_MASK_STYLE = url => ({
   WebkitMaskRepeat: 'no-repeat',
   maskRepeat: 'no-repeat'
 });
-const MiaIdleArt = ({
+const MonsterIdleArt = ({
+  baseId,
   image
 }) => {
-  // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと「翼以外」の層に翼の影が残り、
-  //   翼を上げたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体(.mia-idle)に1回だけ付ける
+  const rig = MONSTER_IDLE_RIGS[baseId];
+  if (!rig || !image) return image || null;
+  if (!rig.parts.length) {
+    return /*#__PURE__*/React.createElement("span", {
+      className: `mon-idle mon-idle--${rig.body}`
+    }, image);
+  }
+  // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと「体」の層に部分の影が残り、
+  //   部分を動かしたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体に1回だけ付ける
   const className = String(image.props.className || '').split(/\s+/).filter(c => c && !/^drop-shadow/.test(c)).join(' ');
   const layer = (url, extra) => React.cloneElement(image, {
     alt: extra ? '' : image.props.alt,
     className,
     style: {
       ...(image.props.style || {}),
-      ...MIA_IDLE_MASK_STYLE(url),
+      ...MONSTER_IDLE_MASK_STYLE(url),
       ...(extra || {})
     }
   });
+  const partNode = (part, index) => /*#__PURE__*/React.createElement("span", {
+    key: index,
+    className: `mon-idle__part mon-idle__part--${part.anim} mon-idle__part--${part.layer}`,
+    "aria-hidden": "true",
+    style: {
+      transformOrigin: part.origin,
+      animationDuration: `${part.dur}ms`,
+      animationDelay: `${part.delay}ms`,
+      '--idle-amp': `${part.amp}deg`,
+      '--idle-bob': `${part.amp}%`
+    }
+  }, layer(part.mask, {
+    display: 'block'
+  }));
   return /*#__PURE__*/React.createElement("span", {
-    className: "mia-idle"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "mia-idle__wing mia-idle__wing--l",
-    "aria-hidden": "true"
-  }, layer(MIA_WING_LEFT_MASK, {
-    display: 'block'
-  })), /*#__PURE__*/React.createElement("span", {
-    className: "mia-idle__wing mia-idle__wing--r",
-    "aria-hidden": "true"
-  }, layer(MIA_WING_RIGHT_MASK, {
-    display: 'block'
-  })), /*#__PURE__*/React.createElement("span", {
-    className: "mia-idle__body"
-  }, layer(MIA_WING_BODY_MASK, null)));
+    className: `mon-idle mon-idle--${rig.body} mon-idle--rig`
+  }, rig.parts.filter(p => p.layer === 'back').map(partNode), /*#__PURE__*/React.createElement("span", {
+    className: "mon-idle__body"
+  }, layer(rig.bodyMask, null)), rig.parts.filter(p => p.layer !== 'back').map(partNode));
 };
 // エイキの攻撃中だけ重ねる桜の花びら。
 // 常時アニメーションにはせず、攻撃モーションが出ているあいだ(isAnimating)だけ描く。
@@ -41716,8 +42088,10 @@ function BattleScreen({
     // ★絵の入れ物は絵と同じ大きさに固定する(2026-09-24 ユーザー指摘「ミーアの攻撃中、姿が消えてる」)。
     //   ミーア・水・聖光の攻撃演出は入れ物いっぱいに重ねる絶対配置なので、大きさを持たないと
     //   入れ物が0×0につぶれ、本体の絵が幅数pxまで押しつぶされてマイクも見えなくなっていた
-    // ミーアだけ待機中も翼を羽ばたかせる(試作。MiaIdleArt)。軽量表示では今までどおり1枚の絵
-    const slotArt = img => s?.id === 'Mia' && !ecoBattleView && !idleMotionOff ? /*#__PURE__*/React.createElement(MiaIdleArt, {
+    // 待機中の動き(翼の羽ばたき・しっぽ・花の揺れ・全体の浮き沈みなど。MonsterIdleArt)。
+    // 軽量表示と、設定の「待機中の動き：止める」では今までどおり1枚の絵
+    const slotArt = img => !ecoBattleView && !idleMotionOff ? /*#__PURE__*/React.createElement(MonsterIdleArt, {
+      baseId: s?.id,
       image: img
     }) : img;
     const slotArtBox = {
@@ -42160,7 +42534,7 @@ function BattleScreen({
         className: "object-contain drop-shadow-md"
       })
     }) : isAnimating && attackAnim.motion === 'arkHolyRain' ? /*#__PURE__*/React.createElement(ArkHolyRainMotion, {
-      image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      image: slotArt(/*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -42170,11 +42544,11 @@ function BattleScreen({
           height: tacticsNewLayout ? '58px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
-      }),
+      })),
       charging: attackAnim.charge === true,
       empowered: attackAnim.charge === false
     }) : isAnimating && attackAnim.motion === 'waterBurst' ? /*#__PURE__*/React.createElement(WaterBurstMotion, {
-      image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      image: slotArt(/*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -42184,7 +42558,7 @@ function BattleScreen({
           height: tacticsNewLayout ? '58px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
-      }),
+      })),
       lunge: attackAnim.charge === false,
       charging: attackAnim.charge === true
     }) : isAnimating && attackAnim.motion === 'miaSongNotes' ? /*#__PURE__*/React.createElement(MiaSongNotesMotion, {
@@ -74922,35 +75296,88 @@ const createAnimationStyle = () => {
         100% { opacity:0; transform:scale(1.4); }
       }
     }
-    /* ミーアの待機アニメ(試作。24-battle-fx.jsx の MiaIdleArt)。
-       同じ絵を「翼以外」「左翼」「右翼」に切り抜いて重ね、翼を肩の付け根を軸に羽ばたかせる。
-       翼は体の後ろ(下の層)。動かすのは transform だけなので、レイアウトを作り直さない。
-       軸の位置: 正方形の枠へ 2:3 の絵を contain で置いたとき、元絵の (425,585) と (599,585) に当たる所 */
-    .mia-idle { position:relative; display:block; transform-origin:50% 96%; will-change:transform;
-      filter:drop-shadow(0 4px 3px rgb(0 0 0 / .07)) drop-shadow(0 2px 2px rgb(0 0 0 / .06));
-      animation:miaIdleHover 2600ms ease-in-out infinite; }
-    .mia-idle__body { position:relative; display:block; z-index:1; }
-    .mia-idle__wing { position:absolute; inset:0; display:block; z-index:0; will-change:transform; }
-    .mia-idle__wing--l { transform-origin:44.3% 38.1%; animation:miaIdleWingL 1300ms cubic-bezier(.45,0,.35,1) infinite; }
-    .mia-idle__wing--r { transform-origin:55.7% 38.1%; animation:miaIdleWingR 1300ms cubic-bezier(.45,0,.35,1) infinite; }
-    /* 宙に浮いているので、ゆっくり上下してわずかに伸び縮みする(呼吸) */
-    @keyframes miaIdleHover {
+    /* 味方モンスターの待機アニメ(24-battle-fx.jsx の MonsterIdleArt)。
+       同じ絵を「体」と「部分(翼・しっぽ・耳・花…)」に切り抜いて重ね、部分を付け根(transform-origin)を軸に動かす。
+       全体の動きは種ごとに1つ(mon-idle--hover など)。動かすのは transform だけなので、レイアウトを作り直さない。
+       部分ごとの大きさ(--idle-amp)・周期・ずらしは MONSTER_IDLE_RIGS から style で渡る */
+    .mon-idle { position:relative; display:block; will-change:transform; transform-origin:50% 96%; }
+    .mon-idle--rig { filter:drop-shadow(0 4px 3px rgb(0 0 0 / .07)) drop-shadow(0 2px 2px rgb(0 0 0 / .06)); }
+    .mon-idle__body { position:relative; display:block; z-index:1; }
+    .mon-idle__part { position:absolute; inset:0; display:block; z-index:0; will-change:transform;
+      animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+    .mon-idle__part--front { z-index:2; }
+    .mon-idle__part--flapL, .mon-idle__part--flapR { animation-name:monIdleFlap; animation-timing-function:cubic-bezier(.45,0,.35,1); }
+    .mon-idle__part--flapR { --idle-flip:-1; }
+    .mon-idle__part--swing { animation-name:monIdleSwing; }
+    .mon-idle__part--wag { animation-name:monIdleWag; }
+    .mon-idle__part--twitch { animation-name:monIdleTwitch; }
+    .mon-idle__part--bob { animation-name:monIdleBob; }
+    /* 羽ばたき。すばやく振り上げてゆっくり下ろす。振り上げたときは奥へ倒れるぶん少し細くする。
+       右の翼は --idle-flip で向きを逆にする(同じ keyframes を左右で使う) */
+    @keyframes monIdleFlap {
+      0%,100% { transform:rotate(calc(var(--idle-amp) * -.2 * var(--idle-flip, 1))) scaleX(1); }
+      38% { transform:rotate(calc(var(--idle-amp) * var(--idle-flip, 1))) scaleX(.9); }
+    }
+    /* ゆったり揺れる(花・ヒレ・腕の刃)。amp の符号で揺れ始めの向きが変わる */
+    @keyframes monIdleSwing {
+      0%,100% { transform:rotate(calc(var(--idle-amp) * -.4)); }
+      50% { transform:rotate(var(--idle-amp)); }
+    }
+    /* しっぽ振り。左右へ同じだけ */
+    @keyframes monIdleWag {
+      0%,100% { transform:rotate(calc(var(--idle-amp) * -1)); }
+      50% { transform:rotate(var(--idle-amp)); }
+    }
+    /* ときどきピクッと動く(耳)。ほとんどの時間は止まっている */
+    @keyframes monIdleTwitch {
+      0%,78%,100% { transform:rotate(0deg); }
+      82% { transform:rotate(var(--idle-amp)); }
+      86% { transform:rotate(0deg); }
+      90% { transform:rotate(calc(var(--idle-amp) * .6)); }
+      94% { transform:rotate(0deg); }
+    }
+    /* 上下にふわふわ(浮いている玉など)。--idle-bob は枠に対する % */
+    @keyframes monIdleBob {
+      0%,100% { transform:translate3d(0,0,0); }
+      50% { transform:translate3d(0,var(--idle-bob),0); }
+    }
+    /* 全体の動き */
+    .mon-idle--hover { animation:monIdleHover 2600ms ease-in-out infinite; }
+    .mon-idle--bounce { animation:monIdleBounce 1800ms ease-in-out infinite; }
+    .mon-idle--breathe { animation:monIdleBreathe 3200ms ease-in-out infinite; }
+    .mon-idle--sway { animation:monIdleSway 3000ms ease-in-out infinite; }
+    .mon-idle--swim { animation:monIdleSwim 2800ms ease-in-out infinite; }
+    /* 宙に浮いている子。ゆっくり上下してわずかに伸び縮みする */
+    @keyframes monIdleHover {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
       50% { transform:translate3d(0,-4%,0) scale(.99,1.015); }
     }
-    /* 羽ばたき。すばやく振り上げ、ゆっくり下ろす。振り上げたときは奥へ倒れるぶん少し細くする */
-    @keyframes miaIdleWingL {
-      0%,100% { transform:rotate(-3deg) scaleX(1); }
-      38% { transform:rotate(13deg) scaleX(.9); }
+    /* 地面に立っている丸い子。足元を軸に、つぶれて・伸びて・小さく弾む */
+    @keyframes monIdleBounce {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      20% { transform:translate3d(0,0,0) scale(1.04,.95); }
+      45% { transform:translate3d(0,-3%,0) scale(.97,1.04); }
+      65% { transform:translate3d(0,0,0) scale(1.02,.98); }
     }
-    @keyframes miaIdleWingR {
-      0%,100% { transform:rotate(3deg) scaleX(1); }
-      38% { transform:rotate(-13deg) scaleX(.9); }
+    /* どっしり立っている子。胸がふくらむように、縦へわずかに伸び縮みする */
+    @keyframes monIdleBreathe {
+      0%,100% { transform:scale(1,1); }
+      50% { transform:scale(1.01,1.025); }
+    }
+    /* 植物の子。足元を軸に、左右へゆっくり傾く */
+    @keyframes monIdleSway {
+      0%,100% { transform:rotate(-2deg); }
+      50% { transform:rotate(2deg); }
+    }
+    /* 人魚の子。水の中にいるように、上下しながら少し傾く */
+    @keyframes monIdleSwim {
+      0%,100% { transform:translate3d(0,0,0) rotate(-1.5deg); }
+      50% { transform:translate3d(0,-3%,0) rotate(1.5deg); }
     }
     /* 軽量な見た目(タクティクスの calm)と「動きを減らす」設定では止める(絵はそのまま見える) */
-    [data-tactics-look="calm"] .mia-idle, [data-tactics-look="calm"] .mia-idle__wing { animation:none; }
+    [data-tactics-look="calm"] .mon-idle, [data-tactics-look="calm"] .mon-idle__part { animation:none; }
     @media (prefers-reduced-motion: reduce) {
-      .mia-idle, .mia-idle__wing { animation:none; }
+      .mon-idle, .mon-idle__part { animation:none; }
     }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
        常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。
