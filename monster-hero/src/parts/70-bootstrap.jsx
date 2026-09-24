@@ -1487,6 +1487,21 @@ const createAnimationStyle = () => {
        ② 動き続ける層に付いた影(filter)を外す。iPhone では、動く層の影は毎コマ GPU でぼかし直しになる。
           外すのは見た目にほとんど効いていないもの(味方の影は濃さ 7%)と、足元の影・光の輪で代わりが出ているものだけ */
     [data-tactics-look][data-fx-rest] *, [data-tactics-look][data-fx-rest] *::before, [data-tactics-look][data-fx-rest] *::after { animation-play-state: paused !important; }
+    /* ==== 画面の軽さ(バトル設定。data-fx-level)(2026-09-24 ユーザー指示「バトル設定で軽い画面でも出来るの作って 4種類ぐらい」) ====
+       標準: 枠・カード・輪の飾りの動き(光の筋・またたき・回転・ライフの帯の光)を止める。見た目は止まった形で残る。
+             モンスターの待機の動き・攻撃の演出はそのまま
+       軽め: data-tactics-look が calm になり、待機の動きも止まる(ここではすりガラスも外す)
+       最軽量: 60-app が軽量表示(liteBattleView)にする */
+    [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-ring], [data-card-shine], [data-enemy-ring])::before,
+    [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-index], [data-card-gem], [data-enemy-hpbar])::after,
+    [data-tactics-look][data-fx-level="STANDARD"] [data-slot-circle] { animation: none !important; }
+    [data-tactics-look]:is([data-fx-level="LIGHT"], [data-fx-level="MINIMAL"]) * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+    /* 最軽量は、次の行動の札・狙われている枠の点滅(animate-pulse)も止め、何も動き続けない画面にする */
+    [data-tactics-look][data-fx-level="MINIMAL"] .animate-pulse { animation: none !important; }
+    /* WAVEのあとの画面(強化フェーズ)も、標準では飾りの動きだけを止める(軽め・最軽量は data-phase-look が calm になる) */
+    /* ★:is() の中に ::before などを書くと規則ごと無効になるので、擬似要素は外に出す */
+    [data-fx-level="STANDARD"] :is(.mh-ph-sparkle, .mh-ph-rune, .mh-ph-floor, .mh-ph-pip[data-next]),
+    [data-fx-level="STANDARD"] :is(.mh-ph-shine, .mh-ph-btn-gold)::before, [data-fx-level="STANDARD"] :is(.mh-ph-gem, .mh-ph-btn-gold)::after { animation: none !important; }
     [data-tactics-look] .mon-idle--rig { filter: none !important; }
     /* 味方の絵の影(drop-shadow-md。濃さ 6〜7%)も外す。待機の動きで揺れているので、4体ぶん毎コマ影を描き直していた */
     [data-tactics-look] .mon-idle img { filter: none !important; }

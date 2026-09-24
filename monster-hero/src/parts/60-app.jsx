@@ -656,7 +656,10 @@ function MonsterHeroGame() {
     const currentIndex=ECO_MODES.indexOf(ecoModeRef.current);
     return setEcoModeSafe(ECO_MODES[(currentIndex+1)%ECO_MODES.length]);
   };
-  const liteBattleView = gameState==='BATTLE'&&ecoMode==='lite';
+  const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
+  // バトル設定の「画面の軽さ」。最軽量は、省エネの「軽量」と同じ表示をバトルで使う
+  const battleFxLoad = normalizeBattleFxSettings(battleFxSettings).load;
+  const liteBattleView = gameState==='BATTLE'&&(ecoMode==='lite'||battleFxLoad==='MINIMAL');
   // 表示・音声だけに使う超省エネ∞セッション。BATTLEを離れる中間画面や最終リザルトでも維持する。
   const ultraEcoSession = ecoMode==='ultra'&&autoRepeat===true;
   const ultraBattleView = gameState==='BATTLE'&&ultraEcoSession;
@@ -1678,8 +1681,8 @@ function MonsterHeroGame() {
     setBattleScreenStyleState(value);
     storeSet(BATTLE_SCREEN_STYLE_KEY, value, false);
   };
-  // バトル設定(待機中の動き・画面の揺れ)。1項目ずつ変えても、ほかの項目はそのまま残す
-  const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
+  // バトル設定(待機中の動き・画面の揺れ・画面の軽さ)。1項目ずつ変えても、ほかの項目はそのまま残す。
+  // ★宣言は上(liteBattleView の手前)にある。「画面の軽さ：最軽量」で軽量表示を使うため
   const setBattleFxSetting = (key, value) => {
     setBattleFxSettingsState(prev => {
       const next = normalizeBattleFxSettings({ ...prev, [key]: value });
@@ -13243,7 +13246,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         器を増やさず**同じ要素のstyleを差し替えるだけ**にしてあるのは、
         切り替えた瞬間に中身が作り直されると演奏中の状態(音の時計・スコア・押している指)が
         飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
-    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF')?'calm':'rich'} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
+    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF'||battleFxLoad==='LIGHT'||battleFxLoad==='MINIMAL')?'calm':'rich'} data-fx-level={battleFxLoad} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
       <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
         {ripples.map(r=>(
