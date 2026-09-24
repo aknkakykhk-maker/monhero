@@ -164,16 +164,26 @@ const rhythmEventPointBaseForScore = (score) => {
   const safe = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
   return Math.floor(safe / 10000 + Math.max(0, safe - 950000) / 500);
 };
+// ★イベントが開いていない期間も、イベント中の1/5だけ貯まる(2026-09-24・ユーザー指示
+//   「イベント限定でもらえるポイントをいつでももらえるように。ただしイベント時の1/5」)。
+//   基本ビートPへ 0.2 を掛けて切り捨てる(100万点で40P・95万点で19P)。
+//   イベント中の計算(通常曲1.0倍・対象曲1.5倍)は変えない。
+//   ★開催中かどうかは呼ばれるたびに数え直す(読み込み時に決めない・CLAUDE.md ⑥-4)。
+const RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER = 0.2;
 const rhythmEventPointAwardAt = (nowMs, songId, score) => {
   const published = (typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' && Array.isArray(RHYTHM_DEMO_SONG_IDS)) ? RHYTHM_DEMO_SONG_IDS : [];
   const id = typeof songId === 'string' ? songId : '';
   if (!id || !published.includes(id)) return null;
   const event = rhythmLimitedEventAt(nowMs);
-  if (!event) return null;
   const base = rhythmEventPointBaseForScore(score);
+  if (!event) {
+    const multiplier = RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER;
+    // 0.2 は2進数で割り切れないので、先に5で割って切り捨てる(floor(base×0.2)と同じ値)
+    return Object.freeze({ eventId:null, base, target:false, offEvent:true, multiplier, amount:Math.floor(base / 5) });
+  }
   const target = Array.isArray(event.songIds) && event.songIds.includes(id);
   const multiplier = target ? RHYTHM_EVENT_POINT_TARGET_MULTIPLIER : 1;
-  return Object.freeze({ eventId:event.id, base, target, multiplier, amount:Math.floor(base * multiplier) });
+  return Object.freeze({ eventId:event.id, base, target, offEvent:false, multiplier, amount:Math.floor(base * multiplier) });
 };
 
 // ===== イベントP交換所 STEP3 =====

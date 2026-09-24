@@ -94,15 +94,32 @@ const BATTLE_SCREEN_STYLE_LABELS = Object.freeze([
 // 見た目だけに効き、戦闘の計算・進行・ランキングには触れない。保存は新しいキー1つに項目をまとめる。
 // ★読むときは必ず normalizeBattleFxSettings を通す。項目を足しても、足す前に保存した人は既定値で補われる
 const BATTLE_FX_SETTINGS_KEY = 'mh_battle_fx_v1';
+// 画面の軽さの段階。軽いほど動きと飾りを減らす(見た目だけ。戦闘の計算・進行・ランキングには触れない)
+//   RICH     … 豪華。すべての飾りと演出(いままでの見た目)
+//   STANDARD … 標準。枠・カード・輪の飾りの動き(光の筋・またたき・回転)を止める。飾りの見た目・モンスターの待機・攻撃の演出は残す
+//   LIGHT    … 軽め。さらに敵と味方の待機の動きを止め、敵の攻撃の全画面の演出を当たりの光と技名だけにする
+//   MINIMAL  … 最軽量。省エネの「軽量」と同じ表示をバトルで使う
+const BATTLE_FX_LOADS = Object.freeze(['RICH', 'STANDARD', 'LIGHT', 'MINIMAL']);
 const normalizeBattleFxSettings = (value) => {
   const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return {
     idleMotion: v.idleMotion === 'OFF' ? 'OFF' : 'ON',
     shake: v.shake === 'OFF' ? 'OFF' : 'ON',
+    // 画面の軽さ(2026-09-24 ユーザー指示「バトル設定で軽い画面でも出来るの作って 4種類ぐらい」)。
+    // ★足す前に保存した人(load が無い)は RICH(いままでの見た目)で始まる
+    load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH',
   };
 };
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
 const BATTLE_FX_SETTING_ITEMS = Object.freeze([
+  { key:'load', title:'画面の軽さ',
+    desc:'バトル画面の飾りと演出の量です。スマホが熱くなる・動きがかくつくときは、軽いほうを選んでください。ダメージや進行は変わりません。',
+    options:[
+      { id:'RICH', label:'豪華', note:'すべての飾りと演出' },
+      { id:'STANDARD', label:'標準', note:'飾りの動きを止める' },
+      { id:'LIGHT', label:'軽め', note:'待機の動きも止める' },
+      { id:'MINIMAL', label:'最軽量', note:'いちばん軽い表示' },
+    ] },
   { key:'idleMotion', title:'待機中の動き',
     desc:'待っているあいだのモンスターの動き（翼の羽ばたき・しっぽや花の揺れなど）と、タクティクス新画面の枠の飾り・敵の待機の動き、WAVEのあとの画面の飾りの動きです。攻撃の演出はどちらでも出ます。',
     options:[{ id:'ON', label:'動かす', note:'いつもの見た目' }, { id:'OFF', label:'止める', note:'画面が軽くなる' }] },
@@ -115,7 +132,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-25 00:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 00:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -211,7 +228,24 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
-const eventReplayList = () => ((typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS) || []).filter(eventReplayReleased);
+// ★日付(date)の新しい順に並べる(2026-09-24・ユーザー指示「日付でも管理されるようにして」)。
+//   日付の無い・壊れた項目はいちばん下へ。同じ日時どうしは書いた順のまま(sort は安定)
+const eventReplayDateMs = (event) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?$/.exec(typeof event?.date === 'string' ? event.date : '');
+  if (!m) return null;
+  const ms = Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0) - 9, +(m[5] || 0));
+  return Number.isFinite(ms) ? ms : null;
+};
+// 一覧に出す日付の文字(例: 2026/09/24)。日付が無ければ空
+const eventReplayDateText = (event) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(typeof event?.date === 'string' ? event.date : '');
+  return m ? `${m[1]}/${m[2]}/${m[3]}` : '';
+};
+const eventReplayList = () => ((typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS) || [])
+  .filter(eventReplayReleased)
+  .map((event, index) => ({ event, index, ms: eventReplayDateMs(event) }))
+  .sort((a, b) => (a.ms == null ? 1 : 0) - (b.ms == null ? 1 : 0) || (b.ms || 0) - (a.ms || 0) || a.index - b.index)
+  .map(row => row.event);
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。

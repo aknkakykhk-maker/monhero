@@ -1471,25 +1471,72 @@ const createAnimationStyle = () => {
       border-width: 2px !important; border-color: transparent !important; border-radius: 16px !important;
       background: var(--mh-pat),
         linear-gradient(170deg, rgba(16,18,34,.95), rgba(5,6,14,.98)) padding-box,
-        conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
           rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important; }
+    /* ★縁の光は回さず、明るい弧のある縁で止める。角度(--mh-ang)を変えると枠の中身ごと描き直しになり、
+         1秒20回に落としても4枠で本体の負担が 13% → 41% に上がった(2026-09-24 計測)。
+         動きは、縁の上を時々横切る光の筋(data-slot-ring の中の ::before。transform だけなので描き直しが要らない)で出す */
+    [data-tactics-look] [data-slot-index]:not([data-distance-broken]) { --mh-ang: 35deg; }
     /* 縁を回る光(2026-09-24 ユーザー指摘「バトル画面にかくつきを感じる」で作り直した)。
        ★もとは conic-gradient の角度(--mh-ang)を毎コマ変えていた。これは縁の塗りを毎コマ描き直すので、
          枠4つ＋手札5枚でスマホ相当の速さだと 60コマ→27コマまで落ちていた。
          いまは縁の形に切り抜いた箱(mask)の中で、大きな光の輪を transform で回すだけ(描き直しが要らない) */
     @keyframes mhSpin { to { transform: rotate(360deg); } }
+    /* ==== 発熱対策(2026-09-24 ユーザー指摘「発熱がすごい」「熱くなるとカクついて動かなくなる」) ====
+       ① 何も起きていない間(data-fx-rest)は、バトル画面の動きをすべて一時停止する。止めるだけなので、触れば同じ場所から動き出す。
+       ② 動き続ける層に付いた影(filter)を外す。iPhone では、動く層の影は毎コマ GPU でぼかし直しになる。
+          外すのは見た目にほとんど効いていないもの(味方の影は濃さ 7%)と、足元の影・光の輪で代わりが出ているものだけ */
+    [data-tactics-look][data-fx-rest] *, [data-tactics-look][data-fx-rest] *::before, [data-tactics-look][data-fx-rest] *::after { animation-play-state: paused !important; }
+    /* ==== 画面の軽さ(バトル設定。data-fx-level)(2026-09-24 ユーザー指示「バトル設定で軽い画面でも出来るの作って 4種類ぐらい」) ====
+       標準: 枠・カード・輪の飾りの動き(光の筋・またたき・回転・ライフの帯の光)を止める。見た目は止まった形で残る。
+             モンスターの待機の動き・攻撃の演出はそのまま
+       軽め: data-tactics-look が calm になり、待機の動きも止まる(ここではすりガラスも外す)
+       最軽量: 60-app が軽量表示(liteBattleView)にする */
+    [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-ring], [data-card-shine], [data-enemy-ring])::before,
+    [data-tactics-look][data-fx-level="STANDARD"] :is([data-slot-index], [data-card-gem], [data-enemy-hpbar])::after,
+    [data-tactics-look][data-fx-level="STANDARD"] [data-slot-circle] { animation: none !important; }
+    [data-tactics-look]:is([data-fx-level="LIGHT"], [data-fx-level="MINIMAL"]) * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+    /* 最軽量は、次の行動の札・狙われている枠の点滅(animate-pulse)も止め、何も動き続けない画面にする */
+    [data-tactics-look][data-fx-level="MINIMAL"] .animate-pulse { animation: none !important; }
+    /* WAVEのあとの画面(強化フェーズ)も、標準では飾りの動きだけを止める(軽め・最軽量は data-phase-look が calm になる) */
+    /* ★:is() の中に ::before などを書くと規則ごと無効になるので、擬似要素は外に出す */
+    [data-fx-level="STANDARD"] :is(.mh-ph-sparkle, .mh-ph-rune, .mh-ph-floor, .mh-ph-pip[data-next]),
+    [data-fx-level="STANDARD"] :is(.mh-ph-shine, .mh-ph-btn-gold)::before, [data-fx-level="STANDARD"] :is(.mh-ph-gem, .mh-ph-btn-gold)::after { animation: none !important; }
+    [data-tactics-look] .mon-idle--rig { filter: none !important; }
+    /* 味方の絵の影(drop-shadow-md。濃さ 6〜7%)も外す。待機の動きで揺れているので、4体ぶん毎コマ影を描き直していた */
+    [data-tactics-look] .mon-idle img { filter: none !important; }
+    /* 手のひらは技のあいだだけ見せる */
+    [data-tactics-look] [data-enemy-skill] > [data-kz-palm], [data-tactics-look] [data-enemy-attack] > [data-kz-palm] { visibility: visible; }
+    [data-tactics-look] [data-enemy-motion] > span > img { filter: none !important; }
+    [data-tactics-look] [data-enemy-ring]::before, [data-tactics-look] [data-slot-circle] { filter: none !important; }
+    /* 覚醒ムー戦の重なり順(2026-09-24 ユーザー指摘「ムー戦だけボタンとか色々裏に回ってる」)。
+       覚醒ムーの大きな絵(z-30)は、端を切り抜きでぼかして下のボタンや枠を透かしていた。iPhone で切り抜きが外れると
+       ログ・解析・ステータスのボタン(z-20)と味方の枠の段(z-10)が絵の裏に隠れた。
+       攻撃していないあいだ(data-moo-front)は、ボタンと枠の段を絵より前へ出す。攻撃の瞬間は絵を前に出したまま */
+    [data-tactics-look][data-moo-front] :is([data-battle-log-button], button[aria-label="敵を解析する"], button[aria-label="勇者モンのステータス"]) { z-index: 45 !important; }
+    [data-tactics-look][data-moo-front] [data-tactics-board-band] { z-index: 45 !important; }
+    /* 覚醒ムーの紫の光(もとは絵に drop-shadow 55px)は、絵の後ろに置いた動かない光で出す */
+    [data-tactics-look] [data-moo-body] > img { filter: none !important; }
+    [data-tactics-look] [data-moo-body]::before { content: ''; position: absolute; inset: 4%; border-radius: 50%; pointer-events: none; z-index: 0;
+      background: radial-gradient(closest-side, rgba(168,85,247,.55), rgba(168,85,247,.25) 55%, rgba(168,85,247,0) 80%); }
     /* ★すりガラス(backdrop-filter)を外す(2026-09-24 ユーザー指摘「バトル画面にかくつきを感じる」)。
        枠・見出し・ライフの札の下地はもともと 72〜98% の濃さで、ぼかしはほとんど見えていなかった。
        それでいて枠の中は入れ子で9か所ぼかしていて、ライフの札は跳ねている味方の絵の真上にあるため、
        絵が動くたびに毎コマぼかし直しになっていた(iPhone でいちばん重い処理のひとつ) */
     [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-head], [data-tactics-look] [data-tactics-party-slot] {
       -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
-    [data-tactics-look] [data-slot-ring] { position: absolute; inset: -2px; border-radius: 16px; padding: 2px; pointer-events: none; z-index: 1; overflow: hidden;
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-    [data-tactics-look] [data-slot-ring]::before { content: ''; position: absolute; inset: -100%;
-      background: conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
-        rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%); }
-    [data-tactics-look="rich"] [data-slot-ring]::before { animation: mhSpin 4.5s linear infinite; }
+    /* ★回る光は出さない(2026-09-24 ユーザー報告「こんな画面になってフリーズする」)。
+       縁の形に切り抜いた箱の中で大きな光の輪(縁の約3倍の板)を回していたが、iPhone で板が9枚ぶん重なると
+       切り抜きが外れて板がそのまま見え(カードの中身が隠れる)、固まることがあった。
+       縁は上の conic-gradient(border-box)で、光ったまま止まった見た目にする */
+    [data-tactics-look] [data-slot-ring] { position: absolute; inset: -2px; border-radius: 16px; overflow: hidden; pointer-events: none; z-index: 1; }
+    [data-tactics-look] [data-slot-ring]::before { content: ''; position: absolute; top: -20%; bottom: -20%; left: 0; width: 26%;
+      background: linear-gradient(90deg, transparent, rgba(var(--mh-rc2),.22), rgba(255,255,255,.45), rgba(var(--mh-rc2),.22), transparent);
+      transform: translateX(-160%) skewX(-18deg); }
+    [data-tactics-look="rich"] [data-slot-ring]::before { animation: mhShine 5.2s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-slot-index="1"] > [data-slot-ring]::before { animation-delay: 1.3s; }
+    [data-tactics-look="rich"] [data-slot-index="2"] > [data-slot-ring]::before { animation-delay: 2.6s; }
+    [data-tactics-look="rich"] [data-slot-index="3"] > [data-slot-ring]::before { animation-delay: 3.9s; }
     [data-tactics-look] [data-distance-broken] > [data-slot-ring] { display: none; }
     /* 外へにじむ距離色の光(box-shadow を使わずに足す) */
     [data-tactics-look] [data-slot-index]:not([data-distance-broken])::before { content: ''; position: absolute; inset: -2px; border-radius: 16px;
@@ -1505,21 +1552,20 @@ const createAnimationStyle = () => {
     /* 足元の魔法陣 */
     [data-tactics-look] [data-slot-circle] { position: absolute; left: 50%; top: calc(50% + 26px); width: 58px; height: 58px; z-index: 0; pointer-events: none;
       transform: translate(-50%, -50%) rotateX(66deg);
-      background: radial-gradient(circle, transparent 52%, rgba(var(--mh-rc2),.95) 53%, rgba(var(--mh-rc2),.95) 55%, transparent 56%, transparent 66%, rgba(var(--mh-rc),.9) 67%, rgba(var(--mh-rc),.9) 70%, transparent 71%),
-        repeating-conic-gradient(rgba(var(--mh-rc2),.8) 0 4deg, transparent 4deg 30deg);
-      -webkit-mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%); mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%);
-      filter: drop-shadow(0 0 4px rgba(var(--mh-rc),1)); }
+      /* ★切り抜き(mask)を使わず、もとの模様(内と外の輪・あいだの目盛り)を SVG で描く(外れると四角い光の板が出たため) */
+      background: center / 100% 100% no-repeat; }
+    [data-tactics-look] [data-slot-index="0"] [data-slot-circle] { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='43.3' fill='none' stroke='rgba(255,210,190,.8)' stroke-width='14' stroke-dasharray='3.02 19.65'/><circle cx='50' cy='50' r='38.2' fill='none' stroke='rgba(255,210,190,.95)' stroke-width='2.8'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(239,68,68,.9)' stroke-width='2.6'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(239,68,68,.3)' stroke-width='5'/></svg>"); }
+    [data-tactics-look] [data-slot-index="1"] [data-slot-circle] { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='43.3' fill='none' stroke='rgba(255,240,160,.8)' stroke-width='14' stroke-dasharray='3.02 19.65'/><circle cx='50' cy='50' r='38.2' fill='none' stroke='rgba(255,240,160,.95)' stroke-width='2.8'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(245,158,11,.9)' stroke-width='2.6'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(245,158,11,.3)' stroke-width='5'/></svg>"); }
+    [data-tactics-look] [data-slot-index="2"] [data-slot-circle] { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='43.3' fill='none' stroke='rgba(190,255,220,.8)' stroke-width='14' stroke-dasharray='3.02 19.65'/><circle cx='50' cy='50' r='38.2' fill='none' stroke='rgba(190,255,220,.95)' stroke-width='2.8'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(16,185,129,.9)' stroke-width='2.6'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(16,185,129,.3)' stroke-width='5'/></svg>"); }
+    [data-tactics-look] [data-slot-index="3"] [data-slot-circle] { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='43.3' fill='none' stroke='rgba(200,225,255,.8)' stroke-width='14' stroke-dasharray='3.02 19.65'/><circle cx='50' cy='50' r='38.2' fill='none' stroke='rgba(200,225,255,.95)' stroke-width='2.8'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(59,130,246,.9)' stroke-width='2.6'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(59,130,246,.3)' stroke-width='5'/></svg>"); }
     [data-tactics-look="rich"] [data-slot-circle] { animation: mhCircle 6s linear infinite; }
     /* 手札: 金の縁・模様・光の筋・宝石 */
     /* isolation で手札1枚ぶんの重なりの世界を作り、模様(z-index:-1)を「カードの地の上・中身の下」に置く */
     [data-tactics-look] [data-hand-card] { border-color: transparent !important; isolation: isolate; }
     [data-tactics-look] [data-card-frame] { position: absolute; inset: -1px; border-radius: 12px; padding: 2px; pointer-events: none; z-index: 6;
-      overflow: hidden;
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-    /* 金の縁も、角度を変えずに中の光の輪を回す(上の data-slot-ring と同じ理由) */
-    [data-tactics-look] [data-card-frame]::before { content: ''; position: absolute; inset: -100%;
-      background: conic-gradient(#8a6220, #fff3c4 10%, #c8962e 25%, #fff0b0 50%, #8a6220 70%, #f4d57c 85%, #8a6220); }
-    [data-tactics-look="rich"] [data-card-frame]::before { animation: mhSpin 5s linear infinite; }
+      /* ★切り抜き(mask)を使わず、もとの金のグラデーションの縁を SVG の枠線で描く(外れるとカードが金色の板で埋まったため) */
+      padding: 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 74 135' preserveAspectRatio='none'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%238a6220'/><stop offset='.1' stop-color='%23fff3c4'/><stop offset='.25' stop-color='%23c8962e'/><stop offset='.5' stop-color='%23fff0b0'/><stop offset='.7' stop-color='%238a6220'/><stop offset='.85' stop-color='%23f4d57c'/><stop offset='1' stop-color='%238a6220'/></linearGradient></defs><rect x='1' y='1' width='72' height='133' rx='11' fill='none' stroke='url(%23g)' stroke-width='2' vector-effect='non-scaling-stroke'/></svg>") center / 100% 100% no-repeat; }
+    /* 金の縁は回さない(上の data-slot-ring と同じ理由。回る光の輪で固まることがあった) */
     [data-tactics-look] [data-card-pattern] { position: absolute; inset: 0; border-radius: 11px; pointer-events: none; z-index: -1;
       background: radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
     [data-tactics-look] [data-card-pattern="攻撃"] { background: repeating-linear-gradient(135deg, rgba(0,0,0,.18) 0 2px, transparent 2px 8px), radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
@@ -1696,12 +1742,11 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"]::after { animation: kzImpact var(--em-dur, 450ms) ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap var(--em-dur, 450ms) ease-in forwards; }
     [data-tactics-look] [data-kz-palm] { font-style: normal; position: absolute; top: 42%; left: 50%; margin-left: -18px; width: 36px; text-align: center; font-size: 30px; line-height: 1;
-      opacity: 0; pointer-events: none; z-index: 10000;
+      opacity: 0; visibility: hidden; pointer-events: none; z-index: 10000;
       filter: hue-rotate(20deg) saturate(.95) brightness(.95) drop-shadow(0 0 8px rgba(239,68,68,.85)) drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
     /* 勢いの線(手のひらの後ろに伸びる白い筋) */
     [data-tactics-look] [data-kz-palm]::after { content: ''; position: absolute; left: 50%; top: -60%; width: 60%; height: 90%; margin-left: -30%; pointer-events: none;
-      background: repeating-linear-gradient(90deg, rgba(255,255,255,.8) 0 2px, transparent 2px 6px);
-      -webkit-mask: linear-gradient(0deg, #000, transparent); mask: linear-gradient(0deg, #000, transparent); }
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,.55) 0 2px, transparent 2px 6px); }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="l"] { animation: kzPalmL var(--em-dur, 450ms) ease-out forwards; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="r"] { animation: kzPalmR var(--em-dur, 450ms) ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp var(--em-dur, 1100ms) ease-in-out forwards; }
@@ -1896,8 +1941,8 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow]::before,
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow]::after { animation: kzDust calc(var(--em-dur, 1100ms) * .55) ease-out calc(var(--em-dur, 1100ms) * .41) forwards; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-kz-fx]::before { inset: -14%; border-radius: 50%;
-      background: conic-gradient(from 0deg, transparent, rgba(253,224,71,.95) 14%, transparent 30%, rgba(255,255,255,.8) 50%, transparent 64%, rgba(251,191,36,.95) 80%, transparent 94%);
-      -webkit-mask: radial-gradient(closest-side, transparent 62%, #000 66%, #000 90%, transparent 96%); mask: radial-gradient(closest-side, transparent 62%, #000 66%, #000 90%, transparent 96%);
+      /* 渦は切り抜かずに、色違いの太い円の縁で描く */
+      border: 7px solid transparent; border-top-color: rgba(253,224,71,.95); border-right-color: rgba(255,255,255,.75); border-bottom-color: rgba(251,191,36,.95);
       animation: kzWhirl var(--em-dur, 1100ms) ease-in-out forwards; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-kz-fx]::after { left: 50%; bottom: -24%; width: 120%; height: 40%; border-radius: 50%;
       background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(253,224,71,.85) 35%, rgba(245,158,11,.4) 65%, transparent);
@@ -2266,14 +2311,10 @@ const createAnimationStyle = () => {
     [data-tactics-look] :is([data-enemy-ring], [data-moo-stage]):is([data-enemy-skill="charge"], [data-enemy-skill="pierceCharge"], [data-enemy-skill="roar"]) > :is(span, [data-moo-body]) > [data-enemy-glow] { animation-name: emGlowCharge; }
     [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-skill="regen"] > :is(span, [data-moo-body]) > [data-enemy-glow] { --em-glow: 52,211,153; animation-name: emGlowSoft; }
     [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-hurt] > :is(span, [data-moo-body]) > [data-enemy-glow] { --em-glow: 255,255,255; animation: emGlowHurt 520ms ease-out forwards; }
-    /* 絵と同じ形に切り抜いた光の板(data-enemy-flash)。もとの filter: brightness の「絵そのものが明るくなる」光り方を、
-       濃さ(opacity)だけで再現する。切り抜き(mask)は絵の URL を style で渡している */
-    /* ★重ね方は color-dodge(灰色の板で明るさを掛け算で上げる)。もとの filter: brightness(1.3) に近い。
-         ふつうに重ねたり screen(足し算)にすると、暗いところまで持ち上がって白っぽく濁る。
-         やられ(もとは brightness(2.2))は板を明るい灰色(140)にして、掛け算の倍率を上げる */
-    [data-tactics-look] [data-enemy-flash] { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; mix-blend-mode: color-dodge;
-      background: rgb(90,90,90);
-      -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+    /* ★同じ絵を明るくした複製(光るあいだだけ置く)。切り抜き(mask)も重ね方(mix-blend-mode)も使わない。
+         iPhone で切り抜きが外れると四角い板が出るため(2026-09-24)。複製なので、明るさ(filter)は動かさず固定のまま */
+    [data-tactics-look] [data-enemy-flash] { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 2; pointer-events: none; opacity: 0;
+      filter: brightness(1.45) saturate(1.1);}
     @keyframes emFlashHit { 0%, 35% { opacity: 0; } 55% { opacity: 1; } 72% { opacity: .55; } 100% { opacity: 0; } }
     @keyframes emFlashCharge { 0% { opacity: 0; } 55% { opacity: .45; } 80% { opacity: 1; } 100% { opacity: 0; } }
     @keyframes emFlashSoft { 0% { opacity: 0; } 50% { opacity: .7; } 100% { opacity: 0; } }
@@ -2281,7 +2322,7 @@ const createAnimationStyle = () => {
     [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-skill] > :is(span, [data-moo-body]) > [data-enemy-flash] { animation: emFlashHit var(--em-dur, 450ms) ease-out forwards; }
     [data-tactics-look] :is([data-enemy-ring], [data-moo-stage]):is([data-enemy-skill="charge"], [data-enemy-skill="pierceCharge"], [data-enemy-skill="roar"]) > :is(span, [data-moo-body]) > [data-enemy-flash] { animation-name: emFlashCharge; }
     [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-skill="regen"] > :is(span, [data-moo-body]) > [data-enemy-flash] { --em-glow: 52,211,153; animation-name: emFlashSoft; }
-    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-hurt] > :is(span, [data-moo-body]) > [data-enemy-flash] { background: rgb(140,140,140); animation: emFlashHurt 520ms ease-out forwards; }
+    [data-tactics-look] :is([data-enemy-ring], [data-moo-stage])[data-enemy-hurt] > :is(span, [data-moo-body]) > [data-enemy-flash] { filter: brightness(2.3) saturate(.4); animation: emFlashHurt 520ms ease-out forwards; }
     /* 待機中の光(もとは待機の動きの中の filter)。ドクドクの脈・ニャルラトホテプのうごめき・覚醒ムーの吠える瞬間に合わせて灯す */
     @keyframes emGlowIdlePulse { 0%, 34%, 100% { opacity: 0; } 20% { opacity: .6; } }
     @keyframes emGlowIdleWrithe { 0%, 20%, 60%, 100% { opacity: 0; } 40% { opacity: .45; } 80% { opacity: .6; } }
@@ -2290,7 +2331,6 @@ const createAnimationStyle = () => {
     [data-tactics-look="rich"] [data-em-idle="pulse"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > [data-enemy-glow] { animation: emGlowIdlePulse 2.6s ease-in-out infinite; }
     [data-tactics-look="rich"] [data-em-idle="writhe"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > [data-enemy-glow] { animation: emGlowIdleWrithe 5s ease-in-out infinite; }
     [data-tactics-look="rich"] [data-moo-stage]:not([data-enemy-skill]):not([data-enemy-hurt]) > [data-moo-body] > [data-enemy-glow] { --em-glow: 220,38,38; animation: mooGlowIdle 4.2s ease-in-out infinite; }
-    [data-tactics-look="rich"] [data-moo-stage]:not([data-enemy-skill]):not([data-enemy-hurt]) > [data-moo-body] > [data-enemy-flash] { animation: mooFlashIdle 4.2s ease-in-out infinite; }
     /* カワズモーは技ごとに光の色を変える(はり手・連続はり手=赤 / かわずつき=緑 / 上手投げ・構え=紅 / 大回転落とし・準備・大投げたまや=金) */
     [data-enemy-motion="kawazumo"]:is([data-enemy-skill="normal"], [data-enemy-skill="rush"]) { --em-glow: 239,68,68; }
     [data-enemy-motion="kawazumo"]:is([data-enemy-skill="pierce"], [data-enemy-skill="pierceCharge"]) { --em-glow: 244,63,94; }
@@ -2312,14 +2352,12 @@ const createAnimationStyle = () => {
       box-shadow: 0 0 30px 10px rgba(var(--em-c),.6); animation: emBeam var(--em-dur) ease-out forwards; }
     [data-tactics-look] [data-em-fx="burst"] > [data-em-fx-el]::before { inset: -22%; border-radius: 50%;
       background: repeating-conic-gradient(rgba(255,255,255,.9) 0 4deg, rgba(var(--em-c),.7) 4deg 9deg, transparent 9deg 30deg);
-      -webkit-mask: radial-gradient(closest-side, transparent 30%, #000 45%, transparent 100%); mask: radial-gradient(closest-side, transparent 30%, #000 45%, transparent 100%);
       animation: emBurst var(--em-dur) ease-out forwards; }
     [data-tactics-look] [data-em-fx="ring"] > [data-em-fx-el]::before { left: 50%; bottom: -18%; width: 110%; height: 40%; border-radius: 50%;
       border: 4px solid rgba(255,255,255,.9); box-shadow: 0 0 18px 4px rgba(var(--em-c),.9), inset 0 0 14px rgba(var(--em-c),.8);
       animation: emRingOut var(--em-dur) ease-out forwards; }
     [data-tactics-look] [data-em-fx="aura"] > [data-em-fx-el]::before { left: -12%; right: -12%; top: -30%; bottom: 0; border-radius: 50% 50% 40% 40%; transform-origin: 50% 100%;
-      background: linear-gradient(0deg, rgba(var(--em-c),.55), rgba(var(--em-c),.25) 45%, transparent 85%);
-      -webkit-mask: radial-gradient(60% 80% at 50% 100%, #000 40%, transparent 100%); mask: radial-gradient(60% 80% at 50% 100%, #000 40%, transparent 100%);
+      background: radial-gradient(60% 80% at 50% 100%, rgba(var(--em-c),.55), rgba(var(--em-c),.22) 55%, transparent 100%);
       animation: emAura var(--em-dur) ease-in-out forwards; }
     [data-tactics-look] [data-em-fx="lock"] > [data-em-fx-el]::before { inset: 4%; border-radius: 50%;
       border: 3px dashed rgba(var(--em-c),.95); box-shadow: 0 0 14px rgba(var(--em-c),.9), inset 0 0 14px rgba(var(--em-c),.6);
@@ -2391,8 +2429,7 @@ const createAnimationStyle = () => {
       100% { opacity: 0; transform: scale(calc(1.45 * var(--s, 1))); }
     }
     [data-impact="burst"]::before, [data-impact="nova"]::before {
-      background: repeating-conic-gradient(rgba(255,255,255,.95) 0 4deg, rgba(var(--em-c),.8) 4deg 9deg, transparent 9deg 30deg);
-      -webkit-mask: radial-gradient(closest-side, #000 20%, transparent 100%); mask: radial-gradient(closest-side, #000 20%, transparent 100%); }
+      background: repeating-conic-gradient(rgba(255,255,255,.95) 0 4deg, rgba(var(--em-c),.8) 4deg 9deg, transparent 9deg 30deg);; }
     [data-impact="burst"]::after, [data-impact="nova"]::after { inset: 25%; background: radial-gradient(circle, #fff, rgba(var(--em-c),.8) 50%, transparent 72%); }
     [data-impact="nova"] { --s: 1.6; }
     /* カワズモー: 手のひらの跡を押す */
@@ -2418,8 +2455,7 @@ const createAnimationStyle = () => {
     [data-impact="flame"]::before { inset: -10% 10% 0; border-radius: 50% 50% 40% 40%;
       background: radial-gradient(60% 80% at 50% 90%, #fff7ed, #fb923c 35%, #dc2626 65%, transparent 72%); }
     /* ニャルラトホテプ: 渦巻く闇 */
-    [data-impact="void"]::before { background: conic-gradient(from 0deg, #000, rgba(var(--em-c),.9), #1e0336, #000, rgba(168,85,247,.9), #000);
-      -webkit-mask: radial-gradient(closest-side, #000 55%, transparent 100%); mask: radial-gradient(closest-side, #000 55%, transparent 100%); animation: emVoidSpin 600ms linear infinite; }
+    [data-impact="void"]::before { background: conic-gradient(from 0deg, #000, rgba(var(--em-c),.9), #1e0336, #000, rgba(168,85,247,.9), #000);; animation: emVoidSpin 600ms linear infinite; }
     @keyframes emVoidSpin { to { transform: rotate(360deg); } }
     /* スプラッター: 3本の爪あと */
     [data-impact="claw"]::before { border-radius: 0; transform: rotate(-30deg);
@@ -2436,7 +2472,7 @@ const createAnimationStyle = () => {
     @keyframes mooCutinBand { 0% { opacity: 0; transform: skewY(-7deg) scaleY(0); } 6% { opacity: 1; transform: skewY(-7deg) scaleY(1.15); } 10%, 38% { opacity: 1; transform: skewY(-7deg) scaleY(1); } 46%, 100% { opacity: 0; transform: skewY(-7deg) scaleY(0); } }
     @keyframes mooCutinText { 0% { transform: translateX(120vw); } 10% { transform: translateX(-4vw); } 14%, 34% { transform: translateX(0); } 44%, 100% { transform: translateX(-130vw); } }
     @keyframes mooCutinStreak { to { background-position: -88px 0; } }
-    [data-moo-flash] { inset: 0; opacity: 0; background: radial-gradient(circle at 50% 55%, #fff, rgba(255,240,200,.9) 40%, rgba(250,204,21,.4) 75%); animation: mooFlash 420ms ease-out both; mix-blend-mode: screen; }
+    [data-moo-flash] { inset: 0; opacity: 0; background: radial-gradient(circle at 50% 55%, #fff, rgba(255,240,200,.9) 40%, rgba(250,204,21,.4) 75%); animation: mooFlash 420ms ease-out both; }
     @keyframes mooFlash { 0% { opacity: 0; } 10% { opacity: .7; } 100% { opacity: 0; } }
     [data-moo-crack] { left: 0; top: 0; opacity: 0; overflow: visible; animation: mooCrack 900ms ease-out both; }
     [data-moo-crack] path { fill: none; stroke: #fff; stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 0 4px #facc15) drop-shadow(0 0 10px rgba(220,38,38,.9)); }
@@ -2478,10 +2514,10 @@ const createAnimationStyle = () => {
     [data-tactics-look="rich"] [data-moo-stage]:not([data-enemy-skill]):not([data-enemy-hurt]) > [data-moo-body] { animation: mooIdleMenace 4.2s ease-in-out infinite; }
     [data-tactics-look="rich"] [data-moo-stage]::before { content: ''; position: absolute; inset: 8% 14% 10%; border-radius: 50%; pointer-events: none; z-index: 0; opacity: 0;
       background: radial-gradient(18% 26% at 30% 70%, rgba(40,0,60,.8), transparent 70%), radial-gradient(20% 30% at 70% 65%, rgba(60,0,40,.8), transparent 70%),
-        radial-gradient(30% 34% at 50% 40%, rgba(88,28,135,.6), transparent 70%); filter: blur(6px); animation: mooIdleSmoke 3.2s ease-out infinite; }
+        radial-gradient(30% 34% at 50% 40%, rgba(88,28,135,.6), transparent 70%); animation: mooIdleSmoke 3.2s ease-out infinite; }
     [data-tactics-look="rich"] [data-moo-stage]::after { content: ''; position: absolute; left: 50%; top: 31%; width: 22%; height: 7%; margin-left: -11%; pointer-events: none; z-index: 2;
       background: radial-gradient(closest-side at 32% 50%, rgba(255,60,60,.95), transparent), radial-gradient(closest-side at 68% 50%, rgba(255,60,60,.95), transparent);
-      mix-blend-mode: screen; filter: blur(2px); animation: mooIdleEye 4.2s ease-in-out infinite; }
+      animation: mooIdleEye 4.2s ease-in-out infinite; }
     @media (prefers-reduced-motion: reduce) {
       [data-tactics-look] [data-moo-stage] > [data-moo-body], [data-tactics-look] [data-moo-stage] > [data-moo-body] > *, [data-tactics-look] [data-moo-stage]::before, [data-tactics-look] [data-moo-stage]::after { animation: none !important; }
     }
@@ -2495,9 +2531,13 @@ const createAnimationStyle = () => {
        同じ色の光は上の box-shadow(縁にぴったりの 16px と、広がる 40px)で出す */
     [data-tactics-look] [data-enemy-ring] { filter: none !important; }
     [data-tactics-look] [data-enemy-ring]::before { content: ''; position: absolute; inset: -16px; border-radius: 50%; pointer-events: none; z-index: 0;
-      background: repeating-conic-gradient(rgba(var(--mh-rc),.9) 0 3deg, transparent 3deg 12deg, rgba(255,240,200,.8) 12deg 13deg, transparent 13deg 30deg);
-      -webkit-mask: radial-gradient(circle, transparent 64%, #000 65%, #000 69%, transparent 70%); mask: radial-gradient(circle, transparent 64%, #000 65%, #000 69%, transparent 70%);
-      filter: drop-shadow(0 0 4px rgba(var(--mh-rc),.9)); }
+      /* ★切り抜き(mask)を使わず、もとの模様(30°ごとに距離色と金の目盛り)を SVG の破線の円で描く。
+           回すのは transform だけなので描き直しも要らない(iPhone で切り抜きが外れると丸い光の板が出たため 2026-09-24) */
+      background: center / 100% 100% no-repeat; }
+    [data-tactics-look] [data-enemy-ring="0"]::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(239,68,68,.28)' stroke-width='5'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(239,68,68,.95)' stroke-width='2.8' stroke-dasharray='2.48 22.34'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(255,240,200,.85)' stroke-width='2.8' stroke-dasharray='0.83 23.99' stroke-dashoffset='-9.93'/></svg>"); }
+    [data-tactics-look] [data-enemy-ring="1"]::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(245,158,11,.28)' stroke-width='5'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(245,158,11,.95)' stroke-width='2.8' stroke-dasharray='2.48 22.34'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(255,240,200,.85)' stroke-width='2.8' stroke-dasharray='0.83 23.99' stroke-dashoffset='-9.93'/></svg>"); }
+    [data-tactics-look] [data-enemy-ring="2"]::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(16,185,129,.28)' stroke-width='5'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(16,185,129,.95)' stroke-width='2.8' stroke-dasharray='2.48 22.34'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(255,240,200,.85)' stroke-width='2.8' stroke-dasharray='0.83 23.99' stroke-dashoffset='-9.93'/></svg>"); }
+    [data-tactics-look] [data-enemy-ring="3"]::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(59,130,246,.28)' stroke-width='5'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(59,130,246,.95)' stroke-width='2.8' stroke-dasharray='2.48 22.34'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(255,240,200,.85)' stroke-width='2.8' stroke-dasharray='0.83 23.99' stroke-dashoffset='-9.93'/></svg>"); }
     [data-tactics-look="rich"] [data-enemy-ring]::before { animation: mhRuneSpin 14s linear infinite; }
     /* ==== 枠に出す効果の光(2026-09-24 ユーザー指示「支援系のアクションももう少しそれっぽく」)。
        回復=緑の光の粒が昇る / 攻撃=赤い光が下から吹き上がる / 守り=青い盾の輪が広がる / ガッツ=黄色の稲妻 / そのほか=金のきらめき。
@@ -2516,8 +2556,8 @@ const createAnimationStyle = () => {
         radial-gradient(3px 3px at 80% 85%, #a7f3d0, transparent 70%), radial-gradient(2px 2px at 26% 100%, #fff, transparent 70%); }
     [data-tactics-look] [data-slot-aura="power"] { box-shadow: inset 0 0 20px rgba(248,113,113,.85); }
     [data-tactics-look] [data-slot-aura="power"]::before { left: 0; right: 0; bottom: 0; height: 100%; animation: mhAuraRise 1.1s ease-out forwards;
-      background: repeating-linear-gradient(90deg, transparent 0 10px, rgba(252,165,165,.55) 10px 12px, transparent 12px 22px),
-        linear-gradient(0deg, rgba(239,68,68,.55), transparent 80%); -webkit-mask: linear-gradient(0deg, #000 30%, transparent); mask: linear-gradient(0deg, #000 30%, transparent); }
+      background: linear-gradient(0deg, rgba(239,68,68,0) 0%, rgba(239,68,68,0) 100%), repeating-linear-gradient(90deg, transparent 0 10px, rgba(252,165,165,.35) 10px 12px, transparent 12px 22px),
+        linear-gradient(0deg, rgba(239,68,68,.55), transparent 80%); }
     [data-tactics-look] [data-slot-aura="shield"] { box-shadow: inset 0 0 18px rgba(96,165,250,.85); }
     [data-tactics-look] [data-slot-aura="shield"]::before { left: 30%; top: 58%; width: 90px; height: 90px; border-radius: 50%; animation: mhAuraRing 1.2s ease-out forwards;
       border: 3px solid rgba(147,197,253,.95); box-shadow: 0 0 14px rgba(96,165,250,.9), inset 0 0 14px rgba(96,165,250,.6); }
@@ -2883,20 +2923,17 @@ const createAnimationStyle = () => {
       background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
         radial-gradient(90% 60% at 50% 0%, rgba(var(--mh-rc),.28), transparent 70%) padding-box,
         linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
-        conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
           rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important;
       box-shadow: 0 0 18px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.18) !important; }
+    /* 縁の光は回さず、明るい弧のある縁で止める(バトルの枠と同じ理由) */
+    .mh-ph-frame[data-ph-on] { --mh-ang: 35deg; }
     /* 縁を回る光(2026-09-24 ユーザー指摘「かくつき」「まだ手が回ってないところも」)。
        バトルの枠(data-slot-ring)と同じく、縁の角度(--mh-ang)を毎コマ変えるのをやめ、
        縁の形に切り抜いた箱(.mh-ph-ring)の中で光の輪を transform で回す */
-    .mh-ph-frame[data-ph-on] { position: relative; }
-    .mh-ph-ring { display: none; }
-    .mh-ph-frame[data-ph-on] > .mh-ph-ring { display: block; position: absolute; inset: -2px; border-radius: inherit; padding: 2px; pointer-events: none; z-index: 1; overflow: hidden;
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-    .mh-ph-frame[data-ph-on] > .mh-ph-ring::before { content: ''; position: absolute; inset: -100%;
-      background: conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
-        rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%); }
-    [data-phase-look="rich"] .mh-ph-frame[data-ph-on] > .mh-ph-ring::before { animation: mhSpin 4.5s linear infinite; }
+    /* ★回る光は出さない(バトルの data-slot-ring と同じ理由。iPhone で切り抜きが外れて固まることがあった)。
+       縁は上の conic-gradient(border-box)で、光ったまま止まった見た目にする */
+    .mh-ph-ring { display: none !important; }
     /* 枠の中の光の粒 */
     .mh-ph-sparkle { position: absolute; inset: 3px; border-radius: inherit; pointer-events: none;
       background: radial-gradient(1.5px 1.5px at 14% 30%, rgba(var(--mh-rc2),.95), transparent 70%), radial-gradient(1.5px 1.5px at 52% 72%, rgba(var(--mh-rc2),.85), transparent 70%),
@@ -2992,7 +3029,7 @@ const createAnimationStyle = () => {
     .mh-ph-pip[data-next] { border-color: #f3d27a; background: rgba(243,210,122,.35); box-shadow: 0 0 6px rgba(243,210,122,.7); }
     [data-phase-look="rich"] .mh-ph-pip[data-next] { animation: mhTwinkle 1.6s ease-in-out infinite; }
     @media (prefers-reduced-motion: reduce) {
-      .mh-ph-ring::before, .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem::after, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
+      .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem::after, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
     }
     @keyframes specialShockwave {
       0% { transform: scale(0.4); opacity: 0.9; }
