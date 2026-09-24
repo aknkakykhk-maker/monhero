@@ -1368,7 +1368,7 @@ function MonsterHeroGame() {
   const stopDexAttackPreview = () => { dexAttackPreviewRunRef.current+=1; setDexAttackPreview(null); };
   const playDexAttackPreview = async (mon, kind, atkMotion) => {
     const run=++dexAttackPreviewRunRef.current;
-    const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion):attackMotionPreviewSequence(atkMotion);
+    const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id):attackMotionPreviewSequence(atkMotion, mon?.id);
     for(const step of steps){
       if(run!==dexAttackPreviewRunRef.current)return;
       setDexAttackPreview({monsterId:mon.id,kind,anim:step.anim});
@@ -10732,7 +10732,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(115); triggerShake();
                 await battleWait(130);
               }else{
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500)))));
+                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))));
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
@@ -10744,7 +10744,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(130);
               }else{
                 if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)))));
+                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))));
               }
             }
             setAttackAnim(null);

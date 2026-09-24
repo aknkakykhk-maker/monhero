@@ -252,7 +252,7 @@ check('未解放モンスターには攻撃アクションの入口を出さな�
 // 専用画面。上へ飛ぶ演出が枠外へ出ないよう縦を大きく取り、通常攻撃と固有技を選んで見比べられる
 check('攻撃アクションの専用画面で通常攻撃と固有技を再生できる',
   attackPreview.includes('await onPlayPreview(mon,kind,atkMotion);')
-  && source.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion):attackMotionPreviewSequence(atkMotion);")
+  && source.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id):attackMotionPreviewSequence(atkMotion, mon?.id);")
   && attackPreview.includes('data-attack-preview-play={kind}')
   && attackPreview.includes("kindButton('normal','通常攻撃'")
   && attackPreview.includes("kindButton('unique','固有技'"));

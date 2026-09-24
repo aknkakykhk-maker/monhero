@@ -85,55 +85,64 @@ const ATTACK_TARGET_SLASHES = Object.freeze({
 // ==== 体当たりだった初期モンスターの攻撃(2026-09-24 ユーザー指示「初期からいるモンスターは攻撃アクションが
 // 体当たりだけだから、モンスターのイメージにあわせたアクションを作って」) ====
 // データの atkMotion は 'default' のまま変えない(待ち時間・RPG表示・検査が atkMotion を見ているため)。
-// 見た目だけを、攻撃する子の種族でここから選ぶ。尺は体当たりと同じ(通常450ms・固有技500ms)に収める。
-// 新しいモンスターを 'default' で足すときは、ここへ1行足せば型を選べる(足さなければ今までどおり体当たり)。
-const DEFAULT_ATTACK_THEMES = Object.freeze({
-  Mocchi:'stomp',     // 高く跳んで、敵の上からのしかかる
-  Suezo:'beam',       // 大きな目から光線
-  Golem:'rocks',      // 地面を叩いて、岩を飛ばす
-  Tiger:'claw',       // 飛びかかって、爪で3本ひっかく
-  Ham:'punch',        // 詰め寄って、連続パンチ
-  Pixie:'magic',      // 魔法陣を出して、魔法の弾を3発
-  Monol:'crush',      // 敵の真上へ浮かんで、押しつぶす
-  Oboro:'petals',     // 青い花びらを吹きつける
-  Plant:'vine',       // つるを伸ばして、はたく
-  Mitarashi:'fire',   // 炎を吐く
-});
+// 見た目だけを、攻撃する子の種族で選ぶ。種族→型の表(DEFAULT_ATTACK_THEMES)と型ごとの尺(THEMED_ATTACK_MS)は、
+// 本番バトルの待ち時間と図鑑のプレビューも使うので 23-rpg-debug.jsx に置いてある。
+// 新しいモンスターを 'default' で足すときは、そこへ1行足せば型を選べる(足さなければ今までどおり体当たり)。
 const themedAttackKindOf = (anim, baseId) => (
   anim && anim.charge !== true && !anim.zanCombo && !anim.twinBlade && (!anim.motion || anim.motion === 'default')
     ? (DEFAULT_ATTACK_THEMES[baseId] || null) : null
 );
-// 飛ぶもの・着弾の小片。x/y は敵の位置からのずれ、d はずらす時間(ms)
+// 飛ぶもの・着弾の小片。x/y は敵の位置からのずれ、d はずらす時間(ms)、a は向き(deg)、s は大きさの倍率。
+// hit2 は2回目の着弾(モッチーのモッチ砲)。型ごとの尺は 23-rpg-debug.jsx の THEMED_ATTACK_MS
 const THEMED_ATTACK_BITS = Object.freeze({
-  stomp:  { hit:[{x:-34,y:10},{x:-22,y:-16},{x:0,y:-24},{x:22,y:-16},{x:34,y:10},{x:0,y:18}] },
-  rocks:  { fly:[{x:-18,y:-4,d:120},{x:0,y:6,d:160},{x:18,y:-2,d:200}], hit:[{x:-30,y:-20},{x:-10,y:-32},{x:14,y:-30},{x:30,y:-14},{x:0,y:14}] },
-  claw:   { hit:[{x:-12,d:180},{x:0,d:205},{x:12,d:230}] },
-  punch:  { hit:[{x:-14,y:-10,d:145},{x:12,y:4,d:205},{x:-4,y:12,d:262}] },
+  stomp:  { hit:[{x:-34,y:10},{x:-22,y:-16},{x:0,y:-24},{x:22,y:-16},{x:34,y:10},{x:0,y:18}],
+            hit2:[{x:-30,y:-22},{x:-8,y:-36},{x:18,y:-30},{x:34,y:-4},{x:-26,y:16},{x:22,y:20}] },
+  rocks:  { hit:[{x:-64,y:-36,a:20},{x:-40,y:-70,a:-40,s:1.3},{x:-6,y:-84,a:60},{x:30,y:-74,a:-20,s:1.4},{x:64,y:-34,a:45},
+                 {x:-58,y:14,a:-60,s:.8},{x:56,y:18,a:30,s:1.1},{x:4,y:34,a:90,s:.8}] },
+  claw:   { hit:[
+    {x:-12,a:28,d:235},{x:0,a:28,d:245},{x:12,a:28,d:255},
+    {x:-12,a:-28,d:295},{x:0,a:-28,d:305},{x:12,a:-28,d:315},
+    {x:-12,a:62,d:355},{x:0,a:62,d:365},{x:12,a:62,d:375},
+  ] },
+  punch:  { hit:[{x:-10,y:-8,d:186,s:.7},{x:-22,y:-20,d:196,s:.4},
+                 {x:6,y:0,d:314,s:1.7},{x:30,y:-22,d:330,s:.8},{x:-24,y:-28,d:340,s:.7},{x:22,y:24,d:350,s:.6}] },
   magic:  { fly:[{x:-10,y:-40,d:120},{x:12,y:-56,d:175},{x:-4,y:-30,d:230}], hit:[{x:-26,y:-18},{x:24,y:-22},{x:-20,y:20},{x:26,y:16},{x:0,y:-30}] },
   crush:  { hit:[{a:-20},{a:35},{a:150},{a:205}] },
   petals: { fly:[{x:-22,y:-30,d:60},{x:16,y:-48,d:100},{x:-10,y:-60,d:140},{x:24,y:-24,d:180},{x:-26,y:-44,d:220},{x:8,y:-36,d:250},{x:-4,y:-52,d:280}] },
   vine:   { hit:[{x:-22,y:-14},{x:20,y:-18},{x:-14,y:16},{x:18,y:12}] },
-  fire:   { fly:[{x:-8,y:-6,d:110},{x:10,y:6,d:145},{x:-12,y:10,d:180},{x:6,y:-10,d:215},{x:-4,y:4,d:250},{x:12,y:-4,d:285}] },
+  fire:   { fly:[{x:-8,y:-6,d:130},{x:10,y:6,d:170},{x:-12,y:10,d:210},{x:6,y:-10,d:250},{x:-4,y:4,d:290},{x:12,y:-4,d:330}],
+            hit:[{x:-30,y:-26,d:230},{x:26,y:-30,d:280},{x:-22,y:22,d:330},{x:30,y:14,d:380}] },
 });
+const THEMED_ATTACK_LINE_KINDS = Object.freeze(['beam','vine','stomp','fire']);
+const ThemedAttackBits = ({list}) => (list||[]).map((b,i)=>(
+  <i key={i} className="thm-atk__bit" style={{'--bx':`${b.x||0}px`,'--by':`${b.y||0}px`,'--ba':`${b.a||0}deg`,'--bs':b.s||1,...(b.d!=null?{animationDelay:`${b.d}ms`}:{})}}/>
+));
 const ThemedAttackMotion = ({kind, image, lunge=false}) => {
   const bits = THEMED_ATTACK_BITS[kind] || {};
+  const ms = THEMED_ATTACK_MS[kind];
   const px = (v) => `${v || 0}px`;
   return (
-    <span className={`thm-atk thm-atk--${kind}${lunge?' thm-atk--lunge':''}`}>
+    <span className={`thm-atk thm-atk--${kind}${lunge?' thm-atk--lunge':''}`} style={ms?{'--thm-ms':`${ms}ms`}:undefined}>
       {kind==='magic'&&<span className="thm-atk__circle" aria-hidden="true"><i/><i/></span>}
-      {kind==='rocks'&&<span className="thm-atk__quake" aria-hidden="true"/>}
+      {/* ライガーの残像。本体と同じカクカクの動きを少し遅れて追いかける */}
+      {kind==='claw'&&[1,2].map(n=>(
+        <span key={n} className={`thm-atk__ghost thm-atk__ghost--${n}`} aria-hidden="true">{image}</span>
+      ))}
       <span className="thm-atk__monster">{image}</span>
-      {(kind==='beam'||kind==='vine')&&<span className="thm-atk__line" aria-hidden="true"><i/></span>}
+      {THEMED_ATTACK_LINE_KINDS.includes(kind)&&<span className="thm-atk__line" aria-hidden="true"><i/></span>}
       {bits.fly&&<span className="thm-atk__flys" aria-hidden="true">{bits.fly.map((b,i)=>(
         <i key={i} className="thm-atk__fly" style={{'--fx':px(b.x),'--fy':px(b.y),animationDelay:`${b.d}ms`}}/>
       ))}</span>}
       <span className="thm-atk__hit" aria-hidden="true">
         <i className="thm-atk__core"/>
         <i className="thm-atk__ring"/>
-        {(bits.hit||[]).map((b,i)=>(
-          <i key={i} className="thm-atk__bit" style={{'--bx':px(b.x),'--by':px(b.y),'--ba':`${b.a||0}deg`,...(b.d!=null?{animationDelay:`${b.d}ms`}:{})}}/>
-        ))}
+        <ThemedAttackBits list={bits.hit}/>
       </span>
+      {bits.hit2&&<span className="thm-atk__hit thm-atk__hit--2" aria-hidden="true">
+        <i className="thm-atk__core"/>
+        <i className="thm-atk__ring"/>
+        <ThemedAttackBits list={bits.hit2}/>
+      </span>}
     </span>
   );
 };
