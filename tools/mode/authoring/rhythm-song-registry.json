@@ -331,7 +331,8 @@
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "detected"
-   }
+   },
+   "challengeFactor": 1.3
   },
   "makutsu_no_senritsu": {
    "audio": "monster-hero/audio/bgm-makutsu-no-senritsu.mp3",
@@ -344,7 +345,8 @@
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "command"
-   }
+   },
+   "challengeFactor": 1.6
   }
  }
 }
