@@ -46,7 +46,8 @@ const check = (name, ok, detail = '') => {
 };
 
 // ★位置と重なり順は本体から読む。検査へ書き写すと、本体を変えたとき検査だけ古くなる
-const art = src.match(/<div className="fixed left-1\/2 pointer-events-none flex items-center justify-center" style=\{\{top:'([^']+)',transform:'translate\(-50%,-50%\)',zIndex:focusedCard\?5:(\d+),width:'([^']+)',height:'([^']+)'\}\}>/);
+// ★2026-09-24 覚醒ムーにも技ごとの動き(data-enemy-motion / data-em-* など)を足した。data-* が前に何個あっても読めるようにする
+const art = src.match(/<div (?:data-[a-zA-Z-]+(?:=\{[^{}]*\})? )*className="fixed left-1\/2 pointer-events-none flex items-center justify-center" style=\{\{top:'([^']+)',transform:'translate\(-50%,-50%\)',zIndex:focusedCard\?5:(\d+),width:'([^']+)',height:'([^']+)'\}\}>/);
 check('立ち絵の置き方を読み取れる', !!art, art ? `top ${art[1]} / z ${art[2]} / ${art[3]}` : '見つからない');
 const notice = src.match(/data-enemy-notice-moo className="fixed left-1\/2 pointer-events-none"\s*\n\s*style=\{\{top:'([^']+)',transform:'([^']+)',zIndex:focusedCard\?5:(\d+)\}\}/);
 check('札の置き方を読み取れる', !!notice, notice ? `top ${notice[1]} / z ${notice[3]}` : '見つからない');
@@ -55,7 +56,7 @@ check('札の置き方を読み取れる', !!notice, notice ? `top ${notice[1]} 
 // ★丸枠の塗りは 2026-09-22 に bg-black/35 へ落とした(濃い塗りだと「丸い板」に見えて、
 //   敵が背景から浮いていた)。間合いの色は輪(border)が持っている
 // ★新しい盤面(2026-09-24)で data-enemy-ring / data-enemy-attack を足した。data-enemy-* が前に何個あっても読めるようにする
-const frameAt = src.search(/<div (?:data-enemy-[a-z-]+=\{[^}]*\}(?:\}[^ ]*)? )*className=\{`rounded-full transition-all duration-500 border-4 relative bg-black\/35 \$\{RANGE_STYLES\[enemyDist\]\.border\}/);
+const frameAt = src.search(/<div (?:data-[a-zA-Z-]+(?:=\{[^{}]*\})? )*className=\{`rounded-full transition-all duration-500 border-4 relative bg-black\/35 \$\{RANGE_STYLES\[enemyDist\]\.border\}/);
 check('丸枠の書き出しを読み取れる', frameAt >= 0);
 const noticeAt = src.indexOf('data-enemy-notice-moo');
 check('札は丸枠の外に置いてある', noticeAt >= 0 && frameAt >= 0 && noticeAt < frameAt,

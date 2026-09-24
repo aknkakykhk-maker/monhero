@@ -44,6 +44,7 @@ description: Add a new playable ally monster (味方モンスター) to モン�
 | 7 | `parts/15-dye-and-art.jsx` | `MASU_COLOR_REGION_HUES[id]` … 染色の部位分け(§4) |
 | 8 | `monster-hero/images/` | 立ち絵 `monsters/<id>.png` ／ 円盤石 `disc-icons/<id>-disc.PNG` |
 | 9 | `parts/60-app.jsx` ほか | 勇者特性・固有技の**実効果のID分岐**(§5)。表示だけでは何も起きない |
+| 10 | `tools/monster/idle-rig-build.js` | `RIGS` へ1体(待機アニメ。動かす部分が無い子も `body` だけ書く)→ `node tools/monster/idle-rig-build.js`。バトルと図鑑の両方で動く(図鑑の側は触らない) |
 
 ### `ALL_PLAYER_MONSTERS` のフィールド
 
@@ -186,6 +187,7 @@ node tools/run-checks.js --area monster,image 2>&1 | tail -25
 | 検査 | 見ているもの |
 | --- | --- |
 | `monster/lineage-dex-check.js` | 血統・区分・図鑑の説明文の抜け |
+| `monster/idle-dex-check.js` | 待機アニメの表の抜け(図鑑とバトルで同じ動きが出るか) |
 | `monster/monster-card-consistency-check.js` | 一覧カードの表示 |
 | `monster/monster-art-fit-check.js` | 立ち絵が枠へ収まるか(`MONSTER_ART_CONTAIN_IDS`) |
 | `monster/market-icon-check.js` | マーケットのアイコン商品の綴り |

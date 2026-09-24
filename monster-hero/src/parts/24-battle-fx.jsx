@@ -143,11 +143,14 @@ const MONSTER_IDLE_MASK_STYLE = (url) => ({
   WebkitMaskPosition:'center', maskPosition:'center',
   WebkitMaskRepeat:'no-repeat', maskRepeat:'no-repeat',
 });
-const MonsterIdleArt = ({baseId, image}) => {
-  const rig = MONSTER_IDLE_RIGS[baseId];
+// fill: 入れ物いっぱいに広げる(図鑑の立ち絵のように、絵が w-full h-full で大きさを持たないとき)。
+//   バトルの絵は幅・高さを px で持っているので要らない
+const MonsterIdleArt = ({baseId, image, fill = false}) => {
+  const rig = monsterIdleRigOf(baseId);
+  const fillClass = fill ? ' mon-idle--fill' : '';
   if (!rig || !image) return image || null;
   if (!rig.parts.length) {
-    return <span className={`mon-idle mon-idle--${rig.body}`}>{image}</span>;
+    return <span className={`mon-idle mon-idle--${rig.body}${fillClass}`} data-monster-idle={baseId}>{image}</span>;
   }
   // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと「体」の層に部分の影が残り、
   //   部分を動かしたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体に1回だけ付ける
@@ -161,13 +164,28 @@ const MonsterIdleArt = ({baseId, image}) => {
     </span>
   );
   return (
-    <span className={`mon-idle mon-idle--${rig.body} mon-idle--rig`}>
+    <span className={`mon-idle mon-idle--${rig.body} mon-idle--rig${fillClass}`} data-monster-idle={baseId}>
       {rig.parts.filter(p => p.layer === 'back').map(partNode)}
       <span className="mon-idle__body">{layer(rig.bodyMask, null)}</span>
       {rig.parts.filter(p => p.layer !== 'back').map(partNode)}
     </span>
   );
 };
+// ==== 図鑑でもバトルと同じ待機アニメを出す入口(2026-09-24 ユーザー指示「モンスター図鑑にも同じ動きが出来る基盤を作っといて」) ====
+// 図鑑の詳細の立ち絵(DexMonsterIdleArt)と攻撃アクションの画面は、ここを通すだけにする。
+// 動かし方の正本は上の MONSTER_IDLE_RIGS(idle-rig-build.js が書く)なので、そこへ1体足せば
+// バトルと図鑑の両方で動き出す。図鑑の側でモンスターの名前を見て分岐しない。
+// ・軸の % は「正方形の枠」での値なので、図鑑は正方形の箱に入れて渡す(DexMonsterIdleArt)
+// ・軽量表示・「待機中の動き：止める」では、図鑑は画面全体の data-phase-look="calm" を見て CSS が止める
+const monsterIdleRigOf = (monsterId) => (monsterId && Object.prototype.hasOwnProperty.call(MONSTER_IDLE_RIGS, monsterId)) ? MONSTER_IDLE_RIGS[monsterId] : null;
+const withMonsterIdleArt = (monsterId, image, {enabled = true, fill = false} = {}) => (
+  enabled && monsterIdleRigOf(monsterId) ? <MonsterIdleArt baseId={monsterId} image={image} fill={fill}/> : image
+);
+// 図鑑の攻撃アクションで、動きの最中も待機アニメを重ねてよいか。バトル(71-screen-battle.jsx)は
+// 聖光・水・歌・通常の動きでは slotArt を通して重ね、パンドラの雷だけは重ねない(分身へ絵を複製するため)。
+// それに合わせる。バトル側の分け方を変えたら、ここも合わせる
+const MONSTER_IDLE_OFF_MOTIONS = Object.freeze(['pandoraDualThunder']);
+const monsterIdleAllowedDuring = (anim) => !anim || !MONSTER_IDLE_OFF_MOTIONS.includes(anim.motion);
 // エイキの攻撃中だけ重ねる桜の花びら。
 // 常時アニメーションにはせず、攻撃モーションが出ているあいだ(isAnimating)だけ描く。
 // スマホの負荷を増やしすぎないよう、要素は固定12枚・CSSアニメーション1本だけにして、
