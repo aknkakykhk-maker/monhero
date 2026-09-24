@@ -80,12 +80,14 @@ const readShapes=(dir,trackId)=>DIFFICULTIES.map(difficulty=>{
 const mean=list=>list.length?list.reduce((a,b)=>a+b,0)/list.length:0;
 try{
   const echo={1:[],2:[]};
+
   for(const trackId of tracks){
     const legacy=generate(trackId,1),latest=generate(trackId,2);
     ok(`${trackId}: 版1・版2とも生成できる`,!!legacy&&!!latest);
     if(!legacy||!latest)continue;
     ok(`${trackId}: 版1/版2 と表示する`,/譜面の作り方: 版1/.test(legacy.stdout)&&/譜面の作り方: 版2/.test(latest.stdout));
     const legacyCharts=readShapes(legacy.dir,trackId),latestCharts=readShapes(latest.dir,trackId);
+
     ok(`${trackId}: 版1には写しが出ない(入口が閉じている)`,
       legacyCharts.every(chart=>chart.chartRevision===1&&!chart.shapes.some(entry=>entry.phraseCopyOf!=null)));
     ok(`${trackId}: 版2では写したかたまりがある`,latestCharts.every(chart=>chart.chartRevision===2)
@@ -123,6 +125,26 @@ try{
   const legacyEcho=mean(echo[1]),latestEcho=mean(echo[2]);
   ok('版2でフレーズの写し率がはっきり上がる(1.4倍以上)',latestEcho>=legacyEcho*1.4&&latestEcho>=.2,
     `版1 ${legacyEcho.toFixed(3)} → 版2 ${latestEcho.toFixed(3)}`);
+  // ── 5. 版2のクロス(端に寄ったHOLDを内側へ寄せて置く) ──────────────────────────
+  // 1曲ごとには増減がある(写しで配置が変わると、押さえの位置も変わる)ので、公開中の全曲の合計で見る。
+  // 実測(2026-09-24): MASTER 版1 31 → 版2 53、EXPERT 32 → 40
+  {
+    const {RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
+    const crossTotal={1:{EXPERT:0,MASTER:0},2:{EXPERT:0,MASTER:0}};
+    for(const trackId of Object.values(RELEASED_TRACKS))for(const revision of [1,2])for(const difficulty of ['EXPERT','MASTER']){
+      const dir=path.join(tmp,`cross-${trackId}-r${revision}`);
+      fs.mkdirSync(dir,{recursive:true});
+      const run=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),'--track',trackId,
+        '--chart-revision',String(revision),'--difficulty',difficulty,'--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:1<<26});
+      if(run.status!==0)continue;
+      const file=path.join(dir,`${trackId.replace(/_/g,'-')}-v3-chart-${difficulty.toLowerCase()}.json`);
+      crossTotal[revision][difficulty]+=JSON.parse(fs.readFileSync(file,'utf8')).notes.filter(note=>note.cross===true).length;
+    }
+    ok('版2でMASTERのクロスが版1より減らない(公開中の全曲の合計)',crossTotal[2].MASTER>=crossTotal[1].MASTER,
+      `版1 ${crossTotal[1].MASTER} → 版2 ${crossTotal[2].MASTER}`);
+    ok('版2ではMASTERのクロスがEXPERTより多い(公開中の全曲の合計)',crossTotal[2].MASTER>crossTotal[2].EXPERT,
+      `EXPERT ${crossTotal[2].EXPERT} / MASTER ${crossTotal[2].MASTER}`);
+  }
 }finally{
   fs.rmSync(tmp,{recursive:true,force:true});
 }

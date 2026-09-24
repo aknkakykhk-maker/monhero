@@ -1079,7 +1079,7 @@
       "perSecond": 3.73,
       "vocab": 8,
       "chords": 2,
-      "widths": 4.48
+      "widths": 4.54
      },
      {
       "label": "J",
@@ -1159,14 +1159,14 @@
    },
    "lanes": {
     "laneShare": [
-     0.036,
-     0.326,
-     0.251,
-     0.293,
-     0.094
+     0.035,
+     0.323,
+     0.252,
+     0.295,
+     0.095
     ],
-    "leftRightBias": 0.032,
-    "centerShare": 0.251,
+    "leftRightBias": 0.042,
+    "centerShare": 0.252,
     "edgeShare": 0.13,
     "meanMove": 0.1,
     "maxMove": 2.5,
@@ -1174,8 +1174,8 @@
     "hardJumps": 0,
     "fastPairs": 302,
     "fingerTravel": [
-     210.5,
-     225
+     211,
+     226
     ]
    },
    "types": {
@@ -1267,7 +1267,7 @@
     "motifTotal": 11,
     "motifSame": 6,
     "phraseConsistency": 0.5,
-    "phraseEcho": 0.173,
+    "phraseEcho": 0.168,
     "phraseEchoTotal": 191,
     "phraseVariations": 2,
     "mirrorRate": 0.095,
@@ -1489,24 +1489,24 @@
     "hardJumps": 0,
     "fastPairs": 384,
     "fingerTravel": [
-     319.3,
-     282.8
+     297.8,
+     303.8
     ]
    },
    "types": {
     "TAP": 651,
-    "HOLD": 38,
-    "SLIDE": 32,
+    "HOLD": 39,
+    "SLIDE": 31,
     "FLICK": 42,
     "chords": 70,
     "chordRuns": 16,
     "sweeps": 4,
-    "crosses": 7,
+    "crosses": 8,
     "accents": 13,
     "endFlicks": 15,
     "tapers": 10,
-    "tapDuringHold": 21,
-    "tapDuringSlide": 34,
+    "tapDuringHold": 23,
+    "tapDuringSlide": 32,
     "expandCount": 13,
     "contractCount": 5,
     "chordShapes": {
@@ -1518,13 +1518,13 @@
     },
     "slideShapes": {
      "sweep": 4,
-     "line": 23,
+     "line": 22,
      "fold": 4,
      "flat": 1
     },
     "slideWidthSequences": 19,
     "slideVarying": 20,
-    "slideVariety": 0.888,
+    "slideVariety": 0.894,
     "rests": 303,
     "longRests": 7,
     "longestRestMs": 2129,
@@ -1535,25 +1535,17 @@
    },
    "hand": {
     "impossible": 0,
-    "strained": 1,
-    "strainedRate": 0.001,
+    "strained": 0,
+    "strainedRate": 0,
     "maxStrainStreakMs": 0,
-    "strainStreaks": 1,
+    "strainStreaks": 0,
     "alternationRate": 1,
     "alternationTotal": 81,
     "sameFingerMinMs": 194,
     "chordClearMinMs": 194,
     "heldFreeOk": 54,
     "heldFreeTotal": 55,
-    "issues": [
-     {
-      "severity": "strained",
-      "timeMs": 153855,
-      "bar": 99,
-      "type": "HOLD",
-      "detail": "2.25レーンの移動が194ms(快適には225ms欲しい)"
-     }
-    ]
+    "issues": []
    }
   }
  }

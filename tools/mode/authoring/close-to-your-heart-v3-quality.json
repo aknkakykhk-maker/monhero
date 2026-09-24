@@ -701,7 +701,7 @@
       "perSecond": 2.03,
       "vocab": 3,
       "chords": 3,
-      "widths": 3.67
+      "widths": 3.47
      },
      {
       "label": "C",
@@ -721,7 +721,7 @@
       "perSecond": 3.15,
       "vocab": 9,
       "chords": 3,
-      "widths": 4.66
+      "widths": 4.68
      },
      {
       "label": "E",
@@ -786,21 +786,21 @@
     "laneShare": [
      0.048,
      0.318,
-     0.22,
-     0.336,
-     0.077
+     0.223,
+     0.33,
+     0.08
     ],
-    "leftRightBias": 0.061,
-    "centerShare": 0.22,
-    "edgeShare": 0.125,
+    "leftRightBias": 0.057,
+    "centerShare": 0.223,
+    "edgeShare": 0.128,
     "meanMove": 0.11,
     "maxMove": 2,
     "moveSpeedPerSecond": 0.18,
     "hardJumps": 0,
     "fastPairs": 194,
     "fingerTravel": [
-     114.5,
-     96.5
+     96.5,
+     113.5
     ]
    },
    "types": {

@@ -7868,3 +7868,6 @@ credit:Object.freeze({
 - 解析ファイル（`*-v3-audio.json`）は1つも作り直していない。公開していない3曲
   （`pandora_boss_beat` / `eiki_boss_beat` / `six_eternel_remix`）は版1のまま
 - 過去のお知らせに書いたレベル・ノーツ数を、いまの譜面に合わせて直した（`song-numbers-check.js`）
+- 作り直した設計資料で `rhythm-chart-v3-check.js` が2項目落ちた。どちらも古い設計資料のせいで隠れていたもの。
+  ①同時押さえの2本目は打点から作らないので出どころを持たない（検査を「組の印を持つ」へ直した）、
+  ②MASTERのクロスがEXPERTより少ない（版1でも12曲）。②は版2の生成器で直した（`RHYTHM_CHART_DESIGN.md` 3.1.19）

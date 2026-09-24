@@ -802,7 +802,7 @@
       "perSecond": 2.29,
       "vocab": 5,
       "chords": 5,
-      "widths": 3.81
+      "widths": 3.74
      },
      {
       "label": "C",
@@ -812,7 +812,7 @@
       "perSecond": 2.54,
       "vocab": 6,
       "chords": 0,
-      "widths": 4.47
+      "widths": 4.37
      },
      {
       "label": "D",
@@ -911,22 +911,22 @@
    "lanes": {
     "laneShare": [
      0.052,
-     0.312,
-     0.259,
-     0.275,
-     0.102
+     0.309,
+     0.264,
+     0.268,
+     0.107
     ],
     "leftRightBias": 0.018,
-    "centerShare": 0.259,
-    "edgeShare": 0.155,
+    "centerShare": 0.264,
+    "edgeShare": 0.159,
     "meanMove": 0.23,
     "maxMove": 2.5,
     "moveSpeedPerSecond": 0.34,
     "hardJumps": 0,
     "fastPairs": 219,
     "fingerTravel": [
-     150.8,
-     147
+     153.3,
+     150.5
     ]
    },
    "types": {
@@ -937,7 +937,7 @@
     "chords": 24,
     "chordRuns": 8,
     "sweeps": 3,
-    "crosses": 1,
+    "crosses": 3,
     "accents": 7,
     "endFlicks": 5,
     "tapers": 5,

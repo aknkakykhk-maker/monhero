@@ -4382,8 +4382,8 @@
   {
    "type": "HOLD",
    "grid": 396,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.52,
    "sourcePeakOffsetMs": 3.07,

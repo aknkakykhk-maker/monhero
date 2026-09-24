@@ -758,7 +758,7 @@
       "perSecond": 3.06,
       "vocab": 9,
       "chords": 0,
-      "widths": 5.05
+      "widths": 4.98
      },
      {
       "label": "E",
@@ -788,7 +788,7 @@
       "perSecond": 3.58,
       "vocab": 12,
       "chords": 2,
-      "widths": 4.83
+      "widths": 4.86
      }
     ]
    },
@@ -839,8 +839,8 @@
     "hardJumps": 0,
     "fastPairs": 344,
     "fingerTravel": [
-     129.8,
-     128
+     128.3,
+     129
     ]
    },
    "types": {

@@ -1054,7 +1054,7 @@
       "perSecond": 2.59,
       "vocab": 12,
       "chords": 2,
-      "widths": 4.14
+      "widths": 4.1
      },
      {
       "label": "E",
@@ -1129,8 +1129,8 @@
     "hardJumps": 0,
     "fastPairs": 147,
     "fingerTravel": [
-     162,
-     151.5
+     163.5,
+     151
     ]
    },
    "types": {
@@ -1141,7 +1141,7 @@
     "chords": 25,
     "chordRuns": 5,
     "sweeps": 4,
-    "crosses": 2,
+    "crosses": 3,
     "accents": 8,
     "endFlicks": 8,
     "tapers": 6,
@@ -1200,7 +1200,7 @@
     "readability": 96,
     "flow": 98,
     "variety": 98,
-    "difficultyFit": 98
+    "difficultyFit": 100
    },
    "musicality": {
     "onsetHitRate": 1,
@@ -1268,7 +1268,7 @@
       "perSecond": 2.78,
       "vocab": 13,
       "chords": 7,
-      "widths": 2.85
+      "widths": 2.83
      },
      {
       "label": "B",
@@ -1418,22 +1418,22 @@
    "lanes": {
     "laneShare": [
      0.114,
-     0.272,
-     0.236,
+     0.268,
+     0.238,
      0.199,
-     0.179
+     0.181
     ],
-    "leftRightBias": 0.01,
-    "centerShare": 0.236,
-    "edgeShare": 0.293,
+    "leftRightBias": 0.003,
+    "centerShare": 0.238,
+    "edgeShare": 0.295,
     "meanMove": 0.45,
     "maxMove": 2.25,
-    "moveSpeedPerSecond": 0.46,
+    "moveSpeedPerSecond": 0.47,
     "hardJumps": 0,
     "fastPairs": 201,
     "fingerTravel": [
-     211.3,
-     186.3
+     204.3,
+     199.3
     ]
    },
    "types": {
@@ -1444,7 +1444,7 @@
     "chords": 48,
     "chordRuns": 12,
     "sweeps": 3,
-    "crosses": 0,
+    "crosses": 2,
     "accents": 9,
     "endFlicks": 10,
     "tapers": 7,

@@ -156,8 +156,8 @@
  "typeCounts": {
   "TAP": 651,
   "FLICK": 42,
-  "SLIDE": 32,
-  "HOLD": 38
+  "SLIDE": 31,
+  "HOLD": 39
  },
  "densityPerSecond": 2.95,
  "shapes": [
@@ -5634,8 +5634,8 @@
   {
    "type": "HOLD",
    "grid": 476,
-   "lane": 2,
-   "subLane": 5,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 4,
    "sourceStrength": 0.51,
    "sourcePeakOffsetMs": 22.27,
@@ -5650,7 +5650,8 @@
    "subLaneWidth": 3,
    "sourceStrength": 0.87,
    "sourcePeakOffsetMs": 19.2,
-   "sourceCharacter": "PUNCH"
+   "sourceCharacter": "PUNCH",
+   "cross": true
   },
   {
    "type": "SLIDE",
@@ -9343,29 +9344,29 @@
    "type": "SLIDE",
    "grid": 1586,
    "durationGrids": 14,
-   "lane": 2,
-   "endLane": 4,
+   "lane": 1,
+   "endLane": 0,
    "subLaneWidth": 2,
    "slidePoints": [
     {
      "grid": 1586,
-     "lane": 2,
+     "lane": 1,
      "subLaneWidth": 2
     },
     {
      "grid": 1600,
-     "lane": 4,
+     "lane": 0,
      "subLaneWidth": 2
     }
    ],
    "heldPair": true,
-   "heldPairShape": "contrary"
+   "heldPairShape": "diverge"
   },
   {
    "type": "HOLD",
    "grid": 1588,
-   "lane": 0,
-   "subLane": 1,
+   "lane": 1,
+   "subLane": 3,
    "subLaneWidth": 3,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 0.81,
@@ -11414,26 +11415,14 @@
    "holdTaper": "pinch"
   },
   {
-   "type": "SLIDE",
+   "type": "HOLD",
    "grid": 2066,
    "durationGrids": 18,
    "lane": 3,
-   "endLane": 4,
+   "subLane": 7,
    "subLaneWidth": 2,
-   "slidePoints": [
-    {
-     "grid": 2066,
-     "lane": 3,
-     "subLaneWidth": 2
-    },
-    {
-     "grid": 2084,
-     "lane": 4,
-     "subLaneWidth": 2
-    }
-   ],
    "heldPair": true,
-   "heldPairShape": "diverge"
+   "heldPairShape": "parallel"
   },
   {
    "type": "TAP",

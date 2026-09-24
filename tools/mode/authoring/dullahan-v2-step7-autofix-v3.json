@@ -99,10 +99,10 @@
    "before": {
     "impossible": 0,
     "strained": 0,
-    "reach": 4,
+    "reach": 5,
     "hardJumps": 3,
     "spread": 169,
-    "cost": 40529
+    "cost": 50529
    },
    "after": {
     "impossible": 0,
@@ -120,8 +120,8 @@
      "type": "TAP",
      "move": "サブレーン2→1",
      "pass": 1,
-     "costBefore": 40529,
-     "costAfter": 30529,
+     "costBefore": 50529,
+     "costAfter": 40529,
      "impossibleAfter": 0,
      "strainedAfter": 0
     },
@@ -132,8 +132,8 @@
      "type": "HOLD",
      "move": "サブレーン2→3",
      "pass": 1,
-     "costBefore": 30529,
-     "costAfter": 20529,
+     "costBefore": 40529,
+     "costAfter": 30529,
      "impossibleAfter": 0,
      "strainedAfter": 0
     },
@@ -144,7 +144,7 @@
      "type": "HOLD",
      "move": "サブレーン6→4",
      "pass": 1,
-     "costBefore": 20529,
+     "costBefore": 30529,
      "costAfter": 528,
      "impossibleAfter": 0,
      "strainedAfter": 0

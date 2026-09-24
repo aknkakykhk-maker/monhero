@@ -152,14 +152,14 @@
   }
  },
  "level": 9,
- "noteCount": 738,
+ "noteCount": 737,
  "typeCounts": {
   "HOLD": 32,
   "FLICK": 35,
-  "TAP": 665,
+  "TAP": 664,
   "SLIDE": 6
  },
- "densityPerSecond": 3.33,
+ "densityPerSecond": 3.32,
  "shapes": [
   {
    "fromGrid": 40,
@@ -4861,8 +4861,8 @@
   {
    "type": "HOLD",
    "grid": 352,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 4,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": -0.1,
@@ -8679,24 +8679,14 @@
   {
    "type": "HOLD",
    "grid": 1684,
-   "lane": 0,
-   "subLane": 0,
+   "lane": 2,
+   "subLane": 4,
    "subLaneWidth": 2,
    "sourceStrength": 0.35,
    "sourcePeakOffsetMs": -24.1,
    "sourceCharacter": "BODY",
    "durationGrids": 16,
    "endFlick": true
-  },
-  {
-   "type": "TAP",
-   "grid": 1688,
-   "lane": 0,
-   "subLane": 1,
-   "subLaneWidth": 3,
-   "sourceStrength": 0.42,
-   "sourcePeakOffsetMs": -8.1,
-   "sourceCharacter": "PUNCH"
   },
   {
    "type": "TAP",

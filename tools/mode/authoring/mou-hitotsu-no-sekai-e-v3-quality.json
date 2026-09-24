@@ -1386,9 +1386,9 @@
   },
   "MASTER": {
    "difficulty": "MASTER",
-   "noteCount": 738,
+   "noteCount": 737,
    "seconds": 221.9,
-   "density": 3.33,
+   "density": 3.32,
    "pass": true,
    "gate": {
     "impossible": 0
@@ -1405,12 +1405,12 @@
     "onsetHitRate": 1,
     "ghostNotes": 0,
     "importantOnsets": 360,
-    "importantHit": 262,
-    "importantCoverage": 0.728,
+    "importantHit": 261,
+    "importantCoverage": 0.725,
     "importantReach": 1,
     "importantNeed": 0.85,
     "beatShare": {
-     "beat": 0.374,
+     "beat": 0.373,
      "eighth": 0.253,
      "sixteenth": 0.374
     },
@@ -1543,8 +1543,8 @@
       "label": "H",
       "bars": 17,
       "intensity": 0.72,
-      "notes": 82,
-      "perSecond": 3.77,
+      "notes": 81,
+      "perSecond": 3.72,
       "vocab": 12,
       "chords": 3,
       "widths": 3
@@ -1667,26 +1667,26 @@
    "lanes": {
     "laneShare": [
      0.121,
-     0.252,
-     0.209,
+     0.25,
+     0.21,
      0.213,
      0.206
     ],
-    "leftRightBias": 0.058,
-    "centerShare": 0.209,
+    "leftRightBias": 0.062,
+    "centerShare": 0.21,
     "edgeShare": 0.327,
     "meanMove": 0.5,
     "maxMove": 2.5,
     "moveSpeedPerSecond": 0.76,
     "hardJumps": 0,
-    "fastPairs": 334,
+    "fastPairs": 333,
     "fingerTravel": [
-     261.8,
-     253
+     264.3,
+     250.5
     ]
    },
    "types": {
-    "TAP": 665,
+    "TAP": 664,
     "HOLD": 32,
     "SLIDE": 6,
     "FLICK": 35,
@@ -1697,7 +1697,7 @@
     "accents": 11,
     "endFlicks": 10,
     "tapers": 10,
-    "tapDuringHold": 14,
+    "tapDuringHold": 13,
     "tapDuringSlide": 1,
     "expandCount": 4,
     "contractCount": 9,
@@ -1733,8 +1733,8 @@
     "alternationTotal": 69,
     "sameFingerMinMs": 160,
     "chordClearMinMs": 160,
-    "heldFreeOk": 14,
-    "heldFreeTotal": 15,
+    "heldFreeOk": 13,
+    "heldFreeTotal": 14,
     "issues": []
    }
   }
