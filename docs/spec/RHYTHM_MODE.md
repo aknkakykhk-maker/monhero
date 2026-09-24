@@ -7848,3 +7848,23 @@ credit:Object.freeze({
 
 作りと実測の詳細は [`RHYTHM_CHART_DESIGN.md`](RHYTHM_CHART_DESIGN.md) 3.1.19。検査は `node tools/mode/rhythm-phrase-copy-check.js`。
 プレイヤーには何も起きていないので、更新履歴・ヘルプには載せない（運用ルール ⑩-2）。
+
+### 公開中の21曲を版2で作り直した（2026-09-24・同日）
+
+ユーザーの判断「既存曲も最新ツールで変えてもいいよ」（切り替えは「マージしたらすぐ」、対象は「公開中の21曲すべて」）。
+運用ルール ⑩-2 の「既存曲の譜面は変えない」に対する、**この回だけの明示の許可**。
+
+- 一覧の公開曲21曲へ `"chartRevision": 2` を書き、`rhythm-chart-v3-pipeline.js --track <id> --release` で流し込んだ。
+  21曲とも止まる条件（押せない・難易度の順・鳴っていない場所・重い警告）に当たらなかった
+- 時刻で入れ替わる3曲（Monster Hero・風がそよぐ場所・Close To Your Heart）は、9/14に切り替わったあとの
+  `-v4-` 側へ入れた（`--markers monster-hero-v4` など）。切り替え前の `-v3-` はそのまま
+  （`monster_hero_theme_candidate_v3` とレベルの基準がそちらを見ている）
+- ★重なりの直し（`rhythm-overlap-reach-fix.js`）の書き戻し先 `RELEASED_MARKERS` が、この3曲だけ `-v3-` のままだった。
+  公開中の `-v4-` を読んで使われていない `-v3-` へ書き戻していたので、**`-v4-` の重なりは一度も直っていなかった**
+  （`rhythm-overlap-reach-check.js` が以前から落ちていた原因）。`-v4-` へ直し、検査が通るようになった
+- レベルは `rhythm-chart-level.js --write` で付け直し、切り替え後の表（`<rhythm-chart-levels-after-switch>`）にも同じ値を写した。
+  上下は曲ごとに ±1〜4（例: 禁断のレジスタンス MASTER 28→32、もう一つの世界へ MASTER 24→22）
+- 記録（`mh_rhythm_best_v1`）は曲×難易度ごとなので、そのまま残る。最大スコアは難易度ごとに固定なので、ランキングの尺度も変わらない
+- 解析ファイル（`*-v3-audio.json`）は1つも作り直していない。公開していない3曲
+  （`pandora_boss_beat` / `eiki_boss_beat` / `six_eternel_remix`）は版1のまま
+- 過去のお知らせに書いたレベル・ノーツ数を、いまの譜面に合わせて直した（`song-numbers-check.js`）

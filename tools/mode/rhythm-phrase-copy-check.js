@@ -12,7 +12,7 @@
 //
 // 版を分けたのは運用ルール ⑩-2 のため(既存曲の生成結果を変えない)。この検査は
 //   ・版の読み方(書いていない曲は版1)と、解析器が新しい曲にだけ最新版を書くこと
-//   ・既存曲の一覧が黙って版2へ上がっていないこと
+//   ・公開中の曲が版2で作ってあること／公開していない曲が黙って版2へ上がっていないこと
 //   ・版1の生成には写しが一切出ないこと(入口が閉じている)
 //   ・版2で写し率がはっきり上がり、押せる・音に乗る・読める・量を悪くしていないこと
 // を確かめる。写し率の物差しは品質レポート(rhythm-chart-quality-report.js の phraseEcho)と同じものを使う。
@@ -44,18 +44,21 @@ ok('人が書いた版は解析のやり直しで消さない',chartRevisionForR
   ok('解析器が一覧へ書くときに版を付けている',/\.\.\.chartRevisionForRegistry\(registry\.songs\[trackId\]\)/.test(source));
 }
 
-// ── 3. 既存曲は版1のまま ─────────────────────────────────────────────────────
-// 2026-09-24 に一覧にあった曲。作り直すと決めてこの曲の版を上げるときは、ここから外し、
-// 決めた理由を docs/spec/RHYTHM_MODE.md へ残す(黙って上げると、次の生成で既存曲の譜面が変わる)。
-const LEGACY_TRACKS=Object.freeze(['monster_hero_theme','atsu_cup_theme','six_eternel_beat','six_eternel_remix_beat',
-  'pandora_boss_beat','eiki_boss_beat','pandora_boss','eiki_boss','six_eternel_remix','kaze_ga_soyogu',
-  'close_to_your_heart','eiki_boss_remix','pandora_boss_remix','dullahan','dullahan_clockwork','toriko','4u_hitasura',
-  'kindan_no_resistance','monster_hero_theme_alt','crossing_field','nothing_without_you','freedom_dive',
-  'the_city_beneath_the_comets','mou_hitotsu_no_sekai_e']);
+// ── 3. 版をどこまで上げたか ──────────────────────────────────────────────────
+// 2026-09-24、ユーザーの判断(「既存曲も最新ツールで変えてもいいよ」)で、公開中の21曲を版2で作り直した。
+// 公開曲(RELEASED_TRACKS)はすべて版2以上であること、公開していない曲は版1のまま残っていることを見る。
+// 公開していない曲を公開するときは、先に版2で作り直すか、ここから外すかを決める(黙って版1のまま出さない)。
+const LEGACY_TRACKS=Object.freeze(['pandora_boss_beat','eiki_boss_beat','six_eternel_remix']);
 const registry=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/rhythm-song-registry.json'),'utf8')).songs||{};
 {
+  const {RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
+  const released=Object.values(RELEASED_TRACKS);
+  const behind=released.filter(id=>!registry[id]||chartRevisionOf(registry[id])<2);
+  ok('公開中の曲は版2以上で作ってある',behind.length===0,behind.join(', '));
   const raised=LEGACY_TRACKS.filter(id=>registry[id]&&chartRevisionOf(registry[id])!==1);
-  ok('既存曲は版1のまま',raised.length===0,raised.join(', '));
+  ok('公開していない曲は版1のまま',raised.length===0,raised.join(', '));
+  const overlap=LEGACY_TRACKS.filter(id=>released.includes(id));
+  ok('版1のまま残す曲に公開曲が混ざっていない',overlap.length===0,overlap.join(', '));
 }
 
 // ── 4. 実際に生成して比べる ──────────────────────────────────────────────────
