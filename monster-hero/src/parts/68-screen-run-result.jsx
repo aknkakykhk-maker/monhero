@@ -19,14 +19,16 @@ function UpgradeSkillScreen({
   return (
 
     // mh-phase … 背の低い器(横持ち)で説明を畳む目印(70-bootstrap.jsx の @container)
-    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",backgroundImage:'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(245,158,11,.16), transparent 70%)',zIndex:30000}} className="mh-phase absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden">
+    // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・宝石)。--ph は画面の識別色
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'245,158,11'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden">
       <div className="mb-2 shrink-0 w-full max-w-sm flex flex-col items-center gap-1.5">
-        <h2 className="text-xl font-black text-amber-400 italic uppercase drop-shadow-[0_0_10px_rgba(245,158,11,.45)]">固有技の強化</h2>
+        <div className="mh-ph-heading"><h2 className="mh-ph-title text-2xl font-black italic uppercase">固有技の強化</h2></div>
         {/* このあと何枚の画面を通ってバトルへ戻るのか */}
         {phasePlan&&<PhaseSteps plan={phasePlan} current="skill" nextWave={wave>0?wave+1:null}/>}
         {/* 残りポイントを大きく。★「Remaining Points: 数」の並びは検査が読む(大小は問わない) */}
-        <div className="flex items-center justify-center gap-2 rounded-full border border-amber-400/40 bg-amber-950/40 px-3 py-1">
-          <span className="text-[9px] text-slate-300 uppercase tracking-widest">Remaining Points: <b className={`ml-0.5 inline-block min-w-[1.6em] rounded-full px-1.5 font-mono text-[15px] leading-tight ${upgradePoints>0?'bg-amber-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>{upgradePoints}</b></span>
+        <div className="mh-ph-plate flex items-center justify-center gap-2 !tracking-normal">
+          <span className="text-[9px] uppercase tracking-widest">Remaining Points: <b className="mh-ph-gem ml-1 h-8 w-8 align-middle font-mono text-[14px]"
+            style={upgradePoints>0?{'--mh-rc':'245,158,11','--mh-rc2':'255,240,160'}:{'--mh-rc':'71,85,105','--mh-rc2':'203,213,225'}}>{upgradePoints}</b></span>
         </div>
         <p className="mh-phase-mid text-[10px] font-bold text-slate-400 leading-snug">ポイント1つで固有技が1段上がります。使わなかったポイントは次に持ち越せます</p>
       </div>
@@ -42,9 +44,9 @@ function UpgradeSkillScreen({
           ? tacticsUnits.map((unit,index)=>(unit&&!unit.downed?index:-1)).filter(index=>index>=0) : [];
         const gutsFull=tacticsMode?!canRecoverGutsWithPoint&&upgradePoints>=GUTS_RECOVERY_POINT_COST:guts>=effectiveMaxGuts;
         const noPoint=upgradePoints<GUTS_RECOVERY_POINT_COST; return (
-      <div data-guts-recovery className="w-full max-w-sm shrink-0 mb-2 rounded-2xl border border-amber-500/40 bg-amber-950/25 px-3 py-2 flex items-center gap-2">
+      <div data-guts-recovery className="mh-ph-panel w-full max-w-sm shrink-0 mb-2 px-3 py-2 flex items-center gap-2">
         <div className="flex-1 min-w-0 text-left">
-          <span className="block text-[8px] font-black tracking-widest text-amber-300/80 leading-none">現在ガッツ</span>
+          <span className="mh-ph-panel-label block text-[8px] font-black leading-none">現在ガッツ</span>
           {tacticsMode
             ? <span data-tactics-guts-recovery className="block font-mono font-black leading-tight">
                 {gutsSlots.length===0
@@ -68,12 +70,12 @@ function UpgradeSkillScreen({
           disabled={!canRecoverGutsWithPoint}
           onClick={recoverGutsWithPoint}
           aria-label={`強化ポイント${GUTS_RECOVERY_POINT_COST}つでガッツを${GUTS_RECOVERY_AMOUNT}回復する`}
-          className="shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-600 text-white font-black leading-tight active:scale-95 disabled:opacity-30">
+          className={`shrink-0 min-h-[44px] px-3 rounded-xl font-black leading-tight active:scale-95 ${canRecoverGutsWithPoint?'mh-ph-btn-gold':'mh-ph-btn-off'}`}>
           {gutsFull
             ? <span className="block" style={{fontSize:'13px'}}>MAX</span>
             : (<>
                 <span className="block" style={{fontSize:'12px'}}>{GUTS_RECOVERY_POINT_COST}P で +{GUTS_RECOVERY_AMOUNT}</span>
-                <span className="block text-amber-100/90" style={{fontSize:'8px'}}>{noPoint?'ポイント不足':'ガッツ回復'}</span>
+                <span className="block opacity-80" style={{fontSize:'8px'}}>{noPoint?'ポイント不足':'ガッツ回復'}</span>
               </>)}
         </button>
       </div>);})()}
@@ -81,7 +83,7 @@ function UpgradeSkillScreen({
         {uniqueUpgradeEntries().map((e,i)=><React.Fragment key={e.rowKey}><div style={{'--i':i}} className="contents">{uniqueUpgradeRow(e)}</div></React.Fragment>)}
       </div>
       {/* 次はアシストカードの画面。以前は「ブリーダー継承へ」と書いてあり、次の画面の名前と合っていなかった */}
-      <button onClick={continueAfterUniqueUpgrade} className="w-full max-w-sm min-h-[52px] bg-white text-black rounded-2xl font-black shadow-[0_0_20px_rgba(255,255,255,0.25)] active:scale-95 transition-transform mt-auto shrink-0 flex items-center justify-center gap-1">アシストカードへ<ChevronRight size={18}/></button>
+      <button onClick={continueAfterUniqueUpgrade} className="mh-ph-btn-gold w-full max-w-sm min-h-[52px] rounded-2xl font-black active:scale-95 transition-transform mt-auto shrink-0 flex items-center justify-center gap-1">アシストカードへ<ChevronRight size={18}/></button>
     </div>
   
   );
@@ -186,13 +188,13 @@ function RewardPickScreen({
       ? (trainableSlots.length>0&&trainableSlots.every(index=>picksOf(index).length===TRAINING_PICK_COUNT))
       : trainingPicks.length===TRAINING_PICK_COUNT;
     const doneSlots=tacticsMode?trainableSlots.filter(index=>picksOf(index).length===TRAINING_PICK_COUNT).length:0;
-    // idle は選ぶ前の枠の色、badge はアイコンの台、bar は伸び幅の棒。
+    // 枠の色と模様は data-ph-kind(70-bootstrap.jsx の mh-ph-*)が持つ。ここは文字の色と伸び幅の棒だけ。
     // 選ぶ前から4項目を色で見分けられるようにする(以前は選ぶまで4枚とも同じ灰色だった)
     const STYLES={
-      hp:  {icon:<Heart size={18}/>,      ring:'border-pink-400',    bg:'bg-pink-900/40',    tint:'text-pink-300',    chip:'bg-pink-500',    idle:'border-pink-400/25',    badge:'bg-pink-500/20 text-pink-300',       bar:'bg-pink-400',    glow:'rgba(244,114,182,.35)'},
-      atk: {icon:<Sword size={18}/>,      ring:'border-red-400',     bg:'bg-red-900/40',     tint:'text-red-300',     chip:'bg-red-500',     idle:'border-red-400/25',     badge:'bg-red-500/20 text-red-300',         bar:'bg-red-400',     glow:'rgba(248,113,113,.35)'},
-      def: {icon:<ShieldCheck size={18}/>,ring:'border-emerald-400', bg:'bg-emerald-900/40', tint:'text-emerald-300', chip:'bg-emerald-500', idle:'border-emerald-400/25', badge:'bg-emerald-500/20 text-emerald-300', bar:'bg-emerald-400', glow:'rgba(52,211,153,.35)'},
-      guts:{icon:<Sparkles size={18}/>,   ring:'border-amber-400',   bg:'bg-amber-900/40',   tint:'text-amber-300',   chip:'bg-amber-500',   idle:'border-amber-400/25',   badge:'bg-amber-500/20 text-amber-300',     bar:'bg-amber-400',   glow:'rgba(251,191,36,.35)'},
+      hp:  {icon:<Heart size={18}/>,       tint:'text-pink-300',    bar:'bg-pink-400'},
+      atk: {icon:<Sword size={18}/>,       tint:'text-red-300',     bar:'bg-red-400'},
+      def: {icon:<ShieldCheck size={18}/>, tint:'text-emerald-300', bar:'bg-emerald-400'},
+      guts:{icon:<Sparkles size={18}/>,    tint:'text-amber-300',   bar:'bg-amber-400'},
     };
     const optionById=(id)=>TRAINING_OPTIONS.find(option=>option.id===id);
     const unitName=(slotIdx)=>slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`;
@@ -209,15 +211,16 @@ function RewardPickScreen({
     });
     return (
     // mh-phase … 器の高さで中身を畳む目印(70-bootstrap.jsx の @container)
-    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",backgroundImage:'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(251,191,36,.16), transparent 70%)',zIndex:30000}} className="mh-phase absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden" data-screen="training">
+    // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・回る光の縁・宝石)。--ph は画面の識別色
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden" data-screen="training">
       <div className="shrink-0 w-full max-w-sm" style={{paddingTop:'calc(.25rem + env(safe-area-inset-top))'}}>
         {/* どのWAVEを抜けたごほうびなのかを見出しの上に出す */}
         {waveResult?.wave>0&&<div className="mb-1 flex justify-center">
-          <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-2.5 py-0.5 text-[9px] font-black tracking-[.2em] text-amber-200">WAVE {waveResult.wave} CLEAR</span>
+          <span className="mh-ph-plate">WAVE {waveResult.wave} CLEAR</span>
         </div>}
-        <div className="flex items-center justify-center gap-2">
-          <Trophy className="text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,.6)]" size={22}/>
-          <h2 className="text-xl font-black italic uppercase tracking-tighter text-white leading-none">トレーニング</h2>
+        <div className="mh-ph-heading">
+          <Trophy className="text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,.7)]" size={22}/>
+          <h2 className="mh-ph-title text-2xl font-black italic uppercase tracking-tighter leading-none">トレーニング</h2>
         </div>
         {/* このあと何枚の画面を通ってバトルへ戻るのか */}
         {phasePlan&&<PhaseSteps plan={phasePlan} current="training" nextWave={waveResult?.wave>0?waveResult.wave+1:null} className="mt-1.5"/>}
@@ -229,21 +232,22 @@ function RewardPickScreen({
             const picked=optionById(activePicks[i]);
             const st=picked?(STYLES[picked.id]||STYLES.hp):null;
             if(!picked) return (
-              <span key={i} className="flex min-w-0 items-center gap-1 rounded-full border border-dashed border-slate-600 px-2 py-1 text-[10px] font-black text-slate-500" style={{maxWidth:'42%'}}>
+              <span key={i} className="mh-ph-step-todo flex min-w-0 items-center gap-1 rounded-full border-dashed px-2 py-1 text-[10px] font-black" style={{maxWidth:'42%'}}>
                 <span className="shrink-0 text-[9px] text-slate-400">{i+1}回目</span><span>―</span>
               </span>
             );
             return (
               <button key={`${i}-${picked.id}`} type="button" disabled={!!effect} onClick={()=>removePick(i)}
                 aria-label={`${i+1}回目の${picked.name}を取り消す`}
-                className={`mh-phase-pop flex min-w-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40 ${st.ring} ${st.bg}`} style={{maxWidth:'42%'}}>
+                data-ph-kind={picked.id} data-ph-on=""
+                className="mh-phase-pop mh-ph-frame flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40" style={{maxWidth:'42%'}}>
                 <span className="shrink-0 text-[9px] text-slate-300">{i+1}回目</span>
                 <span className={`shrink-0 ${st.tint}`}>{cardIconNode(st.icon)}</span><span className="truncate">{picked.name}</span>
                 <span aria-hidden="true" className="shrink-0 text-[10px] text-slate-300">×</span>
               </button>
             );
           })}
-          <span className="shrink-0 text-[11px] font-black font-mono text-amber-300">{activePicks.length} / {TRAINING_PICK_COUNT}</span>
+          <span className="shrink-0 text-[11px] font-black font-mono text-[#f3d27a]">{activePicks.length} / {TRAINING_PICK_COUNT}</span>
         </div>
         {/* 何体ぶん終わったか。1体ずつ選ぶので、どこまで進んだのかが分からないと迷子になる。
             名前の札を並べ、いま選んでいる子を光らせる */}
@@ -256,7 +260,7 @@ function RewardPickScreen({
               const done=count>=TRAINING_PICK_COUNT;
               const active=slotIdx===currentSlot&&pickable;
               return (
-                <span key={slotIdx} className={`flex max-w-[32%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active?'border-amber-300 bg-amber-400/15 text-amber-100 shadow-[0_0_10px_rgba(251,191,36,.35)]':done?'border-emerald-400/50 bg-emerald-950/50 text-emerald-200':'border-slate-700 bg-slate-900/60 text-slate-400'}`}>
+                <span key={slotIdx} className={`flex max-w-[32%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active?'mh-ph-step-now':done?'border-emerald-400/60 bg-emerald-950/60 text-emerald-200':'mh-ph-step-todo'}`}>
                   <span className="truncate">{unitName(slotIdx)}</span>
                   <span className="shrink-0 font-mono">{done?'✓':`${count}/${TRAINING_PICK_COUNT}`}</span>
                 </span>
@@ -275,8 +279,8 @@ function RewardPickScreen({
       <div className={`${tacticsMode?'mh-phase-mid':'mh-phase-tall'} shrink-0 w-full max-w-sm mt-2 text-left`}><AssistantBubble scene="rewardPick" compact/></div>
       {/* いま選んでいるぶんを反映した4ステータス。選ぶ前は現在値だけ、選ぶと増える量も出る。
           各項目のカードは自分のステータスしか出さないので、ここで全体を見比べられるようにする */}
-      {(!tacticsMode||currentUnit)&&<div className="mh-phase-tall shrink-0 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5 mt-2" data-training-status>
-        <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス{trainingPicks.length>0&&<span className="text-amber-300">（選択中の変化）</span>}</div>
+      {(!tacticsMode||currentUnit)&&<div className="mh-phase-tall mh-ph-panel shrink-0 w-full max-w-sm px-2 py-1.5 mt-2" data-training-status>
+        <div className="mh-ph-panel-label text-[8px] font-black text-left mb-1">現在のステータス{trainingPicks.length>0&&<span className="text-amber-300">（選択中の変化）</span>}</div>
         <div className="grid grid-cols-4 gap-1">
           {TRAINING_OPTIONS.map(option=>{
             const st=STYLES[option.id]||STYLES.hp;
@@ -284,8 +288,8 @@ function RewardPickScreen({
             const afterAll=current[option.stat];
             const diff=afterAll-beforeAll;
             return (
-              <div key={option.id} className="rounded-lg bg-black/40 px-1 py-1 text-center">
-                <span className="block text-[8px] font-black text-slate-500 leading-none">{option.statLabel}</span>
+              <div key={option.id} className="mh-ph-cell rounded-lg px-1 py-1 text-center">
+                <span className="block text-[8px] font-black text-slate-400 leading-none">{option.statLabel}</span>
                 <span className={`block text-[13px] font-black font-mono leading-tight ${diff>0?st.tint:'text-slate-300'}`}>{afterAll}</span>
                 <span className={`block text-[8px] font-black font-mono leading-none ${diff>0?'text-emerald-400':'text-slate-700'}`}>{diff>0?`+${diff}`:'±0'}</span>
               </div>
@@ -311,14 +315,16 @@ function RewardPickScreen({
                 return [...prev,{slot:currentSlot,id:option.id}];
               })}
               aria-label={`${option.name} ${option.effect}${count>0?` 選択中${count}回`:''}`}
-              className={`mh-phase-card mh-phase-enter relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40 ${count>0?`${st.bg} ${st.ring}`:`bg-slate-900/70 ${st.idle}`}`}
-              style={{'--i':optionIndex,...(count>0?{boxShadow:`0 0 22px ${st.glow}`}:{})}}>
-              {/* 角の色だまり。4枚を色で見分けるための飾りで、押す範囲や文字には関わらない */}
-              <span aria-hidden="true" className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl" style={{background:st.glow}}/>
+              data-ph-kind={option.id} data-ph-on={count>0?'':undefined}
+              className="mh-phase-card mh-phase-enter mh-ph-frame relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40"
+              style={{'--i':optionIndex}}>
+              {/* 地の光の粒と、選んだ枠を横切る光の筋(飾り。押す範囲や文字には関わらない) */}
+              <span aria-hidden="true" className="mh-ph-sparkle"/>
+              {count>0&&<span aria-hidden="true" className="mh-ph-shine"/>}
               {/* ★ボタンの文字は項目名から始める(検査がボタンを「^走り込み」で探す)。
                   アイコンは絵だけなので前に置いても文字には入らない */}
               <span className="relative flex items-center gap-2">
-                <span className={`mh-phase-card-icon shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${st.badge}`}>{cardIconNode(st.icon)}</span>
+                <span className={`mh-phase-card-icon mh-ph-medal shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${st.tint}`}>{cardIconNode(st.icon)}</span>
                 <span className="min-w-0">
                   <b className="mh-phase-card-name block text-[14px] font-black text-white leading-tight">{option.name}</b>
                   <span className={`block text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{(extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null||extremeRuleNumber(specialRule,'waveEnhancement')!=null)&&(()=>{
@@ -331,9 +337,9 @@ function RewardPickScreen({
               </span>
               {/* いちばん知りたい「どれだけ伸びるか」を大きく出す。カードが縦に伸びたぶんの空きもここで埋まる */}
               <span className="relative flex flex-1 items-center justify-center font-mono font-black leading-none">
-                <span className={`mh-phase-gain ${after>before?st.tint:'text-slate-500'}`}>+{Math.max(0,after-before)}</span>
+                <span className={`mh-phase-gain ${after>before?st.tint:'text-slate-500'}`} style={after>before?{textShadow:'0 0 14px rgba(var(--mh-rc),.75), 0 2px 0 rgba(0,0,0,.7)'}:undefined}>+{Math.max(0,after-before)}</span>
               </span>
-              <span className="relative w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight">
+              <span className="mh-ph-cell relative w-full rounded-lg px-1.5 py-1 font-mono leading-tight">
                 <span className="flex items-baseline justify-between gap-1">
                   <span className="mh-phase-stat-label text-[8px] text-slate-500 font-black">{option.statLabel}</span>
                   <span className="mh-phase-card-nums whitespace-nowrap text-[11px] font-black text-slate-300">{before} <span className="text-slate-600">→</span> <b className={st.tint}>{after}</b></span>
@@ -345,7 +351,7 @@ function RewardPickScreen({
                 </span>
               </span>
               {/* 何回選んだかを ×1 / ×2 で明確に出す */}
-              {count>0&&<span key={`count-${count}`} className={`mh-phase-pop mh-phase-count absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
+              {count>0&&<span key={`count-${count}`} className="mh-phase-pop mh-phase-count mh-ph-gem absolute top-1.5 right-1.5 h-7 w-8 text-[11px]">×{count}</span>}
             </button>
           );
         })}
@@ -356,7 +362,8 @@ function RewardPickScreen({
           {downedSlots.map(slotIdx=>(
             <button key={slotIdx} type="button" disabled={!!effect}
               onClick={()=>{setTrainingPicks([]); handleTraining({revive:slotIdx});}}
-              className="w-full min-h-[44px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/60 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40">
+              data-ph-kind="revive"
+              className="mh-ph-frame w-full min-h-[44px] rounded-2xl border-2 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40">
               <span className="block text-[12px] leading-tight">{slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`}を起こす<span className="text-[9px] font-black text-emerald-400/90">　このWAVEの強化はなし</span></span>
             </button>
           ))}
@@ -365,9 +372,9 @@ function RewardPickScreen({
       {/* 決定は2回そろうまで押せない。確定前ならいつでも選び直せる */}
       <div className="shrink-0 w-full max-w-sm mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-2" style={{paddingBottom:'calc(.25rem + env(safe-area-inset-bottom))'}}>
         <button type="button" disabled={trainingPicks.length===0||!!effect} onClick={()=>setTrainingPicks([])}
-          className="min-h-[52px] px-4 rounded-2xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30">選び直す</button>
+          className="mh-ph-btn min-h-[52px] px-4 rounded-2xl font-black text-[11px] active:scale-95 disabled:opacity-30">選び直す</button>
         <button type="button" disabled={!ready||!!effect} onClick={()=>{const picks=trainingPicks; setTrainingPicks([]); handleTraining(picks);}}
-          className={`min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready&&!effect?'mh-phase-ready bg-gradient-to-r from-amber-300 to-yellow-200 text-slate-950 shadow-[0_0_24px_rgba(251,191,36,0.45)]':'bg-slate-800 text-slate-600'}`}>{ready?'決定する':`あと${remaining}つ選ぶ`}</button>
+          className={`min-h-[52px] rounded-2xl font-black text-base uppercase active:scale-95 transition-all ${ready&&!effect?'mh-phase-ready mh-ph-btn-gold':'mh-ph-btn-off'}`}>{ready?'決定する':`あと${remaining}つ選ぶ`}</button>
       </div>
     </div>);
   
