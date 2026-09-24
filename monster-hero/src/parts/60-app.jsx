@@ -1674,6 +1674,15 @@ function MonsterHeroGame() {
     setBattleScreenStyleState(value);
     storeSet(BATTLE_SCREEN_STYLE_KEY, value, false);
   };
+  // バトル設定(待機中の動き・画面の揺れ)。1項目ずつ変えても、ほかの項目はそのまま残す
+  const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
+  const setBattleFxSetting = (key, value) => {
+    setBattleFxSettingsState(prev => {
+      const next = normalizeBattleFxSettings({ ...prev, [key]: value });
+      storeSet(BATTLE_FX_SETTINGS_KEY, next, false);
+      return next;
+    });
+  };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
   const gameUpdatePendingRef = useRef(false);
@@ -4605,6 +4614,7 @@ function MonsterHeroGame() {
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
+      setBattleFxSettingsState(normalizeBattleFxSettings(await storeGet(BATTLE_FX_SETTINGS_KEY, null, false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -13230,7 +13240,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* 画面の揺れはアプリ全体にかかるので、モンビーを開いている間は掛けない。
           裏でバトルが進んでいるだけなのに、曲えらびや演奏の画面まで揺れてしまう
           (2026-09-06・ユーザー指摘「演出が残ってた（画面が揺れるなど）」) */}
-      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
+      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* HOME: 背景・将来のマスモン・施設操作・情報UIの順に重ねる */}
         {gameState==='HOME'&&(
@@ -14260,6 +14270,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onChangeUpdateNoticeStyle={setUpdateNoticeStyle}
             battleScreenStyle={battleScreenStyle}
             onChangeBattleScreenStyle={setBattleScreenStyle}
+            battleFxSettings={battleFxSettings}
+            onChangeBattleFxSetting={setBattleFxSetting}
           />
         )}
 
@@ -16567,7 +16579,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <BattleScreen
             applyTurnDamageReduction={applyTurnDamageReduction} attackAnim={attackAnim} autoBattle={autoBattle}
             autoBattleRef={autoBattleRef} autoRepeat={autoRepeat} battleIntimidate={battleIntimidate}
-            battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'} battleScreenStyle={battleScreenStyle}
+            battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'} battleScreenStyle={battleScreenStyle} battleFxSettings={battleFxSettings}
             battleSoulMasus={battleSoulMasus} battleSpeed={battleSpeed} battleTutorial={battleTutorial}
             battleTutorialAllowsEmergency={battleTutorialAllowsEmergency}
             battleTutorialCardAllowed={battleTutorialCardAllowed} battleTutorialCardKind={battleTutorialCardKind}
