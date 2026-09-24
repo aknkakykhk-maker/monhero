@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a5f51935d44a6cae
+// source-sha256: 218f31514982d8c4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dcb4a4f709d8931b
+// generated-sha256: 8880c6eec601b01e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 18:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 19:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -31969,76 +31969,251 @@ const useDexIdleMotion = () => {
 };
 
 // ==== 図鑑でマスモンの染色を見る(2026-09-24 ユーザー指示「図鑑の表示でマスモンで染色してるカラーも見れるようにしたい」) ====
-// 持っているマスモンのうち、その種で色を付けた子の配色を候補にする。同じ配色の子は1つにまとめる。
-// 選んだ配色は見た目だけに使い、保存しない(図鑑を開き直す・ほかの種へ移ると元の色へ戻る)。
-// 読み取りだけで、マスモンのデータには一切触れない
-const dexMasuColorChoices = (masuMons, monId) => {
+// 同日「マスモン選択式にしたら？」「この画面で染色も出来てどんな色か見れるようにする機能もあるといいね」で作り替えた。
+//   ・色の見本は、その種のマスモンを一覧から1体選んで決める(マスモンが増えても横に並び続けない)
+//   ・「染めてみる」で、図鑑の中だけで好きな色を試せる
+// どちらも見た目だけに使い、保存しない(図鑑を開き直す・ほかの種へ移ると元の色へ戻る)。
+// 読み取りだけで、マスモンのデータには一切触れない。
+//
+// 選んでいる見本(dexColorKey)の形:
+//   null            … 元の色
+//   { masuId }      … そのマスモンの色(居なくなっていたら元の色)
+//   { colors:[…] }  … 「染めてみる」で決めた色
+const dexMasuListOf = (masuMons, monId) => {
   if (!Array.isArray(masuMons) || !monId) return [];
-  const byKey = new Map();
-  for (const masu of masuMons) {
-    if (!masu || masu.baseId !== monId) continue;
-    const colors = getMasuColors(masu);
-    if (!Array.isArray(colors) || !colors.some(c => typeof c === 'string' && c)) continue;
-    const key = colors.map(c => typeof c === 'string' ? c : '').join('|');
-    const hit = byKey.get(key);
-    if (hit) hit.names.push(masu.name || '');else byKey.set(key, {
-      key,
-      colors: colors.slice(),
-      names: [masu.name || '']
-    });
-  }
-  return [...byKey.values()];
+  const list = masuMons.filter(masu => masu && masu.baseId === monId);
+  // 色を付けた子を先に出す(並びはマスモン一覧の順のまま)
+  const colored = masu => {
+    const c = getMasuColors(masu);
+    return Array.isArray(c) && c.some(x => typeof x === 'string' && x);
+  };
+  return [...list.filter(colored), ...list.filter(masu => !colored(masu))];
 };
-// いま選んでいる配色(見つからなければ null=元の色)
+const dexHasColors = colors => Array.isArray(colors) && colors.some(c => typeof c === 'string' && c);
+// いま見本にしている配色(見つからなければ null=元の色)
 const dexSelectedColors = (masuMons, monId, colorKey) => {
-  if (!colorKey) return null;
-  const hit = dexMasuColorChoices(masuMons, monId).find(choice => choice.key === colorKey);
-  return hit ? hit.colors : null;
+  if (!colorKey || typeof colorKey !== 'object') return null;
+  if (Array.isArray(colorKey.colors)) return dexHasColors(colorKey.colors) ? colorKey.colors : null;
+  if (colorKey.masuId == null) return null;
+  const masu = dexMasuListOf(masuMons, monId).find(m => String(m.id) === String(colorKey.masuId));
+  const colors = masu ? getMasuColors(masu) : null;
+  return dexHasColors(colors) ? colors : null;
 };
-// 「元の色」と、マスモンの配色のチップを横に並べる。配色の子が居なければ何も出さない
-const DexMasuColorPicker = ({
-  choices,
+// 見本の名前(ボタンに出す)
+const dexColorLabel = (masuMons, monId, colorKey) => {
+  if (!dexSelectedColors(masuMons, monId, colorKey)) return '元の色';
+  if (Array.isArray(colorKey.colors)) return '染めてみた色';
+  const masu = dexMasuListOf(masuMons, monId).find(m => String(m.id) === String(colorKey.masuId));
+  return masu?.name || 'マスモン';
+};
+const DexColorSwatches = ({
+  colors
+}) => dexHasColors(colors) ? /*#__PURE__*/React.createElement("span", {
+  className: "flex -space-x-1 shrink-0",
+  "aria-hidden": "true"
+}, colors.filter(Boolean).slice(0, 5).map((c, i) => /*#__PURE__*/React.createElement("span", {
+  key: i,
+  className: "w-3.5 h-3.5 rounded-full border border-black/40",
+  style: {
+    background: getColorSwatchHex(c)
+  }
+}))) : /*#__PURE__*/React.createElement("span", {
+  className: "w-3.5 h-3.5 rounded-full border border-white/40 bg-gradient-to-br from-white/70 to-slate-500 shrink-0",
+  "aria-hidden": "true"
+});
+// 詳細の「色」の行。左は見本の切り替え(押すとマスモンの一覧)、右は「染めてみる」
+const DexColorRow = ({
+  masuMons,
+  mon,
   value,
-  onChange
+  onOpenList,
+  onOpenTry
+}) => /*#__PURE__*/React.createElement("div", {
+  "data-dex-color-row": true,
+  className: "shrink-0 w-full max-w-md mx-auto px-3 pt-1.5 flex items-center gap-1.5",
+  role: "group",
+  "aria-label": "\u8272\u3092\u5909\u3048\u3066\u898B\u308B"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "shrink-0 text-[10px] font-black text-amber-300"
+}, "\u8272"), /*#__PURE__*/React.createElement("button", {
+  type: "button",
+  "data-dex-color-open": true,
+  onClick: () => {
+    Audio_.se.tap();
+    onOpenList();
+  },
+  className: `flex-1 min-w-0 min-h-[44px] px-2.5 rounded-xl border flex items-center gap-1.5 text-[11px] font-black active:scale-95 ${dexSelectedColors(masuMons, mon.id, value) ? 'border-amber-300 bg-amber-700 text-white' : 'border-white/15 bg-slate-900 text-amber-100/90'}`
+}, /*#__PURE__*/React.createElement(DexColorSwatches, {
+  colors: dexSelectedColors(masuMons, mon.id, value)
+}), /*#__PURE__*/React.createElement("span", {
+  className: "truncate min-w-0 flex-1 text-left"
+}, dexColorLabel(masuMons, mon.id, value)), /*#__PURE__*/React.createElement("span", {
+  className: "shrink-0 text-[10px] text-amber-200/80"
+}, "\u9078\u3076 \u25BE")), /*#__PURE__*/React.createElement("button", {
+  type: "button",
+  "data-dex-color-try": true,
+  onClick: () => {
+    Audio_.se.tap();
+    onOpenTry();
+  },
+  className: "shrink-0 min-h-[44px] px-3 rounded-xl border border-fuchsia-400/60 bg-slate-900 text-[11px] font-black text-fuchsia-100 active:scale-95"
+}, "\uD83C\uDFA8 \u67D3\u3081\u3066\u307F\u308B"));
+// マスモンの一覧(色の見本を選ぶ)。その種のマスモンだけを出す。色を付けていない子は押せない
+const DexMasuColorSheet = ({
+  masuMons,
+  mon,
+  value,
+  onSelect,
+  onClose
 }) => {
-  if (!choices.length) return null;
-  const chip = (key, label, colors) => {
-    const on = (value || null) === key;
-    return /*#__PURE__*/React.createElement("button", {
-      key: key || 'base',
-      type: "button",
-      "data-dex-color-choice": key || 'base',
-      "aria-pressed": on,
-      onClick: () => {
-        Audio_.se.tap();
-        onChange(key);
-      },
-      className: `shrink-0 min-h-[44px] max-w-[12rem] px-2.5 rounded-xl border flex items-center gap-1.5 text-[11px] font-black active:scale-95 ${on ? 'border-amber-300 bg-amber-700 text-white' : 'border-white/15 bg-slate-900 text-amber-100/90'}`
-    }, colors ? /*#__PURE__*/React.createElement("span", {
-      className: "flex -space-x-1 shrink-0",
-      "aria-hidden": "true"
-    }, colors.filter(Boolean).slice(0, 4).map((c, i) => /*#__PURE__*/React.createElement("span", {
-      key: i,
-      className: "w-3.5 h-3.5 rounded-full border border-black/40",
-      style: {
-        background: getColorSwatchHex(c)
-      }
-    }))) : /*#__PURE__*/React.createElement("span", {
-      className: "w-3.5 h-3.5 rounded-full border border-white/40 bg-gradient-to-br from-white/70 to-slate-500 shrink-0",
-      "aria-hidden": "true"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "truncate min-w-0"
-    }, label));
+  const list = dexMasuListOf(masuMons, mon.id);
+  const current = dexSelectedColors(masuMons, mon.id, value) ? value : null;
+  const row = (key, on, disabled, icon, title, sub, onClick) => /*#__PURE__*/React.createElement("button", {
+    key: key,
+    type: "button",
+    "data-dex-color-choice": key,
+    "aria-pressed": on,
+    disabled: disabled,
+    onClick: onClick,
+    className: `w-full min-h-[56px] px-3 py-2 rounded-2xl border flex items-center gap-3 text-left active:scale-[.98] ${on ? 'border-amber-300 bg-amber-700/70' : 'border-white/10 bg-slate-900'} ${disabled ? 'opacity-45' : ''}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-11 h-11 rounded-full overflow-hidden border border-white/20 bg-black/40 shrink-0 flex items-center justify-center"
+  }, icon), /*#__PURE__*/React.createElement("span", {
+    className: "flex-1 min-w-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[13px] font-black text-white truncate"
+  }, title), /*#__PURE__*/React.createElement("span", {
+    className: "mt-0.5 flex items-center gap-1.5 text-[10px] font-bold text-slate-300 min-w-0"
+  }, sub)), on && /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-amber-200 text-[11px] font-black"
+  }, "\u8868\u793A\u4E2D"));
+  const face = (colors, alt) => /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: mon.id,
+    src: mon.iconUrl || mon.imgUrl,
+    alt: alt,
+    masuColors: dexHasColors(colors) ? colors : [],
+    draggable: false,
+    className: "w-full h-full object-cover"
+  });
+  const pick = key => {
+    Audio_.se.tap();
+    onSelect(key);
+    onClose();
   };
   return /*#__PURE__*/React.createElement("div", {
-    "data-dex-color-picker": true,
-    className: "shrink-0 w-full max-w-md mx-auto px-3 pt-1.5 flex items-center gap-1.5 overflow-x-auto",
-    role: "group",
-    "aria-label": "\u30DE\u30B9\u30E2\u30F3\u306E\u8272\u3067\u898B\u308B"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "shrink-0 text-[10px] font-black text-amber-300"
-  }, "\u8272"), chip(null, '元の色', null), choices.map(choice => chip(choice.key, choice.names.length > 1 ? `${choice.names[0] || 'マスモン'} ほか${choice.names.length - 1}体` : choice.names[0] || 'マスモン', choice.colors)));
+    "data-dex-color-sheet": true,
+    className: "fixed inset-0 flex items-end justify-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      zIndex: 31400
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u8272\u306E\u898B\u672C\u306B\u3059\u308B\u30DE\u30B9\u30E2\u30F3\u3092\u9078\u3076",
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md max-h-[75dvh] flex flex-col rounded-t-3xl border-2 border-b-0 border-amber-500/70 bg-slate-950 p-4 gap-3",
+    style: {
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    },
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between shrink-0"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-amber-100"
+  }, "\u8272\u306E\u898B\u672C\u306B\u3059\u308B\u30DE\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-label": "\u9589\u3058\u308B",
+    onClick: onClose,
+    className: "min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90"
+  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-1.5"
+  }, row('base', !current, false, face(null, mon.name), '元の色', /*#__PURE__*/React.createElement("span", null, "\u3082\u3068\u306E\u30A4\u30E9\u30B9\u30C8\u306E\u8272"), () => pick(null)), Array.isArray(value?.colors) && dexHasColors(value.colors) && row('try', true, false, face(value.colors, '染めてみた色'), '染めてみた色', /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(DexColorSwatches, {
+    colors: value.colors
+  }), /*#__PURE__*/React.createElement("span", null, "\u300C\u67D3\u3081\u3066\u307F\u308B\u300D\u3067\u6C7A\u3081\u305F\u8272")), () => pick(value)), list.map(masu => {
+    const colors = getMasuColors(masu);
+    const has = dexHasColors(colors);
+    const on = !!current && current.masuId != null && String(current.masuId) === String(masu.id);
+    return row(`masu-${masu.id}`, on, !has, face(colors, masu.name || mon.name), masu.name || mon.name, has ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(DexColorSwatches, {
+      colors: colors
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "truncate"
+    }, "\u3053\u306E\u30DE\u30B9\u30E2\u30F3\u306E\u8272")) : /*#__PURE__*/React.createElement("span", null, "\u307E\u3060\u8272\u3092\u4ED8\u3051\u3066\u3044\u307E\u305B\u3093"), () => pick({
+      masuId: masu.id
+    }));
+  }), list.length === 0 && /*#__PURE__*/React.createElement("p", {
+    className: "text-center text-[11px] font-bold text-slate-400 py-3"
+  }, "\u3053\u306E\u7A2E\u306E\u30DE\u30B9\u30E2\u30F3\u306F\u307E\u3060\u3044\u307E\u305B\u3093\u3002\u300C\u67D3\u3081\u3066\u307F\u308B\u300D\u3067\u597D\u304D\u306A\u8272\u3092\u8A66\u305B\u307E\u3059\u3002"))));
 };
+// 「染めてみる」。マスモンの染色と同じ色の選び方(DyeRegionColorControls)で、図鑑の中だけ色を試す。
+// 決めた色は図鑑の立ち絵と攻撃アクションに使うだけで、保存もしないし染色アイテムも使わない
+const DexTryDyeSheet = ({
+  mon,
+  draft,
+  onChange,
+  onCustom,
+  onApply,
+  onReset,
+  onClose
+}) => /*#__PURE__*/React.createElement("div", {
+  "data-dex-try-dye": true,
+  className: "fixed inset-0 flex items-center justify-center p-4",
+  style: {
+    position: 'fixed',
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    zIndex: 31500,
+    paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+    paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+  },
+  role: "dialog",
+  "aria-modal": "true",
+  "aria-label": `${mon.name}を染めてみる`
+}, /*#__PURE__*/React.createElement("div", {
+  className: "bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2.5 shadow-2xl max-h-full overflow-hidden"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "flex items-center justify-between shrink-0"
+}, /*#__PURE__*/React.createElement("h3", {
+  className: "text-sm font-black text-white"
+}, "\uD83C\uDFA8 ", mon.name, "\u3092\u67D3\u3081\u3066\u307F\u308B"), /*#__PURE__*/React.createElement("button", {
+  type: "button",
+  "aria-label": "\u9589\u3058\u308B",
+  onClick: onClose,
+  className: "min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90"
+}, "\u2715")), /*#__PURE__*/React.createElement("div", {
+  className: "h-36 shrink-0 flex items-center justify-center rounded-2xl bg-black/30 border border-white/5"
+}, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+  baseId: mon.id,
+  src: mon.imgUrl || mon.iconUrl,
+  alt: mon.name,
+  masuColors: draft,
+  draggable: false,
+  className: "h-full aspect-square max-w-full object-contain"
+})), /*#__PURE__*/React.createElement("div", {
+  className: "text-[10px] text-fuchsia-200 font-bold text-center shrink-0"
+}, "\u898B\u308B\u3060\u3051\u306E\u6A5F\u80FD\u3067\u3059\u3002\u30DE\u30B9\u30E2\u30F3\u306E\u8272\u306F\u5909\u308F\u3089\u305A\u3001\u30A2\u30A4\u30C6\u30E0\u3082\u4F7F\u3044\u307E\u305B\u3093\u3002"), dyeRegionCount(mon.id) === 1 && /*#__PURE__*/React.createElement("div", {
+  className: "text-[9px] text-slate-400 font-bold text-center shrink-0"
+}, "\u3053\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u5168\u8EAB\u3092\u307E\u3068\u3081\u3066\u67D3\u3081\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+  className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+}, /*#__PURE__*/React.createElement(DyeRegionColorControls, {
+  baseId: mon.id,
+  colors: draft,
+  onChange: onChange,
+  onCustom: onCustom
+})), /*#__PURE__*/React.createElement("div", {
+  className: "flex gap-2 shrink-0"
+}, /*#__PURE__*/React.createElement("button", {
+  type: "button",
+  onClick: onReset,
+  className: "flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs"
+}, "\u5143\u306E\u8272\u306B\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+  type: "button",
+  "data-dex-try-apply": true,
+  onClick: onApply,
+  className: "flex-1 min-h-[44px] rounded-xl font-black text-xs bg-fuchsia-600 text-white active:scale-95"
+}, "\u3053\u306E\u8272\u3067\u898B\u308B"))));
 function MonsterAttackPreviewScreen({
   dexMonsterId,
   dexAttackPreview,
@@ -32208,6 +32383,12 @@ function MonsterDexDetailScreen({
   masuMons,
   dexColorKey,
   onSelectColor,
+  tryDyeDraft,
+  onOpenTryDye,
+  onTryDyeChange,
+  onTryDyeCustom,
+  onTryDyeReset,
+  onCloseTryDye,
   getAtkSkillLevels,
   getUniqueSkillLevels,
   swipeRef,
@@ -32220,6 +32401,7 @@ function MonsterDexDetailScreen({
 }) {
   const [idleMotion, toggleIdleMotion] = useDexIdleMotion();
   const monsters = dexMonsterList();
+  const [colorSheetOpen, setColorSheetOpen] = useState(false); // 色の見本にするマスモンの一覧(開いているあいだだけ)
   const index = monsters.findIndex(m => m.id === dexMonsterId);
   const mon = index >= 0 ? monsters[index] : null;
   if (!mon) {
@@ -32369,10 +32551,35 @@ function MonsterDexDetailScreen({
       onOpenAttackPreview();
     },
     className: "min-h-[44px] px-5 rounded-xl border border-cyan-300/60 bg-slate-950/85 text-[12px] font-black text-cyan-100 shadow-lg active:scale-95"
-  }, "\u25B6 \u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3")), unlocked && /*#__PURE__*/React.createElement(DexMasuColorPicker, {
-    choices: dexMasuColorChoices(masuMons, mon.id),
-    value: dexSelectedColors(masuMons, mon.id, dexColorKey) ? dexColorKey : null,
-    onChange: onSelectColor
+  }, "\u25B6 \u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3")), unlocked && /*#__PURE__*/React.createElement(DexColorRow, {
+    masuMons: masuMons,
+    mon: mon,
+    value: dexColorKey,
+    onOpenList: () => setColorSheetOpen(true),
+    onOpenTry: () => onOpenTryDye(dexSelectedColors(masuMons, mon.id, dexColorKey) || [])
+  }), unlocked && colorSheetOpen && /*#__PURE__*/React.createElement(DexMasuColorSheet, {
+    masuMons: masuMons,
+    mon: mon,
+    value: dexColorKey,
+    onSelect: onSelectColor,
+    onClose: () => setColorSheetOpen(false)
+  }), unlocked && Array.isArray(tryDyeDraft) && /*#__PURE__*/React.createElement(DexTryDyeSheet, {
+    mon: mon,
+    draft: tryDyeDraft,
+    onChange: onTryDyeChange,
+    onCustom: onTryDyeCustom,
+    onReset: () => {
+      Audio_.se.tap();
+      onTryDyeReset();
+    },
+    onClose: onCloseTryDye,
+    onApply: () => {
+      Audio_.se.tap();
+      onSelectColor(dexHasColors(tryDyeDraft) ? {
+        colors: tryDyeDraft.slice()
+      } : null);
+      onCloseTryDye();
+    }
   }), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 pt-2"
   }, /*#__PURE__*/React.createElement("div", {
@@ -47779,7 +47986,8 @@ function MonsterHeroGame() {
   const [dexLineageFilter, setDexLineageFilter] = useState('all'); // モンスター図鑑: 主血統の絞り込み('all'または血統id)
   const [dexMonsterId, setDexMonsterId] = useState(null); // モンスター図鑑: 詳細で見ているモンスターのid
   const [dexTab, setDexTab] = useState('basic'); // モンスター図鑑の詳細タブ(basic/stats/skills)
-  const [dexColorKey, setDexColorKey] = useState(null); // モンスター図鑑: 見本にしているマスモンの配色(null=元の色。保存しない)
+  const [dexColorKey, setDexColorKey] = useState(null); // モンスター図鑑: 見本にしている配色(null=元の色 / {masuId} / {colors}。保存しない)
+  const [dexTryDyeDraft, setDexTryDyeDraft] = useState(null); // モンスター図鑑: 「染めてみる」で選んでいる途中の色(null=閉じている。保存しない)
   const dexSwipeRef = useRef(null); // 図鑑詳細の横スワイプ(指を置いた位置)
   const [dexAttackPreview, setDexAttackPreview] = useState(null); // 図鑑詳細の攻撃アクション再生中だけ使う {monsterId,anim}
   const dexAttackPreviewRunRef = useRef(0); // 左右移動/戻るで非同期プレビューを確実に止める世代番号
@@ -65710,6 +65918,7 @@ function MonsterHeroGame() {
         setDexMonsterId(monId);
         setDexTab('basic');
         setDexColorKey(null);
+        setDexTryDyeDraft(null);
         setGameState('MONSTER_DEX_DETAIL');
       },
       onBackToManagement: () => setGameState('MB_MANAGEMENT')
@@ -65720,6 +65929,28 @@ function MonsterHeroGame() {
       masuMons: masuMons,
       dexColorKey: dexColorKey,
       onSelectColor: setDexColorKey,
+      tryDyeDraft: dexTryDyeDraft,
+      onOpenTryDye: colors => setDexTryDyeDraft(Array.isArray(colors) ? colors.slice() : []),
+      onTryDyeChange: (idx, colorId) => setDexTryDyeDraft(prev => {
+        const next = [...(prev || [])];
+        next[idx] = colorId;
+        return next;
+      }),
+      onTryDyeCustom: idx => {
+        const parsed = _parseCustomColorId(dexTryDyeDraft?.[idx]);
+        setCustomColorPicker({
+          mode: 'dex',
+          idx,
+          h: parsed?.h ?? 210,
+          s: parsed?.s ?? .7,
+          v: parsed?.v ?? .7
+        });
+      },
+      onTryDyeReset: () => setDexTryDyeDraft([]),
+      onCloseTryDye: () => {
+        setDexTryDyeDraft(null);
+        setCustomColorPicker(null);
+      },
       getAtkSkillLevels: getAtkSkillLevels,
       getUniqueSkillLevels: getUniqueSkillLevels,
       swipeRef: dexSwipeRef,
@@ -65730,6 +65961,7 @@ function MonsterHeroGame() {
         setDexMonsterId(monId);
         setDexTab('basic');
         setDexColorKey(null);
+        setDexTryDyeDraft(null);
       },
       onSelectTab: setDexTab,
       onStopPreview: stopDexAttackPreview
@@ -72370,15 +72602,21 @@ function MonsterHeroGame() {
       // パンドラはまだマスモンでもベースモンでもないので、個体を引かずDEBUG定義をそのまま使う。
       // mode==='monsterCheck' は新モンスター確認からの呼び出しで、所持していない種も塗れる必要がある。
       // そこだけは個体を探さず、選んでいる種から表示用の一時データを作る(保存には触れない)
+      // mode==='dex' は図鑑の「染めてみる」。こちらも個体を探さず、見ている種から表示用の一時データを作る
       const masu = mode === 'monsterCheck' ? ALL_PLAYER_MONSTERS[monsterCheckDebugId] ? {
         id: `monster-check-${monsterCheckDebugId}`,
         baseId: monsterCheckDebugId,
         name: ALL_PLAYER_MONSTERS[monsterCheckDebugId].name,
         colors: []
+      } : null : mode === 'dex' ? ALL_PLAYER_MONSTERS[dexMonsterId] ? {
+        id: `dex-try-${dexMonsterId}`,
+        baseId: dexMonsterId,
+        name: ALL_PLAYER_MONSTERS[dexMonsterId].name,
+        colors: []
       } : null : mode === 'debug' ? masuMons.find(m => String(m.id) === String(monsterImageDebugId)) : getMasuMon(dyeTargetMasuId);
       const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
       const applyCustom = () => {
-        const setter = mode === 'monsterCheck' ? setMonsterCheckDebugColors : mode === 'debug' ? setMonsterImageDebugColors : setDyePreviewColors;
+        const setter = mode === 'monsterCheck' ? setMonsterCheckDebugColors : mode === 'dex' ? setDexTryDyeDraft : mode === 'debug' ? setMonsterImageDebugColors : setDyePreviewColors;
         // 濃さ(@NN)は色を作り直しても引き継ぐ
         setter(prev => {
           const next = [...(prev || (mode === 'debug' ? getMasuColors(masu) : []))];
@@ -72390,7 +72628,7 @@ function MonsterHeroGame() {
       // ドラッグ中は毎フレームcolorIdが変わり染色エンジンの再描画(Canvas処理)が大量発生するため、
       // プレビュー表示だけは色相/彩度/明度を粗く丸めて再描画の頻度を抑える(確定時は元の値をそのまま使う)
       const previewColorId = _encodeCustomColorId(Math.round(h / 4) * 4, Math.round(s * 20) / 20, Math.round(v * 20) / 20);
-      const sourceColors = mode === 'monsterCheck' ? monsterCheckDebugColors || [] : mode === 'debug' ? monsterImageDebugColors || getMasuColors(masu) : dyePreviewColors;
+      const sourceColors = mode === 'monsterCheck' ? monsterCheckDebugColors || [] : mode === 'dex' ? dexTryDyeDraft || [] : mode === 'debug' ? monsterImageDebugColors || getMasuColors(masu) : dyePreviewColors;
       const previewColors = sourceColors.map((c, i) => i === idx ? withColorAlpha(previewColorId, colorAlphaOf(c)) : c);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center p-4",
