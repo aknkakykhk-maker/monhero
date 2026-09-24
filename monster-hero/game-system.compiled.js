@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 601cf7320925c08f
+// source-sha256: a13e09bbf90be936
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d174683a4bc6147b
+// generated-sha256: 82da977b7001a96b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -177,7 +177,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 15:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 15:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17738,6 +17738,8 @@ const attackAimVars = (dx, dy, {
     '--atk-dy': px(dy),
     '--atk-len': px(main.len),
     '--atk-rot': deg(main.rot),
+    // 敵が右にいれば1・左なら-1・ほぼ真上なら0(水攻撃の左右の滑りを敵の側へ寄せるのに使う)
+    '--atk-side': String(dx > 12 ? 1 : dx < -12 ? -1 : 0),
     '--pd-l-x': px(dx * PANDORA_CLONE_REACH - spread),
     '--pd-r-x': px(dx * PANDORA_CLONE_REACH + spread),
     '--pd-y': px(dy * PANDORA_CLONE_REACH),
@@ -18370,7 +18372,7 @@ const WaterBurstMotion = ({
   }
 }))));
 // ミーア専用の歌攻撃演出。
-// 距離枠は動かさず、本体だけがくるっと回って敵のほうへ身を乗り出し、マイクスタンドの前で歌う。
+// 距離枠は動かさず、本体だけが跳ねて体をひねり、敵のほうへ身を乗り出し、マイクスタンドの前で歌う。
 // 音符は5つ、左右に揺れながら敵の位置(--atk-dx/dy)まで飛び、敵の向きへ音の波を3つ走らせる。
 // x は飛ぶ途中の左右の揺れ、y は途中でふくらむ高さ。追加画像・追加音源は使わず、攻撃中だけDOMへ出る
 // 固定数のCSS要素で描く(常時アニメーションにはしない)。
@@ -40764,7 +40766,7 @@ function BattleScreen({
     className: "shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative",
     style: {
       backgroundImage: 'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)',
-      ...(tacticsNewLayout && popups.some(p => ['hero', 'life', 'guts'].includes(p.side) && !Number.isInteger(p.slot)) ? {
+      ...(tacticsNewLayout && popups.some(p => ['hero', 'life', 'guts'].includes(p.side) && !Number.isInteger(p.slot)) || attackAnim && !ecoBattleView ? {
         zIndex: 60
       } : {})
     }
@@ -41025,6 +41027,8 @@ function BattleScreen({
     }
     const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
     // 敵の位置へ向けるためのCSS変数。測れなかったときは :root の既定値(真上)で動く
+    // 新しい盤面は枠が2段に並ぶ。攻撃中の子の枠だけ前へ出さないと、沈み込み・横滑りのときに
+    // あとから描かれる隣や下の枠の裏へ絵が回る(古い盤面は枠ごと z-index:9999 で前へ出している)
     const attackAimStyle = isAnimating && attackAim && attackAim.slotIndex === i ? attackAimVars(attackAim.dx, attackAim.dy) : null;
     // ★絵の入れ物は絵と同じ大きさに固定する(2026-09-24 ユーザー指摘「ミーアの攻撃中、姿が消えてる」)。
     //   ミーア・水・聖光の攻撃演出は入れ物いっぱいに重ねる絶対配置なので、大きさを持たないと
@@ -41091,17 +41095,22 @@ function BattleScreen({
       },
       disabled: isBusy || autoBattle,
       className: `relative ${tacticsNewLayout ? 'rounded-[18px] border grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,.09),inset_0_0_18px_rgba(99,102,241,.035),0_7px_20px_rgba(0,0,0,.24)]' : 'rounded-2xl border-2 flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow || ''} ${tacticsNewLayout ? '' : RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : tacticsNewLayout ? 'border-white/[.10]' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500/80' : ''} ${tacticsNewLayout && !s ? 'opacity-65 shadow-none border-white/[.06]' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
-      style: isAnimating && !tacticsNewLayout ? {
-        zIndex: 9999,
-        animation: attackMotionAnimation(attackAnim),
-        ...attackAimStyle
-      } : distanceBroken ? {
-        backgroundColor: distanceBreakLevel >= 2 ? 'rgb(12,2,5)' : 'rgb(24,5,25)',
-        boxShadow: `inset 0 0 0 ${Math.min(4, distanceBreakLevel + 1)}px rgba(248,113,113,.95), inset 0 0 ${28 + distanceBreakLevel * 8}px rgba(76,5,25,.98), 0 0 ${9 + distanceBreakLevel * 4}px rgba(220,38,38,.65)`,
-        ...(slotHitShake || {})
-      } : slotSettle === i ? {
-        animation: 'slotSettle 400ms ease-out'
-      } : slotHitShake || undefined
+      style: {
+        ...((isAnimating && !tacticsNewLayout ? {
+          zIndex: 9999,
+          animation: attackMotionAnimation(attackAnim),
+          ...attackAimStyle
+        } : distanceBroken ? {
+          backgroundColor: distanceBreakLevel >= 2 ? 'rgb(12,2,5)' : 'rgb(24,5,25)',
+          boxShadow: `inset 0 0 0 ${Math.min(4, distanceBreakLevel + 1)}px rgba(248,113,113,.95), inset 0 0 ${28 + distanceBreakLevel * 8}px rgba(76,5,25,.98), 0 0 ${9 + distanceBreakLevel * 4}px rgba(220,38,38,.65)`,
+          ...(slotHitShake || {})
+        } : slotSettle === i ? {
+          animation: 'slotSettle 400ms ease-out'
+        } : slotHitShake || undefined) || {}),
+        ...(isAnimating && tacticsNewLayout ? {
+          zIndex: 30
+        } : {})
+      }
     }, slotHitKind && (() => {
       const hitFx = TACTICS_SLOT_FX_STYLE[slotHitKind];
       return /*#__PURE__*/React.createElement("div", {
@@ -73515,7 +73524,7 @@ const createAnimationStyle = () => {
     /* 味方の攻撃を「敵の位置」へ向けるための変数(24-battle-fx.jsx の attackAimVars が枠ごとに上書きする)。
        ここは測れなかったとき・図鑑などの既定値で、真上へ少し(今までの見え方に近い)。 */
     :root {
-      --atk-dx: 0px; --atk-dy: -120px; --atk-len: 120px; --atk-rot: 0deg;
+      --atk-dx: 0px; --atk-dy: -120px; --atk-len: 120px; --atk-rot: 0deg; --atk-side: 0;
       --pd-l-x: -56px; --pd-r-x: 56px; --pd-y: -60px;
       --pd-l-len: 97px; --pd-l-rot: 35.4deg; --pd-r-len: 97px; --pd-r-rot: -35.4deg;
     }
@@ -73776,21 +73785,23 @@ const createAnimationStyle = () => {
       55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(34,211,238,.92)) drop-shadow(0 10px 20px rgba(37,99,235,.62)); }
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(14,165,233,.82)); }
     }
+    /* 左右の滑りは --atk-side(敵が右なら1・左なら-1)ぶん敵の側へ寄せる。
+       端の枠の子が外側へ滑ると画面の外へ半分出て、消えたように見えていた(2026-09-24 ユーザー指摘) */
     @keyframes waterBurstAttack {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(103,232,249,.5)); }
       10% { transform:translate3d(0,8px,0) scale(.95,.88) rotate(-2deg); filter:drop-shadow(0 0 15px rgba(34,211,238,.9)); }
-      25% { transform:translate3d(-44px,-2px,0) scale(1.07) rotate(-7deg); filter:drop-shadow(24px 5px 0 rgba(125,211,252,.42)) drop-shadow(48px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 22px rgba(103,232,249,.98)); }
-      48% { transform:translate3d(46px,-8px,0) scale(1.10) rotate(7deg); filter:drop-shadow(-28px 4px 0 rgba(125,211,252,.42)) drop-shadow(-56px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 27px rgba(255,255,255,.98)); }
-      69% { transform:translate3d(-32px,-10px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(24px 4px 0 rgba(103,232,249,.34)) drop-shadow(48px 7px 0 rgba(37,99,235,.15)) drop-shadow(0 0 23px rgba(34,211,238,.94)); }
-      84% { transform:translate3d(20px,-4px,0) scale(1.04) rotate(3deg); filter:drop-shadow(-18px 3px 0 rgba(125,211,252,.28)) drop-shadow(0 0 17px rgba(103,232,249,.82)); }
+      25% { transform:translate3d(calc(-44px + var(--atk-side) * 30px),-2px,0) scale(1.07) rotate(-7deg); filter:drop-shadow(24px 5px 0 rgba(125,211,252,.42)) drop-shadow(48px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 22px rgba(103,232,249,.98)); }
+      48% { transform:translate3d(calc(46px + var(--atk-side) * 30px),-8px,0) scale(1.10) rotate(7deg); filter:drop-shadow(-28px 4px 0 rgba(125,211,252,.42)) drop-shadow(-56px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 27px rgba(255,255,255,.98)); }
+      69% { transform:translate3d(calc(-32px + var(--atk-side) * 30px),-10px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(24px 4px 0 rgba(103,232,249,.34)) drop-shadow(48px 7px 0 rgba(37,99,235,.15)) drop-shadow(0 0 23px rgba(34,211,238,.94)); }
+      84% { transform:translate3d(calc(20px + var(--atk-side) * 30px),-4px,0) scale(1.04) rotate(3deg); filter:drop-shadow(-18px 3px 0 rgba(125,211,252,.28)) drop-shadow(0 0 17px rgba(103,232,249,.82)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
     @keyframes waterBurstLunge {
       0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(34,211,238,.95)); }
-      18% { transform:translate3d(-52px,-4px,0) scale(1.11) rotate(-9deg); filter:drop-shadow(28px 5px 0 rgba(125,211,252,.5)) drop-shadow(58px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 28px rgba(255,255,255,.98)); }
-      43% { transform:translate3d(52px,-13px,0) scale(1.16) rotate(9deg); filter:drop-shadow(-32px 4px 0 rgba(125,211,252,.5)) drop-shadow(-64px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 34px rgba(255,255,255,1)); }
-      67% { transform:translate3d(-38px,-12px,0) scale(1.11) rotate(-6deg); filter:drop-shadow(28px 4px 0 rgba(103,232,249,.42)) drop-shadow(0 0 29px rgba(34,211,238,.98)); }
-      84% { transform:translate3d(24px,-5px,0) scale(1.06) rotate(4deg); filter:drop-shadow(-20px 3px 0 rgba(125,211,252,.34)) drop-shadow(0 0 21px rgba(103,232,249,.9)); }
+      18% { transform:translate3d(calc(-52px + var(--atk-side) * 30px),-4px,0) scale(1.11) rotate(-9deg); filter:drop-shadow(28px 5px 0 rgba(125,211,252,.5)) drop-shadow(58px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 28px rgba(255,255,255,.98)); }
+      43% { transform:translate3d(calc(52px + var(--atk-side) * 30px),-13px,0) scale(1.16) rotate(9deg); filter:drop-shadow(-32px 4px 0 rgba(125,211,252,.5)) drop-shadow(-64px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 34px rgba(255,255,255,1)); }
+      67% { transform:translate3d(calc(-38px + var(--atk-side) * 30px),-12px,0) scale(1.11) rotate(-6deg); filter:drop-shadow(28px 4px 0 rgba(103,232,249,.42)) drop-shadow(0 0 29px rgba(34,211,238,.98)); }
+      84% { transform:translate3d(calc(24px + var(--atk-side) * 30px),-5px,0) scale(1.06) rotate(4deg); filter:drop-shadow(-20px 3px 0 rgba(125,211,252,.34)) drop-shadow(0 0 21px rgba(103,232,249,.9)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
     }
     .water-burst-motion__wake { position:absolute; inset:0; z-index:2; overflow:visible; }
@@ -73914,12 +73925,13 @@ const createAnimationStyle = () => {
       55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(236,72,153,.92)) drop-shadow(0 10px 20px rgba(168,85,247,.6)); }
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(217,70,239,.82)); }
     }
-    /* 歌う本体。しゃがんで跳び、くるっと一回転(左右反転)してから敵のほうへ身を乗り出し、
+    /* 歌う本体。しゃがんで跳ね、体をひねってから敵のほうへ身を乗り出し、
+       (左右反転で回すと幅が0を通って一瞬消えて見えるので使わない。2026-09-24 ユーザー指摘)
        敵の向きへ体を傾けて拍を取りながら歌い、元位置へ戻る */
     @keyframes miaSongSing {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(244,114,182,.5)); }
       9% { transform:translate3d(0,6px,0) scale(1.1,.86) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.8)); }
-      20% { transform:translate3d(calc(var(--atk-dx) * .05),calc(var(--atk-dy) * .05 - 16px),0) scale(-1.08,1.08) rotate(-6deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
+      20% { transform:translate3d(calc(var(--atk-dx) * .05),calc(var(--atk-dy) * .05 - 18px),0) scale(1.1) rotate(-14deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
       32% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 6px),0) scale(1.12) rotate(calc(var(--atk-rot) * .35)); filter:drop-shadow(0 0 22px rgba(236,72,153,.95)); }
       46% { transform:translate3d(calc(var(--atk-dx) * .12),calc(var(--atk-dy) * .12 - 13px),0) scale(1.17) rotate(calc(var(--atk-rot) * .35 + 5deg)); filter:drop-shadow(0 0 26px rgba(255,255,255,.98)); }
       60% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 4px),0) scale(1.1) rotate(calc(var(--atk-rot) * .35 - 5deg)); filter:drop-shadow(0 0 22px rgba(192,132,252,.95)); }
@@ -73927,10 +73939,10 @@ const createAnimationStyle = () => {
       90% { transform:translate3d(0,-4px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
-    /* 固有技のタメ明け。沈んだ位置から高く跳んで回り、通常より大きく前へ出て歌う */
+    /* 固有技のタメ明け。沈んだ位置から高く跳んでひねり、通常より大きく前へ出て歌う */
     @keyframes miaSongSingLunge {
       0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.95)); }
-      18% { transform:translate3d(calc(var(--atk-dx) * .07),calc(var(--atk-dy) * .07 - 24px),0) scale(-1.16,1.16) rotate(-8deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
+      18% { transform:translate3d(calc(var(--atk-dx) * .07),calc(var(--atk-dy) * .07 - 26px),0) scale(1.18) rotate(-16deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
       30% { transform:translate3d(calc(var(--atk-dx) * .14),calc(var(--atk-dy) * .14 - 8px),0) scale(1.18) rotate(calc(var(--atk-rot) * .4)); filter:drop-shadow(0 0 28px rgba(236,72,153,.98)); }
       46% { transform:translate3d(calc(var(--atk-dx) * .16),calc(var(--atk-dy) * .16 - 18px),0) scale(1.24) rotate(calc(var(--atk-rot) * .4 + 6deg)); filter:drop-shadow(0 0 34px rgba(255,255,255,1)); }
       62% { transform:translate3d(calc(var(--atk-dx) * .14),calc(var(--atk-dy) * .14 - 6px),0) scale(1.16) rotate(calc(var(--atk-rot) * .4 - 6deg)); filter:drop-shadow(0 0 28px rgba(192,132,252,.98)); }
