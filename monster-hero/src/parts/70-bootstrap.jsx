@@ -416,29 +416,30 @@ const createAnimationStyle = () => {
       55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(236,72,153,.92)) drop-shadow(0 10px 20px rgba(168,85,247,.6)); }
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(217,70,239,.82)); }
     }
-    /* 歌う本体。しゃがんで跳ね、体をひねってから敵のほうへ身を乗り出し、
-       (左右反転で回すと幅が0を通って一瞬消えて見えるので使わない。2026-09-24 ユーザー指摘)
-       敵の向きへ体を傾けて拍を取りながら歌い、元位置へ戻る */
+    /* 歌う本体。敵へは向かわず、その場で歌う(2026-09-24 ユーザー指摘「音符を飛ばすときにミーアも一緒に
+       アタック気味になっている。意図と違う」)。攻撃するのは音符と音の波だけで、本人は動かない。
+       しゃがんで小さく跳ね、左右へ体を揺らして拍を取り、元の位置へ戻る。
+       (左右反転で回すと幅が0を通って一瞬消えて見えるので使わない) */
     @keyframes miaSongSing {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(244,114,182,.5)); }
-      9% { transform:translate3d(0,6px,0) scale(1.1,.86) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.8)); }
-      20% { transform:translate3d(calc(var(--atk-dx) * .05),calc(var(--atk-dy) * .05 - 18px),0) scale(1.1) rotate(-14deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
-      32% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 6px),0) scale(1.12) rotate(calc(var(--atk-rot) * .35)); filter:drop-shadow(0 0 22px rgba(236,72,153,.95)); }
-      46% { transform:translate3d(calc(var(--atk-dx) * .12),calc(var(--atk-dy) * .12 - 13px),0) scale(1.17) rotate(calc(var(--atk-rot) * .35 + 5deg)); filter:drop-shadow(0 0 26px rgba(255,255,255,.98)); }
-      60% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 4px),0) scale(1.1) rotate(calc(var(--atk-rot) * .35 - 5deg)); filter:drop-shadow(0 0 22px rgba(192,132,252,.95)); }
-      74% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 11px),0) scale(1.14) rotate(calc(var(--atk-rot) * .3 + 3deg)); filter:drop-shadow(0 0 24px rgba(244,114,182,.92)); }
-      90% { transform:translate3d(0,-4px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
+      9% { transform:translate3d(0,5px,0) scale(1.06,.9) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.8)); }
+      20% { transform:translate3d(0,-10px,0) scale(1.05) rotate(-7deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
+      34% { transform:translate3d(-4px,-3px,0) scale(1.04) rotate(-5deg); filter:drop-shadow(0 0 22px rgba(236,72,153,.95)); }
+      48% { transform:translate3d(4px,-8px,0) scale(1.06) rotate(5deg); filter:drop-shadow(0 0 26px rgba(255,255,255,.98)); }
+      62% { transform:translate3d(-4px,-3px,0) scale(1.04) rotate(-5deg); filter:drop-shadow(0 0 22px rgba(192,132,252,.95)); }
+      76% { transform:translate3d(4px,-7px,0) scale(1.05) rotate(4deg); filter:drop-shadow(0 0 24px rgba(244,114,182,.92)); }
+      90% { transform:translate3d(0,-3px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
-    /* 固有技のタメ明け。沈んだ位置から高く跳んでひねり、通常より大きく前へ出て歌う */
+    /* 固有技のタメ明け。沈んだ位置からその場で高く跳ね、通常より大きく体を揺らして歌う(敵へは向かわない) */
     @keyframes miaSongSingLunge {
       0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.95)); }
-      18% { transform:translate3d(calc(var(--atk-dx) * .07),calc(var(--atk-dy) * .07 - 26px),0) scale(1.18) rotate(-16deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
-      30% { transform:translate3d(calc(var(--atk-dx) * .14),calc(var(--atk-dy) * .14 - 8px),0) scale(1.18) rotate(calc(var(--atk-rot) * .4)); filter:drop-shadow(0 0 28px rgba(236,72,153,.98)); }
-      46% { transform:translate3d(calc(var(--atk-dx) * .16),calc(var(--atk-dy) * .16 - 18px),0) scale(1.24) rotate(calc(var(--atk-rot) * .4 + 6deg)); filter:drop-shadow(0 0 34px rgba(255,255,255,1)); }
-      62% { transform:translate3d(calc(var(--atk-dx) * .14),calc(var(--atk-dy) * .14 - 6px),0) scale(1.16) rotate(calc(var(--atk-rot) * .4 - 6deg)); filter:drop-shadow(0 0 28px rgba(192,132,252,.98)); }
-      78% { transform:translate3d(calc(var(--atk-dx) * .12),calc(var(--atk-dy) * .12 - 15px),0) scale(1.18) rotate(calc(var(--atk-rot) * .3 + 4deg)); filter:drop-shadow(0 0 26px rgba(244,114,182,.94)); }
-      92% { transform:translate3d(0,-5px,0) scale(1.03) rotate(0deg); filter:drop-shadow(0 0 13px rgba(244,114,182,.62)); }
+      18% { transform:translate3d(0,-16px,0) scale(1.1) rotate(-9deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
+      32% { transform:translate3d(-6px,-4px,0) scale(1.08) rotate(-7deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.98)); }
+      46% { transform:translate3d(6px,-12px,0) scale(1.1) rotate(7deg); filter:drop-shadow(0 0 34px rgba(255,255,255,1)); }
+      62% { transform:translate3d(-6px,-4px,0) scale(1.08) rotate(-6deg); filter:drop-shadow(0 0 28px rgba(192,132,252,.98)); }
+      78% { transform:translate3d(6px,-10px,0) scale(1.09) rotate(5deg); filter:drop-shadow(0 0 26px rgba(244,114,182,.94)); }
+      92% { transform:translate3d(0,-4px,0) scale(1.03) rotate(0deg); filter:drop-shadow(0 0 13px rgba(244,114,182,.62)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
     }
     /* 足元のステージ光。床に置いた光の輪を2つ、拍に合わせて広げる */
@@ -466,7 +467,7 @@ const createAnimationStyle = () => {
       0% { opacity:0; transform:translate3d(0,10px,0) scale(.35); }
       9% { opacity:1; transform:translate3d(0,0,0) scale(1.16); }
       16% { transform:translate3d(0,0,0) scale(.96); }
-      24%,84% { opacity:1; transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1),0) scale(1); }
+      24%,84% { opacity:1; transform:translate3d(0,0,0) scale(1); }
       100% { opacity:0; transform:translate3d(0,6px,0) scale(.82); }
     }
     /* マイク本体。ホルダーに斜めに留まった形にすると、小さくてもマイクスタンドだと分かる。
@@ -1195,7 +1196,8 @@ const createAnimationStyle = () => {
     /* カワズモー(力士のカエル): 待機は左右に重心を移しながらお腹で呼吸 / 攻撃は のけぞって溜め→踏み込んで張り手→戻る /
        ためるは 片足を上げて四股を踏む / やられは のけぞって震える */
     /* 2026-09-24 ユーザー指摘「思ってたより地味。もっと頑張って動き作れない？」で動きを大きく作り直した。
-       待機は6秒で1巡: 大きく揺れて呼吸(0〜50%) → 片足を上げて四股・土ぼこり(52〜76%) → くるっと横を向いて戻る(80〜98%) */
+       待機は6秒で1巡: 大きく揺れて呼吸(0〜50%) → 片足を上げて四股・土ぼこり(52〜76%) → 小さく跳ねて着地(80〜96%)。
+       ★左右の反転(横を向く)は入れない(2026-09-24 ユーザー指摘「反転はださいだけ」) */
     @keyframes kzIdle {
       0%, 100% { transform: translateX(0) rotate(0) scale(1, 1); }
       8% { transform: translateX(-8px) rotate(-6deg) scale(1.07, .94); }
@@ -1210,10 +1212,11 @@ const createAnimationStyle = () => {
       66% { transform: translate(0, 4px) rotate(0) scale(1.24, .8); }
       69% { transform: translate(0, -3px) rotate(0) scale(.95, 1.07); }
       73% { transform: translate(0, 0) rotate(0) scale(1.04, .97); }
-      78% { transform: scale(1, 1); }
-      82% { transform: scale(-1, 1) rotate(4deg); }
-      92% { transform: scale(-1, 1) rotate(-3deg); }
-      97% { transform: scale(1, 1); }
+      80% { transform: translateY(2px) scale(1.08, .92); }
+      84% { transform: translateY(-10px) scale(.94, 1.08); }
+      88% { transform: translateY(2px) scale(1.1, .9); }
+      92% { transform: translateY(-4px) scale(.97, 1.04); }
+      96% { transform: translateY(0) scale(1.02, .98); }
     }
     @keyframes kzShadow {
       0%, 16%, 32%, 48%, 78%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
@@ -1221,6 +1224,8 @@ const createAnimationStyle = () => {
       24% { transform: translateX(calc(-50% + 8px)) scaleX(1.12); }
       60%, 63% { transform: translateX(calc(-50% - 6px)) scaleX(.8); opacity: .7; }
       66% { transform: translateX(-50%) scaleX(1.35); opacity: 1; }
+      84% { transform: translateX(-50%) scaleX(.82); opacity: .75; }
+      88% { transform: translateX(-50%) scaleX(1.18); opacity: 1; }
     }
     /* 四股の土ぼこり(影の左右から吹き出して消える)。待機の66%と、ためるの踏み込みに合わせる */
     @keyframes kzDustIdle {
@@ -1233,13 +1238,27 @@ const createAnimationStyle = () => {
       60% { opacity: .95; transform: translateX(0) scale(.7); }
       90%, 100% { opacity: 0; transform: translateX(var(--kz-dx)) scale(1.6); }
     }
+    /* 張り手: 腰を落として右肩を引く → 左へひねりながら前へ押し出す(1発目) → 右へひねり返して押し込む(2発目) → 戻る */
     @keyframes kzSlap {
       0% { transform: none; }
-      22% { transform: translateY(-6px) rotate(-12deg) scale(1.14, .84); }
-      40% { transform: translateY(28px) rotate(8deg) scale(.86, 1.22); }
-      52% { transform: translateY(88px) rotate(12deg) scale(1.32, .8); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
-      64% { transform: translateY(80px) rotate(8deg) scale(1.2, .88); filter: drop-shadow(0 0 22px rgba(220,38,38,.9)); }
+      18% { transform: translate(6px, 4px) rotate(14deg) scale(1.1, .9); }
+      36% { transform: translate(-10px, 46px) rotate(-16deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 18px rgba(239,68,68,.9)); }
+      52% { transform: translate(10px, 70px) rotate(15deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
+      66% { transform: translate(0, 60px) rotate(0) scale(1.12, .92); filter: drop-shadow(0 0 18px rgba(220,38,38,.8)); }
       100% { transform: none; filter: none; }
+    }
+    /* 手のひら: 体の横から画面の手前へ大きく突き出る。左右で半拍ずらす。緑がかった色はカエルの手に寄せるため */
+    @keyframes kzPalmL {
+      0%, 22% { opacity: 0; transform: translate(-30px, -10px) rotate(-30deg) scale(.4); }
+      34% { opacity: 1; transform: translate(-18px, 40px) rotate(-8deg) scale(1.5); }
+      44% { opacity: .9; transform: translate(-14px, 70px) rotate(-4deg) scale(2.1); }
+      54%, 100% { opacity: 0; transform: translate(-12px, 84px) rotate(0) scale(2.4); }
+    }
+    @keyframes kzPalmR {
+      0%, 38% { opacity: 0; transform: translate(30px, -6px) rotate(30deg) scale(.4) scaleX(-1); }
+      50% { opacity: 1; transform: translate(18px, 50px) rotate(8deg) scale(1.6) scaleX(-1); }
+      60% { opacity: .9; transform: translate(14px, 80px) rotate(4deg) scale(2.2) scaleX(-1); }
+      70%, 100% { opacity: 0; transform: translate(12px, 92px) rotate(0) scale(2.5) scaleX(-1); }
     }
     @keyframes kzImpact {
       0%, 48% { opacity: 0; transform: translateX(-50%) scale(.2); }
@@ -1287,6 +1306,15 @@ const createAnimationStyle = () => {
       background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(248,113,113,.8) 35%, rgba(239,68,68,.35) 65%, transparent); }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"]::after { animation: kzImpact 450ms ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap 450ms ease-in forwards; }
+    [data-tactics-look] [data-kz-palm] { font-style: normal; position: absolute; top: 42%; left: 50%; margin-left: -18px; width: 36px; text-align: center; font-size: 30px; line-height: 1;
+      opacity: 0; pointer-events: none; z-index: 10000;
+      filter: hue-rotate(20deg) saturate(.95) brightness(.95) drop-shadow(0 0 8px rgba(239,68,68,.85)) drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
+    /* 勢いの線(手のひらの後ろに伸びる白い筋) */
+    [data-tactics-look] [data-kz-palm]::after { content: ''; position: absolute; left: 50%; top: -60%; width: 60%; height: 90%; margin-left: -30%; pointer-events: none;
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,.8) 0 2px, transparent 2px 6px);
+      -webkit-mask: linear-gradient(0deg, #000, transparent); mask: linear-gradient(0deg, #000, transparent); }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="l"] { animation: kzPalmL 450ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="r"] { animation: kzPalmR 450ms ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp 1100ms ease-in-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-hurt] > span { animation: kzHurt 520ms ease-out forwards; }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */

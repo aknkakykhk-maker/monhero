@@ -59,5 +59,14 @@ node tools/mode/rhythm-chart-v3-generate.js | grep -E '^(EASY|NORMAL|HARD|EXPERT
 diff /tmp/before.txt /tmp/after.txt     # ← 差が出たら既存曲へ影響する変更
 ```
 
+**差が出る強化は「譜面の作り方の版」を上げて入れる**(2026-09-24)。拾う音の選び方を良くすると、
+既存曲のノーツ数も連動して動く(フレーズの写しを入れたとき、120譜面中90で動いた)。
+そういう強化は `tools/mode/rhythm-chart-v3-revision.js` の版を1つ上げ、生成器の中で
+`chartRevision>=<新しい版>` のときだけ効かせる。曲の一覧(`rhythm-song-registry.json`)に
+`chartRevision` を書いていない既存曲は版1のまま(今までと1音も変わらない)で、
+解析器が**まだ解析していない曲**にだけ最新版を書く。試すときは `--chart-revision <版>`。
+上の突き合わせは、版を上げたあとも**既存曲(版1)について**そのまま通す。
+詳細: [`RHYTHM_CHART_DESIGN.md`](../spec/RHYTHM_CHART_DESIGN.md) 3.1.19。
+
 > ⚠️ 譜面もゲーム本体も変わらない強化は、**更新履歴とヘルプへ載せない**(⑤の但し書きと同じ理由。
 > プレイヤーには何も起きていない)。効くのは次に曲を足したときなので、そのときの曲の告知に含まれる。

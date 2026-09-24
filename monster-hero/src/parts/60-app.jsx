@@ -661,7 +661,8 @@ function MonsterHeroGame() {
   const ultraEcoSession = ecoMode==='ultra'&&autoRepeat===true;
   const ultraBattleView = gameState==='BATTLE'&&ultraEcoSession;
   const ecoBattleView = liteBattleView||ultraBattleView;
-  // 強化フェーズの画面(WAVEのあと)の飾りの動きも、省エネのときは止める(data-phase-look。70-bootstrap.jsx の mh-ph-*)
+  // 強化フェーズの画面(WAVEのあと)の飾りの動きも、省エネのときと、バトル設定の「待機中の動き：止める」のときは止める
+  // (data-phase-look。70-bootstrap.jsx の mh-ph-*。タクティクス新画面の枠の飾りと同じ扱い)
   // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
   const stopAutoBattle = () => {
     autoBattleRef.current = false;
@@ -1674,6 +1675,15 @@ function MonsterHeroGame() {
     const value = normalizeBattleScreenStyle(next);
     setBattleScreenStyleState(value);
     storeSet(BATTLE_SCREEN_STYLE_KEY, value, false);
+  };
+  // バトル設定(待機中の動き・画面の揺れ)。1項目ずつ変えても、ほかの項目はそのまま残す
+  const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
+  const setBattleFxSetting = (key, value) => {
+    setBattleFxSettingsState(prev => {
+      const next = normalizeBattleFxSettings({ ...prev, [key]: value });
+      storeSet(BATTLE_FX_SETTINGS_KEY, next, false);
+      return next;
+    });
   };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
@@ -4606,6 +4616,7 @@ function MonsterHeroGame() {
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
+      setBattleFxSettingsState(normalizeBattleFxSettings(await storeGet(BATTLE_FX_SETTINGS_KEY, null, false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -13215,7 +13226,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         器を増やさず**同じ要素のstyleを差し替えるだけ**にしてあるのは、
         切り替えた瞬間に中身が作り直されると演奏中の状態(音の時計・スコア・押している指)が
         飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
-    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession)?'calm':'rich'} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
+    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF')?'calm':'rich'} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
       <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
         {ripples.map(r=>(
@@ -13233,7 +13244,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* 画面の揺れはアプリ全体にかかるので、モンビーを開いている間は掛けない。
           裏でバトルが進んでいるだけなのに、曲えらびや演奏の画面まで揺れてしまう
           (2026-09-06・ユーザー指摘「演出が残ってた（画面が揺れるなど）」) */}
-      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
+      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* HOME: 背景・将来のマスモン・施設操作・情報UIの順に重ねる */}
         {gameState==='HOME'&&(
@@ -14263,6 +14274,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onChangeUpdateNoticeStyle={setUpdateNoticeStyle}
             battleScreenStyle={battleScreenStyle}
             onChangeBattleScreenStyle={setBattleScreenStyle}
+            battleFxSettings={battleFxSettings}
+            onChangeBattleFxSetting={setBattleFxSetting}
           />
         )}
 
@@ -16570,7 +16583,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <BattleScreen
             applyTurnDamageReduction={applyTurnDamageReduction} attackAnim={attackAnim} autoBattle={autoBattle}
             autoBattleRef={autoBattleRef} autoRepeat={autoRepeat} battleIntimidate={battleIntimidate}
-            battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'} battleScreenStyle={battleScreenStyle}
+            battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'} battleScreenStyle={battleScreenStyle} battleFxSettings={battleFxSettings}
             battleSoulMasus={battleSoulMasus} battleSpeed={battleSpeed} battleTutorial={battleTutorial}
             battleTutorialAllowsEmergency={battleTutorialAllowsEmergency}
             battleTutorialCardAllowed={battleTutorialCardAllowed} battleTutorialCardKind={battleTutorialCardKind}

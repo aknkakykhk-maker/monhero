@@ -19,32 +19,69 @@
 //   (横画面で「左＝見出し・助手 / 右＝メニュー」に組み替わるのも、この形が条件)
 // ・メニューの1行は menuClass ひとつに寄せた。高さ(64px)・角丸・枠線・押した手応えを
 //   ここでだけ決める。「ゲームを更新」だけ余白と枠色がずれていたのも同じ型に入れた
-function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle }) {
+function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting }) {
   const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
+  // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
+  // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
+  const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  if (battleSettingsOpen) {
+    return (
+      <div data-mh-screen data-battle-settings-page className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="バトル設定" accent="text-cyan-200" onBack={() => setBattleSettingsOpen(false)} backLabel="設定へ戻る"/>
+        <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`}>
+          {/* バトル設定(2026-09-24 ユーザー指示「バトル設定を作って。タクティクスの旧画面とかあるし何項目か」)。
+              バトルの見た目に関わる設定をここへまとめる。項目と文言は BATTLE_FX_SETTING_ITEMS が正本 */}
+          <section data-battle-settings className={`${SCREEN_PANEL_CLASS} w-full text-left space-y-3`}>
+            <div data-battle-screen-setting>
+              <b className="block text-[13px] font-black text-slate-200">タクティクスバトル画面</b>
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {BATTLE_SCREEN_STYLE_LABELS.map(option => (
+                  <button key={option.id} type="button" data-battle-screen-style={option.id}
+                    aria-pressed={battleScreenStyle === option.id}
+                    onClick={() => onChangeBattleScreenStyle(option.id)}
+                    className={`flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                    <span className="block">{option.label}</span>
+                    <small className="mt-0.5 block text-[9px] font-bold opacity-80">{option.note}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {BATTLE_FX_SETTING_ITEMS.map(item => {
+              const current = normalizeBattleFxSettings(battleFxSettings)[item.key];
+              return (
+                <div key={item.key} data-battle-fx-setting={item.key} className="border-t border-white/10 pt-3">
+                  <b className="block text-[13px] font-black text-slate-200">{item.title}</b>
+                  <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">{item.desc}</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {item.options.map(option => (
+                      <button key={option.id} type="button" data-battle-fx-option={option.id}
+                        aria-pressed={current === option.id}
+                        onClick={() => onChangeBattleFxSetting(item.key, option.id)}
+                        className={`flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${current === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                        <span className="block">{option.label}</span>
+                        <small className="mt-0.5 block text-[10px] font-bold opacity-80">{option.note}</small>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        </div>
+      </div>
+    );
+  }
   return (
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="設定" accent="text-slate-200" onBack={onBack} backLabel="HOMEへ戻る"/>
       <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="settings"/></div>
       <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`}>
+        <button type="button" data-open-battle-settings onClick={() => setBattleSettingsOpen(true)} className={menuClass}>バトル設定</button>
         <button type="button" onClick={onOpenAudioSettings} className={menuClass}>音量設定</button>
         <button type="button" onClick={onOpenBgmArrangement} className={menuClass}>BGMアレンジ</button>
         <button type="button" onClick={onOpenBackup} className={menuClass}>データ引き継ぎ</button>
         <button type="button" onClick={onOpenHelp} className={menuClass}>ヘルプ</button>
-        <div data-battle-screen-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
-          <b className="block text-[13px] font-black text-slate-200">タクティクスバトル画面</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。</p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {BATTLE_SCREEN_STYLE_LABELS.map(option => (
-              <button key={option.id} type="button" data-battle-screen-style={option.id}
-                aria-pressed={battleScreenStyle === option.id}
-                onClick={() => onChangeBattleScreenStyle(option.id)}
-                className={`flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
-                <span className="block">{option.label}</span>
-                <small className="mt-0.5 block text-[9px] font-bold opacity-80">{option.note}</small>
-              </button>
-            ))}
-          </div>
-        </div>
         <button type="button" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} className={`${menuClass} flex-col disabled:opacity-40`}><span className="block text-cyan-200">ゲームを更新</span><span className="mt-1 block text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button>
         {/* 新しいバージョンのお知らせ(画面へ出るバナー)の出し方。
             2026-09-12・ユーザー依頼「更新バナーのオンオフをゲーム上の設定で出来るようにしたい」。

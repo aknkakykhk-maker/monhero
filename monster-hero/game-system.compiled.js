@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a8e4d435c4356630
+// source-sha256: 18f7903282d1f0d3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 024f4f97614e65d6
+// generated-sha256: 669ff9c50553652b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -164,6 +164,45 @@ const BATTLE_SCREEN_STYLE_LABELS = Object.freeze([{
   label: 'タクティクス新',
   note: '2×2の新しい表示'
 }]);
+// バトルの見た目の設定(2026-09-24 ユーザー指示「バトル設定を作って。タクティクスの旧画面とかあるし何項目か」)。
+// 見た目だけに効き、戦闘の計算・進行・ランキングには触れない。保存は新しいキー1つに項目をまとめる。
+// ★読むときは必ず normalizeBattleFxSettings を通す。項目を足しても、足す前に保存した人は既定値で補われる
+const BATTLE_FX_SETTINGS_KEY = 'mh_battle_fx_v1';
+const normalizeBattleFxSettings = value => {
+  const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    idleMotion: v.idleMotion === 'OFF' ? 'OFF' : 'ON',
+    shake: v.shake === 'OFF' ? 'OFF' : 'ON'
+  };
+};
+// 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
+const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
+  key: 'idleMotion',
+  title: '待機中の動き',
+  desc: '待っているあいだのモンスターの動き（ミーアの羽ばたきなど）と、タクティクス新画面の枠の飾り・敵の待機の動き、WAVEのあとの画面の飾りの動きです。攻撃の演出はどちらでも出ます。',
+  options: [{
+    id: 'ON',
+    label: '動かす',
+    note: 'いつもの見た目'
+  }, {
+    id: 'OFF',
+    label: '止める',
+    note: '画面が軽くなる'
+  }]
+}, {
+  key: 'shake',
+  title: '画面の揺れ',
+  desc: '会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
+  options: [{
+    id: 'ON',
+    label: '揺らす',
+    note: 'いつもの見た目'
+  }, {
+    id: 'OFF',
+    label: '揺らさない',
+    note: '酔いやすい人向け'
+  }]
+}]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   id: 'FULL',
   label: 'ふつう',
@@ -177,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 16:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 16:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5588,6 +5627,13 @@ const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '�
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
+// 演奏中に1秒あたり何回描くか(2026-09-24・ユーザーと相談して決めた)。
+// POWER_SAVE … 120Hz以上の画面では1回おきに描き、毎秒60回ほどに抑える。発熱と電池を抑える。
+//   90Hzの画面は抑えない(60へ落とすと 11ms/22ms が交互に並び、かえってガタついて見える)。
+// DEVICE     … 画面の速さに合わせてそのまま描く(これまでの動き)。
+// ★判定は指が触れた時刻と曲の時刻で決めているので、どちらでも判定の正確さは変わらない
+const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
+const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -5654,7 +5700,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // 演奏中は通知を出さない(2026-09-05・ユーザー相談)。
   // ブラウザから通知そのものは止められないので、全画面と画面ロック防止でできる範囲だけ行う。
   // 既定はOFF。勝手に全画面へ入ると「戻れない」と感じる人がいるため
-  quietDuringPlay: false
+  quietDuringPlay: false,
+  // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定(省電力)で補われる
+  frameRateMode: 'POWER_SAVE'
 });
 const rhythmFiniteInRange = (value, min, max, fallback) => {
   const number = Number(value);
@@ -5701,7 +5749,8 @@ const normalizeRhythmSettings = value => {
     sideMonsterMotion: RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion) ? source.sideMonsterMotion : DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight: bool('sideMonsterAbilityHighlight'),
     songPreviewEnabled: bool('songPreviewEnabled'),
-    quietDuringPlay: bool('quietDuringPlay')
+    quietDuringPlay: bool('quietDuringPlay'),
+    frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -18447,7 +18496,7 @@ const WaterBurstMotion = ({
   }
 }))));
 // ミーア専用の歌攻撃演出。
-// 距離枠は動かさず、本体だけが跳ねて体をひねり、敵のほうへ身を乗り出し、マイクスタンドの前で歌う。
+// 距離枠は動かさず、本体はその場で跳ねて体を揺らし、マイクスタンドの前で歌う(敵へは向かわない)。
 // 音符は5つ、左右に揺れながら敵の位置(--atk-dx/dy)まで飛び、敵の向きへ音の波を3つ走らせる。
 // x は飛ぶ途中の左右の揺れ、y は途中でふくらむ高さ。追加画像・追加音源は使わず、攻撃中だけDOMへ出る
 // 固定数のCSS要素で描く(常時アニメーションにはしない)。
@@ -23395,7 +23444,9 @@ const RhythmOptions = ({
     className: head
   }, "\u25C6 \u30B7\u30B9\u30C6\u30E0\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
     className: wide ? grid : `mt-3 ${grid}`
-  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。', {
+  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
+    full: true
+  }), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「省電力」です。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
   }), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
@@ -25568,11 +25619,32 @@ const RhythmTapTest = ({
   };
   const scheduleTick = useCallback(() => {
     stopFrame();
+    /* 省電力(settings.frameRateMode='POWER_SAVE')のときは、120Hz以上の画面で1回おきに描く。
+       画面の速さはフレームの間隔をならして測る(はじめは60Hzとみなし、20フレームほどで落ち着く)。
+       ならした間隔が10ms未満(=100Hzより速い)ときだけ、前に描いてから12.5ms経っていないフレームを飛ばす。
+       120Hzならちょうど1回おき(毎秒60回)、144Hzでも1回おき(毎秒72回)で、間隔は乱れない。
+       90Hzは抑えない(60へ落とすと間隔が 11ms/22ms と交互になり、かえってガタついて見える)。
+       ★飛ばすのは描くことだけ。判定は指の入力のたびに曲の時刻で決めているので変わらない。
+         取り逃しのMISSや長押しの終わりも、次に描くフレーム(8ms後)でいつもどおり数える */
+    const powerSave = settings.frameRateMode !== 'DEVICE';
+    let prevFrameMs = 0,
+      avgFrameMs = 1000 / 60,
+      lastDrawnMs = 0;
     const tick = frameNowMs => {
       RHYTHM_PERF.frame(frameNowMs);
       RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
+      if (powerSave) {
+        const gap = prevFrameMs ? frameNowMs - prevFrameMs : 0;
+        prevFrameMs = frameNowMs;
+        if (gap > 0 && gap < 50) avgFrameMs = avgFrameMs * .9 + gap * .1;
+        if (avgFrameMs < 10 && lastDrawnMs && frameNowMs - lastDrawnMs < 12.5) {
+          frameRef.current = requestAnimationFrame(tick);
+          return;
+        }
+        lastDrawnMs = frameNowMs;
+      }
       const perfTickStart = RHYTHM_PERF.enabled ? performance.now() : 0;
       const songTimeMs = run.audio.songTimeMs();
       RHYTHM_PERF.songTime(songTimeMs);
@@ -25589,6 +25661,7 @@ const RhythmTapTest = ({
         nowMs: frameNowMs,
         effect: settings.effectAmount,
         lightweight: settings.lightweightMode,
+        maxDpr: settings.effectAmount === 'MINIMAL' ? 2 : undefined,
         sizeScale: settings.noteSize / 100
       });
       // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
@@ -25930,7 +26003,7 @@ const RhythmTapTest = ({
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
-  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial, updateJudgmentBand]);
+  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.frameRateMode, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial, updateJudgmentBand]);
   const disposeRun = useCallback(() => {
     stopFrame();
     clearJudgmentTimer();
@@ -26101,7 +26174,8 @@ const RhythmTapTest = ({
          違う設定で焼くとそのまま曲の終わりまで使われてしまう(2026-09-12) */
     if (canvasNotes) RHYTHM_CANVAS_RENDERER.warmSprites({
       effect: settings.effectAmount,
-      lightweight: settings.lightweightMode
+      lightweight: settings.lightweightMode,
+      maxDpr: settings.effectAmount === 'MINIMAL' ? 2 : undefined
     });
     /* 両サイドのマスモンが跳ねる速さを曲の1拍へ合わせる。   プレイ開始時に一度書くだけで、あとはCSSアニメーションが回すので毎フレームのJSは走らない */
     const sideBeatMs = rhythmSideMonsterBeatMs(song.bgmTrackId);
@@ -29332,9 +29406,74 @@ function SettingsScreen({
   updateNoticeStyle,
   onChangeUpdateNoticeStyle,
   battleScreenStyle,
-  onChangeBattleScreenStyle
+  onChangeBattleScreenStyle,
+  battleFxSettings,
+  onChangeBattleFxSetting
 }) {
   const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
+  // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
+  // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
+  const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  if (battleSettingsOpen) {
+    return /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
+      "data-battle-settings-page": true,
+      className: SCREEN_SHELL_CLASS
+    }, /*#__PURE__*/React.createElement(ScreenHead, {
+      title: "\u30D0\u30C8\u30EB\u8A2D\u5B9A",
+      accent: "text-cyan-200",
+      onBack: () => setBattleSettingsOpen(false),
+      backLabel: "\u8A2D\u5B9A\u3078\u623B\u308B"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`
+    }, /*#__PURE__*/React.createElement("section", {
+      "data-battle-settings": true,
+      className: `${SCREEN_PANEL_CLASS} w-full text-left space-y-3`
+    }, /*#__PURE__*/React.createElement("div", {
+      "data-battle-screen-setting": true
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block text-[13px] font-black text-slate-200"
+    }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u753B\u9762"), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+    }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u306E\u8868\u793A\u3092\u9078\u3073\u307E\u3059\u3002\u901A\u5E38\u306E\u30AF\u30E9\u30B7\u30C3\u30AF\u30D0\u30C8\u30EB\u306B\u306F\u5F71\u97FF\u3057\u307E\u305B\u3093\u3002\u6226\u95D8\u30EB\u30FC\u30EB\u306F\u65E7\uFF0F\u65B0\u3067\u5171\u901A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-2"
+    }, BATTLE_SCREEN_STYLE_LABELS.map(option => /*#__PURE__*/React.createElement("button", {
+      key: option.id,
+      type: "button",
+      "data-battle-screen-style": option.id,
+      "aria-pressed": battleScreenStyle === option.id,
+      onClick: () => onChangeBattleScreenStyle(option.id),
+      className: `flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, option.label), /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold opacity-80"
+    }, option.note))))), BATTLE_FX_SETTING_ITEMS.map(item => {
+      const current = normalizeBattleFxSettings(battleFxSettings)[item.key];
+      return /*#__PURE__*/React.createElement("div", {
+        key: item.key,
+        "data-battle-fx-setting": item.key,
+        className: "border-t border-white/10 pt-3"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-[13px] font-black text-slate-200"
+      }, item.title), /*#__PURE__*/React.createElement("p", {
+        className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+      }, item.desc), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 grid grid-cols-2 gap-2"
+      }, item.options.map(option => /*#__PURE__*/React.createElement("button", {
+        key: option.id,
+        type: "button",
+        "data-battle-fx-option": option.id,
+        "aria-pressed": current === option.id,
+        onClick: () => onChangeBattleFxSetting(item.key, option.id),
+        className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${current === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block"
+      }, option.label), /*#__PURE__*/React.createElement("small", {
+        className: "mt-0.5 block text-[10px] font-bold opacity-80"
+      }, option.note)))));
+    }))));
+  }
   return /*#__PURE__*/React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS
@@ -29351,6 +29490,11 @@ function SettingsScreen({
     className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
+    "data-open-battle-settings": true,
+    onClick: () => setBattleSettingsOpen(true),
+    className: menuClass
+  }, "\u30D0\u30C8\u30EB\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
     onClick: onOpenAudioSettings,
     className: menuClass
   }, "\u97F3\u91CF\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
@@ -29365,27 +29509,7 @@ function SettingsScreen({
     type: "button",
     onClick: onOpenHelp,
     className: menuClass
-  }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("div", {
-    "data-battle-screen-setting": true,
-    className: `${SCREEN_PANEL_CLASS} w-full text-left`
-  }, /*#__PURE__*/React.createElement("b", {
-    className: "block text-[13px] font-black text-slate-200"
-  }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u753B\u9762"), /*#__PURE__*/React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u306E\u8868\u793A\u3092\u9078\u3073\u307E\u3059\u3002\u901A\u5E38\u306E\u30AF\u30E9\u30B7\u30C3\u30AF\u30D0\u30C8\u30EB\u306B\u306F\u5F71\u97FF\u3057\u307E\u305B\u3093\u3002\u6226\u95D8\u30EB\u30FC\u30EB\u306F\u65E7\uFF0F\u65B0\u3067\u5171\u901A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 grid grid-cols-2 gap-2"
-  }, BATTLE_SCREEN_STYLE_LABELS.map(option => /*#__PURE__*/React.createElement("button", {
-    key: option.id,
-    type: "button",
-    "data-battle-screen-style": option.id,
-    "aria-pressed": battleScreenStyle === option.id,
-    onClick: () => onChangeBattleScreenStyle(option.id),
-    className: `flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "block"
-  }, option.label), /*#__PURE__*/React.createElement("small", {
-    className: "mt-0.5 block text-[9px] font-bold opacity-80"
-  }, option.note))))), /*#__PURE__*/React.createElement("button", {
+  }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onOpenGameUpdate,
     disabled: gameUpdateDisabled,
@@ -39464,6 +39588,7 @@ function BattleScreen({
   autoBattle,
   autoBattleRef,
   autoRepeat,
+  battleFxSettings,
   battleIntimidate,
   battleScenarioRef,
   battleScreenActive,
@@ -39623,6 +39748,10 @@ function BattleScreen({
   // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
+  // 設定の「待機中の動き：止める」と「画面の揺れ：揺らさない」(見た目だけ。攻撃の演出と情報は消さない)
+  const battleFx = normalizeBattleFxSettings(battleFxSettings);
+  const idleMotionOff = battleFx.idleMotion === 'OFF';
+  const shakeOff = battleFx.shake === 'OFF';
   // 敵の攻撃(ためるを含む)を絵だけで動かす場面。移動とムーは今までどおり丸枠ごと
   const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
   // 敵ごとの動き方(2026-09-24 ユーザー指示「敵のグラフィックを攻撃時にアニメーション化」「待機時間も動いてるように」
@@ -39787,7 +39916,7 @@ function BattleScreen({
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
     "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off',
-    "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView ? 'calm' : 'rich' : undefined
+    "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined
   }, /*#__PURE__*/React.createElement("div", {
     "data-battle-stage-bg": true,
     "aria-hidden": "true",
@@ -40466,7 +40595,13 @@ function BattleScreen({
         top: '3dvh'
       } : {})
     }
-  }, !ecoBattleView && /*#__PURE__*/React.createElement("div", {
+  }, enemyMotion === 'kawazumo' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true",
+    "data-kz-palm": "l"
+  }, "\u270B"), /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true",
+    "data-kz-palm": "r"
+  }, "\u270B")), !ecoBattleView && /*#__PURE__*/React.createElement("div", {
     "aria-hidden": "true",
     "data-enemy-shadow": true,
     className: "pointer-events-none absolute left-1/2 z-0 -translate-x-1/2",
@@ -41314,7 +41449,7 @@ function BattleScreen({
     //   (2026-09-22 ユーザー指示「攻撃されたときに誰が攻撃されたかが分かりづらい」)
     const slotHitKind = kindOfTacticsSlotFx(tacticsSlotFx && tacticsSlotFx[i]);
     // 揺れは省エネ表示では出さない(光と輪だけでも誰かは分かる)
-    const slotHitShake = slotHitKind && !ecoBattleView ? {
+    const slotHitShake = slotHitKind && !ecoBattleView && !shakeOff ? {
       animation: 'tacticsHitShake 420ms ease-in-out'
     } : null;
     // ★「その子だけに効く」バフは、かかっている子の枠へ印を出す(タクティクス)。
@@ -41447,7 +41582,7 @@ function BattleScreen({
     //   ミーア・水・聖光の攻撃演出は入れ物いっぱいに重ねる絶対配置なので、大きさを持たないと
     //   入れ物が0×0につぶれ、本体の絵が幅数pxまで押しつぶされてマイクも見えなくなっていた
     // ミーアだけ待機中も翼を羽ばたかせる(試作。MiaIdleArt)。軽量表示では今までどおり1枚の絵
-    const slotArt = img => s?.id === 'Mia' && !ecoBattleView ? /*#__PURE__*/React.createElement(MiaIdleArt, {
+    const slotArt = img => s?.id === 'Mia' && !ecoBattleView && !idleMotionOff ? /*#__PURE__*/React.createElement(MiaIdleArt, {
       image: img
     }) : img;
     const slotArtBox = {
@@ -45105,7 +45240,8 @@ function MonsterHeroGame() {
   const ultraEcoSession = ecoMode === 'ultra' && autoRepeat === true;
   const ultraBattleView = gameState === 'BATTLE' && ultraEcoSession;
   const ecoBattleView = liteBattleView || ultraBattleView;
-  // 強化フェーズの画面(WAVEのあと)の飾りの動きも、省エネのときは止める(data-phase-look。70-bootstrap.jsx の mh-ph-*)
+  // 強化フェーズの画面(WAVEのあと)の飾りの動きも、省エネのときと、バトル設定の「待機中の動き：止める」のときは止める
+  // (data-phase-look。70-bootstrap.jsx の mh-ph-*。タクティクス新画面の枠の飾りと同じ扱い)
   // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
   const stopAutoBattle = () => {
     autoBattleRef.current = false;
@@ -46243,6 +46379,18 @@ function MonsterHeroGame() {
     const value = normalizeBattleScreenStyle(next);
     setBattleScreenStyleState(value);
     storeSet(BATTLE_SCREEN_STYLE_KEY, value, false);
+  };
+  // バトル設定(待機中の動き・画面の揺れ)。1項目ずつ変えても、ほかの項目はそのまま残す
+  const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
+  const setBattleFxSetting = (key, value) => {
+    setBattleFxSettingsState(prev => {
+      const next = normalizeBattleFxSettings({
+        ...prev,
+        [key]: value
+      });
+      storeSet(BATTLE_FX_SETTINGS_KEY, next, false);
+      return next;
+    });
   };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
@@ -50182,6 +50330,7 @@ function MonsterHeroGame() {
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
+      setBattleFxSettingsState(normalizeBattleFxSettings(await storeGet(BATTLE_FX_SETTINGS_KEY, null, false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -63185,7 +63334,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       "data-mh-view-rotation": forcedRotationStyle ? 'true' : 'false',
       "data-mh-portrait-layout": portraitOnlyScreen ? 'true' : 'false',
-      "data-phase-look": ecoMode === 'lite' || ultraEcoSession ? 'calm' : 'rich',
+      "data-phase-look": ecoMode === 'lite' || ultraEcoSession || normalizeBattleFxSettings(battleFxSettings).idleMotion === 'OFF' ? 'calm' : 'rich',
       onPointerDown: rippleOnPointerDown,
       onPointerMove: rippleOnPointerMove,
       onPointerUp: rippleOnPointerEnd,
@@ -63283,7 +63432,7 @@ function MonsterHeroGame() {
       "aria-hidden": "true"
     }), /*#__PURE__*/React.createElement("div", {
       className: "relative z-10 h-full flex flex-col",
-      style: screenShake && !ecoBattleView && !rhythmScreenOpen ? {
+      style: screenShake && !ecoBattleView && !rhythmScreenOpen && battleFxSettings.shake !== 'OFF' ? {
         animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
       } : undefined
     }, gameState === 'HOME' && /*#__PURE__*/React.createElement(HomeScreen, {
@@ -65925,7 +66074,9 @@ function MonsterHeroGame() {
       updateNoticeStyle: updateNoticeStyle,
       onChangeUpdateNoticeStyle: setUpdateNoticeStyle,
       battleScreenStyle: battleScreenStyle,
-      onChangeBattleScreenStyle: setBattleScreenStyle
+      onChangeBattleScreenStyle: setBattleScreenStyle,
+      battleFxSettings: battleFxSettings,
+      onChangeBattleFxSetting: setBattleFxSetting
     }), gameState === 'MASU_PATTERN_DEBUG' && (() => {
       // 所持しているマスモンに加えて、所持していない種も表示用の一時データで並べる
       // (2026-09-17・ユーザー指摘「今は見れないものが多い」)。模様は元から保存しないので、
@@ -71036,6 +71187,7 @@ function MonsterHeroGame() {
       battleScenarioRef: battleScenarioRef,
       battleScreenActive: gameState === 'BATTLE',
       battleScreenStyle: battleScreenStyle,
+      battleFxSettings: battleFxSettings,
       battleSoulMasus: battleSoulMasus,
       battleSpeed: battleSpeed,
       battleTutorial: battleTutorial,
@@ -74405,29 +74557,30 @@ const createAnimationStyle = () => {
       55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(236,72,153,.92)) drop-shadow(0 10px 20px rgba(168,85,247,.6)); }
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(217,70,239,.82)); }
     }
-    /* 歌う本体。しゃがんで跳ね、体をひねってから敵のほうへ身を乗り出し、
-       (左右反転で回すと幅が0を通って一瞬消えて見えるので使わない。2026-09-24 ユーザー指摘)
-       敵の向きへ体を傾けて拍を取りながら歌い、元位置へ戻る */
+    /* 歌う本体。敵へは向かわず、その場で歌う(2026-09-24 ユーザー指摘「音符を飛ばすときにミーアも一緒に
+       アタック気味になっている。意図と違う」)。攻撃するのは音符と音の波だけで、本人は動かない。
+       しゃがんで小さく跳ね、左右へ体を揺らして拍を取り、元の位置へ戻る。
+       (左右反転で回すと幅が0を通って一瞬消えて見えるので使わない) */
     @keyframes miaSongSing {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(244,114,182,.5)); }
-      9% { transform:translate3d(0,6px,0) scale(1.1,.86) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.8)); }
-      20% { transform:translate3d(calc(var(--atk-dx) * .05),calc(var(--atk-dy) * .05 - 18px),0) scale(1.1) rotate(-14deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
-      32% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 6px),0) scale(1.12) rotate(calc(var(--atk-rot) * .35)); filter:drop-shadow(0 0 22px rgba(236,72,153,.95)); }
-      46% { transform:translate3d(calc(var(--atk-dx) * .12),calc(var(--atk-dy) * .12 - 13px),0) scale(1.17) rotate(calc(var(--atk-rot) * .35 + 5deg)); filter:drop-shadow(0 0 26px rgba(255,255,255,.98)); }
-      60% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 4px),0) scale(1.1) rotate(calc(var(--atk-rot) * .35 - 5deg)); filter:drop-shadow(0 0 22px rgba(192,132,252,.95)); }
-      74% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 11px),0) scale(1.14) rotate(calc(var(--atk-rot) * .3 + 3deg)); filter:drop-shadow(0 0 24px rgba(244,114,182,.92)); }
-      90% { transform:translate3d(0,-4px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
+      9% { transform:translate3d(0,5px,0) scale(1.06,.9) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.8)); }
+      20% { transform:translate3d(0,-10px,0) scale(1.05) rotate(-7deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
+      34% { transform:translate3d(-4px,-3px,0) scale(1.04) rotate(-5deg); filter:drop-shadow(0 0 22px rgba(236,72,153,.95)); }
+      48% { transform:translate3d(4px,-8px,0) scale(1.06) rotate(5deg); filter:drop-shadow(0 0 26px rgba(255,255,255,.98)); }
+      62% { transform:translate3d(-4px,-3px,0) scale(1.04) rotate(-5deg); filter:drop-shadow(0 0 22px rgba(192,132,252,.95)); }
+      76% { transform:translate3d(4px,-7px,0) scale(1.05) rotate(4deg); filter:drop-shadow(0 0 24px rgba(244,114,182,.92)); }
+      90% { transform:translate3d(0,-3px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
-    /* 固有技のタメ明け。沈んだ位置から高く跳んでひねり、通常より大きく前へ出て歌う */
+    /* 固有技のタメ明け。沈んだ位置からその場で高く跳ね、通常より大きく体を揺らして歌う(敵へは向かわない) */
     @keyframes miaSongSingLunge {
       0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.95)); }
-      18% { transform:translate3d(calc(var(--atk-dx) * .07),calc(var(--atk-dy) * .07 - 26px),0) scale(1.18) rotate(-16deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
-      30% { transform:translate3d(calc(var(--atk-dx) * .14),calc(var(--atk-dy) * .14 - 8px),0) scale(1.18) rotate(calc(var(--atk-rot) * .4)); filter:drop-shadow(0 0 28px rgba(236,72,153,.98)); }
-      46% { transform:translate3d(calc(var(--atk-dx) * .16),calc(var(--atk-dy) * .16 - 18px),0) scale(1.24) rotate(calc(var(--atk-rot) * .4 + 6deg)); filter:drop-shadow(0 0 34px rgba(255,255,255,1)); }
-      62% { transform:translate3d(calc(var(--atk-dx) * .14),calc(var(--atk-dy) * .14 - 6px),0) scale(1.16) rotate(calc(var(--atk-rot) * .4 - 6deg)); filter:drop-shadow(0 0 28px rgba(192,132,252,.98)); }
-      78% { transform:translate3d(calc(var(--atk-dx) * .12),calc(var(--atk-dy) * .12 - 15px),0) scale(1.18) rotate(calc(var(--atk-rot) * .3 + 4deg)); filter:drop-shadow(0 0 26px rgba(244,114,182,.94)); }
-      92% { transform:translate3d(0,-5px,0) scale(1.03) rotate(0deg); filter:drop-shadow(0 0 13px rgba(244,114,182,.62)); }
+      18% { transform:translate3d(0,-16px,0) scale(1.1) rotate(-9deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
+      32% { transform:translate3d(-6px,-4px,0) scale(1.08) rotate(-7deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.98)); }
+      46% { transform:translate3d(6px,-12px,0) scale(1.1) rotate(7deg); filter:drop-shadow(0 0 34px rgba(255,255,255,1)); }
+      62% { transform:translate3d(-6px,-4px,0) scale(1.08) rotate(-6deg); filter:drop-shadow(0 0 28px rgba(192,132,252,.98)); }
+      78% { transform:translate3d(6px,-10px,0) scale(1.09) rotate(5deg); filter:drop-shadow(0 0 26px rgba(244,114,182,.94)); }
+      92% { transform:translate3d(0,-4px,0) scale(1.03) rotate(0deg); filter:drop-shadow(0 0 13px rgba(244,114,182,.62)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
     }
     /* 足元のステージ光。床に置いた光の輪を2つ、拍に合わせて広げる */
@@ -74455,7 +74608,7 @@ const createAnimationStyle = () => {
       0% { opacity:0; transform:translate3d(0,10px,0) scale(.35); }
       9% { opacity:1; transform:translate3d(0,0,0) scale(1.16); }
       16% { transform:translate3d(0,0,0) scale(.96); }
-      24%,84% { opacity:1; transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1),0) scale(1); }
+      24%,84% { opacity:1; transform:translate3d(0,0,0) scale(1); }
       100% { opacity:0; transform:translate3d(0,6px,0) scale(.82); }
     }
     /* マイク本体。ホルダーに斜めに留まった形にすると、小さくてもマイクスタンドだと分かる。
@@ -75184,7 +75337,8 @@ const createAnimationStyle = () => {
     /* カワズモー(力士のカエル): 待機は左右に重心を移しながらお腹で呼吸 / 攻撃は のけぞって溜め→踏み込んで張り手→戻る /
        ためるは 片足を上げて四股を踏む / やられは のけぞって震える */
     /* 2026-09-24 ユーザー指摘「思ってたより地味。もっと頑張って動き作れない？」で動きを大きく作り直した。
-       待機は6秒で1巡: 大きく揺れて呼吸(0〜50%) → 片足を上げて四股・土ぼこり(52〜76%) → くるっと横を向いて戻る(80〜98%) */
+       待機は6秒で1巡: 大きく揺れて呼吸(0〜50%) → 片足を上げて四股・土ぼこり(52〜76%) → 小さく跳ねて着地(80〜96%)。
+       ★左右の反転(横を向く)は入れない(2026-09-24 ユーザー指摘「反転はださいだけ」) */
     @keyframes kzIdle {
       0%, 100% { transform: translateX(0) rotate(0) scale(1, 1); }
       8% { transform: translateX(-8px) rotate(-6deg) scale(1.07, .94); }
@@ -75199,10 +75353,11 @@ const createAnimationStyle = () => {
       66% { transform: translate(0, 4px) rotate(0) scale(1.24, .8); }
       69% { transform: translate(0, -3px) rotate(0) scale(.95, 1.07); }
       73% { transform: translate(0, 0) rotate(0) scale(1.04, .97); }
-      78% { transform: scale(1, 1); }
-      82% { transform: scale(-1, 1) rotate(4deg); }
-      92% { transform: scale(-1, 1) rotate(-3deg); }
-      97% { transform: scale(1, 1); }
+      80% { transform: translateY(2px) scale(1.08, .92); }
+      84% { transform: translateY(-10px) scale(.94, 1.08); }
+      88% { transform: translateY(2px) scale(1.1, .9); }
+      92% { transform: translateY(-4px) scale(.97, 1.04); }
+      96% { transform: translateY(0) scale(1.02, .98); }
     }
     @keyframes kzShadow {
       0%, 16%, 32%, 48%, 78%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
@@ -75210,6 +75365,8 @@ const createAnimationStyle = () => {
       24% { transform: translateX(calc(-50% + 8px)) scaleX(1.12); }
       60%, 63% { transform: translateX(calc(-50% - 6px)) scaleX(.8); opacity: .7; }
       66% { transform: translateX(-50%) scaleX(1.35); opacity: 1; }
+      84% { transform: translateX(-50%) scaleX(.82); opacity: .75; }
+      88% { transform: translateX(-50%) scaleX(1.18); opacity: 1; }
     }
     /* 四股の土ぼこり(影の左右から吹き出して消える)。待機の66%と、ためるの踏み込みに合わせる */
     @keyframes kzDustIdle {
@@ -75222,13 +75379,27 @@ const createAnimationStyle = () => {
       60% { opacity: .95; transform: translateX(0) scale(.7); }
       90%, 100% { opacity: 0; transform: translateX(var(--kz-dx)) scale(1.6); }
     }
+    /* 張り手: 腰を落として右肩を引く → 左へひねりながら前へ押し出す(1発目) → 右へひねり返して押し込む(2発目) → 戻る */
     @keyframes kzSlap {
       0% { transform: none; }
-      22% { transform: translateY(-6px) rotate(-12deg) scale(1.14, .84); }
-      40% { transform: translateY(28px) rotate(8deg) scale(.86, 1.22); }
-      52% { transform: translateY(88px) rotate(12deg) scale(1.32, .8); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
-      64% { transform: translateY(80px) rotate(8deg) scale(1.2, .88); filter: drop-shadow(0 0 22px rgba(220,38,38,.9)); }
+      18% { transform: translate(6px, 4px) rotate(14deg) scale(1.1, .9); }
+      36% { transform: translate(-10px, 46px) rotate(-16deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 18px rgba(239,68,68,.9)); }
+      52% { transform: translate(10px, 70px) rotate(15deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
+      66% { transform: translate(0, 60px) rotate(0) scale(1.12, .92); filter: drop-shadow(0 0 18px rgba(220,38,38,.8)); }
       100% { transform: none; filter: none; }
+    }
+    /* 手のひら: 体の横から画面の手前へ大きく突き出る。左右で半拍ずらす。緑がかった色はカエルの手に寄せるため */
+    @keyframes kzPalmL {
+      0%, 22% { opacity: 0; transform: translate(-30px, -10px) rotate(-30deg) scale(.4); }
+      34% { opacity: 1; transform: translate(-18px, 40px) rotate(-8deg) scale(1.5); }
+      44% { opacity: .9; transform: translate(-14px, 70px) rotate(-4deg) scale(2.1); }
+      54%, 100% { opacity: 0; transform: translate(-12px, 84px) rotate(0) scale(2.4); }
+    }
+    @keyframes kzPalmR {
+      0%, 38% { opacity: 0; transform: translate(30px, -6px) rotate(30deg) scale(.4) scaleX(-1); }
+      50% { opacity: 1; transform: translate(18px, 50px) rotate(8deg) scale(1.6) scaleX(-1); }
+      60% { opacity: .9; transform: translate(14px, 80px) rotate(4deg) scale(2.2) scaleX(-1); }
+      70%, 100% { opacity: 0; transform: translate(12px, 92px) rotate(0) scale(2.5) scaleX(-1); }
     }
     @keyframes kzImpact {
       0%, 48% { opacity: 0; transform: translateX(-50%) scale(.2); }
@@ -75276,6 +75447,15 @@ const createAnimationStyle = () => {
       background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(248,113,113,.8) 35%, rgba(239,68,68,.35) 65%, transparent); }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"]::after { animation: kzImpact 450ms ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap 450ms ease-in forwards; }
+    [data-tactics-look] [data-kz-palm] { font-style: normal; position: absolute; top: 42%; left: 50%; margin-left: -18px; width: 36px; text-align: center; font-size: 30px; line-height: 1;
+      opacity: 0; pointer-events: none; z-index: 10000;
+      filter: hue-rotate(20deg) saturate(.95) brightness(.95) drop-shadow(0 0 8px rgba(239,68,68,.85)) drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
+    /* 勢いの線(手のひらの後ろに伸びる白い筋) */
+    [data-tactics-look] [data-kz-palm]::after { content: ''; position: absolute; left: 50%; top: -60%; width: 60%; height: 90%; margin-left: -30%; pointer-events: none;
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,.8) 0 2px, transparent 2px 6px);
+      -webkit-mask: linear-gradient(0deg, #000, transparent); mask: linear-gradient(0deg, #000, transparent); }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="l"] { animation: kzPalmL 450ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="r"] { animation: kzPalmR 450ms ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp 1100ms ease-in-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-hurt] > span { animation: kzHurt 520ms ease-out forwards; }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
