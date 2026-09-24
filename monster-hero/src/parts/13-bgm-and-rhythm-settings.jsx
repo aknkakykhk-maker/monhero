@@ -294,6 +294,12 @@ const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE','省電力'],['DEV
 // ★軽量モードのときは、ここの値に関わらず SIMPLE として扱う(rhythmStageLevel)
 const RHYTHM_STAGE_EFFECTS = Object.freeze(['VIVID','CALM','SIMPLE']);
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
+// ===== 他の音ゲーから取り入れた表示(2026-09-24・ユーザー指示「他の音ゲーを学習して取り入れるとこを取り入れて / 設定でいじれるように」) =====
+// レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を何%隠すか。0で出さない
+const RHYTHM_LANE_COVER_MIN = 0, RHYTHM_LANE_COVER_MAX = 60, RHYTHM_LANE_COVER_STEP = 5;
+// ずれの見せ方(osu!・Arcaea)。STANDARD=FAST/SLOWだけ / MS=ずれの数字も / METER=数字とずれメーター
+const RHYTHM_TIMING_DISPLAYS = Object.freeze(['STANDARD','MS','METER']);
+const RHYTHM_TIMING_DISPLAY_LABELS = Object.freeze([['STANDARD','FAST/SLOW'],['MS','数字も'],['METER','メーターも']]);
 const rhythmStageLevel = settings => settings&&settings.lightweightMode?'SIMPLE'
   :(RHYTHM_STAGE_EFFECTS.includes(settings&&settings.stageEffect)?settings.stageEffect:'VIVID');
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
@@ -340,6 +346,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   frameRateMode:'POWER_SAVE',
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定(派手)で補われる
   stageEffect:'VIVID',
+  // 他の音ゲーから取り入れた表示(2026-09-24)。どれも既存の保存値には無いので、読み込み時は既定で補われる
+  laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
 });
 const rhythmFiniteInRange = (value,min,max,fallback) => {
   const number=Number(value); return Number.isFinite(number)&&number>=min&&number<=max?number:fallback;
@@ -386,6 +394,9 @@ const normalizeRhythmSettings = value => {
     quietDuringPlay:bool('quietDuringPlay'),
     frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
+    laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
+    timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
+    comboStatusDisplay:bool('comboStatusDisplay'), paceDisplay:bool('paceDisplay'),
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});

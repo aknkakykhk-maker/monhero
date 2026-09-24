@@ -1886,7 +1886,7 @@ const buildChart=(difficulty,options={})=>{
   // 【難易度】EXPERTで少し、MASTERで中心に。HARD以下には置かない
   // （HARD以下は tapDuringHold が無く、押さえながら別を叩く形そのものを使わないため）。
   // 動かすのはレーンだけで、音の位置（grid）は動かさない。
-  let crossCount=0;
+  let crossCount=0,crossHoldShifted=0;
   if(P.crossPerMinute>0&&P.tapDuringHold){
     const crossMax=countOf(P.crossPerMinute);
     // 経路が動くSLIDEは、その瞬間に指がどこにあるかが変わるので相手にしない。
@@ -1924,31 +1924,57 @@ const buildChart=(difficulty,options={})=>{
       if(!entry)continue;
       const note=notes[pick];
       const hold=entry.hold;
-      const holdCenter=noteTouchLane(hold);
-      // 押さえている指が画面の左寄りなら、その**さらに左**を叩かせる（右の指が越える）。
-      const toLeft=holdCenter<=(LANES-1)/2;
       // 押さえているノーツの外側は狭い。太いままでは入らないので、
       // その難易度で使える細さまで落としてよい（交差は狙って取る一発なので、細いほうが理にかなう）。
       const widthOptions=[...new Set([Number(note.subLaneWidth)||2,...P.widths])]
         .filter(value=>value<=(Number(note.subLaneWidth)||2)).sort((a,b)=>b-a);
-      let placed=null;
-      for(const width of widthOptions){
-        const order=[];
-        if(toLeft)for(let sub=0;sub<=10-width;sub++)order.push(sub);
-        else for(let sub=10-width;sub>=0;sub--)order.push(sub);
-        for(const sub of order){
-          const candidate={subLane:sub,subLaneWidth:width};
-          // 押さえている指より外側にあること（内側では交差にならない）
-          const center=noteTouchLane(candidate);
-          if(toLeft?center>=holdCenter:center<=holdCenter)continue;
-          // 指が2本入る離れかたであること
-          if(separationRange(usableTouchSpan(candidate),usableTouchSpan(hold)).min
-            <HAND_MODEL.fingerMinGapLanes-1e-9)continue;
-          if(conflictsWith(note,candidate))continue;
-          if(!stepOkWith(note,candidate))continue;
-          placed={sub,width};break;
+      // 押さえている指の外側に、叩く指の入る場所を探す。見つからなければ null
+      const findOutside=()=>{
+        // 押さえている指が画面の左寄りなら、その**さらに左**を叩かせる（右の指が越える）。
+        const holdCenterNow=noteTouchLane(hold);
+        const toLeftNow=holdCenterNow<=(LANES-1)/2;
+        for(const width of widthOptions){
+          const order=[];
+          if(toLeftNow)for(let sub=0;sub<=10-width;sub++)order.push(sub);
+          else for(let sub=10-width;sub>=0;sub--)order.push(sub);
+          for(const sub of order){
+            const candidate={subLane:sub,subLaneWidth:width};
+            // 押さえている指より外側にあること（内側では交差にならない）
+            const center=noteTouchLane(candidate);
+            if(toLeftNow?center>=holdCenterNow:center<=holdCenterNow)continue;
+            // 指が2本入る離れかたであること
+            if(separationRange(usableTouchSpan(candidate),usableTouchSpan(hold)).min
+              <HAND_MODEL.fingerMinGapLanes-1e-9)continue;
+            if(conflictsWith(note,candidate))continue;
+            if(!stepOkWith(note,candidate))continue;
+            return {sub,width};
+          }
         }
-        if(placed)break;
+        return null;
+      };
+      let placed=findOutside();
+      // ★版2: 押さえているHOLDが画面の端に寄っていて、外側に指の入る余地が無いときは、
+      //   HOLDを内側へ1〜2レーン寄せてから試す(実測: MASTERで置けなかった候補のほとんどが
+      //   「押さえている指が端から1レーン以内で、外側に叩く指が入らない」だった。そのため
+      //   MASTERのほうがEXPERTより交差が少ない曲が12曲あった)。
+      //   寄せたHOLDも、始まりの前後で指が届くこと・押さえているあいだの別のノーツへ指が入ることを確かめる。
+      //   途中で幅や位置が変わるHOLD(holdPoints)と、ほかの形の一部になっているHOLDは動かさない。
+      if(!placed&&phraseCopy&&!hold.holdPoints&&!hold.heldPair&&!hold.doubleSlide&&!hold.monsterSlot&&!hold.sectionAccent){
+        const originalSub=Number(hold.subLane),holdWidth=Number(hold.subLaneWidth)||2;
+        const inward=noteTouchLane(hold)<=(LANES-1)/2?1:-1;
+        const holdEnd=hold.grid+(Number(hold.durationGrids)||0);
+        const holdFits=()=>!conflictsWith(hold,hold)&&stepOkWith(hold,hold)
+          &&ordered.every(other=>other===hold||other===note||other.grid<=hold.grid||other.grid>holdEnd
+            ||separationRange(usableTouchSpan(other),usableTouchSpan(hold)).min>=HAND_MODEL.fingerMinGapLanes-1e-9);
+        for(const shift of [2,4]){
+          const sub=originalSub+inward*shift;
+          if(sub<0||sub>10-holdWidth)continue;
+          hold.subLane=sub;
+          if(holdFits()){placed=findOutside();if(placed)break;}
+          hold.subLane=originalSub;
+        }
+        if(placed){hold.lane=Math.floor(hold.subLane/2);crossHoldShifted++;}
+        else hold.subLane=originalSub;
       }
       if(!placed)continue;
       note.subLane=placed.sub;
@@ -1957,7 +1983,8 @@ const buildChart=(difficulty,options={})=>{
       note.cross=true;
       crossCount++;
     }
-    notice.push(`指を交差させる置き方 ${crossCount}箇所（狙い${crossMax}箇所・置ける場所${candidates.length}箇所）`);
+    notice.push(`指を交差させる置き方 ${crossCount}箇所（狙い${crossMax}箇所・置ける場所${candidates.length}箇所`
+      +`${crossHoldShifted?`・うち押さえを内側へ寄せて置いた${crossHoldShifted}箇所`:''}）`);
   }
 
   // --- 15.5 / 15.6 のための共通の道具 ---

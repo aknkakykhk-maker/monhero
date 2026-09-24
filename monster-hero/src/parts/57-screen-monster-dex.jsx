@@ -1,4 +1,20 @@
+// 図鑑の立ち絵を動かすか(2026-09-24 ユーザー指示「そのページで動きを止めるか動かすかをワンタッチで決めれればおけ」
+// 「デフォは動く」)。バトルの「待機中の動き」とは別に、図鑑のボタンだけで決める。
+// 保存は新しいキー mh_dex_idle_motion_v1(true/false)。無い・壊れているときは動かす(true)
+const DEX_IDLE_MOTION_KEY = 'mh_dex_idle_motion_v1';
+const useDexIdleMotion = () => {
+  const [motion, setMotion] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    storeGet(DEX_IDLE_MOTION_KEY, true).then(v => { if (alive) setMotion(v !== false); });
+    return () => { alive = false; };
+  }, []);
+  const toggle = () => setMotion(prev => { const next = !prev; storeSet(DEX_IDLE_MOTION_KEY, next); return next; });
+  return [motion, toggle];
+};
+
 function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMonsterIds, getAtkSkillLevels, getUniqueSkillLevels, onMissing, onBackToDetail, onStopPreview, onPlayPreview }) {
+      const [idleMotion]=useDexIdleMotion();
       const monsters=dexMonsterList();
       const mon=monsters.find(m=>m.id===dexMonsterId)||null;
       if(!mon||!unlockedMonsterIds.includes(mon.id)){ onMissing(); return null; }
@@ -29,7 +45,7 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
               拡大の基準は足元にして、伸びるぶんはすべて上の余白へ向ける */}
           <div data-attack-preview-art className="absolute left-1/2" style={{bottom:'11%',width:'clamp(132px, 44vw, 184px)',height:'clamp(132px, 44vw, 184px)',transform:'translateX(-50%) scale(1.15)',transformOrigin:'bottom center'}}>
             {/* 待機アニメ(翼の羽ばたきなど)もバトルと同じ場面で重ねる。持たない子は今までどおり1枚の絵 */}
-            <BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {enabled:monsterIdleAllowedDuring(previewAnim), fill:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>
+            <BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>
           </div>
           <span className="absolute bottom-2 left-0 right-0 text-center text-[10px] font-bold text-slate-400">バトルと同じ演出です（ダメージや性能は変わりません）</span>
         </div>
@@ -85,6 +101,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
       </div>);}
 
 function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, getAtkSkillLevels, getUniqueSkillLevels, swipeRef, onMissing, onBackToList, onOpenAttackPreview, onSelectMonster, onSelectTab, onStopPreview }) {
+      const [idleMotion,toggleIdleMotion]=useDexIdleMotion();
       const monsters=dexMonsterList();
       const index=monsters.findIndex(m=>m.id===dexMonsterId);
       const mon=index>=0?monsters[index]:null;
@@ -153,14 +170,19 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, getA
           onTouchStart={e=>{swipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
           onTouchEnd={e=>{const from=swipeRef.current; swipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
           {unlocked
-            ? <DexMonsterIdleArt mon={mon} alt={mon.name}/>
+            ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion}/>
             : <DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>}
           <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
           <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
         </div>
         {/* 攻撃アクションの入口。立ち絵の上に重ねると絵が隠れてしまうので、枠の外に1行で置く。
             演出は上へ大きく飛ぶため、ここでは再生せず専用画面(MONSTER_ATTACK_PREVIEW)へ移る */}
-        {unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center">
+        {/* 立ち絵の動きの切り替えも同じ行に置く(1回押すたびに 動かす⇔止める。最初は動く) */}
+        {unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center gap-2">
+          {monsterIdleRigOf(mon.id)&&<button type="button" data-dex-idle-toggle aria-pressed={idleMotion} onClick={()=>{Audio_.se.tap();toggleIdleMotion();}}
+            className={`min-h-[44px] px-4 rounded-xl border text-[12px] font-black shadow-lg active:scale-95 ${idleMotion?'border-amber-300/60 bg-slate-950/85 text-amber-100':'border-white/20 bg-slate-800 text-slate-300'}`}>
+            {idleMotion?'⏸ 動きを止める':'▶ 動かす'}
+          </button>}
           <button type="button" data-dex-attack-preview onClick={()=>{stopDexAttackPreview();Audio_.se.tap();onOpenAttackPreview();}}
             className="min-h-[44px] px-5 rounded-xl border border-cyan-300/60 bg-slate-950/85 text-[12px] font-black text-cyan-100 shadow-lg active:scale-95">
             ▶ 攻撃アクション

@@ -35,21 +35,21 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 19,
-    "cost": 19
+    "spread": 18,
+    "cost": 18
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 19,
-    "cost": 19
+    "spread": 18,
+    "cost": 18
    },
    "fixes": []
   },
   "NORMAL": {
-   "noteCount": 69,
+   "noteCount": 68,
    "fixCount": 0,
    "passes": 0,
    "before": {
@@ -57,21 +57,21 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 26,
-    "cost": 26
+    "spread": 24,
+    "cost": 24
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 26,
-    "cost": 26
+    "spread": 24,
+    "cost": 24
    },
    "fixes": []
   },
   "HARD": {
-   "noteCount": 98,
+   "noteCount": 99,
    "fixCount": 0,
    "passes": 0,
    "before": {
@@ -79,38 +79,38 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 37,
-    "cost": 37
+    "spread": 31,
+    "cost": 31
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 37,
-    "cost": 37
+    "spread": 31,
+    "cost": 31
    },
    "fixes": []
   },
   "EXPERT": {
-   "noteCount": 130,
+   "noteCount": 129,
    "fixCount": 0,
    "passes": 0,
    "before": {
     "impossible": 0,
-    "strained": 1,
+    "strained": 2,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 44,
-    "cost": 144
+    "spread": 40,
+    "cost": 240
    },
    "after": {
     "impossible": 0,
-    "strained": 1,
+    "strained": 2,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 44,
-    "cost": 144
+    "spread": 40,
+    "cost": 240
    },
    "fixes": []
   },
@@ -120,19 +120,19 @@
    "passes": 0,
    "before": {
     "impossible": 0,
-    "strained": 5,
+    "strained": 4,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 37,
-    "cost": 537
+    "spread": 44,
+    "cost": 444
    },
    "after": {
     "impossible": 0,
-    "strained": 5,
+    "strained": 4,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 37,
-    "cost": 537
+    "spread": 44,
+    "cost": 444
    },
    "fixes": []
   }

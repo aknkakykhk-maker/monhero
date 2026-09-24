@@ -54,9 +54,9 @@ const IDLE_PLANT_BODY_MASK = "images/monsters/idle/plant-body.png?v=3ade5102ace0
 const IDLE_ZAN_BLADE_L_MASK = "images/monsters/idle/zan-blade-l.png?v=720d86f7607b";
 const IDLE_ZAN_BLADE_R_MASK = "images/monsters/idle/zan-blade-r.png?v=37f812757790";
 const IDLE_ZAN_BODY_MASK = "images/monsters/idle/zan-body.png?v=29102f321ff8";
-const IDLE_MITARASHI_WING_L_MASK = "images/monsters/idle/mitarashi-wing-l.png?v=b267381ccc34";
-const IDLE_MITARASHI_WING_R_MASK = "images/monsters/idle/mitarashi-wing-r.png?v=e5efff1fa61e";
-const IDLE_MITARASHI_BODY_MASK = "images/monsters/idle/mitarashi-body.png?v=14f5078b25d7";
+const IDLE_MITARASHI_WING_L_MASK = "images/monsters/idle/mitarashi-wing-l.png?v=819656f4fe05";
+const IDLE_MITARASHI_WING_R_MASK = "images/monsters/idle/mitarashi-wing-r.png?v=685b5f91bf42";
+const IDLE_MITARASHI_BODY_MASK = "images/monsters/idle/mitarashi-body.png?v=dfc9f8505377";
 const IDLE_ARK_WING_L_MASK = "images/monsters/idle/ark-wing-l.png?v=eef8a4ab2f94";
 const IDLE_ARK_WING_R_MASK = "images/monsters/idle/ark-wing-r.png?v=ba9c67821b45";
 const IDLE_ARK_BODY_MASK = "images/monsters/idle/ark-body.png?v=caf7abaa3319";
