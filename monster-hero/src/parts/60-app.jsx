@@ -9753,7 +9753,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 新モードの咆哮。このターンはダメージが無く、次のターンから敵の攻撃が上がる。
         // 重ねがけの上限は行動の抽選側(evaluateEnemyActions)が見るので、ここでは数えるだけ
         Audio_.se.enemyCharge();
-        setEnemyAttackFx({kind:'charge'});
+        setEnemyAttackFx({kind:'charge',skill:'roar'});
         setEnemyAttackAnim(true);
         tacticsRoarStacksRef.current += 1;
         // ★段数は敵にも持たせる(2026-09-20 ユーザー指摘「咆哮の効果が分からない」)。
@@ -9773,7 +9773,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const healed=tacticsRegenHealAmount(enemy?.maxHp);
         setEnemy(prev=>prev?{...prev,hp:Math.min(Number(prev.maxHp)||0,Math.max(0,Number(prev.hp)||0)+healed)}:prev);
         addPopup(`再生 +${healed}`,'enemy','text-emerald-300 font-black text-2xl drop-shadow-md');
+        // ★技ごとの動き(カワズモーの「かえるのうた」など)を出すために、何の技かだけを渡す。
+        //   enemyAttackAnim は立てない(立てると丸枠・絵が攻撃の動きをしてしまう)
+        setEnemyAttackFx({kind:'regen',skill:'regen'});
         await battleWait(1000);
+        setEnemyAttackFx(null);
       } else if (intent.type==='WAIT') {
         addPopup("待機中...",'enemy','text-slate-400 text-lg'); await battleWait(500);
       } else if (intent.type==='CHARGE') {
@@ -9781,7 +9785,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 突進モーションと炸裂音は必殺技を撃つターンのものなので、ここでは使わない
         // (使うと「準備しただけなのに殴られた」ように見えてしまう)
         Audio_.se.enemyCharge();
-        setEnemyAttackFx({kind:'charge'});
+        setEnemyAttackFx({kind:'charge',skill:'charge'});
         setEnemyAttackAnim(true);
         addPopup("必殺技の準備をしている…！",'enemy','text-amber-300 font-black text-xl drop-shadow-md');
         await battleWait(1100);
@@ -9793,7 +9797,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ガードが効かない技なので、この1ターンで「距離を取る」「回避を用意する」を決めてもらう
         // (2026-09-21 ユーザー指示「貫通は必殺級の技だからこれもためると同じように1ターン経由」)
         Audio_.se.enemyCharge();
-        setEnemyAttackFx({kind:'charge'});
+        setEnemyAttackFx({kind:'charge',skill:'pierceCharge'});
         setEnemyAttackAnim(true);
         addPopup("貫通撃の構え…！ ガードは効かない",'enemy','text-rose-300 font-black text-xl drop-shadow-md');
         await battleWait(1100);
@@ -9870,11 +9874,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         // Enemy lunge animation + attack effect (normal = ! mark, special = aura burst)
         const fxKind = isMooBoss(enemy?.id) ? 'moo' : (intent.type==='SPECIAL' ? 'special' : 'normal');
-        setEnemyAttackFx({kind: fxKind});
+        // skill: 何の技か(画面が技ごとの動きを選ぶのに使う。カワズモーの張り手・上手投げなど)
+        const fxSkill = intent.variant || (intent.type==='SPECIAL' ? 'special' : 'normal');
+        setEnemyAttackFx({kind: fxKind, skill: fxSkill});
         if(intent.type==='SPECIAL') Audio_.se.enemySpecial(); else Audio_.se.enemyAttack();
         setEnemyAttackAnim(true);
         if(fxKind==='moo') triggerShake(true);
-        await battleWait(fxKind==='moo' ? 900 : (intent.type==='SPECIAL' ? 1100 : 450));
+        // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)
+        await battleWait(fxKind==='moo' ? 900 : tacticsEnemyMotionMs(isTacticsMode(runMode)&&!ecoBattleView?enemy?.id:null, fxSkill, intent.type==='SPECIAL' ? 1100 : 450));
         setEnemyAttackAnim(false);
         await battleWait(fxKind==='moo' ? 250 : (intent.type==='SPECIAL' ? 300 : 100));
         setEnemyAttackFx(null);
