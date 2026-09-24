@@ -10181,8 +10181,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (isBusy||hp<=0) return;
     setIsBusy(true);
     Audio_.se.heal();
-    setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl,baseId:mainHero?.id,colors:mainHero?.colors});
-    await battleWait(500); setEffect(null);
+    // ★新しい盤面のタクティクスでは、画面全体を覆う演出を出さない(2026-09-24 ユーザー指摘
+    //   「緊急回復のアクションだけ画面表示が変わるのが気になる」)。バトル中の行動で全画面を暗くするのは
+    //   緊急回復だけだった。盤面の上の札で知らせ、回復した子の枠が光る(枠の光は tacticsSlotFx の heal から)
+    if(isTacticsMode(runMode)&&normalizeBattleScreenStyle(battleScreenStyle)==='TACTICS_NEW'){
+      addPopup('💊 緊急回復','hero','text-emerald-300 font-black',false);
+      await battleWait(500);
+    } else {
+      setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl,baseId:mainHero?.id,colors:mainHero?.colors});
+      await battleWait(500); setEffect(null);
+    }
     // ★新モードは1体ずつ「その子の上限の30%」(2026-09-20 ユーザー指示)。
     //   合計から出すと、1体だけ傷ついているときパーティ全員ぶんがその子へ入る。
     //   倒れた子にも入る(ターンを1回捨てる重い選択なので、復活までの貯めには乗る)
