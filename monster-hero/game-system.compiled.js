@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2431cc2efa831044
+// source-sha256: e5d2bf41d78da68d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 38f6a707e1dca906
+// generated-sha256: 27060e965cec9cd4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -164,6 +164,45 @@ const BATTLE_SCREEN_STYLE_LABELS = Object.freeze([{
   label: 'タクティクス新',
   note: '2×2の新しい表示'
 }]);
+// バトルの見た目の設定(2026-09-24 ユーザー指示「バトル設定を作って。タクティクスの旧画面とかあるし何項目か」)。
+// 見た目だけに効き、戦闘の計算・進行・ランキングには触れない。保存は新しいキー1つに項目をまとめる。
+// ★読むときは必ず normalizeBattleFxSettings を通す。項目を足しても、足す前に保存した人は既定値で補われる
+const BATTLE_FX_SETTINGS_KEY = 'mh_battle_fx_v1';
+const normalizeBattleFxSettings = value => {
+  const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    idleMotion: v.idleMotion === 'OFF' ? 'OFF' : 'ON',
+    shake: v.shake === 'OFF' ? 'OFF' : 'ON'
+  };
+};
+// 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
+const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
+  key: 'idleMotion',
+  title: '待機中の動き',
+  desc: '待っているあいだのモンスターの動き（翼の羽ばたき・しっぽや花の揺れなど）と、タクティクス新画面の枠の飾り・敵の待機の動き、WAVEのあとの画面の飾りの動きです。攻撃の演出はどちらでも出ます。',
+  options: [{
+    id: 'ON',
+    label: '動かす',
+    note: 'いつもの見た目'
+  }, {
+    id: 'OFF',
+    label: '止める',
+    note: '画面が軽くなる'
+  }]
+}, {
+  key: 'shake',
+  title: '画面の揺れ',
+  desc: '会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
+  options: [{
+    id: 'ON',
+    label: '揺らす',
+    note: 'いつもの見た目'
+  }, {
+    id: 'OFF',
+    label: '揺らさない',
+    note: '酔いやすい人向け'
+  }]
+}]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   id: 'FULL',
   label: 'ふつう',
@@ -177,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 17:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 17:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5588,6 +5627,29 @@ const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '�
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
+// 演奏中に1秒あたり何回描くか(2026-09-24・ユーザーと相談して決めた)。
+// POWER_SAVE … 120Hz以上の画面では1回おきに描き、毎秒60回ほどに抑える。発熱と電池を抑える。
+//   90Hzの画面は抑えない(60へ落とすと 11ms/22ms が交互に並び、かえってガタついて見える)。
+// DEVICE     … 画面の速さに合わせてそのまま描く(これまでの動き)。
+// ★判定は指が触れた時刻と曲の時刻で決めているので、どちらでも判定の正確さは変わらない
+const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
+const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
+// 演奏中の背景の演出(2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」)。
+// VIVID  … 曲のジャケットをぼかして敷き、ノーツのタイミングで背景が光り、光の粒とサーチライトが動く
+// CALM   … ジャケットとノーツのタイミングの光だけ(動き続けるものは出さない)
+// SIMPLE … これまでの見た目のまま(何も足さない)
+// ★軽量モードのときは、ここの値に関わらず SIMPLE として扱う(rhythmStageLevel)
+const RHYTHM_STAGE_EFFECTS = Object.freeze(['VIVID', 'CALM', 'SIMPLE']);
+const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
+// ===== 他の音ゲーから取り入れた表示(2026-09-24・ユーザー指示「他の音ゲーを学習して取り入れるとこを取り入れて / 設定でいじれるように」) =====
+// レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を何%隠すか。0で出さない
+const RHYTHM_LANE_COVER_MIN = 0,
+  RHYTHM_LANE_COVER_MAX = 60,
+  RHYTHM_LANE_COVER_STEP = 5;
+// ずれの見せ方(osu!・Arcaea)。STANDARD=FAST/SLOWだけ / MS=ずれの数字も / METER=数字とずれメーター
+const RHYTHM_TIMING_DISPLAYS = Object.freeze(['STANDARD', 'MS', 'METER']);
+const RHYTHM_TIMING_DISPLAY_LABELS = Object.freeze([['STANDARD', 'FAST/SLOW'], ['MS', '数字も'], ['METER', 'メーターも']]);
+const rhythmStageLevel = settings => settings && settings.lightweightMode ? 'SIMPLE' : RHYTHM_STAGE_EFFECTS.includes(settings && settings.stageEffect) ? settings.stageEffect : 'VIVID';
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -5654,7 +5716,16 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // 演奏中は通知を出さない(2026-09-05・ユーザー相談)。
   // ブラウザから通知そのものは止められないので、全画面と画面ロック防止でできる範囲だけ行う。
   // 既定はOFF。勝手に全画面へ入ると「戻れない」と感じる人がいるため
-  quietDuringPlay: false
+  quietDuringPlay: false,
+  // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定(省電力)で補われる
+  frameRateMode: 'POWER_SAVE',
+  // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定(派手)で補われる
+  stageEffect: 'VIVID',
+  // 他の音ゲーから取り入れた表示(2026-09-24)。どれも既存の保存値には無いので、読み込み時は既定で補われる
+  laneCover: 0,
+  timingDisplay: 'STANDARD',
+  comboStatusDisplay: true,
+  paceDisplay: true
 });
 const rhythmFiniteInRange = (value, min, max, fallback) => {
   const number = Number(value);
@@ -5701,7 +5772,13 @@ const normalizeRhythmSettings = value => {
     sideMonsterMotion: RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion) ? source.sideMonsterMotion : DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight: bool('sideMonsterAbilityHighlight'),
     songPreviewEnabled: bool('songPreviewEnabled'),
-    quietDuringPlay: bool('quietDuringPlay')
+    quietDuringPlay: bool('quietDuringPlay'),
+    frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode,
+    stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
+    laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
+    timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
+    comboStatusDisplay: bool('comboStatusDisplay'),
+    paceDisplay: bool('paceDisplay')
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -15104,11 +15181,9 @@ const DexLineageChip = ({
 }, "\u8840"), /*#__PURE__*/React.createElement("span", {
   className: "text-[11px] font-black text-amber-100 truncate"
 }, lineage.name));
-const DexMonsterArt = ({
-  mon,
-  alt,
-  hidden = false
-}) => mon.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+// 立ち絵の <img> そのもの。待機アニメ(withMonsterIdleArt)は絵の要素を複製して重ねるので、
+// 部品(DexMonsterArt)ではなくこの要素を渡す
+const dexMonsterArtImage = (mon, alt, hidden = false) => /*#__PURE__*/React.createElement(DyedMonsterImage, {
   baseId: mon.id,
   src: mon.imgUrl,
   alt: alt,
@@ -15119,9 +15194,31 @@ const DexMonsterArt = ({
     filter: 'brightness(0)',
     opacity: 0.65
   } : undefined
-}) : /*#__PURE__*/React.createElement("div", {
+});
+const DexMonsterArt = ({
+  mon,
+  alt,
+  hidden = false
+}) => mon.imgUrl ? dexMonsterArtImage(mon, alt, hidden) : /*#__PURE__*/React.createElement("div", {
   className: "text-6xl"
 }, hidden ? '？' : mon.emoji);
+// 図鑑の立ち絵に待機アニメを重ねたもの(バトルと同じ MonsterIdleArt)。持たない子・まだ出会っていない子は今までの絵。
+// 待機アニメは正方形の箱の中で軸を合わせるので、正方形の箱(fill)に入れて渡す。
+// 動かすかどうかは図鑑のページのボタン(motion。useDexIdleMotion)だけで決める。止めたら1枚の絵
+const DexMonsterIdleArt = ({
+  mon,
+  alt,
+  motion = true
+}) => motion && mon.imgUrl && monsterIdleRigOf(mon.id) ? /*#__PURE__*/React.createElement("span", {
+  "data-dex-idle-art": true,
+  className: "relative block h-full aspect-square max-w-full"
+}, withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt), {
+  fill: true,
+  own: true
+})) : /*#__PURE__*/React.createElement(DexMonsterArt, {
+  mon: mon,
+  alt: alt
+});
 const MarketProductIcon = ({
   item,
   onZoom,
@@ -16044,14 +16141,14 @@ const QuickStepScreen = ({
       role: "button",
       tabIndex: 0,
       "aria-label": label,
-      className: "absolute inset-0 overflow-y-auto mh-scroll",
+      className: "mh-ph-bg absolute inset-0 overflow-y-auto mh-scroll"
+      // 見た目は強化フェーズのほかの画面と同じ mh-ph-bg(70-bootstrap.jsx)。--ph に識別色(accent は #rrggbb)を渡す
+      ,
       style: {
         position: 'absolute',
         inset: 0,
-        backgroundColor: '#020617',
         zIndex: 30000,
-        // 上から識別色の光を差す(強化フェーズのほかの画面とそろえる)。accent は #rrggbb
-        backgroundImage: `radial-gradient(ellipse 90% 45% at 50% 0%, ${accent}2e, transparent 70%)`
+        '--ph': /^#[0-9a-f]{6}$/i.test(accent) ? [1, 3, 5].map(i => parseInt(accent.slice(i, i + 2), 16)).join(',') : '45,212,191'
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "min-h-full flex flex-col items-center justify-center p-6 text-center"
@@ -17879,14 +17976,374 @@ const AttackTargetFx = ({
     }
   })));
 };
-// ==== ミーアの待機アニメ(試作・2026-09-24 ユーザー指示「試しにミーアでやってみて」) ====
-// 絵は1枚のPNGなので描き足しはしない。同じ絵を「翼以外」「左の翼」「右の翼」の3枚に切り抜いて重ね
-// (切り抜きは images/monsters/mia-wing-*.png のマスク)、翼だけを肩の付け根を軸に回して羽ばたかせる。
-// 翼は体の後ろにあるので、動かしても穴が見えない。全体はゆっくり浮き沈みして呼吸する。
-// ・image はバトルで使う実際の絵(染色つき DyedMonsterImage)をそのまま受け取り、3回複製する
-// ・軸の位置は「正方形の枠に2:3の絵を contain で置いた」ときの座標。バトルの枠(58/64pxの正方形)専用
-// ・軽量表示・動きを減らす設定では止める(呼び出し側と CSS の両方で)
-const MIA_IDLE_MASK_STYLE = url => ({
+// ==== 味方モンスターの待機アニメ(2026-09-24 ユーザー指示「ミーアで試して」→「他の味方モンスターもアニメーション実装よろしく」) ====
+// 絵は1枚のPNGなので描き足しはしない。同じ絵を「体」と「動かす部分(翼・しっぽ・耳・花…)」にマスクで切り抜いて重ね、
+// 部分だけを付け根を軸に回す。全体の動き(浮く・跳ねる・呼吸・揺れる・泳ぐ)は種ごとに1つ。
+// ・どこを切り抜いてどう動かすかは tools/monster/idle-rig-build.js の RIGS が正本。下の表はそこから自動で書かれる
+// ・image はバトルで使う実際の絵(染色つき DyedMonsterImage)をそのまま受け取り、部分の数だけ複製する
+// ・軸の位置は「正方形の枠に絵を contain で置いた」ときの %。バトルの枠(58/64pxの正方形)専用
+// ・軽量表示・設定の「待機中の動き：止める」では呼び出し側が使わない。calm と「動きを減らす」は CSS で止める
+// ==== MONSTER_IDLE_RIGS(tools/monster/idle-rig-build.js が書く。手で直さない) ====
+const MONSTER_IDLE_RIGS = Object.freeze({
+  Mocchi: {
+    body: 'bounce',
+    bodyMask: null,
+    parts: []
+  },
+  Suezo: {
+    body: 'bounce',
+    bodyMask: null,
+    parts: []
+  },
+  Golem: {
+    body: 'breathe',
+    bodyMask: null,
+    parts: []
+  },
+  Tiger: {
+    body: 'breathe',
+    bodyMask: IDLE_TIGER_BODY_MASK,
+    parts: [{
+      mask: IDLE_TIGER_TAIL_MASK,
+      origin: '68% 52%',
+      anim: 'wag',
+      amp: 8,
+      dur: 1100,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Ham: {
+    body: 'breathe',
+    bodyMask: IDLE_HAM_BODY_MASK,
+    parts: [{
+      mask: IDLE_HAM_EAR_L_MASK,
+      origin: '43% 27%',
+      anim: 'twitch',
+      amp: -9,
+      dur: 3200,
+      delay: 0,
+      layer: 'front'
+    }, {
+      mask: IDLE_HAM_EAR_R_MASK,
+      origin: '57% 27%',
+      anim: 'twitch',
+      amp: 9,
+      dur: 3200,
+      delay: 1300,
+      layer: 'front'
+    }]
+  },
+  Pixie: {
+    body: 'hover',
+    bodyMask: IDLE_PIXIE_BODY_MASK,
+    parts: [{
+      mask: IDLE_PIXIE_WING_L_MASK,
+      origin: '36% 32%',
+      anim: 'flapL',
+      amp: 14,
+      dur: 900,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_PIXIE_WING_R_MASK,
+      origin: '64% 32%',
+      anim: 'flapR',
+      amp: 14,
+      dur: 900,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_PIXIE_TAIL_MASK,
+      origin: '58% 62%',
+      anim: 'wag',
+      amp: 7,
+      dur: 1600,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Mia: {
+    body: 'hover',
+    bodyMask: MIA_WING_BODY_MASK,
+    parts: [{
+      mask: MIA_WING_LEFT_MASK,
+      origin: '44.3% 38.1%',
+      anim: 'flapL',
+      amp: 16,
+      dur: 1300,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: MIA_WING_RIGHT_MASK,
+      origin: '55.7% 38.1%',
+      anim: 'flapR',
+      amp: 16,
+      dur: 1300,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Pandora: {
+    body: 'hover',
+    bodyMask: IDLE_PANDORA_BODY_MASK,
+    parts: [{
+      mask: IDLE_PANDORA_WING_L_MASK,
+      origin: '36.7% 33%',
+      anim: 'flapL',
+      amp: 12,
+      dur: 1200,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_PANDORA_WING_R_MASK,
+      origin: '62% 32%',
+      anim: 'flapR',
+      amp: 12,
+      dur: 1200,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_PANDORA_TAIL_L_MASK,
+      origin: '31.3% 58%',
+      anim: 'swing',
+      amp: 7,
+      dur: 2000,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_PANDORA_TAIL_R_MASK,
+      origin: '64.7% 58%',
+      anim: 'swing',
+      amp: -7,
+      dur: 2200,
+      delay: 400,
+      layer: 'back'
+    }]
+  },
+  Monol: {
+    body: 'hover',
+    bodyMask: null,
+    parts: []
+  },
+  Oboro: {
+    body: 'sway',
+    bodyMask: IDLE_OBORO_BODY_MASK,
+    parts: [{
+      mask: IDLE_OBORO_FLOWER_T_MASK,
+      origin: '50% 50%',
+      anim: 'swing',
+      amp: 6,
+      dur: 2600,
+      delay: 0,
+      layer: 'front'
+    }, {
+      mask: IDLE_OBORO_FLOWER_L_MASK,
+      origin: '33% 54%',
+      anim: 'swing',
+      amp: -7,
+      dur: 2300,
+      delay: 500,
+      layer: 'front'
+    }, {
+      mask: IDLE_OBORO_FLOWER_R_MASK,
+      origin: '67% 54%',
+      anim: 'swing',
+      amp: 7,
+      dur: 2500,
+      delay: 900,
+      layer: 'front'
+    }]
+  },
+  Plant: {
+    body: 'sway',
+    bodyMask: IDLE_PLANT_BODY_MASK,
+    parts: [{
+      mask: IDLE_PLANT_FLOWER_T_MASK,
+      origin: '50% 50%',
+      anim: 'swing',
+      amp: 6,
+      dur: 2600,
+      delay: 0,
+      layer: 'front'
+    }, {
+      mask: IDLE_PLANT_FLOWER_L_MASK,
+      origin: '31% 52%',
+      anim: 'swing',
+      amp: -7,
+      dur: 2300,
+      delay: 500,
+      layer: 'front'
+    }, {
+      mask: IDLE_PLANT_FLOWER_R_MASK,
+      origin: '69% 52%',
+      anim: 'swing',
+      amp: 7,
+      dur: 2500,
+      delay: 900,
+      layer: 'front'
+    }]
+  },
+  Zan: {
+    body: 'hover',
+    bodyMask: IDLE_ZAN_BODY_MASK,
+    parts: [{
+      mask: IDLE_ZAN_BLADE_L_MASK,
+      origin: '30% 30%',
+      anim: 'swing',
+      amp: -5,
+      dur: 1800,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_ZAN_BLADE_R_MASK,
+      origin: '70% 30%',
+      anim: 'swing',
+      amp: 5,
+      dur: 1800,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Mitarashi: {
+    body: 'breathe',
+    bodyMask: IDLE_MITARASHI_BODY_MASK,
+    parts: [{
+      mask: IDLE_MITARASHI_WING_L_MASK,
+      origin: '28% 41.5%',
+      anim: 'flapL',
+      amp: 9,
+      dur: 1400,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_MITARASHI_WING_R_MASK,
+      origin: '72% 41.5%',
+      anim: 'flapR',
+      amp: 9,
+      dur: 1400,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Ark: {
+    body: 'hover',
+    bodyMask: IDLE_ARK_BODY_MASK,
+    parts: [{
+      mask: IDLE_ARK_WING_L_MASK,
+      origin: '34% 52%',
+      anim: 'flapL',
+      amp: 6,
+      dur: 1300,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_ARK_WING_R_MASK,
+      origin: '66% 52%',
+      anim: 'flapR',
+      amp: 6,
+      dur: 1300,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  Iblis: {
+    body: 'hover',
+    bodyMask: IDLE_IBLIS_BODY_MASK,
+    parts: [{
+      mask: IDLE_IBLIS_WING_L_MASK,
+      origin: '30% 56%',
+      anim: 'flapL',
+      amp: 10,
+      dur: 1400,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_IBLIS_WING_R_MASK,
+      origin: '70% 56%',
+      anim: 'flapR',
+      amp: 10,
+      dur: 1400,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_IBLIS_ORB_MASK,
+      origin: '48% 8%',
+      anim: 'bob',
+      amp: -6,
+      dur: 1900,
+      delay: 0,
+      layer: 'front'
+    }]
+  },
+  Snegurochka: {
+    body: 'swim',
+    bodyMask: IDLE_SNEGUROCHKA_BODY_MASK,
+    parts: [{
+      mask: IDLE_SNEGUROCHKA_FIN_MASK,
+      origin: '58.5% 80%',
+      anim: 'swing',
+      amp: 7,
+      dur: 1500,
+      delay: 0,
+      layer: 'front'
+    }]
+  },
+  Undine: {
+    body: 'swim',
+    bodyMask: IDLE_UNDINE_BODY_MASK,
+    parts: [{
+      mask: IDLE_UNDINE_FIN_MASK,
+      origin: '58% 80%',
+      anim: 'swing',
+      amp: 8,
+      dur: 1500,
+      delay: 0,
+      layer: 'front'
+    }]
+  },
+  Yaobikuni: {
+    body: 'swim',
+    bodyMask: IDLE_YAOBIKUNI_BODY_MASK,
+    parts: [{
+      mask: IDLE_YAOBIKUNI_FIN_MASK,
+      origin: '60.7% 82%',
+      anim: 'swing',
+      amp: 8,
+      dur: 1500,
+      delay: 0,
+      layer: 'front'
+    }]
+  },
+  Eiki: {
+    body: 'hover',
+    bodyMask: IDLE_EIKI_BODY_MASK,
+    parts: [{
+      mask: IDLE_EIKI_WING_L_MASK,
+      origin: '23.1% 40%',
+      anim: 'flapL',
+      amp: 4,
+      dur: 1600,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_EIKI_WING_R_MASK,
+      origin: '76.9% 40%',
+      anim: 'flapR',
+      amp: 4,
+      dur: 1600,
+      delay: 0,
+      layer: 'back'
+    }]
+  },
+  KenshiMocchi: {
+    body: 'bounce',
+    bodyMask: null,
+    parts: []
+  }
+});
+// ==== MONSTER_IDLE_RIGS ここまで ====
+const MONSTER_IDLE_MASK_STYLE = url => ({
   WebkitMaskImage: `url(${url})`,
   maskImage: `url(${url})`,
   WebkitMaskSize: 'contain',
@@ -17896,37 +18353,84 @@ const MIA_IDLE_MASK_STYLE = url => ({
   WebkitMaskRepeat: 'no-repeat',
   maskRepeat: 'no-repeat'
 });
-const MiaIdleArt = ({
-  image
+// fill: 入れ物いっぱいに広げる(図鑑の立ち絵のように、絵が w-full h-full で大きさを持たないとき)。
+//   バトルの絵は幅・高さを px で持っているので要らない
+// own: 図鑑のように、その画面のボタンで動かす・止めるを決める場所。軽量表示・「待機中の動き：止める」・
+//   端末の「動きを減らす」では止めない(止めたいときは画面のボタンで1枚の絵に戻す)
+const MonsterIdleArt = ({
+  baseId,
+  image,
+  fill = false,
+  own = false
 }) => {
-  // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと「翼以外」の層に翼の影が残り、
-  //   翼を上げたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体(.mia-idle)に1回だけ付ける
+  const rig = monsterIdleRigOf(baseId);
+  const fillClass = fill ? ' mon-idle--fill' : '';
+  const ownAttr = own ? 'true' : undefined;
+  if (!rig || !image) return image || null;
+  if (!rig.parts.length) {
+    return /*#__PURE__*/React.createElement("span", {
+      className: `mon-idle mon-idle--${rig.body}${fillClass}`,
+      "data-monster-idle": baseId,
+      "data-idle-own": ownAttr
+    }, image);
+  }
+  // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと「体」の層に部分の影が残り、
+  //   部分を動かしたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体に1回だけ付ける
   const className = String(image.props.className || '').split(/\s+/).filter(c => c && !/^drop-shadow/.test(c)).join(' ');
   const layer = (url, extra) => React.cloneElement(image, {
     alt: extra ? '' : image.props.alt,
     className,
     style: {
       ...(image.props.style || {}),
-      ...MIA_IDLE_MASK_STYLE(url),
+      ...MONSTER_IDLE_MASK_STYLE(url),
       ...(extra || {})
     }
   });
+  const partNode = (part, index) => /*#__PURE__*/React.createElement("span", {
+    key: index,
+    className: `mon-idle__part mon-idle__part--${part.anim} mon-idle__part--${part.layer}`,
+    "aria-hidden": "true",
+    style: {
+      transformOrigin: part.origin,
+      animationDuration: `${part.dur}ms`,
+      animationDelay: `${part.delay}ms`,
+      '--idle-amp': `${part.amp}deg`,
+      '--idle-bob': `${part.amp}%`
+    }
+  }, layer(part.mask, {
+    display: 'block'
+  }));
   return /*#__PURE__*/React.createElement("span", {
-    className: "mia-idle"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "mia-idle__wing mia-idle__wing--l",
-    "aria-hidden": "true"
-  }, layer(MIA_WING_LEFT_MASK, {
-    display: 'block'
-  })), /*#__PURE__*/React.createElement("span", {
-    className: "mia-idle__wing mia-idle__wing--r",
-    "aria-hidden": "true"
-  }, layer(MIA_WING_RIGHT_MASK, {
-    display: 'block'
-  })), /*#__PURE__*/React.createElement("span", {
-    className: "mia-idle__body"
-  }, layer(MIA_WING_BODY_MASK, null)));
+    className: `mon-idle mon-idle--${rig.body} mon-idle--rig${fillClass}`,
+    "data-monster-idle": baseId,
+    "data-idle-own": ownAttr
+  }, rig.parts.filter(p => p.layer === 'back').map(partNode), /*#__PURE__*/React.createElement("span", {
+    className: "mon-idle__body"
+  }, layer(rig.bodyMask, null)), rig.parts.filter(p => p.layer !== 'back').map(partNode));
 };
+// ==== 図鑑でもバトルと同じ待機アニメを出す入口(2026-09-24 ユーザー指示「モンスター図鑑にも同じ動きが出来る基盤を作っといて」) ====
+// 図鑑の詳細の立ち絵(DexMonsterIdleArt)と攻撃アクションの画面は、ここを通すだけにする。
+// 動かし方の正本は上の MONSTER_IDLE_RIGS(idle-rig-build.js が書く)なので、そこへ1体足せば
+// バトルと図鑑の両方で動き出す。図鑑の側でモンスターの名前を見て分岐しない。
+// ・軸の % は「正方形の枠」での値なので、図鑑は正方形の箱に入れて渡す(DexMonsterIdleArt)
+// ・図鑑は自分のページのボタン(mh_dex_idle_motion_v1。最初は動く)だけで決める。バトルの設定・軽量表示・
+//   「動きを減らす」では止めない(own)。止めるときは enabled:false で1枚の絵に戻す
+const monsterIdleRigOf = monsterId => monsterId && Object.prototype.hasOwnProperty.call(MONSTER_IDLE_RIGS, monsterId) ? MONSTER_IDLE_RIGS[monsterId] : null;
+const withMonsterIdleArt = (monsterId, image, {
+  enabled = true,
+  fill = false,
+  own = false
+} = {}) => enabled && monsterIdleRigOf(monsterId) ? /*#__PURE__*/React.createElement(MonsterIdleArt, {
+  baseId: monsterId,
+  image: image,
+  fill: fill,
+  own: own
+}) : image;
+// 図鑑の攻撃アクションで、動きの最中も待機アニメを重ねてよいか。バトル(71-screen-battle.jsx)は
+// 聖光・水・歌・通常の動きでは slotArt を通して重ね、パンドラの雷だけは重ねない(分身へ絵を複製するため)。
+// それに合わせる。バトル側の分け方を変えたら、ここも合わせる
+const MONSTER_IDLE_OFF_MOTIONS = Object.freeze(['pandoraDualThunder']);
+const monsterIdleAllowedDuring = anim => !anim || !MONSTER_IDLE_OFF_MOTIONS.includes(anim.motion);
 // エイキの攻撃中だけ重ねる桜の花びら。
 // 常時アニメーションにはせず、攻撃モーションが出ているあいだ(isAnimating)だけ描く。
 // スマホの負荷を増やしすぎないよう、要素は固定12枚・CSSアニメーション1本だけにして、
@@ -18447,7 +18951,7 @@ const WaterBurstMotion = ({
   }
 }))));
 // ミーア専用の歌攻撃演出。
-// 距離枠は動かさず、本体だけが跳ねて体をひねり、敵のほうへ身を乗り出し、マイクスタンドの前で歌う。
+// 距離枠は動かさず、本体はその場で跳ねて体を揺らし、マイクスタンドの前で歌う(敵へは向かわない)。
 // 音符は5つ、左右に揺れながら敵の位置(--atk-dx/dy)まで飛び、敵の向きへ音の波を3つ走らせる。
 // x は飛ぶ途中の左右の揺れ、y は途中でふくらむ高さ。追加画像・追加音源は使わず、攻撃中だけDOMへ出る
 // 固定数のCSS要素で描く(常時アニメーションにはしない)。
@@ -23148,7 +23652,7 @@ const RhythmOptions = ({
     className: draft[key] === flag ? 'text-white' : 'text-slate-400'
   }, text))));
   const segments = (key, items) => /*#__PURE__*/React.createElement("div", {
-    className: `grid ${items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
+    className: `grid ${items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
   }, items.map(([id, text]) => /*#__PURE__*/React.createElement("button", {
     type: "button",
     key: id,
@@ -23324,7 +23828,15 @@ const RhythmOptions = ({
     suffix: '%'
   }), '画面の右上に出るライフ（♥のゲージと数字）の大きさです。100%が2026-09-13より前の大きさで、既定は150%です。ゲージは長さも太さも倍率どおりに伸び、数字も大きくなります。横画面ではもともとの長さが倍あるので、そのぶん長く伸びます。ハートだけは伸びをゆるめてあります（ここが行の高さを決めていて、大きくするとポーズボタンがレーンの台形へ寄ってしまうため）。ライフの減り方・DOWNの決まりは変わりません。', {
     full: true
-  }), field('FAST / SLOW表示', toggle('fastSlowDisplay')), field('判定文字表示', toggle('judgmentTextDisplay')), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+  }), field('FAST / SLOW表示', toggle('fastSlowDisplay')), field('判定文字表示', toggle('judgmentTextDisplay')), field('ずれの表示', segments('timingDisplay', RHYTHM_TIMING_DISPLAY_LABELS), '叩いたタイミングのずれの見せ方です。既定は「FAST/SLOW」です（osu!・Arcaea などにある表示です）。\n「FAST/SLOW」＝これまでどおり、早い・遅いだけを出します。\n「数字も」＝「FAST 23ms」のように、どれだけずれたかを数字でも出します。\n「メーターも」＝数字に加えて、判定ラインのすぐ上に「ずれメーター」を出します。真ん中の白い線がぴったりで、左が早い・右が遅いです。直近12回のずれが目盛りで並び、古いものほど薄くなります。帯の色は判定の色（金＝MARVELOUS・紫＝EXCELLENT・赤＝GREAT・緑＝GOOD・青＝BAD）です。\nFAST/SLOW表示をOFFにしているときは、数字も出ません。判定・スコアはどれでも変わりません。', {
+    full: true
+  }), field('レーンカバー', stepper('laneCover', RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, {
+    fine: RHYTHM_LANE_COVER_STEP,
+    coarse: 10,
+    suffix: '%'
+  }), 'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。', {
+    full: true
+  }), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだは COMBO の下に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、右上の経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
   }), field('コンボ数', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: wide ? 'mt-1.5' : 'mt-2'
@@ -23395,7 +23907,11 @@ const RhythmOptions = ({
     className: head
   }, "\u25C6 \u30B7\u30B9\u30C6\u30E0\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
     className: wide ? grid : `mt-3 ${grid}`
-  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。', {
+  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
+    full: true
+  }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「派手」です。判定・スコアはどれでも変わりません。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライトと光の粒は出しません。', {
+    full: true
+  }), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「省電力」です。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
   }), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
@@ -24865,6 +25381,36 @@ const RhythmTapTest = ({
   // lifeBoxRef … 減った瞬間にHUDのライフ表示を揺らす／lifeDamageRef … 減った量(「-50」)を一瞬出す
   const lifeBoxRef = useRef(null),
     lifeDamageRef = useRef(null);
+  // ===== 背景の演出(ライブ背景。2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」) =====
+  // 置くのはプレイエリアのいちばん奥(z-index:-1)。レーン・ノーツ・判定ライン・HUDより必ず後ろなので、
+  // 入力にも判定にも触らない(pointer-events:none)。
+  // ★重さに気をつける。ぼかしは CSS の filter を使わず、ジャケットを 24×24 の canvas へ一度だけ縮めて描き、
+  //   それを引き伸ばして「ぼけた絵」にする(引き伸ばしの補間でぼける。毎フレームの作り直しが起きない)。
+  //   動かすのは transform と opacity だけ(合成だけで済むもの)。
+  const stageLevel = rhythmStageLevel(settings);
+  const stageArtRef = useRef(null),
+    stagePulseRef = useRef(null);
+  const stageArtSrc = stageLevel !== 'SIMPLE' && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+  useEffect(() => {
+    const canvas = stageArtRef.current;
+    if (!canvas || !stageArtSrc) return;
+    let alive = true;
+    const img = new Image();
+    img.onload = () => {
+      if (!alive) return;
+      try {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.dataset.ready = '1';
+      } catch (_) {}
+    };
+    img.src = stageArtSrc;
+    return () => {
+      alive = false;
+      img.onload = null;
+    };
+  }, [stageArtSrc]);
   const sideMonsterElements = useMemo(() => {
     if (settings.sideMonsterOpacity === 'OFF') return null;
     const opacity = rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -24964,6 +25510,33 @@ const RhythmTapTest = ({
   const [pausedSongMs, setPausedSongMs] = useState(0);
   // 曲の進みぐあいのバー。毎フレーム setState せず、要素の幅を直接書き換える
   const songProgressRef = useRef(null);
+  // 経過時間の文字(「0:48/2:25」)。秒が変わったときだけ毎フレームの処理が書き換える
+  const songTimeRef = useRef(null);
+  // 自己ベスト比(IIDXのペースメーカー)と、ずれメーター(osu!)。どちらも判定のたびに DOM へ直接書く
+  const paceRef = useRef(null),
+    meterTicksRef = useRef([]);
+  const timingDisplay = RHYTHM_TIMING_DISPLAYS.includes(settings.timingDisplay) ? settings.timingDisplay : 'STANDARD';
+  /* レーンカバーの形。高さは設定の%で、横はレーンの台形(rhythmProjectionScale)に沿って切り抜く。
+     台形のふちは少し曲がっているので、8か所で折って近づける(外へ1%だけはみ出させて、ふちの隙間を作らない) */
+  const laneCoverStyle = useMemo(() => {
+    const percent = rhythmFiniteStep(settings.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, 0);
+    if (!(percent > 0)) return null;
+    const steps = 8,
+      left = [],
+      right = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps,
+        half = Math.min(50, 50 * rhythmProjectionScale(t * percent / 100) + 1);
+      left.push(`${(50 - half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
+      right.unshift(`${(50 + half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
+    }
+    const clip = `polygon(${left.concat(right).join(',')})`;
+    return {
+      height: `${percent}%`,
+      clipPath: clip,
+      WebkitClipPath: clip
+    };
+  }, [settings.laneCover]);
   // 100コンボごとの演出。
   // 「段階(tier)が変わったときだけ」effectを動かすのが肝心で、以前は view.combo(=ノーツを取るたび
   // 毎回変わる値)を依存にしていたため、100→101など非節目の増加でも毎回effectが再実行され、
@@ -25013,6 +25586,14 @@ const RhythmTapTest = ({
   const lifeRatio = rhythmLifeRatio(view.life);
   const lifeState = rhythmLifeState(view.life);
   const comboTier = rhythmComboTier(view.combo);
+  /* フルコンボ・オールマーベラスが続いているか(プロセカ・CHUNITHM のコンボ色)。「COMBO」の字の色で見せる。
+     AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。設定で出さないこともできる */
+  const comboStatus = (() => {
+    if (settings.comboStatusDisplay === false || !view.counts) return '';
+    const c = view.counts;
+    if ((Number(c.BAD) || 0) + (Number(c.MISS) || 0) > 0) return '';
+    return (Number(c.EXCELLENT) || 0) + (Number(c.GREAT) || 0) + (Number(c.GOOD) || 0) > 0 ? 'FC' : 'AM';
+  })();
   // コンボ数の置き場所(2026-09-12・ユーザー指示)。座標は index.html の
   // [data-combo-pos="…"] が持つので、ここは名前をそのまま属性へ渡すだけ。
   const comboPosition = RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER';
@@ -25461,14 +26042,44 @@ const RhythmTapTest = ({
       slow: run.slow,
       precise: run.precise,
       life: run.life,
+      lastDeltaMs: judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null,
       ...(showAbilityFlash ? {
         ability: abilityFlash
       } : {})
     }));
     scheduleJudgmentClear();
+    /* 自己ベスト比(beatmania IIDX のペースメーカー)。「自己ベストを曲のここまでの割合で割り戻した点」との差。
+       前の記録が無い曲・練習・タイミング合わせでは出さない。★見た目だけで、スコアにも記録にも入れない */
+    const paceEl = paceRef.current;
+    if (paceEl && settings.paceDisplay !== false && !tutorial && !calibrating && Number(run.startBestScore) > 0 && chart.totalNotes > 0) {
+      const judged = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (Number(run.counts[id]) || 0), 0);
+      const diff = Math.round(score - Number(run.startBestScore) * judged / chart.totalNotes);
+      paceEl.hidden = false;
+      paceEl.dataset.pace = diff >= 0 ? 'up' : 'down';
+      paceEl.textContent = `ベスト比 ${diff >= 0 ? '+' : '−'}${Math.abs(diff).toLocaleString()}`;
+    }
+    /* ずれメーター(osu! のヒットエラーメーター)。直近12回のずれを目盛りに並べ、古いものほど薄くする。
+       目盛りの幅は BAD の窓(±185ms)。判定には一切関わらない */
+    if (settings.timingDisplay === 'METER' && judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs)) {
+      const ticks = meterTicksRef.current;
+      if (ticks.length) {
+        const slot = run._meterSlot = ((run._meterSlot ?? -1) + 1) % ticks.length;
+        const range = RHYTHM_JUDGMENTS.find(item => item.id === 'BAD')?.windowMs || 185;
+        const tick = ticks[slot];
+        if (tick) {
+          tick.style.left = `${(50 + Math.max(-1, Math.min(1, deltaMs / range)) * 50).toFixed(2)}%`;
+          tick.dataset.judgment = judgment;
+        }
+        ticks.forEach((el, i) => {
+          if (!el) return;
+          const age = (slot - i + ticks.length) % ticks.length;
+          el.style.opacity = el.dataset.judgment ? String(Math.max(.12, 1 - age / ticks.length).toFixed(2)) : '0';
+        });
+      }
+    }
     if (showAbilityFlash) scheduleAbilityClear();
     if (_judgeT0) RHYTHM_PERF.judge(performance.now() - _judgeT0, !!monster);
-  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, tutorial, calibrating]);
+  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, settings.paceDisplay, settings.timingDisplay, tutorial, calibrating]);
   const finish = useCallback(() => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
@@ -25568,11 +26179,33 @@ const RhythmTapTest = ({
   };
   const scheduleTick = useCallback(() => {
     stopFrame();
+    /* 省電力(settings.frameRateMode='POWER_SAVE')のときは、120Hz以上の画面で1回おきに描く。
+       画面の速さはフレームの間隔をならして測る(はじめは60Hzとみなし、20フレームほどで落ち着く)。
+       ならした間隔が10ms未満(=100Hzより速い)ときだけ、前に描いてから12.5ms経っていないフレームを飛ばす。
+       120Hzならちょうど1回おき(毎秒60回)、144Hzでも1回おき(毎秒72回)で、間隔は乱れない。
+       90Hzは抑えない(60へ落とすと間隔が 11ms/22ms と交互になり、かえってガタついて見える)。
+       ★飛ばすのは描くことだけ。判定は指の入力のたびに曲の時刻で決めているので変わらない。
+         取り逃しのMISSや長押しの終わりも、次に描くフレーム(8ms後)でいつもどおり数える */
+    const powerSave = settings.frameRateMode !== 'DEVICE';
+    const stagePulseOn = rhythmStageLevel(settings) !== 'SIMPLE';
+    let prevFrameMs = 0,
+      avgFrameMs = 1000 / 60,
+      lastDrawnMs = 0;
     const tick = frameNowMs => {
       RHYTHM_PERF.frame(frameNowMs);
       RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
+      if (powerSave) {
+        const gap = prevFrameMs ? frameNowMs - prevFrameMs : 0;
+        prevFrameMs = frameNowMs;
+        if (gap > 0 && gap < 50) avgFrameMs = avgFrameMs * .9 + gap * .1;
+        if (avgFrameMs < 10 && lastDrawnMs && frameNowMs - lastDrawnMs < 12.5) {
+          frameRef.current = requestAnimationFrame(tick);
+          return;
+        }
+        lastDrawnMs = frameNowMs;
+      }
       const perfTickStart = RHYTHM_PERF.enabled ? performance.now() : 0;
       const songTimeMs = run.audio.songTimeMs();
       RHYTHM_PERF.songTime(songTimeMs);
@@ -25582,6 +26215,37 @@ const RhythmTapTest = ({
       let perfScanned = 0,
         perfDrawn = 0;
       updateJudgmentBand(travel, travelMs);
+      /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
+         取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
+         間隔が110ms未満の連打では光らせ直さない(光りっぱなしで何も分からなくなるため)。
+         光らせ方は Web Animations の opacity だけ(合成だけで済む) */
+      if (stagePulseOn) {
+        const pulseEl = stagePulseRef.current,
+          notes = run.notes;
+        let index = run._stageNoteIndex || 0,
+          count = 0,
+          monster = false;
+        while (index < notes.length && notes[index].timeMs <= visualTime) {
+          count++;
+          if (rhythmNoteMonsterSlot(notes[index])) monster = true;
+          index++;
+        }
+        run._stageNoteIndex = index;
+        if (count && pulseEl && typeof pulseEl.animate === 'function' && visualTime - (run._stagePulseAt ?? -1e9) >= 110) {
+          run._stagePulseAt = visualTime;
+          pulseEl.dataset.stagePulseKind = monster ? 'monster' : 'note';
+          try {
+            pulseEl.animate([{
+              opacity: monster ? 1 : count > 1 ? .9 : .62
+            }, {
+              opacity: 0
+            }], {
+              duration: monster ? 620 : count > 1 ? 440 : 340,
+              easing: 'cubic-bezier(.2,.7,.3,1)'
+            });
+          } catch (_) {}
+        }
+      }
       // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
       const placeable = !!travel && travel.ready !== false;
       // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
@@ -25589,6 +26253,7 @@ const RhythmTapTest = ({
         nowMs: frameNowMs,
         effect: settings.effectAmount,
         lightweight: settings.lightweightMode,
+        maxDpr: settings.effectAmount === 'MINIMAL' ? 2 : undefined,
         sizeScale: settings.noteSize / 100
       });
       // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
@@ -25909,13 +26574,22 @@ const RhythmTapTest = ({
         }
       }
       const playEndTimeMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;
-      /* 曲の進みぐあい(画面のいちばん下の細いバー)。0.1%より動いたときだけ書き換える */
+      /* 曲の進みぐあい(右上・ライフの下の細いバーと経過時間)。バーは0.1%より動いたときだけ、時間は秒が変わったときだけ書き換える */
       const progressEl = songProgressRef.current;
       if (progressEl) {
         const ratio = playEndTimeMs > 0 ? Math.max(0, Math.min(1, songTimeMs / playEndTimeMs)) : 0;
         if (Math.abs(ratio - (progressEl._mhRatio || 0)) >= .001 || ratio === 1) {
           progressEl._mhRatio = ratio;
           progressEl.style.transform = `scaleX(${ratio.toFixed(4)})`;
+        }
+      }
+      const timeEl = songTimeRef.current;
+      if (timeEl) {
+        const shownMs = Math.max(0, Math.min(playEndTimeMs, songTimeMs)),
+          second = Math.floor(shownMs / 1000);
+        if (timeEl._mhSecond !== second) {
+          timeEl._mhSecond = second;
+          timeEl.textContent = `${rhythmClockLabel(shownMs)}/${rhythmClockLabel(playEndTimeMs)}`;
         }
       }
       /* 譜面より音源のほうが長い曲(デュラハンの2曲は音源をバトルと共用しているので切れない)は、
@@ -25930,7 +26604,7 @@ const RhythmTapTest = ({
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
-  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial, updateJudgmentBand]);
+  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.frameRateMode, settings.stageEffect, settings.lightweightMode, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial, updateJudgmentBand]);
   const disposeRun = useCallback(() => {
     stopFrame();
     clearJudgmentTimer();
@@ -26101,7 +26775,8 @@ const RhythmTapTest = ({
          違う設定で焼くとそのまま曲の終わりまで使われてしまう(2026-09-12) */
     if (canvasNotes) RHYTHM_CANVAS_RENDERER.warmSprites({
       effect: settings.effectAmount,
-      lightweight: settings.lightweightMode
+      lightweight: settings.lightweightMode,
+      maxDpr: settings.effectAmount === 'MINIMAL' ? 2 : undefined
     });
     /* 両サイドのマスモンが跳ねる速さを曲の1拍へ合わせる。   プレイ開始時に一度書くだけで、あとはCSSアニメーションが回すので毎フレームのJSは走らない */
     const sideBeatMs = rhythmSideMonsterBeatMs(song.bgmTrackId);
@@ -26949,7 +27624,34 @@ const RhythmTapTest = ({
     "aria-label": "\u30DD\u30FC\u30BA",
     className: "pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0",
     onClick: pause
-  }, "\u2161")), /*#__PURE__*/React.createElement("b", {
+  }, "\u2161")), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-song-clock": true,
+    className: "flex w-full items-center justify-end gap-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative h-[3px] w-12 shrink-0 overflow-hidden rounded-full bg-slate-950/80"
+  }, /*#__PURE__*/React.createElement("i", {
+    ref: songProgressRef,
+    className: "absolute inset-y-0 left-0 w-full rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400",
+    style: {
+      transform: 'scaleX(0)',
+      transformOrigin: 'left center'
+    }
+  })), /*#__PURE__*/React.createElement("b", {
+    ref: songTimeRef,
+    "data-rhythm-song-time": true,
+    className: "shrink-0 text-[9px] font-black leading-none tabular-nums text-slate-300",
+    style: {
+      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+    }
+  }, "0:00")), /*#__PURE__*/React.createElement("b", {
+    ref: paceRef,
+    "data-rhythm-pace": true,
+    hidden: true,
+    className: "w-full truncate text-right text-[9px] font-black leading-none tabular-nums text-slate-300",
+    style: {
+      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+    }
+  }), /*#__PURE__*/React.createElement("b", {
     ref: abilityBadgeRef,
     "data-rhythm-ability-badge": true,
     hidden: true,
@@ -26961,17 +27663,7 @@ const RhythmTapTest = ({
     "data-rhythm-down-vignette": true,
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-0 z-20"
-  }), /*#__PURE__*/React.createElement("div", {
-    "data-rhythm-song-progress": true,
-    "aria-hidden": "true",
-    className: "pointer-events-none absolute inset-x-2 bottom-[2px] z-10 h-[3px] overflow-hidden rounded-full bg-white/10"
-  }, /*#__PURE__*/React.createElement("i", {
-    ref: songProgressRef,
-    className: "absolute inset-0 block origin-left rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400",
-    style: {
-      transform: 'scaleX(0)'
-    }
-  })), lifeDownSlam && /*#__PURE__*/React.createElement("div", {
+  }), lifeDownSlam && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-life-down-slam": true,
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"
@@ -27009,12 +27701,35 @@ const RhythmTapTest = ({
       '--mh-judgment-line-bottom': `${rhythmFiniteStep(settings.judgmentLineHeight, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
-  }, laneElements, sideMonsterElements, /*#__PURE__*/React.createElement("div", {
+  }, laneElements, stageLevel !== 'SIMPLE' && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-stage": stageLevel,
+    "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
+    "aria-hidden": "true"
+  }, stageArtSrc && /*#__PURE__*/React.createElement("canvas", {
+    ref: stageArtRef,
+    "data-rhythm-stage-art": true,
+    width: "24",
+    height: "24"
+  }), stageLevel === 'VIVID' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-stage-beam": "left"
+  }), /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-stage-beam": "right"
+  }), /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-stage-sparks": "far"
+  }), /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-stage-sparks": "near"
+  }))), stageLevel !== 'SIMPLE' && /*#__PURE__*/React.createElement("i", {
+    ref: stagePulseRef,
+    "data-rhythm-stage-pulse": true,
+    "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
+    "aria-hidden": "true"
+  }), sideMonsterElements, /*#__PURE__*/React.createElement("div", {
     ref: screenFlashRef,
     "data-rhythm-screen-flash": true,
     "aria-hidden": "true"
   }), settings.comboDisplay !== false && view.combo > 0 && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-combo-box": true,
+    "data-combo-status": comboStatus,
     "data-combo-tier": String(comboTier),
     "data-combo-pos": comboPosition,
     "data-combo-wide": isLandscape ? '1' : '',
@@ -27035,7 +27750,10 @@ const RhythmTapTest = ({
   }, view.combo), /*#__PURE__*/React.createElement("span", {
     "data-rhythm-combo-label": true,
     className: "mt-1 block font-black leading-none tracking-[0.36em]"
-  }, "COMBO")), /*#__PURE__*/React.createElement("div", {
+  }, "COMBO"), comboStatus && /*#__PURE__*/React.createElement("span", {
+    "data-rhythm-combo-status-mark": comboStatus,
+    className: "mt-1 block font-black leading-none"
+  }, comboStatus === 'AM' ? 'ALL MARVELOUS' : 'FULL COMBO')), /*#__PURE__*/React.createElement("div", {
     ref: judgmentBandRef,
     "data-rhythm-judgment-band": true,
     "aria-hidden": "true",
@@ -27148,7 +27866,32 @@ const RhythmTapTest = ({
     className: "block text-[26px] font-black leading-none tracking-wide text-white"
   }, view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? view.last : ''), /*#__PURE__*/React.createElement("small", {
     className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
-  }, settings.fastSlowDisplay ? view.fastSlow || '—' : '—')), comboMilestone > 0 && /*#__PURE__*/React.createElement("div", {
+  }, settings.fastSlowDisplay ? view.fastSlow ? timingDisplay !== 'STANDARD' && typeof view.lastDeltaMs === 'number' ? `${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms` : view.fastSlow : '—' : '—'), timingDisplay === 'METER' && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-timing-meter": true,
+    "aria-hidden": "true",
+    className: "absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2",
+    style: {
+      '--meter-mar': `${(55 / 185 * 50).toFixed(2)}%`,
+      '--meter-exc': `${(100 / 185 * 50).toFixed(2)}%`,
+      '--meter-gre': `${(150 / 185 * 50).toFixed(2)}%`,
+      '--meter-goo': `${(170 / 185 * 50).toFixed(2)}%`
+    }
+  }, /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-timing-meter-band": true
+  }), /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-timing-meter-center": true
+  }), Array.from({
+    length: 12
+  }, (_, i) => /*#__PURE__*/React.createElement("i", {
+    key: i,
+    ref: el => {
+      meterTicksRef.current[i] = el;
+    },
+    "data-rhythm-timing-meter-tick": true,
+    style: {
+      opacity: 0
+    }
+  })))), comboMilestone > 0 && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-combo-milestone": true,
     "data-milestone-stage": comboMilestoneStage,
     "aria-hidden": "true",
@@ -27168,7 +27911,11 @@ const RhythmTapTest = ({
     ref: noteCanvasRef,
     "data-rhythm-note-canvas": true,
     "aria-hidden": "true"
-  }) : noteElements, canvasFaceElements, calibrating && /*#__PURE__*/React.createElement("div", {
+  }) : noteElements, canvasFaceElements, laneCoverStyle && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-lane-cover": true,
+    "aria-hidden": "true",
+    style: laneCoverStyle
+  }), calibrating && /*#__PURE__*/React.createElement("div", {
     ref: calibrationBannerRef,
     "data-rhythm-calibration-banner": true,
     className: "pointer-events-none absolute z-20 rounded-2xl border border-amber-300/60 bg-slate-950/92 text-center shadow-[0_0_18px_rgba(251,191,36,.18)]",
@@ -29146,11 +29893,6 @@ const PHASE_ACCENT_RGB = Object.freeze({
   teaching: '192,132,252'
 });
 const phaseAccentRgb = id => PHASE_ACCENT_RGB[id] || '148,163,184';
-// 画面の根の背景。上から識別色の光を差す
-const phaseBackdropStyle = id => ({
-  backgroundColor: '#020617',
-  backgroundImage: `radial-gradient(ellipse 90% 45% at 50% 0%, rgba(${phaseAccentRgb(id)},.16), transparent 70%)`
-});
 // 手順の並び。plan に current が無いとき(ラン開始時の配置・アシストカードなど)は何も出さない。
 //   plan     … ['training','ally',…](postWavePhasePlan の戻り値)
 //   current  … いまの画面の id
@@ -29166,19 +29908,22 @@ const PhaseSteps = ({
   if (!Array.isArray(plan) || !plan.includes(current)) return null;
   const at = plan.indexOf(current);
   const showNext = Number(nextWave) > 0 && plan.length <= 3;
-  const accent = phaseAccentRgb(current);
+  // 見た目は 70-bootstrap.jsx の mh-ph-step-*(いま=識別色の光る札 / 済み=緑の菱形の宝石 / まだ=夜色の札)
   const line = (on, key) => /*#__PURE__*/React.createElement("span", {
     key: key,
     "aria-hidden": "true",
-    className: "block h-px w-1.5 shrink-0",
-    style: {
-      background: on ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.14)'
+    className: `block h-px w-1.5 shrink-0${on ? ' mh-ph-step-line' : ''}`,
+    style: on ? undefined : {
+      background: 'rgba(243,210,122,.16)'
     }
   });
   return /*#__PURE__*/React.createElement("nav", {
     "aria-label": `強化フェーズ ${at + 1}/${plan.length}：${PHASE_STEP_LABELS[current] || current}`,
     "data-phase-steps": `${current}:${at + 1}/${plan.length}`,
-    className: `flex flex-wrap items-center justify-center gap-x-1 gap-y-1 ${className}`
+    className: `flex flex-wrap items-center justify-center gap-x-1 gap-y-1 ${className}`,
+    style: {
+      '--ph': phaseAccentRgb(current)
+    }
   }, plan.map((id, i) => {
     const state = i < at ? 'done' : i === at ? 'now' : 'todo';
     return /*#__PURE__*/React.createElement(React.Fragment, {
@@ -29186,40 +29931,16 @@ const PhaseSteps = ({
     }, i > 0 && line(i <= at, `line-${id}`), state === 'done' ? /*#__PURE__*/React.createElement("span", {
       title: PHASE_STEP_LABELS[id] || id,
       "aria-label": `${PHASE_STEP_LABELS[id] || id}（済み）`,
-      className: "flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-black text-emerald-300",
-      style: {
-        background: 'rgba(52,211,153,.14)',
-        border: '1px solid rgba(52,211,153,.4)'
-      }
-    }, "\u2713") : /*#__PURE__*/React.createElement("span", {
+      className: "mh-ph-step-done mx-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[8px] font-black"
+    }, /*#__PURE__*/React.createElement("span", null, "\u2713")) : /*#__PURE__*/React.createElement("span", {
       "aria-current": state === 'now' ? 'step' : undefined,
-      className: `shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-black leading-tight ${state === 'now' ? 'text-slate-950' : 'text-slate-500'}`,
-      style: state === 'now' ? {
-        background: `rgb(${accent})`,
-        boxShadow: `0 0 10px rgba(${accent},.55)`
-      } : {
-        border: '1px solid rgba(255,255,255,.14)'
-      }
+      className: `shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-black leading-tight ${state === 'now' ? 'mh-ph-step-now' : 'mh-ph-step-todo'}`
     }, PHASE_STEP_LABELS[id] || id));
   }), showNext && /*#__PURE__*/React.createElement(React.Fragment, null, line(false, 'line-next'), /*#__PURE__*/React.createElement("span", {
-    className: "shrink-0 whitespace-nowrap text-[9px] font-black text-slate-500"
+    className: "shrink-0 whitespace-nowrap text-[9px] font-black text-[#c9ae6a]"
   }, "\u2694 WAVE ", nextWave)));
 };
-// 見出しの上の小さな札(「WAVE 2 CLEAR」「ASSIST CARD」など)。識別色で縁取る
-const PhaseEyebrow = ({
-  id,
-  children
-}) => {
-  const accent = phaseAccentRgb(id);
-  return /*#__PURE__*/React.createElement("span", {
-    className: "inline-block rounded-full px-2.5 py-0.5 text-[9px] font-black tracking-[.2em]",
-    style: {
-      border: `1px solid rgba(${accent},.45)`,
-      background: `rgba(${accent},.1)`,
-      color: `rgb(${accent})`
-    }
-  }, children);
-};
+// ==== 強化フェーズの共通部品ここまで ====
 
 // ---- part: 50-error-boundary.jsx ----
 // ==== 画面のエラー境界 ====
@@ -29358,9 +30079,74 @@ function SettingsScreen({
   updateNoticeStyle,
   onChangeUpdateNoticeStyle,
   battleScreenStyle,
-  onChangeBattleScreenStyle
+  onChangeBattleScreenStyle,
+  battleFxSettings,
+  onChangeBattleFxSetting
 }) {
   const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
+  // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
+  // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
+  const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  if (battleSettingsOpen) {
+    return /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
+      "data-battle-settings-page": true,
+      className: SCREEN_SHELL_CLASS
+    }, /*#__PURE__*/React.createElement(ScreenHead, {
+      title: "\u30D0\u30C8\u30EB\u8A2D\u5B9A",
+      accent: "text-cyan-200",
+      onBack: () => setBattleSettingsOpen(false),
+      backLabel: "\u8A2D\u5B9A\u3078\u623B\u308B"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`
+    }, /*#__PURE__*/React.createElement("section", {
+      "data-battle-settings": true,
+      className: `${SCREEN_PANEL_CLASS} w-full text-left space-y-3`
+    }, /*#__PURE__*/React.createElement("div", {
+      "data-battle-screen-setting": true
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block text-[13px] font-black text-slate-200"
+    }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u753B\u9762"), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+    }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u306E\u8868\u793A\u3092\u9078\u3073\u307E\u3059\u3002\u901A\u5E38\u306E\u30AF\u30E9\u30B7\u30C3\u30AF\u30D0\u30C8\u30EB\u306B\u306F\u5F71\u97FF\u3057\u307E\u305B\u3093\u3002\u6226\u95D8\u30EB\u30FC\u30EB\u306F\u65E7\uFF0F\u65B0\u3067\u5171\u901A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-2"
+    }, BATTLE_SCREEN_STYLE_LABELS.map(option => /*#__PURE__*/React.createElement("button", {
+      key: option.id,
+      type: "button",
+      "data-battle-screen-style": option.id,
+      "aria-pressed": battleScreenStyle === option.id,
+      onClick: () => onChangeBattleScreenStyle(option.id),
+      className: `flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, option.label), /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold opacity-80"
+    }, option.note))))), BATTLE_FX_SETTING_ITEMS.map(item => {
+      const current = normalizeBattleFxSettings(battleFxSettings)[item.key];
+      return /*#__PURE__*/React.createElement("div", {
+        key: item.key,
+        "data-battle-fx-setting": item.key,
+        className: "border-t border-white/10 pt-3"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-[13px] font-black text-slate-200"
+      }, item.title), /*#__PURE__*/React.createElement("p", {
+        className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+      }, item.desc), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 grid grid-cols-2 gap-2"
+      }, item.options.map(option => /*#__PURE__*/React.createElement("button", {
+        key: option.id,
+        type: "button",
+        "data-battle-fx-option": option.id,
+        "aria-pressed": current === option.id,
+        onClick: () => onChangeBattleFxSetting(item.key, option.id),
+        className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${current === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block"
+      }, option.label), /*#__PURE__*/React.createElement("small", {
+        className: "mt-0.5 block text-[10px] font-bold opacity-80"
+      }, option.note)))));
+    }))));
+  }
   return /*#__PURE__*/React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS
@@ -29377,6 +30163,11 @@ function SettingsScreen({
     className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
+    "data-open-battle-settings": true,
+    onClick: () => setBattleSettingsOpen(true),
+    className: menuClass
+  }, "\u30D0\u30C8\u30EB\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
     onClick: onOpenAudioSettings,
     className: menuClass
   }, "\u97F3\u91CF\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
@@ -29391,27 +30182,7 @@ function SettingsScreen({
     type: "button",
     onClick: onOpenHelp,
     className: menuClass
-  }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("div", {
-    "data-battle-screen-setting": true,
-    className: `${SCREEN_PANEL_CLASS} w-full text-left`
-  }, /*#__PURE__*/React.createElement("b", {
-    className: "block text-[13px] font-black text-slate-200"
-  }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u753B\u9762"), /*#__PURE__*/React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u306E\u8868\u793A\u3092\u9078\u3073\u307E\u3059\u3002\u901A\u5E38\u306E\u30AF\u30E9\u30B7\u30C3\u30AF\u30D0\u30C8\u30EB\u306B\u306F\u5F71\u97FF\u3057\u307E\u305B\u3093\u3002\u6226\u95D8\u30EB\u30FC\u30EB\u306F\u65E7\uFF0F\u65B0\u3067\u5171\u901A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 grid grid-cols-2 gap-2"
-  }, BATTLE_SCREEN_STYLE_LABELS.map(option => /*#__PURE__*/React.createElement("button", {
-    key: option.id,
-    type: "button",
-    "data-battle-screen-style": option.id,
-    "aria-pressed": battleScreenStyle === option.id,
-    onClick: () => onChangeBattleScreenStyle(option.id),
-    className: `flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "block"
-  }, option.label), /*#__PURE__*/React.createElement("small", {
-    className: "mt-0.5 block text-[9px] font-bold opacity-80"
-  }, option.note))))), /*#__PURE__*/React.createElement("button", {
+  }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onOpenGameUpdate,
     disabled: gameUpdateDisabled,
@@ -30780,6 +31551,28 @@ function ProfileScreen({
 }
 
 // ---- part: 57-screen-monster-dex.jsx ----
+// 図鑑の立ち絵を動かすか(2026-09-24 ユーザー指示「そのページで動きを止めるか動かすかをワンタッチで決めれればおけ」
+// 「デフォは動く」)。バトルの「待機中の動き」とは別に、図鑑のボタンだけで決める。
+// 保存は新しいキー mh_dex_idle_motion_v1(true/false)。無い・壊れているときは動かす(true)
+const DEX_IDLE_MOTION_KEY = 'mh_dex_idle_motion_v1';
+const useDexIdleMotion = () => {
+  const [motion, setMotion] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    storeGet(DEX_IDLE_MOTION_KEY, true).then(v => {
+      if (alive) setMotion(v !== false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const toggle = () => setMotion(prev => {
+    const next = !prev;
+    storeSet(DEX_IDLE_MOTION_KEY, next);
+    return next;
+  });
+  return [motion, toggle];
+};
 function MonsterAttackPreviewScreen({
   dexMonsterId,
   dexAttackPreview,
@@ -30791,6 +31584,7 @@ function MonsterAttackPreviewScreen({
   onStopPreview,
   onPlayPreview
 }) {
+  const [idleMotion] = useDexIdleMotion();
   const monsters = dexMonsterList();
   const mon = monsters.find(m => m.id === dexMonsterId) || null;
   if (!mon || !unlockedMonsterIds.includes(mon.id)) {
@@ -30845,7 +31639,11 @@ function MonsterAttackPreviewScreen({
       transformOrigin: 'bottom center'
     }
   }, /*#__PURE__*/React.createElement(BattleAttackMotionPreview, {
-    image: /*#__PURE__*/React.createElement(DexMonsterArt, {
+    image: mon.imgUrl ? withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {
+      enabled: idleMotion && monsterIdleAllowedDuring(previewAnim),
+      fill: true,
+      own: true
+    }) : /*#__PURE__*/React.createElement(DexMonsterArt, {
       mon: mon,
       alt: mon.name
     }),
@@ -30948,6 +31746,7 @@ function MonsterDexDetailScreen({
   onSelectTab,
   onStopPreview
 }) {
+  const [idleMotion, toggleIdleMotion] = useDexIdleMotion();
   const monsters = dexMonsterList();
   const index = monsters.findIndex(m => m.id === dexMonsterId);
   const mon = index >= 0 ? monsters[index] : null;
@@ -31053,9 +31852,10 @@ function MonsterDexDetailScreen({
       const dx = to - from;
       if (Math.abs(dx) >= 48) go(dx < 0 ? 1 : -1);
     }
-  }, unlocked ? /*#__PURE__*/React.createElement(DexMonsterArt, {
+  }, unlocked ? /*#__PURE__*/React.createElement(DexMonsterIdleArt, {
     mon: mon,
-    alt: mon.name
+    alt: mon.name,
+    motion: idleMotion
   }) : /*#__PURE__*/React.createElement(DexMonsterArt, {
     mon: mon,
     alt: "\u307E\u3060\u51FA\u4F1A\u3063\u3066\u3044\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC",
@@ -31077,8 +31877,17 @@ function MonsterDexDetailScreen({
   }, /*#__PURE__*/React.createElement(ChevronRight, {
     size: 22
   }))), unlocked && /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 px-3 pt-1 flex justify-center"
-  }, /*#__PURE__*/React.createElement("button", {
+    className: "shrink-0 px-3 pt-1 flex justify-center gap-2"
+  }, monsterIdleRigOf(mon.id) && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-dex-idle-toggle": true,
+    "aria-pressed": idleMotion,
+    onClick: () => {
+      Audio_.se.tap();
+      toggleIdleMotion();
+    },
+    className: `min-h-[44px] px-4 rounded-xl border text-[12px] font-black shadow-lg active:scale-95 ${idleMotion ? 'border-amber-300/60 bg-slate-950/85 text-amber-100' : 'border-white/20 bg-slate-800 text-slate-300'}`
+  }, idleMotion ? '⏸ 動きを止める' : '▶ 動かす'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-dex-attack-preview": true,
     onClick: () => {
@@ -36933,445 +37742,455 @@ function PickHeroAllyScreen({
   }) : /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] leading-none"
   }, mon.emoji));
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      inset: 0,
-      backgroundColor: "#020617",
-      backgroundImage: pickMode === 'ally' ? 'radial-gradient(ellipse 90% 40% at 50% 0%, rgba(129,140,248,.18), transparent 70%)' : undefined,
-      zIndex: 30000
-    },
-    className: `absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode === 'ally' ? ' mh-phase' : ''}`
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "mb-2 text-center flex items-center justify-between px-2 shrink-0"
-  }, /*#__PURE__*/React.createElement("button", {
-    disabled: !!battleTutorial,
-    onClick: onBack,
-    className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
-  }, /*#__PURE__*/React.createElement(ArrowLeft, {
-    size: 20
-  })), /*#__PURE__*/React.createElement("h2", {
-    className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
-  }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), /*#__PURE__*/React.createElement("div", {
-    className: "w-10"
-  })), pickMode === 'ally' && /*#__PURE__*/React.createElement("div", {
-    className: "-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "rounded-full border border-indigo-300/40 bg-indigo-400/10 px-2.5 py-0.5 text-[9px] font-black tracking-[.2em] text-indigo-200"
-  }, waveResult?.wave > 0 ? `WAVE ${waveResult.wave} CLEAR ・ ` : '', "\u65B0\u3057\u3044\u4EF2\u9593\u304C\u5408\u6D41"), phasePlan && /*#__PURE__*/React.createElement(PhaseSteps, {
-    plan: phasePlan,
-    current: "ally",
-    nextWave: wave > 0 ? wave + 1 : null
-  })), /*#__PURE__*/React.createElement("div", {
-    className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}`
-  }, /*#__PURE__*/React.createElement(AssistantBubble, {
-    key: pickMode,
-    scene: pickMode === 'hero' ? 'pickHero' : 'pickAlly',
-    compact: true
-  })), pickMode === 'ally' && /*#__PURE__*/React.createElement("div", {
-    className: "mh-phase-tall shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5",
-    "data-join-status": true
-  }, (() => {
-    const joinRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    if (extremeRuleNumber(joinRule, 'allyJoinPenaltyRate') == null) return null;
-    const totalTurns = waveResult?.totalTurnCount || 0;
-    const multiplier = ultimateAllyJoinMultiplier(totalTurns, joinRule);
-    const floorValue = extremeRuleNumber(joinRule, 'minimumAllyJoinBonus');
-    return /*#__PURE__*/React.createElement("div", {
-      "data-ultimate-join-status": joinRule,
-      className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"
+  return (
+    /*#__PURE__*/
+    // 供モン合流は強化フェーズの1枚なので、タクティクス新盤面と同じ飾り(mh-ph-*)を着せる。勇者モン選びは今までどおり
+    React.createElement("div", {
+      style: pickMode === 'ally' ? {
+        position: "absolute",
+        inset: 0,
+        zIndex: 30000,
+        '--ph': '129,140,248'
+      } : {
+        position: "absolute",
+        inset: 0,
+        backgroundColor: "#020617",
+        zIndex: 30000
+      },
+      className: `absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode === 'ally' ? ' mh-phase mh-ph-bg' : ''}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mb-2 text-center flex items-center justify-between px-2 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      disabled: !!battleTutorial,
+      onClick: onBack,
+      className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
+    }, pickMode === 'hero' ? '勇者モンを選択' : '供モンを選択'), /*#__PURE__*/React.createElement("div", {
+      className: "w-10"
+    })), pickMode === 'ally' && /*#__PURE__*/React.createElement("div", {
+      className: "-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-amber-300"
-    }, joinRule, "\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", precisePercent(multiplier), "\uFF08-", precisePercent(1 - multiplier), "\uFF09", floorValue != null ? `／最低${specialRulePercent(floorValue)}` : ''));
-  })(), (() => {
-    const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    if (rule === NIGHTMARE_SETTING.id) return /*#__PURE__*/React.createElement("div", {
-      "data-nightmare-join-status": true,
-      className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-amber-300"
-    }, "NIGHTMARE\u88DC\u6B63"), "\u3000\u9593\u5408\u3044\u9069\u6027\uFF1A\uFF0B", specialRulePercent(extremeSpecialRule(rule, 'positiveModifier')), " / \uFF0D", specialRulePercent(extremeSpecialRule(rule, 'negativeModifier')));
-    if (rule === CHAOS_SETTING.id) return /*#__PURE__*/React.createElement("div", {
-      "data-chaos-join-status": true,
-      className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-amber-300"
-    }, "CHAOS\u88DC\u6B63"), "\u3000\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", specialRulePercent(extremeSpecialRule(rule, 'allyJoinBonus')));
-    return null;
-  })(), Array.isArray(tacticsUnits) ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
-  }, "\u3044\u307E\u306E\u76E4\u9762\uFF081\u4F53\u305A\u3064\uFF09"), /*#__PURE__*/React.createElement("div", {
-    "data-tactics-board-status": true,
-    className: "grid grid-cols-4 gap-1"
-  }, RANGE_LABELS.map((label, idx) => {
-    const mon = slots[idx];
-    const unit = tacticsUnits[idx];
-    const apt = distTotalBonus(idx);
-    return /*#__PURE__*/React.createElement("div", {
+      className: "mh-ph-plate"
+    }, waveResult?.wave > 0 ? `WAVE ${waveResult.wave} CLEAR ・ ` : '', "\u65B0\u3057\u3044\u4EF2\u9593\u304C\u5408\u6D41"), phasePlan && /*#__PURE__*/React.createElement(PhaseSteps, {
+      plan: phasePlan,
+      current: "ally",
+      nextWave: wave > 0 ? wave + 1 : null
+    })), /*#__PURE__*/React.createElement("div", {
+      className: `shrink-0 w-full max-w-md mx-auto mb-2${pickMode === 'ally' ? ' mh-phase-tall' : ''}`
+    }, /*#__PURE__*/React.createElement(AssistantBubble, {
+      key: pickMode,
+      scene: pickMode === 'hero' ? 'pickHero' : 'pickAlly',
+      compact: true
+    })), pickMode === 'ally' && /*#__PURE__*/React.createElement("div", {
+      className: "mh-phase-tall mh-ph-panel shrink-0 w-full max-w-md mx-auto mb-2 px-2 py-1.5",
+      "data-join-status": true
+    }, (() => {
+      const joinRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+      if (extremeRuleNumber(joinRule, 'allyJoinPenaltyRate') == null) return null;
+      const totalTurns = waveResult?.totalTurnCount || 0;
+      const multiplier = ultimateAllyJoinMultiplier(totalTurns, joinRule);
+      const floorValue = extremeRuleNumber(joinRule, 'minimumAllyJoinBonus');
+      return /*#__PURE__*/React.createElement("div", {
+        "data-ultimate-join-status": joinRule,
+        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, joinRule, "\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", precisePercent(multiplier), "\uFF08-", precisePercent(1 - multiplier), "\uFF09", floorValue != null ? `／最低${specialRulePercent(floorValue)}` : ''));
+    })(), (() => {
+      const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+      if (rule === NIGHTMARE_SETTING.id) return /*#__PURE__*/React.createElement("div", {
+        "data-nightmare-join-status": true,
+        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "NIGHTMARE\u88DC\u6B63"), "\u3000\u9593\u5408\u3044\u9069\u6027\uFF1A\uFF0B", specialRulePercent(extremeSpecialRule(rule, 'positiveModifier')), " / \uFF0D", specialRulePercent(extremeSpecialRule(rule, 'negativeModifier')));
+      if (rule === CHAOS_SETTING.id) return /*#__PURE__*/React.createElement("div", {
+        "data-chaos-join-status": true,
+        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "CHAOS\u88DC\u6B63"), "\u3000\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", specialRulePercent(extremeSpecialRule(rule, 'allyJoinBonus')));
+      return null;
+    })(), Array.isArray(tacticsUnits) ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "mh-ph-panel-label text-[8px] font-black text-left mb-1"
+    }, "\u3044\u307E\u306E\u76E4\u9762\uFF081\u4F53\u305A\u3064\uFF09"), /*#__PURE__*/React.createElement("div", {
+      "data-tactics-board-status": true,
+      className: "grid grid-cols-4 gap-1"
+    }, RANGE_LABELS.map((label, idx) => {
+      const mon = slots[idx];
+      const unit = tacticsUnits[idx];
+      const apt = distTotalBonus(idx);
+      return /*#__PURE__*/React.createElement("div", {
+        key: label,
+        "data-tactics-board-slot": idx,
+        className: `rounded-lg px-1 py-1 text-center ${mon && unit ? 'mh-ph-cell' : 'bg-black/20'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block text-[8px] font-black text-slate-500 leading-none"
+      }, label), mon && unit ? /*#__PURE__*/React.createElement(React.Fragment, null, partyFace(mon, 'mx-auto my-0.5'), /*#__PURE__*/React.createElement("span", {
+        className: "block truncate text-[8px] font-black text-white leading-tight"
+      }, mon.masuName || mon.name), /*#__PURE__*/React.createElement("span", {
+        className: "block text-[10px] font-black font-mono leading-tight text-pink-300"
+      }, unit.hp, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500"
+      }, "/", unit.maxHp)), /*#__PURE__*/React.createElement("span", {
+        className: "block text-[9px] font-black font-mono leading-tight text-red-300"
+      }, "\u529B ", unit.atk), /*#__PURE__*/React.createElement("span", {
+        className: "block text-[9px] font-black font-mono leading-tight text-emerald-300"
+      }, "\u9632 ", unit.def), /*#__PURE__*/React.createElement("span", {
+        className: "block text-[9px] font-black font-mono leading-tight text-amber-300"
+      }, "G ", unit.guts, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500"
+      }, "/", unit.maxGuts)), /*#__PURE__*/React.createElement("span", {
+        className: `block text-[9px] font-black font-mono leading-tight ${apt > 0 ? 'text-cyan-300' : apt < 0 ? 'text-red-300' : 'text-slate-500'}`
+      }, formatAptPct(apt))) :
+      /*#__PURE__*/
+      /* ★空いている間合いを 0% と出すと「適性が0なのか、誰もいないのか」が
+         見分けられない(2026-09-21 ユーザー指示) */
+      React.createElement("span", {
+        className: "block py-2 text-[9px] font-black leading-tight text-slate-600"
+      }, "\u7A7A\u304D"));
+    }))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "mh-ph-panel-label text-[8px] font-black text-left mb-1"
+    }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-4 gap-1"
+    }, [['ライフ', maxHp, 'text-pink-300'], ['ちから', atk, 'text-red-300'], ['丈夫さ', def, 'text-emerald-300'], ['ガッツ', maxGuts, 'text-amber-300']].map(([label, value, tint]) => /*#__PURE__*/React.createElement("div", {
       key: label,
-      "data-tactics-board-slot": idx,
-      className: `rounded-lg px-1 py-1 text-center ${mon && unit ? 'bg-black/40' : 'bg-black/20'}`
+      className: "mh-ph-cell rounded-lg px-1 py-1 text-center"
     }, /*#__PURE__*/React.createElement("span", {
       className: "block text-[8px] font-black text-slate-500 leading-none"
-    }, label), mon && unit ? /*#__PURE__*/React.createElement(React.Fragment, null, partyFace(mon, 'mx-auto my-0.5'), /*#__PURE__*/React.createElement("span", {
-      className: "block truncate text-[8px] font-black text-white leading-tight"
-    }, mon.masuName || mon.name), /*#__PURE__*/React.createElement("span", {
-      className: "block text-[10px] font-black font-mono leading-tight text-pink-300"
-    }, unit.hp, /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-500"
-    }, "/", unit.maxHp)), /*#__PURE__*/React.createElement("span", {
-      className: "block text-[9px] font-black font-mono leading-tight text-red-300"
-    }, "\u529B ", unit.atk), /*#__PURE__*/React.createElement("span", {
-      className: "block text-[9px] font-black font-mono leading-tight text-emerald-300"
-    }, "\u9632 ", unit.def), /*#__PURE__*/React.createElement("span", {
-      className: "block text-[9px] font-black font-mono leading-tight text-amber-300"
-    }, "G ", unit.guts, /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-500"
-    }, "/", unit.maxGuts)), /*#__PURE__*/React.createElement("span", {
-      className: `block text-[9px] font-black font-mono leading-tight ${apt > 0 ? 'text-cyan-300' : apt < 0 ? 'text-red-300' : 'text-slate-500'}`
-    }, formatAptPct(apt))) :
-    /*#__PURE__*/
-    /* ★空いている間合いを 0% と出すと「適性が0なのか、誰もいないのか」が
-       見分けられない(2026-09-21 ユーザー指示) */
-    React.createElement("span", {
-      className: "block py-2 text-[9px] font-black leading-tight text-slate-600"
-    }, "\u7A7A\u304D"));
-  }))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
-  }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-4 gap-1"
-  }, [['ライフ', maxHp, 'text-pink-300'], ['ちから', atk, 'text-red-300'], ['丈夫さ', def, 'text-emerald-300'], ['ガッツ', maxGuts, 'text-amber-300']].map(([label, value, tint]) => /*#__PURE__*/React.createElement("div", {
-    key: label,
-    className: "rounded-lg bg-black/40 px-1 py-1 text-center"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "block text-[8px] font-black text-slate-500 leading-none"
-  }, label), /*#__PURE__*/React.createElement("span", {
-    className: `block text-[13px] font-black font-mono leading-tight ${tint}`
-  }, value)))), /*#__PURE__*/React.createElement("div", {
-    className: "text-[8px] font-black tracking-widest text-slate-500 text-left mt-1.5 mb-1"
-  }, "\u9593\u5408\u3044\u9069\u6027\uFF08\u8DDD\u96E2\u88DC\u6B63\uFF09", /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-600"
-  }, "\u30FB\u3044\u307E\u306E\u968A\u5217")), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-4 gap-1"
-  }, RANGE_LABELS.map((label, idx) => {
-    const cur = distTotalBonus(idx);
-    return /*#__PURE__*/React.createElement("div", {
-      key: label,
-      className: "rounded-lg bg-black/40 px-1 py-1 text-center"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "flex items-center justify-center gap-1"
-    }, partyFace(slots[idx]), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] font-black text-slate-500 leading-none"
-    }, label)), /*#__PURE__*/React.createElement("span", {
-      className: `block text-[12px] font-black font-mono leading-tight ${cur > 0 ? 'text-cyan-300' : cur < 0 ? 'text-red-300' : 'text-slate-400'}`
-    }, formatAptPct(cur)));
-  })))), pickMode === 'hero' && /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 w-full max-w-md mx-auto mb-2"
-  }, !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1.5"
-  }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, label]) => /*#__PURE__*/React.createElement("button", {
-    key: key,
-    onClick: () => {
-      setHeroPickTab(key);
-      setCurrentPickingMon(null);
-    },
-    "aria-pressed": heroPickTab === key,
-    className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
-  }, label))), /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
-  }, isProMode(runMode) ? 'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: `w-full${pickMode === 'ally' ? ' m-auto' : ''}`
-  }, pickMode === 'ally' && !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
-    className: "mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-slate-500"
-  }, /*#__PURE__*/React.createElement("span", null, "\u5408\u6D41\u3067\u304D\u308B\u5019\u88DC ", (monSelection || []).filter(m => m && !slots.some(x => x && x.id === m.id)).length, "\u4F53"), /*#__PURE__*/React.createElement("span", null, "\u30AB\u30FC\u30C9\u3092\u62BC\u3059\u3068\u8A73\u7D30")), (() => {
-    const allyCarousel = pickMode === 'ally' && isProMode(runMode);
-    // 念のため、すでに編成にいる子は一覧にも出さない(勇者モンがもう一度出ないようにする)
-    const inParty = slots.filter(x => x).map(x => x.id);
-    const savedRawList = pickMode === 'hero' && (heroPickTab === 'base' || isProMode(runMode)) ? getUnlockedBaseMonsterList() : monSelection;
-    const rawList = pickMode === 'hero' ? debugHeroMonsterList(savedRawList) : savedRawList;
-    const list = (pickMode === 'ally' ? rawList.filter(m => m && !inParty.includes(m.id)) : rawList) || [];
-    const stepAlly = delta => {
-      const root = allyCarouselRef.current;
-      if (!root) return;
-      const next = Math.max(0, Math.min(list.length - 1, allyCardIndex + delta));
-      setAllyCardIndex(next);
-      centerCarouselChild(root, next, 'smooth');
-    };
-    return /*#__PURE__*/React.createElement(React.Fragment, null, allyCarousel && /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1"
-    }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u4F9B\u30E2\u30F3\u3092\u9078\u629E"), allyCarousel && /*#__PURE__*/React.createElement("div", {
-      className: "relative h-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      "aria-label": "\u524D\u306E\u4F9B\u30E2\u30F3",
-      disabled: allyCardIndex === 0,
-      onClick: () => stepAlly(-1),
-      className: "absolute left-0 top-[70px] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
-    }, /*#__PURE__*/React.createElement(ChevronLeft, null)), /*#__PURE__*/React.createElement("button", {
-      "aria-label": "\u6B21\u306E\u4F9B\u30E2\u30F3",
-      disabled: allyCardIndex >= list.length - 1,
-      onClick: () => stepAlly(1),
-      className: "absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
-    }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
-      ref: allyCarousel ? allyCarouselRef : null,
-      onScroll: allyCarousel ? e => {
-        const root = e.currentTarget,
-          c = root.scrollLeft + root.clientWidth / 2;
-        let best = 0,
-          d = Infinity;
-        [...root.children].forEach((card, i) => {
-          const n = Math.abs(card.offsetLeft + card.offsetWidth / 2 - c);
-          if (n < d) {
-            d = n;
-            best = i;
-          }
-        });
-        if (best !== allyCardIndex) setAllyCardIndex(best);
-      } : undefined,
-      className: allyCarousel ? 'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll' : 'grid grid-cols-2 gap-2.5',
-      style: allyCarousel ? {
-        paddingLeft: '18%',
-        paddingRight: '18%',
-        touchAction: 'pan-x pinch-zoom'
-      } : pickMode === 'hero' && isProMode(runMode) ? {
-        display: 'flex',
-        flexDirection: 'column'
-      } : undefined
-    }, list.map((m, cardIndex) => {
-      const isSel = currentPickingMon?.id === m.id;
-      const focused = allyCarousel && cardIndex === allyCardIndex;
-      // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
-      // 以前はこの画面だけ独自に組んでいたため、絆レベルも総合力も限界突破の★も出ず、
-      // 同じマスモンが画面によって違う見た目になっていた。
-      // この画面だけの情報(固有技名・ステータス・詳細への案内)はextraで足す。
-      const pickMasu = m.masuId ? getMasuMon(m.masuId) : null;
-      const pickBase = m.debugOnly ? m : ALL_PLAYER_MONSTERS[m.id] || m;
-      // カードの見た目は「供モンの候補」と同じ共通部品(renderProMonsterRow)を通す
-      if (pickMode === 'hero' && isProMode(runMode)) return /*#__PURE__*/React.createElement(React.Fragment, {
-        key: m.id
-      }, renderProMonsterRow({
-        mon: m,
-        selected: proHeroPreset?.heroBaseId === m.id,
-        disabled: !scenarioPicksHero(m.id),
-        onSelect: () => {
-          setProHeroPreset(null);
-          setCurrentPickingMon(m);
-          advanceRunStage('PICK_SLOT');
-        },
-        onDetail: () => setCurrentPickingMon(m),
-        selectLabel: `${m.name}を勇者モンに選ぶ`,
-        activeClass: 'active:bg-indigo-900/30',
-        extraButtonClass: scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''
-      }));
-      // 供モンの候補は順に出てくる(--i が並び順)。勇者モン選びは一覧が長いので動かさない
-      const enterStyle = pickMode === 'ally' ? {
-        '--i': cardIndex
-      } : null;
-      return /*#__PURE__*/React.createElement("button", {
-        key: m.id,
-        disabled: pickMode === 'hero' && !scenarioPicksHero(m.id),
-        onClick: () => setCurrentPickingMon(m),
-        style: allyCarousel ? {
-          ...MONSTER_CARD_STYLE,
-          ...enterStyle,
-          flex: '0 0 64%'
-        } : {
-          ...MONSTER_CARD_STYLE,
-          ...enterStyle
-        },
-        className: `${MONSTER_CARD_CLASS}${pickMode === 'ally' ? ' mh-phase-enter' : ''} bg-slate-900 transition-all disabled:opacity-25${pickMode !== 'hero' || scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''}${allyCarousel ? ` snap-center shrink-0 ${focused ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}` : ''} ${isSel ? 'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]' : 'border-slate-800'}`
-      }, renderMonsterCardBody({
-        masu: pickMasu,
-        base: pickBase,
-        mon: m,
-        badge: m.debugOnly ? /*#__PURE__*/React.createElement("div", {
-          className: "absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white"
-        }, "DEBUG\u5C02\u7528") : isSel ? /*#__PURE__*/React.createElement("div", {
-          className: "absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"
-        }, /*#__PURE__*/React.createElement(Check, {
-          size: 12,
-          className: "text-white"
-        })) : null,
-        extra: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-          className: "text-amber-400 font-black flex items-center gap-1 leading-tight",
-          style: {
-            fontSize: '9px'
-          }
-        }, /*#__PURE__*/React.createElement(Zap, {
-          size: 9
-        }), " ", m.unique.name), pickMode === 'hero' ? /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono",
-          style: {
-            fontSize: '9px'
-          }
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex justify-between"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-500"
-        }, "HP"), /*#__PURE__*/React.createElement("span", {
-          className: "text-pink-400 font-bold"
-        }, m.baseHp)), /*#__PURE__*/React.createElement("div", {
-          className: "flex justify-between"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-500"
-        }, "\u529B"), /*#__PURE__*/React.createElement("span", {
-          className: "text-red-400 font-bold"
-        }, m.baseAtk)), /*#__PURE__*/React.createElement("div", {
-          className: "flex justify-between"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-500"
-        }, "\u9632"), /*#__PURE__*/React.createElement("span", {
-          className: "text-emerald-400 font-bold"
-        }, m.baseDef)), /*#__PURE__*/React.createElement("div", {
-          className: "flex justify-between"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-500"
-        }, "G"), /*#__PURE__*/React.createElement("span", {
-          className: "text-amber-400 font-bold"
-        }, m.baseGuts))) : (() => {
-          const preview = allyJoinPreview(m);
-          return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-            className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
-            style: {
-              fontSize: '8px'
+    }, label), /*#__PURE__*/React.createElement("span", {
+      className: `block text-[13px] font-black font-mono leading-tight ${tint}`
+    }, value)))), /*#__PURE__*/React.createElement("div", {
+      className: "mh-ph-panel-label text-[8px] font-black text-left mt-1.5 mb-1"
+    }, "\u9593\u5408\u3044\u9069\u6027\uFF08\u8DDD\u96E2\u88DC\u6B63\uFF09", /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-600"
+    }, "\u30FB\u3044\u307E\u306E\u968A\u5217")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-4 gap-1"
+    }, RANGE_LABELS.map((label, idx) => {
+      const cur = distTotalBonus(idx);
+      return /*#__PURE__*/React.createElement("div", {
+        key: label,
+        className: "mh-ph-cell rounded-lg px-1 py-1 text-center"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "flex items-center justify-center gap-1"
+      }, partyFace(slots[idx]), /*#__PURE__*/React.createElement("span", {
+        className: "text-[8px] font-black text-slate-500 leading-none"
+      }, label)), /*#__PURE__*/React.createElement("span", {
+        className: `block text-[12px] font-black font-mono leading-tight ${cur > 0 ? 'text-cyan-300' : cur < 0 ? 'text-red-300' : 'text-slate-400'}`
+      }, formatAptPct(cur)));
+    })))), pickMode === 'hero' && /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 w-full max-w-md mx-auto mb-2"
+    }, !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-1.5"
+    }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, label]) => /*#__PURE__*/React.createElement("button", {
+      key: key,
+      onClick: () => {
+        setHeroPickTab(key);
+        setCurrentPickingMon(null);
+      },
+      "aria-pressed": heroPickTab === key,
+      className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
+    }, label))), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
+    }, isProMode(runMode) ? 'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `w-full${pickMode === 'ally' ? ' m-auto' : ''}`
+    }, pickMode === 'ally' && !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
+      className: "mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-[#c9ae6a]"
+    }, /*#__PURE__*/React.createElement("span", null, "\u5408\u6D41\u3067\u304D\u308B\u5019\u88DC ", (monSelection || []).filter(m => m && !slots.some(x => x && x.id === m.id)).length, "\u4F53"), /*#__PURE__*/React.createElement("span", null, "\u30AB\u30FC\u30C9\u3092\u62BC\u3059\u3068\u8A73\u7D30")), (() => {
+      const allyCarousel = pickMode === 'ally' && isProMode(runMode);
+      // 念のため、すでに編成にいる子は一覧にも出さない(勇者モンがもう一度出ないようにする)
+      const inParty = slots.filter(x => x).map(x => x.id);
+      const savedRawList = pickMode === 'hero' && (heroPickTab === 'base' || isProMode(runMode)) ? getUnlockedBaseMonsterList() : monSelection;
+      const rawList = pickMode === 'hero' ? debugHeroMonsterList(savedRawList) : savedRawList;
+      const list = (pickMode === 'ally' ? rawList.filter(m => m && !inParty.includes(m.id)) : rawList) || [];
+      const stepAlly = delta => {
+        const root = allyCarouselRef.current;
+        if (!root) return;
+        const next = Math.max(0, Math.min(list.length - 1, allyCardIndex + delta));
+        setAllyCardIndex(next);
+        centerCarouselChild(root, next, 'smooth');
+      };
+      return /*#__PURE__*/React.createElement(React.Fragment, null, allyCarousel && /*#__PURE__*/React.createElement("div", {
+        className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1"
+      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u4F9B\u30E2\u30F3\u3092\u9078\u629E"), allyCarousel && /*#__PURE__*/React.createElement("div", {
+        className: "relative h-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u524D\u306E\u4F9B\u30E2\u30F3",
+        disabled: allyCardIndex === 0,
+        onClick: () => stepAlly(-1),
+        className: "absolute left-0 top-[70px] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
+      }, /*#__PURE__*/React.createElement(ChevronLeft, null)), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u6B21\u306E\u4F9B\u30E2\u30F3",
+        disabled: allyCardIndex >= list.length - 1,
+        onClick: () => stepAlly(1),
+        className: "absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
+      }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
+        ref: allyCarousel ? allyCarouselRef : null,
+        onScroll: allyCarousel ? e => {
+          const root = e.currentTarget,
+            c = root.scrollLeft + root.clientWidth / 2;
+          let best = 0,
+            d = Infinity;
+          [...root.children].forEach((card, i) => {
+            const n = Math.abs(card.offsetLeft + card.offsetWidth / 2 - c);
+            if (n < d) {
+              d = n;
+              best = i;
             }
-          }, preview.stats.map(stat => /*#__PURE__*/React.createElement("span", {
-            key: stat.key,
-            className: "min-w-0 block"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "block text-slate-500 font-black leading-none"
-          }, stat.short), preview.tactics ? stat.diff > 0 ? /*#__PURE__*/React.createElement("span", {
-            className: "block leading-none text-slate-500"
-          }, stat.before, " \u2192") : null : [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
-            className: "block leading-none text-slate-500"
-          }, "\u672C\u6765 +", stat.normalDiff) : null, /*#__PURE__*/React.createElement("b", {
-            className: `block leading-tight ${stat.diff > 0 ? stat.tint : 'text-slate-400'}`,
+          });
+          if (best !== allyCardIndex) setAllyCardIndex(best);
+        } : undefined,
+        className: allyCarousel ? 'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll' : 'grid grid-cols-2 gap-2.5',
+        style: allyCarousel ? {
+          paddingLeft: '18%',
+          paddingRight: '18%',
+          touchAction: 'pan-x pinch-zoom'
+        } : pickMode === 'hero' && isProMode(runMode) ? {
+          display: 'flex',
+          flexDirection: 'column'
+        } : undefined
+      }, list.map((m, cardIndex) => {
+        const isSel = currentPickingMon?.id === m.id;
+        const focused = allyCarousel && cardIndex === allyCardIndex;
+        // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
+        // 以前はこの画面だけ独自に組んでいたため、絆レベルも総合力も限界突破の★も出ず、
+        // 同じマスモンが画面によって違う見た目になっていた。
+        // この画面だけの情報(固有技名・ステータス・詳細への案内)はextraで足す。
+        const pickMasu = m.masuId ? getMasuMon(m.masuId) : null;
+        const pickBase = m.debugOnly ? m : ALL_PLAYER_MONSTERS[m.id] || m;
+        // カードの見た目は「供モンの候補」と同じ共通部品(renderProMonsterRow)を通す
+        if (pickMode === 'hero' && isProMode(runMode)) return /*#__PURE__*/React.createElement(React.Fragment, {
+          key: m.id
+        }, renderProMonsterRow({
+          mon: m,
+          selected: proHeroPreset?.heroBaseId === m.id,
+          disabled: !scenarioPicksHero(m.id),
+          onSelect: () => {
+            setProHeroPreset(null);
+            setCurrentPickingMon(m);
+            advanceRunStage('PICK_SLOT');
+          },
+          onDetail: () => setCurrentPickingMon(m),
+          selectLabel: `${m.name}を勇者モンに選ぶ`,
+          activeClass: 'active:bg-indigo-900/30',
+          extraButtonClass: scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''
+        }));
+        // 供モンの候補は順に出てくる(--i が並び順)。勇者モン選びは一覧が長いので動かさない
+        const enterStyle = pickMode === 'ally' ? {
+          '--i': cardIndex
+        } : null;
+        return /*#__PURE__*/React.createElement("button", {
+          key: m.id,
+          disabled: pickMode === 'hero' && !scenarioPicksHero(m.id),
+          onClick: () => setCurrentPickingMon(m),
+          style: allyCarousel ? {
+            ...MONSTER_CARD_STYLE,
+            ...enterStyle,
+            flex: '0 0 64%'
+          } : {
+            ...MONSTER_CARD_STYLE,
+            ...enterStyle
+          },
+          "data-ph-kind": pickMode === 'ally' ? 'ally' : undefined,
+          "data-ph-on": pickMode === 'ally' && isSel ? '' : undefined,
+          className: `${MONSTER_CARD_CLASS}${pickMode === 'ally' ? ' mh-phase-enter mh-ph-frame' : ''} bg-slate-900 transition-all disabled:opacity-25${pickMode !== 'hero' || scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''}${allyCarousel ? ` snap-center shrink-0 ${focused ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}` : ''} ${isSel ? 'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]' : 'border-slate-800'}`
+        }, renderMonsterCardBody({
+          masu: pickMasu,
+          base: pickBase,
+          mon: m,
+          badge: m.debugOnly ? /*#__PURE__*/React.createElement("div", {
+            className: "absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white"
+          }, "DEBUG\u5C02\u7528") : isSel ? /*#__PURE__*/React.createElement("div", {
+            className: "absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"
+          }, /*#__PURE__*/React.createElement(Check, {
+            size: 12,
+            className: "text-white"
+          })) : null,
+          extra: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+            className: "text-amber-400 font-black flex items-center gap-1 leading-tight",
             style: {
               fontSize: '9px'
             }
-          }, stat.after), preview.tactics ? null : /*#__PURE__*/React.createElement("span", {
-            className: `block leading-none ${stat.diff > 0 ? 'text-emerald-400' : 'text-slate-700'}`
-          }, stat.diff > 0 ? `実際 +${stat.diff}` : '実際 ±0')))), preview.tactics && /*#__PURE__*/React.createElement("div", {
-            "data-tactics-join-catchup": Math.round((preview.catchUp - 1) * 100),
-            "data-tactics-join-turns": preview.catchUpTurns,
-            className: `w-full text-center leading-none font-black ${preview.catchUp > 1 ? 'text-emerald-300' : 'text-slate-500'}`,
+          }, /*#__PURE__*/React.createElement(Zap, {
+            size: 9
+          }), " ", m.unique.name), pickMode === 'hero' ? /*#__PURE__*/React.createElement("div", {
+            className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono",
             style: {
-              fontSize: '8px'
+              fontSize: '9px'
             }
-          }, preview.catchUp > 1 ? `追いつき +${Math.round((preview.catchUp - 1) * 100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）` : '追いつき なし（まだWAVEを抜けていません）'), preview.tactics && /*#__PURE__*/React.createElement("div", {
-            "data-tactics-join-dist-catchup": Math.round((preview.distCatchUp || 0) * 1000) / 10,
-            className: `w-full text-center leading-none font-black ${preview.distCatchUp > 0 ? 'text-cyan-300' : 'text-slate-500'}`,
-            style: {
-              fontSize: '8px'
-            }
-          }, preview.distCatchUp > 0 ? `立つ間合いのボーナスを +${((preview.distCatchUp || 0) * 100).toFixed(1)}% まで引き上げ` : '間合いのボーナスの引き上げ なし'), /*#__PURE__*/React.createElement("div", {
-            className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
-            style: {
-              fontSize: '8px'
-            }
-          }, preview.apt.map(range => /*#__PURE__*/React.createElement("span", {
-            key: range.idx,
-            className: "min-w-0 block"
+          }, /*#__PURE__*/React.createElement("div", {
+            className: "flex justify-between"
           }, /*#__PURE__*/React.createElement("span", {
-            className: "block text-slate-500 font-black leading-none"
-          }, range.label), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === NIGHTMARE_SETTING.id && range.normalDiff !== range.diff ? /*#__PURE__*/React.createElement("span", {
-            className: "block leading-none text-slate-500"
-          }, "\u901A\u5E38 ", formatAptPct(range.normalDiff), " \u2192") : null, /*#__PURE__*/React.createElement("b", {
-            className: `block leading-tight ${range.diff > 0 ? 'text-cyan-300' : range.diff < 0 ? 'text-red-300' : 'text-slate-400'}`
-          }, formatAptPct(range.after)), preview.tactics ? null : /*#__PURE__*/React.createElement("span", {
-            className: `block leading-none ${range.diff > 0 ? 'text-emerald-400' : range.diff < 0 ? 'text-red-400' : 'text-slate-700'}`
-          }, range.diff !== 0 ? `${range.normalDiff !== range.diff ? '実際 ' : ''}${formatAptPct(range.diff)}` : '±0')))));
-        })(), /*#__PURE__*/React.createElement("div", {
-          className: "min-h-[32px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black mt-1 flex items-center justify-center gap-1",
-          style: {
-            fontSize: '10px'
-          }
-        }, "\u8A73\u7D30\u3092\u898B\u308B ", /*#__PURE__*/React.createElement(ChevronRight, {
-          size: 11
-        })))
-      }));
-    })), allyCarousel && /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-center gap-1 py-1 shrink-0"
-    }, list.map((m, i) => /*#__PURE__*/React.createElement("button", {
-      key: m.id,
-      "aria-label": `${i + 1}体目`,
-      onClick: () => stepAlly(i - allyCardIndex),
-      className: `w-1.5 h-1.5 rounded-full ${i === allyCardIndex ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
-    }))));
-  })())), currentPickingMon && (() => {
-    // ★合流の見せ方は allyJoinPreview に1か所だけ置く。ここで何度も呼ぶと、
-    //   タクティクスかどうかの分岐が増えて食い違う
-    const joinPreview = pickMode === 'hero' ? null : allyJoinPreview(currentPickingMon);
-    return renderMonsterDetailModal({
-      mon: currentPickingMon,
-      masu: currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId) : null,
-      onClose: () => setCurrentPickingMon(null),
-      zIndex: 31000,
-      // 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする
-      paddingTop: battleTutorial ? 'calc(4.25rem + env(safe-area-inset-top))' : undefined,
-      detailOpts: {
-        // 一覧カードと同じ allyJoinPreview を通す。以前はここだけ plusStats をそのまま足していたため、
-        // ULTIMATE(累計ターンで加算が下がる)では詳細の数値と実際に増える量が食い違っていた
-        // ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
-        //   before は素の値・after は盤面に入る値(追いつき補正込み)。見出しもそう書く
-        statValues: joinPreview ? joinPreview.stats.map(stat => [stat.label, `${stat.before} → ${stat.after}${stat.diff > 0 ? `（+${stat.diff}）` : ''}`, stat.diff > 0 ? stat.tint : 'text-slate-400']) : null,
-        statTitle: pickMode === 'hero' ? '基本ステータス' : joinPreview?.tactics ? '基本ステータス(素の値 → 盤面に入る値)' : '基本ステータス(現在 → 合流後)',
-        // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる。
-        // ★タクティクスは合算しないので、いまの値は 0 から始めて「その子のぶん」を出す
-        aptCurrentPct: joinPreview?.tactics ? [0, 0, 0, 0] : [0, 1, 2, 3].map(i => distTotalBonus(i)),
-        // 加算量も実際に足される値(NIGHTMAREの半減込み)で出す
-        aptDeltaPct: joinPreview ? joinPreview.apt.map(range => range.diff) : null,
-        aptPointsLabel: currentPickingMon.masuId ? /*#__PURE__*/React.createElement("div", {
-          className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
-        }, /*#__PURE__*/React.createElement(Sparkles, {
-          size: 9
-        }), "\u5F37\u5316P: ", getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) : null,
-        aptExtra: (idx, grade) => {
-          const pts = currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0 : 0;
-          const canUp = pts > 0 && DIST_APTITUDE_GRADES.indexOf(grade) < DIST_APTITUDE_GRADES.length - 1;
-          return canUp ? /*#__PURE__*/React.createElement("button", {
+            className: "text-slate-500"
+          }, "HP"), /*#__PURE__*/React.createElement("span", {
+            className: "text-pink-400 font-bold"
+          }, m.baseHp)), /*#__PURE__*/React.createElement("div", {
+            className: "flex justify-between"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "text-slate-500"
+          }, "\u529B"), /*#__PURE__*/React.createElement("span", {
+            className: "text-red-400 font-bold"
+          }, m.baseAtk)), /*#__PURE__*/React.createElement("div", {
+            className: "flex justify-between"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "text-slate-500"
+          }, "\u9632"), /*#__PURE__*/React.createElement("span", {
+            className: "text-emerald-400 font-bold"
+          }, m.baseDef)), /*#__PURE__*/React.createElement("div", {
+            className: "flex justify-between"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "text-slate-500"
+          }, "G"), /*#__PURE__*/React.createElement("span", {
+            className: "text-amber-400 font-bold"
+          }, m.baseGuts))) : (() => {
+            const preview = allyJoinPreview(m);
+            return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+              className: "mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
+              style: {
+                fontSize: '8px'
+              }
+            }, preview.stats.map(stat => /*#__PURE__*/React.createElement("span", {
+              key: stat.key,
+              className: "min-w-0 block"
+            }, /*#__PURE__*/React.createElement("span", {
+              className: "block text-slate-500 font-black leading-none"
+            }, stat.short), preview.tactics ? stat.diff > 0 ? /*#__PURE__*/React.createElement("span", {
+              className: "block leading-none text-slate-500"
+            }, stat.before, " \u2192") : null : [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
+              className: "block leading-none text-slate-500"
+            }, "\u672C\u6765 +", stat.normalDiff) : null, /*#__PURE__*/React.createElement("b", {
+              className: `block leading-tight ${stat.diff > 0 ? stat.tint : 'text-slate-400'}`,
+              style: {
+                fontSize: '9px'
+              }
+            }, stat.after), preview.tactics ? null : /*#__PURE__*/React.createElement("span", {
+              className: `block leading-none ${stat.diff > 0 ? 'text-emerald-400' : 'text-slate-700'}`
+            }, stat.diff > 0 ? `実際 +${stat.diff}` : '実際 ±0')))), preview.tactics && /*#__PURE__*/React.createElement("div", {
+              "data-tactics-join-catchup": Math.round((preview.catchUp - 1) * 100),
+              "data-tactics-join-turns": preview.catchUpTurns,
+              className: `w-full text-center leading-none font-black ${preview.catchUp > 1 ? 'text-emerald-300' : 'text-slate-500'}`,
+              style: {
+                fontSize: '8px'
+              }
+            }, preview.catchUp > 1 ? `追いつき +${Math.round((preview.catchUp - 1) * 100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）` : '追いつき なし（まだWAVEを抜けていません）'), preview.tactics && /*#__PURE__*/React.createElement("div", {
+              "data-tactics-join-dist-catchup": Math.round((preview.distCatchUp || 0) * 1000) / 10,
+              className: `w-full text-center leading-none font-black ${preview.distCatchUp > 0 ? 'text-cyan-300' : 'text-slate-500'}`,
+              style: {
+                fontSize: '8px'
+              }
+            }, preview.distCatchUp > 0 ? `立つ間合いのボーナスを +${((preview.distCatchUp || 0) * 100).toFixed(1)}% まで引き上げ` : '間合いのボーナスの引き上げ なし'), /*#__PURE__*/React.createElement("div", {
+              className: "mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
+              style: {
+                fontSize: '8px'
+              }
+            }, preview.apt.map(range => /*#__PURE__*/React.createElement("span", {
+              key: range.idx,
+              className: "min-w-0 block"
+            }, /*#__PURE__*/React.createElement("span", {
+              className: "block text-slate-500 font-black leading-none"
+            }, range.label), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === NIGHTMARE_SETTING.id && range.normalDiff !== range.diff ? /*#__PURE__*/React.createElement("span", {
+              className: "block leading-none text-slate-500"
+            }, "\u901A\u5E38 ", formatAptPct(range.normalDiff), " \u2192") : null, /*#__PURE__*/React.createElement("b", {
+              className: `block leading-tight ${range.diff > 0 ? 'text-cyan-300' : range.diff < 0 ? 'text-red-300' : 'text-slate-400'}`
+            }, formatAptPct(range.after)), preview.tactics ? null : /*#__PURE__*/React.createElement("span", {
+              className: `block leading-none ${range.diff > 0 ? 'text-emerald-400' : range.diff < 0 ? 'text-red-400' : 'text-slate-700'}`
+            }, range.diff !== 0 ? `${range.normalDiff !== range.diff ? '実際 ' : ''}${formatAptPct(range.diff)}` : '±0')))));
+          })(), /*#__PURE__*/React.createElement("div", {
+            className: `min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode === 'ally' ? 'mh-ph-btn' : 'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`,
+            style: {
+              fontSize: '10px'
+            }
+          }, "\u8A73\u7D30\u3092\u898B\u308B ", /*#__PURE__*/React.createElement(ChevronRight, {
+            size: 11
+          })))
+        }));
+      })), allyCarousel && /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-center gap-1 py-1 shrink-0"
+      }, list.map((m, i) => /*#__PURE__*/React.createElement("button", {
+        key: m.id,
+        "aria-label": `${i + 1}体目`,
+        onClick: () => stepAlly(i - allyCardIndex),
+        className: `w-1.5 h-1.5 rounded-full ${i === allyCardIndex ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+      }))));
+    })())), currentPickingMon && (() => {
+      // ★合流の見せ方は allyJoinPreview に1か所だけ置く。ここで何度も呼ぶと、
+      //   タクティクスかどうかの分岐が増えて食い違う
+      const joinPreview = pickMode === 'hero' ? null : allyJoinPreview(currentPickingMon);
+      return renderMonsterDetailModal({
+        mon: currentPickingMon,
+        masu: currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId) : null,
+        onClose: () => setCurrentPickingMon(null),
+        zIndex: 31000,
+        // 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする
+        paddingTop: battleTutorial ? 'calc(4.25rem + env(safe-area-inset-top))' : undefined,
+        detailOpts: {
+          // 一覧カードと同じ allyJoinPreview を通す。以前はここだけ plusStats をそのまま足していたため、
+          // ULTIMATE(累計ターンで加算が下がる)では詳細の数値と実際に増える量が食い違っていた
+          // ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
+          //   before は素の値・after は盤面に入る値(追いつき補正込み)。見出しもそう書く
+          statValues: joinPreview ? joinPreview.stats.map(stat => [stat.label, `${stat.before} → ${stat.after}${stat.diff > 0 ? `（+${stat.diff}）` : ''}`, stat.diff > 0 ? stat.tint : 'text-slate-400']) : null,
+          statTitle: pickMode === 'hero' ? '基本ステータス' : joinPreview?.tactics ? '基本ステータス(素の値 → 盤面に入る値)' : '基本ステータス(現在 → 合流後)',
+          // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる。
+          // ★タクティクスは合算しないので、いまの値は 0 から始めて「その子のぶん」を出す
+          aptCurrentPct: joinPreview?.tactics ? [0, 0, 0, 0] : [0, 1, 2, 3].map(i => distTotalBonus(i)),
+          // 加算量も実際に足される値(NIGHTMAREの半減込み)で出す
+          aptDeltaPct: joinPreview ? joinPreview.apt.map(range => range.diff) : null,
+          aptPointsLabel: currentPickingMon.masuId ? /*#__PURE__*/React.createElement("div", {
+            className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
+          }, /*#__PURE__*/React.createElement(Sparkles, {
+            size: 9
+          }), "\u5F37\u5316P: ", getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) : null,
+          aptExtra: (idx, grade) => {
+            const pts = currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0 : 0;
+            const canUp = pts > 0 && DIST_APTITUDE_GRADES.indexOf(grade) < DIST_APTITUDE_GRADES.length - 1;
+            return canUp ? /*#__PURE__*/React.createElement("button", {
+              onClick: () => {
+                const updated = spendAptPoint(currentPickingMon.masuId, idx);
+                if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
+              },
+              className: "w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95"
+            }, "+1") : null;
+          },
+          extraAfterApt: /*#__PURE__*/React.createElement(React.Fragment, null, currentPickingMon.masuId && (getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("div", {
+            className: "bg-black/40 p-2 rounded-xl border border-emerald-500/30"
+          }, /*#__PURE__*/React.createElement("div", {
+            className: "text-[7px] text-emerald-400 uppercase font-bold mb-1"
+          }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316(\u5F37\u5316P 1\u3064\u306B\u3064\u304D\u4F7F\u7528\u30FB\u8ABF\u6574\u4E2D)"), /*#__PURE__*/React.createElement("div", {
+            className: "grid grid-cols-4 gap-1"
+          }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => /*#__PURE__*/React.createElement("button", {
+            key: key,
             onClick: () => {
-              const updated = spendAptPoint(currentPickingMon.masuId, idx);
+              const updated = spendStatPoint(currentPickingMon.masuId, key);
               if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
             },
-            className: "w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95"
-          }, "+1") : null;
+            className: "flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "text-[7px] text-emerald-300 font-black"
+          }, label), /*#__PURE__*/React.createElement("span", {
+            className: "text-[10px] text-white font-black"
+          }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && !currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
+            className: "bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center"
+          }, pickMode === 'hero' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'), currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
+            className: "rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/50 p-2 text-center text-[9px] font-black text-fuchsia-200"
+          }, "DEBUG\u5C02\u7528\u30FB\u4FDD\u5B58\u3001\u80B2\u6210\u3001\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u306E\u5BFE\u8C61\u5916"))
         },
-        extraAfterApt: /*#__PURE__*/React.createElement(React.Fragment, null, currentPickingMon.masuId && (getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("div", {
-          className: "bg-black/40 p-2 rounded-xl border border-emerald-500/30"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "text-[7px] text-emerald-400 uppercase font-bold mb-1"
-        }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316(\u5F37\u5316P 1\u3064\u306B\u3064\u304D\u4F7F\u7528\u30FB\u8ABF\u6574\u4E2D)"), /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-4 gap-1"
-        }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => /*#__PURE__*/React.createElement("button", {
-          key: key,
-          onClick: () => {
-            const updated = spendStatPoint(currentPickingMon.masuId, key);
-            if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
-          },
-          className: "flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[7px] text-emerald-300 font-black"
-        }, label), /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] text-white font-black"
-        }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && !currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
-          className: "bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center"
-        }, pickMode === 'hero' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'), currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
-          className: "rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/50 p-2 text-center text-[9px] font-black text-fuchsia-200"
-        }, "DEBUG\u5C02\u7528\u30FB\u4FDD\u5B58\u3001\u80B2\u6210\u3001\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u306E\u5BFE\u8C61\u5916"))
-      },
-      footer: /*#__PURE__*/React.createElement("div", {
-        className: "flex gap-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setCurrentPickingMon(null),
-        className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95"
-      }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-        onClick: () => advanceRunStage('PICK_SLOT'),
-        className: `flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`
-      }, pickMode === 'hero' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
-    });
-  })());
+        footer: /*#__PURE__*/React.createElement("div", {
+          className: "flex gap-2 shrink-0"
+        }, /*#__PURE__*/React.createElement("button", {
+          onClick: () => setCurrentPickingMon(null),
+          className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95"
+        }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+          onClick: () => advanceRunStage('PICK_SLOT'),
+          className: `flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`
+        }, pickMode === 'hero' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
+      });
+    })())
+  );
 }
 function PickProAlliesScreen({
   advanceRunStage,
@@ -37551,15 +38370,15 @@ function PickSlotScreen({
   return (
     /*#__PURE__*/
     // mh-phase … 背の低い器(横持ち)で、吹き出しと説明を畳んで4つの枠を残す(70-bootstrap.jsx)
+    // mh-ph-* … タクティクス新盤面と同じ飾り。4つの枠は盤面と同じ距離の色(零=赤・近=黄・中=緑・遠=青)と模様
     React.createElement("div", {
       style: {
         position: "absolute",
         inset: 0,
-        backgroundColor: "#020617",
-        backgroundImage: 'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(129,140,248,.18), transparent 70%)',
-        zIndex: 30000
+        zIndex: 30000,
+        '--ph': '129,140,248'
       },
-      className: "mh-phase absolute inset-0 z-[3000] flex flex-col items-center p-4 text-center overflow-hidden"
+      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-4 text-center overflow-hidden"
     }, phasePlan && /*#__PURE__*/React.createElement(PhaseSteps, {
       plan: phasePlan,
       current: "slot",
@@ -37567,37 +38386,47 @@ function PickSlotScreen({
       className: "shrink-0 mb-2"
     }), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 flex flex-col items-center"
-    }, mon?.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "relative mb-2 flex items-center justify-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mh-ph-rune"
+    }), /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mh-ph-floor"
+    }), mon?.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
       baseId: mon.id,
       src: mon.imgUrl,
       alt: "mon",
       masuColors: mon.colors,
-      className: "mh-phase-hero shrink-0 w-24 h-24 mb-2 object-contain animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]"
+      className: "mh-phase-hero relative z-10 shrink-0 w-24 h-24 object-contain animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]"
     }) : /*#__PURE__*/React.createElement("div", {
-      className: "mh-phase-hero text-6xl mb-2 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]"
-    }, mon?.emoji), monName && /*#__PURE__*/React.createElement("div", {
+      className: "mh-phase-hero relative z-10 text-6xl animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]"
+    }, mon?.emoji)), monName && /*#__PURE__*/React.createElement("div", {
       className: "text-[12px] font-black text-white leading-tight"
     }, monName, /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400"
-    }, "\u3092\u3069\u3053\u306B\u7F6E\u304F\uFF1F")), /*#__PURE__*/React.createElement("h2", {
-      className: "text-lg font-black mt-0.5 italic uppercase tracking-widest text-indigo-400"
-    }, "\u914D\u7F6E\u5834\u6240\u3092\u6C7A\u5B9A\u305B\u3088")), /*#__PURE__*/React.createElement("div", {
+    }, "\u3092\u3069\u3053\u306B\u7F6E\u304F\uFF1F")), /*#__PURE__*/React.createElement("div", {
+      className: "mh-ph-heading mt-0.5"
+    }, /*#__PURE__*/React.createElement("h2", {
+      className: "mh-ph-title text-lg font-black italic uppercase tracking-widest"
+    }, "\u914D\u7F6E\u5834\u6240\u3092\u6C7A\u5B9A\u305B\u3088"))), /*#__PURE__*/React.createElement("div", {
       className: "mh-phase-tall shrink-0 w-full max-w-xs mt-1 mb-1 text-left"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "pickSlot",
       compact: true
     })), /*#__PURE__*/React.createElement("div", {
       "data-slot-aptitude": true,
-      className: "mh-phase-tall shrink-0 w-full max-w-xs mt-1 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5"
+      className: "mh-phase-tall mh-ph-panel shrink-0 w-full max-w-xs mt-1 px-2 py-1.5"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] font-black tracking-widest text-slate-500 text-left mb-1"
+      className: "mh-ph-panel-label text-[9px] font-black text-left mb-1"
     }, "\u3053\u306E\u5B50\u306E\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-1"
     }, RANGE_LABELS.map((label, i) => {
       const grade = getDistAptitude(mon, i);
       return /*#__PURE__*/React.createElement("span", {
         key: label,
-        className: "rounded-lg bg-black/40 px-1 py-1"
+        className: "mh-ph-cell rounded-lg px-1 py-1"
       }, /*#__PURE__*/React.createElement("span", {
         className: "block text-[9px] font-black text-slate-400 leading-none"
       }, label), /*#__PURE__*/React.createElement("span", {
@@ -37622,31 +38451,39 @@ function PickSlotScreen({
         style: {
           '--i': i
         },
-        className: `mh-phase-enter mh-phase-card relative min-h-[96px] rounded-2xl border-2 flex flex-col items-center justify-center gap-1 px-1 py-2 transition-all active:scale-90${scenarioPicksSlot(i) ? battleTutorialSpotClass('slots') : ''} ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${open ? allowed ? 'ring-2 ring-white/25 shadow-[0_0_18px_rgba(255,255,255,.12)]' : 'opacity-20' : 'opacity-70 saturate-50'}`
+        "data-ph-range": i,
+        "data-ph-on": open && allowed ? '' : undefined,
+        className: `mh-phase-enter mh-phase-card mh-ph-frame relative overflow-hidden min-h-[96px] rounded-2xl border-2 flex flex-col items-center justify-center gap-1 px-1 py-2 transition-all active:scale-90${scenarioPicksSlot(i) ? battleTutorialSpotClass('slots') : ''} ${open ? allowed ? '' : 'opacity-20' : 'opacity-75 saturate-50'}`
       }, /*#__PURE__*/React.createElement("span", {
-        className: `text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`
+        "aria-hidden": "true",
+        className: "mh-ph-sparkle"
+      }), /*#__PURE__*/React.createElement("span", {
+        className: `relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/30 shadow-md`,
+        style: {
+          boxShadow: '0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'
+        }
       }, RANGE_LABELS[i], "\u8DDD\u96E2"), open ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(PlusCircle, {
-        className: `text-white/60${allowed ? ' animate-pulse' : ''}`,
+        className: `relative text-white/70${allowed ? ' animate-pulse' : ''}`,
         size: 20
       }), /*#__PURE__*/React.createElement("span", {
-        className: `text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`
+        className: `relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`
       }, grade, " \u5408\u6D41\u5F8C ", formatAptPct(after))) : /*#__PURE__*/React.createElement(React.Fragment, null, s.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
         masuColors: s.colors,
-        className: "w-10 h-10 object-contain drop-shadow-md"
+        className: "relative w-10 h-10 object-contain drop-shadow-md"
       }) : /*#__PURE__*/React.createElement("span", {
-        className: "text-2xl drop-shadow-md"
+        className: "relative text-2xl drop-shadow-md"
       }, s.emoji), /*#__PURE__*/React.createElement("span", {
-        className: "max-w-full truncate text-[9px] font-black text-white/90"
+        className: "relative max-w-full truncate text-[9px] font-black text-white/90"
       }, s.masuName || s.name, /*#__PURE__*/React.createElement("span", {
         className: "text-white/50"
       }, "\u30FB\u914D\u7F6E\u305A\u307F"))));
     })), /*#__PURE__*/React.createElement("button", {
       disabled: !!battleTutorial,
       onClick: onRepick,
-      className: "shrink-0 mt-2 min-h-[44px] px-4 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"
+      className: "mh-ph-btn shrink-0 mt-2 min-h-[44px] px-4 rounded-full flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"
     }, /*#__PURE__*/React.createElement(ArrowLeft, {
       size: 14
     }), " \u30E2\u30F3\u30B9\u30BF\u30FC\u3092\u9078\u3073\u76F4\u3059"))
@@ -37666,28 +38503,32 @@ function PickTeachingScreen({
 }) {
   // レベルは 0〜2 の3段。カードにも詳細にも同じ段の点を出して、どこまで育つかを見せる
   const TEACHING_MAX_LEVEL = 2;
+  // 段は菱形の宝石(70-bootstrap.jsx の mh-ph-pip)。色は近くの data-ph-kind(新規=緑・強化=紫・MAX=金)から取る
   const levelPips = (filled, next) => /*#__PURE__*/React.createElement("span", {
-    className: "flex items-center justify-center gap-1",
+    className: "flex items-center justify-center gap-2 py-0.5",
     "aria-hidden": "true"
   }, Array.from({
     length: TEACHING_MAX_LEVEL + 1
   }).map((_, i) => /*#__PURE__*/React.createElement("i", {
     key: i,
-    className: `block h-1.5 w-4 rounded-full ${i < filled ? 'bg-purple-300' : i === next ? 'bg-amber-300 animate-pulse' : 'bg-slate-700'}`
+    className: "mh-ph-pip",
+    "data-on": i < filled ? '' : undefined,
+    "data-next": i === next ? '' : undefined
   })));
+  const kindOf = (owned, isMax) => owned ? isMax ? 'max' : 'up' : 'new';
   return (
     /*#__PURE__*/
     // mh-phase … 背の低い器(横持ち)で吹き出しと説明を畳む目印(70-bootstrap.jsx の @container)。
     // safe-area は body が持っているので、ここでは足さない(41-screen-ui.jsx の注意書き)
+    // mh-ph-* … タクティクス新盤面と同じ飾り(濃紺の地・金の縁・回る光の縁・宝石)。--ph は画面の識別色
     React.createElement("div", {
       style: {
         position: "absolute",
         inset: 0,
-        backgroundColor: "#020617",
-        backgroundImage: 'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(192,132,252,.18), transparent 70%)',
-        zIndex: 30000
+        zIndex: 30000,
+        '--ph': '192,132,252'
       },
-      className: "mh-phase absolute inset-0 z-[3000] px-4 py-3 flex flex-col items-center overflow-hidden"
+      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] px-4 py-3 flex flex-col items-center overflow-hidden"
     }, /*#__PURE__*/React.createElement("div", {
       className: "mb-2 text-center shrink-0 flex flex-col items-center gap-1"
     }, phasePlan ? /*#__PURE__*/React.createElement(PhaseSteps, {
@@ -37695,10 +38536,12 @@ function PickTeachingScreen({
       current: "teaching",
       nextWave: wave > 0 ? wave + 1 : null
     }) : /*#__PURE__*/React.createElement("span", {
-      className: "rounded-full border border-purple-300/40 bg-purple-400/10 px-2.5 py-0.5 text-[9px] font-black tracking-[.2em] text-purple-200"
-    }, "ASSIST CARD"), /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black text-purple-300 italic drop-shadow-[0_0_10px_rgba(192,132,252,.5)]"
-    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u306E\u7D99\u627F\u30FB\u5F37\u5316"), /*#__PURE__*/React.createElement("p", {
+      className: "mh-ph-plate"
+    }, "ASSIST CARD"), /*#__PURE__*/React.createElement("div", {
+      className: "mh-ph-heading"
+    }, /*#__PURE__*/React.createElement("h2", {
+      className: "mh-ph-title text-xl font-black italic"
+    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u306E\u7D99\u627F\u30FB\u5F37\u5316")), /*#__PURE__*/React.createElement("p", {
       className: "mh-phase-tall text-[10px] font-bold text-slate-400"
     }, "1\u679A\u3048\u3089\u3093\u3067\u3001\u65B0\u3057\u304F\u899A\u3048\u308B\u304B\u3001\u6301\u3063\u3066\u3044\u308B\u30AB\u30FC\u30C9\u3092\u5F37\u5316\u3057\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
       className: "mh-phase-tall shrink-0 w-full max-w-sm mb-2"
@@ -37707,16 +38550,16 @@ function PickTeachingScreen({
       compact: true
     })), ownedTeachings.length > 0 && /*#__PURE__*/React.createElement("div", {
       "data-teaching-owned": true,
-      className: "shrink-0 w-full max-w-sm mb-2 rounded-2xl border border-purple-400/20 bg-slate-900/60 px-2 py-1.5"
+      className: "mh-ph-panel shrink-0 w-full max-w-sm mb-2 px-2 py-1.5"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] font-black tracking-widest text-slate-500 mb-1"
+      className: "mh-ph-panel-label text-[8px] font-black mb-1"
     }, "\u6240\u6301\u4E2D\u306E\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9"), /*#__PURE__*/React.createElement("div", {
       className: "flex flex-wrap gap-1.5"
     }, ownedTeachings.map(ot => /*#__PURE__*/React.createElement("span", {
       key: ot.uid || ot.id,
-      className: "flex min-w-0 items-center gap-1 rounded-full bg-black/40 py-0.5 pl-0.5 pr-2"
+      className: "mh-ph-cell flex min-w-0 items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full"
+      className: "mh-ph-medal flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full"
     }, cardIconNode(ot.icon, 22, ot.id)), /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-black text-purple-100 truncate max-w-[6.5rem]"
     }, BREEDER_EVO_NAMES[ot.id]?.[ot.evoLevel] || ot.name), /*#__PURE__*/React.createElement("span", {
@@ -37732,6 +38575,7 @@ function PickTeachingScreen({
       // カードに出す効果は「選んだあとの段」のもの。MAXは今の段のまま
       const shownLevel = owned ? isMax ? level : level + 1 : 0;
       const shownDesc = getFullEvolutionDetails(t)[shownLevel]?.desc || '';
+      // 強化できるカードは縁が回って光る(タクティクスの選んだ枠と同じ)。新規=緑・強化=紫・MAX=金の縁と模様
       return /*#__PURE__*/React.createElement("button", {
         key: t.id,
         disabled: !scenarioPicksTeaching(t.id),
@@ -37739,20 +38583,31 @@ function PickTeachingScreen({
         style: {
           '--i': cardIndex
         },
-        className: `mh-phase-enter relative p-3 pt-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all min-h-[176px] disabled:opacity-20${scenarioPicksTeaching(t.id) ? battleTutorialSpotClass('teachings') : ''} ${owned ? isMax ? 'bg-amber-950/30 border-amber-400/70' : 'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]' : 'bg-slate-900/80 border-slate-700 active:scale-95'}`
+        "data-ph-kind": kindOf(owned, isMax),
+        "data-ph-on": owned && !isMax ? '' : undefined,
+        className: `mh-phase-enter mh-ph-frame relative p-3 pt-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all min-h-[176px] active:scale-95 disabled:opacity-20${scenarioPicksTeaching(t.id) ? battleTutorialSpotClass('teachings') : ''}`
       }, /*#__PURE__*/React.createElement("span", {
+        "aria-hidden": "true",
+        className: "mh-ph-sparkle"
+      }), owned && !isMax && /*#__PURE__*/React.createElement("span", {
+        "aria-hidden": "true",
+        className: "mh-ph-shine"
+      }), /*#__PURE__*/React.createElement("span", {
         style: {
           fontSize: '44px'
         },
-        className: "leading-none"
+        className: "mh-ph-medal relative rounded-2xl p-1 leading-none"
       }, cardIconNode(t.icon, 52, t.id)), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black leading-tight flex flex-col items-center justify-center"
+        className: "relative text-[11px] font-black leading-tight flex flex-col items-center justify-center",
+        style: {
+          textShadow: '0 1px 0 rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.6)'
+        }
       }, owned && !isMax && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-amber-400 mb-0.5 line-through"
       }, BREEDER_EVO_NAMES[t.id][level]), /*#__PURE__*/React.createElement("div", {
         className: owned ? "text-white" : "text-slate-100"
       }, owned ? isMax ? BREEDER_EVO_NAMES[t.id][level] : BREEDER_EVO_NAMES[t.id][level + 1] : BREEDER_EVO_NAMES[t.id][0])), levelPips(owned ? level + 1 : 0, isMax ? -1 : shownLevel), /*#__PURE__*/React.createElement("div", {
-        className: "w-full flex-1 rounded-lg bg-black/30 px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-300",
+        className: "mh-ph-cell relative w-full flex-1 rounded-lg px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-200",
         style: {
           display: '-webkit-box',
           WebkitLineClamp: 3,
@@ -37760,7 +38615,13 @@ function PickTeachingScreen({
           overflow: 'hidden'
         }
       }, shownDesc), /*#__PURE__*/React.createElement("span", {
-        className: `absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[8px] font-black shadow-lg ${owned ? isMax ? 'bg-amber-500 text-slate-950' : 'bg-purple-500 text-white' : 'bg-emerald-500 text-slate-950'}`
+        className: "absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[8px] font-black text-white",
+        style: {
+          border: '1px solid #f3d27a',
+          background: 'linear-gradient(180deg, rgb(var(--mh-rc2)), rgb(var(--mh-rc)) 55%, rgba(var(--mh-rc),.7))',
+          boxShadow: '0 0 0 1px rgba(30,18,4,.9), 0 0 10px rgba(var(--mh-rc),.7)',
+          textShadow: '0 1px 2px rgba(0,0,0,.9)'
+        }
       }, owned ? isMax ? "MAXレベル" : `強化 Lv.${level}→${level + 1}` : "新規習得"));
     }))), selectedTeachingCard && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[3100] flex items-center justify-center p-6",
@@ -37771,14 +38632,27 @@ function PickTeachingScreen({
         zIndex: 31000
       }
     }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-phase-pop bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 shadow-[0_0_40px_rgba(168,85,247,.35)] h-auto max-h-full",
+      "data-ph-kind": (() => {
+        const o = ownedTeachings.find(ot => ot.id === selectedTeachingCard.id);
+        return kindOf(o, !!o && o.evoLevel >= TEACHING_MAX_LEVEL);
+      })(),
+      "data-ph-on": "",
+      className: "mh-phase-pop mh-ph-frame relative rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 h-auto max-h-full"
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mh-ph-sparkle"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "relative shrink-0 flex items-center justify-center",
       style: {
-        backgroundImage: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(192,132,252,.18), transparent 70%)'
+        '--ph': '243,210,122'
       }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-6xl shrink-0"
-    }, cardIconNode(selectedTeachingCard.icon, 76, selectedTeachingCard.id)), /*#__PURE__*/React.createElement("h3", {
-      className: "text-lg font-black text-white shrink-0"
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mh-ph-rune"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "mh-ph-medal relative z-10 rounded-2xl p-1.5 text-6xl leading-none"
+    }, cardIconNode(selectedTeachingCard.icon, 76, selectedTeachingCard.id))), /*#__PURE__*/React.createElement("h3", {
+      className: "mh-ph-title relative text-lg font-black shrink-0"
     }, (() => {
       const t = selectedTeachingCard;
       const owned = ownedTeachings.find(ot => ot.id === t.id);
@@ -37793,7 +38667,7 @@ function PickTeachingScreen({
         className: `text-[10px] font-black ${isMax ? 'text-amber-300' : owned ? 'text-purple-200' : 'text-emerald-300'}`
       }, owned ? isMax ? 'MAXレベルです' : `Lv.${level} → Lv.${level + 1} に強化` : '新しく習得します'));
     })(), /*#__PURE__*/React.createElement("div", {
-      className: "w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1"
+      className: "relative w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1"
     }, getFullEvolutionDetails(selectedTeachingCard).map(info => {
       const owned = ownedTeachings.find(ot => ot.id === selectedTeachingCard.id);
       const currentLvl = owned ? owned.evoLevel : -1;
@@ -37801,7 +38675,7 @@ function PickTeachingScreen({
       const isNext = info.lvl === currentLvl + 1;
       return /*#__PURE__*/React.createElement("div", {
         key: info.lvl,
-        className: `p-2 rounded-xl border ${isCurrent ? 'bg-purple-900/50 border-purple-400' : isNext ? 'bg-amber-900/30 border-amber-500/50' : 'bg-black/30 border-white/5'}`
+        className: `p-2 rounded-xl border ${isCurrent ? 'bg-purple-900/50 border-purple-400' : isNext ? 'bg-amber-900/30 border-amber-400/70 shadow-[0_0_12px_rgba(243,210,122,.3)]' : 'mh-ph-cell border-white/5'}`
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between items-center mb-1"
       }, /*#__PURE__*/React.createElement("span", {
@@ -37814,13 +38688,13 @@ function PickTeachingScreen({
         className: "text-[8px] text-slate-300"
       }, info.desc));
     })), /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-2 w-full mt-auto shrink-0"
+      className: "relative flex gap-2 w-full mt-auto shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setSelectedTeachingCard(null),
-      className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+      className: "mh-ph-btn flex-1 min-h-[44px] py-3 rounded-xl font-bold text-xs"
     }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: () => confirmPickTeaching(),
-      className: "flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs"
+      className: "mh-ph-btn-gold flex-1 min-h-[44px] py-3 rounded-xl font-black text-sm"
     }, ownedTeachings.find(ot => ot.id === selectedTeachingCard.id) ? "強化する" : "習得する")))))
   );
 }
@@ -37857,29 +38731,38 @@ function UpgradeSkillScreen({
   return (
     /*#__PURE__*/
     // mh-phase … 背の低い器(横持ち)で説明を畳む目印(70-bootstrap.jsx の @container)
+    // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・宝石)。--ph は画面の識別色
     React.createElement("div", {
       style: {
         position: "absolute",
         inset: 0,
-        backgroundColor: "#020617",
-        backgroundImage: 'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(245,158,11,.16), transparent 70%)',
-        zIndex: 30000
+        zIndex: 30000,
+        '--ph': '245,158,11'
       },
-      className: "mh-phase absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden"
+      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden"
     }, /*#__PURE__*/React.createElement("div", {
       className: "mb-2 shrink-0 w-full max-w-sm flex flex-col items-center gap-1.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mh-ph-heading"
     }, /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black text-amber-400 italic uppercase drop-shadow-[0_0_10px_rgba(245,158,11,.45)]"
-    }, "\u56FA\u6709\u6280\u306E\u5F37\u5316"), phasePlan && /*#__PURE__*/React.createElement(PhaseSteps, {
+      className: "mh-ph-title text-2xl font-black italic uppercase"
+    }, "\u56FA\u6709\u6280\u306E\u5F37\u5316")), phasePlan && /*#__PURE__*/React.createElement(PhaseSteps, {
       plan: phasePlan,
       current: "skill",
       nextWave: wave > 0 ? wave + 1 : null
     }), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-center gap-2 rounded-full border border-amber-400/40 bg-amber-950/40 px-3 py-1"
+      className: "mh-ph-plate flex items-center justify-center gap-2 !tracking-normal"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] text-slate-300 uppercase tracking-widest"
+      className: "text-[9px] uppercase tracking-widest"
     }, "Remaining Points: ", /*#__PURE__*/React.createElement("b", {
-      className: `ml-0.5 inline-block min-w-[1.6em] rounded-full px-1.5 font-mono text-[15px] leading-tight ${upgradePoints > 0 ? 'bg-amber-500 text-slate-950' : 'bg-slate-700 text-slate-300'}`
+      className: "mh-ph-gem ml-1 h-8 w-8 align-middle font-mono text-[14px]",
+      style: upgradePoints > 0 ? {
+        '--mh-rc': '245,158,11',
+        '--mh-rc2': '255,240,160'
+      } : {
+        '--mh-rc': '71,85,105',
+        '--mh-rc2': '203,213,225'
+      }
     }, upgradePoints))), /*#__PURE__*/React.createElement("p", {
       className: "mh-phase-mid text-[10px] font-bold text-slate-400 leading-snug"
     }, "\u30DD\u30A4\u30F3\u30C81\u3064\u3067\u56FA\u6709\u6280\u304C1\u6BB5\u4E0A\u304C\u308A\u307E\u3059\u3002\u4F7F\u308F\u306A\u304B\u3063\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u6B21\u306B\u6301\u3061\u8D8A\u305B\u307E\u3059")), (() => {
@@ -37892,11 +38775,11 @@ function UpgradeSkillScreen({
       const noPoint = upgradePoints < GUTS_RECOVERY_POINT_COST;
       return /*#__PURE__*/React.createElement("div", {
         "data-guts-recovery": true,
-        className: "w-full max-w-sm shrink-0 mb-2 rounded-2xl border border-amber-500/40 bg-amber-950/25 px-3 py-2 flex items-center gap-2"
+        className: "mh-ph-panel w-full max-w-sm shrink-0 mb-2 px-3 py-2 flex items-center gap-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-w-0 text-left"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "block text-[8px] font-black tracking-widest text-amber-300/80 leading-none"
+        className: "mh-ph-panel-label block text-[8px] font-black leading-none"
       }, "\u73FE\u5728\u30AC\u30C3\u30C4"), tacticsMode ? /*#__PURE__*/React.createElement("span", {
         "data-tactics-guts-recovery": true,
         className: "block font-mono font-black leading-tight"
@@ -37946,7 +38829,7 @@ function UpgradeSkillScreen({
         disabled: !canRecoverGutsWithPoint,
         onClick: recoverGutsWithPoint,
         "aria-label": `強化ポイント${GUTS_RECOVERY_POINT_COST}つでガッツを${GUTS_RECOVERY_AMOUNT}回復する`,
-        className: "shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-600 text-white font-black leading-tight active:scale-95 disabled:opacity-30"
+        className: `shrink-0 min-h-[44px] px-3 rounded-xl font-black leading-tight active:scale-95 ${canRecoverGutsWithPoint ? 'mh-ph-btn-gold' : 'mh-ph-btn-off'}`
       }, gutsFull ? /*#__PURE__*/React.createElement("span", {
         className: "block",
         style: {
@@ -37958,7 +38841,7 @@ function UpgradeSkillScreen({
           fontSize: '12px'
         }
       }, GUTS_RECOVERY_POINT_COST, "P \u3067 +", GUTS_RECOVERY_AMOUNT), /*#__PURE__*/React.createElement("span", {
-        className: "block text-amber-100/90",
+        className: "block opacity-80",
         style: {
           fontSize: '8px'
         }
@@ -37974,7 +38857,7 @@ function UpgradeSkillScreen({
       className: "contents"
     }, uniqueUpgradeRow(e))))), /*#__PURE__*/React.createElement("button", {
       onClick: continueAfterUniqueUpgrade,
-      className: "w-full max-w-sm min-h-[52px] bg-white text-black rounded-2xl font-black shadow-[0_0_20px_rgba(255,255,255,0.25)] active:scale-95 transition-transform mt-auto shrink-0 flex items-center justify-center gap-1"
+      className: "mh-ph-btn-gold w-full max-w-sm min-h-[52px] rounded-2xl font-black active:scale-95 transition-transform mt-auto shrink-0 flex items-center justify-center gap-1"
     }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u3078", /*#__PURE__*/React.createElement(ChevronRight, {
       size: 18
     })))
@@ -38245,60 +39128,36 @@ function RewardPickScreen({
   const remaining = TRAINING_PICK_COUNT - activePicks.length;
   const ready = tacticsMode ? trainableSlots.length > 0 && trainableSlots.every(index => picksOf(index).length === TRAINING_PICK_COUNT) : trainingPicks.length === TRAINING_PICK_COUNT;
   const doneSlots = tacticsMode ? trainableSlots.filter(index => picksOf(index).length === TRAINING_PICK_COUNT).length : 0;
-  // idle は選ぶ前の枠の色、badge はアイコンの台、bar は伸び幅の棒。
+  // 枠の色と模様は data-ph-kind(70-bootstrap.jsx の mh-ph-*)が持つ。ここは文字の色と伸び幅の棒だけ。
   // 選ぶ前から4項目を色で見分けられるようにする(以前は選ぶまで4枚とも同じ灰色だった)
   const STYLES = {
     hp: {
       icon: /*#__PURE__*/React.createElement(Heart, {
         size: 18
       }),
-      ring: 'border-pink-400',
-      bg: 'bg-pink-900/40',
       tint: 'text-pink-300',
-      chip: 'bg-pink-500',
-      idle: 'border-pink-400/25',
-      badge: 'bg-pink-500/20 text-pink-300',
-      bar: 'bg-pink-400',
-      glow: 'rgba(244,114,182,.35)'
+      bar: 'bg-pink-400'
     },
     atk: {
       icon: /*#__PURE__*/React.createElement(Sword, {
         size: 18
       }),
-      ring: 'border-red-400',
-      bg: 'bg-red-900/40',
       tint: 'text-red-300',
-      chip: 'bg-red-500',
-      idle: 'border-red-400/25',
-      badge: 'bg-red-500/20 text-red-300',
-      bar: 'bg-red-400',
-      glow: 'rgba(248,113,113,.35)'
+      bar: 'bg-red-400'
     },
     def: {
       icon: /*#__PURE__*/React.createElement(ShieldCheck, {
         size: 18
       }),
-      ring: 'border-emerald-400',
-      bg: 'bg-emerald-900/40',
       tint: 'text-emerald-300',
-      chip: 'bg-emerald-500',
-      idle: 'border-emerald-400/25',
-      badge: 'bg-emerald-500/20 text-emerald-300',
-      bar: 'bg-emerald-400',
-      glow: 'rgba(52,211,153,.35)'
+      bar: 'bg-emerald-400'
     },
     guts: {
       icon: /*#__PURE__*/React.createElement(Sparkles, {
         size: 18
       }),
-      ring: 'border-amber-400',
-      bg: 'bg-amber-900/40',
       tint: 'text-amber-300',
-      chip: 'bg-amber-500',
-      idle: 'border-amber-400/25',
-      badge: 'bg-amber-500/20 text-amber-300',
-      bar: 'bg-amber-400',
-      glow: 'rgba(251,191,36,.35)'
+      bar: 'bg-amber-400'
     }
   };
   const optionById = id => TRAINING_OPTIONS.find(option => option.id === id);
@@ -38317,15 +39176,15 @@ function RewardPickScreen({
   return (
     /*#__PURE__*/
     // mh-phase … 器の高さで中身を畳む目印(70-bootstrap.jsx の @container)
+    // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・回る光の縁・宝石)。--ph は画面の識別色
     React.createElement("div", {
       style: {
         position: "absolute",
         inset: 0,
-        backgroundColor: "#020617",
-        backgroundImage: 'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(251,191,36,.16), transparent 70%)',
-        zIndex: 30000
+        zIndex: 30000,
+        '--ph': '251,191,36'
       },
-      className: "mh-phase absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden",
+      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden",
       "data-screen": "training"
     }, /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-sm",
@@ -38335,14 +39194,14 @@ function RewardPickScreen({
     }, waveResult?.wave > 0 && /*#__PURE__*/React.createElement("div", {
       className: "mb-1 flex justify-center"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "rounded-full border border-amber-300/40 bg-amber-400/10 px-2.5 py-0.5 text-[9px] font-black tracking-[.2em] text-amber-200"
+      className: "mh-ph-plate"
     }, "WAVE ", waveResult.wave, " CLEAR")), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-center gap-2"
+      className: "mh-ph-heading"
     }, /*#__PURE__*/React.createElement(Trophy, {
-      className: "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,.6)]",
+      className: "text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,.7)]",
       size: 22
     }), /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black italic uppercase tracking-tighter text-white leading-none"
+      className: "mh-ph-title text-2xl font-black italic uppercase tracking-tighter leading-none"
     }, "\u30C8\u30EC\u30FC\u30CB\u30F3\u30B0")), phasePlan && /*#__PURE__*/React.createElement(PhaseSteps, {
       plan: phasePlan,
       current: "training",
@@ -38359,7 +39218,7 @@ function RewardPickScreen({
       const st = picked ? STYLES[picked.id] || STYLES.hp : null;
       if (!picked) return /*#__PURE__*/React.createElement("span", {
         key: i,
-        className: "flex min-w-0 items-center gap-1 rounded-full border border-dashed border-slate-600 px-2 py-1 text-[10px] font-black text-slate-500",
+        className: "mh-ph-step-todo flex min-w-0 items-center gap-1 rounded-full border-dashed px-2 py-1 text-[10px] font-black",
         style: {
           maxWidth: '42%'
         }
@@ -38372,7 +39231,9 @@ function RewardPickScreen({
         disabled: !!effect,
         onClick: () => removePick(i),
         "aria-label": `${i + 1}回目の${picked.name}を取り消す`,
-        className: `mh-phase-pop flex min-w-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40 ${st.ring} ${st.bg}`,
+        "data-ph-kind": picked.id,
+        "data-ph-on": "",
+        className: "mh-phase-pop mh-ph-frame flex min-w-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40",
         style: {
           maxWidth: '42%'
         }
@@ -38387,7 +39248,7 @@ function RewardPickScreen({
         className: "shrink-0 text-[10px] text-slate-300"
       }, "\xD7"));
     }), /*#__PURE__*/React.createElement("span", {
-      className: "shrink-0 text-[11px] font-black font-mono text-amber-300"
+      className: "shrink-0 text-[11px] font-black font-mono text-[#f3d27a]"
     }, activePicks.length, " / ", TRAINING_PICK_COUNT)), tacticsMode && /*#__PURE__*/React.createElement("div", {
       "data-tactics-training-progress": `${doneSlots}/${trainableSlots.length}`,
       className: "mt-1.5 flex flex-wrap items-center justify-center gap-1 text-center text-[10px] font-black text-indigo-300"
@@ -38399,7 +39260,7 @@ function RewardPickScreen({
       const active = slotIdx === currentSlot && pickable;
       return /*#__PURE__*/React.createElement("span", {
         key: slotIdx,
-        className: `flex max-w-[32%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active ? 'border-amber-300 bg-amber-400/15 text-amber-100 shadow-[0_0_10px_rgba(251,191,36,.35)]' : done ? 'border-emerald-400/50 bg-emerald-950/50 text-emerald-200' : 'border-slate-700 bg-slate-900/60 text-slate-400'}`
+        className: `flex max-w-[32%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active ? 'mh-ph-step-now' : done ? 'border-emerald-400/60 bg-emerald-950/60 text-emerald-200' : 'mh-ph-step-todo'}`
       }, /*#__PURE__*/React.createElement("span", {
         className: "truncate"
       }, unitName(slotIdx)), /*#__PURE__*/React.createElement("span", {
@@ -38426,10 +39287,10 @@ function RewardPickScreen({
       scene: "rewardPick",
       compact: true
     })), (!tacticsMode || currentUnit) && /*#__PURE__*/React.createElement("div", {
-      className: "mh-phase-tall shrink-0 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5 mt-2",
+      className: "mh-phase-tall mh-ph-panel shrink-0 w-full max-w-sm px-2 py-1.5 mt-2",
       "data-training-status": true
     }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
+      className: "mh-ph-panel-label text-[8px] font-black text-left mb-1"
     }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9", trainingPicks.length > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-amber-300"
     }, "\uFF08\u9078\u629E\u4E2D\u306E\u5909\u5316\uFF09")), /*#__PURE__*/React.createElement("div", {
@@ -38441,9 +39302,9 @@ function RewardPickScreen({
       const diff = afterAll - beforeAll;
       return /*#__PURE__*/React.createElement("div", {
         key: option.id,
-        className: "rounded-lg bg-black/40 px-1 py-1 text-center"
+        className: "mh-ph-cell rounded-lg px-1 py-1 text-center"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "block text-[8px] font-black text-slate-500 leading-none"
+        className: "block text-[8px] font-black text-slate-400 leading-none"
       }, option.statLabel), /*#__PURE__*/React.createElement("span", {
         className: `block text-[13px] font-black font-mono leading-tight ${diff > 0 ? st.tint : 'text-slate-300'}`
       }, afterAll), /*#__PURE__*/React.createElement("span", {
@@ -38471,23 +39332,22 @@ function RewardPickScreen({
           }];
         }),
         "aria-label": `${option.name} ${option.effect}${count > 0 ? ` 選択中${count}回` : ''}`,
-        className: `mh-phase-card mh-phase-enter relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40 ${count > 0 ? `${st.bg} ${st.ring}` : `bg-slate-900/70 ${st.idle}`}`,
+        "data-ph-kind": option.id,
+        "data-ph-on": count > 0 ? '' : undefined,
+        className: "mh-phase-card mh-phase-enter mh-ph-frame relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40",
         style: {
-          '--i': optionIndex,
-          ...(count > 0 ? {
-            boxShadow: `0 0 22px ${st.glow}`
-          } : {})
+          '--i': optionIndex
         }
       }, /*#__PURE__*/React.createElement("span", {
         "aria-hidden": "true",
-        className: "pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl",
-        style: {
-          background: st.glow
-        }
+        className: "mh-ph-sparkle"
+      }), count > 0 && /*#__PURE__*/React.createElement("span", {
+        "aria-hidden": "true",
+        className: "mh-ph-shine"
       }), /*#__PURE__*/React.createElement("span", {
         className: "relative flex items-center gap-2"
       }, /*#__PURE__*/React.createElement("span", {
-        className: `mh-phase-card-icon shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${st.badge}`
+        className: `mh-phase-card-icon mh-ph-medal shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${st.tint}`
       }, cardIconNode(st.icon)), /*#__PURE__*/React.createElement("span", {
         className: "min-w-0"
       }, /*#__PURE__*/React.createElement("b", {
@@ -38505,9 +39365,12 @@ function RewardPickScreen({
       })()))), /*#__PURE__*/React.createElement("span", {
         className: "relative flex flex-1 items-center justify-center font-mono font-black leading-none"
       }, /*#__PURE__*/React.createElement("span", {
-        className: `mh-phase-gain ${after > before ? st.tint : 'text-slate-500'}`
+        className: `mh-phase-gain ${after > before ? st.tint : 'text-slate-500'}`,
+        style: after > before ? {
+          textShadow: '0 0 14px rgba(var(--mh-rc),.75), 0 2px 0 rgba(0,0,0,.7)'
+        } : undefined
       }, "+", Math.max(0, after - before))), /*#__PURE__*/React.createElement("span", {
-        className: "relative w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight"
+        className: "mh-ph-cell relative w-full rounded-lg px-1.5 py-1 font-mono leading-tight"
       }, /*#__PURE__*/React.createElement("span", {
         className: "flex items-baseline justify-between gap-1"
       }, /*#__PURE__*/React.createElement("span", {
@@ -38532,7 +39395,7 @@ function RewardPickScreen({
         }
       }))), count > 0 && /*#__PURE__*/React.createElement("span", {
         key: `count-${count}`,
-        className: `mh-phase-pop mh-phase-count absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`
+        className: "mh-phase-pop mh-phase-count mh-ph-gem absolute top-1.5 right-1.5 h-7 w-8 text-[11px]"
       }, "\xD7", count));
     })), tacticsMode && downedSlots.length > 0 && /*#__PURE__*/React.createElement("div", {
       "data-tactics-training-revive": true,
@@ -38547,7 +39410,8 @@ function RewardPickScreen({
           revive: slotIdx
         });
       },
-      className: "w-full min-h-[44px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/60 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40"
+      "data-ph-kind": "revive",
+      className: "mh-ph-frame w-full min-h-[44px] rounded-2xl border-2 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40"
     }, /*#__PURE__*/React.createElement("span", {
       className: "block text-[12px] leading-tight"
     }, slots?.[slotIdx]?.masuName || slots?.[slotIdx]?.name || `${slotIdx + 1}番目の子`, "\u3092\u8D77\u3053\u3059", /*#__PURE__*/React.createElement("span", {
@@ -38561,7 +39425,7 @@ function RewardPickScreen({
       type: "button",
       disabled: trainingPicks.length === 0 || !!effect,
       onClick: () => setTrainingPicks([]),
-      className: "min-h-[52px] px-4 rounded-2xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30"
+      className: "mh-ph-btn min-h-[52px] px-4 rounded-2xl font-black text-[11px] active:scale-95 disabled:opacity-30"
     }, "\u9078\u3073\u76F4\u3059"), /*#__PURE__*/React.createElement("button", {
       type: "button",
       disabled: !ready || !!effect,
@@ -38570,7 +39434,7 @@ function RewardPickScreen({
         setTrainingPicks([]);
         handleTraining(picks);
       },
-      className: `min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready && !effect ? 'mh-phase-ready bg-gradient-to-r from-amber-300 to-yellow-200 text-slate-950 shadow-[0_0_24px_rgba(251,191,36,0.45)]' : 'bg-slate-800 text-slate-600'}`
+      className: `min-h-[52px] rounded-2xl font-black text-base uppercase active:scale-95 transition-all ${ready && !effect ? 'mh-phase-ready mh-ph-btn-gold' : 'mh-ph-btn-off'}`
     }, ready ? '決定する' : `あと${remaining}つ選ぶ`)))
   );
 }
@@ -39405,8 +40269,187 @@ const tacticsAuraKindOf = (text = '', side = '') => {
   return 'buff';
 };
 // タクティクスの敵ごとの動き方(新しい画面だけ)。値は 70-bootstrap の data-enemy-motion の CSS 名
+// (2026-09-24 ユーザー指示「次はタクティクスの全モンスターも実装して」で10体すべてに広げた)
 const TACTICS_ENEMY_MOTIONS = Object.freeze({
-  Kawazumo: 'kawazumo'
+  Kawazumo: 'kawazumo',
+  Metalner: 'metalner',
+  Inari: 'inari',
+  Koinobori: 'koinobori',
+  Delpiero: 'delpiero',
+  Dokudoku: 'dokudoku',
+  Lamia: 'lamia',
+  Nyarlathotep: 'nyarlathotep',
+  Splatter: 'splatter',
+  AwakenedMoo: 'awakenedMoo'
+});
+// 技ごとの動きの長さ(ミリ秒)。ここに無い技は今までどおり(通常攻撃 450 / 必殺技 1100)。
+// 戦闘の待ち時間(60-app)もこの値を使うので、CSS の --em-dur / animation の長さと必ずそろえる。
+// ★ムー(覚醒ムー)は攻撃の待ちが 900 で決まっているので、ここは通らない(CSS も 900 にしてある)
+const TACTICS_ENEMY_SKILL_MS_DEFAULT = Object.freeze({
+  rush: 750,
+  pierce: 900,
+  allout: 1000
+});
+const tacticsEnemyMotionMs = (enemyId, skill, fallbackMs) => {
+  const motion = enemyId ? TACTICS_ENEMY_MOTIONS[enemyId] : null;
+  const ms = motion ? TACTICS_ENEMY_SKILL_MS_DEFAULT[skill] : null;
+  return Number.isFinite(ms) ? ms : fallbackMs;
+};
+// カワズモー以外の敵の動きは、共通の部品(70-bootstrap の em◯◯)を敵ごとに組み合わせて作る。
+//   idle … 待っているあいだの動き(data-em-idle)
+//   skills[技] = [体の動き(data-em-body), 飾りの形(data-em-fx), 飛ばす絵文字, 絵文字の出し方(data-em-emo)]
+//     体の動き: jab 突き / lunge 体当たり / dash 横へ踏み込む / flurry 連打 / spin 回転 / windup 溜めて突く /
+//               swing 武器を振る / leap 跳んで落ちる / press のしかかる / rise 力を解き放つ / roar 吠える /
+//               power 力をためる / stance 構える / heal 回復 / sway 揺れる
+//     飾りの形: arc 弧 / slash 十字の斬り跡 / beam 光の柱 / widebeam 太い光線 / burst 光の放射 / ring 衝撃の輪 /
+//               aura 立ちのぼる光 / sparkle 光の粒 / lock 狙いを定める輪(貫通技の構え)
+//     絵文字の出し方: rise 浮かぶ / shoot こちらへ飛ぶ / rain 降る
+// 色は 70-bootstrap の [data-enemy-motion="◯◯"] { --em-c } が持つ。技名は TACTICS_ENEMY_DATA(ユーザーが決めた名前)に合わせた
+const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
+  // メタルナー(拳法ロボ): 浮いて揺れる。掌打・ビーム
+  metalner: {
+    idle: 'hover',
+    skills: {
+      normal: ['jab', 'burst'],
+      sweep: ['dash', 'arc'],
+      rush: ['flurry', 'burst'],
+      pierce: ['windup', 'beam'],
+      special: ['leap', 'ring', '💥', 'shoot'],
+      allout: ['rise', 'widebeam'],
+      roar: ['roar', 'aura', '☯️', 'rise'],
+      regen: ['heal', 'sparkle', '🔧', 'rise'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
+  // イナリ(子ぎつね): ぴょこぴょこ跳ねる。肉球・歌・花
+  inari: {
+    idle: 'hop',
+    skills: {
+      normal: ['lunge', 'burst', '🐾', 'shoot'],
+      sweep: ['dash', 'arc', '🐾', 'shoot'],
+      rush: ['flurry', null, '🐾', 'shoot'],
+      pierce: ['windup', 'beam'],
+      special: ['spin', 'burst', '💨', 'shoot'],
+      allout: ['spin', 'sparkle', '🌺', 'rain'],
+      roar: ['sway', 'aura', '🎤', 'rise'],
+      regen: ['heal', 'sparkle', '💗', 'rise'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
+  // コイノボリ(鯉のぼり): 泳ぐように揺れる。体当たり・しっぽ・波
+  koinobori: {
+    idle: 'swim',
+    skills: {
+      normal: ['lunge', 'ring'],
+      sweep: ['dash', 'arc'],
+      rush: ['swing', 'arc'],
+      pierce: ['press', 'ring'],
+      special: ['leap', 'ring', '🌊', 'shoot'],
+      allout: ['rise', 'aura', '🌊', 'rain'],
+      roar: ['roar', 'burst'],
+      regen: ['sway', 'sparkle', '💤', 'rise'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
+  // デルピエロ(鎌の騎士): 足踏みして構える。槍・十字の斬撃
+  delpiero: {
+    idle: 'prance',
+    skills: {
+      normal: ['swing', 'arc'],
+      sweep: ['dash', 'burst'],
+      rush: ['flurry', 'beam'],
+      pierce: ['windup', 'beam'],
+      special: ['swing', 'slash'],
+      allout: ['rise', 'burst'],
+      roar: ['roar', 'aura', '⚡', 'rise'],
+      regen: ['heal', 'sparkle'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
+  // ドクドク(ハートの手): どくんと脈打つ。張り手・投げキッス・ハート
+  dokudoku: {
+    idle: 'pulse',
+    skills: {
+      normal: ['jab', 'burst'],
+      sweep: ['sway', null, '💋', 'shoot'],
+      rush: ['flurry', 'burst'],
+      pierce: ['windup', 'arc'],
+      special: ['rise', 'aura', '💀', 'rain'],
+      allout: ['press', 'ring', '💧', 'rain'],
+      roar: ['roar', 'aura'],
+      regen: ['heal', 'sparkle', '💗', 'rise'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
+  // ラミア(阿修羅): くねるように揺れる。拳・炎・雷
+  lamia: {
+    idle: 'serpent',
+    skills: {
+      normal: ['jab', 'burst'],
+      sweep: ['dash', 'arc'],
+      rush: ['flurry', 'slash'],
+      pierce: ['windup', 'beam'],
+      special: ['leap', 'ring', '⚡', 'rain'],
+      allout: ['rise', 'aura', '🔥', 'rain'],
+      roar: ['roar', 'aura'],
+      regen: ['heal', 'ring'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
+  // ニャルラトホテプ(邪神): うごめく。魔眼・ダイス・真空の弾
+  nyarlathotep: {
+    idle: 'writhe',
+    skills: {
+      normal: ['jab', 'burst'],
+      sweep: ['sway', 'beam', '👁️', 'shoot'],
+      rush: ['spin', 'slash'],
+      pierce: ['windup', 'beam'],
+      special: ['rise', 'aura', '👁️', 'rise'],
+      allout: ['rise', 'ring', '🌀', 'shoot'],
+      roar: ['roar', 'aura', '🎲', 'rise'],
+      regen: ['heal', 'sparkle'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
+  // スプラッター(斧の処刑人): 重く息をする。斧・影・血
+  splatter: {
+    idle: 'menace',
+    skills: {
+      normal: ['jab', 'burst'],
+      sweep: ['dash', 'arc'],
+      rush: ['spin', 'slash'],
+      pierce: ['windup', 'beam'],
+      special: ['swing', 'slash'],
+      allout: ['rise', 'aura', '💀', 'rain'],
+      roar: ['roar', 'aura'],
+      regen: ['heal', 'sparkle', '🩸', 'rise'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  },
+  // 覚醒ムー(竜): 待機は今までの浮遊のまま。技ごとの動きだけ付ける
+  awakenedMoo: {
+    idle: null,
+    skills: {
+      normal: ['swing', 'slash'],
+      sweep: ['dash', 'arc'],
+      rush: ['flurry', 'burst'],
+      pierce: ['windup', 'beam'],
+      special: ['rise', 'burst', '☄️', 'rain'],
+      allout: ['rise', 'aura', '🌪️', 'rain'],
+      roar: ['roar', 'aura'],
+      regen: ['heal', 'sparkle', '✨', 'rise'],
+      charge: ['power', 'aura'],
+      pierceCharge: ['stance', 'lock']
+    }
+  }
 });
 const kindOfTacticsSlotFx = fx => {
   if (!fx) return null;
@@ -39435,6 +40478,7 @@ function BattleScreen({
   autoBattle,
   autoBattleRef,
   autoRepeat,
+  battleFxSettings,
   battleIntimidate,
   battleScenarioRef,
   battleScreenActive,
@@ -39594,12 +40638,26 @@ function BattleScreen({
   // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
+  // 設定の「待機中の動き：止める」と「画面の揺れ：揺らさない」(見た目だけ。攻撃の演出と情報は消さない)
+  const battleFx = normalizeBattleFxSettings(battleFxSettings);
+  const idleMotionOff = battleFx.idleMotion === 'OFF';
+  const shakeOff = battleFx.shake === 'OFF';
   // 敵の攻撃(ためるを含む)を絵だけで動かす場面。移動とムーは今までどおり丸枠ごと
   const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
   // 敵ごとの動き方(2026-09-24 ユーザー指示「敵のグラフィックを攻撃時にアニメーション化」「待機時間も動いてるように」
   // 「まずはカワズモーで」「タクティクスだけ」)。絵は1枚のまま、待機・攻撃・ためる・やられの動きを CSS で付ける。
   // ★ここに無い敵は今までどおり。足すときは TACTICS_ENEMY_MOTIONS に1行と、70-bootstrap の CSS を足す
   const enemyMotion = tacticsNewLayout && !ecoBattleView ? TACTICS_ENEMY_MOTIONS[enemy?.id] || null : null;
+  // いま動いている技(data-enemy-skill)。ムーは丸枠ではなく枠の外の大きな絵が動く
+  const enemyIsMoo = isMooBoss(enemy?.id);
+  const enemySkillNow = enemyMotion && enemyAttackFx?.skill && (enemyImageOnlyAttack || enemyAttackFx.kind === 'regen' || enemyIsMoo && !!enemyAttackAnim) ? enemyAttackFx.skill : null;
+  // 共通の部品で動かす敵(カワズモー以外)の組み合わせ
+  const emSet = enemyMotion ? TACTICS_ENEMY_MOTION_SETS[enemyMotion] || null : null;
+  const emSpec = emSet && enemySkillNow ? emSet.skills[enemySkillNow] || null : null;
+  const emFxStyle = emSpec && emSpec[2] ? {
+    '--em-e': JSON.stringify(emSpec[2])
+  } : undefined;
+  const enemyHurtNow = !!(enemyMotion && attackAnim && !enemyAttackAnim);
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
@@ -39758,7 +40816,7 @@ function BattleScreen({
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
     "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off',
-    "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView ? 'calm' : 'rich' : undefined
+    "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined
   }, /*#__PURE__*/React.createElement("div", {
     "data-battle-stage-bg": true,
     "aria-hidden": "true",
@@ -40343,6 +41401,13 @@ function BattleScreen({
       }
     }));
   })(), isMooBoss(enemy?.id) && enemy?.imgUrl && /*#__PURE__*/React.createElement("div", {
+    "data-enemy-motion": enemyMotion || undefined,
+    "data-moo-stage": enemyMotion ? 'true' : undefined,
+    "data-enemy-skill": enemySkillNow || undefined,
+    "data-em-body": emSpec?.[0] || undefined,
+    "data-em-fx": emSpec?.[1] || undefined,
+    "data-em-emo": emSpec?.[3] || undefined,
+    "data-enemy-hurt": enemyHurtNow ? 'true' : undefined,
     className: "fixed left-1/2 pointer-events-none flex items-center justify-center",
     style: {
       top: '30%',
@@ -40351,13 +41416,17 @@ function BattleScreen({
       width: 'min(108vw,560px)',
       height: 'min(108vw,560px)'
     }
-  }, /*#__PURE__*/React.createElement("img", {
+  }, emSet && /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true",
+    "data-em-fx-el": true,
+    style: emFxStyle
+  }), /*#__PURE__*/React.createElement("img", {
     src: enemy.imgUrl,
     alt: enemy?.name || "ムー",
     style: {
       width: '100%',
       height: '100%',
-      animation: liteBattleView ? undefined : enemyAttackAnim ? enemyAttackFx?.kind === 'move' ? 'mooMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'mooChargeGather 1100ms ease-in-out forwards' : 'mooAttackLunge 900ms ease-in-out forwards' : 'mooFloat 3000ms ease-in-out infinite',
+      animation: liteBattleView || emSpec || enemyHurtNow ? undefined : enemyAttackAnim ? enemyAttackFx?.kind === 'move' ? 'mooMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'mooChargeGather 1100ms ease-in-out forwards' : 'mooAttackLunge 900ms ease-in-out forwards' : 'mooFloat 3000ms ease-in-out infinite',
       imageRendering: 'auto',
       WebkitMaskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',
       maskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'
@@ -40419,7 +41488,12 @@ function BattleScreen({
     "data-enemy-ring": enemyDist,
     "data-enemy-attack": enemyImageOnlyAttack ? enemyAttackFx?.kind === 'charge' ? 'charge' : 'fly' : undefined,
     "data-enemy-motion": enemyMotion || undefined,
-    "data-enemy-hurt": enemyMotion && attackAnim && !enemyAttackAnim ? 'true' : undefined,
+    "data-enemy-skill": !enemyIsMoo && enemySkillNow || undefined,
+    "data-em-idle": !enemyIsMoo && emSet?.idle || undefined,
+    "data-em-body": !enemyIsMoo && emSpec?.[0] || undefined,
+    "data-em-fx": !enemyIsMoo && emSpec?.[1] || undefined,
+    "data-em-emo": !enemyIsMoo && emSpec?.[3] || undefined,
+    "data-enemy-hurt": !enemyIsMoo && enemyHurtNow ? 'true' : undefined,
     className: `rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
     "data-attack-target": true,
     style: enemyAttackAnim && !ecoBattleView && !enemyImageOnlyAttack ? {
@@ -40437,7 +41511,20 @@ function BattleScreen({
         top: '3dvh'
       } : {})
     }
-  }, !ecoBattleView && /*#__PURE__*/React.createElement("div", {
+  }, enemyMotion === 'kawazumo' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true",
+    "data-kz-palm": "l"
+  }, "\u270B"), /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true",
+    "data-kz-palm": "r"
+  }, "\u270B"), /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true",
+    "data-kz-fx": true
+  })), emSet && !enemyIsMoo && /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true",
+    "data-em-fx-el": true,
+    style: emFxStyle
+  }), !ecoBattleView && /*#__PURE__*/React.createElement("div", {
     "aria-hidden": "true",
     "data-enemy-shadow": true,
     className: "pointer-events-none absolute left-1/2 z-0 -translate-x-1/2",
@@ -41285,7 +42372,7 @@ function BattleScreen({
     //   (2026-09-22 ユーザー指示「攻撃されたときに誰が攻撃されたかが分かりづらい」)
     const slotHitKind = kindOfTacticsSlotFx(tacticsSlotFx && tacticsSlotFx[i]);
     // 揺れは省エネ表示では出さない(光と輪だけでも誰かは分かる)
-    const slotHitShake = slotHitKind && !ecoBattleView ? {
+    const slotHitShake = slotHitKind && !ecoBattleView && !shakeOff ? {
       animation: 'tacticsHitShake 420ms ease-in-out'
     } : null;
     // ★「その子だけに効く」バフは、かかっている子の枠へ印を出す(タクティクス)。
@@ -41417,8 +42504,10 @@ function BattleScreen({
     // ★絵の入れ物は絵と同じ大きさに固定する(2026-09-24 ユーザー指摘「ミーアの攻撃中、姿が消えてる」)。
     //   ミーア・水・聖光の攻撃演出は入れ物いっぱいに重ねる絶対配置なので、大きさを持たないと
     //   入れ物が0×0につぶれ、本体の絵が幅数pxまで押しつぶされてマイクも見えなくなっていた
-    // ミーアだけ待機中も翼を羽ばたかせる(試作。MiaIdleArt)。軽量表示では今までどおり1枚の絵
-    const slotArt = img => s?.id === 'Mia' && !ecoBattleView ? /*#__PURE__*/React.createElement(MiaIdleArt, {
+    // 待機中の動き(翼の羽ばたき・しっぽ・花の揺れ・全体の浮き沈みなど。MonsterIdleArt)。
+    // 軽量表示と、設定の「待機中の動き：止める」では今までどおり1枚の絵
+    const slotArt = img => !ecoBattleView && !idleMotionOff ? /*#__PURE__*/React.createElement(MonsterIdleArt, {
+      baseId: s?.id,
       image: img
     }) : img;
     const slotArtBox = {
@@ -41861,7 +42950,7 @@ function BattleScreen({
         className: "object-contain drop-shadow-md"
       })
     }) : isAnimating && attackAnim.motion === 'arkHolyRain' ? /*#__PURE__*/React.createElement(ArkHolyRainMotion, {
-      image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      image: slotArt(/*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -41871,11 +42960,11 @@ function BattleScreen({
           height: tacticsNewLayout ? '58px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
-      }),
+      })),
       charging: attackAnim.charge === true,
       empowered: attackAnim.charge === false
     }) : isAnimating && attackAnim.motion === 'waterBurst' ? /*#__PURE__*/React.createElement(WaterBurstMotion, {
-      image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      image: slotArt(/*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -41885,7 +42974,7 @@ function BattleScreen({
           height: tacticsNewLayout ? '58px' : '64px'
         },
         className: "z-10 object-contain drop-shadow-md"
-      }),
+      })),
       lunge: attackAnim.charge === false,
       charging: attackAnim.charge === true
     }) : isAnimating && attackAnim.motion === 'miaSongNotes' ? /*#__PURE__*/React.createElement(MiaSongNotesMotion, {
@@ -45076,6 +46165,8 @@ function MonsterHeroGame() {
   const ultraEcoSession = ecoMode === 'ultra' && autoRepeat === true;
   const ultraBattleView = gameState === 'BATTLE' && ultraEcoSession;
   const ecoBattleView = liteBattleView || ultraBattleView;
+  // 強化フェーズの画面(WAVEのあと)の飾りの動きも、省エネのときと、バトル設定の「待機中の動き：止める」のときは止める
+  // (data-phase-look。70-bootstrap.jsx の mh-ph-*。タクティクス新画面の枠の飾りと同じ扱い)
   // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
   const stopAutoBattle = () => {
     autoBattleRef.current = false;
@@ -46213,6 +47304,18 @@ function MonsterHeroGame() {
     const value = normalizeBattleScreenStyle(next);
     setBattleScreenStyleState(value);
     storeSet(BATTLE_SCREEN_STYLE_KEY, value, false);
+  };
+  // バトル設定(待機中の動き・画面の揺れ)。1項目ずつ変えても、ほかの項目はそのまま残す
+  const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
+  const setBattleFxSetting = (key, value) => {
+    setBattleFxSettingsState(prev => {
+      const next = normalizeBattleFxSettings({
+        ...prev,
+        [key]: value
+      });
+      storeSet(BATTLE_FX_SETTINGS_KEY, next, false);
+      return next;
+    });
   };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
@@ -50152,6 +51255,7 @@ function MonsterHeroGame() {
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
+      setBattleFxSettingsState(normalizeBattleFxSettings(await storeGet(BATTLE_FX_SETTINGS_KEY, null, false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -57517,7 +58621,8 @@ function MonsterHeroGame() {
         // 重ねがけの上限は行動の抽選側(evaluateEnemyActions)が見るので、ここでは数えるだけ
         Audio_.se.enemyCharge();
         setEnemyAttackFx({
-          kind: 'charge'
+          kind: 'charge',
+          skill: 'roar'
         });
         setEnemyAttackAnim(true);
         tacticsRoarStacksRef.current += 1;
@@ -57545,7 +58650,14 @@ function MonsterHeroGame() {
           hp: Math.min(Number(prev.maxHp) || 0, Math.max(0, Number(prev.hp) || 0) + healed)
         } : prev);
         addPopup(`再生 +${healed}`, 'enemy', 'text-emerald-300 font-black text-2xl drop-shadow-md');
+        // ★技ごとの動き(カワズモーの「かえるのうた」など)を出すために、何の技かだけを渡す。
+        //   enemyAttackAnim は立てない(立てると丸枠・絵が攻撃の動きをしてしまう)
+        setEnemyAttackFx({
+          kind: 'regen',
+          skill: 'regen'
+        });
         await battleWait(1000);
+        setEnemyAttackFx(null);
       } else if (intent.type === 'WAIT') {
         addPopup("待機中...", 'enemy', 'text-slate-400 text-lg');
         await battleWait(500);
@@ -57555,7 +58667,8 @@ function MonsterHeroGame() {
         // (使うと「準備しただけなのに殴られた」ように見えてしまう)
         Audio_.se.enemyCharge();
         setEnemyAttackFx({
-          kind: 'charge'
+          kind: 'charge',
+          skill: 'charge'
         });
         setEnemyAttackAnim(true);
         addPopup("必殺技の準備をしている…！", 'enemy', 'text-amber-300 font-black text-xl drop-shadow-md');
@@ -57569,7 +58682,8 @@ function MonsterHeroGame() {
         // (2026-09-21 ユーザー指示「貫通は必殺級の技だからこれもためると同じように1ターン経由」)
         Audio_.se.enemyCharge();
         setEnemyAttackFx({
-          kind: 'charge'
+          kind: 'charge',
+          skill: 'pierceCharge'
         });
         setEnemyAttackAnim(true);
         addPopup("貫通撃の構え…！ ガードは効かない", 'enemy', 'text-rose-300 font-black text-xl drop-shadow-md');
@@ -57648,13 +58762,17 @@ function MonsterHeroGame() {
 
         // Enemy lunge animation + attack effect (normal = ! mark, special = aura burst)
         const fxKind = isMooBoss(enemy?.id) ? 'moo' : intent.type === 'SPECIAL' ? 'special' : 'normal';
+        // skill: 何の技か(画面が技ごとの動きを選ぶのに使う。カワズモーの張り手・上手投げなど)
+        const fxSkill = intent.variant || (intent.type === 'SPECIAL' ? 'special' : 'normal');
         setEnemyAttackFx({
-          kind: fxKind
+          kind: fxKind,
+          skill: fxSkill
         });
         if (intent.type === 'SPECIAL') Audio_.se.enemySpecial();else Audio_.se.enemyAttack();
         setEnemyAttackAnim(true);
         if (fxKind === 'moo') triggerShake(true);
-        await battleWait(fxKind === 'moo' ? 900 : intent.type === 'SPECIAL' ? 1100 : 450);
+        // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)
+        await battleWait(fxKind === 'moo' ? 900 : tacticsEnemyMotionMs(isTacticsMode(runMode) && !ecoBattleView ? enemy?.id : null, fxSkill, intent.type === 'SPECIAL' ? 1100 : 450));
         setEnemyAttackAnim(false);
         await battleWait(fxKind === 'moo' ? 250 : intent.type === 'SPECIAL' ? 300 : 100);
         setEnemyAttackFx(null);
@@ -61001,82 +62119,92 @@ function MonsterHeroGame() {
     // 別に持っていて、技が3つ並ぶと背の低い端末で2つしか見えなかった。
     // ★ボタンは1行に2つ(－ が先・＋ が後)。検査が「引き継ぎ」の行の2つ目を＋として押す。
     //   見た目は flex-col-reverse で ＋ を上に置く(押す回数の多いほうを親指に近く)
-    return /*#__PURE__*/React.createElement("div", {
-      key: rowKey,
-      className: `mh-phase-enter p-2.5 rounded-2xl border shrink-0 ${inherited ? 'bg-cyan-950/40 border-cyan-700/60' : 'bg-slate-900/80 border-slate-700/70'}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2.5"
-    }, ownerMon?.iconUrl ? /*#__PURE__*/React.createElement("img", {
-      src: ownerMon.iconUrl,
-      alt: ownerMon.name,
-      style: monsterArtFitStyle(ownerMon.id),
-      className: "w-11 h-11 rounded-full object-cover border border-white/10 shrink-0"
-    }) : /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: '30px'
-      }
-    }, cardIconNode(u.icon, 40)), /*#__PURE__*/React.createElement("div", {
-      className: "text-left flex-1 min-w-0"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `text-[9px] font-black tracking-wider flex items-center gap-1 truncate ${inherited ? 'text-cyan-300' : 'text-indigo-300'}`
-    }, inherited && /*#__PURE__*/React.createElement("span", {
-      className: "bg-cyan-600 text-white px-1 rounded-sm not-italic shrink-0"
-    }, "\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("span", {
-      className: "truncate"
-    }, heading)), /*#__PURE__*/React.createElement("div", {
-      className: "font-black text-white leading-tight truncate",
-      style: {
-        fontSize: '13px'
-      }
-    }, u.names[Math.min(lvl, u.names.length - 1)], " ", /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-400"
-    }, "Lv.", lvl), maxed ? /*#__PURE__*/React.createElement("span", {
-      className: "text-amber-400"
-    }, " MAX") : /*#__PURE__*/React.createElement("span", {
-      className: "text-amber-400"
-    }, " \u2192 ", lvl + 1)), /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 flex gap-0.5",
-      "aria-hidden": "true"
-    }, Array.from({
-      length: 8
-    }).map((_, i) => /*#__PURE__*/React.createElement("i", {
-      key: i,
-      className: `block h-1.5 flex-1 rounded-full ${i < lvl ? inherited ? 'bg-cyan-400' : 'bg-amber-400' : i === lvl && !maxed ? 'bg-white/40 animate-pulse' : 'bg-slate-700'}`
-    }))), !maxed ? /*#__PURE__*/React.createElement("div", {
-      className: "text-slate-400 font-mono flex flex-wrap gap-x-2.5 gap-y-0.5 mt-1",
-      style: {
-        fontSize: '9px'
-      }
-    }, /*#__PURE__*/React.createElement("div", null, "\u6280\u5A01\u529B ", Math.floor(currentMult * 100), " \u2192 ", /*#__PURE__*/React.createElement("span", {
-      className: "text-red-400 font-bold"
-    }, Math.floor(nextMult * 100))), /*#__PURE__*/React.createElement("div", null, "\u6D88\u8CBB ", currentGuts, " \u2192 ", /*#__PURE__*/React.createElement("span", {
-      className: "text-amber-400 font-bold"
-    }, nextGuts)), /*#__PURE__*/React.createElement("div", null, "\u4F1A\u5FC3 ", curCrit, "% \u2192 ", /*#__PURE__*/React.createElement("span", {
-      className: "text-yellow-400 font-bold"
-    }, nextCrit, "%"))) : /*#__PURE__*/React.createElement("div", {
-      className: "text-slate-400 font-mono flex flex-wrap gap-x-2.5 gap-y-0.5 mt-1",
-      style: {
-        fontSize: '9px'
-      }
-    }, /*#__PURE__*/React.createElement("div", null, "\u6280\u5A01\u529B ", Math.floor(currentMult * 100)), /*#__PURE__*/React.createElement("div", null, "\u6D88\u8CBB ", currentGuts), /*#__PURE__*/React.createElement("div", {
-      className: "text-yellow-400"
-    }, "\u4F1A\u5FC3 ", curCrit, "%"))), /*#__PURE__*/React.createElement("div", {
-      className: "flex flex-col-reverse gap-1.5 shrink-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      disabled: lvl <= 0,
-      onClick: () => onStep(-1),
-      "aria-label": `${u.names[Math.min(lvl, u.names.length - 1)]}のレベルを1つ下げる`,
-      className: "w-10 h-9 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90"
-    }, /*#__PURE__*/React.createElement(MinusCircle, {
-      size: 18
-    })), /*#__PURE__*/React.createElement("button", {
-      disabled: upgradePoints <= 0 || maxed,
-      onClick: () => onStep(1),
-      "aria-label": `${u.names[Math.min(lvl, u.names.length - 1)]}のレベルを1つ上げる`,
-      className: `w-10 h-11 flex items-center justify-center rounded-lg text-white disabled:opacity-20 active:scale-90 ${inherited ? 'bg-cyan-600' : 'bg-amber-600'} ${upgradePoints > 0 && !maxed ? 'shadow-[0_0_12px_rgba(245,158,11,.45)]' : ''}`
-    }, /*#__PURE__*/React.createElement(PlusCircle, {
-      size: 20
-    })))));
+    return (
+      /*#__PURE__*/
+      // 見た目は強化フェーズ共通の mh-ph-*(70-bootstrap.jsx)。自分の技は金、引き継いだ技は水色の縁
+      React.createElement("div", {
+        key: rowKey,
+        "data-ph-kind": inherited ? 'inherit' : 'own',
+        className: "mh-phase-enter mh-ph-frame relative overflow-hidden p-2.5 rounded-2xl border shrink-0"
+      }, /*#__PURE__*/React.createElement("span", {
+        "aria-hidden": "true",
+        className: "mh-ph-sparkle"
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "relative flex items-center gap-2.5"
+      }, ownerMon?.iconUrl ? /*#__PURE__*/React.createElement("img", {
+        src: ownerMon.iconUrl,
+        alt: ownerMon.name,
+        style: monsterArtFitStyle(ownerMon.id),
+        className: "mh-ph-medal w-11 h-11 rounded-full object-cover shrink-0"
+      }) : /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: '30px'
+        }
+      }, cardIconNode(u.icon, 40)), /*#__PURE__*/React.createElement("div", {
+        className: "text-left flex-1 min-w-0"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `text-[9px] font-black tracking-wider flex items-center gap-1 truncate ${inherited ? 'text-cyan-300' : 'text-indigo-300'}`
+      }, inherited && /*#__PURE__*/React.createElement("span", {
+        className: "bg-cyan-600 text-white px-1 rounded-sm not-italic shrink-0"
+      }, "\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("span", {
+        className: "truncate"
+      }, heading)), /*#__PURE__*/React.createElement("div", {
+        className: "font-black text-white leading-tight truncate",
+        style: {
+          fontSize: '13px'
+        }
+      }, u.names[Math.min(lvl, u.names.length - 1)], " ", /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "Lv.", lvl), maxed ? /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-400"
+      }, " MAX") : /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-400"
+      }, " \u2192 ", lvl + 1)), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1.5 mb-0.5 flex items-center gap-[5px] pl-0.5",
+        "aria-hidden": "true"
+      }, Array.from({
+        length: 8
+      }).map((_, i) => /*#__PURE__*/React.createElement("i", {
+        key: i,
+        className: "mh-ph-pip",
+        "data-on": i < lvl ? '' : undefined,
+        "data-next": i === lvl && !maxed ? '' : undefined
+      }))), !maxed ? /*#__PURE__*/React.createElement("div", {
+        className: "text-slate-400 font-mono flex flex-wrap gap-x-2.5 gap-y-0.5 mt-1",
+        style: {
+          fontSize: '9px'
+        }
+      }, /*#__PURE__*/React.createElement("div", null, "\u6280\u5A01\u529B ", Math.floor(currentMult * 100), " \u2192 ", /*#__PURE__*/React.createElement("span", {
+        className: "text-red-400 font-bold"
+      }, Math.floor(nextMult * 100))), /*#__PURE__*/React.createElement("div", null, "\u6D88\u8CBB ", currentGuts, " \u2192 ", /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-400 font-bold"
+      }, nextGuts)), /*#__PURE__*/React.createElement("div", null, "\u4F1A\u5FC3 ", curCrit, "% \u2192 ", /*#__PURE__*/React.createElement("span", {
+        className: "text-yellow-400 font-bold"
+      }, nextCrit, "%"))) : /*#__PURE__*/React.createElement("div", {
+        className: "text-slate-400 font-mono flex flex-wrap gap-x-2.5 gap-y-0.5 mt-1",
+        style: {
+          fontSize: '9px'
+        }
+      }, /*#__PURE__*/React.createElement("div", null, "\u6280\u5A01\u529B ", Math.floor(currentMult * 100)), /*#__PURE__*/React.createElement("div", null, "\u6D88\u8CBB ", currentGuts), /*#__PURE__*/React.createElement("div", {
+        className: "text-yellow-400"
+      }, "\u4F1A\u5FC3 ", curCrit, "%"))), /*#__PURE__*/React.createElement("div", {
+        className: "flex flex-col-reverse gap-1.5 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        disabled: lvl <= 0,
+        onClick: () => onStep(-1),
+        "aria-label": `${u.names[Math.min(lvl, u.names.length - 1)]}のレベルを1つ下げる`,
+        className: "mh-ph-btn w-10 h-9 flex items-center justify-center rounded-lg disabled:opacity-20 active:scale-90"
+      }, /*#__PURE__*/React.createElement(MinusCircle, {
+        size: 18
+      })), /*#__PURE__*/React.createElement("button", {
+        disabled: upgradePoints <= 0 || maxed,
+        onClick: () => onStep(1),
+        "aria-label": `${u.names[Math.min(lvl, u.names.length - 1)]}のレベルを1つ上げる`,
+        className: `w-10 h-11 flex items-center justify-center rounded-lg active:scale-90 ${upgradePoints > 0 && !maxed ? 'mh-ph-btn-gold' : 'mh-ph-btn-off'}`
+      }, /*#__PURE__*/React.createElement(PlusCircle, {
+        size: 20
+      })))))
+    );
   };
   const uniqueUpgradeEntries = () => {
     const rows = ownedUniques.map(u => ({
@@ -63145,6 +64273,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       "data-mh-view-rotation": forcedRotationStyle ? 'true' : 'false',
       "data-mh-portrait-layout": portraitOnlyScreen ? 'true' : 'false',
+      "data-phase-look": ecoMode === 'lite' || ultraEcoSession || normalizeBattleFxSettings(battleFxSettings).idleMotion === 'OFF' ? 'calm' : 'rich',
       onPointerDown: rippleOnPointerDown,
       onPointerMove: rippleOnPointerMove,
       onPointerUp: rippleOnPointerEnd,
@@ -63242,7 +64371,7 @@ function MonsterHeroGame() {
       "aria-hidden": "true"
     }), /*#__PURE__*/React.createElement("div", {
       className: "relative z-10 h-full flex flex-col",
-      style: screenShake && !ecoBattleView && !rhythmScreenOpen ? {
+      style: screenShake && !ecoBattleView && !rhythmScreenOpen && battleFxSettings.shake !== 'OFF' ? {
         animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
       } : undefined
     }, gameState === 'HOME' && /*#__PURE__*/React.createElement(HomeScreen, {
@@ -65884,7 +67013,9 @@ function MonsterHeroGame() {
       updateNoticeStyle: updateNoticeStyle,
       onChangeUpdateNoticeStyle: setUpdateNoticeStyle,
       battleScreenStyle: battleScreenStyle,
-      onChangeBattleScreenStyle: setBattleScreenStyle
+      onChangeBattleScreenStyle: setBattleScreenStyle,
+      battleFxSettings: battleFxSettings,
+      onChangeBattleFxSetting: setBattleFxSetting
     }), gameState === 'MASU_PATTERN_DEBUG' && (() => {
       // 所持しているマスモンに加えて、所持していない種も表示用の一時データで並べる
       // (2026-09-17・ユーザー指摘「今は見れないものが多い」)。模様は元から保存しないので、
@@ -70995,6 +72126,7 @@ function MonsterHeroGame() {
       battleScenarioRef: battleScenarioRef,
       battleScreenActive: gameState === 'BATTLE',
       battleScreenStyle: battleScreenStyle,
+      battleFxSettings: battleFxSettings,
       battleSoulMasus: battleSoulMasus,
       battleSpeed: battleSpeed,
       battleTutorial: battleTutorial,
@@ -71493,15 +72625,14 @@ function MonsterHeroGame() {
       plan: phasePlan,
       current: "growth",
       className: "mb-2"
-    }), /*#__PURE__*/React.createElement("h2", {
-      className: "text-2xl font-black italic",
-      style: {
-        color: '#2dd4bf'
-      }
-    }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u30A2\u30C3\u30D7\uFF01"), /*#__PURE__*/React.createElement("p", {
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "mh-ph-heading"
+    }, /*#__PURE__*/React.createElement("h2", {
+      className: "mh-ph-title text-2xl font-black italic"
+    }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u30A2\u30C3\u30D7\uFF01")), /*#__PURE__*/React.createElement("p", {
       className: "text-[10px] font-black text-slate-400 mt-1"
     }, "WAVE ", quickGrowth.nextWave - 1, " \u30AF\u30EA\u30A2\uFF0F\u5168\u30B9\u30C6\u30FC\u30BF\u30B9 +10%"), /*#__PURE__*/React.createElement("div", {
-      className: "mt-4 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden"
+      className: "mh-ph-panel mt-4 w-full overflow-hidden"
     }, quickGrowth.stats.map((st, i) => /*#__PURE__*/React.createElement("div", {
       key: st.label,
       className: `flex items-center gap-2 px-4 py-2 ${i > 0 ? 'border-t border-white/5' : ''}`
@@ -71522,27 +72653,27 @@ function MonsterHeroGame() {
         color: st.after > st.before ? '#5eead4' : '#64748b'
       }
     }, st.after > st.before ? `+${(st.after - st.before).toLocaleString()}` : '±0')))), /*#__PURE__*/React.createElement("div", {
-      className: "mt-3 rounded-2xl px-3 py-2 text-[11px] font-black",
+      className: "mh-ph-plate mt-3 !tracking-normal text-[11px]",
       style: {
-        backgroundColor: 'rgba(45,212,191,.12)',
-        color: '#5eead4'
+        color: '#99f6e4'
       }
     }, "\u30E9\u30A4\u30D5\u30FB\u30AC\u30C3\u30C4\u5168\u56DE\u5FA9\uFF01")), gameState === 'QUICK_JOIN' && quickJoin && /*#__PURE__*/React.createElement(QuickStepScreen, {
       onDone: finishQuickJoin,
       accent: "#2dd4bf",
       label: "\u30BF\u30C3\u30D7\u3057\u3066\u6B21\u3078"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mh-ph-heading"
     }, /*#__PURE__*/React.createElement("h2", {
-      className: "text-2xl font-black italic",
-      style: {
-        color: '#2dd4bf'
-      }
-    }, "\u4F9B\u30E2\u30F3\u52A0\u5165\uFF01"), /*#__PURE__*/React.createElement("div", {
+      className: "mh-ph-title text-2xl font-black italic"
+    }, "\u4F9B\u30E2\u30F3\u52A0\u5165\uFF01")), /*#__PURE__*/React.createElement("div", {
       className: "mt-3 flex items-center justify-center gap-2"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-phase-pop w-20 h-20 rounded-full overflow-hidden border-2 flex items-center justify-center bg-black/40 shadow-[0_0_24px_rgba(45,212,191,.45)]",
-      style: {
-        borderColor: '#2dd4bf'
-      }
+      className: "relative flex items-center justify-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mh-ph-rune"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "mh-phase-pop mh-ph-medal relative z-10 w-20 h-20 rounded-full overflow-hidden flex items-center justify-center"
     }, quickJoin.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
       baseId: quickJoin.baseId,
       src: quickJoin.imgUrl,
@@ -71551,10 +72682,10 @@ function MonsterHeroGame() {
       className: "w-full h-full object-contain"
     }) : /*#__PURE__*/React.createElement("span", {
       className: "text-3xl"
-    }, quickJoin.emoji)), /*#__PURE__*/React.createElement("p", {
+    }, quickJoin.emoji))), /*#__PURE__*/React.createElement("p", {
       className: "text-sm font-black text-white"
     }, quickJoin.name, "\u304C\u4EF2\u9593\u306B\u306A\u3063\u305F\uFF01")), quickJoin.stats.length > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "mt-3 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden"
+      className: "mh-ph-panel mt-3 w-full overflow-hidden"
     }, quickJoin.stats.map((st, i) => /*#__PURE__*/React.createElement("div", {
       key: st.label,
       className: `flex items-center gap-2 px-4 py-2 ${i > 0 ? 'border-t border-white/5' : ''}`
@@ -71577,11 +72708,7 @@ function MonsterHeroGame() {
     }, st.after > st.before ? `+${(st.after - st.before).toLocaleString()}` : '±0')))), quickJoin.aptLabel && /*#__PURE__*/React.createElement("div", {
       className: "mt-2 rounded-full border border-cyan-400/40 bg-cyan-950/40 px-3 py-1 text-[10px] font-black text-cyan-200"
     }, "\u9593\u5408\u3044\u9069\u6027 ", quickJoin.aptLabel), quickJoin.unique ? /*#__PURE__*/React.createElement("div", {
-      className: "mt-3 w-full rounded-2xl border px-3 py-2.5",
-      style: {
-        borderColor: 'rgba(251,191,36,.5)',
-        backgroundColor: 'rgba(0,0,0,.5)'
-      }
+      className: "mh-ph-panel mt-3 w-full px-3 py-2.5"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] font-black text-amber-300"
     }, "\u56FA\u6709\u6280\u30A2\u30C3\u30D7\uFF01"), /*#__PURE__*/React.createElement("div", {
@@ -74369,29 +75496,30 @@ const createAnimationStyle = () => {
       55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(236,72,153,.92)) drop-shadow(0 10px 20px rgba(168,85,247,.6)); }
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(217,70,239,.82)); }
     }
-    /* 歌う本体。しゃがんで跳ね、体をひねってから敵のほうへ身を乗り出し、
-       (左右反転で回すと幅が0を通って一瞬消えて見えるので使わない。2026-09-24 ユーザー指摘)
-       敵の向きへ体を傾けて拍を取りながら歌い、元位置へ戻る */
+    /* 歌う本体。敵へは向かわず、その場で歌う(2026-09-24 ユーザー指摘「音符を飛ばすときにミーアも一緒に
+       アタック気味になっている。意図と違う」)。攻撃するのは音符と音の波だけで、本人は動かない。
+       しゃがんで小さく跳ね、左右へ体を揺らして拍を取り、元の位置へ戻る。
+       (左右反転で回すと幅が0を通って一瞬消えて見えるので使わない) */
     @keyframes miaSongSing {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(244,114,182,.5)); }
-      9% { transform:translate3d(0,6px,0) scale(1.1,.86) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.8)); }
-      20% { transform:translate3d(calc(var(--atk-dx) * .05),calc(var(--atk-dy) * .05 - 18px),0) scale(1.1) rotate(-14deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
-      32% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 6px),0) scale(1.12) rotate(calc(var(--atk-rot) * .35)); filter:drop-shadow(0 0 22px rgba(236,72,153,.95)); }
-      46% { transform:translate3d(calc(var(--atk-dx) * .12),calc(var(--atk-dy) * .12 - 13px),0) scale(1.17) rotate(calc(var(--atk-rot) * .35 + 5deg)); filter:drop-shadow(0 0 26px rgba(255,255,255,.98)); }
-      60% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 4px),0) scale(1.1) rotate(calc(var(--atk-rot) * .35 - 5deg)); filter:drop-shadow(0 0 22px rgba(192,132,252,.95)); }
-      74% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 11px),0) scale(1.14) rotate(calc(var(--atk-rot) * .3 + 3deg)); filter:drop-shadow(0 0 24px rgba(244,114,182,.92)); }
-      90% { transform:translate3d(0,-4px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
+      9% { transform:translate3d(0,5px,0) scale(1.06,.9) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.8)); }
+      20% { transform:translate3d(0,-10px,0) scale(1.05) rotate(-7deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
+      34% { transform:translate3d(-4px,-3px,0) scale(1.04) rotate(-5deg); filter:drop-shadow(0 0 22px rgba(236,72,153,.95)); }
+      48% { transform:translate3d(4px,-8px,0) scale(1.06) rotate(5deg); filter:drop-shadow(0 0 26px rgba(255,255,255,.98)); }
+      62% { transform:translate3d(-4px,-3px,0) scale(1.04) rotate(-5deg); filter:drop-shadow(0 0 22px rgba(192,132,252,.95)); }
+      76% { transform:translate3d(4px,-7px,0) scale(1.05) rotate(4deg); filter:drop-shadow(0 0 24px rgba(244,114,182,.92)); }
+      90% { transform:translate3d(0,-3px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
-    /* 固有技のタメ明け。沈んだ位置から高く跳んでひねり、通常より大きく前へ出て歌う */
+    /* 固有技のタメ明け。沈んだ位置からその場で高く跳ね、通常より大きく体を揺らして歌う(敵へは向かわない) */
     @keyframes miaSongSingLunge {
       0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.95)); }
-      18% { transform:translate3d(calc(var(--atk-dx) * .07),calc(var(--atk-dy) * .07 - 26px),0) scale(1.18) rotate(-16deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
-      30% { transform:translate3d(calc(var(--atk-dx) * .14),calc(var(--atk-dy) * .14 - 8px),0) scale(1.18) rotate(calc(var(--atk-rot) * .4)); filter:drop-shadow(0 0 28px rgba(236,72,153,.98)); }
-      46% { transform:translate3d(calc(var(--atk-dx) * .16),calc(var(--atk-dy) * .16 - 18px),0) scale(1.24) rotate(calc(var(--atk-rot) * .4 + 6deg)); filter:drop-shadow(0 0 34px rgba(255,255,255,1)); }
-      62% { transform:translate3d(calc(var(--atk-dx) * .14),calc(var(--atk-dy) * .14 - 6px),0) scale(1.16) rotate(calc(var(--atk-rot) * .4 - 6deg)); filter:drop-shadow(0 0 28px rgba(192,132,252,.98)); }
-      78% { transform:translate3d(calc(var(--atk-dx) * .12),calc(var(--atk-dy) * .12 - 15px),0) scale(1.18) rotate(calc(var(--atk-rot) * .3 + 4deg)); filter:drop-shadow(0 0 26px rgba(244,114,182,.94)); }
-      92% { transform:translate3d(0,-5px,0) scale(1.03) rotate(0deg); filter:drop-shadow(0 0 13px rgba(244,114,182,.62)); }
+      18% { transform:translate3d(0,-16px,0) scale(1.1) rotate(-9deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
+      32% { transform:translate3d(-6px,-4px,0) scale(1.08) rotate(-7deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.98)); }
+      46% { transform:translate3d(6px,-12px,0) scale(1.1) rotate(7deg); filter:drop-shadow(0 0 34px rgba(255,255,255,1)); }
+      62% { transform:translate3d(-6px,-4px,0) scale(1.08) rotate(-6deg); filter:drop-shadow(0 0 28px rgba(192,132,252,.98)); }
+      78% { transform:translate3d(6px,-10px,0) scale(1.09) rotate(5deg); filter:drop-shadow(0 0 26px rgba(244,114,182,.94)); }
+      92% { transform:translate3d(0,-4px,0) scale(1.03) rotate(0deg); filter:drop-shadow(0 0 13px rgba(244,114,182,.62)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
     }
     /* 足元のステージ光。床に置いた光の輪を2つ、拍に合わせて広げる */
@@ -74419,7 +75547,7 @@ const createAnimationStyle = () => {
       0% { opacity:0; transform:translate3d(0,10px,0) scale(.35); }
       9% { opacity:1; transform:translate3d(0,0,0) scale(1.16); }
       16% { transform:translate3d(0,0,0) scale(.96); }
-      24%,84% { opacity:1; transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1),0) scale(1); }
+      24%,84% { opacity:1; transform:translate3d(0,0,0) scale(1); }
       100% { opacity:0; transform:translate3d(0,6px,0) scale(.82); }
     }
     /* マイク本体。ホルダーに斜めに留まった形にすると、小さくてもマイクスタンドだと分かる。
@@ -74584,35 +75712,93 @@ const createAnimationStyle = () => {
         100% { opacity:0; transform:scale(1.4); }
       }
     }
-    /* ミーアの待機アニメ(試作。24-battle-fx.jsx の MiaIdleArt)。
-       同じ絵を「翼以外」「左翼」「右翼」に切り抜いて重ね、翼を肩の付け根を軸に羽ばたかせる。
-       翼は体の後ろ(下の層)。動かすのは transform だけなので、レイアウトを作り直さない。
-       軸の位置: 正方形の枠へ 2:3 の絵を contain で置いたとき、元絵の (425,585) と (599,585) に当たる所 */
-    .mia-idle { position:relative; display:block; transform-origin:50% 96%; will-change:transform;
-      filter:drop-shadow(0 4px 3px rgb(0 0 0 / .07)) drop-shadow(0 2px 2px rgb(0 0 0 / .06));
-      animation:miaIdleHover 2600ms ease-in-out infinite; }
-    .mia-idle__body { position:relative; display:block; z-index:1; }
-    .mia-idle__wing { position:absolute; inset:0; display:block; z-index:0; will-change:transform; }
-    .mia-idle__wing--l { transform-origin:44.3% 38.1%; animation:miaIdleWingL 1300ms cubic-bezier(.45,0,.35,1) infinite; }
-    .mia-idle__wing--r { transform-origin:55.7% 38.1%; animation:miaIdleWingR 1300ms cubic-bezier(.45,0,.35,1) infinite; }
-    /* 宙に浮いているので、ゆっくり上下してわずかに伸び縮みする(呼吸) */
-    @keyframes miaIdleHover {
+    /* 味方モンスターの待機アニメ(24-battle-fx.jsx の MonsterIdleArt)。
+       同じ絵を「体」と「部分(翼・しっぽ・耳・花…)」に切り抜いて重ね、部分を付け根(transform-origin)を軸に動かす。
+       全体の動きは種ごとに1つ(mon-idle--hover など)。動かすのは transform だけなので、レイアウトを作り直さない。
+       部分ごとの大きさ(--idle-amp)・周期・ずらしは MONSTER_IDLE_RIGS から style で渡る */
+    .mon-idle { position:relative; display:block; will-change:transform; transform-origin:50% 96%; }
+    .mon-idle--rig { filter:drop-shadow(0 4px 3px rgb(0 0 0 / .07)) drop-shadow(0 2px 2px rgb(0 0 0 / .06)); }
+    .mon-idle__body { position:relative; display:block; z-index:1; }
+    .mon-idle__part { position:absolute; inset:0; display:block; z-index:0; will-change:transform;
+      animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+    .mon-idle__part--front { z-index:2; }
+    /* 図鑑の立ち絵は大きさを持たない(w-full h-full)ので、入れ物いっぱいに広げる */
+    .mon-idle--fill, .mon-idle--fill > .mon-idle__body { width:100%; height:100%; }
+    .mon-idle__part--flapL, .mon-idle__part--flapR { animation-name:monIdleFlap; animation-timing-function:cubic-bezier(.45,0,.35,1); }
+    .mon-idle__part--flapR { --idle-flip:-1; }
+    .mon-idle__part--swing { animation-name:monIdleSwing; }
+    .mon-idle__part--wag { animation-name:monIdleWag; }
+    .mon-idle__part--twitch { animation-name:monIdleTwitch; }
+    .mon-idle__part--bob { animation-name:monIdleBob; }
+    /* 羽ばたき。すばやく振り上げてゆっくり下ろす。振り上げたときは奥へ倒れるぶん少し細くする。
+       右の翼は --idle-flip で向きを逆にする(同じ keyframes を左右で使う) */
+    @keyframes monIdleFlap {
+      0%,100% { transform:rotate(calc(var(--idle-amp) * -.2 * var(--idle-flip, 1))) scaleX(1); }
+      38% { transform:rotate(calc(var(--idle-amp) * var(--idle-flip, 1))) scaleX(.9); }
+    }
+    /* ゆったり揺れる(花・ヒレ・腕の刃)。amp の符号で揺れ始めの向きが変わる */
+    @keyframes monIdleSwing {
+      0%,100% { transform:rotate(calc(var(--idle-amp) * -.4)); }
+      50% { transform:rotate(var(--idle-amp)); }
+    }
+    /* しっぽ振り。左右へ同じだけ */
+    @keyframes monIdleWag {
+      0%,100% { transform:rotate(calc(var(--idle-amp) * -1)); }
+      50% { transform:rotate(var(--idle-amp)); }
+    }
+    /* ときどきピクッと動く(耳)。ほとんどの時間は止まっている */
+    @keyframes monIdleTwitch {
+      0%,78%,100% { transform:rotate(0deg); }
+      82% { transform:rotate(var(--idle-amp)); }
+      86% { transform:rotate(0deg); }
+      90% { transform:rotate(calc(var(--idle-amp) * .6)); }
+      94% { transform:rotate(0deg); }
+    }
+    /* 上下にふわふわ(浮いている玉など)。--idle-bob は枠に対する % */
+    @keyframes monIdleBob {
+      0%,100% { transform:translate3d(0,0,0); }
+      50% { transform:translate3d(0,var(--idle-bob),0); }
+    }
+    /* 全体の動き */
+    .mon-idle--hover { animation:monIdleHover 2600ms ease-in-out infinite; }
+    .mon-idle--bounce { animation:monIdleBounce 1800ms ease-in-out infinite; }
+    .mon-idle--breathe { animation:monIdleBreathe 3200ms ease-in-out infinite; }
+    .mon-idle--sway { animation:monIdleSway 3000ms ease-in-out infinite; }
+    .mon-idle--swim { animation:monIdleSwim 2800ms ease-in-out infinite; }
+    /* 宙に浮いている子。ゆっくり上下してわずかに伸び縮みする */
+    @keyframes monIdleHover {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
       50% { transform:translate3d(0,-4%,0) scale(.99,1.015); }
     }
-    /* 羽ばたき。すばやく振り上げ、ゆっくり下ろす。振り上げたときは奥へ倒れるぶん少し細くする */
-    @keyframes miaIdleWingL {
-      0%,100% { transform:rotate(-3deg) scaleX(1); }
-      38% { transform:rotate(13deg) scaleX(.9); }
+    /* 地面に立っている丸い子。足元を軸に、つぶれて・伸びて・小さく弾む */
+    @keyframes monIdleBounce {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      20% { transform:translate3d(0,0,0) scale(1.04,.95); }
+      45% { transform:translate3d(0,-3%,0) scale(.97,1.04); }
+      65% { transform:translate3d(0,0,0) scale(1.02,.98); }
     }
-    @keyframes miaIdleWingR {
-      0%,100% { transform:rotate(3deg) scaleX(1); }
-      38% { transform:rotate(-13deg) scaleX(.9); }
+    /* どっしり立っている子。胸がふくらむように、縦へわずかに伸び縮みする */
+    @keyframes monIdleBreathe {
+      0%,100% { transform:scale(1,1); }
+      50% { transform:scale(1.01,1.025); }
+    }
+    /* 植物の子。足元を軸に、左右へゆっくり傾く */
+    @keyframes monIdleSway {
+      0%,100% { transform:rotate(-2deg); }
+      50% { transform:rotate(2deg); }
+    }
+    /* 人魚の子。水の中にいるように、上下しながら少し傾く */
+    @keyframes monIdleSwim {
+      0%,100% { transform:translate3d(0,0,0) rotate(-1.5deg); }
+      50% { transform:translate3d(0,-3%,0) rotate(1.5deg); }
     }
     /* 軽量な見た目(タクティクスの calm)と「動きを減らす」設定では止める(絵はそのまま見える) */
-    [data-tactics-look="calm"] .mia-idle, [data-tactics-look="calm"] .mia-idle__wing { animation:none; }
+    /* data-idle-own(図鑑)は自分のページのボタンで止めるので、ここでは止めない */
+    [data-tactics-look="calm"] .mon-idle:not([data-idle-own]), [data-tactics-look="calm"] .mon-idle:not([data-idle-own]) .mon-idle__part { animation:none; }
+    /* 画面全体の calm(軽量表示・「待機中の動き：止める」) */
+    [data-phase-look="calm"] .mon-idle:not([data-idle-own]), [data-phase-look="calm"] .mon-idle:not([data-idle-own]) .mon-idle__part { animation:none; }
     @media (prefers-reduced-motion: reduce) {
-      .mia-idle, .mia-idle__wing { animation:none; }
+      .mon-idle:not([data-idle-own]), .mon-idle:not([data-idle-own]) .mon-idle__part { animation:none; }
     }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
        常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。
@@ -75046,15 +76232,14 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-slot-index="1"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
       --mh-pat: repeating-conic-gradient(from 0deg at 20% 62%, rgba(255,210,80,.15) 0 6deg, transparent 6deg 18deg) padding-box,
         radial-gradient(60% 60% at 20% 62%, rgba(255,200,60,.32), transparent 70%) padding-box; }
-    /* 中距離は「下から茂る草と舞う葉」。遠距離の「波紋(同心円)」と形が似ないように、輪を使わない(2026-09-24 ユーザー指摘) */
+    /* 中距離は「翡翠の菱格子と丘の稜線」。零の熱と一方向の斜線・近の光線・遠の波紋(同心円)と形が重ならないように、
+       2方向に交わる細い線(菱形の格子)を全体に敷き、下に丘の稜線を1本だけ光らせる。
+       (2026-09-24 ユーザー指摘「遠と同じはおかしい」→草の縦縞にしたが「ださい」と言われ作り直した) */
     [data-tactics-look] [data-slot-index="2"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
-      --mh-pat: radial-gradient(7px 3px at 58% 30%, rgba(110,231,183,.55), transparent 80%) padding-box,
-        radial-gradient(6px 2.5px at 78% 52%, rgba(110,231,183,.45), transparent 80%) padding-box,
-        radial-gradient(7px 3px at 40% 18%, rgba(167,243,208,.4), transparent 80%) padding-box,
-        radial-gradient(5px 2px at 88% 24%, rgba(110,231,183,.4), transparent 80%) padding-box,
-        repeating-linear-gradient(98deg, rgba(52,211,153,.30) 0 1.5px, transparent 1.5px 6px) bottom / 100% 34% no-repeat padding-box,
-        repeating-linear-gradient(82deg, rgba(16,185,129,.22) 0 1px, transparent 1px 8px) bottom / 100% 22% no-repeat padding-box,
-        radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.26), transparent 70%) padding-box; }
+      --mh-pat: radial-gradient(95% 30% at 30% 106%, rgba(16,185,129,.20) 0 96%, rgba(110,231,183,.6) 98%, transparent 100%) padding-box,
+        repeating-linear-gradient(60deg, rgba(52,211,153,.19) 0 1px, transparent 1px 11px) padding-box,
+        repeating-linear-gradient(120deg, rgba(52,211,153,.19) 0 1px, transparent 1px 11px) padding-box,
+        radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.30), transparent 70%) padding-box; }
     [data-tactics-look] [data-slot-index="3"] { --mh-rc: 59,130,246; --mh-rc2: 200,225,255;
       --mh-pat: repeating-radial-gradient(circle at 20% 140%, rgba(90,160,255,.17) 0 3px, transparent 3px 11px) padding-box,
         radial-gradient(70% 60% at 20% 62%, rgba(80,150,255,.32), transparent 70%) padding-box; }
@@ -75148,7 +76333,8 @@ const createAnimationStyle = () => {
     /* カワズモー(力士のカエル): 待機は左右に重心を移しながらお腹で呼吸 / 攻撃は のけぞって溜め→踏み込んで張り手→戻る /
        ためるは 片足を上げて四股を踏む / やられは のけぞって震える */
     /* 2026-09-24 ユーザー指摘「思ってたより地味。もっと頑張って動き作れない？」で動きを大きく作り直した。
-       待機は6秒で1巡: 大きく揺れて呼吸(0〜50%) → 片足を上げて四股・土ぼこり(52〜76%) → くるっと横を向いて戻る(80〜98%) */
+       待機は6秒で1巡: 大きく揺れて呼吸(0〜50%) → 片足を上げて四股・土ぼこり(52〜76%) → 小さく跳ねて着地(80〜96%)。
+       ★左右の反転(横を向く)は入れない(2026-09-24 ユーザー指摘「反転はださいだけ」) */
     @keyframes kzIdle {
       0%, 100% { transform: translateX(0) rotate(0) scale(1, 1); }
       8% { transform: translateX(-8px) rotate(-6deg) scale(1.07, .94); }
@@ -75163,10 +76349,11 @@ const createAnimationStyle = () => {
       66% { transform: translate(0, 4px) rotate(0) scale(1.24, .8); }
       69% { transform: translate(0, -3px) rotate(0) scale(.95, 1.07); }
       73% { transform: translate(0, 0) rotate(0) scale(1.04, .97); }
-      78% { transform: scale(1, 1); }
-      82% { transform: scale(-1, 1) rotate(4deg); }
-      92% { transform: scale(-1, 1) rotate(-3deg); }
-      97% { transform: scale(1, 1); }
+      80% { transform: translateY(2px) scale(1.08, .92); }
+      84% { transform: translateY(-10px) scale(.94, 1.08); }
+      88% { transform: translateY(2px) scale(1.1, .9); }
+      92% { transform: translateY(-4px) scale(.97, 1.04); }
+      96% { transform: translateY(0) scale(1.02, .98); }
     }
     @keyframes kzShadow {
       0%, 16%, 32%, 48%, 78%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
@@ -75174,6 +76361,8 @@ const createAnimationStyle = () => {
       24% { transform: translateX(calc(-50% + 8px)) scaleX(1.12); }
       60%, 63% { transform: translateX(calc(-50% - 6px)) scaleX(.8); opacity: .7; }
       66% { transform: translateX(-50%) scaleX(1.35); opacity: 1; }
+      84% { transform: translateX(-50%) scaleX(.82); opacity: .75; }
+      88% { transform: translateX(-50%) scaleX(1.18); opacity: 1; }
     }
     /* 四股の土ぼこり(影の左右から吹き出して消える)。待機の66%と、ためるの踏み込みに合わせる */
     @keyframes kzDustIdle {
@@ -75186,13 +76375,27 @@ const createAnimationStyle = () => {
       60% { opacity: .95; transform: translateX(0) scale(.7); }
       90%, 100% { opacity: 0; transform: translateX(var(--kz-dx)) scale(1.6); }
     }
+    /* 張り手: 腰を落として右肩を引く → 左へひねりながら前へ押し出す(1発目) → 右へひねり返して押し込む(2発目) → 戻る */
     @keyframes kzSlap {
       0% { transform: none; }
-      22% { transform: translateY(-6px) rotate(-12deg) scale(1.14, .84); }
-      40% { transform: translateY(28px) rotate(8deg) scale(.86, 1.22); }
-      52% { transform: translateY(88px) rotate(12deg) scale(1.32, .8); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
-      64% { transform: translateY(80px) rotate(8deg) scale(1.2, .88); filter: drop-shadow(0 0 22px rgba(220,38,38,.9)); }
+      18% { transform: translate(6px, 4px) rotate(14deg) scale(1.1, .9); }
+      36% { transform: translate(-10px, 46px) rotate(-16deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 18px rgba(239,68,68,.9)); }
+      52% { transform: translate(10px, 70px) rotate(15deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
+      66% { transform: translate(0, 60px) rotate(0) scale(1.12, .92); filter: drop-shadow(0 0 18px rgba(220,38,38,.8)); }
       100% { transform: none; filter: none; }
+    }
+    /* 手のひら: 体の横から画面の手前へ大きく突き出る。左右で半拍ずらす。緑がかった色はカエルの手に寄せるため */
+    @keyframes kzPalmL {
+      0%, 22% { opacity: 0; transform: translate(-30px, -10px) rotate(-30deg) scale(.4); }
+      34% { opacity: 1; transform: translate(-18px, 40px) rotate(-8deg) scale(1.5); }
+      44% { opacity: .9; transform: translate(-14px, 70px) rotate(-4deg) scale(2.1); }
+      54%, 100% { opacity: 0; transform: translate(-12px, 84px) rotate(0) scale(2.4); }
+    }
+    @keyframes kzPalmR {
+      0%, 38% { opacity: 0; transform: translate(30px, -6px) rotate(30deg) scale(.4) scaleX(-1); }
+      50% { opacity: 1; transform: translate(18px, 50px) rotate(8deg) scale(1.6) scaleX(-1); }
+      60% { opacity: .9; transform: translate(14px, 80px) rotate(4deg) scale(2.2) scaleX(-1); }
+      70%, 100% { opacity: 0; transform: translate(12px, 92px) rotate(0) scale(2.5) scaleX(-1); }
     }
     @keyframes kzImpact {
       0%, 48% { opacity: 0; transform: translateX(-50%) scale(.2); }
@@ -75222,16 +76425,16 @@ const createAnimationStyle = () => {
     }
     [data-tactics-look] [data-enemy-motion] > span { display: block; position: relative; transform-origin: 50% 92%; }
     [data-tactics-look] [data-enemy-motion] > span > img { transform-origin: 50% 92%; }
-    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > span > img { animation: kzIdle 6s ease-in-out infinite; }
-    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow] { animation: kzShadow 6s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation: kzIdle 6s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > [data-enemy-shadow] { animation: kzShadow 6s ease-in-out infinite; }
     /* 土ぼこり: 影の左右に1つずつ */
     [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::before, [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::after {
       content: ''; position: absolute; bottom: 10%; width: 46%; height: 150%; border-radius: 50%; opacity: 0; pointer-events: none;
       background: radial-gradient(closest-side, rgba(214,196,160,.85), rgba(160,140,110,.45) 55%, transparent); }
     [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::before { left: -18%; --kz-dx: -26px; }
     [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::after { right: -18%; --kz-dx: 26px; }
-    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow]::before,
-    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow]::after { animation: kzDustIdle 6s ease-out infinite; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > [data-enemy-shadow]::before,
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > [data-enemy-shadow]::after { animation: kzDustIdle 6s ease-out infinite; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::before,
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::after { animation: kzDust 1100ms ease-out forwards; }
     /* 張り手の衝撃: 丸枠の下に赤い輪が広がる */
@@ -75240,8 +76443,603 @@ const createAnimationStyle = () => {
       background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(248,113,113,.8) 35%, rgba(239,68,68,.35) 65%, transparent); }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"]::after { animation: kzImpact 450ms ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap 450ms ease-in forwards; }
+    [data-tactics-look] [data-kz-palm] { font-style: normal; position: absolute; top: 42%; left: 50%; margin-left: -18px; width: 36px; text-align: center; font-size: 30px; line-height: 1;
+      opacity: 0; pointer-events: none; z-index: 10000;
+      filter: hue-rotate(20deg) saturate(.95) brightness(.95) drop-shadow(0 0 8px rgba(239,68,68,.85)) drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
+    /* 勢いの線(手のひらの後ろに伸びる白い筋) */
+    [data-tactics-look] [data-kz-palm]::after { content: ''; position: absolute; left: 50%; top: -60%; width: 60%; height: 90%; margin-left: -30%; pointer-events: none;
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,.8) 0 2px, transparent 2px 6px);
+      -webkit-mask: linear-gradient(0deg, #000, transparent); mask: linear-gradient(0deg, #000, transparent); }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="l"] { animation: kzPalmL 450ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="r"] { animation: kzPalmR 450ms ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp 1100ms ease-in-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-hurt] > span { animation: kzHurt 520ms ease-out forwards; }
+    /* ---- カワズモーの技ごとの動き(2026-09-24 ユーザー指示「他の技も特徴付けたい」) ----
+       data-enemy-skill に技の名前が入る(60-app の setEnemyAttackFx の skill)。長さは TACTICS_ENEMY_SKILL_MS とそろえる。
+         normal はり手 … 上の kzSlap(左右の張り手2発)
+         sweep かわずつき 450ms … 低く沈んで横から飛び込む。弧の斬り跡
+         rush 連続はり手 750ms … 左右にひねりながら張り手を6発
+         pierce 上手投げ 900ms … 手を伸ばしてつかむ → 後ろへ持ち上げる → 前へ投げ落とす。赤い一直線
+         special 大回転落とし 1100ms … 跳んで2回転 → 真下へ落ちる。金の渦と大きな衝撃
+         allout 大投げたまや 1000ms … 担いで振りかぶり、投げ放つ。頭上に花火
+         charge 必殺技準備 … 深く構えて震え、金色に光が溜まる / pierceCharge … 両手を広げて差し手を狙う / roar しこ踏み … kzStomp
+         regen かえるのうた 1000ms … 揺れながら歌う。音符が昇る */
+    @keyframes kzLunge {
+      0% { transform: none; }
+      28% { transform: translate(-26px, 10px) rotate(-12deg) scale(1.2, .8); }
+      58% { transform: translate(30px, 74px) rotate(14deg) scale(1.26, .86); filter: brightness(1.25) drop-shadow(0 0 22px rgba(52,211,153,1)); }
+      72% { transform: translate(22px, 66px) rotate(8deg) scale(1.18, .9); filter: drop-shadow(0 0 14px rgba(52,211,153,.7)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzSweepArc {
+      0%, 30% { opacity: 0; transform: translateX(-50%) rotate(-38deg) scaleX(.5); }
+      50% { opacity: 1; transform: translateX(-50%) rotate(-6deg) scaleX(1); }
+      72% { opacity: .9; transform: translateX(-50%) rotate(22deg) scaleX(1.1); }
+      100% { opacity: 0; transform: translateX(-50%) rotate(34deg) scaleX(1.15); }
+    }
+    @keyframes kzRush {
+      0% { transform: none; }
+      10% { transform: translate(6px, 4px) rotate(12deg) scale(1.08, .92); }
+      22% { transform: translate(-9px, 40px) rotate(-15deg) scale(1.14, .9); }
+      34% { transform: translate(9px, 50px) rotate(15deg) scale(1.16, .9); }
+      46% { transform: translate(-9px, 58px) rotate(-15deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 16px rgba(239,68,68,.9)); }
+      58% { transform: translate(9px, 64px) rotate(15deg) scale(1.18, .88); }
+      70% { transform: translate(-7px, 68px) rotate(-11deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 24px rgba(239,68,68,1)); }
+      84% { transform: translate(0, 40px) rotate(0) scale(1.08, .94); filter: drop-shadow(0 0 12px rgba(220,38,38,.6)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzPalmJabL {
+      0% { opacity: 0; transform: translate(-34px, 0) rotate(-26deg) scale(.5); }
+      35% { opacity: 1; transform: translate(-24px, 48px) rotate(-8deg) scale(1.6); }
+      65% { opacity: .9; transform: translate(-20px, 72px) rotate(-4deg) scale(2.1); }
+      100% { opacity: 0; transform: translate(-18px, 84px) rotate(0) scale(2.3); }
+    }
+    @keyframes kzPalmJabR {
+      0% { opacity: 0; transform: translate(34px, 0) rotate(26deg) scale(.5) scaleX(-1); }
+      35% { opacity: 1; transform: translate(24px, 52px) rotate(8deg) scale(1.6) scaleX(-1); }
+      65% { opacity: .9; transform: translate(20px, 76px) rotate(4deg) scale(2.1) scaleX(-1); }
+      100% { opacity: 0; transform: translate(18px, 88px) rotate(0) scale(2.3) scaleX(-1); }
+    }
+    @keyframes kzThrow {
+      0% { transform: none; }
+      16% { transform: translate(0, 24px) scale(1.12, .9); }
+      26% { transform: translate(0, 28px) scale(1.14, .88); }
+      44% { transform: translate(-14px, -26px) rotate(-22deg) scale(.94, 1.1); filter: drop-shadow(0 0 10px rgba(244,63,94,.6)); }
+      56% { transform: translate(-16px, -34px) rotate(-27deg) scale(.92, 1.12); filter: drop-shadow(0 0 14px rgba(244,63,94,.8)); }
+      68% { transform: translate(10px, 66px) rotate(24deg) scale(1.28, .84); filter: brightness(1.3) drop-shadow(0 0 26px rgba(244,63,94,1)); }
+      78% { transform: translate(6px, 58px) rotate(16deg) scale(1.2, .88); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzGrab {
+      0%, 6% { opacity: 0; transform: translate(26px, 0) rotate(30deg) scale(.5) scaleX(-1); }
+      16% { opacity: 1; transform: translate(20px, 44px) rotate(10deg) scale(1.6) scaleX(-1); }
+      28% { opacity: 1; transform: translate(18px, 48px) rotate(0) scale(1.2) scaleX(-1); }
+      50% { opacity: 1; transform: translate(-14px, -44px) rotate(-50deg) scale(1.4) scaleX(-1); }
+      66% { opacity: .95; transform: translate(12px, 76px) rotate(40deg) scale(2.1) scaleX(-1); }
+      76%, 100% { opacity: 0; transform: translate(14px, 88px) rotate(46deg) scale(2.3) scaleX(-1); }
+    }
+    @keyframes kzPierceBeam {
+      0%, 62% { opacity: 0; transform: translateX(-50%) scaleY(0); }
+      68% { opacity: 1; transform: translateX(-50%) scaleY(1); }
+      84% { opacity: .85; transform: translateX(-50%) scaleY(1.05) scaleX(.8); }
+      100% { opacity: 0; transform: translateX(-50%) scaleY(1.1) scaleX(.2); }
+    }
+    @keyframes kzSpinDrop {
+      0% { transform: none; }
+      12% { transform: translateY(8px) scale(1.2, .8); }
+      24% { transform: translateY(-56px) rotate(0) scale(.9, 1.12); }
+      34% { transform: translateY(-74px) rotate(180deg) scale(.96); }
+      44% { transform: translateY(-80px) rotate(360deg) scale(.96); filter: drop-shadow(0 0 16px rgba(251,191,36,.8)); }
+      54% { transform: translateY(-80px) rotate(540deg) scale(.96); }
+      64% { transform: translateY(-66px) rotate(720deg) scale(.94, 1.08); filter: drop-shadow(0 0 20px rgba(251,191,36,1)); }
+      74% { transform: translateY(72px) rotate(720deg) scale(1.36, .76); filter: brightness(1.35) drop-shadow(0 0 30px rgba(251,191,36,1)); }
+      80% { transform: translate(-5px, 64px) rotate(720deg) scale(1.28, .8); }
+      86% { transform: translate(5px, 64px) rotate(720deg) scale(1.26, .82); filter: drop-shadow(0 0 14px rgba(251,191,36,.6)); }
+      100% { transform: rotate(720deg); filter: none; }
+    }
+    @keyframes kzWhirl {
+      0%, 16% { opacity: 0; transform: translateY(0) rotate(0) scale(.6); }
+      28% { opacity: 1; transform: translateY(-60px) rotate(360deg) scale(1); }
+      60% { opacity: 1; transform: translateY(-74px) rotate(1080deg) scale(1.05); }
+      72%, 100% { opacity: 0; transform: translateY(50px) rotate(1300deg) scale(1.3, .5); }
+    }
+    @keyframes kzBigImpact {
+      0% { opacity: 0; transform: translateX(-50%) scale(.2); }
+      12% { opacity: 1; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0; transform: translateX(-50%) scale(2.4); }
+    }
+    @keyframes kzShadowJump {
+      0%, 12%, 74%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
+      44%, 54% { transform: translateX(-50%) scaleX(.45); opacity: .35; }
+      78% { transform: translateX(-50%) scaleX(1.5); opacity: 1; }
+    }
+    @keyframes kzHeave {
+      0% { transform: none; }
+      12% { transform: translateY(10px) scale(1.18, .82); }
+      26% { transform: translateY(-12px) scale(.9, 1.16); }
+      38% { transform: translate(-16px, -24px) rotate(-20deg) scale(.9, 1.16); filter: drop-shadow(0 0 12px rgba(250,204,21,.7)); }
+      46% { transform: translate(-18px, -26px) rotate(-23deg) scale(.9, 1.16); }
+      58% { transform: translate(18px, 26px) rotate(24deg) scale(1.24, .86); filter: brightness(1.3) drop-shadow(0 0 26px rgba(250,204,21,1)); }
+      68% { transform: translate(10px, 32px) rotate(14deg) scale(1.16, .9); }
+      82% { transform: translateY(-8px) rotate(0) scale(.95, 1.06); filter: drop-shadow(0 0 12px rgba(250,204,21,.5)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzFirework {
+      0%, 54% { opacity: 0; transform: translateX(-50%) scale(.1); }
+      62% { opacity: 1; transform: translateX(-50%) scale(.6); }
+      86% { opacity: 1; transform: translateX(-50%) scale(1.25); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(14px) scale(1.45); }
+    }
+    @keyframes kzPowerUp {
+      0% { transform: none; }
+      14% { transform: translateY(8px) scale(1.16, .84); }
+      22%, 38%, 54%, 70% { transform: translate(-3px, 8px) scale(1.16, .84); }
+      30%, 46%, 62% { transform: translate(3px, 8px) scale(1.16, .84); }
+      22% { filter: drop-shadow(0 0 6px rgba(251,191,36,.5)); }
+      54% { filter: brightness(1.15) drop-shadow(0 0 16px rgba(251,191,36,.85)); }
+      80% { transform: translateY(-10px) scale(.93, 1.12); filter: brightness(1.3) drop-shadow(0 0 28px rgba(251,191,36,1)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzStance {
+      0% { transform: none; }
+      18% { transform: translateY(6px) scale(1.18, .86); }
+      34% { transform: translate(-10px, 6px) rotate(-8deg) scale(1.18, .86); filter: drop-shadow(0 0 10px rgba(244,63,94,.6)); }
+      50% { transform: translate(10px, 6px) rotate(8deg) scale(1.18, .86); }
+      66% { transform: translate(-10px, 6px) rotate(-8deg) scale(1.18, .86); }
+      82% { transform: translateY(4px) scale(1.22, .82); filter: brightness(1.2) drop-shadow(0 0 22px rgba(244,63,94,1)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzPalmReadyL {
+      0%, 12% { opacity: 0; transform: translate(-20px, 0) rotate(-10deg) scale(.5); }
+      26%, 74% { opacity: 1; transform: translate(-52px, 4px) rotate(-24deg) scale(1.4); }
+      50% { opacity: 1; transform: translate(-56px, 0) rotate(-12deg) scale(1.55); }
+      90%, 100% { opacity: 0; transform: translate(-44px, 8px) rotate(-24deg) scale(1.2); }
+    }
+    @keyframes kzPalmReadyR {
+      0%, 12% { opacity: 0; transform: translate(20px, 0) rotate(10deg) scale(.5) scaleX(-1); }
+      26%, 74% { opacity: 1; transform: translate(52px, 4px) rotate(24deg) scale(1.4) scaleX(-1); }
+      50% { opacity: 1; transform: translate(56px, 0) rotate(12deg) scale(1.55) scaleX(-1); }
+      90%, 100% { opacity: 0; transform: translate(44px, 8px) rotate(24deg) scale(1.2) scaleX(-1); }
+    }
+    @keyframes kzSing {
+      0% { transform: none; }
+      15% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); filter: drop-shadow(0 0 10px rgba(52,211,153,.6)); }
+      35% { transform: translate(6px, 0) rotate(9deg) scale(1.05, .96); }
+      55% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); filter: brightness(1.15) drop-shadow(0 0 18px rgba(52,211,153,.95)); }
+      75% { transform: translate(6px, 0) rotate(9deg) scale(1.05, .96); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzNote {
+      0% { opacity: 0; transform: translate(0, 0) rotate(0) scale(.5); }
+      20% { opacity: 1; transform: translate(calc(var(--kz-nx) * .3), -14px) rotate(calc(var(--kz-nr) * .3)) scale(1); }
+      60% { opacity: 1; transform: translate(calc(var(--kz-nx) * -.2), -44px) rotate(calc(var(--kz-nr) * -.3)) scale(1.1); }
+      100% { opacity: 0; transform: translate(var(--kz-nx), -78px) rotate(var(--kz-nr)) scale(1.2); }
+    }
+    [data-tactics-look] [data-kz-fx] { font-style: normal; position: absolute; inset: 0; pointer-events: none; z-index: 10000; }
+    [data-tactics-look] [data-kz-fx]::before, [data-tactics-look] [data-kz-fx]::after { content: ''; position: absolute; opacity: 0; pointer-events: none; }
+    /* はり手以外は、はり手の動き(kzSlap・手のひら・赤い輪)を止めて技ごとのものに差し替える */
+    /* ★:where で包んで詳しさ(specificity)を上げない。上げると下の技ごとの指定より強くなり、手や輪が出なくなる */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack]:where([data-enemy-skill]:not([data-enemy-skill="normal"])) > [data-kz-palm] { animation: none; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack]:where([data-enemy-skill]:not([data-enemy-skill="normal"]))::after { animation: none; }
+    /* かわずつき */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="sweep"] > span { z-index: 9999; animation: kzLunge 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="sweep"] > [data-kz-fx]::before { left: 50%; bottom: -30%; width: 170%; height: 70%; border-radius: 50%;
+      border-bottom: 6px solid rgba(236,253,245,.95); box-shadow: 0 10px 18px -6px rgba(52,211,153,.9);
+      transform-origin: 50% 0; animation: kzSweepArc 450ms ease-out forwards; }
+    /* 連続はり手 */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > span { z-index: 9999; animation: kzRush 750ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > [data-kz-palm="l"] { animation: kzPalmJabL 220ms ease-out 90ms 3; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > [data-kz-palm="r"] { animation: kzPalmJabR 220ms ease-out 200ms 3; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"]::after { animation: kzImpact 220ms ease-out 110ms 3; }
+    /* 上手投げ */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > span { z-index: 9999; animation: kzThrow 900ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > [data-kz-palm="r"] { animation: kzGrab 900ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"]::after { animation: kzImpact 500ms ease-out 400ms forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > [data-kz-fx]::before { left: 50%; top: 40%; width: 16px; height: 170%; border-radius: 8px; transform-origin: 50% 0;
+      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(251,113,133,.9) 40%, rgba(225,29,72,.6) 80%, transparent);
+      box-shadow: 0 0 18px 6px rgba(244,63,94,.75); animation: kzPierceBeam 900ms ease-out forwards; }
+    /* 大回転落とし */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > span { z-index: 9999; transform-origin: 50% 55%; animation: kzSpinDrop 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow] { animation: kzShadowJump 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow]::after { animation: kzDust 600ms ease-out 450ms forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-kz-fx]::before { inset: -14%; border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent, rgba(253,224,71,.95) 14%, transparent 30%, rgba(255,255,255,.8) 50%, transparent 64%, rgba(251,191,36,.95) 80%, transparent 94%);
+      -webkit-mask: radial-gradient(closest-side, transparent 62%, #000 66%, #000 90%, transparent 96%); mask: radial-gradient(closest-side, transparent 62%, #000 66%, #000 90%, transparent 96%);
+      animation: kzWhirl 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-kz-fx]::after { left: 50%; bottom: -24%; width: 120%; height: 40%; border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(253,224,71,.85) 35%, rgba(245,158,11,.4) 65%, transparent);
+      animation: kzBigImpact 420ms ease-out 800ms forwards; }
+    /* 大投げたまや */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > span { z-index: 9999; animation: kzHeave 1000ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="allout"]::after { animation: kzImpact 500ms ease-out 450ms forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::before,
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::after { left: 50%; top: -58%; width: 150%; aspect-ratio: 1; transform-origin: 50% 50%; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::before {
+      background: radial-gradient(9px 9px at 90% 50%, #fde047, transparent 75%), radial-gradient(9px 9px at 78% 78%, #fb7185, transparent 75%),
+        radial-gradient(9px 9px at 50% 90%, #fde047, transparent 75%), radial-gradient(9px 9px at 22% 78%, #67e8f9, transparent 75%),
+        radial-gradient(9px 9px at 10% 50%, #fde047, transparent 75%), radial-gradient(9px 9px at 22% 22%, #fb7185, transparent 75%),
+        radial-gradient(9px 9px at 50% 10%, #fde047, transparent 75%), radial-gradient(9px 9px at 78% 22%, #67e8f9, transparent 75%),
+        radial-gradient(7px 7px at 72% 50%, #fff, transparent 75%), radial-gradient(7px 7px at 50% 72%, #fff, transparent 75%),
+        radial-gradient(7px 7px at 28% 50%, #fff, transparent 75%), radial-gradient(7px 7px at 50% 28%, #fff, transparent 75%),
+        radial-gradient(closest-side, rgba(253,224,71,.35), transparent 40%);
+      filter: drop-shadow(0 0 6px rgba(253,224,71,.9)); animation: kzFirework 1000ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::after { top: -40%; margin-left: -34%; width: 110%;
+      background: radial-gradient(7px 7px at 90% 50%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 78% 78%, #86efac, transparent 75%),
+        radial-gradient(7px 7px at 50% 90%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 22% 78%, #fdba74, transparent 75%),
+        radial-gradient(7px 7px at 10% 50%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 22% 22%, #86efac, transparent 75%),
+        radial-gradient(7px 7px at 50% 10%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 78% 22%, #fdba74, transparent 75%);
+      filter: drop-shadow(0 0 5px rgba(240,171,252,.9)); animation: kzFirework 1000ms ease-out 120ms forwards; }
+    /* 必殺技準備 / 貫通技準備(しこ踏みは上の kzStomp のまま) */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > span { animation: kzPowerUp 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > span { animation: kzStance 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > [data-enemy-shadow]::after,
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-enemy-shadow]::after { animation: none; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-kz-palm="l"] { animation: kzPalmReadyL 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-kz-palm="r"] { animation: kzPalmReadyR 1100ms ease-in-out forwards; }
+    /* かえるのうた */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > span { animation: kzSing 1000ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::before,
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::after { font-size: 34px; font-weight: 900; line-height: 1; color: #a7f3d0;
+      text-shadow: 0 0 8px rgba(52,211,153,1), 0 2px 4px rgba(0,0,0,.7); }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::before { content: '♪'; left: 8%; top: 22%; --kz-nx: -18px; --kz-nr: -20deg;
+      animation: kzNote 900ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::after { content: '♫'; right: 6%; top: 10%; --kz-nx: 18px; --kz-nr: 20deg; color: #fff;
+      animation: kzNote 800ms ease-out 200ms forwards; }
+    /* ---- カワズモー以外の敵の動き(2026-09-24 ユーザー指示「次はタクティクスの全モンスターも実装して」) ----
+       体の動き・飾りの形・絵文字の出し方を部品にして、敵ごとの組み合わせは 71-screen-battle の
+       TACTICS_ENEMY_MOTION_SETS が決める。ここでは部品と、敵ごとの色(--em-c)だけを持つ。
+       長さは技で決まる(--em-dur)。60-app の待ち時間(TACTICS_ENEMY_SKILL_MS_DEFAULT)とそろえる。
+       ★丸枠の中の絵は「> span」、覚醒ムーの枠の外の絵は「> img」。どちらにも同じ部品が効くように :is(span, img) で書く */
+    [data-tactics-look] [data-enemy-motion="metalner"] { --em-c: 96,165,250; }
+    [data-tactics-look] [data-enemy-motion="inari"] { --em-c: 251,146,60; }
+    [data-tactics-look] [data-enemy-motion="koinobori"] { --em-c: 248,113,113; }
+    [data-tactics-look] [data-enemy-motion="delpiero"] { --em-c: 232,121,249; }
+    [data-tactics-look] [data-enemy-motion="dokudoku"] { --em-c: 192,132,252; }
+    [data-tactics-look] [data-enemy-motion="lamia"] { --em-c: 129,140,248; }
+    [data-tactics-look] [data-enemy-motion="nyarlathotep"] { --em-c: 250,204,21; }
+    [data-tactics-look] [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
+    [data-tactics-look] [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
+    [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
+    [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
+    [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }
+    [data-tactics-look] [data-enemy-skill="allout"], [data-tactics-look] [data-enemy-skill="regen"] { --em-dur: 1000ms; }
+    [data-tactics-look] [data-enemy-skill="special"], [data-tactics-look] [data-enemy-skill="roar"],
+    [data-tactics-look] [data-enemy-skill="charge"], [data-tactics-look] [data-enemy-skill="pierceCharge"] { --em-dur: 1100ms; }
+    /* 覚醒ムーの攻撃は、どの技も 900ms 待つ(ムー専用の待ち時間) */
+    [data-tactics-look] [data-moo-stage]:is([data-enemy-skill="normal"], [data-enemy-skill="sweep"], [data-enemy-skill="rush"], [data-enemy-skill="pierce"],
+      [data-enemy-skill="special"], [data-enemy-skill="allout"]) { --em-dur: 900ms; }
+
+    /* 待機(ずっと繰り返す) */
+    @keyframes emIdleHover {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      25% { transform: translateY(-10px) rotate(-3deg); }
+      50% { transform: translateY(-4px) rotate(0); }
+      75% { transform: translateY(-12px) rotate(3deg); }
+    }
+    @keyframes emShadowHover {
+      0%, 50%, 100% { transform: translateX(-50%) scaleX(.92); opacity: .8; }
+      25%, 75% { transform: translateX(-50%) scaleX(.74); opacity: .55; }
+    }
+    @keyframes emIdleHop {
+      0%, 100% { transform: none; }
+      12% { transform: rotate(-5deg) scale(1.02, .98); }
+      26% { transform: rotate(5deg) scale(1.02, .98); }
+      40% { transform: rotate(-4deg); }
+      52% { transform: none; }
+      60% { transform: translateY(2px) scale(1.08, .92); }
+      66% { transform: translateY(-16px) scale(.94, 1.08); }
+      72% { transform: translateY(2px) scale(1.08, .92); }
+      78% { transform: translateY(-12px) scale(.95, 1.06); }
+      84% { transform: translateY(1px) scale(1.05, .95); }
+      90% { transform: none; }
+    }
+    @keyframes emIdleSwim {
+      0%, 100% { transform: translateX(0) rotate(0) skewX(0); }
+      25% { transform: translateX(-7px) rotate(-4deg) skewX(4deg); }
+      50% { transform: translateX(0) translateY(-5px) rotate(0) skewX(0); }
+      75% { transform: translateX(7px) rotate(4deg) skewX(-4deg); }
+    }
+    @keyframes emIdlePrance {
+      0%, 50%, 100% { transform: translateY(0) rotate(0); }
+      10% { transform: translateY(-7px) rotate(-3deg); }
+      20% { transform: translateY(1px) rotate(-1deg) scale(1.02, .98); }
+      30% { transform: translateY(-7px) rotate(3deg); }
+      40% { transform: translateY(1px) rotate(1deg) scale(1.02, .98); }
+      70% { transform: translateX(-4px) rotate(-2deg); }
+      85% { transform: translateX(3px) rotate(1deg); }
+    }
+    @keyframes emIdlePulse {
+      0%, 34%, 100% { transform: scale(1, 1); }
+      8% { transform: scale(1.1, .92); }
+      14% { transform: scale(.97, 1.04); }
+      20% { transform: scale(1.12, .9); filter: drop-shadow(0 0 12px rgba(var(--em-c),.7)); }
+      28% { transform: scale(.98, 1.03); }
+      60% { transform: translateX(-4px) rotate(-2deg); }
+      80% { transform: translateX(4px) rotate(2deg); }
+    }
+    @keyframes emIdleSerpent {
+      0%, 100% { transform: translateX(0) rotate(0) skewX(0); }
+      25% { transform: translateX(-8px) rotate(-3deg) skewX(5deg); }
+      50% { transform: translateX(0) translateY(-4px) rotate(0) skewX(0) scale(.98, 1.03); }
+      75% { transform: translateX(8px) rotate(3deg) skewX(-5deg); }
+    }
+    @keyframes emIdleWrithe {
+      0%, 100% { transform: none; filter: none; }
+      20% { transform: skewY(-3deg) scale(1.03, .98); }
+      40% { transform: skewY(2deg) rotate(-2deg) scale(.98, 1.03); filter: drop-shadow(0 0 10px rgba(var(--em-c),.5)); }
+      60% { transform: skewY(3deg) scale(1.04, .97); }
+      80% { transform: skewY(-2deg) rotate(2deg) scale(.98, 1.03); filter: drop-shadow(0 0 14px rgba(120,40,200,.7)); }
+    }
+    @keyframes emIdleMenace {
+      0%, 100% { transform: none; }
+      30% { transform: scale(1.03, .98); }
+      50% { transform: translateY(3px) rotate(4deg) scale(1.02, .99); }
+      62% { transform: translateY(3px) rotate(4deg) scale(1.02, .99); }
+      80% { transform: scale(.99, 1.02); }
+    }
+    /* 体の動き(技) */
+    @keyframes emJab {
+      0% { transform: none; }
+      25% { transform: translateY(-6px) rotate(-6deg) scale(.94, 1.06); }
+      50% { transform: translateY(58px) rotate(4deg) scale(1.2, .9); filter: brightness(1.25) drop-shadow(0 0 22px rgba(var(--em-c),1)); }
+      66% { transform: translateY(48px) rotate(2deg) scale(1.12, .92); filter: drop-shadow(0 0 12px rgba(var(--em-c),.7)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emLunge {
+      0% { transform: none; }
+      22% { transform: translateY(-10px) scale(.92, 1.08); }
+      55% { transform: translateY(72px) scale(1.26, .86); filter: brightness(1.25) drop-shadow(0 0 24px rgba(var(--em-c),1)); }
+      70% { transform: translateY(62px) scale(1.2, .88); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emDash {
+      0% { transform: none; }
+      28% { transform: translate(-30px, 6px) rotate(-10deg) scale(1.1, .9); }
+      58% { transform: translate(34px, 64px) rotate(12deg) scale(1.22, .88); filter: brightness(1.25) drop-shadow(0 0 22px rgba(var(--em-c),1)); }
+      72% { transform: translate(24px, 56px) rotate(8deg) scale(1.16, .9); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emFlurry {
+      0% { transform: none; }
+      10% { transform: translate(6px, 4px) rotate(10deg) scale(1.06, .94); }
+      22% { transform: translate(-9px, 40px) rotate(-12deg) scale(1.14, .9); }
+      34% { transform: translate(9px, 50px) rotate(12deg) scale(1.16, .9); }
+      46% { transform: translate(-9px, 58px) rotate(-12deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 16px rgba(var(--em-c),.9)); }
+      58% { transform: translate(9px, 64px) rotate(12deg) scale(1.18, .88); }
+      70% { transform: translate(-7px, 68px) rotate(-9deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 24px rgba(var(--em-c),1)); }
+      84% { transform: translate(0, 40px) rotate(0) scale(1.08, .94); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emSpin {
+      0% { transform: none; }
+      14% { transform: scale(1.1, .9); }
+      50% { transform: translateY(40px) rotate(360deg) scale(1.08); filter: drop-shadow(0 0 16px rgba(var(--em-c),.9)); }
+      80% { transform: translateY(58px) rotate(720deg) scale(1.18); filter: brightness(1.3) drop-shadow(0 0 26px rgba(var(--em-c),1)); }
+      100% { transform: rotate(720deg); filter: none; }
+    }
+    @keyframes emWindup {
+      0% { transform: none; }
+      30% { transform: translateY(-20px) rotate(-14deg) scale(.92, 1.1); filter: drop-shadow(0 0 8px rgba(var(--em-c),.5)); }
+      56% { transform: translate(-4px, -26px) rotate(-18deg) scale(.9, 1.12); filter: drop-shadow(0 0 16px rgba(var(--em-c),.8)); }
+      68% { transform: translateY(72px) rotate(6deg) scale(1.28, .84); filter: brightness(1.3) drop-shadow(0 0 28px rgba(var(--em-c),1)); }
+      78% { transform: translateY(62px) rotate(4deg) scale(1.2, .88); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emSwing {
+      0% { transform: none; }
+      30% { transform: translate(-18px, -10px) rotate(-24deg) scale(.95, 1.06); filter: drop-shadow(0 0 8px rgba(var(--em-c),.5)); }
+      58% { transform: translate(20px, 52px) rotate(22deg) scale(1.2, .9); filter: brightness(1.3) drop-shadow(0 0 24px rgba(var(--em-c),1)); }
+      72% { transform: translate(12px, 44px) rotate(12deg) scale(1.14, .92); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emLeap {
+      0% { transform: none; }
+      12% { transform: translateY(8px) scale(1.18, .82); }
+      30% { transform: translateY(-70px) scale(.9, 1.12); }
+      56% { transform: translateY(-82px) scale(.95, 1.06); filter: drop-shadow(0 0 16px rgba(var(--em-c),.8)); }
+      70% { transform: translateY(72px) scale(1.34, .76); filter: brightness(1.35) drop-shadow(0 0 30px rgba(var(--em-c),1)); }
+      78% { transform: translate(-5px, 64px) scale(1.28, .8); }
+      86% { transform: translate(5px, 64px) scale(1.26, .82); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emPress {
+      0% { transform: none; }
+      12% { transform: translateY(8px) scale(1.16, .84); }
+      34% { transform: translateY(-60px) rotate(-8deg) scale(.95, 1.08); }
+      52% { transform: translateY(-70px) rotate(8deg) scale(1.02); filter: drop-shadow(0 0 14px rgba(var(--em-c),.7)); }
+      70% { transform: translateY(76px) scale(1.42, .7); filter: brightness(1.3) drop-shadow(0 0 28px rgba(var(--em-c),1)); }
+      82% { transform: translateY(64px) scale(1.3, .76); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emRise {
+      0% { transform: none; }
+      20% { transform: translateY(8px) scale(1.12, .88); }
+      48% { transform: translateY(-24px) scale(1.1, 1.18); filter: brightness(1.2) drop-shadow(0 0 20px rgba(var(--em-c),.9)); }
+      60% { transform: translateY(-28px) scale(1.14, 1.2); filter: brightness(1.4) drop-shadow(0 0 34px rgba(var(--em-c),1)); }
+      74% { transform: translateY(34px) scale(1.24, .86); filter: brightness(1.3) drop-shadow(0 0 26px rgba(var(--em-c),1)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emRoar {
+      0% { transform: none; }
+      18% { transform: translateY(6px) scale(1.1, .9); }
+      34% { transform: translateY(-14px) rotate(-4deg) scale(1.08, 1.12); filter: drop-shadow(0 0 16px rgba(var(--em-c),.8)); }
+      42%, 58% { transform: translate(-4px, -14px) scale(1.12, 1.14); }
+      50%, 66% { transform: translate(4px, -14px) scale(1.14, 1.12); filter: brightness(1.25) drop-shadow(0 0 26px rgba(var(--em-c),1)); }
+      80% { transform: translateY(-4px) scale(1.04); filter: drop-shadow(0 0 12px rgba(var(--em-c),.6)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emPower {
+      0% { transform: none; }
+      14% { transform: translateY(8px) scale(1.14, .86); }
+      22%, 38%, 54%, 70% { transform: translate(-3px, 8px) scale(1.14, .86); }
+      30%, 46%, 62% { transform: translate(3px, 8px) scale(1.14, .86); filter: brightness(1.12) drop-shadow(0 0 14px rgba(var(--em-c),.8)); }
+      80% { transform: translateY(-10px) scale(.93, 1.12); filter: brightness(1.3) drop-shadow(0 0 28px rgba(var(--em-c),1)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emStance {
+      0% { transform: none; }
+      18% { transform: translateY(6px) scale(1.16, .88); }
+      34% { transform: translate(-10px, 6px) rotate(-7deg) scale(1.16, .88); filter: drop-shadow(0 0 10px rgba(var(--em-c),.6)); }
+      50% { transform: translate(10px, 6px) rotate(7deg) scale(1.16, .88); }
+      66% { transform: translate(-10px, 6px) rotate(-7deg) scale(1.16, .88); }
+      82% { transform: translateY(4px) scale(1.2, .84); filter: brightness(1.2) drop-shadow(0 0 22px rgba(var(--em-c),1)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emHeal {
+      0% { transform: none; }
+      25% { transform: translateY(-12px) scale(1.04); filter: brightness(1.15) drop-shadow(0 0 14px rgba(52,211,153,.8)); }
+      50% { transform: translateY(-18px) scale(1.06); filter: brightness(1.3) drop-shadow(0 0 24px rgba(52,211,153,1)); }
+      75% { transform: translateY(-10px) scale(1.03); filter: drop-shadow(0 0 14px rgba(52,211,153,.7)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes emSway {
+      0% { transform: none; }
+      15% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); filter: drop-shadow(0 0 10px rgba(var(--em-c),.6)); }
+      35% { transform: translate(6px, 0) rotate(9deg) scale(1.05, .96); }
+      55% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); filter: brightness(1.15) drop-shadow(0 0 18px rgba(var(--em-c),.95)); }
+      75% { transform: translate(6px, 0) rotate(9deg) scale(1.05, .96); }
+      100% { transform: none; filter: none; }
+    }
+    /* 飾りの形(::before) */
+    @keyframes emArc {
+      0%, 30% { opacity: 0; transform: translateX(-50%) rotate(-38deg) scaleX(.5); }
+      50% { opacity: 1; transform: translateX(-50%) rotate(-6deg) scaleX(1); }
+      72% { opacity: .9; transform: translateX(-50%) rotate(22deg) scaleX(1.1); }
+      100% { opacity: 0; transform: translateX(-50%) rotate(34deg) scaleX(1.15); }
+    }
+    @keyframes emSlash {
+      0%, 40% { opacity: 0; transform: scale(.3) rotate(-20deg); }
+      56% { opacity: 1; transform: scale(1) rotate(0); }
+      100% { opacity: 0; transform: scale(1.3) rotate(8deg); }
+    }
+    @keyframes emBeam {
+      0%, 60% { opacity: 0; transform: translateX(-50%) scaleY(0); }
+      68% { opacity: 1; transform: translateX(-50%) scaleY(1); }
+      84% { opacity: .85; transform: translateX(-50%) scaleY(1.05) scaleX(.8); }
+      100% { opacity: 0; transform: translateX(-50%) scaleY(1.1) scaleX(.2); }
+    }
+    @keyframes emBurst {
+      0%, 42% { opacity: 0; transform: scale(.3) rotate(0); }
+      58% { opacity: 1; transform: scale(1) rotate(8deg); }
+      100% { opacity: 0; transform: scale(1.5) rotate(24deg); }
+    }
+    @keyframes emRingOut {
+      0%, 52% { opacity: 0; transform: translateX(-50%) scale(.2); }
+      64% { opacity: 1; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0; transform: translateX(-50%) scale(2.2); }
+    }
+    @keyframes emAura {
+      0% { opacity: 0; transform: scaleY(.3); }
+      35% { opacity: .9; transform: scaleY(1); }
+      80% { opacity: .8; transform: scaleY(1.05); }
+      100% { opacity: 0; transform: scaleY(1.2); }
+    }
+    @keyframes emLock {
+      0% { opacity: 0; transform: scale(2.2) rotate(0); }
+      30% { opacity: .9; transform: scale(1.3) rotate(45deg); }
+      55% { opacity: 1; transform: scale(1) rotate(90deg); }
+      70%, 85% { opacity: 1; transform: scale(.92) rotate(90deg); }
+      100% { opacity: 0; transform: scale(.8) rotate(90deg); }
+    }
+    @keyframes emSparkle {
+      0% { opacity: 0; transform: translateY(20px); }
+      25% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-70px); }
+    }
+    /* 絵文字の出し方(::after) */
+    @keyframes emEmoRise {
+      0% { opacity: 0; transform: translateY(10px) scale(.5); }
+      25% { opacity: 1; transform: translateY(-10px) scale(1); }
+      100% { opacity: 0; transform: translateY(-80px) scale(1.2); }
+    }
+    @keyframes emEmoShoot {
+      0%, 30% { opacity: 0; transform: translate(-50%, 0) scale(.4) rotate(-20deg); }
+      45% { opacity: 1; transform: translate(-50%, 30px) scale(1.2) rotate(0); }
+      75% { opacity: 1; transform: translate(-50%, 110px) scale(2.3) rotate(15deg); }
+      100% { opacity: 0; transform: translate(-50%, 140px) scale(2.6) rotate(20deg); }
+    }
+    @keyframes emEmoRain {
+      0%, 30% { opacity: 0; transform: translateY(-40px); }
+      45% { opacity: 1; }
+      85% { opacity: 1; transform: translateY(110px); }
+      100% { opacity: 0; transform: translateY(130px); }
+    }
+    [data-tactics-look="rich"] [data-em-idle]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation: 4s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-em-idle="hover"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation-name: emIdleHover; }
+    [data-tactics-look="rich"] [data-em-idle="hover"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > [data-enemy-shadow] { animation: emShadowHover 4s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-em-idle="hop"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation-name: emIdleHop; animation-duration: 3.4s; }
+    [data-tactics-look="rich"] [data-em-idle="swim"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation-name: emIdleSwim; }
+    [data-tactics-look="rich"] [data-em-idle="prance"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation-name: emIdlePrance; animation-duration: 3.2s; }
+    [data-tactics-look="rich"] [data-em-idle="pulse"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation-name: emIdlePulse; animation-duration: 2.6s; }
+    [data-tactics-look="rich"] [data-em-idle="serpent"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation-name: emIdleSerpent; }
+    [data-tactics-look="rich"] [data-em-idle="writhe"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation-name: emIdleWrithe; animation-duration: 5s; }
+    [data-tactics-look="rich"] [data-em-idle="menace"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation-name: emIdleMenace; animation-duration: 5s; }
+    /* 体の動き。丸枠の生の攻撃の動き([data-enemy-attack] > span)より強くするため [data-enemy-skill] も付ける */
+    [data-tactics-look] [data-enemy-skill][data-em-body] > :is(span, img) { z-index: 9999; animation-duration: var(--em-dur); animation-timing-function: ease-in-out; animation-fill-mode: forwards; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="jab"] > :is(span, img) { animation-name: emJab; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="lunge"] > :is(span, img) { animation-name: emLunge; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="dash"] > :is(span, img) { animation-name: emDash; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="flurry"] > :is(span, img) { animation-name: emFlurry; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="spin"] > :is(span, img) { animation-name: emSpin; transform-origin: 50% 55%; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="windup"] > :is(span, img) { animation-name: emWindup; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="swing"] > :is(span, img) { animation-name: emSwing; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="leap"] > :is(span, img) { animation-name: emLeap; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="press"] > :is(span, img) { animation-name: emPress; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="rise"] > :is(span, img) { animation-name: emRise; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="roar"] > :is(span, img) { animation-name: emRoar; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="power"] > :is(span, img) { animation-name: emPower; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="stance"] > :is(span, img) { animation-name: emStance; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="heal"] > :is(span, img) { animation-name: emHeal; }
+    [data-tactics-look] [data-enemy-skill][data-em-body="sway"] > :is(span, img) { animation-name: emSway; }
+    [data-tactics-look] [data-moo-stage] > img { transform-origin: 50% 60%; }
+    /* やられ(カワズモーと同じのけぞり) */
+    [data-tactics-look] [data-enemy-ring][data-em-idle][data-enemy-hurt] > span, [data-tactics-look] [data-moo-stage][data-enemy-hurt] > img { animation: kzHurt 520ms ease-out forwards; }
+    /* 飾り */
+    [data-tactics-look] [data-em-fx-el] { font-style: normal; position: absolute; inset: 0; pointer-events: none; z-index: 10000; }
+    [data-tactics-look] [data-em-fx-el]::before, [data-tactics-look] [data-em-fx-el]::after { content: ''; position: absolute; opacity: 0; pointer-events: none; }
+    [data-tactics-look] [data-em-fx="arc"] > [data-em-fx-el]::before { left: 50%; bottom: -30%; width: 170%; height: 70%; border-radius: 50%;
+      border-bottom: 6px solid rgba(255,255,255,.95); box-shadow: 0 10px 18px -6px rgba(var(--em-c),1); transform-origin: 50% 0; animation: emArc var(--em-dur) ease-out forwards; }
+    [data-tactics-look] [data-em-fx="slash"] > [data-em-fx-el]::before { inset: -8%;
+      background: linear-gradient(45deg, transparent 47%, rgba(255,255,255,.95) 49.2%, rgba(var(--em-c),.95) 50.8%, transparent 53%),
+        linear-gradient(-45deg, transparent 47%, rgba(255,255,255,.95) 49.2%, rgba(var(--em-c),.95) 50.8%, transparent 53%);
+      filter: drop-shadow(0 0 10px rgba(var(--em-c),1)); animation: emSlash var(--em-dur) ease-out forwards; }
+    [data-tactics-look] [data-em-fx="beam"] > [data-em-fx-el]::before { left: 50%; top: 40%; width: 16px; height: 170%; border-radius: 8px; transform-origin: 50% 0;
+      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(var(--em-c),.9) 40%, rgba(var(--em-c),.5) 80%, transparent);
+      box-shadow: 0 0 18px 6px rgba(var(--em-c),.75); animation: emBeam var(--em-dur) ease-out forwards; }
+    [data-tactics-look] [data-em-fx="widebeam"] > [data-em-fx-el]::before { left: 50%; top: 35%; width: 62%; height: 220%; border-radius: 40px; transform-origin: 50% 0;
+      background: linear-gradient(90deg, transparent, rgba(var(--em-c),.7) 20%, rgba(255,255,255,.95) 45% 55%, rgba(var(--em-c),.7) 80%, transparent);
+      box-shadow: 0 0 30px 10px rgba(var(--em-c),.6); animation: emBeam var(--em-dur) ease-out forwards; }
+    [data-tactics-look] [data-em-fx="burst"] > [data-em-fx-el]::before { inset: -22%; border-radius: 50%;
+      background: repeating-conic-gradient(rgba(255,255,255,.9) 0 4deg, rgba(var(--em-c),.7) 4deg 9deg, transparent 9deg 30deg);
+      -webkit-mask: radial-gradient(closest-side, transparent 30%, #000 45%, transparent 100%); mask: radial-gradient(closest-side, transparent 30%, #000 45%, transparent 100%);
+      animation: emBurst var(--em-dur) ease-out forwards; }
+    [data-tactics-look] [data-em-fx="ring"] > [data-em-fx-el]::before { left: 50%; bottom: -18%; width: 110%; height: 40%; border-radius: 50%;
+      border: 4px solid rgba(255,255,255,.9); box-shadow: 0 0 18px 4px rgba(var(--em-c),.9), inset 0 0 14px rgba(var(--em-c),.8);
+      animation: emRingOut var(--em-dur) ease-out forwards; }
+    [data-tactics-look] [data-em-fx="aura"] > [data-em-fx-el]::before { left: -12%; right: -12%; top: -30%; bottom: 0; border-radius: 50% 50% 40% 40%; transform-origin: 50% 100%;
+      background: linear-gradient(0deg, rgba(var(--em-c),.55), rgba(var(--em-c),.25) 45%, transparent 85%);
+      -webkit-mask: radial-gradient(60% 80% at 50% 100%, #000 40%, transparent 100%); mask: radial-gradient(60% 80% at 50% 100%, #000 40%, transparent 100%);
+      animation: emAura var(--em-dur) ease-in-out forwards; }
+    [data-tactics-look] [data-em-fx="lock"] > [data-em-fx-el]::before { inset: 4%; border-radius: 50%;
+      border: 3px dashed rgba(var(--em-c),.95); box-shadow: 0 0 14px rgba(var(--em-c),.9), inset 0 0 14px rgba(var(--em-c),.6);
+      background: linear-gradient(rgba(var(--em-c),.9), rgba(var(--em-c),.9)) 50% 0 / 3px 18% no-repeat, linear-gradient(rgba(var(--em-c),.9), rgba(var(--em-c),.9)) 50% 100% / 3px 18% no-repeat,
+        linear-gradient(rgba(var(--em-c),.9), rgba(var(--em-c),.9)) 0 50% / 18% 3px no-repeat, linear-gradient(rgba(var(--em-c),.9), rgba(var(--em-c),.9)) 100% 50% / 18% 3px no-repeat;
+      animation: emLock var(--em-dur) ease-out forwards; }
+    [data-tactics-look] [data-em-fx="sparkle"] > [data-em-fx-el]::before { inset: 0;
+      background: radial-gradient(4px 4px at 20% 70%, #fff, transparent 75%), radial-gradient(5px 5px at 36% 50%, rgba(167,243,208,1), transparent 75%),
+        radial-gradient(4px 4px at 55% 78%, #fff, transparent 75%), radial-gradient(5px 5px at 70% 45%, rgba(167,243,208,1), transparent 75%),
+        radial-gradient(4px 4px at 84% 66%, #fff, transparent 75%), radial-gradient(5px 5px at 48% 30%, rgba(167,243,208,1), transparent 75%);
+      filter: drop-shadow(0 0 6px rgba(52,211,153,1)); animation: emSparkle var(--em-dur) ease-out forwards; }
+    [data-tactics-look] [data-em-emo] > [data-em-fx-el]::after { content: var(--em-e, ''); line-height: 1; text-align: center; white-space: nowrap;
+      filter: drop-shadow(0 0 8px rgba(var(--em-c),1)) drop-shadow(0 2px 4px rgba(0,0,0,.7)); }
+    [data-tactics-look] [data-em-emo="rise"] > [data-em-fx-el]::after { left: 0; right: 0; top: 18%; font-size: 30px; word-spacing: 34px;
+      content: var(--em-e, '') ' ' var(--em-e, '') ' ' var(--em-e, ''); animation: emEmoRise var(--em-dur) ease-out forwards; }
+    [data-tactics-look] [data-em-emo="shoot"] > [data-em-fx-el]::after { left: 50%; top: 38%; font-size: 30px; animation: emEmoShoot var(--em-dur) ease-in forwards; }
+    [data-tactics-look] [data-em-emo="rain"] > [data-em-fx-el]::after { left: -20%; right: -20%; top: -10%; font-size: 34px; word-spacing: 26px;
+      content: var(--em-e, '') ' ' var(--em-e, '') ' ' var(--em-e, '') ' ' var(--em-e, ''); animation: emEmoRain var(--em-dur) ease-in forwards; }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
     [data-tactics-look] [data-enemy-ring="0"] { --mh-rc: 239,68,68; } [data-tactics-look] [data-enemy-ring="1"] { --mh-rc: 245,158,11; }
     [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
@@ -75286,7 +77084,8 @@ const createAnimationStyle = () => {
       [data-tactics-look] [data-card-frame], [data-tactics-look] [data-card-shine]::before, [data-tactics-look] [data-card-gem],
       [data-tactics-look] [data-enemy-hpbar]::after, [data-tactics-look] [data-enemy-ring]::before,
       [data-tactics-look] [data-enemy-motion] > span > img, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow],
-      [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow]::before, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow]::after { animation: none !important; }
+      [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow]::before, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow]::after,
+      [data-tactics-look] [data-em-idle]:not([data-enemy-skill]):not([data-enemy-hurt]) > span > img { animation: none !important; }
     }
     /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
     @keyframes tacticsPopupRise {
@@ -75565,7 +77364,8 @@ const createAnimationStyle = () => {
       /* 1枚の幅が90px前後になるので、名前・数字・×1 の札を一回り小さくして重ならないようにする */
       .mh-phase-card-name { font-size: 12px !important; }
       .mh-phase-card-nums { font-size: 9px !important; }
-      .mh-phase-count { top: 3px !important; right: 3px !important; padding: 0 5px !important; font-size: 9px !important; }
+      /* ×1 の宝石は名前にかぶらないよう、伸び幅の横(下の数字の欄の上)へ移す */
+      .mh-phase-count { top: auto !important; bottom: 30px !important; right: 3px !important; width: 22px !important; height: 20px !important; padding: 2px 0 0 !important; font-size: 8px !important; }
     }
     /* 並んだカードが順に出てくる動き。--i に並び順を入れる。
        fill-mode は backwards にする(both / forwards だと終わったあとも transform を握り続け、
@@ -75580,6 +77380,154 @@ const createAnimationStyle = () => {
     @keyframes mhPhaseReady { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }
     @media (prefers-reduced-motion: reduce) {
       .mh-phase-enter, .mh-phase-pop, .mh-phase-ready { animation: none; }
+    }
+    /* ==== 強化フェーズの画面の見た目(2026-09-24 ユーザー指示「やすっぽい見た目も改善して」
+       「タクティクスバトルを参考に見た目を強くしてほしい」)。
+       タクティクス新盤面の飾り(濃紺の地・金の細い縁・回る光の縁・距離や種類ごとの模様・宝石・魔法陣・光の筋)を
+       同じ言葉で使う。@keyframes mhAng / mhShine / mhTwinkle / mhRuneSpin / mhGem はタクティクスの節で定義済み。
+       ★動き(回る縁・きらめき・光の筋・魔法陣・宝石の明滅)は data-phase-look="rich" のときだけ。
+         省エネ(lite / 超省エネ∞)では calm になり、「動きを減らす」設定でも止める。見た目は残す。
+       ★色は変数で渡す。--ph … 画面の識別色 / --mh-rc・--mh-rc2 … 枠1つぶんの色(濃い・明るい) ==== */
+    .mh-ph-bg {
+      background:
+        radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.55), transparent 60%),
+        radial-gradient(1px 1px at 78% 12%, rgba(255,255,255,.45), transparent 60%),
+        radial-gradient(1.5px 1.5px at 64% 34%, rgba(var(--ph,148,163,184),.8), transparent 60%),
+        radial-gradient(1px 1px at 28% 58%, rgba(255,255,255,.3), transparent 60%),
+        radial-gradient(1px 1px at 90% 66%, rgba(255,255,255,.3), transparent 60%),
+        radial-gradient(1.5px 1.5px at 8% 84%, rgba(var(--ph,148,163,184),.6), transparent 60%),
+        radial-gradient(ellipse 95% 40% at 50% -6%, rgba(var(--ph,148,163,184),.30), transparent 72%),
+        radial-gradient(ellipse 130% 55% at 50% 112%, rgba(var(--ph,148,163,184),.12), transparent 70%),
+        repeating-linear-gradient(135deg, rgba(255,255,255,.02) 0 1px, transparent 1px 9px),
+        linear-gradient(180deg, #0c1126 0%, #060916 55%, #03040b 100%) !important;
+    }
+    /* 見出しの金の文字と、左右の飾り線(◆) */
+    .mh-ph-title { background: linear-gradient(180deg, #fffbe8 0%, #f6d98a 46%, #c8962e 100%); -webkit-background-clip: text; background-clip: text;
+      color: transparent !important; padding-right: .18em; filter: drop-shadow(0 2px 0 rgba(0,0,0,.65)) drop-shadow(0 0 10px rgba(var(--ph,243,210,122),.45)); }
+    .mh-ph-heading { display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .mh-ph-heading::before, .mh-ph-heading::after { content: '◆'; flex: none; font-size: 7px; line-height: 1; color: #f3d27a; text-shadow: 0 0 6px rgba(243,210,122,.8); }
+    .mh-ph-heading::before { padding-left: 26px; background: linear-gradient(90deg, transparent, rgba(243,210,122,.85)) left center / 24px 1px no-repeat; }
+    .mh-ph-heading::after { padding-right: 26px; background: linear-gradient(270deg, transparent, rgba(243,210,122,.85)) right center / 24px 1px no-repeat; }
+    /* 金の縁の札(WAVE CLEAR など) */
+    .mh-ph-plate { display: inline-block; border: 1px solid transparent; border-radius: 999px; padding: 2px 12px; font-size: 9px; font-weight: 900; letter-spacing: .22em; color: #fde9b0;
+      background: linear-gradient(180deg, #1c2446, #0b0f22) padding-box, linear-gradient(90deg, #6b4a14, #fff0b0 30%, #c8962e 60%, #6b4a14) border-box;
+      box-shadow: 0 0 0 1px rgba(20,12,4,.85), 0 2px 8px rgba(0,0,0,.5), 0 0 14px rgba(var(--ph,243,210,122),.28); text-shadow: 0 1px 2px rgba(0,0,0,.9); }
+    /* 金の細い縁のパネル(ステータスの欄・所持カードなど) */
+    .mh-ph-panel { border: 1px solid transparent !important; border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 38%) padding-box,
+        linear-gradient(170deg, rgba(18,22,46,.95), rgba(6,8,18,.97)) padding-box,
+        linear-gradient(160deg, rgba(243,210,122,.6), rgba(243,210,122,.12) 38%, rgba(243,210,122,.08) 62%, rgba(243,210,122,.5)) border-box !important;
+      box-shadow: 0 6px 18px rgba(0,0,0,.45), 0 0 0 1px rgba(10,6,2,.6); }
+    .mh-ph-panel-label { color: #d9bf7a !important; letter-spacing: .18em; }
+    /* パネルの中の升目 */
+    .mh-ph-cell { background: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.28)) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 0 1px rgba(243,210,122,.08); }
+    /* 選ぶ枠: 地の模様 + 濃紺 + 枠の色の縁(タクティクスのモンスター枠と同じ作り)。選んでいない枠は落ち着いた縁、
+       data-ph-on の枠は明るい縁が回り、外へ光がにじむ */
+    .mh-ph-frame { border: 2px solid transparent !important;
+      background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
+        linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0) 30%) padding-box,
+        linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
+        linear-gradient(160deg, rgba(var(--mh-rc),.75), rgba(var(--mh-rc),.22) 40%, rgba(243,210,122,.18) 60%, rgba(var(--mh-rc),.6)) border-box !important; }
+    .mh-ph-frame[data-ph-on] {
+      background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
+        radial-gradient(90% 60% at 50% 0%, rgba(var(--mh-rc),.28), transparent 70%) padding-box,
+        linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
+        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+          rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important;
+      box-shadow: 0 0 18px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.18) !important; }
+    [data-phase-look="rich"] .mh-ph-frame[data-ph-on] { animation: mhAng 4.5s linear infinite; }
+    /* 枠の中の光の粒 */
+    .mh-ph-sparkle { position: absolute; inset: 3px; border-radius: inherit; pointer-events: none;
+      background: radial-gradient(1.5px 1.5px at 14% 30%, rgba(var(--mh-rc2),.95), transparent 70%), radial-gradient(1.5px 1.5px at 52% 72%, rgba(var(--mh-rc2),.85), transparent 70%),
+        radial-gradient(1px 1px at 80% 42%, #fff, transparent 70%), radial-gradient(1px 1px at 36% 16%, #fff, transparent 70%), radial-gradient(1px 1px at 88% 86%, rgba(var(--mh-rc2),.8), transparent 70%); }
+    [data-phase-look="rich"] .mh-ph-sparkle { animation: mhTwinkle 2.6s ease-in-out infinite; }
+    /* 枠を横切る光の筋 */
+    .mh-ph-shine { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+    .mh-ph-shine::before { content: ''; position: absolute; top: -10%; bottom: -10%; left: 0; width: 40%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent); transform: translateX(-160%) skewX(-18deg); }
+    [data-phase-look="rich"] .mh-ph-shine::before { animation: mhShine 3.6s ease-in-out infinite; }
+    /* 種類ごとの地の模様(タクティクスの手札・枠と同じ模様の言葉) */
+    [data-ph-kind="hp"] { --mh-rc: 236,72,153; --mh-rc2: 255,200,230;
+      --mh-pat: radial-gradient(circle at 80% 18%, rgba(255,140,200,.22), transparent 45%), repeating-radial-gradient(circle at 80% 18%, rgba(255,160,210,.10) 0 2px, transparent 2px 10px); }
+    [data-ph-kind="atk"] { --mh-rc: 239,68,68; --mh-rc2: 255,210,190;
+      --mh-pat: radial-gradient(120% 60% at 50% 115%, rgba(255,120,40,.32), transparent 70%), repeating-linear-gradient(135deg, rgba(255,90,40,.10) 0 2px, transparent 2px 9px); }
+    [data-ph-kind="def"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
+      --mh-pat: radial-gradient(circle, rgba(167,243,208,.16) 1.5px, transparent 2px) 0 0 / 9px 9px, radial-gradient(80% 50% at 50% 20%, rgba(52,211,153,.18), transparent 70%); }
+    [data-ph-kind="guts"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
+      --mh-pat: repeating-conic-gradient(from 0deg at 50% 30%, rgba(255,210,80,.06) 0 8deg, transparent 8deg 24deg), radial-gradient(60% 50% at 50% 30%, rgba(255,200,60,.2), transparent 70%); }
+    [data-ph-kind="new"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
+      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(167,243,208,.05) 0 10deg, transparent 10deg 30deg); }
+    [data-ph-kind="up"] { --mh-rc: 168,85,247; --mh-rc2: 233,213,255;
+      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(216,180,254,.07) 0 10deg, transparent 10deg 30deg), radial-gradient(70% 50% at 50% 30%, rgba(168,85,247,.22), transparent 70%); }
+    [data-ph-kind="max"] { --mh-rc: 234,179,8; --mh-rc2: 255,243,196;
+      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(255,230,150,.08) 0 10deg, transparent 10deg 30deg), radial-gradient(70% 50% at 50% 30%, rgba(234,179,8,.22), transparent 70%); }
+    [data-ph-kind="own"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160; }
+    [data-ph-kind="inherit"] { --mh-rc: 6,182,212; --mh-rc2: 207,250,254; }
+    [data-ph-kind="ally"] { --mh-rc: 129,140,248; --mh-rc2: 224,231,255; }
+    [data-ph-kind="revive"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220; }
+    /* 距離ごと(配置)。タクティクスの零=赤・近=黄・中=緑・遠=青 と模様をそのまま使う */
+    [data-ph-range="0"] { --mh-rc: 239,68,68; --mh-rc2: 255,210,190;
+      --mh-pat: radial-gradient(120% 60% at 50% 115%, rgba(255,120,40,.5), rgba(200,30,20,.22) 45%, transparent 70%), repeating-linear-gradient(115deg, rgba(255,90,40,.10) 0 3px, transparent 3px 14px); }
+    [data-ph-range="1"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
+      --mh-pat: repeating-conic-gradient(from 0deg at 20% 62%, rgba(255,210,80,.15) 0 6deg, transparent 6deg 18deg), radial-gradient(60% 60% at 20% 62%, rgba(255,200,60,.32), transparent 70%); }
+    [data-ph-range="2"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
+      --mh-pat: repeating-linear-gradient(98deg, rgba(52,211,153,.30) 0 1.5px, transparent 1.5px 6px) bottom / 100% 34% no-repeat, radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.26), transparent 70%); }
+    [data-ph-range="3"] { --mh-rc: 59,130,246; --mh-rc2: 200,225,255;
+      --mh-pat: repeating-radial-gradient(circle at 20% 140%, rgba(90,160,255,.17) 0 3px, transparent 3px 11px), radial-gradient(70% 60% at 20% 62%, rgba(80,150,255,.32), transparent 70%); }
+    /* 宝石(×1 の数・残りポイントなど)。タクティクスの手札の消費ガッツと同じ形 */
+    .mh-ph-gem { display: inline-flex; align-items: center; justify-content: center; padding-top: 2px; font-weight: 900; line-height: 1; color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,.9); clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
+      background: radial-gradient(circle at 35% 30%, #fff 0 8%, rgba(var(--mh-rc2,200,225,255),1) 18%, rgba(var(--mh-rc,31,111,209),1) 55%, rgba(8,10,30,1) 100%); }
+    [data-phase-look="rich"] .mh-ph-gem { animation: mhGem 2.2s ease-in-out infinite; }
+    /* 絵を収める金の額(アシストカードの顔・固有技の絵) */
+    .mh-ph-medal { border: 2px solid #f3d27a !important; background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.22), rgba(0,0,0,.4)) !important;
+      box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.5), inset 0 0 10px rgba(0,0,0,.5) !important; }
+    /* 絵の後ろで回るルーンの輪 */
+    .mh-ph-rune { position: absolute; left: 50%; top: 50%; width: 150%; height: 150%; margin: -75% 0 0 -75%; border-radius: 50%; pointer-events: none; z-index: 0;
+      background: repeating-conic-gradient(rgba(243,210,122,.85) 0 3deg, transparent 3deg 15deg), radial-gradient(circle, rgba(var(--ph,243,210,122),.25), transparent 70%);
+      -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
+      mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
+      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),.9)); }
+    [data-phase-look="rich"] .mh-ph-rune { animation: mhRuneSpin 16s linear infinite; }
+    /* 足元の魔法陣(タクティクスの枠の足元と同じ) */
+    .mh-ph-floor { position: absolute; left: 50%; bottom: -14px; width: 96px; height: 96px; margin-left: -48px; pointer-events: none; z-index: 0;
+      transform: rotateX(68deg);
+      background: radial-gradient(circle, transparent 52%, rgba(255,240,200,.95) 53%, rgba(255,240,200,.95) 55%, transparent 56%, transparent 66%, rgba(var(--ph,243,210,122),.9) 67%, rgba(var(--ph,243,210,122),.9) 70%, transparent 71%),
+        repeating-conic-gradient(rgba(255,240,200,.8) 0 4deg, transparent 4deg 30deg);
+      -webkit-mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%); mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%);
+      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),1)); }
+    [data-phase-look="rich"] .mh-ph-floor { animation: mhPhFloor 7s linear infinite; }
+    @keyframes mhPhFloor { to { transform: rotateX(68deg) rotate(360deg); } }
+    /* ボタン。金 = 決めるボタン(押せるとき)、夜 = そのほか。ボタンの意味の色は変えず、縁と照りを重ねる */
+    .mh-ph-btn-gold { position: relative; overflow: hidden; color: #2a1a04 !important; text-shadow: 0 1px 0 rgba(255,255,255,.5);
+      background: linear-gradient(180deg, #fff6d0 0%, #f4d57c 24%, #d8a640 62%, #9a6d22 100%) !important;
+      box-shadow: 0 0 0 1px rgba(40,26,6,.9), 0 0 0 3px rgba(243,210,122,.3), 0 6px 18px rgba(0,0,0,.5), 0 0 22px rgba(255,210,120,.45),
+        inset 0 2px 0 rgba(255,255,255,.75), inset 0 -2px 0 rgba(90,60,10,.55) !important; }
+    .mh-ph-btn-gold::after { content: ''; position: absolute; top: -20%; bottom: -20%; left: 0; width: 30%; pointer-events: none;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); transform: translateX(-160%) skewX(-18deg); }
+    [data-phase-look="rich"] .mh-ph-btn-gold::after { animation: mhShine 3s ease-in-out infinite; }
+    .mh-ph-btn { color: #e2e8f0 !important; border: 1px solid rgba(243,210,122,.45) !important;
+      background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0) 45%, rgba(0,0,0,.25)), linear-gradient(180deg, #1c2446, #0b0f22) !important;
+      box-shadow: 0 0 0 1px rgba(20,12,4,.85), 0 4px 12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,240,200,.3) !important; }
+    .mh-ph-btn:disabled { opacity: .45; }
+    .mh-ph-btn-off { color: #64748b !important; border: 1px solid rgba(243,210,122,.18) !important;
+      background: linear-gradient(180deg, #151a33, #0a0d1d) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important; }
+    /* 強化フェーズの並び(PhaseSteps) */
+    .mh-ph-step-now { color: #1a1204 !important; border: 1px solid rgba(255,240,200,.9);
+      background: linear-gradient(180deg, #fff, rgb(var(--ph,243,210,122)) 55%, rgba(var(--ph,243,210,122),.75)) !important;
+      box-shadow: 0 0 0 1px rgba(20,12,4,.8), 0 0 12px rgba(var(--ph,243,210,122),.7), inset 0 1px 0 rgba(255,255,255,.8) !important; }
+    .mh-ph-step-todo { color: #8b93a8 !important; border: 1px solid rgba(243,210,122,.22) !important; background: linear-gradient(180deg, #151a33, #0a0d1d) !important; }
+    .mh-ph-step-done { color: #ecfdf5 !important; border: 1px solid rgba(167,243,208,.9) !important; transform: rotate(45deg); border-radius: 3px !important;
+      background: radial-gradient(circle at 35% 30%, #fff 0 10%, #6ee7b7 30%, #059669 70%, #064e3b 100%) !important; box-shadow: 0 0 8px rgba(52,211,153,.7); }
+    .mh-ph-step-done > span { display: block; transform: rotate(-45deg); }
+    .mh-ph-step-line { height: 1px; background: linear-gradient(90deg, rgba(243,210,122,.2), rgba(243,210,122,.7), rgba(243,210,122,.2)) !important; }
+    /* 菱形の段(アシストカードのレベル) */
+    .mh-ph-pip { display: block; width: 8px; height: 8px; transform: rotate(45deg); border-radius: 1.5px; border: 1px solid rgba(243,210,122,.35); background: #11152b; }
+    .mh-ph-pip[data-on] { border-color: rgba(255,240,200,.9); background: radial-gradient(circle at 35% 30%, #fff 0 12%, rgba(var(--mh-rc2),1) 35%, rgba(var(--mh-rc),1) 80%); box-shadow: 0 0 6px rgba(var(--mh-rc),.8); }
+    .mh-ph-pip[data-next] { border-color: #f3d27a; background: rgba(243,210,122,.35); box-shadow: 0 0 6px rgba(243,210,122,.7); }
+    [data-phase-look="rich"] .mh-ph-pip[data-next] { animation: mhTwinkle 1.6s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-ph-frame[data-ph-on], .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
     }
     @keyframes specialShockwave {
       0% { transform: scale(0.4); opacity: 0.9; }

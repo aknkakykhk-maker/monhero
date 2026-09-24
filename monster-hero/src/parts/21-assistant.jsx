@@ -185,10 +185,10 @@ const QuickStepScreen = ({ onDone, accent = '#2dd4bf', label = 'タップして�
     //   「タップして次へ」の前の文が読めなくなる(2026-09-11・layout-consistency-check)。
     //   中身が収まるときの見た目は今までとまったく同じ。
     <div onClick={finish} role="button" tabIndex={0} aria-label={label}
-         className="absolute inset-0 overflow-y-auto mh-scroll"
-         style={{ position:'absolute', inset:0, backgroundColor:'#020617', zIndex:30000,
-           // 上から識別色の光を差す(強化フェーズのほかの画面とそろえる)。accent は #rrggbb
-           backgroundImage:`radial-gradient(ellipse 90% 45% at 50% 0%, ${accent}2e, transparent 70%)` }}>
+         className="mh-ph-bg absolute inset-0 overflow-y-auto mh-scroll"
+         // 見た目は強化フェーズのほかの画面と同じ mh-ph-bg(70-bootstrap.jsx)。--ph に識別色(accent は #rrggbb)を渡す
+         style={{ position:'absolute', inset:0, zIndex:30000,
+           '--ph': /^#[0-9a-f]{6}$/i.test(accent) ? [1,3,5].map(i=>parseInt(accent.slice(i,i+2),16)).join(',') : '45,212,191' }}>
       <div className="min-h-full flex flex-col items-center justify-center p-6 text-center">
         <div className="mh-phase-enter w-full max-w-sm flex flex-col items-center">{children}</div>
         <div className="mt-5 text-[11px] font-black tracking-widest animate-pulse" style={{ color:accent }}>{label}</div>

@@ -18253,7 +18253,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     //   食い違いを見て sprites.clear() を呼び、焼いたぶんが丸ごと捨てられる。
     warmSprites(options={}){
       if(typeof document==='undefined')return 0;
-      const nextDpr=Math.min(Number(options.dpr)||(typeof devicePixelRatio==='number'?devicePixelRatio:1)||1,options.lightweight?2:3);
+      const nextDpr=Math.min(Number(options.dpr)||(typeof devicePixelRatio==='number'?devicePixelRatio:1)||1,options.lightweight?2:3,Number(options.maxDpr)>0?Number(options.maxDpr):3);
       if(nextDpr!==dpr){dpr=nextDpr;sprites.clear();}
       effect=options.effect||'FULL';
       const before=sprites.size;
@@ -18278,9 +18278,11 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 焼いてあるスプライトの枚数(検査で「曲の中で増えないこと」を見るために使う)
     spriteCount(){return sprites.size;},
     // 毎フレームの最初に呼ぶ。プレイエリアの大きさ・画素密度が変わっていたら canvas を作り直し、全面を消す
+    // ★画素密度の上限は、軽量モードなら2、そうでなければ3。options.maxDpr を渡すとさらに下げられる
+    //   (演出量「最小」は2。2026-09-24。warmSprites にも同じ値を渡すこと)
     begin(rect,options={}){
       if(!canvas||!ctx||!rect||!(rect.width>0&&rect.height>0))return false;
-      const nextDpr=Math.min(Number(options.dpr)||(typeof devicePixelRatio==='number'?devicePixelRatio:1)||1,options.lightweight?2:3);
+      const nextDpr=Math.min(Number(options.dpr)||(typeof devicePixelRatio==='number'?devicePixelRatio:1)||1,options.lightweight?2:3,Number(options.maxDpr)>0?Number(options.maxDpr):3);
       if(nextDpr!==dpr){dpr=nextDpr;sprites.clear();}
       if(cssW!==rect.width||cssH!==rect.height||canvas.width!==Math.round(rect.width*dpr)||canvas.height!==Math.round(rect.height*dpr)){
         cssW=rect.width;cssH=rect.height;
