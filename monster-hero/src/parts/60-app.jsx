@@ -1359,6 +1359,8 @@ function MonsterHeroGame() {
   const [dexLineageFilter, setDexLineageFilter] = useState('all'); // モンスター図鑑: 主血統の絞り込み('all'または血統id)
   const [dexMonsterId, setDexMonsterId] = useState(null);          // モンスター図鑑: 詳細で見ているモンスターのid
   const [dexTab, setDexTab] = useState('basic');                   // モンスター図鑑の詳細タブ(basic/stats/skills)
+  const [dexColorKey, setDexColorKey] = useState(null);            // モンスター図鑑: 見本にしている配色(null=元の色 / {masuId} / {colors}。保存しない)
+  const [dexTryDyeDraft, setDexTryDyeDraft] = useState(null);      // モンスター図鑑: 「染めてみる」で選んでいる途中の色(null=閉じている。保存しない)
   const dexSwipeRef = useRef(null);                                // 図鑑詳細の横スワイプ(指を置いた位置)
   const [dexAttackPreview, setDexAttackPreview] = useState(null);  // 図鑑詳細の攻撃アクション再生中だけ使う {monsterId,anim}
   const dexAttackPreviewRunRef = useRef(0);                         // 左右移動/戻るで非同期プレビューを確実に止める世代番号
@@ -1368,7 +1370,7 @@ function MonsterHeroGame() {
   const stopDexAttackPreview = () => { dexAttackPreviewRunRef.current+=1; setDexAttackPreview(null); };
   const playDexAttackPreview = async (mon, kind, atkMotion) => {
     const run=++dexAttackPreviewRunRef.current;
-    const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion):attackMotionPreviewSequence(atkMotion);
+    const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id):attackMotionPreviewSequence(atkMotion, mon?.id);
     for(const step of steps){
       if(run!==dexAttackPreviewRunRef.current)return;
       setDexAttackPreview({monsterId:mon.id,kind,anim:step.anim});
@@ -10732,7 +10734,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(115); triggerShake();
                 await battleWait(130);
               }else{
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500)))));
+                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))));
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
@@ -10744,7 +10746,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(130);
               }else{
                 if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)))));
+                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))));
               }
             }
             setAttackAnim(null);
@@ -13376,6 +13378,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dexMonsterId={dexMonsterId}
             dexAttackPreview={dexAttackPreview}
             unlockedMonsterIds={unlockedMonsterIds}
+            masuMons={masuMons}
+            dexColorKey={dexColorKey}
             getAtkSkillLevels={getAtkSkillLevels}
             getUniqueSkillLevels={getUniqueSkillLevels}
             onMissing={()=>setGameState('MONSTER_DEX')}
@@ -13390,7 +13394,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dexLineageFilter={dexLineageFilter}
             unlockedMonsterIds={unlockedMonsterIds}
             onSelectLineage={setDexLineageFilter}
-            onOpenDetail={(monId)=>{stopDexAttackPreview();setDexMonsterId(monId);setDexTab('basic');setGameState('MONSTER_DEX_DETAIL');}}
+            onOpenDetail={(monId)=>{stopDexAttackPreview();setDexMonsterId(monId);setDexTab('basic');setDexColorKey(null);setDexTryDyeDraft(null);setGameState('MONSTER_DEX_DETAIL');}}
             onBackToManagement={()=>setGameState('MB_MANAGEMENT')}
           />
         )}
@@ -13403,13 +13407,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dexMonsterId={dexMonsterId}
             dexTab={dexTab}
             unlockedMonsterIds={unlockedMonsterIds}
+            masuMons={masuMons}
+            dexColorKey={dexColorKey}
+            onSelectColor={setDexColorKey}
+            tryDyeDraft={dexTryDyeDraft}
+            onOpenTryDye={(colors)=>setDexTryDyeDraft(Array.isArray(colors)?colors.slice():[])}
+            onTryDyeChange={(idx,colorId)=>setDexTryDyeDraft(prev=>{const next=[...(prev||[])];next[idx]=colorId;return next;})}
+            onTryDyeCustom={(idx)=>{const parsed=_parseCustomColorId(dexTryDyeDraft?.[idx]);setCustomColorPicker({mode:'dex',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}
+            onTryDyeReset={()=>setDexTryDyeDraft([])}
+            onCloseTryDye={()=>{setDexTryDyeDraft(null);setCustomColorPicker(null);}}
             getAtkSkillLevels={getAtkSkillLevels}
             getUniqueSkillLevels={getUniqueSkillLevels}
             swipeRef={dexSwipeRef}
             onMissing={()=>setGameState('MONSTER_DEX')}
             onBackToList={()=>setGameState('MONSTER_DEX')}
             onOpenAttackPreview={()=>setGameState('MONSTER_ATTACK_PREVIEW')}
-            onSelectMonster={(monId)=>{setDexMonsterId(monId);setDexTab('basic');}}
+            onSelectMonster={(monId)=>{setDexMonsterId(monId);setDexTab('basic');setDexColorKey(null);setDexTryDyeDraft(null);}}
             onSelectTab={setDexTab}
             onStopPreview={stopDexAttackPreview}
           />
@@ -16279,12 +16292,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // パンドラはまだマスモンでもベースモンでもないので、個体を引かずDEBUG定義をそのまま使う。
           // mode==='monsterCheck' は新モンスター確認からの呼び出しで、所持していない種も塗れる必要がある。
           // そこだけは個体を探さず、選んでいる種から表示用の一時データを作る(保存には触れない)
+          // mode==='dex' は図鑑の「染めてみる」。こちらも個体を探さず、見ている種から表示用の一時データを作る
           const masu = mode==='monsterCheck'
             ? (ALL_PLAYER_MONSTERS[monsterCheckDebugId] ? {id:`monster-check-${monsterCheckDebugId}`,baseId:monsterCheckDebugId,name:ALL_PLAYER_MONSTERS[monsterCheckDebugId].name,colors:[]} : null)
+            : mode==='dex'
+            ? (ALL_PLAYER_MONSTERS[dexMonsterId] ? {id:`dex-try-${dexMonsterId}`,baseId:dexMonsterId,name:ALL_PLAYER_MONSTERS[dexMonsterId].name,colors:[]} : null)
             : mode==='debug' ? masuMons.find(m=>String(m.id)===String(monsterImageDebugId)) : getMasuMon(dyeTargetMasuId);
           const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
           const applyCustom = () => {
-            const setter=mode==='monsterCheck'?setMonsterCheckDebugColors:mode==='debug'?setMonsterImageDebugColors:setDyePreviewColors;
+            const setter=mode==='monsterCheck'?setMonsterCheckDebugColors:mode==='dex'?setDexTryDyeDraft:mode==='debug'?setMonsterImageDebugColors:setDyePreviewColors;
             // 濃さ(@NN)は色を作り直しても引き継ぐ
             setter(prev => { const next = [...(prev||(mode==='debug'?getMasuColors(masu):[]))]; next[idx] = withColorAlpha(_encodeCustomColorId(h, s, v), colorAlphaOf(next[idx])); return next; });
             setCustomColorPicker(null);
@@ -16292,7 +16308,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ドラッグ中は毎フレームcolorIdが変わり染色エンジンの再描画(Canvas処理)が大量発生するため、
           // プレビュー表示だけは色相/彩度/明度を粗く丸めて再描画の頻度を抑える(確定時は元の値をそのまま使う)
           const previewColorId = _encodeCustomColorId(Math.round(h / 4) * 4, Math.round(s * 20) / 20, Math.round(v * 20) / 20);
-          const sourceColors=mode==='monsterCheck'?(monsterCheckDebugColors||[]):mode==='debug'?(monsterImageDebugColors||getMasuColors(masu)):dyePreviewColors;
+          const sourceColors=mode==='monsterCheck'?(monsterCheckDebugColors||[]):mode==='dex'?(dexTryDyeDraft||[]):mode==='debug'?(monsterImageDebugColors||getMasuColors(masu)):dyePreviewColors;
           const previewColors = sourceColors.map((c, i) => i === idx ? withColorAlpha(previewColorId, colorAlphaOf(c)) : c);
           return (
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:32000}}>
