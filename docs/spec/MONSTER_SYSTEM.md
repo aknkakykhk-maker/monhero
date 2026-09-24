@@ -104,7 +104,7 @@ HOMEの「M/B管理」→「モンスター」→「モンスター図鑑」か�
 `MONSTER_DEX`（一覧）・`MONSTER_DEX_DETAIL`（詳細）・`MONSTER_ATTACK_PREVIEW`（攻撃アクションの確認）の3つ。
 
 - **一覧**: 図鑑登録数（解放済み / 全体）、主血統でのしぼりこみ、アイコン一覧。解放判定は `mh_unlocked_monsters` を
-  そのまま使い、図鑑専用の保存は持たない。未解放はシルエットと「？？？」で出す。
+  そのまま使い、図鑑専用の保存は持たない(例外は見た目の設定 `mh_dex_idle_motion_v1` だけ。下の「待機アニメを図鑑でも出す」)。未解放はシルエットと「？？？」で出す。
 - **詳細**: 上半分に立ち絵（左右ボタンと横スワイプで前後へ移動）、下半分に情報カード（名前・血統・区分・図鑑説明）と
   「基本 / 能力 / 技」の3タブ。
   - 解放済みモンスターは立ち絵の下の「攻撃アクション」から `MONSTER_ATTACK_PREVIEW` へ移り、その種の `atkMotion` を使ったバトル時の攻撃演出を再生できる。未解放はボタン自体を出さない
@@ -112,12 +112,32 @@ HOMEの「M/B管理」→「モンスター」→「モンスター図鑑」か�
     - 「通常攻撃」は `attackMotionPreviewSequence`、「固有技」は `attackMotionUniquePreviewSequence`(共通のタメ650ms → 専用モーション)を使う。どちらもこの画面専用のモーションは作らず、本番の演出部品をそのまま再生する
   - 再生は図鑑専用モーションを作らず、`attackMotionAnimation` / `EikiSakuraPetals` / `KenshiTwinSlash` / `ArkHolyRainMotion` / `WaterBurstMotion` / `MiaSongNotesMotion` / `PandoraDualThunder` など本番の演出部品を再利用する
   - 前後移動・図鑑一覧へ戻る操作では再生中の非同期プレビューを中断し、次のモンスターへ演出を持ち越さない
+  - **待機アニメ**(翼の羽ばたきなど)は、詳細の立ち絵と攻撃アクションの画面でもバトルと同じ部品で動く(下の「待機アニメを図鑑でも出す」)
   - 基本 … 主血統・副血統・区分・勇者特性・特性の効果
   - 能力 … その**種**の基礎能力（`baseHp` / `baseAtk` / `baseDef` / `baseGuts`）と4距離の適性。育成済みマスモンの値ではない
   - 技 … `getAtkSkillLevels` / `getUniqueSkillLevels` から通常技・固有技の9段階（名前・威力・消費ガッツ・会心率）
 
 図鑑の中身はすべて既存のモンスター定義・技データから引く。図鑑専用の配列は作らない。
 図鑑説明だけは `MONSTER_DEX_DESCRIPTIONS` に持ち、未記入のモンスターは空欄ではなく調査中の案内を出す。
+
+### 待機アニメを図鑑でも出す
+
+バトルの待機中・図鑑の立ち絵・図鑑の攻撃アクションで、同じ動きを出す(2026-09-24)。
+動かし方の正本はバトルと同じ `MONSTER_IDLE_RIGS`(`tools/monster/idle-rig-build.js` が `24-battle-fx.jsx` へ書く)で、
+**そこへ1体足せば、図鑑の側を触らずにバトルと図鑑の両方で動く**。
+
+- **入口は1つ**: `withMonsterIdleArt(id, 絵の要素, {enabled, fill})`。表に無い子はそのままの絵を返す。
+  図鑑の側でモンスターの名前を見て分岐しない
+- **絵の要素を渡す**: 部分ごとに絵を複製して重ねるので、部品(`DexMonsterArt`)ではなく `dexMonsterArtImage(mon, alt)` の `<img>` を渡す
+- **正方形の箱**: 軸の % は「正方形の枠に絵を contain で置いた」ときの値。詳細の立ち絵は `DexMonsterIdleArt` が
+  正方形の箱(`data-dex-idle-art`)へ入れる。攻撃アクションの舞台はもとから正方形。絵が大きさを持たないので `fill` で広げる
+- **動かす・止める**: 図鑑の詳細の立ち絵の下のボタン(`data-dex-idle-toggle`)1つで決める。最初は動く。
+  保存は `mh_dex_idle_motion_v1`(`useDexIdleMotion`)で、攻撃アクションの画面も同じ値に従う。
+  バトルの「待機中の動き」・軽量表示・端末の「動きを減らす」では止めない(`own` → `data-idle-own` を CSS の止める規則から外す)。
+  止めたときは1枚の絵に戻す
+- **攻撃アクションの最中**: バトルと同じく、パンドラの雷のときだけ重ねない(`monsterIdleAllowedDuring`)。
+  バトル側の分け方を変えたらここも合わせる
+- 検査: `node tools/monster/idle-dex-check.js`
 
 ### 並び順
 

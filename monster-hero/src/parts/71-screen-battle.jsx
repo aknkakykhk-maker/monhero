@@ -84,8 +84,84 @@ const tacticsAuraKindOf = (text = '', side = '') => {
   return 'buff';
 };
 // タクティクスの敵ごとの動き方(新しい画面だけ)。値は 70-bootstrap の data-enemy-motion の CSS 名
+// (2026-09-24 ユーザー指示「次はタクティクスの全モンスターも実装して」で10体すべてに広げた)
 const TACTICS_ENEMY_MOTIONS = Object.freeze({
   Kawazumo: 'kawazumo',
+  Metalner: 'metalner',
+  Inari: 'inari',
+  Koinobori: 'koinobori',
+  Delpiero: 'delpiero',
+  Dokudoku: 'dokudoku',
+  Lamia: 'lamia',
+  Nyarlathotep: 'nyarlathotep',
+  Splatter: 'splatter',
+  AwakenedMoo: 'awakenedMoo',
+});
+// 技ごとの動きの長さ(ミリ秒)。ここに無い技は今までどおり(通常攻撃 450 / 必殺技 1100)。
+// 戦闘の待ち時間(60-app)もこの値を使うので、CSS の --em-dur / animation の長さと必ずそろえる。
+// ★ムー(覚醒ムー)は攻撃の待ちが 900 で決まっているので、ここは通らない(CSS も 900 にしてある)
+const TACTICS_ENEMY_SKILL_MS_DEFAULT = Object.freeze({ rush: 750, pierce: 900, allout: 1000 });
+const tacticsEnemyMotionMs = (enemyId, skill, fallbackMs) => {
+  const motion = enemyId ? TACTICS_ENEMY_MOTIONS[enemyId] : null;
+  const ms = motion ? TACTICS_ENEMY_SKILL_MS_DEFAULT[skill] : null;
+  return Number.isFinite(ms) ? ms : fallbackMs;
+};
+// カワズモー以外の敵の動きは、共通の部品(70-bootstrap の em◯◯)を敵ごとに組み合わせて作る。
+//   idle … 待っているあいだの動き(data-em-idle)
+//   skills[技] = [体の動き(data-em-body), 飾りの形(data-em-fx), 飛ばす絵文字, 絵文字の出し方(data-em-emo)]
+//     体の動き: jab 突き / lunge 体当たり / dash 横へ踏み込む / flurry 連打 / spin 回転 / windup 溜めて突く /
+//               swing 武器を振る / leap 跳んで落ちる / press のしかかる / rise 力を解き放つ / roar 吠える /
+//               power 力をためる / stance 構える / heal 回復 / sway 揺れる
+//     飾りの形: arc 弧 / slash 十字の斬り跡 / beam 光の柱 / widebeam 太い光線 / burst 光の放射 / ring 衝撃の輪 /
+//               aura 立ちのぼる光 / sparkle 光の粒 / lock 狙いを定める輪(貫通技の構え)
+//     絵文字の出し方: rise 浮かぶ / shoot こちらへ飛ぶ / rain 降る
+// 色は 70-bootstrap の [data-enemy-motion="◯◯"] { --em-c } が持つ。技名は TACTICS_ENEMY_DATA(ユーザーが決めた名前)に合わせた
+const TACTICS_ENEMY_MOTION_SETS = Object.freeze({
+  // メタルナー(拳法ロボ): 浮いて揺れる。掌打・ビーム
+  metalner: { idle:'hover', skills:{
+    normal:['jab','burst'], sweep:['dash','arc'], rush:['flurry','burst'], pierce:['windup','beam'],
+    special:['leap','ring','💥','shoot'], allout:['rise','widebeam'], roar:['roar','aura','☯️','rise'],
+    regen:['heal','sparkle','🔧','rise'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // イナリ(子ぎつね): ぴょこぴょこ跳ねる。肉球・歌・花
+  inari: { idle:'hop', skills:{
+    normal:['lunge','burst','🐾','shoot'], sweep:['dash','arc','🐾','shoot'], rush:['flurry',null,'🐾','shoot'], pierce:['windup','beam'],
+    special:['spin','burst','💨','shoot'], allout:['spin','sparkle','🌺','rain'], roar:['sway','aura','🎤','rise'],
+    regen:['heal','sparkle','💗','rise'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // コイノボリ(鯉のぼり): 泳ぐように揺れる。体当たり・しっぽ・波
+  koinobori: { idle:'swim', skills:{
+    normal:['lunge','ring'], sweep:['dash','arc'], rush:['swing','arc'], pierce:['press','ring'],
+    special:['leap','ring','🌊','shoot'], allout:['rise','aura','🌊','rain'], roar:['roar','burst'],
+    regen:['sway','sparkle','💤','rise'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // デルピエロ(鎌の騎士): 足踏みして構える。槍・十字の斬撃
+  delpiero: { idle:'prance', skills:{
+    normal:['swing','arc'], sweep:['dash','burst'], rush:['flurry','beam'], pierce:['windup','beam'],
+    special:['swing','slash'], allout:['rise','burst'], roar:['roar','aura','⚡','rise'],
+    regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // ドクドク(ハートの手): どくんと脈打つ。張り手・投げキッス・ハート
+  dokudoku: { idle:'pulse', skills:{
+    normal:['jab','burst'], sweep:['sway',null,'💋','shoot'], rush:['flurry','burst'], pierce:['windup','arc'],
+    special:['rise','aura','💀','rain'], allout:['press','ring','💧','rain'], roar:['roar','aura'],
+    regen:['heal','sparkle','💗','rise'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // ラミア(阿修羅): くねるように揺れる。拳・炎・雷
+  lamia: { idle:'serpent', skills:{
+    normal:['jab','burst'], sweep:['dash','arc'], rush:['flurry','slash'], pierce:['windup','beam'],
+    special:['leap','ring','⚡','rain'], allout:['rise','aura','🔥','rain'], roar:['roar','aura'],
+    regen:['heal','ring'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // ニャルラトホテプ(邪神): うごめく。魔眼・ダイス・真空の弾
+  nyarlathotep: { idle:'writhe', skills:{
+    normal:['jab','burst'], sweep:['sway','beam','👁️','shoot'], rush:['spin','slash'], pierce:['windup','beam'],
+    special:['rise','aura','👁️','rise'], allout:['rise','ring','🌀','shoot'], roar:['roar','aura','🎲','rise'],
+    regen:['heal','sparkle'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // スプラッター(斧の処刑人): 重く息をする。斧・影・血
+  splatter: { idle:'menace', skills:{
+    normal:['jab','burst'], sweep:['dash','arc'], rush:['spin','slash'], pierce:['windup','beam'],
+    special:['swing','slash'], allout:['rise','aura','💀','rain'], roar:['roar','aura'],
+    regen:['heal','sparkle','🩸','rise'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
+  // 覚醒ムー(竜): 待機は今までの浮遊のまま。技ごとの動きだけ付ける
+  awakenedMoo: { idle:null, skills:{
+    normal:['swing','slash'], sweep:['dash','arc'], rush:['flurry','burst'], pierce:['windup','beam'],
+    special:['rise','burst','☄️','rain'], allout:['rise','aura','🌪️','rain'], roar:['roar','aura'],
+    regen:['heal','sparkle','✨','rise'], charge:['power','aura'], pierceCharge:['stance','lock'] } },
 });
 const kindOfTacticsSlotFx = (fx) => {
   if (!fx) return null;
@@ -170,6 +246,15 @@ function BattleScreen({
   // 「まずはカワズモーで」「タクティクスだけ」)。絵は1枚のまま、待機・攻撃・ためる・やられの動きを CSS で付ける。
   // ★ここに無い敵は今までどおり。足すときは TACTICS_ENEMY_MOTIONS に1行と、70-bootstrap の CSS を足す
   const enemyMotion = tacticsNewLayout && !ecoBattleView ? (TACTICS_ENEMY_MOTIONS[enemy?.id] || null) : null;
+  // いま動いている技(data-enemy-skill)。ムーは丸枠ではなく枠の外の大きな絵が動く
+  const enemyIsMoo = isMooBoss(enemy?.id);
+  const enemySkillNow = enemyMotion && enemyAttackFx?.skill
+    && (enemyImageOnlyAttack || enemyAttackFx.kind === 'regen' || (enemyIsMoo && !!enemyAttackAnim)) ? enemyAttackFx.skill : null;
+  // 共通の部品で動かす敵(カワズモー以外)の組み合わせ
+  const emSet = enemyMotion ? (TACTICS_ENEMY_MOTION_SETS[enemyMotion] || null) : null;
+  const emSpec = emSet && enemySkillNow ? (emSet.skills[enemySkillNow] || null) : null;
+  const emFxStyle = emSpec && emSpec[2] ? { '--em-e': JSON.stringify(emSpec[2]) } : undefined;
+  const enemyHurtNow = !!(enemyMotion && attackAnim && !enemyAttackAnim);
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
@@ -623,8 +708,10 @@ function BattleScreen({
               );
             })()}
             {isMooBoss(enemy?.id)&&enemy?.imgUrl&&(
-              <div className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
-                <img src={enemy.imgUrl} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',animation:liteBattleView?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
+              <div data-enemy-motion={enemyMotion||undefined} data-moo-stage={enemyMotion?'true':undefined} data-enemy-skill={enemySkillNow||undefined} data-em-body={emSpec?.[0]||undefined} data-em-fx={emSpec?.[1]||undefined} data-em-emo={emSpec?.[3]||undefined} data-enemy-hurt={enemyHurtNow?'true':undefined} className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
+                {/* ★技の動き・やられの動きは CSS(data-em-body / data-enemy-hurt)が掛けるので、そのあいだは style の animation を外す(style が勝ってしまう) */}
+                {emSet&&<i aria-hidden="true" data-em-fx-el style={emFxStyle}/>}
+                <img src={enemy.imgUrl} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',animation:(liteBattleView||emSpec||enemyHurtNow)?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
               </div>
             )}
             {/* ムー攻撃時: 全画面の破壊的演出 */}
@@ -659,14 +746,17 @@ function BattleScreen({
                 「敵も攻撃時は距離枠じゃなくてモンスターだけ動かしたほうがいい」)。動きは data-enemy-attack を見て CSS が絵へ掛ける。
                 移動(距離が変わる)は立ち位置ごと動く動きなので、今までどおり丸枠ごと動かす。ムーは作りが別なので対象外 */}
             {/* data-attack-target: 味方の攻撃モーションが狙う場所(measureAttackAim)。名前は変えない */}
-            <div data-enemy-ring={enemyDist} data-enemy-attack={enemyImageOnlyAttack?(enemyAttackFx?.kind==='charge'?'charge':'fly'):undefined} data-enemy-motion={enemyMotion||undefined} data-enemy-hurt={enemyMotion&&attackAnim&&!enemyAttackAnim?'true':undefined} className={`rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} data-attack-target style={enemyAttackAnim&&!ecoBattleView&&!enemyImageOnlyAttack?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{top:'3dvh'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{top:'3dvh'}:{})}}>
+            <div data-enemy-ring={enemyDist} data-enemy-attack={enemyImageOnlyAttack?(enemyAttackFx?.kind==='charge'?'charge':'fly'):undefined} data-enemy-motion={enemyMotion||undefined} data-enemy-skill={!enemyIsMoo&&enemySkillNow||undefined} data-em-idle={!enemyIsMoo&&emSet?.idle||undefined} data-em-body={!enemyIsMoo&&emSpec?.[0]||undefined} data-em-fx={!enemyIsMoo&&emSpec?.[1]||undefined} data-em-emo={!enemyIsMoo&&emSpec?.[3]||undefined} data-enemy-hurt={!enemyIsMoo&&enemyHurtNow?'true':undefined} className={`rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} data-attack-target style={enemyAttackAnim&&!ecoBattleView&&!enemyImageOnlyAttack?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{top:'3dvh'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{top:'3dvh'}:{})}}>
               {/* 足元の影(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
                   丸枠の塗りを落としたぶん、影が無いと宙に浮いて見える。絵(z-[1])より下へ敷く。
                   ★丸枠は transform を持つので重ね順の島になる。この中に置けば絵の下に必ず入る */}
               {/* カワズモーの張り手の手のひら(2026-09-24 ユーザー指示「張り手ならそれっぽい動きに」)。
                   絵が1枚なので手は別に描く。ふだんは見えず、攻撃(data-enemy-attack="fly")のときだけ CSS が突き出す。
                   ★span にしない。「> span」は敵の絵を包む要素を指す決めごとで、span だと絵の動きが手にも当たる */}
-              {enemyMotion==='kawazumo'&&<><i aria-hidden="true" data-kz-palm="l">✋</i><i aria-hidden="true" data-kz-palm="r">✋</i></>}
+              {/* data-kz-fx: 技ごとの飾り(かわずつきの弧・大回転の渦・たまやの花火・かえるのうたの音符)。::before / ::after を CSS が描く */}
+              {enemyMotion==='kawazumo'&&<><i aria-hidden="true" data-kz-palm="l">✋</i><i aria-hidden="true" data-kz-palm="r">✋</i><i aria-hidden="true" data-kz-fx/></>}
+              {/* data-em-fx-el: カワズモー以外の敵の技の飾り。::before が形(data-em-fx)、::after が絵文字(--em-e) */}
+              {emSet&&!enemyIsMoo&&<i aria-hidden="true" data-em-fx-el style={emFxStyle}/>}
               {!ecoBattleView&&<div aria-hidden="true" data-enemy-shadow className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2" style={{bottom:'11%',width:'64%',height:'13%',borderRadius:'50%',background:'radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.62) 0%, rgba(0,0,0,.28) 52%, rgba(0,0,0,0) 76%)'}}></div>}
               {enemy?.imgUrl?(isMooBoss(enemy?.id)?<div style={{width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}><img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/></span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,10.5dvh,96px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
               {/* 味方の攻撃が敵に当たった瞬間の着弾(体当たり・突進・ザン/エイキの斬撃)。攻撃中だけ出る */}
@@ -1259,8 +1349,9 @@ function BattleScreen({
               // ★絵の入れ物は絵と同じ大きさに固定する(2026-09-24 ユーザー指摘「ミーアの攻撃中、姿が消えてる」)。
               //   ミーア・水・聖光の攻撃演出は入れ物いっぱいに重ねる絶対配置なので、大きさを持たないと
               //   入れ物が0×0につぶれ、本体の絵が幅数pxまで押しつぶされてマイクも見えなくなっていた
-              // ミーアだけ待機中も翼を羽ばたかせる(試作。MiaIdleArt)。軽量表示では今までどおり1枚の絵
-              const slotArt = (img) => (s?.id==='Mia'&&!ecoBattleView&&!idleMotionOff ? <MiaIdleArt image={img}/> : img);
+              // 待機中の動き(翼の羽ばたき・しっぽ・花の揺れ・全体の浮き沈みなど。MonsterIdleArt)。
+              // 軽量表示と、設定の「待機中の動き：止める」では今までどおり1枚の絵
+              const slotArt = (img) => (!ecoBattleView&&!idleMotionOff ? <MonsterIdleArt baseId={s?.id} image={img}/> : img);
               const slotArtBox = {width:tacticsNewLayout?'58px':'64px', height:tacticsNewLayout?'58px':'64px', flexShrink:0};
               // このスロットに固有技カードが割り当てられているか（セット中は常時エフェクト）
               const hasUniqueSet = selectedCards.some(idx=>cardAssignments[idx]===i && hand[idx]?.type==='unique');
@@ -1510,12 +1601,12 @@ function BattleScreen({
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
                     :isAnimating&&attackAnim.motion==='arkHolyRain'
                       ?<ArkHolyRainMotion
-                        image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>}
+                        image={slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
                         charging={attackAnim.charge===true}
                         empowered={attackAnim.charge===false}/>
                     :isAnimating&&attackAnim.motion==='waterBurst'
                       ?<WaterBurstMotion
-                        image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>}
+                        image={slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
                     :isAnimating&&attackAnim.motion==='miaSongNotes'
