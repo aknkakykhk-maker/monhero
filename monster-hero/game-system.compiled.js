@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 89be55c644e5b4c0
+// source-sha256: 82c34929ded43080
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6b21b03f3f412a7e
+// generated-sha256: 560cd743b0e39676
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 16:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 16:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5634,6 +5634,14 @@ const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多�
 // ★判定は指が触れた時刻と曲の時刻で決めているので、どちらでも判定の正確さは変わらない
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
+// 演奏中の背景の演出(2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」)。
+// VIVID  … 曲のジャケットをぼかして敷き、ノーツのタイミングで背景が光り、光の粒とサーチライトが動く
+// CALM   … ジャケットとノーツのタイミングの光だけ(動き続けるものは出さない)
+// SIMPLE … これまでの見た目のまま(何も足さない)
+// ★軽量モードのときは、ここの値に関わらず SIMPLE として扱う(rhythmStageLevel)
+const RHYTHM_STAGE_EFFECTS = Object.freeze(['VIVID', 'CALM', 'SIMPLE']);
+const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
+const rhythmStageLevel = settings => settings && settings.lightweightMode ? 'SIMPLE' : RHYTHM_STAGE_EFFECTS.includes(settings && settings.stageEffect) ? settings.stageEffect : 'VIVID';
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -5702,7 +5710,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // 既定はOFF。勝手に全画面へ入ると「戻れない」と感じる人がいるため
   quietDuringPlay: false,
   // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定(省電力)で補われる
-  frameRateMode: 'POWER_SAVE'
+  frameRateMode: 'POWER_SAVE',
+  // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定(派手)で補われる
+  stageEffect: 'VIVID'
 });
 const rhythmFiniteInRange = (value, min, max, fallback) => {
   const number = Number(value);
@@ -5750,7 +5760,8 @@ const normalizeRhythmSettings = value => {
     sideMonsterAbilityHighlight: bool('sideMonsterAbilityHighlight'),
     songPreviewEnabled: bool('songPreviewEnabled'),
     quietDuringPlay: bool('quietDuringPlay'),
-    frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode
+    frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode,
+    stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -23446,6 +23457,8 @@ const RhythmOptions = ({
     className: wide ? grid : `mt-3 ${grid}`
   }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
     full: true
+  }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「派手」です。判定・スコアはどれでも変わりません。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライトと光の粒は出しません。', {
+    full: true
   }), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「省電力」です。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
   }), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
@@ -24916,6 +24929,36 @@ const RhythmTapTest = ({
   // lifeBoxRef … 減った瞬間にHUDのライフ表示を揺らす／lifeDamageRef … 減った量(「-50」)を一瞬出す
   const lifeBoxRef = useRef(null),
     lifeDamageRef = useRef(null);
+  // ===== 背景の演出(ライブ背景。2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」) =====
+  // 置くのはプレイエリアのいちばん奥(z-index:-1)。レーン・ノーツ・判定ライン・HUDより必ず後ろなので、
+  // 入力にも判定にも触らない(pointer-events:none)。
+  // ★重さに気をつける。ぼかしは CSS の filter を使わず、ジャケットを 24×24 の canvas へ一度だけ縮めて描き、
+  //   それを引き伸ばして「ぼけた絵」にする(引き伸ばしの補間でぼける。毎フレームの作り直しが起きない)。
+  //   動かすのは transform と opacity だけ(合成だけで済むもの)。
+  const stageLevel = rhythmStageLevel(settings);
+  const stageArtRef = useRef(null),
+    stagePulseRef = useRef(null);
+  const stageArtSrc = stageLevel !== 'SIMPLE' && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+  useEffect(() => {
+    const canvas = stageArtRef.current;
+    if (!canvas || !stageArtSrc) return;
+    let alive = true;
+    const img = new Image();
+    img.onload = () => {
+      if (!alive) return;
+      try {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.dataset.ready = '1';
+      } catch (_) {}
+    };
+    img.src = stageArtSrc;
+    return () => {
+      alive = false;
+      img.onload = null;
+    };
+  }, [stageArtSrc]);
   const sideMonsterElements = useMemo(() => {
     if (settings.sideMonsterOpacity === 'OFF') return null;
     const opacity = rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -25627,6 +25670,7 @@ const RhythmTapTest = ({
        ★飛ばすのは描くことだけ。判定は指の入力のたびに曲の時刻で決めているので変わらない。
          取り逃しのMISSや長押しの終わりも、次に描くフレーム(8ms後)でいつもどおり数える */
     const powerSave = settings.frameRateMode !== 'DEVICE';
+    const stagePulseOn = rhythmStageLevel(settings) !== 'SIMPLE';
     let prevFrameMs = 0,
       avgFrameMs = 1000 / 60,
       lastDrawnMs = 0;
@@ -25654,6 +25698,37 @@ const RhythmTapTest = ({
       let perfScanned = 0,
         perfDrawn = 0;
       updateJudgmentBand(travel, travelMs);
+      /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
+         取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
+         間隔が110ms未満の連打では光らせ直さない(光りっぱなしで何も分からなくなるため)。
+         光らせ方は Web Animations の opacity だけ(合成だけで済む) */
+      if (stagePulseOn) {
+        const pulseEl = stagePulseRef.current,
+          notes = run.notes;
+        let index = run._stageNoteIndex || 0,
+          count = 0,
+          monster = false;
+        while (index < notes.length && notes[index].timeMs <= visualTime) {
+          count++;
+          if (rhythmNoteMonsterSlot(notes[index])) monster = true;
+          index++;
+        }
+        run._stageNoteIndex = index;
+        if (count && pulseEl && typeof pulseEl.animate === 'function' && visualTime - (run._stagePulseAt ?? -1e9) >= 110) {
+          run._stagePulseAt = visualTime;
+          pulseEl.dataset.stagePulseKind = monster ? 'monster' : 'note';
+          try {
+            pulseEl.animate([{
+              opacity: monster ? 1 : count > 1 ? .9 : .62
+            }, {
+              opacity: 0
+            }], {
+              duration: monster ? 620 : count > 1 ? 440 : 340,
+              easing: 'cubic-bezier(.2,.7,.3,1)'
+            });
+          } catch (_) {}
+        }
+      }
       // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
       const placeable = !!travel && travel.ready !== false;
       // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
@@ -26003,7 +26078,7 @@ const RhythmTapTest = ({
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
-  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.frameRateMode, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial, updateJudgmentBand]);
+  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.frameRateMode, settings.stageEffect, settings.lightweightMode, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial, updateJudgmentBand]);
   const disposeRun = useCallback(() => {
     stopFrame();
     clearJudgmentTimer();
@@ -27083,7 +27158,29 @@ const RhythmTapTest = ({
       '--mh-judgment-line-bottom': `${rhythmFiniteStep(settings.judgmentLineHeight, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
-  }, laneElements, sideMonsterElements, /*#__PURE__*/React.createElement("div", {
+  }, laneElements, stageLevel !== 'SIMPLE' && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-stage": stageLevel,
+    "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
+    "aria-hidden": "true"
+  }, stageArtSrc && /*#__PURE__*/React.createElement("canvas", {
+    ref: stageArtRef,
+    "data-rhythm-stage-art": true,
+    width: "24",
+    height: "24"
+  }), stageLevel === 'VIVID' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-stage-beam": "left"
+  }), /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-stage-beam": "right"
+  }), /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-stage-sparks": "far"
+  }), /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-stage-sparks": "near"
+  }))), stageLevel !== 'SIMPLE' && /*#__PURE__*/React.createElement("i", {
+    ref: stagePulseRef,
+    "data-rhythm-stage-pulse": true,
+    "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
+    "aria-hidden": "true"
+  }), sideMonsterElements, /*#__PURE__*/React.createElement("div", {
     ref: screenFlashRef,
     "data-rhythm-screen-flash": true,
     "aria-hidden": "true"
