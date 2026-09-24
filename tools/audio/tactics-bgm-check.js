@@ -83,14 +83,20 @@ for (const { audio, label } of SLOTS) {
   check(`${label}の音源が起動時の読み込み一覧に混ざっていない`, !indexHtml.includes(base), base);
 }
 
-// --- ②-2 ジャケットはまだ配信しない（モンヒロビートへ入れるときだけ） ---
-// 2026-09-21 ユーザー「今後モンビー実装用にジャケットも送っとく」。
-// いま images/song-art/ へ置くと、どこからも参照されない絵として image-asset-check が落ちる
-for (const name of ['senjou-no-shippuu', 'makutsu-no-senritsu']) {
-  check(`${name} のジャケット原本を預かっている`,
-    fs.existsSync(path.join(ROOT, 'tools/art-sources/song-art', `${name}.jpg`)));
-  check(`${name} のジャケットはまだ配信していない`,
-    !fs.existsSync(path.join(ROOT, 'monster-hero/images/song-art', `${name}.jpg`)));
+// --- ②-2 ジャケット ---
+// 2026-09-21 ユーザー「今後モンビー実装用にジャケットも送っとく」で原本を預かり、
+// 2026-09-24 にモンヒロビートへ入れた(「この2曲をモンビーに実装して」)。
+// 配信している絵は、曲えらびのジャケットとして実際に使われていること(使われない絵を置かない)。
+{
+  const rhythmMode = fs.readFileSync(path.join(ROOT, 'monster-hero/data/rhythm-mode.js'), 'utf8');
+  for (const name of ['senjou-no-shippuu', 'makutsu-no-senritsu']) {
+    check(`${name} のジャケット原本を預かっている`,
+      fs.existsSync(path.join(ROOT, 'tools/art-sources/song-art', `${name}.jpg`)));
+    check(`${name} のジャケットを配信している`,
+      fs.existsSync(path.join(ROOT, 'monster-hero/images/song-art', `${name}.jpg`)));
+    check(`${name} のジャケットをモンヒロビートの曲が使っている`,
+      rhythmMode.includes(`artwork:'images/song-art/${name}.jpg`));
+  }
 }
 
 // --- ③ 結線 ---

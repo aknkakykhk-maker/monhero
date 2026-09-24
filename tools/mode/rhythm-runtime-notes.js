@@ -189,6 +189,8 @@ const RELEASED_MARKERS=Object.freeze({
   freedom_dive:'freedom-dive-v3',
   the_city_beneath_the_comets:'the-city-beneath-the-comets-v3',
   mou_hitotsu_no_sekai_e:'mou-hitotsu-no-sekai-e-v3',
+  senjou_no_shippuu:'senjou-no-shippuu-v3',
+  makutsu_no_senritsu:'makutsu-no-senritsu-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -216,6 +218,8 @@ const RELEASED_TRACKS=Object.freeze({
   freedom_dive:'freedom_dive',
   the_city_beneath_the_comets:'the_city_beneath_the_comets',
   mou_hitotsu_no_sekai_e:'mou_hitotsu_no_sekai_e',
+  senjou_no_shippuu:'senjou_no_shippuu',
+  makutsu_no_senritsu:'makutsu_no_senritsu',
 });
 
 module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

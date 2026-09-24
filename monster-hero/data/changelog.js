@@ -54,6 +54,30 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-09-24 ユーザー指示「この2曲をモンビーに実装して」。歯ごたえ1.6はユーザーが決めた(「もっと難しく」)
+    date: "2026-09-24 22:50", type:'update', title:'モンヒロビート：新曲「魔窟の旋律」を追加しました', status:'new',
+    image: 'images/song-art/makutsu-no-senritsu.jpg?v=fdac185e6f69',
+    items:[
+      'モンヒロビートに「魔窟の旋律」（2分28秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.17 ／ EXPERT Lv.21 ／ MASTER Lv.28 です。',
+      'ノーツ数は 271 ／ 313 ／ 434 ／ 501 ／ 513 です。',
+      '暗い洞窟の奥へ進んでいくような、重くて緊張感のある曲です。',
+    ],
+    assistantNotice: { id:'update_notice_makutsu_no_senritsu_v1', type:'content' },
+  },
+  {
+    // 2026-09-24 ユーザー指示「この2曲をモンビーに実装して」。歯ごたえ1.3はユーザーが決めた
+    date: "2026-09-24 22:50", type:'update', title:'モンヒロビート：新曲「戦場の疾風」を追加しました', status:'new',
+    image: 'images/song-art/senjou-no-shippuu.jpg?v=50e3ed20ee08',
+    items:[
+      'モンヒロビートに「戦場の疾風」（3分13秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.15 ／ EXPERT Lv.20 ／ MASTER Lv.29 です。',
+      'ノーツ数は 313 ／ 355 ／ 493 ／ 593 ／ 673 です。',
+      '戦いの始まりを思わせる、疾走感のある曲です。',
+    ],
+    assistantNotice: { id:'update_notice_senjou_no_shippuu_v1', type:'content' },
+  },
+  {
     // 見た目を元に近づけつつ軽いまま(2026-09-24 ユーザー指示「せっかく作った見た目を極力維持して今までのような快適さを作って」)
     date: "2026-09-24 22:50", type:'update', group:'battle', title:'タクティクスバトルの枠やカードの見た目を元に戻しました', status:'new',
     items:[
