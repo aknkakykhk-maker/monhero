@@ -1356,13 +1356,13 @@ const createAnimationStyle = () => {
     [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > [data-enemy-shadow]::before,
     [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > [data-enemy-shadow]::after { animation: kzDustIdle 6s ease-out infinite; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::before,
-    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::after { animation: kzDust 1100ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::after { animation: kzDust var(--em-dur, 1100ms) ease-out forwards; }
     /* 張り手の衝撃: 丸枠の下に赤い輪が広がる */
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"]::after { content: ''; position: absolute; left: 50%; bottom: -14%; width: 70%; height: 30%; border-radius: 50%;
       pointer-events: none; opacity: 0; z-index: 2;
       background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(248,113,113,.8) 35%, rgba(239,68,68,.35) 65%, transparent); }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"]::after { animation: kzImpact 450ms ease-out forwards; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"]::after { animation: kzImpact var(--em-dur, 450ms) ease-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap var(--em-dur, 450ms) ease-in forwards; }
     [data-tactics-look] [data-kz-palm] { font-style: normal; position: absolute; top: 42%; left: 50%; margin-left: -18px; width: 36px; text-align: center; font-size: 30px; line-height: 1;
       opacity: 0; pointer-events: none; z-index: 10000;
       filter: hue-rotate(20deg) saturate(.95) brightness(.95) drop-shadow(0 0 8px rgba(239,68,68,.85)) drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
@@ -1370,9 +1370,9 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-kz-palm]::after { content: ''; position: absolute; left: 50%; top: -60%; width: 60%; height: 90%; margin-left: -30%; pointer-events: none;
       background: repeating-linear-gradient(90deg, rgba(255,255,255,.8) 0 2px, transparent 2px 6px);
       -webkit-mask: linear-gradient(0deg, #000, transparent); mask: linear-gradient(0deg, #000, transparent); }
-    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="l"] { animation: kzPalmL 450ms ease-out forwards; }
-    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="r"] { animation: kzPalmR 450ms ease-out forwards; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="l"] { animation: kzPalmL var(--em-dur, 450ms) ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="r"] { animation: kzPalmR var(--em-dur, 450ms) ease-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp var(--em-dur, 1100ms) ease-in-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-hurt] > span { animation: kzHurt 520ms ease-out forwards; }
     /* ---- カワズモーの技ごとの動き(2026-09-24 ユーザー指示「他の技も特徴付けたい」) ----
        data-enemy-skill に技の名前が入る(60-app の setEnemyAttackFx の skill)。長さは TACTICS_ENEMY_SKILL_MS とそろえる。
@@ -1542,37 +1542,37 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack]:where([data-enemy-skill]:not([data-enemy-skill="normal"])) > [data-kz-palm] { animation: none; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack]:where([data-enemy-skill]:not([data-enemy-skill="normal"]))::after { animation: none; }
     /* かわずつき */
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="sweep"] > span { z-index: 9999; animation: kzLunge 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="sweep"] > span { z-index: 9999; animation: kzLunge var(--em-dur, 450ms) ease-in forwards; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="sweep"] > [data-kz-fx]::before { left: 50%; bottom: -30%; width: 170%; height: 70%; border-radius: 50%;
       border-bottom: 6px solid rgba(236,253,245,.95); box-shadow: 0 10px 18px -6px rgba(52,211,153,.9);
-      transform-origin: 50% 0; animation: kzSweepArc 450ms ease-out forwards; }
+      transform-origin: 50% 0; animation: kzSweepArc var(--em-dur, 450ms) ease-out forwards; }
     /* 連続はり手 */
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > span { z-index: 9999; animation: kzRush 750ms ease-in-out forwards; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > [data-kz-palm="l"] { animation: kzPalmJabL 220ms ease-out 90ms 3; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > [data-kz-palm="r"] { animation: kzPalmJabR 220ms ease-out 200ms 3; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"]::after { animation: kzImpact 220ms ease-out 110ms 3; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > span { z-index: 9999; animation: kzRush var(--em-dur, 750ms) ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > [data-kz-palm="l"] { animation: kzPalmJabL calc(var(--em-dur, 750ms) * .29) ease-out calc(var(--em-dur, 750ms) * .12) 3; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > [data-kz-palm="r"] { animation: kzPalmJabR calc(var(--em-dur, 750ms) * .29) ease-out calc(var(--em-dur, 750ms) * .27) 3; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"]::after { animation: kzImpact calc(var(--em-dur, 750ms) * .29) ease-out calc(var(--em-dur, 750ms) * .15) 3; }
     /* 上手投げ */
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > span { z-index: 9999; animation: kzThrow 900ms ease-in-out forwards; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > [data-kz-palm="r"] { animation: kzGrab 900ms ease-in-out forwards; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"]::after { animation: kzImpact 500ms ease-out 400ms forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > span { z-index: 9999; animation: kzThrow var(--em-dur, 900ms) ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > [data-kz-palm="r"] { animation: kzGrab var(--em-dur, 900ms) ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"]::after { animation: kzImpact calc(var(--em-dur, 900ms) * .55) ease-out calc(var(--em-dur, 900ms) * .44) forwards; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > [data-kz-fx]::before { left: 50%; top: 40%; width: 16px; height: 170%; border-radius: 8px; transform-origin: 50% 0;
       background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(251,113,133,.9) 40%, rgba(225,29,72,.6) 80%, transparent);
-      box-shadow: 0 0 18px 6px rgba(244,63,94,.75); animation: kzPierceBeam 900ms ease-out forwards; }
+      box-shadow: 0 0 18px 6px rgba(244,63,94,.75); animation: kzPierceBeam var(--em-dur, 900ms) ease-out forwards; }
     /* 大回転落とし */
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > span { z-index: 9999; transform-origin: 50% 55%; animation: kzSpinDrop 1100ms ease-in-out forwards; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow] { animation: kzShadowJump 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > span { z-index: 9999; transform-origin: 50% 55%; animation: kzSpinDrop var(--em-dur, 1100ms) ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow] { animation: kzShadowJump var(--em-dur, 1100ms) ease-in-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow]::before,
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow]::after { animation: kzDust 600ms ease-out 450ms forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow]::after { animation: kzDust calc(var(--em-dur, 1100ms) * .55) ease-out calc(var(--em-dur, 1100ms) * .41) forwards; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-kz-fx]::before { inset: -14%; border-radius: 50%;
       background: conic-gradient(from 0deg, transparent, rgba(253,224,71,.95) 14%, transparent 30%, rgba(255,255,255,.8) 50%, transparent 64%, rgba(251,191,36,.95) 80%, transparent 94%);
       -webkit-mask: radial-gradient(closest-side, transparent 62%, #000 66%, #000 90%, transparent 96%); mask: radial-gradient(closest-side, transparent 62%, #000 66%, #000 90%, transparent 96%);
-      animation: kzWhirl 1100ms ease-in-out forwards; }
+      animation: kzWhirl var(--em-dur, 1100ms) ease-in-out forwards; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-kz-fx]::after { left: 50%; bottom: -24%; width: 120%; height: 40%; border-radius: 50%;
       background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(253,224,71,.85) 35%, rgba(245,158,11,.4) 65%, transparent);
-      animation: kzBigImpact 420ms ease-out 800ms forwards; }
+      animation: kzBigImpact calc(var(--em-dur, 1100ms) * .38) ease-out calc(var(--em-dur, 1100ms) * .73) forwards; }
     /* 大投げたまや */
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > span { z-index: 9999; animation: kzHeave 1000ms ease-in-out forwards; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="allout"]::after { animation: kzImpact 500ms ease-out 450ms forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > span { z-index: 9999; animation: kzHeave var(--em-dur, 1000ms) ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="allout"]::after { animation: kzImpact calc(var(--em-dur, 1000ms) * .5) ease-out calc(var(--em-dur, 1000ms) * .45) forwards; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::before,
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::after { left: 50%; top: -58%; width: 150%; aspect-ratio: 1; transform-origin: 50% 50%; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::before {
@@ -1583,54 +1583,55 @@ const createAnimationStyle = () => {
         radial-gradient(7px 7px at 72% 50%, #fff, transparent 75%), radial-gradient(7px 7px at 50% 72%, #fff, transparent 75%),
         radial-gradient(7px 7px at 28% 50%, #fff, transparent 75%), radial-gradient(7px 7px at 50% 28%, #fff, transparent 75%),
         radial-gradient(closest-side, rgba(253,224,71,.35), transparent 40%);
-      filter: drop-shadow(0 0 6px rgba(253,224,71,.9)); animation: kzFirework 1000ms ease-out forwards; }
+      filter: drop-shadow(0 0 6px rgba(253,224,71,.9)); animation: kzFirework var(--em-dur, 1000ms) ease-out forwards; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::after { top: -40%; margin-left: -34%; width: 110%;
       background: radial-gradient(7px 7px at 90% 50%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 78% 78%, #86efac, transparent 75%),
         radial-gradient(7px 7px at 50% 90%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 22% 78%, #fdba74, transparent 75%),
         radial-gradient(7px 7px at 10% 50%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 22% 22%, #86efac, transparent 75%),
         radial-gradient(7px 7px at 50% 10%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 78% 22%, #fdba74, transparent 75%);
-      filter: drop-shadow(0 0 5px rgba(240,171,252,.9)); animation: kzFirework 1000ms ease-out 120ms forwards; }
+      filter: drop-shadow(0 0 5px rgba(240,171,252,.9)); animation: kzFirework var(--em-dur, 1000ms) ease-out calc(var(--em-dur, 1000ms) * .12) forwards; }
     /* 必殺技準備 / 貫通技準備(しこ踏みは上の kzStomp のまま) */
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > span { animation: kzPowerUp 1100ms ease-in-out forwards; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > span { animation: kzStance 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > span { animation: kzPowerUp var(--em-dur, 1100ms) ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > span { animation: kzStance var(--em-dur, 1100ms) ease-in-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > [data-enemy-shadow]::before,
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > [data-enemy-shadow]::after,
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-enemy-shadow]::before,
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-enemy-shadow]::after { animation: none; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-kz-palm="l"] { animation: kzPalmReadyL 1100ms ease-in-out forwards; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-kz-palm="r"] { animation: kzPalmReadyR 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-kz-palm="l"] { animation: kzPalmReadyL var(--em-dur, 1100ms) ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-kz-palm="r"] { animation: kzPalmReadyR var(--em-dur, 1100ms) ease-in-out forwards; }
     /* かえるのうた */
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > span { animation: kzSing 1000ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > span { animation: kzSing var(--em-dur, 1000ms) ease-in-out forwards; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::before,
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::after { font-size: 34px; font-weight: 900; line-height: 1; color: #a7f3d0;
       text-shadow: 0 0 8px rgba(52,211,153,1), 0 2px 4px rgba(0,0,0,.7); }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::before { content: '♪'; left: 8%; top: 22%; --kz-nx: -18px; --kz-nr: -20deg;
-      animation: kzNote 900ms ease-out forwards; }
+      animation: kzNote calc(var(--em-dur, 1000ms) * .9) ease-out forwards; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::after { content: '♫'; right: 6%; top: 10%; --kz-nx: 18px; --kz-nr: 20deg; color: #fff;
-      animation: kzNote 800ms ease-out 200ms forwards; }
+      animation: kzNote calc(var(--em-dur, 1000ms) * .8) ease-out calc(var(--em-dur, 1000ms) * .2) forwards; }
     /* ---- カワズモー以外の敵の動き(2026-09-24 ユーザー指示「次はタクティクスの全モンスターも実装して」) ----
        体の動き・飾りの形・絵文字の出し方を部品にして、敵ごとの組み合わせは 71-screen-battle の
        TACTICS_ENEMY_MOTION_SETS が決める。ここでは部品と、敵ごとの色(--em-c)だけを持つ。
        長さは技で決まる(--em-dur)。60-app の待ち時間(TACTICS_ENEMY_SKILL_MS_DEFAULT)とそろえる。
        ★丸枠の中の絵は「> span」、覚醒ムーの枠の外の絵は「> img」。どちらにも同じ部品が効くように :is(span, img) で書く */
-    [data-tactics-look] [data-enemy-motion="metalner"] { --em-c: 96,165,250; }
-    [data-tactics-look] [data-enemy-motion="inari"] { --em-c: 251,146,60; }
-    [data-tactics-look] [data-enemy-motion="koinobori"] { --em-c: 248,113,113; }
-    [data-tactics-look] [data-enemy-motion="delpiero"] { --em-c: 232,121,249; }
-    [data-tactics-look] [data-enemy-motion="dokudoku"] { --em-c: 192,132,252; }
-    [data-tactics-look] [data-enemy-motion="lamia"] { --em-c: 129,140,248; }
-    [data-tactics-look] [data-enemy-motion="nyarlathotep"] { --em-c: 250,204,21; }
-    [data-tactics-look] [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
-    [data-tactics-look] [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
+    /* ★色は body 直下の全画面の演出(data-enemy-stage-fx)でも使うので、[data-tactics-look] の中に限らない */
+    [data-enemy-motion="kawazumo"] { --em-c: 74,222,128; }
+    [data-enemy-motion="metalner"] { --em-c: 96,165,250; }
+    [data-enemy-motion="inari"] { --em-c: 251,146,60; }
+    [data-enemy-motion="koinobori"] { --em-c: 248,113,113; }
+    [data-enemy-motion="delpiero"] { --em-c: 232,121,249; }
+    [data-enemy-motion="dokudoku"] { --em-c: 192,132,252; }
+    [data-enemy-motion="lamia"] { --em-c: 129,140,248; }
+    [data-enemy-motion="nyarlathotep"] { --em-c: 250,204,21; }
+    [data-enemy-motion="splatter"] { --em-c: 220,38,38; }
+    [data-enemy-motion="awakenedMoo"] { --em-c: 250,204,21; }
     [data-tactics-look] [data-enemy-skill] { --em-dur: 450ms; }
     [data-tactics-look] [data-enemy-skill="rush"] { --em-dur: 750ms; }
     [data-tactics-look] [data-enemy-skill="pierce"] { --em-dur: 900ms; }
     [data-tactics-look] [data-enemy-skill="allout"], [data-tactics-look] [data-enemy-skill="regen"] { --em-dur: 1000ms; }
-    [data-tactics-look] [data-enemy-skill="special"], [data-tactics-look] [data-enemy-skill="roar"],
+    [data-tactics-look] [data-enemy-skill="special"] { --em-dur: 1500ms; }
+    [data-tactics-look] [data-enemy-skill="roar"],
     [data-tactics-look] [data-enemy-skill="charge"], [data-tactics-look] [data-enemy-skill="pierceCharge"] { --em-dur: 1100ms; }
-    /* 覚醒ムーの攻撃は、どの技も 900ms 待つ(ムー専用の待ち時間) */
-    [data-tactics-look] [data-moo-stage]:is([data-enemy-skill="normal"], [data-enemy-skill="sweep"], [data-enemy-skill="rush"], [data-enemy-skill="pierce"],
-      [data-enemy-skill="special"], [data-enemy-skill="allout"]) { --em-dur: 900ms; }
+    /* ★実際の長さは画面が style で渡す(--em-dur。戦闘の速さ・覚醒ムーの技ごとの長さを掛けたもの)。ここは渡されなかったときの目安 */
 
     /* 待機(ずっと繰り返す) */
     @keyframes emIdleHover {
@@ -1703,83 +1704,86 @@ const createAnimationStyle = () => {
     /* 体の動き(技) */
     @keyframes emJab {
       0% { transform: none; }
-      25% { transform: translateY(-6px) rotate(-6deg) scale(.94, 1.06); }
-      50% { transform: translateY(58px) rotate(4deg) scale(1.2, .9); filter: brightness(1.25) drop-shadow(0 0 22px rgba(var(--em-c),1)); }
-      66% { transform: translateY(48px) rotate(2deg) scale(1.12, .92); filter: drop-shadow(0 0 12px rgba(var(--em-c),.7)); }
+      25% { transform: translateY(-9px) rotate(-6deg) scale(.94, 1.06); }
+      40% { transform: translateY(-14px) rotate(-9deg) scale(.91, 1.09); }
+      50% { transform: translateY(87px) rotate(4deg) scale(1.2, .9); filter: brightness(1.25) drop-shadow(0 0 22px rgba(var(--em-c),1)); }
+      66% { transform: translateY(72px) rotate(2deg) scale(1.12, .92); filter: drop-shadow(0 0 12px rgba(var(--em-c),.7)); }
       100% { transform: none; filter: none; }
     }
     @keyframes emLunge {
       0% { transform: none; }
-      22% { transform: translateY(-10px) scale(.92, 1.08); }
-      55% { transform: translateY(72px) scale(1.26, .86); filter: brightness(1.25) drop-shadow(0 0 24px rgba(var(--em-c),1)); }
-      70% { transform: translateY(62px) scale(1.2, .88); }
+      22% { transform: translateY(-15px) scale(.92, 1.08); }
+      42% { transform: translateY(-20px) scale(.89, 1.11); }
+      55% { transform: translateY(108px) scale(1.26, .86); filter: brightness(1.25) drop-shadow(0 0 24px rgba(var(--em-c),1)); }
+      70% { transform: translateY(93px) scale(1.2, .88); }
       100% { transform: none; filter: none; }
     }
     @keyframes emDash {
       0% { transform: none; }
-      28% { transform: translate(-30px, 6px) rotate(-10deg) scale(1.1, .9); }
-      58% { transform: translate(34px, 64px) rotate(12deg) scale(1.22, .88); filter: brightness(1.25) drop-shadow(0 0 22px rgba(var(--em-c),1)); }
-      72% { transform: translate(24px, 56px) rotate(8deg) scale(1.16, .9); }
+      28% { transform: translate(-45px, 9px) rotate(-10deg) scale(1.1, .9); }
+      58% { transform: translate(51px, 96px) rotate(12deg) scale(1.22, .88); filter: brightness(1.25) drop-shadow(0 0 22px rgba(var(--em-c),1)); }
+      72% { transform: translate(36px, 84px) rotate(8deg) scale(1.16, .9); }
       100% { transform: none; filter: none; }
     }
     @keyframes emFlurry {
       0% { transform: none; }
-      10% { transform: translate(6px, 4px) rotate(10deg) scale(1.06, .94); }
-      22% { transform: translate(-9px, 40px) rotate(-12deg) scale(1.14, .9); }
-      34% { transform: translate(9px, 50px) rotate(12deg) scale(1.16, .9); }
-      46% { transform: translate(-9px, 58px) rotate(-12deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 16px rgba(var(--em-c),.9)); }
-      58% { transform: translate(9px, 64px) rotate(12deg) scale(1.18, .88); }
-      70% { transform: translate(-7px, 68px) rotate(-9deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 24px rgba(var(--em-c),1)); }
+      10% { transform: translate(9px, 6px) rotate(10deg) scale(1.06, .94); }
+      22% { transform: translate(-14px, 60px) rotate(-12deg) scale(1.14, .9); }
+      34% { transform: translate(14px, 75px) rotate(12deg) scale(1.16, .9); }
+      46% { transform: translate(-14px, 87px) rotate(-12deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 16px rgba(var(--em-c),.9)); }
+      58% { transform: translate(14px, 96px) rotate(12deg) scale(1.18, .88); }
+      70% { transform: translate(-10px, 102px) rotate(-9deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 24px rgba(var(--em-c),1)); }
       84% { transform: translate(0, 40px) rotate(0) scale(1.08, .94); }
       100% { transform: none; filter: none; }
     }
     @keyframes emSpin {
       0% { transform: none; }
       14% { transform: scale(1.1, .9); }
-      50% { transform: translateY(40px) rotate(360deg) scale(1.08); filter: drop-shadow(0 0 16px rgba(var(--em-c),.9)); }
-      80% { transform: translateY(58px) rotate(720deg) scale(1.18); filter: brightness(1.3) drop-shadow(0 0 26px rgba(var(--em-c),1)); }
+      50% { transform: translateY(60px) rotate(360deg) scale(1.08); filter: drop-shadow(0 0 16px rgba(var(--em-c),.9)); }
+      80% { transform: translateY(87px) rotate(720deg) scale(1.18); filter: brightness(1.3) drop-shadow(0 0 26px rgba(var(--em-c),1)); }
       100% { transform: rotate(720deg); filter: none; }
     }
     @keyframes emWindup {
       0% { transform: none; }
-      30% { transform: translateY(-20px) rotate(-14deg) scale(.92, 1.1); filter: drop-shadow(0 0 8px rgba(var(--em-c),.5)); }
-      56% { transform: translate(-4px, -26px) rotate(-18deg) scale(.9, 1.12); filter: drop-shadow(0 0 16px rgba(var(--em-c),.8)); }
-      68% { transform: translateY(72px) rotate(6deg) scale(1.28, .84); filter: brightness(1.3) drop-shadow(0 0 28px rgba(var(--em-c),1)); }
-      78% { transform: translateY(62px) rotate(4deg) scale(1.2, .88); }
+      30% { transform: translateY(-30px) rotate(-14deg) scale(.92, 1.1); filter: drop-shadow(0 0 8px rgba(var(--em-c),.5)); }
+      56% { transform: translate(-6px, -39px) rotate(-18deg) scale(.9, 1.12); filter: drop-shadow(0 0 16px rgba(var(--em-c),.8)); }
+      68% { transform: translateY(108px) rotate(6deg) scale(1.28, .84); filter: brightness(1.3) drop-shadow(0 0 28px rgba(var(--em-c),1)); }
+      78% { transform: translateY(93px) rotate(4deg) scale(1.2, .88); }
       100% { transform: none; filter: none; }
     }
     @keyframes emSwing {
       0% { transform: none; }
-      30% { transform: translate(-18px, -10px) rotate(-24deg) scale(.95, 1.06); filter: drop-shadow(0 0 8px rgba(var(--em-c),.5)); }
-      58% { transform: translate(20px, 52px) rotate(22deg) scale(1.2, .9); filter: brightness(1.3) drop-shadow(0 0 24px rgba(var(--em-c),1)); }
-      72% { transform: translate(12px, 44px) rotate(12deg) scale(1.14, .92); }
+      30% { transform: translate(-27px, -15px) rotate(-24deg) scale(.95, 1.06); filter: drop-shadow(0 0 8px rgba(var(--em-c),.5)); }
+      46% { transform: translate(-32px, -20px) rotate(-30deg) scale(.93, 1.08); }
+      58% { transform: translate(30px, 78px) rotate(22deg) scale(1.2, .9); filter: brightness(1.3) drop-shadow(0 0 24px rgba(var(--em-c),1)); }
+      72% { transform: translate(18px, 66px) rotate(12deg) scale(1.14, .92); }
       100% { transform: none; filter: none; }
     }
     @keyframes emLeap {
       0% { transform: none; }
-      12% { transform: translateY(8px) scale(1.18, .82); }
-      30% { transform: translateY(-70px) scale(.9, 1.12); }
-      56% { transform: translateY(-82px) scale(.95, 1.06); filter: drop-shadow(0 0 16px rgba(var(--em-c),.8)); }
-      70% { transform: translateY(72px) scale(1.34, .76); filter: brightness(1.35) drop-shadow(0 0 30px rgba(var(--em-c),1)); }
-      78% { transform: translate(-5px, 64px) scale(1.28, .8); }
-      86% { transform: translate(5px, 64px) scale(1.26, .82); }
+      12% { transform: translateY(12px) scale(1.18, .82); }
+      30% { transform: translateY(-105px) scale(.9, 1.12); }
+      56% { transform: translateY(-123px) scale(.95, 1.06); filter: drop-shadow(0 0 16px rgba(var(--em-c),.8)); }
+      70% { transform: translateY(108px) scale(1.34, .76); filter: brightness(1.35) drop-shadow(0 0 30px rgba(var(--em-c),1)); }
+      78% { transform: translate(-8px, 96px) scale(1.28, .8); }
+      86% { transform: translate(8px, 96px) scale(1.26, .82); }
       100% { transform: none; filter: none; }
     }
     @keyframes emPress {
       0% { transform: none; }
-      12% { transform: translateY(8px) scale(1.16, .84); }
-      34% { transform: translateY(-60px) rotate(-8deg) scale(.95, 1.08); }
-      52% { transform: translateY(-70px) rotate(8deg) scale(1.02); filter: drop-shadow(0 0 14px rgba(var(--em-c),.7)); }
-      70% { transform: translateY(76px) scale(1.42, .7); filter: brightness(1.3) drop-shadow(0 0 28px rgba(var(--em-c),1)); }
-      82% { transform: translateY(64px) scale(1.3, .76); }
+      12% { transform: translateY(12px) scale(1.16, .84); }
+      34% { transform: translateY(-90px) rotate(-8deg) scale(.95, 1.08); }
+      52% { transform: translateY(-105px) rotate(8deg) scale(1.02); filter: drop-shadow(0 0 14px rgba(var(--em-c),.7)); }
+      70% { transform: translateY(114px) scale(1.42, .7); filter: brightness(1.3) drop-shadow(0 0 28px rgba(var(--em-c),1)); }
+      82% { transform: translateY(96px) scale(1.3, .76); }
       100% { transform: none; filter: none; }
     }
     @keyframes emRise {
       0% { transform: none; }
-      20% { transform: translateY(8px) scale(1.12, .88); }
-      48% { transform: translateY(-24px) scale(1.1, 1.18); filter: brightness(1.2) drop-shadow(0 0 20px rgba(var(--em-c),.9)); }
-      60% { transform: translateY(-28px) scale(1.14, 1.2); filter: brightness(1.4) drop-shadow(0 0 34px rgba(var(--em-c),1)); }
-      74% { transform: translateY(34px) scale(1.24, .86); filter: brightness(1.3) drop-shadow(0 0 26px rgba(var(--em-c),1)); }
+      20% { transform: translateY(12px) scale(1.12, .88); }
+      48% { transform: translateY(-36px) scale(1.1, 1.18); filter: brightness(1.2) drop-shadow(0 0 20px rgba(var(--em-c),.9)); }
+      60% { transform: translateY(-42px) scale(1.14, 1.2); filter: brightness(1.4) drop-shadow(0 0 34px rgba(var(--em-c),1)); }
+      74% { transform: translateY(51px) scale(1.24, .86); filter: brightness(1.3) drop-shadow(0 0 26px rgba(var(--em-c),1)); }
       100% { transform: none; filter: none; }
     }
     @keyframes emRoar {
@@ -1957,9 +1961,156 @@ const createAnimationStyle = () => {
       filter: drop-shadow(0 0 8px rgba(var(--em-c),1)) drop-shadow(0 2px 4px rgba(0,0,0,.7)); }
     [data-tactics-look] [data-em-emo="rise"] > [data-em-fx-el]::after { left: 0; right: 0; top: 18%; font-size: 30px; word-spacing: 34px;
       content: var(--em-e, '') ' ' var(--em-e, '') ' ' var(--em-e, ''); animation: emEmoRise var(--em-dur) ease-out forwards; }
-    [data-tactics-look] [data-em-emo="shoot"] > [data-em-fx-el]::after { left: 50%; top: 38%; font-size: 30px; animation: emEmoShoot var(--em-dur) ease-in forwards; }
+    /* shoot(こちらへ飛ぶ)の絵文字は、丸枠の中ではなく全画面の演出が味方の枠まで飛ばす(data-strike) */
     [data-tactics-look] [data-em-emo="rain"] > [data-em-fx-el]::after { left: -20%; right: -20%; top: -10%; font-size: 34px; word-spacing: 26px;
       content: var(--em-e, '') ' ' var(--em-e, '') ' ' var(--em-e, '') ' ' var(--em-e, ''); animation: emEmoRain var(--em-dur) ease-in forwards; }
+    /* ---- 敵の技の全画面の演出(TacticsEnemyStageFx。body の直下なので [data-tactics-look] の外にある) ----
+       2026-09-24 ユーザー指示「攻撃が味方に届く」「技ごとの飾りを個性的に」「必殺技だけ特別扱い」「ムーはかなり派手な演出が必要」 */
+    [data-enemy-stage-fx] > * { position: absolute; pointer-events: none; font-style: normal; }
+    [data-stage-dim] { inset: 0; opacity: 0; animation: emStageDim var(--em-dur) ease-in-out forwards; }
+    [data-stage-moo] [data-stage-dim] { background-color: rgba(60,0,20,.25); }
+    @keyframes emStageDim { 0% { opacity: 0; } 15%, 80% { opacity: 1; } 100% { opacity: 0; } }
+    /* 飛ばすもの。敵の丸枠の真ん中から、狙われた枠の真ん中まで */
+    [data-strike] { width: 0; height: 0; opacity: 0; animation-timing-function: cubic-bezier(.5,0,.9,.6); animation-fill-mode: both; }
+    [data-strike="orb"] { width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; line-height: 1;
+      background: radial-gradient(circle, #fff 0 22%, rgba(var(--em-c),.95) 45%, rgba(var(--em-c),0) 72%); box-shadow: 0 0 22px 8px rgba(var(--em-c),.7); animation-name: emStrikeOrb; }
+    [data-strike="orb"]:not(:empty) { background: none; box-shadow: none; filter: drop-shadow(0 0 10px rgba(var(--em-c),1)); font-size: 34px; }
+    [data-strike="orb"][data-big] { width: 48px; height: 48px; margin: -24px 0 0 -24px; font-size: 48px; }
+    [data-stage-moo] [data-strike="orb"]:not(:empty) { font-size: 110px; width: 110px; height: 110px; margin: -55px 0 0 -55px; }
+    @keyframes emStrikeOrb {
+      0% { opacity: 0; transform: scale(.3); }
+      18% { opacity: 1; transform: scale(1); }
+      88% { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(1.5); }
+      100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.8); }
+    }
+    [data-strike="beam"], [data-strike="laser"] { height: 18px; width: var(--len); margin-top: -9px; transform-origin: 0 50%; border-radius: 9px;
+      background: linear-gradient(180deg, transparent, rgba(var(--em-c),.9) 25%, #fff 45% 55%, rgba(var(--em-c),.9) 75%, transparent);
+      box-shadow: 0 0 24px 6px rgba(var(--em-c),.7); animation-name: emStrikeBeam; animation-timing-function: ease-out; }
+    [data-strike="laser"] { height: 6px; margin-top: -3px; box-shadow: 0 0 12px 3px rgba(var(--em-c),.9); }
+    [data-strike="beam"][data-big] { height: 40px; margin-top: -20px; border-radius: 20px; }
+    [data-stage-moo] [data-strike="beam"] { height: 110px; margin-top: -55px; border-radius: 55px; box-shadow: 0 0 60px 20px rgba(var(--em-c),.8); }
+    @keyframes emStrikeBeam {
+      0% { opacity: 0; transform: rotate(var(--ang)) scaleX(0); }
+      45% { opacity: 1; transform: rotate(var(--ang)) scaleX(1); }
+      75% { opacity: 1; transform: rotate(var(--ang)) scaleX(1) scaleY(1.2); }
+      100% { opacity: 0; transform: rotate(var(--ang)) scaleX(1) scaleY(.2); }
+    }
+    [data-strike="wave"] { width: 110px; height: 50px; margin: -25px 0 0 -55px; border-radius: 50%; border-bottom: 6px solid rgba(255,255,255,.95);
+      box-shadow: 0 12px 18px -8px rgba(var(--em-c),1); filter: drop-shadow(0 0 8px rgba(var(--em-c),1)); animation-name: emStrikeWave; }
+    [data-strike="wave"][data-big] { width: 170px; height: 70px; margin: -35px 0 0 -85px; }
+    @keyframes emStrikeWave {
+      0% { opacity: 0; transform: rotate(calc(var(--ang) - 90deg)) scale(.4); }
+      18% { opacity: 1; }
+      88% { opacity: 1; transform: translate(var(--dx), var(--dy)) rotate(calc(var(--ang) - 90deg)) scale(1.4); }
+      100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(calc(var(--ang) - 90deg)) scale(1.7); }
+    }
+    /* 当たりの形。狙われた枠の真ん中に出る。--w は枠の大きさ */
+    [data-impact] { width: var(--w); height: var(--w); margin: calc(var(--w) / -2) 0 0 calc(var(--w) / -2); opacity: 0;
+      display: flex; align-items: center; justify-content: center; font-size: calc(var(--w) * .42); line-height: 1;
+      animation: emImpact 400ms ease-out both; filter: drop-shadow(0 0 10px rgba(var(--em-c),1)); }
+    [data-impact][data-big] { --s: 1.35; }
+    [data-impact]::before, [data-impact]::after { content: ''; position: absolute; inset: 0; border-radius: 50%; z-index: -1; }
+    @keyframes emImpact {
+      0% { opacity: 0; transform: scale(calc(.3 * var(--s, 1))); }
+      18% { opacity: 1; transform: scale(calc(1.05 * var(--s, 1))); }
+      60% { opacity: 1; transform: scale(calc(1.15 * var(--s, 1))); }
+      100% { opacity: 0; transform: scale(calc(1.45 * var(--s, 1))); }
+    }
+    [data-impact="burst"]::before, [data-impact="nova"]::before {
+      background: repeating-conic-gradient(rgba(255,255,255,.95) 0 4deg, rgba(var(--em-c),.8) 4deg 9deg, transparent 9deg 30deg);
+      -webkit-mask: radial-gradient(closest-side, #000 20%, transparent 100%); mask: radial-gradient(closest-side, #000 20%, transparent 100%); }
+    [data-impact="burst"]::after, [data-impact="nova"]::after { inset: 25%; background: radial-gradient(circle, #fff, rgba(var(--em-c),.8) 50%, transparent 72%); }
+    [data-impact="nova"] { --s: 1.6; }
+    /* カワズモー: 手のひらの跡を押す */
+    [data-impact="stamp"]::after { inset: 10%; background: radial-gradient(circle, rgba(255,255,255,.9), rgba(var(--em-c),.6) 45%, transparent 70%); }
+    /* メタルナー: 六角形の光の輪 */
+    [data-impact="hex"]::before { inset: 8%; border-radius: 0; clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%);
+      background: radial-gradient(circle, transparent 50%, rgba(255,255,255,.95) 56%, rgba(var(--em-c),.9) 62%, transparent 70%); }
+    [data-impact="hex"]::after { inset: 30%; border-radius: 0; clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); background: rgba(var(--em-c),.55); }
+    /* イナリ: 肉球と花びら */
+    [data-impact="paw"]::after { background: radial-gradient(6px 6px at 20% 30%, #fbcfe8, transparent 75%), radial-gradient(6px 6px at 80% 25%, #fde68a, transparent 75%),
+      radial-gradient(6px 6px at 75% 80%, #fbcfe8, transparent 75%), radial-gradient(6px 6px at 22% 75%, #fde68a, transparent 75%), radial-gradient(circle, rgba(var(--em-c),.45), transparent 65%); }
+    /* コイノボリ: 水しぶき */
+    [data-impact="splash"]::before { background: radial-gradient(7px 10px at 50% 5%, #e0f2fe, transparent 75%), radial-gradient(7px 10px at 90% 40%, #7dd3fc, transparent 75%),
+      radial-gradient(7px 10px at 75% 90%, #e0f2fe, transparent 75%), radial-gradient(7px 10px at 20% 88%, #7dd3fc, transparent 75%), radial-gradient(7px 10px at 8% 38%, #e0f2fe, transparent 75%); }
+    [data-impact="splash"]::after { inset: 15%; border: 4px solid rgba(186,230,253,.9); box-shadow: 0 0 16px rgba(56,189,248,.9); }
+    /* デルピエロ: X の斬り跡 */
+    [data-impact="xslash"]::before { border-radius: 0;
+      background: linear-gradient(45deg, transparent 46%, #fff 49%, rgba(var(--em-c),.95) 51%, transparent 54%), linear-gradient(-45deg, transparent 46%, #fff 49%, rgba(var(--em-c),.95) 51%, transparent 54%); }
+    /* ドクドク: べちゃっと広がる粘液 */
+    [data-impact="goo"]::before { inset: 6%; border-radius: 46% 54% 38% 62% / 55% 40% 60% 45%;
+      background: radial-gradient(circle at 40% 40%, rgba(233,213,255,.95), rgba(147,51,234,.85) 45%, rgba(88,28,135,.6) 70%, transparent 72%); }
+    /* ラミア: 炎の柱 */
+    [data-impact="flame"]::before { inset: -10% 10% 0; border-radius: 50% 50% 40% 40%;
+      background: radial-gradient(60% 80% at 50% 90%, #fff7ed, #fb923c 35%, #dc2626 65%, transparent 72%); }
+    /* ニャルラトホテプ: 渦巻く闇 */
+    [data-impact="void"]::before { background: conic-gradient(from 0deg, #000, rgba(var(--em-c),.9), #1e0336, #000, rgba(168,85,247,.9), #000);
+      -webkit-mask: radial-gradient(closest-side, #000 55%, transparent 100%); mask: radial-gradient(closest-side, #000 55%, transparent 100%); animation: emVoidSpin 600ms linear infinite; }
+    @keyframes emVoidSpin { to { transform: rotate(360deg); } }
+    /* スプラッター: 3本の爪あと */
+    [data-impact="claw"]::before { border-radius: 0; transform: rotate(-30deg);
+      background: linear-gradient(90deg, transparent 18%, #fff 20%, #dc2626 22.5%, transparent 25%, transparent 46%, #fff 48%, #dc2626 50.5%, transparent 53%, transparent 74%, #fff 76%, #dc2626 78.5%, transparent 81%); }
+    /* ---- 覚醒ムー ---- */
+    [data-moo-cutin] { left: 0; right: 0; top: 50%; height: 0; }
+    [data-moo-cutin-band] { position: absolute; left: -10%; right: -10%; top: -44px; height: 88px; transform: skewY(-7deg);
+      background: linear-gradient(90deg, rgba(20,0,10,.95), rgba(88,10,30,.96) 30%, rgba(40,0,15,.96) 70%, rgba(20,0,10,.95));
+      border-top: 3px solid #facc15; border-bottom: 3px solid #facc15; box-shadow: 0 0 40px rgba(250,204,21,.6), 0 0 90px rgba(220,38,38,.5);
+      display: flex; align-items: center; justify-content: center; overflow: hidden; animation: mooCutinBand var(--em-dur) cubic-bezier(.2,.8,.2,1) both; }
+    [data-moo-cutin-band]::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(100deg, transparent 0 40px, rgba(250,204,21,.08) 40px 44px); animation: mooCutinStreak 400ms linear infinite; }
+    [data-moo-cutin-band] > span { position: relative; font-weight: 900; font-size: clamp(30px, 10vw, 48px); letter-spacing: .12em; color: #fff; white-space: nowrap;
+      text-shadow: 0 0 10px #facc15, 0 0 24px #dc2626, 0 3px 0 #7f1d1d; -webkit-text-stroke: 1px #facc15; animation: mooCutinText var(--em-dur) cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes mooCutinBand { 0% { opacity: 0; transform: skewY(-7deg) scaleY(0); } 6% { opacity: 1; transform: skewY(-7deg) scaleY(1.15); } 10%, 38% { opacity: 1; transform: skewY(-7deg) scaleY(1); } 46%, 100% { opacity: 0; transform: skewY(-7deg) scaleY(0); } }
+    @keyframes mooCutinText { 0% { transform: translateX(120vw); } 10% { transform: translateX(-4vw); } 14%, 34% { transform: translateX(0); } 44%, 100% { transform: translateX(-130vw); } }
+    @keyframes mooCutinStreak { to { background-position: -88px 0; } }
+    [data-moo-flash] { inset: 0; opacity: 0; background: radial-gradient(circle at 50% 55%, #fff, rgba(255,240,200,.9) 40%, rgba(250,204,21,.4) 75%); animation: mooFlash 420ms ease-out both; mix-blend-mode: screen; }
+    @keyframes mooFlash { 0% { opacity: 0; } 10% { opacity: .7; } 100% { opacity: 0; } }
+    [data-moo-crack] { left: 0; top: 0; opacity: 0; overflow: visible; animation: mooCrack 900ms ease-out both; }
+    [data-moo-crack] path { fill: none; stroke: #fff; stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 0 4px #facc15) drop-shadow(0 0 10px rgba(220,38,38,.9)); }
+    @keyframes mooCrack { 0% { opacity: 0; } 8%, 70% { opacity: 1; } 100% { opacity: 0; } }
+    [data-moo-claw] { left: -20%; width: 140%; height: 12px; margin-top: -6px; transform: rotate(-32deg) scaleX(0); transform-origin: 0 50%; border-radius: 6px; opacity: 0;
+      background: linear-gradient(180deg, transparent, #dc2626 25%, #fff 45% 55%, #facc15 75%, transparent); box-shadow: 0 0 26px 8px rgba(220,38,38,.8); animation: mooClaw 520ms ease-out both; }
+    @keyframes mooClaw { 0% { opacity: 1; transform: rotate(-32deg) scaleX(0); } 40% { opacity: 1; transform: rotate(-32deg) scaleX(1); } 100% { opacity: 0; transform: rotate(-32deg) scaleX(1) scaleY(.2); } }
+    [data-moo-meteor] { top: -12%; font-size: 64px; opacity: 0; filter: drop-shadow(0 0 16px rgba(251,146,60,1)); animation: mooMeteor 700ms cubic-bezier(.4,0,1,1) both; }
+    @keyframes mooMeteor { 0% { opacity: 0; transform: translate(40vw, 0) rotate(-20deg) scale(.6); } 15% { opacity: 1; } 90% { opacity: 1; transform: translate(-30vw, 80vh) rotate(-20deg) scale(1.3); } 100% { opacity: 0; transform: translate(-34vw, 86vh) scale(1.8); } }
+    [data-moo-tornado] { left: 0; font-size: 110px; margin-top: -55px; opacity: 0; filter: drop-shadow(0 0 20px rgba(250,204,21,.8)); animation: mooTornado 900ms ease-in-out both; }
+    @keyframes mooTornado { 0% { opacity: 0; transform: translateX(-40vw) scaleX(.8); } 15% { opacity: 1; } 50% { transform: translateX(40vw) scaleX(1.1) rotate(-6deg); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateX(110vw) scaleX(.9) rotate(6deg); } }
+    [data-moo-bolt] { font-size: 90px; opacity: 0; filter: drop-shadow(0 0 20px #fde047) drop-shadow(0 0 40px #fff); animation: mooBolt 360ms steps(2, jump-none) both; }
+    @keyframes mooBolt { 0% { opacity: 0; transform: scale(.6); } 20% { opacity: 1; transform: scale(1.2); } 40% { opacity: .2; } 60% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(1.3); } }
+    [data-moo-heaven] { left: calc(var(--sx) - 110px); top: 0; width: 220px; height: calc(var(--sy) + 120px); opacity: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,251,235,.75) 30% 70%, transparent); filter: blur(4px); animation: mooHeaven var(--em-dur) ease-in-out both; }
+    @keyframes mooHeaven { 0% { opacity: 0; transform: scaleX(.2); } 25%, 75% { opacity: 1; transform: scaleX(1); } 100% { opacity: 0; transform: scaleX(1.3); } }
+    [data-moo-feather] { top: -6%; font-size: 30px; opacity: 0; filter: drop-shadow(0 0 8px #fff); animation: mooFeather 900ms ease-in both; }
+    @keyframes mooFeather { 0% { opacity: 0; transform: translateY(0) rotate(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(45vh) rotate(160deg); } }
+    [data-moo-gather] { left: var(--sx); top: var(--sy); width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; opacity: 0;
+      background: radial-gradient(circle, #fff, rgba(250,204,21,.9) 50%, transparent 72%); box-shadow: 0 0 14px 4px rgba(250,204,21,.8); animation: mooGather 600ms ease-in both; }
+    @keyframes mooGather { 0% { opacity: 0; transform: translate(var(--gx), var(--gy)) scale(1.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(0, 0) scale(.3); } }
+    [data-moo-reticle] { width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; opacity: 0; border: 3px dashed rgba(250,204,21,.95);
+      box-shadow: 0 0 16px rgba(220,38,38,.9), inset 0 0 16px rgba(220,38,38,.6); animation: emLock 800ms ease-out both; }
+    /* 覚醒ムーの待機: 翼を広げるように左右へ張り、ときどき身をかがめて吠える。黒い気が立ちのぼり、目が赤く光る */
+    @keyframes mooIdleMenace {
+      0%, 100% { transform: translateY(0) scale(1, 1); filter: none; }
+      12% { transform: translateY(-10px) scale(1.06, .98); }
+      24% { transform: translateY(0) scale(.97, 1.02); }
+      36% { transform: translateY(-12px) scale(1.07, .98); }
+      48% { transform: translateY(0) scale(1, 1); }
+      60% { transform: translateY(6px) scale(1.03, .96); }
+      68% { transform: translateY(-6px) scale(1.1, 1.04); filter: brightness(1.25) drop-shadow(0 0 30px rgba(220,38,38,.9)); }
+      72% { transform: translate(-3px, -6px) scale(1.1, 1.04); }
+      76% { transform: translate(3px, -6px) scale(1.1, 1.04); filter: brightness(1.2) drop-shadow(0 0 26px rgba(220,38,38,.8)); }
+      86% { transform: translateY(-4px) scale(1.02); filter: none; }
+    }
+    @keyframes mooIdleSmoke { 0% { opacity: 0; transform: translateY(20%) scale(.9); } 30% { opacity: .85; } 100% { opacity: 0; transform: translateY(-18%) scale(1.15); } }
+    @keyframes mooIdleEye { 0%, 55%, 100% { opacity: .35; transform: scale(.8); } 68%, 80% { opacity: 1; transform: scale(1.3); } }
+    [data-tactics-look="rich"] [data-moo-stage]:not([data-enemy-skill]):not([data-enemy-hurt]) > img { animation: mooIdleMenace 4.2s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-moo-stage]::before { content: ''; position: absolute; inset: 8% 14% 10%; border-radius: 50%; pointer-events: none; z-index: 0; opacity: 0;
+      background: radial-gradient(18% 26% at 30% 70%, rgba(40,0,60,.8), transparent 70%), radial-gradient(20% 30% at 70% 65%, rgba(60,0,40,.8), transparent 70%),
+        radial-gradient(30% 34% at 50% 40%, rgba(88,28,135,.6), transparent 70%); filter: blur(6px); animation: mooIdleSmoke 3.2s ease-out infinite; }
+    [data-tactics-look="rich"] [data-moo-stage]::after { content: ''; position: absolute; left: 50%; top: 31%; width: 22%; height: 7%; margin-left: -11%; pointer-events: none; z-index: 2;
+      background: radial-gradient(closest-side at 32% 50%, rgba(255,60,60,.95), transparent), radial-gradient(closest-side at 68% 50%, rgba(255,60,60,.95), transparent);
+      mix-blend-mode: screen; filter: blur(2px); animation: mooIdleEye 4.2s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) {
+      [data-tactics-look] [data-moo-stage] > img, [data-tactics-look] [data-moo-stage]::before, [data-tactics-look] [data-moo-stage]::after { animation: none !important; }
+    }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
     [data-tactics-look] [data-enemy-ring="0"] { --mh-rc: 239,68,68; } [data-tactics-look] [data-enemy-ring="1"] { --mh-rc: 245,158,11; }
     [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
