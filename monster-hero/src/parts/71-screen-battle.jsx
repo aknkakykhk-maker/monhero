@@ -71,6 +71,18 @@ const HAND_CARD_FIT = Object.freeze({
   // 新しい盤面の技名の欄。種類の札が下の段へ移ったぶん広い
   nameRich: 'clamp(28px, 4.6dvh, 40px)',
 });
+// 枠に出す効果の光の種類(2026-09-24 ユーザー指示「支援系のアクションももう少しそれっぽく」)。
+// その子の枠に出た吹き出しの文字から決める。効果ごとに addPopup が40か所以上あるので、1つずつ種類を
+// 渡すより、ここで言葉から見分けるほうが漏れない。半減のお知らせなど、光らせないものは null
+const tacticsAuraKindOf = (text = '', side = '') => {
+  const t = String(text);
+  if (/半減|AUTO停止|片手持ち：/.test(t)) return null;
+  if (side === 'life' || /💚|回復|ドレイン|吸収|起き上がった/.test(t)) return 'heal';
+  if (side === 'guts' || /⚡|ガッツ|消費0|消費半減|消費ガッツ/.test(t)) return 'guts';
+  if (/防御|ガード|被ダメ|丈夫さ|軽減|反射|かばう/.test(t)) return 'shield';
+  if (/攻撃|闘志|会心|連撃|連斬|ソードスキル|緋桜|威力/.test(t)) return 'power';
+  return 'buff';
+};
 const kindOfTacticsSlotFx = (fx) => {
   if (!fx) return null;
   if (fx.evade) return 'evade';
@@ -379,7 +391,7 @@ function BattleScreen({
         })()}
         {(()=>{const rule=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);return [NIGHTMARE_SETTING.id,CHAOS_SETTING.id].includes(rule)&&<div data-extreme-battle-status={rule} className="shrink-0 grid grid-cols-4 items-center gap-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[10px] font-black leading-none text-purple-100"><span className="text-amber-300">{rule}</span>{extremeSpecialRuleLines(rule).map(([label,value])=><span key={label} className="text-center whitespace-nowrap">{label} {value}</span>)}</div>;})()}
         {enemy&&(
-          <div className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
+          <div data-enemy-bar className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
             <div className="flex justify-between items-center text-[11px] font-black italic uppercase tracking-tighter mb-0.5">
               <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/><span className="max-w-[34vw] truncate">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{iceLockTurns>0&&<span data-ice-lock-status className="shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[10px] not-italic tracking-tighter whitespace-nowrap text-cyan-100">❄️絶氷 {iceLockPreparing?'準備':<>{iceLockTurns}T　⬇30%</>}</span>}</span>
               <span className="text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span>
@@ -388,7 +400,7 @@ function BattleScreen({
                 ★細い線だったものを、ガラスの筒に色が入っているように見せる。
                   中身は上から下へ暗くなる縦のグラデーション、筒の上半分に白い照りを重ねる。
                 ★太くしたのは4pxだけ。ここは敵の名前と同じ帯なので、伸ばすと舞台が縮む */}
-            <div className="relative h-[14px] overflow-hidden rounded-full border-2 border-white/25 bg-slate-950" style={{boxShadow:'inset 0 2px 6px rgba(0,0,0,.85)'}}>
+            <div data-enemy-hpbar className="relative h-[14px] overflow-hidden rounded-full border-2 border-white/25 bg-slate-950" style={{boxShadow:'inset 0 2px 6px rgba(0,0,0,.85)'}}>
               <div className="h-full transition-all duration-1000" style={{width:`${(Math.max(0,enemy.hp)/enemy.maxHp)*100}%`,backgroundImage:'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'}}></div>
               <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{background:'linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))'}}></div>
             </div>
@@ -625,7 +637,7 @@ function BattleScreen({
             )}
             {/* 行動予測ラベルはmain下部に移動 */}
             {/* data-attack-target: 味方の攻撃モーションが狙う場所(measureAttackAim)。名前は変えない */}
-            <div className={`rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} data-attack-target style={enemyAttackAnim&&!ecoBattleView?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{top:'3dvh'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{top:'3dvh'}:{})}}>
+            <div data-enemy-ring={enemyDist} className={`rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} data-attack-target style={enemyAttackAnim&&!ecoBattleView?{padding:'clamp(6px,1.5dvh,16px)',animation:(enemyAttackFx?.kind==='move'?(isMooBoss(enemy?.id)?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{top:'3dvh'}:{}),...(!isMooBoss(enemy?.id)&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(6px,1.5dvh,16px)',...(isMooBoss(enemy?.id)?{top:'3dvh'}:{})}}>
               {/* 足元の影(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
                   丸枠の塗りを落としたぶん、影が無いと宙に浮いて見える。絵(z-[1])より下へ敷く。
                   ★丸枠は transform を持つので重ね順の島になる。この中に置けば絵の下に必ず入る */}
@@ -1066,7 +1078,9 @@ function BattleScreen({
               </div>
             );
           })()}
-        <div className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)'}}>
+        {/* ★盤面の上の縁に吹き出し(data-tactics-board-popups)が出ているあいだだけ、盤面を強化の札の帯(z-40)より前へ出す。
+            z-10 のままだと、上へ積んだ「💊 緊急回復」などが帯の裏に回って薄くしか見えなかった(2026-09-24) */}
+        <div className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)',...(tacticsNewLayout&&popups.some(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot))?{zIndex:60}:{})}}>
           {/* ★新しい盤面(2×2)では、ここ(盤面のまんなか)へ出すと4枠の境目に乗り、
               どの子のライフも読めなくなっていた(2026-09-23 ユーザー指示「敵への効果は敵の辺り、
               味方への効果は対象の味方や使ったモンスター」)。
@@ -1280,6 +1294,16 @@ function BattleScreen({
                   {(previewDmg>0||previewGuard>0)&&<div data-tactics-image-previews className="flex shrink-0 items-center gap-0.5">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}</div>}
                   <div className="flex min-w-0 flex-1 justify-end">{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} data-tactics-aimed-parts={slotAimHit.parts.length>1?slotAimHit.parts.join('/'):undefined} className="inline-flex h-[13px] max-w-full min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 text-[9px] font-black leading-none text-red-100 shadow"><span className="shrink-0">🎯{slotAimHit.taken>0?`-${tacticsAimNum(slotAimHit.taken)}`:''}</span>{slotAimHit.parts.length>1?<span className="min-w-0 truncate text-[7px] font-bold text-red-200/85">{tacticsAimParts(slotAimHit.parts,tacticsAimNum(slotAimHit.taken))}</span>:null}</span>}</div>
                 </div>)}
+                {/* 効果の光。吹き出しが出るたびに key が変わるので、同じ効果が続いても毎回光り直す。
+                    緊急回復・回復カードの戻り(tacticsSlotFx の heal/guts)もここで光らせる */}
+                {tacticsNewLayout&&(()=>{
+                  const last=popups.filter(p=>p.slot===i&&p.side!=='enemy').slice(-1)[0];
+                  const f=tacticsSlotFx&&tacticsSlotFx[i];
+                  let kind=last?tacticsAuraKindOf(last.text,last.side):null, key=last?`p${last.id}`:null;
+                  if(!kind&&f&&(f.heal>0||f.revive>0)){ kind='heal'; key=`fh${f.heal||0}-${f.revive||0}`; }
+                  else if(!kind&&f&&f.guts>0){ kind='guts'; key=`fg${f.guts}`; }
+                  return kind?<span key={key} aria-hidden="true" data-slot-aura={kind}/>:null;
+                })()}
                 {/* ★新しい盤面(2×2)では、このターンの出来事・技名・その子の効果の吹き出しを
                     **ライフ・ガッツの行より上**の1本の縦積みにまとめる(2026-09-23 ユーザー指示
                     「敵への効果は敵の辺り、味方への効果は対象の味方や使ったモンスター」)。
@@ -1548,7 +1572,7 @@ function BattleScreen({
                 「勇者モンに選んだときだけ効く特性」が今効いていることを確かめられるようにする */}
             <span className={`flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`}><span className="whitespace-nowrap">Action Cards</span> <span className="shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}{soulCoordinationCardBonus>0&&<span data-soul-coordination-bonus className="shrink-0 px-1.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-300/40 text-sky-200 whitespace-nowrap">魂格+1</span>}</span>
             <div className="flex items-center gap-0.5 shrink-0">
-              <button onClick={()=>setShowDeckInfo(true)} className={`flex h-8 items-center gap-0.5 px-2 bg-white/[.035] rounded-[10px] border border-white/[.08] shadow-[inset_0_1px_0_rgba(255,255,255,.04)] active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={9}/><span className="text-[10px]">VIEW</span></button>
+              <button data-battle-view-button onClick={()=>setShowDeckInfo(true)} className={`flex h-8 items-center gap-0.5 px-2 bg-white/[.035] rounded-[10px] border border-white/[.08] shadow-[inset_0_1px_0_rgba(255,255,255,.04)] active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={9}/><span className="text-[10px]">VIEW</span></button>
               {/* 緊急回復(2026-09-22 ユーザー指示「緊急回復は手札側の効果だから位置を変えたい」)。
                   ★もとは敵の絵の左に置いていたが、あの列は「敵や自分を見る」入口を並べた場所。
                     緊急はその場で使う行動なので、カードと同じ操作の列へ移した。

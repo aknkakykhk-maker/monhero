@@ -1060,9 +1060,15 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-slot-index="1"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
       --mh-pat: repeating-conic-gradient(from 0deg at 20% 62%, rgba(255,210,80,.15) 0 6deg, transparent 6deg 18deg) padding-box,
         radial-gradient(60% 60% at 20% 62%, rgba(255,200,60,.32), transparent 70%) padding-box; }
+    /* 中距離は「下から茂る草と舞う葉」。遠距離の「波紋(同心円)」と形が似ないように、輪を使わない(2026-09-24 ユーザー指摘) */
     [data-tactics-look] [data-slot-index="2"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
-      --mh-pat: radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.28), transparent 70%) padding-box,
-        repeating-radial-gradient(ellipse at 20% 115%, rgba(40,180,110,.17) 0 4px, transparent 4px 12px) padding-box; }
+      --mh-pat: radial-gradient(7px 3px at 58% 30%, rgba(110,231,183,.55), transparent 80%) padding-box,
+        radial-gradient(6px 2.5px at 78% 52%, rgba(110,231,183,.45), transparent 80%) padding-box,
+        radial-gradient(7px 3px at 40% 18%, rgba(167,243,208,.4), transparent 80%) padding-box,
+        radial-gradient(5px 2px at 88% 24%, rgba(110,231,183,.4), transparent 80%) padding-box,
+        repeating-linear-gradient(98deg, rgba(52,211,153,.30) 0 1.5px, transparent 1.5px 6px) bottom / 100% 34% no-repeat padding-box,
+        repeating-linear-gradient(82deg, rgba(16,185,129,.22) 0 1px, transparent 1px 8px) bottom / 100% 22% no-repeat padding-box,
+        radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.26), transparent 70%) padding-box; }
     [data-tactics-look] [data-slot-index="3"] { --mh-rc: 59,130,246; --mh-rc2: 200,225,255;
       --mh-pat: repeating-radial-gradient(circle at 20% 140%, rgba(90,160,255,.17) 0 3px, transparent 3px 11px) padding-box,
         radial-gradient(70% 60% at 20% 62%, rgba(80,150,255,.32), transparent 70%) padding-box; }
@@ -1118,9 +1124,78 @@ const createAnimationStyle = () => {
       background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.25), rgba(0,0,0,.35)) !important;
       box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.55), inset 0 0 10px rgba(0,0,0,.5) !important; }
     [data-tactics-look] [data-card-name] { text-shadow: 0 1px 0 rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.6); }
+    /* ==== 敵のまわりも同じ飾りにそろえる(2026-09-24 ユーザー指示「同じように敵領域にあるボタンや表示関係も見た目よくして」)。
+       金の細い縁取り・ガラスの照り・距離の色の光、を枠やカードと共通の言葉で使う。
+       ★ボタンの役割の色(青=勇者・赤=敵・琥珀=記録)は残す。縁取りと照りを重ねるだけ ==== */
+    @keyframes mhBarShine { 0%, 65% { transform: translateX(-120%); } 100% { transform: translateX(420%); } }
+    @keyframes mhRuneSpin { to { transform: rotate(360deg); } }
+    [data-tactics-look] [data-battle-header] { background: linear-gradient(180deg, #161c38, #0a0e1f) !important; border-bottom: 1px solid rgba(243,210,122,.5) !important;
+      box-shadow: 0 2px 12px rgba(0,0,0,.6), inset 0 -1px 0 rgba(255,230,160,.12); }
+    [data-tactics-look] [data-enemy-bar] { background: linear-gradient(180deg, rgba(30,10,16,.96), rgba(10,6,12,.97)) !important; border-bottom: 1px solid rgba(243,210,122,.35) !important; }
+    [data-tactics-look] [data-enemy-hpbar] { border-color: #d4af5a !important; height: 16px !important;
+      box-shadow: 0 0 0 1px rgba(40,26,6,.9), 0 0 10px rgba(239,68,68,.35), inset 0 2px 6px rgba(0,0,0,.85) !important; }
+    [data-tactics-look] [data-enemy-hpbar]::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 22%; pointer-events: none;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); transform: translateX(-120%); }
+    [data-tactics-look="rich"] [data-enemy-hpbar]::after { animation: mhBarShine 4s ease-in-out infinite; }
+    /* 舞台の四隅のボタンと、手札の上の操作ボタン */
+    [data-tactics-look] [data-battle-log-button], [data-tactics-look] button[aria-label="敵を解析する"], [data-tactics-look] button[aria-label="勇者モンのステータス"],
+    [data-tactics-look] [data-battle-view-button], [data-tactics-look] button[aria-label="緊急回復"], [data-tactics-look] button[aria-label^="AUTO"] {
+      border-color: rgba(243,210,122,.55) !important;
+      background-image: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 45%, rgba(0,0,0,.25)) !important;
+      box-shadow: 0 0 0 1px rgba(20,12,4,.85), 0 4px 12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,240,200,.35), 0 0 8px rgba(243,210,122,.18) !important; }
+    [data-tactics-look] [data-battle-menu-button] { border: 1px solid rgba(243,210,122,.55) !important; box-shadow: inset 0 1px 0 rgba(255,240,200,.3); }
+    /* ACTION(押せるとき)は金の縁と照り */
+    [data-tactics-look] [data-battle-action]:not(:disabled) { box-shadow: 0 0 0 2px #d4af5a, 0 0 0 3px rgba(40,26,6,.9), 0 0 16px rgba(255,210,120,.55), inset 0 2px 0 rgba(255,255,255,.6) !important; }
+    /* 敵の行動の札と、強化の札の帯 */
+    [data-tactics-look] [data-enemy-intent] { box-shadow: 0 0 0 1px rgba(243,210,122,.6), 0 0 0 2px rgba(30,10,10,.9), 0 6px 16px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,240,200,.25) !important; }
+    [data-tactics-look] [data-battle-buffs] { border-top: 1px solid rgba(243,210,122,.3); border-bottom: 1px solid rgba(243,210,122,.3);
+      background: linear-gradient(180deg, rgba(14,18,36,.96), rgba(6,8,18,.96)) !important; }
+    /* 敵の絵の右上の技の札(3連撃！など)。色と光(box-shadow)は技の種類のまま残し、金の縁は outline で重ねる */
+    [data-tactics-look] [data-enemy-notice] { outline: 1.5px solid rgba(243,210,122,.9); outline-offset: 1px;
+      background-image: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 50%) !important; }
+    /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
+    [data-tactics-look] [data-enemy-ring="0"] { --mh-rc: 239,68,68; } [data-tactics-look] [data-enemy-ring="1"] { --mh-rc: 245,158,11; }
+    [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
+    [data-tactics-look] [data-enemy-ring] { background: radial-gradient(closest-side, rgba(var(--mh-rc),.22), rgba(0,0,0,.4) 70%) !important;
+      box-shadow: 0 0 0 3px rgba(243,210,122,.55), 0 0 0 5px rgba(20,12,4,.85), 0 0 40px rgba(var(--mh-rc),.55), inset 0 0 30px rgba(var(--mh-rc),.35) !important; }
+    [data-tactics-look] [data-enemy-ring]::before { content: ''; position: absolute; inset: -16px; border-radius: 50%; pointer-events: none; z-index: 0;
+      background: repeating-conic-gradient(rgba(var(--mh-rc),.9) 0 3deg, transparent 3deg 12deg, rgba(255,240,200,.8) 12deg 13deg, transparent 13deg 30deg);
+      -webkit-mask: radial-gradient(circle, transparent 64%, #000 65%, #000 69%, transparent 70%); mask: radial-gradient(circle, transparent 64%, #000 65%, #000 69%, transparent 70%);
+      filter: drop-shadow(0 0 4px rgba(var(--mh-rc),.9)); }
+    [data-tactics-look="rich"] [data-enemy-ring]::before { animation: mhRuneSpin 14s linear infinite; }
+    /* ==== 枠に出す効果の光(2026-09-24 ユーザー指示「支援系のアクションももう少しそれっぽく」)。
+       回復=緑の光の粒が昇る / 攻撃=赤い光が下から吹き上がる / 守り=青い盾の輪が広がる / ガッツ=黄色の稲妻 / そのほか=金のきらめき。
+       1回きり(forwards)で消える。軽量表示では動きの代わりに短い色の点灯だけにする ==== */
+    @keyframes mhAuraGlow { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhAuraRise { 0% { transform: translateY(40%); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-60%); opacity: 0; } }
+    @keyframes mhAuraRing { 0% { transform: translate(-50%,-50%) scale(.3); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1.6); opacity: 0; } }
+    @keyframes mhAuraFlash { 0%, 100% { opacity: 0; } 10%, 30% { opacity: 1; } 20%, 40% { opacity: .3; } }
+    [data-tactics-look] [data-slot-aura] { position: absolute; inset: 0; border-radius: 14px; overflow: hidden; pointer-events: none; z-index: 66;
+      animation: mhAuraGlow 1.3s ease-out forwards; }
+    [data-tactics-look] [data-slot-aura]::before, [data-tactics-look] [data-slot-aura]::after { content: ''; position: absolute; pointer-events: none; }
+    [data-tactics-look] [data-slot-aura="heal"] { background: radial-gradient(70% 80% at 30% 70%, rgba(52,211,153,.45), transparent 70%); box-shadow: inset 0 0 18px rgba(52,211,153,.8); }
+    [data-tactics-look] [data-slot-aura="heal"]::before { left: 0; right: 0; top: 0; bottom: 0; animation: mhAuraRise 1.3s ease-out forwards;
+      background: radial-gradient(3px 3px at 18% 80%, #a7f3d0, transparent 70%), radial-gradient(2px 2px at 32% 60%, #fff, transparent 70%),
+        radial-gradient(3px 3px at 48% 90%, #6ee7b7, transparent 70%), radial-gradient(2px 2px at 64% 70%, #d1fae5, transparent 70%),
+        radial-gradient(3px 3px at 80% 85%, #a7f3d0, transparent 70%), radial-gradient(2px 2px at 26% 100%, #fff, transparent 70%); }
+    [data-tactics-look] [data-slot-aura="power"] { box-shadow: inset 0 0 20px rgba(248,113,113,.85); }
+    [data-tactics-look] [data-slot-aura="power"]::before { left: 0; right: 0; bottom: 0; height: 100%; animation: mhAuraRise 1.1s ease-out forwards;
+      background: repeating-linear-gradient(90deg, transparent 0 10px, rgba(252,165,165,.55) 10px 12px, transparent 12px 22px),
+        linear-gradient(0deg, rgba(239,68,68,.55), transparent 80%); -webkit-mask: linear-gradient(0deg, #000 30%, transparent); mask: linear-gradient(0deg, #000 30%, transparent); }
+    [data-tactics-look] [data-slot-aura="shield"] { box-shadow: inset 0 0 18px rgba(96,165,250,.85); }
+    [data-tactics-look] [data-slot-aura="shield"]::before { left: 30%; top: 58%; width: 90px; height: 90px; border-radius: 50%; animation: mhAuraRing 1.2s ease-out forwards;
+      border: 3px solid rgba(147,197,253,.95); box-shadow: 0 0 14px rgba(96,165,250,.9), inset 0 0 14px rgba(96,165,250,.6); }
+    [data-tactics-look] [data-slot-aura="guts"] { box-shadow: inset 0 0 18px rgba(251,191,36,.85); background: radial-gradient(60% 70% at 30% 60%, rgba(251,191,36,.35), transparent 70%); }
+    [data-tactics-look] [data-slot-aura="guts"]::before { inset: 0; animation: mhAuraFlash .9s linear forwards;
+      background: linear-gradient(115deg, transparent 38%, rgba(254,240,138,.95) 40%, transparent 42%), linear-gradient(115deg, transparent 58%, rgba(254,240,138,.8) 59%, transparent 61%); }
+    [data-tactics-look] [data-slot-aura="buff"] { box-shadow: inset 0 0 16px rgba(243,210,122,.8); }
+    [data-tactics-look] [data-slot-aura="buff"]::before { inset: 0; animation: mhAuraRise 1.2s ease-out forwards;
+      background: radial-gradient(2px 2px at 20% 80%, #fff3c4, transparent 70%), radial-gradient(3px 3px at 45% 90%, #f3d27a, transparent 70%), radial-gradient(2px 2px at 70% 75%, #fff, transparent 70%); }
+    [data-tactics-look="calm"] [data-slot-aura]::before { display: none; }
     @media (prefers-reduced-motion: reduce) {
       [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-index]::after, [data-tactics-look] [data-slot-circle],
-      [data-tactics-look] [data-card-frame], [data-tactics-look] [data-card-shine]::before, [data-tactics-look] [data-card-gem] { animation: none !important; }
+      [data-tactics-look] [data-card-frame], [data-tactics-look] [data-card-shine]::before, [data-tactics-look] [data-card-gem],
+      [data-tactics-look] [data-enemy-hpbar]::after, [data-tactics-look] [data-enemy-ring]::before { animation: none !important; }
     }
     /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
     @keyframes tacticsPopupRise {
