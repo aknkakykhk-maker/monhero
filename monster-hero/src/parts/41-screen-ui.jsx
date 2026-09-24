@@ -135,3 +135,70 @@ const ScreenSectionLabel = ({ children, note = '' }) => (
     {note && <span className="truncate text-[9px] font-bold text-slate-500">{note}</span>}
   </div>
 );
+
+// ==================== 強化フェーズ(WAVEクリア後の画面)の共通部品 ====================
+// WAVEをクリアしてから次のバトルが始まるまでに、トレーニング・供モン・配置・固有技・
+// アシストカードの画面が WAVE によって 1〜5 枚続く。どこまで進んで、あと何枚あるのかが
+// 分からなかったので、各画面の上に同じ形の並びを出す(並びは postWavePhasePlan が組む)。
+// 画面ごとの識別色もここで決める(背景の光・並びの「いまここ」の色)。
+const PHASE_STEP_LABELS = Object.freeze({
+  training:'トレーニング', growth:'自動成長', ally:'供モン', slot:'配置', skill:'固有技', teaching:'アシストカード',
+});
+const PHASE_ACCENT_RGB = Object.freeze({
+  training:'251,191,36', growth:'45,212,191', ally:'129,140,248', slot:'129,140,248', skill:'245,158,11', teaching:'192,132,252',
+});
+const phaseAccentRgb = (id) => PHASE_ACCENT_RGB[id] || '148,163,184';
+// 画面の根の背景。上から識別色の光を差す
+const phaseBackdropStyle = (id) => ({
+  backgroundColor:'#020617',
+  backgroundImage:`radial-gradient(ellipse 90% 45% at 50% 0%, rgba(${phaseAccentRgb(id)},.16), transparent 70%)`,
+});
+// 手順の並び。plan に current が無いとき(ラン開始時の配置・アシストカードなど)は何も出さない。
+//   plan     … ['training','ally',…](postWavePhasePlan の戻り値)
+//   current  … いまの画面の id
+//   nextWave … 並びの最後に「⚔ WAVE n」と出す(省略可。段が4つ以上のときは幅が足りないので出さない)
+// ★iPhone SE の幅(375px)でも1行に収める。済んだ段は名前を出さず ✓ の丸だけにする
+//   (名前は読み上げ用の aria-label と title に残す)。5段+WAVE を全部名前で並べると2行に折れていた
+const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
+  if (!Array.isArray(plan) || !plan.includes(current)) return null;
+  const at = plan.indexOf(current);
+  const showNext = Number(nextWave) > 0 && plan.length <= 3;
+  const accent = phaseAccentRgb(current);
+  const line = (on, key) => <span key={key} aria-hidden="true" className="block h-px w-1.5 shrink-0" style={{background:on?'rgba(255,255,255,.45)':'rgba(255,255,255,.14)'}}/>;
+  return (
+    <nav aria-label={`強化フェーズ ${at + 1}/${plan.length}：${PHASE_STEP_LABELS[current] || current}`}
+      data-phase-steps={`${current}:${at + 1}/${plan.length}`}
+      className={`flex flex-wrap items-center justify-center gap-x-1 gap-y-1 ${className}`}>
+      {plan.map((id, i) => {
+        const state = i < at ? 'done' : i === at ? 'now' : 'todo';
+        return (
+          <React.Fragment key={id}>
+            {i > 0 && line(i <= at, `line-${id}`)}
+            {state === 'done'
+              ? <span title={PHASE_STEP_LABELS[id] || id} aria-label={`${PHASE_STEP_LABELS[id] || id}（済み）`}
+                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-black text-emerald-300"
+                  style={{background:'rgba(52,211,153,.14)', border:'1px solid rgba(52,211,153,.4)'}}>✓</span>
+              : <span aria-current={state === 'now' ? 'step' : undefined}
+                  className={`shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-black leading-tight ${state === 'now' ? 'text-slate-950' : 'text-slate-500'}`}
+                  style={state === 'now' ? {background:`rgb(${accent})`, boxShadow:`0 0 10px rgba(${accent},.55)`}
+                    : {border:'1px solid rgba(255,255,255,.14)'}}>
+                  {PHASE_STEP_LABELS[id] || id}
+                </span>}
+          </React.Fragment>
+        );
+      })}
+      {showNext && <>
+        {line(false, 'line-next')}
+        <span className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-500">⚔ WAVE {nextWave}</span>
+      </>}
+    </nav>
+  );
+};
+// 見出しの上の小さな札(「WAVE 2 CLEAR」「ASSIST CARD」など)。識別色で縁取る
+const PhaseEyebrow = ({ id, children }) => {
+  const accent = phaseAccentRgb(id);
+  return (
+    <span className="inline-block rounded-full px-2.5 py-0.5 text-[9px] font-black tracking-[.2em]"
+      style={{border:`1px solid rgba(${accent},.45)`, background:`rgba(${accent},.1)`, color:`rgb(${accent})`}}>{children}</span>
+  );
+};

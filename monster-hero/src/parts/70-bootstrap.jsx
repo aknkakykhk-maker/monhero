@@ -15,7 +15,7 @@ const createAnimationStyle = () => {
     /* 味方の攻撃を「敵の位置」へ向けるための変数(24-battle-fx.jsx の attackAimVars が枠ごとに上書きする)。
        ここは測れなかったとき・図鑑などの既定値で、真上へ少し(今までの見え方に近い)。 */
     :root {
-      --atk-dx: 0px; --atk-dy: -120px; --atk-len: 120px; --atk-rot: 0deg;
+      --atk-dx: 0px; --atk-dy: -120px; --atk-len: 120px; --atk-rot: 0deg; --atk-side: 0;
       --pd-l-x: -56px; --pd-r-x: 56px; --pd-y: -60px;
       --pd-l-len: 97px; --pd-l-rot: 35.4deg; --pd-r-len: 97px; --pd-r-rot: -35.4deg;
     }
@@ -276,21 +276,23 @@ const createAnimationStyle = () => {
       55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(34,211,238,.92)) drop-shadow(0 10px 20px rgba(37,99,235,.62)); }
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(14,165,233,.82)); }
     }
+    /* 左右の滑りは --atk-side(敵が右なら1・左なら-1)ぶん敵の側へ寄せる。
+       端の枠の子が外側へ滑ると画面の外へ半分出て、消えたように見えていた(2026-09-24 ユーザー指摘) */
     @keyframes waterBurstAttack {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(103,232,249,.5)); }
       10% { transform:translate3d(0,8px,0) scale(.95,.88) rotate(-2deg); filter:drop-shadow(0 0 15px rgba(34,211,238,.9)); }
-      25% { transform:translate3d(-44px,-2px,0) scale(1.07) rotate(-7deg); filter:drop-shadow(24px 5px 0 rgba(125,211,252,.42)) drop-shadow(48px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 22px rgba(103,232,249,.98)); }
-      48% { transform:translate3d(46px,-8px,0) scale(1.10) rotate(7deg); filter:drop-shadow(-28px 4px 0 rgba(125,211,252,.42)) drop-shadow(-56px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 27px rgba(255,255,255,.98)); }
-      69% { transform:translate3d(-32px,-10px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(24px 4px 0 rgba(103,232,249,.34)) drop-shadow(48px 7px 0 rgba(37,99,235,.15)) drop-shadow(0 0 23px rgba(34,211,238,.94)); }
-      84% { transform:translate3d(20px,-4px,0) scale(1.04) rotate(3deg); filter:drop-shadow(-18px 3px 0 rgba(125,211,252,.28)) drop-shadow(0 0 17px rgba(103,232,249,.82)); }
+      25% { transform:translate3d(calc(-44px + var(--atk-side) * 30px),-2px,0) scale(1.07) rotate(-7deg); filter:drop-shadow(24px 5px 0 rgba(125,211,252,.42)) drop-shadow(48px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 22px rgba(103,232,249,.98)); }
+      48% { transform:translate3d(calc(46px + var(--atk-side) * 30px),-8px,0) scale(1.10) rotate(7deg); filter:drop-shadow(-28px 4px 0 rgba(125,211,252,.42)) drop-shadow(-56px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 27px rgba(255,255,255,.98)); }
+      69% { transform:translate3d(calc(-32px + var(--atk-side) * 30px),-10px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(24px 4px 0 rgba(103,232,249,.34)) drop-shadow(48px 7px 0 rgba(37,99,235,.15)) drop-shadow(0 0 23px rgba(34,211,238,.94)); }
+      84% { transform:translate3d(calc(20px + var(--atk-side) * 30px),-4px,0) scale(1.04) rotate(3deg); filter:drop-shadow(-18px 3px 0 rgba(125,211,252,.28)) drop-shadow(0 0 17px rgba(103,232,249,.82)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
     @keyframes waterBurstLunge {
       0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(34,211,238,.95)); }
-      18% { transform:translate3d(-52px,-4px,0) scale(1.11) rotate(-9deg); filter:drop-shadow(28px 5px 0 rgba(125,211,252,.5)) drop-shadow(58px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 28px rgba(255,255,255,.98)); }
-      43% { transform:translate3d(52px,-13px,0) scale(1.16) rotate(9deg); filter:drop-shadow(-32px 4px 0 rgba(125,211,252,.5)) drop-shadow(-64px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 34px rgba(255,255,255,1)); }
-      67% { transform:translate3d(-38px,-12px,0) scale(1.11) rotate(-6deg); filter:drop-shadow(28px 4px 0 rgba(103,232,249,.42)) drop-shadow(0 0 29px rgba(34,211,238,.98)); }
-      84% { transform:translate3d(24px,-5px,0) scale(1.06) rotate(4deg); filter:drop-shadow(-20px 3px 0 rgba(125,211,252,.34)) drop-shadow(0 0 21px rgba(103,232,249,.9)); }
+      18% { transform:translate3d(calc(-52px + var(--atk-side) * 30px),-4px,0) scale(1.11) rotate(-9deg); filter:drop-shadow(28px 5px 0 rgba(125,211,252,.5)) drop-shadow(58px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 28px rgba(255,255,255,.98)); }
+      43% { transform:translate3d(calc(52px + var(--atk-side) * 30px),-13px,0) scale(1.16) rotate(9deg); filter:drop-shadow(-32px 4px 0 rgba(125,211,252,.5)) drop-shadow(-64px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 34px rgba(255,255,255,1)); }
+      67% { transform:translate3d(calc(-38px + var(--atk-side) * 30px),-12px,0) scale(1.11) rotate(-6deg); filter:drop-shadow(28px 4px 0 rgba(103,232,249,.42)) drop-shadow(0 0 29px rgba(34,211,238,.98)); }
+      84% { transform:translate3d(calc(24px + var(--atk-side) * 30px),-5px,0) scale(1.06) rotate(4deg); filter:drop-shadow(-20px 3px 0 rgba(125,211,252,.34)) drop-shadow(0 0 21px rgba(103,232,249,.9)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
     }
     .water-burst-motion__wake { position:absolute; inset:0; z-index:2; overflow:visible; }
@@ -414,12 +416,13 @@ const createAnimationStyle = () => {
       55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(236,72,153,.92)) drop-shadow(0 10px 20px rgba(168,85,247,.6)); }
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(217,70,239,.82)); }
     }
-    /* 歌う本体。しゃがんで跳び、くるっと一回転(左右反転)してから敵のほうへ身を乗り出し、
+    /* 歌う本体。しゃがんで跳ね、体をひねってから敵のほうへ身を乗り出し、
+       (左右反転で回すと幅が0を通って一瞬消えて見えるので使わない。2026-09-24 ユーザー指摘)
        敵の向きへ体を傾けて拍を取りながら歌い、元位置へ戻る */
     @keyframes miaSongSing {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(244,114,182,.5)); }
       9% { transform:translate3d(0,6px,0) scale(1.1,.86) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.8)); }
-      20% { transform:translate3d(calc(var(--atk-dx) * .05),calc(var(--atk-dy) * .05 - 16px),0) scale(-1.08,1.08) rotate(-6deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
+      20% { transform:translate3d(calc(var(--atk-dx) * .05),calc(var(--atk-dy) * .05 - 18px),0) scale(1.1) rotate(-14deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
       32% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 6px),0) scale(1.12) rotate(calc(var(--atk-rot) * .35)); filter:drop-shadow(0 0 22px rgba(236,72,153,.95)); }
       46% { transform:translate3d(calc(var(--atk-dx) * .12),calc(var(--atk-dy) * .12 - 13px),0) scale(1.17) rotate(calc(var(--atk-rot) * .35 + 5deg)); filter:drop-shadow(0 0 26px rgba(255,255,255,.98)); }
       60% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 4px),0) scale(1.1) rotate(calc(var(--atk-rot) * .35 - 5deg)); filter:drop-shadow(0 0 22px rgba(192,132,252,.95)); }
@@ -427,10 +430,10 @@ const createAnimationStyle = () => {
       90% { transform:translate3d(0,-4px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
-    /* 固有技のタメ明け。沈んだ位置から高く跳んで回り、通常より大きく前へ出て歌う */
+    /* 固有技のタメ明け。沈んだ位置から高く跳んでひねり、通常より大きく前へ出て歌う */
     @keyframes miaSongSingLunge {
       0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.95)); }
-      18% { transform:translate3d(calc(var(--atk-dx) * .07),calc(var(--atk-dy) * .07 - 24px),0) scale(-1.16,1.16) rotate(-8deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
+      18% { transform:translate3d(calc(var(--atk-dx) * .07),calc(var(--atk-dy) * .07 - 26px),0) scale(1.18) rotate(-16deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
       30% { transform:translate3d(calc(var(--atk-dx) * .14),calc(var(--atk-dy) * .14 - 8px),0) scale(1.18) rotate(calc(var(--atk-rot) * .4)); filter:drop-shadow(0 0 28px rgba(236,72,153,.98)); }
       46% { transform:translate3d(calc(var(--atk-dx) * .16),calc(var(--atk-dy) * .16 - 18px),0) scale(1.24) rotate(calc(var(--atk-rot) * .4 + 6deg)); filter:drop-shadow(0 0 34px rgba(255,255,255,1)); }
       62% { transform:translate3d(calc(var(--atk-dx) * .14),calc(var(--atk-dy) * .14 - 6px),0) scale(1.16) rotate(calc(var(--atk-rot) * .4 - 6deg)); filter:drop-shadow(0 0 28px rgba(192,132,252,.98)); }
@@ -627,6 +630,36 @@ const createAnimationStyle = () => {
         30% { opacity:.9; transform:scale(1); }
         100% { opacity:0; transform:scale(1.4); }
       }
+    }
+    /* ミーアの待機アニメ(試作。24-battle-fx.jsx の MiaIdleArt)。
+       同じ絵を「翼以外」「左翼」「右翼」に切り抜いて重ね、翼を肩の付け根を軸に羽ばたかせる。
+       翼は体の後ろ(下の層)。動かすのは transform だけなので、レイアウトを作り直さない。
+       軸の位置: 正方形の枠へ 2:3 の絵を contain で置いたとき、元絵の (425,585) と (599,585) に当たる所 */
+    .mia-idle { position:relative; display:block; transform-origin:50% 96%; will-change:transform;
+      filter:drop-shadow(0 4px 3px rgb(0 0 0 / .07)) drop-shadow(0 2px 2px rgb(0 0 0 / .06));
+      animation:miaIdleHover 2600ms ease-in-out infinite; }
+    .mia-idle__body { position:relative; display:block; z-index:1; }
+    .mia-idle__wing { position:absolute; inset:0; display:block; z-index:0; will-change:transform; }
+    .mia-idle__wing--l { transform-origin:44.3% 38.1%; animation:miaIdleWingL 1300ms cubic-bezier(.45,0,.35,1) infinite; }
+    .mia-idle__wing--r { transform-origin:55.7% 38.1%; animation:miaIdleWingR 1300ms cubic-bezier(.45,0,.35,1) infinite; }
+    /* 宙に浮いているので、ゆっくり上下してわずかに伸び縮みする(呼吸) */
+    @keyframes miaIdleHover {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      50% { transform:translate3d(0,-4%,0) scale(.99,1.015); }
+    }
+    /* 羽ばたき。すばやく振り上げ、ゆっくり下ろす。振り上げたときは奥へ倒れるぶん少し細くする */
+    @keyframes miaIdleWingL {
+      0%,100% { transform:rotate(-3deg) scaleX(1); }
+      38% { transform:rotate(13deg) scaleX(.9); }
+    }
+    @keyframes miaIdleWingR {
+      0%,100% { transform:rotate(3deg) scaleX(1); }
+      38% { transform:rotate(-13deg) scaleX(.9); }
+    }
+    /* 軽量な見た目(タクティクスの calm)と「動きを減らす」設定では止める(絵はそのまま見える) */
+    [data-tactics-look="calm"] .mia-idle, [data-tactics-look="calm"] .mia-idle__wing { animation:none; }
+    @media (prefers-reduced-motion: reduce) {
+      .mia-idle, .mia-idle__wing { animation:none; }
     }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
        常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。
@@ -1156,6 +1189,106 @@ const createAnimationStyle = () => {
     /* 敵の攻撃・ためるは絵だけを動かす(丸枠とルーンの輪はその場に残す)。> span は敵の絵を包む要素 */
     [data-tactics-look] [data-enemy-ring][data-enemy-attack="fly"] > span { display: block; position: relative; z-index: 9999; animation: enemyAttackFly 450ms ease-in forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-attack="charge"] > span { display: block; position: relative; animation: enemyChargeShake 1100ms ease-in-out forwards; }
+    /* ==== 敵ごとの動き(2026-09-24 ユーザー指示「待機時間も動いてる感じに」「実際に動いてるように」「まずはカワズモー」)。
+       絵は1枚のまま。支点は足元(transform-origin 50% 92%)にして、伸び縮み・傾き・重心移動で「生きている」ように見せる。
+       待機は絵(img)、攻撃・ためる・やられは絵を包む要素(span)へ掛ける。足元の影も同じ拍子で伸び縮みさせる ==== */
+    /* カワズモー(力士のカエル): 待機は左右に重心を移しながらお腹で呼吸 / 攻撃は のけぞって溜め→踏み込んで張り手→戻る /
+       ためるは 片足を上げて四股を踏む / やられは のけぞって震える */
+    /* 2026-09-24 ユーザー指摘「思ってたより地味。もっと頑張って動き作れない？」で動きを大きく作り直した。
+       待機は6秒で1巡: 大きく揺れて呼吸(0〜50%) → 片足を上げて四股・土ぼこり(52〜76%) → くるっと横を向いて戻る(80〜98%) */
+    @keyframes kzIdle {
+      0%, 100% { transform: translateX(0) rotate(0) scale(1, 1); }
+      8% { transform: translateX(-8px) rotate(-6deg) scale(1.07, .94); }
+      16% { transform: translateX(0) rotate(0) scale(.96, 1.05); }
+      24% { transform: translateX(8px) rotate(6deg) scale(1.07, .94); }
+      32% { transform: translateX(0) rotate(0) scale(.96, 1.05); }
+      40% { transform: translateX(-8px) rotate(-6deg) scale(1.07, .94); }
+      48% { transform: translateX(0) rotate(0) scale(1, 1); }
+      54% { transform: translate(-6px, -4px) rotate(-12deg) scale(.95, 1.07); }
+      60% { transform: translate(-8px, -16px) rotate(-17deg) scale(.94, 1.09); }
+      63% { transform: translate(-7px, -15px) rotate(-16deg) scale(.94, 1.09); }
+      66% { transform: translate(0, 4px) rotate(0) scale(1.24, .8); }
+      69% { transform: translate(0, -3px) rotate(0) scale(.95, 1.07); }
+      73% { transform: translate(0, 0) rotate(0) scale(1.04, .97); }
+      78% { transform: scale(1, 1); }
+      82% { transform: scale(-1, 1) rotate(4deg); }
+      92% { transform: scale(-1, 1) rotate(-3deg); }
+      97% { transform: scale(1, 1); }
+    }
+    @keyframes kzShadow {
+      0%, 16%, 32%, 48%, 78%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
+      8%, 40% { transform: translateX(calc(-50% - 8px)) scaleX(1.12); }
+      24% { transform: translateX(calc(-50% + 8px)) scaleX(1.12); }
+      60%, 63% { transform: translateX(calc(-50% - 6px)) scaleX(.8); opacity: .7; }
+      66% { transform: translateX(-50%) scaleX(1.35); opacity: 1; }
+    }
+    /* 四股の土ぼこり(影の左右から吹き出して消える)。待機の66%と、ためるの踏み込みに合わせる */
+    @keyframes kzDustIdle {
+      0%, 65%, 100% { opacity: 0; transform: translateX(0) scale(.3); }
+      67% { opacity: .95; transform: translateX(0) scale(.6); }
+      76% { opacity: 0; transform: translateX(var(--kz-dx)) scale(1.4); }
+    }
+    @keyframes kzDust {
+      0%, 55% { opacity: 0; transform: translateX(0) scale(.3); }
+      60% { opacity: .95; transform: translateX(0) scale(.7); }
+      90%, 100% { opacity: 0; transform: translateX(var(--kz-dx)) scale(1.6); }
+    }
+    @keyframes kzSlap {
+      0% { transform: none; }
+      22% { transform: translateY(-6px) rotate(-12deg) scale(1.14, .84); }
+      40% { transform: translateY(28px) rotate(8deg) scale(.86, 1.22); }
+      52% { transform: translateY(88px) rotate(12deg) scale(1.32, .8); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
+      64% { transform: translateY(80px) rotate(8deg) scale(1.2, .88); filter: drop-shadow(0 0 22px rgba(220,38,38,.9)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzImpact {
+      0%, 48% { opacity: 0; transform: translateX(-50%) scale(.2); }
+      56% { opacity: 1; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0; transform: translateX(-50%) scale(1.8); }
+    }
+    @keyframes kzStomp {
+      0% { transform: none; }
+      14% { transform: translateY(4px) scale(1.12, .88); }
+      32% { transform: translate(-8px, -18px) rotate(-20deg) scale(.93, 1.1); }
+      38% { transform: translate(-6px, -18px) rotate(-19deg) scale(.93, 1.1); }
+      44% { transform: translate(-9px, -19px) rotate(-21deg) scale(.93, 1.1); }
+      50% { transform: translate(-7px, -18px) rotate(-20deg) scale(.93, 1.1); }
+      58% { transform: translateY(5px) rotate(0) scale(1.28, .76); filter: brightness(1.25) drop-shadow(0 0 22px rgba(251,191,36,1)); }
+      64% { transform: translate(-4px, 3px) scale(1.2, .82); }
+      70% { transform: translate(4px, 3px) scale(1.2, .82); }
+      78% { transform: translate(0, -4px) scale(.95, 1.07); filter: drop-shadow(0 0 12px rgba(251,191,36,.6)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzHurt {
+      0% { transform: none; }
+      16% { transform: translate(12px, -8px) rotate(16deg) scale(.88, 1.1); filter: brightness(2.2) saturate(.4); }
+      36% { transform: translate(-8px, 0) rotate(-8deg) scale(1.08, .94); filter: brightness(1.2); }
+      54% { transform: translate(5px, 0) rotate(4deg); filter: none; }
+      72% { transform: translate(-3px, 0) rotate(-2deg); }
+      100% { transform: none; }
+    }
+    [data-tactics-look] [data-enemy-motion] > span { display: block; position: relative; transform-origin: 50% 92%; }
+    [data-tactics-look] [data-enemy-motion] > span > img { transform-origin: 50% 92%; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > span > img { animation: kzIdle 6s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow] { animation: kzShadow 6s ease-in-out infinite; }
+    /* 土ぼこり: 影の左右に1つずつ */
+    [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::before, [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::after {
+      content: ''; position: absolute; bottom: 10%; width: 46%; height: 150%; border-radius: 50%; opacity: 0; pointer-events: none;
+      background: radial-gradient(closest-side, rgba(214,196,160,.85), rgba(160,140,110,.45) 55%, transparent); }
+    [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::before { left: -18%; --kz-dx: -26px; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::after { right: -18%; --kz-dx: 26px; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow]::before,
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow]::after { animation: kzDustIdle 6s ease-out infinite; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::after { animation: kzDust 1100ms ease-out forwards; }
+    /* 張り手の衝撃: 丸枠の下に赤い輪が広がる */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"]::after { content: ''; position: absolute; left: 50%; bottom: -14%; width: 70%; height: 30%; border-radius: 50%;
+      pointer-events: none; opacity: 0; z-index: 2;
+      background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(248,113,113,.8) 35%, rgba(239,68,68,.35) 65%, transparent); }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"]::after { animation: kzImpact 450ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-hurt] > span { animation: kzHurt 520ms ease-out forwards; }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
     [data-tactics-look] [data-enemy-ring="0"] { --mh-rc: 239,68,68; } [data-tactics-look] [data-enemy-ring="1"] { --mh-rc: 245,158,11; }
     [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
@@ -1198,7 +1331,9 @@ const createAnimationStyle = () => {
     @media (prefers-reduced-motion: reduce) {
       [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-index]::after, [data-tactics-look] [data-slot-circle],
       [data-tactics-look] [data-card-frame], [data-tactics-look] [data-card-shine]::before, [data-tactics-look] [data-card-gem],
-      [data-tactics-look] [data-enemy-hpbar]::after, [data-tactics-look] [data-enemy-ring]::before { animation: none !important; }
+      [data-tactics-look] [data-enemy-hpbar]::after, [data-tactics-look] [data-enemy-ring]::before,
+      [data-tactics-look] [data-enemy-motion] > span > img, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow],
+      [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow]::before, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow]::after { animation: none !important; }
     }
     /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
     @keyframes tacticsPopupRise {
@@ -1451,6 +1586,47 @@ const createAnimationStyle = () => {
     @keyframes idleSpark {
       0%,100% { opacity: 0.15; }
       50% { opacity: 0.9; }
+    }
+    /* 強化フェーズ(WAVEクリア後のトレーニング・供モン・配置・固有技・アシストカード)の画面。
+       根に .mh-phase を付けると、その器の高さで中身を組み替えられる(@container)。
+       横持ちのバトルは縦長のコラムのまま真ん中に置かれ(index.html の data-mh-portrait-layout)、
+       器は 390×390 ほどになる。そこへ縦持ち用の並びを積むとカードが潰れて重なっていたので、
+       背の低い器では .mh-phase-tall(助手の吹き出し・説明・合計の欄など、無くても選べるもの)を畳む。
+       自前で画面を回しているとき(data-mh-view-rotation)も、器の高さで判定するので同じく効く。 */
+    .mh-phase { container-type: size; }
+    /* .mh-phase-card は min-h-[112px] と一緒に付ける。背の低い器ではその下限だけを外す */
+    .mh-phase-gain { font-size: clamp(20px, 7vw, 30px); }
+    /* .mh-phase-mid … SE(667px)くらいから畳むもの(補足の説明文)。絵も一回り小さくする */
+    @container (max-height: 720px) {
+      .mh-phase-mid { display: none !important; }
+      .mh-phase-hero { width: 64px !important; height: 64px !important; margin-bottom: 4px !important; font-size: 44px; }
+    }
+    @container (max-height: 560px) {
+      .mh-phase-tall { display: none !important; }
+      .mh-phase-card { min-height: 0 !important; }
+      .mh-phase-gain { font-size: 18px; }
+      .mh-phase-hero { width: 44px !important; height: 44px !important; font-size: 32px; }
+      /* トレーニングの4枚は横1列に並べ替える(2列2行だと1枚の高さが60px台になり名前しか見えなかった) */
+      .mh-phase-cards { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; grid-template-rows: minmax(0, 1fr) !important; }
+      .mh-phase-card-icon, .mh-phase-stat-label, .mh-phase-bar { display: none !important; }
+      /* 1枚の幅が90px前後になるので、名前・数字・×1 の札を一回り小さくして重ならないようにする */
+      .mh-phase-card-name { font-size: 12px !important; }
+      .mh-phase-card-nums { font-size: 9px !important; }
+      .mh-phase-count { top: 3px !important; right: 3px !important; padding: 0 5px !important; font-size: 9px !important; }
+    }
+    /* 並んだカードが順に出てくる動き。--i に並び順を入れる。
+       fill-mode は backwards にする(both / forwards だと終わったあとも transform を握り続け、
+       押したときの active:scale-95 が効かなくなる) */
+    .mh-phase-enter { animation: mhPhaseEnter .38s cubic-bezier(.2,.8,.3,1) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+    @keyframes mhPhaseEnter { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+    /* 選んだ瞬間の弾み(×1 の札・伸びる量など)。key を変えて付け直すと毎回鳴る */
+    .mh-phase-pop { animation: mhPhasePop .34s cubic-bezier(.2,1.6,.4,1) backwards; }
+    @keyframes mhPhasePop { 0% { transform: scale(.55); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    /* 決定できるようになったボタンの呼吸 */
+    .mh-phase-ready { animation: mhPhaseReady 1.6s ease-in-out infinite; }
+    @keyframes mhPhaseReady { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-phase-enter, .mh-phase-pop, .mh-phase-ready { animation: none; }
     }
     @keyframes specialShockwave {
       0% { transform: scale(0.4); opacity: 0.9; }

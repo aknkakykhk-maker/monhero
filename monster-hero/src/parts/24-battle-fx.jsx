@@ -38,6 +38,8 @@ const attackAimVars = (dx, dy, {spread = 56} = {}) => {
   const deg = (v) => `${Math.round(v * 10) / 10}deg`;
   return {
     '--atk-dx': px(dx), '--atk-dy': px(dy), '--atk-len': px(main.len), '--atk-rot': deg(main.rot),
+    // 敵が右にいれば1・左なら-1・ほぼ真上なら0(水攻撃の左右の滑りを敵の側へ寄せるのに使う)
+    '--atk-side': String(dx > 12 ? 1 : (dx < -12 ? -1 : 0)),
     '--pd-l-x': px(dx * PANDORA_CLONE_REACH - spread), '--pd-r-x': px(dx * PANDORA_CLONE_REACH + spread),
     '--pd-y': px(dy * PANDORA_CLONE_REACH),
     // 分身は撃つあいだ .95 倍に縮むので、雷はそのぶん長くして敵まで届かせる
@@ -101,6 +103,33 @@ const AttackTargetFx = ({anim}) => {
       {[0, 45, 90, 135, 180, 225, 270, 315].map(deg => (
         <i key={deg} className="atk-target-fx__ray" style={{ '--atk-ray-angle':`${deg}deg` }}/>
       ))}
+    </span>
+  );
+};
+// ==== ミーアの待機アニメ(試作・2026-09-24 ユーザー指示「試しにミーアでやってみて」) ====
+// 絵は1枚のPNGなので描き足しはしない。同じ絵を「翼以外」「左の翼」「右の翼」の3枚に切り抜いて重ね
+// (切り抜きは images/monsters/mia-wing-*.png のマスク)、翼だけを肩の付け根を軸に回して羽ばたかせる。
+// 翼は体の後ろにあるので、動かしても穴が見えない。全体はゆっくり浮き沈みして呼吸する。
+// ・image はバトルで使う実際の絵(染色つき DyedMonsterImage)をそのまま受け取り、3回複製する
+// ・軸の位置は「正方形の枠に2:3の絵を contain で置いた」ときの座標。バトルの枠(58/64pxの正方形)専用
+// ・軽量表示・動きを減らす設定では止める(呼び出し側と CSS の両方で)
+const MIA_IDLE_MASK_STYLE = (url) => ({
+  WebkitMaskImage:`url(${url})`, maskImage:`url(${url})`,
+  WebkitMaskSize:'contain', maskSize:'contain',
+  WebkitMaskPosition:'center', maskPosition:'center',
+  WebkitMaskRepeat:'no-repeat', maskRepeat:'no-repeat',
+});
+const MiaIdleArt = ({image}) => {
+  // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと「翼以外」の層に翼の影が残り、
+  //   翼を上げたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体(.mia-idle)に1回だけ付ける
+  const className = String(image.props.className || '').split(/\s+/).filter(c => c && !/^drop-shadow/.test(c)).join(' ');
+  const layer = (url, extra) => React.cloneElement(image, { alt: extra ? '' : image.props.alt, className,
+    style:{ ...(image.props.style||{}), ...MIA_IDLE_MASK_STYLE(url), ...(extra||{}) } });
+  return (
+    <span className="mia-idle">
+      <span className="mia-idle__wing mia-idle__wing--l" aria-hidden="true">{layer(MIA_WING_LEFT_MASK, {display:'block'})}</span>
+      <span className="mia-idle__wing mia-idle__wing--r" aria-hidden="true">{layer(MIA_WING_RIGHT_MASK, {display:'block'})}</span>
+      <span className="mia-idle__body">{layer(MIA_WING_BODY_MASK, null)}</span>
     </span>
   );
 };
@@ -286,7 +315,7 @@ const WaterBurstMotion = ({image, lunge=false, charging=false, compact=false}) =
   </span>
 );
 // ミーア専用の歌攻撃演出。
-// 距離枠は動かさず、本体だけがくるっと回って敵のほうへ身を乗り出し、マイクスタンドの前で歌う。
+// 距離枠は動かさず、本体だけが跳ねて体をひねり、敵のほうへ身を乗り出し、マイクスタンドの前で歌う。
 // 音符は5つ、左右に揺れながら敵の位置(--atk-dx/dy)まで飛び、敵の向きへ音の波を3つ走らせる。
 // x は飛ぶ途中の左右の揺れ、y は途中でふくらむ高さ。追加画像・追加音源は使わず、攻撃中だけDOMへ出る
 // 固定数のCSS要素で描く(常時アニメーションにはしない)。
