@@ -40,7 +40,13 @@ const GAME = path.join(ROOT, 'monster-hero');
 const OUT_DIR = path.join(GAME, 'images', 'monsters', 'idle');
 const IMAGES_JS = path.join(GAME, 'data', 'images', 'images-ally.js');
 const FX_JSX = path.join(GAME, 'src', 'parts', '24-battle-fx.jsx');
-const MASK_LONG = 256; // マスクの長い辺(px)。表示は58〜64pxなので十分
+// マスクの長い辺(px)。図鑑の大きな立ち絵(スマホで 540px 前後)でも境目が粗くならない大きさ
+const MASK_LONG = 512;
+// 付け根のぼかし幅の既定(元絵の長い辺に対する %)。部分ごとに blend で変えられる
+const BLEND_DEFAULT = 5;
+// 付け根とみなす範囲(回転軸からの距離。元絵の長い辺に対する %)。部分ごとに joint で変えられる。
+// ★体に触れている所を全部付け根にすると、翼の先が体の脇に触れている所まで止まり、翼がちぎれて見えた
+const JOINT_DEFAULT = 7;
 
 const RIGS = [
   // 頭の葉は切れ目が頭の上を横切り、傾けると継ぎ目が見えたので動かさない(全体の弾みだけ)
@@ -57,18 +63,18 @@ const RIGS = [
   { id:'Pixie', img:'images/monsters/pixie.png', body:'hover', parts:[
     { name:'wingL', poly:[[24.5,55],[25,48],[29.5,38],[34.5,30],[39.3,27],[39.3,31.5],[38.6,34],[38.6,39.4],[41.6,39.6],[41.6,43.4],[41,44.2],[39.5,45.8],[37.5,48.2],[35.5,50.5],[33,52.3],[27,55.5]], share:[[40.8,39.4],[43.2,39.4],[43.2,43.4],[40.8,43.4]], pivot:[41.8,41.5], anim:'flapL', amp:12, dur:900, layer:'back' },
     { name:'wingR', poly:[[59,27.5],[61.5,29.5],[66,34],[70,42],[73.5,52],[73,55.5],[71,55],[67,52.3],[64.5,50.5],[62.5,48.2],[60.5,45.8],[59,44.2],[58.4,43.4],[58.4,40.3],[59.4,40],[59.4,34],[59.2,31.5]], share:[[56.8,40],[59.2,40],[59.2,44.4],[56.8,44.4]], pivot:[58.2,42.3], anim:'flapR', amp:12, dur:900, layer:'back' },
-    { name:'tail', poly:[[57,63.5],[62,63.5],[78,66],[78,79],[62,79],[59,73],[57.2,70.5],[57,67]], pivot:[57.2,67.5], anim:'wag', amp:7, dur:1600, layer:'back' },
+    { name:'tail', poly:[[58,63.5],[62,63.5],[78,66],[78,79],[62,79],[59,73],[58.2,70.5],[58,67]], pivot:[57.8,67.5], anim:'wag', amp:7, dur:1600, layer:'back' },
   ]},
   // 翼は色で切り抜いた専用マスク(mia-wing-*.png)を使っていたが、袖のふちの線と袖口の縞の一部まで翼に入り、
   // 羽ばたくと袖が欠けて袖口の欠片が一緒に動いた(2026-09-24 ユーザー指摘「ミーアも少し怪しい」)。
   // 翼の形に沿った多角形にし、袖と袖口の外側を回る。軸は袖の後ろの肩の付け根
   { id:'Mia', img:'images/monsters/mia.PNG', body:'hover', parts:[
-    { name:'wingL', poly:[[0,44],[5,42],[10,39.8],[13,35.5],[17,32.5],[20.5,31.8],[24,33.5],[28,37],[33,38.2],[37.5,37.3],[39.6,35.5],[38.9,37.8],[38.2,40],[36.2,42.5],[34.4,44.5],[32.5,46.5],[31,48],[28.5,48.6],[26.8,50],[25.5,52],[20,52.5],[10,53.5],[0,52]], pivot:[41.5,38.1], anim:'flapL', amp:16, dur:1300, layer:'back' },
-    { name:'wingR', poly:[[100,44],[95,42],[90,39.8],[87,35.5],[83,32.5],[79.5,31.8],[76,33.5],[72,37],[67,38.2],[62.5,37.3],[60.4,35.5],[61.1,37.8],[61.9,40],[63.8,42.5],[65.6,44.5],[67.5,46.5],[69,48],[71.8,48.4],[73,50],[74,52],[80,52.5],[90,53.5],[100,52]], pivot:[58.5,38.1], anim:'flapR', amp:16, dur:1300, layer:'back' },
+    { name:'wingL', poly:[[0,40],[6,36.5],[11,32.5],[15,30],[20.5,29.5],[24,33],[28,37],[33,38.2],[37.5,37.3],[39.6,35.5],[38.9,37.8],[38.2,40],[36.2,42.5],[34.4,44.5],[32.5,46.5],[31,48],[28.5,48.6],[26.8,50],[25.5,52],[20,52.5],[10,53.5],[0,53]], pivot:[41.5,38.1], anim:'flapL', amp:16, dur:1300, layer:'back' },
+    { name:'wingR', poly:[[100,40],[94,36.5],[89,32.5],[85,30],[79.5,29.5],[76,33],[72,37],[67,38.2],[62.5,37.3],[60.4,35.5],[61.1,37.8],[61.9,40],[63.8,42.5],[65.6,44.5],[67.5,46.5],[69,48],[71.8,48.4],[73,50],[74,52],[80,52.5],[90,53.5],[100,53]], pivot:[58.5,38.1], anim:'flapR', amp:16, dur:1300, layer:'back' },
   ]},
   { id:'Pandora', img:'images/monsters/pandora.PNG', body:'hover', parts:[
     { name:'wingL', poly:[[0,31],[20,28.5],[26,27.5],[31,28],[32.5,31],[34,33.8],[37,36.3],[36,37.8],[35.1,38.8],[34.4,41.2],[33.3,42.4],[31.9,44.2],[30.4,45.9],[28.9,47.4],[27.5,48],[25.5,48],[23.8,48.6],[22.5,50.5],[21.5,53],[15,54.5],[3,56],[0,56]], share:[[32.5,31.5],[36,33],[37.6,36.4],[34.2,37]], pivot:[33.5,34], anim:'flapL', amp:12, dur:1200, layer:'back' },
-    { name:'wingR', poly:[[68.5,26],[100,24],[100,68],[84,68],[83.3,59],[82.3,55.8],[80,53],[76.8,50.4],[74,48.6],[71,48.7],[69.3,48.2],[67.6,46],[66,43.8],[64.8,41.8],[64.8,39],[66,36.5],[68.2,33]], pivot:[67.5,36], anim:'flapR', amp:12, dur:1200, layer:'back' },
+    { name:'wingR', poly:[[68.5,26],[100,24],[100,68],[84,68],[83.3,59],[82.3,55.8],[80,53],[76.8,50.4],[74,48.6],[71,48.4],[70.2,48],[68.4,45.6],[66.8,43.4],[65.8,41.8],[65.5,39],[66.2,36.5],[68.2,33]], pivot:[67.5,36], anim:'flapR', amp:12, dur:1200, layer:'back' },
     { name:'tailL', poly:[[12,72],[20,69.5],[26.5,64],[31.5,61],[34,60.3],[36.6,60.5],[36.4,61.2],[35.8,63],[33.5,66],[31.5,68.5],[29.8,70.5],[28,73],[27.8,78],[26,83],[21,84.5],[11,80]], pivot:[35.2,61.2], anim:'swing', amp:7, dur:2000, layer:'back' },
     { name:'tailR', poly:[[66,61.8],[70,61.6],[72.5,64.5],[76,68.5],[79,71.5],[86,73],[86,85],[73,85],[71,76],[69,70.5],[66.8,66]], pivot:[67.6,63], anim:'swing', amp:-7, dur:2200, delay:400, layer:'back' },
   ]},
@@ -94,8 +100,8 @@ const RIGS = [
     // 「元の場所の線」と「縦にまっすぐ切れた付け根」が見えて動きがあらく見えた(2026-09-24 ユーザー指摘
     // 「ミタラシの動きがあらい」)。翼の形に沿った多角形で色を問わず切り抜き、体側の辺は体のふちに沿わせる。
     // 付け根が体の後ろへ回り込んでいるので、軸は付け根(首の切れ込みの手前)に置き、振れ幅を小さく・ゆっくりにする
-    { name:'wingL', poly:[[5,45],[12,39.5],[18,36.5],[22,35],[23.5,32],[26.6,32],[26.4,37.5],[27.8,39.1],[30.3,40.6],[27.8,44.5],[25.6,47.5],[23.6,50.5],[22.2,53.8],[21.5,55.5],[18.5,53.5],[17.5,51],[13,50.5],[9,48]], pivot:[28,41.5], anim:'flapL', amp:9, dur:1400, layer:'back' },
-    { name:'wingR', poly:[[95,45],[88,39.5],[82,36.5],[78,35],[76.5,32],[73.4,32],[73.6,37.5],[72.2,39.1],[69.7,40.6],[72.2,44.5],[74.4,47.5],[76.4,50.5],[77.8,53.8],[78.5,55.5],[81.5,53.5],[82.5,51],[87,50.5],[91,48]], pivot:[72,41.5], anim:'flapR', amp:9, dur:1400, layer:'back' },
+    { name:'wingL', poly:[[5,45],[12,39.5],[18,36.5],[22,35],[23.5,32],[26.6,32],[26.4,37.5],[27.8,39.1],[30.3,40.6],[27.8,44.5],[25.8,47.2],[24.2,49.6],[22.8,51],[21.3,52.7],[20.6,52.3],[19.8,50.3],[17,49.5],[13,49.5],[9,48]], pivot:[28,41.5], anim:'flapL', amp:9, dur:1400, layer:'back' },
+    { name:'wingR', poly:[[95,45],[88,39.5],[82,36.5],[78,35],[76.5,32],[73.4,32],[73.6,37.5],[72.2,39.1],[69.7,40.6],[72.2,44.5],[74.2,47.2],[75.8,49.6],[77.2,51],[78.7,52.7],[79.4,52.3],[80.2,50.3],[83,49.5],[87,49.5],[91,48]], pivot:[72,41.5], anim:'flapR', amp:9, dur:1400, layer:'back' },
   ]},
   // 翼は半透明で、右は大きなしっぽの前、左は体の上に重なっている。翼を切り抜いて動かすと、翼の後ろの
   // (絵に描かれていない)しっぽ・体の所が穴になり、明るさで翼だけ拾うと細かい点が体に散らばった
@@ -147,7 +153,8 @@ const toBox = (w, h, [px, py]) => {
 const writeMask = async (file, mw, mh, fn) => {
   const buf = Buffer.alloc(mw * mh * 4);
   for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) {
-    const p = (y * mw + x) * 4; buf[p] = buf[p + 1] = buf[p + 2] = 255; buf[p + 3] = fn(x, y) ? 255 : 0;
+    const p = (y * mw + x) * 4; buf[p] = buf[p + 1] = buf[p + 2] = 255;
+    const v = fn(x, y); buf[p + 3] = v === true ? 255 : (v ? Math.max(0, Math.min(255, Math.round(v))) : 0);
   }
   const png = await sharp(buf, { raw: { width: mw, height: mh, channels: 4 } }).png({ compressionLevel: 9 }).toBuffer();
   return png;
@@ -200,6 +207,41 @@ const replaceBlock = (text, begin, end, body) => {
       }
     });
     const ownedBy = (x, y) => (x < 0 || y < 0 || x >= mw || y >= mh) ? -2 : owner[y * mw + x];
+    // ★付け根のぼかし(2026-09-24 ユーザー指摘「まだ切れがある」「ちゃんと直して」)。
+    //   体と部分をくっきり分けると、部分を回したとき付け根で境目がずれ、すき間や段差が「切れ目」に見えた。
+    //   付け根(体の絵と接している所)から blend の幅だけ、体の絵から部分の絵へ少しずつ切り替える。
+    //   付け根は動かず、先へ行くほど大きく動くので、しなるように見えて切れ目が出ない。
+    //   back(体の後ろ)の部分: 部分は全部描き、上に重なる体のマスクを付け根で濃く・先へ向かって薄くする
+    //   front(体の前)の部分: 下の体は付け根の幅だけ残し、上に重なる部分のマスクを付け根で薄く・先へ向かって濃くする
+    const opaque = (x, y) => px[(y * mw + x) * 4 + 3] > 100;
+    const fadeOf = rig.parts.map((part, index) => {
+      const R = Math.max(1, (part.blend ?? BLEND_DEFAULT) / 100 * MASK_LONG);
+      const JR = (part.joint ?? JOINT_DEFAULT) / 100 * MASK_LONG;
+      const pvx = part.pivot[0] / 100 * mw, pvy = part.pivot[1] / 100 * mh;
+      const dist = new Float32Array(mw * mh).fill(Infinity);
+      const queue = [];
+      for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) {
+        if (owner[y * mw + x] !== index) continue;
+        if (Math.hypot(x + 0.5 - pvx, y + 0.5 - pvy) > JR) continue;
+        let joint = false;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx, ny = y + dy;
+          if (ownedBy(nx, ny) === -1 && opaque(nx, ny)) { joint = true; break; }
+        }
+        if (joint) { dist[y * mw + x] = 0; queue.push(y * mw + x); }
+      }
+      // 部分の中だけを通る距離(8方向・斜めは √2)。付け根の無い部分(体と接していない)はぼかさない
+      for (let q = 0; q < queue.length; q++) {
+        const i = queue[q], x = i % mw, y = (i - x) / mw;
+        for (const [dx, dy, w] of [[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.414],[1,-1,1.414],[-1,1,1.414],[-1,-1,1.414]]) {
+          const nx = x + dx, ny = y + dy; if (ownedBy(nx, ny) !== index) continue;
+          const j = ny * mw + nx, d = dist[i] + w;
+          if (d < dist[j] && d <= R) { dist[j] = d; queue.push(j); }
+        }
+      }
+      // 0 = 付け根(体の絵のまま) → 1 = 部分の絵。なめらかにつなぐ
+      return (x, y) => { const d = dist[y * mw + x]; if (!(d < R)) return 1; const t = d / R; return t * t * (3 - 2 * t); };
+    });
     for (const [partIndex, part] of rig.parts.entries()) {
       let maskConst = part.mask;
       if (!maskConst) {
@@ -208,7 +250,7 @@ const replaceBlock = (text, begin, end, body) => {
         // 部分は1px太らせる(体との境目に継ぎ目が出ないように。後ろの層は体に隠れる)
         const png = await writeMask(file, mw, mh, (x, y) => {
           const own = ownedBy(x, y);
-          if (own === partIndex) return true;
+          if (own === partIndex) return part.layer === 'front' ? 255 * fadeOf[partIndex](x, y) : true;
           // 付け根の重なり: 体の画素も部分に持たせる(ほかの部分の画素は取らない)
           if (own === -1 && part.share && inPoly(...at(x, y), part.share)) return true;
           if (own >= 0) return false; // ほかの部分の画素には広げない
@@ -228,12 +270,16 @@ const replaceBlock = (text, begin, end, body) => {
       else {
         bodyConst = constName(rig.id, 'body');
         const file = fileName(rig.id, 'body');
-        // 体 = どの部分のものでもない画素 ＋ 部分の付け根の重なり(share)
+        // 体 = どの部分のものでもない画素 ＋ 部分の付け根のぼかし ＋ 付け根の重なり(share)
         const png = await writeMask(file, mw, mh, (x, y) => {
           const own = ownedBy(x, y);
           if (own < 0) return true;
           const part = rig.parts[own];
-          return !!(part && part.share && inPoly(...at(x, y), part.share));
+          if (!part) return false;
+          if (part.share && inPoly(...at(x, y), part.share)) return true;
+          const f = fadeOf[own](x, y);
+          if (part.layer === 'front') return f < 1;
+          return 255 * (1 - f);
         });
         const dest = path.join(OUT_DIR, file);
         if (check) { if (!fs.existsSync(dest) || !fs.readFileSync(dest).equals(png)) stale.push(file); }
