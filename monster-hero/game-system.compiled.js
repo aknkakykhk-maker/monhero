@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4821694a10dce933
+// source-sha256: 4ff8b663d8653437
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d1e34cde430dbd52
+// generated-sha256: 96341cfe46e1400c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 17:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 17:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5641,6 +5641,14 @@ const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['D
 // ★軽量モードのときは、ここの値に関わらず SIMPLE として扱う(rhythmStageLevel)
 const RHYTHM_STAGE_EFFECTS = Object.freeze(['VIVID', 'CALM', 'SIMPLE']);
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
+// ===== 他の音ゲーから取り入れた表示(2026-09-24・ユーザー指示「他の音ゲーを学習して取り入れるとこを取り入れて / 設定でいじれるように」) =====
+// レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を何%隠すか。0で出さない
+const RHYTHM_LANE_COVER_MIN = 0,
+  RHYTHM_LANE_COVER_MAX = 60,
+  RHYTHM_LANE_COVER_STEP = 5;
+// ずれの見せ方(osu!・Arcaea)。STANDARD=FAST/SLOWだけ / MS=ずれの数字も / METER=数字とずれメーター
+const RHYTHM_TIMING_DISPLAYS = Object.freeze(['STANDARD', 'MS', 'METER']);
+const RHYTHM_TIMING_DISPLAY_LABELS = Object.freeze([['STANDARD', 'FAST/SLOW'], ['MS', '数字も'], ['METER', 'メーターも']]);
 const rhythmStageLevel = settings => settings && settings.lightweightMode ? 'SIMPLE' : RHYTHM_STAGE_EFFECTS.includes(settings && settings.stageEffect) ? settings.stageEffect : 'VIVID';
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']]);
@@ -5712,7 +5720,12 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定(省電力)で補われる
   frameRateMode: 'POWER_SAVE',
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定(派手)で補われる
-  stageEffect: 'VIVID'
+  stageEffect: 'VIVID',
+  // 他の音ゲーから取り入れた表示(2026-09-24)。どれも既存の保存値には無いので、読み込み時は既定で補われる
+  laneCover: 0,
+  timingDisplay: 'STANDARD',
+  comboStatusDisplay: true,
+  paceDisplay: true
 });
 const rhythmFiniteInRange = (value, min, max, fallback) => {
   const number = Number(value);
@@ -5761,7 +5774,11 @@ const normalizeRhythmSettings = value => {
     songPreviewEnabled: bool('songPreviewEnabled'),
     quietDuringPlay: bool('quietDuringPlay'),
     frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode,
-    stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect
+    stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
+    laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
+    timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
+    comboStatusDisplay: bool('comboStatusDisplay'),
+    paceDisplay: bool('paceDisplay')
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -23635,7 +23652,7 @@ const RhythmOptions = ({
     className: draft[key] === flag ? 'text-white' : 'text-slate-400'
   }, text))));
   const segments = (key, items) => /*#__PURE__*/React.createElement("div", {
-    className: `grid ${items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
+    className: `grid ${items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
   }, items.map(([id, text]) => /*#__PURE__*/React.createElement("button", {
     type: "button",
     key: id,
@@ -23811,7 +23828,15 @@ const RhythmOptions = ({
     suffix: '%'
   }), '画面の右上に出るライフ（♥のゲージと数字）の大きさです。100%が2026-09-13より前の大きさで、既定は150%です。ゲージは長さも太さも倍率どおりに伸び、数字も大きくなります。横画面ではもともとの長さが倍あるので、そのぶん長く伸びます。ハートだけは伸びをゆるめてあります（ここが行の高さを決めていて、大きくするとポーズボタンがレーンの台形へ寄ってしまうため）。ライフの減り方・DOWNの決まりは変わりません。', {
     full: true
-  }), field('FAST / SLOW表示', toggle('fastSlowDisplay')), field('判定文字表示', toggle('judgmentTextDisplay')), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+  }), field('FAST / SLOW表示', toggle('fastSlowDisplay')), field('判定文字表示', toggle('judgmentTextDisplay')), field('ずれの表示', segments('timingDisplay', RHYTHM_TIMING_DISPLAY_LABELS), '叩いたタイミングのずれの見せ方です。既定は「FAST/SLOW」です（osu!・Arcaea などにある表示です）。\n「FAST/SLOW」＝これまでどおり、早い・遅いだけを出します。\n「数字も」＝「FAST 23ms」のように、どれだけずれたかを数字でも出します。\n「メーターも」＝数字に加えて、判定ラインのすぐ上に「ずれメーター」を出します。真ん中の白い線がぴったりで、左が早い・右が遅いです。直近12回のずれが目盛りで並び、古いものほど薄くなります。帯の色は判定の色（金＝MARVELOUS・紫＝EXCELLENT・赤＝GREAT・緑＝GOOD・青＝BAD）です。\nFAST/SLOW表示をOFFにしているときは、数字も出ません。判定・スコアはどれでも変わりません。', {
+    full: true
+  }), field('レーンカバー', stepper('laneCover', RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, {
+    fine: RHYTHM_LANE_COVER_STEP,
+    coarse: 10,
+    suffix: '%'
+  }), 'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。', {
+    full: true
+  }), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだは COMBO の下に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、右上の経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
   }), field('コンボ数', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: wide ? 'mt-1.5' : 'mt-2'
@@ -25487,6 +25512,31 @@ const RhythmTapTest = ({
   const songProgressRef = useRef(null);
   // 経過時間の文字(「0:48/2:25」)。秒が変わったときだけ毎フレームの処理が書き換える
   const songTimeRef = useRef(null);
+  // 自己ベスト比(IIDXのペースメーカー)と、ずれメーター(osu!)。どちらも判定のたびに DOM へ直接書く
+  const paceRef = useRef(null),
+    meterTicksRef = useRef([]);
+  const timingDisplay = RHYTHM_TIMING_DISPLAYS.includes(settings.timingDisplay) ? settings.timingDisplay : 'STANDARD';
+  /* レーンカバーの形。高さは設定の%で、横はレーンの台形(rhythmProjectionScale)に沿って切り抜く。
+     台形のふちは少し曲がっているので、8か所で折って近づける(外へ1%だけはみ出させて、ふちの隙間を作らない) */
+  const laneCoverStyle = useMemo(() => {
+    const percent = rhythmFiniteStep(settings.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, 0);
+    if (!(percent > 0)) return null;
+    const steps = 8,
+      left = [],
+      right = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps,
+        half = Math.min(50, 50 * rhythmProjectionScale(t * percent / 100) + 1);
+      left.push(`${(50 - half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
+      right.unshift(`${(50 + half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
+    }
+    const clip = `polygon(${left.concat(right).join(',')})`;
+    return {
+      height: `${percent}%`,
+      clipPath: clip,
+      WebkitClipPath: clip
+    };
+  }, [settings.laneCover]);
   // 100コンボごとの演出。
   // 「段階(tier)が変わったときだけ」effectを動かすのが肝心で、以前は view.combo(=ノーツを取るたび
   // 毎回変わる値)を依存にしていたため、100→101など非節目の増加でも毎回effectが再実行され、
@@ -25536,6 +25586,14 @@ const RhythmTapTest = ({
   const lifeRatio = rhythmLifeRatio(view.life);
   const lifeState = rhythmLifeState(view.life);
   const comboTier = rhythmComboTier(view.combo);
+  /* フルコンボ・オールマーベラスが続いているか(プロセカ・CHUNITHM のコンボ色)。「COMBO」の字の色で見せる。
+     AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。設定で出さないこともできる */
+  const comboStatus = (() => {
+    if (settings.comboStatusDisplay === false || !view.counts) return '';
+    const c = view.counts;
+    if ((Number(c.BAD) || 0) + (Number(c.MISS) || 0) > 0) return '';
+    return (Number(c.EXCELLENT) || 0) + (Number(c.GREAT) || 0) + (Number(c.GOOD) || 0) > 0 ? 'FC' : 'AM';
+  })();
   // コンボ数の置き場所(2026-09-12・ユーザー指示)。座標は index.html の
   // [data-combo-pos="…"] が持つので、ここは名前をそのまま属性へ渡すだけ。
   const comboPosition = RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER';
@@ -25984,14 +26042,44 @@ const RhythmTapTest = ({
       slow: run.slow,
       precise: run.precise,
       life: run.life,
+      lastDeltaMs: judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null,
       ...(showAbilityFlash ? {
         ability: abilityFlash
       } : {})
     }));
     scheduleJudgmentClear();
+    /* 自己ベスト比(beatmania IIDX のペースメーカー)。「自己ベストを曲のここまでの割合で割り戻した点」との差。
+       前の記録が無い曲・練習・タイミング合わせでは出さない。★見た目だけで、スコアにも記録にも入れない */
+    const paceEl = paceRef.current;
+    if (paceEl && settings.paceDisplay !== false && !tutorial && !calibrating && Number(run.startBestScore) > 0 && chart.totalNotes > 0) {
+      const judged = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (Number(run.counts[id]) || 0), 0);
+      const diff = Math.round(score - Number(run.startBestScore) * judged / chart.totalNotes);
+      paceEl.hidden = false;
+      paceEl.dataset.pace = diff >= 0 ? 'up' : 'down';
+      paceEl.textContent = `ベスト比 ${diff >= 0 ? '+' : '−'}${Math.abs(diff).toLocaleString()}`;
+    }
+    /* ずれメーター(osu! のヒットエラーメーター)。直近12回のずれを目盛りに並べ、古いものほど薄くする。
+       目盛りの幅は BAD の窓(±185ms)。判定には一切関わらない */
+    if (settings.timingDisplay === 'METER' && judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs)) {
+      const ticks = meterTicksRef.current;
+      if (ticks.length) {
+        const slot = run._meterSlot = ((run._meterSlot ?? -1) + 1) % ticks.length;
+        const range = RHYTHM_JUDGMENTS.find(item => item.id === 'BAD')?.windowMs || 185;
+        const tick = ticks[slot];
+        if (tick) {
+          tick.style.left = `${(50 + Math.max(-1, Math.min(1, deltaMs / range)) * 50).toFixed(2)}%`;
+          tick.dataset.judgment = judgment;
+        }
+        ticks.forEach((el, i) => {
+          if (!el) return;
+          const age = (slot - i + ticks.length) % ticks.length;
+          el.style.opacity = el.dataset.judgment ? String(Math.max(.12, 1 - age / ticks.length).toFixed(2)) : '0';
+        });
+      }
+    }
     if (showAbilityFlash) scheduleAbilityClear();
     if (_judgeT0) RHYTHM_PERF.judge(performance.now() - _judgeT0, !!monster);
-  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, tutorial, calibrating]);
+  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, settings.paceDisplay, settings.timingDisplay, tutorial, calibrating]);
   const finish = useCallback(() => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
@@ -27556,6 +27644,14 @@ const RhythmTapTest = ({
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
   }, "0:00")), /*#__PURE__*/React.createElement("b", {
+    ref: paceRef,
+    "data-rhythm-pace": true,
+    hidden: true,
+    className: "w-full truncate text-right text-[9px] font-black leading-none tabular-nums text-slate-300",
+    style: {
+      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+    }
+  }), /*#__PURE__*/React.createElement("b", {
     ref: abilityBadgeRef,
     "data-rhythm-ability-badge": true,
     hidden: true,
@@ -27633,6 +27729,7 @@ const RhythmTapTest = ({
     "aria-hidden": "true"
   }), settings.comboDisplay !== false && view.combo > 0 && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-combo-box": true,
+    "data-combo-status": comboStatus,
     "data-combo-tier": String(comboTier),
     "data-combo-pos": comboPosition,
     "data-combo-wide": isLandscape ? '1' : '',
@@ -27653,7 +27750,10 @@ const RhythmTapTest = ({
   }, view.combo), /*#__PURE__*/React.createElement("span", {
     "data-rhythm-combo-label": true,
     className: "mt-1 block font-black leading-none tracking-[0.36em]"
-  }, "COMBO")), /*#__PURE__*/React.createElement("div", {
+  }, "COMBO"), comboStatus && /*#__PURE__*/React.createElement("span", {
+    "data-rhythm-combo-status-mark": comboStatus,
+    className: "mt-1 block font-black leading-none"
+  }, comboStatus === 'AM' ? 'ALL MARVELOUS' : 'FULL COMBO')), /*#__PURE__*/React.createElement("div", {
     ref: judgmentBandRef,
     "data-rhythm-judgment-band": true,
     "aria-hidden": "true",
@@ -27766,7 +27866,32 @@ const RhythmTapTest = ({
     className: "block text-[26px] font-black leading-none tracking-wide text-white"
   }, view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? view.last : ''), /*#__PURE__*/React.createElement("small", {
     className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
-  }, settings.fastSlowDisplay ? view.fastSlow || '—' : '—')), comboMilestone > 0 && /*#__PURE__*/React.createElement("div", {
+  }, settings.fastSlowDisplay ? view.fastSlow ? timingDisplay !== 'STANDARD' && typeof view.lastDeltaMs === 'number' ? `${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms` : view.fastSlow : '—' : '—'), timingDisplay === 'METER' && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-timing-meter": true,
+    "aria-hidden": "true",
+    className: "absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2",
+    style: {
+      '--meter-mar': `${(55 / 185 * 50).toFixed(2)}%`,
+      '--meter-exc': `${(100 / 185 * 50).toFixed(2)}%`,
+      '--meter-gre': `${(150 / 185 * 50).toFixed(2)}%`,
+      '--meter-goo': `${(170 / 185 * 50).toFixed(2)}%`
+    }
+  }, /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-timing-meter-band": true
+  }), /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-timing-meter-center": true
+  }), Array.from({
+    length: 12
+  }, (_, i) => /*#__PURE__*/React.createElement("i", {
+    key: i,
+    ref: el => {
+      meterTicksRef.current[i] = el;
+    },
+    "data-rhythm-timing-meter-tick": true,
+    style: {
+      opacity: 0
+    }
+  })))), comboMilestone > 0 && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-combo-milestone": true,
     "data-milestone-stage": comboMilestoneStage,
     "aria-hidden": "true",
@@ -27786,7 +27911,11 @@ const RhythmTapTest = ({
     ref: noteCanvasRef,
     "data-rhythm-note-canvas": true,
     "aria-hidden": "true"
-  }) : noteElements, canvasFaceElements, calibrating && /*#__PURE__*/React.createElement("div", {
+  }) : noteElements, canvasFaceElements, laneCoverStyle && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-lane-cover": true,
+    "aria-hidden": "true",
+    style: laneCoverStyle
+  }), calibrating && /*#__PURE__*/React.createElement("div", {
     ref: calibrationBannerRef,
     "data-rhythm-calibration-banner": true,
     className: "pointer-events-none absolute z-20 rounded-2xl border border-amber-300/60 bg-slate-950/92 text-center shadow-[0_0_18px_rgba(251,191,36,.18)]",

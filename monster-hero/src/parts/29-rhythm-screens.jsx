@@ -97,7 +97,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
       <span className={draft[key]===flag?'text-white':'text-slate-400'}>{text}</span>
     </button>)}
   </div>;
-  const segments=(key,items)=><div className={`grid ${items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
+  const segments=(key,items)=><div className={`grid ${items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
   // ★ここは項目の「入れ物」なので、余白・字の大きさは2026-09-05に広げたまま触らない。
   // ★数値のように横幅の要る項目は wide。縦持ち(2列)ではぶち抜き、
@@ -180,6 +180,15 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               '画面の右上に出るライフ（♥のゲージと数字）の大きさです。100%が2026-09-13より前の大きさで、既定は150%です。ゲージは長さも太さも倍率どおりに伸び、数字も大きくなります。横画面ではもともとの長さが倍あるので、そのぶん長く伸びます。ハートだけは伸びをゆるめてあります（ここが行の高さを決めていて、大きくするとポーズボタンがレーンの台形へ寄ってしまうため）。ライフの減り方・DOWNの決まりは変わりません。',{full:true})}
             {field('FAST / SLOW表示',toggle('fastSlowDisplay'))}
             {field('判定文字表示',toggle('judgmentTextDisplay'))}
+            {/* ===== 他の音ゲーから取り入れた表示(2026-09-24・ユーザー指示「設定でいじれるように」) ===== */}
+            {field('ずれの表示',segments('timingDisplay',RHYTHM_TIMING_DISPLAY_LABELS),
+              '叩いたタイミングのずれの見せ方です。既定は「FAST/SLOW」です（osu!・Arcaea などにある表示です）。\n「FAST/SLOW」＝これまでどおり、早い・遅いだけを出します。\n「数字も」＝「FAST 23ms」のように、どれだけずれたかを数字でも出します。\n「メーターも」＝数字に加えて、判定ラインのすぐ上に「ずれメーター」を出します。真ん中の白い線がぴったりで、左が早い・右が遅いです。直近12回のずれが目盛りで並び、古いものほど薄くなります。帯の色は判定の色（金＝MARVELOUS・紫＝EXCELLENT・赤＝GREAT・緑＝GOOD・青＝BAD）です。\nFAST/SLOW表示をOFFにしているときは、数字も出ません。判定・スコアはどれでも変わりません。',{full:true})}
+            {field('レーンカバー',stepper('laneCover',RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,{fine:RHYTHM_LANE_COVER_STEP,coarse:10,suffix:'%'}),
+              'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。',{full:true})}
+            {field('フルコンボ表示',toggle('comboStatusDisplay'),
+              'フルコンボ（BAD・MISSなし）が続いているあいだは COMBO の下に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。')}
+            {field('自己ベスト比',toggle('paceDisplay'),
+              'いまのペースが自己ベストより上か下かを、右上の経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。')}
             {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
             {/* ★出す/出さないと置き場所は**同じ枠にまとめる**(2026-09-13・ユーザー指摘
                 「オプションの配置もコンボを出すとコンボの位置選択から隣り合わせにないのも
