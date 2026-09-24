@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: acb3471c329433a3
+// source-sha256: 5bfc1ac1875ba623
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e295b3eba25e6fe7
+// generated-sha256: 4ba755f4fa2e5f01
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -177,7 +177,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 13:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 13:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38467,7 +38467,7 @@ const handCardNameFit = (name, boxHeight) => {
   const lh = lines === 3 ? 1.08 : 1.15;
   const byHeight = boxHeight ? `, calc(${boxHeight} / ${(lines * lh).toFixed(2)})` : '';
   return {
-    fontSize: `min(${lines === 3 ? 9 : 11}px, calc((100cqw - 6px) / ${perLine})${byHeight})`,
+    fontSize: `min(${lines === 3 ? 10 : 11}px, calc((100cqw - 6px) / ${perLine})${byHeight})`,
     lineHeight: String(lh)
   };
 };
@@ -38481,7 +38481,10 @@ const HAND_CARD_FIT = Object.freeze({
   band: 'clamp(13px, 1.9dvh, 16px)',
   gutsPad: 'clamp(2px, 0.45dvh, 4px)',
   // 新しい盤面の「⇄技変更」(ガッツの段を宝石へ移したぶん、ボタンだけで押しやすい高さにする)
-  skill: 'clamp(22px, 3.1dvh, 28px)'
+  // 技変更の文字(上)と種類の札(下)を1つの段に入れる
+  skill: 'clamp(26px, 3.6dvh, 30px)',
+  // 新しい盤面の技名の欄。種類の札が下の段へ移ったぶん広い
+  nameRich: 'clamp(28px, 4.6dvh, 40px)'
 });
 const kindOfTacticsSlotFx = fx => {
   if (!fx) return null;
@@ -41216,8 +41219,8 @@ function BattleScreen({
       "data-card-name": true,
       className: "text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5",
       style: {
-        height: HAND_CARD_FIT.name,
-        ...handCardNameFit(c.name, HAND_CARD_FIT.name)
+        height: tacticsNewLayout ? HAND_CARD_FIT.nameRich : HAND_CARD_FIT.name,
+        ...handCardNameFit(c.name, tacticsNewLayout ? HAND_CARD_FIT.nameRich : HAND_CARD_FIT.name)
       }
     }, c.name), (() => {
       // カードの表に「ジャンル」と「誰に効くか」を出す(仕様: BATTLE_NEW_MODE_PLAN.md 4.4
@@ -41229,39 +41232,51 @@ function BattleScreen({
       const genre = tacticsCardGenre ? tacticsCardGenre(c) : null;
       const scope = tacticsCardScope ? tacticsCardScope(c) : null;
       const text = genre ? scope && scope !== '敵へ' ? `${genre}・${scope}` : genre : '';
+      // 新しい盤面では下の段(技変更の枠の中・いちばん下)へ出すので、ここには出さない
+      if (tacticsNewLayout) return null;
       return text ? /*#__PURE__*/React.createElement("div", {
         "data-card-genre": genre,
         "data-card-scope": scope || undefined,
         className: "w-full truncate rounded-[5px] bg-black/30 px-0.5 text-[8px] font-black leading-[11px] text-white/85"
       }, text) : null;
-    })(), tacticsNewLayout ? ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
-      role: "button",
-      "aria-label": `${c.name}の技を変える`,
-      "data-skill-change": i,
-      onClick: ev => {
-        ev.stopPropagation();
-        if (isBusy || autoBattleRef.current || Date.now() <= suppressCardClickRef.current) return;
-        setSkillPicker({
-          handIndex: i
-        });
-      },
-      style: {
-        height: HAND_CARD_FIT.skill
-      },
-      className: `flex w-full shrink-0 items-center justify-center gap-0.5 rounded-[7px] border border-white/60 bg-white/[.14] text-[10px] font-black leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
-    }, /*#__PURE__*/React.createElement("span", {
-      "aria-hidden": "true"
-    }, "\u21C4"), "\u6280\u5909\u66F4")
-    // ★攻撃以外のカードにも同じ高さの空きを取る(2026-09-24 ユーザー指摘「攻撃カードだけ技変更で上にずれるのがださい」)。
-    //   無いと攻撃カードだけ名前と種類の段が上へ押し上がり、手札の並びがそろわない。押しても何も起きない
-    : /*#__PURE__*/React.createElement("div", {
-      "aria-hidden": "true",
-      "data-skill-change-spacer": true,
-      style: {
-        height: HAND_CARD_FIT.skill
-      },
-      className: "w-full shrink-0 pointer-events-none"
-    }) : ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
+    })(), tacticsNewLayout ? (() => {
+      const genre = tacticsCardGenre ? tacticsCardGenre(c) : null;
+      const scope = tacticsCardScope ? tacticsCardScope(c) : null;
+      const text = genre ? scope && scope !== '敵へ' ? `${genre}・${scope}` : genre : '';
+      const label = text ? /*#__PURE__*/React.createElement("div", {
+        "data-card-genre": genre,
+        "data-card-scope": scope || undefined,
+        className: "w-full truncate rounded-[5px] bg-black/35 px-0.5 text-[8px] font-black leading-[11px] text-white/85"
+      }, text) : null;
+      return ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
+        role: "button",
+        "aria-label": `${c.name}の技を変える`,
+        "data-skill-change": i,
+        onClick: ev => {
+          ev.stopPropagation();
+          if (isBusy || autoBattleRef.current || Date.now() <= suppressCardClickRef.current) return;
+          setSkillPicker({
+            handIndex: i
+          });
+        },
+        style: {
+          height: HAND_CARD_FIT.skill
+        },
+        className: `flex w-full shrink-0 flex-col items-stretch justify-between gap-px rounded-[7px] border border-white/60 bg-white/[.14] p-[2px] text-white shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "flex items-center justify-center gap-0.5 pt-px text-[9px] font-black leading-none"
+      }, /*#__PURE__*/React.createElement("span", {
+        "aria-hidden": "true"
+      }, "\u21C4"), "\u6280\u5909\u66F4"), label)
+      // 攻撃以外は同じ高さで、種類の札だけをいちばん下に置く(押しても何も起きない)
+      : /*#__PURE__*/React.createElement("div", {
+        "data-skill-change-spacer": true,
+        style: {
+          height: HAND_CARD_FIT.skill
+        },
+        className: "flex w-full shrink-0 flex-col justify-end rounded-[7px] border border-transparent p-[2px] pointer-events-none"
+      }, label);
+    })() : ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
       role: "button",
       "aria-label": `${c.name}の技を変える`,
       "data-skill-change": i,

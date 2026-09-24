@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e295b3eba25e6fe7
+// generated-sha256: 4ba755f4fa2e5f01
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -102,7 +102,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 13:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 13:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22066,7 +22066,7 @@ const handCardNameFit = (name, boxHeight) => {
   const perLine = Math.ceil(n / lines);
   const lh = lines === 3 ? 1.08 : 1.15;
   const byHeight = boxHeight ? `, calc(${boxHeight} / ${(lines * lh).toFixed(2)})` : '';
-  return { fontSize: `min(${lines === 3 ? 9 : 11}px, calc((100cqw - 6px) / ${perLine})${byHeight})`, lineHeight: String(lh) };
+  return { fontSize: `min(${lines === 3 ? 10 : 11}px, calc((100cqw - 6px) / ${perLine})${byHeight})`, lineHeight: String(lh) };
 };
 // 手札のカードの中の段の高さ。★カードの高さは画面の高さで変わる(844pxで133px、667pxで111px)。
 // 固定の px のままだと、背の低い画面では「⇄ 技変更」の帯を足したぶん(もとから4px)下へはみ出していた。
@@ -22078,7 +22078,10 @@ const HAND_CARD_FIT = Object.freeze({
   band: 'clamp(13px, 1.9dvh, 16px)',
   gutsPad: 'clamp(2px, 0.45dvh, 4px)',
   // 新しい盤面の「⇄技変更」(ガッツの段を宝石へ移したぶん、ボタンだけで押しやすい高さにする)
-  skill: 'clamp(22px, 3.1dvh, 28px)',
+  // 技変更の文字(上)と種類の札(下)を1つの段に入れる
+  skill: 'clamp(26px, 3.6dvh, 30px)',
+  // 新しい盤面の技名の欄。種類の札が下の段へ移ったぶん広い
+  nameRich: 'clamp(28px, 4.6dvh, 40px)',
 });
 const kindOfTacticsSlotFx = (fx) => {
   if (!fx) return null;
@@ -23608,7 +23611,7 @@ function BattleScreen({
                 <div data-decoration className="flex shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20" style={{marginTop:HAND_CARD_FIT.iconTop,width:HAND_CARD_FIT.icon,height:HAND_CARD_FIT.icon,boxShadow:'inset 0 1px 0 rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.35)'}}>{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5" style={{containerType:'inline-size'}}>{/* ★技名は押しても技の一覧を開かない(カードを選ぶだけ)。一覧はガッツの段の上の「⇄ 技変更」から開く
                     (2026-09-24 ユーザー指摘「技変更一覧が誤タップで反応しやすい」・場所はユーザー選択)。
                     それまでは技名の欄(カード幅×30px)がまるごと押し場所で、カードを選ぶつもりの指が当たっていた */}
-                <div data-card-name className="text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5" style={{height:HAND_CARD_FIT.name,...handCardNameFit(c.name,HAND_CARD_FIT.name)}}>{c.name}</div>{(()=>{
+                <div data-card-name className="text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5" style={{height:tacticsNewLayout?HAND_CARD_FIT.nameRich:HAND_CARD_FIT.name,...handCardNameFit(c.name,tacticsNewLayout?HAND_CARD_FIT.nameRich:HAND_CARD_FIT.name)}}>{c.name}</div>{(()=>{
                   // カードの表に「ジャンル」と「誰に効くか」を出す(仕様: BATTLE_NEW_MODE_PLAN.md 4.4
                   // 「単体効果と全体効果が分かるようにカード説明に表示するようにしたい」)。
                   // ★言葉はアプリ側の cardGenreLabel / cardScopeLabel から引く。カードをタップした
@@ -23618,16 +23621,28 @@ function BattleScreen({
                   const genre=tacticsCardGenre?tacticsCardGenre(c):null;
                   const scope=tacticsCardScope?tacticsCardScope(c):null;
                   const text=genre?(scope&&scope!=='敵へ'?`${genre}・${scope}`:genre):'';
+                  // 新しい盤面では下の段(技変更の枠の中・いちばん下)へ出すので、ここには出さない
+                  if(tacticsNewLayout) return null;
                   return text?<div data-card-genre={genre} data-card-scope={scope||undefined} className="w-full truncate rounded-[5px] bg-black/30 px-0.5 text-[8px] font-black leading-[11px] text-white/85">{text}</div>:null;
                 })()}{/* ★「⇄技変更」とガッツの段をまとめて1つのボタンにする(2026-09-24 ユーザー指示「どこを押せば反応するかを
                     見た目でわかるようにして」「ガッツ表示含む下部ラインをタップ領域にする」)。
                     帯だけだと高さ13〜16pxで押しにくく、どこまでが押し場所かも見えなかった。
                     明るい枠で囲んだ範囲がそのまま押せる範囲になる。攻撃以外のカードはガッツの段だけ(押しても技の一覧は出ない) */}
-                {tacticsNewLayout?(['atk','range_atk','unique'].includes(c.type)?(<div role="button" aria-label={`${c.name}の技を変える`} data-skill-change={i} onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}}
-                  style={{height:HAND_CARD_FIT.skill}} className={`flex w-full shrink-0 items-center justify-center gap-0.5 rounded-[7px] border border-white/60 bg-white/[.14] text-[10px] font-black leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}><span aria-hidden="true">⇄</span>技変更</div>)
-                  // ★攻撃以外のカードにも同じ高さの空きを取る(2026-09-24 ユーザー指摘「攻撃カードだけ技変更で上にずれるのがださい」)。
-                  //   無いと攻撃カードだけ名前と種類の段が上へ押し上がり、手札の並びがそろわない。押しても何も起きない
-                  :<div aria-hidden="true" data-skill-change-spacer style={{height:HAND_CARD_FIT.skill}} className="w-full shrink-0 pointer-events-none"/>)
+                {/* ★新しい盤面の下の段(2026-09-24 ユーザー指示「技変更の領域はそのままで文字だけ少し上にずらして、
+                    カードタイプは1番下に統一」)。どのカードも同じ高さの段を持ち、いちばん下に種類の札をそろえて置く。
+                    攻撃カードはこの段まるごとが「⇄技変更」の押し場所で、文字は上寄せ。
+                    種類の札が名前の下から抜けたぶん、技名の欄(HAND_CARD_FIT.nameRich)を広くしてある */}
+                {tacticsNewLayout?(()=>{
+                  const genre=tacticsCardGenre?tacticsCardGenre(c):null;
+                  const scope=tacticsCardScope?tacticsCardScope(c):null;
+                  const text=genre?(scope&&scope!=='敵へ'?`${genre}・${scope}`:genre):'';
+                  const label=text?<div data-card-genre={genre} data-card-scope={scope||undefined} className="w-full truncate rounded-[5px] bg-black/35 px-0.5 text-[8px] font-black leading-[11px] text-white/85">{text}</div>:null;
+                  return ['atk','range_atk','unique'].includes(c.type)?(<div role="button" aria-label={`${c.name}の技を変える`} data-skill-change={i} onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}}
+                    style={{height:HAND_CARD_FIT.skill}} className={`flex w-full shrink-0 flex-col items-stretch justify-between gap-px rounded-[7px] border border-white/60 bg-white/[.14] p-[2px] text-white shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>
+                    <span className="flex items-center justify-center gap-0.5 pt-px text-[9px] font-black leading-none"><span aria-hidden="true">⇄</span>技変更</span>{label}</div>)
+                    // 攻撃以外は同じ高さで、種類の札だけをいちばん下に置く(押しても何も起きない)
+                    :(<div data-skill-change-spacer style={{height:HAND_CARD_FIT.skill}} className="flex w-full shrink-0 flex-col justify-end rounded-[7px] border border-transparent p-[2px] pointer-events-none">{label}</div>);
+                })()
                 :(['atk','range_atk','unique'].includes(c.type)?(<div role="button" aria-label={`${c.name}の技を変える`} data-skill-change={i} onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}}
                   className={`flex w-full shrink-0 flex-col overflow-hidden rounded-[7px] border border-white/60 bg-white/[.12] shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>
                   <div style={{height:HAND_CARD_FIT.band}} className="flex shrink-0 items-center justify-center gap-0.5 text-[9px] font-black leading-none text-white"><span aria-hidden="true">⇄</span>技変更</div>
