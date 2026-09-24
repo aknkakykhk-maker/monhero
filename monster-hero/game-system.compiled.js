@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b20b3278bfc106cf
+// source-sha256: b6ba2d0156ce169c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8e059f98a37be1c6
+// generated-sha256: e63db5113cd7872b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -164,6 +164,45 @@ const BATTLE_SCREEN_STYLE_LABELS = Object.freeze([{
   label: 'タクティクス新',
   note: '2×2の新しい表示'
 }]);
+// バトルの見た目の設定(2026-09-24 ユーザー指示「バトル設定を作って。タクティクスの旧画面とかあるし何項目か」)。
+// 見た目だけに効き、戦闘の計算・進行・ランキングには触れない。保存は新しいキー1つに項目をまとめる。
+// ★読むときは必ず normalizeBattleFxSettings を通す。項目を足しても、足す前に保存した人は既定値で補われる
+const BATTLE_FX_SETTINGS_KEY = 'mh_battle_fx_v1';
+const normalizeBattleFxSettings = value => {
+  const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    idleMotion: v.idleMotion === 'OFF' ? 'OFF' : 'ON',
+    shake: v.shake === 'OFF' ? 'OFF' : 'ON'
+  };
+};
+// 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
+const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
+  key: 'idleMotion',
+  title: '待機中の動き',
+  desc: '待っているあいだのモンスターの動き（ミーアの羽ばたきなど）と、タクティクス新画面の枠の飾り・敵の待機の動きです。攻撃の演出はどちらでも出ます。',
+  options: [{
+    id: 'ON',
+    label: '動かす',
+    note: 'いつもの見た目'
+  }, {
+    id: 'OFF',
+    label: '止める',
+    note: '画面が軽くなる'
+  }]
+}, {
+  key: 'shake',
+  title: '画面の揺れ',
+  desc: '会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
+  options: [{
+    id: 'ON',
+    label: '揺らす',
+    note: 'いつもの見た目'
+  }, {
+    id: 'OFF',
+    label: '揺らさない',
+    note: '酔いやすい人向け'
+  }]
+}]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   id: 'FULL',
   label: 'ふつう',
@@ -177,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 16:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 16:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29358,7 +29397,9 @@ function SettingsScreen({
   updateNoticeStyle,
   onChangeUpdateNoticeStyle,
   battleScreenStyle,
-  onChangeBattleScreenStyle
+  onChangeBattleScreenStyle,
+  battleFxSettings,
+  onChangeBattleFxSetting
 }) {
   const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
   return /*#__PURE__*/React.createElement("div", {
@@ -29391,9 +29432,14 @@ function SettingsScreen({
     type: "button",
     onClick: onOpenHelp,
     className: menuClass
-  }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("div", {
+  }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("section", {
+    "data-battle-settings": true,
+    className: `${SCREEN_PANEL_CLASS} w-full text-left space-y-3`
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-[14px] font-black text-cyan-200"
+  }, "\u30D0\u30C8\u30EB\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
     "data-battle-screen-setting": true,
-    className: `${SCREEN_PANEL_CLASS} w-full text-left`
+    className: "border-t border-white/10 pt-3"
   }, /*#__PURE__*/React.createElement("b", {
     className: "block text-[13px] font-black text-slate-200"
   }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u753B\u9762"), /*#__PURE__*/React.createElement("p", {
@@ -29411,7 +29457,31 @@ function SettingsScreen({
     className: "block"
   }, option.label), /*#__PURE__*/React.createElement("small", {
     className: "mt-0.5 block text-[9px] font-bold opacity-80"
-  }, option.note))))), /*#__PURE__*/React.createElement("button", {
+  }, option.note))))), BATTLE_FX_SETTING_ITEMS.map(item => {
+    const current = normalizeBattleFxSettings(battleFxSettings)[item.key];
+    return /*#__PURE__*/React.createElement("div", {
+      key: item.key,
+      "data-battle-fx-setting": item.key,
+      className: "border-t border-white/10 pt-3"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block text-[13px] font-black text-slate-200"
+    }, item.title), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+    }, item.desc), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-2"
+    }, item.options.map(option => /*#__PURE__*/React.createElement("button", {
+      key: option.id,
+      type: "button",
+      "data-battle-fx-option": option.id,
+      "aria-pressed": current === option.id,
+      onClick: () => onChangeBattleFxSetting(item.key, option.id),
+      className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${current === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, option.label), /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[10px] font-bold opacity-80"
+    }, option.note)))));
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onOpenGameUpdate,
     disabled: gameUpdateDisabled,
@@ -39435,6 +39505,7 @@ function BattleScreen({
   autoBattle,
   autoBattleRef,
   autoRepeat,
+  battleFxSettings,
   battleIntimidate,
   battleScenarioRef,
   battleScreenActive,
@@ -39594,6 +39665,10 @@ function BattleScreen({
   // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
+  // 設定の「待機中の動き：止める」と「画面の揺れ：揺らさない」(見た目だけ。攻撃の演出と情報は消さない)
+  const battleFx = normalizeBattleFxSettings(battleFxSettings);
+  const idleMotionOff = battleFx.idleMotion === 'OFF';
+  const shakeOff = battleFx.shake === 'OFF';
   // 敵の攻撃(ためるを含む)を絵だけで動かす場面。移動とムーは今までどおり丸枠ごと
   const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
   // 敵ごとの動き方(2026-09-24 ユーザー指示「敵のグラフィックを攻撃時にアニメーション化」「待機時間も動いてるように」
@@ -39758,7 +39833,7 @@ function BattleScreen({
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
     "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off',
-    "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView ? 'calm' : 'rich' : undefined
+    "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined
   }, /*#__PURE__*/React.createElement("div", {
     "data-battle-stage-bg": true,
     "aria-hidden": "true",
@@ -41285,7 +41360,7 @@ function BattleScreen({
     //   (2026-09-22 ユーザー指示「攻撃されたときに誰が攻撃されたかが分かりづらい」)
     const slotHitKind = kindOfTacticsSlotFx(tacticsSlotFx && tacticsSlotFx[i]);
     // 揺れは省エネ表示では出さない(光と輪だけでも誰かは分かる)
-    const slotHitShake = slotHitKind && !ecoBattleView ? {
+    const slotHitShake = slotHitKind && !ecoBattleView && !shakeOff ? {
       animation: 'tacticsHitShake 420ms ease-in-out'
     } : null;
     // ★「その子だけに効く」バフは、かかっている子の枠へ印を出す(タクティクス)。
@@ -41418,7 +41493,7 @@ function BattleScreen({
     //   ミーア・水・聖光の攻撃演出は入れ物いっぱいに重ねる絶対配置なので、大きさを持たないと
     //   入れ物が0×0につぶれ、本体の絵が幅数pxまで押しつぶされてマイクも見えなくなっていた
     // ミーアだけ待機中も翼を羽ばたかせる(試作。MiaIdleArt)。軽量表示では今までどおり1枚の絵
-    const slotArt = img => s?.id === 'Mia' && !ecoBattleView ? /*#__PURE__*/React.createElement(MiaIdleArt, {
+    const slotArt = img => s?.id === 'Mia' && !ecoBattleView && !idleMotionOff ? /*#__PURE__*/React.createElement(MiaIdleArt, {
       image: img
     }) : img;
     const slotArtBox = {
@@ -46214,6 +46289,18 @@ function MonsterHeroGame() {
     setBattleScreenStyleState(value);
     storeSet(BATTLE_SCREEN_STYLE_KEY, value, false);
   };
+  // バトル設定(待機中の動き・画面の揺れ)。1項目ずつ変えても、ほかの項目はそのまま残す
+  const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
+  const setBattleFxSetting = (key, value) => {
+    setBattleFxSettingsState(prev => {
+      const next = normalizeBattleFxSettings({
+        ...prev,
+        [key]: value
+      });
+      storeSet(BATTLE_FX_SETTINGS_KEY, next, false);
+      return next;
+    });
+  };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
   const gameUpdatePendingRef = useRef(false);
@@ -50152,6 +50239,7 @@ function MonsterHeroGame() {
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
+      setBattleFxSettingsState(normalizeBattleFxSettings(await storeGet(BATTLE_FX_SETTINGS_KEY, null, false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -63242,7 +63330,7 @@ function MonsterHeroGame() {
       "aria-hidden": "true"
     }), /*#__PURE__*/React.createElement("div", {
       className: "relative z-10 h-full flex flex-col",
-      style: screenShake && !ecoBattleView && !rhythmScreenOpen ? {
+      style: screenShake && !ecoBattleView && !rhythmScreenOpen && battleFxSettings.shake !== 'OFF' ? {
         animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
       } : undefined
     }, gameState === 'HOME' && /*#__PURE__*/React.createElement(HomeScreen, {
@@ -65884,7 +65972,9 @@ function MonsterHeroGame() {
       updateNoticeStyle: updateNoticeStyle,
       onChangeUpdateNoticeStyle: setUpdateNoticeStyle,
       battleScreenStyle: battleScreenStyle,
-      onChangeBattleScreenStyle: setBattleScreenStyle
+      onChangeBattleScreenStyle: setBattleScreenStyle,
+      battleFxSettings: battleFxSettings,
+      onChangeBattleFxSetting: setBattleFxSetting
     }), gameState === 'MASU_PATTERN_DEBUG' && (() => {
       // 所持しているマスモンに加えて、所持していない種も表示用の一時データで並べる
       // (2026-09-17・ユーザー指摘「今は見れないものが多い」)。模様は元から保存しないので、
@@ -70995,6 +71085,7 @@ function MonsterHeroGame() {
       battleScenarioRef: battleScenarioRef,
       battleScreenActive: gameState === 'BATTLE',
       battleScreenStyle: battleScreenStyle,
+      battleFxSettings: battleFxSettings,
       battleSoulMasus: battleSoulMasus,
       battleSpeed: battleSpeed,
       battleTutorial: battleTutorial,

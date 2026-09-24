@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8e059f98a37be1c6
+// generated-sha256: e63db5113cd7872b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -97,12 +97,32 @@ const BATTLE_SCREEN_STYLE_LABELS = Object.freeze([
   { id:'TACTICS_OLD', label:'タクティクス旧', note:'従来のタクティクス表示' },
   { id:'TACTICS_NEW', label:'タクティクス新', note:'2×2の新しい表示' },
 ]);
+// バトルの見た目の設定(2026-09-24 ユーザー指示「バトル設定を作って。タクティクスの旧画面とかあるし何項目か」)。
+// 見た目だけに効き、戦闘の計算・進行・ランキングには触れない。保存は新しいキー1つに項目をまとめる。
+// ★読むときは必ず normalizeBattleFxSettings を通す。項目を足しても、足す前に保存した人は既定値で補われる
+const BATTLE_FX_SETTINGS_KEY = 'mh_battle_fx_v1';
+const normalizeBattleFxSettings = (value) => {
+  const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    idleMotion: v.idleMotion === 'OFF' ? 'OFF' : 'ON',
+    shake: v.shake === 'OFF' ? 'OFF' : 'ON',
+  };
+};
+// 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
+const BATTLE_FX_SETTING_ITEMS = Object.freeze([
+  { key:'idleMotion', title:'待機中の動き',
+    desc:'待っているあいだのモンスターの動き（ミーアの羽ばたきなど）と、タクティクス新画面の枠の飾り・敵の待機の動きです。攻撃の演出はどちらでも出ます。',
+    options:[{ id:'ON', label:'動かす', note:'いつもの見た目' }, { id:'OFF', label:'止める', note:'画面が軽くなる' }] },
+  { key:'shake', title:'画面の揺れ',
+    desc:'会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
+    options:[{ id:'ON', label:'揺らす', note:'いつもの見た目' }, { id:'OFF', label:'揺らさない', note:'酔いやすい人向け' }] },
+]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'FULL', label: 'ふつう', note: '横いっぱいに出す' },
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 16:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 16:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17712,7 +17732,7 @@ const DebugThrowScreenError = () => { throw new Error('画面エラーの受け�
 //   (横画面で「左＝見出し・助手 / 右＝メニュー」に組み替わるのも、この形が条件)
 // ・メニューの1行は menuClass ひとつに寄せた。高さ(64px)・角丸・枠線・押した手応えを
 //   ここでだけ決める。「ゲームを更新」だけ余白と枠色がずれていたのも同じ型に入れた
-function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle }) {
+function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting }) {
   const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
   return (
     <div data-mh-screen className={SCREEN_SHELL_CLASS}>
@@ -17723,21 +17743,46 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         <button type="button" onClick={onOpenBgmArrangement} className={menuClass}>BGMアレンジ</button>
         <button type="button" onClick={onOpenBackup} className={menuClass}>データ引き継ぎ</button>
         <button type="button" onClick={onOpenHelp} className={menuClass}>ヘルプ</button>
-        <div data-battle-screen-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
-          <b className="block text-[13px] font-black text-slate-200">タクティクスバトル画面</b>
-          <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。</p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {BATTLE_SCREEN_STYLE_LABELS.map(option => (
-              <button key={option.id} type="button" data-battle-screen-style={option.id}
-                aria-pressed={battleScreenStyle === option.id}
-                onClick={() => onChangeBattleScreenStyle(option.id)}
-                className={`flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
-                <span className="block">{option.label}</span>
-                <small className="mt-0.5 block text-[9px] font-bold opacity-80">{option.note}</small>
-              </button>
-            ))}
+        {/* バトル設定(2026-09-24 ユーザー指示「バトル設定を作って。タクティクスの旧画面とかあるし何項目か」)。
+            バトルの見た目に関わる設定をここへまとめる。項目と文言は BATTLE_FX_SETTING_ITEMS が正本 */}
+        <section data-battle-settings className={`${SCREEN_PANEL_CLASS} w-full text-left space-y-3`}>
+          <h3 className="text-[14px] font-black text-cyan-200">バトル設定</h3>
+          <div data-battle-screen-setting className="border-t border-white/10 pt-3">
+            <b className="block text-[13px] font-black text-slate-200">タクティクスバトル画面</b>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">タクティクスバトルの表示を選びます。通常のクラシックバトルには影響しません。戦闘ルールは旧／新で共通です。</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {BATTLE_SCREEN_STYLE_LABELS.map(option => (
+                <button key={option.id} type="button" data-battle-screen-style={option.id}
+                  aria-pressed={battleScreenStyle === option.id}
+                  onClick={() => onChangeBattleScreenStyle(option.id)}
+                  className={`flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                  <span className="block">{option.label}</span>
+                  <small className="mt-0.5 block text-[9px] font-bold opacity-80">{option.note}</small>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+          {BATTLE_FX_SETTING_ITEMS.map(item => {
+            const current = normalizeBattleFxSettings(battleFxSettings)[item.key];
+            return (
+              <div key={item.key} data-battle-fx-setting={item.key} className="border-t border-white/10 pt-3">
+                <b className="block text-[13px] font-black text-slate-200">{item.title}</b>
+                <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">{item.desc}</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {item.options.map(option => (
+                    <button key={option.id} type="button" data-battle-fx-option={option.id}
+                      aria-pressed={current === option.id}
+                      onClick={() => onChangeBattleFxSetting(item.key, option.id)}
+                      className={`flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${current === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`}>
+                      <span className="block">{option.label}</span>
+                      <small className="mt-0.5 block text-[10px] font-bold opacity-80">{option.note}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </section>
         <button type="button" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} className={`${menuClass} flex-col disabled:opacity-40`}><span className="block text-cyan-200">ゲームを更新</span><span className="mt-1 block text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button>
         {/* 新しいバージョンのお知らせ(画面へ出るバナー)の出し方。
             2026-09-12・ユーザー依頼「更新バナーのオンオフをゲーム上の設定で出来るようにしたい」。
@@ -22620,7 +22665,7 @@ const kindOfTacticsSlotFx = (fx) => {
 //   画面は gameState を知らない約束(ui/screen-parts-check)なので、
 //   本体から battleScreenActive として渡している(綴りだけの違い)
 function BattleScreen({
-  applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleIntimidate,
+  applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, battleIntimidate,
   battleScenarioRef, battleScreenActive, battleScreenStyle, battleSoulMasus, battleSpeed, battleTutorial,
   battleTutorialAllowsEmergency, battleTutorialCardAllowed, battleTutorialCardKind,
   battleTutorialCardTarget, battleTutorialNeed, battleTutorialNeedCard, battleTutorialSpotClass,
@@ -22671,6 +22716,10 @@ function BattleScreen({
   // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
+  // 設定の「待機中の動き：止める」と「画面の揺れ：揺らさない」(見た目だけ。攻撃の演出と情報は消さない)
+  const battleFx = normalizeBattleFxSettings(battleFxSettings);
+  const idleMotionOff = battleFx.idleMotion === 'OFF';
+  const shakeOff = battleFx.shake === 'OFF';
   // 敵の攻撃(ためるを含む)を絵だけで動かす場面。移動とムーは今までどおり丸枠ごと
   const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
   // 敵ごとの動き方(2026-09-24 ユーザー指示「敵のグラフィックを攻撃時にアニメーション化」「待機時間も動いてるように」
@@ -22816,7 +22865,7 @@ function BattleScreen({
   };
   return (
 
-      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView)?'calm':'rich'):undefined}>
+      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined}>
         {/* 舞台の照明(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい。
             イメージ画みたいにかっこよくできないかな？」)。
             ★画像は足さない。スマホの通信量に直に効くうえ、敵ごとに背景を用意すると際限がない
@@ -23673,7 +23722,7 @@ function BattleScreen({
               //   (2026-09-22 ユーザー指示「攻撃されたときに誰が攻撃されたかが分かりづらい」)
               const slotHitKind=kindOfTacticsSlotFx(tacticsSlotFx&&tacticsSlotFx[i]);
               // 揺れは省エネ表示では出さない(光と輪だけでも誰かは分かる)
-              const slotHitShake=slotHitKind&&!ecoBattleView?{animation:'tacticsHitShake 420ms ease-in-out'}:null;
+              const slotHitShake=slotHitKind&&!ecoBattleView&&!shakeOff?{animation:'tacticsHitShake 420ms ease-in-out'}:null;
               // ★「その子だけに効く」バフは、かかっている子の枠へ印を出す(タクティクス)。
               //   画面上の帯(Boost・会心予約…)では誰にかかっているのか分からない。
               //   みゃるの薬と、固有技の効果(消費0・会心確定・贖罪・共鳴)がここに出る
@@ -23763,7 +23812,7 @@ function BattleScreen({
               //   ミーア・水・聖光の攻撃演出は入れ物いっぱいに重ねる絶対配置なので、大きさを持たないと
               //   入れ物が0×0につぶれ、本体の絵が幅数pxまで押しつぶされてマイクも見えなくなっていた
               // ミーアだけ待機中も翼を羽ばたかせる(試作。MiaIdleArt)。軽量表示では今までどおり1枚の絵
-              const slotArt = (img) => (s?.id==='Mia'&&!ecoBattleView ? <MiaIdleArt image={img}/> : img);
+              const slotArt = (img) => (s?.id==='Mia'&&!ecoBattleView&&!idleMotionOff ? <MiaIdleArt image={img}/> : img);
               const slotArtBox = {width:tacticsNewLayout?'58px':'64px', height:tacticsNewLayout?'58px':'64px', flexShrink:0};
               // このスロットに固有技カードが割り当てられているか（セット中は常時エフェクト）
               const hasUniqueSet = selectedCards.some(idx=>cardAssignments[idx]===i && hand[idx]?.type==='unique');
@@ -27142,6 +27191,15 @@ function MonsterHeroGame() {
     setBattleScreenStyleState(value);
     storeSet(BATTLE_SCREEN_STYLE_KEY, value, false);
   };
+  // バトル設定(待機中の動き・画面の揺れ)。1項目ずつ変えても、ほかの項目はそのまま残す
+  const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
+  const setBattleFxSetting = (key, value) => {
+    setBattleFxSettingsState(prev => {
+      const next = normalizeBattleFxSettings({ ...prev, [key]: value });
+      storeSet(BATTLE_FX_SETTINGS_KEY, next, false);
+      return next;
+    });
+  };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
   const gameUpdatePendingRef = useRef(false);
@@ -30073,6 +30131,7 @@ function MonsterHeroGame() {
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
+      setBattleFxSettingsState(normalizeBattleFxSettings(await storeGet(BATTLE_FX_SETTINGS_KEY, null, false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -38698,7 +38757,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* 画面の揺れはアプリ全体にかかるので、モンビーを開いている間は掛けない。
           裏でバトルが進んでいるだけなのに、曲えらびや演奏の画面まで揺れてしまう
           (2026-09-06・ユーザー指摘「演出が残ってた（画面が揺れるなど）」) */}
-      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
+      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* HOME: 背景・将来のマスモン・施設操作・情報UIの順に重ねる */}
         {gameState==='HOME'&&(
@@ -39728,6 +39787,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onChangeUpdateNoticeStyle={setUpdateNoticeStyle}
             battleScreenStyle={battleScreenStyle}
             onChangeBattleScreenStyle={setBattleScreenStyle}
+            battleFxSettings={battleFxSettings}
+            onChangeBattleFxSetting={setBattleFxSetting}
           />
         )}
 
@@ -42035,7 +42096,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <BattleScreen
             applyTurnDamageReduction={applyTurnDamageReduction} attackAnim={attackAnim} autoBattle={autoBattle}
             autoBattleRef={autoBattleRef} autoRepeat={autoRepeat} battleIntimidate={battleIntimidate}
-            battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'} battleScreenStyle={battleScreenStyle}
+            battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'} battleScreenStyle={battleScreenStyle} battleFxSettings={battleFxSettings}
             battleSoulMasus={battleSoulMasus} battleSpeed={battleSpeed} battleTutorial={battleTutorial}
             battleTutorialAllowsEmergency={battleTutorialAllowsEmergency}
             battleTutorialCardAllowed={battleTutorialCardAllowed} battleTutorialCardKind={battleTutorialCardKind}
