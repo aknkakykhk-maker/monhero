@@ -54,7 +54,7 @@ const RIGS = [
   { id:'Suezo', img:'images/monsters/suezo.png', body:'bounce', parts:[] },
   { id:'Golem', img:'images/monsters/golem.png', body:'breathe', parts:[] },
   { id:'Tiger', img:'images/monsters/tiger.PNG', body:'breathe', parts:[
-    { name:'tail', poly:[[66.6,43],[70,42.6],[74,42.4],[78,40],[99,33],[99.5,70],[69.5,70],[67.2,65],[66.6,58],[66.3,50]], share:[[64.8,41.8],[67.4,41.8],[67.4,44],[66.8,44],[66.8,60],[64.8,60]], pivot:[65.5,53], anim:'wag', amp:8, dur:1100, layer:'back' },
+    { name:'tail', poly:[[67.4,43],[70,42.6],[74,42.4],[78,40],[99,33],[99.5,70],[70.5,70],[69,66],[68.2,63.5],[68,61],[67.9,56],[67.8,50],[67.6,46]], share:[[67.2,42.4],[70.2,42.4],[70.2,46],[67.2,46]], pivot:[67.8,53], anim:'wag', amp:7, dur:1100, layer:'back' },
   ]},
   { id:'Ham', img:'images/monsters/ham.png', body:'breathe', parts:[
     { name:'earL', poly:[[31,0],[47,0],[47.5,22],[47.8,27],[46.5,29.5],[45.5,32.5],[42,33.8],[40,34.2],[37.5,34.2],[35.5,30],[35,27],[31,20]], pivot:[40,32.5], anim:'twitch', amp:-9, dur:3200, delay:0, layer:'back' },
