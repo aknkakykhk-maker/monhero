@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d174683a4bc6147b
+// generated-sha256: e1289478c3d88045
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -102,7 +102,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 15:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 15:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13944,6 +13944,8 @@ const RHYTHM_OPTION_TABS=Object.freeze([['live','ライブ'],['volume','音量']
 const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=null,onClearCalibration=null})=>{
   const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
   const [message,setMessage]=useState('');
+  // 未保存のまま「戻る」を押したときの確認。それまでは何も言わずに変更が消えていた
+  const [leaveAsk,setLeaveAsk]=useState(false);
   // どのタブを見ているか。これも設定ではないので保存しない
   const [tab,setTab]=useState('live');
   const previewRef=useRef(null);
@@ -14046,6 +14048,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
   const previewBgm=async()=>{previewRef.current?.stop();previewRef.current=null;const audio=await Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume);previewRef.current=audio;if(!audio)setMessage('BGMを再生できませんでした');};
   const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setMessage('画面上の値を戻しました（未保存）');};
   const saveDraft=async()=>{const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
+  const requestBack=()=>{if(dirty){setLeaveAsk(true);return;}onBack();};
+  const saveAndBack=async()=>{await onSave(draft);setLeaveAsk(false);onBack();};
   // 【2026-09-13・ユーザー指示】「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
   //   普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
   // ★それまでは専用の小さな画面(1本のレーンに目印が降りるだけ)だった。本番と見た目も
@@ -14062,7 +14066,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
         押す場所(戻る・タブ)は44pxのまま縮めない。 */}
     <div data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}>
-      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={onBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div></header>
+      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div></header>
       {/* いま見ているタブだけ色を変え、下へ小さな三角を出して「ここの中身」と分かるようにする */}
       <nav data-rhythm-options-tabs className={`grid shrink-0 grid-cols-3 px-3 ${wide?'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3':'gap-2 pb-2'}`}>
         {RHYTHM_OPTION_TABS.map(([id,text])=><button type="button" key={id} data-rhythm-options-tab={id} aria-pressed={tab===id} onClick={()=>changeTab(id)}
@@ -14193,6 +14197,18 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
       {/* 横持ちでは中央寄せで細くする(横いっぱいのボタンは押しにくいだけで、場所も食う) */}
       <div className={`mx-auto grid grid-cols-[.9fr_1.1fr] gap-3 ${wide?'max-w-[520px]':''}`}><button type="button" onClick={resetDraft} className={`rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black ${wide?'min-h-[42px]':'min-h-[52px]'}`}>デフォルトに戻す</button><button type="button" onClick={saveDraft} data-rhythm-options-save data-dirty={dirty?'true':'false'} className={`rounded-xl px-3 font-black ${wide?'min-h-[42px]':'min-h-[52px]'} ${dirty?'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]':'bg-amber-600 text-slate-950'}`}>{dirty?'変更を保存':'保存'}</button></div>
     </footer>
+    {leaveAsk&&<div data-rhythm-options-leave role="dialog" aria-modal="true" aria-label="変更が保存されていません"
+      className="fixed inset-0 z-[9000] flex items-center justify-center bg-slate-950/80 p-5" onClick={()=>setLeaveAsk(false)}>
+      <div className="w-full max-w-xs rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center shadow-[0_0_24px_rgba(251,191,36,.15)]" onClick={e=>e.stopPropagation()}>
+        <b className="block text-[15px] font-black text-amber-200">変更が保存されていません</b>
+        <p className="mt-1.5 text-[11px] font-bold leading-relaxed text-slate-300">このまま戻ると、いま変えた設定は元に戻ります。</p>
+        <div className="mt-3 grid grid-cols-1 gap-2">
+          <button type="button" data-rhythm-options-leave-save onClick={saveAndBack} className="min-h-[48px] rounded-xl bg-amber-400 text-[13px] font-black text-slate-950">保存して戻る</button>
+          <button type="button" data-rhythm-options-leave-discard onClick={()=>{setLeaveAsk(false);onBack();}} className="min-h-[44px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200">保存せずに戻る</button>
+          <button type="button" data-rhythm-options-leave-cancel onClick={()=>setLeaveAsk(false)} className="min-h-[44px] rounded-xl text-[12px] font-black text-slate-400">設定を続ける</button>
+        </div>
+      </div>
+    </div>}
   </main>;
 };
 // モンスターノーツ用のマスモン設定。音ゲーデバッグ画面と体験版ホームの両方から使うため、
@@ -14468,7 +14484,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   const pickRandom=()=>{
     if(!list.length)return;
     const nextSong=list[Math.floor(Math.random()*list.length)];
-    const ids=(difficulties||[]).filter(item=>rhythmChartPlayable(nextSong,item.id));
+    // ★鍵のかかった難易度は選ばない。選ぶと画面の側がいちばん下の難易度へ戻すので、
+    //   「ランダムを押したのにEASYになった」ように見えていた
+    const ids=(difficulties||[]).filter(item=>rhythmChartPlayable(nextSong,item.id)&&rhythmDifficultyUnlocked(nextSong.songId,item.id,bestRecords));
     setSongId(nextSong.songId);
     if(ids.length)setDifficultyId(ids[Math.floor(Math.random()*ids.length)].id);
   };
@@ -15869,6 +15887,8 @@ scheduleTick();};
 {(()=>{const failed=result.cleared===false;return <div data-rhythm-result-clear data-cleared={failed?'false':'true'} className="mx-auto mt-3 w-full max-w-xs rounded-2xl border-2 px-3 py-2 text-center"><b className="block text-4xl font-black leading-none">{failed?'FAILED':'CLEAR'}</b><small className="mt-1.5 block text-[10px] font-black leading-relaxed">{failed?'ライフが0になったまま曲が終わりました（DOWN）':'ライフを残して最後まで演奏しました'}</small></div>;})()}
 <div data-rhythm-result-rank data-rank-tier={String(rankTier)} className={`relative mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`}>{rank}</div><div className="my-3 text-center text-3xl font-black">{view.score.toLocaleString()}</div><p className="text-center text-sm">BEST SCORE {result.bestScore.toLocaleString()}</p>{result.isNewRecord&&<p data-rhythm-new-record className="text-center text-xl font-black text-amber-300">NEW RECORD</p>}{/* 前の自己ベストとの差。更新したら「+いくつ」、届かなかったら「あといくつ」。
     次の1回の目標が数字で分かるようにする。前の記録が無い(初めて遊んだ)ときは出さない */}
+{/* 次のランクまでのあと少し。その難易度の満点では届かないランクは出さない(rhythmNextRankId が止める) */}
+{(()=>{const nextId=rhythmNextRankId(view.score,difficulty.maxScore);const next=nextId?RHYTHM_RANKS.find(item=>item.id===nextId):null;if(!next)return null;const need=next.min-view.score;if(!(need>0))return null;return <p data-rhythm-next-rank={nextId} className="text-center text-[11px] font-black tabular-nums text-slate-300">次のランク <b className={RHYTHM_RANK_COLORS[nextId]||'text-white'}>{nextId}</b> まで あと {need.toLocaleString()}</p>;})()}
 {(()=>{const before=runRef.current?.startBest;const prev=before&&before.played?Number(before.bestScore)||0:0;if(!(prev>0))return null;const diff=view.score-prev;return <p data-rhythm-best-diff className={`text-center text-[11px] font-black tabular-nums ${diff>0?'text-emerald-300':'text-slate-400'}`}>{diff>0?`前の自己ベストから +${diff.toLocaleString()}`:diff===0?'自己ベストと同じスコア':`自己ベストまで あと ${(-diff).toLocaleString()}`}</p>;})()}{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}</div>}{/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
     ALL MARVELOUS > ALL EXCELLENT > FULL COMBO の順に上位。残りは下に小さく並べる。 */}
 {(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate className="my-3 text-center">
@@ -15904,6 +15924,11 @@ scheduleTick();};
     {quickRunAward.shard>0&&<span>🎖️ <b className="text-amber-200">+{Number(quickRunAward.shard).toLocaleString()}</b></span>}
   </div>
 </div>}
+{/* このクリアで上の難易度が開いたら、その場で知らせる。解放は曲えらびで鍵が外れるだけで、
+    それまでは戻って難易度ボタンを見ないと気づけなかった。
+    ★前の記録がまだクリアしていなかったときだけ(=このプレイで初めて開いたときだけ)出す。
+    ★練習・タイミング合わせ・デバッグから始めたプレイは記録に残らないので出さない */}
+{(()=>{if(tutorial||calibrating||debugPlay||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;const opened=Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id=>RHYTHM_DIFFICULTY_UNLOCK_BY[id]===difficulty.id&&rhythmChartPlayable(song,id));if(!opened)return null;return <div data-rhythm-result-unlock={opened} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {opened}（Lv.{song.difficulties[opened].level}）を曲えらびで選べます</small></div>;})()}
 {/* 判定の割合を1本の帯で。数字の表を読む前に、どの判定が多かったかが色でひと目で分かる。
     色は遊んでいるときに弾ける光と同じ(rhythmJudgmentColor)。0件の判定は帯に出さない */}
 {(()=>{const total=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(view.counts[id])||0),0);if(!(total>0))return null;return <div data-rhythm-result-ratio aria-hidden="true" className="mb-2 flex h-2.5 w-full overflow-hidden rounded-full bg-slate-800">{RHYTHM_JUDGMENT_IDS.map(id=>{const count=Number(view.counts[id])||0;return count>0?<i key={id} data-rhythm-result-ratio-part={id} className="block h-full" style={{width:`${(count/total*100).toFixed(2)}%`,background:rhythmJudgmentColor(id)}}/>:null;})}</div>;})()}
