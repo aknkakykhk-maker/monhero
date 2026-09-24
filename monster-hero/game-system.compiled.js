@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a13e09bbf90be936
+// source-sha256: 6c38d2c8a7966dcd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 82da977b7001a96b
+// generated-sha256: 83373b5cf156e9b7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -177,7 +177,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 15:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 15:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39813,7 +39813,7 @@ function BattleScreen({
     className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none"
   }, "\u9B42\u683C\u52B9\u679C \u767A\u52D5\u4E2D", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), /*#__PURE__*/React.createElement("div", {
     className: "mt-1 relative flex flex-col items-center"
-  }, enemySkillName && /*#__PURE__*/React.createElement("div", {
+  }, enemySkillName && ReactDOM.createPortal(/*#__PURE__*/React.createElement("div", {
     className: "fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap",
     style: {
       top: '14%',
@@ -39822,7 +39822,7 @@ function BattleScreen({
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'SPECIAL' && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), document.body), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'SPECIAL' && /*#__PURE__*/React.createElement("div", {
     className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
     style: {
       top: '11%',
@@ -39855,10 +39855,11 @@ function BattleScreen({
     className: "text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]"
   }, "\u2694\uFE0F"), /*#__PURE__*/React.createElement("div", {
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]"
-  }, "\u8CAB \u901A \u6280 \u6E96 \u5099")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
+  }, "\u8CAB \u901A \u6280 \u6E96 \u5099")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' && ReactDOM.createPortal(
   /*#__PURE__*/
   // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
   // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
+  // ★技名の札と同じ理由で body の直下へ出す(揺れの間に位置が飛ばないように)
   React.createElement("div", {
     className: "fixed left-1/2 pointer-events-none",
     style: {
@@ -39870,7 +39871,7 @@ function BattleScreen({
     className: "mh-enemy-move-hint"
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
-  }, "\uD83C\uDFC3"), /*#__PURE__*/React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "\u8DDD\u96E2\u306B\u79FB\u52D5\u3057\u3088\u3046\u3068\u3057\u3066\u3044\u308B\u2026\uFF1F"))), !tacticsNewLayout && /*#__PURE__*/React.createElement(React.Fragment, null, slotSkill && /*#__PURE__*/React.createElement("div", {
+  }, "\uD83C\uDFC3"), /*#__PURE__*/React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "\u8DDD\u96E2\u306B\u79FB\u52D5\u3057\u3088\u3046\u3068\u3057\u3066\u3044\u308B\u2026\uFF1F"))), document.body), !tacticsNewLayout && /*#__PURE__*/React.createElement(React.Fragment, null, slotSkill && ReactDOM.createPortal(/*#__PURE__*/React.createElement("div", {
     className: "fixed -translate-x-1/2 pointer-events-none whitespace-nowrap",
     style: {
       left: `${12.5 + slotSkill.slotIndex * 25}%`,
@@ -39880,7 +39881,7 @@ function BattleScreen({
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: `px-3 py-1 rounded-xl font-black text-[12px] border-2 shadow-[0_2px_16px_rgba(0,0,0,0.9)] ${slotSkill.type === 'unique' ? 'bg-purple-700 border-purple-200 text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]' : slotSkill.type === 'special' ? 'bg-amber-600 border-amber-200 text-white' : 'bg-red-700 border-red-200 text-white'}`
-  }, slotSkill.name))), !ecoBattleView && guardFx && /*#__PURE__*/React.createElement("div", {
+  }, slotSkill.name)), document.body)), !ecoBattleView && guardFx && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 pointer-events-none flex items-center justify-center",
     style: {
       zIndex: 64000
