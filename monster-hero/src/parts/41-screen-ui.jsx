@@ -148,11 +148,6 @@ const PHASE_ACCENT_RGB = Object.freeze({
   training:'251,191,36', growth:'45,212,191', ally:'129,140,248', slot:'129,140,248', skill:'245,158,11', teaching:'192,132,252',
 });
 const phaseAccentRgb = (id) => PHASE_ACCENT_RGB[id] || '148,163,184';
-// 画面の根の背景。上から識別色の光を差す
-const phaseBackdropStyle = (id) => ({
-  backgroundColor:'#020617',
-  backgroundImage:`radial-gradient(ellipse 90% 45% at 50% 0%, rgba(${phaseAccentRgb(id)},.16), transparent 70%)`,
-});
 // 手順の並び。plan に current が無いとき(ラン開始時の配置・アシストカードなど)は何も出さない。
 //   plan     … ['training','ally',…](postWavePhasePlan の戻り値)
 //   current  … いまの画面の id
@@ -163,12 +158,13 @@ const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
   if (!Array.isArray(plan) || !plan.includes(current)) return null;
   const at = plan.indexOf(current);
   const showNext = Number(nextWave) > 0 && plan.length <= 3;
-  const accent = phaseAccentRgb(current);
-  const line = (on, key) => <span key={key} aria-hidden="true" className="block h-px w-1.5 shrink-0" style={{background:on?'rgba(255,255,255,.45)':'rgba(255,255,255,.14)'}}/>;
+  // 見た目は 70-bootstrap.jsx の mh-ph-step-*(いま=識別色の光る札 / 済み=緑の菱形の宝石 / まだ=夜色の札)
+  const line = (on, key) => <span key={key} aria-hidden="true" className={`block h-px w-1.5 shrink-0${on ? ' mh-ph-step-line' : ''}`} style={on ? undefined : {background:'rgba(243,210,122,.16)'}}/>;
   return (
     <nav aria-label={`強化フェーズ ${at + 1}/${plan.length}：${PHASE_STEP_LABELS[current] || current}`}
       data-phase-steps={`${current}:${at + 1}/${plan.length}`}
-      className={`flex flex-wrap items-center justify-center gap-x-1 gap-y-1 ${className}`}>
+      className={`flex flex-wrap items-center justify-center gap-x-1 gap-y-1 ${className}`}
+      style={{'--ph': phaseAccentRgb(current)}}>
       {plan.map((id, i) => {
         const state = i < at ? 'done' : i === at ? 'now' : 'todo';
         return (
@@ -176,12 +172,11 @@ const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
             {i > 0 && line(i <= at, `line-${id}`)}
             {state === 'done'
               ? <span title={PHASE_STEP_LABELS[id] || id} aria-label={`${PHASE_STEP_LABELS[id] || id}（済み）`}
-                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-black text-emerald-300"
-                  style={{background:'rgba(52,211,153,.14)', border:'1px solid rgba(52,211,153,.4)'}}>✓</span>
+                  className="mh-ph-step-done mx-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[8px] font-black">
+                  <span>✓</span>
+                </span>
               : <span aria-current={state === 'now' ? 'step' : undefined}
-                  className={`shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-black leading-tight ${state === 'now' ? 'text-slate-950' : 'text-slate-500'}`}
-                  style={state === 'now' ? {background:`rgb(${accent})`, boxShadow:`0 0 10px rgba(${accent},.55)`}
-                    : {border:'1px solid rgba(255,255,255,.14)'}}>
+                  className={`shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-black leading-tight ${state === 'now' ? 'mh-ph-step-now' : 'mh-ph-step-todo'}`}>
                   {PHASE_STEP_LABELS[id] || id}
                 </span>}
           </React.Fragment>
@@ -189,16 +184,9 @@ const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
       })}
       {showNext && <>
         {line(false, 'line-next')}
-        <span className="shrink-0 whitespace-nowrap text-[9px] font-black text-slate-500">⚔ WAVE {nextWave}</span>
+        <span className="shrink-0 whitespace-nowrap text-[9px] font-black text-[#c9ae6a]">⚔ WAVE {nextWave}</span>
       </>}
     </nav>
   );
 };
-// 見出しの上の小さな札(「WAVE 2 CLEAR」「ASSIST CARD」など)。識別色で縁取る
-const PhaseEyebrow = ({ id, children }) => {
-  const accent = phaseAccentRgb(id);
-  return (
-    <span className="inline-block rounded-full px-2.5 py-0.5 text-[9px] font-black tracking-[.2em]"
-      style={{border:`1px solid rgba(${accent},.45)`, background:`rgba(${accent},.1)`, color:`rgb(${accent})`}}>{children}</span>
-  );
-};
+// ==== 強化フェーズの共通部品ここまで ====
