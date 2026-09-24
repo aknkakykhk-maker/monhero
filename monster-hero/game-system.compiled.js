@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1cc8a0f0f6cffc88
+// source-sha256: fe42850c55a06b58
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eb542550e26bb26f
+// generated-sha256: 3c89b2870af19ac9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 16:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 17:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39678,6 +39678,20 @@ const tacticsAuraKindOf = (text = '', side = '') => {
 const TACTICS_ENEMY_MOTIONS = Object.freeze({
   Kawazumo: 'kawazumo'
 });
+// 技ごとの動きの長さ(ミリ秒)。ここに無い技は今までどおり(通常攻撃 450 / 必殺技 1100)。
+// 戦闘の待ち時間(60-app)もこの値を使うので、CSS の animation の長さと必ずそろえる
+const TACTICS_ENEMY_SKILL_MS = Object.freeze({
+  kawazumo: Object.freeze({
+    rush: 750,
+    pierce: 900,
+    allout: 1000
+  })
+});
+const tacticsEnemyMotionMs = (enemyId, skill, fallbackMs) => {
+  const motion = enemyId ? TACTICS_ENEMY_MOTIONS[enemyId] : null;
+  const ms = motion && TACTICS_ENEMY_SKILL_MS[motion] ? TACTICS_ENEMY_SKILL_MS[motion][skill] : null;
+  return Number.isFinite(ms) ? ms : fallbackMs;
+};
 const kindOfTacticsSlotFx = fx => {
   if (!fx) return null;
   if (fx.evade) return 'evade';
@@ -40694,6 +40708,7 @@ function BattleScreen({
     "data-enemy-ring": enemyDist,
     "data-enemy-attack": enemyImageOnlyAttack ? enemyAttackFx?.kind === 'charge' ? 'charge' : 'fly' : undefined,
     "data-enemy-motion": enemyMotion || undefined,
+    "data-enemy-skill": enemyMotion && enemyAttackFx?.skill && (enemyImageOnlyAttack || enemyAttackFx.kind === 'regen') ? enemyAttackFx.skill : undefined,
     "data-enemy-hurt": enemyMotion && attackAnim && !enemyAttackAnim ? 'true' : undefined,
     className: `rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
     "data-attack-target": true,
@@ -40718,7 +40733,10 @@ function BattleScreen({
   }, "\u270B"), /*#__PURE__*/React.createElement("i", {
     "aria-hidden": "true",
     "data-kz-palm": "r"
-  }, "\u270B")), !ecoBattleView && /*#__PURE__*/React.createElement("div", {
+  }, "\u270B"), /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true",
+    "data-kz-fx": true
+  })), !ecoBattleView && /*#__PURE__*/React.createElement("div", {
     "aria-hidden": "true",
     "data-enemy-shadow": true,
     className: "pointer-events-none absolute left-1/2 z-0 -translate-x-1/2",
@@ -57813,7 +57831,8 @@ function MonsterHeroGame() {
         // 重ねがけの上限は行動の抽選側(evaluateEnemyActions)が見るので、ここでは数えるだけ
         Audio_.se.enemyCharge();
         setEnemyAttackFx({
-          kind: 'charge'
+          kind: 'charge',
+          skill: 'roar'
         });
         setEnemyAttackAnim(true);
         tacticsRoarStacksRef.current += 1;
@@ -57841,7 +57860,14 @@ function MonsterHeroGame() {
           hp: Math.min(Number(prev.maxHp) || 0, Math.max(0, Number(prev.hp) || 0) + healed)
         } : prev);
         addPopup(`再生 +${healed}`, 'enemy', 'text-emerald-300 font-black text-2xl drop-shadow-md');
+        // ★技ごとの動き(カワズモーの「かえるのうた」など)を出すために、何の技かだけを渡す。
+        //   enemyAttackAnim は立てない(立てると丸枠・絵が攻撃の動きをしてしまう)
+        setEnemyAttackFx({
+          kind: 'regen',
+          skill: 'regen'
+        });
         await battleWait(1000);
+        setEnemyAttackFx(null);
       } else if (intent.type === 'WAIT') {
         addPopup("待機中...", 'enemy', 'text-slate-400 text-lg');
         await battleWait(500);
@@ -57851,7 +57877,8 @@ function MonsterHeroGame() {
         // (使うと「準備しただけなのに殴られた」ように見えてしまう)
         Audio_.se.enemyCharge();
         setEnemyAttackFx({
-          kind: 'charge'
+          kind: 'charge',
+          skill: 'charge'
         });
         setEnemyAttackAnim(true);
         addPopup("必殺技の準備をしている…！", 'enemy', 'text-amber-300 font-black text-xl drop-shadow-md');
@@ -57865,7 +57892,8 @@ function MonsterHeroGame() {
         // (2026-09-21 ユーザー指示「貫通は必殺級の技だからこれもためると同じように1ターン経由」)
         Audio_.se.enemyCharge();
         setEnemyAttackFx({
-          kind: 'charge'
+          kind: 'charge',
+          skill: 'pierceCharge'
         });
         setEnemyAttackAnim(true);
         addPopup("貫通撃の構え…！ ガードは効かない", 'enemy', 'text-rose-300 font-black text-xl drop-shadow-md');
@@ -57944,13 +57972,17 @@ function MonsterHeroGame() {
 
         // Enemy lunge animation + attack effect (normal = ! mark, special = aura burst)
         const fxKind = isMooBoss(enemy?.id) ? 'moo' : intent.type === 'SPECIAL' ? 'special' : 'normal';
+        // skill: 何の技か(画面が技ごとの動きを選ぶのに使う。カワズモーの張り手・上手投げなど)
+        const fxSkill = intent.variant || (intent.type === 'SPECIAL' ? 'special' : 'normal');
         setEnemyAttackFx({
-          kind: fxKind
+          kind: fxKind,
+          skill: fxSkill
         });
         if (intent.type === 'SPECIAL') Audio_.se.enemySpecial();else Audio_.se.enemyAttack();
         setEnemyAttackAnim(true);
         if (fxKind === 'moo') triggerShake(true);
-        await battleWait(fxKind === 'moo' ? 900 : intent.type === 'SPECIAL' ? 1100 : 450);
+        // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)
+        await battleWait(fxKind === 'moo' ? 900 : tacticsEnemyMotionMs(isTacticsMode(runMode) && !ecoBattleView ? enemy?.id : null, fxSkill, intent.type === 'SPECIAL' ? 1100 : 450));
         setEnemyAttackAnim(false);
         await battleWait(fxKind === 'moo' ? 250 : intent.type === 'SPECIAL' ? 300 : 100);
         setEnemyAttackFx(null);
@@ -75352,15 +75384,14 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-slot-index="1"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
       --mh-pat: repeating-conic-gradient(from 0deg at 20% 62%, rgba(255,210,80,.15) 0 6deg, transparent 6deg 18deg) padding-box,
         radial-gradient(60% 60% at 20% 62%, rgba(255,200,60,.32), transparent 70%) padding-box; }
-    /* 中距離は「下から茂る草と舞う葉」。遠距離の「波紋(同心円)」と形が似ないように、輪を使わない(2026-09-24 ユーザー指摘) */
+    /* 中距離は「翡翠の菱格子と丘の稜線」。零の熱と一方向の斜線・近の光線・遠の波紋(同心円)と形が重ならないように、
+       2方向に交わる細い線(菱形の格子)を全体に敷き、下に丘の稜線を1本だけ光らせる。
+       (2026-09-24 ユーザー指摘「遠と同じはおかしい」→草の縦縞にしたが「ださい」と言われ作り直した) */
     [data-tactics-look] [data-slot-index="2"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
-      --mh-pat: radial-gradient(7px 3px at 58% 30%, rgba(110,231,183,.55), transparent 80%) padding-box,
-        radial-gradient(6px 2.5px at 78% 52%, rgba(110,231,183,.45), transparent 80%) padding-box,
-        radial-gradient(7px 3px at 40% 18%, rgba(167,243,208,.4), transparent 80%) padding-box,
-        radial-gradient(5px 2px at 88% 24%, rgba(110,231,183,.4), transparent 80%) padding-box,
-        repeating-linear-gradient(98deg, rgba(52,211,153,.30) 0 1.5px, transparent 1.5px 6px) bottom / 100% 34% no-repeat padding-box,
-        repeating-linear-gradient(82deg, rgba(16,185,129,.22) 0 1px, transparent 1px 8px) bottom / 100% 22% no-repeat padding-box,
-        radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.26), transparent 70%) padding-box; }
+      --mh-pat: radial-gradient(95% 30% at 30% 106%, rgba(16,185,129,.20) 0 96%, rgba(110,231,183,.6) 98%, transparent 100%) padding-box,
+        repeating-linear-gradient(60deg, rgba(52,211,153,.19) 0 1px, transparent 1px 11px) padding-box,
+        repeating-linear-gradient(120deg, rgba(52,211,153,.19) 0 1px, transparent 1px 11px) padding-box,
+        radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.30), transparent 70%) padding-box; }
     [data-tactics-look] [data-slot-index="3"] { --mh-rc: 59,130,246; --mh-rc2: 200,225,255;
       --mh-pat: repeating-radial-gradient(circle at 20% 140%, rgba(90,160,255,.17) 0 3px, transparent 3px 11px) padding-box,
         radial-gradient(70% 60% at 20% 62%, rgba(80,150,255,.32), transparent 70%) padding-box; }
@@ -75546,16 +75577,16 @@ const createAnimationStyle = () => {
     }
     [data-tactics-look] [data-enemy-motion] > span { display: block; position: relative; transform-origin: 50% 92%; }
     [data-tactics-look] [data-enemy-motion] > span > img { transform-origin: 50% 92%; }
-    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > span > img { animation: kzIdle 6s ease-in-out infinite; }
-    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow] { animation: kzShadow 6s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation: kzIdle 6s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > [data-enemy-shadow] { animation: kzShadow 6s ease-in-out infinite; }
     /* 土ぼこり: 影の左右に1つずつ */
     [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::before, [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::after {
       content: ''; position: absolute; bottom: 10%; width: 46%; height: 150%; border-radius: 50%; opacity: 0; pointer-events: none;
       background: radial-gradient(closest-side, rgba(214,196,160,.85), rgba(160,140,110,.45) 55%, transparent); }
     [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::before { left: -18%; --kz-dx: -26px; }
     [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::after { right: -18%; --kz-dx: 26px; }
-    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow]::before,
-    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow]::after { animation: kzDustIdle 6s ease-out infinite; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > [data-enemy-shadow]::before,
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > [data-enemy-shadow]::after { animation: kzDustIdle 6s ease-out infinite; }
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::before,
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::after { animation: kzDust 1100ms ease-out forwards; }
     /* 張り手の衝撃: 丸枠の下に赤い輪が広がる */
@@ -75575,6 +75606,240 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="r"] { animation: kzPalmR 450ms ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp 1100ms ease-in-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-hurt] > span { animation: kzHurt 520ms ease-out forwards; }
+    /* ---- カワズモーの技ごとの動き(2026-09-24 ユーザー指示「他の技も特徴付けたい」) ----
+       data-enemy-skill に技の名前が入る(60-app の setEnemyAttackFx の skill)。長さは TACTICS_ENEMY_SKILL_MS とそろえる。
+         normal はり手 … 上の kzSlap(左右の張り手2発)
+         sweep かわずつき 450ms … 低く沈んで横から飛び込む。弧の斬り跡
+         rush 連続はり手 750ms … 左右にひねりながら張り手を6発
+         pierce 上手投げ 900ms … 手を伸ばしてつかむ → 後ろへ持ち上げる → 前へ投げ落とす。赤い一直線
+         special 大回転落とし 1100ms … 跳んで2回転 → 真下へ落ちる。金の渦と大きな衝撃
+         allout 大投げたまや 1000ms … 担いで振りかぶり、投げ放つ。頭上に花火
+         charge 必殺技準備 … 深く構えて震え、金色に光が溜まる / pierceCharge … 両手を広げて差し手を狙う / roar しこ踏み … kzStomp
+         regen かえるのうた 1000ms … 揺れながら歌う。音符が昇る */
+    @keyframes kzLunge {
+      0% { transform: none; }
+      28% { transform: translate(-26px, 10px) rotate(-12deg) scale(1.2, .8); }
+      58% { transform: translate(30px, 74px) rotate(14deg) scale(1.26, .86); filter: brightness(1.25) drop-shadow(0 0 22px rgba(52,211,153,1)); }
+      72% { transform: translate(22px, 66px) rotate(8deg) scale(1.18, .9); filter: drop-shadow(0 0 14px rgba(52,211,153,.7)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzSweepArc {
+      0%, 30% { opacity: 0; transform: translateX(-50%) rotate(-38deg) scaleX(.5); }
+      50% { opacity: 1; transform: translateX(-50%) rotate(-6deg) scaleX(1); }
+      72% { opacity: .9; transform: translateX(-50%) rotate(22deg) scaleX(1.1); }
+      100% { opacity: 0; transform: translateX(-50%) rotate(34deg) scaleX(1.15); }
+    }
+    @keyframes kzRush {
+      0% { transform: none; }
+      10% { transform: translate(6px, 4px) rotate(12deg) scale(1.08, .92); }
+      22% { transform: translate(-9px, 40px) rotate(-15deg) scale(1.14, .9); }
+      34% { transform: translate(9px, 50px) rotate(15deg) scale(1.16, .9); }
+      46% { transform: translate(-9px, 58px) rotate(-15deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 16px rgba(239,68,68,.9)); }
+      58% { transform: translate(9px, 64px) rotate(15deg) scale(1.18, .88); }
+      70% { transform: translate(-7px, 68px) rotate(-11deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 24px rgba(239,68,68,1)); }
+      84% { transform: translate(0, 40px) rotate(0) scale(1.08, .94); filter: drop-shadow(0 0 12px rgba(220,38,38,.6)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzPalmJabL {
+      0% { opacity: 0; transform: translate(-34px, 0) rotate(-26deg) scale(.5); }
+      35% { opacity: 1; transform: translate(-24px, 48px) rotate(-8deg) scale(1.6); }
+      65% { opacity: .9; transform: translate(-20px, 72px) rotate(-4deg) scale(2.1); }
+      100% { opacity: 0; transform: translate(-18px, 84px) rotate(0) scale(2.3); }
+    }
+    @keyframes kzPalmJabR {
+      0% { opacity: 0; transform: translate(34px, 0) rotate(26deg) scale(.5) scaleX(-1); }
+      35% { opacity: 1; transform: translate(24px, 52px) rotate(8deg) scale(1.6) scaleX(-1); }
+      65% { opacity: .9; transform: translate(20px, 76px) rotate(4deg) scale(2.1) scaleX(-1); }
+      100% { opacity: 0; transform: translate(18px, 88px) rotate(0) scale(2.3) scaleX(-1); }
+    }
+    @keyframes kzThrow {
+      0% { transform: none; }
+      16% { transform: translate(0, 24px) scale(1.12, .9); }
+      26% { transform: translate(0, 28px) scale(1.14, .88); }
+      44% { transform: translate(-14px, -26px) rotate(-22deg) scale(.94, 1.1); filter: drop-shadow(0 0 10px rgba(244,63,94,.6)); }
+      56% { transform: translate(-16px, -34px) rotate(-27deg) scale(.92, 1.12); filter: drop-shadow(0 0 14px rgba(244,63,94,.8)); }
+      68% { transform: translate(10px, 66px) rotate(24deg) scale(1.28, .84); filter: brightness(1.3) drop-shadow(0 0 26px rgba(244,63,94,1)); }
+      78% { transform: translate(6px, 58px) rotate(16deg) scale(1.2, .88); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzGrab {
+      0%, 6% { opacity: 0; transform: translate(26px, 0) rotate(30deg) scale(.5) scaleX(-1); }
+      16% { opacity: 1; transform: translate(20px, 44px) rotate(10deg) scale(1.6) scaleX(-1); }
+      28% { opacity: 1; transform: translate(18px, 48px) rotate(0) scale(1.2) scaleX(-1); }
+      50% { opacity: 1; transform: translate(-14px, -44px) rotate(-50deg) scale(1.4) scaleX(-1); }
+      66% { opacity: .95; transform: translate(12px, 76px) rotate(40deg) scale(2.1) scaleX(-1); }
+      76%, 100% { opacity: 0; transform: translate(14px, 88px) rotate(46deg) scale(2.3) scaleX(-1); }
+    }
+    @keyframes kzPierceBeam {
+      0%, 62% { opacity: 0; transform: translateX(-50%) scaleY(0); }
+      68% { opacity: 1; transform: translateX(-50%) scaleY(1); }
+      84% { opacity: .85; transform: translateX(-50%) scaleY(1.05) scaleX(.8); }
+      100% { opacity: 0; transform: translateX(-50%) scaleY(1.1) scaleX(.2); }
+    }
+    @keyframes kzSpinDrop {
+      0% { transform: none; }
+      12% { transform: translateY(8px) scale(1.2, .8); }
+      24% { transform: translateY(-56px) rotate(0) scale(.9, 1.12); }
+      34% { transform: translateY(-74px) rotate(180deg) scale(.96); }
+      44% { transform: translateY(-80px) rotate(360deg) scale(.96); filter: drop-shadow(0 0 16px rgba(251,191,36,.8)); }
+      54% { transform: translateY(-80px) rotate(540deg) scale(.96); }
+      64% { transform: translateY(-66px) rotate(720deg) scale(.94, 1.08); filter: drop-shadow(0 0 20px rgba(251,191,36,1)); }
+      74% { transform: translateY(72px) rotate(720deg) scale(1.36, .76); filter: brightness(1.35) drop-shadow(0 0 30px rgba(251,191,36,1)); }
+      80% { transform: translate(-5px, 64px) rotate(720deg) scale(1.28, .8); }
+      86% { transform: translate(5px, 64px) rotate(720deg) scale(1.26, .82); filter: drop-shadow(0 0 14px rgba(251,191,36,.6)); }
+      100% { transform: rotate(720deg); filter: none; }
+    }
+    @keyframes kzWhirl {
+      0%, 16% { opacity: 0; transform: translateY(0) rotate(0) scale(.6); }
+      28% { opacity: 1; transform: translateY(-60px) rotate(360deg) scale(1); }
+      60% { opacity: 1; transform: translateY(-74px) rotate(1080deg) scale(1.05); }
+      72%, 100% { opacity: 0; transform: translateY(50px) rotate(1300deg) scale(1.3, .5); }
+    }
+    @keyframes kzBigImpact {
+      0% { opacity: 0; transform: translateX(-50%) scale(.2); }
+      12% { opacity: 1; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0; transform: translateX(-50%) scale(2.4); }
+    }
+    @keyframes kzShadowJump {
+      0%, 12%, 74%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
+      44%, 54% { transform: translateX(-50%) scaleX(.45); opacity: .35; }
+      78% { transform: translateX(-50%) scaleX(1.5); opacity: 1; }
+    }
+    @keyframes kzHeave {
+      0% { transform: none; }
+      12% { transform: translateY(10px) scale(1.18, .82); }
+      26% { transform: translateY(-12px) scale(.9, 1.16); }
+      38% { transform: translate(-16px, -24px) rotate(-20deg) scale(.9, 1.16); filter: drop-shadow(0 0 12px rgba(250,204,21,.7)); }
+      46% { transform: translate(-18px, -26px) rotate(-23deg) scale(.9, 1.16); }
+      58% { transform: translate(18px, 26px) rotate(24deg) scale(1.24, .86); filter: brightness(1.3) drop-shadow(0 0 26px rgba(250,204,21,1)); }
+      68% { transform: translate(10px, 32px) rotate(14deg) scale(1.16, .9); }
+      82% { transform: translateY(-8px) rotate(0) scale(.95, 1.06); filter: drop-shadow(0 0 12px rgba(250,204,21,.5)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzFirework {
+      0%, 54% { opacity: 0; transform: translateX(-50%) scale(.1); }
+      62% { opacity: 1; transform: translateX(-50%) scale(.6); }
+      86% { opacity: 1; transform: translateX(-50%) scale(1.25); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(14px) scale(1.45); }
+    }
+    @keyframes kzPowerUp {
+      0% { transform: none; }
+      14% { transform: translateY(8px) scale(1.16, .84); }
+      22%, 38%, 54%, 70% { transform: translate(-3px, 8px) scale(1.16, .84); }
+      30%, 46%, 62% { transform: translate(3px, 8px) scale(1.16, .84); }
+      22% { filter: drop-shadow(0 0 6px rgba(251,191,36,.5)); }
+      54% { filter: brightness(1.15) drop-shadow(0 0 16px rgba(251,191,36,.85)); }
+      80% { transform: translateY(-10px) scale(.93, 1.12); filter: brightness(1.3) drop-shadow(0 0 28px rgba(251,191,36,1)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzStance {
+      0% { transform: none; }
+      18% { transform: translateY(6px) scale(1.18, .86); }
+      34% { transform: translate(-10px, 6px) rotate(-8deg) scale(1.18, .86); filter: drop-shadow(0 0 10px rgba(244,63,94,.6)); }
+      50% { transform: translate(10px, 6px) rotate(8deg) scale(1.18, .86); }
+      66% { transform: translate(-10px, 6px) rotate(-8deg) scale(1.18, .86); }
+      82% { transform: translateY(4px) scale(1.22, .82); filter: brightness(1.2) drop-shadow(0 0 22px rgba(244,63,94,1)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzPalmReadyL {
+      0%, 12% { opacity: 0; transform: translate(-20px, 0) rotate(-10deg) scale(.5); }
+      26%, 74% { opacity: 1; transform: translate(-52px, 4px) rotate(-24deg) scale(1.4); }
+      50% { opacity: 1; transform: translate(-56px, 0) rotate(-12deg) scale(1.55); }
+      90%, 100% { opacity: 0; transform: translate(-44px, 8px) rotate(-24deg) scale(1.2); }
+    }
+    @keyframes kzPalmReadyR {
+      0%, 12% { opacity: 0; transform: translate(20px, 0) rotate(10deg) scale(.5) scaleX(-1); }
+      26%, 74% { opacity: 1; transform: translate(52px, 4px) rotate(24deg) scale(1.4) scaleX(-1); }
+      50% { opacity: 1; transform: translate(56px, 0) rotate(12deg) scale(1.55) scaleX(-1); }
+      90%, 100% { opacity: 0; transform: translate(44px, 8px) rotate(24deg) scale(1.2) scaleX(-1); }
+    }
+    @keyframes kzSing {
+      0% { transform: none; }
+      15% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); filter: drop-shadow(0 0 10px rgba(52,211,153,.6)); }
+      35% { transform: translate(6px, 0) rotate(9deg) scale(1.05, .96); }
+      55% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); filter: brightness(1.15) drop-shadow(0 0 18px rgba(52,211,153,.95)); }
+      75% { transform: translate(6px, 0) rotate(9deg) scale(1.05, .96); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzNote {
+      0% { opacity: 0; transform: translate(0, 0) rotate(0) scale(.5); }
+      20% { opacity: 1; transform: translate(calc(var(--kz-nx) * .3), -14px) rotate(calc(var(--kz-nr) * .3)) scale(1); }
+      60% { opacity: 1; transform: translate(calc(var(--kz-nx) * -.2), -44px) rotate(calc(var(--kz-nr) * -.3)) scale(1.1); }
+      100% { opacity: 0; transform: translate(var(--kz-nx), -78px) rotate(var(--kz-nr)) scale(1.2); }
+    }
+    [data-tactics-look] [data-kz-fx] { font-style: normal; position: absolute; inset: 0; pointer-events: none; z-index: 10000; }
+    [data-tactics-look] [data-kz-fx]::before, [data-tactics-look] [data-kz-fx]::after { content: ''; position: absolute; opacity: 0; pointer-events: none; }
+    /* はり手以外は、はり手の動き(kzSlap・手のひら・赤い輪)を止めて技ごとのものに差し替える */
+    /* ★:where で包んで詳しさ(specificity)を上げない。上げると下の技ごとの指定より強くなり、手や輪が出なくなる */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack]:where([data-enemy-skill]:not([data-enemy-skill="normal"])) > [data-kz-palm] { animation: none; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack]:where([data-enemy-skill]:not([data-enemy-skill="normal"]))::after { animation: none; }
+    /* かわずつき */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="sweep"] > span { z-index: 9999; animation: kzLunge 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="sweep"] > [data-kz-fx]::before { left: 50%; bottom: -30%; width: 170%; height: 70%; border-radius: 50%;
+      border-bottom: 6px solid rgba(236,253,245,.95); box-shadow: 0 10px 18px -6px rgba(52,211,153,.9);
+      transform-origin: 50% 0; animation: kzSweepArc 450ms ease-out forwards; }
+    /* 連続はり手 */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > span { z-index: 9999; animation: kzRush 750ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > [data-kz-palm="l"] { animation: kzPalmJabL 220ms ease-out 90ms 3; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > [data-kz-palm="r"] { animation: kzPalmJabR 220ms ease-out 200ms 3; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"]::after { animation: kzImpact 220ms ease-out 110ms 3; }
+    /* 上手投げ */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > span { z-index: 9999; animation: kzThrow 900ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > [data-kz-palm="r"] { animation: kzGrab 900ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"]::after { animation: kzImpact 500ms ease-out 400ms forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > [data-kz-fx]::before { left: 50%; top: 40%; width: 16px; height: 170%; border-radius: 8px; transform-origin: 50% 0;
+      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(251,113,133,.9) 40%, rgba(225,29,72,.6) 80%, transparent);
+      box-shadow: 0 0 18px 6px rgba(244,63,94,.75); animation: kzPierceBeam 900ms ease-out forwards; }
+    /* 大回転落とし */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > span { z-index: 9999; transform-origin: 50% 55%; animation: kzSpinDrop 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow] { animation: kzShadowJump 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow]::after { animation: kzDust 600ms ease-out 450ms forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-kz-fx]::before { inset: -14%; border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent, rgba(253,224,71,.95) 14%, transparent 30%, rgba(255,255,255,.8) 50%, transparent 64%, rgba(251,191,36,.95) 80%, transparent 94%);
+      -webkit-mask: radial-gradient(closest-side, transparent 62%, #000 66%, #000 90%, transparent 96%); mask: radial-gradient(closest-side, transparent 62%, #000 66%, #000 90%, transparent 96%);
+      animation: kzWhirl 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-kz-fx]::after { left: 50%; bottom: -24%; width: 120%; height: 40%; border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(253,224,71,.85) 35%, rgba(245,158,11,.4) 65%, transparent);
+      animation: kzBigImpact 420ms ease-out 800ms forwards; }
+    /* 大投げたまや */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > span { z-index: 9999; animation: kzHeave 1000ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="allout"]::after { animation: kzImpact 500ms ease-out 450ms forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::before,
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::after { left: 50%; top: -58%; width: 150%; aspect-ratio: 1; transform-origin: 50% 50%; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::before {
+      background: radial-gradient(9px 9px at 90% 50%, #fde047, transparent 75%), radial-gradient(9px 9px at 78% 78%, #fb7185, transparent 75%),
+        radial-gradient(9px 9px at 50% 90%, #fde047, transparent 75%), radial-gradient(9px 9px at 22% 78%, #67e8f9, transparent 75%),
+        radial-gradient(9px 9px at 10% 50%, #fde047, transparent 75%), radial-gradient(9px 9px at 22% 22%, #fb7185, transparent 75%),
+        radial-gradient(9px 9px at 50% 10%, #fde047, transparent 75%), radial-gradient(9px 9px at 78% 22%, #67e8f9, transparent 75%),
+        radial-gradient(7px 7px at 72% 50%, #fff, transparent 75%), radial-gradient(7px 7px at 50% 72%, #fff, transparent 75%),
+        radial-gradient(7px 7px at 28% 50%, #fff, transparent 75%), radial-gradient(7px 7px at 50% 28%, #fff, transparent 75%),
+        radial-gradient(closest-side, rgba(253,224,71,.35), transparent 40%);
+      filter: drop-shadow(0 0 6px rgba(253,224,71,.9)); animation: kzFirework 1000ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::after { top: -40%; margin-left: -34%; width: 110%;
+      background: radial-gradient(7px 7px at 90% 50%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 78% 78%, #86efac, transparent 75%),
+        radial-gradient(7px 7px at 50% 90%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 22% 78%, #fdba74, transparent 75%),
+        radial-gradient(7px 7px at 10% 50%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 22% 22%, #86efac, transparent 75%),
+        radial-gradient(7px 7px at 50% 10%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 78% 22%, #fdba74, transparent 75%);
+      filter: drop-shadow(0 0 5px rgba(240,171,252,.9)); animation: kzFirework 1000ms ease-out 120ms forwards; }
+    /* 必殺技準備 / 貫通技準備(しこ踏みは上の kzStomp のまま) */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > span { animation: kzPowerUp 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > span { animation: kzStance 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > [data-enemy-shadow]::after,
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-enemy-shadow]::after { animation: none; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-kz-palm="l"] { animation: kzPalmReadyL 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-kz-palm="r"] { animation: kzPalmReadyR 1100ms ease-in-out forwards; }
+    /* かえるのうた */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > span { animation: kzSing 1000ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::before,
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::after { font-size: 34px; font-weight: 900; line-height: 1; color: #a7f3d0;
+      text-shadow: 0 0 8px rgba(52,211,153,1), 0 2px 4px rgba(0,0,0,.7); }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::before { content: '♪'; left: 8%; top: 22%; --kz-nx: -18px; --kz-nr: -20deg;
+      animation: kzNote 900ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::after { content: '♫'; right: 6%; top: 10%; --kz-nx: 18px; --kz-nr: 20deg; color: #fff;
+      animation: kzNote 800ms ease-out 200ms forwards; }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
     [data-tactics-look] [data-enemy-ring="0"] { --mh-rc: 239,68,68; } [data-tactics-look] [data-enemy-ring="1"] { --mh-rc: 245,158,11; }
     [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
