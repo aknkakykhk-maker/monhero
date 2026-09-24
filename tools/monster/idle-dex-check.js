@@ -60,15 +60,15 @@ check('パンドラの雷の最中は重ねない(バトルと同じ)',
 // --- バトルと図鑑が同じ部品を通す ---
 check('バトルは MonsterIdleArt を使う', battle.includes('<MonsterIdleArt baseId={s?.id} image={img}/>'));
 check('入口 withMonsterIdleArt は同じ MonsterIdleArt を返す', fx.includes('<MonsterIdleArt baseId={monsterId} image={image} fill={fill} own={own}/>'));
-check('図鑑の詳細の立ち絵は待機アニメ版を使い、ページのボタンの値で動かす', dex.includes('<DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion}/>'));
+check('図鑑の詳細の立ち絵は待機アニメ版を使い、ページのボタンの値で動かす', dex.includes('<DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion} colors={dexSelectedColors(masuMons, mon.id, dexColorKey)}/>'));
 check('詳細のページに動かす・止めるのボタンが1つある', (dex.match(/data-dex-idle-toggle/g) || []).length === 1 && dex.includes("{idleMotion?'⏸ 動きを止める':'▶ 動かす'}") && dex.includes('onClick={()=>{Audio_.se.tap();toggleIdleMotion();}}'));
 check('最初は動く・新しい保存キーに true/false で残す', dex.includes("const DEX_IDLE_MOTION_KEY = 'mh_dex_idle_motion_v1';") && dex.includes('useState(true)') && dex.includes('storeGet(DEX_IDLE_MOTION_KEY, true).then(v => { if (alive) setMotion(v !== false); });') && dex.includes('storeSet(DEX_IDLE_MOTION_KEY, next)'));
 check('保存キーを保存データの資料に載せた', fs.readFileSync(path.join(root, 'docs/spec/SAVE_DATA.md'), 'utf8').includes('`mh_dex_idle_motion_v1`'));
 check('詳細も攻撃アクションもフックは早い return より前で呼ぶ', (dex.match(/const \[idleMotion(,toggleIdleMotion)?\]=useDexIdleMotion\(\);\n      const monsters=dexMonsterList\(\);/g) || []).length === 2);
 check('図鑑の攻撃アクションも待機アニメを重ねる',
-  dex.includes('withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true})'));
+  dex.includes('withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name, false, dexSelectedColors(masuMons, mon.id, dexColorKey)), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true})'));
 check('図鑑は絵の要素そのものを渡す(部品を複製しない)',
-  dexArt.includes('const dexMonsterArtImage =') && dexArt.includes('withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt), {fill:true, own:true})') && dexArt.includes('(motion && mon.imgUrl && monsterIdleRigOf(mon.id))'));
+  dexArt.includes('const dexMonsterArtImage =') && dexArt.includes('withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt, false, colors), {fill:true, own:true})') && dexArt.includes('(motion && mon.imgUrl && monsterIdleRigOf(mon.id))'));
 check('図鑑の立ち絵は正方形の箱に入れる(軸の % が正方形の枠での値のため)',
   /data-dex-idle-art className="[^"]*aspect-square/.test(dexArt));
 check('図鑑の攻撃アクションの舞台も正方形', /data-attack-preview-art[^>]*width:'clamp\(132px, 44vw, 184px\)',height:'clamp\(132px, 44vw, 184px\)'/.test(dex));
@@ -78,6 +78,35 @@ const stopRules = css.split('\n').filter(l => /\.mon-idle[^{]*\{\s*animation:non
 check('止める規則は3つあり、どれも図鑑(data-idle-own)を外している', stopRules.length === 3 && stopRules.every(l => l.split(',').every(sel => sel.includes(':not([data-idle-own])'))), `${stopRules.length}本`);
 check('バトルは own を付けない(今までどおり設定で止まる)', !/<MonsterIdleArt baseId=\{s\?\.id\}[^>]*own/.test(battle));
 check('入口は own を data-idle-own として付ける', fx.includes("const ownAttr = own ? 'true' : undefined;") && (fx.match(/data-idle-own=\{ownAttr\}/g) || []).length === 2);
+
+// --- マスモンの染色で見る(2026-09-24 ユーザー指示「図鑑の表示でマスモンで染色してるカラーも見れるようにしたい」) ---
+{
+  const c2 = { Array, Map, String };
+  vm.createContext(c2);
+  vm.runInContext(slice(read('monster-hero/src/parts/11-masu-progression.jsx'), 'const getMasuColors =', '\n') + '\n'
+    + slice(dex, 'const dexMasuColorChoices =', 'const DexMasuColorPicker =')
+    + '\nthis.__c = dexMasuColorChoices; this.__s = dexSelectedColors;', c2);
+  const choices = c2.__c, selected = c2.__s;
+  const masus = [
+    { id:'a', baseId:'Mia', name:'ミア1', colors:['red','blue'] },
+    { id:'b', baseId:'Mia', name:'ミア2', colors:['red','blue'] },
+    { id:'c', baseId:'Mia', name:'ミア3', colors:['green'] },
+    { id:'d', baseId:'Mia', name:'ミア4', colors:[] },
+    { id:'e', baseId:'Tiger', name:'トラ', colors:['gold'] },
+    { id:'f', baseId:'Mia', name:'古い形', color:'pink' },
+    null,
+  ];
+  const got = choices(masus, 'Mia');
+  check('その種で色を付けたマスモンだけを候補にし、同じ配色は1つにまとめる',
+    got.length === 3 && got[0].names.length === 2 && got.every(g => g.colors.length > 0), JSON.stringify(got.map(g => g.key)));
+  check('古い形(color 1つ)のマスモンの色も拾う', got.some(g => g.key === 'pink'));
+  check('壊れた一覧・空の一覧でも落ちない', choices(null, 'Mia').length === 0 && choices([], 'Mia').length === 0);
+  check('選んだ配色が無くなっていたら元の色に戻る', selected(masus, 'Mia', 'green')[0] === 'green' && selected(masus, 'Mia', 'nope') === null && selected(masus, 'Mia', null) === null);
+  check('配色は保存しない(図鑑を開くとき・前後へ移るときに元の色へ戻す)',
+    !/storeSet\([^)]*dexColor/.test(dex) && (app => app.includes("setDexTab('basic');setDexColorKey(null);setGameState('MONSTER_DEX_DETAIL')") && app.includes("onSelectMonster={(monId)=>{setDexMonsterId(monId);setDexTab('basic');setDexColorKey(null);}}"))(read('monster-hero/src/parts/60-app.jsx')));
+  check('詳細に色を選ぶ行があり、色を付けた子が居るときだけ出る',
+    dex.includes('<DexMasuColorPicker choices={dexMasuColorChoices(masuMons, mon.id)}') && dex.includes('if (!choices.length) return null;') && dex.includes("chip(null, '元の色', null)"));
+}
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

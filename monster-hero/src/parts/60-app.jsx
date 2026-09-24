@@ -1359,6 +1359,7 @@ function MonsterHeroGame() {
   const [dexLineageFilter, setDexLineageFilter] = useState('all'); // モンスター図鑑: 主血統の絞り込み('all'または血統id)
   const [dexMonsterId, setDexMonsterId] = useState(null);          // モンスター図鑑: 詳細で見ているモンスターのid
   const [dexTab, setDexTab] = useState('basic');                   // モンスター図鑑の詳細タブ(basic/stats/skills)
+  const [dexColorKey, setDexColorKey] = useState(null);            // モンスター図鑑: 見本にしているマスモンの配色(null=元の色。保存しない)
   const dexSwipeRef = useRef(null);                                // 図鑑詳細の横スワイプ(指を置いた位置)
   const [dexAttackPreview, setDexAttackPreview] = useState(null);  // 図鑑詳細の攻撃アクション再生中だけ使う {monsterId,anim}
   const dexAttackPreviewRunRef = useRef(0);                         // 左右移動/戻るで非同期プレビューを確実に止める世代番号
@@ -13376,6 +13377,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dexMonsterId={dexMonsterId}
             dexAttackPreview={dexAttackPreview}
             unlockedMonsterIds={unlockedMonsterIds}
+            masuMons={masuMons}
+            dexColorKey={dexColorKey}
             getAtkSkillLevels={getAtkSkillLevels}
             getUniqueSkillLevels={getUniqueSkillLevels}
             onMissing={()=>setGameState('MONSTER_DEX')}
@@ -13390,7 +13393,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dexLineageFilter={dexLineageFilter}
             unlockedMonsterIds={unlockedMonsterIds}
             onSelectLineage={setDexLineageFilter}
-            onOpenDetail={(monId)=>{stopDexAttackPreview();setDexMonsterId(monId);setDexTab('basic');setGameState('MONSTER_DEX_DETAIL');}}
+            onOpenDetail={(monId)=>{stopDexAttackPreview();setDexMonsterId(monId);setDexTab('basic');setDexColorKey(null);setGameState('MONSTER_DEX_DETAIL');}}
             onBackToManagement={()=>setGameState('MB_MANAGEMENT')}
           />
         )}
@@ -13403,13 +13406,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dexMonsterId={dexMonsterId}
             dexTab={dexTab}
             unlockedMonsterIds={unlockedMonsterIds}
+            masuMons={masuMons}
+            dexColorKey={dexColorKey}
+            onSelectColor={setDexColorKey}
             getAtkSkillLevels={getAtkSkillLevels}
             getUniqueSkillLevels={getUniqueSkillLevels}
             swipeRef={dexSwipeRef}
             onMissing={()=>setGameState('MONSTER_DEX')}
             onBackToList={()=>setGameState('MONSTER_DEX')}
             onOpenAttackPreview={()=>setGameState('MONSTER_ATTACK_PREVIEW')}
-            onSelectMonster={(monId)=>{setDexMonsterId(monId);setDexTab('basic');}}
+            onSelectMonster={(monId)=>{setDexMonsterId(monId);setDexTab('basic');setDexColorKey(null);}}
             onSelectTab={setDexTab}
             onStopPreview={stopDexAttackPreview}
           />
