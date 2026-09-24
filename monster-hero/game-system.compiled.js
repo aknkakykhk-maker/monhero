@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 889b6468ea0e8d62
+// source-sha256: 2468560bc69ad780
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 210aaed458e543c2
+// generated-sha256: 5f45fcb87e89debb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -175,7 +175,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 10:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 10:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38443,14 +38443,14 @@ const tacticsAimNum = (value, limit = 100000) => {
 // 連撃の内訳。全部同じなら「27×3」、違えば「63〜65×3」(いちばん小さい〜大きい)。
 // ★1発ずつ「63・63・65」と並べると、枠の右の列(幅100pxほど)でも5桁で入らない
 //   (2026-09-24 ユーザー了承「内訳を短くしていい」)。1発ずつの数字は「次の行動」の札に出ている
-// ★合計と合わせて13字をこえると右の列でも切れるので、そのときは回数だけ(「×3」)にする
+// ★合計と合わせて18字をこえると枠の横幅でも入らないので、そのときは回数だけ(「×3」)にする
 const tacticsAimParts = (parts, totalText = '') => {
   const list = (Array.isArray(parts) ? parts : []).map(v => Math.max(0, Math.floor(Number(v) || 0)));
   if (list.length <= 1) return '';
   const lo = Math.min(...list),
     hi = Math.max(...list);
   const text = lo === hi ? `${tacticsAimNum(lo, 10000)}×${list.length}` : `${tacticsAimNum(lo, 10000)}〜${tacticsAimNum(hi, 10000)}×${list.length}`;
-  return String(totalText).length + text.length > 13 ? `×${list.length}` : text;
+  return String(totalText).length + text.length > 18 ? `×${list.length}` : text;
 };
 // 手札の技名を、カードの幅に合わせて1〜3行へ収める(2026-09-24 ユーザー指摘「技名がおさまってない」)。
 // ★箱は高さ30pxで固定。11px のまま折り返すと「ホリゾンタル・スクエア」が3行になって上下が切れ、
@@ -40535,7 +40535,29 @@ function BattleScreen({
           animation: 'tacticsHitRing 520ms ease-out 110ms forwards'
         }
       })));
-    })(), (() => {
+    })(), tacticsNewLayout && (previewDmg > 0 || previewGuard > 0 || slotAimHit) && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-slot-top-row": true,
+      className: "absolute left-1 right-1.5 top-[20px] z-[63] flex h-[13px] items-center gap-1 pointer-events-none"
+    }, (previewDmg > 0 || previewGuard > 0) && /*#__PURE__*/React.createElement("div", {
+      "data-tactics-image-previews": true,
+      className: "flex shrink-0 items-center gap-0.5"
+    }, previewDmg > 0 && /*#__PURE__*/React.createElement("span", {
+      "data-tactics-damage-preview": previewDmg,
+      className: `rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'}`
+    }, isPendingPreview && isPendingHalved ? '½' : '', "\u653B", previewDmg), previewGuard > 0 && /*#__PURE__*/React.createElement("span", {
+      "data-tactics-guard-preview": previewGuard,
+      className: "rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200"
+    }, isPendingGuardHalved ? '½' : '', "\u5B88", previewGuard)), /*#__PURE__*/React.createElement("div", {
+      className: "flex min-w-0 flex-1 justify-end"
+    }, slotAimHit && /*#__PURE__*/React.createElement("span", {
+      "data-tactics-aimed-damage": slotAimHit.taken,
+      "data-tactics-aimed-parts": slotAimHit.parts.length > 1 ? slotAimHit.parts.join('/') : undefined,
+      className: "inline-flex h-[13px] max-w-full min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 text-[9px] font-black leading-none text-red-100 shadow"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0"
+    }, "\uD83C\uDFAF", slotAimHit.taken > 0 ? `-${tacticsAimNum(slotAimHit.taken)}` : ''), slotAimHit.parts.length > 1 ? /*#__PURE__*/React.createElement("span", {
+      className: "min-w-0 truncate text-[7px] font-bold text-red-200/85"
+    }, tacticsAimParts(slotAimHit.parts, tacticsAimNum(slotAimHit.taken))) : null))), (() => {
       const slotFxEl = tacticsSlotFx && tacticsSlotFx[i] && (() => {
         const f = tacticsSlotFx[i];
         const hitSpans = Array.isArray(f.hits) && f.hits.length > 1 ? f.hits.map((value, hitIndex) => /*#__PURE__*/React.createElement("span", {
@@ -40686,21 +40708,15 @@ function BattleScreen({
       return /*#__PURE__*/React.createElement("div", {
         "data-tactics-guard-total": gv,
         "data-tactics-guard-kind": slotRushGuard ? 'rush' : 'spread',
-        className: `absolute ${tacticsNewLayout ? 'left-1 top-[22px]' : 'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard ? 'border-amber-200 bg-amber-600/95 text-white' : 'border-sky-300/60 bg-sky-800/90 text-sky-50'}`,
+        className: `absolute ${tacticsNewLayout ? 'left-1 top-[35px]' : 'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard ? 'border-amber-200 bg-amber-600/95 text-white' : 'border-sky-300/60 bg-sky-800/90 text-sky-50'}`,
         style: {
           fontSize: '7px'
         }
       }, "\uD83D\uDEE1 ", slotRushGuard ? '連撃ガード' : '全体', " ", gv);
     })(), (slotAssignedCards.length > 0 || previewDmg > 0 || previewGuard > 0 || slotAimHit || slotExInfo) && /*#__PURE__*/React.createElement("div", {
       "data-tactics-slot-marks": true,
-      className: `${tacticsNewLayout ? 'absolute top-px left-full h-[calc(100%-31px)] w-[150%] overflow-hidden items-stretch justify-start px-1.5' : 'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`
-    }, tacticsNewLayout && slotAimHit && /*#__PURE__*/React.createElement("span", {
-      "data-tactics-aimed-damage": slotAimHit.taken,
-      "data-tactics-aimed-parts": slotAimHit.parts.length > 1 ? slotAimHit.parts.join('/') : undefined,
-      className: "inline-flex h-[13px] max-w-full min-w-0 shrink-0 items-center gap-0.5 self-center overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 text-[9px] font-black leading-none text-red-100 shadow"
-    }, "\uD83C\uDFAF", slotAimHit.taken > 0 ? `-${tacticsAimNum(slotAimHit.taken)}` : '', slotAimHit.parts.length > 1 ? /*#__PURE__*/React.createElement("span", {
-      className: "min-w-0 truncate text-[7px] font-bold text-red-200/85"
-    }, tacticsAimParts(slotAimHit.parts, tacticsAimNum(slotAimHit.taken))) : null), !tacticsNewLayout && slotExInfo && /*#__PURE__*/React.createElement("div", {
+      className: `${tacticsNewLayout ? `absolute left-full w-[150%] overflow-hidden items-stretch justify-start px-1.5 ${slotAimHit || previewDmg > 0 || previewGuard > 0 ? 'top-[15px] h-[calc(100%-46px)]' : 'top-px h-[calc(100%-31px)]'}` : 'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`
+    }, !tacticsNewLayout && slotExInfo && /*#__PURE__*/React.createElement("div", {
       "data-tactics-ex-mark": i,
       "data-tactics-ex-state": slotExInfo.badge.text,
       className: `flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active ? 'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200' : 'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`
@@ -40800,16 +40816,7 @@ function BattleScreen({
         animation: 'idleSpark 900ms ease-in-out infinite',
         animationDelay: `${deg * 2}ms`
       }
-    }, "\u26A1"))), tacticsNewLayout && (previewDmg > 0 || previewGuard > 0) && /*#__PURE__*/React.createElement("div", {
-      "data-tactics-image-previews": true,
-      className: "absolute left-1 top-1 z-[63] flex max-w-[calc(100%-6px)] flex-wrap items-start gap-0.5 pointer-events-none"
-    }, previewDmg > 0 && /*#__PURE__*/React.createElement("span", {
-      "data-tactics-damage-preview": previewDmg,
-      className: `rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'}`
-    }, isPendingPreview && isPendingHalved ? '½' : '', "\u653B", previewDmg), previewGuard > 0 && /*#__PURE__*/React.createElement("span", {
-      "data-tactics-guard-preview": previewGuard,
-      className: "rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200"
-    }, isPendingGuardHalved ? '½' : '', "\u5B88", previewGuard)), (() => {
+    }, "\u26A1"))), (() => {
       const totalBonus = distTotalBonus(i);
       return /*#__PURE__*/React.createElement("div", {
         className: `absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : totalBonus < 0 ? 'text-red-300 border-red-400/30' : 'text-slate-300 border-white/20'}`
