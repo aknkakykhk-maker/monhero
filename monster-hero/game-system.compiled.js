@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e51c42cad780c6eb
+// source-sha256: 8a31daa6ff0fcba7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d3d886d716c046a8
+// generated-sha256: 1ffab0e8b448459c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 20:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 20:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -32491,9 +32491,9 @@ function MonsterDexDetailScreen({
     }, index + 1, " / ", monsters.length)
   }), /*#__PURE__*/React.createElement("div", {
     "data-dex-stage": true,
-    className: "shrink-0 w-full max-w-md mx-auto flex items-stretch gap-1 px-1.5",
+    className: "shrink-0 w-full max-w-md mx-auto flex items-center gap-1 px-1.5 py-1.5",
     style: {
-      height: 'clamp(150px, 20dvh, 180px)'
+      height: 'clamp(176px, 26dvh, 226px)'
     },
     onTouchStart: e => {
       swipeRef.current = e.touches && e.touches[0] ? e.touches[0].clientX : null;
@@ -32508,7 +32508,7 @@ function MonsterDexDetailScreen({
     }
   }, /*#__PURE__*/React.createElement("div", {
     "data-dex-side": "left",
-    className: "flex-1 min-w-0 flex flex-col items-center justify-between py-0.5"
+    className: "flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1"
   }, unlocked && monsterIdleRigOf(mon.id) ? /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-dex-idle-toggle": true,
@@ -32541,9 +32541,9 @@ function MonsterDexDetailScreen({
     "aria-hidden": "true"
   })), /*#__PURE__*/React.createElement("div", {
     "data-dex-art": true,
-    className: "relative shrink-0 h-full aspect-square flex items-center justify-center",
+    className: "relative shrink-0 aspect-square flex items-center justify-center",
     style: {
-      height: 'clamp(150px, 20dvh, 180px)'
+      height: 'clamp(152px, 22dvh, 190px)'
     }
   }, unlocked ? /*#__PURE__*/React.createElement(DexMonsterIdleArt, {
     mon: mon,
@@ -32556,7 +32556,7 @@ function MonsterDexDetailScreen({
     hidden: true
   })), /*#__PURE__*/React.createElement("div", {
     "data-dex-side": "right",
-    className: "flex-1 min-w-0 flex flex-col items-center justify-between py-0.5"
+    className: "flex-1 min-w-0 self-stretch flex flex-col items-center justify-between py-1"
   }, unlocked ? /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-dex-attack-preview": true,
@@ -32616,7 +32616,7 @@ function MonsterDexDetailScreen({
       onCloseTryDye();
     }
   }), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 min-h-0 pt-2"
+    className: "flex-1 min-h-0 pt-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"
   }, /*#__PURE__*/React.createElement("div", {
@@ -77767,6 +77767,10 @@ const createAnimationStyle = () => {
       background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.25), rgba(0,0,0,.35)) !important;
       box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.55), inset 0 0 10px rgba(0,0,0,.5) !important; }
     [data-tactics-look] [data-card-name] { text-shadow: 0 1px 0 rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.6); }
+    /* 固有技(金色のカード)は字の色が黒(TYPE_INLINE_STYLE)で、上の黒い影と地の模様に埋もれて読みにくかった
+       (2026-09-24 ユーザー指摘「固有技の濃い字の黒が見にくい」)。新しい盤面の手札だけ、白い字に濃い茶色の縁取りにする */
+    [data-tactics-look] [data-hand-card][data-card-type="unique"] [data-card-name] { color: #fff;
+      text-shadow: 1px 1px 0 #4a2e00, -1px -1px 0 #4a2e00, 1px -1px 0 #4a2e00, -1px 1px 0 #4a2e00, 0 1px 3px rgba(40,24,0,.95), 0 0 6px rgba(80,50,0,.8); }
     /* ==== 敵のまわりも同じ飾りにそろえる(2026-09-24 ユーザー指示「同じように敵領域にあるボタンや表示関係も見た目よくして」)。
        金の細い縁取り・ガラスの照り・距離の色の光、を枠やカードと共通の言葉で使う。
        ★ボタンの役割の色(青=勇者・赤=敵・琥珀=記録)は残す。縁取りと照りを重ねるだけ ==== */
