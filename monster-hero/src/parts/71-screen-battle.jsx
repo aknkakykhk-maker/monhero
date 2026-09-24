@@ -83,6 +83,8 @@ const tacticsAuraKindOf = (text = '', side = '') => {
   if (/攻撃|闘志|会心|連撃|連斬|ソードスキル|緋桜|威力/.test(t)) return 'power';
   return 'buff';
 };
+// 何も起きていない間、画面の動きを休ませるまでの時間(ミリ秒)。BattleScreen の data-fx-rest を参照
+const TACTICS_FX_REST_MS = 5000;
 // タクティクスの敵ごとの動き方(新しい画面だけ)。値は 70-bootstrap の data-enemy-motion の CSS 名
 // (2026-09-24 ユーザー指示「次はタクティクスの全モンスターも実装して」で10体すべてに広げた)
 const TACTICS_ENEMY_MOTIONS = Object.freeze({
@@ -382,6 +384,32 @@ function BattleScreen({
   // 「まずはカワズモーで」「タクティクスだけ」)。絵は1枚のまま、待機・攻撃・ためる・やられの動きを CSS で付ける。
   // ★ここに無い敵は今までどおり。足すときは TACTICS_ENEMY_MOTIONS に1行と、70-bootstrap の CSS を足す
   const enemyMotion = tacticsNewLayout && !ecoBattleView ? (TACTICS_ENEMY_MOTIONS[enemy?.id] || null) : null;
+  // ★何も起きていない間は、画面の動きを一時停止する(2026-09-24 ユーザー指摘「発熱がすごい」「熱くなるとカクついて動かなくなる」)。
+  //   待機中の飾り・敵と味方の待機の動きは、1つでも動いていると GPU が毎コマ画面を合成し直す(スマホが熱を持つ)。
+  //   タップ・戦闘の進行が TACTICS_FX_REST_MS 無ければ data-fx-rest を立て、CSS が animation-play-state:paused にする。
+  //   触る・何かが起きると、止まった場所からそのまま動き出す(はじめからやり直さない)
+  const [fxRest, setFxRest] = useState(false);
+  const fxRestTimerRef = useRef(null);
+  const fxBusyRef = useRef(false);
+  fxBusyRef.current = !!(isBusy || attackAnim || enemyAttackAnim || enemyAttackFx);
+  const wakeBattleFx = useCallback(() => {
+    setFxRest(false);
+    if (fxRestTimerRef.current) clearTimeout(fxRestTimerRef.current);
+    const arm = () => { fxRestTimerRef.current = setTimeout(() => { if (fxBusyRef.current) arm(); else setFxRest(true); }, TACTICS_FX_REST_MS); };
+    arm();
+  }, []);
+  useEffect(() => { if (tacticsNewLayout) wakeBattleFx(); }, [tacticsNewLayout, isBusy, attackAnim, enemyAttackAnim, enemyAttackFx, popups, enemy?.hp, enemyIntent, wakeBattleFx]);
+  useEffect(() => {
+    if (!tacticsNewLayout || typeof document === 'undefined') return undefined;
+    const onTouch = () => wakeBattleFx();
+    document.addEventListener('pointerdown', onTouch, true);
+    document.addEventListener('keydown', onTouch, true);
+    return () => {
+      document.removeEventListener('pointerdown', onTouch, true);
+      document.removeEventListener('keydown', onTouch, true);
+      if (fxRestTimerRef.current) clearTimeout(fxRestTimerRef.current);
+    };
+  }, [tacticsNewLayout, wakeBattleFx]);
   // いま動いている技(data-enemy-skill)。ムーは丸枠ではなく枠の外の大きな絵が動く
   const enemyIsMoo = isMooBoss(enemy?.id);
   const enemySkillNow = enemyMotion && enemyAttackFx?.skill
@@ -534,7 +562,7 @@ function BattleScreen({
   };
   return (
 
-      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined}>
+      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRest?'true':undefined}>
         {/* 舞台の照明(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい。
             イメージ画みたいにかっこよくできないかな？」)。
             ★画像は足さない。スマホの通信量に直に効くうえ、敵ごとに背景を用意すると際限がない

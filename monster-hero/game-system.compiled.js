@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8a31daa6ff0fcba7
+// source-sha256: 0ccc14d9ce5a4958
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1ffab0e8b448459c
+// generated-sha256: 31cf1487f074a05f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 20:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 21:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -41005,6 +41005,8 @@ const tacticsAuraKindOf = (text = '', side = '') => {
   if (/攻撃|闘志|会心|連撃|連斬|ソードスキル|緋桜|威力/.test(t)) return 'power';
   return 'buff';
 };
+// 何も起きていない間、画面の動きを休ませるまでの時間(ミリ秒)。BattleScreen の data-fx-rest を参照
+const TACTICS_FX_REST_MS = 5000;
 // タクティクスの敵ごとの動き方(新しい画面だけ)。値は 70-bootstrap の data-enemy-motion の CSS 名
 // (2026-09-24 ユーザー指示「次はタクティクスの全モンスターも実装して」で10体すべてに広げた)
 const TACTICS_ENEMY_MOTIONS = Object.freeze({
@@ -41683,6 +41685,38 @@ function BattleScreen({
   // 「まずはカワズモーで」「タクティクスだけ」)。絵は1枚のまま、待機・攻撃・ためる・やられの動きを CSS で付ける。
   // ★ここに無い敵は今までどおり。足すときは TACTICS_ENEMY_MOTIONS に1行と、70-bootstrap の CSS を足す
   const enemyMotion = tacticsNewLayout && !ecoBattleView ? TACTICS_ENEMY_MOTIONS[enemy?.id] || null : null;
+  // ★何も起きていない間は、画面の動きを一時停止する(2026-09-24 ユーザー指摘「発熱がすごい」「熱くなるとカクついて動かなくなる」)。
+  //   待機中の飾り・敵と味方の待機の動きは、1つでも動いていると GPU が毎コマ画面を合成し直す(スマホが熱を持つ)。
+  //   タップ・戦闘の進行が TACTICS_FX_REST_MS 無ければ data-fx-rest を立て、CSS が animation-play-state:paused にする。
+  //   触る・何かが起きると、止まった場所からそのまま動き出す(はじめからやり直さない)
+  const [fxRest, setFxRest] = useState(false);
+  const fxRestTimerRef = useRef(null);
+  const fxBusyRef = useRef(false);
+  fxBusyRef.current = !!(isBusy || attackAnim || enemyAttackAnim || enemyAttackFx);
+  const wakeBattleFx = useCallback(() => {
+    setFxRest(false);
+    if (fxRestTimerRef.current) clearTimeout(fxRestTimerRef.current);
+    const arm = () => {
+      fxRestTimerRef.current = setTimeout(() => {
+        if (fxBusyRef.current) arm();else setFxRest(true);
+      }, TACTICS_FX_REST_MS);
+    };
+    arm();
+  }, []);
+  useEffect(() => {
+    if (tacticsNewLayout) wakeBattleFx();
+  }, [tacticsNewLayout, isBusy, attackAnim, enemyAttackAnim, enemyAttackFx, popups, enemy?.hp, enemyIntent, wakeBattleFx]);
+  useEffect(() => {
+    if (!tacticsNewLayout || typeof document === 'undefined') return undefined;
+    const onTouch = () => wakeBattleFx();
+    document.addEventListener('pointerdown', onTouch, true);
+    document.addEventListener('keydown', onTouch, true);
+    return () => {
+      document.removeEventListener('pointerdown', onTouch, true);
+      document.removeEventListener('keydown', onTouch, true);
+      if (fxRestTimerRef.current) clearTimeout(fxRestTimerRef.current);
+    };
+  }, [tacticsNewLayout, wakeBattleFx]);
   // いま動いている技(data-enemy-skill)。ムーは丸枠ではなく枠の外の大きな絵が動く
   const enemyIsMoo = isMooBoss(enemy?.id);
   const enemySkillNow = enemyMotion && enemyAttackFx?.skill && (enemyImageOnlyAttack || enemyAttackFx.kind === 'regen' || enemyIsMoo && !!enemyAttackAnim) ? enemyAttackFx.skill : null;
@@ -41860,7 +41894,8 @@ function BattleScreen({
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
     "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off',
-    "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined
+    "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined,
+    "data-fx-rest": tacticsNewLayout && fxRest ? 'true' : undefined
   }, /*#__PURE__*/React.createElement("div", {
     "data-battle-stage-bg": true,
     "aria-hidden": "true",
@@ -77702,6 +77737,18 @@ const createAnimationStyle = () => {
          枠4つ＋手札5枚でスマホ相当の速さだと 60コマ→27コマまで落ちていた。
          いまは縁の形に切り抜いた箱(mask)の中で、大きな光の輪を transform で回すだけ(描き直しが要らない) */
     @keyframes mhSpin { to { transform: rotate(360deg); } }
+    /* ==== 発熱対策(2026-09-24 ユーザー指摘「発熱がすごい」「熱くなるとカクついて動かなくなる」) ====
+       ① 何も起きていない間(data-fx-rest)は、バトル画面の動きをすべて一時停止する。止めるだけなので、触れば同じ場所から動き出す。
+       ② 動き続ける層に付いた影(filter)を外す。iPhone では、動く層の影は毎コマ GPU でぼかし直しになる。
+          外すのは見た目にほとんど効いていないもの(味方の影は濃さ 7%)と、足元の影・光の輪で代わりが出ているものだけ */
+    [data-tactics-look][data-fx-rest] *, [data-tactics-look][data-fx-rest] *::before, [data-tactics-look][data-fx-rest] *::after { animation-play-state: paused !important; }
+    [data-tactics-look] .mon-idle--rig { filter: none !important; }
+    [data-tactics-look] [data-enemy-motion] > span > img { filter: none !important; }
+    [data-tactics-look] [data-enemy-ring]::before, [data-tactics-look] [data-slot-circle] { filter: none !important; }
+    /* 覚醒ムーの紫の光(もとは絵に drop-shadow 55px)は、絵の後ろに置いた動かない光で出す */
+    [data-tactics-look] [data-moo-body] > img { filter: none !important; }
+    [data-tactics-look] [data-moo-body]::before { content: ''; position: absolute; inset: 4%; border-radius: 50%; pointer-events: none; z-index: 0;
+      background: radial-gradient(closest-side, rgba(168,85,247,.55), rgba(168,85,247,.25) 55%, rgba(168,85,247,0) 80%); }
     /* ★すりガラス(backdrop-filter)を外す(2026-09-24 ユーザー指摘「バトル画面にかくつきを感じる」)。
        枠・見出し・ライフの札の下地はもともと 72〜98% の濃さで、ぼかしはほとんど見えていなかった。
        それでいて枠の中は入れ子で9か所ぼかしていて、ライフの札は跳ねている味方の絵の真上にあるため、
