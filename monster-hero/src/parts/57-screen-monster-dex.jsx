@@ -13,7 +13,55 @@ const useDexIdleMotion = () => {
   return [motion, toggle];
 };
 
-function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMonsterIds, getAtkSkillLevels, getUniqueSkillLevels, onMissing, onBackToDetail, onStopPreview, onPlayPreview }) {
+// ==== 図鑑でマスモンの染色を見る(2026-09-24 ユーザー指示「図鑑の表示でマスモンで染色してるカラーも見れるようにしたい」) ====
+// 持っているマスモンのうち、その種で色を付けた子の配色を候補にする。同じ配色の子は1つにまとめる。
+// 選んだ配色は見た目だけに使い、保存しない(図鑑を開き直す・ほかの種へ移ると元の色へ戻る)。
+// 読み取りだけで、マスモンのデータには一切触れない
+const dexMasuColorChoices = (masuMons, monId) => {
+  if (!Array.isArray(masuMons) || !monId) return [];
+  const byKey = new Map();
+  for (const masu of masuMons) {
+    if (!masu || masu.baseId !== monId) continue;
+    const colors = getMasuColors(masu);
+    if (!Array.isArray(colors) || !colors.some(c => typeof c === 'string' && c)) continue;
+    const key = colors.map(c => (typeof c === 'string' ? c : '')).join('|');
+    const hit = byKey.get(key);
+    if (hit) hit.names.push(masu.name || '');
+    else byKey.set(key, { key, colors: colors.slice(), names: [masu.name || ''] });
+  }
+  return [...byKey.values()];
+};
+// いま選んでいる配色(見つからなければ null=元の色)
+const dexSelectedColors = (masuMons, monId, colorKey) => {
+  if (!colorKey) return null;
+  const hit = dexMasuColorChoices(masuMons, monId).find(choice => choice.key === colorKey);
+  return hit ? hit.colors : null;
+};
+// 「元の色」と、マスモンの配色のチップを横に並べる。配色の子が居なければ何も出さない
+const DexMasuColorPicker = ({ choices, value, onChange }) => {
+  if (!choices.length) return null;
+  const chip = (key, label, colors) => {
+    const on = (value || null) === key;
+    return (
+      <button key={key || 'base'} type="button" data-dex-color-choice={key || 'base'} aria-pressed={on} onClick={() => { Audio_.se.tap(); onChange(key); }}
+        className={`shrink-0 min-h-[44px] max-w-[12rem] px-2.5 rounded-xl border flex items-center gap-1.5 text-[11px] font-black active:scale-95 ${on ? 'border-amber-300 bg-amber-700 text-white' : 'border-white/15 bg-slate-900 text-amber-100/90'}`}>
+        {colors
+          ? <span className="flex -space-x-1 shrink-0" aria-hidden="true">{colors.filter(Boolean).slice(0, 4).map((c, i) => <span key={i} className="w-3.5 h-3.5 rounded-full border border-black/40" style={{ background: getColorSwatchHex(c) }}/>)}</span>
+          : <span className="w-3.5 h-3.5 rounded-full border border-white/40 bg-gradient-to-br from-white/70 to-slate-500 shrink-0" aria-hidden="true"/>}
+        <span className="truncate min-w-0">{label}</span>
+      </button>
+    );
+  };
+  return (
+    <div data-dex-color-picker className="shrink-0 w-full max-w-md mx-auto px-3 pt-1.5 flex items-center gap-1.5 overflow-x-auto" role="group" aria-label="マスモンの色で見る">
+      <span className="shrink-0 text-[10px] font-black text-amber-300">色</span>
+      {chip(null, '元の色', null)}
+      {choices.map(choice => chip(choice.key, choice.names.length > 1 ? `${choice.names[0] || 'マスモン'} ほか${choice.names.length - 1}体` : (choice.names[0] || 'マスモン'), choice.colors))}
+    </div>
+  );
+};
+
+function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMonsterIds, masuMons, dexColorKey, getAtkSkillLevels, getUniqueSkillLevels, onMissing, onBackToDetail, onStopPreview, onPlayPreview }) {
       const [idleMotion]=useDexIdleMotion();
       const monsters=dexMonsterList();
       const mon=monsters.find(m=>m.id===dexMonsterId)||null;
@@ -45,7 +93,7 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
               拡大の基準は足元にして、伸びるぶんはすべて上の余白へ向ける */}
           <div data-attack-preview-art className="absolute left-1/2" style={{bottom:'11%',width:'clamp(132px, 44vw, 184px)',height:'clamp(132px, 44vw, 184px)',transform:'translateX(-50%) scale(1.15)',transformOrigin:'bottom center'}}>
             {/* 待機アニメ(翼の羽ばたきなど)もバトルと同じ場面で重ねる。持たない子は今までどおり1枚の絵 */}
-            <BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim} baseId={mon.id}/>
+            <BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name, false, dexSelectedColors(masuMons, mon.id, dexColorKey)), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim} baseId={mon.id}/>
           </div>
           <span className="absolute bottom-2 left-0 right-0 text-center text-[10px] font-bold text-slate-400">バトルと同じ演出です（ダメージや性能は変わりません）</span>
         </div>
@@ -100,7 +148,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
         </div>
       </div>);}
 
-function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, getAtkSkillLevels, getUniqueSkillLevels, swipeRef, onMissing, onBackToList, onOpenAttackPreview, onSelectMonster, onSelectTab, onStopPreview }) {
+function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masuMons, dexColorKey, onSelectColor, getAtkSkillLevels, getUniqueSkillLevels, swipeRef, onMissing, onBackToList, onOpenAttackPreview, onSelectMonster, onSelectTab, onStopPreview }) {
       const [idleMotion,toggleIdleMotion]=useDexIdleMotion();
       const monsters=dexMonsterList();
       const index=monsters.findIndex(m=>m.id===dexMonsterId);
@@ -170,7 +218,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, getA
           onTouchStart={e=>{swipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
           onTouchEnd={e=>{const from=swipeRef.current; swipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
           {unlocked
-            ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion}/>
+            ? <DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion} colors={dexSelectedColors(masuMons, mon.id, dexColorKey)}/>
             : <DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>}
           <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
           <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
@@ -188,6 +236,8 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, getA
             ▶ 攻撃アクション
           </button>
         </div>}
+        {/* マスモンに付けた色で見る。その種で色を付けた子が居るときだけ出る */}
+        {unlocked&&<DexMasuColorPicker choices={dexMasuColorChoices(masuMons, mon.id)} value={dexSelectedColors(masuMons, mon.id, dexColorKey)?dexColorKey:null} onChange={onSelectColor}/>}
         {/* 下半分: 情報カード */}
         <div className="flex-1 min-h-0 pt-2">
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
