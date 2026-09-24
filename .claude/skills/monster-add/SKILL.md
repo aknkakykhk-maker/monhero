@@ -1,6 +1,6 @@
 ---
 name: monster-add
-description: Add a new playable ally monster (味方モンスター) to モンスターヒーロー — the 20th-and-beyond entry in ALL_PLAYER_MONSTERS. Use when the user drops a monster illustration or says 新モンスター実装 / モンスター追加 / この子を実装して / 新しい味方モンスター. Lists every place one monster must be registered (stats, 9 attack names, unique skill, images, 立ち絵・顔アイコン・円盤石アイコン, lineage, dex text, market discs, market icon framing, dye regions, attack motion), which values must be asked rather than invented, how the 3 dye-region styles differ (3 parts is the rule, KenshiMocchi's 5 is the exception), and the checks that catch a missing registration.
+description: Add a new playable ally monster (味方モンスター) to モンスターヒーロー — the 20th-and-beyond entry in ALL_PLAYER_MONSTERS. Use when the user drops a monster illustration or says 新モンスター実装 / モンスター追加 / この子を実装して / 新しい味方モンスター. Lists every place one monster must be registered (stats, 9 attack names, unique skill, images, 立ち絵・顔アイコン・円盤石アイコン, lineage, dex text, market discs, market icon framing, dye regions, attack motion, idle-animation rig), which values must be asked rather than invented, how the 3 dye-region styles differ (3 parts is the rule, KenshiMocchi's 5 is the exception), and the checks that catch a missing registration.
 ---
 
 # 味方モンスターを1体足す
@@ -29,9 +29,9 @@ description: Add a new playable ally monster (味方モンスター) to モン�
 
 ## 1. 必要なデータの全体像
 
-**どの子にも必ず要るのが次の9か所。** どれか1つ抜けても画面はふつうに動いてしまう。
+**どの子にも必ず要るのが次の10か所。** どれか1つ抜けても画面はふつうに動いてしまう。
 専用モーションや特殊な効果を付けると、ここに**載っていない場所が増える**(§5)。
-「9か所で終わり」と思って進めないこと。
+「10か所で終わり」と思って進めないこと。
 
 | # | ファイル | 何を足すか |
 | --- | --- | --- |
@@ -44,6 +44,7 @@ description: Add a new playable ally monster (味方モンスター) to モン�
 | 7 | `parts/15-dye-and-art.jsx` | `MASU_COLOR_REGION_HUES[id]` … 染色の部位分け(§4) |
 | 8 | `monster-hero/images/` | 立ち絵 `monsters/<id>.png` ／ 円盤石 `disc-icons/<id>-disc.PNG` |
 | 9 | `parts/60-app.jsx` ほか | 勇者特性・固有技の**実効果のID分岐**(§5)。表示だけでは何も起きない |
+| 10 | `tools/monster/idle-rig-build.js` | **待機アニメ**の `RIGS`(§6)。全20種が持っている。2026-09-24に入った |
 | 10 | `tools/monster/idle-rig-build.js` | `RIGS` へ1体(待機アニメ。動かす部分が無い子も `body` だけ書く)→ `node tools/monster/idle-rig-build.js`。バトルと図鑑の両方で動く(図鑑の側は触らない) |
 
 ### `ALL_PLAYER_MONSTERS` のフィールド
@@ -174,7 +175,50 @@ node tools/where.js --text "Eiki"                 # 専用演出を持つ子が�
 変更前と変更後の値を並べて足す(神殿の再生が古い個体を正しく見分けるため)。
 新規追加のときは不要。
 
-## 6. 検査
+## 6. 待機アニメ(全20種が持っている)
+
+バトルと図鑑で、待っているあいだも体が動く。2026-09-24に入った仕組みで、**今いる20種すべてに
+リグがある**ので、新しい子にも要る。「止まったまま」は目で見てすぐ分かる。
+
+**`24-battle-fx.jsx` の `MONSTER_IDLE_RIGS` を手で直さない。** そこは生成物で、
+正本は `tools/monster/idle-rig-build.js` の `RIGS`。1体ぶん書いて、ツールに書かせる。
+
+```js
+// tools/monster/idle-rig-build.js の RIGS へ1件
+{ id:'<Id>', img:'<id>.png', body:'hover', parts:[
+  { name:'wing-l', poly:[[…]], pivot:[44.3, 38.1], anim:'flapL', amp:16, dur:1300, delay:0, layer:'back' },
+] },
+```
+
+| 書くもの | 中身 |
+| --- | --- |
+| `body` | 全体の動き。種ごとに**1つ**。`bounce` / `breathe` / `hover` / `sway` / `swim` |
+| `poly` | 切り抜く範囲。元絵の左上を(0,0)・右下を(100,100)とした**%の多角形** |
+| `pivot` | 回す軸。同じく元絵の% |
+| `anim` | `flapL` / `flapR`(羽ばたき) / `swing`(ゆったり) / `wag`(しっぽ) / `twitch`(ときどきピクッ) / `bob`(上下) |
+| `layer` | `back`(体の後ろ＝翼・しっぽ) / `front`(体の前＝耳・頭の花) |
+| `keep` | 多角形の中でも拾う画素を色で絞る(`{minLum,maxLum}` / `{hue:[下,上],minSat}` / `orDark:N`)。毛や腕を巻き込まないため |
+
+動かす部分が無い子は `parts:[]` にして全体の動きだけにしてよい(モッチー・スエゾー・
+ゴーレム・モノリスがそう)。**絵は1枚のPNGのまま**で、描き足しはしない。
+
+```bash
+node tools/monster/idle-rig-build.js          # マスクPNG・images-ally.js・24-battle-fx.jsx を書く
+node tools/build.js
+node tools/monster/idle-rig-build.js --check  # 表とマスクが定義どおりか
+node tools/monster/idle-dex-check.js          # 図鑑でも同じアニメが出るか
+```
+
+ツールが書き出すのは3か所。**どれも手で書かない。**
+
+- `monster-hero/images/monsters/idle/<id>-<name>.png`(部分) と `<id>-body.png`(体の残り)
+- `data/images/images-ally.js` の「待機アニメのマスク」区画
+- `parts/24-battle-fx.jsx` の `MONSTER_IDLE_RIGS` 区画
+
+> ミーアだけは色で翼を切り抜いた専用マスク(`mia-wing-*.png`)を使うので `masks` を直接書いている。
+> ふつうは `poly` で足りる。
+
+## 7. 検査
 
 ```bash
 node tools/build.js
@@ -198,24 +242,28 @@ node tools/run-checks.js --area monster,image 2>&1 | tail -25
 | `masu/monster-power-check.js` | 総合力の計算 |
 | `ranking/bond-ranking-species-check.js` | 絆Lvランキングの種別 |
 | `mode/species-challenge-*-check.js` | 種族チャレンジ(血統で選ばれる) |
+| `monster/idle-rig-build.js --check` | 待機アニメの表とマスク(§6) |
+| `monster/idle-dex-check.js` | 図鑑でも待機アニメが出るか |
 
-## 7. 更新履歴・ヘルプ
+## 8. 更新履歴・ヘルプ
 
 **`changelog-help-update` スキルへ。** ここでは要点だけ。
 
 - 一覧になるもの(モンスター・図鑑・マーケット・総合力)は `{t:'data', id:'…'}` が
   実データから作るので**手で書き写さない**(`monsterLineages` / `monsterPower` などのidがある)
-- **ただし、専用モーションや固有技の特殊な効果はヘルプに手で書く。**
-  実データから表にできないため。ミーアには「ミーアの歌う攻撃モーション」という
+- **専用モーションや固有技の特殊な効果はヘルプに手で書く。**
+  実データから表にできないため。20種を数えたところ、**どの子も何らかの形で
+  `help.js` に名前が出ている**(固有技の囲み・勇者特性・反射・氷結など)。
+  「今回は書かなくてよい」と判断する前に、似た効果の子がどう書かれているかを必ず見る。ミーアには「ミーアの歌う攻撃モーション」という
   囲み(`{t:'note'}`)があり、固有技の説明にも「ピクシー・ミーアの『次ターン消費0』」と
   名指しで入っている。`grep -n "ミーア" monster-hero/data/help.js` で実例を見てから書く
 - マーケットに円盤石を並べたので、更新履歴へ
   `assistantNotice:{id:'update_notice_◯◯_v1', type:'market'}` を**必ず**付ける
   (`node tools/boot/market-notice-check.js` が見張る)
 
-## 8. 登録漏れを機械的に見つける
+## 9. 登録漏れを機械的に見つける
 
-§1 の9か所を埋めても、**その子に要る場所が全部とは限らない**。
+§1 の10か所を埋めても、**その子に要る場所が全部とは限らない**。
 実装し終えたら、既存の子と登録先を突き合わせて差を見る。
 
 ```bash
@@ -233,16 +281,30 @@ for n in <新しい表示名> ミーア パンドラ 剣士モッチー; do
 done
 ```
 
+### 20種を数えた結果(2026-09-24)
+
+| 出てくる数 | ファイル | 意味 |
+| --- | --- | --- |
+| 20/20 | `ally-monsters.js` `lineages.js` `help.js` `15-dye-and-art.jsx` `24-battle-fx.jsx` | **全員が持つ＝必ず要る** |
+| 19/20 | `60-app.jsx` | ほぼ必ず |
+| 15/20 | `breeder.js` | 円盤石を売っている子だけ(初期解放8種のうち5種は売っていない) |
+| 14/20 | `20-market-notices-help.jsx` | マーケットに並ぶ子だけ |
+| 12種以下 | `22-enemy-and-bond-entries` `71-screen-battle` `32-tactics-units` ほか | 効果・演出を持つ子だけ(§5) |
+
+`images-ally.js` は8/20 としか出ないが、これは**数え方の穴**。定数名が `KENSHI_MOCCHI_IMG` の
+ように id と綴りが違うので引っかからないだけで、実際は全員ぶんある。
+**「出てこない＝要らない」と即断しない。**
+
 **このスキルを書いたときも、ローマ字だけで数えて help.js と 70-bootstrap.jsx を取りこぼした。**
 日本語名でも必ず引くこと。日本語のほうはコメント中の言及(「ピクシー種ならピクシー・ミーア・
 パンドラが候補」など)も一緒に拾うので、出たファイルは `grep -n` で行を見て、
 本当に登録が要るのかを1つずつ判断する。
 
-## 9. 落とし穴
+## 10. 落とし穴
 
 ### 画面はふつうに動いてしまう
 血統を書き忘れる・マーケットの3件のうち1件だけ足す・`MARKET_ICON_FRAMING` を書かない、
-のどれも**エラーにならない**。気づけるのは §6 の検査だけなので、必ず `--area monster,image` まで通す。
+のどれも**エラーにならない**。気づけるのは §7 の検査だけなので、必ず `--area monster,image` まで通す。
 
 ### 円盤石の商品idはモンスターidと同じ
 `{ id:'Mia', type:'disc' }` の `id` が解放と紐づく。アイコン商品のほうは `mia_icon` /
