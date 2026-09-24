@@ -265,7 +265,10 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
     if (t.includes('リザルト')) { wave1Cleared = true; await clickText('^次へ進む$'); await page.waitForTimeout(1000); continue; }
     // ★「攻撃覚醒」は #639 で「トレーニング」へ置き換わり、4種類から2つ選ぶ形になった。
     //   2つ選ぶまで決定を押せないので、頭から2つ押してから決定する
-    if (t.includes('トレーニング') || t.includes('攻撃覚醒')) {
+    // ★画面の文字ではなく data-screen で見分ける。WAVE後の画面には「✓ トレーニング → 供モン → …」の
+    //   並びが出るようになり、アシストカードや供モンの画面にも「トレーニング」の字が入るため
+    const onTraining = await page.evaluate(() => !!document.querySelector('[data-screen="training"]'));
+    if (onTraining || t.includes('攻撃覚醒')) {
       for (const name of ['^走り込み', '^ドミノ倒し', '^丸太うけ', '^猛勉強']) {
         if (await clickText(name)) await page.waitForTimeout(250);
         if (/決定する|この2つで決定/.test(await bodyText())) break;

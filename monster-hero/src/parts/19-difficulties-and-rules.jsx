@@ -792,6 +792,26 @@ const TRAINING_OPTIONS = Object.freeze([
   Object.freeze({ id:'def',  name:'丸太うけ',   stat:'def',  flat:0, rate:0.20, statLabel:'丈夫さ',  effect:'丈夫さ +20%' }),
   Object.freeze({ id:'guts', name:'猛勉強',     stat:'guts', flat:5, rate:0.05, statLabel:'ガッツ',  effect:'ガッツ +5 ＆ +5%' }),
 ]);
+// ===== 強化フェーズ(WAVEクリア後にバトルへ戻るまで)の手順 =====
+// 画面の上に「トレーニング → 供モン → 配置 → 固有技 → アシストカード」のように、
+// いまどこにいて、あと何画面でバトルへ戻るのかを出すための並び。
+// 進み方そのものは handleTraining / finishQuickGrowth / continueAfterUniqueUpgrade が決めていて、
+// ここはそれと同じ条件で**先に並びを組むだけ**(ここを変えても進み方は変わらない)。
+//   ・供モンが来るのは WAVE 2・4・6 で、編成に空きがあり、候補が1体でもいるとき
+//   ・種族チャレンジは供モンが来なくても固有技の強化へ進む
+//   ・WAVE 1・3・5・7・9 はアシストカードを選んでから次のWAVEへ
+//   ・クイックモードはトレーニングの代わりに自動成長。供モンを選んだら加入を見て次のWAVEへ
+const POST_WAVE_JOIN_WAVES = Object.freeze([2,4,6]);
+const POST_WAVE_TEACHING_WAVES = Object.freeze([1,3,5,7,9]);
+const postWavePhasePlan = ({ wave, quick=false, joinPossible=false, speciesChallenge=false } = {}) => {
+  const w=Number(wave)||0;
+  const joinWave=POST_WAVE_JOIN_WAVES.includes(w);
+  if(quick) return joinWave&&joinPossible ? ['growth','ally','slot'] : ['growth'];
+  if(joinWave&&joinPossible) return ['training','ally','slot','skill','teaching'];
+  if(joinWave&&speciesChallenge) return ['training','skill','teaching'];
+  if(POST_WAVE_TEACHING_WAVES.includes(w)) return ['training','teaching'];
+  return ['training'];
+};
 const chooseAutoTrainingPicks = (strategy, rng=Math.random) => {
   const fixed={offense:['atk','guts'],defense:['hp','def'],guts:['guts','guts']}[strategy];
   if(fixed)return [...fixed];
