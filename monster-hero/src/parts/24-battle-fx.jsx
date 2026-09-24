@@ -106,33 +106,92 @@ const AttackTargetFx = ({anim}) => {
     </span>
   );
 };
-// ==== ミーアの待機アニメ(試作・2026-09-24 ユーザー指示「試しにミーアでやってみて」) ====
-// 絵は1枚のPNGなので描き足しはしない。同じ絵を「翼以外」「左の翼」「右の翼」の3枚に切り抜いて重ね
-// (切り抜きは images/monsters/mia-wing-*.png のマスク)、翼だけを肩の付け根を軸に回して羽ばたかせる。
-// 翼は体の後ろにあるので、動かしても穴が見えない。全体はゆっくり浮き沈みして呼吸する。
-// ・image はバトルで使う実際の絵(染色つき DyedMonsterImage)をそのまま受け取り、3回複製する
-// ・軸の位置は「正方形の枠に2:3の絵を contain で置いた」ときの座標。バトルの枠(58/64pxの正方形)専用
-// ・軽量表示・動きを減らす設定では止める(呼び出し側と CSS の両方で)
-const MIA_IDLE_MASK_STYLE = (url) => ({
+// ==== モンスターの待機アニメ(バトルと図鑑で共用) ====
+// 始まりはミーア(2026-09-24 ユーザー指示「試しにミーアでやってみて」)。そのあと「図鑑にも同じ動きが
+// 出来る基盤を」(2026-09-24)で、ミーア専用の部品をモンスターごとの設定表＋共通の描画部品に分けた。
+// 絵は1枚のPNGなので描き足しはしない。同じ絵を部位ごとのマスク(images/monsters/◯◯-*.png)で切り抜いて
+// 重ね、部位だけを付け根を軸に回す。動かす部位は体の後ろに置くので、動かしても穴が見えない。
+//
+// ■ 新しいモンスターを足すとき(ここと CSS の2か所だけ)
+//   1. 部位のマスクPNGを用意する(元絵と同じ縦横比。白=その部位、透明=それ以外)。
+//      「部位を抜いた残り(base)」のマスクも1枚作る。images-ally.js にパスを書く
+//   2. 下の MONSTER_IDLE_RIGS へ1件足す。座標はすべて**元絵のピクセル**で書く
+//      (枠の形から回転軸の%を出すのは MonsterIdleArt がやるので、枠ごとに数字を直さない)
+//   3. 70-bootstrap.jsx の CSS に .monster-idle--<cssKey> と部位の keyframes を書く
+//   4. node tools/monster/idle-rig-check.js を通す
+//   バトル(71-screen-battle.jsx)と図鑑(57-screen-monster-dex.jsx)は withMonsterIdleArt を通しているので、
+//   ここへ足せば両方で動き出す。呼び出し側は触らない。
+//
+// ・image は各画面で使う実際の絵(染色つき DyedMonsterImage)をそのまま受け取り、層の数だけ複製する
+// ・軽量表示・「待機中の動き：止める」・動きを減らす設定では止める(バトルは呼び出し側で1枚絵に戻し、
+//   図鑑は画面全体の data-phase-look="calm" を見て CSS で止める)
+const MONSTER_IDLE_RIGS = Object.freeze({
+  Mia: Object.freeze({
+    cssKey: 'mia',
+    size: [1024, 1536],            // 元絵(mia.PNG)の大きさ。マスクも同じ縦横比(256×384)
+    anchor: [512, 1475],           // 全体の浮き沈みの軸(足元)
+    base: MIA_WING_BODY_MASK,      // 翼を抜いた残り。いちばん上に重ねる
+    parts: Object.freeze([
+      // 肩の付け根。back:true は体の後ろ(base より下)に置く部位
+      Object.freeze({ key: 'wing-l', mask: MIA_WING_LEFT_MASK,  pivot: [425, 585], back: true }),
+      Object.freeze({ key: 'wing-r', mask: MIA_WING_RIGHT_MASK, pivot: [599, 585], back: true }),
+    ]),
+  }),
+});
+const monsterIdleRigOf = (monsterId) => (monsterId && Object.prototype.hasOwnProperty.call(MONSTER_IDLE_RIGS, monsterId)) ? MONSTER_IDLE_RIGS[monsterId] : null;
+const MONSTER_IDLE_MASK_STYLE = (url) => ({
   WebkitMaskImage:`url(${url})`, maskImage:`url(${url})`,
   WebkitMaskSize:'contain', maskSize:'contain',
   WebkitMaskPosition:'center', maskPosition:'center',
   WebkitMaskRepeat:'no-repeat', maskRepeat:'no-repeat',
 });
-const MiaIdleArt = ({image}) => {
-  // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと「翼以外」の層に翼の影が残り、
-  //   翼を上げたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体(.mia-idle)に1回だけ付ける
+// 元絵の1点(px)が、枠(横÷縦 = frameAspect)へ contain で置いたときに枠の何%の所に来るか。
+// バトルの枠は正方形(1)。図鑑も正方形の箱へ入れて渡す。
+const monsterIdlePoint = (rig, [x, y], frameAspect = 1) => {
+  const [w, h] = rig.size;
+  const artAspect = w / h;
+  const fa = Number.isFinite(frameAspect) && frameAspect > 0 ? frameAspect : 1;
+  // 絵が枠より縦長なら高さいっぱい・左右に余白、横長なら幅いっぱい・上下に余白
+  const sx = artAspect < fa ? artAspect / fa : 1;
+  const sy = artAspect < fa ? 1 : fa / artAspect;
+  const pct = (v) => `${Math.round(v * 1000) / 10}%`;
+  return `${pct((1 - sx) / 2 + (x / w) * sx)} ${pct((1 - sy) / 2 + (y / h) * sy)}`;
+};
+// fill: 入れ物いっぱいに広げる(図鑑の立ち絵のように、絵が w-full h-full で大きさを持たないとき)。
+//   バトルの絵は幅・高さを px で持っているので要らない
+const MonsterIdleArt = ({monsterId, image, frameAspect = 1, fill = false}) => {
+  const rig = monsterIdleRigOf(monsterId);
+  if (!rig || !image) return image || null;
+  // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと base の層に部位の影が残り、
+  //   部位を動かしたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体(.monster-idle)に1回だけ付ける
   const className = String(image.props.className || '').split(/\s+/).filter(c => c && !/^drop-shadow/.test(c)).join(' ');
   const layer = (url, extra) => React.cloneElement(image, { alt: extra ? '' : image.props.alt, className,
-    style:{ ...(image.props.style||{}), ...MIA_IDLE_MASK_STYLE(url), ...(extra||{}) } });
+    style:{ ...(image.props.style||{}), ...MONSTER_IDLE_MASK_STYLE(url), ...(extra||{}) } });
+  const part = (p) => (
+    <span key={p.key} className={`monster-idle__part monster-idle__part--${p.key}${p.back ? '' : ' monster-idle__part--front'}`}
+      style={{ transformOrigin: monsterIdlePoint(rig, p.pivot, frameAspect) }} aria-hidden="true">
+      {layer(p.mask, {display:'block'})}
+    </span>
+  );
   return (
-    <span className="mia-idle">
-      <span className="mia-idle__wing mia-idle__wing--l" aria-hidden="true">{layer(MIA_WING_LEFT_MASK, {display:'block'})}</span>
-      <span className="mia-idle__wing mia-idle__wing--r" aria-hidden="true">{layer(MIA_WING_RIGHT_MASK, {display:'block'})}</span>
-      <span className="mia-idle__body">{layer(MIA_WING_BODY_MASK, null)}</span>
+    <span className={`monster-idle monster-idle--${rig.cssKey}${fill ? ' monster-idle--fill' : ''}`} data-monster-idle={monsterId}
+      style={{ transformOrigin: monsterIdlePoint(rig, rig.anchor, frameAspect) }}>
+      {rig.parts.filter(p => p.back).map(part)}
+      <span className="monster-idle__base">{layer(rig.base, null)}</span>
+      {rig.parts.filter(p => !p.back).map(part)}
     </span>
   );
 };
+// 待機アニメを持つ子なら重ねた絵に、持たない子・止める場面ならそのままの絵を返す。
+// バトルと図鑑はこれを通すだけにして、モンスターの名前で分岐しない
+const withMonsterIdleArt = (monsterId, image, {enabled = true, frameAspect = 1, fill = false} = {}) => (
+  enabled && monsterIdleRigOf(monsterId) ? <MonsterIdleArt monsterId={monsterId} image={image} frameAspect={frameAspect} fill={fill}/> : image
+);
+// 図鑑の攻撃アクションで、動きの最中も待機アニメを重ねてよいか。バトル(71-screen-battle.jsx)が slotArt を
+// 通すのは「待機中」「通常の動き(attackMotionAnimation)」「ミーアの歌」だけなので、それに合わせる。
+// 水・聖光・パンドラの雷は本体の絵を自分で動かす(複製もする)ので、1枚の絵のまま渡す
+const MONSTER_IDLE_OFF_MOTIONS = Object.freeze(['arkHolyRain', 'waterBurst', 'pandoraDualThunder']);
+const monsterIdleAllowedDuring = (anim) => !anim || !MONSTER_IDLE_OFF_MOTIONS.includes(anim.motion);
 // エイキの攻撃中だけ重ねる桜の花びら。
 // 常時アニメーションにはせず、攻撃モーションが出ているあいだ(isAnimating)だけ描く。
 // スマホの負荷を増やしすぎないよう、要素は固定12枚・CSSアニメーション1本だけにして、

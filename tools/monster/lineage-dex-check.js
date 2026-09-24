@@ -254,7 +254,7 @@ check('攻撃アクションの専用画面で通常攻撃と固有技を再生�
   && attackPreview.includes("kindButton('normal','通常攻撃'")
   && attackPreview.includes("kindButton('unique','固有技'"));
 check('専用画面は本番と同じ描画部品を使い、立ち絵を下寄りに置いて上へ余白を残す',
-  attackPreview.includes('<BattleAttackMotionPreview image={<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>')
+  attackPreview.includes('<BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {enabled:monsterIdleAllowedDuring(previewAnim), fill:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>')
   && /data-attack-preview-art[\s\S]{0,200}bottom:'1[0-9]%'/.test(attackPreview)
   && attackPreview.includes('data-attack-preview-stage'));
 check('専用画面から図鑑の詳細へ戻れ、戻るときに再生を止める',
