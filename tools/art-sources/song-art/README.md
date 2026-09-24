@@ -15,10 +15,9 @@ node -e "require('/home/user/monhero/tools/node_modules/sharp')('tools/art-sourc
 
 | 曲 | 原本 | いまの使いみち |
 | --- | --- | --- |
-| 戦場の疾風 | `senjou-no-shippuu.jpg` | タクティクスバトルの通常戦BGM（モンヒロビートには未実装） |
-| 魔窟の旋律 | `makutsu-no-senritsu.jpg` | タクティクスバトルのボス戦BGM（同上） |
+| 戦場の疾風 | `senjou-no-shippuu.jpg` | タクティクスバトルの通常戦BGM／モンヒロビート（2026-09-24〜） |
+| 魔窟の旋律 | `makutsu-no-senritsu.jpg` | タクティクスバトルのボス戦BGM／モンヒロビート（2026-09-24〜） |
 
 > この2枚は2026-09-21にユーザーから「**今後モンビー実装用にジャケットも送っとく**」として
-> 届いたもの。**いまは配信していない。** `monster-hero/images/song-art/` へ置くのは
-> モンヒロビートへ曲を入れるときだけ（先に置くと `tools/image-asset-check.js` が
-> 「どこからも参照されていない絵」として落とす）。
+> 届いたもの。2026-09-24にモンヒロビートへ入れ、512×512 に落とした絵を `monster-hero/images/song-art/` に置いた。
+> 原本はここに残す（作り直すときに使う）。
