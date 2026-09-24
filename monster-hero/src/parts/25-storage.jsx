@@ -114,6 +114,26 @@ const storageUsageReport = () => {
   items.sort((a, b) => b.chars - a.chars);
   return { total, items };
 };
+// ===== 演奏の既定を元へ戻す一度きりの移行(2026-09-24・ユーザー指示
+//   「もしもとより操作性変わるならもとのやつをデフォルトに変えて」) =====
+// 同じ日に「ライブ背景=派手」「描く回数=省電力」を既定にして出したが、実機で操作感が変わったと言われた。
+// 既定を元(シンプル / 端末に合わせる)へ戻しても、オプションで一度「保存」した人は
+// 当時の既定がそのまま保存値に入っているので、既定を変えただけでは戻らない。
+// そこで**一度だけ**、保存値がその当時の既定と同じときに限って元の値へ置き換える。
+// ★ほかの項目・ほかのキーには触らない。済んだら専用のフラグを立て、二度と走らせない(CLAUDE.md ⑦)。
+const RHYTHM_PLAY_DEFAULTS_RESTORED_KEY = 'mh_rhythm_play_defaults_restored_v1';
+const restoreRhythmPlayDefaultsOnce = async raw => {
+  if(await storeGet(RHYTHM_PLAY_DEFAULTS_RESTORED_KEY,false,false)===true)return raw;
+  let next=raw;
+  if(raw&&typeof raw==='object'&&!Array.isArray(raw)){
+    const patch={};
+    if(raw.stageEffect==='VIVID')patch.stageEffect='SIMPLE';
+    if(raw.frameRateMode==='POWER_SAVE')patch.frameRateMode='DEVICE';
+    if(Object.keys(patch).length){next={...raw,...patch};await storeSet(RHYTHM_SETTINGS_KEY,normalizeRhythmSettings(next),false);}
+  }
+  await storeSet(RHYTHM_PLAY_DEFAULTS_RESTORED_KEY,true,false);
+  return next;
+};
 const saveRhythmSettings = async value => {
   const normalized=normalizeRhythmSettings(value); await storeSet(RHYTHM_SETTINGS_KEY,normalized,false); return normalized;
 };

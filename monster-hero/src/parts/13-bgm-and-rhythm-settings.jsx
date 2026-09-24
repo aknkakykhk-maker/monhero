@@ -301,7 +301,7 @@ const RHYTHM_LANE_COVER_MIN = 0, RHYTHM_LANE_COVER_MAX = 60, RHYTHM_LANE_COVER_S
 const RHYTHM_TIMING_DISPLAYS = Object.freeze(['STANDARD','MS','METER']);
 const RHYTHM_TIMING_DISPLAY_LABELS = Object.freeze([['STANDARD','FAST/SLOW'],['MS','数字も'],['METER','メーターも']]);
 const rhythmStageLevel = settings => settings&&settings.lightweightMode?'SIMPLE'
-  :(RHYTHM_STAGE_EFFECTS.includes(settings&&settings.stageEffect)?settings.stageEffect:'VIVID');
+  :(RHYTHM_STAGE_EFFECTS.includes(settings&&settings.stageEffect)?settings.stageEffect:'SIMPLE');
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -342,10 +342,14 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // ブラウザから通知そのものは止められないので、全画面と画面ロック防止でできる範囲だけ行う。
   // 既定はOFF。勝手に全画面へ入ると「戻れない」と感じる人がいるため
   quietDuringPlay:false,
-  // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定(省電力)で補われる
-  frameRateMode:'POWER_SAVE',
-  // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定(派手)で補われる
-  stageEffect:'VIVID',
+  // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
+  // ★既定は「端末に合わせる」(=これまでの動き)。一度は省電力を既定にしたが、
+  //   「もしもとより操作性変わるならもとのやつをデフォルトに」(2026-09-24・ユーザー指示)で戻した
+  frameRateMode:'DEVICE',
+  // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
+  // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
+  //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
+  stageEffect:'SIMPLE',
   // 他の音ゲーから取り入れた表示(2026-09-24)。どれも既存の保存値には無いので、読み込み時は既定で補われる
   laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
 });
