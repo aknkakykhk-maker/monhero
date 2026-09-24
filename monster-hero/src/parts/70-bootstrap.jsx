@@ -1693,7 +1693,8 @@ const createAnimationStyle = () => {
       /* 1枚の幅が90px前後になるので、名前・数字・×1 の札を一回り小さくして重ならないようにする */
       .mh-phase-card-name { font-size: 12px !important; }
       .mh-phase-card-nums { font-size: 9px !important; }
-      .mh-phase-count { top: 3px !important; right: 3px !important; padding: 0 5px !important; font-size: 9px !important; }
+      /* ×1 の宝石は名前にかぶらないよう、伸び幅の横(下の数字の欄の上)へ移す */
+      .mh-phase-count { top: auto !important; bottom: 30px !important; right: 3px !important; width: 22px !important; height: 20px !important; padding: 2px 0 0 !important; font-size: 8px !important; }
     }
     /* 並んだカードが順に出てくる動き。--i に並び順を入れる。
        fill-mode は backwards にする(both / forwards だと終わったあとも transform を握り続け、
@@ -1708,6 +1709,154 @@ const createAnimationStyle = () => {
     @keyframes mhPhaseReady { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }
     @media (prefers-reduced-motion: reduce) {
       .mh-phase-enter, .mh-phase-pop, .mh-phase-ready { animation: none; }
+    }
+    /* ==== 強化フェーズの画面の見た目(2026-09-24 ユーザー指示「やすっぽい見た目も改善して」
+       「タクティクスバトルを参考に見た目を強くしてほしい」)。
+       タクティクス新盤面の飾り(濃紺の地・金の細い縁・回る光の縁・距離や種類ごとの模様・宝石・魔法陣・光の筋)を
+       同じ言葉で使う。@keyframes mhAng / mhShine / mhTwinkle / mhRuneSpin / mhGem はタクティクスの節で定義済み。
+       ★動き(回る縁・きらめき・光の筋・魔法陣・宝石の明滅)は data-phase-look="rich" のときだけ。
+         省エネ(lite / 超省エネ∞)では calm になり、「動きを減らす」設定でも止める。見た目は残す。
+       ★色は変数で渡す。--ph … 画面の識別色 / --mh-rc・--mh-rc2 … 枠1つぶんの色(濃い・明るい) ==== */
+    .mh-ph-bg {
+      background:
+        radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.55), transparent 60%),
+        radial-gradient(1px 1px at 78% 12%, rgba(255,255,255,.45), transparent 60%),
+        radial-gradient(1.5px 1.5px at 64% 34%, rgba(var(--ph,148,163,184),.8), transparent 60%),
+        radial-gradient(1px 1px at 28% 58%, rgba(255,255,255,.3), transparent 60%),
+        radial-gradient(1px 1px at 90% 66%, rgba(255,255,255,.3), transparent 60%),
+        radial-gradient(1.5px 1.5px at 8% 84%, rgba(var(--ph,148,163,184),.6), transparent 60%),
+        radial-gradient(ellipse 95% 40% at 50% -6%, rgba(var(--ph,148,163,184),.30), transparent 72%),
+        radial-gradient(ellipse 130% 55% at 50% 112%, rgba(var(--ph,148,163,184),.12), transparent 70%),
+        repeating-linear-gradient(135deg, rgba(255,255,255,.02) 0 1px, transparent 1px 9px),
+        linear-gradient(180deg, #0c1126 0%, #060916 55%, #03040b 100%) !important;
+    }
+    /* 見出しの金の文字と、左右の飾り線(◆) */
+    .mh-ph-title { background: linear-gradient(180deg, #fffbe8 0%, #f6d98a 46%, #c8962e 100%); -webkit-background-clip: text; background-clip: text;
+      color: transparent !important; padding-right: .18em; filter: drop-shadow(0 2px 0 rgba(0,0,0,.65)) drop-shadow(0 0 10px rgba(var(--ph,243,210,122),.45)); }
+    .mh-ph-heading { display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .mh-ph-heading::before, .mh-ph-heading::after { content: '◆'; flex: none; font-size: 7px; line-height: 1; color: #f3d27a; text-shadow: 0 0 6px rgba(243,210,122,.8); }
+    .mh-ph-heading::before { padding-left: 26px; background: linear-gradient(90deg, transparent, rgba(243,210,122,.85)) left center / 24px 1px no-repeat; }
+    .mh-ph-heading::after { padding-right: 26px; background: linear-gradient(270deg, transparent, rgba(243,210,122,.85)) right center / 24px 1px no-repeat; }
+    /* 金の縁の札(WAVE CLEAR など) */
+    .mh-ph-plate { display: inline-block; border: 1px solid transparent; border-radius: 999px; padding: 2px 12px; font-size: 9px; font-weight: 900; letter-spacing: .22em; color: #fde9b0;
+      background: linear-gradient(180deg, #1c2446, #0b0f22) padding-box, linear-gradient(90deg, #6b4a14, #fff0b0 30%, #c8962e 60%, #6b4a14) border-box;
+      box-shadow: 0 0 0 1px rgba(20,12,4,.85), 0 2px 8px rgba(0,0,0,.5), 0 0 14px rgba(var(--ph,243,210,122),.28); text-shadow: 0 1px 2px rgba(0,0,0,.9); }
+    /* 金の細い縁のパネル(ステータスの欄・所持カードなど) */
+    .mh-ph-panel { border: 1px solid transparent !important; border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 38%) padding-box,
+        linear-gradient(170deg, rgba(18,22,46,.95), rgba(6,8,18,.97)) padding-box,
+        linear-gradient(160deg, rgba(243,210,122,.6), rgba(243,210,122,.12) 38%, rgba(243,210,122,.08) 62%, rgba(243,210,122,.5)) border-box !important;
+      box-shadow: 0 6px 18px rgba(0,0,0,.45), 0 0 0 1px rgba(10,6,2,.6); }
+    .mh-ph-panel-label { color: #d9bf7a !important; letter-spacing: .18em; }
+    /* パネルの中の升目 */
+    .mh-ph-cell { background: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.28)) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 0 1px rgba(243,210,122,.08); }
+    /* 選ぶ枠: 地の模様 + 濃紺 + 枠の色の縁(タクティクスのモンスター枠と同じ作り)。選んでいない枠は落ち着いた縁、
+       data-ph-on の枠は明るい縁が回り、外へ光がにじむ */
+    .mh-ph-frame { border: 2px solid transparent !important;
+      background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
+        linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0) 30%) padding-box,
+        linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
+        linear-gradient(160deg, rgba(var(--mh-rc),.75), rgba(var(--mh-rc),.22) 40%, rgba(243,210,122,.18) 60%, rgba(var(--mh-rc),.6)) border-box !important; }
+    .mh-ph-frame[data-ph-on] {
+      background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
+        radial-gradient(90% 60% at 50% 0%, rgba(var(--mh-rc),.28), transparent 70%) padding-box,
+        linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
+        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+          rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important;
+      box-shadow: 0 0 18px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.18) !important; }
+    [data-phase-look="rich"] .mh-ph-frame[data-ph-on] { animation: mhAng 4.5s linear infinite; }
+    /* 枠の中の光の粒 */
+    .mh-ph-sparkle { position: absolute; inset: 3px; border-radius: inherit; pointer-events: none;
+      background: radial-gradient(1.5px 1.5px at 14% 30%, rgba(var(--mh-rc2),.95), transparent 70%), radial-gradient(1.5px 1.5px at 52% 72%, rgba(var(--mh-rc2),.85), transparent 70%),
+        radial-gradient(1px 1px at 80% 42%, #fff, transparent 70%), radial-gradient(1px 1px at 36% 16%, #fff, transparent 70%), radial-gradient(1px 1px at 88% 86%, rgba(var(--mh-rc2),.8), transparent 70%); }
+    [data-phase-look="rich"] .mh-ph-sparkle { animation: mhTwinkle 2.6s ease-in-out infinite; }
+    /* 枠を横切る光の筋 */
+    .mh-ph-shine { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+    .mh-ph-shine::before { content: ''; position: absolute; top: -10%; bottom: -10%; left: 0; width: 40%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent); transform: translateX(-160%) skewX(-18deg); }
+    [data-phase-look="rich"] .mh-ph-shine::before { animation: mhShine 3.6s ease-in-out infinite; }
+    /* 種類ごとの地の模様(タクティクスの手札・枠と同じ模様の言葉) */
+    [data-ph-kind="hp"] { --mh-rc: 236,72,153; --mh-rc2: 255,200,230;
+      --mh-pat: radial-gradient(circle at 80% 18%, rgba(255,140,200,.22), transparent 45%), repeating-radial-gradient(circle at 80% 18%, rgba(255,160,210,.10) 0 2px, transparent 2px 10px); }
+    [data-ph-kind="atk"] { --mh-rc: 239,68,68; --mh-rc2: 255,210,190;
+      --mh-pat: radial-gradient(120% 60% at 50% 115%, rgba(255,120,40,.32), transparent 70%), repeating-linear-gradient(135deg, rgba(255,90,40,.10) 0 2px, transparent 2px 9px); }
+    [data-ph-kind="def"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
+      --mh-pat: radial-gradient(circle, rgba(167,243,208,.16) 1.5px, transparent 2px) 0 0 / 9px 9px, radial-gradient(80% 50% at 50% 20%, rgba(52,211,153,.18), transparent 70%); }
+    [data-ph-kind="guts"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
+      --mh-pat: repeating-conic-gradient(from 0deg at 50% 30%, rgba(255,210,80,.06) 0 8deg, transparent 8deg 24deg), radial-gradient(60% 50% at 50% 30%, rgba(255,200,60,.2), transparent 70%); }
+    [data-ph-kind="new"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
+      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(167,243,208,.05) 0 10deg, transparent 10deg 30deg); }
+    [data-ph-kind="up"] { --mh-rc: 168,85,247; --mh-rc2: 233,213,255;
+      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(216,180,254,.07) 0 10deg, transparent 10deg 30deg), radial-gradient(70% 50% at 50% 30%, rgba(168,85,247,.22), transparent 70%); }
+    [data-ph-kind="max"] { --mh-rc: 234,179,8; --mh-rc2: 255,243,196;
+      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(255,230,150,.08) 0 10deg, transparent 10deg 30deg), radial-gradient(70% 50% at 50% 30%, rgba(234,179,8,.22), transparent 70%); }
+    [data-ph-kind="own"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160; }
+    [data-ph-kind="inherit"] { --mh-rc: 6,182,212; --mh-rc2: 207,250,254; }
+    [data-ph-kind="ally"] { --mh-rc: 129,140,248; --mh-rc2: 224,231,255; }
+    [data-ph-kind="revive"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220; }
+    /* 距離ごと(配置)。タクティクスの零=赤・近=黄・中=緑・遠=青 と模様をそのまま使う */
+    [data-ph-range="0"] { --mh-rc: 239,68,68; --mh-rc2: 255,210,190;
+      --mh-pat: radial-gradient(120% 60% at 50% 115%, rgba(255,120,40,.5), rgba(200,30,20,.22) 45%, transparent 70%), repeating-linear-gradient(115deg, rgba(255,90,40,.10) 0 3px, transparent 3px 14px); }
+    [data-ph-range="1"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
+      --mh-pat: repeating-conic-gradient(from 0deg at 20% 62%, rgba(255,210,80,.15) 0 6deg, transparent 6deg 18deg), radial-gradient(60% 60% at 20% 62%, rgba(255,200,60,.32), transparent 70%); }
+    [data-ph-range="2"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
+      --mh-pat: repeating-linear-gradient(98deg, rgba(52,211,153,.30) 0 1.5px, transparent 1.5px 6px) bottom / 100% 34% no-repeat, radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.26), transparent 70%); }
+    [data-ph-range="3"] { --mh-rc: 59,130,246; --mh-rc2: 200,225,255;
+      --mh-pat: repeating-radial-gradient(circle at 20% 140%, rgba(90,160,255,.17) 0 3px, transparent 3px 11px), radial-gradient(70% 60% at 20% 62%, rgba(80,150,255,.32), transparent 70%); }
+    /* 宝石(×1 の数・残りポイントなど)。タクティクスの手札の消費ガッツと同じ形 */
+    .mh-ph-gem { display: inline-flex; align-items: center; justify-content: center; padding-top: 2px; font-weight: 900; line-height: 1; color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,.9); clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
+      background: radial-gradient(circle at 35% 30%, #fff 0 8%, rgba(var(--mh-rc2,200,225,255),1) 18%, rgba(var(--mh-rc,31,111,209),1) 55%, rgba(8,10,30,1) 100%); }
+    [data-phase-look="rich"] .mh-ph-gem { animation: mhGem 2.2s ease-in-out infinite; }
+    /* 絵を収める金の額(アシストカードの顔・固有技の絵) */
+    .mh-ph-medal { border: 2px solid #f3d27a !important; background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.22), rgba(0,0,0,.4)) !important;
+      box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.5), inset 0 0 10px rgba(0,0,0,.5) !important; }
+    /* 絵の後ろで回るルーンの輪 */
+    .mh-ph-rune { position: absolute; left: 50%; top: 50%; width: 150%; height: 150%; margin: -75% 0 0 -75%; border-radius: 50%; pointer-events: none; z-index: 0;
+      background: repeating-conic-gradient(rgba(243,210,122,.85) 0 3deg, transparent 3deg 15deg), radial-gradient(circle, rgba(var(--ph,243,210,122),.25), transparent 70%);
+      -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
+      mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
+      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),.9)); }
+    [data-phase-look="rich"] .mh-ph-rune { animation: mhRuneSpin 16s linear infinite; }
+    /* 足元の魔法陣(タクティクスの枠の足元と同じ) */
+    .mh-ph-floor { position: absolute; left: 50%; bottom: -14px; width: 96px; height: 96px; margin-left: -48px; pointer-events: none; z-index: 0;
+      transform: rotateX(68deg);
+      background: radial-gradient(circle, transparent 52%, rgba(255,240,200,.95) 53%, rgba(255,240,200,.95) 55%, transparent 56%, transparent 66%, rgba(var(--ph,243,210,122),.9) 67%, rgba(var(--ph,243,210,122),.9) 70%, transparent 71%),
+        repeating-conic-gradient(rgba(255,240,200,.8) 0 4deg, transparent 4deg 30deg);
+      -webkit-mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%); mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%);
+      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),1)); }
+    [data-phase-look="rich"] .mh-ph-floor { animation: mhPhFloor 7s linear infinite; }
+    @keyframes mhPhFloor { to { transform: rotateX(68deg) rotate(360deg); } }
+    /* ボタン。金 = 決めるボタン(押せるとき)、夜 = そのほか。ボタンの意味の色は変えず、縁と照りを重ねる */
+    .mh-ph-btn-gold { position: relative; overflow: hidden; color: #2a1a04 !important; text-shadow: 0 1px 0 rgba(255,255,255,.5);
+      background: linear-gradient(180deg, #fff6d0 0%, #f4d57c 24%, #d8a640 62%, #9a6d22 100%) !important;
+      box-shadow: 0 0 0 1px rgba(40,26,6,.9), 0 0 0 3px rgba(243,210,122,.3), 0 6px 18px rgba(0,0,0,.5), 0 0 22px rgba(255,210,120,.45),
+        inset 0 2px 0 rgba(255,255,255,.75), inset 0 -2px 0 rgba(90,60,10,.55) !important; }
+    .mh-ph-btn-gold::after { content: ''; position: absolute; top: -20%; bottom: -20%; left: 0; width: 30%; pointer-events: none;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); transform: translateX(-160%) skewX(-18deg); }
+    [data-phase-look="rich"] .mh-ph-btn-gold::after { animation: mhShine 3s ease-in-out infinite; }
+    .mh-ph-btn { color: #e2e8f0 !important; border: 1px solid rgba(243,210,122,.45) !important;
+      background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0) 45%, rgba(0,0,0,.25)), linear-gradient(180deg, #1c2446, #0b0f22) !important;
+      box-shadow: 0 0 0 1px rgba(20,12,4,.85), 0 4px 12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,240,200,.3) !important; }
+    .mh-ph-btn:disabled { opacity: .45; }
+    .mh-ph-btn-off { color: #64748b !important; border: 1px solid rgba(243,210,122,.18) !important;
+      background: linear-gradient(180deg, #151a33, #0a0d1d) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important; }
+    /* 強化フェーズの並び(PhaseSteps) */
+    .mh-ph-step-now { color: #1a1204 !important; border: 1px solid rgba(255,240,200,.9);
+      background: linear-gradient(180deg, #fff, rgb(var(--ph,243,210,122)) 55%, rgba(var(--ph,243,210,122),.75)) !important;
+      box-shadow: 0 0 0 1px rgba(20,12,4,.8), 0 0 12px rgba(var(--ph,243,210,122),.7), inset 0 1px 0 rgba(255,255,255,.8) !important; }
+    .mh-ph-step-todo { color: #8b93a8 !important; border: 1px solid rgba(243,210,122,.22) !important; background: linear-gradient(180deg, #151a33, #0a0d1d) !important; }
+    .mh-ph-step-done { color: #ecfdf5 !important; border: 1px solid rgba(167,243,208,.9) !important; transform: rotate(45deg); border-radius: 3px !important;
+      background: radial-gradient(circle at 35% 30%, #fff 0 10%, #6ee7b7 30%, #059669 70%, #064e3b 100%) !important; box-shadow: 0 0 8px rgba(52,211,153,.7); }
+    .mh-ph-step-done > span { display: block; transform: rotate(-45deg); }
+    .mh-ph-step-line { height: 1px; background: linear-gradient(90deg, rgba(243,210,122,.2), rgba(243,210,122,.7), rgba(243,210,122,.2)) !important; }
+    /* 菱形の段(アシストカードのレベル) */
+    .mh-ph-pip { display: block; width: 8px; height: 8px; transform: rotate(45deg); border-radius: 1.5px; border: 1px solid rgba(243,210,122,.35); background: #11152b; }
+    .mh-ph-pip[data-on] { border-color: rgba(255,240,200,.9); background: radial-gradient(circle at 35% 30%, #fff 0 12%, rgba(var(--mh-rc2),1) 35%, rgba(var(--mh-rc),1) 80%); box-shadow: 0 0 6px rgba(var(--mh-rc),.8); }
+    .mh-ph-pip[data-next] { border-color: #f3d27a; background: rgba(243,210,122,.35); box-shadow: 0 0 6px rgba(243,210,122,.7); }
+    [data-phase-look="rich"] .mh-ph-pip[data-next] { animation: mhTwinkle 1.6s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-ph-frame[data-ph-on], .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
     }
     @keyframes specialShockwave {
       0% { transform: scale(0.4); opacity: 0.9; }
