@@ -39,6 +39,23 @@ check('共通のイベント回想一覧がデータで持たれている', Arra
 check('各イベントがid・タイトル・台本・解放判定の呼び名を持つ',
   Array.isArray(list) && list.every(ev => ev.id && ev.title && Array.isArray(ev.script) && ev.script.length > 0 && ev.unlockedKey));
 
+// 日付で管理する(2026-09-24・ユーザー指示「日付でも管理されるようにして」)
+check('各イベントが日付(YYYY-MM-DD HH:MM)を持つ(足すときの書き忘れよけ)',
+  Array.isArray(list) && list.every(ev => /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(ev.date || '')),
+  (list || []).filter(ev => !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(ev.date || '')).map(ev => ev.id).join(', '));
+{
+  const core = fs.readFileSync(path.join(root, 'monster-hero/src/parts/10-core.jsx'), 'utf8');
+  const from = core.indexOf('const eventReplayDateMs'), to = core.indexOf('.map(row => row.event);', from);
+  const c2 = { EVENT_REPLAYS: list };
+  vm.createContext(c2);
+  vm.runInContext(`const eventReplayReleased=()=>true;\n${core.slice(from, to + '.map(row => row.event);'.length)}\nglobalThis.__o={order:eventReplayList().map(e=>e.id),text:eventReplayDateText(EVENT_REPLAYS[0]),bad:eventReplayDateText({date:'x'})};`, c2);
+  const order = c2.__o.order;
+  const ms = order.map(id => Date.parse(list.find(ev => ev.id === id).date.replace(' ', 'T') + ':00+09:00'));
+  check('一覧は日付の新しい順に並ぶ', order.length === list.length && ms.every((v, i) => i === 0 || ms[i - 1] >= v), order.join(' > '));
+  check('一覧に出す日付は YYYY/MM/DD・壊れた日付は出さない', /^\d{4}\/\d{2}\/\d{2}$/.test(c2.__o.text) && c2.__o.bad === '', c2.__o.text);
+}
+check('一覧の各行に日付を出す', (source.match(/data-event-replay-date/g) || []).length >= 2);
+
 const kikiEvent = Array.isArray(list) ? list.find(ev => ev.id === 'kiki_intro') : null;
 check('最初の登録イベントがきき加入イベント', !!kikiEvent);
 check('タイトルが指定どおり', kikiEvent && kikiEvent.title === 'きき加入 ～ふたりの助手～', kikiEvent && kikiEvent.title);
