@@ -1674,6 +1674,15 @@ function MonsterHeroGame() {
     setBattleScreenStyleState(value);
     storeSet(BATTLE_SCREEN_STYLE_KEY, value, false);
   };
+  // バトル設定(待機中の動き・画面の揺れ)。1項目ずつ変えても、ほかの項目はそのまま残す
+  const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
+  const setBattleFxSetting = (key, value) => {
+    setBattleFxSettingsState(prev => {
+      const next = normalizeBattleFxSettings({ ...prev, [key]: value });
+      storeSet(BATTLE_FX_SETTINGS_KEY, next, false);
+      return next;
+    });
+  };
   const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
   const [gameUpdatePending, setGameUpdatePending] = useState(false);
   const gameUpdatePendingRef = useRef(false);
@@ -1990,6 +1999,9 @@ function MonsterHeroGame() {
   // トレーニングで選んだ項目。選んだ順のオプションid配列で、同じidを2つ入れてよい。
   // 決定するまでは何も反映せず、「選び直す」でいつでも空に戻せる
   const [trainingPicks, setTrainingPicks] = useState([]);
+  // 強化フェーズ(WAVEクリア後)の手順の並び。画面の上の「トレーニング → 供モン → …」に使うだけで、
+  // 進み方は決めない。WAVEクリアで組み、次のバトルが始まったら消す(保存もしない)
+  const [phasePlan, setPhasePlan] = useState(null);
   // 隠しデバッグ戦は通常周回と結果処理を共有しない。stateに加えて同期的なrefを持ち、
   // 敗北・諦め・勝利の非同期処理が通常の保存処理へ入る前に必ず判定できるようにする。
   const [debugBattle, setDebugBattle] = useState(false);
@@ -4602,6 +4614,7 @@ function MonsterHeroGame() {
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
+      setBattleFxSettingsState(normalizeBattleFxSettings(await storeGet(BATTLE_FX_SETTINGS_KEY, null, false)));
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -11163,9 +11176,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       beginQuickGrowth();
     } else {
       // 前のWAVEで選んだ内容が残らないよう、毎回まっさらにしてから開く
+      setPhasePlan(postWavePhasePlan({ wave, joinPossible:postWaveJoinPossible(true), speciesChallenge:!!speciesChallengeBattleRunRef.current }));
       setTrainingPicks([]);
       advanceRunStage('REWARD_PICK');
     }
+  };
+
+  // 強化フェーズの並びを組むための「このあと供モンが来るか」。handleTraining(通常) と
+  // finishQuickGrowth(クイック) と同じ候補の取り方で、候補が1体でもいて編成に空きがあるかだけを見る。
+  // 候補の並びはランダムだが、1体でもいるかどうかは並びに関係なく決まる
+  const postWaveJoinPossible = (withSpeciesPool) => {
+    const activeIds=slots.filter(Boolean).map(joinRosterEntry);
+    const avail=(withSpeciesPool?speciesChallengeJoinPool():null)
+      ||pickJoinCandidates(joinCandidatePool(),activeIds,mainHero?.id,joinOfferSize());
+    return slots.filter(Boolean).length<4&&avail.length>0;
   };
 
   // ===== クイックモード: WAVEごとの自動成長 =====
@@ -11194,6 +11218,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       nextStats: { ...after, effectiveMaxHp: nextEffectiveMaxHp, effectiveMaxGuts: nextEffectiveMaxGuts },
     });
     quickAdvanceRef.current = null;
+    setPhasePlan(postWavePhasePlan({ wave, quick:true, joinPossible:postWaveJoinPossible(false) }));
     Audio_.se.levelUp();
     advanceRunStage('QUICK_GROWTH');
   };
@@ -11482,6 +11507,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
   // 必ず呼び出し元が保持している最新のローカル値を渡す
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey=null, heroForDeck=null, aptPctOverride=null, restoredStats=null) => {
+    // 強化フェーズの並びは次のバトルが始まったら用済み。残すと次のランの配置画面などに古い並びが出る
+    setPhasePlan(null);
     // 通常・クイック・プロ・極限・練習/デバッグの共通開始点で、新しいランだけ累計を初期化する。
     if (w === 1) {
       setTotalTurnCount(0);
@@ -12217,33 +12244,41 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 自分の固有技は、編成に入っているマスモンの名前を優先して出す
     // (マスモン名を付けていても種の名前しか出ないと、どの子の技か分からないため)
     const heading=inherited ? `${holderMon?.name||'？'} ← ${ownerMon?.name||'？'}の技` : (holderMon?.masuName||holderMon?.name||ownerMon?.name||'');
+    const maxed=lvl>=8;
+    // 1行の中に「絵・名前と目盛り・数値・＋－」を収める。以前は「レベル調整」の段を
+    // 別に持っていて、技が3つ並ぶと背の低い端末で2つしか見えなかった。
+    // ★ボタンは1行に2つ(－ が先・＋ が後)。検査が「引き継ぎ」の行の2つ目を＋として押す。
+    //   見た目は flex-col-reverse で ＋ を上に置く(押す回数の多いほうを親指に近く)
     return(
-      <div key={rowKey} className={`p-3 rounded-2xl border shrink-0 ${inherited?'bg-cyan-950/40 border-cyan-700/60':'bg-slate-900 border-slate-800'}`}>
-        <div className="flex items-center gap-3 mb-2">
-          {ownerMon?.iconUrl?(<img src={ownerMon.iconUrl} alt={ownerMon.name} style={monsterArtFitStyle(ownerMon.id)} className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0"/>):(<span style={{fontSize:'30px'}}>{cardIconNode(u.icon,40)}</span>)}
-          <div className="text-left flex-1">
-            <div className={`text-[8px] font-black uppercase tracking-wider flex items-center gap-1 ${inherited?'text-cyan-300':'text-indigo-400'}`}>
-              {inherited&&<span className="bg-cyan-600 text-white px-1 rounded-sm not-italic">引き継ぎ</span>}{heading}
+      <div key={rowKey} className={`mh-phase-enter p-2.5 rounded-2xl border shrink-0 ${inherited?'bg-cyan-950/40 border-cyan-700/60':'bg-slate-900/80 border-slate-700/70'}`}>
+        <div className="flex items-center gap-2.5">
+          {ownerMon?.iconUrl?(<img src={ownerMon.iconUrl} alt={ownerMon.name} style={monsterArtFitStyle(ownerMon.id)} className="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0"/>):(<span style={{fontSize:'30px'}}>{cardIconNode(u.icon,40)}</span>)}
+          <div className="text-left flex-1 min-w-0">
+            <div className={`text-[9px] font-black tracking-wider flex items-center gap-1 truncate ${inherited?'text-cyan-300':'text-indigo-300'}`}>
+              {inherited&&<span className="bg-cyan-600 text-white px-1 rounded-sm not-italic shrink-0">引き継ぎ</span>}<span className="truncate">{heading}</span>
             </div>
-            <div className="font-black uppercase text-white" style={{fontSize:'13px'}}>{u.names[Math.min(lvl,u.names.length-1)]} <span className="text-slate-500">Lv.{lvl}{lvl<8&&<span className="text-amber-500"> → {lvl+1}</span>}</span></div>
-            {lvl<8?(
-              <div className="text-slate-400 font-mono flex flex-wrap gap-x-3 gap-y-0.5 mt-1" style={{fontSize:'9px'}}><div>技威力 {Math.floor(currentMult*100)} → <span className="text-red-400 font-bold">{Math.floor(nextMult*100)}</span></div><div>消費 {currentGuts} → <span className="text-amber-400 font-bold">{nextGuts}</span></div><div>会心 {curCrit}% → <span className="text-yellow-400 font-bold">{nextCrit}%</span></div></div>
+            <div className="font-black text-white leading-tight truncate" style={{fontSize:'13px'}}>{u.names[Math.min(lvl,u.names.length-1)]} <span className="text-slate-400">Lv.{lvl}</span>{maxed?<span className="text-amber-400"> MAX</span>:<span className="text-amber-400"> → {lvl+1}</span>}</div>
+            {/* レベルの目盛り(0〜8)。次に上がる1段を光らせる */}
+            <div className="mt-1 flex gap-0.5" aria-hidden="true">
+              {Array.from({length:8}).map((_,i)=>(
+                <i key={i} className={`block h-1.5 flex-1 rounded-full ${i<lvl?(inherited?'bg-cyan-400':'bg-amber-400'):(i===lvl&&!maxed?'bg-white/40 animate-pulse':'bg-slate-700')}`}/>
+              ))}
+            </div>
+            {!maxed?(
+              <div className="text-slate-400 font-mono flex flex-wrap gap-x-2.5 gap-y-0.5 mt-1" style={{fontSize:'9px'}}><div>技威力 {Math.floor(currentMult*100)} → <span className="text-red-400 font-bold">{Math.floor(nextMult*100)}</span></div><div>消費 {currentGuts} → <span className="text-amber-400 font-bold">{nextGuts}</span></div><div>会心 {curCrit}% → <span className="text-yellow-400 font-bold">{nextCrit}%</span></div></div>
             ):(
-              <div className="text-slate-400 font-mono flex flex-wrap gap-x-3 gap-y-0.5 mt-1" style={{fontSize:'9px'}}><div>技威力 {Math.floor(currentMult*100)}</div><div>消費 {currentGuts}</div><div className="text-yellow-400">会心 {curCrit}%</div><div className="text-amber-500 font-black">MAX</div></div>
+              <div className="text-slate-400 font-mono flex flex-wrap gap-x-2.5 gap-y-0.5 mt-1" style={{fontSize:'9px'}}><div>技威力 {Math.floor(currentMult*100)}</div><div>消費 {currentGuts}</div><div className="text-yellow-400">会心 {curCrit}%</div></div>
             )}
           </div>
-        </div>
-        <div className="flex items-center justify-between bg-black/20 p-2 rounded-xl">
-          <span className="text-slate-500 font-black uppercase tracking-wider" style={{fontSize:'9px'}}>レベル調整</span>
-          <div className="flex items-center gap-3">
-            <button disabled={lvl<=0} onClick={()=>onStep(-1)} className="w-9 h-9 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90"><MinusCircle size={18}/></button>
-            <button disabled={upgradePoints<=0||lvl>=8} onClick={()=>onStep(1)} className={`w-9 h-9 flex items-center justify-center rounded-lg text-white disabled:opacity-20 active:scale-90 ${inherited?'bg-cyan-600':'bg-amber-600'}`}><PlusCircle size={18}/></button>
+          <div className="flex flex-col-reverse gap-1.5 shrink-0">
+            <button disabled={lvl<=0} onClick={()=>onStep(-1)} aria-label={`${u.names[Math.min(lvl,u.names.length-1)]}のレベルを1つ下げる`} className="w-10 h-9 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90"><MinusCircle size={18}/></button>
+            <button disabled={upgradePoints<=0||maxed} onClick={()=>onStep(1)} aria-label={`${u.names[Math.min(lvl,u.names.length-1)]}のレベルを1つ上げる`} className={`w-10 h-11 flex items-center justify-center rounded-lg text-white disabled:opacity-20 active:scale-90 ${inherited?'bg-cyan-600':'bg-amber-600'} ${upgradePoints>0&&!maxed?'shadow-[0_0_12px_rgba(245,158,11,.45)]':''}`}><PlusCircle size={20}/></button>
           </div>
         </div>
       </div>
     );
   };
-  // 強化フェーズに並べる固有技の一覧。自分の固有技のあとに、合体で引き継いだ固有技を続ける
+
   const uniqueUpgradeEntries = () => {
     const rows=ownedUniques.map(u=>({ rowKey:`own:${u.monId}`, u, holderMon:slots.find(sl=>sl&&sl.id===u.monId)||null, inherited:false, onStep:(d)=>upgradeUnique(u.monId,d) }));
     slots.forEach((mon,idx)=>{
@@ -13205,7 +13240,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* 画面の揺れはアプリ全体にかかるので、モンビーを開いている間は掛けない。
           裏でバトルが進んでいるだけなのに、曲えらびや演奏の画面まで揺れてしまう
           (2026-09-06・ユーザー指摘「演出が残ってた（画面が揺れるなど）」) */}
-      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
+      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen&&battleFxSettings.shake!=='OFF'?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* HOME: 背景・将来のマスモン・施設操作・情報UIの順に重ねる */}
         {gameState==='HOME'&&(
@@ -14235,6 +14270,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onChangeUpdateNoticeStyle={setUpdateNoticeStyle}
             battleScreenStyle={battleScreenStyle}
             onChangeBattleScreenStyle={setBattleScreenStyle}
+            battleFxSettings={battleFxSettings}
+            onChangeBattleFxSetting={setBattleFxSetting}
           />
         )}
 
@@ -16542,7 +16579,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <BattleScreen
             applyTurnDamageReduction={applyTurnDamageReduction} attackAnim={attackAnim} autoBattle={autoBattle}
             autoBattleRef={autoBattleRef} autoRepeat={autoRepeat} battleIntimidate={battleIntimidate}
-            battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'} battleScreenStyle={battleScreenStyle}
+            battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'} battleScreenStyle={battleScreenStyle} battleFxSettings={battleFxSettings}
             battleSoulMasus={battleSoulMasus} battleSpeed={battleSpeed} battleTutorial={battleTutorial}
             battleTutorialAllowsEmergency={battleTutorialAllowsEmergency}
             battleTutorialCardAllowed={battleTutorialCardAllowed} battleTutorialCardKind={battleTutorialCardKind}
@@ -16718,6 +16755,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           distTotalBonus={distTotalBonus} extremeDifficulty={extremeDifficulty} extremeRunRef={extremeRunRef}
           getMasuMon={getMasuMon} getUnlockedBaseMonsterList={getUnlockedBaseMonsterList}
           heroPickTab={heroPickTab} maxGuts={maxGuts} maxHp={maxHp} monSelection={monSelection}
+          phasePlan={gameState==='PICK_ALLY'?phasePlan:null} wave={wave}
           tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}
           onBack={()=>{if(gameState==='PICK_HERO'){setCurrentPickingMon(null);setBattleMenuTab('difficulty');setGameState(battleEntryStateRef.current);return;}returnToHome();}}
           pickMode={gameState==='PICK_HERO'?'hero':'ally'} proHeroPreset={proHeroPreset}
@@ -16751,6 +16789,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           currentPickingMon={currentPickingMon} distTotalBonus={distTotalBonus}
           getDistAptitude={getDistAptitude} scenarioPicksSlot={scenarioPicksSlot}
           setupMon={setupMon} slots={slots}
+          phasePlan={mainHero?phasePlan:null} wave={wave}
           onRepick={()=>{
             if(!mainHero&&speciesChallengeBattleRunRef.current){
               setCurrentPickingMon(null);
@@ -16770,6 +16809,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           getFullEvolutionDetails={getFullEvolutionDetails} ownedTeachings={ownedTeachings}
           scenarioPicksTeaching={scenarioPicksTeaching} selectedTeachingCard={selectedTeachingCard}
           setSelectedTeachingCard={setSelectedTeachingCard} teachingPool={teachingPool}
+          phasePlan={enemy?phasePlan:null} wave={wave}
         />
       )}
 
@@ -16777,15 +16817,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* クイックモード: WAVEごとの自動成長。タップで即送り、一定時間で自動的に次へ進む */}
       {gameState==='QUICK_GROWTH'&&quickGrowth&&(
         <QuickStepScreen onDone={finishQuickGrowth} accent="#2dd4bf" label="タップして次へ">
+          {/* 供モンが来るWAVEでは、このあと供モン選び・配置へ続くことを先に見せる */}
+          {phasePlan&&phasePlan.length>1&&<PhaseSteps plan={phasePlan} current="growth" className="mb-2"/>}
           <h2 className="text-2xl font-black italic" style={{color:'#2dd4bf'}}>ステータスアップ！</h2>
           <p className="text-[10px] font-black text-slate-400 mt-1">WAVE {quickGrowth.nextWave-1} クリア／全ステータス +10%</p>
           <div className="mt-4 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden">
             {quickGrowth.stats.map((st,i)=>(
               <div key={st.label} className={`flex items-center gap-2 px-4 py-2 ${i>0?'border-t border-white/5':''}`}>
-                <span className="w-16 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
+                <span className="w-14 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
                 <span className="flex-1 text-right font-mono text-[13px] text-slate-300">{st.before.toLocaleString()}</span>
                 <span className="shrink-0 text-[11px]" style={{color:'#2dd4bf'}}>→</span>
                 <span className="flex-1 text-left font-mono text-[13px] font-black text-white">{st.after.toLocaleString()}</span>
+                <span className="w-16 shrink-0 text-right font-mono text-[11px] font-black" style={{color:st.after>st.before?'#5eead4':'#64748b'}}>{st.after>st.before?`+${(st.after-st.before).toLocaleString()}`:'±0'}</span>
               </div>
             ))}
           </div>
@@ -16798,7 +16841,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <QuickStepScreen onDone={finishQuickJoin} accent="#2dd4bf" label="タップして次へ">
           <h2 className="text-2xl font-black italic" style={{color:'#2dd4bf'}}>供モン加入！</h2>
           <div className="mt-3 flex items-center justify-center gap-2">
-            <div className="w-16 h-16 rounded-full overflow-hidden border-2 flex items-center justify-center bg-black/40" style={{borderColor:'#2dd4bf'}}>
+            <div className="mh-phase-pop w-20 h-20 rounded-full overflow-hidden border-2 flex items-center justify-center bg-black/40 shadow-[0_0_24px_rgba(45,212,191,.45)]" style={{borderColor:'#2dd4bf'}}>
               {quickJoin.imgUrl?<DyedMonsterImage baseId={quickJoin.baseId} src={quickJoin.imgUrl} alt={quickJoin.name} masuColors={quickJoin.colors} className="w-full h-full object-contain"/>:<span className="text-3xl">{quickJoin.emoji}</span>}
             </div>
             <p className="text-sm font-black text-white">{quickJoin.name}が仲間になった！</p>
@@ -16807,15 +16850,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="mt-3 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden">
               {quickJoin.stats.map((st,i)=>(
                 <div key={st.label} className={`flex items-center gap-2 px-4 py-2 ${i>0?'border-t border-white/5':''}`}>
-                  <span className="w-16 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
+                  <span className="w-14 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
                   <span className="flex-1 text-right font-mono text-[13px] text-slate-300">{st.before.toLocaleString()}</span>
                   <span className="shrink-0 text-[11px]" style={{color:'#2dd4bf'}}>→</span>
                   <span className="flex-1 text-left font-mono text-[13px] font-black text-white">{st.after.toLocaleString()}</span>
+                  {/* 増えた量。前後の数字だけだと、どれだけ伸びたのかを引き算しないと分からなかった */}
+                  <span className="w-16 shrink-0 text-right font-mono text-[11px] font-black" style={{color:st.after>st.before?'#5eead4':'#64748b'}}>{st.after>st.before?`+${(st.after-st.before).toLocaleString()}`:'±0'}</span>
                 </div>
               ))}
             </div>
           )}
-          {quickJoin.aptLabel&&<div className="mt-2 text-[10px] font-black text-cyan-300">間合い適性 {quickJoin.aptLabel}</div>}
+          {quickJoin.aptLabel&&<div className="mt-2 rounded-full border border-cyan-400/40 bg-cyan-950/40 px-3 py-1 text-[10px] font-black text-cyan-200">間合い適性 {quickJoin.aptLabel}</div>}
           {quickJoin.unique?(
             <div className="mt-3 w-full rounded-2xl border px-3 py-2.5" style={{borderColor:'rgba(251,191,36,.5)',backgroundColor:'rgba(0,0,0,.5)'}}>
               <div className="text-[11px] font-black text-amber-300">固有技アップ！</div>
@@ -17271,7 +17316,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           effectiveMaxGuts={effectiveMaxGuts} guts={guts} recoverGutsWithPoint={recoverGutsWithPoint}
           slots={slots} tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}
           uniqueUpgradeEntries={uniqueUpgradeEntries} uniqueUpgradeRow={uniqueUpgradeRow}
-          upgradePoints={upgradePoints}
+          upgradePoints={upgradePoints} phasePlan={phasePlan} wave={wave}
         />
       )}
 
@@ -17293,7 +17338,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <RewardPickScreen
           atk={atk} battleTutorialSpotClass={battleTutorialSpotClass} def={def} difficulty={difficulty}
           effect={effect} extremeDifficulty={extremeDifficulty} extremeRun={extremeRun} guts={guts}
-          handleTraining={handleTraining} maxGuts={maxGuts} maxHp={maxHp} runMode={runMode}
+          handleTraining={handleTraining} maxGuts={maxGuts} maxHp={maxHp} phasePlan={phasePlan} runMode={runMode}
           setTrainingPicks={setTrainingPicks} slots={slots}
           tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}
           trainingPicks={trainingPicks} waveResult={waveResult}

@@ -47,6 +47,10 @@ const BANDS=Object.freeze({
   EXPERT:{density:[1.6,4.1],strain:[0,.16],  maxStep:3, restsPerMinute:6,  sameRun:4, vocab:9, types:['TAP','HOLD','FLICK','SLIDE'],complex:['tapDuringHold','chordRuns','sweeps']},
   MASTER:{density:[1.9,4.8],strain:[0,.24],  maxStep:4, restsPerMinute:5,  sameRun:4, vocab:10,types:['TAP','HOLD','FLICK','SLIDE'],complex:['tapDuringHold','chordRuns','sweeps','crosses']},
 });
+// フレーズの写し率(繰り返しの小節のノーツが、元の小節と同じ位置・同じレーンにある割合)の満点の線。
+// 1番と2番で音源の打点そのものが半分ほどしか一致しないうえ、3回目ごとに形を選び直す(発展)ので、1には届かない。
+// 実測(2026-09-24・版2で全曲を作り直した値): 区切りのはっきりした曲で0.4〜0.5、平均0.25。版1は平均0.14。
+const PHRASE_ECHO_GOAL=.35;
 // 「忙しい」が続いてよい長さ(ms)。これを超える連続は「難所が長すぎる」
 const STRAIN_STREAK_LIMIT_MS=Object.freeze({EASY:0,NORMAL:400,HARD:900,EXPERT:1600,MASTER:2400});
 
@@ -181,6 +185,38 @@ const measure=(chart,audio,options={})=>{
     }
   }
   const phraseConsistency=(phraseTotal+motifTotal)?(phraseSame+motifSame)/(phraseTotal+motifTotal):1;
+  // --- フレーズの写し率(2026-09-24): ノーツそのもので測る ---
+  // 上の2つは「形の名前」で比べるので、かたまりの切れ目が元とずれると一致を見落とす
+  // (版2のフレーズの写しは切れ目がずれても同じレーンへ写すが、名前では測れなかった)。
+  // ここでは繰り返しの小節のノーツが、元の小節の**同じ位置・同じレーン**にあるかを数える。
+  // 左右反転で写すのも同じフレーズなので、区切りごとに「そのまま」「反転」の多いほうで数える。
+  // 分母は繰り返しの小節のノーツ数。音源の打点そのものが1番と2番で半分ほどしか一致しないので、1にはならない。
+  let phraseEchoHit=0,phraseEchoTotal=0;
+  {
+    const lastBar=notes.length?Math.floor(notes[notes.length-1].grid/BAR):-1;
+    const touchLaneOf=note=>Math.max(0,Math.min(4,Math.floor(noteTouchLane(note)+1e-9)));
+    const keysByBar=new Map();
+    for(const note of main){
+      const bar=Math.floor(note.grid/BAR);
+      if(!keysByBar.has(bar))keysByBar.set(bar,[]);
+      keysByBar.get(bar).push({offset:note.grid-bar*BAR,lane:touchLaneOf(note)});
+    }
+    for(const section of sections){
+      if(section.repeatOf==null)continue;
+      let same=0,mirrored=0,total=0;
+      for(let bar=section.startBar;bar<Math.min(section.endBarExclusive,lastBar+1);bar++){
+        const own=keysByBar.get(bar)||[];
+        const source=keysByBar.get(section.repeatOf+(bar-section.startBar))||[];
+        const sourceKeys=new Set(source.map(key=>`${key.offset}:${key.lane}`));
+        total+=own.length;
+        same+=own.filter(key=>sourceKeys.has(`${key.offset}:${key.lane}`)).length;
+        mirrored+=own.filter(key=>sourceKeys.has(`${key.offset}:${4-key.lane}`)).length;
+      }
+      phraseEchoHit+=Math.max(same,mirrored);
+      phraseEchoTotal+=total;
+    }
+  }
+  const phraseEcho=phraseEchoTotal?phraseEchoHit/phraseEchoTotal:null;
 
   // --- セクションごとの密度・語彙 ---
   const sectionStats=sections.map(section=>{
@@ -391,10 +427,14 @@ const measure=(chart,audio,options={})=>{
   // ノーツの数より大事な音のほうが多い曲を、届かない目標で減点しないため。
   const importantNeed=Math.min(
     {EASY:.35,NORMAL:.45,HARD:.6,EXPERT:.75,MASTER:.85}[difficulty],importantReach);
+  // 「同じフレーズは同じ形か」は、形の名前で測るもの(phraseConsistency)とノーツで測るもの(phraseEcho)の半々。
+  // 写し率は音源の打点の一致に上限を抑えられるので、PHRASE_ECHO_GOAL で満点とする。繰り返しの無い曲は名前だけで測る
+  const phraseScore=phraseEcho==null?phraseConsistency
+    :.5*phraseConsistency+.5*clamp01(phraseEcho/PHRASE_ECHO_GOAL);
   scores.musicality=Math.round(100*(
     .40*onsetHitRate
     +.25*clamp01(importantNeed>0?importantCoverage/importantNeed:1)
-    +.20*phraseConsistency
+    +.20*phraseScore
     +.15*clamp01(1-notesInSilence/Math.max(1,main.length)*20)));
   scores.readability=Math.round(100*(
     .35*clamp01(1-fallbackShare*4)
@@ -431,7 +471,7 @@ const measure=(chart,audio,options={})=>{
     scores,
     musicality:{onsetHitRate:round(onsetHitRate),ghostNotes,importantOnsets:important.length,importantHit,importantCoverage:round(importantCoverage),
       importantReach:round(importantReach),importantNeed:round(importantNeed),
-      beatShare,notesInSilence,phraseTotal,phraseSame,motifGroups,motifTotal,motifSame,phraseConsistency:round(phraseConsistency),phraseVariations,mirrorRate:round(mirrorRate),
+      beatShare,notesInSilence,phraseTotal,phraseSame,motifGroups,motifTotal,motifSame,phraseConsistency:round(phraseConsistency),phraseEcho:round(phraseEcho),phraseEchoTotal,phraseVariations,mirrorRate:round(mirrorRate),
       intensityDensityAgreement:round(intensityDensityAgreement),sectionDensitySpread:round(sectionDensitySpread,2),sectionVocabSpread,sections:sectionStats},
     vocabulary:{patternCounts,distinctPatterns,topPattern:topPattern?topPattern[0]:null,topShare:round(topShare),fallbackShare:round(fallbackShare),
       maxSameRun,localBias:round(localBias),transitionKinds:transitions.size,transitionTotal,transitionEntropy:round(transitionEntropy,2)},

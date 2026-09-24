@@ -119,6 +119,11 @@ node -e "require('./tools/node_modules/sharp')('<元絵>')
 node tools/mode/rhythm-audio-analyze-v3.js --track <track_id> --write
 ```
 
+初めて解析すると、一覧のその曲へ `"chartRevision": 2`（譜面の作り方の版）が自動で入る。
+**消さない**。版2は「2番のサビを1番と同じ配置（か左右反転）で書く」フレーズの写しが効く作り方で、
+新しい曲だけがこれで作られる（既存曲は版1のまま。`docs/spec/RHYTHM_CHART_DESIGN.md` 3.1.19）。
+生成のときに `譜面の作り方: 版2（フレーズの写しあり）` と出ていれば効いている。
+
 `tempo-ambiguous`（ほかの候補と拮抗）が出たら、**必ず候補を比べる**。
 このスキルで足した3曲は**全部これが出た**。
 

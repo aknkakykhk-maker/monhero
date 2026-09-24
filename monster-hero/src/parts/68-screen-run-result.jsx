@@ -13,13 +13,23 @@
 //   hp<=0 / gaveUp という別の条件で出る。3つとも同じマスモン登録へつながるので、
 //   置き去りにせずまとめて持ってくる
 function UpgradeSkillScreen({
-  canRecoverGutsWithPoint, continueAfterUniqueUpgrade, effectiveMaxGuts, guts,
-  recoverGutsWithPoint, slots, tacticsUnits, uniqueUpgradeEntries, uniqueUpgradeRow, upgradePoints,
+  canRecoverGutsWithPoint, continueAfterUniqueUpgrade, effectiveMaxGuts, guts, phasePlan,
+  recoverGutsWithPoint, slots, tacticsUnits, uniqueUpgradeEntries, uniqueUpgradeRow, upgradePoints, wave,
 }) {
   return (
 
-    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-8 text-center overflow-hidden">
-      <div className="mb-2 shrink-0"><h2 className="text-xl font-black text-amber-400 italic uppercase">固有技の強化</h2><div className="text-[9px] text-slate-400 mt-1 uppercase tracking-widest flex items-center justify-center gap-2">Remaining Points: <span className="text-white bg-amber-600 px-2 rounded-full font-mono">{upgradePoints}</span></div></div>
+    // mh-phase … 背の低い器(横持ち)で説明を畳む目印(70-bootstrap.jsx の @container)
+    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",backgroundImage:'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(245,158,11,.16), transparent 70%)',zIndex:30000}} className="mh-phase absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden">
+      <div className="mb-2 shrink-0 w-full max-w-sm flex flex-col items-center gap-1.5">
+        <h2 className="text-xl font-black text-amber-400 italic uppercase drop-shadow-[0_0_10px_rgba(245,158,11,.45)]">固有技の強化</h2>
+        {/* このあと何枚の画面を通ってバトルへ戻るのか */}
+        {phasePlan&&<PhaseSteps plan={phasePlan} current="skill" nextWave={wave>0?wave+1:null}/>}
+        {/* 残りポイントを大きく。★「Remaining Points: 数」の並びは検査が読む(大小は問わない) */}
+        <div className="flex items-center justify-center gap-2 rounded-full border border-amber-400/40 bg-amber-950/40 px-3 py-1">
+          <span className="text-[9px] text-slate-300 uppercase tracking-widest">Remaining Points: <b className={`ml-0.5 inline-block min-w-[1.6em] rounded-full px-1.5 font-mono text-[15px] leading-tight ${upgradePoints>0?'bg-amber-500 text-slate-950':'bg-slate-700 text-slate-300'}`}>{upgradePoints}</b></span>
+        </div>
+        <p className="mh-phase-mid text-[10px] font-bold text-slate-400 leading-snug">ポイント1つで固有技が1段上がります。使わなかったポイントは次に持ち越せます</p>
+      </div>
       {/* 強化ポイントのもう一つの使い道。技がすべてMAXでもポイントが無駄にならないよう、
           いまのガッツを戻せる。最大ガッツは増やさない。技の＋／－と違って取り消せないので、
           1回押すごとに確定する。技一覧を圧迫しないよう1行に収めている */}
@@ -67,10 +77,11 @@ function UpgradeSkillScreen({
               </>)}
         </button>
       </div>);})()}
-      <div className="w-full max-w-sm space-y-3 mb-2 min-h-0 overflow-y-auto mh-scroll flex-1 p-1 flex flex-col justify-start pt-2">
-        {uniqueUpgradeEntries().map(e=>uniqueUpgradeRow(e))}
+      <div className="w-full max-w-sm gap-2 mb-2 min-h-0 overflow-y-auto mh-scroll flex-1 p-1 flex flex-col justify-start">
+        {uniqueUpgradeEntries().map((e,i)=><React.Fragment key={e.rowKey}><div style={{'--i':i}} className="contents">{uniqueUpgradeRow(e)}</div></React.Fragment>)}
       </div>
-      <button onClick={continueAfterUniqueUpgrade} className="w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform mt-auto shrink-0">ブリーダー継承へ</button>
+      {/* 次はアシストカードの画面。以前は「ブリーダー継承へ」と書いてあり、次の画面の名前と合っていなかった */}
+      <button onClick={continueAfterUniqueUpgrade} className="w-full max-w-sm min-h-[52px] bg-white text-black rounded-2xl font-black shadow-[0_0_20px_rgba(255,255,255,0.25)] active:scale-95 transition-transform mt-auto shrink-0 flex items-center justify-center gap-1">アシストカードへ<ChevronRight size={18}/></button>
     </div>
   
   );
@@ -136,7 +147,7 @@ function WaveResultScreen({
 
 function RewardPickScreen({
   atk, battleTutorialSpotClass, def, difficulty, effect, extremeDifficulty, extremeRun, guts,
-  handleTraining, maxGuts, maxHp, runMode, setTrainingPicks, slots, tacticsUnits, trainingPicks, waveResult,
+  handleTraining, maxGuts, maxHp, phasePlan, runMode, setTrainingPicks, slots, tacticsUnits, trainingPicks, waveResult,
 }) {
 
     const specialRule=specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty);
@@ -185,8 +196,20 @@ function RewardPickScreen({
     };
     const optionById=(id)=>TRAINING_OPTIONS.find(option=>option.id===id);
     const unitName=(slotIdx)=>slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`;
+    // 「1回目」「2回目」の枠を押すと、その1回だけを取り消す。以前は「選び直す」で
+    // 2つとも消すしかなく、2回目だけ変えたいときも1回目から選び直していた
+    const removePick=(index)=>setTrainingPicks(prev=>{
+      if(!tacticsMode) return prev.filter((_,i)=>i!==index);
+      let seen=-1;
+      return prev.filter(entry=>{
+        if(!entry||entry.slot!==currentSlot) return true;
+        seen+=1;
+        return seen!==index;
+      });
+    });
     return (
-    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",backgroundImage:'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(251,191,36,.16), transparent 70%)',zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden" data-screen="training">
+    // mh-phase … 器の高さで中身を畳む目印(70-bootstrap.jsx の @container)
+    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",backgroundImage:'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(251,191,36,.16), transparent 70%)',zIndex:30000}} className="mh-phase absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden" data-screen="training">
       <div className="shrink-0 w-full max-w-sm" style={{paddingTop:'calc(.25rem + env(safe-area-inset-top))'}}>
         {/* どのWAVEを抜けたごほうびなのかを見出しの上に出す */}
         {waveResult?.wave>0&&<div className="mb-1 flex justify-center">
@@ -196,18 +219,28 @@ function RewardPickScreen({
           <Trophy className="text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,.6)]" size={22}/>
           <h2 className="text-xl font-black italic uppercase tracking-tighter text-white leading-none">トレーニング</h2>
         </div>
+        {/* このあと何枚の画面を通ってバトルへ戻るのか */}
+        {phasePlan&&<PhaseSteps plan={phasePlan} current="training" nextWave={waveResult?.wave>0?waveResult.wave+1:null} className="mt-1.5"/>}
         {/* 「4種類から2つ選ぶ」ことと、いま何を選んだかを一目で分かるようにする。
             点だけだと何を選んだのかは各カードの×1を探すしかなかったので、枠に中身を入れる */}
-        <div className="mt-1.5 text-center text-[10px] font-black text-slate-300">{tacticsMode?(pickable?`${currentName||'全員'}のトレーニング`:'全員ぶん決まりました'):'4種類から2つ選ぶ'}</div>
+        <div className="mh-phase-tall mt-1.5 text-center text-[10px] font-black text-slate-300">{tacticsMode?(pickable?`${currentName||'全員'}のトレーニング`:'全員ぶん決まりました'):'4種類から2つ選ぶ'}</div>
         <div className="mt-1 flex items-center justify-center gap-1.5">
           {Array.from({length:TRAINING_PICK_COUNT}).map((_,i)=>{
             const picked=optionById(activePicks[i]);
             const st=picked?(STYLES[picked.id]||STYLES.hp):null;
-            return (
-              <span key={i} className={`flex min-w-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black ${picked?`${st.ring} ${st.bg} text-white`:'border-dashed border-slate-600 text-slate-500'}`} style={{maxWidth:'42%'}}>
-                <span className="shrink-0 text-[8px] text-slate-400">{i+1}回目</span>
-                {picked?<><span className={`shrink-0 ${st.tint}`}>{cardIconNode(st.icon)}</span><span className="truncate">{picked.name}</span></>:<span>―</span>}
+            if(!picked) return (
+              <span key={i} className="flex min-w-0 items-center gap-1 rounded-full border border-dashed border-slate-600 px-2 py-1 text-[10px] font-black text-slate-500" style={{maxWidth:'42%'}}>
+                <span className="shrink-0 text-[9px] text-slate-400">{i+1}回目</span><span>―</span>
               </span>
+            );
+            return (
+              <button key={`${i}-${picked.id}`} type="button" disabled={!!effect} onClick={()=>removePick(i)}
+                aria-label={`${i+1}回目の${picked.name}を取り消す`}
+                className={`mh-phase-pop flex min-w-0 items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black text-white active:scale-95 disabled:opacity-40 ${st.ring} ${st.bg}`} style={{maxWidth:'42%'}}>
+                <span className="shrink-0 text-[9px] text-slate-300">{i+1}回目</span>
+                <span className={`shrink-0 ${st.tint}`}>{cardIconNode(st.icon)}</span><span className="truncate">{picked.name}</span>
+                <span aria-hidden="true" className="shrink-0 text-[10px] text-slate-300">×</span>
+              </button>
             );
           })}
           <span className="shrink-0 text-[11px] font-black font-mono text-amber-300">{activePicks.length} / {TRAINING_PICK_COUNT}</span>
@@ -215,21 +248,21 @@ function RewardPickScreen({
         {/* 何体ぶん終わったか。1体ずつ選ぶので、どこまで進んだのかが分からないと迷子になる。
             名前の札を並べ、いま選んでいる子を光らせる */}
         {tacticsMode&&<div data-tactics-training-progress={`${doneSlots}/${trainableSlots.length}`}
-          className="mt-1.5 text-center text-[10px] font-black text-indigo-300">
-          {doneSlots} / {trainableSlots.length} 体ぶん決定ずみ
-          {trainableSlots.length>1&&<div className="mt-1 flex flex-wrap items-center justify-center gap-1">
+          className="mt-1.5 flex flex-wrap items-center justify-center gap-1 text-center text-[10px] font-black text-indigo-300">
+          <span className="shrink-0">{doneSlots} / {trainableSlots.length} 体ぶん決定ずみ</span>
+          {trainableSlots.length>1&&<>
             {trainableSlots.map(slotIdx=>{
               const count=picksOf(slotIdx).length;
               const done=count>=TRAINING_PICK_COUNT;
               const active=slotIdx===currentSlot&&pickable;
               return (
-                <span key={slotIdx} className={`flex max-w-[45%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active?'border-amber-300 bg-amber-400/15 text-amber-100 shadow-[0_0_10px_rgba(251,191,36,.35)]':done?'border-emerald-400/50 bg-emerald-950/50 text-emerald-200':'border-slate-700 bg-slate-900/60 text-slate-400'}`}>
+                <span key={slotIdx} className={`flex max-w-[32%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active?'border-amber-300 bg-amber-400/15 text-amber-100 shadow-[0_0_10px_rgba(251,191,36,.35)]':done?'border-emerald-400/50 bg-emerald-950/50 text-emerald-200':'border-slate-700 bg-slate-900/60 text-slate-400'}`}>
                   <span className="truncate">{unitName(slotIdx)}</span>
                   <span className="shrink-0 font-mono">{done?'✓':`${count}/${TRAINING_PICK_COUNT}`}</span>
                 </span>
               );
             })}
-          </div>}
+          </>}
         </div>}
         {extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null&&(()=>{
           const turns=waveResult?.turn||0;
@@ -239,10 +272,10 @@ function RewardPickScreen({
         })()}
         {specialRule==='NIGHTMARE'&&<div data-nightmare-training-status className="mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"><span className="text-amber-300">NIGHTMARE補正</span>　強化量 {specialRulePercent(extremeSpecialRule(specialRule,'waveEnhancement'))}</div>}
       </div>
-      <div className="shrink-0 w-full max-w-sm my-2 text-left"><AssistantBubble scene="rewardPick" compact/></div>
+      <div className={`${tacticsMode?'mh-phase-mid':'mh-phase-tall'} shrink-0 w-full max-w-sm mt-2 text-left`}><AssistantBubble scene="rewardPick" compact/></div>
       {/* いま選んでいるぶんを反映した4ステータス。選ぶ前は現在値だけ、選ぶと増える量も出る。
           各項目のカードは自分のステータスしか出さないので、ここで全体を見比べられるようにする */}
-      {(!tacticsMode||currentUnit)&&<div className="shrink-0 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5 mb-2" data-training-status>
+      {(!tacticsMode||currentUnit)&&<div className="mh-phase-tall shrink-0 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5 mt-2" data-training-status>
         <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス{trainingPicks.length>0&&<span className="text-amber-300">（選択中の変化）</span>}</div>
         <div className="grid grid-cols-4 gap-1">
           {TRAINING_OPTIONS.map(option=>{
@@ -262,8 +295,8 @@ function RewardPickScreen({
       </div>}
       {/* 4項目。1画面に収めるため2列2行。空きがあればカードが伸びて画面を埋める。
           同じ項目をもう一度タップすると2回目として積める */}
-      <div className={`w-full max-w-sm grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`}>
-        {TRAINING_OPTIONS.map(option=>{
+      <div className={`mh-phase-cards w-full max-w-sm mt-2 grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`}>
+        {TRAINING_OPTIONS.map((option,optionIndex)=>{
           const count=activePicks.filter(id=>id===option.id).length;
           const st=STYLES[option.id]||STYLES.hp;
           const before=current[option.stat];
@@ -278,16 +311,16 @@ function RewardPickScreen({
                 return [...prev,{slot:currentSlot,id:option.id}];
               })}
               aria-label={`${option.name} ${option.effect}${count>0?` 選択中${count}回`:''}`}
-              className={`relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40 ${count>0?`${st.bg} ${st.ring}`:`bg-slate-900/70 ${st.idle}`}`}
-              style={count>0?{boxShadow:`0 0 22px ${st.glow}`}:undefined}>
+              className={`mh-phase-card mh-phase-enter relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40 ${count>0?`${st.bg} ${st.ring}`:`bg-slate-900/70 ${st.idle}`}`}
+              style={{'--i':optionIndex,...(count>0?{boxShadow:`0 0 22px ${st.glow}`}:{})}}>
               {/* 角の色だまり。4枚を色で見分けるための飾りで、押す範囲や文字には関わらない */}
               <span aria-hidden="true" className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl" style={{background:st.glow}}/>
               {/* ★ボタンの文字は項目名から始める(検査がボタンを「^走り込み」で探す)。
                   アイコンは絵だけなので前に置いても文字には入らない */}
               <span className="relative flex items-center gap-2">
-                <span className={`shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${st.badge}`}>{cardIconNode(st.icon)}</span>
+                <span className={`mh-phase-card-icon shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${st.badge}`}>{cardIconNode(st.icon)}</span>
                 <span className="min-w-0">
-                  <b className="block text-[14px] font-black text-white leading-tight">{option.name}</b>
+                  <b className="mh-phase-card-name block text-[14px] font-black text-white leading-tight">{option.name}</b>
                   <span className={`block text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{(extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null||extremeRuleNumber(specialRule,'waveEnhancement')!=null)&&(()=>{
                     const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null)[option.stat];
                     const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
@@ -298,21 +331,21 @@ function RewardPickScreen({
               </span>
               {/* いちばん知りたい「どれだけ伸びるか」を大きく出す。カードが縦に伸びたぶんの空きもここで埋まる */}
               <span className="relative flex flex-1 items-center justify-center font-mono font-black leading-none">
-                <span className={after>before?st.tint:'text-slate-500'} style={{fontSize:'clamp(20px,7vw,30px)'}}>+{Math.max(0,after-before)}</span>
+                <span className={`mh-phase-gain ${after>before?st.tint:'text-slate-500'}`}>+{Math.max(0,after-before)}</span>
               </span>
               <span className="relative w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight">
                 <span className="flex items-baseline justify-between gap-1">
-                  <span className="text-[8px] text-slate-500 font-black">{option.statLabel}</span>
-                  <span className="text-[11px] font-black text-slate-300">{before} <span className="text-slate-600">→</span> <b className={st.tint}>{after}</b></span>
+                  <span className="mh-phase-stat-label text-[8px] text-slate-500 font-black">{option.statLabel}</span>
+                  <span className="mh-phase-card-nums whitespace-nowrap text-[11px] font-black text-slate-300">{before} <span className="text-slate-600">→</span> <b className={st.tint}>{after}</b></span>
                 </span>
                 {/* 伸びる前の値を灰色、伸びるぶんを項目の色で塗った棒 */}
-                <span className="mt-1 flex h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                <span className="mh-phase-bar mt-1 flex h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
                   <span className="h-full bg-slate-500" style={{width:`${after>0?Math.max(0,Math.min(100,before/after*100)):0}%`}}/>
                   <span className={`h-full ${st.bar}`} style={{width:`${after>0?Math.max(0,Math.min(100,(after-before)/after*100)):0}%`}}/>
                 </span>
               </span>
               {/* 何回選んだかを ×1 / ×2 で明確に出す */}
-              {count>0&&<span className={`absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
+              {count>0&&<span key={`count-${count}`} className={`mh-phase-pop mh-phase-count absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
             </button>
           );
         })}
@@ -324,8 +357,7 @@ function RewardPickScreen({
             <button key={slotIdx} type="button" disabled={!!effect}
               onClick={()=>{setTrainingPicks([]); handleTraining({revive:slotIdx});}}
               className="w-full min-h-[44px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/60 px-3 text-left font-black text-emerald-200 active:scale-95 disabled:opacity-40">
-              <span className="block text-[12px] leading-tight">{slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`}を起こす</span>
-              <span className="block text-[9px] font-black text-emerald-400/90 leading-tight">このWAVEの強化はなし</span>
+              <span className="block text-[12px] leading-tight">{slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`}を起こす<span className="text-[9px] font-black text-emerald-400/90">　このWAVEの強化はなし</span></span>
             </button>
           ))}
         </div>
@@ -335,7 +367,7 @@ function RewardPickScreen({
         <button type="button" disabled={trainingPicks.length===0||!!effect} onClick={()=>setTrainingPicks([])}
           className="min-h-[52px] px-4 rounded-2xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30">選び直す</button>
         <button type="button" disabled={!ready||!!effect} onClick={()=>{const picks=trainingPicks; setTrainingPicks([]); handleTraining(picks);}}
-          className={`min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready&&!effect?'bg-gradient-to-r from-amber-300 to-yellow-200 text-slate-950 shadow-[0_0_24px_rgba(251,191,36,0.45)]':'bg-slate-800 text-slate-600'}`}>{ready?'決定する':`あと${remaining}つ選ぶ`}</button>
+          className={`min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready&&!effect?'mh-phase-ready bg-gradient-to-r from-amber-300 to-yellow-200 text-slate-950 shadow-[0_0_24px_rgba(251,191,36,0.45)]':'bg-slate-800 text-slate-600'}`}>{ready?'決定する':`あと${remaining}つ選ぶ`}</button>
       </div>
     </div>);
   
