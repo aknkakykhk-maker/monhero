@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e8f12ad1b51d1285
+// generated-sha256: 161979bccc85d7fa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -102,7 +102,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 14:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 14:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -43787,9 +43787,15 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-slot-index="1"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
       --mh-pat: repeating-conic-gradient(from 0deg at 20% 62%, rgba(255,210,80,.15) 0 6deg, transparent 6deg 18deg) padding-box,
         radial-gradient(60% 60% at 20% 62%, rgba(255,200,60,.32), transparent 70%) padding-box; }
+    /* 中距離は「下から茂る草と舞う葉」。遠距離の「波紋(同心円)」と形が似ないように、輪を使わない(2026-09-24 ユーザー指摘) */
     [data-tactics-look] [data-slot-index="2"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
-      --mh-pat: radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.28), transparent 70%) padding-box,
-        repeating-radial-gradient(ellipse at 20% 115%, rgba(40,180,110,.17) 0 4px, transparent 4px 12px) padding-box; }
+      --mh-pat: radial-gradient(7px 3px at 58% 30%, rgba(110,231,183,.55), transparent 80%) padding-box,
+        radial-gradient(6px 2.5px at 78% 52%, rgba(110,231,183,.45), transparent 80%) padding-box,
+        radial-gradient(7px 3px at 40% 18%, rgba(167,243,208,.4), transparent 80%) padding-box,
+        radial-gradient(5px 2px at 88% 24%, rgba(110,231,183,.4), transparent 80%) padding-box,
+        repeating-linear-gradient(98deg, rgba(52,211,153,.30) 0 1.5px, transparent 1.5px 6px) bottom / 100% 34% no-repeat padding-box,
+        repeating-linear-gradient(82deg, rgba(16,185,129,.22) 0 1px, transparent 1px 8px) bottom / 100% 22% no-repeat padding-box,
+        radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.26), transparent 70%) padding-box; }
     [data-tactics-look] [data-slot-index="3"] { --mh-rc: 59,130,246; --mh-rc2: 200,225,255;
       --mh-pat: repeating-radial-gradient(circle at 20% 140%, rgba(90,160,255,.17) 0 3px, transparent 3px 11px) padding-box,
         radial-gradient(70% 60% at 20% 62%, rgba(80,150,255,.32), transparent 70%) padding-box; }
