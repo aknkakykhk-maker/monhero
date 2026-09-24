@@ -175,33 +175,61 @@ function RewardPickScreen({
       ? (trainableSlots.length>0&&trainableSlots.every(index=>picksOf(index).length===TRAINING_PICK_COUNT))
       : trainingPicks.length===TRAINING_PICK_COUNT;
     const doneSlots=tacticsMode?trainableSlots.filter(index=>picksOf(index).length===TRAINING_PICK_COUNT).length:0;
+    // idle は選ぶ前の枠の色、badge はアイコンの台、bar は伸び幅の棒。
+    // 選ぶ前から4項目を色で見分けられるようにする(以前は選ぶまで4枚とも同じ灰色だった)
     const STYLES={
-      hp:  {icon:<Heart size={16}/>,      ring:'border-pink-400',    bg:'bg-pink-900/40',    tint:'text-pink-300',    chip:'bg-pink-500'},
-      atk: {icon:<Sword size={16}/>,      ring:'border-red-400',     bg:'bg-red-900/40',     tint:'text-red-300',     chip:'bg-red-500'},
-      def: {icon:<ShieldCheck size={16}/>,ring:'border-emerald-400', bg:'bg-emerald-900/40', tint:'text-emerald-300', chip:'bg-emerald-500'},
-      guts:{icon:<Sparkles size={16}/>,   ring:'border-amber-400',   bg:'bg-amber-900/40',   tint:'text-amber-300',   chip:'bg-amber-500'},
+      hp:  {icon:<Heart size={18}/>,      ring:'border-pink-400',    bg:'bg-pink-900/40',    tint:'text-pink-300',    chip:'bg-pink-500',    idle:'border-pink-400/25',    badge:'bg-pink-500/20 text-pink-300',       bar:'bg-pink-400',    glow:'rgba(244,114,182,.35)'},
+      atk: {icon:<Sword size={18}/>,      ring:'border-red-400',     bg:'bg-red-900/40',     tint:'text-red-300',     chip:'bg-red-500',     idle:'border-red-400/25',     badge:'bg-red-500/20 text-red-300',         bar:'bg-red-400',     glow:'rgba(248,113,113,.35)'},
+      def: {icon:<ShieldCheck size={18}/>,ring:'border-emerald-400', bg:'bg-emerald-900/40', tint:'text-emerald-300', chip:'bg-emerald-500', idle:'border-emerald-400/25', badge:'bg-emerald-500/20 text-emerald-300', bar:'bg-emerald-400', glow:'rgba(52,211,153,.35)'},
+      guts:{icon:<Sparkles size={18}/>,   ring:'border-amber-400',   bg:'bg-amber-900/40',   tint:'text-amber-300',   chip:'bg-amber-500',   idle:'border-amber-400/25',   badge:'bg-amber-500/20 text-amber-300',     bar:'bg-amber-400',   glow:'rgba(251,191,36,.35)'},
     };
+    const optionById=(id)=>TRAINING_OPTIONS.find(option=>option.id===id);
+    const unitName=(slotIdx)=>slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`;
     return (
-    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden" data-screen="training">
+    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",backgroundImage:'radial-gradient(ellipse 90% 45% at 50% 0%, rgba(251,191,36,.16), transparent 70%)',zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden" data-screen="training">
       <div className="shrink-0 w-full max-w-sm" style={{paddingTop:'calc(.25rem + env(safe-area-inset-top))'}}>
+        {/* どのWAVEを抜けたごほうびなのかを見出しの上に出す */}
+        {waveResult?.wave>0&&<div className="mb-1 flex justify-center">
+          <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-2.5 py-0.5 text-[9px] font-black tracking-[.2em] text-amber-200">WAVE {waveResult.wave} CLEAR</span>
+        </div>}
         <div className="flex items-center justify-center gap-2">
-          <Trophy className="text-amber-400" size={22}/>
+          <Trophy className="text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,.6)]" size={22}/>
           <h2 className="text-xl font-black italic uppercase tracking-tighter text-white leading-none">トレーニング</h2>
         </div>
-        {/* 「4種類から2つ選ぶ」ことと、いま何回選んだかを一目で分かるようにする */}
-        <div className="mt-1.5 flex items-center justify-center gap-2">
-          <span className="text-[10px] font-black text-slate-300">{tacticsMode?(pickable?`${currentName||'全員'}のトレーニング`:'全員ぶん決まりました'):'4種類から2つ選ぶ'}</span>
-          <span className="flex items-center gap-1">
-            {Array.from({length:TRAINING_PICK_COUNT}).map((_,i)=>(
-              <i key={i} className={`block rounded-full ${i<activePicks.length?'bg-amber-400':'bg-slate-700'}`} style={{width:'9px',height:'9px'}}/>
-            ))}
-          </span>
-          <span className="text-[11px] font-black font-mono text-amber-300">{activePicks.length} / {TRAINING_PICK_COUNT}</span>
+        {/* 「4種類から2つ選ぶ」ことと、いま何を選んだかを一目で分かるようにする。
+            点だけだと何を選んだのかは各カードの×1を探すしかなかったので、枠に中身を入れる */}
+        <div className="mt-1.5 text-center text-[10px] font-black text-slate-300">{tacticsMode?(pickable?`${currentName||'全員'}のトレーニング`:'全員ぶん決まりました'):'4種類から2つ選ぶ'}</div>
+        <div className="mt-1 flex items-center justify-center gap-1.5">
+          {Array.from({length:TRAINING_PICK_COUNT}).map((_,i)=>{
+            const picked=optionById(activePicks[i]);
+            const st=picked?(STYLES[picked.id]||STYLES.hp):null;
+            return (
+              <span key={i} className={`flex min-w-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black ${picked?`${st.ring} ${st.bg} text-white`:'border-dashed border-slate-600 text-slate-500'}`} style={{maxWidth:'42%'}}>
+                <span className="shrink-0 text-[8px] text-slate-400">{i+1}回目</span>
+                {picked?<><span className={`shrink-0 ${st.tint}`}>{cardIconNode(st.icon)}</span><span className="truncate">{picked.name}</span></>:<span>―</span>}
+              </span>
+            );
+          })}
+          <span className="shrink-0 text-[11px] font-black font-mono text-amber-300">{activePicks.length} / {TRAINING_PICK_COUNT}</span>
         </div>
-        {/* 何体ぶん終わったか。1体ずつ選ぶので、どこまで進んだのかが分からないと迷子になる */}
+        {/* 何体ぶん終わったか。1体ずつ選ぶので、どこまで進んだのかが分からないと迷子になる。
+            名前の札を並べ、いま選んでいる子を光らせる */}
         {tacticsMode&&<div data-tactics-training-progress={`${doneSlots}/${trainableSlots.length}`}
-          className="mt-1 text-center text-[10px] font-black text-indigo-300">
+          className="mt-1.5 text-center text-[10px] font-black text-indigo-300">
           {doneSlots} / {trainableSlots.length} 体ぶん決定ずみ
+          {trainableSlots.length>1&&<div className="mt-1 flex flex-wrap items-center justify-center gap-1">
+            {trainableSlots.map(slotIdx=>{
+              const count=picksOf(slotIdx).length;
+              const done=count>=TRAINING_PICK_COUNT;
+              const active=slotIdx===currentSlot&&pickable;
+              return (
+                <span key={slotIdx} className={`flex max-w-[45%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active?'border-amber-300 bg-amber-400/15 text-amber-100 shadow-[0_0_10px_rgba(251,191,36,.35)]':done?'border-emerald-400/50 bg-emerald-950/50 text-emerald-200':'border-slate-700 bg-slate-900/60 text-slate-400'}`}>
+                  <span className="truncate">{unitName(slotIdx)}</span>
+                  <span className="shrink-0 font-mono">{done?'✓':`${count}/${TRAINING_PICK_COUNT}`}</span>
+                </span>
+              );
+            })}
+          </div>}
         </div>}
         {extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null&&(()=>{
           const turns=waveResult?.turn||0;
@@ -250,20 +278,41 @@ function RewardPickScreen({
                 return [...prev,{slot:currentSlot,id:option.id}];
               })}
               aria-label={`${option.name} ${option.effect}${count>0?` 選択中${count}回`:''}`}
-              className={`relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start justify-center gap-2 text-left transition-all active:scale-95 disabled:opacity-40 ${count>0?`${st.bg} ${st.ring}`:'bg-slate-900/60 border-slate-800'}`}>
+              className={`relative min-h-[112px] overflow-hidden rounded-2xl border-2 p-2.5 flex flex-col items-stretch gap-1.5 text-left transition-all active:scale-95 disabled:opacity-40 ${count>0?`${st.bg} ${st.ring}`:`bg-slate-900/70 ${st.idle}`}`}
+              style={count>0?{boxShadow:`0 0 22px ${st.glow}`}:undefined}>
+              {/* 角の色だまり。4枚を色で見分けるための飾りで、押す範囲や文字には関わらない */}
+              <span aria-hidden="true" className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl" style={{background:st.glow}}/>
+              {/* ★ボタンの文字は項目名から始める(検査がボタンを「^走り込み」で探す)。
+                  アイコンは絵だけなので前に置いても文字には入らない */}
+              <span className="relative flex items-center gap-2">
+                <span className={`shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${st.badge}`}>{cardIconNode(st.icon)}</span>
+                <span className="min-w-0">
+                  <b className="block text-[14px] font-black text-white leading-tight">{option.name}</b>
+                  <span className={`block text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{(extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null||extremeRuleNumber(specialRule,'waveEnhancement')!=null)&&(()=>{
+                    const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null)[option.stat];
+                    const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
+                    const normalGain=normalAfter-current[option.stat],effectiveGain=effectiveAfter-current[option.stat];
+                    return <span className="block text-purple-200">通常 +{normalGain} → 実際 +{effectiveGain}</span>;
+                  })()}</span>
+                </span>
+              </span>
+              {/* いちばん知りたい「どれだけ伸びるか」を大きく出す。カードが縦に伸びたぶんの空きもここで埋まる */}
+              <span className="relative flex flex-1 items-center justify-center font-mono font-black leading-none">
+                <span className={after>before?st.tint:'text-slate-500'} style={{fontSize:'clamp(20px,7vw,30px)'}}>+{Math.max(0,after-before)}</span>
+              </span>
+              <span className="relative w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight">
+                <span className="flex items-baseline justify-between gap-1">
+                  <span className="text-[8px] text-slate-500 font-black">{option.statLabel}</span>
+                  <span className="text-[11px] font-black text-slate-300">{before} <span className="text-slate-600">→</span> <b className={st.tint}>{after}</b></span>
+                </span>
+                {/* 伸びる前の値を灰色、伸びるぶんを項目の色で塗った棒 */}
+                <span className="mt-1 flex h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                  <span className="h-full bg-slate-500" style={{width:`${after>0?Math.max(0,Math.min(100,before/after*100)):0}%`}}/>
+                  <span className={`h-full ${st.bar}`} style={{width:`${after>0?Math.max(0,Math.min(100,(after-before)/after*100)):0}%`}}/>
+                </span>
+              </span>
               {/* 何回選んだかを ×1 / ×2 で明確に出す */}
               {count>0&&<span className={`absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
-              <span className={`flex items-center gap-1.5 ${st.tint}`}>{cardIconNode(st.icon)}<b className="text-[13px] font-black text-white leading-none">{option.name}</b></span>
-              <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{(extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null||extremeRuleNumber(specialRule,'waveEnhancement')!=null)&&(()=>{
-                const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null)[option.stat];
-                const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
-                const normalGain=normalAfter-current[option.stat],effectiveGain=effectiveAfter-current[option.stat];
-                return <span className="block text-purple-200">通常 +{normalGain} → 実際 +{effectiveGain}</span>;
-              })()}</span>
-              <span className="w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight">
-                <span className="block text-[8px] text-slate-500 font-black">{option.statLabel}</span>
-                <span className="block text-[11px] font-black text-slate-300">{before} <span className="text-slate-600">→</span> <b className={st.tint}>{after}</b></span>
-              </span>
             </button>
           );
         })}
@@ -286,7 +335,7 @@ function RewardPickScreen({
         <button type="button" disabled={trainingPicks.length===0||!!effect} onClick={()=>setTrainingPicks([])}
           className="min-h-[52px] px-4 rounded-2xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30">選び直す</button>
         <button type="button" disabled={!ready||!!effect} onClick={()=>{const picks=trainingPicks; setTrainingPicks([]); handleTraining(picks);}}
-          className={`min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready&&!effect?'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]':'bg-slate-800 text-slate-600'}`}>{ready?'決定する':`あと${remaining}つ選ぶ`}</button>
+          className={`min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready&&!effect?'bg-gradient-to-r from-amber-300 to-yellow-200 text-slate-950 shadow-[0_0_24px_rgba(251,191,36,0.45)]':'bg-slate-800 text-slate-600'}`}>{ready?'決定する':`あと${remaining}つ選ぶ`}</button>
       </div>
     </div>);
   
