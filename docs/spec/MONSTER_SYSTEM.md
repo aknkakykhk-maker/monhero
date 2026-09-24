@@ -112,7 +112,7 @@ HOMEの「M/B管理」→「モンスター」→「モンスター図鑑」か�
     - 「通常攻撃」は `attackMotionPreviewSequence`、「固有技」は `attackMotionUniquePreviewSequence`(共通のタメ650ms → 専用モーション)を使う。どちらもこの画面専用のモーションは作らず、本番の演出部品をそのまま再生する
   - 再生は図鑑専用モーションを作らず、`attackMotionAnimation` / `EikiSakuraPetals` / `KenshiTwinSlash` / `ArkHolyRainMotion` / `WaterBurstMotion` / `MiaSongNotesMotion` / `PandoraDualThunder` など本番の演出部品を再利用する
   - 前後移動・図鑑一覧へ戻る操作では再生中の非同期プレビューを中断し、次のモンスターへ演出を持ち越さない
-  - **待機アニメ**(翼の羽ばたきなど)は、詳細の立ち絵と攻撃アクションの画面でもバトルと同じ部品で動く(下の「待機アニメの作り」)
+  - **待機アニメ**(翼の羽ばたきなど)は、詳細の立ち絵と攻撃アクションの画面でもバトルと同じ部品で動く(下の「待機アニメを図鑑でも出す」)
   - 基本 … 主血統・副血統・区分・勇者特性・特性の効果
   - 能力 … その**種**の基礎能力（`baseHp` / `baseAtk` / `baseDef` / `baseGuts`）と4距離の適性。育成済みマスモンの値ではない
   - 技 … `getAtkSkillLevels` / `getUniqueSkillLevels` から通常技・固有技の9段階（名前・威力・消費ガッツ・会心率）
@@ -120,24 +120,22 @@ HOMEの「M/B管理」→「モンスター」→「モンスター図鑑」か�
 図鑑の中身はすべて既存のモンスター定義・技データから引く。図鑑専用の配列は作らない。
 図鑑説明だけは `MONSTER_DEX_DESCRIPTIONS` に持ち、未記入のモンスターは空欄ではなく調査中の案内を出す。
 
-### 待機アニメの作り
+### 待機アニメを図鑑でも出す
 
-バトルの待機中・図鑑の立ち絵・図鑑の攻撃アクションで、同じ動きを出すための仕組み(2026-09-24。ミーアから)。
-絵は1枚のPNGのまま描き足さず、同じ絵を部位のマスクで切り抜いて重ね、部位だけを付け根を軸に回す。
+バトルの待機中・図鑑の立ち絵・図鑑の攻撃アクションで、同じ動きを出す(2026-09-24)。
+動かし方の正本はバトルと同じ `MONSTER_IDLE_RIGS`(`tools/monster/idle-rig-build.js` が `24-battle-fx.jsx` へ書く)で、
+**そこへ1体足せば、図鑑の側を触らずにバトルと図鑑の両方で動く**。
 
-- **設定表**: `MONSTER_IDLE_RIGS`(`24-battle-fx.jsx`)。1体1件で、座標はすべて**元絵のピクセル**で書く
-  - `size` 元絵の大きさ / `anchor` 全体の浮き沈みの軸 / `base` 部位を抜いた残りのマスク
-  - `parts` 動かす部位(`key`・`mask`・`pivot` 付け根・`back` 体の後ろに置くか)
-- **描画**: `MonsterIdleArt`。枠の形(`frameAspect`、既定は正方形)から回転軸の%を `monsterIdlePoint` で出して
-  `transform-origin` に書く。**CSS に軸の%を書かない**(枠が変わるたびに数字を直すことになるため)
-- **動き**: `70-bootstrap.jsx` の `.monster-idle--<cssKey>` と `.monster-idle--<cssKey> .monster-idle__part--<key>`。
-  keyframes と尺だけを書く
-- **入口は1つ**: バトルも図鑑も `withMonsterIdleArt(id, 絵, {enabled})` を通す。モンスター名で分岐しない。
-  設定表へ1件足せば、呼び出し側を触らずに両方で動く
-- **止める場面**: バトルは軽量表示・「待機中の動き：止める」で1枚絵に戻す。図鑑は画面全体の
-  `data-phase-look="calm"`(同じ2つの設定で付く)を CSS が見て止める。「動きを減らす」設定でも止まる
-- 図鑑の攻撃アクションでは、バトルと同じく水・聖光・パンドラの雷の最中は重ねない(`monsterIdleAllowedDuring`)
-- 検査: `node tools/monster/idle-rig-check.js`(マスクの縦横比・軸の範囲・CSS の書き忘れ・両画面の入口)
+- **入口は1つ**: `withMonsterIdleArt(id, 絵の要素, {enabled, fill})`。表に無い子はそのままの絵を返す。
+  図鑑の側でモンスターの名前を見て分岐しない
+- **絵の要素を渡す**: 部分ごとに絵を複製して重ねるので、部品(`DexMonsterArt`)ではなく `dexMonsterArtImage(mon, alt)` の `<img>` を渡す
+- **正方形の箱**: 軸の % は「正方形の枠に絵を contain で置いた」ときの値。詳細の立ち絵は `DexMonsterIdleArt` が
+  正方形の箱(`data-dex-idle-art`)へ入れる。攻撃アクションの舞台はもとから正方形。絵が大きさを持たないので `fill` で広げる
+- **止める場面**: 画面全体の `data-phase-look="calm"`(軽量表示・「待機中の動き：止める」で付く)を CSS が見て止める。
+  「動きを減らす」設定でも止まる
+- **攻撃アクションの最中**: バトルと同じく、パンドラの雷のときだけ重ねない(`monsterIdleAllowedDuring`)。
+  バトル側の分け方を変えたらここも合わせる
+- 検査: `node tools/monster/idle-dex-check.js`
 
 ### 並び順
 

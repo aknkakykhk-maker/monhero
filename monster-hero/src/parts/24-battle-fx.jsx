@@ -106,91 +106,85 @@ const AttackTargetFx = ({anim}) => {
     </span>
   );
 };
-// ==== モンスターの待機アニメ(バトルと図鑑で共用) ====
-// 始まりはミーア(2026-09-24 ユーザー指示「試しにミーアでやってみて」)。そのあと「図鑑にも同じ動きが
-// 出来る基盤を」(2026-09-24)で、ミーア専用の部品をモンスターごとの設定表＋共通の描画部品に分けた。
-// 絵は1枚のPNGなので描き足しはしない。同じ絵を部位ごとのマスク(images/monsters/◯◯-*.png)で切り抜いて
-// 重ね、部位だけを付け根を軸に回す。動かす部位は体の後ろに置くので、動かしても穴が見えない。
-//
-// ■ 新しいモンスターを足すとき(ここと CSS の2か所だけ)
-//   1. 部位のマスクPNGを用意する(元絵と同じ縦横比。白=その部位、透明=それ以外)。
-//      「部位を抜いた残り(base)」のマスクも1枚作る。images-ally.js にパスを書く
-//   2. 下の MONSTER_IDLE_RIGS へ1件足す。座標はすべて**元絵のピクセル**で書く
-//      (枠の形から回転軸の%を出すのは MonsterIdleArt がやるので、枠ごとに数字を直さない)
-//   3. 70-bootstrap.jsx の CSS に .monster-idle--<cssKey> と部位の keyframes を書く
-//   4. node tools/monster/idle-rig-check.js を通す
-//   バトル(71-screen-battle.jsx)と図鑑(57-screen-monster-dex.jsx)は withMonsterIdleArt を通しているので、
-//   ここへ足せば両方で動き出す。呼び出し側は触らない。
-//
-// ・image は各画面で使う実際の絵(染色つき DyedMonsterImage)をそのまま受け取り、層の数だけ複製する
-// ・軽量表示・「待機中の動き：止める」・動きを減らす設定では止める(バトルは呼び出し側で1枚絵に戻し、
-//   図鑑は画面全体の data-phase-look="calm" を見て CSS で止める)
+// ==== 味方モンスターの待機アニメ(2026-09-24 ユーザー指示「ミーアで試して」→「他の味方モンスターもアニメーション実装よろしく」) ====
+// 絵は1枚のPNGなので描き足しはしない。同じ絵を「体」と「動かす部分(翼・しっぽ・耳・花…)」にマスクで切り抜いて重ね、
+// 部分だけを付け根を軸に回す。全体の動き(浮く・跳ねる・呼吸・揺れる・泳ぐ)は種ごとに1つ。
+// ・どこを切り抜いてどう動かすかは tools/monster/idle-rig-build.js の RIGS が正本。下の表はそこから自動で書かれる
+// ・image はバトルで使う実際の絵(染色つき DyedMonsterImage)をそのまま受け取り、部分の数だけ複製する
+// ・軸の位置は「正方形の枠に絵を contain で置いた」ときの %。バトルの枠(58/64pxの正方形)専用
+// ・軽量表示・設定の「待機中の動き：止める」では呼び出し側が使わない。calm と「動きを減らす」は CSS で止める
+// ==== MONSTER_IDLE_RIGS(tools/monster/idle-rig-build.js が書く。手で直さない) ====
 const MONSTER_IDLE_RIGS = Object.freeze({
-  Mia: Object.freeze({
-    cssKey: 'mia',
-    size: [1024, 1536],            // 元絵(mia.PNG)の大きさ。マスクも同じ縦横比(256×384)
-    anchor: [512, 1475],           // 全体の浮き沈みの軸(足元)
-    base: MIA_WING_BODY_MASK,      // 翼を抜いた残り。いちばん上に重ねる
-    parts: Object.freeze([
-      // 肩の付け根。back:true は体の後ろ(base より下)に置く部位
-      Object.freeze({ key: 'wing-l', mask: MIA_WING_LEFT_MASK,  pivot: [425, 585], back: true }),
-      Object.freeze({ key: 'wing-r', mask: MIA_WING_RIGHT_MASK, pivot: [599, 585], back: true }),
-    ]),
-  }),
+  Mocchi: { body:'bounce', bodyMask:null, parts:[] },
+  Suezo: { body:'bounce', bodyMask:null, parts:[] },
+  Golem: { body:'breathe', bodyMask:null, parts:[] },
+  Tiger: { body:'breathe', bodyMask:IDLE_TIGER_BODY_MASK, parts:[{ mask:IDLE_TIGER_TAIL_MASK, origin:'68% 52%', anim:'wag', amp:8, dur:1100, delay:0, layer:'back' }] },
+  Ham: { body:'breathe', bodyMask:IDLE_HAM_BODY_MASK, parts:[{ mask:IDLE_HAM_EAR_L_MASK, origin:'43% 27%', anim:'twitch', amp:-9, dur:3200, delay:0, layer:'front' }, { mask:IDLE_HAM_EAR_R_MASK, origin:'57% 27%', anim:'twitch', amp:9, dur:3200, delay:1300, layer:'front' }] },
+  Pixie: { body:'hover', bodyMask:IDLE_PIXIE_BODY_MASK, parts:[{ mask:IDLE_PIXIE_WING_L_MASK, origin:'36% 32%', anim:'flapL', amp:14, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_WING_R_MASK, origin:'64% 32%', anim:'flapR', amp:14, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_TAIL_MASK, origin:'58% 62%', anim:'wag', amp:7, dur:1600, delay:0, layer:'back' }] },
+  Mia: { body:'hover', bodyMask:MIA_WING_BODY_MASK, parts:[{ mask:MIA_WING_LEFT_MASK, origin:'44.3% 38.1%', anim:'flapL', amp:16, dur:1300, delay:0, layer:'back' }, { mask:MIA_WING_RIGHT_MASK, origin:'55.7% 38.1%', anim:'flapR', amp:16, dur:1300, delay:0, layer:'back' }] },
+  Pandora: { body:'hover', bodyMask:IDLE_PANDORA_BODY_MASK, parts:[{ mask:IDLE_PANDORA_WING_L_MASK, origin:'36.7% 33%', anim:'flapL', amp:12, dur:1200, delay:0, layer:'back' }, { mask:IDLE_PANDORA_WING_R_MASK, origin:'62% 32%', anim:'flapR', amp:12, dur:1200, delay:0, layer:'back' }, { mask:IDLE_PANDORA_TAIL_L_MASK, origin:'31.3% 58%', anim:'swing', amp:7, dur:2000, delay:0, layer:'back' }, { mask:IDLE_PANDORA_TAIL_R_MASK, origin:'64.7% 58%', anim:'swing', amp:-7, dur:2200, delay:400, layer:'back' }] },
+  Monol: { body:'hover', bodyMask:null, parts:[] },
+  Oboro: { body:'sway', bodyMask:IDLE_OBORO_BODY_MASK, parts:[{ mask:IDLE_OBORO_FLOWER_T_MASK, origin:'50% 50%', anim:'swing', amp:6, dur:2600, delay:0, layer:'front' }, { mask:IDLE_OBORO_FLOWER_L_MASK, origin:'33% 54%', anim:'swing', amp:-7, dur:2300, delay:500, layer:'front' }, { mask:IDLE_OBORO_FLOWER_R_MASK, origin:'67% 54%', anim:'swing', amp:7, dur:2500, delay:900, layer:'front' }] },
+  Plant: { body:'sway', bodyMask:IDLE_PLANT_BODY_MASK, parts:[{ mask:IDLE_PLANT_FLOWER_T_MASK, origin:'50% 50%', anim:'swing', amp:6, dur:2600, delay:0, layer:'front' }, { mask:IDLE_PLANT_FLOWER_L_MASK, origin:'31% 52%', anim:'swing', amp:-7, dur:2300, delay:500, layer:'front' }, { mask:IDLE_PLANT_FLOWER_R_MASK, origin:'69% 52%', anim:'swing', amp:7, dur:2500, delay:900, layer:'front' }] },
+  Zan: { body:'hover', bodyMask:IDLE_ZAN_BODY_MASK, parts:[{ mask:IDLE_ZAN_BLADE_L_MASK, origin:'30% 30%', anim:'swing', amp:-5, dur:1800, delay:0, layer:'back' }, { mask:IDLE_ZAN_BLADE_R_MASK, origin:'70% 30%', anim:'swing', amp:5, dur:1800, delay:0, layer:'back' }] },
+  Mitarashi: { body:'breathe', bodyMask:IDLE_MITARASHI_BODY_MASK, parts:[{ mask:IDLE_MITARASHI_WING_L_MASK, origin:'26% 40%', anim:'flapL', amp:14, dur:1000, delay:0, layer:'back' }, { mask:IDLE_MITARASHI_WING_R_MASK, origin:'74% 40%', anim:'flapR', amp:14, dur:1000, delay:0, layer:'back' }] },
+  Ark: { body:'hover', bodyMask:IDLE_ARK_BODY_MASK, parts:[{ mask:IDLE_ARK_WING_L_MASK, origin:'34% 52%', anim:'flapL', amp:6, dur:1300, delay:0, layer:'back' }, { mask:IDLE_ARK_WING_R_MASK, origin:'66% 52%', anim:'flapR', amp:6, dur:1300, delay:0, layer:'back' }] },
+  Iblis: { body:'hover', bodyMask:IDLE_IBLIS_BODY_MASK, parts:[{ mask:IDLE_IBLIS_WING_L_MASK, origin:'30% 56%', anim:'flapL', amp:10, dur:1400, delay:0, layer:'back' }, { mask:IDLE_IBLIS_WING_R_MASK, origin:'70% 56%', anim:'flapR', amp:10, dur:1400, delay:0, layer:'back' }, { mask:IDLE_IBLIS_ORB_MASK, origin:'48% 8%', anim:'bob', amp:-6, dur:1900, delay:0, layer:'front' }] },
+  Snegurochka: { body:'swim', bodyMask:IDLE_SNEGUROCHKA_BODY_MASK, parts:[{ mask:IDLE_SNEGUROCHKA_FIN_MASK, origin:'58.5% 80%', anim:'swing', amp:7, dur:1500, delay:0, layer:'front' }] },
+  Undine: { body:'swim', bodyMask:IDLE_UNDINE_BODY_MASK, parts:[{ mask:IDLE_UNDINE_FIN_MASK, origin:'58% 80%', anim:'swing', amp:8, dur:1500, delay:0, layer:'front' }] },
+  Yaobikuni: { body:'swim', bodyMask:IDLE_YAOBIKUNI_BODY_MASK, parts:[{ mask:IDLE_YAOBIKUNI_FIN_MASK, origin:'60.7% 82%', anim:'swing', amp:8, dur:1500, delay:0, layer:'front' }] },
+  Eiki: { body:'hover', bodyMask:IDLE_EIKI_BODY_MASK, parts:[{ mask:IDLE_EIKI_WING_L_MASK, origin:'23.1% 40%', anim:'flapL', amp:4, dur:1600, delay:0, layer:'back' }, { mask:IDLE_EIKI_WING_R_MASK, origin:'76.9% 40%', anim:'flapR', amp:4, dur:1600, delay:0, layer:'back' }] },
+  KenshiMocchi: { body:'bounce', bodyMask:null, parts:[] },
 });
-const monsterIdleRigOf = (monsterId) => (monsterId && Object.prototype.hasOwnProperty.call(MONSTER_IDLE_RIGS, monsterId)) ? MONSTER_IDLE_RIGS[monsterId] : null;
+// ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
   WebkitMaskImage:`url(${url})`, maskImage:`url(${url})`,
   WebkitMaskSize:'contain', maskSize:'contain',
   WebkitMaskPosition:'center', maskPosition:'center',
   WebkitMaskRepeat:'no-repeat', maskRepeat:'no-repeat',
 });
-// 元絵の1点(px)が、枠(横÷縦 = frameAspect)へ contain で置いたときに枠の何%の所に来るか。
-// バトルの枠は正方形(1)。図鑑も正方形の箱へ入れて渡す。
-const monsterIdlePoint = (rig, [x, y], frameAspect = 1) => {
-  const [w, h] = rig.size;
-  const artAspect = w / h;
-  const fa = Number.isFinite(frameAspect) && frameAspect > 0 ? frameAspect : 1;
-  // 絵が枠より縦長なら高さいっぱい・左右に余白、横長なら幅いっぱい・上下に余白
-  const sx = artAspect < fa ? artAspect / fa : 1;
-  const sy = artAspect < fa ? 1 : fa / artAspect;
-  const pct = (v) => `${Math.round(v * 1000) / 10}%`;
-  return `${pct((1 - sx) / 2 + (x / w) * sx)} ${pct((1 - sy) / 2 + (y / h) * sy)}`;
-};
 // fill: 入れ物いっぱいに広げる(図鑑の立ち絵のように、絵が w-full h-full で大きさを持たないとき)。
 //   バトルの絵は幅・高さを px で持っているので要らない
-const MonsterIdleArt = ({monsterId, image, frameAspect = 1, fill = false}) => {
-  const rig = monsterIdleRigOf(monsterId);
+const MonsterIdleArt = ({baseId, image, fill = false}) => {
+  const rig = monsterIdleRigOf(baseId);
+  const fillClass = fill ? ' mon-idle--fill' : '';
   if (!rig || !image) return image || null;
-  // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと base の層に部位の影が残り、
-  //   部位を動かしたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体(.monster-idle)に1回だけ付ける
+  if (!rig.parts.length) {
+    return <span className={`mon-idle mon-idle--${rig.body}${fillClass}`} data-monster-idle={baseId}>{image}</span>;
+  }
+  // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと「体」の層に部分の影が残り、
+  //   部分を動かしたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体に1回だけ付ける
   const className = String(image.props.className || '').split(/\s+/).filter(c => c && !/^drop-shadow/.test(c)).join(' ');
   const layer = (url, extra) => React.cloneElement(image, { alt: extra ? '' : image.props.alt, className,
     style:{ ...(image.props.style||{}), ...MONSTER_IDLE_MASK_STYLE(url), ...(extra||{}) } });
-  const part = (p) => (
-    <span key={p.key} className={`monster-idle__part monster-idle__part--${p.key}${p.back ? '' : ' monster-idle__part--front'}`}
-      style={{ transformOrigin: monsterIdlePoint(rig, p.pivot, frameAspect) }} aria-hidden="true">
-      {layer(p.mask, {display:'block'})}
+  const partNode = (part, index) => (
+    <span key={index} className={`mon-idle__part mon-idle__part--${part.anim} mon-idle__part--${part.layer}`} aria-hidden="true"
+      style={{ transformOrigin:part.origin, animationDuration:`${part.dur}ms`, animationDelay:`${part.delay}ms`, '--idle-amp':`${part.amp}deg`, '--idle-bob':`${part.amp}%` }}>
+      {layer(part.mask, {display:'block'})}
     </span>
   );
   return (
-    <span className={`monster-idle monster-idle--${rig.cssKey}${fill ? ' monster-idle--fill' : ''}`} data-monster-idle={monsterId}
-      style={{ transformOrigin: monsterIdlePoint(rig, rig.anchor, frameAspect) }}>
-      {rig.parts.filter(p => p.back).map(part)}
-      <span className="monster-idle__base">{layer(rig.base, null)}</span>
-      {rig.parts.filter(p => !p.back).map(part)}
+    <span className={`mon-idle mon-idle--${rig.body} mon-idle--rig${fillClass}`} data-monster-idle={baseId}>
+      {rig.parts.filter(p => p.layer === 'back').map(partNode)}
+      <span className="mon-idle__body">{layer(rig.bodyMask, null)}</span>
+      {rig.parts.filter(p => p.layer !== 'back').map(partNode)}
     </span>
   );
 };
-// 待機アニメを持つ子なら重ねた絵に、持たない子・止める場面ならそのままの絵を返す。
-// バトルと図鑑はこれを通すだけにして、モンスターの名前で分岐しない
-const withMonsterIdleArt = (monsterId, image, {enabled = true, frameAspect = 1, fill = false} = {}) => (
-  enabled && monsterIdleRigOf(monsterId) ? <MonsterIdleArt monsterId={monsterId} image={image} frameAspect={frameAspect} fill={fill}/> : image
+// ==== 図鑑でもバトルと同じ待機アニメを出す入口(2026-09-24 ユーザー指示「モンスター図鑑にも同じ動きが出来る基盤を作っといて」) ====
+// 図鑑の詳細の立ち絵(DexMonsterIdleArt)と攻撃アクションの画面は、ここを通すだけにする。
+// 動かし方の正本は上の MONSTER_IDLE_RIGS(idle-rig-build.js が書く)なので、そこへ1体足せば
+// バトルと図鑑の両方で動き出す。図鑑の側でモンスターの名前を見て分岐しない。
+// ・軸の % は「正方形の枠」での値なので、図鑑は正方形の箱に入れて渡す(DexMonsterIdleArt)
+// ・軽量表示・「待機中の動き：止める」では、図鑑は画面全体の data-phase-look="calm" を見て CSS が止める
+const monsterIdleRigOf = (monsterId) => (monsterId && Object.prototype.hasOwnProperty.call(MONSTER_IDLE_RIGS, monsterId)) ? MONSTER_IDLE_RIGS[monsterId] : null;
+const withMonsterIdleArt = (monsterId, image, {enabled = true, fill = false} = {}) => (
+  enabled && monsterIdleRigOf(monsterId) ? <MonsterIdleArt baseId={monsterId} image={image} fill={fill}/> : image
 );
-// 図鑑の攻撃アクションで、動きの最中も待機アニメを重ねてよいか。バトル(71-screen-battle.jsx)が slotArt を
-// 通すのは「待機中」「通常の動き(attackMotionAnimation)」「ミーアの歌」だけなので、それに合わせる。
-// 水・聖光・パンドラの雷は本体の絵を自分で動かす(複製もする)ので、1枚の絵のまま渡す
-const MONSTER_IDLE_OFF_MOTIONS = Object.freeze(['arkHolyRain', 'waterBurst', 'pandoraDualThunder']);
+// 図鑑の攻撃アクションで、動きの最中も待機アニメを重ねてよいか。バトル(71-screen-battle.jsx)は
+// 聖光・水・歌・通常の動きでは slotArt を通して重ね、パンドラの雷だけは重ねない(分身へ絵を複製するため)。
+// それに合わせる。バトル側の分け方を変えたら、ここも合わせる
+const MONSTER_IDLE_OFF_MOTIONS = Object.freeze(['pandoraDualThunder']);
 const monsterIdleAllowedDuring = (anim) => !anim || !MONSTER_IDLE_OFF_MOTIONS.includes(anim.motion);
 // エイキの攻撃中だけ重ねる桜の花びら。
 // 常時アニメーションにはせず、攻撃モーションが出ているあいだ(isAnimating)だけ描く。
