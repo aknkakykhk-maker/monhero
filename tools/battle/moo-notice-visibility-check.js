@@ -47,7 +47,7 @@ const check = (name, ok, detail = '') => {
 
 // ★位置と重なり順は本体から読む。検査へ書き写すと、本体を変えたとき検査だけ古くなる
 // ★2026-09-24 覚醒ムーにも技ごとの動き(data-enemy-motion / data-em-* など)を足した。data-* が前に何個あっても読めるようにする
-const art = src.match(/<div (?:data-[a-zA-Z-]+(?:=\{[^{}]*\})? )*className="fixed left-1\/2 pointer-events-none flex items-center justify-center" style=\{\{top:'([^']+)',transform:'translate\(-50%,-50%\)',zIndex:focusedCard\?5:(\d+),width:'([^']+)',height:'([^']+)'\}\}>/);
+const art = src.match(/<div (?:data-[a-zA-Z-]+(?:=\{[^{}]*\})? )*className="fixed left-1\/2 pointer-events-none flex items-center justify-center" style=\{\{(?:\.\.\.[A-Za-z]+,)*top:'([^']+)',transform:'translate\(-50%,-50%\)',zIndex:focusedCard\?5:(\d+),width:'([^']+)',height:'([^']+)'\}\}>/);
 check('立ち絵の置き方を読み取れる', !!art, art ? `top ${art[1]} / z ${art[2]} / ${art[3]}` : '見つからない');
 const notice = src.match(/data-enemy-notice-moo className="fixed left-1\/2 pointer-events-none"\s*\n\s*style=\{\{top:'([^']+)',transform:'([^']+)',zIndex:focusedCard\?5:(\d+)\}\}/);
 check('札の置き方を読み取れる', !!notice, notice ? `top ${notice[1]} / z ${notice[3]}` : '見つからない');
