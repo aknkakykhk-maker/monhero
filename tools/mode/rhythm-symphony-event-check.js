@@ -91,10 +91,10 @@ check('終了直前は開催している', at('2026-09-21T03:59:00+09:00')?.id =
 check('終了時刻には開催していない', at('2026-09-21T04:00:00+09:00')?.id !== EVENT_ID);
 
 // ---- ③ ビートP(docs/spec/RHYTHM_EVENT_POINTS.md) ----
-// 対象曲1.5倍・通常曲1.0倍・期間外は獲得なし。式そのものは既存実装のまま使う
+// 対象曲1.5倍・通常曲1.0倍・期間外は開催中の1/5(2026-09-24から)。式そのものは既存実装のまま使う
 const during = Date.parse('2026-09-18T12:00:00+09:00');
 const award = (songId, score, whenMs = during) => rhythmEventPointAwardAt(whenMs, songId, score);
-check('期間外はビートPを獲得しない', award('mou_hitotsu_no_sekai_e', 1000000, Date.parse('2026-09-16T12:00:00+09:00')) === null);
+check('期間外は1.5倍が付かず、開催中(通常曲)の1/5だけ獲得する', award('mou_hitotsu_no_sekai_e', 1000000, Date.parse('2026-09-16T12:00:00+09:00'))?.amount === 40);
 check('イベント対象曲は1.5倍', award('mou_hitotsu_no_sekai_e', 1000000)?.amount === 300,
   `100万点 → ${award('mou_hitotsu_no_sekai_e', 1000000)?.amount}P`);
 check('対象曲すべてが1.5倍', SONGS.every(id => award(id, 1000000)?.multiplier === 1.5));

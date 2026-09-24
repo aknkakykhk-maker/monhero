@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 013f866dd3a1865a
+// source-sha256: 4c9d8b027367bfe6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 12d0b7dc75d75280
+// generated-sha256: 093119c77b924f78
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -246,7 +246,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 23:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 23:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -344,7 +344,24 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
-const eventReplayList = () => (typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || []).filter(eventReplayReleased);
+// ★日付(date)の新しい順に並べる(2026-09-24・ユーザー指示「日付でも管理されるようにして」)。
+//   日付の無い・壊れた項目はいちばん下へ。同じ日時どうしは書いた順のまま(sort は安定)
+const eventReplayDateMs = event => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?$/.exec(typeof event?.date === 'string' ? event.date : '');
+  if (!m) return null;
+  const ms = Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0) - 9, +(m[5] || 0));
+  return Number.isFinite(ms) ? ms : null;
+};
+// 一覧に出す日付の文字(例: 2026/09/24)。日付が無ければ空
+const eventReplayDateText = event => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(typeof event?.date === 'string' ? event.date : '');
+  return m ? `${m[1]}/${m[2]}/${m[3]}` : '';
+};
+const eventReplayList = () => (typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || []).filter(eventReplayReleased).map((event, index) => ({
+  event,
+  index,
+  ms: eventReplayDateMs(event)
+})).sort((a, b) => (a.ms == null ? 1 : 0) - (b.ms == null ? 1 : 0) || (b.ms || 0) - (a.ms || 0) || a.index - b.index).map(row => row.event);
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -5998,7 +6015,8 @@ const EVENT_BGM_SCENES = Object.freeze({
   monbeat_cup_2026_09_thanks: 'monbeatCupEvent',
   symphony_2026_09_17: 'symphonyEvent',
   symphony_2026_09_17_thanks: 'symphonyEvent',
-  tactics_intro: 'tacticsIntroEvent'
+  tactics_intro: 'tacticsIntroEvent',
+  beat_point_always_2026_09_24: 'monbeatCupEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -26557,8 +26575,8 @@ const RhythmTapTest = ({
     // run.lifeDepleted は false に戻っているので、そのときはクリア扱いになる。
     // 練習(tutorial)とタイミング合わせ(calibrating)はライフを減らさないので必ずクリア。
     const failed = !tutorial && !calibrating && run.lifeDepleted === true;
-    // ビートPは正常に最後まで到達した公開プレイだけ。公開後も期間判定は
-    // rhythmEventPointAwardAt 側に残し、イベント非開催中は一切付与しない。
+    // ビートPは正常に最後まで到達した公開プレイだけ。期間判定は rhythmEventPointAwardAt 側に残す
+    // (開催中は通常どおり、非開催中はその1/5。2026-09-24・ユーザー指示)。
     // finishは先頭で run.finished=true にするため、再描画・画面遷移で同じ結果を二重付与しない。
     const eventPointAward = !debugPlay && !tutorial && !calibrating && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof rhythmEventPointAwardAt === 'function' ? rhythmEventPointAwardAt(Date.now(), song.songId, score) : null;
     // タイミング合わせのときは、貯めたずれから「判定タイミング調整」に入れる値を出す。
@@ -27820,7 +27838,10 @@ const RhythmTapTest = ({
       className: "mt-0.5 block text-2xl font-black text-white"
     }, "+", result.eventPointAward.amount.toLocaleString(), "P"), result.eventPointAward.target && /*#__PURE__*/React.createElement("span", {
       className: "mt-1 block text-[9px] font-black text-amber-200"
-    }, "\u30A4\u30D9\u30F3\u30C8\u5BFE\u8C61\u66F2 1.5\u500D")), (result.fullCombo || result.allExcellent || result.allMarvelous) && /*#__PURE__*/React.createElement("div", {
+    }, "\u30A4\u30D9\u30F3\u30C8\u5BFE\u8C61\u66F2 1.5\u500D"), result.eventPointAward.offEvent && /*#__PURE__*/React.createElement("span", {
+      "data-rhythm-result-beat-points-off-event": true,
+      className: "mt-1 block text-[9px] font-black text-violet-200"
+    }, "\u30A4\u30D9\u30F3\u30C8\u958B\u50AC\u4E2D\u306F\u3053\u306E5\u500D\u3082\u3089\u3048\u307E\u3059")), (result.fullCombo || result.allExcellent || result.allMarvelous) && /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-celebrate": true,
       className: "my-3 text-center"
     }, /*#__PURE__*/React.createElement("b", {
@@ -32911,8 +32932,10 @@ function RhythmSongSelectScreen({
   // 今週の対象曲の名前。曲名はデータから引くので、ここに書き写さない。
   // 副題まで入れるのは rhythmSongFullName の役目(原曲とリミックスが同じ displayName を持つため)
   const eventSongTitles = rhythmEventNotice ? rhythmEventNotice.songIds.map(songId => rhythmSongFullName(rhythmEventSong(songId, RHYTHM_SONGS)) || songId) : [];
-  // ビートP交換所は常設だが、獲得案内は期間限定イベント開催中だけ出す。
-  const beatPointEvent = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmLimitedEventAt(Date.now()) : null;
+  // ビートP交換所は常設。獲得案内は、開催中は「獲得期間中」、非開催中は「いつでも1/5」を出す
+  // (2026-09-24・ユーザー指示「いつでももらえるように。ただしイベント時の1/5」)。
+  const beatPointReleased = RELEASE_FLAGS.rhythmEventPoints === true;
+  const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
   const beatPointTargetSong = !!beatPointEvent && Array.isArray(beatPointEvent.songIds) && beatPointEvent.songIds.includes(rhythmSelectedSongId);
   // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
   // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
@@ -33170,7 +33193,10 @@ function RhythmSongSelectScreen({
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
-  }, "\uD83C\uDF9F\uFE0F \u30D3\u30FC\u30C8P\u7372\u5F97\u671F\u9593\u4E2D", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます'), quickRhythmBackgroundVisible && /*#__PURE__*/React.createElement("div", {
+  }, "\uD83C\uDF9F\uFE0F \u30D3\u30FC\u30C8P\u7372\u5F97\u671F\u9593\u4E2D", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます'), beatPointReleased && !beatPointEvent && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-beat-point-always": true,
+    className: "shrink-0 border-b border-violet-400/15 bg-violet-950/15 px-3 py-1 text-center text-[10px] font-black text-violet-200/90"
+  }, "\uD83C\uDF9F\uFE0F \u30D3\u30FC\u30C8P\u306F\u3044\u3064\u3067\u3082\u8CAF\u307E\u308A\u307E\u3059\u30FB\u30A4\u30D9\u30F3\u30C8\u958B\u50AC\u4E2D\u306F5\u500D"), quickRhythmBackgroundVisible && /*#__PURE__*/React.createElement("div", {
     "data-quick-rhythm-background": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
   }, /*#__PURE__*/React.createElement("div", {
@@ -51379,7 +51405,11 @@ function MonsterHeroGame() {
   // 第2回の閉幕の会話(2026-09-20)。第1回と同じく、終了の時刻に自動で流れる。
   // 報酬の上乗せは無いので、知らせるのは終わったことと受け取りのしかただけ
   const SYMPHONY_THANKS_STORY_ID = 'symphony_2026_09_17_thanks';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID];
+  // ビートPがいつでも貯まるようになった知らせ(2026-09-24・ユーザー指示「ストーリー含めて作って」)。
+  // イベントの開催とは関係なく、HOMEで1度だけ流す。見たかどうかは同じ保存キーの配列へ入れる
+  // (新しいキーは作らない)。ビートPの公開フラグが立っているときだけ並べる
+  const BEAT_POINT_ALWAYS_STORY_ID = 'beat_point_always_2026_09_24';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -51469,12 +51499,17 @@ function MonsterHeroGame() {
       const endedThanksId = rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).find(id => id && notPlayedYet(id)) || null;
       if (endedThanksId) setRhythmEventStoryPending(prev => prev || endedThanksId);
       const liveEvent = rhythmLimitedEventAt(Date.now());
-      if (!liveEvent) return;
+      // ビートPの知らせ。イベントの会話が先に並んでいれば、そちらが終わったあとの見回りで並ぶ
+      const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
+      if (!liveEvent) {
+        if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+        return;
+      }
       // ① 会話。まだ見ていなければ、HOMEに着いたところで流す
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
-      }
+      } else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
       // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
       //    組み直すのは起動時とまったく同じ道すじ(planUpdateNoticesForLogin)なので、
       //    すでに見たものが未読へ戻ることはない
@@ -53011,6 +53046,10 @@ function MonsterHeroGame() {
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootThanksId) {
         setRhythmEventStoryPending(bootThanksId);
       }
+      // ビートPの知らせ。イベントの会話(開催・閉幕)が並んでいればそちらを先にする
+      if (RELEASE_FLAGS.rhythmWeeklyRanking === true && RELEASE_FLAGS.rhythmEventPoints === true && wasOnboarded && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(BEAT_POINT_ALWAYS_STORY_ID)) {
+        setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+      }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
       // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
@@ -54315,6 +54354,7 @@ function MonsterHeroGame() {
     monbeatCupEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_STORY_ID),
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
+    beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
@@ -73092,7 +73132,10 @@ function MonsterHeroGame() {
           className: "block text-[12px] font-black text-slate-400"
         }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("small", {
           className: "block text-[9px] text-slate-600"
-        }, "\u307E\u3060\u898B\u3066\u3044\u307E\u305B\u3093")));
+        }, eventReplayDateText(event) && /*#__PURE__*/React.createElement("span", {
+          "data-event-replay-date": true,
+          className: "tabular-nums"
+        }, eventReplayDateText(event), "\u30FB"), "\u307E\u3060\u898B\u3066\u3044\u307E\u305B\u3093")));
       }
       return /*#__PURE__*/React.createElement("button", {
         key: event.id,
@@ -73114,7 +73157,10 @@ function MonsterHeroGame() {
         className: "block text-[12px] font-black text-white"
       }, event.title), /*#__PURE__*/React.createElement("small", {
         className: "block text-[9px] text-fuchsia-300/70"
-      }, "\u30BF\u30C3\u30D7\u3057\u3066\u898B\u8FD4\u3059")));
+      }, eventReplayDateText(event) && /*#__PURE__*/React.createElement("span", {
+        "data-event-replay-date": true,
+        className: "tabular-nums"
+      }, eventReplayDateText(event), "\u30FB"), "\u30BF\u30C3\u30D7\u3057\u3066\u898B\u8FD4\u3059")));
     })), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowEventReplayList(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
