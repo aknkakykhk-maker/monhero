@@ -186,7 +186,10 @@ check('HOMEへ施設を増やしていない', !/mh-home-facility [a-z]*dex/.tes
 check('図鑑登録数と全体数を出している', list.includes('data-dex-count') && list.includes('図鑑登録数'));
 check('解放判定は既存の mh_unlocked_monsters を使う',
   list.includes('unlockedMonsterIds.includes(mon.id)') && detail.includes('unlockedMonsterIds.includes(mon.id)'));
-check('図鑑のための保存キーを増やしていない', !/['"]mh_[^'"]*(?:dex|zukan)/i.test(source));
+// 解放・登録の状態を図鑑専用に持たない(mh_unlocked_monsters が正本)。例外は見た目の設定1つだけ:
+// 立ち絵を動かすか(mh_dex_idle_motion_v1。2026-09-24 ユーザー指示「ワンタッチで決めれれば」「デフォは動く」)
+check('図鑑のための保存キーを増やしていない(立ち絵の動きの設定だけは別)',
+  !/['"]mh_[^'"]*(?:dex|zukan)/i.test(source.split("'mh_dex_idle_motion_v1'").join('')));
 check('未解放はシルエットと ？？？ で出す',
   list.includes("'？？？'") && sharedDex.includes('brightness(0)') && list.includes('hidden={!unlocked}')
   && detail.includes('<DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>'));
@@ -243,7 +246,7 @@ check('攻撃アクションのボタンは立ち絵の枠の外にあり、専�
   && !detail.slice(detail.indexOf('data-dex-art'), detail.indexOf('攻撃アクションの入口')).includes('data-dex-attack-preview')
   && !detail.includes('attackMotionPreviewSequence('));
 check('未解放モンスターには攻撃アクションの入口を出さない',
-  detail.includes('{unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center">')
+  detail.includes('{unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center gap-2">')
   && attackPreview.includes('if(!mon||!unlockedMonsterIds.includes(mon.id)){ onMissing(); return null; }')
   && source.includes("onMissing={()=>setGameState('MONSTER_DEX')}"));
 // 専用画面。上へ飛ぶ演出が枠外へ出ないよう縦を大きく取り、通常攻撃と固有技を選んで見比べられる
@@ -254,7 +257,7 @@ check('攻撃アクションの専用画面で通常攻撃と固有技を再生�
   && attackPreview.includes("kindButton('normal','通常攻撃'")
   && attackPreview.includes("kindButton('unique','固有技'"));
 check('専用画面は本番と同じ描画部品を使い、立ち絵を下寄りに置いて上へ余白を残す',
-  attackPreview.includes('<BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {enabled:monsterIdleAllowedDuring(previewAnim), fill:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>')
+  attackPreview.includes('<BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>')
   && /data-attack-preview-art[\s\S]{0,200}bottom:'1[0-9]%'/.test(attackPreview)
   && attackPreview.includes('data-attack-preview-stage'));
 check('専用画面から図鑑の詳細へ戻れ、戻るときに再生を止める',

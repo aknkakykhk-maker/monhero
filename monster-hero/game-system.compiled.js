@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5dec658440987ef4
+// source-sha256: 89428bb047d17e71
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0c1fa0da7ccca973
+// generated-sha256: efe8a887505b9cb4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 17:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 17:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15187,15 +15187,17 @@ const DexMonsterArt = ({
 }, hidden ? '？' : mon.emoji);
 // 図鑑の立ち絵に待機アニメを重ねたもの(バトルと同じ MonsterIdleArt)。持たない子・まだ出会っていない子は今までの絵。
 // 待機アニメは正方形の箱の中で軸を合わせるので、正方形の箱(fill)に入れて渡す。
-// 軽量表示・「待機中の動き：止める」では画面全体の data-phase-look="calm" で CSS が止める
+// 動かすかどうかは図鑑のページのボタン(motion。useDexIdleMotion)だけで決める。止めたら1枚の絵
 const DexMonsterIdleArt = ({
   mon,
-  alt
-}) => mon.imgUrl && monsterIdleRigOf(mon.id) ? /*#__PURE__*/React.createElement("span", {
+  alt,
+  motion = true
+}) => motion && mon.imgUrl && monsterIdleRigOf(mon.id) ? /*#__PURE__*/React.createElement("span", {
   "data-dex-idle-art": true,
   className: "relative block h-full aspect-square max-w-full"
 }, withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt), {
-  fill: true
+  fill: true,
+  own: true
 })) : /*#__PURE__*/React.createElement(DexMonsterArt, {
   mon: mon,
   alt: alt
@@ -18336,18 +18338,23 @@ const MONSTER_IDLE_MASK_STYLE = url => ({
 });
 // fill: 入れ物いっぱいに広げる(図鑑の立ち絵のように、絵が w-full h-full で大きさを持たないとき)。
 //   バトルの絵は幅・高さを px で持っているので要らない
+// own: 図鑑のように、その画面のボタンで動かす・止めるを決める場所。軽量表示・「待機中の動き：止める」・
+//   端末の「動きを減らす」では止めない(止めたいときは画面のボタンで1枚の絵に戻す)
 const MonsterIdleArt = ({
   baseId,
   image,
-  fill = false
+  fill = false,
+  own = false
 }) => {
   const rig = monsterIdleRigOf(baseId);
   const fillClass = fill ? ' mon-idle--fill' : '';
+  const ownAttr = own ? 'true' : undefined;
   if (!rig || !image) return image || null;
   if (!rig.parts.length) {
     return /*#__PURE__*/React.createElement("span", {
       className: `mon-idle mon-idle--${rig.body}${fillClass}`,
-      "data-monster-idle": baseId
+      "data-monster-idle": baseId,
+      "data-idle-own": ownAttr
     }, image);
   }
   // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと「体」の層に部分の影が残り、
@@ -18378,7 +18385,8 @@ const MonsterIdleArt = ({
   }));
   return /*#__PURE__*/React.createElement("span", {
     className: `mon-idle mon-idle--${rig.body} mon-idle--rig${fillClass}`,
-    "data-monster-idle": baseId
+    "data-monster-idle": baseId,
+    "data-idle-own": ownAttr
   }, rig.parts.filter(p => p.layer === 'back').map(partNode), /*#__PURE__*/React.createElement("span", {
     className: "mon-idle__body"
   }, layer(rig.bodyMask, null)), rig.parts.filter(p => p.layer !== 'back').map(partNode));
@@ -18388,15 +18396,18 @@ const MonsterIdleArt = ({
 // 動かし方の正本は上の MONSTER_IDLE_RIGS(idle-rig-build.js が書く)なので、そこへ1体足せば
 // バトルと図鑑の両方で動き出す。図鑑の側でモンスターの名前を見て分岐しない。
 // ・軸の % は「正方形の枠」での値なので、図鑑は正方形の箱に入れて渡す(DexMonsterIdleArt)
-// ・軽量表示・「待機中の動き：止める」では、図鑑は画面全体の data-phase-look="calm" を見て CSS が止める
+// ・図鑑は自分のページのボタン(mh_dex_idle_motion_v1。最初は動く)だけで決める。バトルの設定・軽量表示・
+//   「動きを減らす」では止めない(own)。止めるときは enabled:false で1枚の絵に戻す
 const monsterIdleRigOf = monsterId => monsterId && Object.prototype.hasOwnProperty.call(MONSTER_IDLE_RIGS, monsterId) ? MONSTER_IDLE_RIGS[monsterId] : null;
 const withMonsterIdleArt = (monsterId, image, {
   enabled = true,
-  fill = false
+  fill = false,
+  own = false
 } = {}) => enabled && monsterIdleRigOf(monsterId) ? /*#__PURE__*/React.createElement(MonsterIdleArt, {
   baseId: monsterId,
   image: image,
-  fill: fill
+  fill: fill,
+  own: own
 }) : image;
 // 図鑑の攻撃アクションで、動きの最中も待機アニメを重ねてよいか。バトル(71-screen-battle.jsx)は
 // 聖光・水・歌・通常の動きでは slotArt を通して重ね、パンドラの雷だけは重ねない(分身へ絵を複製するため)。
@@ -31411,6 +31422,28 @@ function ProfileScreen({
 }
 
 // ---- part: 57-screen-monster-dex.jsx ----
+// 図鑑の立ち絵を動かすか(2026-09-24 ユーザー指示「そのページで動きを止めるか動かすかをワンタッチで決めれればおけ」
+// 「デフォは動く」)。バトルの「待機中の動き」とは別に、図鑑のボタンだけで決める。
+// 保存は新しいキー mh_dex_idle_motion_v1(true/false)。無い・壊れているときは動かす(true)
+const DEX_IDLE_MOTION_KEY = 'mh_dex_idle_motion_v1';
+const useDexIdleMotion = () => {
+  const [motion, setMotion] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    storeGet(DEX_IDLE_MOTION_KEY, true).then(v => {
+      if (alive) setMotion(v !== false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const toggle = () => setMotion(prev => {
+    const next = !prev;
+    storeSet(DEX_IDLE_MOTION_KEY, next);
+    return next;
+  });
+  return [motion, toggle];
+};
 function MonsterAttackPreviewScreen({
   dexMonsterId,
   dexAttackPreview,
@@ -31422,6 +31455,7 @@ function MonsterAttackPreviewScreen({
   onStopPreview,
   onPlayPreview
 }) {
+  const [idleMotion] = useDexIdleMotion();
   const monsters = dexMonsterList();
   const mon = monsters.find(m => m.id === dexMonsterId) || null;
   if (!mon || !unlockedMonsterIds.includes(mon.id)) {
@@ -31477,8 +31511,9 @@ function MonsterAttackPreviewScreen({
     }
   }, /*#__PURE__*/React.createElement(BattleAttackMotionPreview, {
     image: mon.imgUrl ? withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {
-      enabled: monsterIdleAllowedDuring(previewAnim),
-      fill: true
+      enabled: idleMotion && monsterIdleAllowedDuring(previewAnim),
+      fill: true,
+      own: true
     }) : /*#__PURE__*/React.createElement(DexMonsterArt, {
       mon: mon,
       alt: mon.name
@@ -31582,6 +31617,7 @@ function MonsterDexDetailScreen({
   onSelectTab,
   onStopPreview
 }) {
+  const [idleMotion, toggleIdleMotion] = useDexIdleMotion();
   const monsters = dexMonsterList();
   const index = monsters.findIndex(m => m.id === dexMonsterId);
   const mon = index >= 0 ? monsters[index] : null;
@@ -31689,7 +31725,8 @@ function MonsterDexDetailScreen({
     }
   }, unlocked ? /*#__PURE__*/React.createElement(DexMonsterIdleArt, {
     mon: mon,
-    alt: mon.name
+    alt: mon.name,
+    motion: idleMotion
   }) : /*#__PURE__*/React.createElement(DexMonsterArt, {
     mon: mon,
     alt: "\u307E\u3060\u51FA\u4F1A\u3063\u3066\u3044\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC",
@@ -31711,8 +31748,17 @@ function MonsterDexDetailScreen({
   }, /*#__PURE__*/React.createElement(ChevronRight, {
     size: 22
   }))), unlocked && /*#__PURE__*/React.createElement("div", {
-    className: "shrink-0 px-3 pt-1 flex justify-center"
-  }, /*#__PURE__*/React.createElement("button", {
+    className: "shrink-0 px-3 pt-1 flex justify-center gap-2"
+  }, monsterIdleRigOf(mon.id) && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-dex-idle-toggle": true,
+    "aria-pressed": idleMotion,
+    onClick: () => {
+      Audio_.se.tap();
+      toggleIdleMotion();
+    },
+    className: `min-h-[44px] px-4 rounded-xl border text-[12px] font-black shadow-lg active:scale-95 ${idleMotion ? 'border-amber-300/60 bg-slate-950/85 text-amber-100' : 'border-white/20 bg-slate-800 text-slate-300'}`
+  }, idleMotion ? '⏸ 動きを止める' : '▶ 動かす'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-dex-attack-preview": true,
     onClick: () => {
@@ -75618,11 +75664,12 @@ const createAnimationStyle = () => {
       50% { transform:translate3d(0,-3%,0) rotate(1.5deg); }
     }
     /* 軽量な見た目(タクティクスの calm)と「動きを減らす」設定では止める(絵はそのまま見える) */
-    [data-tactics-look="calm"] .mon-idle, [data-tactics-look="calm"] .mon-idle__part { animation:none; }
-    /* 画面全体の calm(軽量表示・「待機中の動き：止める」)。バトルの外(図鑑)はこれで止まる */
-    [data-phase-look="calm"] .mon-idle, [data-phase-look="calm"] .mon-idle__part { animation:none; }
+    /* data-idle-own(図鑑)は自分のページのボタンで止めるので、ここでは止めない */
+    [data-tactics-look="calm"] .mon-idle:not([data-idle-own]), [data-tactics-look="calm"] .mon-idle:not([data-idle-own]) .mon-idle__part { animation:none; }
+    /* 画面全体の calm(軽量表示・「待機中の動き：止める」) */
+    [data-phase-look="calm"] .mon-idle:not([data-idle-own]), [data-phase-look="calm"] .mon-idle:not([data-idle-own]) .mon-idle__part { animation:none; }
     @media (prefers-reduced-motion: reduce) {
-      .mon-idle, .mon-idle__part { animation:none; }
+      .mon-idle:not([data-idle-own]), .mon-idle:not([data-idle-own]) .mon-idle__part { animation:none; }
     }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
        常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。
