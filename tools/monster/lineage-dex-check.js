@@ -238,15 +238,21 @@ check('立ち絵は枠に合わせて縮尺する（元画像の解像度で大�
   && sharedDex.includes('className="w-full h-full object-contain"')
   && !detail.includes('max-w-full max-h-full'));
 check('立ち絵の枠の高さを決めている', /data-dex-art[\s\S]{0,300}height:'clamp\(/.test(detail));
-// 立ち絵の上にボタンを重ねると絵が隠れるので、入口は枠の外に置き、再生は専用画面で行う
-check('攻撃アクションのボタンは立ち絵の枠の外にあり、専用画面へ移る',
+// 立ち絵の上にボタンを重ねると絵が隠れるので、入口は枠の外に置き、再生は専用画面で行う。
+// 2026-09-24 からは、下の情報カードを縮めないよう、立ち絵の左右の列(data-dex-side)に置いている
+const artBlock = (() => { const i = detail.indexOf('<div data-dex-art'); const j = detail.indexOf('</div>', i); return i >= 0 && j > i ? detail.slice(i, j) : ''; })();
+check('攻撃アクションのボタンは立ち絵の枠の外(右の列)にあり、専用画面へ移る',
   detail.includes('data-dex-attack-preview')
   && detail.includes('onOpenAttackPreview();')
   && source.includes("onOpenAttackPreview={()=>setGameState('MONSTER_ATTACK_PREVIEW')}")
-  && !detail.slice(detail.indexOf('data-dex-art'), detail.indexOf('攻撃アクションの入口')).includes('data-dex-attack-preview')
+  && artBlock.length > 0 && !artBlock.includes('<button')
+  && detail.indexOf('data-dex-side="right"') >= 0 && detail.indexOf('data-dex-attack-preview') > detail.indexOf('data-dex-side="right"')
   && !detail.includes('attackMotionPreviewSequence('));
-check('未解放モンスターには攻撃アクションの入口を出さない',
-  detail.includes('{unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center gap-2">')
+check('立ち絵の下にボタンの行を足さない(下の情報カードの縦幅を削らない)',
+  detail.includes('<div data-dex-stage') && !detail.includes('<DexColorRow') && !detail.includes('{unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center gap-2">'));
+check('未解放モンスターには攻撃アクションなどのボタンを出さない(矢印だけ)',
+  (detail.match(/\{unlocked\n?\s*\? <button type="button" data-dex-(attack-preview|color-try)/g) || []).length === 2
+  && detail.includes('{unlocked&&monsterIdleRigOf(mon.id)')
   && attackPreview.includes('if(!mon||!unlockedMonsterIds.includes(mon.id)){ onMissing(); return null; }')
   && source.includes("onMissing={()=>setGameState('MONSTER_DEX')}"));
 // 専用画面。上へ飛ぶ演出が枠外へ出ないよう縦を大きく取り、通常攻撃と固有技を選んで見比べられる

@@ -61,7 +61,7 @@ check('パンドラの雷の最中は重ねない(バトルと同じ)',
 check('バトルは MonsterIdleArt を使う', battle.includes('<MonsterIdleArt baseId={s?.id} image={img}/>'));
 check('入口 withMonsterIdleArt は同じ MonsterIdleArt を返す', fx.includes('<MonsterIdleArt baseId={monsterId} image={image} fill={fill} own={own}/>'));
 check('図鑑の詳細の立ち絵は待機アニメ版を使い、ページのボタンの値で動かす', dex.includes('<DexMonsterIdleArt mon={mon} alt={mon.name} motion={idleMotion} colors={dexSelectedColors(masuMons, mon.id, dexColorKey)}/>'));
-check('詳細のページに動かす・止めるのボタンが1つある', (dex.match(/data-dex-idle-toggle/g) || []).length === 1 && dex.includes("{idleMotion?'⏸ 動きを止める':'▶ 動かす'}") && dex.includes('onClick={()=>{Audio_.se.tap();toggleIdleMotion();}}'));
+check('詳細のページに動かす・止めるのボタンが1つある', (dex.match(/data-dex-idle-toggle/g) || []).length === 1 && dex.includes("<DexSideLabel text={idleMotion?'⏸ 動きを止める':'▶ 動かす'}/>") && dex.includes('onClick={()=>{Audio_.se.tap();toggleIdleMotion();}}'));
 check('最初は動く・新しい保存キーに true/false で残す', dex.includes("const DEX_IDLE_MOTION_KEY = 'mh_dex_idle_motion_v1';") && dex.includes('useState(true)') && dex.includes('storeGet(DEX_IDLE_MOTION_KEY, true).then(v => { if (alive) setMotion(v !== false); });') && dex.includes('storeSet(DEX_IDLE_MOTION_KEY, next)'));
 check('保存キーを保存データの資料に載せた', fs.readFileSync(path.join(root, 'docs/spec/SAVE_DATA.md'), 'utf8').includes('`mh_dex_idle_motion_v1`'));
 check('詳細も攻撃アクションもフックは早い return より前で呼ぶ', (dex.match(/const \[idleMotion(,toggleIdleMotion)?\]=useDexIdleMotion\(\);\n      const monsters=dexMonsterList\(\);/g) || []).length === 2);
@@ -115,8 +115,8 @@ check('入口は own を data-idle-own として付ける', fx.includes("const o
     !/storeSet\([^)]*dex(Color|TryDye)/.test(dex + app)
     && app.includes("setDexTab('basic');setDexColorKey(null);setDexTryDyeDraft(null);setGameState('MONSTER_DEX_DETAIL')")
     && app.includes("onSelectMonster={(monId)=>{setDexMonsterId(monId);setDexTab('basic');setDexColorKey(null);setDexTryDyeDraft(null);}}"));
-  check('詳細に色の行があり、マスモンの一覧と「染めてみる」を開ける',
-    dex.includes('<DexColorRow masuMons={masuMons} mon={mon} value={dexColorKey}') && dex.includes('<DexMasuColorSheet ') && dex.includes('<DexTryDyeSheet '));
+  check('詳細に色のボタンと「染めてみる」があり、マスモンの一覧と染めてみる画面を開ける',
+    dex.includes('<DexColorPickButton masuMons={masuMons} mon={mon} value={dexColorKey}') && dex.includes('data-dex-color-try') && dex.includes('<DexMasuColorSheet ') && dex.includes('<DexTryDyeSheet '));
   check('「染めてみる」は本番の染色と同じ色の選び方を使い、染色アイテムを使わない',
     slice(dex, 'const DexTryDyeSheet =', 'function MonsterAttackPreviewScreen').includes('<DyeRegionColorControls baseId={mon.id} colors={draft} onChange={onChange} onCustom={onCustom}/>')
     && !/useDyeItem/.test(slice(dex, 'const DexTryDyeSheet =', 'function MonsterAttackPreviewScreen')));
