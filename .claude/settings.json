@@ -1,0 +1,17 @@
+{
+  "language": "japanese",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/tools/hooks/japanese-only-check.js\"",
+            "timeout": 20,
+            "statusMessage": "日本語だけで書いたか確かめています"
+          }
+        ]
+      }
+    ]
+  }
+}

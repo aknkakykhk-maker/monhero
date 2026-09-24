@@ -101,7 +101,8 @@ check('加入B低下の表示は難易度名ではなくルールの有無で出
   has("if(extremeRuleNumber(joinRule,'allyJoinPenaltyRate')==null)return null;")
     && has("const floorValue=extremeRuleNumber(joinRule,'minimumAllyJoinBonus');")
     && has('／最低${specialRulePercent(floorValue)}'));
-const aptitudeCards = slice('{preview.apt.map(range=>(', "<div className=\"min-h-[32px]");
+// 終わりの目印は「詳細を見る」の案内(2026-09-24 に案内の見た目を供モン合流だけ切り替える条件つきのクラスにした)
+const aptitudeCards = slice('{preview.apt.map(range=>(', '詳細を見る <ChevronRight size={11}/>');
 check('間合い適性の比較表示はNIGHTMAREだけに限定する',
   aptitudeCards.includes("===NIGHTMARE_SETTING.id&&range.normalDiff!==range.diff") && !aptitudeCards.includes('ULTIMATE_SETTING.id'));
 check('NIGHTMAREは間合い適性だけ通常値と実値を比較する',

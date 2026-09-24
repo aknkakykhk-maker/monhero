@@ -102,7 +102,7 @@ check('配置の並びは合流のときだけ渡す(ラン開始時の勇者モ
 check('アシストカードの並びはWAVEのあとだけ渡す(ラン開始時は出さない)', has('phasePlan={enemy?phasePlan:null}'));
 
 // ---- ⑤ 描いてみる ----
-const uiSrc = slice('const PHASE_STEP_LABELS', 'const PhaseEyebrow');
+const uiSrc = slice('const PHASE_STEP_LABELS', '// ==== 強化フェーズの共通部品ここまで');
 check('PhaseSteps を本体から取り出せる', uiSrc.includes('const PhaseSteps'));
 const transformed = babel.transformSync(`${uiSrc}\nmodule.exports={PhaseSteps,PHASE_STEP_LABELS};`,
   { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'post-wave-phase-check.jsx' });

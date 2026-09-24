@@ -661,6 +661,8 @@ function MonsterHeroGame() {
   const ultraEcoSession = ecoMode==='ultra'&&autoRepeat===true;
   const ultraBattleView = gameState==='BATTLE'&&ultraEcoSession;
   const ecoBattleView = liteBattleView||ultraBattleView;
+  // 強化フェーズの画面(WAVEのあと)の飾りの動きも、省エネのときと、バトル設定の「待機中の動き：止める」のときは止める
+  // (data-phase-look。70-bootstrap.jsx の mh-ph-*。タクティクス新画面の枠の飾りと同じ扱い)
   // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
   const stopAutoBattle = () => {
     autoBattleRef.current = false;
@@ -12257,18 +12259,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★ボタンは1行に2つ(－ が先・＋ が後)。検査が「引き継ぎ」の行の2つ目を＋として押す。
     //   見た目は flex-col-reverse で ＋ を上に置く(押す回数の多いほうを親指に近く)
     return(
-      <div key={rowKey} className={`mh-phase-enter p-2.5 rounded-2xl border shrink-0 ${inherited?'bg-cyan-950/40 border-cyan-700/60':'bg-slate-900/80 border-slate-700/70'}`}>
-        <div className="flex items-center gap-2.5">
-          {ownerMon?.iconUrl?(<img src={ownerMon.iconUrl} alt={ownerMon.name} style={monsterArtFitStyle(ownerMon.id)} className="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0"/>):(<span style={{fontSize:'30px'}}>{cardIconNode(u.icon,40)}</span>)}
+      // 見た目は強化フェーズ共通の mh-ph-*(70-bootstrap.jsx)。自分の技は金、引き継いだ技は水色の縁
+      <div key={rowKey} data-ph-kind={inherited?'inherit':'own'} className="mh-phase-enter mh-ph-frame relative overflow-hidden p-2.5 rounded-2xl border shrink-0">
+        <span aria-hidden="true" className="mh-ph-sparkle"/>
+        <div className="relative flex items-center gap-2.5">
+          {ownerMon?.iconUrl?(<img src={ownerMon.iconUrl} alt={ownerMon.name} style={monsterArtFitStyle(ownerMon.id)} className="mh-ph-medal w-11 h-11 rounded-full object-cover shrink-0"/>):(<span style={{fontSize:'30px'}}>{cardIconNode(u.icon,40)}</span>)}
           <div className="text-left flex-1 min-w-0">
             <div className={`text-[9px] font-black tracking-wider flex items-center gap-1 truncate ${inherited?'text-cyan-300':'text-indigo-300'}`}>
               {inherited&&<span className="bg-cyan-600 text-white px-1 rounded-sm not-italic shrink-0">引き継ぎ</span>}<span className="truncate">{heading}</span>
             </div>
             <div className="font-black text-white leading-tight truncate" style={{fontSize:'13px'}}>{u.names[Math.min(lvl,u.names.length-1)]} <span className="text-slate-400">Lv.{lvl}</span>{maxed?<span className="text-amber-400"> MAX</span>:<span className="text-amber-400"> → {lvl+1}</span>}</div>
-            {/* レベルの目盛り(0〜8)。次に上がる1段を光らせる */}
-            <div className="mt-1 flex gap-0.5" aria-hidden="true">
+            {/* レベルの目盛り(0〜8)。菱形の宝石で、次に上がる1段を光らせる */}
+            <div className="mt-1.5 mb-0.5 flex items-center gap-[5px] pl-0.5" aria-hidden="true">
               {Array.from({length:8}).map((_,i)=>(
-                <i key={i} className={`block h-1.5 flex-1 rounded-full ${i<lvl?(inherited?'bg-cyan-400':'bg-amber-400'):(i===lvl&&!maxed?'bg-white/40 animate-pulse':'bg-slate-700')}`}/>
+                <i key={i} className="mh-ph-pip" data-on={i<lvl?'':undefined} data-next={i===lvl&&!maxed?'':undefined}/>
               ))}
             </div>
             {!maxed?(
@@ -12278,8 +12282,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             )}
           </div>
           <div className="flex flex-col-reverse gap-1.5 shrink-0">
-            <button disabled={lvl<=0} onClick={()=>onStep(-1)} aria-label={`${u.names[Math.min(lvl,u.names.length-1)]}のレベルを1つ下げる`} className="w-10 h-9 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90"><MinusCircle size={18}/></button>
-            <button disabled={upgradePoints<=0||maxed} onClick={()=>onStep(1)} aria-label={`${u.names[Math.min(lvl,u.names.length-1)]}のレベルを1つ上げる`} className={`w-10 h-11 flex items-center justify-center rounded-lg text-white disabled:opacity-20 active:scale-90 ${inherited?'bg-cyan-600':'bg-amber-600'} ${upgradePoints>0&&!maxed?'shadow-[0_0_12px_rgba(245,158,11,.45)]':''}`}><PlusCircle size={20}/></button>
+            <button disabled={lvl<=0} onClick={()=>onStep(-1)} aria-label={`${u.names[Math.min(lvl,u.names.length-1)]}のレベルを1つ下げる`} className="mh-ph-btn w-10 h-9 flex items-center justify-center rounded-lg disabled:opacity-20 active:scale-90"><MinusCircle size={18}/></button>
+            <button disabled={upgradePoints<=0||maxed} onClick={()=>onStep(1)} aria-label={`${u.names[Math.min(lvl,u.names.length-1)]}のレベルを1つ上げる`} className={`w-10 h-11 flex items-center justify-center rounded-lg active:scale-90 ${upgradePoints>0&&!maxed?'mh-ph-btn-gold':'mh-ph-btn-off'}`}><PlusCircle size={20}/></button>
           </div>
         </div>
       </div>
@@ -13229,7 +13233,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         器を増やさず**同じ要素のstyleを差し替えるだけ**にしてあるのは、
         切り替えた瞬間に中身が作り直されると演奏中の状態(音の時計・スコア・押している指)が
         飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
-    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
+    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF')?'calm':'rich'} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
       <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
         {ripples.map(r=>(
@@ -16826,9 +16830,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <QuickStepScreen onDone={finishQuickGrowth} accent="#2dd4bf" label="タップして次へ">
           {/* 供モンが来るWAVEでは、このあと供モン選び・配置へ続くことを先に見せる */}
           {phasePlan&&phasePlan.length>1&&<PhaseSteps plan={phasePlan} current="growth" className="mb-2"/>}
-          <h2 className="text-2xl font-black italic" style={{color:'#2dd4bf'}}>ステータスアップ！</h2>
+          <div className="mh-ph-heading"><h2 className="mh-ph-title text-2xl font-black italic">ステータスアップ！</h2></div>
           <p className="text-[10px] font-black text-slate-400 mt-1">WAVE {quickGrowth.nextWave-1} クリア／全ステータス +10%</p>
-          <div className="mt-4 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden">
+          <div className="mh-ph-panel mt-4 w-full overflow-hidden">
             {quickGrowth.stats.map((st,i)=>(
               <div key={st.label} className={`flex items-center gap-2 px-4 py-2 ${i>0?'border-t border-white/5':''}`}>
                 <span className="w-14 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
@@ -16839,22 +16843,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             ))}
           </div>
-          <div className="mt-3 rounded-2xl px-3 py-2 text-[11px] font-black" style={{backgroundColor:'rgba(45,212,191,.12)',color:'#5eead4'}}>ライフ・ガッツ全回復！</div>
+          <div className="mh-ph-plate mt-3 !tracking-normal text-[11px]" style={{color:'#99f6e4'}}>ライフ・ガッツ全回復！</div>
         </QuickStepScreen>
       )}
 
       {/* クイックモード: 供モン加入。加入ステータスと固有技アップを1画面でまとめて出す */}
       {gameState==='QUICK_JOIN'&&quickJoin&&(
         <QuickStepScreen onDone={finishQuickJoin} accent="#2dd4bf" label="タップして次へ">
-          <h2 className="text-2xl font-black italic" style={{color:'#2dd4bf'}}>供モン加入！</h2>
+          <div className="mh-ph-heading"><h2 className="mh-ph-title text-2xl font-black italic">供モン加入！</h2></div>
           <div className="mt-3 flex items-center justify-center gap-2">
-            <div className="mh-phase-pop w-20 h-20 rounded-full overflow-hidden border-2 flex items-center justify-center bg-black/40 shadow-[0_0_24px_rgba(45,212,191,.45)]" style={{borderColor:'#2dd4bf'}}>
-              {quickJoin.imgUrl?<DyedMonsterImage baseId={quickJoin.baseId} src={quickJoin.imgUrl} alt={quickJoin.name} masuColors={quickJoin.colors} className="w-full h-full object-contain"/>:<span className="text-3xl">{quickJoin.emoji}</span>}
+            {/* 加わった子の後ろでルーンの輪が回る(強化フェーズのほかの画面と同じ飾り) */}
+            <div className="relative flex items-center justify-center">
+              <span aria-hidden="true" className="mh-ph-rune"/>
+              <div className="mh-phase-pop mh-ph-medal relative z-10 w-20 h-20 rounded-full overflow-hidden flex items-center justify-center">
+                {quickJoin.imgUrl?<DyedMonsterImage baseId={quickJoin.baseId} src={quickJoin.imgUrl} alt={quickJoin.name} masuColors={quickJoin.colors} className="w-full h-full object-contain"/>:<span className="text-3xl">{quickJoin.emoji}</span>}
+              </div>
             </div>
             <p className="text-sm font-black text-white">{quickJoin.name}が仲間になった！</p>
           </div>
           {quickJoin.stats.length>0&&(
-            <div className="mt-3 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden">
+            <div className="mh-ph-panel mt-3 w-full overflow-hidden">
               {quickJoin.stats.map((st,i)=>(
                 <div key={st.label} className={`flex items-center gap-2 px-4 py-2 ${i>0?'border-t border-white/5':''}`}>
                   <span className="w-14 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
@@ -16869,7 +16877,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           )}
           {quickJoin.aptLabel&&<div className="mt-2 rounded-full border border-cyan-400/40 bg-cyan-950/40 px-3 py-1 text-[10px] font-black text-cyan-200">間合い適性 {quickJoin.aptLabel}</div>}
           {quickJoin.unique?(
-            <div className="mt-3 w-full rounded-2xl border px-3 py-2.5" style={{borderColor:'rgba(251,191,36,.5)',backgroundColor:'rgba(0,0,0,.5)'}}>
+            <div className="mh-ph-panel mt-3 w-full px-3 py-2.5">
               <div className="text-[11px] font-black text-amber-300">固有技アップ！</div>
               <div className="text-[12px] font-black text-white mt-0.5">{quickJoin.unique.monName}</div>
               <div className="text-[11px] text-slate-300 mt-0.5">「{quickJoin.unique.skillName}」 Lv.{quickJoin.unique.before} → <b className="text-amber-300">Lv.{quickJoin.unique.after}</b></div>

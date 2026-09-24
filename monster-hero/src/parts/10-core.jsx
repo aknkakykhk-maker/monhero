@@ -104,7 +104,7 @@ const normalizeBattleFxSettings = (value) => {
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
 const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'idleMotion', title:'待機中の動き',
-    desc:'待っているあいだのモンスターの動き（ミーアの羽ばたきなど）と、タクティクス新画面の枠の飾り・敵の待機の動きです。攻撃の演出はどちらでも出ます。',
+    desc:'待っているあいだのモンスターの動き（ミーアの羽ばたきなど）と、タクティクス新画面の枠の飾り・敵の待機の動き、WAVEのあとの画面の飾りの動きです。攻撃の演出はどちらでも出ます。',
     options:[{ id:'ON', label:'動かす', note:'いつもの見た目' }, { id:'OFF', label:'止める', note:'画面が軽くなる' }] },
   { key:'shake', title:'画面の揺れ',
     desc:'会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
@@ -115,7 +115,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 16:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 16:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
