@@ -34,6 +34,10 @@ const Audio_ = (() => {
     }).then(async () => {
       if (!Tone) { toneLoadFailed = true; return; }
       try {
+        // ★内部の時計の目覚めを 1秒に20回 → 4回へ減らす(2026-09-24 ユーザー指摘「発熱がすごい」)。
+        //   Tone の時計は効果音を鳴らしていないあいだもずっと本体を起こし続けていた。
+        //   効果音は Tone.now() から直接鳴らしていて時計の予定表(Transport)を使わないので、音の出方は変わらない
+        try { const toneCtx = Tone.getContext && Tone.getContext(); if (toneCtx && 'updateInterval' in toneCtx) toneCtx.updateInterval = 0.25; } catch (e) {}
         seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
         reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).connect(seBus);
         try { await reverb.ready; } catch (e) {}

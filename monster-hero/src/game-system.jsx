@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fd8f1eafd583896f
+// generated-sha256: c8f863215eff0c99
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -122,7 +122,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 21:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 22:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4315,6 +4315,10 @@ const Audio_ = (() => {
     }).then(async () => {
       if (!Tone) { toneLoadFailed = true; return; }
       try {
+        // ★内部の時計の目覚めを 1秒に20回 → 4回へ減らす(2026-09-24 ユーザー指摘「発熱がすごい」)。
+        //   Tone の時計は効果音を鳴らしていないあいだもずっと本体を起こし続けていた。
+        //   効果音は Tone.now() から直接鳴らしていて時計の予定表(Transport)を使わないので、音の出方は変わらない
+        try { const toneCtx = Tone.getContext && Tone.getContext(); if (toneCtx && 'updateInterval' in toneCtx) toneCtx.updateInterval = 0.25; } catch (e) {}
         seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
         reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).connect(seBus);
         try { await reverb.ready; } catch (e) {}
@@ -45918,13 +45922,11 @@ const createAnimationStyle = () => {
        絵が動くたびに毎コマぼかし直しになっていた(iPhone でいちばん重い処理のひとつ) */
     [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-head], [data-tactics-look] [data-tactics-party-slot] {
       -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
-    [data-tactics-look] [data-slot-ring] { position: absolute; inset: -2px; border-radius: 16px; padding: 2px; pointer-events: none; z-index: 1; overflow: hidden;
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-    [data-tactics-look] [data-slot-ring]::before { content: ''; position: absolute; inset: -100%;
-      background: conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
-        rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%); }
-    [data-tactics-look="rich"] [data-slot-ring]::before { animation: mhSpin 4.5s linear infinite; }
-    [data-tactics-look] [data-distance-broken] > [data-slot-ring] { display: none; }
+    /* ★回る光は出さない(2026-09-24 ユーザー報告「こんな画面になってフリーズする」)。
+       縁の形に切り抜いた箱の中で大きな光の輪(縁の約3倍の板)を回していたが、iPhone で板が9枚ぶん重なると
+       切り抜きが外れて板がそのまま見え(カードの中身が隠れる)、固まることがあった。
+       縁は上の conic-gradient(border-box)で、光ったまま止まった見た目にする */
+    [data-tactics-look] [data-slot-ring] { display: none; }
     /* 外へにじむ距離色の光(box-shadow を使わずに足す) */
     [data-tactics-look] [data-slot-index]:not([data-distance-broken])::before { content: ''; position: absolute; inset: -2px; border-radius: 16px;
       pointer-events: none; box-shadow: 0 0 14px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.2); }
@@ -45948,12 +45950,9 @@ const createAnimationStyle = () => {
     /* isolation で手札1枚ぶんの重なりの世界を作り、模様(z-index:-1)を「カードの地の上・中身の下」に置く */
     [data-tactics-look] [data-hand-card] { border-color: transparent !important; isolation: isolate; }
     [data-tactics-look] [data-card-frame] { position: absolute; inset: -1px; border-radius: 12px; padding: 2px; pointer-events: none; z-index: 6;
-      overflow: hidden;
+      background: conic-gradient(#8a6220, #fff3c4 10%, #c8962e 25%, #fff0b0 50%, #8a6220 70%, #f4d57c 85%, #8a6220);
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-    /* 金の縁も、角度を変えずに中の光の輪を回す(上の data-slot-ring と同じ理由) */
-    [data-tactics-look] [data-card-frame]::before { content: ''; position: absolute; inset: -100%;
-      background: conic-gradient(#8a6220, #fff3c4 10%, #c8962e 25%, #fff0b0 50%, #8a6220 70%, #f4d57c 85%, #8a6220); }
-    [data-tactics-look="rich"] [data-card-frame]::before { animation: mhSpin 5s linear infinite; }
+    /* 金の縁は回さない(上の data-slot-ring と同じ理由。回る光の輪で固まることがあった) */
     [data-tactics-look] [data-card-pattern] { position: absolute; inset: 0; border-radius: 11px; pointer-events: none; z-index: -1;
       background: radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
     [data-tactics-look] [data-card-pattern="攻撃"] { background: repeating-linear-gradient(135deg, rgba(0,0,0,.18) 0 2px, transparent 2px 8px), radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
@@ -47323,14 +47322,9 @@ const createAnimationStyle = () => {
     /* 縁を回る光(2026-09-24 ユーザー指摘「かくつき」「まだ手が回ってないところも」)。
        バトルの枠(data-slot-ring)と同じく、縁の角度(--mh-ang)を毎コマ変えるのをやめ、
        縁の形に切り抜いた箱(.mh-ph-ring)の中で光の輪を transform で回す */
-    .mh-ph-frame[data-ph-on] { position: relative; }
-    .mh-ph-ring { display: none; }
-    .mh-ph-frame[data-ph-on] > .mh-ph-ring { display: block; position: absolute; inset: -2px; border-radius: inherit; padding: 2px; pointer-events: none; z-index: 1; overflow: hidden;
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-    .mh-ph-frame[data-ph-on] > .mh-ph-ring::before { content: ''; position: absolute; inset: -100%;
-      background: conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
-        rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%); }
-    [data-phase-look="rich"] .mh-ph-frame[data-ph-on] > .mh-ph-ring::before { animation: mhSpin 4.5s linear infinite; }
+    /* ★回る光は出さない(バトルの data-slot-ring と同じ理由。iPhone で切り抜きが外れて固まることがあった)。
+       縁は上の conic-gradient(border-box)で、光ったまま止まった見た目にする */
+    .mh-ph-ring { display: none !important; }
     /* 枠の中の光の粒 */
     .mh-ph-sparkle { position: absolute; inset: 3px; border-radius: inherit; pointer-events: none;
       background: radial-gradient(1.5px 1.5px at 14% 30%, rgba(var(--mh-rc2),.95), transparent 70%), radial-gradient(1.5px 1.5px at 52% 72%, rgba(var(--mh-rc2),.85), transparent 70%),
@@ -47426,7 +47420,7 @@ const createAnimationStyle = () => {
     .mh-ph-pip[data-next] { border-color: #f3d27a; background: rgba(243,210,122,.35); box-shadow: 0 0 6px rgba(243,210,122,.7); }
     [data-phase-look="rich"] .mh-ph-pip[data-next] { animation: mhTwinkle 1.6s ease-in-out infinite; }
     @media (prefers-reduced-motion: reduce) {
-      .mh-ph-ring::before, .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem::after, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
+      .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem::after, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
     }
     @keyframes specialShockwave {
       0% { transform: scale(0.4); opacity: 0.9; }
