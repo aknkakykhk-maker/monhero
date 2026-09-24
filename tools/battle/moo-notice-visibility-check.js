@@ -54,7 +54,8 @@ check('札の置き方を読み取れる', !!notice, notice ? `top ${notice[1]} 
 // ①札は丸枠より前に書く。丸枠の中に入れると、下でどれだけ z-index を上げても効かない
 // ★丸枠の塗りは 2026-09-22 に bg-black/35 へ落とした(濃い塗りだと「丸い板」に見えて、
 //   敵が背景から浮いていた)。間合いの色は輪(border)が持っている
-const frameAt = src.search(/<div className=\{`rounded-full transition-all duration-500 border-4 relative bg-black\/35 \$\{RANGE_STYLES\[enemyDist\]\.border\}/);
+// ★新しい盤面の飾り(2026-09-24)で data-enemy-ring を足した。あってもなくても読めるようにする
+const frameAt = src.search(/<div (?:data-enemy-ring=\{enemyDist\} )?className=\{`rounded-full transition-all duration-500 border-4 relative bg-black\/35 \$\{RANGE_STYLES\[enemyDist\]\.border\}/);
 check('丸枠の書き出しを読み取れる', frameAt >= 0);
 const noticeAt = src.indexOf('data-enemy-notice-moo');
 check('札は丸枠の外に置いてある', noticeAt >= 0 && frameAt >= 0 && noticeAt < frameAt,
