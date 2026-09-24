@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3fd8d94f7472307c
+// generated-sha256: 0ee4f2bab0abd7cc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -122,7 +122,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 16:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 16:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4024,6 +4024,15 @@ const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','最大'],['LOW','多め']
 // ★判定は指が触れた時刻と曲の時刻で決めているので、どちらでも判定の正確さは変わらない
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE','DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE','省電力'],['DEVICE','端末に合わせる']]);
+// 演奏中の背景の演出(2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」)。
+// VIVID  … 曲のジャケットをぼかして敷き、ノーツのタイミングで背景が光り、光の粒とサーチライトが動く
+// CALM   … ジャケットとノーツのタイミングの光だけ(動き続けるものは出さない)
+// SIMPLE … これまでの見た目のまま(何も足さない)
+// ★軽量モードのときは、ここの値に関わらず SIMPLE として扱う(rhythmStageLevel)
+const RHYTHM_STAGE_EFFECTS = Object.freeze(['VIVID','CALM','SIMPLE']);
+const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
+const rhythmStageLevel = settings => settings&&settings.lightweightMode?'SIMPLE'
+  :(RHYTHM_STAGE_EFFECTS.includes(settings&&settings.stageEffect)?settings.stageEffect:'VIVID');
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -4066,6 +4075,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   quietDuringPlay:false,
   // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定(省電力)で補われる
   frameRateMode:'POWER_SAVE',
+  // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定(派手)で補われる
+  stageEffect:'VIVID',
 });
 const rhythmFiniteInRange = (value,min,max,fallback) => {
   const number=Number(value); return Number.isFinite(number)&&number>=min&&number<=max?number:fallback;
@@ -4111,6 +4122,7 @@ const normalizeRhythmSettings = value => {
     songPreviewEnabled:bool('songPreviewEnabled'),
     quietDuringPlay:bool('quietDuringPlay'),
     frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
+    stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});
@@ -14244,6 +14256,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。',{full:true})}
             {/* 1秒に描く回数(2026-09-24・ユーザーと相談して既定を省電力にした)。
                 120Hz以上の画面でだけ効く。60Hz・90Hzの画面ではどちらを選んでも同じ */}
+            {/* 背景の演出(2026-09-24・ユーザー指示「設定ありきで派手な感じにしたい」)。既定は派手 */}
+            {field('ライブ背景',segments('stageEffect',RHYTHM_STAGE_EFFECT_LABELS),
+              '演奏中のレーンの後ろの演出です。既定は「派手」です。判定・スコアはどれでも変わりません。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライトと光の粒は出しません。',{full:true})}
             {field('描く回数',segments('frameRateMode',RHYTHM_FRAME_RATE_LABELS),
               '演奏中に1秒あたり何回画面を描くかです。既定は「省電力」です。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。',{full:true})}
             {/* モンスターノーツだけを軽くしたい人向け(2026-09-13・ユーザー依頼
@@ -15168,6 +15183,23 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // ライフの強調(2026-09-12)。DOM へ data 属性を書くだけで、判定・スコア・ライフの数値には触らない。
   // lifeBoxRef … 減った瞬間にHUDのライフ表示を揺らす／lifeDamageRef … 減った量(「-50」)を一瞬出す
   const lifeBoxRef=useRef(null),lifeDamageRef=useRef(null);
+  // ===== 背景の演出(ライブ背景。2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」) =====
+  // 置くのはプレイエリアのいちばん奥(z-index:-1)。レーン・ノーツ・判定ライン・HUDより必ず後ろなので、
+  // 入力にも判定にも触らない(pointer-events:none)。
+  // ★重さに気をつける。ぼかしは CSS の filter を使わず、ジャケットを 24×24 の canvas へ一度だけ縮めて描き、
+  //   それを引き伸ばして「ぼけた絵」にする(引き伸ばしの補間でぼける。毎フレームの作り直しが起きない)。
+  //   動かすのは transform と opacity だけ(合成だけで済むもの)。
+  const stageLevel=rhythmStageLevel(settings);
+  const stageArtRef=useRef(null),stagePulseRef=useRef(null);
+  const stageArtSrc=stageLevel!=='SIMPLE'&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
+  useEffect(()=>{
+    const canvas=stageArtRef.current;
+    if(!canvas||!stageArtSrc)return;
+    let alive=true;const img=new Image();
+    img.onload=()=>{if(!alive)return;try{const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);canvas.dataset.ready='1';}catch(_){}};
+    img.src=stageArtSrc;
+    return()=>{alive=false;img.onload=null;};
+  },[stageArtSrc]);
   const sideMonsterElements=useMemo(()=>{
     if(settings.sideMonsterOpacity==='OFF')return null;
     const opacity=rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -15603,9 +15635,14 @@ const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,c
    90Hzは抑えない(60へ落とすと間隔が 11ms/22ms と交互になり、かえってガタついて見える)。
    ★飛ばすのは描くことだけ。判定は指の入力のたびに曲の時刻で決めているので変わらない。
      取り逃しのMISSや長押しの終わりも、次に描くフレーム(8ms後)でいつもどおり数える */
-const powerSave=settings.frameRateMode!=='DEVICE';let prevFrameMs=0,avgFrameMs=1000/60,lastDrawnMs=0;
+const powerSave=settings.frameRateMode!=='DEVICE';const stagePulseOn=rhythmStageLevel(settings)!=='SIMPLE';let prevFrameMs=0,avgFrameMs=1000/60,lastDrawnMs=0;
 const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();const run=runRef.current;if(!run||run.finished||run.paused)return;
 if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
+/* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
+   取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
+   間隔が110ms未満の連打では光らせ直さない(光りっぱなしで何も分からなくなるため)。
+   光らせ方は Web Animations の opacity だけ(合成だけで済む) */
+if(stagePulseOn){const pulseEl=stagePulseRef.current,notes=run.notes;let index=run._stageNoteIndex||0,count=0,monster=false;while(index<notes.length&&notes[index].timeMs<=visualTime){count++;if(rhythmNoteMonsterSlot(notes[index]))monster=true;index++;}run._stageNoteIndex=index;if(count&&pulseEl&&typeof pulseEl.animate==='function'&&visualTime-(run._stagePulseAt??-1e9)>=110){run._stagePulseAt=visualTime;pulseEl.dataset.stagePulseKind=monster?'monster':'note';try{pulseEl.animate([{opacity:monster?1:count>1?.9:.62},{opacity:0}],{duration:monster?620:count>1?440:340,easing:'cubic-bezier(.2,.7,.3,1)'});}catch(_){}}}
 // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
@@ -15777,7 +15814,7 @@ if(!run.fadedOut&&audioDurationMs>playEndTimeMs+RHYTHM_END_FADE_MARGIN_MS
   run.fadedOut=true;
   run.audio.fadeOut?.(RHYTHM_END_FADE_MS);
 }
-if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.frameRateMode,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial,updateJudgmentBand]);
+if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.frameRateMode,settings.stageEffect,settings.lightweightMode,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial,updateJudgmentBand]);
   const disposeRun=useCallback(()=>{stopFrame();clearJudgmentTimer();clearAbilityTimer();clearCountdown();RHYTHM_GESTURE_RUNTIME.clear();rhythmFloatingNotesClear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearCountdown,clearJudgmentTimer,stopFrame]);
   /* プレイエリアが「遊べる大きさ」になるまで待つ。
      毎フレーム測り直し、整ったらすぐ返す。整わないまま上限に達したら、
@@ -16072,7 +16109,16 @@ scheduleTick();};
        (2026-09-13・ユーザー依頼「下過ぎて使いづらいという声があり」)。
        ★ノーツが流れ着く先は measureTravel が**ラインを実測**して決めるので、
          ここを動かすだけで譜面も判定もそのままついてくる */
-    '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
+    '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{/* ライブ背景。いちばん奥(z-index:-1)。見た目は index.html の [data-rhythm-stage] が持つ */}
+{stageLevel!=='SIMPLE'&&<div data-rhythm-stage={stageLevel} data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true">
+  {stageArtSrc&&<canvas ref={stageArtRef} data-rhythm-stage-art width="24" height="24"/>}
+  {stageLevel==='VIVID'&&<><i data-rhythm-stage-beam="left"/><i data-rhythm-stage-beam="right"/>
+    {/* 光の粒は1粒ずつ動かさず、粒を並べた層を2枚(奥と手前)だけ動かす。
+        1粒ずつ別のアニメーションにしていたころは、それだけで毎フレームの計算が倍以上に増えた */}
+    <i data-rhythm-stage-sparks="far"/><i data-rhythm-stage-sparks="near"/></>}
+</div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
+    背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
+{stageLevel!=='SIMPLE'&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
     「コンボももう少し目立つように段階的に / あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
     右上のHUDから**プレイエリアの真ん中**へ移した。
     ★HUDの左右の列は、レーンの台形の外側の空きに置いてある。その空きは上へ行くほど広く、
