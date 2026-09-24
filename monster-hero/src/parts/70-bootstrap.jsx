@@ -1543,6 +1543,10 @@ const createAnimationStyle = () => {
       background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.25), rgba(0,0,0,.35)) !important;
       box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.55), inset 0 0 10px rgba(0,0,0,.5) !important; }
     [data-tactics-look] [data-card-name] { text-shadow: 0 1px 0 rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.6); }
+    /* 固有技(金色のカード)は字の色が黒(TYPE_INLINE_STYLE)で、上の黒い影と地の模様に埋もれて読みにくかった
+       (2026-09-24 ユーザー指摘「固有技の濃い字の黒が見にくい」)。新しい盤面の手札だけ、白い字に濃い茶色の縁取りにする */
+    [data-tactics-look] [data-hand-card][data-card-type="unique"] [data-card-name] { color: #fff;
+      text-shadow: 1px 1px 0 #4a2e00, -1px -1px 0 #4a2e00, 1px -1px 0 #4a2e00, -1px 1px 0 #4a2e00, 0 1px 3px rgba(40,24,0,.95), 0 0 6px rgba(80,50,0,.8); }
     /* ==== 敵のまわりも同じ飾りにそろえる(2026-09-24 ユーザー指示「同じように敵領域にあるボタンや表示関係も見た目よくして」)。
        金の細い縁取り・ガラスの照り・距離の色の光、を枠やカードと共通の言葉で使う。
        ★ボタンの役割の色(青=勇者・赤=敵・琥珀=記録)は残す。縁取りと照りを重ねるだけ ==== */
