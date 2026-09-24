@@ -663,6 +663,10 @@ function BattleScreen({
               {/* 足元の影(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい」)。
                   丸枠の塗りを落としたぶん、影が無いと宙に浮いて見える。絵(z-[1])より下へ敷く。
                   ★丸枠は transform を持つので重ね順の島になる。この中に置けば絵の下に必ず入る */}
+              {/* カワズモーの張り手の手のひら(2026-09-24 ユーザー指示「張り手ならそれっぽい動きに」)。
+                  絵が1枚なので手は別に描く。ふだんは見えず、攻撃(data-enemy-attack="fly")のときだけ CSS が突き出す。
+                  ★span にしない。「> span」は敵の絵を包む要素を指す決めごとで、span だと絵の動きが手にも当たる */}
+              {enemyMotion==='kawazumo'&&<><i aria-hidden="true" data-kz-palm="l">✋</i><i aria-hidden="true" data-kz-palm="r">✋</i></>}
               {!ecoBattleView&&<div aria-hidden="true" data-enemy-shadow className="pointer-events-none absolute left-1/2 z-0 -translate-x-1/2" style={{bottom:'11%',width:'64%',height:'13%',borderRadius:'50%',background:'radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.62) 0%, rgba(0,0,0,.28) 52%, rgba(0,0,0,0) 76%)'}}></div>}
               {enemy?.imgUrl?(isMooBoss(enemy?.id)?<div style={{width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}><img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/></span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,10.5dvh,96px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
               {/* 味方の攻撃が敵に当たった瞬間の着弾(体当たり・突進・ザン/エイキの斬撃)。攻撃中だけ出る */}
