@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 06f746a3b14dd3ce
+// generated-sha256: 215356e3615934df
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -122,7 +122,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 18:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 20:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4038,7 +4038,7 @@ const RHYTHM_LANE_COVER_MIN = 0, RHYTHM_LANE_COVER_MAX = 60, RHYTHM_LANE_COVER_S
 const RHYTHM_TIMING_DISPLAYS = Object.freeze(['STANDARD','MS','METER']);
 const RHYTHM_TIMING_DISPLAY_LABELS = Object.freeze([['STANDARD','FAST/SLOW'],['MS','数字も'],['METER','メーターも']]);
 const rhythmStageLevel = settings => settings&&settings.lightweightMode?'SIMPLE'
-  :(RHYTHM_STAGE_EFFECTS.includes(settings&&settings.stageEffect)?settings.stageEffect:'VIVID');
+  :(RHYTHM_STAGE_EFFECTS.includes(settings&&settings.stageEffect)?settings.stageEffect:'SIMPLE');
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -4079,10 +4079,14 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // ブラウザから通知そのものは止められないので、全画面と画面ロック防止でできる範囲だけ行う。
   // 既定はOFF。勝手に全画面へ入ると「戻れない」と感じる人がいるため
   quietDuringPlay:false,
-  // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定(省電力)で補われる
-  frameRateMode:'POWER_SAVE',
-  // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定(派手)で補われる
-  stageEffect:'VIVID',
+  // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
+  // ★既定は「端末に合わせる」(=これまでの動き)。一度は省電力を既定にしたが、
+  //   「もしもとより操作性変わるならもとのやつをデフォルトに」(2026-09-24・ユーザー指示)で戻した
+  frameRateMode:'DEVICE',
+  // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
+  // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
+  //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
+  stageEffect:'SIMPLE',
   // 他の音ゲーから取り入れた表示(2026-09-24)。どれも既存の保存値には無いので、読み込み時は既定で補われる
   laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
 });
@@ -11482,6 +11486,26 @@ const storageUsageReport = () => {
   items.sort((a, b) => b.chars - a.chars);
   return { total, items };
 };
+// ===== 演奏の既定を元へ戻す一度きりの移行(2026-09-24・ユーザー指示
+//   「もしもとより操作性変わるならもとのやつをデフォルトに変えて」) =====
+// 同じ日に「ライブ背景=派手」「描く回数=省電力」を既定にして出したが、実機で操作感が変わったと言われた。
+// 既定を元(シンプル / 端末に合わせる)へ戻しても、オプションで一度「保存」した人は
+// 当時の既定がそのまま保存値に入っているので、既定を変えただけでは戻らない。
+// そこで**一度だけ**、保存値がその当時の既定と同じときに限って元の値へ置き換える。
+// ★ほかの項目・ほかのキーには触らない。済んだら専用のフラグを立て、二度と走らせない(CLAUDE.md ⑦)。
+const RHYTHM_PLAY_DEFAULTS_RESTORED_KEY = 'mh_rhythm_play_defaults_restored_v1';
+const restoreRhythmPlayDefaultsOnce = async raw => {
+  if(await storeGet(RHYTHM_PLAY_DEFAULTS_RESTORED_KEY,false,false)===true)return raw;
+  let next=raw;
+  if(raw&&typeof raw==='object'&&!Array.isArray(raw)){
+    const patch={};
+    if(raw.stageEffect==='VIVID')patch.stageEffect='SIMPLE';
+    if(raw.frameRateMode==='POWER_SAVE')patch.frameRateMode='DEVICE';
+    if(Object.keys(patch).length){next={...raw,...patch};await storeSet(RHYTHM_SETTINGS_KEY,normalizeRhythmSettings(next),false);}
+  }
+  await storeSet(RHYTHM_PLAY_DEFAULTS_RESTORED_KEY,true,false);
+  return next;
+};
 const saveRhythmSettings = async value => {
   const normalized=normalizeRhythmSettings(value); await storeSet(RHYTHM_SETTINGS_KEY,normalized,false); return normalized;
 };
@@ -14342,13 +14366,13 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
                 動きがカクつく端末ではここがいちばん効く */}
             {field('演出量',segments('effectAmount',RHYTHM_EFFECT_LABELS),
               '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。',{full:true})}
-            {/* 1秒に描く回数(2026-09-24・ユーザーと相談して既定を省電力にした)。
+            {/* 1秒に描く回数(2026-09-24)。既定は「端末に合わせる」(これまでの動き)。
                 120Hz以上の画面でだけ効く。60Hz・90Hzの画面ではどちらを選んでも同じ */}
-            {/* 背景の演出(2026-09-24・ユーザー指示「設定ありきで派手な感じにしたい」)。既定は派手 */}
+            {/* 背景の演出(2026-09-24・ユーザー指示「設定ありきで派手な感じにしたい」)。既定はシンプル(操作感を変えないため) */}
             {field('ライブ背景',segments('stageEffect',RHYTHM_STAGE_EFFECT_LABELS),
-              '演奏中のレーンの後ろの演出です。既定は「派手」です。判定・スコアはどれでも変わりません。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライトと光の粒は出しません。',{full:true})}
+              '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライトと光の粒は出しません。',{full:true})}
             {field('描く回数',segments('frameRateMode',RHYTHM_FRAME_RATE_LABELS),
-              '演奏中に1秒あたり何回画面を描くかです。既定は「省電力」です。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。',{full:true})}
+              '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。',{full:true})}
             {/* モンスターノーツだけを軽くしたい人向け(2026-09-13・ユーザー依頼
                 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」) */}
             {field('モンスターノーツの演出',segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS),
@@ -25983,7 +26007,7 @@ function MonsterHeroGame() {
     storeSet(RHYTHM_SELECT_VIEW_KEY,value,false);
   };
   const openRhythmDemo = async () => {
-    const settings=normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false));
+    const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
     const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
@@ -25992,7 +26016,7 @@ function MonsterHeroGame() {
     setGameState('RHYTHM_DEMO_HOME');
   };
   const openRhythmDebug = async () => {
-    const settings=normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false));
+    const settings=normalizeRhythmSettings(await restoreRhythmPlayDefaultsOnce(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false)));
     const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
     const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
     setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
