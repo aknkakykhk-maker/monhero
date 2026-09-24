@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 120d2be3b1489cd2
+// source-sha256: 8a6021f76e3ff9d2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 82758d68f667bbbc
+// generated-sha256: 7e951811b92ba22f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 16:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 16:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29437,6 +29437,69 @@ function SettingsScreen({
   onChangeBattleFxSetting
 }) {
   const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
+  // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
+  // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
+  const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
+  if (battleSettingsOpen) {
+    return /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
+      "data-battle-settings-page": true,
+      className: SCREEN_SHELL_CLASS
+    }, /*#__PURE__*/React.createElement(ScreenHead, {
+      title: "\u30D0\u30C8\u30EB\u8A2D\u5B9A",
+      accent: "text-cyan-200",
+      onBack: () => setBattleSettingsOpen(false),
+      backLabel: "\u8A2D\u5B9A\u3078\u623B\u308B"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`
+    }, /*#__PURE__*/React.createElement("section", {
+      "data-battle-settings": true,
+      className: `${SCREEN_PANEL_CLASS} w-full text-left space-y-3`
+    }, /*#__PURE__*/React.createElement("div", {
+      "data-battle-screen-setting": true
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block text-[13px] font-black text-slate-200"
+    }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u753B\u9762"), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+    }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u306E\u8868\u793A\u3092\u9078\u3073\u307E\u3059\u3002\u901A\u5E38\u306E\u30AF\u30E9\u30B7\u30C3\u30AF\u30D0\u30C8\u30EB\u306B\u306F\u5F71\u97FF\u3057\u307E\u305B\u3093\u3002\u6226\u95D8\u30EB\u30FC\u30EB\u306F\u65E7\uFF0F\u65B0\u3067\u5171\u901A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 grid grid-cols-2 gap-2"
+    }, BATTLE_SCREEN_STYLE_LABELS.map(option => /*#__PURE__*/React.createElement("button", {
+      key: option.id,
+      type: "button",
+      "data-battle-screen-style": option.id,
+      "aria-pressed": battleScreenStyle === option.id,
+      onClick: () => onChangeBattleScreenStyle(option.id),
+      className: `flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, option.label), /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold opacity-80"
+    }, option.note))))), BATTLE_FX_SETTING_ITEMS.map(item => {
+      const current = normalizeBattleFxSettings(battleFxSettings)[item.key];
+      return /*#__PURE__*/React.createElement("div", {
+        key: item.key,
+        "data-battle-fx-setting": item.key,
+        className: "border-t border-white/10 pt-3"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-[13px] font-black text-slate-200"
+      }, item.title), /*#__PURE__*/React.createElement("p", {
+        className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+      }, item.desc), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 grid grid-cols-2 gap-2"
+      }, item.options.map(option => /*#__PURE__*/React.createElement("button", {
+        key: option.id,
+        type: "button",
+        "data-battle-fx-option": option.id,
+        "aria-pressed": current === option.id,
+        onClick: () => onChangeBattleFxSetting(item.key, option.id),
+        className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${current === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block"
+      }, option.label), /*#__PURE__*/React.createElement("small", {
+        className: "mt-0.5 block text-[10px] font-bold opacity-80"
+      }, option.note)))));
+    }))));
+  }
   return /*#__PURE__*/React.createElement("div", {
     "data-mh-screen": true,
     className: SCREEN_SHELL_CLASS
@@ -29453,6 +29516,11 @@ function SettingsScreen({
     className: `${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-4`
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
+    "data-open-battle-settings": true,
+    onClick: () => setBattleSettingsOpen(true),
+    className: menuClass
+  }, "\u30D0\u30C8\u30EB\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
     onClick: onOpenAudioSettings,
     className: menuClass
   }, "\u97F3\u91CF\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
@@ -29467,56 +29535,7 @@ function SettingsScreen({
     type: "button",
     onClick: onOpenHelp,
     className: menuClass
-  }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("section", {
-    "data-battle-settings": true,
-    className: `${SCREEN_PANEL_CLASS} w-full text-left space-y-3`
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-[14px] font-black text-cyan-200"
-  }, "\u30D0\u30C8\u30EB\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
-    "data-battle-screen-setting": true,
-    className: "border-t border-white/10 pt-3"
-  }, /*#__PURE__*/React.createElement("b", {
-    className: "block text-[13px] font-black text-slate-200"
-  }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u753B\u9762"), /*#__PURE__*/React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u30D0\u30C8\u30EB\u306E\u8868\u793A\u3092\u9078\u3073\u307E\u3059\u3002\u901A\u5E38\u306E\u30AF\u30E9\u30B7\u30C3\u30AF\u30D0\u30C8\u30EB\u306B\u306F\u5F71\u97FF\u3057\u307E\u305B\u3093\u3002\u6226\u95D8\u30EB\u30FC\u30EB\u306F\u65E7\uFF0F\u65B0\u3067\u5171\u901A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 grid grid-cols-2 gap-2"
-  }, BATTLE_SCREEN_STYLE_LABELS.map(option => /*#__PURE__*/React.createElement("button", {
-    key: option.id,
-    type: "button",
-    "data-battle-screen-style": option.id,
-    "aria-pressed": battleScreenStyle === option.id,
-    onClick: () => onChangeBattleScreenStyle(option.id),
-    className: `flex min-h-[58px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-black leading-tight active:scale-95 ${battleScreenStyle === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "block"
-  }, option.label), /*#__PURE__*/React.createElement("small", {
-    className: "mt-0.5 block text-[9px] font-bold opacity-80"
-  }, option.note))))), BATTLE_FX_SETTING_ITEMS.map(item => {
-    const current = normalizeBattleFxSettings(battleFxSettings)[item.key];
-    return /*#__PURE__*/React.createElement("div", {
-      key: item.key,
-      "data-battle-fx-setting": item.key,
-      className: "border-t border-white/10 pt-3"
-    }, /*#__PURE__*/React.createElement("b", {
-      className: "block text-[13px] font-black text-slate-200"
-    }, item.title), /*#__PURE__*/React.createElement("p", {
-      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-    }, item.desc), /*#__PURE__*/React.createElement("div", {
-      className: "mt-2 grid grid-cols-2 gap-2"
-    }, item.options.map(option => /*#__PURE__*/React.createElement("button", {
-      key: option.id,
-      type: "button",
-      "data-battle-fx-option": option.id,
-      "aria-pressed": current === option.id,
-      onClick: () => onChangeBattleFxSetting(item.key, option.id),
-      className: `flex min-h-[52px] flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-black leading-tight active:scale-95 ${current === option.id ? 'border border-cyan-400 bg-cyan-600 text-white' : 'border border-white/10 bg-slate-950 text-slate-300'}`
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block"
-    }, option.label), /*#__PURE__*/React.createElement("small", {
-      className: "mt-0.5 block text-[10px] font-bold opacity-80"
-    }, option.note)))));
-  })), /*#__PURE__*/React.createElement("button", {
+  }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: onOpenGameUpdate,
     disabled: gameUpdateDisabled,
