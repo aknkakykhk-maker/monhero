@@ -1165,7 +1165,8 @@ const createAnimationStyle = () => {
     /* カワズモー(力士のカエル): 待機は左右に重心を移しながらお腹で呼吸 / 攻撃は のけぞって溜め→踏み込んで張り手→戻る /
        ためるは 片足を上げて四股を踏む / やられは のけぞって震える */
     /* 2026-09-24 ユーザー指摘「思ってたより地味。もっと頑張って動き作れない？」で動きを大きく作り直した。
-       待機は6秒で1巡: 大きく揺れて呼吸(0〜50%) → 片足を上げて四股・土ぼこり(52〜76%) → くるっと横を向いて戻る(80〜98%) */
+       待機は6秒で1巡: 大きく揺れて呼吸(0〜50%) → 片足を上げて四股・土ぼこり(52〜76%) → 小さく跳ねて着地(80〜96%)。
+       ★左右の反転(横を向く)は入れない(2026-09-24 ユーザー指摘「反転はださいだけ」) */
     @keyframes kzIdle {
       0%, 100% { transform: translateX(0) rotate(0) scale(1, 1); }
       8% { transform: translateX(-8px) rotate(-6deg) scale(1.07, .94); }
@@ -1180,10 +1181,11 @@ const createAnimationStyle = () => {
       66% { transform: translate(0, 4px) rotate(0) scale(1.24, .8); }
       69% { transform: translate(0, -3px) rotate(0) scale(.95, 1.07); }
       73% { transform: translate(0, 0) rotate(0) scale(1.04, .97); }
-      78% { transform: scale(1, 1); }
-      82% { transform: scale(-1, 1) rotate(4deg); }
-      92% { transform: scale(-1, 1) rotate(-3deg); }
-      97% { transform: scale(1, 1); }
+      80% { transform: translateY(2px) scale(1.08, .92); }
+      84% { transform: translateY(-10px) scale(.94, 1.08); }
+      88% { transform: translateY(2px) scale(1.1, .9); }
+      92% { transform: translateY(-4px) scale(.97, 1.04); }
+      96% { transform: translateY(0) scale(1.02, .98); }
     }
     @keyframes kzShadow {
       0%, 16%, 32%, 48%, 78%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
@@ -1191,6 +1193,8 @@ const createAnimationStyle = () => {
       24% { transform: translateX(calc(-50% + 8px)) scaleX(1.12); }
       60%, 63% { transform: translateX(calc(-50% - 6px)) scaleX(.8); opacity: .7; }
       66% { transform: translateX(-50%) scaleX(1.35); opacity: 1; }
+      84% { transform: translateX(-50%) scaleX(.82); opacity: .75; }
+      88% { transform: translateX(-50%) scaleX(1.18); opacity: 1; }
     }
     /* 四股の土ぼこり(影の左右から吹き出して消える)。待機の66%と、ためるの踏み込みに合わせる */
     @keyframes kzDustIdle {
@@ -1203,13 +1207,27 @@ const createAnimationStyle = () => {
       60% { opacity: .95; transform: translateX(0) scale(.7); }
       90%, 100% { opacity: 0; transform: translateX(var(--kz-dx)) scale(1.6); }
     }
+    /* 張り手: 腰を落として右肩を引く → 左へひねりながら前へ押し出す(1発目) → 右へひねり返して押し込む(2発目) → 戻る */
     @keyframes kzSlap {
       0% { transform: none; }
-      22% { transform: translateY(-6px) rotate(-12deg) scale(1.14, .84); }
-      40% { transform: translateY(28px) rotate(8deg) scale(.86, 1.22); }
-      52% { transform: translateY(88px) rotate(12deg) scale(1.32, .8); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
-      64% { transform: translateY(80px) rotate(8deg) scale(1.2, .88); filter: drop-shadow(0 0 22px rgba(220,38,38,.9)); }
+      18% { transform: translate(6px, 4px) rotate(14deg) scale(1.1, .9); }
+      36% { transform: translate(-10px, 46px) rotate(-16deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 18px rgba(239,68,68,.9)); }
+      52% { transform: translate(10px, 70px) rotate(15deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
+      66% { transform: translate(0, 60px) rotate(0) scale(1.12, .92); filter: drop-shadow(0 0 18px rgba(220,38,38,.8)); }
       100% { transform: none; filter: none; }
+    }
+    /* 手のひら: 体の横から画面の手前へ大きく突き出る。左右で半拍ずらす。緑がかった色はカエルの手に寄せるため */
+    @keyframes kzPalmL {
+      0%, 22% { opacity: 0; transform: translate(-30px, -10px) rotate(-30deg) scale(.4); }
+      34% { opacity: 1; transform: translate(-18px, 40px) rotate(-8deg) scale(1.5); }
+      44% { opacity: .9; transform: translate(-14px, 70px) rotate(-4deg) scale(2.1); }
+      54%, 100% { opacity: 0; transform: translate(-12px, 84px) rotate(0) scale(2.4); }
+    }
+    @keyframes kzPalmR {
+      0%, 38% { opacity: 0; transform: translate(30px, -6px) rotate(30deg) scale(.4) scaleX(-1); }
+      50% { opacity: 1; transform: translate(18px, 50px) rotate(8deg) scale(1.6) scaleX(-1); }
+      60% { opacity: .9; transform: translate(14px, 80px) rotate(4deg) scale(2.2) scaleX(-1); }
+      70%, 100% { opacity: 0; transform: translate(12px, 92px) rotate(0) scale(2.5) scaleX(-1); }
     }
     @keyframes kzImpact {
       0%, 48% { opacity: 0; transform: translateX(-50%) scale(.2); }
@@ -1257,6 +1275,15 @@ const createAnimationStyle = () => {
       background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(248,113,113,.8) 35%, rgba(239,68,68,.35) 65%, transparent); }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"]::after { animation: kzImpact 450ms ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap 450ms ease-in forwards; }
+    [data-tactics-look] [data-kz-palm] { font-style: normal; position: absolute; top: 42%; left: 50%; margin-left: -18px; width: 36px; text-align: center; font-size: 30px; line-height: 1;
+      opacity: 0; pointer-events: none; z-index: 10000;
+      filter: hue-rotate(20deg) saturate(.95) brightness(.95) drop-shadow(0 0 8px rgba(239,68,68,.85)) drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
+    /* 勢いの線(手のひらの後ろに伸びる白い筋) */
+    [data-tactics-look] [data-kz-palm]::after { content: ''; position: absolute; left: 50%; top: -60%; width: 60%; height: 90%; margin-left: -30%; pointer-events: none;
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,.8) 0 2px, transparent 2px 6px);
+      -webkit-mask: linear-gradient(0deg, #000, transparent); mask: linear-gradient(0deg, #000, transparent); }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="l"] { animation: kzPalmL 450ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="r"] { animation: kzPalmR 450ms ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp 1100ms ease-in-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-hurt] > span { animation: kzHurt 520ms ease-out forwards; }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
