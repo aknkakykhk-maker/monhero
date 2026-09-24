@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 16190fd2257c4faa
+// generated-sha256: e8f12ad1b51d1285
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -102,7 +102,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 14:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 14:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22083,6 +22083,18 @@ const HAND_CARD_FIT = Object.freeze({
   // 新しい盤面の技名の欄。種類の札が下の段へ移ったぶん広い
   nameRich: 'clamp(28px, 4.6dvh, 40px)',
 });
+// 枠に出す効果の光の種類(2026-09-24 ユーザー指示「支援系のアクションももう少しそれっぽく」)。
+// その子の枠に出た吹き出しの文字から決める。効果ごとに addPopup が40か所以上あるので、1つずつ種類を
+// 渡すより、ここで言葉から見分けるほうが漏れない。半減のお知らせなど、光らせないものは null
+const tacticsAuraKindOf = (text = '', side = '') => {
+  const t = String(text);
+  if (/半減|AUTO停止|片手持ち：/.test(t)) return null;
+  if (side === 'life' || /💚|回復|ドレイン|吸収|起き上がった/.test(t)) return 'heal';
+  if (side === 'guts' || /⚡|ガッツ|消費0|消費半減|消費ガッツ/.test(t)) return 'guts';
+  if (/防御|ガード|被ダメ|丈夫さ|軽減|反射|かばう/.test(t)) return 'shield';
+  if (/攻撃|闘志|会心|連撃|連斬|ソードスキル|緋桜|威力/.test(t)) return 'power';
+  return 'buff';
+};
 const kindOfTacticsSlotFx = (fx) => {
   if (!fx) return null;
   if (fx.evade) return 'evade';
@@ -23067,7 +23079,9 @@ function BattleScreen({
               </div>
             );
           })()}
-        <div className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)'}}>
+        {/* ★盤面の上の縁に吹き出し(data-tactics-board-popups)が出ているあいだだけ、盤面を強化の札の帯(z-40)より前へ出す。
+            z-10 のままだと、上へ積んだ「💊 緊急回復」などが帯の裏に回って薄くしか見えなかった(2026-09-24) */}
+        <div className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)',...(tacticsNewLayout&&popups.some(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot))?{zIndex:60}:{})}}>
           {/* ★新しい盤面(2×2)では、ここ(盤面のまんなか)へ出すと4枠の境目に乗り、
               どの子のライフも読めなくなっていた(2026-09-23 ユーザー指示「敵への効果は敵の辺り、
               味方への効果は対象の味方や使ったモンスター」)。
@@ -23279,6 +23293,16 @@ function BattleScreen({
                   {(previewDmg>0||previewGuard>0)&&<div data-tactics-image-previews className="flex shrink-0 items-center gap-0.5">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}</div>}
                   <div className="flex min-w-0 flex-1 justify-end">{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} data-tactics-aimed-parts={slotAimHit.parts.length>1?slotAimHit.parts.join('/'):undefined} className="inline-flex h-[13px] max-w-full min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 text-[9px] font-black leading-none text-red-100 shadow"><span className="shrink-0">🎯{slotAimHit.taken>0?`-${tacticsAimNum(slotAimHit.taken)}`:''}</span>{slotAimHit.parts.length>1?<span className="min-w-0 truncate text-[7px] font-bold text-red-200/85">{tacticsAimParts(slotAimHit.parts,tacticsAimNum(slotAimHit.taken))}</span>:null}</span>}</div>
                 </div>)}
+                {/* 効果の光。吹き出しが出るたびに key が変わるので、同じ効果が続いても毎回光り直す。
+                    緊急回復・回復カードの戻り(tacticsSlotFx の heal/guts)もここで光らせる */}
+                {tacticsNewLayout&&(()=>{
+                  const last=popups.filter(p=>p.slot===i&&p.side!=='enemy').slice(-1)[0];
+                  const f=tacticsSlotFx&&tacticsSlotFx[i];
+                  let kind=last?tacticsAuraKindOf(last.text,last.side):null, key=last?`p${last.id}`:null;
+                  if(!kind&&f&&(f.heal>0||f.revive>0)){ kind='heal'; key=`fh${f.heal||0}-${f.revive||0}`; }
+                  else if(!kind&&f&&f.guts>0){ kind='guts'; key=`fg${f.guts}`; }
+                  return kind?<span key={key} aria-hidden="true" data-slot-aura={kind}/>:null;
+                })()}
                 {/* ★新しい盤面(2×2)では、このターンの出来事・技名・その子の効果の吹き出しを
                     **ライフ・ガッツの行より上**の1本の縦積みにまとめる(2026-09-23 ユーザー指示
                     「敵への効果は敵の辺り、味方への効果は対象の味方や使ったモンスター」)。
@@ -35082,8 +35106,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (isBusy||hp<=0) return;
     setIsBusy(true);
     Audio_.se.heal();
-    setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl,baseId:mainHero?.id,colors:mainHero?.colors});
-    await battleWait(500); setEffect(null);
+    // ★新しい盤面のタクティクスでは、画面全体を覆う演出を出さない(2026-09-24 ユーザー指摘
+    //   「緊急回復のアクションだけ画面表示が変わるのが気になる」)。バトル中の行動で全画面を暗くするのは
+    //   緊急回復だけだった。盤面の上の札で知らせ、回復した子の枠が光る(枠の光は tacticsSlotFx の heal から)
+    if(isTacticsMode(runMode)&&normalizeBattleScreenStyle(battleScreenStyle)==='TACTICS_NEW'){
+      addPopup('💊 緊急回復','hero','text-emerald-300 font-black',false);
+      await battleWait(500);
+    } else {
+      setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl,baseId:mainHero?.id,colors:mainHero?.colors});
+      await battleWait(500); setEffect(null);
+    }
     // ★新モードは1体ずつ「その子の上限の30%」(2026-09-20 ユーザー指示)。
     //   合計から出すと、1体だけ傷ついているときパーティ全員ぶんがその子へ入る。
     //   倒れた子にも入る(ターンを1回捨てる重い選択なので、復活までの貯めには乗る)
@@ -43852,6 +43884,35 @@ const createAnimationStyle = () => {
       -webkit-mask: radial-gradient(circle, transparent 64%, #000 65%, #000 69%, transparent 70%); mask: radial-gradient(circle, transparent 64%, #000 65%, #000 69%, transparent 70%);
       filter: drop-shadow(0 0 4px rgba(var(--mh-rc),.9)); }
     [data-tactics-look="rich"] [data-enemy-ring]::before { animation: mhRuneSpin 14s linear infinite; }
+    /* ==== 枠に出す効果の光(2026-09-24 ユーザー指示「支援系のアクションももう少しそれっぽく」)。
+       回復=緑の光の粒が昇る / 攻撃=赤い光が下から吹き上がる / 守り=青い盾の輪が広がる / ガッツ=黄色の稲妻 / そのほか=金のきらめき。
+       1回きり(forwards)で消える。軽量表示では動きの代わりに短い色の点灯だけにする ==== */
+    @keyframes mhAuraGlow { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhAuraRise { 0% { transform: translateY(40%); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-60%); opacity: 0; } }
+    @keyframes mhAuraRing { 0% { transform: translate(-50%,-50%) scale(.3); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1.6); opacity: 0; } }
+    @keyframes mhAuraFlash { 0%, 100% { opacity: 0; } 10%, 30% { opacity: 1; } 20%, 40% { opacity: .3; } }
+    [data-tactics-look] [data-slot-aura] { position: absolute; inset: 0; border-radius: 14px; overflow: hidden; pointer-events: none; z-index: 66;
+      animation: mhAuraGlow 1.3s ease-out forwards; }
+    [data-tactics-look] [data-slot-aura]::before, [data-tactics-look] [data-slot-aura]::after { content: ''; position: absolute; pointer-events: none; }
+    [data-tactics-look] [data-slot-aura="heal"] { background: radial-gradient(70% 80% at 30% 70%, rgba(52,211,153,.45), transparent 70%); box-shadow: inset 0 0 18px rgba(52,211,153,.8); }
+    [data-tactics-look] [data-slot-aura="heal"]::before { left: 0; right: 0; top: 0; bottom: 0; animation: mhAuraRise 1.3s ease-out forwards;
+      background: radial-gradient(3px 3px at 18% 80%, #a7f3d0, transparent 70%), radial-gradient(2px 2px at 32% 60%, #fff, transparent 70%),
+        radial-gradient(3px 3px at 48% 90%, #6ee7b7, transparent 70%), radial-gradient(2px 2px at 64% 70%, #d1fae5, transparent 70%),
+        radial-gradient(3px 3px at 80% 85%, #a7f3d0, transparent 70%), radial-gradient(2px 2px at 26% 100%, #fff, transparent 70%); }
+    [data-tactics-look] [data-slot-aura="power"] { box-shadow: inset 0 0 20px rgba(248,113,113,.85); }
+    [data-tactics-look] [data-slot-aura="power"]::before { left: 0; right: 0; bottom: 0; height: 100%; animation: mhAuraRise 1.1s ease-out forwards;
+      background: repeating-linear-gradient(90deg, transparent 0 10px, rgba(252,165,165,.55) 10px 12px, transparent 12px 22px),
+        linear-gradient(0deg, rgba(239,68,68,.55), transparent 80%); -webkit-mask: linear-gradient(0deg, #000 30%, transparent); mask: linear-gradient(0deg, #000 30%, transparent); }
+    [data-tactics-look] [data-slot-aura="shield"] { box-shadow: inset 0 0 18px rgba(96,165,250,.85); }
+    [data-tactics-look] [data-slot-aura="shield"]::before { left: 30%; top: 58%; width: 90px; height: 90px; border-radius: 50%; animation: mhAuraRing 1.2s ease-out forwards;
+      border: 3px solid rgba(147,197,253,.95); box-shadow: 0 0 14px rgba(96,165,250,.9), inset 0 0 14px rgba(96,165,250,.6); }
+    [data-tactics-look] [data-slot-aura="guts"] { box-shadow: inset 0 0 18px rgba(251,191,36,.85); background: radial-gradient(60% 70% at 30% 60%, rgba(251,191,36,.35), transparent 70%); }
+    [data-tactics-look] [data-slot-aura="guts"]::before { inset: 0; animation: mhAuraFlash .9s linear forwards;
+      background: linear-gradient(115deg, transparent 38%, rgba(254,240,138,.95) 40%, transparent 42%), linear-gradient(115deg, transparent 58%, rgba(254,240,138,.8) 59%, transparent 61%); }
+    [data-tactics-look] [data-slot-aura="buff"] { box-shadow: inset 0 0 16px rgba(243,210,122,.8); }
+    [data-tactics-look] [data-slot-aura="buff"]::before { inset: 0; animation: mhAuraRise 1.2s ease-out forwards;
+      background: radial-gradient(2px 2px at 20% 80%, #fff3c4, transparent 70%), radial-gradient(3px 3px at 45% 90%, #f3d27a, transparent 70%), radial-gradient(2px 2px at 70% 75%, #fff, transparent 70%); }
+    [data-tactics-look="calm"] [data-slot-aura]::before { display: none; }
     @media (prefers-reduced-motion: reduce) {
       [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-index]::after, [data-tactics-look] [data-slot-circle],
       [data-tactics-look] [data-card-frame], [data-tactics-look] [data-card-shine]::before, [data-tactics-look] [data-card-gem],

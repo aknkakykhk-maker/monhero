@@ -939,6 +939,35 @@ const createAnimationStyle = () => {
       -webkit-mask: radial-gradient(circle, transparent 64%, #000 65%, #000 69%, transparent 70%); mask: radial-gradient(circle, transparent 64%, #000 65%, #000 69%, transparent 70%);
       filter: drop-shadow(0 0 4px rgba(var(--mh-rc),.9)); }
     [data-tactics-look="rich"] [data-enemy-ring]::before { animation: mhRuneSpin 14s linear infinite; }
+    /* ==== 枠に出す効果の光(2026-09-24 ユーザー指示「支援系のアクションももう少しそれっぽく」)。
+       回復=緑の光の粒が昇る / 攻撃=赤い光が下から吹き上がる / 守り=青い盾の輪が広がる / ガッツ=黄色の稲妻 / そのほか=金のきらめき。
+       1回きり(forwards)で消える。軽量表示では動きの代わりに短い色の点灯だけにする ==== */
+    @keyframes mhAuraGlow { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhAuraRise { 0% { transform: translateY(40%); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-60%); opacity: 0; } }
+    @keyframes mhAuraRing { 0% { transform: translate(-50%,-50%) scale(.3); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1.6); opacity: 0; } }
+    @keyframes mhAuraFlash { 0%, 100% { opacity: 0; } 10%, 30% { opacity: 1; } 20%, 40% { opacity: .3; } }
+    [data-tactics-look] [data-slot-aura] { position: absolute; inset: 0; border-radius: 14px; overflow: hidden; pointer-events: none; z-index: 66;
+      animation: mhAuraGlow 1.3s ease-out forwards; }
+    [data-tactics-look] [data-slot-aura]::before, [data-tactics-look] [data-slot-aura]::after { content: ''; position: absolute; pointer-events: none; }
+    [data-tactics-look] [data-slot-aura="heal"] { background: radial-gradient(70% 80% at 30% 70%, rgba(52,211,153,.45), transparent 70%); box-shadow: inset 0 0 18px rgba(52,211,153,.8); }
+    [data-tactics-look] [data-slot-aura="heal"]::before { left: 0; right: 0; top: 0; bottom: 0; animation: mhAuraRise 1.3s ease-out forwards;
+      background: radial-gradient(3px 3px at 18% 80%, #a7f3d0, transparent 70%), radial-gradient(2px 2px at 32% 60%, #fff, transparent 70%),
+        radial-gradient(3px 3px at 48% 90%, #6ee7b7, transparent 70%), radial-gradient(2px 2px at 64% 70%, #d1fae5, transparent 70%),
+        radial-gradient(3px 3px at 80% 85%, #a7f3d0, transparent 70%), radial-gradient(2px 2px at 26% 100%, #fff, transparent 70%); }
+    [data-tactics-look] [data-slot-aura="power"] { box-shadow: inset 0 0 20px rgba(248,113,113,.85); }
+    [data-tactics-look] [data-slot-aura="power"]::before { left: 0; right: 0; bottom: 0; height: 100%; animation: mhAuraRise 1.1s ease-out forwards;
+      background: repeating-linear-gradient(90deg, transparent 0 10px, rgba(252,165,165,.55) 10px 12px, transparent 12px 22px),
+        linear-gradient(0deg, rgba(239,68,68,.55), transparent 80%); -webkit-mask: linear-gradient(0deg, #000 30%, transparent); mask: linear-gradient(0deg, #000 30%, transparent); }
+    [data-tactics-look] [data-slot-aura="shield"] { box-shadow: inset 0 0 18px rgba(96,165,250,.85); }
+    [data-tactics-look] [data-slot-aura="shield"]::before { left: 30%; top: 58%; width: 90px; height: 90px; border-radius: 50%; animation: mhAuraRing 1.2s ease-out forwards;
+      border: 3px solid rgba(147,197,253,.95); box-shadow: 0 0 14px rgba(96,165,250,.9), inset 0 0 14px rgba(96,165,250,.6); }
+    [data-tactics-look] [data-slot-aura="guts"] { box-shadow: inset 0 0 18px rgba(251,191,36,.85); background: radial-gradient(60% 70% at 30% 60%, rgba(251,191,36,.35), transparent 70%); }
+    [data-tactics-look] [data-slot-aura="guts"]::before { inset: 0; animation: mhAuraFlash .9s linear forwards;
+      background: linear-gradient(115deg, transparent 38%, rgba(254,240,138,.95) 40%, transparent 42%), linear-gradient(115deg, transparent 58%, rgba(254,240,138,.8) 59%, transparent 61%); }
+    [data-tactics-look] [data-slot-aura="buff"] { box-shadow: inset 0 0 16px rgba(243,210,122,.8); }
+    [data-tactics-look] [data-slot-aura="buff"]::before { inset: 0; animation: mhAuraRise 1.2s ease-out forwards;
+      background: radial-gradient(2px 2px at 20% 80%, #fff3c4, transparent 70%), radial-gradient(3px 3px at 45% 90%, #f3d27a, transparent 70%), radial-gradient(2px 2px at 70% 75%, #fff, transparent 70%); }
+    [data-tactics-look="calm"] [data-slot-aura]::before { display: none; }
     @media (prefers-reduced-motion: reduce) {
       [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-index]::after, [data-tactics-look] [data-slot-circle],
       [data-tactics-look] [data-card-frame], [data-tactics-look] [data-card-shine]::before, [data-tactics-look] [data-card-gem],

@@ -71,6 +71,18 @@ const HAND_CARD_FIT = Object.freeze({
   // 新しい盤面の技名の欄。種類の札が下の段へ移ったぶん広い
   nameRich: 'clamp(28px, 4.6dvh, 40px)',
 });
+// 枠に出す効果の光の種類(2026-09-24 ユーザー指示「支援系のアクションももう少しそれっぽく」)。
+// その子の枠に出た吹き出しの文字から決める。効果ごとに addPopup が40か所以上あるので、1つずつ種類を
+// 渡すより、ここで言葉から見分けるほうが漏れない。半減のお知らせなど、光らせないものは null
+const tacticsAuraKindOf = (text = '', side = '') => {
+  const t = String(text);
+  if (/半減|AUTO停止|片手持ち：/.test(t)) return null;
+  if (side === 'life' || /💚|回復|ドレイン|吸収|起き上がった/.test(t)) return 'heal';
+  if (side === 'guts' || /⚡|ガッツ|消費0|消費半減|消費ガッツ/.test(t)) return 'guts';
+  if (/防御|ガード|被ダメ|丈夫さ|軽減|反射|かばう/.test(t)) return 'shield';
+  if (/攻撃|闘志|会心|連撃|連斬|ソードスキル|緋桜|威力/.test(t)) return 'power';
+  return 'buff';
+};
 const kindOfTacticsSlotFx = (fx) => {
   if (!fx) return null;
   if (fx.evade) return 'evade';
@@ -1055,7 +1067,9 @@ function BattleScreen({
               </div>
             );
           })()}
-        <div className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)'}}>
+        {/* ★盤面の上の縁に吹き出し(data-tactics-board-popups)が出ているあいだだけ、盤面を強化の札の帯(z-40)より前へ出す。
+            z-10 のままだと、上へ積んだ「💊 緊急回復」などが帯の裏に回って薄くしか見えなかった(2026-09-24) */}
+        <div className="shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative" style={{backgroundImage:'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)',...(tacticsNewLayout&&popups.some(p=>['hero','life','guts'].includes(p.side)&&!Number.isInteger(p.slot))?{zIndex:60}:{})}}>
           {/* ★新しい盤面(2×2)では、ここ(盤面のまんなか)へ出すと4枠の境目に乗り、
               どの子のライフも読めなくなっていた(2026-09-23 ユーザー指示「敵への効果は敵の辺り、
               味方への効果は対象の味方や使ったモンスター」)。
@@ -1267,6 +1281,16 @@ function BattleScreen({
                   {(previewDmg>0||previewGuard>0)&&<div data-tactics-image-previews className="flex shrink-0 items-center gap-0.5">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}</div>}
                   <div className="flex min-w-0 flex-1 justify-end">{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} data-tactics-aimed-parts={slotAimHit.parts.length>1?slotAimHit.parts.join('/'):undefined} className="inline-flex h-[13px] max-w-full min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 text-[9px] font-black leading-none text-red-100 shadow"><span className="shrink-0">🎯{slotAimHit.taken>0?`-${tacticsAimNum(slotAimHit.taken)}`:''}</span>{slotAimHit.parts.length>1?<span className="min-w-0 truncate text-[7px] font-bold text-red-200/85">{tacticsAimParts(slotAimHit.parts,tacticsAimNum(slotAimHit.taken))}</span>:null}</span>}</div>
                 </div>)}
+                {/* 効果の光。吹き出しが出るたびに key が変わるので、同じ効果が続いても毎回光り直す。
+                    緊急回復・回復カードの戻り(tacticsSlotFx の heal/guts)もここで光らせる */}
+                {tacticsNewLayout&&(()=>{
+                  const last=popups.filter(p=>p.slot===i&&p.side!=='enemy').slice(-1)[0];
+                  const f=tacticsSlotFx&&tacticsSlotFx[i];
+                  let kind=last?tacticsAuraKindOf(last.text,last.side):null, key=last?`p${last.id}`:null;
+                  if(!kind&&f&&(f.heal>0||f.revive>0)){ kind='heal'; key=`fh${f.heal||0}-${f.revive||0}`; }
+                  else if(!kind&&f&&f.guts>0){ kind='guts'; key=`fg${f.guts}`; }
+                  return kind?<span key={key} aria-hidden="true" data-slot-aura={kind}/>:null;
+                })()}
                 {/* ★新しい盤面(2×2)では、このターンの出来事・技名・その子の効果の吹き出しを
                     **ライフ・ガッツの行より上**の1本の縦積みにまとめる(2026-09-23 ユーザー指示
                     「敵への効果は敵の辺り、味方への効果は対象の味方や使ったモンスター」)。
