@@ -14,52 +14,127 @@ const useDexIdleMotion = () => {
 };
 
 // ==== 図鑑でマスモンの染色を見る(2026-09-24 ユーザー指示「図鑑の表示でマスモンで染色してるカラーも見れるようにしたい」) ====
-// 持っているマスモンのうち、その種で色を付けた子の配色を候補にする。同じ配色の子は1つにまとめる。
-// 選んだ配色は見た目だけに使い、保存しない(図鑑を開き直す・ほかの種へ移ると元の色へ戻る)。
-// 読み取りだけで、マスモンのデータには一切触れない
-const dexMasuColorChoices = (masuMons, monId) => {
+// 同日「マスモン選択式にしたら？」「この画面で染色も出来てどんな色か見れるようにする機能もあるといいね」で作り替えた。
+//   ・色の見本は、その種のマスモンを一覧から1体選んで決める(マスモンが増えても横に並び続けない)
+//   ・「染めてみる」で、図鑑の中だけで好きな色を試せる
+// どちらも見た目だけに使い、保存しない(図鑑を開き直す・ほかの種へ移ると元の色へ戻る)。
+// 読み取りだけで、マスモンのデータには一切触れない。
+//
+// 選んでいる見本(dexColorKey)の形:
+//   null            … 元の色
+//   { masuId }      … そのマスモンの色(居なくなっていたら元の色)
+//   { colors:[…] }  … 「染めてみる」で決めた色
+const dexMasuListOf = (masuMons, monId) => {
   if (!Array.isArray(masuMons) || !monId) return [];
-  const byKey = new Map();
-  for (const masu of masuMons) {
-    if (!masu || masu.baseId !== monId) continue;
-    const colors = getMasuColors(masu);
-    if (!Array.isArray(colors) || !colors.some(c => typeof c === 'string' && c)) continue;
-    const key = colors.map(c => (typeof c === 'string' ? c : '')).join('|');
-    const hit = byKey.get(key);
-    if (hit) hit.names.push(masu.name || '');
-    else byKey.set(key, { key, colors: colors.slice(), names: [masu.name || ''] });
-  }
-  return [...byKey.values()];
+  const list = masuMons.filter(masu => masu && masu.baseId === monId);
+  // 色を付けた子を先に出す(並びはマスモン一覧の順のまま)
+  const colored = (masu) => { const c = getMasuColors(masu); return Array.isArray(c) && c.some(x => typeof x === 'string' && x); };
+  return [...list.filter(colored), ...list.filter(masu => !colored(masu))];
 };
-// いま選んでいる配色(見つからなければ null=元の色)
+const dexHasColors = (colors) => Array.isArray(colors) && colors.some(c => typeof c === 'string' && c);
+// いま見本にしている配色(見つからなければ null=元の色)
 const dexSelectedColors = (masuMons, monId, colorKey) => {
-  if (!colorKey) return null;
-  const hit = dexMasuColorChoices(masuMons, monId).find(choice => choice.key === colorKey);
-  return hit ? hit.colors : null;
+  if (!colorKey || typeof colorKey !== 'object') return null;
+  if (Array.isArray(colorKey.colors)) return dexHasColors(colorKey.colors) ? colorKey.colors : null;
+  if (colorKey.masuId == null) return null;
+  const masu = dexMasuListOf(masuMons, monId).find(m => String(m.id) === String(colorKey.masuId));
+  const colors = masu ? getMasuColors(masu) : null;
+  return dexHasColors(colors) ? colors : null;
 };
-// 「元の色」と、マスモンの配色のチップを横に並べる。配色の子が居なければ何も出さない
-const DexMasuColorPicker = ({ choices, value, onChange }) => {
-  if (!choices.length) return null;
-  const chip = (key, label, colors) => {
-    const on = (value || null) === key;
-    return (
-      <button key={key || 'base'} type="button" data-dex-color-choice={key || 'base'} aria-pressed={on} onClick={() => { Audio_.se.tap(); onChange(key); }}
-        className={`shrink-0 min-h-[44px] max-w-[12rem] px-2.5 rounded-xl border flex items-center gap-1.5 text-[11px] font-black active:scale-95 ${on ? 'border-amber-300 bg-amber-700 text-white' : 'border-white/15 bg-slate-900 text-amber-100/90'}`}>
-        {colors
-          ? <span className="flex -space-x-1 shrink-0" aria-hidden="true">{colors.filter(Boolean).slice(0, 4).map((c, i) => <span key={i} className="w-3.5 h-3.5 rounded-full border border-black/40" style={{ background: getColorSwatchHex(c) }}/>)}</span>
-          : <span className="w-3.5 h-3.5 rounded-full border border-white/40 bg-gradient-to-br from-white/70 to-slate-500 shrink-0" aria-hidden="true"/>}
-        <span className="truncate min-w-0">{label}</span>
-      </button>
-    );
-  };
+// 見本の名前(ボタンに出す)
+const dexColorLabel = (masuMons, monId, colorKey) => {
+  if (!dexSelectedColors(masuMons, monId, colorKey)) return '元の色';
+  if (Array.isArray(colorKey.colors)) return '染めてみた色';
+  const masu = dexMasuListOf(masuMons, monId).find(m => String(m.id) === String(colorKey.masuId));
+  return masu?.name || 'マスモン';
+};
+const DexColorSwatches = ({ colors }) => dexHasColors(colors)
+  ? <span className="flex -space-x-1 shrink-0" aria-hidden="true">{colors.filter(Boolean).slice(0, 5).map((c, i) => <span key={i} className="w-3.5 h-3.5 rounded-full border border-black/40" style={{ background: getColorSwatchHex(c) }}/>)}</span>
+  : <span className="w-3.5 h-3.5 rounded-full border border-white/40 bg-gradient-to-br from-white/70 to-slate-500 shrink-0" aria-hidden="true"/>;
+// 詳細の「色」の行。左は見本の切り替え(押すとマスモンの一覧)、右は「染めてみる」
+const DexColorRow = ({ masuMons, mon, value, onOpenList, onOpenTry }) => (
+  <div data-dex-color-row className="shrink-0 w-full max-w-md mx-auto px-3 pt-1.5 flex items-center gap-1.5" role="group" aria-label="色を変えて見る">
+    <span className="shrink-0 text-[10px] font-black text-amber-300">色</span>
+    <button type="button" data-dex-color-open onClick={() => { Audio_.se.tap(); onOpenList(); }}
+      className={`flex-1 min-w-0 min-h-[44px] px-2.5 rounded-xl border flex items-center gap-1.5 text-[11px] font-black active:scale-95 ${dexSelectedColors(masuMons, mon.id, value) ? 'border-amber-300 bg-amber-700 text-white' : 'border-white/15 bg-slate-900 text-amber-100/90'}`}>
+      <DexColorSwatches colors={dexSelectedColors(masuMons, mon.id, value)}/>
+      <span className="truncate min-w-0 flex-1 text-left">{dexColorLabel(masuMons, mon.id, value)}</span>
+      <span className="shrink-0 text-[10px] text-amber-200/80">選ぶ ▾</span>
+    </button>
+    <button type="button" data-dex-color-try onClick={() => { Audio_.se.tap(); onOpenTry(); }}
+      className="shrink-0 min-h-[44px] px-3 rounded-xl border border-fuchsia-400/60 bg-slate-900 text-[11px] font-black text-fuchsia-100 active:scale-95">
+      🎨 染めてみる
+    </button>
+  </div>
+);
+// マスモンの一覧(色の見本を選ぶ)。その種のマスモンだけを出す。色を付けていない子は押せない
+const DexMasuColorSheet = ({ masuMons, mon, value, onSelect, onClose }) => {
+  const list = dexMasuListOf(masuMons, mon.id);
+  const current = dexSelectedColors(masuMons, mon.id, value) ? value : null;
+  const row = (key, on, disabled, icon, title, sub, onClick) => (
+    <button key={key} type="button" data-dex-color-choice={key} aria-pressed={on} disabled={disabled} onClick={onClick}
+      className={`w-full min-h-[56px] px-3 py-2 rounded-2xl border flex items-center gap-3 text-left active:scale-[.98] ${on ? 'border-amber-300 bg-amber-700/70' : 'border-white/10 bg-slate-900'} ${disabled ? 'opacity-45' : ''}`}>
+      <span className="w-11 h-11 rounded-full overflow-hidden border border-white/20 bg-black/40 shrink-0 flex items-center justify-center">{icon}</span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[13px] font-black text-white truncate">{title}</span>
+        <span className="mt-0.5 flex items-center gap-1.5 text-[10px] font-bold text-slate-300 min-w-0">{sub}</span>
+      </span>
+      {on && <span className="shrink-0 text-amber-200 text-[11px] font-black">表示中</span>}
+    </button>
+  );
+  const face = (colors, alt) => <DyedMonsterImage baseId={mon.id} src={mon.iconUrl || mon.imgUrl} alt={alt} masuColors={dexHasColors(colors) ? colors : []} draggable={false} className="w-full h-full object-cover"/>;
+  const pick = (key) => { Audio_.se.tap(); onSelect(key); onClose(); };
   return (
-    <div data-dex-color-picker className="shrink-0 w-full max-w-md mx-auto px-3 pt-1.5 flex items-center gap-1.5 overflow-x-auto" role="group" aria-label="マスモンの色で見る">
-      <span className="shrink-0 text-[10px] font-black text-amber-300">色</span>
-      {chip(null, '元の色', null)}
-      {choices.map(choice => chip(choice.key, choice.names.length > 1 ? `${choice.names[0] || 'マスモン'} ほか${choice.names.length - 1}体` : (choice.names[0] || 'マスモン'), choice.colors))}
+    <div data-dex-color-sheet className="fixed inset-0 flex items-end justify-center" style={{ position:'fixed', inset:0, backgroundColor:'rgba(0,0,0,0.8)', zIndex:31400 }}
+      role="dialog" aria-modal="true" aria-label="色の見本にするマスモンを選ぶ" onClick={onClose}>
+      <div className="w-full max-w-md max-h-[75dvh] flex flex-col rounded-t-3xl border-2 border-b-0 border-amber-500/70 bg-slate-950 p-4 gap-3"
+        style={{ paddingBottom:'calc(1rem + env(safe-area-inset-bottom))' }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between shrink-0">
+          <h3 className="text-sm font-black text-amber-100">色の見本にするマスモン</h3>
+          <button type="button" aria-label="閉じる" onClick={onClose} className="min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90">✕</button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-1.5">
+          {row('base', !current, false, face(null, mon.name), '元の色', <span>もとのイラストの色</span>, () => pick(null))}
+          {Array.isArray(value?.colors) && dexHasColors(value.colors) && row('try', true, false, face(value.colors, '染めてみた色'), '染めてみた色', <><DexColorSwatches colors={value.colors}/><span>「染めてみる」で決めた色</span></>, () => pick(value))}
+          {list.map(masu => {
+            const colors = getMasuColors(masu);
+            const has = dexHasColors(colors);
+            const on = !!current && current.masuId != null && String(current.masuId) === String(masu.id);
+            return row(`masu-${masu.id}`, on, !has, face(colors, masu.name || mon.name), masu.name || mon.name,
+              has ? <><DexColorSwatches colors={colors}/><span className="truncate">このマスモンの色</span></> : <span>まだ色を付けていません</span>,
+              () => pick({ masuId: masu.id }));
+          })}
+          {list.length === 0 && <p className="text-center text-[11px] font-bold text-slate-400 py-3">この種のマスモンはまだいません。「染めてみる」で好きな色を試せます。</p>}
+        </div>
+      </div>
     </div>
   );
 };
+// 「染めてみる」。マスモンの染色と同じ色の選び方(DyeRegionColorControls)で、図鑑の中だけ色を試す。
+// 決めた色は図鑑の立ち絵と攻撃アクションに使うだけで、保存もしないし染色アイテムも使わない
+const DexTryDyeSheet = ({ mon, draft, onChange, onCustom, onApply, onReset, onClose }) => (
+  <div data-dex-try-dye className="fixed inset-0 flex items-center justify-center p-4" style={{ position:'fixed', inset:0, backgroundColor:'rgba(0,0,0,0.9)', zIndex:31500,
+    paddingTop:'calc(1rem + env(safe-area-inset-top))', paddingBottom:'calc(1rem + env(safe-area-inset-bottom))' }} role="dialog" aria-modal="true" aria-label={`${mon.name}を染めてみる`}>
+    <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2.5 shadow-2xl max-h-full overflow-hidden">
+      <div className="flex items-center justify-between shrink-0">
+        <h3 className="text-sm font-black text-white">🎨 {mon.name}を染めてみる</h3>
+        <button type="button" aria-label="閉じる" onClick={onClose} className="min-w-[40px] min-h-[40px] rounded-full bg-white/5 text-slate-200 font-black active:scale-90">✕</button>
+      </div>
+      <div className="h-36 shrink-0 flex items-center justify-center rounded-2xl bg-black/30 border border-white/5">
+        <DyedMonsterImage baseId={mon.id} src={mon.imgUrl || mon.iconUrl} alt={mon.name} masuColors={draft} draggable={false} className="h-full aspect-square max-w-full object-contain"/>
+      </div>
+      <div className="text-[10px] text-fuchsia-200 font-bold text-center shrink-0">見るだけの機能です。マスモンの色は変わらず、アイテムも使いません。</div>
+      {dyeRegionCount(mon.id) === 1 && <div className="text-[9px] text-slate-400 font-bold text-center shrink-0">このモンスターは全身をまとめて染めます</div>}
+      <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+        <DyeRegionColorControls baseId={mon.id} colors={draft} onChange={onChange} onCustom={onCustom}/>
+      </div>
+      <div className="flex gap-2 shrink-0">
+        <button type="button" onClick={onReset} className="flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-xl font-black text-xs">元の色に戻す</button>
+        <button type="button" data-dex-try-apply onClick={onApply} className="flex-1 min-h-[44px] rounded-xl font-black text-xs bg-fuchsia-600 text-white active:scale-95">この色で見る</button>
+      </div>
+    </div>
+  </div>
+);
 
 function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMonsterIds, masuMons, dexColorKey, getAtkSkillLevels, getUniqueSkillLevels, onMissing, onBackToDetail, onStopPreview, onPlayPreview }) {
       const [idleMotion]=useDexIdleMotion();
@@ -148,9 +223,10 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
         </div>
       </div>);}
 
-function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masuMons, dexColorKey, onSelectColor, getAtkSkillLevels, getUniqueSkillLevels, swipeRef, onMissing, onBackToList, onOpenAttackPreview, onSelectMonster, onSelectTab, onStopPreview }) {
+function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masuMons, dexColorKey, onSelectColor, tryDyeDraft, onOpenTryDye, onTryDyeChange, onTryDyeCustom, onTryDyeReset, onCloseTryDye, getAtkSkillLevels, getUniqueSkillLevels, swipeRef, onMissing, onBackToList, onOpenAttackPreview, onSelectMonster, onSelectTab, onStopPreview }) {
       const [idleMotion,toggleIdleMotion]=useDexIdleMotion();
       const monsters=dexMonsterList();
+      const [colorSheetOpen,setColorSheetOpen]=useState(false); // 色の見本にするマスモンの一覧(開いているあいだだけ)
       const index=monsters.findIndex(m=>m.id===dexMonsterId);
       const mon=index>=0?monsters[index]:null;
       if(!mon){ onMissing(); return null; }
@@ -236,8 +312,13 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
             ▶ 攻撃アクション
           </button>
         </div>}
-        {/* マスモンに付けた色で見る。その種で色を付けた子が居るときだけ出る */}
-        {unlocked&&<DexMasuColorPicker choices={dexMasuColorChoices(masuMons, mon.id)} value={dexSelectedColors(masuMons, mon.id, dexColorKey)?dexColorKey:null} onChange={onSelectColor}/>}
+        {/* 色を変えて見る。左はマスモンを選んでその子の色、右は図鑑の中だけで染めてみる */}
+        {unlocked&&<DexColorRow masuMons={masuMons} mon={mon} value={dexColorKey} onOpenList={()=>setColorSheetOpen(true)}
+          onOpenTry={()=>onOpenTryDye(dexSelectedColors(masuMons, mon.id, dexColorKey)||[])}/>}
+        {unlocked&&colorSheetOpen&&<DexMasuColorSheet masuMons={masuMons} mon={mon} value={dexColorKey} onSelect={onSelectColor} onClose={()=>setColorSheetOpen(false)}/>}
+        {unlocked&&Array.isArray(tryDyeDraft)&&<DexTryDyeSheet mon={mon} draft={tryDyeDraft} onChange={onTryDyeChange} onCustom={onTryDyeCustom}
+          onReset={()=>{Audio_.se.tap();onTryDyeReset();}} onClose={onCloseTryDye}
+          onApply={()=>{Audio_.se.tap();onSelectColor(dexHasColors(tryDyeDraft)?{colors:tryDyeDraft.slice()}:null);onCloseTryDye();}}/>}
         {/* 下半分: 情報カード */}
         <div className="flex-1 min-h-0 pt-2">
           <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-2xl border border-amber-500/60 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">

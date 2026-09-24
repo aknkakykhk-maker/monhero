@@ -79,33 +79,49 @@ check('止める規則は3つあり、どれも図鑑(data-idle-own)を外して
 check('バトルは own を付けない(今までどおり設定で止まる)', !/<MonsterIdleArt baseId=\{s\?\.id\}[^>]*own/.test(battle));
 check('入口は own を data-idle-own として付ける', fx.includes("const ownAttr = own ? 'true' : undefined;") && (fx.match(/data-idle-own=\{ownAttr\}/g) || []).length === 2);
 
-// --- マスモンの染色で見る(2026-09-24 ユーザー指示「図鑑の表示でマスモンで染色してるカラーも見れるようにしたい」) ---
+// --- マスモンの染色で見る(2026-09-24 ユーザー指示「図鑑の表示でマスモンで染色してるカラーも見れるようにしたい」)
+//     同日「マスモン選択式にしたら？」「この画面で染色も出来てどんな色か見れるようにする機能もあるといいね」で作り替えた ---
 {
   const c2 = { Array, Map, String };
   vm.createContext(c2);
   vm.runInContext(slice(read('monster-hero/src/parts/11-masu-progression.jsx'), 'const getMasuColors =', '\n') + '\n'
-    + slice(dex, 'const dexMasuColorChoices =', 'const DexMasuColorPicker =')
-    + '\nthis.__c = dexMasuColorChoices; this.__s = dexSelectedColors;', c2);
-  const choices = c2.__c, selected = c2.__s;
+    + slice(dex, 'const dexMasuListOf =', 'const DexColorSwatches =')
+    + '\nthis.__l = dexMasuListOf; this.__s = dexSelectedColors; this.__n = dexColorLabel;', c2);
+  const listOf = c2.__l, selected = c2.__s, label = c2.__n;
   const masus = [
     { id:'a', baseId:'Mia', name:'ミア1', colors:['red','blue'] },
+    { id:'d', baseId:'Mia', name:'ミア4', colors:[] },
     { id:'b', baseId:'Mia', name:'ミア2', colors:['red','blue'] },
     { id:'c', baseId:'Mia', name:'ミア3', colors:['green'] },
-    { id:'d', baseId:'Mia', name:'ミア4', colors:[] },
     { id:'e', baseId:'Tiger', name:'トラ', colors:['gold'] },
     { id:'f', baseId:'Mia', name:'古い形', color:'pink' },
     null,
   ];
-  const got = choices(masus, 'Mia');
-  check('その種で色を付けたマスモンだけを候補にし、同じ配色は1つにまとめる',
-    got.length === 3 && got[0].names.length === 2 && got.every(g => g.colors.length > 0), JSON.stringify(got.map(g => g.key)));
-  check('古い形(color 1つ)のマスモンの色も拾う', got.some(g => g.key === 'pink'));
-  check('壊れた一覧・空の一覧でも落ちない', choices(null, 'Mia').length === 0 && choices([], 'Mia').length === 0);
-  check('選んだ配色が無くなっていたら元の色に戻る', selected(masus, 'Mia', 'green')[0] === 'green' && selected(masus, 'Mia', 'nope') === null && selected(masus, 'Mia', null) === null);
-  check('配色は保存しない(図鑑を開くとき・前後へ移るときに元の色へ戻す)',
-    !/storeSet\([^)]*dexColor/.test(dex) && (app => app.includes("setDexTab('basic');setDexColorKey(null);setGameState('MONSTER_DEX_DETAIL')") && app.includes("onSelectMonster={(monId)=>{setDexMonsterId(monId);setDexTab('basic');setDexColorKey(null);}}"))(read('monster-hero/src/parts/60-app.jsx')));
-  check('詳細に色を選ぶ行があり、色を付けた子が居るときだけ出る',
-    dex.includes('<DexMasuColorPicker choices={dexMasuColorChoices(masuMons, mon.id)}') && dex.includes('if (!choices.length) return null;') && dex.includes("chip(null, '元の色', null)"));
+  const got = listOf(masus, 'Mia');
+  check('一覧はその種のマスモンだけ。同じ色の子もまとめずに1体ずつ出し、色を付けた子を先に並べる',
+    got.map(m => m.id).join(',') === 'a,b,c,f,d', got.map(m => m.id).join(','));
+  check('壊れた一覧・空の一覧でも落ちない', listOf(null, 'Mia').length === 0 && listOf([], 'Mia').length === 0);
+  check('選んだマスモンの色で見る。古い形(color 1つ)の色も拾う',
+    selected(masus, 'Mia', { masuId:'c' })[0] === 'green' && selected(masus, 'Mia', { masuId:'f' })[0] === 'pink');
+  check('居なくなった子・色の無い子・ほかの種の子を選んでいたら元の色に戻る',
+    selected(masus, 'Mia', { masuId:'nope' }) === null && selected(masus, 'Mia', { masuId:'d' }) === null
+    && selected(masus, 'Mia', { masuId:'e' }) === null && selected(masus, 'Mia', null) === null && selected(masus, 'Mia', 'green') === null);
+  check('「染めてみる」で決めた色で見る(色が1つも無ければ元の色)',
+    selected(masus, 'Mia', { colors:['gold', null] })[0] === 'gold' && selected(masus, 'Mia', { colors:[null] }) === null);
+  check('ボタンの名前は 元の色 / マスモンの名前 / 染めてみた色',
+    label(masus, 'Mia', null) === '元の色' && label(masus, 'Mia', { masuId:'a' }) === 'ミア1' && label(masus, 'Mia', { colors:['red'] }) === '染めてみた色');
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  check('配色は保存しない(図鑑を開くとき・前後へ移るときに元の色へ戻し、染めてみる途中の色も捨てる)',
+    !/storeSet\([^)]*dex(Color|TryDye)/.test(dex + app)
+    && app.includes("setDexTab('basic');setDexColorKey(null);setDexTryDyeDraft(null);setGameState('MONSTER_DEX_DETAIL')")
+    && app.includes("onSelectMonster={(monId)=>{setDexMonsterId(monId);setDexTab('basic');setDexColorKey(null);setDexTryDyeDraft(null);}}"));
+  check('詳細に色の行があり、マスモンの一覧と「染めてみる」を開ける',
+    dex.includes('<DexColorRow masuMons={masuMons} mon={mon} value={dexColorKey}') && dex.includes('<DexMasuColorSheet ') && dex.includes('<DexTryDyeSheet '));
+  check('「染めてみる」は本番の染色と同じ色の選び方を使い、染色アイテムを使わない',
+    slice(dex, 'const DexTryDyeSheet =', 'function MonsterAttackPreviewScreen').includes('<DyeRegionColorControls baseId={mon.id} colors={draft} onChange={onChange} onCustom={onCustom}/>')
+    && !/useDyeItem/.test(slice(dex, 'const DexTryDyeSheet =', 'function MonsterAttackPreviewScreen')));
+  check('カスタムカラーは図鑑の下書きへ戻す(マスモンの色には書き込まない)',
+    app.includes("mode==='dex'?setDexTryDyeDraft:") && app.includes("mode==='dex'?(dexTryDyeDraft||[]):"));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
