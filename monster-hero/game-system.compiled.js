@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dbfeb7504f532e56
+// source-sha256: bc881c6bf34e990c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3cdd35fe7b228621
+// generated-sha256: d9f6c8489f9d40e9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -177,7 +177,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 15:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 15:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22939,6 +22939,8 @@ const RhythmOptions = ({
 }) => {
   const [draft, setDraft] = useState(() => normalizeRhythmSettings(value));
   const [message, setMessage] = useState('');
+  // 未保存のまま「戻る」を押したときの確認。それまでは何も言わずに変更が消えていた
+  const [leaveAsk, setLeaveAsk] = useState(false);
   // どのタブを見ているか。これも設定ではないので保存しない
   const [tab, setTab] = useState('live');
   const previewRef = useRef(null);
@@ -23120,6 +23122,18 @@ const RhythmOptions = ({
     setDraft(saved);
     setMessage('保存しました');
   };
+  const requestBack = () => {
+    if (dirty) {
+      setLeaveAsk(true);
+      return;
+    }
+    onBack();
+  };
+  const saveAndBack = async () => {
+    await onSave(draft);
+    setLeaveAsk(false);
+    onBack();
+  };
   // 【2026-09-13・ユーザー指示】「今の仕様はみにくすぎるし実用性がない / 特に横画面は終わってる /
   //   普通に実際の画面を使ってやればいい / そこで判定も合わせて出して調整するのが1番合うとおもう」。
   // ★それまでは専用の小さな画面(1本のレーンに目印が降りるだけ)だった。本番と見た目も
@@ -23147,7 +23161,7 @@ const RhythmOptions = ({
     className: `flex shrink-0 items-center gap-2 px-3 ${wide ? 'py-1' : 'py-2'}`
   }, /*#__PURE__*/React.createElement("button", {
     "aria-label": "\u623B\u308B",
-    onClick: onBack,
+    onClick: requestBack,
     className: "min-h-[44px] min-w-[44px] text-slate-300"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
@@ -23351,7 +23365,41 @@ const RhythmOptions = ({
     "data-rhythm-options-save": true,
     "data-dirty": dirty ? 'true' : 'false',
     className: `rounded-xl px-3 font-black ${wide ? 'min-h-[42px]' : 'min-h-[52px]'} ${dirty ? 'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]' : 'bg-amber-600 text-slate-950'}`
-  }, dirty ? '変更を保存' : '保存'))));
+  }, dirty ? '変更を保存' : '保存'))), leaveAsk && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-options-leave": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u5909\u66F4\u304C\u4FDD\u5B58\u3055\u308C\u3066\u3044\u307E\u305B\u3093",
+    className: "fixed inset-0 z-[9000] flex items-center justify-center bg-slate-950/80 p-5",
+    onClick: () => setLeaveAsk(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center shadow-[0_0_24px_rgba(251,191,36,.15)]",
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-[15px] font-black text-amber-200"
+  }, "\u5909\u66F4\u304C\u4FDD\u5B58\u3055\u308C\u3066\u3044\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1.5 text-[11px] font-bold leading-relaxed text-slate-300"
+  }, "\u3053\u306E\u307E\u307E\u623B\u308B\u3068\u3001\u3044\u307E\u5909\u3048\u305F\u8A2D\u5B9A\u306F\u5143\u306B\u623B\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 grid grid-cols-1 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-options-leave-save": true,
+    onClick: saveAndBack,
+    className: "min-h-[48px] rounded-xl bg-amber-400 text-[13px] font-black text-slate-950"
+  }, "\u4FDD\u5B58\u3057\u3066\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-options-leave-discard": true,
+    onClick: () => {
+      setLeaveAsk(false);
+      onBack();
+    },
+    className: "min-h-[44px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200"
+  }, "\u4FDD\u5B58\u305B\u305A\u306B\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-options-leave-cancel": true,
+    onClick: () => setLeaveAsk(false),
+    className: "min-h-[44px] rounded-xl text-[12px] font-black text-slate-400"
+  }, "\u8A2D\u5B9A\u3092\u7D9A\u3051\u308B")))));
 };
 // モンスターノーツ用のマスモン設定。音ゲーデバッグ画面と体験版ホームの両方から使うため、
 // 画面の中へ直接書かずにここで1つにまとめてある。中身と操作はどちらから開いても同じ。
@@ -23748,7 +23796,9 @@ const RhythmSongSelect = ({
   const pickRandom = () => {
     if (!list.length) return;
     const nextSong = list[Math.floor(Math.random() * list.length)];
-    const ids = (difficulties || []).filter(item => rhythmChartPlayable(nextSong, item.id));
+    // ★鍵のかかった難易度は選ばない。選ぶと画面の側がいちばん下の難易度へ戻すので、
+    //   「ランダムを押したのにEASYになった」ように見えていた
+    const ids = (difficulties || []).filter(item => rhythmChartPlayable(nextSong, item.id) && rhythmDifficultyUnlocked(nextSong.songId, item.id, bestRecords));
     setSongId(nextSong.songId);
     if (ids.length) setDifficultyId(ids[Math.floor(Math.random() * ids.length)].id);
   };
@@ -26530,6 +26580,18 @@ const RhythmTapTest = ({
       "data-rhythm-new-record": true,
       className: "text-center text-xl font-black text-amber-300"
     }, "NEW RECORD"), (() => {
+      const nextId = rhythmNextRankId(view.score, difficulty.maxScore);
+      const next = nextId ? RHYTHM_RANKS.find(item => item.id === nextId) : null;
+      if (!next) return null;
+      const need = next.min - view.score;
+      if (!(need > 0)) return null;
+      return /*#__PURE__*/React.createElement("p", {
+        "data-rhythm-next-rank": nextId,
+        className: "text-center text-[11px] font-black tabular-nums text-slate-300"
+      }, "\u6B21\u306E\u30E9\u30F3\u30AF ", /*#__PURE__*/React.createElement("b", {
+        className: RHYTHM_RANK_COLORS[nextId] || 'text-white'
+      }, nextId), " \u307E\u3067 \u3042\u3068 ", need.toLocaleString());
+    })(), (() => {
       const before = runRef.current?.startBest;
       const prev = before && before.played ? Number(before.bestScore) || 0 : 0;
       if (!(prev > 0)) return null;
@@ -26598,6 +26660,20 @@ const RhythmTapTest = ({
     }, "+", Number(quickRunAward.psyche).toLocaleString())), quickRunAward.shard > 0 && /*#__PURE__*/React.createElement("span", null, "\uD83C\uDF96\uFE0F ", /*#__PURE__*/React.createElement("b", {
       className: "text-amber-200"
     }, "+", Number(quickRunAward.shard).toLocaleString())))), (() => {
+      if (tutorial || calibrating || debugPlay || result.cleared === false) return null;
+      const before = runRef.current?.startBest;
+      if (before && before.clear === true) return null;
+      const opened = Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id => RHYTHM_DIFFICULTY_UNLOCK_BY[id] === difficulty.id && rhythmChartPlayable(song, id));
+      if (!opened) return null;
+      return /*#__PURE__*/React.createElement("div", {
+        "data-rhythm-result-unlock": opened,
+        className: "mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-base font-black text-amber-100"
+      }, "\uD83D\uDD13 ", opened, " \u304C\u89E3\u653E\u3055\u308C\u307E\u3057\u305F\uFF01"), /*#__PURE__*/React.createElement("small", {
+        className: "mt-0.5 block text-[10px] font-bold text-amber-200/90"
+      }, "\u3053\u306E\u66F2\u306E ", opened, "\uFF08Lv.", song.difficulties[opened].level, "\uFF09\u3092\u66F2\u3048\u3089\u3073\u3067\u9078\u3079\u307E\u3059"));
+    })(), (() => {
       const total = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (Number(view.counts[id]) || 0), 0);
       if (!(total > 0)) return null;
       return /*#__PURE__*/React.createElement("div", {
