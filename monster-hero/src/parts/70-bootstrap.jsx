@@ -631,6 +631,36 @@ const createAnimationStyle = () => {
         100% { opacity:0; transform:scale(1.4); }
       }
     }
+    /* ミーアの待機アニメ(試作。24-battle-fx.jsx の MiaIdleArt)。
+       同じ絵を「翼以外」「左翼」「右翼」に切り抜いて重ね、翼を肩の付け根を軸に羽ばたかせる。
+       翼は体の後ろ(下の層)。動かすのは transform だけなので、レイアウトを作り直さない。
+       軸の位置: 正方形の枠へ 2:3 の絵を contain で置いたとき、元絵の (425,585) と (599,585) に当たる所 */
+    .mia-idle { position:relative; display:block; transform-origin:50% 96%; will-change:transform;
+      filter:drop-shadow(0 4px 3px rgb(0 0 0 / .07)) drop-shadow(0 2px 2px rgb(0 0 0 / .06));
+      animation:miaIdleHover 2600ms ease-in-out infinite; }
+    .mia-idle__body { position:relative; display:block; z-index:1; }
+    .mia-idle__wing { position:absolute; inset:0; display:block; z-index:0; will-change:transform; }
+    .mia-idle__wing--l { transform-origin:44.3% 38.1%; animation:miaIdleWingL 1300ms cubic-bezier(.45,0,.35,1) infinite; }
+    .mia-idle__wing--r { transform-origin:55.7% 38.1%; animation:miaIdleWingR 1300ms cubic-bezier(.45,0,.35,1) infinite; }
+    /* 宙に浮いているので、ゆっくり上下してわずかに伸び縮みする(呼吸) */
+    @keyframes miaIdleHover {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      50% { transform:translate3d(0,-4%,0) scale(.99,1.015); }
+    }
+    /* 羽ばたき。すばやく振り上げ、ゆっくり下ろす。振り上げたときは奥へ倒れるぶん少し細くする */
+    @keyframes miaIdleWingL {
+      0%,100% { transform:rotate(-3deg) scaleX(1); }
+      38% { transform:rotate(13deg) scaleX(.9); }
+    }
+    @keyframes miaIdleWingR {
+      0%,100% { transform:rotate(3deg) scaleX(1); }
+      38% { transform:rotate(-13deg) scaleX(.9); }
+    }
+    /* 軽量な見た目(タクティクスの calm)と「動きを減らす」設定では止める(絵はそのまま見える) */
+    [data-tactics-look="calm"] .mia-idle, [data-tactics-look="calm"] .mia-idle__wing { animation:none; }
+    @media (prefers-reduced-motion: reduce) {
+      .mia-idle, .mia-idle__wing { animation:none; }
+    }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
        常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。
        transform と opacity だけを動かすので、低性能端末でもレイアウトを作り直さない。 */

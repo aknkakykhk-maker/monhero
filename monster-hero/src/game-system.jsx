@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 93aae52505883465
+// generated-sha256: 8e059f98a37be1c6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -102,7 +102,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 16:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 16:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10908,6 +10908,33 @@ const AttackTargetFx = ({anim}) => {
       {[0, 45, 90, 135, 180, 225, 270, 315].map(deg => (
         <i key={deg} className="atk-target-fx__ray" style={{ '--atk-ray-angle':`${deg}deg` }}/>
       ))}
+    </span>
+  );
+};
+// ==== ミーアの待機アニメ(試作・2026-09-24 ユーザー指示「試しにミーアでやってみて」) ====
+// 絵は1枚のPNGなので描き足しはしない。同じ絵を「翼以外」「左の翼」「右の翼」の3枚に切り抜いて重ね
+// (切り抜きは images/monsters/mia-wing-*.png のマスク)、翼だけを肩の付け根を軸に回して羽ばたかせる。
+// 翼は体の後ろにあるので、動かしても穴が見えない。全体はゆっくり浮き沈みして呼吸する。
+// ・image はバトルで使う実際の絵(染色つき DyedMonsterImage)をそのまま受け取り、3回複製する
+// ・軸の位置は「正方形の枠に2:3の絵を contain で置いた」ときの座標。バトルの枠(58/64pxの正方形)専用
+// ・軽量表示・動きを減らす設定では止める(呼び出し側と CSS の両方で)
+const MIA_IDLE_MASK_STYLE = (url) => ({
+  WebkitMaskImage:`url(${url})`, maskImage:`url(${url})`,
+  WebkitMaskSize:'contain', maskSize:'contain',
+  WebkitMaskPosition:'center', maskPosition:'center',
+  WebkitMaskRepeat:'no-repeat', maskRepeat:'no-repeat',
+});
+const MiaIdleArt = ({image}) => {
+  // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと「翼以外」の層に翼の影が残り、
+  //   翼を上げたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体(.mia-idle)に1回だけ付ける
+  const className = String(image.props.className || '').split(/\s+/).filter(c => c && !/^drop-shadow/.test(c)).join(' ');
+  const layer = (url, extra) => React.cloneElement(image, { alt: extra ? '' : image.props.alt, className,
+    style:{ ...(image.props.style||{}), ...MIA_IDLE_MASK_STYLE(url), ...(extra||{}) } });
+  return (
+    <span className="mia-idle">
+      <span className="mia-idle__wing mia-idle__wing--l" aria-hidden="true">{layer(MIA_WING_LEFT_MASK, {display:'block'})}</span>
+      <span className="mia-idle__wing mia-idle__wing--r" aria-hidden="true">{layer(MIA_WING_RIGHT_MASK, {display:'block'})}</span>
+      <span className="mia-idle__body">{layer(MIA_WING_BODY_MASK, null)}</span>
     </span>
   );
 };
@@ -23735,6 +23762,8 @@ function BattleScreen({
               // ★絵の入れ物は絵と同じ大きさに固定する(2026-09-24 ユーザー指摘「ミーアの攻撃中、姿が消えてる」)。
               //   ミーア・水・聖光の攻撃演出は入れ物いっぱいに重ねる絶対配置なので、大きさを持たないと
               //   入れ物が0×0につぶれ、本体の絵が幅数pxまで押しつぶされてマイクも見えなくなっていた
+              // ミーアだけ待機中も翼を羽ばたかせる(試作。MiaIdleArt)。軽量表示では今までどおり1枚の絵
+              const slotArt = (img) => (s?.id==='Mia'&&!ecoBattleView ? <MiaIdleArt image={img}/> : img);
               const slotArtBox = {width:tacticsNewLayout?'58px':'64px', height:tacticsNewLayout?'58px':'64px', flexShrink:0};
               // このスロットに固有技カードが割り当てられているか（セット中は常時エフェクト）
               const hasUniqueSet = selectedCards.some(idx=>cardAssignments[idx]===i && hand[idx]?.type==='unique');
@@ -23994,10 +24023,10 @@ function BattleScreen({
                         charging={attackAnim.charge===true}/>
                     :isAnimating&&attackAnim.motion==='miaSongNotes'
                       ?<MiaSongNotesMotion
-                        image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>}
+                        image={slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)}
                         lunge={attackAnim.charge===false}
                         charging={attackAnim.charge===true}/>
-                      :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
+                      :slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                   {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる。
                       ★動く絵の中に置く。新しい盤面は絵だけが敵へ飛ぶので、枠の側に置くと斬撃が枠に残って敵に届かない */}
                   {isAnimating&&attackAnim.twinBlade&&<KenshiTwinSlash/>}
@@ -44122,6 +44151,36 @@ const createAnimationStyle = () => {
         30% { opacity:.9; transform:scale(1); }
         100% { opacity:0; transform:scale(1.4); }
       }
+    }
+    /* ミーアの待機アニメ(試作。24-battle-fx.jsx の MiaIdleArt)。
+       同じ絵を「翼以外」「左翼」「右翼」に切り抜いて重ね、翼を肩の付け根を軸に羽ばたかせる。
+       翼は体の後ろ(下の層)。動かすのは transform だけなので、レイアウトを作り直さない。
+       軸の位置: 正方形の枠へ 2:3 の絵を contain で置いたとき、元絵の (425,585) と (599,585) に当たる所 */
+    .mia-idle { position:relative; display:block; transform-origin:50% 96%; will-change:transform;
+      filter:drop-shadow(0 4px 3px rgb(0 0 0 / .07)) drop-shadow(0 2px 2px rgb(0 0 0 / .06));
+      animation:miaIdleHover 2600ms ease-in-out infinite; }
+    .mia-idle__body { position:relative; display:block; z-index:1; }
+    .mia-idle__wing { position:absolute; inset:0; display:block; z-index:0; will-change:transform; }
+    .mia-idle__wing--l { transform-origin:44.3% 38.1%; animation:miaIdleWingL 1300ms cubic-bezier(.45,0,.35,1) infinite; }
+    .mia-idle__wing--r { transform-origin:55.7% 38.1%; animation:miaIdleWingR 1300ms cubic-bezier(.45,0,.35,1) infinite; }
+    /* 宙に浮いているので、ゆっくり上下してわずかに伸び縮みする(呼吸) */
+    @keyframes miaIdleHover {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      50% { transform:translate3d(0,-4%,0) scale(.99,1.015); }
+    }
+    /* 羽ばたき。すばやく振り上げ、ゆっくり下ろす。振り上げたときは奥へ倒れるぶん少し細くする */
+    @keyframes miaIdleWingL {
+      0%,100% { transform:rotate(-3deg) scaleX(1); }
+      38% { transform:rotate(13deg) scaleX(.9); }
+    }
+    @keyframes miaIdleWingR {
+      0%,100% { transform:rotate(3deg) scaleX(1); }
+      38% { transform:rotate(-13deg) scaleX(.9); }
+    }
+    /* 軽量な見た目(タクティクスの calm)と「動きを減らす」設定では止める(絵はそのまま見える) */
+    [data-tactics-look="calm"] .mia-idle, [data-tactics-look="calm"] .mia-idle__wing { animation:none; }
+    @media (prefers-reduced-motion: reduce) {
+      .mia-idle, .mia-idle__wing { animation:none; }
     }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
        常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。
