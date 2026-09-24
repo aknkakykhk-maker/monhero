@@ -47,12 +47,25 @@ const tacticsAimParts = (parts, totalText = '') => {
 //   「エッジもんた」は「エッジもん／た」と1字だけ次の行へ落ちていた。
 //   6字までは1行、12字までは2行、それより長いときは3行に割り、1行の字数でカードの幅(100cqw)を
 //   割った大きさまで字を小さくする(箱の左右の余白4pxと字の丸めのぶん、6px引いてから割る)。cqw が使えない端末では、この指定が捨てられて今までの 11px になる
-const handCardNameFit = (name) => {
+// boxHeight を渡すと、その高さに行数ぶん収まる大きさでも頭打ちにする(背の低い画面で技名の欄が縮むため)
+const handCardNameFit = (name, boxHeight) => {
   const n = [...String(name || '')].length || 1;
   const lines = n <= 6 ? 1 : n <= 12 ? 2 : 3;
   const perLine = Math.ceil(n / lines);
-  return { fontSize: `min(${lines === 3 ? 9 : 11}px, calc((100cqw - 6px) / ${perLine}))`, lineHeight: lines === 3 ? '1.08' : '1.15' };
+  const lh = lines === 3 ? 1.08 : 1.15;
+  const byHeight = boxHeight ? `, calc(${boxHeight} / ${(lines * lh).toFixed(2)})` : '';
+  return { fontSize: `min(${lines === 3 ? 9 : 11}px, calc((100cqw - 6px) / ${perLine})${byHeight})`, lineHeight: String(lh) };
 };
+// 手札のカードの中の段の高さ。★カードの高さは画面の高さで変わる(844pxで133px、667pxで111px)。
+// 固定の px のままだと、背の低い画面では「⇄ 技変更」の帯を足したぶん(もとから4px)下へはみ出していた。
+// 背の高い画面では今までと同じ大きさ(絵36px・技名30px)になるよう、上限を今までの値にしてある
+const HAND_CARD_FIT = Object.freeze({
+  iconTop: 'clamp(2px, 0.7dvh, 6px)',
+  icon: 'clamp(24px, 4.2dvh, 36px)',
+  name: 'clamp(20px, 3.4dvh, 30px)',
+  band: 'clamp(13px, 1.9dvh, 16px)',
+  gutsPad: 'clamp(2px, 0.45dvh, 4px)',
+});
 const kindOfTacticsSlotFx = (fx) => {
   if (!fx) return null;
   if (fx.evade) return 'evade';
@@ -1568,7 +1581,10 @@ function BattleScreen({
                 {/* ★data-decoration は「これは絵であって読むものではない」という目じるし。
                     使えないカードの赤い札(枚数上限など)をこの絵の上へわざと出すので、
                     文字の重なりを見る検査ではこの中身を数えない */}
-                <div data-decoration className="mt-1.5 flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20" style={{boxShadow:'inset 0 1px 0 rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.35)'}}>{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5" style={{containerType:'inline-size'}}>{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`} style={handCardNameFit(c.name)}>{c.name}</div>):(<div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5" style={handCardNameFit(c.name)}>{c.name}</div>)}{(()=>{
+                <div data-decoration className="flex shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20" style={{marginTop:HAND_CARD_FIT.iconTop,width:HAND_CARD_FIT.icon,height:HAND_CARD_FIT.icon,boxShadow:'inset 0 1px 0 rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.35)'}}>{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5" style={{containerType:'inline-size'}}>{/* ★技名は押しても技の一覧を開かない(カードを選ぶだけ)。一覧はガッツの段の上の「⇄ 技変更」から開く
+                    (2026-09-24 ユーザー指摘「技変更一覧が誤タップで反応しやすい」・場所はユーザー選択)。
+                    それまでは技名の欄(カード幅×30px)がまるごと押し場所で、カードを選ぶつもりの指が当たっていた */}
+                <div className="text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5" style={{height:HAND_CARD_FIT.name,...handCardNameFit(c.name,HAND_CARD_FIT.name)}}>{c.name}</div>{(()=>{
                   // カードの表に「ジャンル」と「誰に効くか」を出す(仕様: BATTLE_NEW_MODE_PLAN.md 4.4
                   // 「単体効果と全体効果が分かるようにカード説明に表示するようにしたい」)。
                   // ★言葉はアプリ側の cardGenreLabel / cardScopeLabel から引く。カードをタップした
@@ -1579,7 +1595,8 @@ function BattleScreen({
                   const scope=tacticsCardScope?tacticsCardScope(c):null;
                   const text=genre?(scope&&scope!=='敵へ'?`${genre}・${scope}`:genre):'';
                   return text?<div data-card-genre={genre} data-card-scope={scope||undefined} className="w-full truncate rounded-[5px] bg-black/30 px-0.5 text-[8px] font-black leading-[11px] text-white/85">{text}</div>:null;
-                })()}<div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button>{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{isDragging&&ReactDOM.createPortal(<div data-tactics-drag-card-ghost className={`fixed w-[72px] rounded-[12px] border p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]`} style={{left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,pointerEvents:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))',...(TYPE_INLINE_STYLE[c.type]||{})}}><div data-decoration className="mt-1.5 flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20">{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5" style={{containerType:'inline-size'}}><div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5" style={handCardNameFit(c.name)}>{c.name}</div><div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></div>,document.body)}{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
+                })()}{['atk','range_atk','unique'].includes(c.type)&&(<div role="button" aria-label={`${c.name}の技を変える`} data-skill-change={i} onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}}
+                  style={{height:HAND_CARD_FIT.band}} className={`flex w-full shrink-0 items-center justify-center gap-0.5 rounded-[5px] border border-white/30 bg-white/15 text-[9px] font-black leading-none text-white active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}><span aria-hidden="true">⇄</span>技変更</div>)}<div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] flex items-center justify-center gap-0.5" style={{paddingTop:HAND_CARD_FIT.gutsPad,paddingBottom:HAND_CARD_FIT.gutsPad}}><Zap size={9}/>{curGuts}</div></div></button>{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{isDragging&&ReactDOM.createPortal(<div data-tactics-drag-card-ghost className={`fixed w-[72px] rounded-[12px] border p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]`} style={{left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,pointerEvents:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))',...(TYPE_INLINE_STYLE[c.type]||{})}}><div data-decoration className="mt-1.5 flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20">{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5" style={{containerType:'inline-size'}}><div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5" style={handCardNameFit(c.name)}>{c.name}</div><div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></div>,document.body)}{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
             })}
           </div>
         </div>

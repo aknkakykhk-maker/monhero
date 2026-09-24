@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2468560bc69ad780
+// source-sha256: 6770e62050367e41
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5f45fcb87e89debb
+// generated-sha256: 62f55f5983faa70a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -175,7 +175,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 10:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 11:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38457,15 +38457,28 @@ const tacticsAimParts = (parts, totalText = '') => {
 //   「エッジもんた」は「エッジもん／た」と1字だけ次の行へ落ちていた。
 //   6字までは1行、12字までは2行、それより長いときは3行に割り、1行の字数でカードの幅(100cqw)を
 //   割った大きさまで字を小さくする(箱の左右の余白4pxと字の丸めのぶん、6px引いてから割る)。cqw が使えない端末では、この指定が捨てられて今までの 11px になる
-const handCardNameFit = name => {
+// boxHeight を渡すと、その高さに行数ぶん収まる大きさでも頭打ちにする(背の低い画面で技名の欄が縮むため)
+const handCardNameFit = (name, boxHeight) => {
   const n = [...String(name || '')].length || 1;
   const lines = n <= 6 ? 1 : n <= 12 ? 2 : 3;
   const perLine = Math.ceil(n / lines);
+  const lh = lines === 3 ? 1.08 : 1.15;
+  const byHeight = boxHeight ? `, calc(${boxHeight} / ${(lines * lh).toFixed(2)})` : '';
   return {
-    fontSize: `min(${lines === 3 ? 9 : 11}px, calc((100cqw - 6px) / ${perLine}))`,
-    lineHeight: lines === 3 ? '1.08' : '1.15'
+    fontSize: `min(${lines === 3 ? 9 : 11}px, calc((100cqw - 6px) / ${perLine})${byHeight})`,
+    lineHeight: String(lh)
   };
 };
+// 手札のカードの中の段の高さ。★カードの高さは画面の高さで変わる(844pxで133px、667pxで111px)。
+// 固定の px のままだと、背の低い画面では「⇄ 技変更」の帯を足したぶん(もとから4px)下へはみ出していた。
+// 背の高い画面では今までと同じ大きさ(絵36px・技名30px)になるよう、上限を今までの値にしてある
+const HAND_CARD_FIT = Object.freeze({
+  iconTop: 'clamp(2px, 0.7dvh, 6px)',
+  icon: 'clamp(24px, 4.2dvh, 36px)',
+  name: 'clamp(20px, 3.4dvh, 30px)',
+  band: 'clamp(13px, 1.9dvh, 16px)',
+  gutsPad: 'clamp(2px, 0.45dvh, 4px)'
+});
 const kindOfTacticsSlotFx = fx => {
   if (!fx) return null;
   if (fx.evade) return 'evade';
@@ -41163,8 +41176,11 @@ function BattleScreen({
       className: "text-[10px]"
     }, assignedMon.emoji)), /*#__PURE__*/React.createElement("div", {
       "data-decoration": true,
-      className: "mt-1.5 flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20",
+      className: "flex shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20",
       style: {
+        marginTop: HAND_CARD_FIT.iconTop,
+        width: HAND_CARD_FIT.icon,
+        height: HAND_CARD_FIT.icon,
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.35)'
       }
     }, cardIconNode(c.icon, 26, c.id)), /*#__PURE__*/React.createElement("div", {
@@ -41172,19 +41188,12 @@ function BattleScreen({
       style: {
         containerType: 'inline-size'
       }
-    }, ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
-      onClick: ev => {
-        ev.stopPropagation();
-        if (isBusy || autoBattleRef.current || Date.now() <= suppressCardClickRef.current) return;
-        setSkillPicker({
-          handIndex: i
-        });
-      },
-      className: `text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`,
-      style: handCardNameFit(c.name)
-    }, c.name) : /*#__PURE__*/React.createElement("div", {
-      className: "text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5",
-      style: handCardNameFit(c.name)
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5",
+      style: {
+        height: HAND_CARD_FIT.name,
+        ...handCardNameFit(c.name, HAND_CARD_FIT.name)
+      }
     }, c.name), (() => {
       // カードの表に「ジャンル」と「誰に効くか」を出す(仕様: BATTLE_NEW_MODE_PLAN.md 4.4
       // 「単体効果と全体効果が分かるようにカード説明に表示するようにしたい」)。
@@ -41200,8 +41209,29 @@ function BattleScreen({
         "data-card-scope": scope || undefined,
         className: "w-full truncate rounded-[5px] bg-black/30 px-0.5 text-[8px] font-black leading-[11px] text-white/85"
       }, text) : null;
-    })(), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"
+    })(), ['atk', 'range_atk', 'unique'].includes(c.type) && /*#__PURE__*/React.createElement("div", {
+      role: "button",
+      "aria-label": `${c.name}の技を変える`,
+      "data-skill-change": i,
+      onClick: ev => {
+        ev.stopPropagation();
+        if (isBusy || autoBattleRef.current || Date.now() <= suppressCardClickRef.current) return;
+        setSkillPicker({
+          handIndex: i
+        });
+      },
+      style: {
+        height: HAND_CARD_FIT.band
+      },
+      className: `flex w-full shrink-0 items-center justify-center gap-0.5 rounded-[5px] border border-white/30 bg-white/15 text-[9px] font-black leading-none text-white active:scale-95 active:bg-white/30${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true"
+    }, "\u21C4"), "\u6280\u5909\u66F4"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-black bg-black/30 text-white rounded-[6px] flex items-center justify-center gap-0.5",
+      style: {
+        paddingTop: HAND_CARD_FIT.gutsPad,
+        paddingBottom: HAND_CARD_FIT.gutsPad
+      }
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 9
     }), curGuts))), isDragging && /*#__PURE__*/React.createElement("div", {
