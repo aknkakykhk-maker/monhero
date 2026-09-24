@@ -12,7 +12,7 @@
 //
 // 版を分けたのは運用ルール ⑩-2 のため(既存曲の生成結果を変えない)。この検査は
 //   ・版の読み方(書いていない曲は版1)と、解析器が新しい曲にだけ最新版を書くこと
-//   ・既存曲の一覧が黙って版2へ上がっていないこと
+//   ・公開中の曲が版2で作ってあること／公開していない曲が黙って版2へ上がっていないこと
 //   ・版1の生成には写しが一切出ないこと(入口が閉じている)
 //   ・版2で写し率がはっきり上がり、押せる・音に乗る・読める・量を悪くしていないこと
 // を確かめる。写し率の物差しは品質レポート(rhythm-chart-quality-report.js の phraseEcho)と同じものを使う。
@@ -44,18 +44,21 @@ ok('人が書いた版は解析のやり直しで消さない',chartRevisionForR
   ok('解析器が一覧へ書くときに版を付けている',/\.\.\.chartRevisionForRegistry\(registry\.songs\[trackId\]\)/.test(source));
 }
 
-// ── 3. 既存曲は版1のまま ─────────────────────────────────────────────────────
-// 2026-09-24 に一覧にあった曲。作り直すと決めてこの曲の版を上げるときは、ここから外し、
-// 決めた理由を docs/spec/RHYTHM_MODE.md へ残す(黙って上げると、次の生成で既存曲の譜面が変わる)。
-const LEGACY_TRACKS=Object.freeze(['monster_hero_theme','atsu_cup_theme','six_eternel_beat','six_eternel_remix_beat',
-  'pandora_boss_beat','eiki_boss_beat','pandora_boss','eiki_boss','six_eternel_remix','kaze_ga_soyogu',
-  'close_to_your_heart','eiki_boss_remix','pandora_boss_remix','dullahan','dullahan_clockwork','toriko','4u_hitasura',
-  'kindan_no_resistance','monster_hero_theme_alt','crossing_field','nothing_without_you','freedom_dive',
-  'the_city_beneath_the_comets','mou_hitotsu_no_sekai_e']);
+// ── 3. 版をどこまで上げたか ──────────────────────────────────────────────────
+// 2026-09-24、ユーザーの判断(「既存曲も最新ツールで変えてもいいよ」)で、公開中の21曲を版2で作り直した。
+// 公開曲(RELEASED_TRACKS)はすべて版2以上であること、公開していない曲は版1のまま残っていることを見る。
+// 公開していない曲を公開するときは、先に版2で作り直すか、ここから外すかを決める(黙って版1のまま出さない)。
+const LEGACY_TRACKS=Object.freeze(['pandora_boss_beat','eiki_boss_beat','six_eternel_remix']);
 const registry=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/rhythm-song-registry.json'),'utf8')).songs||{};
 {
+  const {RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
+  const released=Object.values(RELEASED_TRACKS);
+  const behind=released.filter(id=>!registry[id]||chartRevisionOf(registry[id])<2);
+  ok('公開中の曲は版2以上で作ってある',behind.length===0,behind.join(', '));
   const raised=LEGACY_TRACKS.filter(id=>registry[id]&&chartRevisionOf(registry[id])!==1);
-  ok('既存曲は版1のまま',raised.length===0,raised.join(', '));
+  ok('公開していない曲は版1のまま',raised.length===0,raised.join(', '));
+  const overlap=LEGACY_TRACKS.filter(id=>released.includes(id));
+  ok('版1のまま残す曲に公開曲が混ざっていない',overlap.length===0,overlap.join(', '));
 }
 
 // ── 4. 実際に生成して比べる ──────────────────────────────────────────────────
@@ -77,12 +80,14 @@ const readShapes=(dir,trackId)=>DIFFICULTIES.map(difficulty=>{
 const mean=list=>list.length?list.reduce((a,b)=>a+b,0)/list.length:0;
 try{
   const echo={1:[],2:[]};
+
   for(const trackId of tracks){
     const legacy=generate(trackId,1),latest=generate(trackId,2);
     ok(`${trackId}: 版1・版2とも生成できる`,!!legacy&&!!latest);
     if(!legacy||!latest)continue;
     ok(`${trackId}: 版1/版2 と表示する`,/譜面の作り方: 版1/.test(legacy.stdout)&&/譜面の作り方: 版2/.test(latest.stdout));
     const legacyCharts=readShapes(legacy.dir,trackId),latestCharts=readShapes(latest.dir,trackId);
+
     ok(`${trackId}: 版1には写しが出ない(入口が閉じている)`,
       legacyCharts.every(chart=>chart.chartRevision===1&&!chart.shapes.some(entry=>entry.phraseCopyOf!=null)));
     ok(`${trackId}: 版2では写したかたまりがある`,latestCharts.every(chart=>chart.chartRevision===2)
@@ -120,6 +125,26 @@ try{
   const legacyEcho=mean(echo[1]),latestEcho=mean(echo[2]);
   ok('版2でフレーズの写し率がはっきり上がる(1.4倍以上)',latestEcho>=legacyEcho*1.4&&latestEcho>=.2,
     `版1 ${legacyEcho.toFixed(3)} → 版2 ${latestEcho.toFixed(3)}`);
+  // ── 5. 版2のクロス(端に寄ったHOLDを内側へ寄せて置く) ──────────────────────────
+  // 1曲ごとには増減がある(写しで配置が変わると、押さえの位置も変わる)ので、公開中の全曲の合計で見る。
+  // 実測(2026-09-24): MASTER 版1 31 → 版2 53、EXPERT 32 → 40
+  {
+    const {RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
+    const crossTotal={1:{EXPERT:0,MASTER:0},2:{EXPERT:0,MASTER:0}};
+    for(const trackId of Object.values(RELEASED_TRACKS))for(const revision of [1,2])for(const difficulty of ['EXPERT','MASTER']){
+      const dir=path.join(tmp,`cross-${trackId}-r${revision}`);
+      fs.mkdirSync(dir,{recursive:true});
+      const run=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),'--track',trackId,
+        '--chart-revision',String(revision),'--difficulty',difficulty,'--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:1<<26});
+      if(run.status!==0)continue;
+      const file=path.join(dir,`${trackId.replace(/_/g,'-')}-v3-chart-${difficulty.toLowerCase()}.json`);
+      crossTotal[revision][difficulty]+=JSON.parse(fs.readFileSync(file,'utf8')).notes.filter(note=>note.cross===true).length;
+    }
+    ok('版2でMASTERのクロスが版1より減らない(公開中の全曲の合計)',crossTotal[2].MASTER>=crossTotal[1].MASTER,
+      `版1 ${crossTotal[1].MASTER} → 版2 ${crossTotal[2].MASTER}`);
+    ok('版2ではMASTERのクロスがEXPERTより多い(公開中の全曲の合計)',crossTotal[2].MASTER>crossTotal[2].EXPERT,
+      `EXPERT ${crossTotal[2].EXPERT} / MASTER ${crossTotal[2].MASTER}`);
+  }
 }finally{
   fs.rmSync(tmp,{recursive:true,force:true});
 }

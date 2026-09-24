@@ -164,16 +164,19 @@ const replaceBlock=(source,marker,notes)=>{
 // マーカー名は曲idと違う(音源のidから作られている)ので、ここで1か所にまとめる。
 // 曲を足したらここにも1行足す(rhythm-overlap-reach-check.js が抜けを見つける)。
 const RELEASED_MARKERS=Object.freeze({
+  // 時刻で入れ替わる曲(RHYTHM_SWITCHING_CHARTS)は、いま遊ばれている側(切り替え後の -v4-)を書く。
+  // 2026-09-24、ここが -v3- のままだったため、重なりの直し(rhythm-overlap-reach-fix.js)が
+  // 公開中の -v4- を読んで、使われていない -v3- へ書き戻していた
   mf_ichika_mix:'atsu-cup-theme-v3',
-  monster_hero:'monster-hero-v3',
+  monster_hero:'monster-hero-v4',
   monster_hero_another:'monster-hero-theme-alt-v3',
   six_eternel_remix:'six-eternel-remix-beat-v3',
   // 2026-09-12、原曲を公開した。書き忘れると検査だけが静かに対象外になる(CLAUDE.md ⑥-3)
   six_eternel_beat:'six-eternel-beat-v3',
   stay_with_me:'pandora-boss-v3',
   kiki_issen:'eiki-boss-v3',
-  kaze_ga_soyogu:'kaze-ga-soyogu-v3',
-  close_to_your_heart:'close-to-your-heart-v3',
+  kaze_ga_soyogu:'kaze-ga-soyogu-v4',
+  close_to_your_heart:'close-to-your-heart-v4',
   eiki_boss_remix:'eiki-boss-remix-v3',
   pandora_boss_remix:'pandora-boss-remix-v3',
   dullahan:'dullahan-v3',
