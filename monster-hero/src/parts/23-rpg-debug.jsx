@@ -439,11 +439,13 @@ const attackMotionAnimation = (anim) => {
   if (anim.motion==='arkHolyRain') return undefined;
   // ミーアの歌攻撃も距離枠は動かさない。MiaSongNotesMotion 内で本体・マイク・音符だけを動かす。
   if (anim.motion==='miaSongNotes') return undefined;
-  // エイキはザンと同じ高速斬撃の動き(zanComboDash)をそのまま使う。
+  // ザン・エイキ・剣士モッチー・通常の体当たりは、敵の位置(--atk-dx/dy)まで飛んでいって斬る/当たる。
   // 桜の花びらは枠を動かすのではなく、下の SakuraPetals を攻撃中だけ重ねて出す
   // 剣士モッチーは敵まで高速で斬り込み、二度通り抜けてX字を完成させる専用モーション。
   // KenshiTwinSlash は斬撃・速度線・決めの閃光を攻撃中だけ重ねる。
   if (anim.twinBlade || anim.motion==='kenshiTwinBlade') return 'kenshiTwinBladeSlash 560ms cubic-bezier(.18,.76,.2,1) forwards';
+  // エイキは同じ残像ダッシュの考え方で、敵のまわりを4回斬り抜けてから宙返りで決める専用版(尺は本番の待ち500msに収まる480ms)。
+  if (anim.zanCombo && anim.sakura) return 'eikiSakuraDash 480ms cubic-bezier(.2,.7,.25,1) forwards';
   if (anim.zanCombo) return 'zanComboDash 320ms ease-out forwards';
   if (anim.charge) return 'specialCharge 650ms ease-out forwards';
   if (anim.charge===false) return anim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':'specialLunge 500ms ease-in forwards';

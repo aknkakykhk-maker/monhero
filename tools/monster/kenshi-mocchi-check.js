@@ -361,9 +361,12 @@ console.log('--- ⑨ 専用の二刀流モーション ---');
 check('atkMotion が専用種別になっている', mon.atkMotion === 'kenshiTwinBlade', String(mon.atkMotion));
 check('敵へ大きく斬り込む専用 keyframes がある',
   /@keyframes kenshiTwinBladeSlash \{/.test(source)
-  && /translate3d\(68px,-116px,0\)/.test(source)
-  && /translate3d\(-86px,-188px,0\)/.test(source)
-  && /translate3d\(90px,-188px,0\)/.test(source));
+  // 2026-09-24: 固定の上方向(-188px など)をやめ、敵の位置(--atk-dx/dy)からのずれで斬り込むようにした
+  // (ユーザー指示「敵に位置を合わせて何かをする感じにしたい」)。＼で抜け→／で切り返し→敵の位置でX字、の形は同じ
+  && /translate3d\(calc\(var\(--atk-dx\) \+ 68px\),calc\(var\(--atk-dy\) \+ 54px\),0\)/.test(source)
+  && /translate3d\(calc\(var\(--atk-dx\) - 86px\),calc\(var\(--atk-dy\) - 18px\),0\)/.test(source)
+  && /translate3d\(calc\(var\(--atk-dx\) \+ 90px\),calc\(var\(--atk-dy\) - 18px\),0\)/.test(source)
+  && /translate3d\(var\(--atk-dx\),var\(--atk-dy\),0\) scale\(1\.12\)/.test(source));
 check('斬撃は＼と／の2本で、190px級の大型3層表現',
   /KENSHI_TWIN_SLASHES = Object\.freeze\(\[/.test(source)
   && /angle:'-38deg'/.test(source) && /angle:'38deg'/.test(source)
