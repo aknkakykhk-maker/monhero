@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 88307de7e00b7d50
+// source-sha256: 1e6ff13a5734721b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a5ed62f7fec27d20
+// generated-sha256: c7215afa8368793c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 18:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 18:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18005,7 +18005,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     bodyMask: IDLE_TIGER_BODY_MASK,
     parts: [{
       mask: IDLE_TIGER_TAIL_MASK,
-      origin: '68% 52%',
+      origin: '65.5% 53%',
       anim: 'wag',
       amp: 8,
       dur: 1100,
@@ -18018,20 +18018,20 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     bodyMask: IDLE_HAM_BODY_MASK,
     parts: [{
       mask: IDLE_HAM_EAR_L_MASK,
-      origin: '43% 27%',
+      origin: '40% 32.5%',
       anim: 'twitch',
       amp: -9,
       dur: 3200,
       delay: 0,
-      layer: 'front'
+      layer: 'back'
     }, {
       mask: IDLE_HAM_EAR_R_MASK,
-      origin: '57% 27%',
+      origin: '59.5% 33%',
       anim: 'twitch',
       amp: 9,
       dur: 3200,
       delay: 1300,
-      layer: 'front'
+      layer: 'back'
     }]
   },
   Pixie: {
@@ -18039,23 +18039,23 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     bodyMask: IDLE_PIXIE_BODY_MASK,
     parts: [{
       mask: IDLE_PIXIE_WING_L_MASK,
-      origin: '36% 32%',
+      origin: '41.8% 41.5%',
       anim: 'flapL',
-      amp: 14,
+      amp: 12,
       dur: 900,
       delay: 0,
       layer: 'back'
     }, {
       mask: IDLE_PIXIE_WING_R_MASK,
-      origin: '64% 32%',
+      origin: '58.2% 42.3%',
       anim: 'flapR',
-      amp: 14,
+      amp: 12,
       dur: 900,
       delay: 0,
       layer: 'back'
     }, {
       mask: IDLE_PIXIE_TAIL_MASK,
-      origin: '58% 62%',
+      origin: '57.2% 67.5%',
       anim: 'wag',
       amp: 7,
       dur: 1600,
@@ -18065,9 +18065,9 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   },
   Mia: {
     body: 'hover',
-    bodyMask: MIA_WING_BODY_MASK,
+    bodyMask: IDLE_MIA_BODY_MASK,
     parts: [{
-      mask: MIA_WING_LEFT_MASK,
+      mask: IDLE_MIA_WING_L_MASK,
       origin: '44.3% 38.1%',
       anim: 'flapL',
       amp: 16,
@@ -18075,7 +18075,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       delay: 0,
       layer: 'back'
     }, {
-      mask: MIA_WING_RIGHT_MASK,
+      mask: IDLE_MIA_WING_R_MASK,
       origin: '55.7% 38.1%',
       anim: 'flapR',
       amp: 16,
@@ -18089,7 +18089,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     bodyMask: IDLE_PANDORA_BODY_MASK,
     parts: [{
       mask: IDLE_PANDORA_WING_L_MASK,
-      origin: '36.7% 33%',
+      origin: '39% 34%',
       anim: 'flapL',
       amp: 12,
       dur: 1200,
@@ -18097,7 +18097,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       layer: 'back'
     }, {
       mask: IDLE_PANDORA_WING_R_MASK,
-      origin: '62% 32%',
+      origin: '61.7% 36%',
       anim: 'flapR',
       amp: 12,
       dur: 1200,
@@ -18105,7 +18105,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       layer: 'back'
     }, {
       mask: IDLE_PANDORA_TAIL_L_MASK,
-      origin: '31.3% 58%',
+      origin: '40.1% 61.2%',
       anim: 'swing',
       amp: 7,
       dur: 2000,
@@ -18113,7 +18113,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       layer: 'back'
     }, {
       mask: IDLE_PANDORA_TAIL_R_MASK,
-      origin: '64.7% 58%',
+      origin: '61.7% 63%',
       anim: 'swing',
       amp: -7,
       dur: 2200,
@@ -18131,25 +18131,25 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     bodyMask: IDLE_OBORO_BODY_MASK,
     parts: [{
       mask: IDLE_OBORO_FLOWER_T_MASK,
-      origin: '50% 50%',
+      origin: '49.5% 54.5%',
       anim: 'swing',
-      amp: 6,
+      amp: 5,
       dur: 2600,
       delay: 0,
       layer: 'front'
     }, {
       mask: IDLE_OBORO_FLOWER_L_MASK,
-      origin: '33% 54%',
+      origin: '41% 57%',
       anim: 'swing',
-      amp: -7,
+      amp: -6,
       dur: 2300,
       delay: 500,
       layer: 'front'
     }, {
       mask: IDLE_OBORO_FLOWER_R_MASK,
-      origin: '67% 54%',
+      origin: '59% 57%',
       anim: 'swing',
-      amp: 7,
+      amp: 6,
       dur: 2500,
       delay: 900,
       layer: 'front'
@@ -18160,25 +18160,25 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     bodyMask: IDLE_PLANT_BODY_MASK,
     parts: [{
       mask: IDLE_PLANT_FLOWER_T_MASK,
-      origin: '50% 50%',
+      origin: '49.5% 55.5%',
       anim: 'swing',
-      amp: 6,
+      amp: 5,
       dur: 2600,
       delay: 0,
       layer: 'front'
     }, {
       mask: IDLE_PLANT_FLOWER_L_MASK,
-      origin: '31% 52%',
+      origin: '44% 57.5%',
       anim: 'swing',
-      amp: -7,
+      amp: -6,
       dur: 2300,
       delay: 500,
       layer: 'front'
     }, {
       mask: IDLE_PLANT_FLOWER_R_MASK,
-      origin: '69% 52%',
+      origin: '56% 57.5%',
       anim: 'swing',
-      amp: 7,
+      amp: 6,
       dur: 2500,
       delay: 900,
       layer: 'front'
@@ -18189,7 +18189,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     bodyMask: IDLE_ZAN_BODY_MASK,
     parts: [{
       mask: IDLE_ZAN_BLADE_L_MASK,
-      origin: '30% 30%',
+      origin: '30% 29.5%',
       anim: 'swing',
       amp: -5,
       dur: 1800,
@@ -18197,7 +18197,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       layer: 'back'
     }, {
       mask: IDLE_ZAN_BLADE_R_MASK,
-      origin: '70% 30%',
+      origin: '70% 29.5%',
       anim: 'swing',
       amp: 5,
       dur: 1800,
@@ -18228,41 +18228,25 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   },
   Ark: {
     body: 'hover',
-    bodyMask: IDLE_ARK_BODY_MASK,
-    parts: [{
-      mask: IDLE_ARK_WING_L_MASK,
-      origin: '34% 52%',
-      anim: 'flapL',
-      amp: 6,
-      dur: 1300,
-      delay: 0,
-      layer: 'back'
-    }, {
-      mask: IDLE_ARK_WING_R_MASK,
-      origin: '66% 52%',
-      anim: 'flapR',
-      amp: 6,
-      dur: 1300,
-      delay: 0,
-      layer: 'back'
-    }]
+    bodyMask: null,
+    parts: []
   },
   Iblis: {
     body: 'hover',
     bodyMask: IDLE_IBLIS_BODY_MASK,
     parts: [{
       mask: IDLE_IBLIS_WING_L_MASK,
-      origin: '30% 56%',
+      origin: '24% 56%',
       anim: 'flapL',
-      amp: 10,
+      amp: 6,
       dur: 1400,
       delay: 0,
       layer: 'back'
     }, {
       mask: IDLE_IBLIS_WING_R_MASK,
-      origin: '70% 56%',
+      origin: '74% 57%',
       anim: 'flapR',
-      amp: 10,
+      amp: 6,
       dur: 1400,
       delay: 0,
       layer: 'back'
@@ -18283,7 +18267,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       mask: IDLE_SNEGUROCHKA_FIN_MASK,
       origin: '58.5% 80%',
       anim: 'swing',
-      amp: 7,
+      amp: 5,
       dur: 1500,
       delay: 0,
       layer: 'front'
@@ -18296,7 +18280,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       mask: IDLE_UNDINE_FIN_MASK,
       origin: '58% 80%',
       anim: 'swing',
-      amp: 8,
+      amp: 6,
       dur: 1500,
       delay: 0,
       layer: 'front'
@@ -18309,7 +18293,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       mask: IDLE_YAOBIKUNI_FIN_MASK,
       origin: '60.7% 82%',
       anim: 'swing',
-      amp: 8,
+      amp: 6,
       dur: 1500,
       delay: 0,
       layer: 'front'
@@ -18317,24 +18301,8 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   },
   Eiki: {
     body: 'hover',
-    bodyMask: IDLE_EIKI_BODY_MASK,
-    parts: [{
-      mask: IDLE_EIKI_WING_L_MASK,
-      origin: '23.1% 40%',
-      anim: 'flapL',
-      amp: 4,
-      dur: 1600,
-      delay: 0,
-      layer: 'back'
-    }, {
-      mask: IDLE_EIKI_WING_R_MASK,
-      origin: '76.9% 40%',
-      anim: 'flapR',
-      amp: 4,
-      dur: 1600,
-      delay: 0,
-      layer: 'back'
-    }]
+    bodyMask: null,
+    parts: []
   },
   KenshiMocchi: {
     body: 'bounce',
