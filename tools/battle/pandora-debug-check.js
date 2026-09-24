@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 正式パンドラ・マーケット解放・禁忌解錠・双極共振・共通モーションを確かめる。
 'use strict';
 const fs=require('fs');
 const assert=require('assert');
@@ -16,12 +17,25 @@ assert.strictEqual((ally.match(/Pandora: \{ id:'Pandora'/g)||[]).length,1);
 assert(!/STARTER_MONSTER_IDS[^;]*Pandora/.test(ally));
 assert(breeder.includes("id:'pandora_icon'")&&breeder.includes("id:'pandora_disc_icon'")&&/id:'Pandora'.*cost:3000/.test(breeder));
 assert(lineage.includes("Pandora:     { main:'pixie',  sub:'unknown' }"));
-assert(source.includes("mainHero?.id==='Pandora' && card.type==='unique' && card.monId!=='Pandora'"));
+// タクティクスバトルは勇者特性を「その札を出した子自身」に効かせるため、
+// mainHero を直に見ず attackHeroId(＝新モードでは札を出した子のid)を通す(2026-09-20)。
+// 「引き継いだ固有技だけ1.5倍」という判定そのものは変えていない
+// 2026-09-22: 持ち主の決め方を traitOwnerOf の1か所へまとめた
+assert(source.includes("const traitOwnerOf = (mon) => (isTacticsMode(runMode) ? (mon?.id || null) : (mainHero?.id || null));"));
+assert(source.includes("const attackHeroId = traitOwnerOf(mon);"));
+// ★連撃へは「勇者モン(heroId)」と「持ち主(traitOwnerId)」の両方を渡す。
+//   パンドラの禁忌解錠は**勇者モンにしたからこそ強い**設定なので heroId で見分ける
+//   (2026-09-22 ユーザー判断。持ち主で見るのはザンの連斬だけ)
+assert(source.includes("attackerId:mon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(mon),"));
+assert(source.includes("attackerId:stunMon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(stunMon),"));
+assert(source.includes("attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon),"));
+assert(source.includes("attackHeroId==='Pandora' && card.type==='unique' && card.monId!=='Pandora'"));
 // 禁忌解錠のヒット列は予測・実処理とも共通の正本 buildAttackHits(ATTACK_COMBO_RULES)が作る
 assert(source.includes("const pandoraSplitNormal = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type);"));
 assert(source.includes("if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);") && source.includes('pandoraSplitNormal: 0.5,'));
 assert(source.includes("if (heroId === 'Pandora' && attackerId === 'Pandora' && isUniqueOf('Pandora')) combo(ATTACK_COMBO_RULES.pandoraUnique + comboDmgBonus, '連撃', true);") && source.includes('pandoraUnique: 1.0,'));
-assert(source.includes('attackerId:activeMon.id, heroId:mainHero?.id') && source.includes('attackerId:mon?.id, heroId:mainHero?.id'), '実処理と予測が同じ buildAttackHits を呼ぶ');
+assert(source.includes('attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon),')
+  && source.includes('attackerId:mon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(mon),'), '実処理と予測が同じ buildAttackHits を呼ぶ');
 assert(source.includes("...(hit.noAnim?{noAnim:true}:{})"));
 const splitNormal=(base,bonus=0)=>Math.floor(base*.5)+Math.floor(base*(.5+bonus)); assert.strictEqual(splitNormal(1000),1000); assert.strictEqual(splitNormal(1000,.03),1030);
 const combo=(base,bonus=0)=>base+Math.floor(base*(1+bonus)); assert.strictEqual(combo(1000),2000); assert.strictEqual(combo(1000,.03),2030);

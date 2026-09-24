@@ -47,6 +47,7 @@ vm.runInContext([
   + 'bondXpForWavesClearedInMode,waveBondXpGainInMode,'
   + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,highestModeScore,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE,BATTLE_MODE_PRO,'
   + 'PRO_RANKING_PREFIX,EXTREME_RANKING_PREFIX,EXTREME_DIFFICULTIES,ALL_EXTREME_DIFFICULTIES,RANKING_DIFFICULTY_KEYS,rankingDifficultyForMode,rankingDifficultyBase,normalizeRankingDifficulty,'
+  + 'TACTICS_DIFFICULTY_IDS,TACTICS_RANKING_PREFIX,tacticsProRankingPrefix,BATTLE_MODE_TACTICS,BATTLE_MODE_TACTICS_PRO,BATTLE_MODE_TACTICS_SPECIES,isTacticsMode,isSpeciesChallengeMode,'
   + 'pickJoinCandidates,battleModeAssistantScene,'
   + 'calculateRemainingHp,resolveEffectiveMaxStat,quickGrowStat,resolveQuickGrowthStats};',
 ].join('\n'), ctx);
@@ -112,9 +113,18 @@ const sumOfWaves = (mult, mode, fn) => { let sum = 0; for (let w = 1; w <= 10; w
 check('WAVEごとの内訳の合計がリザルトの合計と一致する',
   sumOfWaves(3.0, 'quick', m.waveXpGainInMode) === m.xpForWavesClearedInMode(10, 3.0, 'quick')
     && sumOfWaves(1.5, 'quick', m.waveGoldGainInMode) === m.goldForWavesClearedInMode(10, 1.5, 'quick'));
-// スコアはモードで変えない。スコア加算の実処理がモードを見ていないことを確かめる
-const scoreBlock = grab(source, 'const finalRoundScore', 'setScore(s=>s+finalRoundScore);');
-check('スコアの計算はモードを見ない', scoreBlock.length > 0 && !scoreBlock.includes('runMode') && !/QUICK_REWARD_MULT/.test(scoreBlock));
+// スコアの式はモードで変えない。
+// ★新モード(tactics)だけ、式で出した値の桁を 1/1000 へ縮める(2026-09-19 ユーザーが選択)。
+//   式そのものは同じなので、既存モードのスコアは変わらない
+const scoreBlock = grab(source, 'const rawRoundScore', 'setScore(s=>s+finalRoundScore);');
+check('スコアの式はモードで変えない',
+  scoreBlock.length > 0
+    && scoreBlock.includes('const rawRoundScore=((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier;')
+    && !/QUICK_REWARD_MULT/.test(scoreBlock));
+check('モードを見るのは新モードの桁縮めだけ',
+  (scoreBlock.match(/runMode/g) || []).length === 1
+    && scoreBlock.includes('isTacticsMode(runMode)?shrinkTacticsScore(rawRoundScore)'),
+  `runMode を見る回数 ${(scoreBlock.match(/runMode/g) || []).length}`);
 // 経験値はスコアと倍率が違うモード(極限チャレンジ)があるので xpMult を通す
 check('実処理が経験値・ダイヤ・絆経験値にモード倍率を使う',
   has('const breederXpGain = applyQuickXpPolicy(xpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);')
@@ -154,13 +164,23 @@ check('チャレンジの保存キーは従来のまま',
 check('プロは mh_pro_ の新しいキーへ分ける',
   m.modeKeyPrefix('pro') === 'mh_pro_' && m.bestScoreKey('pro', 'Normal') === 'mh_pro_hs_Normal'
     && m.bestWaveKey('pro', 'Hard') === 'mh_pro_highest_wave_Hard' && m.clearCountKey('pro', 'Hard') === 'mh_pro_clears_Hard');
-// 3モードの保存キーがひとつも衝突しない(既存の記録をプロが上書きしない)
+// 5モードの保存キーがひとつも衝突しない(既存の記録を新しいモードが上書きしない)。
+// ★タクティクスは通常9＋極限5の14段階ぶんを持つ
 {
   const keys = [];
   for (const mode of ['challenge', 'quick', 'pro']) for (const d of Object.keys(m.DIFFICULTY_SETTINGS)) {
     keys.push(m.bestScoreKey(mode, d), m.bestWaveKey(mode, d), m.clearCountKey(mode, d));
   }
-  check('3モードの保存キーが1つも重複しない', new Set(keys).size === keys.length, `${keys.length}件`);
+  for (const mode of ['tactics', 'tacticsPro']) for (const d of m.TACTICS_DIFFICULTY_IDS) {
+    keys.push(m.bestScoreKey(mode, d), m.bestWaveKey(mode, d), m.clearCountKey(mode, d));
+  }
+  check('5モードの保存キーが1つも重複しない', new Set(keys).size === keys.length, `${keys.length}件`);
+  // タクティクスの記録が、チャレンジ・プロの接頭辞の中へ入り込んでいないこと
+  check('タクティクスの保存キーは既存の接頭辞と混ざらない',
+    m.TACTICS_DIFFICULTY_IDS.every(d => m.bestScoreKey('tactics', d) === `mh_tactics_hs_${d}`
+      && m.bestScoreKey('tacticsPro', d) === `mh_tactics_pro_hs_${d}`
+      && m.clearCountKey('tactics', d) === `mh_tactics_clears_${d}`
+      && m.bestWaveKey('tacticsPro', d) === `mh_tactics_pro_highest_wave_${d}`));
 }
 const submitBlock = grab(source, 'const submitRunScoreOnce = async', 'const handleSaveName');
 // クイックは submitLocalScore へ行き着く前に return する。
@@ -201,9 +221,40 @@ check('Pro付きのキーもランキングの難易度として通る',
 check('素の難易度へ戻せる',
   Object.keys(m.DIFFICULTY_SETTINGS).every(d => m.rankingDifficultyBase(`Pro${d}`) === d && m.rankingDifficultyBase(d) === d));
 check('知らない難易度は今までどおり弾く', (() => { try { m.normalizeRankingDifficulty('Pro'); return false; } catch { return true; } })());
-// チャレンジ9 + プロ9 + 極限の段階ぶん。重複が無いこと(同じ行を2モードで奪い合わない)を見る
+// チャレンジ9 + プロ9 + タクティクス14 + タクティクスプロ14 + 極限の段階ぶん。
+// 重複が無いこと(同じ行を2モードで奪い合わない)を見る。数は表から出して、検査へ書き写さない
+// ★タクティクスプロは本公開ぶんとβ版ぶんの2つを持つ(公開の前後でどちらも通るように)
 check('難易度キーの一覧に重複が無い', new Set(m.RANKING_DIFFICULTY_KEYS).size === m.RANKING_DIFFICULTY_KEYS.length
-  && m.RANKING_DIFFICULTY_KEYS.length === Object.keys(m.DIFFICULTY_SETTINGS).length * 2 + m.ALL_EXTREME_DIFFICULTIES.length);
+  && m.RANKING_DIFFICULTY_KEYS.length === Object.keys(m.DIFFICULTY_SETTINGS).length * 2
+    + m.TACTICS_DIFFICULTY_IDS.length * 3 + m.ALL_EXTREME_DIFFICULTIES.length);
+// タクティクスのキーも、素の難易度へ戻せて、プロ・極限の行とは混ざらない
+check('新モードの難易度キーが独立している',
+  m.TACTICS_DIFFICULTY_IDS.every(d => m.normalizeRankingDifficulty(`Tactics${d}`) === `Tactics${d}`
+    && m.rankingDifficultyBase(`Tactics${d}`) === d
+    && m.rankingDifficultyForMode('tactics', d) === `Tactics${d}`));
+// ★タクティクスプロは TacticsPro を重ねたキー。Tactics より先に判定しないと
+//   Tactics + 'ProHard' になってしまう(素の難易度へ戻すときも同じ順番が要る)。
+//   β版のあいだは末尾に Beta が付き、本公開で外れる
+check('タクティクスプロの難易度キーが独立している',
+  m.TACTICS_DIFFICULTY_IDS.every(d => m.normalizeRankingDifficulty(`TacticsPro${d}`) === `TacticsPro${d}`
+    && m.normalizeRankingDifficulty(`TacticsProBeta${d}`) === `TacticsProBeta${d}`
+    && m.rankingDifficultyBase(`TacticsPro${d}`) === d
+    && m.rankingDifficultyBase(`TacticsProBeta${d}`) === d
+    && m.rankingDifficultyForMode('tacticsPro', d) === `${m.tacticsProRankingPrefix()}${d}`));
+// 記録の置き場も4つに分かれていること
+check('記録の置き場がモードごとに分かれている',
+  m.modeKeyPrefix('challenge') === 'mh_' && m.modeKeyPrefix('quick') === 'mh_quick_'
+    && m.modeKeyPrefix('pro') === 'mh_pro_' && m.modeKeyPrefix('tactics') === 'mh_tactics_'
+    && m.modeKeyPrefix('tacticsPro') === 'mh_tactics_pro_',
+  ['challenge','quick','pro','tactics','tacticsPro'].map(id => `${id}=${m.modeKeyPrefix(id)}`).join(' / '));
+// 盤面がタクティクス側のモードは3つ。プロの扱い(ベースモン限定・倍率)はタクティクス側でも同じ
+check('タクティクスの3モードは盤面が同じ扱い',
+  m.isTacticsMode('tactics') && m.isTacticsMode('tacticsSpecies') && m.isTacticsMode('tacticsPro')
+    && !m.isTacticsMode('challenge') && !m.isTacticsMode('pro'));
+check('タクティクスプロはプロ扱い・タクティクス種族は種族扱い',
+  m.isProMode('tacticsPro') && !m.isProMode('tactics')
+    && m.isSpeciesChallengeMode('tacticsSpecies') && m.isSpeciesChallengeMode('speciesChallenge')
+    && !m.isSpeciesChallengeMode('tactics'));
 // 既存のランキングデータは1行も書き換えない(移行・変換・削除をしない)
 check('既存のランキング行を書き換える処理を足していない',
   !/rankingDifficultyForMode\([^)]*\)\s*=>/.test(source) && !has('PATCH') && !has('DELETE FROM') && !has('migrateRanking'));
@@ -443,7 +494,9 @@ check('プロの親密度行動があり、既存の獲得量は変わってい�
     && assistantsSrc.includes('const ASSISTANT_BOND_DAILY_MAX = Object.values(ASSISTANT_BOND_ACTIONS).reduce'));
 check('遊んだモードに応じて親密度の行動を切り替える',
   m.modeBondAction('challenge') === 'challenge' && m.modeBondAction('quick') === 'quick' && m.modeBondAction('pro') === 'pro'
-    && has("addAssistantBond('battle');") && has("addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode));"));
+    && has("addAssistantBond('battle');")
+    // ★タクティクスバトルの極限は「極限チャレンジで遊んだ」ではないので 'extreme' を渡さない
+    && has("addAssistantBond(extremeRunRef.current && !isTacticsMode(runMode) ? 'extreme' : modeBondAction(runMode));"));
 
 // --- ⑧ 新しいバトルの入口(第2段階) ---
 // 「バトル → バトルモード選択 → 難易度選択」の3画面。まだデバッグからだけ開ける
@@ -452,24 +505,31 @@ check('新しい3画面がある',
 // HOMEの「バトル」は新しいモード選択へ入る(本番の入口)
 // HOME は 69-screen-home.jsx へ切り出した。行き先の指定は本体に残り、画面へは
 // onOpenBattle だけを渡している。本体の中身と画面の結線を2段で見る
-check('ふだんの「バトル」はモード選択へ入る',
-  has("onOpenBattle={()=>{setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}}")
-    && has("onClick={onOpenBattle} aria-label=\"バトル\""));
+// 2026-09-20 ユーザー指示で、モード選択の1つ上に「どのバトルで遊ぶか」の画面を増やした。
+// HOMEの名前も正式名称の「モンヒロバトル」にした(CLAUDE.md ⑤)
+check('ふだんの「モンヒロバトル」は仕組みの選択へ入る',
+  has('onOpenBattle={openBattleSystemSelect}')
+    && has("const openBattleSystemSelect = () => { setModeSelectTab('mode'); setGameState('BATTLE_SYSTEM_SELECT'); };")
+    && has('onClick={onOpenBattle} aria-label="モンヒロバトル"'));
 check('旧バトル画面はデバッグからだけ開ける',
   has('旧バトル画面を開く（見比べ用）')
     && (source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length === 2,
   `BATTLE_MENUへ移る場所 ${(source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length}か所(デバッグの見比べ用・旧チュートリアルの開始)`);
-// 種族チャレンジは一般公開前なので、公開フラグかデバッグのときだけ末尾へ並ぶ。
-// 通常プレイのBATTLE MODEには出さないこと自体は species-challenge 系checkが見る
-check('モード選択は極限チャレンジを含む全モードを横スライドで並べる',
-  has('const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];')
-    && count('const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];') === 2
+// 種族チャレンジと新モードは、公開フラグかデバッグのときだけ末尾へ並ぶ。
+// 通常プレイのBATTLE MODEには出さないこと自体は species-challenge 系checkが見る。
+// 極限チャレンジはモードカードを持たない(2026-09-19 ユーザー指示)。チャレンジの難易度選択に
+// 「極限」タブとして入ったので、ここへ EXTREME_MODE を戻してはいけない
+const MODE_LIST_LINE = 'const modes=battleSystemModes(battleSystem,{debugBattle}).map(id=>battleModeInfo(id));';
+// ★クイックはここへ並べない(仕組みの画面から直に難易度選択へ入る・2026-09-20)
+check('モード選択は極限チャレンジもクイックも出さず、残りを横スライドで並べる',
+  has(MODE_LIST_LINE) && count(MODE_LIST_LINE) === 2
     && has('aria-label="前のモード"') && has('aria-label="次のモード"')
     && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'),
   'モード一覧はモード選択と難易度選択の2か所とも同じ並べ方');
 // 極限の一覧は「公開ぶんだけ」の共通定義(PUBLIC_EXTREME_DIFFICULTIES)へまとまった
 check('モードカードは選択難易度固定でなくモード内最高スコアを表示する',
-  has('modeBestScore=ranked?highestModeScore(isProMode(m.id)?proHighScores:highScores,Object.keys(DIFFICULTY_SETTINGS)):rec.score')
+  // タクティクスは記録の置き場も難易度の並びも違うので、その2つを差し替えてから最高スコアを出す
+  has('modeBestScore=ranked?highestModeScore(isTacticsMode(m.id)?tacticsRecordsOf(m.id).hs:isProMode(m.id)?proHighScores:highScores,isTacticsMode(m.id)?TACTICS_DIFFICULTY_IDS:Object.keys(DIFFICULTY_SETTINGS)):rec.score')
     && has('highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id))')
     && has("ranked?'最高スコア'")
     && has("ranked?`${modeBestScore.toLocaleString()} pt`"));
@@ -494,7 +554,7 @@ check('ランキングが無いモードには導線も高さ合わせの空枠�
     && has('ranked=modeHasRanking(battleMode);') && has('ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),'));
 check('種族チャレンジは専用の種族別ランキングへ入る',
   has('data-species-record-link') && has('data-species-difficulty-record-link')
-    && has("openSpeciesChallengeRecords('BATTLE_MODE_SELECT')"));
+    && has("openSpeciesChallengeRecords('BATTLE_MODE_SELECT',{mode:m.id})"));
 check('難易度カードから開いたときは、その難易度のタブを最初に選ぶ',
   has('setRankingViewDiff(diff);') && has('loadRankings(rankingDifficultyForMode(mode, diff));')
     && has("openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')"));
@@ -530,7 +590,8 @@ check('既存のバトル画面のランキングも同じ描画を使う',
 // 入口の記録・難易度・モードは、同じハンドラでまとめて確定する
 // (あいだに前の周回の一時選択を消す処理が入るので、続きの並びだけを見る)
 check('新しい画面から実際に始められる',
-  has("battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);")
+  // タクティクスの極限は difficulty を 'Normal' へ置き換えて extremeDifficulty に段階を持たせる
+  has("battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(tacticsExtreme?'Normal':key);if(tacticsExtreme)setExtremeDifficulty(key);setRunMode(battleMode);")
     && !has('プロモードは準備中です'));
 check('助手のセリフは場面キーで出し分ける(JSXへ直書きしない)',
   m.BATTLE_MODES.every(x => ['battleChallenge','battleQuick','battlePro'].includes(
@@ -539,7 +600,7 @@ check('助手のセリフは場面キーで出し分ける(JSXへ直書きしな
 check('スキップや勇者モン選択の戻りは、来た入口の画面へ返す',
   has("const battleEntryStateRef = useRef('BATTLE_DIFFICULTY_SELECT');") && count('battleEntryStateRef.current)') === 3
     && has("battleEntryStateRef.current='BATTLE_MENU';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);")
-    && has("battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);"));
+    && has("battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(tacticsExtreme?'Normal':key);if(tacticsExtreme)setExtremeDifficulty(key);setRunMode(battleMode);"));
 check('新しい画面もBGMとヘルプの対応表に載っている',
   has("BATTLE_MODE_SELECT: 'enhance'") && has("BATTLE_DIFFICULTY_SELECT: 'enhance'") && has("BATTLE_SCORE_RANKING: 'enhance'")
     && helpSrc.includes("BATTLE_MODE_SELECT:       'basics/battle-modes'")

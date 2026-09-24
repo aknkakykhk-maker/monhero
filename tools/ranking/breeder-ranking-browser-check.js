@@ -1,5 +1,7 @@
 // Supabaseをスタブし、複数ブリーダーLv記録が実際のDOMへ描画・保持されることを確認する。
 const { chromium } = require('playwright');
+// イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
+const { eventStorySeed } = require(require('path').resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 (async()=>{
   // ★この1本だけ「環境変数があればそれを使い、無ければPlaywright既定のパス」になっていて、
@@ -24,12 +26,12 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
     put('mh_assistant_unlock_seen_v1',true);
     put('mh_update_notice_seen_v1',true);
     // HOMEへ着いた直後に全画面で流れるイベント回想を止める
-    put('mh_rhythm_event_story_v1',['monbeat_cup_2026_09']);
     // 一度きりの「お詫びの配布」も全画面を覆うので、配布済みにしておく
     put('mh_inherited_unique_level_compensation_v1',true);
     put('mh_inherited_unique_level_compensation_pending_v1',false);
     put('mh_masu_level_cap_compensation_notice_seen_v1',true);
   });
+  await page.addInitScript(eventStorySeed());
   // ★取り方が「難易度ごとに1回ずつ」から「全難易度まとめて1回」へ変わったので、
   //   difficulty で出し分けずに全部返す。見たいのは
   //   「全難易度から集めて、同じ人は最高Lvへまとめる」ことなので、材料は同じ
@@ -81,7 +83,9 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
     await page.waitForTimeout(500);
     if(!closed)break;
   }
-  await page.evaluate(()=>{const b=document.querySelector('button[aria-label="バトル"]');if(b)b.click();});
+  await page.evaluate(()=>{const b=document.querySelector('button[aria-label="モンヒロバトル"]');if(b)b.click();});
+  await page.waitForTimeout(600);
+  await page.evaluate(()=>{const b=document.querySelector('[data-battle-system="systemClassic"]');if(b)b.click();});
   await page.waitForTimeout(1500);
   await page.evaluate(()=>{const b=[...document.querySelectorAll('button')].find(x=>x.textContent.trim()==='ブリーダーLv');if(b)b.click();});
   const cards=page.locator('[data-ranking-kind="breeder"]');

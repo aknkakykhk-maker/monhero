@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 確認者向けレビュー画面の作り(一覧の順・Safe Area付きスクロール)。
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');

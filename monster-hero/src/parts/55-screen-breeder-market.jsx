@@ -64,14 +64,14 @@ function BreederMarketScreen({
           onZoom={()=>onZoomIcon(item)} onBuy={()=>onBuy(item)}
           detail={detailMon||detailTeaching}
           onDetail={()=>onOpenDetail(item,detailMon,detailTeaching)}
-          middle={item.type==='item'?<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>onOpenItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}
+          middle={item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
           item={exchangeItem} owned={false} comingSoon={false}
           canBuy={proofHave>0&&!purchaseProcessing}
           disabled={purchaseProcessing}
           onBuy={onExchangeSoulRankRespec}
-          middle={<><span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>{item.desc&&<button onClick={()=>onOpenItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>}
+          middle={<><span className={`text-[11px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>}
         />}
       </React.Fragment>
     );
@@ -84,16 +84,14 @@ function BreederMarketScreen({
   };
 
   return (
-    <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
-      <div className="flex items-center gap-2 mb-2 shrink-0">
-        <button onClick={handleBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-        <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">{headerTitle}</h2>
-      </div>
-      <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market" condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
+    <div data-mh-screen className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title={headerTitle} accent="text-amber-400" onBack={handleBack}
+        icon={marketSection?<span aria-hidden="true">{sectionMeta[marketSection].emoji}</span>:<ShoppingBag size={20}/>}/>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="market" compact condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
 
-      {!marketSection&&<div data-market-top className="relative flex-1 min-h-0 overflow-y-auto mh-scroll">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-4 top-5 h-60 rounded-[40px] bg-gradient-to-br from-cyan-500/10 via-amber-500/5 to-violet-500/10 blur-2xl"/>
-        <div className="relative grid grid-cols-2 gap-2 pt-8 pb-2">
+      {!marketSection&&<div data-market-top className={`relative ${SCREEN_LIST_CLASS}`}>
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-4 top-1 h-60 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-amber-500/5 to-violet-500/10 blur-2xl"/>
+        <div className="relative grid grid-cols-2 gap-2.5 pt-1 pb-2">
           {[
             {key:'diamond',emoji:'💎',label:'ダイヤショップ',value:gold.toLocaleString(),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
             {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:breederPoints.toLocaleString(),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
@@ -104,14 +102,14 @@ function BreederMarketScreen({
               key={section.key}
               data-market-section={section.key}
               onClick={()=>setMarketSection(section.key)}
-              className={`relative min-h-[108px] rounded-2xl border ${section.border} bg-slate-950/70 px-4 py-4 pr-9 text-left active:scale-[0.98]`}
+              className={`relative min-h-[112px] rounded-2xl border ${section.border} bg-slate-950/70 px-4 py-4 pr-9 text-left active:scale-[.98]`}
             >
               <div className="flex items-center gap-2.5">
                 <span aria-hidden="true" className="text-2xl">{section.emoji}</span>
                 <span className={`text-[12px] font-black leading-tight ${section.title}`}>{section.titleLines?section.titleLines.map(line=><span key={line} className="block">{line}</span>):section.label}</span>
               </div>
-              {section.value!==null&&<div className="mt-2.5 font-mono text-xl font-black text-white">{section.value}</div>}
-              <div className={`text-[10px] font-bold ${section.value===null?'mt-3.5':'mt-0.5'} ${section.key==='event'?'text-slate-500':'text-slate-400'}`}>{section.hint}</div>
+              <div className="mt-2.5 font-mono text-xl font-black text-white">{section.value!==null?section.value:'\u00a0'}</div>
+              <div className="mt-0.5 text-[10px] font-bold text-slate-400">{section.hint}</div>
               <span aria-hidden="true" className={`absolute bottom-3 right-3 text-xl font-black ${section.arrow}`}>›</span>
             </button>
           ))}
@@ -119,50 +117,47 @@ function BreederMarketScreen({
       </div>}
 
       {marketSection==='diamond'&&<>
-        <div className="mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/25 bg-cyan-950/25 py-2">
+        <div className="mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/30 bg-cyan-950/30 py-2">
           <Gem size={15} className="text-cyan-300"/>
           <span className="font-mono text-base font-black text-cyan-100">{gold.toLocaleString()}</span>
-          <span className="text-[9px] font-bold text-slate-400">所持ダイヤ</span>
+          <span className="text-[10px] font-bold text-slate-400">所持ダイヤ</span>
         </div>
-        <div className="flex gap-1.5 mb-3 shrink-0">
-          {diamondTabs.map(tab=>(
-            <button key={tab.key} onClick={()=>onSelectTab(tab.key)} className={`flex-1 py-2 rounded-xl text-[10px] font-black ${activeDiamondTab===tab.key?'bg-amber-500 text-black':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
-          ))}
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-          {diamondItems.length===0?<div className="text-center text-[11px] text-slate-600 font-bold py-10">まだ商品がありません</div>:<div className={MARKET_GRID_CLASS}>{diamondItems.map(item=>renderMarketItem(item))}</div>}
+        <ScreenTabs value={activeDiamondTab} onChange={onSelectTab}
+          items={diamondTabs.map(tab=>({id:tab.key,label:tab.label,color:'#0891b2'}))}/>
+        <div className={SCREEN_LIST_CLASS}>
+          {diamondItems.length===0?<ScreenEmpty emoji="🛒" lines={['まだ商品がありません']}/>:<div className={MARKET_GRID_CLASS}>{diamondItems.map(item=>renderMarketItem(item))}</div>}
         </div>
       </>}
 
       {marketSection==='breeder'&&<>
-        <div className="mb-3 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-amber-500/25 bg-amber-950/25 py-2">
+        <div className="mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-950/30 py-2">
           <Coins size={15} className="text-amber-300"/>
           <span className="font-mono text-base font-black text-amber-100">{breederPoints.toLocaleString()}</span>
-          <span className="text-[9px] font-bold text-slate-400">所持ブリーダーP</span>
+          <span className="text-[10px] font-bold text-slate-400">所持ブリーダーP</span>
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-          {breederPointItems.length===0?<div className="text-center text-[11px] text-slate-600 font-bold py-10">まだ商品がありません</div>:<div className={MARKET_GRID_CLASS}>{breederPointItems.map(item=>renderMarketItem(item))}</div>}
+        <div className={SCREEN_LIST_CLASS}>
+          {breederPointItems.length===0?<ScreenEmpty emoji="🛒" lines={['まだ商品がありません']}/>:<div className={MARKET_GRID_CLASS}>{breederPointItems.map(item=>renderMarketItem(item))}</div>}
         </div>
       </>}
 
       {marketSection==='exchange'&&<>
-        <div data-market-balances className="grid grid-cols-3 gap-2 mb-3 shrink-0">
+        <div data-market-balances className="grid grid-cols-3 gap-2 mb-2 shrink-0">
           {[
             { key:'psyche', emoji:'🌈', label:'虹のプシュケー', value:psycheHave, tone:'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-950/30' },
             { key:'shard',  emoji:'🎖️', label:'勇者の証片',     value:shardHave,  tone:'text-amber-100 border-amber-400/30 bg-amber-950/30' },
             { key:'proof',  emoji:'🏅', label:'勇者の証',       value:proofHave,  tone:'text-amber-200 border-amber-400/30 bg-amber-950/30' },
           ].map(row=>(
-            <div key={row.key} data-market-balance={row.key} className={`flex flex-col items-center justify-center rounded-2xl border py-1.5 ${row.tone}`}>
+            <div key={row.key} data-market-balance={row.key} className={`flex flex-col items-center justify-center rounded-2xl border py-2 ${row.tone}`}>
               <div className="flex items-baseline gap-1">
                 <span aria-hidden="true" className="text-[11px]">{row.emoji}</span>
                 <span className="font-mono text-sm font-black">{row.value.toLocaleString()}</span>
               </div>
-              <span className="text-[8px] font-bold leading-tight text-slate-400">{row.label}</span>
+              <span className="text-[10px] font-bold leading-tight text-slate-400">{row.label}</span>
             </div>
           ))}
         </div>
-        {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300">{marketExchangeError}</div>}
-        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+        {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[11px] font-black text-red-300">{marketExchangeError}</div>}
+        <div className={SCREEN_LIST_CLASS}>
           <div className={MARKET_GRID_CLASS}>
             {itemExchangeItems.map(item=>renderMarketItem(item))}
             {soulRankRespecItem&&renderMarketItem(soulRankRespecItem,{showBase:false,showHeroProofExchange:true})}
@@ -172,34 +167,34 @@ function BreederMarketScreen({
               canBuy={shardHave>=HERO_PROOF_SHARD_PER_PROOF&&!purchaseProcessing}
               disabled={purchaseProcessing}
               onBuy={onExchangeHeroProof}
-              middle={<><span className={`text-[9px] font-black ${proofHave>0?'text-cyan-300':'text-slate-600'}`}>×{proofHave}</span><button onClick={()=>onOpenItemDetail(HERO_PROOF_ITEM)} aria-label="勇者の証の効果を見る" className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button></>}
+              middle={<><span className={`text-[11px] font-black ${proofHave>0?'text-cyan-300':'text-slate-400'}`}>×{proofHave}</span><MarketDetailChip label="勇者の証の効果を見る" onClick={()=>onOpenItemDetail(HERO_PROOF_ITEM)}/></>}
             />
           </div>
         </div>
       </>}
 
       {marketSection==='event'&&<>
-        <div data-event-point-balance className="mb-3 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-violet-500/30 bg-violet-950/30 py-2">
-          <span aria-hidden="true">🎟️</span>
+        <div data-event-point-balance className="mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-violet-500/30 bg-violet-950/30 py-2">
+          <span aria-hidden="true" className="text-[15px]">🎟️</span>
           <span className="font-mono text-base font-black text-violet-100">{safeEventPoints.toLocaleString()}</span>
-          <span className="text-[9px] font-bold text-slate-400">所持ビートP</span>
+          <span className="text-[10px] font-bold text-slate-400">所持ビートP</span>
         </div>
-        {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300">{marketExchangeError}</div>}
-        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-          <div data-event-point-shop className="grid grid-cols-2 gap-2 pb-4">
+        {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[11px] font-black text-red-300">{marketExchangeError}</div>}
+        <div className={SCREEN_LIST_CLASS}>
+          <div data-event-point-shop className="grid grid-cols-2 gap-2.5 pb-4">
             {RHYTHM_EVENT_POINT_SHOP_OFFERS.map(offer=>{
               const maxQuantity=Math.floor(safeEventPoints/offer.cost);
-              return <div key={offer.id} data-event-point-offer={offer.id} className="rounded-2xl border border-violet-500/20 bg-slate-950/80 p-3 flex flex-col min-h-[124px]">
+              return <div key={offer.id} data-event-point-offer={offer.id} className="rounded-2xl border border-white/10 bg-slate-950/80 p-3 flex flex-col min-h-[132px]">
                 <div className="flex items-start gap-2">
                   <span aria-hidden="true" className="text-xl shrink-0">{offer.emoji}</span>
                   <div className="min-w-0 flex-1">
                     <div className="text-[11px] leading-tight font-black text-slate-100">{offer.name}</div>
-                    <div className="mt-1 text-[9px] font-bold text-slate-500">1回：{offer.grantAmount.toLocaleString()}{offer.unit}</div>
+                    <div className="mt-1 text-[10px] font-bold text-slate-400">1回：{offer.grantAmount.toLocaleString()}{offer.unit}</div>
                   </div>
                 </div>
                 <div className="mt-auto pt-2 flex items-end justify-between gap-2">
                   <div className="font-mono text-sm font-black text-violet-300">{offer.cost.toLocaleString()}P</div>
-                  <button type="button" disabled={maxQuantity<=0||eventExchangePending||purchaseProcessing} onClick={()=>{setEventQuantityOffer(offer);setEventQuantity(1);}} className="min-h-[36px] rounded-xl bg-violet-500 px-3 text-[10px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">交換</button>
+                  <button type="button" disabled={maxQuantity<=0||eventExchangePending||purchaseProcessing} onClick={()=>{setEventQuantityOffer(offer);setEventQuantity(1);}} className="mh-button mh-button-primary min-h-[44px] rounded-xl bg-violet-500 px-4 text-[11px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">交換</button>
                 </div>
               </div>;
             })}
@@ -215,16 +210,16 @@ function BreederMarketScreen({
         const changeQuantity=(delta)=>setEventQuantity(Math.max(1,Math.min(Math.max(1,maxQuantity),quantity+delta)));
         const canExchange=maxQuantity>0&&!eventExchangePending&&!purchaseProcessing;
         return <div className="fixed inset-0 z-[42000] flex items-center justify-center bg-black/90 p-4" role="dialog" aria-modal="true" aria-label="ビートP交換数を選ぶ">
-          <div className="w-full max-w-sm rounded-3xl border-2 border-violet-500 bg-slate-950 p-5 shadow-2xl">
-            <div className="flex items-center gap-2"><span className="text-3xl" aria-hidden="true">{eventQuantityOffer.emoji}</span><div><div className="text-base font-black text-violet-200">{eventQuantityOffer.name}</div><div className="text-[10px] font-bold text-slate-500">1回 {eventQuantityOffer.grantAmount.toLocaleString()}{eventQuantityOffer.unit} ／ {eventQuantityOffer.cost.toLocaleString()}P</div></div></div>
+          <div className="w-full max-w-sm rounded-2xl border border-violet-500/60 bg-slate-950 p-5 shadow-2xl">
+            <div className="flex items-center gap-2"><span className="text-3xl" aria-hidden="true">{eventQuantityOffer.emoji}</span><div><div className="text-base font-black text-violet-200">{eventQuantityOffer.name}</div><div className="text-[10px] font-bold text-slate-400">1回 {eventQuantityOffer.grantAmount.toLocaleString()}{eventQuantityOffer.unit} ／ {eventQuantityOffer.cost.toLocaleString()}P</div></div></div>
             <div className="mt-4 grid grid-cols-[1fr_1fr_1.4fr_1fr_1fr] items-center gap-1.5">
-              <button disabled={quantity<=1} onClick={()=>changeQuantity(-10)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">-10</button>
-              <button disabled={quantity<=1} onClick={()=>changeQuantity(-1)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">-1</button>
+              <button disabled={quantity<=1} onClick={()=>changeQuantity(-10)} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40">-10</button>
+              <button disabled={quantity<=1} onClick={()=>changeQuantity(-1)} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40">-1</button>
               <strong className="text-center text-xl font-black font-mono">{quantity}</strong>
-              <button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(1)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">+1</button>
-              <button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(10)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">+10</button>
+              <button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(1)} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40">+1</button>
+              <button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(10)} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40">+10</button>
             </div>
-            <button disabled={maxQuantity<=0} onClick={()=>setEventQuantity(Math.max(1,maxQuantity))} className="mt-2 min-h-[44px] w-full rounded-xl bg-violet-900 font-black disabled:opacity-30">MAX（{Math.max(0,maxQuantity).toLocaleString()}回）</button>
+            <button disabled={maxQuantity<=0} onClick={()=>setEventQuantity(Math.max(1,maxQuantity))} className="mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl bg-violet-900 font-black active:scale-95 disabled:opacity-40">MAX（{Math.max(0,maxQuantity).toLocaleString()}回）</button>
             <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
               <div className="flex justify-between"><span className="text-slate-400">受け取り</span><span>{totalGrant.toLocaleString()}{eventQuantityOffer.unit}</span></div>
               <div className="flex justify-between text-base"><span className="text-slate-300">合計</span><span className="text-violet-300">{totalCost.toLocaleString()}P</span></div>
@@ -232,8 +227,8 @@ function BreederMarketScreen({
             </div>
             {marketExchangeError&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{marketExchangeError}</p>}
             <div className="mt-3 grid grid-cols-1 gap-2">
-              <button disabled={!canExchange} onClick={async()=>{if(!onExchangeEventPoints)return;setEventExchangePending(true);try{const result=await onExchangeEventPoints(eventQuantityOffer,quantity);if(result?.ok)setEventQuantityOffer(null);}finally{setEventExchangePending(false);}}} className="min-h-[48px] rounded-2xl bg-violet-500 text-white font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500">交換する</button>
-              <button disabled={eventExchangePending} onClick={()=>setEventQuantityOffer(null)} className="min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">キャンセル</button>
+              <button disabled={!canExchange} onClick={async()=>{if(!onExchangeEventPoints)return;setEventExchangePending(true);try{const result=await onExchangeEventPoints(eventQuantityOffer,quantity);if(result?.ok)setEventQuantityOffer(null);}finally{setEventExchangePending(false);}}} className="mh-button mh-button-primary min-h-[52px] rounded-xl bg-violet-500 text-white font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500">交換する</button>
+              <button disabled={eventExchangePending} onClick={()=>setEventQuantityOffer(null)} className="mh-button mh-button-secondary min-h-[52px] rounded-xl border border-white/10 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">キャンセル</button>
             </div>
           </div>
         </div>;

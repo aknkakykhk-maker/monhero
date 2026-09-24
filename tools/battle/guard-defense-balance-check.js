@@ -95,9 +95,25 @@ for (const [def,attack,expectedBase,expectedGuard,expected] of cases) {
 }
 
 // 本番の表示と実処理が同じ実効丈夫さ・集計値を参照する結線も固定する。
-assert(game.includes('const defenseRate = Math.min(0.5,effectiveDef*0.00015);'));
-assert(game.includes('Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))'));
-assert(game.includes('Math.floor(flat + effectiveDef * mult)'));
+// 丈夫さは defVal へ入れてから使う。新モード(tactics)だけ「狙われた子の丈夫さ」が入り、
+// targetSlot を渡さない既存モードはこれまでどおり effectiveDef が入る
+assert(game.includes('const defenseRate = Math.min(0.5,defVal*0.00015);'));
+assert(game.includes('Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))'));
+assert(game.includes(': effectiveDef;'), '渡されなければパーティの実効丈夫さへ倒す');
+// 2026-09-22: ガードも「構えた子の丈夫さ」で決まるようになったので、guardValueOf は
+// guardDefFor(slotIdx) を通す。枠を渡さない既存5モードでは effectiveDef へ倒れる
+assert(game.includes('Math.floor(flat + guardDefFor(slotIdx) * mult)'));
+assert(game.includes('if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;'),
+  'ガードも、枠を渡されなければパーティの実効丈夫さへ倒す');
 assert(game.includes('Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult)'));
-assert(game.includes('applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf'));
+// 2026-09-20: 新モードの連撃を 0.6×3 の3ヒットにし、ガードが届くのは1ヒットぶんだけにした。
+// 予告も実処理と同じ resolveTacticsGuardedHit を通す(ガードを引いてからターン軽減、の順は変わらない)
+// 2026-09-22: 予告は枠ごとになった。タクティクスは枠ごとのガード値(全体ガードのぶんも含む)、
+// 既存5モードは今までどおり手札のガードをまとめた1つの値を渡す
+assert(game.includes("guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);"));
+assert(game.includes("guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);"));
+assert(game.includes('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);'));
+// 2026-09-22: ターン軽減も枠ごとになった(どの枠が受けるかで軽減が変わる)ので、
+// 枠の番号を一緒に渡している。検査の文字列だけ古いまま main で赤くなっていた
+assert(game.includes('const taken = applyTurnDamageReduction(hit.taken, slotIdx);'));
 console.log('guard defense balance checks passed');

@@ -11,6 +11,7 @@
 // JSの実行時エラーも出ないため render-error-check.js では拾えない。
 // ここでは実際に開いて「画面いっぱいの不透明なレイヤーが同時に2枚無いか」を測る。
 const { chromium } = require('playwright');
+const { quietBootSeed } = require(require('path').resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 let failed = 0;
@@ -55,6 +56,8 @@ const fullScreenLayers = () => [...document.querySelectorAll('body *')].filter((
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.addInitScript(seed);
+    // お詫びの配布・今日のアドバイスは画面いっぱいに出て、その下のボタンを押せなくする
+    await page.addInitScript(quietBootSeed());
     await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => document.getElementById('root')?.children.length > 0, { timeout: 60000 });
 

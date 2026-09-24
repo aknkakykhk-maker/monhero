@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// ULTIMATE難易度の調整(×35・各0.75%・最低25%・35T段階BREAK・安全距離)と、他難易度へ波及しないこと。
 const fs=require('fs');
 const assert=require('assert');
 const source=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');

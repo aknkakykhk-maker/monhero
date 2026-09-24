@@ -12,46 +12,122 @@ const createAnimationStyle = () => {
        起きていた59通りの禁則違反が全部直った(tools/text/japanese-linebreak-check.js)。
        日本語以外の折り返しには影響しない(英単語の分割は word-break/overflow-wrap が担当)。 */
     body { line-break: strict; }
+    /* 味方の攻撃を「敵の位置」へ向けるための変数(24-battle-fx.jsx の attackAimVars が枠ごとに上書きする)。
+       ここは測れなかったとき・図鑑などの既定値で、真上へ少し(今までの見え方に近い)。 */
+    :root {
+      --atk-dx: 0px; --atk-dy: -120px; --atk-len: 120px; --atk-rot: 0deg; --atk-side: 0;
+      --pd-l-x: -56px; --pd-r-x: 56px; --pd-y: -60px;
+      --pd-l-len: 97px; --pd-l-rot: 35.4deg; --pd-r-len: 97px; --pd-r-rot: -35.4deg;
+    }
+    /* 通常の体当たり(モッチーほか)。一度しゃがんでから敵の位置まで飛び込み、当たった瞬間に
+       ぐしゃっとつぶれて赤く光り、跳ね返って戻る。着弾の光は敵の丸枠の側(AttackTargetFx)が出す。 */
     @keyframes attackFly {
       0% {
-        transform: translateY(0) scale(1);
+        transform: translate3d(0,0,0) scale(1) rotate(0deg);
         filter: drop-shadow(0 0 6px rgba(250,204,21,0.5));
       }
-      45% {
-        transform: translateY(-180px) scale(1.35);
-        filter: drop-shadow(0 0 20px rgba(250,204,21,0.9));
+      14% {
+        transform: translate3d(calc(var(--atk-dx) * -.06), 12px, 0) scale(1.12,.82) rotate(calc(var(--atk-rot) * -.15));
+        filter: drop-shadow(0 0 12px rgba(250,204,21,0.8));
       }
-      60% {
-        transform: translateY(-180px) scale(1.35);
-        filter: drop-shadow(0 0 25px rgba(220,38,38,1));
+      38% {
+        transform: translate3d(calc(var(--atk-dx) * .86), calc(var(--atk-dy) * .86), 0) scale(1.28) rotate(calc(var(--atk-rot) * .3));
+        filter: drop-shadow(calc(var(--atk-dx) * -.12) calc(var(--atk-dy) * -.12) 0 rgba(250,204,21,0.35)) drop-shadow(0 0 20px rgba(250,204,21,0.95));
+      }
+      46% {
+        transform: translate3d(calc(var(--atk-dx) * .94), calc(var(--atk-dy) * .94), 0) scale(1.46,1.1) rotate(calc(var(--atk-rot) * .3));
+        filter: drop-shadow(0 0 28px rgba(220,38,38,1)) brightness(1.35);
+      }
+      62% {
+        transform: translate3d(calc(var(--atk-dx) * .7), calc(var(--atk-dy) * .7 - 22px), 0) scale(1.18) rotate(calc(var(--atk-rot) * -.2));
+        filter: drop-shadow(0 0 18px rgba(250,204,21,0.8));
       }
       100% {
-        transform: translateY(0) scale(1);
+        transform: translate3d(0,0,0) scale(1) rotate(0deg);
         filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
     }
-    /* パンドラ専用: 同じ本体画像2枚へ分かれ、両方から雷撃して再び中央へ戻る。 */
+    /* パンドラ専用: 本体が光って2体に分かれ、敵をはさむ位置まで跳んで、両方から敵へ雷撃する。
+       同時に敵の真上へ大きな落雷を落とし、閃光と輪を敵の位置に出して本体へ戻る。
+       分身の位置・雷の長さと向きは attackAimVars の --pd-* が決める(敵の位置に合わせて毎回変わる)。 */
     .pandora-dual-thunder { position:relative; display:block; width:64px; height:64px; z-index:70; overflow:visible; pointer-events:none; }
     .pandora-dual-thunder img, .pandora-dual-thunder canvas { width:100%!important; height:100%!important; object-fit:contain; }
     .pandora-dual-center, .pandora-dual-clone { position:absolute; inset:0; display:block; }
     .pandora-dual-center { animation:pandoraDualCenter 900ms ease-in-out forwards; }
-    .pandora-dual-clone { opacity:0; animation-duration:900ms; animation-timing-function:ease-in-out; animation-fill-mode:forwards; }
+    .pandora-dual-clone { opacity:0; z-index:2; animation-duration:900ms; animation-timing-function:cubic-bezier(.2,.8,.2,1); animation-fill-mode:forwards; }
     .pandora-dual-clone--left { animation-name:pandoraDualLeft; }
     .pandora-dual-clone--right { animation-name:pandoraDualRight; }
-    .pandora-dual-bolt { position:absolute; left:50%; top:4px; width:7px; height:142px; opacity:0; transform-origin:50% 100%; background:linear-gradient(to top,#c084fc,#fff 42%,#ddd6fe 72%,transparent); clip-path:polygon(45% 100%,0 69%,42% 70%,12% 42%,55% 47%,32% 0,100% 54%,59% 52%,91% 78%,55% 77%); filter:drop-shadow(0 0 5px #a855f7) drop-shadow(0 0 9px #fff); animation:pandoraDualBolt 900ms ease-out forwards; }
-    .pandora-dual-clone--left .pandora-dual-bolt { transform:translate(-50%,-100%) rotate(8deg); }
-    .pandora-dual-clone--right .pandora-dual-bolt { transform:translate(-50%,-100%) rotate(-8deg); }
-    @keyframes pandoraDualCenter { 0%,18%{opacity:1;transform:scale(1)} 28%,78%{opacity:0;transform:scale(.9)} 90%,100%{opacity:1;transform:scale(1)} }
-    @keyframes pandoraDualLeft { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(-42px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0;transform:translateX(0) scale(1)} }
-    @keyframes pandoraDualRight { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(42px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0;transform:translateX(0) scale(1)} }
-    @keyframes pandoraDualBolt { 0%,43%{opacity:0} 48%{opacity:1} 54%{opacity:.35} 59%{opacity:1} 67%,100%{opacity:0} }
+    @keyframes pandoraDualCenter {
+      0% { opacity:1; transform:scale(1); filter:none; }
+      12% { opacity:1; transform:translateY(6px) scale(1.1,.88); filter:drop-shadow(0 0 10px #a855f7); }
+      22% { opacity:1; transform:scale(1.16); filter:drop-shadow(0 0 18px #c084fc) brightness(1.7); }
+      28%,80% { opacity:0; transform:scale(.8); filter:none; }
+      90%,100% { opacity:1; transform:scale(1); filter:none; }
+    }
+    @keyframes pandoraDualLeft {
+      0%,20% { opacity:0; transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      26% { opacity:1; transform:translate3d(-12px,-4px,0) scale(1.06) rotate(-6deg); filter:drop-shadow(0 0 14px #c084fc); }
+      40% { opacity:1; transform:translate3d(var(--pd-l-x),var(--pd-y),0) scale(.92) rotate(-10deg); filter:drop-shadow(18px 16px 0 rgba(168,85,247,.35)) drop-shadow(0 0 16px #a855f7); }
+      48%,68% { opacity:1; transform:translate3d(var(--pd-l-x),calc(var(--pd-y) - 6px),0) scale(.95) rotate(0deg); filter:drop-shadow(0 0 20px #e9d5ff) drop-shadow(0 0 30px #a855f7); }
+      82% { opacity:1; transform:translate3d(0,0,0) scale(.96) rotate(0deg); filter:drop-shadow(0 0 10px #a855f7); }
+      90%,100% { opacity:0; transform:translate3d(0,0,0) scale(1); filter:none; }
+    }
+    @keyframes pandoraDualRight {
+      0%,20% { opacity:0; transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      26% { opacity:1; transform:translate3d(12px,-4px,0) scale(1.06) rotate(6deg); filter:drop-shadow(0 0 14px #c084fc); }
+      40% { opacity:1; transform:translate3d(var(--pd-r-x),var(--pd-y),0) scale(.92) rotate(10deg); filter:drop-shadow(-18px 16px 0 rgba(168,85,247,.35)) drop-shadow(0 0 16px #a855f7); }
+      48%,68% { opacity:1; transform:translate3d(var(--pd-r-x),calc(var(--pd-y) - 6px),0) scale(.95) rotate(0deg); filter:drop-shadow(0 0 20px #e9d5ff) drop-shadow(0 0 30px #a855f7); }
+      82% { opacity:1; transform:translate3d(0,0,0) scale(.96) rotate(0deg); filter:drop-shadow(0 0 10px #a855f7); }
+      90%,100% { opacity:0; transform:translate3d(0,0,0) scale(1); filter:none; }
+    }
+    /* 分身の手元にためる雷の玉 */
+    .pandora-dual-orb {
+      position:absolute; left:50%; top:50%; width:22px; height:22px; margin:-11px 0 0 -11px; opacity:0; border-radius:50%;
+      background:radial-gradient(circle,#fff 0 22%,#e9d5ff 40%,rgba(168,85,247,.7) 62%,transparent 74%);
+      box-shadow:0 0 12px #c084fc; animation:pandoraDualOrb 900ms ease-out forwards;
+    }
+    @keyframes pandoraDualOrb { 0%,38%{opacity:0;transform:scale(.2)} 46%{opacity:1;transform:scale(1.3)} 52%{opacity:.8;transform:scale(.9)} 60%{opacity:1;transform:scale(1.2)} 70%,100%{opacity:0;transform:scale(.4)} }
+    /* 分身から敵へ向かう雷。付け根を分身の中心に置き、敵の向きへ回して敵までの長さに伸ばす */
+    .pandora-dual-bolt {
+      position:absolute; left:50%; top:50%; width:14px; height:var(--pd-l-len); opacity:0; transform-origin:50% 100%;
+      transform:translate(-50%,-100%) rotate(var(--pd-l-rot));
+      background:linear-gradient(to top,#c084fc,#fff 42%,#ddd6fe 72%,#fff);
+      clip-path:polygon(45% 100%,0 69%,42% 70%,12% 42%,55% 47%,32% 0,100% 54%,59% 52%,91% 78%,55% 77%);
+      filter:drop-shadow(0 0 5px #a855f7) drop-shadow(0 0 9px #fff); animation:pandoraDualBolt 900ms ease-out forwards;
+    }
+    .pandora-dual-clone--right .pandora-dual-bolt { height:var(--pd-r-len); transform:translate(-50%,-100%) rotate(var(--pd-r-rot)); }
+    @keyframes pandoraDualBolt { 0%,46%{opacity:0} 50%{opacity:1} 55%{opacity:.3} 60%{opacity:1} 64%{opacity:.4} 68%{opacity:1} 74%,100%{opacity:0} }
+    /* 敵の真上からの落雷と、敵の位置での閃光・輪 */
+    .pandora-dual-strike { position:absolute; left:50%; top:50%; width:0; height:0; z-index:3; translate:var(--atk-dx) var(--atk-dy); }
+    .pandora-dual-strike__bolt {
+      position:absolute; left:-10px; bottom:0; width:20px; height:170px; opacity:0; transform-origin:50% 100%;
+      background:linear-gradient(to top,#fff,#f5f3ff 30%,#c084fc 70%,rgba(168,85,247,0));
+      clip-path:polygon(45% 100%,0 69%,42% 70%,12% 42%,55% 47%,32% 0,100% 54%,59% 52%,91% 78%,55% 77%);
+      filter:drop-shadow(0 0 7px #a855f7) drop-shadow(0 0 14px #fff); animation:pandoraStrikeBolt 900ms ease-out forwards;
+    }
+    @keyframes pandoraStrikeBolt { 0%,52%{opacity:0;transform:scaleY(.15)} 56%{opacity:1;transform:scaleY(1)} 60%{opacity:.35} 63%{opacity:1} 72%,100%{opacity:0;transform:scaleY(1)} }
+    .pandora-dual-strike__flash {
+      position:absolute; left:-54px; top:-54px; width:108px; height:108px; opacity:0; border-radius:50%;
+      background:radial-gradient(circle,#fff 0 10%,rgba(233,213,255,.95) 22%,rgba(168,85,247,.6) 44%,rgba(88,28,135,0) 72%);
+      animation:pandoraStrikeFlash 900ms ease-out forwards;
+    }
+    @keyframes pandoraStrikeFlash { 0%,54%{opacity:0;transform:scale(.3)} 58%{opacity:1;transform:scale(1)} 70%{opacity:.7;transform:scale(1.5)} 84%,100%{opacity:0;transform:scale(2)} }
+    .pandora-dual-strike__ring {
+      position:absolute; left:-26px; top:-26px; width:52px; height:52px; opacity:0; border-radius:50%;
+      border:4px solid rgba(245,243,255,.95); box-shadow:0 0 12px #fff,0 0 24px #a855f7;
+      animation:pandoraStrikeRing 900ms ease-out forwards;
+    }
+    @keyframes pandoraStrikeRing { 0%,56%{opacity:0;transform:scale(.3)} 60%{opacity:1;transform:scale(.9)} 80%,100%{opacity:0;transform:scale(2.6)} }
     .pandora-dual-thunder--compact { width:38px; height:38px; }
-    .pandora-dual-thunder--compact .pandora-dual-clone--left { --pandora-compact:1; }
-    .pandora-dual-thunder--compact .pandora-dual-bolt { height:82px; width:5px; }
-    .pandora-dual-thunder--compact .pandora-dual-clone--left { animation-name:pandoraDualLeftCompact; }
-    .pandora-dual-thunder--compact .pandora-dual-clone--right { animation-name:pandoraDualRightCompact; }
-    @keyframes pandoraDualLeftCompact { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(-25px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0} }
-    @keyframes pandoraDualRightCompact { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(25px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0} }
+    .pandora-dual-thunder--compact .pandora-dual-bolt { width:6px; }
+    .pandora-dual-thunder--compact .pandora-dual-orb { width:14px; height:14px; margin:-7px 0 0 -7px; }
+    .pandora-dual-thunder--compact .pandora-dual-strike__bolt { left:-6px; width:12px; height:90px; }
+    .pandora-dual-thunder--compact .pandora-dual-strike__flash { left:-32px; top:-32px; width:64px; height:64px; }
+    .pandora-dual-thunder--compact .pandora-dual-strike__ring { left:-16px; top:-16px; width:32px; height:32px; border-width:3px; }
+    @media (prefers-reduced-motion: reduce) {
+      .pandora-dual-clone--left, .pandora-dual-clone--right, .pandora-dual-strike__bolt, .pandora-dual-orb { animation:none; opacity:0; }
+      .pandora-dual-center { animation:none; filter:drop-shadow(0 0 14px #a855f7); }
+    }
     /* アーク専用の聖光攻撃。
        距離枠は固定したまま本体がふわりと浮遊し、敵上空の光輪から5本の聖光が時間差で降る。
        白・金・淡い青で神聖さを出し、着弾では大きな閃光と輪、光粒を残す。 */
@@ -113,6 +189,8 @@ const createAnimationStyle = () => {
       48% { opacity:.68; transform:scale(.72) rotate(3deg); }
       100% { opacity:1; transform:scale(1) rotate(8deg); }
     }
+    /* 光輪・光柱・着弾・光粒は「敵が -82px にいる」前提で組んである。敵の実際の位置までずらす */
+    .ark-holy-rain__sky, .ark-holy-rain__rays, .ark-holy-rain__impact, .ark-holy-rain__sparkles { translate:var(--atk-dx) calc(var(--atk-dy) + 82px); }
     .ark-holy-rain__rays { position:absolute; inset:0; overflow:visible; z-index:4; }
     .ark-holy-rain__ray {
       position:absolute; top:-188px; width:18px; height:122px; margin-left:-9px; opacity:0;
@@ -198,21 +276,23 @@ const createAnimationStyle = () => {
       55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(34,211,238,.92)) drop-shadow(0 10px 20px rgba(37,99,235,.62)); }
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(14,165,233,.82)); }
     }
+    /* 左右の滑りは --atk-side(敵が右なら1・左なら-1)ぶん敵の側へ寄せる。
+       端の枠の子が外側へ滑ると画面の外へ半分出て、消えたように見えていた(2026-09-24 ユーザー指摘) */
     @keyframes waterBurstAttack {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(103,232,249,.5)); }
       10% { transform:translate3d(0,8px,0) scale(.95,.88) rotate(-2deg); filter:drop-shadow(0 0 15px rgba(34,211,238,.9)); }
-      25% { transform:translate3d(-44px,-2px,0) scale(1.07) rotate(-7deg); filter:drop-shadow(24px 5px 0 rgba(125,211,252,.42)) drop-shadow(48px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 22px rgba(103,232,249,.98)); }
-      48% { transform:translate3d(46px,-8px,0) scale(1.10) rotate(7deg); filter:drop-shadow(-28px 4px 0 rgba(125,211,252,.42)) drop-shadow(-56px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 27px rgba(255,255,255,.98)); }
-      69% { transform:translate3d(-32px,-10px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(24px 4px 0 rgba(103,232,249,.34)) drop-shadow(48px 7px 0 rgba(37,99,235,.15)) drop-shadow(0 0 23px rgba(34,211,238,.94)); }
-      84% { transform:translate3d(20px,-4px,0) scale(1.04) rotate(3deg); filter:drop-shadow(-18px 3px 0 rgba(125,211,252,.28)) drop-shadow(0 0 17px rgba(103,232,249,.82)); }
+      25% { transform:translate3d(calc(-44px + var(--atk-side) * 30px),-2px,0) scale(1.07) rotate(-7deg); filter:drop-shadow(24px 5px 0 rgba(125,211,252,.42)) drop-shadow(48px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 22px rgba(103,232,249,.98)); }
+      48% { transform:translate3d(calc(46px + var(--atk-side) * 30px),-8px,0) scale(1.10) rotate(7deg); filter:drop-shadow(-28px 4px 0 rgba(125,211,252,.42)) drop-shadow(-56px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 27px rgba(255,255,255,.98)); }
+      69% { transform:translate3d(calc(-32px + var(--atk-side) * 30px),-10px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(24px 4px 0 rgba(103,232,249,.34)) drop-shadow(48px 7px 0 rgba(37,99,235,.15)) drop-shadow(0 0 23px rgba(34,211,238,.94)); }
+      84% { transform:translate3d(calc(20px + var(--atk-side) * 30px),-4px,0) scale(1.04) rotate(3deg); filter:drop-shadow(-18px 3px 0 rgba(125,211,252,.28)) drop-shadow(0 0 17px rgba(103,232,249,.82)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
     @keyframes waterBurstLunge {
       0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(34,211,238,.95)); }
-      18% { transform:translate3d(-52px,-4px,0) scale(1.11) rotate(-9deg); filter:drop-shadow(28px 5px 0 rgba(125,211,252,.5)) drop-shadow(58px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 28px rgba(255,255,255,.98)); }
-      43% { transform:translate3d(52px,-13px,0) scale(1.16) rotate(9deg); filter:drop-shadow(-32px 4px 0 rgba(125,211,252,.5)) drop-shadow(-64px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 34px rgba(255,255,255,1)); }
-      67% { transform:translate3d(-38px,-12px,0) scale(1.11) rotate(-6deg); filter:drop-shadow(28px 4px 0 rgba(103,232,249,.42)) drop-shadow(0 0 29px rgba(34,211,238,.98)); }
-      84% { transform:translate3d(24px,-5px,0) scale(1.06) rotate(4deg); filter:drop-shadow(-20px 3px 0 rgba(125,211,252,.34)) drop-shadow(0 0 21px rgba(103,232,249,.9)); }
+      18% { transform:translate3d(calc(-52px + var(--atk-side) * 30px),-4px,0) scale(1.11) rotate(-9deg); filter:drop-shadow(28px 5px 0 rgba(125,211,252,.5)) drop-shadow(58px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 28px rgba(255,255,255,.98)); }
+      43% { transform:translate3d(calc(52px + var(--atk-side) * 30px),-13px,0) scale(1.16) rotate(9deg); filter:drop-shadow(-32px 4px 0 rgba(125,211,252,.5)) drop-shadow(-64px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 34px rgba(255,255,255,1)); }
+      67% { transform:translate3d(calc(-38px + var(--atk-side) * 30px),-12px,0) scale(1.11) rotate(-6deg); filter:drop-shadow(28px 4px 0 rgba(103,232,249,.42)) drop-shadow(0 0 29px rgba(34,211,238,.98)); }
+      84% { transform:translate3d(calc(24px + var(--atk-side) * 30px),-5px,0) scale(1.06) rotate(4deg); filter:drop-shadow(-20px 3px 0 rgba(125,211,252,.34)) drop-shadow(0 0 21px rgba(103,232,249,.9)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
     }
     .water-burst-motion__wake { position:absolute; inset:0; z-index:2; overflow:visible; }
@@ -249,14 +329,15 @@ const createAnimationStyle = () => {
       content:''; position:absolute; left:3px; top:3px; width:7px; height:9px; border-radius:50%;
       background:rgba(255,255,255,.95); filter:blur(.3px);
     }
+    /* 水弾は敵の向き(--atk-rot)へ傾けて、敵の位置(--atk-dx/dy)まで一直線に飛び、当たって平たくつぶれる */
     @keyframes waterBurstShot {
-      0% { opacity:0; transform:translate3d(-50%,18px,0) rotate(var(--water-shot-angle)) scale(.45,.72); }
-      14% { opacity:1; }
-      72% { opacity:1; transform:translate3d(calc(-50% + var(--water-shot-x)),var(--water-shot-y),0) rotate(var(--water-shot-angle)) scale(1.12,1.28); }
-      100% { opacity:0; transform:translate3d(calc(-50% + var(--water-shot-x)),calc(var(--water-shot-y) - 16px),0) rotate(var(--water-shot-angle)) scale(.72,1.5); }
+      0% { opacity:0; transform:translate3d(-50%,18px,0) rotate(calc(var(--atk-rot) + var(--water-shot-angle))) scale(.45,.72); }
+      14% { opacity:1; transform:translate3d(calc(-50% + var(--atk-dx) * .08),calc(var(--atk-dy) * .08),0) rotate(var(--atk-rot)) scale(1,1.2); }
+      72% { opacity:1; transform:translate3d(calc(-50% + var(--atk-dx) + var(--water-shot-x)),calc(var(--atk-dy) + var(--water-shot-y)),0) rotate(var(--atk-rot)) scale(1.12,1.36); }
+      100% { opacity:0; transform:translate3d(calc(-50% + var(--atk-dx) + var(--water-shot-x)),calc(var(--atk-dy) + var(--water-shot-y)),0) rotate(var(--atk-rot)) scale(1.9,.45); }
     }
     .water-burst-motion__impact {
-      position:absolute; left:50%; top:-92px; width:30px; height:30px; margin:-15px 0 0 -15px;
+      position:absolute; left:50%; top:50%; width:30px; height:30px; margin:-15px 0 0 -15px; translate:var(--atk-dx) var(--atk-dy);
       z-index:7; opacity:0; animation:waterBurstImpact 680ms ease-out forwards;
     }
     .water-burst-motion__impact-core {
@@ -269,10 +350,12 @@ const createAnimationStyle = () => {
       box-shadow:0 0 12px #fff,0 0 25px rgba(34,211,238,.95),0 0 42px rgba(37,99,235,.72);
     }
     @keyframes waterBurstImpact {
-      0%,63% { opacity:0; transform:scale(.18); }
-      66% { opacity:1; transform:scale(.62); }
-      74% { opacity:1; transform:scale(1.25); }
-      84% { opacity:.78; transform:scale(1.85); }
+      0%,46% { opacity:0; transform:scale(.18); }
+      50% { opacity:.9; transform:scale(.62); }
+      60% { opacity:.8; transform:scale(1.05); }
+      70% { opacity:.55; transform:scale(.9); }
+      82% { opacity:1; transform:scale(1.55); }
+      92% { opacity:.7; transform:scale(2.05); }
       100% { opacity:0; transform:scale(2.4); }
     }
     .water-burst-motion__drop {
@@ -333,26 +416,30 @@ const createAnimationStyle = () => {
       55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(236,72,153,.92)) drop-shadow(0 10px 20px rgba(168,85,247,.6)); }
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(217,70,239,.82)); }
     }
-    /* 歌う本体。少し前(上)へ出て、上下と左右で拍を取ってから元位置へ戻る */
+    /* 歌う本体。敵へは向かわず、その場で歌う(2026-09-24 ユーザー指摘「音符を飛ばすときにミーアも一緒に
+       アタック気味になっている。意図と違う」)。攻撃するのは音符と音の波だけで、本人は動かない。
+       しゃがんで小さく跳ね、左右へ体を揺らして拍を取り、元の位置へ戻る。
+       (左右反転で回すと幅が0を通って一瞬消えて見えるので使わない) */
     @keyframes miaSongSing {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(244,114,182,.5)); }
-      12% { transform:translate3d(0,-9px,0) scale(1.05) rotate(0deg); filter:drop-shadow(0 0 16px rgba(244,114,182,.92)); }
-      28% { transform:translate3d(-7px,-3px,0) scale(1.03) rotate(-4deg); filter:drop-shadow(0 0 20px rgba(236,72,153,.95)); }
-      44% { transform:translate3d(7px,-13px,0) scale(1.07) rotate(4deg); filter:drop-shadow(0 0 24px rgba(255,255,255,.96)); }
-      60% { transform:translate3d(-6px,-4px,0) scale(1.03) rotate(-3deg); filter:drop-shadow(0 0 20px rgba(192,132,252,.94)); }
-      76% { transform:translate3d(6px,-11px,0) scale(1.06) rotate(3deg); filter:drop-shadow(0 0 22px rgba(244,114,182,.9)); }
-      90% { transform:translate3d(0,-4px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
+      9% { transform:translate3d(0,5px,0) scale(1.06,.9) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.8)); }
+      20% { transform:translate3d(0,-10px,0) scale(1.05) rotate(-7deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
+      34% { transform:translate3d(-4px,-3px,0) scale(1.04) rotate(-5deg); filter:drop-shadow(0 0 22px rgba(236,72,153,.95)); }
+      48% { transform:translate3d(4px,-8px,0) scale(1.06) rotate(5deg); filter:drop-shadow(0 0 26px rgba(255,255,255,.98)); }
+      62% { transform:translate3d(-4px,-3px,0) scale(1.04) rotate(-5deg); filter:drop-shadow(0 0 22px rgba(192,132,252,.95)); }
+      76% { transform:translate3d(4px,-7px,0) scale(1.05) rotate(4deg); filter:drop-shadow(0 0 24px rgba(244,114,182,.92)); }
+      90% { transform:translate3d(0,-3px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
-    /* 固有技のタメ明け。沈んだ位置から立ち上がり、通常より大きく歌う */
+    /* 固有技のタメ明け。沈んだ位置からその場で高く跳ね、通常より大きく体を揺らして歌う(敵へは向かわない) */
     @keyframes miaSongSingLunge {
       0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.95)); }
-      14% { transform:translate3d(0,-14px,0) scale(1.12) rotate(0deg); filter:drop-shadow(0 0 30px rgba(255,255,255,.98)); }
-      30% { transform:translate3d(-10px,-5px,0) scale(1.08) rotate(-6deg); filter:drop-shadow(0 0 26px rgba(236,72,153,.98)); }
-      46% { transform:translate3d(10px,-18px,0) scale(1.13) rotate(6deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
-      62% { transform:translate3d(-8px,-6px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(0 0 27px rgba(192,132,252,.98)); }
-      78% { transform:translate3d(8px,-15px,0) scale(1.1) rotate(4deg); filter:drop-shadow(0 0 25px rgba(244,114,182,.94)); }
-      92% { transform:translate3d(0,-5px,0) scale(1.03) rotate(0deg); filter:drop-shadow(0 0 13px rgba(244,114,182,.62)); }
+      18% { transform:translate3d(0,-16px,0) scale(1.1) rotate(-9deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
+      32% { transform:translate3d(-6px,-4px,0) scale(1.08) rotate(-7deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.98)); }
+      46% { transform:translate3d(6px,-12px,0) scale(1.1) rotate(7deg); filter:drop-shadow(0 0 34px rgba(255,255,255,1)); }
+      62% { transform:translate3d(-6px,-4px,0) scale(1.08) rotate(-6deg); filter:drop-shadow(0 0 28px rgba(192,132,252,.98)); }
+      78% { transform:translate3d(6px,-10px,0) scale(1.09) rotate(5deg); filter:drop-shadow(0 0 26px rgba(244,114,182,.94)); }
+      92% { transform:translate3d(0,-4px,0) scale(1.03) rotate(0deg); filter:drop-shadow(0 0 13px rgba(244,114,182,.62)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
     }
     /* 足元のステージ光。床に置いた光の輪を2つ、拍に合わせて広げる */
@@ -444,7 +531,7 @@ const createAnimationStyle = () => {
     .mia-song-notes__note {
       position:absolute; top:38%; opacity:0; font-style:normal; font-weight:900; line-height:1;
       text-shadow:0 0 6px #fff,0 0 14px rgba(236,72,153,.95),0 0 26px rgba(168,85,247,.75);
-      will-change:transform,opacity; animation:miaSongNoteFly 460ms cubic-bezier(.14,.72,.22,1) forwards;
+      will-change:transform,opacity; animation:miaSongNoteFly 400ms cubic-bezier(.3,.6,.4,1) forwards;
     }
     /* 音符のうしろに残る短い光の尾 */
     .mia-song-notes__note::after {
@@ -455,13 +542,33 @@ const createAnimationStyle = () => {
     }
     @keyframes miaSongNoteFly {
       0% { opacity:0; transform:translate3d(-50%,14px,0) rotate(0deg) scale(.45); }
-      15% { opacity:1; transform:translate3d(-50%,0,0) rotate(calc(var(--mia-note-spin) * .3)) scale(1.05); }
-      70% { opacity:1; transform:translate3d(calc(-50% + var(--mia-note-x)),calc(var(--mia-note-y) * .78),0) rotate(var(--mia-note-spin)) scale(1.18); }
-      100% { opacity:0; transform:translate3d(calc(-50% + var(--mia-note-x)),var(--mia-note-y),0) rotate(var(--mia-note-spin)) scale(.82); }
+      14% { opacity:1; transform:translate3d(calc(-50% + var(--mia-note-x) * .5),-6px,0) rotate(calc(var(--mia-note-spin) * .3)) scale(1.1); }
+      42% { opacity:1; transform:translate3d(calc(-50% + var(--atk-dx) * .38 + var(--mia-note-x)),calc(var(--atk-dy) * .38 + var(--mia-note-y)),0) rotate(var(--mia-note-spin)) scale(1.26); }
+      72% { opacity:1; transform:translate3d(calc(-50% + var(--atk-dx) * .76 - var(--mia-note-x) * .6),calc(var(--atk-dy) * .76 + var(--mia-note-y) * .5),0) rotate(calc(var(--mia-note-spin) * -1)) scale(1.2); }
+      100% { opacity:0; transform:translate3d(calc(-50% + var(--atk-dx)),var(--atk-dy),0) rotate(0deg) scale(.7); }
     }
+    /* 敵の向きへ走る音の波。入れ物を敵の向き(--atk-rot)へ回し、波はその中をまっすぐ敵の距離(--atk-len)まで進む */
+    .mia-song-notes__waves { position:absolute; left:50%; top:42%; width:0; height:0; z-index:5; rotate:var(--atk-rot); }
+    .mia-song-notes__waves i {
+      position:absolute; left:-22px; top:-12px; width:44px; height:24px; opacity:0;
+      border-top:4px solid rgba(251,207,232,.95); border-radius:50% 50% 0 0 / 100% 100% 0 0;
+      filter:drop-shadow(0 0 5px rgba(236,72,153,.95)) drop-shadow(0 0 10px rgba(168,85,247,.7));
+      will-change:transform,opacity; animation:miaSongWave 400ms ease-out forwards;
+    }
+    .mia-song-notes__waves i:nth-child(1) { animation-delay:120ms; }
+    .mia-song-notes__waves i:nth-child(2) { animation-delay:235ms; }
+    .mia-song-notes__waves i:nth-child(3) { animation-delay:350ms; }
+    @keyframes miaSongWave {
+      0% { opacity:0; transform:translate3d(0,0,0) scale(.4); }
+      20% { opacity:1; }
+      85% { opacity:.85; }
+      100% { opacity:0; transform:translate3d(0,calc(var(--atk-len) * -1),0) scale(2.3,1.7); }
+    }
+    .mia-song-notes--charging .mia-song-notes__waves { display:none; }
     /* 敵側の着弾。音の輪を2度ひろげ、光とキラキラで当たったことを分かるようにする */
     .mia-song-notes__impact {
-      position:absolute; left:50%; top:-92px; width:30px; height:30px; margin:-15px 0 0 -15px; z-index:8;
+      position:absolute; left:50%; top:50%; width:30px; height:30px; margin:-15px 0 0 -15px; z-index:8;
+      translate:var(--atk-dx) var(--atk-dy);
     }
     .mia-song-notes__impact-core {
       position:absolute; inset:-52px; border-radius:50%; opacity:0;
@@ -469,18 +576,18 @@ const createAnimationStyle = () => {
       filter:blur(.4px); animation:miaSongImpactCore 760ms ease-out forwards;
     }
     @keyframes miaSongImpactCore {
-      0%,40% { opacity:0; transform:scale(.2); }
-      46% { opacity:1; transform:scale(.7); }
-      62% { opacity:1; transform:scale(1.25); }
-      82% { opacity:.72; transform:scale(1.75); }
+      0%,58% { opacity:0; transform:scale(.2); }
+      63% { opacity:1; transform:scale(.7); }
+      76% { opacity:1; transform:scale(1.3); }
+      90% { opacity:.72; transform:scale(1.8); }
       100% { opacity:0; transform:scale(2.2); }
     }
     .mia-song-notes__impact-ring {
       position:absolute; inset:-22px; border:4px solid rgba(253,242,248,.96); border-radius:50%; opacity:0;
       box-shadow:0 0 12px #fff,0 0 24px rgba(236,72,153,.95),0 0 40px rgba(168,85,247,.7);
-      animation:miaSongImpactRing 340ms ease-out forwards; animation-delay:400ms;
+      animation:miaSongImpactRing 220ms ease-out forwards; animation-delay:450ms;
     }
-    .mia-song-notes__impact-ring--late { animation-delay:600ms; border-color:rgba(233,213,255,.94); }
+    .mia-song-notes__impact-ring--late { animation-delay:540ms; border-color:rgba(233,213,255,.94); }
     @keyframes miaSongImpactRing {
       0% { opacity:0; transform:scale(.3); }
       24% { opacity:1; transform:scale(.9); }
@@ -490,7 +597,7 @@ const createAnimationStyle = () => {
       position:absolute; left:50%; top:50%; margin:-3px 0 0 -3px; opacity:0; border-radius:50%;
       background:radial-gradient(circle,#fff 0 34%,rgba(244,114,182,.95) 62%,rgba(168,85,247,0) 100%);
       box-shadow:0 0 8px rgba(255,255,255,.95);
-      animation:miaSongSpark 300ms ease-out forwards; animation-delay:calc(455ms + var(--mia-spark-delay));
+      animation:miaSongSpark 260ms ease-out forwards; animation-delay:calc(460ms + var(--mia-spark-delay));
     }
     @keyframes miaSongSpark {
       0% { opacity:0; transform:translate3d(0,0,0) scale(.4); }
@@ -504,7 +611,7 @@ const createAnimationStyle = () => {
       .mia-song-notes--charging .mia-song-notes__monster { animation:miaSongReduced 760ms ease-out forwards; }
       .mia-song-notes__mic { animation:miaSongMicReduced 760ms ease-out forwards; }
       .mia-song-notes__note { animation:miaSongNoteReduced 460ms ease-out forwards; }
-      .mia-song-notes__stage i, .mia-song-notes__spark { display:none; }
+      .mia-song-notes__stage i, .mia-song-notes__spark, .mia-song-notes__waves { display:none; }
       .mia-song-notes__impact-ring { animation:miaSongImpactRingReduced 340ms ease-out forwards; }
       @keyframes miaSongReduced {
         0% { filter:drop-shadow(0 0 4px rgba(244,114,182,.35)); }
@@ -524,6 +631,89 @@ const createAnimationStyle = () => {
         30% { opacity:.9; transform:scale(1); }
         100% { opacity:0; transform:scale(1.4); }
       }
+    }
+    /* 味方モンスターの待機アニメ(24-battle-fx.jsx の MonsterIdleArt)。
+       同じ絵を「体」と「部分(翼・しっぽ・耳・花…)」に切り抜いて重ね、部分を付け根(transform-origin)を軸に動かす。
+       全体の動きは種ごとに1つ(mon-idle--hover など)。動かすのは transform だけなので、レイアウトを作り直さない。
+       部分ごとの大きさ(--idle-amp)・周期・ずらしは MONSTER_IDLE_RIGS から style で渡る */
+    .mon-idle { position:relative; display:block; will-change:transform; transform-origin:50% 96%; }
+    .mon-idle--rig { filter:drop-shadow(0 4px 3px rgb(0 0 0 / .07)) drop-shadow(0 2px 2px rgb(0 0 0 / .06)); }
+    .mon-idle__body { position:relative; display:block; z-index:1; }
+    .mon-idle__part { position:absolute; inset:0; display:block; z-index:0; will-change:transform;
+      animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+    .mon-idle__part--front { z-index:2; }
+    .mon-idle__part--flapL, .mon-idle__part--flapR { animation-name:monIdleFlap; animation-timing-function:cubic-bezier(.45,0,.35,1); }
+    .mon-idle__part--flapR { --idle-flip:-1; }
+    .mon-idle__part--swing { animation-name:monIdleSwing; }
+    .mon-idle__part--wag { animation-name:monIdleWag; }
+    .mon-idle__part--twitch { animation-name:monIdleTwitch; }
+    .mon-idle__part--bob { animation-name:monIdleBob; }
+    /* 羽ばたき。すばやく振り上げてゆっくり下ろす。振り上げたときは奥へ倒れるぶん少し細くする。
+       右の翼は --idle-flip で向きを逆にする(同じ keyframes を左右で使う) */
+    @keyframes monIdleFlap {
+      0%,100% { transform:rotate(calc(var(--idle-amp) * -.2 * var(--idle-flip, 1))) scaleX(1); }
+      38% { transform:rotate(calc(var(--idle-amp) * var(--idle-flip, 1))) scaleX(.9); }
+    }
+    /* ゆったり揺れる(花・ヒレ・腕の刃)。amp の符号で揺れ始めの向きが変わる */
+    @keyframes monIdleSwing {
+      0%,100% { transform:rotate(calc(var(--idle-amp) * -.4)); }
+      50% { transform:rotate(var(--idle-amp)); }
+    }
+    /* しっぽ振り。左右へ同じだけ */
+    @keyframes monIdleWag {
+      0%,100% { transform:rotate(calc(var(--idle-amp) * -1)); }
+      50% { transform:rotate(var(--idle-amp)); }
+    }
+    /* ときどきピクッと動く(耳)。ほとんどの時間は止まっている */
+    @keyframes monIdleTwitch {
+      0%,78%,100% { transform:rotate(0deg); }
+      82% { transform:rotate(var(--idle-amp)); }
+      86% { transform:rotate(0deg); }
+      90% { transform:rotate(calc(var(--idle-amp) * .6)); }
+      94% { transform:rotate(0deg); }
+    }
+    /* 上下にふわふわ(浮いている玉など)。--idle-bob は枠に対する % */
+    @keyframes monIdleBob {
+      0%,100% { transform:translate3d(0,0,0); }
+      50% { transform:translate3d(0,var(--idle-bob),0); }
+    }
+    /* 全体の動き */
+    .mon-idle--hover { animation:monIdleHover 2600ms ease-in-out infinite; }
+    .mon-idle--bounce { animation:monIdleBounce 1800ms ease-in-out infinite; }
+    .mon-idle--breathe { animation:monIdleBreathe 3200ms ease-in-out infinite; }
+    .mon-idle--sway { animation:monIdleSway 3000ms ease-in-out infinite; }
+    .mon-idle--swim { animation:monIdleSwim 2800ms ease-in-out infinite; }
+    /* 宙に浮いている子。ゆっくり上下してわずかに伸び縮みする */
+    @keyframes monIdleHover {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      50% { transform:translate3d(0,-4%,0) scale(.99,1.015); }
+    }
+    /* 地面に立っている丸い子。足元を軸に、つぶれて・伸びて・小さく弾む */
+    @keyframes monIdleBounce {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      20% { transform:translate3d(0,0,0) scale(1.04,.95); }
+      45% { transform:translate3d(0,-3%,0) scale(.97,1.04); }
+      65% { transform:translate3d(0,0,0) scale(1.02,.98); }
+    }
+    /* どっしり立っている子。胸がふくらむように、縦へわずかに伸び縮みする */
+    @keyframes monIdleBreathe {
+      0%,100% { transform:scale(1,1); }
+      50% { transform:scale(1.01,1.025); }
+    }
+    /* 植物の子。足元を軸に、左右へゆっくり傾く */
+    @keyframes monIdleSway {
+      0%,100% { transform:rotate(-2deg); }
+      50% { transform:rotate(2deg); }
+    }
+    /* 人魚の子。水の中にいるように、上下しながら少し傾く */
+    @keyframes monIdleSwim {
+      0%,100% { transform:translate3d(0,0,0) rotate(-1.5deg); }
+      50% { transform:translate3d(0,-3%,0) rotate(1.5deg); }
+    }
+    /* 軽量な見た目(タクティクスの calm)と「動きを減らす」設定では止める(絵はそのまま見える) */
+    [data-tactics-look="calm"] .mon-idle, [data-tactics-look="calm"] .mon-idle__part { animation:none; }
+    @media (prefers-reduced-motion: reduce) {
+      .mon-idle, .mon-idle__part { animation:none; }
     }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
        常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。
@@ -562,7 +752,7 @@ const createAnimationStyle = () => {
       }
     }
     /* 剣士モッチーの二刀流。
-       その場で小さく振る旧演出ではなく、いったん沈んでから敵位置まで高速で斬り込み、
+       その場で小さく振る旧演出ではなく、いったん沈んでから敵位置(--atk-dx/dy)まで高速で斬り込み、
        ＼で通り抜け→反転→／で切り返し→敵位置で巨大X字を光らせて帰還する。
        本体の残像は画像複製ではなく drop-shadow で軽く作り、追加DOMは攻撃中の固定要素だけ。
        永久追加連撃が増えても本体フルモーションは1攻撃1セットなので戦闘時間は増えない。 */
@@ -576,43 +766,43 @@ const createAnimationStyle = () => {
         filter: drop-shadow(0 0 13px rgba(139,92,246,.9)) drop-shadow(0 0 18px rgba(34,211,238,.72));
       }
       23% {
-        transform: translate3d(68px,-116px,0) scale(1.11) rotate(-13deg) skewX(-8deg);
+        transform: translate3d(calc(var(--atk-dx) + 68px),calc(var(--atk-dy) + 54px),0) scale(1.11) rotate(-13deg) skewX(-8deg);
         filter:
           drop-shadow(-28px 42px 0 rgba(139,92,246,.34))
           drop-shadow(-54px 78px 0 rgba(139,92,246,.16))
           drop-shadow(0 0 22px rgba(196,181,253,.98));
       }
       36% {
-        transform: translate3d(-86px,-188px,0) scale(1.17) rotate(17deg) skewX(10deg);
+        transform: translate3d(calc(var(--atk-dx) - 86px),calc(var(--atk-dy) - 18px),0) scale(1.17) rotate(17deg) skewX(10deg);
         filter:
           drop-shadow(38px 8px 0 rgba(139,92,246,.38))
           drop-shadow(82px 24px 0 rgba(139,92,246,.16))
           drop-shadow(0 0 28px rgba(255,255,255,.98));
       }
       47% {
-        transform: translate3d(-92px,-178px,0) scale(.98) rotate(10deg) skewX(0deg);
+        transform: translate3d(calc(var(--atk-dx) - 92px),calc(var(--atk-dy) - 8px),0) scale(.98) rotate(10deg) skewX(0deg);
         filter: drop-shadow(0 0 16px rgba(139,92,246,.72));
       }
       59% {
-        transform: translate3d(-58px,-126px,0) scale(1.08) rotate(12deg) skewX(7deg);
+        transform: translate3d(calc(var(--atk-dx) - 58px),calc(var(--atk-dy) + 44px),0) scale(1.08) rotate(12deg) skewX(7deg);
         filter:
           drop-shadow(30px 38px 0 rgba(34,211,238,.32))
           drop-shadow(58px 72px 0 rgba(34,211,238,.14))
           drop-shadow(0 0 22px rgba(103,232,249,.95));
       }
       72% {
-        transform: translate3d(90px,-188px,0) scale(1.17) rotate(-18deg) skewX(-10deg);
+        transform: translate3d(calc(var(--atk-dx) + 90px),calc(var(--atk-dy) - 18px),0) scale(1.17) rotate(-18deg) skewX(-10deg);
         filter:
           drop-shadow(-40px 8px 0 rgba(34,211,238,.4))
           drop-shadow(-84px 24px 0 rgba(34,211,238,.17))
           drop-shadow(0 0 30px rgba(255,255,255,1));
       }
       78%, 86% {
-        transform: translate3d(0,-170px,0) scale(1.12) rotate(0deg) skewX(0deg);
+        transform: translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.12) rotate(0deg) skewX(0deg);
         filter: drop-shadow(0 0 30px rgba(255,255,255,1)) drop-shadow(0 0 42px rgba(103,232,249,.75));
       }
       93% {
-        transform: translate3d(0,-54px,0) scale(1.04) rotate(0deg);
+        transform: translate3d(calc(var(--atk-dx) * .3),calc(var(--atk-dy) * .3),0) scale(1.04) rotate(0deg);
         filter: drop-shadow(0 24px 0 rgba(255,255,255,.16)) drop-shadow(0 0 18px rgba(196,181,253,.75));
       }
       100% {
@@ -789,31 +979,146 @@ const createAnimationStyle = () => {
         0%,70% { opacity:0; } 80% { opacity:.9; transform:scale(1); } 100% { opacity:0; transform:scale(1.7); }
       }
     }
+    /* ザンの連撃。敵の位置(--atk-dx/dy)まで一瞬で詰め、敵の左右を3回斬り抜けてから戻る。
+       残像は drop-shadow で描き、斬撃の光は敵の丸枠の側(AttackTargetFx)が出す。尺は今までと同じ320ms。 */
     @keyframes zanComboDash {
       0% {
         transform: translate(0,0) scale(1) skewX(0deg);
         filter: drop-shadow(0 0 4px rgba(34,211,238,0.4));
       }
-      18% {
-        transform: translate(-100px,-14px) scale(1.08) skewX(18deg);
+      10% {
+        transform: translate(calc(var(--atk-dx) * .45 - 30px), calc(var(--atk-dy) * .45)) scale(1.06) skewX(14deg);
+        filter: drop-shadow(calc(var(--atk-dx) * -.2) calc(var(--atk-dy) * -.2) 0 rgba(34,211,238,0.3)) drop-shadow(0 0 12px rgba(34,211,238,0.85));
+      }
+      24% {
+        transform: translate(calc(var(--atk-dx) - 72px), calc(var(--atk-dy) + 18px)) scale(1.12) skewX(18deg);
         filter: drop-shadow(48px 6px 0 rgba(34,211,238,0.35)) drop-shadow(84px 10px 0 rgba(34,211,238,0.16)) drop-shadow(0 0 14px rgba(34,211,238,0.9));
       }
-      40% {
-        transform: translate(150px,-8px) scale(1.15) skewX(-22deg);
+      38% {
+        transform: translate(calc(var(--atk-dx) + 84px), calc(var(--atk-dy) - 12px)) scale(1.2) skewX(-24deg);
         filter: drop-shadow(-70px -4px 0 rgba(34,211,238,0.32)) drop-shadow(-130px -8px 0 rgba(34,211,238,0.15)) drop-shadow(0 0 24px rgba(255,255,255,0.95));
       }
-      58% {
-        transform: translate(-70px,-4px) scale(1.1) skewX(14deg);
-        filter: drop-shadow(36px 3px 0 rgba(34,211,238,0.28)) drop-shadow(0 0 20px rgba(34,211,238,0.9));
+      52% {
+        transform: translate(calc(var(--atk-dx) - 66px), calc(var(--atk-dy) - 6px)) scale(1.15) skewX(18deg);
+        filter: drop-shadow(60px 3px 0 rgba(34,211,238,0.3)) drop-shadow(110px 6px 0 rgba(34,211,238,0.14)) drop-shadow(0 0 20px rgba(34,211,238,0.9));
       }
-      78% {
+      64% {
+        transform: translate(calc(var(--atk-dx) + 26px), calc(var(--atk-dy) + 8px)) scale(1.1) skewX(-10deg);
+        filter: drop-shadow(-36px 3px 0 rgba(34,211,238,0.28)) drop-shadow(0 0 22px rgba(255,255,255,0.9));
+      }
+      82% {
         transform: translate(0,0) scale(1) skewX(0deg);
-        filter: drop-shadow(0 0 24px rgba(255,255,255,0.9));
+        filter: drop-shadow(0 0 16px rgba(34,211,238,0.8));
       }
       100% {
         transform: translate(0,0) scale(1) skewX(0deg);
         filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
+    }
+    /* エイキの桜花連舞。ザンと同じ残像ダッシュで敵まで詰め、敵のまわりを4回斬り抜けたあと、
+       敵の真上で宙返り(1回転)して決め、花びらを散らして戻る。尺は本番の待ち500msに収まる480ms。 */
+    @keyframes eikiSakuraDash {
+      0% {
+        transform: translate(0,0) scale(1) rotate(0deg) skewX(0deg);
+        filter: drop-shadow(0 0 4px rgba(244,114,182,0.45));
+      }
+      10% {
+        transform: translate(-6px,10px) scale(.94) rotate(-6deg) skewX(0deg);
+        filter: drop-shadow(0 0 12px rgba(244,114,182,0.85));
+      }
+      22% {
+        transform: translate(calc(var(--atk-dx) - 70px), calc(var(--atk-dy) + 30px)) scale(1.12) rotate(0deg) skewX(16deg);
+        filter: drop-shadow(calc(var(--atk-dx) * -.2) calc(var(--atk-dy) * -.2) 0 rgba(244,114,182,0.32)) drop-shadow(0 0 16px rgba(244,114,182,0.95));
+      }
+      32% {
+        transform: translate(calc(var(--atk-dx) + 76px), calc(var(--atk-dy) - 26px)) scale(1.18) rotate(0deg) skewX(-20deg);
+        filter: drop-shadow(-66px 24px 0 rgba(244,114,182,0.34)) drop-shadow(-120px 44px 0 rgba(244,114,182,0.15)) drop-shadow(0 0 22px rgba(255,255,255,0.95));
+      }
+      42% {
+        transform: translate(calc(var(--atk-dx) - 64px), calc(var(--atk-dy) - 30px)) scale(1.16) rotate(0deg) skewX(18deg);
+        filter: drop-shadow(62px 2px 0 rgba(244,114,182,0.32)) drop-shadow(116px 4px 0 rgba(244,114,182,0.14)) drop-shadow(0 0 20px rgba(244,114,182,0.95));
+      }
+      52% {
+        transform: translate(calc(var(--atk-dx) + 60px), calc(var(--atk-dy) + 34px)) scale(1.18) rotate(0deg) skewX(-16deg);
+        filter: drop-shadow(-58px -30px 0 rgba(244,114,182,0.32)) drop-shadow(-108px -58px 0 rgba(244,114,182,0.14)) drop-shadow(0 0 22px rgba(255,255,255,0.95));
+      }
+      60% {
+        transform: translate(calc(var(--atk-dx)), calc(var(--atk-dy) - 38px)) scale(1.18) rotate(0deg) skewX(0deg);
+        filter: drop-shadow(0 0 22px rgba(244,114,182,0.95));
+      }
+      72% {
+        transform: translate(calc(var(--atk-dx)), calc(var(--atk-dy) - 50px)) scale(1.26) rotate(360deg) skewX(0deg);
+        filter: drop-shadow(0 0 30px rgba(255,255,255,1)) drop-shadow(0 0 42px rgba(244,114,182,0.9));
+      }
+      86% {
+        transform: translate(calc(var(--atk-dx) * .2), calc(var(--atk-dy) * .2)) scale(1.05) rotate(360deg) skewX(0deg);
+        filter: drop-shadow(0 0 16px rgba(244,114,182,0.7));
+      }
+      100% {
+        transform: translate(0,0) scale(1) rotate(360deg) skewX(0deg);
+        filter: drop-shadow(0 0 0 rgba(0,0,0,0));
+      }
+    }
+    /* 敵の側に出す着弾(24-battle-fx.jsx の AttackTargetFx)。敵の丸枠の中心に重ね、攻撃の尺の中で消える。 */
+    .atk-target-fx { position:absolute; left:50%; top:50%; width:0; height:0; z-index:9500; pointer-events:none; overflow:visible; }
+    /* 図鑑などのプレビューでは敵が居ないので、「敵の位置」(--atk-dx/dy)へずらして重ねる */
+    .atk-target-fx-anchor { position:absolute; inset:0; pointer-events:none; overflow:visible; translate:var(--atk-dx) var(--atk-dy); }
+    .atk-target-fx__core {
+      position:absolute; left:-46px; top:-46px; width:92px; height:92px; border-radius:50%; opacity:0;
+      background:radial-gradient(circle,#fff 0 10%,rgba(254,240,138,.95) 22%,rgba(249,115,22,.62) 42%,rgba(220,38,38,0) 70%);
+      animation:atkTargetCore 270ms ease-out forwards; animation-delay:180ms;
+    }
+    .atk-target-fx__ring {
+      position:absolute; left:-24px; top:-24px; width:48px; height:48px; border-radius:50%; opacity:0;
+      border:4px solid rgba(255,251,235,.95); box-shadow:0 0 10px #fff,0 0 22px rgba(251,146,60,.9);
+      animation:atkTargetRing 250ms ease-out forwards; animation-delay:190ms;
+    }
+    .atk-target-fx__ray {
+      position:absolute; left:-3px; top:-34px; width:6px; height:26px; border-radius:999px; opacity:0;
+      transform-origin:50% 34px; rotate:var(--atk-ray-angle);
+      background:linear-gradient(to top,rgba(255,255,255,0),#fff 40%,rgba(253,224,71,.95));
+      box-shadow:0 0 6px rgba(253,224,71,.9);
+      animation:atkTargetRay 230ms ease-out forwards; animation-delay:190ms;
+    }
+    /* 固有技の突進は一回り大きく、少し早く当たる(specialLunge の当たる瞬間に合わせる) */
+    .atk-target-fx--special .atk-target-fx__core { left:-64px; top:-64px; width:128px; height:128px; animation-delay:160ms;
+      background:radial-gradient(circle,#fff 0 10%,rgba(245,208,254,.95) 22%,rgba(217,70,239,.62) 42%,rgba(126,34,206,0) 70%); }
+    .atk-target-fx--special .atk-target-fx__ring { animation-delay:170ms; border-width:5px; box-shadow:0 0 12px #fff,0 0 26px rgba(217,70,239,.95); }
+    .atk-target-fx--special .atk-target-fx__ray { animation-delay:170ms; height:34px; top:-44px; transform-origin:50% 44px; }
+    @keyframes atkTargetCore { 0% { opacity:0; transform:scale(.3); } 25% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.7); } }
+    @keyframes atkTargetRing { 0% { opacity:0; transform:scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:scale(2.6); } }
+    @keyframes atkTargetRay { 0% { opacity:0; transform:translateY(8px) scaleY(.4); } 30% { opacity:1; } 100% { opacity:0; transform:translateY(-22px) scaleY(1.1); } }
+    /* ザン・エイキの斬撃。敵を横切る光の筋を、斬り抜ける瞬間ごとに1本ずつ走らせる */
+    .atk-target-fx__slash {
+      position:absolute; left:-80px; top:-5px; width:160px; height:10px; opacity:0; border-radius:999px;
+      rotate:var(--atk-slash-angle);
+      clip-path:polygon(0 50%,12% 20%,80% 0,100% 50%,80% 100%,12% 80%);
+      background:linear-gradient(90deg,rgba(255,255,255,0),rgba(103,232,249,.95) 22%,#fff 50%,rgba(103,232,249,.95) 78%,rgba(255,255,255,0));
+      box-shadow:0 0 8px #fff,0 0 18px rgba(34,211,238,.9);
+      animation:atkTargetSlash 140ms ease-out forwards;
+    }
+    .atk-target-fx--eiki .atk-target-fx__slash {
+      background:linear-gradient(90deg,rgba(255,255,255,0),rgba(249,168,212,.95) 22%,#fff 50%,rgba(249,168,212,.95) 78%,rgba(255,255,255,0));
+      box-shadow:0 0 8px #fff,0 0 18px rgba(236,72,153,.9);
+    }
+    @keyframes atkTargetSlash { 0% { opacity:0; transform:scaleX(.1); } 35% { opacity:1; transform:scaleX(1); } 100% { opacity:0; transform:scaleX(1.25) scaleY(.4); } }
+    .atk-target-fx__bloom {
+      position:absolute; left:-40px; top:-40px; width:80px; height:80px; border-radius:50%; opacity:0;
+      background:radial-gradient(circle,#fff 0 12%,rgba(165,243,252,.85) 30%,rgba(34,211,238,.4) 50%,rgba(34,211,238,0) 70%);
+      animation:atkTargetCore 120ms ease-out forwards; animation-delay:190ms;
+    }
+    .atk-target-fx--eiki .atk-target-fx__bloom {
+      left:-56px; top:-56px; width:112px; height:112px;
+      background:radial-gradient(circle,#fff 0 12%,rgba(251,207,232,.95) 28%,rgba(236,72,153,.5) 48%,rgba(236,72,153,0) 70%);
+      animation-duration:140ms; animation-delay:330ms;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      @keyframes eikiSakuraDash {
+        0% { filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
+        50% { filter:drop-shadow(0 0 20px rgba(244,114,182,.95)); }
+        100% { filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
+      }
+      .atk-target-fx__ray, .atk-target-fx__slash { display:none; }
     }
     @keyframes specialCharge {
       0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 6px rgba(168,85,247,0.5)); }
@@ -823,6 +1128,531 @@ const createAnimationStyle = () => {
     @keyframes skillNamePop {
       0% { opacity: 0; }
       100% { opacity: 1; }
+    }
+    /* ==== タクティクス新盤面の飾り(2026-09-24 ユーザー指示「モンスター枠やカードの絵をもっと高級感というか
+       いいかんじに」「動きを付ける・枠の中に景色や模様・カードを本格的なカードゲーム風に」「距離ごとの色は取り入れて」)。
+       ★効くのは data-tactics-look を持つバトル画面(新しい盤面のタクティクス)だけ。クラシックの手札は変えない。
+       ★軽量表示(calm)と「動きを減らす」設定の端末では動きを止め、見た目だけ残す。
+       ★枠の box-shadow は触らない。置ける枠の黄色い輪・選んだ枠の輪は Tailwind の ring(box-shadow)で出ているため。
+         BREAK 中の枠(data-distance-broken)も、赤黒の警告を消さないよう飾りを外す ==== */
+    @property --mh-ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+    @keyframes mhAng { to { --mh-ang: 360deg; } }
+    @keyframes mhShine { 0%, 72% { transform: translateX(-160%) skewX(-18deg); } 100% { transform: translateX(330%) skewX(-18deg); } }
+    @keyframes mhCircle { to { transform: translate(-50%, -50%) rotateX(66deg) rotate(360deg); } }
+    @keyframes mhGem { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.3); } }
+    @keyframes mhTwinkle { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+    [data-tactics-look] [data-slot-index="0"] { --mh-rc: 239,68,68; --mh-rc2: 255,210,190;
+      --mh-pat: radial-gradient(120% 60% at 50% 115%, rgba(255,120,40,.5), rgba(200,30,20,.22) 45%, transparent 70%) padding-box,
+        repeating-linear-gradient(115deg, rgba(255,90,40,.10) 0 3px, transparent 3px 14px) padding-box; }
+    [data-tactics-look] [data-slot-index="1"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
+      --mh-pat: repeating-conic-gradient(from 0deg at 20% 62%, rgba(255,210,80,.15) 0 6deg, transparent 6deg 18deg) padding-box,
+        radial-gradient(60% 60% at 20% 62%, rgba(255,200,60,.32), transparent 70%) padding-box; }
+    /* 中距離は「翡翠の菱格子と丘の稜線」。零の熱と一方向の斜線・近の光線・遠の波紋(同心円)と形が重ならないように、
+       2方向に交わる細い線(菱形の格子)を全体に敷き、下に丘の稜線を1本だけ光らせる。
+       (2026-09-24 ユーザー指摘「遠と同じはおかしい」→草の縦縞にしたが「ださい」と言われ作り直した) */
+    [data-tactics-look] [data-slot-index="2"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
+      --mh-pat: radial-gradient(95% 30% at 30% 106%, rgba(16,185,129,.20) 0 96%, rgba(110,231,183,.6) 98%, transparent 100%) padding-box,
+        repeating-linear-gradient(60deg, rgba(52,211,153,.19) 0 1px, transparent 1px 11px) padding-box,
+        repeating-linear-gradient(120deg, rgba(52,211,153,.19) 0 1px, transparent 1px 11px) padding-box,
+        radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.30), transparent 70%) padding-box; }
+    [data-tactics-look] [data-slot-index="3"] { --mh-rc: 59,130,246; --mh-rc2: 200,225,255;
+      --mh-pat: repeating-radial-gradient(circle at 20% 140%, rgba(90,160,255,.17) 0 3px, transparent 3px 11px) padding-box,
+        radial-gradient(70% 60% at 20% 62%, rgba(80,150,255,.32), transparent 70%) padding-box; }
+    [data-tactics-look] [data-slot-index]:not([data-distance-broken]) {
+      border-width: 2px !important; border-color: transparent !important; border-radius: 16px !important;
+      background: var(--mh-pat),
+        linear-gradient(170deg, rgba(16,18,34,.95), rgba(5,6,14,.98)) padding-box,
+        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+          rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important; }
+    [data-tactics-look="rich"] [data-slot-index]:not([data-distance-broken]):not(.animate-pulse) { animation: mhAng 4.5s linear infinite; }
+    /* 外へにじむ距離色の光(box-shadow を使わずに足す) */
+    [data-tactics-look] [data-slot-index]:not([data-distance-broken])::before { content: ''; position: absolute; inset: -2px; border-radius: 16px;
+      pointer-events: none; box-shadow: 0 0 14px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.2); }
+    /* 光の粒 */
+    [data-tactics-look] [data-slot-index]:not([data-distance-broken])::after { content: ''; position: absolute; inset: 3px; border-radius: 13px; pointer-events: none;
+      background: radial-gradient(1.5px 1.5px at 14% 30%, rgba(var(--mh-rc2),.95), transparent 70%), radial-gradient(1.5px 1.5px at 52% 70%, rgba(var(--mh-rc2),.85), transparent 70%),
+        radial-gradient(1px 1px at 78% 40%, #fff, transparent 70%), radial-gradient(1px 1px at 36% 18%, #fff, transparent 70%); }
+    [data-tactics-look="rich"] [data-slot-index]:not([data-distance-broken])::after { animation: mhTwinkle 2.6s ease-in-out infinite; }
+    [data-tactics-look] [data-slot-head] { background: linear-gradient(90deg, rgba(var(--mh-rc),.7), rgba(var(--mh-rc),.16) 65%, transparent) !important;
+      border-bottom-color: rgba(var(--mh-rc2),.5) !important; }
+    [data-tactics-look] [data-slot-head] span { text-shadow: 0 1px 3px rgba(0,0,0,.9); }
+    /* 足元の魔法陣 */
+    [data-tactics-look] [data-slot-circle] { position: absolute; left: 50%; top: calc(50% + 26px); width: 58px; height: 58px; z-index: 0; pointer-events: none;
+      transform: translate(-50%, -50%) rotateX(66deg);
+      background: radial-gradient(circle, transparent 52%, rgba(var(--mh-rc2),.95) 53%, rgba(var(--mh-rc2),.95) 55%, transparent 56%, transparent 66%, rgba(var(--mh-rc),.9) 67%, rgba(var(--mh-rc),.9) 70%, transparent 71%),
+        repeating-conic-gradient(rgba(var(--mh-rc2),.8) 0 4deg, transparent 4deg 30deg);
+      -webkit-mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%); mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%);
+      filter: drop-shadow(0 0 4px rgba(var(--mh-rc),1)); }
+    [data-tactics-look="rich"] [data-slot-circle] { animation: mhCircle 6s linear infinite; }
+    /* 手札: 金の縁・模様・光の筋・宝石 */
+    /* isolation で手札1枚ぶんの重なりの世界を作り、模様(z-index:-1)を「カードの地の上・中身の下」に置く */
+    [data-tactics-look] [data-hand-card] { border-color: transparent !important; isolation: isolate; }
+    [data-tactics-look] [data-card-frame] { position: absolute; inset: -1px; border-radius: 12px; padding: 2px; pointer-events: none; z-index: 6;
+      background: conic-gradient(from var(--mh-ang), #8a6220, #fff3c4 10%, #c8962e 25%, #fff0b0 50%, #8a6220 70%, #f4d57c 85%, #8a6220);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+    [data-tactics-look="rich"] [data-card-frame] { animation: mhAng 5s linear infinite; }
+    [data-tactics-look] [data-card-pattern] { position: absolute; inset: 0; border-radius: 11px; pointer-events: none; z-index: -1;
+      background: radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
+    [data-tactics-look] [data-card-pattern="攻撃"] { background: repeating-linear-gradient(135deg, rgba(0,0,0,.18) 0 2px, transparent 2px 8px), radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
+    [data-tactics-look] [data-card-pattern="守り"] { background: radial-gradient(circle, rgba(255,255,255,.16) 1.5px, transparent 2px) 0 0 / 8px 8px, radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
+    [data-tactics-look] [data-card-pattern="支援"], [data-tactics-look] [data-card-pattern="回復"] {
+      background: repeating-conic-gradient(from 0deg at 50% 30%, rgba(255,255,255,.13) 0 10deg, transparent 10deg 30deg), radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
+    [data-tactics-look] [data-card-shine] { position: absolute; inset: 0; border-radius: 11px; overflow: hidden; pointer-events: none; z-index: 5; }
+    [data-tactics-look] [data-card-shine]::before { content: ''; position: absolute; top: -10%; bottom: -10%; left: 0; width: 40%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); transform: translateX(-160%) skewX(-18deg); }
+    [data-tactics-look="rich"] [data-card-shine]::before { animation: mhShine 3.4s ease-in-out infinite; }
+    [data-tactics-look] [data-card-gem] { position: absolute; left: 1px; top: 1px; width: 22px; height: 22px; z-index: 7; pointer-events: none;
+      display: flex; align-items: center; justify-content: center; padding-top: 2px; font: 900 10px/1 system-ui, sans-serif; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.9);
+      background: radial-gradient(circle at 35% 30%, #fff 0 8%, #7fd8ff 18%, #1f6fd1 55%, #0b2e6b 100%);
+      clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%); }
+    [data-tactics-look="rich"] [data-card-gem] { animation: mhGem 2.2s ease-in-out infinite; }
+    [data-tactics-look] [data-hand-card] [data-decoration] { border-radius: 8px !important; border: 2px solid #f3d27a !important;
+      background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.25), rgba(0,0,0,.35)) !important;
+      box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.55), inset 0 0 10px rgba(0,0,0,.5) !important; }
+    [data-tactics-look] [data-card-name] { text-shadow: 0 1px 0 rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.6); }
+    /* ==== 敵のまわりも同じ飾りにそろえる(2026-09-24 ユーザー指示「同じように敵領域にあるボタンや表示関係も見た目よくして」)。
+       金の細い縁取り・ガラスの照り・距離の色の光、を枠やカードと共通の言葉で使う。
+       ★ボタンの役割の色(青=勇者・赤=敵・琥珀=記録)は残す。縁取りと照りを重ねるだけ ==== */
+    @keyframes mhBarShine { 0%, 65% { transform: translateX(-120%); } 100% { transform: translateX(420%); } }
+    @keyframes mhRuneSpin { to { transform: rotate(360deg); } }
+    [data-tactics-look] [data-battle-header] { background: linear-gradient(180deg, #161c38, #0a0e1f) !important; border-bottom: 1px solid rgba(243,210,122,.5) !important;
+      box-shadow: 0 2px 12px rgba(0,0,0,.6), inset 0 -1px 0 rgba(255,230,160,.12); }
+    [data-tactics-look] [data-enemy-bar] { background: linear-gradient(180deg, rgba(30,10,16,.96), rgba(10,6,12,.97)) !important; border-bottom: 1px solid rgba(243,210,122,.35) !important; }
+    [data-tactics-look] [data-enemy-hpbar] { border-color: #d4af5a !important; height: 16px !important;
+      box-shadow: 0 0 0 1px rgba(40,26,6,.9), 0 0 10px rgba(239,68,68,.35), inset 0 2px 6px rgba(0,0,0,.85) !important; }
+    [data-tactics-look] [data-enemy-hpbar]::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 22%; pointer-events: none;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); transform: translateX(-120%); }
+    [data-tactics-look="rich"] [data-enemy-hpbar]::after { animation: mhBarShine 4s ease-in-out infinite; }
+    /* 舞台の四隅のボタンと、手札の上の操作ボタン */
+    [data-tactics-look] [data-battle-log-button], [data-tactics-look] button[aria-label="敵を解析する"], [data-tactics-look] button[aria-label="勇者モンのステータス"],
+    [data-tactics-look] [data-battle-view-button], [data-tactics-look] button[aria-label="緊急回復"], [data-tactics-look] button[aria-label^="AUTO"] {
+      border-color: rgba(243,210,122,.55) !important;
+      background-image: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 45%, rgba(0,0,0,.25)) !important;
+      box-shadow: 0 0 0 1px rgba(20,12,4,.85), 0 4px 12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,240,200,.35), 0 0 8px rgba(243,210,122,.18) !important; }
+    [data-tactics-look] [data-battle-menu-button] { border: 1px solid rgba(243,210,122,.55) !important; box-shadow: inset 0 1px 0 rgba(255,240,200,.3); }
+    /* ACTION(押せるとき)は金の縁と照り */
+    [data-tactics-look] [data-battle-action]:not(:disabled) { box-shadow: 0 0 0 2px #d4af5a, 0 0 0 3px rgba(40,26,6,.9), 0 0 16px rgba(255,210,120,.55), inset 0 2px 0 rgba(255,255,255,.6) !important; }
+    /* 敵の行動の札と、強化の札の帯 */
+    [data-tactics-look] [data-enemy-intent] { box-shadow: 0 0 0 1px rgba(243,210,122,.6), 0 0 0 2px rgba(30,10,10,.9), 0 6px 16px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,240,200,.25) !important; }
+    [data-tactics-look] [data-battle-buffs] { border-top: 1px solid rgba(243,210,122,.3); border-bottom: 1px solid rgba(243,210,122,.3);
+      background: linear-gradient(180deg, rgba(14,18,36,.96), rgba(6,8,18,.96)) !important; }
+    /* 敵の絵の右上の技の札(3連撃！など)。色と光(box-shadow)は技の種類のまま残し、金の縁は outline で重ねる */
+    [data-tactics-look] [data-enemy-notice] { outline: 1.5px solid rgba(243,210,122,.9); outline-offset: 1px;
+      background-image: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 50%) !important; }
+    /* 敵の攻撃・ためるは絵だけを動かす(丸枠とルーンの輪はその場に残す)。> span は敵の絵を包む要素 */
+    [data-tactics-look] [data-enemy-ring][data-enemy-attack="fly"] > span { display: block; position: relative; z-index: 9999; animation: enemyAttackFly 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-attack="charge"] > span { display: block; position: relative; animation: enemyChargeShake 1100ms ease-in-out forwards; }
+    /* ==== 敵ごとの動き(2026-09-24 ユーザー指示「待機時間も動いてる感じに」「実際に動いてるように」「まずはカワズモー」)。
+       絵は1枚のまま。支点は足元(transform-origin 50% 92%)にして、伸び縮み・傾き・重心移動で「生きている」ように見せる。
+       待機は絵(img)、攻撃・ためる・やられは絵を包む要素(span)へ掛ける。足元の影も同じ拍子で伸び縮みさせる ==== */
+    /* カワズモー(力士のカエル): 待機は左右に重心を移しながらお腹で呼吸 / 攻撃は のけぞって溜め→踏み込んで張り手→戻る /
+       ためるは 片足を上げて四股を踏む / やられは のけぞって震える */
+    /* 2026-09-24 ユーザー指摘「思ってたより地味。もっと頑張って動き作れない？」で動きを大きく作り直した。
+       待機は6秒で1巡: 大きく揺れて呼吸(0〜50%) → 片足を上げて四股・土ぼこり(52〜76%) → 小さく跳ねて着地(80〜96%)。
+       ★左右の反転(横を向く)は入れない(2026-09-24 ユーザー指摘「反転はださいだけ」) */
+    @keyframes kzIdle {
+      0%, 100% { transform: translateX(0) rotate(0) scale(1, 1); }
+      8% { transform: translateX(-8px) rotate(-6deg) scale(1.07, .94); }
+      16% { transform: translateX(0) rotate(0) scale(.96, 1.05); }
+      24% { transform: translateX(8px) rotate(6deg) scale(1.07, .94); }
+      32% { transform: translateX(0) rotate(0) scale(.96, 1.05); }
+      40% { transform: translateX(-8px) rotate(-6deg) scale(1.07, .94); }
+      48% { transform: translateX(0) rotate(0) scale(1, 1); }
+      54% { transform: translate(-6px, -4px) rotate(-12deg) scale(.95, 1.07); }
+      60% { transform: translate(-8px, -16px) rotate(-17deg) scale(.94, 1.09); }
+      63% { transform: translate(-7px, -15px) rotate(-16deg) scale(.94, 1.09); }
+      66% { transform: translate(0, 4px) rotate(0) scale(1.24, .8); }
+      69% { transform: translate(0, -3px) rotate(0) scale(.95, 1.07); }
+      73% { transform: translate(0, 0) rotate(0) scale(1.04, .97); }
+      80% { transform: translateY(2px) scale(1.08, .92); }
+      84% { transform: translateY(-10px) scale(.94, 1.08); }
+      88% { transform: translateY(2px) scale(1.1, .9); }
+      92% { transform: translateY(-4px) scale(.97, 1.04); }
+      96% { transform: translateY(0) scale(1.02, .98); }
+    }
+    @keyframes kzShadow {
+      0%, 16%, 32%, 48%, 78%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
+      8%, 40% { transform: translateX(calc(-50% - 8px)) scaleX(1.12); }
+      24% { transform: translateX(calc(-50% + 8px)) scaleX(1.12); }
+      60%, 63% { transform: translateX(calc(-50% - 6px)) scaleX(.8); opacity: .7; }
+      66% { transform: translateX(-50%) scaleX(1.35); opacity: 1; }
+      84% { transform: translateX(-50%) scaleX(.82); opacity: .75; }
+      88% { transform: translateX(-50%) scaleX(1.18); opacity: 1; }
+    }
+    /* 四股の土ぼこり(影の左右から吹き出して消える)。待機の66%と、ためるの踏み込みに合わせる */
+    @keyframes kzDustIdle {
+      0%, 65%, 100% { opacity: 0; transform: translateX(0) scale(.3); }
+      67% { opacity: .95; transform: translateX(0) scale(.6); }
+      76% { opacity: 0; transform: translateX(var(--kz-dx)) scale(1.4); }
+    }
+    @keyframes kzDust {
+      0%, 55% { opacity: 0; transform: translateX(0) scale(.3); }
+      60% { opacity: .95; transform: translateX(0) scale(.7); }
+      90%, 100% { opacity: 0; transform: translateX(var(--kz-dx)) scale(1.6); }
+    }
+    /* 張り手: 腰を落として右肩を引く → 左へひねりながら前へ押し出す(1発目) → 右へひねり返して押し込む(2発目) → 戻る */
+    @keyframes kzSlap {
+      0% { transform: none; }
+      18% { transform: translate(6px, 4px) rotate(14deg) scale(1.1, .9); }
+      36% { transform: translate(-10px, 46px) rotate(-16deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 18px rgba(239,68,68,.9)); }
+      52% { transform: translate(10px, 70px) rotate(15deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
+      66% { transform: translate(0, 60px) rotate(0) scale(1.12, .92); filter: drop-shadow(0 0 18px rgba(220,38,38,.8)); }
+      100% { transform: none; filter: none; }
+    }
+    /* 手のひら: 体の横から画面の手前へ大きく突き出る。左右で半拍ずらす。緑がかった色はカエルの手に寄せるため */
+    @keyframes kzPalmL {
+      0%, 22% { opacity: 0; transform: translate(-30px, -10px) rotate(-30deg) scale(.4); }
+      34% { opacity: 1; transform: translate(-18px, 40px) rotate(-8deg) scale(1.5); }
+      44% { opacity: .9; transform: translate(-14px, 70px) rotate(-4deg) scale(2.1); }
+      54%, 100% { opacity: 0; transform: translate(-12px, 84px) rotate(0) scale(2.4); }
+    }
+    @keyframes kzPalmR {
+      0%, 38% { opacity: 0; transform: translate(30px, -6px) rotate(30deg) scale(.4) scaleX(-1); }
+      50% { opacity: 1; transform: translate(18px, 50px) rotate(8deg) scale(1.6) scaleX(-1); }
+      60% { opacity: .9; transform: translate(14px, 80px) rotate(4deg) scale(2.2) scaleX(-1); }
+      70%, 100% { opacity: 0; transform: translate(12px, 92px) rotate(0) scale(2.5) scaleX(-1); }
+    }
+    @keyframes kzImpact {
+      0%, 48% { opacity: 0; transform: translateX(-50%) scale(.2); }
+      56% { opacity: 1; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0; transform: translateX(-50%) scale(1.8); }
+    }
+    @keyframes kzStomp {
+      0% { transform: none; }
+      14% { transform: translateY(4px) scale(1.12, .88); }
+      32% { transform: translate(-8px, -18px) rotate(-20deg) scale(.93, 1.1); }
+      38% { transform: translate(-6px, -18px) rotate(-19deg) scale(.93, 1.1); }
+      44% { transform: translate(-9px, -19px) rotate(-21deg) scale(.93, 1.1); }
+      50% { transform: translate(-7px, -18px) rotate(-20deg) scale(.93, 1.1); }
+      58% { transform: translateY(5px) rotate(0) scale(1.28, .76); filter: brightness(1.25) drop-shadow(0 0 22px rgba(251,191,36,1)); }
+      64% { transform: translate(-4px, 3px) scale(1.2, .82); }
+      70% { transform: translate(4px, 3px) scale(1.2, .82); }
+      78% { transform: translate(0, -4px) scale(.95, 1.07); filter: drop-shadow(0 0 12px rgba(251,191,36,.6)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzHurt {
+      0% { transform: none; }
+      16% { transform: translate(12px, -8px) rotate(16deg) scale(.88, 1.1); filter: brightness(2.2) saturate(.4); }
+      36% { transform: translate(-8px, 0) rotate(-8deg) scale(1.08, .94); filter: brightness(1.2); }
+      54% { transform: translate(5px, 0) rotate(4deg); filter: none; }
+      72% { transform: translate(-3px, 0) rotate(-2deg); }
+      100% { transform: none; }
+    }
+    [data-tactics-look] [data-enemy-motion] > span { display: block; position: relative; transform-origin: 50% 92%; }
+    [data-tactics-look] [data-enemy-motion] > span > img { transform-origin: 50% 92%; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > span > img { animation: kzIdle 6s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > [data-enemy-shadow] { animation: kzShadow 6s ease-in-out infinite; }
+    /* 土ぼこり: 影の左右に1つずつ */
+    [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::before, [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::after {
+      content: ''; position: absolute; bottom: 10%; width: 46%; height: 150%; border-radius: 50%; opacity: 0; pointer-events: none;
+      background: radial-gradient(closest-side, rgba(214,196,160,.85), rgba(160,140,110,.45) 55%, transparent); }
+    [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::before { left: -18%; --kz-dx: -26px; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::after { right: -18%; --kz-dx: 26px; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > [data-enemy-shadow]::before,
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]):not([data-enemy-skill]) > [data-enemy-shadow]::after { animation: kzDustIdle 6s ease-out infinite; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::after { animation: kzDust 1100ms ease-out forwards; }
+    /* 張り手の衝撃: 丸枠の下に赤い輪が広がる */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"]::after { content: ''; position: absolute; left: 50%; bottom: -14%; width: 70%; height: 30%; border-radius: 50%;
+      pointer-events: none; opacity: 0; z-index: 2;
+      background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(248,113,113,.8) 35%, rgba(239,68,68,.35) 65%, transparent); }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"]::after { animation: kzImpact 450ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap 450ms ease-in forwards; }
+    [data-tactics-look] [data-kz-palm] { font-style: normal; position: absolute; top: 42%; left: 50%; margin-left: -18px; width: 36px; text-align: center; font-size: 30px; line-height: 1;
+      opacity: 0; pointer-events: none; z-index: 10000;
+      filter: hue-rotate(20deg) saturate(.95) brightness(.95) drop-shadow(0 0 8px rgba(239,68,68,.85)) drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
+    /* 勢いの線(手のひらの後ろに伸びる白い筋) */
+    [data-tactics-look] [data-kz-palm]::after { content: ''; position: absolute; left: 50%; top: -60%; width: 60%; height: 90%; margin-left: -30%; pointer-events: none;
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,.8) 0 2px, transparent 2px 6px);
+      -webkit-mask: linear-gradient(0deg, #000, transparent); mask: linear-gradient(0deg, #000, transparent); }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="l"] { animation: kzPalmL 450ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > [data-kz-palm="r"] { animation: kzPalmR 450ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-hurt] > span { animation: kzHurt 520ms ease-out forwards; }
+    /* ---- カワズモーの技ごとの動き(2026-09-24 ユーザー指示「他の技も特徴付けたい」) ----
+       data-enemy-skill に技の名前が入る(60-app の setEnemyAttackFx の skill)。長さは TACTICS_ENEMY_SKILL_MS とそろえる。
+         normal はり手 … 上の kzSlap(左右の張り手2発)
+         sweep かわずつき 450ms … 低く沈んで横から飛び込む。弧の斬り跡
+         rush 連続はり手 750ms … 左右にひねりながら張り手を6発
+         pierce 上手投げ 900ms … 手を伸ばしてつかむ → 後ろへ持ち上げる → 前へ投げ落とす。赤い一直線
+         special 大回転落とし 1100ms … 跳んで2回転 → 真下へ落ちる。金の渦と大きな衝撃
+         allout 大投げたまや 1000ms … 担いで振りかぶり、投げ放つ。頭上に花火
+         charge 必殺技準備 … 深く構えて震え、金色に光が溜まる / pierceCharge … 両手を広げて差し手を狙う / roar しこ踏み … kzStomp
+         regen かえるのうた 1000ms … 揺れながら歌う。音符が昇る */
+    @keyframes kzLunge {
+      0% { transform: none; }
+      28% { transform: translate(-26px, 10px) rotate(-12deg) scale(1.2, .8); }
+      58% { transform: translate(30px, 74px) rotate(14deg) scale(1.26, .86); filter: brightness(1.25) drop-shadow(0 0 22px rgba(52,211,153,1)); }
+      72% { transform: translate(22px, 66px) rotate(8deg) scale(1.18, .9); filter: drop-shadow(0 0 14px rgba(52,211,153,.7)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzSweepArc {
+      0%, 30% { opacity: 0; transform: translateX(-50%) rotate(-38deg) scaleX(.5); }
+      50% { opacity: 1; transform: translateX(-50%) rotate(-6deg) scaleX(1); }
+      72% { opacity: .9; transform: translateX(-50%) rotate(22deg) scaleX(1.1); }
+      100% { opacity: 0; transform: translateX(-50%) rotate(34deg) scaleX(1.15); }
+    }
+    @keyframes kzRush {
+      0% { transform: none; }
+      10% { transform: translate(6px, 4px) rotate(12deg) scale(1.08, .92); }
+      22% { transform: translate(-9px, 40px) rotate(-15deg) scale(1.14, .9); }
+      34% { transform: translate(9px, 50px) rotate(15deg) scale(1.16, .9); }
+      46% { transform: translate(-9px, 58px) rotate(-15deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 16px rgba(239,68,68,.9)); }
+      58% { transform: translate(9px, 64px) rotate(15deg) scale(1.18, .88); }
+      70% { transform: translate(-7px, 68px) rotate(-11deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 24px rgba(239,68,68,1)); }
+      84% { transform: translate(0, 40px) rotate(0) scale(1.08, .94); filter: drop-shadow(0 0 12px rgba(220,38,38,.6)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzPalmJabL {
+      0% { opacity: 0; transform: translate(-34px, 0) rotate(-26deg) scale(.5); }
+      35% { opacity: 1; transform: translate(-24px, 48px) rotate(-8deg) scale(1.6); }
+      65% { opacity: .9; transform: translate(-20px, 72px) rotate(-4deg) scale(2.1); }
+      100% { opacity: 0; transform: translate(-18px, 84px) rotate(0) scale(2.3); }
+    }
+    @keyframes kzPalmJabR {
+      0% { opacity: 0; transform: translate(34px, 0) rotate(26deg) scale(.5) scaleX(-1); }
+      35% { opacity: 1; transform: translate(24px, 52px) rotate(8deg) scale(1.6) scaleX(-1); }
+      65% { opacity: .9; transform: translate(20px, 76px) rotate(4deg) scale(2.1) scaleX(-1); }
+      100% { opacity: 0; transform: translate(18px, 88px) rotate(0) scale(2.3) scaleX(-1); }
+    }
+    @keyframes kzThrow {
+      0% { transform: none; }
+      16% { transform: translate(0, 24px) scale(1.12, .9); }
+      26% { transform: translate(0, 28px) scale(1.14, .88); }
+      44% { transform: translate(-14px, -26px) rotate(-22deg) scale(.94, 1.1); filter: drop-shadow(0 0 10px rgba(244,63,94,.6)); }
+      56% { transform: translate(-16px, -34px) rotate(-27deg) scale(.92, 1.12); filter: drop-shadow(0 0 14px rgba(244,63,94,.8)); }
+      68% { transform: translate(10px, 66px) rotate(24deg) scale(1.28, .84); filter: brightness(1.3) drop-shadow(0 0 26px rgba(244,63,94,1)); }
+      78% { transform: translate(6px, 58px) rotate(16deg) scale(1.2, .88); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzGrab {
+      0%, 6% { opacity: 0; transform: translate(26px, 0) rotate(30deg) scale(.5) scaleX(-1); }
+      16% { opacity: 1; transform: translate(20px, 44px) rotate(10deg) scale(1.6) scaleX(-1); }
+      28% { opacity: 1; transform: translate(18px, 48px) rotate(0) scale(1.2) scaleX(-1); }
+      50% { opacity: 1; transform: translate(-14px, -44px) rotate(-50deg) scale(1.4) scaleX(-1); }
+      66% { opacity: .95; transform: translate(12px, 76px) rotate(40deg) scale(2.1) scaleX(-1); }
+      76%, 100% { opacity: 0; transform: translate(14px, 88px) rotate(46deg) scale(2.3) scaleX(-1); }
+    }
+    @keyframes kzPierceBeam {
+      0%, 62% { opacity: 0; transform: translateX(-50%) scaleY(0); }
+      68% { opacity: 1; transform: translateX(-50%) scaleY(1); }
+      84% { opacity: .85; transform: translateX(-50%) scaleY(1.05) scaleX(.8); }
+      100% { opacity: 0; transform: translateX(-50%) scaleY(1.1) scaleX(.2); }
+    }
+    @keyframes kzSpinDrop {
+      0% { transform: none; }
+      12% { transform: translateY(8px) scale(1.2, .8); }
+      24% { transform: translateY(-56px) rotate(0) scale(.9, 1.12); }
+      34% { transform: translateY(-74px) rotate(180deg) scale(.96); }
+      44% { transform: translateY(-80px) rotate(360deg) scale(.96); filter: drop-shadow(0 0 16px rgba(251,191,36,.8)); }
+      54% { transform: translateY(-80px) rotate(540deg) scale(.96); }
+      64% { transform: translateY(-66px) rotate(720deg) scale(.94, 1.08); filter: drop-shadow(0 0 20px rgba(251,191,36,1)); }
+      74% { transform: translateY(72px) rotate(720deg) scale(1.36, .76); filter: brightness(1.35) drop-shadow(0 0 30px rgba(251,191,36,1)); }
+      80% { transform: translate(-5px, 64px) rotate(720deg) scale(1.28, .8); }
+      86% { transform: translate(5px, 64px) rotate(720deg) scale(1.26, .82); filter: drop-shadow(0 0 14px rgba(251,191,36,.6)); }
+      100% { transform: rotate(720deg); filter: none; }
+    }
+    @keyframes kzWhirl {
+      0%, 16% { opacity: 0; transform: translateY(0) rotate(0) scale(.6); }
+      28% { opacity: 1; transform: translateY(-60px) rotate(360deg) scale(1); }
+      60% { opacity: 1; transform: translateY(-74px) rotate(1080deg) scale(1.05); }
+      72%, 100% { opacity: 0; transform: translateY(50px) rotate(1300deg) scale(1.3, .5); }
+    }
+    @keyframes kzBigImpact {
+      0% { opacity: 0; transform: translateX(-50%) scale(.2); }
+      12% { opacity: 1; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0; transform: translateX(-50%) scale(2.4); }
+    }
+    @keyframes kzShadowJump {
+      0%, 12%, 74%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
+      44%, 54% { transform: translateX(-50%) scaleX(.45); opacity: .35; }
+      78% { transform: translateX(-50%) scaleX(1.5); opacity: 1; }
+    }
+    @keyframes kzHeave {
+      0% { transform: none; }
+      12% { transform: translateY(10px) scale(1.18, .82); }
+      26% { transform: translateY(-12px) scale(.9, 1.16); }
+      38% { transform: translate(-16px, -24px) rotate(-20deg) scale(.9, 1.16); filter: drop-shadow(0 0 12px rgba(250,204,21,.7)); }
+      46% { transform: translate(-18px, -26px) rotate(-23deg) scale(.9, 1.16); }
+      58% { transform: translate(18px, 26px) rotate(24deg) scale(1.24, .86); filter: brightness(1.3) drop-shadow(0 0 26px rgba(250,204,21,1)); }
+      68% { transform: translate(10px, 32px) rotate(14deg) scale(1.16, .9); }
+      82% { transform: translateY(-8px) rotate(0) scale(.95, 1.06); filter: drop-shadow(0 0 12px rgba(250,204,21,.5)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzFirework {
+      0%, 54% { opacity: 0; transform: translateX(-50%) scale(.1); }
+      62% { opacity: 1; transform: translateX(-50%) scale(.6); }
+      86% { opacity: 1; transform: translateX(-50%) scale(1.25); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(14px) scale(1.45); }
+    }
+    @keyframes kzPowerUp {
+      0% { transform: none; }
+      14% { transform: translateY(8px) scale(1.16, .84); }
+      22%, 38%, 54%, 70% { transform: translate(-3px, 8px) scale(1.16, .84); }
+      30%, 46%, 62% { transform: translate(3px, 8px) scale(1.16, .84); }
+      22% { filter: drop-shadow(0 0 6px rgba(251,191,36,.5)); }
+      54% { filter: brightness(1.15) drop-shadow(0 0 16px rgba(251,191,36,.85)); }
+      80% { transform: translateY(-10px) scale(.93, 1.12); filter: brightness(1.3) drop-shadow(0 0 28px rgba(251,191,36,1)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzStance {
+      0% { transform: none; }
+      18% { transform: translateY(6px) scale(1.18, .86); }
+      34% { transform: translate(-10px, 6px) rotate(-8deg) scale(1.18, .86); filter: drop-shadow(0 0 10px rgba(244,63,94,.6)); }
+      50% { transform: translate(10px, 6px) rotate(8deg) scale(1.18, .86); }
+      66% { transform: translate(-10px, 6px) rotate(-8deg) scale(1.18, .86); }
+      82% { transform: translateY(4px) scale(1.22, .82); filter: brightness(1.2) drop-shadow(0 0 22px rgba(244,63,94,1)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzPalmReadyL {
+      0%, 12% { opacity: 0; transform: translate(-20px, 0) rotate(-10deg) scale(.5); }
+      26%, 74% { opacity: 1; transform: translate(-52px, 4px) rotate(-24deg) scale(1.4); }
+      50% { opacity: 1; transform: translate(-56px, 0) rotate(-12deg) scale(1.55); }
+      90%, 100% { opacity: 0; transform: translate(-44px, 8px) rotate(-24deg) scale(1.2); }
+    }
+    @keyframes kzPalmReadyR {
+      0%, 12% { opacity: 0; transform: translate(20px, 0) rotate(10deg) scale(.5) scaleX(-1); }
+      26%, 74% { opacity: 1; transform: translate(52px, 4px) rotate(24deg) scale(1.4) scaleX(-1); }
+      50% { opacity: 1; transform: translate(56px, 0) rotate(12deg) scale(1.55) scaleX(-1); }
+      90%, 100% { opacity: 0; transform: translate(44px, 8px) rotate(24deg) scale(1.2) scaleX(-1); }
+    }
+    @keyframes kzSing {
+      0% { transform: none; }
+      15% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); filter: drop-shadow(0 0 10px rgba(52,211,153,.6)); }
+      35% { transform: translate(6px, 0) rotate(9deg) scale(1.05, .96); }
+      55% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); filter: brightness(1.15) drop-shadow(0 0 18px rgba(52,211,153,.95)); }
+      75% { transform: translate(6px, 0) rotate(9deg) scale(1.05, .96); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzNote {
+      0% { opacity: 0; transform: translate(0, 0) rotate(0) scale(.5); }
+      20% { opacity: 1; transform: translate(calc(var(--kz-nx) * .3), -14px) rotate(calc(var(--kz-nr) * .3)) scale(1); }
+      60% { opacity: 1; transform: translate(calc(var(--kz-nx) * -.2), -44px) rotate(calc(var(--kz-nr) * -.3)) scale(1.1); }
+      100% { opacity: 0; transform: translate(var(--kz-nx), -78px) rotate(var(--kz-nr)) scale(1.2); }
+    }
+    [data-tactics-look] [data-kz-fx] { font-style: normal; position: absolute; inset: 0; pointer-events: none; z-index: 10000; }
+    [data-tactics-look] [data-kz-fx]::before, [data-tactics-look] [data-kz-fx]::after { content: ''; position: absolute; opacity: 0; pointer-events: none; }
+    /* はり手以外は、はり手の動き(kzSlap・手のひら・赤い輪)を止めて技ごとのものに差し替える */
+    /* ★:where で包んで詳しさ(specificity)を上げない。上げると下の技ごとの指定より強くなり、手や輪が出なくなる */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack]:where([data-enemy-skill]:not([data-enemy-skill="normal"])) > [data-kz-palm] { animation: none; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack]:where([data-enemy-skill]:not([data-enemy-skill="normal"]))::after { animation: none; }
+    /* かわずつき */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="sweep"] > span { z-index: 9999; animation: kzLunge 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="sweep"] > [data-kz-fx]::before { left: 50%; bottom: -30%; width: 170%; height: 70%; border-radius: 50%;
+      border-bottom: 6px solid rgba(236,253,245,.95); box-shadow: 0 10px 18px -6px rgba(52,211,153,.9);
+      transform-origin: 50% 0; animation: kzSweepArc 450ms ease-out forwards; }
+    /* 連続はり手 */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > span { z-index: 9999; animation: kzRush 750ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > [data-kz-palm="l"] { animation: kzPalmJabL 220ms ease-out 90ms 3; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"] > [data-kz-palm="r"] { animation: kzPalmJabR 220ms ease-out 200ms 3; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="rush"]::after { animation: kzImpact 220ms ease-out 110ms 3; }
+    /* 上手投げ */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > span { z-index: 9999; animation: kzThrow 900ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > [data-kz-palm="r"] { animation: kzGrab 900ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierce"]::after { animation: kzImpact 500ms ease-out 400ms forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="pierce"] > [data-kz-fx]::before { left: 50%; top: 40%; width: 16px; height: 170%; border-radius: 8px; transform-origin: 50% 0;
+      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(251,113,133,.9) 40%, rgba(225,29,72,.6) 80%, transparent);
+      box-shadow: 0 0 18px 6px rgba(244,63,94,.75); animation: kzPierceBeam 900ms ease-out forwards; }
+    /* 大回転落とし */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > span { z-index: 9999; transform-origin: 50% 55%; animation: kzSpinDrop 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow] { animation: kzShadowJump 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-enemy-shadow]::after { animation: kzDust 600ms ease-out 450ms forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-kz-fx]::before { inset: -14%; border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent, rgba(253,224,71,.95) 14%, transparent 30%, rgba(255,255,255,.8) 50%, transparent 64%, rgba(251,191,36,.95) 80%, transparent 94%);
+      -webkit-mask: radial-gradient(closest-side, transparent 62%, #000 66%, #000 90%, transparent 96%); mask: radial-gradient(closest-side, transparent 62%, #000 66%, #000 90%, transparent 96%);
+      animation: kzWhirl 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="special"] > [data-kz-fx]::after { left: 50%; bottom: -24%; width: 120%; height: 40%; border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(253,224,71,.85) 35%, rgba(245,158,11,.4) 65%, transparent);
+      animation: kzBigImpact 420ms ease-out 800ms forwards; }
+    /* 大投げたまや */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > span { z-index: 9999; animation: kzHeave 1000ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="allout"]::after { animation: kzImpact 500ms ease-out 450ms forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::before,
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::after { left: 50%; top: -58%; width: 150%; aspect-ratio: 1; transform-origin: 50% 50%; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::before {
+      background: radial-gradient(9px 9px at 90% 50%, #fde047, transparent 75%), radial-gradient(9px 9px at 78% 78%, #fb7185, transparent 75%),
+        radial-gradient(9px 9px at 50% 90%, #fde047, transparent 75%), radial-gradient(9px 9px at 22% 78%, #67e8f9, transparent 75%),
+        radial-gradient(9px 9px at 10% 50%, #fde047, transparent 75%), radial-gradient(9px 9px at 22% 22%, #fb7185, transparent 75%),
+        radial-gradient(9px 9px at 50% 10%, #fde047, transparent 75%), radial-gradient(9px 9px at 78% 22%, #67e8f9, transparent 75%),
+        radial-gradient(7px 7px at 72% 50%, #fff, transparent 75%), radial-gradient(7px 7px at 50% 72%, #fff, transparent 75%),
+        radial-gradient(7px 7px at 28% 50%, #fff, transparent 75%), radial-gradient(7px 7px at 50% 28%, #fff, transparent 75%),
+        radial-gradient(closest-side, rgba(253,224,71,.35), transparent 40%);
+      filter: drop-shadow(0 0 6px rgba(253,224,71,.9)); animation: kzFirework 1000ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="allout"] > [data-kz-fx]::after { top: -40%; margin-left: -34%; width: 110%;
+      background: radial-gradient(7px 7px at 90% 50%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 78% 78%, #86efac, transparent 75%),
+        radial-gradient(7px 7px at 50% 90%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 22% 78%, #fdba74, transparent 75%),
+        radial-gradient(7px 7px at 10% 50%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 22% 22%, #86efac, transparent 75%),
+        radial-gradient(7px 7px at 50% 10%, #f0abfc, transparent 75%), radial-gradient(7px 7px at 78% 22%, #fdba74, transparent 75%);
+      filter: drop-shadow(0 0 5px rgba(240,171,252,.9)); animation: kzFirework 1000ms ease-out 120ms forwards; }
+    /* 必殺技準備 / 貫通技準備(しこ踏みは上の kzStomp のまま) */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > span { animation: kzPowerUp 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > span { animation: kzStance 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="charge"] > [data-enemy-shadow]::after,
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-enemy-shadow]::after { animation: none; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-kz-palm="l"] { animation: kzPalmReadyL 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="pierceCharge"] > [data-kz-palm="r"] { animation: kzPalmReadyR 1100ms ease-in-out forwards; }
+    /* かえるのうた */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > span { animation: kzSing 1000ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::before,
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::after { font-size: 34px; font-weight: 900; line-height: 1; color: #a7f3d0;
+      text-shadow: 0 0 8px rgba(52,211,153,1), 0 2px 4px rgba(0,0,0,.7); }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::before { content: '♪'; left: 8%; top: 22%; --kz-nx: -18px; --kz-nr: -20deg;
+      animation: kzNote 900ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-skill="regen"] > [data-kz-fx]::after { content: '♫'; right: 6%; top: 10%; --kz-nx: 18px; --kz-nr: 20deg; color: #fff;
+      animation: kzNote 800ms ease-out 200ms forwards; }
+    /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
+    [data-tactics-look] [data-enemy-ring="0"] { --mh-rc: 239,68,68; } [data-tactics-look] [data-enemy-ring="1"] { --mh-rc: 245,158,11; }
+    [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
+    [data-tactics-look] [data-enemy-ring] { background: radial-gradient(closest-side, rgba(var(--mh-rc),.22), rgba(0,0,0,.4) 70%) !important;
+      box-shadow: 0 0 0 3px rgba(243,210,122,.55), 0 0 0 5px rgba(20,12,4,.85), 0 0 40px rgba(var(--mh-rc),.55), inset 0 0 30px rgba(var(--mh-rc),.35) !important; }
+    [data-tactics-look] [data-enemy-ring]::before { content: ''; position: absolute; inset: -16px; border-radius: 50%; pointer-events: none; z-index: 0;
+      background: repeating-conic-gradient(rgba(var(--mh-rc),.9) 0 3deg, transparent 3deg 12deg, rgba(255,240,200,.8) 12deg 13deg, transparent 13deg 30deg);
+      -webkit-mask: radial-gradient(circle, transparent 64%, #000 65%, #000 69%, transparent 70%); mask: radial-gradient(circle, transparent 64%, #000 65%, #000 69%, transparent 70%);
+      filter: drop-shadow(0 0 4px rgba(var(--mh-rc),.9)); }
+    [data-tactics-look="rich"] [data-enemy-ring]::before { animation: mhRuneSpin 14s linear infinite; }
+    /* ==== 枠に出す効果の光(2026-09-24 ユーザー指示「支援系のアクションももう少しそれっぽく」)。
+       回復=緑の光の粒が昇る / 攻撃=赤い光が下から吹き上がる / 守り=青い盾の輪が広がる / ガッツ=黄色の稲妻 / そのほか=金のきらめき。
+       1回きり(forwards)で消える。軽量表示では動きの代わりに短い色の点灯だけにする ==== */
+    @keyframes mhAuraGlow { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mhAuraRise { 0% { transform: translateY(40%); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-60%); opacity: 0; } }
+    @keyframes mhAuraRing { 0% { transform: translate(-50%,-50%) scale(.3); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1.6); opacity: 0; } }
+    @keyframes mhAuraFlash { 0%, 100% { opacity: 0; } 10%, 30% { opacity: 1; } 20%, 40% { opacity: .3; } }
+    [data-tactics-look] [data-slot-aura] { position: absolute; inset: 0; border-radius: 14px; overflow: hidden; pointer-events: none; z-index: 66;
+      animation: mhAuraGlow 1.3s ease-out forwards; }
+    [data-tactics-look] [data-slot-aura]::before, [data-tactics-look] [data-slot-aura]::after { content: ''; position: absolute; pointer-events: none; }
+    [data-tactics-look] [data-slot-aura="heal"] { background: radial-gradient(70% 80% at 30% 70%, rgba(52,211,153,.45), transparent 70%); box-shadow: inset 0 0 18px rgba(52,211,153,.8); }
+    [data-tactics-look] [data-slot-aura="heal"]::before { left: 0; right: 0; top: 0; bottom: 0; animation: mhAuraRise 1.3s ease-out forwards;
+      background: radial-gradient(3px 3px at 18% 80%, #a7f3d0, transparent 70%), radial-gradient(2px 2px at 32% 60%, #fff, transparent 70%),
+        radial-gradient(3px 3px at 48% 90%, #6ee7b7, transparent 70%), radial-gradient(2px 2px at 64% 70%, #d1fae5, transparent 70%),
+        radial-gradient(3px 3px at 80% 85%, #a7f3d0, transparent 70%), radial-gradient(2px 2px at 26% 100%, #fff, transparent 70%); }
+    [data-tactics-look] [data-slot-aura="power"] { box-shadow: inset 0 0 20px rgba(248,113,113,.85); }
+    [data-tactics-look] [data-slot-aura="power"]::before { left: 0; right: 0; bottom: 0; height: 100%; animation: mhAuraRise 1.1s ease-out forwards;
+      background: repeating-linear-gradient(90deg, transparent 0 10px, rgba(252,165,165,.55) 10px 12px, transparent 12px 22px),
+        linear-gradient(0deg, rgba(239,68,68,.55), transparent 80%); -webkit-mask: linear-gradient(0deg, #000 30%, transparent); mask: linear-gradient(0deg, #000 30%, transparent); }
+    [data-tactics-look] [data-slot-aura="shield"] { box-shadow: inset 0 0 18px rgba(96,165,250,.85); }
+    [data-tactics-look] [data-slot-aura="shield"]::before { left: 30%; top: 58%; width: 90px; height: 90px; border-radius: 50%; animation: mhAuraRing 1.2s ease-out forwards;
+      border: 3px solid rgba(147,197,253,.95); box-shadow: 0 0 14px rgba(96,165,250,.9), inset 0 0 14px rgba(96,165,250,.6); }
+    [data-tactics-look] [data-slot-aura="guts"] { box-shadow: inset 0 0 18px rgba(251,191,36,.85); background: radial-gradient(60% 70% at 30% 60%, rgba(251,191,36,.35), transparent 70%); }
+    [data-tactics-look] [data-slot-aura="guts"]::before { inset: 0; animation: mhAuraFlash .9s linear forwards;
+      background: linear-gradient(115deg, transparent 38%, rgba(254,240,138,.95) 40%, transparent 42%), linear-gradient(115deg, transparent 58%, rgba(254,240,138,.8) 59%, transparent 61%); }
+    [data-tactics-look] [data-slot-aura="buff"] { box-shadow: inset 0 0 16px rgba(243,210,122,.8); }
+    [data-tactics-look] [data-slot-aura="buff"]::before { inset: 0; animation: mhAuraRise 1.2s ease-out forwards;
+      background: radial-gradient(2px 2px at 20% 80%, #fff3c4, transparent 70%), radial-gradient(3px 3px at 45% 90%, #f3d27a, transparent 70%), radial-gradient(2px 2px at 70% 75%, #fff, transparent 70%); }
+    [data-tactics-look="calm"] [data-slot-aura]::before { display: none; }
+    @media (prefers-reduced-motion: reduce) {
+      [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-index]::after, [data-tactics-look] [data-slot-circle],
+      [data-tactics-look] [data-card-frame], [data-tactics-look] [data-card-shine]::before, [data-tactics-look] [data-card-gem],
+      [data-tactics-look] [data-enemy-hpbar]::after, [data-tactics-look] [data-enemy-ring]::before,
+      [data-tactics-look] [data-enemy-motion] > span > img, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow],
+      [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow]::before, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow]::after { animation: none !important; }
+    }
+    /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
+    @keyframes tacticsPopupRise {
+      0% { opacity: 0; transform: translateY(6px) scale(0.92); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
     }
     @keyframes dragGrab {
       0% { transform: translate(-50%,-100%) scale(0.6); opacity: 0.4; }
@@ -874,11 +1704,13 @@ const createAnimationStyle = () => {
       25% { opacity: 1; }
       100% { opacity: 0; }
     }
+    /* 固有技の突進。タメで沈んだ位置から敵の位置へ一直線に飛び込み、大きくつぶれて光ってから戻る */
     @keyframes specialLunge {
-      0% { transform: translateY(44px) scale(0.78) rotate(-4deg); filter: drop-shadow(0 0 26px rgba(217,70,239,1)); }
-      35% { transform: translateY(-220px) scale(1.5) rotate(4deg); filter: drop-shadow(0 0 34px rgba(217,70,239,1)); }
-      55% { transform: translateY(-220px) scale(1.5); filter: drop-shadow(0 0 40px rgba(255,255,255,1)); }
-      100% { transform: translateY(0) scale(1) rotate(0deg); filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+      0% { transform: translate3d(0,44px,0) scale(0.78) rotate(-4deg); filter: drop-shadow(0 0 26px rgba(217,70,239,1)); }
+      30% { transform: translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9),0) scale(1.5) rotate(calc(var(--atk-rot) * .3)); filter: drop-shadow(calc(var(--atk-dx) * -.14) calc(var(--atk-dy) * -.14) 0 rgba(217,70,239,.4)) drop-shadow(0 0 34px rgba(217,70,239,1)); }
+      40% { transform: translate3d(calc(var(--atk-dx) * .97),calc(var(--atk-dy) * .97),0) scale(1.72,1.3) rotate(calc(var(--atk-rot) * .3)); filter: drop-shadow(0 0 44px rgba(255,255,255,1)) brightness(1.4); }
+      58% { transform: translate3d(calc(var(--atk-dx) * .75),calc(var(--atk-dy) * .75 - 26px),0) scale(1.4) rotate(calc(var(--atk-rot) * -.2)); filter: drop-shadow(0 0 34px rgba(217,70,239,1)); }
+      100% { transform: translate3d(0,0,0) scale(1) rotate(0deg); filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
     /* アーク/イブリース専用モーション: ゆっくり宙に浮かび上がって漂い、最後に光が鋭く突き刺さる */
     @keyframes floatStabAttack {
@@ -1010,6 +1842,57 @@ const createAnimationStyle = () => {
       0%,100% { transform: scale(0.95) translateY(0) rotate(-4deg); opacity: 0.85; }
       50% { transform: scale(1.18) translateY(-3px) rotate(4deg); opacity: 1; }
     }
+    /* 誰が攻撃を食らったのかを、枠そのもので見せる(2026-09-22 ユーザー指示
+       「攻撃されたときに誰が攻撃されたかが分かりづらい 食らったモンスターに
+        エフェクトなどがつくようにしたい」)。浮かぶ数字だけでは、全体攻撃のときに
+       どこを見ればよいのか目が追いつかない。枠が揺れて光れば一目で分かる */
+    @keyframes tacticsHitShake {
+      0%,100% { transform: translate(0,0); }
+      15% { transform: translate(-4px,2px); }
+      30% { transform: translate(4px,-2px); }
+      45% { transform: translate(-3px,-2px); }
+      60% { transform: translate(3px,2px); }
+      80% { transform: translate(-2px,1px); }
+    }
+    @keyframes tacticsHitFlash {
+      0% { opacity: 0; }
+      18% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    @keyframes tacticsHitRing {
+      0% { transform: scale(0.45); opacity: 0.95; }
+      100% { transform: scale(1.9); opacity: 0; }
+    }
+    @keyframes tacticsHitEdge {
+      0%,100% { opacity: 0; }
+      20% { opacity: 1; }
+      55% { opacity: 0.5; }
+      75% { opacity: 1; }
+    }
+    /* 敵の右上に出す「何をする技か」の札。効果ごとに動きを変えて、
+       色と文字を読む前に「攻めてくるのか・回復するのか」が分かるようにする
+       (2026-09-22 ユーザー指示「吹き出しを効果によって変えると見た目がいい」) */
+    @keyframes noticeHit {
+      0%,100% { transform: scale(1) rotate(-2deg); }
+      45% { transform: scale(1.1) rotate(2deg); }
+      60% { transform: scale(1.04) rotate(-1deg); }
+    }
+    @keyframes noticeCharge {
+      0%,100% { transform: scale(0.96); filter: brightness(0.95); }
+      50% { transform: scale(1.12); filter: brightness(1.25); }
+    }
+    @keyframes noticeHeal {
+      0%,100% { transform: translateY(2px) scale(1); }
+      50% { transform: translateY(-4px) scale(1.05); }
+    }
+    @keyframes noticeShout {
+      0%,100% { transform: translateX(-3px) scale(1.02); }
+      50% { transform: translateX(3px) scale(1.08); }
+    }
+    @keyframes noticeCalm {
+      0%,100% { opacity: 0.75; transform: scale(0.98); }
+      50% { opacity: 1; transform: scale(1.03); }
+    }
     @keyframes idleAuraPulse {
       0%,100% { transform: scale(0.92); opacity: 0.5; }
       50% { transform: scale(1.08); opacity: 0.85; }
@@ -1017,6 +1900,196 @@ const createAnimationStyle = () => {
     @keyframes idleSpark {
       0%,100% { opacity: 0.15; }
       50% { opacity: 0.9; }
+    }
+    /* 強化フェーズ(WAVEクリア後のトレーニング・供モン・配置・固有技・アシストカード)の画面。
+       根に .mh-phase を付けると、その器の高さで中身を組み替えられる(@container)。
+       横持ちのバトルは縦長のコラムのまま真ん中に置かれ(index.html の data-mh-portrait-layout)、
+       器は 390×390 ほどになる。そこへ縦持ち用の並びを積むとカードが潰れて重なっていたので、
+       背の低い器では .mh-phase-tall(助手の吹き出し・説明・合計の欄など、無くても選べるもの)を畳む。
+       自前で画面を回しているとき(data-mh-view-rotation)も、器の高さで判定するので同じく効く。 */
+    .mh-phase { container-type: size; }
+    /* .mh-phase-card は min-h-[112px] と一緒に付ける。背の低い器ではその下限だけを外す */
+    .mh-phase-gain { font-size: clamp(20px, 7vw, 30px); }
+    /* .mh-phase-mid … SE(667px)くらいから畳むもの(補足の説明文)。絵も一回り小さくする */
+    @container (max-height: 720px) {
+      .mh-phase-mid { display: none !important; }
+      .mh-phase-hero { width: 64px !important; height: 64px !important; margin-bottom: 4px !important; font-size: 44px; }
+    }
+    @container (max-height: 560px) {
+      .mh-phase-tall { display: none !important; }
+      .mh-phase-card { min-height: 0 !important; }
+      .mh-phase-gain { font-size: 18px; }
+      .mh-phase-hero { width: 44px !important; height: 44px !important; font-size: 32px; }
+      /* トレーニングの4枚は横1列に並べ替える(2列2行だと1枚の高さが60px台になり名前しか見えなかった) */
+      .mh-phase-cards { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; grid-template-rows: minmax(0, 1fr) !important; }
+      .mh-phase-card-icon, .mh-phase-stat-label, .mh-phase-bar { display: none !important; }
+      /* 1枚の幅が90px前後になるので、名前・数字・×1 の札を一回り小さくして重ならないようにする */
+      .mh-phase-card-name { font-size: 12px !important; }
+      .mh-phase-card-nums { font-size: 9px !important; }
+      /* ×1 の宝石は名前にかぶらないよう、伸び幅の横(下の数字の欄の上)へ移す */
+      .mh-phase-count { top: auto !important; bottom: 30px !important; right: 3px !important; width: 22px !important; height: 20px !important; padding: 2px 0 0 !important; font-size: 8px !important; }
+    }
+    /* 並んだカードが順に出てくる動き。--i に並び順を入れる。
+       fill-mode は backwards にする(both / forwards だと終わったあとも transform を握り続け、
+       押したときの active:scale-95 が効かなくなる) */
+    .mh-phase-enter { animation: mhPhaseEnter .38s cubic-bezier(.2,.8,.3,1) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+    @keyframes mhPhaseEnter { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+    /* 選んだ瞬間の弾み(×1 の札・伸びる量など)。key を変えて付け直すと毎回鳴る */
+    .mh-phase-pop { animation: mhPhasePop .34s cubic-bezier(.2,1.6,.4,1) backwards; }
+    @keyframes mhPhasePop { 0% { transform: scale(.55); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    /* 決定できるようになったボタンの呼吸 */
+    .mh-phase-ready { animation: mhPhaseReady 1.6s ease-in-out infinite; }
+    @keyframes mhPhaseReady { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-phase-enter, .mh-phase-pop, .mh-phase-ready { animation: none; }
+    }
+    /* ==== 強化フェーズの画面の見た目(2026-09-24 ユーザー指示「やすっぽい見た目も改善して」
+       「タクティクスバトルを参考に見た目を強くしてほしい」)。
+       タクティクス新盤面の飾り(濃紺の地・金の細い縁・回る光の縁・距離や種類ごとの模様・宝石・魔法陣・光の筋)を
+       同じ言葉で使う。@keyframes mhAng / mhShine / mhTwinkle / mhRuneSpin / mhGem はタクティクスの節で定義済み。
+       ★動き(回る縁・きらめき・光の筋・魔法陣・宝石の明滅)は data-phase-look="rich" のときだけ。
+         省エネ(lite / 超省エネ∞)では calm になり、「動きを減らす」設定でも止める。見た目は残す。
+       ★色は変数で渡す。--ph … 画面の識別色 / --mh-rc・--mh-rc2 … 枠1つぶんの色(濃い・明るい) ==== */
+    .mh-ph-bg {
+      background:
+        radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.55), transparent 60%),
+        radial-gradient(1px 1px at 78% 12%, rgba(255,255,255,.45), transparent 60%),
+        radial-gradient(1.5px 1.5px at 64% 34%, rgba(var(--ph,148,163,184),.8), transparent 60%),
+        radial-gradient(1px 1px at 28% 58%, rgba(255,255,255,.3), transparent 60%),
+        radial-gradient(1px 1px at 90% 66%, rgba(255,255,255,.3), transparent 60%),
+        radial-gradient(1.5px 1.5px at 8% 84%, rgba(var(--ph,148,163,184),.6), transparent 60%),
+        radial-gradient(ellipse 95% 40% at 50% -6%, rgba(var(--ph,148,163,184),.30), transparent 72%),
+        radial-gradient(ellipse 130% 55% at 50% 112%, rgba(var(--ph,148,163,184),.12), transparent 70%),
+        repeating-linear-gradient(135deg, rgba(255,255,255,.02) 0 1px, transparent 1px 9px),
+        linear-gradient(180deg, #0c1126 0%, #060916 55%, #03040b 100%) !important;
+    }
+    /* 見出しの金の文字と、左右の飾り線(◆) */
+    .mh-ph-title { background: linear-gradient(180deg, #fffbe8 0%, #f6d98a 46%, #c8962e 100%); -webkit-background-clip: text; background-clip: text;
+      color: transparent !important; padding-right: .18em; filter: drop-shadow(0 2px 0 rgba(0,0,0,.65)) drop-shadow(0 0 10px rgba(var(--ph,243,210,122),.45)); }
+    .mh-ph-heading { display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .mh-ph-heading::before, .mh-ph-heading::after { content: '◆'; flex: none; font-size: 7px; line-height: 1; color: #f3d27a; text-shadow: 0 0 6px rgba(243,210,122,.8); }
+    .mh-ph-heading::before { padding-left: 26px; background: linear-gradient(90deg, transparent, rgba(243,210,122,.85)) left center / 24px 1px no-repeat; }
+    .mh-ph-heading::after { padding-right: 26px; background: linear-gradient(270deg, transparent, rgba(243,210,122,.85)) right center / 24px 1px no-repeat; }
+    /* 金の縁の札(WAVE CLEAR など) */
+    .mh-ph-plate { display: inline-block; border: 1px solid transparent; border-radius: 999px; padding: 2px 12px; font-size: 9px; font-weight: 900; letter-spacing: .22em; color: #fde9b0;
+      background: linear-gradient(180deg, #1c2446, #0b0f22) padding-box, linear-gradient(90deg, #6b4a14, #fff0b0 30%, #c8962e 60%, #6b4a14) border-box;
+      box-shadow: 0 0 0 1px rgba(20,12,4,.85), 0 2px 8px rgba(0,0,0,.5), 0 0 14px rgba(var(--ph,243,210,122),.28); text-shadow: 0 1px 2px rgba(0,0,0,.9); }
+    /* 金の細い縁のパネル(ステータスの欄・所持カードなど) */
+    .mh-ph-panel { border: 1px solid transparent !important; border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 38%) padding-box,
+        linear-gradient(170deg, rgba(18,22,46,.95), rgba(6,8,18,.97)) padding-box,
+        linear-gradient(160deg, rgba(243,210,122,.6), rgba(243,210,122,.12) 38%, rgba(243,210,122,.08) 62%, rgba(243,210,122,.5)) border-box !important;
+      box-shadow: 0 6px 18px rgba(0,0,0,.45), 0 0 0 1px rgba(10,6,2,.6); }
+    .mh-ph-panel-label { color: #d9bf7a !important; letter-spacing: .18em; }
+    /* パネルの中の升目 */
+    .mh-ph-cell { background: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.28)) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.05), inset 0 0 0 1px rgba(243,210,122,.08); }
+    /* 選ぶ枠: 地の模様 + 濃紺 + 枠の色の縁(タクティクスのモンスター枠と同じ作り)。選んでいない枠は落ち着いた縁、
+       data-ph-on の枠は明るい縁が回り、外へ光がにじむ */
+    .mh-ph-frame { border: 2px solid transparent !important;
+      background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
+        linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0) 30%) padding-box,
+        linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
+        linear-gradient(160deg, rgba(var(--mh-rc),.75), rgba(var(--mh-rc),.22) 40%, rgba(243,210,122,.18) 60%, rgba(var(--mh-rc),.6)) border-box !important; }
+    .mh-ph-frame[data-ph-on] {
+      background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
+        radial-gradient(90% 60% at 50% 0%, rgba(var(--mh-rc),.28), transparent 70%) padding-box,
+        linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
+        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+          rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important;
+      box-shadow: 0 0 18px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.18) !important; }
+    [data-phase-look="rich"] .mh-ph-frame[data-ph-on] { animation: mhAng 4.5s linear infinite; }
+    /* 枠の中の光の粒 */
+    .mh-ph-sparkle { position: absolute; inset: 3px; border-radius: inherit; pointer-events: none;
+      background: radial-gradient(1.5px 1.5px at 14% 30%, rgba(var(--mh-rc2),.95), transparent 70%), radial-gradient(1.5px 1.5px at 52% 72%, rgba(var(--mh-rc2),.85), transparent 70%),
+        radial-gradient(1px 1px at 80% 42%, #fff, transparent 70%), radial-gradient(1px 1px at 36% 16%, #fff, transparent 70%), radial-gradient(1px 1px at 88% 86%, rgba(var(--mh-rc2),.8), transparent 70%); }
+    [data-phase-look="rich"] .mh-ph-sparkle { animation: mhTwinkle 2.6s ease-in-out infinite; }
+    /* 枠を横切る光の筋 */
+    .mh-ph-shine { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+    .mh-ph-shine::before { content: ''; position: absolute; top: -10%; bottom: -10%; left: 0; width: 40%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent); transform: translateX(-160%) skewX(-18deg); }
+    [data-phase-look="rich"] .mh-ph-shine::before { animation: mhShine 3.6s ease-in-out infinite; }
+    /* 種類ごとの地の模様(タクティクスの手札・枠と同じ模様の言葉) */
+    [data-ph-kind="hp"] { --mh-rc: 236,72,153; --mh-rc2: 255,200,230;
+      --mh-pat: radial-gradient(circle at 80% 18%, rgba(255,140,200,.22), transparent 45%), repeating-radial-gradient(circle at 80% 18%, rgba(255,160,210,.10) 0 2px, transparent 2px 10px); }
+    [data-ph-kind="atk"] { --mh-rc: 239,68,68; --mh-rc2: 255,210,190;
+      --mh-pat: radial-gradient(120% 60% at 50% 115%, rgba(255,120,40,.32), transparent 70%), repeating-linear-gradient(135deg, rgba(255,90,40,.10) 0 2px, transparent 2px 9px); }
+    [data-ph-kind="def"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
+      --mh-pat: radial-gradient(circle, rgba(167,243,208,.16) 1.5px, transparent 2px) 0 0 / 9px 9px, radial-gradient(80% 50% at 50% 20%, rgba(52,211,153,.18), transparent 70%); }
+    [data-ph-kind="guts"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
+      --mh-pat: repeating-conic-gradient(from 0deg at 50% 30%, rgba(255,210,80,.06) 0 8deg, transparent 8deg 24deg), radial-gradient(60% 50% at 50% 30%, rgba(255,200,60,.2), transparent 70%); }
+    [data-ph-kind="new"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
+      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(167,243,208,.05) 0 10deg, transparent 10deg 30deg); }
+    [data-ph-kind="up"] { --mh-rc: 168,85,247; --mh-rc2: 233,213,255;
+      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(216,180,254,.07) 0 10deg, transparent 10deg 30deg), radial-gradient(70% 50% at 50% 30%, rgba(168,85,247,.22), transparent 70%); }
+    [data-ph-kind="max"] { --mh-rc: 234,179,8; --mh-rc2: 255,243,196;
+      --mh-pat: repeating-conic-gradient(from 0deg at 50% 34%, rgba(255,230,150,.08) 0 10deg, transparent 10deg 30deg), radial-gradient(70% 50% at 50% 30%, rgba(234,179,8,.22), transparent 70%); }
+    [data-ph-kind="own"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160; }
+    [data-ph-kind="inherit"] { --mh-rc: 6,182,212; --mh-rc2: 207,250,254; }
+    [data-ph-kind="ally"] { --mh-rc: 129,140,248; --mh-rc2: 224,231,255; }
+    [data-ph-kind="revive"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220; }
+    /* 距離ごと(配置)。タクティクスの零=赤・近=黄・中=緑・遠=青 と模様をそのまま使う */
+    [data-ph-range="0"] { --mh-rc: 239,68,68; --mh-rc2: 255,210,190;
+      --mh-pat: radial-gradient(120% 60% at 50% 115%, rgba(255,120,40,.5), rgba(200,30,20,.22) 45%, transparent 70%), repeating-linear-gradient(115deg, rgba(255,90,40,.10) 0 3px, transparent 3px 14px); }
+    [data-ph-range="1"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
+      --mh-pat: repeating-conic-gradient(from 0deg at 20% 62%, rgba(255,210,80,.15) 0 6deg, transparent 6deg 18deg), radial-gradient(60% 60% at 20% 62%, rgba(255,200,60,.32), transparent 70%); }
+    [data-ph-range="2"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
+      --mh-pat: repeating-linear-gradient(98deg, rgba(52,211,153,.30) 0 1.5px, transparent 1.5px 6px) bottom / 100% 34% no-repeat, radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.26), transparent 70%); }
+    [data-ph-range="3"] { --mh-rc: 59,130,246; --mh-rc2: 200,225,255;
+      --mh-pat: repeating-radial-gradient(circle at 20% 140%, rgba(90,160,255,.17) 0 3px, transparent 3px 11px), radial-gradient(70% 60% at 20% 62%, rgba(80,150,255,.32), transparent 70%); }
+    /* 宝石(×1 の数・残りポイントなど)。タクティクスの手札の消費ガッツと同じ形 */
+    .mh-ph-gem { display: inline-flex; align-items: center; justify-content: center; padding-top: 2px; font-weight: 900; line-height: 1; color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,.9); clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
+      background: radial-gradient(circle at 35% 30%, #fff 0 8%, rgba(var(--mh-rc2,200,225,255),1) 18%, rgba(var(--mh-rc,31,111,209),1) 55%, rgba(8,10,30,1) 100%); }
+    [data-phase-look="rich"] .mh-ph-gem { animation: mhGem 2.2s ease-in-out infinite; }
+    /* 絵を収める金の額(アシストカードの顔・固有技の絵) */
+    .mh-ph-medal { border: 2px solid #f3d27a !important; background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.22), rgba(0,0,0,.4)) !important;
+      box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.5), inset 0 0 10px rgba(0,0,0,.5) !important; }
+    /* 絵の後ろで回るルーンの輪 */
+    .mh-ph-rune { position: absolute; left: 50%; top: 50%; width: 150%; height: 150%; margin: -75% 0 0 -75%; border-radius: 50%; pointer-events: none; z-index: 0;
+      background: repeating-conic-gradient(rgba(243,210,122,.85) 0 3deg, transparent 3deg 15deg), radial-gradient(circle, rgba(var(--ph,243,210,122),.25), transparent 70%);
+      -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
+      mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
+      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),.9)); }
+    [data-phase-look="rich"] .mh-ph-rune { animation: mhRuneSpin 16s linear infinite; }
+    /* 足元の魔法陣(タクティクスの枠の足元と同じ) */
+    .mh-ph-floor { position: absolute; left: 50%; bottom: -14px; width: 96px; height: 96px; margin-left: -48px; pointer-events: none; z-index: 0;
+      transform: rotateX(68deg);
+      background: radial-gradient(circle, transparent 52%, rgba(255,240,200,.95) 53%, rgba(255,240,200,.95) 55%, transparent 56%, transparent 66%, rgba(var(--ph,243,210,122),.9) 67%, rgba(var(--ph,243,210,122),.9) 70%, transparent 71%),
+        repeating-conic-gradient(rgba(255,240,200,.8) 0 4deg, transparent 4deg 30deg);
+      -webkit-mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%); mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%);
+      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),1)); }
+    [data-phase-look="rich"] .mh-ph-floor { animation: mhPhFloor 7s linear infinite; }
+    @keyframes mhPhFloor { to { transform: rotateX(68deg) rotate(360deg); } }
+    /* ボタン。金 = 決めるボタン(押せるとき)、夜 = そのほか。ボタンの意味の色は変えず、縁と照りを重ねる */
+    .mh-ph-btn-gold { position: relative; overflow: hidden; color: #2a1a04 !important; text-shadow: 0 1px 0 rgba(255,255,255,.5);
+      background: linear-gradient(180deg, #fff6d0 0%, #f4d57c 24%, #d8a640 62%, #9a6d22 100%) !important;
+      box-shadow: 0 0 0 1px rgba(40,26,6,.9), 0 0 0 3px rgba(243,210,122,.3), 0 6px 18px rgba(0,0,0,.5), 0 0 22px rgba(255,210,120,.45),
+        inset 0 2px 0 rgba(255,255,255,.75), inset 0 -2px 0 rgba(90,60,10,.55) !important; }
+    .mh-ph-btn-gold::after { content: ''; position: absolute; top: -20%; bottom: -20%; left: 0; width: 30%; pointer-events: none;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); transform: translateX(-160%) skewX(-18deg); }
+    [data-phase-look="rich"] .mh-ph-btn-gold::after { animation: mhShine 3s ease-in-out infinite; }
+    .mh-ph-btn { color: #e2e8f0 !important; border: 1px solid rgba(243,210,122,.45) !important;
+      background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0) 45%, rgba(0,0,0,.25)), linear-gradient(180deg, #1c2446, #0b0f22) !important;
+      box-shadow: 0 0 0 1px rgba(20,12,4,.85), 0 4px 12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,240,200,.3) !important; }
+    .mh-ph-btn:disabled { opacity: .45; }
+    .mh-ph-btn-off { color: #64748b !important; border: 1px solid rgba(243,210,122,.18) !important;
+      background: linear-gradient(180deg, #151a33, #0a0d1d) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important; }
+    /* 強化フェーズの並び(PhaseSteps) */
+    .mh-ph-step-now { color: #1a1204 !important; border: 1px solid rgba(255,240,200,.9);
+      background: linear-gradient(180deg, #fff, rgb(var(--ph,243,210,122)) 55%, rgba(var(--ph,243,210,122),.75)) !important;
+      box-shadow: 0 0 0 1px rgba(20,12,4,.8), 0 0 12px rgba(var(--ph,243,210,122),.7), inset 0 1px 0 rgba(255,255,255,.8) !important; }
+    .mh-ph-step-todo { color: #8b93a8 !important; border: 1px solid rgba(243,210,122,.22) !important; background: linear-gradient(180deg, #151a33, #0a0d1d) !important; }
+    .mh-ph-step-done { color: #ecfdf5 !important; border: 1px solid rgba(167,243,208,.9) !important; transform: rotate(45deg); border-radius: 3px !important;
+      background: radial-gradient(circle at 35% 30%, #fff 0 10%, #6ee7b7 30%, #059669 70%, #064e3b 100%) !important; box-shadow: 0 0 8px rgba(52,211,153,.7); }
+    .mh-ph-step-done > span { display: block; transform: rotate(-45deg); }
+    .mh-ph-step-line { height: 1px; background: linear-gradient(90deg, rgba(243,210,122,.2), rgba(243,210,122,.7), rgba(243,210,122,.2)) !important; }
+    /* 菱形の段(アシストカードのレベル) */
+    .mh-ph-pip { display: block; width: 8px; height: 8px; transform: rotate(45deg); border-radius: 1.5px; border: 1px solid rgba(243,210,122,.35); background: #11152b; }
+    .mh-ph-pip[data-on] { border-color: rgba(255,240,200,.9); background: radial-gradient(circle at 35% 30%, #fff 0 12%, rgba(var(--mh-rc2),1) 35%, rgba(var(--mh-rc),1) 80%); box-shadow: 0 0 6px rgba(var(--mh-rc),.8); }
+    .mh-ph-pip[data-next] { border-color: #f3d27a; background: rgba(243,210,122,.35); box-shadow: 0 0 6px rgba(243,210,122,.7); }
+    [data-phase-look="rich"] .mh-ph-pip[data-next] { animation: mhTwinkle 1.6s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-ph-frame[data-ph-on], .mh-ph-sparkle, .mh-ph-shine::before, .mh-ph-gem, .mh-ph-rune, .mh-ph-floor, .mh-ph-btn-gold::after, .mh-ph-pip[data-next] { animation: none !important; }
     }
     @keyframes specialShockwave {
       0% { transform: scale(0.4); opacity: 0.9; }
@@ -1135,7 +2208,7 @@ const createAnimationStyle = () => {
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
     .mh-regeneration-animation{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle,#4c1d95,#020617 65%)}.mh-regeneration-disc{position:absolute;width:170px;height:170px;object-fit:contain;animation:mhRegenerationDisc 1.5s ease-in forwards}.mh-regeneration-born{position:relative;width:min(330px,100%);padding:20px;border:2px solid #fbbf24;border-radius:24px;background:#0f172a;text-align:center;opacity:0;animation:mhRegenerationBorn .6s 1.4s ease-out forwards}.mh-regeneration-born h3{font-size:20px;font-weight:1000;color:#fde68a}.mh-regeneration-born b{float:right;color:#f9a8d4}@keyframes mhRegenerationDisc{0%{transform:rotate(0) scale(.7);opacity:1}85%{transform:rotate(1080deg) scale(1.15);opacity:1}100%{transform:rotate(1260deg) scale(.1);opacity:0}}@keyframes mhRegenerationBorn{to{opacity:1;transform:none}}
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
@@ -1216,7 +2289,6 @@ const createAnimationStyle = () => {
     .mh-soul-rank-badge.is-stage-4{background:radial-gradient(circle at 33% 25%,#ffffffdd,#ffffff33 20%,transparent 46%),linear-gradient(150deg,#fda4af,#b91c1c 58%,#4c0519);box-shadow:inset 0 1px 1px #ffffffb3,inset 0 -2px 3px #00000066,0 0 9px #fb7185cc,0 0 17px #fcd34d99,0 1px 4px #020617}
     .mh-soul-rank-badge.is-stage-5{border-color:#fff;background:radial-gradient(circle at 34% 24%,#ffffffa6,#ffffff1a 15%,transparent 36%),conic-gradient(from 205deg,#ff5f6d,#ffc857,#5ef38c,#3ddcf7,#8b7bff,#ff6fd8,#ff5f6d);box-shadow:inset 0 1px 2px #ffffffcc,inset 0 -2px 3px #00000059,0 0 0 1.2px #7c3aed,0 0 11px #ff6fd8dd,0 0 20px #3ddcf7bb,0 1px 4px #020617}
     .mh-soul-rank-badge.is-stage-5::before{background:linear-gradient(180deg,#ffffff,#ffd7f5 34%,#8b7bff 68%,#3b2a8a);filter:drop-shadow(0 1px 2px #000a) drop-shadow(0 0 3px #ff6fd8)}
-    .mh-transcend-link{border-color:#fcd34daa;background:linear-gradient(135deg,#4c1d95aa,#78350faa)}
     /* 超越の演出。3〜5秒で一度だけ流す。終わったら要素ごと消えるので常時アニメは残らない */
     .mh-transcend-animation{position:fixed;inset:0;z-index:51500;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 46%,#3b0764 0,#0b0518 42%,#020617 76%);pointer-events:auto;touch-action:none;padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px)}
     .mh-transcend-converge{position:absolute;inset:0;z-index:1;pointer-events:none}
@@ -1331,7 +2403,7 @@ const createAnimationStyle = () => {
     }@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management>span,.mh-home-facility.temple>span{top:45%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
     .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
    施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:62%}}
-    .mh-gift-list{display:flex;flex-direction:column;gap:5px}.mh-gift-card{display:flex;flex-direction:column;min-height:80px;padding:5px 8px}.mh-gift-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;height:18px}.mh-gift-heading h3{display:flex;align-items:center;gap:4px;min-width:0;font-size:12px;line-height:18px;color:#fff}.mh-gift-heading h3 span{flex:none;padding:1px 4px;border-radius:5px;background:#78350f;color:#fde68a;font-size:8px;line-height:14px}.mh-gift-heading h3 b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-gift-heading>em{flex:none;padding:1px 6px;border-radius:999px;font-size:8px;line-height:15px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:37px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:76px;height:36px;padding:0 10px;border-radius:10px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap}.mh-gift-main>button:disabled{background:#334155;color:#64748b}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:8px;line-height:12px}
+    .mh-gift-list{display:flex;flex-direction:column;gap:8px}.mh-gift-card{display:flex;flex:none;flex-direction:column;gap:4px;min-height:88px;padding:10px 12px}.mh-gift-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0;min-height:20px}.mh-gift-heading h3{display:flex;align-items:flex-start;gap:4px;min-width:0;font-size:14px;line-height:19px;color:#fff}.mh-gift-heading h3 span{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#78350f;color:#fde68a;font-size:10px;line-height:16px}.mh-gift-heading h3 b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0;white-space:normal;overflow-wrap:anywhere}.mh-gift-heading>em{flex:none;padding:2px 8px;border-radius:999px;font-size:10px;line-height:16px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:84px;height:44px;padding:0 12px;border-radius:12px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .12s ease-out}.mh-gift-main>button:active{transform:scale(.95)}.mh-gift-main>button:disabled{opacity:.4;transform:none}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:10px;line-height:14px}
     @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
     /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
     @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:0;top:calc(70px + env(safe-area-inset-top));width:30%;height:calc(50% - 70px - env(safe-area-inset-top))}.mh-home-facility.management>span{left:8%;top:76px}.mh-home-facility.rhythm{left:0;top:58%;width:30%;height:34%}.mh-home-facility.rhythm>span{left:8%;top:20%}.mh-home-facility.temple{right:0;top:30%;width:30%;height:24%}.mh-home-facility.temple>span{right:8%;top:24%}.mh-home-facility.market{right:0;top:54%;width:30%;height:24%}.mh-home-facility.market>span{right:8%;top:24%}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle{left:30%;right:30%;height:34%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
@@ -1343,7 +2415,7 @@ const createAnimationStyle = () => {
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
     .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
-    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:8px}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
+    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:8px}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-kind{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:999px;border:1px solid currentColor;font:900 9px/1.5 sans-serif}.mh-changelog-kind[data-kind="fix"]{color:#fca5a5;background:#7f1d1d55}.mh-changelog-kind[data-kind="feature"]{color:#86efac;background:#14532d55}.mh-changelog-kind[data-kind="update"]{color:#93c5fd;background:#1e3a8a55}.mh-changelog-kind[data-kind="market"]{color:#fcd34d;background:#78350f55}.mh-changelog-kind[data-kind="issue"]{color:#d8b4fe;background:#4c1d9555}.mh-changelog-kind[data-kind="mode"]{color:#67e8f9;background:#164e6355}.mh-changelog-kind[data-kind="content"]{color:#f9a8d4;background:#83184355}.mh-changelog-kind[data-kind="event"]{color:#fdba74;background:#7c2d1255}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-head{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0;border:0;background:transparent;color:inherit;text-align:left}.mh-changelog-head b{flex:1;min-width:0;margin:4px 0}.mh-changelog-head small{flex:none;font-size:8px;font-weight:900;color:#94a3b8;white-space:nowrap}.mh-changelog-detail{margin-top:2px;padding-top:6px;border-top:1px solid #ffffff14}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-changelog-day{position:sticky;top:0;z-index:1;margin:10px 0 6px;padding:3px 0;background:#0f172a;color:#a5b4fc;font:900 10px/1.4 monospace;letter-spacing:.04em}.mh-changelog-day:first-child{margin-top:0}.mh-changelog-group-emoji{flex:none;font-size:13px;line-height:1}.mh-changelog-count{flex:none;position:relative;padding:2px 7px;border-radius:999px;background:#ffffff14;color:#cbd5e1;font:900 9px/1.5 sans-serif;white-space:nowrap}.mh-changelog-count em{margin-left:5px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-peek{margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:9px;line-height:1.5;color:#94a3b8}.mh-changelog-kinds{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.mh-changelog-kinds .mh-changelog-kind{margin-top:0}.mh-changelog-kind i{margin-left:3px;font-style:normal;opacity:.85}.mh-changelog-item{padding:9px 0;border-top:1px solid #ffffff14}.mh-changelog-item:first-child{padding-top:2px;border-top:0}.mh-changelog-item time{display:inline-block;margin-right:6px;font:9px monospace;color:#94a3b8}.mh-changelog-item time em{margin-left:4px;padding:1px 4px;border-radius:5px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-changelog-item b{display:block;margin:4px 0;font-size:11px;line-height:1.5}.mh-changelog-item .mh-changelog-kind{margin-top:0}[data-changelog-link]{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:8px 13px;border:1px solid #7dd3fc55;border-radius:11px;background:#0ea5e922;color:#7dd3fc;font:900 10px/1.4 sans-serif;text-decoration:none}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}

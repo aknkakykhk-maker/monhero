@@ -67,8 +67,10 @@ check('本編を待たずに見られるイベントを作れる',
 // --- プロフィール画面の入口 ---
 // 2026-09-10(STEP 6-7)にプロフィールを ProfileScreen へ切り出したので、
 // 「画面のボタンが伝える」→「本体が一覧を開く」の2段で見る
+// ★見出しの字の大きさまで固定すると、見た目を整えるたびにここだけが落ちる
+//   (text-[11px] → text-[13px] にしたときに落ちた)。ここで見るのは「入口があるか」だけ
 check('プロフィールに「イベント回想」の入口がある',
-  has("<b className=\"block text-[11px] font-black text-fuchsia-100\">イベント回想</b>")
+  /<b className="[^"]*">イベント回想<\/b>/.test(source)
     && has('onClick={onOpenEventReplayList}')
     && has('onOpenEventReplayList={()=>setShowEventReplayList(true)}'));
 
@@ -117,7 +119,7 @@ if (from >= 0 && to > from) {
   // 「本編で流したぶんを見たことにする」処理を使うようになった(2026-09-11)。
   // 名前を渡していないと ReferenceError で描画そのものが落ち、下の確認が1件も走らない
   const transformed = babel.transformSync(
-    'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, ASSISTANT_LIST, assistantById, AssistantFace,\n'
+    'const Screen = ({ eventReplay, setEventReplay, EVENT_REPLAYS, eventReplayList, ASSISTANT_LIST, assistantById, AssistantFace,\n'
     + '  normalizeAssistantBond, assistantBonds, assistantCallStyles, assistantSpeakText, assistantBondLevelOf,\n'
     + '  breederName, markRhythmEventStorySeen, MONBEAT_CUP_STORY_ID }) => (<>\n'
     + replayBlock + '\n</>);\nmodule.exports = { Screen };',
@@ -128,6 +130,9 @@ if (from >= 0 && to > from) {
     eventReplay: { id: 'kiki_intro', step },
     setEventReplay: () => {},
     EVENT_REPLAYS: list,
+    // ★画面は「公開フラグでふるいにかけた一覧」(eventReplayList)を通すようになった。
+    //   渡していないと ReferenceError で描画そのものが落ちる
+    eventReplayList: () => list,
     ASSISTANT_LIST: ASSISTANTS,
     assistantById: (id) => ASSISTANTS.find(x => x.id === id) || ASSISTANTS[0],
     AssistantFace,
@@ -198,8 +203,10 @@ check('回想を途中でやめるスキップがある', (() => {
   const at = source.indexOf('const skip=()=>{');
   if (at < 0) return false;
   const body = source.slice(at, source.indexOf('};', at));
+  // ★ボタンの書き方は2026-09-17に変わった(当たり判定の直しで stopPropagation を挟んだ)。
+  //   形ではなく「スキップを呼んでいるボタンがある」ことで見る
   return body.includes('setEventReplay(null)')
-    && /onClick=\{skip\}/.test(source)
+    && /onClick=\{(skip|\(e\)=>\{e\.stopPropagation\(\);skip\(\);\})\}/.test(source)
     && /スキップ/.test(source);
 })());
 check('スキップは既読フラグを立てない(最後まで見ていないため)',
@@ -210,7 +217,7 @@ check('スキップは既読フラグを立てない(最後まで見ていない
     return !/markMomosukeIntroSeen|markKikiIntroSeen/.test(body);
   })());
 check('最後の1枚ではスキップを出さない(そこは「とじる」だけ)',
-  /\{!last&&<button onClick=\{skip\}/.test(source));
+  /\{!last&&<button [^>]*onClick=\{\(e\)=>\{e\.stopPropagation\(\);skip\(\);\}\}/.test(source));
 
 // --- 更新履歴とヘルプ ---
 check('更新履歴に書いてある', /イベント回想/.test(changelogSrc));

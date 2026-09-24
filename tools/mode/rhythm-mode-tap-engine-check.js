@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// TAPの判定幅(MARVELOUS/EXCELLENT…)が決めた値どおりか。
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
@@ -27,7 +28,10 @@ check('20〜30秒・5レーン・複数/連続を含むTAP限定譜面',chart.du
 // 「窓の内側で叩いたのにノーツがもう無い」が起きる。
 check('受付幅＋入力の遅れを過ぎた未処理ノーツを自動MISS',/songTimeMs-\(note\.timeMs\+settings\.judgmentTimingOffsetMs\)>RHYTHM_MISS_RECLAIM_MS\)applyJudgment\(note,'MISS'/.test(game));
 check('回収の猶予は判定窓＋入力の最大遅れから作る(数字を直接書かない)',/const RHYTHM_MISS_RECLAIM_MS = RHYTHM_INPUT_MATCH_WINDOW_MS \+ RHYTHM_INPUT_AGE_MAX_MS;/.test(data));
-check('songTimeはAudioContext.currentTimeと実再生開始時刻が正本',game.includes('startedAt=ctx.currentTime')&&game.includes('offsetSeconds+(playing?ctx.currentTime-startedAt:0)')&&game.includes('songTimeMs:()=>songTimeSeconds()*1000'));
+// ★スピーカーから実際に音が出るまでの遅れ(outputLatencySeconds)を引いてから時刻を出す。
+//   引かないと、音に合わせて叩く人が必ずその分だけ遅れて判定される(本体 14-audio.jsx にも
+//   そう書いてある)。ここを外すと譜面全体が後ろへずれるので、引いていることまで見る
+check('songTimeはAudioContext.currentTimeと実再生開始時刻が正本',game.includes('startedAt=ctx.currentTime')&&game.includes('offsetSeconds+(playing?ctx.currentTime-startedAt-outputLatencySeconds:0)')&&game.includes('songTimeMs:()=>songTimeSeconds()*1000'));
 check('判定処理はDate.now/setInterval/CSS animationを基準にしない',!logic?.includes('Date.now')&&!logic?.includes('setInterval')&&game.includes('requestAnimationFrame(tick)'));
 // 2026-09-05: 第3引数 options を足した(autoStart:false で「用意だけして鳴らさない」)。
 // 既定は今までどおり自動で鳴らすので、プレビューなど他の呼び出しは変わらない

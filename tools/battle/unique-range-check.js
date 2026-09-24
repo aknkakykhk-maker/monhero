@@ -1,3 +1,4 @@
+// 継承した固有技を、表示名ではなく系統ID(monId/lineageId)で扱っているか。
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 const fs = require('fs');
 const path = require('path');

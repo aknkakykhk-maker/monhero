@@ -1,3 +1,4 @@
+// 継承固有技Lvの安定ID移行・並び替え・削除・重複と、総合力の回帰。
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 const assert = require('assert');
 const fs = require('fs');

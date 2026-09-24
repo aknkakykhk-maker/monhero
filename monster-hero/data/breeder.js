@@ -1,6 +1,9 @@
 // ==================== 教えカード用アイコン ====================
 // TEACHING_CARDSのicon欄(教えカードの表示アイコン)として使用。モンスターとは無関係。
-const ORYO_FACE_ICON = "images/breeder-icons/oryo.png?v=a5ec60be5094";
+// ニコラオ(旧おりょう)。2026-09-18にキャラクターを差し替えた。
+// id は 'oryo' のまま据え置く。持ち込み中のアシストカード(mh_teaching_roster)と、
+// 攻撃バフの種別キー(ゴーレムの固有技も同じキーを使う)がこのIDで保存されているため。
+const NICOLAO_FACE_ICON = "images/breeder-icons/nicolao.png?v=fc5a1318af2d";
 const DRA_FACE_ICON = "images/breeder-icons/dra.png?v=423f4119d101";
 const MYARU_FACE_ICON = "images/breeder-icons/myaru.png?v=88a5201c9b51";
 const ATSU_FACE_ICON = "images/breeder-icons/atsu.png?v=3df879752dee";
@@ -34,7 +37,7 @@ const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=0b8dca1d94c0";
 const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG?v=57ec53a942c7";
 
 const BREEDER_EVO_NAMES = {
-  oryo: ["おりょうの力", "おりょうの気合", "おりょうの憤怒"],
+  oryo: ["ニコラオの力", "ニコラオの気合", "ニコラオの憤怒"],
   dra: ["ドラの緑膝", "ドラの黒膝臭", "ドラの毒膝地獄"],
   cadmium: ["かどみうむの計算", "かどみうむの理論", "かどみうむの叡智"],
   mua: ["みゅあの愛", "みゅあの深愛", "みゅあの慈愛"],
@@ -72,7 +75,7 @@ const POLTZ_TIERS = [
 ];
 
 const TEACHING_CARDS = [
-  { id:'oryo',    baseName:"おりょうの力",    icon:ORYO_FACE_ICON,    type:'buff',   subType:'atk_buff',    baseValue:0.1, step:0.1,  desc:"攻撃アップ",   evoLevel:0, guts:20 },
+  { id:'oryo',    baseName:"ニコラオの力",    icon:NICOLAO_FACE_ICON,    type:'buff',   subType:'atk_buff',    baseValue:0.1, step:0.1,  desc:"攻撃アップ",   evoLevel:0, guts:20 },
   { id:'dra',     baseName:"ドラの緑膝",      icon:DRA_FACE_ICON,     type:'buff',   subType:'dmg_cut_buff', baseValue:0.03,step:0.03, desc:"被ダメージダウン",     evoLevel:0, guts:20 },
   { id:'cadmium', baseName:"かどみうむの計算", icon:CADMIUM_FACE_ICON, type:'buff',   subType:'guts_buff',   baseValue:1.3, step:0.2,  desc:"自動回復・上限アップ",   evoLevel:0, guts:20 },
   { id:'mua',     baseName:"みゅあの愛",      icon:MUA_FACE_ICON,     type:'heal',   subType:'heal_mua',    baseValue:0.5, step:0.2,  desc:"回復・能力永続アップ",   evoLevel:0, guts:20 },
@@ -189,7 +192,7 @@ const BREEDER_MARKET_ITEMS = [
   { id:'kiki', name:"アシストカード「きき」", type:'assist', icon:KIKI_FACE_ICON, cost:1500, desc:"次ターンから使用可能カード枚数+1・バトル中永続で全体連撃を強化" },
   { id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:1500, desc:"緊急回復相当＋現在ガード。複数枚使用で次ターンを強化" },
   { id:'poltz', name:"アシストカード「ポルツ」", type:'assist', icon:POLTZ_FACE_ICON, cost:1500, desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ（Lv3は攻撃アップも）" },
-  { id:'oryo',    name:"おりょうのアイコン",     type:'icon', icon:ORYO_FACE_ICON,    cost:1 },
+  { id:'oryo',    name:"ニコラオのアイコン",     type:'icon', icon:NICOLAO_FACE_ICON, cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
   { id:'cadmium', name:"かどみうむのアイコン",   type:'icon', icon:CADMIUM_FACE_ICON, cost:1 },
   { id:'mua',     name:"みゅあのアイコン",      type:'icon', icon:MUA_FACE_ICON,     cost:1 },
@@ -215,11 +218,15 @@ const BREEDER_MARKET_ITEMS = [
   // ウンディーネ。本人アイコン・円盤石アイコン・解放用の円盤石の3商品。
   // アイコンは立ち絵/円盤石の絵をそのまま使い、丸い枠での見え方は
   // MARKET_PROFILE_ICON_STYLES の scale/x/y で寄せる(画像は複製しない)
-  { id:'undine_icon', name:"ウンディーネのアイコン", type:'icon', icon:UNDINE_IMG, cost:1 },
+  // 本人アイコンは立ち絵ではなく顔クロップ(UNDINE_FACE_ICON)を使う。立ち絵は尾ひれまで
+  // 入っていて頭が小さく写っており、丸枠でどう寄せても「顔が小さい」か「耳が切れる」の
+  // どちらかにしかならなかった(2026-09-19)。エイキ・剣士モッチーと同じ扱い。
+  { id:'undine_icon', name:"ウンディーネのアイコン", type:'icon', icon:UNDINE_FACE_ICON, cost:1 },
   { id:'undine_disc_icon', name:"ウンディーネの円盤石アイコン", type:'icon', icon:UNDINE_DISC_ICON, cost:1 },
   { id:'Undine', name:"ウンディーネの円盤石", type:'disc', icon:UNDINE_DISC_ICON, cost:1500 },
   // ヤオビクニ
-  { id:'yaobikuni_icon', name:"ヤオビクニのアイコン", type:'icon', icon:YAOBIKUNI_IMG, cost:1 },
+  // ウンディーネと同じ理由で顔クロップを使う
+  { id:'yaobikuni_icon', name:"ヤオビクニのアイコン", type:'icon', icon:YAOBIKUNI_FACE_ICON, cost:1 },
   { id:'yaobikuni_disc_icon', name:"ヤオビクニの円盤石アイコン", type:'icon', icon:YAOBIKUNI_DISC_ICON, cost:1 },
   { id:'Yaobikuni', name:"ヤオビクニの円盤石", type:'disc', icon:YAOBIKUNI_DISC_ICON, cost:1500 },
   // プラント。既存の本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
@@ -305,6 +312,10 @@ const SKIP_TICKET_BY_DIFFICULTY = Object.freeze(Object.fromEntries(
 const PROFILE_FRAME_NONE_ID = 'none';
 // 選んでいるフレームの保存キー。既存の mh_breeder_icon とは別に持つ(アイコンとフレームは独立した設定)
 const PROFILE_FRAME_KEY = 'mh_profile_frame_v1';
+// ★助手ごとの飾り枠は unlock:{assistantId, bondLevel} で結び付ける。
+//   ドラ(2026-09-17に加入)のぶんは**まだ無い**。後日対応と決めてある(ユーザー指示)。
+//   無くても画面は壊れない(nextProfileFrameForAssistant が null を返し、
+//   プロフィールの「次にもらえる枠」ボタンが出ないだけ)。足すときはここへ3枠。
 const PROFILE_FRAMES = [
   { id:'none',   name:'フレームなし', kind:'none', released:true,
     desc:'飾り枠を付けません。これまでと同じ見た目です。' },

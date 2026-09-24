@@ -1,3 +1,4 @@
+// 種族チャレンジの進行がプロフィールに出るか。
 const fs = require('fs');
 const vm = require('vm');
 const { screenSource } = require(require('path').join(__dirname, '..', 'harness'));
@@ -38,10 +39,14 @@ const profileStart=source.indexOf('{/* 保存済みの各モード記録を読�
 const profileEnd=source.indexOf('{/* イベント回想:',profileStart);
 const profile=source.slice(profileStart,profileEnd);
 assert(profile.includes('SPECIES_CHALLENGE_MODE')&&profile.includes('data-profile-mode={mode.id}'),'プロフィールに種族チャレンジを既存モードカードとして追加する');
-assert(profile.includes('speciesChallengeProfileSummary(speciesChallengeProgress)'),'プロフィールは既存の正規化済みローカル進行だけを集計する');
-// 画面は「開いて」と伝えるだけで、戻り先を決めるのは本体。両方つながっていることを見る
-assert(profile.includes('onOpenSpeciesRecords()')
-  && source.includes("onOpenSpeciesRecords={()=>openSpeciesChallengeRecords('PROFILE')}"),
+// ★クラシックとタクティクス、どちらの種族チャレンジも同じ集計関数を通す(2026-09-20)。
+//   集計に使うのは、そのモードの正規化済みローカル進行だけ
+assert(profile.includes('speciesChallengeProfileSummary(progressOf(mode))')
+  && profile.includes("const speciesSummary=speciesSummaryOf(BATTLE_MODE_SPECIES_CHALLENGE);"),
+  'プロフィールは既存の正規化済みローカル進行だけを集計する');
+// 画面は「どのモードを開いて」と伝えるだけで、戻り先を決めるのは本体
+assert(profile.includes('onOpenSpeciesRecords(mode.id)')
+  && source.includes("onOpenSpeciesRecords={(mode)=>openSpeciesChallengeRecords('PROFILE',{mode:mode||BATTLE_MODE_SPECIES_CHALLENGE})}"),
   'タップで既存の全種族ランキングへ進み、プロフィールへ戻れる');
 assert(!profile.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map'),'プロフィールへ154組を直接描画しない');
 assert(!profile.includes('mh_hs_')&&!profile.includes('localRankings')&&!profile.includes('loadRankings('),'通常チャレンジや全国ランキング値をプロフィール集計へ混ぜない');

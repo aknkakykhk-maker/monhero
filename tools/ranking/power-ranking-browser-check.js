@@ -101,7 +101,9 @@ async function run() {
     await page.waitForTimeout(600);
     if (!closed) break;
   }
-  await page.evaluate(() => { const b = document.querySelector('button[aria-label="バトル"]'); if (b) b.click(); });
+  await page.evaluate(() => { const b = document.querySelector('button[aria-label="モンヒロバトル"]'); if (b) b.click(); });
+  await page.waitForTimeout(600);
+  await page.evaluate(() => { const b = document.querySelector('[data-battle-system="systemClassic"]'); if (b) b.click(); });
   await page.waitForTimeout(1500);
 
   // 上のタブが4つ並んでいること(モード選択・ブリーダーLv・絆Lv・総合力)

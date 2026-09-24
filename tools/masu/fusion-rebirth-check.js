@@ -152,8 +152,10 @@ check('限界突破・転生とも確認画面と実処理で同じ費用計算�
   `masuRebirthCost の使用箇所 ${(source.match(/masuRebirthCost\(/g) || []).length}`);
 check('転生の画面に古い×100の計算が残っていない', !has('cost=lvl.level*100'));
 // 必要ダイヤは、押す前に気づける場所へ出す
+// ★文字の色(text-slate-400 など)まで固定すると、見た目を整えるたびにここだけが落ちる。
+//   見るのは「必要ダイヤと所持ダイヤが別々の行に出ているか」だけ
 check('転生の必要ダイヤを独立した枠で出す',
-  has('<span className="text-slate-400">必要ダイヤ</span>') && has('<span className="text-slate-500">所持ダイヤ</span>')
+  /<span className="[^"]*">必要ダイヤ<\/span>/.test(source) && /<span className="[^"]*">所持ダイヤ<\/span>/.test(source)
     && has('ダイヤが足りません（あと '));
 check('費用の内訳は定義した値をそのまま出す',
   has('（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}')

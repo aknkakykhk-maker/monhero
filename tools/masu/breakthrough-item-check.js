@@ -169,7 +169,10 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 足りないときは限界突破のボタンを押せない`,
     /disabled[=:]\s*\{?\s*rebirthSkillKey\s*===?\s*null\s*\|\|\s*gold\s*<\s*cost\s*\|\|\s*ownedItemCount\(ownedItems,\s*BREAKTHROUGH_ITEM_ID\)\s*<\s*breakthroughItemCost/.test(code));
   check(`${label}: リザルトに獲得数を出す`, /summary\.psycheGain > 0/.test(code) && code.includes('虹のプシュケー'));
-  check(`${label}: マーケットには並べない`, (code.match(/item\.shop !== false|item\.shop!==false/g) || []).length === 2);
+  // ★以前は同じ式が2か所にあったが、ヘルプ側は「買えない」と伝える文へ変わった(item.shop === false)。
+  //   数ではなく「マーケットの一覧が shop:false を外しているか」で見る
+  check(`${label}: マーケットには並べない`,
+    /BREEDER_MARKET_ITEMS\.filter\(item\s*=>\s*item\.shop\s*!==\s*false\)/.test(code));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

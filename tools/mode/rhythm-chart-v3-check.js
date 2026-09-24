@@ -354,5 +354,55 @@ for(const difficulty of DIFFICULTIES){
   check(`${difficulty}: 形の語彙を8種類以上使っている`,kinds.size>=8,`${kinds.size}種類`);
 }
 
+// (m) 終点フリックを「弾いた動きと見分けられる場所」にだけ置いているか（2026-09-18）
+//
+// 終点フリックは「受付に入った位置から24px動いたら弾いた」と見る。斜めやジグザグのSLIDEでは
+// 指は経路を追って動き続けるしかなく、人の追従は遅れる。受付のあいだに経路そのものが24pxより
+// 大きく振れる区間では「弾いた」と「追っただけ」を見分けられず、弾かなくても成立してしまう。
+// 配信中の譜面は rhythm-end-flick-swing-check.js が見張っているので、ここでは**生成した譜面**を見る。
+{
+  const ARM_MS=250,BACK_MS=80,BACK_STEPS=4,MAX_SWING_LANES=.35;   // 24px ÷ 68.6px(幅390pxの画面の1レーン)
+  const laneAt=(note,grid)=>{
+    const points=note.slidePoints;
+    if(!Array.isArray(points)||!points.length)return Number(note.lane)||0;
+    if(grid<=points[0].grid)return Number(points[0].lane)||0;
+    for(let i=1;i<points.length;i++){
+      const a=points[i-1],b=points[i];
+      if(grid<=b.grid){
+        const span=Math.max(1e-6,Number(b.grid)-Number(a.grid));
+        const p=Math.max(0,Math.min(1,(grid-Number(a.grid))/span));
+        return Number(a.lane)+(Number(b.lane)-Number(a.lane))*p;
+      }
+    }
+    return Number(points[points.length-1].lane)||0;
+  };
+  const swingLanes=note=>{
+    if(note.type!=='SLIDE')return 0;
+    const endGrid=note.grid+(Number(note.durationGrids)||0);
+    let peak=0;
+    for(let ms=-ARM_MS;ms<=0;ms+=10){
+      let min=Infinity,max=-Infinity;
+      for(let i=0;i<=BACK_STEPS;i++){
+        const lane=laneAt(note,endGrid+(ms-BACK_MS*(1-i/BACK_STEPS))/gridMs);
+        if(!Number.isFinite(lane))continue;
+        if(lane<min)min=lane;
+        if(lane>max)max=lane;
+      }
+      if(max>=min&&max-min>peak)peak=max-min;
+    }
+    return peak;
+  };
+  for(const difficulty of DIFFICULTIES){
+    const flicks=charts[difficulty].notes.filter(note=>note.endFlick===true);
+    const bad=flicks.filter(note=>swingLanes(note)>=MAX_SWING_LANES);
+    check(`${difficulty}: 終点フリックが、経路の大きく振れる場所に無い`,bad.length===0,
+      bad.length?bad.slice(0,3).map(note=>`${note.grid}(${swingLanes(note).toFixed(2)}レーン)`).join(' / ')
+        :`${flicks.length}本 / 上限${MAX_SWING_LANES}レーン`);
+  }
+  check('生成器も同じ条件で候補から外している',
+    /endFlickPathSwingLanes\(note\)>=END_FLICK_MAX_SWING_LANES/.test(generator)
+    &&/const END_FLICK_MAX_SWING_LANES=0\.35/.test(generator));
+}
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

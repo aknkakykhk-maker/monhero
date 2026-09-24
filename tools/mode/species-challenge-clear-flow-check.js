@@ -77,10 +77,11 @@ check('保存する実戦は誤操作防止の確認を出す',
   source.includes("window.confirm('実際の種族チャレンジ進行・所持品を変更します。よろしいですか？')"));
 check('保存する実戦であることを画面へ明示する',
   source.includes('⚠️ 実際の種族チャレンジ進行・所持品を変更します。'));
-const modeCardStart = source.indexOf("const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])]");
+// モード選択の並びは battleSystemModes が作る(2026-09-20 に「バトルの仕組み」を1段足した)
+const modeCardStart = source.indexOf('const modes=battleSystemModes(battleSystem,{debugBattle}).map(id=>battleModeInfo(id));');
 // 本番のバトル入口から始めたときだけ保存する。デバッグのバトルモード入口(debugBattle)は保存なしのまま
 check('デバッグのバトルモード入口は保存なしのまま',
-  modeCardStart >= 0 && source.includes('if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle});return;}'));
+  modeCardStart >= 0 && source.includes('if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle,mode:m.id});return;}'));
 // DEBUGバッジ・保存の注意書きは、デバッグから入ったときだけ出す(通常プレイの画面へ出さない)
 check('DEBUGの表示はデバッグから入ったときだけ',
   (source.match(/\{selection\.fromDebug&&\(selection\.saveProgress/g) || []).length === 2
@@ -92,7 +93,7 @@ check('一般公開フラグはtrue(通常プレイのBATTLE MODEへ出す)',
 // --- ランキング画面 ---
 // 他モードと同じ「◯◯ランキング」の呼び方・同じ入れ物にそろえ、
 // 絆Lvランキングと同じように種族で絞り込めるようにする
-const rankBodyStart = source.indexOf('const renderSpeciesChallengeRecordBody = () => {');
+const rankBodyStart = source.indexOf('const renderSpeciesChallengeRecordBody = (mode = BATTLE_MODE_SPECIES_CHALLENGE) => {');
 const rankBodyEnd = source.indexOf('const renderBreederRankingBody =', rankBodyStart);
 check('種族チャレンジのランキング本文がある', rankBodyStart >= 0 && rankBodyEnd > rankBodyStart);
 const rankBody = rankBodyStart >= 0 ? source.slice(rankBodyStart, rankBodyEnd) : '';
@@ -116,7 +117,7 @@ check('「自己ベスト」は全国ランキングではないと画面に書�
   rankBody.includes('data-species-self-best-note') && rankBody.includes('全国ランキングは種族のタブから見られます'));
 // 難易度は他モードのランキングと同じくタブで切り替える。種族タブ×難易度タブで中身が決まる
 check('「自己ベスト」はその難易度の種族順位を出す',
-  rankBody.includes('lineages.map(lineage => ({ lineage, record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId) }))'));
+  rankBody.includes('lineages.map(lineage => ({ lineage, record: speciesChallengeRecord(speciesChallengeProgressOf(mode), lineage.id, diffId) }))'));
 // 以前は種族を選ぶと14難易度を縦に並べていたが、他モードにそろえて難易度もタブにした
 check('難易度はどのタブでもタブで切り替える',
   rankBody.includes('data-species-difficulty-tabs')
@@ -124,9 +125,11 @@ check('難易度はどのタブでもタブで切り替える',
 // 全国ランキングへの切り替えは公開フラグを見てから。
 // 「自己ベスト」タブのあいだは通信せず、自分の記録だけを出す
 check('全国ランキングへの切り替えは公開フラグを見てから',
-  rankBody.includes('const nationalMode = SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesFilter !== SPECIES_RANK_TAB_SELF_BEST;'));
+  // 公開フラグはモードごと(modeHasRanking)。タクティクス側はタクティクスのフラグで止まる
+  rankBody.includes('const ranked = modeHasRanking(mode);')
+  && rankBody.includes('const nationalMode = ranked && speciesFilter !== SPECIES_RANK_TAB_SELF_BEST;'));
 check('公開後は既存のスコアランキングの取得・表示をそのまま使う',
-  rankBody.includes('rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, difficultyId, tabId)')
+  rankBody.includes('rankingDifficultyForMode(mode, difficultyId, tabId)')
   // 「全種族」タブは、どの種族の記録かが分からないと読めないので、行に種族名を出す。
   // そのぶん renderScoreRankingEntry へ第3引数(showSpecies)を渡す形になっている
   && rankBody.includes('nationalRows.map((row,i)=>renderScoreRankingEntry(row,i,speciesFilter===SPECIES_RANK_TAB_ALL))'));
@@ -137,7 +140,7 @@ check('難易度タブに14段階すべてを出す',
 // 難易度カードからも、その種族のランキングへ入れるようにする
 check('難易度カードに種族ランキングの導線がある',
   source.includes('data-species-difficulty-record-link')
-  && source.includes("openSpeciesChallengeRecords('BATTLE_DIFFICULTY_SELECT',{speciesId:speciesChallengeSelection.speciesId,difficultyId:key})"));
+  && source.includes("openSpeciesChallengeRecords('BATTLE_DIFFICULTY_SELECT',{speciesId:speciesChallengeSelection.speciesId,difficultyId:key,mode:battleMode})"));
 const openRecords = source.slice(source.indexOf('const openSpeciesChallengeRecords ='), source.indexOf('const openModeScoreRanking ='));
 check('そこから開くと、その種族と難易度が最初から選ばれている',
   openRecords.includes('speciesChallengeLineages().some(lineage=>lineage.id===speciesId)')
@@ -145,12 +148,12 @@ check('そこから開くと、その種族と難易度が最初から選ばれ�
 // 種族を指定せずに開くモード選択の「🏆 種族チャレンジのランキング」も、他モードと同じく
 // 全国ランキングから見せる。以前はここが 'all'(自分の記録)で始まっていた
 check('種族を指定せずに開いても全国ランキングから始まる',
-  openRecords.includes('SPECIES_CHALLENGE_PUBLIC_RELEASE ? SPECIES_RANK_TAB_ALL : SPECIES_RANK_TAB_SELF_BEST')
+  openRecords.includes('ranked ? SPECIES_RANK_TAB_ALL : SPECIES_RANK_TAB_SELF_BEST')
   && !openRecords.includes("lineage.id===speciesId)?speciesId:'all'"));
 check('「自己ベスト」タブのときは通信しない(自分の記録だけ)',
-  openRecords.includes("if(SPECIES_CHALLENGE_PUBLIC_RELEASE&&speciesTab!==SPECIES_RANK_TAB_SELF_BEST){"));
+  openRecords.includes("if(ranked&&speciesTab!==SPECIES_RANK_TAB_SELF_BEST){"));
 check('公開前だったときの案内も残してある',
-  rankBody.includes('!SPECIES_CHALLENGE_PUBLIC_RELEASE &&') && rankBody.includes('全国ランキングはモードの公開後に始まります'));
+  rankBody.includes('{!ranked &&') && rankBody.includes('全国ランキングはモードの公開後に始まります'));
 check('ランキング画面は新しい保存キーを作らない', !/mh_[a-z]/.test(rankBody));
 
 // --- ④ デバッグ状態が通常バトルへ漏れない ---
@@ -179,8 +182,9 @@ check('保存する周回はdebugBattleを立てない',
   && start.includes('debugBattleRef.current=previewRun;')
   && start.includes('setDebugBattle(previewRun);')
   && !start.includes('debugBattleRef.current=true;'));
+// ★クラシックとタクティクス、どちらの種族チャレンジかは run が持つ(speciesChallengeRunMode)
 check('種族チャレンジのランは専用のrunModeで走る',
-  start.includes('setRunMode(BATTLE_MODE_SPECIES_CHALLENGE);')
+  start.includes('setRunMode(speciesChallengeRunMode(run));')
   && !start.includes('setRunMode(extremeSetting?EXTREME_MODE.id:BATTLE_MODE_CHALLENGE);'));
 
 // --- ⑥ 実際に動かして、記録の積み上がり方を確かめる ---

@@ -27,6 +27,13 @@ const BGM_TRACKS = [
   // 会話イベント用。1が既定で、2はBGMアレンジから自分で選べる(自動では使わない)
   { id:'original_event_01', name:'イベントBGM 1', creator:'オリジナル', src:'audio/bgm-event-01.mp3', gain:1, loop:true },
   { id:'original_event_02', name:'イベントBGM 2', creator:'オリジナル', src:'audio/bgm-event-02.mp3', gain:1, loop:true },
+  // タクティクスバトル用に受け取った曲(2026-09-21 ユーザー指示「通常曲とボス曲の変更 /
+  // 戦場→通常曲 / 魔窟→ボス戦」)。ジャケットは tools/art-sources/song-art/ に預けてあり、
+  // 今後モンヒロビートへ入れるときに使う。
+  // ★曲の一覧(BGMアレンジの選択肢)は公開前でも全部出るので、**名前にモード名を入れない**。
+  //   「タクティクス ボステーマ」のような名前にすると、まだ見せていないモードの名前が見えてしまう
+  { id:'senjou_no_shippuu', name:'戦場の疾風', creator:'オリジナル', src:'audio/bgm-senjou-no-shippuu.mp3', gain:1, loop:true },
+  { id:'makutsu_no_senritsu', name:'魔窟の旋律', creator:'オリジナル', src:'audio/bgm-makutsu-no-senritsu.mp3', gain:1, loop:true },
   // プロモードの戦闘用
   { id:'original_pro_battle_01', name:'プロ戦闘BGM 1', creator:'オリジナル', src:'audio/bgm-pro-battle-01.mp3', gain:1, loop:true },
   { id:'original_pro_battle_02', name:'プロ戦闘BGM 2', creator:'オリジナル', src:'audio/bgm-pro-battle-02.mp3', gain:1, loop:true },
@@ -70,6 +77,9 @@ const BGM_TRACKS = [
   // モンビー用に足した1分40秒の穏やかな曲。ほかの曲より譜面をやさしめにしてある。
   { id:'kaze_ga_soyogu', name:'風がそよぐ場所', creator:'オリジナル', src:'audio/bgm-kaze-ga-soyogu-basho.mp3', gain:1, loop:true },
   { id:'close_to_your_heart', name:'Close To Your Heart', creator:'オリジナル', src:'audio/bgm-close-to-your-heart.mp3', gain:1, loop:true },
+  // 同じ曲のBGM版(2026-09-21 ユーザー指示「イベントBGMはこれにしよう」)。別テイクなので
+  // 長さも違う(2分04秒 / もとは2分00秒)。タクティクスの導入会話でかける
+  { id:'close_to_your_heart_alt', name:'Close To Your Heart -BGM-', creator:'オリジナル', src:'audio/bgm-close-to-your-heart-alt.mp3', gain:1, loop:true },
   // ボス戦2曲のリミックス(2026-09-05・ユーザー提供)。モンビー用の別の曲として足す。
   // 元の曲・ショート版はそのまま残すので、バトルのBGMも今までの譜面も変わらない。
   { id:'eiki_boss_remix', name:'綺季一閃 ～花雪に舞う詠姫～ battle remix', creator:'オリジナル', src:'audio/bgm-eiki-boss-remix.mp3', gain:1, loop:true },
@@ -270,6 +280,22 @@ const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL','標準'],['LOW','控�
 //   2026-09-13・ユーザー指示「段を増やして更に標準をもっと軽くする」。
 //   名前は重さの順に読めるようにそろえてある(既定が「標準」なのは前の指示のまま)。
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','最大'],['LOW','多め'],['LIGHT','標準'],['MINIMAL','最小']]);
+// 演奏中に1秒あたり何回描くか(2026-09-24・ユーザーと相談して決めた)。
+// POWER_SAVE … 120Hz以上の画面では1回おきに描き、毎秒60回ほどに抑える。発熱と電池を抑える。
+//   90Hzの画面は抑えない(60へ落とすと 11ms/22ms が交互に並び、かえってガタついて見える)。
+// DEVICE     … 画面の速さに合わせてそのまま描く(これまでの動き)。
+// ★判定は指が触れた時刻と曲の時刻で決めているので、どちらでも判定の正確さは変わらない
+const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE','DEVICE']);
+const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE','省電力'],['DEVICE','端末に合わせる']]);
+// 演奏中の背景の演出(2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」)。
+// VIVID  … 曲のジャケットをぼかして敷き、ノーツのタイミングで背景が光り、光の粒とサーチライトが動く
+// CALM   … ジャケットとノーツのタイミングの光だけ(動き続けるものは出さない)
+// SIMPLE … これまでの見た目のまま(何も足さない)
+// ★軽量モードのときは、ここの値に関わらず SIMPLE として扱う(rhythmStageLevel)
+const RHYTHM_STAGE_EFFECTS = Object.freeze(['VIVID','CALM','SIMPLE']);
+const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
+const rhythmStageLevel = settings => settings&&settings.lightweightMode?'SIMPLE'
+  :(RHYTHM_STAGE_EFFECTS.includes(settings&&settings.stageEffect)?settings.stageEffect:'VIVID');
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']]);
 // ★AUTO(おすすめ)は「台形の外でいちばん広く空いているところ」(2026-09-13・ユーザー提案
@@ -310,6 +336,10 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // ブラウザから通知そのものは止められないので、全画面と画面ロック防止でできる範囲だけ行う。
   // 既定はOFF。勝手に全画面へ入ると「戻れない」と感じる人がいるため
   quietDuringPlay:false,
+  // 描く回数(2026-09-24)。既存の保存値には無いので、読み込み時は既定(省電力)で補われる
+  frameRateMode:'POWER_SAVE',
+  // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定(派手)で補われる
+  stageEffect:'VIVID',
 });
 const rhythmFiniteInRange = (value,min,max,fallback) => {
   const number=Number(value); return Number.isFinite(number)&&number>=min&&number<=max?number:fallback;
@@ -354,6 +384,8 @@ const normalizeRhythmSettings = value => {
     sideMonsterAbilityHighlight:bool('sideMonsterAbilityHighlight'),
     songPreviewEnabled:bool('songPreviewEnabled'),
     quietDuringPlay:bool('quietDuringPlay'),
+    frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
+    stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});
@@ -417,7 +449,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -432,6 +464,12 @@ const BGM_BATTLE_MODE_TABS = Object.freeze([
   ...(SPECIES_CHALLENGE_PUBLIC_RELEASE
     ? [{ id:'species', label:'種族', items:[['speciesBattle','通常戦 BGM'],['speciesDullahan','デュラハン戦 BGM'],['speciesMoo','ムー戦 BGM']] }]
     : []),
+  // タクティクスは通常戦・中ボス戦・ボス戦の3枠。ほかのモードと同じ並びになった
+  // (2026-09-21、通常戦の曲「戦場の疾風」を受け取ったため)。
+  // ★WAVE9はデュラハンではなくスプラッターなので、呼び名は「中ボス戦」にする
+  ...((TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE)
+    ? [{ id:'tactics', label:'タクティクス', items:[['tacticsBattle','通常戦 BGM'],['tacticsMidBoss','中ボス戦 BGM'],['tacticsBoss','ボス戦 BGM']] }]
+    : []),
 ]);
 const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDullahan:'dullahan', proMoo:'boss', extremeDullahan:'dullahan', extremeMoo:'boss', speciesBattle:'battle', speciesDullahan:'dullahan', speciesMoo:'boss' });
 // プロモードの既定曲を専用曲へ変えたときの、一度きりの移行。
@@ -443,7 +481,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 // 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、

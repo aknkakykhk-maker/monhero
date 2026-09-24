@@ -1,3 +1,4 @@
+// 種族チャレンジの土台(難易度と種族の定義)。
 const fs = require('fs');
 const vm = require('vm');
 
@@ -48,7 +49,9 @@ assert(foundation.speciesChallengeFirstClearReward('UNKNOWN') === 0, '不正難�
 
 assert(JSON.stringify(Object.keys(foundation.DIFFICULTY_SETTINGS)) === JSON.stringify(expectedIds.slice(0, 9)), '既存DIFFICULTY_SETTINGSのIDと順序を変更していない');
 assert(JSON.stringify(foundation.EXTREME_DIFFICULTIES.map(item => item.id)) === JSON.stringify(expectedIds.slice(9)), '既存EXTREME_DIFFICULTIESのIDと順序を変更していない');
-const battleModes = source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常の3モードとは別に持っている'));
+// ★見るのは BATTLE_MODES の配列だけ。うしろの「バトルの仕組み(BATTLE_SYSTEMS)」には
+//   種族チャレンジのidが入っている(公開フラグで出し入れする器)ので、そこまで含めない
+const battleModes = source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// ===== バトルの仕組み(モード選択の1つ上) ====='));
 assert(!battleModes.includes('BATTLE_MODE_SPECIES_CHALLENGE') && !battleModes.includes('SPECIES_CHALLENGE_MODE'), '種族チャレンジは本番モード選択UIへ表示されていない');
 assert(source.includes("const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';") && source.includes("label:'種族チャレンジ'"), '内部IDと表示名を定義している');
 assert(source.includes("const SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_species_challenge_progress_v1';"), '種族チャレンジ進行専用の保存キーを定義している');

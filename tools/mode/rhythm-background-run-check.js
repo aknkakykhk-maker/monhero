@@ -105,13 +105,12 @@ const seed = () => {
     //   1回だけ回す検査では、実行中の印の持ち越しを絶対に拾えない。
     const autoLabel = async () => page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.getAttribute('aria-label'));
     const startQuickInfinityRun = async () => {
-    await page.evaluate(() => document.querySelector('button[aria-label="バトル"]')?.click());
+    await page.evaluate(() => document.querySelector('button[aria-label="モンヒロバトル"]')?.click());
+    await page.waitForTimeout(600);
+    await page.evaluate(() => document.querySelector('[data-battle-system="systemQuick"]')?.click());
       await page.waitForTimeout(1200);
-      await page.evaluate(() => {
-        const card = [...document.querySelectorAll('article')].find((a) => a.textContent.includes('クイックモード'));
-        const b = card && [...card.querySelectorAll('button')].find((x) => /難易度を選ぶ/.test(x.textContent));
-        b?.click();
-      });
+    // ★クイックは1つ上の入口で選んだ時点で難易度選択へ進んでいる(2026-09-20)。
+    //   モード選択のカルーセルには並ばないので、ここでカードを探す必要はない
       await page.waitForTimeout(1300);
       await clickMatching('この難易度で挑戦');
       await page.waitForTimeout(1500);
@@ -201,6 +200,17 @@ const seed = () => {
     // ---- ⑤ 超省エネでもモンビーへ行ける ----
     // 超省エネは画面ごと簡易表示へ差し替わる。入口を通常のバトル画面にしか置いていなかったため
     // 「超省エネではまだいけない」状態だった(2026-09-06・ユーザー報告)
+    //
+    // ★ここへ来た時点では、直前の往復チェックでモンビーにいる。
+    //   省エネボタンはバトル画面にしかないので、先にバトルへ戻す。
+    //   戻さずに探していたため「ボタンが見つからない」で2本とも落ち続けていた
+    //   (往復チェックを足したときに戻す手順を入れ忘れた。本体は壊れていない)
+    await page.evaluate(() => document.querySelector('[data-quick-run-progress-header] button, [data-quick-run-progress] button')?.click());
+    await page.waitForTimeout(400);
+    await clickSelector('[data-quick-run-progress-back]');
+    await page.waitForTimeout(2000);
+    check('超省エネを試す前に、バトル画面へ戻れている',
+      await page.evaluate(() => !!document.querySelector('button[aria-label^="AUTO"]')));
     const ecoLabel = () => page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.getAttribute('aria-label'));
     for (let i = 0; i < 4 && (await ecoLabel()) !== '省エネ 超'; i++) {
       await page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.click());

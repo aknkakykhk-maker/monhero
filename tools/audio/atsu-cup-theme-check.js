@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// 「MF × ICHIKA MIX」(旧・あつ杯テーマ)の音源とBGM登録がそろっているか。
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');

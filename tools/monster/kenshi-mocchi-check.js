@@ -361,9 +361,12 @@ console.log('--- ⑨ 専用の二刀流モーション ---');
 check('atkMotion が専用種別になっている', mon.atkMotion === 'kenshiTwinBlade', String(mon.atkMotion));
 check('敵へ大きく斬り込む専用 keyframes がある',
   /@keyframes kenshiTwinBladeSlash \{/.test(source)
-  && /translate3d\(68px,-116px,0\)/.test(source)
-  && /translate3d\(-86px,-188px,0\)/.test(source)
-  && /translate3d\(90px,-188px,0\)/.test(source));
+  // 2026-09-24: 固定の上方向(-188px など)をやめ、敵の位置(--atk-dx/dy)からのずれで斬り込むようにした
+  // (ユーザー指示「敵に位置を合わせて何かをする感じにしたい」)。＼で抜け→／で切り返し→敵の位置でX字、の形は同じ
+  && /translate3d\(calc\(var\(--atk-dx\) \+ 68px\),calc\(var\(--atk-dy\) \+ 54px\),0\)/.test(source)
+  && /translate3d\(calc\(var\(--atk-dx\) - 86px\),calc\(var\(--atk-dy\) - 18px\),0\)/.test(source)
+  && /translate3d\(calc\(var\(--atk-dx\) \+ 90px\),calc\(var\(--atk-dy\) - 18px\),0\)/.test(source)
+  && /translate3d\(var\(--atk-dx\),var\(--atk-dy\),0\) scale\(1\.12\)/.test(source));
 check('斬撃は＼と／の2本で、190px級の大型3層表現',
   /KENSHI_TWIN_SLASHES = Object\.freeze\(\[/.test(source)
   && /angle:'-38deg'/.test(source) && /angle:'38deg'/.test(source)
@@ -479,27 +482,31 @@ check('compiled にも反映されている(ビルド済み)',
   // 「実際の表示条件」の枠は、本番と同じ形(縦横比・角丸・収め方)でなければ意味が無い。
   // 以前は高さだけを指定していたため、幅がグリッドの列いっぱいに広がり、
   // 本番では丸いアイコンが横長のカプセルになっていた(2026-09-08・ユーザー指摘)。
+  // 枠の指定は「新モンスター確認」(74-screen-monster-check-debug.jsx)の画像タブにある。
+  // もとは「モンスター画像・染色確認」(MONSTER_IMAGE_DEBUG)を見ていたが、中身が9割同じだったので
+  // そちらへ吸収して消した(2026-09-17)。見ている約束は変えていない
+  const checkPart = read('monster-hero/src/parts/74-screen-monster-check-debug.jsx');
   const frames = [
     ['バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain'],
     ['一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover'],
     ['顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain'],
-    ['プロフィール／選択アイコン', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain'],
+    ['プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain'],
     ['小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain'],
   ];
   for (const [label, sourceKey, frameClass, fit] of frames) {
     // ラベルごとに1本の呼び出しとして照合する(同じ枠指定が他のラベルにもあるため、
     // 文字列がどこかに在るだけでは「その枠が正しい」ことにならない)
     check(`「${label}」の枠が本番と同じ形になっている`,
-      source.includes(`renderCurrent('${label}','${sourceKey}',colors,'${frameClass}','${fit}'`),
+      checkPart.includes(`artFrame('${label}', '${sourceKey}', '${frameClass}', '${fit}'`),
       `${frameClass} / ${fit}`);
   }
   // 高さだけの枠(幅が列いっぱいに広がる)へ戻っていないか。丸を指定したのに横長のカプセルになる
   check('丸・角丸の枠に高さだけの指定が残っていない',
-    !/renderCurrent\('(?:一覧／全身アイコン|顔アイコン|プロフィール／選択アイコン|小型／編成枠)','[^']*',colors,'h-\d+/.test(source));
+    !/artFrame\('(?:一覧／全身アイコン|顔アイコン|プロフィール／選択|小型／編成枠)', '[^']*', 'h-\d+/.test(checkPart));
   // 顔アイコンは本番(BreederIcon)で MARKET_PROFILE_ICON_STYLES の拡大・位置調整が掛かる
   check('顔アイコンの枠へ本番と同じ拡大・位置調整を渡している',
-    source.includes('const profileIconStyle=marketProfileIconStyle(')
-    && (source.match(/renderCurrent\('(?:顔アイコン|プロフィール／選択アイコン)'[^)]*profileIconStyle/g) || []).length === 2);
+    checkPart.includes('const profileIconStyle = marketProfileIconStyle(')
+    && (checkPart.match(/artFrame\('(?:顔アイコン|プロフィール／選択)'[^)]*profileIconStyle/g) || []).length === 2);
 
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
   process.exit(failed ? 1 : 0);

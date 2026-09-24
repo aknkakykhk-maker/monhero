@@ -1,0 +1,1597 @@
+const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
+// 新モード(id: tactics)の「1体ぶん」の値と盤面を、本体の純関数をそのまま動かして確かめる。
+// 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md
+//
+//   ① 1体ぶんの値を作れる(ライフ・ちから・丈夫さ・ガッツを個別に持つ)
+//   ② 狙われた子だけがライフを減らし、0になったその子だけが倒れる
+//   ③ 倒れた子はカードを使えない。戻す手段は2つあり、戻るライフが違う
+//   ④ 全員倒れたときだけ全滅
+//   ⑤ 敵はライフの少ない子を狙いやすい。全体攻撃だけは狙いを決めない
+//   ⑥ 壊れた値が来ても落ちない
+//   ⑦ バトル本体へ結線されている(盤面が slots と一緒に動き、予告へ狙いが乗る)
+//   ⑧ パーティのライフは盤面の合計。増減が正しく振り分けられる(段階5)
+//   ⑩⑪ ガッツも1体ずつ。カードは「使う子」を選び、その子のガッツで払う(段階6)
+//   ⑫⑬ ガードは使った子自身を守る。回復カードは使う子へ、倒れた子へ向けると起こす(段階7)
+//   ⑭⑮ 画面へ1体ずつの帯を出す(段階8)／合流すると総合力に応じて敵も強くなる(段階9)
+//   ⑯ ちから・丈夫さも1体ずつ。攻撃はその子のちから、被弾はその子の丈夫さ(段階10)
+//   ⑰ トレーニングを1体ずつ選ぶ。倒れた子はここで起こせる(段階11)
+//   ⑱ スコアは式そのままで桁だけ 1/1000 へ縮める(段階12)
+//   ⑲ 距離適性も1体ずつ。その子の適性がその子の攻撃に効く
+//
+// 数式をこのファイルへ書き写すと、本体を変えたときに検査だけ古くなる。
+// 計算は必ず本体から切り出した実装をそのまま動かす。
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+const root = path.resolve(TOOLS_DIR, '..');
+const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
+
+let failed = 0;
+const check = (name, ok, detail = '') => {
+  console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`);
+  if (!ok) failed++;
+};
+const slice = (from, to) => {
+  const i = source.indexOf(from);
+  const j = source.indexOf(to, i);
+  if (i < 0 || j <= i) { console.log(`NG: 本体から切り出せませんでした（${from}）`); process.exit(1); }
+  return source.slice(i, j);
+};
+
+// このファイルは純関数だけなので、そのまま切り出して動かせる
+const sandbox = { Math, Number, console };
+vm.createContext(sandbox);
+vm.runInContext(
+  slice('const TACTICS_START_GUTS_RATE', '// ==== 画面ライフサイクル')
+    + ';globalThis.api={TACTICS_START_GUTS_RATE,'
+    + 'createTacticsUnit,normalizeTacticsUnit,applyTacticsDamage,healTacticsUnit,reviveTacticsUnit,'
+    + 'payTacticsGuts,recoverTacticsGuts,tacticsAliveSlots,tacticsDownedSlots,isTacticsWipedOut,'
+    + 'canTacticsSlotAct,chooseTacticsTarget,withTacticsTarget,tacticsIntentTargets,'
+    + 'isTacticsSweepOnSpot,tacticsSweepIntent,'
+    + 'tacticsTotalHp,tacticsTotalMaxHp,tacticsTotalBaseMaxHp,scaleTacticsUnits,scaleTacticsUnitMaxHp,'
+    + 'damageTacticsTargets,healTacticsBoard,rateHealTacticsBoard,rateHealTacticsAt,'
+    + 'tacticsMaxDef,selfDamageTacticsBoard,'
+    + 'wipeTacticsBoard,tacticsTotalGuts,tacticsTotalBaseMaxGuts,tacticsHasGutsRoom,'
+    + 'scaleTacticsUnitMaxGuts,canTacticsSlotPay,payTacticsGutsAt,recoverTacticsGutsBoard,'
+    + 'healTacticsAt,recoverTacticsGutsAt,selfDamageTacticsAt,'
+    + 'reviveTacticsAt,tacticsEnemyPowerMultiplier,'
+    + 'TACTICS_ENEMY_POWER_MAX,applyTacticsTraining,tacticsPartyAtk,'
+    + 'tacticsPartyDef,shrinkTacticsScore,TACTICS_SCORE_DIVISOR,'
+    + 'splitTacticsGuardedHit,resolveTacticsGuardedHit,tacticsGuardHits,makeCardHalveCounter,'
+    + 'isTacticsSpreadGuard,TACTICS_RUSH_GUARD_CARDS,TACTICS_SPREAD_GUARD_SLOTS,'
+    + 'splitTacticsGuardedAmounts,scaleTacticsHitAmounts,'
+    + 'regenDownedTacticsBoard,TACTICS_DOWNED_REGEN_RATE,rateHealTacticsBoard,splitTacticsHitAmounts,'
+    + 'tacticsJoinWaveRate,addTacticsJoinCatchUp,applyTacticsJoinCatchUp,'
+    + 'TACTICS_JOIN_RATE_PER_TURN,TACTICS_JOIN_DIST_BASE_TURNS,tacticsJoinDistWaveRate,'
+    + 'addTacticsJoinDistCatchUp,tacticsJoinDistBonus,applyTacticsJoinDistBonus,'
+    + 'isSameTacticsUnit,tacticsJoinedSlots,'
+    + 'tacticsSlotFlag,tacticsSlotRate,tacticsSlotTurns,withTacticsSlotBuff,'
+    + 'carryTacticsSlotBuffs,clearTacticsSlotFlag};', sandbox);
+const api = sandbox.api;
+// ★合計へみゅあ補正を掛ける式は本体から切り出して動かす(検査へ書き写さない)。
+//   1体ずつは floor(素の上限×補正)、合計は floor(素の上限の合計×補正) なので、
+//   全員満タンでも「合計 < 上限」になることがある。㉔でそれを実際に出す
+vm.runInContext(slice('const resolveEffectiveMaxStat', '\n')
+  + ';globalThis.resolveEffectiveMaxStat=resolveEffectiveMaxStat;', sandbox);
+// 間合いのボーナスの換算率も本体から切り出す(検査へ 0.001/100 を書き写さない)
+vm.runInContext(slice('const DIST_BONUS_PER_DAMAGE', '\n')
+  + ';globalThis.DIST_BONUS_PER_DAMAGE=DIST_BONUS_PER_DAMAGE;', sandbox);
+
+// モンスター1体ぶんの入力。マスモンなら育成済みの値が baseHp などに入っている
+const mon = (over = {}) => ({ id: 'Mocchi', name: 'モッチー', baseHp: 600, baseAtk: 120, baseDef: 120, baseGuts: 100, ...over });
+
+// --- ① 1体ぶんの値を作る ---
+const unit = api.createTacticsUnit(mon());
+check('1体ぶんの値を作れる',
+  unit.maxHp === 600 && unit.hp === 600 && unit.atk === 120 && unit.def === 120 && unit.maxGuts === 100,
+  `HP${unit.hp}/${unit.maxHp} 力${unit.atk} 防${unit.def} G${unit.guts}/${unit.maxGuts}`);
+check('ガッツは最大の半分から始まる', unit.guts === Math.floor(100 * api.TACTICS_START_GUTS_RATE), `${unit.guts}`);
+check('満タンで始めることもできる', api.createTacticsUnit(mon(), { fullGuts: true }).guts === 100);
+check('作った直後は倒れていない', unit.downed === false);
+check('モンスターがいなければ null', api.createTacticsUnit(null) === null);
+// 合算しないことの確認。2体作っても互いの値に影響しない
+const a = api.createTacticsUnit(mon());
+const b = api.createTacticsUnit(mon({ id: 'Golem', baseHp: 900, baseAtk: 80 }));
+check('2体目を作っても1体目の値は変わらない（合算しない）',
+  a.maxHp === 600 && b.maxHp === 900 && a.atk === 120 && b.atk === 80,
+  `${a.maxHp}/${a.atk} と ${b.maxHp}/${b.atk}`);
+
+// --- ② ダメージと戦闘不能 ---
+const hit = api.applyTacticsDamage(unit, 100);
+check('ダメージはその子のライフだけ減らす', hit.hp === 500 && hit.downed === false, `${hit.hp}`);
+const downed = api.applyTacticsDamage(unit, 9999);
+check('ライフが0になったら倒れる', downed.hp === 0 && downed.downed === true);
+check('倒れた子へさらに当たっても何も起きない', api.applyTacticsDamage(downed, 100).hp === 0);
+check('元の値を書き換えない（新しい値を返す）', unit.hp === 600, `元のHP ${unit.hp}`);
+check('回復はライフを超えない', api.healTacticsUnit(hit, 9999).hp === 600);
+// --- ③ 倒れた子は「ライフが全快になってはじめて復活」(2026-09-19 ユーザーが決めた形) ---
+// ★倒れたあともライフは回復で貯まる。途中では立たない
+const healingDowned = api.healTacticsUnit(downed, 500);
+check('倒れた子にも回復は入る', healingDowned.hp === 500, `${healingDowned.hp}/600`);
+check('全快の手前では立たない', healingDowned.downed === true);
+check('全快になったら立ち上がる', api.healTacticsUnit(healingDowned, 100).downed === false);
+check('全快を超えて回復しても上限どまり', api.healTacticsUnit(downed, 9999).hp === 600);
+// トレーニングの「起こす」は、中身は「上限まで回復する」
+check('起こすと全快で立ち上がる',
+  api.reviveTacticsUnit(downed).hp === 600 && api.reviveTacticsUnit(downed).downed === false);
+check('立っている子に起こす操作をしても何も起きない', api.reviveTacticsUnit(unit).hp === 600);
+
+// --- ガッツは個別。足りなければ払えない ---
+const paid = api.payTacticsGuts(unit, 20);
+check('ガッツを払える', paid.payable === true && paid.unit.guts === unit.guts - 20, `${paid.unit.guts}`);
+check('足りなければ払えず、値も変わらない',
+  api.payTacticsGuts(unit, 9999).payable === false && api.payTacticsGuts(unit, 9999).unit.guts === unit.guts);
+check('倒れた子はガッツを払えない', api.payTacticsGuts(downed, 0).payable === false);
+check('ガッツの回復は最大を超えない', api.recoverTacticsGuts(unit, 9999).guts === 100);
+
+// --- ④ 盤面と全滅 ---
+const board = [api.createTacticsUnit(mon()), null, api.createTacticsUnit(mon({ id: 'Golem' })), null];
+check('生きているスロットを数えられる', api.tacticsAliveSlots(board).join(',') === '0,2', api.tacticsAliveSlots(board).join(','));
+const boardOneDown = [api.applyTacticsDamage(board[0], 9999), null, board[2], null];
+check('倒れた子は生存から外れる', api.tacticsAliveSlots(boardOneDown).join(',') === '2');
+check('倒れた子のスロットは空かない', api.tacticsDownedSlots(boardOneDown).join(',') === '0');
+check('1体でも生きていれば全滅ではない', api.isTacticsWipedOut(boardOneDown) === false);
+const allDown = boardOneDown.map(u => (u ? api.applyTacticsDamage(u, 9999) : null));
+check('全員倒れたら全滅', api.isTacticsWipedOut(allDown) === true);
+check('誰も置いていない盤面は全滅にしない', api.isTacticsWipedOut([null, null, null, null]) === false);
+check('倒れた子のカードは選べない',
+  api.canTacticsSlotAct(boardOneDown, 0) === false && api.canTacticsSlotAct(boardOneDown, 2) === true);
+check('空きスロットのカードも選べない', api.canTacticsSlotAct(board, 1) === false);
+
+// --- ⑤ 敵の狙い ---
+// 生きている子からしか選ばない
+const picks = new Set();
+for (let i = 0; i < 200; i++) picks.add(api.chooseTacticsTarget(boardOneDown, () => i / 200));
+check('倒れた子は狙われない', [...picks].every(index => index === 2), [...picks].join(','));
+check('誰も生きていなければ狙いは決まらない', api.chooseTacticsTarget(allDown, () => 0) === null);
+// ライフの少ない子を狙いやすい(重み付け)。偏りを0にすると一様になる
+const hurt = [api.applyTacticsDamage(board[0], 540), null, board[2], null]; // 0番は残り10%
+const countLow = (bias) => {
+  let low = 0;
+  for (let i = 0; i < 1000; i++) if (api.chooseTacticsTarget(hurt, () => i / 1000, bias) === 0) low++;
+  return low;
+};
+check('ライフの少ない子を狙いやすい', countLow() > 500, `1000回中 ${countLow()}回`);
+check('偏りを0にすると一様になる', Math.abs(countLow(0) - 500) <= 5, `1000回中 ${countLow(0)}回`);
+
+// --- 予告へ狙いを足す ---
+const attack = { type: 'ATTACK', value: 100 };
+check('攻撃の予告には狙いが付く', Number.isInteger(api.withTacticsTarget(attack, board, () => 0).targetSlot));
+check('ためる・移動には狙いを付けない',
+  api.withTacticsTarget({ type: 'CHARGE' }, board, () => 0).targetSlot === undefined
+    && api.withTacticsTarget({ type: 'MOVE', targetDist: 1 }, board, () => 0).targetSlot === undefined);
+check('全体攻撃は狙いを決めない', api.withTacticsTarget({ type: 'ATTACK', targetsAll: true }, board, () => 0).targetSlot === undefined);
+// 予告の吹き出しへ出す呼び名。ここが空だと「誰を狙うか」が画面に出ない
+check('狙った子の名前を予告へ持ち歩く',
+  api.withTacticsTarget(attack, board, () => 0).targetName === 'モッチー',
+  String(api.withTacticsTarget(attack, board, () => 0).targetName));
+check('全体攻撃は「全員」と出す',
+  api.withTacticsTarget({ type: 'ATTACK', targetsAll: true }, board, () => 0).targetName === '全員');
+check('名前が無い子でも呼び名が空にならない',
+  !!api.withTacticsTarget(attack, [api.createTacticsUnit({ id: 'X', baseHp: 10 }), null, null, null], () => 0).targetName);
+// ★間合い攻撃も「誰を狙うか」を決める(2026-09-22 ユーザー指示「誰に攻撃するかが大事」)。
+//   予告した間合いに立っている子がいればその子、いなければほかの技と同じ決め方で1体
+check('間合い攻撃も狙いを決める',
+  api.withTacticsTarget({ type: 'ATTACK', variant: 'sweep', sweepDist: 2 }, board, () => 0).targetSlot === 2);
+check('その間合いに誰も立っていなければ、ほかの技と同じ決め方で選ぶ',
+  Number.isInteger(api.withTacticsTarget({ type: 'ATTACK', variant: 'sweep', sweepDist: 1 }, board, () => 0).targetSlot));
+
+// --- 実際に当たる相手 ---
+check('単体狙いは1体だけに当たる',
+  api.tacticsIntentTargets({ type: 'ATTACK', targetSlot: 2 }, board).join(',') === '2');
+check('全体攻撃は生きている全員に当たる',
+  api.tacticsIntentTargets({ type: 'ATTACK', targetsAll: true }, boardOneDown).join(',') === '2');
+check('間合い攻撃はその間合いにいる子へ当たる',
+  api.tacticsIntentTargets({ type: 'ATTACK', variant: 'sweep', sweepDist: 2 }, board, 2).join(',') === '2');
+// ★距離撃で敵を動かしても、狙いは**予告した間合いの子のまま**。威力だけが落ちる
+//   (2026-09-22 ユーザー指摘「近距離にいる場合は1.2倍攻撃だけど敵を移動させて中距離とかに
+//    させたら狙われてるモンスターが0.4倍攻撃に変わるイメージ」)。
+//   ここを「いまの敵の間合い」にすると、ずらした先の**別の子**が食らってしまう
+check('間合い攻撃は、敵をずらしても予告した子を狙ったまま',
+  api.tacticsIntentTargets({ type: 'ATTACK', variant: 'sweep', sweepDist: 2 }, board, 1).join(',') === '2');
+check('予告が無いときだけ、いまの敵の間合いを見る',
+  api.tacticsIntentTargets({ type: 'ATTACK', variant: 'sweep' }, board, 2).join(',') === '2');
+check('倒れた子は狙いに残っていても当たらない',
+  api.tacticsIntentTargets({ type: 'ATTACK', targetSlot: 0 }, boardOneDown).length === 0);
+
+// --- ⑥ 壊れた値でも落ちない ---
+check('壊れた値を渡しても落ちない', (() => {
+  const broken = api.normalizeTacticsUnit({ hp: 'x', maxHp: null, atk: NaN, def: -5, guts: 999, maxGuts: 10 });
+  return broken.hp === 0 && broken.maxHp === 1 && broken.atk === 0 && broken.def === 0
+    && broken.guts === 10 && broken.downed === true;
+})());
+check('ライフ0なのに立っている状態を作らない',
+  api.normalizeTacticsUnit({ hp: 0, maxHp: 100, downed: false }).downed === true);
+// ★「ライフがあるのに倒れている」は**作ってよい**。全快までの貯めがその状態
+check('全快の手前ではライフがあっても倒れたまま',
+  api.normalizeTacticsUnit({ hp: 50, maxHp: 100, downed: true }).downed === true);
+check('全快なら必ず立っている',
+  api.normalizeTacticsUnit({ hp: 100, maxHp: 100, downed: true }).downed === false);
+check('unitでないものは null', api.normalizeTacticsUnit(null) === null && api.normalizeTacticsUnit('x') === null);
+check('盤面が配列でなくても落ちない',
+  api.tacticsAliveSlots(null).length === 0 && api.isTacticsWipedOut(undefined) === false);
+
+// --- ⑧ 盤面の合計と、ライフの振り分け(段階5) ---
+// ★ここが崩れると「合計は残っているのに全員倒れている」「誰も倒れていないのに敗北」になる
+const makeBoard = (...mons) => {
+  const units = [null, null, null, null];
+  mons.forEach(([index, over]) => { units[index] = api.createTacticsUnit(mon(over)); });
+  return units;
+};
+const pair = makeBoard([0, {}], [2, { id: 'Golem', name: 'ゴーレム', baseHp: 400 }]);
+check('合計ライフは1体ずつの足し算', api.tacticsTotalHp(pair) === 1000, String(api.tacticsTotalHp(pair)));
+check('合計の上限も1体ずつの足し算', api.tacticsTotalMaxHp(pair) === 1000);
+check('素の上限の合計を別に取れる', api.tacticsTotalBaseMaxHp(pair) === 1000);
+check('空の盤面は合計0', api.tacticsTotalHp([null, null, null, null]) === 0 && api.tacticsTotalHp(null) === 0);
+
+// 狙われた子だけが減る
+const hitOne = api.damageTacticsTargets(pair, [0], 100);
+check('狙われた子だけが減る', api.tacticsTotalHp(hitOne) === 900 && hitOne[0].hp === 500 && hitOne[2].hp === 400,
+  `${hitOne[0].hp} / ${hitOne[2].hp}`);
+const hitAll = api.damageTacticsTargets(pair, [0, 2], 100);
+check('全体攻撃は立っている全員が減る', hitAll[0].hp === 500 && hitAll[2].hp === 300);
+check('誰にも当たらない行動では減らない', api.tacticsTotalHp(api.damageTacticsTargets(pair, [], 100)) === 1000);
+const downOne = api.damageTacticsTargets(pair, [2], 9999);
+check('0になった子だけが倒れる', downOne[2].downed === true && downOne[0].downed === false);
+check('1体倒れただけでは全滅ではない', api.isTacticsWipedOut(downOne) === false);
+check('倒れた子のぶんは合計から消える', api.tacticsTotalHp(downOne) === 600, String(api.tacticsTotalHp(downOne)));
+check('全員倒れたら合計0＝敗北', api.tacticsTotalHp(api.wipeTacticsBoard(pair)) === 0
+  && api.isTacticsWipedOut(api.wipeTacticsBoard(pair)) === true);
+
+// 回復は立っている子へ配る
+const damagedBoard = api.damageTacticsTargets(api.damageTacticsTargets(pair, [0], 300), [2], 100);
+const healedBoard = api.healTacticsBoard(damagedBoard, 200);
+check('回復は足りない量の多い子から配る', healedBoard[0].hp > damagedBoard[0].hp && api.tacticsTotalHp(healedBoard) === api.tacticsTotalHp(damagedBoard) + 200,
+  `${damagedBoard[0].hp}→${healedBoard[0].hp} / ${damagedBoard[2].hp}→${healedBoard[2].hp}`);
+check('上限を超えて回復しない', api.tacticsTotalHp(api.healTacticsBoard(damagedBoard, 99999)) === api.tacticsTotalMaxHp(damagedBoard));
+// ★自動再生・緊急回復も「復活までの貯め」に乗る(2026-09-19 ユーザーが決めた形)
+check('倒れた子にも配る(オート回復も乗る)', (() => {
+  const board = api.damageTacticsTargets(pair, [2], 9999);
+  const after = api.healTacticsBoard(api.damageTacticsTargets(board, [0], 200), 200);
+  return after[2].hp > 0 && after[2].downed === true;
+})());
+check('配り切っても全快でなければ立たない', (() => {
+  const board = api.damageTacticsTargets(pair, [2], 9999);
+  return api.healTacticsBoard(board, 100)[2].downed === true;
+})());
+check('配ったぶんで全快になれば立ち上がる', (() => {
+  const board = api.damageTacticsTargets(pair, [2], 9999);
+  return api.healTacticsBoard(board, 9999)[2].downed === false;
+})());
+// ★合計ライフへ数えるのは立っている子だけ。数えると「全員倒れているのに敗北しない」が起きる
+check('倒れた子のライフは合計へ数えない', (() => {
+  const board = api.healTacticsBoard(api.damageTacticsTargets(pair, [2], 9999), 100);
+  return api.tacticsTotalHp(board) === 600 && board[2].hp > 0;
+})());
+check('全員倒れていれば合計は0', (() => {
+  const board = api.healTacticsBoard(api.wipeTacticsBoard(pair), 100);
+  return api.tacticsTotalHp(board) === 0 && api.isTacticsWipedOut(board) === true;
+})());
+// --- 回復はすべて「その子の上限 × 率」で1体ずつ(2026-09-20 ユーザー指摘) ---
+// ★合計の上限から量を出して配る形だと、1体だけ傷ついているときに
+//   パーティ全員ぶんがその子へ丸ごと入り、倒れている子が多いほど残った子がよけいに回復する
+// pair は 0番が600(ガッツ100)・2番が400(ガッツ100)
+check('回復はその子の上限の率だけ入る', (() => {
+  const board = api.damageTacticsTargets(api.damageTacticsTargets(pair, [0], 300), [2], 300);
+  const res = api.rateHealTacticsBoard(board, 0.1, 0);
+  // 0番は600の10%＝60、2番は400の10%＝40。合計の10%(100)を配るのとは違う
+  return res.units[0].hp === 360 && res.units[2].hp === 140 && res.hp === 100;
+})(), JSON.stringify(api.rateHealTacticsBoard(api.damageTacticsTargets(api.damageTacticsTargets(pair, [0], 300), [2], 300), 0.1, 0).units.map(u => u && u.hp)));
+check('倒れている子がいても、残った子の回復量は変わらない', (() => {
+  // 2番を倒しても、0番が受け取るのは自分の上限の10%(60)のまま
+  const board = api.damageTacticsTargets(api.damageTacticsTargets(pair, [2], 9999), [0], 300);
+  const res = api.rateHealTacticsBoard(board, 0.1, 0);
+  return res.units[0].hp === 360 && res.hp === 60;
+})(), JSON.stringify(api.rateHealTacticsBoard(api.damageTacticsTargets(api.damageTacticsTargets(pair, [2], 9999), [0], 300), 0.1, 0).hp));
+// 自動再生(includeDowned なし)は倒れた子へ入れない
+check('自動再生は倒れた子のライフを貯めない', (() => {
+  const board = api.damageTacticsTargets(pair, [2], 9999);
+  const res = api.rateHealTacticsBoard(board, 1, 1);
+  return res.units[2].hp === 0 && res.units[2].downed === true;
+})());
+check('全員倒れていれば自動再生では誰も起きない', (() => {
+  const res = api.rateHealTacticsBoard(api.wipeTacticsBoard(pair), 1, 1);
+  return api.isTacticsWipedOut(res.units) === true && res.hp === 0;
+})());
+// 回復カード・緊急回復(includeDowned あり)は倒れた子にも入り、全快で立つ
+check('回復カード・緊急回復は倒れた子にも入る', (() => {
+  const board = api.damageTacticsTargets(pair, [2], 9999);
+  const res = api.rateHealTacticsBoard(board, 0.5, 0, true);
+  // 2番は400の50%＝200ぶん貯まるが、全快ではないのでまだ倒れたまま
+  return res.units[2].hp === 200 && res.units[2].downed === true;
+})(), JSON.stringify(api.rateHealTacticsBoard(api.damageTacticsTargets(pair, [2], 9999), 0.5, 0, true).units.map(u => u && u.hp)));
+check('倒れた子も全快まで入れば立ち上がる', (() => {
+  const res = api.rateHealTacticsBoard(api.damageTacticsTargets(pair, [2], 9999), 1, 0, true);
+  return res.units[2].hp === 400 && res.units[2].downed === false;
+})());
+check('倒れた子にガッツは入れない(カードを使えないので)', (() => {
+  const board = api.payTacticsGutsAt(api.damageTacticsTargets(pair, [2], 9999), 2, 0).units;
+  const res = api.rateHealTacticsBoard(board, 0, 1, true);
+  return res.units[2].guts === 50;
+})(), JSON.stringify(api.rateHealTacticsBoard(api.damageTacticsTargets(pair, [2], 9999), 0, 1, true).units.map(u => u && u.guts)));
+check('上限で頭打ちになったぶんは数えない', (() => {
+  // 満タンの盤面へ回しても、入った量は0
+  const res = api.rateHealTacticsBoard(pair, 0.5, 0);
+  return res.hp === 0 && api.tacticsTotalHp(res.units) === 1000;
+})());
+check('ガッツも1体ずつその子の上限の率で戻る', (() => {
+  const board = api.payTacticsGutsAt(api.payTacticsGutsAt(pair, 0, 40).units, 2, 40).units;
+  const res = api.rateHealTacticsBoard(board, 0, 0.1);
+  // どちらもガッツ上限100なので10ずつ
+  return res.units[0].guts === 20 && res.units[2].guts === 20 && res.guts === 20;
+})(), JSON.stringify(api.rateHealTacticsBoard(api.payTacticsGutsAt(api.payTacticsGutsAt(pair, 0, 40).units, 2, 40).units, 0, 0.1).units.map(u => u && u.guts)));
+// 固有技など「使った子」だけへ入るもの
+check('1体だけの回復もその子の上限の率', (() => {
+  const board = api.payTacticsGutsAt(api.payTacticsGutsAt(pair, 0, 40).units, 2, 40).units;
+  const res = api.rateHealTacticsAt(board, 0, 0, 0.5);
+  // 0番だけ上限100の50%＝50戻る(10→60)。2番は触らない
+  return res.units[0].guts === 60 && res.units[2].guts === 10 && res.guts === 50;
+})(), JSON.stringify(api.rateHealTacticsAt(api.payTacticsGutsAt(api.payTacticsGutsAt(pair, 0, 40).units, 2, 40).units, 0, 0, 0.5).units.map(u => u && u.guts)));
+check('空きスロットへ回しても落ちない',
+  api.rateHealTacticsAt(pair, 1, 1, 1).hp === 0);
+// ガード段階は「いちばん硬い子」(2026-09-20 ユーザー指示)
+check('ガード段階はいちばん硬い子の丈夫さで決める', (() => {
+  const board = api.makeBoardForDef
+    ? null
+    : [api.createTacticsUnit({ id: 'a', name: 'a', baseHp: 500, baseAtk: 100, baseDef: 120, baseGuts: 100 }),
+       null,
+       api.createTacticsUnit({ id: 'b', name: 'b', baseHp: 500, baseAtk: 100, baseDef: 380, baseGuts: 100 }), null];
+  // 平均は250だがいちばん硬いのは380
+  return api.tacticsMaxDef(board) === 380 && api.tacticsPartyDef(board) === 250;
+})());
+// ★回復カード・緊急回復・吸収は今までどおり倒れた子にも入る
+check('全体回復は倒れた子にも入ったまま', (() => {
+  const board = api.damageTacticsTargets(pair, [2], 9999);
+  return api.healTacticsBoard(board, 9999)[2].downed === false;
+})());
+
+check('満タンの盤面へ回復しても増えない', api.tacticsTotalHp(api.healTacticsBoard(pair, 500)) === 1000);
+// 全員倒れていても、貯めには入る(ただし合計は0のままなので敗北は動かない)
+check('全員倒れていても合計は0のまま',
+  api.tacticsTotalHp(api.healTacticsBoard(api.wipeTacticsBoard(pair), 500)) === 0);
+
+// 自傷では倒れない
+const selfHurt = api.selfDamageTacticsBoard(pair, 99999);
+check('自傷では誰も倒れない', selfHurt.filter(Boolean).every(u => u.hp >= 1 && u.downed === false),
+  selfHurt.filter(Boolean).map(u => u.hp).join(','));
+check('自傷は立っている子へ配る', api.tacticsTotalHp(api.selfDamageTacticsBoard(pair, 200)) === 800);
+
+// みゅあ補正は1体ずつの上限へ効かせる
+const scaledBoard = api.scaleTacticsUnits(pair, 0.1);
+check('上限の倍率は1体ずつへ効く', scaledBoard[0].maxHp === 660 && scaledBoard[2].maxHp === 440,
+  `${scaledBoard[0].maxHp} / ${scaledBoard[2].maxHp}`);
+check('素の上限は残る(倍率が戻れば元に戻る)',
+  api.scaleTacticsUnits(scaledBoard, 0).map(u => (u ? u.maxHp : 0)).join(',') === '600,0,400,0');
+check('倍率を上げても現在のライフは増えない', scaledBoard[0].hp === 600);
+
+// トレーニングで伸びた上限は、配ったぶんの合計が必ず一致する
+check('1体もいない盤面でも落ちない',
+  api.tacticsTotalHp(api.selfDamageTacticsBoard(null, 10)) === 0
+    && api.tacticsPartyAtk(null) === 0);
+
+// 本体のソースを直に見る検査で使う
+const has = (needle) => source.includes(needle);
+
+// --- ⑩ ガッツを1体ずつ持つ(段階6) ---
+// ★カードを使うのは「選んだその子」で、払うのもその子のガッツ。
+//   合計で足りていても、その子が足りなければ使えない。ここが新モードの手ざわりの中心
+check('ガッツの合計も1体ずつの足し算', api.tacticsTotalGuts(pair) === 100 && api.tacticsTotalBaseMaxGuts(pair) === 200,
+  `いま${api.tacticsTotalGuts(pair)} / 上限${api.tacticsTotalBaseMaxGuts(pair)}`);
+check('ガッツは最大の半分から始まる', pair[0].guts === 50 && pair[0].maxGuts === 100);
+check('ガッツの上限の倍率も1体ずつへ効く', api.scaleTacticsUnitMaxGuts(pair[0], 0.2).maxGuts === 120);
+check('その子が払えるかで決まる',
+  api.canTacticsSlotPay(pair, 0, 50) === true && api.canTacticsSlotPay(pair, 0, 51) === false);
+// ★合計では足りていても、その子が足りなければ使えない
+check('合計で足りていても、その子が足りなければ払えない',
+  api.tacticsTotalGuts(pair) === 100 && api.canTacticsSlotPay(pair, 0, 80) === false);
+check('倒れた子は払えない',
+  api.canTacticsSlotPay(api.damageTacticsTargets(pair, [0], 9999), 0, 0) === false);
+check('空のスロットは払えない', api.canTacticsSlotPay(pair, 1, 0) === false);
+const gutsPaid = api.payTacticsGutsAt(pair, 0, 30);
+check('払うとその子のガッツだけ減る',
+  gutsPaid.payable === true && gutsPaid.units[0].guts === 20 && gutsPaid.units[2].guts === 50,
+  `${gutsPaid.units[0].guts} / ${gutsPaid.units[2].guts}`);
+check('払えないときは盤面を変えない', (() => {
+  const failed = api.payTacticsGutsAt(pair, 0, 999);
+  return failed.payable === false && api.tacticsTotalGuts(failed.units) === 100;
+})());
+const gutsHealed = api.recoverTacticsGutsBoard(gutsPaid.units, 20);
+check('ガッツの回復も立っている子へ配る',
+  api.tacticsTotalGuts(gutsHealed) === api.tacticsTotalGuts(gutsPaid.units) + 20 && gutsHealed[0].guts > gutsPaid.units[0].guts,
+  `${gutsPaid.units[0].guts}→${gutsHealed[0].guts}`);
+check('ガッツも上限を超えない', api.tacticsTotalGuts(api.recoverTacticsGutsBoard(pair, 9999)) === api.tacticsTotalMaxHp(pair) - api.tacticsTotalMaxHp(pair) + 200,
+  String(api.tacticsTotalGuts(api.recoverTacticsGutsBoard(pair, 9999))));
+check('倒れた子のガッツは回復しない', (() => {
+  const board = api.damageTacticsTargets(pair, [2], 9999);
+  const after = api.recoverTacticsGutsBoard(api.payTacticsGutsAt(board, 0, 40).units, 999);
+  return after[2].guts === 50 && after[0].guts === 100;
+})());
+
+// --- ⑪ カードの払い主を選ぶ結線(段階6) ---
+check('新モードはどのカードも使う子を選ぶ', has('if(isTacticsMode(runMode)) return true;')
+  && has('// 新モードはどのカードも「使う子」を選ぶ。その子のガッツで払い、効果もその子に乗る'));
+check('割り当てられる子は「その子が払えるか」で決まる',
+  has('const tacticsUsableSlots = (card, excludeHandIndex = null) => {')
+    && has('if(!canTacticsSlotPay(tacticsUnitsRef.current,slotIdx,(spent[slotIdx]||0)+getCardGuts(card,slotIdx))) return;'));
+// ★回復カードも「全体回復」なので、倒れた子へ向ける必要はない。
+//   どのカードも「立っていて、その子が払えるか」だけで決まる
+check('払い主に特別扱いは無い', !has('tacticsPayerSlot') && !has('tacticsReviveHelper'));
+// ★「1体につき何枚まで」(slotMaxUses)に数えるかは countsTowardTacticsSlotLimit が1か所で決める
+//   (2026-09-21 ユーザー指摘「パンドラに2枚カード使えるのはおかしい」)。
+//   攻撃カードだけ数えていたころは、守り・回復を何枚でも同じ子へ置けてしまい、
+//   👑(ハム・剣士モッチー)を持たない子にも2枚目が乗っていた。
+// ★ガードだけは2026-09-22に外した(ユーザー指示「ガードは個別にも枚数制限ないようにして
+//   連撃ガードがほとんどのモンスターができない」)。同じ子へ2枚構えると連撃ガードになる
+//   決めごとを入れたのに、1体1枚のままでは👑持ちの子しか連撃ガードにできなかった。
+// ★全体の枚数(baseCardLimit)は「立っている人数＋👑」で決まるので、攻撃を1体1枚に絞っても
+//   配り切れる。WAVE1で使える枚数も減らない(盤面1体なら全体も1枚)
+check('枚数制限の数え方は1か所で決める',
+  has('const countsTowardTacticsSlotLimit = (card) => !!card && !isAssistCard(card) && !(guardCardWeight(card) > 0);'));
+check('枚数制限はガードとアシスト以外に効く',
+  has('if(countsTowardTacticsSlotLimit(card)&&(used[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;')
+    && has('if(countsTowardTacticsSlotLimit(assigned)) used[slotIdx]=(used[slotIdx]||0)+1;'));
+// ★ガードを数える書き方が戻っていないか。戻ると、連撃ガードがまた👑持ちだけのものになる
+check('ガードを枚数に数える書き方が残っていない',
+  !has('if(!isAssistCard(card)&&(used[slotIdx]||0)>=slotMaxUses(mon,slotIdx)) return;')
+    && !has('if(!isAssistCard(assigned)) used[slotIdx]=(used[slotIdx]||0)+1;'));
+// ★攻撃だけ数える書き方が戻っていないか。戻ると、回復がまた数え落ちる
+check('攻撃カードだけ数える書き方が残っていない', !has('attacks[slotIdx]'));
+// ★「なぜ使えないか」を出すほうも同じ数え方にする。ずれると、置けないのに理由が出ない
+check('使えない理由も同じ数え方で出す',
+  (s => (s.match(/if\(countsTowardTacticsSlotLimit\(assigned\)\) used\[slotIdx\]=\(used\[slotIdx\]\|\|0\)\+1;/g) || []).length >= 2)(source));
+// ★AUTOも手動と同じ数え方を通す。別々に持っていたころは、AUTOだけ回復もバフも
+//   何枚でも同じ子へ置けていた(手動では置けない盤面をAUTOが作れてしまう)
+check('AUTOも手動と同じ数え方を通す',
+  has('countsTowardSlotLimit:countsTowardTacticsSlotLimit,') && !has('countsTowardSlotLimit:isAttackCard,'));
+check('使える子が1体だけなら選ぶ手間を省く',
+  has('if(tacticsMode&&usable.length===1){ setCardAssignments(p=>({...p,[i]:usable[0]})); }'));
+check('ドラッグでの割り当ても同じ判定を通す',
+  has('if(tacticsMode && !tacticsUsableSlots(c,cardIndex).includes(slotIdx)){ setFocusedCard(null); return; }'));
+// ★ここを通さないと、払えない組み合わせでカードだけ切れてしまう
+check('実行の前に「使う子が払えるか」を見る',
+  has('return canTacticsSlotPay(tacticsUnitsRef.current,idx,spentBySlot[idx]);'));
+check('払うのは使う子',
+  has('if(isTacticsMode(runMode)) tacticsPayGuts(slotIdx,cardCost);'));
+check('ガッツの回復は1か所(gainGuts)へまとめる',
+  has('const gainGuts = (amount) => {')
+    && (source.match(/gainGuts(At|ByRate)?\(/g) || []).length >= 11,
+  `gainGuts / gainGutsAt / gainGutsByRate を呼ぶ場所 ${(source.match(/gainGuts(At|ByRate)?\(/g) || []).length}か所`);
+// カードで増えるガッツの行き先(段階7 → 2026-09-21に整理し直した)。
+// ★量はどちらも「その子の上限 × 率」。違うのは**誰に入るか**。
+// ★**回復カード(助手の教え)は全体へ**。使う子を選ぶのはガッツを払うためだけで、
+//   効くのは盤面ぜんぶ(2026-09-19 ユーザーの整理)。ライフはそうなっていたのに
+//   ガッツだけ「使った子」へ入れていた
+//   (2026-09-21 ユーザー指摘「みゅあの回復は全体なのに1体にしかきいてなかった」)。
+// ★「その子だけ」へ入るのは2つ。固有技(スエゾー＝そのモンスターの技)と、
+//   氷海の支配者(持っている子だけ・仕様 4.9)
+check('ガッツを増やすものは、行き先を名指しで渡す', has('const gainGutsAt = (slotIdx, amount) => {')
+  && has('const gainGutsByRate = (slotIdx, rate) => {')
+  && has('const gainGutsByRateAll = (rate) => {')
+  && (source.match(/gainGutsByRate\(slotIdx,/g) || []).length === 2
+  && (source.match(/gainGutsByRateAll\(/g) || []).length === 3
+  && (source.match(/gainGutsAt\(slotIdx,/g) || []).length === 2,
+  `その子だけ ${(source.match(/gainGutsByRate\(slotIdx,/g) || []).length}か所 / 全体 ${(source.match(/gainGutsByRateAll\(/g) || []).length}か所 / 固定量 ${(source.match(/gainGutsAt\(slotIdx,/g) || []).length}か所`);
+// 氷海ぶんは全員へ配る率に混ぜず、持っている子へだけ足す(混ぜると誰か1人の特性で全員が得をする)
+check('氷海ぶんは持っている子へだけ足す',
+  has('const extra=iceExtraRateAt(slotIdx);')
+    && has('if (extra>0) gutsRegen+=gainGutsByRate(slotIdx,extra);'));
+// AUTO。倒れた子を空スロットとして渡し、ガッツは1体ずつ見る
+check('オートは倒れた子を選ばない',
+  // ★EX(併用できない)を使った子も同じく空の枠として渡す(tactics-ex-skills-check が見る)
+  has('? slots.map((mon,idx)=>(canTacticsSlotAct(tacticsUnitsRef.current,idx)&&!tacticsExLocked.includes(idx)?mon:null))'));
+check('オートも1体ずつのガッツで選ぶ',
+  has('gutsForSlot:(slotIdx)=>(tacticsUnitsRef.current[slotIdx]?.guts||0),'));
+// ★新モードは cardNeedsMonster がどのカードでも true になる。
+//   isAttackCardFn を渡さないと「守りだけのターン」を防ぐ仕掛けが効かなくなる
+check('オートへ攻撃カードの見分け方を渡す', has('isAttackCardFn:isAttackCard,'));
+
+// --- ⑦ バトル本体への結線 ---
+// 純関数だけ足して結線を忘れると、盤面がいつまでも空のまま「狙いなし」で予告が出る。
+// 例外は出ず画面も壊れないので、遊んで気付けない
+check('盤面は slots と同じ入口で動かす',
+  has('const applySlots = (nextSlots, mode = runMode) => {')
+    && has('    syncTacticsUnits(nextSlots, mode);'));
+// ★バトルを始める処理の中では runMode(state)がまだ前のモードのまま。
+//   ここでモードを渡し忘れると、1戦目だけ盤面がライフに反映されない
+check('バトル開始時は runMode ではなく決まったモードを渡す',
+  has('applySlots(initialSlots, resolved.runMode);'));
+// ★画面へ setSlots を直に渡すと、そこだけ applySlots を通らず盤面が古いまま残る
+//   (勇者モンを選び直す画面で実際に通っていた。2026-09-19)
+check('画面へ渡すのも applySlots', has('setSlots={applySlots}'));
+check('編成スロットを applySlots 以外から書き換えていない',
+  (source.match(/setSlots\(/g) || []).length === 2,
+  `setSlots を呼ぶ場所 ${(source.match(/setSlots\(/g) || []).length}か所`
+  + '(applySlots の中と、applySlots を受け取った画面の1か所だけ)');
+// ★すでに居る子のライフを持ち越さないと、供モンが合流した瞬間に全員が満タンへ戻る
+// ★同じかどうかの判定は isSameTacticsUnit ひとつだけ(㉚)。盤面を作り直す側と、
+//   あとから入った枠を数える側が別々の判定を持つと「入れ替えたのに追いつかない」になる
+check('合流しても、すでに居る子の現在値を作り直さない',
+  has('const isSame = (mon, index) => isSameTacticsUnit(before[index], mon);')
+    && has('if (isSame(mon, index)) return before[index];'));
+// --- ㉓ あとから入った子の追いつき補正(2026-09-20 ユーザー指示) ---
+// ★加入ボーナス(plusStats)は使わず素のステータスをそのまま入れるが、
+//   勇者モンはそこまでトレーニングを受けているので遅く入るほど見劣りする。
+//   クリアしたWAVE1つにつき全ステ+10%を基準に、そのWAVEの残りターンで厚みを決めて積む
+check('加入した子へ積み上げた補正を掛ける',
+  has('return isTacticsMode(mode) ? applyTacticsJoinCatchUp(fresh, tacticsJoinCatchUpRef.current) : fresh;'));
+check('補正はWAVEを倒しきった瞬間に1回だけ積む',
+  has('tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp(tacticsJoinCatchUpRef.current,remainingTurns);')
+    && has('const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);'));
+// ★1へ戻すのは resetTacticsJoinCatchUp ひとつだけ。片付けを何か所にも書くと、
+//   片方だけ直して片方が残る(2026-09-22に実際そうなって再発した)
+check('積み上げを1へ戻すのは resetTacticsJoinCatchUp だけ',
+  (source.match(/tacticsJoinCatchUpRef\.current=1;/g) || []).length === 1
+    // ★頭の3行だけを見る。同じ片付けに EXスキルの回数の作り直しも入っている(tactics-ex-skills-check が見る)
+    && has('const resetTacticsJoinCatchUp = () => {\n    tacticsJoinCatchUpRef.current=1;\n'
+      + '    tacticsJoinCatchUpTurnsRef.current=0;\n    tacticsJoinDistCatchUpRef.current=1;\n'),
+  `戻す場所 ${(source.match(/tacticsJoinCatchUpRef\.current=1;/g) || []).length}か所`);
+// ★ランの状態を作り直すところは、必ず追いつき補正も数え直す。
+//   applyResetAllState だけに書いて returnToHome へ書き忘れたのが再発の原因
+check('ランの状態を作り直すところは、必ず追いつき補正も数え直す', (() => {
+  const starts = [];
+  const re = /resetAllState\(\)/g;
+  let m;
+  while ((m = re.exec(source))) {
+    // 定義そのもの(const resetAllState = () => ({ ... )は除く
+    if (source.slice(Math.max(0, m.index - 24), m.index).includes('const resetAllState')) continue;
+    starts.push(m.index);
+  }
+  if (!starts.length) return false;
+  return starts.every((at) => {
+    // その呼び出しを含む関数の頭(直前の「  const 名前 =」)から呼び出しまでを見る
+    const head = source.lastIndexOf('\n  const ', at);
+    if (head < 0) return false;
+    return source.slice(head, at).includes('resetTacticsJoinCatchUp()');
+  });
+})(), `resetAllState() を呼ぶ場所 ${(source.match(/resetAllState\(\)/g) || []).length}か所`);
+// ★タクティクス専用の値なので、ほかのモードでは積まない。
+//   モードを見ずに積むと、クイックの∞周回ぶんが次のタクティクスへ乗る
+check('積むのはタクティクスのランのときだけ',
+  has('if(isTacticsMode(runMode)){\n      tacticsJoinCatchUpRef.current=addTacticsJoinCatchUp('));
+check('加入ボーナス(plusStats)は新モードでは使わない',
+  has("const nAtk=atk+joinBonus('atk'), nDef=def+joinBonus('def');")
+    && has('if(!tacticsJoin){ setMaxHp(nMaxHp); setHp(p=>p+(nMaxHp-bHp)); setMaxGuts(nMaxGuts); setAtk(nAtk); setDef(nDef); }'));
+check('合流ボーナスの説明も新モード向けに出す',
+  has('素のステータスがそのまま入ります')
+    && has('あとから入るほど、先に育った子に追いつく補正がかかります'));
+{
+  // 率は「残りターン × 1%」。remainingTurns は 21 - そのWAVEに使ったターン数
+  check('1ターンで抜ければ+20%', Math.abs(api.tacticsJoinWaveRate(20) - 0.2) < 1e-9,
+    String(api.tacticsJoinWaveRate(20)));
+  check('11ターン(半分)で+10%', Math.abs(api.tacticsJoinWaveRate(10) - 0.1) < 1e-9,
+    String(api.tacticsJoinWaveRate(10)));
+  check('20ターンかかれば+1%', Math.abs(api.tacticsJoinWaveRate(1) - 0.01) < 1e-9);
+  check('時間切れなら増えない', api.tacticsJoinWaveRate(0) === 0 && api.tacticsJoinWaveRate(-5) === 0);
+  // WAVEごとに掛け算で積む
+  check('WAVEごとに掛け算で積む', (() => {
+    let m = 1;
+    m = api.addTacticsJoinCatchUp(m, 10);   // +10%
+    m = api.addTacticsJoinCatchUp(m, 10);   // さらに+10%
+    return Math.abs(m - 1.21) < 1e-9;
+  })());
+  check('速いWAVEが続くほど厚くなる', (() => {
+    let fast = 1, slow = 1;
+    for (let i = 0; i < 5; i++) { fast = api.addTacticsJoinCatchUp(fast, 20); slow = api.addTacticsJoinCatchUp(slow, 1); }
+    return fast > 2.4 && slow < 1.06;
+  })(), (() => {
+    let fast = 1, slow = 1;
+    for (let i = 0; i < 5; i++) { fast = api.addTacticsJoinCatchUp(fast, 20); slow = api.addTacticsJoinCatchUp(slow, 1); }
+    return `最速5WAVE ${fast.toFixed(2)} / 最遅5WAVE ${slow.toFixed(2)}`;
+  })());
+  // 実際に加入する子へ乗せる。mon() は 600/120/120/100
+  const joined = api.applyTacticsJoinCatchUp(api.createTacticsUnit(mon()), 1.61);
+  check('積み上げたぶんだけ強くなる',
+    joined.baseMaxHp === 966 && joined.atk === 193 && joined.def === 193 && joined.baseMaxGuts === 161,
+    `${joined.baseMaxHp}/${joined.atk}/${joined.def}/${joined.baseMaxGuts}`);
+  check('満タンで加わる', joined.hp === joined.maxHp && joined.downed === false);
+  check('ガッツは半分から始まるのは変わらない', joined.guts === Math.floor(161 * api.TACTICS_START_GUTS_RATE));
+  check('積み上げが1なら素のまま', (() => {
+    const flat = api.applyTacticsJoinCatchUp(api.createTacticsUnit(mon()), 1);
+    return flat.baseMaxHp === 600 && flat.atk === 120;
+  })());
+  check('壊れた値でも落ちない',
+    api.applyTacticsJoinCatchUp(null, 2) === null
+      && api.applyTacticsJoinCatchUp(api.createTacticsUnit(mon()), null).baseMaxHp === 600
+      && api.addTacticsJoinCatchUp(null, null) === 1);
+}
+
+check('1体ずつの帯は新モードだけへ渡す',
+  has('tacticsUnits={isTacticsMode(runMode)?tacticsUnits:null}'));
+check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsCanAssign}')
+  && has('const tacticsCanAssign = (card, cardIndex, slotIdx) => (isTacticsMode(runMode)'));
+{
+  const screen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  const hasScreen = (needle) => screen.includes(needle);
+  // ★1体ずつのライフ・ガッツは**枠の中**に出す(2026-09-22 ユーザー指摘「距離いれると縦が
+  //   狭くなりすぎる」)。もとは枠の上に別の段として4列並べていたが、同じ4列が2段あるだけで
+  //   枠1つぶん(55px)と余白を丸ごと使っていた。段を1つ減らして間合いバーのぶんを作った。
+  //   ※2026-09-19 に「スロットの中の小さい帯は小さすぎて読めない」としていったんやめているので、
+  //     数字は10pxまでにとどめ、縮めるのは帯の高さと余白のほうにする
+  check('距離枠の中に1体ずつのライフ・ガッツを出す',
+    hasScreen('data-tactics-hp={`${tacticsUnit.hp}/${tacticsUnit.maxHp}`}')
+      && hasScreen('data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}')
+      // ★末尾の ${...} は、タクティクスのれんしゅうで光らせるための印(2026-09-21)。
+      //   帯を枠へ移したときに落とすと、案内が何も指さないまま進む
+      && hasScreen('px-1${battleTutorialSpotClass(\'tacticsParty\')}'));
+  check('1体ずつの帯を上の段としては出さない', !hasScreen('<div data-tactics-party className='));
+  // ★ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カード)は、合計の帯に重ねて出していた。
+  //   その帯をやめたときに出す場所ごと消えていたので、1体ずつの帯の上へ置き直した(2026-09-20)
+  check('ライフ・ガッツの数字が出る場所がある',
+    hasScreen('<div data-tactics-party-popups className="absolute inset-x-0 top-0 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>')
+      && hasScreen("popups.filter(p=>p.side==='life'||p.side==='guts')"));
+  // ★合計のライフ・ガッツは出さない。個別と両方出すと読むものが増えるだけ
+  check('新モードでは合計の帯を出さない', hasScreen('{Array.isArray(tacticsUnits)?(') && hasScreen('):('));
+  check('スロットの中の小さい帯はやめた', !hasScreen('data-tactics-unit={i}'));
+  check('倒れた子は覆って分かるようにする', hasScreen('data-tactics-down-mark={i}') && hasScreen('ダウン'));
+  // ★「全快になったら復活」なので、あとどれだけかを出さないと回復を回す判断が立たない
+  check('復活まであとどれだけかを出す',
+    hasScreen('data-tactics-revive={`${revivePct}`}') && hasScreen('復活まで {100-revivePct}%'));
+  check('ダウン中の帯は復活ゲージとして色を変える',
+    hasScreen("tacticsUnit.downed?'bg-gradient-to-r from-emerald-500 to-teal-300'"));
+  // 1体ずつのステータスは「ステータス」から見る(2026-09-19 ユーザーの質問)
+  check('ステータスに1体ずつの値を出す',
+    has('<div data-tactics-status className="space-y-1.5 text-left">')
+      && has('data-tactics-status-slot={i}'));
+  check('ちから・丈夫さ・距離適性まで出す',
+    // ★ちから・丈夫さはEXで変わった値も出すので、1つの形(statCell)で描く
+    has('この枠の距離適性') && has("{statCell('ちから','text-red-400',u.atk,")
+      && has("{statCell('丈夫さ','text-emerald-400',u.def,"));
+  // ★null のときだけ今までどおりの判定を使う。ここを間違えると既存モードの置き方が変わる
+  // ★予告と実行で数え方がずれると「ガードしたのに予定より減った」になる
+  // ★数え方は1か所(plannedDamageFor)にまとめる。吹き出しと枠で別々に書くと、
+  //   ガードの数え方を直したときに片方だけ古くなる
+  check('予定ダメージの数え方は1か所にまとまっている',
+    hasScreen('const plannedHitFor = (slotIdx) => {')
+      // ★EX「みんなをかばう」のターンは、かばう子が人数ぶんを受ける。plannedHitFor を包む1つだけを通す
+      && hasScreen('const hit = plannedHitFor(slotIdx);')
+      && hasScreen('const plannedDamageFor = (slotIdx) => plannedHitWithCover(slotIdx).taken;')
+      && hasScreen('const plannedHit=plannedHitWithCover(aimedSlot);')
+      && hasScreen('const slotAimHit=slotAimed?plannedHitWithCover(i):null;'));
+  check('予定ダメージは本番と同じ受け方を通る',
+    hasScreen('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);')
+      && hasScreen('guardHits = tacticsGuardHits(own.cards, hits);'));
+  // ★連撃の予定は「1発ずつ」出す(2026-09-22 ユーザー指示)。合計だけだと、1発いくつ来るのか、
+  //   ガードで何発止まるのかが読めない。受けたあとの表示と同じ関数で割る
+  check('連撃の予定は発ごとの量をそのまま出す',
+    hasScreen('parts: hits > 1 ? scaleTacticsHitAmounts((hit.amounts || []).filter(value => value > 0), taken) : [taken] };'));
+  // ★止まった発(0)は数字を出さない。数字の数＝これから食らう回数
+  check('止まった発は数に入れない', hasScreen('.filter(value => value > 0), taken)'));
+  // ★間合いをずらされた技は威力が落ちる。枠ごとの計算がどこか1つでも元の intent を
+  //   見ていると、そこだけフルダメージが入る(2026-09-22 に4か所とも actingIntent へ直した)
+  check('枠ごとの計算は、間合いをずらされたぶんを反映した値で出す',
+    !has('getIncomingDamageBeforeTurnReduction(intent,'));
+  // 受けたあとの表示も、同じ「発ごとの量」を出す(予告と実際で割り方がそろう)
+  check('受けたあとも発ごとの量をそのまま出す',
+    has('fx.hits=scaleTacticsHitAmounts((hit.amounts||[]).filter(value=>value>0),fd);'));
+  // ★予告は丸1本の帯から、敵の絵の右の札へ変えた(2026-09-22)。数字の作り方は同じまま
+  check('札も枠も同じ形で出す',
+    hasScreen("const plannedText=plannedHit.parts.join('・');")
+      && hasScreen('>{plannedText}</div>')
+      // ★枠のほうは 2026-09-22 に「🎯-合計」と1発ずつの内訳の2段になった(main 側の直し)
+      && hasScreen(">{slotAimHit.parts.join('・')}</span>"));
+  // ★1発ずつ並べると**合計がどこにも出ない**ので「結局いくつ食らうか」が読めなかった
+  //   (2026-09-22 ユーザー指摘「連撃ダメージで合計ダメージと軽減後の合計ダメージが
+  //    ないといくつくらうかわからない」)。ガードが効いていれば「軽減前→軽減後」で出す。
+  // ★同じ日に予告を右下の札へ移したので、合計は札の大きい字、1発ずつの内訳はその下の小さい字になった
+  //   (吹き出し1本に詰めていたころの plannedBubbleText は、札の幅100pxでは折り返すのでやめた)
+  check('連撃は合計も出す',
+    hasScreen("const plannedTotalText=plannedHit.raw>plannedDmg?`${plannedHit.raw}→${plannedDmg}`:`${plannedDmg}`;")
+      && hasScreen('>{plannedTotalText}</div>'));
+  check('軽減前の合計も持ち歩く',
+    hasScreen('return { taken, raw, parts: hits > 1 ? scaleTacticsHitAmounts')
+      && hasScreen('const none = { taken: 0, parts: [], raw: 0 };'));
+  // ★ガードの枚数を数えないと、2枚構えても連撃ガードにならない
+  check('予定ダメージもガードの枚数を数える', hasScreen('entry.cards += 1;'));
+  // ★全体攻撃は立っている全員に当たり、受ける量は**その子の丈夫さ**で1体ずつ変わる。
+  //   ガードも枠ごとなので、その枠へ置いたぶんだけを数える
+  // ★全体ガードかどうかは「何体が別々に構えたか」で決まるので、枠ごとにまとめてから数える
+  check('枠ごとにまとめてから数える',
+    hasScreen('const plannedGuardBySlot = () => {')
+      && hasScreen("guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);"));
+  // ★枠は「合計」を上の行に、1発ずつの内訳をその下へ小さく添える。
+  //   いちばん知りたいのは「結局いくつ食らうか」なので、合計を先に読ませる
+  check('狙われている枠にその子の予定ダメージを出す',
+    hasScreen('data-tactics-aimed-damage={slotAimHit.taken}')
+      && hasScreen("<span>🎯{slotAimHit.taken>0?`-${slotAimHit.taken}`:''}</span>")
+      && hasScreen("{slotAimHit.parts.length>1&&<span className=\"text-[7px] font-bold text-red-200/90\">{slotAimHit.parts.join('・')}</span>}"));
+  // ★枠の中に出すものは**1本の縦積み**に入れる(2026-09-23 ユーザー指摘「表示が被ってて見えない」)。
+  //   それまでは札ごとに top-0 / top-[18px] / top-[21px] と上からの距離で避けていて、
+  //   札が2枚になる・連撃で内訳が2行になると必ず重なった。位置で避ける書き方へ戻さない
+  check('枠の中の札は1本の縦積みにまとめる',
+    hasScreen('<div data-tactics-slot-marks className="absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[60] pointer-events-none px-0.5">')
+      && !hasScreen("${slotAssignedCards.length>0?'top-[18px]':'top-0'}")
+      && !hasScreen('absolute top-[21px] right-0.5'));
+  // ★合計DMG・合計軽減も浮かせない。枠の上に1行ぶんの場所を作る
+  check('合計の札は浮かせず、枠の上の行に置く',
+    hasScreen('<div data-battle-total-preview className="shrink-0 w-full flex flex-wrap')
+      && !hasScreen("style={{bottom:'calc(78% + 2px)'}}"));
+  // ★1つの数字にまとめると、どの子がどれだけ減るのか分からなくなる
+  check('全体攻撃は札に1つの数字を出さない',
+    // かばっているターンだけは受けるのが1体なので出してよい
+    hasScreen('const showPlannedInBubble=coverActive||!enemyIntent.targetsAll;')
+      && hasScreen('{rawDmg>0&&showPlannedInBubble&&plannedText?('));
+  // ★連撃だと予告の時点で分かる(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)
+  // ★連撃だと予告の時点で分かる(2026-09-21 ユーザー指摘「敵の連撃技が連撃表示になってない」)。
+  //   2026-09-22 から、何連撃かを出すのは**右上の吹き出し**(noticeLabel)だけにした
+  //   (ユーザー指摘「予測は攻撃名で吹き出しはその効果」)。両方に書くと同じことを2回言ううえ、
+  //   札の幅(100px)で技名が2行に折り返していた
+  check('連撃かどうかは吹き出しが出す',
+    has('noticeLabel:`${TACTICS_RUSH_HITS}連撃`')
+      && !hasScreen("{previewHits>1?` ${previewHits}連撃`:''}"));
+  // ★同じことを2か所で言わない(2026-09-22 ユーザー指摘「必殺技のためると必殺準備が被って出てる。
+  //   それって本来どっちかでいいはずだよね」)。画面まんなかの大きい警告(必殺技／ためる／
+  //   貫通技準備)と、敵の絵の右上の札が、重なってどちらも読めなくなっていた。
+  //   タクティクスは右上の札にまとめ、まんなかの警告は札が無い既存5モードのために残す
+  check('タクティクスではまんなかの大きい警告を出さない',
+    ['SPECIAL', 'CHARGE', 'PIERCE_CHARGE'].every(type =>
+      hasScreen(`!Array.isArray(tacticsUnits)&&enemyIntent.type==='${type}'&&(`)));
+  // ★貫通技準備だけ右上の札から外していたのも、まんなかの警告と被るためだった。
+  //   そちらを止めたので、ここは全部の行動を同じ形で出す
+  check('右上の札は全部の行動で出す',
+    hasScreen('&&Array.isArray(tacticsUnits)&&!!enemyIntent.notice;')
+      && !hasScreen("enemyIntent.notice&&enemyIntent.type!=='PIERCE_CHARGE'"));
+  // ★札と吹き出しで同じことを言わない(2026-09-22 ユーザー指摘「他のにならってやると
+  //   攻撃予測のとこをためるにして吹き出しを必殺技準備が正解なはず」)。
+  //   ためるは敵ごとの技名を持たないので、label が「必殺技の準備をしている」という説明文になり、
+  //   吹き出しの「必殺技準備」を長く言い直すだけになっていた
+  check('ためるの予測は短い呼び名にそろえる',
+    hasScreen("const intentTitle=enemyIntent.type==='CHARGE'&&enemyIntent.category?enemyIntent.category:enemyIntent.label;")
+      && has('notice:enemyActionNoticeLabel(selected),category:selected.category'));
+  check('ためるの短い呼び名は「ためる」', has("{id:'charge',type:'CHARGE',category:'ためる',noticeLabel:'必殺技準備'"));
+  check('置けるかの判定は新モードだけ差し替える',
+    hasScreen('const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;')
+      && hasScreen('if(tacticsAnswer===null||tacticsAnswer===undefined){'));
+
+  // --- ⑳ 手札の灰色も1体ずつのガッツで決める(2026-09-19 ユーザー指摘) ---
+  // ★合計で見ていたころは、⚡242(125と117)持っていれば ⚡128 のカードが灰色にならず、
+  //   枠に合わせてはじめて使えないと分かった。しかも理由が出なかった
+  check('「使えるか・なぜ使えないか」を返す入口がある',
+    has('const tacticsCardBlock = (card, cardIndex = null) => {')
+      && has("if(!isTacticsMode(runMode)||!card) return null;"));
+  check('使える子がいるかで決める(合計では決めない)',
+    has('if(tacticsUsableSlots(card,cardIndex).length>0){'));
+  check('理由はガッツ不足・ダウン・枚数の上限を見分ける',
+    has("kind:'guts', short:'ガッツ不足'") && has("kind:'down', short:'ダウン'")
+      && has("kind:'uses', short:'枚数上限'") && has("kind:'limit', short:null"));
+  check('いちばん近い子の数字を理由に出す',
+    has('if(!best||left-need>best.left-best.need) best={name:mon.masuName||mon.name,left,need};'));
+  check('画面へ渡している', has('tacticsCardBlock={tacticsCardBlock}'));
+  // ★null のときだけ今までどおりの合計での判定を使う
+  check('手札の灰色は新モードだけ差し替える',
+    hasScreen('const cardBlock=tacticsCardBlock?tacticsCardBlock(c,i):null;')
+      && hasScreen('const isSelectable=isSel||(cardBlock?cardBlock.ok:(remainingGuts>=requiredGuts&&selectedCards.length<cardLimit));'));
+  // ★理由の帯は grayscale の中へ置くと赤も灰色になる。ボタンの外(枠のdiv)へ出す
+  check('使えないカードには理由の帯を出す',
+    hasScreen('{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short}')
+      && hasScreen('return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex">'));
+  // ★1ターンに選べる枚数の上限は、いままでの5モードと同じ見え方(灰色だけ)にする
+  check('枚数の上限では帯を出さない(理由はカード詳細で出す)',
+    hasScreen('data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined}'));
+  check('カード詳細には理由の全文を出す', has('data-tactics-card-why'));
+  // ★帯のアニメーションを外すと、回復もダメージも瞬間で増減して見える(2026-09-20 ユーザー指摘)。
+  //   合計の帯と同じ速さ(ライフ1秒・ガッツ0.5秒)にそろえる
+  // ★帯そのものも光らせた(2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
+  //   見るのは色ではなく**動く速さ**。ここが消えると回復もダメージも瞬間で増減して見える
+  check('1体ずつの帯は合計の帯と同じ速さで動く',
+    hasScreen('data-tactics-hp-bar className={`h-full transition-all duration-1000 ')
+      && hasScreen('data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-500"'));
+  check('手札に検査の手がかりがある',
+    hasScreen('data-hand-card={i}') && hasScreen('data-card-cost={requiredGuts}')
+      && hasScreen("data-card-usable={isSelectable?'true':'false'}"));
+}
+
+// --- 誰が狙われているか(2026-09-21 ユーザー指摘「誰に攻撃か分からない」) ---
+// ★間合い攻撃(sweep)だけは相手を1体決めず「予告した間合いに立っている子」へ当たるので、
+//   ほかの技と違って targetName を持たない。targetName だけを見ていたころは、
+//   間合い攻撃の予告が「突進: 中 (予定: 186)」で終わり、誰に来るのか読めなかった
+{
+  const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  const inScreen = (needle) => battleScreen.includes(needle);
+  // ★丸1本の帯から右の札へ変えたので(2026-09-22)、狙いも1行として出すようになった
+  check('予告の札に狙いを出す', inScreen('>🎯{aimedName}</div>'));
+  // ★数え方は本番と同じ関数を通す。別に書くと、距離撃でずらしたときに予告と実際がずれる
+  check('狙いの数え方は本番と同じ関数を通す',
+    inScreen('tacticsIntentTargets(enemyIntent, tacticsUnits, enemyDist)'));
+  check('間合い攻撃で誰もいないときは、それが分かる',
+    inScreen("(enemyIntent?.variant === 'sweep' ? 'だれもいない' : '')"));
+  // ★名前だけでは4つの枠から自分で探すことになる。枠のほうにも印を出す
+  check('狙われている枠に印を出す',
+    inScreen("data-tactics-aimed={slotAimed?'true':undefined}")
+      && inScreen('const slotAimed=aimedSlots.includes(i);')
+      && inScreen('data-tactics-aimed-ring'));
+  // ★輪(ring)で出すと、カードを置ける黄色の輪・ドラッグ中の緑の輪と重なって読めなくなる
+  check('狙われている印は輪ではなく枠の内側の線で出す',
+    !inScreen("${slotAimed?'ring-2 ring-red-500':''}"));
+}
+
+// --- ㉔ ガッツの合計と、1ターンに選べる枚数(2026-09-20 ユーザー指示) ---
+// ★ユーザーの問い「行動回数ってガッツも見るようにしてるんだっけ？」から2つ決まった。
+//   (1) 枚数はガッツのしきい(120/180)を見ず、立っている人数だけで決める
+//   (2) ガッツの合計はライフと同じく「立っている子だけ」にする
+// ★もとは「立っている子が全員満タンでも、倒れた子のぶんで合計が上限に届かず、
+//   リザルトの『強化ポイントでガッツ回復』が押せてポイントだけ減る」が起きていた
+const downedPair = api.damageTacticsTargets(pair, [2], 9999);
+check('倒れた子はガッツの合計に数えない',
+  api.tacticsTotalGuts(downedPair) === 50 && api.tacticsTotalBaseMaxGuts(downedPair) === 100,
+  `いま${api.tacticsTotalGuts(downedPair)} / 上限${api.tacticsTotalBaseMaxGuts(downedPair)}`);
+check('ガッツを入れる余地は1体ずつで見る',
+  api.tacticsHasGutsRoom(pair) === true
+  && api.tacticsHasGutsRoom(api.recoverTacticsGutsBoard(pair, 9999)) === false);
+check('倒れた子のガッツが減っていても、立っている子が満タンなら余地なし', (() => {
+  const filled = api.recoverTacticsGutsBoard(downedPair, 9999);
+  return api.tacticsHasGutsRoom(filled) === false
+    && api.tacticsTotalGuts(filled) === api.tacticsTotalBaseMaxGuts(filled);
+})());
+check('空の盤面でも落ちない',
+  api.tacticsHasGutsRoom([null, null, null, null]) === false
+  && api.tacticsHasGutsRoom(null) === false
+  && api.tacticsTotalGuts(undefined) === 0);
+// ★切り捨ての差。ここがもう1つの原因で、倒れた子を外すだけでは直らない
+const oddFull = api.recoverTacticsGutsBoard(
+  api.scaleTacticsUnits(makeBoard([0, { baseGuts: 65 }], [1, { baseGuts: 65 }], [2, { baseGuts: 65 }]), 0, 0.1),
+  9999);
+const oddTotalMax = sandbox.resolveEffectiveMaxStat(api.tacticsTotalBaseMaxGuts(oddFull), 0.1);
+check('全員満タンでも、合計で見ると上限に届かないことがある',
+  api.tacticsTotalGuts(oddFull) < oddTotalMax,
+  `1体ずつの合計${api.tacticsTotalGuts(oddFull)} / 合計に掛けた上限${oddTotalMax}`);
+check('それでも1体ずつなら「余地なし」と分かる', api.tacticsHasGutsRoom(oddFull) === false);
+// 本体への結線
+check('枚数は新モードだとガッツのしきいを見ない',
+  has('if ((tactics || effectiveMaxGuts >= 180) && allyCount >= 3) limit = 3;')
+  && has('else if ((tactics || effectiveMaxGuts >= 120) && allyCount >= 2) limit = 2;'));
+check('枚数は立っている人数で数える',
+  has('const allyCount = tactics') && has('? tacticsAliveSlots(tacticsUnits).length'));
+check('ガッツ回復のボタンは1体ずつで出し分ける',
+  has('&& (isTacticsMode(runMode) ? tacticsHasGutsRoom(tacticsUnits) : guts < effectiveMaxGuts);'));
+check('ガッツ回復は新モードだと合計を足さずに配る',
+  has('      gutsRecoveryLockRef.current = true;\n      // 新モードは立っている子へ配る(合計だけ増やすと、払える子が増えない)\n      gainGuts(GUTS_RECOVERY_AMOUNT);'));
+
+// --- ㉕ 連撃の受け方(2026-09-22 ユーザー指示の新仕様) ---
+// 「同じモンスターに2枚以上使ったら連撃ガードに変わり連撃全部をガードの合計値分ガードする」
+// 「2体以上別々にガードを入れると全体ガードに変わる。ただし1枚目に選んでないモンスターは軽減値分」
+// ★ここは**実際に計算して**確かめる。文字列で見るだけだと、式を1つ書き換えただけで
+//   受け方が変わったことに気づけない。予告と実行が同じ関数を通ることは上で見ている
+{
+  const HITS = 3, INCOMING = 300;              // 1ヒット = 100
+  const rush = (guard, cards) => api.resolveTacticsGuardedHit(INCOMING, HITS, guard, api.tacticsGuardHits(cards, HITS));
+  check('ガードが無ければ連撃は全部通る', rush(0, 0).taken === INCOMING, `${rush(0, 0).taken}`);
+  check('ガード1枚で1ヒットぶんを受け止める',
+    rush(150, 1).taken === 200 && rush(150, 1).covered === 1, `通ったぶん ${rush(150, 1).taken}`);
+  // ★2枚以上を同じ子へ構えると「連撃ガード」。全ヒットを受け止める
+  check('同じ子へ2枚構えると連撃の全ヒットを受け止める',
+    rush(300, 2).taken === 0 && rush(300, 2).covered === HITS, `通ったぶん ${rush(300, 2).taken}`);
+  // ★ガードは**1ヒットごと**に効く(ユーザー選択)。合計同士で引き算しない。
+  //   3連撃300(各100)をガード合計150で受けると、1ヒットずつ150が当たって全部止まる
+  check('ガードは1ヒットごとに効く(合計同士で引かない)',
+    rush(150, 2).taken === 0, `通ったぶん ${rush(150, 2).taken}`);
+  check('1ヒットぶんに足りなければ、その足りないぶんだけ通る',
+    rush(60, 2).taken === 120, `通ったぶん ${rush(60, 2).taken}`);
+  // ★1枚のままなら厚さをいくら積んでも1ヒットしか止まらない(ここは変えていない)
+  check('厚いガード1枚では連撃は止まらない', rush(100000, 1).taken === 200, `通ったぶん ${rush(100000, 1).taken}`);
+  // 枚数の決めごとは本体の定数から読む(検査へ 2 を書き写さない)
+  check('連撃ガードになる枚数は本体が持つ',
+    api.tacticsGuardHits(api.TACTICS_RUSH_GUARD_CARDS - 1, HITS) === 1
+      && api.tacticsGuardHits(api.TACTICS_RUSH_GUARD_CARDS, HITS) === HITS,
+    `${api.TACTICS_RUSH_GUARD_CARDS}枚`);
+  check('ヒット数を超えては数えない', rush(100000, 9).covered === HITS);
+  // ★発ごとの通る量。ガードが効いた発は小さく、効いていない発はそのまま
+  //   (2026-09-22 ユーザー指摘「ガード1枚でしたけど連撃分全部のダメージが同じだった」)
+  const amountsOf = (guard, cards) =>
+    api.splitTacticsGuardedAmounts(INCOMING, HITS, guard, api.tacticsGuardHits(cards, HITS));
+  check('ガード1枚だと、当たった発だけ小さくなる',
+    JSON.stringify(amountsOf(60, 1)) === '[40,100,100]', JSON.stringify(amountsOf(60, 1)));
+  check('ガードが1発ぶんを超えれば、その発は0になる',
+    JSON.stringify(amountsOf(150, 1)) === '[0,100,100]', JSON.stringify(amountsOf(150, 1)));
+  check('連撃ガードなら全部の発に効く',
+    JSON.stringify(amountsOf(150, 2)) === '[0,0,0]', JSON.stringify(amountsOf(150, 2)));
+  check('ガードが無ければ全部そのまま通る',
+    JSON.stringify(amountsOf(0, 0)) === '[100,100,100]', JSON.stringify(amountsOf(0, 0)));
+  check('発ごとの量を足すと、受ける合計に一致する',
+    [0, 60, 150, 100000].every(g => [0, 1, 2, 3].every(c =>
+      amountsOf(g, c).reduce((sum, v) => sum + v, 0) === rush(g, c).taken)));
+  // 端数は最後の発へ寄る(足すと元へ戻る)
+  const odd = api.splitTacticsGuardedAmounts(301, 3, 0, 1);
+  check('端数は最後の発へ寄せる', JSON.stringify(odd) === '[100,100,101]', JSON.stringify(odd));
+  // ★ターン軽減のあとの合計へ割り直しても、足すとその合計に戻る
+  check('軽減後の合計へ割り直しても、足すと合う',
+    [10, 99, 250].every(total =>
+      api.scaleTacticsHitAmounts([40, 100, 100], total).reduce((sum, v) => sum + v, 0) === total),
+    JSON.stringify(api.scaleTacticsHitAmounts([40, 100, 100], 99)));
+  check('割り直しても、大きい発と小さい発の差は残る',
+    api.scaleTacticsHitAmounts([40, 100, 100], 240)[0] < api.scaleTacticsHitAmounts([40, 100, 100], 240)[1],
+    JSON.stringify(api.scaleTacticsHitAmounts([40, 100, 100], 240)));
+  check('受け止めたぶんと通ったぶんを足すと元の値に戻る',
+    [0, 1, 2, 3, 9].every(w => { const r = rush(100000, w); return r.guarded + r.through === INCOMING; }));
+  // ★1ヒットの攻撃(通常攻撃・必殺技・貫通撃)は今までどおり
+  check('1ヒットの攻撃は余ったガードがライフになる',
+    api.resolveTacticsGuardedHit(100, 1, 150, api.tacticsGuardHits(3)).saved === 50);
+  check('ガードが足りなければ足りないぶんだけ通る',
+    api.resolveTacticsGuardedHit(100, 1, 40, api.tacticsGuardHits(1)).taken === 60);
+}
+
+// --- ㉖ 倒れた子は毎ターン戻る(2026-09-21 ユーザー指示) ---
+// 「死んだら毎ターン10%は回復する仕様に変更 何もしなくても10ターンで生き返れる」。
+// ★2026-09-20 の「勝手に起きる回復では復活しない」をここで覆した。
+//   何ターンで起きるかは遊びの手ざわりそのものなので、**実際に回して数える**
+{
+  const downedMon = { id: 'Mocchi', name: 'モッチー', baseHp: 600, baseAtk: 120, baseDef: 120, baseGuts: 100 };
+  check('戻る率は本体が持つ', api.TACTICS_DOWNED_REGEN_RATE === 0.1, `${api.TACTICS_DOWNED_REGEN_RATE}`);
+  let units = api.damageTacticsTargets([api.createTacticsUnit(downedMon)], [0], 9999);
+  check('倒れた直後は0から始まる',
+    api.normalizeTacticsUnit(units[0]).hp === 0 && api.normalizeTacticsUnit(units[0]).downed === true);
+  let turns = 0;
+  while (api.normalizeTacticsUnit(units[0]).downed && turns < 30) {
+    units = api.regenDownedTacticsBoard(units).units;
+    turns += 1;
+  }
+  check('何もしなくても10ターンで立ち上がる', turns === 10, `${turns}ターン`);
+  check('立ち上がったときは満タン',
+    api.normalizeTacticsUnit(units[0]).hp === api.normalizeTacticsUnit(units[0]).maxHp);
+  // ★立っている子には入れない(そちらは自動再生がバフの率で別に回す)。
+  //   ここへ入れると、強い編成ほど早く起き上がることになる
+  let alive = api.damageTacticsTargets([api.createTacticsUnit(downedMon)], [0], 300);
+  const aliveBefore = api.normalizeTacticsUnit(alive[0]).hp;
+  alive = api.regenDownedTacticsBoard(alive).units;
+  check('立っている子には入れない', api.normalizeTacticsUnit(alive[0]).hp === aliveBefore,
+    `${aliveBefore} → ${api.normalizeTacticsUnit(alive[0]).hp}`);
+  // ★ガッツは戻さない(倒れている子はカードを使えないので、戻しても行き場がない)
+  let downedGuts = api.damageTacticsTargets([api.createTacticsUnit(downedMon)], [0], 9999);
+  const gutsBefore = api.normalizeTacticsUnit(downedGuts[0]).guts;
+  downedGuts = api.regenDownedTacticsBoard(downedGuts).units;
+  check('倒れている子のガッツは戻さない', api.normalizeTacticsUnit(downedGuts[0]).guts === gutsBefore);
+  // ★戻したぶんは枠ごとに返す(画面がその枠へ出す)
+  let one = api.damageTacticsTargets([api.createTacticsUnit(downedMon)], [0], 9999);
+  const got = api.regenDownedTacticsBoard(one);
+  check('戻したぶんを枠ごとに返す', got.healed && got.healed[0] === 60 && got.hp === 60,
+    JSON.stringify(got.healed || {}));
+}
+
+// --- ㉗ 誰に何が起きたかを枠ごとに出す(2026-09-21 ユーザー指摘) ---
+// 「個別ダメージと全体ダメージで誰に何が起きてるか分かりにくいからそこはちゃんと仕上げて」
+{
+  const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  const inScreen = (needle) => battleScreen.includes(needle);
+  check('枠ごとに何が起きたかを出す',
+    inScreen('data-tactics-slot-fx={i}') && inScreen('tacticsSlotFx&&tacticsSlotFx[i]'));
+  // ★連撃のときは1ヒットずつ並べるので、まとめた数字は連撃でないときだけ出る
+  check('減った・受け止めた・戻ったを出し分ける',
+    inScreen('f.dmg>0&&') && inScreen('{f.guard&&') && inScreen('{f.heal>0&&')
+      && inScreen('{f.revive>0&&') && inScreen('f.evade?') && inScreen('f.reflect?'));
+  // --- 合計の重ね出しをやめる(2026-09-21 ユーザー指示) ---
+  // 「個別をみんなに出してるならただ見にくいだけだから出さないで
+  //  ただし連撃は最後に合計を出すようにして」
+  // ★枠ごとに出しているものは、まんなかへ同じ数字を重ねない
+  check('減ったぶんの合計をまんなかへ重ねない', !has("addPopup(`-${dealt}`,'hero'"));
+  check('ガードで戻ったぶんの合計も重ねない',
+    !has("addPopup(`💚 ライフ +${saved}`") && !has("addPopup(`⚡ ガッツ +${gutsBack}`"));
+  check('回復カードの合計も重ねない', !has('addPopup(`💚 回復 +${healedAll.hp}`'));
+  // ★既存5モードは今までどおり合計で出す。消すのはタクティクスの枝だけ
+  check('吸収の合計は既存モードだけ',
+    (source.match(/addPopup\(`💚 ライフ \+\$\{hpGain\}`/g) || []).length === 1,
+    `${(source.match(/addPopup\(`💚 ライフ \+\$\{hpGain\}`/g) || []).length}か所`);
+  check('自動再生・緊急回復の合計は既存モードだけ',
+    has('const showRegenTotal=!isTacticsMode(runMode);')
+      && has('if(showRegenTotal) addPopup(`🌿 自動再生 +${autoHealVal}`')
+      && has('if(!isTacticsMode(runMode)){\n      if(recoverHp>0) addPopup('));
+  // ★連撃だけは最後に合計を出す(味方が敵へ連撃したときと同じ見せ方)
+  check('連撃だけは最後に合計を出す',
+    has('if(rushSlot!=null&&dealt>0){') && has('addPopup(`合計 ${dealt}`,\'hero\''));
+  check('味方が敵へ連撃したときも最後に合計を出す(今までどおり)',
+    has('addPopup(`合計 ${totalDmg}`,\'enemy\''));
+  // ★何も起きなかったことは、枠に数字が出ないだけでは分からないので残す
+  check('無傷のときは今までどおり知らせる', has("addPopup('無傷！','hero'"));
+  // ★出した数字は時間で消す(2026-09-21 ユーザー指摘「前ターンのダメージとか
+  //   アイコンみたいのが残ってる」)。もとは「次に自分がカードを切るまで残す」だったが、
+  //   敵が何もしないターン(様子を見ている)を挟むと前のターンの数字が居座っていた
+  check('出した数字は時間で消す',
+    has('const showTacticsSlotFx = (updater) => {')
+      && has('tacticsSlotFxTimerRef.current = setTimeout(() => {')
+      && has('const TACTICS_SLOT_FX_MS = 2600;'));
+  check('自分が動いたら、その場で消す', has('clearTacticsSlotFx();'));
+  // ★出すときは必ず showTacticsSlotFx を通す。直に setTacticsSlotFx を呼ぶと
+  //   時計が張られず、その表示だけ消えずに残る
+  check('出すのは必ず時計つきの入口を通す',
+    has('showTacticsSlotFx(Object.keys(slotFx).length?slotFx:null);')
+      && !has('setTacticsSlotFx(Object.keys(slotFx)'));
+  check('画面を離れるときに時計を片づける',
+    has('useEffect(() => () => { if (tacticsSlotFxTimerRef.current) clearTimeout(tacticsSlotFxTimerRef.current); }, []);'));
+  check('倒れた子が戻ったぶんもその枠へ出す', has('slotIdx,{revive:got}'));
+  // ★回復カード・緊急回復・メロソ・ポルツはすべて tacticsRateHeal を通る。
+  //   ここ1か所で枠へ出せば、足すたびに書き足さなくてよい
+  check('回復も枠ごとに出す',
+    has('mergeTacticsSlotFx(result.healed, result.gutsHealed);')
+      && has('const mergeTacticsSlotFx = (healed, gutsHealed) => {'));
+  // ★置き換えではなく重ねる。同じターンのガードぶんと回復カードぶんが両方残る
+  check('枠ごとの表示は重ねて足す',
+    has('next[slotIdx] = { ...(next[slotIdx] || {}), ...value };'));
+  // --- 回復カードのガッツも全体へ(2026-09-21 ユーザー指摘) ---
+  // 「みゅあの回復は全体なのに1体にしかきいてなかった」。ライフは tacticsRateHeal で
+  // 全体へ入っていたのに、**ガッツだけ gainGutsByRate(slotIdx,…) で使った子にしか
+  // 入っていなかった**。回復カードは全体回復で、使う子を選ぶのはガッツを払うためだけ
+  check('回復カードのガッツは全体へ入る入口がある',
+    has('const gainGutsByRateAll = (rate) => {') && has('const result = tacticsRateHeal(0, rate);'));
+  check('みゅあ・メロソ・助手カードのガッツが全体へ入る',
+    has('const gutsVal=gainGutsByRateAll(0.3*effMul);')
+      && has('if(gutsRecRate>0) gainGutsByRateAll(gutsRecRate*effMul);')
+      && has('if(level>=1) gainGutsByRateAll((0.5+level*0.2)*effMul);'));
+  // ★固有技は「そのモンスターの技」なので、使った子だけに入る(スエゾー)。
+  //   ここまで全体にすると、単体へ効く技が1つも無くなる
+  check('固有技のガッツは使った子だけのまま',
+    has("else if(card.monId==='Suezo'){const gRec=gainGutsByRate(slotIdx,0.5*effMul);"));
+  // ★絶氷の楔は立っている子を1体ずつ回すループなので、そのまま
+  check('絶氷の楔は1体ずつ回す形のまま',
+    has('if (extra>0) gutsRegen+=gainGutsByRate(slotIdx,extra);'));
+  // ★吸ったのは狙われた子ひとり。誰が吸ったのかを出す
+  check('吸収も誰が吸ったかを出す',
+    has('if(absorbSlot!=null&&(hpGain>0||gutsGain>0)) mergeTacticsSlotFx({[absorbSlot]:hpGain},{[absorbSlot]:gutsGain});'));
+  check('ガッツの増えたぶんも枠へ出す', inScreen('{f.guts>0&&'));
+  // --- 連撃は1ヒットずつ出す(2026-09-21 ユーザー指示) ---
+  // 「連撃の表示が1回だけだった 敵の3連撃なら3回ダメージ表記が出るようにして
+  //  60なら20、20，20みたいな」
+  check('連撃は1ヒットずつ並べて出す',
+    inScreen('Array.isArray(f.hits)&&f.hits.length>1')
+      && inScreen('f.hits.map((value,hitIndex)=>'));
+  check('連撃は1ヒットずつ順に出す(まとめて出さない)',
+    has('for(let shown=1; shown<=allHits.length; shown+=1){')
+      && has('hits:allHits.slice(0,shown)'));
+  // ★合計を均等に割ると、ガードが効いた発も効いていない発も同じ数字になる
+  //   (2026-09-22 ユーザー指摘「ガード1枚でしたけど連撃分全部のダメージが同じだった」)。
+  //   発ごとの通る量をそのまま出し、止まった発(0)は数字にしない
+  check('発ごとの通る量をそのまま出す(止まった発は数えない)',
+    has('if(rushHits>1) fx.hits=scaleTacticsHitAmounts((hit.amounts||[]).filter(value=>value>0),fd);')
+      && !has('splitTacticsHitAmounts(fd,throughHits)'));
+}
+
+// --- ㉙ 連撃を1ヒットずつに割る(2026-09-21 ユーザー指示) ---
+// 「60なら20、20，20みたいな」。**実際に割って**、足すと元の合計へ戻ることまで見る
+{
+  check('60を3ヒットに割ると 20/20/20',
+    JSON.stringify(api.splitTacticsHitAmounts(60, 3)) === '[20,20,20]',
+    JSON.stringify(api.splitTacticsHitAmounts(60, 3)));
+  // ★端数はいちばん最後のヒットへ寄せる。足して元へ戻らないと、枠の数字と実際の減り方が食い違う
+  check('割り切れないときも足すと元の合計に戻る',
+    [61, 100, 7, 1].every(total => api.splitTacticsHitAmounts(total, 3).reduce((sum, value) => sum + value, 0) === total),
+    JSON.stringify(api.splitTacticsHitAmounts(61, 3)));
+  check('端数は最後のヒットへ寄せる',
+    JSON.stringify(api.splitTacticsHitAmounts(61, 3)) === '[20,20,21]',
+    JSON.stringify(api.splitTacticsHitAmounts(61, 3)));
+  check('1ヒットならそのまま1つ', JSON.stringify(api.splitTacticsHitAmounts(60, 1)) === '[60]');
+  check('0なら何も出さない', JSON.stringify(api.splitTacticsHitAmounts(0, 3)) === '[]');
+}
+
+// --- ㉘ 回復の内訳を枠ごとに返す(2026-09-21 ユーザー指摘) ---
+// 「ダメージや回復表示は個別で分かるようになった？」。合計だけでは、4体のうち
+// 誰が戻ったのかが分からない。**実際に動かして**内訳が合うことを確かめる
+{
+  const healMon = { id: 'Mocchi', name: 'モッチー', baseHp: 600, baseAtk: 120, baseDef: 120, baseGuts: 100 };
+  let board = [api.createTacticsUnit(healMon), api.createTacticsUnit(healMon)];
+  board = api.applyTacticsDamage ? board : board;
+  board = api.damageTacticsTargets(board, [0], 300);   // 1体目だけ300減らす
+  const res = api.rateHealTacticsBoard(board, 0.3, 0.3, false);
+  check('回復の内訳を枠ごとに返す',
+    res.healed && res.healed[0] === 180 && res.healed[1] === undefined,
+    JSON.stringify(res.healed || {}));
+  check('内訳の合計が、返す合計と合う',
+    Object.values(res.healed || {}).reduce((sum, value) => sum + value, 0) === res.hp, `${res.hp}`);
+  check('ガッツの内訳も枠ごとに返す',
+    res.gutsHealed && res.gutsHealed[0] === 30 && res.gutsHealed[1] === 30,
+    JSON.stringify(res.gutsHealed || {}));
+}
+
+// --- ㉚ 追いつき補正を間合いのボーナスへも乗せる(2026-09-21 ユーザー指示) ---
+// 「そうしたら追いつき補正で距離ボーナスも乗せないとだね」
+//   ・ベース値は「これまでの合計ダメージ」で見る
+//   ・残りターン10がベース値どおりになる基準で、そこより速いか遅いかで上下する
+// ★上下するのは**ベース値を基準にした位置**であって、もらえるボーナスがマイナスへ
+//   なるわけではない(2026-09-21 ユーザー指摘「ボーナスがマイナスになるわけじゃなくて、
+//   ベースボーナスが基準値より上か下かっていう意味」)。手間取っても引き上げ幅は残る。
+// 数字は本体の定数から出す(検査へ 1% や 10ターンを書き写さない)
+{
+  const perTurn = api.TACTICS_JOIN_RATE_PER_TURN;
+  const baseTurns = api.TACTICS_JOIN_DIST_BASE_TURNS;
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  check('基準のターン数ならベース値どおり', near(api.addTacticsJoinDistCatchUp(1, baseTurns), 1),
+    `${api.addTacticsJoinDistCatchUp(1, baseTurns)}`);
+  check('基準より速く抜ければベース値より上',
+    api.addTacticsJoinDistCatchUp(1, baseTurns + 5) > 1
+      && near(api.tacticsJoinDistWaveRate(baseTurns + 5), 5 * perTurn));
+  check('基準より遅ければベース値より下',
+    api.addTacticsJoinDistCatchUp(1, 0) < 1 && near(api.tacticsJoinDistWaveRate(0), -baseTurns * perTurn));
+  // ★ここが読み違えやすいところ。**引き上げる値そのものはマイナスにならない**
+  const slowBonus = api.tacticsJoinDistBonus(2000000, sandbox.DIST_BONUS_PER_DAMAGE,
+    api.addTacticsJoinDistCatchUp(1, 0));
+  check('いちばん遅い抜け方でも、引き上げる値はマイナスにならない', slowBonus > 0, `${slowBonus}`);
+  check('遅く抜けたぶんはベース値より下に収まる',
+    slowBonus < api.tacticsJoinDistBonus(2000000, sandbox.DIST_BONUS_PER_DAMAGE, 1), `${slowBonus}`);
+  // ステータス側は基準を持たない。ここが2つの補正の違いなので、実際に並べて確かめる
+  check('ステータス側は基準を持たない（残りターンのぶんだけ上がる）',
+    api.tacticsJoinWaveRate(0) === 0 && api.tacticsJoinWaveRate(baseTurns) > 0);
+  // WAVEごとに掛け算で積む
+  const oneWave = api.addTacticsJoinDistCatchUp(1, baseTurns + 10);
+  const twoWaves = api.addTacticsJoinDistCatchUp(oneWave, baseTurns + 10);
+  check('WAVEごとに掛け算で積む', near(twoWaves, oneWave * oneWave), `${oneWave} → ${twoWaves}`);
+  check('倍率がマイナスへ落ちない', api.addTacticsJoinDistCatchUp(0, 0) >= 0 && api.addTacticsJoinDistCatchUp(-5, 0) >= 0);
+  // ベース値は合計ダメージ。実際に計算して確かめる
+  const bonus = api.tacticsJoinDistBonus(2000000, sandbox.DIST_BONUS_PER_DAMAGE, oneWave);
+  check('ベース値は合計ダメージから出す',
+    near(bonus, 2000000 * sandbox.DIST_BONUS_PER_DAMAGE * oneWave), `${bonus}`);
+  check('ダメージを与えていなければ引き上げもない',
+    api.tacticsJoinDistBonus(0, sandbox.DIST_BONUS_PER_DAMAGE, oneWave) === 0);
+  // 加入した枠だけ引き上げる。ほかの枠は1つも動かさない
+  const before = [0.5, 0, 0.1, 0];
+  const after = api.applyTacticsJoinDistBonus(before, [1, 3], 0.2);
+  check('あとから入った枠だけ引き上げる',
+    near(after[1], 0.2) && near(after[3], 0.2), JSON.stringify(after));
+  check('入っていない枠はそのまま', near(after[0], 0.5) && near(after[2], 0.1), JSON.stringify(after));
+  // ★すでに積み上がっている枠を下げない。間合いのボーナスは枠ごとの配列をパーティで
+  //   共有しているので、下げるとそこへ立っていた子のぶんまで削れる
+  const kept = api.applyTacticsJoinDistBonus([0.9, 0, 0, 0], [0], 0.2);
+  check('すでに上へ積み上がっている枠は下げない', near(kept[0], 0.9), JSON.stringify(kept));
+  check('加入した枠が無ければ何も変えない',
+    JSON.stringify(api.applyTacticsJoinDistBonus(before, [], 0.2)) === JSON.stringify(before));
+  // 「あとから入った枠」の数え方
+  const board = [api.createTacticsUnit(mon()), null, api.createTacticsUnit(mon({ id: 'Golem' })), null];
+  const next = [{ id: 'Mocchi' }, { id: 'Pixie' }, { id: 'Golem' }, null];
+  check('入れ替わった枠と空いていた枠だけを拾う',
+    JSON.stringify(api.tacticsJoinedSlots(board, next)) === '[1]',
+    JSON.stringify(api.tacticsJoinedSlots(board, next)));
+  check('同じ枠の別の子は「入った」とみなす',
+    JSON.stringify(api.tacticsJoinedSlots(board, [{ id: 'Pixie' }, null, { id: 'Golem' }, null])) === '[0]');
+  check('マスモンは個体(masuId)まで見て同じかを決める',
+    api.isSameTacticsUnit(api.createTacticsUnit(mon({ masuId: 'm1' })), { id: 'Mocchi', masuId: 'm1' })
+      && !api.isSameTacticsUnit(api.createTacticsUnit(mon({ masuId: 'm1' })), { id: 'Mocchi', masuId: 'm2' }));
+  // 本体への結線。合計ダメージは ref から読む(周回のはじめに前周ぶんを配らないため)
+  check('加入した枠を、盤面を作り直す前に数えている',
+    has('const joinedSlots = isTacticsMode(mode) ? tacticsJoinedSlots(tacticsUnitsRef.current, nextSlots) : [];'));
+  check('加入した枠があるときだけ引き上げる',
+    has('if (joinedSlots.length) catchUpTacticsDistBonus(joinedSlots, mode);'));
+  check('合計ダメージは ref から読む（周回のはじめに前周ぶんを配らない）',
+    has('tacticsJoinDistBonus(totalAllDamageRef.current, DIST_BONUS_PER_DAMAGE, tacticsJoinDistCatchUpRef.current)'));
+  check('難易度の距離強化も既存の子と同じように通す',
+    has('return Math.max(0, applyDistanceEnhancement(base, specialRuleDifficulty, wave));'));
+  check('WAVEを抜けるたびに積む',
+    has('tacticsJoinDistCatchUpRef.current=addTacticsJoinDistCatchUp(tacticsJoinDistCatchUpRef.current,remainingTurns);'));
+  check('周回のはじめに数え直す',
+    has('    // あとから入る子の追いつき補正は1周ごとに数え直す(ステータスも間合いのボーナスも)\n    resetTacticsJoinCatchUp();'));
+  check('供モン選びの画面にも同じ値を出す', has('distCatchUp: tacticsJoinDistCatchUpBonus()'));
+}
+
+// --- ㉛ 合計・平均をタクティクスの画面へ出さない(2026-09-22 ユーザー指摘) ---
+// 「クラシックをベースにしてるからそのへんごっちゃになってる」
+//   タクティクスで足し算に意味があるのは「敗北判定(全員倒れた)」と「スコア・合計ダメージ」だけ。
+//   ちから・丈夫さは**平均**、ガードの段階は**いちばん硬い子**、攻撃段階は**その枠の子だけ**。
+//   合計や平均を画面へ出すと「これ何の数字？」になる(トレーニング画面で実際に起きた)
+{
+  // ★ガードの軽減量は構えた子の丈夫さで決まる。画面と実際で別々に書くと必ずずれる
+  //   (2026-09-22 まで、実際はその子・画面はパーティの平均になっていた)
+  check('ガードの軽減量は1か所(guardValueOf)で出す',
+    has('const guardValueOf = (flat, mult, slotIdx = null) =>')
+      && has('(flat > 0 || mult > 0) ? Math.floor(flat + guardDefFor(slotIdx) * mult) : 0;'));
+  check('枠を渡さなければ今までどおりパーティの値(既存5モード)',
+    has('if (slotIdx == null || !isTacticsMode(runMode)) return effectiveDef;'));
+  check('枠を渡せばその子の丈夫さで出す',
+    has('return unit ? resolveEffectiveMaxStat(normalizeTacticsUnit(unit).def, getPermaBuff(\'defPct\')) : effectiveDef;'));
+  check('実際に受け止める計算も画面と同じ1か所を通る',
+    has('const base=tacticsSlotGuardValue(slotGuards,slotIdx);')
+      && has('const tacticsSlotGuardValue = (guardBySlot, slotIdx) => {'));
+  // ★実際の計算だけが「その子」で、画面が平均のままだと、硬い子が構えたときに
+  //   予定ダメージより実際が少なくなる(数字が合わない)
+  const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  const inScreen = (needle) => battleScreen.includes(needle);
+  check('予定ダメージのガードも、その枠の子で出す',
+    inScreen("guardValueOf(flat, mult, slotIdx)"));
+  check('枠に置いたガードカードの軽減量も、その枠の子で出す',
+    inScreen('GUARD_EVOLUTION[guardLevel].mult*gw*ge,i)'));
+  check('手札の合計ガードは、枠ごとに出して足す(平均で1回出さない)',
+    inScreen('const committedGuard=Array.isArray(tacticsUnits)?sumGuardBySlot():guardValueOf(guardFlat,guardMult);')
+      && inScreen('(unit&&!unit.downed ? sum+tacticsSlotGuardValue(merged,slotIdx) : sum),0);'));
+  check('置く先が決まっている保留カードも、その子で足す',
+    inScreen('sumGuardBySlot({slot:pendingGuardSlot,'));
+  // ★「パーティ全体」の欄は消した(2026-09-22 ユーザー選択「消す」)。
+  //   ①を直したので、ちから・丈夫さはもうどこの判断にも使われていない
+  check('バトルの詳細に「パーティ全体」の欄を出さない',
+    !has('パーティ全体（カードの効きめを決める値）')
+      && has('{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-6 text-left">'));
+  // ★固有技の強化画面のガッツも1体ずつ。押せるかは前から1体ずつで見ていた
+  const upgradeScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/68-screen-run-result.jsx'), 'utf8');
+  check('固有技の強化画面のガッツを枠ごとに出す',
+    upgradeScreen.includes('data-tactics-guts-recovery')
+      && upgradeScreen.includes('data-tactics-guts-slot={index}'));
+  check('既存5モードでは今までどおり合計を出す',
+    upgradeScreen.includes('<b className={gutsFull?\'text-amber-300\':\'text-white\'} style={{fontSize:\'17px\'}}>{guts}</b>'));
+}
+
+// --- ㉜ 全体ガード(2026-09-22 ユーザー指示の新仕様) ---
+// 「2体以上別々にガードを入れると全体ガードに変わる。ただし1枚目に選んでないモンスターは軽減値分」
+// ★連撃ガード(同じ子へ2枚)と全体ガード(2体以上へ別々)は**同時に成り立つ**(ユーザー確認済み)
+{
+  const spread = (bySlot) => api.isTacticsSpreadGuard(bySlot);
+  check('1体だけが構えても全体ガードにならない', spread({ 0: { cards: 1 } }) === false);
+  check('同じ子へ2枚でも全体ガードにならない', spread({ 0: { cards: 2 } }) === false);
+  check('2体が別々に構えると全体ガードになる', spread({ 0: { cards: 1 }, 3: { cards: 1 } }) === true);
+  // ★ここが読み違えやすいところ。Aに2枚・Bに1枚なら両方成り立つ
+  check('連撃ガードと全体ガードは同時に成り立つ',
+    spread({ 0: { cards: 2 }, 1: { cards: 1 } }) === true
+      && api.tacticsGuardHits(2, 3) === 3 && api.tacticsGuardHits(1, 3) === 1);
+  check('構えていない枠は数に入れない', spread({ 0: { cards: 1 }, 1: { cards: 0 } }) === false);
+  check('全体ガードになる人数は本体が持つ',
+    api.TACTICS_SPREAD_GUARD_SLOTS === 2, `${api.TACTICS_SPREAD_GUARD_SLOTS}体`);
+  // ★構えていない子に付くのは「その子の丈夫さをベースに、2枚目以降と同じ半減をかけた値」
+  //   (2026-09-22 ユーザー指示「あくまでも個別での丈夫さをベースとしてだよ。
+  //    かつ2枚目以降は半分になるからその補正値」)。
+  //   固定値(flat)もクラシックと同じように通す。0 を直に書くと、将来 flat に値を
+  //   入れたときだけ全体ガードが置いていかれる
+  check('構えていない子は、その子の丈夫さをベースにする',
+    has('GUARD_EVOLUTION[guardLevel].mult * halvedRate, slotIdx);')
+      && !has('guardValueOf(0, GUARD_EVOLUTION[guardLevel].mult, slotIdx)'));
+  check('全体ガードのぶんには、2枚目以降と同じ半減をかける',
+    has("const halvedRate = cardEffectMultiplier({ type: 'guard' }, true);")
+      && has('guardValueOf(GUARD_EVOLUTION[guardLevel].flat * halvedRate,'));
+  // ★半減の率(0.5)を検査へ書き写さない。本体が率を変えたらここも一緒に動く
+  check('半減の率は本体の cardEffectMultiplier から取る',
+    !/halvedRate\s*=\s*0\.5/.test(source) && has("cardEffectMultiplier({ type: 'guard' }, true)"));
+  check('構えていればその子のぶん、なければ全体ガードのぶん',
+    has('if (own && (own.cards || 0) > 0) return guardValueOf(own.flat, own.mult, slotIdx);')
+      && has('return isTacticsSpreadGuard(guardBySlot) ? tacticsSpreadGuardValue(slotIdx) : 0;'));
+  // 画面にも出す。数字が出ないと、全体ガードになったことに気づけない
+  const battleScreenSpread = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  // ★ガードも攻撃と同じく「この子へ置いたらいくら受け止められるか」を枠へ出す
+  //   (2026-09-22 ユーザー指摘「ダメージは個別に見えるのにガード値は個別に分からない」)
+  check('置き場所を選ぶとき、枠ごとのガード値を出す',
+    battleScreenSpread.includes('data-tactics-guard-preview={previewGuard}')
+      // ★枠は87pxしかないので、2026-09-23に「GUARD:」から「守」へ縮めた(重なりを無くすため)
+      && battleScreenSpread.includes('守{previewGuard}'));
+  check('枠ごとのガード値は、その子の丈夫さで出す',
+    battleScreenSpread.includes('previewGuard=guardValueOf(GUARD_EVOLUTION[guardLevel].flat*gw*ge,GUARD_EVOLUTION[guardLevel].mult*gw*ge,i);'));
+  check('2枚目以降は半分になることも枠に出す',
+    battleScreenSpread.includes("{isPendingGuardHalved?'½':''}守"));
+  // ★カードの説明は、パーティの平均で1つの数字を出さない(誰の数値か分からない)
+  check('カードの説明は「その子の丈夫さ」で決まると書く',
+    has('if(isTacticsMode(runMode)) return(<div className="text-center font-bold">敵の攻撃を軽減')
+      && has('置く子で変わります。盤面の枠に出る GUARD の数字で確かめられます'));
+  check('枠へガードのまとめを出す(連撃ガードは合計値)',
+    battleScreenSpread.includes('data-tactics-guard-total={gv}')
+      && battleScreenSpread.includes("data-tactics-guard-kind={slotRushGuard?'rush':'spread'}")
+      && battleScreenSpread.includes("🛡 {slotRushGuard?'連撃ガード':'全体'} {gv}"));
+  // ★全体ガードになったら、立っている子**全員**の枠に軽減値を出す(2026-09-22 ユーザー指示
+  //   「全体ガードになったときは全味方モンスターに軽減値を出して」)。
+  //   全体ガードでない1枚だけの枠は、カードの札と同じ数字になるので出さない(二重になる)
+  check('全体ガードなら構えた子の枠にもまとめを出す',
+    battleScreenSpread.includes('if(!slotRushGuard&&!slotSpreadGuard) return null;')
+      && !battleScreenSpread.includes('if(guardCards>0&&!rushGuard) return null;'));
+  check('連撃ガード・全体ガードの判定は本体が持つ',
+    battleScreenSpread.includes('const slotRushGuard=slotGuardCards>=TACTICS_RUSH_GUARD_CARDS;')
+      && battleScreenSpread.includes('const slotSpreadGuard=!!guardPlanBySlot&&isTacticsSpreadGuard(guardPlanBySlot);'));
+  // ★空き枠・倒れた子にガードが付いてはいけない(2026-09-22 ユーザー提供の画面で発覚)。
+  //   guardDefFor は unit の無い枠でパーティ平均の丈夫さを返すため、止めないと数字が作られる
+  check('立っている子がいない枠にはガードが付かない',
+    has('if (isTacticsMode(runMode) && !canTacticsSlotAct(tacticsUnitsRef.current, slotIdx)) return 0;'));
+  // ★ガードが連撃・全体に変わったら、名前は変えずに**となりへ印**を出す
+  //   (2026-09-22 ユーザー選択「名前＋印に分ける」)。段階の名前は9つあり、後半は
+  //   「ガード」が付かない(金剛不壊・万象拒絶…)ので、頭に足すと言葉として読みにくい
+  check('連撃・全体になった札は名前のとなりに印を出す',
+    battleScreenSpread.includes("const guardMark=gw>0?(slotRushGuard?'連撃':(slotSpreadGuard?'全体':'')):'';")
+      && battleScreenSpread.includes('data-tactics-guard-mark={guardMark}')
+      && battleScreenSpread.includes("{halvedByIdx[idx]?'½':''}{card.name}")
+      && !battleScreenSpread.includes("{spreadGuardCard?'全体':''}{card.name}"));
+  // ★全体ガードの枠は、軽減量を🛡が立っている子全員に出すので、札に数字を重ねない
+  check('全体ガードの枠は札に数字を重ねない',
+    battleScreenSpread.includes('const spreadGuardCard=gw>0&&slotSpreadGuard&&!slotRushGuard;')
+      && battleScreenSpread.includes('{gv>0&&!spreadGuardCard&&<span'));
+  // ★合計DMGの予測も、盤面のタップ判定とまったく同じ答えを使う。
+  //   自前で枚数を数えていると、ガードを置いた子が「もう置けない子」に見えてずれる
+  check('合計DMGの予測も同じ置ける判定を通す',
+    battleScreenSpread.includes('const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;\n                if(tacticsAnswer===null||tacticsAnswer===undefined){'));
+}
+
+// --- ㉝ みゃるの薬は「飲んだ子だけ」(2026-09-22 ユーザー指摘) ---
+// ★攻撃バフを全体(atkMult)へ置き、自傷を盤面の合計ライフから引いていた。
+//   4体いると自分のライフの何倍もの自傷が来るので、飲むたびに必ず1まで落ちていた
+//   (ユーザー「ライフが劇的に減った。多分全体ライフを見てる？」
+//     「みゃるの薬は使ったやつだけにきくバフだね 多分全体になってるよね？」)。
+check('みゃるの攻撃バフは、タクティクスだけ枠ごとに置く',
+  has("if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'atkMult',myaruAtkMult);")
+    && has('else setNextTurnBuff(\'atkMult\',myaruAtkMult);'));
+check('枠ごとの攻撃バフがダメージへ効く',
+  has("getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*"));
+// ★同じターンに2人が使っても消し合わない(枠ごとに足す)。書き込みは1か所を通す
+check('枠ごとのバフは足していく',
+  has('...p, bySlot: withTacticsSlotBuff(p.bySlot, slotIdx, key, value),'));
+check('枠ごとのバフは、タクティクスのときだけ読む',
+  has("const tacticsSlotBuffs = () => (isTacticsMode(runMode) ? getTurnBuff('bySlot', null) : null);")
+    && has("const tacticsSlotAtkMult = (slotIdx) => tacticsSlotRate(tacticsSlotBuffs(), slotIdx, 'atkMult', 1.0);"));
+// 読み出しの決まりは本体の純関数をそのまま動かす(検査へ書き写さない)
+{
+  const bySlot = { 1: { atkMult: 2.0 } };
+  check('飲んだ子だけ攻撃が上がる', api.tacticsSlotRate(bySlot, 1, 'atkMult', 1) === 2.0
+    && api.tacticsSlotRate(bySlot, 0, 'atkMult', 1) === 1 && api.tacticsSlotRate(bySlot, 3, 'atkMult', 1) === 1);
+  check('壊れた値が来ても等倍に倒す', api.tacticsSlotRate({ 1: { atkMult: 'こわれた' } }, 1, 'atkMult', 1) === 1
+    && api.tacticsSlotRate({ 1: { atkMult: -3 } }, 1, 'atkMult', 1) === 1);
+  check('誰も飲んでいなければ等倍', api.tacticsSlotRate(null, 0, 'atkMult', 1) === 1
+    && api.tacticsSlotRate({}, 0, 'atkMult', 1) === 1);
+}
+// ★どの子にかかっているかを枠に出す。全体の札(Boost)では誰のものか分からない
+{
+  const battleScreenMyaru = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  check('薬がかかっている子の枠に印を出す',
+    battleScreenMyaru.includes("const bySlot=getTurnBuff('bySlot',null);")
+      && battleScreenMyaru.includes('data-tactics-slot-buff={mark.text}')
+      && battleScreenMyaru.includes("marks.push({text:`⚔×${atkMult.toFixed(1)}`,cls:'text-red-300'});"));
+}
+check('カードの説明にも「飲んだ子だけ」と書く',
+  has("isTacticsMode(runMode)&&focusedCard.subType==='buff_myaru'")
+    && has('置いた子だけに効きます。自傷もその子の今のライフから引きます'));
+
+// --- ㉞ カードの説明に「ジャンル」と「誰に効くか」を出す(2026-09-22 ユーザー指示) ---
+// ★タクティクスは1体ずつステータスを持つので、置いた子だけに効くのか味方ぜんぶに効くのかで
+//   置き方がまるごと変わる(ユーザー「攻撃や回復や支援とかそれに単体や全体など
+//   効果のジャンルが分かるようにしたい」)。決め方は本体から切り出してそのまま動かす
+{
+  const genreSrc = slice('const cardGenreLabel = (card) => {', '\n  };') + '\n  };';
+  const scopeSrc = slice('const cardScopeLabel = (card) => {', '\n  };') + '\n  };';
+  const attackSrc = slice('const isAttackCard = (card) =>', '\n');
+  const box = { __tactics: true };
+  vm.createContext(box);
+  vm.runInContext(
+    'const isTacticsMode=()=>__tactics; const runMode=null;'
+      + attackSrc.trim() + '\n' + genreSrc.trim() + '\n' + scopeSrc.trim()
+      + '\nglobalThis.genreOf=cardGenreLabel; globalThis.scopeOf=cardScopeLabel;', box);
+  const genreOf = box.genreOf, scopeOf = box.scopeOf;
+  // ★助手の教えカードの一覧も本体(data/breeder.js)から読む。検査へ書き写さない
+  const teachSrc = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8');
+  const teachBlock = teachSrc.slice(teachSrc.indexOf('const TEACHING_CARDS'), teachSrc.indexOf('const STARTER_TEACHING_IDS'));
+  const teachings = [...teachBlock.matchAll(/\{\s*id:'([^']+)',[\s\S]*?[^b]type:'([^']+)',\s*subType:'([^']+)'/g)]
+    .map(m => ({ id: m[1], type: m[2], subType: m[3] }));
+  check('助手の教えカードを本体から読める', teachings.length >= 9, teachings.map(t => t.id).join(','));
+  const missing = teachings.filter(t => !genreOf(t) || !scopeOf(t));
+  check('助手の教えカードはどれもジャンルと効く先が出る', missing.length === 0, missing.map(t => t.id).join(','));
+  // ★単体に効くのはガードとみゃるの薬だけ(2026-09-19 ユーザーの整理
+  //   「単体に効くのはガードの余りとドレインと吸収だけ」／みゃるは2026-09-22に単体へ直した)
+  const singles = teachings.filter(t => scopeOf(t) === '単体').map(t => t.id);
+  check('助手の教えで単体なのはみゃるの薬だけ', singles.join(',') === 'myaru', singles.join(',') || 'なし');
+  check('ガードは守り・単体', genreOf({ type:'guard' }) === '守り' && scopeOf({ type:'guard' }) === '単体'
+    && genreOf({ type:'weak_guard' }) === '守り' && scopeOf({ type:'weak_guard' }) === '単体');
+  check('回復は回復・全体', genreOf({ type:'heal' }) === '回復' && scopeOf({ type:'heal' }) === '全体');
+  check('攻撃・固有技・距離撃は攻撃・敵へ',
+    ['atk', 'range_atk', 'unique'].every(type => genreOf({ type }) === '攻撃' && scopeOf({ type }) === '敵へ'));
+  box.__tactics = false;
+  check('既存5モードでは効く先を出さない', scopeOf({ type:'guard' }) === null);
+}
+check('カードの説明にジャンルと効く先を出す',
+  has('const genre=cardGenreLabel(focusedCard), scope=cardScopeLabel(focusedCard);')
+    && has("data-card-genre={genre||''} data-card-scope={scope}"));
+// ★手札の**表**にも同じことを出す(2026-09-22 ユーザー指示「ニコラオは単体支援とかにしない？
+//   それだと全体や単体とか効果わかりやすいし」)。カードを1枚ずつ開かなくても、
+//   守りが置いた子だけ・支援が味方ぜんぶ、と並べて見比べられる。
+// ★言葉はアプリ側の同じ関数から引く。画面側で別に書くと、説明と表で言い方がずれる
+check('手札の表にもジャンルと効く先を出す',
+  has('const genre=tacticsCardGenre?tacticsCardGenre(c):null;')
+    && has('const scope=tacticsCardScope?tacticsCardScope(c):null;')
+    && has('data-card-genre={genre} data-card-scope={scope||undefined}')
+    && has('tacticsCardGenre={cardGenreLabel} tacticsCardScope={cardScopeLabel}'));
+// ★攻撃だけは「攻撃・敵へ」にしない。味方に効かないのは攻撃カードの前提で、
+//   わざわざ言うと守り・支援の「単体／全体」が埋もれる
+check('攻撃の表に「敵へ」は出さない', has("scope&&scope!=='敵へ'?`${genre}・${scope}`:genre"));
+
+// --- ㉟ 固有技の効果も「使った子だけ」(2026-09-22 ユーザー選択) ---
+// ★ピクシー/ミーアの消費0・タイガーの会心確定・アーク/イブリースの贖罪・パンドラの共鳴は、
+//   クラシックの作りのまま**味方全員**にかかっていた。ステータスが1体ずつのタクティクスでは
+//   「全員がタダ」「全員が会心確定」になるので効きすぎる。
+// ★モノリスの反射は設計どおり味方全体のまま(§10 段階7)。
+//   メロソの被ダメ減もアシストカードなので全体のまま
+check('ピクシー/ミーアの消費0は使った子だけ',
+  has("if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'zeroGuts',true); else setNextTurnBuff('zeroGuts',true);"));
+check('タイガーの会心確定は使った子だけ',
+  has("if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'guaranteedCrit',true); else setNextTurnBuff('guaranteedCrit',true);"));
+check('アーク/イブリースの贖罪は、利点と欠点をまとめて使った子だけ',
+  has("if(isTacticsMode(runMode)){ setTacticsNextSlotBuff(slotIdx,'takenDamageMult',0.5); setTacticsNextSlotBuff(slotIdx,'gutsCostMult',1.15); }")
+    && has("else { setNextTurnBuff('takenDamageMult',0.5); setNextTurnBuff('gutsCostMult',1.15); }"));
+check('パンドラの共鳴は使った子だけ',
+  has("if(isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx,'pandoraResonanceTurns',2);"));
+check('モノリスの反射は味方全体のまま',
+  has("setNextTurnBuff('reflect',true)") && !has("setTacticsNextSlotBuff(slotIdx,'reflect'"));
+check('メロソの被ダメ減も味方全体のまま',
+  has("setNextTurnBuff('takenDamageMult',1-0.5*effMul)") && !has("setTacticsNextSlotBuff(slotIdx,'takenDamageMult',1-"));
+// 効き先。全体のぶん(メロソ)と枠ごとのぶんは掛け合わせる
+check('消費ガッツは枠ごとのぶんも見る',
+  has("tacticsSlotFlag(slotBuffs, slotIdx, 'zeroGuts')")
+    && has("tacticsSlotRate(slotBuffs, slotIdx, 'gutsCostMult', 1.0)")
+    && has("tacticsSlotTurns(slotBuffs, slotIdx, 'pandoraResonanceTurns')"));
+check('被ダメ軽減は狙われた枠のぶんも掛ける',
+  has('const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage>0')
+    && has("*tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)"));
+// ★会心確定は「予測」「あつの挑発」「ふつうの攻撃」の3か所が同じ読み方をする。
+//   1か所でも漏らすと、予測と実際がずれる
+check('会心確定は予測も実処理も枠ごとのぶんを見る',
+  (source.match(/tacticsSlotFlag\(getTurnBuff\('bySlot',null\),slotIdx,'guaranteedCrit'\)/g) || []).length >= 3);
+check('固有技の効果も枠の印に出る',
+  ["tacticsSlotFlag(bySlot,i,'zeroGuts')", "tacticsSlotFlag(bySlot,i,'guaranteedCrit')",
+    "tacticsSlotRate(bySlot,i,'takenDamageMult',1.0)", "tacticsSlotRate(bySlot,i,'gutsCostMult',1.0)",
+    "tacticsSlotTurns(bySlot,i,'pandoraResonanceTurns')"].every(needle => has(needle)));
+// 枠ごとの入れ物そのもののふるまい。本体の純関数をそのまま動かす
+{
+  const written = api.withTacticsSlotBuff(api.withTacticsSlotBuff(null, 1, 'zeroGuts', true), 2, 'atkMult', 2.0);
+  check('2人ぶんを書いても消し合わない',
+    api.tacticsSlotFlag(written, 1, 'zeroGuts') === true && api.tacticsSlotRate(written, 2, 'atkMult', 1) === 2.0
+      && api.tacticsSlotFlag(written, 2, 'zeroGuts') === false);
+  const both = api.withTacticsSlotBuff(api.withTacticsSlotBuff(null, 1, 'takenDamageMult', 0.5), 1, 'gutsCostMult', 1.15);
+  check('同じ子へ2つ書いても両方残る',
+    api.tacticsSlotRate(both, 1, 'takenDamageMult', 1) === 0.5 && api.tacticsSlotRate(both, 1, 'gutsCostMult', 1) === 1.15);
+  const carried = api.carryTacticsSlotBuffs(null, { 1: { pandoraResonanceTurns: 2 } }, 'pandoraResonanceTurns');
+  check('共鳴は1ターンずつ減って持ち越す', api.tacticsSlotTurns(carried, 1, 'pandoraResonanceTurns') === 1);
+  check('共鳴は残り1で終わる',
+    Object.keys(api.carryTacticsSlotBuffs(null, { 1: { pandoraResonanceTurns: 1 } }, 'pandoraResonanceTurns')).length === 0);
+  const refreshed = api.carryTacticsSlotBuffs({ 1: { pandoraResonanceTurns: 2 } }, { 1: { pandoraResonanceTurns: 2 } }, 'pandoraResonanceTurns');
+  check('張り直したら新しい値が勝つ', api.tacticsSlotTurns(refreshed, 1, 'pandoraResonanceTurns') === 2);
+  // ★持ち越すのは共鳴だけ。次ターン1回きりの予約(消費0・会心確定)を持ち越すと永久に続く
+  check('1回きりの予約は持ち越さない',
+    Object.keys(api.carryTacticsSlotBuffs(null, { 1: { zeroGuts: true, guaranteedCrit: true } }, 'pandoraResonanceTurns')).length === 0);
+  const cleared = api.clearTacticsSlotFlag({ 1: { zeroGuts: true, atkMult: 2.0 }, 2: { zeroGuts: true } }, 'zeroGuts');
+  check('使い切った消費0だけ落ちる',
+    api.tacticsSlotFlag(cleared, 1, 'zeroGuts') === false && api.tacticsSlotRate(cleared, 1, 'atkMult', 1) === 2.0
+      && cleared[2] === undefined);
+}
+
+// --- ㊱ 「誰に効くか」の早見表が、本体に追いついているか ---
+// ★2026-09-22 に食い違いが4つ見つかった(みゃるの薬・固有技の効果・ガードの軽減量・
+//   連撃系の勇者特性)。どれも「全体か個別か」の取り違えだったので、結論だけを
+//   docs/spec/BATTLE_NEW_MODE_PLAN.md の §4.0 へ1枚にまとめた。
+//   枠ごとのバフを足したのに早見表へ書き忘れると、また同じ取り違えが起きる
+{
+  const plan = fs.readFileSync(path.join(root, 'docs/spec/BATTLE_NEW_MODE_PLAN.md'), 'utf8');
+  check('早見表がある', plan.includes('### 4.0 効き先の早見表')
+    && ['#### ① カードは誰に効くか', '#### ② 次のターンへ残る効果', '#### ③ 勇者特性は誰のものか',
+      '#### ④ ガードの置き方'].every(heading => plan.includes(heading)));
+  // ★本体が書き込んでいる「枠ごとのバフ」の鍵を全部拾い、早見表に載っているかを見る
+  const keys = [...new Set([...source.matchAll(/setTacticsNextSlotBuff\(slotIdx,'([A-Za-z]+)'/g)].map(m => m[1]))];
+  check('枠ごとのバフを本体から拾える', keys.length >= 6, keys.join(','));
+  // ★探すのは §4.0 の中だけ。ほかの節に出てくるだけでは「1枚にまとめた」ことにならない
+  const quickRef = plan.slice(plan.indexOf('### 4.0 効き先の早見表'), plan.indexOf('### 4.1 '));
+  const missing = keys.filter(key => !quickRef.includes(`\`${key}\``));
+  check('枠ごとのバフはすべて早見表に載っている', missing.length === 0, missing.join(',') || 'すべてある');
+}
+
+// --- ㊲ 間合い攻撃は「誰を狙うか」を決めてから、距離を見て威力が決まる ---
+// ★2026-09-22 ユーザー指示「誰に攻撃するかが大事で、それに対して敵がどの距離で
+//   狙われた味方がどの距離かを見るんだよ」。見るのは**敵の距離**と**狙われた子の距離**の2つだけ。
+//   予告した間合い(sweepDist)は「敵がどこから薙ぐか」の見出しであって、当たり外れの材料ではない。
+//   sweepDist で狙い先を探していたころは、その間合いに誰も立っていないと攻撃そのものが起きなかった
+{
+  const board = [api.createTacticsUnit(mon()), null, api.createTacticsUnit(mon({ id: 'Golem' })), null];
+  // 本番と同じ流れ。予告を作る → 狙いを付ける(withTacticsTarget) → 当たり外れを見る
+  const aimed = (dist, units = board) => api.withTacticsTarget(
+    { type: 'ATTACK', variant: 'sweep', sweepDist: dist, value: 120, missValue: 40 }, units, () => 0);
+  const onSpot = (intent, enemyDist, units = board) => api.isTacticsSweepOnSpot(intent, units, enemyDist);
+  const power = (intent, enemyDist, units = board) => api.tacticsSweepIntent(intent, units, enemyDist).value;
+
+  // 零に立っている子を狙い、敵も零 → 距離が同じなので当たり
+  const atZero = aimed(0);
+  check('狙った子と敵が同じ距離なら当たり', atZero.targetSlot === 0
+    && onSpot(atZero, 0) === true && power(atZero, 0) === 120);
+  // 距離撃で敵を中へ動かすと、狙われた子(零)と距離が違う → 外れ
+  check('敵を距離撃でずらしたら外れ', onSpot(atZero, 2) === false && power(atZero, 2) === 40);
+  // ★誰も立っていない間合いを予告しても、狙いは付く。その子の距離と敵の距離は違うので外れ
+  const atEmpty = aimed(1);
+  check('誰も立っていない間合いでも、必ず誰かを狙う', Number.isInteger(atEmpty.targetSlot)
+    && api.tacticsIntentTargets(atEmpty, board, 1).length === 1);
+  check('狙った子と敵の距離が違うので外れ(0にはならない)',
+    onSpot(atEmpty, 1) === false && power(atEmpty, 1) === 40);
+  // 狙い先はそのまま当たる相手になる
+  check('当たる相手は狙った子', api.tacticsIntentTargets(atZero, board, 0).join(',') === '0'
+    && api.tacticsIntentTargets(aimed(2), board, 2).join(',') === '2');
+  // ★倒れた子は「立っていない」。その間合いを予告されても、起きている子が狙われる
+  const downed = api.damageTacticsTargets(board, [0], 9999);
+  const atDowned = aimed(0, downed);
+  check('倒れた子の間合いなら、立っている子が狙われる', atDowned.targetSlot === 2
+    && onSpot(atDowned, 0, downed) === false && power(atDowned, 0, downed) === 40);
+  check('その子の距離まで敵が動けば当たりに戻る', onSpot(atDowned, 2, downed) === true
+    && power(atDowned, 2, downed) === 120);
+  check('全員倒れていれば誰にも当たらない',
+    api.tacticsIntentTargets(aimed(1, [null, null, null, null]), [null, null, null, null], 1).length === 0);
+  // ★狙いが付いていない予告(既存5モード・古い保存)は当たり扱い。ここで振る舞いを変えない
+  check('狙いが付いていなければ今までどおり',
+    api.isTacticsSweepOnSpot({ variant: 'sweep', sweepDist: 0 }, board, 3) === true);
+  check('間合い攻撃以外は素通し',
+    api.isTacticsSweepOnSpot({ variant: 'rush', targetSlot: 0 }, board, 3) === true
+      && api.tacticsSweepIntent({ variant: 'rush', value: 99 }, board, 3).value === 99);
+}
+
+// --- ㊳ 1体が出せる枚数は「ふつう1枚。持っている子だけ1枚ずつ増える」 ---
+// ★2026-09-22 ユーザー指摘「剣士モッチーで攻撃カードが3枚使えたんだけど仕様あってないよね？」。
+//   slotMaxUses が baseCardLimit(＝そのターンに盤面ぜんぶで何枚使えるか)を土台にしていたので、
+//   盤面に👑が2体いると、その合計まで1体に乗って5枚まで使えていた。
+//   決めごとは設計 4.6「ふつう1枚。ハム本人・きき・連携持ちだけ増える」
+{
+  const usesSrc = slice('const slotMaxUses = (mon, slotIdx=null) => {', '\n  };') + '\n  };';
+  // 場面ごとに器を作り直す(外から値を差し替えると const が拾えないため)
+  const makeUses = (over = {}) => {
+    const cfg = Object.assign({ tactics: true, mainHero: null, owners: ['Ham', 'KenshiMocchi'],
+      kiki: 0, baseLimit: 5, cardLimit: 5, coordSlots: [], coordBonus: 0 }, over);
+    const box = { Math, Number, __cfg: cfg };
+    vm.createContext(box);
+    vm.runInContext(
+      'const isTacticsMode=()=>__cfg.tactics; const runMode=null; const mainHero=__cfg.mainHero;'
+        + 'const heroCardBonusOf=(id)=>(__cfg.owners.includes(id)?1:0);'
+        + 'const kikiCardBonus=__cfg.kiki; const baseCardLimit=__cfg.baseLimit; const cardLimit=__cfg.cardLimit;'
+        + 'const soulCoordinationSlots=__cfg.coordSlots; const soulCoordinationCardBonus=__cfg.coordBonus;'
+        + usesSrc.trim() + '\nglobalThis.f=slotMaxUses;', box);
+    return box.f;
+  };
+  // ★盤面に👑が2体(ハム・剣士モッチー)。そのターンの総数は5枚でも、1体は2枚まで
+  const plain = makeUses();
+  check('👑を持つ子は2枚まで', plain({ id: 'KenshiMocchi' }, 0) === 2, String(plain({ id: 'KenshiMocchi' }, 0)));
+  check('持っていない子は1枚まで', plain({ id: 'Pandora' }, 1) === 1, String(plain({ id: 'Pandora' }, 1)));
+  // きき(全体+1)は、どの子も1枚ずつ増える
+  const withKiki = makeUses({ kiki: 1 });
+  check('きき中はどの子も1枚増える', withKiki({ id: 'Pandora' }, 1) === 2
+    && withKiki({ id: 'KenshiMocchi' }, 0) === 3);
+  // 魂格の連携は持っている枠だけ
+  const withCoord = makeUses({ coordSlots: [2], coordBonus: 1 });
+  check('連携は持っている枠だけ増える', withCoord({ id: 'Pandora' }, 2) === 2
+    && withCoord({ id: 'Pandora' }, 1) === 1);
+  // ★そのターンの総数(cardLimit)を超えない
+  const tightTurn = makeUses({ kiki: 1, cardLimit: 2 });
+  check('そのターンの総数を超えない', tightTurn({ id: 'KenshiMocchi' }, 0) === 2);
+  // ★既存5モードは今までどおり(勇者モン本人ときき中はそのターンの総数まで重ねられる)
+  const legacy = makeUses({ tactics: false, mainHero: { id: 'KenshiMocchi' } });
+  check('既存5モードの勇者モンは今までどおり', legacy({ id: 'KenshiMocchi' }, 0) === 5
+    && legacy({ id: 'Pandora' }, 1) === 1);
+}
+
+// --- ㊴ デバッグ入口の途中で debugBattle が解除されても新UI確認を失わない ---
+// タクティクスは現在デバッグのバトルモード入口からだけ起動できるため、
+// BattleScreen 側は tacticsUnits の存在を確認UIの条件にする。
+{
+  const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
+  check('タクティクス戦では2x2確認UIを維持する',
+    battleScreen.includes('const tacticsDebugLayout = Array.isArray(tacticsUnits);')
+      && battleScreen.includes('data-tactics-debug-layout={tacticsDebugLayout?\'2x2\':undefined}'));
+  check('タクティクスのHP/GUTS帯を詰める',
+    battleScreen.includes('flex h-[10px] items-center justify-between leading-none')
+      && battleScreen.includes('h-[2px] overflow-hidden rounded-full bg-black/60'));
+  const appSource = fs.readFileSync(path.join(root, 'monster-hero/src/parts/60-app.jsx'), 'utf8');
+  check('タクティクスのカード詳細は味方枠より上へ出す',
+    appSource.includes("data-tactics-card-detail={isTacticsMode(runMode)?'raised':undefined}")
+      && appSource.includes("top:'max(calc(env(safe-area-inset-top) + 96px),14dvh)'"));
+  check('カード詳細中もタクティクスの敵行動予測を隠さない',
+    battleScreen.includes("focusedCard&&!tacticsDebugLayout?'invisible':'visible'"));
+  check('タクティクス確認UIは細い枠と半透明HUDで表示する',
+    battleScreen.includes("rounded-[18px] border grid grid-cols-[40%_60%]")
+      && battleScreen.includes("bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px]")
+      && battleScreen.includes("tacticsDebugLayout?'rounded-[12px] border':'rounded-xl border-2'"));
+  check('HP/GUTS帯の上枠線を重ねない',
+    battleScreen.includes("w-[60%] min-w-0 border-l flex flex-col justify-end")
+      && !battleScreen.includes("w-[60%] min-w-0 border-l border-t flex flex-col justify-end"));
+  check('タクティクス攻撃モーションでスロット外枠を動かさない',
+    battleScreen.includes("isAnimating&&!tacticsDebugLayout?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}")
+      && battleScreen.includes("data-tactics-attack-content={tacticsDebugLayout?'content-only':undefined}")
+      && battleScreen.includes("isAnimating&&tacticsDebugLayout?{zIndex:9999,animation:attackMotionAnimation(attackAnim)}:undefined"));
+  check('タクティクス操作帯とカードの装飾を統一する',
+    battleScreen.includes("rounded-[10px] border border-blue-300/55 bg-blue-500/10")
+      && battleScreen.includes("tacticsDebugLayout?'rounded-[12px] border':'rounded-xl border-2'")
+      && battleScreen.includes("rounded-[11px] border border-white/[.16] bg-black/20"));
+  check('タクティクス合計予測はバフ帯へ統合する',
+    battleScreen.includes("data-tactics-preview-band={tacticsDebugLayout?'buff-overlay':undefined}")
+      && !battleScreen.includes("absolute left-1/2 -translate-x-1/2 bottom-0 z-[55]"));
+  check('タクティクスGUTS表示を下端から離して欠けを防ぐ',
+    battleScreen.includes("absolute right-0 bottom-[3px] w-[60%]"));
+  check('カード詳細中も合計予測をバフ帯上へ残す',
+    battleScreen.includes("focusedCard&&!tacticsDebugLayout?'invisible':'visible'")
+      && battleScreen.includes("focusedCard&&tacticsDebugLayout?'invisible':'visible'")
+      && battleScreen.includes("absolute left-1/2 top-0 z-[65] w-max max-w-[78%] -translate-x-1/2 -translate-y-full pb-1"));
+  check('タクティクス合計DMGと軽減を縦積みにする',
+    battleScreen.includes("flex ${tacticsDebugLayout?'flex-col':'flex-wrap'} items-center justify-center"));
+  check('選択済みカードの文字を暗くしすぎない',
+    battleScreen.includes("opacity-90 saturate-[0.95]"));
+  check('ドラッグ中も手札カードを残して追従ゴーストを別表示する',
+    battleScreen.includes('data-tactics-drag-card-ghost')
+      && battleScreen.includes('isDragging&&ReactDOM.createPortal')
+      && battleScreen.includes('data-tactics-drag-card-placeholder')
+      && battleScreen.includes("isDragging?{touchAction:'none',position:'fixed'"));
+
+
+}
+
+console.log(failed ? `\nNG ${failed}件` : '\nすべてOK');
+process.exit(failed ? 1 : 0);

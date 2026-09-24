@@ -28,6 +28,7 @@ const _ICON_PATHS = {
   Edit3: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   ArrowLeft: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
   ArrowDownCircle: '<circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/>',
+  ArrowUpCircle: '<circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/>',
   Search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
   Layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
   AlertCircle: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
@@ -61,7 +62,7 @@ const _icon = (name) => (props) => {
     dangerouslySetInnerHTML:{ __html: inner }
   });
 };
-const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronLeft=_icon('ChevronLeft'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag'), Gem=_icon('Gem'), Package=_icon('Package'), Settings=_icon('Settings'), List=_icon('List'), Lock=_icon('Lock');
+const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronLeft=_icon('ChevronLeft'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), ArrowUpCircle=_icon('ArrowUpCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag'), Gem=_icon('Gem'), Package=_icon('Package'), Settings=_icon('Settings'), List=_icon('List'), Lock=_icon('Lock');
 
 
 // --- Helpers ---
@@ -79,12 +80,42 @@ const UPDATE_NOTICE_STYLES = ['FULL', 'MINI', 'OFF'];
 const normalizeUpdateNoticeStyle = (value) =>
   UPDATE_NOTICE_STYLES.includes(String(value)) ? String(value) : 'FULL';
 const UPDATE_NOTICE_STYLE_KEY = 'mh_update_notice_style_v1';
+// 手札のカードのダブルタップとみなす間隔(ミリ秒)。1回目で選び、この間に同じカードを押すと説明を出す
+const CARD_DOUBLE_TAP_MS = 350;
+const BATTLE_SCREEN_STYLES = ['TACTICS_OLD', 'TACTICS_NEW'];
+const normalizeBattleScreenStyle = (value) =>
+  BATTLE_SCREEN_STYLES.includes(String(value)) ? String(value) : 'TACTICS_NEW';
+const BATTLE_SCREEN_STYLE_KEY = 'mh_battle_screen_style_v1';
+const BATTLE_SCREEN_STYLE_LABELS = Object.freeze([
+  { id:'TACTICS_OLD', label:'タクティクス旧', note:'従来のタクティクス表示' },
+  { id:'TACTICS_NEW', label:'タクティクス新', note:'2×2の新しい表示' },
+]);
+// バトルの見た目の設定(2026-09-24 ユーザー指示「バトル設定を作って。タクティクスの旧画面とかあるし何項目か」)。
+// 見た目だけに効き、戦闘の計算・進行・ランキングには触れない。保存は新しいキー1つに項目をまとめる。
+// ★読むときは必ず normalizeBattleFxSettings を通す。項目を足しても、足す前に保存した人は既定値で補われる
+const BATTLE_FX_SETTINGS_KEY = 'mh_battle_fx_v1';
+const normalizeBattleFxSettings = (value) => {
+  const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    idleMotion: v.idleMotion === 'OFF' ? 'OFF' : 'ON',
+    shake: v.shake === 'OFF' ? 'OFF' : 'ON',
+  };
+};
+// 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
+const BATTLE_FX_SETTING_ITEMS = Object.freeze([
+  { key:'idleMotion', title:'待機中の動き',
+    desc:'待っているあいだのモンスターの動き（翼の羽ばたき・しっぽや花の揺れなど）と、タクティクス新画面の枠の飾り・敵の待機の動き、WAVEのあとの画面の飾りの動きです。攻撃の演出はどちらでも出ます。',
+    options:[{ id:'ON', label:'動かす', note:'いつもの見た目' }, { id:'OFF', label:'止める', note:'画面が軽くなる' }] },
+  { key:'shake', title:'画面の揺れ',
+    desc:'会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
+    options:[{ id:'ON', label:'揺らす', note:'いつもの見た目' }, { id:'OFF', label:'揺らさない', note:'酔いやすい人向け' }] },
+]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'FULL', label: 'ふつう', note: '横いっぱいに出す' },
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-17 00:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 17:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -115,6 +146,32 @@ const BATTLE_MODE_QUICK = 'quick';
 // 種族チャレンジはデバッグのバトルモード入口だけに合流させる。
 // 通常プレイの公開配列には含めず、固定計画2/4では結果も保存しない。
 const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';
+// 敵が技を持ち、1ターン前の予告を読んで受け方を決めるモード。
+// 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md
+//
+// ★idは保存キー(mh_tactics_*)と全国ランキング(Tactics<難易度>)へ焼き付くので、公開後に変えない。
+//   画面に出す名前はまだ決まっていないため label は仮のまま置く
+//   (idと表示名は一致していなくてよい。プロ=pro のように揃っているのは結果であって決まりではない)。
+// ★BATTLE_MODES へは入れない。極限チャレンジ・種族チャレンジと同じく外に置き、
+//   モード選択の一覧で公開フラグ付きに合流させる
+//   (既存3モードの「同じ見出しを同じ順で並べる」検査と、公開配列の作り方を壊さないため)。
+const BATTLE_MODE_TACTICS = 'tactics';
+// タクティクスバトルの中のモード。クラシックバトルの「チャレンジ／種族チャレンジ／プロ」と
+// 同じ並びを、盤面がタクティクスの側にも用意する(2026-09-20 ユーザー指示
+// 「通常/極限、種族とかはどっちのモードにもあるように」)。
+// ★idはどちらも保存キーとランキングへ焼き付く。公開後に変えない
+//   tacticsSpecies … mh_tactics_species_challenge_progress_v1 / TacticsSpecies-<血統>-<難易度>
+//   tacticsPro     … mh_tactics_pro_*                          / TacticsPro<難易度>
+const BATTLE_MODE_TACTICS_SPECIES = 'tacticsSpecies';
+const BATTLE_MODE_TACTICS_PRO = 'tacticsPro';
+// 盤面が「1体ずつライフを持つ」側のモード。バトルの中身の分岐(isTacticsMode)はこの3つ共通
+const TACTICS_BATTLE_MODES = Object.freeze([
+  BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_SPECIES, BATTLE_MODE_TACTICS_PRO,
+]);
+// 難易度ごとの自己ベスト・クリア回数・最高到達WAVEを持つモード。
+// 種族チャレンジは「種族×難易度」で持つので、ここには入れない
+const TACTICS_SCORE_MODES = Object.freeze([BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_PRO]);
+const EMPTY_TACTICS_RECORD = Object.freeze({ hs: Object.freeze({}), clears: Object.freeze({}), waves: Object.freeze({}) });
 // 種族チャレンジを一般公開するかどうかの1つのスイッチ。
 // false のあいだは
 //   ・通常プレイのBATTLE MODEへ出さない(デバッグのバトルモード入口からだけ見える)
@@ -124,6 +181,37 @@ const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';
 // 2026年8月にユーザーの指示で公開した。実装側から勝手に false へ戻さない
 // (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
 const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;
+// 新モードを一般公開するかどうかの1つのスイッチ。種族チャレンジとまったく同じ作り。
+// false のあいだは
+//   ・モード選択へ出さない(デバッグのバトルモード入口からだけ見える)
+//   ・クリアしても全国ランキングへ送らない
+// 画面に出す名前が決まり、敵の行動と供モン加入の調整が入ってから true にする。
+// 一度 true にしたあとは、実装側から勝手に false へ戻さない
+// (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
+const TACTICS_MODE_PUBLIC_RELEASE = false;
+// タクティクスバトルの公開は2段階。β版では**タクティクスプロだけ**遊べるようにする
+// (2026-09-20 ユーザー指示「公開の前にβ版としてプロモードだけ出来るようにして」)。
+// true のあいだは
+//   ・モンヒロバトルの入口にタクティクスバトルが出る(「β版」と分かるように出す)
+//   ・中に3つのカードが並び、遊べるのはタクティクスプロだけ。ほかの2つは「準備中」
+//   ・タクティクスプロのスコアは**β版専用の行**(TacticsProBeta<難易度>)へ送る
+// 本公開(TACTICS_MODE_PUBLIC_RELEASE)を立てると、3モードすべてが遊べるようになり、
+// ランキングも TacticsPro<難易度> へ切り替わるので、本番の順位は空から始まる。
+// ★β版の行は消さない。モンヒロビートの週間ランキングが週IDで区切るのと同じ考え方で、
+//   キーを変えるだけにしておく(消す作業はSupabaseの管理接続が要るうえ、戻せない)。
+// 一度 true にしたあとは、実装側から勝手に false へ戻さない
+// (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
+const TACTICS_BETA_PRO_RELEASE = true;
+// イベント回想の出し分け。公開前の機能の会話は、一覧にも出さない
+// (モードが見えていないのに会話だけ並ぶと、何の話か分からないうえに中身が見えてしまう)。
+// EVENT_REPLAYS(data/assistants.js)は releaseFlag という「呼び名」しか持たないので、
+// その名前→公開しているか の対応をここで持つ。イベントを増やすときはここへ1行足す
+const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
+  tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
+});
+const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
+// 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
+const eventReplayList = () => ((typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS) || []).filter(eventReplayReleased);
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -154,6 +242,89 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
     ['⏩','スキップチケット','使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'],
     ['🔁','AUTO','AUTOでの自動戦闘は使えます。ただしクリア後にそのまま次の周へ入る「AUTO∞」は使えません。挑むたびに種族・難易度・編成を選び直すモードのためです。'],
     ['🎯','こんな人におすすめ','特定の種族を集中して育てている人、いつもの編成とは違う制限つきの戦いを試したい人、種族ごとにやり込みたい人向けです。'],
+  ],
+});
+// 新モードの表示情報。見出しの並びは既存3モード(BATTLE_MODES)とそろえてある。
+// ★2026-09-20 にユーザーが名前を決めた。仕組みが「タクティクスバトル」で、その中の
+//   ふつうのモードがこれ。クラシックバトル側の「チャレンジモード」と同じ位置づけだが、
+//   ランキングや記録で並んだときに見分けが付くよう「タクティクスチャレンジ」にしてある。
+// ★本文は公開時にそのまま出るプレイヤー向けの文にする。開発の進み具合はここへ書かない。
+// ★cardLabel … モード選択のカードに出す短い名前(無ければ label)。
+//   入口(BATTLE_SYSTEM_SELECT)で「タクティクスバトル」を選んでいるので、その中のカードで
+//   「タクティクス〜」と繰り返すと名前が長くなり、カードの中(内幅約176px)で2行に折り返す。
+//   label は正式名称のまま残し(記録の一覧・ランキング・説明の見出しはこちらを使う)、
+//   カードの見出しだけクラシック側と同じ短い名前にそろえる(2026-09-21 ユーザー指摘)。
+const TACTICS_MODE = Object.freeze({
+  id:BATTLE_MODE_TACTICS, label:'タクティクスチャレンジ', cardLabel:'チャレンジモード', short:'タクティクス', emoji:'🎯', color:'#fb923c',
+  // ★売りの3行は、同じ仕組みの中の3モードを**見比べる**ためのもの。
+  //   「敵が技を使い分ける」「予告を読んで受ける」はタクティクスの3モードすべてにあるので、
+  //   ここには書かない(仕組みの入口カードと「詳しいルール」の担当)。
+  //   クラシック側と同じ ①遊び方 ②もらえるもの ③記録 の順でそろえる(2026-09-21 ユーザー指摘)。
+  tagline:'強化を選んでじっくり攻略する、基本のモード',
+  highlights:[
+    ['🏆','強化を選んでスコアを伸ばす王道'],
+    ['💎','経験値・ダイヤは難易度どおり'],
+    ['📊','このモード専用のスコアランキング'],
+  ],
+  points:[
+    ['⚔️','編成','ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'],
+    ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
+    ['📈','WAVEのあいだの強化','クラシックバトルのチャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。敵がどんな技を使ってくるかを見てから、どこを伸ばすかを決められます。'],
+    ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は通常攻撃と必殺技だけでなく、間合い攻撃・連撃・貫通撃・攻撃力アップなど、それぞれ違う技を使ってきます。どの技が来るかは1ターン前に予告されるので、ガードで受けるか、間合いを変えるか、動きを止めるかをその場で選びます。'],
+    ['💎','もらえる経験値とダイヤ','ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'],
+    ['🏆','スコアと記録','スコアはこのモード専用の全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'],
+    ['🤝','供モンの加入','決まったWAVEで供モンが加わります。ただしタクティクスバトルでは、供モンが加わるとそのぶん敵も強くなります。強く育てた子を連れていくほど敵も手ごわくなるので、少ない人数のまま進むという選び方もできます。'],
+    ['⭐','マスモン登録','勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'],
+    ['⏩','スキップチケット','使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'],
+    ['🎯','こんな人におすすめ','育成の数字だけでなく、その場の判断で勝ちたい人、いつもの押し切りが通じない戦いを試したい人向けです。'],
+  ],
+});
+// タクティクスバトルの種族チャレンジ。しばりの中身はクラシックの種族チャレンジと同じで、
+// 違うのは盤面が「1体ずつライフを持つ」ことと、記録・ランキングが別枠になることだけ。
+const TACTICS_SPECIES_MODE = Object.freeze({
+  id:BATTLE_MODE_TACTICS_SPECIES, label:'タクティクス種族チャレンジ', cardLabel:'種族チャレンジ', short:'種族', emoji:'🧬', color:'#67e8f9',
+  // ★「敵の予告を読んで誰を守るか」はタクティクスの3モードすべてにあるので売りに書かない。
+  //   クラシックの種族チャレンジと同じ3行にそろえる(見比べる列をそろえるため)
+  tagline:'ひとつの種族だけで挑む、しばりプレイのモード',
+  highlights:[
+    ['🧬','ひとつの種族だけでWAVE1〜10'],
+    ['🔓','種族ごとに難易度を解放していく'],
+    ['🏅','記録は種族ごとに別々に残る'],
+  ],
+  points:[
+    ['🧬','どんなモード','挑む前に種族をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。クラシックバトルの種族チャレンジと同じしばりで、戦い方だけがタクティクスバトルになります。'],
+    ['⚔️','編成','勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。同じモンスターは1体までですが、同じ種族の別のモンスターなら一緒に連れていけます。'],
+    ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
+    ['🤝','供モンの加入','事前に選んだ供モンは、WAVE2・4・6をクリアしたときに1体ずつ加わります。加わるとそのぶん敵も強くなります。'],
+    ['👹','難しさ','難易度は14段階です。最初の5段階は最初から挑めます。その先は、同じ種族で1つ前の難易度をクリアすると順に解放されます。'],
+    ['💎','もらえるもの','経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'],
+    ['🏅','記録','自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。クラシックバトルの種族チャレンジの記録は書き換わりません。'],
+    ['⭐','マスモン登録','勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'],
+    ['⏩','スキップチケット','使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'],
+    ['🎯','こんな人におすすめ','特定の種族を育てている人で、押し切りではなく読み合いで勝ちたい人向けです。'],
+  ],
+});
+// タクティクスバトルのプロモード。制約(ベースモンだけ)と倍率はクラシックのプロと同じで、
+// 戦い方と記録の置き場だけが違う。
+const TACTICS_PRO_MODE = Object.freeze({
+  id:BATTLE_MODE_TACTICS_PRO, label:'タクティクスプロ', cardLabel:'プロモード', short:'プロ', emoji:'🎓', color:'#f472b6',
+  tagline:'ベースモンだけで挑む、育成に頼れない特殊モード',
+  highlights:[
+    ['🔥','育てたマスモンなしで挑む実力勝負'],
+    ['💎','絆経験値3倍・ブリーダー経験値1.5倍'],
+    ['📊','このモード専用のスコアランキング'],
+  ],
+  points:[
+    ['⚔️','編成','育てたマスモンは1体も連れていけません。全員が素のベースモンです。積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'],
+    ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れた子はその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
+    ['📈','WAVEのあいだの強化','WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、誰をどこまで伸ばすかの判断がそのまま結果に出ます。'],
+    ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は間合い攻撃・連撃・貫通撃・攻撃力アップなどを使い分け、どの技が来るかは1ターン前に予告されます。育てた個体に頼れないぶん、読み合いの比重がいちばん大きいモードです。'],
+    ['💎','もらえる経験値とダイヤ','絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりです。'],
+    ['🏆','スコアと記録','スコアはこのモード専用の全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'],
+    ['🤝','供モンの加入','始める前に供モンの候補を5体選びます。実際に加入候補として出るのは、その5体からランダムに選ばれた3体です。加わるとそのぶん敵も強くなります。'],
+    ['⭐','マスモン登録','勇者モンにしたベースモンは、プレイが終わったあとマスモンとして登録できます。'],
+    ['⏩','スキップチケット','使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'],
+    ['🎯','こんな人におすすめ','育成の力を借りずに、その場の判断だけで勝ちたい人向けです。'],
   ],
 });
 // プロモード: ベースモンだけで挑み、新しいマスモンを育てる価値を高めたモード。
@@ -196,10 +367,17 @@ const resolveQuickGrowthStats = ({hp, atk, def, guts}, growthRate=QUICK_GROWTH_M
   def: Math.floor((Number(def)||0)*(1+growthRate)), guts: Math.floor((Number(guts)||0)*(1+growthRate)),
 });
 const isQuickMode = (mode) => normalizeBattleMode(mode) === BATTLE_MODE_QUICK;
-const isProMode = (mode) => normalizeBattleMode(mode) === BATTLE_MODE_PRO;
+// ★タクティクスプロも「ベースモンだけで挑む」モードなので、編成・倍率・記録の分かれ方は
+//   プロとまったく同じ扱いにする。normalizeBattleMode は tacticsPro を知らない(チャレンジへ落ちる)
+//   ので、idそのものを先に見る
+const isProMode = (mode) => mode === BATTLE_MODE_TACTICS_PRO || normalizeBattleMode(mode) === BATTLE_MODE_PRO;
 // 種族チャレンジは normalizeBattleMode の対象外(未知の値はチャレンジへ落ちる)なので、
 // idそのものを見る。BGMのようにモードごとに分かれる設定はここを通す
-const isSpeciesChallengeMode = (mode) => mode === BATTLE_MODE_SPECIES_CHALLENGE;
+const isSpeciesChallengeMode = (mode) => mode === BATTLE_MODE_SPECIES_CHALLENGE
+  || mode === BATTLE_MODE_TACTICS_SPECIES;
+// 新モードも normalizeBattleMode の対象外(未知の値はチャレンジへ落ちる)なので、idそのものを見る。
+// ここを normalizeBattleMode 経由にすると、記録の置き場がチャレンジと同じ mh_ になってしまう
+const isTacticsMode = (mode) => TACTICS_BATTLE_MODES.includes(mode);
 // クイックの報酬方針は画面内だけで選び、保存データには増やさない。
 // 周回開始時の選択をrefへ固定するため、途中の画面遷移や他モードへ影響しない。
 const QUICK_REWARD_POLICY_GROWTH = 'growth';
@@ -240,7 +418,11 @@ const bondXpForWavesClearedInMode = (wavesCleared, mult, mode) => {
 // 自己ベスト・最高到達WAVE・クリア回数の保存キー。チャレンジは従来のキーをそのまま使い、
 // クイックは別のキーへ保存して、チャレンジの記録を上書きしないようにする
 // プロは mh_pro_* へ分ける。チャレンジ(mh_*)・クイック(mh_quick_*)のキーには一切触らない
-const modeKeyPrefix = (mode) => isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
+// 新モードは mh_tactics_* へ分ける。チャレンジ(mh_*)・クイック(mh_quick_*)・プロ(mh_pro_*)の
+// キーには一切触らない。id と同じく、公開後はこの接頭辞も変えない
+const modeKeyPrefix = (mode) => mode === BATTLE_MODE_TACTICS_PRO ? 'mh_tactics_pro_'
+  : isTacticsMode(mode) ? 'mh_tactics_'
+  : isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
 const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
 const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
@@ -336,6 +518,34 @@ const isAutoQuickRunDifficultyAllowed = (difficulty, quickClears) =>
 //   0へ直した(2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるように
 //   なるから失敗は0にして」)。周回クリア扱いにするのは、ちゃんと弾ききったときだけ。
 // ★クリアかどうかを渡さない古い呼び出し(undefined)は、これまでどおり全額入る。
+// ===== プロモードを遊んだぶんを、クイック周回の報酬にする =====
+// (2026-09-21・ユーザー提案「プロモードをクリアしたときに限り、クイック何周分の報酬が
+//  もらえるなら可能？ 演奏と同じ仕組み」)。
+//
+// ★バトルを2つ動かすのではない。プロのランが終わったときに「クイック何周ぶんか」を
+//   数えて、その報酬だけを配る。モンヒロビートの演奏とまったく同じ立て付けで、
+//   スコアもランキングも1ポイントも動かさない。
+// ★決め方は「進んだWAVE数」と「プロの難易度の重さ(DIFFICULTY_SETTINGS の power)」。
+//   演奏は曲の長さで決めるが、プロは難易度で1回の重さがまるで違うため
+//   (2026-09-21・ユーザー選択「難易度とWAVE数で決める」)。
+// ★負けても、クリアしたWAVEの段階まで入る(同・ユーザー選択)。
+//   1WAVEも越えられなかったときだけ0。
+//
+//   周回数 = 切り捨て( 進んだWAVE数 ÷ 10 × 難易度のpower × 係数 )   ※1WAVE以上なら最低1周
+//
+//   係数5のとき(10WAVE完走): Normal 5周 / Expert 15周 / Master 25周 / Legend 50周
+const PRO_RUN_QUICK_LOOP_SCALE = 5;
+const PRO_RUN_QUICK_LOOP_MIN = 1;
+const proRunQuickLoops = (wavesCleared, difficultyPower, scale = PRO_RUN_QUICK_LOOP_SCALE) => {
+  const waves = Math.max(0, Math.trunc(Number(wavesCleared) || 0));
+  if (waves <= 0) return 0;
+  const power = Number(difficultyPower);
+  if (!Number.isFinite(power) || power <= 0) return 0;
+  const mult = Number(scale);
+  const safeScale = Number.isFinite(mult) && mult > 0 ? mult : PRO_RUN_QUICK_LOOP_SCALE;
+  return Math.max(PRO_RUN_QUICK_LOOP_MIN, Math.floor((waves / 10) * power * safeScale));
+};
+
 const rhythmPlayRunLoopsForResult = (loops, cleared) => {
   const base = Math.max(0, Math.trunc(Number(loops) || 0));
   if (base <= 0) return 0;
@@ -423,11 +633,162 @@ const BATTLE_MODES = [
     ],
   },
 ];
+// ===== バトルの仕組み(モード選択の1つ上) =====
+// 2026-09-20 ユーザー指示「モンヒロバトルに入ったらすぐモード選択ページにいかずに、
+// チャレンジモードと新バトルモードとクイックモードを選べるようにして、そこの中で各種モードがあるように」。
+// ★ここで選ぶものは**保存しない**(画面を分けるためだけの値)。記録もランキングも今までどおり
+//   モードのid(mh_hs_* / mh_tactics_* など)で分かれるので、保存キーは1つも増えない。
+//   難易度選択の「通常/極限」タブ(difficultySelectTab)と同じ扱い
+// ★名前は2026-09-20にユーザーが決めた(クラシックバトル / タクティクスバトル)。
+//   idと保存キーは変えないので、名前だけあとから差し替えられる
+const BATTLE_SYSTEM_CLASSIC = 'systemClassic';
+const BATTLE_SYSTEM_TACTICS = 'systemTactics';
+const BATTLE_SYSTEM_QUICK = 'systemQuick';
+// ★書き方の決めごと(2026-09-20 ユーザー指摘で整理)。
+//   クラシック   … 「いままでの通常のバトル」なので、**このゲームのバトルの基本**を書く
+//   タクティクス … その基本から**変わったところだけ**を書く(基本の説明を繰り返さない)
+//   クイック     … 基本から強化フェーズを外したぶん、何が得かを書く
+// ★ほかのバトルにもあることを売りにしない。
+//   「敵の行動が1ターン前に予告される」「解析で確率が見られる」は**どのバトルにもある**ので、
+//   クラシック側(＝基本)に書く。タクティクス側は「誰を狙うかまで出る」が変わったところ。
+// ★違いは「ライフ」ではなく「ステータス」で書く(2026-09-21 ユーザー指摘)。
+//   合算か1体ずつかが分かれるのはライフだけではない。ちから・丈夫さ・ガッツも同じで、
+//   供モンが合算されずに自分の値のまま加わることが、タクティクス側の作り直しの中心
+//   (仕様 4.1「合流した供モンは、合算されず自分の値のまま盤面に加わる」)。
+// ★「育てた数字より読みで勝てる」とは書かない。プロ以外はどのバトルでも育成の力が要る
+//   (タクティクスは基本の上に読み合いが**足された**もので、育成が要らなくなるわけではない)。
+// ★持っているときだけの話(スキップチケット)や、仕様の言い換えだけの行も置かない。
+// ★points は「詳しいルール」で開く本文。モードの説明モーダルと同じ形なので、
+//   画面はモードと仕組みを区別せずに出せる(battleInfoById)。
+const BATTLE_SYSTEMS = Object.freeze([
+  Object.freeze({
+    id: BATTLE_SYSTEM_CLASSIC, label: 'クラシックバトル', short: 'クラシック', emoji: '⚔️', color: '#818cf8',
+    tagline: 'モンヒロバトルの基本。育てたモンスターで10WAVEに挑む',
+    highlights: Object.freeze([
+      Object.freeze(['🛡️', 'ステータスは全員ぶんの合計']),
+      Object.freeze(['🃏', 'カードと間合いを選んで戦う']),
+      Object.freeze(['📈', 'WAVEごとに強化を選んで積み上げる']),
+    ]),
+    note: 'チャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
+    points: Object.freeze([
+      Object.freeze(['🛡️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツは、パーティ全員ぶんを合わせた1組です。供モンが加わるとその子のぶんが足されて、パーティがまとめて強くなります。ライフも1本なので、誰が狙われても同じライフが減り、0になったら負けです。']),
+      Object.freeze(['🃏', 'カードと間合い', '手札のカードをガッツで払って使います。攻撃・ガード・回復・間合いの移動などがあり、モンスターには間合いごとの得意・不得意（間合い適性）があります。']),
+      Object.freeze(['🔮', '敵の予告', '敵が次のターンに何をするかは、そのターンのうちに予告されます。「解析」を押すと、それぞれの行動が選ばれる確率と威力まで確かめられます。受けるか、攻めるか、間合いを変えるかをここで決めます。']),
+      Object.freeze(['✨', '勇者特性', '勇者モンにした子の特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']),
+      Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']),
+      Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度えらびの「極限」タブから挑め、段ごとに特殊ルールが付きます。']),
+      Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']),
+      Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']),
+      Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。']),
+    ]),
+    modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO]),
+  }),
+  Object.freeze({
+    id: BATTLE_SYSTEM_TACTICS, label: 'タクティクスバトル', short: 'タクティクス', emoji: '🎯', color: '#fb923c',
+    tagline: '基本のルールに、誰を守るかの読み合いを足したバトル',
+    highlights: Object.freeze([
+      Object.freeze(['❤️', 'ステータスは1体ずつ別々']),
+      Object.freeze(['🎯', '敵の予告に「誰を狙うか」まで出る']),
+      Object.freeze(['✨', '連れてきた全員の勇者特性が効く']),
+    ]),
+    note: 'タクティクスチャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
+    points: Object.freeze([
+      Object.freeze(['❤️', 'ステータスの持ち方', '基本のバトルは全員ぶんを合わせた1組ですが、こちらはライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます。供モンが加わっても合算されず、自分の値のまま並びます。攻撃はその子のちから、受けるダメージはその子の丈夫さで決まり、狙われた子だけが減ります。倒れた子はその場では戦えなくなり、全員が倒れたときだけ負けです。']),
+      Object.freeze(['🎯', '敵の狙い', '敵の予告に「誰を狙うか」まで出ます。基本のバトルはライフが1本なので狙いという考え方がありませんが、こちらは1体ずつ持つので、誰が受けるかで結果が変わります。']),
+      Object.freeze(['🌀', '敵の技が増える', '間合い攻撃・連撃・貫通撃・攻撃力アップなど、基本のバトルには無い技を使い分けます。ガードが効かない技もあるので、予告を見てから受け方を決めます。']),
+      Object.freeze(['✨', '勇者特性は持っている子のもの', '基本のバトルは勇者モンの特性だけが効きますが、こちらは連れてきた供モンの勇者特性も、それぞれの子に効きます（効き目は勇者モンと同じ）。ライガーの「俊足」ならライガーが狙われたときに避け、ゴーレムの「怪力」ならゴーレムが攻撃したときに乗ります。供モンを選ぶ意味が「ステータスの足し算」から「どの特性を連れていくか」に変わります。']),
+      Object.freeze(['🃏', 'カードを使う子を選ぶ', 'カードは「誰が使うか」を選んでから出します。ガッツもその子のぶんから払うので、1体に任せきりにはできません。']),
+      Object.freeze(['🤝', '供モンの加入', '供モンが加わると、そのぶん敵も強くなります。強く育てた子を連れていくほど手ごわくなるので、少ない人数のまま進むという選び方もできます。']),
+      Object.freeze(['🎮', '中にあるモード', 'タクティクスチャレンジ（基本）、種族チャレンジ、プロの3つです。難易度は通常と極限から選べます。']),
+      Object.freeze(['🏆', 'スコアと記録', 'クラシックバトルとは別の全国ランキングに載ります。クラシックバトルの記録は書き換わりません。']),
+      Object.freeze(['💪', '育成はここでも効く', '編成・カード・間合い・強化フェーズは基本のバトルと同じで、育てた強さはそのまま効きます。そのうえに「誰が受けるか」の判断が足される、という関係です。']),
+      Object.freeze(['🎯', 'こんな人におすすめ', '基本のバトルに慣れて、もう一段の読み合いがほしい人向けです。同じ編成でも、受け方の判断で結果が変わります。']),
+    ]),
+    modes: Object.freeze([BATTLE_MODE_TACTICS, BATTLE_MODE_TACTICS_SPECIES, BATTLE_MODE_TACTICS_PRO]),
+  }),
+  Object.freeze({
+    id: BATTLE_SYSTEM_QUICK, label: 'クイックモード', short: 'クイック', emoji: '⚡', color: '#fbbf24',
+    tagline: '短い時間でモンスターを育てる、周回向けのバトル',
+    highlights: Object.freeze([
+      Object.freeze(['💎', '経験値・ダイヤが1.5倍もらえる']),
+      Object.freeze(['⚡', '強化を選ばないから1周が速い']),
+      Object.freeze(['🔁', 'AUTO∞で放置したまま何周でも']),
+    ]),
+    note: '中のモードは1つだけなので、選ぶとそのまま難易度えらびへ進みます',
+    points: Object.freeze([
+      Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。']),
+      Object.freeze(['📈', '強化のかわり', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員のライフ・ちから・丈夫さ・ガッツがそのときの値から10%上がり、ライフとガッツが満タンまで回復します。']),
+      Object.freeze(['🔁', '放置で周回する', 'AUTO∞を使うと、10WAVEをクリアしたあとそのまま次の周へ入ります。置いておくだけで育つので、育成の周回と相性がいい遊び方です。']),
+      Object.freeze(['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。']),
+      Object.freeze(['🎁', '報酬の方針を選べる', '難易度えらびで「育成／プシュケー優先／ダイヤ優先」を選べます。いま欲しいものに合わせて、もらえるものの内訳を変えられます。']),
+      Object.freeze(['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、ほかのモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。']),
+      Object.freeze(['🎯', 'こんな人におすすめ', '新しい子を早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。']),
+    ]),
+    modes: Object.freeze([BATTLE_MODE_QUICK]),
+    direct: true,
+  }),
+]);
+// そのモードがどの仕組みに属するか。見つからなければ「これまでのバトル」に寄せる
+const battleSystemOf = (modeId) => BATTLE_SYSTEMS.find(s => s.modes.includes(modeId)) || BATTLE_SYSTEMS[0];
+// そのモードをいま遊べるか。公開フラグの見方はここ1か所にまとめる
+// (画面・ランキング・検査がばらばらにフラグを見ると、片方だけ出し忘れる)
+const battleModePlayable = (id, { debugBattle = false } = {}) => {
+  if (debugBattle) return true;
+  if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE;
+  // ★β版はタクティクスプロだけ遊べる(2026-09-20 ユーザー指示)
+  if (id === BATTLE_MODE_TACTICS_PRO) return TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE;
+  if (isTacticsMode(id)) return TACTICS_MODE_PUBLIC_RELEASE;
+  return true;
+};
+// まだ遊べないが、カードだけは並べるモード。β版のタクティクスバトルの中だけで起きる
+// (ユーザー指示「3つ並べてプロ以外は準備中」)。デバッグからは今までどおり全部遊べる
+const battleModeComingSoon = (id, { debugBattle = false } = {}) => !debugBattle
+  && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE
+  && isTacticsMode(id) && !battleModePlayable(id, { debugBattle });
+// 仕組みの中で実際に画面へ並べるモード。遊べないものは落とすが、
+// 「準備中」として見せるものだけは残す
+const battleSystemModes = (systemId, { debugBattle = false } = {}) => {
+  const system = BATTLE_SYSTEMS.find(s => s.id === systemId) || BATTLE_SYSTEMS[0];
+  return system.modes.filter(id => battleModePlayable(id, { debugBattle })
+    || battleModeComingSoon(id, { debugBattle }));
+};
+// まだ遊べないが、枠だけは見せる仕組み(2026-09-20 ユーザー指示
+// 「準備中の新モードもクイックの上に入れて」)。モンヒロビートの「準備中」と同じ作りで、
+// 公開フラグが立つまでは押せないカードを出す。デバッグからは今までどおり遊べる。
+// ★β版が立つと中のプロが遊べるので、仕組みそのものは「準備中」ではなくなる
+const battleSystemComingSoon = (systemId, { debugBattle = false } = {}) =>
+  systemId === BATTLE_SYSTEM_TACTICS && !TACTICS_MODE_PUBLIC_RELEASE
+    && !TACTICS_BETA_PRO_RELEASE && !debugBattle;
+// β版で開いている仕組み。中のモードが全部そろっていないことを入口で伝えるために使う
+const battleSystemBeta = (systemId, { debugBattle = false } = {}) => !debugBattle
+  && systemId === BATTLE_SYSTEM_TACTICS && TACTICS_BETA_PRO_RELEASE && !TACTICS_MODE_PUBLIC_RELEASE;
+// タクティクス専用の EXスキル(設計: docs/spec/TACTICS_EX_SKILLS.md)を、プレイヤーへ出すかどうか。
+// false のあいだは**デバッグのバトル(バトルモード入口)でだけ**距離枠から開ける。
+// 2026-09-23 ユーザー指示「β版だし公開していいよ」で、お試しとして公開した
+// (モノリス・ゴーレム・剣士モッチーの3体。不具合や変更があることを前提にしたβの公開)。
+// ★タクティクスの公開フラグ(TACTICS_BETA_PRO_RELEASE ほか)とは別のスイッチ。あちらは触らない
+const TACTICS_EX_SKILLS_RELEASE = true;
+// EXスキルをいま出してよいか。見るのはここ1か所だけ(画面も本体も検査もここを通す)。
+// ★タクティクス以外のモードでは、フラグやデバッグに関係なく必ず false
+// ★練習(バトルのれんしゅう)では出さない。台本どおりに進める場面なので、別の操作を増やさない
+const tacticsExSkillsEnabled = (mode, { debugBattle = false, tutorial = false } = {}) =>
+  isTacticsMode(mode) && !tutorial && (TACTICS_EX_SKILLS_RELEASE || debugBattle === true);
+// 画面へ並べる仕組み。中に出せるモードが1つも無いものは、準備中の枠としてだけ出す
+const visibleBattleSystems = ({ debugBattle = false } = {}) =>
+  BATTLE_SYSTEMS.filter(s => battleSystemModes(s.id, { debugBattle }).length > 0
+    || battleSystemComingSoon(s.id, { debugBattle }));
+// 「詳しいルール」で開くもの。仕組み(BATTLE_SYSTEMS)とモード(BATTLE_MODES など)を
+// 同じ入口から引く。どちらも {emoji,label,color,tagline,points} を持っているので、
+// 説明の画面はモードと仕組みを区別しなくてよい
+const battleInfoById = (id) => BATTLE_SYSTEMS.find(s => s.id === id) || battleModeInfo(id);
 // 極限チャレンジは通常の3モードとは別に持っているので、説明・ランキング画面から引けるようにここで合流させる
 // (EXTREME_MODE はこの下で定義するため、呼ばれた時点で参照する)
 const battleModeInfo = (mode) => {
   if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) return EXTREME_MODE;
   if (mode === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_MODE;
+  if (mode === BATTLE_MODE_TACTICS) return TACTICS_MODE;
+  if (mode === BATTLE_MODE_TACTICS_SPECIES) return TACTICS_SPECIES_MODE;
+  if (mode === BATTLE_MODE_TACTICS_PRO) return TACTICS_PRO_MODE;
   return BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
 };
 // 本番のバトル画面へ出すモード。いまは3モードすべてを公開している。
@@ -437,13 +798,21 @@ const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 // スコアランキングがあるモードかどうか。クイックだけ対象外
 // 種族チャレンジは一般公開するまで全国ランキングへ送らない。
 // デバッグの実戦から外部ランキングを汚さないための入口はここ1か所にまとめてある
+// 新モードも、公開するまでは全国ランキングへ送らない(デバッグから遊べるため、ここで止める)
+// ★タクティクス側は battleModePlayable がフラグを1か所で見る。
+//   β版ではタクティクスプロだけが true になり、送り先もβ版専用の行になる
 const modeHasRanking = (mode) => !isQuickMode(mode)
-  && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE);
+  && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE)
+  && (!isTacticsMode(mode) || battleModePlayable(mode));
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
 const modeBondAction = (mode) => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';
 // そのモードの画面で助手(みゅあ)に話させる場面。セリフは data/assistants.js にある
 const battleModeAssistantScene = (mode) => mode === EXTREME_MODE.id ? 'extremeChallenge' : isQuickMode(mode) ? 'battleQuick' : isProMode(mode) ? 'battlePro' : 'battleChallenge';
+// クラシックバトルの種族チャレンジか(タクティクス側は別のidを持つ)。
+// 「種族を選ぶ画面」「種族ごとの記録」はどちらのモードでも同じ入口を通すので、
+// 見分けが要るのは記録の置き場とランキングのキーだけ
+const isClassicSpeciesChallengeMode = (mode) => mode === BATTLE_MODE_SPECIES_CHALLENGE;
 // ラン中に供モンが合流するとき、画面へ出す候補を作る。
 // 「すでに編成にいる子」と「勇者モン」は必ず外す。勇者モンは編成にいるので普通は
 // activeIds で外れるが、そこに頼ると取りこぼしたときに自分自身が候補として出てしまうため、

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// AUTO∞の自動限界突破で、どの個体を選ぶかの判定。
 'use strict';
 
 const assert = require('assert');

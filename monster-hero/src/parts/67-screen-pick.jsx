@@ -147,23 +147,36 @@ function PickHeroAllyScreen({
   allyJoinPreview, atk, battleTutorial, battleTutorialSpotClass, currentPickingMon,
   debugHeroMonsterList, def, difficulty, distTotalBonus, extremeDifficulty, extremeRunRef,
   getMasuMon, getUnlockedBaseMonsterList, heroPickTab, maxGuts, maxHp, monSelection, onBack,
-  pickMode, proHeroPreset, renderMonsterCardBody, renderMonsterDetailModal, renderProMonsterRow,
+  phasePlan, pickMode, proHeroPreset, renderMonsterCardBody, renderMonsterDetailModal, renderProMonsterRow,
   runMode, scenarioPicksHero, setAllyCardIndex, setCurrentPickingMon, setHeroPickTab,
-  setProHeroPreset, setupMon, slots, spendAptPoint, spendStatPoint, waveResult,
+  setProHeroPreset, setupMon, slots, spendAptPoint, spendStatPoint, tacticsUnits, wave, waveResult,
 }) {
+  // 隊列の小さな顔。空いている間合いは点線の丸にして「誰もいない」ことを見せる
+  const partyFace=(mon,className='')=>!mon
+    ?<span aria-hidden="true" className={`block h-4 w-4 shrink-0 rounded-full border border-dashed border-slate-600 ${className}`}/>
+    :<span aria-hidden="true" className={`flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/40 ${className}`}>
+      {mon.imgUrl?<DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt="" masuColors={mon.colors} className="h-full w-full object-contain"/>:<span className="text-[10px] leading-none">{mon.emoji}</span>}
+    </span>;
   return (
 
-    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden">
+    // 供モン合流は強化フェーズの1枚なので、タクティクス新盤面と同じ飾り(mh-ph-*)を着せる。勇者モン選びは今までどおり
+    <div style={pickMode==='ally'?{position:"absolute",inset:0,zIndex:30000,'--ph':'129,140,248'}:{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className={`absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode==='ally'?' mh-phase mh-ph-bg':''}`}>
       {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
           供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
-      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button disabled={!!battleTutorial} onClick={onBack} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
+      <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button disabled={!!battleTutorial} onClick={onBack} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
+      {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
+      {pickMode==='ally'&&<div className="-mt-1 mb-2 flex shrink-0 flex-col items-center gap-1.5">
+        <span className="mh-ph-plate">{waveResult?.wave>0?`WAVE ${waveResult.wave} CLEAR ・ `:''}新しい仲間が合流</span>
+        {/* このあと何枚の画面を通ってバトルへ戻るのか */}
+        {phasePlan&&<PhaseSteps plan={phasePlan} current="ally" nextWave={wave>0?wave+1:null}/>}
+      </div>}
       {/* 勇者モンは編成に入れていないベースモンからも選べる(マスモン登録のためだけに編成を入れ替えなくてよい) */}
-      <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble key={pickMode} scene={pickMode==='hero'?'pickHero':'pickAlly'} compact/></div>
+      <div className={`shrink-0 w-full max-w-md mx-auto mb-2${pickMode==='ally'?' mh-phase-tall':''}`}><AssistantBubble key={pickMode} scene={pickMode==='hero'?'pickHero':'pickAlly'} compact/></div>
       {/* 供モン合流は「いま何がどれだけ増えるか」を選ぶ場面なので、トレーニング画面と同じ形で
           基準になる現在値をここに固定表示する。各カードは自分の変動しか出さないため、
           ここが無いと「合流後の値」だけを見て比べることになり、どれが得か分からなかった */}
       {pickMode==='ally'&&(
-        <div className="shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5" data-join-status>
+        <div className="mh-phase-tall mh-ph-panel shrink-0 w-full max-w-md mx-auto mb-2 px-2 py-1.5" data-join-status>
           {(()=>{
             const joinRule=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
             if(extremeRuleNumber(joinRule,'allyJoinPenaltyRate')==null)return null;
@@ -173,24 +186,57 @@ function PickHeroAllyScreen({
             return <div data-ultimate-join-status={joinRule} className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"><span className="text-amber-300">{joinRule}補正</span><span>累計{totalTurns}T</span><span>加入ボーナス {precisePercent(multiplier)}（-{precisePercent(1-multiplier)}）{floorValue!=null?`／最低${specialRulePercent(floorValue)}`:''}</span></div>;
           })()}
           {(()=>{const rule=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);if(rule===NIGHTMARE_SETTING.id)return <div data-nightmare-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"><span className="text-amber-300">NIGHTMARE補正</span>　間合い適性：＋{specialRulePercent(extremeSpecialRule(rule,'positiveModifier'))} / －{specialRulePercent(extremeSpecialRule(rule,'negativeModifier'))}</div>;if(rule===CHAOS_SETTING.id)return <div data-chaos-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"><span className="text-amber-300">CHAOS補正</span>　加入ボーナス {specialRulePercent(extremeSpecialRule(rule,'allyJoinBonus'))}</div>;return null;})()}
-          <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス</div>
+          {/* ★タクティクスはステータスを1体ずつ持つ(設計 4.4)。合計と平均が混ざった4つを
+              並べても読み取れないので、**立っている子ごと**に出す
+              (2026-09-21 ユーザー指示)。バトル画面の盤面と同じ並び(零・近・中・遠) */}
+          {Array.isArray(tacticsUnits)?(<>
+            <div className="mh-ph-panel-label text-[8px] font-black text-left mb-1">いまの盤面（1体ずつ）</div>
+            <div data-tactics-board-status className="grid grid-cols-4 gap-1">
+              {RANGE_LABELS.map((label,idx)=>{
+                const mon=slots[idx];
+                const unit=tacticsUnits[idx];
+                const apt=distTotalBonus(idx);
+                return (
+                  <div key={label} data-tactics-board-slot={idx} className={`rounded-lg px-1 py-1 text-center ${mon&&unit?'mh-ph-cell':'bg-black/20'}`}>
+                    <span className="block text-[8px] font-black text-slate-500 leading-none">{label}</span>
+                    {mon&&unit?(<>
+                      {partyFace(mon,'mx-auto my-0.5')}
+                      <span className="block truncate text-[8px] font-black text-white leading-tight">{mon.masuName||mon.name}</span>
+                      <span className="block text-[10px] font-black font-mono leading-tight text-pink-300">{unit.hp}<span className="text-slate-500">/{unit.maxHp}</span></span>
+                      <span className="block text-[9px] font-black font-mono leading-tight text-red-300">力 {unit.atk}</span>
+                      <span className="block text-[9px] font-black font-mono leading-tight text-emerald-300">防 {unit.def}</span>
+                      <span className="block text-[9px] font-black font-mono leading-tight text-amber-300">G {unit.guts}<span className="text-slate-500">/{unit.maxGuts}</span></span>
+                      <span className={`block text-[9px] font-black font-mono leading-tight ${apt>0?'text-cyan-300':apt<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(apt)}</span>
+                    </>):(
+                      /* ★空いている間合いを 0% と出すと「適性が0なのか、誰もいないのか」が
+                         見分けられない(2026-09-21 ユーザー指示) */
+                      <span className="block py-2 text-[9px] font-black leading-tight text-slate-600">空き</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>):(<>
+          <div className="mh-ph-panel-label text-[8px] font-black text-left mb-1">現在のステータス</div>
           <div className="grid grid-cols-4 gap-1">
             {[['ライフ',maxHp,'text-pink-300'],['ちから',atk,'text-red-300'],['丈夫さ',def,'text-emerald-300'],['ガッツ',maxGuts,'text-amber-300']].map(([label,value,tint])=>(
-              <div key={label} className="rounded-lg bg-black/40 px-1 py-1 text-center">
+              <div key={label} className="mh-ph-cell rounded-lg px-1 py-1 text-center">
                 <span className="block text-[8px] font-black text-slate-500 leading-none">{label}</span>
                 <span className={`block text-[13px] font-black font-mono leading-tight ${tint}`}>{value}</span>
               </div>
             ))}
           </div>
-          <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mt-1.5 mb-1">間合い適性（距離補正）</div>
+          <div className="mh-ph-panel-label text-[8px] font-black text-left mt-1.5 mb-1">間合い適性（距離補正）<span className="text-slate-600">・いまの隊列</span></div>
           <div className="grid grid-cols-4 gap-1">
             {RANGE_LABELS.map((label,idx)=>{const cur=distTotalBonus(idx); return (
-              <div key={label} className="rounded-lg bg-black/40 px-1 py-1 text-center">
-                <span className="block text-[8px] font-black text-slate-500 leading-none">{label}</span>
+              <div key={label} className="mh-ph-cell rounded-lg px-1 py-1 text-center">
+                {/* だれがどの間合いに立っているかを顔で出す。合流した子は空いている間合いへ入る */}
+                <span className="flex items-center justify-center gap-1">{partyFace(slots[idx])}<span className="text-[8px] font-black text-slate-500 leading-none">{label}</span></span>
                 <span className={`block text-[12px] font-black font-mono leading-tight ${cur>0?'text-cyan-300':cur<0?'text-red-300':'text-slate-400'}`}>{formatAptPct(cur)}</span>
               </div>
             );})}
           </div>
+          </>)}
         </div>
       )}
       {pickMode==='hero'&&(
@@ -209,6 +255,9 @@ function PickHeroAllyScreen({
           内側を m-auto で寄せておけば、余っているときだけ中央、あふれたら先頭からたどれる */}
       <div className="flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col">
        <div className={`w-full${pickMode==='ally'?' m-auto':''}`}>
+        {pickMode==='ally'&&!isProMode(runMode)&&<div className="mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-[#c9ae6a]">
+          <span>合流できる候補 {(monSelection||[]).filter(m=>m&&!slots.some(x=>x&&x.id===m.id)).length}体</span><span>カードを押すと詳細</span>
+        </div>}
         {/* バトルチュートリアル中は一覧の外枠ではなくカード1枚ずつを光らせる。
             外枠だと画面からはみ出して「どこを押すのか」が分からなかった */}
         {/* プロの供モン合流だけ、バトルモード選択と同じ横スライドで1体ずつ見せる。
@@ -249,7 +298,9 @@ function PickHeroAllyScreen({
               extraButtonClass: scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):'',
             })}</React.Fragment>
           );
-          return(<button key={m.id} disabled={pickMode==='hero'&&!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} style={allyCarousel?{...MONSTER_CARD_STYLE,flex:'0 0 64%'}:MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25${pickMode!=='hero'||scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}${allyCarousel?` snap-center shrink-0 ${focused?'scale-100 opacity-100':'scale-[.92] opacity-55'}`:''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`}>
+          // 供モンの候補は順に出てくる(--i が並び順)。勇者モン選びは一覧が長いので動かさない
+          const enterStyle=pickMode==='ally'?{'--i':cardIndex}:null;
+          return(<button key={m.id} disabled={pickMode==='hero'&&!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} style={allyCarousel?{...MONSTER_CARD_STYLE,...enterStyle,flex:'0 0 64%'}:{...MONSTER_CARD_STYLE,...enterStyle}} data-ph-kind={pickMode==='ally'?'ally':undefined} data-ph-on={pickMode==='ally'&&isSel?'':undefined} className={`${MONSTER_CARD_CLASS}${pickMode==='ally'?' mh-phase-enter mh-ph-frame':''} bg-slate-900 transition-all disabled:opacity-25${pickMode!=='hero'||scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}${allyCarousel?` snap-center shrink-0 ${focused?'scale-100 opacity-100':'scale-[.92] opacity-55'}`:''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`}>
           {renderMonsterCardBody({
             masu: pickMasu, base: pickBase, mon: m,
             badge: m.debugOnly?<div className="absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white">DEBUG専用</div>:isSel?<div className="absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>:null,
@@ -269,28 +320,44 @@ function PickHeroAllyScreen({
                 {/* 上の「現在のステータス」が今の値を出しているので、カードは合流後の値と
                     変化量だけを4列で並べる。「1480→1600」のように両方を1つの枠へ入れると
                     iPhone SEの幅では数字が切れてしまう */}
-                <div className="w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
+                {/* ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
+                    パーティが増えるわけではない。増分(+130)を出すと嘘になるため、
+                    **素の値 → 盤面に入る値** を出す(2026-09-21 ユーザー指示) */}
+                <div className="mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
                   {preview.stats.map(stat=>(
                     <span key={stat.key} className="min-w-0 block">
                       <span className="block text-slate-500 font-black leading-none">{stat.short}</span>
-                      {[ULTIMATE_SETTING.id,CHAOS_SETTING.id,INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty))&&stat.normalDiff!==stat.diff?<span className="block leading-none text-slate-500">本来 +{stat.normalDiff}</span>:null}
+                      {preview.tactics
+                        ?(stat.diff>0?<span className="block leading-none text-slate-500">{stat.before} →</span>:null)
+                        :([ULTIMATE_SETTING.id,CHAOS_SETTING.id,INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty))&&stat.normalDiff!==stat.diff?<span className="block leading-none text-slate-500">本来 +{stat.normalDiff}</span>:null)}
                       <b className={`block leading-tight ${stat.diff>0?stat.tint:'text-slate-400'}`} style={{fontSize:'9px'}}>{stat.after}</b>
-                      <span className={`block leading-none ${stat.diff>0?'text-emerald-400':'text-slate-700'}`}>{stat.diff>0?`実際 +${stat.diff}`:'実際 ±0'}</span>
+                      {preview.tactics
+                        ?null
+                        :<span className={`block leading-none ${stat.diff>0?'text-emerald-400':'text-slate-700'}`}>{stat.diff>0?`実際 +${stat.diff}`:'実際 ±0'}</span>}
                     </span>
                   ))}
                 </div>
-                <div className="w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
+                {/* ★追いつき補正。WAVEを速く抜けるほど厚くなるぶんを、素の値との差として出す */}
+                {preview.tactics&&<div data-tactics-join-catchup={Math.round((preview.catchUp-1)*100)} data-tactics-join-turns={preview.catchUpTurns} className={`w-full text-center leading-none font-black ${preview.catchUp>1?'text-emerald-300':'text-slate-500'}`} style={{fontSize:'8px'}}>{preview.catchUp>1?`追いつき +${Math.round((preview.catchUp-1)*100)}%（${preview.catchUpTurns}ターン残して勝ったぶん）`:'追いつき なし（まだWAVEを抜けていません）'}</div>}
+                {/* ★間合いのボーナスの追いつき。あとから埋まった間合いは0から始まるので、
+                    合計ダメージから出した値まで引き上げる(すでに上ならそのまま) */}
+                {preview.tactics&&<div data-tactics-join-dist-catchup={Math.round((preview.distCatchUp||0)*1000)/10} className={`w-full text-center leading-none font-black ${preview.distCatchUp>0?'text-cyan-300':'text-slate-500'}`} style={{fontSize:'8px'}}>{preview.distCatchUp>0?`立つ間合いのボーナスを +${((preview.distCatchUp||0)*100).toFixed(1)}% まで引き上げ`:'間合いのボーナスの引き上げ なし'}</div>}
+                <div className="mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
                   {preview.apt.map(range=>(
                     <span key={range.idx} className="min-w-0 block">
                       <span className="block text-slate-500 font-black leading-none">{range.label}</span>
                       {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===NIGHTMARE_SETTING.id&&range.normalDiff!==range.diff?<span className="block leading-none text-slate-500">通常 {formatAptPct(range.normalDiff)} →</span>:null}
                       <b className={`block leading-tight ${range.diff>0?'text-cyan-300':range.diff<0?'text-red-300':'text-slate-400'}`}>{formatAptPct(range.after)}</b>
-                      <span className={`block leading-none ${range.diff>0?'text-emerald-400':range.diff<0?'text-red-400':'text-slate-700'}`}>{range.diff!==0?`${range.normalDiff!==range.diff?'実際 ':''}${formatAptPct(range.diff)}`:'±0'}</span>
+                      {/* ★タクティクスは合算しない(その子の適性がその子の攻撃に効く)ので、
+                          上の数字がそのままその子のぶん。増分の行は出さない */}
+                      {preview.tactics
+                        ?null
+                        :<span className={`block leading-none ${range.diff>0?'text-emerald-400':range.diff<0?'text-red-400':'text-slate-700'}`}>{range.diff!==0?`${range.normalDiff!==range.diff?'実際 ':''}${formatAptPct(range.diff)}`:'±0'}</span>}
                     </span>
                   ))}
                 </div>
               </>);})()}
-              <div className="min-h-[32px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black mt-1 flex items-center justify-center gap-1" style={{fontSize:'10px'}}>詳細を見る <ChevronRight size={11}/></div>
+              <div className={`min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode==='ally'?'mh-ph-btn':'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`} style={{fontSize:'10px'}}>詳細を見る <ChevronRight size={11}/></div>
             </>),
           })}
         </button>);})}
@@ -301,7 +368,11 @@ function PickHeroAllyScreen({
       </div>
       {/* 勇者モン選択・供モン合流の詳細。外枠と上部サマリーは他の画面と同じマスターUIで、
           この画面だけの違いは「現在値 → 合流後」のステータス表記と強化Pの割り振りボタン */}
-      {currentPickingMon&&renderMonsterDetailModal({
+      {currentPickingMon&&(()=>{
+      // ★合流の見せ方は allyJoinPreview に1か所だけ置く。ここで何度も呼ぶと、
+      //   タクティクスかどうかの分岐が増えて食い違う
+      const joinPreview = pickMode==='hero' ? null : allyJoinPreview(currentPickingMon);
+      return renderMonsterDetailModal({
         mon: currentPickingMon,
         masu: currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId) : null,
         onClose: ()=>setCurrentPickingMon(null),
@@ -311,14 +382,18 @@ function PickHeroAllyScreen({
         detailOpts: {
   // 一覧カードと同じ allyJoinPreview を通す。以前はここだけ plusStats をそのまま足していたため、
   // ULTIMATE(累計ターンで加算が下がる)では詳細の数値と実際に増える量が食い違っていた
-  statValues: pickMode==='hero' ? null : allyJoinPreview(currentPickingMon).stats.map(stat=>[
+  // ★タクティクスは「その子の素のステータスがそのまま盤面へ入る」ので、
+  //   before は素の値・after は盤面に入る値(追いつき補正込み)。見出しもそう書く
+  statValues: joinPreview ? joinPreview.stats.map(stat=>[
 stat.label, `${stat.before} → ${stat.after}${stat.diff>0?`（+${stat.diff}）`:''}`, stat.diff>0?stat.tint:'text-slate-400',
-  ]),
-  statTitle: pickMode==='hero' ? '基本ステータス' : '基本ステータス(現在 → 合流後)',
-  // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる
-  aptCurrentPct: [0,1,2,3].map(i=>distTotalBonus(i)),
+  ]) : null,
+  statTitle: pickMode==='hero' ? '基本ステータス'
+    : (joinPreview?.tactics ? '基本ステータス(素の値 → 盤面に入る値)' : '基本ステータス(現在 → 合流後)'),
+  // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる。
+  // ★タクティクスは合算しないので、いまの値は 0 から始めて「その子のぶん」を出す
+  aptCurrentPct: joinPreview?.tactics ? [0,0,0,0] : [0,1,2,3].map(i=>distTotalBonus(i)),
   // 加算量も実際に足される値(NIGHTMAREの半減込み)で出す
-  aptDeltaPct: pickMode==='hero' ? null : allyJoinPreview(currentPickingMon).apt.map(range=>range.diff),
+  aptDeltaPct: joinPreview ? joinPreview.apt.map(range=>range.diff) : null,
   aptPointsLabel: currentPickingMon.masuId?<div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {getMasuMon(currentPickingMon.masuId)?.distAptPoints||0}</div>:null,
   aptExtra: (idx,grade)=>{const pts=currentPickingMon.masuId?(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0):0; const canUp=pts>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return canUp?<button onClick={()=>{const updated=spendAptPoint(currentPickingMon.masuId,idx); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>:null;},
   extraAfterApt: (<>
@@ -346,7 +421,8 @@ stat.label, `${stat.before} → ${stat.after}${stat.diff>0?`（+${stat.diff}）`
         footer: (
           <div className="flex gap-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95">戻る</button><button onClick={()=>advanceRunStage('PICK_SLOT')} className={`flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`}>{pickMode==='hero'?'勇者モンに選ぶ':'この供モンを選ぶ'}</button></div>
         ),
-      })}
+      });
+      })()}
     </div>
   
   );
@@ -415,66 +491,168 @@ function PickProAlliesScreen({
 
 function PickSlotScreen({
   battleTutorial, battleTutorialSpotClass, currentPickingMon, distTotalBonus,
-  getDistAptitude, onRepick, scenarioPicksSlot, setupMon, slots,
+  getDistAptitude, onRepick, phasePlan, scenarioPicksSlot, setupMon, slots, wave,
 }) {
+  const mon=currentPickingMon;
+  const monName=mon?.masuName||mon?.name||'';
   return (
 
-    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
-      {currentPickingMon?.imgUrl?(<DyedMonsterImage baseId={currentPickingMon.id} src={currentPickingMon.imgUrl} alt="mon" masuColors={currentPickingMon.colors} className="shrink-0 w-28 h-28 mb-4 object-contain animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] scale-110"/>):(<div className="text-7xl mb-4 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]">{currentPickingMon?.emoji}</div>)}
-      <h2 className="shrink-0 text-lg font-black mb-1 italic uppercase tracking-widest text-indigo-400">配置場所を決定せよ</h2>
-      <div className="shrink-0 w-full max-w-xs mb-2"><AssistantBubble scene="pickSlot" compact/></div>
+    // mh-phase … 背の低い器(横持ち)で、吹き出しと説明を畳んで4つの枠を残す(70-bootstrap.jsx)
+    // mh-ph-* … タクティクス新盤面と同じ飾り。4つの枠は盤面と同じ距離の色(零=赤・近=黄・中=緑・遠=青)と模様
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'129,140,248'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-4 text-center overflow-hidden">
+      {/* 供モンの合流では、強化フェーズのどこにいるかを出す(ラン開始時の配置では出さない) */}
+      {phasePlan&&<PhaseSteps plan={phasePlan} current="slot" nextWave={wave>0?wave+1:null} className="shrink-0 mb-2"/>}
+      <div className="shrink-0 flex flex-col items-center">
+        {/* 合流する子の後ろでルーンの輪が回り、足元に魔法陣(タクティクスの枠の足元と同じ) */}
+        <div className="relative mb-2 flex items-center justify-center">
+          <span aria-hidden="true" className="mh-ph-rune"/>
+          <span aria-hidden="true" className="mh-ph-floor"/>
+          {mon?.imgUrl?(<DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt="mon" masuColors={mon.colors} className="mh-phase-hero relative z-10 shrink-0 w-24 h-24 object-contain animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]"/>):(<div className="mh-phase-hero relative z-10 text-6xl animate-bounce drop-shadow-[0_0_24px_rgba(129,140,248,0.7)]">{mon?.emoji}</div>)}
+        </div>
+        {monName&&<div className="text-[12px] font-black text-white leading-tight">{monName}<span className="text-slate-400">をどこに置く？</span></div>}
+        <div className="mh-ph-heading mt-0.5"><h2 className="mh-ph-title text-lg font-black italic uppercase tracking-widest">配置場所を決定せよ</h2></div>
+      </div>
+      <div className="mh-phase-tall shrink-0 w-full max-w-xs mt-1 mb-1 text-left"><AssistantBubble scene="pickSlot" compact/></div>
+      {/* この子の間合い適性を4つまとめて。枠の中にも出すが、置いてある枠には出ないので、
+          ここで4距離ぶんを見比べられるようにする */}
+      <div data-slot-aptitude className="mh-phase-tall mh-ph-panel shrink-0 w-full max-w-xs mt-1 px-2 py-1.5">
+        <div className="mh-ph-panel-label text-[9px] font-black text-left mb-1">この子の間合い適性</div>
+        <div className="grid grid-cols-4 gap-1">
+          {RANGE_LABELS.map((label,i)=>{const grade=getDistAptitude(mon,i); return (
+            <span key={label} className="mh-ph-cell rounded-lg px-1 py-1">
+              <span className="block text-[9px] font-black text-slate-400 leading-none">{label}</span>
+              <span className={`mt-0.5 inline-block rounded-full border px-1.5 text-[10px] font-black leading-tight ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>
+              <span className="block text-[9px] font-black font-mono text-slate-300 leading-tight">{formatAptPct(aptGradeToPct(grade))}</span>
+            </span>
+          );})}
+        </div>
+      </div>
       {/* 間合い適性はどこに置いても4距離すべてに入る。ここの%は「このモンスターを加えた後の各距離の補正値」 */}
-      <div className="shrink-0 text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2">間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</div>
+      <div className="mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2">間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</div>
       {/* 練習中は押せる枠だけを光らせる。枠全体を囲むと「どれを押すのか」が分からなかった */}
       {/* 背の低い端末では、ここが縮んでスクロールする。戻るボタンを画面の外へ押し出さないため。
           となりの教えカードえらび(PickTeachingScreen)と同じ作りにそろえてある */}
-      <div className="grid grid-cols-2 gap-4 w-full max-w-xs overflow-y-auto min-h-0 p-1 flex-1 content-center mh-scroll">
-        {slots.map((s,i)=>{const grade=getDistAptitude(currentPickingMon,i); const after=distTotalBonus(i)+aptGradeToPct(grade);
-          return(<button key={i} disabled={s!==null||!scenarioPicksSlot(i)} onClick={()=>setupMon(currentPickingMon,i)} className={`h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all disabled:opacity-20${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''} ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s?'opacity-100 shadow-xl':'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`}>
-          <span className={`text-[10px] font-black mb-1 uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`}>{RANGE_LABELS[i]}距離</span>
-          {s?(s.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="w-10 h-10 mt-1 object-contain drop-shadow-md scale-125"/>:<span className="text-xl mt-1 drop-shadow-md">{s.emoji}</span>):<PlusCircle className="text-white/50 mt-1" size={20}/>}
-          {!s&&<span className={`text-[9px] font-black mt-1 px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} 合流後 {formatAptPct(after)}</span>}
+      {/* ★すでに誰かが立っている枠は押せないが、以前は 20% の濃さまで落としていて
+          「誰がどこにいるのか」がほとんど見えなかった。名前と絵を出したまま、押せないことだけを伝える */}
+      <div className="grid grid-cols-2 gap-3 w-full max-w-xs overflow-y-auto min-h-0 p-1 mt-2 flex-1 content-center mh-scroll">
+        {slots.map((s,i)=>{const grade=getDistAptitude(mon,i); const now=distTotalBonus(i); const after=now+aptGradeToPct(grade); const open=s===null; const allowed=scenarioPicksSlot(i);
+          return(<button key={i} disabled={!open||!allowed} onClick={()=>setupMon(mon,i)} style={{'--i':i}}
+            data-ph-range={i} data-ph-on={open&&allowed?'':undefined}
+            className={`mh-phase-enter mh-phase-card mh-ph-frame relative overflow-hidden min-h-[96px] rounded-2xl border-2 flex flex-col items-center justify-center gap-1 px-1 py-2 transition-all active:scale-90${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''} ${open?(allowed?'':'opacity-20'):'opacity-75 saturate-50'}`}>
+          <span aria-hidden="true" className="mh-ph-sparkle"/>
+          <span className={`relative text-[10px] font-black uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/30 shadow-md`} style={{boxShadow:'0 0 10px rgba(var(--mh-rc),.6), inset 0 1px 0 rgba(255,255,255,.35)'}}>{RANGE_LABELS[i]}距離</span>
+          {open?(<>
+            <PlusCircle className={`relative text-white/70${allowed?' animate-pulse':''}`} size={20}/>
+            <span className={`relative text-[9px] font-black px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} 合流後 {formatAptPct(after)}</span>
+          </>):(<>
+            {s.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="relative w-10 h-10 object-contain drop-shadow-md"/>:<span className="relative text-2xl drop-shadow-md">{s.emoji}</span>}
+            <span className="relative max-w-full truncate text-[9px] font-black text-white/90">{s.masuName||s.name}<span className="text-white/50">・配置ずみ</span></span>
+          </>)}
         </button>);})}
       </div>
       {/* 種族チャレンジは通常の勇者選択(PICK_HERO)を持たないので、選び直しは
           種族チャレンジの編成画面(出撃確認)へ戻す。ここを分けないと、種族の縛りが
           外れた通常の勇者選択へ入り込んでしまう */}
-      <button disabled={!!battleTutorial} onClick={onRepick} className="shrink-0 mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"><ArrowLeft size={14}/> モンスターを選び直す</button>
+      <button disabled={!!battleTutorial} onClick={onRepick} className="mh-ph-btn shrink-0 mt-2 min-h-[44px] px-4 rounded-full flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"><ArrowLeft size={14}/> モンスターを選び直す</button>
     </div>
   
   );
 }
 
 function PickTeachingScreen({
-  battleTutorialSpotClass, confirmPickTeaching, getFullEvolutionDetails, ownedTeachings,
-  scenarioPicksTeaching, selectedTeachingCard, setSelectedTeachingCard, teachingPool,
+  battleTutorialSpotClass, confirmPickTeaching, getFullEvolutionDetails, ownedTeachings, phasePlan,
+  scenarioPicksTeaching, selectedTeachingCard, setSelectedTeachingCard, teachingPool, wave,
 }) {
+  // レベルは 0〜2 の3段。カードにも詳細にも同じ段の点を出して、どこまで育つかを見せる
+  const TEACHING_MAX_LEVEL=2;
+  // 段は菱形の宝石(70-bootstrap.jsx の mh-ph-pip)。色は近くの data-ph-kind(新規=緑・強化=紫・MAX=金)から取る
+  const levelPips=(filled,next)=>(
+    <span className="flex items-center justify-center gap-2 py-0.5" aria-hidden="true">
+      {Array.from({length:TEACHING_MAX_LEVEL+1}).map((_,i)=>(
+        <i key={i} className="mh-ph-pip" data-on={i<filled?'':undefined} data-next={i===next?'':undefined}/>
+      ))}
+    </span>
+  );
+  const kindOf=(owned,isMax)=>owned?(isMax?'max':'up'):'new';
   return (
 
-    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] p-4 flex flex-col items-center justify-center overflow-hidden">
-      <div className="mb-4 text-center shrink-0"><h2 className="text-xl font-black text-purple-400 italic">アシストカードの継承・強化</h2><p className="text-[9px] text-slate-400 uppercase mt-1 tracking-widest">Select Breeder Card</p></div>
-      <div className="shrink-0 w-full max-w-sm mb-2"><AssistantBubble scene="pickTeaching" compact/></div>
-      {/* 練習中は押せるカードだけを光らせる */}
-      <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto overflow-y-auto min-h-0 p-1 flex-1 content-center">
-        {teachingPool.map(t=>{const owned=ownedTeachings.find(ot=>ot.id===t.id); const level=owned?owned.evoLevel:0; const isMax=level>=2;
-          return(<button key={t.id} disabled={!scenarioPicksTeaching(t.id)} onClick={()=>setSelectedTeachingCard(t)} className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 transition-all aspect-square disabled:opacity-20${scenarioPicksTeaching(t.id)?battleTutorialSpotClass('teachings'):''} ${owned?'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]':'bg-slate-900 border-slate-800 active:scale-95'}`}>
-            <span style={{fontSize:'44px'}}>{cardIconNode(t.icon,52,t.id)}</span>
-            <div className="text-[11px] font-black leading-tight flex flex-col items-center justify-center">{owned&&!isMax&&<div className="text-[8px] text-amber-400 mb-0.5 line-through">{BREEDER_EVO_NAMES[t.id][level]}</div>}<div className={owned?"text-white":""}>{owned?(isMax?BREEDER_EVO_NAMES[t.id][level]:BREEDER_EVO_NAMES[t.id][level+1]):BREEDER_EVO_NAMES[t.id][0]}</div></div>
-            <div className="text-[8px] text-slate-200 bg-black/20 px-2 py-1 rounded-full">{owned?(isMax?"MAXレベル":"進化：効果上昇"):"新規習得"}</div>
+    // mh-phase … 背の低い器(横持ち)で吹き出しと説明を畳む目印(70-bootstrap.jsx の @container)。
+    // safe-area は body が持っているので、ここでは足さない(41-screen-ui.jsx の注意書き)
+    // mh-ph-* … タクティクス新盤面と同じ飾り(濃紺の地・金の縁・回る光の縁・宝石)。--ph は画面の識別色
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'192,132,252'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] px-4 py-3 flex flex-col items-center overflow-hidden">
+      <div className="mb-2 text-center shrink-0 flex flex-col items-center gap-1">
+        {/* WAVEのあとは強化フェーズの並び、ラン開始時は札だけ */}
+        {phasePlan
+          ? <PhaseSteps plan={phasePlan} current="teaching" nextWave={wave>0?wave+1:null}/>
+          : <span className="mh-ph-plate">ASSIST CARD</span>}
+        <div className="mh-ph-heading"><h2 className="mh-ph-title text-xl font-black italic">アシストカードの継承・強化</h2></div>
+        <p className="mh-phase-tall text-[10px] font-bold text-slate-400">1枚えらんで、新しく覚えるか、持っているカードを強化します</p>
+      </div>
+      <div className="mh-phase-tall shrink-0 w-full max-w-sm mb-2"><AssistantBubble scene="pickTeaching" compact/></div>
+      {/* 持っているカードとそのレベル。どれを伸ばすか決めるときに、今の手持ちを見比べられるようにする */}
+      {ownedTeachings.length>0&&(
+        <div data-teaching-owned className="mh-ph-panel shrink-0 w-full max-w-sm mb-2 px-2 py-1.5">
+          <div className="mh-ph-panel-label text-[8px] font-black mb-1">所持中のアシストカード</div>
+          <div className="flex flex-wrap gap-1.5">
+            {ownedTeachings.map(ot=>(
+              <span key={ot.uid||ot.id} className="mh-ph-cell flex min-w-0 items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2">
+                <span className="mh-ph-medal flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full">{cardIconNode(ot.icon,22,ot.id)}</span>
+                <span className="text-[9px] font-black text-purple-100 truncate max-w-[6.5rem]">{BREEDER_EVO_NAMES[ot.id]?.[ot.evoLevel]||ot.name}</span>
+                <span className={`shrink-0 text-[8px] font-black font-mono ${ot.evoLevel>=TEACHING_MAX_LEVEL?'text-amber-300':'text-slate-400'}`}>{ot.evoLevel>=TEACHING_MAX_LEVEL?'MAX':`Lv.${ot.evoLevel}`}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* 練習中は押せるカードだけを光らせる。
+          あふれたときに上側へ届かなくならないよう、並びは内側の m-auto で中央へ寄せる */}
+      <div className="w-full max-w-sm mx-auto flex-1 min-h-0 overflow-y-auto mh-scroll flex flex-col">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-4 w-full m-auto px-1 pb-1 pt-3">
+        {teachingPool.map((t,cardIndex)=>{const owned=ownedTeachings.find(ot=>ot.id===t.id); const level=owned?owned.evoLevel:0; const isMax=level>=TEACHING_MAX_LEVEL;
+          // カードに出す効果は「選んだあとの段」のもの。MAXは今の段のまま
+          const shownLevel=owned?(isMax?level:level+1):0;
+          const shownDesc=getFullEvolutionDetails(t)[shownLevel]?.desc||'';
+          // 強化できるカードは縁が回って光る(タクティクスの選んだ枠と同じ)。新規=緑・強化=紫・MAX=金の縁と模様
+          return(<button key={t.id} disabled={!scenarioPicksTeaching(t.id)} onClick={()=>setSelectedTeachingCard(t)} style={{'--i':cardIndex}}
+            data-ph-kind={kindOf(owned,isMax)} data-ph-on={owned&&!isMax?'':undefined}
+            className={`mh-phase-enter mh-ph-frame relative p-3 pt-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all min-h-[176px] active:scale-95 disabled:opacity-20${scenarioPicksTeaching(t.id)?battleTutorialSpotClass('teachings'):''}`}>
+            <span aria-hidden="true" className="mh-ph-sparkle"/>
+            {owned&&!isMax&&<span aria-hidden="true" className="mh-ph-shine"/>}
+            <span style={{fontSize:'44px'}} className="mh-ph-medal relative rounded-2xl p-1 leading-none">{cardIconNode(t.icon,52,t.id)}</span>
+            <div className="relative text-[11px] font-black leading-tight flex flex-col items-center justify-center" style={{textShadow:'0 1px 0 rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.6)'}}>{owned&&!isMax&&<div className="text-[8px] text-amber-400 mb-0.5 line-through">{BREEDER_EVO_NAMES[t.id][level]}</div>}<div className={owned?"text-white":"text-slate-100"}>{owned?(isMax?BREEDER_EVO_NAMES[t.id][level]:BREEDER_EVO_NAMES[t.id][level+1]):BREEDER_EVO_NAMES[t.id][0]}</div></div>
+            {levelPips(owned?level+1:0, isMax?-1:shownLevel)}
+            <div className="mh-ph-cell relative w-full flex-1 rounded-lg px-1.5 py-1 text-[9px] font-bold leading-snug text-slate-200" style={{display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{shownDesc}</div>
+            {/* 新規 / 強化 / MAX の札。文字はカード名の後ろに置く(名前で探す検査がある) */}
+            <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[8px] font-black text-white"
+              style={{border:'1px solid #f3d27a',background:'linear-gradient(180deg, rgb(var(--mh-rc2)), rgb(var(--mh-rc)) 55%, rgba(var(--mh-rc),.7))',boxShadow:'0 0 0 1px rgba(30,18,4,.9), 0 0 10px rgba(var(--mh-rc),.7)',textShadow:'0 1px 2px rgba(0,0,0,.9)'}}>{owned?(isMax?"MAXレベル":`強化 Lv.${level}→${level+1}`):"新規習得"}</span>
           </button>);
         })}
       </div>
+      </div>
       {selectedTeachingCard&&(
         <div className="fixed inset-0 z-[3100] flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.85)',zIndex:31000}}>
-          <div className="bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full">
-            <div className="text-6xl mb-2 shrink-0">{cardIconNode(selectedTeachingCard.icon,76,selectedTeachingCard.id)}</div>
-            <h3 className="text-lg font-black text-white mb-4 shrink-0">{(()=>{const t=selectedTeachingCard; const owned=ownedTeachings.find(ot=>ot.id===t.id); return BREEDER_EVO_NAMES[t.id][owned?owned.evoLevel:0];})()}</h3>
-            <div className="w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
+          <div data-ph-kind={(()=>{const o=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); return kindOf(o,!!o&&o.evoLevel>=TEACHING_MAX_LEVEL);})()} data-ph-on=""
+            className="mh-phase-pop mh-ph-frame relative rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 h-auto max-h-full">
+            <span aria-hidden="true" className="mh-ph-sparkle"/>
+            {/* 絵の後ろでルーンの輪が回る */}
+            <div className="relative shrink-0 flex items-center justify-center" style={{'--ph':'243,210,122'}}>
+              <span aria-hidden="true" className="mh-ph-rune"/>
+              <span className="mh-ph-medal relative z-10 rounded-2xl p-1.5 text-6xl leading-none">{cardIconNode(selectedTeachingCard.icon,76,selectedTeachingCard.id)}</span>
+            </div>
+            <h3 className="mh-ph-title relative text-lg font-black shrink-0">{(()=>{const t=selectedTeachingCard; const owned=ownedTeachings.find(ot=>ot.id===t.id); return BREEDER_EVO_NAMES[t.id][owned?owned.evoLevel:0];})()}</h3>
+            {/* 選ぶと何が起きるか(新しく覚える / 何段目へ上がる)を、段の点と一緒に出す */}
+            {(()=>{const owned=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); const level=owned?owned.evoLevel:0; const isMax=!!owned&&level>=TEACHING_MAX_LEVEL; return (
+              <div className="-mt-1 mb-1 flex shrink-0 flex-col items-center gap-1">
+                {levelPips(owned?level+1:0, isMax?-1:(owned?level+1:0))}
+                <span className={`text-[10px] font-black ${isMax?'text-amber-300':owned?'text-purple-200':'text-emerald-300'}`}>{owned?(isMax?'MAXレベルです':`Lv.${level} → Lv.${level+1} に強化`):'新しく習得します'}</span>
+              </div>
+            );})()}
+            <div className="relative w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
               {getFullEvolutionDetails(selectedTeachingCard).map(info=>{const owned=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); const currentLvl=owned?owned.evoLevel:-1; const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
-                return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[7px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{isNext&&<span className="text-[7px] bg-amber-600 text-white px-1.5 rounded">強化後</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
+                return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-400/70 shadow-[0_0_12px_rgba(243,210,122,.3)]':'mh-ph-cell border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[7px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{isNext&&<span className="text-[8px] bg-amber-600 text-white px-1.5 rounded">{owned?'強化後':'習得後'}</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
               })}
             </div>
-            <div className="flex gap-2 w-full mt-auto shrink-0"><button onClick={()=>setSelectedTeachingCard(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={()=>confirmPickTeaching()} className="flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs">{ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id)?"強化する":"習得する"}</button></div>
+            <div className="relative flex gap-2 w-full mt-auto shrink-0"><button onClick={()=>setSelectedTeachingCard(null)} className="mh-ph-btn flex-1 min-h-[44px] py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={()=>confirmPickTeaching()} className="mh-ph-btn-gold flex-1 min-h-[44px] py-3 rounded-xl font-black text-sm">{ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id)?"強化する":"習得する"}</button></div>
           </div>
         </div>
       )}

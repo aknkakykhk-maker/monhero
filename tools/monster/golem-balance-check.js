@@ -50,7 +50,9 @@ const gutsRecoveryRate = num(/const currentAutoGutsRecovery=Math\.max\(0,([\d.]+
 // ラン開始時の手持ちガッツは最大の半分
 const startGutsRatio = num(/setMaxGuts\(m\.baseGuts\); setGuts\(Math\.floor\(m\.baseGuts\*([\d.]+)\)\)/, '開始時ガッツの割合');
 // ゴーレムの勇者特性「怪力」の倍率
-const golemTrait = num(/mainHero\?\.id==='Golem'\?([\d.]+):1\.0/, '怪力の倍率');
+// ★勇者特性が「勇者モンのもの」から「その子の能力」へ変わったとき(タクティクスバトル)、
+//   参照が mainHero?.id から attackHeroId(いま殴っている子)へ変わった。倍率は同じ
+const golemTrait = num(/attackHeroId==='Golem'\?([\d.]+):1\.0/, '怪力の倍率');
 check('式の定数を実装から読めている',
   gutsRecoveryRate !== null && startGutsRatio !== null && golemTrait !== null,
   `自動回復${gutsRecoveryRate} / 開始${startGutsRatio} / 怪力×${golemTrait}`);

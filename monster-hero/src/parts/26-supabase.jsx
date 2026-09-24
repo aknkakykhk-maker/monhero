@@ -14,9 +14,26 @@ const PRO_RANKING_PREFIX = 'Pro';
 // 極限チャレンジも同じやり方。難易度の並びが通常と別なので、極限の段階IDへ接頭辞を付ける
 // (例: ExtremeEXTREME)。チャレンジ・プロの行は読みも書きもしない
 const EXTREME_RANKING_PREFIX = 'Extreme';
+// タクティクスバトル(id: tactics)も同じやり方。難易度キーの先頭へ Tactics を付ける
+// (例: TacticsHard / TacticsEXTREME)。Pro / Extreme とは先頭が違うので取り違えは起きない。
+// チャレンジ・プロ・極限の行は読みも書きもしない
+const TACTICS_RANKING_PREFIX = 'Tactics';
+// ★タクティクスプロは、β版のあいだだけ別の行(TacticsProBeta<難易度>)へ送る。
+//   本公開でキーが TacticsPro<難易度> へ切り替わり、本番の順位は空から始まる。
+//   β版の行は消さない(モンヒロビートの週間ランキングが週IDで区切るのと同じ考え方)
+const TACTICS_PRO_RANKING_PREFIX = `${TACTICS_RANKING_PREFIX}${PRO_RANKING_PREFIX}`;
+const TACTICS_PRO_BETA_SUFFIX = 'Beta';
+const tacticsProRankingPrefix = () => (TACTICS_MODE_PUBLIC_RELEASE
+  ? TACTICS_PRO_RANKING_PREFIX : `${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}`);
 const RANKING_DIFFICULTY_KEYS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`),
+  // タクティクスは通常9段階＋極限5段階(TACTICS_DIFFICULTY_IDS が正本)。
+  // 極限もモードの中の難易度なので、極限チャレンジの Extreme* とは別の行になる
+  ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_RANKING_PREFIX}${key}`),
+  // 本公開ぶんとβ版ぶんの両方を通す。公開の前後で、片方が「知らない難易度」にならないように
+  ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_PRO_RANKING_PREFIX}${key}`),
+  ...TACTICS_DIFFICULTY_IDS.map(key => `${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}${key}`),
   // GOD以降も同じ表(ALL_EXTREME_DIFFICULTIES)から作る。難易度を足すたびにここへ1行書き足すと
   // 書き忘れでランキングだけ落ちるので、正本を1つにしておく
   ...ALL_EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`),
@@ -27,18 +44,30 @@ const RANKING_DIFFICULTY_KEYS = Object.freeze([
 // 一切現れないため、チャレンジ・プロ・極限の行と混ざることが構造上起きない。
 const SPECIES_RANKING_PREFIX = 'Species';
 const SPECIES_RANKING_SEPARATOR = '-';
-const speciesChallengeRankingDifficulty = (speciesId, difficultyId) => {
+// タクティクスバトルの種族チャレンジは、同じ3つ組のまま先頭だけを TacticsSpecies にする。
+// 形が同じなので、読み書き・「全種族」の展開・種族名バッジはすべて同じ道を通る
+const TACTICS_SPECIES_RANKING_PREFIX = `${TACTICS_RANKING_PREFIX}${SPECIES_RANKING_PREFIX}`;
+const speciesRankingPrefixOf = (mode) => (mode === BATTLE_MODE_TACTICS_SPECIES
+  ? TACTICS_SPECIES_RANKING_PREFIX : SPECIES_RANKING_PREFIX);
+const speciesRankingModeOf = (prefix) => (String(prefix).toLowerCase() === TACTICS_SPECIES_RANKING_PREFIX.toLowerCase()
+  ? BATTLE_MODE_TACTICS_SPECIES : BATTLE_MODE_SPECIES_CHALLENGE);
+const isSpeciesRankingPrefix = (prefix) => {
+  const lower = String(prefix).toLowerCase();
+  return lower === SPECIES_RANKING_PREFIX.toLowerCase()
+    || lower === TACTICS_SPECIES_RANKING_PREFIX.toLowerCase();
+};
+const speciesChallengeRankingDifficulty = (speciesId, difficultyId, mode = BATTLE_MODE_SPECIES_CHALLENGE) => {
   const lineage = speciesChallengeLineages().find(item => item.id === speciesId);
   if (!lineage || !SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)) return null;
-  return `${SPECIES_RANKING_PREFIX}${SPECIES_RANKING_SEPARATOR}${lineage.id}${SPECIES_RANKING_SEPARATOR}${difficultyId}`;
+  return `${speciesRankingPrefixOf(mode)}${SPECIES_RANKING_SEPARATOR}${lineage.id}${SPECIES_RANKING_SEPARATOR}${difficultyId}`;
 };
 // ランキングキーから種族と難易度へ戻す。知らない組み合わせはnull(既存キーとして扱う)
 const parseSpeciesChallengeRankingDifficulty = (key) => {
   const parts = String(key ?? '').trim().split(SPECIES_RANKING_SEPARATOR);
-  if (parts.length !== 3 || parts[0].toLowerCase() !== SPECIES_RANKING_PREFIX.toLowerCase()) return null;
+  if (parts.length !== 3 || !isSpeciesRankingPrefix(parts[0])) return null;
   const lineage = speciesChallengeLineages().find(item => item.id.toLowerCase() === parts[1].toLowerCase());
   const difficultyId = SPECIES_CHALLENGE_DIFFICULTY_IDS.find(id => id.toLowerCase() === parts[2].toLowerCase());
-  return lineage && difficultyId ? { speciesId:lineage.id, difficultyId } : null;
+  return lineage && difficultyId ? { speciesId:lineage.id, difficultyId, mode:speciesRankingModeOf(parts[0]) } : null;
 };
 // 種族をまたいだ「全種族」の全国ランキング。
 //
@@ -54,22 +83,22 @@ const SPECIES_RANKING_ALL_ID = 'all';
 // ランキング画面の種族タブのid。血統idとぶつからない名前にする
 const SPECIES_RANK_TAB_ALL = 'allSpecies';
 const SPECIES_RANK_TAB_SELF_BEST = 'selfBest';
-const speciesChallengeAllRankingDifficulty = (difficultyId) =>
+const speciesChallengeAllRankingDifficulty = (difficultyId, mode = BATTLE_MODE_SPECIES_CHALLENGE) =>
   (SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)
-    ? `${SPECIES_RANKING_PREFIX}${SPECIES_RANKING_SEPARATOR}${SPECIES_RANKING_ALL_ID}${SPECIES_RANKING_SEPARATOR}${difficultyId}`
+    ? `${speciesRankingPrefixOf(mode)}${SPECIES_RANKING_SEPARATOR}${SPECIES_RANKING_ALL_ID}${SPECIES_RANKING_SEPARATOR}${difficultyId}`
     : null);
 const parseSpeciesChallengeAllRankingDifficulty = (key) => {
   const parts = String(key ?? '').trim().split(SPECIES_RANKING_SEPARATOR);
-  if (parts.length !== 3 || parts[0].toLowerCase() !== SPECIES_RANKING_PREFIX.toLowerCase()) return null;
+  if (parts.length !== 3 || !isSpeciesRankingPrefix(parts[0])) return null;
   if (parts[1].toLowerCase() !== SPECIES_RANKING_ALL_ID) return null;
   // 実在する血統と同じidなら、そちらの解釈を優先する(取り違えを構造的に防ぐ)
   if (speciesChallengeLineages().some(item => item.id.toLowerCase() === SPECIES_RANKING_ALL_ID)) return null;
   const difficultyId = SPECIES_CHALLENGE_DIFFICULTY_IDS.find(id => id.toLowerCase() === parts[2].toLowerCase());
-  return difficultyId ? { difficultyId } : null;
+  return difficultyId ? { difficultyId, mode:speciesRankingModeOf(parts[0]) } : null;
 };
 // 「全種族」を、実際にDBへ入っている種族別キーの一覧へ展開する
-const speciesChallengeAllRankingMembers = (difficultyId) => speciesChallengeLineages()
-  .map(lineage => speciesChallengeRankingDifficulty(lineage.id, difficultyId))
+const speciesChallengeAllRankingMembers = (difficultyId, mode = BATTLE_MODE_SPECIES_CHALLENGE) => speciesChallengeLineages()
+  .map(lineage => speciesChallengeRankingDifficulty(lineage.id, difficultyId, mode))
   .filter(Boolean);
 // 「全種族」の一覧で、1件ごとの記録がどの種族のものかを表示するための短いラベル。
 // difficulty列(Species-<血統id>-<難易度id>)から血統名を戻すだけで、既存キーの意味は変えない。
@@ -89,14 +118,20 @@ const normalizeExtremeDifficulty = (value) => (ALL_EXTREME_DIFFICULTIES
 // 極限チャレンジは diff に極限の段階ID(EXTREMEなど)を渡す
 // 種族チャレンジだけは種族(主血統)も要るので、第3引数で受け取る
 const rankingDifficultyForMode = (mode, diff, speciesId=null) => {
-  if (mode === BATTLE_MODE_SPECIES_CHALLENGE) {
-    const key = speciesChallengeRankingDifficulty(speciesId, diff);
+  if (isSpeciesChallengeMode(mode)) {
+    const key = speciesChallengeRankingDifficulty(speciesId, diff, mode);
     if (!key) throw new Error(`unknown species challenge ranking: ${String(speciesId)}/${String(diff)}`);
     return key;
   }
   if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) {
     return `${EXTREME_RANKING_PREFIX}${normalizeExtremeDifficulty(diff)}`;
   }
+  // ★タクティクスプロは Tactics と Pro を重ねた TacticsPro<難易度>(β版は末尾に Beta)。
+  //   isTacticsMode より先に見る(あとに置くと Tactics<難易度> になってしまう)
+  if (mode === BATTLE_MODE_TACTICS_PRO) {
+    return `${tacticsProRankingPrefix()}${normalizeBattleDifficulty(diff)}`;
+  }
+  if (isTacticsMode(mode)) return `${TACTICS_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`;
   return isProMode(mode) ? `${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}` : normalizeBattleDifficulty(diff);
 };
 // ランキングの難易度キーから、表示に使う素の難易度へ戻す
@@ -105,15 +140,22 @@ const rankingDifficultyBase = (key) => {
   const species = parseSpeciesChallengeRankingDifficulty(text);
   if (species) return species.difficultyId;
   if (text.startsWith(EXTREME_RANKING_PREFIX)) return text.slice(EXTREME_RANKING_PREFIX.length);
+  // TacticsProBeta → TacticsPro → Tactics の順で落とす
+  // (順番を逆にすると 'ProHard' や 'BetaHard' が残る)
+  if (text.startsWith(`${TACTICS_PRO_RANKING_PREFIX}${TACTICS_PRO_BETA_SUFFIX}`)) {
+    return text.slice(TACTICS_PRO_RANKING_PREFIX.length + TACTICS_PRO_BETA_SUFFIX.length);
+  }
+  if (text.startsWith(TACTICS_PRO_RANKING_PREFIX)) return text.slice(TACTICS_PRO_RANKING_PREFIX.length);
+  if (text.startsWith(TACTICS_RANKING_PREFIX)) return text.slice(TACTICS_RANKING_PREFIX.length);
   return text.startsWith(PRO_RANKING_PREFIX) ? text.slice(PRO_RANKING_PREFIX.length) : text;
 };
 const normalizeRankingDifficulty = (value) => {
   // 種族チャレンジのキーは種族×難易度の組で決まるので、固定リストではなく組み合わせで確かめる
   const species = parseSpeciesChallengeRankingDifficulty(value);
-  if (species) return speciesChallengeRankingDifficulty(species.speciesId, species.difficultyId);
+  if (species) return speciesChallengeRankingDifficulty(species.speciesId, species.difficultyId, species.mode);
   // 「全種族」は保存には使わない読み取り専用の合成キー。取得のときだけ種族別キーへ展開する
   const speciesAll = parseSpeciesChallengeAllRankingDifficulty(value);
-  if (speciesAll) return speciesChallengeAllRankingDifficulty(speciesAll.difficultyId);
+  if (speciesAll) return speciesChallengeAllRankingDifficulty(speciesAll.difficultyId, speciesAll.mode);
   const compact = String(value ?? '').trim().replace(/\s+/g, '').toLowerCase();
   const canonical = RANKING_DIFFICULTY_KEYS.find(key => key.toLowerCase() === compact);
   if (!canonical) throw new Error(`unknown ranking difficulty: ${String(value)}`);
@@ -476,7 +518,7 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
   // 他モードの行(Normal / ProNormal / ExtremeEXTREME)が紛れ込むことは構造上ない。
   // 並べ替えと件数の絞り込みはDB側で効くので、通信は他のタブと同じ1回で済む。
   const speciesAllDifficulty = normalizedDifficulty == null ? null : parseSpeciesChallengeAllRankingDifficulty(normalizedDifficulty);
-  const speciesAllMembers = speciesAllDifficulty ? speciesChallengeAllRankingMembers(speciesAllDifficulty.difficultyId) : [];
+  const speciesAllMembers = speciesAllDifficulty ? speciesChallengeAllRankingMembers(speciesAllDifficulty.difficultyId, speciesAllDifficulty.mode) : [];
   const difficultyFilter = normalizedDifficulty == null
     ? ''
     : speciesAllDifficulty

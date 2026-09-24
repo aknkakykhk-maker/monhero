@@ -94,8 +94,21 @@
       "role": "音ゲーの演奏画面 RhythmTapTest(rAF 1本・判定・描画)と振動・サイドの応援。タイミング基盤は触らない"
     },
     {
+      "file": "31-debug-ui.jsx",
+      "role": "デバッグ画面の共通部品(どの画面も同じ頭・同じ「保存します/しません」のバッジ・メニューの1行)"
+    },
+    {
+      "file": "32-tactics-units.jsx",
+      "role": "新モード(tactics)の「1体ぶん」の値と盤面の純関数。個別のライフ・ちから・丈夫さ・ガッツ、倒れる/戻す、全滅判定、敵がどの子を狙うか",
+      "pure": true
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
+    },
+    {
+      "file": "41-screen-ui.jsx",
+      "role": "画面の共通ガワ(頭・説明文・空状態・タブ・小見出しと、根/パネル/一覧の型)"
     },
     {
       "file": "50-error-boundary.jsx",
@@ -184,6 +197,14 @@
     {
       "file": "73-screen-rhythm-history.jsx",
       "role": "画面: モンヒロビートの履歴(RHYTHM_HISTORY)。終わった週・イベントの順位をあとから見る。表示専用で保存に触らない"
+    },
+    {
+      "file": "74-screen-monster-check-debug.jsx",
+      "role": "画面: 新モンスター確認(MONSTER_CHECK_DEBUG。デバッグ専用)。所持・解放に関係なく全種を並べ、画像・染色・モーション・能力・技・血統・マーケットと「実装チェック」を1枚で見る"
+    },
+    {
+      "file": "76-screen-debug-data.jsx",
+      "role": "画面: データを用意する(DEBUG_DATA_SETUP。デバッグ専用)。条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)をすぐ試せる状態にする"
     },
     {
       "file": "60-app.jsx",

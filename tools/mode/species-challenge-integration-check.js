@@ -1,3 +1,4 @@
+// 種族チャレンジが既存のゲームへつながっているか。
 const fs = require('fs');
 const vm = require('vm');
 const { loadDyeModule } = require('../harness');
@@ -73,7 +74,7 @@ for (const id of ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY']) {
   assert(api.extremeDifficultySetting(id) === api.EXTREME_DIFFICULTIES.find(setting => setting.id === id), `${id}は既存specialRulesの同一オブジェクトを返す`);
 }
 const debugStart = source.indexOf("{gameState==='SPECIES_CHALLENGE_DEBUG'&&(()=>{");
-const debugEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'", debugStart);
+const debugEnd = source.indexOf("{gameState==='MONSTER_CHECK_DEBUG'", debugStart);
 const debugScreen = source.slice(debugStart, debugEnd);
 assert(debugScreen.includes('buildUnifiedMonsterEntries(unlockedMonsterIds,masuMons,[])'), '勇者候補は解放済Baseと所持Masuの既存統合一覧を使う');
 assert(debugScreen.includes('heroCandidates=challengeEntries.filter(entry=>monsterLineageOf(entry.baseId).main.id===speciesId)'), '勇者候補を選択種族(主血統)だけへ絞る');
@@ -107,7 +108,9 @@ assert(debugScreen.includes("storeSet('mh_masu_mons',nextMasuMons,false)") && de
 assert(!debugScreen.includes('storeSet(\'mh_species_challenge_run') && !debugScreen.includes('storeSet("mh_species_challenge_run'), '供モンのラン状態を保存しない');
 for (const legacyKey of ['mh_species_challenge_progress_v1','mh_owned_items','mh_masu_mons']) assert(source.includes(legacyKey), `${legacyKey}を維持する`);
 
-const battleModes = source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常の3モードとは別に持っている'));
+// ★見るのは BATTLE_MODES の配列だけ。うしろの「バトルの仕組み(BATTLE_SYSTEMS)」には
+//   種族チャレンジのidが入っている(公開フラグで出し入れする器)ので、そこまで含めない
+const battleModes = source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// ===== バトルの仕組み(モード選択の1つ上) ====='));
 assert(!battleModes.includes('BATTLE_MODE_SPECIES_CHALLENGE'), '本番BATTLE MODEへ表示しない');
 assert(!source.includes('SPECIES_CHALLENGE_RANKING') && !source.includes('species_challenge_ranking'), '種族チャレンジのランキング接続を作らない');
 assert(!source.includes('SPECIES_CHALLENGE_MARKET') && !source.includes('species_challenge_market'), '種族チャレンジのMARKET接続を作らない');

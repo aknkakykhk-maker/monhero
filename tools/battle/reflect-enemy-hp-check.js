@@ -35,7 +35,11 @@ const slice = (from, to) => {
 check('敵のライフも呼び出し側から受け取る',
   has('const handleEnemyTurn = async (lastActionType, immediateEffects={}, overrideIntent=null, hpAtAttackStart=hp, enemyHpAtAttackStart=enemy?.hp??0) => {'));
 check('反射は渡された最新のライフから引く(ターン開始時の値を使わない)',
-  has('const reflectedHp=Math.max(0,enemyHpAtAttackStart-incomingDmg);'));
+  has('const reflectedHp=Math.max(0,enemyHpAtAttackStart-reflectDmg);'));
+// ★新モードは返す量を「狙われた子が受けるはずだったダメージ」で数え直す(2026-09-20)。
+//   incomingDmg はパーティの丈夫さから出した値なので、1体ずつにした今はずれる
+check('返す量は新モードだけ数え直す(既存モードは incomingDmg のまま)',
+  has('const reflectDmg=reflectSlots') && has(': incomingDmg;'));
 // ★ここが戻ると不具合も戻る
 const enemyTurnFn = slice('const handleEnemyTurn = async (lastActionType', '  const useEmergency = async () => {');
 check('敵の行動中に、古い enemy.hp を読んでいる箇所が無い',
@@ -52,9 +56,12 @@ check('不死で起き上がったら、その値へ復活後のライフを入�
 // 何もしなかったターン(緊急回復)は、こちらのダメージが無いので既定値のままでよい
 check('緊急回復から敵が動くときは既定値のまま(こちらの与ダメが無いため)',
   has("await handleEnemyTurn('none',{},acting,hpAfterRecovery);"));
-// こちらの攻撃は関数型更新のまま(絶対値で書き戻すと同じ不具合が起きる)
+// こちらの攻撃は関数型更新のまま(絶対値で書き戻すと同じ不具合が起きる)。
+// ★敵がいない瞬間に prev を掘ると画面が落ちるので prev? の番をしている。
+//   数だけでなく「絶対値で書き戻していないか」も見る
 check('こちらの攻撃は関数型更新でライフを減らす',
-  (source.match(/setEnemy\(prev=>\(\{\.\.\.prev,hp:Math\.max\(0,prev\.hp-/g) || []).length === 2);
+  (source.match(/setEnemy\(prev=>prev\?\{\.\.\.prev,hp:Math\.max\(0,prev\.hp-/g) || []).length === 2
+    && !/setEnemy\(\{\.\.\.enemy,hp:/.test(source));
 
 // ---- 実際に動かして、敵が回復しないことを確かめる ----
 // Reactのstateと同じ振る舞い(クロージャのenemyは更新されない)を再現する

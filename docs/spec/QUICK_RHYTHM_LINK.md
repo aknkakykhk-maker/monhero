@@ -825,3 +825,52 @@ if (state === 'HOME' || …) return bgmArrangement.home;
 敗北の全画面表示はモンビー中に出さないので、**気づく手がかりはこの音と進捗の帯だけ**。
 SEではなくBGM側で鳴っているため、モンビー中のSE消音にも巻き込まれない。
 `node tools/audio/rhythm-return-bgm-check.js` が順番を見張る。
+
+## 13. プロモードのランぶんを、クイック周回の報酬にする（2026-09-21 ユーザー提案）
+
+> 「モンビーと同じようにバトルのプロモードも裏でクイック動かすみたいな事ってできる？」
+> 「プロモードをクリアしたときに限り、クイック何周分の報酬がもらえるなら可能？ 演奏と同じ仕組み」
+
+**裏で2つ目のバトルを動かすのは無理**。モンビーが裏で回せるのは、モンビーが
+ラン中の state（`hp`・`wave`・`slots`・`enemy`・`hand`・`score`…）を**ひとつも使わない画面**
+だからで、動いているバトルは常に1つ。どれも1組しかないので、プロとクイックを同時には持てない。
+
+そこで採ったのが、**演奏と同じ「終わったときに何周ぶんか数えて、報酬だけ配る」**方式。
+
+| 決めごと | 中身 | 決めた人 |
+| --- | --- | --- |
+| 周回数 | `切り捨て(進んだWAVE数 ÷ 10 × 難易度のpower × 5)`。1WAVE以上なら最低1周 | ユーザー選択（難易度とWAVE数・係数5） |
+| 報酬の基準 | AUTO設定「モンヒロビート中に回すクイック周回」の難易度 | 同上 |
+| 負けたとき | クリアしたWAVEの段階まで入る | 同上 |
+| 対象 | 各バトルの**プロモードのみ**（`BATTLE_MODE_PRO` / `BATTLE_MODE_TACTICS_PRO`） | 同上 |
+
+係数5のときの周回数（10WAVE完走）: Normal 5 / Expert 15 / Master 25 / Hell 40 / Legend 50。
+
+**実装**
+
+- 換算は `proRunQuickLoops(wavesCleared, power, scale)`（`10-core.jsx`・純粋関数）
+- 配るのは `awardProRunQuickLoops(wavesCleared)`。`awardRunRewards` が通常の報酬を配り終えた
+  あとに呼ぶので、**プロ本体の報酬とは別のまとまり**として結果画面に出る
+- 報酬そのものは既存の `awardRhythmPlayRunLoops` を通す。**引数で基準を差し替えられるようにした**
+  （`rewardMode` / `rewardDifficulty` / `rewardPolicy` / `countLoopProgress` / `recordQuickClear`）。
+  渡さなければ今までどおり「裏で回しているクイックのラン」を見るので、演奏の側は何も変わらない
+- プロから呼ぶときは `countLoopProgress:false`（モンビーの帯は裏の周回のためのもの）と
+  `recordQuickClear:false`（遊んだのはプロなので、クイックのクリア回数・ミッション・助手の絆は進めない）
+- 絆経験値は**裏でクイックを回していたときと同じ顔ぶれ**へ入る（2026-09-21・ユーザー指示
+  「オート設定のモンスター達と編成に入ってるモンスター。モンビーと同じ仕様」）。
+  AUTO設定の勇者モン＝1倍 ／ AUTO設定の供モン①②③＝1/2 ／ モンスター編成の控え＝1/4。
+  **プロで戦った編成ではない**。`awardRhythmPlayRunLoops` の `bondHeroMasuId` /
+  `bondParticipantMasuIds` で差し替える（渡さなければ今までどおり戦っている編成）
+- スコアとランキングには一切触れない。プロが全国ランキング対象であることと衝突しない
+
+**条件**（1つでも欠けたら配らない）
+
+| 条件 | なぜ |
+| --- | --- |
+| 各バトルのプロモードであること | ユーザー選択。チャレンジや極限にも付けるとクイックを直接回す意味が薄くなる |
+| AUTO設定が3つそろっている（`autoQuickRunConfigured`） | 報酬の基準になる難易度が決まらない |
+| その難易度をクイックでクリア済み（`isAutoQuickRunDifficultyAllowed`） | 勝てない難易度のタダ取りを止める（演奏の `rhythmPlayRunLoopsAllowed` と同じ考え方） |
+| WAVEを1つ以上クリアしている | 0WAVEは0周 |
+
+**ヘルプ**は難易度ごとの表を `{t:'data', id:'proQuickLoops'}` で実データから作る（`power` と
+同じ式を通すので、難易度を調整しても追随する）。**検査**は `tools/run/pro-quick-loop-check.js`。

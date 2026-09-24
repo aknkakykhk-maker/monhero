@@ -11,7 +11,10 @@ const slice=(from,to)=>{const a=source.indexOf(from),b=source.indexOf(to,a);if(a
 const sandbox={DIFFICULTY_SETTINGS:{},RANGE_LABELS:['零','近','中','遠'],QUICK_GROWTH_MULT:1.1,isQuickMode:()=>false,isProMode:()=>false,PRO_RANKING_PREFIX:'Pro',EXTREME_MODE:{id:'extreme'},console};
 vm.createContext(sandbox);
 vm.runInContext([
-  "const BATTLE_MODE_CHALLENGE='challenge',BATTLE_MODE_QUICK='quick',BATTLE_MODE_PRO='pro',BATTLE_MODE_SPECIES_CHALLENGE='speciesChallenge';",
+  "const BATTLE_MODE_CHALLENGE='challenge',BATTLE_MODE_QUICK='quick',BATTLE_MODE_PRO='pro',BATTLE_MODE_SPECIES_CHALLENGE='speciesChallenge',"
+  + "BATTLE_MODE_TACTICS='tactics',BATTLE_MODE_TACTICS_SPECIES='tacticsSpecies',BATTLE_MODE_TACTICS_PRO='tacticsPro';"
+  // この検査は極限チャレンジのぶんだけを見る。タクティクス側の分岐は通らない
+  + "const isTacticsMode=()=>false,isSpeciesChallengeMode=(m)=>m===BATTLE_MODE_SPECIES_CHALLENGE;",
   slice('const EXTREME_DIFFICULTIES = Object.freeze([','// ===== トレーニング'),
   slice('const TRAINING_PICK_COUNT','// 極限チャレンジの説明には'),
   slice('const EXTREME_RANKING_PREFIX','// ランキングの難易度キーから'),
@@ -40,7 +43,11 @@ check('複合与ダメは倍率合成後に1回だけfloor',near(combined(20,0,[
 check('最低1ダメージ保証なし',applyGod(1,170,0,[8,0,0,0],9,'atk')===0&&!slice('const applyGodSpecialDamage','const ultimateAllyJoinMultiplier').includes('Math.max(1'));
 check('170Tでも有限・非負', [1,9].every(w=>[20,40,60,80,100,120,140,160,170].every(t=>{const vals=[damage(t,'GOD',w),combined(t,0,[8,0,0,0],'GOD',w,'atk'),enemy(t,'GOD')*divinity(w).enemyMultiplier];return vals.every(v=>Number.isFinite(v)&&v>=0);}))); 
 check('通常UIへGODを公開しINFINITYクリアで解放',source.includes("available:true, debugAvailable:true")&&source.includes("setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:false")&&source.includes("'INFINITYクリアで解放'"));
-check('GODランキングと記録を公開一覧へ分離',source.includes('PUBLIC_EXTREME_DIFFICULTIES.map(setting=><button')&&source.includes('? PUBLIC_EXTREME_DIFFICULTIES.map(setting=>'));
+// GODが並ぶ場所(ランキングの難易度タブ・プロフィールの記録一覧)は、どちらも
+// PUBLIC_EXTREME_DIFFICULTIES から作る。難易度を手で並べ直すと、足したときに片方へ出ない
+check('GODランキングと記録を公開一覧へ分離',
+  source.includes('? PUBLIC_EXTREME_DIFFICULTIES.map(setting => [setting.id, setting])')
+  &&source.includes('? PUBLIC_EXTREME_DIFFICULTIES.map(setting=>{const score=extremeBestScores[setting.id]||0;'));
 // 2026-09-13・ユーザー依頼でクイックへも公開した(報酬は案A)。極限本体の数値は上の検査が見ている。
 check('QuickへGODを公開(経験値45/ダイヤ24/虹100・敵強度は本体を参照)',
   G('QUICK_EXTREME_SETTINGS').GOD?.xp===45&&G('QUICK_EXTREME_SETTINGS').GOD?.gold===24

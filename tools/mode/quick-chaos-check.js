@@ -14,7 +14,10 @@ assert.strictEqual(9 * 1.5 * 2, 27, 'ダイヤ優先の最終ダイヤ倍率');
 assert(source.includes('specialRuleDifficultyForRun(runMode,difficulty'), '特殊ルール共通解決関数を実戦で使用');
 const quickConfig = source.slice(source.indexOf('const QUICK_EXTREME_SETTINGS'), source.indexOf('const QUICK_DIFFICULTY_SETTINGS'));
 assert(!/(damageDealt|allyJoinBonus|gutsCost)/.test(quickConfig), 'クイック定義に特殊ルールを複製しない');
-assert(source.includes("const modeKeyPrefix = (mode) => isQuickMode(mode) ? 'mh_quick_'"), '既存クイック記録キー方式を使用');
+// ★2026-09-20 にタクティクスの記録(mh_tactics_ / mh_tactics_pro_)が増え、接頭辞の並びが
+//   増えた。ここで見たいのは「クイックの記録が mh_quick_ のままで、既存キーを動かしていない」こと
+assert(/const modeKeyPrefix = \(mode\) =>[\s\S]{0,240}isQuickMode\(mode\) \? 'mh_quick_'/.test(source),
+  '既存クイック記録キー方式を使用');
 assert(source.includes('if (isQuickMode(runMode)) {') && source.includes('return;'), 'クイックはランキング送信前に除外');
 assert(source.includes('debugBattleRef.current=false') && source.includes('debugBattle||isQuickDifficultyUnlocked'), '通常開始はデバッグ保存を無効化し、デバッグ選択は解放条件を無視');
 const order = source.indexOf("Legend:") < source.indexOf("EXTREME: { label:'EXTREME'")

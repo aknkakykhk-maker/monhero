@@ -171,14 +171,16 @@ if (REWARD_PICK_HEAD.test(component)) {
     jsx.replace(REWARD_PICK_HEAD, 'const Screen = ({ gameState, trainingPicks, setTrainingPicks, atk, def, maxHp, maxGuts, waveResult, effect,\n'
     + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep, ULTIMATE_SETTING, extremeRuleNumber, trainingGainRate, compactPercent, specialRulePercent, extremeSpecialRule, quickGrowthRateForRun, isQuickMode,\n'
     + '  TRAINING_PICK_COUNT, TRAINING_OPTIONS, handleTraining, AssistantBubble, battleTutorialSpotClass, cardIconNode,\n'
+    + '  slots, tacticsUnits, phasePlan, PhaseSteps,\n'
     + '  Trophy, Heart, Sword, ShieldCheck, Sparkles }) => {')
     + '\nmodule.exports = { Screen };',
     { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'training-reward-check.jsx' });
   const scope = { exports: {} };
   new Function('module', 'exports', 'React', transformed.code)(scope, scope.exports, React);
   const Icon = (name) => () => React.createElement('i', { 'data-icon': name });
-  const render = (picks) => ReactDOMServer.renderToStaticMarkup(React.createElement(scope.exports.Screen, {
-    gameState: 'REWARD_PICK', trainingPicks: picks, setTrainingPicks: () => {},
+  // extra は新モード(tactics)用。渡さなければ今までどおりのパーティ1本のトレーニング画面
+  const render = (picks, extra = {}) => ReactDOMServer.renderToStaticMarkup(React.createElement(scope.exports.Screen, {
+    gameState: 'REWARD_PICK', trainingPicks: picks, setTrainingPicks: () => {}, ...extra,
     atk: 100, def: 100, maxHp: 500, maxGuts: 100, waveResult: { turn: 0 }, effect: null,
     runMode: 'challenge', difficulty: 'Normal', extremeRun: false, extremeDifficulty: null,
     specialRuleDifficultyForRun: () => null, ULTIMATE_SETTING: { id: 'ULTIMATE' }, compactPercent: value => `${Number((value*100).toFixed(1))}%`,
@@ -193,6 +195,66 @@ if (REWARD_PICK_HEAD.test(component)) {
     Trophy: Icon('trophy'), Heart: Icon('heart'), Sword: Icon('sword'), ShieldCheck: Icon('shield'), Sparkles: Icon('sparkles'),
   }));
   const text = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // --- 新モード(tactics): 居るモンスター個別に選ぶ(2026-09-19 ユーザーが決めた形) ---
+  const unit = (over = {}) => ({ hp: 500, maxHp: 500, baseMaxHp: 500, atk: 100, def: 100,
+    guts: 50, maxGuts: 100, baseMaxGuts: 100, downed: false, ...over });
+  const tacticsExtra = (units, slots) => ({ tacticsUnits: units, slots });
+  const twoAlive = [unit(), null, unit({ atk: 200 }), null];
+  const tacticsEmpty = render([], tacticsExtra(twoAlive, [{ name: 'モッチー' }, null, { name: 'ゴーレム' }, null]));
+  check('新モードは「誰のトレーニングか」を出す', tacticsEmpty.includes('モッチーのトレーニング'),
+    text(tacticsEmpty).slice(0, 60));
+  check('何体ぶん終わったかを出す', tacticsEmpty.includes('data-tactics-training-progress="0/2"'));
+  // 1体目を選び終えたら2体目へ自動で進む。タブを押させない
+  const tacticsHalf = render([{ slot: 0, id: 'hp' }, { slot: 0, id: 'atk' }],
+    tacticsExtra(twoAlive, [{ name: 'モッチー' }, null, { name: 'ゴーレム' }, null]));
+  check('1体目が終わると次の子へ進む', tacticsHalf.includes('ゴーレムのトレーニング')
+    && tacticsHalf.includes('data-tactics-training-progress="1/2"'));
+  // ★全員ぶん選び終わったあと、ステータスの欄がパーティ合計へ戻らないこと
+  //   (2026-09-22 ユーザー指摘「トレーニングを2回め選ぶとステがもとに戻る」)。
+  //   ライフを2回選んだので 500 → 600 → 720。戻っていれば 720 が消えて 500 だけになる
+  const tacticsDone = render(
+    [{ slot: 0, id: 'hp' }, { slot: 0, id: 'hp' }, { slot: 2, id: 'hp' }, { slot: 2, id: 'hp' }],
+    tacticsExtra(twoAlive, [{ name: 'モッチー' }, null, { name: 'ゴーレム' }, null]));
+  check('全員ぶん選び終わってもステータスが戻らない',
+    text(tacticsDone).includes('720') && tacticsDone.includes('data-tactics-training-progress="2/2"'),
+    text(tacticsDone).slice(0, 80));
+  check('全員ぶん決まったことが分かる', text(tacticsDone).includes('全員ぶん決まりました'));
+  check('全員ぶん決まったら決定できる', text(tacticsDone).includes('決定する'));
+  // 3つ目を積めてはいけない。カードは押せない状態で出す
+  check('選び終わった子へ3つ目を積ませない',
+    (tacticsDone.match(/<button[^>]*disabled=""/g) || []).length >= 4,
+    `押せないカード ${(tacticsDone.match(/<button[^>]*disabled=""/g) || []).length}個`);
+  // ★1体ずつのときも同じ。スクリーンショットの状況(遠距離に1体だけ)を再現する
+  const oneAlive = [null, null, null, unit()];
+  const oneDone = render([{ slot: 3, id: 'hp' }, { slot: 3, id: 'hp' }],
+    tacticsExtra(oneAlive, [null, null, null, { name: 'スネグーラチカ' }]));
+  check('1体だけのときも選び終わったあと戻らない',
+    text(oneDone).includes('720') && oneDone.includes('data-tactics-training-progress="1/1"'),
+    text(oneDone).slice(0, 80));
+  // ★倒れた子はここで起こせる。起こすとそのWAVEは誰も強化できない
+  const withDowned = [unit(), null, unit({ hp: 0, downed: true }), null];
+  const tacticsDowned = render([], tacticsExtra(withDowned, [{ name: 'モッチー' }, null, { name: 'ゴーレム' }, null]));
+  check('倒れた子を起こす入口が出る', tacticsDowned.includes('data-tactics-training-revive')
+    && tacticsDowned.includes('ゴーレムを起こす'));
+  check('起こすと強化できないことを書いてある', tacticsDowned.includes('このWAVEの強化はなし'));
+  check('倒れた子はトレーニングの対象に数えない',
+    tacticsDowned.includes('data-tactics-training-progress="0/1"'));
+  // ★全員倒れているときは、パーティ合計のステータス欄を出さない(起こすだけの画面)。
+  //   1体ずつのモードで合計を出すと、何の数字なのか読み取れない
+  const allDowned = [unit({ hp: 0, downed: true }), null, unit({ hp: 0, downed: true }), null];
+  const tacticsAllDowned = render([], tacticsExtra(allDowned, [{ name: 'モッチー' }, null, { name: 'ゴーレム' }, null]));
+  check('全員倒れているときは合計のステータス欄を出さない',
+    !tacticsAllDowned.includes('data-training-status'));
+  check('既存5モードでは今までどおりステータス欄を出す',
+    render([]).includes('data-training-status'));
+  // ★強化フェーズの並び(PhaseSteps)と、選んだ1回だけを取り消す枠
+  const stubSteps = (props) => React.createElement('i', { 'data-stub-steps': props.current });
+  const withPlan = render(['hp'], { phasePlan: ['training', 'teaching'], PhaseSteps: stubSteps });
+  check('強化フェーズの並びをトレーニングの段で出す', withPlan.includes('data-stub-steps="training"'));
+  check('並びが無いときは出さない', !render(['hp'], { PhaseSteps: stubSteps }).includes('data-stub-steps'));
+  check('選んだ1回を「1回目」の枠から取り消せる', withPlan.includes('aria-label="1回目の走り込みを取り消す"'));
+  check('まだ選んでいない枠は押せるボタンにしない', !withPlan.includes('2回目の') );
 
   const empty = render([]);
   check('画面が落ちずに描ける', empty.length > 0);

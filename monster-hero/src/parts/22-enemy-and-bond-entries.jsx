@@ -5,9 +5,30 @@ const difficultyStyle = (setting, selected) => (selected
 
 // 透明余白を含む画像キャンバスではなく、画面ごとの見た目を基準に調整する。
 // contextを必須にすることで、SCANの調整が全WAVE詳細へ波及しないようにする。
+// ラスボスのムーと、タクティクスの覚醒ムー。どちらも「最後に出てくる特別な敵」なので、
+// 丸枠の外に巨大な立ち絵を置き、浮遊・突進・ためこみ・全画面オーラまで専用の演出を出す。
+// ★id を画面のあちこちへ直に書くと、敵を足したとき片方だけ抜ける。実際、覚醒ムーは
+//   ENEMY_ART_LAYOUT だけムーとそろえてあったのに、演出の分岐(8か所)から漏れていて、
+//   丸枠の中に小さく出るだけだった(2026-09-21 ユーザー指摘「覚醒ムーがしょぼすぎる
+//   クラシックのムーの描写を参照してって言ったじゃん」)
+const MOO_BOSS_IDS = ['Moo', 'AwakenedMoo'];
+const isMooBoss = (id) => MOO_BOSS_IDS.includes(String(id || ''));
+
 const ENEMY_ART_LAYOUT = {
   default: { scanScale:1, waveDetailScale:1, objectPosition:'center' },
   Moo: { scanScale:2.75, waveDetailScale:2, objectPosition:'center 48%' },
+  // ★タクティクスバトルの敵。絵は長辺160pxにそろえてあるが、鎌・斧・翼のように
+  //   細長いものが付いていると長辺をそこに取られ、本体が小さく見える。
+  //   どれくらい小さく見えるかは node tools/image/enemy-art-size-report.js で測れる
+  //   (56pxの枠に色が乗る面積。配信中の敵は13%〜68%・まんなか31%)。
+  //   2026-09-21にユーザーが10体とも絵を出し直した。面積は コイノボリ63% / ドクドク48% /
+  //   ニャルラトホテプ46% / カワズモー42% / スプラッター33% / メタルナー32% / 覚醒ムー30% /
+  //   イナリ30% / ラミア29% / デルピエロ28% で、**10体ともその幅のまんなか寄り**に入ったので、
+  //   覚醒ムー以外は倍率を入れない。古い絵に合わせた倍率(メタルナー1.1 / デルピエロ1.4 /
+  //   スプラッター1.2)をそのまま残すと、今度は大きすぎる
+  // ★覚醒ムーはクラシックのムーと同じ扱い。ボスだけは絵を高い解像度のまま置き(1024x598)、
+  //   表示のときに大きく拡大する。拡大率もムーとそろえてある
+  AwakenedMoo: { scanScale:2.75, waveDetailScale:2,    objectPosition:'center 48%' },
 };
 const enemyArtStyle = (enemyId, context='scan') => {
   const layout=ENEMY_ART_LAYOUT[enemyId]||ENEMY_ART_LAYOUT.default;
@@ -30,22 +51,167 @@ const ENEMY_ACTION_DEFINITIONS = [
   {id:'wait',type:'WAIT',category:'特殊行動',weight:20,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
   {id:'move',type:'MOVE',category:'移動',weight:15,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
 ];
+// ===== 新モード(id: tactics)の敵行動 =====
+// 設計の正本: docs/spec/BATTLE_NEW_MODE_PLAN.md
+//
+// ★上の ENEMY_ACTION_DEFINITIONS は書き換えない。別の表として持ち、
+//   state.definitions で渡す。既存モードの呼び出しは何も変わらない。
+// ★「様子を見ている(WAIT)」は入れない。5回に1回、敵が何もしないターンを作らないため。
+// ★どの行動にも「こちらの対抗手段」を1つ用意する。読めば受けられる、が成り立たないと
+//   ただ強いだけの難易度と変わらなくなる。
+//     間合い攻撃 → 距離撃で敵をずらす / 連撃 → ガード(1ヒットぶんだけ効く)＋回復 /
+//     貫通撃 → 回避・反射・スタン / 咆哮・再生 → スタンで潰す・削り切る /
+//     単体狙い → 狙われた子を守る・回復する / 全体攻撃 → 全員のライフを見て回復を回す
+// ★type は既存の ATTACK / SPECIAL をそのまま使い、違いは variant で持つ。
+//   getIncomingDamageBeforeTurnReduction は type でダメージの有無を判断しているので、
+//   ここを新しい type にするとダメージ計算・演出・予告の経路を全部書き足すことになる。
+// ★倍率は2026-09-20にユーザーが1つずつ決め直した。それまでは受けるダメージが重く、
+//   とくに「人数が増えるほど全体攻撃だけが強い」「同じ×1.8なのに連撃が貫通撃を
+//   絶対に上回れない」という歪みがあった。攻める側(敵)を全体に下げて、
+//   そのぶん敵を落としにくく(再生を厚く)し、休めるターン(行動なし)を戻してある。
+const TACTICS_SWEEP_MULT = 1.2;       // 予告した間合いに敵がいるとき
+const TACTICS_SWEEP_MISS_MULT = 0.4;  // 距離撃などでずらしたとき
+const TACTICS_RUSH_MULT = 1.2;        // 0.4×3ヒット。ガードは1ヒットぶんしか効かない
+const TACTICS_RUSH_HITS = 3;          // 威力をこの数で割ってヒットに分ける。ガードは1枚につき1ヒットを受け止める
+const TACTICS_PIERCE_MULT = 0.8;      // ガードを無視する。効かないぶん倍率で加減する
+const TACTICS_ROAR_ATK_RATE = 1.5;    // 次のターンから敵の攻撃が上がる
+const TACTICS_ROAR_MAX_STACKS = 2;    // 重ねがけの上限
+// ★0.5 → 0.3(2026-09-22 ユーザー指示「50%はでかすぎた 30%に変更で」)。
+//   最大ライフの半分が一度に戻ると、削り切る前に必ず1回は振り出しへ近づいていた
+const TACTICS_REGEN_RATE = 0.3;       // 最大ライフに対する回復量。★与ダメを下げたぶん敵を落としにくくする
+const TACTICS_REGEN_HP_THRESHOLD = 0.9; // ライフがこの割合を下回ったときだけ使う
+// ★回復量を数えるのはこの関数だけ(2026-09-22 ユーザー指示「敵の回復時でいくつ回復するかも
+//   数値を予測で出してほしい」)。予告の札と実際の回復が別々に数えると、出した予測が嘘になる。
+//   満タンで止めるのは回復する側(上限は敵の最大ライフ)。ここは「振り込む量」だけを返す
+const tacticsRegenHealAmount = (maxHp) => Math.max(1, Math.floor(Math.max(0, Number(maxHp) || 0) * TACTICS_REGEN_RATE));
+// 全体攻撃(2026-09-19・設計 5.3)。
+// ★1体あたりの威力は通常攻撃より必ず低くする。同じか上にすると人数が増えるほど
+//   「全員を殴るほうが得」になり、狙いを読む意味も、供モンを連れる意味も消える。
+//   もとは0.9で、4体そろうと合計×3.6と最も重い技になっていた(2026-09-20 に0.4へ)
+// ★単体狙い(focus)は廃止した。必殺技(ためる→×2.5)と役割がかぶるため
+//   (2026-09-20 ユーザー指示)。通常攻撃も連撃も貫通撃も「狙った1体」へ当たるので、
+//   誰が狙われるかを読む遊びはそのまま残る
+const TACTICS_ALLOUT_MULT = 0.4;  // 全員へ。1体あたりは通常攻撃より低い
+// スエゾーの「眼力」。タクティクスバトルでは**その子が攻撃したターン**に引く(2026-09-20 ユーザー指示)。
+// 既存5モードは今までどおり編成から決まる確率で、敵のターンの頭に引く
+const TACTICS_INTIMIDATE_RATE = 0.4;
+// ★noticeLabel … 敵の絵の右上へ出す「何をする技か」の吹き出し(2026-09-22 ユーザー指示
+//   「右上に必殺技！みたいに吹き出し出せばいい。3連撃！とか」)。技名だけでは何が起きるか
+//   覚えられないので、予告のあいだ出しっぱなしにする。書かなければ category を使う
+// ★category … 予告の札(攻撃予測)へ出す短い呼び名。予告そのものへ持たせて画面から引けるようにする。
+//   「ためる」は敵ごとの技名を持たないので label が「必殺技の準備をしている」という説明文になり、
+//   右上の吹き出しの「必殺技準備」を長く言い直しただけになっていた(2026-09-22 ユーザー指摘
+//   「攻撃予測のとこをためるにして吹き出しを必殺技準備が正解なはず」)
+const TACTICS_ACTION_DEFINITIONS = [
+  {id:'normal',type:'ATTACK',category:'通常攻撃',noticeLabel:'通常攻撃',weight:30,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'charge',type:'CHARGE',category:'ためる',noticeLabel:'必殺技準備',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'special',type:'SPECIAL',category:'必殺技',noticeLabel:'必殺技',weight:0,multiplier:2.5,hits:1,range:'全間合い',condition:'ためた次のターンに必ず発動',cooldown:0,useLimit:null},
+  {id:'wait',type:'WAIT',category:'特殊行動',noticeLabel:'様子見',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'move',type:'MOVE',category:'移動',noticeLabel:'間合い移動',weight:10,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある・移動した次のターンは選ばない',cooldown:0,useLimit:null},
+  {id:'sweep',type:'ATTACK',variant:'sweep',category:'間合い攻撃',noticeLabel:'間合い攻撃',weight:14,multiplier:TACTICS_SWEEP_MULT,missMultiplier:TACTICS_SWEEP_MISS_MULT,hits:1,range:'予告した1間合い',condition:'予告した間合いに敵がいると大ダメージ。距離撃でずらせる',cooldown:0,useLimit:null},
+  {id:'rush',type:'ATTACK',variant:'rush',category:'連撃',noticeLabel:`${TACTICS_RUSH_HITS}連撃`,weight:14,multiplier:TACTICS_RUSH_MULT,hits:TACTICS_RUSH_HITS,range:'全間合い',condition:`${TACTICS_RUSH_HITS}ヒットに分かれる。ガードは1枚につき1ヒットを受け止める`,cooldown:0,useLimit:null},
+  // ★貫通撃は「ためる → 必殺技」と同じ形にしてある(2026-09-21 ユーザー指示
+  //   「貫通は必殺級の技だからこれもためると同じように1ターン経由したほうがいい」)。
+  //   ガードが効かない＝受け方が無い技なので、来ると分かってから距離や回避で備えられるようにする。
+  //   抽選に出るのは構えのほうで、貫通撃そのものは構えた次のターンに必ず出る(weight 0)
+  {id:'pierceCharge',type:'PIERCE_CHARGE',category:'貫通技準備',noticeLabel:'貫通技準備',weight:12,multiplier:0,hits:0,range:'全間合い',condition:'常時',effectText:'次のターンに貫通撃が確定で出る',cooldown:0,useLimit:null},
+  {id:'pierce',type:'ATTACK',variant:'pierce',category:'貫通撃',noticeLabel:'貫通撃',weight:0,multiplier:TACTICS_PIERCE_MULT,hits:1,range:'全間合い',condition:'構えた次のターンに必ず発動。ガードが効かない',cooldown:0,useLimit:null},
+  {id:'roar',type:'ROAR',category:'攻撃力アップ',noticeLabel:'攻撃力アップ',weight:10,multiplier:0,hits:0,range:'全間合い',condition:`重ねがけは${TACTICS_ROAR_MAX_STACKS}回まで`,effectText:`次のターンから敵の攻撃 ×${TACTICS_ROAR_ATK_RATE}（このWAVEのあいだ続く。${TACTICS_ROAR_MAX_STACKS}回重ねると最大 ×${(TACTICS_ROAR_ATK_RATE**TACTICS_ROAR_MAX_STACKS).toFixed(2)}）`,cooldown:0,useLimit:TACTICS_ROAR_MAX_STACKS},
+  {id:'regen',type:'REGEN',category:'再生',noticeLabel:'回復',weight:10,multiplier:0,hits:0,range:'全間合い',condition:'ライフが減っているときだけ',effectText:`敵が自分の最大ライフの${Math.round(TACTICS_REGEN_RATE*100)}%を回復する`,cooldown:0,useLimit:null},
+  {id:'allout',type:'ATTACK',variant:'allout',targetsAll:true,category:'全体攻撃',noticeLabel:'全体攻撃',weight:10,multiplier:TACTICS_ALLOUT_MULT,hits:1,range:'全員',condition:'立っている全員へ同時に当たる。狙いをかわせない',cooldown:0,useLimit:null},
+];
+// どの敵も通常攻撃・ためる・必殺技・移動は持つ。ここへ足すのは「その敵だけの技」。
+// WAVEが進むほど読むことが増える並びにしてある(敵の順は TACTICS_ENEMY_SEQUENCE)。
+// ★ここのキーは「タクティクス専用の敵」のid。クラシックの敵idを書くと、
+//   タクティクスの敵が追加6技を1つも持たない状態になる(2026-09-21にそれで丸ごと出ていなかった)。
+const TACTICS_BASE_ACTION_IDS = Object.freeze(['normal','charge','special','wait','move']);
+const TACTICS_ENEMY_ACTION_IDS = Object.freeze({
+  Kawazumo:Object.freeze(['rush']),
+  Metalner:Object.freeze(['sweep']),
+  Inari:Object.freeze(['rush','roar']),
+  Koinobori:Object.freeze(['sweep','regen']),
+  Delpiero:Object.freeze(['pierce','sweep']),
+  Dokudoku:Object.freeze(['roar','rush','allout']),
+  Lamia:Object.freeze(['sweep','pierce']),
+  Nyarlathotep:Object.freeze(['regen','pierce','allout']),
+  Splatter:Object.freeze(['rush','roar','pierce','allout']),
+  AwakenedMoo:Object.freeze(['sweep','rush','pierce','roar','regen','allout']),
+});
+// 難易度が上がると、基本構成に無い技も順に使えるようになる(2026-09-21 ユーザー指示
+// 「難易度が上がるにつれて使える技も増やそうか」)。足す順はこれ。
+// ★allout(全体攻撃)は最後。低いWAVEの敵が早くから全員攻撃を撒くと、受け方を1つずつ覚えられない。
+//   pierce(貫通撃)はその手前。構えを挟むぶん読めるとはいえ、ガードが効かない技なので後ろに置く
+const TACTICS_EXTRA_ACTION_ORDER = Object.freeze(['rush','sweep','roar','regen','pierce','allout']);
+// 基本構成(Normal)を0として、難易度ごとに何本増減するか。
+// ★最低1本は残す。0にすると通常攻撃とためるだけになり、このモードの読み合いが消える
+const TACTICS_DIFFICULTY_ACTION_DELTA = Object.freeze({
+  Beginner:-2, Easy:-1, Normal:0, Hard:0, Expert:1, Master:1,
+  GrandMaster:2, Hell:2, Legend:3,
+  EXTREME:4, NIGHTMARE:4, CHAOS:5, ULTIMATE:6, INFINITY:6, GOD:6,
+});
+// 減らすときに先に落とす技。殴ってこないものから外す。
+// ★前から順に切ると、ニャルラトホテプが再生だけ・ドクドクが咆哮だけになり、
+//   易しい難易度ほど「敵が何もしてこない」ように見えてしまう
+const TACTICS_SUPPORT_ACTION_IDS = Object.freeze(['roar','regen']);
+// その敵がその難易度で使う技のid。難易度を渡さなければ基本構成のまま(既存の呼び出しはそのまま動く)
+const tacticsEnemyActionIds = (enemyId, difficulty) => {
+  const base = TACTICS_ENEMY_ACTION_IDS[enemyId] || [];
+  const delta = Number.isFinite(TACTICS_DIFFICULTY_ACTION_DELTA[difficulty]) ? TACTICS_DIFFICULTY_ACTION_DELTA[difficulty] : 0;
+  const want = Math.max(1, base.length + delta);
+  if (want === base.length) return base;
+  if (want < base.length) {
+    // 落とすのは「補助をうしろから → それでも足りなければうしろから」。残ったものは base の並びを保つ
+    const drop = base.length - want, dropped = new Set();
+    for (let i = base.length - 1; i >= 0 && dropped.size < drop; i -= 1) {
+      if (TACTICS_SUPPORT_ACTION_IDS.includes(base[i])) dropped.add(i);
+    }
+    for (let i = base.length - 1; i >= 0 && dropped.size < drop; i -= 1) dropped.add(i);
+    return base.filter((_, i) => !dropped.has(i));
+  }
+  const extra = TACTICS_EXTRA_ACTION_ORDER.filter(id => !base.includes(id));
+  return [...base, ...extra.slice(0, want - base.length)];
+};
+const tacticsActionDefinitions = (enemyId, difficulty) => {
+  const own = tacticsEnemyActionIds(enemyId, difficulty);
+  // 貫通撃は構えとセットで持たせる。構えが無いと、貫通撃は一生出てこない(weight 0 のため)
+  const ids = [...TACTICS_BASE_ACTION_IDS, ...own, ...(own.includes('pierce') ? ['pierceCharge'] : [])];
+  return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id));
+};
+// そのモード・その敵が使う行動表。新モード以外は今までどおりの1つの表を返す
+const enemyActionDefinitionsFor = (mode, enemyId, difficulty) => (typeof isTacticsMode === 'function' && isTacticsMode(mode))
+  ? tacticsActionDefinitions(enemyId, difficulty) : ENEMY_ACTION_DEFINITIONS;
 // 直前の行動から、次に選べる行動を決めるための状態を作る
 const enemyActionStateFrom = (lastIntent) => ({
   charging: lastIntent?.type === 'CHARGE',
+  piercing: lastIntent?.type === 'PIERCE_CHARGE',
   movedLast: lastIntent?.type === 'MOVE',
 });
 const evaluateEnemyActions = (ent,currentDist,state={}) => {
-  const charging=!!state.charging, movedLast=!!state.movedLast;
-  return ENEMY_ACTION_DEFINITIONS.map(def => {
+  const charging=!!state.charging, piercing=!!state.piercing, movedLast=!!state.movedLast;
+  // 行動表はモードごとに違う(新モードだけ別の表)。渡されなければ今までどおりの1つの表を使う
+  const definitions=Array.isArray(state.definitions)&&state.definitions.length?state.definitions:ENEMY_ACTION_DEFINITIONS;
+  return definitions.map(def => {
     let available=!!ent, reason=ent?'':'敵情報がありません';
     if (available) {
       if (charging) {
         // ためた次のターンは必殺技で確定。ほかの行動では上書きしない
         available = def.type==='SPECIAL';
         if (!available) reason='ためているため、次は必殺技で確定しています';
+      } else if (piercing) {
+        // 構えた次のターンは貫通撃で確定。ためる→必殺技とまったく同じ形
+        available = def.id==='pierce';
+        if (!available) reason='構えているため、次は貫通撃で確定しています';
       } else if (def.type==='SPECIAL') {
         available=false; reason='ためた次のターンにだけ発動します';
+      } else if (def.id==='pierce') {
+        available=false; reason='構えた次のターンにだけ発動します';
+      } else if (def.type==='REGEN') {
+        // 満タンに近いあいだは使わない。回復するものが無いターンを作らないため
+        const maxHp=Math.max(0,Number(ent.maxHp)||0), hp=Math.max(0,Number(ent.hp)||0);
+        if (!(maxHp>0 && hp<maxHp*TACTICS_REGEN_HP_THRESHOLD)) { available=false; reason='ライフが十分あるあいだは使いません'; }
+      } else if (def.type==='ROAR') {
+        // 重ねがけの上限。すでに上限まで吼えていたら選ばない
+        if (Math.max(0,Number(state.roarStacks)||0)>=TACTICS_ROAR_MAX_STACKS) { available=false; reason=`重ねがけは${TACTICS_ROAR_MAX_STACKS}回までです`; }
       } else if (def.type==='MOVE') {
         // 移動は必ず前のターンに吹き出しで予告してから行う。
         // 予告を出す機会が無かったターンの直後は、そもそも移動を選ばない。
@@ -56,7 +222,10 @@ const evaluateEnemyActions = (ent,currentDist,state={}) => {
         else if (!RANGE_LABELS.some((_,i)=>i!==currentDist)) { available=false; reason='移動先がありません'; }
       }
     }
-    return {...def,weight:charging?(def.type==='SPECIAL'?1:0):def.weight,available,unavailableReason:available?'':reason};
+    const weight = charging ? (def.type==='SPECIAL'?1:0)
+      : piercing ? (def.id==='pierce'?1:0)
+      : def.weight;
+    return {...def,weight,available,unavailableReason:available?'':reason};
   });
 };
 const enemyActionProbabilities = (ent,currentDist,state={}) => {
@@ -66,9 +235,31 @@ const enemyActionProbabilities = (ent,currentDist,state={}) => {
 // 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
 const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常攻撃')
   : type==='CHARGE' ? '必殺技の準備をしている'
+  : type==='PIERCE_CHARGE' ? '貫通撃の構えをとっている'
   : type==='SPECIAL' ? (ent?.special||'必殺技！')
+  : type==='ROAR' ? '攻撃力を上げている'
+  : type==='REGEN' ? '傷を癒している'
   : '様子を見ている';
-const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃'};
+// その敵のその行動を、画面へ出すときの名前。タクティクスの敵は追加6技の名前を actions に持つ
+// (TACTICS_ENEMY_DATA)。名前を持たない敵は1文字も変わらず、今までどおりの見出しへ落ちる。
+const enemyActionDisplayName = (ent,def) => {
+  if(!def) return '';
+  const named = ent && ent.actions && typeof ent.actions[def.id]==='string' ? ent.actions[def.id].trim() : '';
+  if(named) return named;
+  // 貫通の構えは、その敵の貫通撃の名前から作る(「◯◯の構え」)。何が来るかを名前で分かるようにする
+  if(def.id==='pierceCharge'){
+    const pierceName = ent && ent.actions && typeof ent.actions.pierce==='string' ? ent.actions.pierce.trim() : '';
+    if(pierceName) return `${pierceName}の構え`;
+  }
+  return def.type==='MOVE' ? '間合い移動' : def.variant ? def.category : enemyActionLabel(ent,def.type);
+};
+// 敵の絵の右上へ出す「何をする技か」。技名(◯◯の構え・かえるのうた)だけでは
+// 何が起きるか覚えられないので、予告のあいだ添える(2026-09-22 ユーザー指示)。
+// 書いていない技(既存5モードの定義)は category がそのまま出る
+const enemyActionNoticeLabel = (def) => (def && (def.noticeLabel || def.category)) || '';
+const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃',ROAR:'📢',REGEN:'💚',PIERCE_CHARGE:'⚔️'};
+// 新モードの攻撃は type が ATTACK のままなので、見分けは variant で付ける
+const TACTICS_VARIANT_ICONS = {sweep:'🌪️',rush:'💥',pierce:'🗡️',allout:'🌊'};
 const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
   const actions=enemyActionProbabilities(ent,currentDist,state),roll=random(),available=actions.filter(a=>a.available);
   let cursor=roll;
@@ -79,9 +270,25 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
     const targetDist=targets[Math.min(targets.length-1,Math.floor(random()*targets.length))];
     // 予告に出した移動先をそのまま持ち歩く。実行時はこの値だけを見るので、
     // 予告と実際の移動先が食い違うことはない
-    return {type:selected.type,value:0,label:`移動: ${RANGE_LABELS[targetDist]}`,targetDist,icon:ENEMY_ACTION_ICONS.MOVE,actionId:selected.id};
+    return {type:selected.type,value:0,label:`移動: ${RANGE_LABELS[targetDist]}`,targetDist,icon:ENEMY_ACTION_ICONS.MOVE,notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
   }
-  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionLabel(ent,selected.type),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',actionId:selected.id};
+  // 間合い攻撃は「いまいる間合い」を狙うと予告する。実行までに距離撃でずらせば威力が落ちるので、
+  // 予告を見てからガッツを距離撃へ回すかどうかの判断になる。
+  // 予告と実際に薙ぐ間合いが食い違わないよう、ここで決めた値だけを実行時に見る
+  if(selected.variant==='sweep'){
+    return {type:selected.type,variant:selected.variant,sweepDist:currentDist,
+      value:Math.floor(ent.atk*selected.multiplier),missValue:Math.floor(ent.atk*(selected.missMultiplier??1)),
+      label:`${enemyActionDisplayName(ent,selected)}: ${RANGE_LABELS[currentDist]}`,icon:TACTICS_VARIANT_ICONS.sweep,notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
+  }
+  if(selected.variant){
+    // 全体攻撃だけは狙いを決めない。予告の時点で「立っている全員」と決まっているので、
+    // targetsAll を intent へ持ち歩き、当たる相手は tacticsIntentTargets が数え直す
+    return {type:selected.type,variant:selected.variant,hits:Math.max(1,Math.floor(Number(selected.hits)||1)),
+      ...(selected.targetsAll?{targetsAll:true}:{}),
+      value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),
+      icon:TACTICS_VARIANT_ICONS[selected.variant]||ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
+  }
+  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
 };
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
@@ -94,9 +301,18 @@ const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroD
   && heroDist===enemyDist
   ? Math.min(1, currentRate + 0.5)
   : currentRate;
-const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null, enemyTurnMultiplier=1) => {
-  const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
-  const base = ENEMY_DATA[enemyKey];
+// ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。
+//   options.mode にそのランのモードを渡すと、そちらの10体が出る。
+//   クラシック・クイックの並び(ENEMY_SEQUENCE)は1つも変えない——あちらを差し替えると、
+//   いま遊んでいる人のチャレンジ・プロの手ごたえが同時に変わってしまう。
+//   forcedEnemyKey(デバッグの敵指定)は、どちらの表からでも引けるようにしておく。
+const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null, enemyTurnMultiplier=1, options={}) => {
+  const tacticsEnemies = typeof isTacticsMode === 'function' && isTacticsMode(options && options.mode)
+    && typeof TACTICS_ENEMY_SEQUENCE !== 'undefined';
+  const sequence = tacticsEnemies ? TACTICS_ENEMY_SEQUENCE : ENEMY_SEQUENCE;
+  const enemyKey = forcedEnemyKey || sequence[wave - 1];
+  const base = (tacticsEnemies ? TACTICS_ENEMY_DATA[enemyKey] : null) || ENEMY_DATA[enemyKey]
+    || (typeof TACTICS_ENEMY_DATA !== 'undefined' ? TACTICS_ENEMY_DATA[enemyKey] : null);
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
   const hasPowerOverride = powerOverride !== null && powerOverride !== undefined && Number.isFinite(Number(powerOverride));
   const mod = hasPowerOverride ? Number(powerOverride) : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].power;
@@ -105,6 +321,9 @@ const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=
   return {
     ...(base || {}),
     id:enemyKey || `missing-wave-${wave}`,
+    // ★難易度を敵そのものに持たせる。タクティクスは難易度で使える技の本数が変わるので、
+    //   行動表を引くたびに「いまの難易度」を別経路で探すと、実戦とSCANでずれる
+    difficulty:safeDifficulty,
     name:base?.name || '敵データ未設定',
     imgUrl:base?.imgUrl || '',
     emoji:base?.emoji || '❓',
@@ -241,7 +460,12 @@ const ATTACK_COMBO_RULES = Object.freeze({
 // ソードスキルの「連撃パワー」が満タンになる数。ここに達するたびに永久10%連撃が1本増え、0へ戻る
 const KENSHI_COMBO_POWER_MAX = 3;
 // mainCanCrit:false は「メインヒットには会心が乗らない」種類(あつの挑発)。連撃・全体連撃の会心判定は変わらない
-const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1 }) => {
+// ★heroId … 勇者モンのid。traitOwnerId … 特性の「持ち主」(タクティクスでは札を出した子、
+//   既存5モードは勇者モンと同じ)。渡さなければ heroId と同じに倒れるので、今までの呼び出しは変わらない。
+//   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
+//     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
+//     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
+const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
@@ -267,7 +491,7 @@ const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critD
     const safeComboFinalMultiplier = Math.max(0, Number(comboFinalMultiplier) || 0);
     hits.push({ kind: 'combo', crit, dmg: Math.floor(beforeSoulFinal * safeComboFinalMultiplier), skillName, noAnim });
   };
-  if (heroId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);
+  if (traitOwnerId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);
   if (isUniqueOf('Zan')) combo(ATTACK_COMBO_RULES.zanUnique + comboDmgBonus);
   if (heroId === 'Eiki' && attackerId === 'Eiki') {
     for (const rate of ATTACK_COMBO_RULES.eikiHero) combo(rate + comboDmgBonus);
@@ -280,7 +504,9 @@ const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critD
   if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);
   if (kenshiHero && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiHeroUnique) combo(rate + comboDmgBonus);
   // 固有効果「ソードスキル」: 技の出自が剣士モッチーなら誰が使っても(合体で引き継いだ場合も)
-  if (isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
+  // ★swordSkill:false … タクティクスのEX「ソード・コンバージョン」で片手持ちの剣士モッチーが使ったとき。
+  //   固有技そのものは使えるが、ソードスキルの連撃は出ない(ほかのモードは渡さないので常に true)
+  if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
   // ソードスキルの連撃パワーが3充填されるたびに1本ずつ増える永久連撃。
   // 本数に上限は設けない。率にも連撃ダメージ補正(comboDmgBonus)が乗る
   if (attackerId === 'KenshiMocchi') {

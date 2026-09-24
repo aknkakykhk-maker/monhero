@@ -262,7 +262,8 @@ check('画面側はこれまでどおり scene を渡すだけ',
 for (const [key, wired] of Object.entries({
   login: "gainAssistantBond(loadedBonds[activeAssistant], 'login')",
   battle: "addAssistantBond('battle')",
-  challenge: "addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode))",
+  // ★タクティクスバトルの極限は「極限チャレンジで遊んだ」ではないので 'extreme' を渡さない
+  challenge: "addAssistantBond(extremeRunRef.current && !isTacticsMode(runMode) ? 'extreme' : modeBondAction(runMode))",
   ranking: "addAssistantBond('ranking')",
   temple: "addAssistantBond('temple')",
   market: "addAssistantBond('market')",
@@ -278,7 +279,7 @@ for (const [key, wired] of Object.entries({
   enhance: "addAssistantBond('enhance')",
   dye: "addAssistantBond('dye')",
   partySet: "addAssistantBond('partySet')",
-  extreme: "addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode))",
+  extreme: "addAssistantBond(extremeRunRef.current && !isTacticsMode(runMode) ? 'extreme' : modeBondAction(runMode))",
   clear: "addAssistantBond('clear')",
   quickClear: "addAssistantBond('quickClear')",
   proClear: "addAssistantBond('proClear')",
@@ -451,8 +452,11 @@ const C = cardCtx.__c;
 
 check('みゅあカード(id:mua)はみゅあ本人へ結び付く', C.assistantIdOfAssistCard('mua') === 'mua', String(C.assistantIdOfAssistCard('mua')));
 check('ききカード(id:kiki)はきき本人へ結び付く', C.assistantIdOfAssistCard('kiki') === 'kiki', String(C.assistantIdOfAssistCard('kiki')));
+// ★ドラは 2026-09-17 に助手へ加わったので、ここから外して下の行へ移した。
+//   カードidと助手idが同じ綴りなら、そのまま本人へ結び付く(17-release… の作りどおり)
+check('ドラカード(id:dra)はドラ本人へ結び付く', C.assistantIdOfAssistCard('dra') === 'dra', String(C.assistantIdOfAssistCard('dra')));
 check('助手以外のアシストカードは結び付かない',
-  ['oryo', 'dra', 'atsu', 'cadmium', 'meloso', 'mocchi'].every(id => C.assistantIdOfAssistCard(id) === null));
+  ['oryo', 'atsu', 'cadmium', 'meloso', 'mocchi'].every(id => C.assistantIdOfAssistCard(id) === null));
 check('壊れた値でも落ちずにnullを返す',
   [null, undefined, '', 0, {}, []].every(v => C.assistantIdOfAssistCard(v) === null));
 // カード名は進化で変わる(みゅあの愛→深愛→慈愛)。名前で判定していたら、ここで外れる
@@ -622,7 +626,7 @@ check('デバッグ戦では、カード分を数えない',
 // 通常の加算はこれまでどおり選択中の助手へ入る(カード分を足したせいで壊れていないこと)
 check('通常のバトル・モード・クリア分は、これまでどおり選択中の助手へ入る',
   has("addAssistantBond('battle');")
-    && has("addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode));")
+    && has("addAssistantBond(extremeRunRef.current && !isTacticsMode(runMode) ? 'extreme' : modeBondAction(runMode));")
     && has("addAssistantBond('clear');"));
 
 // --- ヘルプ・更新履歴 ---

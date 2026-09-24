@@ -6,6 +6,7 @@ GitHub Pages では配信されない。
 | フォルダ | 中身 | 使うところ |
 | --- | --- | --- |
 | `monsters/` | 顔アイコンを切り出すための高解像度な原本と、加工前の立ち絵の原本 | `node tools/image/make-face-icons.js` / `node tools/image/make-plant-dye-mask.js` |
+| `assistants/` | 助手・キャラクターの表情画像のうち、まだゲームで使っていないもの | 使うことが決まったら `monster-hero/images/assistant/` へ写す([README](assistants/README.md)) |
 | `dye-masks/` | 染色の部位分けが正しいかを比べるための正解見本 | `node tools/image/undine-dye-mask-check.js` など |
 
 ## なぜここに置くか

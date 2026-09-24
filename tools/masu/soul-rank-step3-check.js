@@ -22,6 +22,8 @@ const source = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/game-system
 // 本体＋切り出した画面をつないだ1本(harness.readAppSource)を見る
 const app = readAppSource();
 const marketUi = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/20-market-notices-help.jsx'),'utf8');
+// マーケットの画面は 55-screen-breeder-market.jsx へ切り出してある(商品カードの並べ方はこちら)
+const marketScreen = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/55-screen-breeder-market.jsx'),'utf8');
 const breeder = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/data/breeder.js'),'utf8');
 
 let failed=0;
@@ -190,13 +192,16 @@ check('魂格特性強化はmh_masu_monsだけを検証保存',
   (()=>{const i=app.indexOf('const commitSoulTraitUpgrade');const j=app.indexOf('const commitSoulTraitRespec',i);const b=app.slice(i,j);return b.includes("key:'mh_masu_mons'")&&!b.includes("key:'mh_owned_items'");})());
 check('魂格再編はmh_masu_mons/mh_owned_itemsを取引保存',
   (()=>{const i=app.indexOf('const commitSoulTraitRespec');const j=app.indexOf('// 固有技設定',i);const b=app.slice(i,j);return b.includes("key:'mh_masu_mons'")&&b.includes("key:'mh_owned_items'");})());
+// ★詳細への入口は MarketDetailChip という部品へ切り出した。ボタンのJSXを直接
+//   書いていた頃の文字列では見つからない
 check('100万ダイヤ版の魂格再編の書は詳細ボタンを維持',
-  app.includes("item.desc&&<button onClick={()=>onOpenItemDetail(item)}")
-  && !app.includes("item.id===SOUL_RANK_RESPEC_ITEM_ID?<button"));
+  /item\.desc&&<MarketDetailChip/.test(marketScreen)
+  && !marketScreen.includes("item.id===SOUL_RANK_RESPEC_ITEM_ID?<button"));
+// ★アイコンの大きさは見た目の都合で変わる。潰れない指定(shrink-0)が付いているかだけを見る
 check('100万ダイヤ版の長い価格でもダイヤアイコンを潰さない',
-  marketUi.includes('usesGold?<Gem size={9} className="shrink-0"/>:<Coins size={9} className="shrink-0"/>'));
+  /usesGold\?<Gem size=\{\d+\} className="shrink-0"\/>:<Coins size=\{\d+\} className="shrink-0"\/>/.test(marketUi));
 check('勇者の証交換版の魂格再編の書にも詳細ボタンを表示',
-  app.split("item.desc&&<button onClick={()=>onOpenItemDetail(item)}").length-1>=2);
+  (marketScreen.match(/desc&&<MarketDetailChip/g) || []).length >= 2);
 check('勇者の証1→再編の書は同じアイテムの隣に出す別商品カード',
   app.includes("const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID")
   && app.includes("const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null")

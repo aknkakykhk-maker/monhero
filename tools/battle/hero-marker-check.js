@@ -40,16 +40,24 @@ check('配信用JSにも王冠が入っている', compiled.includes('isHeroSlot
   compiled.includes('isHeroSlotMon') ? '' : 'ビルドし直してください');
 
 // --- ③ 同時使用枚数の加算 ---
+// 2026-09-20: タクティクスバトルは「持っているモンスター本人」が1枚多く使う(仕様 4.9)ので、
+// 盤面にいる持ち主の人数を数える。既存5モードは今までどおり勇者モンのぶんだけ。
+// 見張りたいのは「+1 を決める場所が1つ」なので、どちらも heroCardBonusOf を通ること
 check('勇者特性の加算を1か所で決めている',
-  has("const heroCardBonus = useMemo(() => heroCardBonusOf(mainHero?.id), [mainHero]);"));
+  has("const heroCardBonus = useMemo(() => (isTacticsMode(runMode)")
+    && has("    ? tacticsAliveSlots(tacticsUnits).filter(i => heroCardBonusOf(tacticsUnits[i]?.id) > 0).length")
+    && has("    : heroCardBonusOf(mainHero?.id)), [mainHero, runMode, tacticsUnits]);"));
 // 対象の種は一覧で持つ。同じ効果(ハムの「連続攻撃」・剣士モッチーの「二刀流」)を
 // 種ごとの分岐でコピーすると、増えるたびに手動とAUTOで食い違う元になる
 check('加算する種を一覧で持っている(種ごとの分岐にしていない)',
   has("const HERO_CARD_BONUS_MONSTER_IDS = Object.freeze(['Ham', 'KenshiMocchi']);")
   && has("const heroCardBonusOf = (heroId) => (HERO_CARD_BONUS_MONSTER_IDS.includes(heroId) ? 1 : 0);"));
 check('枚数の計算がその値を使う',
-  // きき加入後は、ききの枚数ボーナスも同じ場所で足す
-  has('return Math.min(5,limit + heroCardBonus + kikiCardBonus);') && has('}, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);'));
+  // きき加入後は、ききの枚数ボーナスも同じ場所で足す。
+  // 2026-09-20: 新モードは倒れた子を人数に数えないので、盤面(tacticsUnits)も見るようになった。
+  // 「+1 を1か所で足す」という見張りたいことは変わっていない
+  has('return Math.min(5,limit + heroCardBonus + kikiCardBonus);')
+    && has('}, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus, runMode, tacticsUnits]);'));
 check('計算と別に条件を書き足していない',
   !has("if (mainHero?.id === 'Ham') limit += 1;") && !has("if (mainHero?.id === 'KenshiMocchi') limit += 1;"));
 check('増えていることを画面にも出す',

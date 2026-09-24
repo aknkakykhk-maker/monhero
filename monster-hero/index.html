@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":7761,"data/images/images-enemy.js":1347,"data/ally-monsters.js":24360,"data/lineages.js":8832,"data/breeder.js":44275,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":1317242,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":45191,"data/changelog.js":735987,"data/help.js":363345,"data/rhythm-step3-release.js":7722,"data/assistants.js":305729,"tailwind.css":121046,"game-system.compiled.js":3832231,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":12319,"data/images/images-enemy.js":2313,"data/ally-monsters.js":24360,"data/lineages.js":8832,"data/breeder.js":45450,"data/enemy-monsters.js":6573,"data/skills.js":4375,"data/rhythm-mode.js":1326152,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/rhythm-event.js":49381,"data/changelog.js":874039,"data/help.js":400005,"data/rhythm-step3-release.js":7722,"data/assistants.js":466325,"tailwind.css":139024,"game-system.compiled.js":4552244,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202609170047';
+var GAME_BUILD = '202609241708';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -119,7 +119,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=deb89ca92ecc" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=8984f248514b" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -129,7 +129,64 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
      svh は「いちばん小さいときの高さ」なので、UIがどう出ていても必ず画面へ収まる。
      svh を知らないブラウザでは @supports が効かず dvh のままになる。
      画面いっぱいを使う場所(本体・モーダル)は、直に 100dvh と書かずここを参照する。 */
-  :root { --mh-vh: 100dvh; }
+  :root {
+    --mh-vh: 100dvh;
+    /* 共通の視覚言語。距離・カード・難易度など、意味のある色には適用しない。 */
+    --mh-bg: #0b1224;
+    --mh-surface: #15213a;
+    --mh-surface-low: #101a2e;
+    --mh-border: #354660;
+    --mh-text: #edf2fa;
+    --mh-muted: #b4c1d5;
+    --mh-gold: #e8bc62;
+    --mh-gold-light: #f3d494;
+    --mh-on-gold: #211a0c;
+    --mh-radius: 12px;
+    --mh-panel-radius: 16px;
+  }
+  .mh-app.mh-app, .mh-screen-shell { background-color: var(--mh-bg); color: var(--mh-text); }
+  .mh-panel.mh-panel { background: var(--mh-surface); border-color: var(--mh-border); border-radius: var(--mh-panel-radius); }
+  .mh-panel-flat.mh-panel-flat { background: var(--mh-surface-low); border-color: var(--mh-border); border-radius: var(--mh-radius); }
+  .mh-screen-head, .mh-screen-footer { border-color: var(--mh-border); }
+  .mh-screen-head h2 { font-style: normal; }
+  .mh-screen-note.mh-screen-note { color: var(--mh-muted); }
+  .mh-button.mh-button, .mh-tab.mh-tab {
+    border: 1px solid var(--mh-border);
+    border-radius: var(--mh-radius);
+    transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .mh-button.mh-button-secondary, .mh-tab[aria-selected="false"] {
+    background: var(--mh-surface); color: var(--mh-text); box-shadow: none;
+  }
+  .mh-button.mh-button-primary {
+    background: linear-gradient(180deg, var(--mh-gold-light), var(--mh-gold));
+    border-color: var(--mh-gold-light); color: var(--mh-on-gold);
+    box-shadow: 0 2px 5px #0003; text-shadow: none;
+  }
+  .mh-button.mh-button-danger { background: #3b1b2a; border-color: #a85f70; color: #ffdae1; }
+  .mh-tab[aria-selected="true"] { border-color: var(--mh-gold-light); box-shadow: inset 0 -3px 0 var(--mh-gold-light); }
+  .mh-button:focus-visible, .mh-tab:focus-visible, .mh-home-scene button:focus-visible {
+    outline: 2px solid var(--mh-gold-light); outline-offset: 2px;
+  }
+  .mh-button:enabled:active { filter: brightness(.92); }
+  .mh-button.mh-button:disabled {
+    background: #1b2639; border-color: #344157; color: #a7b3c6;
+    opacity: .65; box-shadow: none; text-shadow: none; filter: none; transform: none; cursor: not-allowed;
+  }
+  /* ホームの配置・絵・案内の強調は維持し、通常の看板と操作だけを共通色へ。 */
+  .mh-home-scene .mh-home-facility:not(.is-tutorial-spot) > span,
+  .mh-home-scene .mh-home-mission:not(.is-tutorial-spot),
+  .mh-home-scene .mh-home-gift:not(.is-tutorial-spot),
+  .mh-home-scene .mh-home-update {
+    background: var(--mh-surface); border-color: var(--mh-border); color: var(--mh-text);
+    border-radius: var(--mh-radius); box-shadow: 0 3px 10px #0005; text-shadow: none;
+  }
+  .mh-home-scene .mh-home-facility.battle:not(.is-tutorial-spot) > span {
+    background: linear-gradient(180deg, var(--mh-gold-light), var(--mh-gold));
+    border-color: var(--mh-gold-light); color: var(--mh-on-gold);
+    box-shadow: 0 3px 10px #0005; animation: none;
+  }
+  @media (prefers-reduced-motion: reduce) { .mh-button, .mh-tab { transition: none; } }
   @supports (height: 100svh) { :root { --mh-vh: 100svh; } }
   body { height:var(--mh-vh); box-sizing:border-box; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
   #root { width:100%; height:100%; overflow:hidden; }
@@ -471,6 +528,75 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
   [data-rhythm-play-area] > div:first-child {
     inset:0 !important;
     z-index:1;
+  }
+  /* ===== ライブ背景(2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」) =====
+     オプション「ライブ背景」(派手/控えめ/シンプル)で出し入れする。シンプルと軽量モードでは要素ごと出さない。
+     ★いちばん奥(z-index:-1)。プレイエリアは isolation:isolate なので、この外へは漏れない。
+     ★重さの決めごと:
+       ・filter(ぼかし)を使わない。ジャケットは 24×24 の canvas を引き伸ばしてぼかしている
+       ・動かすのは transform と opacity だけ(合成だけで済む。毎フレームの塗り直しが起きない)
+       ・色の段(data-stage-tier)はコンボの段が変わったときだけ切り替わる */
+  [data-rhythm-stage]{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+  [data-rhythm-stage],[data-rhythm-stage-pulse]{--stage-c1:rgba(34,211,238,.55);--stage-c2:rgba(217,70,239,.38);--stage-beam:rgba(103,232,249,.22)}
+  [data-stage-tier="1"]{--stage-c1:rgba(232,121,249,.62);--stage-c2:rgba(34,211,238,.42);--stage-beam:rgba(232,121,249,.24)}
+  [data-stage-tier="2"]{--stage-c1:rgba(251,191,36,.62);--stage-c2:rgba(244,114,182,.46);--stage-beam:rgba(251,191,36,.24)}
+  [data-stage-tier="3"]{--stage-c1:rgba(253,224,71,.72);--stage-c2:rgba(167,139,250,.58);--stage-beam:rgba(255,255,255,.26)}
+  /* 曲のジャケット。読み込めたら(data-ready)ふわっと出す */
+  [data-rhythm-stage-art]{position:absolute;left:-12%;top:-8%;width:124%;height:116%;opacity:0;transition:opacity .8s ease-out}
+  [data-rhythm-stage-art][data-ready="1"]{opacity:.5}
+  [data-rhythm-stage="CALM"] [data-rhythm-stage-art][data-ready="1"]{opacity:.34}
+  /* ジャケットの上にかける暗幕。ノーツが絵に埋もれないよう、判定ライン付近と奥を暗くする */
+  [data-rhythm-stage]::after{
+    content:"";position:absolute;inset:0;z-index:0;
+    background:
+      radial-gradient(ellipse 70% 55% at 50% 45%,rgba(3,4,11,.62),rgba(3,4,11,.18) 70%,transparent 100%),
+      linear-gradient(180deg,rgba(3,4,11,.62) 0%,rgba(3,4,11,.3) 12%,rgba(3,4,11,.05) 35%,rgba(3,4,11,.2) 70%,rgba(3,4,11,.55) 100%);
+  }
+  /* ノーツのタイミングで光る(光らせるのは演奏画面の処理が Web Animations の opacity で行う)。
+     これだけはレーンの上に置く(z-index:1。判定の帯2・コンボ2・ノーツ5・判定ライン6より下) */
+  [data-rhythm-stage-pulse]{
+    position:absolute;inset:0;z-index:1;opacity:0;pointer-events:none;
+    background:
+      radial-gradient(ellipse 85% 38% at 50% 90%,var(--stage-c1),transparent 72%),
+      radial-gradient(ellipse 70% 26% at 50% 0%,var(--stage-c2),transparent 72%),
+      radial-gradient(ellipse 30% 60% at 0% 60%,var(--stage-c2),transparent 70%),
+      radial-gradient(ellipse 30% 60% at 100% 60%,var(--stage-c2),transparent 70%);
+  }
+  [data-rhythm-stage-pulse][data-stage-pulse-kind="monster"]{
+    background:
+      radial-gradient(ellipse 95% 45% at 50% 88%,rgba(253,224,71,.8),transparent 72%),
+      radial-gradient(ellipse 80% 30% at 50% 0%,rgba(250,204,21,.5),transparent 72%),
+      radial-gradient(ellipse 34% 70% at 0% 55%,rgba(251,191,36,.5),transparent 70%),
+      radial-gradient(ellipse 34% 70% at 100% 55%,rgba(251,191,36,.5),transparent 70%);
+  }
+  /* サーチライト。左右の上の角から、ゆっくり首を振る */
+  [data-rhythm-stage-beam]{
+    position:absolute;top:-12%;width:38%;height:135%;z-index:1;opacity:.75;
+    background:linear-gradient(180deg,var(--stage-beam),transparent 78%);
+    clip-path:polygon(44% 0,56% 0,100% 100%,0 100%);
+    transform-origin:50% 0;
+    animation:7s ease-in-out infinite alternate;
+  }
+  /* ★keyframes に var() を書かない。書くと合成だけで回せなくなり、毎フレーム計算し直しになる(実測で増えた) */
+  [data-rhythm-stage-beam="left"]{left:-10%;animation-name:mhRhythmStageBeamL}
+  [data-rhythm-stage-beam="right"]{right:-10%;animation-name:mhRhythmStageBeamR;animation-delay:-3.5s}
+  @keyframes mhRhythmStageBeamL{from{transform:rotate(-22deg)}to{transform:rotate(6deg)}}
+  @keyframes mhRhythmStageBeamR{from{transform:rotate(22deg)}to{transform:rotate(-6deg)}}
+  /* 光の粒。粒を並べた層(高さ200%・上下半分ずつ同じ並び)を、半分ぶん上へ送って繰り返す。
+     奥(far)は小さく遅く、手前(near)は大きく速くして奥行きを出す。動くのは層ごとの transform だけ */
+  [data-rhythm-stage-sparks]{
+    position:absolute;left:0;top:0;width:100%;height:200%;z-index:1;opacity:.7;
+    background-size:100% 50%;background-repeat:repeat-y;
+    animation:mhRhythmStageSparks linear infinite;
+  }
+  [data-rhythm-stage-sparks="far"]{background-image:radial-gradient(circle at 8% 12%,rgba(236,254,255,.95) 0 1px,rgba(103,232,249,.35) 2px,transparent 4px),radial-gradient(circle at 27% 63%,rgba(236,254,255,.95) 0 1px,rgba(103,232,249,.35) 2px,transparent 4px),radial-gradient(circle at 41% 30%,rgba(236,254,255,.95) 0 1px,rgba(103,232,249,.35) 2px,transparent 4px),radial-gradient(circle at 58% 85%,rgba(236,254,255,.95) 0 1px,rgba(103,232,249,.35) 2px,transparent 4px),radial-gradient(circle at 73% 18%,rgba(236,254,255,.95) 0 1px,rgba(103,232,249,.35) 2px,transparent 4px),radial-gradient(circle at 88% 52%,rgba(236,254,255,.95) 0 1px,rgba(103,232,249,.35) 2px,transparent 4px),radial-gradient(circle at 15% 90%,rgba(236,254,255,.95) 0 1px,rgba(103,232,249,.35) 2px,transparent 4px),radial-gradient(circle at 64% 45%,rgba(236,254,255,.95) 0 1px,rgba(103,232,249,.35) 2px,transparent 4px);animation-duration:16s;opacity:.55}
+  [data-rhythm-stage-sparks="near"]{background-image:radial-gradient(circle at 5% 40%,rgba(236,254,255,.95) 0 2px,rgba(103,232,249,.35) 3px,transparent 5px),radial-gradient(circle at 21% 8%,rgba(236,254,255,.95) 0 2px,rgba(103,232,249,.35) 3px,transparent 5px),radial-gradient(circle at 36% 77%,rgba(236,254,255,.95) 0 2px,rgba(103,232,249,.35) 3px,transparent 5px),radial-gradient(circle at 80% 33%,rgba(236,254,255,.95) 0 2px,rgba(103,232,249,.35) 3px,transparent 5px),radial-gradient(circle at 93% 70%,rgba(236,254,255,.95) 0 2px,rgba(103,232,249,.35) 3px,transparent 5px),radial-gradient(circle at 50% 58%,rgba(236,254,255,.95) 0 2px,rgba(103,232,249,.35) 3px,transparent 5px);animation-duration:9s}
+  @keyframes mhRhythmStageSparks{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,-50%,0)}}
+  /* 演出量「最小」と、動きを減らす設定の端末では、動き続けるもの(サーチライト・光の粒)を出さない */
+  [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-stage-beam],
+  [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-stage-sparks]{display:none}
+  @media (prefers-reduced-motion:reduce){
+    [data-rhythm-stage-beam],[data-rhythm-stage-sparks]{animation:none;display:none}
   }
   [data-rhythm-lane] {
     position:absolute;
@@ -1391,26 +1517,25 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
 <body>
 <div id="loading"><div class="static-mocchi"><img id="static-mocchi-image" alt="モッチー"><span></span></div><section class="static-copy"><h1>NOW LOADING</h1><h2>冒険の準備をしています</h2><div class="static-progress"><span></span></div><strong>0%</strong><p>ゲームシステムを起動中</p></section></div>
 <div id="root"></div>
-<div style="position:fixed;bottom:2px;right:4px;font:900 9px monospace;color:rgba(255,255,255,0.35);z-index:99999;pointer-events:none;">LF</div>
-<script src="data/images/images-ally.js?v=98a8e0a5ab53" onload="__mhBoot.done('data/images/images-ally.js','モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-ally.js')"></script>
+<script src="data/images/images-ally.js?v=45687dcf2837" onload="__mhBoot.done('data/images/images-ally.js','モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-ally.js')"></script>
 <script>try{document.getElementById('static-mocchi-image').src=MOCCHI_IMG}catch(e){}</script>
-<script src="data/images/images-enemy.js?v=548448d40244" onload="__mhBoot.done('data/images/images-enemy.js','敵モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-enemy.js')"></script>
+<script src="data/images/images-enemy.js?v=044f78c1b308" onload="__mhBoot.done('data/images/images-enemy.js','敵モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-enemy.js')"></script>
 <script src="data/ally-monsters.js?v=ccdf1b5d1621" onload="__mhBoot.done('data/ally-monsters.js','モンスターデータを読み込み中')" onerror="__mhBoot.fail('data/ally-monsters.js')"></script>
 <script src="data/lineages.js?v=329ac2e1d7e9" onload="__mhBoot.done('data/lineages.js','血統データを読み込み中')" onerror="__mhBoot.fail('data/lineages.js')"></script>
-<script src="data/breeder.js?v=37fef50c5334" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
-<script src="data/enemy-monsters.js?v=756038184df4" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
+<script src="data/breeder.js?v=d464fe84d921" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
+<script src="data/enemy-monsters.js?v=62c54e7949c0" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
-<script src="data/rhythm-mode.js?v=7a2bfd59ecf0" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
+<script src="data/rhythm-mode.js?v=96cb30ce059c" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
 <script src="data/rhythm-lane-svg.js?v=d0b5c2bea35c" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=1e490f73b5e2" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=25f459cc2892" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
-<script src="data/rhythm-event.js?v=7f90c6d441e6" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=6c9d2cfee231" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=15bcc1cf2c1d" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/rhythm-event.js?v=71c2a0aa34bf" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
+<script src="data/changelog.js?v=c4a2fad17e2d" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=6d4327fb9ee5" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e09b26e107d5" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
-<script src="data/assistants.js?v=953bccfec42e" onload="__mhBoot.done('data/assistants.js','みゅあを呼んでいます')" onerror="__mhBoot.fail('data/assistants.js')"></script>
+<script src="data/assistants.js?v=554c12d1b9d9" onload="__mhBoot.done('data/assistants.js','みゅあを呼んでいます')" onerror="__mhBoot.fail('data/assistants.js')"></script>
 <script>
 (function(){
   // game-system.compiled.js は tools/build.js が game-system.jsx から生成した変換済みJS。

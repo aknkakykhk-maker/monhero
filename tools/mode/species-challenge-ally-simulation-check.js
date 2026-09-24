@@ -1,3 +1,4 @@
+// 種族チャレンジの味方シミュレーション。
 const fs = require('fs');
 const vm = require('vm');
 const { installLineageHelpers } = require('./species-challenge-lineage-stub');

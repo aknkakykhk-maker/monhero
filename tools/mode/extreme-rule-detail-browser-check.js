@@ -58,13 +58,20 @@ const openDifficultySelect = async (page, extremeClears) => {
     if (!closed) break;
     await page.waitForTimeout(450);
   }
-  await page.evaluate(() => document.querySelector('button[aria-label="バトル"]')?.click());
+  await page.evaluate(() => document.querySelector('button[aria-label="モンヒロバトル"]')?.click());
+  await page.waitForTimeout(600);
+  await page.evaluate(() => document.querySelector('[data-battle-system="systemClassic"]')?.click());
   await page.waitForTimeout(1200);
-  // モード選択のカルーセルから極限チャレンジへ入る
+  // ★極限チャレンジの入口は「モードのカード」から「チャレンジの極限タブ」へ移った
+  //   (2026-09-19・PR #1517)。チャレンジの難易度選択まで降りてからタブを押す
   await page.evaluate(() => {
-    const card = [...document.querySelectorAll('article')].find(a => a.textContent.includes('極限チャレンジ'));
-    const button = card && [...card.querySelectorAll('button')].find(x => /挑戦|難易度/.test(x.textContent));
-    (button || card?.querySelector('button'))?.click();
+    const cards = [...document.querySelectorAll('[data-battle-mode="challenge"]')];
+    const card = cards[Math.floor(cards.length / 2)] || cards[0];
+    [...(card ? card.querySelectorAll('button') : [])].find(b => b.textContent.includes('難易度を選ぶ'))?.click();
+  });
+  await page.waitForTimeout(1200);
+  await page.evaluate(() => {
+    [...document.querySelectorAll('[data-difficulty-tabs] button')].find(b => b.textContent.includes('極限'))?.click();
   });
   await page.waitForTimeout(1200);
 };

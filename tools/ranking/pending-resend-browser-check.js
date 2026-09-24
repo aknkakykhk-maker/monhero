@@ -92,7 +92,7 @@ const localRows = (extra = {}) => ([
       await page.addStyleTag({ content: `.snap-mandatory{display:flex;overflow-x:auto;width:100%;}` });
       await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 60000 });
-      await page.getByRole('button', { name: 'バトル' }).waitFor({ timeout: 30000 });
+      await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
       // 送り直しは HOME へ着いて少し待ってから始まる(RANKING_RESEND_DELAY_MS)
       await page.waitForTimeout(9000);
       const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_rank_Legend') || '[]'));

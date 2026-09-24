@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// HOLDの判定(終端100ms手前まで来ていれば離しても成立する等)。
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};

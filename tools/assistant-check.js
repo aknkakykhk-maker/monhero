@@ -168,6 +168,21 @@ check('直近3件が続けて出ない', (() => {
 const linesOf = (whoId) => SCENES.flatMap(([k, def]) => [
   ...(def.lines || []), ...Object.values(def.when || {}).flat(),
 ].filter(l => (l.who || 'mua') === whoId).map(l => ({ k, t: l.t })));
+// ★どの助手も、全場面に自分のセリフを持っていること(2026-09-18に足した)。
+//   filterAssistantLines は、その助手のぶんが1本も無い場面ではみゅあのセリフへ落とす。
+//   画面はふつうに動いてしまうので、気づけるのはここだけ。実際に、モンヒロビートの
+//   「これまでの記録」でももすけのぶんが1本も無く、みゅあの言葉で話していた。
+//   これまではももすけだけ momosuke-check が見ていたので、全員ぶんをここで見る
+check('どの助手も、全場面に自分のセリフがある(ほかの助手へ落ちていない)', (() => {
+  const ids = a.ASSISTANTS.map(x => x.id).filter(id => id !== 'mua');
+  return ids.every(id => SCENES.every(([k]) => linesOf(id).some(l => l.k === k)));
+})(), (() => {
+  const ids = a.ASSISTANTS.map(x => x.id).filter(id => id !== 'mua');
+  const missing = ids.flatMap(id => SCENES
+    .filter(([k]) => !linesOf(id).some(l => l.k === k))
+    .map(([k]) => `${id}:${k}`));
+  return missing.length ? missing.join(', ') : `${ids.join('/')} × ${SCENES.length}場面`;
+})());
 check('みゅあの一人称は「あたし」', (() => {
   const bad = linesOf('mua').filter(l => /わたし|私/.test(l.t));
   return bad.length === 0;
@@ -317,7 +332,7 @@ check('初回プレイを最初から通しで見られる',
 // 画面ごとに書き分けると必ず書き忘れが出るため、鍵ひとつに集約した
 // (詳しい動作確認は tools/boot/onboarding-preview-check.js が実際に storeSet を動かして行う)
 check('見るだけの表示では何も保存しない',
-  has('  if (_storageWriteBlocked) return;')
+  has('  if (_storageWriteBlocked) return true;')
     && /const startOnboardingPreview = \(\) => \{[\s\S]{0,900}setStorageWriteBlocked\(true\)/.test(source)
     && /const endOnboardingPreview = \(\) => \{[\s\S]{0,900}setStorageWriteBlocked\(false\)/.test(source));
 check('見るだけをやめたら、名前も助手も元へ戻す',

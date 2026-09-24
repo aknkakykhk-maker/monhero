@@ -49,7 +49,12 @@ const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 // ビートPはSTEP4で正式公開。獲得はこのフラグに加えて期間限定イベント開催中だけに限定し、
 // 常設の交換所・ヘルプ・更新履歴・助手告知を同じタイミングで公開する。
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
-const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+// ★tacticsBattle は「β公開のあいだも開く枠」。ヘルプは、β版で遊べる人にも要る
+//   (tactics は本公開だけ。両方を1つのフラグにすると、本公開前の告知まで出てしまう)
+const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
+  tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
+  // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -211,6 +216,10 @@ const CHANGELOG_TYPE_LABELS = Object.freeze({
   // content は新曲・新しい助手のような「新しい遊び」に付くので、公開のたびに起きる。
   mode:    { label:'新モード',   tone:'mode' },
   content: { label:'新コンテンツ', tone:'content' },
+  // 2026-09-17 に足した。期間限定イベントの開催・閉幕は「改善」でも「新コンテンツ」でもない。
+  // 第1回・第2回とも update(=改善) と表示されていた(ユーザー指摘)。
+  // イベントは今後も繰り返し開くので、一覧で見分けられるよう専用の種別にする。
+  event:   { label:'イベント',   tone:'event' },
 });
 const changelogTypeOf = (entry) => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG_TYPE_LABELS.update;
 
@@ -299,6 +308,9 @@ const KIKI_INTRO_SEEN_KEY = 'mh_kiki_intro_seen_v1';
 // 本編を待たずにプロフィールの回想から見た場合も、最後まで見たらこのキーを立てる
 // (＝解放され、あとから本編で重ねて流れない)。
 const MOMOSUKE_INTRO_SEEN_KEY = 'mh_momosuke_intro_seen_v1';
+// タクティクスバトルの導入会話を見たか。β公開してから1度だけ流すための判定に使う。
+// ★新しいキーを足すだけ。既存の mh_*_intro_seen_v1 は一切触らない(CLAUDE.md ⑦)
+const TACTICS_INTRO_SEEN_KEY = 'mh_tactics_intro_seen_v1';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
   : ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua');
@@ -465,6 +477,27 @@ const applyLoginPointFix = (points, xp, gifts) => {
   return { changed:true, points:nowPoints - moved, xp:nowXp + wrong, moved, granted:wrong };
 };
 
+// ===== 受け取り済みのギフトを積もらせない =====
+// ★受け取り済みは消す仕組みが無く、8月からの全部が残っていた
+//   (2026-09-21・書き出したセーブの実測で mh_gifts は331件122,271文字。
+//    うち328件・129,500文字が受け取り済みで、ミッション報酬が274件を占めていた)。
+//   保存データが localStorage の上限へ近づくと、**ダイヤ1つの保存すら効かなくなる**ため、
+//   受け取り済みの控えは新しいものだけ残す。報酬はすでに配り終えているので、
+//   消えるのは「受取済み」タブに並ぶ記録だけ。
+// ★ログインボーナスと補償は消さない。一度きりの付け替え(mistakenLoginPoints)が
+//   受け取り済みのログインボーナスを数えており、消すと数え直せなくなる。
+const GIFT_HISTORY_LIMIT = 50;
+const GIFT_HISTORY_KEEP_SOURCES = Object.freeze(['loginBonus', 'compensation']);
+const giftHistoryPrunable = (gift) => !!gift?.claimedAt && !GIFT_HISTORY_KEEP_SOURCES.includes(gift?.source);
+const pruneGiftHistory = (gifts, limit = GIFT_HISTORY_LIMIT) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const prunable = list.filter(giftHistoryPrunable);
+  if (prunable.length <= limit) return list;
+  const claimedAtOf = (gift) => Date.parse(gift?.claimedAt || '') || 0;
+  const keep = new Set(prunable.slice().sort((a, b) => claimedAtOf(b) - claimedAtOf(a)).slice(0, limit));
+  return list.filter(gift => !giftHistoryPrunable(gift) || keep.has(gift));
+};
+
 const grantCompensationGifts = (gifts, now=Date.now()) => {
   const list = Array.isArray(gifts) ? gifts : [];
   const missing = COMPENSATION_GIFTS.filter(def => !list.some(item => item?.id === def.id));
@@ -472,6 +505,50 @@ const grantCompensationGifts = (gifts, now=Date.now()) => {
   const createdAt = new Date(now).toISOString();
   const expiresAt = new Date(Number(now) + 30*24*60*60*1000).toISOString();
   const added = missing.map(def => ({ ...def, source:'compensation', rewards:def.rewards.map(r=>({...r})), createdAt, expiresAt, claimedAt:null }));
+  return { granted:true, gifts:[...added, ...list] };
+};
+
+// ===== その人だけに届くお詫び(2026-09-21) =====
+//
+// 不具合の影響が特定の人にだけ出たときのための配布。全員へ配る COMPENSATION_GIFTS とは
+// 別に、タイトル画面に出している PLAYER ID(mh_player_id)が一致した端末にだけ届ける。
+//
+// 【なぜIDを見て配るか】セーブデータは端末の中にしかなく、こちらから送り込む手段がない。
+// ゲーム側で「自分が対象か」を確かめて、自分のギフトボックスへ入れてもらう形にする。
+// 【限界】対象IDはソースに書くので、端末の保存値を書き換えれば対象外の人でも受け取れる。
+// 金額が大きいものを配るときは承知のうえで使うこと(2026-09-21・ユーザー了解済み)。
+// 【期限は付けない】受け取りそこねると取り返しがつかないので expiresAt を書かない。
+// 【項目は消さない】消すと、まだ受け取っていない端末へ再び配られてしまう。
+// 【IDは端末ごと】機種変すると別IDになり届かなくなる。届いたかは本人に確かめる。
+const PLAYER_COMPENSATION_GIFTS = [
+  {
+    id: 'gift_player_compensation_20260921_rebirth_xp',
+    // 【読み違いに注意】3文字目は 0(ゼロ)ではなく O(大文字のオー)。タイトル画面の
+    // 等幅フォントはゼロに斜線が入るので、その有無で見分ける(2026-09-21に取り違えて配れなかった)
+    playerIds: ['MH-O65J-BWBP'],
+    title: 'お詫びのしるし',
+    description: '転生200回ぶんの経験値が失われる不具合のお詫びです。ご迷惑をおかけしました。',
+    rewards: [
+      { type:'diamond', amount:200000000 },
+    ],
+  },
+];
+// PLAYER ID は大文字の決まった形で作っているが、読み違いを避けるため前後の空白と
+// 大小の違いは吸収して見比べる。値が無い・文字列でないときは空文字にする(=対象外)。
+const normalizePlayerIdForGift = (value) => (typeof value === 'string' ? value.trim().toUpperCase() : '');
+// 対象のPLAYER IDと一致したときだけ、まだ届いていないお詫びをギフト一覧の先頭へ足す。
+// idが既にあれば足さないので、受取済み・未受取のどちらでも二重には届かない。
+const grantPlayerCompensationGifts = (gifts, playerId, now=Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const id = normalizePlayerIdForGift(playerId);
+  if (!id) return { granted:false, gifts:list };
+  const missing = PLAYER_COMPENSATION_GIFTS.filter(def =>
+    (Array.isArray(def.playerIds) ? def.playerIds : []).some(target => normalizePlayerIdForGift(target) === id)
+    && !list.some(item => item?.id === def.id));
+  if (missing.length === 0) return { granted:false, gifts:list };
+  const createdAt = new Date(now).toISOString();
+  // playerIds は配る相手を決めるためだけのもの。保存するギフトには持たせない
+  const added = missing.map(({ playerIds, ...def }) => ({ ...def, source:'compensation', rewards:def.rewards.map(r=>({...r})), createdAt, claimedAt:null }));
   return { granted:true, gifts:[...added, ...list] };
 };
 // ---------- モンヒロビート プレオープン記念 新規プレイヤーキャンペーン ----------

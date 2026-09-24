@@ -36,7 +36,8 @@ const ctx={console};
 vm.createContext(ctx);
 vm.runInContext(`${demoIds}\n${eventData}\n`
   +'this.out={RHYTHM_EVENTS,RHYTHM_EVENT_REWARD_CLAIM_MS,rhythmEventParticipationReward,'
-  +'rhythmLimitedEventAt,rhythmLimitedEventJustEnded,rhythmEventTimeMs};',ctx);
+  +'rhythmLimitedEventAt,rhythmLimitedEventJustEnded,rhythmEventTimeMs,'
+  +'rhythmLimitedEventsJustEnded:typeof rhythmLimitedEventsJustEnded!=="undefined"?rhythmLimitedEventsJustEnded:null};',ctx);
 const O=ctx.out;
 const event=(O.RHYTHM_EVENTS||[]).find(e=>e&&e.id===EVENT_ID);
 check('週末ゲリラ杯の定義がある',!!event);
@@ -82,8 +83,10 @@ check('勇者の証を書いていないイベントでは0になる(既存の�
   const endMs=O.rhythmEventTimeMs(event&&event.endAt);
   check('終了の直前はまだ「終わった直後」にならない',O.rhythmLimitedEventJustEnded(endMs-1)===null);
   check('終了ちょうどで「終わった直後」になる',(O.rhythmLimitedEventJustEnded(endMs)||{}).id===EVENT_ID);
+  // ★null ではなく「この回が返らないこと」で見る。イベントが増えると、
+  //   この回の期限が切れたあとは**別の回**が返るため(2026-09-17に第2回を足して実際にそうなった)
   check('受取期限(2週間)を過ぎたらもう流さない',
-    O.rhythmLimitedEventJustEnded(endMs+O.RHYTHM_EVENT_REWARD_CLAIM_MS)===null
+    (O.rhythmLimitedEventJustEnded(endMs+O.RHYTHM_EVENT_REWARD_CLAIM_MS)||{}).id!==EVENT_ID
     &&(O.rhythmLimitedEventJustEnded(endMs+O.RHYTHM_EVENT_REWARD_CLAIM_MS-1000)||{}).id===EVENT_ID);
   check('開催中は流さない',O.rhythmLimitedEventJustEnded(endMs-3600000)===null
     &&!!O.rhythmLimitedEventAt(endMs-3600000));
@@ -91,15 +94,43 @@ check('勇者の証を書いていないイベントでは0になる(既存の�
     O.rhythmLimitedEventJustEnded(null)===null&&O.rhythmLimitedEventJustEnded('あ')===null);
 }
 check('1分おきの見回りで流す(読み込み時に1回だけ決まる値を使っていない)',
-  /rhythmLimitedEventJustEnded\(Date\.now\(\)\)/.test(app)
+  /rhythmLimitedEventsJustEnded\(Date\.now\(\)\)/.test(app)
   &&app.includes('setInterval(look, 60000)')
-  &&(app.match(/rhythmLimitedEventJustEnded\(Date\.now\(\)\)/g)||[]).length>=2);
+  &&(app.match(/rhythmLimitedEventsJustEnded\(Date\.now\(\)\)/g)||[]).length>=2);
+// ★終わった直後の回は**全部**見る(2026-09-20)。単数で1件だけ引くと、受取期限(2週間)が
+//   重なっているあいだ前の回が返り続け、新しい回の閉幕の会話が何日も出てこない。
+//   第2回の終了時(2026-09-21 04:00)は第1回もまだ期限内で、実際に8日間出てこない形だった
+check('閉幕の会話は、終わった回を全部見てから選ぶ',
+  /rhythmLimitedEventsJustEnded\(Date\.now\(\)\)\s*\n?\s*\.map\(rhythmEventThanksStoryIdFor\)\.find\(/.test(app)
+  &&(app.match(/\.map\(rhythmEventThanksStoryIdFor\)\.find\(/g)||[]).length>=2);
+{
+  check('終わった直後の回を全部返す仕組みがある',typeof O.rhythmLimitedEventsJustEnded==='function',
+    O.rhythmLimitedEventsJustEnded?'rhythmLimitedEventsJustEnded':'data/rhythm-event.js に無い');
+  if(typeof O.rhythmLimitedEventsJustEnded==='function'){
+  const ends=(O.RHYTHM_EVENTS||[]).filter(e=>e&&e.kind==='limited')
+    .map(e=>({id:e.id,endMs:O.rhythmEventTimeMs(e.endAt)})).filter(e=>e.endMs!==null);
+  check('終わった直後の一覧は、新しく終わった回が先頭に来る',
+    ends.every(e=>{
+      const list=O.rhythmLimitedEventsJustEnded(e.endMs)||[];
+      return list.length>0&&list[0].id===e.id;
+    }),ends.map(e=>`${e.id}→${(O.rhythmLimitedEventsJustEnded(e.endMs)[0]||{}).id}`).join(' / '));
+  check('開催中は一覧に入らない',(O.rhythmLimitedEventsJustEnded(ends[0].endMs-3600000)||[]).every(e=>e.id!==ends[0].id));
+  check('壊れた値でも落ちない',
+    Array.isArray(O.rhythmLimitedEventsJustEnded(null))&&Array.isArray(O.rhythmLimitedEventsJustEnded('あ')));
+}
+}
+// ★閉幕の会話はイベントidから引く(RHYTHM_EVENT_THANKS_STORY_BY_EVENT)。
+//   用意していない回では流さないので、直書きではなく変数で渡している
 check('起動したときにも見る(終わったあとに初めて開いた人へ)',
-  /rhythmLimitedEventJustEnded\(Date\.now\(\)\)[\s\S]{0,200}setRhythmEventStoryPending\(MONBEAT_CUP_THANKS_STORY_ID\)/.test(app));
+  /rhythmLimitedEventsJustEnded\(Date\.now\(\)\)[\s\S]{0,300}setRhythmEventStoryPending\(bootThanksId\)/.test(app));
+check('閉幕の会話をイベントidから引いている(ほかの回の終了で流さない)',
+  app.includes('RHYTHM_EVENT_THANKS_STORY_BY_EVENT')
+  && new RegExp(`RHYTHM_EVENT_THANKS_STORY_BY_EVENT = \\{ \\[MONBEAT_CUP_EVENT_ID\\]: MONBEAT_CUP_THANKS_STORY_ID`).test(app));
 // ★これを書き忘れると、閉幕の会話が**永久に既読にならず**、起動のたびに流れ続ける。
 //   しかも受け取り画面が会話待ちのまま出なくなる(2026-09-14に実際にこの形で書いていた)
+// ★一覧は会話を足すたびに増える。「開催と閉幕の両方が入っていること」だけを見る
 check('会話を最後まで見たら「見た」として記録する',
-  /const RHYTHM_EVENT_STORY_IDS = \[MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID\];/.test(app)
+  /const RHYTHM_EVENT_STORY_IDS = \[[^\]]*\bMONBEAT_CUP_STORY_ID\b[^\]]*\bMONBEAT_CUP_THANKS_STORY_ID\b[^\]]*\];/.test(app)
   &&/RHYTHM_EVENT_STORY_IDS\.includes\(event\.id\)&&!eventReplay\.debug\) void markRhythmEventStorySeen\(event\.id\)/.test(app));
 check('飛ばしたときも本編なら「見た」にする(起動のたびに出ない)',
   /eventReplay\.live&&!eventReplay\.debug&&event&&RHYTHM_EVENT_STORY_IDS\.includes\(event\.id\)\) void markRhythmEventStorySeen\(event\.id\)/.test(app));
@@ -114,10 +145,12 @@ check('見たかどうかは既存の保存キーの中(新しいキーを作っ
   &&!/mh_.*thanks/.test(app));
 
 // ③ 会話が先、受け取りはあと
-check('会話を見るまで受け取り画面を出さない',
-  /event\.id === MONBEAT_CUP_EVENT_ID[\s\S]{0,200}includes\(MONBEAT_CUP_THANKS_STORY_ID\)\) return;/.test(app));
+// ★2026-09-20、回ごとの直書きをやめた。閉幕の会話を持つ回が増えても同じ形で待たせる
+check('会話を見るまで受け取り画面を出さない(回ごとに直書きしない)',
+  /const pendingThanksId = rhythmEventThanksStoryIdFor\(weekly \? null : event\);/.test(app)
+  &&/if \(pendingThanksId[\s\S]{0,200}includes\(pendingThanksId\)\) return;/.test(app));
 check('会話を見終えたら受け取りを確かめ直す',
-  /rhythmEventStorySeen\.includes\(MONBEAT_CUP_THANKS_STORY_ID\)/.test(app)
+  /thanksIds\.some\(id => rhythmEventStorySeen\.includes\(id\)\)/.test(app)
   &&/rhythmEventRewardCheckedRef\.current = false;[\s\S]{0,80}checkRhythmEventRewards\(\)/.test(app));
 check('ほかのイベントの受け取りは待たせない',app.includes("const MONBEAT_CUP_EVENT_ID = 'weekend_2026_09_11';"));
 
@@ -138,6 +171,68 @@ check('ほかのイベントの受け取りは待たせない',app.includes("con
     const text=script.map(l=>l&&l.t||'').join('');
     return !text.includes('モンビー')||text.includes('モンヒロビート');
   })());
+}
+
+
+// ===== ここから下は「閉幕の会話を持つ回ぜんぶ」を見る(2026-09-20) =====
+// 上の節は第1回(週末ゲリラ杯)の作り込みを固定するためのもので、回ごとの事情が入っている。
+// 共通の作り(台本・呼び名・BGM・回想・既読の記録)は、回が増えるたびに書き足さなくて
+// よいようここでまとめて見る。★第2回を足したとき、閉幕の会話そのものが
+// 用意されていないことに誰も気づけなかったのが、この節を作った理由。
+{
+  const table=(app.match(/const RHYTHM_EVENT_THANKS_STORY_BY_EVENT = \{([\s\S]*?)\};/)||[])[1]||'';
+  const pairs=[...table.matchAll(/\[(\w+)\]:\s*(\w+)/g)].map(m=>[m[1],m[2]]);
+  const idOfConst=name=>{
+    const m=app.match(new RegExp(`const ${name} = '([^']+)';`));
+    return m?m[1]:null;
+  };
+  check('閉幕の会話の対応表が読める',pairs.length>0,`${pairs.length}件`);
+  // ★開催が終わった回に閉幕の会話が用意されているか。
+  //   用意し忘れると、終わっても何も流れないまま静かに幕が下りる(第2回で実際にそうなった)。
+  const limited=(O.RHYTHM_EVENTS||[]).filter(e=>e&&e.kind==='limited');
+  const covered=new Set(pairs.map(([eventConst])=>idOfConst(eventConst)));
+  const missing=limited.filter(e=>!covered.has(e.id));
+  check('どの期間限定イベントにも閉幕の会話がある',missing.length===0,
+    missing.length?missing.map(e=>e.id).join(' / '):`${limited.length}回ぶん`);
+
+  for(const [eventConst,storyConst] of pairs){
+    const eventId=idOfConst(eventConst),storyId=idOfConst(storyConst);
+    const label=eventId||eventConst;
+    const entry=(A.EVENT_REPLAYS||[]).find(e=>e&&e.id===storyId);
+    check(`${label}: 閉幕の会話が回想の一覧にある`,!!entry&&Array.isArray(entry.script)&&entry.script.length>0,
+      entry?`${entry.title} / ${entry.script.length}行`:`${storyId} が見つからない`);
+    if(!entry)continue;
+    const script=entry.script;
+    const who=[...new Set(script.map(l=>l&&l.who))];
+    check(`${label}: 全部の行に話し手・表情・本文がある`,
+      script.every(l=>l&&typeof l.who==='string'&&typeof l.e==='string'&&typeof l.t==='string'&&l.t.length>0));
+    check(`${label}: 呼び名で「{name}」を使っている`,script.some(l=>l&&l.t.includes('{name}')),
+      `${script.filter(l=>l&&l.t.includes('{name}')).length}行`);
+    check(`${label}: 出てくる助手ぜんぶに会話の中の呼び名がある`,
+      !!entry.calls&&who.every(id=>typeof entry.calls[id]==='string'),
+      who.join(' / '));
+    check(`${label}: BGMの場面が決まっている`,new RegExp(`${storyId}:'[a-zA-Z]+'`).test(bgm));
+    check(`${label}: 回想の解放フラグが本体側で解決されている`,
+      !!entry.unlockedKey&&app.includes(`${entry.unlockedKey}:`),String(entry.unlockedKey));
+    check(`${label}: 見終えたら「見た」として記録する一覧に入っている`,
+      new RegExp(`const RHYTHM_EVENT_STORY_IDS = \\[[^\\]]*\\b${storyConst}\\b`).test(app));
+    check(`${label}: 正式名称で書いている(略称だけで済ませていない)`,(()=>{
+      const text=script.map(l=>l&&l.t||'').join('');
+      return !text.includes('モンビー')||text.includes('モンヒロビート');
+    })());
+    // 会話で数を言うなら、実際に配る数と同じであること(第1回で踏んだ形)
+    const reward=(()=>{const e=(O.RHYTHM_EVENTS||[]).find(x=>x&&x.id===eventId);
+      return e?O.rhythmEventParticipationReward(e):null;})();
+    const text=script.map(l=>l&&l.t||'').join('\n');
+    const songsSaid=[...text.matchAll(/(\d+)曲/g)].map(m=>Number(m[1]));
+    check(`${label}: 会話で言う曲数と実際の参加賞の条件が同じ`,
+      songsSaid.length===0||songsSaid.every(n=>n===(reward&&reward.songs)),
+      `会話 ${songsSaid.join('/')||'—'} ／ 実際 ${reward&&reward.songs}`);
+    const proofSaid=[...text.matchAll(/勇者の証を?(\d+)個/g)].map(m=>Number(m[1]));
+    check(`${label}: 会話で言う勇者の証の数と実際が同じ`,
+      proofSaid.length===0||proofSaid.every(n=>n===(reward&&reward.heroProof)),
+      `会話 ${proofSaid.join('/')||'言っていない'} ／ 実際 ${reward&&reward.heroProof}`);
+  }
 }
 
 // --- 案内 ---

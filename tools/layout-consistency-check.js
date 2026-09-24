@@ -24,11 +24,13 @@ const count = (needle) => source.split(needle).length - 1;
 // --- ① モンスターカードの統一 ---
 check('カードの共通サイズを1か所で決めている',
   has("const MONSTER_CARD_CLASS = 'w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1 active:scale-95 select-none';")
-    && has("const MONSTER_CARD_STYLE = { minHeight: '96px' };")
+    && has("const MONSTER_CARD_STYLE = { minHeight: '112px' };")
     && has("const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';"));
 // 行の高さは共通部品の中だけで決める。画面ごとに書くとそこだけずれる
+// 2026-09-18: 7〜8pxの字をやめて読める大きさへ上げたので、行の高さも 16 / 20 px へ上げた。
+// 大事なのは「画面ごとに書かず、共通部品の中だけで決めている」ことなので、そこを見る。
 check('行の高さは共通部品の中で決めている',
-  has("style={{height:'14px'}}") && has("style={{height:'16px'}}") && has("style={{height:'18px'}}"));
+  has("style={{minHeight:'16px'}}") && has("style={{height:'20px'}}"));
 // カードを描く画面は増えていくので件数は決め打ちにせず、「外枠のクラスを使う行は
 // 必ず共通サイズも指定する」で見る。片方だけ書いた画面があるとそこだけ高さがずれる
 // 2026-09-10に画面を別部品へ切り出したので、呼び出し側はクラスとサイズを「1行ずつ並べて」渡す
@@ -46,9 +48,13 @@ check('カードを描く画面はすべて共通クラスと共通サイズを�
   `${cardLines.length}画面 / サイズ指定もれ ${cardLinesWithoutStyle.length}件`);
 // 中身(アイコン・補足行・状態行)は共通部品の中だけで組み立てる。画面ごとに書き写すと
 // 片方だけ直したときにずれる(実際にプロモードの横長カードで起きた)
+// 2026-09-18: 編成のアシストカードも、自前の w-10 h-10 をやめて共通のアイコン枠へ寄せた。
+// 共通の定数を使う場所が増えるのは「ずれる原因が減る」ほうなので、数では縛らない
+// (以前はちょうど2か所=定義1+使用1で見ていた)。
+// 「中身を画面ごとに組み立てていないか」は、補足行と状態行が1か所ずつであることで見る。
 check('カードの中身は共通部品1か所だけで組み立てる',
-  count('MONSTER_CARD_ICON_CLASS') === 2 && count('monsterCardSub(') === 1 && count('monsterCardStatus(') === 1,
-  `アイコン${count('MONSTER_CARD_ICON_CLASS') - 1}か所 / 補足行${count('monsterCardSub(')}か所 / 状態行${count('monsterCardStatus(')}か所`);
+  count('MONSTER_CARD_ICON_CLASS') >= 2 && count('monsterCardSub(') === 1 && count('monsterCardStatus(') === 1,
+  `アイコン枠の共通定数${count('MONSTER_CARD_ICON_CLASS') - 1}か所 / 補足行${count('monsterCardSub(')}か所 / 状態行${count('monsterCardStatus(')}か所`);
 // ★2026-09-07・ユーザー指摘「1枚目 まだ窮屈 / 2枚目 このサイズ感がいい」。
 // 以前は中身が無くても行を確保していたため、絆Lvしか出さない画面(合体の主・副など)でも
 // 総合力・強化P・状態の3行ぶん(約59px)が空のまま場所を取っていた。
@@ -57,11 +63,11 @@ check('出す行が無いときは行ごと作らない',
   has('const monsterCardStatus = (node) => node ?') && has('const monsterCardPower = (power) => power==null ? null :')
     && has('{monsterCardStatus(status)}'));
 check('マスモンの個体名は転生オーラより前面に固定する',
-  has('mh-monster-card-name text-[10px]')
+  has('mh-monster-card-name text-[11px]')
     && has('.mh-reincarnate-aura{position:absolute;z-index:-1;')
     && has('.mh-monster-card-name{position:relative;z-index:2}'));
 check('マスモン一覧の個体名は画像とオーラの下に独立した名前帯で表示する',
-  has("band?'min-h-[26px] px-1 py-0.5 rounded-md border border-pink-300/50 bg-slate-950/80 whitespace-normal break-words")
+  has("band?'min-h-[28px] px-1 py-0.5 rounded-lg border border-white/15 bg-slate-950/80 whitespace-normal break-words")
     && has("style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}")
     // 2026-09-10に画面を MasuMonsScreen へ切り出した。切り出し先は 60-app.jsx より前に連結されるので、
     // ファイル内の並び順ではなく、その画面の本体そのものを見る
@@ -107,7 +113,11 @@ check('モードのタブはランキングでは出さない',
 // 名前の行数・説明の有無・所持数の有無・詳細ボタンの有無で、
 // 「〜で購入」ボタンの位置がカードごとにずれていた
 // 名前は最長14文字。細い端末では3行になるので、3行ぶんの枠を確保しておく
-check('商品名は行数が変わっても同じ高さの枠に入れる', has("style={{minHeight:'36px'}}>{item.name}</div>"));
+// 2026-09-18: 枠の高さに加えて「上寄せ(items-start)」もここで見る。中央寄せに戻すと、
+// 1行で収まる品だけが枠の真ん中へ降りて、2行の品の1行目と高さがそろわなくなる。
+check('商品名は行数が変わっても同じ高さの枠に入れる',
+  has("style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>")
+    && has('w-full flex items-start justify-center text-center text-[11px] font-black leading-tight'));
 // アイテムの効果は詳細ボタンから出す(カードに長い説明を載せると縦に伸びるため)
 // 2026-09-10(STEP 6-6)にマーケットを切り出したので、画面は onOpenItemDetail を呼び、
 // 本体がそれに setMarketItemDetail を渡す形になった
@@ -116,9 +126,11 @@ check('アイテムの効果は詳細ボタンから出す',
     && !has("style={{minHeight:'40px'}}>{item.desc||null}</div>"));
 check('所持数と詳細ボタンは同じ高さの1行にまとめる',
   has("<div className=\"w-full flex items-center justify-center gap-1\" style={{height:'22px'}}>"));
-// 1行に4商品。カードが細くなるので、アイコンの大きさもそれに合わせて1か所で決める
-check('1行に4商品ずつ並べる',
-  has("const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';") && has('<div className={MARKET_GRID_CLASS}>'));
+// 1行に3商品(2026-09-18)。4商品のときは幅360pxの端末で1枚76pxしかなく、商品名が9pxまで
+// 落ちて2〜3行に折り返していた。3商品なら1枚103pxあり、名前が11pxで1行に収まる。
+// アイコンの大きさもそれに合わせて1か所で決める
+check('1行に3商品ずつ並べる',
+  has("const MARKET_GRID_CLASS = 'grid grid-cols-3 gap-2.5 pb-4';") && has('<div className={MARKET_GRID_CLASS}>'));
 // 4つ並べるとアイコンが小さいので、タップで大きく見られるようにしている
 check('商品アイコンはタップで拡大できる',
   has('onZoom={()=>onZoomIcon(item)}') && has('onZoomIcon={setMarketIconZoom}')
@@ -137,7 +149,7 @@ check('購入ボタンはカードの下端に揃える', has('<div className="w
 // 「指で押せる高さ(min-h-[30px])がある」こと。クラスの並びは変わりうるので、
 // 並び全体の丸写しではなく、この2つだけを見る(2026-09-05)。
 check('詳細と購入ボタンを押し間違えない間隔がある',
-  has('mt-auto pt-2') && has('min-h-[30px] max-w-full rounded-xl'));
+  has('mt-auto pt-2') && has('min-h-[44px]') && has('max-w-full rounded-xl'));
 // 細いカードから通貨表示がはみ出さないこと。
 // もとは「プシュケーだけ通貨名と価格を2行に分ける」作りだったが、
 // いまは絵文字＋数字(🌈 1,200)の短い1行になっている。
@@ -146,7 +158,7 @@ check('購入ボタンの通貨表示がカード内に収まる',
   has('max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap')
     && has('usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>')
     // 勇者の証は名前が長いので、字を小さくして1行(whitespace-nowrap)に収めている
-    && has('usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[8px]">勇者の証 ×{item.cost.toLocaleString()}</span></>'));
+    && has('usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>'));
 check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">近日追加</div>') && has('rounded-full whitespace-nowrap">所持済み</div>'));
 // 拡大量は表示コードへ直接書かず、アイコンIDごとの表を1か所に持つ。
 // ききはマーケット商品とアシストカードの両方で同じ値を使うので、定数を共有する
@@ -207,6 +219,10 @@ const sharedComponentSource = (component) => {
   return '';
 };
 
+// 2026-09-18: 管理系の画面は一覧のクラスを共通化した(41-screen-ui.jsx の SCREEN_LIST_CLASS
+// = 'flex-1 min-h-0 overflow-y-auto mh-scroll')。画面のソースに overflow-y-auto の文字が
+// 出てこなくなるので、共通の一覧クラスを使っていればスクロールできるものとして数える。
+const hasScroll = (text) => text.includes('overflow-y-auto') || text.includes('SCREEN_LIST_CLASS');
 const noScroll = screens.filter(name => {
   if (ABSOLUTE_LAYOUT_SCREENS.includes(name) || OUT_OF_SCOPE_SCREENS(name)) return false;
   if (COMPONENT_OWNED_SCREENS[name]) return false;
@@ -220,17 +236,17 @@ const noScroll = screens.filter(name => {
     // screenSource は部品が見つからないとき gameState の窓へ落ちる。落ちた結果は
     // 呼び出しの数行でしかないので、「部品そのものが返ってきたとき」だけ信用する
     const moved = screenSource(name, called);
-    if (moved.startsWith(`function ${called}`)) return !moved.includes('overflow-y-auto');
+    if (moved.startsWith(`function ${called}`)) return !hasScroll(moved);
     // 共有の部品(QuickStepScreen など)は 51〜71-screen-*.jsx ではなく共有層にいるので
     // screenSource では拾えない。部品の定義そのものを探して、その中身を見る
     // (2026-09-11。ここが空振りすると、呼び出しの数行だけを見て「スクロールが無い」と
     //  誤って言う。実際 QUICK_GROWTH / QUICK_JOIN がそうなっていた)
     const shared = sharedComponentSource(called);
-    if (shared) return !shared.includes('overflow-y-auto');
+    if (shared) return !hasScroll(shared);
   }
   const at = screenStart(name);
   if (at < 0) return false;
-  return !source.slice(at, at + 9000).includes('overflow-y-auto');
+  return !hasScroll(source.slice(at, at + 9000));
 });
 check('各画面に縦スクロールできる場所がある', noScroll.length === 0, noScroll.join(', '));
 
@@ -252,6 +268,21 @@ check('HOMEに横画面用の配置がある', has('@media(orientation:landscape
 check('HOMEは小さい端末向けの調整がある', has('@media(max-width:350px)') && has('@media(max-height:620px)'));
 check('難易度タブは背の低い端末で縦スクロールできる',
   has('return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>'));
+
+// --- ⑤ バトルの強化の札は、いくつ付いても高さが変わらない(2026-09-20 ユーザー指摘) ---
+// ★もとは flex-wrap で何行にも伸び、強化が増えると敵の絵・「緊急」のボタン・与ダメの数字を
+//   押し出していた。ふだんはアイコン1行、数値は「詳細」を押したときだけ出す
+check('強化の札はふだんアイコン1行で出す',
+  has('data-battle-buff-icons className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto scrollbar-hide"')
+    && !has('flex flex-wrap justify-center gap-1 max-w-[340px] shrink-0 px-2 pt-1 pb-0.5 bg-slate-950'));
+// ★伸びてよいのは**3段まで**(2026-09-22 ユーザー指示「最大3列ぐらいまで伸びてあとは
+//   スクロールでみれるようにして」)。札は23px、2段目からの行送りは26pxなので 3段 = 75px。
+//   実際に3段で止まること・その先をスクロールで読めることは tactics-browser-check が実ブラウザで見る
+check('強化の詳細は3段までで、あとは中でスクロールする',
+  has('data-battle-buff-list className="flex-1 min-w-0 flex flex-wrap justify-center gap-1 overflow-y-auto mh-scroll" style={{maxHeight:\'75px\'}}'));
+check('強化の札は「詳細」で開け閉めできる',
+  has('data-battle-buff-toggle={buffDetail?\'close\':\'open\'}')
+    && has('const [buffDetail, setBuffDetail] = useState(false);'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

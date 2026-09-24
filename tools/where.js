@@ -21,8 +21,9 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const SEARCH_ROOTS = ['monster-hero/src/parts', 'monster-hero/data'];
-const EXCLUDE = /(game-system\.jsx|\.compiled\.js|node_modules|\.min\.js)/;
+const SEARCH_ROOTS = ['monster-hero/src/parts', 'monster-hero/data', 'tools', 'docs', '.claude/skills'];
+const EXCLUDE = /(game-system\.jsx|\.compiled\.js|node_modules|\.min\.js|art-sources|authoring|\/out\/)/;
+const EXT = /\.(jsx?|json|md)$/;
 
 // 定義らしい行。const/let/var の代入、function 宣言、オブジェクトの中の関数、Reactのフック。
 const DEF_RE = /^(\s*)(?:export\s+)?(?:async\s+)?(?:function\s+([A-Za-z_$][\w$]*)|(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=|([A-Za-z_$][\w$]*)\s*:\s*(?:\(|async|function))/;
@@ -39,9 +40,17 @@ function collectFiles() {
       if (st.isDirectory()) {
         for (const inner of fs.readdirSync(full)) {
           const f = path.join(full, inner);
-          if (!EXCLUDE.test(f) && /\.(jsx?|json)$/.test(inner) && fs.statSync(f).isFile()) out.push(f);
+          if (EXCLUDE.test(f)) continue;
+          const innerStat = fs.statSync(f);
+          // スキルは .claude/skills/<名前>/SKILL.md のように1段深い
+          if (innerStat.isDirectory()) {
+            for (const leaf of fs.readdirSync(f)) {
+              const g = path.join(f, leaf);
+              if (!EXCLUDE.test(g) && EXT.test(leaf) && fs.statSync(g).isFile()) out.push(g);
+            }
+          } else if (EXT.test(inner)) out.push(f);
         }
-      } else if (/\.(jsx?)$/.test(name)) {
+      } else if (EXT.test(name)) {
         out.push(full);
       }
     }
@@ -70,7 +79,7 @@ function printHits(hits, limit, width) {
   if (hits.length > limit) {
     console.log(`… ほか ${hits.length - limit} 件(--limit ${Math.min(hits.length, limit * 3)} で増やせます)`);
   }
-  console.log(`\n読むときは全文を開かず、行番号で切り出すこと:  sed -n '開始,終了p' <ファイル>`);
+  console.log(`\n読むときは全文を開かない:  node tools/ctx.js read <ファイル> <名前>（終わりの行は自動で決まる）`);
 }
 
 function main() {
@@ -132,6 +141,8 @@ function main() {
   const needle = word.toLowerCase();
   const hits = [];
   for (const f of files) {
+    // 定義を探すときは資料(.md)を見ない。仕様書に貼られた引用が本物の定義より先に出てしまう
+    if (mode !== 'text' && /\.md$/i.test(f)) continue;
     eachLine(f, (text, line) => {
       if (!text.toLowerCase().includes(needle)) return;
       if (mode === 'text') { hits.push({ file: relOf(f), line, text }); return; }
@@ -145,4 +156,7 @@ function main() {
   printHits(hits, limit, width);
 }
 
-main();
+if (require.main === module) main();
+
+// ctx.js から探索の仕組みを使い回す（同じ範囲・同じ除外を2か所に書かないため）
+if (require.main !== module) module.exports = { collectFiles, relOf, eachLine, DEF_RE, SEARCH_ROOTS, EXCLUDE };

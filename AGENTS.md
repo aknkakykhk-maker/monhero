@@ -3,9 +3,14 @@
 このファイルは、このリポジトリ全体で作業する AI エージェントに適用します。詳細な手順は
 [`DEVELOPMENT.md`](DEVELOPMENT.md)、プロジェクトの前提は [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) を正本とします。
 
+> ⚠️ **[`CLAUDE.md`](CLAUDE.md) と食い違うときは CLAUDE.md が優先。** こちらはツールを問わない共通の土台で、
+> CLAUDE.md はユーザーが Claude へ個別に出した指示（コミットからマージまで確認を取らずに進める、
+> 新曲実装は聞き返さない、など）を含むため、そちらが上書きする。
+> 下の「Codex 作業ルール」は**Codex だけ**に適用する（Claude は CLAUDE.md ②③に従う）。
+
 ## 作業の開始と範囲
 
-- 作業開始時に、この `AGENTS.md`、[`README.md`](README.md)、[`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) を読む。続いて `DEVELOPMENT.md` と変更箇所に適用される下位の `AGENTS.md`、関連文書を確認する。
+- 作業開始時に、この `AGENTS.md`、[`README.md`](README.md)、[`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) を読む。続いて `DEVELOPMENT.md` と関連文書を確認する（Claude は `CLAUDE.md` の「最初に打つもの」＝ `node tools/ctx.js brief` から始める）。
 - `git status --short --branch` で既存変更を確認し、利用者の変更を破棄・上書きしない。
 - 依頼範囲外のコード、仕様、データ、アセット、文書を「ついでに」変更しない。不明な要件は推測せず、質問するか未確認事項として明記する。
 - ゲーム仕様・バランス、ランキング、Supabase のスキーマや通信、セーブデータ形式は、明示的な依頼と互換性・移行方針なしに変更しない。
@@ -13,6 +18,11 @@
   保存項目を増やすときは新しいキーを足し、読み込みは必ず既定値へ落ちる正規化を通す。一度きりの移行には専用フラグを持たせて二重適用を防ぐ。
 - 機能を追加・変更したときは、`monster-hero/data/changelog.js`（更新履歴）と `monster-hero/data/help.js`（ヘルプ）の
   両方を必ず更新する。ヘルプの更新漏れは `node tools/help-coverage-check.js` で検出できる。
+  ただし**プレイヤーの通常プレイに一切現れない変更は、どちらにも載せない**。
+  対象は2つ。(1) デバッグ専用のもの（`DEBUG_SETTINGS` 配下の確認ボタン・デバッグ画面など）、
+  (2) 譜面もゲーム本体も変わらないツールの強化。詳細は
+  [`docs/rules/CHANGELOG_HELP.md`](docs/rules/CHANGELOG_HELP.md) と
+  [`docs/rules/SCOPE.md`](docs/rules/SCOPE.md)。
 - 新モード・主要新機能・マーケット新商品は、更新履歴に加えて `assistantNotice` による助手の初回通知まで確認し、`node tools/assistant/assistant-update-notice-check.js` を実行する。
 
 ## GitHub Actions・ブランチ・PR の運用
@@ -55,6 +65,9 @@ ChatGPT・Codex・Claude Code のどれで作業しても、ここは同じ手�
 - 作業ブランチはマージまたはクローズしたら削除する。放置しない。
 - どのツールの作業か分かる接頭辞を付ける(`claude/` / `chatgpt/` / `codex-` / `work/`)。
 - 同じ目的で `-v2` `-v3` と作り直さない。既存の作業ブランチを直す。
+- **通常チャットのChatGPTからGitHub連携を使って作業し、Actionsの「ビルドと検査（手動実行）」で対象ブランチを人が選ぶ必要がある場合だけ**、選択しやすいよう一時ブランチ名を `0000-RUN-<TASK>-BUILD` とする。この例外はClaude / Codex / Workや通常の実装ブランチには適用しない。
+- `0000-RUN-*` は手動workflow起動用の一時ブランチであり、本来の作業ブランチの代替・別実装にしない。同じHEADを指す形で用意し、用途が終わったら削除して放置しない。
+- 通常チャットのChatGPTが `0000-RUN-*` を用意した場合は、作成報告だけで止めず、ユーザーがそのまま起動操作へ進めるよう **Actions の「ビルドと検査（手動実行）」ページへの直接リンクも必ず同じ返答に付ける**。
 
 ### PR
 
@@ -98,7 +111,7 @@ node tools/build.js && node tools/build.js --check
 # 検査を通してからコミット・プッシュ・マージ
 ```
 
-## Codex 作業ルール
+## Codex 作業ルール（Codex 専用。Claude は CLAUDE.md ②③に従う）
 
 - 依頼された実装を行う。
 - 必要なビルドとテストを行う。
@@ -114,7 +127,7 @@ node tools/build.js && node tools/build.js --check
 - Codex クラウドで npm レジストリが 403 となり正規ビルド不能でも、安全に確認できる編集元の実装・静的確認・コミットまでは完了し、Codex 標準の Push / PR フローへ進める状態にする。ただし `monster-hero/src/game-system.jsx` と配信用生成物が未同期なら「配信可能」「完了」と報告せず、PR の未確認事項へ明記する。
 - `main` へマージする前に、依存を利用できる環境で `node tools/build.js` と `node tools/build.js --check` を必ず成功させる。Bun 等の別変換器による代替生成は禁止する。
 
-### 大容量ファイルの読み込み
+## 大容量ファイルの読み込み（ツール共通）
 
 - トークン消費を抑えつつ調査精度を維持するため、大容量ファイルや行数の多いファイルを最初から全文読み込みしない。`cat` 等による無条件の全文表示は避ける。
 - ファイルサイズや行数が不明な場合は、`ls -lh`、`stat`、`wc -l` 等で先に確認する。
@@ -123,6 +136,22 @@ node tools/build.js && node tools/build.js --check
 - 全体構造の把握が必要な場合も、見出し、定義、関数名、キー一覧などを先に抽出してから対象範囲を読む。
 - 全文を読む必要があると判断した場合のみ、分割して作業に必要な範囲を読む。
 - 一度取得した情報を理由なく何度も再読み込みしない。「念のため全文を読む」は避け、必要性を判断してから読む。
+
+このリポジトリには、上の作法を手で守らなくて済むようにした道具がある。範囲を当て推量して読み直す
+往復が消えるので、消費量だけでなく調査の精度も上がる。詳細は
+[`docs/rules/CONTEXT_BUDGET.md`](docs/rules/CONTEXT_BUDGET.md)。
+
+```
+node tools/ctx.js brief                  いまの状態(ブランチ・変更・次に打つもの)
+node tools/ctx.js find <語>              定義を探す（text で本文検索）
+node tools/ctx.js read <名前>            その定義の本体だけ（置き場所も終わりの行も機械が決める）
+node tools/ctx.js refs <名前>            その名前を使っている場所の全体像（直し忘れを防ぐ）
+node tools/ctx.js toc <ファイル>          見出し／骨格の一覧
+node tools/ctx.js doc <語>               資料を横断して見出しを探す
+node tools/ctx.js checks <語>            検査を「名前＋何を見るか」で引く
+node tools/ctx.js diff                   生成物を除いた差分（素の git diff の代わり）
+node tools/run-checks.js --changed       変更内容から要る検査を選んで回す
+```
 
 ## 実装時の互換性と品質
 

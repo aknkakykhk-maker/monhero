@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// AUTO∞の内部状態が初期OFFで、保存キーを持たないこと。
 'use strict';
 const fs=require('fs');
 const path=require('path');
@@ -39,8 +40,10 @@ for(const token of ["runStage!=='CHAMPION'",'!championPresentationComplete','!au
 if(presentation.indexOf('await executeAutoRepeatBreakthroughs')>presentation.indexOf('startRunFromRepeatTemplate'))fail('限界突破の保存完了前に次周を開始しています');
 if((presentation.match(/startRunFromRepeatTemplate\(/g)||[]).length!==1)fail('結果表示後のテンプレート開始呼び出しが1箇所ではありません');
 // 次周に使うテンプレートは「1周目に自分で組んだ編成」が最優先。
-// AUTO設定の事前設定(PR5)はそれが無いときだけ使う
-if(!source.includes('const repeatTemplateForNewRun = () => repeatRunTemplateRef.current || repeatTemplateFromAutoSettings();'))fail('次周のテンプレートが周回テンプレートを優先していません');
+// AUTO設定の事前設定(PR5)はそれが無いときだけ使う。
+// ★ただし持ち越すのはクイックの編成だけ(2026-09-19・チャレンジの編成を引き継いでいた)
+if(!source.includes('const repeatTemplateForNewRun = () => (isQuickRepeatTemplate(repeatRunTemplateRef.current) ? repeatRunTemplateRef.current : repeatTemplateFromAutoSettings());'))fail('次周のテンプレートが周回テンプレートを優先していません');
+if(!source.includes('const isQuickRepeatTemplate = (template) => !!template && !template.extremeRun && isQuickMode(template.runMode);'))fail('クイック以外の編成を持ち越さない判定がありません');
 for(const token of ['onPresentationComplete?.()',"key={resultProcessing?'locked':'ready'}",'onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}','setChampionPresentationComplete(false)'])if(!source.includes(token))fail(`報酬演出完了の接続 ${token} がありません`);
 if(!source.includes('onClick={()=>setAutoRepeatEnabled(false)}')||!source.includes('onClick={()=>setAutoBattleEnabled(false)}'))fail('結果表示中にAUTO∞/AUTOを停止できません');
 if(!source.includes('if(autoRepeatRef.current&&!isQuickMode(runMode))setAutoRepeatEnabled(false)'))fail('クイック以外の不正な∞状態を単独解除していません');

@@ -7,6 +7,9 @@
 // このサンドボックスはTailwindのCDNへ出られないため、見た目(px)は再現できない。
 // ここで見るのは「操作できるか」「出る中身が正しいか」だけで、実機確認の代わりにはならない。
 const { chromium } = require('playwright');
+const path = require('path');
+// イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
+const { eventStorySeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const results = [];
@@ -25,6 +28,7 @@ const seed = (extremeClears) => {
 
 const openDifficultySelect = async (page, extremeClears) => {
   await page.addInitScript(seed, extremeClears);
+  await page.addInitScript(eventStorySeed());
   await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction(() => document.getElementById('root')?.children.length > 0, { timeout: 60000 });
   const tap = (sel) => page.evaluate((s) => {
@@ -50,12 +54,20 @@ const openDifficultySelect = async (page, extremeClears) => {
     if (!closed) break;
     await page.waitForTimeout(450);
   }
-  await page.evaluate(() => document.querySelector('button[aria-label="バトル"]')?.click());
+  await page.evaluate(() => document.querySelector('button[aria-label="モンヒロバトル"]')?.click());
+  await page.waitForTimeout(600);
+  await page.evaluate(() => document.querySelector('[data-battle-system="systemClassic"]')?.click());
+  await page.waitForTimeout(1200);
+  // ★極限チャレンジの入口は「モードのカード」から「チャレンジの極限タブ」へ移った
+  //   (2026-09-19・PR #1517)。チャレンジの難易度選択まで降りてからタブを押す
+  await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('[data-battle-mode="challenge"]')];
+    const card = cards[Math.floor(cards.length / 2)] || cards[0];
+    [...(card ? card.querySelectorAll('button') : [])].find(b => b.textContent.includes('難易度を選ぶ'))?.click();
+  });
   await page.waitForTimeout(1200);
   await page.evaluate(() => {
-    const card = [...document.querySelectorAll('article')].find(a => a.textContent.includes('極限チャレンジ'));
-    const button = card && [...card.querySelectorAll('button')].find(x => /挑戦|難易度/.test(x.textContent));
-    (button || card?.querySelector('button'))?.click();
+    [...document.querySelectorAll('[data-difficulty-tabs] button')].find(b => b.textContent.includes('極限'))?.click();
   });
   await page.waitForTimeout(1200);
 };

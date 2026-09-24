@@ -5,7 +5,9 @@ const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 assert(source.includes('const getAttackPredictedDmg = useCallback'), '攻撃1枚の共通予測関数が必要');
 // 予測と実処理はヒット列の共通の正本 buildAttackHits を使う(分岐は ATTACK_COMBO_RULES にまとまっている)
 assert(source.includes('const buildAttackHits = ({') && (source.match(/buildAttackHits\(\{/g)||[]).length >= 2, '定義と、実処理・予測の2か所の呼び出しがある');
-assert(source.includes("if (heroId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);"), 'ザン勇者特性の連撃');
+// 2026-09-22: ザンの連撃だけ「特性の持ち主(traitOwnerId)」で決まる。タクティクスでは供モンでも出る
+// (エイキ・パンドラ・剣士モッチーは勇者モン限定のまま。tactics-enemy-actions-check.js が見張る)
+assert(source.includes("if (traitOwnerId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);"), 'ザン勇者特性の連撃');
 assert(source.includes("if (isUniqueOf('Zan')) combo(ATTACK_COMBO_RULES.zanUnique + comboDmgBonus);"), '連斬の連撃');
 assert(source.includes("if (heroId === 'Eiki' && attackerId === 'Eiki') {"), 'エイキ勇者特性の連撃');
 assert(source.includes("if (isUniqueOf('Eiki')) for (const rate of ATTACK_COMBO_RULES.eikiUnique) combo(rate + comboDmgBonus);"), 'エイキ固有技の連撃');
@@ -29,7 +31,9 @@ assert(source.includes("const kenshiSplitNormal = kenshiHero && ['atk', 'range_a
 }
 assert(source.includes("if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);") && source.includes('pandoraSplitNormal: 0.5,'), 'パンドラ通常攻撃の連撃を分割前ダメージ基準で積む');
 assert(source.includes('if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);') && source.includes('kenshiSplitNormal: 0.5,'), '剣士モッチー通常攻撃の連撃を分割前ダメージ基準で積む');
-assert(source.includes("if (isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);"), 'ソードスキルの連撃');
+// ★swordSkill はタクティクスのEX「ソード・コンバージョン」(片手持ち)だけが false にする。既存5モードは渡さないので常に true
+assert(source.includes("if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);")
+  && source.includes('kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true }) => {'), 'ソードスキルの連撃');
 // 永久追加連撃の本数は永続バフから読む。予測(getAttackPredictedDmg)にも同じ本数を渡していないと
 // 「予測より実際が多い」になるので、buildAttackHits を呼ぶ3か所すべてで渡していることを見る
 assert((source.match(/kenshiExtraCombos:getPermaBuff\('kenshiExtraCombo'\)/g) || []).length === 3,
@@ -38,8 +42,21 @@ assert(source.includes("if (!(card.type === 'unique' && (card.monId === 'Ark' ||
   && source.includes('const base = Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement);')
   && source.includes('attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier)'), '贖罪の追撃を予測する');
 assert((source.match(/getAttackPredictedDmg\(/g)||[]).length >= 4, '合計と個別表示が共通予測関数を使う');
-assert(source.includes('const plannedDmg=applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf'), '敵の予定ダメージへガードとターン軽減を実処理と同じ順で反映する');
-assert(source.includes('(予定: ${plannedDmg})'), '敵予告は軽減後の予定値を表示する');
+// 2026-09-20: 新モードの連撃を 0.6×3 の3ヒットにし、ガードが届くのは1ヒットぶんだけにした。
+// 予告も実処理と同じ splitTacticsGuardedHit を通す。「ガードを引いてからターン軽減」の順は変わらない
+// 2026-09-22: 予告は枠ごとになった(全体攻撃は丈夫さで1体ずつ変わる)。ガードも枠ごとにまとめてから
+// 数え、被ダメ軽減へは狙われた枠を渡す(アーク/イブリースの贖罪が「その子だけ」になったため)
+assert(source.includes("guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);")
+  && source.includes("guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);")
+  && source.includes('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);')
+  && source.includes('const taken = applyTurnDamageReduction(hit.taken, slotIdx);'),
+  '敵の予定ダメージへガードとターン軽減を実処理と同じ順で反映する');
+// 2026-09-22: 連撃は1発ずつに加えて合計も出す(合計がどこにも出ず「結局いくつ食らうか」が読めなかった)。
+// ★同じ日に予告を敵の絵の右下の札へ移したので、吹き出し1本に詰める書き方(plannedBubbleText)はやめ、
+//   合計を大きい字・1発ずつの内訳をその下の小さい字に分けた(札の幅100pxでは1行に入らない)
+assert(source.includes("const plannedTotalText=plannedHit.raw>plannedDmg?`${plannedHit.raw}→${plannedDmg}`:`${plannedDmg}`;")
+  && source.includes('>{plannedTotalText}</div>')
+  && source.includes('>{plannedText}</div>'), '敵予告は軽減後の予定値を表示する');
 
 const pandoraPredictedDmg=(baseDmg,comboDmgBonus=0)=>
   Math.floor(baseDmg*0.5)+Math.floor(baseDmg*(0.5+comboDmgBonus));

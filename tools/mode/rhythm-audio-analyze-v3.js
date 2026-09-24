@@ -32,6 +32,7 @@ const {detectTiming}=require('./rhythm-audio-tempo-v3.js');
 const {detectStructure}=require('./rhythm-audio-structure-v3.js');
 const {pickPeaks,estimatePitch,biquadBandpass}=require('./rhythm-audio-dsp.js');
 const {collectWarnings,criticalWarnings,formatWarnings}=require('./rhythm-audio-warnings.js');
+const {chartRevisionForRegistry}=require('./rhythm-chart-v3-revision.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -452,6 +453,9 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
     if(!outputDir){
     registry.songs[trackId]={
       ...(registry.songs[trackId]||{}),
+      // 譜面の作り方の版。まだ解析していない曲(＝これから足す曲)だけに最新版を書く。
+      // 一度解析した曲には付けない(既存曲の譜面を黙って変えない。rhythm-chart-v3-revision.js)
+      ...chartRevisionForRegistry(registry.songs[trackId]),
       audio:audioRelative,
       audioSha256,
       durationMs:Math.round(features.durationMs),

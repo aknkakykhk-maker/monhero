@@ -1,9 +1,9 @@
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
-// いま本番で使っているバトルチュートリアル(新しいモード選択から始まる版)を
+// いま本番で使っているバトルチュートリアル(バトルの仕組みえらびから始まる版)を
 // 実際のブラウザで通してみる。
 //
-//   ① デバッグ設定から「新バトルチュートリアルを見る（お試し）」で始まる
-//   ② 新しいモード選択の画面から始まり、3モードの説明が順に出る
+//   ① デバッグ設定から「バトルチュートリアル開始」で始まる
+//   ② ふだんの入口(仕組みえらび)から始まり、3つの仕組み → クラシックの3モードの順に説明が出る
 //   ③ 練習中は戻る・ランキング・モードの説明が押せない(台本から外れない)
 //   ④ チャレンジ以外の「難易度を選ぶ」は押せない(初回にクイック・プロを遊ばせない)
 //   ⑤ 難易度選択はビギナーから始まり、ビギナー以外は押せない
@@ -16,6 +16,8 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+// イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
+const { eventStorySeed } = require(path.join(TOOLS_DIR, 'boot/quiet-boot-seed'));
 
 const root = path.resolve(TOOLS_DIR, '..');
 const PORT = 8983;
@@ -63,7 +65,11 @@ const check = (name, ok, detail = '') => {
       // わざと「まだ見ていない」状態にしておき、お試し再生で書き換わらないことを確かめる
       localStorage.setItem('mh_battle_tutorial_seen_v1', JSON.stringify(false));
       localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
+      // お詫びの配布は画面全体を覆う。配布済みの印を先に入れて出さない
+      localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
+      localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
     });
+    await page.addInitScript(eventStorySeed());
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.addStyleTag({ content: `
       .snap-mandatory { display:flex; overflow-x:auto; width:100%; scroll-snap-type:x mandatory; }
@@ -72,7 +78,7 @@ const check = (name, ok, detail = '') => {
 
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.getByRole('button', { name: 'バトル' }).waitFor({ timeout: 30000 });
+    await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
       const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
@@ -84,11 +90,17 @@ const check = (name, ok, detail = '') => {
     await page.getByRole('button', { name: '設定' }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByRole('button', { name: 'ヘルプ' }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.locator('button', { hasText: /^💊$/ }).dispatchEvent('click', {}, { timeout: 15000 });
+    // DEBUG MENU は節ごとに畳んであるアコーディオン。「⚔️ バトル」→「📖 チュートリアル」の順に開く
+    await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
+    await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+    await page.locator('summary').filter({ hasText: '📖 チュートリアル' }).first().click();
     const startButton = page.getByRole('button', { name: 'バトルチュートリアル開始（記録は残りません）' });
     check('デバッグ設定にチュートリアルの入口がある', await startButton.count() === 1);
     await startButton.dispatchEvent('click');
-    await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
-    check('新しいモード選択の画面から始まる', true);
+    // ★2026-09-21: ふだん HOME の「モンヒロバトル」を押すと最初に出るのは
+    //   バトルの仕組みえらび。練習もここから始める
+    await page.getByText('どのバトルで遊ぶかを選びます').first().waitFor({ timeout: 15000 });
+    check('ふだんの入口(バトルの仕組みえらび)から始まる', true);
 
     // 吹き出しの見出しを読みながら「つぎへ」で進める
     // 吹き出しの中身。枠は role="dialog" aria-label="バトルチュートリアル" で出ている
@@ -104,22 +116,56 @@ const check = (name, ok, detail = '') => {
       return true;
     };
 
-    // --- ② 3モードの説明が順に出る ---
+    // --- ②-1 入口の3つの仕組みの説明が順に出る ---
     check('チュートリアルの吹き出しが出ている', (await bubbleText() || '').includes('れんしゅう'), String(await bubbleText()).slice(0, 40));
-    const said = [];
-    for (let i = 0; i < 8; i++) {
+    const saidSystem = [];
+    for (let i = 0; i < 10; i++) {
       const t = await bubbleText();
-      if (t) said.push(t);
+      if (t) saidSystem.push(t);
       if (!(await tapNext())) break;
     }
-    const allSaid = said.join(' | ');
-    check('チャレンジ・クイック・プロの3つを説明する',
-      ['チャレンジ', 'クイック', 'プロ'].every(w => allSaid.includes(w)),
-      `${said.length}ステップぶん読んだ`);
-    // ★モードごとの「何がうれしいか」に触れているか。プロの説明は
-    //   「難しい」から「ベースモンだけで挑む」という言い方へ変わった
+    const allSystem = saidSystem.join(' | ');
+    check('クラシック・タクティクス・クイックの3つを説明する',
+      ['クラシック', 'タクティクス', 'クイック'].every(w => allSystem.includes(w)),
+      `${saidSystem.length}ステップぶん読んだ`);
+    check('それぞれの中身にも触れる',
+      allSystem.includes('力を合わせて') && allSystem.includes('1体ずつライフ') && allSystem.includes('1.5倍'));
+
+    // --- ②-2 仕組みえらびでも台本から外れる操作を止める ---
+    check('練習中は戻るが押せない(仕組みえらび)', await page.getByRole('button', { name: '戻る' }).isDisabled());
+    // ★練習は記録を残さないために debugBattle を立てるが、その副作用で入口の並びが
+    //   「ふだん遊ぶときと違う見え方」になってはいけない(準備中・β版・DEBUGの出し分け)
+    check('練習中もふだんと同じ枚数のカードが並ぶ',
+      await page.locator('[data-battle-system-card]').count() === 3,
+      `${await page.locator('[data-battle-system-card]').count()}枚`);
+    check('練習中はクラシック以外の仕組みを選べない',
+      await page.locator('[data-battle-system="systemQuick"]').isDisabled()
+        && await page.locator('[data-battle-system="systemTactics"]').isDisabled());
+    check('練習中は「詳しいルール」が押せない',
+      await page.locator('[data-battle-system-info]').first().isDisabled());
+    check('クラシックのカードは押せる',
+      await page.locator('[data-battle-system="systemClassic"]').isEnabled());
+
+    // --- ②-3 クラシックを選ぶとモードえらびへ進む ---
+    await page.locator('[data-battle-system="systemClassic"]').dispatchEvent('click');
+    await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
+    check('クラシックを選ぶとモード選択へ進む', true);
+    const saidMode = [];
+    for (let i = 0; i < 10; i++) {
+      const t = await bubbleText();
+      if (t) saidMode.push(t);
+      if (!(await tapNext())) break;
+    }
+    const allMode = saidMode.join(' | ');
+    check('クラシックの中の3モードを説明する',
+      ['チャレンジ', '種族チャレンジ', 'プロ'].every(w => allMode.includes(w)),
+      `${saidMode.length}ステップぶん読んだ`);
+    // ★クイックはモードではなく仕組みの側にある。ここで「となりはクイック」と
+    //   説明すると、実際に並んでいる種族チャレンジのカードと食い違う
+    //   (2026-09-21 ユーザー指摘)
+    check('モード選択でクイックの話をしない', !allMode.includes('クイック'), allMode.slice(0, 60));
     check('3つのモードの中身にも触れる',
-      allSaid.includes('スコア') && allSaid.includes('1.5倍') && allSaid.includes('ベースモンだけ'));
+      allMode.includes('スコア') && allMode.includes('ひとつの種族') && allMode.includes('ベースモンだけ'));
 
     // --- ③ 練習中は台本から外れる操作を止める ---
     check('練習中は戻るが押せない', await page.getByRole('button', { name: '戻る' }).isDisabled());
@@ -129,12 +175,15 @@ const check = (name, ok, detail = '') => {
     check('練習中はモードの説明が押せない',
       await page.getByRole('button', { name: 'このモードの説明' }).first().isDisabled());
     check('練習中はスコアランキングへ入れない',
-      await page.getByRole('button', { name: /チャレンジモードのランキング/ }).first().isDisabled());
+      await page.locator('[data-battle-mode="challenge"]').first()
+        .getByRole('button', { name: /このモードのランキング/ }).isDisabled());
 
     // --- ④ チャレンジだけ進める ---
-    const startOf = (label) => page.locator('article').filter({ hasText: label }).first().getByRole('button', { name: '難易度を選ぶ' });
+    // ★2026-09-20 に「どのバトルで遊ぶか」の画面が1段増え、クイックは別の仕組みへ移った。
+    //   クラシックの並びは チャレンジ・種族チャレンジ・プロ の3枚になっている
+    const startOf = (label, name = '難易度を選ぶ') => page.locator('article').filter({ hasText: label }).first().getByRole('button', { name });
     check('チャレンジの「難易度を選ぶ」は押せる', await startOf('チャレンジモード').isEnabled());
-    check('クイックの「難易度を選ぶ」は押せない', await startOf('クイックモード').isDisabled());
+    check('種族チャレンジの「種族を選ぶ」は押せない', await startOf('種族チャレンジ', '種族を選ぶ').isDisabled());
     check('プロの「難易度を選ぶ」は押せない', await startOf('プロモード').isDisabled());
 
     await startOf('チャレンジモード').dispatchEvent('click');
@@ -176,20 +225,26 @@ const check = (name, ok, detail = '') => {
     // セリフでは「ACTIONを押して」と言うのに、押す先のボタンは一度も光っていなかった
     // (2026-09-12・ユーザー指摘)。台本と画面の結びつきは静的な検査でも見ているが、
     // 実際に光るのは実物を動かさないと分からないので、ここで確かめる
+    // ★ACTIONボタンは押せない理由を文字で出す(「カードを選ぶ」「置き場所を選ぶ」)ので、
+    //   文字ではなく data-battle-action で見分ける
     const spots = () => page.evaluate(() => [...document.querySelectorAll('.is-battle-tutorial-spot')]
-      .map(el => (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 20)));
+      .map(el => ({
+        text: (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 20),
+        action: !!el.closest('[data-battle-action]') || !!el.querySelector('[data-battle-action]'),
+      })));
     await page.locator('button').filter({ hasText: 'モッチー' }).first().dispatchEvent('click');
     await page.waitForTimeout(400);
     await page.locator('button').filter({ hasText: /^勇者モンに選ぶ$/ }).first().dispatchEvent('click');
     await page.waitForTimeout(500);
     await page.locator('button').filter({ hasText: /^近距離/ }).first().dispatchEvent('click');
     await page.waitForTimeout(500);
-    await page.locator('button').filter({ hasText: /^おりょうの力/ }).first().dispatchEvent('click');
+    // アシストカードは2026-09-18に「おりょうの力」から「ニコラオの力」へ名前が変わった
+    await page.locator('button').filter({ hasText: /^ニコラオの力/ }).first().dispatchEvent('click');
     await page.waitForTimeout(400);
     await page.locator('button').filter({ hasText: /^習得する$/ }).first().dispatchEvent('click');
     await page.waitForTimeout(1200);
     check('練習のままバトル画面まで進む',
-      await page.getByRole('button', { name: /Action/i }).count() >= 1);
+      await page.locator('[data-battle-action]').count() >= 1);
     // 画面の見かたの説明を順に進め、ACTIONボタンの説明まで来たら光っているものを見る
     let actionSpots = null;
     for (let i = 0; i < 30; i++) {
@@ -198,17 +253,21 @@ const check = (name, ok, detail = '') => {
       if (!(await tapNext())) break;
     }
     check('ACTIONの説明でACTIONボタンが光る',
-      Array.isArray(actionSpots) && actionSpots.length === 1 && /Action/i.test(actionSpots[0]),
+      Array.isArray(actionSpots) && actionSpots.length === 1 && actionSpots[0].action === true,
       JSON.stringify(actionSpots));
     // ガードを使う番(操作待ち)まで進める。吹き出しが消えて「つぎへ」も無くなる
     for (let i = 0; i < 12; i++) if (!(await tapNext())) break;
     const doSpots = await spots();
     check('カードを使う番はACTIONも光る',
-      doSpots.some(t => /Action/i.test(t)) && doSpots.some(t => /ガード/.test(t)),
+      doSpots.some(s => s.action) && doSpots.some(s => /ガード/.test(s.text)),
       JSON.stringify(doSpots));
 
     // --- ⑦ やめると始めた場所へ帰り、既読は書き換わらない ---
     await page.locator('button').filter({ hasText: /^やめる$/ }).first().dispatchEvent('click');
+    // 帰ってきた DEBUG MENU は節が畳まれた状態なので、開き直して入口があることを確かめる
+    await page.getByText('DEBUG MENU').first().waitFor({ timeout: 15000 });
+    await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
+    await page.locator('summary').filter({ hasText: '📖 チュートリアル' }).first().click();
     await page.getByRole('button', { name: 'バトルチュートリアル開始（記録は残りません）' }).waitFor({ timeout: 15000 });
     check('やめると始めた場所(デバッグ設定)へ帰る', true);
     const seen = await page.evaluate(() => localStorage.getItem('mh_battle_tutorial_seen_v1'));

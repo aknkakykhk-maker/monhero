@@ -54,7 +54,46 @@ const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...EXTREME_DIFFICULTIES.map(setting=>setting.id),
 ]);
+// タクティクスバトルも、難易度の定義を複製せずIDの順序だけを参照する(種族チャレンジと同じ)。
+// 通常9段階＋極限5段階の14段階。GOD / RAGNAROK は極限チャレンジ専用なので入れない
+// (2026-09-20 ユーザー指示「通常/極限、種族とかはどっちのモードにもあるように」)
+const TACTICS_DIFFICULTY_IDS = Object.freeze([
+  ...Object.keys(DIFFICULTY_SETTINGS),
+  ...EXTREME_DIFFICULTIES.map(setting=>setting.id),
+]);
+// タクティクスバトルの難易度は、そのモードの中だけで順に開ける。
+// ・Beginner / Easy / Normal / Hard は最初から挑める
+// ・**Expert 以上は「1つ前の難易度を1回クリア」で開く**
+//   (2026-09-21 ユーザー指示「エキスパート以上は解放条件ありにしたい」。
+//    クラシックの5モードは据え置き＝いま遊んでいる人の解放状況を変えない)
+// ・極限の入口(EXTREME)は「タクティクスで Master 以上を1回クリア」で開く
+// ・そこから先は「1つ前の極限をクリアすると次が開く」(極限チャレンジと同じ考え方)
+// 見るのは mh_tactics_clears_* だけ。クラシックバトルの進み具合は一切混ぜない
+// (混ぜると、片方で進めたぶんがもう片方の解放に化ける)
+const TACTICS_EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
+const TACTICS_EXTREME_UNLOCK_TEXT = 'タクティクス Master以上クリアで解放';
+// 最初から挑める段数。4 = Beginner / Easy / Normal / Hard
+const TACTICS_DIFFICULTY_INITIAL_UNLOCK_COUNT = 4;
+const isTacticsDifficultyUnlocked = (difficultyId, tacticsClearCounts = {}) => {
+  const index = TACTICS_DIFFICULTY_IDS.indexOf(difficultyId);
+  if (index < 0) return false;
+  const counts = tacticsClearCounts && typeof tacticsClearCounts === 'object' ? tacticsClearCounts : {};
+  const cleared = (id) => (Number(counts[id]) || 0) > 0;
+  const previous = TACTICS_DIFFICULTY_IDS[index - 1];
+  if (!isExtremeDifficultyId(difficultyId)) {
+    // 通常の9段階。Hard までは最初から、Expert 以上は1つ前をクリアすると開く
+    if (index < TACTICS_DIFFICULTY_INITIAL_UNLOCK_COUNT) return true;
+    return cleared(previous);
+  }
+  return isExtremeDifficultyId(previous) ? cleared(previous) : TACTICS_EXTREME_UNLOCK_DIFFICULTIES.some(cleared);
+};
 const SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_species_challenge_progress_v1';
+// ★タクティクスバトルの種族チャレンジは、進み具合も記録も別のキーへ持つ。
+//   同じ入れ物にすると、クラシックで解放した難易度がタクティクスでも開いてしまい、
+//   自己ベストスコアも桁の違うもの同士(タクティクスは 1/1000 に縮める)が混ざる
+const TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_tactics_species_challenge_progress_v1';
+const speciesChallengeProgressKeyOf = (mode) => (mode === BATTLE_MODE_TACTICS_SPECIES
+  ? TACTICS_SPECIES_CHALLENGE_PROGRESS_KEY : SPECIES_CHALLENGE_PROGRESS_KEY);
 const emptySpeciesChallengeProgress = () => ({ version:1, species:{}, pendingRewards:{} });
 const validSpeciesChallengeId = (speciesId) => typeof speciesId === 'string' && speciesId.length > 0;
 const normalizeSpeciesChallengeDifficultyFlags = (value) => Object.fromEntries(
@@ -225,12 +264,17 @@ const validateSpeciesChallengeAllySelection = ({speciesId,heroId,allyIds,unlocke
   }
   return { valid:true,reason:null };
 };
-const createSpeciesChallengeRunState = ({speciesId,difficultyId,heroId,allyIds,unlockedBaseIds=[],masuMons=[]}={}) => {
+// mode は「クラシックの種族チャレンジ」か「タクティクスの種族チャレンジ」か。
+// 記録の保存先・ランキングのキー・盤面の作りがここで分かれる。
+// 古い形(mode を持たない run)が来ても、これまでどおりクラシックとして扱う
+const createSpeciesChallengeRunState = ({speciesId,difficultyId,heroId,allyIds,unlockedBaseIds=[],masuMons=[],mode=BATTLE_MODE_SPECIES_CHALLENGE}={}) => {
   const validation=validateSpeciesChallengeAllySelection({speciesId,heroId,allyIds,unlockedBaseIds,masuMons});
   if(!validation.valid)return null;
-  const run={ speciesId,difficultyId,heroId,allyIds:[...allyIds],joinedAllyIds:[] };
+  const run={ speciesId,difficultyId,heroId,allyIds:[...allyIds],joinedAllyIds:[],mode:speciesChallengeRunMode({mode}) };
   return run;
 };
+const speciesChallengeRunMode = (run) => (run?.mode === BATTLE_MODE_TACTICS_SPECIES
+  ? BATTLE_MODE_TACTICS_SPECIES : BATTLE_MODE_SPECIES_CHALLENGE);
 const speciesChallengeSelectedAllies = (runState) => Array.isArray(runState?.allyIds) ? [...runState.allyIds] : [];
 const speciesChallengeUnjoinedAllies = (runState) => {
   const joined=new Set(Array.isArray(runState?.joinedAllyIds)?runState.joinedAllyIds:[]);
@@ -254,10 +298,17 @@ const simulateSpeciesChallengeJoinWave = (runState,entryId=null) => {
   return { ...result,hadJoinCandidates:remaining.length>0,gutsRecoveryRequired:true };
 };
 const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = 5;
-const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds=[]) => {
+// ★タクティクスの種族チャレンジは Expert から条件を付ける(4 = Hard まで最初から)。
+//   クラシックの種族チャレンジは 5 のまま据え置き＝いま遊んでいる人の解放状況を変えない
+//   (2026-09-21 ユーザー指示「エキスパート以上は解放条件ありにしたい / クラシックは据え置き」)
+const TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = TACTICS_DIFFICULTY_INITIAL_UNLOCK_COUNT;
+const speciesChallengeInitialUnlockCountOf = (mode) => (typeof isTacticsMode === 'function' && isTacticsMode(mode)
+  ? TACTICS_SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT : SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT);
+const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds=[], initialUnlockCount=SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT) => {
   const index=SPECIES_CHALLENGE_DIFFICULTY_IDS.indexOf(difficultyId);
   if(index<0)return false;
-  if(index<SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT)return true;
+  const initial=Number.isFinite(initialUnlockCount)?initialUnlockCount:SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT;
+  if(index<initial)return true;
   const cleared=new Set(Array.isArray(clearedDifficultyIds)?clearedDifficultyIds:[]);
   return cleared.has(SPECIES_CHALLENGE_DIFFICULTY_IDS[index-1]);
 };
@@ -298,8 +349,8 @@ const finalizeSpeciesChallengeClearReward = ({ progress,ownedItems,speciesId,dif
 };
 // 2キーを一括保存できないlocal storageでも安全にする4段階確定。
 // pendingを先に残し、実はtargetCountまで、claimed後にpendingを消す。
-const persistSpeciesChallengeClearRewardTransaction = async ({ progress,ownedItems,speciesId,difficultyId,storeSet,storeGet,record=null }={}) => {
-  const savedProgress=await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,progress,false);
+const persistSpeciesChallengeClearRewardTransaction = async ({ progress,ownedItems,speciesId,difficultyId,storeSet,storeGet,record=null,progressKey=SPECIES_CHALLENGE_PROGRESS_KEY }={}) => {
+  const savedProgress=await storeGet(progressKey,progress,false);
   const savedItems=await storeGet('mh_owned_items',ownedItems,false);
   let currentProgress=normalizeSpeciesChallengeProgress(savedProgress);
   const currentItems=savedItems && typeof savedItems==='object' && !Array.isArray(savedItems) ? savedItems : {};
@@ -308,20 +359,20 @@ const persistSpeciesChallengeClearRewardTransaction = async ({ progress,ownedIte
   // clears を二重に増やさないよう、呼び出し側は1ランにつき1回だけ呼ぶこと。
   if(record){
     currentProgress=updateSpeciesChallengeRecord(currentProgress,speciesId,difficultyId,record);
-    await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,currentProgress,false);
+    await storeSet(progressKey,currentProgress,false);
   }
   const rewardAmount=speciesChallengeFirstClearReward(difficultyId);
   const itemId=speciesTranscendFruitItemId(speciesId);
   if(!itemId || rewardAmount<=0){
     // 報酬が無くてもクリア済みは保存する。ここを保存し忘れると次の難易度が解放されない
     const result=finalizeSpeciesChallengeClearReward({progress:currentProgress,ownedItems:currentItems,speciesId,difficultyId});
-    await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,result.nextProgress,false);
+    await storeSet(progressKey,result.nextProgress,false);
     return result;
   }
   const pendingKey=speciesChallengeRewardPendingKey(speciesId,difficultyId);
   if(isSpeciesChallengeFirstRewardClaimed(currentProgress,speciesId,difficultyId)){
     const result=finalizeSpeciesChallengeClearReward({progress:currentProgress,ownedItems:currentItems,speciesId,difficultyId});
-    if(currentProgress.pendingRewards[pendingKey])await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,result.nextProgress,false);
+    if(currentProgress.pendingRewards[pendingKey])await storeSet(progressKey,result.nextProgress,false);
     return result;
   }
   const savedPending=currentProgress.pendingRewards[pendingKey];
@@ -330,16 +381,16 @@ const persistSpeciesChallengeClearRewardTransaction = async ({ progress,ownedIte
     : { speciesId,difficultyId,itemId,rewardAmount,targetCount:ownedItemCount(currentItems,itemId)+rewardAmount };
   const pendingProgress=markSpeciesChallengeCleared(currentProgress,speciesId,difficultyId);
   pendingProgress.pendingRewards[pendingKey]=pending;
-  await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,pendingProgress,false);
+  await storeSet(progressKey,pendingProgress,false);
   const latestItems=await storeGet('mh_owned_items',currentItems,false);
   const safeLatestItems=latestItems && typeof latestItems==='object' && !Array.isArray(latestItems)?latestItems:currentItems;
   const nextOwnedItems={ ...safeLatestItems,[itemId]:Math.max(ownedItemCount(safeLatestItems,itemId),pending.targetCount) };
   await storeSet('mh_owned_items',nextOwnedItems,false);
   const claimedProgress=markSpeciesChallengeFirstRewardClaimed(pendingProgress,speciesId,difficultyId);
-  await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,claimedProgress,false);
+  await storeSet(progressKey,claimedProgress,false);
   const nextProgress=normalizeSpeciesChallengeProgress(claimedProgress);
   delete nextProgress.pendingRewards[pendingKey];
-  await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,nextProgress,false);
+  await storeSet(progressKey,nextProgress,false);
   return { nextProgress,nextOwnedItems,rewardGranted:true,rewardAmount };
 };
 // 同一タブ内の別クリアが同時に走ってprogressを上書きし合わないよう、保存処理は直列化する。
@@ -427,6 +478,23 @@ const extremeWaveStageLabel = (difficultyId) => extremeWaveStage(difficultyId)?.
 // 段階ぶんの敵倍率。段階を持たない難易度では1倍(既存の挙動のまま)。
 const extremeWaveEnemyMultiplier = (difficultyId,waveNumber=1) => extremeWaveStageRules(difficultyId,waveNumber)?.enemyMultiplier ?? 1;
 const extremeRuleSetting = (difficultyId) => ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===difficultyId)||null;
+// その難易度が極限側か。通常の9段階(DIFFICULTY_SETTINGS)に無いものを極限として扱う。
+// 難易度選択とランキングのタブを「通常 / 極限」で分けるのに使う(2026-09-19 ユーザー指示)。
+// ★難易度名で並べない。極限を足してもここは変えずに済む
+const isExtremeDifficultyId = (difficultyId) => !!difficultyId && !DIFFICULTY_SETTINGS[difficultyId];
+// 難易度の一覧を「通常 / 極限」の2つへ分ける。並びはもとの順のまま。
+// entries は [id, 設定] の組の配列(難易度選択がそのまま渡せる形)
+const splitDifficultyEntries = (entries) => {
+  const list = Array.isArray(entries) ? entries : [];
+  return {
+    normal: list.filter(([id]) => !isExtremeDifficultyId(id)),
+    extreme: list.filter(([id]) => isExtremeDifficultyId(id)),
+  };
+};
+// 難易度選択・ランキングのタブid。保存はしないので、表示のためだけの値
+const DIFFICULTY_TAB_NORMAL = 'normal';
+const DIFFICULTY_TAB_EXTREME = 'extreme';
+const difficultyTabOf = (difficultyId) => isExtremeDifficultyId(difficultyId) ? DIFFICULTY_TAB_EXTREME : DIFFICULTY_TAB_NORMAL;
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
 const QUICK_ULTIMATE_SETTING = Object.freeze({
@@ -627,6 +695,10 @@ const applyNightmareWaveEnhancement = (value, specialDifficulty=null) => value *
   ? extremeSpecialRule(specialDifficulty, 'waveEnhancement') : 1);
 const applyNightmareStatGain = (before, normalAfter, specialDifficulty=null) => before
   + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, specialDifficulty));
+// 与えたダメージ1につき伸びる「間合いのボーナス」。
+// WAVE後に距離ごとのダメージへ掛けて距離ボーナスを伸ばすのも、あとから入る子の
+// 追いつき補正でベース値を出すのも、ここを通す(2か所で別々に書くとずれる)。
+const DIST_BONUS_PER_DAMAGE = 0.001 / 100;
 // WAVE後に増える「距離強化」だけへ掛ける倍率。
 // NIGHTMAREは waveEnhancement でWAVE後強化そのものが50%になるのでそれをそのまま使う。
 // INFINITYは距離強化だけを50%にし、通常トレーニングへは重ねないので専用ルールを持つ
@@ -720,6 +792,26 @@ const TRAINING_OPTIONS = Object.freeze([
   Object.freeze({ id:'def',  name:'丸太うけ',   stat:'def',  flat:0, rate:0.20, statLabel:'丈夫さ',  effect:'丈夫さ +20%' }),
   Object.freeze({ id:'guts', name:'猛勉強',     stat:'guts', flat:5, rate:0.05, statLabel:'ガッツ',  effect:'ガッツ +5 ＆ +5%' }),
 ]);
+// ===== 強化フェーズ(WAVEクリア後にバトルへ戻るまで)の手順 =====
+// 画面の上に「トレーニング → 供モン → 配置 → 固有技 → アシストカード」のように、
+// いまどこにいて、あと何画面でバトルへ戻るのかを出すための並び。
+// 進み方そのものは handleTraining / finishQuickGrowth / continueAfterUniqueUpgrade が決めていて、
+// ここはそれと同じ条件で**先に並びを組むだけ**(ここを変えても進み方は変わらない)。
+//   ・供モンが来るのは WAVE 2・4・6 で、編成に空きがあり、候補が1体でもいるとき
+//   ・種族チャレンジは供モンが来なくても固有技の強化へ進む
+//   ・WAVE 1・3・5・7・9 はアシストカードを選んでから次のWAVEへ
+//   ・クイックモードはトレーニングの代わりに自動成長。供モンを選んだら加入を見て次のWAVEへ
+const POST_WAVE_JOIN_WAVES = Object.freeze([2,4,6]);
+const POST_WAVE_TEACHING_WAVES = Object.freeze([1,3,5,7,9]);
+const postWavePhasePlan = ({ wave, quick=false, joinPossible=false, speciesChallenge=false } = {}) => {
+  const w=Number(wave)||0;
+  const joinWave=POST_WAVE_JOIN_WAVES.includes(w);
+  if(quick) return joinWave&&joinPossible ? ['growth','ally','slot'] : ['growth'];
+  if(joinWave&&joinPossible) return ['training','ally','slot','skill','teaching'];
+  if(joinWave&&speciesChallenge) return ['training','skill','teaching'];
+  if(POST_WAVE_TEACHING_WAVES.includes(w)) return ['training','teaching'];
+  return ['training'];
+};
 const chooseAutoTrainingPicks = (strategy, rng=Math.random) => {
   const fixed={offense:['atk','guts'],defense:['hp','def'],guts:['guts','guts']}[strategy];
   if(fixed)return [...fixed];

@@ -3,6 +3,171 @@
 // それも使えない場合のみメモリ内フォールバック(リロードで消える)にする。
 // 本番バトルとDEBUGで共用するパンドラの分身描画。中央像と左右2枚は同じ画像要素を
 // 複製し、雷も各分身体の内側に置くことで発射位置が中央1点にならないようにする。
+// バトルの記録(ログ)の色分け。何が起きた行なのかを、読む前に色で見分けられるようにする。
+// 分け方はRPGテストのメッセージ欄(会心・かわした・戦闘不能…)と同じ考え方にそろえてある。
+const BATTLE_LOG_TONE_STYLE = Object.freeze({
+  turn:    'border-indigo-400/40 bg-indigo-950/60 text-indigo-200 text-center tracking-[0.18em]',
+  card:    'border-violet-400/30 bg-violet-950/40 text-violet-100',
+  enemy:   'border-red-500/30 bg-red-950/40 text-red-200',
+  crit:    'border-amber-300/40 bg-amber-950/40 text-amber-200',
+  damage:  'border-white/10 bg-slate-900/70 text-slate-100',
+  miss:    'border-cyan-400/30 bg-cyan-950/40 text-cyan-200',
+  guard:   'border-emerald-400/30 bg-emerald-950/40 text-emerald-200',
+  heal:    'border-emerald-400/30 bg-emerald-950/40 text-emerald-200',
+  down:    'border-rose-500/40 bg-rose-950/50 text-rose-200',
+  default: 'border-white/10 bg-slate-900/70 text-slate-300',
+});
+
+// ==== 攻撃を「敵の位置」へ向ける(2026-09-24 ユーザー指示「モンスターの位置から上に向かって
+// アクションしているのを、敵に位置を合わせて何かをする感じにしたい」)。
+// 攻撃する子の絵の中心から敵の丸枠の中心までの差(px)を測り、CSS変数で各モーションへ渡す。
+//   --atk-dx / --atk-dy : 敵までの横・縦のずれ(上が負)
+//   --atk-len / --atk-rot : 敵までの距離と向き(真上を0degとして時計回り)
+//   --pd-l-* / --pd-r-* : パンドラの左右の分身から敵までの雷の長さと向き(分身の位置は下の比率で決まる)
+// 変数が無いとき(図鑑・画像デバッグ・RPG)は :root の既定値(真上へ少し)で、今までに近い見え方になる。
+// ★計算・保存・ターン進行には一切触れない。見た目だけ。
+const PANDORA_CLONE_REACH = .5;   // 分身が敵へ向かって出る割合(0=その場・1=敵の位置)
+const PANDORA_CLONE_LIFT = 6;     // 撃っているあいだの分身の浮き(px)。keyframes の -6px と同じ値
+const attackAimVars = (dx, dy, {spread = 56} = {}) => {
+  const aimOf = (vx, vy) => ({ len: Math.max(24, Math.hypot(vx, vy)), rot: Math.atan2(vx, -vy) * 180 / Math.PI });
+  const main = aimOf(dx, dy);
+  const cloneY = dy * PANDORA_CLONE_REACH - PANDORA_CLONE_LIFT;
+  const left = aimOf(dx - (dx * PANDORA_CLONE_REACH - spread), dy - cloneY);
+  const right = aimOf(dx - (dx * PANDORA_CLONE_REACH + spread), dy - cloneY);
+  const px = (v) => `${Math.round(v)}px`;
+  const deg = (v) => `${Math.round(v * 10) / 10}deg`;
+  return {
+    '--atk-dx': px(dx), '--atk-dy': px(dy), '--atk-len': px(main.len), '--atk-rot': deg(main.rot),
+    // 敵が右にいれば1・左なら-1・ほぼ真上なら0(水攻撃の左右の滑りを敵の側へ寄せるのに使う)
+    '--atk-side': String(dx > 12 ? 1 : (dx < -12 ? -1 : 0)),
+    '--pd-l-x': px(dx * PANDORA_CLONE_REACH - spread), '--pd-r-x': px(dx * PANDORA_CLONE_REACH + spread),
+    '--pd-y': px(dy * PANDORA_CLONE_REACH),
+    // 分身は撃つあいだ .95 倍に縮むので、雷はそのぶん長くして敵まで届かせる
+    '--pd-l-len': px(left.len / .95), '--pd-l-rot': deg(left.rot),
+    '--pd-r-len': px(right.len / .95), '--pd-r-rot': deg(right.rot),
+  };
+};
+// 要素の中心を測る。★自分に掛かっている transform(攻撃中の移動・タメの沈み込み)は含めない。
+// getBoundingClientRect は動いている最中の位置を返すので、タメ→本技の2段目で狙いがずれる。
+// offsetLeft/offsetTop は transform を含まないので、動かない親の位置に足して中心を出す。
+const attackAimCenter = (el) => {
+  const parent = el.offsetParent;
+  if (!parent) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+  const pr = parent.getBoundingClientRect();
+  return {
+    x: pr.left + parent.clientLeft - parent.scrollLeft + el.offsetLeft + el.offsetWidth / 2,
+    y: pr.top + parent.clientTop - parent.scrollTop + el.offsetTop + el.offsetHeight / 2,
+  };
+};
+// バトル画面で、その枠の子から敵(data-attack-target)までのずれを返す。測れなければ null(既定値で動く)。
+// 新しい盤面は絵だけが動く(data-tactics-attack-image)ので絵の中心から、古い盤面は枠ごと動くので枠の中心から測る。
+const measureAttackAim = (slotIndex) => {
+  if (typeof document === 'undefined' || slotIndex == null) return null;
+  const slot = document.querySelector(`[data-slot-index="${slotIndex}"]`);
+  const enemy = document.querySelector('[data-attack-target]');
+  if (!slot || !enemy) return null;
+  const from = attackAimCenter(slot.querySelector('[data-tactics-attack-image]') || slot);
+  const to = attackAimCenter(enemy);
+  const dx = Math.round(to.x - from.x);
+  const dy = Math.round(to.y - from.y);
+  if (!Number.isFinite(dx) || !Number.isFinite(dy) || Math.hypot(dx, dy) < 24) return null;
+  return { slotIndex, dx, dy };
+};
+// 敵の側に出す着弾。枠ごと飛んでいく動き(通常の体当たり・固有技の突進・ザン・エイキ)は
+// 絵の中に着弾を置くと一緒に動いてしまうので、敵の丸枠の中へ重ねる。
+// 水・歌・雷・聖光は自分の演出の中で敵の位置へ着弾を描くので、ここでは何も出さない。
+// 時間は各モーションの「当たった瞬間」に合わせてあり、どれも攻撃の尺の中で消える。
+const ATTACK_TARGET_OWN_IMPACT = Object.freeze(['waterBurst', 'miaSongNotes', 'pandoraDualThunder', 'arkHolyRain']);
+const ATTACK_TARGET_SLASHES = Object.freeze({
+  zan:  [{ angle:'-32deg', delay:'80ms'  }, { angle:'24deg', delay:'124ms' }, { angle:'-6deg', delay:'168ms' }],
+  eiki: [{ angle:'28deg',  delay:'110ms' }, { angle:'-4deg', delay:'158ms' }, { angle:'-38deg', delay:'206ms' }, { angle:'64deg', delay:'254ms' }],
+});
+const AttackTargetFx = ({anim}) => {
+  if (!anim || anim.charge === true || anim.twinBlade) return null;
+  if (anim.zanCombo) {
+    const kind = anim.sakura ? 'eiki' : 'zan';
+    return (
+      <span className={`atk-target-fx atk-target-fx--${kind}`} aria-hidden="true">
+        {ATTACK_TARGET_SLASHES[kind].map((slash, index) => (
+          <i key={index} className="atk-target-fx__slash" style={{ '--atk-slash-angle':slash.angle, animationDelay:slash.delay }}/>
+        ))}
+        <i className="atk-target-fx__bloom"/>
+      </span>
+    );
+  }
+  if (ATTACK_TARGET_OWN_IMPACT.includes(anim.motion)) return null;
+  return (
+    <span className={`atk-target-fx atk-target-fx--hit${anim.charge === false ? ' atk-target-fx--special' : ''}`} aria-hidden="true">
+      <i className="atk-target-fx__core"/>
+      <i className="atk-target-fx__ring"/>
+      {[0, 45, 90, 135, 180, 225, 270, 315].map(deg => (
+        <i key={deg} className="atk-target-fx__ray" style={{ '--atk-ray-angle':`${deg}deg` }}/>
+      ))}
+    </span>
+  );
+};
+// ==== 味方モンスターの待機アニメ(2026-09-24 ユーザー指示「ミーアで試して」→「他の味方モンスターもアニメーション実装よろしく」) ====
+// 絵は1枚のPNGなので描き足しはしない。同じ絵を「体」と「動かす部分(翼・しっぽ・耳・花…)」にマスクで切り抜いて重ね、
+// 部分だけを付け根を軸に回す。全体の動き(浮く・跳ねる・呼吸・揺れる・泳ぐ)は種ごとに1つ。
+// ・どこを切り抜いてどう動かすかは tools/monster/idle-rig-build.js の RIGS が正本。下の表はそこから自動で書かれる
+// ・image はバトルで使う実際の絵(染色つき DyedMonsterImage)をそのまま受け取り、部分の数だけ複製する
+// ・軸の位置は「正方形の枠に絵を contain で置いた」ときの %。バトルの枠(58/64pxの正方形)専用
+// ・軽量表示・設定の「待機中の動き：止める」では呼び出し側が使わない。calm と「動きを減らす」は CSS で止める
+// ==== MONSTER_IDLE_RIGS(tools/monster/idle-rig-build.js が書く。手で直さない) ====
+const MONSTER_IDLE_RIGS = Object.freeze({
+  Mocchi: { body:'bounce', bodyMask:null, parts:[] },
+  Suezo: { body:'bounce', bodyMask:null, parts:[] },
+  Golem: { body:'breathe', bodyMask:null, parts:[] },
+  Tiger: { body:'breathe', bodyMask:IDLE_TIGER_BODY_MASK, parts:[{ mask:IDLE_TIGER_TAIL_MASK, origin:'68% 52%', anim:'wag', amp:8, dur:1100, delay:0, layer:'back' }] },
+  Ham: { body:'breathe', bodyMask:IDLE_HAM_BODY_MASK, parts:[{ mask:IDLE_HAM_EAR_L_MASK, origin:'43% 27%', anim:'twitch', amp:-9, dur:3200, delay:0, layer:'front' }, { mask:IDLE_HAM_EAR_R_MASK, origin:'57% 27%', anim:'twitch', amp:9, dur:3200, delay:1300, layer:'front' }] },
+  Pixie: { body:'hover', bodyMask:IDLE_PIXIE_BODY_MASK, parts:[{ mask:IDLE_PIXIE_WING_L_MASK, origin:'36% 32%', anim:'flapL', amp:14, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_WING_R_MASK, origin:'64% 32%', anim:'flapR', amp:14, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_TAIL_MASK, origin:'58% 62%', anim:'wag', amp:7, dur:1600, delay:0, layer:'back' }] },
+  Mia: { body:'hover', bodyMask:MIA_WING_BODY_MASK, parts:[{ mask:MIA_WING_LEFT_MASK, origin:'44.3% 38.1%', anim:'flapL', amp:16, dur:1300, delay:0, layer:'back' }, { mask:MIA_WING_RIGHT_MASK, origin:'55.7% 38.1%', anim:'flapR', amp:16, dur:1300, delay:0, layer:'back' }] },
+  Pandora: { body:'hover', bodyMask:IDLE_PANDORA_BODY_MASK, parts:[{ mask:IDLE_PANDORA_WING_L_MASK, origin:'36.7% 33%', anim:'flapL', amp:12, dur:1200, delay:0, layer:'back' }, { mask:IDLE_PANDORA_WING_R_MASK, origin:'62% 32%', anim:'flapR', amp:12, dur:1200, delay:0, layer:'back' }, { mask:IDLE_PANDORA_TAIL_L_MASK, origin:'31.3% 58%', anim:'swing', amp:7, dur:2000, delay:0, layer:'back' }, { mask:IDLE_PANDORA_TAIL_R_MASK, origin:'64.7% 58%', anim:'swing', amp:-7, dur:2200, delay:400, layer:'back' }] },
+  Monol: { body:'hover', bodyMask:null, parts:[] },
+  Oboro: { body:'sway', bodyMask:IDLE_OBORO_BODY_MASK, parts:[{ mask:IDLE_OBORO_FLOWER_T_MASK, origin:'50% 50%', anim:'swing', amp:6, dur:2600, delay:0, layer:'front' }, { mask:IDLE_OBORO_FLOWER_L_MASK, origin:'33% 54%', anim:'swing', amp:-7, dur:2300, delay:500, layer:'front' }, { mask:IDLE_OBORO_FLOWER_R_MASK, origin:'67% 54%', anim:'swing', amp:7, dur:2500, delay:900, layer:'front' }] },
+  Plant: { body:'sway', bodyMask:IDLE_PLANT_BODY_MASK, parts:[{ mask:IDLE_PLANT_FLOWER_T_MASK, origin:'50% 50%', anim:'swing', amp:6, dur:2600, delay:0, layer:'front' }, { mask:IDLE_PLANT_FLOWER_L_MASK, origin:'31% 52%', anim:'swing', amp:-7, dur:2300, delay:500, layer:'front' }, { mask:IDLE_PLANT_FLOWER_R_MASK, origin:'69% 52%', anim:'swing', amp:7, dur:2500, delay:900, layer:'front' }] },
+  Zan: { body:'hover', bodyMask:IDLE_ZAN_BODY_MASK, parts:[{ mask:IDLE_ZAN_BLADE_L_MASK, origin:'30% 30%', anim:'swing', amp:-5, dur:1800, delay:0, layer:'back' }, { mask:IDLE_ZAN_BLADE_R_MASK, origin:'70% 30%', anim:'swing', amp:5, dur:1800, delay:0, layer:'back' }] },
+  Mitarashi: { body:'breathe', bodyMask:IDLE_MITARASHI_BODY_MASK, parts:[{ mask:IDLE_MITARASHI_WING_L_MASK, origin:'26% 40%', anim:'flapL', amp:14, dur:1000, delay:0, layer:'back' }, { mask:IDLE_MITARASHI_WING_R_MASK, origin:'74% 40%', anim:'flapR', amp:14, dur:1000, delay:0, layer:'back' }] },
+  Ark: { body:'hover', bodyMask:IDLE_ARK_BODY_MASK, parts:[{ mask:IDLE_ARK_WING_L_MASK, origin:'34% 52%', anim:'flapL', amp:6, dur:1300, delay:0, layer:'back' }, { mask:IDLE_ARK_WING_R_MASK, origin:'66% 52%', anim:'flapR', amp:6, dur:1300, delay:0, layer:'back' }] },
+  Iblis: { body:'hover', bodyMask:IDLE_IBLIS_BODY_MASK, parts:[{ mask:IDLE_IBLIS_WING_L_MASK, origin:'30% 56%', anim:'flapL', amp:10, dur:1400, delay:0, layer:'back' }, { mask:IDLE_IBLIS_WING_R_MASK, origin:'70% 56%', anim:'flapR', amp:10, dur:1400, delay:0, layer:'back' }, { mask:IDLE_IBLIS_ORB_MASK, origin:'48% 8%', anim:'bob', amp:-6, dur:1900, delay:0, layer:'front' }] },
+  Snegurochka: { body:'swim', bodyMask:IDLE_SNEGUROCHKA_BODY_MASK, parts:[{ mask:IDLE_SNEGUROCHKA_FIN_MASK, origin:'58.5% 80%', anim:'swing', amp:7, dur:1500, delay:0, layer:'front' }] },
+  Undine: { body:'swim', bodyMask:IDLE_UNDINE_BODY_MASK, parts:[{ mask:IDLE_UNDINE_FIN_MASK, origin:'58% 80%', anim:'swing', amp:8, dur:1500, delay:0, layer:'front' }] },
+  Yaobikuni: { body:'swim', bodyMask:IDLE_YAOBIKUNI_BODY_MASK, parts:[{ mask:IDLE_YAOBIKUNI_FIN_MASK, origin:'60.7% 82%', anim:'swing', amp:8, dur:1500, delay:0, layer:'front' }] },
+  Eiki: { body:'hover', bodyMask:IDLE_EIKI_BODY_MASK, parts:[{ mask:IDLE_EIKI_WING_L_MASK, origin:'23.1% 40%', anim:'flapL', amp:4, dur:1600, delay:0, layer:'back' }, { mask:IDLE_EIKI_WING_R_MASK, origin:'76.9% 40%', anim:'flapR', amp:4, dur:1600, delay:0, layer:'back' }] },
+  KenshiMocchi: { body:'bounce', bodyMask:null, parts:[] },
+});
+// ==== MONSTER_IDLE_RIGS ここまで ====
+const MONSTER_IDLE_MASK_STYLE = (url) => ({
+  WebkitMaskImage:`url(${url})`, maskImage:`url(${url})`,
+  WebkitMaskSize:'contain', maskSize:'contain',
+  WebkitMaskPosition:'center', maskPosition:'center',
+  WebkitMaskRepeat:'no-repeat', maskRepeat:'no-repeat',
+});
+const MonsterIdleArt = ({baseId, image}) => {
+  const rig = MONSTER_IDLE_RIGS[baseId];
+  if (!rig || !image) return image || null;
+  if (!rig.parts.length) {
+    return <span className={`mon-idle mon-idle--${rig.body}`}>{image}</span>;
+  }
+  // ★影(drop-shadow)は切り抜く前に付くので、各層に付けたままだと「体」の層に部分の影が残り、
+  //   部分を動かしたとき元の位置に影の輪郭が見える。影は層から外し、重ねた全体に1回だけ付ける
+  const className = String(image.props.className || '').split(/\s+/).filter(c => c && !/^drop-shadow/.test(c)).join(' ');
+  const layer = (url, extra) => React.cloneElement(image, { alt: extra ? '' : image.props.alt, className,
+    style:{ ...(image.props.style||{}), ...MONSTER_IDLE_MASK_STYLE(url), ...(extra||{}) } });
+  const partNode = (part, index) => (
+    <span key={index} className={`mon-idle__part mon-idle__part--${part.anim} mon-idle__part--${part.layer}`} aria-hidden="true"
+      style={{ transformOrigin:part.origin, animationDuration:`${part.dur}ms`, animationDelay:`${part.delay}ms`, '--idle-amp':`${part.amp}deg`, '--idle-bob':`${part.amp}%` }}>
+      {layer(part.mask, {display:'block'})}
+    </span>
+  );
+  return (
+    <span className={`mon-idle mon-idle--${rig.body} mon-idle--rig`}>
+      {rig.parts.filter(p => p.layer === 'back').map(partNode)}
+      <span className="mon-idle__body">{layer(rig.bodyMask, null)}</span>
+      {rig.parts.filter(p => p.layer !== 'back').map(partNode)}
+    </span>
+  );
+};
 // エイキの攻撃中だけ重ねる桜の花びら。
 // 常時アニメーションにはせず、攻撃モーションが出ているあいだ(isAnimating)だけ描く。
 // スマホの負荷を増やしすぎないよう、要素は固定12枚・CSSアニメーション1本だけにして、
@@ -142,11 +307,13 @@ const ArkHolyRainMotion = ({image, charging=false, empowered=false, compact=fals
 );
 // ウンディーネ種（スネグーラチカ・ウンディーネ・ヤオビクニ）共通の水攻撃演出。
 // 距離枠そのものは動かさず、本体だけを左右へ大きく滑らせながら水弾を3発撃つ。
+// 水弾は敵の向き(--atk-rot)へ傾けて敵の位置(--atk-dx/dy)まで飛ばし、着弾の飛沫も敵の上に出す。
+// x は3発が敵の中心へ寄るための横のずれ、y は当たる場所のばらけ。
 // 水弾・水面の引き波・着弾飛沫は攻撃中だけDOMへ出し、常時アニメーションにはしない。
 const WATER_BURST_SHOTS = Object.freeze([
-  { left:'17%', delay:'120ms', x:'24px',  y:'-132px', angle:'-8deg' },
-  { left:'50%', delay:'240ms', x:'0px',   y:'-138px', angle:'2deg'  },
-  { left:'83%', delay:'360ms', x:'-24px', y:'-132px', angle:'9deg'  },
+  { left:'17%', delay:'120ms', x:'24px',  y:'-8px', angle:'-10deg' },
+  { left:'50%', delay:'240ms', x:'0px',   y:'6px',  angle:'2deg'   },
+  { left:'83%', delay:'360ms', x:'-24px', y:'-4px', angle:'10deg'  },
 ]);
 const WATER_BURST_SPLASH_DROPS = Object.freeze([
   { x:'-74px', y:'-34px', angle:'-28deg', delay:'0ms'  },
@@ -183,16 +350,18 @@ const WaterBurstMotion = ({image, lunge=false, charging=false, compact=false}) =
   </span>
 );
 // ミーア専用の歌攻撃演出。
-// 距離枠は動かさず、本体だけが少し前へ出てリズムを取り、前へマイクスタンドを出して
-// 音符を4つ時間差で敵へ飛ばす。追加画像・追加音源は使わず、攻撃中だけDOMへ出る
+// 距離枠は動かさず、本体はその場で跳ねて体を揺らし、マイクスタンドの前で歌う(敵へは向かわない)。
+// 音符は5つ、左右に揺れながら敵の位置(--atk-dx/dy)まで飛び、敵の向きへ音の波を3つ走らせる。
+// x は飛ぶ途中の左右の揺れ、y は途中でふくらむ高さ。追加画像・追加音源は使わず、攻撃中だけDOMへ出る
 // 固定数のCSS要素で描く(常時アニメーションにはしない)。
 // スマホの縦画面でも「歌って攻撃している」と一目で分かるよう、マイクは本体の手前・
 // やや左に置いて本体を隠さず、音符は大きさと高さをばらして4つ流す。
 const MIA_SONG_NOTES = Object.freeze([
-  { glyph:'♪', left:'36%', delay:'90ms',  x:'20px',  y:'-126px', size:'26px', spin:'-18deg', color:'#f9a8d4' },
-  { glyph:'♬', left:'52%', delay:'185ms', x:'-4px',  y:'-142px', size:'33px', spin:'14deg',  color:'#c4b5fd' },
-  { glyph:'♫', left:'66%', delay:'275ms', x:'-24px', y:'-120px', size:'24px', spin:'-12deg', color:'#fda4af' },
-  { glyph:'♩', left:'45%', delay:'365ms', x:'10px',  y:'-136px', size:'29px', spin:'20deg',  color:'#a5f3fc' },
+  { glyph:'♪', left:'40%', delay:'70ms',  x:'-26px', y:'-34px', size:'26px', spin:'-18deg', color:'#f9a8d4' },
+  { glyph:'♬', left:'56%', delay:'140ms', x:'24px',  y:'-48px', size:'33px', spin:'14deg',  color:'#c4b5fd' },
+  { glyph:'♫', left:'46%', delay:'210ms', x:'-18px', y:'-40px', size:'24px', spin:'-12deg', color:'#fda4af' },
+  { glyph:'♩', left:'60%', delay:'280ms', x:'30px',  y:'-56px', size:'29px', spin:'20deg',  color:'#a5f3fc' },
+  { glyph:'♪', left:'50%', delay:'340ms', x:'-10px', y:'-30px', size:'22px', spin:'10deg',  color:'#fde68a' },
 ]);
 const MIA_SONG_SPARKLES = Object.freeze([
   { x:'-70px', y:'-30px', delay:'0ms',  size:'8px' },
@@ -216,6 +385,7 @@ const MiaSongNotesMotion = ({image, lunge=false, charging=false, compact=false})
       <i className="mia-song-notes__mic-joint"/>
       <i className="mia-song-notes__mic-base"/>
     </span>
+    <span className="mia-song-notes__waves" aria-hidden="true"><i/><i/><i/></span>
     <span className="mia-song-notes__notes" aria-hidden="true">
       {MIA_SONG_NOTES.map((note,index)=>(
         <i key={`note-${index}`} className="mia-song-notes__note" style={{
@@ -237,42 +407,54 @@ const MiaSongNotesMotion = ({image, lunge=false, charging=false, compact=false})
     </span>
   </span>
 );
+// パンドラの分身雷撃。本体が光って2体に分かれ、敵をはさむ位置(--pd-l-x / --pd-r-x)まで跳び、
+// それぞれの分身から敵へ向けて雷を撃つ(長さと向きは attackAimVars が決める)。
+// 同時に敵の真上から大きな落雷を落とし、着弾の閃光と輪を敵の位置に出してから本体へ戻る。
 const PandoraDualThunder = ({image, compact=false}) => (
   <span className={`pandora-dual-thunder${compact?' pandora-dual-thunder--compact':''}`} aria-hidden="true">
     <span className="pandora-dual-center">{React.cloneElement(image,{alt:''})}</span>
     {['left','right'].map(side=><span key={side} className={`pandora-dual-clone pandora-dual-clone--${side}`}>
       {React.cloneElement(image,{alt:''})}
+      <i className="pandora-dual-orb"/>
       <i className="pandora-dual-bolt"/>
     </span>)}
+    <span className="pandora-dual-strike">
+      <i className="pandora-dual-strike__bolt"/>
+      <i className="pandora-dual-strike__flash"/>
+      <i className="pandora-dual-strike__ring"/>
+    </span>
   </span>
 );
 // 図鑑などから本番と同じ攻撃モーション描画を使うための共通ステージ。
 // image は用途ごとの実画像要素を受け取り、モーション専用の画像コピーは作らない。
+// 敵が居ないので、真上の少し先を「敵の位置」として変数を渡す(本番と同じ keyframes がそのまま動く)。
 const BattleAttackMotionPreview = ({image, anim, compact=false}) => {
+  const aimVars = compact ? attackAimVars(0, -70, {spread:30}) : attackAimVars(0, -120);
   if(anim?.motion==='arkHolyRain') {
     return (
-      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
+      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate',...aimVars}}>
         <ArkHolyRainMotion image={image} charging={anim?.charge===true} empowered={anim?.charge===false} compact={compact}/>
       </div>
     );
   }
   if(anim?.motion==='waterBurst') {
     return (
-      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
+      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate',...aimVars}}>
         <WaterBurstMotion image={image} lunge={anim?.charge===false} charging={anim?.charge===true} compact={compact}/>
       </div>
     );
   }
   if(anim?.motion==='miaSongNotes') {
     return (
-      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
+      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate',...aimVars}}>
         <MiaSongNotesMotion image={image} lunge={anim?.charge===false} charging={anim?.charge===true} compact={compact}/>
       </div>
     );
   }
   if(anim?.motion==='pandoraDualThunder') {
+    // 大きく見せる版は2.15倍に拡大するので、敵までの距離もそのぶん縮めて渡す
     return (
-      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
+      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate',...attackAimVars(0, -56, {spread:26})}}>
         <span style={compact?undefined:{display:'block',transform:'scale(2.15)',transformOrigin:'center'}}>
           <PandoraDualThunder image={image} compact={compact}/>
         </span>
@@ -280,10 +462,14 @@ const BattleAttackMotionPreview = ({image, anim, compact=false}) => {
     );
   }
   return (
-    <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(anim)}}>
-      {image}
-      {anim?.sakura&&<EikiSakuraPetals/>}
-      {anim?.twinBlade&&<KenshiTwinSlash/>}
+    <div className="relative h-full w-full" style={{isolation:'isolate',...aimVars}}>
+      <div className="relative h-full w-full" style={{animation:attackMotionAnimation(anim)}}>
+        {image}
+        {anim?.sakura&&<EikiSakuraPetals/>}
+        {anim?.twinBlade&&<KenshiTwinSlash/>}
+      </div>
+      {/* 敵の側の着弾。本番は敵の丸枠に重ねるが、ここでは「敵の位置」へずらして重ねる */}
+      <span className="atk-target-fx-anchor" aria-hidden="true"><AttackTargetFx anim={anim}/></span>
     </div>
   );
 };

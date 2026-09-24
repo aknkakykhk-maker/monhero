@@ -1,5 +1,6 @@
-// マーケットは1行に4商品ずつ並べる。カードが細くなるので中身も小さくそろえる
-const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';
+// マーケットは1行に3商品ずつ並べる。4つだと幅360pxの端末で1枚76pxしか取れず、
+// そのせいで商品名が9px・購入ボタンが30pxまで縮んでいた(2026-09-18)。3つなら1枚約103px。
+const MARKET_GRID_CLASS = 'grid grid-cols-3 gap-2.5 pb-4';
 // 商品アイコンの大きさ。円盤石は絵を見せたいのでいちばん大きく、
 // ブリーダーアイコンやカード・アイテムは名前のほうが大事なので小さくする
 const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };
@@ -20,12 +21,17 @@ const MARKET_PROFILE_ICON_STYLES = {
   // 顔に寄りすぎて角も上下も切れていた(2026-09-05・ユーザー指摘「近すぎる」)。
   // 角と光輪が丸ごと入るところまで引いた。ボールは元絵の一部なので出してよい。
   iblis_icon: { scale: 1.30, x: 0, y: -11 },
-  // 人魚2体。本人アイコンは顔が丸の中央で大きく見える位置、円盤石アイコンは
-  // 円盤が丸へぴったり収まる位置。どちらも画像は加工せず、ここの倍率と位置だけで合わせる。
-  // 立ち絵が縦長(1024x1536)で顔が小さく写っているため、スネグーラチカ(正方形)と
-  // 同じ「顔の高さが丸の約4割」になるよう倍率を上げ、顔の中心が絵の中央より左にある分を横へ寄せている
-  undine_icon: { scale: 3.67, x: 7.7, y: 118 },
-  yaobikuni_icon: { scale: 3.70, x: 6.8, y: 122 },
+  // ウンディーネ・ヤオビクニの本人アイコンは、エイキ・剣士モッチーと同じく専用の顔クロップ
+  // (UNDINE_FACE_ICON / YAOBIKUNI_FACE_ICON)を使うので、ここでの拡大・位置調整は要らない
+  // (元から丸枠向けに切り出してある)。
+  //
+  // ⚠️ 2026-09-19、ここの倍率を 3.67→4.76 まで上げて顔を大きくしようとしたが実機で悪化した。
+  // 立ち絵は尾ひれまで入っていて頭が小さく写っているので、倍率をいくら上げても
+  // 「顔が小さい」か「耳が切れて何のキャラか分からない」のどちらかにしかならない。
+  // 同じ人魚のスネグーラチカが良く見えていたのは、最初から顔クロップを持っていたから。
+  // 倍率で解こうとせず、顔クロップを作るのが正解だった(tools/image/make-face-icons.js)。
+  // なお見た目を変えるときは **実機と同じ40pxで描いて確かめる**こと。
+  // 190pxの大きな丸で見ると、40pxでは潰れて消える耳や髪が「入っている」ように見える。
   mia_icon: { scale: 3.2, x: 0, y: 94 },
   // パンドラ。1.8では顔が小さく、ほかのアイコンより引いて見えた
   // (2026-09-05・ユーザー指摘「少し遠い」)。角と光輪が切れない範囲で寄せた。
@@ -161,17 +167,53 @@ const MarketProductIcon = ({ item, onZoom, disabled=false }) => {
   const cls=`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${disabled?'':'active:scale-90'}`;
   return onZoom?<button type="button" onClick={onZoom} aria-label={`${item.name}を大きく見る`} className={cls}>{content}</button>:<div className={cls}>{content}</div>;
 };
+// 「詳細」チップ。商品カードとマーケット画面の計4か所へ同じ形が写されていて、
+// 8pxの字・実高さ15pxで、いちばん押す回数が多いのにいちばん小さいボタンになっていた。
+// 中身の行は高さ22pxに固定してあるので、そこへ収まる範囲でいっぱいまで大きくする。
+const MarketDetailChip = ({ label, onClick }) => (
+  <button type="button" onClick={onClick} aria-label={label}
+    className="flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full border border-indigo-500/40 bg-indigo-950/50 px-2 py-1 text-[10px] font-black leading-none text-indigo-300 active:scale-95"><BookOpen size={10}/>詳細</button>
+);
+// 商品名の折り返し(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
+// カードの幅では2行になる名前があるが、ブラウザは日本語の語の切れ目を知らないので
+// 「トレーニン／グチケット」「スキップチ／ケット・序」のように語の途中で切っていた。
+// カタカナの複合語でよく使う後ろ半分の前に「ここで折り返してよい」印(U+200B)を入れて教える。
+//   トレーニング|チケット   スキップ|チケット   絆ポイント|リセットの書   アシスト|カード「きき」
+//   イブリースの|円盤石   おりょうの|アイコン
+//   (「イブリースの円盤／石」「おりょうのアイコ／ン」と最後の1文字が落ちていた)
+// ★入れるのは画面へ出す文字だけ。item.name そのものは変えないので、読み上げラベル・詳細・
+//   検索・保存はこれまでどおり(U+200B は幅0で、コピーしても見た目に出ない)。
+// ★語の頭に印が来ても害はない(行の先頭では折り返しの機会にならない)。
+const MARKET_NAME_WRAP_WORDS = Object.freeze(['チケット', 'カード', 'リセット', 'ショップ', 'ボーナス', 'プシュケー', '円盤石', 'アイコン']);
+const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
+  (text, word) => text.split(word).join(`​${word}`), String(name || ''));
+// ★印は文字(U+200B)のままDOMへ置かず、<wbr> に変えてから描く。
+//   U+200B は幅0でも**文字として残る**ので、画面の文字を拾う検査やブラウザの検索で
+//   「ウンディーネのアイコン」が見つからなくなる(2026-09-18に monster/mermaid-browser-check.js が
+//   実際に落ちた。商品はちゃんと並んでいるのに「無い」と言われた)。
+//   <wbr> は「ここで折り返してよい」だけを表し、innerText には現れない。
+const marketNameNodes = (name) => marketNameForWrap(name).split('​')
+  .map((seg, index) => <React.Fragment key={index}>{index>0&&<wbr/>}{seg}</React.Fragment>);
 const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false }) => {
   const usesGold=item.type==='disc'||item.type==='assist'||item.type==='item';
   const usesPsyche=item.currency==='psyche';
   const usesHeroProof=item.currency==='heroProof';
   const usesHeroProofShard=item.currency==='heroProofShard';
   const priceLabel=usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
-  return <div className={`rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
+  return <div className={`rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
     <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled}/>
-    <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'36px'}}>{item.name}</div>
-    <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail&&!comingSoon?<>{middle}{!middle&&<button onClick={onDetail} aria-label={`${item.name}の詳細を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}</div>
-    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[8px] font-black text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>:owned?<div className="text-[8px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard?'交換':'購入'}`}`} className={`text-[10px] font-black px-1.5 min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[8px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[8px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={9} className="shrink-0"/>:<Coins size={9} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
+    {/* 商品名(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
+        ★縦は**上寄せ**にする。中央寄せだと、1行で収まる品(魂格再編の書・染色もどき)だけが
+          枠の真ん中へ降りてきて、2行の品の1行目と高さがそろわなかった。
+        ★word-break:keep-all で「どの文字の間でも折ってよい」をやめ、marketNameForWrap が
+          入れた印(U+200B)の位置だけで折るようにする。既定のままだと日本語は文字単位で
+          折れるので、幅ぴったりのときに最後の1文字だけが2行目へ落ちていた
+          (「トレーニングチケッ/ト」「アシストカード「き/き」」)。
+          text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
+          なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
+    <div className={`w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
+    <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail&&!comingSoon?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
+    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;
 };
 
@@ -314,6 +356,34 @@ const helpDataRows = (id) => {
   switch (id) {
     case 'difficulties':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label, `敵×${s.power} ／ スコア×${s.score} ／ ダイヤ×${s.gold}`]);
+    // タクティクスバトルの敵の技(2026-09-21)。種別と倍率と受け方を実データから作る。
+    // ★技の名前は敵ごとに違う(10体×8技)ので、ここに出すのは**種別**。
+    //   倍率を調整したときにヘルプが古いままにならないよう、行を書き写さない
+    // ★2列目は短くする。長い説明(condition)をそのまま入れると画面で省略され、
+    //   「表のとおりに描けているか」を見る help-render-check が落ちる
+    case 'tacticsEnemyActions':
+      return (typeof TACTICS_ACTION_DEFINITIONS !== 'undefined' ? TACTICS_ACTION_DEFINITIONS : [])
+        .filter(action => action.type !== 'WAIT' && action.type !== 'MOVE')
+        .map(action => [action.category,
+          action.multiplier > 0
+            ? `威力 ×${action.multiplier}${action.hits > 1 ? `（${action.hits}ヒット）` : ''}`
+            : 'ダメージなし']);
+    // タクティクスのEXスキル(2026-09-23)。持っている子・名前・回数・カードとの併用・効果時間を定義から作る。
+    // ★EXを足したときにヘルプが古いままにならないよう、行を書き写さない。2列目は短く(help-render-check)
+    case 'tacticsExSkills':
+      return Object.keys((typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS) || {}).map(monId => {
+        const def = tacticsExDefOf(monId);
+        const monName = ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId]) || {}).name || monId;
+        const duration = { turn:'そのターン', wave:'そのWAVE', toggle:'切り替え' }[def.duration] || '';
+        return [`${monName}「${def.name}」`,
+          `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
+      });
+    // プロモードのランぶんに入るクイック周回数(2026-09-21)。
+    // 難易度ごとの重さ(power)と同じ式から作るので、難易度を調整したときも自動で追随する
+    // (ヘルプへ9行書き写すと、必ずどこかが古いままになる)
+    case 'proQuickLoops':
+      return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label,
+        `10WAVE完走 ${proRunQuickLoops(10, s.power)}周 ／ WAVE5まで ${proRunQuickLoops(5, s.power)}周`]);
     // モンスターの血統一覧。ヘルプへ手で書き写すと、モンスターを足したときに古いままになる
     case 'monsterLineages':
       return dexMonsterList().map(mon => {
@@ -534,6 +604,9 @@ const helpDataRows = (id) => {
 // 表の上に出す見出し(何の表かを分かるようにする)
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
+  tacticsEnemyActions: 'タクティクスバトルの敵が使う技',
+  tacticsExSkills: 'タクティクスバトルのEXスキル',
+  proQuickLoops: 'プロモードで入るクイック周回数',
   extremeDifficulties: '極限チャレンジの難易度',
   rhythmEventPlayBonus: 'イベントの回数ボーナス（1回あたり）',
   rhythmWeeklyRewards: '週間ランキングの順位報酬',

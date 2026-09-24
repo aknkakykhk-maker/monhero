@@ -1,3 +1,4 @@
+// 種族チャレンジの選択画面から、種族限定のrun情報が作られるか。
 const fs = require('fs');
 const vm = require('vm');
 const { installLineageHelpers } = require('./species-challenge-lineage-stub');
@@ -54,7 +55,7 @@ const run = api.createSpeciesChallengeRunState({ speciesId:'mocchi', difficultyI
 assert(run?.speciesId === 'mocchi' && run?.allyIds[0] === 'masu:mitarashi-masu', '確認画面から種族限定run情報を生成する');
 
 const screenStart = source.indexOf("{gameState==='SPECIES_CHALLENGE_SELECT'");
-const screenEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'", screenStart);
+const screenEnd = source.indexOf("{gameState==='MONSTER_CHECK_DEBUG'", screenStart);
 const screen = source.slice(screenStart, screenEnd);
 assert(screenStart >= 0 && screenEnd > screenStart, '本番形式の共通選択画面が存在する');
 // 画面側でも、勇者と同じモンスターは供モン候補から外す
@@ -65,7 +66,9 @@ for (const step of ['species', 'hero', 'allies', 'confirm']) assert(screen.inclu
 assert(screen.includes('const speciesEntries=speciesChallengeLineages();'), '種族候補は主血統(dexMainLineages)を正本にする');
 assert(screen.includes('data-species-row'), '種族は1行1種族の横長カードで並べる');
 assert(screen.includes('種 限定'), '種族カードは「◯◯種 限定」と名乗る');
-assert(source.includes('const difficulties=species?SPECIES_CHALLENGE_DIFFICULTY_IDS.map'), '14難易度は既存BATTLE DIFFICULTY描画へデータとして渡す');
+// タクティクスバトルの種族チャレンジも同じ14難易度をここから渡す(2026-09-20)
+assert(source.includes('?(species?SPECIES_CHALLENGE_DIFFICULTY_IDS:TACTICS_DIFFICULTY_IDS).map(id=>[id,speciesSetting(id)])'),
+  '14難易度は既存BATTLE DIFFICULTY描画へデータとして渡す');
 assert(source.includes('speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId)'), '共通難易度画面は種族別progressからクリア難易度を得る');
 assert(source.includes('isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds'), 'ロック判定は既存helperと種族別進行を再利用する');
 assert(!screen.includes('speciesChallengeDebugProgress'), '選択フローはデバッグ専用progressに依存しない');
@@ -99,18 +102,21 @@ for (const [handler, label] of [['chooseSpecies', '種族'], ['chooseHero', '勇
 assert(!screen.includes('useEffect') || !/useEffect\([^)]*selectSe/.test(screen), '再描画では選択SEを鳴らさない');
 assert(!screen.includes("selection.step==='intro'") && !source.includes('data-species-preview-mode-card'), '専用モードプレビューを廃止する');
 assert(source.includes("isSpecies?'種族を選ぶ':'難易度を選ぶ'"), '共通モードカードから種族選択へ進める');
-assert(source.includes('const loadSpeciesChallengeProgress = async() =>')
-  && source.includes('normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false))'), '共通loaderは既存キーを読み込み正規化する');
-assert(source.includes('const openSpeciesChallengeSelection = async({ saveProgress=false, fromDebug=false }={}) =>')
-  && source.includes('await loadSpeciesChallengeProgress();')
-  && source.includes('if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle});return;}'), 'デバッグ画面を先に開かず選択フロー入口で保存済み進行を読む');
+// ★保存先はモードで決まる(クラシック=mh_species_challenge_progress_v1 /
+//   タクティクス=mh_tactics_species_challenge_progress_v1)。読み込みも同じ入口を通す
+assert(source.includes('const loadSpeciesChallengeProgress = async(mode=speciesChallengeMode) =>')
+  && source.includes('normalizeSpeciesChallengeProgress(await storeGet(speciesChallengeProgressKeyOf(mode),null,false))'), '共通loaderは既存キーを読み込み正規化する');
+assert(source.includes('const openSpeciesChallengeSelection = async({ saveProgress=false, fromDebug=false, mode=BATTLE_MODE_SPECIES_CHALLENGE }={}) =>')
+  && source.includes('await loadSpeciesChallengeProgress(mode);')
+  && source.includes('if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle,mode:m.id});return;}'), 'デバッグ画面を先に開かず選択フロー入口で保存済み進行を読む');
 // 通常のバトル入口から始めた周回だけが記録・報酬を保存する。
 // デバッグのバトルモード入口(debugBattle)から来たときはこれまでどおり保存しない
-assert(source.includes('openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle})'), '本番の入口からだけ保存する周回として始める');
+assert(source.includes('openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle,mode:m.id})'), '本番の入口からだけ保存する周回として始める');
 
 // --- 難易度を決めたあとに通常のPICK_HEROへ落ちない ---
 // ここを通すと debugBattle が false へ戻り、保存なしのはずの確認が記録を残してしまう。
-const confirmAt = source.indexOf("!quickUnlocked?(species?'🔒 前の難易度クリアで解放'");
+// 鍵の文言はモードごとに変わるので、ボタンの目印で探す
+const confirmAt = source.indexOf("{!quickUnlocked?lockText:pro&&!proReady?");
 const confirmButton = source.slice(source.lastIndexOf('<button', confirmAt), confirmAt);
 assert(confirmButton.includes("if(species){"), '「この難易度で挑戦」は種族チャレンジを先に分岐する');
 assert(confirmButton.includes("step:'hero'") && confirmButton.includes("setGameState('SPECIES_CHALLENGE_SELECT');return;"),
@@ -119,7 +125,9 @@ const speciesBranch = confirmButton.slice(confirmButton.indexOf('if(species){'),
 assert(!speciesBranch.includes("advanceRunStage('PICK_HERO')"), '種族チャレンジは通常のPICK_HEROへ入らない');
 assert(!speciesBranch.includes('debugBattleRef.current=false') && !speciesBranch.includes('setDebugBattle(false)'),
   '種族チャレンジの分岐でdebugBattleをfalseへ戻さない');
-const battleModes = source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常の3モードとは別に持っている'));
+// ★見るのは BATTLE_MODES の配列だけ。うしろの「バトルの仕組み(BATTLE_SYSTEMS)」には
+//   種族チャレンジのidが入っている(公開フラグで出し入れする器)ので、そこまで含めない
+const battleModes = source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// ===== バトルの仕組み(モード選択の1つ上) ====='));
 assert(!battleModes.includes('BATTLE_MODE_SPECIES_CHALLENGE') && !battleModes.includes('SPECIES_CHALLENGE_SELECT'), '本番BATTLE MODEには入口を表示しない');
 assert(!screen.includes('storeSet(') && !screen.includes('storeGet(') && !/mh_[a-z]/.test(screen), '選択フローは保存キーを読み書きしない');
 

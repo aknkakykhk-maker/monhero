@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// AUTO∞の切替UIで、ONのときも印が戻ること。
 'use strict';
 const fs=require('fs');
 const path=require('path');
@@ -27,10 +28,17 @@ if(!battleToggle.includes("if(!next){stopAllAuto('manual');return;}"))fail('通�
 const cycle=between('const cycleBattleAuto = () => {','// 特殊ルール説明を閉じる正規経路');
 for(const token of ['if(autoRepeatRef.current){setAutoBattleEnabled(false);return;}','if(autoBattleRef.current){','if(isQuickMode(runMode))setAutoRepeatEnabled(true);','else setAutoBattleEnabled(false);','setAutoBattleEnabled(true);'])if(!cycle.includes(token))fail(`統合AUTOの循環処理に ${token} がありません`);
 const battleControls=between('<span className={`flex-1 min-w-0 flex flex-wrap','{/* 使うカードが決まっている番は');
-for(const token of ['onClick={cycleBattleAuto}','aria-pressed={autoBattle}',"autoRepeat?'∞':autoBattle?'ON':'OFF'",'min-h-[44px] min-w-[84px] shrink-0'])if(!battleControls.includes(token))fail(`統合AUTO/ACTION UIに ${token} がありません`);
+for(const token of ['onClick={cycleBattleAuto}','aria-pressed={autoBattle}',"autoRepeat?'∞':autoBattle?'ON':'OFF'"])if(!battleControls.includes(token))fail(`統合AUTO/ACTION UIに ${token} がありません`);
+// ★ACTIONの寸法は数字を書き写さず、実装から読み取る。
+//   見た目の調整で幅が変わるたびにこの検査が落ちていた(2026-09-19の画面見直しで 84px→96px)。
+//   見たいのは数字そのものではなく「指で押せる大きさか」「狭い画面でも手札の場所が残るか」の2つ。
+const actionSize=/min-h-\[(\d+)px\] min-w-\[(\d+)px\] shrink-0/.exec(battleControls);
+if(!actionSize)fail('統合AUTO/ACTION UIに ACTIONのタップ領域の指定(min-h/min-w/shrink-0) がありません');
+const actionHeight=Number(actionSize[1]),actionWidth=Number(actionSize[2]);
+if(actionHeight<44)fail(`ACTIONのタップ領域が小さすぎます(高さ ${actionHeight}px。44px以上にすること)`);
 if(battleControls.includes('setAutoRepeatEnabled(!autoRepeatRef.current)')||battleControls.includes('∞周回</button>'))fail('バトル内に独立した∞周回ボタンが残っています');
 if(/const \[[^\]]*(?:autoMode|autoStatus|battleAuto)[^\]]*\] = useState/i.test(source))fail('統合AUTO表示用のstateを追加しています');
-for(const width of [320,390,430])if(width-16-(40+44+84+4)<100)fail(`${width}pxでACTIONを維持した操作列が収まりません`);
+for(const width of [320,390,430])if(width-16-(40+44+actionWidth+4)<100)fail(`${width}pxでACTIONを維持した操作列が収まりません(ACTIONの幅 ${actionWidth}px)`);
 if(/['"]mh_[^'"]*(?:repeat|infinity)/.test(source))fail('AUTO∞を永続化する保存キーがあります');
 const speedControl=between('const [battleSpeed, setBattleSpeed] = useState(1);','const [focusedCard, setFocusedCard]');
 for(const token of ['const autoRepeatBattleSpeedRef = useRef(null)','if(autoRepeatBattleSpeedRef.current==null)autoRepeatBattleSpeedRef.current=normalizeBattleSpeed(battleSpeedRef.current)','battleSpeedRef.current=4','setBattleSpeed(4)','const restored=normalizeBattleSpeed(autoRepeatBattleSpeedRef.current)','battleSpeedRef.current=restored','setBattleSpeed(restored)','if (battleScenarioRef.current||autoRepeatRef.current) return;'])if(!speedControl.includes(token))fail(`AUTO∞の速度固定・復元に ${token} がありません`);

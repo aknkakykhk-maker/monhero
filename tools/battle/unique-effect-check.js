@@ -189,10 +189,13 @@ check('丈夫さバフを乗せた実効値がある',
 // バランス調整のたびにここが落ちるだけなので、「実効の丈夫さを使っているか」を見る。
 // 係数を変えたときは meloso-assist-check.js のモデルも直す必要があるため、
 // あちらのDRIFT GUARDが係数を見張っている
+// 丈夫さは defVal へ入れてから使う(新モードだけ「狙われた子の丈夫さ」が入る)。
+// 渡されなければ effectiveDef へ倒すので、既存モードの計算は変わらない
 check('被ダメージの固定軽減に実効の丈夫さを使う',
-  /Math\.max\(30,\(atkVal-effectiveDef\*[\d.]+\)\*\(1-defenseRate\)\)/.test(source));
+  /Math\.max\(30,\(atkVal-defVal\*[\d.]+\)\*\(1-defenseRate\)\)/.test(source)
+    && source.includes(': effectiveDef;'));
 check('被ダメージの割合軽減に実効の丈夫さを使う',
-  /const defenseRate = Math\.min\(0\.5,effectiveDef\*[\d.]+\);/.test(source));
+  /const defenseRate = Math\.min\(0\.5,defVal\*[\d.]+\);/.test(source));
 check('ガードの軽減量(表示)に実効の丈夫さを使う', /Math\.floor\(flat \+ effectiveDef \* mult\)/.test(source));
 check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.floor\(immediateEffects\.guardFlat \+ effectiveDef\*immediateEffects\.guardMult\)/.test(source));
 
@@ -241,9 +244,15 @@ check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.f
 
 // --- 画面の表示が意味と合っていること ---
 // 「被ダメージ軽減」を「DEF +3%」と出していたため、丈夫さが増えたように見えていた
-check('丈夫さバフが「DEF +◯%」として出る', /DEF \+\{Math\.floor\(getPermaBuff\('defPct'\)\*100\)\}%/.test(source));
-check('被ダメージ軽減は「被ダメ -◯%」として別に出る', /被ダメ -\{Math\.floor\(getPermaBuff\('dmgCutPct'\)\*100\)\}%/.test(source));
-check('被ダメージ軽減を「DEF +◯%」と表示していない', !/DEF \+\{Math\.floor\(getPermaBuff\('dmgCutPct'\)\*100\)\}%/.test(source));
+// 2026-09-20: 強化の札を1つずつ書くのをやめ、chip(...) で配列へ足す形にした(アイコン1行＋詳細)。
+// 見張りたいこと(丈夫さと被ダメ軽減を別の名前で出す)は変わっていない
+check('丈夫さバフが「DEF +◯%」として出る',
+  /const defPct=Math\.floor\(getPermaBuff\('defPct'\)\*100\);/.test(source)
+    && /chip\('def',[^\n]*'DEF',`\+\$\{defPct\}%`/.test(source));
+check('被ダメージ軽減は「被ダメ -◯%」として別に出る',
+  /const dmgCutPct=Math\.floor\(getPermaBuff\('dmgCutPct'\)\*100\);/.test(source)
+    && /chip\('dmgCut',[^\n]*'被ダメ',`-\$\{dmgCutPct\}%`/.test(source));
+check('被ダメージ軽減を「DEF +◯%」と表示していない', !/'DEF',`[+-]\$\{dmgCutPct\}%`/.test(source));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exitCode = failed ? 1 : 0;

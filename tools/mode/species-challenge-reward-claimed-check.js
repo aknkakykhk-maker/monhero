@@ -89,7 +89,7 @@ const UNCLAIMED_DIFFICULTY = 'Easy';
 
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
-    await page.getByRole('button', { name: 'バトル' }).waitFor({ timeout: 30000 });
+    await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
       const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
@@ -103,8 +103,15 @@ const UNCLAIMED_DIFFICULTY = 'Easy';
     await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
     await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
     await page.locator('footer button[aria-label=""]').dispatchEvent('click');
-    await page.getByText('BATTLE TEST').first().waitFor({ timeout: 20000 });
-    await page.getByRole('button', { name: '⚔️ バトルモード' }).dispatchEvent('click');
+    await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
+    // DEBUG MENU は節ごとに畳んであるアコーディオン。「⚔️ バトル」を開いてから押す
+    // (畳んだままだとボタンがDOMに無く、名前で探しても見つからない)
+    // ★この検査は「お知らせが重なっていても進む」方針で dispatchEvent に統一してある。
+    //   ここだけ click にすると、閉じ損ねたお知らせに遮られて止まる
+    await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().dispatchEvent('click');
+    await page.locator('[data-debug-battle-mode]').dispatchEvent('click');
+    // ★2026-09-20 にモード選択の1つ上へ「どのバトルで遊ぶか」の画面が増えた
+    await page.locator('[data-battle-system="systemClassic"]').dispatchEvent('click', {}, { timeout: 20000 });
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 20000 });
     const speciesCard = page.locator('article').filter({ hasText: '種族チャレンジ' }).first();
     await speciesCard.scrollIntoViewIfNeeded();

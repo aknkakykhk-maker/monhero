@@ -119,7 +119,11 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   // --- ランを開始して、近距離にマスモンを配置する ---
   // ★「召喚開始」でいきなり始まる作りは無くなり、
   //   HOME →「バトル」→ モード選択 → 難易度 → 勇者モン → 距離、の順になった
-  await clickText('^バトル$'); await page.waitForTimeout(1600); await dismissOverlays();
+  await clickText('^モンヒロバトル$'); await page.waitForTimeout(1600); await dismissOverlays();
+  // ★2026-09-20 にモード選択の1つ上へ「どのバトルで遊ぶか」の画面が増えた。
+  //   HOME → 入口(クラシック) → モード選択 と1段ずつ降りる
+  await page.evaluate(() => document.querySelector('[data-battle-system="systemClassic"]')?.click());
+  await page.waitForTimeout(1400);
   await clickText('難易度を選ぶ'); await page.waitForTimeout(1600);
   await clickText('この難易度で挑戦'); await page.waitForTimeout(1800); await dismissOverlays();
   // ★カードを押すと詳細が開き、確定は「勇者モンに選ぶ」。以前の「決定」ではもう進めない
@@ -128,7 +132,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   const placed = await clickText('近距離'); await page.waitForTimeout(1200);
   check('マスモンを近距離に配置できる', placed);
   // アシストカードを1枚習得してバトルへ
-  await clickText('おりょうの力'); await page.waitForTimeout(700);
+  // アシストカードは2026-09-18に「おりょうの力」から「ニコラオの力」へ名前が変わった
+  await clickText('ニコラオの力'); await page.waitForTimeout(700);
   await clickText('習得する'); await page.waitForTimeout(1800);
 
   const inBattle = (await bodyText()).includes('WAVE 1/');
@@ -198,7 +203,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   // --- 画面に応じて自動で進める ---
   // WAVE1をクリアし、WAVE2で供モンが加入すると「固有技の強化」画面に入る
   const selectedCount = async () => {
-    const m = (await bodyText()).match(/Action Cards (\d+)\/(\d+)/);
+    // ★見出しは Tailwind の uppercase が効いて ACTION CARDS と出る。大小は問わない
+    const m = (await bodyText()).match(/action cards (\d+)\/(\d+)/i);
     return m ? Number(m[1]) : 0;
   };
   // 攻撃力の高い順に試し、ガッツが足りなければ次の候補へ。最後はガード(消費0)で1ターン流す
@@ -223,7 +229,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
     if (t.includes('固有技の強化')) { reachedUpgrade = true; break; }
     if (t.includes('GAME OVER') || t.includes('ゲームオーバー')) { gameOver = true; break; }
 
-    if (t.includes('Action Cards')) {
+    if (/action cards/i.test(t)) {
       // バトル中: 1枚選んで配置し、Actionを押す
       await collectRange();
       let picked = false;
@@ -239,19 +245,30 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
         });
         await page.waitForTimeout(350);
       }
-      if (!(await clickText('^Action$'))) { await page.waitForTimeout(600); continue; }
+      // ★ACTIONボタンは押せない理由を文字で出す(「カードを選ぶ」「置き場所を選ぶ」)ので、
+      //   文字ではなく data-battle-action で押す
+      const acted = await page.evaluate(() => {
+        const b = document.querySelector('[data-battle-action]');
+        if (!b || b.disabled) return false;
+        b.click();
+        return true;
+      });
+      if (!acted) { await page.waitForTimeout(600); continue; }
       for (let w = 0; w < 14; w++) {
         await page.waitForTimeout(450);
         await watchAudio();
         const t2 = await bodyText();
-        if (!t2.includes('Action Cards') || t2.includes('リザルト')) break;
+        if (!/action cards/i.test(t2) || t2.includes('リザルト')) break;
       }
       continue;
     }
     if (t.includes('リザルト')) { wave1Cleared = true; await clickText('^次へ進む$'); await page.waitForTimeout(1000); continue; }
     // ★「攻撃覚醒」は #639 で「トレーニング」へ置き換わり、4種類から2つ選ぶ形になった。
     //   2つ選ぶまで決定を押せないので、頭から2つ押してから決定する
-    if (t.includes('トレーニング') || t.includes('攻撃覚醒')) {
+    // ★画面の文字ではなく data-screen で見分ける。WAVE後の画面には「✓ トレーニング → 供モン → …」の
+    //   並びが出るようになり、アシストカードや供モンの画面にも「トレーニング」の字が入るため
+    const onTraining = await page.evaluate(() => !!document.querySelector('[data-screen="training"]'));
+    if (onTraining || t.includes('攻撃覚醒')) {
       for (const name of ['^走り込み', '^ドミノ倒し', '^丸太うけ', '^猛勉強']) {
         if (await clickText(name)) await page.waitForTimeout(250);
         if (/決定する|この2つで決定/.test(await bodyText())) break;
@@ -260,7 +277,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
       await page.waitForTimeout(1000); continue;
     }
     if (t.includes('アシストカードの継承')) {
-      if (!(await clickText('^習得する$|^強化する$'))) await clickText('おりょうの力|あつの挑発');
+      if (!(await clickText('^習得する$|^強化する$'))) await clickText('ニコラオの力|あつの挑発');
       await page.waitForTimeout(1200); continue;
     }
     if (t.includes('配置場所を決定')) { await clickText('中距離'); await page.waitForTimeout(1200); continue; }
@@ -304,7 +321,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
 
   // 引き継ぎ技の「＋」を押してレベルが上がるか(ポイントがある場合のみ)
   const before = await page.evaluate(() => {
-    const m = (document.body.innerText || '').match(/Remaining Points:\s*(\d+)/);
+    // ★見出しは Tailwind の uppercase が効いて REMAINING POINTS と出る。大小は問わない
+    const m = (document.body.innerText || '').match(/remaining points:\s*(\d+)/i);
     return m ? Number(m[1]) : 0;
   });
   if (before > 0) {

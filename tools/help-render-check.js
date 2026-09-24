@@ -64,6 +64,14 @@ const dataTablePrelude = [
   (source.match(/^const HERO_PROOF_SHARD_ITEM_ID = .*$/m) || [''])[0],
   (source.match(/^const HERO_PROOF_SHARD_PER_PROOF = .*$/m) || [''])[0],
   grab(source, 'const HERO_PROOF_SHARD_ITEM = Object.freeze({', 'const HERO_PROOF_CLEAR_REWARDS'),
+  // プロモードで入るクイック周回数の表は、この換算をそのまま使う(2026-09-21)
+  grab(source, 'const PRO_RUN_QUICK_LOOP_SCALE =', 'const rhythmPlayRunLoopsForResult ='),
+  // タクティクスバトルの敵の技の表。倍率と行動表を実データから作るので、その材料も持ち込む
+  // (持ち込まないと helpDataRows が空の表を返し、「本文が最後まで描けない」で落ちる)
+  grab(source, 'const TACTICS_SWEEP_MULT', 'const TACTICS_ENEMY_ACTION_IDS'),
+  // タクティクスのEXスキルの表(2026-09-23)。定義と、定義をそろえる関数を持ち込む
+  grab(source, 'const tacticsSafeInt', 'const tacticsClamp'),
+  grab(source, '// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   // 曲一覧が使う曲名の組み立て。helpDataRows より前にあるので、別に持ち込む
   grab(source, 'const rhythmSongFullName =', 'const helpDataRows = (id)'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),

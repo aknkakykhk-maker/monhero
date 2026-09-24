@@ -32,10 +32,18 @@ vm.runInContext(`${assistantsSrc}
 globalThis.__t = { ASSISTANT_BATTLE_TUTORIAL, ASSISTANT_BATTLE_TUTORIAL_V2, ASSISTANT_BATTLE_TUTORIAL_BODY,
   ASSISTANT_BATTLE_TUTORIAL_INTRO_V1, ASSISTANT_BATTLE_TUTORIAL_INTRO_V2,
   ASSISTANT_BATTLE_TUTORIAL_OUTRO_V1, ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2,
+  ASSISTANT_BATTLE_TUTORIAL_TACTICS, ASSISTANT_BATTLE_TUTORIAL_TACTICS_INTRO,
+  ASSISTANT_BATTLE_TUTORIAL_TACTICS_BODY, ASSISTANT_BATTLE_TUTORIAL_TACTICS_OUTRO,
+  BATTLE_TUTORIAL_SCENARIO, BATTLE_TUTORIAL_SCENARIO_TACTICS,
   findBattleTutorialStep, ASSISTANT_EXPRESSIONS };`, ctx);
 const { ASSISTANT_BATTLE_TUTORIAL: steps, ASSISTANT_BATTLE_TUTORIAL_V2: stepsV2,
   ASSISTANT_BATTLE_TUTORIAL_BODY: bodySteps, ASSISTANT_BATTLE_TUTORIAL_INTRO_V2: introV2,
   ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2: outroV2,
+  ASSISTANT_BATTLE_TUTORIAL_TACTICS: stepsTactics,
+  ASSISTANT_BATTLE_TUTORIAL_TACTICS_INTRO: introTactics,
+  ASSISTANT_BATTLE_TUTORIAL_TACTICS_BODY: bodyTactics,
+  ASSISTANT_BATTLE_TUTORIAL_TACTICS_OUTRO: outroTactics,
+  BATTLE_TUTORIAL_SCENARIO: scenario, BATTLE_TUTORIAL_SCENARIO_TACTICS: scenarioTactics,
   findBattleTutorialStep, ASSISTANT_EXPRESSIONS } = ctx.__t;
 
 // --- ① 台本はデータで持つ ---
@@ -104,10 +112,17 @@ check('攻撃予告の場所を正しく伝える',
 // 技の一覧で暗くなっている技の理由(距離補正・供モン加入)まで説明する
 check('技が解放される条件にも触れる',
   steps.some(s => s.t.includes('補正')) && steps.some(s => s.t.includes('供モンが合流')));
-// 技の一覧は「カードを選ぶ」→「もう一度名前を押す」の2回タップで開く。
-// 1回で開くと思って書くと、押しても開かないように見えてしまう
-check('技変更が2回タップだと伝えている',
-  steps.some(s => /2回|もう1回|もう一度/.test(s.t) && /名前|一覧/.test(s.t)));
+// 技の一覧はガッツのすぐ上の「⇄技変更」の帯を押すと開く(2026-09-24 ユーザー指示で技名から移した)。
+// それまでは「カードを選ぶ」→「もう一度名前を押す」の2回タップだった。
+// 名前を押すように書いたままだと、押しても一覧が開かないように見えてしまう
+// ★「2回つづけて押す」はカードの説明(ダブルタップ・2026-09-24)でも使うので、禁止するのは
+//   技変更の古い言い方(名前を2回・点線)だけにする
+check('技変更は「⇄技変更」の枠を押すと伝えている',
+  steps.some(s => /技変更/.test(s.t) && /押/.test(s.t) && /一覧/.test(s.t))
+    && !steps.some(s => /もう1回おなじ名前|点線|名前を2回|名前をトントン/.test(s.t)));
+// カードの説明はダブルタップで出す(2026-09-24 ユーザー指示)。どこかで教えていないと、説明の出し方が分からない
+check('カードの説明はダブルタップで出すと伝えている',
+  steps.some(s => /2回つづけて/.test(s.t) && /説明/.test(s.t)));
 check('操作して進むステップがある', steps.filter(s => s.wait === 'act').length >= 4,
   `${steps.filter(s => s.wait === 'act').length}ステップ`);
 // 「説明 → 操作 → 説明 → …」の流れ。いきなり操作モードに入る画面があると
@@ -199,9 +214,10 @@ check('ヘルプのいちばん上に導線がある',
   has("onClick={()=>{setHelpCatId('battle');setHelpTopicId('tutorial');}}")
     && has('みゅあと一緒に、実際に動かして遊び方を覚えられます'));
 check('ヘルプ側に項目がある', helpSrc.includes("launch: 'battleTutorial'"));
-// 呼び出し口は、定義を除いて デバッグ(v1)・デバッグ(v2お試し)・はじめての案内2つ・ヘルプ の5つ
+// 呼び出し口は、定義を除いて デバッグ(v2)・デバッグ(v1)・デバッグ(タクティクス)・
+// はじめての案内2つ・ヘルプ の6つ
 const entryCalls = (source.match(/startBattleTutorial\(/g) || []).length;
-check('入口は決めた5つだけ', entryCalls === 5, `${entryCalls}か所`);
+check('入口は決めた6つだけ', entryCalls === 6, `${entryCalls}か所`);
 // 役割が入れ替わったので、デバッグ専用は v1 のほう
 check('お試しの台本はデバッグからだけ開ける',
   (source.match(/startBattleTutorial\('DEBUG_SETTINGS','v1'\)/g) || []).length === 1
@@ -264,8 +280,9 @@ check('つぎへとスキップ(やめる)がある',
   has("{last?'おわる':'つぎへ'}") && has('<button onClick={()=>endBattleTutorial(false)}') && has('やめる</button>'));
 // 押してほしいものだけを押せるようにする。枠全体を光らせると
 // 「どれを押すのか」が分からず、他が押せると台本から外れてしまう
+// (2026-09-24 配置画面を作り直し、押せない枠の薄さは disabled: ではなく枠ごとの条件で付けるようにした)
 check('置く距離は押せる枠だけ光らせる',
-  has("disabled:opacity-20${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''}")
+  has("active:scale-90${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''}")
     && !has("max-w-xs${battleTutorialSpotClass('slots')}"));
 check('アシストカードは押せるカードだけ光らせる',
   has("disabled:opacity-20${scenarioPicksTeaching(t.id)?battleTutorialSpotClass('teachings'):''}")
@@ -291,6 +308,8 @@ check('緊急回復はその番だけ押せる',
   has('const battleTutorialAllowsEmergency = !battleTutorialNeed') && has('disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency}'));
 // 押してほしい場所を光らせる
 const SPOTS = ['modeTabs', 'rankingBtn', 'difficulty', 'battleStart',
+  'systemCards', 'systemClassic', 'systemTactics', 'systemQuick',
+  'modeCards', 'modeRankTabs', 'modeStart', 'tacticsParty',
   'monCards', 'monDecide', 'slots', 'teachings',
   'waveInfo', 'enemyBar', 'enemyIntent', 'heroStatus', 'emergency', 'battleSlots',
   'cards', 'cardCount', 'deckView', 'action', 'rewards', 'waveNext'];
@@ -304,7 +323,7 @@ check('台本のspotは画面側に用意されているものだけ',
 // 逆向きの取りこぼし。画面側へ光らせる場所を用意したのに台本がどこからも使っていないと、
 // 「用意したのに一度も光らない」まま気づけない。実際にACTIONボタンがその状態だった
 // (セリフでは「ACTIONを押して」と言うのに、押す先は光っていなかった。2026-09-12・ユーザー指摘)
-const usedSpots = new Set([...steps, ...stepsV2]
+const usedSpots = new Set([...steps, ...stepsV2, ...stepsTactics]
   .flatMap(s => (Array.isArray(s.spot) ? s.spot : s.spot ? [s.spot] : [])));
 const unusedSpots = SPOTS.filter(name => !usedSpots.has(name));
 check('画面側に用意した光らせる場所は、台本でも使っている', unusedSpots.length === 0, unusedSpots.join(', '));
@@ -342,29 +361,170 @@ check('新しい台本がある', Array.isArray(stepsV2) && stepsV2.length >= st
 check('本体(勇者モン選択から強化フェーズまで)は新旧で同じものを使い回す',
   bodySteps.length > 0 && JSON.stringify(steps.slice(steps.length - bodySteps.length - 5, steps.length - 5)) === JSON.stringify(bodySteps)
     && JSON.stringify(stepsV2.slice(introV2.length, introV2.length + bodySteps.length)) === JSON.stringify(bodySteps));
-check('新しい台本は新しいモード選択から始まる',
-  stepsV2[0].at === 'BATTLE_MODE_SELECT' && introV2.some(s => s.at === 'BATTLE_DIFFICULTY_SELECT'));
-check('3モードすべてに触れる',
-  ['チャレンジ', 'クイック', 'プロ'].every(word => introV2.some(s => s.t.includes(word))));
+// ★ふだん HOME の「モンヒロバトル」を押すと最初に出るのは仕組みえらび。
+//   ここを飛ばしてモードえらびから教えると、練習のあとで知らない画面に出迎えられる
+//   (2026-09-21 ユーザー指摘)
+check('新しい台本はふだんの入口(仕組みえらび)から始まる',
+  stepsV2[0].at === 'BATTLE_SYSTEM_SELECT'
+    && introV2.some(s => s.at === 'BATTLE_MODE_SELECT')
+    && introV2.some(s => s.at === 'BATTLE_DIFFICULTY_SELECT'),
+  [...new Set(introV2.map(s => s.at))].join(' → '));
+check('画面から始める順が、実際に通る順と同じ',
+  introV2.findIndex(s => s.at === 'BATTLE_SYSTEM_SELECT') < introV2.findIndex(s => s.at === 'BATTLE_MODE_SELECT')
+    && introV2.findIndex(s => s.at === 'BATTLE_MODE_SELECT') < introV2.findIndex(s => s.at === 'BATTLE_DIFFICULTY_SELECT'));
+// 入口に並ぶ3つの仕組み。クイックはモードではなく仕組みの側にあるので、
+// 「クラシックのとなりはクイック」と説明すると実際の画面と食い違う
+check('入口の3つの仕組みすべてに触れる',
+  ['クラシック', 'タクティクス', 'クイック'].every(word =>
+    introV2.some(s => s.at === 'BATTLE_SYSTEM_SELECT' && s.t.includes(word))),
+  ['クラシック', 'タクティクス', 'クイック'].filter(word =>
+    !introV2.some(s => s.at === 'BATTLE_SYSTEM_SELECT' && s.t.includes(word))).join(', '));
+check('クラシックの中の3モードすべてに触れる',
+  ['チャレンジ', '種族チャレンジ', 'プロ'].every(word =>
+    introV2.some(s => s.at === 'BATTLE_MODE_SELECT' && s.t.includes(word))),
+  ['チャレンジ', '種族チャレンジ', 'プロ'].filter(word =>
+    !introV2.some(s => s.at === 'BATTLE_MODE_SELECT' && s.t.includes(word))).join(', '));
+// クイックをモードえらびの画面の説明に混ぜない(そこには並んでいない)
+check('クイックをクラシックの中のモードとして説明しない',
+  !introV2.some(s => s.at === 'BATTLE_MODE_SELECT' && s.t.includes('クイック')));
 check('チャレンジを選んでビギナーで始めると伝える',
   introV2.some(s => s.t.includes('チャレンジ') && s.wait === 'act') && introV2.some(s => s.t.includes('ビギナー')));
-check('しめくくりで3モードの使い分けに触れる',
-  ['チャレンジ', 'クイック', 'プロ'].every(word => outroV2.some(s => s.t.includes(word))));
+check('しめくくりで仕組みとモードの使い分けに触れる',
+  ['チャレンジ', '種族チャレンジ', 'プロ', 'クイック'].every(word => outroV2.some(s => s.t.includes(word))),
+  ['チャレンジ', '種族チャレンジ', 'プロ', 'クイック'].filter(word => !outroV2.some(s => s.t.includes(word))).join(', '));
+// V1と同じ並べ方のきまりを、新しい台本にも効かせる
+// (説明 → 操作 の順・読んでいる間から同じ場所が光っている)
+const actWithoutTalkV2 = stepsV2.filter((s, i) => {
+  if (s.wait !== 'act' && s.wait !== 'do') return false;
+  const prev = stepsV2[i - 1];
+  return !(prev && prev.wait === 'next' && prev.at === s.at);
+});
+check('新しい台本も操作の手前に同じ画面の説明がある', actWithoutTalkV2.length === 0,
+  actWithoutTalkV2.map(s => `${s.id}(${s.at})`).join(', '));
+const talkWithoutSpotV2 = stepsV2.filter((s, i) =>
+  (s.wait === 'act' || s.wait === 'do') && stepsV2[i - 1] && spotKey(stepsV2[i - 1]) !== spotKey(s));
+check('新しい台本も説明と操作で同じ場所を光らせている', talkWithoutSpotV2.length === 0,
+  talkWithoutSpotV2.map(s => s.id).join(', '));
 check('新しい台本もセリフを短く保つ', stepsV2.every(s => s.t.length <= 70), stepsV2.filter(s => s.t.length > 70).map(s => `${s.id}:${s.t.length}字`).join(', '));
 check('新しい台本のidも重複していない', new Set(stepsV2.map(s => s.id)).size === stepsV2.length);
 check('新しい台本の表情もすべて用意されているもの', stepsV2.every(s => ASSISTANT_EXPRESSIONS.includes(s.e)));
 // 初回でクイック・プロを実際に遊ばせない
 // 極限・種族チャレンジの解放条件と同じ disabled にまとまった
-check('練習中はチャレンジ以外の「難易度を選ぶ」を押せない',
-  has('disabled={extremeLocked||speciesLocked||(!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE)}'));
+// ★β版の「準備中」も同じ disabled にまとまっている(2026-09-20)
+check('練習中はその台本のモード以外の「難易度を選ぶ」を押せない',
+  has('disabled={extremeLocked||speciesLocked||modeSoon||(!!battleTutorial&&m.id!==battleTutorialMode)}'));
 check('新しい難易度選択でも練習中はビギナーだけ',
   has("disabled={!!battleTutorial&&key!=='Beginner'}"));
 check('練習中の難易度選択はビギナーから始まる',
   has("const start=battleTutorialStep!=null?'Beginner':BATTLE_DEFAULT_DIFFICULTY;"));
+const INTRO_V2_SPOTS = ['systemCards', 'systemClassic', 'systemTactics', 'systemQuick',
+  'modeCards', 'modeRankTabs', 'modeStart', 'difficulty', 'battleStart'];
 check('新しい画面でも押してほしい場所だけ光らせる',
-  has("battleTutorialSpotClass('modeCards')") && has("battleTutorialSpotClass('modeRankTabs')")
-    && has("battleTutorialSpotClass('modeStart')")
-    && introV2.every(s => !s.spot || ['modeCards','modeRankTabs','modeStart','difficulty','battleStart'].includes(s.spot)));
+  INTRO_V2_SPOTS.every(name => has(`battleTutorialSpotClass('${name}')`))
+    && introV2.every(s => !s.spot || INTRO_V2_SPOTS.includes(s.spot)),
+  INTRO_V2_SPOTS.filter(name => !has(`battleTutorialSpotClass('${name}')`)).join(', '));
+// れんしゅうは「ふだん遊ぶときと同じ入口」を覚えてもらう場。記録を残さないための
+// debugBattle が、入口のカードの並び(準備中・β版・DEBUGの出し分け)まで変えないようにする。
+// ★ただし、まだ公開していない仕組みのれんしゅう(タクティクス)は、その仕組みが準備中のままだと
+//   選べなくなるので、そのときだけデバッグの見え方を残す
+check('れんしゅう中の入口は、ふだん遊ぶときと同じ並びで見せる',
+  has('const tutorialNeedsDebugSystems=!!battleTutorial&&battleSystemComingSoon(battleTutorialSystem,{debugBattle:false});')
+    && has('const systemDebug=debugBattle&&(!battleTutorial||tutorialNeedsDebugSystems);')
+    && has('visibleBattleSystems({debugBattle:systemDebug})')
+    && has('battleSystemComingSoon(sys.id,{debugBattle:systemDebug})'));
+check('れんしゅう中は、その台本の仕組み以外を選べない',
+  has("const tutorialLocked=!!battleTutorial&&sys.id!==battleTutorialSystem;")
+    && has('disabled={soon||tutorialLocked}'));
+check('台本の仕組みを選んだ状態で始める',
+  startBlock.includes('setBattleSystem(isTacticsMode(tutorialMode) ? BATTLE_SYSTEM_TACTICS : BATTLE_SYSTEM_CLASSIC);')
+    && startBlock.includes("setGameState('BATTLE_SYSTEM_SELECT');"));
+
+// --- ⑦ タクティクスバトルのれんしゅう(2026-09-21・公開前なのでデバッグからだけ) ---
+// 盤面の持ち方が違うので、クラシックの本体(BODY)は使い回さず専用に書く。
+// 使い回すと「ライフは1本」「ガッツは全員ぶん」を前提にした言い回しがそのまま嘘になる
+check('タクティクスの台本がある',
+  Array.isArray(stepsTactics) && stepsTactics.length >= 40, `${(stepsTactics || []).length}ステップ`);
+check('タクティクスの台本はクラシックの本体を使い回していない',
+  !stepsTactics.some(s => bodySteps.some(b => b.id === s.id && b.t === s.t)));
+check('タクティクスもふだんの入口(仕組みえらび)から始まる',
+  stepsTactics[0].at === 'BATTLE_SYSTEM_SELECT'
+    && introTactics.some(s => s.at === 'BATTLE_MODE_SELECT')
+    && introTactics.some(s => s.at === 'BATTLE_DIFFICULTY_SELECT'));
+check('タクティクスの台本も仕様どおりの画面をこの順で通る', (() => {
+  const at = (id) => stepsTactics.findIndex(s => s.id === id);
+  return at('tStart') < at('tHero') && at('tHero') < at('tSlot') && at('tSlot') < at('tTeach')
+    && at('tTeach') < at('tBattle') && at('tBattle') < at('tClear') && at('tClear') < at('tReward');
+})());
+// このモードならではのところ。ここを説明しないなら、クラシックの練習と同じでよくなってしまう
+const TACTICS_TOPICS = [
+  ['1体ずつのライフ', /1体ずつ|1体ごと/],
+  ['倒れてもすぐ負けではない', /全員が倒れた/],
+  ['敵の予告に狙いが出る', /狙わ|狙う/],
+  ['カードを使う子を選ぶ', /使う子|受ける子/],
+  ['ガッツもその子のぶん', /ガッツはその子|その子のぶん/],
+  ['連撃はガードが1ヒットぶん', /連撃/],
+  ['勇者特性が全員ぶん効く', /特性/],
+  ['記録はクラシックと別', /別のランキング/],
+];
+const missingTactics = TACTICS_TOPICS.filter(([, re]) => !stepsTactics.some(s => re.test(s.t)));
+check('タクティクスならではのところを説明している', missingTactics.length === 0,
+  missingTactics.map(([name]) => name).join(', '));
+check('タクティクスの3モードすべてに触れる',
+  ['タクティクスチャレンジ', '種族チャレンジ', 'プロ'].every(word =>
+    introTactics.some(s => s.at === 'BATTLE_MODE_SELECT' && s.t.includes(word))));
+check('タクティクスの台本のidも重複していない',
+  new Set(stepsTactics.map(s => s.id)).size === stepsTactics.length);
+check('タクティクスの台本もステップの形がそろっている',
+  stepsTactics.every(s => s.id && s.at && s.t && s.e && ['next', 'act', 'do', 'end'].includes(s.wait))
+    && stepsTactics.filter(s => s.wait === 'do').every(s => !!s.need));
+check('タクティクスの台本の表情もすべて用意されているもの',
+  stepsTactics.every(s => ASSISTANT_EXPRESSIONS.includes(s.e)));
+check('タクティクスの台本もセリフを短く保つ', stepsTactics.every(s => s.t.length <= 70),
+  stepsTactics.filter(s => s.t.length > 70).map(s => `${s.id}:${s.t.length}字`).join(', '));
+check('タクティクスの台本も最後は「ヘルプからいつでも」で終わる',
+  stepsTactics[stepsTactics.length - 1].wait === 'end'
+    && stepsTactics[stepsTactics.length - 1].t.includes('ヘルプ'));
+const actWithoutTalkTactics = stepsTactics.filter((s, i) => {
+  if (s.wait !== 'act' && s.wait !== 'do') return false;
+  const prev = stepsTactics[i - 1];
+  return !(prev && prev.wait === 'next' && prev.at === s.at);
+});
+check('タクティクスの台本も操作の手前に同じ画面の説明がある', actWithoutTalkTactics.length === 0,
+  actWithoutTalkTactics.map(s => `${s.id}(${s.at})`).join(', '));
+const talkWithoutSpotTactics = stepsTactics.filter((s, i) =>
+  (s.wait === 'act' || s.wait === 'do') && stepsTactics[i - 1] && spotKey(stepsTactics[i - 1]) !== spotKey(s));
+check('タクティクスの台本も説明と操作で同じ場所を光らせている', talkWithoutSpotTactics.length === 0,
+  talkWithoutSpotTactics.map(s => s.id).join(', '));
+const spotNamesTactics = stepsTactics.flatMap(s => (Array.isArray(s.spot) ? s.spot : s.spot ? [s.spot] : []));
+check('タクティクスの台本のspotも画面側に用意されているものだけ',
+  spotNamesTactics.every(name => SPOTS.includes(name)),
+  spotNamesTactics.filter(name => !SPOTS.includes(name)).join(', '));
+check('1体ずつのライフを光らせる場所が画面側にある',
+  has("battleTutorialSpotClass('tacticsParty')") && has('data-tactics-party'));
+// 台本の中身。タクティクスの盤面で走らせるために、モードと敵の行動をここで決めている
+check('タクティクス用の台本データがある',
+  !!scenarioTactics && scenarioTactics.mode === 'tactics' && scenarioTactics !== scenario);
+check('台本は連撃を1回見せる',
+  Array.isArray(scenarioTactics.intents) && scenarioTactics.intents.some(i => i.actionId === 'rush'));
+check('台本の敵の行動はこのモードの定義から作る',
+  assistantsSrc.includes("typeof TACTICS_ACTION_DEFINITIONS !== 'undefined'")
+    && assistantsSrc.includes('enemyActionDisplayName(enemy, tacticsDef)'));
+// 走らせるモードと台本データは1か所で決める(入口が増えても取り違えないように)
+check('台本ごとのモードとデータを1か所で決めている',
+  has("const BATTLE_TUTORIAL_VARIANTS = ['v1', 'v2', 'tactics'];")
+    && has('const battleTutorialModeOf = (variant) => (battleTutorialVariantOf(variant) === \'tactics\'')
+    && has('battleScenarioRef.current = battleTutorialScenarioOf(variant);'));
+check('タクティクスのれんしゅうはタクティクスのモードで走る',
+  has('const tutorialMode = battleTutorialModeOf(variant);')
+    && has('setDifficulty(\'Beginner\'); setRunMode(tutorialMode); setBattleMode(tutorialMode);')
+    && has('const tutorialMode = battleTutorialModeOf(battleTutorialVariant);'));
+check('れんしゅう中はその台本のモードしか始められない',
+  has('disabled={extremeLocked||speciesLocked||modeSoon||(!!battleTutorial&&m.id!==battleTutorialMode)}'));
+// 公開前なので、ふだんの入口(初回案内・ヘルプ)からは開かない
+check('タクティクスのれんしゅうはデバッグからだけ開ける',
+  (source.match(/startBattleTutorial\('DEBUG_SETTINGS','tactics'\)/g) || []).length === 1
+    && !/startBattleTutorial\('HOME',\s*'tactics'\)/.test(source)
+    && source.indexOf("startBattleTutorial('DEBUG_SETTINGS','tactics')") > source.indexOf("gameState==='DEBUG_SETTINGS'"));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

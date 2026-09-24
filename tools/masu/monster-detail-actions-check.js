@@ -18,14 +18,21 @@ check('強化は詳細の個体を維持して専用画面へ進む', detail.inc
 // 数を数える対象は強化画面に限る——図鑑にも同名の backToDetail があり、
 // 連結物を丸ごと数えると他の画面のぶんまで混ざるため
 const enhanceScreen = screenSource('MASU_ENHANCE', 'MasuEnhanceScreen');
+// ★戻る導線は2つ(見出しの戻る・いちばん下のボタン)。見出しは ScreenHead へ切り出され
+//   onBack= で渡すようになったので、onClick だけを数えると足りなくなる
+const enhanceBacks = (enhanceScreen.match(/on(?:Back|Click)=\{backToDetail\}/g) || []).length;
 check('強化から戻ると一覧ではなく詳細へ戻る',
   source.includes("const backToDetail = () => { setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuEnhanceFrom(null); setBulkPlan(null); };")
-    && source.includes('onBack={backToDetail}')
-    && (enhanceScreen.match(/onClick=\{backToDetail\}/g) || []).length === 2
+    && enhanceBacks === 2
     && !source.includes('backToList'));
 check('トレーニングは詳細の個体IDを引き継ぐ', detail.includes('setDetailTrainingMasuId(masu.id)') && source.includes('masuId:masu.id,count:1'));
 check('染色は詳細の個体IDと現在色を引き継ぐ', detail.includes('setDyeTargetMasuId(masu.id)') && detail.includes('getMasuColors(masu)'));
-check('3つの操作は対象名つきのアクセシブルなタップボタン', ['を強化','をトレーニング','を染色'].every(label=>detail.includes(`aria-label={\`${'${masu.name}'}${label}\`}`)) && (detail.match(/min-h-\[46px\]/g)||[]).length>=3);
+// ★3つの操作は共通クラス(MASU_DETAIL_ACTION_CLASS)へまとめられた。
+//   高さは「指で押せる大きさか」で見る(何pxかを決め打ちしない)
+const actionClass = (source.match(/const MASU_DETAIL_ACTION_CLASS = '([^']*)'/) || [])[1] || '';
+const actionMinH = Number((actionClass.match(/min-h-\[(\d+)px\]/) || [])[1] || 0);
+check('3つの操作は対象名つきのアクセシブルなタップボタン', ['を強化','をトレーニング','を染色'].every(label=>detail.includes(`aria-label={\`${'${masu.name}'}${label}\`}`))
+  && (detail.match(/MASU_DETAIL_ACTION_CLASS/g)||[]).length>=3 && actionMinH>=44);
 check('トレーニングと染色のモーダルはiPhoneのSafe Area内に収まる', (source.match(/paddingBottom:'calc\(1rem \+ env\(safe-area-inset-bottom\)\)'/g)||[]).length>=2 && source.includes('aria-label={`${masu.name}のトレーニング`}') && source.includes('aria-label={`${masu.name}の染色`}'));
 check('限界突破・転生・合体の操作導線を追加していない', !detail.includes('限界突破する') && !detail.includes('転生する') && !detail.includes('合体する'));
 check('重トレーニングチケットは表示名だけ変更', /id:'training_ticket_l', name:"重トレーニングチケット", type:'item', emoji:"🎟️", cost:1000, bondXp:150/.test(breeder));

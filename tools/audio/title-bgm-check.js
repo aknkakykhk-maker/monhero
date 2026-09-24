@@ -20,6 +20,8 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   node audio/title-bgm-check.js
 const path = require('path');
 const { chromium } = require('playwright');
+// イベントの「閉幕とお礼」は終了の時刻に自動で流れる。既読にしておかないと会話で止まる
+const { eventStorySeed } = require(require('path').resolve(__dirname, '..', 'boot/quiet-boot-seed'));
 
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const results = [];
@@ -48,11 +50,11 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
     put('mh_assistant_selected_v1', 'mua');
     put('mh_assistant_unlock_seen_v1', true);
     put('mh_update_notice_seen_v1', true);
-    put('mh_rhythm_event_story_v1', ['monbeat_cup_2026_09']);
     put('mh_inherited_unique_level_compensation_v1', true);
     put('mh_inherited_unique_level_compensation_pending_v1', false);
     put('mh_masu_level_cap_compensation_notice_seen_v1', true);
   });
+  await page.addInitScript(eventStorySeed());
   // iOS相当の自動再生制限を再現する
   await page.addInitScript(() => {
     window.__audio = { unlocked: false, rejected: 0, calls: [] };
