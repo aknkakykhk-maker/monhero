@@ -238,26 +238,32 @@ check('立ち絵は枠に合わせて縮尺する（元画像の解像度で大�
   && sharedDex.includes('className="w-full h-full object-contain"')
   && !detail.includes('max-w-full max-h-full'));
 check('立ち絵の枠の高さを決めている', /data-dex-art[\s\S]{0,300}height:'clamp\(/.test(detail));
-// 立ち絵の上にボタンを重ねると絵が隠れるので、入口は枠の外に置き、再生は専用画面で行う
-check('攻撃アクションのボタンは立ち絵の枠の外にあり、専用画面へ移る',
+// 立ち絵の上にボタンを重ねると絵が隠れるので、入口は枠の外に置き、再生は専用画面で行う。
+// 2026-09-24 からは、下の情報カードを縮めないよう、立ち絵の左右の列(data-dex-side)に置いている
+const artBlock = (() => { const i = detail.indexOf('<div data-dex-art'); const j = detail.indexOf('</div>', i); return i >= 0 && j > i ? detail.slice(i, j) : ''; })();
+check('攻撃アクションのボタンは立ち絵の枠の外(右の列)にあり、専用画面へ移る',
   detail.includes('data-dex-attack-preview')
   && detail.includes('onOpenAttackPreview();')
   && source.includes("onOpenAttackPreview={()=>setGameState('MONSTER_ATTACK_PREVIEW')}")
-  && !detail.slice(detail.indexOf('data-dex-art'), detail.indexOf('攻撃アクションの入口')).includes('data-dex-attack-preview')
+  && artBlock.length > 0 && !artBlock.includes('<button')
+  && detail.indexOf('data-dex-side="right"') >= 0 && detail.indexOf('data-dex-attack-preview') > detail.indexOf('data-dex-side="right"')
   && !detail.includes('attackMotionPreviewSequence('));
-check('未解放モンスターには攻撃アクションの入口を出さない',
-  detail.includes('{unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center gap-2">')
+check('立ち絵の下にボタンの行を足さない(下の情報カードの縦幅を削らない)',
+  detail.includes('<div data-dex-stage') && !detail.includes('<DexColorRow') && !detail.includes('{unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center gap-2">'));
+check('未解放モンスターには攻撃アクションなどのボタンを出さない(矢印だけ)',
+  (detail.match(/\{unlocked\n?\s*\? <button type="button" data-dex-(attack-preview|color-try)/g) || []).length === 2
+  && detail.includes('{unlocked&&monsterIdleRigOf(mon.id)')
   && attackPreview.includes('if(!mon||!unlockedMonsterIds.includes(mon.id)){ onMissing(); return null; }')
   && source.includes("onMissing={()=>setGameState('MONSTER_DEX')}"));
 // 専用画面。上へ飛ぶ演出が枠外へ出ないよう縦を大きく取り、通常攻撃と固有技を選んで見比べられる
 check('攻撃アクションの専用画面で通常攻撃と固有技を再生できる',
   attackPreview.includes('await onPlayPreview(mon,kind,atkMotion);')
-  && source.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion):attackMotionPreviewSequence(atkMotion);")
+  && source.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id):attackMotionPreviewSequence(atkMotion, mon?.id);")
   && attackPreview.includes('data-attack-preview-play={kind}')
   && attackPreview.includes("kindButton('normal','通常攻撃'")
   && attackPreview.includes("kindButton('unique','固有技'"));
 check('専用画面は本番と同じ描画部品を使い、立ち絵を下寄りに置いて上へ余白を残す',
-  attackPreview.includes('<BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>')
+  attackPreview.includes('<BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name, false, dexSelectedColors(masuMons, mon.id, dexColorKey)), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim} baseId={mon.id}/>')
   && /data-attack-preview-art[\s\S]{0,200}bottom:'1[0-9]%'/.test(attackPreview)
   && attackPreview.includes('data-attack-preview-stage'));
 check('専用画面から図鑑の詳細へ戻れ、戻るときに再生を止める',
@@ -269,7 +275,7 @@ check('専用画面から図鑑の詳細へ戻れ、戻るときに再生を止�
 // tools/battle/attack-preview-parity-check.js が実際に関数を動かして見ている
 check('固有技のプレビューは共通のタメから始まる手順を使う',
   source.includes('const attackMotionUniquePreviewSequence =')
-  && /attackMotionUniquePreviewSequence = \(atkMotion='default'\) => \{[\s\S]{0,900}\{anim:\{charge:true\},ms:650\}/.test(source));
+  && /attackMotionUniquePreviewSequence = \(atkMotion='default', baseId=null\) => \{[\s\S]{0,900}\{anim:\{charge:true\},ms:650\}/.test(source));
 check('左右移動と一覧へ戻る操作で途中の再生を止める',
   detail.includes('const stopDexAttackPreview=')
   && detail.includes('const go=(delta)=>{ stopDexAttackPreview();')
@@ -290,7 +296,7 @@ check('図鑑プレビューは本番と同じモーション描画を使う',
 {
   const previewCtx={WATER_BURST_MOTION_MS:680,ARK_HOLY_RAIN_MOTION_MS:900,MIA_SONG_NOTES_MOTION_MS:760};
   vm.createContext(previewCtx);
-  vm.runInContext(slice('const attackMotionPreviewSequence =', 'const rpgMotionName =')
+  vm.runInContext(slice('const DEFAULT_ATTACK_THEMES =', 'const rpgMotionName =')
     + '\nglobalThis.preview=attackMotionPreviewSequence;', previewCtx);
   const motionKinds=[...new Set(monsters.map(mon=>mon.atkMotion||'default'))];
   const brokenPreview=motionKinds.filter(motion=>{

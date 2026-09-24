@@ -426,6 +426,27 @@ const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', a
 const WATER_BURST_MOTION_MS = 680;
 const MIA_SONG_NOTES_MOTION_MS = 760;
 const ARK_HOLY_RAIN_MOTION_MS = 900;
+// 体当たり(atkMotion:'default')だった初期モンスターの攻撃の型。見た目は 24-battle-fx.jsx の ThemedAttackMotion、
+// 動きは 70-bootstrap.jsx の .thm-atk--◯◯。ここに無い子は従来の体当たり(attackFly)のまま。
+const DEFAULT_ATTACK_THEMES = Object.freeze({
+  Mocchi:'stomp',     // 高く跳んで押しつぶし、戻った位置からモッチ砲(ビーム)
+  Suezo:'beam',       // 大きな目から光線
+  Golem:'rocks',      // 敵を直接殴り、岩のかけらが飛び散る
+  Tiger:'claw',       // カクカクと高速で詰めて、爪で3回ひっかく
+  Ham:'punch',        // 詰め寄って、ワンツーパンチ
+  Pixie:'magic',      // 魔法陣を出して、魔法の弾を3発
+  Monol:'crush',      // 敵の真上へ浮かんで、押しつぶす
+  Oboro:'petals',     // 青い花びらを吹きつける
+  Plant:'vine',       // つるを伸ばして、はたく
+  Mitarashi:'fire',   // 口から炎のビーム
+});
+// 型ごとの尺(ms)。体当たりと同じ 450ms(固有技 500ms)に収まらない型だけ書く。
+// 本番バトルの待ち時間・図鑑のプレビュー・CSSの長さ(--thm-ms)の3つがここを見る。
+const THEMED_ATTACK_MS = Object.freeze({ stomp:900, rocks:520, claw:600, punch:580, fire:560 });
+const themedAttackMotionMs = (monId, motion) => {
+  if (motion && motion !== 'default') return null;
+  return THEMED_ATTACK_MS[DEFAULT_ATTACK_THEMES[monId]] || null;
+};
 // DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
 const attackMotionAnimation = (anim) => {
   if (!anim) return undefined;
@@ -454,7 +475,7 @@ const attackMotionAnimation = (anim) => {
 // 図鑑・画像デバッグで、本番の atkMotion を「1回の攻撃アクション」として見せるための共通手順。
 // 動かし方そのものは attackMotionAnimation / PandoraDualThunder 等の本番演出を使い、
 // ここでは「どの状態を何ms見せるか」だけを返す。保存や戦闘計算には触れない。
-const attackMotionPreviewSequence = (atkMotion='default') => {
+const attackMotionPreviewSequence = (atkMotion='default', baseId=null) => {
   const motion=atkMotion||'default';
   const isTwin=motion==='kenshiTwinBlade';
   const isComboDash=motion==='zanCombo'||motion==='eikiSakuraCombo'||isTwin;
@@ -463,14 +484,14 @@ const attackMotionPreviewSequence = (atkMotion='default') => {
   ];
   return [{
     anim:{motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
-    ms:motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)))),
+    ms:themedAttackMotionMs(baseId, motion) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))),
   }];
 };
 // 固有技のほうの見せ方。本番の固有技とまったく同じ順で、
 // 「共通のタメ(下に沈む specialCharge・650ms)→ 専用モーション」を返す。
 // 通常攻撃用の attackMotionPreviewSequence とは分けてあるので、
 // 図鑑の一覧側や既存のプレビューへタメが混ざることはない。
-const attackMotionUniquePreviewSequence = (atkMotion='default') => {
+const attackMotionUniquePreviewSequence = (atkMotion='default', baseId=null) => {
   const motion=atkMotion||'default';
   const isTwin=motion==='kenshiTwinBlade';
   // ザン・エイキ・剣士モッチーは固有技でも、本番と同じく通常攻撃と同じ残像ダッシュへ移る
@@ -484,7 +505,7 @@ const attackMotionUniquePreviewSequence = (atkMotion='default') => {
     {anim:{charge:true},ms:650},
     {
       anim:{charge:false,motion,twinBlade:false,sakura:false},
-      ms:motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500)))),
+      ms:themedAttackMotionMs(baseId, motion) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))),
     },
   ];
 };

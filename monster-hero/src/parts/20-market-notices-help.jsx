@@ -161,18 +161,19 @@ const DexLineageChip = ({ lineage, iconUrl }) => (
 );
 // 立ち絵の <img> そのもの。待機アニメ(withMonsterIdleArt)は絵の要素を複製して重ねるので、
 // 部品(DexMonsterArt)ではなくこの要素を渡す
-const dexMonsterArtImage = (mon, alt, hidden=false) => (
-  <DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt={alt} masuColors={[]} draggable={false} className="w-full h-full object-contain" style={hidden?{filter:'brightness(0)',opacity:0.65}:undefined}/>
+// colors: 見本にするマスモンの染色(DexMasuColorPicker で選ぶ)。無ければ元の色
+const dexMonsterArtImage = (mon, alt, hidden=false, colors=null) => (
+  <DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt={alt} masuColors={!hidden&&Array.isArray(colors)?colors:[]} draggable={false} className="w-full h-full object-contain" style={hidden?{filter:'brightness(0)',opacity:0.65}:undefined}/>
 );
-const DexMonsterArt = ({ mon, alt, hidden=false }) => mon.imgUrl
-  ? dexMonsterArtImage(mon, alt, hidden)
+const DexMonsterArt = ({ mon, alt, hidden=false, colors=null }) => mon.imgUrl
+  ? dexMonsterArtImage(mon, alt, hidden, colors)
   : <div className="text-6xl">{hidden?'？':mon.emoji}</div>;
 // 図鑑の立ち絵に待機アニメを重ねたもの(バトルと同じ MonsterIdleArt)。持たない子・まだ出会っていない子は今までの絵。
 // 待機アニメは正方形の箱の中で軸を合わせるので、正方形の箱(fill)に入れて渡す。
 // 動かすかどうかは図鑑のページのボタン(motion。useDexIdleMotion)だけで決める。止めたら1枚の絵
-const DexMonsterIdleArt = ({ mon, alt, motion = true }) => (motion && mon.imgUrl && monsterIdleRigOf(mon.id))
-  ? <span data-dex-idle-art className="relative block h-full aspect-square max-w-full">{withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt), {fill:true, own:true})}</span>
-  : <DexMonsterArt mon={mon} alt={alt}/>;
+const DexMonsterIdleArt = ({ mon, alt, motion = true, colors = null }) => (motion && mon.imgUrl && monsterIdleRigOf(mon.id))
+  ? <span data-dex-idle-art className="relative block h-full aspect-square max-w-full">{withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt, false, colors), {fill:true, own:true})}</span>
+  : <DexMonsterArt mon={mon} alt={alt} colors={colors}/>;
 const MarketProductIcon = ({ item, onZoom, disabled=false }) => {
   const content=item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>;
   const cls=`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${disabled?'':'active:scale-90'}`;

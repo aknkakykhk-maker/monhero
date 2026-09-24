@@ -774,8 +774,9 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   // ★帯そのものも光らせた(2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
   //   見るのは色ではなく**動く速さ**。ここが消えると回復もダメージも瞬間で増減して見える
   check('1体ずつの帯は合計の帯と同じ速さで動く',
-    hasScreen('data-tactics-hp-bar className={`h-full transition-all duration-1000 ')
-      && hasScreen('data-tactics-guts-bar className="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-500"'));
+  // ★2026-09-24 幅(width)ではなく横の縮み(scaleX)で動かすようにした(幅だとスマホでかくつく)。速さは変えていない
+    hasScreen('data-tactics-hp-bar className={`h-full w-full origin-left transition-transform duration-1000 ')
+      && hasScreen('data-tactics-guts-bar className="h-full w-full origin-left bg-gradient-to-r from-amber-500 to-yellow-300 transition-transform duration-500"'));
   check('手札に検査の手がかりがある',
     hasScreen('data-hand-card={i}') && hasScreen('data-card-cost={requiredGuts}')
       && hasScreen("data-card-usable={isSelectable?'true':'false'}"));
