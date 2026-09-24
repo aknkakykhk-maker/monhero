@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1d218a024604f0f
+// source-sha256: aa8aa858712facaf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0bd246355e618da9
+// generated-sha256: d8318903a7e84a4a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 19:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 19:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -42130,9 +42130,9 @@ function BattleScreen({
       boxShadow: 'inset 0 2px 6px rgba(0,0,0,.85)'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "h-full transition-all duration-1000",
+    className: "h-full w-full origin-left transition-transform duration-1000",
     style: {
-      width: `${Math.max(0, enemy.hp) / enemy.maxHp * 100}%`,
+      transform: `scaleX(${Math.min(1, Math.max(0, enemy.hp) / (enemy.maxHp || 1))})`,
       backgroundImage: 'linear-gradient(180deg,#fca5a5 0%,#ef4444 38%,#b91c1c 72%,#7f1d1d 100%)'
     }
   }), /*#__PURE__*/React.createElement("div", {
@@ -42580,7 +42580,10 @@ function BattleScreen({
       width: 'clamp(92px,16dvh,142px)',
       height: 'clamp(86px,15dvh,132px)'
     }
-  }, /*#__PURE__*/React.createElement("img", {
+  }, enemyMotion && /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true",
+    "data-enemy-glow": true
+  }), /*#__PURE__*/React.createElement("img", {
     src: enemy.imgUrl,
     alt: enemy?.name,
     className: `relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
@@ -43766,7 +43769,10 @@ function BattleScreen({
       className: "absolute inset-0 z-[25] flex items-center justify-center pointer-events-none text-red-200/80"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-2xl font-black"
-    }, "\u26A0"))), /*#__PURE__*/React.createElement("div", {
+    }, "\u26A0"))), tacticsNewLayout && /*#__PURE__*/React.createElement("i", {
+      "aria-hidden": "true",
+      "data-slot-ring": true
+    }), /*#__PURE__*/React.createElement("div", {
       "data-slot-head": tacticsNewLayout ? i : undefined,
       className: `${tacticsNewLayout ? 'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[72px] backdrop-blur-sm' : 'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-400/10 border-amber-200/20' : 'bg-white/[.025] border-white/[.055]'}`
     }, tacticsNewLayout && /*#__PURE__*/React.createElement("span", {
@@ -44091,9 +44097,9 @@ function BattleScreen({
         }
       }, /*#__PURE__*/React.createElement("div", {
         "data-tactics-hp-bar": true,
-        className: `h-full transition-all duration-1000 ${tacticsUnit.downed ? 'bg-gradient-to-r from-emerald-500 to-teal-300' : 'bg-gradient-to-r from-rose-500 to-pink-300'}`,
+        className: `h-full w-full origin-left transition-transform duration-1000 ${tacticsUnit.downed ? 'bg-gradient-to-r from-emerald-500 to-teal-300' : 'bg-gradient-to-r from-rose-500 to-pink-300'}`,
         style: {
-          width: `${hpPct}%`,
+          transform: `scaleX(${Math.min(100, Math.max(0, hpPct)) / 100})`,
           boxShadow: '0 0 6px rgba(244,114,182,.55)'
         }
       })), /*#__PURE__*/React.createElement("div", {
@@ -44113,9 +44119,9 @@ function BattleScreen({
         }
       }, /*#__PURE__*/React.createElement("div", {
         "data-tactics-guts-bar": true,
-        className: "h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-500",
+        className: "h-full w-full origin-left bg-gradient-to-r from-amber-500 to-yellow-300 transition-transform duration-500",
         style: {
-          width: `${gutsPct}%`,
+          transform: `scaleX(${Math.min(100, Math.max(0, gutsPct)) / 100})`,
           boxShadow: '0 0 6px rgba(251,191,36,.55)'
         }
       })));
@@ -77652,9 +77658,26 @@ const createAnimationStyle = () => {
       border-width: 2px !important; border-color: transparent !important; border-radius: 16px !important;
       background: var(--mh-pat),
         linear-gradient(170deg, rgba(16,18,34,.95), rgba(5,6,14,.98)) padding-box,
-        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+        conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
           rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important; }
-    [data-tactics-look="rich"] [data-slot-index]:not([data-distance-broken]):not(.animate-pulse) { animation: mhAng 4.5s linear infinite; }
+    /* 縁を回る光(2026-09-24 ユーザー指摘「バトル画面にかくつきを感じる」で作り直した)。
+       ★もとは conic-gradient の角度(--mh-ang)を毎コマ変えていた。これは縁の塗りを毎コマ描き直すので、
+         枠4つ＋手札5枚でスマホ相当の速さだと 60コマ→27コマまで落ちていた。
+         いまは縁の形に切り抜いた箱(mask)の中で、大きな光の輪を transform で回すだけ(描き直しが要らない) */
+    @keyframes mhSpin { to { transform: rotate(360deg); } }
+    /* ★すりガラス(backdrop-filter)を外す(2026-09-24 ユーザー指摘「バトル画面にかくつきを感じる」)。
+       枠・見出し・ライフの札の下地はもともと 72〜98% の濃さで、ぼかしはほとんど見えていなかった。
+       それでいて枠の中は入れ子で9か所ぼかしていて、ライフの札は跳ねている味方の絵の真上にあるため、
+       絵が動くたびに毎コマぼかし直しになっていた(iPhone でいちばん重い処理のひとつ) */
+    [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-head], [data-tactics-look] [data-tactics-party-slot] {
+      -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+    [data-tactics-look] [data-slot-ring] { position: absolute; inset: -2px; border-radius: 16px; padding: 2px; pointer-events: none; z-index: 1; overflow: hidden;
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+    [data-tactics-look] [data-slot-ring]::before { content: ''; position: absolute; inset: -100%;
+      background: conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+        rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%); }
+    [data-tactics-look="rich"] [data-slot-ring]::before { animation: mhSpin 4.5s linear infinite; }
+    [data-tactics-look] [data-distance-broken] > [data-slot-ring] { display: none; }
     /* 外へにじむ距離色の光(box-shadow を使わずに足す) */
     [data-tactics-look] [data-slot-index]:not([data-distance-broken])::before { content: ''; position: absolute; inset: -2px; border-radius: 16px;
       pointer-events: none; box-shadow: 0 0 14px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.2); }
@@ -77678,9 +77701,12 @@ const createAnimationStyle = () => {
     /* isolation で手札1枚ぶんの重なりの世界を作り、模様(z-index:-1)を「カードの地の上・中身の下」に置く */
     [data-tactics-look] [data-hand-card] { border-color: transparent !important; isolation: isolate; }
     [data-tactics-look] [data-card-frame] { position: absolute; inset: -1px; border-radius: 12px; padding: 2px; pointer-events: none; z-index: 6;
-      background: conic-gradient(from var(--mh-ang), #8a6220, #fff3c4 10%, #c8962e 25%, #fff0b0 50%, #8a6220 70%, #f4d57c 85%, #8a6220);
+      overflow: hidden;
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
-    [data-tactics-look="rich"] [data-card-frame] { animation: mhAng 5s linear infinite; }
+    /* 金の縁も、角度を変えずに中の光の輪を回す(上の data-slot-ring と同じ理由) */
+    [data-tactics-look] [data-card-frame]::before { content: ''; position: absolute; inset: -100%;
+      background: conic-gradient(#8a6220, #fff3c4 10%, #c8962e 25%, #fff0b0 50%, #8a6220 70%, #f4d57c 85%, #8a6220); }
+    [data-tactics-look="rich"] [data-card-frame]::before { animation: mhSpin 5s linear infinite; }
     [data-tactics-look] [data-card-pattern] { position: absolute; inset: 0; border-radius: 11px; pointer-events: none; z-index: -1;
       background: radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
     [data-tactics-look] [data-card-pattern="攻撃"] { background: repeating-linear-gradient(135deg, rgba(0,0,0,.18) 0 2px, transparent 2px 8px), radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
@@ -77695,7 +77721,11 @@ const createAnimationStyle = () => {
       display: flex; align-items: center; justify-content: center; padding-top: 2px; font: 900 10px/1 system-ui, sans-serif; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.9);
       background: radial-gradient(circle at 35% 30%, #fff 0 8%, #7fd8ff 18%, #1f6fd1 55%, #0b2e6b 100%);
       clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%); }
-    [data-tactics-look="rich"] [data-card-gem] { animation: mhGem 2.2s ease-in-out infinite; }
+    /* 宝石のまたたき。明るさ(filter)を変えると描き直しになるので、上に重ねた光の濃さ(opacity)だけを変える */
+    [data-tactics-look] [data-card-gem]::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.75), rgba(255,255,255,0) 60%); }
+    [data-tactics-look="rich"] [data-card-gem]::after { animation: mhGemGlow 2.2s ease-in-out infinite; }
+    @keyframes mhGemGlow { 0%, 100% { opacity: 0; } 50% { opacity: .55; } }
     [data-tactics-look] [data-hand-card] [data-decoration] { border-radius: 8px !important; border: 2px solid #f3d27a !important;
       background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.25), rgba(0,0,0,.35)) !important;
       box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.55), inset 0 0 10px rgba(0,0,0,.5) !important; }
@@ -77784,10 +77814,10 @@ const createAnimationStyle = () => {
     @keyframes kzSlap {
       0% { transform: none; }
       18% { transform: translate(6px, 4px) rotate(14deg) scale(1.1, .9); }
-      36% { transform: translate(-10px, 46px) rotate(-16deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 18px rgba(239,68,68,.9)); }
-      52% { transform: translate(10px, 70px) rotate(15deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
-      66% { transform: translate(0, 60px) rotate(0) scale(1.12, .92); filter: drop-shadow(0 0 18px rgba(220,38,38,.8)); }
-      100% { transform: none; filter: none; }
+      36% { transform: translate(-10px, 46px) rotate(-16deg) scale(1.16, .9); }
+      52% { transform: translate(10px, 70px) rotate(15deg) scale(1.2, .88); }
+      66% { transform: translate(0, 60px) rotate(0) scale(1.12, .92); }
+      100% { transform: none; }
     }
     /* 手のひら: 体の横から画面の手前へ大きく突き出る。左右で半拍ずらす。緑がかった色はカエルの手に寄せるため */
     @keyframes kzPalmL {
@@ -77814,17 +77844,17 @@ const createAnimationStyle = () => {
       38% { transform: translate(-6px, -18px) rotate(-19deg) scale(.93, 1.1); }
       44% { transform: translate(-9px, -19px) rotate(-21deg) scale(.93, 1.1); }
       50% { transform: translate(-7px, -18px) rotate(-20deg) scale(.93, 1.1); }
-      58% { transform: translateY(5px) rotate(0) scale(1.28, .76); filter: brightness(1.25) drop-shadow(0 0 22px rgba(251,191,36,1)); }
+      58% { transform: translateY(5px) rotate(0) scale(1.28, .76); }
       64% { transform: translate(-4px, 3px) scale(1.2, .82); }
       70% { transform: translate(4px, 3px) scale(1.2, .82); }
-      78% { transform: translate(0, -4px) scale(.95, 1.07); filter: drop-shadow(0 0 12px rgba(251,191,36,.6)); }
-      100% { transform: none; filter: none; }
+      78% { transform: translate(0, -4px) scale(.95, 1.07); }
+      100% { transform: none; }
     }
     @keyframes kzHurt {
       0% { transform: none; }
-      16% { transform: translate(12px, -8px) rotate(16deg) scale(.88, 1.1); filter: brightness(2.2) saturate(.4); }
-      36% { transform: translate(-8px, 0) rotate(-8deg) scale(1.08, .94); filter: brightness(1.2); }
-      54% { transform: translate(5px, 0) rotate(4deg); filter: none; }
+      16% { transform: translate(12px, -8px) rotate(16deg) scale(.88, 1.1); }
+      36% { transform: translate(-8px, 0) rotate(-8deg) scale(1.08, .94); }
+      54% { transform: translate(5px, 0) rotate(4deg); }
       72% { transform: translate(-3px, 0) rotate(-2deg); }
       100% { transform: none; }
     }
@@ -77872,9 +77902,9 @@ const createAnimationStyle = () => {
     @keyframes kzLunge {
       0% { transform: none; }
       28% { transform: translate(-26px, 10px) rotate(-12deg) scale(1.2, .8); }
-      58% { transform: translate(30px, 74px) rotate(14deg) scale(1.26, .86); filter: brightness(1.25) drop-shadow(0 0 22px rgba(52,211,153,1)); }
-      72% { transform: translate(22px, 66px) rotate(8deg) scale(1.18, .9); filter: drop-shadow(0 0 14px rgba(52,211,153,.7)); }
-      100% { transform: none; filter: none; }
+      58% { transform: translate(30px, 74px) rotate(14deg) scale(1.26, .86); }
+      72% { transform: translate(22px, 66px) rotate(8deg) scale(1.18, .9); }
+      100% { transform: none; }
     }
     @keyframes kzSweepArc {
       0%, 30% { opacity: 0; transform: translateX(-50%) rotate(-38deg) scaleX(.5); }
@@ -77887,11 +77917,11 @@ const createAnimationStyle = () => {
       10% { transform: translate(6px, 4px) rotate(12deg) scale(1.08, .92); }
       22% { transform: translate(-9px, 40px) rotate(-15deg) scale(1.14, .9); }
       34% { transform: translate(9px, 50px) rotate(15deg) scale(1.16, .9); }
-      46% { transform: translate(-9px, 58px) rotate(-15deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 16px rgba(239,68,68,.9)); }
+      46% { transform: translate(-9px, 58px) rotate(-15deg) scale(1.16, .9); }
       58% { transform: translate(9px, 64px) rotate(15deg) scale(1.18, .88); }
-      70% { transform: translate(-7px, 68px) rotate(-11deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 24px rgba(239,68,68,1)); }
-      84% { transform: translate(0, 40px) rotate(0) scale(1.08, .94); filter: drop-shadow(0 0 12px rgba(220,38,38,.6)); }
-      100% { transform: none; filter: none; }
+      70% { transform: translate(-7px, 68px) rotate(-11deg) scale(1.2, .88); }
+      84% { transform: translate(0, 40px) rotate(0) scale(1.08, .94); }
+      100% { transform: none; }
     }
     @keyframes kzPalmJabL {
       0% { opacity: 0; transform: translate(-34px, 0) rotate(-26deg) scale(.5); }
@@ -77909,11 +77939,11 @@ const createAnimationStyle = () => {
       0% { transform: none; }
       16% { transform: translate(0, 24px) scale(1.12, .9); }
       26% { transform: translate(0, 28px) scale(1.14, .88); }
-      44% { transform: translate(-14px, -26px) rotate(-22deg) scale(.94, 1.1); filter: drop-shadow(0 0 10px rgba(244,63,94,.6)); }
-      56% { transform: translate(-16px, -34px) rotate(-27deg) scale(.92, 1.12); filter: drop-shadow(0 0 14px rgba(244,63,94,.8)); }
-      68% { transform: translate(10px, 66px) rotate(24deg) scale(1.28, .84); filter: brightness(1.3) drop-shadow(0 0 26px rgba(244,63,94,1)); }
+      44% { transform: translate(-14px, -26px) rotate(-22deg) scale(.94, 1.1); }
+      56% { transform: translate(-16px, -34px) rotate(-27deg) scale(.92, 1.12); }
+      68% { transform: translate(10px, 66px) rotate(24deg) scale(1.28, .84); }
       78% { transform: translate(6px, 58px) rotate(16deg) scale(1.2, .88); }
-      100% { transform: none; filter: none; }
+      100% { transform: none; }
     }
     @keyframes kzGrab {
       0%, 6% { opacity: 0; transform: translate(26px, 0) rotate(30deg) scale(.5) scaleX(-1); }
@@ -77934,13 +77964,13 @@ const createAnimationStyle = () => {
       12% { transform: translateY(8px) scale(1.2, .8); }
       24% { transform: translateY(-56px) rotate(0) scale(.9, 1.12); }
       34% { transform: translateY(-74px) rotate(180deg) scale(.96); }
-      44% { transform: translateY(-80px) rotate(360deg) scale(.96); filter: drop-shadow(0 0 16px rgba(251,191,36,.8)); }
+      44% { transform: translateY(-80px) rotate(360deg) scale(.96); }
       54% { transform: translateY(-80px) rotate(540deg) scale(.96); }
-      64% { transform: translateY(-66px) rotate(720deg) scale(.94, 1.08); filter: drop-shadow(0 0 20px rgba(251,191,36,1)); }
-      74% { transform: translateY(72px) rotate(720deg) scale(1.36, .76); filter: brightness(1.35) drop-shadow(0 0 30px rgba(251,191,36,1)); }
+      64% { transform: translateY(-66px) rotate(720deg) scale(.94, 1.08); }
+      74% { transform: translateY(72px) rotate(720deg) scale(1.36, .76); }
       80% { transform: translate(-5px, 64px) rotate(720deg) scale(1.28, .8); }
-      86% { transform: translate(5px, 64px) rotate(720deg) scale(1.26, .82); filter: drop-shadow(0 0 14px rgba(251,191,36,.6)); }
-      100% { transform: rotate(720deg); filter: none; }
+      86% { transform: translate(5px, 64px) rotate(720deg) scale(1.26, .82); }
+      100% { transform: rotate(720deg); }
     }
     @keyframes kzWhirl {
       0%, 16% { opacity: 0; transform: translateY(0) rotate(0) scale(.6); }
@@ -77962,12 +77992,12 @@ const createAnimationStyle = () => {
       0% { transform: none; }
       12% { transform: translateY(10px) scale(1.18, .82); }
       26% { transform: translateY(-12px) scale(.9, 1.16); }
-      38% { transform: translate(-16px, -24px) rotate(-20deg) scale(.9, 1.16); filter: drop-shadow(0 0 12px rgba(250,204,21,.7)); }
+      38% { transform: translate(-16px, -24px) rotate(-20deg) scale(.9, 1.16); }
       46% { transform: translate(-18px, -26px) rotate(-23deg) scale(.9, 1.16); }
-      58% { transform: translate(18px, 26px) rotate(24deg) scale(1.24, .86); filter: brightness(1.3) drop-shadow(0 0 26px rgba(250,204,21,1)); }
+      58% { transform: translate(18px, 26px) rotate(24deg) scale(1.24, .86); }
       68% { transform: translate(10px, 32px) rotate(14deg) scale(1.16, .9); }
-      82% { transform: translateY(-8px) rotate(0) scale(.95, 1.06); filter: drop-shadow(0 0 12px rgba(250,204,21,.5)); }
-      100% { transform: none; filter: none; }
+      82% { transform: translateY(-8px) rotate(0) scale(.95, 1.06); }
+      100% { transform: none; }
     }
     @keyframes kzFirework {
       0%, 54% { opacity: 0; transform: translateX(-50%) scale(.1); }
@@ -77980,19 +78010,19 @@ const createAnimationStyle = () => {
       14% { transform: translateY(8px) scale(1.16, .84); }
       22%, 38%, 54%, 70% { transform: translate(-3px, 8px) scale(1.16, .84); }
       30%, 46%, 62% { transform: translate(3px, 8px) scale(1.16, .84); }
-      22% { filter: drop-shadow(0 0 6px rgba(251,191,36,.5)); }
-      54% { filter: brightness(1.15) drop-shadow(0 0 16px rgba(251,191,36,.85)); }
-      80% { transform: translateY(-10px) scale(.93, 1.12); filter: brightness(1.3) drop-shadow(0 0 28px rgba(251,191,36,1)); }
-      100% { transform: none; filter: none; }
+      22% { }
+      54% { }
+      80% { transform: translateY(-10px) scale(.93, 1.12); }
+      100% { transform: none; }
     }
     @keyframes kzStance {
       0% { transform: none; }
       18% { transform: translateY(6px) scale(1.18, .86); }
-      34% { transform: translate(-10px, 6px) rotate(-8deg) scale(1.18, .86); filter: drop-shadow(0 0 10px rgba(244,63,94,.6)); }
+      34% { transform: translate(-10px, 6px) rotate(-8deg) scale(1.18, .86); }
       50% { transform: translate(10px, 6px) rotate(8deg) scale(1.18, .86); }
       66% { transform: translate(-10px, 6px) rotate(-8deg) scale(1.18, .86); }
-      82% { transform: translateY(4px) scale(1.22, .82); filter: brightness(1.2) drop-shadow(0 0 22px rgba(244,63,94,1)); }
-      100% { transform: none; filter: none; }
+      82% { transform: translateY(4px) scale(1.22, .82); }
+      100% { transform: none; }
     }
     @keyframes kzPalmReadyL {
       0%, 12% { opacity: 0; transform: translate(-20px, 0) rotate(-10deg) scale(.5); }
@@ -78008,11 +78038,11 @@ const createAnimationStyle = () => {
     }
     @keyframes kzSing {
       0% { transform: none; }
-      15% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); filter: drop-shadow(0 0 10px rgba(52,211,153,.6)); }
+      15% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); }
       35% { transform: translate(6px, 0) rotate(9deg) scale(1.05, .96); }
-      55% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); filter: brightness(1.15) drop-shadow(0 0 18px rgba(52,211,153,.95)); }
+      55% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); }
       75% { transform: translate(6px, 0) rotate(9deg) scale(1.05, .96); }
-      100% { transform: none; filter: none; }
+      100% { transform: none; }
     }
     @keyframes kzNote {
       0% { opacity: 0; transform: translate(0, 0) rotate(0) scale(.5); }
@@ -78161,7 +78191,7 @@ const createAnimationStyle = () => {
       0%, 34%, 100% { transform: scale(1, 1); }
       8% { transform: scale(1.1, .92); }
       14% { transform: scale(.97, 1.04); }
-      20% { transform: scale(1.12, .9); filter: drop-shadow(0 0 12px rgba(var(--em-c),.7)); }
+      20% { transform: scale(1.12, .9); }
       28% { transform: scale(.98, 1.03); }
       60% { transform: translateX(-4px) rotate(-2deg); }
       80% { transform: translateX(4px) rotate(2deg); }
@@ -78173,11 +78203,11 @@ const createAnimationStyle = () => {
       75% { transform: translateX(8px) rotate(3deg) skewX(-5deg); }
     }
     @keyframes emIdleWrithe {
-      0%, 100% { transform: none; filter: none; }
+      0%, 100% { transform: none; }
       20% { transform: skewY(-3deg) scale(1.03, .98); }
-      40% { transform: skewY(2deg) rotate(-2deg) scale(.98, 1.03); filter: drop-shadow(0 0 10px rgba(var(--em-c),.5)); }
+      40% { transform: skewY(2deg) rotate(-2deg) scale(.98, 1.03); }
       60% { transform: skewY(3deg) scale(1.04, .97); }
-      80% { transform: skewY(-2deg) rotate(2deg) scale(.98, 1.03); filter: drop-shadow(0 0 14px rgba(120,40,200,.7)); }
+      80% { transform: skewY(-2deg) rotate(2deg) scale(.98, 1.03); }
     }
     @keyframes emIdleMenace {
       0%, 100% { transform: none; }
@@ -78191,126 +78221,126 @@ const createAnimationStyle = () => {
       0% { transform: none; }
       25% { transform: translateY(-9px) rotate(-6deg) scale(.94, 1.06); }
       40% { transform: translateY(-14px) rotate(-9deg) scale(.91, 1.09); }
-      50% { transform: translateY(87px) rotate(4deg) scale(1.2, .9); filter: brightness(1.25) drop-shadow(0 0 22px rgba(var(--em-c),1)); }
-      66% { transform: translateY(72px) rotate(2deg) scale(1.12, .92); filter: drop-shadow(0 0 12px rgba(var(--em-c),.7)); }
-      100% { transform: none; filter: none; }
+      50% { transform: translateY(87px) rotate(4deg) scale(1.2, .9); }
+      66% { transform: translateY(72px) rotate(2deg) scale(1.12, .92); }
+      100% { transform: none; }
     }
     @keyframes emLunge {
       0% { transform: none; }
       22% { transform: translateY(-15px) scale(.92, 1.08); }
       42% { transform: translateY(-20px) scale(.89, 1.11); }
-      55% { transform: translateY(108px) scale(1.26, .86); filter: brightness(1.25) drop-shadow(0 0 24px rgba(var(--em-c),1)); }
+      55% { transform: translateY(108px) scale(1.26, .86); }
       70% { transform: translateY(93px) scale(1.2, .88); }
-      100% { transform: none; filter: none; }
+      100% { transform: none; }
     }
     @keyframes emDash {
       0% { transform: none; }
       28% { transform: translate(-45px, 9px) rotate(-10deg) scale(1.1, .9); }
-      58% { transform: translate(51px, 96px) rotate(12deg) scale(1.22, .88); filter: brightness(1.25) drop-shadow(0 0 22px rgba(var(--em-c),1)); }
+      58% { transform: translate(51px, 96px) rotate(12deg) scale(1.22, .88); }
       72% { transform: translate(36px, 84px) rotate(8deg) scale(1.16, .9); }
-      100% { transform: none; filter: none; }
+      100% { transform: none; }
     }
     @keyframes emFlurry {
       0% { transform: none; }
       10% { transform: translate(9px, 6px) rotate(10deg) scale(1.06, .94); }
       22% { transform: translate(-14px, 60px) rotate(-12deg) scale(1.14, .9); }
       34% { transform: translate(14px, 75px) rotate(12deg) scale(1.16, .9); }
-      46% { transform: translate(-14px, 87px) rotate(-12deg) scale(1.16, .9); filter: brightness(1.2) drop-shadow(0 0 16px rgba(var(--em-c),.9)); }
+      46% { transform: translate(-14px, 87px) rotate(-12deg) scale(1.16, .9); }
       58% { transform: translate(14px, 96px) rotate(12deg) scale(1.18, .88); }
-      70% { transform: translate(-10px, 102px) rotate(-9deg) scale(1.2, .88); filter: brightness(1.3) drop-shadow(0 0 24px rgba(var(--em-c),1)); }
+      70% { transform: translate(-10px, 102px) rotate(-9deg) scale(1.2, .88); }
       84% { transform: translate(0, 40px) rotate(0) scale(1.08, .94); }
-      100% { transform: none; filter: none; }
+      100% { transform: none; }
     }
     @keyframes emSpin {
       0% { transform: none; }
       14% { transform: scale(1.1, .9); }
-      50% { transform: translateY(60px) rotate(360deg) scale(1.08); filter: drop-shadow(0 0 16px rgba(var(--em-c),.9)); }
-      80% { transform: translateY(87px) rotate(720deg) scale(1.18); filter: brightness(1.3) drop-shadow(0 0 26px rgba(var(--em-c),1)); }
-      100% { transform: rotate(720deg); filter: none; }
+      50% { transform: translateY(60px) rotate(360deg) scale(1.08); }
+      80% { transform: translateY(87px) rotate(720deg) scale(1.18); }
+      100% { transform: rotate(720deg); }
     }
     @keyframes emWindup {
       0% { transform: none; }
-      30% { transform: translateY(-30px) rotate(-14deg) scale(.92, 1.1); filter: drop-shadow(0 0 8px rgba(var(--em-c),.5)); }
-      56% { transform: translate(-6px, -39px) rotate(-18deg) scale(.9, 1.12); filter: drop-shadow(0 0 16px rgba(var(--em-c),.8)); }
-      68% { transform: translateY(108px) rotate(6deg) scale(1.28, .84); filter: brightness(1.3) drop-shadow(0 0 28px rgba(var(--em-c),1)); }
+      30% { transform: translateY(-30px) rotate(-14deg) scale(.92, 1.1); }
+      56% { transform: translate(-6px, -39px) rotate(-18deg) scale(.9, 1.12); }
+      68% { transform: translateY(108px) rotate(6deg) scale(1.28, .84); }
       78% { transform: translateY(93px) rotate(4deg) scale(1.2, .88); }
-      100% { transform: none; filter: none; }
+      100% { transform: none; }
     }
     @keyframes emSwing {
       0% { transform: none; }
-      30% { transform: translate(-27px, -15px) rotate(-24deg) scale(.95, 1.06); filter: drop-shadow(0 0 8px rgba(var(--em-c),.5)); }
+      30% { transform: translate(-27px, -15px) rotate(-24deg) scale(.95, 1.06); }
       46% { transform: translate(-32px, -20px) rotate(-30deg) scale(.93, 1.08); }
-      58% { transform: translate(30px, 78px) rotate(22deg) scale(1.2, .9); filter: brightness(1.3) drop-shadow(0 0 24px rgba(var(--em-c),1)); }
+      58% { transform: translate(30px, 78px) rotate(22deg) scale(1.2, .9); }
       72% { transform: translate(18px, 66px) rotate(12deg) scale(1.14, .92); }
-      100% { transform: none; filter: none; }
+      100% { transform: none; }
     }
     @keyframes emLeap {
       0% { transform: none; }
       12% { transform: translateY(12px) scale(1.18, .82); }
       30% { transform: translateY(-105px) scale(.9, 1.12); }
-      56% { transform: translateY(-123px) scale(.95, 1.06); filter: drop-shadow(0 0 16px rgba(var(--em-c),.8)); }
-      70% { transform: translateY(108px) scale(1.34, .76); filter: brightness(1.35) drop-shadow(0 0 30px rgba(var(--em-c),1)); }
+      56% { transform: translateY(-123px) scale(.95, 1.06); }
+      70% { transform: translateY(108px) scale(1.34, .76); }
       78% { transform: translate(-8px, 96px) scale(1.28, .8); }
       86% { transform: translate(8px, 96px) scale(1.26, .82); }
-      100% { transform: none; filter: none; }
+      100% { transform: none; }
     }
     @keyframes emPress {
       0% { transform: none; }
       12% { transform: translateY(12px) scale(1.16, .84); }
       34% { transform: translateY(-90px) rotate(-8deg) scale(.95, 1.08); }
-      52% { transform: translateY(-105px) rotate(8deg) scale(1.02); filter: drop-shadow(0 0 14px rgba(var(--em-c),.7)); }
-      70% { transform: translateY(114px) scale(1.42, .7); filter: brightness(1.3) drop-shadow(0 0 28px rgba(var(--em-c),1)); }
+      52% { transform: translateY(-105px) rotate(8deg) scale(1.02); }
+      70% { transform: translateY(114px) scale(1.42, .7); }
       82% { transform: translateY(96px) scale(1.3, .76); }
-      100% { transform: none; filter: none; }
+      100% { transform: none; }
     }
     @keyframes emRise {
       0% { transform: none; }
       20% { transform: translateY(12px) scale(1.12, .88); }
-      48% { transform: translateY(-36px) scale(1.1, 1.18); filter: brightness(1.2) drop-shadow(0 0 20px rgba(var(--em-c),.9)); }
-      60% { transform: translateY(-42px) scale(1.14, 1.2); filter: brightness(1.4) drop-shadow(0 0 34px rgba(var(--em-c),1)); }
-      74% { transform: translateY(51px) scale(1.24, .86); filter: brightness(1.3) drop-shadow(0 0 26px rgba(var(--em-c),1)); }
-      100% { transform: none; filter: none; }
+      48% { transform: translateY(-36px) scale(1.1, 1.18); }
+      60% { transform: translateY(-42px) scale(1.14, 1.2); }
+      74% { transform: translateY(51px) scale(1.24, .86); }
+      100% { transform: none; }
     }
     @keyframes emRoar {
       0% { transform: none; }
       18% { transform: translateY(6px) scale(1.1, .9); }
-      34% { transform: translateY(-14px) rotate(-4deg) scale(1.08, 1.12); filter: drop-shadow(0 0 16px rgba(var(--em-c),.8)); }
+      34% { transform: translateY(-14px) rotate(-4deg) scale(1.08, 1.12); }
       42%, 58% { transform: translate(-4px, -14px) scale(1.12, 1.14); }
-      50%, 66% { transform: translate(4px, -14px) scale(1.14, 1.12); filter: brightness(1.25) drop-shadow(0 0 26px rgba(var(--em-c),1)); }
-      80% { transform: translateY(-4px) scale(1.04); filter: drop-shadow(0 0 12px rgba(var(--em-c),.6)); }
-      100% { transform: none; filter: none; }
+      50%, 66% { transform: translate(4px, -14px) scale(1.14, 1.12); }
+      80% { transform: translateY(-4px) scale(1.04); }
+      100% { transform: none; }
     }
     @keyframes emPower {
       0% { transform: none; }
       14% { transform: translateY(8px) scale(1.14, .86); }
       22%, 38%, 54%, 70% { transform: translate(-3px, 8px) scale(1.14, .86); }
-      30%, 46%, 62% { transform: translate(3px, 8px) scale(1.14, .86); filter: brightness(1.12) drop-shadow(0 0 14px rgba(var(--em-c),.8)); }
-      80% { transform: translateY(-10px) scale(.93, 1.12); filter: brightness(1.3) drop-shadow(0 0 28px rgba(var(--em-c),1)); }
-      100% { transform: none; filter: none; }
+      30%, 46%, 62% { transform: translate(3px, 8px) scale(1.14, .86); }
+      80% { transform: translateY(-10px) scale(.93, 1.12); }
+      100% { transform: none; }
     }
     @keyframes emStance {
       0% { transform: none; }
       18% { transform: translateY(6px) scale(1.16, .88); }
-      34% { transform: translate(-10px, 6px) rotate(-7deg) scale(1.16, .88); filter: drop-shadow(0 0 10px rgba(var(--em-c),.6)); }
+      34% { transform: translate(-10px, 6px) rotate(-7deg) scale(1.16, .88); }
       50% { transform: translate(10px, 6px) rotate(7deg) scale(1.16, .88); }
       66% { transform: translate(-10px, 6px) rotate(-7deg) scale(1.16, .88); }
-      82% { transform: translateY(4px) scale(1.2, .84); filter: brightness(1.2) drop-shadow(0 0 22px rgba(var(--em-c),1)); }
-      100% { transform: none; filter: none; }
+      82% { transform: translateY(4px) scale(1.2, .84); }
+      100% { transform: none; }
     }
     @keyframes emHeal {
       0% { transform: none; }
-      25% { transform: translateY(-12px) scale(1.04); filter: brightness(1.15) drop-shadow(0 0 14px rgba(52,211,153,.8)); }
-      50% { transform: translateY(-18px) scale(1.06); filter: brightness(1.3) drop-shadow(0 0 24px rgba(52,211,153,1)); }
-      75% { transform: translateY(-10px) scale(1.03); filter: drop-shadow(0 0 14px rgba(52,211,153,.7)); }
-      100% { transform: none; filter: none; }
+      25% { transform: translateY(-12px) scale(1.04); }
+      50% { transform: translateY(-18px) scale(1.06); }
+      75% { transform: translateY(-10px) scale(1.03); }
+      100% { transform: none; }
     }
     @keyframes emSway {
       0% { transform: none; }
-      15% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); filter: drop-shadow(0 0 10px rgba(var(--em-c),.6)); }
+      15% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); }
       35% { transform: translate(6px, 0) rotate(9deg) scale(1.05, .96); }
-      55% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); filter: brightness(1.15) drop-shadow(0 0 18px rgba(var(--em-c),.95)); }
+      55% { transform: translate(-6px, -6px) rotate(-9deg) scale(.96, 1.06); }
       75% { transform: translate(6px, 0) rotate(9deg) scale(1.05, .96); }
-      100% { transform: none; filter: none; }
+      100% { transform: none; }
     }
     /* 飾りの形(::before) */
     @keyframes emArc {
@@ -78406,6 +78436,23 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-moo-stage] > img { transform-origin: 50% 60%; }
     /* やられ(カワズモーと同じのけぞり) */
     [data-tactics-look] [data-enemy-ring][data-em-idle][data-enemy-hurt] > span, [data-tactics-look] [data-moo-stage][data-enemy-hurt] > img { animation: kzHurt 520ms ease-out forwards; }
+    /* 技の光(2026-09-24 ユーザー指摘「バトル画面にかくつき」で作り直した)。
+       ★もとは体の動きの中で filter(drop-shadow / brightness)を変えていた。大きな絵を毎コマぼかし直すので、攻撃のたびにかくついた。
+         いまは絵の後ろに置いた光の輪(data-enemy-glow。絵と一緒に動く)の濃さ(opacity)だけを変える */
+    [data-tactics-look] [data-enemy-glow] { position: absolute; inset: -14%; border-radius: 50%; pointer-events: none; z-index: 0; opacity: 0;
+      background: radial-gradient(closest-side, rgba(var(--em-glow, var(--em-c, 255,255,255)),.95), rgba(var(--em-glow, var(--em-c, 255,255,255)),.4) 55%, rgba(var(--em-glow, var(--em-c, 255,255,255)),0) 78%); }
+    @keyframes emGlowHit { 0%, 30% { opacity: 0; } 55% { opacity: .9; } 70% { opacity: .75; } 100% { opacity: 0; } }
+    @keyframes emGlowCharge { 0% { opacity: 0; } 50% { opacity: .55; } 80% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes emGlowSoft { 0% { opacity: 0; } 50% { opacity: .8; } 100% { opacity: 0; } }
+    @keyframes emGlowHurt { 0% { opacity: 0; } 12% { opacity: .95; } 100% { opacity: 0; } }
+    [data-tactics-look] [data-enemy-ring][data-enemy-skill] > span > [data-enemy-glow] { animation: emGlowHit var(--em-dur, 450ms) ease-out forwards; }
+    [data-tactics-look] [data-enemy-ring]:is([data-enemy-skill="charge"], [data-enemy-skill="pierceCharge"], [data-enemy-skill="roar"]) > span > [data-enemy-glow] { animation-name: emGlowCharge; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-skill="regen"] > span > [data-enemy-glow] { --em-glow: 52,211,153; animation-name: emGlowSoft; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-hurt] > span > [data-enemy-glow] { --em-glow: 255,255,255; animation: emGlowHurt 520ms ease-out forwards; }
+    /* カワズモーは技ごとに光の色を変える(はり手・連続はり手=赤 / かわずつき=緑 / 上手投げ・構え=紅 / 大回転落とし・準備・大投げたまや=金) */
+    [data-enemy-motion="kawazumo"]:is([data-enemy-skill="normal"], [data-enemy-skill="rush"]) { --em-glow: 239,68,68; }
+    [data-enemy-motion="kawazumo"]:is([data-enemy-skill="pierce"], [data-enemy-skill="pierceCharge"]) { --em-glow: 244,63,94; }
+    [data-enemy-motion="kawazumo"]:is([data-enemy-skill="special"], [data-enemy-skill="charge"], [data-enemy-skill="allout"], [data-enemy-skill="roar"]) { --em-glow: 251,191,36; }
     /* 飾り */
     [data-tactics-look] [data-em-fx-el] { font-style: normal; position: absolute; inset: 0; pointer-events: none; z-index: 10000; }
     [data-tactics-look] [data-em-fx-el]::before, [data-tactics-look] [data-em-fx-el]::after { content: ''; position: absolute; opacity: 0; pointer-events: none; }
@@ -78573,16 +78620,16 @@ const createAnimationStyle = () => {
       box-shadow: 0 0 16px rgba(220,38,38,.9), inset 0 0 16px rgba(220,38,38,.6); animation: emLock 800ms ease-out both; }
     /* 覚醒ムーの待機: 翼を広げるように左右へ張り、ときどき身をかがめて吠える。黒い気が立ちのぼり、目が赤く光る */
     @keyframes mooIdleMenace {
-      0%, 100% { transform: translateY(0) scale(1, 1); filter: none; }
+      0%, 100% { transform: translateY(0) scale(1, 1); }
       12% { transform: translateY(-10px) scale(1.06, .98); }
       24% { transform: translateY(0) scale(.97, 1.02); }
       36% { transform: translateY(-12px) scale(1.07, .98); }
       48% { transform: translateY(0) scale(1, 1); }
       60% { transform: translateY(6px) scale(1.03, .96); }
-      68% { transform: translateY(-6px) scale(1.1, 1.04); filter: brightness(1.25) drop-shadow(0 0 30px rgba(220,38,38,.9)); }
+      68% { transform: translateY(-6px) scale(1.1, 1.04); }
       72% { transform: translate(-3px, -6px) scale(1.1, 1.04); }
-      76% { transform: translate(3px, -6px) scale(1.1, 1.04); filter: brightness(1.2) drop-shadow(0 0 26px rgba(220,38,38,.8)); }
-      86% { transform: translateY(-4px) scale(1.02); filter: none; }
+      76% { transform: translate(3px, -6px) scale(1.1, 1.04); }
+      86% { transform: translateY(-4px) scale(1.02); }
     }
     @keyframes mooIdleSmoke { 0% { opacity: 0; transform: translateY(20%) scale(.9); } 30% { opacity: .85; } 100% { opacity: 0; transform: translateY(-18%) scale(1.15); } }
     @keyframes mooIdleEye { 0%, 55%, 100% { opacity: .35; transform: scale(.8); } 68%, 80% { opacity: 1; transform: scale(1.3); } }
@@ -78601,6 +78648,10 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
     [data-tactics-look] [data-enemy-ring] { background: radial-gradient(closest-side, rgba(var(--mh-rc),.22), rgba(0,0,0,.4) 70%) !important;
       box-shadow: 0 0 0 3px rgba(243,210,122,.55), 0 0 0 5px rgba(20,12,4,.85), 0 0 40px rgba(var(--mh-rc),.55), inset 0 0 30px rgba(var(--mh-rc),.35) !important; }
+    /* ★丸枠の filter(距離の色の drop-shadow)は外す(2026-09-24 ユーザー指摘「バトル画面にかくつき」)。
+       丸枠の中では敵の絵と魔法陣がずっと動いているので、丸枠ごとぼかした影を毎コマ描き直していた。
+       同じ色の光は上の box-shadow(0 0 40px)が出している */
+    [data-tactics-look] [data-enemy-ring] { filter: none !important; }
     [data-tactics-look] [data-enemy-ring]::before { content: ''; position: absolute; inset: -16px; border-radius: 50%; pointer-events: none; z-index: 0;
       background: repeating-conic-gradient(rgba(var(--mh-rc),.9) 0 3deg, transparent 3deg 12deg, rgba(255,240,200,.8) 12deg 13deg, transparent 13deg 30deg);
       -webkit-mask: radial-gradient(circle, transparent 64%, #000 65%, #000 69%, transparent 70%); mask: radial-gradient(circle, transparent 64%, #000 65%, #000 69%, transparent 70%);
