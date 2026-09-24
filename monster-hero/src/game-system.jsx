@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3bfbb39809fc4baa
+// generated-sha256: 3bdb0d3b6af4aac2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -122,7 +122,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 22:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 22:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -45901,8 +45901,12 @@ const createAnimationStyle = () => {
       border-width: 2px !important; border-color: transparent !important; border-radius: 16px !important;
       background: var(--mh-pat),
         linear-gradient(170deg, rgba(16,18,34,.95), rgba(5,6,14,.98)) padding-box,
-        conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
           rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important; }
+    /* ★縁の光は回さず、明るい弧のある縁で止める。角度(--mh-ang)を変えると枠の中身ごと描き直しになり、
+         1秒20回に落としても4枠で本体の負担が 13% → 41% に上がった(2026-09-24 計測)。
+         動きは、縁の上を時々横切る光の筋(data-slot-ring の中の ::before。transform だけなので描き直しが要らない)で出す */
+    [data-tactics-look] [data-slot-index]:not([data-distance-broken]) { --mh-ang: 35deg; }
     /* 縁を回る光(2026-09-24 ユーザー指摘「バトル画面にかくつきを感じる」で作り直した)。
        ★もとは conic-gradient の角度(--mh-ang)を毎コマ変えていた。これは縁の塗りを毎コマ描き直すので、
          枠4つ＋手札5枚でスマホ相当の速さだと 60コマ→27コマまで落ちていた。
@@ -45914,6 +45918,10 @@ const createAnimationStyle = () => {
           外すのは見た目にほとんど効いていないもの(味方の影は濃さ 7%)と、足元の影・光の輪で代わりが出ているものだけ */
     [data-tactics-look][data-fx-rest] *, [data-tactics-look][data-fx-rest] *::before, [data-tactics-look][data-fx-rest] *::after { animation-play-state: paused !important; }
     [data-tactics-look] .mon-idle--rig { filter: none !important; }
+    /* 味方の絵の影(drop-shadow-md。濃さ 6〜7%)も外す。待機の動きで揺れているので、4体ぶん毎コマ影を描き直していた */
+    [data-tactics-look] .mon-idle img { filter: none !important; }
+    /* 手のひらは技のあいだだけ見せる */
+    [data-tactics-look] [data-enemy-skill] > [data-kz-palm], [data-tactics-look] [data-enemy-attack] > [data-kz-palm] { visibility: visible; }
     [data-tactics-look] [data-enemy-motion] > span > img { filter: none !important; }
     [data-tactics-look] [data-enemy-ring]::before, [data-tactics-look] [data-slot-circle] { filter: none !important; }
     /* 覚醒ムー戦の重なり順(2026-09-24 ユーザー指摘「ムー戦だけボタンとか色々裏に回ってる」)。
@@ -45936,7 +45944,15 @@ const createAnimationStyle = () => {
        縁の形に切り抜いた箱の中で大きな光の輪(縁の約3倍の板)を回していたが、iPhone で板が9枚ぶん重なると
        切り抜きが外れて板がそのまま見え(カードの中身が隠れる)、固まることがあった。
        縁は上の conic-gradient(border-box)で、光ったまま止まった見た目にする */
-    [data-tactics-look] [data-slot-ring] { display: none; }
+    [data-tactics-look] [data-slot-ring] { position: absolute; inset: -2px; border-radius: 16px; overflow: hidden; pointer-events: none; z-index: 1; }
+    [data-tactics-look] [data-slot-ring]::before { content: ''; position: absolute; top: -20%; bottom: -20%; left: 0; width: 26%;
+      background: linear-gradient(90deg, transparent, rgba(var(--mh-rc2),.22), rgba(255,255,255,.45), rgba(var(--mh-rc2),.22), transparent);
+      transform: translateX(-160%) skewX(-18deg); }
+    [data-tactics-look="rich"] [data-slot-ring]::before { animation: mhShine 5.2s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-slot-index="1"] > [data-slot-ring]::before { animation-delay: 1.3s; }
+    [data-tactics-look="rich"] [data-slot-index="2"] > [data-slot-ring]::before { animation-delay: 2.6s; }
+    [data-tactics-look="rich"] [data-slot-index="3"] > [data-slot-ring]::before { animation-delay: 3.9s; }
+    [data-tactics-look] [data-distance-broken] > [data-slot-ring] { display: none; }
     /* 外へにじむ距離色の光(box-shadow を使わずに足す) */
     [data-tactics-look] [data-slot-index]:not([data-distance-broken])::before { content: ''; position: absolute; inset: -2px; border-radius: 16px;
       pointer-events: none; box-shadow: 0 0 14px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.2); }
@@ -45951,15 +45967,19 @@ const createAnimationStyle = () => {
     /* 足元の魔法陣 */
     [data-tactics-look] [data-slot-circle] { position: absolute; left: 50%; top: calc(50% + 26px); width: 58px; height: 58px; z-index: 0; pointer-events: none;
       transform: translate(-50%, -50%) rotateX(66deg);
-      /* ★切り抜き(mask)を使わず、線の円と点線の円で描く(外れると四角い光の板が出るため) */
-      border-radius: 50%; border: 2px solid rgba(var(--mh-rc2),.9); outline: 2px dashed rgba(var(--mh-rc),.85); outline-offset: 3px; }
+      /* ★切り抜き(mask)を使わず、もとの模様(内と外の輪・あいだの目盛り)を SVG で描く(外れると四角い光の板が出たため) */
+      background: center / 100% 100% no-repeat; }
+    [data-tactics-look] [data-slot-index="0"] [data-slot-circle] { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='43.3' fill='none' stroke='rgba(255,210,190,.8)' stroke-width='14' stroke-dasharray='3.02 19.65'/><circle cx='50' cy='50' r='38.2' fill='none' stroke='rgba(255,210,190,.95)' stroke-width='2.8'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(239,68,68,.9)' stroke-width='2.6'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(239,68,68,.3)' stroke-width='5'/></svg>"); }
+    [data-tactics-look] [data-slot-index="1"] [data-slot-circle] { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='43.3' fill='none' stroke='rgba(255,240,160,.8)' stroke-width='14' stroke-dasharray='3.02 19.65'/><circle cx='50' cy='50' r='38.2' fill='none' stroke='rgba(255,240,160,.95)' stroke-width='2.8'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(245,158,11,.9)' stroke-width='2.6'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(245,158,11,.3)' stroke-width='5'/></svg>"); }
+    [data-tactics-look] [data-slot-index="2"] [data-slot-circle] { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='43.3' fill='none' stroke='rgba(190,255,220,.8)' stroke-width='14' stroke-dasharray='3.02 19.65'/><circle cx='50' cy='50' r='38.2' fill='none' stroke='rgba(190,255,220,.95)' stroke-width='2.8'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(16,185,129,.9)' stroke-width='2.6'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(16,185,129,.3)' stroke-width='5'/></svg>"); }
+    [data-tactics-look] [data-slot-index="3"] [data-slot-circle] { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='43.3' fill='none' stroke='rgba(200,225,255,.8)' stroke-width='14' stroke-dasharray='3.02 19.65'/><circle cx='50' cy='50' r='38.2' fill='none' stroke='rgba(200,225,255,.95)' stroke-width='2.8'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(59,130,246,.9)' stroke-width='2.6'/><circle cx='50' cy='50' r='48.4' fill='none' stroke='rgba(59,130,246,.3)' stroke-width='5'/></svg>"); }
     [data-tactics-look="rich"] [data-slot-circle] { animation: mhCircle 6s linear infinite; }
     /* 手札: 金の縁・模様・光の筋・宝石 */
     /* isolation で手札1枚ぶんの重なりの世界を作り、模様(z-index:-1)を「カードの地の上・中身の下」に置く */
     [data-tactics-look] [data-hand-card] { border-color: transparent !important; isolation: isolate; }
     [data-tactics-look] [data-card-frame] { position: absolute; inset: -1px; border-radius: 12px; padding: 2px; pointer-events: none; z-index: 6;
-      /* ★切り抜き(mask)を使わず、4辺で明るさを変えた金の線で描く(外れるとカードが金色の板で埋まるため) */
-      padding: 0; border: 2px solid; border-color: #fff0b0 #c8962e #8a6220 #d9b25a; box-shadow: inset 0 0 0 1px rgba(255,243,196,.35); }
+      /* ★切り抜き(mask)を使わず、もとの金のグラデーションの縁を SVG の枠線で描く(外れるとカードが金色の板で埋まったため) */
+      padding: 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 74 135' preserveAspectRatio='none'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%238a6220'/><stop offset='.1' stop-color='%23fff3c4'/><stop offset='.25' stop-color='%23c8962e'/><stop offset='.5' stop-color='%23fff0b0'/><stop offset='.7' stop-color='%238a6220'/><stop offset='.85' stop-color='%23f4d57c'/><stop offset='1' stop-color='%238a6220'/></linearGradient></defs><rect x='1' y='1' width='72' height='133' rx='11' fill='none' stroke='url(%23g)' stroke-width='2' vector-effect='non-scaling-stroke'/></svg>") center / 100% 100% no-repeat; }
     /* 金の縁は回さない(上の data-slot-ring と同じ理由。回る光の輪で固まることがあった) */
     [data-tactics-look] [data-card-pattern] { position: absolute; inset: 0; border-radius: 11px; pointer-events: none; z-index: -1;
       background: radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
@@ -46137,7 +46157,7 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"]::after { animation: kzImpact var(--em-dur, 450ms) ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap var(--em-dur, 450ms) ease-in forwards; }
     [data-tactics-look] [data-kz-palm] { font-style: normal; position: absolute; top: 42%; left: 50%; margin-left: -18px; width: 36px; text-align: center; font-size: 30px; line-height: 1;
-      opacity: 0; pointer-events: none; z-index: 10000;
+      opacity: 0; visibility: hidden; pointer-events: none; z-index: 10000;
       filter: hue-rotate(20deg) saturate(.95) brightness(.95) drop-shadow(0 0 8px rgba(239,68,68,.85)) drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
     /* 勢いの線(手のひらの後ろに伸びる白い筋) */
     [data-tactics-look] [data-kz-palm]::after { content: ''; position: absolute; left: 50%; top: -60%; width: 60%; height: 90%; margin-left: -30%; pointer-events: none;
@@ -46926,8 +46946,13 @@ const createAnimationStyle = () => {
        同じ色の光は上の box-shadow(縁にぴったりの 16px と、広がる 40px)で出す */
     [data-tactics-look] [data-enemy-ring] { filter: none !important; }
     [data-tactics-look] [data-enemy-ring]::before { content: ''; position: absolute; inset: -16px; border-radius: 50%; pointer-events: none; z-index: 0;
-      /* ★切り抜き(mask)を使わず、点線の円2本で描く(iPhone で切り抜きが外れると、敵の後ろに丸い光の板が出るため) */
-      inset: -10px; border: 2px dashed rgba(var(--mh-rc),.9); outline: 1px dotted rgba(255,240,200,.75); outline-offset: 3px; }
+      /* ★切り抜き(mask)を使わず、もとの模様(30°ごとに距離色と金の目盛り)を SVG の破線の円で描く。
+           回すのは transform だけなので描き直しも要らない(iPhone で切り抜きが外れると丸い光の板が出たため 2026-09-24) */
+      background: center / 100% 100% no-repeat; }
+    [data-tactics-look] [data-enemy-ring="0"]::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(239,68,68,.28)' stroke-width='5'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(239,68,68,.95)' stroke-width='2.8' stroke-dasharray='2.48 22.34'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(255,240,200,.85)' stroke-width='2.8' stroke-dasharray='0.83 23.99' stroke-dashoffset='-9.93'/></svg>"); }
+    [data-tactics-look] [data-enemy-ring="1"]::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(245,158,11,.28)' stroke-width='5'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(245,158,11,.95)' stroke-width='2.8' stroke-dasharray='2.48 22.34'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(255,240,200,.85)' stroke-width='2.8' stroke-dasharray='0.83 23.99' stroke-dashoffset='-9.93'/></svg>"); }
+    [data-tactics-look] [data-enemy-ring="2"]::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(16,185,129,.28)' stroke-width='5'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(16,185,129,.95)' stroke-width='2.8' stroke-dasharray='2.48 22.34'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(255,240,200,.85)' stroke-width='2.8' stroke-dasharray='0.83 23.99' stroke-dashoffset='-9.93'/></svg>"); }
+    [data-tactics-look] [data-enemy-ring="3"]::before { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(59,130,246,.28)' stroke-width='5'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(59,130,246,.95)' stroke-width='2.8' stroke-dasharray='2.48 22.34'/><circle cx='50' cy='50' r='47.4' fill='none' stroke='rgba(255,240,200,.85)' stroke-width='2.8' stroke-dasharray='0.83 23.99' stroke-dashoffset='-9.93'/></svg>"); }
     [data-tactics-look="rich"] [data-enemy-ring]::before { animation: mhRuneSpin 14s linear infinite; }
     /* ==== 枠に出す効果の光(2026-09-24 ユーザー指示「支援系のアクションももう少しそれっぽく」)。
        回復=緑の光の粒が昇る / 攻撃=赤い光が下から吹き上がる / 守り=青い盾の輪が広がる / ガッツ=黄色の稲妻 / そのほか=金のきらめき。
@@ -47313,9 +47338,11 @@ const createAnimationStyle = () => {
       background: var(--mh-pat, linear-gradient(transparent, transparent)) padding-box,
         radial-gradient(90% 60% at 50% 0%, rgba(var(--mh-rc),.28), transparent 70%) padding-box,
         linear-gradient(170deg, rgba(16,18,36,.95), rgba(5,6,14,.98)) padding-box,
-        conic-gradient(rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
           rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important;
       box-shadow: 0 0 18px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.18) !important; }
+    /* 縁の光は回さず、明るい弧のある縁で止める(バトルの枠と同じ理由) */
+    .mh-ph-frame[data-ph-on] { --mh-ang: 35deg; }
     /* 縁を回る光(2026-09-24 ユーザー指摘「かくつき」「まだ手が回ってないところも」)。
        バトルの枠(data-slot-ring)と同じく、縁の角度(--mh-ang)を毎コマ変えるのをやめ、
        縁の形に切り抜いた箱(.mh-ph-ring)の中で光の輪を transform で回す */
