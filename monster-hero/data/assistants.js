@@ -5635,6 +5635,9 @@ const ASSISTANT_TACTICS_INTRO = [
 //   unlockedKey … 「見たことがあるか」を判定する保存キーの呼び名。実際の値はgame-system.jsx側で
 //                 解決する(データファイルはgame-system.jsxの定数を参照できないため、ここでは
 //                 文字列の名前だけを持つ)
+//   date        … その会話が本編で流れはじめた日時(JST・'YYYY-MM-DD HH:MM')。一覧はこの新しい順に並び、
+//                 各行に日付を出す(2026-09-24・ユーザー指示「日付でも管理されるようにして」)。
+//                 イベントの会話は開幕・閉幕の時刻、それ以外は公開した時刻を書く。**足すときは必ず書く**
 //   alwaysUnlocked … true にすると、本編でまだ見ていなくても回想一覧に出す。
 //                 「本編で流れるのを待たずに、ここから見てもいい」イベント用。
 //                 最後まで見たら、本編で見たときと同じ扱い(解放・以後は自動で流さない)になる
@@ -5643,26 +5646,26 @@ const EVENT_REPLAYS = [
   // (releaseFlag。モードが見えていないのに会話だけあると、何の話か分からない)。
   // いまは alwaysUnlocked で「公開したら回想からいつでも見られる」形。
   // 本編で1度だけ流す導線は、β版を出すときに告知とセットで足す
-  { id: 'tactics_intro', title: 'タクティクスバトル ～誰を連れていくか～', script: ASSISTANT_TACTICS_INTRO, unlockedKey: 'tacticsIntroSeen', releaseFlag: 'tacticsBattle', alwaysUnlocked: true },
-  { id: 'kiki_intro', title: 'きき加入 ～ふたりの助手～', script: ASSISTANT_KIKI_INTRO, calls: ASSISTANT_KIKI_INTRO_CALLS, unlockedKey: 'kikiIntroSeen' },
+  { id: 'tactics_intro', date: '2026-09-21 20:15', title: 'タクティクスバトル ～誰を連れていくか～', script: ASSISTANT_TACTICS_INTRO, unlockedKey: 'tacticsIntroSeen', releaseFlag: 'tacticsBattle', alwaysUnlocked: true },
+  { id: 'kiki_intro', date: '2026-08-16 18:41', title: 'きき加入 ～ふたりの助手～', script: ASSISTANT_KIKI_INTRO, calls: ASSISTANT_KIKI_INTRO_CALLS, unlockedKey: 'kikiIntroSeen' },
   // ももすけ登場は、本編を待たずに回想からも見られる(2026-09-05・ユーザー指示)。
   // 新しく始めた人は最初の助手選択でももすけを選べるので、そもそも本編では流れない。
   // その人たちも、あとから「どういう経緯で来たのか」を見られるようにするため。
-  { id: 'momosuke_intro', title: 'ももすけ登場 ～モンヒロビート～', script: ASSISTANT_MOMOSUKE_INTRO, calls: ASSISTANT_MOMOSUKE_INTRO_CALLS, unlockedKey: 'momosukeIntroSeen', alwaysUnlocked: true },
+  { id: 'momosuke_intro', date: '2026-09-05 12:36', title: 'ももすけ登場 ～モンヒロビート～', script: ASSISTANT_MOMOSUKE_INTRO, calls: ASSISTANT_MOMOSUKE_INTRO_CALLS, unlockedKey: 'momosukeIntroSeen', alwaysUnlocked: true },
   // イベント開催の会話(2026-09-11)。開催中に1度だけ本編で流れ、そのあとは回想からいつでも見られる。
   // 期間が終わっても回想には残る(そのときどういう会話だったかを見返せるように)
-  { id: 'monbeat_cup_2026_09', title: '週末ゲリラ杯 ～はじめての大会～', script: ASSISTANT_MONBEAT_CUP_EVENT, calls: ASSISTANT_MONBEAT_CUP_EVENT_CALLS, unlockedKey: 'monbeatCupEventSeen' },
+  { id: 'monbeat_cup_2026_09', date: '2026-09-11 15:00', title: '週末ゲリラ杯 ～はじめての大会～', script: ASSISTANT_MONBEAT_CUP_EVENT, calls: ASSISTANT_MONBEAT_CUP_EVENT_CALLS, unlockedKey: 'monbeatCupEventSeen' },
   // 閉幕の会話(2026-09-13)。**イベントが終わった時刻に自動で流れる**。
   // 参加賞へ勇者の証10個を足したことを、ここで知らせる
-  { id: 'monbeat_cup_2026_09_thanks', title: '週末ゲリラ杯 ～閉幕とお礼～', script: ASSISTANT_MONBEAT_CUP_THANKS, calls: ASSISTANT_MONBEAT_CUP_THANKS_CALLS, unlockedKey: 'monbeatCupThanksSeen' },
+  { id: 'monbeat_cup_2026_09_thanks', date: '2026-09-14 05:00', title: '週末ゲリラ杯 ～閉幕とお礼～', script: ASSISTANT_MONBEAT_CUP_THANKS, calls: ASSISTANT_MONBEAT_CUP_THANKS_CALLS, unlockedKey: 'monbeatCupThanksSeen' },
   // 第2回イベントの開催会話(2026-09-17)。最後まで見ると助手ドラが解放される
   // (ASSISTANT_UNLOCK_STORIES)。期間が終わっても回想からいつでも見返せる
-  { id: 'symphony_2026_09_17', title: '異世界交響祭 ～ドラ登場～', script: ASSISTANT_SYMPHONY_EVENT, calls: ASSISTANT_SYMPHONY_EVENT_CALLS, unlockedKey: 'symphonyEventSeen' },
+  { id: 'symphony_2026_09_17', date: '2026-09-17 12:00', title: '異世界交響祭 ～ドラ登場～', script: ASSISTANT_SYMPHONY_EVENT, calls: ASSISTANT_SYMPHONY_EVENT_CALLS, unlockedKey: 'symphonyEventSeen' },
   // 第2回の閉幕の会話(2026-09-20)。**イベントが終わった時刻に自動で流れる**。
   // 報酬の上乗せは無いので、知らせるのは終わったことと受け取りのしかただけ
-  { id: 'symphony_2026_09_17_thanks', title: '異世界交響祭 ～閉幕とお礼～', script: ASSISTANT_SYMPHONY_THANKS, calls: ASSISTANT_SYMPHONY_THANKS_CALLS, unlockedKey: 'symphonyThanksSeen' },
+  { id: 'symphony_2026_09_17_thanks', date: '2026-09-21 04:00', title: '異世界交響祭 ～閉幕とお礼～', script: ASSISTANT_SYMPHONY_THANKS, calls: ASSISTANT_SYMPHONY_THANKS_CALLS, unlockedKey: 'symphonyThanksSeen' },
   // ビートPがいつでも貯まるようになった知らせ(2026-09-24)。HOMEで1度だけ流れ、そのあとは回想から見返せる
-  { id: 'beat_point_always_2026_09_24', title: 'いつでもビートP ～交換所のこれから～', script: ASSISTANT_BEAT_POINT_ALWAYS, calls: ASSISTANT_BEAT_POINT_ALWAYS_CALLS, unlockedKey: 'beatPointAlwaysSeen' },
+  { id: 'beat_point_always_2026_09_24', date: '2026-09-24 23:02', title: 'いつでもビートP ～交換所のこれから～', script: ASSISTANT_BEAT_POINT_ALWAYS, calls: ASSISTANT_BEAT_POINT_ALWAYS_CALLS, unlockedKey: 'beatPointAlwaysSeen' },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------

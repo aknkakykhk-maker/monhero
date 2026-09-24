@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8440daf7cf55e820
+// source-sha256: 0057f56d43748e50
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3ef7c48bc5db15d6
+// generated-sha256: a79a0dd34c20e82c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -216,7 +216,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 23:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 23:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -314,7 +314,24 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
 });
 const eventReplayReleased = event => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
-const eventReplayList = () => (typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || []).filter(eventReplayReleased);
+// ★日付(date)の新しい順に並べる(2026-09-24・ユーザー指示「日付でも管理されるようにして」)。
+//   日付の無い・壊れた項目はいちばん下へ。同じ日時どうしは書いた順のまま(sort は安定)
+const eventReplayDateMs = event => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?$/.exec(typeof event?.date === 'string' ? event.date : '');
+  if (!m) return null;
+  const ms = Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0) - 9, +(m[5] || 0));
+  return Number.isFinite(ms) ? ms : null;
+};
+// 一覧に出す日付の文字(例: 2026/09/24)。日付が無ければ空
+const eventReplayDateText = event => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(typeof event?.date === 'string' ? event.date : '');
+  return m ? `${m[1]}/${m[2]}/${m[3]}` : '';
+};
+const eventReplayList = () => (typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || []).filter(eventReplayReleased).map((event, index) => ({
+  event,
+  index,
+  ms: eventReplayDateMs(event)
+})).sort((a, b) => (a.ms == null ? 1 : 0) - (b.ms == null ? 1 : 0) || (b.ms || 0) - (a.ms || 0) || a.index - b.index).map(row => row.event);
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -73074,7 +73091,10 @@ function MonsterHeroGame() {
           className: "block text-[12px] font-black text-slate-400"
         }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("small", {
           className: "block text-[9px] text-slate-600"
-        }, "\u307E\u3060\u898B\u3066\u3044\u307E\u305B\u3093")));
+        }, eventReplayDateText(event) && /*#__PURE__*/React.createElement("span", {
+          "data-event-replay-date": true,
+          className: "tabular-nums"
+        }, eventReplayDateText(event), "\u30FB"), "\u307E\u3060\u898B\u3066\u3044\u307E\u305B\u3093")));
       }
       return /*#__PURE__*/React.createElement("button", {
         key: event.id,
@@ -73096,7 +73116,10 @@ function MonsterHeroGame() {
         className: "block text-[12px] font-black text-white"
       }, event.title), /*#__PURE__*/React.createElement("small", {
         className: "block text-[9px] text-fuchsia-300/70"
-      }, "\u30BF\u30C3\u30D7\u3057\u3066\u898B\u8FD4\u3059")));
+      }, eventReplayDateText(event) && /*#__PURE__*/React.createElement("span", {
+        "data-event-replay-date": true,
+        className: "tabular-nums"
+      }, eventReplayDateText(event), "\u30FB"), "\u30BF\u30C3\u30D7\u3057\u3066\u898B\u8FD4\u3059")));
     })), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowEventReplayList(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"

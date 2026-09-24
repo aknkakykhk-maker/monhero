@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3ef7c48bc5db15d6
+// generated-sha256: a79a0dd34c20e82c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -122,7 +122,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 23:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 23:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -218,7 +218,24 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
 });
 const eventReplayReleased = (event) => !event?.releaseFlag || EVENT_REPLAY_RELEASE_FLAGS[event.releaseFlag] === true;
 // 画面に並べるイベント回想。3か所(プロフィール・回想一覧・再生)が同じ並びを見るための唯一の入口
-const eventReplayList = () => ((typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS) || []).filter(eventReplayReleased);
+// ★日付(date)の新しい順に並べる(2026-09-24・ユーザー指示「日付でも管理されるようにして」)。
+//   日付の無い・壊れた項目はいちばん下へ。同じ日時どうしは書いた順のまま(sort は安定)
+const eventReplayDateMs = (event) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?$/.exec(typeof event?.date === 'string' ? event.date : '');
+  if (!m) return null;
+  const ms = Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0) - 9, +(m[5] || 0));
+  return Number.isFinite(ms) ? ms : null;
+};
+// 一覧に出す日付の文字(例: 2026/09/24)。日付が無ければ空
+const eventReplayDateText = (event) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(typeof event?.date === 'string' ? event.date : '');
+  return m ? `${m[1]}/${m[2]}/${m[3]}` : '';
+};
+const eventReplayList = () => ((typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS) || [])
+  .filter(eventReplayReleased)
+  .map((event, index) => ({ event, index, ms: eventReplayDateMs(event) }))
+  .sort((a, b) => (a.ms == null ? 1 : 0) - (b.ms == null ? 1 : 0) || (b.ms || 0) - (a.ms || 0) || a.index - b.index)
+  .map(row => row.event);
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -42779,7 +42796,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <span className="text-lg" aria-hidden="true">🔒</span>
                         <span className="min-w-0 flex-1">
                           <b className="block text-[12px] font-black text-slate-400">？？？</b>
-                          <small className="block text-[9px] text-slate-600">まだ見ていません</small>
+                          <small className="block text-[9px] text-slate-600">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}まだ見ていません</small>
                         </span>
                       </div>
                     );
@@ -42790,7 +42807,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <Play size={16} className="text-fuchsia-300 shrink-0"/>
                       <span className="min-w-0 flex-1">
                         <b className="block text-[12px] font-black text-white">{event.title}</b>
-                        <small className="block text-[9px] text-fuchsia-300/70">タップして見返す</small>
+                        <small className="block text-[9px] text-fuchsia-300/70">{eventReplayDateText(event)&&<span data-event-replay-date className="tabular-nums">{eventReplayDateText(event)}・</span>}タップして見返す</small>
                       </span>
                     </button>
                   );
