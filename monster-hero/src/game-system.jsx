@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 210aaed458e543c2
+// generated-sha256: 5f45fcb87e89debb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -100,7 +100,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 10:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 10:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22044,13 +22044,13 @@ const tacticsAimNum = (value, limit = 100000) => {
 // 連撃の内訳。全部同じなら「27×3」、違えば「63〜65×3」(いちばん小さい〜大きい)。
 // ★1発ずつ「63・63・65」と並べると、枠の右の列(幅100pxほど)でも5桁で入らない
 //   (2026-09-24 ユーザー了承「内訳を短くしていい」)。1発ずつの数字は「次の行動」の札に出ている
-// ★合計と合わせて13字をこえると右の列でも切れるので、そのときは回数だけ(「×3」)にする
+// ★合計と合わせて18字をこえると枠の横幅でも入らないので、そのときは回数だけ(「×3」)にする
 const tacticsAimParts = (parts, totalText = '') => {
   const list = (Array.isArray(parts) ? parts : []).map(v => Math.max(0, Math.floor(Number(v) || 0)));
   if (list.length <= 1) return '';
   const lo = Math.min(...list), hi = Math.max(...list);
   const text = lo === hi ? `${tacticsAimNum(lo, 10000)}×${list.length}` : `${tacticsAimNum(lo, 10000)}〜${tacticsAimNum(hi, 10000)}×${list.length}`;
-  return String(totalText).length + text.length > 13 ? `×${list.length}` : text;
+  return String(totalText).length + text.length > 18 ? `×${list.length}` : text;
 };
 // 手札の技名を、カードの幅に合わせて1〜3行へ収める(2026-09-24 ユーザー指摘「技名がおさまってない」)。
 // ★箱は高さ30pxで固定。11px のまま折り返すと「ホリゾンタル・スクエア」が3行になって上下が切れ、
@@ -23250,6 +23250,15 @@ function BattleScreen({
                     「個別ダメージと全体ダメージで誰に何が起きてるか分かりにくい」)。
                     合計の数字は画面のまんなかに出したままなので、
                     「全体で何点減ったか」と「誰が減ったか」の両方が読める */}
+                {/* ★名前の行のすぐ下の段。左に「こちらが出すぶん」(攻・守の予測)、右に「受けるぶん」(🎯)。
+                    (2026-09-24 ユーザー指示「ダメージだけは1列分まるまる使って」「右寄せて数値が増えたら
+                    枠いっぱいまで使える仕様。ただし左側の別の表示(味方攻撃等)との位置かぶりがないように」)
+                    ★1本の flex の段に並べるので、🎯が伸びても左の札の手前で止まり、重ならない。
+                      入り切らないときは🎯の内訳のほうから「…」で縮む(合計の数字は縮めない) */}
+                {tacticsNewLayout&&(previewDmg>0||previewGuard>0||slotAimHit)&&(<div data-tactics-slot-top-row className="absolute left-1 right-1.5 top-[20px] z-[63] flex h-[13px] items-center gap-1 pointer-events-none">
+                  {(previewDmg>0||previewGuard>0)&&<div data-tactics-image-previews className="flex shrink-0 items-center gap-0.5">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}</div>}
+                  <div className="flex min-w-0 flex-1 justify-end">{slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} data-tactics-aimed-parts={slotAimHit.parts.length>1?slotAimHit.parts.join('/'):undefined} className="inline-flex h-[13px] max-w-full min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 text-[9px] font-black leading-none text-red-100 shadow"><span className="shrink-0">🎯{slotAimHit.taken>0?`-${tacticsAimNum(slotAimHit.taken)}`:''}</span>{slotAimHit.parts.length>1?<span className="min-w-0 truncate text-[7px] font-bold text-red-200/85">{tacticsAimParts(slotAimHit.parts,tacticsAimNum(slotAimHit.taken))}</span>:null}</span>}</div>
+                </div>)}
                 {/* ★新しい盤面(2×2)では、このターンの出来事・技名・その子の効果の吹き出しを
                     **ライフ・ガッツの行より上**の1本の縦積みにまとめる(2026-09-23 ユーザー指示
                     「敵への効果は敵の辺り、味方への効果は対象の味方や使ったモンスター」)。
@@ -23334,7 +23343,7 @@ function BattleScreen({
                     const gv=tacticsSlotGuardValue(guardPlanBySlot,i);
                     if(!(gv>0)) return null;
                     return <div data-tactics-guard-total={gv} data-tactics-guard-kind={slotRushGuard?'rush':'spread'}
-                      className={`absolute ${tacticsNewLayout?'left-1 top-[22px]':'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
+                      className={`absolute ${tacticsNewLayout?'left-1 top-[35px]':'bottom-0.5 left-0.5'} z-[61] rounded border px-1 py-0.5 font-black leading-none pointer-events-none ${slotRushGuard?'border-amber-200 bg-amber-600/95 text-white':'border-sky-300/60 bg-sky-800/90 text-sky-50'}`}
                       style={{fontSize:'7px'}}>🛡 {slotRushGuard?'連撃ガード':'全体'} {gv}</div>;
                   })()}
                   {/* ★枠の中に出すものは、ぜんぶこの1本の縦積みに入れる(2026-09-22 ユーザー指摘
@@ -23347,13 +23356,12 @@ function BattleScreen({
                   {/* ★EXスキルの札も同じ縦積みの先頭に入れる。名前の行へ入れると名前が切れる
                       (2026-09-23 ユーザー指摘「名前が切れてる」)。二刀流／片手持ちのような「いまの状態」をここで出す */}
                   {(slotAssignedCards.length>0||previewDmg>0||previewGuard>0||slotAimHit||slotExInfo)&&(
-                    <div data-tactics-slot-marks className={`${tacticsNewLayout?'absolute top-px left-full h-[calc(100%-31px)] w-[150%] overflow-hidden items-stretch justify-start px-1.5':'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`}>
-                      {/* ★いちばん上は狙いの印(🎯)、その下に置いたカードを2列×3段(2026-09-24 ユーザー指示
-                          「ダメージ予測を1番上に置いて、その下に2列3段」「カード×4とかは確かにいらない」)。
-                          ガードやアシストカードを足すと1体に5枚まで置けるので、1枚1段では
-                          ライフ・ガッツの行まで届いていた。高さはライフの行の上までに切ってあり
-                          (h-[calc(100%-31px)])、🎯13px＋札9px×3段で収まる。枚数は札の数で読める */}
-                      {tacticsNewLayout&&slotAimHit&&<span data-tactics-aimed-damage={slotAimHit.taken} data-tactics-aimed-parts={slotAimHit.parts.length>1?slotAimHit.parts.join('/'):undefined} className="inline-flex h-[13px] max-w-full min-w-0 shrink-0 items-center gap-0.5 self-center overflow-hidden whitespace-nowrap rounded border border-red-300 bg-red-950 px-1 text-[9px] font-black leading-none text-red-100 shadow">🎯{slotAimHit.taken>0?`-${tacticsAimNum(slotAimHit.taken)}`:''}{slotAimHit.parts.length>1?<span className="min-w-0 truncate text-[7px] font-bold text-red-200/85">{tacticsAimParts(slotAimHit.parts,tacticsAimNum(slotAimHit.taken))}</span>:null}</span>}{!tacticsNewLayout&&slotExInfo&&(<div data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text}
+                    <div data-tactics-slot-marks className={`${tacticsNewLayout?`absolute left-full w-[150%] overflow-hidden items-stretch justify-start px-1.5 ${(slotAimHit||previewDmg>0||previewGuard>0)?'top-[15px] h-[calc(100%-46px)]':'top-px h-[calc(100%-31px)]'}`:'absolute top-0 left-0 right-0 items-center px-0.5'} flex flex-col gap-px z-[60] pointer-events-none`}>
+                      {/* ★置いたカードは2列×3段(2026-09-24 ユーザー指示「ダメージ予測を1番上に置いて、その下に2列3段」
+                          「カード×4とかは確かにいらない」)。ガードやアシストカードを足すと1体に5枚まで置けるので、
+                          1枚1段ではライフ・ガッツの行まで届いていた。高さはライフの行の上までに切ってある。
+                          🎯は枠の横幅をまるごと使う上の段(data-tactics-slot-top-row)へ出す */}
+                      {!tacticsNewLayout&&slotExInfo&&(<div data-tactics-ex-mark={i} data-tactics-ex-state={slotExInfo.badge.text}
                         className={`flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 leading-none shadow ${slotExInfo.badge.active?'bg-fuchsia-600 text-white ring-1 ring-fuchsia-200':'bg-black/70 text-fuchsia-200 ring-1 ring-fuchsia-400/60'}`}>
                         <span style={{fontSize:'7px'}} className="shrink-0 font-black">EX</span>
                         {slotExInfo.badge.text!=='EX'&&<span style={{fontSize:'8px'}} className="truncate min-w-0 font-black">{slotExInfo.badge.text}</span>}
@@ -23408,7 +23416,7 @@ function BattleScreen({
                       ))}
                     </div>
                   )}
-                  {tacticsNewLayout&&(previewDmg>0||previewGuard>0)&&(<div data-tactics-image-previews className="absolute left-1 top-1 z-[63] flex max-w-[calc(100%-6px)] flex-wrap items-start gap-0.5 pointer-events-none">{previewDmg>0&&<span data-tactics-damage-preview={previewDmg} className={`rounded px-1 py-0.5 text-[8px] font-black leading-none shadow ring-1 ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'}`}>{isPendingPreview&&isPendingHalved?'½':''}攻{previewDmg}</span>}{previewGuard>0&&<span data-tactics-guard-preview={previewGuard} className="rounded bg-emerald-600 px-1 py-0.5 text-[8px] font-black leading-none text-white shadow ring-1 ring-emerald-200">{isPendingGuardHalved?'½':''}守{previewGuard}</span>}</div>)}{/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
+                  {/* 距離補正は0%でも出す(「補正が無い」ことも情報なので、枠ごとに常に見えるようにする) */}
                   {(()=>{const totalBonus=distTotalBonus(i); return(<div className={`absolute bottom-0.5 right-0.5 text-[11px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':totalBonus<0?'text-red-300 border-red-400/30':'text-slate-300 border-white/20'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
                   {s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                     ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="object-contain drop-shadow-md"/>}/>
