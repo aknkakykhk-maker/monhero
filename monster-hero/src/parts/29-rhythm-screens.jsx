@@ -491,11 +491,16 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   const chart=song&&difficulty?song.difficulties[difficulty.id]:null;
   const best=song&&difficulty?rhythmBestRecord(bestRecords,song.songId,difficulty.id):null;
   // 一覧の「楽曲Lv.」は、いま選んでいる難易度のレベル。その曲に無ければいちばん上の難易度。
-  const rowLevel=entry=>{
+  // 行ごとに「どの難易度の話か」を1か所で決める。楽曲Lv.も、行の自己ベストのランクもこれを見る
+  // (別々に決めると、Lv.はHARDなのにランクはEASY、という食い違いが起きる)
+  const rowDifficultyId=entry=>{
     const ids=(difficulties||[]).filter(item=>rhythmChartPlayable(entry,item.id)).map(item=>item.id);
-    if(!ids.length)return 0;
-    const id=difficulty&&ids.includes(difficulty.id)?difficulty.id:ids[ids.length-1];
-    return Number(entry.difficulties[id].level)||0;
+    if(!ids.length)return null;
+    return difficulty&&ids.includes(difficulty.id)?difficulty.id:ids[ids.length-1];
+  };
+  const rowLevel=entry=>{
+    const id=rowDifficultyId(entry);
+    return id?Number(entry.difficulties[id].level)||0:0;
   };
   // ★イベントの対象曲は、一覧で見てすぐ分かるようにする
   //   (2026-09-11・ユーザー指示「イベント曲は見てすぐ分かるようにして」)。
@@ -697,9 +702,24 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                     return <i key={item.id} {...(main?{'data-rhythm-achievement':markId}:{})} title={`${item.id}: ${mark.label}`}
                       className="block h-2 w-2 rotate-45 rounded-[1px]" style={mark.style}/>;
                   })}
-                  <small className="ml-1 text-[9px] font-bold text-slate-400">
-                    {(difficulties||[]).filter(item=>rhythmChartPlayable(entry,item.id)).length}難易度
-                  </small>
+                  {/* 「いま選んでいる難易度」での自己ベストのランクを、行のまま見せる。
+                      それまでは「5難易度」とだけ出ていて、どの曲をどこまで遊んだかは
+                      1曲ずつ選び直さないと分からなかった。
+                      ★Lv.と同じ難易度(rowDifficultyId)を見るので、数字とランクが食い違わない */}
+                  {(()=>{
+                    const rowId=rowDifficultyId(entry);
+                    const record=rowId?rhythmBestRecord(bestRecords,entry.songId,rowId):null;
+                    const played=!!(record&&record.played);
+                    const rank=played?rhythmRankForScore(record.bestScore):'';
+                    return <small {...(main?{'data-rhythm-song-row-rank':played?rank:''}:{})}
+                      className="ml-1 flex min-w-0 items-baseline gap-1 text-[9px] font-bold text-slate-400">
+                      {rowId&&<span className={`shrink-0 font-black ${rhythmDifficultyTextColor(rowId)}`}>{rowId}</span>}
+                      {played
+                        ?<><b className={`text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank]||'text-slate-300'}`}>{rank}</b>
+                          <span className="truncate tabular-nums text-slate-300">{record.bestScore.toLocaleString()}</span></>
+                        :<span className="truncate">未プレイ</span>}
+                    </small>;
+                  })()}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200">🏆 イベント対象</small>}
                 </span>

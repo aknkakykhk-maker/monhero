@@ -96,7 +96,16 @@ function RhythmSongSelectScreen({
         ? (repeatTemplateForNewRun()
           ? <button type="button" data-quick-run-start-button onClick={()=>{if(!startQuickRunFromRhythm())setQuickRunStartError(true);}}
               className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]">⚔ 裏でクイックの∞周回を始める</button>
-          : <p data-quick-run-start-hint className="px-1 py-1 text-[9px] leading-relaxed text-slate-500">裏で周回を回すには、クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。</p>)
+          // ★案内は1行に畳んでおき、知りたい人だけ開く。3行の説明文が曲の一覧の上に
+          //   いつも居座っていて、縦画面で見える曲がそのぶん減っていた。
+          //   開け閉めはブラウザの <details> に任せる(状態を持たないので、どこへ置いても同じに動く)
+          : <details data-quick-run-start-hint className="group px-1 py-0.5 text-[9px] leading-relaxed text-slate-500">
+              <summary className="flex min-h-[32px] cursor-pointer list-none items-center gap-1 font-black text-slate-400 [&::-webkit-details-marker]:hidden">
+                <span aria-hidden="true">⚔</span><span className="min-w-0 flex-1 truncate">裏でクイックの∞周回を回すには？</span>
+                <span aria-hidden="true" className="shrink-0 text-slate-500 group-open:rotate-180">▾</span>
+              </summary>
+              <p className="pb-1">クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。</p>
+            </details>)
         : null;
       return (
       <main data-rhythm-demo-home className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
