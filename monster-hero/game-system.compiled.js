@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0095194d31461498
+// source-sha256: 1bf57a8bcb3d09c3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6cdae513cf625882
+// generated-sha256: c9f7c34ce81ae9ec
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -177,7 +177,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 15:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 15:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -40678,6 +40678,14 @@ function BattleScreen({
     const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
     // 敵の位置へ向けるためのCSS変数。測れなかったときは :root の既定値(真上)で動く
     const attackAimStyle = isAnimating && attackAim && attackAim.slotIndex === i ? attackAimVars(attackAim.dx, attackAim.dy) : null;
+    // ★絵の入れ物は絵と同じ大きさに固定する(2026-09-24 ユーザー指摘「ミーアの攻撃中、姿が消えてる」)。
+    //   ミーア・水・聖光の攻撃演出は入れ物いっぱいに重ねる絶対配置なので、大きさを持たないと
+    //   入れ物が0×0につぶれ、本体の絵が幅数pxまで押しつぶされてマイクも見えなくなっていた
+    const slotArtBox = {
+      width: tacticsNewLayout ? '58px' : '64px',
+      height: tacticsNewLayout ? '58px' : '64px',
+      flexShrink: 0
+    };
     // このスロットに固有技カードが割り当てられているか（セット中は常時エフェクト）
     const hasUniqueSet = selectedCards.some(idx => cardAssignments[idx] === i && hand[idx]?.type === 'unique');
     // このスロットに表示する選択中カード: 攻撃系は割当先スロット、全体系(ガード/バフ/回復等)は全スロット
@@ -41087,11 +41095,14 @@ function BattleScreen({
     }), /*#__PURE__*/React.createElement("div", {
       "data-tactics-attack-image": tacticsNewLayout ? i : undefined,
       className: "relative flex items-center justify-center",
-      style: isAnimating && tacticsNewLayout ? {
-        zIndex: 9999,
-        animation: attackMotionAnimation(attackAnim),
-        ...attackAimStyle
-      } : undefined
+      style: {
+        ...(s ? slotArtBox : {}),
+        ...(isAnimating && tacticsNewLayout ? {
+          zIndex: 9999,
+          animation: attackMotionAnimation(attackAnim),
+          ...attackAimStyle
+        } : {})
+      }
     }, s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? /*#__PURE__*/React.createElement(PandoraDualThunder, {
       image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: s.id,
