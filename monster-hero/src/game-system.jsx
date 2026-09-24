@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4b0a10a75a02f188
+// generated-sha256: ddcf7c3a751539d9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -102,7 +102,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-24 15:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 16:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22853,10 +22853,14 @@ function BattleScreen({
           })()}
           {turnCount===1&&battleSoulMasus.some(m=>normalizeSoulRankStage(m.soulRankStage)>0)&&!isBusy&&<div data-soul-battle-start-summary className="absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none">魂格効果 発動中{Math.round(soulBattleParty.damageReduction*10)/10>0?` ・鉄壁${(Math.round(soulBattleParty.damageReduction*10)/10)}%`:''}{unifiedSpecialDefense.rate>0?` ・特殊防御${(Math.round(unifiedSpecialDefense.rate*10)/10)}%`:''}{battleIntimidate>0?` ・威圧${(Math.round(battleIntimidate*10)/10)}%`:''}{soulCoordinationCardBonus>0?' ・カード+1':''}</div>}
           <div className="mt-1 relative flex flex-col items-center">
-            {enemySkillName&&(
+            {/* ★body の直下へ出す(ReactDOM.createPortal)。画面の揺れ(screenShake)は transform で作ってあり、
+                transform の掛かった要素の中の position:fixed は、揺れているあいだだけ基準がその要素へ切り替わる。
+                そのため敵の攻撃が当たった瞬間に技名の札が飛ぶように「ずれ」ていた(2026-09-24 ユーザー指摘
+                「大回転落としとか技名表示がずれる」)。バトル中の設定メニューで一度直したのと同じ原因 */}
+            {enemySkillName&&ReactDOM.createPortal(
               <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                 <div className="px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"><span>{cardIconNode(enemySkillName.icon,16)}</span>{enemySkillName.label}</div>
-              </div>
+              </div>,document.body
             )}
             {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&!Array.isArray(tacticsUnits)&&enemyIntent.type==='SPECIAL'&&(
               <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 500ms ease-in-out infinite'}}>
@@ -22889,23 +22893,24 @@ function BattleScreen({
                 【置き場所】丸枠(敵の円)の中には置かないこと。丸枠は transform を持つため
                 独自の重ね順の島になり、いくらz-indexを上げても、枠の外へ巨大に描くムーの
                 裏へ回ってしまう。必殺技の警告と同じこの階層に置くと前面に出る */}
-            {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&enemyNextIntent.type==='MOVE'&&(
+            {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&enemyNextIntent.type==='MOVE'&&ReactDOM.createPortal(
               // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
               // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
+              // ★技名の札と同じ理由で body の直下へ出す(揺れの間に位置が飛ばないように)
               <div className="fixed left-1/2 pointer-events-none" style={{top:'22%',transform:'translateX(calc(min(50vw, 300px) - 100% - 8px))',zIndex:65000}}>
                 <div className="mh-enemy-move-hint">
                   <span aria-hidden="true">🏃</span>
                   <span>{RANGE_LABELS[enemyNextIntent.targetDist]}距離に移動しようとしている…？</span>
                 </div>
-              </div>
+              </div>,document.body
             )}
             {/* ★新しい盤面(2×2)では技名を枠の中へ出す(下の data-tactics-slot-popups)。
                 この固定位置は4列に並んでいた前提で、2×2では別の枠の上に出ていた */}
             {!tacticsNewLayout&&(<>
-            {slotSkill&&(
+            {slotSkill&&ReactDOM.createPortal(
               <div className="fixed -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{left:`${12.5+slotSkill.slotIndex*25}%`,bottom:'30%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                 <div className={`px-3 py-1 rounded-xl font-black text-[12px] border-2 shadow-[0_2px_16px_rgba(0,0,0,0.9)] ${slotSkill.type==='unique'?'bg-purple-700 border-purple-200 text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]':slotSkill.type==='special'?'bg-amber-600 border-amber-200 text-white':'bg-red-700 border-red-200 text-white'}`}>{slotSkill.name}</div>
-              </div>
+              </div>,document.body
             )}
             </>)}
             {!ecoBattleView&&guardFx&&(
@@ -44492,47 +44497,101 @@ const createAnimationStyle = () => {
        待機は絵(img)、攻撃・ためる・やられは絵を包む要素(span)へ掛ける。足元の影も同じ拍子で伸び縮みさせる ==== */
     /* カワズモー(力士のカエル): 待機は左右に重心を移しながらお腹で呼吸 / 攻撃は のけぞって溜め→踏み込んで張り手→戻る /
        ためるは 片足を上げて四股を踏む / やられは のけぞって震える */
+    /* 2026-09-24 ユーザー指摘「思ってたより地味。もっと頑張って動き作れない？」で動きを大きく作り直した。
+       待機は6秒で1巡: 大きく揺れて呼吸(0〜50%) → 片足を上げて四股・土ぼこり(52〜76%) → くるっと横を向いて戻る(80〜98%) */
     @keyframes kzIdle {
-      0%, 100% { transform: translateX(-3px) rotate(-3deg) scale(1.03, .97); }
-      25% { transform: translateX(0) rotate(0) scale(.98, 1.03); }
-      50% { transform: translateX(3px) rotate(3deg) scale(1.03, .97); }
-      75% { transform: translateX(0) rotate(0) scale(.98, 1.03); }
+      0%, 100% { transform: translateX(0) rotate(0) scale(1, 1); }
+      8% { transform: translateX(-8px) rotate(-6deg) scale(1.07, .94); }
+      16% { transform: translateX(0) rotate(0) scale(.96, 1.05); }
+      24% { transform: translateX(8px) rotate(6deg) scale(1.07, .94); }
+      32% { transform: translateX(0) rotate(0) scale(.96, 1.05); }
+      40% { transform: translateX(-8px) rotate(-6deg) scale(1.07, .94); }
+      48% { transform: translateX(0) rotate(0) scale(1, 1); }
+      54% { transform: translate(-6px, -4px) rotate(-12deg) scale(.95, 1.07); }
+      60% { transform: translate(-8px, -16px) rotate(-17deg) scale(.94, 1.09); }
+      63% { transform: translate(-7px, -15px) rotate(-16deg) scale(.94, 1.09); }
+      66% { transform: translate(0, 4px) rotate(0) scale(1.24, .8); }
+      69% { transform: translate(0, -3px) rotate(0) scale(.95, 1.07); }
+      73% { transform: translate(0, 0) rotate(0) scale(1.04, .97); }
+      78% { transform: scale(1, 1); }
+      82% { transform: scale(-1, 1) rotate(4deg); }
+      92% { transform: scale(-1, 1) rotate(-3deg); }
+      97% { transform: scale(1, 1); }
     }
     @keyframes kzShadow {
-      0%, 100% { transform: translateX(calc(-50% - 3px)) scaleX(1.06); }
-      25%, 75% { transform: translateX(-50%) scaleX(.94); }
-      50% { transform: translateX(calc(-50% + 3px)) scaleX(1.06); }
+      0%, 16%, 32%, 48%, 78%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
+      8%, 40% { transform: translateX(calc(-50% - 8px)) scaleX(1.12); }
+      24% { transform: translateX(calc(-50% + 8px)) scaleX(1.12); }
+      60%, 63% { transform: translateX(calc(-50% - 6px)) scaleX(.8); opacity: .7; }
+      66% { transform: translateX(-50%) scaleX(1.35); opacity: 1; }
+    }
+    /* 四股の土ぼこり(影の左右から吹き出して消える)。待機の66%と、ためるの踏み込みに合わせる */
+    @keyframes kzDustIdle {
+      0%, 65%, 100% { opacity: 0; transform: translateX(0) scale(.3); }
+      67% { opacity: .95; transform: translateX(0) scale(.6); }
+      76% { opacity: 0; transform: translateX(var(--kz-dx)) scale(1.4); }
+    }
+    @keyframes kzDust {
+      0%, 55% { opacity: 0; transform: translateX(0) scale(.3); }
+      60% { opacity: .95; transform: translateX(0) scale(.7); }
+      90%, 100% { opacity: 0; transform: translateX(var(--kz-dx)) scale(1.6); }
     }
     @keyframes kzSlap {
       0% { transform: none; }
-      28% { transform: translateY(-8px) rotate(-10deg) scale(.94, 1.07); }
-      48% { transform: translateY(78px) rotate(9deg) scale(1.22, .88); filter: drop-shadow(0 0 22px rgba(239,68,68,.95)); }
-      62% { transform: translateY(70px) rotate(5deg) scale(1.16, .93); filter: drop-shadow(0 0 26px rgba(220,38,38,1)); }
+      22% { transform: translateY(-6px) rotate(-12deg) scale(1.14, .84); }
+      40% { transform: translateY(28px) rotate(8deg) scale(.86, 1.22); }
+      52% { transform: translateY(88px) rotate(12deg) scale(1.32, .8); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
+      64% { transform: translateY(80px) rotate(8deg) scale(1.2, .88); filter: drop-shadow(0 0 22px rgba(220,38,38,.9)); }
       100% { transform: none; filter: none; }
+    }
+    @keyframes kzImpact {
+      0%, 48% { opacity: 0; transform: translateX(-50%) scale(.2); }
+      56% { opacity: 1; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0; transform: translateX(-50%) scale(1.8); }
     }
     @keyframes kzStomp {
       0% { transform: none; }
-      22% { transform: translateX(-5px) rotate(-12deg) scale(.97, 1.04); }
-      42% { transform: translate(-6px, -12px) rotate(-14deg) scale(.96, 1.06); }
-      56% { transform: translateY(4px) rotate(0) scale(1.16, .84); filter: drop-shadow(0 0 18px rgba(251,191,36,.9)); }
-      64% { transform: translate(-2px, 2px) scale(1.12, .88); }
-      72% { transform: translate(2px, 2px) scale(1.12, .88); }
+      14% { transform: translateY(4px) scale(1.12, .88); }
+      32% { transform: translate(-8px, -18px) rotate(-20deg) scale(.93, 1.1); }
+      38% { transform: translate(-6px, -18px) rotate(-19deg) scale(.93, 1.1); }
+      44% { transform: translate(-9px, -19px) rotate(-21deg) scale(.93, 1.1); }
+      50% { transform: translate(-7px, -18px) rotate(-20deg) scale(.93, 1.1); }
+      58% { transform: translateY(5px) rotate(0) scale(1.28, .76); filter: brightness(1.25) drop-shadow(0 0 22px rgba(251,191,36,1)); }
+      64% { transform: translate(-4px, 3px) scale(1.2, .82); }
+      70% { transform: translate(4px, 3px) scale(1.2, .82); }
+      78% { transform: translate(0, -4px) scale(.95, 1.07); filter: drop-shadow(0 0 12px rgba(251,191,36,.6)); }
       100% { transform: none; filter: none; }
     }
     @keyframes kzHurt {
       0% { transform: none; }
-      25% { transform: translate(6px, -3px) rotate(8deg) scale(.95, 1.04); filter: brightness(1.6) saturate(.6); }
-      45% { transform: translate(-3px, 0) rotate(-3deg); filter: none; }
-      60% { transform: translate(2px, 0) rotate(2deg); }
+      16% { transform: translate(12px, -8px) rotate(16deg) scale(.88, 1.1); filter: brightness(2.2) saturate(.4); }
+      36% { transform: translate(-8px, 0) rotate(-8deg) scale(1.08, .94); filter: brightness(1.2); }
+      54% { transform: translate(5px, 0) rotate(4deg); filter: none; }
+      72% { transform: translate(-3px, 0) rotate(-2deg); }
       100% { transform: none; }
     }
     [data-tactics-look] [data-enemy-motion] > span { display: block; position: relative; transform-origin: 50% 92%; }
     [data-tactics-look] [data-enemy-motion] > span > img { transform-origin: 50% 92%; }
-    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > span > img { animation: kzIdle 2.6s ease-in-out infinite; }
-    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow] { animation: kzShadow 2.6s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > span > img { animation: kzIdle 6s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow] { animation: kzShadow 6s ease-in-out infinite; }
+    /* 土ぼこり: 影の左右に1つずつ */
+    [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::before, [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::after {
+      content: ''; position: absolute; bottom: 10%; width: 46%; height: 150%; border-radius: 50%; opacity: 0; pointer-events: none;
+      background: radial-gradient(closest-side, rgba(214,196,160,.85), rgba(160,140,110,.45) 55%, transparent); }
+    [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::before { left: -18%; --kz-dx: -26px; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::after { right: -18%; --kz-dx: 26px; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow]::before,
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow]::after { animation: kzDustIdle 6s ease-out infinite; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::after { animation: kzDust 1100ms ease-out forwards; }
+    /* 張り手の衝撃: 丸枠の下に赤い輪が広がる */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"]::after { content: ''; position: absolute; left: 50%; bottom: -14%; width: 70%; height: 30%; border-radius: 50%;
+      pointer-events: none; opacity: 0; z-index: 2;
+      background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(248,113,113,.8) 35%, rgba(239,68,68,.35) 65%, transparent); }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"]::after { animation: kzImpact 450ms ease-out forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap 450ms ease-in forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp 1100ms ease-in-out forwards; }
-    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-hurt] > span { animation: kzHurt 480ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-hurt] > span { animation: kzHurt 520ms ease-out forwards; }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
     [data-tactics-look] [data-enemy-ring="0"] { --mh-rc: 239,68,68; } [data-tactics-look] [data-enemy-ring="1"] { --mh-rc: 245,158,11; }
     [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
@@ -44576,7 +44635,8 @@ const createAnimationStyle = () => {
       [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-index]::after, [data-tactics-look] [data-slot-circle],
       [data-tactics-look] [data-card-frame], [data-tactics-look] [data-card-shine]::before, [data-tactics-look] [data-card-gem],
       [data-tactics-look] [data-enemy-hpbar]::after, [data-tactics-look] [data-enemy-ring]::before,
-      [data-tactics-look] [data-enemy-motion] > span > img, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow] { animation: none !important; }
+      [data-tactics-look] [data-enemy-motion] > span > img, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow],
+      [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow]::before, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow]::after { animation: none !important; }
     }
     /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
     @keyframes tacticsPopupRise {
