@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e1af0936b534b4a6
+// source-sha256: bf96a7833278eca0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 84ef27796650d47a
+// generated-sha256: fa9473d9943fb5c4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -177,7 +177,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 12:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 13:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38479,7 +38479,9 @@ const HAND_CARD_FIT = Object.freeze({
   icon: 'clamp(24px, 4.2dvh, 36px)',
   name: 'clamp(20px, 3.4dvh, 30px)',
   band: 'clamp(13px, 1.9dvh, 16px)',
-  gutsPad: 'clamp(2px, 0.45dvh, 4px)'
+  gutsPad: 'clamp(2px, 0.45dvh, 4px)',
+  // 新しい盤面の「⇄技変更」(ガッツの段を宝石へ移したぶん、ボタンだけで押しやすい高さにする)
+  skill: 'clamp(22px, 3.1dvh, 28px)'
 });
 const kindOfTacticsSlotFx = fx => {
   if (!fx) return null;
@@ -38816,7 +38818,8 @@ function BattleScreen({
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
-    "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off'
+    "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off',
+    "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView ? 'calm' : 'rich' : undefined
   }, /*#__PURE__*/React.createElement("div", {
     "data-battle-stage-bg": true,
     "aria-hidden": "true",
@@ -40645,6 +40648,7 @@ function BattleScreen({
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-2xl font-black"
     }, "\u26A0"))), /*#__PURE__*/React.createElement("div", {
+      "data-slot-head": tacticsNewLayout ? i : undefined,
       className: `${tacticsNewLayout ? 'col-span-2 row-start-1 h-[18px] justify-start gap-0.5 pr-[72px] backdrop-blur-sm' : 'h-[18px] justify-center'} shrink-0 flex items-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-400/10 border-amber-200/20' : 'bg-white/[.025] border-white/[.055]'}`
     }, tacticsNewLayout && /*#__PURE__*/React.createElement("span", {
       className: `mr-1 shrink-0 rounded px-1 py-0.5 text-[8px] font-black leading-none ${RANGE_STYLES[i].labelBg}`
@@ -40834,7 +40838,10 @@ function BattleScreen({
       }, /*#__PURE__*/React.createElement(Sword, {
         size: 5
       }), totalBonus > 0 ? '+' : '', (totalBonus * 100).toFixed(1), "%");
-    })(), /*#__PURE__*/React.createElement("div", {
+    })(), tacticsNewLayout && s && /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true",
+      "data-slot-circle": true
+    }), /*#__PURE__*/React.createElement("div", {
       "data-tactics-attack-image": tacticsNewLayout ? i : undefined,
       className: "relative flex items-center justify-center",
       style: isAnimating && tacticsNewLayout ? {
@@ -41165,8 +41172,20 @@ function BattleScreen({
         ...(TYPE_INLINE_STYLE[c.type] || {})
       },
       className: `relative w-full ${tacticsNewLayout ? 'rounded-[12px] border' : 'rounded-xl border-2'} p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging ? 'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]' : isSel ? 'transition-all -translate-y-1.5 ring-2 ring-cyan-300 z-20 scale-[1.03] opacity-90 saturate-[0.95] shadow-[0_0_16px_rgba(103,232,249,0.45)]' : 'transition-all opacity-90'} ${isPending ? 'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]' : ''} ${!isSelectable && !isSel && !isDragging ? 'grayscale opacity-50' : ''}${tutorialTargeted ? ' is-battle-tutorial-spot' : ''}${battleTutorialCardTarget && !tutorialTargeted ? ' grayscale opacity-25' : ''}`
-    }, isSel && !assignedMon && /*#__PURE__*/React.createElement("div", {
-      className: "absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"
+    }, tacticsNewLayout && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true",
+      "data-card-pattern": tacticsCardGenre && tacticsCardGenre(c) || ''
+    }), /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true",
+      "data-card-shine": true
+    }), /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true",
+      "data-card-frame": true
+    }), /*#__PURE__*/React.createElement("span", {
+      "data-card-gem": true,
+      "aria-label": `消費ガッツ ${curGuts}`
+    }, curGuts)), isSel && !assignedMon && /*#__PURE__*/React.createElement("div", {
+      className: `absolute top-0.5 ${tacticsNewLayout ? 'right-0.5' : 'left-0.5'} z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg`
     }, /*#__PURE__*/React.createElement(Check, {
       size: 10,
       className: "text-white",
@@ -41194,6 +41213,7 @@ function BattleScreen({
         containerType: 'inline-size'
       }
     }, /*#__PURE__*/React.createElement("div", {
+      "data-card-name": true,
       className: "text-[11px] font-black leading-[13px] w-full whitespace-normal flex items-center justify-center overflow-hidden px-0.5",
       style: {
         height: HAND_CARD_FIT.name,
@@ -41214,7 +41234,24 @@ function BattleScreen({
         "data-card-scope": scope || undefined,
         className: "w-full truncate rounded-[5px] bg-black/30 px-0.5 text-[8px] font-black leading-[11px] text-white/85"
       }, text) : null;
-    })(), ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
+    })(), tacticsNewLayout ? ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
+      role: "button",
+      "aria-label": `${c.name}の技を変える`,
+      "data-skill-change": i,
+      onClick: ev => {
+        ev.stopPropagation();
+        if (isBusy || autoBattleRef.current || Date.now() <= suppressCardClickRef.current) return;
+        setSkillPicker({
+          handIndex: i
+        });
+      },
+      style: {
+        height: HAND_CARD_FIT.skill
+      },
+      className: `flex w-full shrink-0 items-center justify-center gap-0.5 rounded-[7px] border border-white/60 bg-white/[.14] text-[10px] font-black leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard && tutorialTargeted ? ' is-battle-tutorial-spot' : ''}`
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true"
+    }, "\u21C4"), "\u6280\u5909\u66F4") : null : ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
       role: "button",
       "aria-label": `${c.name}の技を変える`,
       "data-skill-change": i,
@@ -73652,6 +73689,86 @@ const createAnimationStyle = () => {
     @keyframes skillNamePop {
       0% { opacity: 0; }
       100% { opacity: 1; }
+    }
+    /* ==== タクティクス新盤面の飾り(2026-09-24 ユーザー指示「モンスター枠やカードの絵をもっと高級感というか
+       いいかんじに」「動きを付ける・枠の中に景色や模様・カードを本格的なカードゲーム風に」「距離ごとの色は取り入れて」)。
+       ★効くのは data-tactics-look を持つバトル画面(新しい盤面のタクティクス)だけ。クラシックの手札は変えない。
+       ★軽量表示(calm)と「動きを減らす」設定の端末では動きを止め、見た目だけ残す。
+       ★枠の box-shadow は触らない。置ける枠の黄色い輪・選んだ枠の輪は Tailwind の ring(box-shadow)で出ているため。
+         BREAK 中の枠(data-distance-broken)も、赤黒の警告を消さないよう飾りを外す ==== */
+    @property --mh-ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+    @keyframes mhAng { to { --mh-ang: 360deg; } }
+    @keyframes mhShine { 0%, 72% { transform: translateX(-160%) skewX(-18deg); } 100% { transform: translateX(330%) skewX(-18deg); } }
+    @keyframes mhCircle { to { transform: translate(-50%, -50%) rotateX(66deg) rotate(360deg); } }
+    @keyframes mhGem { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.3); } }
+    @keyframes mhTwinkle { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+    [data-tactics-look] [data-slot-index="0"] { --mh-rc: 239,68,68; --mh-rc2: 255,210,190;
+      --mh-pat: radial-gradient(120% 60% at 50% 115%, rgba(255,120,40,.5), rgba(200,30,20,.22) 45%, transparent 70%) padding-box,
+        repeating-linear-gradient(115deg, rgba(255,90,40,.10) 0 3px, transparent 3px 14px) padding-box; }
+    [data-tactics-look] [data-slot-index="1"] { --mh-rc: 245,158,11; --mh-rc2: 255,240,160;
+      --mh-pat: repeating-conic-gradient(from 0deg at 20% 62%, rgba(255,210,80,.15) 0 6deg, transparent 6deg 18deg) padding-box,
+        radial-gradient(60% 60% at 20% 62%, rgba(255,200,60,.32), transparent 70%) padding-box; }
+    [data-tactics-look] [data-slot-index="2"] { --mh-rc: 16,185,129; --mh-rc2: 190,255,220;
+      --mh-pat: radial-gradient(70% 60% at 20% 62%, rgba(40,200,130,.28), transparent 70%) padding-box,
+        repeating-radial-gradient(ellipse at 20% 115%, rgba(40,180,110,.17) 0 4px, transparent 4px 12px) padding-box; }
+    [data-tactics-look] [data-slot-index="3"] { --mh-rc: 59,130,246; --mh-rc2: 200,225,255;
+      --mh-pat: repeating-radial-gradient(circle at 20% 140%, rgba(90,160,255,.17) 0 3px, transparent 3px 11px) padding-box,
+        radial-gradient(70% 60% at 20% 62%, rgba(80,150,255,.32), transparent 70%) padding-box; }
+    [data-tactics-look] [data-slot-index]:not([data-distance-broken]) {
+      border-width: 2px !important; border-color: transparent !important; border-radius: 16px !important;
+      background: var(--mh-pat),
+        linear-gradient(170deg, rgba(16,18,34,.95), rgba(5,6,14,.98)) padding-box,
+        conic-gradient(from var(--mh-ang), rgba(var(--mh-rc),1), rgba(var(--mh-rc2),1) 10%, rgba(var(--mh-rc),1) 22%, rgba(30,12,12,.9) 45%,
+          rgba(var(--mh-rc),1) 70%, #fff 76%, rgba(var(--mh-rc),1) 82%) border-box !important; }
+    [data-tactics-look="rich"] [data-slot-index]:not([data-distance-broken]):not(.animate-pulse) { animation: mhAng 4.5s linear infinite; }
+    /* 外へにじむ距離色の光(box-shadow を使わずに足す) */
+    [data-tactics-look] [data-slot-index]:not([data-distance-broken])::before { content: ''; position: absolute; inset: -2px; border-radius: 16px;
+      pointer-events: none; box-shadow: 0 0 14px rgba(var(--mh-rc),.5), inset 0 0 18px rgba(var(--mh-rc),.2); }
+    /* 光の粒 */
+    [data-tactics-look] [data-slot-index]:not([data-distance-broken])::after { content: ''; position: absolute; inset: 3px; border-radius: 13px; pointer-events: none;
+      background: radial-gradient(1.5px 1.5px at 14% 30%, rgba(var(--mh-rc2),.95), transparent 70%), radial-gradient(1.5px 1.5px at 52% 70%, rgba(var(--mh-rc2),.85), transparent 70%),
+        radial-gradient(1px 1px at 78% 40%, #fff, transparent 70%), radial-gradient(1px 1px at 36% 18%, #fff, transparent 70%); }
+    [data-tactics-look="rich"] [data-slot-index]:not([data-distance-broken])::after { animation: mhTwinkle 2.6s ease-in-out infinite; }
+    [data-tactics-look] [data-slot-head] { background: linear-gradient(90deg, rgba(var(--mh-rc),.7), rgba(var(--mh-rc),.16) 65%, transparent) !important;
+      border-bottom-color: rgba(var(--mh-rc2),.5) !important; }
+    [data-tactics-look] [data-slot-head] span { text-shadow: 0 1px 3px rgba(0,0,0,.9); }
+    /* 足元の魔法陣 */
+    [data-tactics-look] [data-slot-circle] { position: absolute; left: 50%; top: calc(50% + 26px); width: 58px; height: 58px; z-index: 0; pointer-events: none;
+      transform: translate(-50%, -50%) rotateX(66deg);
+      background: radial-gradient(circle, transparent 52%, rgba(var(--mh-rc2),.95) 53%, rgba(var(--mh-rc2),.95) 55%, transparent 56%, transparent 66%, rgba(var(--mh-rc),.9) 67%, rgba(var(--mh-rc),.9) 70%, transparent 71%),
+        repeating-conic-gradient(rgba(var(--mh-rc2),.8) 0 4deg, transparent 4deg 30deg);
+      -webkit-mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%); mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%);
+      filter: drop-shadow(0 0 4px rgba(var(--mh-rc),1)); }
+    [data-tactics-look="rich"] [data-slot-circle] { animation: mhCircle 6s linear infinite; }
+    /* 手札: 金の縁・模様・光の筋・宝石 */
+    /* isolation で手札1枚ぶんの重なりの世界を作り、模様(z-index:-1)を「カードの地の上・中身の下」に置く */
+    [data-tactics-look] [data-hand-card] { border-color: transparent !important; isolation: isolate; }
+    [data-tactics-look] [data-card-frame] { position: absolute; inset: -1px; border-radius: 12px; padding: 2px; pointer-events: none; z-index: 6;
+      background: conic-gradient(from var(--mh-ang), #8a6220, #fff3c4 10%, #c8962e 25%, #fff0b0 50%, #8a6220 70%, #f4d57c 85%, #8a6220);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+    [data-tactics-look="rich"] [data-card-frame] { animation: mhAng 5s linear infinite; }
+    [data-tactics-look] [data-card-pattern] { position: absolute; inset: 0; border-radius: 11px; pointer-events: none; z-index: -1;
+      background: radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
+    [data-tactics-look] [data-card-pattern="攻撃"] { background: repeating-linear-gradient(135deg, rgba(0,0,0,.18) 0 2px, transparent 2px 8px), radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
+    [data-tactics-look] [data-card-pattern="守り"] { background: radial-gradient(circle, rgba(255,255,255,.16) 1.5px, transparent 2px) 0 0 / 8px 8px, radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
+    [data-tactics-look] [data-card-pattern="支援"], [data-tactics-look] [data-card-pattern="回復"] {
+      background: repeating-conic-gradient(from 0deg at 50% 30%, rgba(255,255,255,.13) 0 10deg, transparent 10deg 30deg), radial-gradient(80% 50% at 50% 28%, rgba(255,255,255,.2), transparent 70%); }
+    [data-tactics-look] [data-card-shine] { position: absolute; inset: 0; border-radius: 11px; overflow: hidden; pointer-events: none; z-index: 5; }
+    [data-tactics-look] [data-card-shine]::before { content: ''; position: absolute; top: -10%; bottom: -10%; left: 0; width: 40%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); transform: translateX(-160%) skewX(-18deg); }
+    [data-tactics-look="rich"] [data-card-shine]::before { animation: mhShine 3.4s ease-in-out infinite; }
+    [data-tactics-look] [data-card-gem] { position: absolute; left: 1px; top: 1px; width: 22px; height: 22px; z-index: 7; pointer-events: none;
+      display: flex; align-items: center; justify-content: center; padding-top: 2px; font: 900 10px/1 system-ui, sans-serif; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.9);
+      background: radial-gradient(circle at 35% 30%, #fff 0 8%, #7fd8ff 18%, #1f6fd1 55%, #0b2e6b 100%);
+      clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%); }
+    [data-tactics-look="rich"] [data-card-gem] { animation: mhGem 2.2s ease-in-out infinite; }
+    [data-tactics-look] [data-hand-card] [data-decoration] { border-radius: 8px !important; border: 2px solid #f3d27a !important;
+      background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.25), rgba(0,0,0,.35)) !important;
+      box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.55), inset 0 0 10px rgba(0,0,0,.5) !important; }
+    [data-tactics-look] [data-card-name] { text-shadow: 0 1px 0 rgba(0,0,0,.85), 0 0 4px rgba(0,0,0,.6); }
+    @media (prefers-reduced-motion: reduce) {
+      [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-index]::after, [data-tactics-look] [data-slot-circle],
+      [data-tactics-look] [data-card-frame], [data-tactics-look] [data-card-shine]::before, [data-tactics-look] [data-card-gem] { animation: none !important; }
     }
     /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
     @keyframes tacticsPopupRise {
