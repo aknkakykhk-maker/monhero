@@ -1156,6 +1156,52 @@ const createAnimationStyle = () => {
     /* 敵の攻撃・ためるは絵だけを動かす(丸枠とルーンの輪はその場に残す)。> span は敵の絵を包む要素 */
     [data-tactics-look] [data-enemy-ring][data-enemy-attack="fly"] > span { display: block; position: relative; z-index: 9999; animation: enemyAttackFly 450ms ease-in forwards; }
     [data-tactics-look] [data-enemy-ring][data-enemy-attack="charge"] > span { display: block; position: relative; animation: enemyChargeShake 1100ms ease-in-out forwards; }
+    /* ==== 敵ごとの動き(2026-09-24 ユーザー指示「待機時間も動いてる感じに」「実際に動いてるように」「まずはカワズモー」)。
+       絵は1枚のまま。支点は足元(transform-origin 50% 92%)にして、伸び縮み・傾き・重心移動で「生きている」ように見せる。
+       待機は絵(img)、攻撃・ためる・やられは絵を包む要素(span)へ掛ける。足元の影も同じ拍子で伸び縮みさせる ==== */
+    /* カワズモー(力士のカエル): 待機は左右に重心を移しながらお腹で呼吸 / 攻撃は のけぞって溜め→踏み込んで張り手→戻る /
+       ためるは 片足を上げて四股を踏む / やられは のけぞって震える */
+    @keyframes kzIdle {
+      0%, 100% { transform: translateX(-3px) rotate(-3deg) scale(1.03, .97); }
+      25% { transform: translateX(0) rotate(0) scale(.98, 1.03); }
+      50% { transform: translateX(3px) rotate(3deg) scale(1.03, .97); }
+      75% { transform: translateX(0) rotate(0) scale(.98, 1.03); }
+    }
+    @keyframes kzShadow {
+      0%, 100% { transform: translateX(calc(-50% - 3px)) scaleX(1.06); }
+      25%, 75% { transform: translateX(-50%) scaleX(.94); }
+      50% { transform: translateX(calc(-50% + 3px)) scaleX(1.06); }
+    }
+    @keyframes kzSlap {
+      0% { transform: none; }
+      28% { transform: translateY(-8px) rotate(-10deg) scale(.94, 1.07); }
+      48% { transform: translateY(78px) rotate(9deg) scale(1.22, .88); filter: drop-shadow(0 0 22px rgba(239,68,68,.95)); }
+      62% { transform: translateY(70px) rotate(5deg) scale(1.16, .93); filter: drop-shadow(0 0 26px rgba(220,38,38,1)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzStomp {
+      0% { transform: none; }
+      22% { transform: translateX(-5px) rotate(-12deg) scale(.97, 1.04); }
+      42% { transform: translate(-6px, -12px) rotate(-14deg) scale(.96, 1.06); }
+      56% { transform: translateY(4px) rotate(0) scale(1.16, .84); filter: drop-shadow(0 0 18px rgba(251,191,36,.9)); }
+      64% { transform: translate(-2px, 2px) scale(1.12, .88); }
+      72% { transform: translate(2px, 2px) scale(1.12, .88); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzHurt {
+      0% { transform: none; }
+      25% { transform: translate(6px, -3px) rotate(8deg) scale(.95, 1.04); filter: brightness(1.6) saturate(.6); }
+      45% { transform: translate(-3px, 0) rotate(-3deg); filter: none; }
+      60% { transform: translate(2px, 0) rotate(2deg); }
+      100% { transform: none; }
+    }
+    [data-tactics-look] [data-enemy-motion] > span { display: block; position: relative; transform-origin: 50% 92%; }
+    [data-tactics-look] [data-enemy-motion] > span > img { transform-origin: 50% 92%; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > span > img { animation: kzIdle 2.6s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow] { animation: kzShadow 2.6s ease-in-out infinite; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-hurt] > span { animation: kzHurt 480ms ease-out forwards; }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
     [data-tactics-look] [data-enemy-ring="0"] { --mh-rc: 239,68,68; } [data-tactics-look] [data-enemy-ring="1"] { --mh-rc: 245,158,11; }
     [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
@@ -1198,7 +1244,8 @@ const createAnimationStyle = () => {
     @media (prefers-reduced-motion: reduce) {
       [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-index]::after, [data-tactics-look] [data-slot-circle],
       [data-tactics-look] [data-card-frame], [data-tactics-look] [data-card-shine]::before, [data-tactics-look] [data-card-gem],
-      [data-tactics-look] [data-enemy-hpbar]::after, [data-tactics-look] [data-enemy-ring]::before { animation: none !important; }
+      [data-tactics-look] [data-enemy-hpbar]::after, [data-tactics-look] [data-enemy-ring]::before,
+      [data-tactics-look] [data-enemy-motion] > span > img, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow] { animation: none !important; }
     }
     /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
     @keyframes tacticsPopupRise {
