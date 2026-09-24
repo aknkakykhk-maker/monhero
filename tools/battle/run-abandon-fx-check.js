@@ -72,7 +72,8 @@ for(const {state,clear,what} of TURN_FX){
 
 // ④ 技名は置き場所しか見ていない = 残ると誰もいない間合いに出る
 {
-  const start=battleScreen.indexOf('{slotSkill&&(');
+  // ★2026-09-24 に揺れの影響を受けないよう body 直下へ出した(ReactDOM.createPortal)。どちらの書き出しでも読む
+  const start=Math.max(battleScreen.indexOf('{slotSkill&&('),battleScreen.indexOf('{slotSkill&&ReactDOM.createPortal('));
   const body=start<0?'':battleScreen.slice(start,start+700);
   check('技名は slotIndex だけで置き場所を決めている',
     body.includes('left:`${12.5+slotSkill.slotIndex*25}%`'),

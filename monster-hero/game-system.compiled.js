@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8fbfeb7d81fb0f40
+// source-sha256: fe058bb994781b4b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: be7a02e8e7ce03f0
+// generated-sha256: a28d517064d3c27b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -177,7 +177,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-24 15:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-24 15:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17765,6 +17765,8 @@ const attackAimVars = (dx, dy, {
     '--atk-dy': px(dy),
     '--atk-len': px(main.len),
     '--atk-rot': deg(main.rot),
+    // 敵が右にいれば1・左なら-1・ほぼ真上なら0(水攻撃の左右の滑りを敵の側へ寄せるのに使う)
+    '--atk-side': String(dx > 12 ? 1 : dx < -12 ? -1 : 0),
     '--pd-l-x': px(dx * PANDORA_CLONE_REACH - spread),
     '--pd-r-x': px(dx * PANDORA_CLONE_REACH + spread),
     '--pd-y': px(dy * PANDORA_CLONE_REACH),
@@ -18397,7 +18399,7 @@ const WaterBurstMotion = ({
   }
 }))));
 // ミーア専用の歌攻撃演出。
-// 距離枠は動かさず、本体だけがくるっと回って敵のほうへ身を乗り出し、マイクスタンドの前で歌う。
+// 距離枠は動かさず、本体だけが跳ねて体をひねり、敵のほうへ身を乗り出し、マイクスタンドの前で歌う。
 // 音符は5つ、左右に揺れながら敵の位置(--atk-dx/dy)まで飛び、敵の向きへ音の波を3つ走らせる。
 // x は飛ぶ途中の左右の揺れ、y は途中でふくらむ高さ。追加画像・追加音源は使わず、攻撃中だけDOMへ出る
 // 固定数のCSS要素で描く(常時アニメーションにはしない)。
@@ -23722,11 +23724,16 @@ const RhythmSongSelect = ({
   const chart = song && difficulty ? song.difficulties[difficulty.id] : null;
   const best = song && difficulty ? rhythmBestRecord(bestRecords, song.songId, difficulty.id) : null;
   // 一覧の「楽曲Lv.」は、いま選んでいる難易度のレベル。その曲に無ければいちばん上の難易度。
-  const rowLevel = entry => {
+  // 行ごとに「どの難易度の話か」を1か所で決める。楽曲Lv.も、行の自己ベストのランクもこれを見る
+  // (別々に決めると、Lv.はHARDなのにランクはEASY、という食い違いが起きる)
+  const rowDifficultyId = entry => {
     const ids = (difficulties || []).filter(item => rhythmChartPlayable(entry, item.id)).map(item => item.id);
-    if (!ids.length) return 0;
-    const id = difficulty && ids.includes(difficulty.id) ? difficulty.id : ids[ids.length - 1];
-    return Number(entry.difficulties[id].level) || 0;
+    if (!ids.length) return null;
+    return difficulty && ids.includes(difficulty.id) ? difficulty.id : ids[ids.length - 1];
+  };
+  const rowLevel = entry => {
+    const id = rowDifficultyId(entry);
+    return id ? Number(entry.difficulties[id].level) || 0 : 0;
   };
   // ★イベントの対象曲は、一覧で見てすぐ分かるようにする
   //   (2026-09-11・ユーザー指示「イベント曲は見てすぐ分かるようにして」)。
@@ -23996,9 +24003,25 @@ const RhythmSongSelect = ({
         className: "block h-2 w-2 rotate-45 rounded-[1px]",
         style: mark.style
       }));
-    }), /*#__PURE__*/React.createElement("small", {
-      className: "ml-1 text-[9px] font-bold text-slate-400"
-    }, (difficulties || []).filter(item => rhythmChartPlayable(entry, item.id)).length, "\u96E3\u6613\u5EA6"), eventSong && /*#__PURE__*/React.createElement("small", _extends({}, main ? {
+    }), (() => {
+      const rowId = rowDifficultyId(entry);
+      const record = rowId ? rhythmBestRecord(bestRecords, entry.songId, rowId) : null;
+      const played = !!(record && record.played);
+      const rank = played ? rhythmRankForScore(record.bestScore) : '';
+      return /*#__PURE__*/React.createElement("small", _extends({}, main ? {
+        'data-rhythm-song-row-rank': played ? rank : ''
+      } : {}, {
+        className: "ml-1 flex min-w-0 items-baseline gap-1 text-[9px] font-bold text-slate-400"
+      }), rowId && /*#__PURE__*/React.createElement("span", {
+        className: `shrink-0 font-black ${rhythmDifficultyTextColor(rowId)}`
+      }, rowId), played ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", {
+        className: `text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank] || 'text-slate-300'}`
+      }, rank), /*#__PURE__*/React.createElement("span", {
+        className: "truncate tabular-nums text-slate-300"
+      }, record.bestScore.toLocaleString())) : /*#__PURE__*/React.createElement("span", {
+        className: "truncate"
+      }, "\u672A\u30D7\u30EC\u30A4"));
+    })(), eventSong && /*#__PURE__*/React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-event': entry.songId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200"
@@ -24318,6 +24341,13 @@ const RHYTHM_HAPTICS = (() => {
 // 歓声(mhRhythmSideCheer)の長さ。CSS側と同じ値をここに持つ。
 // 終わったら data-rhythm-side-hit を外して、待機の動きへ戻すために使う。
 const RHYTHM_SIDE_CHEER_MS = 700;
+// ポーズから戻るときの数え方。開始のときの READY は要らない(もう構えている)ので 3→2→1 だけ
+const RHYTHM_RESUME_COUNTDOWN_STEPS = Object.freeze(['3', '2', '1']);
+// 曲の位置を「1:05」の形にする。ポーズ画面の「いまどのあたりか」に使う
+const rhythmClockLabel = ms => {
+  const total = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+};
 // TAPを取った指が境界付近に残ると、iPhoneの接触中心が数px揺れただけでも
 // floor(subLaneCoordinate)が隣へ変わり、同じ指で未来TAPを再判定していた。
 // 判定ライン付近では1サブレーン約32〜38pxなので、.20は約6〜8px。
@@ -24826,6 +24856,16 @@ const RhythmTapTest = ({
   const [countdownStep, setCountdownStep] = useState(null);
   const countdownTimerRef = useRef(null);
   const countdownResolveRef = useRef(null);
+  /* ポーズから戻るときも 3→2→1 と数えてから曲を動かす。
+     それまでは「再開」を押した瞬間に曲が動き出し、指を構え直すあいだに
+     流れてきたノーツを落としていた。true のあいだはポーズメニューを隠して、
+     止まったままのノーツ(最後に描いた場面)を見せる */
+  const [resumeCountdown, setResumeCountdown] = useState(false);
+  const resumingRef = useRef(false);
+  // ポーズした時点の曲の位置(ミリ秒)。ポーズ画面の「いまどのあたりか」に使う
+  const [pausedSongMs, setPausedSongMs] = useState(0);
+  // 曲の進みぐあいのバー。毎フレーム setState せず、要素の幅を直接書き換える
+  const songProgressRef = useRef(null);
   // 100コンボごとの演出。
   // 「段階(tier)が変わったときだけ」effectを動かすのが肝心で、以前は view.combo(=ノーツを取るたび
   // 毎回変わる値)を依存にしていたため、100→101など非節目の増加でも毎回effectが再実行され、
@@ -25771,6 +25811,15 @@ const RhythmTapTest = ({
         }
       }
       const playEndTimeMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;
+      /* 曲の進みぐあい(画面のいちばん下の細いバー)。0.1%より動いたときだけ書き換える */
+      const progressEl = songProgressRef.current;
+      if (progressEl) {
+        const ratio = playEndTimeMs > 0 ? Math.max(0, Math.min(1, songTimeMs / playEndTimeMs)) : 0;
+        if (Math.abs(ratio - (progressEl._mhRatio || 0)) >= .001 || ratio === 1) {
+          progressEl._mhRatio = ratio;
+          progressEl.style.transform = `scaleX(${ratio.toFixed(4)})`;
+        }
+      }
       /* 譜面より音源のほうが長い曲(デュラハンの2曲は音源をバトルと共用しているので切れない)は、
          終わりの手前から音量をなめらかに落とす。何もしないと曲の途中でぶつっと止まる。
          音源が譜面とほぼ同時に終わる曲では何もしない(自然な終わりをいじらない)。 */
@@ -25810,7 +25859,7 @@ const RhythmTapTest = ({
   /* READY→3→2→1 と数えてから返す。
      途中で画面を離れた・作り直された(generationが変わった)ら false を返して、
      呼び出し側が曲を鳴らさずに終われるようにする */
-  const runCountdown = generation => new Promise(resolve => {
+  const runCountdown = (generation, steps = RHYTHM_COUNTDOWN_STEPS) => new Promise(resolve => {
     countdownResolveRef.current = resolve;
     const done = value => {
       if (countdownResolveRef.current === resolve) countdownResolveRef.current = null;
@@ -25824,13 +25873,13 @@ const RhythmTapTest = ({
         done(false);
         return;
       }
-      if (index >= RHYTHM_COUNTDOWN_STEPS.length) {
+      if (index >= steps.length) {
         setCountdownStep(null);
         countdownTimerRef.current = null;
         done(true);
         return;
       }
-      setCountdownStep(RHYTHM_COUNTDOWN_STEPS[index]);
+      setCountdownStep(steps[index]);
       index++;
       countdownTimerRef.current = setTimeout(step, RHYTHM_COUNTDOWN_STEP_MS);
     };
@@ -26029,6 +26078,7 @@ const RhythmTapTest = ({
     run.notes.forEach(note => {
       if (note.type === 'HOLD' && note.activePointerId !== null) note.activePointerId = -1;
     });
+    setPausedSongMs(Math.max(0, Number(run.audio.songTimeMs()) || 0));
     run.paused = true;
     stopFrame();
     run.audio.pause();
@@ -26037,9 +26087,20 @@ const RhythmTapTest = ({
       status: 'paused'
     }));
   };
+  /* 再開は 3→2→1 と数えてから(開始のカウントダウンと同じ部品を使い、READYだけ省く)。
+     数えているあいだに画面を離れた・リスタートした(generationが変わった)ら鳴らさない。
+     二度押しで数えが2本走らないよう resumingRef で止める */
   const resume = async () => {
     const run = runRef.current;
-    if (!run || run.finished || !run.paused) return;
+    if (!run || run.finished || !run.paused || resumingRef.current) return;
+    const generation = generationRef.current;
+    resumingRef.current = true;
+    setResumeCountdown(true);
+    const counted = await runCountdown(generation, RHYTHM_RESUME_COUNTDOWN_STEPS);
+    resumingRef.current = false;
+    if (!mountedRef.current) return;
+    setResumeCountdown(false);
+    if (!counted || generation !== generationRef.current || runRef.current !== run || run.finished || !run.paused) return;
     const resumed = await run.audio.resume();
     if (!resumed) return;
     run.paused = false;
@@ -26495,7 +26556,16 @@ const RhythmTapTest = ({
     }, "BEST SCORE ", result.bestScore.toLocaleString()), result.isNewRecord && /*#__PURE__*/React.createElement("p", {
       "data-rhythm-new-record": true,
       className: "text-center text-xl font-black text-amber-300"
-    }, "NEW RECORD"), result.eventPointAward && result.eventPointAward.amount > 0 && /*#__PURE__*/React.createElement("div", {
+    }, "NEW RECORD"), (() => {
+      const before = runRef.current?.startBest;
+      const prev = before && before.played ? Number(before.bestScore) || 0 : 0;
+      if (!(prev > 0)) return null;
+      const diff = view.score - prev;
+      return /*#__PURE__*/React.createElement("p", {
+        "data-rhythm-best-diff": true,
+        className: `text-center text-[11px] font-black tabular-nums ${diff > 0 ? 'text-emerald-300' : 'text-slate-400'}`
+      }, diff > 0 ? `前の自己ベストから +${diff.toLocaleString()}` : diff === 0 ? '自己ベストと同じスコア' : `自己ベストまで あと ${(-diff).toLocaleString()}`);
+    })(), result.eventPointAward && result.eventPointAward.amount > 0 && /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-beat-points": true,
       className: "mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center"
     }, /*#__PURE__*/React.createElement("small", {
@@ -26554,7 +26624,26 @@ const RhythmTapTest = ({
       className: "text-fuchsia-200"
     }, "+", Number(quickRunAward.psyche).toLocaleString())), quickRunAward.shard > 0 && /*#__PURE__*/React.createElement("span", null, "\uD83C\uDF96\uFE0F ", /*#__PURE__*/React.createElement("b", {
       className: "text-amber-200"
-    }, "+", Number(quickRunAward.shard).toLocaleString())))), /*#__PURE__*/React.createElement("dl", {
+    }, "+", Number(quickRunAward.shard).toLocaleString())))), (() => {
+      const total = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (Number(view.counts[id]) || 0), 0);
+      if (!(total > 0)) return null;
+      return /*#__PURE__*/React.createElement("div", {
+        "data-rhythm-result-ratio": true,
+        "aria-hidden": "true",
+        className: "mb-2 flex h-2.5 w-full overflow-hidden rounded-full bg-slate-800"
+      }, RHYTHM_JUDGMENT_IDS.map(id => {
+        const count = Number(view.counts[id]) || 0;
+        return count > 0 ? /*#__PURE__*/React.createElement("i", {
+          key: id,
+          "data-rhythm-result-ratio-part": id,
+          className: "block h-full",
+          style: {
+            width: `${(count / total * 100).toFixed(2)}%`,
+            background: rhythmJudgmentColor(id)
+          }
+        }) : null;
+      }));
+    })(), /*#__PURE__*/React.createElement("dl", {
       className: "grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4"
     }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
       key: id
@@ -26581,8 +26670,22 @@ const RhythmTapTest = ({
       className: "text-right"
     }, view.fast), /*#__PURE__*/React.createElement("dt", null, "SLOW"), /*#__PURE__*/React.createElement("dd", {
       className: "text-right"
-    }, view.slow)), /*#__PURE__*/React.createElement("div", {
-      className: "mt-5 grid grid-cols-1 gap-2"
+    }, view.slow)), (() => {
+      const fast = Number(view.fast) || 0,
+        slow = Number(view.slow) || 0;
+      if (calibrating || fast + slow < 12) return null;
+      const early = fast >= slow * 2,
+        late = slow >= fast * 2;
+      if (!early && !late) return null;
+      return /*#__PURE__*/React.createElement("p", {
+        "data-rhythm-timing-tendency": true,
+        className: `mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-relaxed ${early ? 'border-cyan-400/30 bg-cyan-950/30 text-cyan-100' : 'border-fuchsia-400/30 bg-fuchsia-950/30 text-fuchsia-100'}`
+      }, early ? 'FASTが多めでした。少し早く叩くくせがあるようです。' : 'SLOWが多めでした。少し遅れて叩くくせがあるようです。', "\u6C17\u306B\u306A\u308B\u3068\u304D\u306F\u3001\u30AA\u30D7\u30B7\u30E7\u30F3\u306E\u300C\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574\u300D\u2192\u300C\uD83C\uDFAF \u5B9F\u969B\u306E\u753B\u9762\u3067\u5408\u308F\u305B\u308B\u300D\u3067\u5408\u308F\u305B\u3089\u308C\u307E\u3059\u3002");
+    })(), /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-result-actions": true,
+      className: "sticky bottom-0 -mx-4 mt-3 bg-gradient-to-t from-slate-950 via-slate-950/95 to-slate-950/0 px-4 pb-1 pt-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-1 gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       className: "min-h-[48px] rounded-xl bg-fuchsia-700 font-black",
       disabled: startLockRef.current,
@@ -26590,7 +26693,7 @@ const RhythmTapTest = ({
     }, "\u3082\u3046\u4E00\u5EA6\u30D7\u30EC\u30A4"), /*#__PURE__*/React.createElement("button", {
       className: "min-h-[48px] rounded-xl bg-indigo-700 font-black",
       onClick: abort
-    }, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る')));
+    }, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る'))));
   }
   /* ★ここへ属性を足すときは className の「後ろ」へ置く。
      rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という
@@ -26734,7 +26837,17 @@ const RhythmTapTest = ({
     "data-rhythm-down-vignette": true,
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-0 z-20"
-  }), lifeDownSlam && /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-song-progress": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-x-2 bottom-[2px] z-10 h-[3px] overflow-hidden rounded-full bg-white/10"
+  }, /*#__PURE__*/React.createElement("i", {
+    ref: songProgressRef,
+    className: "absolute inset-0 block origin-left rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400",
+    style: {
+      transform: 'scaleX(0)'
+    }
+  })), lifeDownSlam && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-life-down-slam": true,
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"
@@ -26897,7 +27010,7 @@ const RhythmTapTest = ({
       color: '#a5f3fc',
       textShadow: '0 1px 6px rgba(2,6,23,.95)'
     }
-  }, "\u307E\u3082\u306A\u304F \u306F\u3058\u307E\u308A\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
+  }, resumeCountdown ? 'まもなく 再開します' : 'まもなく はじまります')), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
@@ -26979,13 +27092,50 @@ const RhythmTapTest = ({
   }, RHYTHM_TUTORIAL_STEPS[0].title), /*#__PURE__*/React.createElement("span", {
     "data-rhythm-tutorial-text": true,
     className: "mt-1 block text-[11px] font-bold leading-relaxed text-slate-200"
-  }, RHYTHM_TUTORIAL_STEPS[0].text)), view.status === 'paused' && /*#__PURE__*/React.createElement("div", {
+  }, RHYTHM_TUTORIAL_STEPS[0].text)), view.status === 'paused' && !resumeCountdown && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-pause-menu": true,
     "data-rhythm-debug-play": debugPlay ? '1' : undefined,
     className: "absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-2xl font-black"
-  }, "PAUSE"), /*#__PURE__*/React.createElement("button", {
+  }, "PAUSE"), (() => {
+    const endMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;
+    const ratio = endMs > 0 ? Math.max(0, Math.min(1, pausedSongMs / endMs)) : 0;
+    return /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-pause-info": true,
+      className: "w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2.5"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block truncate text-[12px] font-black text-slate-100"
+    }, "\u266A ", rhythmSongFullName(song)), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 flex items-center gap-1.5 text-[10px] font-black"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 leading-none"
+    }, difficulty.id), !calibrating && !tutorial && /*#__PURE__*/React.createElement("span", {
+      className: "text-cyan-300"
+    }, "Lv.", chart.level), /*#__PURE__*/React.createElement("span", {
+      className: "ml-auto tabular-nums text-slate-300"
+    }, "SCORE ", /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, view.score.toLocaleString())), /*#__PURE__*/React.createElement("span", {
+      className: "tabular-nums text-slate-300"
+    }, "COMBO ", /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, view.combo))), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "absolute inset-y-0 left-0 block rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400",
+      style: {
+        width: `${(ratio * 100).toFixed(1)}%`
+      }
+    })), /*#__PURE__*/React.createElement("small", {
+      "data-rhythm-pause-time": true,
+      className: "shrink-0 text-[10px] font-black tabular-nums text-slate-300"
+    }, rhythmClockLabel(pausedSongMs), " / ", rhythmClockLabel(endMs))));
+  })(), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] font-bold text-slate-400"
+  }, "\u300C\u518D\u958B\u300D\u3092\u62BC\u3059\u3068 3\u30FB2\u30FB1 \u3068\u6570\u3048\u3066\u304B\u3089\u7D9A\u304D\u304C\u59CB\u307E\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("button", {
     "data-rhythm-pause-resume": true,
     className: "min-h-[48px] w-full rounded-xl bg-cyan-700 font-black",
     onClick: resume
@@ -31083,10 +31233,25 @@ function RhythmSongSelectScreen({
       if (!startQuickRunFromRhythm()) setQuickRunStartError(true);
     },
     className: "flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]"
-  }, "\u2694 \u88CF\u3067\u30AF\u30A4\u30C3\u30AF\u306E\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B") : /*#__PURE__*/React.createElement("p", {
+  }, "\u2694 \u88CF\u3067\u30AF\u30A4\u30C3\u30AF\u306E\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B")
+  // ★案内は1行に畳んでおき、知りたい人だけ開く。3行の説明文が曲の一覧の上に
+  //   いつも居座っていて、縦画面で見える曲がそのぶん減っていた。
+  //   開け閉めはブラウザの <details> に任せる(状態を持たないので、どこへ置いても同じに動く)
+  : /*#__PURE__*/React.createElement("details", {
     "data-quick-run-start-hint": true,
-    className: "px-1 py-1 text-[9px] leading-relaxed text-slate-500"
-  }, "\u88CF\u3067\u5468\u56DE\u3092\u56DE\u3059\u306B\u306F\u3001\u30AF\u30A4\u30C3\u30AF\u30671\u5EA6\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u304B\u3001M/B\u7BA1\u7406\u306E\u300CAUTO\u8A2D\u5B9A \u2192 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u300D\u3067\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u3092\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002") : null;
+    className: "group px-1 py-0.5 text-[9px] leading-relaxed text-slate-500"
+  }, /*#__PURE__*/React.createElement("summary", {
+    className: "flex min-h-[32px] cursor-pointer list-none items-center gap-1 font-black text-slate-400 [&::-webkit-details-marker]:hidden"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\u2694"), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 flex-1 truncate"
+  }, "\u88CF\u3067\u30AF\u30A4\u30C3\u30AF\u306E\u221E\u5468\u56DE\u3092\u56DE\u3059\u306B\u306F\uFF1F"), /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-slate-500 group-open:rotate-180"
+  }, "\u25BE")), /*#__PURE__*/React.createElement("p", {
+    className: "pb-1"
+  }, "\u30AF\u30A4\u30C3\u30AF\u30671\u5EA6\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u304B\u3001M/B\u7BA1\u7406\u306E\u300CAUTO\u8A2D\u5B9A \u2192 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u300D\u3067\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u3092\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002")) : null;
   return /*#__PURE__*/React.createElement("main", {
     "data-rhythm-demo-home": true,
     className: "relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
@@ -39115,6 +39280,10 @@ const tacticsAuraKindOf = (text = '', side = '') => {
   if (/攻撃|闘志|会心|連撃|連斬|ソードスキル|緋桜|威力/.test(t)) return 'power';
   return 'buff';
 };
+// タクティクスの敵ごとの動き方(新しい画面だけ)。値は 70-bootstrap の data-enemy-motion の CSS 名
+const TACTICS_ENEMY_MOTIONS = Object.freeze({
+  Kawazumo: 'kawazumo'
+});
 const kindOfTacticsSlotFx = fx => {
   if (!fx) return null;
   if (fx.evade) return 'evade';
@@ -39301,6 +39470,12 @@ function BattleScreen({
   // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
+  // 敵の攻撃(ためるを含む)を絵だけで動かす場面。移動とムーは今までどおり丸枠ごと
+  const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
+  // 敵ごとの動き方(2026-09-24 ユーザー指示「敵のグラフィックを攻撃時にアニメーション化」「待機時間も動いてるように」
+  // 「まずはカワズモーで」「タクティクスだけ」)。絵は1枚のまま、待機・攻撃・ためる・やられの動きを CSS で付ける。
+  // ★ここに無い敵は今までどおり。足すときは TACTICS_ENEMY_MOTIONS に1行と、70-bootstrap の CSS を足す
+  const enemyMotion = tacticsNewLayout && !ecoBattleView ? TACTICS_ENEMY_MOTIONS[enemy?.id] || null : null;
   // ★いま狙われている枠(2026-09-21 ユーザー指摘「誰に攻撃か分からない」)。
   //   間合い攻撃は相手を1体決めず「予告した間合いに立っている子」へ当たるので、
   //   ほかの技と違って targetName を持たない。予告を見ても間合いしか分からなかった。
@@ -39766,7 +39941,11 @@ function BattleScreen({
   }))), /*#__PURE__*/React.createElement("main", {
     className: "flex-1 relative flex flex-col items-center justify-start pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0",
     style: {
-      justifyContent: 'safe center'
+      justifyContent: 'safe center',
+      ...(enemyImageOnlyAttack ? {
+        overflow: 'visible',
+        zIndex: 70
+      } : {})
     }
   }, /*#__PURE__*/React.createElement("button", {
     "data-battle-log-button": true,
@@ -39893,7 +40072,7 @@ function BattleScreen({
     className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none"
   }, "\u9B42\u683C\u52B9\u679C \u767A\u52D5\u4E2D", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), /*#__PURE__*/React.createElement("div", {
     className: "mt-1 relative flex flex-col items-center"
-  }, enemySkillName && /*#__PURE__*/React.createElement("div", {
+  }, enemySkillName && ReactDOM.createPortal(/*#__PURE__*/React.createElement("div", {
     className: "fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap",
     style: {
       top: '14%',
@@ -39902,7 +40081,7 @@ function BattleScreen({
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'SPECIAL' && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), document.body), enemy && enemyIntent && !isBusy && !enemyAttackFx && !Array.isArray(tacticsUnits) && enemyIntent.type === 'SPECIAL' && /*#__PURE__*/React.createElement("div", {
     className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
     style: {
       top: '11%',
@@ -39935,10 +40114,11 @@ function BattleScreen({
     className: "text-5xl drop-shadow-[0_0_20px_rgba(244,63,94,1)]"
   }, "\u2694\uFE0F"), /*#__PURE__*/React.createElement("div", {
     className: "px-3 py-1 rounded-lg bg-gradient-to-r from-rose-900 via-rose-600 to-rose-900 border-2 border-rose-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(244,63,94,0.9)]"
-  }, "\u8CAB \u901A \u6280 \u6E96 \u5099")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
+  }, "\u8CAB \u901A \u6280 \u6E96 \u5099")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' && ReactDOM.createPortal(
   /*#__PURE__*/
   // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
   // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
+  // ★技名の札と同じ理由で body の直下へ出す(揺れの間に位置が飛ばないように)
   React.createElement("div", {
     className: "fixed left-1/2 pointer-events-none",
     style: {
@@ -39950,7 +40130,7 @@ function BattleScreen({
     className: "mh-enemy-move-hint"
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
-  }, "\uD83C\uDFC3"), /*#__PURE__*/React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "\u8DDD\u96E2\u306B\u79FB\u52D5\u3057\u3088\u3046\u3068\u3057\u3066\u3044\u308B\u2026\uFF1F"))), !tacticsNewLayout && /*#__PURE__*/React.createElement(React.Fragment, null, slotSkill && /*#__PURE__*/React.createElement("div", {
+  }, "\uD83C\uDFC3"), /*#__PURE__*/React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "\u8DDD\u96E2\u306B\u79FB\u52D5\u3057\u3088\u3046\u3068\u3057\u3066\u3044\u308B\u2026\uFF1F"))), document.body), !tacticsNewLayout && /*#__PURE__*/React.createElement(React.Fragment, null, slotSkill && ReactDOM.createPortal(/*#__PURE__*/React.createElement("div", {
     className: "fixed -translate-x-1/2 pointer-events-none whitespace-nowrap",
     style: {
       left: `${12.5 + slotSkill.slotIndex * 25}%`,
@@ -39960,7 +40140,7 @@ function BattleScreen({
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: `px-3 py-1 rounded-xl font-black text-[12px] border-2 shadow-[0_2px_16px_rgba(0,0,0,0.9)] ${slotSkill.type === 'unique' ? 'bg-purple-700 border-purple-200 text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]' : slotSkill.type === 'special' ? 'bg-amber-600 border-amber-200 text-white' : 'bg-red-700 border-red-200 text-white'}`
-  }, slotSkill.name))), !ecoBattleView && guardFx && /*#__PURE__*/React.createElement("div", {
+  }, slotSkill.name)), document.body)), !ecoBattleView && guardFx && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 pointer-events-none flex items-center justify-center",
     style: {
       zIndex: 64000
@@ -40113,9 +40293,12 @@ function BattleScreen({
     }
   }, enemyNoticeCard()), /*#__PURE__*/React.createElement("div", {
     "data-enemy-ring": enemyDist,
+    "data-enemy-attack": enemyImageOnlyAttack ? enemyAttackFx?.kind === 'charge' ? 'charge' : 'fly' : undefined,
+    "data-enemy-motion": enemyMotion || undefined,
+    "data-enemy-hurt": enemyMotion && attackAnim && !enemyAttackAnim ? 'true' : undefined,
     className: `rounded-full transition-all duration-500 border-4 relative bg-black/35 ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
     "data-attack-target": true,
-    style: enemyAttackAnim && !ecoBattleView ? {
+    style: enemyAttackAnim && !ecoBattleView && !enemyImageOnlyAttack ? {
       padding: 'clamp(6px,1.5dvh,16px)',
       animation: enemyAttackFx?.kind === 'move' ? isMooBoss(enemy?.id) ? 'enemyMoveSlideMoo 1000ms ease-in-out forwards' : 'enemyMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'enemyChargeShake 1100ms ease-in-out forwards' : 'enemyAttackFly 450ms ease-in forwards',
       ...(isMooBoss(enemy?.id) && enemyAttackFx?.kind !== 'move' ? {
@@ -40132,6 +40315,7 @@ function BattleScreen({
     }
   }, !ecoBattleView && /*#__PURE__*/React.createElement("div", {
     "aria-hidden": "true",
+    "data-enemy-shadow": true,
     className: "pointer-events-none absolute left-1/2 z-0 -translate-x-1/2",
     style: {
       bottom: '11%',
@@ -40842,7 +41026,7 @@ function BattleScreen({
     className: "shrink-0 py-1.5 px-2 border-y border-white/10 flex flex-col items-center justify-center gap-1 z-10 relative",
     style: {
       backgroundImage: 'linear-gradient(180deg, rgba(14,19,38,.97) 0%, rgba(8,11,22,.98) 100%)',
-      ...(tacticsNewLayout && popups.some(p => ['hero', 'life', 'guts'].includes(p.side) && !Number.isInteger(p.slot)) ? {
+      ...(tacticsNewLayout && popups.some(p => ['hero', 'life', 'guts'].includes(p.side) && !Number.isInteger(p.slot)) || attackAnim && !ecoBattleView ? {
         zIndex: 60
       } : {})
     }
@@ -41103,7 +41287,17 @@ function BattleScreen({
     }
     const isAnimating = !ecoBattleView && attackAnim && attackAnim.slotIndex === i;
     // 敵の位置へ向けるためのCSS変数。測れなかったときは :root の既定値(真上)で動く
+    // 新しい盤面は枠が2段に並ぶ。攻撃中の子の枠だけ前へ出さないと、沈み込み・横滑りのときに
+    // あとから描かれる隣や下の枠の裏へ絵が回る(古い盤面は枠ごと z-index:9999 で前へ出している)
     const attackAimStyle = isAnimating && attackAim && attackAim.slotIndex === i ? attackAimVars(attackAim.dx, attackAim.dy) : null;
+    // ★絵の入れ物は絵と同じ大きさに固定する(2026-09-24 ユーザー指摘「ミーアの攻撃中、姿が消えてる」)。
+    //   ミーア・水・聖光の攻撃演出は入れ物いっぱいに重ねる絶対配置なので、大きさを持たないと
+    //   入れ物が0×0につぶれ、本体の絵が幅数pxまで押しつぶされてマイクも見えなくなっていた
+    const slotArtBox = {
+      width: tacticsNewLayout ? '58px' : '64px',
+      height: tacticsNewLayout ? '58px' : '64px',
+      flexShrink: 0
+    };
     // このスロットに固有技カードが割り当てられているか（セット中は常時エフェクト）
     const hasUniqueSet = selectedCards.some(idx => cardAssignments[idx] === i && hand[idx]?.type === 'unique');
     // このスロットに表示する選択中カード: 攻撃系は割当先スロット、全体系(ガード/バフ/回復等)は全スロット
@@ -41161,17 +41355,22 @@ function BattleScreen({
       },
       disabled: isBusy || autoBattle,
       className: `relative ${tacticsNewLayout ? 'rounded-[18px] border grid grid-cols-[40%_60%] grid-rows-[18px_minmax(0,1fr)] items-stretch bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,.09),inset_0_0_18px_rgba(99,102,241,.035),0_7px_20px_rgba(0,0,0,.24)]' : 'rounded-2xl border-2 flex flex-col items-stretch'} overflow-visible transition-all ${RANGE_STYLES[i].slotGlow || ''} ${tacticsNewLayout ? '' : RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : tacticsNewLayout ? 'border-white/[.10]' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500/80' : ''} ${tacticsNewLayout && !s ? 'opacity-65 shadow-none border-white/[.06]' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
-      style: isAnimating && !tacticsNewLayout ? {
-        zIndex: 9999,
-        animation: attackMotionAnimation(attackAnim),
-        ...attackAimStyle
-      } : distanceBroken ? {
-        backgroundColor: distanceBreakLevel >= 2 ? 'rgb(12,2,5)' : 'rgb(24,5,25)',
-        boxShadow: `inset 0 0 0 ${Math.min(4, distanceBreakLevel + 1)}px rgba(248,113,113,.95), inset 0 0 ${28 + distanceBreakLevel * 8}px rgba(76,5,25,.98), 0 0 ${9 + distanceBreakLevel * 4}px rgba(220,38,38,.65)`,
-        ...(slotHitShake || {})
-      } : slotSettle === i ? {
-        animation: 'slotSettle 400ms ease-out'
-      } : slotHitShake || undefined
+      style: {
+        ...((isAnimating && !tacticsNewLayout ? {
+          zIndex: 9999,
+          animation: attackMotionAnimation(attackAnim),
+          ...attackAimStyle
+        } : distanceBroken ? {
+          backgroundColor: distanceBreakLevel >= 2 ? 'rgb(12,2,5)' : 'rgb(24,5,25)',
+          boxShadow: `inset 0 0 0 ${Math.min(4, distanceBreakLevel + 1)}px rgba(248,113,113,.95), inset 0 0 ${28 + distanceBreakLevel * 8}px rgba(76,5,25,.98), 0 0 ${9 + distanceBreakLevel * 4}px rgba(220,38,38,.65)`,
+          ...(slotHitShake || {})
+        } : slotSettle === i ? {
+          animation: 'slotSettle 400ms ease-out'
+        } : slotHitShake || undefined) || {}),
+        ...(isAnimating && tacticsNewLayout ? {
+          zIndex: 30
+        } : {})
+      }
     }, slotHitKind && (() => {
       const hitFx = TACTICS_SLOT_FX_STYLE[slotHitKind];
       return /*#__PURE__*/React.createElement("div", {
@@ -41513,11 +41712,14 @@ function BattleScreen({
     }), /*#__PURE__*/React.createElement("div", {
       "data-tactics-attack-image": tacticsNewLayout ? i : undefined,
       className: "relative flex items-center justify-center",
-      style: isAnimating && tacticsNewLayout ? {
-        zIndex: 9999,
-        animation: attackMotionAnimation(attackAnim),
-        ...attackAimStyle
-      } : undefined
+      style: {
+        ...(s ? slotArtBox : {}),
+        ...(isAnimating && tacticsNewLayout ? {
+          zIndex: 9999,
+          animation: attackMotionAnimation(attackAnim),
+          ...attackAimStyle
+        } : {})
+      }
     }, s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? /*#__PURE__*/React.createElement(PandoraDualThunder, {
       image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: s.id,
@@ -73638,7 +73840,7 @@ const createAnimationStyle = () => {
     /* 味方の攻撃を「敵の位置」へ向けるための変数(24-battle-fx.jsx の attackAimVars が枠ごとに上書きする)。
        ここは測れなかったとき・図鑑などの既定値で、真上へ少し(今までの見え方に近い)。 */
     :root {
-      --atk-dx: 0px; --atk-dy: -120px; --atk-len: 120px; --atk-rot: 0deg;
+      --atk-dx: 0px; --atk-dy: -120px; --atk-len: 120px; --atk-rot: 0deg; --atk-side: 0;
       --pd-l-x: -56px; --pd-r-x: 56px; --pd-y: -60px;
       --pd-l-len: 97px; --pd-l-rot: 35.4deg; --pd-r-len: 97px; --pd-r-rot: -35.4deg;
     }
@@ -73899,21 +74101,23 @@ const createAnimationStyle = () => {
       55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(34,211,238,.92)) drop-shadow(0 10px 20px rgba(37,99,235,.62)); }
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(14,165,233,.82)); }
     }
+    /* 左右の滑りは --atk-side(敵が右なら1・左なら-1)ぶん敵の側へ寄せる。
+       端の枠の子が外側へ滑ると画面の外へ半分出て、消えたように見えていた(2026-09-24 ユーザー指摘) */
     @keyframes waterBurstAttack {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(103,232,249,.5)); }
       10% { transform:translate3d(0,8px,0) scale(.95,.88) rotate(-2deg); filter:drop-shadow(0 0 15px rgba(34,211,238,.9)); }
-      25% { transform:translate3d(-44px,-2px,0) scale(1.07) rotate(-7deg); filter:drop-shadow(24px 5px 0 rgba(125,211,252,.42)) drop-shadow(48px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 22px rgba(103,232,249,.98)); }
-      48% { transform:translate3d(46px,-8px,0) scale(1.10) rotate(7deg); filter:drop-shadow(-28px 4px 0 rgba(125,211,252,.42)) drop-shadow(-56px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 27px rgba(255,255,255,.98)); }
-      69% { transform:translate3d(-32px,-10px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(24px 4px 0 rgba(103,232,249,.34)) drop-shadow(48px 7px 0 rgba(37,99,235,.15)) drop-shadow(0 0 23px rgba(34,211,238,.94)); }
-      84% { transform:translate3d(20px,-4px,0) scale(1.04) rotate(3deg); filter:drop-shadow(-18px 3px 0 rgba(125,211,252,.28)) drop-shadow(0 0 17px rgba(103,232,249,.82)); }
+      25% { transform:translate3d(calc(-44px + var(--atk-side) * 30px),-2px,0) scale(1.07) rotate(-7deg); filter:drop-shadow(24px 5px 0 rgba(125,211,252,.42)) drop-shadow(48px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 22px rgba(103,232,249,.98)); }
+      48% { transform:translate3d(calc(46px + var(--atk-side) * 30px),-8px,0) scale(1.10) rotate(7deg); filter:drop-shadow(-28px 4px 0 rgba(125,211,252,.42)) drop-shadow(-56px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 27px rgba(255,255,255,.98)); }
+      69% { transform:translate3d(calc(-32px + var(--atk-side) * 30px),-10px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(24px 4px 0 rgba(103,232,249,.34)) drop-shadow(48px 7px 0 rgba(37,99,235,.15)) drop-shadow(0 0 23px rgba(34,211,238,.94)); }
+      84% { transform:translate3d(calc(20px + var(--atk-side) * 30px),-4px,0) scale(1.04) rotate(3deg); filter:drop-shadow(-18px 3px 0 rgba(125,211,252,.28)) drop-shadow(0 0 17px rgba(103,232,249,.82)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
     @keyframes waterBurstLunge {
       0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(34,211,238,.95)); }
-      18% { transform:translate3d(-52px,-4px,0) scale(1.11) rotate(-9deg); filter:drop-shadow(28px 5px 0 rgba(125,211,252,.5)) drop-shadow(58px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 28px rgba(255,255,255,.98)); }
-      43% { transform:translate3d(52px,-13px,0) scale(1.16) rotate(9deg); filter:drop-shadow(-32px 4px 0 rgba(125,211,252,.5)) drop-shadow(-64px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 34px rgba(255,255,255,1)); }
-      67% { transform:translate3d(-38px,-12px,0) scale(1.11) rotate(-6deg); filter:drop-shadow(28px 4px 0 rgba(103,232,249,.42)) drop-shadow(0 0 29px rgba(34,211,238,.98)); }
-      84% { transform:translate3d(24px,-5px,0) scale(1.06) rotate(4deg); filter:drop-shadow(-20px 3px 0 rgba(125,211,252,.34)) drop-shadow(0 0 21px rgba(103,232,249,.9)); }
+      18% { transform:translate3d(calc(-52px + var(--atk-side) * 30px),-4px,0) scale(1.11) rotate(-9deg); filter:drop-shadow(28px 5px 0 rgba(125,211,252,.5)) drop-shadow(58px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 28px rgba(255,255,255,.98)); }
+      43% { transform:translate3d(calc(52px + var(--atk-side) * 30px),-13px,0) scale(1.16) rotate(9deg); filter:drop-shadow(-32px 4px 0 rgba(125,211,252,.5)) drop-shadow(-64px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 34px rgba(255,255,255,1)); }
+      67% { transform:translate3d(calc(-38px + var(--atk-side) * 30px),-12px,0) scale(1.11) rotate(-6deg); filter:drop-shadow(28px 4px 0 rgba(103,232,249,.42)) drop-shadow(0 0 29px rgba(34,211,238,.98)); }
+      84% { transform:translate3d(calc(24px + var(--atk-side) * 30px),-5px,0) scale(1.06) rotate(4deg); filter:drop-shadow(-20px 3px 0 rgba(125,211,252,.34)) drop-shadow(0 0 21px rgba(103,232,249,.9)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
     }
     .water-burst-motion__wake { position:absolute; inset:0; z-index:2; overflow:visible; }
@@ -74037,12 +74241,13 @@ const createAnimationStyle = () => {
       55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(236,72,153,.92)) drop-shadow(0 10px 20px rgba(168,85,247,.6)); }
       100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(217,70,239,.82)); }
     }
-    /* 歌う本体。しゃがんで跳び、くるっと一回転(左右反転)してから敵のほうへ身を乗り出し、
+    /* 歌う本体。しゃがんで跳ね、体をひねってから敵のほうへ身を乗り出し、
+       (左右反転で回すと幅が0を通って一瞬消えて見えるので使わない。2026-09-24 ユーザー指摘)
        敵の向きへ体を傾けて拍を取りながら歌い、元位置へ戻る */
     @keyframes miaSongSing {
       0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(244,114,182,.5)); }
       9% { transform:translate3d(0,6px,0) scale(1.1,.86) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.8)); }
-      20% { transform:translate3d(calc(var(--atk-dx) * .05),calc(var(--atk-dy) * .05 - 16px),0) scale(-1.08,1.08) rotate(-6deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
+      20% { transform:translate3d(calc(var(--atk-dx) * .05),calc(var(--atk-dy) * .05 - 18px),0) scale(1.1) rotate(-14deg); filter:drop-shadow(0 0 20px rgba(255,255,255,.95)); }
       32% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 6px),0) scale(1.12) rotate(calc(var(--atk-rot) * .35)); filter:drop-shadow(0 0 22px rgba(236,72,153,.95)); }
       46% { transform:translate3d(calc(var(--atk-dx) * .12),calc(var(--atk-dy) * .12 - 13px),0) scale(1.17) rotate(calc(var(--atk-rot) * .35 + 5deg)); filter:drop-shadow(0 0 26px rgba(255,255,255,.98)); }
       60% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 4px),0) scale(1.1) rotate(calc(var(--atk-rot) * .35 - 5deg)); filter:drop-shadow(0 0 22px rgba(192,132,252,.95)); }
@@ -74050,10 +74255,10 @@ const createAnimationStyle = () => {
       90% { transform:translate3d(0,-4px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
-    /* 固有技のタメ明け。沈んだ位置から高く跳んで回り、通常より大きく前へ出て歌う */
+    /* 固有技のタメ明け。沈んだ位置から高く跳んでひねり、通常より大きく前へ出て歌う */
     @keyframes miaSongSingLunge {
       0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.95)); }
-      18% { transform:translate3d(calc(var(--atk-dx) * .07),calc(var(--atk-dy) * .07 - 24px),0) scale(-1.16,1.16) rotate(-8deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
+      18% { transform:translate3d(calc(var(--atk-dx) * .07),calc(var(--atk-dy) * .07 - 26px),0) scale(1.18) rotate(-16deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
       30% { transform:translate3d(calc(var(--atk-dx) * .14),calc(var(--atk-dy) * .14 - 8px),0) scale(1.18) rotate(calc(var(--atk-rot) * .4)); filter:drop-shadow(0 0 28px rgba(236,72,153,.98)); }
       46% { transform:translate3d(calc(var(--atk-dx) * .16),calc(var(--atk-dy) * .16 - 18px),0) scale(1.24) rotate(calc(var(--atk-rot) * .4 + 6deg)); filter:drop-shadow(0 0 34px rgba(255,255,255,1)); }
       62% { transform:translate3d(calc(var(--atk-dx) * .14),calc(var(--atk-dy) * .14 - 6px),0) scale(1.16) rotate(calc(var(--atk-rot) * .4 - 6deg)); filter:drop-shadow(0 0 28px rgba(192,132,252,.98)); }
@@ -74776,6 +74981,109 @@ const createAnimationStyle = () => {
     /* 敵の絵の右上の技の札(3連撃！など)。色と光(box-shadow)は技の種類のまま残し、金の縁は outline で重ねる */
     [data-tactics-look] [data-enemy-notice] { outline: 1.5px solid rgba(243,210,122,.9); outline-offset: 1px;
       background-image: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 50%) !important; }
+    /* 敵の攻撃・ためるは絵だけを動かす(丸枠とルーンの輪はその場に残す)。> span は敵の絵を包む要素 */
+    [data-tactics-look] [data-enemy-ring][data-enemy-attack="fly"] > span { display: block; position: relative; z-index: 9999; animation: enemyAttackFly 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-attack="charge"] > span { display: block; position: relative; animation: enemyChargeShake 1100ms ease-in-out forwards; }
+    /* ==== 敵ごとの動き(2026-09-24 ユーザー指示「待機時間も動いてる感じに」「実際に動いてるように」「まずはカワズモー」)。
+       絵は1枚のまま。支点は足元(transform-origin 50% 92%)にして、伸び縮み・傾き・重心移動で「生きている」ように見せる。
+       待機は絵(img)、攻撃・ためる・やられは絵を包む要素(span)へ掛ける。足元の影も同じ拍子で伸び縮みさせる ==== */
+    /* カワズモー(力士のカエル): 待機は左右に重心を移しながらお腹で呼吸 / 攻撃は のけぞって溜め→踏み込んで張り手→戻る /
+       ためるは 片足を上げて四股を踏む / やられは のけぞって震える */
+    /* 2026-09-24 ユーザー指摘「思ってたより地味。もっと頑張って動き作れない？」で動きを大きく作り直した。
+       待機は6秒で1巡: 大きく揺れて呼吸(0〜50%) → 片足を上げて四股・土ぼこり(52〜76%) → くるっと横を向いて戻る(80〜98%) */
+    @keyframes kzIdle {
+      0%, 100% { transform: translateX(0) rotate(0) scale(1, 1); }
+      8% { transform: translateX(-8px) rotate(-6deg) scale(1.07, .94); }
+      16% { transform: translateX(0) rotate(0) scale(.96, 1.05); }
+      24% { transform: translateX(8px) rotate(6deg) scale(1.07, .94); }
+      32% { transform: translateX(0) rotate(0) scale(.96, 1.05); }
+      40% { transform: translateX(-8px) rotate(-6deg) scale(1.07, .94); }
+      48% { transform: translateX(0) rotate(0) scale(1, 1); }
+      54% { transform: translate(-6px, -4px) rotate(-12deg) scale(.95, 1.07); }
+      60% { transform: translate(-8px, -16px) rotate(-17deg) scale(.94, 1.09); }
+      63% { transform: translate(-7px, -15px) rotate(-16deg) scale(.94, 1.09); }
+      66% { transform: translate(0, 4px) rotate(0) scale(1.24, .8); }
+      69% { transform: translate(0, -3px) rotate(0) scale(.95, 1.07); }
+      73% { transform: translate(0, 0) rotate(0) scale(1.04, .97); }
+      78% { transform: scale(1, 1); }
+      82% { transform: scale(-1, 1) rotate(4deg); }
+      92% { transform: scale(-1, 1) rotate(-3deg); }
+      97% { transform: scale(1, 1); }
+    }
+    @keyframes kzShadow {
+      0%, 16%, 32%, 48%, 78%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
+      8%, 40% { transform: translateX(calc(-50% - 8px)) scaleX(1.12); }
+      24% { transform: translateX(calc(-50% + 8px)) scaleX(1.12); }
+      60%, 63% { transform: translateX(calc(-50% - 6px)) scaleX(.8); opacity: .7; }
+      66% { transform: translateX(-50%) scaleX(1.35); opacity: 1; }
+    }
+    /* 四股の土ぼこり(影の左右から吹き出して消える)。待機の66%と、ためるの踏み込みに合わせる */
+    @keyframes kzDustIdle {
+      0%, 65%, 100% { opacity: 0; transform: translateX(0) scale(.3); }
+      67% { opacity: .95; transform: translateX(0) scale(.6); }
+      76% { opacity: 0; transform: translateX(var(--kz-dx)) scale(1.4); }
+    }
+    @keyframes kzDust {
+      0%, 55% { opacity: 0; transform: translateX(0) scale(.3); }
+      60% { opacity: .95; transform: translateX(0) scale(.7); }
+      90%, 100% { opacity: 0; transform: translateX(var(--kz-dx)) scale(1.6); }
+    }
+    @keyframes kzSlap {
+      0% { transform: none; }
+      22% { transform: translateY(-6px) rotate(-12deg) scale(1.14, .84); }
+      40% { transform: translateY(28px) rotate(8deg) scale(.86, 1.22); }
+      52% { transform: translateY(88px) rotate(12deg) scale(1.32, .8); filter: brightness(1.3) drop-shadow(0 0 26px rgba(239,68,68,1)); }
+      64% { transform: translateY(80px) rotate(8deg) scale(1.2, .88); filter: drop-shadow(0 0 22px rgba(220,38,38,.9)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzImpact {
+      0%, 48% { opacity: 0; transform: translateX(-50%) scale(.2); }
+      56% { opacity: 1; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0; transform: translateX(-50%) scale(1.8); }
+    }
+    @keyframes kzStomp {
+      0% { transform: none; }
+      14% { transform: translateY(4px) scale(1.12, .88); }
+      32% { transform: translate(-8px, -18px) rotate(-20deg) scale(.93, 1.1); }
+      38% { transform: translate(-6px, -18px) rotate(-19deg) scale(.93, 1.1); }
+      44% { transform: translate(-9px, -19px) rotate(-21deg) scale(.93, 1.1); }
+      50% { transform: translate(-7px, -18px) rotate(-20deg) scale(.93, 1.1); }
+      58% { transform: translateY(5px) rotate(0) scale(1.28, .76); filter: brightness(1.25) drop-shadow(0 0 22px rgba(251,191,36,1)); }
+      64% { transform: translate(-4px, 3px) scale(1.2, .82); }
+      70% { transform: translate(4px, 3px) scale(1.2, .82); }
+      78% { transform: translate(0, -4px) scale(.95, 1.07); filter: drop-shadow(0 0 12px rgba(251,191,36,.6)); }
+      100% { transform: none; filter: none; }
+    }
+    @keyframes kzHurt {
+      0% { transform: none; }
+      16% { transform: translate(12px, -8px) rotate(16deg) scale(.88, 1.1); filter: brightness(2.2) saturate(.4); }
+      36% { transform: translate(-8px, 0) rotate(-8deg) scale(1.08, .94); filter: brightness(1.2); }
+      54% { transform: translate(5px, 0) rotate(4deg); filter: none; }
+      72% { transform: translate(-3px, 0) rotate(-2deg); }
+      100% { transform: none; }
+    }
+    [data-tactics-look] [data-enemy-motion] > span { display: block; position: relative; transform-origin: 50% 92%; }
+    [data-tactics-look] [data-enemy-motion] > span > img { transform-origin: 50% 92%; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > span > img { animation: kzIdle 6s ease-in-out infinite; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow] { animation: kzShadow 6s ease-in-out infinite; }
+    /* 土ぼこり: 影の左右に1つずつ */
+    [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::before, [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::after {
+      content: ''; position: absolute; bottom: 10%; width: 46%; height: 150%; border-radius: 50%; opacity: 0; pointer-events: none;
+      background: radial-gradient(closest-side, rgba(214,196,160,.85), rgba(160,140,110,.45) 55%, transparent); }
+    [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::before { left: -18%; --kz-dx: -26px; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"] > [data-enemy-shadow]::after { right: -18%; --kz-dx: 26px; }
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow]::before,
+    [data-tactics-look="rich"] [data-enemy-motion="kawazumo"]:not([data-enemy-attack]):not([data-enemy-hurt]) > [data-enemy-shadow]::after { animation: kzDustIdle 6s ease-out infinite; }
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::before,
+    [data-tactics-look] [data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > [data-enemy-shadow]::after { animation: kzDust 1100ms ease-out forwards; }
+    /* 張り手の衝撃: 丸枠の下に赤い輪が広がる */
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"]::after { content: ''; position: absolute; left: 50%; bottom: -14%; width: 70%; height: 30%; border-radius: 50%;
+      pointer-events: none; opacity: 0; z-index: 2;
+      background: radial-gradient(closest-side, rgba(255,255,255,.95), rgba(248,113,113,.8) 35%, rgba(239,68,68,.35) 65%, transparent); }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"]::after { animation: kzImpact 450ms ease-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="fly"] > span { z-index: 9999; animation: kzSlap 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-attack="charge"] > span { animation: kzStomp 1100ms ease-in-out forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-motion="kawazumo"][data-enemy-hurt] > span { animation: kzHurt 520ms ease-out forwards; }
     /* 敵の丸枠: 距離の色のまま、外に回るルーンの輪と金の細い輪を足す */
     [data-tactics-look] [data-enemy-ring="0"] { --mh-rc: 239,68,68; } [data-tactics-look] [data-enemy-ring="1"] { --mh-rc: 245,158,11; }
     [data-tactics-look] [data-enemy-ring="2"] { --mh-rc: 16,185,129; } [data-tactics-look] [data-enemy-ring="3"] { --mh-rc: 59,130,246; }
@@ -74818,7 +75126,9 @@ const createAnimationStyle = () => {
     @media (prefers-reduced-motion: reduce) {
       [data-tactics-look] [data-slot-index], [data-tactics-look] [data-slot-index]::after, [data-tactics-look] [data-slot-circle],
       [data-tactics-look] [data-card-frame], [data-tactics-look] [data-card-shine]::before, [data-tactics-look] [data-card-gem],
-      [data-tactics-look] [data-enemy-hpbar]::after, [data-tactics-look] [data-enemy-ring]::before { animation: none !important; }
+      [data-tactics-look] [data-enemy-hpbar]::after, [data-tactics-look] [data-enemy-ring]::before,
+      [data-tactics-look] [data-enemy-motion] > span > img, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow],
+      [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow]::before, [data-tactics-look] [data-enemy-motion] > [data-enemy-shadow]::after { animation: none !important; }
     }
     /* タクティクスの枠の中・盤面の上に出す吹き出し。下から少し浮かせて出す */
     @keyframes tacticsPopupRise {
