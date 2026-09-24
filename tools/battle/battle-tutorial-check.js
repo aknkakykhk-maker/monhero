@@ -280,8 +280,9 @@ check('つぎへとスキップ(やめる)がある',
   has("{last?'おわる':'つぎへ'}") && has('<button onClick={()=>endBattleTutorial(false)}') && has('やめる</button>'));
 // 押してほしいものだけを押せるようにする。枠全体を光らせると
 // 「どれを押すのか」が分からず、他が押せると台本から外れてしまう
+// (2026-09-24 配置画面を作り直し、押せない枠の薄さは disabled: ではなく枠ごとの条件で付けるようにした)
 check('置く距離は押せる枠だけ光らせる',
-  has("disabled:opacity-20${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''}")
+  has("active:scale-90${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''}")
     && !has("max-w-xs${battleTutorialSpotClass('slots')}"));
 check('アシストカードは押せるカードだけ光らせる',
   has("disabled:opacity-20${scenarioPicksTeaching(t.id)?battleTutorialSpotClass('teachings'):''}")

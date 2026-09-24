@@ -655,7 +655,8 @@ check('実戦の行動表も難易度つきで引く',
     && screen.includes("animation:'tacticsHitRing 520ms ease-out forwards'"));
   // ★数字(z-[70])より下へ重ねる。上に置くと数字が読めなくなる
   check('光は数字より下へ重ねる', screen.includes('className="absolute inset-0 z-[58] pointer-events-none overflow-visible"'));
-  check('枠を揺らす', screen.includes("const slotHitShake=slotHitKind&&!ecoBattleView?{animation:'tacticsHitShake 420ms ease-in-out'}:null;"));
+  // 2026-09-24: 設定の「画面の揺れ：揺らさない」(shakeOff)のときも揺らさない。光と輪は残る
+  check('枠を揺らす', screen.includes("const slotHitShake=slotHitKind&&!ecoBattleView&&!shakeOff?{animation:'tacticsHitShake 420ms ease-in-out'}:null;"));
   // ★省エネ表示では揺れも2枚目の輪も出さない(光と輪1枚でも誰かは分かる)
   check('省エネ表示では軽くする', screen.includes('{!ecoBattleView&&<div className={`absolute rounded-full border-2 ${hitFx.ring}`}'));
   // ★書いた動きがすべて定義されているか。1つでも無いと、そのエフェクトだけ静止する
