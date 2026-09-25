@@ -196,6 +196,15 @@ const groupChangelogEntries = (entries) => {
   });
   return rows;
 };
+// 更新履歴の画面は、開いているあいだ描き直すたびに全件をまとめ直していた。
+// CHANGELOG_ENTRIES は読み込み時に決まって変わらないので、タブごとに1回だけまとめて使い回す
+// (読むだけ。まとめた行を後から書き換えないこと)
+const _changelogRowsByTab = new Map();
+const changelogRowsOfTab = (tab) => {
+  const key = tab === 'issue' ? 'issue' : 'update';
+  if (!_changelogRowsByTab.has(key)) _changelogRowsByTab.set(key, groupChangelogEntries(changelogEntriesOfTab(key)));
+  return _changelogRowsByTab.get(key);
+};
 // 既読の判定に使う「いま存在するすべてのID」。
 // タブの振り分けを変えると、既読にしたIDが別のタブへ移る。タブごとのID一覧で
 // ふるいにかけると移った先で未読へ戻ってしまうため、こちらで残す・捨てるを決める

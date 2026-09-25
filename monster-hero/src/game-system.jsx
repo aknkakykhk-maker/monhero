@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3685487726a738d3
+// generated-sha256: 96c53a31b4286d28
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -145,7 +145,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-25 23:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 01:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7169,6 +7169,15 @@ const groupChangelogEntries = (entries) => {
     row.entries.push(entry);
   });
   return rows;
+};
+// 更新履歴の画面は、開いているあいだ描き直すたびに全件をまとめ直していた。
+// CHANGELOG_ENTRIES は読み込み時に決まって変わらないので、タブごとに1回だけまとめて使い回す
+// (読むだけ。まとめた行を後から書き換えないこと)
+const _changelogRowsByTab = new Map();
+const changelogRowsOfTab = (tab) => {
+  const key = tab === 'issue' ? 'issue' : 'update';
+  if (!_changelogRowsByTab.has(key)) _changelogRowsByTab.set(key, groupChangelogEntries(changelogEntriesOfTab(key)));
+  return _changelogRowsByTab.get(key);
 };
 // 既読の判定に使う「いま存在するすべてのID」。
 // タブの振り分けを変えると、既読にしたIDが別のタブへ移る。タブごとのID一覧で
@@ -24190,6 +24199,28 @@ function BattleScreen({
     });
     return bySlot;
   };
+  // 上の2つ(ガードのまとめ・先に選んだカードの補正)は、1回の描画のなかでは入力が同じで
+  // 返り値も読むだけなので、枠ごと・発ごとに作り直さず最初の1回を使い回す
+  let guardPlanOnceCache;
+  const guardPlanOnce = () => (guardPlanOnceCache === undefined ? (guardPlanOnceCache = plannedGuardBySlot()) : guardPlanOnceCache);
+  const previewBoostsOnceCache = new Map();
+  const previewBoostsOnce = (excludeIdx) => {
+    if (!previewBoostsOnceCache.has(excludeIdx)) previewBoostsOnceCache.set(excludeIdx, previewLocalBoosts(excludeIdx));
+    return previewBoostsOnceCache.get(excludeIdx);
+  };
+  // 手札1枚ごとに「ほかに選んだカードのガッツ」を数えるので、選んだカードのガッツは描画ごとに1回だけ求める
+  let selectedGutsListCache;
+  const selectedGutsListOnce = () => (selectedGutsListCache || (selectedGutsListCache = selectedCards.map(idx => [idx, selectedCardGuts(idx)])));
+  // 置ける枠かどうか(タクティクス)も、合計DMG欄と枠ごとの表示で同じ問いを2回していたので1回にする
+  const canAssignOnceCache = new Map();
+  const tacticsCanAssignOnce = (card, cardIndex, slotIdx) => {
+    const key = `${cardIndex}:${slotIdx}`;
+    const hit = canAssignOnceCache.get(key);
+    if (hit && hit.card === card) return hit.answer;
+    const answer = tacticsCanAssign(card, cardIndex, slotIdx);
+    canAssignOnceCache.set(key, { card, answer });
+    return answer;
+  };
   // ★連撃は「1発ずつ」出す(2026-09-22 ユーザー指示「連撃ダメージ予測が合算分だから
   //   分かりにくい ガード入れても合算計算だし うまくバラバラでわかるようにしたい」)。
   //   受けたあとの表示と同じ splitTacticsHitAmounts を通すので、予告と実際で割り方がそろう。
@@ -24207,7 +24238,7 @@ function BattleScreen({
     // ★タクティクスは枠ごと。構えていない子も、全体ガードなら丈夫さぶんが付く。
     //   受け止めるヒット数は、その子へ何枚構えたかで決まる(2枚以上なら連撃の全部)
     if (Array.isArray(tacticsUnits) && slotIdx !== null) {
-      const bySlot = plannedGuardBySlot();
+      const bySlot = guardPlanOnce();
       const own = bySlot[slotIdx] || { cards: 0 };
       guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);
       guardHits = tacticsGuardHits(own.cards, hits);
@@ -24980,7 +25011,7 @@ function BattleScreen({
             // ニコラオ・ゴーレム・モッチー/ミタラシ・ききは使ったターンからすぐ効くため、
             // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
             // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
-            const boosts=previewLocalBoosts(pendingIdx);
+            const boosts=previewBoostsOnce(pendingIdx);
             let committedTotal=0; let guardFlat=0; let guardMult=0; const guardBySlot={};
             const committedCounter=makeCardHalveCounter();
             selectedCards.forEach(idx=>{
@@ -25032,7 +25063,7 @@ function BattleScreen({
                 // ★置ける枠かどうかは、盤面のタップ判定とまったく同じ答えを使う。
                 //   自前で枚数を数えていたころは、ガードを1枚置いた子が
                 //   「もう置けない子」に見えて、合計DMGの予測だけ別の子で出ていた
-                const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;
+                const tacticsAnswer=tacticsCanAssign?tacticsCanAssignOnce(pendingCardObj,pendingIdx,i):null;
                 if(tacticsAnswer===null||tacticsAnswer===undefined){
                   const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
                   const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
@@ -25152,7 +25183,7 @@ function BattleScreen({
               const tacticsUnit=Array.isArray(tacticsUnits)?(tacticsUnits[i]||null):null;
               // この枠のガードの状態。札の名前(全体ハイガード)と🛡のまとめが同じ答えを使えるよう、
               // ガードのまとめは枠ごとに1回だけ作ってここから配る
-              const guardPlanBySlot=Array.isArray(tacticsUnits)?plannedGuardBySlot():null;
+              const guardPlanBySlot=Array.isArray(tacticsUnits)?guardPlanOnce():null;
               const slotGuardCards=guardPlanBySlot?(guardPlanBySlot[i]?.cards||0):0;
               const slotRushGuard=slotGuardCards>=TACTICS_RUSH_GUARD_CARDS;
               const slotSpreadGuard=!!guardPlanBySlot&&isTacticsSpreadGuard(guardPlanBySlot);
@@ -25184,7 +25215,7 @@ function BattleScreen({
               if(s && pendingCardObj){
                 // 新モードは「その子が払えるか」で決まる。倒れた子へは回復カードだけ置ける。
                 // ★null のときだけ今までどおりの判定を使う(既存モードはここを通る)
-                const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;
+                const tacticsAnswer=tacticsCanAssign?tacticsCanAssignOnce(pendingCardObj,pendingIdx,i):null;
                 if(tacticsAnswer===null||tacticsAnswer===undefined){
                   canAssign = assignedCount<maxUses;
                   if(pendingCardObj.type==='unique') canAssign = canAssign && (pendingCardObj.ownerSlotIdx===i);
@@ -25204,7 +25235,7 @@ function BattleScreen({
               //   using the GLOBAL attack order (2nd+ attack = half damage), matching processTurn
               // ニコラオ・ゴーレム・モッチー/ミタラシ・ききの同ターン即時効果を、
               // このスロットの予測にも反映する(合計DMG欄と同じpreviewLocalBoosts)。
-              const slotBoosts=previewLocalBoosts(pendingIdx);
+              const slotBoosts=previewBoostsOnce(pendingIdx);
               let previewDmg=0; let isPendingPreview=false; let isPendingHalved=false; let previewSoulPct=0;
               // ★ガードも枠ごとに「この子へ置いたらいくら受け止められるか」を出す
               //   (2026-09-22 ユーザー指摘「ダメージは個別に見えるのにガード値は個別に
@@ -25642,7 +25673,7 @@ function BattleScreen({
               const assignedSlot=cardAssignments[i];
               const curGuts=assignedSlot!=null?getCardGuts(c,assignedSlot):getCardGuts(c,null);
               const requiredGuts=assignedSlot!=null?curGuts:pendingCardGuts(c);
-              const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+(idx===i?0:selectedCardGuts(idx)),0);
+              const remainingGuts=guts-selectedGutsListOnce().reduce((acc,[idx,g])=>acc+(idx===i?0:g),0);
               // 新モードは合計のガッツでは決まらない。「その子が払えるか」をアプリ側へ聞く。
               // null が返るモード(いままでの5つ)では、今までどおり合計で見る
               const cardBlock=tacticsCardBlock?tacticsCardBlock(c,i):null;
@@ -27134,7 +27165,8 @@ function MonsterHeroGame() {
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
-  const debugIconItems = breederIconOptions({includeUnowned:true});
+  // 中身は固定の一覧だけから決まるので、最初の1回だけ作る
+  const debugIconItems = useMemo(() => breederIconOptions({includeUnowned:true}), []);
   const [iconAdjustId, setIconAdjustId] = useState(debugIconItems[0]?.id||'');
   const [iconAdjustQuery, setIconAdjustQuery] = useState('');
   const [iconAdjustments, setIconAdjustments] = useState(()=>Object.fromEntries(debugIconItems.map(item=>[item.id,{...(MARKET_PROFILE_ICON_STYLES[item.id]||DEFAULT_PROFILE_ICON_STYLE)}])));
@@ -28956,9 +28988,13 @@ function MonsterHeroGame() {
   // タブ別の既読ID集合を比較するため、再ビルドやBUILD_DATE変更で過去項目は復活しない。
   // 既読はタブをまたいで見る。振り分けを変えたとき、前に更新情報で読んだ不具合修正が
   // 不具合情報タブで未読(NEW)へ戻るのを防ぐ
-  const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-  const changelogUnreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
-  const changelogUnread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogUnreadIds[type].length>0]));
+  // 約900件を見比べるので、既読が変わったときだけ数え直す(描画のたびに作り直さない)
+  const { changelogUnreadIds, changelogUnread } = useMemo(() => {
+    const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
+    const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
+    const unread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, unreadIds[type].length>0]));
+    return { changelogUnreadIds: unreadIds, changelogUnread: unread };
+  }, [changelogSeen]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue;
   const markChangelogTabSeen = (type) => {
     const ids = CHANGELOG_IDS_BY_TYPE[type];
@@ -31285,7 +31321,8 @@ function MonsterHeroGame() {
     const onVisible = () => { if (document.visibilityState === 'visible') checkVersion(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', onVisible);
-    const interval = setInterval(checkVersion, 30 * 1000);
+    // 裏に回っているあいだは問い合わせない(戻った瞬間に onVisible がすぐ確かめる)
+    const interval = setInterval(() => { if (document.visibilityState === 'hidden') return; checkVersion(); }, 30 * 1000);
     return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
   }, []);
 
@@ -40004,12 +40041,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //  過去のやつが一瞬で見えなくなる」)。
             // 1行ずつ積み上げていたころは682行あり、少しさかのぼるだけで指が疲れていた。
             // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
-            const rows = groupChangelogEntries(changelogEntriesOfTab(changelogTab));
-            const unreadHere = changelogUnreadIds[changelogTab];
+            const rows = changelogRowsOfTab(changelogTab);
+            const unreadHere = new Set(changelogUnreadIds[changelogTab]);
             let shownDay = null;
             return rows.map(row=>{
               const open=changelogOpenId===row.key;
-              const unreadCount=row.entries.filter(entry=>unreadHere.includes(entry.id)).length;
+              const unreadCount=row.entries.filter(entry=>unreadHere.has(entry.id)).length;
               // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
               // 分かるようにしておく(2026-09-05・ユーザー指摘「直近の更新情報が不具合修正との
               // 区別がついてない」)。1つのまとまりに種類が混ざることがあるので、
@@ -40035,7 +40072,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 開いたら、その話題のその日の項目を時刻・種別・本文までぜんぶ出す */}
                   {open&&<div className="mh-changelog-detail" data-changelog-detail>
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
-                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.includes(c.id)&&<em>NEW</em>}</time>
+                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
                       <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
                       <b>{c.title}</b>
                       {/* 告知画像があれば本文の上に出す
