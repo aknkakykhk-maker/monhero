@@ -743,8 +743,10 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
       && has('notice:enemyActionNoticeLabel(selected),category:selected.category'));
   check('ためるの短い呼び名は「ためる」', has("{id:'charge',type:'CHARGE',category:'ためる',noticeLabel:'必殺技準備'"));
   check('置けるかの判定は新モードだけ差し替える',
-    hasScreen('const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;')
-      && hasScreen('if(tacticsAnswer===null||tacticsAnswer===undefined){'));
+    hasScreen('const tacticsAnswer=tacticsCanAssign?tacticsCanAssignOnce(pendingCardObj,pendingIdx,i):null;')
+      && hasScreen('if(tacticsAnswer===null||tacticsAnswer===undefined){')
+      // 同じ描画のなかで同じ問いを2回しないよう1回にまとめてある(2026-09-26)。中身は本物の判定を呼ぶだけ
+      && hasScreen('const answer = tacticsCanAssign(card, cardIndex, slotIdx);'));
 
   // --- ⑳ 手札の灰色も1体ずつのガッツで決める(2026-09-19 ユーザー指摘) ---
   // ★合計で見ていたころは、⚡242(125と117)持っていれば ⚡128 のカードが灰色にならず、
@@ -1286,7 +1288,7 @@ check('ガッツ回復は新モードだと合計を足さずに配る',
   // ★合計DMGの予測も、盤面のタップ判定とまったく同じ答えを使う。
   //   自前で枚数を数えていると、ガードを置いた子が「もう置けない子」に見えてずれる
   check('合計DMGの予測も同じ置ける判定を通す',
-    battleScreenSpread.includes('const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;\n                if(tacticsAnswer===null||tacticsAnswer===undefined){'));
+    battleScreenSpread.includes('const tacticsAnswer=tacticsCanAssign?tacticsCanAssignOnce(pendingCardObj,pendingIdx,i):null;\n                if(tacticsAnswer===null||tacticsAnswer===undefined){'));
 }
 
 // --- ㉝ みゃるの薬は「飲んだ子だけ」(2026-09-22 ユーザー指摘) ---
@@ -1588,9 +1590,13 @@ check('固有技の効果も枠の印に出る',
     battleScreen.includes("flex ${tacticsDebugLayout?'flex-col':'flex-wrap'} items-center justify-center"));
   check('選択済みカードの文字を暗くしすぎない',
     battleScreen.includes("opacity-90 saturate-[0.95]"));
-  check('ドラッグ中も手札カードを残して追従ゴーストを別表示する',
-    battleScreen.includes('data-tactics-drag-card-ghost')
-      && battleScreen.includes('isDragging&&ReactDOM.createPortal')
+  // ★2026-09-26 ユーザー指摘「上に持ってくと下からまたカードが出てくる」「ドラッグしてるカードの表示が古いやつのまま」。
+  //   古い見た目の写し(ghost)と本物のカードを両方動かしていて、本物は手札の欄(backdrop-filter)の中で
+  //   ずれた位置に見えていた。本物のカード1枚だけを body の直下へ出し、手札には穴埋めを残す形にした
+  check('ドラッグ中は本物のカード1枚だけを最上層へ出し、手札には穴埋めを残す',
+    !battleScreen.includes('data-tactics-drag-card-ghost')
+      && battleScreen.includes('isDragging?ReactDOM.createPortal(<div data-drag-card-layer data-tactics-look=')
+      && battleScreen.includes('{handCardButton}</div>,document.body):handCardButton}')
       && battleScreen.includes('data-tactics-drag-card-placeholder')
       && battleScreen.includes("isDragging?{touchAction:'none',position:'fixed'"));
 

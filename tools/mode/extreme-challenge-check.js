@@ -149,7 +149,9 @@ assert(source.includes('左右にスワイプして難易度を選択') && sourc
 assert(source.includes('mh-extreme-enemy-image') && source.includes("extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'"), 'all EXTREME enemies must receive the image-bound dedicated aura');
 assert(source.includes('mh-nightmare-enemy-aura-shell') && source.includes('@keyframes mhNightmareMist') && source.includes('mh-extreme-enemy-aura-shell') && source.includes('@keyframes mhExtremeEnemyMist') && source.includes('@keyframes mhExtremeEnemyFloor'), 'EXTREME and NIGHTMARE auras must remain distinct; EXTREME must combine silhouette glow, rising evil energy, and a foot glow with lightweight CSS-only motion');
 assert(source.includes('h-[366px]') && source.includes('flex items-start gap-2.5'), 'mode cards must share a fixed outer height and aligned carousel');
-assert(/const packedLines = scene \? ASSISTANT_LINE_PACKS\.flatMap/.test(assistants), 'line-pack-only EXTREME assistant dialogue must remain reachable');
+// 場面の定義がある場面では束のセリフを組み立てない形にした(2026-09-26)。束だけで足した場面は今までどおり束から読む
+assert(/const packedLines = \(scene && !sceneDef\) \? ASSISTANT_LINE_PACKS\.flatMap/.test(assistants)
+  && assistants.includes('const def = sceneDef || (packedLines.length ? { lines:packedLines } : null);'), 'line-pack-only EXTREME assistant dialogue must remain reachable');
 assert(source.includes("? 'extremeChallenge'") && source.includes('const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;') && source.includes('key={extremeDifficultyAssistantScene}') && source.includes('scene={extremeDifficultyAssistantScene}') && !source.includes('extremeGuideStep'), 'the centered EXTREME tier card must select its own shared assistant scene regardless of unlock state');
 const sceneLines = (name) => {
   const start = assistants.indexOf(`${name}: [`);
