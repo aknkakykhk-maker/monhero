@@ -18339,7 +18339,7 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-lane]::before{content:"";position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:var(--rhythm-boundary-clip,none)!important}
     [data-rhythm-lane]::after{content:none!important}
     [data-rhythm-lane]:last-child::after{content:""!important;position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:var(--rhythm-right-clip,none)!important}
-    [data-rhythm-sublane-boundary]{display:block;position:absolute;z-index:1;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(216,180,254,.12),rgba(103,232,249,.20) 70%,rgba(236,254,255,.38));clip-path:var(--rhythm-sub-clip,none)}
+    [data-rhythm-sublane-boundary]{display:block;position:absolute;z-index:1;inset:0;pointer-events:none;opacity:.12;background:linear-gradient(180deg,rgba(216,180,254,.12),rgba(103,232,249,.20) 70%,rgba(236,254,255,.38));clip-path:var(--rhythm-sub-clip,none)}
     [data-rhythm-note]{z-index:2}
     /* canvas でノーツを描くとき(2026-09-07)。canvas はノーツと同じ層に置く。
        マスモンの絵だけは DOM の要素のまま canvas の上へ重ね、tick が transform で動かす(絵の染色を触らないため)。 */
@@ -18568,7 +18568,7 @@ const installRhythmGeometryStyles=()=>{
        動く・動かないは「両サイドのマスモン｜動き」で決める。 */
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster]{animation:none!important}
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster]::after{animation:none!important}
-    [data-rhythm-judgment-line]{height:4px!important;background:linear-gradient(90deg,#d8b4fe 0%,#ecfeff 50%,#d8b4fe 100%)!important;border-radius:999px;box-shadow:0 0 14px #67e8f9,0 0 28px #c084fc,0 8px 24px rgba(34,211,238,.34)!important}
+    [data-rhythm-judgment-line]{height:4px!important;background:linear-gradient(90deg,#d8b4fe 0%,#ecfeff 50%,#d8b4fe 100%)!important;border-radius:999px;box-shadow:0 0 14px #f0abfc,0 0 28px #c084fc,0 -9px 0 -1px rgba(240,171,252,.55)!important}
     /* 判定ラインを曲の拍に合わせて静かに脈打たせる(2026-09-05・演出強化)。
        1拍の長さ(--rhythm-beat)はプレイ開始時に一度だけ書くので、毎フレームのJSは増えない。
        動かすのは opacity と scaleY だけなので、レイアウトも塗り直しも起こさない。
@@ -19247,6 +19247,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const CAP=28;             // 3分割画像の両端の幅(角丸7px + 縁取り + 余白)
   const MID=8;              // 3分割画像の中央の幅(横に伸ばす)
   const easeOut=t=>1-(1-t)*(1-t);
+  // 見た目の刷新(2026-09-26・ユーザー指示「見た目も含めてこんぐらいに仕上げたい」)。
+  // 粒の厚み。ノーツ要素・当たり判定の大きさは変えず、canvas に描く粒だけを厚くする
+  // (当たり判定はノーツサイズにも粒の見た目にも左右されない)。
+  const HEAD_THICK=1.55;
+  // 粒の上半分に入れる白い芯(板の表面が光って見えるように)。色分けの色はそのまま残る
+  const HEAD_CORE_STOPS=[['rgba(255,255,255,.92)',0],['rgba(255,255,255,.35)',.45],['rgba(255,255,255,0)',.55]];
   const HEADS={
     TAP:    {radius:5,gradient:['#fde68a','#d946ef'],border:'rgba(255,255,255,.72)',inset:'rgba(255,255,255,.58)',glow:[[12,'rgba(217,70,239,.32)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
     HOLD:   {radius:5,gradient:['#ecfeff','#22d3ee'],border:'rgba(207,250,254,.86)',inset:'rgba(255,255,255,.72)',glow:[[13,'rgba(34,211,238,.42)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
@@ -19347,10 +19353,19 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const {failed,monster,wide,brightness,depthScale,alpha,pop,pressed}=opts;
     const style=headStyle(note,failed,monster);
     const sizeMul=sizeScale*(pop?1+1.1*easeOut(pop):1);
-    const w=geo.head.w*sizeMul,h=HEAD_H*depthScale*sizeMul,cx=geo.head.cx,cy=geo.head.cy,radius=(wide?7:style.radius)*sizeMul;
+    const w=geo.head.w*sizeMul,h=HEAD_H*HEAD_THICK*depthScale*sizeMul,cx=geo.head.cx,cy=geo.head.cy,radius=(wide?7:style.radius)*sizeMul;
     const x=cx-w/2,y=cy-h/2;
     ctx.globalAlpha=alpha;
-    if(style.glow.length&&!failed)draw3Slice(glowSprite(monster?'MONSTER':note.type,style.radius,style.glow),cx,cy,w,h,alpha);
+    if(style.glow.length&&!failed){
+      const glow=glowSprite(monster?'MONSTER':note.type,style.radius,style.glow);
+      if(effect==='MINIMAL'||lightweight)draw3Slice(glow,cx,cy,w,h,alpha);
+      else{
+        // 光は足し算で2回重ねて強くする。焼いてある光の画像を貼るだけなので、ぼかしは作り直さない
+        ctx.globalCompositeOperation='lighter';
+        draw3Slice(glow,cx,cy,w*1.04,h*1.25,alpha);draw3Slice(glow,cx,cy,w*1.04,h*1.25,alpha*.8);
+        ctx.globalCompositeOperation='source-over';
+      }
+    }
     if(monster&&!failed){
       // 外側の光(::after)は 1.15 秒で薄く・濃くを繰り返す(opacity だけ)。内側(::before)は固定
       const pulse=.40+(.82-.40)*(0.5-0.5*Math.cos((frameNow/1150)*Math.PI));
@@ -19363,7 +19378,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.fillStyle=fillGradient(x,y,h,style.gradient);ctx.fill();
     ctx.lineWidth=1;ctx.strokeStyle=style.border;ctx.stroke();
     // 上端の白い筋(inset 0 1px 0)
-    ctx.fillStyle=style.inset;ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),1);
+    // 上半分の白い芯(以前は上端の白い筋1本だった)
+    if(!failed){roundRectPath(ctx,x+1,y+1,Math.max(0,w-2),Math.max(0,h-2),radius);ctx.fillStyle=fillGradient(x,y,h,HEAD_CORE_STOPS);ctx.fill();}
+    else{ctx.fillStyle=style.inset;ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),1);}
     if(wide&&!monster){
       const bar=ctx.createLinearGradient(0,y,0,y+h);bar.addColorStop(0,'rgba(255,255,255,.95)');bar.addColorStop(1,'rgba(255,255,255,.55)');
       ctx.fillStyle=bar;ctx.fillRect(x+1,y+1,3,h-2);ctx.fillRect(x+w-4,y+1,3,h-2);
@@ -19392,7 +19409,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!failed&&effect!=='MINIMAL'&&!lightweight){ctx.lineWidth=5;ctx.strokeStyle='rgba(180,240,255,.16)';ctx.lineJoin='round';ctx.stroke();}
     const g=ctx.createLinearGradient(0,bottom,0,top);
     if(failed){g.addColorStop(0,'rgba(120,130,145,.9)');g.addColorStop(1,'rgba(150,160,175,.7)');}
-    else{g.addColorStop(0,'rgba(6,182,212,.9)');g.addColorStop(1,'rgba(165,243,252,.7)');}
+    else{g.addColorStop(0,'rgba(56,189,248,.62)');g.addColorStop(.6,'rgba(59,130,246,.42)');g.addColorStop(1,'rgba(165,243,252,.55)');}
     ctx.fillStyle=g;ctx.fill();
     if(pressed&&!failed){ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();}
     ctx.globalAlpha=1;
