@@ -451,7 +451,9 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
     const slideCenterOff=fixedSlide.reduce((max,{sample})=>Math.max(max,Math.abs(sample.center-sample.expectedCenter)),0);
     const slideWidthOff=fixedSlide.reduce((max,{sample})=>Math.max(max,Math.abs(sample.width-sample.expectedWidth)),0);
     check('直線SLIDE帯の中心が画面内のどの高さでもprojectionと一致',slideCenterOff<=.006,`最大ズレ ${(slideCenterOff*390).toFixed(2)}px`);
-    check('直線SLIDE帯の幅も画面内のどの高さでもprojectionと一致',slideWidthOff<=.006,`最大ズレ ${(slideWidthOff*390).toFixed(2)}px`);
+    const slideWidthWorst=fixedSlide.reduce((best,item)=>!best||Math.abs(item.sample.width-item.sample.expectedWidth)>Math.abs(best.sample.width-best.sample.expectedWidth)?item:best,null);
+    check('直線SLIDE帯の幅も画面内のどの高さでもprojectionと一致',slideWidthOff<=.006,`最大ズレ ${(slideWidthOff*390).toFixed(2)}px`
+      +(slideWidthWorst&&slideWidthOff>.006?` (${slideWidthWorst.row.id} 速度${slideWidthWorst.row.speed} サイズ${slideWidthWorst.row.size}% y=${slideWidthWorst.sample.yArea} 実測${(slideWidthWorst.sample.width*390).toFixed(1)}px 期待${(slideWidthWorst.sample.expectedWidth*390).toFixed(1)}px)`:''));
     const slideOut=slideSamples.filter(({sample})=>sample.center-sample.width/2<sample.laneLeft-.006||sample.center+sample.width/2>sample.laneRight+.006);
     check('SLIDE帯も全速度・全サイズでレーンの外へ出ない',slideOut.length===0,
       slideOut[0]?`${slideOut[0].row.id} 速度${slideOut[0].row.speed} サイズ${slideOut[0].row.size}% y=${slideOut[0].sample.yArea}`:'');
@@ -466,7 +468,7 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
     const endOff=worst(endRows,row=>Math.abs(row.end.center-row.endExpectedCenter));
     check('ENDバーの中心が終端レーンのprojectionと一致',endOff<=.004,`最大ズレ ${(endOff*390).toFixed(2)}px`);
     const endOut=endRows.filter(row=>row.end.center-row.end.width/2<row.endLaneLeft-.004||row.end.center+row.end.width/2>row.endLaneRight+.004);
-    check('ENDバーもレーンの外へ出ない',endOut.length===0,endOut[0]?`${endOut[0].id} 速度${endOut[0].speed} サイズ${endOut[0].size}%`:'');
+    check('ENDバーもレーンの外へ出ない',endOut.length===0,endOut[0]?`${endOut[0].id} 速度${endOut[0].speed} サイズ${endOut[0].size}% 中心${endOut[0].end.center.toFixed(4)} 幅${endOut[0].end.width.toFixed(4)} レーン${endOut[0].endLaneLeft.toFixed(4)}〜${endOut[0].endLaneRight.toFixed(4)} 進み${endOut[0].progress} 件数${endOut.length}`:'');
     const endSizeChanged=Object.values(sizeGroups).filter(group=>group[80]?.end&&group[120]?.end
       &&(!near(group[80].end.center,group[120].end.center,.002)||!near(group[80].end.width,group[120].end.width,.002)));
     check('ENDバーの位置と幅はnoteSizeで変わらない',endSizeChanged.length===0,endSizeChanged[0]?`${endSizeChanged[0][80].id}`:'');
@@ -484,10 +486,13 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
       const straight=y=>rhythmProjectBoundary(0,0)+(rhythmProjectBoundary(0,1)-rhythmProjectBoundary(0,0))*y;
       const sampled=ratios.map(y=>({y,curve:rhythmProjectBoundary(0,y),straight:straight(y)}));
       const polygonPoints=rhythmLanePolygon(0).match(/-?[\d.]+(?=%)/g)?.length||0;
-      return {maxGap:Math.max(...sampled.map(s=>Math.abs(s.curve-s.straight))),polygonPoints};
+      return {maxGap:Math.max(...sampled.map(s=>Math.abs(s.curve-s.straight))),polygonPoints,straightProjection:typeof RHYTHM_PROJECTION_CURVE!=='undefined'&&RHYTHM_PROJECTION_CURVE===1};
     });
     check('レーン枠は2点の台形ではなく曲線に沿った多点ポリゴン',edge.polygonPoints>=20,`${edge.polygonPoints/2}点`);
-    check('直線近似との差が実際にある(=多点化する意味がある)',edge.maxGap>.01,`最大 ${(edge.maxGap*390).toFixed(1)}px`);
+    // 2026-09-26 に道の両端をまっすぐ(RHYTHM_PROJECTION_CURVE=1)にしたので、そのときは直線と差が無くてよい。
+    // 曲線へ戻したときに多点化が効いていることは、これまでどおりここで見る
+    check('直線近似との差が実際にある(=多点化する意味がある)',edge.straightProjection?edge.maxGap<.001:edge.maxGap>.01,
+      edge.straightProjection?`道の両端はまっすぐ(最大 ${(edge.maxGap*390).toFixed(1)}px)`:`最大 ${(edge.maxGap*390).toFixed(1)}px`);
   }finally{
     await browser?.close();
     server.close();
