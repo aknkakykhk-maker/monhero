@@ -18,10 +18,14 @@
 //   2 … フレーズの写し。繰り返しの区切りでは、元の小節と同じ位置の音を拾い、
 //        同じレーン(区切りの出現ごとに左右反転)へ置く(docs/spec/RHYTHM_CHART_DESIGN.md 3.1.19)
 //        ＋ 押さえているHOLDが端に寄っていてクロス(指の交差)が置けないときは、HOLDを内側へ寄せて置く
+//   3 … SLIDEの曲線(2026-09-26)。できあがった譜面のSLIDEの区間へ ease(in / out / inout)を付け、
+//        向きが変わる点ではゆっくり止まり、同じ向きへ続く点では止まらずに流れる帯にする。
+//        付けたあと本体と同じ式で「指が2本入らない重なり」を数え、新しく重なりを作ったSLIDEは直線に戻す。
+//        ノーツ数は変わらない(帯の途中の通り道が変わるだけ)
 'use strict';
 
 const CHART_REVISION_LEGACY=1;
-const CHART_REVISION_LATEST=2;
+const CHART_REVISION_LATEST=3;
 
 // 曲の一覧の1件から版を読む。無い・壊れている・範囲外なら版1(今までの作り方)。
 const chartRevisionOf=entry=>{
