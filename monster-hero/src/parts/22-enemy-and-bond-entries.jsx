@@ -437,7 +437,7 @@ const splitRankingParty = (entry) => {
 //   → 二刀流(通常の後半) → 二刀流(固有技の10%×3) → ソードスキル(20%×2) → 永久追加連撃 → 全体連撃。
 // 演出(専用モーションの再生・noAnim)がこの順序と skillName に依存している。
 // 勇者モンに選んだときだけ効く「同時使用可能枚数+1」を持つ種。
-// ハムの「連続攻撃」と剣士モッチーの「二刀流」は名前が違うだけで効果は同じなので、
+// ハムの「連続攻撃」と剣士モッチーの「黒の剣士」は名前が違うだけで効果は同じなので、
 // 種ごとに処理を書かず、この一覧と cardLimit の共通ルールへ乗せる。
 // 1つのスロットへ何枚重ねられるか(60-app.jsx の slotMaxUses)も、この一覧を通す。
 // 勇者モンにした本人のカードだけ複数枚まとめて使える(ただし固有技は山札に1枚しか無い)
@@ -500,7 +500,7 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   if (isUniqueOf('Eiki')) for (const rate of ATTACK_COMBO_RULES.eikiUnique) combo(rate + comboDmgBonus);
   if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);
   if (heroId === 'Pandora' && attackerId === 'Pandora' && isUniqueOf('Pandora')) combo(ATTACK_COMBO_RULES.pandoraUnique + comboDmgBonus, '連撃', true);
-  // 勇者特性「二刀流」: 通常攻撃のもう半分と、自身の固有技のときの10%×3
+  // 勇者特性「黒の剣士」(旧名「二刀流」): 通常攻撃のもう半分と、自身の固有技のときの10%×3
   if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);
   if (kenshiHero && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiHeroUnique) combo(rate + comboDmgBonus);
   // 固有効果「ソードスキル」: 技の出自が剣士モッチーなら誰が使っても(合体で引き継いだ場合も)

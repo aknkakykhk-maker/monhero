@@ -166,7 +166,8 @@ check('ヘルプの図鑑項目に剣士モッチー専用の解説がある',
 check('画像は仮実装のものを使い回している(円盤石を作り直していない)',
   breederSrc.includes('const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG'));
 
-console.log('--- ⑤ 勇者特性「二刀流」: 同時使用可能枚数+1 ---');
+console.log('--- ⑤ 勇者特性「黒の剣士」(旧名「二刀流」): 同時使用可能枚数+1 ---');
+check('勇者特性の名前は「黒の剣士」(タクティクスのEXのスタイル「二刀流」と取り違えない)', mon.trait === '黒の剣士', mon.trait);
 // ハムの「連続攻撃」と同じ共通ルールへ乗せる。種ごとの分岐をコピーしない
 check('加算する種を一覧で持っている',
   source.includes("const HERO_CARD_BONUS_MONSTER_IDS = Object.freeze(['Ham', 'KenshiMocchi']);")
