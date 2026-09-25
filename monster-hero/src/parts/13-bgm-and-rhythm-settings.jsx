@@ -322,6 +322,8 @@ const rhythmMirrorNote = note => {
   if(Number.isFinite(Number(note.endLane)))next.endLane=4-Number(note.endLane);
   if(Number.isFinite(Number(note.subLane)))next.subLane=RHYTHM_MIRROR_SUB_LANES-Number(note.subLane)-w;
   if(Array.isArray(note.slidePoints))next.slidePoints=note.slidePoints.map(point=>point&&Number.isFinite(Number(point.lane))?{...point,lane:4-Number(point.lane)}:point);
+  // 横フリックの向きも左右を入れ替える(2026-09-26)
+  if(note.flickDir==='left')next.flickDir='right';else if(note.flickDir==='right')next.flickDir='left';
   if(Array.isArray(note.holdPoints))next.holdPoints=note.holdPoints.map(point=>{
     if(!point||typeof point!=='object')return point;
     const pw=Number(point.subLaneWidth),pointWidth=Number.isFinite(pw)&&pw>0?pw:w;

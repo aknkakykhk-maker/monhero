@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2fcc3fded0e44023
+// source-sha256: 45c6dd0a6aadbfe1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -4790,6 +4790,7 @@ const rhythmMirrorNote = note => {
     ...point,
     lane: 4 - Number(point.lane)
   } : point);
+  if (note.flickDir === 'left') next.flickDir = 'right';else if (note.flickDir === 'right') next.flickDir = 'left';
   if (Array.isArray(note.holdPoints)) next.holdPoints = note.holdPoints.map(point => {
     if (!point || typeof point !== 'object') return point;
     const pw = Number(point.subLaneWidth),
@@ -22291,6 +22292,7 @@ const RhythmTapTest = ({
   const stageArtRef = useRef(null),
     stagePulseRef = useRef(null);
   const stageArtSrc = stageLevel !== 'SIMPLE' && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+  const hudArtSrc = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
   useEffect(() => {
     const canvas = stageArtRef.current;
     if (!canvas || !stageArtSrc) return;
@@ -22563,6 +22565,8 @@ const RhythmTapTest = ({
   const stopFrame = useCallback(() => {
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     frameRef.current = null;
+    const area = playAreaRef.current;
+    if (area && area.dataset.rhythmGlowLive) delete area.dataset.rhythmGlowLive;
   }, []);
   const clearJudgmentTimer = useCallback(() => {
     if (judgmentTimerRef.current !== null) clearTimeout(judgmentTimerRef.current);
@@ -23145,6 +23149,7 @@ const RhythmTapTest = ({
       if (canvasReady && settings.laneGlow !== 'NONE') {
         const glowArea = playAreaRef.current;
         let glowNodes = glowNodesRef.current;
+        if (glowArea && glowArea.dataset.rhythmGlowLive !== '1') glowArea.dataset.rhythmGlowLive = '1';
         if (glowArea && (!glowNodes || !glowNodes.length || !glowNodes[0].isConnected)) glowNodes = glowNodesRef.current = Array.from(glowArea.querySelectorAll('[data-rhythm-sublane-feedback]'));
         const glow = laneGlowStateRef.current || (laneGlowStateRef.current = {
           levels: new Float32Array(10),
@@ -24390,9 +24395,23 @@ const RhythmTapTest = ({
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
   }, calibrating ? 'タイミング合わせ' : tutorial ? 'れんしゅう' : debugPlay ? debugChartLabel : `Lv.${chart.level}`))), React.createElement("div", {
-    "data-rhythm-hud-song": true,
-    className: "mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0",
+    className: "mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0"
+  }, hudArtSrc && React.createElement("img", {
+    "data-rhythm-hud-art": true,
+    src: hudArtSrc,
+    alt: "",
+    "aria-hidden": "true",
+    decoding: "async",
+    draggable: false,
+    className: "h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6",
     style: {
+      boxShadow: '0 1px 6px rgba(2,6,23,.8)'
+    }
+  }), React.createElement("div", {
+    "data-rhythm-hud-song": true,
+    className: "min-w-0 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:max-w-none",
+    style: {
+      maxWidth: hudArtSrc && !isLandscape ? 'calc(31vw - 34px)' : undefined,
       display: '-webkit-box',
       WebkitLineClamp: isLandscape ? '1' : '3',
       WebkitBoxOrient: 'vertical',
@@ -24400,7 +24419,7 @@ const RhythmTapTest = ({
       lineHeight: '1.25',
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, "♪ ", rhythmSongFullName(song))), React.createElement("div", {
+  }, "♪ ", rhythmSongFullName(song)))), React.createElement("div", {
     "data-rhythm-hud-right": true,
     className: "flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"
   }, React.createElement("div", {
