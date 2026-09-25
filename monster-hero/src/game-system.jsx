@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1b6efcd936798dd6
+// generated-sha256: 2bddec5a1456bea3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 04:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 04:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15941,6 +15941,9 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
      ★高さは曲名の折り返しで変わるので、左上の表示の下端を実測して決める。横はレーンの台形のふちから決める。
      ★縦持ち・横持ち・回した横画面のどれも同じ置き方にする */
   const hudLeftRef=useRef(null);
+  // スコアの右隣へ置くのに要る幅。「0:24/2:24」に縮めた進みぐあいのバー(20px以上)を添えた1行が収まる幅。
+  // 自己ベスト比は長いと末尾が「…」になるが、ふつうの点差(±99,999まで)は収まる
+  const RHYTHM_CLOCK_SIDE_MIN_WIDTH=100;
   const [clockPlace,setClockPlace]=useState(null);
   // ★端末を横にした横画面も左へ置く。右上(ライフの下)のままだと、ゲージと自己ベスト比のぶん縦に伸びて、横持ちのコンボ数とレーンにかかった
   const clockOnLeft=true;
@@ -15952,10 +15955,20 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
       if(!area||!hud)return;
       const ar=RHYTHM_VIEW_ROTATION.rectOf(area),hr=RHYTHM_VIEW_ROTATION.rectOf(hud);
       if(!(ar&&hr&&ar.width>0&&ar.height>0))return;
+      const laneLeftAt=y=>ar.width/2-ar.width/2*rhythmProjectionScale(Math.min(1,Math.max(0,y)/ar.height));
+      /* ★スコア表示の右隣(レーンの左ふちまで)が空いていれば、そこへ置く(2026-09-26・ユーザー指示
+         「残り時間の位置がモンスターとかぶってて気になる / もうちょい上のエリアが空いてるからそっちに移動して」)。
+         横画面ではスコアの下に左上のマスモンが来るので重なっていた。縦画面は隙間が20px前後しかないので、今までどおりスコアの下 */
+      const sideTop=Math.max(4,Math.round(hr.top-ar.top)),sideLeft=Math.round(hr.right-ar.left)+12;
+      const sideWidth=Math.floor(laneLeftAt(sideTop+48)-10-sideLeft);
+      if(sideWidth>=RHYTHM_CLOCK_SIDE_MIN_WIDTH){
+        setClockPlace(prev=>prev&&prev.top===sideTop&&prev.left===sideLeft&&prev.width===sideWidth?prev:{top:sideTop,left:sideLeft,width:sideWidth});
+        return;
+      }
       const top=Math.round(hr.bottom-ar.top+8),bottom=top+44;
-      const laneLeft=ar.width/2-ar.width/2*rhythmProjectionScale(Math.min(1,bottom/ar.height));
+      const laneLeft=laneLeftAt(bottom);
       const width=Math.max(60,Math.floor(laneLeft-12-6));
-      setClockPlace(prev=>prev&&prev.top===top&&prev.width===width?prev:{top,width});
+      setClockPlace(prev=>prev&&prev.top===top&&prev.left===12&&prev.width===width?prev:{top,left:12,width});
     };
     measure();frame=requestAnimationFrame(measure);const later=setTimeout(measure,400);
     window.addEventListener('resize',measure);
@@ -16827,7 +16840,7 @@ scheduleTick();};
       縦持ちは右の余白までに収め、狭い画面ではバーが縮む(shrink)。
     ★HUDの検査(rhythm-hud-wedge-check)が写すのは <header> の中だけなので、ここは外に置いて自分で位置を決める。
       中身(時間・自己ベスト比)は毎フレームの処理と判定の処理が ref から直接書く */}
-<div data-rhythm-song-clock data-clock-wide={isLandscape?'1':''} data-clock-side={clockOnLeft?'left':'right'} aria-hidden="true" className="pointer-events-none absolute z-30 flex flex-col items-start gap-1" style={clockOnLeft?(clockPlace?{left:'12px',top:`${clockPlace.top}px`,width:`${clockPlace.width}px`}:{left:'12px',top:'110px',width:'100px',visibility:'hidden'}):{left:'calc(64.5% + 4px)',top:'46px',width:'max-content'}}>
+<div data-rhythm-song-clock data-clock-wide={isLandscape?'1':''} data-clock-side={clockOnLeft?'left':'right'} aria-hidden="true" className="pointer-events-none absolute z-30 flex flex-col items-start gap-1" style={clockOnLeft?(clockPlace?{left:`${clockPlace.left}px`,top:`${clockPlace.top}px`,width:`${clockPlace.width}px`}:{left:'12px',top:'110px',width:'100px',visibility:'hidden'}):{left:'calc(64.5% + 4px)',top:'46px',width:'max-content'}}>
   <div className="flex w-full min-w-0 items-center gap-1.5"><div className="relative h-[5px] w-12 min-w-0 shrink overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i ref={songProgressRef} className="absolute inset-y-0 left-0 w-full rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400" style={{transform:'scaleX(0)',transformOrigin:'left center'}}/></div><b ref={songTimeRef} data-rhythm-song-time className="shrink-0 text-[11px] font-black leading-none tabular-nums text-white" style={{textShadow:'0 1px 3px rgba(2,6,23,1),0 0 6px rgba(2,6,23,.9)'}}>0:00</b></div>
   {/* アシストモード・ミラー譜面で遊んでいることを、演奏中もひと目で分かるようにする */}
   {(assistOn||mirrorOn)&&<span data-rhythm-play-mode className="flex gap-1 text-[9px] font-black leading-none">{assistOn&&<span className="rounded bg-emerald-600/80 px-1 py-0.5 text-white">ASSIST</span>}{mirrorOn&&<span className="rounded bg-sky-600/80 px-1 py-0.5 text-white">MIRROR</span>}</span>}

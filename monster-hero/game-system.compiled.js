@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4f1ab8071b106346
+// source-sha256: 22c96f55274116e7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 04:13";
+const BUILD_DATE = "2026-09-26 04:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -22491,6 +22491,7 @@ const RhythmTapTest = ({
     };
   }, []);
   const hudLeftRef = useRef(null);
+  const RHYTHM_CLOCK_SIDE_MIN_WIDTH = 100;
   const [clockPlace, setClockPlace] = useState(null);
   const clockOnLeft = true;
   useEffect(() => {
@@ -22506,12 +22507,25 @@ const RhythmTapTest = ({
       const ar = RHYTHM_VIEW_ROTATION.rectOf(area),
         hr = RHYTHM_VIEW_ROTATION.rectOf(hud);
       if (!(ar && hr && ar.width > 0 && ar.height > 0)) return;
+      const laneLeftAt = y => ar.width / 2 - ar.width / 2 * rhythmProjectionScale(Math.min(1, Math.max(0, y) / ar.height));
+      const sideTop = Math.max(4, Math.round(hr.top - ar.top)),
+        sideLeft = Math.round(hr.right - ar.left) + 12;
+      const sideWidth = Math.floor(laneLeftAt(sideTop + 48) - 10 - sideLeft);
+      if (sideWidth >= RHYTHM_CLOCK_SIDE_MIN_WIDTH) {
+        setClockPlace(prev => prev && prev.top === sideTop && prev.left === sideLeft && prev.width === sideWidth ? prev : {
+          top: sideTop,
+          left: sideLeft,
+          width: sideWidth
+        });
+        return;
+      }
       const top = Math.round(hr.bottom - ar.top + 8),
         bottom = top + 44;
-      const laneLeft = ar.width / 2 - ar.width / 2 * rhythmProjectionScale(Math.min(1, bottom / ar.height));
+      const laneLeft = laneLeftAt(bottom);
       const width = Math.max(60, Math.floor(laneLeft - 12 - 6));
-      setClockPlace(prev => prev && prev.top === top && prev.width === width ? prev : {
+      setClockPlace(prev => prev && prev.top === top && prev.left === 12 && prev.width === width ? prev : {
         top,
+        left: 12,
         width
       });
     };
@@ -24450,7 +24464,7 @@ const RhythmTapTest = ({
     "aria-hidden": "true",
     className: "pointer-events-none absolute z-30 flex flex-col items-start gap-1",
     style: clockOnLeft ? clockPlace ? {
-      left: '12px',
+      left: `${clockPlace.left}px`,
       top: `${clockPlace.top}px`,
       width: `${clockPlace.width}px`
     } : {
