@@ -445,6 +445,39 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     p = await panel();
     check('片手盾: 元のステータスから数え直して 135／210(二刀流の37からではない)', !!p && /135／210/.test(p.text), p && p.text.slice(0, 220));
     await closePanel();
+
+    // --- ⑤ モッチー「ガッツ全開っちー」(2026-09-25 ユーザー指示) ---
+    await boot();
+    await closePopups();
+    await page.getByRole('button', { name: 'モンヒロバトル' }).dispatchEvent('click', {}, { timeout: 15000 });
+    await page.waitForTimeout(600);
+    await page.locator('[data-battle-system="systemTactics"]').dispatchEvent('click', {}, { timeout: 15000 });
+    const mo = await startTacticsPro('モッチー');
+    check('モッチーを勇者モンにしてタクティクスプロを始められる', mo === 'ok', mo);
+    if (mo !== 'ok') throw new Error(mo);
+    const moSlot = await heroSlot();
+    const party = () => page.evaluate((slot) => {
+      const el = document.querySelector(`[data-tactics-party-slot="${slot}"]`);
+      return el ? { hp: el.getAttribute('data-tactics-hp'), guts: el.getAttribute('data-tactics-guts') } : null;
+    }, moSlot);
+    const before = await party();
+    await tapSlot(moSlot);
+    p = await panel();
+    check('「ガッツ全開っちー」: 3/3・カードと併用できる・5ターン・力／丈夫さ 120／120', !!p && p.name === 'ガッツ全開っちー'
+      && /3 \/ 3/.test(p.uses) && p.withCards === 'yes' && /5ターン/.test(p.text) && /120／120/.test(p.text), p && p.text.slice(0, 220));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    const after = await party();
+    const full = (v) => { const m = /^(\d+)\/(\d+)$/.exec(v || ''); return !!m && m[1] === m[2]; };
+    check('使うとライフとガッツが満タンになる(ガッツは半分から始まる)', !!before && !!after && !full(before.guts) && full(after.hp) && full(after.guts),
+      `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
+    check('枠の札が「あと5ターン」になる', await page.locator(`[data-tactics-ex-mark="${moSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと5ターン');
+    await tapSlot(moSlot);
+    p = await panel();
+    check('力／丈夫さが 144／144 に上がり、残りが 2/3', !!p && /144／144/.test(p.text) && /2 \/ 3/.test(p.uses), p && p.text.slice(0, 220));
+    await closePanel();
+    await tapFirstCard();
+    check('使ったターンもモッチーはカードを使える', (await selectedCount()) > 0);
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
     check('最後まで確かめられた', false, String(e).slice(0, 200));

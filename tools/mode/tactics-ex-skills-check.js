@@ -63,7 +63,7 @@ vm.runInContext([
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
-    + 'applyTacticsExUse,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
+    + 'applyTacticsExUse,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
 ].join('\n'), sandbox);
 // ヒット列(二刀流で2回ぶん入るか)は本体の buildAttackHits をそのまま動かす
 vm.runInContext(slice('const HERO_CARD_BONUS_MONSTER_IDS', 'const attackAtonementDmg') + ';globalThis.hitsApi={buildAttackHits};', sandbox);
@@ -113,7 +113,7 @@ check('ソード・コンバージョンの説明だけで3つのスタイルの
 check('EXを持たない子は null', ex.tacticsExDefOf('Ham') === null && ex.tacticsExDefOf(null) === null
   && ex.tacticsExDefOf('toString') === null && ex.tacticsExDefOf('__proto__') === null);
 check('どの定義も効果時間の説明を持つ', Object.keys(ex.TACTICS_EX_SKILLS)
-  .every(id => !!ex.TACTICS_EX_DURATION_TEXT[ex.tacticsExDefOf(id).duration]));
+  .every(id => !!ex.tacticsExDurationText(ex.tacticsExDefOf(id))));
 const ids = Object.keys(ex.TACTICS_EX_SKILLS).map(id => ex.tacticsExDefOf(id).id);
 check('EXのidが重ならない', new Set(ids).size === ids.length, ids.join(','));
 // STEP1 では効果の中身がまだ無い。入れたら TACTICS_EX_IMPLEMENTED_EFFECTS へ足すので、ここも合わせて変わる
@@ -297,6 +297,33 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('効果の無いEXは力・丈夫さを変えない', JSON.stringify(ex.applyTacticsExStats(units[1], m, 1, T(1, 2))) === JSON.stringify(units[1]));
 }
 
+// ---------- ⑪ モッチー「ガッツ全開っちー」(2026-09-25 ユーザー指示) ----------
+{
+  const gm = ex.tacticsExDefOf('Mocchi');
+  check('モッチー「ガッツ全開っちー」: ラン3回・カードと併用できる・5ターン・20%・全回復', !!gm && gm.name === 'ガッツ全開っちー'
+    && gm.maxUses === 3 && !gm.unlimited && gm.withCards && gm.duration === 'turns' && gm.turns === 5
+    && gm.statRate === 0.2 && gm.fullRecover && ex.isTacticsExEffectImplemented(gm), JSON.stringify(gm));
+  check('効果時間の文にターン数と「WAVEが変わると切れる」が入る', /5ターン/.test(ex.tacticsExDurationText(gm)) && /WAVEが変わると切れる/.test(ex.tacticsExDurationText(gm)), ex.tacticsExDurationText(gm));
+  const A = (wave, turn) => ({ wave, turn });
+  const s0 = ex.createTacticsExState();
+  // WAVE2の3ターン目に使う
+  const g = ex.applyTacticsExUse(s0, { def: gm, slot: 0, monId: 'Mocchi', now: A(2, 3) });
+  const unit = { id: 'Mocchi', hp: 300, maxHp: 600, atk: 120, def: 120, guts: 50, maxGuts: 100, downed: false };
+  const on = ex.applyTacticsExStats(unit, g, 0, A(2, 3));
+  check('使ったターンから 力120/丈夫さ120 → 144/144(20%アップ)', on.atk === 144 && on.def === 144, `${on.atk}/${on.def}`);
+  check('同じWAVEの5ターン目(7ターン目)まで続く', ex.isTacticsExEffectActive(g, 0, 'Mocchi', A(2, 7)));
+  check('6ターン目(8ターン目)には切れて元の値に戻る', !ex.isTacticsExEffectActive(g, 0, 'Mocchi', A(2, 8))
+    && ex.applyTacticsExStats(unit, g, 0, A(2, 8)).atk === 120);
+  // ★WAVEはまたがない(2026-09-25 ユーザー指示「WAVE跨ぎはなし」)
+  const late = ex.applyTacticsExUse(s0, { def: gm, slot: 0, monId: 'Mocchi', now: A(2, 18) });
+  check('WAVEが変わったら5ターンたつ前でも切れる(WAVE2の18ターン目に使い、WAVE3の1ターン目で切れる)',
+    ex.isTacticsExEffectActive(late, 0, 'Mocchi', A(2, 19)) && !ex.isTacticsExEffectActive(late, 0, 'Mocchi', A(3, 1)));
+  check('あと何ターンか(使ったターンは5、最後のターンは1、切れたら0)', ex.tacticsExTurnsLeft(g, 0, 'Mocchi', A(2, 3)) === 5
+    && ex.tacticsExTurnsLeft(g, 0, 'Mocchi', A(2, 7)) === 1 && ex.tacticsExTurnsLeft(g, 0, 'Mocchi', A(2, 8)) === 0);
+  check('ライフ・ガッツの上限は変えない(満タンにするのは使った瞬間の回復)', on.maxHp === 600 && on.maxGuts === 100 && on.hp === 300);
+  check('使ったターンもほかのカードを使える(その子も)', !ex.isTacticsExCardLocked(g, 0, A(2, 3)));
+}
+
 // ---------- ⑧ 壊れた値 ----------
 {
   let fine = true;
@@ -363,6 +390,9 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     /const tacticsExEffectAt = \(slotIdx\) => \{\n\s*const live=tacticsExLiveRef\.current;/.test(app));
   // 発動の入口は詳細パネルの中だけ(「EXスキルを使用」と、スタイル式の選択肢)。距離枠のタップからは発動しない
   const panelSrc = screen.slice(screen.indexOf('{exPanel&&ReactDOM.createPortal('), screen.indexOf('{showBattleMenu&&ReactDOM.createPortal('));
+  check('使った瞬間にその子のライフとガッツを満タンにする(ガッツ全開っちー)',
+    /if\(def\.fullRecover\)\{[\s\S]{0,300}recoverTacticsGutsAt\(healTacticsAt\(tacticsUnitsRef\.current,slotIdx,hpGain\),slotIdx,gutsGain\)/.test(app)
+    && /const tacticsExNow = \{ wave, turn:turnCount \};/.test(app));
   check('発動は詳細パネルの「EXスキルを使用」(スタイル式はその先の選択肢)からだけ',
     (screen.match(/activateTacticsEx\(/g) || []).length === (panelSrc.match(/activateTacticsEx\(/g) || []).length
     && (panelSrc.match(/activateTacticsEx\(/g) || []).length === 2

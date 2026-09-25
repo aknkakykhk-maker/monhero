@@ -386,7 +386,7 @@ const helpDataRows = (id) => {
       return Object.keys((typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS) || {}).map(monId => {
         const def = tacticsExDefOf(monId);
         const monName = ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId]) || {}).name || monId;
-        const duration = { turn:'そのターン', wave:'そのWAVE', style:'選び直すまで' }[def.duration] || '';
+        const duration = def.duration === 'turns' ? `${def.turns}ターン` : ({ turn:'そのターン', wave:'そのWAVE', style:'選び直すまで' }[def.duration] || '');
         return [`${monName}「${def.name}」`,
           `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
       });

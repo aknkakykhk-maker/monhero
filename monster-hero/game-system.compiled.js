@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e69afa68dfa70dbe
+// source-sha256: 890be7b14c13a246
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: db8b79e1ae535f16
+// generated-sha256: 2aeb76fd584be49d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -246,7 +246,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-25 12:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 13:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15571,7 +15571,7 @@ const helpDataRows = id => {
       return Object.keys(typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS || {}).map(monId => {
         const def = tacticsExDefOf(monId);
         const monName = (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId] || {}).name || monId;
-        const duration = {
+        const duration = def.duration === 'turns' ? `${def.turns}ターン` : {
           turn: 'そのターン',
           wave: 'そのWAVE',
           style: '選び直すまで'
@@ -29622,6 +29622,10 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //               ★止まるのは使った子だけ。ほかの子はいつもどおりカードを使える(2026-09-23 ユーザー指示
 //                 「EXで他行動禁止はそのモンスターだけ」)
 //   duration  … 効果の続く長さ。'turn'(発動ターン) / 'wave'(発動WAVEの終わりまで) / 'style'(もう一度使って選び直すまで)
+//               / 'turns'(使ったターンから turns ターンのあいだ。WAVEが変わったらそこで切れる)
+//   turns     … duration:'turns' のときのターン数
+//   statRate  … 効いているあいだ、力と丈夫さを何割上げるか(0.2 なら20%)
+//   fullRecover … true なら、使った瞬間にその子のライフとガッツを満タンにする
 //   styles    … duration:'style' のときの選択肢 [{ id, label, desc }]。使うたびに1つ選ぶ(いまのものは選べない)
 //   defaultStyle … バトルを始めたときのスタイル(styles の id)
 //   heroInitialStyle … true なら、勇者モンに選んだときだけ配置の画面で初期スタイルを選べる
@@ -29644,6 +29648,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
     withCards: true,
     duration: 'turn',
     effect: 'coverAll'
+  }),
+  // ★2026-09-25 ユーザー指示「モッチー ガッツ全開っちー 5ターンの間全てのステータスが20%上がり、
+  //   ライフとガッツを全回復する 使用回数3回」。上がるのは力と丈夫さ(ライフ・ガッツは満タンにする)。
+  //   カードとの併用は指定が無かったので、制限なし(併用できる)にしてある
+  Mocchi: Object.freeze({
+    id: 'mocchi_guts_full',
+    name: 'ガッツ全開っちー',
+    desc: '5ターンのあいだ、力と丈夫さが20%上がる。使った瞬間にライフとガッツを満タンまで回復する。',
+    maxUses: 3,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 5,
+    statRate: 0.2,
+    fullRecover: true,
+    effect: 'statBoost'
   }),
   Golem: Object.freeze({
     id: 'golem_all_in',
@@ -29696,10 +29716,10 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
-const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style']);
+const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 // 二刀流で、連撃を何回ぶん入れるか(メインのダメージは1回のまま。連撃だけ2回ぶん)
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
 
@@ -29728,11 +29748,16 @@ const normalizeTacticsExDef = raw => {
     styles: safeDuration === 'style' ? styles : [],
     defaultStyle: safeDuration === 'style' ? defaultStyle : null,
     heroInitialStyle: safeDuration === 'style' && raw.heroInitialStyle === true,
+    turns: safeDuration === 'turns' ? Math.max(1, tacticsSafeInt(raw.turns, 1)) : 0,
+    statRate: Math.max(0, Number.isFinite(Number(raw.statRate)) ? Number(raw.statRate) : 0),
+    fullRecover: raw.fullRecover === true,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null
   };
 };
+// 効果時間の文(「5ターンのあいだ」のようにターン数を入れる)
+const tacticsExDurationText = def => !def ? null : def.duration === 'turns' ? `使ったターンから${def.turns}ターンのあいだ（WAVEが変わると切れる）` : TACTICS_EX_DURATION_TEXT[def.duration] || null;
 // そのモンスターのEX。持っていなければ null
 const tacticsExDefOf = (monId, table = TACTICS_EX_SKILLS) => monId && table && Object.prototype.hasOwnProperty.call(table, monId) ? normalizeTacticsExDef(table[monId]) : null;
 const isTacticsExEffectImplemented = (def, implemented = TACTICS_EX_IMPLEMENTED_EFFECTS) => !!(def && def.effect && implemented.includes(def.effect));
@@ -29802,6 +29827,15 @@ const isTacticsExEffectActive = (state, slot, monId, now) => {
   const effect = normalizeTacticsExState(state).effects[slot];
   if (!effect || effect.monId !== monId) return false;
   if (effect.duration === 'style') return effect.on === true;
+  // ★ターン数で切れるもの。**WAVEをまたがない**(2026-09-25 ユーザー指示「WAVE跨ぎはなし」)。
+  //   同じWAVEのあいだだけ、使ったターンから数えて turns ターン目まで効く
+  if (effect.duration === 'turns') {
+    if (!now || tacticsSafeInt(effect.wave, -1) !== tacticsSafeInt(now.wave, -2)) return false;
+    const at = tacticsSafeInt(now.turn, -1),
+      from = tacticsSafeInt(effect.turn, -1),
+      len = tacticsSafeInt(effect.turns, 0);
+    return from >= 0 && at >= from && at < from + len;
+  }
   if (effect.duration === 'wave') return !!now && tacticsSafeInt(effect.wave, -1) === tacticsSafeInt(now.wave, -2);
   return sameTacticsExTurn(effect, now);
 };
@@ -29911,6 +29945,8 @@ const applyTacticsExUse = (state, {
         turn: stamp.turn,
         on: def.duration === 'style' ? style !== def.defaultStyle : true,
         style,
+        turns: def.duration === 'turns' ? def.turns : 0,
+        statRate: def.statRate || 0,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -30001,6 +30037,15 @@ const applyTacticsExStats = (unit, state, slot, now) => {
       def: 0
     };
   }
+  // ステータスアップ(ガッツ全開っちー): 力と丈夫さを statRate ぶん上げる(切り捨て)
+  if (kind === 'statBoost') {
+    const rate = Math.max(0, Number(normalizeTacticsExState(state).effects[slot].statRate) || 0);
+    return {
+      ...unit,
+      atk: Math.floor(Math.max(0, tacticsSafeInt(unit.atk, 0)) * (1 + rate)),
+      def: Math.floor(Math.max(0, tacticsSafeInt(unit.def, 0)) * (1 + rate))
+    };
+  }
   // ★スタイルの効き目は、いつも「元のステータス」(盤面の値)から数え直す。積み重ならない
   if (kind === 'weaponChange') {
     const style = normalizeTacticsExState(state).effects[slot].style;
@@ -30016,6 +30061,12 @@ const applyTacticsExStats = (unit, state, slot, now) => {
     };
   }
   return unit;
+};
+// ターン数で切れる効果の、あと何ターン残っているか(使ったターンを含めて数える)。効いていなければ 0
+const tacticsExTurnsLeft = (state, slot, monId, now) => {
+  const effect = normalizeTacticsExState(state).effects[slot];
+  if (!effect || effect.duration !== 'turns' || !isTacticsExEffectActive(state, slot, monId, now)) return 0;
+  return tacticsSafeInt(effect.turn, 0) + tacticsSafeInt(effect.turns, 0) - tacticsSafeInt(now.turn, 0);
 };
 // いま効いているスタイル(既定のスタイルのときは null)。戦闘の計算側がヒット列やソードスキルの有無に使う
 const tacticsExActiveStyle = (state, slot, monId, now) => {
@@ -32901,10 +32952,10 @@ function MonsterDexDetailScreen({
   }, "\"", mon.unique?.effectDesc || '', "\"")), (() => {
     const exDef = typeof tacticsExDefOf === 'function' ? tacticsExDefOf(mon.id) : null;
     if (!exDef) return null;
-    const durationLabel = {
+    const durationLabel = exDef.duration === 'turns' ? `${exDef.turns}ターン` : {
       turn: 'そのターン',
       wave: 'そのWAVE',
-      toggle: '再使用まで'
+      style: '再使用まで'
     }[exDef.duration] || String(exDef.duration || '—');
     return /*#__PURE__*/React.createElement("div", {
       "data-dex-ex-skill": true,
@@ -60744,7 +60795,7 @@ function MonsterHeroGame() {
         ...st,
         current: tacticsExStyleOf(def, state, slotIdx, mon.id) === st.id
       })) : null,
-      durationText: TACTICS_EX_DURATION_TEXT[def.duration] || null,
+      durationText: tacticsExDurationText(def),
       implemented: isTacticsExEffectImplemented(def),
       // いまの力・丈夫さ(EXが乗っていればそのぶんも)。捨て身・片手持ちの効き目を数字で確かめられるように
       // 距離枠に出す短い札。切り替え式はいまの状態(二刀流／片手持ち)、効いている間は「◯◯中」、ふだんは「EX」
@@ -60754,6 +60805,11 @@ function MonsterHeroGame() {
         if (styleLabel) return {
           text: styleLabel,
           active: isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)
+        };
+        // ターン数で切れるもの(ガッツ全開っちー)は、あと何ターンかを出す
+        if (def.duration === 'turns' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) return {
+          text: `あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン`,
+          active: true
         };
         if (isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow)) return {
           text: `${def.name}中`,
@@ -60818,6 +60874,20 @@ function MonsterHeroGame() {
     Audio_.se.card();
     const toggled = def.duration === 'style' ? `（${tacticsExStyleLabel(def, next, slotIdx, mon.id)}）` : '';
     pushBattleLog(`EX ${mon.masuName || mon.name}「${def.name}」${toggled}`, 'ally');
+    // 使った瞬間にライフとガッツを満タンにする(ガッツ全開っちー)。その子だけ。枠に入った量を出す
+    if (def.fullRecover) {
+      const u = normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
+      if (u) {
+        const hpGain = Math.max(0, u.maxHp - u.hp),
+          gutsGain = Math.max(0, u.maxGuts - u.guts);
+        commitTacticsUnits(recoverTacticsGutsAt(healTacticsAt(tacticsUnitsRef.current, slotIdx, hpGain), slotIdx, gutsGain));
+        if (hpGain > 0 || gutsGain > 0) mergeTacticsSlotFx({
+          [slotIdx]: hpGain
+        }, {
+          [slotIdx]: gutsGain
+        });
+      }
+    }
     const onUse = TACTICS_EX_ON_USE[def.effect];
     if (isTacticsExEffectImplemented(def)) {
       addPopup(`EX ${def.name}！${toggled}`, 'hero', 'text-fuchsia-300 font-black text-xl drop-shadow-md', undefined, slotIdx);
@@ -63996,7 +64066,7 @@ function MonsterHeroGame() {
     }, "\u7F6E\u304F\u8DDD\u96E2\u306B\u95A2\u4FC2\u306A\u304F\u3001\u3053\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u88DC\u6B63\u304C4\u8DDD\u96E2\u3059\u3079\u3066\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059")), renderSkillSection(mon), (() => {
       const exDef = typeof tacticsExDefOf === 'function' ? tacticsExDefOf(mon.id) : null;
       if (!exDef) return null;
-      const durationLabel = {
+      const durationLabel = exDef.duration === 'turns' ? `${exDef.turns}ターン` : {
         turn: 'そのターン',
         wave: 'そのWAVE',
         style: '再使用まで'
