@@ -17,8 +17,10 @@ const game=fs.readFileSync(path.join(ROOT,'monster-hero/src/game-system.jsx'),'u
 const data=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
 
 // ---- 保存のしかた(CLAUDE.md ⑦) ----
-ok('新しいキーを足しただけで、既存のキーは触っていない',
-  /DEFAULT_RHYTHM_SETTINGS = Object\.freeze\(\{[\s\S]{0,900}judgmentLineHeight:12/.test(game));
+// 既定は2026-09-26に12→20へ上げた(ユーザー指示「奥行きの違いが気になる」。判定ラインの下にも道が続く見え方)。
+// 保存してある値は書き換えない(前から遊んでいる人は選んでいた高さのまま)。
+ok('新しいキーを足しただけで、既存のキーは触っていない(既定は20)',
+  /DEFAULT_RHYTHM_SETTINGS = Object\.freeze\(\{[\s\S]{0,900}judgmentLineHeight:20/.test(game));
 ok('保存値が無い・壊れているときは既定(12＝これまでの位置)へ倒れる',
   /judgmentLineHeight:rhythmFiniteStep\(source\.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS\.judgmentLineHeight\)/.test(game));
 ok('上限は32%。これを超えると「まだ形が決まっていない」の見張りとぶつかる',
