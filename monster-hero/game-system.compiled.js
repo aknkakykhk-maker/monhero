@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8b37305c3ce80458
+// source-sha256: e0552fe47f6c468e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9d19b1cbeaa4d4a1
+// generated-sha256: ddffc0d53329144a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -262,7 +262,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-25 16:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 17:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -49594,6 +49594,9 @@ function MonsterHeroGame() {
   //   どれもこの1か所から難易度を取る(取り違えると別の難易度の記録を書き換えてしまう)
   const tacticsRecordDifficulty = () => extremeRunRef.current ? extremeDifficulty : difficulty;
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
+  // デバッグ戦で選んでいるモードと難易度(画面に出す選択。極限は実際の difficulty が 'Normal' になるので別に持つ)
+  const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
+  const [debugBattleDifficultyId, setDebugBattleDifficultyId] = useState('Normal');
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
@@ -63058,11 +63061,82 @@ function MonsterHeroGame() {
 
   // 通常の敵順と敵定義の両方に存在するものだけを候補にする。敵名・能力値を複製せず、
   // 選択した難易度で通常生成に使う倍率もspawnEnemyへそのまま委ねる。
-  const getDebugEnemyOptions = diff => DIFFICULTY_SETTINGS[diff] ? [...new Set(ENEMY_SEQUENCE)].map(key => ({
-    key,
-    wave: ENEMY_SEQUENCE.indexOf(key) + 1,
-    enemy: ENEMY_DATA[key]
-  })).filter(item => item.enemy && item.enemy.name && item.enemy.baseHp > 0 && item.enemy.baseAtk >= 0) : [];
+  // ---- デバッグ戦(デバッグ専用) ----
+  // 各モード・各難易度で、どの敵とでも戦えるようにする(2026-09-25 ユーザー指示
+  // 「デバッグで各モード難易度でどの敵からも戦えるやつ作って」)。
+  // ★モードを選ぶと runMode・difficulty・extremeDifficulty をその場でそろえる。
+  //   開始ボタン(startDebugBattle)と敵の生成(spawnEnemy)はこの3つを読むので、押す前に確定させておく。
+  //   極限(クラシックの極限チャレンジ・タクティクスの極限5段階)は、通常のランと同じく
+  //   difficulty を 'Normal' にして extremeDifficulty に難易度を入れる
+  // ★種族チャレンジは種族を選ぶ流れが要るので入れない(デバッグの「種族チャレンジ進行確認」から入る)
+  const DEBUG_BATTLE_MODES = [{
+    id: 'challenge',
+    label: 'チャレンジ',
+    runMode: BATTLE_MODE_CHALLENGE
+  }, {
+    id: 'quick',
+    label: 'クイック',
+    runMode: BATTLE_MODE_QUICK
+  }, {
+    id: 'pro',
+    label: 'プロ',
+    runMode: BATTLE_MODE_PRO
+  }, {
+    id: 'extreme',
+    label: '極限チャレンジ',
+    runMode: BATTLE_MODE_CHALLENGE,
+    extreme: true
+  }, {
+    id: 'tactics',
+    label: 'タクティクス',
+    runMode: BATTLE_MODE_TACTICS
+  }, {
+    id: 'tacticsPro',
+    label: 'タクティクスプロ',
+    runMode: BATTLE_MODE_TACTICS_PRO
+  }];
+  const debugBattleModeOf = modeId => DEBUG_BATTLE_MODES.find(m => m.id === modeId) || DEBUG_BATTLE_MODES[0];
+  // そのモードで選べる難易度(通常の難易度選択と同じ並び)
+  const debugBattleDifficultyIds = modeId => {
+    const mode = debugBattleModeOf(modeId);
+    if (mode.extreme) return ALL_EXTREME_DIFFICULTIES.map(setting => setting.id);
+    if (isTacticsMode(mode.runMode)) return [...TACTICS_DIFFICULTY_IDS];
+    if (isQuickMode(mode.runMode)) return Object.keys(QUICK_DIFFICULTY_SETTINGS);
+    return Object.keys(DIFFICULTY_SETTINGS);
+  };
+  const debugBattleDifficultySetting = id => DIFFICULTY_SETTINGS[id] || quickDifficultySetting(id) || extremeRuleSetting(id) || {
+    label: id
+  };
+  // 極限として始めるか(クラシックの極限チャレンジ、またはタクティクスの極限5段階)
+  const debugBattleIsExtreme = (modeId, difficultyId) => {
+    const mode = debugBattleModeOf(modeId);
+    return !!mode.extreme || isTacticsMode(mode.runMode) && isExtremeDifficultyId(difficultyId);
+  };
+  // そのモードで戦う敵(タクティクスはタクティクス専用の10体)。wave はその敵が本来出てくるWAVE
+  const getDebugEnemyOptions = modeId => {
+    const tactics = isTacticsMode(debugBattleModeOf(modeId).runMode);
+    const sequence = tactics ? TACTICS_ENEMY_SEQUENCE : ENEMY_SEQUENCE;
+    const table = tactics ? TACTICS_ENEMY_DATA : ENEMY_DATA;
+    return [...new Set(sequence)].map(key => ({
+      key,
+      wave: sequence.indexOf(key) + 1,
+      enemy: table[key]
+    })).filter(item => item.enemy && item.enemy.name && item.enemy.baseHp > 0 && item.enemy.baseAtk >= 0);
+  };
+  const selectDebugBattle = (modeId, difficultyId) => {
+    const mode = debugBattleModeOf(modeId);
+    const ids = debugBattleDifficultyIds(mode.id);
+    const diffId = ids.includes(difficultyId) ? difficultyId : ids.includes('Normal') ? 'Normal' : ids[0];
+    const extreme = debugBattleIsExtreme(mode.id, diffId);
+    setDebugBattleModeId(mode.id);
+    setDebugBattleDifficultyId(diffId);
+    setRunMode(mode.runMode);
+    setBattleMode(mode.runMode);
+    setDifficulty(extreme ? 'Normal' : diffId);
+    if (extreme) setExtremeDifficulty(diffId);
+    const options = getDebugEnemyOptions(mode.id);
+    if (!options.some(o => o.key === debugEnemyKey)) setDebugEnemyKey(options[0]?.key || null);
+  };
 
   // ---- バトルチュートリアル ----
   // ふだんのバトル画面をそのまま使い、上にみゅあの吹き出しとハイライトを重ねて進める。
@@ -63308,7 +63382,7 @@ function MonsterHeroGame() {
   }, [battleTutorialStep, gameState, currentPickingMon]);
   const startDebugBattle = (extreme = false) => {
     stopAllAuto();
-    const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
+    const option = getDebugEnemyOptions(debugBattleModeId).find(item => item.key === debugEnemyKey);
     const savedParty = getActiveMonsterList();
     const party = (debugStrongestHero ? [makeDebugStrongestMonster(), ...savedParty.filter(mon => mon?.id !== 'Mocchi')] : savedParty).slice(0, 4);
     if (!option || party.length === 0) return;
@@ -70801,38 +70875,70 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement(DebugScreenHead, {
       title: "\u30C7\u30D0\u30C3\u30B0\u6226",
-      note: "\u96E3\u6613\u5EA6\u3068\u6575\u3092\u9078\u3093\u3067\u3001\u305D\u306E\u5834\u3067\u6226\u3046",
+      note: "\u30E2\u30FC\u30C9\u30FB\u96E3\u6613\u5EA6\u30FB\u6575\u3092\u9078\u3093\u3067\u3001\u305D\u306E\u5834\u3067\u6226\u3046",
       saves: false,
       onBack: () => setGameState('DEBUG_SETTINGS')
     }), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4"
-    }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("section", {
+      "data-debug-battle-modes": true
+    }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-500 font-black mb-2"
-    }, "1. \u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("div", {
+    }, "1. \u30E2\u30FC\u30C9"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-3 gap-2"
-    }, Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => /*#__PURE__*/React.createElement("button", {
-      key: key,
-      onClick: () => {
-        setDifficulty(key);
-        const options = getDebugEnemyOptions(key);
-        if (!options.some(o => o.key === debugEnemyKey)) setDebugEnemyKey(options[0]?.key || null);
-      },
-      className: `min-h-[48px] rounded-xl text-[9px] font-black ${difficulty === key ? 'ring-2 ring-white' : 'border border-white/10'}`,
-      style: difficultyStyle(setting, difficulty === key)
-    }, setting.label)))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+    }, DEBUG_BATTLE_MODES.map(mode => /*#__PURE__*/React.createElement("button", {
+      key: mode.id,
+      type: "button",
+      "data-debug-battle-mode-option": mode.id,
+      "aria-pressed": debugBattleModeId === mode.id,
+      onClick: () => selectDebugBattle(mode.id, debugBattleDifficultyId),
+      className: `min-h-[48px] px-1 rounded-xl text-[10px] font-black leading-tight ${debugBattleModeId === mode.id ? 'bg-cyan-700 border-2 border-cyan-300 text-white' : 'bg-slate-900 border border-white/10 text-slate-400'}`
+    }, mode.label)))), /*#__PURE__*/React.createElement("section", {
+      "data-debug-battle-difficulties": true
+    }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-500 font-black mb-2"
-    }, "2. \u6575"), /*#__PURE__*/React.createElement("div", {
+    }, "2. \u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-3 gap-2"
+    }, debugBattleDifficultyIds(debugBattleModeId).map(key => {
+      const setting = debugBattleDifficultySetting(key);
+      const selected = debugBattleDifficultyId === key;
+      return /*#__PURE__*/React.createElement("button", {
+        key: key,
+        type: "button",
+        "data-debug-battle-difficulty": key,
+        "aria-pressed": selected,
+        onClick: () => selectDebugBattle(debugBattleModeId, key),
+        className: `min-h-[48px] rounded-xl text-[9px] font-black ${selected ? 'ring-2 ring-white' : 'border border-white/10'}`,
+        style: difficultyStyle({
+          bg: '#475569',
+          text: '#cbd5e1',
+          ...setting
+        }, selected)
+      }, setting.label || key);
+    }))), /*#__PURE__*/React.createElement("section", {
+      "data-debug-battle-enemies": true
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-slate-500 font-black mb-2"
+    }, "3. \u6575", /*#__PURE__*/React.createElement("small", {
+      className: "ml-1 font-bold text-slate-600"
+    }, "\uFF08\u305D\u306E\u6575\u304C\u51FA\u3066\u304F\u308BWAVE\u3068\u3057\u3066\u6226\u3046\uFF09")), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
-    }, getDebugEnemyOptions(difficulty).map(({
+    }, getDebugEnemyOptions(debugBattleModeId).map(({
       key,
+      wave: debugWave,
       enemy: debugEnemy
     }) => /*#__PURE__*/React.createElement("button", {
       key: key,
+      type: "button",
+      "data-debug-battle-enemy": key,
+      "aria-pressed": debugEnemyKey === key,
       onClick: () => setDebugEnemyKey(key),
-      className: `min-h-[46px] px-3 rounded-xl text-[11px] font-black ${debugEnemyKey === key ? 'bg-purple-950 border-2 border-purple-400 text-purple-100' : 'bg-slate-900 border border-white/10 text-slate-400'}`
-    }, debugEnemy.emoji, " ", debugEnemy.name)))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+      className: `min-h-[46px] px-3 rounded-xl text-[11px] font-black text-left ${debugEnemyKey === key ? 'bg-purple-950 border-2 border-purple-400 text-purple-100' : 'bg-slate-900 border border-white/10 text-slate-400'}`
+    }, /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] opacity-70"
+    }, "WAVE ", debugWave), debugEnemy.emoji, " ", debugEnemy.name)))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-500 font-black mb-2"
-    }, "3. \u52C7\u8005\u30E2\u30F3"), /*#__PURE__*/React.createElement("button", {
+    }, "4. \u52C7\u8005\u30E2\u30F3"), /*#__PURE__*/React.createElement("button", {
       type: "button",
       "data-debug-strongest-monster": true,
       "aria-pressed": debugStrongestHero,
@@ -70843,10 +70949,13 @@ function MonsterHeroGame() {
     }, "\uD83D\uDEE0 \u30C7\u30D0\u30C3\u30B0\u6700\u5F37\u30E2\u30F3"), /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] opacity-80"
     }, "DEBUG\u5C02\u7528\u30FB\u30E9\u30A4\u30D5/\u3061\u304B\u3089/\u4E08\u592B\u3055/\u6700\u5927\u30AC\u30C3\u30C4 99990\u30FB\u5168\u8DDD\u96E2M"))), /*#__PURE__*/React.createElement("button", {
-      disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || !debugStrongestHero && getActiveMonsterList().length === 0,
-      onClick: startDebugBattle,
+      "data-debug-battle-start": true,
+      disabled: !getDebugEnemyOptions(debugBattleModeId).some(o => o.key === debugEnemyKey) || !debugStrongestHero && getActiveMonsterList().length === 0,
+      onClick: () => startDebugBattle(debugBattleIsExtreme(debugBattleModeId, debugBattleDifficultyId)),
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
-    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
+    }, "5. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[9px] font-bold opacity-70"
+    }, debugBattleModeOf(debugBattleModeId).label, " / ", debugBattleDifficultySetting(debugBattleDifficultyId).label || debugBattleDifficultyId)))), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -70942,8 +71051,11 @@ function MonsterHeroGame() {
       "data-debug-battle-setup": true,
       icon: "\uD83D\uDEE0",
       label: "\u30C7\u30D0\u30C3\u30B0\u6226",
-      desc: "\u96E3\u6613\u5EA6\u3068\u6575\u3092\u9078\u3093\u3067\u6226\u3046\u3002\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093",
-      onClick: () => setGameState('DEBUG_BATTLE_SETUP')
+      desc: "\u30E2\u30FC\u30C9\u30FB\u96E3\u6613\u5EA6\u30FB\u6575\u3092\u9078\u3093\u3067\u6226\u3046\u3002\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093",
+      onClick: () => {
+        selectDebugBattle(debugBattleModeId, debugBattleDifficultyId);
+        setGameState('DEBUG_BATTLE_SETUP');
+      }
     }), /*#__PURE__*/React.createElement("button", {
       "data-debug-species-challenge": true,
       onClick: async () => {
@@ -75632,8 +75744,8 @@ function MonsterHeroGame() {
       }, "\u308F\u304B\u3063\u305F\uFF01\u5192\u967A\u306B\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
         "aria-label": "",
         onClick: () => {
-          const options = getDebugEnemyOptions(difficulty);
-          setDebugEnemyKey(options[0]?.key || null);
+          const options = getDebugEnemyOptions(debugBattleModeId);
+          if (!options.some(o => o.key === debugEnemyKey)) setDebugEnemyKey(options[0]?.key || null);
           debugBattleRef.current = false;
           extremeRunRef.current = false;
           setDebugBattle(false);
