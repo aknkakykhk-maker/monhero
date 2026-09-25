@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 78de06a2994eb46f
+// source-sha256: e69afa68dfa70dbe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 839d09a069a4b17b
+// generated-sha256: db8b79e1ae535f16
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -246,7 +246,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-25 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 12:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16980,7 +16980,7 @@ const splitRankingParty = entry => {
 //   → 二刀流(通常の後半) → 二刀流(固有技の10%×3) → ソードスキル(20%×2) → 永久追加連撃 → 全体連撃。
 // 演出(専用モーションの再生・noAnim)がこの順序と skillName に依存している。
 // 勇者モンに選んだときだけ効く「同時使用可能枚数+1」を持つ種。
-// ハムの「連続攻撃」と剣士モッチーの「二刀流」は名前が違うだけで効果は同じなので、
+// ハムの「連続攻撃」と剣士モッチーの「黒の剣士」は名前が違うだけで効果は同じなので、
 // 種ごとに処理を書かず、この一覧と cardLimit の共通ルールへ乗せる。
 // 1つのスロットへ何枚重ねられるか(60-app.jsx の slotMaxUses)も、この一覧を通す。
 // 勇者モンにした本人のカードだけ複数枚まとめて使える(ただし固有技は山札に1枚しか無い)
@@ -17080,7 +17080,7 @@ const buildAttackHits = ({
   if (isUniqueOf('Eiki')) for (const rate of ATTACK_COMBO_RULES.eikiUnique) combo(rate + comboDmgBonus);
   if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);
   if (heroId === 'Pandora' && attackerId === 'Pandora' && isUniqueOf('Pandora')) combo(ATTACK_COMBO_RULES.pandoraUnique + comboDmgBonus, '連撃', true);
-  // 勇者特性「二刀流」: 通常攻撃のもう半分と、自身の固有技のときの10%×3
+  // 勇者特性「黒の剣士」(旧名「二刀流」): 通常攻撃のもう半分と、自身の固有技のときの10%×3
   if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);
   if (kenshiHero && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiHeroUnique) combo(rate + comboDmgBonus);
   // 固有効果「ソードスキル」: 技の出自が剣士モッチーなら誰が使っても(合体で引き継いだ場合も)
@@ -57439,7 +57439,7 @@ function MonsterHeroGame() {
   // 1回のランに同じ種は1体しか入らないので、種idの一致で特定できる
   // (マスモンは名前を自由に付けられるため、名前で見分けることはできない)
   const isHeroSlotMon = mon => !!(mon && mainHero && mon.id === mainHero.id);
-  // 勇者モンの特性で増える同時使用枚数(ハムの「連続攻撃」・剣士モッチーの「二刀流」)。
+  // 勇者モンの特性で増える同時使用枚数(ハムの「連続攻撃」・剣士モッチーの「黒の剣士」)。
   // 「勇者モンに選んだときだけ効く」特性なので、効いていることが画面から分かるように
   // 枚数表示の横にも出す。計算と表示で食い違わないよう、ここを唯一の出どころにする。
   // 対象の種は HERO_CARD_BONUS_MONSTER_IDS の一覧が持つ(種ごとの分岐をここへ書かない)
