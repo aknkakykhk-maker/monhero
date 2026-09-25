@@ -18341,6 +18341,9 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-lane]:last-child::after{content:""!important;position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:var(--rhythm-right-clip,none)!important}
     [data-rhythm-sublane-boundary]{display:block;position:absolute;z-index:1;inset:0;pointer-events:none;opacity:.12;background:linear-gradient(180deg,rgba(216,180,254,.12),rgba(103,232,249,.20) 70%,rgba(236,254,255,.38));clip-path:var(--rhythm-sub-clip,none)}
     [data-rhythm-note]{z-index:2}
+    /* canvas で光の柱を描くとき(2026-09-26)は、DOM の押下表示は「どこを押しているか」の目印としてだけ残し、描かない。
+       visibility:hidden の要素は描かれないので、押すたびの内側の影・filter の描き直しが起きない */
+    [data-rhythm-play-area][data-rhythm-canvas-glow="1"] [data-rhythm-sublane-feedback]{visibility:hidden!important}
     /* canvas でノーツを描くとき(2026-09-07)。canvas はノーツと同じ層に置く。
        マスモンの顔も、演奏の前に焼いた絵を同じ canvas へ描く(2026-09-25。以前は DOM の要素を重ねていた)。 */
     [data-rhythm-note-canvas]{position:absolute;left:0;top:0;pointer-events:none;z-index:5}
@@ -19241,6 +19244,8 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
 // ノーツは光の画像を重ねて描いているので、2倍を3倍の画面へ引き伸ばしても見た目の差はほとんど出ない。
 // 判定・入力の座標は CSS の画素で持っているので、ここを変えても当たり判定は動かない。
 const RHYTHM_NOTE_CANVAS_MAX_DPR=2;
+// 押したサブレーンの光の柱を、指を離してから消し切るまでの時間(ms)。
+const RHYTHM_LANE_GLOW_FADE_MS=180;
 
 // 描画そのもの。色は DOM 版(index.html / Tailwind / rhythm-mode.js の CSS)と同じ値。
 const RHYTHM_CANVAS_RENDERER=(()=>{
@@ -19267,6 +19272,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // マスモンの顔(焼いた絵)。ノーツより上に出すため、描くのはフレームの最後(end)にまとめる。
   // 以前は DOM の要素を canvas の上へ重ねて毎フレーム動かしていた(2026-09-25にやめた)
   const faces=[];
+  // 光の柱の形(サブレーンごとの多角形)と色。大きさ・判定ラインの高さが変わったときだけ作り直す
+  let laneGlowW=0,laneGlowH=0,laneGlowPolys=[],laneGlowGradKey='',laneGlowGrad=null;
   const sprites=new Map();
   const roundRectPath=(c,x,y,w,h,r)=>{
     const rr=Math.max(0,Math.min(r,w/2,h/2));
@@ -19519,7 +19526,51 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
       return sprites.size-before;
     },
-    release(){canvas=null;ctx=null;sprites.clear();},
+    release(){canvas=null;ctx=null;sprites.clear();laneGlowW=laneGlowH=0;laneGlowPolys=[];laneGlowGradKey='';laneGlowGrad=null;},
+    // 押しているサブレーンの光の柱(2026-09-26・ユーザー指示「見た目も含めてこんぐらいに仕上げたい」)。
+    // 以前は DOM の10枚([data-rhythm-sublane-feedback])を出し入れしており、1枚ごとに半径52pxの
+    // 内側の影と filter を持つ全高の板だったので、押すたび・離すたびにぼかしを描き直していた。
+    // canvas はもともと毎フレーム描き直しているので、ここへ描けば描き直しは増えない。
+    // levels はサブレーンごとの明るさ(0〜1。離したあとは RHYTHM_LANE_GLOW_FADE_MS で0へ)。
+    // 形はレーン枠と同じ投影(rhythmBoundaryEdgePoints)なので、道の遠近にそのまま沿う。
+    // ノーツより先に呼ぶ(粒が光の上に乗る)。見た目だけで、判定・入力には一切触らない。
+    drawLaneGlow(levels,judgmentRatio){
+      if(!ctx||!levels||!(cssW>0&&cssH>0))return;
+      let any=false;
+      for(let i=0;i<levels.length;i++)if(levels[i]>0){any=true;break;}
+      if(!any)return;
+      if(laneGlowW!==cssW||laneGlowH!==cssH||laneGlowPolys.length!==levels.length){
+        laneGlowW=cssW;laneGlowH=cssH;laneGlowPolys=[];
+        for(let sub=0;sub<levels.length;sub++){
+          const right=rhythmBoundaryEdgePoints((sub+1)/2),left=rhythmBoundaryEdgePoints(sub/2).reverse(),pts=[];
+          for(const q of [...right,...left])pts.push(q.x*cssW,q.y*cssH);
+          laneGlowPolys.push(pts);
+        }
+      }
+      // 判定ラインのところがいちばん明るく、奥へ向かって青く消えていく
+      const ratio=Math.max(.5,Math.min(.95,Number(judgmentRatio)||.88)),key=`${cssH}:${ratio.toFixed(3)}`;
+      if(laneGlowGradKey!==key||!laneGlowGrad){
+        const g=ctx.createLinearGradient(0,0,0,cssH);
+        g.addColorStop(0,'rgba(59,130,246,0)');
+        g.addColorStop(ratio*.35,'rgba(59,130,246,.14)');
+        g.addColorStop(ratio*.75,'rgba(96,165,250,.46)');
+        g.addColorStop(ratio,'rgba(224,242,254,.9)');
+        g.addColorStop(Math.min(1,ratio+.04),'rgba(147,197,253,.5)');
+        g.addColorStop(1,'rgba(59,130,246,.25)');
+        laneGlowGradKey=key;laneGlowGrad=g;
+      }
+      ctx.globalCompositeOperation='lighter';ctx.fillStyle=laneGlowGrad;
+      for(let sub=0;sub<levels.length;sub++){
+        const level=levels[sub];
+        if(!(level>0))continue;
+        const pts=laneGlowPolys[sub];
+        ctx.globalAlpha=Math.min(1,level);
+        ctx.beginPath();ctx.moveTo(pts[0],pts[1]);
+        for(let k=2;k<pts.length;k+=2)ctx.lineTo(pts[k],pts[k+1]);
+        ctx.closePath();ctx.fill();
+      }
+      ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+    },
     get drawn(){return drawn;},
     // 焼いてあるスプライトの枚数(検査で「曲の中で増えないこと」を見るために使う)
     spriteCount(){return sprites.size;},
