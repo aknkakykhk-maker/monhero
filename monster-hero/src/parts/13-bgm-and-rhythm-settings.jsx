@@ -360,6 +360,29 @@ const rhythmLiveLogSections = (log,endMs,count=RHYTHM_LIVE_LOG_SECTIONS) => {
   sections.forEach(section=>{section.rate=section.total>0?section.good/section.total:null;});
   return sections;
 };
+// ===== ラッキーラッシュ(2026-09-25・ユーザー指示。バンドリ！アワーノーツの「LUCK撃奏」を見習ったもの) =====
+// うまく叩くとラッキーゲージがたまり、満タンで抽選する。当たりで「LUCKY RUSH!!」になり、
+// しばらくのあいだゲージが2倍の速さでたまり、次の抽選も当たりやすくなる。抽選のたびにラッキーptが入る。
+// ★スコア・判定・ランキングには一切入れない(アワーノーツはスコアも上がるが、ここではランキングを守るため入れない)。
+//   おまけは曲の終わりのビートPだけで、上限10P(ふだんの1プレイの5%ほど)。イベントを開いていない期間は1/5
+const RHYTHM_LUCK_GAUGE_MAX = 100;
+const RHYTHM_LUCK_GAIN = Object.freeze({ MARVELOUS:4, EXCELLENT:3, GREAT:2, GOOD:1, BAD:0, MISS:0 });
+const RHYTHM_LUCK_WIN_RATE = 0.3, RHYTHM_LUCK_WIN_RATE_RUSH = 0.6;
+const RHYTHM_LUCK_RUSH_MS = 8000, RHYTHM_LUCK_RUSH_EXTEND_MS = 6000;
+const RHYTHM_LUCK_POINTS = Object.freeze({ win:10, winRush:8, lose:2, loseRush:3 });
+const RHYTHM_LUCK_BONUS_MAX = 10;
+// 抽選1回ぶん。roll は 0〜1 の乱数(検査で決まった値を渡せるよう、外から受け取る)
+const rhythmLuckDraw = (rushActive,roll) => {
+  const r=Number.isFinite(Number(roll))?Number(roll):0.99;
+  const win=r<(rushActive?RHYTHM_LUCK_WIN_RATE_RUSH:RHYTHM_LUCK_WIN_RATE);
+  return { win, points:win?(rushActive?RHYTHM_LUCK_POINTS.winRush:RHYTHM_LUCK_POINTS.win):(rushActive?RHYTHM_LUCK_POINTS.loseRush:RHYTHM_LUCK_POINTS.lose),
+    rushMs:win?(rushActive?RHYTHM_LUCK_RUSH_EXTEND_MS:RHYTHM_LUCK_RUSH_MS):0 };
+};
+// ラッキーptから曲の終わりのおまけビートPを出す。offEvent(イベントを開いていない)ときは1/5
+const rhythmLuckBonusPoints = (points,offEvent) => {
+  const base=Math.min(RHYTHM_LUCK_BONUS_MAX,Math.floor(Math.max(0,Number(points)||0)/10));
+  return offEvent?Math.floor(base/5):base;
+};
 const rhythmStageLevel = settings => settings&&settings.lightweightMode?'SIMPLE'
   :(RHYTHM_STAGE_EFFECTS.includes(settings&&settings.stageEffect)?settings.stageEffect:'SIMPLE');
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
@@ -414,6 +437,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
   // バンドリ！アワーノーツから取り入れた遊び方(2026-09-24)。どちらも既定OFF(=これまでどおり)
   assistMode:false, mirrorChart:false,
+  // ラッキーラッシュ(2026-09-25・アワーノーツのLUCK撃奏を見習ったもの)。操作は変えない見た目とおまけなので既定ON
+  luckyRush:true,
 });
 const rhythmFiniteInRange = (value,min,max,fallback) => {
   const number=Number(value); return Number.isFinite(number)&&number>=min&&number<=max?number:fallback;
@@ -463,7 +488,7 @@ const normalizeRhythmSettings = value => {
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
     comboStatusDisplay:bool('comboStatusDisplay'), paceDisplay:bool('paceDisplay'),
-    assistMode:bool('assistMode'), mirrorChart:bool('mirrorChart'),
+    assistMode:bool('assistMode'), mirrorChart:bool('mirrorChart'), luckyRush:bool('luckyRush'),
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 282bb18fcd127a9f
+// source-sha256: 4ce9c8d1fb2fd35b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1d3c5b6e6fcf3c0f
+// generated-sha256: 7f9e3f011c5dd2aa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -262,7 +262,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-25 20:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 20:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5813,6 +5813,46 @@ const rhythmLiveLogSections = (log, endMs, count = RHYTHM_LIVE_LOG_SECTIONS) => 
   });
   return sections;
 };
+// ===== ラッキーラッシュ(2026-09-25・ユーザー指示。バンドリ！アワーノーツの「LUCK撃奏」を見習ったもの) =====
+// うまく叩くとラッキーゲージがたまり、満タンで抽選する。当たりで「LUCKY RUSH!!」になり、
+// しばらくのあいだゲージが2倍の速さでたまり、次の抽選も当たりやすくなる。抽選のたびにラッキーptが入る。
+// ★スコア・判定・ランキングには一切入れない(アワーノーツはスコアも上がるが、ここではランキングを守るため入れない)。
+//   おまけは曲の終わりのビートPだけで、上限10P(ふだんの1プレイの5%ほど)。イベントを開いていない期間は1/5
+const RHYTHM_LUCK_GAUGE_MAX = 100;
+const RHYTHM_LUCK_GAIN = Object.freeze({
+  MARVELOUS: 4,
+  EXCELLENT: 3,
+  GREAT: 2,
+  GOOD: 1,
+  BAD: 0,
+  MISS: 0
+});
+const RHYTHM_LUCK_WIN_RATE = 0.3,
+  RHYTHM_LUCK_WIN_RATE_RUSH = 0.6;
+const RHYTHM_LUCK_RUSH_MS = 8000,
+  RHYTHM_LUCK_RUSH_EXTEND_MS = 6000;
+const RHYTHM_LUCK_POINTS = Object.freeze({
+  win: 10,
+  winRush: 8,
+  lose: 2,
+  loseRush: 3
+});
+const RHYTHM_LUCK_BONUS_MAX = 10;
+// 抽選1回ぶん。roll は 0〜1 の乱数(検査で決まった値を渡せるよう、外から受け取る)
+const rhythmLuckDraw = (rushActive, roll) => {
+  const r = Number.isFinite(Number(roll)) ? Number(roll) : 0.99;
+  const win = r < (rushActive ? RHYTHM_LUCK_WIN_RATE_RUSH : RHYTHM_LUCK_WIN_RATE);
+  return {
+    win,
+    points: win ? rushActive ? RHYTHM_LUCK_POINTS.winRush : RHYTHM_LUCK_POINTS.win : rushActive ? RHYTHM_LUCK_POINTS.loseRush : RHYTHM_LUCK_POINTS.lose,
+    rushMs: win ? rushActive ? RHYTHM_LUCK_RUSH_EXTEND_MS : RHYTHM_LUCK_RUSH_MS : 0
+  };
+};
+// ラッキーptから曲の終わりのおまけビートPを出す。offEvent(イベントを開いていない)ときは1/5
+const rhythmLuckBonusPoints = (points, offEvent) => {
+  const base = Math.min(RHYTHM_LUCK_BONUS_MAX, Math.floor(Math.max(0, Number(points) || 0) / 10));
+  return offEvent ? Math.floor(base / 5) : base;
+};
 const rhythmStageLevel = settings => settings && settings.lightweightMode ? 'SIMPLE' : RHYTHM_STAGE_EFFECTS.includes(settings && settings.stageEffect) ? settings.stageEffect : 'SIMPLE';
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']]);
 const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']]);
@@ -5896,7 +5936,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   paceDisplay: true,
   // バンドリ！アワーノーツから取り入れた遊び方(2026-09-24)。どちらも既定OFF(=これまでどおり)
   assistMode: false,
-  mirrorChart: false
+  mirrorChart: false,
+  // ラッキーラッシュ(2026-09-25・アワーノーツのLUCK撃奏を見習ったもの)。操作は変えない見た目とおまけなので既定ON
+  luckyRush: true
 });
 const rhythmFiniteInRange = (value, min, max, fallback) => {
   const number = Number(value);
@@ -5951,7 +5993,8 @@ const normalizeRhythmSettings = value => {
     comboStatusDisplay: bool('comboStatusDisplay'),
     paceDisplay: bool('paceDisplay'),
     assistMode: bool('assistMode'),
-    mirrorChart: bool('mirrorChart')
+    mirrorChart: bool('mirrorChart'),
+    luckyRush: bool('luckyRush')
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -24543,7 +24586,7 @@ const RhythmOptions = ({
     suffix: '%'
   }), 'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。', {
     full: true
-  }), field('アシストモード', toggle('assistMode'), 'リズムゲームが苦手でも気軽に遊べるモードです（バンドリ！アワーノーツのアシストモードを見習いました）。既定はOFFです。ONにすると、フリックはタップするだけで取れ、ホールド・スライドの終わりのフリックも離すだけでよくなります。BAD・MISSでコンボが切れそうなときは「コンボガード」が代わりに受け止めます（最大3回ぶん。コンボをつなぐと少しずつたまり、崩れているときほど早くたまります）。そのかわりスコアは8割になり、FULL COMBO などの称号は付かず、自己ベスト・全国ランキング・ビートPには残りません。曲えらびの「🛟 アシスト」でも切り替えられます。'), field('ミラー譜面', toggle('mirrorChart'), '譜面を左右反対にして遊びます（バンドリ！アワーノーツなどにある設定です）。既定はOFFです。同じ曲でも手の動きが変わるので、苦手な配置の練習や気分転換に使えます。判定・スコア・記録はふだんどおりです。曲えらびの「↔ ミラー譜面」でも切り替えられます。'), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだは COMBO の下に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、レーンの右のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+  }), field('アシストモード', toggle('assistMode'), 'リズムゲームが苦手でも気軽に遊べるモードです（バンドリ！アワーノーツのアシストモードを見習いました）。既定はOFFです。ONにすると、フリックはタップするだけで取れ、ホールド・スライドの終わりのフリックも離すだけでよくなります。BAD・MISSでコンボが切れそうなときは「コンボガード」が代わりに受け止めます（最大3回ぶん。コンボをつなぐと少しずつたまり、崩れているときほど早くたまります）。そのかわりスコアは8割になり、FULL COMBO などの称号は付かず、自己ベスト・全国ランキング・ビートPには残りません。曲えらびの「🛟 アシスト」でも切り替えられます。'), field('ミラー譜面', toggle('mirrorChart'), '譜面を左右反対にして遊びます（バンドリ！アワーノーツなどにある設定です）。既定はOFFです。同じ曲でも手の動きが変わるので、苦手な配置の練習や気分転換に使えます。判定・スコア・記録はふだんどおりです。曲えらびの「↔ ミラー譜面」でも切り替えられます。'), field('ラッキーラッシュ', toggle('luckyRush'), 'うまく叩くと、経過時間の下の🍀ゲージがたまり、満タンで抽選します（バンドリ！アワーノーツの「LUCK撃奏」を見習いました）。当たると「LUCKY RUSH!!」になり、しばらくのあいだ画面のふちが金色に光って、ゲージが2倍の速さでたまり、次の抽選も当たりやすくなります。抽選のたびにラッキーptが入り、曲の終わりにおまけのビートPになります（1曲で最大10P。イベントを開いていない期間は1/5。アシストモードでは入りません）。スコア・判定・ランキングには関わりません。既定はONです。'), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだは COMBO の下に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、レーンの右のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
   }), field('コンボ数', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: wide ? 'mt-1.5' : 'mt-2'
@@ -26232,6 +26275,29 @@ const RhythmTapTest = ({
   // 自己ベスト比(IIDXのペースメーカー)と、ずれメーター(osu!)。どちらも判定のたびに DOM へ直接書く
   const paceRef = useRef(null),
     meterTicksRef = useRef([]);
+  // ラッキーラッシュ(アワーノーツのLUCK撃奏)。ゲージと点数は判定のたびに DOM へ直接書き、
+  // RUSH中かどうかと、抽選の結果の一言だけを React の状態で持つ(変わるのは抽選のときだけ)
+  const luckGaugeRef = useRef(null),
+    luckPointsRef = useRef(null),
+    luckBannerTimerRef = useRef(null);
+  const [luckyRush, setLuckyRush] = useState(false);
+  const [luckyBanner, setLuckyBanner] = useState(null);
+  const luckOn = settings.luckyRush !== false && !tutorial && !calibrating;
+  const showLuckyBanner = useCallback((text, kind) => {
+    if (luckBannerTimerRef.current) clearTimeout(luckBannerTimerRef.current);
+    setLuckyBanner({
+      text,
+      kind,
+      id: Date.now()
+    });
+    luckBannerTimerRef.current = setTimeout(() => {
+      luckBannerTimerRef.current = null;
+      setLuckyBanner(null);
+    }, kind === 'rush' ? 1400 : 800);
+  }, []);
+  useEffect(() => () => {
+    if (luckBannerTimerRef.current) clearTimeout(luckBannerTimerRef.current);
+  }, []);
   const timingDisplay = RHYTHM_TIMING_DISPLAYS.includes(settings.timingDisplay) ? settings.timingDisplay : 'STANDARD';
   /* レーンカバーの形。高さは設定の%で、横はレーンの台形(rhythmProjectionScale)に沿って切り抜く。
      台形のふちは少し曲がっているので、8か所で折って近づける(外へ1%だけはみ出させて、ふちの隙間を作らない) */
@@ -26670,6 +26736,35 @@ const RhythmTapTest = ({
     }
     /* ライブログ(アワーノーツの演奏後の振り返り)。ノーツの時刻と判定だけを控え、リザルトで区間ごとに数える。記録には残さない */
     (run.liveLog || (run.liveLog = [])).push([Number(note.timeMs) || 0, judgment]);
+    /* ラッキーラッシュ。うまく叩くほどゲージがたまり、満タンで抽選。RUSH中は2倍でたまり、当たりやすい。
+       ★スコア・判定・コンボ・ライフには一切触らない。点数(ラッキーpt)は曲の終わりのおまけにだけ使う */
+    if (luckOn) {
+      const luckNow = run.audio?.songTimeMs?.() ?? 0;
+      const rushActive = run.luckRushUntil != null && luckNow < run.luckRushUntil;
+      run.luckGauge = (run.luckGauge || 0) + (RHYTHM_LUCK_GAIN[judgment] || 0) * (rushActive ? 2 : 1);
+      if (run.luckGauge >= RHYTHM_LUCK_GAUGE_MAX) {
+        run.luckGauge = 0;
+        const draw = rhythmLuckDraw(rushActive, Math.random());
+        run.luckPoints = (run.luckPoints || 0) + draw.points;
+        run.luckDraws = (run.luckDraws || 0) + 1;
+        if (draw.win) {
+          run.luckRushUntil = (rushActive ? run.luckRushUntil : luckNow) + draw.rushMs;
+          if (!rushActive) run.luckRushCount = (run.luckRushCount || 0) + 1;
+          setLuckyRush(true);
+          showLuckyBanner(rushActive ? 'RUSH 延長!' : 'LUCKY RUSH!!', 'rush');
+        } else showLuckyBanner(`+${draw.points}pt`, 'small');
+      }
+      const gaugeEl = luckGaugeRef.current;
+      if (gaugeEl) {
+        const ratio = Math.min(1, run.luckGauge / RHYTHM_LUCK_GAUGE_MAX);
+        gaugeEl.style.transform = `scaleX(${ratio.toFixed(3)})`;
+      }
+      const ptEl = luckPointsRef.current;
+      if (ptEl && ptEl._mhLuck !== run.luckPoints) {
+        ptEl._mhLuck = run.luckPoints || 0;
+        ptEl.textContent = `${run.luckPoints || 0}pt`;
+      }
+    }
     run.combo = keptCombo;
     run.maxCombo = Math.max(run.maxCombo, keptCombo);
     run.counts[judgment]++;
@@ -26825,7 +26920,7 @@ const RhythmTapTest = ({
     }
     if (showAbilityFlash) scheduleAbilityClear();
     if (_judgeT0) RHYTHM_PERF.judge(performance.now() - _judgeT0, !!monster);
-  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, settings.paceDisplay, settings.timingDisplay, tutorial, calibrating, assistOn]);
+  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, settings.paceDisplay, settings.timingDisplay, tutorial, calibrating, assistOn, luckOn, showLuckyBanner]);
   const finish = useCallback(() => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
@@ -26906,8 +27001,30 @@ const RhythmTapTest = ({
       }
     }));
     if (eventPointAward && eventPointAward.amount > 0 && typeof addRhythmEventPoints === 'function') void addRhythmEventPoints(eventPointAward.amount);
+    /* ラッキーラッシュのおまけ。公開の曲を最後まで遊んだときだけ(アシスト・練習・デバッグは除く)。上限10P、イベント期間外は1/5 */
+    setLuckyRush(false);
+    if (luckOn && !assistOn && !debugPlay && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof addRhythmEventPoints === 'function') {
+      const offEvent = !(typeof rhythmLimitedEventAt === 'function' && rhythmLimitedEventAt(Date.now()));
+      const luckBonus = rhythmLuckBonusPoints(run.luckPoints, offEvent);
+      if (luckBonus > 0) {
+        run.luckBonus = luckBonus;
+        void addRhythmEventPoints(luckBonus);
+      }
+    }
+    if (luckOn) setView(v => v.result ? {
+      ...v,
+      result: {
+        ...v.result,
+        luck: {
+          points: run.luckPoints || 0,
+          draws: run.luckDraws || 0,
+          rush: run.luckRushCount || 0,
+          bonus: run.luckBonus || 0
+        }
+      }
+    } : v);
     onComplete(result, merged);
-  }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, onComplete, settings.effectAmount, settings.lightweightMode, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn]);
+  }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, onComplete, settings.effectAmount, settings.lightweightMode, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn]);
   // celebrate画面: 出た瞬間に合成SEを1回鳴らし、既定の時間で自動的にresultへ進む。
   // 依存はview.statusだけにしてある。もしview.comboなど毎ノーツ変わる値を依存に入れると、
   // (かつてコンボ演出で実際に踏んだ通り)途中でeffectが再実行されるたびcleanupが走り、
@@ -27345,6 +27462,10 @@ const RhythmTapTest = ({
           progressEl.style.transform = `scaleX(${ratio.toFixed(4)})`;
         }
       }
+      if (run.luckRushUntil != null && songTimeMs >= run.luckRushUntil) {
+        run.luckRushUntil = null;
+        setLuckyRush(false);
+      }
       const timeEl = songTimeRef.current;
       if (timeEl) {
         const shownMs = Math.max(0, Math.min(playEndTimeMs, songTimeMs)),
@@ -27558,6 +27679,14 @@ const RhythmTapTest = ({
       ...initialView(),
       status: 'playing'
     });
+    /* ラッキーラッシュは1曲ごとに0から(リスタートで前のゲージ・RUSHを持ち越さない) */
+    setLuckyRush(false);
+    setLuckyBanner(null);
+    if (luckGaugeRef.current) luckGaugeRef.current.style.transform = 'scaleX(0)';
+    if (luckPointsRef.current) {
+      luckPointsRef.current._mhLuck = 0;
+      luckPointsRef.current.textContent = '0pt';
+    }
     /* ここまでで画面の中身はそろっているが、実際に置かれる大きさが決まるのは次の描画のあと。
        絵の読み込み・レイアウトの反映が終わる前に曲を鳴らし始めると、ノーツを正しい場所へ
        置けないまま曲だけ進み、MISSが積み上がる(2026-09-05・実機の指摘)。
@@ -28119,7 +28248,16 @@ const RhythmTapTest = ({
         "data-rhythm-best-diff": true,
         className: `text-center text-[11px] font-black tabular-nums ${diff > 0 ? 'text-emerald-300' : 'text-slate-400'}`
       }, diff > 0 ? `前の自己ベストから +${diff.toLocaleString()}` : diff === 0 ? '自己ベストと同じスコア' : `自己ベストまで あと ${(-diff).toLocaleString()}`);
-    })(), result.eventPointAward && result.eventPointAward.amount > 0 && /*#__PURE__*/React.createElement("div", {
+    })(), result.luck && (result.luck.draws > 0 || result.luck.points > 0) && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-result-luck": true,
+      className: "mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center"
+    }, /*#__PURE__*/React.createElement("small", {
+      className: "block text-[10px] font-black tracking-wider text-lime-200"
+    }, "\uD83C\uDF40 \u30E9\u30C3\u30AD\u30FC\u30E9\u30C3\u30B7\u30E5"), /*#__PURE__*/React.createElement("b", {
+      className: "mt-0.5 block text-lg font-black tabular-nums text-white"
+    }, Number(result.luck.points).toLocaleString(), "pt"), /*#__PURE__*/React.createElement("span", {
+      className: "mt-0.5 block text-[10px] font-bold text-lime-100"
+    }, "\u62BD\u9078 ", result.luck.draws, "\u56DE\u30FBRUSH ", result.luck.rush, "\u56DE", result.luck.bonus > 0 ? `・おまけビートP +${result.luck.bonus}P` : '')), result.eventPointAward && result.eventPointAward.amount > 0 && /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-beat-points": true,
       className: "mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center"
     }, /*#__PURE__*/React.createElement("small", {
@@ -28486,7 +28624,30 @@ const RhythmTapTest = ({
     className: "rounded bg-emerald-600/80 px-1 py-0.5 text-white"
   }, "ASSIST"), mirrorOn && /*#__PURE__*/React.createElement("span", {
     className: "rounded bg-sky-600/80 px-1 py-0.5 text-white"
-  }, "MIRROR")), /*#__PURE__*/React.createElement("b", {
+  }, "MIRROR")), luckOn && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-luck": true,
+    "data-rush": luckyRush ? '1' : '0',
+    className: "flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] leading-none"
+  }, "\uD83C\uDF40"), /*#__PURE__*/React.createElement("div", {
+    className: "relative h-[4px] w-10 overflow-hidden rounded-full border border-white/20 bg-slate-950/80"
+  }, /*#__PURE__*/React.createElement("i", {
+    ref: luckGaugeRef,
+    "data-rhythm-luck-gauge": true,
+    className: "absolute inset-y-0 left-0 w-full rounded-full",
+    style: {
+      transform: 'scaleX(0)',
+      transformOrigin: 'left center'
+    }
+  })), /*#__PURE__*/React.createElement("b", {
+    ref: luckPointsRef,
+    "data-rhythm-luck-points": true,
+    className: "text-[9px] font-black leading-none tabular-nums text-lime-200",
+    style: {
+      textShadow: '0 1px 3px rgba(2,6,23,1)'
+    }
+  }, "0pt")), /*#__PURE__*/React.createElement("b", {
     ref: paceRef,
     "data-rhythm-pace": true,
     hidden: true,
@@ -28726,7 +28887,15 @@ const RhythmTapTest = ({
     style: {
       opacity: 0
     }
-  })))), comboMilestone > 0 && /*#__PURE__*/React.createElement("div", {
+  })))), luckyRush && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-lucky-rush": true,
+    "aria-hidden": "true"
+  }), luckyBanner && /*#__PURE__*/React.createElement("div", {
+    key: luckyBanner.id,
+    "data-rhythm-lucky-banner": true,
+    "data-kind": luckyBanner.kind,
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("b", null, luckyBanner.text)), comboMilestone > 0 && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-combo-milestone": true,
     "data-milestone-stage": comboMilestoneStage,
     "aria-hidden": "true",

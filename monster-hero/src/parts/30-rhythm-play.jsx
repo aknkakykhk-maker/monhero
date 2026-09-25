@@ -330,6 +330,14 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const songTimeRef=useRef(null);
   // 自己ベスト比(IIDXのペースメーカー)と、ずれメーター(osu!)。どちらも判定のたびに DOM へ直接書く
   const paceRef=useRef(null),meterTicksRef=useRef([]);
+  // ラッキーラッシュ(アワーノーツのLUCK撃奏)。ゲージと点数は判定のたびに DOM へ直接書き、
+  // RUSH中かどうかと、抽選の結果の一言だけを React の状態で持つ(変わるのは抽選のときだけ)
+  const luckGaugeRef=useRef(null),luckPointsRef=useRef(null),luckBannerTimerRef=useRef(null);
+  const [luckyRush,setLuckyRush]=useState(false);
+  const [luckyBanner,setLuckyBanner]=useState(null);
+  const luckOn=settings.luckyRush!==false&&!tutorial&&!calibrating;
+  const showLuckyBanner=useCallback((text,kind)=>{if(luckBannerTimerRef.current)clearTimeout(luckBannerTimerRef.current);setLuckyBanner({text,kind,id:Date.now()});luckBannerTimerRef.current=setTimeout(()=>{luckBannerTimerRef.current=null;setLuckyBanner(null);},kind==='rush'?1400:800);},[]);
+  useEffect(()=>()=>{if(luckBannerTimerRef.current)clearTimeout(luckBannerTimerRef.current);},[]);
   const timingDisplay=RHYTHM_TIMING_DISPLAYS.includes(settings.timingDisplay)?settings.timingDisplay:'STANDARD';
   /* レーンカバーの形。高さは設定の%で、横はレーンの台形(rhythmProjectionScale)に沿って切り抜く。
      台形のふちは少し曲がっているので、8か所で折って近づける(外へ1%だけはみ出させて、ふちの隙間を作らない) */
@@ -631,6 +639,15 @@ if(assistOn){const guard=run.assistGuard??RHYTHM_ASSIST_GUARD_MAX;run._assistJud
   else{run.assistGuard=guard;run._assistStreak=0;}}
 /* ライブログ(アワーノーツの演奏後の振り返り)。ノーツの時刻と判定だけを控え、リザルトで区間ごとに数える。記録には残さない */
 (run.liveLog||(run.liveLog=[])).push([Number(note.timeMs)||0,judgment]);
+/* ラッキーラッシュ。うまく叩くほどゲージがたまり、満タンで抽選。RUSH中は2倍でたまり、当たりやすい。
+   ★スコア・判定・コンボ・ライフには一切触らない。点数(ラッキーpt)は曲の終わりのおまけにだけ使う */
+if(luckOn){const luckNow=run.audio?.songTimeMs?.()??0;const rushActive=run.luckRushUntil!=null&&luckNow<run.luckRushUntil;
+  run.luckGauge=(run.luckGauge||0)+(RHYTHM_LUCK_GAIN[judgment]||0)*(rushActive?2:1);
+  if(run.luckGauge>=RHYTHM_LUCK_GAUGE_MAX){run.luckGauge=0;const draw=rhythmLuckDraw(rushActive,Math.random());run.luckPoints=(run.luckPoints||0)+draw.points;run.luckDraws=(run.luckDraws||0)+1;
+    if(draw.win){run.luckRushUntil=(rushActive?run.luckRushUntil:luckNow)+draw.rushMs;if(!rushActive)run.luckRushCount=(run.luckRushCount||0)+1;setLuckyRush(true);showLuckyBanner(rushActive?'RUSH 延長!':'LUCKY RUSH!!','rush');}
+    else showLuckyBanner(`+${draw.points}pt`,'small');}
+  const gaugeEl=luckGaugeRef.current;if(gaugeEl){const ratio=Math.min(1,run.luckGauge/RHYTHM_LUCK_GAUGE_MAX);gaugeEl.style.transform=`scaleX(${ratio.toFixed(3)})`;}
+  const ptEl=luckPointsRef.current;if(ptEl&&ptEl._mhLuck!==run.luckPoints){ptEl._mhLuck=run.luckPoints||0;ptEl.textContent=`${run.luckPoints||0}pt`;}}
 run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
@@ -693,7 +710,7 @@ const paceEl=paceRef.current;
 if(paceEl&&settings.paceDisplay!==false&&!tutorial&&!calibrating&&Number(run.startBestScore)>0&&chart.totalNotes>0){const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(run.counts[id])||0),0);const diff=Math.round(score-Number(run.startBestScore)*judged/chart.totalNotes);paceEl.hidden=false;paceEl.dataset.pace=diff>=0?'up':'down';paceEl.textContent=`ベスト比 ${diff>=0?'+':'−'}${Math.abs(diff).toLocaleString()}`;}
 /* ずれメーター(osu! のヒットエラーメーター)。直近12回のずれを目盛りに並べ、古いものほど薄くする。
    目盛りの幅は BAD の窓(±185ms)。判定には一切関わらない */
-if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)){const ticks=meterTicksRef.current;if(ticks.length){const slot=(run._meterSlot=((run._meterSlot??-1)+1)%ticks.length);const range=RHYTHM_JUDGMENTS.find(item=>item.id==='BAD')?.windowMs||185;const tick=ticks[slot];if(tick){tick.style.left=`${(50+Math.max(-1,Math.min(1,deltaMs/range))*50).toFixed(2)}%`;tick.dataset.judgment=judgment;}ticks.forEach((el,i)=>{if(!el)return;const age=(slot-i+ticks.length)%ticks.length;el.style.opacity=el.dataset.judgment?String(Math.max(.12,1-age/ticks.length).toFixed(2)):'0';});}}if(showAbilityFlash)scheduleAbilityClear();if(_judgeT0)RHYTHM_PERF.judge(performance.now()-_judgeT0,!!monster);},[chart.totalNotes,difficulty.maxScore,scheduleAbilityClear,scheduleJudgmentClear,settings.vibrationEnabled,settings.monsterNoteEffect,settings.paceDisplay,settings.timingDisplay,tutorial,calibrating,assistOn]);
+if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)){const ticks=meterTicksRef.current;if(ticks.length){const slot=(run._meterSlot=((run._meterSlot??-1)+1)%ticks.length);const range=RHYTHM_JUDGMENTS.find(item=>item.id==='BAD')?.windowMs||185;const tick=ticks[slot];if(tick){tick.style.left=`${(50+Math.max(-1,Math.min(1,deltaMs/range))*50).toFixed(2)}%`;tick.dataset.judgment=judgment;}ticks.forEach((el,i)=>{if(!el)return;const age=(slot-i+ticks.length)%ticks.length;el.style.opacity=el.dataset.judgment?String(Math.max(.12,1-age/ticks.length).toFixed(2)):'0';});}}if(showAbilityFlash)scheduleAbilityClear();if(_judgeT0)RHYTHM_PERF.judge(performance.now()-_judgeT0,!!monster);},[chart.totalNotes,difficulty.maxScore,scheduleAbilityClear,scheduleJudgmentClear,settings.vibrationEnabled,settings.monsterNoteEffect,settings.paceDisplay,settings.timingDisplay,tutorial,calibrating,assistOn,luckOn,showLuckyBanner]);
   const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.finished=true;stopFrame();RHYTHM_GESTURE_RUNTIME.clear();run.activePointers.clear();run.activeTouchInputs?.clear();run.audio?.stop();const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);/* アシストモードでは FULL COMBO 等の称号を付けない(アワーノーツと同じ) */if(assistOn){achievements.fullCombo=false;achievements.allExcellent=false;achievements.allMarvelous=false;}
     // ===== クリアか失敗か(2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして」) =====
     // 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。根性で蘇生して0を脱していれば
@@ -725,8 +742,16 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
     setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,result:{...result,isNewRecord,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn}}));
     if(eventPointAward&&eventPointAward.amount>0&&typeof addRhythmEventPoints==='function')void addRhythmEventPoints(eventPointAward.amount);
+    /* ラッキーラッシュのおまけ。公開の曲を最後まで遊んだときだけ(アシスト・練習・デバッグは除く)。上限10P、イベント期間外は1/5 */
+    setLuckyRush(false);
+    if(luckOn&&!assistOn&&!debugPlay&&typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS?.rhythmEventPoints===true&&typeof addRhythmEventPoints==='function'){
+      const offEvent=!(typeof rhythmLimitedEventAt==='function'&&rhythmLimitedEventAt(Date.now()));
+      const luckBonus=rhythmLuckBonusPoints(run.luckPoints,offEvent);
+      if(luckBonus>0){run.luckBonus=luckBonus;void addRhythmEventPoints(luckBonus);}
+    }
+    if(luckOn)setView(v=>v.result?{...v,result:{...v.result,luck:{points:run.luckPoints||0,draws:run.luckDraws||0,rush:run.luckRushCount||0,bonus:run.luckBonus||0}}}:v);
     onComplete(result,merged);
-  },[chart.totalNotes,chart.durationMs,difficulty.maxScore,onComplete,settings.effectAmount,settings.lightweightMode,stopFrame,tutorial,calibrating,debugPlay,song.songId,song.playDurationMs,assistOn,mirrorOn]);
+  },[chart.totalNotes,chart.durationMs,difficulty.maxScore,onComplete,settings.effectAmount,settings.lightweightMode,stopFrame,tutorial,calibrating,debugPlay,song.songId,song.playDurationMs,assistOn,mirrorOn,luckOn]);
   // celebrate画面: 出た瞬間に合成SEを1回鳴らし、既定の時間で自動的にresultへ進む。
   // 依存はview.statusだけにしてある。もしview.comboなど毎ノーツ変わる値を依存に入れると、
   // (かつてコンボ演出で実際に踏んだ通り)途中でeffectが再実行されるたびcleanupが走り、
@@ -917,6 +942,7 @@ const playEndTimeMs=Number.isFinite(Number(song.playDurationMs))?Number(song.pla
 /* 曲の進みぐあい(右上・ライフの下の細いバーと経過時間)。バーは0.1%より動いたときだけ、時間は秒が変わったときだけ書き換える */
 const progressEl=songProgressRef.current;
 if(progressEl){const ratio=playEndTimeMs>0?Math.max(0,Math.min(1,songTimeMs/playEndTimeMs)):0;if(Math.abs(ratio-(progressEl._mhRatio||0))>=.001||ratio===1){progressEl._mhRatio=ratio;progressEl.style.transform=`scaleX(${ratio.toFixed(4)})`;}}
+if(run.luckRushUntil!=null&&songTimeMs>=run.luckRushUntil){run.luckRushUntil=null;setLuckyRush(false);}
 const timeEl=songTimeRef.current;
 if(timeEl){const shownMs=Math.max(0,Math.min(playEndTimeMs,songTimeMs)),second=Math.floor(shownMs/1000);if(timeEl._mhSecond!==second){timeEl._mhSecond=second;timeEl.textContent=`${rhythmClockLabel(shownMs)}/${rhythmClockLabel(playEndTimeMs)}`;}}
 /* 譜面より音源のほうが長い曲(デュラハンの2曲は音源をバトルと共用しているので切れない)は、
@@ -979,6 +1005,8 @@ sideMonsterRefs.current.forEach(el=>{if(el){el.style.setProperty('--rhythm-side-
    変わるのは厚み(scaleY)と濃さ(opacity)だけなので、判定の位置は動かない */
 if(judgmentLineRef.current)judgmentLineRef.current.style.setProperty('--rhythm-beat',`${sideBeatMs}ms`);
 startLockRef.current=false;setView({...initialView(),status:'playing'});
+/* ラッキーラッシュは1曲ごとに0から(リスタートで前のゲージ・RUSHを持ち越さない) */
+setLuckyRush(false);setLuckyBanner(null);if(luckGaugeRef.current)luckGaugeRef.current.style.transform='scaleX(0)';if(luckPointsRef.current){luckPointsRef.current._mhLuck=0;luckPointsRef.current.textContent='0pt';}
 /* ここまでで画面の中身はそろっているが、実際に置かれる大きさが決まるのは次の描画のあと。
    絵の読み込み・レイアウトの反映が終わる前に曲を鳴らし始めると、ノーツを正しい場所へ
    置けないまま曲だけ進み、MISSが積み上がる(2026-09-05・実機の指摘)。
@@ -1136,7 +1164,8 @@ scheduleTick();};
     次の1回の目標が数字で分かるようにする。前の記録が無い(初めて遊んだ)ときは出さない */}
 {/* 次のランクまでのあと少し。その難易度の満点では届かないランクは出さない(rhythmNextRankId が止める) */}
 {(()=>{const nextId=rhythmNextRankId(view.score,difficulty.maxScore);const next=nextId?RHYTHM_RANKS.find(item=>item.id===nextId):null;if(!next)return null;const need=next.min-view.score;if(!(need>0))return null;return <p data-rhythm-next-rank={nextId} className="text-center text-[11px] font-black tabular-nums text-slate-300">次のランク <b className={RHYTHM_RANK_COLORS[nextId]||'text-white'}>{nextId}</b> まで あと {need.toLocaleString()}</p>;})()}
-{(()=>{const before=runRef.current?.startBest;const prev=before&&before.played?Number(before.bestScore)||0:0;if(!(prev>0))return null;const diff=view.score-prev;return <p data-rhythm-best-diff className={`text-center text-[11px] font-black tabular-nums ${diff>0?'text-emerald-300':'text-slate-400'}`}>{diff>0?`前の自己ベストから +${diff.toLocaleString()}`:diff===0?'自己ベストと同じスコア':`自己ベストまで あと ${(-diff).toLocaleString()}`}</p>;})()}{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
+{(()=>{const before=runRef.current?.startBest;const prev=before&&before.played?Number(before.bestScore)||0:0;if(!(prev>0))return null;const diff=view.score-prev;return <p data-rhythm-best-diff className={`text-center text-[11px] font-black tabular-nums ${diff>0?'text-emerald-300':'text-slate-400'}`}>{diff>0?`前の自己ベストから +${diff.toLocaleString()}`:diff===0?'自己ベストと同じスコア':`自己ベストまで あと ${(-diff).toLocaleString()}`}</p>;})()}{result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
+{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
     ALL MARVELOUS > ALL EXCELLENT > FULL COMBO の順に上位。残りは下に小さく並べる。 */}
 {(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate className="my-3 text-center">
   <b className="block text-3xl font-black leading-tight">{result.allMarvelous?'ALL MARVELOUS!!':result.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!'}</b>
@@ -1232,6 +1261,8 @@ scheduleTick();};
   <div className="flex w-full min-w-0 items-center gap-1.5"><div className="relative h-[5px] w-12 min-w-0 shrink overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i ref={songProgressRef} className="absolute inset-y-0 left-0 w-full rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400" style={{transform:'scaleX(0)',transformOrigin:'left center'}}/></div><b ref={songTimeRef} data-rhythm-song-time className="shrink-0 text-[11px] font-black leading-none tabular-nums text-white" style={{textShadow:'0 1px 3px rgba(2,6,23,1),0 0 6px rgba(2,6,23,.9)'}}>0:00</b></div>
   {/* アシストモード・ミラー譜面で遊んでいることを、演奏中もひと目で分かるようにする */}
   {(assistOn||mirrorOn)&&<span data-rhythm-play-mode className="flex gap-1 text-[9px] font-black leading-none">{assistOn&&<span className="rounded bg-emerald-600/80 px-1 py-0.5 text-white">ASSIST</span>}{mirrorOn&&<span className="rounded bg-sky-600/80 px-1 py-0.5 text-white">MIRROR</span>}</span>}
+  {/* ラッキーゲージ。満タンで抽選(ラッキーラッシュ)。中身は判定のたびに applyJudgment が書く */}
+  {luckOn&&<div data-rhythm-luck data-rush={luckyRush?'1':'0'} className="flex items-center gap-1"><span className="text-[10px] leading-none">🍀</span><div className="relative h-[4px] w-10 overflow-hidden rounded-full border border-white/20 bg-slate-950/80"><i ref={luckGaugeRef} data-rhythm-luck-gauge className="absolute inset-y-0 left-0 w-full rounded-full" style={{transform:'scaleX(0)',transformOrigin:'left center'}}/></div><b ref={luckPointsRef} data-rhythm-luck-points className="text-[9px] font-black leading-none tabular-nums text-lime-200" style={{textShadow:'0 1px 3px rgba(2,6,23,1)'}}>0pt</b></div>}
   {/* 自己ベスト比。中身と色は判定のたびに applyJudgment が書く(前の記録が無ければ出さない) */}
   <b ref={paceRef} data-rhythm-pace hidden className="max-w-full truncate text-[10px] font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 3px rgba(2,6,23,1),0 0 6px rgba(2,6,23,.9)'}}/>
 </div>{/* ===== ライフ0(DOWN)の強調(2026-09-12・ユーザー指示) ===== */}
@@ -1300,6 +1331,10 @@ scheduleTick();};
       text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}<b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={view.last||''} data-judgment-precise={view.lastPrecise?'1':''} className="block text-[26px] font-black leading-none tracking-wide text-white">{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow?(timingDisplay!=='STANDARD'&&typeof view.lastDeltaMs==='number'?`${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms`:view.fastSlow):'—'):'—'}</small>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
     帯の色は判定窓(MARVELOUS 金・EXCELLENT 紫・GREAT 赤・GOOD 緑・BAD 青)で、真ん中がぴったり */}
 {timingDisplay==='METER'&&<div data-rhythm-timing-meter aria-hidden="true" className="absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2" style={{'--meter-mar':`${(55/185*50).toFixed(2)}%`,'--meter-exc':`${(100/185*50).toFixed(2)}%`,'--meter-gre':`${(150/185*50).toFixed(2)}%`,'--meter-goo':`${(170/185*50).toFixed(2)}%`}}><i data-rhythm-timing-meter-band/><i data-rhythm-timing-meter-center/>{Array.from({length:12},(_,i)=><i key={i} ref={el=>{meterTicksRef.current[i]=el;}} data-rhythm-timing-meter-tick style={{opacity:0}}/>)}</div>}</div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
+{/* ラッキーラッシュ中は、プレイエリアのふちが金色に光る(ノーツより後ろ・入力に触らない) */}
+{luckyRush&&<div data-rhythm-lucky-rush aria-hidden="true"/>}
+{/* 抽選の結果。当たりは大きく「LUCKY RUSH!!」、はずれは小さく「+2pt」 */}
+{luckyBanner&&<div key={luckyBanner.id} data-rhythm-lucky-banner data-kind={luckyBanner.kind} aria-hidden="true"><b>{luckyBanner.text}</b></div>}
 {comboMilestone>0&&<div data-rhythm-combo-milestone data-milestone-stage={comboMilestoneStage} aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 whitespace-nowrap text-center"><b className={`block font-black leading-none tabular-nums landscape:text-4xl ${comboMilestoneStage>=3?'text-6xl':'text-5xl'}`}>{comboMilestone}</b><small className="mt-1 block text-sm font-black tracking-[0.3em]">COMBO</small></div>}
                 {view.ability&&<div data-rhythm-ability-flash className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{view.ability.ability}！</div>}{canvasNotes?<canvas ref={noteCanvasRef} data-rhythm-note-canvas aria-hidden="true"/>:noteElements}{canvasFaceElements}{/* レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を幕で隠し、ノーツが見えはじめる位置を手前へ寄せる。
     隠すのはレーンの台形の中だけ(laneCoverStyle の clip-path)。左右の空きにあるコンボ数・マスモン・背景は隠さない。
