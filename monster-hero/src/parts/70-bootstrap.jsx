@@ -1179,33 +1179,61 @@ const createAnimationStyle = () => {
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
     }
 
-    /* ライガー: コマ落としのようにカクカクと左右へ跳びながら高速で詰め、爪で3回ひっかいて同じように戻る(600ms)。
+    /* ライガー: コマ落としのようにカクカクと左右へ跳びながら高速で詰め、爪で3回ひっかく。
+       同じようにカクカクと元の場所へ戻り、角に雷をためて、敵へ雷撃を落とす(900ms)。
        steps(1,end) で各コマの間をつながずに瞬間移動させ、残像(.thm-atk__ghost)が少し遅れて追いかける */
-    .thm-atk--claw { --c1:#fee2e2; --c2:#ef4444; --c3:rgba(239,68,68,0); --hit-at:235ms; }
+    .thm-atk--claw { --c1:#fee2e2; --c2:#ef4444; --c3:rgba(239,68,68,0); --hit-at:235ms; --hit-at2:665ms; }
     .thm-atk--claw .thm-atk__monster { animation-name:thmClawBody; animation-timing-function:steps(1,end); }
     .thm-atk__ghost { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:3; opacity:0;
       transform-origin:50% 80%; pointer-events:none; filter:sepia(1) saturate(4) hue-rotate(-30deg) brightness(1.2);
       animation:thmClawBody var(--thm-ms,450ms) steps(1,end) forwards, thmClawGhost var(--thm-ms,450ms) linear forwards; }
     .thm-atk__ghost--1 { animation-delay:35ms,0ms; --ghost-a:.5; }
     .thm-atk__ghost--2 { animation-delay:70ms,0ms; --ghost-a:.28; }
-    @keyframes thmClawGhost { 0%,8% { opacity:0; } 14%,84% { opacity:var(--ghost-a,.4); } 92%,100% { opacity:0; } }
+    @keyframes thmClawGhost { 0%,5% { opacity:0; } 9%,55% { opacity:var(--ghost-a,.4); } 61%,100% { opacity:0; } }
     .thm-atk--claw .thm-atk__core { width:70px; height:70px; left:-35px; top:-35px; animation-duration:260ms; }
-    .thm-atk--claw .thm-atk__bit { left:-3px; top:-36px; width:6px; height:72px; border-radius:999px; rotate:var(--ba); translate:var(--bx) 0;
+    .thm-atk--claw .thm-atk__hit:not(.thm-atk__hit--2) .thm-atk__bit { left:-3px; top:-36px; width:6px; height:72px; border-radius:999px; rotate:var(--ba); translate:var(--bx) 0;
       background:linear-gradient(180deg,rgba(255,255,255,0),#fff 30%,#fecaca 60%,rgba(239,68,68,0)); box-shadow:0 0 8px #ef4444;
       animation-name:thmClaw; animation-duration:140ms; }
     @keyframes thmClaw { 0% { opacity:0; transform:scaleY(.1); } 35% { opacity:1; transform:scaleY(1); } 100% { opacity:0; transform:scaleY(1.1) scaleX(.4); } }
+    /* 雷撃の着弾は黄色 */
+    .thm-atk--claw .thm-atk__hit--2 { --c1:#fef9c3; --c2:#facc15; --c3:rgba(250,204,21,0); }
+    .thm-atk--claw .thm-atk__hit--2 .thm-atk__core { width:104px; height:104px; left:-52px; top:-52px; animation-duration:300ms; }
+    .thm-atk--claw .thm-atk__hit--2 .thm-atk__bit { width:10px; height:3px; border-radius:2px; background:#fef08a; box-shadow:0 0 6px #facc15; animation-duration:220ms; }
     @keyframes thmClawBody {
-      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
-      6% { transform:translate3d(0,6px,0) scale(1.1,.86); }
-      14% { transform:translate3d(calc(var(--atk-dx) * .28 - 34px),calc(var(--atk-dy) * .28),0) scale(1.08) rotate(-8deg); }
-      22% { transform:translate3d(calc(var(--atk-dx) * .52 + 34px),calc(var(--atk-dy) * .52),0) scale(1.1) rotate(8deg); }
-      30% { transform:translate3d(calc(var(--atk-dx) * .74 - 26px),calc(var(--atk-dy) * .74),0) scale(1.14) rotate(-8deg); }
-      39% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.26) rotate(-14deg); }
-      49% { transform:translate3d(calc(var(--atk-dx) + 26px),calc(var(--atk-dy) * .95 - 10px),0) scale(1.24) rotate(14deg); }
-      59% { transform:translate3d(calc(var(--atk-dx) - 26px),calc(var(--atk-dy) * .95 + 6px),0) scale(1.26) rotate(-12deg); }
-      68% { transform:translate3d(calc(var(--atk-dx) * .6 + 30px),calc(var(--atk-dy) * .6),0) scale(1.1) rotate(8deg); }
-      78% { transform:translate3d(calc(var(--atk-dx) * .3 - 26px),calc(var(--atk-dy) * .3),0) scale(1.05) rotate(-6deg); }
-      88%,100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+      4% { transform:translate3d(0,6px,0) scale(1.1,.86); }
+      10% { transform:translate3d(calc(var(--atk-dx) * .28 - 34px),calc(var(--atk-dy) * .28),0) scale(1.08) rotate(-8deg); }
+      15% { transform:translate3d(calc(var(--atk-dx) * .52 + 34px),calc(var(--atk-dy) * .52),0) scale(1.1) rotate(8deg); }
+      21% { transform:translate3d(calc(var(--atk-dx) * .74 - 26px),calc(var(--atk-dy) * .74),0) scale(1.14) rotate(-8deg); }
+      26% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.26) rotate(-14deg); }
+      32% { transform:translate3d(calc(var(--atk-dx) + 26px),calc(var(--atk-dy) * .95 - 10px),0) scale(1.24) rotate(14deg); }
+      39% { transform:translate3d(calc(var(--atk-dx) - 26px),calc(var(--atk-dy) * .95 + 6px),0) scale(1.26) rotate(-12deg); }
+      45% { transform:translate3d(calc(var(--atk-dx) * .6 + 30px),calc(var(--atk-dy) * .6),0) scale(1.1) rotate(8deg); }
+      51% { transform:translate3d(calc(var(--atk-dx) * .3 - 26px),calc(var(--atk-dy) * .3),0) scale(1.05) rotate(-6deg); }
+      57% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+      /* 元の場所で身を低くして、角に雷をためる */
+      63% { transform:translate3d(0,5px,0) scale(1.08,.9) rotate(0deg); filter:drop-shadow(0 0 10px #fde047); }
+      68% { transform:translate3d(0,3px,0) scale(1.1,.9) rotate(0deg); filter:drop-shadow(0 0 16px #facc15) drop-shadow(0 0 4px #fff); }
+      /* 頭を振り上げて雷撃。反動で小刻みに震える */
+      72% { transform:translate3d(calc(var(--atk-dx) * -.05),calc(var(--atk-dy) * -.05 - 4px),0) scale(1.12,1.04) rotate(-5deg); filter:drop-shadow(0 0 18px #fef08a); }
+      77% { transform:translate3d(calc(var(--atk-dx) * -.05 + 3px),calc(var(--atk-dy) * -.05 - 4px),0) scale(1.12,1.04) rotate(-3deg); }
+      82% { transform:translate3d(calc(var(--atk-dx) * -.05 - 3px),calc(var(--atk-dy) * -.05 - 4px),0) scale(1.12,1.04) rotate(-5deg); filter:drop-shadow(0 0 12px #facc15); }
+      88% { transform:translate3d(calc(var(--atk-dx) * -.03),calc(var(--atk-dy) * -.03),0) scale(1.05) rotate(-2deg); }
+      94%,100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+    }
+    /* 角から敵までの雷。ジグザグの形(clip-path)で切り抜き、光は親(.thm-atk__line)の影で付ける(子に付けると形で切れる) */
+    .thm-atk--claw .thm-atk__line { top:24%; filter:drop-shadow(0 0 6px #facc15) drop-shadow(0 0 14px rgba(250,204,21,.8)); }
+    .thm-atk--claw .thm-atk__line i { width:40px; left:-20px;
+      clip-path:polygon(42% 100%, 12% 86%, 70% 72%, 16% 58%, 66% 44%, 20% 30%, 62% 16%, 42% 0%, 58% 0%, 78% 16%, 36% 30%, 82% 44%, 32% 58%, 86% 72%, 28% 86%, 58% 100%);
+      background:linear-gradient(90deg,#fde047,#fff 50%,#fde047); animation-name:thmClawBolt; }
+    @keyframes thmClawBolt {
+      0%,70% { opacity:0; transform:scaleY(0); }
+      73% { opacity:1; transform:scaleY(1) scaleX(1.2); }
+      76% { opacity:.35; transform:scaleY(1) scaleX(-1); }
+      79% { opacity:1; transform:scaleY(1) scaleX(1.1); }
+      83% { opacity:.5; transform:scaleY(1) scaleX(-1.2); }
+      86% { opacity:1; transform:scaleY(1) scaleX(1); }
+      92%,100% { opacity:0; transform:scaleY(1) scaleX(.2); }
     }
 
     /* ハム: 敵へ駆け寄って、左のジャブ(小)→ 体をひねって右ストレート(大)のワンツー(580ms) */

@@ -202,7 +202,7 @@ node tools/where.js --text "Eiki"                 # 専用演出を持つ子が�
 
 専用モーションを作らないなら `atkMotion:'default'` と書くだけでよい。
 `'default'` のままでも、`src/parts/23-rpg-debug.jsx` の `DEFAULT_ATTACK_THEMES` へ1行足せば
-用意済みの型(`stomp` 押しつぶし＋ビーム / `beam` ビーム / `rocks` 殴って岩が飛び散る / `claw` カクカク高速ひっかき /
+用意済みの型(`stomp` 押しつぶし＋ビーム / `beam` ビーム / `rocks` 殴って岩が飛び散る / `claw` カクカク高速ひっかき＋角から雷撃 /
 `punch` ワンツーパンチ / `magic` 魔法の玉 / `crush` 押しつぶし / `petals` 花びら / `vine` つる / `fire` 炎のビーム)
 から選んで、体当たり以外の動きにできる。450ms(固有技500ms)を超える型は `THEMED_ATTACK_MS` に尺を書く。
 
