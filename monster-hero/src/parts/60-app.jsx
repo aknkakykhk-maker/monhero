@@ -9207,6 +9207,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // その子へいま置いてあるカードの枚数(併用できないEXを使えるかの判定に使う)
   const tacticsSlotCardCount = (slotIdx) => Object.values(cardAssignments).filter(v => v === slotIdx).length;
   const tacticsExTurnUsed = tacticsExEnabled && isTacticsExTurnUsed(tacticsExState, tacticsExNow);
+  // ★ライフ・ガッツの上限を上げるEX(ガッツ全開っちー)が切れたら、上限を元へ戻す。
+  //   ターンやWAVEが進んだとき・EXの状態が変わったときに見直す。戻すものが無ければ何もしない(何度走っても同じ結果)
+  useEffect(() => {
+    if (!isTacticsMode(runMode)) return;
+    const result = expireTacticsExMaxRates(tacticsUnitsRef.current, tacticsExStateRef.current, { wave, turn:turnCount });
+    if (result.changed) commitTacticsUnits(scaleTacticsUnits(result.units, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
+  }, [wave, turnCount, tacticsExState, runMode]);
   // ★EXの効き目を戦闘の計算へ渡す入口。モンスターのidではなく「いま効いている効果の種類」を見る。
   //   ref の最新値を読む(使った直後の同じ操作の中でも古い値を見ない)
   const tacticsExEffectAt = (slotIdx) => {
@@ -10347,11 +10354,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
     // 使った瞬間にライフとガッツを満タンにする(ガッツ全開っちー)。その子だけ。枠に入った量を出す
+    // ★ライフ・ガッツの上限も上げてから、その上がった上限まで満タンにする(2026-09-25 ユーザー指示)
     if(def.fullRecover){
-      const u=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
+      let units=tacticsUnitsRef.current;
+      if(def.statRate>0) units=scaleTacticsUnits(setTacticsExMaxRate(units,slotIdx,def.statRate),getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+      const u=normalizeTacticsUnit(units[slotIdx]);
       if(u){
         const hpGain=Math.max(0,u.maxHp-u.hp), gutsGain=Math.max(0,u.maxGuts-u.guts);
-        commitTacticsUnits(recoverTacticsGutsAt(healTacticsAt(tacticsUnitsRef.current,slotIdx,hpGain),slotIdx,gutsGain));
+        commitTacticsUnits(recoverTacticsGutsAt(healTacticsAt(units,slotIdx,hpGain),slotIdx,gutsGain));
         if(hpGain>0||gutsGain>0) mergeTacticsSlotFx({[slotIdx]:hpGain},{[slotIdx]:gutsGain});
       }
     }

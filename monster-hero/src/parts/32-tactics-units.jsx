@@ -165,11 +165,18 @@ const tacticsTotalBaseMaxHp = (units) => (Array.isArray(units) ? units : [])
 // みゅあ・かどみうむ・回復カードで上がるライフ上限の倍率。
 // ★合計へ掛けると1体ずつの上限と基準が食い違うので、1体ずつの maxHp へ効かせる。
 //   素の上限(baseMaxHp)は残したまま計算し直すので、倍率が下がっても元へ戻せる
+// ★exMaxRate … タクティクスのEX(ガッツ全開っちー)で上がっている上限の割合。無ければ0。
+//   みゅあ補正で上限を作り直しても消えないよう、ここで一緒に掛ける(既存の子は0なので値は今までどおり)
+const tacticsExMaxRateOf = (unit) => {
+  const rate = Number(unit && unit.exMaxRate);
+  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+};
 const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
   const target = normalizeTacticsUnit(unit);
   if (!target) return null;
   const pct = Number.isFinite(Number(hpPct)) ? Math.max(0, Number(hpPct)) : 0;
-  const maxHp = Math.max(1, Math.floor(target.baseMaxHp * (1 + pct)));
+  const exRate = tacticsExMaxRateOf(target);
+  const maxHp = Math.max(1, Math.floor(target.baseMaxHp * (1 + pct) * (1 + exRate)));
   return normalizeTacticsUnit({ ...target, maxHp });
 };
 // ガッツの上限も同じ考え方。みゅあ補正は合計ではなく1体ずつへ効かせる
@@ -177,7 +184,8 @@ const scaleTacticsUnitMaxGuts = (unit, gutsPct = 0) => {
   const target = normalizeTacticsUnit(unit);
   if (!target) return null;
   const pct = Number.isFinite(Number(gutsPct)) ? Math.max(0, Number(gutsPct)) : 0;
-  const maxGuts = Math.max(0, Math.floor(target.baseMaxGuts * (1 + pct)));
+  const exRate = tacticsExMaxRateOf(target);
+  const maxGuts = Math.max(0, Math.floor(target.baseMaxGuts * (1 + pct) * (1 + exRate)));
   return normalizeTacticsUnit({ ...target, maxGuts });
 };
 const scaleTacticsUnits = (units, hpPct = 0, gutsPct = 0) => (Array.isArray(units) ? units : [])
@@ -922,7 +930,9 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Mocchi: Object.freeze({
     id: 'mocchi_guts_full',
     name: 'ガッツ全開っちー',
-    desc: '5ターンのあいだ、力と丈夫さが20%上がる。使った瞬間にライフとガッツを満タンまで回復する。',
+    // ★2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」。
+    //   上限も20%上げ、その上がった上限まで満タンにする
+    desc: '5ターンのあいだ、力・丈夫さ・ライフの上限・ガッツの上限が20%上がる。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     statRate: 0.2, fullRecover: true,
     effect: 'statBoost',
@@ -1186,6 +1196,23 @@ const applyTacticsExStats = (unit, state, slot, now) => {
     if (style === 'dual') return { ...unit, def: Math.floor(def / 2) };
   }
   return unit;
+};
+// ライフ・ガッツの上限を上げるEX(ガッツ全開っちー)の、上げ下げ。
+// ★上限そのものは盤面の値なので、効いているあいだは unit.exMaxRate に割合を持たせ、
+//   scaleTacticsUnits(みゅあ補正と同じ作り直し)で上限へ掛ける。切れたら0へ戻して作り直す
+//   (ライフ・ガッツは normalizeTacticsUnit が新しい上限で丸める)
+const setTacticsExMaxRate = (units, slot, rate) => (Array.isArray(units) ? units : [])
+  .map((unit, i) => (unit && i === slot ? { ...unit, exMaxRate: Math.max(0, Number(rate) || 0) } : unit));
+// 効果が切れているのに上限が上がったままの枠を、0へ戻す。戻した枠があれば changed:true
+const expireTacticsExMaxRates = (units, state, now) => {
+  let changed = false;
+  const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
+    if (!unit || !(tacticsExMaxRateOf(unit) > 0)) return unit;
+    if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
+    changed = true;
+    return { ...unit, exMaxRate: 0 };
+  });
+  return { units: next, changed };
 };
 // ターン数で切れる効果の、あと何ターン残っているか(使ったターンを含めて数える)。効いていなければ 0
 const tacticsExTurnsLeft = (state, slot, monId, now) => {

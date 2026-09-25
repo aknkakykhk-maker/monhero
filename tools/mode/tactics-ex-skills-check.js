@@ -58,12 +58,14 @@ vm.runInContext([
   // かばう先は「立っている子」だけ。盤面の関数(tacticsAliveSlots)を借りる
   line('const tacticsClamp'),
   slice('const normalizeTacticsUnit', 'const applyTacticsDamage'),
+  // 上限の作り直し(みゅあ補正とEXの上限アップ)も本体から借りる
+  slice('const tacticsExMaxRateOf', '// 敵の攻撃。当たった子だけが減り'),
   slice('const tacticsAliveSlots', 'const tacticsFilledSlots'),
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
-    + 'applyTacticsExUse,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
+    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
 ].join('\n'), sandbox);
 // ヒット列(二刀流で2回ぶん入るか)は本体の buildAttackHits をそのまま動かす
 vm.runInContext(slice('const HERO_CARD_BONUS_MONSTER_IDS', 'const attackAtonementDmg') + ';globalThis.hitsApi={buildAttackHits};', sandbox);
@@ -320,7 +322,21 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     ex.isTacticsExEffectActive(late, 0, 'Mocchi', A(2, 19)) && !ex.isTacticsExEffectActive(late, 0, 'Mocchi', A(3, 1)));
   check('あと何ターンか(使ったターンは5、最後のターンは1、切れたら0)', ex.tacticsExTurnsLeft(g, 0, 'Mocchi', A(2, 3)) === 5
     && ex.tacticsExTurnsLeft(g, 0, 'Mocchi', A(2, 7)) === 1 && ex.tacticsExTurnsLeft(g, 0, 'Mocchi', A(2, 8)) === 0);
-  check('ライフ・ガッツの上限は変えない(満タンにするのは使った瞬間の回復)', on.maxHp === 600 && on.maxGuts === 100 && on.hp === 300);
+  // ★ライフ・ガッツの上限も20%上げる(2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」)。
+  //   上限はみゅあ補正と同じ作り直し(scaleTacticsUnits)で掛けるので、補正で作り直しても消えない
+  const base = { id: 'Mocchi', hp: 300, maxHp: 600, baseMaxHp: 600, atk: 120, def: 120, guts: 50, maxGuts: 100, baseMaxGuts: 100, downed: false };
+  const up = ex.scaleTacticsUnits(ex.setTacticsExMaxRate([base], 0, 0.2), 0, 0)[0];
+  check('上限が20%上がる(ライフ600→720・ガッツ100→120)。いまのライフ・ガッツはそのまま', up.maxHp === 720 && up.maxGuts === 120 && up.hp === 300 && up.guts === 50,
+    `${up.hp}/${up.maxHp} ${up.guts}/${up.maxGuts}`);
+  const upMua = ex.scaleTacticsUnits(ex.setTacticsExMaxRate([base], 0, 0.2), 0.1, 0)[0];
+  check('みゅあ補正(+10%)で作り直しても20%は消えない(600×1.1×1.2＝792)', upMua.maxHp === 792, String(upMua.maxHp));
+  const fullUnit = { ...up, hp: 720, guts: 120 };
+  const exp = ex.expireTacticsExMaxRates([fullUnit], g, A(2, 8));
+  const down = ex.scaleTacticsUnits(exp.units, 0, 0)[0];
+  check('切れたら上限を元へ戻し、ライフ・ガッツは新しい上限で丸める(720→600・120→100)', exp.changed && down.maxHp === 600 && down.hp === 600
+    && down.maxGuts === 100 && down.guts === 100, `${down.hp}/${down.maxHp} ${down.guts}/${down.maxGuts}`);
+  check('効いているあいだは上限を戻さない', !ex.expireTacticsExMaxRates([fullUnit], g, A(2, 7)).changed);
+  check('上限を上げていない子(既存の子)は、作り直しても値が変わらない', ex.scaleTacticsUnits([base], 0.1, 0)[0].maxHp === 660);
   check('使ったターンもほかのカードを使える(その子も)', !ex.isTacticsExCardLocked(g, 0, A(2, 3)));
 }
 
@@ -391,8 +407,10 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   // 発動の入口は詳細パネルの中だけ(「EXスキルを使用」と、スタイル式の選択肢)。距離枠のタップからは発動しない
   const panelSrc = screen.slice(screen.indexOf('{exPanel&&ReactDOM.createPortal('), screen.indexOf('{showBattleMenu&&ReactDOM.createPortal('));
   check('使った瞬間にその子のライフとガッツを満タンにする(ガッツ全開っちー)',
-    /if\(def\.fullRecover\)\{[\s\S]{0,300}recoverTacticsGutsAt\(healTacticsAt\(tacticsUnitsRef\.current,slotIdx,hpGain\),slotIdx,gutsGain\)/.test(app)
-    && /const tacticsExNow = \{ wave, turn:turnCount \};/.test(app));
+    /if\(def\.fullRecover\)\{[\s\S]{0,600}recoverTacticsGutsAt\(healTacticsAt\(units,slotIdx,hpGain\),slotIdx,gutsGain\)/.test(app)
+    && /const tacticsExNow = \{ wave, turn:turnCount \};/.test(app)
+    && /if\(def\.statRate>0\) units=scaleTacticsUnits\(setTacticsExMaxRate\(units,slotIdx,def\.statRate\)/.test(app)
+    && /const result = expireTacticsExMaxRates\(tacticsUnitsRef\.current, tacticsExStateRef\.current, \{ wave, turn:turnCount \}\);/.test(app));
   check('発動は詳細パネルの「EXスキルを使用」(スタイル式はその先の選択肢)からだけ',
     (screen.match(/activateTacticsEx\(/g) || []).length === (panelSrc.match(/activateTacticsEx\(/g) || []).length
     && (panelSrc.match(/activateTacticsEx\(/g) || []).length === 2

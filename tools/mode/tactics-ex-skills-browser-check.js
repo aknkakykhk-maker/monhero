@@ -469,7 +469,9 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await page.waitForTimeout(900);
     const after = await party();
     const full = (v) => { const m = /^(\d+)\/(\d+)$/.exec(v || ''); return !!m && m[1] === m[2]; };
-    check('使うとライフとガッツが満タンになる(ガッツは半分から始まる)', !!before && !!after && !full(before.guts) && full(after.hp) && full(after.guts),
+    // ★上限も20%上がってから満タン(モッチー ライフ600→720・ガッツ100→120)
+    check('使うとライフとガッツの上限が20%上がり、そこまで満タンになる(600→720/720・100→120/120)', !!before && !!after && !full(before.guts)
+      && after.hp === '720/720' && after.guts === '120/120',
       `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
     check('枠の札が「あと5ターン」になる', await page.locator(`[data-tactics-ex-mark="${moSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと5ターン');
     await tapSlot(moSlot);
