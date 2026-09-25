@@ -297,7 +297,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const faceBitmapsRef=useRef([]);
   useEffect(()=>{faceBitmapsRef.current=[];if(!canvasNotes||monsterFaceHidden)return undefined;let cancelled=false;
     const deviceDpr=typeof window!=='undefined'&&window.devicePixelRatio>0?window.devicePixelRatio:1;
-    const dpr=Math.min(deviceDpr,settings.lightweightMode?2:3,settings.effectAmount==='MINIMAL'?2:3);
+    const dpr=Math.min(deviceDpr,RHYTHM_NOTE_CANVAS_MAX_DPR);
     monsters.forEach((monster,index)=>{rhythmBakeMonsterFace(monster,dpr).then(face=>{if(!cancelled&&face)faceBitmapsRef.current[index]=face;});});
     return()=>{cancelled=true;};
   },[canvasNotes,monsterSignature,monsterFaceHidden,settings.lightweightMode,settings.effectAmount]);

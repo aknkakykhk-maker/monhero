@@ -525,6 +525,8 @@ function BattleScreen({
   // 画面の軽さ(豪華/標準/軽め/最軽量)。最軽量は 60-app が liteBattleView(軽量表示)にしてから渡してくる。
   // 軽めは「待機中の動き：止める」と同じく、敵と味方の待機の動きを止める
   const fxLoad = battleFx.load;
+  // 操作がないときの一時停止(バトル設定。既定は止めない)
+  const fxRestEnabled = battleFx.restPause === 'ON';
   const idleMotionOff = battleFx.idleMotion === 'OFF' || fxLoad === 'LIGHT';
   const shakeOff = battleFx.shake === 'OFF';
   // 敵の攻撃(ためるを含む)を絵だけで動かす場面。移動とムーは今までどおり丸枠ごと
@@ -545,13 +547,17 @@ function BattleScreen({
   const fxRestTimerRef = useRef(null);
   const fxBusyRef = useRef(false);
   fxBusyRef.current = !!(isBusy || attackAnim || enemyAttackAnim || enemyAttackFx);
+  const fxRestEnabledRef = useRef(fxRestEnabled);
+  fxRestEnabledRef.current = fxRestEnabled;
   const wakeBattleFx = useCallback(() => {
     setFxRest(false);
     if (fxRestTimerRef.current) clearTimeout(fxRestTimerRef.current);
-    const arm = () => { fxRestTimerRef.current = setTimeout(() => { if (fxBusyRef.current) arm(); else setFxRest(true); }, TACTICS_FX_REST_MS); };
+    // 設定で「止めない」のときは、タイマーそのものを置かない(再描画も起こさない)
+    if (!fxRestEnabledRef.current) return;
+    const arm = () => { fxRestTimerRef.current = setTimeout(() => { if (!fxRestEnabledRef.current) return; if (fxBusyRef.current) arm(); else setFxRest(true); }, TACTICS_FX_REST_MS); };
     arm();
   }, []);
-  useEffect(() => { if (tacticsNewLayout) wakeBattleFx(); }, [tacticsNewLayout, isBusy, attackAnim, enemyAttackAnim, enemyAttackFx, popups, enemy?.hp, enemyIntent, wakeBattleFx]);
+  useEffect(() => { if (tacticsNewLayout) wakeBattleFx(); }, [tacticsNewLayout, fxRestEnabled, isBusy, attackAnim, enemyAttackAnim, enemyAttackFx, popups, enemy?.hp, enemyIntent, wakeBattleFx]);
   useEffect(() => {
     if (!tacticsNewLayout || typeof document === 'undefined') return undefined;
     const onTouch = () => wakeBattleFx();
@@ -627,6 +633,28 @@ function BattleScreen({
     });
     return bySlot;
   };
+  // 上の2つ(ガードのまとめ・先に選んだカードの補正)は、1回の描画のなかでは入力が同じで
+  // 返り値も読むだけなので、枠ごと・発ごとに作り直さず最初の1回を使い回す
+  let guardPlanOnceCache;
+  const guardPlanOnce = () => (guardPlanOnceCache === undefined ? (guardPlanOnceCache = plannedGuardBySlot()) : guardPlanOnceCache);
+  const previewBoostsOnceCache = new Map();
+  const previewBoostsOnce = (excludeIdx) => {
+    if (!previewBoostsOnceCache.has(excludeIdx)) previewBoostsOnceCache.set(excludeIdx, previewLocalBoosts(excludeIdx));
+    return previewBoostsOnceCache.get(excludeIdx);
+  };
+  // 手札1枚ごとに「ほかに選んだカードのガッツ」を数えるので、選んだカードのガッツは描画ごとに1回だけ求める
+  let selectedGutsListCache;
+  const selectedGutsListOnce = () => (selectedGutsListCache || (selectedGutsListCache = selectedCards.map(idx => [idx, selectedCardGuts(idx)])));
+  // 置ける枠かどうか(タクティクス)も、合計DMG欄と枠ごとの表示で同じ問いを2回していたので1回にする
+  const canAssignOnceCache = new Map();
+  const tacticsCanAssignOnce = (card, cardIndex, slotIdx) => {
+    const key = `${cardIndex}:${slotIdx}`;
+    const hit = canAssignOnceCache.get(key);
+    if (hit && hit.card === card) return hit.answer;
+    const answer = tacticsCanAssign(card, cardIndex, slotIdx);
+    canAssignOnceCache.set(key, { card, answer });
+    return answer;
+  };
   // ★連撃は「1発ずつ」出す(2026-09-22 ユーザー指示「連撃ダメージ予測が合算分だから
   //   分かりにくい ガード入れても合算計算だし うまくバラバラでわかるようにしたい」)。
   //   受けたあとの表示と同じ splitTacticsHitAmounts を通すので、予告と実際で割り方がそろう。
@@ -644,7 +672,7 @@ function BattleScreen({
     // ★タクティクスは枠ごと。構えていない子も、全体ガードなら丈夫さぶんが付く。
     //   受け止めるヒット数は、その子へ何枚構えたかで決まる(2枚以上なら連撃の全部)
     if (Array.isArray(tacticsUnits) && slotIdx !== null) {
-      const bySlot = plannedGuardBySlot();
+      const bySlot = guardPlanOnce();
       const own = bySlot[slotIdx] || { cards: 0 };
       guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);
       guardHits = tacticsGuardHits(own.cards, hits);
@@ -719,7 +747,7 @@ function BattleScreen({
   };
   return (
 
-      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined}>
+      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRestEnabled&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined}>
         {/* 舞台の照明(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい。
             イメージ画みたいにかっこよくできないかな？」)。
             ★画像は足さない。スマホの通信量に直に効くうえ、敵ごとに背景を用意すると際限がない
@@ -1417,7 +1445,7 @@ function BattleScreen({
             // ニコラオ・ゴーレム・モッチー/ミタラシ・ききは使ったターンからすぐ効くため、
             // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
             // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
-            const boosts=previewLocalBoosts(pendingIdx);
+            const boosts=previewBoostsOnce(pendingIdx);
             let committedTotal=0; let guardFlat=0; let guardMult=0; const guardBySlot={};
             const committedCounter=makeCardHalveCounter();
             selectedCards.forEach(idx=>{
@@ -1469,7 +1497,7 @@ function BattleScreen({
                 // ★置ける枠かどうかは、盤面のタップ判定とまったく同じ答えを使う。
                 //   自前で枚数を数えていたころは、ガードを1枚置いた子が
                 //   「もう置けない子」に見えて、合計DMGの予測だけ別の子で出ていた
-                const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;
+                const tacticsAnswer=tacticsCanAssign?tacticsCanAssignOnce(pendingCardObj,pendingIdx,i):null;
                 if(tacticsAnswer===null||tacticsAnswer===undefined){
                   const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
                   const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
@@ -1589,7 +1617,7 @@ function BattleScreen({
               const tacticsUnit=Array.isArray(tacticsUnits)?(tacticsUnits[i]||null):null;
               // この枠のガードの状態。札の名前(全体ハイガード)と🛡のまとめが同じ答えを使えるよう、
               // ガードのまとめは枠ごとに1回だけ作ってここから配る
-              const guardPlanBySlot=Array.isArray(tacticsUnits)?plannedGuardBySlot():null;
+              const guardPlanBySlot=Array.isArray(tacticsUnits)?guardPlanOnce():null;
               const slotGuardCards=guardPlanBySlot?(guardPlanBySlot[i]?.cards||0):0;
               const slotRushGuard=slotGuardCards>=TACTICS_RUSH_GUARD_CARDS;
               const slotSpreadGuard=!!guardPlanBySlot&&isTacticsSpreadGuard(guardPlanBySlot);
@@ -1621,7 +1649,7 @@ function BattleScreen({
               if(s && pendingCardObj){
                 // 新モードは「その子が払えるか」で決まる。倒れた子へは回復カードだけ置ける。
                 // ★null のときだけ今までどおりの判定を使う(既存モードはここを通る)
-                const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;
+                const tacticsAnswer=tacticsCanAssign?tacticsCanAssignOnce(pendingCardObj,pendingIdx,i):null;
                 if(tacticsAnswer===null||tacticsAnswer===undefined){
                   canAssign = assignedCount<maxUses;
                   if(pendingCardObj.type==='unique') canAssign = canAssign && (pendingCardObj.ownerSlotIdx===i);
@@ -1641,7 +1669,7 @@ function BattleScreen({
               //   using the GLOBAL attack order (2nd+ attack = half damage), matching processTurn
               // ニコラオ・ゴーレム・モッチー/ミタラシ・ききの同ターン即時効果を、
               // このスロットの予測にも反映する(合計DMG欄と同じpreviewLocalBoosts)。
-              const slotBoosts=previewLocalBoosts(pendingIdx);
+              const slotBoosts=previewBoostsOnce(pendingIdx);
               let previewDmg=0; let isPendingPreview=false; let isPendingHalved=false; let previewSoulPct=0;
               // ★ガードも枠ごとに「この子へ置いたらいくら受け止められるか」を出す
               //   (2026-09-22 ユーザー指摘「ダメージは個別に見えるのにガード値は個別に
@@ -2079,7 +2107,7 @@ function BattleScreen({
               const assignedSlot=cardAssignments[i];
               const curGuts=assignedSlot!=null?getCardGuts(c,assignedSlot):getCardGuts(c,null);
               const requiredGuts=assignedSlot!=null?curGuts:pendingCardGuts(c);
-              const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+(idx===i?0:selectedCardGuts(idx)),0);
+              const remainingGuts=guts-selectedGutsListOnce().reduce((acc,[idx,g])=>acc+(idx===i?0:g),0);
               // 新モードは合計のガッツでは決まらない。「その子が払えるか」をアプリ側へ聞く。
               // null が返るモード(いままでの5つ)では、今までどおり合計で見る
               const cardBlock=tacticsCardBlock?tacticsCardBlock(c,i):null;
@@ -2091,7 +2119,7 @@ function BattleScreen({
               const tutorialAllowed=battleTutorialCardAllowed(c);
               // 光らせるのは「いま触ってほしい種類」だけ。技変更の番は名前のところも光らせる
               const tutorialTargeted=!!battleTutorialCardTarget&&battleTutorialCardKind(c)===battleTutorialCardTarget;
-              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex"><button data-hand-card={i} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
+              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex"><button data-hand-card={i} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
                 if(isBusy||autoBattleRef.current||!tutorialAllowed)return;
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;

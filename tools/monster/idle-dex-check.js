@@ -57,6 +57,15 @@ check('図鑑の攻撃アクションも、待機中・通常の動き・聖光�
 check('パンドラの雷の最中は重ねない(バトルと同じ)',
   !allowed({ motion: 'pandoraDualThunder' }) && /motion==='pandoraDualThunder'\s*\?<PandoraDualThunder image=\{<DyedMonsterImage/.test(battle));
 
+// 全体の動き(body)は CSS に .mon-idle--<body> があるものだけを使う(書き忘れると全体が止まったままになる)
+const bodies = [...new Set(Object.values(rigs).map(r => r.body))];
+const missingBody = bodies.filter(b => !css.includes(`.mon-idle--${b} { animation:`));
+check('全体の動きはどれも CSS に書いてある', missingBody.length === 0, missingBody.join('・') || bodies.join('・'));
+// 待機が地味だった子(2026-09-25 ユーザー指示「待機中の動きが地味なモンスターがいるからもう少し改良したい」)。
+// 動く部分が無い子は、ただ浮く・弾むだけにせず、その子の動き方を持たせる
+const plain = Object.entries(rigs).filter(([, r]) => r.parts.length === 0);
+check('動く部分が無い子は、浮く・弾む以外の動き方を持つ', plain.every(([, r]) => !['hover', 'bounce'].includes(r.body)), plain.map(([id, r]) => `${id}:${r.body}`).join(' '));
+
 // --- バトルと図鑑が同じ部品を通す ---
 check('バトルは MonsterIdleArt を使う', battle.includes('<MonsterIdleArt baseId={s?.id} image={img}/>'));
 check('入口 withMonsterIdleArt は同じ MonsterIdleArt を返す', fx.includes('<MonsterIdleArt baseId={monsterId} image={image} fill={fill} own={own}/>'));

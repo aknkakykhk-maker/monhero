@@ -183,26 +183,26 @@ const AttackTargetFx = ({anim, attackerId}) => {
 // ・軽量表示・設定の「待機中の動き：止める」では呼び出し側が使わない。calm と「動きを減らす」は CSS で止める
 // ==== MONSTER_IDLE_RIGS(tools/monster/idle-rig-build.js が書く。手で直さない) ====
 const MONSTER_IDLE_RIGS = Object.freeze({
-  Mocchi: { body:'bounce', bodyMask:null, parts:[] },
-  Suezo: { body:'bounce', bodyMask:null, parts:[] },
-  Golem: { body:'breathe', bodyMask:null, parts:[] },
+  Mocchi: { body:'jelly', bodyMask:IDLE_MOCCHI_BODY_MASK, parts:[{ mask:IDLE_MOCCHI_ARM_L_MASK, origin:'29.5% 40%', anim:'swing', amp:-7, dur:1800, delay:0, layer:'front' }, { mask:IDLE_MOCCHI_ARM_R_MASK, origin:'70% 40%', anim:'swing', amp:7, dur:1800, delay:900, layer:'front' }] },
+  Suezo: { body:'hop', bodyMask:null, parts:[] },
+  Golem: { body:'heavy', bodyMask:IDLE_GOLEM_BODY_MASK, parts:[{ mask:IDLE_GOLEM_ARM_L_MASK, origin:'22% 43%', anim:'swing', amp:-4, dur:3000, delay:0, layer:'back' }, { mask:IDLE_GOLEM_ARM_R_MASK, origin:'77% 43%', anim:'swing', amp:4, dur:3000, delay:1500, layer:'back' }] },
   Tiger: { body:'breathe', bodyMask:IDLE_TIGER_BODY_MASK, parts:[{ mask:IDLE_TIGER_TAIL_MASK, origin:'67.8% 53%', anim:'wag', amp:7, dur:1100, delay:0, layer:'back' }] },
   Ham: { body:'breathe', bodyMask:IDLE_HAM_BODY_MASK, parts:[{ mask:IDLE_HAM_EAR_L_MASK, origin:'40% 32.5%', anim:'twitch', amp:-9, dur:3200, delay:0, layer:'back' }, { mask:IDLE_HAM_EAR_R_MASK, origin:'59.5% 33%', anim:'twitch', amp:9, dur:3200, delay:1300, layer:'back' }] },
   Pixie: { body:'hover', bodyMask:IDLE_PIXIE_BODY_MASK, parts:[{ mask:IDLE_PIXIE_WING_L_MASK, origin:'41.8% 41.5%', anim:'flapL', amp:12, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_WING_R_MASK, origin:'58.2% 42.3%', anim:'flapR', amp:12, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_TAIL_MASK, origin:'57.8% 67.5%', anim:'wag', amp:7, dur:1600, delay:0, layer:'back' }] },
   Mia: { body:'hover', bodyMask:IDLE_MIA_BODY_MASK, parts:[{ mask:IDLE_MIA_WING_L_MASK, origin:'44.3% 38.1%', anim:'flapL', amp:16, dur:1300, delay:0, layer:'back' }, { mask:IDLE_MIA_WING_R_MASK, origin:'55.7% 38.1%', anim:'flapR', amp:16, dur:1300, delay:0, layer:'back' }] },
   Pandora: { body:'hover', bodyMask:IDLE_PANDORA_BODY_MASK, parts:[{ mask:IDLE_PANDORA_WING_L_MASK, origin:'39% 34%', anim:'flapL', amp:12, dur:1200, delay:0, layer:'back' }, { mask:IDLE_PANDORA_WING_R_MASK, origin:'61.7% 36%', anim:'flapR', amp:12, dur:1200, delay:0, layer:'back' }, { mask:IDLE_PANDORA_TAIL_L_MASK, origin:'40.1% 61.2%', anim:'swing', amp:7, dur:2000, delay:0, layer:'back' }, { mask:IDLE_PANDORA_TAIL_R_MASK, origin:'61.7% 63%', anim:'swing', amp:-7, dur:2200, delay:400, layer:'back' }] },
-  Monol: { body:'hover', bodyMask:null, parts:[] },
+  Monol: { body:'drift', bodyMask:null, parts:[] },
   Oboro: { body:'sway', bodyMask:IDLE_OBORO_BODY_MASK, parts:[{ mask:IDLE_OBORO_FLOWER_T_MASK, origin:'49.5% 54.5%', anim:'swing', amp:5, dur:2600, delay:0, layer:'front' }, { mask:IDLE_OBORO_FLOWER_L_MASK, origin:'41% 57%', anim:'swing', amp:-6, dur:2300, delay:500, layer:'front' }, { mask:IDLE_OBORO_FLOWER_R_MASK, origin:'59% 57%', anim:'swing', amp:6, dur:2500, delay:900, layer:'front' }] },
   Plant: { body:'sway', bodyMask:IDLE_PLANT_BODY_MASK, parts:[{ mask:IDLE_PLANT_FLOWER_T_MASK, origin:'49.5% 55.5%', anim:'swing', amp:5, dur:2600, delay:0, layer:'front' }, { mask:IDLE_PLANT_FLOWER_L_MASK, origin:'44% 57.5%', anim:'swing', amp:-6, dur:2300, delay:500, layer:'front' }, { mask:IDLE_PLANT_FLOWER_R_MASK, origin:'56% 57.5%', anim:'swing', amp:6, dur:2500, delay:900, layer:'front' }] },
   Zan: { body:'hover', bodyMask:IDLE_ZAN_BODY_MASK, parts:[{ mask:IDLE_ZAN_BLADE_L_MASK, origin:'30% 29.5%', anim:'swing', amp:-5, dur:1800, delay:0, layer:'back' }, { mask:IDLE_ZAN_BLADE_R_MASK, origin:'70% 29.5%', anim:'swing', amp:5, dur:1800, delay:0, layer:'back' }] },
   Mitarashi: { body:'breathe', bodyMask:IDLE_MITARASHI_BODY_MASK, parts:[{ mask:IDLE_MITARASHI_WING_L_MASK, origin:'28% 41.5%', anim:'flapL', amp:9, dur:1400, delay:0, layer:'back' }, { mask:IDLE_MITARASHI_WING_R_MASK, origin:'72% 41.5%', anim:'flapR', amp:9, dur:1400, delay:0, layer:'back' }] },
-  Ark: { body:'hover', bodyMask:null, parts:[] },
+  Ark: { body:'glide', bodyMask:IDLE_ARK_BODY_MASK, parts:[{ mask:IDLE_ARK_CROWN_MASK, origin:'50% 24%', anim:'bob', amp:-2.2, dur:1800, delay:0, layer:'front' }, { mask:IDLE_ARK_HALO_MASK, origin:'50% 30%', anim:'bob', amp:-1.4, dur:1800, delay:300, layer:'front' }] },
   Iblis: { body:'hover', bodyMask:IDLE_IBLIS_BODY_MASK, parts:[{ mask:IDLE_IBLIS_WING_L_MASK, origin:'24% 56%', anim:'flapL', amp:6, dur:1400, delay:0, layer:'back' }, { mask:IDLE_IBLIS_WING_R_MASK, origin:'74% 57%', anim:'flapR', amp:6, dur:1400, delay:0, layer:'back' }, { mask:IDLE_IBLIS_ORB_MASK, origin:'48% 8%', anim:'bob', amp:-6, dur:1900, delay:0, layer:'front' }] },
   Snegurochka: { body:'swim', bodyMask:IDLE_SNEGUROCHKA_BODY_MASK, parts:[{ mask:IDLE_SNEGUROCHKA_FIN_MASK, origin:'58.5% 80%', anim:'swing', amp:5, dur:1500, delay:0, layer:'front' }] },
   Undine: { body:'swim', bodyMask:IDLE_UNDINE_BODY_MASK, parts:[{ mask:IDLE_UNDINE_FIN_MASK, origin:'58% 80%', anim:'swing', amp:6, dur:1500, delay:0, layer:'front' }] },
   Yaobikuni: { body:'swim', bodyMask:IDLE_YAOBIKUNI_BODY_MASK, parts:[{ mask:IDLE_YAOBIKUNI_FIN_MASK, origin:'60.7% 82%', anim:'swing', amp:6, dur:1500, delay:0, layer:'front' }] },
-  Eiki: { body:'hover', bodyMask:null, parts:[] },
-  KenshiMocchi: { body:'bounce', bodyMask:null, parts:[] },
+  Eiki: { body:'glide', bodyMask:null, parts:[] },
+  KenshiMocchi: { body:'jelly', bodyMask:IDLE_KENSHI_MOCCHI_BODY_MASK, parts:[{ mask:IDLE_KENSHI_MOCCHI_SWORD_L_MASK, origin:'29.5% 26%', anim:'swing', amp:-4, dur:2400, delay:0, layer:'back' }, { mask:IDLE_KENSHI_MOCCHI_SWORD_R_MASK, origin:'70.5% 26%', anim:'swing', amp:4, dur:2400, delay:1200, layer:'back' }] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
@@ -572,4 +572,26 @@ const BattleAttackMotionPreview = ({image, anim, compact=false, baseId=null}) =>
     </div>
   );
 };
-
+// タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない。
+// 波紋の一覧はこの部品だけが持つ。以前は本体(MonsterHeroGame)の state で、カードを引きずっている
+// あいだも波紋1つごとに画面全体を2回(出す・消す)描き直していた。本体は spawnRef.current(x, y) を呼ぶだけ
+const TapRippleLayer = ({ spawnRef }) => {
+  const [ripples, setRipples] = useState([]);
+  useEffect(() => {
+    const timers = new Set();
+    spawnRef.current = (x, y) => {
+      const id = Date.now() + Math.random();
+      setRipples(prev => [...prev, { id, x, y }]);
+      const timer = setTimeout(() => { timers.delete(timer); setRipples(prev => prev.filter(r => r.id !== id)); }, 650);
+      timers.add(timer);
+    };
+    return () => { spawnRef.current = null; timers.forEach(clearTimeout); };
+  }, [spawnRef]);
+  return (
+      <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
+        {ripples.map(r=>(
+          <span key={r.id} style={{position:'absolute',left:r.x,top:r.y,width:'48px',height:'48px',marginLeft:'-24px',marginTop:'-24px',borderRadius:'9999px',border:'2px solid rgba(255,255,255,0.9)',boxShadow:'0 0 10px rgba(255,255,255,0.6)',transformOrigin:'center',animation:'mhRipple 550ms ease-out forwards'}}/>
+        ))}
+      </div>
+  );
+};

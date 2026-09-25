@@ -40,3 +40,14 @@ node tools/render-error-check.js         # 実際に開いて真っ白になら�
 参照先の綴り間違いやキャッシュキーの取り違えは、公開してから「絵が出ない・古い絵のまま」になって初めて分かるため、
 このチェックで機械的に拾う。
 
+
+### 配信用JS(`game-system.compiled.js`)にはコメントが入らない(2026-09-26)
+
+`node tools/build.js` は配信用だけコメントを外し、日本語も `\uXXXX` にせずそのまま書く
+(`transformGameSystem({ forRelease:true })`)。本体が 4.8MB → 3.5MB、gzip後 1,183KB → 754KB。
+検査が vm で動かす変換は今までどおりコメント付き。
+
+- **配信用JSの中からコメントの字を探す検査を書かない。** 必ず落ちる。実コード(関数名・定数・呼び出しの形)で見る
+- 以前はコメントの字に当たって「通っているつもり」だった検査が4本あった
+  (`audio/audio-route-check` / `masu/breakthrough-star-check` / `ranking/profile-frame-check` / `audio/auto-ultra-bgm-check`)。
+  前の3本は実コードを見る形へ直し、最後の1本は日本語をそのまま書くようにしたことで元の判定のまま通る

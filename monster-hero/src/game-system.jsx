@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: edc4c180a7250f7b
+// generated-sha256: 854f2a6b47a8c2d5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -115,6 +115,9 @@ const normalizeBattleFxSettings = (value) => {
     // 画面の軽さ(2026-09-24 ユーザー指示「バトル設定で軽い画面でも出来るの作って 4種類ぐらい」)。
     // ★足す前に保存した人(load が無い)は RICH(いままでの見た目)で始まる
     load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH',
+    // 操作が無いときの一時停止(2026-09-25 ユーザー指示「それも設定で作って」)。
+    // ★既定は OFF(休ませない)。5秒で止まるのが「動きが止まった」ように見えていたため、選んだ人だけ休ませる
+    restPause: v.restPause === 'ON' ? 'ON' : 'OFF',
     // ボスの必殺技ムービー(2026-09-25 ユーザー指示「設定でオンオフもつけて」)。
     // ★足す前に保存した人(specialMovie が無い)は ON(流す)で始まる
     specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON',
@@ -130,6 +133,9 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
       { id:'LIGHT', label:'軽め', note:'待機の動きも止める' },
       { id:'MINIMAL', label:'最軽量', note:'いちばん軽い表示' },
     ] },
+  { key:'restPause', title:'操作がないときの一時停止',
+    desc:'タクティクス新画面で、5秒ほど何も操作せず戦闘も進んでいないあいだ、飾りやモンスターの動きを一時停止してスマホを休ませます。画面に触れるか戦闘が進むと、止まったところからすぐに動き出します。',
+    options:[{ id:'OFF', label:'止めない', note:'いつも動かす' }, { id:'ON', label:'5秒で止める', note:'スマホが熱くなりにくい' }] },
   { key:'idleMotion', title:'待機中の動き',
     desc:'待っているあいだのモンスターの動き（翼の羽ばたき・しっぽや花の揺れなど）と、タクティクス新画面の枠の飾り・敵の待機の動き、WAVEのあとの画面の飾りの動きです。攻撃の演出はどちらでも出ます。',
     options:[{ id:'ON', label:'動かす', note:'いつもの見た目' }, { id:'OFF', label:'止める', note:'画面が軽くなる' }] },
@@ -145,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 03:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 03:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7252,6 +7258,15 @@ const groupChangelogEntries = (entries) => {
   });
   return rows;
 };
+// 更新履歴の画面は、開いているあいだ描き直すたびに全件をまとめ直していた。
+// CHANGELOG_ENTRIES は読み込み時に決まって変わらないので、タブごとに1回だけまとめて使い回す
+// (読むだけ。まとめた行を後から書き換えないこと)
+const _changelogRowsByTab = new Map();
+const changelogRowsOfTab = (tab) => {
+  const key = tab === 'issue' ? 'issue' : 'update';
+  if (!_changelogRowsByTab.has(key)) _changelogRowsByTab.set(key, groupChangelogEntries(changelogEntriesOfTab(key)));
+  return _changelogRowsByTab.get(key);
+};
 // 既読の判定に使う「いま存在するすべてのID」。
 // タブの振り分けを変えると、既読にしたIDが別のタブへ移る。タブごとのID一覧で
 // ふるいにかけると移った先で未読へ戻ってしまうため、こちらで残す・捨てるを決める
@@ -11338,26 +11353,26 @@ const AttackTargetFx = ({anim, attackerId}) => {
 // ・軽量表示・設定の「待機中の動き：止める」では呼び出し側が使わない。calm と「動きを減らす」は CSS で止める
 // ==== MONSTER_IDLE_RIGS(tools/monster/idle-rig-build.js が書く。手で直さない) ====
 const MONSTER_IDLE_RIGS = Object.freeze({
-  Mocchi: { body:'bounce', bodyMask:null, parts:[] },
-  Suezo: { body:'bounce', bodyMask:null, parts:[] },
-  Golem: { body:'breathe', bodyMask:null, parts:[] },
+  Mocchi: { body:'jelly', bodyMask:IDLE_MOCCHI_BODY_MASK, parts:[{ mask:IDLE_MOCCHI_ARM_L_MASK, origin:'29.5% 40%', anim:'swing', amp:-7, dur:1800, delay:0, layer:'front' }, { mask:IDLE_MOCCHI_ARM_R_MASK, origin:'70% 40%', anim:'swing', amp:7, dur:1800, delay:900, layer:'front' }] },
+  Suezo: { body:'hop', bodyMask:null, parts:[] },
+  Golem: { body:'heavy', bodyMask:IDLE_GOLEM_BODY_MASK, parts:[{ mask:IDLE_GOLEM_ARM_L_MASK, origin:'22% 43%', anim:'swing', amp:-4, dur:3000, delay:0, layer:'back' }, { mask:IDLE_GOLEM_ARM_R_MASK, origin:'77% 43%', anim:'swing', amp:4, dur:3000, delay:1500, layer:'back' }] },
   Tiger: { body:'breathe', bodyMask:IDLE_TIGER_BODY_MASK, parts:[{ mask:IDLE_TIGER_TAIL_MASK, origin:'67.8% 53%', anim:'wag', amp:7, dur:1100, delay:0, layer:'back' }] },
   Ham: { body:'breathe', bodyMask:IDLE_HAM_BODY_MASK, parts:[{ mask:IDLE_HAM_EAR_L_MASK, origin:'40% 32.5%', anim:'twitch', amp:-9, dur:3200, delay:0, layer:'back' }, { mask:IDLE_HAM_EAR_R_MASK, origin:'59.5% 33%', anim:'twitch', amp:9, dur:3200, delay:1300, layer:'back' }] },
   Pixie: { body:'hover', bodyMask:IDLE_PIXIE_BODY_MASK, parts:[{ mask:IDLE_PIXIE_WING_L_MASK, origin:'41.8% 41.5%', anim:'flapL', amp:12, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_WING_R_MASK, origin:'58.2% 42.3%', anim:'flapR', amp:12, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_TAIL_MASK, origin:'57.8% 67.5%', anim:'wag', amp:7, dur:1600, delay:0, layer:'back' }] },
   Mia: { body:'hover', bodyMask:IDLE_MIA_BODY_MASK, parts:[{ mask:IDLE_MIA_WING_L_MASK, origin:'44.3% 38.1%', anim:'flapL', amp:16, dur:1300, delay:0, layer:'back' }, { mask:IDLE_MIA_WING_R_MASK, origin:'55.7% 38.1%', anim:'flapR', amp:16, dur:1300, delay:0, layer:'back' }] },
   Pandora: { body:'hover', bodyMask:IDLE_PANDORA_BODY_MASK, parts:[{ mask:IDLE_PANDORA_WING_L_MASK, origin:'39% 34%', anim:'flapL', amp:12, dur:1200, delay:0, layer:'back' }, { mask:IDLE_PANDORA_WING_R_MASK, origin:'61.7% 36%', anim:'flapR', amp:12, dur:1200, delay:0, layer:'back' }, { mask:IDLE_PANDORA_TAIL_L_MASK, origin:'40.1% 61.2%', anim:'swing', amp:7, dur:2000, delay:0, layer:'back' }, { mask:IDLE_PANDORA_TAIL_R_MASK, origin:'61.7% 63%', anim:'swing', amp:-7, dur:2200, delay:400, layer:'back' }] },
-  Monol: { body:'hover', bodyMask:null, parts:[] },
+  Monol: { body:'drift', bodyMask:null, parts:[] },
   Oboro: { body:'sway', bodyMask:IDLE_OBORO_BODY_MASK, parts:[{ mask:IDLE_OBORO_FLOWER_T_MASK, origin:'49.5% 54.5%', anim:'swing', amp:5, dur:2600, delay:0, layer:'front' }, { mask:IDLE_OBORO_FLOWER_L_MASK, origin:'41% 57%', anim:'swing', amp:-6, dur:2300, delay:500, layer:'front' }, { mask:IDLE_OBORO_FLOWER_R_MASK, origin:'59% 57%', anim:'swing', amp:6, dur:2500, delay:900, layer:'front' }] },
   Plant: { body:'sway', bodyMask:IDLE_PLANT_BODY_MASK, parts:[{ mask:IDLE_PLANT_FLOWER_T_MASK, origin:'49.5% 55.5%', anim:'swing', amp:5, dur:2600, delay:0, layer:'front' }, { mask:IDLE_PLANT_FLOWER_L_MASK, origin:'44% 57.5%', anim:'swing', amp:-6, dur:2300, delay:500, layer:'front' }, { mask:IDLE_PLANT_FLOWER_R_MASK, origin:'56% 57.5%', anim:'swing', amp:6, dur:2500, delay:900, layer:'front' }] },
   Zan: { body:'hover', bodyMask:IDLE_ZAN_BODY_MASK, parts:[{ mask:IDLE_ZAN_BLADE_L_MASK, origin:'30% 29.5%', anim:'swing', amp:-5, dur:1800, delay:0, layer:'back' }, { mask:IDLE_ZAN_BLADE_R_MASK, origin:'70% 29.5%', anim:'swing', amp:5, dur:1800, delay:0, layer:'back' }] },
   Mitarashi: { body:'breathe', bodyMask:IDLE_MITARASHI_BODY_MASK, parts:[{ mask:IDLE_MITARASHI_WING_L_MASK, origin:'28% 41.5%', anim:'flapL', amp:9, dur:1400, delay:0, layer:'back' }, { mask:IDLE_MITARASHI_WING_R_MASK, origin:'72% 41.5%', anim:'flapR', amp:9, dur:1400, delay:0, layer:'back' }] },
-  Ark: { body:'hover', bodyMask:null, parts:[] },
+  Ark: { body:'glide', bodyMask:IDLE_ARK_BODY_MASK, parts:[{ mask:IDLE_ARK_CROWN_MASK, origin:'50% 24%', anim:'bob', amp:-2.2, dur:1800, delay:0, layer:'front' }, { mask:IDLE_ARK_HALO_MASK, origin:'50% 30%', anim:'bob', amp:-1.4, dur:1800, delay:300, layer:'front' }] },
   Iblis: { body:'hover', bodyMask:IDLE_IBLIS_BODY_MASK, parts:[{ mask:IDLE_IBLIS_WING_L_MASK, origin:'24% 56%', anim:'flapL', amp:6, dur:1400, delay:0, layer:'back' }, { mask:IDLE_IBLIS_WING_R_MASK, origin:'74% 57%', anim:'flapR', amp:6, dur:1400, delay:0, layer:'back' }, { mask:IDLE_IBLIS_ORB_MASK, origin:'48% 8%', anim:'bob', amp:-6, dur:1900, delay:0, layer:'front' }] },
   Snegurochka: { body:'swim', bodyMask:IDLE_SNEGUROCHKA_BODY_MASK, parts:[{ mask:IDLE_SNEGUROCHKA_FIN_MASK, origin:'58.5% 80%', anim:'swing', amp:5, dur:1500, delay:0, layer:'front' }] },
   Undine: { body:'swim', bodyMask:IDLE_UNDINE_BODY_MASK, parts:[{ mask:IDLE_UNDINE_FIN_MASK, origin:'58% 80%', anim:'swing', amp:6, dur:1500, delay:0, layer:'front' }] },
   Yaobikuni: { body:'swim', bodyMask:IDLE_YAOBIKUNI_BODY_MASK, parts:[{ mask:IDLE_YAOBIKUNI_FIN_MASK, origin:'60.7% 82%', anim:'swing', amp:6, dur:1500, delay:0, layer:'front' }] },
-  Eiki: { body:'hover', bodyMask:null, parts:[] },
-  KenshiMocchi: { body:'bounce', bodyMask:null, parts:[] },
+  Eiki: { body:'glide', bodyMask:null, parts:[] },
+  KenshiMocchi: { body:'jelly', bodyMask:IDLE_KENSHI_MOCCHI_BODY_MASK, parts:[{ mask:IDLE_KENSHI_MOCCHI_SWORD_L_MASK, origin:'29.5% 26%', anim:'swing', amp:-4, dur:2400, delay:0, layer:'back' }, { mask:IDLE_KENSHI_MOCCHI_SWORD_R_MASK, origin:'70.5% 26%', anim:'swing', amp:4, dur:2400, delay:1200, layer:'back' }] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
@@ -11725,6 +11740,29 @@ const BattleAttackMotionPreview = ({image, anim, compact=false, baseId=null}) =>
       {/* 敵の側の着弾。本番は敵の丸枠に重ねるが、ここでは「敵の位置」へずらして重ねる */}
       <span className="atk-target-fx-anchor" aria-hidden="true"><AttackTargetFx anim={anim}/></span>
     </div>
+  );
+};
+// タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない。
+// 波紋の一覧はこの部品だけが持つ。以前は本体(MonsterHeroGame)の state で、カードを引きずっている
+// あいだも波紋1つごとに画面全体を2回(出す・消す)描き直していた。本体は spawnRef.current(x, y) を呼ぶだけ
+const TapRippleLayer = ({ spawnRef }) => {
+  const [ripples, setRipples] = useState([]);
+  useEffect(() => {
+    const timers = new Set();
+    spawnRef.current = (x, y) => {
+      const id = Date.now() + Math.random();
+      setRipples(prev => [...prev, { id, x, y }]);
+      const timer = setTimeout(() => { timers.delete(timer); setRipples(prev => prev.filter(r => r.id !== id)); }, 650);
+      timers.add(timer);
+    };
+    return () => { spawnRef.current = null; timers.forEach(clearTimeout); };
+  }, [spawnRef]);
+  return (
+      <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
+        {ripples.map(r=>(
+          <span key={r.id} style={{position:'absolute',left:r.x,top:r.y,width:'48px',height:'48px',marginLeft:'-24px',marginTop:'-24px',borderRadius:'9999px',border:'2px solid rgba(255,255,255,0.9)',boxShadow:'0 0 10px rgba(255,255,255,0.6)',transformOrigin:'center',animation:'mhRipple 550ms ease-out forwards'}}/>
+        ))}
+      </div>
   );
 };
 
@@ -15709,7 +15747,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const faceBitmapsRef=useRef([]);
   useEffect(()=>{faceBitmapsRef.current=[];if(!canvasNotes||monsterFaceHidden)return undefined;let cancelled=false;
     const deviceDpr=typeof window!=='undefined'&&window.devicePixelRatio>0?window.devicePixelRatio:1;
-    const dpr=Math.min(deviceDpr,settings.lightweightMode?2:3,settings.effectAmount==='MINIMAL'?2:3);
+    const dpr=Math.min(deviceDpr,RHYTHM_NOTE_CANVAS_MAX_DPR);
     monsters.forEach((monster,index)=>{rhythmBakeMonsterFace(monster,dpr).then(face=>{if(!cancelled&&face)faceBitmapsRef.current[index]=face;});});
     return()=>{cancelled=true;};
   },[canvasNotes,monsterSignature,monsterFaceHidden,settings.lightweightMode,settings.effectAmount]);
@@ -24239,6 +24277,8 @@ function BattleScreen({
   // 画面の軽さ(豪華/標準/軽め/最軽量)。最軽量は 60-app が liteBattleView(軽量表示)にしてから渡してくる。
   // 軽めは「待機中の動き：止める」と同じく、敵と味方の待機の動きを止める
   const fxLoad = battleFx.load;
+  // 操作がないときの一時停止(バトル設定。既定は止めない)
+  const fxRestEnabled = battleFx.restPause === 'ON';
   const idleMotionOff = battleFx.idleMotion === 'OFF' || fxLoad === 'LIGHT';
   const shakeOff = battleFx.shake === 'OFF';
   // 敵の攻撃(ためるを含む)を絵だけで動かす場面。移動とムーは今までどおり丸枠ごと
@@ -24259,13 +24299,17 @@ function BattleScreen({
   const fxRestTimerRef = useRef(null);
   const fxBusyRef = useRef(false);
   fxBusyRef.current = !!(isBusy || attackAnim || enemyAttackAnim || enemyAttackFx);
+  const fxRestEnabledRef = useRef(fxRestEnabled);
+  fxRestEnabledRef.current = fxRestEnabled;
   const wakeBattleFx = useCallback(() => {
     setFxRest(false);
     if (fxRestTimerRef.current) clearTimeout(fxRestTimerRef.current);
-    const arm = () => { fxRestTimerRef.current = setTimeout(() => { if (fxBusyRef.current) arm(); else setFxRest(true); }, TACTICS_FX_REST_MS); };
+    // 設定で「止めない」のときは、タイマーそのものを置かない(再描画も起こさない)
+    if (!fxRestEnabledRef.current) return;
+    const arm = () => { fxRestTimerRef.current = setTimeout(() => { if (!fxRestEnabledRef.current) return; if (fxBusyRef.current) arm(); else setFxRest(true); }, TACTICS_FX_REST_MS); };
     arm();
   }, []);
-  useEffect(() => { if (tacticsNewLayout) wakeBattleFx(); }, [tacticsNewLayout, isBusy, attackAnim, enemyAttackAnim, enemyAttackFx, popups, enemy?.hp, enemyIntent, wakeBattleFx]);
+  useEffect(() => { if (tacticsNewLayout) wakeBattleFx(); }, [tacticsNewLayout, fxRestEnabled, isBusy, attackAnim, enemyAttackAnim, enemyAttackFx, popups, enemy?.hp, enemyIntent, wakeBattleFx]);
   useEffect(() => {
     if (!tacticsNewLayout || typeof document === 'undefined') return undefined;
     const onTouch = () => wakeBattleFx();
@@ -24341,6 +24385,28 @@ function BattleScreen({
     });
     return bySlot;
   };
+  // 上の2つ(ガードのまとめ・先に選んだカードの補正)は、1回の描画のなかでは入力が同じで
+  // 返り値も読むだけなので、枠ごと・発ごとに作り直さず最初の1回を使い回す
+  let guardPlanOnceCache;
+  const guardPlanOnce = () => (guardPlanOnceCache === undefined ? (guardPlanOnceCache = plannedGuardBySlot()) : guardPlanOnceCache);
+  const previewBoostsOnceCache = new Map();
+  const previewBoostsOnce = (excludeIdx) => {
+    if (!previewBoostsOnceCache.has(excludeIdx)) previewBoostsOnceCache.set(excludeIdx, previewLocalBoosts(excludeIdx));
+    return previewBoostsOnceCache.get(excludeIdx);
+  };
+  // 手札1枚ごとに「ほかに選んだカードのガッツ」を数えるので、選んだカードのガッツは描画ごとに1回だけ求める
+  let selectedGutsListCache;
+  const selectedGutsListOnce = () => (selectedGutsListCache || (selectedGutsListCache = selectedCards.map(idx => [idx, selectedCardGuts(idx)])));
+  // 置ける枠かどうか(タクティクス)も、合計DMG欄と枠ごとの表示で同じ問いを2回していたので1回にする
+  const canAssignOnceCache = new Map();
+  const tacticsCanAssignOnce = (card, cardIndex, slotIdx) => {
+    const key = `${cardIndex}:${slotIdx}`;
+    const hit = canAssignOnceCache.get(key);
+    if (hit && hit.card === card) return hit.answer;
+    const answer = tacticsCanAssign(card, cardIndex, slotIdx);
+    canAssignOnceCache.set(key, { card, answer });
+    return answer;
+  };
   // ★連撃は「1発ずつ」出す(2026-09-22 ユーザー指示「連撃ダメージ予測が合算分だから
   //   分かりにくい ガード入れても合算計算だし うまくバラバラでわかるようにしたい」)。
   //   受けたあとの表示と同じ splitTacticsHitAmounts を通すので、予告と実際で割り方がそろう。
@@ -24358,7 +24424,7 @@ function BattleScreen({
     // ★タクティクスは枠ごと。構えていない子も、全体ガードなら丈夫さぶんが付く。
     //   受け止めるヒット数は、その子へ何枚構えたかで決まる(2枚以上なら連撃の全部)
     if (Array.isArray(tacticsUnits) && slotIdx !== null) {
-      const bySlot = plannedGuardBySlot();
+      const bySlot = guardPlanOnce();
       const own = bySlot[slotIdx] || { cards: 0 };
       guard = enemyIntent.variant === 'pierce' ? 0 : tacticsSlotGuardValue(bySlot, slotIdx);
       guardHits = tacticsGuardHits(own.cards, hits);
@@ -24433,7 +24499,7 @@ function BattleScreen({
   };
   return (
 
-      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined}>
+      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRestEnabled&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined}>
         {/* 舞台の照明(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい。
             イメージ画みたいにかっこよくできないかな？」)。
             ★画像は足さない。スマホの通信量に直に効くうえ、敵ごとに背景を用意すると際限がない
@@ -25131,7 +25197,7 @@ function BattleScreen({
             // ニコラオ・ゴーレム・モッチー/ミタラシ・ききは使ったターンからすぐ効くため、
             // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
             // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
-            const boosts=previewLocalBoosts(pendingIdx);
+            const boosts=previewBoostsOnce(pendingIdx);
             let committedTotal=0; let guardFlat=0; let guardMult=0; const guardBySlot={};
             const committedCounter=makeCardHalveCounter();
             selectedCards.forEach(idx=>{
@@ -25183,7 +25249,7 @@ function BattleScreen({
                 // ★置ける枠かどうかは、盤面のタップ判定とまったく同じ答えを使う。
                 //   自前で枚数を数えていたころは、ガードを1枚置いた子が
                 //   「もう置けない子」に見えて、合計DMGの予測だけ別の子で出ていた
-                const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;
+                const tacticsAnswer=tacticsCanAssign?tacticsCanAssignOnce(pendingCardObj,pendingIdx,i):null;
                 if(tacticsAnswer===null||tacticsAnswer===undefined){
                   const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
                   const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
@@ -25303,7 +25369,7 @@ function BattleScreen({
               const tacticsUnit=Array.isArray(tacticsUnits)?(tacticsUnits[i]||null):null;
               // この枠のガードの状態。札の名前(全体ハイガード)と🛡のまとめが同じ答えを使えるよう、
               // ガードのまとめは枠ごとに1回だけ作ってここから配る
-              const guardPlanBySlot=Array.isArray(tacticsUnits)?plannedGuardBySlot():null;
+              const guardPlanBySlot=Array.isArray(tacticsUnits)?guardPlanOnce():null;
               const slotGuardCards=guardPlanBySlot?(guardPlanBySlot[i]?.cards||0):0;
               const slotRushGuard=slotGuardCards>=TACTICS_RUSH_GUARD_CARDS;
               const slotSpreadGuard=!!guardPlanBySlot&&isTacticsSpreadGuard(guardPlanBySlot);
@@ -25335,7 +25401,7 @@ function BattleScreen({
               if(s && pendingCardObj){
                 // 新モードは「その子が払えるか」で決まる。倒れた子へは回復カードだけ置ける。
                 // ★null のときだけ今までどおりの判定を使う(既存モードはここを通る)
-                const tacticsAnswer=tacticsCanAssign?tacticsCanAssign(pendingCardObj,pendingIdx,i):null;
+                const tacticsAnswer=tacticsCanAssign?tacticsCanAssignOnce(pendingCardObj,pendingIdx,i):null;
                 if(tacticsAnswer===null||tacticsAnswer===undefined){
                   canAssign = assignedCount<maxUses;
                   if(pendingCardObj.type==='unique') canAssign = canAssign && (pendingCardObj.ownerSlotIdx===i);
@@ -25355,7 +25421,7 @@ function BattleScreen({
               //   using the GLOBAL attack order (2nd+ attack = half damage), matching processTurn
               // ニコラオ・ゴーレム・モッチー/ミタラシ・ききの同ターン即時効果を、
               // このスロットの予測にも反映する(合計DMG欄と同じpreviewLocalBoosts)。
-              const slotBoosts=previewLocalBoosts(pendingIdx);
+              const slotBoosts=previewBoostsOnce(pendingIdx);
               let previewDmg=0; let isPendingPreview=false; let isPendingHalved=false; let previewSoulPct=0;
               // ★ガードも枠ごとに「この子へ置いたらいくら受け止められるか」を出す
               //   (2026-09-22 ユーザー指摘「ダメージは個別に見えるのにガード値は個別に
@@ -25793,7 +25859,7 @@ function BattleScreen({
               const assignedSlot=cardAssignments[i];
               const curGuts=assignedSlot!=null?getCardGuts(c,assignedSlot):getCardGuts(c,null);
               const requiredGuts=assignedSlot!=null?curGuts:pendingCardGuts(c);
-              const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+(idx===i?0:selectedCardGuts(idx)),0);
+              const remainingGuts=guts-selectedGutsListOnce().reduce((acc,[idx,g])=>acc+(idx===i?0:g),0);
               // 新モードは合計のガッツでは決まらない。「その子が払えるか」をアプリ側へ聞く。
               // null が返るモード(いままでの5つ)では、今までどおり合計で見る
               const cardBlock=tacticsCardBlock?tacticsCardBlock(c,i):null;
@@ -25805,7 +25871,7 @@ function BattleScreen({
               const tutorialAllowed=battleTutorialCardAllowed(c);
               // 光らせるのは「いま触ってほしい種類」だけ。技変更の番は名前のところも光らせる
               const tutorialTargeted=!!battleTutorialCardTarget&&battleTutorialCardKind(c)===battleTutorialCardTarget;
-              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex"><button data-hand-card={i} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
+              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex"><button data-hand-card={i} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
                 if(isBusy||autoBattleRef.current||!tutorialAllowed)return;
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;
@@ -27285,7 +27351,8 @@ function MonsterHeroGame() {
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
-  const debugIconItems = breederIconOptions({includeUnowned:true});
+  // 中身は固定の一覧だけから決まるので、最初の1回だけ作る
+  const debugIconItems = useMemo(() => breederIconOptions({includeUnowned:true}), []);
   const [iconAdjustId, setIconAdjustId] = useState(debugIconItems[0]?.id||'');
   const [iconAdjustQuery, setIconAdjustQuery] = useState('');
   const [iconAdjustments, setIconAdjustments] = useState(()=>Object.fromEntries(debugIconItems.map(item=>[item.id,{...(MARKET_PROFILE_ICON_STYLES[item.id]||DEFAULT_PROFILE_ICON_STYLE)}])));
@@ -27576,20 +27643,9 @@ function MonsterHeroGame() {
     setScreenShake(false); setBigShake(false);
     requestAnimationFrame(() => { setScreenShake(true); setBigShake(big); setTimeout(()=>{setScreenShake(false); setBigShake(false);}, big?750:450); });
   }, []);
-  // タップの波紋は React の state を通さず、入れ物へ要素を直接足して 650ms 後に外す(2026-09-25)。
-  // 以前は state に積んでいたため、**タップのたびにゲーム全体(このコンポーネント)が2回描き直され**、
-  // 開いている画面もまとめて作り直されていた。モンヒロビートは1秒に何回もタップするので、
-  // 譜面が詰まるほどカクついた(ユーザー報告「どの端末でも演奏中にカクつく / 譜面が多いと起こりやすい」)。
-  // 見た目(大きさ・枠・光・動き)は以前の <span> と同じ。
-  const rippleLayerRef = useRef(null);
-  const spawnRipple = useCallback((x, y) => {
-    const layer = rippleLayerRef.current;
-    if (!layer || typeof document === 'undefined' || !Number.isFinite(x) || !Number.isFinite(y)) return;
-    const el = document.createElement('span');
-    el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:48px;height:48px;margin-left:-24px;margin-top:-24px;border-radius:9999px;border:2px solid rgba(255,255,255,0.9);box-shadow:0 0 10px rgba(255,255,255,0.6);transform-origin:center;animation:mhRipple 550ms ease-out forwards`;
-    layer.appendChild(el);
-    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 650);
-  }, []);
+  // 波紋の一覧は TapRippleLayer だけが持つ(波紋が出たり消えたりするたびに、ここを丸ごと描き直さない)
+  const rippleSpawnRef = useRef(null);
+  const spawnRipple = useCallback((x, y) => { if (rippleSpawnRef.current) rippleSpawnRef.current(x, y); }, []);
   // タップ中(押している間)は指を離すまでスライドしても波紋が付いてくるようにする。
   // 動くたびに出すと出過ぎるので、時間と距離の両方で間引く
   // 自前で画面を回しているときだけ、いちばん外の箱へ掛けるCSSが返る(ふだんは null)
@@ -28086,6 +28142,10 @@ function MonsterHeroGame() {
   const [attackAnim, setAttackAnim] = useState(null); // {slotIndex}
   const [slotSkill, setSlotSkill] = useState(null); // {slotIndex, name, type} スロット上の技名インライン表示
   const [dragState, setDragState] = useState(null); // {cardIndex, x, y, active, card} カードドラッグ
+  // 引きずっているあいだの指の位置。動くたびに state を更新すると画面全体(予測の計算も)が
+  // 描き直されるので、位置はここへ入れてカード1枚の left/top だけを直接動かす。
+  // 描き直しが起きたときもここから読むので、カードが古い位置へ戻らない
+  const dragPosRef = useRef(null);
   const cardDragActiveRef = useRef(false); // 閾値を越えたあと始点へ戻っても、スワイプ成立を保持する
   const suppressCardClickRef = useRef(0); // pointerup後にブラウザが合成するclickを捕捉して捨てる期限
   const [dragOverSlot, setDragOverSlot] = useState(null); // ドラッグ中にホバーしているスロット
@@ -29115,9 +29175,13 @@ function MonsterHeroGame() {
   // タブ別の既読ID集合を比較するため、再ビルドやBUILD_DATE変更で過去項目は復活しない。
   // 既読はタブをまたいで見る。振り分けを変えたとき、前に更新情報で読んだ不具合修正が
   // 不具合情報タブで未読(NEW)へ戻るのを防ぐ
-  const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-  const changelogUnreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
-  const changelogUnread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogUnreadIds[type].length>0]));
+  // 約900件を見比べるので、既読が変わったときだけ数え直す(描画のたびに作り直さない)
+  const { changelogUnreadIds, changelogUnread } = useMemo(() => {
+    const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
+    const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
+    const unread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, unreadIds[type].length>0]));
+    return { changelogUnreadIds: unreadIds, changelogUnread: unread };
+  }, [changelogSeen]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue;
   const markChangelogTabSeen = (type) => {
     const ids = CHANGELOG_IDS_BY_TYPE[type];
@@ -31444,7 +31508,8 @@ function MonsterHeroGame() {
     const onVisible = () => { if (document.visibilityState === 'visible') checkVersion(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', onVisible);
-    const interval = setInterval(checkVersion, 30 * 1000);
+    // 裏に回っているあいだは問い合わせない(戻った瞬間に onVisible がすぐ確かめる)
+    const interval = setInterval(() => { if (document.visibilityState === 'hidden') return; checkVersion(); }, 30 * 1000);
     return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
   }, []);
 
@@ -31671,6 +31736,9 @@ function MonsterHeroGame() {
     if(!dragState) return;
     const DRAG_THRESHOLD=10;
     const startX=dragState.x, startY=dragState.y;
+    dragPosRef.current={x:startX,y:startY};
+    // 画面へ出している active。これが変わるとき(引きずり始め)だけ state を更新する
+    let shownActive=!!dragState.active;
     const findSlot=(x,y)=>{
       const el=document.elementFromPoint(x,y);
       if(!el) return null;
@@ -31683,7 +31751,14 @@ function MonsterHeroGame() {
       const moved=Math.hypot(x-startX,y-startY);
       if(moved>=DRAG_THRESHOLD) cardDragActiveRef.current=true;
       const active=cardDragActiveRef.current;
-      setDragState(prev=>prev?{...prev,x,y,active}:null);
+      dragPosRef.current={x,y};
+      if(active!==shownActive){
+        shownActive=active;
+        setDragState(prev=>prev?{...prev,x,y,active}:null);
+      } else if(active){
+        const el=document.querySelector('[data-dragging-card]');
+        if(el){ el.style.left=`${x}px`; el.style.top=`${y}px`; }
+      }
       if(active){ setDragOverSlot(findSlot(x,y)); }
       if(active&&e.cancelable) e.preventDefault();
     };
@@ -31715,6 +31790,7 @@ function MonsterHeroGame() {
       window.removeEventListener('pointermove',onMove);
       window.removeEventListener('pointerup',onUp);
       window.removeEventListener('pointercancel',onUp);
+      dragPosRef.current=null;
     };
   }, [dragState?.cardIndex]);
 
@@ -40163,12 +40239,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //  過去のやつが一瞬で見えなくなる」)。
             // 1行ずつ積み上げていたころは682行あり、少しさかのぼるだけで指が疲れていた。
             // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
-            const rows = groupChangelogEntries(changelogEntriesOfTab(changelogTab));
-            const unreadHere = changelogUnreadIds[changelogTab];
+            const rows = changelogRowsOfTab(changelogTab);
+            const unreadHere = new Set(changelogUnreadIds[changelogTab]);
             let shownDay = null;
             return rows.map(row=>{
               const open=changelogOpenId===row.key;
-              const unreadCount=row.entries.filter(entry=>unreadHere.includes(entry.id)).length;
+              const unreadCount=row.entries.filter(entry=>unreadHere.has(entry.id)).length;
               // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
               // 分かるようにしておく(2026-09-05・ユーザー指摘「直近の更新情報が不具合修正との
               // 区別がついてない」)。1つのまとまりに種類が混ざることがあるので、
@@ -40194,7 +40270,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 開いたら、その話題のその日の項目を時刻・種別・本文までぜんぶ出す */}
                   {open&&<div className="mh-changelog-detail" data-changelog-detail>
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
-                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.includes(c.id)&&<em>NEW</em>}</time>
+                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
                       <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
                       <b>{c.title}</b>
                       {/* 告知画像があれば本文の上に出す
@@ -40528,7 +40604,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
     <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF'||battleFxLoad==='LIGHT'||battleFxLoad==='MINIMAL')?'calm':'rich'} data-fx-level={battleFxLoad} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
-      <div ref={rippleLayerRef} data-mh-tap-ripples style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}/>
+      <TapRippleLayer spawnRef={rippleSpawnRef}/>
       {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
@@ -43911,7 +43987,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             cardNeedsMonster={cardNeedsMonster} cycleActiveUniqueForSlot={cycleActiveUniqueForSlot}
             cycleBattleAuto={cycleBattleAuto} cycleBattleSpeed={cycleBattleSpeed} cycleEcoMode={cycleEcoMode}
             debugBattle={debugBattle} difficulty={difficulty} dismissQuickRhythmIntro={dismissQuickRhythmIntro}
-            distTotalBonus={distTotalBonus} dragOverSlot={dragOverSlot} dragState={dragState}
+            distTotalBonus={distTotalBonus} dragOverSlot={dragOverSlot} dragState={dragState&&dragPosRef.current?{...dragState,x:dragPosRef.current.x,y:dragPosRef.current.y}:dragState}
             ecoBattleView={ecoBattleView} ecoMode={ecoMode} effectiveMaxGuts={effectiveMaxGuts}
             effectiveMaxHp={effectiveMaxHp} enemy={enemy} enemyAttackAnim={enemyAttackAnim}
             enemyAttackFx={enemyAttackFx} enemyDist={enemyDist} enemyIntent={enemyIntent}
@@ -46082,6 +46158,11 @@ const createAnimationStyle = () => {
     .mon-idle--breathe { animation:monIdleBreathe 3200ms ease-in-out infinite; }
     .mon-idle--sway { animation:monIdleSway 3000ms ease-in-out infinite; }
     .mon-idle--swim { animation:monIdleSwim 2800ms ease-in-out infinite; }
+    .mon-idle--jelly { animation:monIdleJelly 2000ms ease-in-out infinite; }
+    .mon-idle--hop { animation:monIdleHop 2800ms ease-in-out infinite; }
+    .mon-idle--heavy { animation:monIdleHeavy 3600ms ease-in-out infinite; }
+    .mon-idle--glide { animation:monIdleGlide 3200ms ease-in-out infinite; }
+    .mon-idle--drift { animation:monIdleDrift 4200ms ease-in-out infinite; transform-origin:50% 50%; }
     /* 宙に浮いている子。ゆっくり上下してわずかに伸び縮みする */
     @keyframes monIdleHover {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
@@ -46096,8 +46177,45 @@ const createAnimationStyle = () => {
     }
     /* どっしり立っている子。胸がふくらむように、縦へわずかに伸び縮みする */
     @keyframes monIdleBreathe {
-      0%,100% { transform:scale(1,1); }
-      50% { transform:scale(1.01,1.025); }
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      50% { transform:translate3d(0,-1%,0) scale(1.015,1.04); }
+    }
+    /* ↓ 待機が地味だった子の動き(2026-09-25 ユーザー指示「待機中の動きが地味なモンスターがいるからもう少し改良したい」)。
+       どれも足元(transform-origin 50% 96%)を軸にするので、地面から離れて見えない */
+    /* ぷるぷるの子(モッチー・剣士モッチー)。つぶれて、ぴょんと伸びて、ぷるんと揺れて止まる */
+    @keyframes monIdleJelly {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      14% { transform:translate3d(0,0,0) scale(1.07,.92); }
+      32% { transform:translate3d(0,-3.5%,0) scale(.95,1.06); }
+      48% { transform:translate3d(0,0,0) scale(1.05,.95); }
+      58% { transform:translate3d(0,0,0) scale(.98,1.03); }
+      68% { transform:translate3d(0,0,0) scale(1.01,.99); }
+    }
+    /* 跳ねる子(スエゾー)。しっぽでぴょんと跳び、左右を見回すように交互に傾く */
+    @keyframes monIdleHop {
+      0%,50%,100% { transform:translate3d(0,0,0) rotate(0) scale(1,1); }
+      8%,58% { transform:translate3d(0,0,0) rotate(0) scale(1.08,.9); }
+      20% { transform:translate3d(0,-10%,0) rotate(-6deg) scale(.95,1.06); }
+      70% { transform:translate3d(0,-10%,0) rotate(6deg) scale(.95,1.06); }
+      32%,82% { transform:translate3d(0,0,0) rotate(0) scale(1.06,.93); }
+      40%,90% { transform:translate3d(0,0,0) rotate(0) scale(.98,1.02); }
+    }
+    /* 重たい子(ゴーレム)。左右へ体重を移し、真ん中で胸をふくらませる */
+    @keyframes monIdleHeavy {
+      0%,100% { transform:translate3d(0,0,0) rotate(0) scale(1,1); }
+      25% { transform:translate3d(-1.2%,0,0) rotate(-2deg) scale(1,1); }
+      50% { transform:translate3d(0,-1.2%,0) rotate(0) scale(1.02,1.035); }
+      75% { transform:translate3d(1.2%,0,0) rotate(2deg) scale(1,1); }
+    }
+    /* 翼で滑るように浮く子(アーク・エイキ)。大きく浮き沈みしながら、ゆったり傾く */
+    @keyframes monIdleGlide {
+      0%,100% { transform:translate3d(0,0,0) rotate(-2deg) scale(1,1); }
+      50% { transform:translate3d(0,-6%,0) rotate(2deg) scale(.99,1.02); }
+    }
+    /* 宙を漂う子(モノリス)。ゆっくり大きく浮き沈みし、ふらりと回る */
+    @keyframes monIdleDrift {
+      0%,100% { transform:translate3d(0,0,0) rotate(-4deg); }
+      50% { transform:translate3d(0,-8%,0) rotate(4deg); }
     }
     /* 植物の子。足元を軸に、左右へゆっくり傾く */
     @keyframes monIdleSway {

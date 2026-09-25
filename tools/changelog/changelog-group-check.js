@@ -115,7 +115,14 @@ assert.ok(Array.isArray(entries) && entries.length > 0, '更新情報が読め�
 // ---- 9. 画面がこのまとめを使っているか ----
 {
   const app = fs.readFileSync('monster-hero/src/parts/60-app.jsx', 'utf8');
-  assert.ok(app.includes('groupChangelogEntries(changelogEntriesOfTab(changelogTab))'), '一覧はまとめてから並べる');
+  // 画面はタブごとに1回だけまとめた結果(changelogRowsOfTab)を使い回す。
+  // 使い回しても、毎回まとめ直したときと同じ行が同じ順で出ることを実物で確かめる
+  assert.ok(app.includes('changelogRowsOfTab(changelogTab)'), '一覧はまとめてから並べる');
+  for (const tab of ['update', 'issue']) {
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(m.changelogRowsOfTab(tab))),
+      JSON.parse(JSON.stringify(m.groupChangelogEntries(m.changelogEntriesOfTab(tab)))), `使い回すまとめが毎回まとめ直した結果と同じ(${tab})`);
+    assert.strictEqual(m.changelogRowsOfTab(tab), m.changelogRowsOfTab(tab), `2回目からは同じものを返す(${tab})`);
+  }
   assert.ok(app.includes('data-changelog-day'), '日付の見出しを出している');
   assert.ok(app.includes('data-changelog-group'), 'まとめた行に話題が付いている');
   assert.ok(app.includes('data-changelog-peek'), '閉じているあいだも中身の見出しがちら見えする');

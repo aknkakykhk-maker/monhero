@@ -6130,9 +6130,11 @@ const filterAssistantLines = (list, assistantId) => {
 const assistantSceneLines = (scene, condition, bondLevel, assistantId) => {
   // line pack だけで追加されたデバッグ用の場面も取得できるようにする。
   // これが無いと pack のセリフは読み込み時に捨てられ、案内待ちのまま画面が止まる。
-  const packedLines = scene ? ASSISTANT_LINE_PACKS.flatMap(pack => Array.isArray(pack.lines?.[scene])
+  // 場面の定義があるときは pack のセリフを使わないので、組み立てるのは定義が無いときだけ
+  const sceneDef = scene ? ASSISTANT_SCENES[scene] : null;
+  const packedLines = (scene && !sceneDef) ? ASSISTANT_LINE_PACKS.flatMap(pack => Array.isArray(pack.lines?.[scene])
     ? stampAssistantOnLines(pack.lines[scene], pack.assistantId || DEFAULT_ASSISTANT_ID) : []) : [];
-  const def = (scene && ASSISTANT_SCENES[scene]) || (packedLines.length ? { lines:packedLines } : null);
+  const def = sceneDef || (packedLines.length ? { lines:packedLines } : null);
   if (!def) return [];
   const conditionalAll = (condition && def.when && Array.isArray(def.when[condition])) ? def.when[condition] : null;
   // 条件つきのセリフは、その助手のものが無ければ通常のセリフへ落とす

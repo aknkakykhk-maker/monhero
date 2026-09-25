@@ -155,7 +155,8 @@ function MonsterHeroGame() {
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
-  const debugIconItems = breederIconOptions({includeUnowned:true});
+  // 中身は固定の一覧だけから決まるので、最初の1回だけ作る
+  const debugIconItems = useMemo(() => breederIconOptions({includeUnowned:true}), []);
   const [iconAdjustId, setIconAdjustId] = useState(debugIconItems[0]?.id||'');
   const [iconAdjustQuery, setIconAdjustQuery] = useState('');
   const [iconAdjustments, setIconAdjustments] = useState(()=>Object.fromEntries(debugIconItems.map(item=>[item.id,{...(MARKET_PROFILE_ICON_STYLES[item.id]||DEFAULT_PROFILE_ICON_STYLE)}])));
@@ -446,20 +447,9 @@ function MonsterHeroGame() {
     setScreenShake(false); setBigShake(false);
     requestAnimationFrame(() => { setScreenShake(true); setBigShake(big); setTimeout(()=>{setScreenShake(false); setBigShake(false);}, big?750:450); });
   }, []);
-  // タップの波紋は React の state を通さず、入れ物へ要素を直接足して 650ms 後に外す(2026-09-25)。
-  // 以前は state に積んでいたため、**タップのたびにゲーム全体(このコンポーネント)が2回描き直され**、
-  // 開いている画面もまとめて作り直されていた。モンヒロビートは1秒に何回もタップするので、
-  // 譜面が詰まるほどカクついた(ユーザー報告「どの端末でも演奏中にカクつく / 譜面が多いと起こりやすい」)。
-  // 見た目(大きさ・枠・光・動き)は以前の <span> と同じ。
-  const rippleLayerRef = useRef(null);
-  const spawnRipple = useCallback((x, y) => {
-    const layer = rippleLayerRef.current;
-    if (!layer || typeof document === 'undefined' || !Number.isFinite(x) || !Number.isFinite(y)) return;
-    const el = document.createElement('span');
-    el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:48px;height:48px;margin-left:-24px;margin-top:-24px;border-radius:9999px;border:2px solid rgba(255,255,255,0.9);box-shadow:0 0 10px rgba(255,255,255,0.6);transform-origin:center;animation:mhRipple 550ms ease-out forwards`;
-    layer.appendChild(el);
-    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 650);
-  }, []);
+  // 波紋の一覧は TapRippleLayer だけが持つ(波紋が出たり消えたりするたびに、ここを丸ごと描き直さない)
+  const rippleSpawnRef = useRef(null);
+  const spawnRipple = useCallback((x, y) => { if (rippleSpawnRef.current) rippleSpawnRef.current(x, y); }, []);
   // タップ中(押している間)は指を離すまでスライドしても波紋が付いてくるようにする。
   // 動くたびに出すと出過ぎるので、時間と距離の両方で間引く
   // 自前で画面を回しているときだけ、いちばん外の箱へ掛けるCSSが返る(ふだんは null)
@@ -956,6 +946,10 @@ function MonsterHeroGame() {
   const [attackAnim, setAttackAnim] = useState(null); // {slotIndex}
   const [slotSkill, setSlotSkill] = useState(null); // {slotIndex, name, type} スロット上の技名インライン表示
   const [dragState, setDragState] = useState(null); // {cardIndex, x, y, active, card} カードドラッグ
+  // 引きずっているあいだの指の位置。動くたびに state を更新すると画面全体(予測の計算も)が
+  // 描き直されるので、位置はここへ入れてカード1枚の left/top だけを直接動かす。
+  // 描き直しが起きたときもここから読むので、カードが古い位置へ戻らない
+  const dragPosRef = useRef(null);
   const cardDragActiveRef = useRef(false); // 閾値を越えたあと始点へ戻っても、スワイプ成立を保持する
   const suppressCardClickRef = useRef(0); // pointerup後にブラウザが合成するclickを捕捉して捨てる期限
   const [dragOverSlot, setDragOverSlot] = useState(null); // ドラッグ中にホバーしているスロット
@@ -1985,9 +1979,13 @@ function MonsterHeroGame() {
   // タブ別の既読ID集合を比較するため、再ビルドやBUILD_DATE変更で過去項目は復活しない。
   // 既読はタブをまたいで見る。振り分けを変えたとき、前に更新情報で読んだ不具合修正が
   // 不具合情報タブで未読(NEW)へ戻るのを防ぐ
-  const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-  const changelogUnreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
-  const changelogUnread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogUnreadIds[type].length>0]));
+  // 約900件を見比べるので、既読が変わったときだけ数え直す(描画のたびに作り直さない)
+  const { changelogUnreadIds, changelogUnread } = useMemo(() => {
+    const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
+    const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
+    const unread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, unreadIds[type].length>0]));
+    return { changelogUnreadIds: unreadIds, changelogUnread: unread };
+  }, [changelogSeen]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue;
   const markChangelogTabSeen = (type) => {
     const ids = CHANGELOG_IDS_BY_TYPE[type];
@@ -4314,7 +4312,8 @@ function MonsterHeroGame() {
     const onVisible = () => { if (document.visibilityState === 'visible') checkVersion(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', onVisible);
-    const interval = setInterval(checkVersion, 30 * 1000);
+    // 裏に回っているあいだは問い合わせない(戻った瞬間に onVisible がすぐ確かめる)
+    const interval = setInterval(() => { if (document.visibilityState === 'hidden') return; checkVersion(); }, 30 * 1000);
     return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
   }, []);
 
@@ -4541,6 +4540,9 @@ function MonsterHeroGame() {
     if(!dragState) return;
     const DRAG_THRESHOLD=10;
     const startX=dragState.x, startY=dragState.y;
+    dragPosRef.current={x:startX,y:startY};
+    // 画面へ出している active。これが変わるとき(引きずり始め)だけ state を更新する
+    let shownActive=!!dragState.active;
     const findSlot=(x,y)=>{
       const el=document.elementFromPoint(x,y);
       if(!el) return null;
@@ -4553,7 +4555,14 @@ function MonsterHeroGame() {
       const moved=Math.hypot(x-startX,y-startY);
       if(moved>=DRAG_THRESHOLD) cardDragActiveRef.current=true;
       const active=cardDragActiveRef.current;
-      setDragState(prev=>prev?{...prev,x,y,active}:null);
+      dragPosRef.current={x,y};
+      if(active!==shownActive){
+        shownActive=active;
+        setDragState(prev=>prev?{...prev,x,y,active}:null);
+      } else if(active){
+        const el=document.querySelector('[data-dragging-card]');
+        if(el){ el.style.left=`${x}px`; el.style.top=`${y}px`; }
+      }
       if(active){ setDragOverSlot(findSlot(x,y)); }
       if(active&&e.cancelable) e.preventDefault();
     };
@@ -4585,6 +4594,7 @@ function MonsterHeroGame() {
       window.removeEventListener('pointermove',onMove);
       window.removeEventListener('pointerup',onUp);
       window.removeEventListener('pointercancel',onUp);
+      dragPosRef.current=null;
     };
   }, [dragState?.cardIndex]);
 
@@ -13033,12 +13043,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //  過去のやつが一瞬で見えなくなる」)。
             // 1行ずつ積み上げていたころは682行あり、少しさかのぼるだけで指が疲れていた。
             // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
-            const rows = groupChangelogEntries(changelogEntriesOfTab(changelogTab));
-            const unreadHere = changelogUnreadIds[changelogTab];
+            const rows = changelogRowsOfTab(changelogTab);
+            const unreadHere = new Set(changelogUnreadIds[changelogTab]);
             let shownDay = null;
             return rows.map(row=>{
               const open=changelogOpenId===row.key;
-              const unreadCount=row.entries.filter(entry=>unreadHere.includes(entry.id)).length;
+              const unreadCount=row.entries.filter(entry=>unreadHere.has(entry.id)).length;
               // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
               // 分かるようにしておく(2026-09-05・ユーザー指摘「直近の更新情報が不具合修正との
               // 区別がついてない」)。1つのまとまりに種類が混ざることがあるので、
@@ -13064,7 +13074,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 開いたら、その話題のその日の項目を時刻・種別・本文までぜんぶ出す */}
                   {open&&<div className="mh-changelog-detail" data-changelog-detail>
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
-                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.includes(c.id)&&<em>NEW</em>}</time>
+                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
                       <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
                       <b>{c.title}</b>
                       {/* 告知画像があれば本文の上に出す
@@ -13398,7 +13408,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
     <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF'||battleFxLoad==='LIGHT'||battleFxLoad==='MINIMAL')?'calm':'rich'} data-fx-level={battleFxLoad} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
-      <div ref={rippleLayerRef} data-mh-tap-ripples style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}/>
+      <TapRippleLayer spawnRef={rippleSpawnRef}/>
       {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
@@ -16781,7 +16791,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             cardNeedsMonster={cardNeedsMonster} cycleActiveUniqueForSlot={cycleActiveUniqueForSlot}
             cycleBattleAuto={cycleBattleAuto} cycleBattleSpeed={cycleBattleSpeed} cycleEcoMode={cycleEcoMode}
             debugBattle={debugBattle} difficulty={difficulty} dismissQuickRhythmIntro={dismissQuickRhythmIntro}
-            distTotalBonus={distTotalBonus} dragOverSlot={dragOverSlot} dragState={dragState}
+            distTotalBonus={distTotalBonus} dragOverSlot={dragOverSlot} dragState={dragState&&dragPosRef.current?{...dragState,x:dragPosRef.current.x,y:dragPosRef.current.y}:dragState}
             ecoBattleView={ecoBattleView} ecoMode={ecoMode} effectiveMaxGuts={effectiveMaxGuts}
             effectiveMaxHp={effectiveMaxHp} enemy={enemy} enemyAttackAnim={enemyAttackAnim}
             enemyAttackFx={enemyAttackFx} enemyDist={enemyDist} enemyIntent={enemyIntent}

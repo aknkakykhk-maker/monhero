@@ -135,7 +135,10 @@ function syncPartsAndGameSystem({ dryRun = false, fromParts = false } = {}) {
 }
 
 // game-system.jsx をBabelで変換する。構文エラーはここで例外になる(check-syntax.jsもこれを使う)
-function transformGameSystem() {
+// forRelease: 配信用(build.js)だけコメントを外す。コメントは実行に関係せず、
+// 本体の約2割を占めていて、更新のたびに全員が取り直していた(gzip後で約375KB)。
+// 検査が vm で動かす変換は今までどおりコメントを残す(読みやすさ・行の手がかりのため)
+function transformGameSystem({ forRelease = false } = {}) {
   const src = fs.readFileSync(GAME_SYSTEM, 'utf8');
   const out = babel.transformSync(src, {
     filename: 'game-system.jsx',
@@ -143,6 +146,10 @@ function transformGameSystem() {
     babelrc: false,
     configFile: false,
     compact: false,
+    comments: !forRelease,
+    // 配信用は日本語を \uXXXX に置き換えずそのまま書く(1字6バイト→3バイト。実行結果は同じ)。
+    // ファイルはもともと日本語の文字列をそのまま含んでいて、UTF-8 で読まれている
+    ...(forRelease ? { generatorOpts: { jsescOption: { minimal: true } } } : {}),
     sourceType: 'script',
   });
   return out.code;
@@ -169,6 +176,7 @@ const EXPORTED_NAMES = [
   'CHANGELOG_GROUPS',
   'changelogGroupIdOf',
   'groupChangelogEntries',
+  'changelogRowsOfTab',
   'changelogEntriesOfTab',
   'masuAwaitsBondResetReallocation',
   'buildMasuBondPointReset',

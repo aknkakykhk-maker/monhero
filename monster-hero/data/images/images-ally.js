@@ -29,6 +29,12 @@ const MIA_WING_LEFT_MASK = "images/monsters/mia-wing-left.png?v=691e69ca7c0c";
 const MIA_WING_RIGHT_MASK = "images/monsters/mia-wing-right.png?v=8c9771e0c3f6";
 const MIA_WING_BODY_MASK = "images/monsters/mia-wing-body.png?v=478633cf794b";
 // ==== 待機アニメのマスク(tools/monster/idle-rig-build.js が書く。手で直さない) ====
+const IDLE_MOCCHI_ARM_L_MASK = "images/monsters/idle/mocchi-arm-l.png?v=f1dd72a0953d";
+const IDLE_MOCCHI_ARM_R_MASK = "images/monsters/idle/mocchi-arm-r.png?v=47529d24e35e";
+const IDLE_MOCCHI_BODY_MASK = "images/monsters/idle/mocchi-body.png?v=4de767a4ea86";
+const IDLE_GOLEM_ARM_L_MASK = "images/monsters/idle/golem-arm-l.png?v=6cb522491673";
+const IDLE_GOLEM_ARM_R_MASK = "images/monsters/idle/golem-arm-r.png?v=7c2002093edd";
+const IDLE_GOLEM_BODY_MASK = "images/monsters/idle/golem-body.png?v=331474694b5c";
 const IDLE_TIGER_TAIL_MASK = "images/monsters/idle/tiger-tail.png?v=e16a1b133e83";
 const IDLE_TIGER_BODY_MASK = "images/monsters/idle/tiger-body.png?v=555dbddaf554";
 const IDLE_HAM_EAR_L_MASK = "images/monsters/idle/ham-ear-l.png?v=53b2a27d6711";
@@ -60,6 +66,9 @@ const IDLE_ZAN_BODY_MASK = "images/monsters/idle/zan-body.png?v=f2b36527a978";
 const IDLE_MITARASHI_WING_L_MASK = "images/monsters/idle/mitarashi-wing-l.png?v=7d23fd913a18";
 const IDLE_MITARASHI_WING_R_MASK = "images/monsters/idle/mitarashi-wing-r.png?v=c9283f5c98b6";
 const IDLE_MITARASHI_BODY_MASK = "images/monsters/idle/mitarashi-body.png?v=1f6988453d07";
+const IDLE_ARK_CROWN_MASK = "images/monsters/idle/ark-crown.png?v=145d71b2169c";
+const IDLE_ARK_HALO_MASK = "images/monsters/idle/ark-halo.png?v=fdfa90c3fa94";
+const IDLE_ARK_BODY_MASK = "images/monsters/idle/ark-body.png?v=54f0131118b0";
 const IDLE_IBLIS_WING_L_MASK = "images/monsters/idle/iblis-wing-l.png?v=1fbfeba9f86e";
 const IDLE_IBLIS_WING_R_MASK = "images/monsters/idle/iblis-wing-r.png?v=6ffc46284145";
 const IDLE_IBLIS_ORB_MASK = "images/monsters/idle/iblis-orb.png?v=d8a65e3e5bc8";
@@ -70,6 +79,9 @@ const IDLE_UNDINE_FIN_MASK = "images/monsters/idle/undine-fin.png?v=eccd4b8f8df3
 const IDLE_UNDINE_BODY_MASK = "images/monsters/idle/undine-body.png?v=e8fe6ced69e9";
 const IDLE_YAOBIKUNI_FIN_MASK = "images/monsters/idle/yaobikuni-fin.png?v=149bf988c547";
 const IDLE_YAOBIKUNI_BODY_MASK = "images/monsters/idle/yaobikuni-body.png?v=317c2f8ac754";
+const IDLE_KENSHI_MOCCHI_SWORD_L_MASK = "images/monsters/idle/kenshi-mocchi-sword-l.png?v=b9b1ffae3176";
+const IDLE_KENSHI_MOCCHI_SWORD_R_MASK = "images/monsters/idle/kenshi-mocchi-sword-r.png?v=7c89a22e275a";
+const IDLE_KENSHI_MOCCHI_BODY_MASK = "images/monsters/idle/kenshi-mocchi-body.png?v=b3eff61e21cb";
 // ==== 待機アニメのマスク ここまで ====
 const PANDORA_IMG = "images/monsters/pandora.PNG?v=f8009b5d2b5e";
 const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=3dae0c26d9a1";
