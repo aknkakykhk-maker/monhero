@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c728d9bc95ee4519
+// generated-sha256: 6abfcc7a71593948
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -139,7 +139,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-25 11:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 12:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10359,13 +10359,14 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
   // ★hitRepeat … タクティクスのEX「ソード・コンバージョン」の二刀流(2026-09-25 ユーザー指示)。
-  //   メイン・連撃をまとめたヒット列が、もう1回ぶん入る(合計ダメージがちょうど2倍になる)。
+  //   **連撃ぶんだけ**がもう1回ぶん入る。メインヒットは1回のまま(2026-09-25 ユーザー指示
+  //   「二刀流はメインダメじゃなくて、連撃分のみね」)。
   //   2回目は同じ値のまま連撃として足す(演出は1セットだけにするので noAnim)。ほかのモードは渡さないので常に1
   const repeat = Math.max(1, Math.floor(Number(hitRepeat) || 1));
   if (repeat > 1) {
-    const first = hits.slice();
+    const combos = hits.filter(h => h.kind === 'combo');
     for (let r = 1; r < repeat; r += 1) {
-      first.forEach(h => hits.push({ kind: 'combo', crit: h.crit, dmg: h.dmg, skillName: '二刀流', noAnim: true }));
+      combos.forEach(h => hits.push({ kind: 'combo', crit: h.crit, dmg: h.dmg, skillName: '二刀流', noAnim: true }));
     }
   }
   return hits;
@@ -17473,7 +17474,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     styles: Object.freeze([
       Object.freeze({ id: 'sword', label: '片手剣', desc: 'いつもの戦い方。ソードスキルも出る' }),
       Object.freeze({ id: 'shield', label: '片手盾', desc: '力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない' }),
-      Object.freeze({ id: 'dual', label: '二刀流', desc: '丈夫さが半分になる代わりに、攻撃のヒットがすべて2回ぶん入る' }),
+      Object.freeze({ id: 'dual', label: '二刀流', desc: '丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）' }),
     ]),
     defaultStyle: 'sword',
     heroInitialStyle: true,
@@ -17493,7 +17494,7 @@ const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weap
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style']);
-// 二刀流で、攻撃のヒット列を何回ぶん入れるか(メイン・連撃をまとめて2回ぶん)
+// 二刀流で、連撃を何回ぶん入れるか(メインのダメージは1回のまま。連撃だけ2回ぶん)
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
 
 // 定義を安全な形へそろえる。壊れた項目があっても落とさず、いちばん控えめな既定値へ倒す

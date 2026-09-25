@@ -930,7 +930,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     styles: Object.freeze([
       Object.freeze({ id: 'sword', label: '片手剣', desc: 'いつもの戦い方。ソードスキルも出る' }),
       Object.freeze({ id: 'shield', label: '片手盾', desc: '力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない' }),
-      Object.freeze({ id: 'dual', label: '二刀流', desc: '丈夫さが半分になる代わりに、攻撃のヒットがすべて2回ぶん入る' }),
+      Object.freeze({ id: 'dual', label: '二刀流', desc: '丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）' }),
     ]),
     defaultStyle: 'sword',
     heroInitialStyle: true,
@@ -950,7 +950,7 @@ const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weap
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style']);
-// 二刀流で、攻撃のヒット列を何回ぶん入れるか(メイン・連撃をまとめて2回ぶん)
+// 二刀流で、連撃を何回ぶん入れるか(メインのダメージは1回のまま。連撃だけ2回ぶん)
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
 
 // 定義を安全な形へそろえる。壊れた項目があっても落とさず、いちばん控えめな既定値へ倒す

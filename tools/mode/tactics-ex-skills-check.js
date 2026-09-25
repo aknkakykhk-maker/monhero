@@ -259,9 +259,18 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const baseHits = hitsApi.buildAttackHits({ d: 1000, card: { type: 'unique', monId: 'KenshiMocchi' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi' });
   const dualHits = hitsApi.buildAttackHits({ d: 1000, card: { type: 'unique', monId: 'KenshiMocchi' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi', hitRepeat: ex.TACTICS_EX_DUAL_HIT_REPEAT });
   const sum = (hs) => hs.reduce((a, h) => a + h.dmg, 0);
-  check('二刀流: ヒット列が2回ぶん入り、合計がちょうど2倍(メイン1000＋10%×3＋20%×2 → ×2)',
-    dualHits.length === baseHits.length * 2 && sum(dualHits) === sum(baseHits) * 2 && dualHits[0].kind === 'main'
-    && dualHits.slice(baseHits.length).every(h => h.kind === 'combo'), `${baseHits.length}発 ${sum(baseHits)} → ${dualHits.length}発 ${sum(dualHits)}`);
+  // ★2回ぶん入るのは連撃だけ。メインは1回のまま(2026-09-25 ユーザー指示「二刀流はメインダメじゃなくて、連撃分のみね」)
+  const baseCombos = baseHits.filter(h => h.kind === 'combo');
+  const mainDmg = baseHits.filter(h => h.kind === 'main').reduce((a, h) => a + h.dmg, 0);
+  check('二刀流: 連撃だけが2回ぶん入り、メインは1回のまま(メイン1000＋連撃10%×3＋20%×2 → メイン1000＋連撃×2)',
+    dualHits.filter(h => h.kind === 'main').length === 1 && dualHits.length === baseHits.length + baseCombos.length
+    && sum(dualHits) === mainDmg + sum(baseCombos) * 2 && dualHits[0].kind === 'main',
+    `${baseHits.length}発 ${sum(baseHits)} → ${dualHits.length}発 ${sum(dualHits)}（メイン ${mainDmg}）`);
+  // 通常攻撃(勇者特性の二刀流で 50%+50% に分かれる)も、後半の50%は連撃なので2回ぶん。メインの50%は1回
+  const atkBase = hitsApi.buildAttackHits({ d: 1001, card: { type: 'atk' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi' });
+  const atkDual = hitsApi.buildAttackHits({ d: 1001, card: { type: 'atk' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi', hitRepeat: ex.TACTICS_EX_DUAL_HIT_REPEAT });
+  check('二刀流: 通常攻撃は メイン501＋連撃500 → メイン501＋連撃500×2', sum(atkBase) === 1001 && sum(atkDual) === 1501
+    && atkDual.filter(h => h.kind === 'main').length === 1, `${sum(atkBase)} → ${sum(atkDual)}`);
   const noSkill = hitsApi.buildAttackHits({ d: 1000, card: { type: 'unique', monId: 'KenshiMocchi' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi', swordSkill: false });
   check('片手盾(swordSkill:false)はソードスキルの20%×2が出ない', baseHits.length - noSkill.length === 2, `${baseHits.length}→${noSkill.length}`);
   // みんなをかばう
@@ -337,7 +346,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('敵の攻撃の当たり先はすべて tacticsTargetsNow(かばう)を通る',
     !/tacticsIntentTargets\(intent,tacticsUnitsRef\.current,actingEnemyDist\)/.test(app)
     && (app.match(/tacticsTargetsNow\(intent,actingEnemyDist\)/g) || []).length === 3);
-  check('片手盾の剣士モッチーはソードスキルが出ない・二刀流はヒット列が2回ぶん(実処理・予測の両方)',
+  check('片手盾の剣士モッチーはソードスキルが出ない・二刀流は連撃が2回ぶん(実処理・予測の両方)',
     (app.match(/swordSkill:tacticsExStyleAt\(slotIdx\)!=='shield'/g) || []).length === 2
     && (app.match(/hitRepeat:tacticsExStyleAt\(slotIdx\)==='dual'\?TACTICS_EX_DUAL_HIT_REPEAT:1/g) || []).length === 2
     && /card\.monId==='KenshiMocchi'&&tacticsExStyleAt\(slotIdx\)==='shield'/.test(app)

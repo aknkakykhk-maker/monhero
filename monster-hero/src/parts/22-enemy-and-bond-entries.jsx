@@ -514,13 +514,14 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
   // ★hitRepeat … タクティクスのEX「ソード・コンバージョン」の二刀流(2026-09-25 ユーザー指示)。
-  //   メイン・連撃をまとめたヒット列が、もう1回ぶん入る(合計ダメージがちょうど2倍になる)。
+  //   **連撃ぶんだけ**がもう1回ぶん入る。メインヒットは1回のまま(2026-09-25 ユーザー指示
+  //   「二刀流はメインダメじゃなくて、連撃分のみね」)。
   //   2回目は同じ値のまま連撃として足す(演出は1セットだけにするので noAnim)。ほかのモードは渡さないので常に1
   const repeat = Math.max(1, Math.floor(Number(hitRepeat) || 1));
   if (repeat > 1) {
-    const first = hits.slice();
+    const combos = hits.filter(h => h.kind === 'combo');
     for (let r = 1; r < repeat; r += 1) {
-      first.forEach(h => hits.push({ kind: 'combo', crit: h.crit, dmg: h.dmg, skillName: '二刀流', noAnim: true }));
+      combos.forEach(h => hits.push({ kind: 'combo', crit: h.crit, dmg: h.dmg, skillName: '二刀流', noAnim: true }));
     }
   }
   return hits;
