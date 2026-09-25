@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a322c28811c4742f
+// generated-sha256: e795ebe482a18a6a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 03:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 03:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15569,6 +15569,8 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const rawChart=song.difficulties[difficulty.id];
   const transformedChart=useMemo(()=>assistOn||mirrorOn?rhythmTransformChart(song.difficulties[difficulty.id],{mirror:mirrorOn,assist:assistOn}):null,[song.songId,difficulty.id,assistOn,mirrorOn]);
   const chart=transformedChart||rawChart,laneRefs=useRef([]),runRef=useRef(null),frameRef=useRef(null),playAreaRef=useRef(null),judgmentLineRef=useRef(null),judgmentBandRef=useRef(null),judgmentTimerRef=useRef(null),judgmentRevisionRef=useRef(0),startLockRef=useRef(false),generationRef=useRef(0),mountedRef=useRef(false),glowNodesRef=useRef(null),liveTouchSubLanesRef=useRef([]);
+  // canvas に描く光の柱の明るさ(サブレーンごと)と、最後に押していた時刻。見た目だけの控え
+  const laneGlowStateRef=useRef(null);
   const tutorialBannerRef=useRef(null),tutorialStepRef=useRef(null);
   // タイミング合わせの案内(いま何回ぶん数えたか・途中経過のずれ)を書き換えるための控え。
   // 数えた回数が変わったときだけDOMへ書く(毎フレームReactを動かさない)
@@ -16190,6 +16192,17 @@ if(stagePulseOn){const pulseEl=stagePulseRef.current,notes=run.notes;let index=r
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
 const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:settings.effectAmount==='MINIMAL'?2:undefined,sizeScale:settings.noteSize/100});
+// 押しているサブレーンの光の柱(2026-09-26)。どこを押しているかは DOM の押下表示の印(data-pressed /
+// data-rhythm-touchspan)をそのまま読む。印を付ける2か所(setPressedLanes と接触幅の補助)は触らない。
+// 離したあとは RHYTHM_LANE_GLOW_FADE_MS かけて消す。ノーツより先に描いて、粒が光の上に乗るようにする
+if(canvasReady&&settings.laneGlow!=='NONE'){
+  const glowArea=playAreaRef.current;let glowNodes=glowNodesRef.current;
+  if(glowArea&&(!glowNodes||!glowNodes.length||!glowNodes[0].isConnected))glowNodes=glowNodesRef.current=Array.from(glowArea.querySelectorAll('[data-rhythm-sublane-feedback]'));
+  const glow=laneGlowStateRef.current||(laneGlowStateRef.current={levels:new Float32Array(10),lastOn:new Float64Array(10).fill(-1e9)});
+  const glowGain=settings.laneGlow==='LOW'?.35:1;
+  for(let sub=0;sub<10;sub++){const el=glowNodes&&glowNodes[sub],on=!!el&&(el.dataset.pressed==='true'||el.dataset.rhythmTouchspan==='true');if(on)glow.lastOn[sub]=frameNowMs;const since=frameNowMs-glow.lastOn[sub];glow.levels[sub]=on?glowGain:since<RHYTHM_LANE_GLOW_FADE_MS?glowGain*(1-since/RHYTHM_LANE_GLOW_FADE_MS):0;}
+  RHYTHM_CANVAS_RENDERER.drawLaneGlow(glow.levels,(travel.judgmentY+travel.noteHeight/2)/travel.rect.height);
+}
 // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
 // 判定はここへ来る前に visitNote が済ませている。描くだけで、judgment・score・input には触らない
 const paintCanvasNote=note=>{
@@ -16677,7 +16690,7 @@ scheduleTick();};
 {lifeState==='down'&&<div data-rhythm-down-vignette aria-hidden="true" className="pointer-events-none absolute inset-0 z-20"/>}
 {/* 0になったその瞬間だけ、大きく1度だけ出す(1.4秒で消える) */}
 {lifeDownSlam&&<div data-rhythm-life-down-slam aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"><b className="block text-5xl font-black leading-none">LIFE 0</b><small className="mt-1 block text-xs font-black tracking-[0.34em]">DOWN</small></div>}
-<div ref={playAreaRef} data-rhythm-play-area data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
+<div ref={playAreaRef} data-rhythm-play-area data-rhythm-canvas-glow={canvasNotes?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
     置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
     判定ラインが画面の変なところへ出る(2026-09-05)。中身の置き場所に関わるものは
     外部CSSに任せない */position:'relative',overflow:'hidden',touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,
