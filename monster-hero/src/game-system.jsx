@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bcdd591cd19bd9d4
+// generated-sha256: 3685487726a738d3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -145,7 +145,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-25 22:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 23:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11256,26 +11256,26 @@ const AttackTargetFx = ({anim, attackerId}) => {
 // ・軽量表示・設定の「待機中の動き：止める」では呼び出し側が使わない。calm と「動きを減らす」は CSS で止める
 // ==== MONSTER_IDLE_RIGS(tools/monster/idle-rig-build.js が書く。手で直さない) ====
 const MONSTER_IDLE_RIGS = Object.freeze({
-  Mocchi: { body:'bounce', bodyMask:null, parts:[] },
-  Suezo: { body:'bounce', bodyMask:null, parts:[] },
-  Golem: { body:'breathe', bodyMask:null, parts:[] },
+  Mocchi: { body:'jelly', bodyMask:IDLE_MOCCHI_BODY_MASK, parts:[{ mask:IDLE_MOCCHI_ARM_L_MASK, origin:'29.5% 40%', anim:'swing', amp:-7, dur:1800, delay:0, layer:'front' }, { mask:IDLE_MOCCHI_ARM_R_MASK, origin:'70% 40%', anim:'swing', amp:7, dur:1800, delay:900, layer:'front' }] },
+  Suezo: { body:'hop', bodyMask:null, parts:[] },
+  Golem: { body:'heavy', bodyMask:IDLE_GOLEM_BODY_MASK, parts:[{ mask:IDLE_GOLEM_ARM_L_MASK, origin:'22% 43%', anim:'swing', amp:-4, dur:3000, delay:0, layer:'back' }, { mask:IDLE_GOLEM_ARM_R_MASK, origin:'77% 43%', anim:'swing', amp:4, dur:3000, delay:1500, layer:'back' }] },
   Tiger: { body:'breathe', bodyMask:IDLE_TIGER_BODY_MASK, parts:[{ mask:IDLE_TIGER_TAIL_MASK, origin:'67.8% 53%', anim:'wag', amp:7, dur:1100, delay:0, layer:'back' }] },
   Ham: { body:'breathe', bodyMask:IDLE_HAM_BODY_MASK, parts:[{ mask:IDLE_HAM_EAR_L_MASK, origin:'40% 32.5%', anim:'twitch', amp:-9, dur:3200, delay:0, layer:'back' }, { mask:IDLE_HAM_EAR_R_MASK, origin:'59.5% 33%', anim:'twitch', amp:9, dur:3200, delay:1300, layer:'back' }] },
   Pixie: { body:'hover', bodyMask:IDLE_PIXIE_BODY_MASK, parts:[{ mask:IDLE_PIXIE_WING_L_MASK, origin:'41.8% 41.5%', anim:'flapL', amp:12, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_WING_R_MASK, origin:'58.2% 42.3%', anim:'flapR', amp:12, dur:900, delay:0, layer:'back' }, { mask:IDLE_PIXIE_TAIL_MASK, origin:'57.8% 67.5%', anim:'wag', amp:7, dur:1600, delay:0, layer:'back' }] },
   Mia: { body:'hover', bodyMask:IDLE_MIA_BODY_MASK, parts:[{ mask:IDLE_MIA_WING_L_MASK, origin:'44.3% 38.1%', anim:'flapL', amp:16, dur:1300, delay:0, layer:'back' }, { mask:IDLE_MIA_WING_R_MASK, origin:'55.7% 38.1%', anim:'flapR', amp:16, dur:1300, delay:0, layer:'back' }] },
   Pandora: { body:'hover', bodyMask:IDLE_PANDORA_BODY_MASK, parts:[{ mask:IDLE_PANDORA_WING_L_MASK, origin:'39% 34%', anim:'flapL', amp:12, dur:1200, delay:0, layer:'back' }, { mask:IDLE_PANDORA_WING_R_MASK, origin:'61.7% 36%', anim:'flapR', amp:12, dur:1200, delay:0, layer:'back' }, { mask:IDLE_PANDORA_TAIL_L_MASK, origin:'40.1% 61.2%', anim:'swing', amp:7, dur:2000, delay:0, layer:'back' }, { mask:IDLE_PANDORA_TAIL_R_MASK, origin:'61.7% 63%', anim:'swing', amp:-7, dur:2200, delay:400, layer:'back' }] },
-  Monol: { body:'hover', bodyMask:null, parts:[] },
+  Monol: { body:'drift', bodyMask:null, parts:[] },
   Oboro: { body:'sway', bodyMask:IDLE_OBORO_BODY_MASK, parts:[{ mask:IDLE_OBORO_FLOWER_T_MASK, origin:'49.5% 54.5%', anim:'swing', amp:5, dur:2600, delay:0, layer:'front' }, { mask:IDLE_OBORO_FLOWER_L_MASK, origin:'41% 57%', anim:'swing', amp:-6, dur:2300, delay:500, layer:'front' }, { mask:IDLE_OBORO_FLOWER_R_MASK, origin:'59% 57%', anim:'swing', amp:6, dur:2500, delay:900, layer:'front' }] },
   Plant: { body:'sway', bodyMask:IDLE_PLANT_BODY_MASK, parts:[{ mask:IDLE_PLANT_FLOWER_T_MASK, origin:'49.5% 55.5%', anim:'swing', amp:5, dur:2600, delay:0, layer:'front' }, { mask:IDLE_PLANT_FLOWER_L_MASK, origin:'44% 57.5%', anim:'swing', amp:-6, dur:2300, delay:500, layer:'front' }, { mask:IDLE_PLANT_FLOWER_R_MASK, origin:'56% 57.5%', anim:'swing', amp:6, dur:2500, delay:900, layer:'front' }] },
   Zan: { body:'hover', bodyMask:IDLE_ZAN_BODY_MASK, parts:[{ mask:IDLE_ZAN_BLADE_L_MASK, origin:'30% 29.5%', anim:'swing', amp:-5, dur:1800, delay:0, layer:'back' }, { mask:IDLE_ZAN_BLADE_R_MASK, origin:'70% 29.5%', anim:'swing', amp:5, dur:1800, delay:0, layer:'back' }] },
   Mitarashi: { body:'breathe', bodyMask:IDLE_MITARASHI_BODY_MASK, parts:[{ mask:IDLE_MITARASHI_WING_L_MASK, origin:'28% 41.5%', anim:'flapL', amp:9, dur:1400, delay:0, layer:'back' }, { mask:IDLE_MITARASHI_WING_R_MASK, origin:'72% 41.5%', anim:'flapR', amp:9, dur:1400, delay:0, layer:'back' }] },
-  Ark: { body:'hover', bodyMask:null, parts:[] },
+  Ark: { body:'glide', bodyMask:IDLE_ARK_BODY_MASK, parts:[{ mask:IDLE_ARK_CROWN_MASK, origin:'50% 24%', anim:'bob', amp:-2.2, dur:1800, delay:0, layer:'front' }, { mask:IDLE_ARK_HALO_MASK, origin:'50% 30%', anim:'bob', amp:-1.4, dur:1800, delay:300, layer:'front' }] },
   Iblis: { body:'hover', bodyMask:IDLE_IBLIS_BODY_MASK, parts:[{ mask:IDLE_IBLIS_WING_L_MASK, origin:'24% 56%', anim:'flapL', amp:6, dur:1400, delay:0, layer:'back' }, { mask:IDLE_IBLIS_WING_R_MASK, origin:'74% 57%', anim:'flapR', amp:6, dur:1400, delay:0, layer:'back' }, { mask:IDLE_IBLIS_ORB_MASK, origin:'48% 8%', anim:'bob', amp:-6, dur:1900, delay:0, layer:'front' }] },
   Snegurochka: { body:'swim', bodyMask:IDLE_SNEGUROCHKA_BODY_MASK, parts:[{ mask:IDLE_SNEGUROCHKA_FIN_MASK, origin:'58.5% 80%', anim:'swing', amp:5, dur:1500, delay:0, layer:'front' }] },
   Undine: { body:'swim', bodyMask:IDLE_UNDINE_BODY_MASK, parts:[{ mask:IDLE_UNDINE_FIN_MASK, origin:'58% 80%', anim:'swing', amp:6, dur:1500, delay:0, layer:'front' }] },
   Yaobikuni: { body:'swim', bodyMask:IDLE_YAOBIKUNI_BODY_MASK, parts:[{ mask:IDLE_YAOBIKUNI_FIN_MASK, origin:'60.7% 82%', anim:'swing', amp:6, dur:1500, delay:0, layer:'front' }] },
-  Eiki: { body:'hover', bodyMask:null, parts:[] },
-  KenshiMocchi: { body:'bounce', bodyMask:null, parts:[] },
+  Eiki: { body:'glide', bodyMask:null, parts:[] },
+  KenshiMocchi: { body:'jelly', bodyMask:IDLE_KENSHI_MOCCHI_BODY_MASK, parts:[{ mask:IDLE_KENSHI_MOCCHI_SWORD_L_MASK, origin:'29.5% 26%', anim:'swing', amp:-4, dur:2400, delay:0, layer:'back' }, { mask:IDLE_KENSHI_MOCCHI_SWORD_R_MASK, origin:'70.5% 26%', anim:'swing', amp:4, dur:2400, delay:1200, layer:'back' }] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
@@ -45927,6 +45927,11 @@ const createAnimationStyle = () => {
     .mon-idle--breathe { animation:monIdleBreathe 3200ms ease-in-out infinite; }
     .mon-idle--sway { animation:monIdleSway 3000ms ease-in-out infinite; }
     .mon-idle--swim { animation:monIdleSwim 2800ms ease-in-out infinite; }
+    .mon-idle--jelly { animation:monIdleJelly 2000ms ease-in-out infinite; }
+    .mon-idle--hop { animation:monIdleHop 2800ms ease-in-out infinite; }
+    .mon-idle--heavy { animation:monIdleHeavy 3600ms ease-in-out infinite; }
+    .mon-idle--glide { animation:monIdleGlide 3200ms ease-in-out infinite; }
+    .mon-idle--drift { animation:monIdleDrift 4200ms ease-in-out infinite; transform-origin:50% 50%; }
     /* 宙に浮いている子。ゆっくり上下してわずかに伸び縮みする */
     @keyframes monIdleHover {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
@@ -45941,8 +45946,45 @@ const createAnimationStyle = () => {
     }
     /* どっしり立っている子。胸がふくらむように、縦へわずかに伸び縮みする */
     @keyframes monIdleBreathe {
-      0%,100% { transform:scale(1,1); }
-      50% { transform:scale(1.01,1.025); }
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      50% { transform:translate3d(0,-1%,0) scale(1.015,1.04); }
+    }
+    /* ↓ 待機が地味だった子の動き(2026-09-25 ユーザー指示「待機中の動きが地味なモンスターがいるからもう少し改良したい」)。
+       どれも足元(transform-origin 50% 96%)を軸にするので、地面から離れて見えない */
+    /* ぷるぷるの子(モッチー・剣士モッチー)。つぶれて、ぴょんと伸びて、ぷるんと揺れて止まる */
+    @keyframes monIdleJelly {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      14% { transform:translate3d(0,0,0) scale(1.07,.92); }
+      32% { transform:translate3d(0,-3.5%,0) scale(.95,1.06); }
+      48% { transform:translate3d(0,0,0) scale(1.05,.95); }
+      58% { transform:translate3d(0,0,0) scale(.98,1.03); }
+      68% { transform:translate3d(0,0,0) scale(1.01,.99); }
+    }
+    /* 跳ねる子(スエゾー)。しっぽでぴょんと跳び、左右を見回すように交互に傾く */
+    @keyframes monIdleHop {
+      0%,50%,100% { transform:translate3d(0,0,0) rotate(0) scale(1,1); }
+      8%,58% { transform:translate3d(0,0,0) rotate(0) scale(1.08,.9); }
+      20% { transform:translate3d(0,-10%,0) rotate(-6deg) scale(.95,1.06); }
+      70% { transform:translate3d(0,-10%,0) rotate(6deg) scale(.95,1.06); }
+      32%,82% { transform:translate3d(0,0,0) rotate(0) scale(1.06,.93); }
+      40%,90% { transform:translate3d(0,0,0) rotate(0) scale(.98,1.02); }
+    }
+    /* 重たい子(ゴーレム)。左右へ体重を移し、真ん中で胸をふくらませる */
+    @keyframes monIdleHeavy {
+      0%,100% { transform:translate3d(0,0,0) rotate(0) scale(1,1); }
+      25% { transform:translate3d(-1.2%,0,0) rotate(-2deg) scale(1,1); }
+      50% { transform:translate3d(0,-1.2%,0) rotate(0) scale(1.02,1.035); }
+      75% { transform:translate3d(1.2%,0,0) rotate(2deg) scale(1,1); }
+    }
+    /* 翼で滑るように浮く子(アーク・エイキ)。大きく浮き沈みしながら、ゆったり傾く */
+    @keyframes monIdleGlide {
+      0%,100% { transform:translate3d(0,0,0) rotate(-2deg) scale(1,1); }
+      50% { transform:translate3d(0,-6%,0) rotate(2deg) scale(.99,1.02); }
+    }
+    /* 宙を漂う子(モノリス)。ゆっくり大きく浮き沈みし、ふらりと回る */
+    @keyframes monIdleDrift {
+      0%,100% { transform:translate3d(0,0,0) rotate(-4deg); }
+      50% { transform:translate3d(0,-8%,0) rotate(4deg); }
     }
     /* 植物の子。足元を軸に、左右へゆっくり傾く */
     @keyframes monIdleSway {
