@@ -14,8 +14,11 @@ const section = (from, to) => {
 
 const difficulties = section('const DIFFICULTY_SETTINGS = {', '\n};').match(/^\s{2}[A-Za-z]+:/gm) || [];
 assert.strictEqual(difficulties.length, 9, 'all existing difficulties must remain available');
-assert(source.includes('[...new Set(ENEMY_SEQUENCE)]'), 'debug enemies must derive from the normal enemy sequence');
-assert(source.includes('ENEMY_DATA[key]'), 'debug enemies must reuse existing enemy definitions');
+// デバッグ戦はモード(クラシック／タクティクス)ごとに、そのモードの敵の並びから作る(2026-09-25 ユーザー指示
+// 「デバッグで各モード難易度でどの敵からも戦えるやつ作って」)。別の一覧を手で持たないことは変わらない
+assert(source.includes('const sequence = tactics ? TACTICS_ENEMY_SEQUENCE : ENEMY_SEQUENCE;')
+  && source.includes('[...new Set(sequence)]'), 'debug enemies must derive from the normal enemy sequence');
+assert(source.includes('const table = tactics ? TACTICS_ENEMY_DATA : ENEMY_DATA;') && source.includes('enemy: table[key]'), 'debug enemies must reuse existing enemy definitions');
 assert(enemySource.includes('Durahan:') && enemySource.includes('Moo:'), 'Dullahan and Moo must remain valid enemy definitions');
 assert(source.includes("if (enemyId === 'Durahan' || currentWave === 9) return bgmArrangement[modeBgm.dullahan];"), 'Dullahan must use its mode-specific BGM route');
 assert(source.includes("if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement[modeBgm.moo];"), 'debug Moo and normal WAVE 10 must use the mode-specific Moo BGM');

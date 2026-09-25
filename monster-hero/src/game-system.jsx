@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 945a88803bb0f47c
+// generated-sha256: 4375b6c982dbc3b1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -115,6 +115,9 @@ const normalizeBattleFxSettings = (value) => {
     // 画面の軽さ(2026-09-24 ユーザー指示「バトル設定で軽い画面でも出来るの作って 4種類ぐらい」)。
     // ★足す前に保存した人(load が無い)は RICH(いままでの見た目)で始まる
     load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH',
+    // ボスの必殺技ムービー(2026-09-25 ユーザー指示「設定でオンオフもつけて」)。
+    // ★足す前に保存した人(specialMovie が無い)は ON(流す)で始まる
+    specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON',
   };
 };
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
@@ -133,13 +136,16 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'shake', title:'画面の揺れ',
     desc:'会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
     options:[{ id:'ON', label:'揺らす', note:'いつもの見た目' }, { id:'OFF', label:'揺らさない', note:'酔いやすい人向け' }] },
+  { key:'specialMovie', title:'必殺技ムービー',
+    desc:'タクティクスバトルの覚醒ムーが必殺技「アポカリプス」を使うとき、画面を切り替えてムービーを流します。流さないときは、いつもの演出で短く進みます。ダメージや進行は変わりません。',
+    options:[{ id:'ON', label:'流す', note:'画面いっぱいで見せる' }, { id:'OFF', label:'流さない', note:'いつもの演出で短く' }] },
 ]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'FULL', label: 'ふつう', note: '横いっぱいに出す' },
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-25 19:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 20:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4430,6 +4436,7 @@ const Audio_ = (() => {
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
     "audio/jingle-victory.mp3": "689c9715a824",
+    "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",
     "audio/綺季一閃_～花雪に舞う詠姫～.mp3": "099d201c53b1",
 // </audio-cache-keys>
   };
@@ -4767,6 +4774,32 @@ const Audio_ = (() => {
       jingleTimer = setTimeout(backToBGM, Math.ceil(buffer.duration * 1000) + 250);
     } catch (e) { if (currentKey) playBGM(currentKey); }
   };
+  // 音源ファイルの効果音(ボスの必殺技ムービーの音など。2026-09-25)。
+  // ★効果音の音量(seBus)を通すので、効果音の音量設定・オンオフがそのまま効く。
+  //   読み込みは BGM と同じ loadBuffer(キャッシュキー付き・一度読めば持っておく)。
+  //   Tone の再生器で鳴らす(BGM の出口とは別の音の世界なので、そのままつなげない)。
+  //   止められるように { stop(秒) } を返す。鳴らせなかったら null
+  const preloadSE = (src) => { if (enabled && src) loadBuffer(src).catch(() => {}); };
+  const playSeFile = async (src) => {
+    if (!enabled || !src) return null;
+    await ensure(); if (!Tone || !seBus) return null;
+    let buffer = null;
+    try { buffer = await loadBuffer(src); } catch (e) { return null; }
+    if (!enabled || pageHidden) return null;
+    try {
+      const player = new Tone.Player(buffer).connect(seBus);
+      let done = false;
+      const dispose = () => { if (done) return; done = true; try { player.dispose(); } catch (e) {} };
+      player.onstop = dispose;
+      player.start();
+      const stop = (fadeSec = 0.25) => {
+        if (done) return;
+        try { player.volume.rampTo(-60, fadeSec); } catch (e) {}
+        setTimeout(() => { try { player.stop(); } catch (e) {} dispose(); }, Math.round(fadeSec * 1000) + 60);
+      };
+      return { stop };
+    } catch (e) { return null; }
+  };
   const setPageHidden = (hidden) => { pageHidden = !!hidden; ctxTimeMark = null; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
   const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
   const isEnabled = () => enabled;
@@ -4908,7 +4941,7 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se };
+  return { playSeFile, preloadSE, playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se };
 })();
 
 // ---- part: 15-dye-and-art.jsx ----
@@ -9379,7 +9412,7 @@ const helpDataRows = (id) => {
       return Object.keys((typeof TACTICS_EX_SKILLS !== 'undefined' && TACTICS_EX_SKILLS) || {}).map(monId => {
         const def = tacticsExDefOf(monId);
         const monName = ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[monId]) || {}).name || monId;
-        const duration = { turn:'そのターン', wave:'そのWAVE', toggle:'切り替え' }[def.duration] || '';
+        const duration = def.duration === 'turns' ? `${def.turns}ターン` : ({ turn:'そのターン', wave:'そのWAVE', style:'選び直すまで' }[def.duration] || '');
         return [`${monName}「${def.name}」`,
           `${def.unlimited ? '無制限' : `1ラン${def.maxUses}回`} ／ ${def.withCards ? 'カードと併用可' : 'その子はカード不可'} ／ ${duration}`];
       });
@@ -10016,11 +10049,18 @@ const tacticsEnemyActionIds = (enemyId, difficulty) => {
   const extra = TACTICS_EXTRA_ACTION_ORDER.filter(id => !base.includes(id));
   return [...base, ...extra.slice(0, want - base.length)];
 };
+// 必殺技が全体技になる敵(2026-09-25 ユーザー指示「ムーの必殺技は全体技に変更しよう」)。
+// 威力は1体あたりいままでの必殺技と同じ(×2.5)のまま、立っている全員へ同時に当たる。
+// 当たる相手は全体攻撃と同じく targetsAll を見て tacticsIntentTargets が数える
+const TACTICS_ALL_TARGET_SPECIAL_ENEMY_IDS = Object.freeze(['AwakenedMoo']);
 const tacticsActionDefinitions = (enemyId, difficulty) => {
   const own = tacticsEnemyActionIds(enemyId, difficulty);
   // 貫通撃は構えとセットで持たせる。構えが無いと、貫通撃は一生出てこない(weight 0 のため)
   const ids = [...TACTICS_BASE_ACTION_IDS, ...own, ...(own.includes('pierce') ? ['pierceCharge'] : [])];
-  return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id));
+  const allTargetSpecial = TACTICS_ALL_TARGET_SPECIAL_ENEMY_IDS.includes(enemyId);
+  return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id)).map(def => (allTargetSpecial && def.id === 'special')
+    ? { ...def, targetsAll:true, noticeLabel:'全体必殺技', range:'全員', condition:'ためた次のターンに必ず発動。立っている全員へ同時に当たる' }
+    : def);
 };
 // そのモード・その敵が使う行動表。新モード以外は今までどおりの1つの表を返す
 const enemyActionDefinitionsFor = (mode, enemyId, difficulty) => (typeof isTacticsMode === 'function' && isTacticsMode(mode))
@@ -10133,7 +10173,8 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
       value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),
       icon:TACTICS_VARIANT_ICONS[selected.variant]||ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
   }
-  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
+  // ★必殺技も全体技のことがある(覚醒ムー)。狙いは全体攻撃と同じく「立っている全員」
+  return {type:selected.type,...(selected.targetsAll?{targetsAll:true}:{}),value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
 };
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
@@ -10282,7 +10323,7 @@ const splitRankingParty = (entry) => {
 //   → 二刀流(通常の後半) → 二刀流(固有技の10%×3) → ソードスキル(20%×2) → 永久追加連撃 → 全体連撃。
 // 演出(専用モーションの再生・noAnim)がこの順序と skillName に依存している。
 // 勇者モンに選んだときだけ効く「同時使用可能枚数+1」を持つ種。
-// ハムの「連続攻撃」と剣士モッチーの「二刀流」は名前が違うだけで効果は同じなので、
+// ハムの「連続攻撃」と剣士モッチーの「黒の剣士」は名前が違うだけで効果は同じなので、
 // 種ごとに処理を書かず、この一覧と cardLimit の共通ルールへ乗せる。
 // 1つのスロットへ何枚重ねられるか(60-app.jsx の slotMaxUses)も、この一覧を通す。
 // 勇者モンにした本人のカードだけ複数枚まとめて使える(ただし固有技は山札に1枚しか無い)
@@ -10310,7 +10351,7 @@ const KENSHI_COMBO_POWER_MAX = 3;
 //   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
 //     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
 //     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
-const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true }) => {
+const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1 }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
@@ -10345,11 +10386,11 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   if (isUniqueOf('Eiki')) for (const rate of ATTACK_COMBO_RULES.eikiUnique) combo(rate + comboDmgBonus);
   if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);
   if (heroId === 'Pandora' && attackerId === 'Pandora' && isUniqueOf('Pandora')) combo(ATTACK_COMBO_RULES.pandoraUnique + comboDmgBonus, '連撃', true);
-  // 勇者特性「二刀流」: 通常攻撃のもう半分と、自身の固有技のときの10%×3
+  // 勇者特性「黒の剣士」(旧名「二刀流」): 通常攻撃のもう半分と、自身の固有技のときの10%×3
   if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);
   if (kenshiHero && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiHeroUnique) combo(rate + comboDmgBonus);
   // 固有効果「ソードスキル」: 技の出自が剣士モッチーなら誰が使っても(合体で引き継いだ場合も)
-  // ★swordSkill:false … タクティクスのEX「ソード・コンバージョン」で片手持ちの剣士モッチーが使ったとき。
+  // ★swordSkill:false … タクティクスのEX「ソード・コンバージョン」で片手盾の剣士モッチーが使ったとき。
   //   固有技そのものは使えるが、ソードスキルの連撃は出ない(ほかのモードは渡さないので常に true)
   if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
   // ソードスキルの連撃パワーが3充填されるたびに1本ずつ増える永久連撃。
@@ -10358,6 +10399,17 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
     for (let i = 0; i < kenshiExtraCombos; i++) combo(ATTACK_COMBO_RULES.kenshiExtraCombo + comboDmgBonus);
   }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
+  // ★hitRepeat … タクティクスのEX「ソード・コンバージョン」の二刀流(2026-09-25 ユーザー指示)。
+  //   **連撃ぶんだけ**がもう1回ぶん入る。メインヒットは1回のまま(2026-09-25 ユーザー指示
+  //   「二刀流はメインダメじゃなくて、連撃分のみね」)。
+  //   2回目は同じ値のまま連撃として足す(演出は1セットだけにするので noAnim)。ほかのモードは渡さないので常に1
+  const repeat = Math.max(1, Math.floor(Number(hitRepeat) || 1));
+  if (repeat > 1) {
+    const combos = hits.filter(h => h.kind === 'combo');
+    for (let r = 1; r < repeat; r += 1) {
+      combos.forEach(h => hits.push({ kind: 'combo', crit: h.crit, dmg: h.dmg, skillName: '二刀流', noAnim: true }));
+    }
+  }
   return hits;
 };
 // 贖罪の追撃(アーク・イブリースの固有技)。メインヒットの確定値を基準にし、会心は乗せない
@@ -10814,7 +10866,7 @@ const DEFAULT_ATTACK_THEMES = Object.freeze({
   Mocchi:'stomp',     // 高く跳んで押しつぶし、戻った位置からモッチ砲(ビーム)
   Suezo:'beam',       // 大きな目から光線
   Golem:'rocks',      // 敵を直接殴り、岩のかけらが飛び散る
-  Tiger:'claw',       // カクカクと高速で詰めて、爪で3回ひっかく
+  Tiger:'claw',       // カクカクと高速で詰めて爪で3回ひっかき、元の場所へ戻って角から雷撃
   Ham:'punch',        // 詰め寄って、ワンツーパンチ
   Pixie:'magic',      // 魔法陣を出して、魔法の弾を3発
   Monol:'crush',      // 敵の真上へ浮かんで、押しつぶす
@@ -10824,7 +10876,7 @@ const DEFAULT_ATTACK_THEMES = Object.freeze({
 });
 // 型ごとの尺(ms)。体当たりと同じ 450ms(固有技 500ms)に収まらない型だけ書く。
 // 本番バトルの待ち時間・図鑑のプレビュー・CSSの長さ(--thm-ms)の3つがここを見る。
-const THEMED_ATTACK_MS = Object.freeze({ stomp:900, rocks:520, claw:600, punch:580, fire:560 });
+const THEMED_ATTACK_MS = Object.freeze({ stomp:900, rocks:520, claw:900, punch:580, fire:560 });
 const themedAttackMotionMs = (monId, motion) => {
   if (motion && motion !== 'default') return null;
   return THEMED_ATTACK_MS[DEFAULT_ATTACK_THEMES[monId]] || null;
@@ -11036,7 +11088,9 @@ const THEMED_ATTACK_BITS = Object.freeze({
     {x:-12,a:28,d:235},{x:0,a:28,d:245},{x:12,a:28,d:255},
     {x:-12,a:-28,d:295},{x:0,a:-28,d:305},{x:12,a:-28,d:315},
     {x:-12,a:62,d:355},{x:0,a:62,d:365},{x:12,a:62,d:375},
-  ] },
+  ],
+            // 角からの雷撃が当たったときの火花
+            hit2:[{x:-34,y:-20},{x:-14,y:-40},{x:16,y:-38},{x:36,y:-14},{x:-28,y:18},{x:26,y:22}] },
   punch:  { hit:[{x:-10,y:-8,d:186,s:.7},{x:-22,y:-20,d:196,s:.4},
                  {x:6,y:0,d:314,s:1.7},{x:30,y:-22,d:330,s:.8},{x:-24,y:-28,d:340,s:.7},{x:22,y:24,d:350,s:.6}] },
   magic:  { fly:[{x:-10,y:-40,d:120},{x:12,y:-56,d:175},{x:-4,y:-30,d:230}], hit:[{x:-26,y:-18},{x:24,y:-22},{x:-20,y:20},{x:26,y:16},{x:0,y:-30}] },
@@ -11046,7 +11100,7 @@ const THEMED_ATTACK_BITS = Object.freeze({
   fire:   { fly:[{x:-8,y:-6,d:130},{x:10,y:6,d:170},{x:-12,y:10,d:210},{x:6,y:-10,d:250},{x:-4,y:4,d:290},{x:12,y:-4,d:330}],
             hit:[{x:-30,y:-26,d:230},{x:26,y:-30,d:280},{x:-22,y:22,d:330},{x:30,y:14,d:380}] },
 });
-const THEMED_ATTACK_LINE_KINDS = Object.freeze(['beam','vine','stomp','fire']);
+const THEMED_ATTACK_LINE_KINDS = Object.freeze(['beam','vine','stomp','fire','claw']);
 const ThemedAttackBits = ({list}) => (list||[]).map((b,i)=>(
   <i key={i} className="thm-atk__bit" style={{'--bx':`${b.x||0}px`,'--by':`${b.y||0}px`,'--ba':`${b.a||0}deg`,'--bs':b.s||1,...(b.d!=null?{animationDelay:`${b.d}ms`}:{})}}/>
 ));
@@ -16698,11 +16752,18 @@ const tacticsTotalBaseMaxHp = (units) => (Array.isArray(units) ? units : [])
 // みゅあ・かどみうむ・回復カードで上がるライフ上限の倍率。
 // ★合計へ掛けると1体ずつの上限と基準が食い違うので、1体ずつの maxHp へ効かせる。
 //   素の上限(baseMaxHp)は残したまま計算し直すので、倍率が下がっても元へ戻せる
+// ★exMaxRate … タクティクスのEX(ガッツ全開っちー)で上がっている上限の割合。無ければ0。
+//   みゅあ補正で上限を作り直しても消えないよう、ここで一緒に掛ける(既存の子は0なので値は今までどおり)
+const tacticsExMaxRateOf = (unit) => {
+  const rate = Number(unit && unit.exMaxRate);
+  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+};
 const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
   const target = normalizeTacticsUnit(unit);
   if (!target) return null;
   const pct = Number.isFinite(Number(hpPct)) ? Math.max(0, Number(hpPct)) : 0;
-  const maxHp = Math.max(1, Math.floor(target.baseMaxHp * (1 + pct)));
+  const exRate = tacticsExMaxRateOf(target);
+  const maxHp = Math.max(1, Math.floor(target.baseMaxHp * (1 + pct) * (1 + exRate)));
   return normalizeTacticsUnit({ ...target, maxHp });
 };
 // ガッツの上限も同じ考え方。みゅあ補正は合計ではなく1体ずつへ効かせる
@@ -16710,7 +16771,8 @@ const scaleTacticsUnitMaxGuts = (unit, gutsPct = 0) => {
   const target = normalizeTacticsUnit(unit);
   if (!target) return null;
   const pct = Number.isFinite(Number(gutsPct)) ? Math.max(0, Number(gutsPct)) : 0;
-  const maxGuts = Math.max(0, Math.floor(target.baseMaxGuts * (1 + pct)));
+  const exRate = tacticsExMaxRateOf(target);
+  const maxGuts = Math.max(0, Math.floor(target.baseMaxGuts * (1 + pct) * (1 + exRate)));
   return normalizeTacticsUnit({ ...target, maxGuts });
 };
 const scaleTacticsUnits = (units, hpPct = 0, gutsPct = 0) => (Array.isArray(units) ? units : [])
@@ -17424,23 +17486,47 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   withCards … 同じターンにその子が通常カードも使えるか。false なら「使ったターン、**その子は**カードを使えない」
 //               ★止まるのは使った子だけ。ほかの子はいつもどおりカードを使える(2026-09-23 ユーザー指示
 //                 「EXで他行動禁止はそのモンスターだけ」)
-//   duration  … 効果の続く長さ。'turn'(発動ターン) / 'wave'(発動WAVEの終わりまで) / 'toggle'(もう一度使うまで)
-//   toggleLabels … duration:'toggle' のときの [切り替える前, 切り替えたあと] の呼び名
+//   duration  … 効果の続く長さ。'turn'(発動ターン) / 'wave'(発動WAVEの終わりまで) / 'style'(もう一度使って選び直すまで)
+//               / 'turns'(使ったターンから turns ターンのあいだ。WAVEが変わったらそこで切れる)
+//   turns     … duration:'turns' のときのターン数
+//   statRate  … 効いているあいだ、力と丈夫さを何割上げるか(0.3 なら30%)
+//   regenRate … 効いているあいだ、ターン終わりのライフ・ガッツの自動回復の率へそのまま足す値(0.3 なら上限の30%ぶんを上乗せ)
+//   fullRecover … true なら、使った瞬間にその子のライフとガッツを満タンにする
+//   styles    … duration:'style' のときの選択肢 [{ id, label, desc }]。使うたびに1つ選ぶ(いまのものは選べない)
+//   defaultStyle … バトルを始めたときのスタイル(styles の id)
+//   heroInitialStyle … true なら、勇者モンに選んだときだけ配置の画面で初期スタイルを選べる
 //   conditions … 使うための追加の条件(TACTICS_EX_CONDITIONS のキー)。無ければ空
 //   conditionText … 条件を画面に出すときの文(任意)
 //   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
 const TACTICS_EX_DURATION_TEXT = Object.freeze({
   turn: '発動したターンだけ',
   wave: '発動したWAVEが終わるまで',
-  toggle: 'もう一度使って切り替えるまで',
+  style: 'もう一度使って選び直すまで',
 });
 const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
     desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
-    maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
+    // ★2026-09-25 ユーザー指示で 1ラン3回 → 10回
+    maxUses: 10, unlimited: false, withCards: true, duration: 'turn',
     effect: 'coverAll',
+  }),
+  // ★2026-09-25 ユーザー指示で上げ幅を20% → 30%。さらに効いているあいだ自動回復を30%増やす
+  //   (「ステータス30%アップに変更。更に効果中ライフとガッツの自動回復を30%上昇」)。
+  //   自動回復は「いまの率 + 30%」(倍率ではなく固定値で足す。ユーザー指示「1.3倍じゃなくて30%固定値でプラス」)
+  // ★2026-09-25 ユーザー指示「モッチー ガッツ全開っちー 5ターンの間全てのステータスが20%上がり、
+  //   ライフとガッツを全回復する 使用回数3回」。上がるのは力と丈夫さ(ライフ・ガッツは満タンにする)。
+  //   カードとの併用は指定が無かったので、制限なし(併用できる)にしてある
+  Mocchi: Object.freeze({
+    id: 'mocchi_guts_full',
+    name: 'ガッツ全開っちー',
+    // ★2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」。
+    //   上限も20%上げ、その上がった上限まで満タンにする
+    desc: '5ターンのあいだ、ちから・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    statRate: 0.3, regenRate: 0.3, fullRecover: true,
+    effect: 'statBoost',
   }),
   Golem: Object.freeze({
     id: 'golem_all_in',
@@ -17454,9 +17540,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
   KenshiMocchi: Object.freeze({
     id: 'kenshi_mocchi_weapon_change',
     name: 'ソード・コンバージョン',
-    desc: '二刀流と片手持ちを切り替える。片手持ちのあいだは力と同じ数値を丈夫さへ加える。固有技は使えるが、ソードスキルの効果は出ない。',
-    maxUses: 0, unlimited: true, withCards: false, duration: 'toggle',
-    toggleLabels: Object.freeze(['二刀流', '片手持ち']),
+    // ★2026-09-25 ユーザー指示で3択にした(片手剣・片手盾・二刀流。既定は片手剣)。
+    //   スタイルの効き目は、いつも「元のステータス」から数え直す(切り替えても積み重ならない)
+    // ★説明だけで3つの効き目が分かるように、スタイルごとに1行ずつ書く(2026-09-25 ユーザー指摘
+    //   「説明があれじゃ効果が分からない」)。画面は改行をそのまま出す(whitespace-pre-line)
+    desc: '戦い方（スタイル）を3つから選び直す。いまのスタイルは選べない。\n'
+      + '片手剣：いつもの戦い方。固有技でソードスキルも出る。\n'
+      + '片手盾：力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない。\n'
+      + '二刀流：丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）。',
+    maxUses: 0, unlimited: true, withCards: false, duration: 'style',
+    styles: Object.freeze([
+      Object.freeze({ id: 'sword', label: '片手剣', desc: 'いつもの戦い方。ソードスキルも出る' }),
+      Object.freeze({ id: 'shield', label: '片手盾', desc: '力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない' }),
+      Object.freeze({ id: 'dual', label: '二刀流', desc: '丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）' }),
+    ]),
+    defaultStyle: 'sword',
+    heroInitialStyle: true,
     effect: 'weaponChange',
   }),
 });
@@ -17469,18 +17568,25 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
-const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'toggle']);
+const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
+// 二刀流で、連撃を何回ぶん入れるか(メインのダメージは1回のまま。連撃だけ2回ぶん)
+const TACTICS_EX_DUAL_HIT_REPEAT = 2;
 
 // 定義を安全な形へそろえる。壊れた項目があっても落とさず、いちばん控えめな既定値へ倒す
 const normalizeTacticsExDef = (raw) => {
   if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || !raw.id) return null;
   const unlimited = raw.unlimited === true;
   const duration = TACTICS_EX_DURATIONS.includes(raw.duration) ? raw.duration : 'turn';
-  const toggleLabels = Array.isArray(raw.toggleLabels) && raw.toggleLabels.length === 2
-    ? raw.toggleLabels.map(String) : ['OFF', 'ON'];
+  const styles = Array.isArray(raw.styles)
+    ? raw.styles.filter(st => st && typeof st.id === 'string' && st.id)
+      .map(st => ({ id: st.id, label: String(st.label || st.id), desc: String(st.desc || '') }))
+    : [];
+  // スタイル式なのに選択肢が2つ未満なら、選び直せないので発動ターンへ倒す
+  const safeDuration = duration === 'style' && styles.length < 2 ? 'turn' : duration;
+  const defaultStyle = styles.some(st => st.id === raw.defaultStyle) ? raw.defaultStyle : (styles[0] ? styles[0].id : null);
   return {
     id: raw.id,
     name: String(raw.name || raw.id),
@@ -17489,13 +17595,23 @@ const normalizeTacticsExDef = (raw) => {
     unlimited,
     // ★併用できるかが書かれていなければ「併用できない」へ倒す(強すぎる側へ倒さない)
     withCards: raw.withCards === true,
-    duration,
-    toggleLabels,
+    duration: safeDuration,
+    styles: safeDuration === 'style' ? styles : [],
+    defaultStyle: safeDuration === 'style' ? defaultStyle : null,
+    heroInitialStyle: safeDuration === 'style' && raw.heroInitialStyle === true,
+    turns: safeDuration === 'turns' ? Math.max(1, tacticsSafeInt(raw.turns, 1)) : 0,
+    statRate: Math.max(0, Number.isFinite(Number(raw.statRate)) ? Number(raw.statRate) : 0),
+    regenRate: Math.max(0, Number.isFinite(Number(raw.regenRate)) ? Number(raw.regenRate) : 0),
+    fullRecover: raw.fullRecover === true,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null,
   };
 };
+// 効果時間の文(「5ターンのあいだ」のようにターン数を入れる)
+const tacticsExDurationText = (def) => (!def ? null
+  : def.duration === 'turns' ? `使ったターンから${def.turns}ターンのあいだ（WAVEが変わると切れる）`
+  : (TACTICS_EX_DURATION_TEXT[def.duration] || null));
 // そのモンスターのEX。持っていなければ null
 const tacticsExDefOf = (monId, table = TACTICS_EX_SKILLS) =>
   (monId && table && Object.prototype.hasOwnProperty.call(table, monId) ? normalizeTacticsExDef(table[monId]) : null);
@@ -17505,7 +17621,8 @@ const isTacticsExEffectImplemented = (def, implemented = TACTICS_EX_IMPLEMENTED_
 // ラン中の状態。枠(スロット)ごとに持つ(配置はラン中に変わらないので枠で数えてよい)。
 // ★念のため monId も持ち、枠の子が違えば「その子はまだ使っていない」として数える
 //   uses[slot]    = { monId, count }                1ランで使った回数
-//   effects[slot] = { monId, exId, duration, wave, turn, on }   いま載っている効果
+//   effects[slot] = { monId, exId, effect, duration, wave, turn, on, style, snapshot }   いま載っている効果
+//                   (style はスタイル式のいまのスタイル。on は「既定のスタイル以外か」)
 //   lastUse[slot] = { wave, turn }                  同じ子は1ターンに1回まで
 //   turnUsed      = { wave, turn }                  このターンにだれかがEXを使ったか
 //   cardLock[slot]= { wave, turn }                  このターン、その子はカードを使えない(使った子だけ)
@@ -17539,7 +17656,14 @@ const tacticsExRemaining = (def, count) => {
 const isTacticsExEffectActive = (state, slot, monId, now) => {
   const effect = normalizeTacticsExState(state).effects[slot];
   if (!effect || effect.monId !== monId) return false;
-  if (effect.duration === 'toggle') return effect.on === true;
+  if (effect.duration === 'style') return effect.on === true;
+  // ★ターン数で切れるもの。**WAVEをまたがない**(2026-09-25 ユーザー指示「WAVE跨ぎはなし」)。
+  //   同じWAVEのあいだだけ、使ったターンから数えて turns ターン目まで効く
+  if (effect.duration === 'turns') {
+    if (!now || tacticsSafeInt(effect.wave, -1) !== tacticsSafeInt(now.wave, -2)) return false;
+    const at = tacticsSafeInt(now.turn, -1), from = tacticsSafeInt(effect.turn, -1), len = tacticsSafeInt(effect.turns, 0);
+    return from >= 0 && at >= from && at < from + len;
+  }
   if (effect.duration === 'wave') return !!now && tacticsSafeInt(effect.wave, -1) === tacticsSafeInt(now.wave, -2);
   return sameTacticsExTurn(effect, now);
 };
@@ -17577,27 +17701,56 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
 // 使ったあとの状態を返す(渡された state は書き換えない)。
 // ★回数を減らすのは無制限でないときだけ。無制限は数えるが、残りには効かない
 // snapshot … 使った瞬間の値(捨て身なら使ったときの丈夫さ)。効果の計算はこの値から出す
-const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null } = {}) => {
+// choice … スタイル式のとき、選んだスタイルの id(checkTacticsExChoice を通したもの)
+const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null } = {}) => {
   const safe = normalizeTacticsExState(state);
   if (!def || !Number.isInteger(slot)) return safe;
+  // スタイル式は、選べないスタイル(いまのもの・知らないもの)なら何もしない(回数も減らさない)
+  if (def.duration === 'style' && checkTacticsExChoice(def, safe, slot, monId, choice)) return safe;
   const stamp = { wave: tacticsSafeInt(now && now.wave, 0), turn: tacticsSafeInt(now && now.turn, 0) };
   const count = tacticsExUsesOf(safe, slot, monId) + 1;
-  const prev = safe.effects[slot];
-  const wasOn = !!(prev && prev.monId === monId && prev.duration === 'toggle' && prev.on === true);
+  const style = def.duration === 'style' ? choice : null;
   return {
     uses: { ...safe.uses, [slot]: { monId, count } },
     effects: { ...safe.effects, [slot]: { monId, exId: def.id, effect: def.effect, duration: def.duration, wave: stamp.wave, turn: stamp.turn,
-      on: def.duration === 'toggle' ? !wasOn : true,
+      on: def.duration === 'style' ? style !== def.defaultStyle : true,
+      style,
+      turns: def.duration === 'turns' ? def.turns : 0, statRate: def.statRate || 0, regenRate: def.regenRate || 0,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
     cardLock: def.withCards ? safe.cardLock : { ...safe.cardLock, [slot]: stamp },
   };
 };
-// 切り替え式のEXが、いまどちらの状態か(画面に「いま：片手持ち」のように出す)
-const tacticsExToggleLabel = (def, state, slot, monId) => {
-  if (!def || def.duration !== 'toggle') return null;
-  return def.toggleLabels[isTacticsExEffectActive(state, slot, monId, null) ? 1 : 0];
+// スタイル式のEXの、いまのスタイル(id)。選んだことが無ければ既定のスタイル
+const tacticsExStyleOf = (def, state, slot, monId) => {
+  if (!def || def.duration !== 'style') return null;
+  const effect = normalizeTacticsExState(state).effects[slot];
+  const style = effect && effect.monId === monId ? effect.style : null;
+  return def.styles.some(st => st.id === style) ? style : def.defaultStyle;
+};
+// いまのスタイルの呼び名(画面に「いま：片手盾」のように出す)
+const tacticsExStyleLabel = (def, state, slot, monId) => {
+  const id = tacticsExStyleOf(def, state, slot, monId);
+  const st = id && def.styles.find(x => x.id === id);
+  return st ? st.label : null;
+};
+// そのスタイルを選べるか。選べないときだけ理由を返す(いまのスタイルは選べない)
+const checkTacticsExChoice = (def, state, slot, monId, choice) => {
+  if (!def || def.duration !== 'style') return null;
+  if (!def.styles.some(st => st.id === choice)) return 'スタイルを選ぶ';
+  if (tacticsExStyleOf(def, state, slot, monId) === choice) return 'いまのスタイルは選べない';
+  return null;
+};
+// 勇者モンの初期スタイル(配置の画面で選ぶ)。回数も「このターン」も数えない。
+// ★バトルを始める前にしか呼ばないので、ほかの記録はまっさらにして、その枠の1件だけにする
+//   (選び直して別の枠へ置き直したとき、前の枠に古いスタイルが残らないように)
+const setTacticsExInitialStyle = (state, { def, slot, monId, style } = {}) => {
+  const base = createTacticsExState();
+  if (!def || !def.heroInitialStyle || !Number.isInteger(slot) || !def.styles.some(st => st.id === style)) return base;
+  if (style === def.defaultStyle) return base;
+  return { ...base, effects: { [slot]: { monId, exId: def.id, effect: def.effect, duration: def.duration,
+    wave: 0, turn: 0, on: true, style, snapshot: null } } };
 };
 // その枠で、いま効いている効果の種類(effect)。効いていなければ null。
 // ★戦闘の計算側はモンスターのidではなく、これを見る(モンスターごとの if を増やさない)
@@ -17610,7 +17763,16 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
 // ★読むときに上乗せするだけなので、効果が切れた瞬間(WAVEが変わる・切り替えで戻す)に
 //   何もしなくても元の値へ戻る。トレーニングで伸ばした値も失われない
 //   捨て身(allIn)     … 丈夫さ0。使ったときの丈夫さの50%を力へ足す
-//   ソード・コンバージョン(weaponChange) の片手持ち … いまの力と同じ数値を丈夫さへ足す(力は減らない)
+//   ソード・コンバージョン(weaponChange) の片手盾 … いまの力と同じ数値を丈夫さへ足す(力は減らない)
+//                                         二刀流 … 丈夫さを半分にする(ヒット列の2回ぶんは tacticsExActiveStyle を見て別に掛ける)
+// ターン終わりの自動回復の率へ足す値(ガッツ全開っちーが効いている子だけ。ほかは0)。
+// ★倍率ではなく固定値で足す(いまの率 + regenRate)。倒れている子の戻り(10%ずつ)には乗せない
+const tacticsExRegenRateAt = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'statBoost') return 0;
+  const rate = Number(normalizeTacticsExState(state).effects[slot].regenRate);
+  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+};
 const applyTacticsExStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);
@@ -17619,11 +17781,50 @@ const applyTacticsExStats = (unit, state, slot, now) => {
     const usedDef = Math.max(0, tacticsSafeInt(snap && snap.def, tacticsSafeInt(unit.def, 0)));
     return { ...unit, atk: Math.max(0, tacticsSafeInt(unit.atk, 0)) + Math.floor(usedDef * TACTICS_EX_ALL_IN_ATK_RATE), def: 0 };
   }
+  // ステータスアップ(ガッツ全開っちー): 力と丈夫さを statRate ぶん上げる(切り捨て)
+  if (kind === 'statBoost') {
+    const rate = Math.max(0, Number(normalizeTacticsExState(state).effects[slot].statRate) || 0);
+    return { ...unit, atk: Math.floor(Math.max(0, tacticsSafeInt(unit.atk, 0)) * (1 + rate)),
+      def: Math.floor(Math.max(0, tacticsSafeInt(unit.def, 0)) * (1 + rate)) };
+  }
+  // ★スタイルの効き目は、いつも「元のステータス」(盤面の値)から数え直す。積み重ならない
   if (kind === 'weaponChange') {
+    const style = normalizeTacticsExState(state).effects[slot].style;
     const atk = Math.max(0, tacticsSafeInt(unit.atk, 0));
-    return { ...unit, def: Math.max(0, tacticsSafeInt(unit.def, 0)) + atk };
+    const def = Math.max(0, tacticsSafeInt(unit.def, 0));
+    if (style === 'shield') return { ...unit, def: def + atk };
+    if (style === 'dual') return { ...unit, def: Math.floor(def / 2) };
   }
   return unit;
+};
+// ライフ・ガッツの上限を上げるEX(ガッツ全開っちー)の、上げ下げ。
+// ★上限そのものは盤面の値なので、効いているあいだは unit.exMaxRate に割合を持たせ、
+//   scaleTacticsUnits(みゅあ補正と同じ作り直し)で上限へ掛ける。切れたら0へ戻して作り直す
+//   (ライフ・ガッツは normalizeTacticsUnit が新しい上限で丸める)
+const setTacticsExMaxRate = (units, slot, rate) => (Array.isArray(units) ? units : [])
+  .map((unit, i) => (unit && i === slot ? { ...unit, exMaxRate: Math.max(0, Number(rate) || 0) } : unit));
+// 効果が切れているのに上限が上がったままの枠を、0へ戻す。戻した枠があれば changed:true
+const expireTacticsExMaxRates = (units, state, now) => {
+  let changed = false;
+  const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
+    if (!unit || !(tacticsExMaxRateOf(unit) > 0)) return unit;
+    if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
+    changed = true;
+    return { ...unit, exMaxRate: 0 };
+  });
+  return { units: next, changed };
+};
+// ターン数で切れる効果の、あと何ターン残っているか(使ったターンを含めて数える)。効いていなければ 0
+const tacticsExTurnsLeft = (state, slot, monId, now) => {
+  const effect = normalizeTacticsExState(state).effects[slot];
+  if (!effect || effect.duration !== 'turns' || !isTacticsExEffectActive(state, slot, monId, now)) return 0;
+  return tacticsSafeInt(effect.turn, 0) + tacticsSafeInt(effect.turns, 0) - tacticsSafeInt(now.turn, 0);
+};
+// いま効いているスタイル(既定のスタイルのときは null)。戦闘の計算側がヒット列やソードスキルの有無に使う
+const tacticsExActiveStyle = (state, slot, monId, now) => {
+  if (!tacticsExActiveEffect(state, slot, monId, now)) return null;
+  const style = normalizeTacticsExState(state).effects[slot].style;
+  return typeof style === 'string' ? style : null;
 };
 // 「みんなをかばう」が効いている枠(立っている子だけ)。無ければ null
 const tacticsExCoverSlot = (state, units, now) => {
@@ -19280,8 +19481,8 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
                   {(()=>{
                     const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
                     if(!exDef)return null;
-                    const durationLabel={turn:'そのターン',wave:'そのWAVE',toggle:'再使用まで'}[exDef.duration]||String(exDef.duration||'—');
-                    return <div data-dex-ex-skill className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"><div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black text-violet-300 tracking-widest">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div><div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div><div className="mt-1 text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div><div className="mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"><span className="rounded-lg bg-black/30 px-1.5 py-1">回数 <b className="text-white">{exDef.unlimited?'無制限':`${exDef.maxUses}回`}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">効果時間 <b className="text-white">{durationLabel}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">通常カード <b className="text-white">{exDef.withCards?'併用可':'併用不可'}</b></span></div></div>;
+                    const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
+                    return <div data-dex-ex-skill className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2"><div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black text-violet-300 tracking-widest">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div><div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div><div className="mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div><div className="mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"><span className="rounded-lg bg-black/30 px-1.5 py-1">回数 <b className="text-white">{exDef.unlimited?'無制限':`${exDef.maxUses}回`}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">効果時間 <b className="text-white">{durationLabel}</b></span><span className="rounded-lg bg-black/30 px-1.5 py-1">通常カード <b className="text-white">{exDef.withCards?'併用可':'併用不可'}</b></span></div></div>;
                   })()}
                 </div>)}
               </div>
@@ -22261,8 +22462,12 @@ function PickProAlliesScreen({
 function PickSlotScreen({
   battleTutorial, battleTutorialSpotClass, currentPickingMon, distTotalBonus,
   getDistAptitude, onRepick, phasePlan, scenarioPicksSlot, setupMon, slots, wave,
+  heroStyleDef = null, heroStyle = null, onHeroStyle = null,
 }) {
   const mon=currentPickingMon;
+  // 勇者モンの初期スタイル(タクティクスで、スタイル式のEXを持つ子を勇者モンにしたときだけ)。
+  // 選んでいなければ既定のスタイル(剣士モッチーなら片手剣)
+  const pickedStyle=heroStyleDef?(heroStyleDef.styles.some(st=>st.id===heroStyle)?heroStyle:heroStyleDef.defaultStyle):null;
   const monName=mon?.masuName||mon?.name||'';
   return (
 
@@ -22296,6 +22501,21 @@ function PickSlotScreen({
           );})}
         </div>
       </div>
+      {/* ★勇者モンの初期スタイル(2026-09-25 ユーザー指示「勇者モンに選んだときに限り、初期スタイルを選べる」)。
+          バトル中にEXで選び直すこともできる。どちらも元のステータスから数え直すので積み重ならない */}
+      {heroStyleDef&&(
+        <div data-hero-initial-style className="mh-ph-panel shrink-0 w-full max-w-xs mt-1 px-2 py-1.5 text-left">
+          <div className="mh-ph-panel-label text-[9px] font-black mb-1">初期スタイル（勇者モンのときだけ選べる）</div>
+          <div className="grid grid-cols-3 gap-1">
+            {heroStyleDef.styles.map(st=>(
+              <button key={st.id} type="button" data-hero-style={st.id} aria-pressed={pickedStyle===st.id}
+                onClick={()=>onHeroStyle&&onHeroStyle(st.id)}
+                className={`min-h-[40px] rounded-lg border-2 px-1 text-[11px] font-black active:scale-95 ${pickedStyle===st.id?'border-fuchsia-300 bg-fuchsia-700 text-white':'border-white/20 bg-black/40 text-slate-300'}`}>{st.label}</button>
+            ))}
+          </div>
+          <div className="mt-1 text-[9px] font-bold leading-snug text-slate-300">{(heroStyleDef.styles.find(st=>st.id===pickedStyle)||{}).desc}</div>
+        </div>
+      )}
       {/* 間合い適性はどこに置いても4距離すべてに入る。ここの%は「このモンスターを加えた後の各距離の補正値」 */}
       <div className="mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2">間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</div>
       {/* 練習中は押せる枠だけを光らせる。枠全体を囲むと「どれを押すのか」が分からなかった */}
@@ -23333,6 +23553,145 @@ const TACTICS_CRACK_PATHS = Object.freeze([
   'M0 0 L40 -22 L78 -18 L120 -52 L170 -60', 'M0 0 L-36 -30 L-60 -80 L-104 -96', 'M0 0 L-50 12 L-96 4 L-150 30 L-190 22',
   'M0 0 L20 44 L10 92 L42 140', 'M0 0 L56 30 L90 74 L150 88', 'M0 0 L-24 50 L-70 70 L-90 120', 'M0 0 L8 -50 L-6 -96 L14 -150',
 ]);
+// ==================== ボスの必殺技ムービー ====================
+// (2026-09-25 ユーザー指示「敵モンスター必殺技アニメーション」「透過できないなら画面切り替えてでも全然あり」
+//  「時間はそこそこ長くなってもいいから下手に短くしないでおけ」「設定でオンオフもつけて」)
+// 敵データの specialMovie(mp4)を、必殺技のときだけ画面を切り替えて流す。流し終えたら戦闘画面へ戻り、
+// そこで味方の枠に当たる(ダメージはそのあと。呼び出し元の 60-app が待つ)。
+// ★動画の要素は1つだけ作って使い回す。その敵との戦いに入った時点で読み込みを始めておき、必殺技で同じものを流す。
+//   毎回作り直すとスマホではそのたびに読み込み直しになり、頭が欠けたり黒い画面が続いたりする
+// ★流せなかったとき(読み込めない・自動再生を止められた・画面が無い)は false を返す。
+//   呼び出し元はそのときいつもの演出へ戻るので、進行が止まることはない
+// ★ここは見せるだけ。計算・進行・保存には触れない
+const BOSS_MOVIE_START_TIMEOUT_MS = 2500; // これまでに再生が始まらなければあきらめる(いつもの演出へ戻る)
+const BOSS_MOVIE_MAX_MS = 15000;          // 途中で止まっても、これ以上は待たない
+// ムービーごとの効果音(ムービーと同時に頭から鳴らす1本の音源)と、画面を揺らす時刻(再生位置のミリ秒)。
+// 音も揺れも絵に合わせてある。キーは ?v= を外したパス(キャッシュキーは中身を差し替えるたびに変わる)。
+// ★ムービー自体は音なし(iPhone は音ありの動画を自動で再生させてくれない)。音は効果音として別に鳴らすので、
+//   効果音の音量設定がそのまま効く(2026-09-25 ユーザー指摘「効果音がださい」「溜めるゴォー、ブレスはボォー」で作り直した)
+const BOSS_MOVIE_EXTRAS = Object.freeze({
+  // 覚醒ムー「アポカリプス」: 咆哮 → 口に溜める「ゴォー」→ 光線の「ボォー」(3.3秒)→ 爆発(4.42秒)→ 地鳴り → うなり
+  'movies/awakened-moo-apocalypse.mp4': Object.freeze({ sound: 'audio/se-awakened-moo-apocalypse.mp3', shakes: Object.freeze([3300, 4420]) }),
+});
+const bossMovieExtras = (src) => BOSS_MOVIE_EXTRAS[String(src || '').split('?')[0]] || null;
+const bossMovieStore = { el: null, src: '', show: null };
+const preloadBossMovie = (src) => {
+  if (!src || typeof document === 'undefined') return;
+  if (bossMovieStore.el && bossMovieStore.src === src) return;
+  const el = document.createElement('video');
+  // ★音なし・画面の中で再生(playsinline)にしておかないと、iPhone は自動で再生させてくれない
+  el.muted = true; el.defaultMuted = true; el.playsInline = true;
+  el.setAttribute('muted', ''); el.setAttribute('playsinline', ''); el.setAttribute('webkit-playsinline', '');
+  el.preload = 'auto';
+  el.src = src;
+  try { el.load(); } catch (e) { /* 読めなければ、流すときに false が返る */ }
+  bossMovieStore.el = el; bossMovieStore.src = src;
+  // 効果音も先に読んでおく(鳴らすときに読み込みを待つと、絵と音がずれる)
+  const extras = bossMovieExtras(src);
+  if (extras && extras.sound && Audio_.preloadSE) Audio_.preloadSE(extras.sound);
+};
+// 流し終えたら true、流せなかったら false で終わる
+const playBossMovie = (src, info = {}) => new Promise((resolve) => {
+  if (!src || typeof bossMovieStore.show !== 'function') { resolve(false); return; }
+  preloadBossMovie(src);
+  bossMovieStore.show({ src, info, done: resolve });
+});
+const BossMovieLayer = ({ shake = true }) => {
+  const [req, setReq] = useState(null);
+  const [shakeKey, setShakeKey] = useState(0);
+  const [canSkip, setCanSkip] = useState(false);
+  const holderRef = useRef(null);
+  const finishRef = useRef(null);
+  useEffect(() => {
+    // 前のムービーが残っていれば、下の後片付け(finish(false))がその待ちを起こす
+    bossMovieStore.show = (next) => setReq({ ...next, key: Date.now() });
+    return () => {
+      bossMovieStore.show = null;
+      // 画面ごと閉じられたら、待っている側を必ず起こす
+      if (finishRef.current) finishRef.current(false);
+    };
+  }, []);
+  React.useLayoutEffect(() => {
+    if (!req) return undefined;
+    const el = bossMovieStore.el;
+    const holder = holderRef.current;
+    let settled = false, started = false, raf = 0, startWall = 0;
+    const timers = [];
+    const extras = bossMovieExtras(req.src);
+    const shakes = ((extras && extras.shakes) || []).map((at) => ({ at, fired: false }));
+    let sound = null; // 鳴らしている効果音(Audio_.playSeFile が返す { stop } を待つ Promise)
+    const onPlaying = () => {
+      if (started) return;
+      started = true; startWall = Date.now();
+      if (extras && extras.sound && Audio_.playSeFile) sound = Audio_.playSeFile(extras.sound);
+      timers.push(setTimeout(() => finish(true), BOSS_MOVIE_MAX_MS));
+      timers.push(setTimeout(() => setCanSkip(true), 900));
+      const tick = () => {
+        if (settled) return;
+        const pos = Number.isFinite(el.currentTime) ? el.currentTime * 1000 : Date.now() - startWall;
+        shakes.forEach((c) => {
+          if (c.fired || pos < c.at) return;
+          c.fired = true;
+          if (shake) setShakeKey((k) => k + 1);
+        });
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    };
+    // ★最後まで流れたときは、効果音の余韻をそのまま残す。途中で閉じたとき(スキップ・読めない・画面ごと閉じた)は音も消す
+    const onEnded = () => finish(true, true);
+    const onError = () => finish(started);
+    const finish = (ok, reachedEnd = false) => {
+      if (settled) return;
+      settled = true;
+      finishRef.current = null;
+      timers.forEach(clearTimeout);
+      if (raf) cancelAnimationFrame(raf);
+      if (sound && !reachedEnd) sound.then((h) => { if (h) h.stop(0.2); }).catch(() => {});
+      if (el) {
+        el.removeEventListener('playing', onPlaying);
+        el.removeEventListener('ended', onEnded);
+        el.removeEventListener('error', onError);
+        try { el.pause(); } catch (e) { /* 止められなくても次に頭から流す */ }
+      }
+      setCanSkip(false);
+      // ★次のムービーがもう入っていたら消さない(自分のぶんだけ閉じる)
+      setReq((cur) => (cur === req ? null : cur));
+      req.done(!!ok);
+    };
+    finishRef.current = finish;
+    if (!el || !holder) { finish(false); return undefined; }
+    holder.appendChild(el);
+    el.addEventListener('playing', onPlaying);
+    el.addEventListener('ended', onEnded);
+    el.addEventListener('error', onError);
+    try { el.currentTime = 0; } catch (e) { /* 読み込み前は頭から始まる */ }
+    timers.push(setTimeout(() => { if (!started) finish(false); }, BOSS_MOVIE_START_TIMEOUT_MS));
+    let playing;
+    try { playing = el.play(); } catch (e) { finish(false); return undefined; }
+    if (playing && typeof playing.catch === 'function') playing.catch(() => finish(false));
+    return () => finish(false);
+  }, [req]);
+  if (!req) return null;
+  const info = req.info || {};
+  return ReactDOM.createPortal(
+    <div data-boss-movie role="presentation" onClick={() => { if (canSkip && finishRef.current) finishRef.current(true); }}>
+      {/* ★揺れは属性の a / b を切り替えて動きをかけ直す。key を変えると中の枠ごと作り直され、
+          入れてある動画が画面から外れてしまう */}
+      <div data-boss-movie-stage data-boss-movie-shake={shakeKey === 0 ? undefined : (shakeKey % 2 ? 'a' : 'b')}>
+        {info.label && (
+          <div data-boss-movie-title>
+            {info.enemyName && <small>{info.enemyName}</small>}
+            <b>{info.label}</b>
+          </div>
+        )}
+        <div data-boss-movie-frame ref={holderRef}/>
+      </div>
+      <div data-boss-movie-skip aria-hidden={!canSkip} style={{ opacity: canSkip ? 1 : 0 }}>タップでスキップ</div>
+    </div>,
+    document.body
+  );
+};
 // 敵の技の、画面全体に重ねる演出(body の直下へ出す)。攻撃が狙われた味方の枠まで飛んで当たる / 必殺技は画面を暗くする /
 // 覚醒ムーは技名のカットイン・技ごとの全画面の演出・ひび割れも出す。
 // ★位置は出す瞬間に1回だけ測る(敵の丸枠と味方の枠)。動きの途中で測り直すと、跳ねている絵の位置を拾ってしまう
@@ -23356,7 +23715,10 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
   if (!fx || !fx.skill || !motion || !geo) return null;
   const skill = fx.skill;
   const ms = Number.isFinite(fx.ms) && fx.ms > 0 ? fx.ms : tacticsEnemyMotionMs(enemyId, skill, 1000);
-  const hit = tacticsEnemyHitFrac(enemyId, skill);
+  // ★ムービーを流したあと(afterMovie)は、溜めも技名もムービーで見せ終えている。
+  //   戦闘画面へ戻ったらすぐ味方の枠へ当てる
+  const afterMovie = !!fx.afterMovie;
+  const hit = afterMovie ? 0.12 : tacticsEnemyHitFrac(enemyId, skill);
   const look = TACTICS_ENEMY_STRIKE_LOOK[motion] || {};
   const spec = TACTICS_ENEMY_MOTION_SETS[motion] ? TACTICS_ENEMY_MOTION_SETS[motion].skills[skill] : null;
   const strikes = !TACTICS_ENEMY_NO_STRIKE_SKILLS.includes(skill);
@@ -23370,7 +23732,7 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
   return ReactDOM.createPortal(
     <div data-enemy-stage-fx data-enemy-motion={motion} data-stage-skill={skill} data-stage-moo={isMoo ? 'true' : undefined}
       className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 64000, '--em-dur': `${ms}ms`, '--sx': `${sx}px`, '--sy': `${sy}px` }}>
-      {!lite && (skill === 'special' || (isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill))) && (
+      {!lite && !afterMovie && (skill === 'special' || (isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill))) && (
         <div data-stage-dim style={{ background: `radial-gradient(circle at ${sx}px ${sy}px, transparent ${Math.round(sr * 1.15)}px, rgba(0,0,0,.74) ${Math.round(sr * 1.15 + 110)}px)` }}/>
       )}
       {strikes && geo.slots.map((t) => hits.map((h, k) => {
@@ -23386,7 +23748,7 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
           </React.Fragment>
         );
       }))}
-      {isMoo && TACTICS_MOO_CUTIN_SKILLS.includes(skill) && skillLabel && (
+      {isMoo && !afterMovie && TACTICS_MOO_CUTIN_SKILLS.includes(skill) && skillLabel && (
         <div data-moo-cutin><div data-moo-cutin-band><span>{skillLabel}</span></div></div>
       )}
       {isMoo && !lite && skill === 'normal' && [0, 1, 2].map((k) => (
@@ -23396,7 +23758,7 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
         <i key={k} data-impact="nova" data-big="true" style={{ left: t.x + ((k * 37) % 60) - 30, top: t.y + ((k * 23) % 40) - 20, '--w': `${Math.round(t.w * 0.8)}px`,
           animationDelay: at(0.25 + k * 0.07), animationDuration: '380ms' }}/>
       ))}
-      {isMoo && !lite && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
+      {isMoo && !lite && !afterMovie && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
         <i key={k} data-moo-meteor style={{ left: `${8 + ((k * 29) % 90)}%`, animationDelay: at(0.18 + k * 0.07) }}>☄️</i>
       ))}
       {isMoo && !lite && skill === 'allout' && [0, 1, 2].map((k) => (
@@ -23415,12 +23777,12 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
         <i key={k} data-moo-reticle style={{ left: t.x, top: t.y, animationDelay: at(0.1 + k * 0.08) }}/>
       ))}
       {isMoo && ['normal', 'rush', 'pierce', 'special', 'allout', 'roar'].includes(skill) && (
-        <div data-moo-flash style={{ animationDelay: at(skill === 'special' ? 0.78 : hit) }}/>
+        <div data-moo-flash style={{ animationDelay: at(skill === 'special' && !afterMovie ? 0.78 : hit) }}/>
       )}
       {isMoo && !lite && TACTICS_MOO_CRACK_SKILLS.includes(skill) && (() => {
         const t = geo.slots[0] || geo.all[0] || { x: geo.vw / 2, y: geo.vh * 0.6 };
         return (
-          <svg data-moo-crack width={geo.vw} height={geo.vh} viewBox={`0 0 ${geo.vw} ${geo.vh}`} style={{ animationDelay: at(skill === 'special' ? 0.78 : hit) }}>
+          <svg data-moo-crack width={geo.vw} height={geo.vh} viewBox={`0 0 ${geo.vw} ${geo.vh}`} style={{ animationDelay: at(skill === 'special' && !afterMovie ? 0.78 : hit) }}>
             <g transform={`translate(${t.x} ${t.y}) scale(${skill === 'special' || skill === 'allout' ? 1.6 : 1.1})`}>
               {TACTICS_CRACK_PATHS.map((d, k) => <path key={k} d={d}/>)}
             </g>
@@ -23499,7 +23861,10 @@ function BattleScreen({
   const [showBattleMenu, setShowBattleMenu] = useState(false);
   // ★タクティクス専用 EXスキルの詳細を開いている枠。距離枠をタップすると開く(開くだけで発動はしない)。
   //   中身は毎回 tacticsExInfo から引き直す(回数・使えるかは開いたあとも変わるため、開いた時点の値を持たない)
-  const [exPanelSlot, setExPanelSlot] = useState(null);
+  const [exPanelSlot, setExPanelSlotRaw] = useState(null);
+  // スタイル式のEX(ソード・コンバージョン)は「EXスキルを使用」のあとに選択肢を出す。開き直したら選ぶ前に戻す
+  const [exChoosing, setExChoosing] = useState(false);
+  const setExPanelSlot = (slot) => { setExChoosing(false); setExPanelSlotRaw(slot); };
   const exPanel = exPanelSlot!=null&&tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
   // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
@@ -23517,6 +23882,10 @@ function BattleScreen({
   // 「まずはカワズモーで」「タクティクスだけ」)。絵は1枚のまま、待機・攻撃・ためる・やられの動きを CSS で付ける。
   // ★ここに無い敵は今までどおり。足すときは TACTICS_ENEMY_MOTIONS に1行と、70-bootstrap の CSS を足す
   const enemyMotion = tacticsNewLayout && !ecoBattleView ? (TACTICS_ENEMY_MOTIONS[enemy?.id] || null) : null;
+  // 必殺技ムービーを持つ敵との戦いに入ったら、読み込みを始めておく(流すのは 60-app が決める)。
+  // ★設定で「流さない」にしている人・省エネの軽量表示では読まない(通信量を使わせない)
+  const bossMovieSrc = battleFx.specialMovie === 'ON' && !ecoBattleView && typeof enemy?.specialMovie === 'string' ? enemy.specialMovie : null;
+  useEffect(() => { if (bossMovieSrc) preloadBossMovie(bossMovieSrc); }, [bossMovieSrc]);
   // ★何も起きていない間は、画面の動きを一時停止する(2026-09-24 ユーザー指摘「発熱がすごい」「熱くなるとカクついて動かなくなる」)。
   //   待機中の飾り・敵と味方の待機の動きは、1つでも動いていると GPU が毎コマ画面を合成し直す(スマホが熱を持つ)。
   //   タップ・戦闘の進行が TACTICS_FX_REST_MS 無ければ data-fx-rest を立て、CSS が animation-play-state:paused にする。
@@ -23928,6 +24297,8 @@ function BattleScreen({
                 そのため敵の攻撃が当たった瞬間に技名の札が飛ぶように「ずれ」ていた(2026-09-24 ユーザー指摘
                 「大回転落としとか技名表示がずれる」)。バトル中の設定メニューで一度直したのと同じ原因 */}
             {/* 敵の技の全画面の演出(攻撃が味方の枠まで届く・必殺技で暗くなる・覚醒ムーのカットインなど) */}
+            {/* ボスの必殺技ムービー(画面を切り替えて流す)。流すかどうかは 60-app が playBossMovie で決める */}
+            <BossMovieLayer shake={battleFx.shake!=='OFF'}/>
             {enemyMotion&&<TacticsEnemyStageFx fx={enemyAttackFx} motion={enemyMotion} isMoo={enemyIsMoo} enemyId={enemy?.id} skillLabel={enemySkillName?.label||null} lite={fxLoad==='LIGHT'}/>}
             {/* ★覚醒ムーのカットインが出ている技は、上の小さな技名の札を出さない(同じ名前が2か所に出る) */}
             {enemySkillName&&!(enemyIsMoo&&emSet&&enemyAttackFx?.skill&&TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill))&&ReactDOM.createPortal(
@@ -25157,7 +25528,7 @@ function BattleScreen({
                 {!exPanel.implemented&&<span data-tactics-ex-dev className="ml-auto shrink-0 rounded-full border border-amber-300/60 bg-amber-900/60 px-2 py-0.5 text-[10px] font-black text-amber-100">開発中</span>}
               </div>
               <div data-tactics-ex-name className="mt-1 text-[18px] font-black leading-tight text-fuchsia-100">{exPanel.def.name}</div>
-              <p data-tactics-ex-desc className="mt-1.5 text-[12px] font-bold leading-relaxed text-slate-200">{exPanel.def.desc}</p>
+              <p data-tactics-ex-desc className="mt-1.5 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{exPanel.def.desc}</p>
               {!exPanel.implemented&&<p className="mt-1.5 rounded-lg border border-amber-300/40 bg-amber-950/50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-100">効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。</p>}
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]">
                 <dt className="font-bold text-slate-400">使える回数</dt>
@@ -25166,15 +25537,31 @@ function BattleScreen({
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
-                {exPanel.toggleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-toggle className="font-black text-fuchsia-200">{exPanel.toggleLabel}</dd></>}
-                {!exPanel.toggleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
+                {exPanel.styleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-style className="font-black text-fuchsia-200">{exPanel.styleLabel}</dd></>}
+                {!exPanel.styleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
                 {exPanel.stats&&<><dt className="font-bold text-slate-400">ちから／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
+              {exChoosing&&exPanel.styleOptions?(
+                // ★スタイルを選ぶ(2026-09-25 ユーザー指示)。いまのスタイルは選べない
+                <div data-tactics-ex-choices className="mt-3 flex flex-col gap-1.5">
+                  <div className="text-[11px] font-black text-slate-300">どのスタイルにする？</div>
+                  {exPanel.styleOptions.map(st=>(
+                    <button key={st.id} type="button" data-tactics-ex-choice={st.id} disabled={st.current||!exPanel.check.ok}
+                      onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot,st.id)) setExPanelSlot(null); }}
+                      className={`min-h-[44px] rounded-xl border-2 px-3 py-1.5 text-left active:scale-95 ${st.current?'border-slate-600 bg-slate-800 text-slate-500':'border-fuchsia-300 bg-fuchsia-900/60 text-white'}`}>
+                      <span className="block text-[13px] font-black">{st.label}{st.current?'（いまのスタイル）':''}</span>
+                      <span className="block text-[10px] font-bold leading-snug opacity-80">{st.desc}</span>
+                    </button>
+                  ))}
+                  <button type="button" data-tactics-ex-choice-back onClick={()=>setExChoosing(false)} className="min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-95">戻る</button>
+                </div>
+              ):(
               <div className="mt-3 flex gap-2">
                 <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
-                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
+                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(exPanel.styleOptions){ setExChoosing(true); return; } if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
               </div>
+              )}
             </div>
           </div>
         ), document.body)}
@@ -27178,12 +27565,16 @@ function MonsterHeroGame() {
   const [tacticsExState, setTacticsExState] = useState(createTacticsExState);
   const tacticsExStateRef = useRef(tacticsExState);
   const commitTacticsExState = (next) => { tacticsExStateRef.current=next; setTacticsExState(next); };
+  // 勇者モンの初期スタイル(スタイル式のEXを持つ子を勇者モンにしたときだけ、配置の画面で選ぶ)。
+  // ★選んだ値は配置した瞬間(setupMon)に盤面の記録へ書き込む。ここはその手前の「選んでいる途中」の値
+  const [tacticsHeroStyle, setTacticsHeroStyle] = useState(null);
   const resetTacticsJoinCatchUp = () => {
     tacticsJoinCatchUpRef.current=1;
     tacticsJoinCatchUpTurnsRef.current=0;
     tacticsJoinDistCatchUpRef.current=1;
     // EXの使用回数もランごとに数え直す(ランの片付けはここ1か所へ書く決まりなので、ここへ置く)
     commitTacticsExState(createTacticsExState());
+    setTacticsHeroStyle(null);
   };
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
@@ -27550,9 +27941,19 @@ function MonsterHeroGame() {
   const tacticsRegen = (hpRate, gutsRate) => {
     if (!isTacticsMode(runMode)) return null;
     const alive = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, false);
-    const downed = regenDownedTacticsBoard(alive.units);
+    // ★ガッツ全開っちーが効いている子は、その子の上限の regenRate ぶん(30%)を上乗せする
+    //   (2026-09-25 ユーザー指示「効果中ライフとガッツの自動回復を30%上昇」「1.3倍じゃなくて30%固定値でプラス」)
+    let units = alive.units, hp = alive.hp, guts = alive.guts;
+    const live = tacticsExLiveRef.current;
+    if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
+      const boost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now);
+      if (boost <= 0) return;
+      const extra = rateHealTacticsAt(units, slotIdx, boost, boost);
+      units = extra.units; hp += extra.hp; guts += extra.guts;
+    });
+    const downed = regenDownedTacticsBoard(units);
     const total = commitTacticsUnits(downed.units);
-    return { hp: alive.hp, guts: alive.guts, downedHp: downed.hp, downedHealed: downed.healed, total };
+    return { hp, guts, downedHp: downed.hp, downedHealed: downed.healed, total };
   };
   // 固有技・アシストカードの効果が「使った子」へ入るとき。量もその子の上限の率
   const tacticsRateHealAt = (slotIdx, hpRate, gutsRate) => {
@@ -28409,6 +28810,9 @@ function MonsterHeroGame() {
   //   どれもこの1か所から難易度を取る(取り違えると別の難易度の記録を書き換えてしまう)
   const tacticsRecordDifficulty = () => (extremeRunRef.current ? extremeDifficulty : difficulty);
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
+  // デバッグ戦で選んでいるモードと難易度(画面に出す選択。極限は実際の difficulty が 'Normal' になるので別に持つ)
+  const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
+  const [debugBattleDifficultyId, setDebugBattleDifficultyId] = useState('Normal');
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
@@ -34303,7 +34707,7 @@ function MonsterHeroGame() {
   // 1回のランに同じ種は1体しか入らないので、種idの一致で特定できる
   // (マスモンは名前を自由に付けられるため、名前で見分けることはできない)
   const isHeroSlotMon = (mon) => !!(mon && mainHero && mon.id === mainHero.id);
-  // 勇者モンの特性で増える同時使用枚数(ハムの「連続攻撃」・剣士モッチーの「二刀流」)。
+  // 勇者モンの特性で増える同時使用枚数(ハムの「連続攻撃」・剣士モッチーの「黒の剣士」)。
   // 「勇者モンに選んだときだけ効く」特性なので、効いていることが画面から分かるように
   // 枚数表示の横にも出す。計算と表示で食い違わないよう、ここを唯一の出どころにする。
   // 対象の種は HERO_CARD_BONUS_MONSTER_IDS の一覧が持つ(種ごとの分岐をここへ書かない)
@@ -35581,6 +35985,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // その子へいま置いてあるカードの枚数(併用できないEXを使えるかの判定に使う)
   const tacticsSlotCardCount = (slotIdx) => Object.values(cardAssignments).filter(v => v === slotIdx).length;
   const tacticsExTurnUsed = tacticsExEnabled && isTacticsExTurnUsed(tacticsExState, tacticsExNow);
+  // ★ライフ・ガッツの上限を上げるEX(ガッツ全開っちー)が切れたら、上限を元へ戻す。
+  //   ターンやWAVEが進んだとき・EXの状態が変わったときに見直す。戻すものが無ければ何もしない(何度走っても同じ結果)
+  useEffect(() => {
+    if (!isTacticsMode(runMode)) return;
+    const result = expireTacticsExMaxRates(tacticsUnitsRef.current, tacticsExStateRef.current, { wave, turn:turnCount });
+    if (result.changed) commitTacticsUnits(scaleTacticsUnits(result.units, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
+  }, [wave, turnCount, tacticsExState, runMode]);
   // ★EXの効き目を戦闘の計算へ渡す入口。モンスターのidではなく「いま効いている効果の種類」を見る。
   //   ref の最新値を読む(使った直後の同じ操作の中でも古い値を見ない)
   const tacticsExEffectAt = (slotIdx) => {
@@ -35589,7 +36000,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const unit=tacticsUnitsRef.current?.[slotIdx];
     return unit ? tacticsExActiveEffect(tacticsExStateRef.current,slotIdx,unit.id,live.now) : null;
   };
-  // 戦闘で使う1体ぶん(捨て身・片手持ちの力と丈夫さを乗せる)。盤面の値そのものは書き換えない
+  // いま効いているスタイル(ソード・コンバージョンの片手盾・二刀流。既定の片手剣なら null)
+  const tacticsExStyleAt = (slotIdx) => {
+    const live=tacticsExLiveRef.current;
+    if(!live.enabled||!Number.isInteger(slotIdx)) return null;
+    const unit=tacticsUnitsRef.current?.[slotIdx];
+    return unit ? tacticsExActiveStyle(tacticsExStateRef.current,slotIdx,unit.id,live.now) : null;
+  };
+  // 戦闘で使う1体ぶん(捨て身・片手盾・二刀流の力と丈夫さを乗せる)。盤面の値そのものは書き換えない
   const tacticsBattleUnit = (slotIdx) => {
     const unit=tacticsUnitsRef.current?.[slotIdx];
     if(!unit) return unit;
@@ -35981,7 +36399,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(mon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
-      comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExEffectAt(slotIdx)!=='weaponChange' });
+      comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1 });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
@@ -36280,14 +36699,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)。
         //   ムーも動きを持つときは技ごとの長さ(全画面の演出を見せきる長さ)になる
         const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? enemy?.id : null;
-        const fxMs = tacticsEnemyMotionMs(motionEnemyId, fxSkill, fxKind==='moo' ? 900 : (intent.type==='SPECIAL' ? 1100 : 450));
+        // ★必殺技ムービーを持つ敵(覚醒ムー)の必殺技は、画面を切り替えてムービーを流してから当てる
+        //   (2026-09-25 ユーザー指示)。流すのは設定が「流す」のときだけ。演奏で止まったぶんの追いつき中は流さない。
+        //   ムービーは戦闘の速さに合わせて縮めない(「下手に短くしないでおけ」)。
+        //   流せなかったとき(読み込めない・自動再生を止められた)は、いつもの演出へそのまま戻る。
+        //   見せ方が変わるだけで、ダメージの計算・進行はどちらでも同じ
+        const specialMovieSrc = fxSkill==='special' && motionEnemyId && typeof enemy?.specialMovie==='string'
+          && normalizeBattleFxSettings(battleFxSettings).specialMovie==='ON' && !(catchUpUntilRef.current>Date.now())
+          ? enemy.specialMovie : null;
+        const movieShown = specialMovieSrc
+          ? await playBossMovie(specialMovieSrc, {label: intent.label || enemy?.special || '', enemyName: enemy?.name || ''})
+          : false;
+        const fxMs = movieShown ? 1000 : tacticsEnemyMotionMs(motionEnemyId, fxSkill, fxKind==='moo' ? 900 : (intent.type==='SPECIAL' ? 1100 : 450));
         // targets: 狙われた枠(画面が攻撃を味方の枠まで飛ばすのに使う) / ms: 速さの設定を掛けた実際の長さ(動きをこれに合わせる)
-        setEnemyAttackFx({kind: fxKind, skill: fxSkill, targets: Array.isArray(aimedSlots) ? aimedSlots.slice() : [], ms: battleMs(fxMs)});
-        if(intent.type==='SPECIAL') Audio_.se.enemySpecial(); else Audio_.se.enemyAttack();
+        // afterMovie: ムービーを見せ終えたあと。画面は溜め・技名を省いて、すぐ味方の枠へ当てる
+        setEnemyAttackFx({kind: fxKind, skill: fxSkill, targets: Array.isArray(aimedSlots) ? aimedSlots.slice() : [], ms: battleMs(fxMs), ...(movieShown?{afterMovie:true}:{})});
+        // ★ムービーのあとは溜めも爆発もムービーの音で聞かせ終えている。戻ってからの着弾は短い打撃音だけにする
+        //   (enemySpecial は「溜め→0.4秒後に爆発」の作りで、すぐ当たる着弾とずれる)
+        if(intent.type==='SPECIAL'&&!movieShown) Audio_.se.enemySpecial(); else Audio_.se.enemyAttack();
         setEnemyAttackAnim(true);
         if(fxKind==='moo') {
           // 動きを持つムーは、技が当たる瞬間に揺らす(はじめに揺らすと、溜めのあいだに揺れが終わってしまう)
-          if (motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId]) setTimeout(()=>triggerShake(true), battleMs(Math.round(fxMs*tacticsEnemyHitFrac(motionEnemyId, fxSkill))));
+          if (movieShown) setTimeout(()=>triggerShake(true), battleMs(Math.round(fxMs*0.12)));
+          else if (motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId]) setTimeout(()=>triggerShake(true), battleMs(Math.round(fxMs*tacticsEnemyHitFrac(motionEnemyId, fxSkill))));
           else triggerShake(true);
         }
         await battleWait(fxMs);
@@ -36666,15 +37100,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return {
       slot:slotIdx, monName:mon.masuName||mon.name, def, remaining, check,
       active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow),
-      toggleLabel:tacticsExToggleLabel(def,state,slotIdx,mon.id),
-      durationText:TACTICS_EX_DURATION_TEXT[def.duration]||null,
+      styleLabel:tacticsExStyleLabel(def,state,slotIdx,mon.id),
+      // スタイル式の選択肢。いまのスタイルは選べない
+      styleOptions:def.duration==='style'?def.styles.map(st=>({ ...st,
+        current:tacticsExStyleOf(def,state,slotIdx,mon.id)===st.id })):null,
+      durationText:tacticsExDurationText(def),
       implemented:isTacticsExEffectImplemented(def),
       // いまの力・丈夫さ(EXが乗っていればそのぶんも)。捨て身・片手持ちの効き目を数字で確かめられるように
       // 距離枠に出す短い札。切り替え式はいまの状態(二刀流／片手持ち)、効いている間は「◯◯中」、ふだんは「EX」
       // (2026-09-23 ユーザー指示「現在二刀流中か片手持ち中か分かるようにしたい」)
       badge:(()=>{
-        const toggle=tacticsExToggleLabel(def,state,slotIdx,mon.id);
-        if(toggle) return { text:toggle, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
+        const styleLabel=tacticsExStyleLabel(def,state,slotIdx,mon.id);
+        if(styleLabel) return { text:styleLabel, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
+        // ターン数で切れるもの(ガッツ全開っちー)は、あと何ターンかを出す
+        if(def.duration==='turns'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン`, active:true };
         if(isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`${def.name}中`, active:true };
         return { text:'EX', active:false };
       })(),
@@ -36687,7 +37126,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★効き目そのもの(攻撃の引き受け・ステータスの上下・固有技の切り替え)は、戦闘の計算側で
   //   isTacticsExEffectActive を見て決める。ここは「使った瞬間」に1度だけ起こすもの(演出・ログ)の置き場
   const TACTICS_EX_ON_USE = {};
-  const activateTacticsEx = (slotIdx) => {
+  // choice … スタイル式のEX(ソード・コンバージョン)で選んだスタイルの id
+  const activateTacticsEx = (slotIdx, choice = null) => {
     if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
     const mon=slots[slotIdx]; if(!mon) return false;
     const def=tacticsExDefOf(mon.id); if(!def) return false;
@@ -36697,14 +37137,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       alive:canTacticsSlotAct(tacticsUnitsRef.current,slotIdx), selectedCount:tacticsSlotCardCount(slotIdx),
       now:tacticsExNow, busy:false });
     if(!check.ok) return false;
+    if(def.duration==='style'&&checkTacticsExChoice(def,state,slotIdx,mon.id,choice)) return false;
     // 使った瞬間の値を控える(捨て身は「使ったときの丈夫さ」から力へ移す量を決める)
     const usedUnit=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
     const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
-      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null });
+      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null, choice });
     commitTacticsExState(next);
     Audio_.se.card();
-    const toggled=def.duration==='toggle'?`（${tacticsExToggleLabel(def,next,slotIdx,mon.id)}）`:'';
+    const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
+    // 使った瞬間にライフとガッツを満タンにする(ガッツ全開っちー)。その子だけ。枠に入った量を出す
+    // ★ライフ・ガッツの上限も上げてから、その上がった上限まで満タンにする(2026-09-25 ユーザー指示)
+    if(def.fullRecover){
+      let units=tacticsUnitsRef.current;
+      if(def.statRate>0) units=scaleTacticsUnits(setTacticsExMaxRate(units,slotIdx,def.statRate),getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+      const u=normalizeTacticsUnit(units[slotIdx]);
+      if(u){
+        const hpGain=Math.max(0,u.maxHp-u.hp), gutsGain=Math.max(0,u.maxGuts-u.guts);
+        commitTacticsUnits(recoverTacticsGutsAt(healTacticsAt(units,slotIdx,hpGain),slotIdx,gutsGain));
+        if(hpGain>0||gutsGain>0) mergeTacticsSlotFx({[slotIdx]:hpGain},{[slotIdx]:gutsGain});
+      }
+    }
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
       addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md',undefined,slotIdx);
@@ -36938,9 +37391,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // それに加えて「連撃パワー」を1貯め、3たまるごとに永久10%連撃(kenshiExtraCombo)を1本増やして0へ戻す。
           // どちらも addPermaBuff / writePermaBuffs なので「永続・重複可・次のターンから」になり、
           // 本数にも +3% の回数にも上限は設けない。ヒット列側(buildAttackHits)がこの本数を読む
-          // ★タクティクスのEX「武器チェンジ」で片手持ちの剣士モッチー本人が使ったときは、ソードスキルが出ない
-          else if(card.monId==='KenshiMocchi'&&tacticsExEffectAt(slotIdx)==='weaponChange'){
-            addPopup('片手持ち：ソードスキルなし','hero','text-slate-300 text-sm font-bold');
+          // ★タクティクスのEX「ソード・コンバージョン」で片手盾の剣士モッチー本人が使ったときは、ソードスキルが出ない
+          else if(card.monId==='KenshiMocchi'&&tacticsExStyleAt(slotIdx)==='shield'){
+            addPopup('片手盾：ソードスキルなし','hero','text-slate-300 text-sm font-bold');
           }
           else if(card.monId==='KenshiMocchi'){
             addPermaBuff('comboDmgPct',0.03*effMul);
@@ -36964,7 +37417,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+critRateBonus),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
-          swordSkill:tacticsExEffectAt(slotIdx)!=='weaponChange' });
+          swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1 });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
@@ -37987,9 +38441,57 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   // 通常の敵順と敵定義の両方に存在するものだけを候補にする。敵名・能力値を複製せず、
   // 選択した難易度で通常生成に使う倍率もspawnEnemyへそのまま委ねる。
-  const getDebugEnemyOptions = (diff) => DIFFICULTY_SETTINGS[diff]
-    ? [...new Set(ENEMY_SEQUENCE)].map((key) => ({ key, wave: ENEMY_SEQUENCE.indexOf(key)+1, enemy: ENEMY_DATA[key] })).filter(item => item.enemy && item.enemy.name && item.enemy.baseHp > 0 && item.enemy.baseAtk >= 0)
-    : [];
+  // ---- デバッグ戦(デバッグ専用) ----
+  // 各モード・各難易度で、どの敵とでも戦えるようにする(2026-09-25 ユーザー指示
+  // 「デバッグで各モード難易度でどの敵からも戦えるやつ作って」)。
+  // ★モードを選ぶと runMode・difficulty・extremeDifficulty をその場でそろえる。
+  //   開始ボタン(startDebugBattle)と敵の生成(spawnEnemy)はこの3つを読むので、押す前に確定させておく。
+  //   極限(クラシックの極限チャレンジ・タクティクスの極限5段階)は、通常のランと同じく
+  //   difficulty を 'Normal' にして extremeDifficulty に難易度を入れる
+  // ★種族チャレンジは種族を選ぶ流れが要るので入れない(デバッグの「種族チャレンジ進行確認」から入る)
+  const DEBUG_BATTLE_MODES = [
+    { id:'challenge', label:'チャレンジ', runMode:BATTLE_MODE_CHALLENGE },
+    { id:'quick', label:'クイック', runMode:BATTLE_MODE_QUICK },
+    { id:'pro', label:'プロ', runMode:BATTLE_MODE_PRO },
+    { id:'extreme', label:'極限チャレンジ', runMode:BATTLE_MODE_CHALLENGE, extreme:true },
+    { id:'tactics', label:'タクティクス', runMode:BATTLE_MODE_TACTICS },
+    { id:'tacticsPro', label:'タクティクスプロ', runMode:BATTLE_MODE_TACTICS_PRO },
+  ];
+  const debugBattleModeOf = (modeId) => DEBUG_BATTLE_MODES.find(m => m.id === modeId) || DEBUG_BATTLE_MODES[0];
+  // そのモードで選べる難易度(通常の難易度選択と同じ並び)
+  const debugBattleDifficultyIds = (modeId) => {
+    const mode = debugBattleModeOf(modeId);
+    if (mode.extreme) return ALL_EXTREME_DIFFICULTIES.map(setting => setting.id);
+    if (isTacticsMode(mode.runMode)) return [...TACTICS_DIFFICULTY_IDS];
+    if (isQuickMode(mode.runMode)) return Object.keys(QUICK_DIFFICULTY_SETTINGS);
+    return Object.keys(DIFFICULTY_SETTINGS);
+  };
+  const debugBattleDifficultySetting = (id) => DIFFICULTY_SETTINGS[id] || quickDifficultySetting(id) || extremeRuleSetting(id) || { label:id };
+  // 極限として始めるか(クラシックの極限チャレンジ、またはタクティクスの極限5段階)
+  const debugBattleIsExtreme = (modeId, difficultyId) => {
+    const mode = debugBattleModeOf(modeId);
+    return !!mode.extreme || (isTacticsMode(mode.runMode) && isExtremeDifficultyId(difficultyId));
+  };
+  // そのモードで戦う敵(タクティクスはタクティクス専用の10体)。wave はその敵が本来出てくるWAVE
+  const getDebugEnemyOptions = (modeId) => {
+    const tactics = isTacticsMode(debugBattleModeOf(modeId).runMode);
+    const sequence = tactics ? TACTICS_ENEMY_SEQUENCE : ENEMY_SEQUENCE;
+    const table = tactics ? TACTICS_ENEMY_DATA : ENEMY_DATA;
+    return [...new Set(sequence)].map((key) => ({ key, wave: sequence.indexOf(key)+1, enemy: table[key] }))
+      .filter(item => item.enemy && item.enemy.name && item.enemy.baseHp > 0 && item.enemy.baseAtk >= 0);
+  };
+  const selectDebugBattle = (modeId, difficultyId) => {
+    const mode = debugBattleModeOf(modeId);
+    const ids = debugBattleDifficultyIds(mode.id);
+    const diffId = ids.includes(difficultyId) ? difficultyId : (ids.includes('Normal') ? 'Normal' : ids[0]);
+    const extreme = debugBattleIsExtreme(mode.id, diffId);
+    setDebugBattleModeId(mode.id); setDebugBattleDifficultyId(diffId);
+    setRunMode(mode.runMode); setBattleMode(mode.runMode);
+    setDifficulty(extreme ? 'Normal' : diffId);
+    if (extreme) setExtremeDifficulty(diffId);
+    const options = getDebugEnemyOptions(mode.id);
+    if (!options.some(o => o.key === debugEnemyKey)) setDebugEnemyKey(options[0]?.key || null);
+  };
 
   // ---- バトルチュートリアル ----
   // ふだんのバトル画面をそのまま使い、上にみゅあの吹き出しとハイライトを重ねて進める。
@@ -38193,7 +38695,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   const startDebugBattle = (extreme=false) => {
     stopAllAuto();
-    const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
+    const option = getDebugEnemyOptions(debugBattleModeId).find(item => item.key === debugEnemyKey);
     const savedParty = getActiveMonsterList();
     const party = (debugStrongestHero
       ? [makeDebugStrongestMonster(),...savedParty.filter(mon=>mon?.id!=='Mocchi')]
@@ -38248,6 +38750,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!isHero) Audio_.se.join();
     if (isHero) {
       initialBattleDistanceRef.current=slotIdx;
+      // ★タクティクスは、勇者モンを置いた瞬間に初期スタイル(ソード・コンバージョンなど)を盤面の記録へ書く。
+      //   選び直して置き直したときに前の枠の記録が残らないよう、記録ごと作り直す(バトルの前なので消えるものは無い)
+      if (isTacticsMode(runMode)) {
+        const heroExDef=tacticsExDefOf(m.id);
+        commitTacticsExState(heroExDef&&heroExDef.heroInitialStyle&&tacticsHeroStyle
+          ? setTacticsExInitialStyle(createTacticsExState(),{ def:heroExDef, slot:slotIdx, monId:m.id, style:tacticsHeroStyle })
+          : createTacticsExState());
+      }
       // 勇者モンの間合い適性も、置いた距離だけでなく4距離すべての補正値になる
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
       setDistAptPct(getMonsterAptPct(m,specialRuleDifficulty,wave));
@@ -38881,11 +39391,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {(()=>{
         const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
         if(!exDef)return null;
-        const durationLabel={turn:'そのターン',wave:'そのWAVE',toggle:'再使用まで'}[exDef.duration]||String(exDef.duration||'—');
+        const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
         return <div data-monster-detail-ex className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
           <div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-widest text-violet-300">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div>
           <div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div>
-          <div className="mt-1 text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div>
+          <div className="mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div>
           <div className="mt-1.5 grid grid-cols-3 gap-1 text-center text-[9px] font-black">
             <div className="rounded-lg bg-black/30 px-1 py-1 text-slate-300">回数<span className="block text-white">{exDef.unlimited?'無制限':`${exDef.maxUses}回`}</span></div>
             <div className="rounded-lg bg-black/30 px-1 py-1 text-slate-300">効果時間<span className="block text-white">{durationLabel}</span></div>
@@ -41457,12 +41967,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             中身と押したときの処理は1つも変えていない。 */}
         {gameState==='DEBUG_BATTLE_SETUP'&&(
           <main data-debug-battle-setup-screen data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <DebugScreenHead title="デバッグ戦" note="難易度と敵を選んで、その場で戦う" saves={false} onBack={()=>setGameState('DEBUG_SETTINGS')}/>
+            <DebugScreenHead title="デバッグ戦" note="モード・難易度・敵を選んで、その場で戦う" saves={false} onBack={()=>setGameState('DEBUG_SETTINGS')}/>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4">
-              <section><div className="text-[10px] text-slate-500 font-black mb-2">1. 難易度</div><div className="grid grid-cols-3 gap-2">{Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=><button key={key} onClick={()=>{setDifficulty(key);const options=getDebugEnemyOptions(key);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);}} className={`min-h-[48px] rounded-xl text-[9px] font-black ${difficulty===key?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle(setting,difficulty===key)}>{setting.label}</button>)}</div></section>
-              <section><div className="text-[10px] text-slate-500 font-black mb-2">2. 敵</div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(difficulty).map(({key,enemy:debugEnemy})=><button key={key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
-              <section><div className="text-[10px] text-slate-500 font-black mb-2">3. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M</small></button></section>
-              <button disabled={!getDebugEnemyOptions(difficulty).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={startDebugBattle} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">4. デバッグ戦開始</button>
+              <section data-debug-battle-modes><div className="text-[10px] text-slate-500 font-black mb-2">1. モード</div><div className="grid grid-cols-3 gap-2">{DEBUG_BATTLE_MODES.map(mode=><button key={mode.id} type="button" data-debug-battle-mode-option={mode.id} aria-pressed={debugBattleModeId===mode.id} onClick={()=>selectDebugBattle(mode.id,debugBattleDifficultyId)} className={`min-h-[48px] px-1 rounded-xl text-[10px] font-black leading-tight ${debugBattleModeId===mode.id?'bg-cyan-700 border-2 border-cyan-300 text-white':'bg-slate-900 border border-white/10 text-slate-400'}`}>{mode.label}</button>)}</div></section>
+              <section data-debug-battle-difficulties><div className="text-[10px] text-slate-500 font-black mb-2">2. 難易度</div><div className="grid grid-cols-3 gap-2">{debugBattleDifficultyIds(debugBattleModeId).map(key=>{const setting=debugBattleDifficultySetting(key);const selected=debugBattleDifficultyId===key;return <button key={key} type="button" data-debug-battle-difficulty={key} aria-pressed={selected} onClick={()=>selectDebugBattle(debugBattleModeId,key)} className={`min-h-[48px] rounded-xl text-[9px] font-black ${selected?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle({bg:'#475569',text:'#cbd5e1',...setting},selected)}>{setting.label||key}</button>;})}</div></section>
+              <section data-debug-battle-enemies><div className="text-[10px] text-slate-500 font-black mb-2">3. 敵<small className="ml-1 font-bold text-slate-600">（その敵が出てくるWAVEとして戦う）</small></div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(debugBattleModeId).map(({key,wave:debugWave,enemy:debugEnemy})=><button key={key} type="button" data-debug-battle-enemy={key} aria-pressed={debugEnemyKey===key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black text-left ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}><small className="block text-[8px] opacity-70">WAVE {debugWave}</small>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
+              <section><div className="text-[10px] text-slate-500 font-black mb-2">4. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M</small></button></section>
+              {/* ★開始の関数をそのまま onClick へ渡すと、押したときのイベントが「極限か」の引数へ入ってしまう */}
+              <button data-debug-battle-start disabled={!getDebugEnemyOptions(debugBattleModeId).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={()=>startDebugBattle(debugBattleIsExtreme(debugBattleModeId,debugBattleDifficultyId))} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">5. デバッグ戦開始<small className="block text-[9px] font-bold opacity-70">{debugBattleModeOf(debugBattleModeId).label} / {debugBattleDifficultySetting(debugBattleDifficultyId).label||debugBattleDifficultyId}</small></button>
             </div>
           </main>
         )}
@@ -41497,7 +42009,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       そのまま埋まっていた。1500pxほど縦に伸びていて、次の欄へ行くのにそこを全部
                       スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。
                       **メニューには入口だけを置き、道具そのものを埋めない** のが決めごと */}
-                  <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="難易度と敵を選んで戦う。結果は保存されません" onClick={()=>setGameState('DEBUG_BATTLE_SETUP')}/>
+                  <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="モード・難易度・敵を選んで戦う。結果は保存されません" onClick={()=>{selectDebugBattle(debugBattleModeId,debugBattleDifficultyId);setGameState('DEBUG_BATTLE_SETUP');}}/>
                   <button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧬 種族チャレンジ進行確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族別の解放・クリア・初回報酬を確認／編集</small></button>
                   {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                       通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
@@ -43225,6 +43737,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           getDistAptitude={getDistAptitude} scenarioPicksSlot={scenarioPicksSlot}
           setupMon={setupMon} slots={slots}
           phasePlan={mainHero?phasePlan:null} wave={wave}
+          heroStyleDef={(()=>{
+            // 勇者モンを置くときだけ。スタイル式のEXを持つ子(剣士モッチー)なら初期スタイルを選べる
+            if(mainHero||!currentPickingMon||!tacticsExEnabled) return null;
+            const d=tacticsExDefOf(currentPickingMon.id);
+            return d&&d.heroInitialStyle?d:null;
+          })()}
+          heroStyle={tacticsHeroStyle} onHeroStyle={setTacticsHeroStyle}
           onRepick={()=>{
             if(!mainHero&&speciesChallengeBattleRunRef.current){
               setCurrentPickingMon(null);
@@ -43889,7 +44408,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
           <footer className="shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <button onClick={()=>setShowHelp(false)} className="w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm shadow-2xl active:scale-95">わかった！冒険に戻る</button>
-            <button aria-label="" onClick={()=>{const options=getDebugEnemyOptions(difficulty);setDebugEnemyKey(options[0]?.key||null);debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setShowHelp(false);setGameState('DEBUG_SETTINGS');}} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
+            <button aria-label="" onClick={()=>{const options=getDebugEnemyOptions(debugBattleModeId);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setShowHelp(false);setGameState('DEBUG_SETTINGS');}} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
           </footer>
         </div>);
       })()}
@@ -44308,7 +44827,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         <div><div className="text-[8px] font-black text-amber-400">ガッツ</div><div className="text-[12px] font-mono font-black">{u.guts}<span className="text-[9px] text-slate-500">/{u.maxGuts}</span></div></div>
       </div>
       <div className="mt-0.5 text-[9px] font-black text-cyan-300">この枠の間合い適性 {aptPct>=0?'+':''}{Math.round(aptPct*10)/10}%</div>
-      {exInfo&&<div data-tactics-status-ex={i} className="mt-0.5 text-[9px] font-black text-fuchsia-200">EX「{exInfo.def.name}」{exInfo.toggleLabel?`：いまは${exInfo.toggleLabel}`:(exInfo.active?'：効果中':'')}{exInfo.remaining.unlimited?'':`（のこり ${exInfo.remaining.left}/${exInfo.remaining.max}）`}</div>}
+      {exInfo&&<div data-tactics-status-ex={i} className="mt-0.5 text-[9px] font-black text-fuchsia-200">EX「{exInfo.def.name}」{exInfo.styleLabel?`：いまは${exInfo.styleLabel}`:(exInfo.active?'：効果中':'')}{exInfo.remaining.unlimited?'':`（のこり ${exInfo.remaining.left}/${exInfo.remaining.max}）`}</div>}
     </div>);
   })}
 </div>)}{/* ★タクティクスは1体ずつなので、パーティの合計・平均の欄そのものを出さない
@@ -45683,33 +46202,61 @@ const createAnimationStyle = () => {
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
     }
 
-    /* ライガー: コマ落としのようにカクカクと左右へ跳びながら高速で詰め、爪で3回ひっかいて同じように戻る(600ms)。
+    /* ライガー: コマ落としのようにカクカクと左右へ跳びながら高速で詰め、爪で3回ひっかく。
+       同じようにカクカクと元の場所へ戻り、角に雷をためて、敵へ雷撃を落とす(900ms)。
        steps(1,end) で各コマの間をつながずに瞬間移動させ、残像(.thm-atk__ghost)が少し遅れて追いかける */
-    .thm-atk--claw { --c1:#fee2e2; --c2:#ef4444; --c3:rgba(239,68,68,0); --hit-at:235ms; }
+    .thm-atk--claw { --c1:#fee2e2; --c2:#ef4444; --c3:rgba(239,68,68,0); --hit-at:235ms; --hit-at2:665ms; }
     .thm-atk--claw .thm-atk__monster { animation-name:thmClawBody; animation-timing-function:steps(1,end); }
     .thm-atk__ghost { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:3; opacity:0;
       transform-origin:50% 80%; pointer-events:none; filter:sepia(1) saturate(4) hue-rotate(-30deg) brightness(1.2);
       animation:thmClawBody var(--thm-ms,450ms) steps(1,end) forwards, thmClawGhost var(--thm-ms,450ms) linear forwards; }
     .thm-atk__ghost--1 { animation-delay:35ms,0ms; --ghost-a:.5; }
     .thm-atk__ghost--2 { animation-delay:70ms,0ms; --ghost-a:.28; }
-    @keyframes thmClawGhost { 0%,8% { opacity:0; } 14%,84% { opacity:var(--ghost-a,.4); } 92%,100% { opacity:0; } }
+    @keyframes thmClawGhost { 0%,5% { opacity:0; } 9%,55% { opacity:var(--ghost-a,.4); } 61%,100% { opacity:0; } }
     .thm-atk--claw .thm-atk__core { width:70px; height:70px; left:-35px; top:-35px; animation-duration:260ms; }
-    .thm-atk--claw .thm-atk__bit { left:-3px; top:-36px; width:6px; height:72px; border-radius:999px; rotate:var(--ba); translate:var(--bx) 0;
+    .thm-atk--claw .thm-atk__hit:not(.thm-atk__hit--2) .thm-atk__bit { left:-3px; top:-36px; width:6px; height:72px; border-radius:999px; rotate:var(--ba); translate:var(--bx) 0;
       background:linear-gradient(180deg,rgba(255,255,255,0),#fff 30%,#fecaca 60%,rgba(239,68,68,0)); box-shadow:0 0 8px #ef4444;
       animation-name:thmClaw; animation-duration:140ms; }
     @keyframes thmClaw { 0% { opacity:0; transform:scaleY(.1); } 35% { opacity:1; transform:scaleY(1); } 100% { opacity:0; transform:scaleY(1.1) scaleX(.4); } }
+    /* 雷撃の着弾は黄色 */
+    .thm-atk--claw .thm-atk__hit--2 { --c1:#fef9c3; --c2:#facc15; --c3:rgba(250,204,21,0); }
+    .thm-atk--claw .thm-atk__hit--2 .thm-atk__core { width:104px; height:104px; left:-52px; top:-52px; animation-duration:300ms; }
+    .thm-atk--claw .thm-atk__hit--2 .thm-atk__bit { width:10px; height:3px; border-radius:2px; background:#fef08a; box-shadow:0 0 6px #facc15; animation-duration:220ms; }
     @keyframes thmClawBody {
-      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
-      6% { transform:translate3d(0,6px,0) scale(1.1,.86); }
-      14% { transform:translate3d(calc(var(--atk-dx) * .28 - 34px),calc(var(--atk-dy) * .28),0) scale(1.08) rotate(-8deg); }
-      22% { transform:translate3d(calc(var(--atk-dx) * .52 + 34px),calc(var(--atk-dy) * .52),0) scale(1.1) rotate(8deg); }
-      30% { transform:translate3d(calc(var(--atk-dx) * .74 - 26px),calc(var(--atk-dy) * .74),0) scale(1.14) rotate(-8deg); }
-      39% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.26) rotate(-14deg); }
-      49% { transform:translate3d(calc(var(--atk-dx) + 26px),calc(var(--atk-dy) * .95 - 10px),0) scale(1.24) rotate(14deg); }
-      59% { transform:translate3d(calc(var(--atk-dx) - 26px),calc(var(--atk-dy) * .95 + 6px),0) scale(1.26) rotate(-12deg); }
-      68% { transform:translate3d(calc(var(--atk-dx) * .6 + 30px),calc(var(--atk-dy) * .6),0) scale(1.1) rotate(8deg); }
-      78% { transform:translate3d(calc(var(--atk-dx) * .3 - 26px),calc(var(--atk-dy) * .3),0) scale(1.05) rotate(-6deg); }
-      88%,100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+      4% { transform:translate3d(0,6px,0) scale(1.1,.86); }
+      10% { transform:translate3d(calc(var(--atk-dx) * .28 - 34px),calc(var(--atk-dy) * .28),0) scale(1.08) rotate(-8deg); }
+      15% { transform:translate3d(calc(var(--atk-dx) * .52 + 34px),calc(var(--atk-dy) * .52),0) scale(1.1) rotate(8deg); }
+      21% { transform:translate3d(calc(var(--atk-dx) * .74 - 26px),calc(var(--atk-dy) * .74),0) scale(1.14) rotate(-8deg); }
+      26% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.26) rotate(-14deg); }
+      32% { transform:translate3d(calc(var(--atk-dx) + 26px),calc(var(--atk-dy) * .95 - 10px),0) scale(1.24) rotate(14deg); }
+      39% { transform:translate3d(calc(var(--atk-dx) - 26px),calc(var(--atk-dy) * .95 + 6px),0) scale(1.26) rotate(-12deg); }
+      45% { transform:translate3d(calc(var(--atk-dx) * .6 + 30px),calc(var(--atk-dy) * .6),0) scale(1.1) rotate(8deg); }
+      51% { transform:translate3d(calc(var(--atk-dx) * .3 - 26px),calc(var(--atk-dy) * .3),0) scale(1.05) rotate(-6deg); }
+      57% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+      /* 元の場所で身を低くして、角に雷をためる */
+      63% { transform:translate3d(0,5px,0) scale(1.08,.9) rotate(0deg); filter:drop-shadow(0 0 10px #fde047); }
+      68% { transform:translate3d(0,3px,0) scale(1.1,.9) rotate(0deg); filter:drop-shadow(0 0 16px #facc15) drop-shadow(0 0 4px #fff); }
+      /* 頭を振り上げて雷撃。反動で小刻みに震える */
+      72% { transform:translate3d(calc(var(--atk-dx) * -.05),calc(var(--atk-dy) * -.05 - 4px),0) scale(1.12,1.04) rotate(-5deg); filter:drop-shadow(0 0 18px #fef08a); }
+      77% { transform:translate3d(calc(var(--atk-dx) * -.05 + 3px),calc(var(--atk-dy) * -.05 - 4px),0) scale(1.12,1.04) rotate(-3deg); }
+      82% { transform:translate3d(calc(var(--atk-dx) * -.05 - 3px),calc(var(--atk-dy) * -.05 - 4px),0) scale(1.12,1.04) rotate(-5deg); filter:drop-shadow(0 0 12px #facc15); }
+      88% { transform:translate3d(calc(var(--atk-dx) * -.03),calc(var(--atk-dy) * -.03),0) scale(1.05) rotate(-2deg); }
+      94%,100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+    }
+    /* 角から敵までの雷。ジグザグの形(clip-path)で切り抜き、光は親(.thm-atk__line)の影で付ける(子に付けると形で切れる) */
+    .thm-atk--claw .thm-atk__line { top:24%; filter:drop-shadow(0 0 6px #facc15) drop-shadow(0 0 14px rgba(250,204,21,.8)); }
+    .thm-atk--claw .thm-atk__line i { width:40px; left:-20px;
+      clip-path:polygon(42% 100%, 12% 86%, 70% 72%, 16% 58%, 66% 44%, 20% 30%, 62% 16%, 42% 0%, 58% 0%, 78% 16%, 36% 30%, 82% 44%, 32% 58%, 86% 72%, 28% 86%, 58% 100%);
+      background:linear-gradient(90deg,#fde047,#fff 50%,#fde047); animation-name:thmClawBolt; }
+    @keyframes thmClawBolt {
+      0%,70% { opacity:0; transform:scaleY(0); }
+      73% { opacity:1; transform:scaleY(1) scaleX(1.2); }
+      76% { opacity:.35; transform:scaleY(1) scaleX(-1); }
+      79% { opacity:1; transform:scaleY(1) scaleX(1.1); }
+      83% { opacity:.5; transform:scaleY(1) scaleX(-1.2); }
+      86% { opacity:1; transform:scaleY(1) scaleX(1); }
+      92%,100% { opacity:0; transform:scaleY(1) scaleX(.2); }
     }
 
     /* ハム: 敵へ駆け寄って、左のジャブ(小)→ 体をひねって右ストレート(大)のワンツー(580ms) */
@@ -47000,6 +47547,30 @@ const createAnimationStyle = () => {
     @keyframes mooGather { 0% { opacity: 0; transform: translate(var(--gx), var(--gy)) scale(1.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(0, 0) scale(.3); } }
     [data-moo-reticle] { width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; opacity: 0; border: 3px dashed rgba(250,204,21,.95);
       box-shadow: 0 0 16px rgba(220,38,38,.9), inset 0 0 16px rgba(220,38,38,.6); animation: emLock 800ms ease-out both; }
+    /* ---- ボスの必殺技ムービー(71-screen-battle の BossMovieLayer)。画面を切り替えて、上に技名・まんなかにムービー ----
+       ★ムービーは横長(768×488)。縦のスマホでは幅いっぱいより少し大きく(116vw)して左右を少しだけ切り、上下のふちはぼかして背景へなじませる。
+       ★技名の札(z 65000)・敵の技の演出(z 64000)より上に出す */
+    [data-boss-movie] { position: fixed; inset: 0; z-index: 66000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); -webkit-tap-highlight-color: transparent; user-select: none;
+      background: radial-gradient(ellipse at 50% 50%, #34104f, #0c0218 62%, #000); animation: bossMovieIn 260ms ease-out both; }
+    /* ★背景は不透明にする。半透明だと、うしろの戦闘画面(敵の絵・枠)が透けて見える */
+    @keyframes bossMovieIn { from { opacity: 0; } to { opacity: 1; } }
+    [data-boss-movie-stage] { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    [data-boss-movie-frame] { position: relative; flex-shrink: 0; width: min(116vw, calc(66vh * 768 / 488)); aspect-ratio: 768 / 488; overflow: hidden;
+      -webkit-mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); }
+    [data-boss-movie-frame] > video { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+    [data-boss-movie-title] { text-align: center; line-height: 1.15; animation: bossMovieTitle 900ms cubic-bezier(.2,.8,.2,1) both; }
+    [data-boss-movie-title] small { display: block; font-size: 12px; font-weight: 900; letter-spacing: .3em; color: #e9d5ff; opacity: .85; }
+    [data-boss-movie-title] b { display: block; font-weight: 900; font-size: clamp(30px, 10vw, 52px); letter-spacing: .14em; color: #fff; white-space: nowrap;
+      text-shadow: 0 0 10px #c084fc, 0 0 26px #7e22ce, 0 3px 0 #3b0764; -webkit-text-stroke: 1px #facc15; }
+    @keyframes bossMovieTitle { 0% { opacity: 0; transform: scale(1.6); } 100% { opacity: 1; transform: scale(1); } }
+    [data-boss-movie-skip] { position: absolute; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); padding: 6px 12px; border-radius: 999px; pointer-events: none;
+      font-size: 11px; font-weight: 900; color: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.45); transition: opacity 300ms; }
+    /* 光線・爆発の瞬間の揺れ。a と b は同じ動き(属性を切り替えて、動きを頭からかけ直すため2つある) */
+    [data-boss-movie-shake="a"] { animation: bossMovieShakeA 420ms ease-out both; }
+    [data-boss-movie-shake="b"] { animation: bossMovieShakeB 420ms ease-out both; }
+    @keyframes bossMovieShakeA { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-9px, 6px); } 30% { transform: translate(8px, -7px); } 45% { transform: translate(-6px, 4px); } 60% { transform: translate(5px, -3px); } 80% { transform: translate(-2px, 1px); } }
+    @keyframes bossMovieShakeB { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-9px, 6px); } 30% { transform: translate(8px, -7px); } 45% { transform: translate(-6px, 4px); } 60% { transform: translate(5px, -3px); } 80% { transform: translate(-2px, 1px); } }
     /* 覚醒ムーの待機: 翼を広げるように左右へ張り、ときどき身をかがめて吠える。黒い気が立ちのぼり、目が赤く光る */
     @keyframes mooIdleMenace {
       0%, 100% { transform: translateY(0) scale(1, 1); }

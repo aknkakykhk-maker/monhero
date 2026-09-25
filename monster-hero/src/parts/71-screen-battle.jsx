@@ -204,6 +204,145 @@ const TACTICS_CRACK_PATHS = Object.freeze([
   'M0 0 L40 -22 L78 -18 L120 -52 L170 -60', 'M0 0 L-36 -30 L-60 -80 L-104 -96', 'M0 0 L-50 12 L-96 4 L-150 30 L-190 22',
   'M0 0 L20 44 L10 92 L42 140', 'M0 0 L56 30 L90 74 L150 88', 'M0 0 L-24 50 L-70 70 L-90 120', 'M0 0 L8 -50 L-6 -96 L14 -150',
 ]);
+// ==================== ボスの必殺技ムービー ====================
+// (2026-09-25 ユーザー指示「敵モンスター必殺技アニメーション」「透過できないなら画面切り替えてでも全然あり」
+//  「時間はそこそこ長くなってもいいから下手に短くしないでおけ」「設定でオンオフもつけて」)
+// 敵データの specialMovie(mp4)を、必殺技のときだけ画面を切り替えて流す。流し終えたら戦闘画面へ戻り、
+// そこで味方の枠に当たる(ダメージはそのあと。呼び出し元の 60-app が待つ)。
+// ★動画の要素は1つだけ作って使い回す。その敵との戦いに入った時点で読み込みを始めておき、必殺技で同じものを流す。
+//   毎回作り直すとスマホではそのたびに読み込み直しになり、頭が欠けたり黒い画面が続いたりする
+// ★流せなかったとき(読み込めない・自動再生を止められた・画面が無い)は false を返す。
+//   呼び出し元はそのときいつもの演出へ戻るので、進行が止まることはない
+// ★ここは見せるだけ。計算・進行・保存には触れない
+const BOSS_MOVIE_START_TIMEOUT_MS = 2500; // これまでに再生が始まらなければあきらめる(いつもの演出へ戻る)
+const BOSS_MOVIE_MAX_MS = 15000;          // 途中で止まっても、これ以上は待たない
+// ムービーごとの効果音(ムービーと同時に頭から鳴らす1本の音源)と、画面を揺らす時刻(再生位置のミリ秒)。
+// 音も揺れも絵に合わせてある。キーは ?v= を外したパス(キャッシュキーは中身を差し替えるたびに変わる)。
+// ★ムービー自体は音なし(iPhone は音ありの動画を自動で再生させてくれない)。音は効果音として別に鳴らすので、
+//   効果音の音量設定がそのまま効く(2026-09-25 ユーザー指摘「効果音がださい」「溜めるゴォー、ブレスはボォー」で作り直した)
+const BOSS_MOVIE_EXTRAS = Object.freeze({
+  // 覚醒ムー「アポカリプス」: 咆哮 → 口に溜める「ゴォー」→ 光線の「ボォー」(3.3秒)→ 爆発(4.42秒)→ 地鳴り → うなり
+  'movies/awakened-moo-apocalypse.mp4': Object.freeze({ sound: 'audio/se-awakened-moo-apocalypse.mp3', shakes: Object.freeze([3300, 4420]) }),
+});
+const bossMovieExtras = (src) => BOSS_MOVIE_EXTRAS[String(src || '').split('?')[0]] || null;
+const bossMovieStore = { el: null, src: '', show: null };
+const preloadBossMovie = (src) => {
+  if (!src || typeof document === 'undefined') return;
+  if (bossMovieStore.el && bossMovieStore.src === src) return;
+  const el = document.createElement('video');
+  // ★音なし・画面の中で再生(playsinline)にしておかないと、iPhone は自動で再生させてくれない
+  el.muted = true; el.defaultMuted = true; el.playsInline = true;
+  el.setAttribute('muted', ''); el.setAttribute('playsinline', ''); el.setAttribute('webkit-playsinline', '');
+  el.preload = 'auto';
+  el.src = src;
+  try { el.load(); } catch (e) { /* 読めなければ、流すときに false が返る */ }
+  bossMovieStore.el = el; bossMovieStore.src = src;
+  // 効果音も先に読んでおく(鳴らすときに読み込みを待つと、絵と音がずれる)
+  const extras = bossMovieExtras(src);
+  if (extras && extras.sound && Audio_.preloadSE) Audio_.preloadSE(extras.sound);
+};
+// 流し終えたら true、流せなかったら false で終わる
+const playBossMovie = (src, info = {}) => new Promise((resolve) => {
+  if (!src || typeof bossMovieStore.show !== 'function') { resolve(false); return; }
+  preloadBossMovie(src);
+  bossMovieStore.show({ src, info, done: resolve });
+});
+const BossMovieLayer = ({ shake = true }) => {
+  const [req, setReq] = useState(null);
+  const [shakeKey, setShakeKey] = useState(0);
+  const [canSkip, setCanSkip] = useState(false);
+  const holderRef = useRef(null);
+  const finishRef = useRef(null);
+  useEffect(() => {
+    // 前のムービーが残っていれば、下の後片付け(finish(false))がその待ちを起こす
+    bossMovieStore.show = (next) => setReq({ ...next, key: Date.now() });
+    return () => {
+      bossMovieStore.show = null;
+      // 画面ごと閉じられたら、待っている側を必ず起こす
+      if (finishRef.current) finishRef.current(false);
+    };
+  }, []);
+  React.useLayoutEffect(() => {
+    if (!req) return undefined;
+    const el = bossMovieStore.el;
+    const holder = holderRef.current;
+    let settled = false, started = false, raf = 0, startWall = 0;
+    const timers = [];
+    const extras = bossMovieExtras(req.src);
+    const shakes = ((extras && extras.shakes) || []).map((at) => ({ at, fired: false }));
+    let sound = null; // 鳴らしている効果音(Audio_.playSeFile が返す { stop } を待つ Promise)
+    const onPlaying = () => {
+      if (started) return;
+      started = true; startWall = Date.now();
+      if (extras && extras.sound && Audio_.playSeFile) sound = Audio_.playSeFile(extras.sound);
+      timers.push(setTimeout(() => finish(true), BOSS_MOVIE_MAX_MS));
+      timers.push(setTimeout(() => setCanSkip(true), 900));
+      const tick = () => {
+        if (settled) return;
+        const pos = Number.isFinite(el.currentTime) ? el.currentTime * 1000 : Date.now() - startWall;
+        shakes.forEach((c) => {
+          if (c.fired || pos < c.at) return;
+          c.fired = true;
+          if (shake) setShakeKey((k) => k + 1);
+        });
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    };
+    // ★最後まで流れたときは、効果音の余韻をそのまま残す。途中で閉じたとき(スキップ・読めない・画面ごと閉じた)は音も消す
+    const onEnded = () => finish(true, true);
+    const onError = () => finish(started);
+    const finish = (ok, reachedEnd = false) => {
+      if (settled) return;
+      settled = true;
+      finishRef.current = null;
+      timers.forEach(clearTimeout);
+      if (raf) cancelAnimationFrame(raf);
+      if (sound && !reachedEnd) sound.then((h) => { if (h) h.stop(0.2); }).catch(() => {});
+      if (el) {
+        el.removeEventListener('playing', onPlaying);
+        el.removeEventListener('ended', onEnded);
+        el.removeEventListener('error', onError);
+        try { el.pause(); } catch (e) { /* 止められなくても次に頭から流す */ }
+      }
+      setCanSkip(false);
+      // ★次のムービーがもう入っていたら消さない(自分のぶんだけ閉じる)
+      setReq((cur) => (cur === req ? null : cur));
+      req.done(!!ok);
+    };
+    finishRef.current = finish;
+    if (!el || !holder) { finish(false); return undefined; }
+    holder.appendChild(el);
+    el.addEventListener('playing', onPlaying);
+    el.addEventListener('ended', onEnded);
+    el.addEventListener('error', onError);
+    try { el.currentTime = 0; } catch (e) { /* 読み込み前は頭から始まる */ }
+    timers.push(setTimeout(() => { if (!started) finish(false); }, BOSS_MOVIE_START_TIMEOUT_MS));
+    let playing;
+    try { playing = el.play(); } catch (e) { finish(false); return undefined; }
+    if (playing && typeof playing.catch === 'function') playing.catch(() => finish(false));
+    return () => finish(false);
+  }, [req]);
+  if (!req) return null;
+  const info = req.info || {};
+  return ReactDOM.createPortal(
+    <div data-boss-movie role="presentation" onClick={() => { if (canSkip && finishRef.current) finishRef.current(true); }}>
+      {/* ★揺れは属性の a / b を切り替えて動きをかけ直す。key を変えると中の枠ごと作り直され、
+          入れてある動画が画面から外れてしまう */}
+      <div data-boss-movie-stage data-boss-movie-shake={shakeKey === 0 ? undefined : (shakeKey % 2 ? 'a' : 'b')}>
+        {info.label && (
+          <div data-boss-movie-title>
+            {info.enemyName && <small>{info.enemyName}</small>}
+            <b>{info.label}</b>
+          </div>
+        )}
+        <div data-boss-movie-frame ref={holderRef}/>
+      </div>
+      <div data-boss-movie-skip aria-hidden={!canSkip} style={{ opacity: canSkip ? 1 : 0 }}>タップでスキップ</div>
+    </div>,
+    document.body
+  );
+};
 // 敵の技の、画面全体に重ねる演出(body の直下へ出す)。攻撃が狙われた味方の枠まで飛んで当たる / 必殺技は画面を暗くする /
 // 覚醒ムーは技名のカットイン・技ごとの全画面の演出・ひび割れも出す。
 // ★位置は出す瞬間に1回だけ測る(敵の丸枠と味方の枠)。動きの途中で測り直すと、跳ねている絵の位置を拾ってしまう
@@ -227,7 +366,10 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
   if (!fx || !fx.skill || !motion || !geo) return null;
   const skill = fx.skill;
   const ms = Number.isFinite(fx.ms) && fx.ms > 0 ? fx.ms : tacticsEnemyMotionMs(enemyId, skill, 1000);
-  const hit = tacticsEnemyHitFrac(enemyId, skill);
+  // ★ムービーを流したあと(afterMovie)は、溜めも技名もムービーで見せ終えている。
+  //   戦闘画面へ戻ったらすぐ味方の枠へ当てる
+  const afterMovie = !!fx.afterMovie;
+  const hit = afterMovie ? 0.12 : tacticsEnemyHitFrac(enemyId, skill);
   const look = TACTICS_ENEMY_STRIKE_LOOK[motion] || {};
   const spec = TACTICS_ENEMY_MOTION_SETS[motion] ? TACTICS_ENEMY_MOTION_SETS[motion].skills[skill] : null;
   const strikes = !TACTICS_ENEMY_NO_STRIKE_SKILLS.includes(skill);
@@ -241,7 +383,7 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
   return ReactDOM.createPortal(
     <div data-enemy-stage-fx data-enemy-motion={motion} data-stage-skill={skill} data-stage-moo={isMoo ? 'true' : undefined}
       className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 64000, '--em-dur': `${ms}ms`, '--sx': `${sx}px`, '--sy': `${sy}px` }}>
-      {!lite && (skill === 'special' || (isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill))) && (
+      {!lite && !afterMovie && (skill === 'special' || (isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill))) && (
         <div data-stage-dim style={{ background: `radial-gradient(circle at ${sx}px ${sy}px, transparent ${Math.round(sr * 1.15)}px, rgba(0,0,0,.74) ${Math.round(sr * 1.15 + 110)}px)` }}/>
       )}
       {strikes && geo.slots.map((t) => hits.map((h, k) => {
@@ -257,7 +399,7 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
           </React.Fragment>
         );
       }))}
-      {isMoo && TACTICS_MOO_CUTIN_SKILLS.includes(skill) && skillLabel && (
+      {isMoo && !afterMovie && TACTICS_MOO_CUTIN_SKILLS.includes(skill) && skillLabel && (
         <div data-moo-cutin><div data-moo-cutin-band><span>{skillLabel}</span></div></div>
       )}
       {isMoo && !lite && skill === 'normal' && [0, 1, 2].map((k) => (
@@ -267,7 +409,7 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
         <i key={k} data-impact="nova" data-big="true" style={{ left: t.x + ((k * 37) % 60) - 30, top: t.y + ((k * 23) % 40) - 20, '--w': `${Math.round(t.w * 0.8)}px`,
           animationDelay: at(0.25 + k * 0.07), animationDuration: '380ms' }}/>
       ))}
-      {isMoo && !lite && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
+      {isMoo && !lite && !afterMovie && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map((k) => (
         <i key={k} data-moo-meteor style={{ left: `${8 + ((k * 29) % 90)}%`, animationDelay: at(0.18 + k * 0.07) }}>☄️</i>
       ))}
       {isMoo && !lite && skill === 'allout' && [0, 1, 2].map((k) => (
@@ -286,12 +428,12 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
         <i key={k} data-moo-reticle style={{ left: t.x, top: t.y, animationDelay: at(0.1 + k * 0.08) }}/>
       ))}
       {isMoo && ['normal', 'rush', 'pierce', 'special', 'allout', 'roar'].includes(skill) && (
-        <div data-moo-flash style={{ animationDelay: at(skill === 'special' ? 0.78 : hit) }}/>
+        <div data-moo-flash style={{ animationDelay: at(skill === 'special' && !afterMovie ? 0.78 : hit) }}/>
       )}
       {isMoo && !lite && TACTICS_MOO_CRACK_SKILLS.includes(skill) && (() => {
         const t = geo.slots[0] || geo.all[0] || { x: geo.vw / 2, y: geo.vh * 0.6 };
         return (
-          <svg data-moo-crack width={geo.vw} height={geo.vh} viewBox={`0 0 ${geo.vw} ${geo.vh}`} style={{ animationDelay: at(skill === 'special' ? 0.78 : hit) }}>
+          <svg data-moo-crack width={geo.vw} height={geo.vh} viewBox={`0 0 ${geo.vw} ${geo.vh}`} style={{ animationDelay: at(skill === 'special' && !afterMovie ? 0.78 : hit) }}>
             <g transform={`translate(${t.x} ${t.y}) scale(${skill === 'special' || skill === 'allout' ? 1.6 : 1.1})`}>
               {TACTICS_CRACK_PATHS.map((d, k) => <path key={k} d={d}/>)}
             </g>
@@ -370,7 +512,10 @@ function BattleScreen({
   const [showBattleMenu, setShowBattleMenu] = useState(false);
   // ★タクティクス専用 EXスキルの詳細を開いている枠。距離枠をタップすると開く(開くだけで発動はしない)。
   //   中身は毎回 tacticsExInfo から引き直す(回数・使えるかは開いたあとも変わるため、開いた時点の値を持たない)
-  const [exPanelSlot, setExPanelSlot] = useState(null);
+  const [exPanelSlot, setExPanelSlotRaw] = useState(null);
+  // スタイル式のEX(ソード・コンバージョン)は「EXスキルを使用」のあとに選択肢を出す。開き直したら選ぶ前に戻す
+  const [exChoosing, setExChoosing] = useState(false);
+  const setExPanelSlot = (slot) => { setExChoosing(false); setExPanelSlotRaw(slot); };
   const exPanel = exPanelSlot!=null&&tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
   // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
@@ -388,6 +533,10 @@ function BattleScreen({
   // 「まずはカワズモーで」「タクティクスだけ」)。絵は1枚のまま、待機・攻撃・ためる・やられの動きを CSS で付ける。
   // ★ここに無い敵は今までどおり。足すときは TACTICS_ENEMY_MOTIONS に1行と、70-bootstrap の CSS を足す
   const enemyMotion = tacticsNewLayout && !ecoBattleView ? (TACTICS_ENEMY_MOTIONS[enemy?.id] || null) : null;
+  // 必殺技ムービーを持つ敵との戦いに入ったら、読み込みを始めておく(流すのは 60-app が決める)。
+  // ★設定で「流さない」にしている人・省エネの軽量表示では読まない(通信量を使わせない)
+  const bossMovieSrc = battleFx.specialMovie === 'ON' && !ecoBattleView && typeof enemy?.specialMovie === 'string' ? enemy.specialMovie : null;
+  useEffect(() => { if (bossMovieSrc) preloadBossMovie(bossMovieSrc); }, [bossMovieSrc]);
   // ★何も起きていない間は、画面の動きを一時停止する(2026-09-24 ユーザー指摘「発熱がすごい」「熱くなるとカクついて動かなくなる」)。
   //   待機中の飾り・敵と味方の待機の動きは、1つでも動いていると GPU が毎コマ画面を合成し直す(スマホが熱を持つ)。
   //   タップ・戦闘の進行が TACTICS_FX_REST_MS 無ければ data-fx-rest を立て、CSS が animation-play-state:paused にする。
@@ -799,6 +948,8 @@ function BattleScreen({
                 そのため敵の攻撃が当たった瞬間に技名の札が飛ぶように「ずれ」ていた(2026-09-24 ユーザー指摘
                 「大回転落としとか技名表示がずれる」)。バトル中の設定メニューで一度直したのと同じ原因 */}
             {/* 敵の技の全画面の演出(攻撃が味方の枠まで届く・必殺技で暗くなる・覚醒ムーのカットインなど) */}
+            {/* ボスの必殺技ムービー(画面を切り替えて流す)。流すかどうかは 60-app が playBossMovie で決める */}
+            <BossMovieLayer shake={battleFx.shake!=='OFF'}/>
             {enemyMotion&&<TacticsEnemyStageFx fx={enemyAttackFx} motion={enemyMotion} isMoo={enemyIsMoo} enemyId={enemy?.id} skillLabel={enemySkillName?.label||null} lite={fxLoad==='LIGHT'}/>}
             {/* ★覚醒ムーのカットインが出ている技は、上の小さな技名の札を出さない(同じ名前が2か所に出る) */}
             {enemySkillName&&!(enemyIsMoo&&emSet&&enemyAttackFx?.skill&&TACTICS_MOO_CUTIN_SKILLS.includes(enemyAttackFx.skill))&&ReactDOM.createPortal(
@@ -2028,7 +2179,7 @@ function BattleScreen({
                 {!exPanel.implemented&&<span data-tactics-ex-dev className="ml-auto shrink-0 rounded-full border border-amber-300/60 bg-amber-900/60 px-2 py-0.5 text-[10px] font-black text-amber-100">開発中</span>}
               </div>
               <div data-tactics-ex-name className="mt-1 text-[18px] font-black leading-tight text-fuchsia-100">{exPanel.def.name}</div>
-              <p data-tactics-ex-desc className="mt-1.5 text-[12px] font-bold leading-relaxed text-slate-200">{exPanel.def.desc}</p>
+              <p data-tactics-ex-desc className="mt-1.5 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{exPanel.def.desc}</p>
               {!exPanel.implemented&&<p className="mt-1.5 rounded-lg border border-amber-300/40 bg-amber-950/50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-100">効果はまだ入っていません。使うと回数と「他のカードと一緒に使えるか」の決まりだけが動きます。</p>}
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]">
                 <dt className="font-bold text-slate-400">使える回数</dt>
@@ -2037,15 +2188,31 @@ function BattleScreen({
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
-                {exPanel.toggleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-toggle className="font-black text-fuchsia-200">{exPanel.toggleLabel}</dd></>}
-                {!exPanel.toggleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
+                {exPanel.styleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-style className="font-black text-fuchsia-200">{exPanel.styleLabel}</dd></>}
+                {!exPanel.styleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
                 {exPanel.stats&&<><dt className="font-bold text-slate-400">ちから／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
+              {exChoosing&&exPanel.styleOptions?(
+                // ★スタイルを選ぶ(2026-09-25 ユーザー指示)。いまのスタイルは選べない
+                <div data-tactics-ex-choices className="mt-3 flex flex-col gap-1.5">
+                  <div className="text-[11px] font-black text-slate-300">どのスタイルにする？</div>
+                  {exPanel.styleOptions.map(st=>(
+                    <button key={st.id} type="button" data-tactics-ex-choice={st.id} disabled={st.current||!exPanel.check.ok}
+                      onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot,st.id)) setExPanelSlot(null); }}
+                      className={`min-h-[44px] rounded-xl border-2 px-3 py-1.5 text-left active:scale-95 ${st.current?'border-slate-600 bg-slate-800 text-slate-500':'border-fuchsia-300 bg-fuchsia-900/60 text-white'}`}>
+                      <span className="block text-[13px] font-black">{st.label}{st.current?'（いまのスタイル）':''}</span>
+                      <span className="block text-[10px] font-bold leading-snug opacity-80">{st.desc}</span>
+                    </button>
+                  ))}
+                  <button type="button" data-tactics-ex-choice-back onClick={()=>setExChoosing(false)} className="min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-95">戻る</button>
+                </div>
+              ):(
               <div className="mt-3 flex gap-2">
                 <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
-                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
+                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(exPanel.styleOptions){ setExChoosing(true); return; } if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
               </div>
+              )}
             </div>
           </div>
         ), document.body)}

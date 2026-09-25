@@ -11,6 +11,7 @@
 //   ③ キャッシュキー(?v=)が中身のハッシュと一致しているか
 //      (ずれていると、絵を差し替えてもブラウザに残った古い絵が表示され続ける)
 //   ④ images/ に置いてあるのにどこからも参照されていないファイルが無いか
+//   ⑤ ムービー(movies/*.mp4)も、実在・キャッシュキー・置きっぱなしを同じように見る
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -104,6 +105,25 @@ const referencedDirs = [...sources.matchAll(/imageDir:\s*["'`](images\/[^"'`]+)[
 const orphans = files.filter((rel) => !referenced.has(rel)
   && !referencedDirs.some((d) => rel.startsWith(d + '/')));
 check('images/ に使われていない画像が残っていない', orphans.length === 0, orphans.slice(0, 8).join(' / '));
+
+// --- ⑤ ムービー(movies/*.mp4)も、実在・キャッシュキー・置きっぱなしを同じように見る ---
+// 覚醒ムーの必殺技ムービー(2026-09-25)。敵データの specialMovie から参照し、?v= は stamp-version.js が付ける
+const movieHost = fs.readFileSync(path.join(WEB_ROOT, 'data/enemy-monsters.js'), 'utf8');
+const movieRefs = [...movieHost.matchAll(/["'](movies\/[^"'?]+\.mp4)(?:\?v=([0-9a-f]*))?["']/g)];
+const movieMissing = [], movieStale = [];
+for (const [, rel, key] of movieRefs) {
+  const file = path.join(WEB_ROOT, rel);
+  if (!fs.existsSync(file)) { movieMissing.push(rel); continue; }
+  const want = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex').slice(0, 12);
+  if (key !== want) movieStale.push(`${rel}(${key || 'キーなし'} ≠ ${want})`);
+}
+check('参照しているムービーがすべて実在する', movieMissing.length === 0, movieMissing.join(' / '));
+check('ムービーのキャッシュキーが中身と一致している', movieStale.length === 0,
+  movieStale.length ? `${movieStale.join(' / ')} — node tools/build.js で更新されます` : '');
+const moviesRoot = path.join(WEB_ROOT, 'movies');
+const movieFiles = fs.existsSync(moviesRoot) ? fs.readdirSync(moviesRoot).map((name) => `movies/${name}`) : [];
+const movieOrphans = movieFiles.filter((rel) => !movieRefs.some(([, r]) => r === rel));
+check('movies/ に使われていないファイルが残っていない', movieOrphans.length === 0, movieOrphans.join(' / '));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exitCode = failed ? 1 : 0;
