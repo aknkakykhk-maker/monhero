@@ -908,7 +908,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
     desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
-    maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
+    // ★2026-09-25 ユーザー指示で 1ラン3回 → 10回
+    maxUses: 10, unlimited: false, withCards: true, duration: 'turn',
     effect: 'coverAll',
   }),
   Golem: Object.freeze({
@@ -925,7 +926,12 @@ const TACTICS_EX_SKILLS = Object.freeze({
     name: 'ソード・コンバージョン',
     // ★2026-09-25 ユーザー指示で3択にした(片手剣・片手盾・二刀流。既定は片手剣)。
     //   スタイルの効き目は、いつも「元のステータス」から数え直す(切り替えても積み重ならない)
-    desc: '片手剣・片手盾・二刀流から戦い方を選び直す（いまのスタイルは選べない）。',
+    // ★説明だけで3つの効き目が分かるように、スタイルごとに1行ずつ書く(2026-09-25 ユーザー指摘
+    //   「説明があれじゃ効果が分からない」)。画面は改行をそのまま出す(whitespace-pre-line)
+    desc: '戦い方（スタイル）を3つから選び直す。いまのスタイルは選べない。\n'
+      + '片手剣：いつもの戦い方。固有技でソードスキルも出る。\n'
+      + '片手盾：力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない。\n'
+      + '二刀流：丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）。',
     maxUses: 0, unlimited: true, withCards: false, duration: 'style',
     styles: Object.freeze([
       Object.freeze({ id: 'sword', label: '片手剣', desc: 'いつもの戦い方。ソードスキルも出る' }),

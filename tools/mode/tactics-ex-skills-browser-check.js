@@ -401,13 +401,13 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     const mSlot = await heroSlot();
     await tapSlot(mSlot);
     p = await panel();
-    check('モノリスのEX「みんなをかばう」: 3/3・通常カードと併用できる', !!p && p.name === 'みんなをかばう' && /3 \/ 3/.test(p.uses) && p.withCards === 'yes',
+    check('モノリスのEX「みんなをかばう」: 10/10・通常カードと併用できる', !!p && p.name === 'みんなをかばう' && /10 \/ 10/.test(p.uses) && p.withCards === 'yes',
       p && p.text.slice(0, 120));
     await page.locator('[data-tactics-ex-use]').click();
     await page.waitForTimeout(600);
     await tapSlot(mSlot);
     p = await panel();
-    check('モノリスも使うと 3→2', !!p && /2 \/ 3/.test(p.uses), p && p.uses);
+    check('モノリスも使うと 10→9', !!p && /9 \/ 10/.test(p.uses), p && p.uses);
     await closePanel();
     await tapFirstCard();
     check('併用できるEXを使ったターンでも、通常カードを選べる', (await selectedCount()) > 0);
@@ -426,6 +426,9 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     check('初期スタイルが枠の札に出る(二刀流)', await page.locator(`[data-tactics-ex-mark="${kSlot}"]`).getAttribute('data-tactics-ex-state') === '二刀流');
     await tapSlot(kSlot);
     p = await panel();
+    if (process.env.EX_SHOT_KENSHI) await page.screenshot({ path: process.env.EX_SHOT_KENSHI });
+    // 説明だけで3つのスタイルの効き目が読める(2026-09-25 ユーザー指摘「説明があれじゃ効果が分からない」)
+    check('剣士モッチーの詳細に、3つのスタイルの効き目が1行ずつ出る', !!p && ['片手剣：', '片手盾：', '二刀流：'].every(w => p.text.includes(w)), p && p.text.slice(0, 260));
     check('二刀流: 力135/丈夫さ75 → 135／37 で、回数は使っていない', !!p && /135／37/.test(p.text) && /無制限/.test(p.uses), p && p.text.slice(0, 220));
     await page.locator('[data-tactics-ex-use]').click();
     await page.waitForTimeout(300);
