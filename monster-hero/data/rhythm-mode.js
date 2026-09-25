@@ -556,8 +556,14 @@ const RHYTHM_STRIP=(()=>{
   return api;
 })();
 
-const RHYTHM_PROJECTION_TOP_SCALE=.18;
+// 道の奥行き(2026-09-26・ユーザー指示「奥行きの違いが気になる」。見本画像で決めた)。
+// 以前は奥の幅 .18・高さの1.24乗で、道の両端がラッパのように曲がっていた。
+// いまは奥の幅 .07・1乗(=直線)で、画面の上の一点へ向かってまっすぐ細くなる三角形の道にする。
+// 判定・入力・見た目はすべてこの投影を通るので、ここを変えれば3つがそろって変わる。
+const RHYTHM_PROJECTION_TOP_SCALE=.07;
+const RHYTHM_PROJECTION_CURVE=1;
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
+// 終わりの横棒は最低10pxにするが、道の奥でレーンがそれより細いときはレーンの幅までにする(2026-09-26。奥行きを深くしてはみ出したため)
 // HOLD/SLIDEの帯の太さ。ノーツの頭(.78)より細い。
 //
 // 【2026-09-11・一度 .78 へそろえようとして戻した】
@@ -587,7 +593,14 @@ const RHYTHM_BODY_WIDTH_RATIO=.64;
 const RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES=.45;
 const RHYTHM_TAP_TOLERANCE_SUB_LANES=.60;
 const rhythmClamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
-const rhythmProjectionScale=yRatio=>RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*Math.pow(rhythmClamp01(yRatio),1.24);
+// 画面より上(yRatio<0)は、道がまっすぐ(CURVE=1)なら消える一点まで細くなり続ける(0で止める)。
+// 以前のように上端の幅で止めると、画面の上端をまたぐ帯がそこで折れて見える(2026-09-26)。
+// 曲線(CURVE≠1)のときは今までどおり上端の幅で止める。画面の中(0〜1)の値はどちらも変わらない。
+const rhythmProjectionScale=yRatio=>{
+  const y=Math.min(1,Number(yRatio)||0);
+  if(y<0&&RHYTHM_PROJECTION_CURVE===1)return Math.max(0,RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*y);
+  return RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*Math.pow(rhythmClamp01(y),RHYTHM_PROJECTION_CURVE);
+};
 const rhythmProjectBoundary=(boundary,yRatio)=>{
   const scale=rhythmProjectionScale(yRatio),flat=Number(boundary)/RHYTHM_LANE_COUNT;
   return .5+(flat-.5)*scale;
@@ -711,7 +724,7 @@ const rhythmNoteVisualSpan=(note,visualLane,yRatio,chartTimeMs)=>{
   if(rhythmNoteIsSlide(note))return rhythmProjectSlideSpan(Number(visualLane),note,yRatio);
   return rhythmProjectSubLaneSpan(Number(visualLane)*2,2,yRatio);
 };
-// projectionはyに対する曲線(pow 1.24)なので、上端と下端だけを直線で結ぶ台形にすると
+// projectionはyに対する曲線(pow RHYTHM_PROJECTION_CURVE。2026-09-26からは1=直線)でもよいように、上端と下端だけを直線で結ぶ台形にすると
 // 中間の高さでレーン枠だけがノーツより外側へ膨らむ。見た目の枠も同じboundary helperを
 // 一定間隔でサンプルし、ノーツ・HOLD帯・SLIDE帯と同じ曲線へ沿わせる。
 const RHYTHM_PROJECTION_EDGE_STEPS=16;
@@ -735,11 +748,17 @@ const rhythmBoundaryLinePolygon=(boundary,widthPx=1,steps=RHYTHM_PROJECTION_EDGE
 };
 const rhythmLanePolygon=lane=>rhythmSpanPolygon(lane,lane+1);
 const rhythmSubLanePolygon=subLane=>rhythmSpanPolygon(subLane/2,(subLane+1)/2);
+// ノーツの進み方(2026-09-26)。本物の遠近と同じく、奥ではゆっくり・手前ほど速く近づく。
+// 出てくるところ(進み0)を「手前の RHYTHM_TRAVEL_FAR_SCALE 倍の大きさに見える距離」とし、
+// その距離を一定の速さで縮めたときの画面上の位置を返す。判定ラインへ着く時刻は変わらない。
+// 以前は p*(.54+.46p) のゆるい加速だった。範囲の外(出る前・通り過ぎた後)は端の傾きのまま伸ばす。
+// .25 だと判定ラインで平均の4倍の速さになり、手前で目が追いつかない。.4 で2.5倍(以前の式は1.46倍)
+const RHYTHM_TRAVEL_FAR_SCALE=.4;
 const rhythmProjectTravelProgress=progress=>{
-  const p=Number(progress)||0;
-  if(p<0)return p*.72;
-  if(p>1)return 1+(p-1)*1.28;
-  return p*(.54+.46*p);
+  const p=Number(progress)||0,far=RHYTHM_TRAVEL_FAR_SCALE,k=1/far;
+  if(p<0)return p*(k-1)/(k*k)/(1-far);
+  if(p>1)return 1+(p-1)*(k-1)/(1-far);
+  return (1/(k-(k-1)*p)-far)/(1-far);
 };
 // --- 判定ラインの「幅」を画面で見せる（2026-09-06・ユーザー指示
 //     「タップ判定ラインの表示を上下goodラインまで広げて真ん中にマーベラスラインを出す」）---
@@ -18922,7 +18941,7 @@ const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Num
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
   const project=point=>{
-    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=rhythmClamp01(y/rect.height),span=rhythmProjectSlideSpan(Number(point.lane),note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
+    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=Math.min(1,y/rect.height),span=rhythmProjectSlideSpan(Number(point.lane),note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
     return {y,left:rect.width*span.center-half,right:rect.width*span.center+half};
   };
   let firstIndex=0;
@@ -19148,7 +19167,7 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   const endBar=el._rhythmEndBar||el.querySelector('[data-rhythm-end-bar]');
   if(endBar)el._rhythmEndBar=endBar;
   if(endBar&&Number.isFinite(releaseYpx)){
-    const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height),end=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);
+    const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height),end=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(Math.min(10,rect.width*end.width),rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);
     endBar.style.left=`${(rect.width*end.center-left-barWidth/2).toFixed(2)}px`;
     endBar.style.top=`${(Number(releaseYpx)-Number(yPx)+noteHeight/2-4).toFixed(2)}px`;
     endBar.style.width=`${barWidth.toFixed(2)}px`;
@@ -19181,7 +19200,7 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
   const project=point=>{
-    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=rhythmClamp01(y/rect.height),span=rhythmProjectSlideSpan(point.lane,note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
+    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=Math.min(1,y/rect.height),span=rhythmProjectSlideSpan(point.lane,note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
     return {y,left:rect.width*span.center-half,right:rect.width*span.center+half};
   };
   let firstIndex=0;
@@ -19271,7 +19290,7 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   if(rhythmNoteHasBody(note)&&Number.isFinite(Number(releaseYpx))&&releaseYpx!==null){
     const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height);
     const end=rhythmNoteHasVariableSpan(note)&&rhythmNoteIsHold(note)?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY);
-    out.end={cx:rect.width*end.center,cy:Number(releaseYpx)+noteHeight/2,w:Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO),scale:end.scale};
+    out.end={cx:rect.width*end.center,cy:Number(releaseYpx)+noteHeight/2,w:Math.max(Math.min(10,rect.width*end.width),rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO),scale:end.scale};
   }
   return out;
 };

@@ -27,7 +27,9 @@ if(helper){
   // 上端が細く収束すること・判定線側が十分広いことは変わらず担保する。
   check('上端は画面幅の20%以下へ収束し、判定線側は87%以上まで広がる',rhythmProjectLane(2,0).scale<=.20&&rhythmProjectLane(2,.88).scale>=.87);
   const far=rhythmProjectTravelProgress(.2)-rhythmProjectTravelProgress(.1),near=rhythmProjectTravelProgress(.9)-rhythmProjectTravelProgress(.8);
-  check('Y移動は時刻を保った自然な非線形遠近',rhythmProjectTravelProgress(0)===0&&rhythmProjectTravelProgress(1)===1&&far>0&&near>far&&near/far<2);
+  // 2026-09-26 奥行きの見直しで、奥ではゆっくり・手前ほど速い本物の遠近にした(以前は near/far<2 の緩い加速)。
+// 手前が速すぎると目が追いつかないので、上限も持つ(出るところを手前の0.4倍に見える距離にして約3.5倍)
+check('Y移動は時刻を保った自然な非線形遠近',Math.abs(rhythmProjectTravelProgress(0))<1e-12&&Math.abs(rhythmProjectTravelProgress(1)-1)<1e-12&&far>0&&near/far>2&&near/far<5);
   check('手前の移動量は奥の1.6倍以上で迫り感を保つ',near/far>=1.6);
 }
 check('TAP・HOLD・FLICK・SLIDE端点が共通projectionを使用',source.includes('const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,slideTravel?.chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio,slideTravel?.chartNowMs)')&&source.includes('span=rhythmProjectSlideSpan(Number(point.lane),note,yRatio,point.timeMs)')&&source.includes('const bodyTopY=centerY-height;')&&source.includes('const yRatioAt=rhythmClamp01((bodyTopY+height*ratio)/rect.height);')
