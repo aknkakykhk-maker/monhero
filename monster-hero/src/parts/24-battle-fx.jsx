@@ -103,7 +103,9 @@ const THEMED_ATTACK_BITS = Object.freeze({
     {x:-12,a:28,d:235},{x:0,a:28,d:245},{x:12,a:28,d:255},
     {x:-12,a:-28,d:295},{x:0,a:-28,d:305},{x:12,a:-28,d:315},
     {x:-12,a:62,d:355},{x:0,a:62,d:365},{x:12,a:62,d:375},
-  ] },
+  ],
+            // 角からの雷撃が当たったときの火花
+            hit2:[{x:-34,y:-20},{x:-14,y:-40},{x:16,y:-38},{x:36,y:-14},{x:-28,y:18},{x:26,y:22}] },
   punch:  { hit:[{x:-10,y:-8,d:186,s:.7},{x:-22,y:-20,d:196,s:.4},
                  {x:6,y:0,d:314,s:1.7},{x:30,y:-22,d:330,s:.8},{x:-24,y:-28,d:340,s:.7},{x:22,y:24,d:350,s:.6}] },
   magic:  { fly:[{x:-10,y:-40,d:120},{x:12,y:-56,d:175},{x:-4,y:-30,d:230}], hit:[{x:-26,y:-18},{x:24,y:-22},{x:-20,y:20},{x:26,y:16},{x:0,y:-30}] },
@@ -113,7 +115,7 @@ const THEMED_ATTACK_BITS = Object.freeze({
   fire:   { fly:[{x:-8,y:-6,d:130},{x:10,y:6,d:170},{x:-12,y:10,d:210},{x:6,y:-10,d:250},{x:-4,y:4,d:290},{x:12,y:-4,d:330}],
             hit:[{x:-30,y:-26,d:230},{x:26,y:-30,d:280},{x:-22,y:22,d:330},{x:30,y:14,d:380}] },
 });
-const THEMED_ATTACK_LINE_KINDS = Object.freeze(['beam','vine','stomp','fire']);
+const THEMED_ATTACK_LINE_KINDS = Object.freeze(['beam','vine','stomp','fire','claw']);
 const ThemedAttackBits = ({list}) => (list||[]).map((b,i)=>(
   <i key={i} className="thm-atk__bit" style={{'--bx':`${b.x||0}px`,'--by':`${b.y||0}px`,'--ba':`${b.a||0}deg`,'--bs':b.s||1,...(b.d!=null?{animationDelay:`${b.d}ms`}:{})}}/>
 ));

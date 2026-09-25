@@ -171,11 +171,18 @@ const tacticsEnemyActionIds = (enemyId, difficulty) => {
   const extra = TACTICS_EXTRA_ACTION_ORDER.filter(id => !base.includes(id));
   return [...base, ...extra.slice(0, want - base.length)];
 };
+// 必殺技が全体技になる敵(2026-09-25 ユーザー指示「ムーの必殺技は全体技に変更しよう」)。
+// 威力は1体あたりいままでの必殺技と同じ(×2.5)のまま、立っている全員へ同時に当たる。
+// 当たる相手は全体攻撃と同じく targetsAll を見て tacticsIntentTargets が数える
+const TACTICS_ALL_TARGET_SPECIAL_ENEMY_IDS = Object.freeze(['AwakenedMoo']);
 const tacticsActionDefinitions = (enemyId, difficulty) => {
   const own = tacticsEnemyActionIds(enemyId, difficulty);
   // 貫通撃は構えとセットで持たせる。構えが無いと、貫通撃は一生出てこない(weight 0 のため)
   const ids = [...TACTICS_BASE_ACTION_IDS, ...own, ...(own.includes('pierce') ? ['pierceCharge'] : [])];
-  return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id));
+  const allTargetSpecial = TACTICS_ALL_TARGET_SPECIAL_ENEMY_IDS.includes(enemyId);
+  return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id)).map(def => (allTargetSpecial && def.id === 'special')
+    ? { ...def, targetsAll:true, noticeLabel:'全体必殺技', range:'全員', condition:'ためた次のターンに必ず発動。立っている全員へ同時に当たる' }
+    : def);
 };
 // そのモード・その敵が使う行動表。新モード以外は今までどおりの1つの表を返す
 const enemyActionDefinitionsFor = (mode, enemyId, difficulty) => (typeof isTacticsMode === 'function' && isTacticsMode(mode))
@@ -288,7 +295,8 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
       value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),
       icon:TACTICS_VARIANT_ICONS[selected.variant]||ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
   }
-  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
+  // ★必殺技も全体技のことがある(覚醒ムー)。狙いは全体攻撃と同じく「立っている全員」
+  return {type:selected.type,...(selected.targetsAll?{targetsAll:true}:{}),value:Math.floor(ent.atk*selected.multiplier),label:enemyActionDisplayName(ent,selected),icon:ENEMY_ACTION_ICONS[selected.type]||'⏳',notice:enemyActionNoticeLabel(selected),category:selected.category,actionId:selected.id};
 };
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
