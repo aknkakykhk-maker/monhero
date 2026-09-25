@@ -447,12 +447,9 @@ function MonsterHeroGame() {
     setScreenShake(false); setBigShake(false);
     requestAnimationFrame(() => { setScreenShake(true); setBigShake(big); setTimeout(()=>{setScreenShake(false); setBigShake(false);}, big?750:450); });
   }, []);
-  const [ripples, setRipples] = useState([]);
-  const spawnRipple = useCallback((x, y) => {
-    const id = Date.now() + Math.random();
-    setRipples(prev => [...prev, { id, x, y }]);
-    setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 650);
-  }, []);
+  // 波紋の一覧は TapRippleLayer だけが持つ(波紋が出たり消えたりするたびに、ここを丸ごと描き直さない)
+  const rippleSpawnRef = useRef(null);
+  const spawnRipple = useCallback((x, y) => { if (rippleSpawnRef.current) rippleSpawnRef.current(x, y); }, []);
   // タップ中(押している間)は指を離すまでスライドしても波紋が付いてくるようにする。
   // 動くたびに出すと出過ぎるので、時間と距離の両方で間引く
   // 自前で画面を回しているときだけ、いちばん外の箱へ掛けるCSSが返る(ふだんは null)
@@ -949,6 +946,10 @@ function MonsterHeroGame() {
   const [attackAnim, setAttackAnim] = useState(null); // {slotIndex}
   const [slotSkill, setSlotSkill] = useState(null); // {slotIndex, name, type} スロット上の技名インライン表示
   const [dragState, setDragState] = useState(null); // {cardIndex, x, y, active, card} カードドラッグ
+  // 引きずっているあいだの指の位置。動くたびに state を更新すると画面全体(予測の計算も)が
+  // 描き直されるので、位置はここへ入れてカード1枚の left/top だけを直接動かす。
+  // 描き直しが起きたときもここから読むので、カードが古い位置へ戻らない
+  const dragPosRef = useRef(null);
   const cardDragActiveRef = useRef(false); // 閾値を越えたあと始点へ戻っても、スワイプ成立を保持する
   const suppressCardClickRef = useRef(0); // pointerup後にブラウザが合成するclickを捕捉して捨てる期限
   const [dragOverSlot, setDragOverSlot] = useState(null); // ドラッグ中にホバーしているスロット
@@ -4539,6 +4540,9 @@ function MonsterHeroGame() {
     if(!dragState) return;
     const DRAG_THRESHOLD=10;
     const startX=dragState.x, startY=dragState.y;
+    dragPosRef.current={x:startX,y:startY};
+    // 画面へ出している active。これが変わるとき(引きずり始め)だけ state を更新する
+    let shownActive=!!dragState.active;
     const findSlot=(x,y)=>{
       const el=document.elementFromPoint(x,y);
       if(!el) return null;
@@ -4551,7 +4555,14 @@ function MonsterHeroGame() {
       const moved=Math.hypot(x-startX,y-startY);
       if(moved>=DRAG_THRESHOLD) cardDragActiveRef.current=true;
       const active=cardDragActiveRef.current;
-      setDragState(prev=>prev?{...prev,x,y,active}:null);
+      dragPosRef.current={x,y};
+      if(active!==shownActive){
+        shownActive=active;
+        setDragState(prev=>prev?{...prev,x,y,active}:null);
+      } else if(active){
+        const el=document.querySelector('[data-dragging-card]');
+        if(el){ el.style.left=`${x}px`; el.style.top=`${y}px`; }
+      }
       if(active){ setDragOverSlot(findSlot(x,y)); }
       if(active&&e.cancelable) e.preventDefault();
     };
@@ -4583,6 +4594,7 @@ function MonsterHeroGame() {
       window.removeEventListener('pointermove',onMove);
       window.removeEventListener('pointerup',onUp);
       window.removeEventListener('pointercancel',onUp);
+      dragPosRef.current=null;
     };
   }, [dragState?.cardIndex]);
 
@@ -13396,11 +13408,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
     <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF'||battleFxLoad==='LIGHT'||battleFxLoad==='MINIMAL')?'calm':'rich'} data-fx-level={battleFxLoad} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
-      <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
-        {ripples.map(r=>(
-          <span key={r.id} style={{position:'absolute',left:r.x,top:r.y,width:'48px',height:'48px',marginLeft:'-24px',marginTop:'-24px',borderRadius:'9999px',border:'2px solid rgba(255,255,255,0.9)',boxShadow:'0 0 10px rgba(255,255,255,0.6)',transformOrigin:'center',animation:'mhRipple 550ms ease-out forwards'}}/>
-        ))}
-      </div>
+      <TapRippleLayer spawnRef={rippleSpawnRef}/>
       {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
@@ -16783,7 +16791,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             cardNeedsMonster={cardNeedsMonster} cycleActiveUniqueForSlot={cycleActiveUniqueForSlot}
             cycleBattleAuto={cycleBattleAuto} cycleBattleSpeed={cycleBattleSpeed} cycleEcoMode={cycleEcoMode}
             debugBattle={debugBattle} difficulty={difficulty} dismissQuickRhythmIntro={dismissQuickRhythmIntro}
-            distTotalBonus={distTotalBonus} dragOverSlot={dragOverSlot} dragState={dragState}
+            distTotalBonus={distTotalBonus} dragOverSlot={dragOverSlot} dragState={dragState&&dragPosRef.current?{...dragState,x:dragPosRef.current.x,y:dragPosRef.current.y}:dragState}
             ecoBattleView={ecoBattleView} ecoMode={ecoMode} effectiveMaxGuts={effectiveMaxGuts}
             effectiveMaxHp={effectiveMaxHp} enemy={enemy} enemyAttackAnim={enemyAttackAnim}
             enemyAttackFx={enemyAttackFx} enemyDist={enemyDist} enemyIntent={enemyIntent}

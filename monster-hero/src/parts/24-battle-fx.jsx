@@ -572,4 +572,26 @@ const BattleAttackMotionPreview = ({image, anim, compact=false, baseId=null}) =>
     </div>
   );
 };
-
+// タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない。
+// 波紋の一覧はこの部品だけが持つ。以前は本体(MonsterHeroGame)の state で、カードを引きずっている
+// あいだも波紋1つごとに画面全体を2回(出す・消す)描き直していた。本体は spawnRef.current(x, y) を呼ぶだけ
+const TapRippleLayer = ({ spawnRef }) => {
+  const [ripples, setRipples] = useState([]);
+  useEffect(() => {
+    const timers = new Set();
+    spawnRef.current = (x, y) => {
+      const id = Date.now() + Math.random();
+      setRipples(prev => [...prev, { id, x, y }]);
+      const timer = setTimeout(() => { timers.delete(timer); setRipples(prev => prev.filter(r => r.id !== id)); }, 650);
+      timers.add(timer);
+    };
+    return () => { spawnRef.current = null; timers.forEach(clearTimeout); };
+  }, [spawnRef]);
+  return (
+      <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
+        {ripples.map(r=>(
+          <span key={r.id} style={{position:'absolute',left:r.x,top:r.y,width:'48px',height:'48px',marginLeft:'-24px',marginTop:'-24px',borderRadius:'9999px',border:'2px solid rgba(255,255,255,0.9)',boxShadow:'0 0 10px rgba(255,255,255,0.6)',transformOrigin:'center',animation:'mhRipple 550ms ease-out forwards'}}/>
+        ))}
+      </div>
+  );
+};
