@@ -95,12 +95,17 @@ try {
   try { published = execFileSync('git', ['show', 'origin/main:monster-hero/data/changelog.js'],
     { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }); } catch {}
   const drift = [];
-  for (const m2 of changelog.matchAll(/date: "([^"]+)"[^\n]*?title:'((?:[^'\\]|\\.)*)'/g)) {
-    const real = timeOf.get(m2[2]);
+  for (const m2 of changelog.matchAll(/(date: "([^"]+)"[^\n]*?)title:'((?:[^'\\]|\\.)*)'/g)) {
+    const [, head, date, title] = m2;
+    const real = timeOf.get(title);
     if (!real) continue;
-    if (published && published.includes(`title:'${m2[2]}'`)) continue;
-    const gap = Math.abs(new Date(`${m2[1]}:00`) - new Date(`${real}:00`)) / 3600000;
-    if (gap >= 1) drift.push(`${m2[1]}(実際 ${real}) ${m2[2].slice(0, 20)}`);
+    if (published && published.includes(`title:'${title}'`)) continue;
+    // ★公開済みの項目のタイトルを直しただけのもの(CLAUDE.md ⑤「前に書いたお知らせも直す」)は、
+    //   タイトルで見分けると「新しく書いた項目」に見えてしまう。日時・種類・話題まで同じ行が
+    //   公開済みにあれば、それは前からある項目なので照合しない(2026-09-26 に踏んだ)
+    if (published && published.includes(head)) continue;
+    const gap = Math.abs(new Date(`${date}:00`) - new Date(`${real}:00`)) / 3600000;
+    if (gap >= 1) drift.push(`${date}(実際 ${real}) ${title.slice(0, 20)}`);
   }
   check('日時が実際のコミット時刻と合っている', drift.length === 0,
     `${drift.length}件${drift.length ? `(例: ${drift[0]})` : ''}`);
