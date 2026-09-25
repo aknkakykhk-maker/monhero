@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0bc1bffb7cc4a46a
+// source-sha256: 1895dbdb1eea0f85
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6599fa5d462fcd6e
+// generated-sha256: bcdd591cd19bd9d4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -262,7 +262,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-25 21:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 22:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -34032,7 +34032,7 @@ function RhythmSongSelectScreen({
     },
     footer: song => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       "data-rhythm-play-modes": true,
-      className: "mt-1.5 grid grid-cols-2 gap-1.5"
+      className: "mt-1.5 grid grid-cols-3 gap-1.5"
     }, [['assistMode', '🛟 アシスト', 'border-emerald-300 bg-emerald-600/80 text-white'], ['mirrorChart', '↔ ミラー譜面', 'border-sky-300 bg-sky-600/80 text-white']].map(([key, label, on]) => {
       const active = !!(rhythmSettings && rhythmSettings[key]);
       return /*#__PURE__*/React.createElement("button", {
@@ -34041,16 +34041,21 @@ function RhythmSongSelectScreen({
         "data-rhythm-play-mode-toggle": key,
         "aria-pressed": active,
         onClick: () => onToggleRhythmSetting && onToggleRhythmSetting(key),
-        className: `min-h-[44px] rounded-xl border text-[11px] font-black ${active ? on : 'border-white/15 bg-slate-900/80 text-slate-300'}`
-      }, label, "\uFF1A", active ? 'ON' : 'OFF');
-    })), rhythmSettings && rhythmSettings.assistMode && /*#__PURE__*/React.createElement("p", {
-      "data-rhythm-assist-note": true,
-      className: "mt-1 text-[9px] font-bold leading-relaxed text-emerald-200"
-    }, "\u30A2\u30B7\u30B9\u30C8ON\uFF1A\u30D5\u30EA\u30C3\u30AF\u306F\u30BF\u30C3\u30D7\u3060\u3051\u3067\u53D6\u308C\u3066\u3001\u30B3\u30F3\u30DC\u304C\u5207\u308C\u305D\u3046\u306A\u3068\u304D\u306F\u30AC\u30FC\u30C9\u304C\u5B88\u308A\u307E\u3059\u3002\u30B9\u30B3\u30A2\u306F8\u5272\u306B\u306A\u308A\u3001\u81EA\u5DF1\u30D9\u30B9\u30C8\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u306B\u306F\u6B8B\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
+        className: `min-h-[44px] rounded-xl border px-1 text-[11px] font-black leading-tight ${active ? on : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+      }, label, /*#__PURE__*/React.createElement("span", {
+        className: "block text-[10px]"
+      }, active ? 'ON' : 'OFF'));
+    }), /*#__PURE__*/React.createElement("button", {
       "data-rhythm-demo-ranking": true,
       onClick: () => onOpenRanking(song),
-      className: "mt-1.5 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100"
-    }, "\uD83C\uDFC6 \u3053\u306E\u66F2\u306E\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0"))
+      "aria-label": "\u3053\u306E\u66F2\u306E\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0",
+      className: "min-h-[44px] rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"
+    }, "\uD83C\uDFC6 \u5168\u56FD", /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, "\u30E9\u30F3\u30AD\u30F3\u30B0"))), rhythmSettings && rhythmSettings.assistMode && /*#__PURE__*/React.createElement("p", {
+      "data-rhythm-assist-note": true,
+      className: "mt-1 text-[9px] font-bold leading-snug text-emerald-200"
+    }, "\u30A2\u30B7\u30B9\u30C8ON\uFF1A\u30D5\u30EA\u30C3\u30AF\u306F\u30BF\u30C3\u30D7\u3067\u53D6\u308C\u3066\u3001\u30B3\u30F3\u30DC\u3092\u30AC\u30FC\u30C9\u304C\u5B88\u308A\u307E\u3059\u3002\u30B9\u30B3\u30A2\u306F8\u5272\u3067\u3001\u81EA\u5DF1\u30D9\u30B9\u30C8\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u306B\u306F\u6B8B\u308A\u307E\u305B\u3093\u3002"))
   }));
 }
 function RhythmHelpScreen({

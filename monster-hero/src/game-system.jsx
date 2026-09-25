@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6599fa5d462fcd6e
+// generated-sha256: bcdd591cd19bd9d4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -145,7 +145,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-25 21:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 22:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19993,21 +19993,23 @@ function RhythmSongSelectScreen({
           footer={song=><>
             {/* アシストモードとミラー譜面は、アワーノーツと同じく「遊ぶ前にその場で」切り替えられるようにする
                 (2026-09-24)。オプションの「ライブ」にも同じ設定があり、どちらで変えても同じ値が保存される */}
-            <div data-rhythm-play-modes className="mt-1.5 grid grid-cols-2 gap-1.5">
+            {/* アシスト・ミラー・全国ランキングは1行に3つ並べる。2行に分けていたら縦画面で曲が2曲しか
+                見えなくなった(2026-09-25・ユーザー指摘「曲選択画面が狭くなっちゃってる」)。
+                全国ランキングは曲ごとなので、いま選んでいる曲のぶんを開く。
+                ここにあったマスモンの説明文は外した。同じ内容が「📖 遊びかた」にあり、
+                曲えらびでは1行でも多く曲を並べたいため
+                (2026-09-05・ユーザー指摘「縦画面の楽曲選択が2曲までしか出ないのがやりづらい」)。 */}
+            <div data-rhythm-play-modes className="mt-1.5 grid grid-cols-3 gap-1.5">
               {[['assistMode','🛟 アシスト','border-emerald-300 bg-emerald-600/80 text-white'],['mirrorChart','↔ ミラー譜面','border-sky-300 bg-sky-600/80 text-white']].map(([key,label,on])=>{
                 const active=!!(rhythmSettings&&rhythmSettings[key]);
                 return <button key={key} type="button" data-rhythm-play-mode-toggle={key} aria-pressed={active}
                   onClick={()=>onToggleRhythmSetting&&onToggleRhythmSetting(key)}
-                  className={`min-h-[44px] rounded-xl border text-[11px] font-black ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}>{label}：{active?'ON':'OFF'}</button>;
+                  className={`min-h-[44px] rounded-xl border px-1 text-[11px] font-black leading-tight ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}>{label}<span className="block text-[10px]">{active?'ON':'OFF'}</span></button>;
               })}
+              <button data-rhythm-demo-ranking onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング"
+                className="min-h-[44px] rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100">🏆 全国<span className="block">ランキング</span></button>
             </div>
-            {rhythmSettings&&rhythmSettings.assistMode&&<p data-rhythm-assist-note className="mt-1 text-[9px] font-bold leading-relaxed text-emerald-200">アシストON：フリックはタップだけで取れて、コンボが切れそうなときはガードが守ります。スコアは8割になり、自己ベスト・ランキングには残りません。</p>}
-            {/* 全国ランキングは曲ごとなので、いま選んでいる曲のぶんを開く。
-                ここにあったマスモンの説明文は外した。同じ内容が「📖 遊びかた」にあり、
-                曲えらびでは1行でも多く曲を並べたいため
-                (2026-09-05・ユーザー指摘「縦画面の楽曲選択が2曲までしか出ないのがやりづらい」)。 */}
-            <button data-rhythm-demo-ranking onClick={()=>onOpenRanking(song)}
-              className="mt-1.5 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100">🏆 この曲の全国ランキング</button>
+            {rhythmSettings&&rhythmSettings.assistMode&&<p data-rhythm-assist-note className="mt-1 text-[9px] font-bold leading-snug text-emerald-200">アシストON：フリックはタップで取れて、コンボをガードが守ります。スコアは8割で、自己ベスト・ランキングには残りません。</p>}
           </>}/>
       </main>
       );
