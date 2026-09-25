@@ -2113,7 +2113,7 @@ function BattleScreen({
               const tutorialAllowed=battleTutorialCardAllowed(c);
               // 光らせるのは「いま触ってほしい種類」だけ。技変更の番は名前のところも光らせる
               const tutorialTargeted=!!battleTutorialCardTarget&&battleTutorialCardKind(c)===battleTutorialCardTarget;
-              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex"><button data-hand-card={i} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
+              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex"><button data-hand-card={i} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
                 if(isBusy||autoBattleRef.current||!tutorialAllowed)return;
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;

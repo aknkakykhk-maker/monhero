@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6484d0a7d67259bb
+// source-sha256: ead5f7fc563dfc81
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -228,7 +228,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 01:26";
+const BUILD_DATE = "2026-09-26 03:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17018,6 +17018,56 @@ const BattleAttackMotionPreview = ({
     "aria-hidden": "true"
   }, React.createElement(AttackTargetFx, {
     anim: anim
+  })));
+};
+const TapRippleLayer = ({
+  spawnRef
+}) => {
+  const [ripples, setRipples] = useState([]);
+  useEffect(() => {
+    const timers = new Set();
+    spawnRef.current = (x, y) => {
+      const id = Date.now() + Math.random();
+      setRipples(prev => [...prev, {
+        id,
+        x,
+        y
+      }]);
+      const timer = setTimeout(() => {
+        timers.delete(timer);
+        setRipples(prev => prev.filter(r => r.id !== id));
+      }, 650);
+      timers.add(timer);
+    };
+    return () => {
+      spawnRef.current = null;
+      timers.forEach(clearTimeout);
+    };
+  }, [spawnRef]);
+  return React.createElement("div", {
+    style: {
+      position: 'absolute',
+      inset: 0,
+      pointerEvents: 'none',
+      zIndex: 2147483647,
+      overflow: 'hidden'
+    }
+  }, ripples.map(r => React.createElement("span", {
+    key: r.id,
+    style: {
+      position: 'absolute',
+      left: r.x,
+      top: r.y,
+      width: '48px',
+      height: '48px',
+      marginLeft: '-24px',
+      marginTop: '-24px',
+      borderRadius: '9999px',
+      border: '2px solid rgba(255,255,255,0.9)',
+      boxShadow: '0 0 10px rgba(255,255,255,0.6)',
+      transformOrigin: 'center',
+      animation: 'mhRipple 550ms ease-out forwards'
+    }
   })));
 };
 const _memStore = {};
@@ -39520,6 +39570,7 @@ function BattleScreen({
       className: "relative flex-1 min-w-0 max-w-[20%] flex"
     }, React.createElement("button", {
       "data-hand-card": i,
+      "data-dragging-card": isDragging ? 'true' : undefined,
       "data-card-cost": requiredGuts,
       "data-card-type": c.type,
       "data-card-usable": isSelectable ? 'true' : 'false',
@@ -41934,15 +41985,9 @@ function MonsterHeroGame() {
       }, big ? 750 : 450);
     });
   }, []);
-  const [ripples, setRipples] = useState([]);
+  const rippleSpawnRef = useRef(null);
   const spawnRipple = useCallback((x, y) => {
-    const id = Date.now() + Math.random();
-    setRipples(prev => [...prev, {
-      id,
-      x,
-      y
-    }]);
-    setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 650);
+    if (rippleSpawnRef.current) rippleSpawnRef.current(x, y);
   }, []);
   const forcedRotationStyle = useRhythmForcedRotationStyle();
   const rippleDragRef = useRef(false);
@@ -42278,6 +42323,7 @@ function MonsterHeroGame() {
   const [attackAnim, setAttackAnim] = useState(null);
   const [slotSkill, setSlotSkill] = useState(null);
   const [dragState, setDragState] = useState(null);
+  const dragPosRef = useRef(null);
   const cardDragActiveRef = useRef(false);
   const suppressCardClickRef = useRef(0);
   const [dragOverSlot, setDragOverSlot] = useState(null);
@@ -45813,6 +45859,11 @@ function MonsterHeroGame() {
     const DRAG_THRESHOLD = 10;
     const startX = dragState.x,
       startY = dragState.y;
+    dragPosRef.current = {
+      x: startX,
+      y: startY
+    };
+    let shownActive = !!dragState.active;
     const findSlot = (x, y) => {
       const el = document.elementFromPoint(x, y);
       if (!el) return null;
@@ -45826,12 +45877,25 @@ function MonsterHeroGame() {
       const moved = Math.hypot(x - startX, y - startY);
       if (moved >= DRAG_THRESHOLD) cardDragActiveRef.current = true;
       const active = cardDragActiveRef.current;
-      setDragState(prev => prev ? {
-        ...prev,
+      dragPosRef.current = {
         x,
-        y,
-        active
-      } : null);
+        y
+      };
+      if (active !== shownActive) {
+        shownActive = active;
+        setDragState(prev => prev ? {
+          ...prev,
+          x,
+          y,
+          active
+        } : null);
+      } else if (active) {
+        const el = document.querySelector('[data-dragging-card]');
+        if (el) {
+          el.style.left = `${x}px`;
+          el.style.top = `${y}px`;
+        }
+      }
       if (active) {
         setDragOverSlot(findSlot(x, y));
       }
@@ -45868,6 +45932,7 @@ function MonsterHeroGame() {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
+      dragPosRef.current = null;
     };
   }, [dragState?.cardIndex]);
   const bootTapPending = useRef(false);
@@ -57117,31 +57182,9 @@ function MonsterHeroGame() {
       style: forcedRotationStyle || {
         height: '100%'
       }
-    }, React.createElement("div", {
-      style: {
-        position: 'absolute',
-        inset: 0,
-        pointerEvents: 'none',
-        zIndex: 2147483647,
-        overflow: 'hidden'
-      }
-    }, ripples.map(r => React.createElement("span", {
-      key: r.id,
-      style: {
-        position: 'absolute',
-        left: r.x,
-        top: r.y,
-        width: '48px',
-        height: '48px',
-        marginLeft: '-24px',
-        marginTop: '-24px',
-        borderRadius: '9999px',
-        border: '2px solid rgba(255,255,255,0.9)',
-        boxShadow: '0 0 10px rgba(255,255,255,0.6)',
-        transformOrigin: 'center',
-        animation: 'mhRipple 550ms ease-out forwards'
-      }
-    }))), updateNotice, storageTroubleNotice, showAutoBgmPicker && isRunStage(gameState) && React.createElement("div", {
+    }, React.createElement(TapRippleLayer, {
+      spawnRef: rippleSpawnRef
+    }), updateNotice, storageTroubleNotice, showAutoBgmPicker && isRunStage(gameState) && React.createElement("div", {
       "data-auto-bgm-picker": true,
       className: "fixed inset-0 flex items-end justify-center bg-black/55 p-3",
       style: {
@@ -64927,7 +64970,11 @@ function MonsterHeroGame() {
       dismissQuickRhythmIntro: dismissQuickRhythmIntro,
       distTotalBonus: distTotalBonus,
       dragOverSlot: dragOverSlot,
-      dragState: dragState,
+      dragState: dragState && dragPosRef.current ? {
+        ...dragState,
+        x: dragPosRef.current.x,
+        y: dragPosRef.current.y
+      } : dragState,
       ecoBattleView: ecoBattleView,
       ecoMode: ecoMode,
       effectiveMaxGuts: effectiveMaxGuts,
