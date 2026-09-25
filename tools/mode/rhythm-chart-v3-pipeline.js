@@ -26,6 +26,7 @@ const fs=require('fs');
 const path=require('path');
 const {spawnSync}=require('child_process');
 const {criticalWarnings,formatWarnings}=require('./rhythm-audio-warnings.js');
+const {SLIDE_EASE_CODES}=require('./rhythm-runtime-notes.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -157,7 +158,8 @@ const runtimeRow=note=>{
   const timeMs=gridTimeMs(note.grid);
   const endFlick=note.endFlick===true?',1':'';
   if(note.type==='SLIDE'){
-    const points=note.slidePoints.map(p=>`[${gridTimeMs(p.grid)},${p.lane},${p.subLaneWidth}]`).join(',');
+    // 4つ目は曲線の番号(1=in・2=out・3=inout。版3)。直線の点は今までどおり3つだけ書く
+    const points=note.slidePoints.map(p=>{const ease=SLIDE_EASE_CODES.indexOf(p.ease);return `[${gridTimeMs(p.grid)},${p.lane},${p.subLaneWidth}${ease>0?`,${ease}`:''}]`;}).join(',');
     return `s(${timeMs},${gridTimeMs(note.grid+note.durationGrids)},[${points}]${endFlick})`;
   }
   if(note.type==='HOLD'){
