@@ -4,17 +4,17 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   node tools/battle/card-drag-browser-check.js
 //
 // 【なぜ要るか】
-// 引きずっているあいだ、以前は指が動くたびに state を更新して画面全体(ダメージ予測の計算も)を
-// 描き直していた(1秒に60〜120回)。2026-09-26 から、位置は ref に持ってカード1枚の left/top だけを
-// 直接動かし、state を変えるのは「引きずり始め・置き先の枠が変わった・離した」ときだけにした。
-// この形は、作りを間違えると「カードが一瞬前の位置へ戻る」「離しても置かれない」になり、
-// 例外も出ないので静的な検査では拾えない。ここで実際に引きずって見張る。
+// 2026-09-26 に、引きずっているあいだは state を変えずにカード1枚の left/top だけを直接動かす形を試した。
+// パソコン相当のブラウザでは問題なかったが、iPhone の Safari では手札の欄の backdrop-filter が
+// position:fixed の基準を変え、カードが指についてこず、下から別の位置のカードが追いかけてくる表示になった
+// (ユーザーの画面録画で確認)。元の「動くたびに state で描く」形へ戻してある。
+// 指についてくる・置ける・押すだけなら選ぶ、は壊れても例外が出ないので、ここで実際に引きずって見張る。
+// ⚠️ この道具は Chromium で動くので、Safari だけで起きるずれは拾えない。引きずりの作りを変えたら実機で確かめる。
 //
 // 見るもの:
 //   ・少し動かすと引きずり始める(カードが指についてくる)
 //   ・どこへ動かしても、カードの位置が指の位置と一致している
 //   ・置き先の枠が光って画面が描き直されても、カードが古い位置へ戻らない
-//   ・動かしているあいだに画面全体の描き直しが起きすぎない(以前の作りなら動かした回数ぶん起きる)
 //   ・枠の上で離すとカードが置かれ、引きずりの表示が消える
 //   ・動かさずに押して離したときは、今までどおり「選ぶ」になる
 const http = require('http');
@@ -57,15 +57,6 @@ const check = (name, ok, detail = '') => {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     page.on('pageerror', (e) => errors.push(String(e)));
-    // React が画面を描き終えた回数を数える(開発者ツールの差し込み口を借りる。本番の React も呼ぶ)
-    await page.addInitScript(() => {
-      window.__mhCommits = 0;
-      window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
-        supportsFiber: true, isDisabled: false, renderers: new Map(),
-        inject() { return 1; }, checkDCE() {},
-        onCommitFiberRoot() { window.__mhCommits += 1; }, onCommitFiberUnmount() {}, onPostCommitFiberRoot() {},
-      };
-    });
     await page.addInitScript(() => {
       localStorage.setItem('mh_breeder_name', JSON.stringify('検査ブリーダー'));
       localStorage.setItem('mh_breeder_icon', JSON.stringify('🐣'));
@@ -165,7 +156,6 @@ const check = (name, ok, detail = '') => {
     check('しきい値を超えると引きずり始める', !!first && first.fixed, JSON.stringify(first));
     check('引きずり始めた位置が指と一致する', !!first && Math.abs(first.left - (start.x + 20)) < 1 && Math.abs(first.top - (start.y - 30)) < 1,
       JSON.stringify(first));
-    const commitsBefore = await page.evaluate(() => window.__mhCommits);
     // 枠の外を小刻みに動かす(置き先が変わらないので、描き直しは要らない場面)
     let worst = 0;
     for (let k = 1; k <= 20; k += 1) {
@@ -177,10 +167,6 @@ const check = (name, ok, detail = '') => {
       else worst = Infinity;
     }
     check('動かしているあいだカードが指についてくる', worst < 1, `最大のずれ ${worst}px`);
-    const commits = await page.evaluate((n) => window.__mhCommits - n, commitsBefore);
-    // 以前の作りでは20回動かすと20回以上描き直していた。指の波紋(小さな部品だけの描き直し)や
-    // 敵の動きなど、別の理由の描き直しは少し入るので、上限は動かした回数の半分にしてある
-    check('置き先が変わらないあいだは、動かすたびに画面全体を描き直さない', commits <= 10, `20回動かして ${commits}回`);
     // 枠の上へ(置き先が光る = 画面の描き直しが起きる)。描き直しのあとも位置が戻らない
     const steps = 8;
     for (let k = 1; k <= steps; k += 1) {
