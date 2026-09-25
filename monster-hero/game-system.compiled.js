@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4ce9c8d1fb2fd35b
+// source-sha256: 0bc1bffb7cc4a46a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7f9e3f011c5dd2aa
+// generated-sha256: 6599fa5d462fcd6e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -262,7 +262,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-25 20:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 21:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24586,7 +24586,7 @@ const RhythmOptions = ({
     suffix: '%'
   }), 'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。', {
     full: true
-  }), field('アシストモード', toggle('assistMode'), 'リズムゲームが苦手でも気軽に遊べるモードです（バンドリ！アワーノーツのアシストモードを見習いました）。既定はOFFです。ONにすると、フリックはタップするだけで取れ、ホールド・スライドの終わりのフリックも離すだけでよくなります。BAD・MISSでコンボが切れそうなときは「コンボガード」が代わりに受け止めます（最大3回ぶん。コンボをつなぐと少しずつたまり、崩れているときほど早くたまります）。そのかわりスコアは8割になり、FULL COMBO などの称号は付かず、自己ベスト・全国ランキング・ビートPには残りません。曲えらびの「🛟 アシスト」でも切り替えられます。'), field('ミラー譜面', toggle('mirrorChart'), '譜面を左右反対にして遊びます（バンドリ！アワーノーツなどにある設定です）。既定はOFFです。同じ曲でも手の動きが変わるので、苦手な配置の練習や気分転換に使えます。判定・スコア・記録はふだんどおりです。曲えらびの「↔ ミラー譜面」でも切り替えられます。'), field('ラッキーラッシュ', toggle('luckyRush'), 'うまく叩くと、経過時間の下の🍀ゲージがたまり、満タンで抽選します（バンドリ！アワーノーツの「LUCK撃奏」を見習いました）。当たると「LUCKY RUSH!!」になり、しばらくのあいだ画面のふちが金色に光って、ゲージが2倍の速さでたまり、次の抽選も当たりやすくなります。抽選のたびにラッキーptが入り、曲の終わりにおまけのビートPになります（1曲で最大10P。イベントを開いていない期間は1/5。アシストモードでは入りません）。スコア・判定・ランキングには関わりません。既定はONです。'), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだは COMBO の下に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、レーンの右のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+  }), field('アシストモード', toggle('assistMode'), 'リズムゲームが苦手でも気軽に遊べるモードです（バンドリ！アワーノーツのアシストモードを見習いました）。既定はOFFです。ONにすると、フリックはタップするだけで取れ、ホールド・スライドの終わりのフリックも離すだけでよくなります。BAD・MISSでコンボが切れそうなときは「コンボガード」が代わりに受け止めます（最大3回ぶん。コンボをつなぐと少しずつたまり、崩れているときほど早くたまります）。そのかわりスコアは8割になり、FULL COMBO などの称号は付かず、自己ベスト・全国ランキング・ビートPには残りません。曲えらびの「🛟 アシスト」でも切り替えられます。'), field('ミラー譜面', toggle('mirrorChart'), '譜面を左右反対にして遊びます（バンドリ！アワーノーツなどにある設定です）。既定はOFFです。同じ曲でも手の動きが変わるので、苦手な配置の練習や気分転換に使えます。判定・スコア・記録はふだんどおりです。曲えらびの「↔ ミラー譜面」でも切り替えられます。'), field('ラッキーラッシュ', toggle('luckyRush'), 'うまく叩くと、経過時間の下の🍀ゲージがたまり、満タンで抽選します（バンドリ！アワーノーツの「LUCK撃奏」を見習いました）。当たると「LUCKY RUSH!!」になり、しばらくのあいだ画面のふちが金色に光って、ゲージが2倍の速さでたまり、次の抽選も当たりやすくなります。抽選のたびにラッキーptが入り、曲の終わりにおまけのビートPになります（1曲で最大10P。イベントを開いていない期間は1/5。アシストモードでは入りません）。スコア・判定・ランキングには関わりません。既定はONです。'), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだはコンボ数のすぐ上に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、レーンの左のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
   }), field('コンボ数', /*#__PURE__*/React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: wide ? 'mt-1.5' : 'mt-2'
@@ -26401,6 +26401,72 @@ const RhythmTapTest = ({
       if (mql.removeEventListener) mql.removeEventListener('change', onChange);else mql.removeListener?.(onChange);
     };
   }, []);
+  /* ===== 経過時間の箱の置き場所(2026-09-25) =====
+     縦持ちと「🔄 横」で回した横画面では、左上のスコア表示のすぐ下・レーンの左ふちへ寄せて置く。
+     右上に置いていたころは、ラッキーゲージと自己ベスト比が加わって縦に伸び、右上のコンボ数と重なっていた
+     (重なりを測る確認で見つかった)。左ならコンボ数・ライフ・ポーズ(どれも右)と離れ、自己ベスト比もスコアの近くになる。
+     ★高さは曲名の折り返しで変わるので、左上の表示の下端を実測して決める。横はレーンの台形のふちから決める。
+     ★縦持ち・横持ち・回した横画面のどれも同じ置き方にする */
+  const hudLeftRef = useRef(null);
+  const [clockPlace, setClockPlace] = useState(null);
+  // ★端末を横にした横画面も左へ置く。右上(ライフの下)のままだと、ゲージと自己ベスト比のぶん縦に伸びて、横持ちのコンボ数とレーンにかかった
+  const clockOnLeft = true;
+  useEffect(() => {
+    if (!clockOnLeft) {
+      setClockPlace(null);
+      return;
+    }
+    let frame = 0;
+    const measure = () => {
+      const area = playAreaRef.current,
+        hud = hudLeftRef.current;
+      if (!area || !hud) return;
+      const ar = RHYTHM_VIEW_ROTATION.rectOf(area),
+        hr = RHYTHM_VIEW_ROTATION.rectOf(hud);
+      if (!(ar && hr && ar.width > 0 && ar.height > 0)) return;
+      const top = Math.round(hr.bottom - ar.top + 8),
+        bottom = top + 44;
+      const laneLeft = ar.width / 2 - ar.width / 2 * rhythmProjectionScale(Math.min(1, bottom / ar.height));
+      const width = Math.max(60, Math.floor(laneLeft - 12 - 6));
+      setClockPlace(prev => prev && prev.top === top && prev.width === width ? prev : {
+        top,
+        width
+      });
+    };
+    measure();
+    frame = requestAnimationFrame(measure);
+    const later = setTimeout(measure, 400);
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(later);
+      window.removeEventListener('resize', measure);
+    };
+  }, [clockOnLeft, song.songId, view.status]);
+  /* 横持ちのライフゲージの長さの上限(2026-09-25)。ライフ表示を200%にすると、左はしのハートがレーンのふちに7pxほどかかっていた。
+     横持ちの器は「🔄 横」で回したときも端末の幅(vw)と合わないので、CSSの vw では決められない。器の幅を測って上限を渡す。
+     上限 = 器の幅×0.38 − 150px(ライフの行の右はしはポーズの手前、左はしはレーンの右ふち+8px。そこからハートと数字の幅を引いたもの) */
+  useEffect(() => {
+    const box = lifeBoxRef.current;
+    if (!box) return;
+    if (!isLandscape) {
+      box.style.removeProperty('--mh-life-track-max');
+      return;
+    }
+    const apply = () => {
+      const area = playAreaRef.current;
+      const ar = area ? RHYTHM_VIEW_ROTATION.rectOf(area) : null;
+      if (!(ar && ar.width > 0)) return;
+      box.style.setProperty('--mh-life-track-max', `${Math.max(60, Math.floor(ar.width * 0.38 - 150))}px`);
+    };
+    apply();
+    const later = setTimeout(apply, 400);
+    window.addEventListener('resize', apply);
+    return () => {
+      clearTimeout(later);
+      window.removeEventListener('resize', apply);
+    };
+  }, [isLandscape, view.status]);
   const stopFrame = useCallback(() => {
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     frameRef.current = null;
@@ -28462,6 +28528,7 @@ const RhythmTapTest = ({
     "data-rhythm-hud": true,
     className: "pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"
   }, /*#__PURE__*/React.createElement("div", {
+    ref: hudLeftRef,
     "data-rhythm-hud-left": true,
     className: "min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"
   }, /*#__PURE__*/React.createElement("div", {
@@ -28588,16 +28655,22 @@ const RhythmTapTest = ({
   }))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-song-clock": true,
     "data-clock-wide": isLandscape ? '1' : '',
+    "data-clock-side": clockOnLeft ? 'left' : 'right',
     "aria-hidden": "true",
     className: "pointer-events-none absolute z-30 flex flex-col items-start gap-1",
-    style: isLandscape ? {
+    style: clockOnLeft ? clockPlace ? {
+      left: '12px',
+      top: `${clockPlace.top}px`,
+      width: `${clockPlace.width}px`
+    } : {
+      left: '12px',
+      top: '110px',
+      width: '100px',
+      visibility: 'hidden'
+    } : {
       left: 'calc(64.5% + 4px)',
       top: '46px',
       width: 'max-content'
-    } : {
-      left: 'calc(64% + 4px)',
-      right: '12px',
-      top: '82px'
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex w-full min-w-0 items-center gap-1.5"
@@ -28748,7 +28821,7 @@ const RhythmTapTest = ({
     className: "mt-1 block font-black leading-none tracking-[0.36em]"
   }, "COMBO"), comboStatus && /*#__PURE__*/React.createElement("span", {
     "data-rhythm-combo-status-mark": comboStatus,
-    className: "mt-1 block font-black leading-none"
+    className: "block font-black leading-none"
   }, comboStatus === 'AM' ? 'ALL MARVELOUS' : 'FULL COMBO')), /*#__PURE__*/React.createElement("div", {
     ref: judgmentBandRef,
     "data-rhythm-judgment-band": true,
