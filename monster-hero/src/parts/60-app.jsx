@@ -3159,7 +3159,8 @@ function MonsterHeroGame() {
     pushAutoEnhanceLog(result.results);
   }, [masuMons, dataLoaded]);
 
-  const homePastureMasumons = homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]);
+  // 画面に関係なく毎回マスモン全体から探し直していたので、並びかマスモンが変わったときだけにする
+  const homePastureMasumons = useMemo(() => homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]), [homePastureIds, masuMons]);
   // セーブ読込後のタイトル中に、最初のHOMEで必ず使う画像だけを最優先で先読みする。
   // 完了をタイトル操作やHOME遷移の条件にはせず、失敗時も通常のimg読込へそのまま任せる。
   useEffect(() => {

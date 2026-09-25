@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4115ae31d1c84efb
+// source-sha256: 77a8d24b1982d064
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 05:54";
+const BUILD_DATE = "2026-09-26 06:10";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -8285,12 +8285,17 @@ const DyedMonsterImage = ({
   useEffect(() => {
     const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
     if (wanted.length === 0) {
-      setRecolored({});
+      setRecolored(prev => Object.keys(prev).length === 0 ? prev : {});
       return;
     }
     let cancelled = false;
     Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then(url => [_recoloredKey(idx, c), url]))).then(entries => {
-      if (!cancelled) setRecolored(Object.fromEntries(entries));
+      if (cancelled) return;
+      const next = Object.fromEntries(entries);
+      setRecolored(prev => {
+        const keys = Object.keys(next);
+        return keys.length === Object.keys(prev).length && keys.every(k => prev[k] === next[k]) ? prev : next;
+      });
     });
     return () => {
       cancelled = true;
@@ -36824,6 +36829,7 @@ const BossMovieLayer = ({
       timers.push(setTimeout(() => finish(true), BOSS_MOVIE_MAX_MS));
       timers.push(setTimeout(() => setCanSkip(true), 900));
       const tick = () => {
+        raf = 0;
         if (settled) return;
         const pos = Number.isFinite(el.currentTime) ? el.currentTime * 1000 : Date.now() - startWall;
         shakes.forEach(c => {
@@ -36831,9 +36837,9 @@ const BossMovieLayer = ({
           c.fired = true;
           if (shake) setShakeKey(k => k + 1);
         });
-        raf = requestAnimationFrame(tick);
+        if (shakes.some(c => !c.fired)) raf = requestAnimationFrame(tick);
       };
-      raf = requestAnimationFrame(tick);
+      if (shakes.length) raf = requestAnimationFrame(tick);
     };
     const onEnded = () => finish(true, true);
     const onError = () => finish(started);
@@ -44885,7 +44891,7 @@ function MonsterHeroGame() {
     setMasuMonDetail(prev => prev ? result.next.find(m => String(m.id) === String(prev.id)) || prev : prev);
     pushAutoEnhanceLog(result.results);
   }, [masuMons, dataLoaded]);
-  const homePastureMasumons = homePastureIds.map(id => masuMons.find(m => String(m.id) === String(id))).filter(m => m && ALL_PLAYER_MONSTERS[m.baseId]);
+  const homePastureMasumons = useMemo(() => homePastureIds.map(id => masuMons.find(m => String(m.id) === String(id))).filter(m => m && ALL_PLAYER_MONSTERS[m.baseId]), [homePastureIds, masuMons]);
   useEffect(() => {
     if (bootPhase !== 'TITLE' || !dataLoaded) return;
     const pastureUrls = homePastureMasumons.map(masu => {

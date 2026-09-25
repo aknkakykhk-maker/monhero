@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 18dbe76be102c230
+// generated-sha256: 3cad387b35e6763b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 05:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 06:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6195,12 +6195,21 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
   // 書き分けていないモンスターでは作る枚数はこれまでと変わらない
   useEffect(() => {
     const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
-    if (wanted.length === 0) { setRecolored({}); return; }
+    // 中身が同じなら前のものをそのまま使う(新しい空の箱を入れるたびに描き直しが1回増えていた。
+    // 待機の動きで部位ごとに絵を重ねる子は、その枚数ぶん増えていた)
+    if (wanted.length === 0) { setRecolored((prev) => (Object.keys(prev).length === 0 ? prev : {})); return; }
     let cancelled = false;
     // 濃さ(@NN)は重ねる透明度で出すので、作る絵は濃さ抜きの色で1枚。
     // 置き場所の名前も濃さ抜きにしておくと、スライダーを動かしている間に絵を作り直さない
     Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then((url) => [_recoloredKey(idx, c), url])))
-      .then((entries) => { if (!cancelled) setRecolored(Object.fromEntries(entries)); });
+      .then((entries) => {
+        if (cancelled) return;
+        const next = Object.fromEntries(entries);
+        setRecolored((prev) => {
+          const keys = Object.keys(next);
+          return (keys.length === Object.keys(prev).length && keys.every((k) => prev[k] === next[k])) ? prev : next;
+        });
+      });
     return () => { cancelled = true; };
   }, [baseId, src, colorKey]);
   if (!hues || hues.length === 0) {
@@ -24064,7 +24073,10 @@ const BossMovieLayer = ({ shake = true }) => {
       if (extras && extras.sound && Audio_.playSeFile) sound = Audio_.playSeFile(extras.sound);
       timers.push(setTimeout(() => finish(true), BOSS_MOVIE_MAX_MS));
       timers.push(setTimeout(() => setCanSkip(true), 900));
+      // 揺れの合図を見るためだけのループ。合図が無いムービーでは回さず、全部出し終えたら止める
+      // (以前は合図が無くても・出し終えてもムービーが終わるまで毎コマ回っていた)
       const tick = () => {
+        raf = 0;
         if (settled) return;
         const pos = Number.isFinite(el.currentTime) ? el.currentTime * 1000 : Date.now() - startWall;
         shakes.forEach((c) => {
@@ -24072,9 +24084,9 @@ const BossMovieLayer = ({ shake = true }) => {
           c.fired = true;
           if (shake) setShakeKey((k) => k + 1);
         });
-        raf = requestAnimationFrame(tick);
+        if (shakes.some((c) => !c.fired)) raf = requestAnimationFrame(tick);
       };
-      raf = requestAnimationFrame(tick);
+      if (shakes.length) raf = requestAnimationFrame(tick);
     };
     // ★最後まで流れたときは、効果音の余韻をそのまま残す。途中で閉じたとき(スキップ・読めない・画面ごと閉じた)は音も消す
     const onEnded = () => finish(true, true);
@@ -30398,7 +30410,8 @@ function MonsterHeroGame() {
     pushAutoEnhanceLog(result.results);
   }, [masuMons, dataLoaded]);
 
-  const homePastureMasumons = homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]);
+  // 画面に関係なく毎回マスモン全体から探し直していたので、並びかマスモンが変わったときだけにする
+  const homePastureMasumons = useMemo(() => homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]), [homePastureIds, masuMons]);
   // セーブ読込後のタイトル中に、最初のHOMEで必ず使う画像だけを最優先で先読みする。
   // 完了をタイトル操作やHOME遷移の条件にはせず、失敗時も通常のimg読込へそのまま任せる。
   useEffect(() => {
