@@ -19319,8 +19319,6 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 粒の厚み。2026-09-26 に1.55倍へ厚くしたが、実機で「ノーツが太くなってて違和感が凄い」と言われて元の1倍へ戻した。
   // (当たり判定はノーツサイズにも粒の見た目にも左右されない)。
   const HEAD_THICK=1;
-  // 粒の上半分に入れる白い芯(板の表面が光って見えるように)。色分けの色はそのまま残る
-  const HEAD_CORE_STOPS=[['rgba(255,255,255,.92)',0],['rgba(255,255,255,.35)',.45],['rgba(255,255,255,0)',.55]];
   const HEADS={
     TAP:    {radius:5,gradient:['#fde68a','#d946ef'],border:'rgba(255,255,255,.72)',inset:'rgba(255,255,255,.58)',glow:[[12,'rgba(217,70,239,.32)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
     HOLD:   {radius:5,gradient:['#ecfeff','#22d3ee'],border:'rgba(207,250,254,.86)',inset:'rgba(255,255,255,.72)',glow:[[13,'rgba(34,211,238,.42)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
@@ -19329,12 +19327,19 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     MONSTER:{radius:5,gradient:['#fef3c7','#f59e0b'],border:'rgba(255,255,255,.72)',inset:'rgba(255,255,255,.58)',ring:'#fde68a',glow:[[12,'rgba(217,70,239,.32)'],[5,'rgba(253,224,71,.72)'],[10,'rgba(217,70,239,.42)'],[14,'rgba(34,211,238,.24)']]},
     FAILED: {radius:5,gradient:['#94a3b8','#475569'],border:'rgba(148,163,184,.6)',inset:'rgba(255,255,255,.3)',glow:[]},
   };
+  // 強い光(2026-09-26)。光の層の並びを2回つなげた並びで焼いた画像を、1回だけ貼る。
+  // はじめは毎フレーム「足し算(lighter)で2回貼る」形にしたが、それでフレームが60→30fpsへ落ちた
+  // (CPUを1/4に絞った実測。原因を1つずつ外して特定)。焼くのは最初の1回だけなので、毎フレームの仕事は以前と同じ。
+  for(const [name,style] of Object.entries(HEADS)){style.glowStrong=style.glow.length?Object.freeze([...style.glow,...style.glow]):style.glow;style.glowStrongKey=`${name}+`;}
   let canvas=null,ctx=null,dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
   // マスモンの顔(焼いた絵)。ノーツより上に出すため、描くのはフレームの最後(end)にまとめる。
   // 以前は DOM の要素を canvas の上へ重ねて毎フレーム動かしていた(2026-09-25にやめた)
   const faces=[];
-  // 光の柱の形(サブレーンごとの多角形)と色。大きさ・判定ラインの高さが変わったときだけ作り直す
-  let laneGlowW=0,laneGlowH=0,laneGlowPolys=[],laneGlowGradKey='',laneGlowGrad=null;
+  // 光の柱の段(判定ラインの高さに対する割合 from〜to と色)。to が null なら画面の下端まで
+  const LANE_GLOW_BANDS=Object.freeze([
+    // 4段にとどめる(7段では叩き続けたときにフレームが1割減った)。段の明るさの差を小さくして境目を目立たせない
+    [.62,.8,'rgba(96,165,250,.1)'],[.8,.93,'rgba(147,197,253,.24)'],[.93,1.03,'rgba(224,242,254,.52)'],[1.03,null,'rgba(59,130,246,.18)'],
+  ].map(Object.freeze));
   const sprites=new Map();
   const roundRectPath=(c,x,y,w,h,r)=>{
     const rr=Math.max(0,Math.min(r,w/2,h/2));
@@ -19430,14 +19435,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const x=cx-w/2,y=cy-h/2;
     ctx.globalAlpha=alpha;
     if(style.glow.length&&!failed){
-      const glow=glowSprite(monster?'MONSTER':note.type,style.radius,style.glow);
+      const glow=effect==='MINIMAL'||lightweight?glowSprite(monster?'MONSTER':note.type,style.radius,style.glow):null;
       if(effect==='MINIMAL'||lightweight)draw3Slice(glow,cx,cy,w,h,alpha);
-      else{
-        // 光は足し算で2回重ねて強くする。焼いてある光の画像を貼るだけなので、ぼかしは作り直さない
-        ctx.globalCompositeOperation='lighter';
-        draw3Slice(glow,cx,cy,w*1.04,h*1.25,alpha);draw3Slice(glow,cx,cy,w*1.04,h*1.25,alpha*.8);
-        ctx.globalCompositeOperation='source-over';
-      }
+      else draw3Slice(glowSprite(style.glowStrongKey,style.radius,style.glowStrong),cx,cy,w*1.04,h*1.25,alpha);
     }
     if(monster&&!failed){
       // 外側の光(::after)は 1.15 秒で薄く・濃くを繰り返す(opacity だけ)。内側(::before)は固定
@@ -19452,7 +19452,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.lineWidth=1;ctx.strokeStyle=style.border;ctx.stroke();
     // 上端の白い筋(inset 0 1px 0)
     // 上半分の白い芯(以前は上端の白い筋1本だった)
-    if(!failed){roundRectPath(ctx,x+1,y+1,Math.max(0,w-2),Math.max(0,h-2),radius);ctx.fillStyle=fillGradient(x,y,h,HEAD_CORE_STOPS);ctx.fill();}
+    // 白い芯は半透明の四角を2段塗るだけにする(ノーツごとにグラデーションを作らない。上と同じ実測で JS が重かった)
+    if(!failed){ctx.fillStyle='rgba(255,255,255,.62)';ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),Math.max(1,h*.22));ctx.fillStyle='rgba(255,255,255,.26)';ctx.fillRect(x+radius/2,y+1+h*.22,Math.max(0,w-radius),Math.max(1,h*.22));}
     else{ctx.fillStyle=style.inset;ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),1);}
     if(wide&&!monster){
       const bar=ctx.createLinearGradient(0,y,0,y+h);bar.addColorStop(0,'rgba(255,255,255,.95)');bar.addColorStop(1,'rgba(255,255,255,.55)');
@@ -19581,7 +19582,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const before=sprites.size;
       // 粒のまわりの光。種類ごとに1枚。FAILED は glow が空なので作らない(描くときも作らない)
       for(const [type,style] of Object.entries(HEADS)){
-        if(style.glow&&style.glow.length)glowSprite(type,style.radius,style.glow);
+        if(style.glow&&style.glow.length){glowSprite(type,style.radius,style.glow);if(effect!=='MINIMAL'&&!options.lightweight)glowSprite(style.glowStrongKey,style.radius,style.glowStrong);}
       }
       // モンスターノーツのアウラ(外は脈打つ・内は固定)
       auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',AURA_OUTER_GLOWS,AURA_OUTER_DOTS);
@@ -19595,7 +19596,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
       return sprites.size-before;
     },
-    release(){canvas=null;ctx=null;sprites.clear();laneGlowW=laneGlowH=0;laneGlowPolys=[];laneGlowGradKey='';laneGlowGrad=null;},
+    release(){canvas=null;ctx=null;sprites.clear();},
     // 押しているサブレーンの光の柱(2026-09-26・ユーザー指示「見た目も含めてこんぐらいに仕上げたい」)。
     // 以前は DOM の10枚([data-rhythm-sublane-feedback])を出し入れしており、1枚ごとに半径52pxの
     // 内側の影と filter を持つ全高の板だったので、押すたび・離すたびにぼかしを描き直していた。
@@ -19608,37 +19609,31 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       let any=false;
       for(let i=0;i<levels.length;i++)if(levels[i]>0){any=true;break;}
       if(!any)return;
-      if(laneGlowW!==cssW||laneGlowH!==cssH||laneGlowPolys.length!==levels.length){
-        laneGlowW=cssW;laneGlowH=cssH;laneGlowPolys=[];
-        for(let sub=0;sub<levels.length;sub++){
-          const right=rhythmBoundaryEdgePoints((sub+1)/2),left=rhythmBoundaryEdgePoints(sub/2).reverse(),pts=[];
-          for(const q of [...right,...left])pts.push(q.x*cssW,q.y*cssH);
-          laneGlowPolys.push(pts);
-        }
-      }
-      // 判定ラインのところがいちばん明るく、奥へ向かって青く消えていく
-      const ratio=Math.max(.5,Math.min(.95,Number(judgmentRatio)||.88)),key=`${cssH}:${ratio.toFixed(3)}`;
-      if(laneGlowGradKey!==key||!laneGlowGrad){
-        const g=ctx.createLinearGradient(0,0,0,cssH);
-        g.addColorStop(0,'rgba(59,130,246,0)');
-        g.addColorStop(ratio*.35,'rgba(59,130,246,.14)');
-        g.addColorStop(ratio*.75,'rgba(96,165,250,.46)');
-        g.addColorStop(ratio,'rgba(224,242,254,.9)');
-        g.addColorStop(Math.min(1,ratio+.04),'rgba(147,197,253,.5)');
-        g.addColorStop(1,'rgba(59,130,246,.25)');
-        laneGlowGradKey=key;laneGlowGrad=g;
-      }
-      ctx.globalCompositeOperation='lighter';ctx.fillStyle=laneGlowGrad;
-      for(let sub=0;sub<levels.length;sub++){
-        const level=levels[sub];
-        if(!(level>0))continue;
-        const pts=laneGlowPolys[sub];
-        ctx.globalAlpha=Math.min(1,level);
-        ctx.beginPath();ctx.moveTo(pts[0],pts[1]);
-        for(let k=2;k<pts.length;k+=2)ctx.lineTo(pts[k],pts[k+1]);
+      // 判定ラインのところがいちばん明るく、奥へ向かって青く消えていく。
+      // ★グラデーションでは塗らない。縦のグラデーションで広い面を塗ると、叩き続けたときに
+      //   フレームが2割減った(単色なら減らない。2026-09-26 実測)。明るさの違う単色の段を重ねて近づける
+      const ratio=Math.max(.5,Math.min(.95,Number(judgmentRatio)||.88)),steps=RHYTHM_PROJECTION_CURVE===1?1:8;
+      const fillSpan=(left,right,y0,y1)=>{
+        ctx.beginPath();
+        for(let k=0;k<=steps;k++){const y=y0+(y1-y0)*k/steps,x=rhythmProjectBoundary(right,y)*cssW;if(k===0)ctx.moveTo(x,y*cssH);else ctx.lineTo(x,y*cssH);}
+        for(let k=steps;k>=0;k--){const y=y0+(y1-y0)*k/steps;ctx.lineTo(rhythmProjectBoundary(left,y)*cssW,y*cssH);}
         ctx.closePath();ctx.fill();
+      };
+      // 隣り合って同じ明るさのサブレーンは1枚にまとめて塗る
+      for(let sub=0;sub<levels.length;){
+        const level=levels[sub];
+        if(!(level>0)){sub++;continue;}
+        let end=sub+1;
+        while(end<levels.length&&levels[end]===level)end++;
+        const left=sub/2,right=end/2;
+        ctx.globalAlpha=Math.min(1,level);
+        for(const [from,to,color] of LANE_GLOW_BANDS){
+          ctx.fillStyle=color;
+          fillSpan(left,right,Math.min(1,ratio*from),to===null?1:Math.min(1,ratio*to));
+        }
+        sub=end;
       }
-      ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+      ctx.globalAlpha=1;
     },
     get drawn(){return drawn;},
     // 焼いてあるスプライトの枚数(検査で「曲の中で増えないこと」を見るために使う)
