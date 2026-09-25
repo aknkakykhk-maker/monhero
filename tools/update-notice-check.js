@@ -41,7 +41,8 @@ const checks = [
     || (calibrationDataOnlyStamp && calibration.includes('if(data?.build===RHYTHM_CALIBRATION_DATA_BUILD)') && !calibration.includes('if(data?.build!==RHYTHM_CALIBRATION_DATA_BUILD)'))],
   ['デバッグdata-only橋渡しは更新履歴へ追記しない', !calibrationDataOnlyStamp || (!calibration.includes('CHANGELOG.unshift') && !calibration.includes('HELP_CATEGORIES'))],
   ['更新バナー用stampはCHANGELOGを自動変更しない', !stampTool.includes('replacedChangelog') && !stampTool.includes('fs.writeFileSync(changelogPath') && stampTool.includes('CHANGELOGは変更しません')],
-  ['30秒間隔・バックグラウンド復帰・ページ再表示時にversion.jsonを再確認', source.includes('setInterval(checkVersion, 30 * 1000)') && source.includes("document.addEventListener('visibilitychange', onVisible)") && source.includes("window.addEventListener('pageshow', onVisible)")],
+  // 裏に回っているあいだの30秒ごとの問い合わせは省く(戻った瞬間に onVisible がすぐ確かめるので、見えている間の早さは同じ)
+  ['30秒間隔(表に出ているあいだ)・バックグラウンド復帰・ページ再表示時にversion.jsonを再確認', /setInterval\(\(\) => \{ if \(document\.visibilityState === 'hidden'\) return; checkVersion\(\); \}, 30 \* 1000\)/.test(source) && source.includes("document.addEventListener('visibilitychange', onVisible)") && source.includes("window.addEventListener('pageshow', onVisible)")],
   ['version.jsonをキャッシュなしで取得', source.includes("fetch('version.json?t=' + Date.now(), { cache: 'no-store' })")],
   ['初回検知で自動再読み込みせず更新ボタンを表示', source.includes('setUpdateAvailable(true)') && !source.includes('if (wasFirstCheck) window.location.reload()')],
   ['更新ボタンをbody直下に表示', source.includes('ReactDOM.createPortal(') && source.includes('document.body') && source.includes('z-[100000]')],

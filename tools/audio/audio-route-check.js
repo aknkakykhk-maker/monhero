@@ -20,7 +20,9 @@ for (const file of files) {
   check(`${file}: HTML Audioのplay()を直接呼ばない`, !/\.play\s*\(/.test(audioCode));
   check(`${file}: MediaElementSourceを使用しない`, !/createMediaElementSource/.test(audioEngine));
   check(`${file}: navigator.audioSessionをplaybackへ変更しない`, !/audioSession[\s\S]{0,80}playback/.test(source));
-  check(`${file}: 音源をfetchしてdecodeAudioDataする`, /fetch\s*\(url/.test(audioEngine) && /decodeAudioData/.test(audioEngine));
+  // 実コードは fetch(audioUrlWithKey(url), …)。以前は /fetch\s*\(url/ がコメントの字にだけ当たって通っていたので、
+  // コメントを外した配信用JSでも実コードで確かめる
+  check(`${file}: 音源をfetchしてdecodeAudioDataする`, /fetch\s*\((?:audioUrlWithKey\(\s*)?url\b/.test(audioCode) && /decodeAudioData/.test(audioCode));
   check(`${file}: BGMをAudioBufferSourceNodeでループ再生する`,
     /const startBgmBuffer/.test(audioEngine) && /createBufferSource\s*\(\)/.test(audioEngine) && /source\.loop\s*=\s*track\.loop\s*!==\s*false/.test(audioEngine));
   check(`${file}: ジングルをAudioBufferSourceNodeで再生する`,

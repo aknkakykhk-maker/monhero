@@ -80,7 +80,7 @@ if (process.argv.includes('--check')) {
 
   // ハッシュだけでは、別の変換器で生成したコードへ同じハッシュを付けた不整合を検出できない。
   // 正規ビルドの出力そのものを比較し、tools/build.js 以外による生成物の混入を防ぐ。
-  if (fs.readFileSync(OUT_FILE, 'utf8') !== buildFileContents(hash, transformGameSystem())) {
+  if (fs.readFileSync(OUT_FILE, 'utf8') !== buildFileContents(hash, transformGameSystem({ forRelease: true }))) {
     console.error('NG: game-system.compiled.js が正規ビルドの出力と一致しません。node tools/build.js を実行してください');
     process.exit(1);
   }
@@ -144,7 +144,7 @@ if (process.argv.includes('--check')) {
 require('./stamp-version');
 
 const hash = sourceHash();
-const code = transformGameSystem();
+const code = transformGameSystem({ forRelease: true });
 
 fs.writeFileSync(OUT_FILE, buildFileContents(hash, code));
 const kb = (fs.statSync(OUT_FILE).size / 1024).toFixed(0);

@@ -155,7 +155,8 @@ function MonsterHeroGame() {
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
-  const debugIconItems = breederIconOptions({includeUnowned:true});
+  // 中身は固定の一覧だけから決まるので、最初の1回だけ作る
+  const debugIconItems = useMemo(() => breederIconOptions({includeUnowned:true}), []);
   const [iconAdjustId, setIconAdjustId] = useState(debugIconItems[0]?.id||'');
   const [iconAdjustQuery, setIconAdjustQuery] = useState('');
   const [iconAdjustments, setIconAdjustments] = useState(()=>Object.fromEntries(debugIconItems.map(item=>[item.id,{...(MARKET_PROFILE_ICON_STYLES[item.id]||DEFAULT_PROFILE_ICON_STYLE)}])));
@@ -1977,9 +1978,13 @@ function MonsterHeroGame() {
   // タブ別の既読ID集合を比較するため、再ビルドやBUILD_DATE変更で過去項目は復活しない。
   // 既読はタブをまたいで見る。振り分けを変えたとき、前に更新情報で読んだ不具合修正が
   // 不具合情報タブで未読(NEW)へ戻るのを防ぐ
-  const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-  const changelogUnreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
-  const changelogUnread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogUnreadIds[type].length>0]));
+  // 約900件を見比べるので、既読が変わったときだけ数え直す(描画のたびに作り直さない)
+  const { changelogUnreadIds, changelogUnread } = useMemo(() => {
+    const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
+    const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
+    const unread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, unreadIds[type].length>0]));
+    return { changelogUnreadIds: unreadIds, changelogUnread: unread };
+  }, [changelogSeen]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue;
   const markChangelogTabSeen = (type) => {
     const ids = CHANGELOG_IDS_BY_TYPE[type];
@@ -4306,7 +4311,8 @@ function MonsterHeroGame() {
     const onVisible = () => { if (document.visibilityState === 'visible') checkVersion(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', onVisible);
-    const interval = setInterval(checkVersion, 30 * 1000);
+    // 裏に回っているあいだは問い合わせない(戻った瞬間に onVisible がすぐ確かめる)
+    const interval = setInterval(() => { if (document.visibilityState === 'hidden') return; checkVersion(); }, 30 * 1000);
     return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
   }, []);
 
@@ -13025,12 +13031,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //  過去のやつが一瞬で見えなくなる」)。
             // 1行ずつ積み上げていたころは682行あり、少しさかのぼるだけで指が疲れていた。
             // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
-            const rows = groupChangelogEntries(changelogEntriesOfTab(changelogTab));
-            const unreadHere = changelogUnreadIds[changelogTab];
+            const rows = changelogRowsOfTab(changelogTab);
+            const unreadHere = new Set(changelogUnreadIds[changelogTab]);
             let shownDay = null;
             return rows.map(row=>{
               const open=changelogOpenId===row.key;
-              const unreadCount=row.entries.filter(entry=>unreadHere.includes(entry.id)).length;
+              const unreadCount=row.entries.filter(entry=>unreadHere.has(entry.id)).length;
               // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
               // 分かるようにしておく(2026-09-05・ユーザー指摘「直近の更新情報が不具合修正との
               // 区別がついてない」)。1つのまとまりに種類が混ざることがあるので、
@@ -13056,7 +13062,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 開いたら、その話題のその日の項目を時刻・種別・本文までぜんぶ出す */}
                   {open&&<div className="mh-changelog-detail" data-changelog-detail>
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
-                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.includes(c.id)&&<em>NEW</em>}</time>
+                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
                       <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
                       <b>{c.title}</b>
                       {/* 告知画像があれば本文の上に出す
