@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ff0dad6e920e0077
+// source-sha256: 3fa08eeb41a876a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 04:23";
+const BUILD_DATE = "2026-09-26 05:10";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -22563,6 +22563,8 @@ const RhythmTapTest = ({
   const stopFrame = useCallback(() => {
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     frameRef.current = null;
+    const area = playAreaRef.current;
+    if (area && area.dataset.rhythmGlowLive) delete area.dataset.rhythmGlowLive;
   }, []);
   const clearJudgmentTimer = useCallback(() => {
     if (judgmentTimerRef.current !== null) clearTimeout(judgmentTimerRef.current);
@@ -23145,6 +23147,7 @@ const RhythmTapTest = ({
       if (canvasReady && settings.laneGlow !== 'NONE') {
         const glowArea = playAreaRef.current;
         let glowNodes = glowNodesRef.current;
+        if (glowArea && glowArea.dataset.rhythmGlowLive !== '1') glowArea.dataset.rhythmGlowLive = '1';
         if (glowArea && (!glowNodes || !glowNodes.length || !glowNodes[0].isConnected)) glowNodes = glowNodesRef.current = Array.from(glowArea.querySelectorAll('[data-rhythm-sublane-feedback]'));
         const glow = laneGlowStateRef.current || (laneGlowStateRef.current = {
           levels: new Float32Array(10),
