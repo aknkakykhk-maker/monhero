@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6484d0a7d67259bb
+// source-sha256: a77e1c84ba6b680d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -151,6 +151,7 @@ const normalizeBattleFxSettings = value => {
     idleMotion: v.idleMotion === 'OFF' ? 'OFF' : 'ON',
     shake: v.shake === 'OFF' ? 'OFF' : 'ON',
     load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH',
+    restPause: v.restPause === 'ON' ? 'ON' : 'OFF',
     specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON'
   };
 };
@@ -174,6 +175,19 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
     id: 'MINIMAL',
     label: '最軽量',
     note: 'いちばん軽い表示'
+  }]
+}, {
+  key: 'restPause',
+  title: '操作がないときの一時停止',
+  desc: 'タクティクス新画面で、5秒ほど何も操作せず戦闘も進んでいないあいだ、飾りやモンスターの動きを一時停止してスマホを休ませます。画面に触れるか戦闘が進むと、止まったところからすぐに動き出します。',
+  options: [{
+    id: 'OFF',
+    label: '止めない',
+    note: 'いつも動かす'
+  }, {
+    id: 'ON',
+    label: '5秒で止める',
+    note: 'スマホが熱くなりにくい'
   }]
 }, {
   key: 'idleMotion',
@@ -228,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 01:26";
+const BUILD_DATE = "2026-09-26 01:57";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -37040,6 +37054,7 @@ function BattleScreen({
   const tacticsNewLayout = Array.isArray(tacticsUnits) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW';
   const battleFx = normalizeBattleFxSettings(battleFxSettings);
   const fxLoad = battleFx.load;
+  const fxRestEnabled = battleFx.restPause === 'ON';
   const idleMotionOff = battleFx.idleMotion === 'OFF' || fxLoad === 'LIGHT';
   const shakeOff = battleFx.shake === 'OFF';
   const enemyImageOnlyAttack = tacticsNewLayout && !!enemyAttackAnim && !ecoBattleView && enemyAttackFx?.kind !== 'move' && !isMooBoss(enemy?.id);
@@ -37052,11 +37067,15 @@ function BattleScreen({
   const fxRestTimerRef = useRef(null);
   const fxBusyRef = useRef(false);
   fxBusyRef.current = !!(isBusy || attackAnim || enemyAttackAnim || enemyAttackFx);
+  const fxRestEnabledRef = useRef(fxRestEnabled);
+  fxRestEnabledRef.current = fxRestEnabled;
   const wakeBattleFx = useCallback(() => {
     setFxRest(false);
     if (fxRestTimerRef.current) clearTimeout(fxRestTimerRef.current);
+    if (!fxRestEnabledRef.current) return;
     const arm = () => {
       fxRestTimerRef.current = setTimeout(() => {
+        if (!fxRestEnabledRef.current) return;
         if (fxBusyRef.current) arm();else setFxRest(true);
       }, TACTICS_FX_REST_MS);
     };
@@ -37064,7 +37083,7 @@ function BattleScreen({
   }, []);
   useEffect(() => {
     if (tacticsNewLayout) wakeBattleFx();
-  }, [tacticsNewLayout, isBusy, attackAnim, enemyAttackAnim, enemyAttackFx, popups, enemy?.hp, enemyIntent, wakeBattleFx]);
+  }, [tacticsNewLayout, fxRestEnabled, isBusy, attackAnim, enemyAttackAnim, enemyAttackFx, popups, enemy?.hp, enemyIntent, wakeBattleFx]);
   useEffect(() => {
     if (!tacticsNewLayout || typeof document === 'undefined') return undefined;
     const onTouch = () => wakeBattleFx();
@@ -37230,7 +37249,7 @@ function BattleScreen({
     "data-battle-speed": battleSpeed,
     "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off',
     "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined,
-    "data-fx-rest": tacticsNewLayout && fxRest ? 'true' : undefined,
+    "data-fx-rest": tacticsNewLayout && fxRestEnabled && fxRest ? 'true' : undefined,
     "data-fx-level": tacticsNewLayout ? fxLoad : undefined,
     "data-moo-front": tacticsNewLayout && enemyIsMoo && !enemyAttackAnim ? 'true' : undefined
   }, React.createElement("div", {

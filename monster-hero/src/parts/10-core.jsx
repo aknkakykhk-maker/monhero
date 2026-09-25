@@ -108,6 +108,9 @@ const normalizeBattleFxSettings = (value) => {
     // 画面の軽さ(2026-09-24 ユーザー指示「バトル設定で軽い画面でも出来るの作って 4種類ぐらい」)。
     // ★足す前に保存した人(load が無い)は RICH(いままでの見た目)で始まる
     load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH',
+    // 操作が無いときの一時停止(2026-09-25 ユーザー指示「それも設定で作って」)。
+    // ★既定は OFF(休ませない)。5秒で止まるのが「動きが止まった」ように見えていたため、選んだ人だけ休ませる
+    restPause: v.restPause === 'ON' ? 'ON' : 'OFF',
     // ボスの必殺技ムービー(2026-09-25 ユーザー指示「設定でオンオフもつけて」)。
     // ★足す前に保存した人(specialMovie が無い)は ON(流す)で始まる
     specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON',
@@ -123,6 +126,9 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
       { id:'LIGHT', label:'軽め', note:'待機の動きも止める' },
       { id:'MINIMAL', label:'最軽量', note:'いちばん軽い表示' },
     ] },
+  { key:'restPause', title:'操作がないときの一時停止',
+    desc:'タクティクス新画面で、5秒ほど何も操作せず戦闘も進んでいないあいだ、飾りやモンスターの動きを一時停止してスマホを休ませます。画面に触れるか戦闘が進むと、止まったところからすぐに動き出します。',
+    options:[{ id:'OFF', label:'止めない', note:'いつも動かす' }, { id:'ON', label:'5秒で止める', note:'スマホが熱くなりにくい' }] },
   { key:'idleMotion', title:'待機中の動き',
     desc:'待っているあいだのモンスターの動き（翼の羽ばたき・しっぽや花の揺れなど）と、タクティクス新画面の枠の飾り・敵の待機の動き、WAVEのあとの画面の飾りの動きです。攻撃の演出はどちらでも出ます。',
     options:[{ id:'ON', label:'動かす', note:'いつもの見た目' }, { id:'OFF', label:'止める', note:'画面が軽くなる' }] },
@@ -138,7 +144,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 01:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 01:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
