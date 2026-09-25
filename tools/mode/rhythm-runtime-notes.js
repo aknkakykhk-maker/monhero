@@ -126,10 +126,13 @@ const fastPairConflicts=(notes,spanAt)=>{
 // --- マーカーの内側を書き戻す ---
 // 行の書き方は tools/mode/rhythm-chart-v3-pipeline.js の runtimeRow と同じにする。
 // ここがずれると、直していないノーツまで差分に出てしまう。
+// 本体の RHYTHM_SLIDE_EASES と同じ並び(rhythm-slide-ease-check.js が突き合わせる)
+const SLIDE_EASE_CODES=Object.freeze(['linear','in','out','inout']);
 const runtimeRow=note=>{
   const time=Math.round(Number(note.timeMs));
   if(note.type==='SLIDE'){
-    const points=note.slidePoints.map(p=>`[${Math.round(Number(p.timeMs))},${p.lane},${p.subLaneWidth}]`).join(',');
+    // 4つ目は曲線の番号(1=in・2=out・3=inout)。直線の点は今までどおり3つだけ書く
+    const points=note.slidePoints.map(p=>{const ease=SLIDE_EASE_CODES.indexOf(p.ease);return `[${Math.round(Number(p.timeMs))},${p.lane},${p.subLaneWidth}${ease>0?`,${ease}`:''}]`;}).join(',');
     return `s(${time},${Math.round(noteEndMs(note))},[${points}]${note.endFlick===true?',1':''})`;
   }
   if(note.type==='HOLD'){
@@ -222,6 +225,6 @@ const RELEASED_TRACKS=Object.freeze({
   makutsu_no_senritsu:'makutsu_no_senritsu',
 });
 
-module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
+module.exports={SLIDE_EASE_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
   RELEASED_TRACKS,
   noteEndMs,isHeld,overlapConflicts,fastPairConflicts,runtimeRow,markerBlock,renderBlock,replaceBlock,RELEASED_MARKERS};

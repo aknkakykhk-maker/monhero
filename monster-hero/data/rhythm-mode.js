@@ -1175,15 +1175,20 @@ const RHYTHM_SLIDE_SPEED_BONUS_MAX_LANES = .35;
 const rhythmSlideLaneSpeedAt=(note,chartTimeMs)=>{
   const points=rhythmSlidePoints(note),t=Number(chartTimeMs);
   if(!Array.isArray(points)||points.length<2)return 0;
-  const speedOf=(a,b)=>{
+  // 曲線の区間(ease)では、平均の速さにその瞬間の傾きを掛ける。直線の区間は傾き1なので今までと同じ
+  const speedOf=(a,b,p)=>{
     const seconds=(Number(b?.timeMs)-Number(a?.timeMs))/1000,lanes=Math.abs(Number(b?.lane)-Number(a?.lane));
-    return seconds>0&&Number.isFinite(lanes)?lanes/seconds:0;
+    const average=seconds>0&&Number.isFinite(lanes)?lanes/seconds:0;
+    return average*rhythmSlideEaseSlope(rhythmSlideSegmentEase(note,a),p);
   };
-  if(!Number.isFinite(t)||t<=Number(points[0]?.timeMs))return speedOf(points[0],points[1]);
+  if(!Number.isFinite(t)||t<=Number(points[0]?.timeMs))return speedOf(points[0],points[1],0);
   for(let i=1;i<points.length;i++){
-    if(t<=Number(points[i].timeMs))return speedOf(points[i-1],points[i]);
+    if(t<=Number(points[i].timeMs)){
+      const a=points[i-1],span=Math.max(1,Number(points[i].timeMs)-Number(a.timeMs));
+      return speedOf(a,points[i],(t-Number(a.timeMs))/span);
+    }
   }
-  return speedOf(points[points.length-2],points[points.length-1]);
+  return speedOf(points[points.length-2],points[points.length-1],1);
 };
 // その時刻の速さから、許容へ足すレーン数を作る。
 const rhythmSlideSpeedBonusLanes=(note,chartTimeMs)=>{
@@ -1231,6 +1236,36 @@ const rhythmWorseJudgment=(a,b)=>{
 const rhythmSlidePoints=note=>Array.isArray(note?.slidePoints)&&note.slidePoints.length>=2
     ? note.slidePoints
     : [{timeMs:Number(note?.timeMs)||0,lane:Number(note?.lane)||0},{timeMs:Number(note?._rhythmReleaseOriginalEndTimeMs??note?.endTimeMs)||Number(note?.timeMs)||0,lane:Number(note?.endLane??note?.lane)||0}];
+// ── SLIDEの曲線(2026-09-26・ユーザー指示「見た目も含めてこんぐらいに仕上げたい」) ──
+// slidePoints の点に ease を書くと、その点から次の点までを曲線でつなぐ。
+//   'in'    … ゆっくり動き出して、だんだん速く(p²)
+//   'out'   … 速く動き出して、だんだんゆっくり(1-(1-p)²)
+//   'inout' … ゆっくり動き出し、真ん中で速く、ゆっくり止まる(S字。p²(3-2p))
+// ノーツそのものに slideEase を書くと、ease を書いていない区間すべての既定になる。
+// **どちらも書いていない区間は今までどおりの直線**(既存の譜面は1点も動かない)。
+// 曲がるのは「レーン(横の位置)」だけ。幅(subLaneWidth)の変わり方は今までどおり時間に比例する。
+// 見た目(帯)・追従の的・速さの上乗せの3つは、すべて下の2つの関数を通るのでずれない。
+const RHYTHM_SLIDE_EASES=Object.freeze(['linear','in','out','inout']);
+const rhythmSlideSegmentEase=(note,point)=>{
+  const ease=point?.ease??note?.slideEase;
+  return RHYTHM_SLIDE_EASES.includes(ease)?ease:'linear';
+};
+// 区間の進み具合 p(0〜1)を、曲線に沿った進み具合へ直す
+const rhythmSlideEaseProgress=(ease,p)=>{
+  const x=Math.max(0,Math.min(1,Number(p)||0));
+  if(ease==='in')return x*x;
+  if(ease==='out')return 1-(1-x)*(1-x);
+  if(ease==='inout')return x*x*(3-2*x);
+  return x;
+};
+// その瞬間の速さが、区間の平均の何倍か(上の式の傾き)。直線なら常に1
+const rhythmSlideEaseSlope=(ease,p)=>{
+  const x=Math.max(0,Math.min(1,Number(p)||0));
+  if(ease==='in')return 2*x;
+  if(ease==='out')return 2*(1-x);
+  if(ease==='inout')return 6*x*(1-x);
+  return 1;
+};
 const rhythmSlideWidthAt=(note,chartTimeMs)=>{
   const points=rhythmSlidePoints(note),t=Number(chartTimeMs);
   if(!Number.isFinite(t)||t<=Number(points[0]?.timeMs))return rhythmSlidePointWidth(note,points[0]);
@@ -1256,7 +1291,7 @@ const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
     if(t<=b.timeMs){
       const span=Math.max(1,Number(b.timeMs)-Number(a.timeMs));
       const p=Math.max(0,Math.min(1,(t-Number(a.timeMs))/span));
-      return fit(Number(a.lane)+(Number(b.lane)-Number(a.lane))*p,t);
+      return fit(Number(a.lane)+(Number(b.lane)-Number(a.lane))*rhythmSlideEaseProgress(rhythmSlideSegmentEase(note,a),p),t);
     }
   }
   const last=points[points.length-1];
@@ -2946,8 +2981,10 @@ const mhHoldV2=(timeMs,subLane,subLaneWidth,endTimeMs,endFlick,holdPoints)=>Obje
     ?{holdPoints:Object.freeze(holdPoints.map(([pointTimeMs,pointSubLane,pointWidth])=>Object.freeze({timeMs:pointTimeMs,subLane:pointSubLane,subLaneWidth:pointWidth})))}
     :{}),
 });
+// 点の4つ目は曲線の番号(RHYTHM_SLIDE_EASES の並び。1=in・2=out・3=inout)。書いていない点は直線
 const mhSlideV2=(timeMs,endTimeMs,points,endFlick)=>{
-  const slidePoints=Object.freeze(points.map(([pointTimeMs,lane,subLaneWidth])=>Object.freeze({timeMs:pointTimeMs,lane,subLaneWidth})));
+  const slidePoints=Object.freeze(points.map(([pointTimeMs,lane,subLaneWidth,easeCode])=>Object.freeze({timeMs:pointTimeMs,lane,subLaneWidth,
+    ...(easeCode>0&&RHYTHM_SLIDE_EASES[easeCode]?{ease:RHYTHM_SLIDE_EASES[easeCode]}:{})})));
   return Object.freeze({
     type:'SLIDE',timeMs,endTimeMs,
     lane:slidePoints[0].lane,endLane:slidePoints[slidePoints.length-1].lane,
@@ -19154,9 +19191,11 @@ const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number
   let fromPoint=startPoint,from=project(startPoint);
   for(let index=Math.max(1,firstIndex);index<source.length;index++){
     const toPoint=source[index],fromTime=Number(fromPoint.timeMs),toTime=Number(toPoint.timeMs),spanMs=toTime-fromTime;
-    for(let step=1;step<=RHYTHM_SLIDE_SEGMENT_STEPS;step++){
-      const ratio=step/RHYTHM_SLIDE_SEGMENT_STEPS,timeMs=fromTime+spanMs*ratio;
-      const to=step===RHYTHM_SLIDE_SEGMENT_STEPS?project(toPoint):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
+    // 曲線の区間(ease)は刻みを倍にして、曲がりが折れ線に見えないようにする。直線の区間は今までどおり
+    const steps=rhythmSlideSegmentEase(note,source[index-1])==='linear'?RHYTHM_SLIDE_SEGMENT_STEPS:RHYTHM_SLIDE_SEGMENT_STEPS*2;
+    for(let step=1;step<=steps;step++){
+      const ratio=step/steps,timeMs=fromTime+spanMs*ratio;
+      const to=step===steps?project(toPoint):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
       quads.push({l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y});
       from=to;
     }
