@@ -555,6 +555,9 @@ check('加入ボーナス(plusStats)は新モードでは使わない',
 check('合流ボーナスの説明も新モード向けに出す',
   has('素のステータスがそのまま入ります')
     && has('あとから入るほど、先に育った子に追いつく補正がかかります'));
+// ★runMode はラン後も残る。ラン外(ベースモン一覧など)ではクラシックの値を出す(2026-09-25 ユーザー報告)
+check('合流ボーナスの新モード説明はラン中の画面だけ',
+  has("{isTacticsMode(runMode)&&(RUN_PHASE_STATES.includes(gameState)||gameState==='BATTLE')"));
 {
   // 率は「残りターン × 1%」。remainingTurns は 21 - そのWAVEに使ったターン数
   check('1ターンで抜ければ+20%', Math.abs(api.tacticsJoinWaveRate(20) - 0.2) < 1e-9,
