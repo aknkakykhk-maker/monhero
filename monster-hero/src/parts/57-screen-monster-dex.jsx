@@ -274,7 +274,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
                 <span className="text-[10px] font-mono font-black text-amber-300 shrink-0">Lv.{skill.lvl}</span>
               </div>
               <div className="flex items-center gap-2 mt-0.5 text-[10px] font-mono font-black text-slate-400">
-                <span className="text-red-300">威力{skill.power}</span><span className="text-amber-300">消費G{skill.guts}</span><span className="text-yellow-300">会心{skill.crit}%</span>
+                <span className="text-red-300">威力{skill.power}</span><span className="text-amber-300">消費ガッツ{skill.guts}</span><span className="text-yellow-300">会心{skill.crit}%</span>
               </div>
             </div>
           ))}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6f6b00489fc3f9c5
+// generated-sha256: 945a88803bb0f47c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -139,7 +139,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-25 11:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 19:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1468,7 +1468,7 @@ const buildMasuAutoEnhancePlan = (masu, base) => {
 // 自動で振ったときの「何がどれだけ増えたか」。画面のお知らせとログに使う
 const describeAutoEnhancePlan = (plan) => {
   const lines = [];
-  (plan?.apt || []).forEach((count, index) => { if (count > 0) lines.push(`${RANGE_LABELS[index]}距離適性 +${count}段階`); });
+  (plan?.apt || []).forEach((count, index) => { if (count > 0) lines.push(`${RANGE_LABELS[index]}間合い適性 +${count}段階`); });
   Object.entries(plan?.stat || {}).forEach(([key, count]) => {
     if (count > 0) lines.push(`${STAT_POINT_KEYS[key]} +${count * (STAT_POINT_GAIN[key] || 1)}`);
   });
@@ -8088,7 +8088,7 @@ const DIFFICULTY_SETTINGS = {
 // バトル側は「そのルールを持っているか」で判定するので、難易度名の分岐を増やさなくてよい。
 const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ assistCardEffect:0.5 }) },
-  { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
+  { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。間合い適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
   { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:true, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
   { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
   // INFINITYは既存4難易度の特徴を統合した10WAVEの最終難易度。ただし役割が重なるルールは
@@ -8656,7 +8656,7 @@ const extremeSpecialRuleLines = (difficultyId) => {
   if (rules.waveEnhancement != null) lines.push(['WAVE後強化',specialRulePercent(rules.waveEnhancement)]);
   if (rules.positiveModifier != null || rules.negativeModifier != null) {
     const signed=`＋${specialRulePercent(rules.positiveModifier ?? 1)} / −${specialRulePercent(rules.negativeModifier ?? 1)}`;
-    lines.push(['自動回復補正',signed],['距離適性補正',signed]);
+    lines.push(['自動回復補正',signed],['間合い適性補正',signed]);
   }
   if (rules.damageDealt != null) lines.push(['与ダメージ',specialRulePercent(rules.damageDealt)]);
   if (rules.allyJoinBonus != null) lines.push(['供モン加入ボーナス',specialRulePercent(rules.allyJoinBonus)]);
@@ -8681,12 +8681,12 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
   const push=(title,lines)=>{const kept=lines.filter(Boolean);if(kept.length)groups.push({title,lines:kept});};
   if(difficultyId===GOD_SETTING.id)push('神威',[
     ['進行','2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'],
-    ['敵HP/攻撃','神威Lvごと +15% / +30% / +45% / +60% / +75%'],
+    ['敵ライフ/攻撃力','神威Lvごと +15% / +30% / +45% / +60% / +75%'],
     ['Lv5','与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし'],
   ]);
   if(difficultyId===RAGNAROK_SETTING.id)push('黄昏',[
     ['進行','2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'],
-    ['敵HP/攻撃','黄昏Lvごと +20% / +40% / +60% / +80% / +100%'],
+    ['敵ライフ/攻撃力','黄昏Lvごと +20% / +40% / +60% / +80% / +100%'],
     ['Lv2','距離強化 35%→25%'],
     ['Lv3','消費ガッツ 175%→200%'],
     ['Lv4','＋補正 35%→25%・−補正 250%→300%'],
@@ -8707,7 +8707,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     rules.gutsCost!=null&&['消費ガッツ',specialRulePercent(rules.gutsCost)],
   ]);
   push('累計ターン',[
-    rules.enemyTurnRate!=null&&['敵HP/攻撃',`累計Tごと+${precisePercent(rules.enemyTurnRate)}`],
+    rules.enemyTurnRate!=null&&['敵ライフ/攻撃力',`累計Tごと+${precisePercent(rules.enemyTurnRate)}`],
     rules.allyJoinPenaltyRate!=null&&['加入B倍率',`累計Tごと-${turnPointText(rules.allyJoinPenaltyRate)}${rules.minimumAllyJoinBonus!=null?`（最低${specialRulePercent(rules.minimumAllyJoinBonus)}）`:''}`],
     rules.damageTurnRate!=null&&['与ダメ倍率',`経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`],
   ]);
@@ -19147,7 +19147,7 @@ function MonsterDexDetailScreen({ dexMonsterId, dexTab, unlockedMonsterIds, masu
                 <span className="text-[10px] font-mono font-black text-amber-300 shrink-0">Lv.{skill.lvl}</span>
               </div>
               <div className="flex items-center gap-2 mt-0.5 text-[10px] font-mono font-black text-slate-400">
-                <span className="text-red-300">威力{skill.power}</span><span className="text-amber-300">消費G{skill.guts}</span><span className="text-yellow-300">会心{skill.crit}%</span>
+                <span className="text-red-300">威力{skill.power}</span><span className="text-amber-300">消費ガッツ{skill.guts}</span><span className="text-yellow-300">会心{skill.crit}%</span>
               </div>
             </div>
           ))}
@@ -21235,7 +21235,7 @@ function MasuEnhanceScreen({
         addAssistantBond('enhance');
         setBulkPlan(null);
         const lines = [];
-        plan.apt.forEach((n,i)=>{ if(n>0) lines.push(`${RANGE_LABELS[i]}距離適性 +${n}`); });
+        plan.apt.forEach((n,i)=>{ if(n>0) lines.push(`${RANGE_LABELS[i]}間合い適性 +${n}`); });
         Object.entries(plan.stat).forEach(([k,n])=>{ if(n>0) lines.push(`${STAT_POINT_KEYS[k]} +${n*(STAT_POINT_GAIN[k]||1)}`); });
         setEffect({type:'enhance',label:'まとめて強化！',icon:'💪',monEmoji:base.emoji,imgUrl:base.iconUrl,baseId:masu.baseId,colors:getMasuColors(updated),subLabel:lines.join('\n')});
         setTimeout(()=>setEffect(null),1200);
@@ -21312,8 +21312,8 @@ function MasuEnhanceScreen({
                   {RANGE_LABELS.map((label,idx)=>{const before=resolvedDistAptitude[idx]||'C',after=plannedGrade(idx),added=plan.apt[idx];return <div key={idx} className="grid grid-cols-[48px_1fr_56px_1fr] items-center gap-1 rounded-xl bg-black/30 p-1.5">
                     <span className={`text-[10px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
                     <div className="text-center font-mono font-black text-[12px]"><span className={DIST_APTITUDE_COLOR[before]}>{before}</span><span className="text-slate-400 mx-1">→</span><span className={added>0?'text-cyan-300':'text-slate-300'}>{after}</span></div>
-                    <label className="flex items-center gap-0.5 min-w-0"><input data-direct-point-input="normal-apt" aria-label={`${label}距離適性の振り分けポイントを直接入力`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" value={added} onFocus={e=>e.currentTarget.select()} onChange={e=>setPlanExact('apt',idx,e.currentTarget.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="w-full min-w-0 h-11 rounded-xl border border-amber-400/40 bg-slate-950/80 px-0.5 text-center text-[12px] font-mono font-black text-amber-300 outline-none focus:border-amber-300"/><span className="text-[10px] font-black text-amber-300">P</span></label>
-                    <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}距離適性を減らす`} disabled={added<=0} onPress={()=>addPlanApt(idx,-1)} className="min-h-[44px] rounded-xl bg-slate-700 text-lg font-black active:scale-95 disabled:opacity-30">−</PressRepeatButton><PressRepeatButton aria-label={`${label}距離適性を増やす`} disabled={!canPlanApt(idx)} onPress={()=>addPlanApt(idx,1)} className="min-h-[44px] rounded-xl bg-amber-600 text-lg font-black active:scale-95 disabled:bg-slate-700 disabled:opacity-30">＋</PressRepeatButton></div>
+                    <label className="flex items-center gap-0.5 min-w-0"><input data-direct-point-input="normal-apt" aria-label={`${label}間合い適性の振り分けポイントを直接入力`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" value={added} onFocus={e=>e.currentTarget.select()} onChange={e=>setPlanExact('apt',idx,e.currentTarget.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="w-full min-w-0 h-11 rounded-xl border border-amber-400/40 bg-slate-950/80 px-0.5 text-center text-[12px] font-mono font-black text-amber-300 outline-none focus:border-amber-300"/><span className="text-[10px] font-black text-amber-300">P</span></label>
+                    <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}間合い適性を減らす`} disabled={added<=0} onPress={()=>addPlanApt(idx,-1)} className="min-h-[44px] rounded-xl bg-slate-700 text-lg font-black active:scale-95 disabled:opacity-30">−</PressRepeatButton><PressRepeatButton aria-label={`${label}間合い適性を増やす`} disabled={!canPlanApt(idx)} onPress={()=>addPlanApt(idx,1)} className="min-h-[44px] rounded-xl bg-amber-600 text-lg font-black active:scale-95 disabled:bg-slate-700 disabled:opacity-30">＋</PressRepeatButton></div>
                   </div>;})}
                 </div>
                 <div className="text-[11px] text-slate-400 font-black mb-1.5">ステータス</div>
@@ -21338,7 +21338,7 @@ function MasuEnhanceScreen({
             </div>
             <div className="rounded-xl border border-pink-500/30 bg-black/30 px-3 py-2">
               <div className="text-[10px] text-pink-400 font-bold">合流ボーナス(このマスモンが供モンとして合流した時に加算される値)</div>
-              <div className="text-[11px] text-white font-bold mt-1">{ps.hp>0&&`HP+${ps.hp} `}{ps.atk>0&&`攻+${ps.atk} `}{ps.def>0&&`防+${ps.def} `}{ps.guts>0&&`G+${ps.guts} `}{!(ps.hp>0||ps.atk>0||ps.def>0||ps.guts>0)&&'なし'}</div>
+              <div className="text-[11px] text-white font-bold mt-1">{ps.hp>0&&`ライフ+${ps.hp} `}{ps.atk>0&&`ちから+${ps.atk} `}{ps.def>0&&`丈夫さ+${ps.def} `}{ps.guts>0&&`G+${ps.guts} `}{!(ps.hp>0||ps.atk>0||ps.def>0||ps.guts>0)&&'なし'}</div>
             </div>
             <div className="text-[10px] text-slate-400 font-bold text-center px-2">強化は上の「まとめて強化」で下書きし、確定すると保存されます。</div>
             <button type="button" onClick={backToDetail} className="mh-button mh-button-secondary w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-800 text-slate-300 font-black text-[12px] active:scale-95 mt-2">完了</button>
@@ -22080,10 +22080,10 @@ function PickHeroAllyScreen({
                   トレーニング画面と同じく変化そのものを見せる */}
               {pickMode==='hero'?(
               <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono" style={{fontSize:'9px'}}>
-                <div className="flex justify-between"><span className="text-slate-500">HP</span><span className="text-pink-400 font-bold">{m.baseHp}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">力</span><span className="text-red-400 font-bold">{m.baseAtk}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">防</span><span className="text-emerald-400 font-bold">{m.baseDef}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">G</span><span className="text-amber-400 font-bold">{m.baseGuts}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">ライフ</span><span className="text-pink-400 font-bold">{m.baseHp}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">ちから</span><span className="text-red-400 font-bold">{m.baseAtk}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">丈夫さ</span><span className="text-emerald-400 font-bold">{m.baseDef}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">ガッツ</span><span className="text-amber-400 font-bold">{m.baseGuts}</span></div>
               </div>
               ):(()=>{const preview=allyJoinPreview(m); return (<>
                 {/* 上の「現在のステータス」が今の値を出しているので、カードは合流後の値と
@@ -22095,7 +22095,7 @@ function PickHeroAllyScreen({
                 <div className="mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
                   {preview.stats.map(stat=>(
                     <span key={stat.key} className="min-w-0 block">
-                      <span className="block text-slate-500 font-black leading-none">{stat.short}</span>
+                      <span className="block text-slate-500 font-black leading-none break-all">{stat.label}</span>
                       {preview.tactics
                         ?(stat.diff>0?<span className="block leading-none text-slate-500">{stat.before} →</span>:null)
                         :([ULTIMATE_SETTING.id,CHAOS_SETTING.id,INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty))&&stat.normalDiff!==stat.diff?<span className="block leading-none text-slate-500">本来 +{stat.normalDiff}</span>:null)}
@@ -23749,7 +23749,7 @@ function BattleScreen({
               <section className="rounded-xl border border-indigo-900/70 bg-slate-900/95 px-2 py-1.5">
                 <div data-ultra-ally-slots className="grid grid-cols-4 gap-1">{slots.map((s,i)=><div key={i} className={`flex h-[42px] min-w-0 flex-col items-center justify-center rounded-lg border px-0.5 py-1 text-center ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border}`}><div className="w-full truncate text-[10px] font-black text-white">{s?.name||'---'}</div><div className="mt-1 text-[10px] font-black">{RANGE_LABELS[i]}距離</div></div>)}</div>
                 <div className="mt-1.5 space-y-1">
-                  <div><div className="flex justify-between text-[10px] font-black text-pink-300"><span>味方HP</span><span className="font-mono">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-pink-500" style={{width:`${(hp/effectiveMaxHp)*100}%`}}/></div></div>
+                  <div><div className="flex justify-between text-[10px] font-black text-pink-300"><span>味方のライフ</span><span className="font-mono">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-pink-500" style={{width:`${(hp/effectiveMaxHp)*100}%`}}/></div></div>
                   <div><div className="flex justify-between text-[10px] font-black text-amber-300"><span>ガッツ</span><span className="font-mono">{Math.floor(guts).toLocaleString()} / {effectiveMaxGuts.toLocaleString()}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-amber-400" style={{width:`${(guts/effectiveMaxGuts)*100}%`}}/></div></div>
                 </div>
                 <div data-ultra-ally-log className="mt-1 h-[42px] overflow-hidden rounded-lg border border-indigo-800/60 bg-black/50 px-2 py-1 text-center leading-tight">{slotSkill&&<div className="truncate text-[11px] font-black text-indigo-200">{slotSkill.name}</div>}{popups.filter(p=>['hero','life','guts'].includes(p.side)).map(p=><div key={p.id} className={`${p.color} truncate text-sm font-black`}>{p.text}</div>)}</div>
@@ -24304,11 +24304,11 @@ function BattleScreen({
             //   card-icon-check.js が `c.icon` をそのまま描く書き方を禁じている
             const chip=(key,mark,label,value,tone,opts)=>{const o=opts||{};chips.push({key,mark,label,value,tone,short:o.short!=null?o.short:value,pulse:!!o.pulse});};
             const atkPct=Math.floor((getPermaBuff('atkPct')+getPermaBuff('muaAtkPct'))*100);
-            if(atkPct>0) chip('atk',<Sword size={9}/>,'ATK',`+${atkPct}%`,'text-red-500 border-red-500/50');
+            if(atkPct>0) chip('atk',<Sword size={9}/>,'攻撃力',`+${atkPct}%`,'text-red-500 border-red-500/50');
             const dmgCutPct=Math.floor(getPermaBuff('dmgCutPct')*100);
             if(dmgCutPct>0) chip('dmgCut',<Shield size={9}/>,'被ダメ',`-${dmgCutPct}%`,'text-emerald-500 border-emerald-500/50');
             const defPct=Math.floor(getPermaBuff('defPct')*100);
-            if(defPct>0) chip('def',<Shield size={9}/>,'DEF',`+${defPct}%`,'text-emerald-500 border-emerald-500/50');
+            if(defPct>0) chip('def',<Shield size={9}/>,'丈夫さ',`+${defPct}%`,'text-emerald-500 border-emerald-500/50');
             const muaHpPct=Math.floor(getPermaBuff('muaHpPct')*100);
             if(muaHpPct>0) chip('muaHp',<Heart size={9}/>,'ライフ',`+${muaHpPct}%`,'text-pink-500 border-pink-500/50');
             const muaGutsPct=Math.floor(getPermaBuff('muaGutsPct')*100);
@@ -24352,8 +24352,8 @@ function BattleScreen({
             if(getWaveBuff('enemyTakenDmgBonus')>0) chip('enemyTaken',<PlusCircle size={9}/>,'敵被ダメ',`+${Math.round(getWaveBuff('enemyTakenDmgBonus')*100)}%`,'text-orange-400 border-orange-500/50',{pulse:true});
             if(getNextTurnBuff('takenDamageMult',1.0)<1) chip('takenNext',<Shield size={9}/>,'次T被ダメ',`-${Math.round((1-getNextTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-400 border-pink-500/50',{pulse:true});
             if(getTurnBuff('takenDamageMult',1.0)<1) chip('takenNow',<Shield size={9}/>,'被ダメ',`-${Math.round((1-getTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-300 border-pink-400',{pulse:true});
-            if(getNextTurnBuff('gutsCostMult',1.0)>1) chip('costNext',<Zap size={9}/>,'次T消費G',`+${Math.round((getNextTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-400 border-amber-500/50',{pulse:true});
-            if(getTurnBuff('gutsCostMult',1.0)>1) chip('costNow',<Zap size={9}/>,'消費G',`+${Math.round((getTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-300 border-amber-400',{pulse:true});
+            if(getNextTurnBuff('gutsCostMult',1.0)>1) chip('costNext',<Zap size={9}/>,'次ターン消費ガッツ',`+${Math.round((getNextTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-400 border-amber-500/50',{pulse:true});
+            if(getTurnBuff('gutsCostMult',1.0)>1) chip('costNow',<Zap size={9}/>,'消費ガッツ',`+${Math.round((getTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-300 border-amber-400',{pulse:true});
             if(!chips.length) return null;
             return (
               <div data-battle-buffs={chips.length} data-battle-buffs-mode={buffDetail?'detail':'icon'}
@@ -24977,7 +24977,7 @@ function BattleScreen({
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
                       <div className="flex h-[10px] items-center justify-between leading-none">
-                        <span className="text-[8px] font-black tracking-wider text-pink-300">HP</span>
+                        <span className="text-[8px] font-black tracking-wider text-pink-300">ライフ</span>
                         <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
                       </div>
                       <div className="h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
@@ -25168,7 +25168,7 @@ function BattleScreen({
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
                 {exPanel.toggleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-toggle className="font-black text-fuchsia-200">{exPanel.toggleLabel}</dd></>}
                 {!exPanel.toggleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
-                {exPanel.stats&&<><dt className="font-bold text-slate-400">力／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
+                {exPanel.stats&&<><dt className="font-bold text-slate-400">ちから／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
               <div className="mt-3 flex gap-2">
@@ -25376,7 +25376,7 @@ function MasuAutoEnhanceScreen({
       };
       const rowLabel = (target) => {
         const aptIndex = autoEnhanceAptIndexOf(target);
-        return aptIndex != null ? `${RANGE_LABELS[aptIndex]}距離適性` : STAT_POINT_KEYS[target];
+        return aptIndex != null ? `${RANGE_LABELS[aptIndex]}間合い適性` : STAT_POINT_KEYS[target];
       };
       // 目標に選べるグレード。いまより下は選べない(下げる強化は存在しないため)
       const aptChoices = (index) => {
@@ -28322,7 +28322,7 @@ function MonsterHeroGame() {
           <div className="font-black text-[13px] text-white leading-tight truncate">{mon.name}</div>
           <div className="font-black text-[10px] text-amber-300 leading-tight truncate"><Zap size={10} className="inline mr-0.5"/>{mon.unique.name}</div>
           <div className="grid grid-cols-2 gap-x-2 text-[10px] font-mono leading-tight">
-            <span className="flex justify-between text-slate-400">HP <b className="text-pink-300">{mon.baseHp}</b></span><span className="flex justify-between text-slate-400">ちから <b className="text-red-300">{mon.baseAtk}</b></span>
+            <span className="flex justify-between text-slate-400">ライフ <b className="text-pink-300">{mon.baseHp}</b></span><span className="flex justify-between text-slate-400">ちから <b className="text-red-300">{mon.baseAtk}</b></span>
             <span className="flex justify-between text-slate-400">丈夫さ <b className="text-emerald-300">{mon.baseDef}</b></span><span className="flex justify-between text-slate-400">ガッツ <b className="text-amber-300">{mon.baseGuts}</b></span>
           </div>
         </div>
@@ -28560,10 +28560,10 @@ function MonsterHeroGame() {
       const rate = Math.max(1, Number(tacticsJoinCatchUpRef.current) || 1);
       const joined = applyTacticsJoinCatchUp(base, rate);
       const stats = [
-        { key:'hp',   label:'ライフ', short:'HP', before:base.baseMaxHp,   after:joined.baseMaxHp,   tint:'text-pink-300' },
-        { key:'atk',  label:'ちから', short:'力', before:base.atk,         after:joined.atk,         tint:'text-red-300' },
-        { key:'def',  label:'丈夫さ', short:'防', before:base.def,         after:joined.def,         tint:'text-emerald-300' },
-        { key:'guts', label:'ガッツ', short:'G',  before:base.baseMaxGuts, after:joined.baseMaxGuts, tint:'text-amber-300' },
+        { key:'hp',   label:'ライフ', before:base.baseMaxHp,   after:joined.baseMaxHp,   tint:'text-pink-300' },
+        { key:'atk',  label:'ちから', before:base.atk,         after:joined.atk,         tint:'text-red-300' },
+        { key:'def',  label:'丈夫さ', before:base.def,         after:joined.def,         tint:'text-emerald-300' },
+        { key:'guts', label:'ガッツ', before:base.baseMaxGuts, after:joined.baseMaxGuts, tint:'text-amber-300' },
       ].map(stat => ({ ...stat, diff: stat.after - stat.before, normalDiff: stat.after - stat.before }));
       // 距離適性も「その子のぶんだけ」。合算しない(設計 §7)
       const own = getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty),
@@ -28581,10 +28581,10 @@ function MonsterHeroGame() {
     const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const add = (key) => applyAllyJoinBonus(bonus[key]||0, rule, waveResult?.totalTurnCount);
     const stats = [
-      { key:'hp',   label:'ライフ', short:'HP', before:maxHp,   diff:add('hp'),   tint:'text-pink-300' },
-      { key:'atk',  label:'ちから', short:'力', before:atk,     diff:add('atk'),  tint:'text-red-300' },
-      { key:'def',  label:'丈夫さ', short:'防', before:def,     diff:add('def'),  tint:'text-emerald-300' },
-      { key:'guts', label:'ガッツ', short:'G',  before:maxGuts, diff:add('guts'), tint:'text-amber-300' },
+      { key:'hp',   label:'ライフ', before:maxHp,   diff:add('hp'),   tint:'text-pink-300' },
+      { key:'atk',  label:'ちから', before:atk,     diff:add('atk'),  tint:'text-red-300' },
+      { key:'def',  label:'丈夫さ', before:def,     diff:add('def'),  tint:'text-emerald-300' },
+      { key:'guts', label:'ガッツ', before:maxGuts, diff:add('guts'), tint:'text-amber-300' },
     ].map(stat => ({ ...stat, normalDiff:Number(bonus[stat.key])||0, after: stat.before + stat.diff }));
     // 間合い適性は「置いた距離に関係なく4距離すべてへ加算される」ので、距離ごとの合計補正で見せる
     const normalAptDelta = getMonsterAptPct(mon, null);
@@ -33430,7 +33430,7 @@ function MonsterHeroGame() {
     const lines = [];
     normalizeTranscendAptBoosts(applied.masu.transcendAptBoosts).forEach((boost, i) => {
       const gained = boost - before.transcendAptBoosts[i];
-      if (gained > 0) lines.push(`${RANGE_LABELS[i]}距離適性 +${gained}`);
+      if (gained > 0) lines.push(`${RANGE_LABELS[i]}間合い適性 +${gained}`);
     });
     Object.entries(normalizeTranscendStatPoints(applied.masu.transcendStatPoints)).forEach(([key, value]) => {
       const gained = value - (before.transcendStatPoints[key] || 0);
@@ -36837,7 +36837,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if (card.type==='buff'||card.type==='debuff') {
         fireTeachingFx(card.id);
         if (card.subType==='atk_buff') { addPopup(`攻撃UP!`,'hero','text-red-400 font-black text-2xl drop-shadow-md'); const boost=localBoostFromCard(card).oryo*effMul; addPermaBuff('atkPct',boost); localOryoAdd+=boost; }
-        else if (card.subType==='dmg_cut_buff') { addPopup(`防御UP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=(level===0?0.03:(level===1?0.06:0.10))*effMul; writePermaBuffs(p=>({...p, dmgCutPct:Math.min(0.9,(p.dmgCutPct||0)+cutValue)})); }
+        else if (card.subType==='dmg_cut_buff') { addPopup(`丈夫さUP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=(level===0?0.03:(level===1?0.06:0.10))*effMul; writePermaBuffs(p=>({...p, dmgCutPct:Math.min(0.9,(p.dmgCutPct||0)+cutValue)})); }
         // かどみうむ: 効果量はdata/breeder.jsのCADMIUM_TIERSに集約している(説明文の生成も同じ値を見る)
         else if (card.subType==='guts_buff') { const owned=ownedTeachings.find(ot=>ot.id===card.id); const tier=CADMIUM_TIERS[Math.min(owned?owned.evoLevel:0,CADMIUM_TIERS.length-1)]; addPopup(tier.gutsLimit>0?`⚡ ガッツ上限UP!`:`⚡ ガッツ回復UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); if(tier.autoGuts>0) addPermaBuff('gutsRecoverPct',tier.autoGuts*effMul); if(tier.gutsLimit>0) addPermaBuff('muaGutsPct',tier.gutsLimit*effMul); if(tier.hpLimit>0) addPermaBuff('muaHpPct',tier.hpLimit*effMul); if(tier.autoHp>0){ addPermaBuff('autoHpRecovery',tier.autoHp*effMul); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md'); } }
         else if (card.subType==='stun_atsu') {
@@ -38858,7 +38858,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ['丈夫さ', mon.baseDef, 'text-emerald-400'],
       ['ガッツ', mon.baseGuts, 'text-amber-400'],
     ];
-    const joinBonus = [plus.hp>0&&`HP+${plus.hp}`, plus.atk>0&&`攻+${plus.atk}`, plus.def>0&&`防+${plus.def}`, plus.guts>0&&`G+${plus.guts}`].filter(Boolean).join(' ');
+    const joinBonus = [plus.hp>0&&`ライフ+${plus.hp}`, plus.atk>0&&`ちから+${plus.atk}`, plus.def>0&&`丈夫さ+${plus.def}`, plus.guts>0&&`ガッツ+${plus.guts}`].filter(Boolean).join(' ');
     const aptBonus = formatAptBonus(mon);
     // 開いている内訳は個体ごとに覚える。別のモンスターを開いたときは閉じた状態から始まる
     const monGrowthKey = String(mon.masuId ?? mon.id ?? '');
@@ -38953,8 +38953,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     );
   };
   const renderSkillSection = (mon) => { const currentUnique=uniqueSkillAtLevel(mon.unique, mon.unique?.evoLevel); return (<>
-    <button onClick={()=>setRosterSkillDetail({mon,kind:'atk'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Sword size={12} className="text-red-400"/><span className="text-[10px] font-black uppercase">通常技: {(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {Math.floor(BASE_ATK_EVOLUTION[0].mult*100)}</span><span className="text-amber-400 font-bold">消費G {BASE_ATK_EVOLUTION[0].baseGuts}</span></div></button>
-    <button onClick={()=>setRosterSkillDetail({mon,kind:'unique'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技 Lv.{currentUnique.evoLevel}: {currentUnique.name}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-3 text-[9px] font-mono mb-2"><span className="text-red-400 font-bold">技威力 {Math.floor(currentUnique.mult*100)}</span><span className="text-yellow-400 font-bold">会心率 {Math.round(currentUnique.crit*100)}%</span><span className="text-amber-400 font-bold">消費G {currentUnique.guts}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic">"{currentUnique.effectDesc}"</div></button>
+    <button onClick={()=>setRosterSkillDetail({mon,kind:'atk'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Sword size={12} className="text-red-400"/><span className="text-[10px] font-black uppercase">通常技: {(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {Math.floor(BASE_ATK_EVOLUTION[0].mult*100)}</span><span className="text-amber-400 font-bold">消費ガッツ {BASE_ATK_EVOLUTION[0].baseGuts}</span></div></button>
+    <button onClick={()=>setRosterSkillDetail({mon,kind:'unique'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技 Lv.{currentUnique.evoLevel}: {currentUnique.name}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-3 text-[9px] font-mono mb-2"><span className="text-red-400 font-bold">技威力 {Math.floor(currentUnique.mult*100)}</span><span className="text-yellow-400 font-bold">会心率 {Math.round(currentUnique.crit*100)}%</span><span className="text-amber-400 font-bold">消費ガッツ {currentUnique.guts}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic">"{currentUnique.effectDesc}"</div></button>
   </>); };
 
 
@@ -40170,7 +40170,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>;
         })()}
 
-        {showWaveDetails&&(()=>{const extreme=gameState==='EXTREME_DIFFICULTY_SELECT';const extremePreviewSetting=ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===extremeDifficulty)||EXTREME_SETTING;const waveDifficulty=extreme?'Normal':safeDifficulty;const powerOverride=extreme?extremePreviewSetting.power:null;const label=extreme?extremePreviewSetting.label:QUICK_DIFFICULTY_SETTINGS[safeDifficulty].label;return <div className="fixed inset-0 flex items-center justify-center p-3" style={{zIndex:70000,backgroundColor:'rgba(2,6,23,.96)',paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true"><section className="w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"><header className="flex items-center justify-between mb-3"><div><small className="text-indigo-300 font-black">{label}</small><h2 className="text-xl font-black">全WAVE詳細</h2></div><button aria-label="閉じる" onClick={()=>{setWaveScanPreview(null);setShowWaveDetails(false);}} className="p-3 rounded-full bg-white/10"><X/></button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{ENEMY_SEQUENCE.map((enemyKey,index)=>{const enemy=createBattleEnemy(index+1,waveDifficulty,null,powerOverride,1,{mode:battleMode});const boss=index===ENEMY_SEQUENCE.length-1;return <article key={`${enemyKey}-${index}`} data-wave={index+1} role="button" tabIndex={0} aria-label={`WAVE ${index+1} ${enemy.name}を解析`} onClick={()=>setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty})} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty});}}} className={`grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 cursor-pointer active:scale-[.99] ${boss?'border-amber-400/40 min-h-[120px]':'border-white/10 min-h-[64px]'}`}><b className={`${boss?'text-amber-300':'text-indigo-300'} whitespace-nowrap`}>W{index+1}</b><div data-wave-art className="relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id,'waveDetail')} className="w-14 h-14 object-contain"/>:<span className="text-3xl">{enemy.emoji}</span>}</div><div className="min-w-0"><b className={`block truncate whitespace-nowrap ${boss?'text-amber-300':''}`} title={enemy.name}>{enemy.name}</b>{boss&&<span className="block text-[9px] leading-tight font-black text-amber-400">BOSS</span>}</div><div data-wave-stats className="w-[72px] text-right text-[10px] whitespace-nowrap"><div>HP <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃 <b>{enemy.atk.toLocaleString()}</b></div></div></article>})}</div></section></div>})()}
+        {showWaveDetails&&(()=>{const extreme=gameState==='EXTREME_DIFFICULTY_SELECT';const extremePreviewSetting=ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===extremeDifficulty)||EXTREME_SETTING;const waveDifficulty=extreme?'Normal':safeDifficulty;const powerOverride=extreme?extremePreviewSetting.power:null;const label=extreme?extremePreviewSetting.label:QUICK_DIFFICULTY_SETTINGS[safeDifficulty].label;return <div className="fixed inset-0 flex items-center justify-center p-3" style={{zIndex:70000,backgroundColor:'rgba(2,6,23,.96)',paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true"><section className="w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"><header className="flex items-center justify-between mb-3"><div><small className="text-indigo-300 font-black">{label}</small><h2 className="text-xl font-black">全WAVE詳細</h2></div><button aria-label="閉じる" onClick={()=>{setWaveScanPreview(null);setShowWaveDetails(false);}} className="p-3 rounded-full bg-white/10"><X/></button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{ENEMY_SEQUENCE.map((enemyKey,index)=>{const enemy=createBattleEnemy(index+1,waveDifficulty,null,powerOverride,1,{mode:battleMode});const boss=index===ENEMY_SEQUENCE.length-1;return <article key={`${enemyKey}-${index}`} data-wave={index+1} role="button" tabIndex={0} aria-label={`WAVE ${index+1} ${enemy.name}を解析`} onClick={()=>setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty})} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty});}}} className={`grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 cursor-pointer active:scale-[.99] ${boss?'border-amber-400/40 min-h-[120px]':'border-white/10 min-h-[64px]'}`}><b className={`${boss?'text-amber-300':'text-indigo-300'} whitespace-nowrap`}>W{index+1}</b><div data-wave-art className="relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id,'waveDetail')} className="w-14 h-14 object-contain"/>:<span className="text-3xl">{enemy.emoji}</span>}</div><div className="min-w-0"><b className={`block truncate whitespace-nowrap ${boss?'text-amber-300':''}`} title={enemy.name}>{enemy.name}</b>{boss&&<span className="block text-[9px] leading-tight font-black text-amber-400">BOSS</span>}</div><div data-wave-stats className="w-[72px] text-right text-[10px] whitespace-nowrap"><div>ライフ <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃力 <b>{enemy.atk.toLocaleString()}</b></div></div></article>})}</div></section></div>})()}
         {gameState==='BATTLE_MENU'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             {/* 戻るボタン。ランキングを見ているときは、いきなりホームへ帰らず
@@ -44186,7 +44186,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
                       {t.unlocked&&(
                         <div className="flex items-center gap-2.5 mt-1">
                           <span className="text-[9px] font-mono text-red-400 font-bold">威力 {t.power}</span>
-                          {t.guts>0&&<span className="text-[9px] font-mono text-amber-400 font-bold">消費G {t.guts}</span>}
+                          {t.guts>0&&<span className="text-[9px] font-mono text-amber-400 font-bold">消費ガッツ {t.guts}</span>}
                           {t.crit>0&&<span className="text-[9px] font-mono text-yellow-300 font-bold">会心 {t.crit}%</span>}
                         </div>
                       )}
@@ -44204,7 +44204,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
                   </div>
                 ))}
               </div>
-              {isAtkFamily&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">敵と同じ距離枠にいる味方の距離適性・距離ダメージ補正の合計値を上げると、上位レベルが解放されます</div>}
+              {isAtkFamily&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">敵と同じ距離枠にいる味方の間合い適性・距離ダメージ補正の合計値を上げると、上位レベルが解放されます</div>}
               {card.type==='unique'&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">固有技の強化(強化ポイント)で上位レベルが解放されます</div>}
             </div>
           </div>
@@ -44271,7 +44271,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             </div>
             <div className="flex items-center gap-3 mb-3">
               <span className="text-[10px] font-mono text-red-400 font-bold">威力 {skillEffectDetail.power}</span>
-              {skillEffectDetail.guts>0&&<span className="text-[10px] font-mono text-amber-400 font-bold">消費G {skillEffectDetail.guts}</span>}
+              {skillEffectDetail.guts>0&&<span className="text-[10px] font-mono text-amber-400 font-bold">消費ガッツ {skillEffectDetail.guts}</span>}
               {skillEffectDetail.crit>0&&<span className="text-[10px] font-mono text-yellow-300 font-bold">会心 {skillEffectDetail.crit}%</span>}
             </div>
             <div className="bg-black/40 border border-white/10 rounded-2xl p-3">
@@ -44307,13 +44307,13 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         {statCell('丈夫さ','text-emerald-400',u.def,exStats?exStats.def:u.def,'def')}
         <div><div className="text-[8px] font-black text-amber-400">ガッツ</div><div className="text-[12px] font-mono font-black">{u.guts}<span className="text-[9px] text-slate-500">/{u.maxGuts}</span></div></div>
       </div>
-      <div className="mt-0.5 text-[9px] font-black text-cyan-300">この枠の距離適性 {aptPct>=0?'+':''}{Math.round(aptPct*10)/10}%</div>
+      <div className="mt-0.5 text-[9px] font-black text-cyan-300">この枠の間合い適性 {aptPct>=0?'+':''}{Math.round(aptPct*10)/10}%</div>
       {exInfo&&<div data-tactics-status-ex={i} className="mt-0.5 text-[9px] font-black text-fuchsia-200">EX「{exInfo.def.name}」{exInfo.toggleLabel?`：いまは${exInfo.toggleLabel}`:(exInfo.active?'：効果中':'')}{exInfo.remaining.unlimited?'':`（のこり ${exInfo.remaining.left}/${exInfo.remaining.max}）`}</div>}
     </div>);
   })}
 </div>)}{/* ★タクティクスは1体ずつなので、パーティの合計・平均の欄そのものを出さない
                   (2026-09-22 ユーザー選択「消す」)。ちから・丈夫さは平均でしかなく、
-                  ダメージも被弾もガードも、いまは全部その子の値で決まる */}{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} DEF +{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div>}<div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
+                  ダメージも被弾もガードも、いまは全部その子の値で決まる */}{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">ちから</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} 丈夫さ+{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div>}<div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
 
       {showSoulBattleEffects&&gameState==='BATTLE'&&(
         <SoulBattleEffects
@@ -44489,7 +44489,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             <div className="bg-slate-900 border-2 border-amber-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
               <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0"><h3 className="text-sm font-black text-white uppercase">{title}</h3><button onClick={()=>setRosterSkillDetail(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button></div>
               <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5">
-                {levels.map(info=>{const locked=isUnique&&info.lvl>currentLevel; const current=isUnique&&info.lvl===currentLevel; return <div key={info.lvl} className={`p-2 rounded-xl border ${locked?'bg-slate-950/70 border-slate-800 opacity-45':'bg-black/30'} ${current?'border-amber-400 ring-1 ring-amber-400/40':'border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${locked?'text-slate-500':'text-amber-300'}`}>{locked?'🔒 ':''}Lv.{info.lvl} {info.name}</span>{isUnique&&<span className={`text-[8px] font-black ${current?'text-amber-300':locked?'text-slate-600':'text-emerald-400'}`}>{current?'現在の技':locked?'未解放':'解放済み'}</span>}</div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {info.power}</span><span className="text-yellow-400 font-bold">会心率 {info.crit}%</span><span className="text-amber-400 font-bold">消費G {info.guts}</span></div>{isUnique&&<div className="text-[8px] text-slate-400 mt-1">{mon.unique.effectDesc}</div>}</div>;})}
+                {levels.map(info=>{const locked=isUnique&&info.lvl>currentLevel; const current=isUnique&&info.lvl===currentLevel; return <div key={info.lvl} className={`p-2 rounded-xl border ${locked?'bg-slate-950/70 border-slate-800 opacity-45':'bg-black/30'} ${current?'border-amber-400 ring-1 ring-amber-400/40':'border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${locked?'text-slate-500':'text-amber-300'}`}>{locked?'🔒 ':''}Lv.{info.lvl} {info.name}</span>{isUnique&&<span className={`text-[8px] font-black ${current?'text-amber-300':locked?'text-slate-600':'text-emerald-400'}`}>{current?'現在の技':locked?'未解放':'解放済み'}</span>}</div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {info.power}</span><span className="text-yellow-400 font-bold">会心率 {info.crit}%</span><span className="text-amber-400 font-bold">消費ガッツ {info.guts}</span></div>{isUnique&&<div className="text-[8px] text-slate-400 mt-1">{mon.unique.effectDesc}</div>}</div>;})}
               </div>
               <button onClick={()=>setRosterSkillDetail(null)} className="w-full bg-amber-600 text-white py-3 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95">閉じる</button>
             </div>

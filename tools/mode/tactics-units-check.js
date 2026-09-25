@@ -638,7 +638,7 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
       && has('data-tactics-status-slot={i}'));
   check('ちから・丈夫さ・距離適性まで出す',
     // ★ちから・丈夫さはEXで変わった値も出すので、1つの形(statCell)で描く
-    has('この枠の距離適性') && has("{statCell('ちから','text-red-400',u.atk,")
+    has('この枠の間合い適性') && has("{statCell('ちから','text-red-400',u.atk,")
       && has("{statCell('丈夫さ','text-emerald-400',u.def,"));
   // ★null のときだけ今までどおりの判定を使う。ここを間違えると既存モードの置き方が変わる
   // ★予告と実行で数え方がずれると「ガードしたのに予定より減った」になる
