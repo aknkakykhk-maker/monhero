@@ -55,9 +55,9 @@
     const defs = svgEl('defs');
     const laneFill = svgEl('linearGradient', { id:'rhythmLaneSvgFill', x1:'0', y1:'0', x2:'0', y2:'1' });
     laneFill.append(
-      svgEl('stop', { offset:'0%', 'stop-color':'#111827', 'stop-opacity':'.18' }),
-      svgEl('stop', { offset:'72%', 'stop-color':'#0e7490', 'stop-opacity':'.16' }),
-      svgEl('stop', { offset:'100%', 'stop-color':'#164e63', 'stop-opacity':'.26' })
+      svgEl('stop', { offset:'0%', 'stop-color':'#020617', 'stop-opacity':'.9' }),
+      svgEl('stop', { offset:'72%', 'stop-color':'#1e3a8a', 'stop-opacity':'.55' }),
+      svgEl('stop', { offset:'100%', 'stop-color':'#2563eb', 'stop-opacity':'.6' })
     );
     const pressedFill = svgEl('linearGradient', { id:'rhythmLaneSvgPressed', x1:'0', y1:'0', x2:'0', y2:'1' });
     pressedFill.append(
@@ -81,19 +81,15 @@
       svg.appendChild(press);
     }
 
-    for (const y of [.25, .5, .75]) {
-      svg.appendChild(svgEl('line', {
-        x1:(rhythmProjectBoundary(0,y)*1000).toFixed(3), y1:(y*1000).toFixed(3),
-        x2:(rhythmProjectBoundary(RHYTHM_LANE_COUNT,y)*1000).toFixed(3), y2:(y*1000).toFixed(3),
-        stroke:'#67e8f9', 'stroke-opacity':'.09', 'stroke-width':'1.2'
-      }));
-    }
+    // 横の格子線(高さ25/50/75%)は2026-09-26に外した。道を奥が暗く手前ほど明るい濃い青にし、
+    // 内側のレーン境界も控えめにして、ノーツが道から浮き上がって見えるようにした
+    // (ユーザー指示「見た目も含めてこんぐらいに仕上げたい」。外周の2本だけは強めに残す)。
     for (let boundary = 0; boundary <= RHYTHM_LANE_COUNT; boundary++) {
       const outer = boundary === 0 || boundary === RHYTHM_LANE_COUNT;
       svg.appendChild(svgEl('polyline', {
         points:edgePoints(boundary).join(' '), fill:'none',
         stroke:outer ? '#e0f2fe' : '#a5f3fc',
-        'stroke-opacity':outer ? '.72' : '.46',
+        'stroke-opacity':outer ? '.9' : '.22',
         'stroke-width':outer ? '2.4' : '1.6'
       }));
     }
