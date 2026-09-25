@@ -110,7 +110,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       await page.waitForTimeout(1500);
       const hero = await page.evaluate((name) => {
         const b = [...document.querySelectorAll('button')].find(x => !x.disabled && x.offsetParent
-          && /HP\s*\d+/.test(x.textContent) && x.textContent.trim().startsWith(name) && !/DEBUG/.test(x.textContent));
+          && /ライフ\s*\d+/.test(x.textContent) && x.textContent.trim().startsWith(name) && !/DEBUG/.test(x.textContent));
         if (b) b.click(); return !!b;
       }, heroName);
       if (!hero) return `勇者モンに ${heroName} が並んでいない: ` + await page.evaluate(() => [...document.querySelectorAll('button')].filter(x=>x.offsetParent).map(x=>x.textContent.trim().slice(0,30)).join(' | ').slice(0,1500));
@@ -133,7 +133,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
           const confirm = pick(/^(習得する|強化する)$/); if (confirm) { confirm.click(); return 'confirm'; }
           const teaching = pick(/新規習得|強化後/); if (teaching) { teaching.click(); return 'teach'; }
           const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }
-          const mons = live.filter(x => /HP\s*\d+/.test(x.textContent) && !x.textContent.trim().startsWith(heroName)
+          const mons = live.filter(x => /ライフ\s*\d+/.test(x.textContent) && !x.textContent.trim().startsWith(heroName)
             && x.textContent.trim() !== '詳細を見る' && !/DEBUG/.test(x.textContent));
           if (mons.length) { mons[0].click(); return 'mon'; }
           const changes = live.filter(x => x.textContent.trim() === '変更');

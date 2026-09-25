@@ -311,10 +311,10 @@ function PickHeroAllyScreen({
                   トレーニング画面と同じく変化そのものを見せる */}
               {pickMode==='hero'?(
               <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono" style={{fontSize:'9px'}}>
-                <div className="flex justify-between"><span className="text-slate-500">HP</span><span className="text-pink-400 font-bold">{m.baseHp}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">力</span><span className="text-red-400 font-bold">{m.baseAtk}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">防</span><span className="text-emerald-400 font-bold">{m.baseDef}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">G</span><span className="text-amber-400 font-bold">{m.baseGuts}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">ライフ</span><span className="text-pink-400 font-bold">{m.baseHp}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">ちから</span><span className="text-red-400 font-bold">{m.baseAtk}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">丈夫さ</span><span className="text-emerald-400 font-bold">{m.baseDef}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">ガッツ</span><span className="text-amber-400 font-bold">{m.baseGuts}</span></div>
               </div>
               ):(()=>{const preview=allyJoinPreview(m); return (<>
                 {/* 上の「現在のステータス」が今の値を出しているので、カードは合流後の値と
@@ -326,7 +326,7 @@ function PickHeroAllyScreen({
                 <div className="mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
                   {preview.stats.map(stat=>(
                     <span key={stat.key} className="min-w-0 block">
-                      <span className="block text-slate-500 font-black leading-none">{stat.short}</span>
+                      <span className="block text-slate-500 font-black leading-none break-all">{stat.label}</span>
                       {preview.tactics
                         ?(stat.diff>0?<span className="block leading-none text-slate-500">{stat.before} →</span>:null)
                         :([ULTIMATE_SETTING.id,CHAOS_SETTING.id,INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty))&&stat.normalDiff!==stat.diff?<span className="block leading-none text-slate-500">本来 +{stat.normalDiff}</span>:null)}

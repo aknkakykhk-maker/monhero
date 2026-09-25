@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 715230393a9f888e
+// source-sha256: 27575a70c483b737
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9b7fab9ec12e648c
+// generated-sha256: 4375b6c982dbc3b1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -262,7 +262,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-25 19:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 20:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1754,7 +1754,7 @@ const buildMasuAutoEnhancePlan = (masu, base) => {
 const describeAutoEnhancePlan = plan => {
   const lines = [];
   (plan?.apt || []).forEach((count, index) => {
-    if (count > 0) lines.push(`${RANGE_LABELS[index]}距離適性 +${count}段階`);
+    if (count > 0) lines.push(`${RANGE_LABELS[index]}間合い適性 +${count}段階`);
   });
   Object.entries(plan?.stat || {}).forEach(([key, count]) => {
     if (count > 0) lines.push(`${STAT_POINT_KEYS[key]} +${count * (STAT_POINT_GAIN[key] || 1)}`);
@@ -13603,7 +13603,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   xp: 30,
   gold: 10,
   psyche: 40,
-  description: '有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。',
+  description: '有利な補正は弱まり、不利な補正は重くなる。間合い適性とWAVEごとの立ち回りが重要な高難易度。',
   specialRules: Object.freeze({
     waveEnhancement: 0.5,
     positiveModifier: 0.5,
@@ -14587,7 +14587,7 @@ const extremeSpecialRuleLines = difficultyId => {
   if (rules.waveEnhancement != null) lines.push(['WAVE後強化', specialRulePercent(rules.waveEnhancement)]);
   if (rules.positiveModifier != null || rules.negativeModifier != null) {
     const signed = `＋${specialRulePercent(rules.positiveModifier ?? 1)} / −${specialRulePercent(rules.negativeModifier ?? 1)}`;
-    lines.push(['自動回復補正', signed], ['距離適性補正', signed]);
+    lines.push(['自動回復補正', signed], ['間合い適性補正', signed]);
   }
   if (rules.damageDealt != null) lines.push(['与ダメージ', specialRulePercent(rules.damageDealt)]);
   if (rules.allyJoinBonus != null) lines.push(['供モン加入ボーナス', specialRulePercent(rules.allyJoinBonus)]);
@@ -14615,12 +14615,12 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
       lines: kept
     });
   };
-  if (difficultyId === GOD_SETTING.id) push('神威', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵HP/攻撃', '神威Lvごと +15% / +30% / +45% / +60% / +75%'], ['Lv5', '与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし']]);
-  if (difficultyId === RAGNAROK_SETTING.id) push('黄昏', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵HP/攻撃', '黄昏Lvごと +20% / +40% / +60% / +80% / +100%'], ['Lv2', '距離強化 35%→25%'], ['Lv3', '消費ガッツ 175%→200%'], ['Lv4', '＋補正 35%→25%・−補正 250%→300%'], ['Lv5', '与ダメ低下 -1.75pt/T・最低15%']]);
+  if (difficultyId === GOD_SETTING.id) push('神威', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵ライフ/攻撃力', '神威Lvごと +15% / +30% / +45% / +60% / +75%'], ['Lv5', '与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし']]);
+  if (difficultyId === RAGNAROK_SETTING.id) push('黄昏', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵ライフ/攻撃力', '黄昏Lvごと +20% / +40% / +60% / +80% / +100%'], ['Lv2', '距離強化 35%→25%'], ['Lv3', '消費ガッツ 175%→200%'], ['Lv4', '＋補正 35%→25%・−補正 250%→300%'], ['Lv5', '与ダメ低下 -1.75pt/T・最低15%']]);
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
   push('補正', [rules.waveEnhancement != null && ['WAVE後強化', specialRulePercent(rules.waveEnhancement)], rules.positiveModifier != null && ['＋補正', specialRulePercent(rules.positiveModifier)], rules.negativeModifier != null && ['－補正', specialRulePercent(rules.negativeModifier)], rules.distanceEnhancement != null && ['距離強化', specialRulePercent(rules.distanceEnhancement)]]);
   push('ダメージ・ガッツ', [rules.damageDealt != null && ['与ダメージ', specialRulePercent(rules.damageDealt)], rules.allyJoinBonus != null && ['供モン加入ボーナス', specialRulePercent(rules.allyJoinBonus)], rules.gutsCost != null && ['消費ガッツ', specialRulePercent(rules.gutsCost)]]);
-  push('累計ターン', [rules.enemyTurnRate != null && ['敵HP/攻撃', `累計Tごと+${precisePercent(rules.enemyTurnRate)}`], rules.allyJoinPenaltyRate != null && ['加入B倍率', `累計Tごと-${turnPointText(rules.allyJoinPenaltyRate)}${rules.minimumAllyJoinBonus != null ? `（最低${specialRulePercent(rules.minimumAllyJoinBonus)}）` : ''}`], rules.damageTurnRate != null && ['与ダメ倍率', `経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt ?? 0)}で停止）`]]);
+  push('累計ターン', [rules.enemyTurnRate != null && ['敵ライフ/攻撃力', `累計Tごと+${precisePercent(rules.enemyTurnRate)}`], rules.allyJoinPenaltyRate != null && ['加入B倍率', `累計Tごと-${turnPointText(rules.allyJoinPenaltyRate)}${rules.minimumAllyJoinBonus != null ? `（最低${specialRulePercent(rules.minimumAllyJoinBonus)}）` : ''}`], rules.damageTurnRate != null && ['与ダメ倍率', `経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt ?? 0)}で停止）`]]);
   push('WAVEターン', [
   // クイックの自動成長は成長率そのものから引く(10%→…)ので「pt」、
   // トレーニングは増える量へ掛かるので「%」。掛かり方が違うので言い方も分ける
@@ -29773,7 +29773,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     name: 'ガッツ全開っちー',
     // ★2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」。
     //   上限も20%上げ、その上がった上限まで満タンにする
-    desc: '5ターンのあいだ、力・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    desc: '5ターンのあいだ、ちから・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
     maxUses: 3,
     unlimited: false,
     withCards: true,
@@ -32891,7 +32891,7 @@ function MonsterDexDetailScreen({
     className: "text-red-300"
   }, "\u5A01\u529B", skill.power), /*#__PURE__*/React.createElement("span", {
     className: "text-amber-300"
-  }, "\u6D88\u8CBBG", skill.guts), /*#__PURE__*/React.createElement("span", {
+  }, "\u6D88\u8CBB\u30AC\u30C3\u30C4", skill.guts), /*#__PURE__*/React.createElement("span", {
     className: "text-yellow-300"
   }, "\u4F1A\u5FC3", skill.crit, "%")))));
   return /*#__PURE__*/React.createElement("div", {
@@ -37354,7 +37354,7 @@ function MasuEnhanceScreen({
     setBulkPlan(null);
     const lines = [];
     plan.apt.forEach((n, i) => {
-      if (n > 0) lines.push(`${RANGE_LABELS[i]}距離適性 +${n}`);
+      if (n > 0) lines.push(`${RANGE_LABELS[i]}間合い適性 +${n}`);
     });
     Object.entries(plan.stat).forEach(([k, n]) => {
       if (n > 0) lines.push(`${STAT_POINT_KEYS[k]} +${n * (STAT_POINT_GAIN[k] || 1)}`);
@@ -37546,7 +37546,7 @@ function MasuEnhanceScreen({
       className: "flex items-center gap-0.5 min-w-0"
     }, /*#__PURE__*/React.createElement("input", {
       "data-direct-point-input": "normal-apt",
-      "aria-label": `${label}距離適性の振り分けポイントを直接入力`,
+      "aria-label": `${label}間合い適性の振り分けポイントを直接入力`,
       type: "text",
       inputMode: "numeric",
       pattern: "[0-9]*",
@@ -37564,12 +37564,12 @@ function MasuEnhanceScreen({
     }, "P")), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-1"
     }, /*#__PURE__*/React.createElement(PressRepeatButton, {
-      "aria-label": `${label}距離適性を減らす`,
+      "aria-label": `${label}間合い適性を減らす`,
       disabled: added <= 0,
       onPress: () => addPlanApt(idx, -1),
       className: "min-h-[44px] rounded-xl bg-slate-700 text-lg font-black active:scale-95 disabled:opacity-30"
     }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
-      "aria-label": `${label}距離適性を増やす`,
+      "aria-label": `${label}間合い適性を増やす`,
       disabled: !canPlanApt(idx),
       onPress: () => addPlanApt(idx, 1),
       className: "min-h-[44px] rounded-xl bg-amber-600 text-lg font-black active:scale-95 disabled:bg-slate-700 disabled:opacity-30"
@@ -37668,7 +37668,7 @@ function MasuEnhanceScreen({
     className: "text-[10px] text-pink-400 font-bold"
   }, "\u5408\u6D41\u30DC\u30FC\u30CA\u30B9(\u3053\u306E\u30DE\u30B9\u30E2\u30F3\u304C\u4F9B\u30E2\u30F3\u3068\u3057\u3066\u5408\u6D41\u3057\u305F\u6642\u306B\u52A0\u7B97\u3055\u308C\u308B\u5024)"), /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-white font-bold mt-1"
-  }, ps.hp > 0 && `HP+${ps.hp} `, ps.atk > 0 && `攻+${ps.atk} `, ps.def > 0 && `防+${ps.def} `, ps.guts > 0 && `G+${ps.guts} `, !(ps.hp > 0 || ps.atk > 0 || ps.def > 0 || ps.guts > 0) && 'なし')), /*#__PURE__*/React.createElement("div", {
+  }, ps.hp > 0 && `ライフ+${ps.hp} `, ps.atk > 0 && `ちから+${ps.atk} `, ps.def > 0 && `丈夫さ+${ps.def} `, ps.guts > 0 && `G+${ps.guts} `, !(ps.hp > 0 || ps.atk > 0 || ps.def > 0 || ps.guts > 0) && 'なし')), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-400 font-bold text-center px-2"
   }, "\u5F37\u5316\u306F\u4E0A\u306E\u300C\u307E\u3068\u3081\u3066\u5F37\u5316\u300D\u3067\u4E0B\u66F8\u304D\u3057\u3001\u78BA\u5B9A\u3059\u308B\u3068\u4FDD\u5B58\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -39173,25 +39173,25 @@ function PickHeroAllyScreen({
             className: "flex justify-between"
           }, /*#__PURE__*/React.createElement("span", {
             className: "text-slate-500"
-          }, "HP"), /*#__PURE__*/React.createElement("span", {
+          }, "\u30E9\u30A4\u30D5"), /*#__PURE__*/React.createElement("span", {
             className: "text-pink-400 font-bold"
           }, m.baseHp)), /*#__PURE__*/React.createElement("div", {
             className: "flex justify-between"
           }, /*#__PURE__*/React.createElement("span", {
             className: "text-slate-500"
-          }, "\u529B"), /*#__PURE__*/React.createElement("span", {
+          }, "\u3061\u304B\u3089"), /*#__PURE__*/React.createElement("span", {
             className: "text-red-400 font-bold"
           }, m.baseAtk)), /*#__PURE__*/React.createElement("div", {
             className: "flex justify-between"
           }, /*#__PURE__*/React.createElement("span", {
             className: "text-slate-500"
-          }, "\u9632"), /*#__PURE__*/React.createElement("span", {
+          }, "\u4E08\u592B\u3055"), /*#__PURE__*/React.createElement("span", {
             className: "text-emerald-400 font-bold"
           }, m.baseDef)), /*#__PURE__*/React.createElement("div", {
             className: "flex justify-between"
           }, /*#__PURE__*/React.createElement("span", {
             className: "text-slate-500"
-          }, "G"), /*#__PURE__*/React.createElement("span", {
+          }, "\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("span", {
             className: "text-amber-400 font-bold"
           }, m.baseGuts))) : (() => {
             const preview = allyJoinPreview(m);
@@ -39204,8 +39204,8 @@ function PickHeroAllyScreen({
               key: stat.key,
               className: "min-w-0 block"
             }, /*#__PURE__*/React.createElement("span", {
-              className: "block text-slate-500 font-black leading-none"
-            }, stat.short), preview.tactics ? stat.diff > 0 ? /*#__PURE__*/React.createElement("span", {
+              className: "block text-slate-500 font-black leading-none break-all"
+            }, stat.label), preview.tactics ? stat.diff > 0 ? /*#__PURE__*/React.createElement("span", {
               className: "block leading-none text-slate-500"
             }, stat.before, " \u2192") : null : [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
               className: "block leading-none text-slate-500"
@@ -42712,7 +42712,7 @@ function BattleScreen({
     className: "mt-1.5 space-y-1"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between text-[10px] font-black text-pink-300"
-  }, /*#__PURE__*/React.createElement("span", null, "\u5473\u65B9HP"), /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", null, "\u5473\u65B9\u306E\u30E9\u30A4\u30D5"), /*#__PURE__*/React.createElement("span", {
     className: "font-mono"
   }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
     className: "h-1.5 overflow-hidden rounded-full bg-slate-800"
@@ -43660,7 +43660,7 @@ function BattleScreen({
     const atkPct = Math.floor((getPermaBuff('atkPct') + getPermaBuff('muaAtkPct')) * 100);
     if (atkPct > 0) chip('atk', /*#__PURE__*/React.createElement(Sword, {
       size: 9
-    }), 'ATK', `+${atkPct}%`, 'text-red-500 border-red-500/50');
+    }), '攻撃力', `+${atkPct}%`, 'text-red-500 border-red-500/50');
     const dmgCutPct = Math.floor(getPermaBuff('dmgCutPct') * 100);
     if (dmgCutPct > 0) chip('dmgCut', /*#__PURE__*/React.createElement(Shield, {
       size: 9
@@ -43668,7 +43668,7 @@ function BattleScreen({
     const defPct = Math.floor(getPermaBuff('defPct') * 100);
     if (defPct > 0) chip('def', /*#__PURE__*/React.createElement(Shield, {
       size: 9
-    }), 'DEF', `+${defPct}%`, 'text-emerald-500 border-emerald-500/50');
+    }), '丈夫さ', `+${defPct}%`, 'text-emerald-500 border-emerald-500/50');
     const muaHpPct = Math.floor(getPermaBuff('muaHpPct') * 100);
     if (muaHpPct > 0) chip('muaHp', /*#__PURE__*/React.createElement(Heart, {
       size: 9
@@ -43785,12 +43785,12 @@ function BattleScreen({
     });
     if (getNextTurnBuff('gutsCostMult', 1.0) > 1) chip('costNext', /*#__PURE__*/React.createElement(Zap, {
       size: 9
-    }), '次T消費G', `+${Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100)}%`, 'text-amber-400 border-amber-500/50', {
+    }), '次ターン消費ガッツ', `+${Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100)}%`, 'text-amber-400 border-amber-500/50', {
       pulse: true
     });
     if (getTurnBuff('gutsCostMult', 1.0) > 1) chip('costNow', /*#__PURE__*/React.createElement(Zap, {
       size: 9
-    }), '消費G', `+${Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100)}%`, 'text-amber-300 border-amber-400', {
+    }), '消費ガッツ', `+${Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100)}%`, 'text-amber-300 border-amber-400', {
       pulse: true
     });
     if (!chips.length) return null;
@@ -44819,7 +44819,7 @@ function BattleScreen({
         className: "flex h-[10px] items-center justify-between leading-none"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[8px] font-black tracking-wider text-pink-300"
-      }, "HP"), /*#__PURE__*/React.createElement("span", {
+      }, "\u30E9\u30A4\u30D5"), /*#__PURE__*/React.createElement("span", {
         className: "font-mono leading-none"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[11px] font-black text-white"
@@ -45290,7 +45290,7 @@ function BattleScreen({
     className: "font-black text-fuchsia-200"
   }, "\u52B9\u679C\u4E2D")), exPanel.stats && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("dt", {
     className: "font-bold text-slate-400"
-  }, "\u529B\uFF0F\u4E08\u592B\u3055"), /*#__PURE__*/React.createElement("dd", {
+  }, "\u3061\u304B\u3089\uFF0F\u4E08\u592B\u3055"), /*#__PURE__*/React.createElement("dd", {
     "data-tactics-ex-stats": true,
     className: `font-black ${exPanel.stats.changed ? 'text-fuchsia-200' : 'text-white'}`
   }, exPanel.stats.atk, "\uFF0F", exPanel.stats.def, exPanel.stats.changed ? '（EXで変化中）' : ''))), !exPanel.check.ok && /*#__PURE__*/React.createElement("p", {
@@ -45756,7 +45756,7 @@ function MasuAutoEnhanceScreen({
   };
   const rowLabel = target => {
     const aptIndex = autoEnhanceAptIndexOf(target);
-    return aptIndex != null ? `${RANGE_LABELS[aptIndex]}距離適性` : STAT_POINT_KEYS[target];
+    return aptIndex != null ? `${RANGE_LABELS[aptIndex]}間合い適性` : STAT_POINT_KEYS[target];
   };
   // 目標に選べるグレード。いまより下は選べない(下げる強化は存在しないため)
   const aptChoices = index => {
@@ -49555,7 +49555,7 @@ function MonsterHeroGame() {
     className: "grid grid-cols-2 gap-x-2 text-[10px] font-mono leading-tight"
   }, /*#__PURE__*/React.createElement("span", {
     className: "flex justify-between text-slate-400"
-  }, "HP ", /*#__PURE__*/React.createElement("b", {
+  }, "\u30E9\u30A4\u30D5 ", /*#__PURE__*/React.createElement("b", {
     className: "text-pink-300"
   }, mon.baseHp)), /*#__PURE__*/React.createElement("span", {
     className: "flex justify-between text-slate-400"
@@ -49894,28 +49894,24 @@ function MonsterHeroGame() {
       const stats = [{
         key: 'hp',
         label: 'ライフ',
-        short: 'HP',
         before: base.baseMaxHp,
         after: joined.baseMaxHp,
         tint: 'text-pink-300'
       }, {
         key: 'atk',
         label: 'ちから',
-        short: '力',
         before: base.atk,
         after: joined.atk,
         tint: 'text-red-300'
       }, {
         key: 'def',
         label: '丈夫さ',
-        short: '防',
         before: base.def,
         after: joined.def,
         tint: 'text-emerald-300'
       }, {
         key: 'guts',
         label: 'ガッツ',
-        short: 'G',
         before: base.baseMaxGuts,
         after: joined.baseMaxGuts,
         tint: 'text-amber-300'
@@ -49952,28 +49948,24 @@ function MonsterHeroGame() {
     const stats = [{
       key: 'hp',
       label: 'ライフ',
-      short: 'HP',
       before: maxHp,
       diff: add('hp'),
       tint: 'text-pink-300'
     }, {
       key: 'atk',
       label: 'ちから',
-      short: '力',
       before: atk,
       diff: add('atk'),
       tint: 'text-red-300'
     }, {
       key: 'def',
       label: '丈夫さ',
-      short: '防',
       before: def,
       diff: add('def'),
       tint: 'text-emerald-300'
     }, {
       key: 'guts',
       label: 'ガッツ',
-      short: 'G',
       before: maxGuts,
       diff: add('guts'),
       tint: 'text-amber-300'
@@ -56652,7 +56644,7 @@ function MonsterHeroGame() {
     const lines = [];
     normalizeTranscendAptBoosts(applied.masu.transcendAptBoosts).forEach((boost, i) => {
       const gained = boost - before.transcendAptBoosts[i];
-      if (gained > 0) lines.push(`${RANGE_LABELS[i]}距離適性 +${gained}`);
+      if (gained > 0) lines.push(`${RANGE_LABELS[i]}間合い適性 +${gained}`);
     });
     Object.entries(normalizeTranscendStatPoints(applied.masu.transcendStatPoints)).forEach(([key, value]) => {
       const gained = value - (before.transcendStatPoints[key] || 0);
@@ -61471,7 +61463,7 @@ function MonsterHeroGame() {
           addPermaBuff('atkPct', boost);
           localOryoAdd += boost;
         } else if (card.subType === 'dmg_cut_buff') {
-          addPopup(`防御UP!`, 'hero', 'text-emerald-400 font-black text-2xl drop-shadow-md');
+          addPopup(`丈夫さUP!`, 'hero', 'text-emerald-400 font-black text-2xl drop-shadow-md');
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = owned ? owned.evoLevel : 0;
           let cutValue = (level === 0 ? 0.03 : level === 1 ? 0.06 : 0.10) * effMul;
@@ -64470,7 +64462,7 @@ function MonsterHeroGame() {
     } = opts;
     const plus = mon.plusStats || {};
     const rows = statValues || [['ライフ', mon.baseHp, 'text-pink-400'], ['ちから', mon.baseAtk, 'text-red-400'], ['丈夫さ', mon.baseDef, 'text-emerald-400'], ['ガッツ', mon.baseGuts, 'text-amber-400']];
-    const joinBonus = [plus.hp > 0 && `HP+${plus.hp}`, plus.atk > 0 && `攻+${plus.atk}`, plus.def > 0 && `防+${plus.def}`, plus.guts > 0 && `G+${plus.guts}`].filter(Boolean).join(' ');
+    const joinBonus = [plus.hp > 0 && `ライフ+${plus.hp}`, plus.atk > 0 && `ちから+${plus.atk}`, plus.def > 0 && `丈夫さ+${plus.def}`, plus.guts > 0 && `ガッツ+${plus.guts}`].filter(Boolean).join(' ');
     const aptBonus = formatAptBonus(mon);
     // 開いている内訳は個体ごとに覚える。別のモンスターを開いたときは閉じた状態から始まる
     const monGrowthKey = String(mon.masuId ?? mon.id ?? '');
@@ -64763,7 +64755,7 @@ function MonsterHeroGame() {
       className: "text-red-400 font-bold"
     }, "\u6280\u5A01\u529B ", Math.floor(BASE_ATK_EVOLUTION[0].mult * 100)), /*#__PURE__*/React.createElement("span", {
       className: "text-amber-400 font-bold"
-    }, "\u6D88\u8CBBG ", BASE_ATK_EVOLUTION[0].baseGuts))), /*#__PURE__*/React.createElement("button", {
+    }, "\u6D88\u8CBB\u30AC\u30C3\u30C4 ", BASE_ATK_EVOLUTION[0].baseGuts))), /*#__PURE__*/React.createElement("button", {
       onClick: () => setRosterSkillDetail({
         mon,
         kind: 'unique'
@@ -64789,7 +64781,7 @@ function MonsterHeroGame() {
       className: "text-yellow-400 font-bold"
     }, "\u4F1A\u5FC3\u7387 ", Math.round(currentUnique.crit * 100), "%"), /*#__PURE__*/React.createElement("span", {
       className: "text-amber-400 font-bold"
-    }, "\u6D88\u8CBBG ", currentUnique.guts)), /*#__PURE__*/React.createElement("div", {
+    }, "\u6D88\u8CBB\u30AC\u30C3\u30C4 ", currentUnique.guts)), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-300 leading-relaxed italic"
     }, "\"", currentUnique.effectDesc, "\"")));
   };
@@ -67643,7 +67635,7 @@ function MonsterHeroGame() {
         }, "BOSS")), /*#__PURE__*/React.createElement("div", {
           "data-wave-stats": true,
           className: "w-[72px] text-right text-[10px] whitespace-nowrap"
-        }, /*#__PURE__*/React.createElement("div", null, "HP ", /*#__PURE__*/React.createElement("b", null, enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "\u653B\u6483 ", /*#__PURE__*/React.createElement("b", null, enemy.atk.toLocaleString()))));
+        }, /*#__PURE__*/React.createElement("div", null, "\u30E9\u30A4\u30D5 ", /*#__PURE__*/React.createElement("b", null, enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "\u653B\u6483\u529B ", /*#__PURE__*/React.createElement("b", null, enemy.atk.toLocaleString()))));
       }))));
     })(), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
       "data-mh-screen": true,
@@ -76361,7 +76353,7 @@ function MonsterHeroGame() {
         className: "text-[9px] font-mono text-red-400 font-bold"
       }, "\u5A01\u529B ", t.power), t.guts > 0 && /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-mono text-amber-400 font-bold"
-      }, "\u6D88\u8CBBG ", t.guts), t.crit > 0 && /*#__PURE__*/React.createElement("span", {
+      }, "\u6D88\u8CBB\u30AC\u30C3\u30C4 ", t.guts), t.crit > 0 && /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-mono text-yellow-300 font-bold"
       }, "\u4F1A\u5FC3 ", t.crit, "%")), t.sub && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-amber-400 font-bold truncate mt-0.5"
@@ -76383,7 +76375,7 @@ function MonsterHeroGame() {
         className: "shrink-0 text-[8px] font-black text-indigo-300 bg-indigo-950/60 border border-indigo-500/40 rounded-full px-2 py-0.5 active:scale-90"
       }, "\u8A73\u7D30"))))), isAtkFamily && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 text-center pt-1 shrink-0"
-      }, "\u6575\u3068\u540C\u3058\u8DDD\u96E2\u67A0\u306B\u3044\u308B\u5473\u65B9\u306E\u8DDD\u96E2\u9069\u6027\u30FB\u8DDD\u96E2\u30C0\u30E1\u30FC\u30B8\u88DC\u6B63\u306E\u5408\u8A08\u5024\u3092\u4E0A\u3052\u308B\u3068\u3001\u4E0A\u4F4D\u30EC\u30D9\u30EB\u304C\u89E3\u653E\u3055\u308C\u307E\u3059"), card.type === 'unique' && /*#__PURE__*/React.createElement("div", {
+      }, "\u6575\u3068\u540C\u3058\u8DDD\u96E2\u67A0\u306B\u3044\u308B\u5473\u65B9\u306E\u9593\u5408\u3044\u9069\u6027\u30FB\u8DDD\u96E2\u30C0\u30E1\u30FC\u30B8\u88DC\u6B63\u306E\u5408\u8A08\u5024\u3092\u4E0A\u3052\u308B\u3068\u3001\u4E0A\u4F4D\u30EC\u30D9\u30EB\u304C\u89E3\u653E\u3055\u308C\u307E\u3059"), card.type === 'unique' && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 text-center pt-1 shrink-0"
       }, "\u56FA\u6709\u6280\u306E\u5F37\u5316(\u5F37\u5316\u30DD\u30A4\u30F3\u30C8)\u3067\u4E0A\u4F4D\u30EC\u30D9\u30EB\u304C\u89E3\u653E\u3055\u308C\u307E\u3059")));
     })(), focusedCard && !skillPicker && /*#__PURE__*/React.createElement("div", {
@@ -76523,7 +76515,7 @@ function MonsterHeroGame() {
       className: "text-[10px] font-mono text-red-400 font-bold"
     }, "\u5A01\u529B ", skillEffectDetail.power), skillEffectDetail.guts > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-mono text-amber-400 font-bold"
-    }, "\u6D88\u8CBBG ", skillEffectDetail.guts), skillEffectDetail.crit > 0 && /*#__PURE__*/React.createElement("span", {
+    }, "\u6D88\u8CBB\u30AC\u30C3\u30C4 ", skillEffectDetail.guts), skillEffectDetail.crit > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-mono text-yellow-300 font-bold"
     }, "\u4F1A\u5FC3 ", skillEffectDetail.crit, "%")), /*#__PURE__*/React.createElement("div", {
       className: "bg-black/40 border border-white/10 rounded-2xl p-3"
@@ -76725,7 +76717,7 @@ function MonsterHeroGame() {
         className: "text-[9px] text-slate-500"
       }, "/", u.maxGuts)))), /*#__PURE__*/React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-cyan-300"
-      }, "\u3053\u306E\u67A0\u306E\u8DDD\u96E2\u9069\u6027 ", aptPct >= 0 ? '+' : '', Math.round(aptPct * 10) / 10, "%"), exInfo && /*#__PURE__*/React.createElement("div", {
+      }, "\u3053\u306E\u67A0\u306E\u9593\u5408\u3044\u9069\u6027 ", aptPct >= 0 ? '+' : '', Math.round(aptPct * 10) / 10, "%"), exInfo && /*#__PURE__*/React.createElement("div", {
         "data-tactics-status-ex": i,
         className: "mt-0.5 text-[9px] font-black text-fuchsia-200"
       }, "EX\u300C", exInfo.def.name, "\u300D", exInfo.styleLabel ? `：いまは${exInfo.styleLabel}` : exInfo.active ? '：効果中' : '', exInfo.remaining.unlimited ? '' : `（のこり ${exInfo.remaining.left}/${exInfo.remaining.max}）`));
@@ -76737,7 +76729,7 @@ function MonsterHeroGame() {
       className: "text-xl font-mono font-black"
     }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-red-400 font-black uppercase"
-    }, "\u653B\u6483\u529B"), /*#__PURE__*/React.createElement("div", {
+    }, "\u3061\u304B\u3089"), /*#__PURE__*/React.createElement("div", {
       className: "text-xl font-mono font-black"
     }, atk)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-emerald-400 font-black uppercase"
@@ -76745,7 +76737,7 @@ function MonsterHeroGame() {
       className: "text-xl font-mono font-black"
     }, effectiveDef, getPermaBuff('defPct') > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] text-emerald-400 ml-1"
-    }, "(\u57FA\u790E", def, " DEF +", Math.round(getPermaBuff('defPct') * 100), "%)"), getPermaBuff('dmgCutPct') > 0 && /*#__PURE__*/React.createElement("span", {
+    }, "(\u57FA\u790E", def, " \u4E08\u592B\u3055+", Math.round(getPermaBuff('defPct') * 100), "%)"), getPermaBuff('dmgCutPct') > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] text-emerald-400 ml-1"
     }, "(\u88AB\u30C0\u30E1 -", Math.round(getPermaBuff('dmgCutPct') * 100), "%)"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-amber-400 font-black uppercase"
@@ -77176,7 +77168,7 @@ function MonsterHeroGame() {
           className: "text-yellow-400 font-bold"
         }, "\u4F1A\u5FC3\u7387 ", info.crit, "%"), /*#__PURE__*/React.createElement("span", {
           className: "text-amber-400 font-bold"
-        }, "\u6D88\u8CBBG ", info.guts)), isUnique && /*#__PURE__*/React.createElement("div", {
+        }, "\u6D88\u8CBB\u30AC\u30C3\u30C4 ", info.guts)), isUnique && /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-slate-400 mt-1"
         }, mon.unique.effectDesc));
       })), /*#__PURE__*/React.createElement("button", {

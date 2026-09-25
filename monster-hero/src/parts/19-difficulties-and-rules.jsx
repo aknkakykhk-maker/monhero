@@ -40,7 +40,7 @@ const DIFFICULTY_SETTINGS = {
 // バトル側は「そのルールを持っているか」で判定するので、難易度名の分岐を増やさなくてよい。
 const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ assistCardEffect:0.5 }) },
-  { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
+  { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。間合い適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
   { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:true, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
   { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
   // INFINITYは既存4難易度の特徴を統合した10WAVEの最終難易度。ただし役割が重なるルールは
@@ -608,7 +608,7 @@ const extremeSpecialRuleLines = (difficultyId) => {
   if (rules.waveEnhancement != null) lines.push(['WAVE後強化',specialRulePercent(rules.waveEnhancement)]);
   if (rules.positiveModifier != null || rules.negativeModifier != null) {
     const signed=`＋${specialRulePercent(rules.positiveModifier ?? 1)} / −${specialRulePercent(rules.negativeModifier ?? 1)}`;
-    lines.push(['自動回復補正',signed],['距離適性補正',signed]);
+    lines.push(['自動回復補正',signed],['間合い適性補正',signed]);
   }
   if (rules.damageDealt != null) lines.push(['与ダメージ',specialRulePercent(rules.damageDealt)]);
   if (rules.allyJoinBonus != null) lines.push(['供モン加入ボーナス',specialRulePercent(rules.allyJoinBonus)]);
@@ -633,12 +633,12 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
   const push=(title,lines)=>{const kept=lines.filter(Boolean);if(kept.length)groups.push({title,lines:kept});};
   if(difficultyId===GOD_SETTING.id)push('神威',[
     ['進行','2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'],
-    ['敵HP/攻撃','神威Lvごと +15% / +30% / +45% / +60% / +75%'],
+    ['敵ライフ/攻撃力','神威Lvごと +15% / +30% / +45% / +60% / +75%'],
     ['Lv5','与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし'],
   ]);
   if(difficultyId===RAGNAROK_SETTING.id)push('黄昏',[
     ['進行','2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'],
-    ['敵HP/攻撃','黄昏Lvごと +20% / +40% / +60% / +80% / +100%'],
+    ['敵ライフ/攻撃力','黄昏Lvごと +20% / +40% / +60% / +80% / +100%'],
     ['Lv2','距離強化 35%→25%'],
     ['Lv3','消費ガッツ 175%→200%'],
     ['Lv4','＋補正 35%→25%・−補正 250%→300%'],
@@ -659,7 +659,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     rules.gutsCost!=null&&['消費ガッツ',specialRulePercent(rules.gutsCost)],
   ]);
   push('累計ターン',[
-    rules.enemyTurnRate!=null&&['敵HP/攻撃',`累計Tごと+${precisePercent(rules.enemyTurnRate)}`],
+    rules.enemyTurnRate!=null&&['敵ライフ/攻撃力',`累計Tごと+${precisePercent(rules.enemyTurnRate)}`],
     rules.allyJoinPenaltyRate!=null&&['加入B倍率',`累計Tごと-${turnPointText(rules.allyJoinPenaltyRate)}${rules.minimumAllyJoinBonus!=null?`（最低${specialRulePercent(rules.minimumAllyJoinBonus)}）`:''}`],
     rules.damageTurnRate!=null&&['与ダメ倍率',`経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`],
   ]);

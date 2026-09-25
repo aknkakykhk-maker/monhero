@@ -769,7 +769,7 @@ function BattleScreen({
               <section className="rounded-xl border border-indigo-900/70 bg-slate-900/95 px-2 py-1.5">
                 <div data-ultra-ally-slots className="grid grid-cols-4 gap-1">{slots.map((s,i)=><div key={i} className={`flex h-[42px] min-w-0 flex-col items-center justify-center rounded-lg border px-0.5 py-1 text-center ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border}`}><div className="w-full truncate text-[10px] font-black text-white">{s?.name||'---'}</div><div className="mt-1 text-[10px] font-black">{RANGE_LABELS[i]}距離</div></div>)}</div>
                 <div className="mt-1.5 space-y-1">
-                  <div><div className="flex justify-between text-[10px] font-black text-pink-300"><span>味方HP</span><span className="font-mono">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-pink-500" style={{width:`${(hp/effectiveMaxHp)*100}%`}}/></div></div>
+                  <div><div className="flex justify-between text-[10px] font-black text-pink-300"><span>味方のライフ</span><span className="font-mono">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-pink-500" style={{width:`${(hp/effectiveMaxHp)*100}%`}}/></div></div>
                   <div><div className="flex justify-between text-[10px] font-black text-amber-300"><span>ガッツ</span><span className="font-mono">{Math.floor(guts).toLocaleString()} / {effectiveMaxGuts.toLocaleString()}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-amber-400" style={{width:`${(guts/effectiveMaxGuts)*100}%`}}/></div></div>
                 </div>
                 <div data-ultra-ally-log className="mt-1 h-[42px] overflow-hidden rounded-lg border border-indigo-800/60 bg-black/50 px-2 py-1 text-center leading-tight">{slotSkill&&<div className="truncate text-[11px] font-black text-indigo-200">{slotSkill.name}</div>}{popups.filter(p=>['hero','life','guts'].includes(p.side)).map(p=><div key={p.id} className={`${p.color} truncate text-sm font-black`}>{p.text}</div>)}</div>
@@ -1326,11 +1326,11 @@ function BattleScreen({
             //   card-icon-check.js が `c.icon` をそのまま描く書き方を禁じている
             const chip=(key,mark,label,value,tone,opts)=>{const o=opts||{};chips.push({key,mark,label,value,tone,short:o.short!=null?o.short:value,pulse:!!o.pulse});};
             const atkPct=Math.floor((getPermaBuff('atkPct')+getPermaBuff('muaAtkPct'))*100);
-            if(atkPct>0) chip('atk',<Sword size={9}/>,'ATK',`+${atkPct}%`,'text-red-500 border-red-500/50');
+            if(atkPct>0) chip('atk',<Sword size={9}/>,'攻撃力',`+${atkPct}%`,'text-red-500 border-red-500/50');
             const dmgCutPct=Math.floor(getPermaBuff('dmgCutPct')*100);
             if(dmgCutPct>0) chip('dmgCut',<Shield size={9}/>,'被ダメ',`-${dmgCutPct}%`,'text-emerald-500 border-emerald-500/50');
             const defPct=Math.floor(getPermaBuff('defPct')*100);
-            if(defPct>0) chip('def',<Shield size={9}/>,'DEF',`+${defPct}%`,'text-emerald-500 border-emerald-500/50');
+            if(defPct>0) chip('def',<Shield size={9}/>,'丈夫さ',`+${defPct}%`,'text-emerald-500 border-emerald-500/50');
             const muaHpPct=Math.floor(getPermaBuff('muaHpPct')*100);
             if(muaHpPct>0) chip('muaHp',<Heart size={9}/>,'ライフ',`+${muaHpPct}%`,'text-pink-500 border-pink-500/50');
             const muaGutsPct=Math.floor(getPermaBuff('muaGutsPct')*100);
@@ -1374,8 +1374,8 @@ function BattleScreen({
             if(getWaveBuff('enemyTakenDmgBonus')>0) chip('enemyTaken',<PlusCircle size={9}/>,'敵被ダメ',`+${Math.round(getWaveBuff('enemyTakenDmgBonus')*100)}%`,'text-orange-400 border-orange-500/50',{pulse:true});
             if(getNextTurnBuff('takenDamageMult',1.0)<1) chip('takenNext',<Shield size={9}/>,'次T被ダメ',`-${Math.round((1-getNextTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-400 border-pink-500/50',{pulse:true});
             if(getTurnBuff('takenDamageMult',1.0)<1) chip('takenNow',<Shield size={9}/>,'被ダメ',`-${Math.round((1-getTurnBuff('takenDamageMult',1.0))*100)}%`,'text-pink-300 border-pink-400',{pulse:true});
-            if(getNextTurnBuff('gutsCostMult',1.0)>1) chip('costNext',<Zap size={9}/>,'次T消費G',`+${Math.round((getNextTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-400 border-amber-500/50',{pulse:true});
-            if(getTurnBuff('gutsCostMult',1.0)>1) chip('costNow',<Zap size={9}/>,'消費G',`+${Math.round((getTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-300 border-amber-400',{pulse:true});
+            if(getNextTurnBuff('gutsCostMult',1.0)>1) chip('costNext',<Zap size={9}/>,'次ターン消費ガッツ',`+${Math.round((getNextTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-400 border-amber-500/50',{pulse:true});
+            if(getTurnBuff('gutsCostMult',1.0)>1) chip('costNow',<Zap size={9}/>,'消費ガッツ',`+${Math.round((getTurnBuff('gutsCostMult',1.0)-1)*100)}%`,'text-amber-300 border-amber-400',{pulse:true});
             if(!chips.length) return null;
             return (
               <div data-battle-buffs={chips.length} data-battle-buffs-mode={buffDetail?'detail':'icon'}
@@ -1999,7 +1999,7 @@ function BattleScreen({
                           (2026-09-22 ユーザー指摘「カードも距離枠も全て安っぽくない？」)。
                           読む順が「何の値か → いくつか」で固定され、4枚並べたときに縦がそろう */}
                       <div className="flex h-[10px] items-center justify-between leading-none">
-                        <span className="text-[8px] font-black tracking-wider text-pink-300">HP</span>
+                        <span className="text-[8px] font-black tracking-wider text-pink-300">ライフ</span>
                         <span className="font-mono leading-none"><span className="text-[11px] font-black text-white">{tacticsUnit.hp}</span><span className="text-[8px] text-slate-400">/{tacticsUnit.maxHp}</span></span>
                       </div>
                       <div className="h-[2px] overflow-hidden rounded-full bg-black/60" style={{boxShadow:'inset 0 1px 2px rgba(0,0,0,.9)'}}>
@@ -2190,7 +2190,7 @@ function BattleScreen({
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
                 {exPanel.styleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-style className="font-black text-fuchsia-200">{exPanel.styleLabel}</dd></>}
                 {!exPanel.styleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
-                {exPanel.stats&&<><dt className="font-bold text-slate-400">力／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
+                {exPanel.stats&&<><dt className="font-bold text-slate-400">ちから／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
               {exChoosing&&exPanel.styleOptions?(
