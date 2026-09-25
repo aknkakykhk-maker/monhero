@@ -80,7 +80,7 @@ function MasuAutoEnhanceScreen({
       };
       const rowLabel = (target) => {
         const aptIndex = autoEnhanceAptIndexOf(target);
-        return aptIndex != null ? `${RANGE_LABELS[aptIndex]}距離適性` : STAT_POINT_KEYS[target];
+        return aptIndex != null ? `${RANGE_LABELS[aptIndex]}間合い適性` : STAT_POINT_KEYS[target];
       };
       // 目標に選べるグレード。いまより下は選べない(下げる強化は存在しないため)
       const aptChoices = (index) => {

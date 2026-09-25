@@ -166,12 +166,12 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   await click('配分をすべて取消');
 
   // Cから現行の最大段階までだけ上がり、余ったポイントは残る。
-  await clickExact('MAX'); await clickControl('零距離適性を増やす');
+  await clickExact('MAX'); await clickControl('零間合い適性を増やす');
   allocation = await shownAllocation();
   const maxDraftText = await text();
   check('MAX配分で距離適性が現行上限を超えない', /C\s*→\s*M/.test(maxDraftText), maxDraftText.match(/C\s*→\s*\S+/)?.[0]);
   check('距離適性上限で配分が止まりポイントが残る', allocation && allocation.left > 0, allocation?.text);
-  await clickControl('零距離適性を減らす');
+  await clickControl('零間合い適性を減らす');
   allocation = await shownAllocation();
   check('MAXの−でその項目の仮配分をすべて戻す', allocation && allocation.left === allocation.total, allocation?.text);
 
@@ -183,7 +183,7 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   await click('配分をすべて取消');
 
   // 最後は5Pを確定し、保存される量を検証する。
-  await clickExact('5P'); await clickControl('零距離適性を増やす'); await clickControl('ライフを増やす');
+  await clickExact('5P'); await clickControl('零間合い適性を増やす'); await clickControl('ライフを増やす');
   allocation = await shownAllocation();
   check('確定ボタンに使用合計ptが出る', allocation?.text.includes('10ptを使って強化する'), allocation?.text);
   check('確定直前もセーブ値が変わらない', JSON.stringify(await stored()) === JSON.stringify(before));

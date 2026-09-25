@@ -311,10 +311,10 @@ function PickHeroAllyScreen({
                   トレーニング画面と同じく変化そのものを見せる */}
               {pickMode==='hero'?(
               <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono" style={{fontSize:'9px'}}>
-                <div className="flex justify-between"><span className="text-slate-500">HP</span><span className="text-pink-400 font-bold">{m.baseHp}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">力</span><span className="text-red-400 font-bold">{m.baseAtk}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">防</span><span className="text-emerald-400 font-bold">{m.baseDef}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">G</span><span className="text-amber-400 font-bold">{m.baseGuts}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">ライフ</span><span className="text-pink-400 font-bold">{m.baseHp}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">ちから</span><span className="text-red-400 font-bold">{m.baseAtk}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">丈夫さ</span><span className="text-emerald-400 font-bold">{m.baseDef}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">ガッツ</span><span className="text-amber-400 font-bold">{m.baseGuts}</span></div>
               </div>
               ):(()=>{const preview=allyJoinPreview(m); return (<>
                 {/* 上の「現在のステータス」が今の値を出しているので、カードは合流後の値と
@@ -326,7 +326,7 @@ function PickHeroAllyScreen({
                 <div className="mh-ph-cell w-full rounded-lg px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
                   {preview.stats.map(stat=>(
                     <span key={stat.key} className="min-w-0 block">
-                      <span className="block text-slate-500 font-black leading-none">{stat.short}</span>
+                      <span className="block text-slate-500 font-black leading-none break-all">{stat.label}</span>
                       {preview.tactics
                         ?(stat.diff>0?<span className="block leading-none text-slate-500">{stat.before} →</span>:null)
                         :([ULTIMATE_SETTING.id,CHAOS_SETTING.id,INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty))&&stat.normalDiff!==stat.diff?<span className="block leading-none text-slate-500">本来 +{stat.normalDiff}</span>:null)}
@@ -492,8 +492,12 @@ function PickProAlliesScreen({
 function PickSlotScreen({
   battleTutorial, battleTutorialSpotClass, currentPickingMon, distTotalBonus,
   getDistAptitude, onRepick, phasePlan, scenarioPicksSlot, setupMon, slots, wave,
+  heroStyleDef = null, heroStyle = null, onHeroStyle = null,
 }) {
   const mon=currentPickingMon;
+  // 勇者モンの初期スタイル(タクティクスで、スタイル式のEXを持つ子を勇者モンにしたときだけ)。
+  // 選んでいなければ既定のスタイル(剣士モッチーなら片手剣)
+  const pickedStyle=heroStyleDef?(heroStyleDef.styles.some(st=>st.id===heroStyle)?heroStyle:heroStyleDef.defaultStyle):null;
   const monName=mon?.masuName||mon?.name||'';
   return (
 
@@ -527,6 +531,21 @@ function PickSlotScreen({
           );})}
         </div>
       </div>
+      {/* ★勇者モンの初期スタイル(2026-09-25 ユーザー指示「勇者モンに選んだときに限り、初期スタイルを選べる」)。
+          バトル中にEXで選び直すこともできる。どちらも元のステータスから数え直すので積み重ならない */}
+      {heroStyleDef&&(
+        <div data-hero-initial-style className="mh-ph-panel shrink-0 w-full max-w-xs mt-1 px-2 py-1.5 text-left">
+          <div className="mh-ph-panel-label text-[9px] font-black mb-1">初期スタイル（勇者モンのときだけ選べる）</div>
+          <div className="grid grid-cols-3 gap-1">
+            {heroStyleDef.styles.map(st=>(
+              <button key={st.id} type="button" data-hero-style={st.id} aria-pressed={pickedStyle===st.id}
+                onClick={()=>onHeroStyle&&onHeroStyle(st.id)}
+                className={`min-h-[40px] rounded-lg border-2 px-1 text-[11px] font-black active:scale-95 ${pickedStyle===st.id?'border-fuchsia-300 bg-fuchsia-700 text-white':'border-white/20 bg-black/40 text-slate-300'}`}>{st.label}</button>
+            ))}
+          </div>
+          <div className="mt-1 text-[9px] font-bold leading-snug text-slate-300">{(heroStyleDef.styles.find(st=>st.id===pickedStyle)||{}).desc}</div>
+        </div>
+      )}
       {/* 間合い適性はどこに置いても4距離すべてに入る。ここの%は「このモンスターを加えた後の各距離の補正値」 */}
       <div className="mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2">間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</div>
       {/* 練習中は押せる枠だけを光らせる。枠全体を囲むと「どれを押すのか」が分からなかった */}

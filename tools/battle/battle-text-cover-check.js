@@ -152,7 +152,7 @@ const OVERLAP_FN = () => {
         const confirm = pick(/^(習得する|強化する)$/); if (confirm) { confirm.click(); return 'confirm'; }
         const teaching = pick(/新規習得|強化後/); if (teaching) { teaching.click(); return 'teach'; }
         const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }
-        const mons = live.filter((x) => /HP\s*\d+ちから|総合力/.test(x.textContent) && x.textContent.trim() !== '詳細を見る');
+        const mons = live.filter((x) => /ライフ\s*\d+ちから|総合力/.test(x.textContent) && x.textContent.trim() !== '詳細を見る');
         if (mons.length) { const m = mons[Math.min(window.__pick, mons.length - 1)]; window.__pick += 1; m.click(); return 'mon'; }
         const changes = live.filter((x) => x.textContent.trim() === '変更');
         if (changes.length) { const c = changes[Math.min(window.__change, changes.length - 1)]; window.__change += 1; c.click(); return 'change'; }

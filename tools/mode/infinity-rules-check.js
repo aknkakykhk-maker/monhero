@@ -106,7 +106,7 @@ check('アシストカード効果 50%', specialRule('INFINITY', 'assistCardEffe
 check('＋補正50% / －補正200%',
   specialRule('INFINITY', 'positiveModifier') === 0.5 && specialRule('INFINITY', 'negativeModifier') === 2.0);
 check('消費ガッツ 150%', specialRule('INFINITY', 'gutsCost') === 1.5);
-check('敵HP/攻撃は累計Tごと+0.75%',
+check('敵ライフ/攻撃力は累計Tごと+0.75%',
   percents(t => enemyMul(t, 'INFINITY'), [[0, 1], [20, 1.15], [40, 1.30]]),
   `0T=${enemyMul(0, 'INFINITY')} / 20T=${enemyMul(20, 'INFINITY').toFixed(4)} / 40T=${enemyMul(40, 'INFINITY').toFixed(4)}`);
 check('加入Bは累計Tごと-0.75pt・最低10%',

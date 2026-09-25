@@ -583,7 +583,7 @@ const buildMasuAutoEnhancePlan = (masu, base) => {
 // 自動で振ったときの「何がどれだけ増えたか」。画面のお知らせとログに使う
 const describeAutoEnhancePlan = (plan) => {
   const lines = [];
-  (plan?.apt || []).forEach((count, index) => { if (count > 0) lines.push(`${RANGE_LABELS[index]}距離適性 +${count}段階`); });
+  (plan?.apt || []).forEach((count, index) => { if (count > 0) lines.push(`${RANGE_LABELS[index]}間合い適性 +${count}段階`); });
   Object.entries(plan?.stat || {}).forEach(([key, count]) => {
     if (count > 0) lines.push(`${STAT_POINT_KEYS[key]} +${count * (STAT_POINT_GAIN[key] || 1)}`);
   });

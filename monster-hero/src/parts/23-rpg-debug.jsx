@@ -432,7 +432,7 @@ const DEFAULT_ATTACK_THEMES = Object.freeze({
   Mocchi:'stomp',     // 高く跳んで押しつぶし、戻った位置からモッチ砲(ビーム)
   Suezo:'beam',       // 大きな目から光線
   Golem:'rocks',      // 敵を直接殴り、岩のかけらが飛び散る
-  Tiger:'claw',       // カクカクと高速で詰めて、爪で3回ひっかく
+  Tiger:'claw',       // カクカクと高速で詰めて爪で3回ひっかき、元の場所へ戻って角から雷撃
   Ham:'punch',        // 詰め寄って、ワンツーパンチ
   Pixie:'magic',      // 魔法陣を出して、魔法の弾を3発
   Monol:'crush',      // 敵の真上へ浮かんで、押しつぶす
@@ -442,7 +442,7 @@ const DEFAULT_ATTACK_THEMES = Object.freeze({
 });
 // 型ごとの尺(ms)。体当たりと同じ 450ms(固有技 500ms)に収まらない型だけ書く。
 // 本番バトルの待ち時間・図鑑のプレビュー・CSSの長さ(--thm-ms)の3つがここを見る。
-const THEMED_ATTACK_MS = Object.freeze({ stomp:900, rocks:520, claw:600, punch:580, fire:560 });
+const THEMED_ATTACK_MS = Object.freeze({ stomp:900, rocks:520, claw:900, punch:580, fire:560 });
 const themedAttackMotionMs = (monId, motion) => {
   if (motion && motion !== 'default') return null;
   return THEMED_ATTACK_MS[DEFAULT_ATTACK_THEMES[monId]] || null;

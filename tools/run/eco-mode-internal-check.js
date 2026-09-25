@@ -34,7 +34,7 @@ for(const token of [
   "data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}",
   'data-lite-eco-dimmer','bg-black/20','data-ultra-battle-view',
   'ultraBattleView?(','WAVE {wave}/10','{turnCount}/20','{enemy.name}','enemy.hp',
-  '現在距離','味方HP','ガッツ','slots.map((s,i)=>','Action Cards','AUTO∞で進行中',
+  '現在距離','味方のライフ','ガッツ','slots.map((s,i)=>','Action Cards','AUTO∞で進行中',
   '{slotSkill.name}','{enemySkillName.label}','popups.filter',
 ])if(!battle.includes(token))fail(`省エネでも残す戦闘表示 ${token} がありません`);
 const ultra=between('data-ultra-battle-view','):(<>');

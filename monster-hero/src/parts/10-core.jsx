@@ -108,6 +108,9 @@ const normalizeBattleFxSettings = (value) => {
     // 画面の軽さ(2026-09-24 ユーザー指示「バトル設定で軽い画面でも出来るの作って 4種類ぐらい」)。
     // ★足す前に保存した人(load が無い)は RICH(いままでの見た目)で始まる
     load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH',
+    // ボスの必殺技ムービー(2026-09-25 ユーザー指示「設定でオンオフもつけて」)。
+    // ★足す前に保存した人(specialMovie が無い)は ON(流す)で始まる
+    specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON',
   };
 };
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
@@ -126,13 +129,16 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'shake', title:'画面の揺れ',
     desc:'会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
     options:[{ id:'ON', label:'揺らす', note:'いつもの見た目' }, { id:'OFF', label:'揺らさない', note:'酔いやすい人向け' }] },
+  { key:'specialMovie', title:'必殺技ムービー',
+    desc:'タクティクスバトルの覚醒ムーが必殺技「アポカリプス」を使うとき、画面を切り替えてムービーを流します。流さないときは、いつもの演出で短く進みます。ダメージや進行は変わりません。',
+    options:[{ id:'ON', label:'流す', note:'画面いっぱいで見せる' }, { id:'OFF', label:'流さない', note:'いつもの演出で短く' }] },
 ]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'FULL', label: 'ふつう', note: '横いっぱいに出す' },
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-25 20:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 20:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
