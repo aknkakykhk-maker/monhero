@@ -18498,6 +18498,22 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]>i{animation:mhRhythmHitCoreBig var(--rhythm-hit-ms,900ms) cubic-bezier(.16,.9,.3,1) 1}
     [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]>b{animation:mhRhythmHitBeamBig var(--rhythm-hit-ms,900ms) cubic-bezier(.16,.9,.3,1) 1}
     [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]>u{animation:mhRhythmHitSpark var(--rhythm-hit-ms,900ms) cubic-bezier(.16,.9,.3,1) 1}
+    /* 白い十字の光(2026-09-26・参考動画「判定ラインで白い十字の光がはじける」)。
+       形は動かない背景(横の細い帯＋縦の短い帯＋中心の丸)で、動かすのは transform と opacity だけ。
+       ぼかし・影は使わない(毎フレームの塗り直しを起こさない)。演出量「少なめ」でも出さない */
+    [data-rhythm-hit-effect]>s{position:absolute;display:block;opacity:0;left:50%;top:0;width:190px;height:110px;
+      margin:-55px 0 0 -95px;pointer-events:none;text-decoration:none;
+      background:
+        radial-gradient(closest-side,rgba(255,255,255,1) 0%,rgba(255,255,255,.7) 14%,rgba(224,242,254,.25) 30%,rgba(255,255,255,0) 48%),
+        linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.55) 30%,#fff 50%,rgba(255,255,255,.55) 70%,rgba(255,255,255,0) 100%) center/100% 5px no-repeat,
+        linear-gradient(180deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.6) 35%,#fff 50%,rgba(255,255,255,.6) 65%,rgba(255,255,255,0) 100%) center/4px 100% no-repeat}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>s{animation:mhRhythmHitFlare var(--rhythm-hit-ms,340ms) cubic-bezier(.16,.9,.3,1) 1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]>s{animation:mhRhythmHitFlare var(--rhythm-hit-ms,900ms) cubic-bezier(.16,.9,.3,1) 1}
+    @keyframes mhRhythmHitFlare{
+      0%{opacity:0;transform:scale(.35) rotate(-6deg)}
+      14%{opacity:1;transform:scale(1) rotate(0deg)}
+      100%{opacity:0;transform:scale(1.25,.8) rotate(4deg)}}
+    [data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-hit-effect]>s{display:none}
     @keyframes mhRhythmHitCore{
       0%{opacity:0;transform:scale(.28,.4)}
       12%{opacity:1;transform:scale(1.02,1.9)}
@@ -18772,6 +18788,7 @@ const rhythmEnsureHitEffects=area=>{
     item.appendChild(document.createElement('b'));   // 立ち上がる光の柱
     // はじける粒。飛ぶ向きはCSSの nth-of-type で決めてあるので、ここでは数だけ揃える
     for(let spark=0;spark<RHYTHM_HIT_SPARK_COUNT;spark++)item.appendChild(document.createElement('u'));
+    item.appendChild(document.createElement('s'));   // 白い十字の光(2026-09-26)
     layer.appendChild(item);
     layer._rhythmPool.push(item);
   }
