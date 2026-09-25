@@ -216,15 +216,15 @@ const TACTICS_CRACK_PATHS = Object.freeze([
 // ★ここは見せるだけ。計算・進行・保存には触れない
 const BOSS_MOVIE_START_TIMEOUT_MS = 2500; // これまでに再生が始まらなければあきらめる(いつもの演出へ戻る)
 const BOSS_MOVIE_MAX_MS = 15000;          // 途中で止まっても、これ以上は待たない
-// ムービーの中で音を鳴らし、画面を揺らす時刻(再生位置のミリ秒)。絵に合わせてある。
-// キーは ?v= を外したパス(キャッシュキーは中身を差し替えるたびに変わる)
-const BOSS_MOVIE_CUES = Object.freeze({
-  // 覚醒ムー「アポカリプス」: 吠える / 口に溜める / 光線を吐く / 爆発
-  'movies/awakened-moo-apocalypse.mp4': Object.freeze([
-    { at: 0, se: 'enemyCharge' }, { at: 1920, se: 'enemyCharge' },
-    { at: 3300, se: 'enemySpecial', shake: true }, { at: 4420, se: 'enemySpecial', shake: true },
-  ]),
+// ムービーごとの効果音(ムービーと同時に頭から鳴らす1本の音源)と、画面を揺らす時刻(再生位置のミリ秒)。
+// 音も揺れも絵に合わせてある。キーは ?v= を外したパス(キャッシュキーは中身を差し替えるたびに変わる)。
+// ★ムービー自体は音なし(iPhone は音ありの動画を自動で再生させてくれない)。音は効果音として別に鳴らすので、
+//   効果音の音量設定がそのまま効く(2026-09-25 ユーザー指摘「効果音がださい」「溜めるゴォー、ブレスはボォー」で作り直した)
+const BOSS_MOVIE_EXTRAS = Object.freeze({
+  // 覚醒ムー「アポカリプス」: 咆哮 → 口に溜める「ゴォー」→ 光線の「ボォー」(3.3秒)→ 爆発(4.42秒)→ 地鳴り → うなり
+  'movies/awakened-moo-apocalypse.mp4': Object.freeze({ sound: 'audio/se-awakened-moo-apocalypse.mp3', shakes: Object.freeze([3300, 4420]) }),
 });
+const bossMovieExtras = (src) => BOSS_MOVIE_EXTRAS[String(src || '').split('?')[0]] || null;
 const bossMovieStore = { el: null, src: '', show: null };
 const preloadBossMovie = (src) => {
   if (!src || typeof document === 'undefined') return;
@@ -237,6 +237,9 @@ const preloadBossMovie = (src) => {
   el.src = src;
   try { el.load(); } catch (e) { /* 読めなければ、流すときに false が返る */ }
   bossMovieStore.el = el; bossMovieStore.src = src;
+  // 効果音も先に読んでおく(鳴らすときに読み込みを待つと、絵と音がずれる)
+  const extras = bossMovieExtras(src);
+  if (extras && extras.sound && Audio_.preloadSE) Audio_.preloadSE(extras.sound);
 };
 // 流し終えたら true、流せなかったら false で終わる
 const playBossMovie = (src, info = {}) => new Promise((resolve) => {
@@ -265,33 +268,37 @@ const BossMovieLayer = ({ shake = true }) => {
     const holder = holderRef.current;
     let settled = false, started = false, raf = 0, startWall = 0;
     const timers = [];
-    const cues = (BOSS_MOVIE_CUES[String(req.src).split('?')[0]] || []).map((c) => ({ ...c, fired: false }));
+    const extras = bossMovieExtras(req.src);
+    const shakes = ((extras && extras.shakes) || []).map((at) => ({ at, fired: false }));
+    let sound = null; // 鳴らしている効果音(Audio_.playSeFile が返す { stop } を待つ Promise)
     const onPlaying = () => {
       if (started) return;
       started = true; startWall = Date.now();
+      if (extras && extras.sound && Audio_.playSeFile) sound = Audio_.playSeFile(extras.sound);
       timers.push(setTimeout(() => finish(true), BOSS_MOVIE_MAX_MS));
       timers.push(setTimeout(() => setCanSkip(true), 900));
       const tick = () => {
         if (settled) return;
         const pos = Number.isFinite(el.currentTime) ? el.currentTime * 1000 : Date.now() - startWall;
-        cues.forEach((c) => {
+        shakes.forEach((c) => {
           if (c.fired || pos < c.at) return;
           c.fired = true;
-          if (c.se && Audio_.se && typeof Audio_.se[c.se] === 'function') Audio_.se[c.se]();
-          if (c.shake && shake) setShakeKey((k) => k + 1);
+          if (shake) setShakeKey((k) => k + 1);
         });
         raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
     };
-    const onEnded = () => finish(true);
+    // ★最後まで流れたときは、効果音の余韻をそのまま残す。途中で閉じたとき(スキップ・読めない・画面ごと閉じた)は音も消す
+    const onEnded = () => finish(true, true);
     const onError = () => finish(started);
-    const finish = (ok) => {
+    const finish = (ok, reachedEnd = false) => {
       if (settled) return;
       settled = true;
       finishRef.current = null;
       timers.forEach(clearTimeout);
       if (raf) cancelAnimationFrame(raf);
+      if (sound && !reachedEnd) sound.then((h) => { if (h) h.stop(0.2); }).catch(() => {});
       if (el) {
         el.removeEventListener('playing', onPlaying);
         el.removeEventListener('ended', onEnded);
