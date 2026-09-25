@@ -18,6 +18,8 @@
 
 音ゲーの仕様を変更するPRでは、本書の更新要否も確認し、仕様が変わる場合は原則として同じ変更単位で更新する。
 
+見た目をどこまで仕上げるかの目標(参考動画の観察・まだの差・やる順)は [`RHYTHM_VISUAL_TARGET.md`](RHYTHM_VISUAL_TARGET.md)。
+
 現行挙動と数値は、必ず最新 `main` の以下を正本とする。
 
 - `monster-hero/data/rhythm-mode.js`
