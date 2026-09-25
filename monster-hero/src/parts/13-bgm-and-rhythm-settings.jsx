@@ -300,6 +300,66 @@ const RHYTHM_LANE_COVER_MIN = 0, RHYTHM_LANE_COVER_MAX = 60, RHYTHM_LANE_COVER_S
 // ずれの見せ方(osu!・Arcaea)。STANDARD=FAST/SLOWだけ / MS=ずれの数字も / METER=数字とずれメーター
 const RHYTHM_TIMING_DISPLAYS = Object.freeze(['STANDARD','MS','METER']);
 const RHYTHM_TIMING_DISPLAY_LABELS = Object.freeze([['STANDARD','FAST/SLOW'],['MS','数字も'],['METER','メーターも']]);
+// ===== バンドリ！アワーノーツから取り入れた遊び方(2026-09-24・ユーザー指示「アワーノーツの機能等を見習って学習して実装して」) =====
+// ・アシストモード … フリックはタップだけで取れる(終点フリックも離すだけでよい)。BAD・MISSでコンボが切れそうなとき、
+//   「コンボガード」が代わりに受け止める(最大3回ぶん。うまく取れているほど減り、崩れているほど早くたまる)。
+//   代わりにスコアは8割になり、FULL COMBO等の称号は付かず、自己ベスト・ランキング・ビートPには残らない
+//   (アワーノーツも「スコアが下がり、FULL COMBO/ALL PERFECTが付かない」。記録を残さないのはCLAUDE.md ⑦の決めごと)。
+// ・ミラー譜面 … 譜面を左右反対にして遊ぶ。判定・スコア・記録はふだんどおり。
+const RHYTHM_ASSIST_SCORE_RATE = 0.8;
+const RHYTHM_ASSIST_GUARD_MAX = 3;
+// ガードが1つたまるまでに要る「コンボをつないだ判定」の数。最近ガードを使った(崩れている)ほど少なくて済む
+const RHYTHM_ASSIST_GUARD_RECHARGE = 20, RHYTHM_ASSIST_GUARD_RECHARGE_STRUGGLING = 8;
+const RHYTHM_MIRROR_SUB_LANES = 10;
+// 左右反対の譜面を作る。位置は「左はしの半レーン+幅」(TAP・HOLD・FLICK)と「レーンの中心」(SLIDE)の2通り。
+// ★元の譜面は書き換えない(新しいオブジェクトを返す)。レベル・ノーツ数・長さはそのまま
+const rhythmMirrorNote = note => {
+  if(!note||typeof note!=='object')return note;
+  const next={...note};
+  const width=Number(note.subLaneWidth);
+  const w=Number.isFinite(width)&&width>0?width:2;
+  if(Number.isFinite(Number(note.lane)))next.lane=4-Number(note.lane);
+  if(Number.isFinite(Number(note.endLane)))next.endLane=4-Number(note.endLane);
+  if(Number.isFinite(Number(note.subLane)))next.subLane=RHYTHM_MIRROR_SUB_LANES-Number(note.subLane)-w;
+  if(Array.isArray(note.slidePoints))next.slidePoints=note.slidePoints.map(point=>point&&Number.isFinite(Number(point.lane))?{...point,lane:4-Number(point.lane)}:point);
+  if(Array.isArray(note.holdPoints))next.holdPoints=note.holdPoints.map(point=>{
+    if(!point||typeof point!=='object')return point;
+    const pw=Number(point.subLaneWidth),pointWidth=Number.isFinite(pw)&&pw>0?pw:w;
+    const ps=Number(point.subLane),pointSub=Number.isFinite(ps)?ps:Number(note.subLane)||0;
+    return {...point,subLane:RHYTHM_MIRROR_SUB_LANES-pointSub-pointWidth};
+  });
+  return next;
+};
+// アシストモードの譜面。フリックはタップに、終点フリックはただ離すだけに変える(譜面の数と時刻は変えない)
+const rhythmAssistNote = note => {
+  if(!note||typeof note!=='object')return note;
+  if(note.type==='FLICK')return {...note,type:'TAP',_rhythmAssistFlick:true};
+  if(note.endFlick)return {...note,endFlick:false};
+  return note;
+};
+const rhythmTransformChart = (chart,{mirror=false,assist=false}={}) => {
+  if(!chart||!Array.isArray(chart.notes)||(!mirror&&!assist))return chart;
+  return {...chart,notes:chart.notes.map(note=>{let next=note;if(assist)next=rhythmAssistNote(next);if(mirror)next=rhythmMirrorNote(next);return next;})};
+};
+// 曲をいくつかの区間に分けて、区間ごとの出来を数える(アワーノーツのライブログ)。log は [ノーツの時刻, 判定] の並び。
+// 返すのは区間ごとの {fromMs,toMs,total,good,bad,miss,rate}。rate は MARVELOUS・EXCELLENT の割合(0〜1)
+const RHYTHM_LIVE_LOG_SECTIONS = 8;
+const rhythmLiveLogSections = (log,endMs,count=RHYTHM_LIVE_LOG_SECTIONS) => {
+  const total=Math.max(1,Number(endMs)||0),n=Math.max(1,Math.floor(count));
+  const sections=Array.from({length:n},(_,i)=>({fromMs:Math.round(total*i/n),toMs:Math.round(total*(i+1)/n),total:0,good:0,bad:0,miss:0,rate:null}));
+  (Array.isArray(log)?log:[]).forEach(entry=>{
+    if(!Array.isArray(entry))return;
+    const t=Number(entry[0]),judgment=String(entry[1]||'');
+    if(!Number.isFinite(t))return;
+    const section=sections[Math.max(0,Math.min(n-1,Math.floor(t/total*n)))];
+    section.total++;
+    if(judgment==='MARVELOUS'||judgment==='EXCELLENT')section.good++;
+    else if(judgment==='BAD')section.bad++;
+    else if(judgment==='MISS')section.miss++;
+  });
+  sections.forEach(section=>{section.rate=section.total>0?section.good/section.total:null;});
+  return sections;
+};
 const rhythmStageLevel = settings => settings&&settings.lightweightMode?'SIMPLE'
   :(RHYTHM_STAGE_EFFECTS.includes(settings&&settings.stageEffect)?settings.stageEffect:'SIMPLE');
 const RHYTHM_SIDE_MONSTER_OPACITY_LABELS = Object.freeze([['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']]);
@@ -352,6 +412,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   stageEffect:'SIMPLE',
   // 他の音ゲーから取り入れた表示(2026-09-24)。どれも既存の保存値には無いので、読み込み時は既定で補われる
   laneCover:0, timingDisplay:'STANDARD', comboStatusDisplay:true, paceDisplay:true,
+  // バンドリ！アワーノーツから取り入れた遊び方(2026-09-24)。どちらも既定OFF(=これまでどおり)
+  assistMode:false, mirrorChart:false,
 });
 const rhythmFiniteInRange = (value,min,max,fallback) => {
   const number=Number(value); return Number.isFinite(number)&&number>=min&&number<=max?number:fallback;
@@ -401,6 +463,7 @@ const normalizeRhythmSettings = value => {
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
     comboStatusDisplay:bool('comboStatusDisplay'), paceDisplay:bool('paceDisplay'),
+    assistMode:bool('assistMode'), mirrorChart:bool('mirrorChart'),
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,played:false,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});
