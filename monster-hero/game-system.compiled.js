@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6c65e0471feee872
+// source-sha256: 797c5d3041244d16
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 03:04";
+const BUILD_DATE = "2026-09-26 03:31";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -21932,6 +21932,7 @@ const RhythmTapTest = ({
     mountedRef = useRef(false),
     glowNodesRef = useRef(null),
     liveTouchSubLanesRef = useRef([]);
+  const laneGlowStateRef = useRef(null);
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
   const calibrationBannerRef = useRef(null),
@@ -22919,6 +22920,24 @@ const RhythmTapTest = ({
         maxDpr: settings.effectAmount === 'MINIMAL' ? 2 : undefined,
         sizeScale: settings.noteSize / 100
       });
+      if (canvasReady && settings.laneGlow !== 'NONE') {
+        const glowArea = playAreaRef.current;
+        let glowNodes = glowNodesRef.current;
+        if (glowArea && (!glowNodes || !glowNodes.length || !glowNodes[0].isConnected)) glowNodes = glowNodesRef.current = Array.from(glowArea.querySelectorAll('[data-rhythm-sublane-feedback]'));
+        const glow = laneGlowStateRef.current || (laneGlowStateRef.current = {
+          levels: new Float32Array(10),
+          lastOn: new Float64Array(10).fill(-1e9)
+        });
+        const glowGain = settings.laneGlow === 'LOW' ? .35 : 1;
+        for (let sub = 0; sub < 10; sub++) {
+          const el = glowNodes && glowNodes[sub],
+            on = !!el && (el.dataset.pressed === 'true' || el.dataset.rhythmTouchspan === 'true');
+          if (on) glow.lastOn[sub] = frameNowMs;
+          const since = frameNowMs - glow.lastOn[sub];
+          glow.levels[sub] = on ? glowGain : since < RHYTHM_LANE_GLOW_FADE_MS ? glowGain * (1 - since / RHYTHM_LANE_GLOW_FADE_MS) : 0;
+        }
+        RHYTHM_CANVAS_RENDERER.drawLaneGlow(glow.levels, (travel.judgmentY + travel.noteHeight / 2) / travel.rect.height);
+      }
       const paintCanvasNote = note => {
         const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && rhythmNoteHasBody(note) && songTimeMs < rhythmReleaseTargetMs(note);
         const clearFlash = note.done && Number.isFinite(note._rhythmClearAt) && songTimeMs - note._rhythmClearAt < RHYTHM_CLEAR_FLASH_MS;
@@ -24338,6 +24357,7 @@ const RhythmTapTest = ({
   }, "DOWN")), React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
+    "data-rhythm-canvas-glow": canvasNotes ? '1' : undefined,
     "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
