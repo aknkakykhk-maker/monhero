@@ -9,6 +9,8 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // position:fixed の基準を変え、カードが指についてこず、下から別の位置のカードが追いかけてくる表示になった
 // (ユーザーの画面録画で確認)。元の「動くたびに state で描く」形へ戻してある。
 // 指についてくる・置ける・押すだけなら選ぶ、は壊れても例外が出ないので、ここで実際に引きずって見張る。
+// 同じ日の後の作業で、引きずっているカードは本物1枚だけを body 直下の箱へ出す形にした(二重表示の解消)。
+// その箱の中のカードに限って位置を直接動かし、画面全体の描き直しを減らしている。
 // ⚠️ この道具は Chromium で動くので、Safari だけで起きるずれは拾えない。引きずりの作りを変えたら実機で確かめる。
 //
 // 見るもの:
@@ -57,6 +59,15 @@ const check = (name, ok, detail = '') => {
     browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     page.on('pageerror', (e) => errors.push(String(e)));
+    // React が画面を描き終えた回数を数える(開発者ツールの差し込み口を借りる。本番の React も呼ぶ)
+    await page.addInitScript(() => {
+      window.__mhCommits = 0;
+      window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+        supportsFiber: true, isDisabled: false, renderers: new Map(),
+        inject() { return 1; }, checkDCE() {},
+        onCommitFiberRoot() { window.__mhCommits += 1; }, onCommitFiberUnmount() {}, onPostCommitFiberRoot() {},
+      };
+    });
     await page.addInitScript(() => {
       localStorage.setItem('mh_breeder_name', JSON.stringify('検査ブリーダー'));
       localStorage.setItem('mh_breeder_icon', JSON.stringify('🐣'));
@@ -133,7 +144,11 @@ const check = (name, ok, detail = '') => {
     const dragged = async () => page.evaluate(() => {
       const el = document.querySelector('[data-dragging-card]');
       if (!el) return null;
-      return { left: parseFloat(el.style.left), top: parseFloat(el.style.top), fixed: el.style.position === 'fixed' };
+      // 書き込んだ値(style)だけでなく、画面上の実際の位置(中心)も返す。
+      // 2026-09-26 のずれは「値は正しいのに、手札の欄が基準になって見た目だけ下にずれる」ものだった
+      const r = el.getBoundingClientRect();
+      return { left: parseFloat(el.style.left), top: parseFloat(el.style.top), fixed: el.style.position === 'fixed',
+        cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
     });
     const actionEnabled = async () => page.evaluate(() => {
       const b = document.querySelector('[data-battle-action]');
@@ -154,8 +169,16 @@ const check = (name, ok, detail = '') => {
     await page.waitForTimeout(150);
     const first = await dragged();
     check('しきい値を超えると引きずり始める', !!first && first.fixed, JSON.stringify(first));
+    const layered = await page.evaluate(() => {
+      const el = document.querySelector('[data-dragging-card]');
+      return { inLayer: !!(el && el.closest('[data-drag-card-layer]')), layerIsBodyChild: !!(el && el.closest('[data-drag-card-layer]')?.parentElement === document.body),
+        ghosts: document.querySelectorAll('[data-tactics-drag-card-ghost]').length, cards: document.querySelectorAll('[data-dragging-card]').length };
+    });
+    check('引きずっているカードは body 直下の箱に1枚だけ出る(手札の欄の中で動かさない)',
+      layered.inLayer && layered.layerIsBodyChild && layered.ghosts === 0 && layered.cards === 1, JSON.stringify(layered));
     check('引きずり始めた位置が指と一致する', !!first && Math.abs(first.left - (start.x + 20)) < 1 && Math.abs(first.top - (start.y - 30)) < 1,
       JSON.stringify(first));
+    const commitsBefore = await page.evaluate(() => window.__mhCommits);
     // 枠の外を小刻みに動かす(置き先が変わらないので、描き直しは要らない場面)
     let worst = 0;
     for (let k = 1; k <= 20; k += 1) {
@@ -163,10 +186,14 @@ const check = (name, ok, detail = '') => {
       await page.mouse.move(x, y);
       await page.waitForTimeout(16);
       const d = await dragged();
-      if (d) worst = Math.max(worst, Math.abs(d.left - x), Math.abs(d.top - y));
+      if (d) worst = Math.max(worst, Math.abs(d.left - x), Math.abs(d.top - y), Math.abs(d.cx - x), Math.abs(d.cy - y));
       else worst = Infinity;
     }
     check('動かしているあいだカードが指についてくる', worst < 1, `最大のずれ ${worst}px`);
+    const commits = await page.evaluate((n) => window.__mhCommits - n, commitsBefore);
+    // 以前は20回動かすと20回以上描き直していた。指の波紋(小さな部品だけの描き直し)や敵の動きなど、
+    // 別の理由の描き直しは少し入るので、上限は動かした回数の半分にしてある
+    check('置き先が変わらないあいだは、動かすたびに画面全体を描き直さない', commits <= 10, `20回動かして ${commits}回`);
     // 枠の上へ(置き先が光る = 画面の描き直しが起きる)。描き直しのあとも位置が戻らない
     const steps = 8;
     for (let k = 1; k <= steps; k += 1) {
@@ -176,7 +203,8 @@ const check = (name, ok, detail = '') => {
     }
     await page.waitForTimeout(200);
     const onSlot = await dragged();
-    check('置き先の枠の上でも、カードが指の位置にある', !!onSlot && Math.abs(onSlot.left - target.x) < 1 && Math.abs(onSlot.top - target.y) < 1,
+    check('置き先の枠の上でも、カードが指の位置にある', !!onSlot && Math.abs(onSlot.left - target.x) < 1 && Math.abs(onSlot.top - target.y) < 1
+      && Math.abs(onSlot.cx - target.x) < 1.5 && Math.abs(onSlot.cy - target.y) < 1.5,
       JSON.stringify(onSlot));
     await page.mouse.up();
     await page.waitForTimeout(800);

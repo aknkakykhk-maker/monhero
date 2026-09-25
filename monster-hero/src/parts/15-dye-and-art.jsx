@@ -1152,12 +1152,21 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
   // 書き分けていないモンスターでは作る枚数はこれまでと変わらない
   useEffect(() => {
     const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
-    if (wanted.length === 0) { setRecolored({}); return; }
+    // 中身が同じなら前のものをそのまま使う(新しい空の箱を入れるたびに描き直しが1回増えていた。
+    // 待機の動きで部位ごとに絵を重ねる子は、その枚数ぶん増えていた)
+    if (wanted.length === 0) { setRecolored((prev) => (Object.keys(prev).length === 0 ? prev : {})); return; }
     let cancelled = false;
     // 濃さ(@NN)は重ねる透明度で出すので、作る絵は濃さ抜きの色で1枚。
     // 置き場所の名前も濃さ抜きにしておくと、スライダーを動かしている間に絵を作り直さない
     Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then((url) => [_recoloredKey(idx, c), url])))
-      .then((entries) => { if (!cancelled) setRecolored(Object.fromEntries(entries)); });
+      .then((entries) => {
+        if (cancelled) return;
+        const next = Object.fromEntries(entries);
+        setRecolored((prev) => {
+          const keys = Object.keys(next);
+          return (keys.length === Object.keys(prev).length && keys.every((k) => prev[k] === next[k])) ? prev : next;
+        });
+      });
     return () => { cancelled = true; };
   }, [baseId, src, colorKey]);
   if (!hues || hues.length === 0) {

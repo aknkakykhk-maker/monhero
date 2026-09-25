@@ -277,7 +277,10 @@ const BossMovieLayer = ({ shake = true }) => {
       if (extras && extras.sound && Audio_.playSeFile) sound = Audio_.playSeFile(extras.sound);
       timers.push(setTimeout(() => finish(true), BOSS_MOVIE_MAX_MS));
       timers.push(setTimeout(() => setCanSkip(true), 900));
+      // 揺れの合図を見るためだけのループ。合図が無いムービーでは回さず、全部出し終えたら止める
+      // (以前は合図が無くても・出し終えてもムービーが終わるまで毎コマ回っていた)
       const tick = () => {
+        raf = 0;
         if (settled) return;
         const pos = Number.isFinite(el.currentTime) ? el.currentTime * 1000 : Date.now() - startWall;
         shakes.forEach((c) => {
@@ -285,9 +288,9 @@ const BossMovieLayer = ({ shake = true }) => {
           c.fired = true;
           if (shake) setShakeKey((k) => k + 1);
         });
-        raf = requestAnimationFrame(tick);
+        if (shakes.some((c) => !c.fired)) raf = requestAnimationFrame(tick);
       };
-      raf = requestAnimationFrame(tick);
+      if (shakes.length) raf = requestAnimationFrame(tick);
     };
     // ★最後まで流れたときは、効果音の余韻をそのまま残す。途中で閉じたとき(スキップ・読めない・画面ごと閉じた)は音も消す
     const onEnded = () => finish(true, true);
