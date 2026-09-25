@@ -65,7 +65,7 @@ vm.runInContext([
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
-    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
+    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
 ].join('\n'), sandbox);
 // ヒット列(二刀流で2回ぶん入るか)は本体の buildAttackHits をそのまま動かす
 vm.runInContext(slice('const HERO_CARD_BONUS_MONSTER_IDS', 'const attackAtonementDmg') + ';globalThis.hitsApi={buildAttackHits};', sandbox);
@@ -302,9 +302,9 @@ const use = (state, def, slot, monId, now, extra = {}) => {
 // ---------- ⑪ モッチー「ガッツ全開っちー」(2026-09-25 ユーザー指示) ----------
 {
   const gm = ex.tacticsExDefOf('Mocchi');
-  check('モッチー「ガッツ全開っちー」: ラン3回・カードと併用できる・5ターン・20%・全回復', !!gm && gm.name === 'ガッツ全開っちー'
+  check('モッチー「ガッツ全開っちー」: ラン3回・カードと併用できる・5ターン・30%・自動回復30%増・全回復', !!gm && gm.name === 'ガッツ全開っちー'
     && gm.maxUses === 3 && !gm.unlimited && gm.withCards && gm.duration === 'turns' && gm.turns === 5
-    && gm.statRate === 0.2 && gm.fullRecover && ex.isTacticsExEffectImplemented(gm), JSON.stringify(gm));
+    && gm.statRate === 0.3 && gm.regenRate === 0.3 && gm.fullRecover && ex.isTacticsExEffectImplemented(gm), JSON.stringify(gm));
   check('効果時間の文にターン数と「WAVEが変わると切れる」が入る', /5ターン/.test(ex.tacticsExDurationText(gm)) && /WAVEが変わると切れる/.test(ex.tacticsExDurationText(gm)), ex.tacticsExDurationText(gm));
   const A = (wave, turn) => ({ wave, turn });
   const s0 = ex.createTacticsExState();
@@ -312,7 +312,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const g = ex.applyTacticsExUse(s0, { def: gm, slot: 0, monId: 'Mocchi', now: A(2, 3) });
   const unit = { id: 'Mocchi', hp: 300, maxHp: 600, atk: 120, def: 120, guts: 50, maxGuts: 100, downed: false };
   const on = ex.applyTacticsExStats(unit, g, 0, A(2, 3));
-  check('使ったターンから 力120/丈夫さ120 → 144/144(20%アップ)', on.atk === 144 && on.def === 144, `${on.atk}/${on.def}`);
+  check('使ったターンから 力120/丈夫さ120 → 156/156(30%アップ)', on.atk === 156 && on.def === 156, `${on.atk}/${on.def}`);
   check('同じWAVEの5ターン目(7ターン目)まで続く', ex.isTacticsExEffectActive(g, 0, 'Mocchi', A(2, 7)));
   check('6ターン目(8ターン目)には切れて元の値に戻る', !ex.isTacticsExEffectActive(g, 0, 'Mocchi', A(2, 8))
     && ex.applyTacticsExStats(unit, g, 0, A(2, 8)).atk === 120);
@@ -322,22 +322,30 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     ex.isTacticsExEffectActive(late, 0, 'Mocchi', A(2, 19)) && !ex.isTacticsExEffectActive(late, 0, 'Mocchi', A(3, 1)));
   check('あと何ターンか(使ったターンは5、最後のターンは1、切れたら0)', ex.tacticsExTurnsLeft(g, 0, 'Mocchi', A(2, 3)) === 5
     && ex.tacticsExTurnsLeft(g, 0, 'Mocchi', A(2, 7)) === 1 && ex.tacticsExTurnsLeft(g, 0, 'Mocchi', A(2, 8)) === 0);
-  // ★ライフ・ガッツの上限も20%上げる(2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」)。
+  // ★ライフ・ガッツの上限も上げる(2026-09-25 のちに20% → 30%)(2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」)。
   //   上限はみゅあ補正と同じ作り直し(scaleTacticsUnits)で掛けるので、補正で作り直しても消えない
   const base = { id: 'Mocchi', hp: 300, maxHp: 600, baseMaxHp: 600, atk: 120, def: 120, guts: 50, maxGuts: 100, baseMaxGuts: 100, downed: false };
-  const up = ex.scaleTacticsUnits(ex.setTacticsExMaxRate([base], 0, 0.2), 0, 0)[0];
-  check('上限が20%上がる(ライフ600→720・ガッツ100→120)。いまのライフ・ガッツはそのまま', up.maxHp === 720 && up.maxGuts === 120 && up.hp === 300 && up.guts === 50,
+  const up = ex.scaleTacticsUnits(ex.setTacticsExMaxRate([base], 0, 0.3), 0, 0)[0];
+  check('上限が30%上がる(ライフ600→780・ガッツ100→130)。いまのライフ・ガッツはそのまま', up.maxHp === 780 && up.maxGuts === 130 && up.hp === 300 && up.guts === 50,
     `${up.hp}/${up.maxHp} ${up.guts}/${up.maxGuts}`);
-  const upMua = ex.scaleTacticsUnits(ex.setTacticsExMaxRate([base], 0, 0.2), 0.1, 0)[0];
-  check('みゅあ補正(+10%)で作り直しても20%は消えない(600×1.1×1.2＝792)', upMua.maxHp === 792, String(upMua.maxHp));
-  const fullUnit = { ...up, hp: 720, guts: 120 };
+  const upMua = ex.scaleTacticsUnits(ex.setTacticsExMaxRate([base], 0, 0.3), 0.1, 0)[0];
+  check('みゅあ補正(+10%)で作り直しても30%は消えない(600×1.1×1.3＝858)', upMua.maxHp === 858, String(upMua.maxHp));
+  const fullUnit = { ...up, hp: 780, guts: 130 };
   const exp = ex.expireTacticsExMaxRates([fullUnit], g, A(2, 8));
   const down = ex.scaleTacticsUnits(exp.units, 0, 0)[0];
-  check('切れたら上限を元へ戻し、ライフ・ガッツは新しい上限で丸める(720→600・120→100)', exp.changed && down.maxHp === 600 && down.hp === 600
+  check('切れたら上限を元へ戻し、ライフ・ガッツは新しい上限で丸める(780→600・130→100)', exp.changed && down.maxHp === 600 && down.hp === 600
     && down.maxGuts === 100 && down.guts === 100, `${down.hp}/${down.maxHp} ${down.guts}/${down.maxGuts}`);
   check('効いているあいだは上限を戻さない', !ex.expireTacticsExMaxRates([fullUnit], g, A(2, 7)).changed);
   check('上限を上げていない子(既存の子)は、作り直しても値が変わらない', ex.scaleTacticsUnits([base], 0.1, 0)[0].maxHp === 660);
   check('使ったターンもほかのカードを使える(その子も)', !ex.isTacticsExCardLocked(g, 0, A(2, 3)));
+  // ★効いているあいだ、自動回復を30%増やす(2026-09-25 ユーザー指示「効果中ライフとガッツの自動回復を30%上昇」)
+  check('効いているあいだは自動回復の上乗せが0.3、切れたら0・ほかの枠は0',
+    ex.tacticsExRegenRateAt(g, [unit], 0, A(2, 3)) === 0.3 && ex.tacticsExRegenRateAt(g, [unit], 0, A(2, 7)) === 0.3
+    && ex.tacticsExRegenRateAt(g, [unit], 0, A(2, 8)) === 0 && ex.tacticsExRegenRateAt(g, [unit, unit], 1, A(2, 3)) === 0
+    && ex.tacticsExRegenRateAt(late, [unit], 0, A(3, 1)) === 0);
+  check('ほかの子に入れ替わっていたら上乗せしない', ex.tacticsExRegenRateAt(g, [{ ...unit, id: 'Golem' }], 0, A(2, 3)) === 0);
+  check('自動回復は1体ずつ「上限の30%」を固定値で足す(率への倍率ではない・倒れている子の戻りには乗せない)',
+    /const boost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now\);[\s\S]{0,120}rateHealTacticsAt\(units, slotIdx, boost, boost\)[\s\S]{0,120}const downed = regenDownedTacticsBoard\(units\)/.test(app));
 }
 
 // ---------- ⑧ 壊れた値 ----------

@@ -902,7 +902,8 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   duration  … 効果の続く長さ。'turn'(発動ターン) / 'wave'(発動WAVEの終わりまで) / 'style'(もう一度使って選び直すまで)
 //               / 'turns'(使ったターンから turns ターンのあいだ。WAVEが変わったらそこで切れる)
 //   turns     … duration:'turns' のときのターン数
-//   statRate  … 効いているあいだ、力と丈夫さを何割上げるか(0.2 なら20%)
+//   statRate  … 効いているあいだ、力と丈夫さを何割上げるか(0.3 なら30%)
+//   regenRate … 効いているあいだ、ターン終わりのライフ・ガッツの自動回復の率へそのまま足す値(0.3 なら上限の30%ぶんを上乗せ)
 //   fullRecover … true なら、使った瞬間にその子のライフとガッツを満タンにする
 //   styles    … duration:'style' のときの選択肢 [{ id, label, desc }]。使うたびに1つ選ぶ(いまのものは選べない)
 //   defaultStyle … バトルを始めたときのスタイル(styles の id)
@@ -924,6 +925,9 @@ const TACTICS_EX_SKILLS = Object.freeze({
     maxUses: 10, unlimited: false, withCards: true, duration: 'turn',
     effect: 'coverAll',
   }),
+  // ★2026-09-25 ユーザー指示で上げ幅を20% → 30%。さらに効いているあいだ自動回復を30%増やす
+  //   (「ステータス30%アップに変更。更に効果中ライフとガッツの自動回復を30%上昇」)。
+  //   自動回復は「いまの率 + 30%」(倍率ではなく固定値で足す。ユーザー指示「1.3倍じゃなくて30%固定値でプラス」)
   // ★2026-09-25 ユーザー指示「モッチー ガッツ全開っちー 5ターンの間全てのステータスが20%上がり、
   //   ライフとガッツを全回復する 使用回数3回」。上がるのは力と丈夫さ(ライフ・ガッツは満タンにする)。
   //   カードとの併用は指定が無かったので、制限なし(併用できる)にしてある
@@ -932,9 +936,9 @@ const TACTICS_EX_SKILLS = Object.freeze({
     name: 'ガッツ全開っちー',
     // ★2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」。
     //   上限も20%上げ、その上がった上限まで満タンにする
-    desc: '5ターンのあいだ、力・丈夫さ・ライフの上限・ガッツの上限が20%上がる。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    desc: '5ターンのあいだ、力・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
-    statRate: 0.2, fullRecover: true,
+    statRate: 0.3, regenRate: 0.3, fullRecover: true,
     effect: 'statBoost',
   }),
   Golem: Object.freeze({
@@ -1010,6 +1014,7 @@ const normalizeTacticsExDef = (raw) => {
     heroInitialStyle: safeDuration === 'style' && raw.heroInitialStyle === true,
     turns: safeDuration === 'turns' ? Math.max(1, tacticsSafeInt(raw.turns, 1)) : 0,
     statRate: Math.max(0, Number.isFinite(Number(raw.statRate)) ? Number(raw.statRate) : 0),
+    regenRate: Math.max(0, Number.isFinite(Number(raw.regenRate)) ? Number(raw.regenRate) : 0),
     fullRecover: raw.fullRecover === true,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
@@ -1123,7 +1128,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
     effects: { ...safe.effects, [slot]: { monId, exId: def.id, effect: def.effect, duration: def.duration, wave: stamp.wave, turn: stamp.turn,
       on: def.duration === 'style' ? style !== def.defaultStyle : true,
       style,
-      turns: def.duration === 'turns' ? def.turns : 0, statRate: def.statRate || 0,
+      turns: def.duration === 'turns' ? def.turns : 0, statRate: def.statRate || 0, regenRate: def.regenRate || 0,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -1173,6 +1178,14 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
 //   捨て身(allIn)     … 丈夫さ0。使ったときの丈夫さの50%を力へ足す
 //   ソード・コンバージョン(weaponChange) の片手盾 … いまの力と同じ数値を丈夫さへ足す(力は減らない)
 //                                         二刀流 … 丈夫さを半分にする(ヒット列の2回ぶんは tacticsExActiveStyle を見て別に掛ける)
+// ターン終わりの自動回復の率へ足す値(ガッツ全開っちーが効いている子だけ。ほかは0)。
+// ★倍率ではなく固定値で足す(いまの率 + regenRate)。倒れている子の戻り(10%ずつ)には乗せない
+const tacticsExRegenRateAt = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'statBoost') return 0;
+  const rate = Number(normalizeTacticsExState(state).effects[slot].regenRate);
+  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+};
 const applyTacticsExStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);

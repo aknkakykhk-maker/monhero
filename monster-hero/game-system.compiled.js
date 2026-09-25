@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ee7f60d544c9d83d
+// source-sha256: 715230393a9f888e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bc9f7d8090446002
+// generated-sha256: 9b7fab9ec12e648c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -262,7 +262,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-25 17:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 19:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29736,7 +29736,8 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   duration  … 効果の続く長さ。'turn'(発動ターン) / 'wave'(発動WAVEの終わりまで) / 'style'(もう一度使って選び直すまで)
 //               / 'turns'(使ったターンから turns ターンのあいだ。WAVEが変わったらそこで切れる)
 //   turns     … duration:'turns' のときのターン数
-//   statRate  … 効いているあいだ、力と丈夫さを何割上げるか(0.2 なら20%)
+//   statRate  … 効いているあいだ、力と丈夫さを何割上げるか(0.3 なら30%)
+//   regenRate … 効いているあいだ、ターン終わりのライフ・ガッツの自動回復の率へそのまま足す値(0.3 なら上限の30%ぶんを上乗せ)
 //   fullRecover … true なら、使った瞬間にその子のライフとガッツを満タンにする
 //   styles    … duration:'style' のときの選択肢 [{ id, label, desc }]。使うたびに1つ選ぶ(いまのものは選べない)
 //   defaultStyle … バトルを始めたときのスタイル(styles の id)
@@ -29761,6 +29762,9 @@ const TACTICS_EX_SKILLS = Object.freeze({
     duration: 'turn',
     effect: 'coverAll'
   }),
+  // ★2026-09-25 ユーザー指示で上げ幅を20% → 30%。さらに効いているあいだ自動回復を30%増やす
+  //   (「ステータス30%アップに変更。更に効果中ライフとガッツの自動回復を30%上昇」)。
+  //   自動回復は「いまの率 + 30%」(倍率ではなく固定値で足す。ユーザー指示「1.3倍じゃなくて30%固定値でプラス」)
   // ★2026-09-25 ユーザー指示「モッチー ガッツ全開っちー 5ターンの間全てのステータスが20%上がり、
   //   ライフとガッツを全回復する 使用回数3回」。上がるのは力と丈夫さ(ライフ・ガッツは満タンにする)。
   //   カードとの併用は指定が無かったので、制限なし(併用できる)にしてある
@@ -29769,13 +29773,14 @@ const TACTICS_EX_SKILLS = Object.freeze({
     name: 'ガッツ全開っちー',
     // ★2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」。
     //   上限も20%上げ、その上がった上限まで満タンにする
-    desc: '5ターンのあいだ、力・丈夫さ・ライフの上限・ガッツの上限が20%上がる。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    desc: '5ターンのあいだ、力・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
     maxUses: 3,
     unlimited: false,
     withCards: true,
     duration: 'turns',
     turns: 5,
-    statRate: 0.2,
+    statRate: 0.3,
+    regenRate: 0.3,
     fullRecover: true,
     effect: 'statBoost'
   }),
@@ -29864,6 +29869,7 @@ const normalizeTacticsExDef = raw => {
     heroInitialStyle: safeDuration === 'style' && raw.heroInitialStyle === true,
     turns: safeDuration === 'turns' ? Math.max(1, tacticsSafeInt(raw.turns, 1)) : 0,
     statRate: Math.max(0, Number.isFinite(Number(raw.statRate)) ? Number(raw.statRate) : 0),
+    regenRate: Math.max(0, Number.isFinite(Number(raw.regenRate)) ? Number(raw.regenRate) : 0),
     fullRecover: raw.fullRecover === true,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
@@ -30061,6 +30067,7 @@ const applyTacticsExUse = (state, {
         style,
         turns: def.duration === 'turns' ? def.turns : 0,
         statRate: def.statRate || 0,
+        regenRate: def.regenRate || 0,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -30139,6 +30146,14 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
 //   捨て身(allIn)     … 丈夫さ0。使ったときの丈夫さの50%を力へ足す
 //   ソード・コンバージョン(weaponChange) の片手盾 … いまの力と同じ数値を丈夫さへ足す(力は減らない)
 //                                         二刀流 … 丈夫さを半分にする(ヒット列の2回ぶんは tacticsExActiveStyle を見て別に掛ける)
+// ターン終わりの自動回復の率へ足す値(ガッツ全開っちーが効いている子だけ。ほかは0)。
+// ★倍率ではなく固定値で足す(いまの率 + regenRate)。倒れている子の戻り(10%ずつ)には乗せない
+const tacticsExRegenRateAt = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'statBoost') return 0;
+  const rate = Number(normalizeTacticsExState(state).effects[slot].regenRate);
+  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+};
 const applyTacticsExStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);
@@ -48548,11 +48563,25 @@ function MonsterHeroGame() {
   const tacticsRegen = (hpRate, gutsRate) => {
     if (!isTacticsMode(runMode)) return null;
     const alive = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, false);
-    const downed = regenDownedTacticsBoard(alive.units);
+    // ★ガッツ全開っちーが効いている子は、その子の上限の regenRate ぶん(30%)を上乗せする
+    //   (2026-09-25 ユーザー指示「効果中ライフとガッツの自動回復を30%上昇」「1.3倍じゃなくて30%固定値でプラス」)
+    let units = alive.units,
+      hp = alive.hp,
+      guts = alive.guts;
+    const live = tacticsExLiveRef.current;
+    if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
+      const boost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now);
+      if (boost <= 0) return;
+      const extra = rateHealTacticsAt(units, slotIdx, boost, boost);
+      units = extra.units;
+      hp += extra.hp;
+      guts += extra.guts;
+    });
+    const downed = regenDownedTacticsBoard(units);
     const total = commitTacticsUnits(downed.units);
     return {
-      hp: alive.hp,
-      guts: alive.guts,
+      hp,
+      guts,
       downedHp: downed.hp,
       downedHealed: downed.healed,
       total
