@@ -9939,7 +9939,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // targets: 狙われた枠(画面が攻撃を味方の枠まで飛ばすのに使う) / ms: 速さの設定を掛けた実際の長さ(動きをこれに合わせる)
         // afterMovie: ムービーを見せ終えたあと。画面は溜め・技名を省いて、すぐ味方の枠へ当てる
         setEnemyAttackFx({kind: fxKind, skill: fxSkill, targets: Array.isArray(aimedSlots) ? aimedSlots.slice() : [], ms: battleMs(fxMs), ...(movieShown?{afterMovie:true}:{})});
-        if(intent.type==='SPECIAL') Audio_.se.enemySpecial(); else Audio_.se.enemyAttack();
+        // ★ムービーのあとは溜めも爆発もムービーの音で聞かせ終えている。戻ってからの着弾は短い打撃音だけにする
+        //   (enemySpecial は「溜め→0.4秒後に爆発」の作りで、すぐ当たる着弾とずれる)
+        if(intent.type==='SPECIAL'&&!movieShown) Audio_.se.enemySpecial(); else Audio_.se.enemyAttack();
         setEnemyAttackAnim(true);
         if(fxKind==='moo') {
           // 動きを持つムーは、技が当たる瞬間に揺らす(はじめに揺らすと、溜めのあいだに揺れが終わってしまう)
