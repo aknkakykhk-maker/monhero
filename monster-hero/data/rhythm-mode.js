@@ -18342,12 +18342,8 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-sublane-boundary]{display:block;position:absolute;z-index:1;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(216,180,254,.12),rgba(103,232,249,.20) 70%,rgba(236,254,255,.38));clip-path:var(--rhythm-sub-clip,none)}
     [data-rhythm-note]{z-index:2}
     /* canvas でノーツを描くとき(2026-09-07)。canvas はノーツと同じ層に置く。
-       マスモンの絵だけは DOM の要素のまま canvas の上へ重ね、tick が transform で動かす(絵の染色を触らないため)。 */
+       マスモンの顔も、演奏の前に焼いた絵を同じ canvas へ描く(2026-09-25。以前は DOM の要素を重ねていた)。 */
     [data-rhythm-note-canvas]{position:absolute;left:0;top:0;pointer-events:none;z-index:5}
-    [data-rhythm-canvas-face]{position:absolute;left:0;top:0;width:42px;height:42px;pointer-events:none;z-index:6;will-change:transform}
-    [data-rhythm-canvas-face]>[data-rhythm-canvas-face-art]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:scale(var(--rhythm-face-scale,1));filter:drop-shadow(0 1px 2px rgba(0,0,0,.58)) drop-shadow(0 0 4px rgba(253,224,71,.55))}
-    [data-rhythm-canvas-face][data-rhythm-clear="1"]>[data-rhythm-canvas-face-art]{animation:rhythm-clear-pop .26s ease-out forwards;filter:none}
-    [data-rhythm-canvas-face]>[data-rhythm-canvas-face-art]>*{border:0!important;outline:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;clip-path:none!important}
     [data-rhythm-lane][data-pressed="true"]{background:linear-gradient(180deg,rgba(34,211,238,.10),rgba(34,211,238,.22) 54%,rgba(217,70,239,.30) 100%)!important;box-shadow:inset 0 0 30px rgba(103,232,249,.48),inset 0 -72px 64px rgba(6,182,212,.34),0 0 15px rgba(34,211,238,.24)!important;border:0!important;filter:none!important}
     /* --rhythm-note-depth-brightness は落下中まいフレーム書き換えている。そこへ40msの
        transitionを付けると、目標値が毎フレーム置き換わるので補間はほぼ働かず、
@@ -18718,12 +18714,18 @@ const rhythmEnsureHitEffects=area=>{
 //
 // 外す→読む→付ける の「読む」は1回で足りる。まとめて外し、1回だけ読み、まとめて付ける。
 // **見た目も再生の始まる時刻も変わらない**(同じ処理の中で終わるため)。
+//
+// 【2026-09-25】読むものを offsetWidth(レイアウトまで計算させる)から、
+// getComputedStyle の animationName(スタイルだけ計算させる)へ替えた。
+// アニメーションが外れるか付くかはスタイルの計算だけで決まるので、それで流し直せる。
+// 判定のたびにページ全体の配置を計算し直していたのが、スタイルの計算だけになる
+// (実測: 叩いた10秒のうち、この読み取りに78ms。CPUを1/4に絞った環境)。
 const rhythmRestartAnimations=entries=>{
   const list=(Array.isArray(entries)?entries:[]).filter(entry=>entry&&entry.el&&entry.attr);
   if(!list.length)return 0;
   for(const entry of list)entry.el.dataset[entry.attr]='';
-  // ここ1回だけ。印を外したことを確定させるためにレイアウトを読む
-  void list[0].el.offsetWidth;
+  // ここ1回だけ。印を外したことをスタイルの計算で確定させる(レイアウトは読まない)
+  void getComputedStyle(list[0].el).animationName;
   for(const entry of list)entry.el.dataset[entry.attr]=entry.value===undefined?'1':entry.value;
   return list.length;
 };
@@ -19248,6 +19250,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     FAILED: {radius:5,gradient:['#94a3b8','#475569'],border:'rgba(148,163,184,.6)',inset:'rgba(255,255,255,.3)',glow:[]},
   };
   let canvas=null,ctx=null,dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
+  // マスモンの顔(焼いた絵)。ノーツより上に出すため、描くのはフレームの最後(end)にまとめる。
+  // 以前は DOM の要素を canvas の上へ重ねて毎フレーム動かしていた(2026-09-25にやめた)
+  const faces=[];
   const sprites=new Map();
   const roundRectPath=(c,x,y,w,h,r)=>{
     const rr=Math.max(0,Math.min(r,w/2,h/2));
@@ -19507,7 +19512,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       }
       ctx.setTransform(dpr,0,0,dpr,0,0);
       ctx.clearRect(0,0,cssW,cssH);
-      frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';lightweight=!!options.lightweight;sizeScale=Number(options.sizeScale)||1;drawn=0;
+      frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';lightweight=!!options.lightweight;sizeScale=Number(options.sizeScale)||1;drawn=0;faces.length=0;
       return true;
     },
     // ノーツ1個。geo は rhythmNoteCanvasGeometry の結果。opts: {failed,monster,wide,pressed,alpha,pop(0..1|null),depthScale,brightness,hideBody}
@@ -19523,8 +19528,23 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const headOpts=o.pop===null?o:{...o,alpha:o.alpha*.95*(1-easeOut(o.pop)),brightness:1};
       drawHead(note,geo,headOpts);
     },
-    end(){},
-    clear(){if(ctx&&cssW&&cssH){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);}},
+    // マスモンの顔を1つ積む。bitmap は焼いた canvas、(cx,cy) は中心、size は一辺(どれも CSS px)。
+    drawFace(bitmap,cx,cy,size,alpha=1){
+      if(!ctx||!bitmap||!(size>0)||!(alpha>0))return;
+      faces.push(bitmap,cx,cy,size,alpha);
+    },
+    end(){
+      if(!ctx||!faces.length)return;
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      for(let i=0;i<faces.length;i+=5){
+        const size=faces[i+3];
+        ctx.globalAlpha=Math.min(1,faces[i+4]);
+        ctx.drawImage(faces[i],faces[i+1]-size/2,faces[i+2]-size/2,size,size);
+      }
+      ctx.globalAlpha=1;
+      faces.length=0;
+    },
+    clear(){faces.length=0;if(ctx&&cssW&&cssH){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);}},
   };
 })();
 

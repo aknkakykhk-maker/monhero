@@ -446,11 +446,19 @@ function MonsterHeroGame() {
     setScreenShake(false); setBigShake(false);
     requestAnimationFrame(() => { setScreenShake(true); setBigShake(big); setTimeout(()=>{setScreenShake(false); setBigShake(false);}, big?750:450); });
   }, []);
-  const [ripples, setRipples] = useState([]);
+  // タップの波紋は React の state を通さず、入れ物へ要素を直接足して 650ms 後に外す(2026-09-25)。
+  // 以前は state に積んでいたため、**タップのたびにゲーム全体(このコンポーネント)が2回描き直され**、
+  // 開いている画面もまとめて作り直されていた。モンヒロビートは1秒に何回もタップするので、
+  // 譜面が詰まるほどカクついた(ユーザー報告「どの端末でも演奏中にカクつく / 譜面が多いと起こりやすい」)。
+  // 見た目(大きさ・枠・光・動き)は以前の <span> と同じ。
+  const rippleLayerRef = useRef(null);
   const spawnRipple = useCallback((x, y) => {
-    const id = Date.now() + Math.random();
-    setRipples(prev => [...prev, { id, x, y }]);
-    setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 650);
+    const layer = rippleLayerRef.current;
+    if (!layer || typeof document === 'undefined' || !Number.isFinite(x) || !Number.isFinite(y)) return;
+    const el = document.createElement('span');
+    el.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:48px;height:48px;margin-left:-24px;margin-top:-24px;border-radius:9999px;border:2px solid rgba(255,255,255,0.9);box-shadow:0 0 10px rgba(255,255,255,0.6);transform-origin:center;animation:mhRipple 550ms ease-out forwards`;
+    layer.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 650);
   }, []);
   // タップ中(押している間)は指を離すまでスライドしても波紋が付いてくるようにする。
   // 動くたびに出すと出過ぎるので、時間と距離の両方で間引く
@@ -13390,11 +13398,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
     <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF'||battleFxLoad==='LIGHT'||battleFxLoad==='MINIMAL')?'calm':'rich'} data-fx-level={battleFxLoad} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
-      <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
-        {ripples.map(r=>(
-          <span key={r.id} style={{position:'absolute',left:r.x,top:r.y,width:'48px',height:'48px',marginLeft:'-24px',marginTop:'-24px',borderRadius:'9999px',border:'2px solid rgba(255,255,255,0.9)',boxShadow:'0 0 10px rgba(255,255,255,0.6)',transformOrigin:'center',animation:'mhRipple 550ms ease-out forwards'}}/>
-        ))}
-      </div>
+      <div ref={rippleLayerRef} data-mh-tap-ripples style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}/>
       {updateNotice}{storageTroubleNotice}
       {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
