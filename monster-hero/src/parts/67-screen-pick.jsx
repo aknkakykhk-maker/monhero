@@ -492,8 +492,12 @@ function PickProAlliesScreen({
 function PickSlotScreen({
   battleTutorial, battleTutorialSpotClass, currentPickingMon, distTotalBonus,
   getDistAptitude, onRepick, phasePlan, scenarioPicksSlot, setupMon, slots, wave,
+  heroStyleDef = null, heroStyle = null, onHeroStyle = null,
 }) {
   const mon=currentPickingMon;
+  // 勇者モンの初期スタイル(タクティクスで、スタイル式のEXを持つ子を勇者モンにしたときだけ)。
+  // 選んでいなければ既定のスタイル(剣士モッチーなら片手剣)
+  const pickedStyle=heroStyleDef?(heroStyleDef.styles.some(st=>st.id===heroStyle)?heroStyle:heroStyleDef.defaultStyle):null;
   const monName=mon?.masuName||mon?.name||'';
   return (
 
@@ -527,6 +531,21 @@ function PickSlotScreen({
           );})}
         </div>
       </div>
+      {/* ★勇者モンの初期スタイル(2026-09-25 ユーザー指示「勇者モンに選んだときに限り、初期スタイルを選べる」)。
+          バトル中にEXで選び直すこともできる。どちらも元のステータスから数え直すので積み重ならない */}
+      {heroStyleDef&&(
+        <div data-hero-initial-style className="mh-ph-panel shrink-0 w-full max-w-xs mt-1 px-2 py-1.5 text-left">
+          <div className="mh-ph-panel-label text-[9px] font-black mb-1">初期スタイル（勇者モンのときだけ選べる）</div>
+          <div className="grid grid-cols-3 gap-1">
+            {heroStyleDef.styles.map(st=>(
+              <button key={st.id} type="button" data-hero-style={st.id} aria-pressed={pickedStyle===st.id}
+                onClick={()=>onHeroStyle&&onHeroStyle(st.id)}
+                className={`min-h-[40px] rounded-lg border-2 px-1 text-[11px] font-black active:scale-95 ${pickedStyle===st.id?'border-fuchsia-300 bg-fuchsia-700 text-white':'border-white/20 bg-black/40 text-slate-300'}`}>{st.label}</button>
+            ))}
+          </div>
+          <div className="mt-1 text-[9px] font-bold leading-snug text-slate-300">{(heroStyleDef.styles.find(st=>st.id===pickedStyle)||{}).desc}</div>
+        </div>
+      )}
       {/* 間合い適性はどこに置いても4距離すべてに入る。ここの%は「このモンスターを加えた後の各距離の補正値」 */}
       <div className="mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2">間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</div>
       {/* 練習中は押せる枠だけを光らせる。枠全体を囲むと「どれを押すのか」が分からなかった */}

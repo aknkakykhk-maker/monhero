@@ -465,7 +465,7 @@ const KENSHI_COMBO_POWER_MAX = 3;
 //   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
 //     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
 //     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
-const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true }) => {
+const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1 }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
@@ -504,7 +504,7 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);
   if (kenshiHero && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiHeroUnique) combo(rate + comboDmgBonus);
   // 固有効果「ソードスキル」: 技の出自が剣士モッチーなら誰が使っても(合体で引き継いだ場合も)
-  // ★swordSkill:false … タクティクスのEX「ソード・コンバージョン」で片手持ちの剣士モッチーが使ったとき。
+  // ★swordSkill:false … タクティクスのEX「ソード・コンバージョン」で片手盾の剣士モッチーが使ったとき。
   //   固有技そのものは使えるが、ソードスキルの連撃は出ない(ほかのモードは渡さないので常に true)
   if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
   // ソードスキルの連撃パワーが3充填されるたびに1本ずつ増える永久連撃。
@@ -513,6 +513,16 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
     for (let i = 0; i < kenshiExtraCombos; i++) combo(ATTACK_COMBO_RULES.kenshiExtraCombo + comboDmgBonus);
   }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
+  // ★hitRepeat … タクティクスのEX「ソード・コンバージョン」の二刀流(2026-09-25 ユーザー指示)。
+  //   メイン・連撃をまとめたヒット列が、もう1回ぶん入る(合計ダメージがちょうど2倍になる)。
+  //   2回目は同じ値のまま連撃として足す(演出は1セットだけにするので noAnim)。ほかのモードは渡さないので常に1
+  const repeat = Math.max(1, Math.floor(Number(hitRepeat) || 1));
+  if (repeat > 1) {
+    const first = hits.slice();
+    for (let r = 1; r < repeat; r += 1) {
+      first.forEach(h => hits.push({ kind: 'combo', crit: h.crit, dmg: h.dmg, skillName: '二刀流', noAnim: true }));
+    }
+  }
   return hits;
 };
 // 贖罪の追撃(アーク・イブリースの固有技)。メインヒットの確定値を基準にし、会心は乗せない

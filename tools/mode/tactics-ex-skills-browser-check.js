@@ -65,6 +65,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
       localStorage.setItem('mh_tactics_intro_seen_v1', JSON.stringify(true));
+      // 剣士モッチー(円盤石で解放するレア)も勇者モンに選べるようにする。検査のまっさらなデータだけの話
+      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi']));
     });
     // ★ランキングへは何も送らない(本番の入口でも途中で読み込み直すだけで、降参しない)
     await page.route(/supabase\.co/, (route) => route.abort());
@@ -88,7 +90,8 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
 
     // 難易度えらび → 勇者モン(名前で名指し) → 配置 → アシストカード → バトル
     // ★見つからなければその場で止める(押せるものを押して進めない。設計 11.2)
-    const startTacticsPro = async (heroName) => {
+    // heroStyle … 配置の画面で選ぶ初期スタイル(剣士モッチーのとき)
+    const startTacticsPro = async (heroName, heroStyle = null) => {
       await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
       const opened = await page.evaluate(() => {
         const cards = [...document.querySelectorAll('[data-battle-mode="tacticsPro"]')];
@@ -112,6 +115,13 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       }, heroName);
       if (!hero) return `勇者モンに ${heroName} が並んでいない: ` + await page.evaluate(() => [...document.querySelectorAll('button')].filter(x=>x.offsetParent).map(x=>x.textContent.trim().slice(0,30)).join(' | ').slice(0,1500));
       await page.waitForTimeout(1200);
+      if (heroStyle) {
+        const b = page.locator(`[data-hero-style="${heroStyle}"]`);
+        if (await b.count() === 0) return `配置の画面に初期スタイル(${heroStyle})が出ない`;
+        await b.click();
+        await page.waitForTimeout(300);
+        if (await b.getAttribute('aria-pressed') !== 'true') return `初期スタイル(${heroStyle})を選べない`;
+      }
       // 供モン候補5体は「変更」→ 一覧から1体ずつ選ぶ(勇者モンと同じ子は選ばない)
       await page.evaluate(() => { window.__change = 1; });
       for (let i = 0; i < 40; i += 1) {
@@ -267,12 +277,18 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     check('ゴーレムの枠にEXの印が出る', await page.locator(`[data-tactics-ex-mark="${gSlot}"]`).count() === 1, `枠${gSlot}`);
     // ★名前の行へ札を入れると名前が切れる(2026-09-23 ユーザー指摘「名前が切れてる」)。
     //   EXの札は枠の中の縦積みへ入れ、名前の行は今までどおり名前だけにする
+    // ★2026-09-25 以降の枠は、札を名前の行の右端に置き、右側を空けて名前を押し出さない作り。
+    //   札の置き場所ではなく「名前が切れていない・札が名前に重なっていない」を見る
     const nameCut = await page.evaluate((slot) => {
       const b = document.querySelector(`button[data-slot-index="${slot}"]`);
       const row = b && b.querySelector('.truncate');
-      return row ? { text: row.textContent, cut: row.scrollWidth > row.clientWidth + 1, exInRow: !!row.parentElement.querySelector('[data-tactics-ex-mark]') } : null;
+      const mark = b && b.querySelector('[data-tactics-ex-mark]');
+      if (!row || !mark) return null;
+      const r = row.getBoundingClientRect(), m = mark.getBoundingClientRect();
+      const overlap = Math.max(0, Math.min(r.right, m.right) - Math.max(r.left, m.left)) * Math.max(0, Math.min(r.bottom, m.bottom) - Math.max(r.top, m.top));
+      return { text: row.textContent, cut: row.scrollWidth > row.clientWidth + 1, overlap: Math.round(overlap) };
     }, gSlot);
-    check('EXの札は名前の行に入らない(名前を押し出さない)', !!nameCut && !nameCut.exInRow, JSON.stringify(nameCut));
+    check('EXの札で名前が切れず、札が名前に重ならない', !!nameCut && !nameCut.cut && nameCut.overlap === 0, JSON.stringify(nameCut));
     check('使う前の札は「EX」', await page.locator(`[data-tactics-ex-mark="${gSlot}"]`).getAttribute('data-tactics-ex-state') === 'EX');
     // 空いている枠(EXを持つ子がいない)をタップしても何も開かない
     const empty = [0, 1, 2, 3].find(i => i !== gSlot);
@@ -395,6 +411,37 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await closePanel();
     await tapFirstCard();
     check('併用できるEXを使ったターンでも、通常カードを選べる', (await selectedCount()) > 0);
+
+    // --- ④ 剣士モッチー「ソード・コンバージョン」(2026-09-25 ユーザー指示: 片手剣・片手盾・二刀流の3択) ---
+    // 本番の入口(公開済み)で、勇者モンにして初期スタイルを二刀流にする。ランキングへは送らない(読み込み直して捨てる)
+    await boot();
+    await closePopups();
+    await page.getByRole('button', { name: 'モンヒロバトル' }).dispatchEvent('click', {}, { timeout: 15000 });
+    await page.waitForTimeout(600);
+    await page.locator('[data-battle-system="systemTactics"]').dispatchEvent('click', {}, { timeout: 15000 });
+    const km = await startTacticsPro('剣士モッチー', 'dual');
+    check('剣士モッチーを勇者モンにして、配置の画面で初期スタイル(二刀流)を選べる', km === 'ok', km);
+    if (km !== 'ok') throw new Error(km);
+    const kSlot = await heroSlot();
+    check('初期スタイルが枠の札に出る(二刀流)', await page.locator(`[data-tactics-ex-mark="${kSlot}"]`).getAttribute('data-tactics-ex-state') === '二刀流');
+    await tapSlot(kSlot);
+    p = await panel();
+    check('二刀流: 力135/丈夫さ75 → 135／37 で、回数は使っていない', !!p && /135／37/.test(p.text) && /無制限/.test(p.uses), p && p.text.slice(0, 220));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(300);
+    const choices = await page.evaluate(() => [...document.querySelectorAll('[data-tactics-ex-choice]')]
+      .map(b => ({ id: b.getAttribute('data-tactics-ex-choice'), disabled: b.disabled })));
+    check('「EXスキルを使用」で3つの選択肢が出て、いまのスタイル(二刀流)は選べない',
+      JSON.stringify(choices.map(c => c.id)) === '["sword","shield","dual"]' && choices.find(c => c.id === 'dual').disabled
+      && !choices.find(c => c.id === 'sword').disabled && !choices.find(c => c.id === 'shield').disabled, JSON.stringify(choices));
+    await page.locator('[data-tactics-ex-choice="shield"]').click();
+    await page.waitForTimeout(600);
+    check('片手盾を選ぶとパネルが閉じ、枠の札が「片手盾」になる', (await panel()) === null
+      && await page.locator(`[data-tactics-ex-mark="${kSlot}"]`).getAttribute('data-tactics-ex-state') === '片手盾');
+    await tapSlot(kSlot);
+    p = await panel();
+    check('片手盾: 元のステータスから数え直して 135／210(二刀流の37からではない)', !!p && /135／210/.test(p.text), p && p.text.slice(0, 220));
+    await closePanel();
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
     check('最後まで確かめられた', false, String(e).slice(0, 200));

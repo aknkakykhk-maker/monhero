@@ -370,7 +370,10 @@ function BattleScreen({
   const [showBattleMenu, setShowBattleMenu] = useState(false);
   // ★タクティクス専用 EXスキルの詳細を開いている枠。距離枠をタップすると開く(開くだけで発動はしない)。
   //   中身は毎回 tacticsExInfo から引き直す(回数・使えるかは開いたあとも変わるため、開いた時点の値を持たない)
-  const [exPanelSlot, setExPanelSlot] = useState(null);
+  const [exPanelSlot, setExPanelSlotRaw] = useState(null);
+  // スタイル式のEX(ソード・コンバージョン)は「EXスキルを使用」のあとに選択肢を出す。開き直したら選ぶ前に戻す
+  const [exChoosing, setExChoosing] = useState(false);
+  const setExPanelSlot = (slot) => { setExChoosing(false); setExPanelSlotRaw(slot); };
   const exPanel = exPanelSlot!=null&&tacticsExInfo ? tacticsExInfo(exPanelSlot) : null;
   // タクティクスの戦闘ロジックは旧/新UIで共通。ここでは表示だけを設定値で切り替える。
   // tacticsUnits の有無は「タクティクス戦か」の判定として維持し、CLASSICでは新UIを出さない。
@@ -2037,15 +2040,31 @@ function BattleScreen({
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこの子も通常カードを使える':'使ったターン、この子はカードを使えない（ほかの子は使える）'}</dd>
                 {exPanel.durationText&&<><dt className="font-bold text-slate-400">効果時間</dt><dd className="font-black text-white">{exPanel.durationText}</dd></>}
                 {exPanel.def.conditionText&&<><dt className="font-bold text-slate-400">条件</dt><dd className="font-black text-white">{exPanel.def.conditionText}</dd></>}
-                {exPanel.toggleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-toggle className="font-black text-fuchsia-200">{exPanel.toggleLabel}</dd></>}
-                {!exPanel.toggleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
+                {exPanel.styleLabel&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-style className="font-black text-fuchsia-200">{exPanel.styleLabel}</dd></>}
+                {!exPanel.styleLabel&&exPanel.active&&<><dt className="font-bold text-slate-400">いま</dt><dd data-tactics-ex-active className="font-black text-fuchsia-200">効果中</dd></>}
                 {exPanel.stats&&<><dt className="font-bold text-slate-400">力／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
+              {exChoosing&&exPanel.styleOptions?(
+                // ★スタイルを選ぶ(2026-09-25 ユーザー指示)。いまのスタイルは選べない
+                <div data-tactics-ex-choices className="mt-3 flex flex-col gap-1.5">
+                  <div className="text-[11px] font-black text-slate-300">どのスタイルにする？</div>
+                  {exPanel.styleOptions.map(st=>(
+                    <button key={st.id} type="button" data-tactics-ex-choice={st.id} disabled={st.current||!exPanel.check.ok}
+                      onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot,st.id)) setExPanelSlot(null); }}
+                      className={`min-h-[44px] rounded-xl border-2 px-3 py-1.5 text-left active:scale-95 ${st.current?'border-slate-600 bg-slate-800 text-slate-500':'border-fuchsia-300 bg-fuchsia-900/60 text-white'}`}>
+                      <span className="block text-[13px] font-black">{st.label}{st.current?'（いまのスタイル）':''}</span>
+                      <span className="block text-[10px] font-bold leading-snug opacity-80">{st.desc}</span>
+                    </button>
+                  ))}
+                  <button type="button" data-tactics-ex-choice-back onClick={()=>setExChoosing(false)} className="min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-95">戻る</button>
+                </div>
+              ):(
               <div className="mt-3 flex gap-2">
                 <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
-                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
+                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(exPanel.styleOptions){ setExChoosing(true); return; } if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
               </div>
+              )}
             </div>
           </div>
         ), document.body)}

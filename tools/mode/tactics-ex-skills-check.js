@@ -63,9 +63,11 @@ vm.runInContext([
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
-    + 'applyTacticsExUse,tacticsExToggleLabel,tacticsExActiveEffect,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
+    + 'applyTacticsExUse,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
 ].join('\n'), sandbox);
-const { gate, modes, ex } = sandbox;
+// ヒット列(二刀流で2回ぶん入るか)は本体の buildAttackHits をそのまま動かす
+vm.runInContext(slice('const HERO_CARD_BONUS_MONSTER_IDS', 'const attackAtonementDmg') + ';globalThis.hitsApi={buildAttackHits};', sandbox);
+const { gate, modes, ex, hitsApi } = sandbox;
 
 // ---------- ① タクティクス以外へ出ない ----------
 {
@@ -103,8 +105,8 @@ check('ゴーレム「捨て身」: ラン3回・使ったターンは他カー�
     && golem.conditions.includes('notActive'),
   JSON.stringify(golem));
 check('剣士モッチー「ソード・コンバージョン」: 無制限・使ったターンは他カード不可・再使用まで続く',
-  kenshi && kenshi.name === 'ソード・コンバージョン' && kenshi.unlimited && !kenshi.withCards && kenshi.duration === 'toggle'
-    && kenshi.toggleLabels[0] === '二刀流' && kenshi.toggleLabels[1] === '片手持ち',
+  kenshi && kenshi.name === 'ソード・コンバージョン' && kenshi.unlimited && !kenshi.withCards && kenshi.duration === 'style'
+    && kenshi.styles.map(st => st.label).join('/') === '片手剣/片手盾/二刀流' && kenshi.defaultStyle === 'sword' && kenshi.heroInitialStyle,
   JSON.stringify(kenshi));
 check('EXを持たない子は null', ex.tacticsExDefOf('Ham') === null && ex.tacticsExDefOf(null) === null
   && ex.tacticsExDefOf('toString') === null && ex.tacticsExDefOf('__proto__') === null);
@@ -118,9 +120,12 @@ check('効果が入っていないEXは「未実装」と判定される(画面�
 
 // ---------- ③④ 回数 ----------
 const T = (wave, turn) => ({ wave, turn });
+// スタイル式(ソード・コンバージョン)は、いまのスタイル以外を1つ選んで使う
 const use = (state, def, slot, monId, now, extra = {}) => {
   const c = ex.checkTacticsExUse({ def, state, slot, monId, alive: true, selectedCount: 0, now, ...extra });
-  return { check: c, state: c.ok ? ex.applyTacticsExUse(state, { def, slot, monId, now }) : state };
+  const choice = extra.choice || (def && def.duration === 'style'
+    ? def.styles.find(st => st.id !== ex.tacticsExStyleOf(def, state, slot, monId)).id : null);
+  return { check: c, state: c.ok ? ex.applyTacticsExUse(state, { def, slot, monId, now, choice }) : state };
 };
 {
   let s = ex.createTacticsExState();
@@ -191,14 +196,17 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const g = use(s0, golem, 3, 'Golem', T(2, 4)).state;
   check('WAVE内のEXは、そのWAVEのあいだ効き、次のWAVEで切れる', ex.isTacticsExEffectActive(g, 3, 'Golem', T(2, 20))
     && !ex.isTacticsExEffectActive(g, 3, 'Golem', T(3, 1)));
-  let k = use(s0, kenshi, 0, 'KenshiMocchi', T(1, 2)).state;
+  let k = use(s0, kenshi, 0, 'KenshiMocchi', T(1, 2), { choice: 'shield' }).state;
   const on1 = ex.isTacticsExEffectActive(k, 0, 'KenshiMocchi', T(5, 1));
-  const label1 = ex.tacticsExToggleLabel(kenshi, k, 0, 'KenshiMocchi');
-  k = use(k, kenshi, 0, 'KenshiMocchi', T(5, 1)).state;
+  k = use(k, kenshi, 0, 'KenshiMocchi', T(5, 1), { choice: 'sword' }).state;
   const on2 = ex.isTacticsExEffectActive(k, 0, 'KenshiMocchi', T(5, 1));
-  check('切り替え式は、WAVEをまたいでも続き、もう一度使うと戻る', on1 && !on2);
-  check('切り替え式の「いま」の呼び名', ex.tacticsExToggleLabel(kenshi, s0, 0, 'KenshiMocchi') === '二刀流'
-    && label1 === '片手持ち' && ex.tacticsExToggleLabel(kenshi, k, 0, 'KenshiMocchi') === '二刀流');
+  check('スタイル式は、WAVEをまたいでも続き、片手剣へ戻すと切れる', on1 && !on2);
+  check('スタイルの「いま」の呼び名(はじめは片手剣)', ex.tacticsExStyleLabel(kenshi, s0, 0, 'KenshiMocchi') === '片手剣'
+    && ex.tacticsExStyleLabel(kenshi, use(s0, kenshi, 0, 'KenshiMocchi', T(1, 1), { choice: 'dual' }).state, 0, 'KenshiMocchi') === '二刀流');
+  check('いまのスタイルは選べない・知らないスタイルも選べない', !!ex.checkTacticsExChoice(kenshi, s0, 0, 'KenshiMocchi', 'sword')
+    && !!ex.checkTacticsExChoice(kenshi, s0, 0, 'KenshiMocchi', 'axe') && ex.checkTacticsExChoice(kenshi, s0, 0, 'KenshiMocchi', 'dual') === null);
+  const bad = ex.applyTacticsExUse(s0, { def: kenshi, slot: 0, monId: 'KenshiMocchi', now: T(1, 1), choice: 'sword' });
+  check('選べないスタイルでは何も起きない(回数も減らない)', ex.tacticsExUsesOf(bad, 0, 'KenshiMocchi') === 0);
   const cond = ex.normalizeTacticsExDef({ id: 't', name: 't', maxUses: 5, withCards: true, duration: 'wave', conditions: ['notActive', 'nope'] });
   const sc = use(s0, cond, 0, 'X', T(1, 1)).state;
   const cc = ex.checkTacticsExUse({ def: cond, state: sc, slot: 0, monId: 'X', alive: true, now: T(1, 2) });
@@ -222,17 +230,40 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('捨て身: 効果中はもう一度使えない(回数が無駄に減らない)', !again.ok, again.reason);
   const nextWave = ex.checkTacticsExUse({ def: golem, state: g, slot: 0, monId: 'Golem', alive: true, now: T(3, 1) });
   check('捨て身: 次のWAVEではまた使える', nextWave.ok);
-  // ソード・コンバージョン: 仮仕様の例(二刀流 力185/丈夫さ25 → 片手持ち 力185/丈夫さ210)
-  const mUnit = { id: 'KenshiMocchi', hp: 300, maxHp: 300, atk: 185, def: 25, guts: 10, maxGuts: 20, downed: false };
-  const k1 = ex.applyTacticsExUse(s0, { def: kenshi, slot: 1, monId: 'KenshiMocchi', now: T(1, 1) });
-  const one = ex.applyTacticsExStats(mUnit, k1, 1, T(4, 9));
-  check('片手持ち: 力185/丈夫さ25 → 力185/丈夫さ210(WAVEをまたいでも続く)', one.atk === 185 && one.def === 210, `${one.atk}/${one.def}`);
-  check('片手持ちのあいだは「ソード・コンバージョン」の効果が効いている(ソードスキルを止める手がかり)',
-    ex.tacticsExActiveEffect(k1, 1, 'KenshiMocchi', T(4, 9)) === 'weaponChange');
-  const k2 = ex.applyTacticsExUse(k1, { def: kenshi, slot: 1, monId: 'KenshiMocchi', now: T(4, 9) });
-  const two = ex.applyTacticsExStats(mUnit, k2, 1, T(4, 10));
-  check('もう一度使うと二刀流に戻る(力も丈夫さも元どおり)', two.atk === 185 && two.def === 25
-    && ex.tacticsExActiveEffect(k2, 1, 'KenshiMocchi', T(4, 10)) === null);
+  // ソード・コンバージョン(2026-09-25 ユーザー指示)。新しい基礎値 力135/丈夫さ75 で数える
+  const mUnit = { id: 'KenshiMocchi', hp: 350, maxHp: 350, atk: 135, def: 75, guts: 10, maxGuts: 20, downed: false };
+  const at = (style, from = s0) => ex.applyTacticsExUse(from, { def: kenshi, slot: 1, monId: 'KenshiMocchi', now: T(1, 1), choice: style });
+  const sword = ex.applyTacticsExStats(mUnit, s0, 1, T(1, 1));
+  check('片手剣(既定): 力135/丈夫さ75 のまま', sword.atk === 135 && sword.def === 75, `${sword.atk}/${sword.def}`);
+  const shield = ex.applyTacticsExStats(mUnit, at('shield'), 1, T(4, 9));
+  check('片手盾: 力135/丈夫さ75 → 力135/丈夫さ210(WAVEをまたいでも続く)', shield.atk === 135 && shield.def === 210, `${shield.atk}/${shield.def}`);
+  const dual = ex.applyTacticsExStats(mUnit, at('dual'), 1, T(4, 9));
+  check('二刀流: 力135/丈夫さ75 → 力135/丈夫さ37(半分・切り捨て)', dual.atk === 135 && dual.def === 37, `${dual.atk}/${dual.def}`);
+  // ★切り替えても積み重ならない(いつも元のステータスから数え直す)
+  const back = ex.applyTacticsExStats(mUnit, at('dual', at('shield')), 1, T(4, 9));
+  check('片手盾→二刀流と選び直しても元のステータスから数える(210の半分ではなく75の半分)', back.def === 37, String(back.def));
+  check('効いているスタイルが分かる(片手盾・二刀流。片手剣は null)', ex.tacticsExActiveStyle(at('shield'), 1, 'KenshiMocchi', T(2, 2)) === 'shield'
+    && ex.tacticsExActiveStyle(at('dual'), 1, 'KenshiMocchi', T(2, 2)) === 'dual'
+    && ex.tacticsExActiveStyle(at('sword', at('dual')), 1, 'KenshiMocchi', T(2, 2)) === null);
+  // 勇者モンの初期スタイル。回数も「このターン」も数えない
+  const init = ex.setTacticsExInitialStyle(s0, { def: kenshi, slot: 2, monId: 'KenshiMocchi', style: 'dual' });
+  check('初期スタイル(二刀流)は回数を使わず、カードも止めない', ex.tacticsExStyleOf(kenshi, init, 2, 'KenshiMocchi') === 'dual'
+    && ex.tacticsExUsesOf(init, 2, 'KenshiMocchi') === 0 && ex.tacticsExLockedSlots(init, T(1, 1)).length === 0
+    && !ex.isTacticsExTurnUsed(init, T(1, 1)));
+  check('初期スタイルでもバトル中に選び直せる(元のステータスから)', ex.applyTacticsExStats(mUnit, at('shield', init), 1, T(1, 1)).def === 210
+    && ex.tacticsExStyleOf(kenshi, ex.applyTacticsExUse(init, { def: kenshi, slot: 2, monId: 'KenshiMocchi', now: T(1, 1), choice: 'shield' }), 2, 'KenshiMocchi') === 'shield');
+  check('初期スタイルが片手剣なら記録を残さない・スタイル式でない子は初期スタイルを持たない',
+    Object.keys(ex.setTacticsExInitialStyle(s0, { def: kenshi, slot: 2, monId: 'KenshiMocchi', style: 'sword' }).effects).length === 0
+    && Object.keys(ex.setTacticsExInitialStyle(s0, { def: golem, slot: 2, monId: 'Golem', style: 'dual' }).effects).length === 0);
+  // 二刀流のヒット列は、メイン・連撃をまとめて2回ぶん(合計ちょうど2倍)
+  const baseHits = hitsApi.buildAttackHits({ d: 1000, card: { type: 'unique', monId: 'KenshiMocchi' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi' });
+  const dualHits = hitsApi.buildAttackHits({ d: 1000, card: { type: 'unique', monId: 'KenshiMocchi' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi', hitRepeat: ex.TACTICS_EX_DUAL_HIT_REPEAT });
+  const sum = (hs) => hs.reduce((a, h) => a + h.dmg, 0);
+  check('二刀流: ヒット列が2回ぶん入り、合計がちょうど2倍(メイン1000＋10%×3＋20%×2 → ×2)',
+    dualHits.length === baseHits.length * 2 && sum(dualHits) === sum(baseHits) * 2 && dualHits[0].kind === 'main'
+    && dualHits.slice(baseHits.length).every(h => h.kind === 'combo'), `${baseHits.length}発 ${sum(baseHits)} → ${dualHits.length}発 ${sum(dualHits)}`);
+  const noSkill = hitsApi.buildAttackHits({ d: 1000, card: { type: 'unique', monId: 'KenshiMocchi' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi', swordSkill: false });
+  check('片手盾(swordSkill:false)はソードスキルの20%×2が出ない', baseHits.length - noSkill.length === 2, `${baseHits.length}→${noSkill.length}`);
   // みんなをかばう
   const units = [
     { id: 'Mocchi', hp: 100, maxHp: 100, atk: 1, def: 1, guts: 0, maxGuts: 0, downed: false },
@@ -306,14 +337,23 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('敵の攻撃の当たり先はすべて tacticsTargetsNow(かばう)を通る',
     !/tacticsIntentTargets\(intent,tacticsUnitsRef\.current,actingEnemyDist\)/.test(app)
     && (app.match(/tacticsTargetsNow\(intent,actingEnemyDist\)/g) || []).length === 3);
-  check('片手持ちの剣士モッチーはソードスキルが出ない(実処理・予測の両方)',
-    (app.match(/swordSkill:tacticsExEffectAt\(slotIdx\)!=='weaponChange'/g) || []).length === 2
-    && /card\.monId==='KenshiMocchi'&&tacticsExEffectAt\(slotIdx\)==='weaponChange'/.test(app)
+  check('片手盾の剣士モッチーはソードスキルが出ない・二刀流はヒット列が2回ぶん(実処理・予測の両方)',
+    (app.match(/swordSkill:tacticsExStyleAt\(slotIdx\)!=='shield'/g) || []).length === 2
+    && (app.match(/hitRepeat:tacticsExStyleAt\(slotIdx\)==='dual'\?TACTICS_EX_DUAL_HIT_REPEAT:1/g) || []).length === 2
+    && /card\.monId==='KenshiMocchi'&&tacticsExStyleAt\(slotIdx\)==='shield'/.test(app)
     && /if \(swordSkill && isUniqueOf\('KenshiMocchi'\)\)/.test(source));
+  check('勇者モンを置いた瞬間に初期スタイルを書き込む(タクティクスだけ)',
+    /if \(isTacticsMode\(runMode\)\) \{\n\s*const heroExDef=tacticsExDefOf\(m\.id\);/.test(app)
+    && /setTacticsHeroStyle\(null\);/.test(app.slice(app.indexOf('const resetTacticsJoinCatchUp'), app.indexOf('const resetTacticsJoinCatchUp') + 800)));
   check('効き目は ref から「いま」を読む(useCallback の古い関数から呼ばれても同じ答え)',
     /const tacticsExEffectAt = \(slotIdx\) => \{\n\s*const live=tacticsExLiveRef\.current;/.test(app));
-  check('発動は詳細パネルの「EXスキルを使用」からだけ', (screen.match(/activateTacticsEx\(/g) || []).length === 1
-    && /data-tactics-ex-use disabled=\{!exPanel\.check\.ok\}/.test(screen));
+  // 発動の入口は詳細パネルの中だけ(「EXスキルを使用」と、スタイル式の選択肢)。距離枠のタップからは発動しない
+  const panelSrc = screen.slice(screen.indexOf('{exPanel&&ReactDOM.createPortal('), screen.indexOf('{showBattleMenu&&ReactDOM.createPortal('));
+  check('発動は詳細パネルの「EXスキルを使用」(スタイル式はその先の選択肢)からだけ',
+    (screen.match(/activateTacticsEx\(/g) || []).length === (panelSrc.match(/activateTacticsEx\(/g) || []).length
+    && (panelSrc.match(/activateTacticsEx\(/g) || []).length === 2
+    && /data-tactics-ex-use disabled=\{!exPanel\.check\.ok\}/.test(screen)
+    && /data-tactics-ex-choice=\{st\.id\} disabled=\{st\.current\|\|!exPanel\.check\.ok\}/.test(screen));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
