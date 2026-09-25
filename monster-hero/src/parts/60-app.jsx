@@ -14872,6 +14872,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 測った値はここで覚えるだけ。設定へ入れるかどうかはオプションの画面で選ぶ
           if(rhythmPlay.from==='calibration')return;
           if(rhythmPlay.from==='tutorial')return;
+          // アシストモード(2026-09-24・バンドリ！アワーノーツから取り入れた遊び方)のプレイは、
+          // 自己ベストにも全国ランキングにも残さない(CLAUDE.md ⑦「ランキング対象外の遊び方は送信しないだけでなく自己ベストも上書きしない」)
+          if(result?.assist===true)return;
           const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
@@ -14895,6 +14898,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ・左の「ジャンルタブ」は曲が増えてから足す(2026-09-05・ユーザー指示で今回は置かない) */}
         {gameState==='RHYTHM_DEMO_HOME'&&(
           <RhythmSongSelectScreen
+            rhythmSettings={rhythmSettings}
+            onToggleRhythmSetting={async key=>{const saved=await saveRhythmSettings({...rhythmSettings,[key]:!rhythmSettings[key]});setRhythmSettings(saved);}}
             catchingUp={catchingUp}
             difficulty={difficulty}
             dismissQuickRhythmBackground={dismissQuickRhythmBackground}

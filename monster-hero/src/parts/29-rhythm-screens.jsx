@@ -185,6 +185,11 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               '叩いたタイミングのずれの見せ方です。既定は「FAST/SLOW」です（osu!・Arcaea などにある表示です）。\n「FAST/SLOW」＝これまでどおり、早い・遅いだけを出します。\n「数字も」＝「FAST 23ms」のように、どれだけずれたかを数字でも出します。\n「メーターも」＝数字に加えて、判定ラインのすぐ上に「ずれメーター」を出します。真ん中の白い線がぴったりで、左が早い・右が遅いです。直近12回のずれが目盛りで並び、古いものほど薄くなります。帯の色は判定の色（金＝MARVELOUS・紫＝EXCELLENT・赤＝GREAT・緑＝GOOD・青＝BAD）です。\nFAST/SLOW表示をOFFにしているときは、数字も出ません。判定・スコアはどれでも変わりません。',{full:true})}
             {field('レーンカバー',stepper('laneCover',RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,{fine:RHYTHM_LANE_COVER_STEP,coarse:10,suffix:'%'}),
               'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。',{full:true})}
+            {/* ===== バンドリ！アワーノーツから取り入れた遊び方(2026-09-24) ===== */}
+            {field('アシストモード',toggle('assistMode'),
+              'リズムゲームが苦手でも気軽に遊べるモードです（バンドリ！アワーノーツのアシストモードを見習いました）。既定はOFFです。ONにすると、フリックはタップするだけで取れ、ホールド・スライドの終わりのフリックも離すだけでよくなります。BAD・MISSでコンボが切れそうなときは「コンボガード」が代わりに受け止めます（最大3回ぶん。コンボをつなぐと少しずつたまり、崩れているときほど早くたまります）。そのかわりスコアは8割になり、FULL COMBO などの称号は付かず、自己ベスト・全国ランキング・ビートPには残りません。曲えらびの「🛟 アシスト」でも切り替えられます。')}
+            {field('ミラー譜面',toggle('mirrorChart'),
+              '譜面を左右反対にして遊びます（バンドリ！アワーノーツなどにある設定です）。既定はOFFです。同じ曲でも手の動きが変わるので、苦手な配置の練習や気分転換に使えます。判定・スコア・記録はふだんどおりです。曲えらびの「↔ ミラー譜面」でも切り替えられます。')}
             {field('フルコンボ表示',toggle('comboStatusDisplay'),
               'フルコンボ（BAD・MISSなし）が続いているあいだは COMBO の下に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。')}
             {field('自己ベスト比',toggle('paceDisplay'),
