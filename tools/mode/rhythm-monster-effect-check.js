@@ -26,13 +26,17 @@ ok('段は重い順に4つ',
 ok('既定は「標準」の段',game.includes("monsterNoteEffect:'LIGHT'"));
 // いちばん軽い段では、絵の要素を**作らない**(隠すのではなく作らない)。
 // 隠すだけだと、要素はDOMに残って tick の走査対象にもなる
-ok('いちばん軽い段ではマスモンの絵の要素を作らない',
+// 2026-09-25: canvas 版の顔は DOM の要素をやめ、演奏の前に焼いた絵を canvas へ描くようにした。
+// いちばん軽い段では**焼かない**(=描かない)。DOM 版は今までどおり要素を作らない。
+ok('いちばん軽い段ではマスモンの絵を用意しない(canvas 版は焼かない・DOM 版は要素を作らない)',
   game.includes("const monsterFaceHidden=rhythmMonsterEffectAtMost(monsterNoteEffect,'NONE');")
-  &&game.includes('const canvasFaceElements=useMemo(()=>canvasNotes&&!monsterFaceHidden?')
+  &&game.includes('useEffect(()=>{faceBitmapsRef.current=[];if(!canvasNotes||monsterFaceHidden)return undefined;')
   &&game.includes('{monster&&!monsterFaceHidden&&<span data-rhythm-monster-face'));
-ok('作る・作らないが変わったら組み直す(依存に入っている)',
-  /\[canvasNotes,chart\.notes,monsterSignature,monsterFaceHidden\]/.test(game)
+ok('用意する・しないが変わったら作り直す(依存に入っている)',
+  /\[canvasNotes,monsterSignature,monsterFaceHidden,settings\.lightweightMode,settings\.effectAmount\]/.test(game)
   &&/\[chart\.notes,monsterSignature,settings\.lightweightMode,settings\.effectAmount,monsterFaceHidden\]/.test(game));
+ok('canvas 版の顔は DOM の要素を重ねない(毎フレーム拡大して描き直させない)',
+  !game.includes('data-rhythm-canvas-face aria-hidden')&&game.includes('RHYTHM_CANVAS_RENDERER.drawFace(faceBitmap.glow'));
 ok('いちばん軽い段では能力名の大きな表示も出さない',
   game.includes("const showAbilityFlash=!!abilityFlash&&!rhythmMonsterEffectAtMost(settings.monsterNoteEffect,'NONE');")
   &&game.includes('...(showAbilityFlash?{ability:abilityFlash}:{})')

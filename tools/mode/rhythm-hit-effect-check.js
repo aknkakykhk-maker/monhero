@@ -255,11 +255,13 @@ check('判定文字も一度だけ弾む',
 check('印の付け直しは1か所へまとめる(rhythmRestartAnimations を呼ぶ)',
   game.includes('rhythmRestartAnimations(restarts)')
   &&source.includes('const rhythmRestartAnimations=entries=>{'));
-check('まとめ処理はレイアウトを1回だけ読む',(()=>{
+// 2026-09-25: 読むものを offsetWidth(レイアウトまで計算させる)から getComputedStyle の
+// animationName(スタイルだけ)へ替えた。アニメーションの付け外しはスタイルの計算だけで決まる。
+check('まとめ処理はスタイルを1回だけ確定させ、レイアウトは読まない',(()=>{
   const start=source.indexOf('const rhythmRestartAnimations=entries=>{');
   if(start<0)return false;
   const body=source.slice(start,source.indexOf('\n};',start));
-  return (body.match(/offsetWidth/g)||[]).length===1;
+  return (body.match(/getComputedStyle\(/g)||[]).length===1&&!/offsetWidth|offsetHeight|getBoundingClientRect/.test(body.replace(/\/\/[^\n]*/g,''));
 })());
 check('演奏中の判定処理に offsetWidth の読み取りを残さない',
   !/void\s+[A-Za-z_$][\w$.]*\.offsetWidth/.test(game.slice(game.indexOf('const applyJudgment'),game.indexOf('const applyJudgment')+9000)),
