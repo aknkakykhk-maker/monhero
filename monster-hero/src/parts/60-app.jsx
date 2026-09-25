@@ -800,12 +800,16 @@ function MonsterHeroGame() {
   const [tacticsExState, setTacticsExState] = useState(createTacticsExState);
   const tacticsExStateRef = useRef(tacticsExState);
   const commitTacticsExState = (next) => { tacticsExStateRef.current=next; setTacticsExState(next); };
+  // 勇者モンの初期スタイル(スタイル式のEXを持つ子を勇者モンにしたときだけ、配置の画面で選ぶ)。
+  // ★選んだ値は配置した瞬間(setupMon)に盤面の記録へ書き込む。ここはその手前の「選んでいる途中」の値
+  const [tacticsHeroStyle, setTacticsHeroStyle] = useState(null);
   const resetTacticsJoinCatchUp = () => {
     tacticsJoinCatchUpRef.current=1;
     tacticsJoinCatchUpTurnsRef.current=0;
     tacticsJoinDistCatchUpRef.current=1;
     // EXの使用回数もランごとに数え直す(ランの片付けはここ1か所へ書く決まりなので、ここへ置く)
     commitTacticsExState(createTacticsExState());
+    setTacticsHeroStyle(null);
   };
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
@@ -9211,7 +9215,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const unit=tacticsUnitsRef.current?.[slotIdx];
     return unit ? tacticsExActiveEffect(tacticsExStateRef.current,slotIdx,unit.id,live.now) : null;
   };
-  // 戦闘で使う1体ぶん(捨て身・片手持ちの力と丈夫さを乗せる)。盤面の値そのものは書き換えない
+  // いま効いているスタイル(ソード・コンバージョンの片手盾・二刀流。既定の片手剣なら null)
+  const tacticsExStyleAt = (slotIdx) => {
+    const live=tacticsExLiveRef.current;
+    if(!live.enabled||!Number.isInteger(slotIdx)) return null;
+    const unit=tacticsUnitsRef.current?.[slotIdx];
+    return unit ? tacticsExActiveStyle(tacticsExStateRef.current,slotIdx,unit.id,live.now) : null;
+  };
+  // 戦闘で使う1体ぶん(捨て身・片手盾・二刀流の力と丈夫さを乗せる)。盤面の値そのものは書き換えない
   const tacticsBattleUnit = (slotIdx) => {
     const unit=tacticsUnitsRef.current?.[slotIdx];
     if(!unit) return unit;
@@ -9603,7 +9614,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(mon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
-      comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExEffectAt(slotIdx)!=='weaponChange' });
+      comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1 });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
@@ -10288,15 +10300,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return {
       slot:slotIdx, monName:mon.masuName||mon.name, def, remaining, check,
       active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow),
-      toggleLabel:tacticsExToggleLabel(def,state,slotIdx,mon.id),
+      styleLabel:tacticsExStyleLabel(def,state,slotIdx,mon.id),
+      // スタイル式の選択肢。いまのスタイルは選べない
+      styleOptions:def.duration==='style'?def.styles.map(st=>({ ...st,
+        current:tacticsExStyleOf(def,state,slotIdx,mon.id)===st.id })):null,
       durationText:TACTICS_EX_DURATION_TEXT[def.duration]||null,
       implemented:isTacticsExEffectImplemented(def),
       // いまの力・丈夫さ(EXが乗っていればそのぶんも)。捨て身・片手持ちの効き目を数字で確かめられるように
       // 距離枠に出す短い札。切り替え式はいまの状態(二刀流／片手持ち)、効いている間は「◯◯中」、ふだんは「EX」
       // (2026-09-23 ユーザー指示「現在二刀流中か片手持ち中か分かるようにしたい」)
       badge:(()=>{
-        const toggle=tacticsExToggleLabel(def,state,slotIdx,mon.id);
-        if(toggle) return { text:toggle, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
+        const styleLabel=tacticsExStyleLabel(def,state,slotIdx,mon.id);
+        if(styleLabel) return { text:styleLabel, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
         if(isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`${def.name}中`, active:true };
         return { text:'EX', active:false };
       })(),
@@ -10309,7 +10324,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★効き目そのもの(攻撃の引き受け・ステータスの上下・固有技の切り替え)は、戦闘の計算側で
   //   isTacticsExEffectActive を見て決める。ここは「使った瞬間」に1度だけ起こすもの(演出・ログ)の置き場
   const TACTICS_EX_ON_USE = {};
-  const activateTacticsEx = (slotIdx) => {
+  // choice … スタイル式のEX(ソード・コンバージョン)で選んだスタイルの id
+  const activateTacticsEx = (slotIdx, choice = null) => {
     if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
     const mon=slots[slotIdx]; if(!mon) return false;
     const def=tacticsExDefOf(mon.id); if(!def) return false;
@@ -10319,13 +10335,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       alive:canTacticsSlotAct(tacticsUnitsRef.current,slotIdx), selectedCount:tacticsSlotCardCount(slotIdx),
       now:tacticsExNow, busy:false });
     if(!check.ok) return false;
+    if(def.duration==='style'&&checkTacticsExChoice(def,state,slotIdx,mon.id,choice)) return false;
     // 使った瞬間の値を控える(捨て身は「使ったときの丈夫さ」から力へ移す量を決める)
     const usedUnit=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
     const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
-      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null });
+      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null, choice });
     commitTacticsExState(next);
     Audio_.se.card();
-    const toggled=def.duration==='toggle'?`（${tacticsExToggleLabel(def,next,slotIdx,mon.id)}）`:'';
+    const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
@@ -10560,9 +10577,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // それに加えて「連撃パワー」を1貯め、3たまるごとに永久10%連撃(kenshiExtraCombo)を1本増やして0へ戻す。
           // どちらも addPermaBuff / writePermaBuffs なので「永続・重複可・次のターンから」になり、
           // 本数にも +3% の回数にも上限は設けない。ヒット列側(buildAttackHits)がこの本数を読む
-          // ★タクティクスのEX「武器チェンジ」で片手持ちの剣士モッチー本人が使ったときは、ソードスキルが出ない
-          else if(card.monId==='KenshiMocchi'&&tacticsExEffectAt(slotIdx)==='weaponChange'){
-            addPopup('片手持ち：ソードスキルなし','hero','text-slate-300 text-sm font-bold');
+          // ★タクティクスのEX「ソード・コンバージョン」で片手盾の剣士モッチー本人が使ったときは、ソードスキルが出ない
+          else if(card.monId==='KenshiMocchi'&&tacticsExStyleAt(slotIdx)==='shield'){
+            addPopup('片手盾：ソードスキルなし','hero','text-slate-300 text-sm font-bold');
           }
           else if(card.monId==='KenshiMocchi'){
             addPermaBuff('comboDmgPct',0.03*effMul);
@@ -10586,7 +10603,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+critRateBonus),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
-          swordSkill:tacticsExEffectAt(slotIdx)!=='weaponChange' });
+          swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1 });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
@@ -11870,6 +11888,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!isHero) Audio_.se.join();
     if (isHero) {
       initialBattleDistanceRef.current=slotIdx;
+      // ★タクティクスは、勇者モンを置いた瞬間に初期スタイル(ソード・コンバージョンなど)を盤面の記録へ書く。
+      //   選び直して置き直したときに前の枠の記録が残らないよう、記録ごと作り直す(バトルの前なので消えるものは無い)
+      if (isTacticsMode(runMode)) {
+        const heroExDef=tacticsExDefOf(m.id);
+        commitTacticsExState(heroExDef&&heroExDef.heroInitialStyle&&tacticsHeroStyle
+          ? setTacticsExInitialStyle(createTacticsExState(),{ def:heroExDef, slot:slotIdx, monId:m.id, style:tacticsHeroStyle })
+          : createTacticsExState());
+      }
       // 勇者モンの間合い適性も、置いた距離だけでなく4距離すべての補正値になる
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
       setDistAptPct(getMonsterAptPct(m,specialRuleDifficulty,wave));
@@ -12503,7 +12529,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {(()=>{
         const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
         if(!exDef)return null;
-        const durationLabel={turn:'そのターン',wave:'そのWAVE',toggle:'再使用まで'}[exDef.duration]||String(exDef.duration||'—');
+        const durationLabel={turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—');
         return <div data-monster-detail-ex className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
           <div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-widest text-violet-300">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div>
           <div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div>
@@ -16847,6 +16873,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           getDistAptitude={getDistAptitude} scenarioPicksSlot={scenarioPicksSlot}
           setupMon={setupMon} slots={slots}
           phasePlan={mainHero?phasePlan:null} wave={wave}
+          heroStyleDef={(()=>{
+            // 勇者モンを置くときだけ。スタイル式のEXを持つ子(剣士モッチー)なら初期スタイルを選べる
+            if(mainHero||!currentPickingMon||!tacticsExEnabled) return null;
+            const d=tacticsExDefOf(currentPickingMon.id);
+            return d&&d.heroInitialStyle?d:null;
+          })()}
+          heroStyle={tacticsHeroStyle} onHeroStyle={setTacticsHeroStyle}
           onRepick={()=>{
             if(!mainHero&&speciesChallengeBattleRunRef.current){
               setCurrentPickingMon(null);
@@ -17930,7 +17963,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         <div><div className="text-[8px] font-black text-amber-400">ガッツ</div><div className="text-[12px] font-mono font-black">{u.guts}<span className="text-[9px] text-slate-500">/{u.maxGuts}</span></div></div>
       </div>
       <div className="mt-0.5 text-[9px] font-black text-cyan-300">この枠の距離適性 {aptPct>=0?'+':''}{Math.round(aptPct*10)/10}%</div>
-      {exInfo&&<div data-tactics-status-ex={i} className="mt-0.5 text-[9px] font-black text-fuchsia-200">EX「{exInfo.def.name}」{exInfo.toggleLabel?`：いまは${exInfo.toggleLabel}`:(exInfo.active?'：効果中':'')}{exInfo.remaining.unlimited?'':`（のこり ${exInfo.remaining.left}/${exInfo.remaining.max}）`}</div>}
+      {exInfo&&<div data-tactics-status-ex={i} className="mt-0.5 text-[9px] font-black text-fuchsia-200">EX「{exInfo.def.name}」{exInfo.styleLabel?`：いまは${exInfo.styleLabel}`:(exInfo.active?'：効果中':'')}{exInfo.remaining.unlimited?'':`（のこり ${exInfo.remaining.left}/${exInfo.remaining.max}）`}</div>}
     </div>);
   })}
 </div>)}{/* ★タクティクスは1体ずつなので、パーティの合計・平均の欄そのものを出さない

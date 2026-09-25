@@ -49,8 +49,9 @@ check(`${NAME}が定義されている`, !!mon);
 if (!mon) { console.log('\n定義が無いため以降を中止'); process.exit(1); }
 check(`内部IDが ${ID}`, mon.id === ID);
 check(`名前が ${NAME}`, mon.name === NAME);
-check('基礎能力 ライフ350/ちから185/丈夫さ25/ガッツ130',
-  mon.baseHp === 350 && mon.baseAtk === 185 && mon.baseDef === 25 && mon.baseGuts === 130,
+// ★2026-09-25 ユーザー指示で ちから185→135 / 丈夫さ25→75 に調整(タクティクスのEX「ソード・コンバージョン」に合わせて)
+check('基礎能力 ライフ350/ちから135/丈夫さ75/ガッツ130',
+  mon.baseHp === 350 && mon.baseAtk === 135 && mon.baseDef === 75 && mon.baseGuts === 130,
   `HP${mon.baseHp}/ATK${mon.baseAtk}/DEF${mon.baseDef}/GUTS${mon.baseGuts}`);
 check('距離適性 零A/近A/中C/遠D',
   JSON.stringify(mon.distAptitude) === JSON.stringify(['A', 'A', 'C', 'D']), mon.distAptitude.join('/'));
