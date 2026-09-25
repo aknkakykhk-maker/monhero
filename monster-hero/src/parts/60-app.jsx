@@ -155,7 +155,8 @@ function MonsterHeroGame() {
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
-  const debugIconItems = breederIconOptions({includeUnowned:true});
+  // 中身は固定の一覧だけから決まるので、最初の1回だけ作る
+  const debugIconItems = useMemo(() => breederIconOptions({includeUnowned:true}), []);
   const [iconAdjustId, setIconAdjustId] = useState(debugIconItems[0]?.id||'');
   const [iconAdjustQuery, setIconAdjustQuery] = useState('');
   const [iconAdjustments, setIconAdjustments] = useState(()=>Object.fromEntries(debugIconItems.map(item=>[item.id,{...(MARKET_PROFILE_ICON_STYLES[item.id]||DEFAULT_PROFILE_ICON_STYLE)}])));
@@ -800,12 +801,16 @@ function MonsterHeroGame() {
   const [tacticsExState, setTacticsExState] = useState(createTacticsExState);
   const tacticsExStateRef = useRef(tacticsExState);
   const commitTacticsExState = (next) => { tacticsExStateRef.current=next; setTacticsExState(next); };
+  // 勇者モンの初期スタイル(スタイル式のEXを持つ子を勇者モンにしたときだけ、配置の画面で選ぶ)。
+  // ★選んだ値は配置した瞬間(setupMon)に盤面の記録へ書き込む。ここはその手前の「選んでいる途中」の値
+  const [tacticsHeroStyle, setTacticsHeroStyle] = useState(null);
   const resetTacticsJoinCatchUp = () => {
     tacticsJoinCatchUpRef.current=1;
     tacticsJoinCatchUpTurnsRef.current=0;
     tacticsJoinDistCatchUpRef.current=1;
     // EXの使用回数もランごとに数え直す(ランの片付けはここ1か所へ書く決まりなので、ここへ置く)
     commitTacticsExState(createTacticsExState());
+    setTacticsHeroStyle(null);
   };
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
   const [ultimateDistanceBreakLevels,setUltimateDistanceBreakLevels]=useState([0,0,0,0]);
@@ -1172,9 +1177,19 @@ function MonsterHeroGame() {
   const tacticsRegen = (hpRate, gutsRate) => {
     if (!isTacticsMode(runMode)) return null;
     const alive = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, false);
-    const downed = regenDownedTacticsBoard(alive.units);
+    // ★ガッツ全開っちーが効いている子は、その子の上限の regenRate ぶん(30%)を上乗せする
+    //   (2026-09-25 ユーザー指示「効果中ライフとガッツの自動回復を30%上昇」「1.3倍じゃなくて30%固定値でプラス」)
+    let units = alive.units, hp = alive.hp, guts = alive.guts;
+    const live = tacticsExLiveRef.current;
+    if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
+      const boost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now);
+      if (boost <= 0) return;
+      const extra = rateHealTacticsAt(units, slotIdx, boost, boost);
+      units = extra.units; hp += extra.hp; guts += extra.guts;
+    });
+    const downed = regenDownedTacticsBoard(units);
     const total = commitTacticsUnits(downed.units);
-    return { hp: alive.hp, guts: alive.guts, downedHp: downed.hp, downedHealed: downed.healed, total };
+    return { hp, guts, downedHp: downed.hp, downedHealed: downed.healed, total };
   };
   // 固有技・アシストカードの効果が「使った子」へ入るとき。量もその子の上限の率
   const tacticsRateHealAt = (slotIdx, hpRate, gutsRate) => {
@@ -1944,7 +1959,7 @@ function MonsterHeroGame() {
           <div className="font-black text-[13px] text-white leading-tight truncate">{mon.name}</div>
           <div className="font-black text-[10px] text-amber-300 leading-tight truncate"><Zap size={10} className="inline mr-0.5"/>{mon.unique.name}</div>
           <div className="grid grid-cols-2 gap-x-2 text-[10px] font-mono leading-tight">
-            <span className="flex justify-between text-slate-400">HP <b className="text-pink-300">{mon.baseHp}</b></span><span className="flex justify-between text-slate-400">ちから <b className="text-red-300">{mon.baseAtk}</b></span>
+            <span className="flex justify-between text-slate-400">ライフ <b className="text-pink-300">{mon.baseHp}</b></span><span className="flex justify-between text-slate-400">ちから <b className="text-red-300">{mon.baseAtk}</b></span>
             <span className="flex justify-between text-slate-400">丈夫さ <b className="text-emerald-300">{mon.baseDef}</b></span><span className="flex justify-between text-slate-400">ガッツ <b className="text-amber-300">{mon.baseGuts}</b></span>
           </div>
         </div>
@@ -1963,9 +1978,13 @@ function MonsterHeroGame() {
   // タブ別の既読ID集合を比較するため、再ビルドやBUILD_DATE変更で過去項目は復活しない。
   // 既読はタブをまたいで見る。振り分けを変えたとき、前に更新情報で読んだ不具合修正が
   // 不具合情報タブで未読(NEW)へ戻るのを防ぐ
-  const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
-  const changelogUnreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
-  const changelogUnread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogUnreadIds[type].length>0]));
+  // 約900件を見比べるので、既読が変わったときだけ数え直す(描画のたびに作り直さない)
+  const { changelogUnreadIds, changelogUnread } = useMemo(() => {
+    const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
+    const unreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
+    const unread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, unreadIds[type].length>0]));
+    return { changelogUnreadIds: unreadIds, changelogUnread: unread };
+  }, [changelogSeen]);
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue;
   const markChangelogTabSeen = (type) => {
     const ids = CHANGELOG_IDS_BY_TYPE[type];
@@ -2031,6 +2050,9 @@ function MonsterHeroGame() {
   //   どれもこの1か所から難易度を取る(取り違えると別の難易度の記録を書き換えてしまう)
   const tacticsRecordDifficulty = () => (extremeRunRef.current ? extremeDifficulty : difficulty);
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
+  // デバッグ戦で選んでいるモードと難易度(画面に出す選択。極限は実際の difficulty が 'Normal' になるので別に持つ)
+  const [debugBattleModeId, setDebugBattleModeId] = useState('challenge');
+  const [debugBattleDifficultyId, setDebugBattleDifficultyId] = useState('Normal');
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
@@ -2182,10 +2204,10 @@ function MonsterHeroGame() {
       const rate = Math.max(1, Number(tacticsJoinCatchUpRef.current) || 1);
       const joined = applyTacticsJoinCatchUp(base, rate);
       const stats = [
-        { key:'hp',   label:'ライフ', short:'HP', before:base.baseMaxHp,   after:joined.baseMaxHp,   tint:'text-pink-300' },
-        { key:'atk',  label:'ちから', short:'力', before:base.atk,         after:joined.atk,         tint:'text-red-300' },
-        { key:'def',  label:'丈夫さ', short:'防', before:base.def,         after:joined.def,         tint:'text-emerald-300' },
-        { key:'guts', label:'ガッツ', short:'G',  before:base.baseMaxGuts, after:joined.baseMaxGuts, tint:'text-amber-300' },
+        { key:'hp',   label:'ライフ', before:base.baseMaxHp,   after:joined.baseMaxHp,   tint:'text-pink-300' },
+        { key:'atk',  label:'ちから', before:base.atk,         after:joined.atk,         tint:'text-red-300' },
+        { key:'def',  label:'丈夫さ', before:base.def,         after:joined.def,         tint:'text-emerald-300' },
+        { key:'guts', label:'ガッツ', before:base.baseMaxGuts, after:joined.baseMaxGuts, tint:'text-amber-300' },
       ].map(stat => ({ ...stat, diff: stat.after - stat.before, normalDiff: stat.after - stat.before }));
       // 距離適性も「その子のぶんだけ」。合算しない(設計 §7)
       const own = getMonsterAptPct(mon, specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty),
@@ -2203,10 +2225,10 @@ function MonsterHeroGame() {
     const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const add = (key) => applyAllyJoinBonus(bonus[key]||0, rule, waveResult?.totalTurnCount);
     const stats = [
-      { key:'hp',   label:'ライフ', short:'HP', before:maxHp,   diff:add('hp'),   tint:'text-pink-300' },
-      { key:'atk',  label:'ちから', short:'力', before:atk,     diff:add('atk'),  tint:'text-red-300' },
-      { key:'def',  label:'丈夫さ', short:'防', before:def,     diff:add('def'),  tint:'text-emerald-300' },
-      { key:'guts', label:'ガッツ', short:'G',  before:maxGuts, diff:add('guts'), tint:'text-amber-300' },
+      { key:'hp',   label:'ライフ', before:maxHp,   diff:add('hp'),   tint:'text-pink-300' },
+      { key:'atk',  label:'ちから', before:atk,     diff:add('atk'),  tint:'text-red-300' },
+      { key:'def',  label:'丈夫さ', before:def,     diff:add('def'),  tint:'text-emerald-300' },
+      { key:'guts', label:'ガッツ', before:maxGuts, diff:add('guts'), tint:'text-amber-300' },
     ].map(stat => ({ ...stat, normalDiff:Number(bonus[stat.key])||0, after: stat.before + stat.diff }));
     // 間合い適性は「置いた距離に関係なく4距離すべてへ加算される」ので、距離ごとの合計補正で見せる
     const normalAptDelta = getMonsterAptPct(mon, null);
@@ -4289,7 +4311,8 @@ function MonsterHeroGame() {
     const onVisible = () => { if (document.visibilityState === 'visible') checkVersion(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', onVisible);
-    const interval = setInterval(checkVersion, 30 * 1000);
+    // 裏に回っているあいだは問い合わせない(戻った瞬間に onVisible がすぐ確かめる)
+    const interval = setInterval(() => { if (document.visibilityState === 'hidden') return; checkVersion(); }, 30 * 1000);
     return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
   }, []);
 
@@ -7052,7 +7075,7 @@ function MonsterHeroGame() {
     const lines = [];
     normalizeTranscendAptBoosts(applied.masu.transcendAptBoosts).forEach((boost, i) => {
       const gained = boost - before.transcendAptBoosts[i];
-      if (gained > 0) lines.push(`${RANGE_LABELS[i]}距離適性 +${gained}`);
+      if (gained > 0) lines.push(`${RANGE_LABELS[i]}間合い適性 +${gained}`);
     });
     Object.entries(normalizeTranscendStatPoints(applied.masu.transcendStatPoints)).forEach(([key, value]) => {
       const gained = value - (before.transcendStatPoints[key] || 0);
@@ -7925,7 +7948,7 @@ function MonsterHeroGame() {
   // 1回のランに同じ種は1体しか入らないので、種idの一致で特定できる
   // (マスモンは名前を自由に付けられるため、名前で見分けることはできない)
   const isHeroSlotMon = (mon) => !!(mon && mainHero && mon.id === mainHero.id);
-  // 勇者モンの特性で増える同時使用枚数(ハムの「連続攻撃」・剣士モッチーの「二刀流」)。
+  // 勇者モンの特性で増える同時使用枚数(ハムの「連続攻撃」・剣士モッチーの「黒の剣士」)。
   // 「勇者モンに選んだときだけ効く」特性なので、効いていることが画面から分かるように
   // 枚数表示の横にも出す。計算と表示で食い違わないよう、ここを唯一の出どころにする。
   // 対象の種は HERO_CARD_BONUS_MONSTER_IDS の一覧が持つ(種ごとの分岐をここへ書かない)
@@ -9203,6 +9226,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // その子へいま置いてあるカードの枚数(併用できないEXを使えるかの判定に使う)
   const tacticsSlotCardCount = (slotIdx) => Object.values(cardAssignments).filter(v => v === slotIdx).length;
   const tacticsExTurnUsed = tacticsExEnabled && isTacticsExTurnUsed(tacticsExState, tacticsExNow);
+  // ★ライフ・ガッツの上限を上げるEX(ガッツ全開っちー)が切れたら、上限を元へ戻す。
+  //   ターンやWAVEが進んだとき・EXの状態が変わったときに見直す。戻すものが無ければ何もしない(何度走っても同じ結果)
+  useEffect(() => {
+    if (!isTacticsMode(runMode)) return;
+    const result = expireTacticsExMaxRates(tacticsUnitsRef.current, tacticsExStateRef.current, { wave, turn:turnCount });
+    if (result.changed) commitTacticsUnits(scaleTacticsUnits(result.units, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
+  }, [wave, turnCount, tacticsExState, runMode]);
   // ★EXの効き目を戦闘の計算へ渡す入口。モンスターのidではなく「いま効いている効果の種類」を見る。
   //   ref の最新値を読む(使った直後の同じ操作の中でも古い値を見ない)
   const tacticsExEffectAt = (slotIdx) => {
@@ -9211,7 +9241,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const unit=tacticsUnitsRef.current?.[slotIdx];
     return unit ? tacticsExActiveEffect(tacticsExStateRef.current,slotIdx,unit.id,live.now) : null;
   };
-  // 戦闘で使う1体ぶん(捨て身・片手持ちの力と丈夫さを乗せる)。盤面の値そのものは書き換えない
+  // いま効いているスタイル(ソード・コンバージョンの片手盾・二刀流。既定の片手剣なら null)
+  const tacticsExStyleAt = (slotIdx) => {
+    const live=tacticsExLiveRef.current;
+    if(!live.enabled||!Number.isInteger(slotIdx)) return null;
+    const unit=tacticsUnitsRef.current?.[slotIdx];
+    return unit ? tacticsExActiveStyle(tacticsExStateRef.current,slotIdx,unit.id,live.now) : null;
+  };
+  // 戦闘で使う1体ぶん(捨て身・片手盾・二刀流の力と丈夫さを乗せる)。盤面の値そのものは書き換えない
   const tacticsBattleUnit = (slotIdx) => {
     const unit=tacticsUnitsRef.current?.[slotIdx];
     if(!unit) return unit;
@@ -9603,7 +9640,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(mon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
-      comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExEffectAt(slotIdx)!=='weaponChange' });
+      comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1 });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
@@ -9902,14 +9940,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)。
         //   ムーも動きを持つときは技ごとの長さ(全画面の演出を見せきる長さ)になる
         const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? enemy?.id : null;
-        const fxMs = tacticsEnemyMotionMs(motionEnemyId, fxSkill, fxKind==='moo' ? 900 : (intent.type==='SPECIAL' ? 1100 : 450));
+        // ★必殺技ムービーを持つ敵(覚醒ムー)の必殺技は、画面を切り替えてムービーを流してから当てる
+        //   (2026-09-25 ユーザー指示)。流すのは設定が「流す」のときだけ。演奏で止まったぶんの追いつき中は流さない。
+        //   ムービーは戦闘の速さに合わせて縮めない(「下手に短くしないでおけ」)。
+        //   流せなかったとき(読み込めない・自動再生を止められた)は、いつもの演出へそのまま戻る。
+        //   見せ方が変わるだけで、ダメージの計算・進行はどちらでも同じ
+        const specialMovieSrc = fxSkill==='special' && motionEnemyId && typeof enemy?.specialMovie==='string'
+          && normalizeBattleFxSettings(battleFxSettings).specialMovie==='ON' && !(catchUpUntilRef.current>Date.now())
+          ? enemy.specialMovie : null;
+        const movieShown = specialMovieSrc
+          ? await playBossMovie(specialMovieSrc, {label: intent.label || enemy?.special || '', enemyName: enemy?.name || ''})
+          : false;
+        const fxMs = movieShown ? 1000 : tacticsEnemyMotionMs(motionEnemyId, fxSkill, fxKind==='moo' ? 900 : (intent.type==='SPECIAL' ? 1100 : 450));
         // targets: 狙われた枠(画面が攻撃を味方の枠まで飛ばすのに使う) / ms: 速さの設定を掛けた実際の長さ(動きをこれに合わせる)
-        setEnemyAttackFx({kind: fxKind, skill: fxSkill, targets: Array.isArray(aimedSlots) ? aimedSlots.slice() : [], ms: battleMs(fxMs)});
-        if(intent.type==='SPECIAL') Audio_.se.enemySpecial(); else Audio_.se.enemyAttack();
+        // afterMovie: ムービーを見せ終えたあと。画面は溜め・技名を省いて、すぐ味方の枠へ当てる
+        setEnemyAttackFx({kind: fxKind, skill: fxSkill, targets: Array.isArray(aimedSlots) ? aimedSlots.slice() : [], ms: battleMs(fxMs), ...(movieShown?{afterMovie:true}:{})});
+        // ★ムービーのあとは溜めも爆発もムービーの音で聞かせ終えている。戻ってからの着弾は短い打撃音だけにする
+        //   (enemySpecial は「溜め→0.4秒後に爆発」の作りで、すぐ当たる着弾とずれる)
+        if(intent.type==='SPECIAL'&&!movieShown) Audio_.se.enemySpecial(); else Audio_.se.enemyAttack();
         setEnemyAttackAnim(true);
         if(fxKind==='moo') {
           // 動きを持つムーは、技が当たる瞬間に揺らす(はじめに揺らすと、溜めのあいだに揺れが終わってしまう)
-          if (motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId]) setTimeout(()=>triggerShake(true), battleMs(Math.round(fxMs*tacticsEnemyHitFrac(motionEnemyId, fxSkill))));
+          if (movieShown) setTimeout(()=>triggerShake(true), battleMs(Math.round(fxMs*0.12)));
+          else if (motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId]) setTimeout(()=>triggerShake(true), battleMs(Math.round(fxMs*tacticsEnemyHitFrac(motionEnemyId, fxSkill))));
           else triggerShake(true);
         }
         await battleWait(fxMs);
@@ -10288,15 +10341,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return {
       slot:slotIdx, monName:mon.masuName||mon.name, def, remaining, check,
       active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow),
-      toggleLabel:tacticsExToggleLabel(def,state,slotIdx,mon.id),
-      durationText:TACTICS_EX_DURATION_TEXT[def.duration]||null,
+      styleLabel:tacticsExStyleLabel(def,state,slotIdx,mon.id),
+      // スタイル式の選択肢。いまのスタイルは選べない
+      styleOptions:def.duration==='style'?def.styles.map(st=>({ ...st,
+        current:tacticsExStyleOf(def,state,slotIdx,mon.id)===st.id })):null,
+      durationText:tacticsExDurationText(def),
       implemented:isTacticsExEffectImplemented(def),
       // いまの力・丈夫さ(EXが乗っていればそのぶんも)。捨て身・片手持ちの効き目を数字で確かめられるように
       // 距離枠に出す短い札。切り替え式はいまの状態(二刀流／片手持ち)、効いている間は「◯◯中」、ふだんは「EX」
       // (2026-09-23 ユーザー指示「現在二刀流中か片手持ち中か分かるようにしたい」)
       badge:(()=>{
-        const toggle=tacticsExToggleLabel(def,state,slotIdx,mon.id);
-        if(toggle) return { text:toggle, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
+        const styleLabel=tacticsExStyleLabel(def,state,slotIdx,mon.id);
+        if(styleLabel) return { text:styleLabel, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
+        // ターン数で切れるもの(ガッツ全開っちー)は、あと何ターンかを出す
+        if(def.duration==='turns'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン`, active:true };
         if(isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`${def.name}中`, active:true };
         return { text:'EX', active:false };
       })(),
@@ -10309,7 +10367,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★効き目そのもの(攻撃の引き受け・ステータスの上下・固有技の切り替え)は、戦闘の計算側で
   //   isTacticsExEffectActive を見て決める。ここは「使った瞬間」に1度だけ起こすもの(演出・ログ)の置き場
   const TACTICS_EX_ON_USE = {};
-  const activateTacticsEx = (slotIdx) => {
+  // choice … スタイル式のEX(ソード・コンバージョン)で選んだスタイルの id
+  const activateTacticsEx = (slotIdx, choice = null) => {
     if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
     const mon=slots[slotIdx]; if(!mon) return false;
     const def=tacticsExDefOf(mon.id); if(!def) return false;
@@ -10319,14 +10378,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       alive:canTacticsSlotAct(tacticsUnitsRef.current,slotIdx), selectedCount:tacticsSlotCardCount(slotIdx),
       now:tacticsExNow, busy:false });
     if(!check.ok) return false;
+    if(def.duration==='style'&&checkTacticsExChoice(def,state,slotIdx,mon.id,choice)) return false;
     // 使った瞬間の値を控える(捨て身は「使ったときの丈夫さ」から力へ移す量を決める)
     const usedUnit=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
     const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
-      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null });
+      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null, choice });
     commitTacticsExState(next);
     Audio_.se.card();
-    const toggled=def.duration==='toggle'?`（${tacticsExToggleLabel(def,next,slotIdx,mon.id)}）`:'';
+    const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
+    // 使った瞬間にライフとガッツを満タンにする(ガッツ全開っちー)。その子だけ。枠に入った量を出す
+    // ★ライフ・ガッツの上限も上げてから、その上がった上限まで満タンにする(2026-09-25 ユーザー指示)
+    if(def.fullRecover){
+      let units=tacticsUnitsRef.current;
+      if(def.statRate>0) units=scaleTacticsUnits(setTacticsExMaxRate(units,slotIdx,def.statRate),getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+      const u=normalizeTacticsUnit(units[slotIdx]);
+      if(u){
+        const hpGain=Math.max(0,u.maxHp-u.hp), gutsGain=Math.max(0,u.maxGuts-u.guts);
+        commitTacticsUnits(recoverTacticsGutsAt(healTacticsAt(units,slotIdx,hpGain),slotIdx,gutsGain));
+        if(hpGain>0||gutsGain>0) mergeTacticsSlotFx({[slotIdx]:hpGain},{[slotIdx]:gutsGain});
+      }
+    }
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
       addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md',undefined,slotIdx);
@@ -10459,7 +10531,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if (card.type==='buff'||card.type==='debuff') {
         fireTeachingFx(card.id);
         if (card.subType==='atk_buff') { addPopup(`攻撃UP!`,'hero','text-red-400 font-black text-2xl drop-shadow-md'); const boost=localBoostFromCard(card).oryo*effMul; addPermaBuff('atkPct',boost); localOryoAdd+=boost; }
-        else if (card.subType==='dmg_cut_buff') { addPopup(`防御UP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=(level===0?0.03:(level===1?0.06:0.10))*effMul; writePermaBuffs(p=>({...p, dmgCutPct:Math.min(0.9,(p.dmgCutPct||0)+cutValue)})); }
+        else if (card.subType==='dmg_cut_buff') { addPopup(`丈夫さUP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=(level===0?0.03:(level===1?0.06:0.10))*effMul; writePermaBuffs(p=>({...p, dmgCutPct:Math.min(0.9,(p.dmgCutPct||0)+cutValue)})); }
         // かどみうむ: 効果量はdata/breeder.jsのCADMIUM_TIERSに集約している(説明文の生成も同じ値を見る)
         else if (card.subType==='guts_buff') { const owned=ownedTeachings.find(ot=>ot.id===card.id); const tier=CADMIUM_TIERS[Math.min(owned?owned.evoLevel:0,CADMIUM_TIERS.length-1)]; addPopup(tier.gutsLimit>0?`⚡ ガッツ上限UP!`:`⚡ ガッツ回復UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); if(tier.autoGuts>0) addPermaBuff('gutsRecoverPct',tier.autoGuts*effMul); if(tier.gutsLimit>0) addPermaBuff('muaGutsPct',tier.gutsLimit*effMul); if(tier.hpLimit>0) addPermaBuff('muaHpPct',tier.hpLimit*effMul); if(tier.autoHp>0){ addPermaBuff('autoHpRecovery',tier.autoHp*effMul); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md'); } }
         else if (card.subType==='stun_atsu') {
@@ -10560,9 +10632,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // それに加えて「連撃パワー」を1貯め、3たまるごとに永久10%連撃(kenshiExtraCombo)を1本増やして0へ戻す。
           // どちらも addPermaBuff / writePermaBuffs なので「永続・重複可・次のターンから」になり、
           // 本数にも +3% の回数にも上限は設けない。ヒット列側(buildAttackHits)がこの本数を読む
-          // ★タクティクスのEX「武器チェンジ」で片手持ちの剣士モッチー本人が使ったときは、ソードスキルが出ない
-          else if(card.monId==='KenshiMocchi'&&tacticsExEffectAt(slotIdx)==='weaponChange'){
-            addPopup('片手持ち：ソードスキルなし','hero','text-slate-300 text-sm font-bold');
+          // ★タクティクスのEX「ソード・コンバージョン」で片手盾の剣士モッチー本人が使ったときは、ソードスキルが出ない
+          else if(card.monId==='KenshiMocchi'&&tacticsExStyleAt(slotIdx)==='shield'){
+            addPopup('片手盾：ソードスキルなし','hero','text-slate-300 text-sm font-bold');
           }
           else if(card.monId==='KenshiMocchi'){
             addPermaBuff('comboDmgPct',0.03*effMul);
@@ -10586,7 +10658,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+critRateBonus),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
-          swordSkill:tacticsExEffectAt(slotIdx)!=='weaponChange' });
+          swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1 });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
@@ -11609,9 +11682,57 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   // 通常の敵順と敵定義の両方に存在するものだけを候補にする。敵名・能力値を複製せず、
   // 選択した難易度で通常生成に使う倍率もspawnEnemyへそのまま委ねる。
-  const getDebugEnemyOptions = (diff) => DIFFICULTY_SETTINGS[diff]
-    ? [...new Set(ENEMY_SEQUENCE)].map((key) => ({ key, wave: ENEMY_SEQUENCE.indexOf(key)+1, enemy: ENEMY_DATA[key] })).filter(item => item.enemy && item.enemy.name && item.enemy.baseHp > 0 && item.enemy.baseAtk >= 0)
-    : [];
+  // ---- デバッグ戦(デバッグ専用) ----
+  // 各モード・各難易度で、どの敵とでも戦えるようにする(2026-09-25 ユーザー指示
+  // 「デバッグで各モード難易度でどの敵からも戦えるやつ作って」)。
+  // ★モードを選ぶと runMode・difficulty・extremeDifficulty をその場でそろえる。
+  //   開始ボタン(startDebugBattle)と敵の生成(spawnEnemy)はこの3つを読むので、押す前に確定させておく。
+  //   極限(クラシックの極限チャレンジ・タクティクスの極限5段階)は、通常のランと同じく
+  //   difficulty を 'Normal' にして extremeDifficulty に難易度を入れる
+  // ★種族チャレンジは種族を選ぶ流れが要るので入れない(デバッグの「種族チャレンジ進行確認」から入る)
+  const DEBUG_BATTLE_MODES = [
+    { id:'challenge', label:'チャレンジ', runMode:BATTLE_MODE_CHALLENGE },
+    { id:'quick', label:'クイック', runMode:BATTLE_MODE_QUICK },
+    { id:'pro', label:'プロ', runMode:BATTLE_MODE_PRO },
+    { id:'extreme', label:'極限チャレンジ', runMode:BATTLE_MODE_CHALLENGE, extreme:true },
+    { id:'tactics', label:'タクティクス', runMode:BATTLE_MODE_TACTICS },
+    { id:'tacticsPro', label:'タクティクスプロ', runMode:BATTLE_MODE_TACTICS_PRO },
+  ];
+  const debugBattleModeOf = (modeId) => DEBUG_BATTLE_MODES.find(m => m.id === modeId) || DEBUG_BATTLE_MODES[0];
+  // そのモードで選べる難易度(通常の難易度選択と同じ並び)
+  const debugBattleDifficultyIds = (modeId) => {
+    const mode = debugBattleModeOf(modeId);
+    if (mode.extreme) return ALL_EXTREME_DIFFICULTIES.map(setting => setting.id);
+    if (isTacticsMode(mode.runMode)) return [...TACTICS_DIFFICULTY_IDS];
+    if (isQuickMode(mode.runMode)) return Object.keys(QUICK_DIFFICULTY_SETTINGS);
+    return Object.keys(DIFFICULTY_SETTINGS);
+  };
+  const debugBattleDifficultySetting = (id) => DIFFICULTY_SETTINGS[id] || quickDifficultySetting(id) || extremeRuleSetting(id) || { label:id };
+  // 極限として始めるか(クラシックの極限チャレンジ、またはタクティクスの極限5段階)
+  const debugBattleIsExtreme = (modeId, difficultyId) => {
+    const mode = debugBattleModeOf(modeId);
+    return !!mode.extreme || (isTacticsMode(mode.runMode) && isExtremeDifficultyId(difficultyId));
+  };
+  // そのモードで戦う敵(タクティクスはタクティクス専用の10体)。wave はその敵が本来出てくるWAVE
+  const getDebugEnemyOptions = (modeId) => {
+    const tactics = isTacticsMode(debugBattleModeOf(modeId).runMode);
+    const sequence = tactics ? TACTICS_ENEMY_SEQUENCE : ENEMY_SEQUENCE;
+    const table = tactics ? TACTICS_ENEMY_DATA : ENEMY_DATA;
+    return [...new Set(sequence)].map((key) => ({ key, wave: sequence.indexOf(key)+1, enemy: table[key] }))
+      .filter(item => item.enemy && item.enemy.name && item.enemy.baseHp > 0 && item.enemy.baseAtk >= 0);
+  };
+  const selectDebugBattle = (modeId, difficultyId) => {
+    const mode = debugBattleModeOf(modeId);
+    const ids = debugBattleDifficultyIds(mode.id);
+    const diffId = ids.includes(difficultyId) ? difficultyId : (ids.includes('Normal') ? 'Normal' : ids[0]);
+    const extreme = debugBattleIsExtreme(mode.id, diffId);
+    setDebugBattleModeId(mode.id); setDebugBattleDifficultyId(diffId);
+    setRunMode(mode.runMode); setBattleMode(mode.runMode);
+    setDifficulty(extreme ? 'Normal' : diffId);
+    if (extreme) setExtremeDifficulty(diffId);
+    const options = getDebugEnemyOptions(mode.id);
+    if (!options.some(o => o.key === debugEnemyKey)) setDebugEnemyKey(options[0]?.key || null);
+  };
 
   // ---- バトルチュートリアル ----
   // ふだんのバトル画面をそのまま使い、上にみゅあの吹き出しとハイライトを重ねて進める。
@@ -11815,7 +11936,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   const startDebugBattle = (extreme=false) => {
     stopAllAuto();
-    const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
+    const option = getDebugEnemyOptions(debugBattleModeId).find(item => item.key === debugEnemyKey);
     const savedParty = getActiveMonsterList();
     const party = (debugStrongestHero
       ? [makeDebugStrongestMonster(),...savedParty.filter(mon=>mon?.id!=='Mocchi')]
@@ -11870,6 +11991,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!isHero) Audio_.se.join();
     if (isHero) {
       initialBattleDistanceRef.current=slotIdx;
+      // ★タクティクスは、勇者モンを置いた瞬間に初期スタイル(ソード・コンバージョンなど)を盤面の記録へ書く。
+      //   選び直して置き直したときに前の枠の記録が残らないよう、記録ごと作り直す(バトルの前なので消えるものは無い)
+      if (isTacticsMode(runMode)) {
+        const heroExDef=tacticsExDefOf(m.id);
+        commitTacticsExState(heroExDef&&heroExDef.heroInitialStyle&&tacticsHeroStyle
+          ? setTacticsExInitialStyle(createTacticsExState(),{ def:heroExDef, slot:slotIdx, monId:m.id, style:tacticsHeroStyle })
+          : createTacticsExState());
+      }
       // 勇者モンの間合い適性も、置いた距離だけでなく4距離すべての補正値になる
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
       setDistAptPct(getMonsterAptPct(m,specialRuleDifficulty,wave));
@@ -12480,7 +12609,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ['丈夫さ', mon.baseDef, 'text-emerald-400'],
       ['ガッツ', mon.baseGuts, 'text-amber-400'],
     ];
-    const joinBonus = [plus.hp>0&&`HP+${plus.hp}`, plus.atk>0&&`攻+${plus.atk}`, plus.def>0&&`防+${plus.def}`, plus.guts>0&&`G+${plus.guts}`].filter(Boolean).join(' ');
+    const joinBonus = [plus.hp>0&&`ライフ+${plus.hp}`, plus.atk>0&&`ちから+${plus.atk}`, plus.def>0&&`丈夫さ+${plus.def}`, plus.guts>0&&`ガッツ+${plus.guts}`].filter(Boolean).join(' ');
     const aptBonus = formatAptBonus(mon);
     // 開いている内訳は個体ごとに覚える。別のモンスターを開いたときは閉じた状態から始まる
     const monGrowthKey = String(mon.masuId ?? mon.id ?? '');
@@ -12503,11 +12632,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {(()=>{
         const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
         if(!exDef)return null;
-        const durationLabel={turn:'そのターン',wave:'そのWAVE',toggle:'再使用まで'}[exDef.duration]||String(exDef.duration||'—');
+        const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
         return <div data-monster-detail-ex className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
           <div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-widest text-violet-300">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div>
           <div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div>
-          <div className="mt-1 text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div>
+          <div className="mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{exDef.desc}</div>
           <div className="mt-1.5 grid grid-cols-3 gap-1 text-center text-[9px] font-black">
             <div className="rounded-lg bg-black/30 px-1 py-1 text-slate-300">回数<span className="block text-white">{exDef.unlimited?'無制限':`${exDef.maxUses}回`}</span></div>
             <div className="rounded-lg bg-black/30 px-1 py-1 text-slate-300">効果時間<span className="block text-white">{durationLabel}</span></div>
@@ -12520,8 +12649,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <div className="grid grid-cols-2 gap-2 shrink-0">
         <div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[10px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[10px] text-slate-500 font-bold">勇者モンに選んだとき</div>{mon.trait&&<div className="text-[10px] text-indigo-300 font-black mt-0.5">{mon.trait}</div>}<div className="text-[10px] text-white font-bold leading-tight mt-1">{mon.traitDesc||'特性なし'}</div></div>
         <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[10px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[10px] text-slate-500 font-bold">供モンとして合流したとき</div>{/* 新モードは合流ボーナスを足さず、素のステータスをそのまま盤面へ入れる(2026-09-20 ユーザー指示)。
-        あとから入るほど見劣りするぶんは、先に育った子の育ち率に合わせる追いつき補正で埋める */}
-        {isTacticsMode(runMode)
+        あとから入るほど見劣りするぶんは、先に育った子の育ち率に合わせる追いつき補正で埋める。
+        ★runMode はランを終えても前回のまま残るので、ラン中の画面にいるときだけ見る。
+          見ないと、タクティクスを遊んだあとにHOMEのベースモン一覧などで開いたとき、
+          クラシックの合流ボーナスの値の代わりにタクティクスの説明が出る(2026-09-25 ユーザー報告) */}
+        {isTacticsMode(runMode)&&(RUN_PHASE_STATES.includes(gameState)||gameState==='BATTLE')
           ?(<div className="text-[10px] text-white font-bold mt-1">素のステータスがそのまま入ります<span className="block text-[9px] font-bold text-cyan-300">あとから入るほど、先に育った子に追いつく補正がかかります</span></div>)
           :(<div className="text-[10px] text-white font-bold mt-1">{joinBonus||'なし'}</div>)}{aptBonus&&<div className="text-[10px] text-cyan-300 font-bold mt-0.5">間合い適性 {aptBonus}</div>}</div>
       </div>
@@ -12572,8 +12704,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     );
   };
   const renderSkillSection = (mon) => { const currentUnique=uniqueSkillAtLevel(mon.unique, mon.unique?.evoLevel); return (<>
-    <button onClick={()=>setRosterSkillDetail({mon,kind:'atk'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Sword size={12} className="text-red-400"/><span className="text-[10px] font-black uppercase">通常技: {(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {Math.floor(BASE_ATK_EVOLUTION[0].mult*100)}</span><span className="text-amber-400 font-bold">消費G {BASE_ATK_EVOLUTION[0].baseGuts}</span></div></button>
-    <button onClick={()=>setRosterSkillDetail({mon,kind:'unique'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技 Lv.{currentUnique.evoLevel}: {currentUnique.name}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-3 text-[9px] font-mono mb-2"><span className="text-red-400 font-bold">技威力 {Math.floor(currentUnique.mult*100)}</span><span className="text-yellow-400 font-bold">会心率 {Math.round(currentUnique.crit*100)}%</span><span className="text-amber-400 font-bold">消費G {currentUnique.guts}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic">"{currentUnique.effectDesc}"</div></button>
+    <button onClick={()=>setRosterSkillDetail({mon,kind:'atk'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Sword size={12} className="text-red-400"/><span className="text-[10px] font-black uppercase">通常技: {(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {Math.floor(BASE_ATK_EVOLUTION[0].mult*100)}</span><span className="text-amber-400 font-bold">消費ガッツ {BASE_ATK_EVOLUTION[0].baseGuts}</span></div></button>
+    <button onClick={()=>setRosterSkillDetail({mon,kind:'unique'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技 Lv.{currentUnique.evoLevel}: {currentUnique.name}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-3 text-[9px] font-mono mb-2"><span className="text-red-400 font-bold">技威力 {Math.floor(currentUnique.mult*100)}</span><span className="text-yellow-400 font-bold">会心率 {Math.round(currentUnique.crit*100)}%</span><span className="text-amber-400 font-bold">消費ガッツ {currentUnique.guts}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic">"{currentUnique.effectDesc}"</div></button>
   </>); };
 
 
@@ -12899,12 +13031,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //  過去のやつが一瞬で見えなくなる」)。
             // 1行ずつ積み上げていたころは682行あり、少しさかのぼるだけで指が疲れていた。
             // 日付は行の上に1度だけ出す(同じ日が続くあいだは繰り返さない)。
-            const rows = groupChangelogEntries(changelogEntriesOfTab(changelogTab));
-            const unreadHere = changelogUnreadIds[changelogTab];
+            const rows = changelogRowsOfTab(changelogTab);
+            const unreadHere = new Set(changelogUnreadIds[changelogTab]);
             let shownDay = null;
             return rows.map(row=>{
               const open=changelogOpenId===row.key;
-              const unreadCount=row.entries.filter(entry=>unreadHere.includes(entry.id)).length;
+              const unreadCount=row.entries.filter(entry=>unreadHere.has(entry.id)).length;
               // まとめた行にも種類の札を出す。折りたたんだままでも、新機能なのか不具合修正なのかが
               // 分かるようにしておく(2026-09-05・ユーザー指摘「直近の更新情報が不具合修正との
               // 区別がついてない」)。1つのまとまりに種類が混ざることがあるので、
@@ -12930,7 +13062,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 開いたら、その話題のその日の項目を時刻・種別・本文までぜんぶ出す */}
                   {open&&<div className="mh-changelog-detail" data-changelog-detail>
                     {row.entries.map(c=>(<section key={c.id} className="mh-changelog-item" data-changelog-type={c.type||'update'}>
-                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.includes(c.id)&&<em>NEW</em>}</time>
+                      <time>{(c.date||'').slice(11)||c.date}{unreadHere.has(c.id)&&<em>NEW</em>}</time>
                       <span className="mh-changelog-kind" data-kind={changelogTypeOf(c).tone}>{changelogTypeOf(c).label}</span>
                       <b>{c.title}</b>
                       {/* 告知画像があれば本文の上に出す
@@ -13789,7 +13921,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>;
         })()}
 
-        {showWaveDetails&&(()=>{const extreme=gameState==='EXTREME_DIFFICULTY_SELECT';const extremePreviewSetting=ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===extremeDifficulty)||EXTREME_SETTING;const waveDifficulty=extreme?'Normal':safeDifficulty;const powerOverride=extreme?extremePreviewSetting.power:null;const label=extreme?extremePreviewSetting.label:QUICK_DIFFICULTY_SETTINGS[safeDifficulty].label;return <div className="fixed inset-0 flex items-center justify-center p-3" style={{zIndex:70000,backgroundColor:'rgba(2,6,23,.96)',paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true"><section className="w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"><header className="flex items-center justify-between mb-3"><div><small className="text-indigo-300 font-black">{label}</small><h2 className="text-xl font-black">全WAVE詳細</h2></div><button aria-label="閉じる" onClick={()=>{setWaveScanPreview(null);setShowWaveDetails(false);}} className="p-3 rounded-full bg-white/10"><X/></button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{ENEMY_SEQUENCE.map((enemyKey,index)=>{const enemy=createBattleEnemy(index+1,waveDifficulty,null,powerOverride,1,{mode:battleMode});const boss=index===ENEMY_SEQUENCE.length-1;return <article key={`${enemyKey}-${index}`} data-wave={index+1} role="button" tabIndex={0} aria-label={`WAVE ${index+1} ${enemy.name}を解析`} onClick={()=>setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty})} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty});}}} className={`grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 cursor-pointer active:scale-[.99] ${boss?'border-amber-400/40 min-h-[120px]':'border-white/10 min-h-[64px]'}`}><b className={`${boss?'text-amber-300':'text-indigo-300'} whitespace-nowrap`}>W{index+1}</b><div data-wave-art className="relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id,'waveDetail')} className="w-14 h-14 object-contain"/>:<span className="text-3xl">{enemy.emoji}</span>}</div><div className="min-w-0"><b className={`block truncate whitespace-nowrap ${boss?'text-amber-300':''}`} title={enemy.name}>{enemy.name}</b>{boss&&<span className="block text-[9px] leading-tight font-black text-amber-400">BOSS</span>}</div><div data-wave-stats className="w-[72px] text-right text-[10px] whitespace-nowrap"><div>HP <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃 <b>{enemy.atk.toLocaleString()}</b></div></div></article>})}</div></section></div>})()}
+        {showWaveDetails&&(()=>{const extreme=gameState==='EXTREME_DIFFICULTY_SELECT';const extremePreviewSetting=ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===extremeDifficulty)||EXTREME_SETTING;const waveDifficulty=extreme?'Normal':safeDifficulty;const powerOverride=extreme?extremePreviewSetting.power:null;const label=extreme?extremePreviewSetting.label:QUICK_DIFFICULTY_SETTINGS[safeDifficulty].label;return <div className="fixed inset-0 flex items-center justify-center p-3" style={{zIndex:70000,backgroundColor:'rgba(2,6,23,.96)',paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true"><section className="w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"><header className="flex items-center justify-between mb-3"><div><small className="text-indigo-300 font-black">{label}</small><h2 className="text-xl font-black">全WAVE詳細</h2></div><button aria-label="閉じる" onClick={()=>{setWaveScanPreview(null);setShowWaveDetails(false);}} className="p-3 rounded-full bg-white/10"><X/></button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{ENEMY_SEQUENCE.map((enemyKey,index)=>{const enemy=createBattleEnemy(index+1,waveDifficulty,null,powerOverride,1,{mode:battleMode});const boss=index===ENEMY_SEQUENCE.length-1;return <article key={`${enemyKey}-${index}`} data-wave={index+1} role="button" tabIndex={0} aria-label={`WAVE ${index+1} ${enemy.name}を解析`} onClick={()=>setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty})} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty});}}} className={`grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 cursor-pointer active:scale-[.99] ${boss?'border-amber-400/40 min-h-[120px]':'border-white/10 min-h-[64px]'}`}><b className={`${boss?'text-amber-300':'text-indigo-300'} whitespace-nowrap`}>W{index+1}</b><div data-wave-art className="relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id,'waveDetail')} className="w-14 h-14 object-contain"/>:<span className="text-3xl">{enemy.emoji}</span>}</div><div className="min-w-0"><b className={`block truncate whitespace-nowrap ${boss?'text-amber-300':''}`} title={enemy.name}>{enemy.name}</b>{boss&&<span className="block text-[9px] leading-tight font-black text-amber-400">BOSS</span>}</div><div data-wave-stats className="w-[72px] text-right text-[10px] whitespace-nowrap"><div>ライフ <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃力 <b>{enemy.atk.toLocaleString()}</b></div></div></article>})}</div></section></div>})()}
         {gameState==='BATTLE_MENU'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             {/* 戻るボタン。ランキングを見ているときは、いきなりホームへ帰らず
@@ -14872,6 +15004,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 測った値はここで覚えるだけ。設定へ入れるかどうかはオプションの画面で選ぶ
           if(rhythmPlay.from==='calibration')return;
           if(rhythmPlay.from==='tutorial')return;
+          // アシストモード(2026-09-24・バンドリ！アワーノーツから取り入れた遊び方)のプレイは、
+          // 自己ベストにも全国ランキングにも残さない(CLAUDE.md ⑦「ランキング対象外の遊び方は送信しないだけでなく自己ベストも上書きしない」)
+          if(result?.assist===true)return;
           const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
@@ -14895,6 +15030,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ・左の「ジャンルタブ」は曲が増えてから足す(2026-09-05・ユーザー指示で今回は置かない) */}
         {gameState==='RHYTHM_DEMO_HOME'&&(
           <RhythmSongSelectScreen
+            rhythmSettings={rhythmSettings}
+            onToggleRhythmSetting={async key=>{const saved=await saveRhythmSettings({...rhythmSettings,[key]:!rhythmSettings[key]});setRhythmSettings(saved);}}
             catchingUp={catchingUp}
             difficulty={difficulty}
             dismissQuickRhythmBackground={dismissQuickRhythmBackground}
@@ -15076,12 +15213,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             中身と押したときの処理は1つも変えていない。 */}
         {gameState==='DEBUG_BATTLE_SETUP'&&(
           <main data-debug-battle-setup-screen data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <DebugScreenHead title="デバッグ戦" note="難易度と敵を選んで、その場で戦う" saves={false} onBack={()=>setGameState('DEBUG_SETTINGS')}/>
+            <DebugScreenHead title="デバッグ戦" note="モード・難易度・敵を選んで、その場で戦う" saves={false} onBack={()=>setGameState('DEBUG_SETTINGS')}/>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4">
-              <section><div className="text-[10px] text-slate-500 font-black mb-2">1. 難易度</div><div className="grid grid-cols-3 gap-2">{Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=><button key={key} onClick={()=>{setDifficulty(key);const options=getDebugEnemyOptions(key);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);}} className={`min-h-[48px] rounded-xl text-[9px] font-black ${difficulty===key?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle(setting,difficulty===key)}>{setting.label}</button>)}</div></section>
-              <section><div className="text-[10px] text-slate-500 font-black mb-2">2. 敵</div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(difficulty).map(({key,enemy:debugEnemy})=><button key={key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
-              <section><div className="text-[10px] text-slate-500 font-black mb-2">3. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M</small></button></section>
-              <button disabled={!getDebugEnemyOptions(difficulty).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={startDebugBattle} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">4. デバッグ戦開始</button>
+              <section data-debug-battle-modes><div className="text-[10px] text-slate-500 font-black mb-2">1. モード</div><div className="grid grid-cols-3 gap-2">{DEBUG_BATTLE_MODES.map(mode=><button key={mode.id} type="button" data-debug-battle-mode-option={mode.id} aria-pressed={debugBattleModeId===mode.id} onClick={()=>selectDebugBattle(mode.id,debugBattleDifficultyId)} className={`min-h-[48px] px-1 rounded-xl text-[10px] font-black leading-tight ${debugBattleModeId===mode.id?'bg-cyan-700 border-2 border-cyan-300 text-white':'bg-slate-900 border border-white/10 text-slate-400'}`}>{mode.label}</button>)}</div></section>
+              <section data-debug-battle-difficulties><div className="text-[10px] text-slate-500 font-black mb-2">2. 難易度</div><div className="grid grid-cols-3 gap-2">{debugBattleDifficultyIds(debugBattleModeId).map(key=>{const setting=debugBattleDifficultySetting(key);const selected=debugBattleDifficultyId===key;return <button key={key} type="button" data-debug-battle-difficulty={key} aria-pressed={selected} onClick={()=>selectDebugBattle(debugBattleModeId,key)} className={`min-h-[48px] rounded-xl text-[9px] font-black ${selected?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle({bg:'#475569',text:'#cbd5e1',...setting},selected)}>{setting.label||key}</button>;})}</div></section>
+              <section data-debug-battle-enemies><div className="text-[10px] text-slate-500 font-black mb-2">3. 敵<small className="ml-1 font-bold text-slate-600">（その敵が出てくるWAVEとして戦う）</small></div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(debugBattleModeId).map(({key,wave:debugWave,enemy:debugEnemy})=><button key={key} type="button" data-debug-battle-enemy={key} aria-pressed={debugEnemyKey===key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black text-left ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}><small className="block text-[8px] opacity-70">WAVE {debugWave}</small>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
+              <section><div className="text-[10px] text-slate-500 font-black mb-2">4. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M</small></button></section>
+              {/* ★開始の関数をそのまま onClick へ渡すと、押したときのイベントが「極限か」の引数へ入ってしまう */}
+              <button data-debug-battle-start disabled={!getDebugEnemyOptions(debugBattleModeId).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={()=>startDebugBattle(debugBattleIsExtreme(debugBattleModeId,debugBattleDifficultyId))} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">5. デバッグ戦開始<small className="block text-[9px] font-bold opacity-70">{debugBattleModeOf(debugBattleModeId).label} / {debugBattleDifficultySetting(debugBattleDifficultyId).label||debugBattleDifficultyId}</small></button>
             </div>
           </main>
         )}
@@ -15116,7 +15255,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       そのまま埋まっていた。1500pxほど縦に伸びていて、次の欄へ行くのにそこを全部
                       スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。
                       **メニューには入口だけを置き、道具そのものを埋めない** のが決めごと */}
-                  <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="難易度と敵を選んで戦う。結果は保存されません" onClick={()=>setGameState('DEBUG_BATTLE_SETUP')}/>
+                  <DebugMenuRow data-debug-battle-setup icon="🛠" label="デバッグ戦" desc="モード・難易度・敵を選んで戦う。結果は保存されません" onClick={()=>{selectDebugBattle(debugBattleModeId,debugBattleDifficultyId);setGameState('DEBUG_BATTLE_SETUP');}}/>
                   <button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">🧬 種族チャレンジ進行確認<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族別の解放・クリア・初回報酬を確認／編集</small></button>
                   {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                       通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
@@ -16844,6 +16983,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           getDistAptitude={getDistAptitude} scenarioPicksSlot={scenarioPicksSlot}
           setupMon={setupMon} slots={slots}
           phasePlan={mainHero?phasePlan:null} wave={wave}
+          heroStyleDef={(()=>{
+            // 勇者モンを置くときだけ。スタイル式のEXを持つ子(剣士モッチー)なら初期スタイルを選べる
+            if(mainHero||!currentPickingMon||!tacticsExEnabled) return null;
+            const d=tacticsExDefOf(currentPickingMon.id);
+            return d&&d.heroInitialStyle?d:null;
+          })()}
+          heroStyle={tacticsHeroStyle} onHeroStyle={setTacticsHeroStyle}
           onRepick={()=>{
             if(!mainHero&&speciesChallengeBattleRunRef.current){
               setCurrentPickingMon(null);
@@ -17508,7 +17654,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
           <footer className="shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <button onClick={()=>setShowHelp(false)} className="w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm shadow-2xl active:scale-95">わかった！冒険に戻る</button>
-            <button aria-label="" onClick={()=>{const options=getDebugEnemyOptions(difficulty);setDebugEnemyKey(options[0]?.key||null);debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setShowHelp(false);setGameState('DEBUG_SETTINGS');}} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
+            <button aria-label="" onClick={()=>{const options=getDebugEnemyOptions(debugBattleModeId);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setShowHelp(false);setGameState('DEBUG_SETTINGS');}} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
           </footer>
         </div>);
       })()}
@@ -17805,7 +17951,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
                       {t.unlocked&&(
                         <div className="flex items-center gap-2.5 mt-1">
                           <span className="text-[9px] font-mono text-red-400 font-bold">威力 {t.power}</span>
-                          {t.guts>0&&<span className="text-[9px] font-mono text-amber-400 font-bold">消費G {t.guts}</span>}
+                          {t.guts>0&&<span className="text-[9px] font-mono text-amber-400 font-bold">消費ガッツ {t.guts}</span>}
                           {t.crit>0&&<span className="text-[9px] font-mono text-yellow-300 font-bold">会心 {t.crit}%</span>}
                         </div>
                       )}
@@ -17823,7 +17969,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
                   </div>
                 ))}
               </div>
-              {isAtkFamily&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">敵と同じ距離枠にいる味方の距離適性・距離ダメージ補正の合計値を上げると、上位レベルが解放されます</div>}
+              {isAtkFamily&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">敵と同じ距離枠にいる味方の間合い適性・距離ダメージ補正の合計値を上げると、上位レベルが解放されます</div>}
               {card.type==='unique'&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">固有技の強化(強化ポイント)で上位レベルが解放されます</div>}
             </div>
           </div>
@@ -17890,7 +18036,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             </div>
             <div className="flex items-center gap-3 mb-3">
               <span className="text-[10px] font-mono text-red-400 font-bold">威力 {skillEffectDetail.power}</span>
-              {skillEffectDetail.guts>0&&<span className="text-[10px] font-mono text-amber-400 font-bold">消費G {skillEffectDetail.guts}</span>}
+              {skillEffectDetail.guts>0&&<span className="text-[10px] font-mono text-amber-400 font-bold">消費ガッツ {skillEffectDetail.guts}</span>}
               {skillEffectDetail.crit>0&&<span className="text-[10px] font-mono text-yellow-300 font-bold">会心 {skillEffectDetail.crit}%</span>}
             </div>
             <div className="bg-black/40 border border-white/10 rounded-2xl p-3">
@@ -17926,13 +18072,13 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         {statCell('丈夫さ','text-emerald-400',u.def,exStats?exStats.def:u.def,'def')}
         <div><div className="text-[8px] font-black text-amber-400">ガッツ</div><div className="text-[12px] font-mono font-black">{u.guts}<span className="text-[9px] text-slate-500">/{u.maxGuts}</span></div></div>
       </div>
-      <div className="mt-0.5 text-[9px] font-black text-cyan-300">この枠の距離適性 {aptPct>=0?'+':''}{Math.round(aptPct*10)/10}%</div>
-      {exInfo&&<div data-tactics-status-ex={i} className="mt-0.5 text-[9px] font-black text-fuchsia-200">EX「{exInfo.def.name}」{exInfo.toggleLabel?`：いまは${exInfo.toggleLabel}`:(exInfo.active?'：効果中':'')}{exInfo.remaining.unlimited?'':`（のこり ${exInfo.remaining.left}/${exInfo.remaining.max}）`}</div>}
+      <div className="mt-0.5 text-[9px] font-black text-cyan-300">この枠の間合い適性 {aptPct>=0?'+':''}{Math.round(aptPct*10)/10}%</div>
+      {exInfo&&<div data-tactics-status-ex={i} className="mt-0.5 text-[9px] font-black text-fuchsia-200">EX「{exInfo.def.name}」{exInfo.styleLabel?`：いまは${exInfo.styleLabel}`:(exInfo.active?'：効果中':'')}{exInfo.remaining.unlimited?'':`（のこり ${exInfo.remaining.left}/${exInfo.remaining.max}）`}</div>}
     </div>);
   })}
 </div>)}{/* ★タクティクスは1体ずつなので、パーティの合計・平均の欄そのものを出さない
                   (2026-09-22 ユーザー選択「消す」)。ちから・丈夫さは平均でしかなく、
-                  ダメージも被弾もガードも、いまは全部その子の値で決まる */}{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} DEF +{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div>}<div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
+                  ダメージも被弾もガードも、いまは全部その子の値で決まる */}{!isTacticsMode(runMode)&&<div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">ちから</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{effectiveDef}{getPermaBuff('defPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(基礎{def} 丈夫さ+{Math.round(getPermaBuff('defPct')*100)}%)</span>}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(被ダメ -{Math.round(getPermaBuff('dmgCutPct')*100)}%)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div>}<div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div><div className="text-left"><AssistantBubble scene="battleHelp" compact/></div></div></div></div>)}
 
       {showSoulBattleEffects&&gameState==='BATTLE'&&(
         <SoulBattleEffects
@@ -18108,7 +18254,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             <div className="bg-slate-900 border-2 border-amber-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
               <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0"><h3 className="text-sm font-black text-white uppercase">{title}</h3><button onClick={()=>setRosterSkillDetail(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button></div>
               <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5">
-                {levels.map(info=>{const locked=isUnique&&info.lvl>currentLevel; const current=isUnique&&info.lvl===currentLevel; return <div key={info.lvl} className={`p-2 rounded-xl border ${locked?'bg-slate-950/70 border-slate-800 opacity-45':'bg-black/30'} ${current?'border-amber-400 ring-1 ring-amber-400/40':'border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${locked?'text-slate-500':'text-amber-300'}`}>{locked?'🔒 ':''}Lv.{info.lvl} {info.name}</span>{isUnique&&<span className={`text-[8px] font-black ${current?'text-amber-300':locked?'text-slate-600':'text-emerald-400'}`}>{current?'現在の技':locked?'未解放':'解放済み'}</span>}</div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {info.power}</span><span className="text-yellow-400 font-bold">会心率 {info.crit}%</span><span className="text-amber-400 font-bold">消費G {info.guts}</span></div>{isUnique&&<div className="text-[8px] text-slate-400 mt-1">{mon.unique.effectDesc}</div>}</div>;})}
+                {levels.map(info=>{const locked=isUnique&&info.lvl>currentLevel; const current=isUnique&&info.lvl===currentLevel; return <div key={info.lvl} className={`p-2 rounded-xl border ${locked?'bg-slate-950/70 border-slate-800 opacity-45':'bg-black/30'} ${current?'border-amber-400 ring-1 ring-amber-400/40':'border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${locked?'text-slate-500':'text-amber-300'}`}>{locked?'🔒 ':''}Lv.{info.lvl} {info.name}</span>{isUnique&&<span className={`text-[8px] font-black ${current?'text-amber-300':locked?'text-slate-600':'text-emerald-400'}`}>{current?'現在の技':locked?'未解放':'解放済み'}</span>}</div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {info.power}</span><span className="text-yellow-400 font-bold">会心率 {info.crit}%</span><span className="text-amber-400 font-bold">消費ガッツ {info.guts}</span></div>{isUnique&&<div className="text-[8px] text-slate-400 mt-1">{mon.unique.effectDesc}</div>}</div>;})}
               </div>
               <button onClick={()=>setRosterSkillDetail(null)} className="w-full bg-amber-600 text-white py-3 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95">閉じる</button>
             </div>

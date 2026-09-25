@@ -685,6 +685,11 @@ const createAnimationStyle = () => {
     .mon-idle--breathe { animation:monIdleBreathe 3200ms ease-in-out infinite; }
     .mon-idle--sway { animation:monIdleSway 3000ms ease-in-out infinite; }
     .mon-idle--swim { animation:monIdleSwim 2800ms ease-in-out infinite; }
+    .mon-idle--jelly { animation:monIdleJelly 2000ms ease-in-out infinite; }
+    .mon-idle--hop { animation:monIdleHop 2800ms ease-in-out infinite; }
+    .mon-idle--heavy { animation:monIdleHeavy 3600ms ease-in-out infinite; }
+    .mon-idle--glide { animation:monIdleGlide 3200ms ease-in-out infinite; }
+    .mon-idle--drift { animation:monIdleDrift 4200ms ease-in-out infinite; transform-origin:50% 50%; }
     /* 宙に浮いている子。ゆっくり上下してわずかに伸び縮みする */
     @keyframes monIdleHover {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
@@ -699,8 +704,45 @@ const createAnimationStyle = () => {
     }
     /* どっしり立っている子。胸がふくらむように、縦へわずかに伸び縮みする */
     @keyframes monIdleBreathe {
-      0%,100% { transform:scale(1,1); }
-      50% { transform:scale(1.01,1.025); }
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      50% { transform:translate3d(0,-1%,0) scale(1.015,1.04); }
+    }
+    /* ↓ 待機が地味だった子の動き(2026-09-25 ユーザー指示「待機中の動きが地味なモンスターがいるからもう少し改良したい」)。
+       どれも足元(transform-origin 50% 96%)を軸にするので、地面から離れて見えない */
+    /* ぷるぷるの子(モッチー・剣士モッチー)。つぶれて、ぴょんと伸びて、ぷるんと揺れて止まる */
+    @keyframes monIdleJelly {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      14% { transform:translate3d(0,0,0) scale(1.07,.92); }
+      32% { transform:translate3d(0,-3.5%,0) scale(.95,1.06); }
+      48% { transform:translate3d(0,0,0) scale(1.05,.95); }
+      58% { transform:translate3d(0,0,0) scale(.98,1.03); }
+      68% { transform:translate3d(0,0,0) scale(1.01,.99); }
+    }
+    /* 跳ねる子(スエゾー)。しっぽでぴょんと跳び、左右を見回すように交互に傾く */
+    @keyframes monIdleHop {
+      0%,50%,100% { transform:translate3d(0,0,0) rotate(0) scale(1,1); }
+      8%,58% { transform:translate3d(0,0,0) rotate(0) scale(1.08,.9); }
+      20% { transform:translate3d(0,-10%,0) rotate(-6deg) scale(.95,1.06); }
+      70% { transform:translate3d(0,-10%,0) rotate(6deg) scale(.95,1.06); }
+      32%,82% { transform:translate3d(0,0,0) rotate(0) scale(1.06,.93); }
+      40%,90% { transform:translate3d(0,0,0) rotate(0) scale(.98,1.02); }
+    }
+    /* 重たい子(ゴーレム)。左右へ体重を移し、真ん中で胸をふくらませる */
+    @keyframes monIdleHeavy {
+      0%,100% { transform:translate3d(0,0,0) rotate(0) scale(1,1); }
+      25% { transform:translate3d(-1.2%,0,0) rotate(-2deg) scale(1,1); }
+      50% { transform:translate3d(0,-1.2%,0) rotate(0) scale(1.02,1.035); }
+      75% { transform:translate3d(1.2%,0,0) rotate(2deg) scale(1,1); }
+    }
+    /* 翼で滑るように浮く子(アーク・エイキ)。大きく浮き沈みしながら、ゆったり傾く */
+    @keyframes monIdleGlide {
+      0%,100% { transform:translate3d(0,0,0) rotate(-2deg) scale(1,1); }
+      50% { transform:translate3d(0,-6%,0) rotate(2deg) scale(.99,1.02); }
+    }
+    /* 宙を漂う子(モノリス)。ゆっくり大きく浮き沈みし、ふらりと回る */
+    @keyframes monIdleDrift {
+      0%,100% { transform:translate3d(0,0,0) rotate(-4deg); }
+      50% { transform:translate3d(0,-8%,0) rotate(4deg); }
     }
     /* 植物の子。足元を軸に、左右へゆっくり傾く */
     @keyframes monIdleSway {
@@ -1179,33 +1221,61 @@ const createAnimationStyle = () => {
       100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
     }
 
-    /* ライガー: コマ落としのようにカクカクと左右へ跳びながら高速で詰め、爪で3回ひっかいて同じように戻る(600ms)。
+    /* ライガー: コマ落としのようにカクカクと左右へ跳びながら高速で詰め、爪で3回ひっかく。
+       同じようにカクカクと元の場所へ戻り、角に雷をためて、敵へ雷撃を落とす(900ms)。
        steps(1,end) で各コマの間をつながずに瞬間移動させ、残像(.thm-atk__ghost)が少し遅れて追いかける */
-    .thm-atk--claw { --c1:#fee2e2; --c2:#ef4444; --c3:rgba(239,68,68,0); --hit-at:235ms; }
+    .thm-atk--claw { --c1:#fee2e2; --c2:#ef4444; --c3:rgba(239,68,68,0); --hit-at:235ms; --hit-at2:665ms; }
     .thm-atk--claw .thm-atk__monster { animation-name:thmClawBody; animation-timing-function:steps(1,end); }
     .thm-atk__ghost { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:3; opacity:0;
       transform-origin:50% 80%; pointer-events:none; filter:sepia(1) saturate(4) hue-rotate(-30deg) brightness(1.2);
       animation:thmClawBody var(--thm-ms,450ms) steps(1,end) forwards, thmClawGhost var(--thm-ms,450ms) linear forwards; }
     .thm-atk__ghost--1 { animation-delay:35ms,0ms; --ghost-a:.5; }
     .thm-atk__ghost--2 { animation-delay:70ms,0ms; --ghost-a:.28; }
-    @keyframes thmClawGhost { 0%,8% { opacity:0; } 14%,84% { opacity:var(--ghost-a,.4); } 92%,100% { opacity:0; } }
+    @keyframes thmClawGhost { 0%,5% { opacity:0; } 9%,55% { opacity:var(--ghost-a,.4); } 61%,100% { opacity:0; } }
     .thm-atk--claw .thm-atk__core { width:70px; height:70px; left:-35px; top:-35px; animation-duration:260ms; }
-    .thm-atk--claw .thm-atk__bit { left:-3px; top:-36px; width:6px; height:72px; border-radius:999px; rotate:var(--ba); translate:var(--bx) 0;
+    .thm-atk--claw .thm-atk__hit:not(.thm-atk__hit--2) .thm-atk__bit { left:-3px; top:-36px; width:6px; height:72px; border-radius:999px; rotate:var(--ba); translate:var(--bx) 0;
       background:linear-gradient(180deg,rgba(255,255,255,0),#fff 30%,#fecaca 60%,rgba(239,68,68,0)); box-shadow:0 0 8px #ef4444;
       animation-name:thmClaw; animation-duration:140ms; }
     @keyframes thmClaw { 0% { opacity:0; transform:scaleY(.1); } 35% { opacity:1; transform:scaleY(1); } 100% { opacity:0; transform:scaleY(1.1) scaleX(.4); } }
+    /* 雷撃の着弾は黄色 */
+    .thm-atk--claw .thm-atk__hit--2 { --c1:#fef9c3; --c2:#facc15; --c3:rgba(250,204,21,0); }
+    .thm-atk--claw .thm-atk__hit--2 .thm-atk__core { width:104px; height:104px; left:-52px; top:-52px; animation-duration:300ms; }
+    .thm-atk--claw .thm-atk__hit--2 .thm-atk__bit { width:10px; height:3px; border-radius:2px; background:#fef08a; box-shadow:0 0 6px #facc15; animation-duration:220ms; }
     @keyframes thmClawBody {
-      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
-      6% { transform:translate3d(0,6px,0) scale(1.1,.86); }
-      14% { transform:translate3d(calc(var(--atk-dx) * .28 - 34px),calc(var(--atk-dy) * .28),0) scale(1.08) rotate(-8deg); }
-      22% { transform:translate3d(calc(var(--atk-dx) * .52 + 34px),calc(var(--atk-dy) * .52),0) scale(1.1) rotate(8deg); }
-      30% { transform:translate3d(calc(var(--atk-dx) * .74 - 26px),calc(var(--atk-dy) * .74),0) scale(1.14) rotate(-8deg); }
-      39% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.26) rotate(-14deg); }
-      49% { transform:translate3d(calc(var(--atk-dx) + 26px),calc(var(--atk-dy) * .95 - 10px),0) scale(1.24) rotate(14deg); }
-      59% { transform:translate3d(calc(var(--atk-dx) - 26px),calc(var(--atk-dy) * .95 + 6px),0) scale(1.26) rotate(-12deg); }
-      68% { transform:translate3d(calc(var(--atk-dx) * .6 + 30px),calc(var(--atk-dy) * .6),0) scale(1.1) rotate(8deg); }
-      78% { transform:translate3d(calc(var(--atk-dx) * .3 - 26px),calc(var(--atk-dy) * .3),0) scale(1.05) rotate(-6deg); }
-      88%,100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+      4% { transform:translate3d(0,6px,0) scale(1.1,.86); }
+      10% { transform:translate3d(calc(var(--atk-dx) * .28 - 34px),calc(var(--atk-dy) * .28),0) scale(1.08) rotate(-8deg); }
+      15% { transform:translate3d(calc(var(--atk-dx) * .52 + 34px),calc(var(--atk-dy) * .52),0) scale(1.1) rotate(8deg); }
+      21% { transform:translate3d(calc(var(--atk-dx) * .74 - 26px),calc(var(--atk-dy) * .74),0) scale(1.14) rotate(-8deg); }
+      26% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.26) rotate(-14deg); }
+      32% { transform:translate3d(calc(var(--atk-dx) + 26px),calc(var(--atk-dy) * .95 - 10px),0) scale(1.24) rotate(14deg); }
+      39% { transform:translate3d(calc(var(--atk-dx) - 26px),calc(var(--atk-dy) * .95 + 6px),0) scale(1.26) rotate(-12deg); }
+      45% { transform:translate3d(calc(var(--atk-dx) * .6 + 30px),calc(var(--atk-dy) * .6),0) scale(1.1) rotate(8deg); }
+      51% { transform:translate3d(calc(var(--atk-dx) * .3 - 26px),calc(var(--atk-dy) * .3),0) scale(1.05) rotate(-6deg); }
+      57% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+      /* 元の場所で身を低くして、角に雷をためる */
+      63% { transform:translate3d(0,5px,0) scale(1.08,.9) rotate(0deg); filter:drop-shadow(0 0 10px #fde047); }
+      68% { transform:translate3d(0,3px,0) scale(1.1,.9) rotate(0deg); filter:drop-shadow(0 0 16px #facc15) drop-shadow(0 0 4px #fff); }
+      /* 頭を振り上げて雷撃。反動で小刻みに震える */
+      72% { transform:translate3d(calc(var(--atk-dx) * -.05),calc(var(--atk-dy) * -.05 - 4px),0) scale(1.12,1.04) rotate(-5deg); filter:drop-shadow(0 0 18px #fef08a); }
+      77% { transform:translate3d(calc(var(--atk-dx) * -.05 + 3px),calc(var(--atk-dy) * -.05 - 4px),0) scale(1.12,1.04) rotate(-3deg); }
+      82% { transform:translate3d(calc(var(--atk-dx) * -.05 - 3px),calc(var(--atk-dy) * -.05 - 4px),0) scale(1.12,1.04) rotate(-5deg); filter:drop-shadow(0 0 12px #facc15); }
+      88% { transform:translate3d(calc(var(--atk-dx) * -.03),calc(var(--atk-dy) * -.03),0) scale(1.05) rotate(-2deg); }
+      94%,100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+    }
+    /* 角から敵までの雷。ジグザグの形(clip-path)で切り抜き、光は親(.thm-atk__line)の影で付ける(子に付けると形で切れる) */
+    .thm-atk--claw .thm-atk__line { top:24%; filter:drop-shadow(0 0 6px #facc15) drop-shadow(0 0 14px rgba(250,204,21,.8)); }
+    .thm-atk--claw .thm-atk__line i { width:40px; left:-20px;
+      clip-path:polygon(42% 100%, 12% 86%, 70% 72%, 16% 58%, 66% 44%, 20% 30%, 62% 16%, 42% 0%, 58% 0%, 78% 16%, 36% 30%, 82% 44%, 32% 58%, 86% 72%, 28% 86%, 58% 100%);
+      background:linear-gradient(90deg,#fde047,#fff 50%,#fde047); animation-name:thmClawBolt; }
+    @keyframes thmClawBolt {
+      0%,70% { opacity:0; transform:scaleY(0); }
+      73% { opacity:1; transform:scaleY(1) scaleX(1.2); }
+      76% { opacity:.35; transform:scaleY(1) scaleX(-1); }
+      79% { opacity:1; transform:scaleY(1) scaleX(1.1); }
+      83% { opacity:.5; transform:scaleY(1) scaleX(-1.2); }
+      86% { opacity:1; transform:scaleY(1) scaleX(1); }
+      92%,100% { opacity:0; transform:scaleY(1) scaleX(.2); }
     }
 
     /* ハム: 敵へ駆け寄って、左のジャブ(小)→ 体をひねって右ストレート(大)のワンツー(580ms) */
@@ -2496,6 +2566,30 @@ const createAnimationStyle = () => {
     @keyframes mooGather { 0% { opacity: 0; transform: translate(var(--gx), var(--gy)) scale(1.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(0, 0) scale(.3); } }
     [data-moo-reticle] { width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; opacity: 0; border: 3px dashed rgba(250,204,21,.95);
       box-shadow: 0 0 16px rgba(220,38,38,.9), inset 0 0 16px rgba(220,38,38,.6); animation: emLock 800ms ease-out both; }
+    /* ---- ボスの必殺技ムービー(71-screen-battle の BossMovieLayer)。画面を切り替えて、上に技名・まんなかにムービー ----
+       ★ムービーは横長(768×488)。縦のスマホでは幅いっぱいより少し大きく(116vw)して左右を少しだけ切り、上下のふちはぼかして背景へなじませる。
+       ★技名の札(z 65000)・敵の技の演出(z 64000)より上に出す */
+    [data-boss-movie] { position: fixed; inset: 0; z-index: 66000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); -webkit-tap-highlight-color: transparent; user-select: none;
+      background: radial-gradient(ellipse at 50% 50%, #34104f, #0c0218 62%, #000); animation: bossMovieIn 260ms ease-out both; }
+    /* ★背景は不透明にする。半透明だと、うしろの戦闘画面(敵の絵・枠)が透けて見える */
+    @keyframes bossMovieIn { from { opacity: 0; } to { opacity: 1; } }
+    [data-boss-movie-stage] { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    [data-boss-movie-frame] { position: relative; flex-shrink: 0; width: min(116vw, calc(66vh * 768 / 488)); aspect-ratio: 768 / 488; overflow: hidden;
+      -webkit-mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); }
+    [data-boss-movie-frame] > video { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+    [data-boss-movie-title] { text-align: center; line-height: 1.15; animation: bossMovieTitle 900ms cubic-bezier(.2,.8,.2,1) both; }
+    [data-boss-movie-title] small { display: block; font-size: 12px; font-weight: 900; letter-spacing: .3em; color: #e9d5ff; opacity: .85; }
+    [data-boss-movie-title] b { display: block; font-weight: 900; font-size: clamp(30px, 10vw, 52px); letter-spacing: .14em; color: #fff; white-space: nowrap;
+      text-shadow: 0 0 10px #c084fc, 0 0 26px #7e22ce, 0 3px 0 #3b0764; -webkit-text-stroke: 1px #facc15; }
+    @keyframes bossMovieTitle { 0% { opacity: 0; transform: scale(1.6); } 100% { opacity: 1; transform: scale(1); } }
+    [data-boss-movie-skip] { position: absolute; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); padding: 6px 12px; border-radius: 999px; pointer-events: none;
+      font-size: 11px; font-weight: 900; color: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.45); transition: opacity 300ms; }
+    /* 光線・爆発の瞬間の揺れ。a と b は同じ動き(属性を切り替えて、動きを頭からかけ直すため2つある) */
+    [data-boss-movie-shake="a"] { animation: bossMovieShakeA 420ms ease-out both; }
+    [data-boss-movie-shake="b"] { animation: bossMovieShakeB 420ms ease-out both; }
+    @keyframes bossMovieShakeA { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-9px, 6px); } 30% { transform: translate(8px, -7px); } 45% { transform: translate(-6px, 4px); } 60% { transform: translate(5px, -3px); } 80% { transform: translate(-2px, 1px); } }
+    @keyframes bossMovieShakeB { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-9px, 6px); } 30% { transform: translate(8px, -7px); } 45% { transform: translate(-6px, 4px); } 60% { transform: translate(5px, -3px); } 80% { transform: translate(-2px, 1px); } }
     /* 覚醒ムーの待機: 翼を広げるように左右へ張り、ときどき身をかがめて吠える。黒い気が立ちのぼり、目が赤く光る */
     @keyframes mooIdleMenace {
       0%, 100% { transform: translateY(0) scale(1, 1); }

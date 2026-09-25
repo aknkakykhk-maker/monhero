@@ -49,8 +49,9 @@ check(`${NAME}が定義されている`, !!mon);
 if (!mon) { console.log('\n定義が無いため以降を中止'); process.exit(1); }
 check(`内部IDが ${ID}`, mon.id === ID);
 check(`名前が ${NAME}`, mon.name === NAME);
-check('基礎能力 ライフ350/ちから185/丈夫さ25/ガッツ130',
-  mon.baseHp === 350 && mon.baseAtk === 185 && mon.baseDef === 25 && mon.baseGuts === 130,
+// ★2026-09-25 ユーザー指示で ちから185→135 / 丈夫さ25→75 に調整(タクティクスのEX「ソード・コンバージョン」に合わせて)
+check('基礎能力 ライフ350/ちから135/丈夫さ75/ガッツ130',
+  mon.baseHp === 350 && mon.baseAtk === 135 && mon.baseDef === 75 && mon.baseGuts === 130,
   `HP${mon.baseHp}/ATK${mon.baseAtk}/DEF${mon.baseDef}/GUTS${mon.baseGuts}`);
 check('距離適性 零A/近A/中C/遠D',
   JSON.stringify(mon.distAptitude) === JSON.stringify(['A', 'A', 'C', 'D']), mon.distAptitude.join('/'));
@@ -165,7 +166,8 @@ check('ヘルプの図鑑項目に剣士モッチー専用の解説がある',
 check('画像は仮実装のものを使い回している(円盤石を作り直していない)',
   breederSrc.includes('const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG'));
 
-console.log('--- ⑤ 勇者特性「二刀流」: 同時使用可能枚数+1 ---');
+console.log('--- ⑤ 勇者特性「黒の剣士」(旧名「二刀流」): 同時使用可能枚数+1 ---');
+check('勇者特性の名前は「黒の剣士」(タクティクスのEXのスタイル「二刀流」と取り違えない)', mon.trait === '黒の剣士', mon.trait);
 // ハムの「連続攻撃」と同じ共通ルールへ乗せる。種ごとの分岐をコピーしない
 check('加算する種を一覧で持っている',
   source.includes("const HERO_CARD_BONUS_MONSTER_IDS = Object.freeze(['Ham', 'KenshiMocchi']);")

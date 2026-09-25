@@ -165,11 +165,18 @@ const tacticsTotalBaseMaxHp = (units) => (Array.isArray(units) ? units : [])
 // みゅあ・かどみうむ・回復カードで上がるライフ上限の倍率。
 // ★合計へ掛けると1体ずつの上限と基準が食い違うので、1体ずつの maxHp へ効かせる。
 //   素の上限(baseMaxHp)は残したまま計算し直すので、倍率が下がっても元へ戻せる
+// ★exMaxRate … タクティクスのEX(ガッツ全開っちー)で上がっている上限の割合。無ければ0。
+//   みゅあ補正で上限を作り直しても消えないよう、ここで一緒に掛ける(既存の子は0なので値は今までどおり)
+const tacticsExMaxRateOf = (unit) => {
+  const rate = Number(unit && unit.exMaxRate);
+  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+};
 const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
   const target = normalizeTacticsUnit(unit);
   if (!target) return null;
   const pct = Number.isFinite(Number(hpPct)) ? Math.max(0, Number(hpPct)) : 0;
-  const maxHp = Math.max(1, Math.floor(target.baseMaxHp * (1 + pct)));
+  const exRate = tacticsExMaxRateOf(target);
+  const maxHp = Math.max(1, Math.floor(target.baseMaxHp * (1 + pct) * (1 + exRate)));
   return normalizeTacticsUnit({ ...target, maxHp });
 };
 // ガッツの上限も同じ考え方。みゅあ補正は合計ではなく1体ずつへ効かせる
@@ -177,7 +184,8 @@ const scaleTacticsUnitMaxGuts = (unit, gutsPct = 0) => {
   const target = normalizeTacticsUnit(unit);
   if (!target) return null;
   const pct = Number.isFinite(Number(gutsPct)) ? Math.max(0, Number(gutsPct)) : 0;
-  const maxGuts = Math.max(0, Math.floor(target.baseMaxGuts * (1 + pct)));
+  const exRate = tacticsExMaxRateOf(target);
+  const maxGuts = Math.max(0, Math.floor(target.baseMaxGuts * (1 + pct) * (1 + exRate)));
   return normalizeTacticsUnit({ ...target, maxGuts });
 };
 const scaleTacticsUnits = (units, hpPct = 0, gutsPct = 0) => (Array.isArray(units) ? units : [])
@@ -891,23 +899,47 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   withCards … 同じターンにその子が通常カードも使えるか。false なら「使ったターン、**その子は**カードを使えない」
 //               ★止まるのは使った子だけ。ほかの子はいつもどおりカードを使える(2026-09-23 ユーザー指示
 //                 「EXで他行動禁止はそのモンスターだけ」)
-//   duration  … 効果の続く長さ。'turn'(発動ターン) / 'wave'(発動WAVEの終わりまで) / 'toggle'(もう一度使うまで)
-//   toggleLabels … duration:'toggle' のときの [切り替える前, 切り替えたあと] の呼び名
+//   duration  … 効果の続く長さ。'turn'(発動ターン) / 'wave'(発動WAVEの終わりまで) / 'style'(もう一度使って選び直すまで)
+//               / 'turns'(使ったターンから turns ターンのあいだ。WAVEが変わったらそこで切れる)
+//   turns     … duration:'turns' のときのターン数
+//   statRate  … 効いているあいだ、力と丈夫さを何割上げるか(0.3 なら30%)
+//   regenRate … 効いているあいだ、ターン終わりのライフ・ガッツの自動回復の率へそのまま足す値(0.3 なら上限の30%ぶんを上乗せ)
+//   fullRecover … true なら、使った瞬間にその子のライフとガッツを満タンにする
+//   styles    … duration:'style' のときの選択肢 [{ id, label, desc }]。使うたびに1つ選ぶ(いまのものは選べない)
+//   defaultStyle … バトルを始めたときのスタイル(styles の id)
+//   heroInitialStyle … true なら、勇者モンに選んだときだけ配置の画面で初期スタイルを選べる
 //   conditions … 使うための追加の条件(TACTICS_EX_CONDITIONS のキー)。無ければ空
 //   conditionText … 条件を画面に出すときの文(任意)
 //   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
 const TACTICS_EX_DURATION_TEXT = Object.freeze({
   turn: '発動したターンだけ',
   wave: '発動したWAVEが終わるまで',
-  toggle: 'もう一度使って切り替えるまで',
+  style: 'もう一度使って選び直すまで',
 });
 const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
     desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
-    maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
+    // ★2026-09-25 ユーザー指示で 1ラン3回 → 10回
+    maxUses: 10, unlimited: false, withCards: true, duration: 'turn',
     effect: 'coverAll',
+  }),
+  // ★2026-09-25 ユーザー指示で上げ幅を20% → 30%。さらに効いているあいだ自動回復を30%増やす
+  //   (「ステータス30%アップに変更。更に効果中ライフとガッツの自動回復を30%上昇」)。
+  //   自動回復は「いまの率 + 30%」(倍率ではなく固定値で足す。ユーザー指示「1.3倍じゃなくて30%固定値でプラス」)
+  // ★2026-09-25 ユーザー指示「モッチー ガッツ全開っちー 5ターンの間全てのステータスが20%上がり、
+  //   ライフとガッツを全回復する 使用回数3回」。上がるのは力と丈夫さ(ライフ・ガッツは満タンにする)。
+  //   カードとの併用は指定が無かったので、制限なし(併用できる)にしてある
+  Mocchi: Object.freeze({
+    id: 'mocchi_guts_full',
+    name: 'ガッツ全開っちー',
+    // ★2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」。
+    //   上限も20%上げ、その上がった上限まで満タンにする
+    desc: '5ターンのあいだ、ちから・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    statRate: 0.3, regenRate: 0.3, fullRecover: true,
+    effect: 'statBoost',
   }),
   Golem: Object.freeze({
     id: 'golem_all_in',
@@ -921,9 +953,22 @@ const TACTICS_EX_SKILLS = Object.freeze({
   KenshiMocchi: Object.freeze({
     id: 'kenshi_mocchi_weapon_change',
     name: 'ソード・コンバージョン',
-    desc: '二刀流と片手持ちを切り替える。片手持ちのあいだは力と同じ数値を丈夫さへ加える。固有技は使えるが、ソードスキルの効果は出ない。',
-    maxUses: 0, unlimited: true, withCards: false, duration: 'toggle',
-    toggleLabels: Object.freeze(['二刀流', '片手持ち']),
+    // ★2026-09-25 ユーザー指示で3択にした(片手剣・片手盾・二刀流。既定は片手剣)。
+    //   スタイルの効き目は、いつも「元のステータス」から数え直す(切り替えても積み重ならない)
+    // ★説明だけで3つの効き目が分かるように、スタイルごとに1行ずつ書く(2026-09-25 ユーザー指摘
+    //   「説明があれじゃ効果が分からない」)。画面は改行をそのまま出す(whitespace-pre-line)
+    desc: '戦い方（スタイル）を3つから選び直す。いまのスタイルは選べない。\n'
+      + '片手剣：いつもの戦い方。固有技でソードスキルも出る。\n'
+      + '片手盾：力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない。\n'
+      + '二刀流：丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）。',
+    maxUses: 0, unlimited: true, withCards: false, duration: 'style',
+    styles: Object.freeze([
+      Object.freeze({ id: 'sword', label: '片手剣', desc: 'いつもの戦い方。ソードスキルも出る' }),
+      Object.freeze({ id: 'shield', label: '片手盾', desc: '力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない' }),
+      Object.freeze({ id: 'dual', label: '二刀流', desc: '丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）' }),
+    ]),
+    defaultStyle: 'sword',
+    heroInitialStyle: true,
     effect: 'weaponChange',
   }),
 });
@@ -936,18 +981,25 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
-const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'toggle']);
+const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
+// 二刀流で、連撃を何回ぶん入れるか(メインのダメージは1回のまま。連撃だけ2回ぶん)
+const TACTICS_EX_DUAL_HIT_REPEAT = 2;
 
 // 定義を安全な形へそろえる。壊れた項目があっても落とさず、いちばん控えめな既定値へ倒す
 const normalizeTacticsExDef = (raw) => {
   if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || !raw.id) return null;
   const unlimited = raw.unlimited === true;
   const duration = TACTICS_EX_DURATIONS.includes(raw.duration) ? raw.duration : 'turn';
-  const toggleLabels = Array.isArray(raw.toggleLabels) && raw.toggleLabels.length === 2
-    ? raw.toggleLabels.map(String) : ['OFF', 'ON'];
+  const styles = Array.isArray(raw.styles)
+    ? raw.styles.filter(st => st && typeof st.id === 'string' && st.id)
+      .map(st => ({ id: st.id, label: String(st.label || st.id), desc: String(st.desc || '') }))
+    : [];
+  // スタイル式なのに選択肢が2つ未満なら、選び直せないので発動ターンへ倒す
+  const safeDuration = duration === 'style' && styles.length < 2 ? 'turn' : duration;
+  const defaultStyle = styles.some(st => st.id === raw.defaultStyle) ? raw.defaultStyle : (styles[0] ? styles[0].id : null);
   return {
     id: raw.id,
     name: String(raw.name || raw.id),
@@ -956,13 +1008,23 @@ const normalizeTacticsExDef = (raw) => {
     unlimited,
     // ★併用できるかが書かれていなければ「併用できない」へ倒す(強すぎる側へ倒さない)
     withCards: raw.withCards === true,
-    duration,
-    toggleLabels,
+    duration: safeDuration,
+    styles: safeDuration === 'style' ? styles : [],
+    defaultStyle: safeDuration === 'style' ? defaultStyle : null,
+    heroInitialStyle: safeDuration === 'style' && raw.heroInitialStyle === true,
+    turns: safeDuration === 'turns' ? Math.max(1, tacticsSafeInt(raw.turns, 1)) : 0,
+    statRate: Math.max(0, Number.isFinite(Number(raw.statRate)) ? Number(raw.statRate) : 0),
+    regenRate: Math.max(0, Number.isFinite(Number(raw.regenRate)) ? Number(raw.regenRate) : 0),
+    fullRecover: raw.fullRecover === true,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null,
   };
 };
+// 効果時間の文(「5ターンのあいだ」のようにターン数を入れる)
+const tacticsExDurationText = (def) => (!def ? null
+  : def.duration === 'turns' ? `使ったターンから${def.turns}ターンのあいだ（WAVEが変わると切れる）`
+  : (TACTICS_EX_DURATION_TEXT[def.duration] || null));
 // そのモンスターのEX。持っていなければ null
 const tacticsExDefOf = (monId, table = TACTICS_EX_SKILLS) =>
   (monId && table && Object.prototype.hasOwnProperty.call(table, monId) ? normalizeTacticsExDef(table[monId]) : null);
@@ -972,7 +1034,8 @@ const isTacticsExEffectImplemented = (def, implemented = TACTICS_EX_IMPLEMENTED_
 // ラン中の状態。枠(スロット)ごとに持つ(配置はラン中に変わらないので枠で数えてよい)。
 // ★念のため monId も持ち、枠の子が違えば「その子はまだ使っていない」として数える
 //   uses[slot]    = { monId, count }                1ランで使った回数
-//   effects[slot] = { monId, exId, duration, wave, turn, on }   いま載っている効果
+//   effects[slot] = { monId, exId, effect, duration, wave, turn, on, style, snapshot }   いま載っている効果
+//                   (style はスタイル式のいまのスタイル。on は「既定のスタイル以外か」)
 //   lastUse[slot] = { wave, turn }                  同じ子は1ターンに1回まで
 //   turnUsed      = { wave, turn }                  このターンにだれかがEXを使ったか
 //   cardLock[slot]= { wave, turn }                  このターン、その子はカードを使えない(使った子だけ)
@@ -1006,7 +1069,14 @@ const tacticsExRemaining = (def, count) => {
 const isTacticsExEffectActive = (state, slot, monId, now) => {
   const effect = normalizeTacticsExState(state).effects[slot];
   if (!effect || effect.monId !== monId) return false;
-  if (effect.duration === 'toggle') return effect.on === true;
+  if (effect.duration === 'style') return effect.on === true;
+  // ★ターン数で切れるもの。**WAVEをまたがない**(2026-09-25 ユーザー指示「WAVE跨ぎはなし」)。
+  //   同じWAVEのあいだだけ、使ったターンから数えて turns ターン目まで効く
+  if (effect.duration === 'turns') {
+    if (!now || tacticsSafeInt(effect.wave, -1) !== tacticsSafeInt(now.wave, -2)) return false;
+    const at = tacticsSafeInt(now.turn, -1), from = tacticsSafeInt(effect.turn, -1), len = tacticsSafeInt(effect.turns, 0);
+    return from >= 0 && at >= from && at < from + len;
+  }
   if (effect.duration === 'wave') return !!now && tacticsSafeInt(effect.wave, -1) === tacticsSafeInt(now.wave, -2);
   return sameTacticsExTurn(effect, now);
 };
@@ -1044,27 +1114,56 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
 // 使ったあとの状態を返す(渡された state は書き換えない)。
 // ★回数を減らすのは無制限でないときだけ。無制限は数えるが、残りには効かない
 // snapshot … 使った瞬間の値(捨て身なら使ったときの丈夫さ)。効果の計算はこの値から出す
-const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null } = {}) => {
+// choice … スタイル式のとき、選んだスタイルの id(checkTacticsExChoice を通したもの)
+const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null } = {}) => {
   const safe = normalizeTacticsExState(state);
   if (!def || !Number.isInteger(slot)) return safe;
+  // スタイル式は、選べないスタイル(いまのもの・知らないもの)なら何もしない(回数も減らさない)
+  if (def.duration === 'style' && checkTacticsExChoice(def, safe, slot, monId, choice)) return safe;
   const stamp = { wave: tacticsSafeInt(now && now.wave, 0), turn: tacticsSafeInt(now && now.turn, 0) };
   const count = tacticsExUsesOf(safe, slot, monId) + 1;
-  const prev = safe.effects[slot];
-  const wasOn = !!(prev && prev.monId === monId && prev.duration === 'toggle' && prev.on === true);
+  const style = def.duration === 'style' ? choice : null;
   return {
     uses: { ...safe.uses, [slot]: { monId, count } },
     effects: { ...safe.effects, [slot]: { monId, exId: def.id, effect: def.effect, duration: def.duration, wave: stamp.wave, turn: stamp.turn,
-      on: def.duration === 'toggle' ? !wasOn : true,
+      on: def.duration === 'style' ? style !== def.defaultStyle : true,
+      style,
+      turns: def.duration === 'turns' ? def.turns : 0, statRate: def.statRate || 0, regenRate: def.regenRate || 0,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
     cardLock: def.withCards ? safe.cardLock : { ...safe.cardLock, [slot]: stamp },
   };
 };
-// 切り替え式のEXが、いまどちらの状態か(画面に「いま：片手持ち」のように出す)
-const tacticsExToggleLabel = (def, state, slot, monId) => {
-  if (!def || def.duration !== 'toggle') return null;
-  return def.toggleLabels[isTacticsExEffectActive(state, slot, monId, null) ? 1 : 0];
+// スタイル式のEXの、いまのスタイル(id)。選んだことが無ければ既定のスタイル
+const tacticsExStyleOf = (def, state, slot, monId) => {
+  if (!def || def.duration !== 'style') return null;
+  const effect = normalizeTacticsExState(state).effects[slot];
+  const style = effect && effect.monId === monId ? effect.style : null;
+  return def.styles.some(st => st.id === style) ? style : def.defaultStyle;
+};
+// いまのスタイルの呼び名(画面に「いま：片手盾」のように出す)
+const tacticsExStyleLabel = (def, state, slot, monId) => {
+  const id = tacticsExStyleOf(def, state, slot, monId);
+  const st = id && def.styles.find(x => x.id === id);
+  return st ? st.label : null;
+};
+// そのスタイルを選べるか。選べないときだけ理由を返す(いまのスタイルは選べない)
+const checkTacticsExChoice = (def, state, slot, monId, choice) => {
+  if (!def || def.duration !== 'style') return null;
+  if (!def.styles.some(st => st.id === choice)) return 'スタイルを選ぶ';
+  if (tacticsExStyleOf(def, state, slot, monId) === choice) return 'いまのスタイルは選べない';
+  return null;
+};
+// 勇者モンの初期スタイル(配置の画面で選ぶ)。回数も「このターン」も数えない。
+// ★バトルを始める前にしか呼ばないので、ほかの記録はまっさらにして、その枠の1件だけにする
+//   (選び直して別の枠へ置き直したとき、前の枠に古いスタイルが残らないように)
+const setTacticsExInitialStyle = (state, { def, slot, monId, style } = {}) => {
+  const base = createTacticsExState();
+  if (!def || !def.heroInitialStyle || !Number.isInteger(slot) || !def.styles.some(st => st.id === style)) return base;
+  if (style === def.defaultStyle) return base;
+  return { ...base, effects: { [slot]: { monId, exId: def.id, effect: def.effect, duration: def.duration,
+    wave: 0, turn: 0, on: true, style, snapshot: null } } };
 };
 // その枠で、いま効いている効果の種類(effect)。効いていなければ null。
 // ★戦闘の計算側はモンスターのidではなく、これを見る(モンスターごとの if を増やさない)
@@ -1077,7 +1176,16 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
 // ★読むときに上乗せするだけなので、効果が切れた瞬間(WAVEが変わる・切り替えで戻す)に
 //   何もしなくても元の値へ戻る。トレーニングで伸ばした値も失われない
 //   捨て身(allIn)     … 丈夫さ0。使ったときの丈夫さの50%を力へ足す
-//   ソード・コンバージョン(weaponChange) の片手持ち … いまの力と同じ数値を丈夫さへ足す(力は減らない)
+//   ソード・コンバージョン(weaponChange) の片手盾 … いまの力と同じ数値を丈夫さへ足す(力は減らない)
+//                                         二刀流 … 丈夫さを半分にする(ヒット列の2回ぶんは tacticsExActiveStyle を見て別に掛ける)
+// ターン終わりの自動回復の率へ足す値(ガッツ全開っちーが効いている子だけ。ほかは0)。
+// ★倍率ではなく固定値で足す(いまの率 + regenRate)。倒れている子の戻り(10%ずつ)には乗せない
+const tacticsExRegenRateAt = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'statBoost') return 0;
+  const rate = Number(normalizeTacticsExState(state).effects[slot].regenRate);
+  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+};
 const applyTacticsExStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
   const kind = tacticsExActiveEffect(state, slot, unit.id, now);
@@ -1086,11 +1194,50 @@ const applyTacticsExStats = (unit, state, slot, now) => {
     const usedDef = Math.max(0, tacticsSafeInt(snap && snap.def, tacticsSafeInt(unit.def, 0)));
     return { ...unit, atk: Math.max(0, tacticsSafeInt(unit.atk, 0)) + Math.floor(usedDef * TACTICS_EX_ALL_IN_ATK_RATE), def: 0 };
   }
+  // ステータスアップ(ガッツ全開っちー): 力と丈夫さを statRate ぶん上げる(切り捨て)
+  if (kind === 'statBoost') {
+    const rate = Math.max(0, Number(normalizeTacticsExState(state).effects[slot].statRate) || 0);
+    return { ...unit, atk: Math.floor(Math.max(0, tacticsSafeInt(unit.atk, 0)) * (1 + rate)),
+      def: Math.floor(Math.max(0, tacticsSafeInt(unit.def, 0)) * (1 + rate)) };
+  }
+  // ★スタイルの効き目は、いつも「元のステータス」(盤面の値)から数え直す。積み重ならない
   if (kind === 'weaponChange') {
+    const style = normalizeTacticsExState(state).effects[slot].style;
     const atk = Math.max(0, tacticsSafeInt(unit.atk, 0));
-    return { ...unit, def: Math.max(0, tacticsSafeInt(unit.def, 0)) + atk };
+    const def = Math.max(0, tacticsSafeInt(unit.def, 0));
+    if (style === 'shield') return { ...unit, def: def + atk };
+    if (style === 'dual') return { ...unit, def: Math.floor(def / 2) };
   }
   return unit;
+};
+// ライフ・ガッツの上限を上げるEX(ガッツ全開っちー)の、上げ下げ。
+// ★上限そのものは盤面の値なので、効いているあいだは unit.exMaxRate に割合を持たせ、
+//   scaleTacticsUnits(みゅあ補正と同じ作り直し)で上限へ掛ける。切れたら0へ戻して作り直す
+//   (ライフ・ガッツは normalizeTacticsUnit が新しい上限で丸める)
+const setTacticsExMaxRate = (units, slot, rate) => (Array.isArray(units) ? units : [])
+  .map((unit, i) => (unit && i === slot ? { ...unit, exMaxRate: Math.max(0, Number(rate) || 0) } : unit));
+// 効果が切れているのに上限が上がったままの枠を、0へ戻す。戻した枠があれば changed:true
+const expireTacticsExMaxRates = (units, state, now) => {
+  let changed = false;
+  const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
+    if (!unit || !(tacticsExMaxRateOf(unit) > 0)) return unit;
+    if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
+    changed = true;
+    return { ...unit, exMaxRate: 0 };
+  });
+  return { units: next, changed };
+};
+// ターン数で切れる効果の、あと何ターン残っているか(使ったターンを含めて数える)。効いていなければ 0
+const tacticsExTurnsLeft = (state, slot, monId, now) => {
+  const effect = normalizeTacticsExState(state).effects[slot];
+  if (!effect || effect.duration !== 'turns' || !isTacticsExEffectActive(state, slot, monId, now)) return 0;
+  return tacticsSafeInt(effect.turn, 0) + tacticsSafeInt(effect.turns, 0) - tacticsSafeInt(now.turn, 0);
+};
+// いま効いているスタイル(既定のスタイルのときは null)。戦闘の計算側がヒット列やソードスキルの有無に使う
+const tacticsExActiveStyle = (state, slot, monId, now) => {
+  if (!tacticsExActiveEffect(state, slot, monId, now)) return null;
+  const style = normalizeTacticsExState(state).effects[slot].style;
+  return typeof style === 'string' ? style : null;
 };
 // 「みんなをかばう」が効いている枠(立っている子だけ)。無ければ null
 const tacticsExCoverSlot = (state, units, now) => {

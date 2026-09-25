@@ -115,6 +115,7 @@ const Audio_ = (() => {
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
     "audio/jingle-victory.mp3": "689c9715a824",
+    "audio/se-awakened-moo-apocalypse.mp3": "3ed18e30e8e7",
     "audio/綺季一閃_～花雪に舞う詠姫～.mp3": "099d201c53b1",
 // </audio-cache-keys>
   };
@@ -452,6 +453,32 @@ const Audio_ = (() => {
       jingleTimer = setTimeout(backToBGM, Math.ceil(buffer.duration * 1000) + 250);
     } catch (e) { if (currentKey) playBGM(currentKey); }
   };
+  // 音源ファイルの効果音(ボスの必殺技ムービーの音など。2026-09-25)。
+  // ★効果音の音量(seBus)を通すので、効果音の音量設定・オンオフがそのまま効く。
+  //   読み込みは BGM と同じ loadBuffer(キャッシュキー付き・一度読めば持っておく)。
+  //   Tone の再生器で鳴らす(BGM の出口とは別の音の世界なので、そのままつなげない)。
+  //   止められるように { stop(秒) } を返す。鳴らせなかったら null
+  const preloadSE = (src) => { if (enabled && src) loadBuffer(src).catch(() => {}); };
+  const playSeFile = async (src) => {
+    if (!enabled || !src) return null;
+    await ensure(); if (!Tone || !seBus) return null;
+    let buffer = null;
+    try { buffer = await loadBuffer(src); } catch (e) { return null; }
+    if (!enabled || pageHidden) return null;
+    try {
+      const player = new Tone.Player(buffer).connect(seBus);
+      let done = false;
+      const dispose = () => { if (done) return; done = true; try { player.dispose(); } catch (e) {} };
+      player.onstop = dispose;
+      player.start();
+      const stop = (fadeSec = 0.25) => {
+        if (done) return;
+        try { player.volume.rampTo(-60, fadeSec); } catch (e) {}
+        setTimeout(() => { try { player.stop(); } catch (e) {} dispose(); }, Math.round(fadeSec * 1000) + 60);
+      };
+      return { stop };
+    } catch (e) { return null; }
+  };
   const setPageHidden = (hidden) => { pageHidden = !!hidden; ctxTimeMark = null; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
   const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
   const isEnabled = () => enabled;
@@ -593,5 +620,5 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se };
+  return { playSeFile, preloadSE, playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se };
 })();

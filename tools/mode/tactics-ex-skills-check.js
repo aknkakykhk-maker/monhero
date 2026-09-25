@@ -58,14 +58,18 @@ vm.runInContext([
   // かばう先は「立っている子」だけ。盤面の関数(tacticsAliveSlots)を借りる
   line('const tacticsClamp'),
   slice('const normalizeTacticsUnit', 'const applyTacticsDamage'),
+  // 上限の作り直し(みゅあ補正とEXの上限アップ)も本体から借りる
+  slice('const tacticsExMaxRateOf', '// 敵の攻撃。当たった子だけが減り'),
   slice('const tacticsAliveSlots', 'const tacticsFilledSlots'),
   slice('// ==== タクティクス専用 EXスキル(STEP1: 共通基盤) ====', '// ==== タクティクス専用 EXスキルここまで ===='),
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
-    + 'applyTacticsExUse,tacticsExToggleLabel,tacticsExActiveEffect,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
+    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
 ].join('\n'), sandbox);
-const { gate, modes, ex } = sandbox;
+// ヒット列(二刀流で2回ぶん入るか)は本体の buildAttackHits をそのまま動かす
+vm.runInContext(slice('const HERO_CARD_BONUS_MONSTER_IDS', 'const attackAtonementDmg') + ';globalThis.hitsApi={buildAttackHits};', sandbox);
+const { gate, modes, ex, hitsApi } = sandbox;
 
 // ---------- ① タクティクス以外へ出ない ----------
 {
@@ -95,21 +99,23 @@ const { gate, modes, ex } = sandbox;
 const monol = ex.tacticsExDefOf('Monol');
 const golem = ex.tacticsExDefOf('Golem');
 const kenshi = ex.tacticsExDefOf('KenshiMocchi');
-check('モノリス「みんなをかばう」: ラン3回・併用できる・発動ターン',
-  monol && monol.name === 'みんなをかばう' && monol.maxUses === 3 && !monol.unlimited && monol.withCards && monol.duration === 'turn',
+check('モノリス「みんなをかばう」: ラン10回・併用できる・発動ターン',
+  monol && monol.name === 'みんなをかばう' && monol.maxUses === 10 && !monol.unlimited && monol.withCards && monol.duration === 'turn',
   JSON.stringify(monol));
 check('ゴーレム「捨て身」: ラン3回・使ったターンは他カード不可・WAVE内・効果中は再使用不可',
   golem && golem.name === '捨て身' && golem.maxUses === 3 && !golem.unlimited && !golem.withCards && golem.duration === 'wave'
     && golem.conditions.includes('notActive'),
   JSON.stringify(golem));
 check('剣士モッチー「ソード・コンバージョン」: 無制限・使ったターンは他カード不可・再使用まで続く',
-  kenshi && kenshi.name === 'ソード・コンバージョン' && kenshi.unlimited && !kenshi.withCards && kenshi.duration === 'toggle'
-    && kenshi.toggleLabels[0] === '二刀流' && kenshi.toggleLabels[1] === '片手持ち',
+  kenshi && kenshi.name === 'ソード・コンバージョン' && kenshi.unlimited && !kenshi.withCards && kenshi.duration === 'style'
+    && kenshi.styles.map(st => st.label).join('/') === '片手剣/片手盾/二刀流' && kenshi.defaultStyle === 'sword' && kenshi.heroInitialStyle,
   JSON.stringify(kenshi));
+check('ソード・コンバージョンの説明だけで3つのスタイルの効き目が分かる', ['片手剣：', '片手盾：', '二刀流：', '丈夫さ', 'ソードスキル', '連撃', 'メイン']
+  .every(w => kenshi.desc.includes(w)), kenshi.desc);
 check('EXを持たない子は null', ex.tacticsExDefOf('Ham') === null && ex.tacticsExDefOf(null) === null
   && ex.tacticsExDefOf('toString') === null && ex.tacticsExDefOf('__proto__') === null);
 check('どの定義も効果時間の説明を持つ', Object.keys(ex.TACTICS_EX_SKILLS)
-  .every(id => !!ex.TACTICS_EX_DURATION_TEXT[ex.tacticsExDefOf(id).duration]));
+  .every(id => !!ex.tacticsExDurationText(ex.tacticsExDefOf(id))));
 const ids = Object.keys(ex.TACTICS_EX_SKILLS).map(id => ex.tacticsExDefOf(id).id);
 check('EXのidが重ならない', new Set(ids).size === ids.length, ids.join(','));
 // STEP1 では効果の中身がまだ無い。入れたら TACTICS_EX_IMPLEMENTED_EFFECTS へ足すので、ここも合わせて変わる
@@ -118,22 +124,28 @@ check('効果が入っていないEXは「未実装」と判定される(画面�
 
 // ---------- ③④ 回数 ----------
 const T = (wave, turn) => ({ wave, turn });
+// スタイル式(ソード・コンバージョン)は、いまのスタイル以外を1つ選んで使う
 const use = (state, def, slot, monId, now, extra = {}) => {
   const c = ex.checkTacticsExUse({ def, state, slot, monId, alive: true, selectedCount: 0, now, ...extra });
-  return { check: c, state: c.ok ? ex.applyTacticsExUse(state, { def, slot, monId, now }) : state };
+  const choice = extra.choice || (def && def.duration === 'style'
+    ? def.styles.find(st => st.id !== ex.tacticsExStyleOf(def, state, slot, monId)).id : null);
+  return { check: c, state: c.ok ? ex.applyTacticsExUse(state, { def, slot, monId, now, choice }) : state };
 };
 {
   let s = ex.createTacticsExState();
+  // ★モノリスは 2026-09-25 から1ラン10回。回数は定義から読む(数字を検査へ書き写さない)
+  const M = monol.maxUses;
   check('新しいランの状態は、どの子も0回', ex.tacticsExUsesOf(s, 0, 'Monol') === 0
-    && ex.tacticsExRemaining(monol, 0).left === 3);
+    && ex.tacticsExRemaining(monol, 0).left === M);
   let r = use(s, monol, 1, 'Monol', T(1, 1)); s = r.state;
-  check('使うと残りが1減る(3→2)', r.check.ok && ex.tacticsExRemaining(monol, ex.tacticsExUsesOf(s, 1, 'Monol')).left === 2);
+  check(`使うと残りが1減る(${M}→${M - 1})`, r.check.ok && ex.tacticsExRemaining(monol, ex.tacticsExUsesOf(s, 1, 'Monol')).left === M - 1);
   // WAVEをまたぐ(WAVE2の1ターン目)。回数は戻らない
   r = use(s, monol, 1, 'Monol', T(2, 1)); s = r.state;
-  check('WAVEが変わっても回数は戻らない(2→1)', r.check.ok && ex.tacticsExRemaining(monol, ex.tacticsExUsesOf(s, 1, 'Monol')).left === 1);
-  r = use(s, monol, 1, 'Monol', T(3, 5)); s = r.state;
-  check('3回目で0になる', r.check.ok && ex.tacticsExRemaining(monol, ex.tacticsExUsesOf(s, 1, 'Monol')).left === 0);
-  r = use(s, monol, 1, 'Monol', T(4, 1));
+  check(`WAVEが変わっても回数は戻らない(${M - 1}→${M - 2})`, r.check.ok && ex.tacticsExRemaining(monol, ex.tacticsExUsesOf(s, 1, 'Monol')).left === M - 2);
+  let allOk = true;
+  for (let k = 2; k < M; k += 1) { r = use(s, monol, 1, 'Monol', T(3 + k, 1)); allOk = allOk && r.check.ok; s = r.state; }
+  check(`${M}回目で0になる`, allOk && ex.tacticsExRemaining(monol, ex.tacticsExUsesOf(s, 1, 'Monol')).left === 0);
+  r = use(s, monol, 1, 'Monol', T(99, 1));
   check('0回では使えない', !r.check.ok && /回数/.test(r.check.reason), r.check.reason);
   check('ほかの枠の回数には影響しない', ex.tacticsExUsesOf(s, 0, 'Monol') === 0);
   check('枠の子が違えば、その子はまだ使っていない扱い', ex.tacticsExUsesOf(s, 1, 'Golem') === 0);
@@ -191,14 +203,17 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const g = use(s0, golem, 3, 'Golem', T(2, 4)).state;
   check('WAVE内のEXは、そのWAVEのあいだ効き、次のWAVEで切れる', ex.isTacticsExEffectActive(g, 3, 'Golem', T(2, 20))
     && !ex.isTacticsExEffectActive(g, 3, 'Golem', T(3, 1)));
-  let k = use(s0, kenshi, 0, 'KenshiMocchi', T(1, 2)).state;
+  let k = use(s0, kenshi, 0, 'KenshiMocchi', T(1, 2), { choice: 'shield' }).state;
   const on1 = ex.isTacticsExEffectActive(k, 0, 'KenshiMocchi', T(5, 1));
-  const label1 = ex.tacticsExToggleLabel(kenshi, k, 0, 'KenshiMocchi');
-  k = use(k, kenshi, 0, 'KenshiMocchi', T(5, 1)).state;
+  k = use(k, kenshi, 0, 'KenshiMocchi', T(5, 1), { choice: 'sword' }).state;
   const on2 = ex.isTacticsExEffectActive(k, 0, 'KenshiMocchi', T(5, 1));
-  check('切り替え式は、WAVEをまたいでも続き、もう一度使うと戻る', on1 && !on2);
-  check('切り替え式の「いま」の呼び名', ex.tacticsExToggleLabel(kenshi, s0, 0, 'KenshiMocchi') === '二刀流'
-    && label1 === '片手持ち' && ex.tacticsExToggleLabel(kenshi, k, 0, 'KenshiMocchi') === '二刀流');
+  check('スタイル式は、WAVEをまたいでも続き、片手剣へ戻すと切れる', on1 && !on2);
+  check('スタイルの「いま」の呼び名(はじめは片手剣)', ex.tacticsExStyleLabel(kenshi, s0, 0, 'KenshiMocchi') === '片手剣'
+    && ex.tacticsExStyleLabel(kenshi, use(s0, kenshi, 0, 'KenshiMocchi', T(1, 1), { choice: 'dual' }).state, 0, 'KenshiMocchi') === '二刀流');
+  check('いまのスタイルは選べない・知らないスタイルも選べない', !!ex.checkTacticsExChoice(kenshi, s0, 0, 'KenshiMocchi', 'sword')
+    && !!ex.checkTacticsExChoice(kenshi, s0, 0, 'KenshiMocchi', 'axe') && ex.checkTacticsExChoice(kenshi, s0, 0, 'KenshiMocchi', 'dual') === null);
+  const bad = ex.applyTacticsExUse(s0, { def: kenshi, slot: 0, monId: 'KenshiMocchi', now: T(1, 1), choice: 'sword' });
+  check('選べないスタイルでは何も起きない(回数も減らない)', ex.tacticsExUsesOf(bad, 0, 'KenshiMocchi') === 0);
   const cond = ex.normalizeTacticsExDef({ id: 't', name: 't', maxUses: 5, withCards: true, duration: 'wave', conditions: ['notActive', 'nope'] });
   const sc = use(s0, cond, 0, 'X', T(1, 1)).state;
   const cc = ex.checkTacticsExUse({ def: cond, state: sc, slot: 0, monId: 'X', alive: true, now: T(1, 2) });
@@ -222,17 +237,49 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('捨て身: 効果中はもう一度使えない(回数が無駄に減らない)', !again.ok, again.reason);
   const nextWave = ex.checkTacticsExUse({ def: golem, state: g, slot: 0, monId: 'Golem', alive: true, now: T(3, 1) });
   check('捨て身: 次のWAVEではまた使える', nextWave.ok);
-  // ソード・コンバージョン: 仮仕様の例(二刀流 力185/丈夫さ25 → 片手持ち 力185/丈夫さ210)
-  const mUnit = { id: 'KenshiMocchi', hp: 300, maxHp: 300, atk: 185, def: 25, guts: 10, maxGuts: 20, downed: false };
-  const k1 = ex.applyTacticsExUse(s0, { def: kenshi, slot: 1, monId: 'KenshiMocchi', now: T(1, 1) });
-  const one = ex.applyTacticsExStats(mUnit, k1, 1, T(4, 9));
-  check('片手持ち: 力185/丈夫さ25 → 力185/丈夫さ210(WAVEをまたいでも続く)', one.atk === 185 && one.def === 210, `${one.atk}/${one.def}`);
-  check('片手持ちのあいだは「ソード・コンバージョン」の効果が効いている(ソードスキルを止める手がかり)',
-    ex.tacticsExActiveEffect(k1, 1, 'KenshiMocchi', T(4, 9)) === 'weaponChange');
-  const k2 = ex.applyTacticsExUse(k1, { def: kenshi, slot: 1, monId: 'KenshiMocchi', now: T(4, 9) });
-  const two = ex.applyTacticsExStats(mUnit, k2, 1, T(4, 10));
-  check('もう一度使うと二刀流に戻る(力も丈夫さも元どおり)', two.atk === 185 && two.def === 25
-    && ex.tacticsExActiveEffect(k2, 1, 'KenshiMocchi', T(4, 10)) === null);
+  // ソード・コンバージョン(2026-09-25 ユーザー指示)。新しい基礎値 力135/丈夫さ75 で数える
+  const mUnit = { id: 'KenshiMocchi', hp: 350, maxHp: 350, atk: 135, def: 75, guts: 10, maxGuts: 20, downed: false };
+  const at = (style, from = s0) => ex.applyTacticsExUse(from, { def: kenshi, slot: 1, monId: 'KenshiMocchi', now: T(1, 1), choice: style });
+  const sword = ex.applyTacticsExStats(mUnit, s0, 1, T(1, 1));
+  check('片手剣(既定): 力135/丈夫さ75 のまま', sword.atk === 135 && sword.def === 75, `${sword.atk}/${sword.def}`);
+  const shield = ex.applyTacticsExStats(mUnit, at('shield'), 1, T(4, 9));
+  check('片手盾: 力135/丈夫さ75 → 力135/丈夫さ210(WAVEをまたいでも続く)', shield.atk === 135 && shield.def === 210, `${shield.atk}/${shield.def}`);
+  const dual = ex.applyTacticsExStats(mUnit, at('dual'), 1, T(4, 9));
+  check('二刀流: 力135/丈夫さ75 → 力135/丈夫さ37(半分・切り捨て)', dual.atk === 135 && dual.def === 37, `${dual.atk}/${dual.def}`);
+  // ★切り替えても積み重ならない(いつも元のステータスから数え直す)
+  const back = ex.applyTacticsExStats(mUnit, at('dual', at('shield')), 1, T(4, 9));
+  check('片手盾→二刀流と選び直しても元のステータスから数える(210の半分ではなく75の半分)', back.def === 37, String(back.def));
+  check('効いているスタイルが分かる(片手盾・二刀流。片手剣は null)', ex.tacticsExActiveStyle(at('shield'), 1, 'KenshiMocchi', T(2, 2)) === 'shield'
+    && ex.tacticsExActiveStyle(at('dual'), 1, 'KenshiMocchi', T(2, 2)) === 'dual'
+    && ex.tacticsExActiveStyle(at('sword', at('dual')), 1, 'KenshiMocchi', T(2, 2)) === null);
+  // 勇者モンの初期スタイル。回数も「このターン」も数えない
+  const init = ex.setTacticsExInitialStyle(s0, { def: kenshi, slot: 2, monId: 'KenshiMocchi', style: 'dual' });
+  check('初期スタイル(二刀流)は回数を使わず、カードも止めない', ex.tacticsExStyleOf(kenshi, init, 2, 'KenshiMocchi') === 'dual'
+    && ex.tacticsExUsesOf(init, 2, 'KenshiMocchi') === 0 && ex.tacticsExLockedSlots(init, T(1, 1)).length === 0
+    && !ex.isTacticsExTurnUsed(init, T(1, 1)));
+  check('初期スタイルでもバトル中に選び直せる(元のステータスから)', ex.applyTacticsExStats(mUnit, at('shield', init), 1, T(1, 1)).def === 210
+    && ex.tacticsExStyleOf(kenshi, ex.applyTacticsExUse(init, { def: kenshi, slot: 2, monId: 'KenshiMocchi', now: T(1, 1), choice: 'shield' }), 2, 'KenshiMocchi') === 'shield');
+  check('初期スタイルが片手剣なら記録を残さない・スタイル式でない子は初期スタイルを持たない',
+    Object.keys(ex.setTacticsExInitialStyle(s0, { def: kenshi, slot: 2, monId: 'KenshiMocchi', style: 'sword' }).effects).length === 0
+    && Object.keys(ex.setTacticsExInitialStyle(s0, { def: golem, slot: 2, monId: 'Golem', style: 'dual' }).effects).length === 0);
+  // 二刀流のヒット列は、メイン・連撃をまとめて2回ぶん(合計ちょうど2倍)
+  const baseHits = hitsApi.buildAttackHits({ d: 1000, card: { type: 'unique', monId: 'KenshiMocchi' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi' });
+  const dualHits = hitsApi.buildAttackHits({ d: 1000, card: { type: 'unique', monId: 'KenshiMocchi' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi', hitRepeat: ex.TACTICS_EX_DUAL_HIT_REPEAT });
+  const sum = (hs) => hs.reduce((a, h) => a + h.dmg, 0);
+  // ★2回ぶん入るのは連撃だけ。メインは1回のまま(2026-09-25 ユーザー指示「二刀流はメインダメじゃなくて、連撃分のみね」)
+  const baseCombos = baseHits.filter(h => h.kind === 'combo');
+  const mainDmg = baseHits.filter(h => h.kind === 'main').reduce((a, h) => a + h.dmg, 0);
+  check('二刀流: 連撃だけが2回ぶん入り、メインは1回のまま(メイン1000＋連撃10%×3＋20%×2 → メイン1000＋連撃×2)',
+    dualHits.filter(h => h.kind === 'main').length === 1 && dualHits.length === baseHits.length + baseCombos.length
+    && sum(dualHits) === mainDmg + sum(baseCombos) * 2 && dualHits[0].kind === 'main',
+    `${baseHits.length}発 ${sum(baseHits)} → ${dualHits.length}発 ${sum(dualHits)}（メイン ${mainDmg}）`);
+  // 通常攻撃(勇者特性の二刀流で 50%+50% に分かれる)も、後半の50%は連撃なので2回ぶん。メインの50%は1回
+  const atkBase = hitsApi.buildAttackHits({ d: 1001, card: { type: 'atk' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi' });
+  const atkDual = hitsApi.buildAttackHits({ d: 1001, card: { type: 'atk' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi', hitRepeat: ex.TACTICS_EX_DUAL_HIT_REPEAT });
+  check('二刀流: 通常攻撃は メイン501＋連撃500 → メイン501＋連撃500×2', sum(atkBase) === 1001 && sum(atkDual) === 1501
+    && atkDual.filter(h => h.kind === 'main').length === 1, `${sum(atkBase)} → ${sum(atkDual)}`);
+  const noSkill = hitsApi.buildAttackHits({ d: 1000, card: { type: 'unique', monId: 'KenshiMocchi' }, attackerId: 'KenshiMocchi', heroId: 'KenshiMocchi', swordSkill: false });
+  check('片手盾(swordSkill:false)はソードスキルの20%×2が出ない', baseHits.length - noSkill.length === 2, `${baseHits.length}→${noSkill.length}`);
   // みんなをかばう
   const units = [
     { id: 'Mocchi', hp: 100, maxHp: 100, atk: 1, def: 1, guts: 0, maxGuts: 0, downed: false },
@@ -250,6 +297,55 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   const downUnits = units.map((u, i) => (i === 1 ? { ...u, hp: 0, downed: true } : u));
   check('かばう: モノリスが倒れていたら、かばわない', ex.tacticsExCoverSlot(m, downUnits, T(1, 2)) === null);
   check('効果の無いEXは力・丈夫さを変えない', JSON.stringify(ex.applyTacticsExStats(units[1], m, 1, T(1, 2))) === JSON.stringify(units[1]));
+}
+
+// ---------- ⑪ モッチー「ガッツ全開っちー」(2026-09-25 ユーザー指示) ----------
+{
+  const gm = ex.tacticsExDefOf('Mocchi');
+  check('モッチー「ガッツ全開っちー」: ラン3回・カードと併用できる・5ターン・30%・自動回復30%増・全回復', !!gm && gm.name === 'ガッツ全開っちー'
+    && gm.maxUses === 3 && !gm.unlimited && gm.withCards && gm.duration === 'turns' && gm.turns === 5
+    && gm.statRate === 0.3 && gm.regenRate === 0.3 && gm.fullRecover && ex.isTacticsExEffectImplemented(gm), JSON.stringify(gm));
+  check('効果時間の文にターン数と「WAVEが変わると切れる」が入る', /5ターン/.test(ex.tacticsExDurationText(gm)) && /WAVEが変わると切れる/.test(ex.tacticsExDurationText(gm)), ex.tacticsExDurationText(gm));
+  const A = (wave, turn) => ({ wave, turn });
+  const s0 = ex.createTacticsExState();
+  // WAVE2の3ターン目に使う
+  const g = ex.applyTacticsExUse(s0, { def: gm, slot: 0, monId: 'Mocchi', now: A(2, 3) });
+  const unit = { id: 'Mocchi', hp: 300, maxHp: 600, atk: 120, def: 120, guts: 50, maxGuts: 100, downed: false };
+  const on = ex.applyTacticsExStats(unit, g, 0, A(2, 3));
+  check('使ったターンから 力120/丈夫さ120 → 156/156(30%アップ)', on.atk === 156 && on.def === 156, `${on.atk}/${on.def}`);
+  check('同じWAVEの5ターン目(7ターン目)まで続く', ex.isTacticsExEffectActive(g, 0, 'Mocchi', A(2, 7)));
+  check('6ターン目(8ターン目)には切れて元の値に戻る', !ex.isTacticsExEffectActive(g, 0, 'Mocchi', A(2, 8))
+    && ex.applyTacticsExStats(unit, g, 0, A(2, 8)).atk === 120);
+  // ★WAVEはまたがない(2026-09-25 ユーザー指示「WAVE跨ぎはなし」)
+  const late = ex.applyTacticsExUse(s0, { def: gm, slot: 0, monId: 'Mocchi', now: A(2, 18) });
+  check('WAVEが変わったら5ターンたつ前でも切れる(WAVE2の18ターン目に使い、WAVE3の1ターン目で切れる)',
+    ex.isTacticsExEffectActive(late, 0, 'Mocchi', A(2, 19)) && !ex.isTacticsExEffectActive(late, 0, 'Mocchi', A(3, 1)));
+  check('あと何ターンか(使ったターンは5、最後のターンは1、切れたら0)', ex.tacticsExTurnsLeft(g, 0, 'Mocchi', A(2, 3)) === 5
+    && ex.tacticsExTurnsLeft(g, 0, 'Mocchi', A(2, 7)) === 1 && ex.tacticsExTurnsLeft(g, 0, 'Mocchi', A(2, 8)) === 0);
+  // ★ライフ・ガッツの上限も上げる(2026-09-25 のちに20% → 30%)(2026-09-25 ユーザー指示「ライフとガッツは上限も上げてさらに全回復のイメージだった」)。
+  //   上限はみゅあ補正と同じ作り直し(scaleTacticsUnits)で掛けるので、補正で作り直しても消えない
+  const base = { id: 'Mocchi', hp: 300, maxHp: 600, baseMaxHp: 600, atk: 120, def: 120, guts: 50, maxGuts: 100, baseMaxGuts: 100, downed: false };
+  const up = ex.scaleTacticsUnits(ex.setTacticsExMaxRate([base], 0, 0.3), 0, 0)[0];
+  check('上限が30%上がる(ライフ600→780・ガッツ100→130)。いまのライフ・ガッツはそのまま', up.maxHp === 780 && up.maxGuts === 130 && up.hp === 300 && up.guts === 50,
+    `${up.hp}/${up.maxHp} ${up.guts}/${up.maxGuts}`);
+  const upMua = ex.scaleTacticsUnits(ex.setTacticsExMaxRate([base], 0, 0.3), 0.1, 0)[0];
+  check('みゅあ補正(+10%)で作り直しても30%は消えない(600×1.1×1.3＝858)', upMua.maxHp === 858, String(upMua.maxHp));
+  const fullUnit = { ...up, hp: 780, guts: 130 };
+  const exp = ex.expireTacticsExMaxRates([fullUnit], g, A(2, 8));
+  const down = ex.scaleTacticsUnits(exp.units, 0, 0)[0];
+  check('切れたら上限を元へ戻し、ライフ・ガッツは新しい上限で丸める(780→600・130→100)', exp.changed && down.maxHp === 600 && down.hp === 600
+    && down.maxGuts === 100 && down.guts === 100, `${down.hp}/${down.maxHp} ${down.guts}/${down.maxGuts}`);
+  check('効いているあいだは上限を戻さない', !ex.expireTacticsExMaxRates([fullUnit], g, A(2, 7)).changed);
+  check('上限を上げていない子(既存の子)は、作り直しても値が変わらない', ex.scaleTacticsUnits([base], 0.1, 0)[0].maxHp === 660);
+  check('使ったターンもほかのカードを使える(その子も)', !ex.isTacticsExCardLocked(g, 0, A(2, 3)));
+  // ★効いているあいだ、自動回復を30%増やす(2026-09-25 ユーザー指示「効果中ライフとガッツの自動回復を30%上昇」)
+  check('効いているあいだは自動回復の上乗せが0.3、切れたら0・ほかの枠は0',
+    ex.tacticsExRegenRateAt(g, [unit], 0, A(2, 3)) === 0.3 && ex.tacticsExRegenRateAt(g, [unit], 0, A(2, 7)) === 0.3
+    && ex.tacticsExRegenRateAt(g, [unit], 0, A(2, 8)) === 0 && ex.tacticsExRegenRateAt(g, [unit, unit], 1, A(2, 3)) === 0
+    && ex.tacticsExRegenRateAt(late, [unit], 0, A(3, 1)) === 0);
+  check('ほかの子に入れ替わっていたら上乗せしない', ex.tacticsExRegenRateAt(g, [{ ...unit, id: 'Golem' }], 0, A(2, 3)) === 0);
+  check('自動回復は1体ずつ「上限の30%」を固定値で足す(率への倍率ではない・倒れている子の戻りには乗せない)',
+    /const boost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now\);[\s\S]{0,120}rateHealTacticsAt\(units, slotIdx, boost, boost\)[\s\S]{0,120}const downed = regenDownedTacticsBoard\(units\)/.test(app));
 }
 
 // ---------- ⑧ 壊れた値 ----------
@@ -306,14 +402,28 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('敵の攻撃の当たり先はすべて tacticsTargetsNow(かばう)を通る',
     !/tacticsIntentTargets\(intent,tacticsUnitsRef\.current,actingEnemyDist\)/.test(app)
     && (app.match(/tacticsTargetsNow\(intent,actingEnemyDist\)/g) || []).length === 3);
-  check('片手持ちの剣士モッチーはソードスキルが出ない(実処理・予測の両方)',
-    (app.match(/swordSkill:tacticsExEffectAt\(slotIdx\)!=='weaponChange'/g) || []).length === 2
-    && /card\.monId==='KenshiMocchi'&&tacticsExEffectAt\(slotIdx\)==='weaponChange'/.test(app)
+  check('片手盾の剣士モッチーはソードスキルが出ない・二刀流は連撃が2回ぶん(実処理・予測の両方)',
+    (app.match(/swordSkill:tacticsExStyleAt\(slotIdx\)!=='shield'/g) || []).length === 2
+    && (app.match(/hitRepeat:tacticsExStyleAt\(slotIdx\)==='dual'\?TACTICS_EX_DUAL_HIT_REPEAT:1/g) || []).length === 2
+    && /card\.monId==='KenshiMocchi'&&tacticsExStyleAt\(slotIdx\)==='shield'/.test(app)
     && /if \(swordSkill && isUniqueOf\('KenshiMocchi'\)\)/.test(source));
+  check('勇者モンを置いた瞬間に初期スタイルを書き込む(タクティクスだけ)',
+    /if \(isTacticsMode\(runMode\)\) \{\n\s*const heroExDef=tacticsExDefOf\(m\.id\);/.test(app)
+    && /setTacticsHeroStyle\(null\);/.test(app.slice(app.indexOf('const resetTacticsJoinCatchUp'), app.indexOf('const resetTacticsJoinCatchUp') + 800)));
   check('効き目は ref から「いま」を読む(useCallback の古い関数から呼ばれても同じ答え)',
     /const tacticsExEffectAt = \(slotIdx\) => \{\n\s*const live=tacticsExLiveRef\.current;/.test(app));
-  check('発動は詳細パネルの「EXスキルを使用」からだけ', (screen.match(/activateTacticsEx\(/g) || []).length === 1
-    && /data-tactics-ex-use disabled=\{!exPanel\.check\.ok\}/.test(screen));
+  // 発動の入口は詳細パネルの中だけ(「EXスキルを使用」と、スタイル式の選択肢)。距離枠のタップからは発動しない
+  const panelSrc = screen.slice(screen.indexOf('{exPanel&&ReactDOM.createPortal('), screen.indexOf('{showBattleMenu&&ReactDOM.createPortal('));
+  check('使った瞬間にその子のライフとガッツを満タンにする(ガッツ全開っちー)',
+    /if\(def\.fullRecover\)\{[\s\S]{0,600}recoverTacticsGutsAt\(healTacticsAt\(units,slotIdx,hpGain\),slotIdx,gutsGain\)/.test(app)
+    && /const tacticsExNow = \{ wave, turn:turnCount \};/.test(app)
+    && /if\(def\.statRate>0\) units=scaleTacticsUnits\(setTacticsExMaxRate\(units,slotIdx,def\.statRate\)/.test(app)
+    && /const result = expireTacticsExMaxRates\(tacticsUnitsRef\.current, tacticsExStateRef\.current, \{ wave, turn:turnCount \}\);/.test(app));
+  check('発動は詳細パネルの「EXスキルを使用」(スタイル式はその先の選択肢)からだけ',
+    (screen.match(/activateTacticsEx\(/g) || []).length === (panelSrc.match(/activateTacticsEx\(/g) || []).length
+    && (panelSrc.match(/activateTacticsEx\(/g) || []).length === 2
+    && /data-tactics-ex-use disabled=\{!exPanel\.check\.ok\}/.test(screen)
+    && /data-tactics-ex-choice=\{st\.id\} disabled=\{st\.current\|\|!exPanel\.check\.ok\}/.test(screen));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
