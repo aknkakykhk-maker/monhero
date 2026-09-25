@@ -2524,6 +2524,30 @@ const createAnimationStyle = () => {
     @keyframes mooGather { 0% { opacity: 0; transform: translate(var(--gx), var(--gy)) scale(1.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(0, 0) scale(.3); } }
     [data-moo-reticle] { width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; opacity: 0; border: 3px dashed rgba(250,204,21,.95);
       box-shadow: 0 0 16px rgba(220,38,38,.9), inset 0 0 16px rgba(220,38,38,.6); animation: emLock 800ms ease-out both; }
+    /* ---- ボスの必殺技ムービー(71-screen-battle の BossMovieLayer)。画面を切り替えて、上に技名・まんなかにムービー ----
+       ★ムービーは横長(768×488)。縦のスマホでは幅いっぱいより少し大きく(116vw)して左右を少しだけ切り、上下のふちはぼかして背景へなじませる。
+       ★技名の札(z 65000)・敵の技の演出(z 64000)より上に出す */
+    [data-boss-movie] { position: fixed; inset: 0; z-index: 66000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); -webkit-tap-highlight-color: transparent; user-select: none;
+      background: radial-gradient(ellipse at 50% 50%, #34104f, #0c0218 62%, #000); animation: bossMovieIn 260ms ease-out both; }
+    /* ★背景は不透明にする。半透明だと、うしろの戦闘画面(敵の絵・枠)が透けて見える */
+    @keyframes bossMovieIn { from { opacity: 0; } to { opacity: 1; } }
+    [data-boss-movie-stage] { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    [data-boss-movie-frame] { position: relative; flex-shrink: 0; width: min(116vw, calc(66vh * 768 / 488)); aspect-ratio: 768 / 488; overflow: hidden;
+      -webkit-mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); }
+    [data-boss-movie-frame] > video { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+    [data-boss-movie-title] { text-align: center; line-height: 1.15; animation: bossMovieTitle 900ms cubic-bezier(.2,.8,.2,1) both; }
+    [data-boss-movie-title] small { display: block; font-size: 12px; font-weight: 900; letter-spacing: .3em; color: #e9d5ff; opacity: .85; }
+    [data-boss-movie-title] b { display: block; font-weight: 900; font-size: clamp(30px, 10vw, 52px); letter-spacing: .14em; color: #fff; white-space: nowrap;
+      text-shadow: 0 0 10px #c084fc, 0 0 26px #7e22ce, 0 3px 0 #3b0764; -webkit-text-stroke: 1px #facc15; }
+    @keyframes bossMovieTitle { 0% { opacity: 0; transform: scale(1.6); } 100% { opacity: 1; transform: scale(1); } }
+    [data-boss-movie-skip] { position: absolute; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); padding: 6px 12px; border-radius: 999px; pointer-events: none;
+      font-size: 11px; font-weight: 900; color: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.45); transition: opacity 300ms; }
+    /* 光線・爆発の瞬間の揺れ。a と b は同じ動き(属性を切り替えて、動きを頭からかけ直すため2つある) */
+    [data-boss-movie-shake="a"] { animation: bossMovieShakeA 420ms ease-out both; }
+    [data-boss-movie-shake="b"] { animation: bossMovieShakeB 420ms ease-out both; }
+    @keyframes bossMovieShakeA { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-9px, 6px); } 30% { transform: translate(8px, -7px); } 45% { transform: translate(-6px, 4px); } 60% { transform: translate(5px, -3px); } 80% { transform: translate(-2px, 1px); } }
+    @keyframes bossMovieShakeB { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-9px, 6px); } 30% { transform: translate(8px, -7px); } 45% { transform: translate(-6px, 4px); } 60% { transform: translate(5px, -3px); } 80% { transform: translate(-2px, 1px); } }
     /* 覚醒ムーの待機: 翼を広げるように左右へ張り、ときどき身をかがめて吠える。黒い気が立ちのぼり、目が赤く光る */
     @keyframes mooIdleMenace {
       0%, 100% { transform: translateY(0) scale(1, 1); }
