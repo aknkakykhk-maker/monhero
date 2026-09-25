@@ -1194,6 +1194,88 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
     </div>
   );
 };
+// DyedMonsterImage と同じ絵(object-contain・部位マスク・濃さ)を、size×size の canvas 1枚へ焼く。
+// モンヒロビートの演奏画面で使う(2026-09-25)。DOM のまま出すと、元絵(最大1024px)と
+// 部位ごとの染め絵・マスクを何枚も重ねた要素になり、その要素を拡大・縮小するたびに
+// 端末はマスクを掛け直して描き直す。演奏中は落ちてくるノーツの顔が毎フレーム大きくなるので、
+// それがそのままカクつきになっていた(ユーザー報告「モンスターノーツを踏むと画面が飛ぶ」)。
+// 焼いてしまえば、あとは小さな絵を1枚置くだけになる。
+// 染め絵・マスクは DyedMonsterImage と同じキャッシュ(getRecoloredImage / getDyeRegionMasks)から取る。
+// 読めなかったときは null を返す(呼び出し側は絵を出さないだけにする)。
+const _loadArtImage = (url) => new Promise((resolve) => {
+  if (!url || typeof window === 'undefined' || !window.Image) { resolve(null); return; }
+  const img = new window.Image();
+  img.onload = () => resolve(img);
+  img.onerror = () => resolve(null);
+  img.src = url;
+});
+const _drawContain = (ctx, img, size) => {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  if (!(w > 0 && h > 0)) return;
+  const k = Math.min(size / w, size / h), dw = w * k, dh = h * k;
+  ctx.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
+};
+const bakeDyedMonsterCanvas = async ({ baseId, src, masuColors }, size) => {
+  try {
+    if (typeof document === 'undefined' || !src || !(size > 0)) return null;
+    const px = Math.max(1, Math.round(size));
+    const hues = MASU_COLOR_REGION_HUES[baseId];
+    const rawColors = masuColors || [];
+    const fallbackMap = MASU_COLOR_FALLBACK_REGION[baseId];
+    const colors = (fallbackMap && hues) ? hues.map((_, idx) => rawColors[idx] || (fallbackMap[idx] !== undefined ? rawColors[fallbackMap[idx]] : rawColors[idx])) : rawColors;
+    const base = await _loadArtImage(src);
+    if (!base) return null;
+    const out = document.createElement('canvas');
+    out.width = px; out.height = px;
+    const ctx = out.getContext('2d');
+    if (!ctx) return null;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    if (!hues || hues.length === 0) {
+      const recoloredUrl = colors[0] ? await Promise.resolve(getRecoloredImage(src, colors[0], baseId, 0)) : null;
+      const recolored = recoloredUrl ? await _loadArtImage(recoloredUrl) : null;
+      const alpha = colorAlphaOf(colors[0]);
+      if (recolored && alpha < MASU_COLOR_ALPHA_MAX) {
+        _drawContain(ctx, base, px);
+        ctx.globalAlpha = alpha / 100;
+        _drawContain(ctx, recolored, px);
+        ctx.globalAlpha = 1;
+      } else {
+        _drawContain(ctx, recolored || base, px);
+      }
+      return out;
+    }
+    const masks = colors.some(Boolean) ? await Promise.resolve(getDyeRegionMasks(baseId, src, null)) : null;
+    _drawContain(ctx, base, px);
+    if (!masks) return out;
+    const layer = document.createElement('canvas');
+    layer.width = px; layer.height = px;
+    const lctx = layer.getContext('2d');
+    if (!lctx) return out;
+    lctx.imageSmoothingEnabled = true;
+    lctx.imageSmoothingQuality = 'high';
+    for (let idx = 0; idx < hues.length; idx++) {
+      if (!colors[idx] || !masks[idx]) continue;
+      const recoloredUrl = await Promise.resolve(getRecoloredImage(src, colors[idx], baseId, idx));
+      if (!recoloredUrl) continue;
+      const [recolored, mask] = await Promise.all([_loadArtImage(recoloredUrl), _loadArtImage(masks[idx])]);
+      if (!recolored || !mask) continue;
+      // CSS の mask-image(アルファで切り抜く・mask-size:contain・中央)と同じことを canvas でする
+      lctx.globalCompositeOperation = 'source-over';
+      lctx.clearRect(0, 0, px, px);
+      _drawContain(lctx, recolored, px);
+      lctx.globalCompositeOperation = 'destination-in';
+      _drawContain(lctx, mask, px);
+      lctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = colorAlphaOf(colors[idx]) / 100;
+      ctx.drawImage(layer, 0, 0);
+      ctx.globalAlpha = 1;
+    }
+    return out;
+  } catch (e) {
+    return null;
+  }
+};
 // 種族チャレンジの全カードが使う、共通のモンスター絵の枠。
 //
 // 【なぜ共通部品にするか】

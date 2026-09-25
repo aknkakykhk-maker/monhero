@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7ae8d61efb0cddba
+// generated-sha256: 8fb8ca54798fa575
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 03:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 03:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6234,6 +6234,88 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
       ) : null)}
     </div>
   );
+};
+// DyedMonsterImage と同じ絵(object-contain・部位マスク・濃さ)を、size×size の canvas 1枚へ焼く。
+// モンヒロビートの演奏画面で使う(2026-09-25)。DOM のまま出すと、元絵(最大1024px)と
+// 部位ごとの染め絵・マスクを何枚も重ねた要素になり、その要素を拡大・縮小するたびに
+// 端末はマスクを掛け直して描き直す。演奏中は落ちてくるノーツの顔が毎フレーム大きくなるので、
+// それがそのままカクつきになっていた(ユーザー報告「モンスターノーツを踏むと画面が飛ぶ」)。
+// 焼いてしまえば、あとは小さな絵を1枚置くだけになる。
+// 染め絵・マスクは DyedMonsterImage と同じキャッシュ(getRecoloredImage / getDyeRegionMasks)から取る。
+// 読めなかったときは null を返す(呼び出し側は絵を出さないだけにする)。
+const _loadArtImage = (url) => new Promise((resolve) => {
+  if (!url || typeof window === 'undefined' || !window.Image) { resolve(null); return; }
+  const img = new window.Image();
+  img.onload = () => resolve(img);
+  img.onerror = () => resolve(null);
+  img.src = url;
+});
+const _drawContain = (ctx, img, size) => {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  if (!(w > 0 && h > 0)) return;
+  const k = Math.min(size / w, size / h), dw = w * k, dh = h * k;
+  ctx.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
+};
+const bakeDyedMonsterCanvas = async ({ baseId, src, masuColors }, size) => {
+  try {
+    if (typeof document === 'undefined' || !src || !(size > 0)) return null;
+    const px = Math.max(1, Math.round(size));
+    const hues = MASU_COLOR_REGION_HUES[baseId];
+    const rawColors = masuColors || [];
+    const fallbackMap = MASU_COLOR_FALLBACK_REGION[baseId];
+    const colors = (fallbackMap && hues) ? hues.map((_, idx) => rawColors[idx] || (fallbackMap[idx] !== undefined ? rawColors[fallbackMap[idx]] : rawColors[idx])) : rawColors;
+    const base = await _loadArtImage(src);
+    if (!base) return null;
+    const out = document.createElement('canvas');
+    out.width = px; out.height = px;
+    const ctx = out.getContext('2d');
+    if (!ctx) return null;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    if (!hues || hues.length === 0) {
+      const recoloredUrl = colors[0] ? await Promise.resolve(getRecoloredImage(src, colors[0], baseId, 0)) : null;
+      const recolored = recoloredUrl ? await _loadArtImage(recoloredUrl) : null;
+      const alpha = colorAlphaOf(colors[0]);
+      if (recolored && alpha < MASU_COLOR_ALPHA_MAX) {
+        _drawContain(ctx, base, px);
+        ctx.globalAlpha = alpha / 100;
+        _drawContain(ctx, recolored, px);
+        ctx.globalAlpha = 1;
+      } else {
+        _drawContain(ctx, recolored || base, px);
+      }
+      return out;
+    }
+    const masks = colors.some(Boolean) ? await Promise.resolve(getDyeRegionMasks(baseId, src, null)) : null;
+    _drawContain(ctx, base, px);
+    if (!masks) return out;
+    const layer = document.createElement('canvas');
+    layer.width = px; layer.height = px;
+    const lctx = layer.getContext('2d');
+    if (!lctx) return out;
+    lctx.imageSmoothingEnabled = true;
+    lctx.imageSmoothingQuality = 'high';
+    for (let idx = 0; idx < hues.length; idx++) {
+      if (!colors[idx] || !masks[idx]) continue;
+      const recoloredUrl = await Promise.resolve(getRecoloredImage(src, colors[idx], baseId, idx));
+      if (!recoloredUrl) continue;
+      const [recolored, mask] = await Promise.all([_loadArtImage(recoloredUrl), _loadArtImage(masks[idx])]);
+      if (!recolored || !mask) continue;
+      // CSS の mask-image(アルファで切り抜く・mask-size:contain・中央)と同じことを canvas でする
+      lctx.globalCompositeOperation = 'source-over';
+      lctx.clearRect(0, 0, px, px);
+      _drawContain(lctx, recolored, px);
+      lctx.globalCompositeOperation = 'destination-in';
+      _drawContain(lctx, mask, px);
+      lctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = colorAlphaOf(colors[idx]) / 100;
+      ctx.drawImage(layer, 0, 0);
+      ctx.globalAlpha = 1;
+    }
+    return out;
+  } catch (e) {
+    return null;
+  }
 };
 // 種族チャレンジの全カードが使う、共通のモンスター絵の枠。
 //
@@ -15422,6 +15504,39 @@ const RHYTHM_HAPTICS=(()=>{
 // 歓声(mhRhythmSideCheer)の長さ。CSS側と同じ値をここに持つ。
 // 終わったら data-rhythm-side-hit を外して、待機の動きへ戻すために使う。
 const RHYTHM_SIDE_CHEER_MS=700;
+// ===== マスモンの絵を、演奏の前に1枚の小さな絵へ焼いておく(2026-09-25) =====
+// ユーザー報告「どの端末でも演奏中にカクつく / モンスターノーツを踏むと画面が飛ぶ」。
+// 以前はノーツの顔を DOM の要素(元絵＋部位ごとの染め絵をマスクで重ね、影を2重に付けたもの)の
+// まま canvas の上へ置き、落ちてくるあいだ毎フレーム拡大率を書き換えていた。拡大率は
+// 合成用のレイヤーの**内側**で変わるので、端末は毎フレーム、影とマスクを掛け直して
+// 最大1024pxの絵を描き直していた。踏んだ瞬間の「弾ける」動きも同じところで起きる。
+// いまは顔を焼いた絵にして、ノーツと同じ canvas へ drawImage するだけにした。見た目は同じ。
+// 顔の枠(42px)・拡大(1.28倍)・影は、以前の CSS([data-rhythm-canvas-face])の値そのまま。
+const RHYTHM_FACE_BOX=42,RHYTHM_FACE_ZOOM=1.28,RHYTHM_FACE_PAD=12;
+const rhythmBakeMonsterFace=async(monster,dpr)=>{
+  if(!monster||!monster.imageUrl||typeof document==='undefined')return null;
+  // 焼く画素 / 顔の枠の1px。ノーツがいちばん手前で 1.28倍になるので、そこで画面の画素と1対1になる
+  const ratio=RHYTHM_FACE_ZOOM*Math.max(1,Number(dpr)||1);
+  const art=await bakeDyedMonsterCanvas({baseId:monster.baseId,src:monster.imageUrl,masuColors:monster.colors},Math.round(RHYTHM_FACE_BOX*ratio));
+  if(!art)return null;
+  const pad=Math.ceil(RHYTHM_FACE_PAD*ratio),full=art.width+pad*2;
+  const canvasOf=()=>{const c=document.createElement('canvas');c.width=full;c.height=full;return c;};
+  // 弾ける演出のあいだは影なし(以前の CSS も filter:none にしていた)
+  const plain=canvasOf(),plainCtx=plain.getContext('2d');
+  if(!plainCtx)return null;
+  plainCtx.drawImage(art,pad,pad);
+  // filter:drop-shadow(0 1px 2px rgba(0,0,0,.58)) drop-shadow(0 0 4px rgba(253,224,71,.55)) と同じ順に重ねる。
+  // canvas の shadowBlur は CSS の drop-shadow の2倍の値で同じぼけ方になる(ブラウザで測って合わせた)
+  const shaded=canvasOf(),shadedCtx=shaded.getContext('2d');
+  const glow=canvasOf(),glowCtx=glow.getContext('2d');
+  if(!shadedCtx||!glowCtx)return null;
+  shadedCtx.shadowColor='rgba(0,0,0,.58)';shadedCtx.shadowOffsetY=1*ratio;shadedCtx.shadowBlur=4*ratio;
+  shadedCtx.drawImage(art,pad,pad);
+  glowCtx.shadowColor='rgba(253,224,71,.55)';glowCtx.shadowBlur=8*ratio;
+  glowCtx.drawImage(shaded,0,0);
+  // box … 余白込みの一辺を「顔の枠(42px)の何倍か」で持つ。描くときはこれに拡大率を掛ける
+  return {glow,plain,box:full/art.width};
+};
 // ポーズから戻るときの数え方。開始のときの READY は要らない(もう構えている)ので 3→2→1 だけ
 const RHYTHM_RESUME_COUNTDOWN_STEPS=Object.freeze(['3','2','1']);
 // 曲の位置を「1:05」の形にする。ポーズ画面の「いまどのあたりか」に使う
@@ -15592,7 +15707,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // ref も付け直すため、タップのたびに一瞬止まって見える(2026-09-04の実機報告)。
   // ノーツを canvas 1枚へ描くか(発熱対策・2026-09-07)。公開フラグとデバッグ画面の上書きで決まり、演奏の途中では変えない
   const canvasNotes=useState(()=>rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
-  const noteCanvasRef=useRef(null),faceRefs=useRef([]);
+  const noteCanvasRef=useRef(null);
   useEffect(()=>{if(!canvasNotes)return undefined;RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current);return()=>RHYTHM_CANVAS_RENDERER.release();},[canvasNotes]);
   const noteElements=useMemo(()=>canvasNotes?null:chart.notes.map((note,index)=>{const monsterSlot=rhythmNoteMonsterSlot(note),monster=monsterSlot?monsters[monsterSlot-1]||null:null;return <div key={index} ref={el=>laneRefs.current[index]=el} data-rhythm-note data-note-type={note.type} data-rhythm-note-wide={rhythmNoteIsWide(note)?'1':undefined} data-rhythm-monster-note={monster?monsterSlot:undefined} className="absolute top-0 h-5" style={{left:`calc(${note.lane*20}% + 5px)`,width:'calc(20% - 10px)',pointerEvents:'none'}}>{/* HOLDの帯は水色でそろえる。以前は根もとが emerald(緑)だったが、FLICKが緑なので
                 「フリックとホールドの色が似ていて分かりにくい」と指摘された(2026-09-07)。
@@ -15612,7 +15727,32 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
                 {monster&&!monsterFaceHidden&&<span data-rhythm-monster-face aria-hidden="true" className="absolute left-1/2 top-1/2 flex h-[42px] w-[42px] items-center justify-center" style={{transform:'translate(-50%,-50%) scale(var(--rhythm-note-depth-scale, 1))'}}>{monster.imageUrl&&<DyedMonsterImage baseId={monster.baseId} src={monster.imageUrl} alt="" masuColors={monster.colors} draggable={false} className="h-full w-full object-contain"/>}</span>}</div>;}),[chart.notes,monsterSignature,settings.lightweightMode,settings.effectAmount,monsterFaceHidden]);
   // canvas で描くときも、マスモンの絵(染色済み・透明部分あり)だけは要素のまま canvas の上へ重ねる。
   // 位置と大きさは tick が transform で書く。絵が無いノーツには要素を作らない
-  const canvasFaceElements=useMemo(()=>canvasNotes&&!monsterFaceHidden?chart.notes.map((note,index)=>{const monsterSlot=rhythmNoteMonsterSlot(note),monster=monsterSlot?monsters[monsterSlot-1]||null:null;if(!monster)return null;return <span key={index} ref={el=>faceRefs.current[index]=el} data-rhythm-canvas-face aria-hidden="true" style={{display:'none'}}><span data-rhythm-canvas-face-art>{monster.imageUrl&&<DyedMonsterImage baseId={monster.baseId} src={monster.imageUrl} alt="" masuColors={monster.colors} draggable={false} className="h-full w-full object-contain"/>}</span></span>;}).filter(Boolean):null,[canvasNotes,chart.notes,monsterSignature,monsterFaceHidden]);
+  // 両サイドのマスモンも、焼いた1枚の絵で出す(2026-09-25)。染色の重ね絵(元絵＋部位ごとの染め絵を
+  // マスクで重ねたもの)のままだと、能力が効いて絵が1.14倍になるあいだや、跳ねる動きが切り替わるたびに、
+  // 端末が最大1024pxの絵へマスクを掛け直して描き直す。モンスターノーツを踏んだ瞬間にちょうど重なる。
+  // 大きさは横画面でいちばん大きくなるとき(一辺160px前後・能力中はその1.14倍)が収まる180px。
+  const [sideArtUrls,setSideArtUrls]=useState([]);
+  useEffect(()=>{let cancelled=false;const made=[];
+    const deviceDpr=typeof window!=='undefined'&&window.devicePixelRatio>0?window.devicePixelRatio:1;
+    const px=Math.round(180*Math.min(3,Math.max(1,deviceDpr)));
+    const toUrl=canvas=>new Promise(resolve=>{try{canvas.toBlob(blob=>resolve(blob?URL.createObjectURL(blob):null),'image/png');}catch(e){resolve(null);}});
+    Promise.all(monsters.map(monster=>monster&&monster.imageUrl
+      ?bakeDyedMonsterCanvas({baseId:monster.baseId,src:monster.imageUrl,masuColors:monster.colors},px).then(canvas=>canvas?toUrl(canvas):null)
+      :Promise.resolve(null)))
+      .then(list=>{list.forEach(url=>{if(url)made.push(url);});if(cancelled){made.forEach(url=>URL.revokeObjectURL(url));return;}setSideArtUrls(list);});
+    return()=>{cancelled=true;made.forEach(url=>URL.revokeObjectURL(url));};
+  },[monsterSignature]);
+  // canvas で描くときのマスモンの顔。演奏の前(カウントダウンのあいだ)に1体ずつ焼いておき、
+  // tick は焼いた絵を canvas へ置くだけにする(rhythmBakeMonsterFace の説明を参照)。
+  // いちばん軽い段(NONE)では焼かない＝顔を出さない。焼けていないうちは顔を出さないだけで、判定には関係しない。
+  // 画素密度は RHYTHM_CANVAS_RENDERER.begin() と同じ決め方にそろえる。
+  const faceBitmapsRef=useRef([]);
+  useEffect(()=>{faceBitmapsRef.current=[];if(!canvasNotes||monsterFaceHidden)return undefined;let cancelled=false;
+    const deviceDpr=typeof window!=='undefined'&&window.devicePixelRatio>0?window.devicePixelRatio:1;
+    const dpr=Math.min(deviceDpr,RHYTHM_NOTE_CANVAS_MAX_DPR);
+    monsters.forEach((monster,index)=>{rhythmBakeMonsterFace(monster,dpr).then(face=>{if(!cancelled&&face)faceBitmapsRef.current[index]=face;});});
+    return()=>{cancelled=true;};
+  },[canvasNotes,monsterSignature,monsterFaceHidden,settings.lightweightMode,settings.effectAmount]);
   // レーン枠・サブレーン境界・サブレーン発光も、遊んでいるあいだは中身が変わらない。
   // 発光の ON/OFF は setPressedLanes が直接DOMへ書くので、Reactが作り直す必要はない。
   const laneElements=useMemo(()=><><div className="pointer-events-none absolute inset-0 grid grid-cols-5">{Array.from({length:5},(_,lane)=><div key={lane} data-rhythm-lane={lane} data-pressed="false" aria-hidden="true" className="relative border-r border-white/20 bg-slate-900/40" style={{/* ★filter をここへ入れない。押したレーンの filter を変えると、変化の60msのあいだ そのレーンが毎フレーム作り直しになる(2026-09-12・実機のカクつき調査) */transition:settings.lightweightMode?'none':'background-color 60ms linear, box-shadow 60ms linear, border-color 60ms linear',borderBottom:'3px solid transparent',boxSizing:'border-box'}}></div>)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{Array.from({length:5},(_,index)=><i key={index} data-rhythm-sublane-boundary="" />)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{/* ★will-change は置かない。以前は10枚すべてに willChange:"opacity" を常時付けていたが、 will-change は「これから変わる」と前もって伝えるものなので、付けっぱなしにすると 押していないあいだも10枚が合成レイヤーとして居座り続ける。opacity の45msの変化は will-change 無しでも十分間に合う(2026-09-12・実機のカクつき調査)。 */}{Array.from({length:10},(_,subLane)=><i key={subLane} data-rhythm-sublane-feedback={subLane} data-pressed="false" className="absolute inset-0 opacity-0" style={{clipPath:rhythmSubLanePolygon(subLane),background:'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)':'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',filter:settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'brightness(1.08)':'brightness(1.22)',transition:settings.lightweightMode?'none':'opacity 45ms linear'}}/>)}</div></>,[settings.lightweightMode,settings.effectAmount]);
@@ -15664,12 +15804,15 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
               DyedMonsterImage は染色ありのとき<div>で返るので、
               **className で大きさを渡さないと中身が0pxになって何も見えない**(実機で発生) */}
           <span data-rhythm-side-monster-art>
-            <DyedMonsterImage baseId={monster.baseId} src={monster.imageUrl} alt="" masuColors={monster.colors} draggable={false} className="h-full w-full object-contain"/>
+            {/* 焼いた絵ができていればそれを1枚出す(sideArtUrls の説明を参照)。できるまでは今までどおり染色の重ね絵で出す */}
+            {sideArtUrls[index]
+              ?<img data-rhythm-side-monster-baked src={sideArtUrls[index]} alt="" draggable={false} className="h-full w-full object-contain"/>
+              :<DyedMonsterImage baseId={monster.baseId} src={monster.imageUrl} alt="" masuColors={monster.colors} draggable={false} className="h-full w-full object-contain"/>}
           </span>
         </span>;
       })}
     </div>;
-  },[monsterSignature,settings.sideMonsterOpacity,settings.sideMonsterMotion,settings.lightweightMode]);
+  },[monsterSignature,settings.sideMonsterOpacity,settings.sideMonsterMotion,settings.lightweightMode,sideArtUrls]);
   const abilityTimerRef=useRef(null),abilityRevisionRef=useRef(0),abilityBadgeRef=useRef(null);
   const emptyCounts=()=>Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]));
   // HOLD/SLIDEの追従を難易度ごとにやさしくする値を、演奏を始めるときにノーツへ焼き込む。
@@ -16182,6 +16325,12 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
      取り逃しのMISSや長押しの終わりも、次に描くフレーム(8ms後)でいつもどおり数える */
 const powerSave=settings.frameRateMode!=='DEVICE';const stagePulseOn=rhythmStageLevel(settings)!=='SIMPLE';let prevFrameMs=0,avgFrameMs=1000/60,lastDrawnMs=0;
 const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();const run=runRef.current;if(!run||run.finished||run.paused)return;
+/* 入力の座標変換に使うプレイエリアの箱を、**このフレームでまだ何も書き換えていないうち**に測っておく(2026-09-25)。
+   箱は毎フレーム捨てている(ずれると入力位置がずれるため)。以前はタップが来たときに初めて測っていたので、
+   そのフレームで書き換えたぶんを片付けるための配置計算を、タップのたびにその場でさせていた
+   (叩いた10秒のうち66ms。CPUを1/4に絞った環境)。ここなら配置はまだ崩れておらず、ほぼただで測れる。
+   測った値はこのフレームのあいだのタップがそのまま使う。値そのものは以前と同じ(同じ関数で測る) */
+RHYTHM_GESTURE_RUNTIME.areaRect(playAreaRef.current);
 if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
 /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
    取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
@@ -16208,14 +16357,12 @@ if(canvasReady&&settings.laneGlow!=='NONE'){
 const paintCanvasNote=note=>{
   const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&rhythmNoteHasBody(note)&&songTimeMs<rhythmReleaseTargetMs(note);
   const clearFlash=note.done&&Number.isFinite(note._rhythmClearAt)&&songTimeMs-note._rhythmClearAt<RHYTHM_CLEAR_FLASH_MS;
-  const face=faceRefs.current[note.index]||null;
-  const hideFace=()=>{if(face&&face._rhythmFaceShown!==false){face.style.display='none';face._rhythmFaceShown=false;}};
   // 取り終えたノーツは、弾ける演出が済んでからマスモンの絵を隠し、「片付け済み」の印を付ける。
   // 走査の先頭(scanFrom)はこの印まで進めない(DOM 版が要素の非表示を待つのと同じ)。
   // これが無いと取った瞬間に走査から外れ、絵が隠れずに判定ラインへ残った(2026-09-07・実機「canvas 版でマスモンが残る」)
-  if(note.done&&!failedTrail&&!clearFlash){hideFace();note._rhythmCanvasSettled=true;return;}
+  if(note.done&&!failedTrail&&!clearFlash){note._rhythmCanvasSettled=true;return;}
   const progress=1-(note.timeMs-visualTime)/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);
-  if(!visible||!travel||!canvasReady){hideFace();return;}
+  if(!visible||!travel||!canvasReady)return;
   perfDrawn++;
   let yPx=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx;
   if(note.type==='HOLD'&&note.activePointerId!==null)yPx=travel.judgmentY;
@@ -16229,14 +16376,16 @@ const paintCanvasNote=note=>{
   const monster=!!monsterForNote(note);
   const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
   RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
-  if(face){
-    const transform=`translate(${(geo.head.cx-21).toFixed(1)}px,${(geo.head.cy-21).toFixed(1)}px)`;
-    if(face._rhythmFaceTransform!==transform){face.style.transform=transform;face._rhythmFaceTransform=transform;}
-    const scale=(depthScale*1.28).toFixed(3);
-    if(face._rhythmFaceScale!==scale){face.style.setProperty('--rhythm-face-scale',scale);face._rhythmFaceScale=scale;}
-    const clearFlag=clearFlash?'1':'';
-    if(face._rhythmFaceClear!==clearFlag){if(clearFlag)face.dataset.rhythmClear='1';else delete face.dataset.rhythmClear;face._rhythmFaceClear=clearFlag;}
-    if(face._rhythmFaceShown!==true){face.style.display='';face._rhythmFaceShown=true;}
+  // マスモンの顔(焼いた絵)。以前の DOM 版と同じく、落下中は「奥行き×1.28倍」、
+  // 取った瞬間は枠の大きさから2.1倍へ広がりながら消える(0.26秒・影なし)
+  const monsterSlot=monster?rhythmNoteMonsterSlot(note):0,faceBitmap=monsterSlot?faceBitmapsRef.current[monsterSlot-1]:null;
+  if(faceBitmap){
+    if(clearFlash){
+      const t=Math.min(1,Math.max(0,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS)),eased=1-(1-t)*(1-t);
+      RHYTHM_CANVAS_RENDERER.drawFace(faceBitmap.plain,geo.head.cx,geo.head.cy,RHYTHM_FACE_BOX*faceBitmap.box*(1+1.1*eased),.95*(1-eased));
+    }else{
+      RHYTHM_CANVAS_RENDERER.drawFace(faceBitmap.glow,geo.head.cx,geo.head.cy,RHYTHM_FACE_BOX*faceBitmap.box*depthScale*RHYTHM_FACE_ZOOM,1);
+    }
   }
 };
 // 練習の説明。曲の時刻で切り替わる。変わったときだけDOMへ書く(毎フレームReactを動かさない)
@@ -16358,9 +16507,11 @@ if(settings.sideMonsterAbilityHighlight&&sideMonsterRefs.current.length){
   }
 }
 const playEndTimeMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;
-/* 曲の進みぐあい(右上・ライフの下の細いバーと経過時間)。バーは0.1%より動いたときだけ、時間は秒が変わったときだけ書き換える */
+/* 曲の進みぐあい(スコアの下の細いバーと経過時間)。バーは0.5%動いたときだけ、時間は秒が変わったときだけ書き換える。
+   ★バーは合成用のレイヤーを持たないので、書き換えるたびに画面全体の層が塗り直される(2026-09-25にトレースで確認)。
+   0.1%刻みだと1秒に約7回。バーの幅は長くても120px前後なので、0.5%(1px未満)刻みで見た目は変わらない */
 const progressEl=songProgressRef.current;
-if(progressEl){const ratio=playEndTimeMs>0?Math.max(0,Math.min(1,songTimeMs/playEndTimeMs)):0;if(Math.abs(ratio-(progressEl._mhRatio||0))>=.001||ratio===1){progressEl._mhRatio=ratio;progressEl.style.transform=`scaleX(${ratio.toFixed(4)})`;}}
+if(progressEl){const ratio=playEndTimeMs>0?Math.max(0,Math.min(1,songTimeMs/playEndTimeMs)):0;if(Math.abs(ratio-(progressEl._mhRatio||0))>=.005||ratio===1){progressEl._mhRatio=ratio;progressEl.style.transform=`scaleX(${ratio.toFixed(4)})`;}}
 if(run.luckRushUntil!=null&&songTimeMs>=run.luckRushUntil){run.luckRushUntil=null;setLuckyRush(false);}
 const timeEl=songTimeRef.current;
 if(timeEl){const shownMs=Math.max(0,Math.min(playEndTimeMs,songTimeMs)),second=Math.floor(shownMs/1000);if(timeEl._mhSecond!==second){timeEl._mhSecond=second;timeEl.textContent=`${rhythmClockLabel(shownMs)}/${rhythmClockLabel(playEndTimeMs)}`;}}
@@ -16408,7 +16559,7 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
     };
     if(typeof requestAnimationFrame==='function')requestAnimationFrame(step);else setTimeout(step,16);
   });
-  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);rhythmFloatingNotesClear();runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});faceRefs.current.forEach(el=>{if(el){el.style.display='none';delete el.dataset.rhythmClear;el._rhythmFaceShown=false;el._rhythmFaceClear=undefined;el._rhythmFaceTransform=undefined;el._rhythmFaceScale=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
+  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);rhythmFloatingNotesClear();runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
 rhythmEnsureHitEffects(playAreaRef.current);
 /* 光のスプライトも先に焼いておく。曲の中で「その種類のノーツが初めて出た瞬間」に作ると
@@ -16755,7 +16906,7 @@ scheduleTick();};
 {/* 抽選の結果。当たりは大きく「LUCKY RUSH!!」、はずれは小さく「+2pt」 */}
 {luckyBanner&&<div key={luckyBanner.id} data-rhythm-lucky-banner data-kind={luckyBanner.kind} aria-hidden="true"><b>{luckyBanner.text}</b></div>}
 {comboMilestone>0&&<div data-rhythm-combo-milestone data-milestone-stage={comboMilestoneStage} aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 whitespace-nowrap text-center"><b className={`block font-black leading-none tabular-nums landscape:text-4xl ${comboMilestoneStage>=3?'text-6xl':'text-5xl'}`}>{comboMilestone}</b><small className="mt-1 block text-sm font-black tracking-[0.3em]">COMBO</small></div>}
-                {view.ability&&<div data-rhythm-ability-flash className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{view.ability.ability}！</div>}{canvasNotes?<canvas ref={noteCanvasRef} data-rhythm-note-canvas aria-hidden="true"/>:noteElements}{canvasFaceElements}{/* レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を幕で隠し、ノーツが見えはじめる位置を手前へ寄せる。
+                {view.ability&&<div data-rhythm-ability-flash className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{view.ability.ability}！</div>}{canvasNotes?<canvas ref={noteCanvasRef} data-rhythm-note-canvas aria-hidden="true"/>:noteElements}{/* レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を幕で隠し、ノーツが見えはじめる位置を手前へ寄せる。
     隠すのはレーンの台形の中だけ(laneCoverStyle の clip-path)。左右の空きにあるコンボ数・マスモン・背景は隠さない。
     ノーツ(z-5)より前、判定ライン(z-6)より前(上端から伸びるので判定ラインとは重ならない)、HUD(z-30)より後ろ。
     ★隠すだけで、ノーツが流れる速さ・判定のタイミングは変わらない */}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 311a2c8d22bfa5ae
+// source-sha256: e4b3e48aa61251bd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 03:44";
+const BUILD_DATE = "2026-09-26 03:51";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -8388,6 +8388,91 @@ const DyedMonsterImage = ({
       opacity: colorAlphaOf(colors[idx]) / 100
     }
   }) : null));
+};
+const _loadArtImage = url => new Promise(resolve => {
+  if (!url || typeof window === 'undefined' || !window.Image) {
+    resolve(null);
+    return;
+  }
+  const img = new window.Image();
+  img.onload = () => resolve(img);
+  img.onerror = () => resolve(null);
+  img.src = url;
+});
+const _drawContain = (ctx, img, size) => {
+  const w = img.naturalWidth || img.width,
+    h = img.naturalHeight || img.height;
+  if (!(w > 0 && h > 0)) return;
+  const k = Math.min(size / w, size / h),
+    dw = w * k,
+    dh = h * k;
+  ctx.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
+};
+const bakeDyedMonsterCanvas = async ({
+  baseId,
+  src,
+  masuColors
+}, size) => {
+  try {
+    if (typeof document === 'undefined' || !src || !(size > 0)) return null;
+    const px = Math.max(1, Math.round(size));
+    const hues = MASU_COLOR_REGION_HUES[baseId];
+    const rawColors = masuColors || [];
+    const fallbackMap = MASU_COLOR_FALLBACK_REGION[baseId];
+    const colors = fallbackMap && hues ? hues.map((_, idx) => rawColors[idx] || (fallbackMap[idx] !== undefined ? rawColors[fallbackMap[idx]] : rawColors[idx])) : rawColors;
+    const base = await _loadArtImage(src);
+    if (!base) return null;
+    const out = document.createElement('canvas');
+    out.width = px;
+    out.height = px;
+    const ctx = out.getContext('2d');
+    if (!ctx) return null;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    if (!hues || hues.length === 0) {
+      const recoloredUrl = colors[0] ? await Promise.resolve(getRecoloredImage(src, colors[0], baseId, 0)) : null;
+      const recolored = recoloredUrl ? await _loadArtImage(recoloredUrl) : null;
+      const alpha = colorAlphaOf(colors[0]);
+      if (recolored && alpha < MASU_COLOR_ALPHA_MAX) {
+        _drawContain(ctx, base, px);
+        ctx.globalAlpha = alpha / 100;
+        _drawContain(ctx, recolored, px);
+        ctx.globalAlpha = 1;
+      } else {
+        _drawContain(ctx, recolored || base, px);
+      }
+      return out;
+    }
+    const masks = colors.some(Boolean) ? await Promise.resolve(getDyeRegionMasks(baseId, src, null)) : null;
+    _drawContain(ctx, base, px);
+    if (!masks) return out;
+    const layer = document.createElement('canvas');
+    layer.width = px;
+    layer.height = px;
+    const lctx = layer.getContext('2d');
+    if (!lctx) return out;
+    lctx.imageSmoothingEnabled = true;
+    lctx.imageSmoothingQuality = 'high';
+    for (let idx = 0; idx < hues.length; idx++) {
+      if (!colors[idx] || !masks[idx]) continue;
+      const recoloredUrl = await Promise.resolve(getRecoloredImage(src, colors[idx], baseId, idx));
+      if (!recoloredUrl) continue;
+      const [recolored, mask] = await Promise.all([_loadArtImage(recoloredUrl), _loadArtImage(masks[idx])]);
+      if (!recolored || !mask) continue;
+      lctx.globalCompositeOperation = 'source-over';
+      lctx.clearRect(0, 0, px, px);
+      _drawContain(lctx, recolored, px);
+      lctx.globalCompositeOperation = 'destination-in';
+      _drawContain(lctx, mask, px);
+      lctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = colorAlphaOf(colors[idx]) / 100;
+      ctx.drawImage(layer, 0, 0);
+      ctx.globalAlpha = 1;
+    }
+    return out;
+  } catch (e) {
+    return null;
+  }
 };
 const MonsterArtFrame = ({
   baseId,
@@ -21759,6 +21844,48 @@ const RHYTHM_HAPTICS = (() => {
   };
 })();
 const RHYTHM_SIDE_CHEER_MS = 700;
+const RHYTHM_FACE_BOX = 42,
+  RHYTHM_FACE_ZOOM = 1.28,
+  RHYTHM_FACE_PAD = 12;
+const rhythmBakeMonsterFace = async (monster, dpr) => {
+  if (!monster || !monster.imageUrl || typeof document === 'undefined') return null;
+  const ratio = RHYTHM_FACE_ZOOM * Math.max(1, Number(dpr) || 1);
+  const art = await bakeDyedMonsterCanvas({
+    baseId: monster.baseId,
+    src: monster.imageUrl,
+    masuColors: monster.colors
+  }, Math.round(RHYTHM_FACE_BOX * ratio));
+  if (!art) return null;
+  const pad = Math.ceil(RHYTHM_FACE_PAD * ratio),
+    full = art.width + pad * 2;
+  const canvasOf = () => {
+    const c = document.createElement('canvas');
+    c.width = full;
+    c.height = full;
+    return c;
+  };
+  const plain = canvasOf(),
+    plainCtx = plain.getContext('2d');
+  if (!plainCtx) return null;
+  plainCtx.drawImage(art, pad, pad);
+  const shaded = canvasOf(),
+    shadedCtx = shaded.getContext('2d');
+  const glow = canvasOf(),
+    glowCtx = glow.getContext('2d');
+  if (!shadedCtx || !glowCtx) return null;
+  shadedCtx.shadowColor = 'rgba(0,0,0,.58)';
+  shadedCtx.shadowOffsetY = 1 * ratio;
+  shadedCtx.shadowBlur = 4 * ratio;
+  shadedCtx.drawImage(art, pad, pad);
+  glowCtx.shadowColor = 'rgba(253,224,71,.55)';
+  glowCtx.shadowBlur = 8 * ratio;
+  glowCtx.drawImage(shaded, 0, 0);
+  return {
+    glow,
+    plain,
+    box: full / art.width
+  };
+};
 const RHYTHM_RESUME_COUNTDOWN_STEPS = Object.freeze(['3', '2', '1']);
 const rhythmClockLabel = ms => {
   const total = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
@@ -21994,8 +22121,7 @@ const RhythmTapTest = ({
   monstersRef.current = monsters;
   const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
-  const noteCanvasRef = useRef(null),
-    faceRefs = useRef([]);
+  const noteCanvasRef = useRef(null);
   useEffect(() => {
     if (!canvasNotes) return undefined;
     RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current);
@@ -22062,29 +22188,54 @@ const RhythmTapTest = ({
       className: "h-full w-full object-contain"
     })));
   }), [chart.notes, monsterSignature, settings.lightweightMode, settings.effectAmount, monsterFaceHidden]);
-  const canvasFaceElements = useMemo(() => canvasNotes && !monsterFaceHidden ? chart.notes.map((note, index) => {
-    const monsterSlot = rhythmNoteMonsterSlot(note),
-      monster = monsterSlot ? monsters[monsterSlot - 1] || null : null;
-    if (!monster) return null;
-    return React.createElement("span", {
-      key: index,
-      ref: el => faceRefs.current[index] = el,
-      "data-rhythm-canvas-face": true,
-      "aria-hidden": "true",
-      style: {
-        display: 'none'
+  const [sideArtUrls, setSideArtUrls] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    const made = [];
+    const deviceDpr = typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
+    const px = Math.round(180 * Math.min(3, Math.max(1, deviceDpr)));
+    const toUrl = canvas => new Promise(resolve => {
+      try {
+        canvas.toBlob(blob => resolve(blob ? URL.createObjectURL(blob) : null), 'image/png');
+      } catch (e) {
+        resolve(null);
       }
-    }, React.createElement("span", {
-      "data-rhythm-canvas-face-art": true
-    }, monster.imageUrl && React.createElement(DyedMonsterImage, {
+    });
+    Promise.all(monsters.map(monster => monster && monster.imageUrl ? bakeDyedMonsterCanvas({
       baseId: monster.baseId,
       src: monster.imageUrl,
-      alt: "",
-      masuColors: monster.colors,
-      draggable: false,
-      className: "h-full w-full object-contain"
-    })));
-  }).filter(Boolean) : null, [canvasNotes, chart.notes, monsterSignature, monsterFaceHidden]);
+      masuColors: monster.colors
+    }, px).then(canvas => canvas ? toUrl(canvas) : null) : Promise.resolve(null))).then(list => {
+      list.forEach(url => {
+        if (url) made.push(url);
+      });
+      if (cancelled) {
+        made.forEach(url => URL.revokeObjectURL(url));
+        return;
+      }
+      setSideArtUrls(list);
+    });
+    return () => {
+      cancelled = true;
+      made.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [monsterSignature]);
+  const faceBitmapsRef = useRef([]);
+  useEffect(() => {
+    faceBitmapsRef.current = [];
+    if (!canvasNotes || monsterFaceHidden) return undefined;
+    let cancelled = false;
+    const deviceDpr = typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
+    const dpr = Math.min(deviceDpr, RHYTHM_NOTE_CANVAS_MAX_DPR);
+    monsters.forEach((monster, index) => {
+      rhythmBakeMonsterFace(monster, dpr).then(face => {
+        if (!cancelled && face) faceBitmapsRef.current[index] = face;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [canvasNotes, monsterSignature, monsterFaceHidden, settings.lightweightMode, settings.effectAmount]);
   const laneElements = useMemo(() => React.createElement(React.Fragment, null, React.createElement("div", {
     className: "pointer-events-none absolute inset-0 grid grid-cols-5"
   }, Array.from({
@@ -22185,7 +22336,13 @@ const RhythmTapTest = ({
         }
       }, React.createElement("span", {
         "data-rhythm-side-monster-art": true
-      }, React.createElement(DyedMonsterImage, {
+      }, sideArtUrls[index] ? React.createElement("img", {
+        "data-rhythm-side-monster-baked": true,
+        src: sideArtUrls[index],
+        alt: "",
+        draggable: false,
+        className: "h-full w-full object-contain"
+      }) : React.createElement(DyedMonsterImage, {
         baseId: monster.baseId,
         src: monster.imageUrl,
         alt: "",
@@ -22194,7 +22351,7 @@ const RhythmTapTest = ({
         className: "h-full w-full object-contain"
       })));
     }));
-  }, [monsterSignature, settings.sideMonsterOpacity, settings.sideMonsterMotion, settings.lightweightMode]);
+  }, [monsterSignature, settings.sideMonsterOpacity, settings.sideMonsterMotion, settings.lightweightMode, sideArtUrls]);
   const abilityTimerRef = useRef(null),
     abilityRevisionRef = useRef(0),
     abilityBadgeRef = useRef(null);
@@ -22916,6 +23073,7 @@ const RhythmTapTest = ({
       RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
+      RHYTHM_GESTURE_RUNTIME.areaRect(playAreaRef.current);
       if (powerSave) {
         const gap = prevFrameMs ? frameNowMs - prevFrameMs : 0;
         prevFrameMs = frameNowMs;
@@ -22991,24 +23149,13 @@ const RhythmTapTest = ({
       const paintCanvasNote = note => {
         const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && rhythmNoteHasBody(note) && songTimeMs < rhythmReleaseTargetMs(note);
         const clearFlash = note.done && Number.isFinite(note._rhythmClearAt) && songTimeMs - note._rhythmClearAt < RHYTHM_CLEAR_FLASH_MS;
-        const face = faceRefs.current[note.index] || null;
-        const hideFace = () => {
-          if (face && face._rhythmFaceShown !== false) {
-            face.style.display = 'none';
-            face._rhythmFaceShown = false;
-          }
-        };
         if (note.done && !failedTrail && !clearFlash) {
-          hideFace();
           note._rhythmCanvasSettled = true;
           return;
         }
         const progress = 1 - (note.timeMs - visualTime) / travelMs,
           visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
-        if (!visible || !travel || !canvasReady) {
-          hideFace();
-          return;
-        }
+        if (!visible || !travel || !canvasReady) return;
         perfDrawn++;
         let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
         if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
@@ -23041,25 +23188,15 @@ const RhythmTapTest = ({
           depthScale,
           brightness
         });
-        if (face) {
-          const transform = `translate(${(geo.head.cx - 21).toFixed(1)}px,${(geo.head.cy - 21).toFixed(1)}px)`;
-          if (face._rhythmFaceTransform !== transform) {
-            face.style.transform = transform;
-            face._rhythmFaceTransform = transform;
-          }
-          const scale = (depthScale * 1.28).toFixed(3);
-          if (face._rhythmFaceScale !== scale) {
-            face.style.setProperty('--rhythm-face-scale', scale);
-            face._rhythmFaceScale = scale;
-          }
-          const clearFlag = clearFlash ? '1' : '';
-          if (face._rhythmFaceClear !== clearFlag) {
-            if (clearFlag) face.dataset.rhythmClear = '1';else delete face.dataset.rhythmClear;
-            face._rhythmFaceClear = clearFlag;
-          }
-          if (face._rhythmFaceShown !== true) {
-            face.style.display = '';
-            face._rhythmFaceShown = true;
+        const monsterSlot = monster ? rhythmNoteMonsterSlot(note) : 0,
+          faceBitmap = monsterSlot ? faceBitmapsRef.current[monsterSlot - 1] : null;
+        if (faceBitmap) {
+          if (clearFlash) {
+            const t = Math.min(1, Math.max(0, (songTimeMs - note._rhythmClearAt) / RHYTHM_CLEAR_FLASH_MS)),
+              eased = 1 - (1 - t) * (1 - t);
+            RHYTHM_CANVAS_RENDERER.drawFace(faceBitmap.plain, geo.head.cx, geo.head.cy, RHYTHM_FACE_BOX * faceBitmap.box * (1 + 1.1 * eased), .95 * (1 - eased));
+          } else {
+            RHYTHM_CANVAS_RENDERER.drawFace(faceBitmap.glow, geo.head.cx, geo.head.cy, RHYTHM_FACE_BOX * faceBitmap.box * depthScale * RHYTHM_FACE_ZOOM, 1);
           }
         }
       };
@@ -23267,7 +23404,7 @@ const RhythmTapTest = ({
       const progressEl = songProgressRef.current;
       if (progressEl) {
         const ratio = playEndTimeMs > 0 ? Math.max(0, Math.min(1, songTimeMs / playEndTimeMs)) : 0;
-        if (Math.abs(ratio - (progressEl._mhRatio || 0)) >= .001 || ratio === 1) {
+        if (Math.abs(ratio - (progressEl._mhRatio || 0)) >= .005 || ratio === 1) {
           progressEl._mhRatio = ratio;
           progressEl.style.transform = `scaleX(${ratio.toFixed(4)})`;
         }
@@ -23434,16 +23571,6 @@ const RhythmTapTest = ({
         el._rhythmDepthBrightness = undefined;
         el._rhythmTransform = undefined;
         el._rhythmSlideBody = undefined;
-      }
-    });
-    faceRefs.current.forEach(el => {
-      if (el) {
-        el.style.display = 'none';
-        delete el.dataset.rhythmClear;
-        el._rhythmFaceShown = false;
-        el._rhythmFaceClear = undefined;
-        el._rhythmFaceTransform = undefined;
-        el._rhythmFaceScale = undefined;
       }
     });
     if (canvasNotes) RHYTHM_CANVAS_RENDERER.clear();
@@ -24640,7 +24767,7 @@ const RhythmTapTest = ({
     ref: noteCanvasRef,
     "data-rhythm-note-canvas": true,
     "aria-hidden": "true"
-  }) : noteElements, canvasFaceElements, laneCoverStyle && React.createElement("div", {
+  }) : noteElements, laneCoverStyle && React.createElement("div", {
     "data-rhythm-lane-cover": true,
     "aria-hidden": "true",
     style: laneCoverStyle
