@@ -685,6 +685,11 @@ const createAnimationStyle = () => {
     .mon-idle--breathe { animation:monIdleBreathe 3200ms ease-in-out infinite; }
     .mon-idle--sway { animation:monIdleSway 3000ms ease-in-out infinite; }
     .mon-idle--swim { animation:monIdleSwim 2800ms ease-in-out infinite; }
+    .mon-idle--jelly { animation:monIdleJelly 2000ms ease-in-out infinite; }
+    .mon-idle--hop { animation:monIdleHop 2800ms ease-in-out infinite; }
+    .mon-idle--heavy { animation:monIdleHeavy 3600ms ease-in-out infinite; }
+    .mon-idle--glide { animation:monIdleGlide 3200ms ease-in-out infinite; }
+    .mon-idle--drift { animation:monIdleDrift 4200ms ease-in-out infinite; transform-origin:50% 50%; }
     /* 宙に浮いている子。ゆっくり上下してわずかに伸び縮みする */
     @keyframes monIdleHover {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
@@ -699,8 +704,45 @@ const createAnimationStyle = () => {
     }
     /* どっしり立っている子。胸がふくらむように、縦へわずかに伸び縮みする */
     @keyframes monIdleBreathe {
-      0%,100% { transform:scale(1,1); }
-      50% { transform:scale(1.01,1.025); }
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      50% { transform:translate3d(0,-1%,0) scale(1.015,1.04); }
+    }
+    /* ↓ 待機が地味だった子の動き(2026-09-25 ユーザー指示「待機中の動きが地味なモンスターがいるからもう少し改良したい」)。
+       どれも足元(transform-origin 50% 96%)を軸にするので、地面から離れて見えない */
+    /* ぷるぷるの子(モッチー・剣士モッチー)。つぶれて、ぴょんと伸びて、ぷるんと揺れて止まる */
+    @keyframes monIdleJelly {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      14% { transform:translate3d(0,0,0) scale(1.07,.92); }
+      32% { transform:translate3d(0,-3.5%,0) scale(.95,1.06); }
+      48% { transform:translate3d(0,0,0) scale(1.05,.95); }
+      58% { transform:translate3d(0,0,0) scale(.98,1.03); }
+      68% { transform:translate3d(0,0,0) scale(1.01,.99); }
+    }
+    /* 跳ねる子(スエゾー)。しっぽでぴょんと跳び、左右を見回すように交互に傾く */
+    @keyframes monIdleHop {
+      0%,50%,100% { transform:translate3d(0,0,0) rotate(0) scale(1,1); }
+      8%,58% { transform:translate3d(0,0,0) rotate(0) scale(1.08,.9); }
+      20% { transform:translate3d(0,-10%,0) rotate(-6deg) scale(.95,1.06); }
+      70% { transform:translate3d(0,-10%,0) rotate(6deg) scale(.95,1.06); }
+      32%,82% { transform:translate3d(0,0,0) rotate(0) scale(1.06,.93); }
+      40%,90% { transform:translate3d(0,0,0) rotate(0) scale(.98,1.02); }
+    }
+    /* 重たい子(ゴーレム)。左右へ体重を移し、真ん中で胸をふくらませる */
+    @keyframes monIdleHeavy {
+      0%,100% { transform:translate3d(0,0,0) rotate(0) scale(1,1); }
+      25% { transform:translate3d(-1.2%,0,0) rotate(-2deg) scale(1,1); }
+      50% { transform:translate3d(0,-1.2%,0) rotate(0) scale(1.02,1.035); }
+      75% { transform:translate3d(1.2%,0,0) rotate(2deg) scale(1,1); }
+    }
+    /* 翼で滑るように浮く子(アーク・エイキ)。大きく浮き沈みしながら、ゆったり傾く */
+    @keyframes monIdleGlide {
+      0%,100% { transform:translate3d(0,0,0) rotate(-2deg) scale(1,1); }
+      50% { transform:translate3d(0,-6%,0) rotate(2deg) scale(.99,1.02); }
+    }
+    /* 宙を漂う子(モノリス)。ゆっくり大きく浮き沈みし、ふらりと回る */
+    @keyframes monIdleDrift {
+      0%,100% { transform:translate3d(0,0,0) rotate(-4deg); }
+      50% { transform:translate3d(0,-8%,0) rotate(4deg); }
     }
     /* 植物の子。足元を軸に、左右へゆっくり傾く */
     @keyframes monIdleSway {

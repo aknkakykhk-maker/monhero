@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1895dbdb1eea0f85
+// source-sha256: 023902dcfb471402
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bcdd591cd19bd9d4
+// generated-sha256: 3685487726a738d3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -262,7 +262,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-25 22:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 23:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18726,19 +18726,51 @@ const AttackTargetFx = ({
 // ==== MONSTER_IDLE_RIGS(tools/monster/idle-rig-build.js が書く。手で直さない) ====
 const MONSTER_IDLE_RIGS = Object.freeze({
   Mocchi: {
-    body: 'bounce',
-    bodyMask: null,
-    parts: []
+    body: 'jelly',
+    bodyMask: IDLE_MOCCHI_BODY_MASK,
+    parts: [{
+      mask: IDLE_MOCCHI_ARM_L_MASK,
+      origin: '29.5% 40%',
+      anim: 'swing',
+      amp: -7,
+      dur: 1800,
+      delay: 0,
+      layer: 'front'
+    }, {
+      mask: IDLE_MOCCHI_ARM_R_MASK,
+      origin: '70% 40%',
+      anim: 'swing',
+      amp: 7,
+      dur: 1800,
+      delay: 900,
+      layer: 'front'
+    }]
   },
   Suezo: {
-    body: 'bounce',
+    body: 'hop',
     bodyMask: null,
     parts: []
   },
   Golem: {
-    body: 'breathe',
-    bodyMask: null,
-    parts: []
+    body: 'heavy',
+    bodyMask: IDLE_GOLEM_BODY_MASK,
+    parts: [{
+      mask: IDLE_GOLEM_ARM_L_MASK,
+      origin: '22% 43%',
+      anim: 'swing',
+      amp: -4,
+      dur: 3000,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_GOLEM_ARM_R_MASK,
+      origin: '77% 43%',
+      anim: 'swing',
+      amp: 4,
+      dur: 3000,
+      delay: 1500,
+      layer: 'back'
+    }]
   },
   Tiger: {
     body: 'breathe',
@@ -18862,7 +18894,7 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     }]
   },
   Monol: {
-    body: 'hover',
+    body: 'drift',
     bodyMask: null,
     parts: []
   },
@@ -18967,9 +18999,25 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     }]
   },
   Ark: {
-    body: 'hover',
-    bodyMask: null,
-    parts: []
+    body: 'glide',
+    bodyMask: IDLE_ARK_BODY_MASK,
+    parts: [{
+      mask: IDLE_ARK_CROWN_MASK,
+      origin: '50% 24%',
+      anim: 'bob',
+      amp: -2.2,
+      dur: 1800,
+      delay: 0,
+      layer: 'front'
+    }, {
+      mask: IDLE_ARK_HALO_MASK,
+      origin: '50% 30%',
+      anim: 'bob',
+      amp: -1.4,
+      dur: 1800,
+      delay: 300,
+      layer: 'front'
+    }]
   },
   Iblis: {
     body: 'hover',
@@ -19040,14 +19088,30 @@ const MONSTER_IDLE_RIGS = Object.freeze({
     }]
   },
   Eiki: {
-    body: 'hover',
+    body: 'glide',
     bodyMask: null,
     parts: []
   },
   KenshiMocchi: {
-    body: 'bounce',
-    bodyMask: null,
-    parts: []
+    body: 'jelly',
+    bodyMask: IDLE_KENSHI_MOCCHI_BODY_MASK,
+    parts: [{
+      mask: IDLE_KENSHI_MOCCHI_SWORD_L_MASK,
+      origin: '29.5% 26%',
+      anim: 'swing',
+      amp: -4,
+      dur: 2400,
+      delay: 0,
+      layer: 'back'
+    }, {
+      mask: IDLE_KENSHI_MOCCHI_SWORD_R_MASK,
+      origin: '70.5% 26%',
+      anim: 'swing',
+      amp: 4,
+      dur: 2400,
+      delay: 1200,
+      layer: 'back'
+    }]
   }
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
@@ -78361,6 +78425,11 @@ const createAnimationStyle = () => {
     .mon-idle--breathe { animation:monIdleBreathe 3200ms ease-in-out infinite; }
     .mon-idle--sway { animation:monIdleSway 3000ms ease-in-out infinite; }
     .mon-idle--swim { animation:monIdleSwim 2800ms ease-in-out infinite; }
+    .mon-idle--jelly { animation:monIdleJelly 2000ms ease-in-out infinite; }
+    .mon-idle--hop { animation:monIdleHop 2800ms ease-in-out infinite; }
+    .mon-idle--heavy { animation:monIdleHeavy 3600ms ease-in-out infinite; }
+    .mon-idle--glide { animation:monIdleGlide 3200ms ease-in-out infinite; }
+    .mon-idle--drift { animation:monIdleDrift 4200ms ease-in-out infinite; transform-origin:50% 50%; }
     /* 宙に浮いている子。ゆっくり上下してわずかに伸び縮みする */
     @keyframes monIdleHover {
       0%,100% { transform:translate3d(0,0,0) scale(1,1); }
@@ -78375,8 +78444,45 @@ const createAnimationStyle = () => {
     }
     /* どっしり立っている子。胸がふくらむように、縦へわずかに伸び縮みする */
     @keyframes monIdleBreathe {
-      0%,100% { transform:scale(1,1); }
-      50% { transform:scale(1.01,1.025); }
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      50% { transform:translate3d(0,-1%,0) scale(1.015,1.04); }
+    }
+    /* ↓ 待機が地味だった子の動き(2026-09-25 ユーザー指示「待機中の動きが地味なモンスターがいるからもう少し改良したい」)。
+       どれも足元(transform-origin 50% 96%)を軸にするので、地面から離れて見えない */
+    /* ぷるぷるの子(モッチー・剣士モッチー)。つぶれて、ぴょんと伸びて、ぷるんと揺れて止まる */
+    @keyframes monIdleJelly {
+      0%,100% { transform:translate3d(0,0,0) scale(1,1); }
+      14% { transform:translate3d(0,0,0) scale(1.07,.92); }
+      32% { transform:translate3d(0,-3.5%,0) scale(.95,1.06); }
+      48% { transform:translate3d(0,0,0) scale(1.05,.95); }
+      58% { transform:translate3d(0,0,0) scale(.98,1.03); }
+      68% { transform:translate3d(0,0,0) scale(1.01,.99); }
+    }
+    /* 跳ねる子(スエゾー)。しっぽでぴょんと跳び、左右を見回すように交互に傾く */
+    @keyframes monIdleHop {
+      0%,50%,100% { transform:translate3d(0,0,0) rotate(0) scale(1,1); }
+      8%,58% { transform:translate3d(0,0,0) rotate(0) scale(1.08,.9); }
+      20% { transform:translate3d(0,-10%,0) rotate(-6deg) scale(.95,1.06); }
+      70% { transform:translate3d(0,-10%,0) rotate(6deg) scale(.95,1.06); }
+      32%,82% { transform:translate3d(0,0,0) rotate(0) scale(1.06,.93); }
+      40%,90% { transform:translate3d(0,0,0) rotate(0) scale(.98,1.02); }
+    }
+    /* 重たい子(ゴーレム)。左右へ体重を移し、真ん中で胸をふくらませる */
+    @keyframes monIdleHeavy {
+      0%,100% { transform:translate3d(0,0,0) rotate(0) scale(1,1); }
+      25% { transform:translate3d(-1.2%,0,0) rotate(-2deg) scale(1,1); }
+      50% { transform:translate3d(0,-1.2%,0) rotate(0) scale(1.02,1.035); }
+      75% { transform:translate3d(1.2%,0,0) rotate(2deg) scale(1,1); }
+    }
+    /* 翼で滑るように浮く子(アーク・エイキ)。大きく浮き沈みしながら、ゆったり傾く */
+    @keyframes monIdleGlide {
+      0%,100% { transform:translate3d(0,0,0) rotate(-2deg) scale(1,1); }
+      50% { transform:translate3d(0,-6%,0) rotate(2deg) scale(.99,1.02); }
+    }
+    /* 宙を漂う子(モノリス)。ゆっくり大きく浮き沈みし、ふらりと回る */
+    @keyframes monIdleDrift {
+      0%,100% { transform:translate3d(0,0,0) rotate(-4deg); }
+      50% { transform:translate3d(0,-8%,0) rotate(4deg); }
     }
     /* 植物の子。足元を軸に、左右へゆっくり傾く */
     @keyframes monIdleSway {
