@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 874a08fe260b3221
+// generated-sha256: c728d9bc95ee4519
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -139,7 +139,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-25 11:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 11:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39031,8 +39031,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <div className="grid grid-cols-2 gap-2 shrink-0">
         <div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[10px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[10px] text-slate-500 font-bold">勇者モンに選んだとき</div>{mon.trait&&<div className="text-[10px] text-indigo-300 font-black mt-0.5">{mon.trait}</div>}<div className="text-[10px] text-white font-bold leading-tight mt-1">{mon.traitDesc||'特性なし'}</div></div>
         <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[10px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[10px] text-slate-500 font-bold">供モンとして合流したとき</div>{/* 新モードは合流ボーナスを足さず、素のステータスをそのまま盤面へ入れる(2026-09-20 ユーザー指示)。
-        あとから入るほど見劣りするぶんは、先に育った子の育ち率に合わせる追いつき補正で埋める */}
-        {isTacticsMode(runMode)
+        あとから入るほど見劣りするぶんは、先に育った子の育ち率に合わせる追いつき補正で埋める。
+        ★runMode はランを終えても前回のまま残るので、ラン中の画面にいるときだけ見る。
+          見ないと、タクティクスを遊んだあとにHOMEのベースモン一覧などで開いたとき、
+          クラシックの合流ボーナスの値の代わりにタクティクスの説明が出る(2026-09-25 ユーザー報告) */}
+        {isTacticsMode(runMode)&&(RUN_PHASE_STATES.includes(gameState)||gameState==='BATTLE')
           ?(<div className="text-[10px] text-white font-bold mt-1">素のステータスがそのまま入ります<span className="block text-[9px] font-bold text-cyan-300">あとから入るほど、先に育った子に追いつく補正がかかります</span></div>)
           :(<div className="text-[10px] text-white font-bold mt-1">{joinBonus||'なし'}</div>)}{aptBonus&&<div className="text-[10px] text-cyan-300 font-bold mt-0.5">間合い適性 {aptBonus}</div>}</div>
       </div>

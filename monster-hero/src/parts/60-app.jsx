@@ -12546,8 +12546,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <div className="grid grid-cols-2 gap-2 shrink-0">
         <div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[10px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[10px] text-slate-500 font-bold">勇者モンに選んだとき</div>{mon.trait&&<div className="text-[10px] text-indigo-300 font-black mt-0.5">{mon.trait}</div>}<div className="text-[10px] text-white font-bold leading-tight mt-1">{mon.traitDesc||'特性なし'}</div></div>
         <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[10px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[10px] text-slate-500 font-bold">供モンとして合流したとき</div>{/* 新モードは合流ボーナスを足さず、素のステータスをそのまま盤面へ入れる(2026-09-20 ユーザー指示)。
-        あとから入るほど見劣りするぶんは、先に育った子の育ち率に合わせる追いつき補正で埋める */}
-        {isTacticsMode(runMode)
+        あとから入るほど見劣りするぶんは、先に育った子の育ち率に合わせる追いつき補正で埋める。
+        ★runMode はランを終えても前回のまま残るので、ラン中の画面にいるときだけ見る。
+          見ないと、タクティクスを遊んだあとにHOMEのベースモン一覧などで開いたとき、
+          クラシックの合流ボーナスの値の代わりにタクティクスの説明が出る(2026-09-25 ユーザー報告) */}
+        {isTacticsMode(runMode)&&(RUN_PHASE_STATES.includes(gameState)||gameState==='BATTLE')
           ?(<div className="text-[10px] text-white font-bold mt-1">素のステータスがそのまま入ります<span className="block text-[9px] font-bold text-cyan-300">あとから入るほど、先に育った子に追いつく補正がかかります</span></div>)
           :(<div className="text-[10px] text-white font-bold mt-1">{joinBonus||'なし'}</div>)}{aptBonus&&<div className="text-[10px] text-cyan-300 font-bold mt-0.5">間合い適性 {aptBonus}</div>}</div>
       </div>
