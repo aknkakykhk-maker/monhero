@@ -1176,9 +1176,19 @@ function MonsterHeroGame() {
   const tacticsRegen = (hpRate, gutsRate) => {
     if (!isTacticsMode(runMode)) return null;
     const alive = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, false);
-    const downed = regenDownedTacticsBoard(alive.units);
+    // ★ガッツ全開っちーが効いている子は、その子の上限の regenRate ぶん(30%)を上乗せする
+    //   (2026-09-25 ユーザー指示「効果中ライフとガッツの自動回復を30%上昇」「1.3倍じゃなくて30%固定値でプラス」)
+    let units = alive.units, hp = alive.hp, guts = alive.guts;
+    const live = tacticsExLiveRef.current;
+    if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
+      const boost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now);
+      if (boost <= 0) return;
+      const extra = rateHealTacticsAt(units, slotIdx, boost, boost);
+      units = extra.units; hp += extra.hp; guts += extra.guts;
+    });
+    const downed = regenDownedTacticsBoard(units);
     const total = commitTacticsUnits(downed.units);
-    return { hp: alive.hp, guts: alive.guts, downedHp: downed.hp, downedHealed: downed.healed, total };
+    return { hp, guts, downedHp: downed.hp, downedHealed: downed.healed, total };
   };
   // 固有技・アシストカードの効果が「使った子」へ入るとき。量もその子の上限の率
   const tacticsRateHealAt = (slotIdx, hpRate, gutsRate) => {
