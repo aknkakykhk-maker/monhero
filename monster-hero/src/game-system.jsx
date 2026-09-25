@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 36cd042ebabf0dba
+// generated-sha256: 18dbe76be102c230
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 05:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 05:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -28185,6 +28185,9 @@ function MonsterHeroGame() {
   const [attackAnim, setAttackAnim] = useState(null); // {slotIndex}
   const [slotSkill, setSlotSkill] = useState(null); // {slotIndex, name, type} スロット上の技名インライン表示
   const [dragState, setDragState] = useState(null); // {cardIndex, x, y, active, card} カードドラッグ
+  // 引きずっているあいだの指の位置(下の onMove を参照)。描き直しが起きたときもここから読むので、
+  // カードが古い位置へ戻らない
+  const dragPosRef = useRef(null);
   const cardDragActiveRef = useRef(false); // 閾値を越えたあと始点へ戻っても、スワイプ成立を保持する
   const suppressCardClickRef = useRef(0); // pointerup後にブラウザが合成するclickを捕捉して捨てる期限
   const [dragOverSlot, setDragOverSlot] = useState(null); // ドラッグ中にホバーしているスロット
@@ -31775,6 +31778,9 @@ function MonsterHeroGame() {
     if(!dragState) return;
     const DRAG_THRESHOLD=10;
     const startX=dragState.x, startY=dragState.y;
+    dragPosRef.current={x:startX,y:startY};
+    // 画面へ出している active(引きずり始めを state で描いたか)
+    let shownActive=!!dragState.active;
     const findSlot=(x,y)=>{
       const el=document.elementFromPoint(x,y);
       if(!el) return null;
@@ -31787,10 +31793,21 @@ function MonsterHeroGame() {
       const moved=Math.hypot(x-startX,y-startY);
       if(moved>=DRAG_THRESHOLD) cardDragActiveRef.current=true;
       const active=cardDragActiveRef.current;
-      // ★位置は毎回 state で描く(2026-09-26 に「カード1枚の left/top だけを直接動かす」形を試したが、
-      //   手札の欄の backdrop-filter が position:fixed の基準を変えるため、iPhone の Safari で
-      //   カードが指についてこず、下から別の位置のカードが追いかけてくる表示になった。元の形へ戻した)
-      setDragState(prev=>prev?{...prev,x,y,active}:null);
+      dragPosRef.current={x,y};
+      // ★引きずっているカードは body 直下の箱([data-drag-card-layer])に1枚だけ出ている(71-screen-battle)。
+      //   そこに出ていれば、位置だけを直接動かして画面全体は描き直さない(指が動くたびに
+      //   予測の計算ごと描き直していて、重さ・発熱の原因になっていた)。
+      //   引きずり始め(まだ箱に出ていない)や、箱が見つからないときは、今までどおり state で描く。
+      //   ⚠️ 2026-09-26 に一度、手札の欄(backdrop-filter の中)に置いたまま直接動かして、iPhone で
+      //   カードがずれて2枚に見えた。直接動かすのは body 直下の箱の中のカードだけにすること
+      const layerCard=active&&shownActive?document.querySelector('[data-drag-card-layer] [data-dragging-card]'):null;
+      if(layerCard){
+        layerCard.style.left=`${x}px`;
+        layerCard.style.top=`${y}px`;
+      } else {
+        shownActive=active;
+        setDragState(prev=>prev?{...prev,x,y,active}:null);
+      }
       if(active){ setDragOverSlot(findSlot(x,y)); }
       if(active&&e.cancelable) e.preventDefault();
     };
@@ -31822,6 +31839,7 @@ function MonsterHeroGame() {
       window.removeEventListener('pointermove',onMove);
       window.removeEventListener('pointerup',onUp);
       window.removeEventListener('pointercancel',onUp);
+      dragPosRef.current=null;
     };
   }, [dragState?.cardIndex]);
 
@@ -44018,7 +44036,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             cardNeedsMonster={cardNeedsMonster} cycleActiveUniqueForSlot={cycleActiveUniqueForSlot}
             cycleBattleAuto={cycleBattleAuto} cycleBattleSpeed={cycleBattleSpeed} cycleEcoMode={cycleEcoMode}
             debugBattle={debugBattle} difficulty={difficulty} dismissQuickRhythmIntro={dismissQuickRhythmIntro}
-            distTotalBonus={distTotalBonus} dragOverSlot={dragOverSlot} dragState={dragState}
+            distTotalBonus={distTotalBonus} dragOverSlot={dragOverSlot} dragState={dragState&&dragPosRef.current?{...dragState,x:dragPosRef.current.x,y:dragPosRef.current.y}:dragState}
             ecoBattleView={ecoBattleView} ecoMode={ecoMode} effectiveMaxGuts={effectiveMaxGuts}
             effectiveMaxHp={effectiveMaxHp} enemy={enemy} enemyAttackAnim={enemyAttackAnim}
             enemyAttackFx={enemyAttackFx} enemyDist={enemyDist} enemyIntent={enemyIntent}
