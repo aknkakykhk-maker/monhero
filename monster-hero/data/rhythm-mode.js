@@ -1096,6 +1096,21 @@ const RHYTHM_MISS_RECLAIM_MS = RHYTHM_INPUT_MATCH_WINDOW_MS + RHYTHM_INPUT_AGE_M
 
 const RHYTHM_FLICK_DISTANCE_PX = 24;
 const RHYTHM_FLICK_MAX_MS = 450;
+// 横フリック(2026-09-26・ユーザー指示「横フリックも実装したい」「横フリックはマスターから譜面にのるようにして」)。
+// FLICK に flickDir('left' / 'right')を書くと、その向きへ払ったときだけ成立する。
+// 書いていない FLICK は今までどおり向きの指定なし(どの向きでも可)。
+// 向きの判定: その向きへ RHYTHM_FLICK_DISTANCE_PX 以上動き、かつ横の動きが縦の動きの
+// RHYTHM_FLICK_SIDE_DOMINANCE 倍以上(斜め上へ払っても、横が主なら通す)。違う向きへ払っても成立せず、
+// RHYTHM_FLICK_MAX_MS を過ぎると取り逃し(MISS)になる。
+const RHYTHM_FLICK_DIRS=Object.freeze(['','left','right']);
+const RHYTHM_FLICK_SIDE_DOMINANCE=.8;
+const rhythmFlickDir=note=>note&&(note.flickDir==='left'||note.flickDir==='right')?note.flickDir:'';
+const rhythmFlickMatches=(note,dx,dy)=>{
+  const dir=rhythmFlickDir(note);
+  if(!dir)return Math.hypot(dx,dy)>=RHYTHM_FLICK_DISTANCE_PX;
+  const side=dir==='left'?-dx:dx;
+  return side>=RHYTHM_FLICK_DISTANCE_PX&&side>=Math.abs(dy)*RHYTHM_FLICK_SIDE_DOMINANCE;
+};
 // 終点フリック(HOLD / SLIDE の終わりでフリックして離す)。
 // ・受付開始: 終端のこの時間前から。受付に入った瞬間の指の位置を基準にし、
 //   そこから RHYTHM_FLICK_DISTANCE_PX(単発FLICKと同じ距離・方向指定なし)動けば成立する。
@@ -1802,7 +1817,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     if(session.kind==='FLICK'){
       const elapsed=Math.max(0,pos.perfMs-session.startPerfMs);
       const dx=pos.clientX-session.startX,dy=pos.clientY-session.startY;
-      if(elapsed<=RHYTHM_FLICK_MAX_MS&&Math.hypot(dx,dy)>=RHYTHM_FLICK_DISTANCE_PX)finishGesture(session,true);
+      if(elapsed<=RHYTHM_FLICK_MAX_MS&&rhythmFlickMatches(session.note,dx,dy))finishGesture(session,true);
       return;
     }
     if(session.kind!=='SLIDE'&&session.kind!=='HOLD')return;
@@ -2977,8 +2992,10 @@ const mhTap=(timeMs,subLane,subLaneWidth,monsterSlot)=>Object.freeze({
 const mhHold=(timeMs,subLane,subLaneWidth,endTimeMs)=>Object.freeze({
   type:'HOLD',timeMs,endTimeMs,lane:Math.floor(subLane/2),subLane,subLaneWidth,
 });
-const mhFlick=(timeMs,subLane,subLaneWidth)=>Object.freeze({
+// 4つ目は横フリックの向き(RHYTHM_FLICK_DIRS の並び。1=左・2=右)。書いていなければ向きの指定なし
+const mhFlick=(timeMs,subLane,subLaneWidth,dirCode)=>Object.freeze({
   type:'FLICK',timeMs,lane:Math.floor(subLane/2),subLane,subLaneWidth,
+  ...(dirCode>0&&RHYTHM_FLICK_DIRS[dirCode]?{flickDir:RHYTHM_FLICK_DIRS[dirCode]}:{}),
 });
 const mhSlide=(timeMs,endTimeMs,points)=>{
   const slidePoints=Object.freeze(points.map(([pointTimeMs,lane,subLaneWidth])=>Object.freeze({timeMs:pointTimeMs,lane,subLaneWidth})));
@@ -19417,6 +19434,31 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const AURA_INNER_GLOWS=Object.freeze([[5,'rgba(253,224,71,.92)'],[9,'rgba(232,121,249,.58)'],[13,'rgba(34,211,238,.34)']]);
   const FLICK_ARROW_GLOWS=Object.freeze([[5,'rgba(34,197,94,.95)'],[11,'rgba(21,128,61,.7)'],[2,'rgba(2,6,23,.9)']]);
   const FLICK_ARROW_FILL=Object.freeze([[0,'#ffffff'],[.38,'#bbf7d0'],[1,'#22c55e']]);
+  // 横フリックの山形(<<< / >>>)。左は緑・右はピンクで、形と色の両方で向きがわかるようにする(2026-09-26)。
+  // 焼くのは最初の1回だけ(ぼかしは焼くときにだけ使う)。
+  const SIDE_FLICK_STYLE=Object.freeze({
+    left:Object.freeze({stroke:'#f0fdf4',glows:Object.freeze([[6,'rgba(34,197,94,.95)'],[12,'rgba(21,128,61,.7)']])}),
+    right:Object.freeze({stroke:'#fdf2f8',glows:Object.freeze([[6,'rgba(236,72,153,.95)'],[12,'rgba(190,24,93,.7)']])}),
+  });
+  const SIDE_CHEVRON_W=46,SIDE_CHEVRON_H=18,SIDE_CHEVRON_MARGIN=12;
+  const sideChevronSprite=dir=>{
+    const id=`chevron:${dir}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const style=SIDE_FLICK_STYLE[dir],m=SIDE_CHEVRON_MARGIN,w=SIDE_CHEVRON_W,h=SIDE_CHEVRON_H;
+    const s=makeSpriteCanvas(w+m*2,h+m*2),c=s.ctx;
+    // 山形を3つ。左向きなら先端が左
+    const chevrons=()=>{
+      c.beginPath();
+      for(let i=0;i<3;i++){
+        const x0=m+i*(w/3),tip=dir==='left'?x0:x0+w/3-4,back=dir==='left'?x0+w/3-4:x0;
+        c.moveTo(back,m);c.lineTo(tip,m+h/2);c.lineTo(back,m+h);
+      }
+    };
+    c.lineCap='round';c.lineJoin='round';
+    for(const [blur,color] of style.glows){c.save();c.shadowBlur=blur;c.shadowColor=color;c.strokeStyle=color;c.lineWidth=5;chevrons();c.stroke();c.restore();}
+    c.strokeStyle=style.stroke;c.lineWidth=3.2;chevrons();c.stroke();
+    const sprite={...s,margin:m,tw:w,th:h};sprites.set(id,sprite);return sprite;
+  };
   const END_BAR_GLOWS_LOW=Object.freeze([[7,'#67e8f9']]);
   const END_BAR_GLOWS=Object.freeze([[10,'#67e8f9'],[18,'#d946ef']]);
   const END_FLICK_ARROW_GLOWS=Object.freeze([[4,'rgba(34,197,94,.95)'],[2,'rgba(2,6,23,.85)']]);
@@ -19463,7 +19505,13 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 奥ほど暗い(filter:brightness 相当。不透明な粒の上では黒を (1-明るさ) の濃さで重ねると同じ色になる)
     if(brightness<1){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
     if(pressed){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();}
-    if(rhythmNoteVisualType(note)==='FLICK'&&!failed){
+    const sideDir=rhythmNoteVisualType(note)==='FLICK'&&!failed?rhythmFlickDir(note):'';
+    if(sideDir){
+      // 横フリック: 粒の上に向きの山形を重ねる。横幅は粒に合わせて伸ばしすぎない
+      const sprite=sideChevronSprite(sideDir);
+      const aw=Math.min((sprite.tw+sprite.margin*2)*sizeMul,w+sprite.margin*2),ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
+      ctx.drawImage(sprite.canvas,cx-aw/2,cy-ah/2,aw,ah);
+    }else if(rhythmNoteVisualType(note)==='FLICK'&&!failed){
       const sprite=arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       const aw=(sprite.tw+sprite.margin*2)*sizeMul,ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
       ctx.drawImage(sprite.canvas,cx-aw/2,y-3*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale,aw,ah);
@@ -19587,8 +19635,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // モンスターノーツのアウラ(外は脈打つ・内は固定)
       auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',AURA_OUTER_GLOWS,AURA_OUTER_DOTS);
       auraSprite('inner',1,-2,9999,'rgba(255,250,205,.98)',AURA_INNER_GLOWS);
-      // FLICKの矢印
+      // FLICKの矢印と、横フリックの山形
       arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
+      sideChevronSprite('left');sideChevronSprite('right');
       // 終端バーの光と、終点フリックの矢印
       const endGlows=(effect==='LOW'||effect==='LIGHT')?END_BAR_GLOWS_LOW:END_BAR_GLOWS;
       glowSprite('end',4,endGlows);

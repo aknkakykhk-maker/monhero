@@ -423,6 +423,8 @@ const chartRevision=(()=>{
 const phraseCopy=chartRevision>=2;
 // 版3: SLIDEの区間を曲線でつなぐ(下の applySlideEase)
 const slideEase=chartRevision>=3;
+// 版4: MASTERだけ横フリックを付ける(下の applySideFlicks)
+const sideFlick=chartRevision>=4;
 if(audio.analysisType!=='rhythm-audio-v3')throw new Error('V3音源解析のJSONではありません');
 if(!audio.structure)throw new Error('V3音源解析が古い形です。rhythm-audio-analyze-v3.js を通し直してください');
 const structure=audio.structure;
@@ -3173,6 +3175,39 @@ function applySlideEase(notes){
 }
 
 // ============================================================================
+// 版4: 横フリック(2026-09-26)
+// ============================================================================
+// MASTERの FLICK に向き(flickDir)を付ける。本体の rhythmFlickMatches が同じ向きを読む。
+//   ・次のノーツ(SIDE_FLICK_NEXT_MS 以内)が SIDE_FLICK_MIN_SHIFT サブレーン以上右なら right、左なら left
+//     (次のノーツへ向かって払うので、手の流れが途切れない)
+//   ・次が近くに無い・ほぼ真上に続くときは、道の端に近い(中心が端から SIDE_FLICK_EDGE サブレーン以内)ものだけ外向き
+//   ・それ以外は今までどおり向きなし(上向きの矢印)
+// ノーツの数・時刻・位置は変えない。終点フリック(HOLD/SLIDE の endFlick)には付けない。
+const SIDE_FLICK_NEXT_MS=700,SIDE_FLICK_MIN_SHIFT=2,SIDE_FLICK_EDGE=1.5;
+function applySideFlicks(notes){
+  const center=n=>Number(n.subLane)+Number(n.subLaneWidth||2)/2;
+  const order=notes.map((note,index)=>({note,index,t:gridTimeMs(note.grid)})).sort((a,b)=>a.t-b.t);
+  let left=0,right=0;
+  order.forEach((item,k)=>{
+    const note=item.note;
+    if(note.type!=='FLICK')return;
+    delete note.flickDir;
+    const next=order.slice(k+1).find(other=>other.t-item.t>1);
+    let dir='';
+    if(next&&next.t-item.t<=SIDE_FLICK_NEXT_MS){
+      const shift=(next.note.type==='SLIDE'&&Array.isArray(next.note.slidePoints)?Number(next.note.slidePoints[0].lane)*2+1:center(next.note))-center(note);
+      if(shift>=SIDE_FLICK_MIN_SHIFT)dir='right';else if(shift<=-SIDE_FLICK_MIN_SHIFT)dir='left';
+    }
+    if(!dir){
+      const c=center(note);
+      if(c<=SIDE_FLICK_EDGE)dir='left';else if(c>=10-SIDE_FLICK_EDGE)dir='right';
+    }
+    if(dir){note.flickDir=dir;if(dir==='left')left++;else right++;}
+  });
+  return {left,right};
+}
+
+// ============================================================================
 // 実行
 // ============================================================================
 const targets=only?[only]:DIFFICULTIES;
@@ -3199,8 +3234,12 @@ if(slideEase){
     (r.notice||(r.notice=[])).push(`スライドの曲線: ${eased.notes}本・${eased.segments}区間`+(eased.reverted?`（重なるので直線へ戻した ${eased.reverted}本）`:''));
   }
 }
+if(sideFlick&&results.MASTER){
+  const r=results.MASTER,side=applySideFlicks(r.notes);
+  (r.notice||(r.notice=[])).push(`横フリック: 左${side.left}本・右${side.right}本`);
+}
 
-console.log(`譜面の作り方: 版${chartRevision}${phraseCopy?'（フレーズの写しあり）':'（2026-09-24までの作り方）'}${slideEase?'（スライドの曲線あり）':''}`);
+console.log(`譜面の作り方: 版${chartRevision}${phraseCopy?'（フレーズの写しあり）':'（2026-09-24までの作り方）'}${slideEase?'（スライドの曲線あり）':''}${sideFlick?'（MASTERに横フリックあり）':''}`);
 for(const difficulty of targets){
   const {notes,profile,runs}=results[difficulty];
   const typeCounts=notes.reduce((acc,n)=>{acc[n.type]=(acc[n.type]||0)+1;return acc;},{});
