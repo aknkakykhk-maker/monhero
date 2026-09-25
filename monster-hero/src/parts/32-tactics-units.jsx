@@ -892,6 +892,10 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //               ★止まるのは使った子だけ。ほかの子はいつもどおりカードを使える(2026-09-23 ユーザー指示
 //                 「EXで他行動禁止はそのモンスターだけ」)
 //   duration  … 効果の続く長さ。'turn'(発動ターン) / 'wave'(発動WAVEの終わりまで) / 'style'(もう一度使って選び直すまで)
+//               / 'turns'(使ったターンから turns ターンのあいだ。WAVEが変わったらそこで切れる)
+//   turns     … duration:'turns' のときのターン数
+//   statRate  … 効いているあいだ、力と丈夫さを何割上げるか(0.2 なら20%)
+//   fullRecover … true なら、使った瞬間にその子のライフとガッツを満タンにする
 //   styles    … duration:'style' のときの選択肢 [{ id, label, desc }]。使うたびに1つ選ぶ(いまのものは選べない)
 //   defaultStyle … バトルを始めたときのスタイル(styles の id)
 //   heroInitialStyle … true なら、勇者モンに選んだときだけ配置の画面で初期スタイルを選べる
@@ -911,6 +915,17 @@ const TACTICS_EX_SKILLS = Object.freeze({
     // ★2026-09-25 ユーザー指示で 1ラン3回 → 10回
     maxUses: 10, unlimited: false, withCards: true, duration: 'turn',
     effect: 'coverAll',
+  }),
+  // ★2026-09-25 ユーザー指示「モッチー ガッツ全開っちー 5ターンの間全てのステータスが20%上がり、
+  //   ライフとガッツを全回復する 使用回数3回」。上がるのは力と丈夫さ(ライフ・ガッツは満タンにする)。
+  //   カードとの併用は指定が無かったので、制限なし(併用できる)にしてある
+  Mocchi: Object.freeze({
+    id: 'mocchi_guts_full',
+    name: 'ガッツ全開っちー',
+    desc: '5ターンのあいだ、力と丈夫さが20%上がる。使った瞬間にライフとガッツを満タンまで回復する。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    statRate: 0.2, fullRecover: true,
+    effect: 'statBoost',
   }),
   Golem: Object.freeze({
     id: 'golem_all_in',
@@ -952,10 +967,10 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
-const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style']);
+const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 // 二刀流で、連撃を何回ぶん入れるか(メインのダメージは1回のまま。連撃だけ2回ぶん)
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
 
@@ -983,11 +998,18 @@ const normalizeTacticsExDef = (raw) => {
     styles: safeDuration === 'style' ? styles : [],
     defaultStyle: safeDuration === 'style' ? defaultStyle : null,
     heroInitialStyle: safeDuration === 'style' && raw.heroInitialStyle === true,
+    turns: safeDuration === 'turns' ? Math.max(1, tacticsSafeInt(raw.turns, 1)) : 0,
+    statRate: Math.max(0, Number.isFinite(Number(raw.statRate)) ? Number(raw.statRate) : 0),
+    fullRecover: raw.fullRecover === true,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null,
   };
 };
+// 効果時間の文(「5ターンのあいだ」のようにターン数を入れる)
+const tacticsExDurationText = (def) => (!def ? null
+  : def.duration === 'turns' ? `使ったターンから${def.turns}ターンのあいだ（WAVEが変わると切れる）`
+  : (TACTICS_EX_DURATION_TEXT[def.duration] || null));
 // そのモンスターのEX。持っていなければ null
 const tacticsExDefOf = (monId, table = TACTICS_EX_SKILLS) =>
   (monId && table && Object.prototype.hasOwnProperty.call(table, monId) ? normalizeTacticsExDef(table[monId]) : null);
@@ -1033,6 +1055,13 @@ const isTacticsExEffectActive = (state, slot, monId, now) => {
   const effect = normalizeTacticsExState(state).effects[slot];
   if (!effect || effect.monId !== monId) return false;
   if (effect.duration === 'style') return effect.on === true;
+  // ★ターン数で切れるもの。**WAVEをまたがない**(2026-09-25 ユーザー指示「WAVE跨ぎはなし」)。
+  //   同じWAVEのあいだだけ、使ったターンから数えて turns ターン目まで効く
+  if (effect.duration === 'turns') {
+    if (!now || tacticsSafeInt(effect.wave, -1) !== tacticsSafeInt(now.wave, -2)) return false;
+    const at = tacticsSafeInt(now.turn, -1), from = tacticsSafeInt(effect.turn, -1), len = tacticsSafeInt(effect.turns, 0);
+    return from >= 0 && at >= from && at < from + len;
+  }
   if (effect.duration === 'wave') return !!now && tacticsSafeInt(effect.wave, -1) === tacticsSafeInt(now.wave, -2);
   return sameTacticsExTurn(effect, now);
 };
@@ -1084,6 +1113,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
     effects: { ...safe.effects, [slot]: { monId, exId: def.id, effect: def.effect, duration: def.duration, wave: stamp.wave, turn: stamp.turn,
       on: def.duration === 'style' ? style !== def.defaultStyle : true,
       style,
+      turns: def.duration === 'turns' ? def.turns : 0, statRate: def.statRate || 0,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -1141,6 +1171,12 @@ const applyTacticsExStats = (unit, state, slot, now) => {
     const usedDef = Math.max(0, tacticsSafeInt(snap && snap.def, tacticsSafeInt(unit.def, 0)));
     return { ...unit, atk: Math.max(0, tacticsSafeInt(unit.atk, 0)) + Math.floor(usedDef * TACTICS_EX_ALL_IN_ATK_RATE), def: 0 };
   }
+  // ステータスアップ(ガッツ全開っちー): 力と丈夫さを statRate ぶん上げる(切り捨て)
+  if (kind === 'statBoost') {
+    const rate = Math.max(0, Number(normalizeTacticsExState(state).effects[slot].statRate) || 0);
+    return { ...unit, atk: Math.floor(Math.max(0, tacticsSafeInt(unit.atk, 0)) * (1 + rate)),
+      def: Math.floor(Math.max(0, tacticsSafeInt(unit.def, 0)) * (1 + rate)) };
+  }
   // ★スタイルの効き目は、いつも「元のステータス」(盤面の値)から数え直す。積み重ならない
   if (kind === 'weaponChange') {
     const style = normalizeTacticsExState(state).effects[slot].style;
@@ -1150,6 +1186,12 @@ const applyTacticsExStats = (unit, state, slot, now) => {
     if (style === 'dual') return { ...unit, def: Math.floor(def / 2) };
   }
   return unit;
+};
+// ターン数で切れる効果の、あと何ターン残っているか(使ったターンを含めて数える)。効いていなければ 0
+const tacticsExTurnsLeft = (state, slot, monId, now) => {
+  const effect = normalizeTacticsExState(state).effects[slot];
+  if (!effect || effect.duration !== 'turns' || !isTacticsExEffectActive(state, slot, monId, now)) return 0;
+  return tacticsSafeInt(effect.turn, 0) + tacticsSafeInt(effect.turns, 0) - tacticsSafeInt(now.turn, 0);
 };
 // いま効いているスタイル(既定のスタイルのときは null)。戦闘の計算側がヒット列やソードスキルの有無に使う
 const tacticsExActiveStyle = (state, slot, monId, now) => {

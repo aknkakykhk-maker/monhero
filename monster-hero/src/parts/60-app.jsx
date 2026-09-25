@@ -10304,7 +10304,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // スタイル式の選択肢。いまのスタイルは選べない
       styleOptions:def.duration==='style'?def.styles.map(st=>({ ...st,
         current:tacticsExStyleOf(def,state,slotIdx,mon.id)===st.id })):null,
-      durationText:TACTICS_EX_DURATION_TEXT[def.duration]||null,
+      durationText:tacticsExDurationText(def),
       implemented:isTacticsExEffectImplemented(def),
       // いまの力・丈夫さ(EXが乗っていればそのぶんも)。捨て身・片手持ちの効き目を数字で確かめられるように
       // 距離枠に出す短い札。切り替え式はいまの状態(二刀流／片手持ち)、効いている間は「◯◯中」、ふだんは「EX」
@@ -10312,6 +10312,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       badge:(()=>{
         const styleLabel=tacticsExStyleLabel(def,state,slotIdx,mon.id);
         if(styleLabel) return { text:styleLabel, active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow) };
+        // ターン数で切れるもの(ガッツ全開っちー)は、あと何ターンかを出す
+        if(def.duration==='turns'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン`, active:true };
         if(isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)) return { text:`${def.name}中`, active:true };
         return { text:'EX', active:false };
       })(),
@@ -10344,6 +10346,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     Audio_.se.card();
     const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
+    // 使った瞬間にライフとガッツを満タンにする(ガッツ全開っちー)。その子だけ。枠に入った量を出す
+    if(def.fullRecover){
+      const u=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
+      if(u){
+        const hpGain=Math.max(0,u.maxHp-u.hp), gutsGain=Math.max(0,u.maxGuts-u.guts);
+        commitTacticsUnits(recoverTacticsGutsAt(healTacticsAt(tacticsUnitsRef.current,slotIdx,hpGain),slotIdx,gutsGain));
+        if(hpGain>0||gutsGain>0) mergeTacticsSlotFx({[slotIdx]:hpGain},{[slotIdx]:gutsGain});
+      }
+    }
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
       addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md',undefined,slotIdx);
@@ -12529,7 +12540,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {(()=>{
         const exDef=typeof tacticsExDefOf==='function'?tacticsExDefOf(mon.id):null;
         if(!exDef)return null;
-        const durationLabel={turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—');
+        const durationLabel=exDef.duration==='turns'?`${exDef.turns}ターン`:({turn:'そのターン',wave:'そのWAVE',style:'再使用まで'}[exDef.duration]||String(exDef.duration||'—'));
         return <div data-monster-detail-ex className="rounded-xl border border-violet-400/40 bg-violet-950/25 p-2 min-w-0">
           <div className="flex items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-widest text-violet-300">EXスキル</div><div className="text-[9px] font-black text-violet-200/80">タクティクス専用</div></div>
           <div className="mt-0.5 text-[12px] font-black text-white">EX《{exDef.name}》</div>
