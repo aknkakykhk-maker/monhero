@@ -19316,9 +19316,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const MID=8;              // 3分割画像の中央の幅(横に伸ばす)
   const easeOut=t=>1-(1-t)*(1-t);
   // 見た目の刷新(2026-09-26・ユーザー指示「見た目も含めてこんぐらいに仕上げたい」)。
-  // 粒の厚み。ノーツ要素・当たり判定の大きさは変えず、canvas に描く粒だけを厚くする
+  // 粒の厚み。2026-09-26 に1.55倍へ厚くしたが、実機で「ノーツが太くなってて違和感が凄い」と言われて元の1倍へ戻した。
   // (当たり判定はノーツサイズにも粒の見た目にも左右されない)。
-  const HEAD_THICK=1.55;
+  const HEAD_THICK=1;
   // 粒の上半分に入れる白い芯(板の表面が光って見えるように)。色分けの色はそのまま残る
   const HEAD_CORE_STOPS=[['rgba(255,255,255,.92)',0],['rgba(255,255,255,.35)',.45],['rgba(255,255,255,0)',.55]];
   const HEADS={
@@ -19469,14 +19469,19 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     ctx.globalAlpha=1;
   };
+  // 帯・SLIDE・終わりの横棒の横幅も、粒と同じノーツサイズの倍率にする(中心は動かさない。2026-09-26)。
+  // 以前は粒だけが倍率で細く・太くなり、HOLD/SLIDE の先頭だけ細いのに帯は元の幅のまま残って見えた
+  // (実機「ノーツサイズを下げたら先端だけ細くなって、でももとの太さも残ってる」)。
+  // 見た目だけ。判定・入力の受け付け幅はこれまでどおりノーツサイズに左右されない。
+  const sizeX=(left,right)=>{const c=(left+right)/2,k=sizeScale;return [c-(c-left)*k,c+(right-c)*k];};
   const drawBand=(geo,opts)=>{
     const {failed,alpha,pressed}=opts,band=geo.band;
     if(!band||band.length<2)return;
     const top=band[0].y,bottom=band[band.length-1].y;
     ctx.globalAlpha=alpha;
     ctx.beginPath();
-    band.forEach((edge,index)=>{if(index===0)ctx.moveTo(edge.right,edge.y);else ctx.lineTo(edge.right,edge.y);});
-    for(let index=band.length-1;index>=0;index--)ctx.lineTo(band[index].left,band[index].y);
+    band.forEach((edge,index)=>{const r=sizeX(edge.left,edge.right)[1];if(index===0)ctx.moveTo(r,edge.y);else ctx.lineTo(r,edge.y);});
+    for(let index=band.length-1;index>=0;index--)ctx.lineTo(sizeX(band[index].left,band[index].right)[0],band[index].y);
     ctx.closePath();
     // 帯のまわりの光(ノーツ全体の drop-shadow 相当)は、外周の太い半透明の線で出す
     if(!failed&&effect!=='MINIMAL'&&!lightweight){ctx.lineWidth=5;ctx.strokeStyle='rgba(180,240,255,.16)';ctx.lineJoin='round';ctx.stroke();}
@@ -19488,8 +19493,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.globalAlpha=1;
   };
   const drawSlide=(geo,opts)=>{
-    const {failed,alpha}=opts,quads=geo.slide;
-    if(!quads||!quads.length)return;
+    const {failed,alpha}=opts;
+    if(!geo.slide||!geo.slide.length)return;
+    // ノーツサイズが100%以外のときだけ、帯の左右を中心のまわりで倍率にした写しを作る(100%は元のまま)
+    const quads=sizeScale===1?geo.slide:geo.slide.map(q=>{const [l0,r0]=sizeX(q.l0,q.r0),[l1,r1]=sizeX(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1};});
     ctx.globalAlpha=alpha;
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
       // ぼかし(drop-shadow 5px)の代わりに、外周をなぞる太い半透明の線
@@ -19514,7 +19521,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const checkpoints=geo.checkpoints;
     if(checkpoints&&checkpoints.length){
       ctx.strokeStyle=failed?'rgba(190,190,200,.6)':'rgba(233,213,255,.85)';ctx.lineWidth=2;ctx.lineCap='round';
-      checkpoints.forEach(line=>{ctx.beginPath();ctx.moveTo(line.x1,line.y);ctx.lineTo(line.x2,line.y);ctx.stroke();});
+      checkpoints.forEach(line=>{const [x1,x2]=sizeX(line.x1,line.x2);ctx.beginPath();ctx.moveTo(x1,line.y);ctx.lineTo(x2,line.y);ctx.stroke();});
       ctx.lineCap='butt';
     }
     ctx.globalAlpha=1;
@@ -19523,7 +19530,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const {failed,alpha}=opts,end=geo.end;
     if(!end)return;
     // DOM 版: top = releaseY + noteH/2 - 4、高さ 8px を scaleY(0.52+0.48*奥行き) で中心基準に伸縮 → 中心は end.cy のまま
-    const flick=note.endFlick===true,h=8*(0.52+end.scale*.48),w=end.w,x=end.cx-w/2,top=end.cy-h/2;
+    // 横幅は帯と同じくノーツサイズの倍率(sizeX と同じ考え方。中心は動かさない)
+    const flick=note.endFlick===true,h=8*(0.52+end.scale*.48),w=end.w*sizeScale,x=end.cx-w/2,top=end.cy-h/2;
     ctx.globalAlpha=alpha;
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
       const sprite=glowSprite(flick?'endFlick':'end',4,(effect==='LOW'||effect==='LIGHT')?END_BAR_GLOWS_LOW:END_BAR_GLOWS);
