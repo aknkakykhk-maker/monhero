@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a525f1f94c7f8b9a
+// source-sha256: 78de06a2994eb46f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6abfcc7a71593948
+// generated-sha256: 839d09a069a4b17b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -246,7 +246,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-25 12:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29638,7 +29638,8 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
     desc: 'そのターンの敵の攻撃を、単体・全体・連撃までまとめてモノリスが引き受ける。',
-    maxUses: 3,
+    // ★2026-09-25 ユーザー指示で 1ラン3回 → 10回
+    maxUses: 10,
     unlimited: false,
     withCards: true,
     duration: 'turn',
@@ -29661,7 +29662,9 @@ const TACTICS_EX_SKILLS = Object.freeze({
     name: 'ソード・コンバージョン',
     // ★2026-09-25 ユーザー指示で3択にした(片手剣・片手盾・二刀流。既定は片手剣)。
     //   スタイルの効き目は、いつも「元のステータス」から数え直す(切り替えても積み重ならない)
-    desc: '片手剣・片手盾・二刀流から戦い方を選び直す（いまのスタイルは選べない）。',
+    // ★説明だけで3つの効き目が分かるように、スタイルごとに1行ずつ書く(2026-09-25 ユーザー指摘
+    //   「説明があれじゃ効果が分からない」)。画面は改行をそのまま出す(whitespace-pre-line)
+    desc: '戦い方（スタイル）を3つから選び直す。いまのスタイルは選べない。\n' + '片手剣：いつもの戦い方。固有技でソードスキルも出る。\n' + '片手盾：力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない。\n' + '二刀流：丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）。',
     maxUses: 0,
     unlimited: true,
     withCards: false,
@@ -32915,7 +32918,7 @@ function MonsterDexDetailScreen({
     }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u5C02\u7528")), /*#__PURE__*/React.createElement("div", {
       className: "mt-0.5 text-[12px] font-black text-white"
     }, "EX\u300A", exDef.name, "\u300B"), /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-200"
+      className: "mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200"
     }, exDef.desc), /*#__PURE__*/React.createElement("div", {
       className: "mt-1.5 flex flex-wrap gap-1 text-[9px] font-black text-slate-300"
     }, /*#__PURE__*/React.createElement("span", {
@@ -44844,7 +44847,7 @@ function BattleScreen({
     className: "mt-1 text-[18px] font-black leading-tight text-fuchsia-100"
   }, exPanel.def.name), /*#__PURE__*/React.createElement("p", {
     "data-tactics-ex-desc": true,
-    className: "mt-1.5 text-[12px] font-bold leading-relaxed text-slate-200"
+    className: "mt-1.5 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200"
   }, exPanel.def.desc), !exPanel.implemented && /*#__PURE__*/React.createElement("p", {
     className: "mt-1.5 rounded-lg border border-amber-300/40 bg-amber-950/50 px-2 py-1.5 text-[11px] font-bold leading-snug text-amber-100"
   }, "\u52B9\u679C\u306F\u307E\u3060\u5165\u3063\u3066\u3044\u307E\u305B\u3093\u3002\u4F7F\u3046\u3068\u56DE\u6570\u3068\u300C\u4ED6\u306E\u30AB\u30FC\u30C9\u3068\u4E00\u7DD2\u306B\u4F7F\u3048\u308B\u304B\u300D\u306E\u6C7A\u307E\u308A\u3060\u3051\u304C\u52D5\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("dl", {
@@ -64010,7 +64013,7 @@ function MonsterHeroGame() {
       }, "\u30BF\u30AF\u30C6\u30A3\u30AF\u30B9\u5C02\u7528")), /*#__PURE__*/React.createElement("div", {
         className: "mt-0.5 text-[12px] font-black text-white"
       }, "EX\u300A", exDef.name, "\u300B"), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-200"
+        className: "mt-1 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200"
       }, exDef.desc), /*#__PURE__*/React.createElement("div", {
         className: "mt-1.5 grid grid-cols-3 gap-1 text-center text-[9px] font-black"
       }, /*#__PURE__*/React.createElement("div", {

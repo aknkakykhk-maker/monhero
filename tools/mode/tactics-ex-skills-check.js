@@ -97,8 +97,8 @@ const { gate, modes, ex, hitsApi } = sandbox;
 const monol = ex.tacticsExDefOf('Monol');
 const golem = ex.tacticsExDefOf('Golem');
 const kenshi = ex.tacticsExDefOf('KenshiMocchi');
-check('モノリス「みんなをかばう」: ラン3回・併用できる・発動ターン',
-  monol && monol.name === 'みんなをかばう' && monol.maxUses === 3 && !monol.unlimited && monol.withCards && monol.duration === 'turn',
+check('モノリス「みんなをかばう」: ラン10回・併用できる・発動ターン',
+  monol && monol.name === 'みんなをかばう' && monol.maxUses === 10 && !monol.unlimited && monol.withCards && monol.duration === 'turn',
   JSON.stringify(monol));
 check('ゴーレム「捨て身」: ラン3回・使ったターンは他カード不可・WAVE内・効果中は再使用不可',
   golem && golem.name === '捨て身' && golem.maxUses === 3 && !golem.unlimited && !golem.withCards && golem.duration === 'wave'
@@ -108,6 +108,8 @@ check('剣士モッチー「ソード・コンバージョン」: 無制限・�
   kenshi && kenshi.name === 'ソード・コンバージョン' && kenshi.unlimited && !kenshi.withCards && kenshi.duration === 'style'
     && kenshi.styles.map(st => st.label).join('/') === '片手剣/片手盾/二刀流' && kenshi.defaultStyle === 'sword' && kenshi.heroInitialStyle,
   JSON.stringify(kenshi));
+check('ソード・コンバージョンの説明だけで3つのスタイルの効き目が分かる', ['片手剣：', '片手盾：', '二刀流：', '丈夫さ', 'ソードスキル', '連撃', 'メイン']
+  .every(w => kenshi.desc.includes(w)), kenshi.desc);
 check('EXを持たない子は null', ex.tacticsExDefOf('Ham') === null && ex.tacticsExDefOf(null) === null
   && ex.tacticsExDefOf('toString') === null && ex.tacticsExDefOf('__proto__') === null);
 check('どの定義も効果時間の説明を持つ', Object.keys(ex.TACTICS_EX_SKILLS)
@@ -129,16 +131,19 @@ const use = (state, def, slot, monId, now, extra = {}) => {
 };
 {
   let s = ex.createTacticsExState();
+  // ★モノリスは 2026-09-25 から1ラン10回。回数は定義から読む(数字を検査へ書き写さない)
+  const M = monol.maxUses;
   check('新しいランの状態は、どの子も0回', ex.tacticsExUsesOf(s, 0, 'Monol') === 0
-    && ex.tacticsExRemaining(monol, 0).left === 3);
+    && ex.tacticsExRemaining(monol, 0).left === M);
   let r = use(s, monol, 1, 'Monol', T(1, 1)); s = r.state;
-  check('使うと残りが1減る(3→2)', r.check.ok && ex.tacticsExRemaining(monol, ex.tacticsExUsesOf(s, 1, 'Monol')).left === 2);
+  check(`使うと残りが1減る(${M}→${M - 1})`, r.check.ok && ex.tacticsExRemaining(monol, ex.tacticsExUsesOf(s, 1, 'Monol')).left === M - 1);
   // WAVEをまたぐ(WAVE2の1ターン目)。回数は戻らない
   r = use(s, monol, 1, 'Monol', T(2, 1)); s = r.state;
-  check('WAVEが変わっても回数は戻らない(2→1)', r.check.ok && ex.tacticsExRemaining(monol, ex.tacticsExUsesOf(s, 1, 'Monol')).left === 1);
-  r = use(s, monol, 1, 'Monol', T(3, 5)); s = r.state;
-  check('3回目で0になる', r.check.ok && ex.tacticsExRemaining(monol, ex.tacticsExUsesOf(s, 1, 'Monol')).left === 0);
-  r = use(s, monol, 1, 'Monol', T(4, 1));
+  check(`WAVEが変わっても回数は戻らない(${M - 1}→${M - 2})`, r.check.ok && ex.tacticsExRemaining(monol, ex.tacticsExUsesOf(s, 1, 'Monol')).left === M - 2);
+  let allOk = true;
+  for (let k = 2; k < M; k += 1) { r = use(s, monol, 1, 'Monol', T(3 + k, 1)); allOk = allOk && r.check.ok; s = r.state; }
+  check(`${M}回目で0になる`, allOk && ex.tacticsExRemaining(monol, ex.tacticsExUsesOf(s, 1, 'Monol')).left === 0);
+  r = use(s, monol, 1, 'Monol', T(99, 1));
   check('0回では使えない', !r.check.ok && /回数/.test(r.check.reason), r.check.reason);
   check('ほかの枠の回数には影響しない', ex.tacticsExUsesOf(s, 0, 'Monol') === 0);
   check('枠の子が違えば、その子はまだ使っていない扱い', ex.tacticsExUsesOf(s, 1, 'Golem') === 0);
