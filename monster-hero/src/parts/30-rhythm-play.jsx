@@ -535,7 +535,8 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
     apply();const later=setTimeout(apply,400);window.addEventListener('resize',apply);
     return()=>{clearTimeout(later);window.removeEventListener('resize',apply);};
   },[isLandscape,view.status]);
-  const stopFrame=useCallback(()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);frameRef.current=null;},[]);
+  // ループを止めたら canvas の光の柱も止まるので、DOM の押下表示を見せる側へ戻す(data-rhythm-glow-live)
+  const stopFrame=useCallback(()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);frameRef.current=null;const area=playAreaRef.current;if(area&&area.dataset.rhythmGlowLive)delete area.dataset.rhythmGlowLive;},[]);
   const clearJudgmentTimer=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);judgmentTimerRef.current=null;++judgmentRevisionRef.current;},[]);
   const scheduleJudgmentClear=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);const revision=++judgmentRevisionRef.current;judgmentTimerRef.current=setTimeout(()=>{if(revision!==judgmentRevisionRef.current)return;judgmentTimerRef.current=null;setView(v=>({...v,last:'',lastPrecise:false,fastSlow:''}));},RHYTHM_JUDGMENT_DISPLAY_MS);},[]);
   // 能力の発動表示(「ミーア　元気！」)は短時間で消す。判定表示とは別のタイマーで持つ
@@ -909,6 +910,8 @@ const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.re
 // 離したあとは RHYTHM_LANE_GLOW_FADE_MS かけて消す。ノーツより先に描いて、粒が光の上に乗るようにする
 if(canvasReady&&settings.laneGlow!=='NONE'){
   const glowArea=playAreaRef.current;let glowNodes=glowNodesRef.current;
+  // ここから canvas が光を描くので、DOM の押下表示を隠す(止めたら stopFrame が戻す)
+  if(glowArea&&glowArea.dataset.rhythmGlowLive!=='1')glowArea.dataset.rhythmGlowLive='1';
   if(glowArea&&(!glowNodes||!glowNodes.length||!glowNodes[0].isConnected))glowNodes=glowNodesRef.current=Array.from(glowArea.querySelectorAll('[data-rhythm-sublane-feedback]'));
   const glow=laneGlowStateRef.current||(laneGlowStateRef.current={levels:new Float32Array(10),lastOn:new Float64Array(10).fill(-1e9)});
   const glowGain=settings.laneGlow==='LOW'?.35:1;

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f5a33310600cf7a5
+// generated-sha256: 9868b4526e0c07dd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 04:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 04:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15985,7 +15985,8 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
     apply();const later=setTimeout(apply,400);window.addEventListener('resize',apply);
     return()=>{clearTimeout(later);window.removeEventListener('resize',apply);};
   },[isLandscape,view.status]);
-  const stopFrame=useCallback(()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);frameRef.current=null;},[]);
+  // ループを止めたら canvas の光の柱も止まるので、DOM の押下表示を見せる側へ戻す(data-rhythm-glow-live)
+  const stopFrame=useCallback(()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);frameRef.current=null;const area=playAreaRef.current;if(area&&area.dataset.rhythmGlowLive)delete area.dataset.rhythmGlowLive;},[]);
   const clearJudgmentTimer=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);judgmentTimerRef.current=null;++judgmentRevisionRef.current;},[]);
   const scheduleJudgmentClear=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);const revision=++judgmentRevisionRef.current;judgmentTimerRef.current=setTimeout(()=>{if(revision!==judgmentRevisionRef.current)return;judgmentTimerRef.current=null;setView(v=>({...v,last:'',lastPrecise:false,fastSlow:''}));},RHYTHM_JUDGMENT_DISPLAY_MS);},[]);
   // 能力の発動表示(「ミーア　元気！」)は短時間で消す。判定表示とは別のタイマーで持つ
@@ -16359,6 +16360,8 @@ const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.re
 // 離したあとは RHYTHM_LANE_GLOW_FADE_MS かけて消す。ノーツより先に描いて、粒が光の上に乗るようにする
 if(canvasReady&&settings.laneGlow!=='NONE'){
   const glowArea=playAreaRef.current;let glowNodes=glowNodesRef.current;
+  // ここから canvas が光を描くので、DOM の押下表示を隠す(止めたら stopFrame が戻す)
+  if(glowArea&&glowArea.dataset.rhythmGlowLive!=='1')glowArea.dataset.rhythmGlowLive='1';
   if(glowArea&&(!glowNodes||!glowNodes.length||!glowNodes[0].isConnected))glowNodes=glowNodesRef.current=Array.from(glowArea.querySelectorAll('[data-rhythm-sublane-feedback]'));
   const glow=laneGlowStateRef.current||(laneGlowStateRef.current={levels:new Float32Array(10),lastOn:new Float64Array(10).fill(-1e9)});
   const glowGain=settings.laneGlow==='LOW'?.35:1;

@@ -18398,8 +18398,11 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-sublane-boundary]{display:block;position:absolute;z-index:1;inset:0;pointer-events:none;opacity:.12;background:linear-gradient(180deg,rgba(216,180,254,.12),rgba(103,232,249,.20) 70%,rgba(236,254,255,.38));clip-path:var(--rhythm-sub-clip,none)}
     [data-rhythm-note]{z-index:2}
     /* canvas で光の柱を描くとき(2026-09-26)は、DOM の押下表示は「どこを押しているか」の目印としてだけ残し、描かない。
-       visibility:hidden の要素は描かれないので、押すたびの内側の影・filter の描き直しが起きない */
-    [data-rhythm-play-area][data-rhythm-canvas-glow="1"] [data-rhythm-sublane-feedback]{visibility:hidden!important}
+       visibility:hidden の要素は描かれないので、押すたびの内側の影・filter の描き直しが起きない。
+       ★隠すのは演奏ループが canvas へ光を描いているあいだ(data-rhythm-glow-live="1")だけ。
+         ループはカウントダウンの後に動き出すので、常に隠すとカウントダウン中に押しても光らない
+         (2026-09-26・実機「演奏前にタップはきくのにレーンが光らない」)。止まっている間は DOM の光が出る */
+    [data-rhythm-play-area][data-rhythm-canvas-glow="1"][data-rhythm-glow-live="1"] [data-rhythm-sublane-feedback]{visibility:hidden!important}
     /* canvas でノーツを描くとき(2026-09-07)。canvas はノーツと同じ層に置く。
        マスモンの顔も、演奏の前に焼いた絵を同じ canvas へ描く(2026-09-25。以前は DOM の要素を重ねていた)。 */
     [data-rhythm-note-canvas]{position:absolute;left:0;top:0;pointer-events:none;z-index:5}
