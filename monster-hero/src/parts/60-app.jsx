@@ -9921,14 +9921,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)。
         //   ムーも動きを持つときは技ごとの長さ(全画面の演出を見せきる長さ)になる
         const motionEnemyId = isTacticsMode(runMode)&&!ecoBattleView ? enemy?.id : null;
-        const fxMs = tacticsEnemyMotionMs(motionEnemyId, fxSkill, fxKind==='moo' ? 900 : (intent.type==='SPECIAL' ? 1100 : 450));
+        // ★必殺技ムービーを持つ敵(覚醒ムー)の必殺技は、画面を切り替えてムービーを流してから当てる
+        //   (2026-09-25 ユーザー指示)。流すのは設定が「流す」のときだけ。演奏で止まったぶんの追いつき中は流さない。
+        //   ムービーは戦闘の速さに合わせて縮めない(「下手に短くしないでおけ」)。
+        //   流せなかったとき(読み込めない・自動再生を止められた)は、いつもの演出へそのまま戻る。
+        //   見せ方が変わるだけで、ダメージの計算・進行はどちらでも同じ
+        const specialMovieSrc = fxSkill==='special' && motionEnemyId && typeof enemy?.specialMovie==='string'
+          && normalizeBattleFxSettings(battleFxSettings).specialMovie==='ON' && !(catchUpUntilRef.current>Date.now())
+          ? enemy.specialMovie : null;
+        const movieShown = specialMovieSrc
+          ? await playBossMovie(specialMovieSrc, {label: intent.label || enemy?.special || '', enemyName: enemy?.name || ''})
+          : false;
+        const fxMs = movieShown ? 1000 : tacticsEnemyMotionMs(motionEnemyId, fxSkill, fxKind==='moo' ? 900 : (intent.type==='SPECIAL' ? 1100 : 450));
         // targets: 狙われた枠(画面が攻撃を味方の枠まで飛ばすのに使う) / ms: 速さの設定を掛けた実際の長さ(動きをこれに合わせる)
-        setEnemyAttackFx({kind: fxKind, skill: fxSkill, targets: Array.isArray(aimedSlots) ? aimedSlots.slice() : [], ms: battleMs(fxMs)});
+        // afterMovie: ムービーを見せ終えたあと。画面は溜め・技名を省いて、すぐ味方の枠へ当てる
+        setEnemyAttackFx({kind: fxKind, skill: fxSkill, targets: Array.isArray(aimedSlots) ? aimedSlots.slice() : [], ms: battleMs(fxMs), ...(movieShown?{afterMovie:true}:{})});
         if(intent.type==='SPECIAL') Audio_.se.enemySpecial(); else Audio_.se.enemyAttack();
         setEnemyAttackAnim(true);
         if(fxKind==='moo') {
           // 動きを持つムーは、技が当たる瞬間に揺らす(はじめに揺らすと、溜めのあいだに揺れが終わってしまう)
-          if (motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId]) setTimeout(()=>triggerShake(true), battleMs(Math.round(fxMs*tacticsEnemyHitFrac(motionEnemyId, fxSkill))));
+          if (movieShown) setTimeout(()=>triggerShake(true), battleMs(Math.round(fxMs*0.12)));
+          else if (motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId]) setTimeout(()=>triggerShake(true), battleMs(Math.round(fxMs*tacticsEnemyHitFrac(motionEnemyId, fxSkill))));
           else triggerShake(true);
         }
         await battleWait(fxMs);

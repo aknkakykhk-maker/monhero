@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a9295e03dc5ca67c
+// source-sha256: 8b37305c3ce80458
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f1f37413157aad83
+// generated-sha256: 9d19b1cbeaa4d4a1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -181,7 +181,10 @@ const normalizeBattleFxSettings = value => {
     shake: v.shake === 'OFF' ? 'OFF' : 'ON',
     // 画面の軽さ(2026-09-24 ユーザー指示「バトル設定で軽い画面でも出来るの作って 4種類ぐらい」)。
     // ★足す前に保存した人(load が無い)は RICH(いままでの見た目)で始まる
-    load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH'
+    load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH',
+    // ボスの必殺技ムービー(2026-09-25 ユーザー指示「設定でオンオフもつけて」)。
+    // ★足す前に保存した人(specialMovie が無い)は ON(流す)で始まる
+    specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON'
   };
 };
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
@@ -232,6 +235,19 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
     label: '揺らさない',
     note: '酔いやすい人向け'
   }]
+}, {
+  key: 'specialMovie',
+  title: '必殺技ムービー',
+  desc: 'タクティクスバトルの覚醒ムーが必殺技「アポカリプス」を使うとき、画面を切り替えてムービーを流します。流さないときは、いつもの演出で短く進みます。ダメージや進行は変わりません。',
+  options: [{
+    id: 'ON',
+    label: '流す',
+    note: '画面いっぱいで見せる'
+  }, {
+    id: 'OFF',
+    label: '流さない',
+    note: 'いつもの演出で短く'
+  }]
 }]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   id: 'FULL',
@@ -246,7 +262,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-25 14:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-25 16:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16623,11 +16639,22 @@ const tacticsEnemyActionIds = (enemyId, difficulty) => {
   const extra = TACTICS_EXTRA_ACTION_ORDER.filter(id => !base.includes(id));
   return [...base, ...extra.slice(0, want - base.length)];
 };
+// 必殺技が全体技になる敵(2026-09-25 ユーザー指示「ムーの必殺技は全体技に変更しよう」)。
+// 威力は1体あたりいままでの必殺技と同じ(×2.5)のまま、立っている全員へ同時に当たる。
+// 当たる相手は全体攻撃と同じく targetsAll を見て tacticsIntentTargets が数える
+const TACTICS_ALL_TARGET_SPECIAL_ENEMY_IDS = Object.freeze(['AwakenedMoo']);
 const tacticsActionDefinitions = (enemyId, difficulty) => {
   const own = tacticsEnemyActionIds(enemyId, difficulty);
   // 貫通撃は構えとセットで持たせる。構えが無いと、貫通撃は一生出てこない(weight 0 のため)
   const ids = [...TACTICS_BASE_ACTION_IDS, ...own, ...(own.includes('pierce') ? ['pierceCharge'] : [])];
-  return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id));
+  const allTargetSpecial = TACTICS_ALL_TARGET_SPECIAL_ENEMY_IDS.includes(enemyId);
+  return TACTICS_ACTION_DEFINITIONS.filter(def => ids.includes(def.id)).map(def => allTargetSpecial && def.id === 'special' ? {
+    ...def,
+    targetsAll: true,
+    noticeLabel: '全体必殺技',
+    range: '全員',
+    condition: 'ためた次のターンに必ず発動。立っている全員へ同時に当たる'
+  } : def);
 };
 // そのモード・その敵が使う行動表。新モード以外は今までどおりの1つの表を返す
 const enemyActionDefinitionsFor = (mode, enemyId, difficulty) => typeof isTacticsMode === 'function' && isTacticsMode(mode) ? tacticsActionDefinitions(enemyId, difficulty) : ENEMY_ACTION_DEFINITIONS;
@@ -16806,8 +16833,12 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
       actionId: selected.id
     };
   }
+  // ★必殺技も全体技のことがある(覚醒ムー)。狙いは全体攻撃と同じく「立っている全員」
   return {
     type: selected.type,
+    ...(selected.targetsAll ? {
+      targetsAll: true
+    } : {}),
     value: Math.floor(ent.atk * selected.multiplier),
     label: enemyActionDisplayName(ent, selected),
     icon: ENEMY_ACTION_ICONS[selected.type] || '⏳',
@@ -41624,6 +41655,197 @@ const TACTICS_MOO_CUTIN_SKILLS = Object.freeze(['normal', 'sweep', 'rush', 'pier
 const TACTICS_MOO_CRACK_SKILLS = Object.freeze(['rush', 'pierce', 'special', 'allout', 'roar']);
 // 画面のひび割れ。中心から伸びる折れ線を、決まった形で描く(毎回同じ形でよい。乱数にすると描き直しで形が変わる)
 const TACTICS_CRACK_PATHS = Object.freeze(['M0 0 L40 -22 L78 -18 L120 -52 L170 -60', 'M0 0 L-36 -30 L-60 -80 L-104 -96', 'M0 0 L-50 12 L-96 4 L-150 30 L-190 22', 'M0 0 L20 44 L10 92 L42 140', 'M0 0 L56 30 L90 74 L150 88', 'M0 0 L-24 50 L-70 70 L-90 120', 'M0 0 L8 -50 L-6 -96 L14 -150']);
+// ==================== ボスの必殺技ムービー ====================
+// (2026-09-25 ユーザー指示「敵モンスター必殺技アニメーション」「透過できないなら画面切り替えてでも全然あり」
+//  「時間はそこそこ長くなってもいいから下手に短くしないでおけ」「設定でオンオフもつけて」)
+// 敵データの specialMovie(mp4)を、必殺技のときだけ画面を切り替えて流す。流し終えたら戦闘画面へ戻り、
+// そこで味方の枠に当たる(ダメージはそのあと。呼び出し元の 60-app が待つ)。
+// ★動画の要素は1つだけ作って使い回す。その敵との戦いに入った時点で読み込みを始めておき、必殺技で同じものを流す。
+//   毎回作り直すとスマホではそのたびに読み込み直しになり、頭が欠けたり黒い画面が続いたりする
+// ★流せなかったとき(読み込めない・自動再生を止められた・画面が無い)は false を返す。
+//   呼び出し元はそのときいつもの演出へ戻るので、進行が止まることはない
+// ★ここは見せるだけ。計算・進行・保存には触れない
+const BOSS_MOVIE_START_TIMEOUT_MS = 2500; // これまでに再生が始まらなければあきらめる(いつもの演出へ戻る)
+const BOSS_MOVIE_MAX_MS = 15000; // 途中で止まっても、これ以上は待たない
+// ムービーの中で音を鳴らし、画面を揺らす時刻(再生位置のミリ秒)。絵に合わせてある。
+// キーは ?v= を外したパス(キャッシュキーは中身を差し替えるたびに変わる)
+const BOSS_MOVIE_CUES = Object.freeze({
+  // 覚醒ムー「アポカリプス」: 吠える / 口に溜める / 光線を吐く / 爆発
+  'movies/awakened-moo-apocalypse.mp4': Object.freeze([{
+    at: 0,
+    se: 'enemyCharge'
+  }, {
+    at: 1920,
+    se: 'enemyCharge'
+  }, {
+    at: 3300,
+    se: 'enemySpecial',
+    shake: true
+  }, {
+    at: 4420,
+    se: 'enemySpecial',
+    shake: true
+  }])
+});
+const bossMovieStore = {
+  el: null,
+  src: '',
+  show: null
+};
+const preloadBossMovie = src => {
+  if (!src || typeof document === 'undefined') return;
+  if (bossMovieStore.el && bossMovieStore.src === src) return;
+  const el = document.createElement('video');
+  // ★音なし・画面の中で再生(playsinline)にしておかないと、iPhone は自動で再生させてくれない
+  el.muted = true;
+  el.defaultMuted = true;
+  el.playsInline = true;
+  el.setAttribute('muted', '');
+  el.setAttribute('playsinline', '');
+  el.setAttribute('webkit-playsinline', '');
+  el.preload = 'auto';
+  el.src = src;
+  try {
+    el.load();
+  } catch (e) {/* 読めなければ、流すときに false が返る */}
+  bossMovieStore.el = el;
+  bossMovieStore.src = src;
+};
+// 流し終えたら true、流せなかったら false で終わる
+const playBossMovie = (src, info = {}) => new Promise(resolve => {
+  if (!src || typeof bossMovieStore.show !== 'function') {
+    resolve(false);
+    return;
+  }
+  preloadBossMovie(src);
+  bossMovieStore.show({
+    src,
+    info,
+    done: resolve
+  });
+});
+const BossMovieLayer = ({
+  shake = true
+}) => {
+  const [req, setReq] = useState(null);
+  const [shakeKey, setShakeKey] = useState(0);
+  const [canSkip, setCanSkip] = useState(false);
+  const holderRef = useRef(null);
+  const finishRef = useRef(null);
+  useEffect(() => {
+    // 前のムービーが残っていれば、下の後片付け(finish(false))がその待ちを起こす
+    bossMovieStore.show = next => setReq({
+      ...next,
+      key: Date.now()
+    });
+    return () => {
+      bossMovieStore.show = null;
+      // 画面ごと閉じられたら、待っている側を必ず起こす
+      if (finishRef.current) finishRef.current(false);
+    };
+  }, []);
+  React.useLayoutEffect(() => {
+    if (!req) return undefined;
+    const el = bossMovieStore.el;
+    const holder = holderRef.current;
+    let settled = false,
+      started = false,
+      raf = 0,
+      startWall = 0;
+    const timers = [];
+    const cues = (BOSS_MOVIE_CUES[String(req.src).split('?')[0]] || []).map(c => ({
+      ...c,
+      fired: false
+    }));
+    const onPlaying = () => {
+      if (started) return;
+      started = true;
+      startWall = Date.now();
+      timers.push(setTimeout(() => finish(true), BOSS_MOVIE_MAX_MS));
+      timers.push(setTimeout(() => setCanSkip(true), 900));
+      const tick = () => {
+        if (settled) return;
+        const pos = Number.isFinite(el.currentTime) ? el.currentTime * 1000 : Date.now() - startWall;
+        cues.forEach(c => {
+          if (c.fired || pos < c.at) return;
+          c.fired = true;
+          if (c.se && Audio_.se && typeof Audio_.se[c.se] === 'function') Audio_.se[c.se]();
+          if (c.shake && shake) setShakeKey(k => k + 1);
+        });
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    };
+    const onEnded = () => finish(true);
+    const onError = () => finish(started);
+    const finish = ok => {
+      if (settled) return;
+      settled = true;
+      finishRef.current = null;
+      timers.forEach(clearTimeout);
+      if (raf) cancelAnimationFrame(raf);
+      if (el) {
+        el.removeEventListener('playing', onPlaying);
+        el.removeEventListener('ended', onEnded);
+        el.removeEventListener('error', onError);
+        try {
+          el.pause();
+        } catch (e) {/* 止められなくても次に頭から流す */}
+      }
+      setCanSkip(false);
+      // ★次のムービーがもう入っていたら消さない(自分のぶんだけ閉じる)
+      setReq(cur => cur === req ? null : cur);
+      req.done(!!ok);
+    };
+    finishRef.current = finish;
+    if (!el || !holder) {
+      finish(false);
+      return undefined;
+    }
+    holder.appendChild(el);
+    el.addEventListener('playing', onPlaying);
+    el.addEventListener('ended', onEnded);
+    el.addEventListener('error', onError);
+    try {
+      el.currentTime = 0;
+    } catch (e) {/* 読み込み前は頭から始まる */}
+    timers.push(setTimeout(() => {
+      if (!started) finish(false);
+    }, BOSS_MOVIE_START_TIMEOUT_MS));
+    let playing;
+    try {
+      playing = el.play();
+    } catch (e) {
+      finish(false);
+      return undefined;
+    }
+    if (playing && typeof playing.catch === 'function') playing.catch(() => finish(false));
+    return () => finish(false);
+  }, [req]);
+  if (!req) return null;
+  const info = req.info || {};
+  return ReactDOM.createPortal(/*#__PURE__*/React.createElement("div", {
+    "data-boss-movie": true,
+    role: "presentation",
+    onClick: () => {
+      if (canSkip && finishRef.current) finishRef.current(true);
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-boss-movie-stage": true,
+    "data-boss-movie-shake": shakeKey === 0 ? undefined : shakeKey % 2 ? 'a' : 'b'
+  }, info.label && /*#__PURE__*/React.createElement("div", {
+    "data-boss-movie-title": true
+  }, info.enemyName && /*#__PURE__*/React.createElement("small", null, info.enemyName), /*#__PURE__*/React.createElement("b", null, info.label)), /*#__PURE__*/React.createElement("div", {
+    "data-boss-movie-frame": true,
+    ref: holderRef
+  })), /*#__PURE__*/React.createElement("div", {
+    "data-boss-movie-skip": true,
+    "aria-hidden": !canSkip,
+    style: {
+      opacity: canSkip ? 1 : 0
+    }
+  }, "\u30BF\u30C3\u30D7\u3067\u30B9\u30AD\u30C3\u30D7")), document.body);
+};
 // 敵の技の、画面全体に重ねる演出(body の直下へ出す)。攻撃が狙われた味方の枠まで飛んで当たる / 必殺技は画面を暗くする /
 // 覚醒ムーは技名のカットイン・技ごとの全画面の演出・ひび割れも出す。
 // ★位置は出す瞬間に1回だけ測る(敵の丸枠と味方の枠)。動きの途中で測り直すと、跳ねている絵の位置を拾ってしまう
@@ -41678,7 +41900,10 @@ const TacticsEnemyStageFx = ({
   if (!fx || !fx.skill || !motion || !geo) return null;
   const skill = fx.skill;
   const ms = Number.isFinite(fx.ms) && fx.ms > 0 ? fx.ms : tacticsEnemyMotionMs(enemyId, skill, 1000);
-  const hit = tacticsEnemyHitFrac(enemyId, skill);
+  // ★ムービーを流したあと(afterMovie)は、溜めも技名もムービーで見せ終えている。
+  //   戦闘画面へ戻ったらすぐ味方の枠へ当てる
+  const afterMovie = !!fx.afterMovie;
+  const hit = afterMovie ? 0.12 : tacticsEnemyHitFrac(enemyId, skill);
   const look = TACTICS_ENEMY_STRIKE_LOOK[motion] || {};
   const spec = TACTICS_ENEMY_MOTION_SETS[motion] ? TACTICS_ENEMY_MOTION_SETS[motion].skills[skill] : null;
   const strikes = !TACTICS_ENEMY_NO_STRIKE_SKILLS.includes(skill);
@@ -41705,7 +41930,7 @@ const TacticsEnemyStageFx = ({
       '--sx': `${sx}px`,
       '--sy': `${sy}px`
     }
-  }, !lite && (skill === 'special' || isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill)) && /*#__PURE__*/React.createElement("div", {
+  }, !lite && !afterMovie && (skill === 'special' || isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill)) && /*#__PURE__*/React.createElement("div", {
     "data-stage-dim": true,
     style: {
       background: `radial-gradient(circle at ${sx}px ${sy}px, transparent ${Math.round(sr * 1.15)}px, rgba(0,0,0,.74) ${Math.round(sr * 1.15 + 110)}px)`
@@ -41742,7 +41967,7 @@ const TacticsEnemyStageFx = ({
         animationDuration: `${Math.max(280, Math.round(ms * 0.36))}ms`
       }
     }, look.mark || null));
-  })), isMoo && TACTICS_MOO_CUTIN_SKILLS.includes(skill) && skillLabel && /*#__PURE__*/React.createElement("div", {
+  })), isMoo && !afterMovie && TACTICS_MOO_CUTIN_SKILLS.includes(skill) && skillLabel && /*#__PURE__*/React.createElement("div", {
     "data-moo-cutin": true
   }, /*#__PURE__*/React.createElement("div", {
     "data-moo-cutin-band": true
@@ -41764,7 +41989,7 @@ const TacticsEnemyStageFx = ({
       animationDelay: at(0.25 + k * 0.07),
       animationDuration: '380ms'
     }
-  })), isMoo && !lite && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map(k => /*#__PURE__*/React.createElement("i", {
+  })), isMoo && !lite && !afterMovie && skill === 'special' && [0, 1, 2, 3, 4, 5, 6, 7].map(k => /*#__PURE__*/React.createElement("i", {
     key: k,
     "data-moo-meteor": true,
     style: {
@@ -41814,7 +42039,7 @@ const TacticsEnemyStageFx = ({
   })), isMoo && ['normal', 'rush', 'pierce', 'special', 'allout', 'roar'].includes(skill) && /*#__PURE__*/React.createElement("div", {
     "data-moo-flash": true,
     style: {
-      animationDelay: at(skill === 'special' ? 0.78 : hit)
+      animationDelay: at(skill === 'special' && !afterMovie ? 0.78 : hit)
     }
   }), isMoo && !lite && TACTICS_MOO_CRACK_SKILLS.includes(skill) && (() => {
     const t = geo.slots[0] || geo.all[0] || {
@@ -41827,7 +42052,7 @@ const TacticsEnemyStageFx = ({
       height: geo.vh,
       viewBox: `0 0 ${geo.vw} ${geo.vh}`,
       style: {
-        animationDelay: at(skill === 'special' ? 0.78 : hit)
+        animationDelay: at(skill === 'special' && !afterMovie ? 0.78 : hit)
       }
     }, /*#__PURE__*/React.createElement("g", {
       transform: `translate(${t.x} ${t.y}) scale(${skill === 'special' || skill === 'allout' ? 1.6 : 1.1})`
@@ -42043,6 +42268,12 @@ function BattleScreen({
   // 「まずはカワズモーで」「タクティクスだけ」)。絵は1枚のまま、待機・攻撃・ためる・やられの動きを CSS で付ける。
   // ★ここに無い敵は今までどおり。足すときは TACTICS_ENEMY_MOTIONS に1行と、70-bootstrap の CSS を足す
   const enemyMotion = tacticsNewLayout && !ecoBattleView ? TACTICS_ENEMY_MOTIONS[enemy?.id] || null : null;
+  // 必殺技ムービーを持つ敵との戦いに入ったら、読み込みを始めておく(流すのは 60-app が決める)。
+  // ★設定で「流さない」にしている人・省エネの軽量表示では読まない(通信量を使わせない)
+  const bossMovieSrc = battleFx.specialMovie === 'ON' && !ecoBattleView && typeof enemy?.specialMovie === 'string' ? enemy.specialMovie : null;
+  useEffect(() => {
+    if (bossMovieSrc) preloadBossMovie(bossMovieSrc);
+  }, [bossMovieSrc]);
   // ★何も起きていない間は、画面の動きを一時停止する(2026-09-24 ユーザー指摘「発熱がすごい」「熱くなるとカクついて動かなくなる」)。
   //   待機中の飾り・敵と味方の待機の動きは、1つでも動いていると GPU が毎コマ画面を合成し直す(スマホが熱を持つ)。
   //   タップ・戦闘の進行が TACTICS_FX_REST_MS 無ければ data-fx-rest を立て、CSS が animation-play-state:paused にする。
@@ -42700,7 +42931,9 @@ function BattleScreen({
     className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[10px] font-black text-sky-100 pointer-events-none"
   }, "\u9B42\u683C\u52B9\u679C \u767A\u52D5\u4E2D", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), /*#__PURE__*/React.createElement("div", {
     className: "mt-1 relative flex flex-col items-center"
-  }, enemyMotion && /*#__PURE__*/React.createElement(TacticsEnemyStageFx, {
+  }, /*#__PURE__*/React.createElement(BossMovieLayer, {
+    shake: battleFx.shake !== 'OFF'
+  }), enemyMotion && /*#__PURE__*/React.createElement(TacticsEnemyStageFx, {
     fx: enemyAttackFx,
     motion: enemyMotion,
     isMoo: enemyIsMoo,
@@ -60330,19 +60563,33 @@ function MonsterHeroGame() {
         // ★技ごとの動きを持つ敵は、連続はり手・上手投げなどを見せきる長さだけ待つ(tacticsEnemyMotionMs)。
         //   ムーも動きを持つときは技ごとの長さ(全画面の演出を見せきる長さ)になる
         const motionEnemyId = isTacticsMode(runMode) && !ecoBattleView ? enemy?.id : null;
-        const fxMs = tacticsEnemyMotionMs(motionEnemyId, fxSkill, fxKind === 'moo' ? 900 : intent.type === 'SPECIAL' ? 1100 : 450);
+        // ★必殺技ムービーを持つ敵(覚醒ムー)の必殺技は、画面を切り替えてムービーを流してから当てる
+        //   (2026-09-25 ユーザー指示)。流すのは設定が「流す」のときだけ。演奏で止まったぶんの追いつき中は流さない。
+        //   ムービーは戦闘の速さに合わせて縮めない(「下手に短くしないでおけ」)。
+        //   流せなかったとき(読み込めない・自動再生を止められた)は、いつもの演出へそのまま戻る。
+        //   見せ方が変わるだけで、ダメージの計算・進行はどちらでも同じ
+        const specialMovieSrc = fxSkill === 'special' && motionEnemyId && typeof enemy?.specialMovie === 'string' && normalizeBattleFxSettings(battleFxSettings).specialMovie === 'ON' && !(catchUpUntilRef.current > Date.now()) ? enemy.specialMovie : null;
+        const movieShown = specialMovieSrc ? await playBossMovie(specialMovieSrc, {
+          label: intent.label || enemy?.special || '',
+          enemyName: enemy?.name || ''
+        }) : false;
+        const fxMs = movieShown ? 1000 : tacticsEnemyMotionMs(motionEnemyId, fxSkill, fxKind === 'moo' ? 900 : intent.type === 'SPECIAL' ? 1100 : 450);
         // targets: 狙われた枠(画面が攻撃を味方の枠まで飛ばすのに使う) / ms: 速さの設定を掛けた実際の長さ(動きをこれに合わせる)
+        // afterMovie: ムービーを見せ終えたあと。画面は溜め・技名を省いて、すぐ味方の枠へ当てる
         setEnemyAttackFx({
           kind: fxKind,
           skill: fxSkill,
           targets: Array.isArray(aimedSlots) ? aimedSlots.slice() : [],
-          ms: battleMs(fxMs)
+          ms: battleMs(fxMs),
+          ...(movieShown ? {
+            afterMovie: true
+          } : {})
         });
         if (intent.type === 'SPECIAL') Audio_.se.enemySpecial();else Audio_.se.enemyAttack();
         setEnemyAttackAnim(true);
         if (fxKind === 'moo') {
           // 動きを持つムーは、技が当たる瞬間に揺らす(はじめに揺らすと、溜めのあいだに揺れが終わってしまう)
-          if (motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId]) setTimeout(() => triggerShake(true), battleMs(Math.round(fxMs * tacticsEnemyHitFrac(motionEnemyId, fxSkill))));else triggerShake(true);
+          if (movieShown) setTimeout(() => triggerShake(true), battleMs(Math.round(fxMs * 0.12)));else if (motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId]) setTimeout(() => triggerShake(true), battleMs(Math.round(fxMs * tacticsEnemyHitFrac(motionEnemyId, fxSkill))));else triggerShake(true);
         }
         await battleWait(fxMs);
         setEnemyAttackAnim(false);
@@ -79270,6 +79517,30 @@ const createAnimationStyle = () => {
     @keyframes mooGather { 0% { opacity: 0; transform: translate(var(--gx), var(--gy)) scale(1.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(0, 0) scale(.3); } }
     [data-moo-reticle] { width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; opacity: 0; border: 3px dashed rgba(250,204,21,.95);
       box-shadow: 0 0 16px rgba(220,38,38,.9), inset 0 0 16px rgba(220,38,38,.6); animation: emLock 800ms ease-out both; }
+    /* ---- ボスの必殺技ムービー(71-screen-battle の BossMovieLayer)。画面を切り替えて、上に技名・まんなかにムービー ----
+       ★ムービーは横長(768×488)。縦のスマホでは幅いっぱいより少し大きく(116vw)して左右を少しだけ切り、上下のふちはぼかして背景へなじませる。
+       ★技名の札(z 65000)・敵の技の演出(z 64000)より上に出す */
+    [data-boss-movie] { position: fixed; inset: 0; z-index: 66000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); -webkit-tap-highlight-color: transparent; user-select: none;
+      background: radial-gradient(ellipse at 50% 50%, #34104f, #0c0218 62%, #000); animation: bossMovieIn 260ms ease-out both; }
+    /* ★背景は不透明にする。半透明だと、うしろの戦闘画面(敵の絵・枠)が透けて見える */
+    @keyframes bossMovieIn { from { opacity: 0; } to { opacity: 1; } }
+    [data-boss-movie-stage] { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    [data-boss-movie-frame] { position: relative; flex-shrink: 0; width: min(116vw, calc(66vh * 768 / 488)); aspect-ratio: 768 / 488; overflow: hidden;
+      -webkit-mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); }
+    [data-boss-movie-frame] > video { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+    [data-boss-movie-title] { text-align: center; line-height: 1.15; animation: bossMovieTitle 900ms cubic-bezier(.2,.8,.2,1) both; }
+    [data-boss-movie-title] small { display: block; font-size: 12px; font-weight: 900; letter-spacing: .3em; color: #e9d5ff; opacity: .85; }
+    [data-boss-movie-title] b { display: block; font-weight: 900; font-size: clamp(30px, 10vw, 52px); letter-spacing: .14em; color: #fff; white-space: nowrap;
+      text-shadow: 0 0 10px #c084fc, 0 0 26px #7e22ce, 0 3px 0 #3b0764; -webkit-text-stroke: 1px #facc15; }
+    @keyframes bossMovieTitle { 0% { opacity: 0; transform: scale(1.6); } 100% { opacity: 1; transform: scale(1); } }
+    [data-boss-movie-skip] { position: absolute; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); padding: 6px 12px; border-radius: 999px; pointer-events: none;
+      font-size: 11px; font-weight: 900; color: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.45); transition: opacity 300ms; }
+    /* 光線・爆発の瞬間の揺れ。a と b は同じ動き(属性を切り替えて、動きを頭からかけ直すため2つある) */
+    [data-boss-movie-shake="a"] { animation: bossMovieShakeA 420ms ease-out both; }
+    [data-boss-movie-shake="b"] { animation: bossMovieShakeB 420ms ease-out both; }
+    @keyframes bossMovieShakeA { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-9px, 6px); } 30% { transform: translate(8px, -7px); } 45% { transform: translate(-6px, 4px); } 60% { transform: translate(5px, -3px); } 80% { transform: translate(-2px, 1px); } }
+    @keyframes bossMovieShakeB { 0%, 100% { transform: translate(0, 0); } 15% { transform: translate(-9px, 6px); } 30% { transform: translate(8px, -7px); } 45% { transform: translate(-6px, 4px); } 60% { transform: translate(5px, -3px); } 80% { transform: translate(-2px, 1px); } }
     /* 覚醒ムーの待機: 翼を広げるように左右へ張り、ときどき身をかがめて吠える。黒い気が立ちのぼり、目が赤く光る */
     @keyframes mooIdleMenace {
       0%, 100% { transform: translateY(0) scale(1, 1); }
