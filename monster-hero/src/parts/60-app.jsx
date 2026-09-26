@@ -10386,6 +10386,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★効き目そのもの(攻撃の引き受け・ステータスの上下・固有技の切り替え)は、戦闘の計算側で
   //   isTacticsExEffectActive を見て決める。ここは「使った瞬間」に1度だけ起こすもの(演出・ログ)の置き場
   const TACTICS_EX_ON_USE = {};
+  // EXを使った瞬間のカットイン(TacticsExCutin)。見た目だけなので、進行は待たずに時間で片付ける
+  const [tacticsExCutin, setTacticsExCutin] = useState(null);
+  const tacticsExCutinTimerRef = useRef(null);
+  const showTacticsExCutin = (cutin) => {
+    if (tacticsExCutinTimerRef.current) clearTimeout(tacticsExCutinTimerRef.current);
+    setTacticsExCutin({ ...cutin, key: Date.now() });
+    tacticsExCutinTimerRef.current = setTimeout(() => { tacticsExCutinTimerRef.current = null; setTacticsExCutin(null); }, TACTICS_EX_CUTIN_MS);
+  };
   // choice … スタイル式のEX(ソード・コンバージョン)で選んだスタイルの id
   const activateTacticsEx = (slotIdx, choice = null) => {
     if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
@@ -10421,6 +10429,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
       addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md',undefined,slotIdx);
+      Audio_.se.special();
+      showTacticsExCutin({ slotIndex:slotIdx, effect:def.effect, monId:mon.id, imgUrl:mon.imgUrl, colors:mon.colors, monName:mon.masuName||mon.name, exName:def.name,
+        styleLabel:def.duration==='style'?tacticsExStyleLabel(def,next,slotIdx,mon.id):'' });
       if(typeof onUse==='function') onUse({ def, slotIdx, mon, state:next });
     }
     else pushBattleLog('（開発中）このEXの効果はまだ出ない。回数と併用のルールだけ動いている', 'info');
@@ -16810,7 +16821,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getNextTurnBuff={getNextTurnBuff} getPermaBuff={getPermaBuff} getTurnBuff={getTurnBuff}
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
-            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx}
+            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
