@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: efdc4056d80ecba7
+// generated-sha256: 12881497b4ab4c5e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 13:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 13:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4074,8 +4074,16 @@ const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE','省電力'],['DEV
 // (ノーツ・マスモンの顔・判定文字の光・ライブ背景の光)を、どこまで細かく描くか。
 // iPhone は画面の画素がとても細かい(3倍)ので、少し下げても見分けにくく、端末の負担と発熱が減る。
 // 既定は「高」(これまでの細かさ)。判定・スコア・叩く位置には一切関わらない。
-const RHYTHM_RENDER_QUALITY_MODES = Object.freeze(['HIGH','STANDARD','SAVE']);
-const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['HIGH','高'],['STANDARD','標準'],['SAVE','省電力']]);
+const RHYTHM_RENDER_QUALITY_MODES = Object.freeze(['AUTO','HIGH','STANDARD','SAVE']);
+const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['AUTO','自動'],['HIGH','高'],['STANDARD','標準'],['SAVE','省電力']]);
+// 「自動」(2026-09-26・ユーザー指示「画質の自動を入れて」)。演奏中に、描くのが間に合わなかったフレームが
+// 3秒のうち8%を超えたら一段下げる(高→標準→省電力)。下げた段は、アプリを開いているあいだ次の曲にも引き継ぐ
+// (保存はしない。開き直すと「高」から)。上げ直しはしない(上げ下げを繰り返すと、そのたびに描き直しで詰まるため)。
+const RHYTHM_RENDER_QUALITY_STEPS = Object.freeze(['HIGH','STANDARD','SAVE']);
+const RHYTHM_AUTO_QUALITY_WINDOW_MS = 3000;
+const RHYTHM_AUTO_QUALITY_SLOW_RATIO = .08;
+// 「自動」のとき、いま使う段。それ以外はそのまま
+const rhythmEffectiveRenderQuality = (quality, autoLevel) => (quality==='AUTO' ? (RHYTHM_RENDER_QUALITY_STEPS.includes(autoLevel) ? autoLevel : 'HIGH') : quality);
 // 画素密度の上限。highCap は「高」のときの上限(描くものごとに違う)。標準は1.5倍まで、省電力は1倍
 const rhythmRenderQualityCap = (quality, highCap) => (quality==='SAVE' ? 1 : quality==='STANDARD' ? Math.min(highCap, 1.5) : highCap);
 // 演奏中の背景の演出(2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」)。
@@ -14859,7 +14867,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。',{full:true})}
             {/* 画質(2026-09-26・ユーザー指示「画質の設定を入れて」)。既定は「高」(これまでの細かさ) */}
             {field('画質',segments('renderQuality',RHYTHM_RENDER_QUALITY_LABELS),
-              '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。')}
+              '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。')}
             {/* モンスターノーツだけを軽くしたい人向け(2026-09-13・ユーザー依頼
                 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」) */}
             {field('モンスターノーツの演出',segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS),
@@ -15719,6 +15727,8 @@ const rhythmStageSparkSprite=(layer,scale)=>{
   g.fillStyle=grad;g.fillRect(0,0,size,size);
   return c;
 };
+// 画質「自動」で下げた段。アプリを開いているあいだだけ覚えておき、次の曲もこの段から始める(保存はしない)
+const rhythmAutoQualityMemory={level:'HIGH'};
 const RHYTHM_FACE_BOX=42,RHYTHM_FACE_ZOOM=1.28,RHYTHM_FACE_PAD=12;
 const rhythmBakeMonsterFace=async(monster,dpr)=>{
   if(!monster||!monster.imageUrl||typeof document==='undefined')return null;
@@ -15915,7 +15925,17 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const canvasNotes=useState(()=>rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
   // ノーツを描く canvas の画素密度の上限。演出量「最小」は2倍まで(以前から)、そのうえで画質の設定で下げる(2026-09-26)。
   // begin() と warmSprites() に**同じ値**を渡すこと(食い違うと焼いた光を捨てて作り直す)
-  const noteCanvasMaxDpr=Math.min(settings.effectAmount==='MINIMAL'?2:RHYTHM_NOTE_CANVAS_MAX_DPR,rhythmRenderQualityCap(settings.renderQuality,RHYTHM_NOTE_CANVAS_MAX_DPR));
+  // 画質「自動」では、演奏中に詰まりが続くと一段ずつ下げる(tick が数える)。曲の途中で切り替えるのはノーツとマスモンの顔だけ。
+  // 判定文字の光とライブ背景の光は、焼き直すあいだ一瞬消えるので、曲の始めの段のままにする
+  const [autoQuality,setAutoQuality]=useState(()=>rhythmAutoQualityMemory.level);
+  const autoQualityAtStart=useState(()=>rhythmAutoQualityMemory.level)[0];
+  const renderQualityNow=rhythmEffectiveRenderQuality(settings.renderQuality,autoQuality);
+  const renderQualityStill=rhythmEffectiveRenderQuality(settings.renderQuality,autoQualityAtStart);
+  const stepAutoQualityRef=useRef(null);
+  stepAutoQualityRef.current=()=>setAutoQuality(level=>{const index=RHYTHM_RENDER_QUALITY_STEPS.indexOf(level);const next=RHYTHM_RENDER_QUALITY_STEPS[Math.min(RHYTHM_RENDER_QUALITY_STEPS.length-1,Math.max(0,index)+1)];rhythmAutoQualityMemory.level=next;return next;});
+  const noteCanvasMaxDpr=Math.min(settings.effectAmount==='MINIMAL'?2:RHYTHM_NOTE_CANVAS_MAX_DPR,rhythmRenderQualityCap(renderQualityNow,RHYTHM_NOTE_CANVAS_MAX_DPR));
+  // 毎フレームの処理は作り直さないので、いまの値はここから読む(「自動」で曲の途中に変わるため)
+  const noteCanvasMaxDprRef=useRef(noteCanvasMaxDpr);noteCanvasMaxDprRef.current=noteCanvasMaxDpr;
   const noteCanvasRef=useRef(null);
   useEffect(()=>{if(!canvasNotes)return undefined;RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current);return()=>RHYTHM_CANVAS_RENDERER.release();},[canvasNotes]);
   const noteElements=useMemo(()=>canvasNotes?null:chart.notes.map((note,index)=>{const monsterSlot=rhythmNoteMonsterSlot(note),monster=monsterSlot?monsters[monsterSlot-1]||null:null;return <div key={index} ref={el=>laneRefs.current[index]=el} data-rhythm-note data-note-type={note.type} data-rhythm-note-wide={rhythmNoteIsWide(note)?'1':undefined} data-rhythm-monster-note={monster?monsterSlot:undefined} className="absolute top-0 h-5" style={{left:`calc(${note.lane*20}% + 5px)`,width:'calc(20% - 10px)',pointerEvents:'none'}}>{/* HOLDの帯は水色でそろえる。以前は根もとが emerald(緑)だったが、FLICKが緑なので
@@ -15956,7 +15976,8 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // いちばん軽い段(NONE)では焼かない＝顔を出さない。焼けていないうちは顔を出さないだけで、判定には関係しない。
   // 画素密度は RHYTHM_CANVAS_RENDERER.begin() と同じ決め方にそろえる。
   const faceBitmapsRef=useRef([]);
-  useEffect(()=>{faceBitmapsRef.current=[];if(!canvasNotes||monsterFaceHidden)return undefined;let cancelled=false;
+  useEffect(()=>{if(!canvasNotes||monsterFaceHidden){faceBitmapsRef.current=[];return undefined;}let cancelled=false;
+    // ★焼き直すあいだは前の絵を使い続ける(画質「自動」で曲の途中に焼き直すとき、顔が一瞬消えないように)
     const deviceDpr=typeof window!=='undefined'&&window.devicePixelRatio>0?window.devicePixelRatio:1;
     const dpr=Math.min(deviceDpr,noteCanvasMaxDpr);
     monsters.forEach((monster,index)=>{rhythmBakeMonsterFace(monster,dpr).then(face=>{if(!cancelled&&face)faceBitmapsRef.current[index]=face;});});
@@ -15986,7 +16007,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
     setHaloKeys(null);
     const textEl=judgmentTextRef.current;
     if(!textEl||typeof document==='undefined')return undefined;
-    rhythmBakeJudgmentHalos(textEl,rhythmRenderQualityCap(settings.renderQuality,2)).then(baked=>{
+    rhythmBakeJudgmentHalos(textEl,rhythmRenderQualityCap(renderQualityStill,2)).then(baked=>{
       if(!baked)return;
       if(cancelled){baked.forEach(item=>URL.revokeObjectURL(item.url));return;}
       made=baked;
@@ -15996,7 +16017,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
       setHaloKeys(new Set(baked.map(item=>`${item.judgment}|${item.precise}`)));
     }).catch(()=>{});
     return()=>{cancelled=true;const style=document.querySelector('style[data-rhythm-judgment-halo-style]');if(style)style.textContent='';if(made)made.forEach(item=>URL.revokeObjectURL(item.url));};
-  },[settings.effectAmount,settings.lightweightMode,settings.renderQuality]);
+  },[settings.effectAmount,settings.lightweightMode,renderQualityStill]);
   // ライフの強調(2026-09-12)。DOM へ data 属性を書くだけで、判定・スコア・ライフの数値には触らない。
   // lifeBoxRef … 減った瞬間にHUDのライフ表示を揺らす／lifeDamageRef … 減った量(「-50」)を一瞬出す
   const lifeBoxRef=useRef(null),lifeDamageRef=useRef(null);
@@ -16180,7 +16201,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
       if(!(w>0&&h>0))return;
       // ぼけた光なので画素密度は1.5倍まで(以前は画面の画素数そのまま)
       // 画質「標準」は1.25倍、「省電力」は1倍
-      const cap=settings.renderQuality==='STANDARD'?1.25:rhythmRenderQualityCap(settings.renderQuality,1.5);
+      const cap=renderQualityStill==='STANDARD'?1.25:rhythmRenderQualityCap(renderQualityStill,1.5);
       const scale=Math.min(cap,Math.max(1,Number(window.devicePixelRatio)||1));
       const key=`${w}x${h}@${scale}`;
       if(key===lastKey)return;
@@ -16205,7 +16226,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
     const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(()=>{clearTimeout(timer);timer=setTimeout(bake,150);}):null;
     if(observer)observer.observe(host);
     return()=>{alive=false;clearTimeout(timer);if(observer)observer.disconnect();setStageImages(null);made.forEach(url=>URL.revokeObjectURL(url));};
-  },[stageFxOn,settings.renderQuality]);
+  },[stageFxOn,renderQualityStill]);
   /* フルコンボ・オールマーベラスが続いているか(プロセカ・CHUNITHM のコンボ色)。「COMBO」の字の色で見せる。
      AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。設定で出さないこともできる */
   /* アシストモードでは称号が付かないので出さない(出すと「取れる」と思わせてしまう) */const comboStatus=(()=>{if(settings.comboStatusDisplay===false||assistOn||!view.counts)return '';const c=view.counts;if((Number(c.BAD)||0)+(Number(c.MISS)||0)>0)return '';return (Number(c.EXCELLENT)||0)+(Number(c.GREAT)||0)+(Number(c.GOOD)||0)>0?'FC':'AM';})();
@@ -16641,6 +16662,11 @@ const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.i
 /* ★ここでプレイエリアの箱を先に測っておく形は、2026-09-25に入れて26日にやめた。毎フレームの最初の時点で
    配置の計算がたまっていることが多く、測るたびにその場で計算させていた(8秒で560ms。タップのときだけ測る
    以前の形は10秒で66ms)。箱はタップが来たときに初めて測る(同じフレームのタップは使い回す) */
+/* 画質「自動」。rAF の間隔から「描くのが間に合わなかったフレーム」(いちばん短い間隔の1.8倍より長いもの)を数え、
+   3秒のうち8%を超えたら一段下げる。止まっていた間(250ms以上あいた)は数えない。数えるだけで、判定・描画には触らない */
+if(settings.renderQuality==='AUTO'){const aq=run._autoQuality||(run._autoQuality={last:0,start:frameNowMs,frames:0,slow:0,minGap:1e9});const gap=aq.last?frameNowMs-aq.last:0;aq.last=frameNowMs;
+  if(gap>0&&gap<250){aq.frames++;if(gap>=5&&gap<aq.minGap)aq.minGap=gap;if(gap>Math.max(5,aq.minGap)*1.8)aq.slow++;}
+  if(frameNowMs-aq.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){if(aq.frames>=30&&aq.slow/aq.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepAutoQualityRef.current)stepAutoQualityRef.current();aq.start=frameNowMs;aq.frames=0;aq.slow=0;}}
 if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
 /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
    取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
@@ -16650,7 +16676,7 @@ if(stagePulseOn){const pulseEl=stagePulseRef.current,notes=run.notes;let index=r
 // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
-const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDpr,sizeScale:settings.noteSize/100});
+const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100});
 
 // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
 // 判定はここへ来る前に visitNote が済ませている。描くだけで、judgment・score・input には触らない
