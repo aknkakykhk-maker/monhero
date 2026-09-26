@@ -40,7 +40,7 @@ const path=require('path');
 const {laneCountOfChart,chartRevisionOf}=require('./rhythm-chart-v3-revision.js');
 // 道のレーン数。譜面ごとに読み直す(譜面の作り方の版5から6。書いていない譜面は5)
 let LANE_COUNT=5;
-// HOLDを動かすときに、その上の交差を守るか(譜面の作り方の版7から。版6以前の譜面の結果は変えない)
+// HOLDを動かすときに、その上の交差を守るか(譜面の作り方のRev.7から。Rev.6以前の譜面の結果は変えない)
 let GUARD_COVERED_CROSSES=false;
 
 const ROOT=path.resolve(__dirname,'..','..');
@@ -269,7 +269,7 @@ const placements=(notes,index)=>{
   };
   // 逆に、押さえっぱなしのHOLDの側を動かすときも、その上に乗った交差を壊さない(2026-09-26)。
   // 交差のノーツと同じ側へ回り込んだり、2本入らない近さへ寄ったりしない。
-  // (版7で作り直した Monster Hero MASTER で、HOLDを左へ2サブレーン寄せて交差のノーツと重ねていた。rhythm-chart-v3-check.js が見つけた)
+  // (Rev.7で作り直した Monster Hero MASTER で、HOLDを左へ2サブレーン寄せて交差のノーツと重ねていた。rhythm-chart-v3-check.js が見つけた)
   const coveredCrosses=GUARD_COVERED_CROSSES&&note.type==='HOLD'?notes.filter(other=>other.cross===true&&note.grid<other.grid
     &&other.grid<=note.grid+(Number(note.durationGrids)||0)):[];
   // 「外側」は検査(rhythm-chart-v3-check.js)と同じ物差し: HOLDが道の左半分なら交差はその左、右半分ならその右。

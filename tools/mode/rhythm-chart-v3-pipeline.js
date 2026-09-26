@@ -158,7 +158,7 @@ const runtimeRow=note=>{
   const timeMs=gridTimeMs(note.grid);
   const endFlick=note.endFlick===true?',1':'';
   if(note.type==='SLIDE'){
-    // 4つ目は曲線の番号(1=in・2=out・3=inout。版3)。直線の点は今までどおり3つだけ書く
+    // 4つ目は曲線の番号(1=in・2=out・3=inout。Rev.3)。直線の点は今までどおり3つだけ書く
     const points=note.slidePoints.map(p=>{const ease=SLIDE_EASE_CODES.indexOf(p.ease);return `[${gridTimeMs(p.grid)},${p.lane},${p.subLaneWidth}${ease>0?`,${ease}`:''}]`;}).join(',');
     return `s(${timeMs},${gridTimeMs(note.grid+note.durationGrids)},[${points}]${endFlick})`;
   }
@@ -169,7 +169,7 @@ const runtimeRow=note=>{
     const flickArg=taper?(note.endFlick===true?',1':',0'):endFlick;
     return `h(${timeMs},${note.subLane},${note.subLaneWidth},${gridTimeMs(note.grid+note.durationGrids)}${flickArg}${taper})`;
   }
-  // 4つ目は横フリックの向き(1=左・2=右。版4のMASTER)。向きの無いFLICKは今までどおり3つだけ書く
+  // 4つ目は横フリックの向き(1=左・2=右。Rev.4のMASTER)。向きの無いFLICKは今までどおり3つだけ書く
   if(note.type==='FLICK'){const dir=FLICK_DIR_CODES.indexOf(note.flickDir);return `f(${timeMs},${note.subLane},${note.subLaneWidth}${dir>0?`,${dir}`:''})`;}
   return `t(${timeMs},${note.subLane},${note.subLaneWidth},${note.monsterSlot||0})`;
 };
@@ -227,7 +227,7 @@ for(const difficulty of DIFFICULTIES){
   for(let i=0;i<rows.length;i+=4)lines.push('  '+rows.slice(i,i+4).join(',')+',');
   runtimeSource=`${runtimeSource.slice(0,b+begin.length)}\n${lines.join('\n')}\n${runtimeSource.slice(e)}`;
   // 道のレーン数を、その譜面を束ねている mhChart(レベル,ノーツ,長さ,レーン数) の4つ目へ書く。
-  // 6レーン(版5)の譜面は 6、5レーンの譜面は書かない(本体が道の真ん中へ寄せて使う)。
+  // 6レーン(Rev.5)の譜面は 6、5レーンの譜面は書かない(本体が道の真ん中へ寄せて使う)。
   // マーカーのすぐ上の「const ◯◯Notes=((t,h,f,s)=>[」から名前を拾い、その名前の mhChart だけを直す
   {
     const head=runtimeSource.slice(0,runtimeSource.indexOf(begin));
