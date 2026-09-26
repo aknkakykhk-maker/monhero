@@ -23,8 +23,9 @@
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');
-const {HAND_MODEL,fingerPairFeasible,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange}=require('./rhythm-hand-model.js');
+const {HAND_MODEL,fingerPairFeasible,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange,useRuntimeSlideLanes}=require('./rhythm-hand-model.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
+const {assignSideFlickDirs}=require('./rhythm-side-flick.js');
 const {setLaneCount:setPatternLaneCount,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
 const {soundTraitsFor,flickScoreOf,chordScoreOf}=require('./rhythm-sound-traits.js');
 const {weightsForRevision,knowledgeBoost,knowledgeShapePrefer}=require('./rhythm-chart-knowledge.js');
@@ -438,10 +439,21 @@ const knowledgeWeights=knowledgeOn?weightsForRevision(chartRevision):null;
 // 作法の後押しの大きさ(段ごとの点数の目盛りに合わせる)。
 //   拾う音の優先度は 0.3〜3 ほど、同時押し・フリックの音の性格の点は 0〜2.5 ほど、区切りの一発は強さ 0〜1
 const KNOWLEDGE_SCALE=Object.freeze({pick:.35,chord:.8,accent:.6});
+// Rev.8: 手の動きと繰り返しを揃える(docs/spec/RHYTHM_CHART_ENGINE_ROADMAP.md の段1)。
+//   ・横フリックの向きを払う指の動きで決める(rhythm-side-flick.js。自動修正のあとにも決め直す)
+//   ・フレーズの写しで、元の小節の FLICK・同時押し・区切りの一発も揃える(phraseEchoTypes)
+//   ・6レーンの中央を (LANES-1)/2 で数える(CENTER_LANE)
+//   ・手のモデルが SLIDE の位置をゲーム本体と同じ座標で測る(useRuntimeSlideLanes)
+const rev8=chartRevision>=8;
+const phraseEchoTypes=rev8&&phraseCopy;
+useRuntimeSlideLanes(rev8);
 // Rev.5: 6レーンの道。Rev.4までは5レーン(サブレーン10本)のまま作る。
 // ★レーン数の数字(5・4・10)を直接書かない。LANES(レーン数)・LANES-1(右はしのレーン)・SUB_LANES(サブレーン数)を使う
 const LANES=laneCountForRevision(chartRevision);
 const SUB_LANES=LANES*2;
+// 道の真ん中のレーン。Rev.5〜7 は 6レーンでも 2 と数えていて、中央前提の形とレーンの補間が左へ半レーン偏っていた
+// (既存曲の譜面を変えないため、Rev.7 までは 2 のまま)
+const CENTER_LANE=rev8?(LANES-1)/2:2;
 setPatternLaneCount(LANES);
 if(audio.analysisType!=='rhythm-audio-v3')throw new Error('V3音源解析のJSONではありません');
 if(!audio.structure)throw new Error('V3音源解析が古い形です。rhythm-audio-analyze-v3.js を通し直してください');
@@ -575,6 +587,36 @@ const phraseOccurrence=bar=>{
 // 向きは元の小節からの相対(元が反転していれば、反転の反転で元の向きへ戻る)。
 const phraseDevelopForBar=bar=>{const count=phraseOccurrence(bar)+1;return count>1&&count%3===0;};
 const phraseMirrorForBar=bar=>phraseOccurrence(bar)%2===1;
+// Rev.8: 繰り返しの小節の音が、元の小節のどの位置の写しか(元のグリッド)。写さない「発展」の回・元が無い所は null。
+// FLICK・同時押し・区切りの一発を元の小節と揃えるのに使う(Rev.2 はリズムとレーンだけ写し、種類は曲全体で別に選んでいた
+// ので、1番と2番で揃う保証が無かった)
+const phraseEchoSourceGrid=grid=>{
+  if(!phraseEchoTypes)return null;
+  const bar=Math.floor(grid/BAR);
+  const source=repeatSourceBar(bar);
+  if(source==null||source>=bar||phraseDevelopForBar(bar))return null;
+  return source*BAR+(grid-bar*BAR);
+};
+// Rev.8: 繰り返しの小節で、元の小節と同じ種類に揃える(時刻の早い順に見るので、写しの写しも元に揃う)。
+//   pickedOf(index) … いまその種類になっているか / canAdd(index) … その種類にしてよい候補か
+//   add(index) / remove(index) … 種類を付ける・外す。removeOk が false なら外さない(足すだけ)
+const echoPhraseTypes=(notes,{pickedOf,canAdd,add,remove,removeOk=true})=>{
+  let added=0,removed=0;
+  if(!phraseEchoTypes)return {added,removed};
+  const byGrid=new Map();
+  notes.forEach((note,index)=>{if(!note.chord&&(note.type==='TAP'||note.type==='FLICK')&&!byGrid.has(note.grid))byGrid.set(note.grid,index);});
+  const order=[...byGrid.values()].sort((a,b)=>notes[a].grid-notes[b].grid);
+  for(const index of order){
+    const sourceGrid=phraseEchoSourceGrid(notes[index].grid);
+    if(sourceGrid==null)continue;
+    const source=byGrid.get(sourceGrid);
+    if(source==null)continue;
+    const want=pickedOf(source),has=pickedOf(index);
+    if(want&&!has&&canAdd(index)){add(index);added++;}
+    else if(!want&&has&&removeOk){remove(index);removed++;}
+  }
+  return {added,removed};
+};
 const musicalOnsetsInBar=bar=>allOnsets.filter(o=>o.grid>=bar*BAR&&o.grid<(bar+1)*BAR).length;
 // Rev.7の作法に渡す「その場の様子」。区切りの前後・盛り上がり・その小節の打点の多さ(区切りの平均との比)
 const sortedSections=(Array.isArray(structure.sections)?structure.sections:[]).slice().sort((a,b)=>a.startBar-b.startBar);
@@ -1126,7 +1168,7 @@ const buildChart=(difficulty,options={})=>{
   // 直前のかたまりの並び(つなぎの向きを見る)と、同じ向きへ流れ続けた回数
   let lastOffsets=null,driftCount=0,lastDirection=0;
   const laneUse=Array(LANES).fill(0);
-  let lastLane=2,lastPlacedGrid=-Infinity;
+  let lastLane=CENTER_LANE,lastPlacedGrid=-Infinity;
   const placed=[];
   // 置いたノーツのレーン(グリッド → レーン)。Rev.2のフレーズの写しが、元の小節のレーンを引くのに使う
   const laneByGrid=new Map();
@@ -1264,7 +1306,7 @@ const buildChart=(difficulty,options={})=>{
             ?Math.round(sourceLanes[before]+(sourceLanes[after]-sourceLanes[before])*(i-before)/(after-before))
             :sourceLanes[before>=0?before:after];
           const previous=i>0?lanesNow[i-1]:null;
-          if(previous!=null&&lane===previous&&!allowJack)lane+=lane>=2?-1:1;
+          if(previous!=null&&lane===previous&&!allowJack)lane+=lane>=CENTER_LANE?-1:1;
           lanesNow[i]=Math.max(0,Math.min(LANES-1,lane));
         }
         const low=Math.min(...lanesNow);
@@ -1329,7 +1371,7 @@ const buildChart=(difficulty,options={})=>{
         const direction=Math.sign(lanes[0]-lastLane);
         if(lastDirection!==0&&direction!==0)cost+=(driftCount>=2?direction===lastDirection:direction!==lastDirection)?1.5:0;
         // 中央前提の形は中央へ
-        if(pattern&&pattern.centered)cost+=Math.abs(base-2)*3;
+        if(pattern&&pattern.centered)cost+=Math.abs(base-CENTER_LANE)*3;
         // 同じフレーズの3回目以降は、起点を1つずらして「少し発展」させる(HARD以上)
         if(attempt.fromMemory&&attempt.count>=3&&P.level>=5&&remembered.base!=null)cost+=Math.abs(Math.abs(base-remembered.base)-1)*.8;
         // レーンの偏りをならす
@@ -1506,6 +1548,14 @@ const buildChart=(difficulty,options={})=>{
       })
       :spreadPick(candidates.map(c=>c.index),accentMax,8);
     if(knowledgeOn)for(const index of chosen)markKnowledge(notes[index].grid,accentBoost.get(index)||[]);
+    // Rev.8: 元の小節で一発だった位置は、写しの小節でも一発にする(強い音の強調は消さないので足すだけ)
+    if(phraseEchoTypes){
+      const chosenSet=new Set(chosen),candidateSet=new Set(candidates.map(c=>c.index));
+      const echoed=echoPhraseTypes(notes,{pickedOf:index=>chosenSet.has(index),canAdd:index=>candidateSet.has(index),
+        add:index=>chosenSet.add(index),remove:()=>{},removeOk:false});
+      if(echoed.added)notice.push(`写しの小節の区切りの一発を元の小節に揃えた +${echoed.added}`);
+      chosen.splice(0,chosen.length,...[...chosenSet].sort((a,b)=>a-b));
+    }
     for(const index of chosen){
       const note=notes[index];
       const width=Math.max(1,Math.min(SUB_LANES,P.accentWidth>=10?SUB_LANES:P.accentWidth));
@@ -1537,6 +1587,13 @@ const buildChart=(difficulty,options={})=>{
       ?soundPick(candidates,flickMax,4,index=>flickScoreOf(soundTraitAt(notes[index].grid)))
       :spreadPick(candidates,flickMax,4);
     for(const index of picked)notes[index].type='FLICK';
+    // Rev.8: 元の小節で FLICK だった位置は写しでも FLICK、TAP だった位置は写しでも TAP
+    if(phraseEchoTypes){
+      const candidateSet=new Set(candidates);
+      const echoed=echoPhraseTypes(notes,{pickedOf:index=>notes[index].type==='FLICK',canAdd:index=>candidateSet.has(index)&&notes[index].type==='TAP',
+        add:index=>{notes[index].type='FLICK';},remove:index=>{notes[index].type='TAP';}});
+      if(echoed.added||echoed.removed)notice.push(`写しの小節の FLICK を元の小節に揃えた +${echoed.added} −${echoed.removed}`);
+    }
   }
 
   // --- 8. 終点フリック（HOLD/SLIDEの終わりで弾く） ---
@@ -1627,7 +1684,9 @@ const buildChart=(difficulty,options={})=>{
       //   幅の上限(4)も外す。大きな一発はいちばん太く置かれるので、上限があると最初から候補に入らなかった
       let picked=soundTypes
         ?soundPick(rest,chordMax-chordCount,CHORD.spacingGrids,index=>{
-          const grid=notes[index].grid,base=chordScoreOf(soundTraitAt(grid));
+          const grid=notes[index].grid,sourceGrid=phraseEchoSourceGrid(grid);
+          // Rev.8: 写しの小節の候補は、元の位置と同じ点を持つ(元と写しがそろって選ばれやすくする)
+          const base=Math.max(chordScoreOf(soundTraitAt(grid)),sourceGrid==null?0:chordScoreOf(soundTraitAt(sourceGrid)));
           if(!knowledgeOn||!(base>0))return base;
           const boost=knowledgeBoost('chord',knowledgeContext(grid,onsetByGrid.get(grid)),knowledgeWeights);
           chordKnowledge.set(index,boost.fired);
@@ -3376,8 +3435,9 @@ if(slideEase){
   }
 }
 if(sideFlick&&results.MASTER){
-  const r=results.MASTER,side=applySideFlicks(r.notes);
-  (r.notice||(r.notice=[])).push(`横フリック: 左${side.left}本・右${side.right}本`);
+  // Rev.8: 払う指の動きで向きを決める(自動修正がレーンを動かしたあと、step7 でも同じ決め方で付け直す)
+  const r=results.MASTER,side=rev8?assignSideFlickDirs(r.notes,timing):applySideFlicks(r.notes);
+  (r.notice||(r.notice=[])).push(`横フリック: 左${side.left}本・右${side.right}本`+(rev8?`・向きなし${side.plain}本(うち、もう片方の指へ向かうので付けない${side.blocked}本)`:''));
 }
 
 console.log(`譜面の作り方: ${chartRevisionLabel(chartRevision)}${phraseCopy?'（フレーズの写しあり）':'（2026-09-24までの作り方）'}${slideEase?'（スライドの曲線あり）':''}${sideFlick?'（MASTERに横フリックあり）':''}`);

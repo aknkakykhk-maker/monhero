@@ -43,16 +43,27 @@
 //   7 … 音ゲーの作法(2026-09-26・ユーザー指示「よその作品の譜面知識や音ゲーとしての一般的知識は生成器にいれとてほしい」
 //        「決めつけはしないであくまでも曲に合わせた作りを」)。作法の一覧(rhythm-chart-knowledge.js)が、
 //        曲にその音の裏づけがあるときだけ選ばれやすさを少し足す。区切りの一発も強さの順に選ぶ
-//   8〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
-//        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる
+//   8 … 手の動きと繰り返しを揃える(2026-09-26・docs/spec/RHYTHM_CHART_ENGINE_ROADMAP.md の段1)。
+//        ・横フリックの向きを「次のノーツ → 来た向き → もう片方の指から離れる外向き」で決め、もう片方の指へ向かって
+//          払う向きは付けない。旋律の上下では決めない(遊んだ感想「向きがバラバラ」。Rev.7 の公開曲で自然なのは25〜71%)。
+//          自動修正(step7)がレーンを動かしたあとにも決め直す(rhythm-side-flick.js)
+//        ・フレーズの写しで、元の小節の FLICK・同時押し・区切りの一発も揃える
+//        ・6レーンの中央を 2 ではなく (LANES-1)/2 で数える(Rev.5〜7 は左へ半レーン偏っていた)
+//        ・手のモデルが SLIDE の位置をゲーム本体と同じ座標(レーンの値＋0.5が中心)で測る
+//   9〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
+//        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)と重みの最新の大きいほう＋1」を次の番号にする
+//        (同じ番号が「作り方の改良」と「重みの学び直し」の2つの意味を持たないように)
 'use strict';
 
 const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
+// 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
+const CHART_REVISION_CODE_LATEST=8;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
-const CHART_REVISION_LATEST=Math.max(7,latestKnowledgeRevision());
+const CHART_REVISION_LATEST=Math.max(CHART_REVISION_CODE_LATEST,latestKnowledgeRevision());
 // リビジョンごとの道のレーン数。Rev.5から6レーン
 const CHART_LANE_COUNT_LEGACY=5;
 const CHART_SIX_LANE_REVISION=5;
@@ -80,5 +91,5 @@ const chartRevisionForRegistry=previousEntry=>{
   return {chartRevision:CHART_REVISION_LATEST};
 };
 
-module.exports={CHART_ENGINE_NAME,chartRevisionLabel,CHART_REVISION_LEGACY,CHART_REVISION_LATEST,chartRevisionOf,chartRevisionForRegistry,
+module.exports={CHART_ENGINE_NAME,chartRevisionLabel,CHART_REVISION_LEGACY,CHART_REVISION_CODE_LATEST,CHART_REVISION_LATEST,chartRevisionOf,chartRevisionForRegistry,
   CHART_LANE_COUNT_LEGACY,CHART_SIX_LANE_REVISION,laneCountForRevision,laneCountOfChart};

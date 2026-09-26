@@ -22,9 +22,9 @@
 'use strict';
 const fs=require('fs'),path=require('path');
 const ROOT=path.resolve(__dirname,'..','..');
-const {KNOWLEDGE,WEIGHTS_FILE,readWeightsFile,latestKnowledgeRevision,weightsForRevision}=require('./rhythm-chart-knowledge.js');
+const {KNOWLEDGE,WEIGHTS_FILE,readWeightsFile,weightsForRevision}=require('./rhythm-chart-knowledge.js');
 const {loadRuntime,RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
-const {chartRevisionLabel}=require('./rhythm-chart-v3-revision.js');
+const {chartRevisionLabel,CHART_REVISION_LATEST}=require('./rhythm-chart-v3-revision.js');
 const {validNote,fingerprintOf}=require('./rhythm-chart-feedback.js');
 
 const FEEDBACK_DIR=path.join(ROOT,'tools/mode/authoring/feedback');
@@ -90,7 +90,9 @@ const tally=()=>{
 };
 
 const learn=()=>{
-  const base=latestKnowledgeRevision();
+  // 学び直しの元は「いまの最新リビジョン」(作り方の改良で上がった番号も含む)。
+  //   重みの最新(latestKnowledgeRevision)だけを見ると、作り方の改良(Rev.8)と同じ番号を書いてしまう
+  const base=CHART_REVISION_LATEST;
   const current=weightsForRevision(base);
   const {counts,used,stale,unreleased,segments}=tally();
   const proposal={};

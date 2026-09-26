@@ -1391,7 +1391,7 @@ Rev.2では、外側に余地が無いときだけ**HOLDを内側へ1〜2レー�
 - 効いた作法はノーツに `knowledge:[id]` として印を残す（作者用の譜面だけ。ゲームへ書き出す形には入らない）
 - 新しい作法は `KNOWLEDGE` へ1件足すだけで効く。足したら `rhythm-chart-knowledge-check.js` に「効く場面」を1つ書く
 
-#### 学び直し（Rev.8〜）
+#### 学び直し（Rev.9〜。Rev.8 は作り方の改良 3.1.22 に使った）
 
 作法の重みの初めの値（すべて1）は、よその作品の一般的な作り方から決めた仮の値。このゲームで遊んだ感想で直していく。
 
@@ -1415,6 +1415,50 @@ Rev.2では、外側に余地が無いときだけ**HOLDを内側へ1〜2レー�
 
 `node tools/mode/rhythm-chart-knowledge-check.js`（作法の形と出どころ／裏づけが無いと効かない／学び直しの式の幅／
 リビジョンの数え方／Rev.6・Rev.7を実際に作って比べる）。
+
+### 3.1.22 手の動きと繰り返しを揃える（2026-09-26・Rev.8）
+
+段取りと経緯は [`RHYTHM_CHART_ENGINE_ROADMAP.md`](RHYTHM_CHART_ENGINE_ROADMAP.md) の段1。遊んだ感想「横フリックの向きがバラバラ」と、
+気持ちよさの物差し（`rhythm-chart-feel-report.js`）で見つけた食い違いを直した。
+
+#### 何を変えたか
+
+- **横フリックの向きを払う指の動きで決める**（`rhythm-side-flick.js`）。①同じ指が次に取るノーツの方向 ②来た向き
+  ③もう片方の指から離れる外向き。もう片方の指へ向かう向きは付けない。旋律の上下では決めない。
+  「次のノーツ」は譜面全体の次ではなく**同じ指の次**（次をもう片方の指が取るなら、そちらへ払っても指どうしが近づくだけ）。
+  自動修正（step7）がレーンを動かしたあとにも同じ決め方で付け直す（Rev.7 までは生成器で付けた向きが、修正で崩れていた）
+- **写しの小節の種類を揃える**。元の小節で FLICK なら写しも FLICK、TAP なら TAP。区切りの一発は足すだけ（強調は消さない）。
+  同時押しは写しの候補に元の位置と同じ点を持たせる（相方の置き方が複雑なので、選ばれやすくするところまで）。
+  写さない「発展」の回（3回目ごと）は揃えない
+- **6レーンの中央**を `CENTER_LANE=(LANES-1)/2` で数える。Rev.5〜7 は 2 のままで、中央前提の形とレーンの補間が左へ半レーン偏っていた
+- **手のモデルが SLIDE をゲーム本体と同じ座標で読む**（`useRuntimeSlideLanes`）。ゲーム本体は SLIDE のレーンの値＋0.5を中心に描くのに、
+  手のモデルは値そのものを中心と読んでいた。公開曲の HARD〜MASTER で、SLIDE を押さえている最中の TAP 728組のうち82組を
+  「指が入る」と見逃し、公開のときの `rhythm-overlap-reach-fix.js` が公開データの側で TAP を動かして直していた。
+  既定は今までの読み方のままで、Rev.8 の譜面を扱う生成器・自動修正・押せるかの検査・品質レポートだけが切り替える
+  （レベルの計算などほかの道具の結果は変わらない）
+
+#### 効き方（公開中の23曲を Rev.8 で作った実測・自動修正後。Rev.7 と比べて）
+
+| | Rev.7 | Rev.8 |
+| --- | --- | --- |
+| MASTER の横フリックの向きが自然 | 42%（442本） | 100%（502本） |
+| もう片方の指へ向かって払う | 131本 | 0本 |
+| SLIDE を押さえている指から1レーン未満の TAP（EXPERT / MASTER） | 23 / 40組 | 0 / 5組 |
+| 押せない配置 | 0 | 0 |
+| 品質の6軸 | — | どれも ±1点未満 |
+
+ノーツ数はほぼ同じ（MASTER 12246→12236）。SLIDE の座標が正しくなって配置の判断が変わり、押さえている最中に指が足りなくなる
+ノーツを外す数が曲によって少し動く（dullahan_clockwork MASTER 357→346）。
+残った5組は 0.83〜0.92 レーンで、自動修正が SLIDE の曲線（Rev.3）の途中を直線で測るための見落とし。公開のときの
+`rhythm-overlap-reach-fix.js`（ゲーム本体と同じ曲線で測る）が直す。
+**Rev.7 以前の生成結果と自動修正の結果は、全26曲で1バイトも変わらない**（突き合わせ済み）。
+横フリックの「100%」は決め方どおりに付けたので当然の値で、本当に気持ちよくなったかは遊んだ感想で確かめる。
+
+#### 検査
+
+`node tools/mode/rhythm-chart-rev8-check.js`（学び直しの番号／手のモデルの切り替え／中央の直書きが無い／
+Rev.7 の譜面が authoring/ と1バイトも同じ／Rev.8 の横フリックが生成直後も自動修正後も決め方どおり）。
+生成器を今までの向きの付け方に戻すと落ちることを確認済み。
 
 ### 3.1.6 譜面文法 — 形を「順位」でなく「点数」で選ぶ（2026-09-07）
 
@@ -1811,6 +1855,7 @@ maimai の無理配置の分類など。動画そのものは見ていない）�
 | 3.1.18 音の伸びしろ | 生成器の `memoryKey` / `peakOffsetAllowance` ＋ レポートの `importantReach` | `rhythm-chart-quality-report.js`（音） |
 | 3.1.19 フレーズの写し | 生成器の `phraseCopy`（Rev.2・`rhythm-chart-v3-revision.js`）＋ レポートの `phraseEcho` | `rhythm-phrase-copy-check.js` |
 | 3.1.20 音の性格でノーツの種類 | 生成器の `soundTypes`（Rev.6）＋ `rhythm-sound-traits.js` ＋ 測る道具 `rhythm-note-type-fit.js` ＋ 譜面メモ `rhythm-chart-feedback.js` | `rhythm-sound-types-check.js` |
+| 3.1.22 手の動きと繰り返しを揃える | 生成器の `rev8` / `phraseEchoTypes` / `CENTER_LANE`（Rev.8）＋ `rhythm-side-flick.js` ＋ 手のモデルの `useRuntimeSlideLanes` ＋ 物差し `rhythm-chart-feel-report.js` | `rhythm-chart-rev8-check.js` / `rhythm-chart-feel-report-check.js` |
 | 3.1.6 譜面文法 / 3.1.7 指紋 | `rhythm-chart-v3-patterns.js` の `rankShapes` / 生成器の `motifKeyOf` | `rhythm-chart-quality-report.js`（語彙・偏り・フレーズ一致） |
 | 10. 品質の6軸 | `rhythm-chart-quality-report.js` | パイプラインのゲート |
 | 2. レイヤリング | `rhythm-audio-analyze-v3.js`（音の性格）＋ V3生成 | `rhythm-audio-analyze-v3-check.js` |

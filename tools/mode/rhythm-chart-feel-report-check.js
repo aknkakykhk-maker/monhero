@@ -7,6 +7,8 @@
 const path=require('path');
 const fs=require('fs');
 const {measureFeel,feelReportFor}=require('./rhythm-chart-feel-report.js');
+const {chooseSideFlickDir,assignSideFlickDirs}=require('./rhythm-side-flick.js');
+const {slideLaneOffset}=require('./rhythm-hand-model.js');
 
 let failed=0;
 const ok=(label,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${label}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
@@ -19,9 +21,10 @@ const measure=notes=>measureFeel(chartOf(notes),audio,{withQuality:false});
 
 // ── 1. 横フリック ──
 {
-  const toward=measure([tap(0,2),{...tap(4,4),type:'FLICK',flickDir:'right'},tap(6,8)]);
-  ok('次のノーツへ向かう右フリックは自然',toward.sideFlick.count===1&&toward.sideFlick.naturalRate===1&&toward.sideFlick.basis.next===1,JSON.stringify(toward.sideFlick.basis));
-  const away=measure([tap(0,2),{...tap(4,4),type:'FLICK',flickDir:'left'},tap(6,8)]);
+  // 2.5レーンのフリックを右の指が取り、375ms後の4.5レーンも同じ指が取る(左の指は1レーンで遠い)
+  const toward=measure([{...tap(0,4),type:'FLICK',flickDir:'right'},tap(3,8)]);
+  ok('同じ指の次のノーツへ向かう右フリックは自然',toward.sideFlick.count===1&&toward.sideFlick.naturalRate===1&&toward.sideFlick.basis.next===1,JSON.stringify(toward.sideFlick.basis));
+  const away=measure([{...tap(0,4),type:'FLICK',flickDir:'left'},tap(3,8)]);
   ok('次のノーツと逆へ払う左フリックは不自然',away.sideFlick.naturalRate===0);
   ok('不自然なフリックは区間の気になる理由に出る',away.worst.length===1&&away.worst[0].flickOff===1,JSON.stringify(away.worst.map(seg=>seg.details)));
   // もう片方の指が HOLD で 3.5 レーンを押さえている所へ、2.5 レーンから右へ払う
@@ -29,6 +32,21 @@ const measure=notes=>measureFeel(chartOf(notes),audio,{withQuality:false});
   ok('押さえている指へ向かって払うと「ぶつかる」',collide.sideFlick.collide===1&&collide.sideFlick.naturalRate===0);
   const plain=measure([tap(0,2),{...tap(4,4),type:'FLICK'},tap(6,8)]);
   ok('向きの無いフリックは数えない',plain.sideFlick.count===0&&plain.sideFlick.naturalRate===null);
+}
+
+// ── 1b. 向きの決め方(rhythm-side-flick.js。Rev.8 の生成器と物差しが同じものを使う) ──
+{
+  const base={toNext:0,incoming:0,outward:0,otherLane:null,center:3};
+  ok('同じ指の次のノーツがあれば、その方向',chooseSideFlickDir({...base,toNext:1,incoming:-1,outward:-1}).dir===1);
+  ok('次が無ければ来た向き',chooseSideFlickDir({...base,incoming:-1,outward:1}).dir===-1);
+  ok('どちらも無ければ外向き',chooseSideFlickDir({...base,outward:1,otherLane:1}).dir===1);
+  const blocked=chooseSideFlickDir({...base,toNext:1,otherLane:4});
+  ok('近くのもう片方の指へ向かう向きは付けない',blocked.dir===0&&blocked.blocked===true);
+  ok('材料が無ければ向きを付けない',chooseSideFlickDir(base).dir===0);
+  const notes=[{...tap(0,4),type:'FLICK',flickDir:'left'},tap(3,8)];
+  const counts=assignSideFlickDirs(notes,audio.timing);
+  ok('付け直すと、同じ指の次のノーツへ向かう向きになる',notes[0].flickDir==='right'&&counts.right===1,JSON.stringify(counts));
+  ok('物差しは測り終えたら手のモデルの読み方を元へ戻す',slideLaneOffset()===0);
 }
 
 // ── 2. 単調さ ──

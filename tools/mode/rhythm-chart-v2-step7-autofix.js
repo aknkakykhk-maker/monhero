@@ -8,6 +8,7 @@
 //   node tools/mode/rhythm-chart-v2-step7-autofix.js --verbose        # 直した箇所を全部出す
 //   node tools/mode/rhythm-chart-v2-step7-autofix.js --file <path>    # 1つの譜面JSONだけ直す(書き出さない)
 //   node tools/mode/rhythm-chart-v2-step7-autofix.js --write --output-dir <dir>  # 書き出し先を変える(検査用)
+//   node tools/mode/rhythm-chart-v2-step7-autofix.js --source v3 --input-dir <dir> # V3生成の読み込み元を変える(生成器の --output-dir と組にして、authoring/ を触らずに試す)
 //
 // 【何をするか】
 // STEP6(両手の指のシミュレート)が「押せない」「忙しい」を場所つきで出すので、それを入力に譜面を直す。
@@ -52,6 +53,7 @@ const sourceKind=arg('--source','step5');
 const fileArg=arg('--file',null);
 // 検査が既存の成果物を壊さずに書き出せるよう、行き先を差し替えられるようにする
 const outputDir=arg('--output-dir',null);
+const inputDir=arg('--input-dir',null);
 const trackId=arg('--track','monster_hero_theme');
 // ファイル名は曲idから作る（曲が増えても、ここへ手で書き足さなくてよい）
 const dashed=trackId.replace(/_/g,'-');
@@ -81,7 +83,7 @@ const MAX_PASSES=8;           // これ以上は回さない(下がらなくな�
 const SOURCES=Object.freeze({
   step5:{label:'V2 STEP5 採用案',file:d=>`tools/mode/authoring/${dashed}-v2-step5-chart-${d.toLowerCase()}.json`},
   step3:{label:'V2 STEP3/4 出力',file:d=>`tools/mode/authoring/${dashed}-v2-chart-${d.toLowerCase()}.json`},
-  v3:{label:'V3 生成',file:d=>`tools/mode/authoring/${dashed}-v3-chart-${d.toLowerCase()}.json`,
+  v3:{label:'V3 生成',file:d=>inputDir?path.join(path.resolve(ROOT,inputDir),`${dashed}-v3-chart-${d.toLowerCase()}.json`):`tools/mode/authoring/${dashed}-v3-chart-${d.toLowerCase()}.json`,
     outFile:d=>`tools/mode/authoring/${dashed}-v3-fixed-${d.toLowerCase()}.json`},
 });
 const source=fileArg?{label:`指定ファイル ${fileArg}`,file:()=>path.resolve(ROOT,fileArg)}:SOURCES[sourceKind];
@@ -89,7 +91,8 @@ if(!source){console.error(`未知の --source です: ${sourceKind} (${Object.ke
 
 // --- ノーツの位置 ---
 // 指が触るのは中心。式は rhythm-hand-model.js に一本化してある(STEP3・STEP6と同じ物差しにするため)。
-const {HAND_MODEL,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange,slideLaneAtGrid}=require('./rhythm-hand-model.js');
+const {HAND_MODEL,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange,slideLaneAtGrid,useRuntimeSlideLanes}=require('./rhythm-hand-model.js');
+const {assignSideFlickDirs}=require('./rhythm-side-flick.js');
 const laneCenter=note=>noteTouchLane(note);
 // 重なり判定のため、どのノーツもサブレーン座標の範囲へ揃える
 const span=note=>{
@@ -421,8 +424,18 @@ for(const difficulty of DIFFICULTIES){
   const key=difficulty||chart.difficulty||'FILE';
   LANE_COUNT=laneCountOfChart(chart);
   GUARD_COVERED_CROSSES=chartRevisionOf(chart)>=7;
+  // Rev.8〜: SLIDE の位置をゲーム本体と同じ座標で測る(rhythm-hand-model.js の useRuntimeSlideLanes)
+  const rev8=chartRevisionOf(chart)>=8;
+  useRuntimeSlideLanes(rev8);
   currentMaxStep=MAX_STEP_LANES[chart.difficulty||difficulty]??Infinity;
   const {notes,fixes,passes,before,after}=autofix(chart.notes||[]);
+  // Rev.8〜: レーンを動かしたので、横フリックの向きを払う指の動きで付け直す(生成器と同じ決め方)。
+  //   生成器で付けた向きのままだと、動かしたノーツへ向かう向きが逆になっていることがある
+  let sideFlickNote='';
+  if(rev8&&(chart.difficulty||difficulty)==='MASTER'){
+    const side=assignSideFlickDirs(notes,timing);
+    sideFlickNote=`    横フリックの向きを付け直した: 左${side.left}本・右${side.right}本・向きなし${side.plain}本`;
+  }
   if(after.impossible)anyImpossible=true;
 
   const arrow=(a,b)=>a===b?`${a}`:`${a}→${b}`;
@@ -433,6 +446,7 @@ for(const difficulty of DIFFICULTIES){
   const show=verbose?fixes:fixes.slice(0,5);
   for(const fix of show)console.log(`      ${(fix.timeMs/1000).toFixed(1)}s 第${fix.bar+1}小節 ${fix.type}: ${fix.move}`);
   if(!verbose&&fixes.length>5)console.log(`      … ほか${fixes.length-5}箇所(--verbose で全件)`);
+  if(sideFlickNote)console.log(sideFlickNote);
 
   report.difficulties[key]={noteCount:notes.length,fixCount:fixes.length,passes,before,after,fixes};
 

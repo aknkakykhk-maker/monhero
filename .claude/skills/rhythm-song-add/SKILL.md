@@ -119,10 +119,11 @@ node -e "require('./tools/node_modules/sharp')('<元絵>')
 node tools/mode/rhythm-audio-analyze-v3.js --track <track_id> --write
 ```
 
-初めて解析すると、一覧のその曲へ `"chartRevision": 2`（譜面の作り方のリビジョン）が自動で入る。
-**消さない**。Rev.2は「2番のサビを1番と同じ配置（か左右反転）で書く」フレーズの写しが効く作り方で、
-新しい曲だけがこれで作られる（既存曲はRev.1のまま。`docs/spec/RHYTHM_CHART_DESIGN.md` 3.1.19）。
-生成のときに `譜面の作り方: MHB CHART ENGINE Rev.7（フレーズの写しあり）…` のように出ていれば効いている
+初めて解析すると、一覧のその曲へ `"chartRevision": <最新>`（譜面の作り方のリビジョン。2026-09-26 時点で 8）が自動で入る。
+**消さない**。新しい曲だけが最新の作り方で作られる（既存曲は書いてあるリビジョンのまま）。
+中身の一覧は `tools/mode/rhythm-chart-v3-revision.js` の冒頭。Rev.8 は横フリックの向きを払う指の動きで決め、
+写しの小節の FLICK も元の小節に揃える（`docs/spec/RHYTHM_CHART_ENGINE_ROADMAP.md` の段1）。
+生成のときに `譜面の作り方: MHB CHART ENGINE Rev.8（フレーズの写しあり）…` のように出ていれば効いている
 （譜面生成ツールの名前が **MHB CHART ENGINE**、作り方の世代が **Rev.**。2026-09-26 に「版」から呼び名を改めた）。
 
 > 入るリビジョンは `rhythm-chart-v3-revision.js` の `CHART_REVISION_LATEST`(最新リビジョン)。**Rev.5からは6レーン**の譜面になる
