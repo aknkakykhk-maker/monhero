@@ -107,9 +107,10 @@ const NOTES=[
     check('何も無いところは透明のまま',result.empty.a===0,`a=${result.empty.a}`);
     check('触って取り損ねた FLICK のレーンに帯が残らない(終端60秒先の HOLD として描かない)',result.touchedLane.a===0,`a=${result.touchedLane.a}`);
     const by=type=>result.samples.find(s=>s.type===type);
-    check('TAP は桃色(赤 > 緑)',by('TAP').r>by('TAP').g,`rgb(${by('TAP').r},${by('TAP').g},${by('TAP').b})`);
-    check('FLICK は緑(緑 > 赤)',by('FLICK').g>by('FLICK').r,`rgb(${by('FLICK').r},${by('FLICK').g},${by('FLICK').b})`);
-    check('HOLD は水色(青 > 赤)',by('HOLD').b>by('HOLD').r,`rgb(${by('HOLD').r},${by('HOLD').g},${by('HOLD').b})`);
+    // 2026-09-26 にノーツの色を作り替えた(案B: TAP=水色・HOLD=緑・SLIDE=紫・FLICK=ピンク・横フリック左=オレンジ/右=黄緑)
+    check('TAP は水色(青 > 赤)',by('TAP').b>by('TAP').r,`rgb(${by('TAP').r},${by('TAP').g},${by('TAP').b})`);
+    check('FLICK はピンク(赤 > 緑)',by('FLICK').r>by('FLICK').g,`rgb(${by('FLICK').r},${by('FLICK').g},${by('FLICK').b})`);
+    check('HOLD は緑(緑 > 赤)',by('HOLD').g>by('HOLD').r,`rgb(${by('HOLD').r},${by('HOLD').g},${by('HOLD').b})`);
     check('SLIDE は紫(青 > 緑)',by('SLIDE').b>by('SLIDE').g,`rgb(${by('SLIDE').r},${by('SLIDE').g},${by('SLIDE').b})`);
     check('モンスターノーツは金(赤 > 青)',by('MONSTER').r>by('MONSTER').b,`rgb(${by('MONSTER').r},${by('MONSTER').g},${by('MONSTER').b})`);
     console.log(`  1フレームの JS 時間(${NOTES.length}ノーツ・Chromium): 中央値 ${result.jsMedianMs.toFixed(2)}ms / 上位5% ${result.jsP95Ms.toFixed(2)}ms`);

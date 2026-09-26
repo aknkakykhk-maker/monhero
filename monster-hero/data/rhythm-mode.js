@@ -18100,8 +18100,8 @@ const RHYTHM_TUTORIAL_STEPS=Object.freeze([
   {fromMs:rhythmTutorialMs(14), title:'2つ同時に「同時押し」', text:'左右に1つずつ出ます。指を2本置いて、同時に叩きます。'},
   {fromMs:rhythmTutorialMs(22), title:'押さえ続ける「ホールド」', text:'叩いたまま押さえて、終わりの光る横棒が判定ラインへ来たら離します。'},
   {fromMs:rhythmTutorialMs(34), title:'なぞる「スライド」',   text:'押さえたまま、帯の道すじを指でなぞります。途中で指を離さないように。'},
-  {fromMs:rhythmTutorialMs(43), title:'払う「フリック」',     text:'緑のノーツは、叩いたあと指を上へ払います。MASTERには、矢印の向き（左か右）へ払うノーツも出ます。'},
-  {fromMs:rhythmTutorialMs(50), title:'「終点フリック」',     text:'終わりの横棒が緑で上向きの矢印が付いているホールドは、離さずにそのまま上へ払って終わります。'},
+  {fromMs:rhythmTutorialMs(43), title:'払う「フリック」',     text:'ピンクのノーツは、叩いたあと指を上へ払います。MASTERには、矢印の向き（左か右）へ払うノーツも出ます（左はオレンジ・右は黄緑）。'},
+  {fromMs:rhythmTutorialMs(50), title:'「終点フリック」',     text:'終わりの横棒がピンクで上向きの矢印が付いているホールドは、離さずにそのまま上へ払って終わります。'},
   {fromMs:rhythmTutorialMs(58), title:'「モンスターノーツ」', text:'金色のノーツです。GREATより良い判定で取ると、設定したマスモンの能力が出ます。'},
   {fromMs:rhythmTutorialMs(63), title:'ここまで！',           text:'おつかれさま。あとは曲をえらんで遊んでみてください。'},
 ]);
@@ -18926,6 +18926,18 @@ const rhythmRestartAnimations=entries=>{
 // defer:true を渡すと、印を付けずに「付けるべき印」だけを返す。
 // 呼び出し側が rhythmRestartAnimations へまとめて渡すことで、レイアウトの読み取りを1回にできる。
 const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false})=>{
+  // 検証用に WebGL で描いているときは、同じ光をノーツの canvas へ描く(RHYTHM_CANVAS_RENDERER の「叩いたときの光」)。
+  // DOM の部品には触らないので、返すもの(流し直す印)も無い
+  if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&RHYTHM_CANVAS_RENDERER.hitsFor(area)){
+    const big=!!monster,rainbow=!big&&precise&&judgment==='MARVELOUS';
+    RHYTHM_CANVAS_RENDERER.pushHit({
+      center:Math.max(0,Math.min(1,Number(centerRatio)||.5)),
+      width:Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(big?1.5:1.15),
+      color:big?'#fde047':rhythmHitEffectColor(judgment),judgment:big?'':String(judgment||''),
+      precise:rainbow,big,sparkScale:big?2.1:(rainbow?1.45:1),
+    });
+    return null;
+  }
   const layer=rhythmEnsureHitEffects(area);
   if(!layer||!layer._rhythmPool.length)return null;
   const item=layer._rhythmPool[layer._rhythmNext%layer._rhythmPool.length];
@@ -19670,6 +19682,18 @@ const rhythmCreateGL2D=canvas=>{
 };
 
 // 描画そのもの。色は DOM 版(index.html / Tailwind / rhythm-mode.js の CSS)と同じ値。
+// ===== ノーツの色(2026-09-26・ユーザー指示「ノーツごとにちゃんと色分けしたい」「全部のノーツの色を変えたい、矢印も含めて」。案Bに決定) =====
+// 粒・帯・矢印・終わりの横棒・押さえている最中の光は、どれもこの表から色を取る(色をあちこちに書き写さない)。
+//   hi … いちばん明るい色(粒の上・矢印の芯) / mid … その種類の色 / lo … 暗い側 / rgb … 光(rgba)に使う
+// ★横フリックは左右で色を分ける(左=オレンジ・右=黄緑)。以前は粒が緑のまま矢印だけ左緑・右ピンクで、統一感がなかった
+const RHYTHM_NOTE_COLORS=Object.freeze({
+  TAP:  Object.freeze({hi:'#f0f9ff',mid:'#38bdf8',lo:'#0284c7',rgb:'56,189,248',label:'水色'}),
+  HOLD: Object.freeze({hi:'#ecfdf5',mid:'#34d399',lo:'#059669',rgb:'52,211,153',label:'緑'}),
+  SLIDE:Object.freeze({hi:'#f5f3ff',mid:'#a78bfa',lo:'#7c3aed',rgb:'167,139,250',label:'紫'}),
+  FLICK:Object.freeze({hi:'#fdf2f8',mid:'#f472b6',lo:'#db2777',rgb:'244,114,182',label:'ピンク'}),
+  LEFT: Object.freeze({hi:'#fff7ed',mid:'#fb923c',lo:'#ea580c',rgb:'251,146,60',label:'オレンジ'}),
+  RIGHT:Object.freeze({hi:'#f7fee7',mid:'#a3e635',lo:'#4d7c0f',rgb:'163,230,53',label:'黄緑'}),
+});
 const RHYTHM_CANVAS_RENDERER=(()=>{
   const HEAD_H=12;          // 粒の高さ(ノーツ要素 20px から inset 4px 0 を引いた値)
   const GLOW=20;            // 光の画像の余白(px)。いちばん広い光(18px)が収まる
@@ -19680,11 +19704,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 粒の厚み。2026-09-26 に1.55倍へ厚くしたが、実機で「ノーツが太くなってて違和感が凄い」と言われて元の1倍へ戻した。
   // (当たり判定はノーツサイズにも粒の見た目にも左右されない)。
   const HEAD_THICK=1;
+  // 粒の色は RHYTHM_NOTE_COLORS から作る(2026-09-26)。光は その色(濃い) → 白 → その色(薄い) の3層
+  const headOf=c=>({radius:5,gradient:[c.hi,[c.mid,.55],c.lo],border:'rgba(255,255,255,.82)',inset:'rgba(255,255,255,.7)',glow:[[13,`rgba(${c.rgb},.5)`],[6,'rgba(255,255,255,.22)'],[10,`rgba(${c.rgb},.26)`]]});
   const HEADS={
-    TAP:    {radius:5,gradient:['#fde68a','#d946ef'],border:'rgba(255,255,255,.72)',inset:'rgba(255,255,255,.58)',glow:[[12,'rgba(217,70,239,.32)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
-    HOLD:   {radius:5,gradient:['#ecfeff','#22d3ee'],border:'rgba(207,250,254,.86)',inset:'rgba(255,255,255,.72)',glow:[[13,'rgba(34,211,238,.42)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
-    FLICK:  {radius:5,gradient:['#f0fdf4',['#86efac',.34],['#22c55e',.62],'#15803d'],border:'rgba(220,252,231,.98)',inset:'rgba(255,255,255,.95)',glow:[[10,'rgba(34,197,94,.92)'],[18,'rgba(21,128,61,.62)'],[6,'rgba(255,255,255,.20)']]},
-    SLIDE:  {radius:5,gradient:['#ddd6fe',['#a855f7',.58],'#6d28d9'],border:'rgba(221,214,254,.95)',inset:'rgba(255,255,255,.82)',glow:[[16,'rgba(168,85,247,.64)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
+    TAP:    headOf(RHYTHM_NOTE_COLORS.TAP),
+    HOLD:   headOf(RHYTHM_NOTE_COLORS.HOLD),
+    FLICK:  headOf(RHYTHM_NOTE_COLORS.FLICK),
+    SLIDE:  headOf(RHYTHM_NOTE_COLORS.SLIDE),
+    // 横フリック(左・右)。粒も矢印も同じ色
+    LEFT:   headOf(RHYTHM_NOTE_COLORS.LEFT),
+    RIGHT:  headOf(RHYTHM_NOTE_COLORS.RIGHT),
     MONSTER:{radius:5,gradient:['#fef3c7','#f59e0b'],border:'rgba(255,255,255,.72)',inset:'rgba(255,255,255,.58)',ring:'#fde68a',glow:[[12,'rgba(217,70,239,.32)'],[5,'rgba(253,224,71,.72)'],[10,'rgba(217,70,239,.42)'],[14,'rgba(34,211,238,.24)']]},
     FAILED: {radius:5,gradient:['#94a3b8','#475569'],border:'rgba(148,163,184,.6)',inset:'rgba(255,255,255,.3)',glow:[]},
   };
@@ -19735,7 +19764,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     ctx.globalAlpha=1;
   };
-  // 矢印(FLICK / 終点フリック)。三角に緑の光。
+  // 矢印(FLICK / 終点フリック)。三角にピンクの光(色は RHYTHM_NOTE_COLORS.FLICK)。
   const arrowSprite=(key,w,h,glows,gradientStops)=>{
     const id=`arrow:${key}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
@@ -19771,14 +19800,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const AURA_OUTER_GLOWS=Object.freeze([[8,'rgba(217,70,239,.45)'],[12,'rgba(34,211,238,.28)']]);
   const AURA_OUTER_DOTS=Object.freeze([[.08,.45,'rgba(255,255,255,.85)'],[.93,.58,'rgba(103,232,249,.85)'],[.20,.88,'rgba(253,224,71,.8)'],[.78,.08,'rgba(232,121,249,.82)']]);
   const AURA_INNER_GLOWS=Object.freeze([[5,'rgba(253,224,71,.92)'],[9,'rgba(232,121,249,.58)'],[13,'rgba(34,211,238,.34)']]);
-  const FLICK_ARROW_GLOWS=Object.freeze([[5,'rgba(34,197,94,.95)'],[11,'rgba(21,128,61,.7)'],[2,'rgba(2,6,23,.9)']]);
-  const FLICK_ARROW_FILL=Object.freeze([[0,'#ffffff'],[.38,'#bbf7d0'],[1,'#22c55e']]);
-  // 横フリックの山形(<<< / >>>)。左は緑・右はピンクで、形と色の両方で向きがわかるようにする(2026-09-26)。
+  const FLICK_ARROW_GLOWS=Object.freeze([[5,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.95)`],[11,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.6)`],[2,'rgba(2,6,23,.9)']]);
+  const FLICK_ARROW_FILL=Object.freeze([[0,'#ffffff'],[.38,RHYTHM_NOTE_COLORS.FLICK.hi],[1,RHYTHM_NOTE_COLORS.FLICK.mid]]);
+  // 横フリックの山形(<<< / >>>)。粒と同じ色(左=オレンジ・右=黄緑)で、形と色の両方で向きがわかるようにする(2026-09-26)。
   // 焼くのは最初の1回だけ(ぼかしは焼くときにだけ使う)。
-  const SIDE_FLICK_STYLE=Object.freeze({
-    left:Object.freeze({stroke:'#f0fdf4',glows:Object.freeze([[6,'rgba(34,197,94,.95)'],[12,'rgba(21,128,61,.7)']])}),
-    right:Object.freeze({stroke:'#fdf2f8',glows:Object.freeze([[6,'rgba(236,72,153,.95)'],[12,'rgba(190,24,93,.7)']])}),
-  });
+  const sideFlickStyle=c=>Object.freeze({stroke:c.hi,glows:Object.freeze([[6,`rgba(${c.rgb},.95)`],[12,`rgba(${c.rgb},.6)`]])});
+  const SIDE_FLICK_STYLE=Object.freeze({left:sideFlickStyle(RHYTHM_NOTE_COLORS.LEFT),right:sideFlickStyle(RHYTHM_NOTE_COLORS.RIGHT)});
   const SIDE_CHEVRON_W=46,SIDE_CHEVRON_H=18,SIDE_CHEVRON_MARGIN=12;
   const sideChevronSprite=dir=>{
     const id=`chevron:${dir}:${dpr}`;
@@ -19798,11 +19825,21 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     c.strokeStyle=style.stroke;c.lineWidth=3.2;chevrons();c.stroke();
     const sprite={...s,margin:m,tw:w,th:h};sprites.set(id,sprite);return sprite;
   };
-  const END_BAR_GLOWS_LOW=Object.freeze([[7,'#67e8f9']]);
-  const END_BAR_GLOWS=Object.freeze([[10,'#67e8f9'],[18,'#d946ef']]);
-  const END_FLICK_ARROW_GLOWS=Object.freeze([[4,'rgba(34,197,94,.95)'],[2,'rgba(2,6,23,.85)']]);
-  const END_FLICK_ARROW_FILL=Object.freeze([[0,'#f0fdf4'],[.6,'#4ade80'],[1,'#16a34a']]);
-  const headStyle=(note,failed,monster)=>failed?HEADS.FAILED:monster?HEADS.MONSTER:HEADS[rhythmNoteVisualType(note)]||HEADS.TAP;
+  // 終わりの横棒は、そのノーツと同じ色(HOLD=緑・SLIDE=紫・終点フリック=ピンク)
+  const endBarColor=(note,flick)=>flick?RHYTHM_NOTE_COLORS.FLICK:rhythmNoteIsSlide(note)?RHYTHM_NOTE_COLORS.SLIDE:RHYTHM_NOTE_COLORS.HOLD;
+  // 光の並びは定数として1度だけ作る(毎フレーム配列を作らない)
+  const END_BAR_GLOWS=Object.freeze(Object.fromEntries(['HOLD','SLIDE','FLICK'].map(kind=>{const c=RHYTHM_NOTE_COLORS[kind];
+    return [kind,Object.freeze({full:Object.freeze([[10,c.mid],[18,c.lo]]),low:Object.freeze([[7,c.mid]])})];})));
+  const endBarKind=(note,flick)=>flick?'FLICK':rhythmNoteIsSlide(note)?'SLIDE':'HOLD';
+  const END_FLICK_ARROW_GLOWS=Object.freeze([[4,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.95)`],[2,'rgba(2,6,23,.85)']]);
+  const END_FLICK_ARROW_FILL=Object.freeze([[0,RHYTHM_NOTE_COLORS.FLICK.hi],[.6,RHYTHM_NOTE_COLORS.FLICK.mid],[1,RHYTHM_NOTE_COLORS.FLICK.lo]]);
+  const headStyle=(note,failed,monster)=>{
+    if(failed)return HEADS.FAILED;
+    if(monster)return HEADS.MONSTER;
+    const type=rhythmNoteVisualType(note);
+    if(type==='FLICK'){const dir=rhythmFlickDir(note);if(dir==='left')return HEADS.LEFT;if(dir==='right')return HEADS.RIGHT;}
+    return HEADS[type]||HEADS.TAP;
+  };
   const fillGradient=(x,y,h,stops)=>{
     const g=ctx.createLinearGradient(0,y,0,y+h);
     stops.forEach((stop,index)=>{const offset=Array.isArray(stop)?stop[1]:index/(stops.length-1);const color=Array.isArray(stop)?stop[0]:stop;g.addColorStop(offset,color);});
@@ -19864,7 +19901,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 判定ラインにとどまっている粒のまわりに、光のたまり(楕円)と、上へ昇る小さな光の粒を出す。
   // どちらも最初の1回だけ焼いた絵を貼るだけ(毎フレームのグラデーション作成・ぼかしは無し)。
   // 押さえているノーツ1本につき drawImage が 1 + 4 回。押さえられるのは指の数(2本)まで
-  const HOLD_SPARK_TINT=Object.freeze({HOLD:'103,232,249',SLIDE:'192,132,252'});
+  const HOLD_SPARK_TINT=Object.freeze({HOLD:RHYTHM_NOTE_COLORS.HOLD.rgb,SLIDE:RHYTHM_NOTE_COLORS.SLIDE.rgb});
   const holdSparkSprite=kind=>{
     const id=`spark:${kind}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
@@ -19933,13 +19970,13 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     for(let index=band.length-1;index>=0;index--)ctx.lineTo(sizeX(band[index].left,band[index].right)[0],band[index].y);
     ctx.closePath();
     // 帯のまわりの光(ノーツ全体の drop-shadow 相当)は、外周の太い半透明の線で出す
-    if(!failed&&effect!=='MINIMAL'&&!lightweight){ctx.lineWidth=5;ctx.strokeStyle='rgba(180,240,255,.16)';ctx.lineJoin='round';ctx.stroke();}
+    if(!failed&&effect!=='MINIMAL'&&!lightweight){ctx.lineWidth=5;ctx.strokeStyle=`rgba(${RHYTHM_NOTE_COLORS.HOLD.rgb},.18)`;ctx.lineJoin='round';ctx.stroke();}
     const g=ctx.createLinearGradient(0,bottom,0,top);
     if(failed){g.addColorStop(0,'rgba(120,130,145,.9)');g.addColorStop(1,'rgba(150,160,175,.7)');}
-    else{g.addColorStop(0,'rgba(56,189,248,.62)');g.addColorStop(.6,'rgba(59,130,246,.42)');g.addColorStop(1,'rgba(165,243,252,.55)');}
+    else{const c=RHYTHM_NOTE_COLORS.HOLD.rgb;g.addColorStop(0,`rgba(${c},.62)`);g.addColorStop(.6,`rgba(${c},.40)`);g.addColorStop(1,`rgba(${c},.55)`);}
     ctx.fillStyle=g;ctx.fill();
     // 押さえている最中は帯を明るくする(押せている合図の1つ。以前は .22)
-    if(pressed&&!failed){ctx.fillStyle='rgba(224,247,255,.34)';ctx.fill();}
+    if(pressed&&!failed){ctx.fillStyle='rgba(236,253,245,.34)';ctx.fill();}
     ctx.globalAlpha=1;
   };
   const drawSlide=(geo,opts)=>{
@@ -19955,9 +19992,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       quads.forEach(q=>ctx.lineTo(q.r1,q.y1));
       for(let index=quads.length-1;index>=0;index--)ctx.lineTo(quads[index].l1,quads[index].y1);
       ctx.lineTo(quads[0].l0,quads[0].y0);ctx.closePath();
-      ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle='rgba(168,85,247,.16)';ctx.stroke();
+      ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle=`rgba(${RHYTHM_NOTE_COLORS.SLIDE.rgb},.18)`;ctx.stroke();
     }
-    ctx.fillStyle=failed?'rgba(120,120,135,.48)':'rgba(168,85,247,.48)';
+    ctx.fillStyle=failed?'rgba(120,120,135,.48)':`rgba(${RHYTHM_NOTE_COLORS.SLIDE.rgb},.5)`;
     // 継ぎ目(10等分の境目)は判定と無関係なので線を引かない。塗りだけ。
     quads.forEach(q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     // 帯のふち。DOM版の[data-rhythm-slide-edge]と同じ濃さで外周だけをなぞる。
@@ -19986,16 +20023,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const flick=note.endFlick===true,h=8*(0.52+end.scale*.48),w=end.w*sizeScale,x=end.cx-w/2,top=end.cy-h/2;
     ctx.globalAlpha=alpha;
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
-      const sprite=glowSprite(flick?'endFlick':'end',4,(effect==='LOW'||effect==='LIGHT')?END_BAR_GLOWS_LOW:END_BAR_GLOWS);
+      const low=effect==='LOW'||effect==='LIGHT',kind=endBarKind(note,flick);
+      const sprite=glowSprite(`end:${kind}:${low?'low':'full'}`,4,END_BAR_GLOWS[kind][low?'low':'full']);
       draw3Slice(sprite,end.cx,end.cy,w,h,alpha);
     }
     roundRectPath(ctx,x,top,w,h,h/2);
     const g=ctx.createLinearGradient(x,0,x+w,0);
     if(failed){g.addColorStop(0,'#94a3b8');g.addColorStop(.5,'#e2e8f0');g.addColorStop(1,'#94a3b8');}
-    else if(flick){g.addColorStop(0,'#22c55e');g.addColorStop(.5,'#f0fdf4');g.addColorStop(1,'#22c55e');}
-    else{g.addColorStop(0,'#e879f9');g.addColorStop(.5,'#cffafe');g.addColorStop(1,'#e879f9');}
+    else{const c=endBarColor(note,flick);g.addColorStop(0,c.mid);g.addColorStop(.5,c.hi);g.addColorStop(1,c.mid);}
     ctx.fillStyle=g;ctx.fill();
-    ctx.lineWidth=1;ctx.strokeStyle=failed?'rgba(148,163,184,.6)':flick?'rgba(220,252,231,.98)':'rgba(255,255,255,.8)';ctx.stroke();
+    ctx.lineWidth=1;ctx.strokeStyle=failed?'rgba(148,163,184,.6)':'rgba(255,255,255,.85)';ctx.stroke();
     if(flick&&!failed){
       const sprite=arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
       const aw=sprite.tw+sprite.margin*2,ah=sprite.th+sprite.margin*2;
@@ -20003,9 +20040,156 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     ctx.globalAlpha=1;
   };
+  // ── 叩いたときの光(検証用・WebGL で描くときだけ。2026-09-26) ─────────────────────────
+  // ふだんは DOM の部品(rhythmSpawnHitEffect)を CSS アニメーションで動かしている。WebGL で描くときだけ、
+  // 同じ形・同じ動き・同じ色をこの canvas へ描き、部品は動かさない。叩くたびに走っていたスタイルの計算と
+  // 重なりの組み立て(実測でそれぞれ約2割)が要らなくなる。
+  // ★形と動きは [data-rhythm-hit-effect] の CSS と @keyframes mhRhythmHit* を写したもの。向こうを変えたらこちらも直す。
+  // ★明るさのフィルター(brightness・saturate)は、使い回す部品へ判定の印を付けて、実際に効いている値を読む
+  //   (index.html と rhythm-mode.js のどちらの指定が勝っているかに左右されないように)。
+  // ★重なり順も DOM と同じにする。光の層(z-index:3)はノーツの canvas(z-index:5)の下なので、ノーツより先に描く。
+  const HIT_KEYS={
+    core:[[0,{o:0,sx:.28,sy:.4}],[.12,{o:1,sx:1.02,sy:1.9}],[1,{o:0,sx:1.34,sy:.28}]],
+    beam:[[0,{o:0,sx:.68,sy:.08}],[.14,{o:.82,sx:1,sy:.74}],[1,{o:0,sx:.52,sy:1.3}]],
+    coreBig:[[0,{o:0,sx:.3,sy:.5}],[.09,{o:1,sx:1.3,sy:3.2}],[.42,{o:.9,sx:1.7,sy:1.6}],[1,{o:0,sx:2.1,sy:.3}]],
+    beamBig:[[0,{o:0,sx:.7,sy:.1}],[.1,{o:1,sx:1.16,sy:1.5}],[.48,{o:.72,sx:1,sy:2.1}],[1,{o:0,sx:.6,sy:2.9}]],
+    spark:[[0,{o:0,k:0,s:.3}],[.12,{o:1,k:.3,s:1}],[1,{o:0,k:1,s:.2}]],
+    flare:[[0,{o:0,sx:.35,sy:.35,r:-6}],[.14,{o:1,sx:1,sy:1,r:0}],[1,{o:0,sx:1.25,sy:.8,r:4}]],
+  };
+  const HIT_SPARK_OFFSETS=[[-54,-56],[-24,-86],[0,-104],[24,-86],[54,-56]];
+  const HIT_CORE_RAINBOW=['#f87171','#fbbf24','#a3e635','#22d3ee','#a78bfa','#f472b6'];
+  const HIT_BEAM_RAINBOW=[[0,'#f472b6'],[.24,'#a78bfa'],[.46,'#22d3ee'],[.64,'#a3e635'],[.82,'rgba(251,191,36,.35)'],[1,'rgba(251,191,36,0)']];
+  // cubic-bezier(.16,.9,.3,1)。CSS と同じく、キーフレームの区間ごとにかける
+  const hitEase=(()=>{const x1=.16,y1=.9,x2=.3,y2=1,cx=3*x1,bx=3*(x2-x1)-cx,ax=1-cx-bx,cy=3*y1,by=3*(y2-y1)-cy,ay=1-cy-by;
+    const sx=t=>((ax*t+bx)*t+cx)*t,sy=t=>((ay*t+by)*t+cy)*t,dx=t=>(3*ax*t+2*bx)*t+cx;
+    return x=>{if(x<=0)return 0;if(x>=1)return 1;let t=x;
+      for(let i=0;i<8;i++){const e=sx(t)-x;if(Math.abs(e)<1e-6)return sy(t);const d=dx(t);if(Math.abs(d)<1e-6)break;t-=e/d;}
+      let lo=0,hi=1;t=x;for(let i=0;i<30;i++){const v=sx(t);if(Math.abs(v-x)<1e-6)break;if(v<x)lo=t;else hi=t;t=(lo+hi)/2;}
+      return sy(t);};})();
+  const hitFrame=(keys,t)=>{let i=1;while(i<keys.length-1&&t>keys[i][0])i++;
+    const t0=keys[i-1][0],t1=keys[i][0],a=keys[i-1][1],b=keys[i][1];
+    const k=hitEase(t1>t0?Math.max(0,Math.min(1,(t-t0)/(t1-t0))):1),out={};
+    for(const key in a)out[key]=a[key]+(b[key]-a[key])*k;return out;};
+  const hitRgba=text=>{const str=String(text||'').trim();
+    if(str[0]==='#'){const h=str.slice(1),full=h.length<=4?h.split('').map(ch=>ch+ch).join(''):h;
+      return [parseInt(full.slice(0,2),16),parseInt(full.slice(2,4),16),parseInt(full.slice(4,6),16),full.length>=8?parseInt(full.slice(6,8),16)/255:1];}
+    const m=str.match(/rgba?\(([^)]*)\)/i);if(m){const p=m[1].split(/[\s,\/]+/).filter(Boolean).map(Number);return [p[0]||0,p[1]||0,p[2]||0,p.length>3?p[3]:1];}
+    return [255,255,255,1];};
+  const hitText=c=>`rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${Math.round(c[3]*1000)/1000})`;
+  // CSS の brightness → saturate を色へかける(どちらも1段ごとに0〜255へ丸める)
+  const hitFilter=(c,f)=>{if(!f)return c;const cl=v=>Math.max(0,Math.min(255,v));
+    const r=cl(c[0]*f[0]),g=cl(c[1]*f[0]),b=cl(c[2]*f[0]),s=f[1];
+    return [cl((.213+.787*s)*r+(.715-.715*s)*g+(.072-.072*s)*b),cl((.213-.213*s)*r+(.715+.285*s)*g+(.072-.072*s)*b),cl((.213-.213*s)*r+(.715-.715*s)*g+(.072+.928*s)*b),c[3]];};
+  // CSS のグラデーションは乗算済みの色で混ぜる。canvas は混ぜ方が違うので、あいだの色を乗算済みで作って足す
+  const hitPremulMix=(a,b,u)=>{const al=a[3]+(b[3]-a[3])*u;if(!(al>0))return [b[0],b[1],b[2],0];
+    return [(a[0]*a[3]+(b[0]*b[3]-a[0]*a[3])*u)/al,(a[1]*a[3]+(b[1]*b[3]-a[1]*a[3])*u)/al,(a[2]*a[3]+(b[2]*b[3]-a[2]*a[3])*u)/al,al];};
+  const hitParseFilter=text=>{const str=String(text||'');if(!str||str==='none')return null;
+    const num=re=>{const m=str.match(re);return m?Number(m[1])/(m[2]?100:1):1;};
+    const f=[num(/brightness\(([\d.]+)(%)?\)/),num(/saturate\(([\d.]+)(%)?\)/)];
+    return f[0]===1&&f[1]===1?null:f;};
+  let hitArea=null,hitNext=0;
+  const hitSlots=new Array(RHYTHM_HIT_EFFECT_POOL).fill(null),hitFilters=new Map();
+  const readHitFilters=area=>{
+    hitFilters.clear();
+    try{
+      const layer=rhythmEnsureHitEffects(area),item=layer&&layer._rhythmPool&&layer._rhythmPool[0];
+      if(!item)return;
+      const keep=[item.dataset.hitJudgment||'',item.dataset.hitPrecise||''],i=item.querySelector('i'),b=item.querySelector('b');
+      for(const judgment of ['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD',''])for(const precise of judgment==='MARVELOUS'?['','1']:['']){
+        item.dataset.hitJudgment=judgment;item.dataset.hitPrecise=precise;
+        hitFilters.set(`${judgment}|${precise}`,{core:i?hitParseFilter(getComputedStyle(i).filter):null,beam:b?hitParseFilter(getComputedStyle(b).filter):null});
+      }
+      item.dataset.hitJudgment=keep[0];item.dataset.hitPrecise=keep[1];
+    }catch(e){}
+  };
+  // 中心のフラッシュ(ふつう)。横長の楕円の放射グラデーションを1枚焼き、幅に合わせて伸ばして貼る(楕円なので伸ばしても形は同じ)
+  const hitCoreSprite=(color,filter)=>{
+    const id=`hitcore:${color}:${filter?filter.join(','):''}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const s=makeSpriteCanvas(128,16),c=s.ctx,mid=hitFilter(hitRgba(color),filter),center=hitFilter([255,255,255,1],filter);
+    c.save();c.translate(64,8);c.scale(8,1);
+    const g=c.createRadialGradient(0,0,0,0,0,8);
+    g.addColorStop(0,hitText(center));g.addColorStop(.4,hitText(mid));g.addColorStop(1,hitText([mid[0],mid[1],mid[2],0]));
+    c.fillStyle=g;c.fillRect(-8,-8,16,16);c.restore();
+    sprites.set(id,s);return s;
+  };
+  // 白い十字の光。形も色も固定なので1枚だけ焼く。CSS の背景は先に書いたものが上なので、縦の帯→横の帯→中心の丸の順に重ねる
+  const hitFlareSprite=()=>{
+    const id=`hitflare:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const s=makeSpriteCanvas(190,110),c=s.ctx,fillStops=(g,stops)=>{stops.forEach(([t,col])=>g.addColorStop(t,col));return g;};
+    c.fillStyle=fillStops(c.createLinearGradient(0,0,0,110),[[0,'rgba(255,255,255,0)'],[.35,'rgba(255,255,255,.6)'],[.5,'#fff'],[.65,'rgba(255,255,255,.6)'],[1,'rgba(255,255,255,0)']]);
+    c.fillRect(93,0,4,110);
+    c.fillStyle=fillStops(c.createLinearGradient(0,0,190,0),[[0,'rgba(255,255,255,0)'],[.3,'rgba(255,255,255,.55)'],[.5,'#fff'],[.7,'rgba(255,255,255,.55)'],[1,'rgba(255,255,255,0)']]);
+    c.fillRect(0,52.5,190,5);
+    c.save();c.translate(95,55);c.scale(95/55,1);
+    c.fillStyle=fillStops(c.createRadialGradient(0,0,0,0,0,55),[[0,'rgba(255,255,255,1)'],[.14,'rgba(255,255,255,.7)'],[.3,'rgba(224,242,254,.25)'],[.48,'rgba(224,242,254,0)']]);
+    c.fillRect(-55,-55,110,110);c.restore();
+    sprites.set(id,s);return s;
+  };
+  const warmHitSprites=()=>{
+    if(!hitArea)return;
+    hitFlareSprite();
+    for(const judgment of ['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD']){const f=hitFilters.get(`${judgment}|`);hitCoreSprite(rhythmHitEffectColor(judgment),f?f.core:null);}
+    const monster=hitFilters.get('|');hitCoreSprite('#fde047',monster?monster.core:null);
+  };
+  // (ox,oy) を中心に拡大(sx,sy)→回転(deg)。CSS の transform:scale() rotate() と同じ順
+  const hitTransform=(ox,oy,sx,sy,deg=0)=>{
+    const rad=deg*Math.PI/180,cos=Math.cos(rad),sin=Math.sin(rad);
+    const a=sx*cos,b=sy*sin,c=-sx*sin,d=sy*cos;
+    ctx.setTransform(a*dpr,b*dpr,c*dpr,d*dpr,(ox-(a*ox+c*oy))*dpr,(oy-(b*ox+d*oy))*dpr);
+  };
+  const hitBeamPath=(x,y,w,h)=>{
+    // border-radius:999px 999px 0 0 は、幅が高さの2倍までは「幅の半分」の丸になる
+    const r=Math.max(0,Math.min(w/2,h));
+    ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x,y+r);ctx.arc(x+r,y+r,r,Math.PI,Math.PI*1.5);
+    ctx.lineTo(x+w-r,y);ctx.arc(x+w-r,y+r,r,Math.PI*1.5,Math.PI*2);ctx.lineTo(x+w,y+h);ctx.closePath();
+  };
+  const drawOneHit=(h,p,hitY)=>{
+    const W=h.width*cssW,cx=h.center*cssW,left=cx-W/2;
+    // 中心のフラッシュ(判定ラインの上下7px・幅いっぱい)
+    let f=hitFrame(h.big?HIT_KEYS.coreBig:HIT_KEYS.core,p);
+    if(f.o>.002){
+      ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy);
+      if(h.precise){
+        roundRectPath(ctx,left,hitY-7,W,14,7);
+        const g=ctx.createLinearGradient(left,0,left+W,0);
+        HIT_CORE_RAINBOW.forEach((col,i)=>g.addColorStop(i/(HIT_CORE_RAINBOW.length-1),hitText(hitFilter(hitRgba(col),h.filter.core))));
+        ctx.fillStyle=g;ctx.fill();
+      }else ctx.drawImage(hitCoreSprite(h.color,h.filter.core).canvas,left,hitY-7,W,14);
+    }
+    // 立ち上がる光の柱(判定ラインから上へ96px)
+    f=hitFrame(h.big?HIT_KEYS.beamBig:HIT_KEYS.beam,p);
+    if(f.o>.002){
+      ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy);
+      hitBeamPath(left,hitY-96,W,96);
+      const g=ctx.createLinearGradient(0,hitY,0,hitY-96);
+      if(h.precise)HIT_BEAM_RAINBOW.forEach(([t,col])=>g.addColorStop(t,hitText(hitFilter(hitRgba(col),h.filter.beam))));
+      else{
+        const base=hitFilter(hitRgba(h.color),h.filter.beam),white=hitFilter([255,255,255,.32],h.filter.beam);
+        [0,1/3,2/3,1].forEach(u=>g.addColorStop(.42*u,hitText(hitPremulMix(base,white,u))));
+        g.addColorStop(1,hitText([white[0],white[1],white[2],0]));
+      }
+      ctx.fillStyle=g;ctx.fill();
+    }
+    // はじける粒(7pxの丸が5つ)。フィルターはかからない
+    f=hitFrame(HIT_KEYS.spark,p);
+    if(f.o>.002&&f.s>0){
+      ctx.globalAlpha=Math.min(1,f.o);ctx.setTransform(dpr,0,0,dpr,0,0);
+      HIT_SPARK_OFFSETS.forEach(([ox,oy],i)=>{
+        ctx.fillStyle=h.precise?RHYTHM_JUDGMENT_RAINBOW[i]:h.color;
+        ctx.beginPath();ctx.arc(cx+ox*h.sparkScale*f.k,hitY+oy*h.sparkScale*f.k,3.5*f.s,0,Math.PI*2);ctx.fill();
+      });
+    }
+    // 白い十字の光(演出量「多め」では出さない)
+    if(h.flare){
+      f=hitFrame(HIT_KEYS.flare,p);
+      if(f.o>.002){ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy,f.r);ctx.drawImage(hitFlareSprite().canvas,cx-95,hitY-55,190,110);}
+    }
+  };
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
-    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx)ctx=canvas.getContext('2d');},
+    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;hitArea=null;hitSlots.fill(null);if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx)ctx=canvas.getContext('2d');},
     get backend(){return backend;},
     // ── 演奏が始まる前に、光のスプライトを焼いておく ──────────────────────────
     //
@@ -20044,13 +20228,41 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       sideChevronSprite('left');sideChevronSprite('right');
       // 終端バーの光と、終点フリックの矢印
-      const endGlows=(effect==='LOW'||effect==='LIGHT')?END_BAR_GLOWS_LOW:END_BAR_GLOWS;
-      glowSprite('end',4,endGlows);
-      glowSprite('endFlick',4,endGlows);
+      // (種類ごとの色。drawEndBar と同じ名前で焼く)
+      const low=effect==='LOW'||effect==='LIGHT';
+      for(const kind of ['HOLD','SLIDE','FLICK'])glowSprite(`end:${kind}:${low?'low':'full'}`,4,END_BAR_GLOWS[kind][low?'low':'full']);
       arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
+      // 押さえている最中の光(演奏の途中で新しく絵を作らないよう、ここで焼いておく)
+      if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);}sparkDotSprite();}
+      // 叩いたときの光(canvas で描くときだけ)
+      if(effect!=='MINIMAL'&&!options.lightweight)warmHitSprites();
       return sprites.size-before;
     },
-    release(){canvas=null;ctx=null;sprites.clear();},
+    release(){canvas=null;ctx=null;sprites.clear();hitArea=null;hitSlots.fill(null);},
+    // 叩いたときの光をこの canvas で描くか(検証用・WebGL のときだけ演奏画面が area を渡す)。null で DOM の部品へ戻す
+    enableHits(area){hitArea=area&&ctx?area:null;hitSlots.fill(null);hitNext=0;if(hitArea)readHitFilters(hitArea);},
+    hitsFor(area){return !!hitArea&&!!ctx&&area===hitArea;},
+    // DOM の部品と同じく10枠を順に使い回す(11個目は1個目を切って上書きする)。演出量「最小」・軽量モードでは出さない
+    pushHit(hit){
+      if(!hitArea||effect==='MINIMAL'||lightweight)return;
+      const key=`${hit.judgment||''}|${hit.precise?'1':''}`;
+      hitSlots[hitNext]={...hit,filter:hitFilters.get(key)||{core:null,beam:null},start:typeof performance!=='undefined'?performance.now():Date.now(),
+        ms:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW'};
+      hitNext=(hitNext+1)%hitSlots.length;
+    },
+    // begin() のすぐあと(ノーツより先)に呼ぶ。hitY は判定ラインの下端(光の入れ物の bottom)の高さ
+    drawHits(hitY){
+      if(!ctx||!hitArea||!Number.isFinite(hitY))return 0;
+      const now=frameNow||(typeof performance!=='undefined'?performance.now():Date.now());let count=0;
+      for(let slot=0;slot<hitSlots.length;slot++){
+        const hit=hitSlots[slot];if(!hit)continue;
+        const t=(now-hit.start)/hit.ms;
+        if(t>=1){hitSlots[slot]=null;continue;}
+        drawOneHit(hit,Math.max(0,t),hitY);count++;
+      }
+      if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
+      return count;
+    },
     get drawn(){return drawn;},
 
     // 焼いてあるスプライトの枚数(検査で「曲の中で増えないこと」を見るために使う)

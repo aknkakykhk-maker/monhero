@@ -304,6 +304,47 @@ const serve=()=>new Promise(resolve=>{
   });
   server.listen(PORT,()=>resolve(server));
 });
+// ---- WebGL で描くときの光(2026-09-26)。canvas 側の動きが CSS と同じ数字のままか ----
+// 検証用に WebGL で描くときだけ、叩いたときの光を部品ではなく canvas で描く(RHYTHM_CANVAS_RENDERER の HIT_KEYS)。
+// CSS の @keyframes だけ直すと、WebGL のときだけ見た目がずれる。キーフレームの位置・不透明度・拡大・回転と、
+// 粒の飛ぶ向き・タイミング関数が一致しているかを見る。
+{
+  const keysText=(source.match(/const HIT_KEYS=(\{[\s\S]*?\n  \});/)||[])[1];
+  let hitKeys=null;try{hitKeys=keysText?vm.runInNewContext(`(${keysText})`):null;}catch(e){hitKeys=null;}
+  check('canvas 側の光の動き(HIT_KEYS)を読めた',!!hitKeys);
+  const cssFrames=name=>{
+    const m=source.match(new RegExp(`@keyframes ${name}\\{([\\s\\S]*?)\\}\\}`));if(!m)return null;
+    return [...(m[1]+'}').matchAll(/([\d.]+)%\{([^}]*)\}/g)].map(([,pct,body])=>{
+      const out={t:Number(pct)/100,o:Number((body.match(/opacity:([\d.]+)/)||[])[1])};
+      const sc=body.match(/scale\(([-\d.]+)(?:,([-\d.]+))?\)/);if(sc){out.sx=Number(sc[1]);out.sy=sc[2]!==undefined?Number(sc[2]):Number(sc[1]);}
+      const rot=body.match(/rotate\(([-\d.]+)deg\)/);if(rot)out.r=Number(rot[1]);
+      return out;});
+  };
+  const same=(a,b)=>Math.abs(a-b)<1e-9;
+  const compare=(name,key,fields)=>{
+    const css=cssFrames(name),canvasKeys=hitKeys&&hitKeys[key];
+    const ok=!!css&&!!canvasKeys&&css.length===canvasKeys.length&&css.every((frame,i)=>same(frame.t,canvasKeys[i][0])&&fields.every(field=>{
+      const cssValue=field==='s'?frame.sx:frame[field];return cssValue===undefined?canvasKeys[i][1][field]===undefined||same(canvasKeys[i][1][field],0):same(cssValue,canvasKeys[i][1][field]);}));
+    check(`光の動きが CSS と同じ: ${name}`,ok);
+  };
+  compare('mhRhythmHitCore','core',['o','sx','sy']);
+  compare('mhRhythmHitBeam','beam',['o','sx','sy']);
+  compare('mhRhythmHitCoreBig','coreBig',['o','sx','sy']);
+  compare('mhRhythmHitBeamBig','beamBig',['o','sx','sy']);
+  compare('mhRhythmHitFlare','flare',['o','sx','sy','r']);
+  compare('mhRhythmHitSpark','spark',['o','s']);
+  const cssSparks=[1,2,3,4,5].map(n=>{const m=source.match(new RegExp(`\\[data-rhythm-hit-effect\\]>u:nth-of-type\\(${n}\\)\\{--rhythm-spark-x:([-\\d.]+)px;--rhythm-spark-y:([-\\d.]+)px\\}`));return m?[Number(m[1]),Number(m[2])]:null;});
+  const canvasSparks=(source.match(/const HIT_SPARK_OFFSETS=(\[[^;]*\]);/)||[])[1];
+  check('粒の飛ぶ向きが CSS と同じ',!!canvasSparks&&JSON.stringify(cssSparks)===JSON.stringify(JSON.parse(canvasSparks)));
+  check('タイミング関数が CSS と同じ(cubic-bezier(.16,.9,.3,1))',
+    source.includes('cubic-bezier(.16,.9,.3,1)')&&/const hitEase=\(\(\)=>\{const x1=\.16,y1=\.9,x2=\.3,y2=1,/.test(source));
+  check('WebGL で描けたときだけ光を canvas へ回す(2D の canvas・DOM 版は部品のまま)',
+    game.includes("RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend==='webgl'?playAreaRef.current:null);")
+    &&/const rhythmSpawnHitEffect=[^\n]*\n[\s\S]{0,400}RHYTHM_CANVAS_RENDERER\.hitsFor\(area\)/.test(source));
+  check('光はノーツより先に描く(光の層はノーツの canvas の下)',
+    /RHYTHM_CANVAS_RENDERER\.begin\([^\n]*\n[^\n]*\nif\(canvasReady\)RHYTHM_CANVAS_RENDERER\.drawHits\(travel\.hitY\);/.test(game));
+}
+
 const PAGE=`<!doctype html><html><head><meta charset="utf-8"><style>
 html,body{margin:0;background:#000}
 #area{position:relative;width:390px;height:700px;overflow:hidden}
