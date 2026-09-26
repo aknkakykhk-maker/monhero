@@ -20,10 +20,13 @@ const FOCUS_STATES=Object.freeze(['drums','melody','mix']);
 const FOCUS_MIX_MARGIN=.08;
 // 切り替えのコスト: フレーズの境目 / それ以外
 const FOCUS_SWITCH_AT_BOUNDARY=.05,FOCUS_SWITCH_INSIDE=.6;
+// Rev.13: 旋律の音高がほとんど取れない小節(伴奏だけの間奏など)では、歌・主旋律を追いにくくする
+//   melodyPresence(小節→旋律の音高が取れている割合)を渡したときだけ効く(Rev.9〜12 は渡さない)
+const FOCUS_MELODY_MIN_PRESENCE=.2,FOCUS_NO_MELODY_PENALTY=.3;
 
 // layers: rhythm-audio-layers-v3.js の出力 / bar: 1小節のグリッド数 / sectionStarts: 区切りの頭の小節の集合
 // 返り値: {byBar: Map(小節→状態), evidence: Map(小節→証拠)}
-const trackFocus=(layers,{bar,sectionStarts=new Set(),firstBar=null,lastBar=null})=>{
+const trackFocus=(layers,{bar,sectionStarts=new Set(),firstBar=null,lastBar=null,melodyPresence=null})=>{
   const series=layers&&layers.series;
   if(!series||!Array.isArray(series.percussive)||!Array.isArray(series.lead))return {byBar:new Map(),evidence:new Map()};
   const first=Number(layers.grid.firstGrid)||0;
@@ -48,9 +51,10 @@ const trackFocus=(layers,{bar,sectionStarts=new Set(),firstBar=null,lastBar=null
     let start=minBar;for(const s of starts)if(s<=b)start=s;
     return (b-start)%4===0;
   };
-  const emission=(state,e)=>state==='drums'?e:state==='melody'?-e:FOCUS_MIX_MARGIN;
+  const noMelody=b=>melodyPresence&&melodyPresence.has(b)&&melodyPresence.get(b)<FOCUS_MELODY_MIN_PRESENCE;
+  const emissionAt=(state,e,b)=>state==='drums'?e:state==='melody'?-e-(noMelody(b)?FOCUS_NO_MELODY_PENALTY:0):FOCUS_MIX_MARGIN;
   // 動的計画法(得点を最大にする並び)
-  let score=FOCUS_STATES.map(state=>emission(state,evidence.get(bars[0])||0));
+  let score=FOCUS_STATES.map(state=>emissionAt(state,evidence.get(bars[0])||0,bars[0]));
   const back=[];
   for(let i=1;i<bars.length;i++){
     const e=evidence.get(bars[i])||0,cost=boundary(bars[i])?FOCUS_SWITCH_AT_BOUNDARY:FOCUS_SWITCH_INSIDE;
@@ -58,7 +62,7 @@ const trackFocus=(layers,{bar,sectionStarts=new Set(),firstBar=null,lastBar=null
     FOCUS_STATES.forEach((state,s)=>{
       let best=-Infinity,arg=0;
       FOCUS_STATES.forEach((_,t)=>{const v=score[t]-(t===s?0:cost);if(v>best+1e-12){best=v;arg=t;}});
-      next.push(best+emission(state,e));from.push(arg);
+      next.push(best+emissionAt(state,e,bars[i]));from.push(arg);
     });
     score=next;back.push(from);
   }
@@ -76,6 +80,8 @@ const trackFocus=(layers,{bar,sectionStarts=new Set(),firstBar=null,lastBar=null
 //   drums  … 打楽器成分の割合(percussiveShare。その曲の打点の中の順位 0〜1 で渡す)が高い打点を上げ、低い打点を下げる
 //   melody … 音程のある打点(pitchHz)と、歌や主旋律の帯が強いグリッドを上げ、音程の無い打楽器だけの打点を下げる
 //   mix    … 0
+//   (ハイハットの強い位置を上げる後押しも試したが、5曲の MASTER でハイハットの強い位置の打点が 62.1→62.6% にしか動かなかった。
+//    MASTER はもともとほぼ全部の打点を拾うので選び直す余地が無い。効かないので入れていない・2026-09-26)
 const focusBoost=(state,{percussiveShare=null,pitched=false,lead=null}={})=>{
   if(state==='drums'){
     if(!Number.isFinite(percussiveShare))return 0;
@@ -90,4 +96,4 @@ const focusBoost=(state,{percussiveShare=null,pitched=false,lead=null}={})=>{
   return 0;
 };
 
-module.exports={FOCUS_STATES,FOCUS_MIX_MARGIN,FOCUS_SWITCH_AT_BOUNDARY,FOCUS_SWITCH_INSIDE,trackFocus,focusBoost};
+module.exports={FOCUS_MELODY_MIN_PRESENCE,FOCUS_NO_MELODY_PENALTY,FOCUS_STATES,FOCUS_MIX_MARGIN,FOCUS_SWITCH_AT_BOUNDARY,FOCUS_SWITCH_INSIDE,trackFocus,focusBoost};
