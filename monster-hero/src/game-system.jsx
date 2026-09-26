@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c952607668f7226c
+// generated-sha256: 183877ba8914141d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 12:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 13:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15671,6 +15671,41 @@ const rhythmBakeJudgmentHalos=async textEl=>{
   }
   return baked.length?baked:null;
 };
+// ===== ライブ背景「派手」のサーチライトと光の粒を、1度だけ画像に焼く(2026-09-26) =====
+// ユーザー報告「演出量とライブ背景をマックスに上げると重くなるし発熱がすごい」。
+// 以前は、サーチライトを clip-path で台形に切り抜いた層として回し、光の粒は CSS の模様(radial-gradient)を
+// 並べた「画面の2倍の高さ」の層を、画面の画素数そのままで上へ流していた。回転する層の切り抜きは合成のたびに
+// マスクを通り、粒の層は大きな絵を2枚抱えることになる。
+// いまは形を1度だけ canvas で描いて画像にし、<img> を CSS のアニメーション(合成だけで動く)で動かす。
+// 画素密度は1.5倍まで(ぼけた光なので見分けがつかない)。位置・動き・速さ・色は以前の CSS のまま。
+//   サーチライト … 幅38%・高さ135%。上の辺の44%〜56%から下の辺いっぱいへ広がる台形。色は上から78%で消える
+//   光の粒 … 奥8粒(16秒で1周・濃さ.55)、手前6粒(9秒で1周・濃さ.7)。層の上半分と下半分に同じ並び
+// ★動くものを毎フレーム canvas へ描き直す形は試してやめた。合成だけで済んでいた動きが毎フレームの塗りになり、
+//   この環境の計測でも処理時間が倍近くに増えた。ジャケットと暗幕はもともと軽い(24×24 の絵の引き伸ばし・動かない層)ので変えていない。
+const RHYTHM_STAGE_BEAM_COLORS=Object.freeze(['rgba(103,232,249,.22)','rgba(232,121,249,.24)','rgba(251,191,36,.24)','rgba(255,255,255,.26)']);
+const RHYTHM_STAGE_SPARKS=Object.freeze([
+  {duration:16000,opacity:.55,core:1,mid:2,end:4,dots:[[8,12],[27,63],[41,30],[58,85],[73,18],[88,52],[15,90],[64,45]]},
+  {duration:9000,opacity:.7,core:2,mid:3,end:5,dots:[[5,40],[21,8],[36,77],[80,33],[93,70],[50,58]]},
+]);
+// サーチライト1本。box は要素の箱(CSS px)、回転の中心は箱の上辺の真ん中
+const rhythmDrawStageBeam=(g,left,top,bw,bh,angleDeg,color,alpha=.75)=>{
+  g.save();
+  g.translate(left+bw/2,top);g.rotate(angleDeg*Math.PI/180);g.translate(-bw/2,0);
+  g.beginPath();g.moveTo(.44*bw,0);g.lineTo(.56*bw,0);g.lineTo(bw,bh);g.lineTo(0,bh);g.closePath();
+  const grad=g.createLinearGradient(0,0,0,bh);grad.addColorStop(0,color);grad.addColorStop(.78,color.replace(/[\d.]+\)$/,'0)'));
+  g.globalAlpha=alpha;g.fillStyle=grad;g.fill();
+  g.restore();
+};
+// 光の粒1つ(円の中心から core まで白、mid で水色.35、end で透明)
+const rhythmStageSparkSprite=(layer,scale)=>{
+  const r=layer.end,size=Math.ceil(r*2*scale)+2,c=document.createElement('canvas');c.width=size;c.height=size;
+  const g=c.getContext('2d');if(!g)return c;
+  const cx=size/2,grad=g.createRadialGradient(cx,cx,0,cx,cx,r*scale);
+  grad.addColorStop(0,'rgba(236,254,255,.95)');grad.addColorStop(layer.core/r,'rgba(236,254,255,.95)');
+  grad.addColorStop(layer.mid/r,'rgba(103,232,249,.35)');grad.addColorStop(1,'rgba(103,232,249,0)');
+  g.fillStyle=grad;g.fillRect(0,0,size,size);
+  return c;
+};
 const RHYTHM_FACE_BOX=42,RHYTHM_FACE_ZOOM=1.28,RHYTHM_FACE_PAD=12;
 const rhythmBakeMonsterFace=async(monster,dpr)=>{
   if(!monster||!monster.imageUrl||typeof document==='undefined')return null;
@@ -16113,6 +16148,46 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const lifeRatio=rhythmLifeRatio(view.life);
   const lifeState=rhythmLifeState(view.life);
   const comboTier=rhythmComboTier(view.combo);
+  // ライブ背景「派手」のサーチライトと光の粒を、1度だけ画像に焼く(RHYTHM_STAGE_* の説明を参照)。
+  // 大きさはプレイエリアから決めるので、画面の大きさが変わったら焼き直す。サーチライトは色の段ごとに4枚
+  const stageTierNow=Math.min(3,Math.floor(comboTier/2));
+  const stageHostRef=useRef(null);
+  const [stageImages,setStageImages]=useState(null);
+  const stageFxOn=stageLevel==='VIVID'&&settings.effectAmount!=='MINIMAL';
+  useEffect(()=>{
+    const host=stageHostRef.current;
+    if(!host||!stageFxOn||typeof window==='undefined'||typeof document==='undefined')return undefined;
+    let alive=true,made=[],timer=0,lastKey='';
+    const toUrl=canvas=>new Promise(resolve=>{try{canvas.toBlob(blob=>resolve(blob?URL.createObjectURL(blob):null),'image/png');}catch(e){resolve(null);}});
+    const bake=async()=>{
+      const w=host.clientWidth,h=host.clientHeight;
+      if(!(w>0&&h>0))return;
+      // ぼけた光なので画素密度は1.5倍まで(以前は画面の画素数そのまま)
+      const scale=Math.min(1.5,Math.max(1,Number(window.devicePixelRatio)||1));
+      const key=`${w}x${h}@${scale}`;
+      if(key===lastKey)return;
+      lastKey=key;
+      const canvasOf=(cw,ch)=>{const c=document.createElement('canvas');c.width=Math.max(1,Math.round(cw*scale));c.height=Math.max(1,Math.round(ch*scale));const g=c.getContext('2d');if(g)g.setTransform(scale,0,0,scale,0,0);return [c,g];};
+      const bw=.38*w,bh=1.35*h;
+      const beams=await Promise.all(RHYTHM_STAGE_BEAM_COLORS.map(color=>{const [c,g]=canvasOf(bw,bh);if(!g)return null;rhythmDrawStageBeam(g,0,0,bw,bh,0,color,1);return toUrl(c);}));
+      const sparks=await Promise.all(RHYTHM_STAGE_SPARKS.map(layer=>{
+        const [c,g]=canvasOf(w,h*2);if(!g)return null;
+        const sprite=rhythmStageSparkSprite(layer,scale),size=sprite.width/scale;
+        for(const [px,py] of layer.dots)for(const k of [0,1])g.drawImage(sprite,px/100*w-size/2,py/100*h+k*h-size/2,size,size);
+        return toUrl(c);
+      }));
+      const urls=[...beams,...sparks];
+      if(!alive||urls.some(url=>!url)){urls.forEach(url=>{if(url)URL.revokeObjectURL(url);});return;}
+      const old=made;made=urls;
+      setStageImages({beams,sparks});
+      // 差し替えた古い画像は、読み替えが終わったころに片付ける
+      setTimeout(()=>old.forEach(url=>URL.revokeObjectURL(url)),1000);
+    };
+    bake();
+    const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(()=>{clearTimeout(timer);timer=setTimeout(bake,150);}):null;
+    if(observer)observer.observe(host);
+    return()=>{alive=false;clearTimeout(timer);if(observer)observer.disconnect();setStageImages(null);made.forEach(url=>URL.revokeObjectURL(url));};
+  },[stageFxOn]);
   /* フルコンボ・オールマーベラスが続いているか(プロセカ・CHUNITHM のコンボ色)。「COMBO」の字の色で見せる。
      AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。設定で出さないこともできる */
   /* アシストモードでは称号が付かないので出さない(出すと「取れる」と思わせてしまう) */const comboStatus=(()=>{if(settings.comboStatusDisplay===false||assistOn||!view.counts)return '';const c=view.counts;if((Number(c.BAD)||0)+(Number(c.MISS)||0)>0)return '';return (Number(c.EXCELLENT)||0)+(Number(c.GREAT)||0)+(Number(c.GOOD)||0)>0?'FC':'AM';})();
@@ -17062,12 +17137,12 @@ scheduleTick();};
        ★ノーツが流れ着く先は measureTravel が**ラインを実測**して決めるので、
          ここを動かすだけで譜面も判定もそのままついてくる */
     '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{/* ライブ背景。いちばん奥(z-index:-1)。見た目は index.html の [data-rhythm-stage] が持つ */}
-{stageLevel!=='SIMPLE'&&<div data-rhythm-stage={stageLevel} data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true">
+{stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} aria-hidden="true">
   {stageArtSrc&&<canvas ref={stageArtRef} data-rhythm-stage-art width="24" height="24"/>}
-  {stageLevel==='VIVID'&&<><i data-rhythm-stage-beam="left"/><i data-rhythm-stage-beam="right"/>
-    {/* 光の粒は1粒ずつ動かさず、粒を並べた層を2枚(奥と手前)だけ動かす。
-        1粒ずつ別のアニメーションにしていたころは、それだけで毎フレームの計算が倍以上に増えた */}
-    <i data-rhythm-stage-sparks="far"/><i data-rhythm-stage-sparks="near"/></>}
+  {/* サーチライトと光の粒は、1度だけ焼いた画像を CSS のアニメーション(合成だけで動く)で動かす(2026-09-26)。
+      以前はサーチライトを clip-path で切り抜いた層、光の粒を画面の2倍の高さの CSS の模様で作っていた */}
+  {stageFxOn&&stageImages&&<><img data-rhythm-stage-beam="left" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/><img data-rhythm-stage-beam="right" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/>
+    <img data-rhythm-stage-sparks="far" src={stageImages.sparks[0]} alt="" draggable={false}/><img data-rhythm-stage-sparks="near" src={stageImages.sparks[1]} alt="" draggable={false}/></>}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
 {stageLevel!=='SIMPLE'&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====

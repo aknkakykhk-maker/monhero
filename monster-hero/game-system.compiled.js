@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d4ce697f53ae1e45
+// source-sha256: 752314d014c4be0d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 12:35";
+const BUILD_DATE = "2026-09-26 13:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -22063,6 +22063,59 @@ const rhythmBakeJudgmentHalos = async textEl => {
   }
   return baked.length ? baked : null;
 };
+const RHYTHM_STAGE_BEAM_COLORS = Object.freeze(['rgba(103,232,249,.22)', 'rgba(232,121,249,.24)', 'rgba(251,191,36,.24)', 'rgba(255,255,255,.26)']);
+const RHYTHM_STAGE_SPARKS = Object.freeze([{
+  duration: 16000,
+  opacity: .55,
+  core: 1,
+  mid: 2,
+  end: 4,
+  dots: [[8, 12], [27, 63], [41, 30], [58, 85], [73, 18], [88, 52], [15, 90], [64, 45]]
+}, {
+  duration: 9000,
+  opacity: .7,
+  core: 2,
+  mid: 3,
+  end: 5,
+  dots: [[5, 40], [21, 8], [36, 77], [80, 33], [93, 70], [50, 58]]
+}]);
+const rhythmDrawStageBeam = (g, left, top, bw, bh, angleDeg, color, alpha = .75) => {
+  g.save();
+  g.translate(left + bw / 2, top);
+  g.rotate(angleDeg * Math.PI / 180);
+  g.translate(-bw / 2, 0);
+  g.beginPath();
+  g.moveTo(.44 * bw, 0);
+  g.lineTo(.56 * bw, 0);
+  g.lineTo(bw, bh);
+  g.lineTo(0, bh);
+  g.closePath();
+  const grad = g.createLinearGradient(0, 0, 0, bh);
+  grad.addColorStop(0, color);
+  grad.addColorStop(.78, color.replace(/[\d.]+\)$/, '0)'));
+  g.globalAlpha = alpha;
+  g.fillStyle = grad;
+  g.fill();
+  g.restore();
+};
+const rhythmStageSparkSprite = (layer, scale) => {
+  const r = layer.end,
+    size = Math.ceil(r * 2 * scale) + 2,
+    c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d');
+  if (!g) return c;
+  const cx = size / 2,
+    grad = g.createRadialGradient(cx, cx, 0, cx, cx, r * scale);
+  grad.addColorStop(0, 'rgba(236,254,255,.95)');
+  grad.addColorStop(layer.core / r, 'rgba(236,254,255,.95)');
+  grad.addColorStop(layer.mid / r, 'rgba(103,232,249,.35)');
+  grad.addColorStop(1, 'rgba(103,232,249,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  return c;
+};
 const RHYTHM_FACE_BOX = 42,
   RHYTHM_FACE_ZOOM = 1.28,
   RHYTHM_FACE_PAD = 12;
@@ -22743,6 +22796,85 @@ const RhythmTapTest = ({
   const lifeRatio = rhythmLifeRatio(view.life);
   const lifeState = rhythmLifeState(view.life);
   const comboTier = rhythmComboTier(view.combo);
+  const stageTierNow = Math.min(3, Math.floor(comboTier / 2));
+  const stageHostRef = useRef(null);
+  const [stageImages, setStageImages] = useState(null);
+  const stageFxOn = stageLevel === 'VIVID' && settings.effectAmount !== 'MINIMAL';
+  useEffect(() => {
+    const host = stageHostRef.current;
+    if (!host || !stageFxOn || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+    let alive = true,
+      made = [],
+      timer = 0,
+      lastKey = '';
+    const toUrl = canvas => new Promise(resolve => {
+      try {
+        canvas.toBlob(blob => resolve(blob ? URL.createObjectURL(blob) : null), 'image/png');
+      } catch (e) {
+        resolve(null);
+      }
+    });
+    const bake = async () => {
+      const w = host.clientWidth,
+        h = host.clientHeight;
+      if (!(w > 0 && h > 0)) return;
+      const scale = Math.min(1.5, Math.max(1, Number(window.devicePixelRatio) || 1));
+      const key = `${w}x${h}@${scale}`;
+      if (key === lastKey) return;
+      lastKey = key;
+      const canvasOf = (cw, ch) => {
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(cw * scale));
+        c.height = Math.max(1, Math.round(ch * scale));
+        const g = c.getContext('2d');
+        if (g) g.setTransform(scale, 0, 0, scale, 0, 0);
+        return [c, g];
+      };
+      const bw = .38 * w,
+        bh = 1.35 * h;
+      const beams = await Promise.all(RHYTHM_STAGE_BEAM_COLORS.map(color => {
+        const [c, g] = canvasOf(bw, bh);
+        if (!g) return null;
+        rhythmDrawStageBeam(g, 0, 0, bw, bh, 0, color, 1);
+        return toUrl(c);
+      }));
+      const sparks = await Promise.all(RHYTHM_STAGE_SPARKS.map(layer => {
+        const [c, g] = canvasOf(w, h * 2);
+        if (!g) return null;
+        const sprite = rhythmStageSparkSprite(layer, scale),
+          size = sprite.width / scale;
+        for (const [px, py] of layer.dots) for (const k of [0, 1]) g.drawImage(sprite, px / 100 * w - size / 2, py / 100 * h + k * h - size / 2, size, size);
+        return toUrl(c);
+      }));
+      const urls = [...beams, ...sparks];
+      if (!alive || urls.some(url => !url)) {
+        urls.forEach(url => {
+          if (url) URL.revokeObjectURL(url);
+        });
+        return;
+      }
+      const old = made;
+      made = urls;
+      setStageImages({
+        beams,
+        sparks
+      });
+      setTimeout(() => old.forEach(url => URL.revokeObjectURL(url)), 1000);
+    };
+    bake();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(bake, 150);
+    }) : null;
+    if (observer) observer.observe(host);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+      if (observer) observer.disconnect();
+      setStageImages(null);
+      made.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [stageFxOn]);
   const comboStatus = (() => {
     if (settings.comboStatusDisplay === false || assistOn || !view.counts) return '';
     const c = view.counts;
@@ -24845,22 +24977,35 @@ const RhythmTapTest = ({
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
   }, laneElements, stageLevel !== 'SIMPLE' && React.createElement("div", {
+    ref: stageHostRef,
     "data-rhythm-stage": stageLevel,
-    "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
+    "data-stage-tier": String(stageTierNow),
     "aria-hidden": "true"
   }, stageArtSrc && React.createElement("canvas", {
     ref: stageArtRef,
     "data-rhythm-stage-art": true,
     width: "24",
     height: "24"
-  }), stageLevel === 'VIVID' && React.createElement(React.Fragment, null, React.createElement("i", {
-    "data-rhythm-stage-beam": "left"
-  }), React.createElement("i", {
-    "data-rhythm-stage-beam": "right"
-  }), React.createElement("i", {
-    "data-rhythm-stage-sparks": "far"
-  }), React.createElement("i", {
-    "data-rhythm-stage-sparks": "near"
+  }), stageFxOn && stageImages && React.createElement(React.Fragment, null, React.createElement("img", {
+    "data-rhythm-stage-beam": "left",
+    src: stageImages.beams[stageTierNow] || stageImages.beams[0],
+    alt: "",
+    draggable: false
+  }), React.createElement("img", {
+    "data-rhythm-stage-beam": "right",
+    src: stageImages.beams[stageTierNow] || stageImages.beams[0],
+    alt: "",
+    draggable: false
+  }), React.createElement("img", {
+    "data-rhythm-stage-sparks": "far",
+    src: stageImages.sparks[0],
+    alt: "",
+    draggable: false
+  }), React.createElement("img", {
+    "data-rhythm-stage-sparks": "near",
+    src: stageImages.sparks[1],
+    alt: "",
+    draggable: false
   }))), stageLevel !== 'SIMPLE' && React.createElement("i", {
     ref: stagePulseRef,
     "data-rhythm-stage-pulse": true,
