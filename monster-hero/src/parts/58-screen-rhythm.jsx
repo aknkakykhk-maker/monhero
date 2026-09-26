@@ -61,8 +61,9 @@ function RhythmSongSelectScreen({
       const eventSongTitles=rhythmEventNotice
         ?rhythmEventNotice.songIds.map(songId=>rhythmSongFullName(rhythmEventSong(songId,RHYTHM_SONGS))||songId)
         :[];
-      // ビートP交換所は常設。獲得案内は、開催中は「獲得期間中」、非開催中は「いつでも1/5」を出す
-      // (2026-09-24・ユーザー指示「いつでももらえるように。ただしイベント時の1/5」)。
+      // ビートP交換所は常設。獲得案内は、開催中だけ「獲得期間中」を出す
+      // (2026-09-24・ユーザー指示「いつでももらえるように。ただしイベント時の1/5」。
+      //  非開催中の「いつでも貯まります」の帯は 2026-09-26 に外した)。
       const beatPointReleased=RELEASE_FLAGS.rhythmEventPoints===true;
       const beatPointEvent=beatPointReleased?rhythmLimitedEventAt(Date.now()):null;
       const beatPointTargetSong=!!beatPointEvent&&Array.isArray(beatPointEvent.songIds)&&beatPointEvent.songIds.includes(rhythmSelectedSongId);
@@ -253,7 +254,10 @@ function RhythmSongSelectScreen({
             <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
         </div>}
-        {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}{beatPointReleased&&!beatPointEvent&&<div data-rhythm-beat-point-always className="shrink-0 border-b border-violet-400/15 bg-violet-950/15 px-3 py-1 text-center text-[10px] font-black text-violet-200/90">🎟️ ビートPはいつでも貯まります・イベント開催中は5倍</div>}
+        {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
+        {/* 開催していないときの「ビートPはいつでも貯まります」の帯は外した(2026-09-26・ユーザー指示
+            「ビートPがいつでももらえるはここに書く必要はない / この分でもスペース無駄にしてる」)。
+            同じことはヘルプとリザルト(獲得したとき)で分かる。開催中の帯だけ残す */}
         {/* 6レーンになったこと・MASTERの横フリックを、曲えらびを開いた最初の1回だけ伝える(2026-09-26) */}
         {rhythmSixLaneIntroVisible&&<div data-rhythm-six-lane-intro className="shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
@@ -307,15 +311,18 @@ function RhythmSongSelectScreen({
                 ここにあったマスモンの説明文は外した。同じ内容が「📖 遊びかた」にあり、
                 曲えらびでは1行でも多く曲を並べたいため
                 (2026-09-05・ユーザー指摘「縦画面の楽曲選択が2曲までしか出ないのがやりづらい」)。 */}
-            <div data-rhythm-play-modes className="mt-1.5 grid grid-cols-3 gap-1.5">
-              {[['assistMode','🛟 アシスト','border-emerald-300 bg-emerald-600/80 text-white'],['mirrorChart','↔ ミラー譜面','border-sky-300 bg-sky-600/80 text-white']].map(([key,label,on])=>{
+            {/* 2026-09-26 に見本の形へ(ユーザー指示「見本の形がかなり理想」)。縦は1行の横長ボタン、
+                横はジャケットの右(自己ベストの下)へ入るので、絵文字とON/OFFだけの小さなボタンにする */}
+            <div data-rhythm-play-modes className="grid grid-cols-3 gap-1.5">
+              {[['assistMode','🛟','アシスト','border-emerald-300 bg-emerald-600/80 text-white'],['mirrorChart','↔','ミラー譜面','border-sky-300 bg-sky-600/80 text-white']].map(([key,icon,name,on])=>{
                 const active=!!(rhythmSettings&&rhythmSettings[key]);
                 return <button key={key} type="button" data-rhythm-play-mode-toggle={key} aria-pressed={active}
+                  aria-label={`${name} ${active?'ON':'OFF'}`} title={name}
                   onClick={()=>onToggleRhythmSetting&&onToggleRhythmSetting(key)}
-                  className={`min-h-[44px] rounded-xl border px-1 text-[11px] font-black leading-tight ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}>{label}<span className="block text-[10px]">{active?'ON':'OFF'}</span></button>;
+                  className={`flex min-h-[40px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}><span aria-hidden="true">{icon}</span><span className="landscape:hidden">{name}</span><span className="text-[10px]">{active?'ON':'OFF'}</span></button>;
               })}
-              <button data-rhythm-demo-ranking onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング"
-                className="min-h-[44px] rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100">🏆 全国<span className="block">ランキング</span></button>
+              <button data-rhythm-demo-ranking onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング" title="全国ランキング"
+                className="flex min-h-[40px] items-center justify-center gap-1 rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"><span aria-hidden="true">🏆</span><span className="landscape:hidden">ランキング</span></button>
             </div>
             {rhythmSettings&&rhythmSettings.assistMode&&<p data-rhythm-assist-note className="mt-1 text-[9px] font-bold leading-snug text-emerald-200">アシストON：フリックはタップで取れて、コンボをガードが守ります。スコアは8割で、自己ベスト・ランキングには残りません。</p>}
           </>}/>
