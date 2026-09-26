@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 09992fe0ad8e689c
+// source-sha256: e294c707fb125ef3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 11:37";
+const BUILD_DATE = "2026-09-26 11:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -10773,6 +10773,12 @@ const missionWeekRotationIndex = (now = Date.now()) => {
   const index = Math.floor((periodMs - epochMs) / (7 * 24 * 60 * 60 * 1000));
   return (index % 4 + 4) % 4;
 };
+const MISSION_BATTLE_BOTH = '（クラシック・タクティクスどちらでも）';
+const missionItemReward = (itemId, amount) => ({
+  type: 'gameItem',
+  itemId,
+  amount
+});
 const DAILY_ROTATION_MISSIONS = Object.freeze({
   1: {
     id: 'daily_rotation',
@@ -10782,7 +10788,7 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
     target: 1,
     rewards: [{
       type: 'diamond',
-      amount: 200
+      amount: 300
     }]
   },
   2: {
@@ -10799,7 +10805,7 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   3: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'プロモードを1回クリアする',
+    condition: `プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,
     key: 'proClears',
     target: 1,
     rewards: [{
@@ -10810,8 +10816,8 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   4: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'クイックモードを1回クリアする',
-    key: 'quickClears',
+    condition: `種族チャレンジを1回クリアする${MISSION_BATTLE_BOTH}`,
+    key: 'speciesClears',
     target: 1,
     rewards: [{
       type: 'rainbowPsyche',
@@ -10821,9 +10827,9 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   5: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'アイテムを1個使用する',
-    key: 'itemUses',
-    target: 1,
+    condition: 'モンヒロビートで3曲演奏する',
+    key: 'rhythmPlays',
+    target: 3,
     rewards: [{
       type: 'dyeMock',
       amount: 1
@@ -10832,20 +10838,17 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   6: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'プロモードを1回クリアする',
+    condition: `プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,
     key: 'proClears',
     target: 1,
-    rewards: [{
-      type: 'diamond',
-      amount: 300
-    }]
+    rewards: [missionItemReward('hero_proof_shard', 1)]
   },
   0: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'クイックモードを1回クリアする',
-    key: 'quickClears',
-    target: 1,
+    condition: 'モンヒロビートで3曲演奏する',
+    key: 'rhythmPlays',
+    target: 3,
     rewards: [{
       type: 'trainingTicketLarge',
       amount: 1
@@ -10855,13 +10858,10 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
 const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
   id: 'weekly_rotation',
   name: '今週のミッション',
-  condition: 'プロモードを3回クリアする',
+  condition: `プロモードを3回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'proClears',
   target: 3,
-  rewards: [{
-    type: 'uniqueSkillResetTicket',
-    amount: 1
-  }]
+  rewards: [missionItemReward('hero_proof_shard', 3)]
 }, {
   id: 'weekly_rotation',
   name: '今週のミッション',
@@ -10875,9 +10875,9 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
 }, {
   id: 'weekly_rotation',
   name: '今週のミッション',
-  condition: 'クイックモードを10回クリアする',
-  key: 'quickClears',
-  target: 10,
+  condition: `種族チャレンジを3回クリアする${MISSION_BATTLE_BOTH}`,
+  key: 'speciesClears',
+  target: 3,
   rewards: [{
     type: 'trainingTicketLarge',
     amount: 2
@@ -10901,7 +10901,7 @@ const missionDailyDefinitions = (now = Date.now()) => [{
   target: 1,
   rewards: [{
     type: 'diamond',
-    amount: 100
+    amount: 200
   }]
 }, {
   id: 'daily_battles',
@@ -10916,7 +10916,7 @@ const missionDailyDefinitions = (now = Date.now()) => [{
 }, {
   id: 'daily_wins',
   name: 'デイリーチャレンジ',
-  condition: 'チャレンジモードを1回クリアする',
+  condition: `チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'challengeClears',
   target: 1,
   rewards: [{
@@ -10931,14 +10931,24 @@ const missionDailyDefinitions = (now = Date.now()) => [{
   target: 1,
   rewards: [{
     type: 'diamond',
-    amount: 200
+    amount: 300
+  }]
+}, {
+  id: 'daily_rhythm',
+  name: '今日の一曲',
+  condition: 'モンヒロビートで1曲演奏する',
+  key: 'rhythmPlays',
+  target: 1,
+  rewards: [{
+    type: 'trainingTicket',
+    amount: 3
   }]
 }, {
   ...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]
 }, {
   id: 'daily_complete',
   name: 'デイリーコンプリート',
-  condition: '通常デイリー5個のうち4個を達成する',
+  condition: '通常デイリー6個のうち4個を達成する',
   key: 'complete',
   target: 4,
   rewards: [{
@@ -10958,7 +10968,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   target: 5,
   rewards: [{
     type: 'diamond',
-    amount: 500
+    amount: 1000
   }]
 }, {
   id: 'weekly_battles',
@@ -10968,7 +10978,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   target: 20,
   rewards: [{
     type: 'diamond',
-    amount: 500
+    amount: 1000
   }]
 }, {
   id: 'weekly_enhance',
@@ -10993,7 +11003,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
 }, {
   id: 'weekly_donations',
   name: 'チャレンジャー',
-  condition: 'チャレンジモードを3回クリアする',
+  condition: `チャレンジモードを3回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'challengeClears',
   target: 3,
   rewards: [{
@@ -11021,23 +11031,30 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
     amount: 1
   }]
 }, {
+  id: 'weekly_rhythm',
+  name: 'モンヒロビート週間',
+  condition: 'モンヒロビートで10曲演奏する',
+  key: 'rhythmPlays',
+  target: 10,
+  rewards: [missionItemReward('hero_proof_shard', 3)]
+}, {
   ...WEEKLY_ROTATION_MISSIONS[missionWeekRotationIndex(now)]
 }, {
   id: 'weekly_complete',
   name: 'ウィークリーコンプリート',
-  condition: '通常ウィークリー8個のうち6個を達成する',
+  condition: '通常ウィークリー9個のうち6個を達成する',
   key: 'complete',
   target: 6,
   rewards: [{
     type: 'diamond',
-    amount: 2000
+    amount: 3000
   }, {
     type: 'skipTicketKyu',
     amount: 1
   }, {
     type: 'rainbowPsyche',
     amount: 30
-  }],
+  }, missionItemReward('hero_proof_shard', 5)],
   complete: true
 }];
 const missionMonthlyDefinitions = () => [{
@@ -11048,7 +11065,7 @@ const missionMonthlyDefinitions = () => [{
   target: 20,
   rewards: [{
     type: 'diamond',
-    amount: 3000
+    amount: 5000
   }]
 }, {
   id: 'monthly_battles',
@@ -11103,13 +11120,27 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_challenge_runs',
   name: 'チャレンジ月間',
-  condition: 'チャレンジモードを10回プレイする',
+  condition: `チャレンジモードを10回プレイする${MISSION_BATTLE_BOTH}`,
   key: 'challengeRuns',
   target: 10,
   rewards: [{
     type: 'rainbowPsyche',
     amount: 50
   }]
+}, {
+  id: 'monthly_pro_clears',
+  name: 'プロ月間',
+  condition: `プロモードを10回クリアする${MISSION_BATTLE_BOTH}`,
+  key: 'proClears',
+  target: 10,
+  rewards: [missionItemReward('hero_proof_shard', 10)]
+}, {
+  id: 'monthly_rhythm',
+  name: 'モンヒロビート月間',
+  condition: 'モンヒロビートで40曲演奏する',
+  key: 'rhythmPlays',
+  target: 40,
+  rewards: [missionItemReward('hero_proof_shard', 10)]
 }, {
   id: 'monthly_enhances',
   name: '育成月間',
@@ -11143,7 +11174,7 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_complete',
   name: 'マンスリーコンプリート',
-  condition: '通常マンスリー10個のうち8個を達成する',
+  condition: '通常マンスリー12個のうち8個を達成する',
   key: 'complete',
   target: 8,
   rewards: [{
@@ -11155,7 +11186,7 @@ const missionMonthlyDefinitions = () => [{
   }, {
     type: 'rainbowTranscendFruit',
     amount: 1
-  }],
+  }, missionItemReward('skip_ticket_kiwami', 1)],
   complete: true
 }];
 const MISSION_DEFS = {
@@ -11186,7 +11217,9 @@ const emptyMissionCounts = () => ({
   quickClears: 0,
   proClears: 0,
   extremeClears: 0,
-  itemUses: 0
+  itemUses: 0,
+  speciesClears: 0,
+  rhythmPlays: 0
 });
 const normalizeMissions = (value, now = Date.now()) => {
   const dailyPeriod = missionDailyPeriod(now),
@@ -50312,6 +50345,7 @@ function MonsterHeroGame() {
     await awardHeroProofForClear();
     await awardHeroProofShardForClear();
     if (speciesChallengeBattleRunRef.current) {
+      if (speciesChallengeSaveRunRef.current) await saveMissionProgress('speciesClear');
       addAssistantBond('clear');
       return;
     }
@@ -50320,6 +50354,7 @@ function MonsterHeroGame() {
       const nextTactics = (Number(tacticsRecordsOf(runMode).clears[tacticsDiff]) || 0) + 1;
       bumpTacticsRecord(runMode, 'clears', tacticsDiff, nextTactics);
       await storeSet(clearCountKey(runMode, tacticsDiff), nextTactics, false);
+      await saveMissionProgress(extremeRunRef.current ? 'extremeClear' : isProMode(runMode) ? 'proClear' : 'challengeClear');
       addAssistantBond('clear');
       return;
     }
@@ -51522,7 +51557,8 @@ function MonsterHeroGame() {
       proClear: {
         key: 'proClears',
         daily: true,
-        weekly: true
+        weekly: true,
+        monthly: true
       },
       extremeClear: {
         key: 'extremeClears',
@@ -51533,6 +51569,18 @@ function MonsterHeroGame() {
         key: 'itemUses',
         daily: true,
         weekly: true
+      },
+      speciesClear: {
+        key: 'speciesClears',
+        daily: true,
+        weekly: true,
+        monthly: true
+      },
+      rhythmPlay: {
+        key: 'rhythmPlays',
+        daily: true,
+        weekly: true,
+        monthly: true
       }
     }[event];
     if (!rule) return;
@@ -55213,7 +55261,7 @@ function MonsterHeroGame() {
       });
     }
     if (!enemy && !debugBattleRef.current) {
-      if (isQuickMode(runMode)) void saveMissionProgress('quickRun');else if (runMode === BATTLE_MODE_CHALLENGE && !extremeRunRef.current && !speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');else void saveMissionProgress('modeRun');
+      if (isQuickMode(runMode)) void saveMissionProgress('quickRun');else if ((runMode === BATTLE_MODE_CHALLENGE || runMode === BATTLE_MODE_TACTICS) && !extremeRunRef.current && !speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');else void saveMissionProgress('modeRun');
     }
     setTimeout(() => {
       setOwnedTeachings(nextTeachings);
@@ -61585,6 +61633,7 @@ function MonsterHeroGame() {
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       quickRunAward: rhythmPlayRunAward,
       onComplete: async (result, merged) => {
+        if (rhythmPlay.from === 'demo') await saveMissionProgress('rhythmPlay');
         if (rhythmPlay.from !== 'tutorial') {
           const baseLoops = rhythmPlayLoopsFor(rhythmPlay.song, rhythmPlay.difficulty);
           const loopScale = rhythmPlayRunLoopScaleFor(rhythmPlay.song);

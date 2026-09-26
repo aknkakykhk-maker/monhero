@@ -8,7 +8,7 @@ const start = source.indexOf('const LOGIN_BONUS_REWARDS');
 const end = source.indexOf('const STAT_POINT_GAIN');
 const context = {};
 vm.createContext(context);
-vm.runInContext(`${source.slice(start,end)}\nglobalThis.__m={LOGIN_BONUS_REWARDS,MISSION_DEFS,missionDailyPeriod,missionWeeklyPeriod,missionMonthlyPeriod,missionPeriodWeekday,missionWeekRotationIndex,normalizeMissions,missionValue,missionClaimableCount,missionNextReset,reconcileMonthlyMissionCompletions,buildGiftClaim};`,context);
+vm.runInContext(`${source.slice(start,end)}\nglobalThis.__m={LOGIN_BONUS_REWARDS,MISSION_DEFS,missionDailyPeriod,missionWeeklyPeriod,missionMonthlyPeriod,missionPeriodWeekday,missionWeekRotationIndex,normalizeMissions,missionValue,missionClaimableCount,missionNextReset,reconcileMonthlyMissionCompletions,buildGiftClaim,emptyMissionCounts};`,context);
 const m=context.__m;
 let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'OK':'NG'}: ${name}`);if(!ok)failed++;};
@@ -20,36 +20,38 @@ const login=m.LOGIN_BONUS_REWARDS;
 check('ログイン7日すべて序1枚を維持',login.length===7&&login.every(r=>r.some(x=>x.type==='skipTicketJo'&&x.amount===1)));
 check('ログイン報酬を新アイテム構成へ更新',login[2].some(x=>x.type==='trainingTicket'&&x.amount===5)&&login[3].some(x=>x.type==='breederXp'&&x.amount===200)&&login[4].some(x=>x.type==='uniqueSkillResetTicket'&&x.amount===1)&&login[5].some(x=>x.type==='rainbowPsyche'&&x.amount===10)&&login[6].some(x=>x.type==='trainingTicketLarge'&&x.amount===1));
 const daily=m.MISSION_DEFS.daily,weekly=m.MISSION_DEFS.weekly,monthly=m.MISSION_DEFS.monthly;
-check('デイリーは通常5個+コンプリート',daily.filter(x=>!x.complete).length===5&&daily.find(x=>x.complete)?.target===4);
+check('デイリーは通常6個+コンプリート',daily.filter(x=>!x.complete).length===6&&daily.find(x=>x.complete)?.target===4);
 const dailyChallenge=daily.find(x=>x.id==='daily_wins');
 check('旧daily_wins IDを通常チャレンジ1クリアへ再利用',dailyChallenge?.key==='challengeClears'&&dailyChallenge?.target===1&&dailyChallenge?.rewards?.some(r=>r.type==='rainbowPsyche'&&r.amount===5));
 let state=m.normalizeMissions(null,at('2026-08-29T05:00:00Z'));state.daily={...state.daily,login:1,battles:3,challengeClears:1,enhances:1};
-check('デイリー4/5でコンプリート',m.missionValue(state,'daily',m.MISSION_DEFS.daily.find(x=>x.complete))===4);
+check('デイリー4/6でコンプリート',m.missionValue(state,'daily',m.MISSION_DEFS.daily.find(x=>x.complete))===4);
 check('日替わりは曜日で共通固定',m.missionPeriodWeekday(at('2026-08-24T05:00:00Z'))===1&&m.missionPeriodWeekday(at('2026-08-30T05:00:00Z'))===0);
-check('ウィークリーは通常8個+コンプリート',weekly.filter(x=>!x.complete).length===8&&weekly.find(x=>x.complete)?.target===6);
+check('ウィークリーは通常9個+コンプリート',weekly.filter(x=>!x.complete).length===9&&weekly.find(x=>x.complete)?.target===6);
 const quick=weekly.find(x=>x.id==='weekly_wins'),challenge=weekly.find(x=>x.id==='weekly_donations'),items=weekly.find(x=>x.id==='weekly_daily_claims');
 check('週クイック5クリア',quick?.key==='quickClears'&&quick?.target===5&&quick?.rewards?.some(r=>r.type==='rainbowPsyche'&&r.amount===20));
 check('旧weekly_donations IDを通常チャレンジ3クリアへ再利用',challenge?.key==='challengeClears'&&challenge?.target===3&&challenge?.rewards?.some(r=>r.type==='breederXp'&&r.amount===300));
 check('週アイテム5個使用',items?.key==='itemUses'&&items?.target===5&&items?.rewards?.some(r=>r.type==='uniqueSkillResetTicket'&&r.amount===1));
 check('週間ローテーションは4週周期',m.missionWeekRotationIndex(at('2026-08-24T05:00:00Z'))===0&&m.missionWeekRotationIndex(at('2026-08-31T05:00:00Z'))===1&&m.missionWeekRotationIndex(at('2026-09-21T05:00:00Z'))===0);
 state.weekly={...state.weekly,battles:20,enhances:10,quickClears:5,challengeClears:3,marketTrades:3,itemUses:5,proClears:3};state.weeklyLoginDays=['a','b','c','d','e'];
-check('ウィークリー6/8でコンプリート可能',m.missionValue(state,'weekly',m.MISSION_DEFS.weekly.find(x=>x.complete))>=6);
-check('マンスリーは通常10個+8個達成コンプリート',monthly.filter(x=>!x.complete).length===10&&monthly.find(x=>x.complete)?.target===8);
+check('ウィークリー6/9でコンプリート可能',m.missionValue(state,'weekly',m.MISSION_DEFS.weekly.find(x=>x.complete))>=6);
+check('マンスリーは通常12個+8個達成コンプリート',monthly.filter(x=>!x.complete).length===12&&monthly.find(x=>x.complete)?.target===8);
 const monthlyComplete=monthly.find(x=>x.complete);
 check('月次コンプリート報酬が指定どおり',monthlyComplete.rewards.some(r=>r.type==='diamond'&&r.amount===10000)&&monthlyComplete.rewards.some(r=>r.type==='rainbowPsyche'&&r.amount===200)&&monthlyComplete.rewards.some(r=>r.type==='rainbowTranscendFruit'&&r.amount===1));
 const monthlyExpected=[
-  ['monthly_logins','loginDays',20,'diamond',3000],
+  ['monthly_logins','loginDays',20,'diamond',5000],
   ['monthly_battles','battles',100,'rainbowPsyche',50],
   ['monthly_wins','wins',200,'trainingTicketLarge',5],
   ['monthly_daily_completes','dailyCompletes',20,'diamond',5000],
   ['monthly_weekly_completes','weeklyCompletes',3,'rainbowPsyche',100],
   ['monthly_quick_runs','quickRuns',20,'skipTicketKyu',2],
   ['monthly_challenge_runs','challengeRuns',10,'rainbowPsyche',50],
+  ['monthly_pro_clears','proClears',10,'gameItem',10],
+  ['monthly_rhythm','rhythmPlays',40,'gameItem',10],
   ['monthly_enhances','enhances',30,'uniqueSkillResetTicket',2],
   ['monthly_market','marketTrades',10,'dyeMock',5],
   ['monthly_mode_runs','modeRuns',30,'bondPointReset',2],
 ];
-check('月次10項目の条件・目標・個別報酬が指定どおり',monthlyExpected.every(([id,key,target,type,amount])=>{const def=monthly.find(x=>x.id===id);return def?.key===key&&def?.target===target&&def?.rewards?.length===1&&def.rewards[0].type===type&&def.rewards[0].amount===amount;}));
+check('月次12項目の条件・目標・個別報酬が指定どおり',monthlyExpected.every(([id,key,target,type,amount])=>{const def=monthly.find(x=>x.id===id);return def?.key===key&&def?.target===target&&def?.rewards?.length===1&&def.rewards[0].type===type&&def.rewards[0].amount===amount;}));
 let monthlyState=m.normalizeMissions(null,at('2026-08-15T05:00:00Z'));
 monthlyState.monthly={...monthlyState.monthly,battles:100,wins:200,dailyCompletes:20,weeklyCompletes:3,quickRuns:20,challengeRuns:10,enhances:30,marketTrades:10};
 check('月次は10個中8個でコンプリート',m.missionValue(monthlyState,'monthly',monthlyComplete)===8);
@@ -169,5 +171,24 @@ check('読み込み時の補填は本来の数との差額だけ',
     && source.includes('savedPoints += expectedPoints - grantedPoints;')
     && source.includes("await storeSet('mh_breeder_points_granted', grantedPoints, false);")
     && source.includes('const expectedPoints = Math.max(0, levelInfo(savedXp).level - 1);'));
+
+// --- ミッションの見直し(2026-09-26) ---
+// クラシックとタクティクスで同じモードのミッションが進むこと。記録の置き場は分けたまま
+check('タクティクスのクリアもチャレンジ・プロ・極限のミッションへ数える',
+  source.includes("await saveMissionProgress(extremeRunRef.current ? 'extremeClear' : isProMode(runMode) ? 'proClear' : 'challengeClear');"));
+check('タクティクスチャレンジのプレイもチャレンジのプレイ回数へ数える',
+  source.includes("(runMode===BATTLE_MODE_CHALLENGE||runMode===BATTLE_MODE_TACTICS)&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun')"));
+check('種族チャレンジのクリアは保存する周回だけ数える',
+  source.includes("if (speciesChallengeSaveRunRef.current) await saveMissionProgress('speciesClear');"));
+check('モンヒロビートは曲えらびから最後まで演奏した曲だけ数える',
+  source.includes("if(rhythmPlay.from==='demo')await saveMissionProgress('rhythmPlay');"));
+const usedKeys=new Set([...daily,...weekly,...monthly].filter(x=>!x.complete).map(x=>x.key));
+const counted=new Set(['login','loginDays','extremeOrQuick','dailyCompletes','weeklyCompletes',...Object.keys(m.emptyMissionCounts())]);
+check('ミッションの条件はすべて数えている値を指す',[...usedKeys].every(k=>counted.has(k)));
+check('新しい数え方(種族・モンヒロビート)は既定値0で補われる',m.normalizeMissions({daily:{battles:1}},at('2026-09-26T05:00:00Z')).daily.rhythmPlays===0&&m.normalizeMissions(null).monthly.speciesClears===0);
+const itemRewardIds=[...daily,...weekly,...monthly].flatMap(x=>x.rewards).filter(r=>r.type==='gameItem').map(r=>r.itemId);
+check('アイテムの報酬は実在するアイテムidだけを指す',itemRewardIds.length>0&&itemRewardIds.every(id=>id==='hero_proof_shard'||breederSrc.includes(`id:'${id}'`)));
+check('既存ミッションのidを残している(受取履歴の互換)',['daily_login','daily_battles','daily_wins','daily_enhance','daily_rotation','daily_complete'].every(id=>daily.some(x=>x.id===id))
+  &&['weekly_logins','weekly_battles','weekly_enhance','weekly_wins','weekly_donations','weekly_market','weekly_daily_claims','weekly_rotation','weekly_complete'].every(id=>weekly.some(x=>x.id===id)));
 
 process.exit(failed?1:0);
