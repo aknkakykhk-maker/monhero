@@ -76,8 +76,9 @@ const judgmentRule=id=>{
   return at<0?'':html.slice(at,html.indexOf('}',at));
 };
 check('判定文字の見た目はCSSが持ち、JSXはどの判定かだけを渡す',
-  game.includes("data-judgment={view.last||''}")
-  && !/data-rhythm-judgment-text[\s\S]{0,400}rhythmJudgmentColor\(view\.last\)/.test(game)
+  // 判定の文字は部品(RhythmHudJudgment)が hud から出す(2026-09-27。以前は view.last)
+  game.includes("data-judgment={last||''}")
+  && !/data-rhythm-judgment-text[\s\S]{0,400}rhythmJudgmentColor\((view\.)?last\)/.test(game)
   && !/data-rhythm-judgment-text[\s\S]{0,400}text-fuchsia-100/.test(game));
 // ★どれも文字を透かしてグラデーションを敷く(単色＋影だけだと平たく見える、という指摘)
 check('どの判定もグラデーションで描く(MISSも含む)',
@@ -152,12 +153,13 @@ check('ぴったりは自己ベストの保存へ入れない(保存形式を変
   &&!/const mergeRhythmBestRecord[\s\S]{0,700}precise/.test(game));
 check('ぴったりは表示だけへ渡す(viewと演出)',
   game.includes('lastPrecise:preciseHit')
-  &&game.includes("data-judgment-precise={view.lastPrecise?'1':''}")
+  &&game.includes("data-judgment-precise={lastPrecise?'1':''}")
   &&game.includes('precise:preciseHit'));
 // 印は次の判定へ持ち越さない(消すときも一緒に落とす)
 check('判定表示を消すときに、ぴったりの印も落とす',
-  game.includes("setView(v=>({...v,last:'',lastPrecise:false,fastSlow:''}))")
-  &&game.includes("const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,"));
+  game.includes("hudRef.current.set({last:'',lastPrecise:false,fastSlow:''})")
+  &&game.includes("const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,")
+  &&game.includes("const rhythmHudInitial=()=>({score:0,combo:0,last:'',lastPrecise:false,"));
 check('ぴったりのときだけ見た目が強くなる(文字と光)',
   html.includes('[data-rhythm-judgment-text][data-judgment="MARVELOUS"][data-judgment-precise="1"]{')
   &&html.includes('[data-rhythm-hit-effect][data-hit-precise="1"]>i{')
@@ -272,7 +274,7 @@ check('演奏中の判定処理に offsetWidth の読み取りを残さない',
 // 字は ::after に重ね直す。ここが崩れると、また毎回ぼかしを計算し直す。
 check('判定文字の光を焼いて出す(焼いた判定だけ目印を付け、本体のぼかしを外す)',
   game.includes('const rhythmBakeJudgmentHalos=async(textEl,maxScale=2)=>{')
-  &&game.includes("haloKeys.has(`${view.last}|${view.lastPrecise?'1':''}`)?'1':undefined}")
+  &&game.includes("haloKeys.has(`${last}|${lastPrecise?'1':''}`)?'1':undefined}")
   &&html.includes('[data-rhythm-judgment-text][data-halo="1"]{position:relative;z-index:0;filter:none!important}'));
 check('重ね直した字は模様の位置を本体から受け継ぐ(金・虹の流れがそのまま動く)',
   /\[data-rhythm-judgment-text\]\[data-halo="1"\]::after\{[\s\S]{0,200}content:attr\(data-judgment\)[\s\S]{0,300}background-position:inherit/.test(html));

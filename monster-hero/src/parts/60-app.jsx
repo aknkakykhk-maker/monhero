@@ -12255,7 +12255,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(!ids.length) return;
         const unit=normalizeTacticsUnit(units[slotIdx]);
         const after=resolveTrainingStats({atk:unit.atk,def:unit.def,hp:unit.baseMaxHp,guts:unit.baseMaxGuts},
-          ids,waveResult?.turn,specialRuleDifficulty);
+          ids,waveResult?.turn,specialRuleDifficulty,runMode);
         units=applyTacticsTraining(units,slotIdx,after,getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
       });
       commitTacticsUnits(units);
@@ -12263,7 +12263,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       nGuardDef=tacticsMaxDef(units);
       nMaxHp=tacticsTotalBaseMaxHp(units); nMaxGuts=tacticsTotalBaseMaxGuts(units);
     } else {
-      const nextStats=resolveTrainingStats({atk,def,hp:maxHp,guts:maxGuts},picks,waveResult?.turn,specialRuleDifficulty);
+      const nextStats=resolveTrainingStats({atk,def,hp:maxHp,guts:maxGuts},picks,waveResult?.turn,specialRuleDifficulty,runMode);
       nMaxHp=nextStats.hp; nAtk=nextStats.atk; nDef=nextStats.def; nMaxGuts=nextStats.guts;
       setMaxHp(nMaxHp); setMaxGuts(nMaxGuts); setAtk(nAtk); setDef(nDef);
       nGuardDef=nDef;
