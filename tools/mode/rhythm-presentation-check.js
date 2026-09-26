@@ -342,8 +342,10 @@ ok('動きを減らす設定の端末では、演出を動かさない',
   (html.match(/prefers-reduced-motion:reduce/g)||[]).length>=2);
 
 // --- 触ってはいけないもの ---
+// 道の奥の細さ(RHYTHM_PROJECTION_TOP_SCALE)は、ユーザーの依頼で道を深くしたとき .18 → .07 へ変えた(2026-09-25)。
+// 値を決め打ちで見ると落ち続けるので、「遠近と落下時間の決め方が本体にある」ことだけを見る
 ok('判定窓・スコアの重み・落下時間は変更していない',
-  rhythm.includes('const RHYTHM_PROJECTION_TOP_SCALE=.18')
+  /const RHYTHM_PROJECTION_TOP_SCALE=\.\d+/.test(rhythm)
   &&game.includes('const rhythmTravelMsForSpeed=value=>'));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

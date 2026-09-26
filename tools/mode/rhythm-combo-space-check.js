@@ -42,7 +42,9 @@ const sandboxSource = [
   'const rhythmClamp01=v=>Math.max(0,Math.min(1,Number(v)||0));',
   grabConst('RHYTHM_PROJECTION_TOP_SCALE'),
   grabConst('RHYTHM_LANE_COUNT'),
-  grabConst('rhythmProjectionScale'),
+  // rhythmProjectionScale は複数行で、RHYTHM_PROJECTION_CURVE も使う(2026-09-27 に追従。grabConst だと途中で切れて読み込めなかった)
+  grabConst('RHYTHM_PROJECTION_CURVE'),
+  grabFn('rhythmProjectionScale'),
   grabFn('rhythmProjectBoundary'),
   grabConst('RHYTHM_SIDE_MONSTER_ANCHORS'),
   grabConst('RHYTHM_SIDE_MONSTER_FILL'),

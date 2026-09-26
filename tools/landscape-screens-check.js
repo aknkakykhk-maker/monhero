@@ -33,7 +33,11 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
 const LIST_SCREENS=['M/B管理','神殿','マーケット','ミッション','ギフト'];
 // 神殿のボタンの数は実装から数える。ここを直に書くと、ボタンを足したときに
 // 「届かない」ではなく「数が違う」で落ち、何が壊れたのか分からなくなる(魂格進化を足して実際に落ちた)
-const TEMPLE_LINKS=(fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/60-app.jsx'),'utf8').match(/mh-temple-link/g)||[]).length;
+// 神殿のボタンは templeLink(…) でまとめて作る形になった(クラスは mh-temple-menu-card を1か所に書くだけ)。
+// クラス名を数えると1つにしかならないので、神殿の画面の中の {templeLink( の数を数える(2026-09-27)
+const TEMPLE_LINKS=(()=>{const app=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/60-app.jsx'),'utf8');
+  const at=app.indexOf("gameState==='TEMPLE'&&"),end=at<0?-1:app.indexOf('gameState===',at+30);
+  return at<0?0:(app.slice(at,end<0?undefined:end).match(/\{templeLink\(/g)||[]).length;})();
 
 (async()=>{
   let chromium;
@@ -101,7 +105,7 @@ const TEMPLE_LINKS=(fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/60-ap
       ok(`${name}: 横にはみ出さない`,!m.hOverflow);
       if(name==='神殿'){
         const reach=await page.evaluate(()=>{const s=[...document.querySelector('[data-mh-screen]').children].find(e=>e.classList.contains('mh-scroll'));
-          if(!s)return null;s.scrollTop=s.scrollHeight;const links=[...s.querySelectorAll('.mh-temple-link')];const last=links[links.length-1];
+          if(!s)return null;s.scrollTop=s.scrollHeight;const links=[...s.querySelectorAll('.mh-temple-menu-card')];const last=links[links.length-1];if(!last)return {count:0,lastBottom:0,listBottom:0};
           const b=last.getBoundingClientRect(),sb=s.getBoundingClientRect();return {count:links.length,lastBottom:Math.round(b.bottom),listBottom:Math.round(sb.bottom)};});
         ok(`神殿: ${TEMPLE_LINKS}つのボタンがすべて届く(最後までスクロールできる)`,!!reach&&reach.count===TEMPLE_LINKS&&reach.lastBottom<=reach.listBottom+1,reach?`${reach.count}個 / 最後の下端 ${reach.lastBottom} / 一覧の下端 ${reach.listBottom}`:'一覧なし');
       }

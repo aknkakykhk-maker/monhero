@@ -40,7 +40,8 @@ check('演出量MINIMAL・軽量モードではcelebrate画面を出さない(�
 // ※BAD・MISSが1つも無いとライフは減らないので理屈上は重ならないが、
 //   ライフの増減値を変えたときに静かに矛盾しないよう、条件として書いておく。
 check('失敗(ライフ0のまま完走)ではお祝いの画面を出さない',
-  finishBlock.includes('const failed=!tutorial&&run.lifeDepleted===true;')
+  // タイミング合わせ(calibrating・2026-09-26)も練習と同じく必ずクリアになったので、間に条件が1つ増えてよい
+  /const failed=!tutorial&&(?:!calibrating&&)?run\.lifeDepleted===true;/.test(finishBlock)
   &&finishBlock.includes('cleared:!failed,'));
 check('保存(onComplete)はcelebrateの有無に関わらず必ず1回呼ぶ(演出で記録が変わらない)',
   finishBlock.includes('onComplete(result,merged);'));

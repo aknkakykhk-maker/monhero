@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 27a92e475dd507d4
+// source-sha256: 431cf856a08aea8e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 03:39";
+const BUILD_DATE = "2026-09-27 07:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -23374,13 +23374,20 @@ const RhythmTapTest = ({
   const settingsLiveRef = useRef(settings);
   settingsLiveRef.current = settings;
   const stepEffectCapRef = useRef(null);
+  const [effectCapNotice, setEffectCapNotice] = useState(0);
   stepEffectCapRef.current = () => {
     const next = rhythmNextEffectCap(settingsIn, effectCap);
     if (next === null) return false;
     rhythmAutoEffectMemory.level = next;
     setEffectCap(next);
+    setEffectCapNotice(value => value + 1);
     return true;
   };
+  useEffect(() => {
+    if (!effectCapNotice) return undefined;
+    const timer = setTimeout(() => setEffectCapNotice(0), 2500);
+    return () => clearTimeout(timer);
+  }, [effectCapNotice]);
   const monsterNoteEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect;
   const monsterFaceHidden = rhythmMonsterEffectAtMost(monsterNoteEffect, 'NONE');
   const assistOn = !!settings.assistMode && !tutorial && !calibrating && !debugPlay,
@@ -24756,13 +24763,13 @@ const RhythmTapTest = ({
         });
         const gap = aq.last ? frameNowMs - aq.last : 0;
         aq.last = frameNowMs;
-        if (gap > 0 && gap < 250) {
+        if (gap > 0 && gap < 1000) {
           aq.frames++;
           if (gap >= 5 && gap < aq.minGap) aq.minGap = gap;
-          if (gap > Math.max(5, aq.minGap) * 1.8) aq.slow++;
+          if (gap > Math.max(5, aq.minGap) * 1.8 || gap >= 50) aq.slow++;
         }
         if (frameNowMs - aq.start >= RHYTHM_AUTO_QUALITY_WINDOW_MS) {
-          if (aq.settle > 0) aq.settle--;else if (aq.frames >= 30 && aq.slow / aq.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepAutoQualityRef.current) {
+          if (aq.settle > 0) aq.settle--;else if (aq.frames >= 10 && aq.slow / aq.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepAutoQualityRef.current) {
             stepAutoQualityRef.current();
             aq.settle = 1;
           }
@@ -24782,7 +24789,7 @@ const RhythmTapTest = ({
         });
         const gap = ae.last ? frameNowMs - ae.last : 0;
         ae.last = frameNowMs;
-        if (gap > 0 && gap < 250) {
+        if (gap > 0 && gap < 1000) {
           ae.frames++;
           if (gap >= 5 && gap < ae.minGap) ae.minGap = gap;
           if (gap > Math.max(5, ae.minGap) * 1.8 || gap >= 50) ae.slow++;
@@ -26677,7 +26684,12 @@ const RhythmTapTest = ({
   })))), luckyRush && React.createElement("div", {
     "data-rhythm-lucky-rush": true,
     "aria-hidden": "true"
-  }), luckyBanner && React.createElement("div", {
+  }), effectCapNotice > 0 && React.createElement("div", {
+    key: effectCapNotice,
+    "data-rhythm-effect-cap-notice": true,
+    role: "status",
+    className: "pointer-events-none absolute left-1/2 top-[13%] z-30 -translate-x-1/2 whitespace-nowrap rounded-full border border-cyan-300/40 bg-slate-950/85 px-3 py-1 text-[11px] font-black text-cyan-100"
+  }, "重いので演出を控えめにしました"), luckyBanner && React.createElement("div", {
     key: luckyBanner.id,
     "data-rhythm-lucky-banner": true,
     "data-kind": luckyBanner.kind,
