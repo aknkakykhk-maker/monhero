@@ -1540,6 +1540,9 @@ const buildChart=(difficulty,options={})=>{
         &&(gridCount.get(note.grid)||0)===1
         &&nearestOther(note)>=CHORD.clearGrids
         &&nearestOther(note)>=restrikeGrids
+        // 版6: EASY・NORMAL(左端と右端の同時押し)は前後を1拍空ける所だけ。大きな一発は前後が詰まりやすく、
+        //   8分あとに続くノーツを自動修正が動かすと、端から2.5レーン跳ぶ形が残った(Monster Hero NORMAL)
+        &&(!soundTypes||!CHORD.edge||nearestOther(note)>=BEAT)
         &&!sustainSpans.some(span=>span.startGrid<note.grid&&note.grid<=span.endGrid))
       .map(entry=>entry.index);
     // 選んだ場所が「置いてみたら条件に合わなかった」ときは、そのぶんを取り戻す。
@@ -1559,11 +1562,15 @@ const buildChart=(difficulty,options={})=>{
       //   版5までは「前後が空いている」所を選ぶので、かえって弱い音に乗っていた
       //   (実測: EASY〜HARDの同時押しのうちシンバル・大きな一発に乗っていたのは 0〜1%)。
       //   幅の上限(4)も外す。大きな一発はいちばん太く置かれるので、上限があると最初から候補に入らなかった
-      const picked=soundTypes
+      let picked=soundTypes
         ?soundPick(rest,chordMax-chordCount,CHORD.spacingGrids,index=>chordScoreOf(soundTraitAt(notes[index].grid)))
         :spreadPick(rest,chordMax-chordCount,CHORD.spacingGrids);
+      // ふさわしい音を使い切っても狙いの数に届かないときだけ、残りを今までの置き方で補う。
+      //   同時押しは2本目のぶんノーツが増えるので、数が減ると難しさの段そのものが下がる
+      //   (実測: 補わないと FREEDOM DiVE↓ MASTER が Lv.49 → 38・ノーツ 815 → 750 になった。
+      //    ユーザーが「ダントツで難しく」と決めた曲)。ふさわしい音が先なのは変わらない
+      if(soundTypes&&!picked.length)picked=spreadPick(rest,chordMax-chordCount,CHORD.spacingGrids);
       for(const index of picked)tried.add(index);
-      if(soundTypes&&!picked.length)for(const index of rest)tried.add(index);
       return picked;
     };
     const queue=[];
