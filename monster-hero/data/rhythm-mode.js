@@ -19334,9 +19334,32 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
 // 公開フラグ RELEASE_FLAGS.rhythmCanvasNotes と、デバッグ画面の上書き(mh_rhythm_canvas_v1)で DOM 版と切り替える。
 const RHYTHM_CANVAS_KEY='mh_rhythm_canvas_v1';
 const rhythmCanvasNotesPreference=()=>{try{if(typeof localStorage==='undefined')return '';const value=localStorage.getItem(RHYTHM_CANVAS_KEY);return value==='canvas'||value==='dom'||value==='webgl'?value:'';}catch{return '';}};
-// WebGL で描くか(2026-09-26)。デバッグ画面の「ノーツの描き方(検証用)」を選んでいればそちらに従い、
-// 選んでいなければ音ゲー設定の「描き方」(noteDrawMode)が「軽い」のときだけ WebGL で描く。
-const rhythmWebglNotesActive=noteDrawMode=>{const pref=rhythmCanvasNotesPreference();if(pref)return pref==='webgl';return noteDrawMode==='LIGHT';};
+// 端末にちゃんとした GPU があるか(描画方式「自動」の見極め。2026-09-26)。
+// GPU が弱い・使えない端末では、ブラウザが CPU で WebGL を肩代わりする(SwiftShader など)。それだと Canvas より重いので使わない。
+// ★本番の canvas では調べない。一度 WebGL を作った canvas からは 2D を取り出せないため、見えない試し用の canvas で1回だけ調べ、結果を覚えておく。
+let rhythmWebglGpuUsableCache=null;
+const rhythmWebglGpuUsable=()=>{
+  if(rhythmWebglGpuUsableCache!==null)return rhythmWebglGpuUsableCache;
+  let ok=false;
+  try{
+    if(typeof document!=='undefined'){
+      const probe=document.createElement('canvas');probe.width=probe.height=1;
+      const gl=probe.getContext('webgl',{failIfMajorPerformanceCaveat:true,stencil:true})||probe.getContext('experimental-webgl',{failIfMajorPerformanceCaveat:true,stencil:true});
+      if(gl){
+        const info=gl.getExtension('WEBGL_debug_renderer_info');
+        const name=String(info?gl.getParameter(info.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER)||'');
+        ok=!/swiftshader|llvmpipe|softpipe|software|basic render/i.test(name)&&!!gl.getContextAttributes()?.stencil;
+        try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}
+      }
+    }
+  }catch(e){ok=false;}
+  rhythmWebglGpuUsableCache=ok;
+  return ok;
+};
+// WebGL で描くか(2026-09-26)。デバッグ画面の「ノーツの描き方(検証用)」を選んでいればそちらに従う。
+// 選んでいなければ音ゲー設定の「描画方式」(noteDrawMode)で決める: WebGL(LIGHT)は必ず、自動(AUTO)は GPU があるときだけ、Canvas(STANDARD)は使わない。
+const rhythmWebglNotesActive=noteDrawMode=>{const pref=rhythmCanvasNotesPreference();if(pref)return pref==='webgl';
+  if(noteDrawMode==='LIGHT')return true;if(noteDrawMode==='AUTO')return rhythmWebglGpuUsable();return false;};
 const rhythmCanvasNotesSetPreference=value=>{
   const next=value==='canvas'||value==='dom'||value==='webgl'?value:'';
   try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_CANVAS_KEY,next);else localStorage.removeItem(RHYTHM_CANVAS_KEY);}}catch{}
@@ -19704,6 +19727,10 @@ const rhythmCreateGL2D=canvas=>{
     },
     // 焼き直した画像(同じ canvas を描き直したもの)を GPU へ渡し直す
     forgetImage(source){const entry=textures.get(source);if(entry){gl.deleteTexture(entry.tex);textures.delete(source);}},
+    // 絵を先に GPU へ渡しておく(演奏の途中で初めて出た瞬間に渡すと、そこで一瞬引っかかるため)
+    preloadImage(source){if(!lost&&source)textureOf(source);},
+    // 使い終えたら片付ける。iPhone などは同時に持てる WebGL の数に上限があり、曲ごとに作ると古いものから消されていく
+    dispose(){try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
   };
   return ctx;
 };
@@ -20263,9 +20290,11 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);}sparkDotSprite();}
       // 叩いたときの光(canvas で描くときだけ)
       if(effect!=='MINIMAL'&&!options.lightweight)warmHitSprites();
+      // WebGL のときは、焼いた絵を演奏の前に GPU へ渡しておく
+      if(ctx&&backend==='webgl'&&typeof ctx.preloadImage==='function')for(const sprite of sprites.values())if(sprite&&sprite.canvas)ctx.preloadImage(sprite.canvas);
       return sprites.size-before;
     },
-    release(){canvas=null;ctx=null;sprites.clear();hitArea=null;hitSlots.fill(null);},
+    release(){if(ctx&&backend==='webgl'&&typeof ctx.dispose==='function')ctx.dispose();canvas=null;ctx=null;backend='2d';sprites.clear();hitArea=null;hitSlots.fill(null);},
     // 叩いたときの光をこの canvas で描くか(検証用・WebGL のときだけ演奏画面が area を渡す)。null で DOM の部品へ戻す
     enableHits(area){hitArea=area&&ctx?area:null;hitSlots.fill(null);hitNext=0;if(hitArea)readHitFilters(hitArea);},
     hitsFor(area){return !!hitArea&&!!ctx&&area===hitArea;},

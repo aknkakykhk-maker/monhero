@@ -371,3 +371,13 @@ WebGL のときは、通常の canvas より JavaScript が多かった(CPU プ�
 
 ノーツの描き方に WebGL の描き込み先が知らない命令を足すと、WebGL のときだけその部分が出なくなる。
 `tools/mode/rhythm-webgl-notes-check.js` が、同じノーツの並びを 2D と WebGL で描いて画素を比べて見張る。
+
+## 2026-09-26 描画方式の既定を「自動」にした(WebGL を既定へ)
+
+- 「自動」は、見えない試し用の canvas で1回だけ GPU を調べ(`rhythmWebglGpuUsable`)、ちゃんとした GPU があれば WebGL、
+  ブラウザが CPU で肩代わりしている(SwiftShader・llvmpipe など)なら Canvas で描く。本番の canvas で調べないのは、
+  一度 WebGL を作った canvas からは 2D を取り出せないため
+- 保存済みの STANDARD(Canvas)・LIGHT(WebGL)は意味を変えずにそのまま(移行はしない)。既定値だけ AUTO にした
+- 曲を抜けるたびに WebGL を片付ける(`WEBGL_lose_context`)。iPhone などは同時に持てる数に上限がある
+- 焼いた絵は演奏の前に GPU へ渡しておく(`preloadImage`)。初めて出た瞬間の引っかかりを防ぐ
+- テスト環境(GPU なし)では「自動」は Canvas になる。GPU がある端末に見せかけると WebGL になることを確かめた
