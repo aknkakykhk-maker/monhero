@@ -76,8 +76,9 @@ const inlineStyle=body=>{
   return kept.length?` style="${kept.join(';')}"`:'';
 };
 // isLandscape?'1':'3' のような三項はinlineStyle側で拾えない(条件式なので前段のガードで落ちる)。
-// 横画面検査では1行折り返しを見たいので、先に固定値へ置き換えてから変換する。
-const headerJsxLandscape=headerJsx.replace(/WebkitLineClamp:isLandscape\?'1':'3'/,"WebkitLineClamp:'1'");
+// 横画面検査では横の行数(2行まで)を見たいので、先に固定値へ置き換えてから変換する。
+// ★横は2026-09-26に1行→2行へ(ユーザー報告「演奏中の曲名が切れてる」。長い曲名が「…」で切れていた)
+const headerJsxLandscape=headerJsx.replace(/WebkitLineClamp:isLandscape\?'2':'3'/,"WebkitLineClamp:'2'");
 const SAMPLE={difficulty:'MASTER',song:'テスト楽曲テスト楽曲テスト',score:'1,000,000',best:'BEST 1,000,000',combo:'9999',life:'1000',rank:'SS',rankNext:'★MAX'};
 // コンボ数は段(rhythmComboTier)が上がるほど倍率で大きくなる(2026-09-12)。倍率は transform なので
 // 実際の描画範囲がそのぶん広がる。いちばん大きい段の倍率を実装から取り出し、その形で測る。
@@ -169,8 +170,8 @@ const cssFor=token=>{
       w:['width'],h:['height'],'min-h':['min-height'],'min-w':['min-width'],'max-w':['max-width']}[m[1]];
     return props.map(prop=>`${prop}:${value}`).join(';');
   }
-  if((m=/^max-w-\[(\d+)(vw|%)\]$/.exec(token)))return `max-width:${m[1]}${m[2]}`;
-  if((m=/^w-\[(\d+)(vw|%)\]$/.exec(token)))return `width:${m[1]}${m[2]}`;
+  if((m=/^max-w-\[(\d+)(vw|cqw|%)\]$/.exec(token)))return `max-width:${m[1]}${m[2]}`;
+  if((m=/^w-\[(\d+)(vw|cqw|%)\]$/.exec(token)))return `width:${m[1]}${m[2]}`;
   if((m=/^min-h-\[(\d+)px\]$/.exec(token)))return `min-height:${m[1]}px`;
   if((m=/^min-w-\[(\d+)px\]$/.exec(token)))return `min-width:${m[1]}px`;
   if((m=/^text-\[(\d+)px\]$/.exec(token)))return `font-size:${m[1]}px`;
