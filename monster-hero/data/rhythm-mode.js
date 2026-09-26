@@ -19946,6 +19946,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // (CPUを1/4に絞った実測。原因を1つずつ外して特定)。焼くのは最初の1回だけなので、毎フレームの仕事は以前と同じ。
   for(const [name,style] of Object.entries(HEADS)){style.glowStrong=style.glow.length?Object.freeze([...style.glow,...style.glow]):style.glow;style.glowStrongKey=`${name}+`;}
   let canvas=null,ctx=null,backend='2d',dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
+  // ノーツの動き(オプション「ノーツの動き」・2026-09-27)。フリックの矢印と SLIDE の帯に流れる光を足す。演出量「最小」・軽量モードでは切る
+  let motion=false;
   // マスモンの顔(焼いた絵)。ノーツより上に出すため、描くのはフレームの最後(end)にまとめる。
   // 以前は DOM の要素を canvas の上へ重ねて毎フレーム動かしていた(2026-09-25にやめた)
   const faces=[];
@@ -20122,11 +20124,21 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // (2026-09-26・実機「横フリックの矢印とノーツがかぶって、矢印しか見えなくて視覚性が悪い」)。横幅は粒に合わせて伸ばしすぎない
       const sprite=sideChevronSprite(sideDir);
       const aw=Math.min((sprite.tw+sprite.margin*2)*sizeMul,w+sprite.margin*2),ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
-      ctx.drawImage(sprite.canvas,cx-aw/2,y-2*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale,aw,ah);
+      const ay=y-2*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale;
+      ctx.drawImage(sprite.canvas,cx-aw/2,ay,aw,ah);
+      // ノーツの動き: 払う向きへ、同じ山形の残像がすっと流れ出て消える(0.6秒ごと)
+      if(motion){const p=(frameNow%600)/600,base=ctx.globalAlpha;ctx.globalAlpha=base*(1-p)*.6;ctx.drawImage(sprite.canvas,cx-aw/2+(sideDir==='left'?-1:1)*p*aw*.35,ay,aw,ah);ctx.globalAlpha=base;}
     }else if(rhythmNoteVisualType(note)==='FLICK'&&!failed){
       const sprite=arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       const aw=(sprite.tw+sprite.margin*2)*sizeMul,ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
-      ctx.drawImage(sprite.canvas,cx-aw/2,y-3*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale,aw,ah);
+      const ay=y-3*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale;
+      if(motion){
+        // ノーツの動き: 矢印を3段に重ね(上ほど少し小さく)、明るさの波を下から上へ流す(0.7秒で1周)
+        const base=ctx.globalAlpha;
+        for(let i=2;i>=0;i--){const k=Math.pow(.86,i),bw=aw*k,bh=ah*k,wave=.5+.5*Math.cos(2*Math.PI*(frameNow/700-i/3));
+          ctx.globalAlpha=base*(i?(.3+.7*wave)*.85:.75+.25*wave);ctx.drawImage(sprite.canvas,cx-bw/2,ay-i*ah*.42,bw,bh);}
+        ctx.globalAlpha=base;
+      }else ctx.drawImage(sprite.canvas,cx-aw/2,ay,aw,ah);
     }
     ctx.globalAlpha=1;
   };
@@ -20241,6 +20253,14 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.lineWidth=1;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':'rgba(233,213,255,.56)';ctx.stroke();
     // 押さえている最中は帯を明るくする(2026-09-26。以前はSLIDEだけ何も変わらなかった)。外周の道すじをそのまま塗る
     if(pressed&&!failed){ctx.fillStyle='rgba(243,232,255,.30)';ctx.fill();}
+    // ノーツの動き: 帯の上を、判定ライン(画面の下)へ向かって光の波が流れる。明るさは画面の高さで決めるので(波長110px・0.5秒で1波長)、
+    // 区切りごとに上端と下端の明るさを縦のグラデーションでつなげば、区切りの継ぎ目で段にならない
+    if(motion&&!failed){
+      const glow=y=>{const wave=.5+.5*Math.cos(2*Math.PI*(y/110-frameNow/500));return wave>.3?((wave-.3)/.7*.3).toFixed(3):'0';};
+      quads.forEach(q=>{const a0=glow(q.y0),a1=glow(q.y1);if(a0==='0'&&a1==='0')return;
+        const g=ctx.createLinearGradient(0,q.y0,0,q.y1);g.addColorStop(0,`rgba(243,232,255,${a0})`);g.addColorStop(1,`rgba(243,232,255,${a1})`);
+        ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
+    }
     // チェックポイント＝そこで判定が入るところ。DOM版の[data-rhythm-slide-checkpoint]と同じ見た目。
     const checkpoints=geo.checkpoints;
     if(checkpoints&&checkpoints.length){
@@ -20559,7 +20579,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       }
       ctx.setTransform(dpr,0,0,dpr,0,0);
       ctx.clearRect(0,0,cssW,cssH);
-      frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';lightweight=!!options.lightweight;sizeScale=Number(options.sizeScale)||1;drawn=0;faces.length=0;
+      frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';motion=options.motion===true&&options.effect!=='MINIMAL'&&!options.lightweight;lightweight=!!options.lightweight;sizeScale=Number(options.sizeScale)||1;drawn=0;faces.length=0;
       // にじむ光(ブルーム)。オプションで入れた人だけ・WebGL で光を足し算で描いているときだけ。演出量「最小」と軽量モードでは使わない
       if(typeof ctx.setBloom==='function')ctx.setBloom(!!options.bloom&&additiveGlow&&effect!=='MINIMAL'&&!lightweight);
       return true;

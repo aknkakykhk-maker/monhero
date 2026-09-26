@@ -497,6 +497,11 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   noteBloom:false,
   // 道の演出(2026-09-26・ユーザー指示「重くなると思うから設定で切り替えられる前提で」)。拍の線・道のふちの光・奥のもやと光。既定は OFF
   roadFx:false,
+  // 判定の演出・ノーツの動き・コンボの節目の演出(2026-09-27・ユーザー指示「全部やって」。重くなりうるので設定で切り替え)。既定は OFF
+  //   judgmentFx … GREAT 以上で判定の文字の後ろに光がはじけ、文字が大きく弾む
+  //   noteMotionFx … フリックの矢印と SLIDE の帯に流れる光
+  //   comboMilestoneFx … 100コンボごとに「100 COMBO!」の帯と光の輪
+  judgmentFx:false, noteMotionFx:false, comboMilestoneFx:false,
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -557,6 +562,9 @@ const normalizeRhythmSettings = value => {
     noteDrawMode:RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode)?source.noteDrawMode:DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
     noteBloom:typeof source.noteBloom==='boolean'?source.noteBloom:DEFAULT_RHYTHM_SETTINGS.noteBloom,
     roadFx:typeof source.roadFx==='boolean'?source.roadFx:DEFAULT_RHYTHM_SETTINGS.roadFx,
+    judgmentFx:typeof source.judgmentFx==='boolean'?source.judgmentFx:DEFAULT_RHYTHM_SETTINGS.judgmentFx,
+    noteMotionFx:typeof source.noteMotionFx==='boolean'?source.noteMotionFx:DEFAULT_RHYTHM_SETTINGS.noteMotionFx,
+    comboMilestoneFx:typeof source.comboMilestoneFx==='boolean'?source.comboMilestoneFx:DEFAULT_RHYTHM_SETTINGS.comboMilestoneFx,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
