@@ -56,7 +56,9 @@ const MOTION_GRAM=4;
 // 動きの大きさの段(レーン)。0.5未満は「その場」
 const motionStep=delta=>{const size=Math.abs(delta);return size<.5?0:size<1.5?1:size<2.5?2:3;};
 // 区間の気になり点の重み(暫定。感想と合わせて直す)
-const CONCERN_WEIGHTS=Object.freeze({monotony:1,flickOff:3,flickCollide:5,sharpTurn:2,hardLanding:2,strained:1});
+const CONCERN_WEIGHTS=Object.freeze({monotony:1,flickOff:3,flickCollide:5,sharpTurn:2,hardLanding:2,strained:1,againstMelody:.5,overlapLook:.5,typeSwitch:.5});
+// 見やすさ・頭の負担の窓(ms)
+const OVERLAP_LOOK_MS=100,TYPE_SWITCH_MS=250;
 
 const noteCenter=note=>{const [lo,hi]=noteTouchSpan(note);return (lo+hi)/2;};
 const slideEndCenter=note=>{
@@ -95,7 +97,7 @@ const measureFeelInner=(chart,audio,options={})=>{
   const segments=new Map();
   const segment=ms=>{
     const index=segmentOf(ms);
-    if(!segments.has(index))segments.set(index,{index,fromMs:starts?starts[index]:index*SEGMENT_MS,notes:0,monotony:0,flickOff:0,flickCollide:0,sharpTurn:0,hardLanding:0,strained:0,details:[]});
+    if(!segments.has(index))segments.set(index,{index,fromMs:starts?starts[index]:index*SEGMENT_MS,notes:0,monotony:0,flickOff:0,flickCollide:0,sharpTurn:0,hardLanding:0,strained:0,againstMelody:0,overlapLook:0,typeSwitch:0,details:[]});
     return segments.get(index);
   };
   for(const note of notes)segment(timeOf(note.grid)).notes++;
@@ -194,6 +196,30 @@ const measureFeelInner=(chart,audio,options={})=>{
     }
   }
 
+  // --- 次を予想しやすいか・見やすさ・頭の負担(2026-09-26・最初にもらった案の6) ---
+  //   旋律と逆向きの動き: 前のノーツから旋律が上がった(下がった)のに、左(右)へ1レーン以上動く。
+  //     「音の高さが上がれば右へ」は形の語彙の約束ごと(3.2)で、逆に動くと次を予想しにくい
+  //   重なって見える: 0.1秒以内に続く2つのノーツ(同時押しの相方どうしは除く)が横に重なっている
+  //   種類の切り替わり: 0.25秒以内に続くノーツで種類(TAP / FLICK / HOLD / SLIDE)が変わる
+  const heightAt=(()=>{const map=new Map((audio.pitchCurve||[]).filter(p=>Number(p.clarity)>=.5&&Number(p.hz)>0).map(p=>[p.grid,Number(p.height)]));return grid=>map.has(grid)?map.get(grid):null;})();
+  let againstMelody=0,melodyMoves=0,overlapLook=0,typeSwitch=0;
+  for(let i=1;i<flow.length;i++){
+    const a=flow[i-1],b=flow[i],ha=heightAt(a.grid),hb=heightAt(b.grid);
+    if(ha==null||hb==null||Math.abs(hb-ha)<.08||Math.abs(b.lane-a.lane)<1)continue;
+    melodyMoves++;
+    if(Math.sign(hb-ha)!==Math.sign(b.lane-a.lane)){againstMelody++;segment(b.ms).againstMelody++;}
+  }
+  const main=hits.filter(hit=>!hit.note.chord);
+  for(let i=1;i<main.length;i++){
+    const a=main[i-1],b=main[i],gap=b.ms-a.ms;
+    if(gap<=0)continue;
+    if(gap<=OVERLAP_LOOK_MS){
+      const [alo,ahi]=noteTouchSpan(a.note),[blo,bhi]=noteTouchSpan(b.note);
+      if(Math.min(ahi,bhi)-Math.max(alo,blo)>0){overlapLook++;const seg=segment(b.ms);seg.overlapLook++;seg.details.push('続くノーツが重なって見える');}
+    }
+    if(gap<=TYPE_SWITCH_MS&&a.note.type!==b.note.type){typeSwitch++;segment(b.ms).typeSwitch++;}
+  }
+
   // --- 区間の気になり点 ---
   const list=[...segments.values()].sort((a,b)=>a.index-b.index).map(seg=>{
     const raw=Object.entries(CONCERN_WEIGHTS).reduce((sum,[key,weight])=>sum+weight*(seg[key]||0),0);
@@ -210,6 +236,8 @@ const measureFeelInner=(chart,audio,options={})=>{
     sideFlick:{count:sideFlicks.count,naturalRate:sideFlicks.count?round(sideFlicks.natural/sideFlicks.count):null,
       collide:sideFlicks.collide,basis:{next:sideFlicks.byNext,incoming:sideFlicks.byIncoming,outward:sideFlicks.byOutward,undecided:sideFlicks.undecided},
       notes:sideFlicks.notes},
+    readability:{againstMelodyRate:melodyMoves?round(againstMelody/melodyMoves):null,melodyMoves,
+      overlapLookPerMinute:round(overlapLook/minutes,2),typeSwitchPerMinute:round(typeSwitch/minutes,2)},
     handFlow:{sharpTurnsPerMinute:round(sharpTurns/minutes,2),
       hardLandings,slideEnds,hardLandingRate:slideEnds?round(hardLandings/slideEnds):null},
     strained:sim.strained,impossible:sim.impossible,
@@ -254,7 +282,7 @@ const printReport=(report,{summaryOnly=false}={})=>{
     if(!m.worst.length)continue;
     console.log(`  ${difficulty} の気になる区間(暫定の重み・上位${m.worst.length})`);
     for(const seg of m.worst){
-      const counts=Object.keys(CONCERN_WEIGHTS).filter(key=>seg[key]).map(key=>`${({monotony:'単調',flickOff:'向き',flickCollide:'ぶつかる',sharpTurn:'切り返し',hardLanding:'着地',strained:'忙しい'})[key]}${seg[key]}`).join(' ');
+      const counts=Object.keys(CONCERN_WEIGHTS).filter(key=>seg[key]).map(key=>`${({monotony:'単調',againstMelody:'旋律と逆',overlapLook:'重なり',typeSwitch:'種類の切替',flickOff:'向き',flickCollide:'ぶつかる',sharpTurn:'切り返し',hardLanding:'着地',strained:'忙しい'})[key]}${seg[key]}`).join(' ');
       console.log(`    ${clock(seg.fromMs)}〜${clock(seg.fromMs+SEGMENT_MS)}  点${seg.concern}  ${counts}${seg.details.length?`  （${seg.details.slice(0,3).join('／')}）`:''}`);
     }
   }
