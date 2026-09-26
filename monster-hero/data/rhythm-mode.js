@@ -19331,8 +19331,32 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
 // 公開フラグ RELEASE_FLAGS.rhythmCanvasNotes と、デバッグ画面の上書き(mh_rhythm_canvas_v1)で DOM 版と切り替える。
 const RHYTHM_CANVAS_KEY='mh_rhythm_canvas_v1';
 const rhythmCanvasNotesPreference=()=>{try{if(typeof localStorage==='undefined')return '';const value=localStorage.getItem(RHYTHM_CANVAS_KEY);return value==='canvas'||value==='dom'||value==='webgl'?value:'';}catch{return '';}};
-// 検証用の WebGL で描くか(デバッグ画面で「WebGL」を選んだときだけ。2026-09-26)
-const rhythmWebglNotesActive=()=>rhythmCanvasNotesPreference()==='webgl';
+// 端末にちゃんとした GPU があるか(描画方式「自動」の見極め。2026-09-26)。
+// GPU が弱い・使えない端末では、ブラウザが CPU で WebGL を肩代わりする(SwiftShader など)。それだと Canvas より重いので使わない。
+// ★本番の canvas では調べない。一度 WebGL を作った canvas からは 2D を取り出せないため、見えない試し用の canvas で1回だけ調べ、結果を覚えておく。
+let rhythmWebglGpuUsableCache=null;
+const rhythmWebglGpuUsable=()=>{
+  if(rhythmWebglGpuUsableCache!==null)return rhythmWebglGpuUsableCache;
+  let ok=false;
+  try{
+    if(typeof document!=='undefined'){
+      const probe=document.createElement('canvas');probe.width=probe.height=1;
+      const gl=probe.getContext('webgl',{failIfMajorPerformanceCaveat:true,stencil:true})||probe.getContext('experimental-webgl',{failIfMajorPerformanceCaveat:true,stencil:true});
+      if(gl){
+        const info=gl.getExtension('WEBGL_debug_renderer_info');
+        const name=String(info?gl.getParameter(info.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER)||'');
+        ok=!/swiftshader|llvmpipe|softpipe|software|basic render/i.test(name)&&!!gl.getContextAttributes()?.stencil;
+        try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}
+      }
+    }
+  }catch(e){ok=false;}
+  rhythmWebglGpuUsableCache=ok;
+  return ok;
+};
+// WebGL で描くか(2026-09-26)。デバッグ画面の「ノーツの描き方(検証用)」を選んでいればそちらに従う。
+// 選んでいなければ音ゲー設定の「描画方式」(noteDrawMode)で決める: WebGL(LIGHT)は必ず、自動(AUTO)は GPU があるときだけ、Canvas(STANDARD)は使わない。
+const rhythmWebglNotesActive=noteDrawMode=>{const pref=rhythmCanvasNotesPreference();if(pref)return pref==='webgl';
+  if(noteDrawMode==='LIGHT')return true;if(noteDrawMode==='AUTO')return rhythmWebglGpuUsable();return false;};
 const rhythmCanvasNotesSetPreference=value=>{
   const next=value==='canvas'||value==='dom'||value==='webgl'?value:'';
   try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_CANVAS_KEY,next);else localStorage.removeItem(RHYTHM_CANVAS_KEY);}}catch{}
@@ -19484,6 +19508,12 @@ const rhythmCreateGL2D=canvas=>{
     'for(int i=1;i<6;i++){if(i>=uStops)break;float t0=uStopT[i-1];float t1=uStopT[i];if(t>=t0){float k=t1>t0?clamp((t-t0)/(t1-t0),0.0,1.0):1.0;c=mix(uStopC[i-1],uStopC[i],k);}}return c;}'+
     'void main(){vec4 c;if(uMode==2){c=texture2D(uTex,vUv);gl_FragColor=c*uAlpha;}else{if(uMode==1)c=grad();else c=uColor;gl_FragColor=vec4(c.rgb*c.a,c.a)*uAlpha;}}';
   let prog=null,loc=null,buf=null,lost=false,textures=new WeakMap(),stencilRef=0,viewW=0,viewH=0;
+  // GPU へ送った値の覚え(2026-09-26)。同じ値を毎回送り直さない(スマホのブラウザは命令1回ごとの手間が大きい)。
+  // 作り直したとき(init)は忘れて、次の描画で全部送り直す
+  let sentM0=[NaN,NaN,NaN],sentM1=[NaN,NaN,NaN],sentViewW=NaN,sentViewH=NaN,sentAlpha=NaN,sentMode=NaN,sentColor=[NaN,NaN,NaN,NaN],sentTex=null,sentStencil=NaN;
+  const resetSent=()=>{sentM0=[NaN,NaN,NaN];sentM1=[NaN,NaN,NaN];sentViewW=sentViewH=sentAlpha=sentMode=sentStencil=NaN;sentColor=[NaN,NaN,NaN,NaN];sentTex=null;};
+  // 三角形へ分けるとき、重なりうる分け方(逃げ道の扇)を使ったか。使ったときだけステンシルで「1画素1度」を守る
+  let triOverlap=false;
   const compile=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s)||'shader');return s;};
   const init=()=>{
     prog=gl.createProgram();gl.attachShader(prog,compile(gl.VERTEX_SHADER,VS));gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,FS));gl.linkProgram(prog);
@@ -19496,8 +19526,8 @@ const rhythmCreateGL2D=canvas=>{
     gl.enableVertexAttribArray(loc.aUv);gl.vertexAttribPointer(loc.aUv,2,gl.FLOAT,false,16,8);
     gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.STENCIL_TEST);gl.stencilOp(gl.KEEP,gl.KEEP,gl.REPLACE);
-    gl.uniform1i(loc.uTex,0);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
-    textures=new WeakMap();stencilRef=0;viewW=viewH=0;
+    gl.uniform1i(loc.uTex,0);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.activeTexture(gl.TEXTURE0);
+    textures=new WeakMap();stencilRef=0;viewW=viewH=0;resetSent();
   };
   try{init();}catch(e){return null;}
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;},false);
@@ -19521,33 +19551,64 @@ const rhythmCreateGL2D=canvas=>{
   // 画面の大きさ(ほんとうの画素)に合わせる
   const syncView=()=>{if(viewW!==canvas.width||viewH!==canvas.height){viewW=canvas.width;viewH=canvas.height;gl.viewport(0,0,viewW,viewH);}};
   let data=new Float32Array(4096);
-  const ensure=n=>{if(data.length<n){let size=data.length;while(size<n)size*=2;data=new Float32Array(size);}};
+  // ★大きくするときは、それまでに積んだ三角形を写してから替える(写さないと、点の多い形で前半が消える)
+  const ensure=count=>{if(data.length<count){let size=data.length;while(size<count)size*=2;const next=new Float32Array(size);next.set(data.subarray(0,n*4));data=next;}};
+  // GPU 側の入れ物も使い回す。足りないときだけ大きく取り直す
+  let bufFloats=0;
+  // グラデーションの色と位置も、塗るたびに作らず使い回す
+  const gradColors=new Float32Array(24),gradTimes=new Float32Array(6);
   // 1回ぶんの描画。verts は [x,y,u,v,...] の三角形の並び
-  const flush=(count,mode,paint,texture)=>{
+  const flush=(count,mode,paint,texture,needStencil=true)=>{
     if(lost||!prog||!count)return;
     syncView();
-    gl.uniform3f(loc.uM0,m[0],m[2],m[4]);gl.uniform3f(loc.uM1,m[1],m[3],m[5]);gl.uniform2f(loc.uView,viewW,viewH);
-    gl.uniform1f(loc.uAlpha,Math.max(0,Math.min(1,alpha)));gl.uniform1i(loc.uMode,mode);
-    if(mode===0){const c=parseColor(paint);gl.uniform4f(loc.uColor,c[0],c[1],c[2],c[3]);}
+    if(m[0]!==sentM0[0]||m[2]!==sentM0[1]||m[4]!==sentM0[2]){gl.uniform3f(loc.uM0,m[0],m[2],m[4]);sentM0=[m[0],m[2],m[4]];}
+    if(m[1]!==sentM1[0]||m[3]!==sentM1[1]||m[5]!==sentM1[2]){gl.uniform3f(loc.uM1,m[1],m[3],m[5]);sentM1=[m[1],m[3],m[5]];}
+    if(viewW!==sentViewW||viewH!==sentViewH){gl.uniform2f(loc.uView,viewW,viewH);sentViewW=viewW;sentViewH=viewH;}
+    const a=Math.max(0,Math.min(1,alpha));if(a!==sentAlpha){gl.uniform1f(loc.uAlpha,a);sentAlpha=a;}
+    if(mode!==sentMode){gl.uniform1i(loc.uMode,mode);sentMode=mode;}
+    if(mode===0){const c=parseColor(paint);if(c[0]!==sentColor[0]||c[1]!==sentColor[1]||c[2]!==sentColor[2]||c[3]!==sentColor[3]){gl.uniform4f(loc.uColor,c[0],c[1],c[2],c[3]);sentColor=c.slice();}}
     else if(mode===1){
       const stops=paint.stops.slice().sort((a,b)=>a[0]-b[0]).slice(0,6);
-      const cs=new Float32Array(24),ts=new Float32Array(6);
+      const cs=gradColors,ts=gradTimes;cs.fill(0);ts.fill(0);
       stops.forEach(([t,color],i)=>{const c=parseColor(color);cs.set(c,i*4);ts[i]=t;});
       gl.uniform2f(loc.uG0,paint.x0,paint.y0);gl.uniform2f(loc.uG1,paint.x1,paint.y1);gl.uniform4fv(loc.uStopC,cs);gl.uniform1fv(loc.uStopT,ts);gl.uniform1i(loc.uStops,Math.max(1,stops.length));
-    }else if(mode===2){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);}
-    // 同じ画素を1度しか塗らない(1回ごとに違う番号をステンシルへ書く。255回で消して数え直す)
-    stencilRef++;if(stencilRef>255){gl.clear(gl.STENCIL_BUFFER_BIT);stencilRef=1;}
-    gl.stencilFunc(gl.NOTEQUAL,stencilRef,0xff);
-    gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,data.subarray(0,count*4),gl.STREAM_DRAW);
+    }else if(mode===2){if(texture!==sentTex){gl.bindTexture(gl.TEXTURE_2D,texture);sentTex=texture;}}
+    // 同じ画素を1度しか塗らない(1回ごとに違う番号をステンシルへ書く。255回で消して数え直す)。
+    // ★三角形が重ならない描画(絵の貼り付け・1つの形の塗り)では要らないので、その間は「いつも通す」にしておく
+    //   (そのとき書かれる 0 は、次に線を引くときの新しい番号とは重ならない)
+    if(needStencil){stencilRef++;if(stencilRef>255){gl.clear(gl.STENCIL_BUFFER_BIT);stencilRef=1;}gl.stencilFunc(gl.NOTEQUAL,stencilRef,0xff);sentStencil=stencilRef;}
+    else if(sentStencil!==0){gl.stencilFunc(gl.ALWAYS,0,0xff);sentStencil=0;}
+    // 入れ物(buf)は1つだけなので、準備のときに結び付けたまま使う
+    if(count*4>bufFloats){bufFloats=data.length;gl.bufferData(gl.ARRAY_BUFFER,bufFloats*4,gl.DYNAMIC_DRAW);}
+    gl.bufferSubData(gl.ARRAY_BUFFER,0,data.subarray(0,count*4));
     gl.drawArrays(gl.TRIANGLES,0,count);
   };
   let n=0;
-  const tri=(x1,y1,x2,y2,x3,y3)=>{ensure((n+3)*4);data.set([x1,y1,0,0,x2,y2,0,0,x3,y3,0,0],n*4);n+=3;};
+  // 三角形1つ。作業用の配列を作らず、じかに書き込む(毎フレーム数千回呼ばれるため)
+  const tri=(x1,y1,x2,y2,x3,y3)=>{ensure((n+3)*4);const o=n*4;
+    data[o]=x1;data[o+1]=y1;data[o+2]=0;data[o+3]=0;data[o+4]=x2;data[o+5]=y2;data[o+6]=0;data[o+7]=0;data[o+8]=x3;data[o+9]=y3;data[o+10]=0;data[o+11]=0;n+=3;};
   const quad=(ax,ay,bx,by,cx,cy,dx,dy)=>{tri(ax,ay,bx,by,cx,cy);tri(ax,ay,cx,cy,dx,dy);};
-  const disc=(x,y,r)=>{const seg=Math.max(8,Math.min(24,Math.ceil(r*3)));for(let i=0;i<seg;i++){const a0=i/seg*Math.PI*2,a1=(i+1)/seg*Math.PI*2;tri(x,y,x+Math.cos(a0)*r,y+Math.sin(a0)*r,x+Math.cos(a1)*r,y+Math.sin(a1)*r);}};
+  // 丸。分け方(8〜24)ごとに単位円の点を一度だけ計算して使い回す
+  const unitCircles=new Map();
+  const unitCircle=seg=>{let t=unitCircles.get(seg);if(!t){t=new Float32Array((seg+1)*2);for(let i=0;i<=seg;i++){const a=i/seg*Math.PI*2;t[i*2]=Math.cos(a);t[i*2+1]=Math.sin(a);}unitCircles.set(seg,t);}return t;};
+  const disc=(x,y,r)=>{const seg=Math.max(8,Math.min(24,Math.ceil(r*3))),t=unitCircle(seg);for(let i=0;i<seg;i++)tri(x,y,x+t[i*2]*r,y+t[i*2+1]*r,x+t[i*2+2]*r,y+t[i*2+3]*r);};
   // 単純な多角形を三角形に分ける(耳を切り落とす方式。ノーツの形は点が少ないので十分)
+  // 凸形か(曲がる向きがずっと同じで、x・y の進む向きが2回までしか入れ替わらない)。ノーツの形はほとんどこれ
+  const isConvex=pts=>{
+    const count=pts.length/2;let sign=0,flipsX=0,flipsY=0,lastDx=0,lastDy=0;
+    for(let i=0;i<count;i++){
+      const j=(i+1)%count,k=(i+2)%count,dx=pts[j*2]-pts[i*2],dy=pts[j*2+1]-pts[i*2+1];
+      const cr=dx*(pts[k*2+1]-pts[j*2+1])-dy*(pts[k*2]-pts[j*2]);
+      if(cr>1e-9){if(sign<0)return false;sign=1;}else if(cr<-1e-9){if(sign>0)return false;sign=-1;}
+      if(dx!==0){if(lastDx!==0&&(dx>0)!==(lastDx>0))flipsX++;lastDx=dx;}
+      if(dy!==0){if(lastDy!==0&&(dy>0)!==(lastDy>0))flipsY++;lastDy=dy;}
+    }
+    return flipsX<=2&&flipsY<=2;
+  };
   const triangulate=pts=>{
     const count=pts.length/2;if(count<3)return;
+    // 凸形は1点から扇に分けるだけでよい(塗る範囲は耳を切る方式と同じ。1画素を1度しか塗らないのもステンシルが守る)
+    if(isConvex(pts)){for(let k=1;k<count-1;k++)tri(pts[0],pts[1],pts[k*2],pts[k*2+1],pts[k*2+2],pts[k*2+3]);return;}
     const idx=[];for(let i=0;i<count;i++)idx.push(i);
     let area=0;for(let i=0;i<count;i++){const j=(i+1)%count;area+=pts[i*2]*pts[j*2+1]-pts[j*2]*pts[i*2+1];}
     const ccw=area>0;
@@ -19568,12 +19629,12 @@ const rhythmCreateGL2D=canvas=>{
       if(!cut)break;
     }
     if(idx.length===3)tri(X(idx[0]),Y(idx[0]),X(idx[1]),Y(idx[1]),X(idx[2]),Y(idx[2]));
-    else if(idx.length>3){for(let k=1;k<idx.length-1;k++)tri(X(idx[0]),Y(idx[0]),X(idx[k]),Y(idx[k]),X(idx[k+1]),Y(idx[k+1]));}
+    else if(idx.length>3){triOverlap=true;for(let k=1;k<idx.length-1;k++)tri(X(idx[0]),Y(idx[0]),X(idx[k]),Y(idx[k]),X(idx[k+1]),Y(idx[k+1]));}
   };
   const textureOf=source=>{
     let entry=textures.get(source);
     if(entry)return entry;
-    const tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);
+    const tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);sentTex=tex;
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     try{gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);}catch(e){return null;}
@@ -19634,9 +19695,10 @@ const rhythmCreateGL2D=canvas=>{
     },
     rect(x,y,w,h){this.moveTo(x,y);point(x+w,y);point(x+w,y+h);point(x,y+h);this.closePath();},
     fill(){
-      if(lost)return;n=0;
-      for(const sp of subpaths){if(sp.pts.length>=6)triangulate(sp.pts);}
-      const paint=fillStyle;flush(n,paint&&typeof paint==='object'&&paint.stops?1:0,paint);
+      if(lost)return;n=0;triOverlap=false;let shapes=0;
+      for(const sp of subpaths){if(sp.pts.length>=6){triangulate(sp.pts);shapes++;}}
+      // 形が2つ以上か、重なりうる分け方をしたときだけ「1画素1度」を守る
+      const paint=fillStyle;flush(n,paint&&typeof paint==='object'&&paint.stops?1:0,paint,shapes>1||triOverlap);
     },
     stroke(){
       if(lost)return;n=0;const hw=lineWidth/2;
@@ -19657,7 +19719,7 @@ const rhythmCreateGL2D=canvas=>{
       }
       const paint=strokeStyle;flush(n,paint&&typeof paint==='object'&&paint.stops?1:0,paint);
     },
-    fillRect(x,y,w,h){if(lost||!(w>0)||!(h>0))return;n=0;quad(x,y,x+w,y,x+w,y+h,x,y+h);const paint=fillStyle;flush(n,paint&&typeof paint==='object'&&paint.stops?1:0,paint);},
+    fillRect(x,y,w,h){if(lost||!(w>0)||!(h>0))return;n=0;quad(x,y,x+w,y,x+w,y+h,x,y+h);const paint=fillStyle;flush(n,paint&&typeof paint==='object'&&paint.stops?1:0,paint,false);},
     createLinearGradient(x0,y0,x1,y1){const g={x0,y0,x1,y1,stops:[],addColorStop(t,color){this.stops.push([Math.max(0,Math.min(1,Number(t)||0)),color]);}};return g;},
     drawImage(source,...args){
       if(lost||!source)return;
@@ -19670,10 +19732,14 @@ const rhythmCreateGL2D=canvas=>{
       const u0=sx/entry.w,v0=sy/entry.h,u1=(sx+sw)/entry.w,v1=(sy+sh)/entry.h;
       ensure(24);n=0;
       data.set([dx,dy,u0,v0,dx+dw,dy,u1,v0,dx+dw,dy+dh,u1,v1,dx,dy,u0,v0,dx+dw,dy+dh,u1,v1,dx,dy+dh,u0,v1],0);n=6;
-      flush(n,2,null,entry.tex);
+      flush(n,2,null,entry.tex,false);
     },
     // 焼き直した画像(同じ canvas を描き直したもの)を GPU へ渡し直す
-    forgetImage(source){const entry=textures.get(source);if(entry){gl.deleteTexture(entry.tex);textures.delete(source);}},
+    forgetImage(source){const entry=textures.get(source);if(entry){if(sentTex===entry.tex)sentTex=null;gl.deleteTexture(entry.tex);textures.delete(source);}},
+    // 絵を先に GPU へ渡しておく(演奏の途中で初めて出た瞬間に渡すと、そこで一瞬引っかかるため)
+    preloadImage(source){if(!lost&&source)textureOf(source);},
+    // 使い終えたら片付ける。iPhone などは同時に持てる WebGL の数に上限があり、曲ごとに作ると古いものから消されていく
+    dispose(){try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
   };
   return ctx;
 };
@@ -20233,9 +20299,11 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);}sparkDotSprite();}
       // 叩いたときの光(canvas で描くときだけ)
       if(effect!=='MINIMAL'&&!options.lightweight)warmHitSprites();
+      // WebGL のときは、焼いた絵を演奏の前に GPU へ渡しておく
+      if(ctx&&backend==='webgl'&&typeof ctx.preloadImage==='function')for(const sprite of sprites.values())if(sprite&&sprite.canvas)ctx.preloadImage(sprite.canvas);
       return sprites.size-before;
     },
-    release(){canvas=null;ctx=null;sprites.clear();hitArea=null;hitSlots.fill(null);},
+    release(){if(ctx&&backend==='webgl'&&typeof ctx.dispose==='function')ctx.dispose();canvas=null;ctx=null;backend='2d';sprites.clear();hitArea=null;hitSlots.fill(null);},
     // 叩いたときの光をこの canvas で描くか(検証用・WebGL のときだけ演奏画面が area を渡す)。null で DOM の部品へ戻す
     enableHits(area){hitArea=area&&ctx?area:null;hitSlots.fill(null);hitNext=0;if(hitArea)readHitFilters(hitArea);},
     hitsFor(area){return !!hitArea&&!!ctx&&area===hitArea;},

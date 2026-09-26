@@ -118,22 +118,20 @@ const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
 //     whileEvent  … いま開催しているイベントの対象曲(開催していないあいだは押せない)
 //     favorite    … お気に入りに入れた曲(曲えらびの保存値の favorites)
 //   id は保存値になるので、増やすことはあっても名前は変えない('all' と 'event' は前からある)。
+// ★同じ日のうちに、常に並べるタブをやめて「押して選ぶ」形へ戻した(ユーザー指示
+//   「ジャンルは常時出すより押して選べるタイプにしたい / いまのとこはイベントとお気に入り以外は作らなくていい」)。
+//   'original' / 'collab' は半日だけ出していたので、保存値に残っている人がいる。一覧に無い id は
+//   normalizeRhythmSelectView が 'all' へ倒すので、消しても一覧が空になる人は出ない。
+//   また出すときは同じ id で足し直す(別の意味で使い回さない)。
 const RHYTHM_GENRES = Object.freeze([
   Object.freeze({ id:'all',      label:'ALL',        note:'遊べる曲を全部' }),
-  Object.freeze({ id:'original', label:'オリジナル', note:'モンスターヒーローのために作られた曲', tag:'original' }),
-  Object.freeze({ id:'collab',   label:'コラボ',     note:'ほかの作り手と一緒に届けている曲', tag:'collab' }),
   Object.freeze({ id:'event',    label:'イベント',   note:'いま開催しているイベントの対象曲', whileEvent:true }),
   Object.freeze({ id:'favorite', label:'お気に入り', note:'♡を付けた曲', favorite:true }),
 ]);
 // 曲に付ける印(ジャンルの tag)。書いていない曲は 'original'。
-// ★曲を足したり、振り分けを変えたりするときは、ここへ1行足す・直すだけでよい。
-//   コラボの4曲は、更新履歴とイベントの告知に作り手の名前が出ている曲(2026-09-26。ユーザーの確認待ち)
-const RHYTHM_SONG_GENRE_TAGS = Object.freeze({
-  mf_ichika_mix: Object.freeze(['collab']),
-  pandora_boss_remix: Object.freeze(['collab']),
-  the_city_beneath_the_comets: Object.freeze(['collab']),
-  mou_hitotsu_no_sekai_e: Object.freeze(['collab']),
-});
+// ★tag で見分けるジャンルを足すときは、上の一覧へ1件足して、ここへ曲ごとの印を1行ずつ書く。
+//   例: mf_ichika_mix: Object.freeze(['collab'])
+const RHYTHM_SONG_GENRE_TAGS = Object.freeze({});
 const rhythmSongGenreTags = song => {
   const tags = song && RHYTHM_SONG_GENRE_TAGS[song.songId];
   return Array.isArray(tags) && tags.length ? tags : ['original'];
@@ -325,6 +323,17 @@ const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['AUTO','自動'],['HIGH','�
 // 「自動」(2026-09-26・ユーザー指示「画質の自動を入れて」)。演奏中に、描くのが間に合わなかったフレームが
 // 3秒のうち8%を超えたら一段下げる(高→標準→省電力)。下げた段は、アプリを開いているあいだ次の曲にも引き継ぐ
 // (保存はしない。開き直すと「高」から)。上げ直しはしない(上げ下げを繰り返すと、そのたびに描き直しで詰まるため)。
+// 描画方式(2026-09-26・ユーザー指示「設定で選べるようにしてほしい」)。
+// 名前は一度「ふつう/軽い」にしたが、「表現としていまいち / 専門用語使っていいから説明で補完しよう」(同日)で
+// ボタンは「Canvas/WebGL」にし、何で描くのかは説明に書く。保存する値(STANDARD/LIGHT)は変えない(選んだ人の設定をそのまま引き継ぐ)。
+// LIGHT＝ノーツと叩いたときの光を WebGL で描く(GPU にまとめて任せる)。見た目は Canvas と同じ。
+// 既定は Canvas(これまでの描き方)。WebGL が使えない端末・途中で使えなくなったときは、自動で「ふつう」の描き方に戻す。
+// デバッグ画面の「ノーツの描き方(検証用)」を選んでいるときは、そちらが優先される(rhythmWebglNotesActive)。
+// 「自動」(2026-09-26・ユーザー指示「WebGLをデフォルトにしたい」)。端末にちゃんとした GPU があれば WebGL、
+// 無ければ(ブラウザが CPU で WebGL を肩代わりしている端末など)Canvas で描く。見極めは rhythmWebglGpuUsable。
+// ★既定は「自動」。すでに保存した STANDARD(Canvas)・LIGHT(WebGL)は意味を変えずにそのまま使う(移行はしない)。
+const RHYTHM_NOTE_DRAW_MODES = Object.freeze(['AUTO','STANDARD','LIGHT']);
+const RHYTHM_NOTE_DRAW_LABELS = Object.freeze([['AUTO','自動'],['STANDARD','Canvas'],['LIGHT','WebGL']]);
 const RHYTHM_RENDER_QUALITY_STEPS = Object.freeze(['HIGH','STANDARD','SAVE']);
 const RHYTHM_AUTO_QUALITY_WINDOW_MS = 3000;
 const RHYTHM_AUTO_QUALITY_SLOW_RATIO = .08;
@@ -481,6 +490,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   //   「もしもとより操作性変わるならもとのやつをデフォルトに」(2026-09-24・ユーザー指示)で戻した
   frameRateMode:'DEVICE',
   renderQuality:'HIGH',
+  // 描画方式(2026-09-26)。既存の保存値に無い人は、読み込み時に既定(自動)で補われる
+  noteDrawMode:'AUTO',
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -538,6 +549,7 @@ const normalizeRhythmSettings = value => {
     quietDuringPlay:bool('quietDuringPlay'),
     frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
     renderQuality:RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality)?source.renderQuality:DEFAULT_RHYTHM_SETTINGS.renderQuality,
+    noteDrawMode:RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode)?source.noteDrawMode:DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,

@@ -738,9 +738,10 @@ check('STEP3の更新履歴も開発メモとして隠す',(()=>{
 })());
 
 // --- ビートP STEP4（正式公開・表示・案内） ---
-check('曲選択の獲得案内は開催中と期間外で出し分ける',
+// 期間外の「いつでも貯まります」の帯は 2026-09-26 に外した(ユーザー指示「ここに書く必要はない / スペース無駄にしてる」)
+check('曲選択の獲得案内は開催中だけ出す(期間外の帯は出さない)',
   screen.includes("const beatPointEvent=beatPointReleased?rhythmLimitedEventAt(Date.now()):null;")
-  &&screen.includes('data-rhythm-beat-point-always')
+  &&!screen.includes('<div data-rhythm-beat-point-always')
   &&screen.includes('data-rhythm-beat-point-active')
   &&screen.includes('ビートP獲得期間中'));
 check('リザルトは獲得したときだけビートPと対象曲倍率を出す',
