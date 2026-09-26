@@ -313,12 +313,14 @@ const rhythmCreateStageGL=canvas=>{
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.activeTexture(gl.TEXTURE0);
   const lasers=new Float32Array(16),laserColors=new Float32Array(16);
+  // GPU の時間を測る(デバッグの「性能計測」が ON のときだけ。rhythmCreateGpuTimer は data/rhythm-mode.js。検査で部品だけ切り出したときは無い)
+  const gpuTimer=typeof rhythmCreateGpuTimer==='function'?rhythmCreateGpuTimer(gl,'stage'):null;
   return {
     setArt(source){try{gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,tex);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);artVersion++;return true;}catch(e){return false;}},
     // w,h … CSS px / scale … 画素密度 / timeMs … 動きの時刻 / artA … ジャケットの濃さ / fx … サーチライトと粒を出すか / tier … 色の段
     // live … 「ライブ」のときだけ {beats:曲の頭から数えた拍(小数), bar:1小節の拍数, pulse:拍の頭の光(0..1)}。無ければ「派手」と同じ
-    draw({w,h,scale,timeMs,artA,fx,tier,live=null}){
-      if(gl.isContextLost())return;
+    draw(options){if(gl.isContextLost())return;if(gpuTimer)gpuTimer.begin();try{this.drawFrame(options);}finally{if(gpuTimer)gpuTimer.end();}},
+    drawFrame({w,h,scale,timeMs,artA,fx,tier,live=null}){
       const pw=Math.max(1,Math.round(w*scale)),ph=Math.max(1,Math.round(h*scale));
       if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;}
       gl.viewport(0,0,pw,ph);
@@ -380,7 +382,7 @@ const rhythmCreateStageGL=canvas=>{
       if(liveOn){gl.useProgram(prog);gl.uniform1f(u.uMode,2);gl.blendFunc(gl.ONE,gl.ONE);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);}
       gl.disable(gl.BLEND);
     },
-    release(){try{gl.deleteTexture(tex);gl.deleteTexture(staticTex);gl.deleteFramebuffer(fbo);gl.deleteBuffer(buf);gl.deleteProgram(prog);gl.deleteProgram(sparkProg);gl.deleteShader(vs);gl.deleteShader(fs);gl.deleteShader(svs);gl.deleteShader(sfs);const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
+    release(){try{if(gpuTimer)gpuTimer.dispose();gl.deleteTexture(tex);gl.deleteTexture(staticTex);gl.deleteFramebuffer(fbo);gl.deleteBuffer(buf);gl.deleteProgram(prog);gl.deleteProgram(sparkProg);gl.deleteShader(vs);gl.deleteShader(fs);gl.deleteShader(svs);gl.deleteShader(sfs);const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
   };
 };
 // 画質「自動」で下げた段。アプリを開いているあいだだけ覚えておき、次の曲もこの段から始める(保存はしない)

@@ -394,7 +394,10 @@ const RHYTHM_PERF=(()=>{
     judgeCount:0,judgeSum:0,judgeMax:0,monsterCount:0,monsterSum:0,monsterMax:0,
     // 大きく飛んだフレームを「起きたときに1件ずつ」控える。
     // 平均や最大だけだと「たまに起きる」ものは埋もれる(実機で4回とも2.0msだった)。
-    spikes:[],lastMonsterAtMs:0});
+    spikes:[],lastMonsterAtMs:0,
+    // GPU で描くのにかかった時間(2026-09-27)。notes … ノーツの canvas(WebGL のとき) / stage … ライブ背景(WebGL のとき)。
+    // supported … その端末で測れるか(null=まだ描いていない)。測れるのは EXT_disjoint_timer_query がある端末だけ(iPhone の Safari には無い)
+    gpu:{notes:{n:0,sum:0,max:0,supported:null},stage:{n:0,sum:0,max:0,supported:null}}});
   let on=false,last=null,acc=zero();
   const api={
     get enabled(){return on;},
@@ -439,6 +442,9 @@ const RHYTHM_PERF=(()=>{
       acc.pendingScanned=0;acc.pendingDrawn=0;acc.pendingTickMs=0;acc.pendingHeadSkipped=0;acc.pendingDelayMs=0;
       last=Number.isFinite(t)?t:null;
     },
+    // GPU で描くのにかかった時間(rhythmCreateGpuTimer から。数フレーム遅れて届く)
+    gpuSupport(kind,ok){if(!on||!acc.gpu[kind])return;acc.gpu[kind].supported=!!ok;},
+    gpu(kind,ms){if(!on||!acc.gpu[kind])return;const v=Number(ms);if(!Number.isFinite(v)||v<0)return;const g=acc.gpu[kind];g.n++;g.sum+=v;if(v>g.max)g.max=v;},
     // tickのノーツ走査から呼ぶ。ONのときだけ足し込む(OFFなら即return)
     notes(scanned,drawn,headSkipped,narrowed){if(!on)return;acc.pendingScanned=Number(scanned)||0;acc.pendingDrawn=Number(drawn)||0;
       acc.pendingHeadSkipped=Number(headSkipped)||0;if(narrowed!==undefined)acc.narrowed=!!narrowed;},
@@ -491,8 +497,10 @@ const RHYTHM_PERF=(()=>{
     snapshot(){
       const frames=acc.frames;
       const per=value=>frames?value/frames:0;
+      const gpuOf=kind=>{const g=acc.gpu[kind];return {supported:g.supported,count:g.n,avgMs:g.n?g.sum/g.n:0,maxMs:g.max};};
       return {
         frames,
+        gpuNotes:gpuOf('notes'),gpuStage:gpuOf('stage'),
         avgMs:per(acc.totalMs),
         fps:acc.totalMs?1000*frames/acc.totalMs:0,
         maxMs:acc.maxMs,
@@ -532,6 +540,23 @@ const RHYTHM_PERF=(()=>{
   api.restore();
   return api;
 })();
+// GPU で描くのにかかった時間を測る(デバッグの「性能計測」を ON にしたときだけ・2026-09-27・ユーザー指示「やれること全部」)。
+// WebGL の EXT_disjoint_timer_query を使う(Android の Chrome などにある。iPhone の Safari には無い)。
+// 結果は数フレーム遅れて届くので、届いたものから RHYTHM_PERF.gpu へ渡す。GPU が途中で別の仕事に切り替わった(disjoint)回は捨てる。
+// 計測が OFF のあいだは begin/end とも何もしない(拡張も取りに行かない)
+const rhythmCreateGpuTimer=(gl,kind)=>{
+  let ext=null,tried=false,open=null;const pending=[];
+  const poll=()=>{while(pending.length){const q=pending[0];if(!ext.getQueryObjectEXT(q,ext.QUERY_RESULT_AVAILABLE_EXT))break;pending.shift();
+    if(!gl.getParameter(ext.GPU_DISJOINT_EXT))RHYTHM_PERF.gpu(kind,ext.getQueryObjectEXT(q,ext.QUERY_RESULT_EXT)/1e6);ext.deleteQueryEXT(q);}};
+  return {
+    begin(){if(!RHYTHM_PERF.enabled||open)return;
+      if(!tried){tried=true;try{ext=gl.getExtension('EXT_disjoint_timer_query');}catch(e){ext=null;}}
+      RHYTHM_PERF.gpuSupport(kind,!!ext);if(!ext)return;
+      try{poll();if(pending.length>=4)return;open=ext.createQueryEXT();ext.beginQueryEXT(ext.TIME_ELAPSED_EXT,open);}catch(e){open=null;}},
+    end(){if(!open||!ext)return;try{ext.endQueryEXT(ext.TIME_ELAPSED_EXT);pending.push(open);}catch(e){}open=null;},
+    dispose(){try{if(ext){pending.forEach(q=>ext.deleteQueryEXT(q));if(open)ext.deleteQueryEXT(open);}}catch(e){}pending.length=0;open=null;},
+  };
+};
 
 // 演奏画面の「重そうな装飾」を個別に切って、実機で何が効くかを切り分けるための逃げ道。
 // デバッグ限定で、ふだんは空。プレイヤーの通常プレイでは何も起きない。
@@ -19855,6 +19880,7 @@ const rhythmCreateGL2D=canvas=>{
     entry={tex,w:source.width||source.naturalWidth||1,h:source.height||source.naturalHeight||1};
     textures.set(source,entry);return entry;
   };
+  const gpuTimer=rhythmCreateGpuTimer(gl,'notes');
   const ctx={
     canvas,
     get isWebGL(){return true;},
@@ -19959,6 +19985,9 @@ const rhythmCreateGL2D=canvas=>{
     // 使い終えたら片付ける。iPhone などは同時に持てる WebGL の数に上限があり、曲ごとに作ると古いものから消されていく
     // 待っている描画を今すぐ描き切る(読み取る前など)
     flushPending(){flushPending();},
+    // GPU の時間を測る(性能計測が ON のときだけ)。描く部品の begin() と end() から呼ぶ
+    gpuFrameBegin(){gpuTimer.begin();},
+    gpuFrameEnd(){gpuTimer.end();},
     // にじむ光を使うか(演奏画面が毎フレームの始めに決める)。gain は重ねる強さ
     setBloom(on,gain){bloomOn=!!on;if(Number.isFinite(gain))bloomGain=gain;if(!bloomOn)bloomList.length=0;},
     get bloomReady(){return !!bloom;},
@@ -20019,7 +20048,7 @@ const rhythmCreateGL2D=canvas=>{
       gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,viewW,viewH);gl.enable(gl.BLEND);gl.enable(gl.STENCIL_TEST);
       resetSent();bloomList.length=0;
     },
-    dispose(){pend=null;n=0;try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
+    dispose(){pend=null;n=0;gpuTimer.dispose();try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
   };
   return ctx;
 };
@@ -20707,6 +20736,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       pendingClear=true;
       frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';motion=options.motion===true&&options.effect!=='MINIMAL'&&!options.lightweight;lightweight=!!options.lightweight;sizeScale=Number(options.sizeScale)||1;drawn=0;faces.length=0;
       // にじむ光(ブルーム)。オプションで入れた人だけ・WebGL で光を足し算で描いているときだけ。演出量「最小」と軽量モードでは使わない
+      if(typeof ctx.gpuFrameBegin==='function')ctx.gpuFrameBegin();
       if(typeof ctx.setBloom==='function')ctx.setBloom(!!options.bloom&&additiveGlow&&effect!=='MINIMAL'&&!lightweight);
       return true;
     },
@@ -20735,7 +20765,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(!ctx)return;
       if(faces.length)touch();
       // 何も描かなかったフレーム。前のフレームに何か残っているときだけ消す(空なら GPU には何も頼まない)
-      if(pendingClear){pendingClear=false;if(!blank){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);blank=true;if(typeof ctx.flushPending==='function')ctx.flushPending();}return;}
+      if(pendingClear){pendingClear=false;if(!blank){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);blank=true;if(typeof ctx.flushPending==='function')ctx.flushPending();}if(typeof ctx.gpuFrameEnd==='function')ctx.gpuFrameEnd();return;}
       if(faces.length){
         ctx.setTransform(dpr,0,0,dpr,0,0);
         for(let i=0;i<faces.length;i+=5){
@@ -20749,6 +20779,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       // WebGL で待っている描画(まとめて頼む分)を、フレームの終わりに描き切る。にじむ光はそのあとに重ねる
       if(typeof ctx.flushPending==='function')ctx.flushPending();
       if(typeof ctx.bloomFinish==='function')ctx.bloomFinish();
+      if(typeof ctx.gpuFrameEnd==='function')ctx.gpuFrameEnd();
     },
     clear(){faces.length=0;pendingClear=false;if(ctx&&cssW&&cssH){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);blank=true;}},
   };
