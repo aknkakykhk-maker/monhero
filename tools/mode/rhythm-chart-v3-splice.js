@@ -94,8 +94,9 @@ const spliceCharts=(charts,audio)=>{
     }
   }finally{setHandModelFlags(previous);}
   const sum=list=>list.reduce((a,b)=>a+b,0);
-  const after=sum(sections.map((_,i)=>costs[chosen[i]][i]));
-  return {notes,chosen,choice,before:sum(costs[0]),after,bestSingle:Math.min(...costs.map(sum)),reverted,sections:sections.length};
+  const sectionCosts=sections.map((_,i)=>costs[chosen[i]][i]);
+  const after=sum(sectionCosts);
+  return {notes,chosen,choice,before:sum(costs[0]),after,bestSingle:Math.min(...costs.map(sum)),reverted,sections:sections.length,sectionCosts};
 };
 
 // 関門: 押せない配置が無い・品質の6軸の合計が候補0より下がらない・気になり点が SPLICE_MIN_GAIN 以上減る
@@ -108,7 +109,17 @@ const spliceGate=(charts,audio,result)=>{
   return {pass:true,reason:`品質の6軸の合計 ${before.sum.toFixed(1)}→${after.sum.toFixed(1)}`};
 };
 
-module.exports={spliceCharts,spliceGate,SPLICE_MIN_GAIN,SPLICE_REVISION};
+// 差し替えたあとも気になり点が高い区切りがあるか(悪い区間だけ作り直す二段目の合図)。
+//   区切りの気になり点が SPLICE_BAD_MIN 以上、かつ区切りの中央値の2倍以上
+const SPLICE_BAD_MIN=3,SPLICE_EXTRA_COUNT=4,SPLICE_RETRY_REVISION=14;
+const badSections=result=>{
+  const list=(result.sectionCosts||[]).slice().sort((a,b)=>a-b);
+  if(!list.length)return [];
+  const median=list[list.length>>1];
+  return (result.sectionCosts||[]).map((cost,i)=>({cost,i})).filter(x=>x.cost>=SPLICE_BAD_MIN&&x.cost>=median*2).map(x=>x.i);
+};
+
+module.exports={spliceCharts,spliceGate,badSections,SPLICE_MIN_GAIN,SPLICE_REVISION,SPLICE_BAD_MIN,SPLICE_EXTRA_COUNT,SPLICE_RETRY_REVISION};
 
 if(require.main===module){
   const trackId=arg('--track','monster_hero_theme'),dashed=trackId.replace(/_/g,'-');
@@ -118,41 +129,55 @@ if(require.main===module){
   const authoringDir=path.join(ROOT,'tools/mode/authoring');
   // --apply の書き出し先(生成器が譜面を書いた場所)。既定は authoring/
   const chartDir=arg('--chart-dir',null)?path.resolve(ROOT,arg('--chart-dir')):authoringDir;
+  const registry=JSON.parse(fs.readFileSync(path.join(authoringDir,'rhythm-song-registry.json'),'utf8'));
+  // --chart-revision があればそれで試す(生成器と同じ。一覧は書き換えない)
+  const songRevision=revision!=null?chartRevisionOf({chartRevision:Number(revision)}):chartRevisionOf((registry.songs||{})[trackId]);
   if(apply){
-    const registry=JSON.parse(fs.readFileSync(path.join(authoringDir,'rhythm-song-registry.json'),'utf8'));
-    // --chart-revision があればそれで試す(生成器と同じ。一覧は書き換えない)
-    const songRevision=revision!=null?chartRevisionOf({chartRevision:Number(revision)}):chartRevisionOf((registry.songs||{})[trackId]);
     if(songRevision<SPLICE_REVISION){console.log(`区間の差し替え: Rev.${songRevision} の曲なので差し替えない（Rev.${SPLICE_REVISION} から）`);process.exit(0);}
   }
   const audioFile=path.join(inputDir?path.resolve(ROOT,inputDir):path.join(ROOT,'tools/mode/authoring'),`${dashed}-v3-audio.json`);
   const audio=JSON.parse(fs.readFileSync(audioFile,'utf8'));
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'v3-splice-'));
   try{
-    for(let v=0;v<count;v++){
-      const dir=path.join(tmp,`v${v}`);fs.mkdirSync(dir);
+    const makeVariant=v=>{
+      const dir=path.join(tmp,`v${v}`);if(fs.existsSync(dir))return;fs.mkdirSync(dir);
       const args=[path.join(__dirname,'rhythm-chart-v3-generate.js'),'--track',trackId,'--variant',String(v),'--write','--output-dir',dir,
         ...(inputDir?['--input-dir',inputDir]:[]),...(revision?['--chart-revision',revision]:[])];
       const result=spawnSync(process.execPath,args,{cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
       if(result.status!==0){console.error(`候補${v}を作れませんでした`);process.exit(1);}
-    }
+    };
+    for(let v=0;v<count;v++)makeVariant(v);
     console.log(`区間の差し替え（${trackId}・候補${count}本）`);
     for(const difficulty of DIFFICULTIES){
       const file=v=>path.join(tmp,`v${v}`,`${dashed}-v3-chart-${difficulty.toLowerCase()}.json`);
       if(!fs.existsSync(file(0)))continue;
-      const charts=Array.from({length:count},(_,v)=>JSON.parse(fs.readFileSync(file(v),'utf8')));
-      const result=spliceCharts(charts,audio);
+      let charts=Array.from({length:count},(_,v)=>JSON.parse(fs.readFileSync(file(v),'utf8')));
+      let result=spliceCharts(charts,audio);
+      // 二段目(Rev.14 から): 差し替えても気になり点の高い区切りが残るなら、候補を SPLICE_EXTRA_COUNT 本足して選び直す(悪い区間だけ作り直す)
+      const bad=badSections(result);
+      let regenerated='';
+      if(bad.length&&songRevision>=SPLICE_RETRY_REVISION){
+        for(let v=count;v<count+SPLICE_EXTRA_COUNT;v++)makeVariant(v);
+        const more=Array.from({length:SPLICE_EXTRA_COUNT},(_,k)=>JSON.parse(fs.readFileSync(file(count+k),'utf8')));
+        const retry=spliceCharts(charts.concat(more),audio);
+        const stillBad=badSections(retry).length;
+        const adopted=retry.after<result.after,firstAfter=result.after;
+        if(adopted){charts=charts.concat(more);result=retry;}
+        regenerated=adopted?`  気になり点の高い区切り ${bad.length}つを作り直した（候補を${SPLICE_EXTRA_COUNT}本足す・一巡目 ${firstAfter} → ${result.after}・まだ高い区切り ${stillBad}つ）`
+          :`  気になり点の高い区切り ${bad.length}つを作り直そうとしたが、足した候補では良くならなかった`;
+      }
       const picked=[...result.choice.entries()].filter(([,k])=>k!==0).map(([label,k])=>`${label}→候補${k}`).join(' ')||'すべて候補0';
-      console.log(`  ${difficulty}: 気になり点 ${result.before} → ${result.after}（1本だけ選ぶなら最良 ${result.bestSingle}）  ${picked}${result.reverted?`  押せないので候補0へ戻した区切り ${result.reverted}`:''}`);
+      console.log(`  ${difficulty}: 気になり点 ${result.before} → ${result.after}（1本だけ選ぶなら最良 ${result.bestSingle}）  ${picked}${result.reverted?`  押せないので候補0へ戻した区切り ${result.reverted}`:''}${regenerated}`);
       if(apply){
         const gate=spliceGate(charts,audio,result);
         if(gate.pass){
-          const out={...charts[0],notes:result.notes,splice:{count,choice:Object.fromEntries(result.choice),gate:gate.reason}};
+          const out={...charts[0],notes:result.notes,splice:{count:charts.length,choice:Object.fromEntries(result.choice),gate:gate.reason}};
           fs.writeFileSync(path.join(chartDir,path.basename(file(0))),JSON.stringify(out,null,1)+'\n');
           console.log(`    → 差し替えた（${gate.reason}）`);
         }else console.log(`    → 差し替えない（${gate.reason}）`);
       }
       if(outputDir){
-        const out={...charts[0],notes:result.notes,splice:{count,choice:Object.fromEntries(result.choice)}};
+        const out={...charts[0],notes:result.notes,splice:{count:charts.length,choice:Object.fromEntries(result.choice)}};
         fs.mkdirSync(path.resolve(ROOT,outputDir),{recursive:true});
         fs.writeFileSync(path.join(path.resolve(ROOT,outputDir),path.basename(file(0))),JSON.stringify(out,null,1)+'\n');
       }
