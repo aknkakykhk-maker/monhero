@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a7031f82d29e479
+// source-sha256: 656a436ea0d68905
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 19:23";
+const BUILD_DATE = "2026-09-26 19:26";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -24818,7 +24818,7 @@ const RhythmTapTest = ({
       return React.createElement("aside", {
         "data-rhythm-result-hero": true,
         "aria-hidden": "true",
-        className: "relative hidden w-[31%] max-w-[360px] shrink-0 items-center justify-center p-3 [@container(min-width:680px)]:flex"
+        className: "relative hidden w-[22%] max-w-[220px] shrink-0 items-center justify-center p-2 [@container(min-width:680px)]:flex"
       }, art ? React.createElement("img", {
         "data-rhythm-result-hero-art": true,
         src: art,
@@ -24841,10 +24841,10 @@ const RhythmTapTest = ({
       "data-rhythm-result-scroll": true,
       className: "min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3"
     }, React.createElement("h2", {
-      className: "mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200"
+      className: "mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200 [@container(min-width:680px)]:hidden"
     }, "RHYTHM RESULT"), React.createElement("div", {
       "data-rhythm-result-summary": true,
-      className: "[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-2 [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2"
+      className: "[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2"
     }, React.createElement("div", {
       "data-rhythm-result-summary-main": true,
       className: "[@container(min-width:680px)]:contents"
@@ -25013,7 +25013,7 @@ const RhythmTapTest = ({
       }));
     })(), React.createElement("section", {
       "data-rhythm-result-judgments": true,
-      className: "flex items-stretch gap-2 [@container(min-width:680px)]:flex-col"
+      className: "flex items-stretch gap-2"
     }, React.createElement("dl", {
       "data-rhythm-result-judgment-table": true,
       className: "grid min-w-0 flex-1 grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 text-[15px] italic"
@@ -25035,14 +25035,14 @@ const RhythmTapTest = ({
       className: "text-right font-mono"
     }, view.counts[id])))), React.createElement("div", {
       "data-rhythm-result-combo": true,
-      className: "flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:grid [@container(min-width:680px)]:w-full [@container(min-width:680px)]:grid-cols-[auto_auto_minmax(0,1fr)] [@container(min-width:680px)]:gap-2 [@container(min-width:680px)]:px-2.5 [@container(min-width:680px)]:py-1.5"
+      className: "flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-[31%]"
     }, React.createElement("small", {
-      className: `text-[10px] font-black tracking-[.2em] [@container(min-width:680px)]:w-[3.2rem] [@container(min-width:680px)]:leading-tight ${rhythmComboTextColor(view.maxCombo)}`
+      className: `text-[10px] font-black tracking-[.2em] ${rhythmComboTextColor(view.maxCombo)}`
     }, "MAX COMBO"), React.createElement("b", {
       "data-rhythm-max-combo": true,
-      className: `block text-[34px] font-black leading-tight tabular-nums [@container(min-width:680px)]:text-[26px] ${rhythmComboTextColor(view.maxCombo)}`
+      className: `block text-[34px] font-black leading-tight tabular-nums ${rhythmComboTextColor(view.maxCombo)}`
     }, view.maxCombo), React.createElement("div", {
-      className: "mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black [@container(min-width:680px)]:mt-0 [@container(min-width:680px)]:min-w-0"
+      className: "mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"
     }, React.createElement("span", {
       "data-rhythm-result-fast": true,
       className: "rounded-lg bg-cyan-500/15 py-1 text-cyan-200"
