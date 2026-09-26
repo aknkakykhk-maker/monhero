@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 70a4e8cb8e1a6204
+// source-sha256: b9402ecd4e3418a7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 18:02";
+const BUILD_DATE = "2026-09-26 18:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -25198,7 +25198,7 @@ const RhythmTapTest = ({
   }
   return React.createElement("main", {
     "data-rhythm-tap-test": true,
-    className: "relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]",
+    className: "relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)] [container-type:inline-size]",
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
     style: {
@@ -25210,7 +25210,7 @@ const RhythmTapTest = ({
   }, React.createElement("div", {
     ref: hudLeftRef,
     "data-rhythm-hud-left": true,
-    className: "min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"
+    className: "min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"
   }, React.createElement("div", {
     className: "landscape:flex landscape:items-center landscape:gap-2"
   }, React.createElement("div", {
@@ -25246,7 +25246,7 @@ const RhythmTapTest = ({
     "data-rhythm-score": true,
     className: "mt-0.5 block font-black leading-none tabular-nums landscape:mt-0",
     style: {
-      fontSize: 'min(18px,4.6vw)',
+      fontSize: 'min(18px,4.6cqw)',
       textShadow: '0 1px 6px rgba(2,6,23,.96)'
     }
   }, view.score.toLocaleString()), React.createElement("small", {
@@ -25255,7 +25255,7 @@ const RhythmTapTest = ({
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
   }, "BEST ", Number(bestRecord?.bestScore || 0).toLocaleString()))), React.createElement("div", {
-    className: "mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"
+    className: "mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"
   }, React.createElement("span", {
     className: "shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none"
   }, difficulty.id), React.createElement("small", {
@@ -25279,11 +25279,11 @@ const RhythmTapTest = ({
     }
   }), React.createElement("div", {
     "data-rhythm-hud-song": true,
-    className: "min-w-0 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:max-w-none",
+    className: "min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none",
     style: {
-      maxWidth: hudArtSrc && !isLandscape ? 'calc(31vw - 34px)' : undefined,
+      maxWidth: hudArtSrc && !isLandscape ? 'calc(31cqw - 34px)' : undefined,
       display: '-webkit-box',
-      WebkitLineClamp: isLandscape ? '1' : '3',
+      WebkitLineClamp: isLandscape ? '2' : '3',
       WebkitBoxOrient: 'vertical',
       overflow: 'hidden',
       lineHeight: '1.25',
@@ -25291,7 +25291,7 @@ const RhythmTapTest = ({
     }
   }, "♪ ", rhythmSongFullName(song)))), React.createElement("div", {
     "data-rhythm-hud-right": true,
-    className: "flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"
+    className: "flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5"
   }, React.createElement("div", {
     className: "flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"
   }, React.createElement("div", {

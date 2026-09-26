@@ -31,12 +31,14 @@ check('プレイ画面は overflow-hidden の1画面で、内側にスクロー�
 check('HUDはレイアウトの高さを取らない絶対配置で、台形の中央を覆う背景を持たない',
   game.includes('<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"')
   &&!/data-rhythm-hud[\s\S]{0,50}background:/.test(game));
-// ウェッジは下へ行くほど狭くなるので、行ごとに幅を変える。幅は画面幅基準の vw で持つ
+// ウェッジは下へ行くほど狭くなるので、行ごとに幅を変える。幅は演奏画面の幅基準の cqw で持つ
+// (2026-09-26 に vw から変えた。「🔄 横」で絵を回すと vw は端末の縦の幅のままで、左上の欄が縮んでいた)
 // (% は親要素基準になり、入れ子だと意図した画面比にならない)。実際の当たりは
 // rhythm-hud-wedge-check.js が実ブラウザで測る。
-check('HUD本文の幅は画面幅基準(vw)で、左右それぞれ上限を持つ',
-  game.includes('data-rhythm-hud-left className="min-w-0 max-w-[35vw]')
-  &&game.includes('data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw]'));
+check('HUD本文の幅は演奏画面の幅基準(cqw)で、左右それぞれ上限を持つ',
+  game.includes('data-rhythm-hud-left className="min-w-0 max-w-[35cqw]')
+  &&game.includes('data-rhythm-hud-right className="flex w-[33cqw] max-w-[33cqw]')
+  &&/<main data-rhythm-tap-test className="[^"]*\[container-type:inline-size\]"/.test(game));
 // 曲名を truncate で切ると、実機で「あつ杯テー…」となって曲が分からなくなる
 check('曲名は truncate で切らずに折り返す',
   /data-rhythm-hud-song className="(?![^"]*truncate)/.test(game)
