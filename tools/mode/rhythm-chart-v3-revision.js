@@ -66,7 +66,9 @@
 //        主役の追跡で歌・主旋律を追いにくくする(解析ファイルの pitchCurve で、小節の中で音高が取れている割合が2割未満)
 //   14 … 手と種類の仕上げ(2026-09-26)。終点フリックを音で選ぶ(語尾・切れる音)・HOLD の太さの形を伴奏の強さの変化で決める・
 //        手のモデルが SLIDE の曲線どおりに動き親指の左右を区別する(自動修正が曲線の途中の近さも見る)・候補(--variant)が HARD でも分かれる
-//   15〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   15 … 旋律の上下に沿って動かす(2026-09-26・最初にもらった案の2)。かたまりの継ぎ目の起点と、フレーズの写しの左右の向きを
+//        旋律の上がり下がりに合わせる(形の中は Rev.14 までも合っていた)
+//   16〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)と重みの最新の大きいほう＋1」を次の番号にする
 //        (同じ番号が「作り方の改良」と「重みの学び直し」の2つの意味を持たないように)
@@ -76,7 +78,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=14;
+const CHART_REVISION_CODE_LATEST=15;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const CHART_REVISION_LATEST=Math.max(CHART_REVISION_CODE_LATEST,latestKnowledgeRevision());
