@@ -19700,18 +19700,52 @@ const rhythmCreateGL2D=canvas=>{
     }
     return flipsX<=2&&flipsY<=2;
   };
+  // ★帯の形(右の縁を上→下、左の縁を下→上に並べた形。HOLD の帯)は、同じ高さの左右の点を対にして、上から順に台形へ切る
+  //   (2026-09-26・ユーザー報告「ノーツ残像バグ / 形の変わるホールドが犯人」)。
+  //   太さが変わるホールドは帯がへこんだ形になり、耳を切る方式が点の並び(一直線に並ぶ点・ほぼ重なる点)で行き詰まって、
+  //   1点からの扇に逃げていた。扇はへこみの外まで塗るので、細くなったところに「前の太さ」が残って見えた。
+  //   実際の譜面の太さが変わるホールド736本・88,803通りの形のうち約65%がこれで、1つで最大7,000画素ほど外へ塗っていた。
+  //   台形に切れば、はみ出しも抜けもない(tools/mode/rhythm-webgl-notes-check.js が実際の譜面の帯で見張る)
+  const triangulateStrip=pts=>{
+    const count=pts.length/2;if(count<4||count%2)return false;
+    const half=count/2;
+    for(let i=0;i<half;i++){const j=count-1-i;if(Math.abs(pts[i*2+1]-pts[j*2+1])>1e-6)return false;if(i>0&&pts[i*2+1]<pts[i*2-1]-1e-6)return false;}
+    for(let i=0;i<half-1;i++){const j=count-1-i,k=count-2-i;
+      const rx0=pts[i*2],ry0=pts[i*2+1],rx1=pts[i*2+2],ry1=pts[i*2+3],lx0=pts[j*2],ly0=pts[j*2+1],lx1=pts[k*2],ly1=pts[k*2+1];
+      if(!(ry1-ry0>1e-9))continue;
+      tri(rx0,ry0,rx1,ry1,lx1,ly1);tri(rx0,ry0,lx1,ly1,lx0,ly0);}
+    return true;
+  };
+  // 帯の形でないへこんだ形は、重なった点と一直線に並んだ点を先に抜いてから耳を切る(行き詰まって扇に逃げないように)
+  const cleanPolygon=pts=>{
+    let list=[];const count=pts.length/2;
+    for(let i=0;i<count;i++){const x=pts[i*2],y=pts[i*2+1];const last=list.length?list[list.length-1]:null;if(last&&Math.abs(last[0]-x)<1e-6&&Math.abs(last[1]-y)<1e-6)continue;list.push([x,y]);}
+    if(list.length>1){const a=list[0],b=list[list.length-1];if(Math.abs(a[0]-b[0])<1e-6&&Math.abs(a[1]-b[1])<1e-6)list.pop();}
+    let changed=list.length!==count;
+    for(let guard=0;guard<count&&list.length>3;guard++){let removed=false;
+      for(let i=0;i<list.length&&list.length>3;i++){const a=list[(i+list.length-1)%list.length],b=list[i],c=list[(i+1)%list.length];
+        const cr=(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);const len=Math.hypot(c[0]-a[0],c[1]-a[1])||1;
+        if(Math.abs(cr)/len<1e-4){list.splice(i,1);i--;removed=true;changed=true;}}
+      if(!removed)break;}
+    if(!changed)return pts;
+    const out=[];list.forEach(p=>{out.push(p[0],p[1]);});return out;
+  };
   const triangulate=pts=>{
     const count=pts.length/2;if(count<3)return;
     // 凸形は1点から扇に分けるだけでよい(塗る範囲は耳を切る方式と同じ。1画素を1度しか塗らないのもステンシルが守る)
+    if(triangulateStrip(pts))return;
     if(isConvex(pts)){for(let k=1;k<count-1;k++)tri(pts[0],pts[1],pts[k*2],pts[k*2+1],pts[k*2+2],pts[k*2+3]);return;}
-    const idx=[];for(let i=0;i<count;i++)idx.push(i);
-    let area=0;for(let i=0;i<count;i++){const j=(i+1)%count;area+=pts[i*2]*pts[j*2+1]-pts[j*2]*pts[i*2+1];}
+    const clean=cleanPolygon(pts);
+    if(clean!==pts){if(clean.length<6)return;if(isConvex(clean)){triangulate(clean);return;}pts=clean;}
+    const cnt=pts.length/2;
+    const idx=[];for(let i=0;i<cnt;i++)idx.push(i);
+    let area=0;for(let i=0;i<cnt;i++){const j=(i+1)%cnt;area+=pts[i*2]*pts[j*2+1]-pts[j*2]*pts[i*2+1];}
     const ccw=area>0;
     const X=i=>pts[i*2],Y=i=>pts[i*2+1];
     const cross=(a,b,c)=>(X(b)-X(a))*(Y(c)-Y(a))-(Y(b)-Y(a))*(X(c)-X(a));
     const inside=(p,a,b,c)=>{const d1=cross(a,b,p),d2=cross(b,c,p),d3=cross(c,a,p);return ccw?(d1>=0&&d2>=0&&d3>=0):(d1<=0&&d2<=0&&d3<=0);};
     let guard=0;
-    while(idx.length>3&&guard++<count*count){
+    while(idx.length>3&&guard++<cnt*cnt){
       let cut=false;
       for(let k=0;k<idx.length;k++){
         const a=idx[(k+idx.length-1)%idx.length],b=idx[k],c=idx[(k+1)%idx.length];
