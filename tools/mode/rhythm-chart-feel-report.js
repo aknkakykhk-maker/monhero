@@ -82,11 +82,19 @@ const measureFeelInner=(chart,audio,options={})=>{
   const beatMs=gridMs*BEAT;
   const timeOf=grid=>timing.beatZeroMs+grid*gridMs;
   const notes=chart.notes.slice().sort((a,b)=>a.grid-b.grid||(Number(a.subLane)||0)-(Number(b.subLane)||0));
-  const segmentOf=ms=>Math.max(0,Math.floor(ms/SEGMENT_MS));
+  // 区間: 既定は8秒ごと(譜面メモと同じ)。options.segmentStartsMs(昇順の開始時刻の並び)を渡すと、その区切りで数える
+  //   (区間の差し替え rhythm-chart-v3-splice.js が曲の区切りごとに数えるのに使う)
+  const starts=Array.isArray(options.segmentStartsMs)&&options.segmentStartsMs.length?options.segmentStartsMs:null;
+  const segmentOf=ms=>{
+    if(!starts)return Math.max(0,Math.floor(ms/SEGMENT_MS));
+    let lo=0,hi=starts.length-1;
+    while(lo<hi){const mid=(lo+hi+1)>>1;if(starts[mid]<=ms)lo=mid;else hi=mid-1;}
+    return lo;
+  };
   const segments=new Map();
   const segment=ms=>{
     const index=segmentOf(ms);
-    if(!segments.has(index))segments.set(index,{index,fromMs:index*SEGMENT_MS,notes:0,monotony:0,flickOff:0,flickCollide:0,sharpTurn:0,hardLanding:0,strained:0,details:[]});
+    if(!segments.has(index))segments.set(index,{index,fromMs:starts?starts[index]:index*SEGMENT_MS,notes:0,monotony:0,flickOff:0,flickCollide:0,sharpTurn:0,hardLanding:0,strained:0,details:[]});
     return segments.get(index);
   };
   for(const note of notes)segment(timeOf(note.grid)).notes++;
