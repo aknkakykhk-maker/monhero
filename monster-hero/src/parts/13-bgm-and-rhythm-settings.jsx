@@ -111,10 +111,35 @@ const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
 //   画面(29-rhythm-screens.jsx)は書き換えない。
 // ★whileEvent:true を付けたものは、イベントを開催しているあいだだけ選べる。
 //   開催していないときに選ぶと一覧が空になるため。
+// ★2026-09-26 に、曲えらびの左(縦持ちは上)へタブで並べる形にした(ユーザー指示
+//   「オール、オリジナル、コラボ、イベント、お気に入り。あとはこれから追加できる仕組みを」)。
+//   ジャンルを足すときは、ここへ1件。曲を見分ける印は3通りから選ぶ。
+//     tag:'◯◯'    … 曲に付けた印(下の RHYTHM_SONG_GENRE_TAGS / rhythmSongGenreTags)で見分ける
+//     whileEvent  … いま開催しているイベントの対象曲(開催していないあいだは押せない)
+//     favorite    … お気に入りに入れた曲(曲えらびの保存値の favorites)
+//   id は保存値になるので、増やすことはあっても名前は変えない('all' と 'event' は前からある)。
 const RHYTHM_GENRES = Object.freeze([
-  Object.freeze({ id:'all',   label:'すべて',       note:'遊べる曲を全部' }),
-  Object.freeze({ id:'event', label:'🏆 イベント曲', note:'いま開催しているイベントの対象曲', whileEvent:true }),
+  Object.freeze({ id:'all',      label:'ALL',        note:'遊べる曲を全部' }),
+  Object.freeze({ id:'original', label:'オリジナル', note:'モンスターヒーローのために作られた曲', tag:'original' }),
+  Object.freeze({ id:'collab',   label:'コラボ',     note:'ほかの作り手と一緒に届けている曲', tag:'collab' }),
+  Object.freeze({ id:'event',    label:'イベント',   note:'いま開催しているイベントの対象曲', whileEvent:true }),
+  Object.freeze({ id:'favorite', label:'お気に入り', note:'♡を付けた曲', favorite:true }),
 ]);
+// 曲に付ける印(ジャンルの tag)。書いていない曲は 'original'。
+// ★曲を足したり、振り分けを変えたりするときは、ここへ1行足す・直すだけでよい。
+//   コラボの4曲は、更新履歴とイベントの告知に作り手の名前が出ている曲(2026-09-26。ユーザーの確認待ち)
+const RHYTHM_SONG_GENRE_TAGS = Object.freeze({
+  mf_ichika_mix: Object.freeze(['collab']),
+  pandora_boss_remix: Object.freeze(['collab']),
+  the_city_beneath_the_comets: Object.freeze(['collab']),
+  mou_hitotsu_no_sekai_e: Object.freeze(['collab']),
+});
+const rhythmSongGenreTags = song => {
+  const tags = song && RHYTHM_SONG_GENRE_TAGS[song.songId];
+  return Array.isArray(tags) && tags.length ? tags : ['original'];
+};
+// お気に入りの上限(保存値が膨らみすぎないように)
+const RHYTHM_FAVORITES_MAX = 200;
 const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
 // genre … 曲の絞り込み(2026-09-11)。並び替えではないので、並び替えの一覧には混ぜない。
 //   ★開催していないときは、保存値が 'event' のままでも絞らない(画面側で見る)。
@@ -122,7 +147,8 @@ const RHYTHM_GENRE_IDS = Object.freeze(RHYTHM_GENRES.map(item => item.id));
 //   ★新しい項目なので、持っていない既存ユーザーは既定値('all')で補われる(CLAUDE.md ⑦)。
 //   ★短いあいだ eventOnly(真偽値)で持っていたので、その値も読める形にしてある。
 //     消さずに読み替えるだけ。true だった人は 'event' を選んでいた扱いになる。
-const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, genre:'all' });
+// favorites … お気に入りに入れた曲のid(2026-09-26)。新しい項目なので、持っていない既存ユーザーは空で補われる
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({ sort:'added', desc:false, noticeOpen:true, genre:'all', favorites:Object.freeze([]) });
 const normalizeRhythmSelectView = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const genre = RHYTHM_GENRE_IDS.includes(source.genre) ? source.genre
@@ -132,6 +158,9 @@ const normalizeRhythmSelectView = value => {
     desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
     noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen,
     genre,
+    favorites: Array.isArray(source.favorites)
+      ? [...new Set(source.favorites.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 80))].slice(0, RHYTHM_FAVORITES_MAX)
+      : [],
   };
 };
 // ノーツ速度は見た目のtravelだけを変える。1.0〜12.0を0.1刻みで選べ、6.0は従来の見た目(2150ms)を維持する。
