@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 80d5b01ebcbc7efb
+// generated-sha256: ccdb2679001a1959
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-27 03:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-27 07:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16390,7 +16390,10 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // 演奏の途中で段が下がっても、作り直されない処理(毎フレームの処理・判定の処理)が最新の設定を読めるように
   const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
   const stepEffectCapRef=useRef(null);
-  stepEffectCapRef.current=()=>{const next=rhythmNextEffectCap(settingsIn,effectCap);if(next===null)return false;rhythmAutoEffectMemory.level=next;setEffectCap(next);return true;};
+  // 下げたときは画面の上のほうへ一瞬だけ知らせる(黙って下がると「設定したのに演出が出ない」と思われるため)
+  const [effectCapNotice,setEffectCapNotice]=useState(0);
+  stepEffectCapRef.current=()=>{const next=rhythmNextEffectCap(settingsIn,effectCap);if(next===null)return false;rhythmAutoEffectMemory.level=next;setEffectCap(next);setEffectCapNotice(value=>value+1);return true;};
+  useEffect(()=>{if(!effectCapNotice)return undefined;const timer=setTimeout(()=>setEffectCapNotice(0),2500);return()=>clearTimeout(timer);},[effectCapNotice]);
   // モンスターノーツの演出の段。いちばん軽い段(NONE)では、ノーツへ重ねるマスモンの絵を
   // 作らない(2026-09-13・ユーザー指摘「あれは踏んだときまだカクつきがある / 設定は最小」)。
   // ★この絵だけは canvas ではなくDOMの要素で、毎フレーム transform と scale を書き換えている。
@@ -17263,17 +17266,20 @@ const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.i
    配置の計算がたまっていることが多く、測るたびにその場で計算させていた(8秒で560ms。タップのときだけ測る
    以前の形は10秒で66ms)。箱はタップが来たときに初めて測る(同じフレームのタップは使い回す) */
 /* 画質「自動」。rAF の間隔から「描くのが間に合わなかったフレーム」(いちばん短い間隔の1.8倍より長いもの)を数え、
-   3秒のうち8%を超えたら一段下げる。止まっていた間(250ms以上あいた)は数えない。数えるだけで、判定・描画には触らない */
+   3秒のうち8%を超えたら一段下げる。止まっていた間(1秒以上あいた)は数えない。数えるだけで、判定・描画には触らない。
+   (以前は250ms以上を数えなかったが、1フレームに200〜500msかかるほど遅い端末では、ほとんどのフレームが数えられず判断しなかった)
+   3秒で10フレームあれば判断する(以前は30フレーム。1秒に10フレームを割るほど遅い端末では、いつまでも判断しなかった) */
 if(settings.renderQuality==='AUTO'){const aq=run._autoQuality||(run._autoQuality={last:0,start:frameNowMs,frames:0,slow:0,minGap:1e9});const gap=aq.last?frameNowMs-aq.last:0;aq.last=frameNowMs;
-  if(gap>0&&gap<250){aq.frames++;if(gap>=5&&gap<aq.minGap)aq.minGap=gap;if(gap>Math.max(5,aq.minGap)*1.8)aq.slow++;}
+  // ★ずっと一様に遅い端末(1秒に20フレームを割る)は「いちばん短い間隔の1.8倍」では拾えないので、50ms 以上のフレームは常に遅いと数える(2026-09-27)
+  if(gap>0&&gap<1000){aq.frames++;if(gap>=5&&gap<aq.minGap)aq.minGap=gap;if(gap>Math.max(5,aq.minGap)*1.8||gap>=50)aq.slow++;}
   // ★一段下げた直後の枠は数えない。下げると光の絵やマスモンの顔を焼き直すので、その一瞬の詰まりで
   //   続けてもう一段下げてしまっていた(高→標準→省電力と一気に落ちる。2026-09-26 の点検で見つけた)
-  if(frameNowMs-aq.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){if(aq.settle>0)aq.settle--;else if(aq.frames>=30&&aq.slow/aq.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepAutoQualityRef.current){stepAutoQualityRef.current();aq.settle=1;}aq.start=frameNowMs;aq.frames=0;aq.slow=0;}}
+  if(frameNowMs-aq.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){if(aq.settle>0)aq.settle--;else if(aq.frames>=10&&aq.slow/aq.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepAutoQualityRef.current){stepAutoQualityRef.current();aq.settle=1;}aq.start=frameNowMs;aq.frames=0;aq.slow=0;}}
 /* 演出の自動調整(設定「重いときは演出を自動で控えめに」)。画質「自動」と同じ数え方で、3秒のうち8%を超えたら重い演出から一段下げる。
    画質「自動」を使っているときは、画質を下げきってから演出を下げる。下げた直後の枠は数えない(背景の絵の焼き直しで一瞬詰まるため) */
 if(settingsLiveRef.current.autoEffectDown!==false&&stepEffectCapRef.current){const ae=run._autoEffect||(run._autoEffect={last:0,start:frameNowMs,frames:0,slow:0,minGap:1e9,settle:0});const gap=ae.last?frameNowMs-ae.last:0;ae.last=frameNowMs;
   // ★ずっと一様に遅い端末(1秒に20フレームを割る)は「いちばん短い間隔の1.8倍」では拾えないので、50ms 以上のフレームは常に遅いと数える
-  if(gap>0&&gap<250){ae.frames++;if(gap>=5&&gap<ae.minGap)ae.minGap=gap;if(gap>Math.max(5,ae.minGap)*1.8||gap>=50)ae.slow++;}
+  if(gap>0&&gap<1000){ae.frames++;if(gap>=5&&gap<ae.minGap)ae.minGap=gap;if(gap>Math.max(5,ae.minGap)*1.8||gap>=50)ae.slow++;}
   if(frameNowMs-ae.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){const qualityFirst=settings.renderQuality==='AUTO'&&autoQualityLevelRef.current!==RHYTHM_RENDER_QUALITY_STEPS[RHYTHM_RENDER_QUALITY_STEPS.length-1];
     if(ae.settle>0)ae.settle--;else if(!qualityFirst&&ae.frames>=10&&ae.slow/ae.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepEffectCapRef.current())ae.settle=1;ae.start=frameNowMs;ae.frames=0;ae.slow=0;}}
 if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
@@ -17962,6 +17968,8 @@ scheduleTick();};
 {timingDisplay==='METER'&&<div data-rhythm-timing-meter aria-hidden="true" className="absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2" style={{'--meter-mar':`${(55/185*50).toFixed(2)}%`,'--meter-exc':`${(100/185*50).toFixed(2)}%`,'--meter-gre':`${(150/185*50).toFixed(2)}%`,'--meter-goo':`${(170/185*50).toFixed(2)}%`}}><i data-rhythm-timing-meter-band/><i data-rhythm-timing-meter-center/>{Array.from({length:12},(_,i)=><i key={i} ref={el=>{meterTicksRef.current[i]=el;}} data-rhythm-timing-meter-tick style={{opacity:0}}/>)}</div>}</div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
 {/* ラッキーラッシュ中は、プレイエリアのふちが金色に光る(ノーツより後ろ・入力に触らない) */}
 {luckyRush&&<div data-rhythm-lucky-rush aria-hidden="true"/>}
+{/* 演出を自動で控えめにしたお知らせ(設定「重いときは演出を自動で控えめに」)。2.5秒だけ出す */}
+{effectCapNotice>0&&<div key={effectCapNotice} data-rhythm-effect-cap-notice role="status" className="pointer-events-none absolute left-1/2 top-[13%] z-30 -translate-x-1/2 whitespace-nowrap rounded-full border border-cyan-300/40 bg-slate-950/85 px-3 py-1 text-[11px] font-black text-cyan-100">重いので演出を控えめにしました</div>}
 {/* 抽選の結果。当たりは大きく「LUCKY RUSH!!」、はずれは小さく「+2pt」 */}
 {luckyBanner&&<div key={luckyBanner.id} data-rhythm-lucky-banner data-kind={luckyBanner.kind} aria-hidden="true"><b>{luckyBanner.text}</b></div>}
 {comboMilestone>0&&<div data-rhythm-combo-milestone data-milestone-stage={comboMilestoneStage} aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 whitespace-nowrap text-center"><b className={`block font-black leading-none tabular-nums landscape:text-4xl ${comboMilestoneStage>=3?'text-6xl':'text-5xl'}`}>{comboMilestone}</b><small className="mt-1 block text-sm font-black tracking-[0.3em]">COMBO</small></div>}

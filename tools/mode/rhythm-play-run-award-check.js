@@ -51,17 +51,21 @@ for (const [rel, src] of sources) {
     && compact.includes('Number(song?.difficulties?.[rhythmDifficulty?.id]?.durationMs)'));
 
   // ---- 配るもの ----
+  // 配る側は、曲ごとの報酬の段(rewardMode・rewardDifficulty)を受け取れるよう awardMode / awardDifficulty を通す形になった
+  // (2026-09-22・#1639)。以前の runMode / difficulty の形でも、今の形でも通す
+  const hasAward=pattern=>[['runMode','difficulty'],['awardMode','awardDifficulty']]
+    .some(([mode,diff])=>compact.includes(pattern.replace(/MODE/g,mode).replace(/DIFF/g,diff)));
   // ★実際に1周クリアしたときと同じものを入れる。
   //   経験値とダイヤだけにしていたころは、演奏より裏で回したほうが得だった
   //   (2026-09-07・ユーザー指摘)
   check(`${rel}: 1周ぶんの値は報酬を配るのと同じ関数を通す`,
-    compact.includes('applyQuickXpPolicy(xpForWavesClearedInMode(10,xpMult,runMode),runMode,policy)')
-    && compact.includes('applyQuickDiamondPolicy(goldForWavesClearedInMode(10,goldMult,runMode),runMode,policy)'));
+    hasAward('applyQuickXpPolicy(xpForWavesClearedInMode(10,xpMult,MODE),MODE,policy)')
+    && hasAward('applyQuickDiamondPolicy(goldForWavesClearedInMode(10,goldMult,MODE),MODE,policy)'));
   check(`${rel}: マスモンの絆経験値も同じ関数で配る`,
-    compact.includes('applyQuickXpPolicy(bondXpForWavesClearedInMode(10,xpMult,runMode),runMode,policy)')
+    hasAward('applyQuickXpPolicy(bondXpForWavesClearedInMode(10,xpMult,MODE),MODE,policy)')
     && compact.includes('buildRunBondAwards({') && compact.includes("storeSet('mh_masu_mons',next,false)"));
   check(`${rel}: 虹のプシュケーも同じ個数の決め方で配る`,
-    compact.includes('applyQuickPsychePolicy(clearPsycheReward(difficulty),runMode,policy)')
+    hasAward('applyQuickPsychePolicy(clearPsycheReward(DIFF),MODE,policy)')
     && compact.includes("storeSet('mh_owned_items',nextItems,false)"));
   check(`${rel}: クリア回数・ミッション・助手の絆も周回ぶん進める`,
     compact.includes('storeSet(clearCountKey(BATTLE_MODE_QUICK,difficulty),nextQuick,false)')

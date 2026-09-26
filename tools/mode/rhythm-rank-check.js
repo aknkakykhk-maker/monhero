@@ -90,8 +90,11 @@ check('maxScoreを渡さない/0以下/壊れているときは今までどお�
   &&rhythmNextRankId(600000,0)==='A'&&rhythmNextRankId(600000,-1)==='A');
 
 // --- 画面側の結線 ---
+// 色そのものは見た目の調整で変わる(2026-09-22 に G・M などの色が変わり、ここが古い色のまま落ち続けていた)。
+// 見るのは「全部のランクに色がある」ことだけにする
+const rankColorBlock=(game.match(/const RHYTHM_RANK_COLORS = Object\.freeze\(\{([\s\S]*?)\}\);/)||[])[1]||'';
 check('ランク色マップを持つ',
-  game.includes('const RHYTHM_RANK_COLORS = Object.freeze({')&&game.includes("G:'text-slate-500'")&&game.includes("M:'text-yellow-200'"));
+  ['G','F','E','D','C','B','A','S','SS','M'].every(rank=>new RegExp(`(^|[\\s,])${rank}:'text-[a-z]+-\\d{3}'`).test(rankColorBlock)));
 check('HUDのSCORE横にライブランクを表示',
   game.includes('data-rhythm-rank')&&game.includes('RHYTHM_RANK_COLORS[rhythmRankForScore(score)]'));  // スコアの札の部品(RhythmHudScore)が hud のスコアから出す(2026-09-27)
 check('リザルト画面にも大きくランクを表示',
