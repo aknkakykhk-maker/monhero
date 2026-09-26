@@ -29,9 +29,6 @@ const MIA_WING_LEFT_MASK = "images/monsters/mia-wing-left.png?v=691e69ca7c0c";
 const MIA_WING_RIGHT_MASK = "images/monsters/mia-wing-right.png?v=8c9771e0c3f6";
 const MIA_WING_BODY_MASK = "images/monsters/mia-wing-body.png?v=478633cf794b";
 // ==== 待機アニメのマスク(tools/monster/idle-rig-build.js が書く。手で直さない) ====
-const IDLE_MOCCHI_ARM_L_MASK = "images/monsters/idle/mocchi-arm-l.png?v=b50fe1f86dc5";
-const IDLE_MOCCHI_ARM_R_MASK = "images/monsters/idle/mocchi-arm-r.png?v=2a1197ff67e3";
-const IDLE_MOCCHI_BODY_MASK = "images/monsters/idle/mocchi-body.png?v=f3fefff57805";
 const IDLE_GOLEM_ARM_L_MASK = "images/monsters/idle/golem-arm-l.png?v=638331d61615";
 const IDLE_GOLEM_ARM_R_MASK = "images/monsters/idle/golem-arm-r.png?v=35881a33b040";
 const IDLE_GOLEM_BODY_MASK = "images/monsters/idle/golem-body.png?v=989b36ba8cb5";

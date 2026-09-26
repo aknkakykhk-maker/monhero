@@ -51,6 +51,7 @@ const posesOf = (part, flip) => {
     case 'flapL': return [{ rot: a * -0.2, sx: 1 }, { rot: a, sx: 0.9 }];
     case 'flapR': return [{ rot: -a * -0.2, sx: 1 }, { rot: -a, sx: 0.9 }];
     case 'swing': return [{ rot: a * -0.4, sx: 1 }, { rot: a, sx: 1 }];
+    case 'swingIn': return [{ rot: 0, sx: 1 }, { rot: a, sx: 1 }];
     case 'wag': return [{ rot: -a, sx: 1 }, { rot: a, sx: 1 }];
     case 'twitch': return [{ rot: 0, sx: 1 }, { rot: a, sx: 1 }];
     case 'bob': return [{ rot: 0, sx: 1 }, { rot: 0, sx: 1, dy: a / 100 * S }];
