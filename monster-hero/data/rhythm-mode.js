@@ -17602,21 +17602,23 @@ const RHYTHM_CHART_LEVELS_AFTER_SWITCH=Object.freeze({
 // </rhythm-chart-levels-after-switch>
 });
 // ===== リザルトの左に大きく出すマスモン(2026-09-26) =====
-// ユーザー「マスモン4体選ぶ中でどれが選ばれるの？」に答えた決め方。
-//   ・その曲で能力がいちばん多く出た子
-//   ・同じ回数なら編成の先の子
-//   ・1回も出なければ、絵のある先頭の子
-// arts … 枠ごとの絵(無い枠は空)、counts … 枠ごとの能力が出た回数(演奏中の控え。保存しない)。
+// 最初は「その曲で能力がいちばん多く出た子」にしたが、モンスターノーツは1体につき1曲1回しか出ないので
+// 取れた子はみな同点になり、ほぼいつも編成の1体目が出ていた(ユーザー指摘「基本的にモンスターノーツって1回ずつしか出ないよ」)。
+// ユーザーが選んだ決め方(「毎回ランダム」):
+//   ・その演奏でモンスターノーツを取れた(能力が出た)子の中から、ランダムに1体
+//   ・誰も取れなかったときは、絵のある子の中からランダムに1体
+// arts … 枠ごとの絵(無い枠は空)、counts … 枠ごとの能力が出た回数(演奏中の控え。保存しない)、
+// seed … 0以上1未満の数。演奏を始めるときに1回だけ決める(リザルトを描き直すたびに入れ替わらないように)。
 // 絵のある子が1体もいなければ -1(リザルトは曲のジャケットを出す)
-const rhythmResultHeroIndex=(arts,counts)=>{
+const rhythmResultHeroIndex=(arts,counts,seed=0)=>{
   const list=Array.isArray(arts)?arts:[];
-  let best=-1,bestCount=0;
-  list.forEach((art,index)=>{
-    if(!art)return;
-    const count=Math.max(0,Number(Array.isArray(counts)?counts[index]:0)||0);
-    if(best<0||count>bestCount){best=index;bestCount=count;}
-  });
-  return best;
+  const withArt=list.map((art,index)=>art?index:-1).filter(index=>index>=0);
+  if(!withArt.length)return -1;
+  const fired=withArt.filter(index=>Math.max(0,Number(Array.isArray(counts)?counts[index]:0)||0)>0);
+  const pool=fired.length?fired:withArt;
+  const r=Number(seed);
+  const at=Number.isFinite(r)&&r>=0&&r<1?Math.floor(r*pool.length):0;
+  return pool[Math.min(pool.length-1,at)];
 };
 // ===== 5レーン時代の譜面を6レーンの道で使う(2026-09-26) =====
 // 譜面が laneCount を持っていなければ5レーン時代のもの。サブレーンを (12-10)/2=1 本ずつ右へずらし、
@@ -19494,14 +19496,20 @@ const rhythmCreateGL2D=canvas=>{
   let gl=null;
   try{gl=canvas.getContext('webgl',attrs)||canvas.getContext('experimental-webgl',attrs);}catch(e){gl=null;}
   if(!gl)return null;
-  const VS='attribute vec2 aPos;attribute vec2 aUv;uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;varying vec2 vUv;varying vec2 vPos;'+
-    'void main(){vUv=aUv;vPos=aPos;vec2 p=vec2(dot(uM0,vec3(aPos,1.0)),dot(uM1,vec3(aPos,1.0)));vec2 c=p/uView*2.0-1.0;gl_Position=vec4(c.x,-c.y,0.0,1.0);}';
+  // ★グラデーションの位置(0〜1)は頂点側(必ず高い精度)で計算し、塗り側へはその値だけを渡す(2026-09-26・実機
+  //   「スライドやホールドで描写バグ？ノーツラインが残像になるみたい」)。位置は画面上でまっすぐに変わる量なので、
+  //   頂点で計算してなめらかにつないでも画素ごとに計算したのと同じになる。塗り側で CSS の画素座標のまま
+  //   掛け算すると、塗り側の精度が低い(16ビットの)GPU では長い帯で桁があふれ、帯の色が崩れて線や段が残る。
+  //   highp を使えない GPU でも起きないよう、塗り側では大きな数を扱わない。
+  //   (uG0・uG1 は頂点側だけで使う。両方で使うと精度の宣言が食い違ってリンクに失敗する GPU がある)
+  const VS='attribute vec2 aPos;attribute vec2 aUv;uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;uniform vec2 uG0;uniform vec2 uG1;varying vec2 vUv;varying float vT;'+
+    'void main(){vUv=aUv;vec2 d=uG1-uG0;vT=dot(aPos-uG0,d)/max(dot(d,d),1e-6);vec2 p=vec2(dot(uM0,vec3(aPos,1.0)),dot(uM1,vec3(aPos,1.0)));vec2 c=p/uView*2.0-1.0;gl_Position=vec4(c.x,-c.y,0.0,1.0);}';
   // ★精度は使えるなら highp。帯のグラデーションの位置は CSS の画素座標のまま掛け算するので、
   //   16ビット(mediump が16ビットの GPU。iPhone など)だと長い帯で 65504 を超えてあふれ、
   //   帯が1色になったり段が出たりして Canvas 2D の見た目とずれる(2026-09-26 の点検で見つけた)
-  const FS='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nvarying vec2 vUv;varying vec2 vPos;uniform int uMode;uniform vec4 uColor;uniform sampler2D uTex;uniform float uAlpha;'+
-    'uniform vec2 uG0;uniform vec2 uG1;uniform vec4 uStopC[6];uniform float uStopT[6];uniform int uStops;'+
-    'vec4 grad(){vec2 d=uG1-uG0;float t=clamp(dot(vPos-uG0,d)/max(dot(d,d),1e-6),0.0,1.0);vec4 c=uStopC[0];'+
+  const FS='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nvarying vec2 vUv;varying float vT;uniform int uMode;uniform vec4 uColor;uniform sampler2D uTex;uniform float uAlpha;'+
+    'uniform vec4 uStopC[6];uniform float uStopT[6];uniform int uStops;'+
+    'vec4 grad(){float t=clamp(vT,0.0,1.0);vec4 c=uStopC[0];'+
     'for(int i=1;i<6;i++){if(i>=uStops)break;float t0=uStopT[i-1];float t1=uStopT[i];if(t>=t0){float k=t1>t0?clamp((t-t0)/(t1-t0),0.0,1.0):1.0;c=mix(uStopC[i-1],uStopC[i],k);}}return c;}'+
     'void main(){vec4 c;if(uMode==2){c=texture2D(uTex,vUv);gl_FragColor=c*uAlpha;}else{if(uMode==1)c=grad();else c=uColor;gl_FragColor=vec4(c.rgb*c.a,c.a)*uAlpha;}}';
   let prog=null,loc=null,buf=null,lost=false,textures=new WeakMap(),stencilRef=0,viewW=0,viewH=0;
