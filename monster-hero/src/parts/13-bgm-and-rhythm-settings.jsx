@@ -323,6 +323,13 @@ const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['AUTO','自動'],['HIGH','�
 // 「自動」(2026-09-26・ユーザー指示「画質の自動を入れて」)。演奏中に、描くのが間に合わなかったフレームが
 // 3秒のうち8%を超えたら一段下げる(高→標準→省電力)。下げた段は、アプリを開いているあいだ次の曲にも引き継ぐ
 // (保存はしない。開き直すと「高」から)。上げ直しはしない(上げ下げを繰り返すと、そのたびに描き直しで詰まるため)。
+// 描き方(2026-09-26・ユーザー指示「設定で選べるようにしてほしい / 専門用語を使われてもわからないからわかるように」)。
+// 「軽い」＝ノーツと叩いたときの光を WebGL で描く(端末の絵を描く専用の部分へまとめて任せる)。見た目は「ふつう」と同じ。
+// 画面に出す名前・説明には WebGL・canvas・GPU などの言葉を使わない。
+// 既定は「ふつう」(これまでの描き方)。WebGL が使えない端末・途中で使えなくなったときは、自動で「ふつう」の描き方に戻す。
+// デバッグ画面の「ノーツの描き方(検証用)」を選んでいるときは、そちらが優先される(rhythmWebglNotesActive)。
+const RHYTHM_NOTE_DRAW_MODES = Object.freeze(['STANDARD','LIGHT']);
+const RHYTHM_NOTE_DRAW_LABELS = Object.freeze([['STANDARD','ふつう'],['LIGHT','軽い']]);
 const RHYTHM_RENDER_QUALITY_STEPS = Object.freeze(['HIGH','STANDARD','SAVE']);
 const RHYTHM_AUTO_QUALITY_WINDOW_MS = 3000;
 const RHYTHM_AUTO_QUALITY_SLOW_RATIO = .08;
@@ -479,6 +486,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   //   「もしもとより操作性変わるならもとのやつをデフォルトに」(2026-09-24・ユーザー指示)で戻した
   frameRateMode:'DEVICE',
   renderQuality:'HIGH',
+  // 描き方(2026-09-26)。既存の保存値には無いので、読み込み時は既定(ふつう)で補われる
+  noteDrawMode:'STANDARD',
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -536,6 +545,7 @@ const normalizeRhythmSettings = value => {
     quietDuringPlay:bool('quietDuringPlay'),
     frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
     renderQuality:RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality)?source.renderQuality:DEFAULT_RHYTHM_SETTINGS.renderQuality,
+    noteDrawMode:RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode)?source.noteDrawMode:DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
