@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a5e5430d97a8ae56
+// generated-sha256: b014deb07001e549
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 17:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 18:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15072,6 +15072,20 @@ const centerCarouselChild = (root, index, behavior = 'auto') => {
 // 画面を数えて確かめている検査が本物の3倍を見てしまうため、影には目印を付けない。
 // onZoom を渡すと、絵のある曲だけ「押せる絵」になる(押すと拡大して見られる)。
 // 一覧の行は曲を選ぶボタンそのものなので、渡さない(ボタンの中にボタンは置けない)。
+// 曲名をその幅の1行に収める字の大きさ(CSS の値)を作る(2026-09-26・ユーザー報告「曲選択画面の曲名が切れてる」)。
+// 置き場所を器(container-type:inline-size)にしておき、100cqw ÷ (曲名の幅をemで見積もったもの) を上限・下限で挟む。
+// 見積もりは太字のおおよその幅(漢字かな・全角=1 / 英大文字・数字=0.72 / 英小文字=0.6 / 空白=0.3)に10%の余裕を足す。
+// 下限まで縮めても入らない曲名は、呼ぶ側で2行まで折り返す。cqw が使えない端末では上限の大きさのまま
+const rhythmTitleFitEm=text=>{
+  let em=0;
+  for(const ch of String(text||'')){
+    const code=ch.codePointAt(0);
+    em+=code>=0x2e80?1:ch===' '?.3:/[A-Z0-9]/.test(ch)?.72:/[a-z]/.test(ch)?.6:.62;
+  }
+  return Math.max(1,em*1.1);
+};
+const rhythmTitleFitSize=(text,maxPx,minPx,reservePx=0)=>
+  `clamp(${minPx}px, calc((100cqw - ${reservePx}px) / ${rhythmTitleFitEm(text).toFixed(2)}), ${maxPx}px)`;
 const RhythmSongArt=({song,large=false,marked=true,onZoom=null})=>{
   const hue=rhythmSongArtHue(song&&song.songId);
   const src=typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):(song&&typeof song.artwork==='string'?song.artwork:'');
@@ -15407,9 +15421,17 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                   (2026-09-05・ユーザー指摘「文字数で枠がずれるのがださい」)。
                   2026-09-26 に2行ぶんの確保をやめて1行にした(ユーザー指示「見本のほうがサイズ感が見やすい」)。
                   曲名の全部は、選んだときに下の欄へ2行で出る。 */}
-              <span className="min-w-0 flex-1">
-                <b {...(main?{'data-rhythm-song-row-title':''}:{})} className="block truncate text-[15px] font-black leading-snug text-white">{rhythmSongFullName(entry)}</b>
-                <span className={`mt-0.5 flex items-center gap-1${spot('achievement')}`}>
+              <span className="min-w-0 flex-1 [container-type:inline-size]">
+                {/* 曲名は幅に合わせて15px〜12pxで1行に収める。12pxでも入らない曲名だけ2行へ折り返す。
+                    高さは15pxの2行ぶん(36px)で固定し、1行の曲は上下のまん中に置く(曲名の長さで行の高さを変えない)。
+                    ★折り返しと高さはインラインで持つ(CSSが届かなくても行の高さがそろうように) */}
+                <span {...(main?{'data-rhythm-song-row-title':''}:{})} className="flex items-center overflow-hidden"
+                  style={{display:'flex',alignItems:'center',overflow:'hidden',height:'36px'}}>
+                  <b className="line-clamp-2 block font-black text-white"
+                    style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',
+                      lineHeight:1.2,fontSize:rhythmTitleFitSize(rhythmSongFullName(entry),15,12)}}>{rhythmSongFullName(entry)}</b>
+                </span>
+                <span className={`flex items-center gap-1${spot('achievement')}`}>
                   {/* 楽曲Lv.(いま選んでいる難易度のLv.)。参考画像にならって赤い札にする(2026-09-26) */}
                   <span className="mr-1 inline-flex shrink-0 items-baseline gap-0.5 rounded-md bg-gradient-to-b from-rose-500 to-rose-700 px-1.5 py-0.5 leading-none shadow-[0_1px_0_rgba(0,0,0,.4)]">
                     <small className="text-[8px] font-black text-rose-100">Lv.</small>
@@ -15470,8 +15492,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           {/* 曲名は縦で2行分・横で1行分の高さを固定する。曲名の長さで下の段が上下に動かないように */}
           <div className="min-w-0" style={{gridArea:'title'}}>
             {/* 曲名の横に「♡ お気に入り」(2026-09-26。ジャンルの「お気に入り」にまとまる) */}
-            <div className="flex items-start gap-1.5">
-              <b data-rhythm-song-title className="line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white landscape:line-clamp-1 landscape:h-[1.25em] landscape:text-[16px]">{rhythmSongFullName(song)}</b>
+            {/* 横は1行なので、幅に合わせて16px〜12pxで収める(♡のボタンぶん44pxを引く)。縦は2行・17pxのまま */}
+            <div className="flex items-start gap-1.5 [container-type:inline-size]">
+              <b data-rhythm-song-title className="line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]"
+                style={{'--mh-title-fit':rhythmTitleFitSize(rhythmSongFullName(song),16,12,44)}}>{rhythmSongFullName(song)}</b>
               <button type="button" data-rhythm-song-favorite aria-pressed={favoriteIds.has(song.songId)}
                 aria-label={favoriteIds.has(song.songId)?'お気に入りから外す':'お気に入りに入れる'}
                 onClick={()=>toggleFavorite(song.songId)}
@@ -15493,7 +15517,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                 style={best&&best.played?{fontSize:`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`}:undefined}>
                 {best&&best.played?best.bestScore.toLocaleString():'まだ遊んでいません'}
               </b>
-              <span data-rhythm-demo-combo className="block text-[9px] font-black text-slate-400">MAX COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
+              <span data-rhythm-demo-combo className="block whitespace-nowrap text-[9px] font-black text-slate-400"><span className="[@container(max-width:120px)]:hidden">MAX </span>COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
             </div>
             <span data-rhythm-demo-rank className="flex flex-col items-center text-[8px] font-black tracking-[.15em] text-slate-400">RANK<b className={`text-[28px] italic leading-none tracking-normal landscape:text-[24px] ${best&&best.played?RHYTHM_RANK_COLORS[rhythmRankForScore(best.bestScore)]||'text-white':'text-slate-500'}`}>{best&&best.played?rhythmRankForScore(best.bestScore):'—'}</b></span>
           </div>
@@ -15511,18 +15535,17 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
               data-rhythm-difficulty-locked={open?'0':'1'} disabled={!open}
               title={open?undefined:`${need}をクリアすると挑めます`}
               onClick={()=>{if(open)setDifficultyId(item.id);}}
-              className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none landscape:h-[48px] ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
+              className={`flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] ${open?(on?`${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]`:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
               {/* Lv.の数字を大きく、難易度の名前を小さく(2026-09-26・参考: バンドリの難易度の並び) */}
               <b className="block text-[18px] tabular-nums">{song.difficulties[item.id].level}</b>
               <span className="block text-[8px] tracking-wide">{open?item.id:`🔒${item.id}`}</span>
               {/* 自己ベストは**難易度ごと**に出す。全国ランキングは難易度をまたいだ
                   合算なので、そちらとは別のものだと分かるように、ここへ並べて置く */}
-              <span data-rhythm-difficulty-best={item.id} className="block max-w-full truncate text-[8px] font-black tabular-nums opacity-80">
-                {open
-                  ?(()=>{const record=rhythmBestRecord(bestRecords,song.songId,item.id);
-                    return record&&record.played?record.bestScore.toLocaleString():'—';})()
-                  :`${need}で解放`}
-              </span>
+              {/* ボタンが細い端末でも「1,000,000」が切れないよう、幅に合わせて8px〜6pxで収める(2026-09-26) */}
+              {(()=>{const record=open?rhythmBestRecord(bestRecords,song.songId,item.id):null;
+                const text=open?(record&&record.played?record.bestScore.toLocaleString():'—'):`${need}で解放`;
+                return <span data-rhythm-difficulty-best={item.id} className="block max-w-full truncate text-[8px] font-black tabular-nums opacity-80"
+                  style={{fontSize:rhythmTitleFitSize(text,8,6,2)}}>{text}</span>;})()}
             </button>;
           })}
           </div>
