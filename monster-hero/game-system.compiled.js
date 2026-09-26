@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8a99507fb6fb059f
+// source-sha256: cf970cffeb95da5c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 02:15";
+const BUILD_DATE = "2026-09-27 02:32";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4960,6 +4960,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   vibrationEnabled: false,
   effectAmount: 'LIGHT',
   lightweightMode: false,
+  noteSeType: 'STANDARD',
   livePartnerVisible: true,
   sideMonsterOpacity: 'NORMAL',
   sideMonsterMotion: 'NORMAL',
@@ -5014,7 +5015,8 @@ const normalizeRhythmSettings = value => {
     monsterNoteEffect: RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect) ? source.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
-    noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
+    noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
+    noteSeType: rhythmNoteSeTypeOf(source.noteSeType),
     noteSeEnabled: bool('noteSeEnabled'),
     vibrationEnabled: bool('vibrationEnabled'),
     effectAmount: RHYTHM_EFFECT_LEVELS.includes(source.effectAmount) ? source.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount,
@@ -12800,6 +12802,12 @@ const TRAINING_OPTIONS = Object.freeze([Object.freeze({
   statLabel: 'ガッツ',
   effect: 'ガッツ +5 ＆ +5%'
 })]);
+const TACTICS_PRO_TRAINING_OPTIONS = Object.freeze(TRAINING_OPTIONS.map(option => option.id === 'atk' ? Object.freeze({
+  ...option,
+  flat: 5,
+  effect: 'ちから +5 ＆ +5%'
+}) : option));
+const trainingOptionsFor = (mode = null) => mode === BATTLE_MODE_TACTICS_PRO ? TACTICS_PRO_TRAINING_OPTIONS : TRAINING_OPTIONS;
 const POST_WAVE_JOIN_WAVES = Object.freeze([2, 4, 6]);
 const POST_WAVE_TEACHING_WAVES = Object.freeze([1, 3, 5, 7, 9]);
 const postWavePhasePlan = ({
@@ -12840,15 +12848,15 @@ const resolveRepeatInitialTeaching = (candidates, teachingId) => {
   if (!Array.isArray(candidates) || !teachingId) return null;
   return candidates.find(card => card && card.id === teachingId) || null;
 };
-const trainingOptionOf = id => TRAINING_OPTIONS.find(option => option.id === id) || null;
-const resolveTrainingStep = (stats, optionId, turns, specialDifficulty = null) => {
+const trainingOptionOf = (id, mode = null) => trainingOptionsFor(mode).find(option => option.id === id) || null;
+const resolveTrainingStep = (stats, optionId, turns, specialDifficulty = null, mode = null) => {
   const before = {
     atk: Number(stats?.atk) || 0,
     def: Number(stats?.def) || 0,
     hp: Number(stats?.hp) || 0,
     guts: Number(stats?.guts) || 0
   };
-  const option = trainingOptionOf(optionId);
+  const option = trainingOptionOf(optionId, mode);
   if (!option) return before;
   const base = before[option.stat];
   const normalAfter = Math.floor((base + option.flat) * (1 + option.rate));
@@ -12858,7 +12866,7 @@ const resolveTrainingStep = (stats, optionId, turns, specialDifficulty = null) =
     [option.stat]: applyNightmareStatGain(base, after, specialDifficulty)
   };
 };
-const resolveTrainingStats = (stats, picks, turns, specialDifficulty = null) => (Array.isArray(picks) ? picks : []).reduce((acc, id) => resolveTrainingStep(acc, id, turns, specialDifficulty), {
+const resolveTrainingStats = (stats, picks, turns, specialDifficulty = null, mode = null) => (Array.isArray(picks) ? picks : []).reduce((acc, id) => resolveTrainingStep(acc, id, turns, specialDifficulty, mode), {
   atk: Number(stats?.atk) || 0,
   def: Number(stats?.def) || 0,
   hp: Number(stats?.hp) || 0,
@@ -20838,13 +20846,17 @@ const RhythmOptions = ({
   })), React.createElement("span", {
     className: draft[key] === flag ? 'text-white' : 'text-slate-400'
   }, text))));
-  const segments = (key, items) => React.createElement("div", {
+  const segments = (key, items, onPick = null) => React.createElement("div", {
     className: `grid ${items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
   }, items.map(([id, text]) => React.createElement("button", {
     type: "button",
     key: id,
+    "data-rhythm-option-choice": `${key}:${id}`,
     "aria-pressed": draft[key] === id,
-    onClick: () => set(key, id),
+    onClick: () => {
+      set(key, id);
+      if (onPick) onPick(id);
+    },
     className: `border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide ? 'min-h-[38px]' : 'min-h-[44px]'} ${draft[key] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
   }, text)));
   const field = (title, control, description = null, {
@@ -21048,10 +21060,16 @@ const RhythmOptions = ({
     coarse: 10
   }), null, {
     full: true
-  }), field('タップ音量', stepper('noteSeVolume', 0, RHYTHM_VOLUME_MAX, 1, {
+  }), field('タップ音量', stepper('noteSeVolume', 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, {
     fine: 1,
     coarse: 10
   }), null, {
+    full: true
+  }), field('タップ音の種類', segments('noteSeType', RHYTHM_NOTE_SE_TYPES.map(item => [item.id, item.label]), id => RHYTHM_NOTE_SE_RUNTIME.preview({
+    ...draft,
+    noteSeType: id,
+    noteSeEnabled: true
+  })), `ノーツを叩いたときの音です。${RHYTHM_NOTE_SE_TYPES.map(item => `${item.label}＝${item.note}`).join('／')}。取り終えたとき・モンスターノーツ・フルコンボの音は変わりません。`, {
     full: true
   }), field('タップ音', toggle('noteSeEnabled')), React.createElement("div", {
     className: "grid gap-2"
@@ -21074,7 +21092,9 @@ const RhythmOptions = ({
     className: `mt-2 ${note}`
   }, "2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。"), React.createElement("p", {
     className: `mt-2 ${note}`
-  }, "音量は0〜", RHYTHM_VOLUME_MAX, "まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。"))), tab === 'system' && React.createElement("section", {
+  }, "タップ音量は0〜", RHYTHM_NOTE_SE_VOLUME_MAX, "まで上げられます（", RHYTHM_VOLUME_MAX, "より上は、割れないように大きい音だけ丸めて鳴らします）。"), React.createElement("p", {
+    className: `mt-2 ${note}`
+  }, "BGM音量は0〜", RHYTHM_VOLUME_MAX, "まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。"))), tab === 'system' && React.createElement("section", {
     "data-rhythm-options-panel": "system",
     className: card
   }, !wide && React.createElement("h3", {
@@ -37156,7 +37176,7 @@ function RewardPickScreen({
     hp: maxHp,
     guts: maxGuts
   };
-  const current = resolveTrainingStats(baseStats, activePicks, waveResult?.turn, specialRule);
+  const current = resolveTrainingStats(baseStats, activePicks, waveResult?.turn, specialRule, runMode);
   const remaining = TRAINING_PICK_COUNT - activePicks.length;
   const ready = tacticsMode ? trainableSlots.length > 0 && trainableSlots.every(index => picksOf(index).length === TRAINING_PICK_COUNT) : trainingPicks.length === TRAINING_PICK_COUNT;
   const doneSlots = tacticsMode ? trainableSlots.filter(index => picksOf(index).length === TRAINING_PICK_COUNT).length : 0;
@@ -37190,7 +37210,8 @@ function RewardPickScreen({
       bar: 'bg-amber-400'
     }
   };
-  const optionById = id => TRAINING_OPTIONS.find(option => option.id === id);
+  const trainingOptions = trainingOptionsFor(runMode);
+  const optionById = id => trainingOptions.find(option => option.id === id);
   const unitName = slotIdx => slots?.[slotIdx]?.masuName || slots?.[slotIdx]?.name || `${slotIdx + 1}番目の子`;
   const removePick = index => setTrainingPicks(prev => {
     if (!tacticsMode) return prev.filter((_, i) => i !== index);
@@ -37321,7 +37342,7 @@ function RewardPickScreen({
       className: "text-amber-300"
     }, "（選択中の変化）")), React.createElement("div", {
       className: "grid grid-cols-4 gap-1"
-    }, TRAINING_OPTIONS.map(option => {
+    }, trainingOptions.map(option => {
       const st = STYLES[option.id] || STYLES.hp;
       const beforeAll = baseStats[option.stat];
       const afterAll = current[option.stat];
@@ -37338,11 +37359,11 @@ function RewardPickScreen({
       }, diff > 0 ? `+${diff}` : '±0'));
     }))), React.createElement("div", {
       className: `mh-phase-cards w-full max-w-sm mt-2 grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`
-    }, TRAINING_OPTIONS.map((option, optionIndex) => {
+    }, trainingOptions.map((option, optionIndex) => {
       const count = activePicks.filter(id => id === option.id).length;
       const st = STYLES[option.id] || STYLES.hp;
       const before = current[option.stat];
-      const after = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
+      const after = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule, runMode)[option.stat];
       const full = remaining <= 0;
       return React.createElement("button", {
         key: option.id,
@@ -37384,8 +37405,8 @@ function RewardPickScreen({
       }, option.name), React.createElement("span", {
         className: `block text-[10px] font-black ${st.tint} leading-tight`
       }, option.effect, (extremeRuleNumber(specialRule, 'awakeningZeroTurns') != null || extremeRuleNumber(specialRule, 'waveEnhancement') != null) && (() => {
-        const normalAfter = resolveTrainingStep(current, option.id, waveResult?.turn, null)[option.stat];
-        const effectiveAfter = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
+        const normalAfter = resolveTrainingStep(current, option.id, waveResult?.turn, null, runMode)[option.stat];
+        const effectiveAfter = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule, runMode)[option.stat];
         const normalGain = normalAfter - current[option.stat],
           effectiveGain = effectiveAfter - current[option.stat];
         return React.createElement("span", {
@@ -56914,7 +56935,7 @@ function MonsterHeroGame() {
           def: unit.def,
           hp: unit.baseMaxHp,
           guts: unit.baseMaxGuts
-        }, ids, waveResult?.turn, specialRuleDifficulty);
+        }, ids, waveResult?.turn, specialRuleDifficulty, runMode);
         units = applyTacticsTraining(units, slotIdx, after, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct'));
       });
       commitTacticsUnits(units);
@@ -56929,7 +56950,7 @@ function MonsterHeroGame() {
         def,
         hp: maxHp,
         guts: maxGuts
-      }, picks, waveResult?.turn, specialRuleDifficulty);
+      }, picks, waveResult?.turn, specialRuleDifficulty, runMode);
       nMaxHp = nextStats.hp;
       nAtk = nextStats.atk;
       nDef = nextStats.def;

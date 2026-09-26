@@ -1458,26 +1458,79 @@ const RHYTHM_NOTE_SE_GAIN_SCALE = 10;
 // フルコンボ音(1.00)は音量140あたりからここで頭打ちになるが、そこから上は
 // 割れるだけなので止めてよい(2026-09-12)。
 const RHYTHM_NOTE_SE_LEVEL_MAX = .8;
+// ===== タップ音量の上限と、割れ止め(2026-09-26・ユーザー指示「タップ音量の上限をもっと上げて」) =====
+// タップ音量だけ 400 まで上げられるようにする(BGM音量は RHYTHM_VOLUME_MAX=200 のまま)。
+// ★200 までの音はこれまでと1つも変わらない。200 より上だけ、音の蓋を RHYTHM_NOTE_SE_LOUD_LEVEL_MAX まで開ける。
+//   そのままだと出口で割れるので、タップ音の出口に「割れ止め」(WaveShaper の柔らかい頭打ち)を1つ通す。
+//   しきい値(RHYTHM_NOTE_SE_SOFT_CLIP_KNEE)より小さい音は素通りで、大きい音だけ丸めて 1 を超えないようにする。
+//   コンプレッサー(DynamicsCompressorNode)は先読みのぶん数ms遅れて鳴るので使わない(叩いた瞬間の音が遅れると音ゲーでは困る)
+const RHYTHM_NOTE_SE_VOLUME_MAX = 400;
+const RHYTHM_NOTE_SE_LOUD_LEVEL_MAX = 2.4;
+const RHYTHM_NOTE_SE_SOFT_CLIP_KNEE = .72;
+// ===== タップ音の種類(2026-09-26・ユーザー指示「ノーツを押したときの音のバリエーションがほしい / 設定で変えられるように」) =====
+// どれも合成音(音源ファイルは増やさない)。id は保存値(mh_rhythm_settings_v1 の noteSeType)になるので、名前は変えない。
+// 変わるのは「ノーツを叩いたときの音」だけ。取り終えた音・モンスターノーツ・フルコンボの音は、どの種類でも同じ。
+const RHYTHM_NOTE_SE_TYPES = Object.freeze([
+  Object.freeze({ id:'STANDARD', label:'標準',     note:'ピッ。これまでの音' }),
+  Object.freeze({ id:'CLAP',     label:'クラップ', note:'パン。手拍子のような音' }),
+  Object.freeze({ id:'DRUM',     label:'ドラム',   note:'トン。低くて丸い太鼓の音' }),
+  Object.freeze({ id:'WOOD',     label:'ウッド',   note:'コッ。木を叩いたような短い音' }),
+  Object.freeze({ id:'BELL',     label:'ベル',     note:'キン。高く澄んだ鈴の音' }),
+]);
+const RHYTHM_NOTE_SE_TYPE_IDS = Object.freeze(RHYTHM_NOTE_SE_TYPES.map(item => item.id));
+const rhythmNoteSeTypeOf = value => RHYTHM_NOTE_SE_TYPE_IDS.includes(value) ? value : 'STANDARD';
 // 元の係数 × 倍率 × 音量(0〜1)。
 // 下限(.0001)は exponentialRampToValueAtTime が0を受け取れないためで、これまでと同じ。
-const rhythmNoteSeLevel = (base, volume) =>
-  Math.max(.0001, Math.min(RHYTHM_NOTE_SE_LEVEL_MAX, base * RHYTHM_NOTE_SE_GAIN_SCALE * volume));
+// ★音量200(=2)までは今までと同じ蓋(.8)。それより上だけ、200での大きさから音量に比例して蓋を開ける
+const rhythmNoteSeLevel = (base, volume) => {
+  const raw = base * RHYTHM_NOTE_SE_GAIN_SCALE * volume;
+  const cap = volume > 2 ? Math.min(RHYTHM_NOTE_SE_LOUD_LEVEL_MAX, RHYTHM_NOTE_SE_LEVEL_MAX * volume / 2) : RHYTHM_NOTE_SE_LEVEL_MAX;
+  return Math.max(.0001, Math.min(cap, raw));
+};
 const RHYTHM_NOTE_SE_RUNTIME=(()=>{
-  let ctx=null,cachedRaw=null,cachedSettings={enabled:true,volume:70},inputGroupDepth=0,inputGroupHit=false;
+  let ctx=null,cachedRaw=null,cachedSettings={enabled:true,volume:70,type:'STANDARD'},inputGroupDepth=0,inputGroupHit=false;
+  // 出口(割れ止めを1つ通してから destination へ)。音の作り(context)ごとに1つだけ作って使い回す
+  let outCtx=null,outNode=null,noiseCtx=null,noiseBuffer=null;
+  const output=audio=>{
+    if(outCtx===audio&&outNode)return outNode;
+    outCtx=audio;outNode=audio.destination;
+    try{
+      const shaper=audio.createWaveShaper(),size=2048,curve=new Float32Array(size),k=RHYTHM_NOTE_SE_SOFT_CLIP_KNEE;
+      // しきい値までは入った大きさのまま、そこから上は 1 へ向かって柔らかく寄せる(いくら大きくても 1 を超えない)
+      for(let i=0;i<size;i++){const x=(i/(size-1))*2-1,a=Math.abs(x)*4;
+        const y=a<=k?a:k+(1-k)*Math.tanh((a-k)/(1-k));curve[i]=Math.sign(x)*Math.min(1,y);}
+      shaper.curve=curve;shaper.oversample='none';
+      // WaveShaper は -1〜+1 の入力しか形を変えないので、1/4 に縮めて通し、出たあとで4倍に戻す(入力 4 までを扱える)
+      const pre=audio.createGain(),post=audio.createGain();pre.gain.value=.25;post.gain.value=1;
+      // 縮めた入力 x に対して、曲線は「元の大きさ a=4x」の答え y を返しているので、戻しは要らない
+      pre.connect(shaper);shaper.connect(post);post.connect(audio.destination);
+      outNode=pre;
+    }catch{outNode=audio.destination;}
+    return outNode;
+  };
+  // クラップ・ドラムの「ザッ」に使う雑音。1回だけ作って使い回す(叩くたびに作らない)
+  const noise=audio=>{
+    if(noiseCtx===audio&&noiseBuffer)return noiseBuffer;
+    const rate=audio.sampleRate||44100,length=Math.max(1,Math.floor(rate*.08));
+    noiseBuffer=audio.createBuffer(1,length,rate);noiseCtx=audio;
+    const data=noiseBuffer.getChannelData(0);for(let i=0;i<length;i++)data[i]=Math.random()*2-1;
+    return noiseBuffer;
+  };
   const readSettings=()=>{
     if(typeof localStorage==='undefined')return cachedSettings;
     let raw=null;
     try{raw=localStorage.getItem('mh_rhythm_settings_v1');}catch{return cachedSettings;}
     if(raw===cachedRaw)return cachedSettings;
     cachedRaw=raw;
-    if(!raw){cachedSettings={enabled:true,volume:70};return cachedSettings;}
+    if(!raw){cachedSettings={enabled:true,volume:70,type:'STANDARD'};return cachedSettings;}
     try{
       const value=JSON.parse(raw),number=Number(value?.noteSeVolume);
       cachedSettings={
         enabled:typeof value?.noteSeEnabled==='boolean'?value.noteSeEnabled:true,
-        volume:Number.isFinite(number)?Math.max(0,Math.min(RHYTHM_VOLUME_MAX,number)):70,
+        volume:Number.isFinite(number)?Math.max(0,Math.min(RHYTHM_NOTE_SE_VOLUME_MAX,number)):70,
+        type:rhythmNoteSeTypeOf(value?.noteSeType),
       };
-    }catch{cachedSettings={enabled:true,volume:70};}
+    }catch{cachedSettings={enabled:true,volume:70,type:'STANDARD'};}
     return cachedSettings;
   };
   const context=()=>{
@@ -1494,22 +1547,54 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   };
   const play=(previewSettings=null)=>{
     if(inputGroupDepth>0)inputGroupHit=true;
-    const settings=previewSettings?{enabled:previewSettings.noteSeEnabled!==false,volume:Math.max(0,Math.min(RHYTHM_VOLUME_MAX,Number(previewSettings.noteSeVolume)||0))}:readSettings();
+    const settings=previewSettings?{enabled:previewSettings.noteSeEnabled!==false,volume:Math.max(0,Math.min(RHYTHM_NOTE_SE_VOLUME_MAX,Number(previewSettings.noteSeVolume)||0)),type:rhythmNoteSeTypeOf(previewSettings.noteSeType)}:readSettings();
     if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
-    const oscillator=audio.createOscillator(),gain=audio.createGain(),now=audio.currentTime,level=rhythmNoteSeLevel(.035,settings.volume/100);
-    oscillator.type='triangle';
-    oscillator.frequency.setValueAtTime(1120,now);
-    oscillator.frequency.exponentialRampToValueAtTime(820,now+.035);
-    gain.gain.setValueAtTime(level,now);
-    gain.gain.exponentialRampToValueAtTime(.0001,now+.045);
-    oscillator.connect(gain);
-    gain.connect(audio.destination);
-    oscillator.start(now);
-    oscillator.stop(now+.05);
-    oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    const now=audio.currentTime,volume=settings.volume/100,out=output(audio);
+    // 音を1つ鳴らす部品。type … 波形、f0→f1 … 高さの動き、peak … 元の係数、decay … 消えるまで
+    const tone=(type,f0,f1,peak,decay,start=now)=>{
+      const oscillator=audio.createOscillator(),gain=audio.createGain();
+      oscillator.type=type;
+      oscillator.frequency.setValueAtTime(f0,start);
+      if(f1&&f1!==f0)oscillator.frequency.exponentialRampToValueAtTime(f1,start+decay*.8);
+      gain.gain.setValueAtTime(rhythmNoteSeLevel(peak,volume),start);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+decay);
+      oscillator.connect(gain);gain.connect(out);
+      oscillator.start(start);oscillator.stop(start+decay+.005);
+      oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    };
+    // makeup … 雑音は帯域を絞ると小さくなるので、そのぶんを絞ったあとで持ち上げる倍率。
+    //   係数(peak)を大きくして補うと、音量200の蓋(.8)に先に当たって「200のほうが100より小さい」になった
+    const burst=(filterType,freq,q,peak,decay,start=now,makeup=1)=>{
+      const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain(),boost=audio.createGain();
+      source.buffer=noise(audio);
+      filter.type=filterType;filter.frequency.setValueAtTime(freq,start);filter.Q.setValueAtTime(q,start);
+      gain.gain.setValueAtTime(rhythmNoteSeLevel(peak,volume),start);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+decay);
+      boost.gain.value=makeup;
+      source.connect(gain);gain.connect(filter);filter.connect(boost);boost.connect(out);
+      source.start(start);source.stop(start+decay+.005);
+      source.onended=()=>{try{source.disconnect();filter.disconnect();gain.disconnect();boost.disconnect();}catch{}};
+    };
+    // ★どの種類も、叩いた瞬間に一番大きく鳴る(立ち上がりを遅らせない)。大きさは「標準」と同じくらいに聞こえるよう係数を合わせてある
+    switch(settings.type){
+      case 'CLAP':  // パン: 帯域を絞った雑音を、ごく短い間隔で3回重ねる(手拍子のばらつき)
+        burst('bandpass',1500,1.1,.027,.012,now,3);burst('bandpass',1500,1.1,.027,.012,now+.009,3);burst('bandpass',1200,.8,.03,.07,now+.018,3);
+        break;
+      case 'DRUM':  // トン: 下がる丸い音に、叩いた「コッ」を少しだけ足す。スマホのスピーカーでも鳴る高さ(260→110Hz)にしてある
+        tone('sine',260,110,.045,.1);burst('lowpass',3000,.7,.03,.012);
+        break;
+      case 'WOOD':  // コッ: 高めの丸い音を2つ、ごく短く
+        tone('sine',1650,1500,.03,.04);tone('triangle',820,780,.02,.035);
+        break;
+      case 'BELL':  // キン: 高い音と、その上の音をやや長く響かせる
+        tone('sine',2093,2093,.017,.22);tone('sine',3136,3136,.01,.12);tone('triangle',1046.5,1046.5,.008,.08);
+        break;
+      default:      // 標準(ピッ): これまでと同じ音
+        tone('triangle',1120,820,.035,.045);
+    }
     return true;
   };
   const emitEmpty=()=>{
@@ -1527,7 +1612,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     filter.Q.setValueAtTime(.7,now);
     gain.gain.setValueAtTime(level,now);
     gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
-    source.connect(filter);filter.connect(gain);gain.connect(audio.destination);
+    source.connect(filter);filter.connect(gain);gain.connect(output(audio));
     source.start(now);source.stop(now+duration);
     source.onended=()=>{try{source.disconnect();filter.disconnect();gain.disconnect();}catch{}};
     return true;
@@ -1562,7 +1647,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     gain.gain.setValueAtTime(.0001,now);
     gain.gain.exponentialRampToValueAtTime(level,now+.008);
     gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
-    oscillator.connect(gain);gain.connect(audio.destination);
+    oscillator.connect(gain);gain.connect(output(audio));
     oscillator.start(now);oscillator.stop(now+duration+.02);
     oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
     return true;
@@ -1587,7 +1672,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
       gain.gain.setValueAtTime(.0001,start);
       gain.gain.exponentialRampToValueAtTime(rhythmNoteSeLevel(peak,volume),start+.008);
       gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
-      oscillator.connect(gain);gain.connect(audio.destination);
+      oscillator.connect(gain);gain.connect(output(audio));
       oscillator.start(start);oscillator.stop(start+sustain+.02);
       oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
     };
@@ -1618,7 +1703,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
       gain.gain.exponentialRampToValueAtTime(level,start+.012);
       gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
       oscillator.connect(gain);
-      gain.connect(audio.destination);
+      gain.connect(output(audio));
       oscillator.start(start);
       oscillator.stop(start+sustain+.02);
       oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
