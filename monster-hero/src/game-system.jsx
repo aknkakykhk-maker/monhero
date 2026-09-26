@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9a84168282c84b1f
+// generated-sha256: 3913fb14d7a27566
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 23:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 23:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4275,6 +4275,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   renderQuality:'HIGH',
   // 描画方式(2026-09-26)。既存の保存値に無い人は、読み込み時に既定(自動)で補われる
   noteDrawMode:'AUTO',
+  // にじむ光(2026-09-26)。WebGL で描いているときだけ効く。既存の保存値には無いので、読み込み時は既定(OFF)で補われる
+  noteBloom:false,
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -4333,6 +4335,7 @@ const normalizeRhythmSettings = value => {
     frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
     renderQuality:RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality)?source.renderQuality:DEFAULT_RHYTHM_SETTINGS.renderQuality,
     noteDrawMode:RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode)?source.noteDrawMode:DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
+    noteBloom:typeof source.noteBloom==='boolean'?source.noteBloom:DEFAULT_RHYTHM_SETTINGS.noteBloom,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -11483,7 +11486,7 @@ const AttackTargetFx = ({anim, attackerId}) => {
 // ・軽量表示・設定の「待機中の動き：止める」では呼び出し側が使わない。calm と「動きを減らす」は CSS で止める
 // ==== MONSTER_IDLE_RIGS(tools/monster/idle-rig-build.js が書く。手で直さない) ====
 const MONSTER_IDLE_RIGS = Object.freeze({
-  Mocchi: { body:'jelly', bodyMask:IDLE_MOCCHI_BODY_MASK, parts:[{ mask:IDLE_MOCCHI_ARM_L_MASK, origin:'29.5% 40%', anim:'swing', amp:-7, dur:1800, delay:0, layer:'front' }, { mask:IDLE_MOCCHI_ARM_R_MASK, origin:'70% 40%', anim:'swing', amp:7, dur:1800, delay:900, layer:'front' }] },
+  Mocchi: { body:'jelly', bodyMask:null, parts:[] },
   Suezo: { body:'hop', bodyMask:null, parts:[] },
   Golem: { body:'heavy', bodyMask:IDLE_GOLEM_BODY_MASK, parts:[{ mask:IDLE_GOLEM_ARM_L_MASK, origin:'22% 43%', anim:'swing', amp:-4, dur:3000, delay:0, layer:'back' }, { mask:IDLE_GOLEM_ARM_R_MASK, origin:'77% 43%', anim:'swing', amp:4, dur:3000, delay:1500, layer:'back' }] },
   Tiger: { body:'breathe', bodyMask:IDLE_TIGER_BODY_MASK, parts:[{ mask:IDLE_TIGER_TAIL_MASK, origin:'67.8% 53%', anim:'wag', amp:7, dur:1100, delay:0, layer:'back' }] },
@@ -14928,7 +14931,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               {/* いまの選び方で、この端末ではどちらで描くか(「自動」の結果を実機で確かめられるように)。
                   デバッグ画面の指定があればそれも含めて決める(rhythmWebglNotesActive)。見極めは初回の1回だけ */}
               <p data-rhythm-draw-mode-now className="mt-1.5 text-center text-[10px] font-bold text-cyan-100/80">この端末では「{rhythmWebglNotesActive(draft.noteDrawMode)?'WebGL':'Canvas'}」で描きます</p></>,
-              'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。見た目・判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。')}
+              'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。見た目・判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。ライブ背景も GPU で1枚にまとめて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。ノーツの光や叩いたときの光は、重なるほど白く輝くように描きます（光の見え方だけが「Canvas」と少し違います）。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。')}
+            {/* にじむ光(2026-09-26・ユーザー指示「見た目の向上＋軽量化」の3。既定は OFF)。WebGL で描いているときだけ効く */}
+            {field('にじむ光',toggle('noteBloom'),
+              'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。')}
             {/* モンスターノーツだけを軽くしたい人向け(2026-09-13・ユーザー依頼
                 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」) */}
             {field('モンスターノーツの演出',segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS),
@@ -15852,6 +15858,118 @@ const rhythmStageSparkSprite=(layer,scale)=>{
   g.fillStyle=grad;g.fillRect(0,0,size,size);
   return c;
 };
+// ===== ライブ背景を WebGL で1枚に描く(2026-09-26) =====
+// 描画方式が WebGL のとき(デバッグ画面の「ライブ背景の描き方(検証用)」で切り替えられる)は、
+// ジャケット・暗幕・サーチライト・光の粒を、canvas 1枚へ1回の描画でまとめて描く。
+// CSS 版は「引き伸ばしたジャケット」「暗幕」「サーチライト2枚」「画面の2倍の高さの粒の層2枚」を毎フレーム重ね合わせており、
+// GPU は画面およそ7枚ぶんを塗っている。こちらは画面1枚ぶんを、1秒に30回まで塗り直すだけで済む(動きがゆっくりなので見分けがつかない)。
+// 形・位置・色・動きの速さは CSS 版(index.html の [data-rhythm-stage] と RHYTHM_STAGE_*)を写した。
+// ★ノーツのタイミングの光([data-rhythm-stage-pulse])はレーンの上に置く必要があるので、ここでは描かない(CSS 版のまま)。
+const RHYTHM_STAGE_GL_KEY='mh_rhythm_stage_gl_v1';
+const rhythmStageGlPreference=()=>{try{if(typeof localStorage==='undefined')return '';const value=localStorage.getItem(RHYTHM_STAGE_GL_KEY);return value==='css'||value==='webgl'?value:'';}catch{return '';}};
+const rhythmStageGlSetPreference=value=>{
+  const next=value==='css'||value==='webgl'?value:'';
+  try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_STAGE_GL_KEY,next);else localStorage.removeItem(RHYTHM_STAGE_GL_KEY);}}catch{}
+  return next;
+};
+// デバッグ画面の指定があればそれに従い、無ければノーツの描き方に合わせる(ノーツが WebGL のときだけ)
+const rhythmStageGlActive=webglNotes=>{const pref=rhythmStageGlPreference();if(pref)return pref==='webgl';return !!webglNotes;};
+// CSS の cubic-bezier と同じ緩急(x から y を求める)
+const rhythmCubicBezier=(x1,y1,x2,y2)=>{
+  const at=(a,b,t)=>((1-3*b+3*a)*t+(3*b-6*a))*t*t+3*a*t;
+  return x=>{if(x<=0)return 0;if(x>=1)return 1;let lo=0,hi=1,t=x;for(let i=0;i<20;i++){const v=at(x1,x2,t);if(Math.abs(v-x)<1e-5)break;if(v<x)lo=t;else hi=t;t=(lo+hi)/2;}return at(y1,y2,t);};
+};
+const rhythmStageEaseInOut=rhythmCubicBezier(.42,0,.58,1),rhythmStageEaseOut=rhythmCubicBezier(0,0,.58,1);
+const RHYTHM_STAGE_GL_DOTS=RHYTHM_STAGE_SPARKS.flatMap((layer,index)=>layer.dots.map(([x,y])=>[x/100,y/100,index]));
+const RHYTHM_STAGE_GL_BEAM_RGBA=RHYTHM_STAGE_BEAM_COLORS.map(color=>(color.match(/[\d.]+/g)||[]).map(Number));
+const RHYTHM_STAGE_GL_VS='attribute vec2 aPos;uniform vec2 uSize;varying vec2 vP;void main(){vP=vec2((aPos.x+1.)*.5*uSize.x,(1.-aPos.y)*.5*uSize.y);gl_Position=vec4(aPos,0.,1.);}';
+const RHYTHM_STAGE_GL_FS=`#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec2 vP;
+uniform vec2 uSize;uniform sampler2D uArt;uniform float uArtA,uFx;
+uniform vec4 uBeamL,uBeamR,uBeamC;uniform vec2 uBeamBox;uniform vec4 uDots[${RHYTHM_STAGE_GL_DOTS.length}];
+vec4 over(vec4 c,vec4 s){return s+c*(1.-s.a);}
+vec4 tint(vec3 rgb,float a){return vec4(rgb*a,a);}
+float beam(vec4 b){vec2 d=vP-b.zw;vec2 l=vec2(b.x*d.x+b.y*d.y,-b.y*d.x+b.x*d.y);
+  float hw=mix(.06,.5,clamp(l.y/uBeamBox.y,0.,1.))*uBeamBox.x;
+  return clamp(hw-abs(l.x)+.5,0.,1.)*clamp(l.y+.5,0.,1.)*clamp(1.-l.y/(.78*uBeamBox.y),0.,1.);}
+vec4 spark(float r,float core,float mid,float end){
+  vec4 a=vec4(vec3(236.,254.,255.)/255.*.95,.95),b=vec4(vec3(103.,232.,249.)/255.*.35,.35);
+  if(r<=core)return a;if(r<=mid)return mix(a,b,(r-core)/(mid-core));if(r<end)return mix(b,vec4(0.),(r-mid)/(end-mid));return vec4(0.);}
+void main(){
+  vec4 c=vec4(0.);
+  vec2 uv=(vP-vec2(-.12,-.08)*uSize)/(vec2(1.24,1.16)*uSize);
+  vec4 art=texture2D(uArt,uv);c=art*uArtA;
+  float y=vP.y/uSize.y;
+  float lin=y<.12?mix(.62,.3,y/.12):y<.35?mix(.3,.05,(y-.12)/.23):y<.7?mix(.05,.2,(y-.35)/.35):mix(.2,.55,(y-.7)/.3);
+  vec3 dark=vec3(3.,4.,11.)/255.;
+  c=over(c,tint(dark,lin));
+  float t=length((vP-vec2(.5,.45)*uSize)/(vec2(.7,.55)*uSize));
+  float rad=t<.7?mix(.62,.18,t/.7):t<1.?mix(.18,0.,(t-.7)/.3):0.;
+  c=over(c,tint(dark,rad));
+  if(uFx>.5){
+    c=over(c,tint(uBeamC.rgb,uBeamC.a*beam(uBeamL)));
+    c=over(c,tint(uBeamC.rgb,uBeamC.a*beam(uBeamR)));
+    vec4 far=vec4(0.),near=vec4(0.);
+    for(int i=0;i<${RHYTHM_STAGE_GL_DOTS.length};i++){vec4 d=uDots[i];
+      float r=min(length(vP-d.xy),length(vP-vec2(d.x,d.y+uSize.y)));
+      if(d.w<.5)far=over(far,spark(r,1.,2.,4.));else near=over(near,spark(r,2.,3.,5.));}
+    c=over(c,far*.55);c=over(c,near*.7);
+  }
+  gl_FragColor=c;
+}`;
+// canvas へ WebGL の描き込み先を作る。作れなければ null(呼び出し側は CSS 版へ戻す)
+const rhythmCreateStageGL=canvas=>{
+  if(!canvas||typeof canvas.getContext!=='function')return null;
+  const attrs={alpha:true,premultipliedAlpha:true,antialias:false,depth:false,stencil:false,preserveDrawingBuffer:false};
+  let gl=null;try{gl=canvas.getContext('webgl',attrs)||canvas.getContext('experimental-webgl',attrs);}catch(e){gl=null;}
+  if(!gl)return null;
+  const shader=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return gl.getShaderParameter(s,gl.COMPILE_STATUS)?s:null;};
+  const vs=shader(gl.VERTEX_SHADER,RHYTHM_STAGE_GL_VS),fs=shader(gl.FRAGMENT_SHADER,RHYTHM_STAGE_GL_FS);
+  if(!vs||!fs)return null;
+  const prog=gl.createProgram();gl.attachShader(prog,vs);gl.attachShader(prog,fs);gl.bindAttribLocation(prog,0,'aPos');gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog,gl.LINK_STATUS))return null;
+  gl.useProgram(prog);
+  const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+  const tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));
+  gl.disable(gl.BLEND);gl.disable(gl.DEPTH_TEST);gl.clearColor(0,0,0,0);
+  const u={};['uSize','uArt','uArtA','uFx','uBeamL','uBeamR','uBeamC','uBeamBox','uDots'].forEach(name=>{u[name]=gl.getUniformLocation(prog,name);});
+  gl.uniform1i(u.uArt,0);
+  const dots=new Float32Array(RHYTHM_STAGE_GL_DOTS.length*4);
+  return {
+    setArt(source){try{gl.bindTexture(gl.TEXTURE_2D,tex);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);return true;}catch(e){return false;}},
+    // w,h … CSS px / scale … 画素密度 / timeMs … 動きの時刻 / artA … ジャケットの濃さ / fx … サーチライトと粒を出すか / tier … 色の段
+    draw({w,h,scale,timeMs,artA,fx,tier}){
+      if(gl.isContextLost())return;
+      const pw=Math.max(1,Math.round(w*scale)),ph=Math.max(1,Math.round(h*scale));
+      if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;}
+      gl.viewport(0,0,pw,ph);
+      gl.uniform2f(u.uSize,w,h);gl.uniform1f(u.uArtA,artA);gl.uniform1f(u.uFx,fx?1:0);
+      if(fx){
+        const bw=.38*w,bh=1.35*h,top=-.12*h;
+        // 7秒で片道・行って戻る(alternate)。右は3.5秒ずらす
+        const swing=offset=>{const p=((timeMs+offset)/7000)%2;return rhythmStageEaseInOut(p>1?2-p:p);};
+        const put=(loc,deg,cx)=>{const a=deg*Math.PI/180;gl.uniform4f(loc,Math.cos(a),Math.sin(a),cx,top);};
+        put(u.uBeamL,-22+28*swing(0),-.1*w+bw/2);
+        put(u.uBeamR,22-28*swing(3500),w+.1*w-bw/2);
+        const rgba=RHYTHM_STAGE_GL_BEAM_RGBA[tier]||RHYTHM_STAGE_GL_BEAM_RGBA[0];
+        gl.uniform4f(u.uBeamC,rgba[0]/255,rgba[1]/255,rgba[2]/255,(rgba[3]||0)*.75);
+        gl.uniform2f(u.uBeamBox,bw,bh);
+        RHYTHM_STAGE_GL_DOTS.forEach(([x,y,layer],i)=>{const off=((timeMs/RHYTHM_STAGE_SPARKS[layer].duration)%1)*h;dots[i*4]=x*w;dots[i*4+1]=y*h-off;dots[i*4+2]=0;dots[i*4+3]=layer;});
+        gl.uniform4fv(u.uDots,dots);
+      }
+      gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    },
+    release(){try{gl.deleteTexture(tex);gl.deleteBuffer(buf);gl.deleteProgram(prog);gl.deleteShader(vs);gl.deleteShader(fs);const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
+  };
+};
 // 画質「自動」で下げた段。アプリを開いているあいだだけ覚えておき、次の曲もこの段から始める(保存はしない)
 const rhythmAutoQualityMemory={level:'HIGH'};
 const RHYTHM_FACE_BOX=42,RHYTHM_FACE_ZOOM=1.28,RHYTHM_FACE_PAD=12;
@@ -16216,6 +16334,12 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   //   動かすのは transform と opacity だけ(合成だけで済むもの)。
   const stageLevel=rhythmStageLevel(settings);
   const stageArtRef=useRef(null),stagePulseRef=useRef(null);
+  // ライブ背景を WebGL で1枚に描くか(rhythmCreateStageGL の説明を参照)。ノーツと同じく演奏の始めに1回だけ決める。
+  // 途中で端末に WebGL を取り上げられたら(webglcontextlost)、CSS 版へ戻す
+  const stageGlWanted=useState(()=>stageLevel!=='SIMPLE'&&rhythmStageGlActive(webglWanted))[0];
+  const [stageGlLost,setStageGlLost]=useState(false);
+  const stageGl=stageGlWanted&&stageLevel!=='SIMPLE'&&!stageGlLost;
+  const stageGlRef=useRef(null);
   const stageArtSrc=stageLevel!=='SIMPLE'&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
   // 曲名のとなりに出す小さなジャケット(ライブ背景の設定とは関係なく、絵がある曲なら出す)
   const hudArtSrc=typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
@@ -16226,7 +16350,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
     img.onload=()=>{if(!alive)return;try{const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);canvas.dataset.ready='1';}catch(_){}};
     img.src=stageArtSrc;
     return()=>{alive=false;img.onload=null;};
-  },[stageArtSrc]);
+  },[stageArtSrc,stageGl]);
   const sideMonsterElements=useMemo(()=>{
     if(settings.sideMonsterOpacity==='OFF')return null;
     const opacity=rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -16380,7 +16504,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const stageFxOn=stageLevel==='VIVID'&&settings.effectAmount!=='MINIMAL';
   useEffect(()=>{
     const host=stageHostRef.current;
-    if(!host||!stageFxOn||typeof window==='undefined'||typeof document==='undefined')return undefined;
+    if(!host||!stageFxOn||stageGl||typeof window==='undefined'||typeof document==='undefined')return undefined;
     let alive=true,made=[],timer=0,lastKey='';
     const toUrl=canvas=>new Promise(resolve=>{try{canvas.toBlob(blob=>resolve(blob?URL.createObjectURL(blob):null),'image/png');}catch(e){resolve(null);}});
     const bake=async()=>{
@@ -16413,7 +16537,45 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
     const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(()=>{clearTimeout(timer);timer=setTimeout(bake,150);}):null;
     if(observer)observer.observe(host);
     return()=>{alive=false;clearTimeout(timer);if(observer)observer.disconnect();setStageImages(null);made.forEach(url=>URL.revokeObjectURL(url));};
-  },[stageFxOn,renderQualityStill]);
+  },[stageFxOn,stageGl,renderQualityStill]);
+  // WebGL 版のライブ背景を動かす。色の段と演出の有無は毎回の描画でここから読む(描き直しの輪を作り直さない)
+  const stageGlLiveRef=useRef(null);stageGlLiveRef.current={tier:stageTierNow,fx:stageFxOn};
+  useEffect(()=>{
+    const canvas=stageGlRef.current,host=stageHostRef.current;
+    if(!stageGl||!canvas||!host||typeof window==='undefined'||typeof document==='undefined')return undefined;
+    const renderer=rhythmCreateStageGL(canvas);
+    if(!renderer){setStageGlLost(true);return undefined;}
+    let alive=true,frame=0,last=-1e9,artAt=-1,artSettled=false,dirty=true,lastTier=-1,lastFx=null,w=host.clientWidth,h=host.clientHeight;
+    const start=performance.now();
+    // 動きを減らす設定の端末では、CSS 版と同じくサーチライトと光の粒を出さない
+    const reduce=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    // 画素密度は CSS 版の焼いた画像と同じ(1.5倍まで。画質「標準」は1.25倍、「省電力」は1倍)
+    const cap=renderQualityStill==='STANDARD'?1.25:rhythmRenderQualityCap(renderQualityStill,1.5);
+    const scale=Math.min(cap,Math.max(1,Number(window.devicePixelRatio)||1));
+    const fullArt=stageLevel==='CALM'?.34:.5;
+    if(stageArtSrc){const img=new Image();img.onload=()=>{if(!alive)return;const c=document.createElement('canvas');c.width=24;c.height=24;const g=c.getContext('2d');if(!g)return;try{g.drawImage(img,0,0,24,24);}catch(_){return;}if(renderer.setArt(c)){artAt=performance.now();dirty=true;}};img.src=stageArtSrc;}
+    const onLost=event=>{if(event&&typeof event.preventDefault==='function')event.preventDefault();setStageGlLost(true);};
+    canvas.addEventListener('webglcontextlost',onLost);
+    // 大きさは変わったときだけ測る(毎フレーム測ると配置の計算をその場でさせてしまう)
+    const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(()=>{w=host.clientWidth;h=host.clientHeight;dirty=true;}):null;
+    if(observer)observer.observe(host);
+    const loop=now=>{
+      frame=requestAnimationFrame(loop);
+      const live=stageGlLiveRef.current||{},fx=!!live.fx&&!reduce,tier=Number(live.tier)||0;
+      if(tier!==lastTier||fx!==lastFx){lastTier=tier;lastFx=fx;dirty=true;}
+      const fading=artAt>=0&&now-artAt<800;
+      if(artAt>=0&&!fading&&!artSettled){artSettled=true;dirty=true;}
+      if(!dirty&&!fx&&!fading)return;
+      // 動きはゆっくりなので、1秒に30回まで(60Hz なら1回おき)
+      if(!dirty&&now-last<28)return;
+      if(!(w>0&&h>0))return;
+      last=now;dirty=false;
+      const artA=artAt<0?0:fullArt*rhythmStageEaseOut(Math.min(1,(now-artAt)/800));
+      renderer.draw({w,h,scale,timeMs:now-start,artA,fx,tier});
+    };
+    frame=requestAnimationFrame(loop);
+    return()=>{alive=false;cancelAnimationFrame(frame);if(observer)observer.disconnect();canvas.removeEventListener('webglcontextlost',onLost);renderer.release();};
+  },[stageGl,stageLevel,stageArtSrc,renderQualityStill]);
   /* フルコンボ・オールマーベラスが続いているか(プロセカ・CHUNITHM のコンボ色)。「COMBO」の字の色で見せる。
      AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。設定で出さないこともできる */
   /* アシストモードでは称号が付かないので出さない(出すと「取れる」と思わせてしまう) */const comboStatus=(()=>{if(settings.comboStatusDisplay===false||assistOn||!view.counts)return '';const c=view.counts;if((Number(c.BAD)||0)+(Number(c.MISS)||0)>0)return '';return (Number(c.EXCELLENT)||0)+(Number(c.GREAT)||0)+(Number(c.GOOD)||0)>0?'FC':'AM';})();
@@ -16869,7 +17031,7 @@ if(stagePulseOn){const pulseEl=stagePulseRef.current,notes=run.notes;let index=r
 // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
-const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100});
+const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:settings.noteBloom===true});
 // 叩いたときの光(WebGL のときだけ canvas で描く)。光の層はノーツの下なので、ノーツより先に描く
 if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
 
@@ -17475,11 +17637,14 @@ scheduleTick();};
        ★ノーツが流れ着く先は measureTravel が**ラインを実測**して決めるので、
          ここを動かすだけで譜面も判定もそのままついてくる */
     '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{/* ライブ背景。いちばん奥(z-index:-1)。見た目は index.html の [data-rhythm-stage] が持つ */}
-{stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} aria-hidden="true">
-  {stageArtSrc&&<canvas ref={stageArtRef} data-rhythm-stage-art width="24" height="24"/>}
+{stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} data-stage-gl={stageGl?'1':undefined} aria-hidden="true">
+  {/* WebGL 版は、ジャケット・暗幕・サーチライト・光の粒をこの canvas 1枚に描く(暗幕の ::after は CSS 側で消す)。
+      描き込み先を作り直すときは canvas も作り直す(一度片付けた canvas からは描き込み先を取り出せない) */}
+  {stageGl&&<canvas key={`stage-gl-${stageLevel}-${renderQualityStill}`} ref={stageGlRef} data-rhythm-stage-gl/>}
+  {!stageGl&&stageArtSrc&&<canvas ref={stageArtRef} data-rhythm-stage-art width="24" height="24"/>}
   {/* サーチライトと光の粒は、1度だけ焼いた画像を CSS のアニメーション(合成だけで動く)で動かす(2026-09-26)。
       以前はサーチライトを clip-path で切り抜いた層、光の粒を画面の2倍の高さの CSS の模様で作っていた */}
-  {stageFxOn&&stageImages&&<><img data-rhythm-stage-beam="left" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/><img data-rhythm-stage-beam="right" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/>
+  {!stageGl&&stageFxOn&&stageImages&&<><img data-rhythm-stage-beam="left" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/><img data-rhythm-stage-beam="right" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/>
     <img data-rhythm-stage-sparks="far" src={stageImages.sparks[0]} alt="" draggable={false}/><img data-rhythm-stage-sparks="near" src={stageImages.sparks[1]} alt="" draggable={false}/></>}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
@@ -27963,6 +28128,7 @@ function MonsterHeroGame() {
   const [rhythmStrip,setRhythmStrip]=useState(()=>RHYTHM_STRIP.value);
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
   const [rhythmCanvasPref,setRhythmCanvasPref]=useState(()=>rhythmCanvasNotesPreference());
+  const [rhythmStageGlPref,setRhythmStageGlPref]=useState(()=>rhythmStageGlPreference());
   const [rhythmChartToolsOpened,setRhythmChartToolsOpened]=useState(false);
   // 音ゲー体験版の入口。デバッグ画面と同じ保存値を読むが、開く画面は体験版ホーム。
   // 体験版で遊べるのは Monster Hero 1曲・EASY/NORMAL/HARD だけで、デバッグ用の曲は出さない。
@@ -43115,6 +43281,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`],['曲の時刻の進み/frame',`${(rhythmPerfStats.songStepMsPerFrame??0).toFixed(2)}ms`],['曲の時刻が進まないframe',`${((rhythmPerfStats.songStallRate??0)*100).toFixed(1)}%`],['曲の時刻の最大の飛び',`${(rhythmPerfStats.songStepMaxMs??0).toFixed(1)}ms`],['ノーツを取る処理/回',`${(rhythmPerfStats.judgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.judgeCount??0}回）`],['取る処理の最大',`${(rhythmPerfStats.judgeMsMax??0).toFixed(1)}ms`],['モンスターノーツ/回',`${(rhythmPerfStats.monsterJudgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount??0}回）`],['モンスターノーツの最大',`${(rhythmPerfStats.monsterJudgeMsMax??0).toFixed(1)}ms`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.spikes)&&rhythmPerfStats.spikes.length>0&&<div data-rhythm-perf-spikes className="mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-amber-200">飛んだフレーム（33ms超）を起きた順に{rhythmPerfStats.spikes.length}件</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70">「モンスター後」が小さい行が並ぶなら、踏んだあとの演出が原因です。「tick」が0msなら、その飛びはJSではなく描画側です。</p><ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.spikes.map((sp,i)=><li key={i}>{`${(sp.at/1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon<0?'—':`${sp.mon}ms`}`}</li>)}</ol></div>}</section><section data-rhythm-strip-panel className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"><h3 className="text-xs font-black text-rose-200">装飾を切って切り分ける（デバッグ）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80">演奏画面の重そうな装飾を個別に消します。<b>次の演奏から効きます。</b>ONにして1曲プレイし、性能計測の「33ms超」が減るかを見てください。減ったものが原因です。判定・スコア・譜面には一切関わりません。</p><div className="mt-2 grid grid-cols-2 gap-2">{RHYTHM_STRIP_ITEMS.map(item=><button key={item.id} type="button" data-rhythm-strip-toggle={item.id} aria-pressed={rhythmStrip.split(/\s+/).includes(item.id)} onClick={()=>setRhythmStrip(RHYTHM_STRIP.toggle(item.id))} className={`min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id)?'bg-rose-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{item.label}</button>)}</div><button type="button" className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmStrip(RHYTHM_STRIP.set(''))}>ぜんぶ元に戻す</button></section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-canvas-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">ノーツの描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは{RELEASE_FLAGS.rhythmCanvasNotes?'canvas':'要素'}）に従います。「WebGL」は canvas と同じ描き方を GPU で描く試作です（重さ・発熱を「性能計測」で canvas と比べるためのもの）。</p><div className="mt-2 flex gap-2">{[['','自動'],['dom','要素'],['canvas','canvas'],['webgl','WebGL']].map(([value,label])=><button key={value||'auto'} type="button" data-rhythm-canvas-pref={value||'auto'} aria-pressed={rhythmCanvasPref===value} onClick={()=>setRhythmCanvasPref(rhythmCanvasNotesSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
+            {/* ライブ背景を WebGL で描くかの切り替え(2026-09-26)。実機で重さ・発熱を CSS 版と比べるためのもの。
+                プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
+            <section data-rhythm-stage-gl-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">ライブ背景の描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">ライブ背景（控えめ・派手）を、これまでの CSS の重ね合わせで描くか、WebGL の canvas 1枚で描くかを切り替えます。次の演奏から効きます。「自動」はノーツが WebGL で描かれるときだけ WebGL にします。</p><div className="mt-2 flex gap-2">{[['','自動'],['css','CSS'],['webgl','WebGL']].map(([value,label])=><button key={value||'auto'} type="button" data-rhythm-stage-gl-pref={value||'auto'} aria-pressed={rhythmStageGlPref===value} onClick={()=>setRhythmStageGlPref(rhythmStageGlSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmStageGlPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* モンスターノーツ用のマスモン設定(RHYTHM_MODE §3.2)。最大4体・同じモンスターの重複禁止・
                 1〜4枠の並び順がそのままモンスターノーツの登場順になる。ノーツ本体はこのあと作る */}
             <div className="mb-3"><RhythmMonsterSlotsPanel rhythmMonsterSlots={rhythmMonsterSlots} rhythmMonsterSlotIdsInUse={rhythmMonsterSlotIdsInUse} rhythmMonsterPickerOpen={rhythmMonsterPickerOpen} setRhythmMonsterPickerOpen={setRhythmMonsterPickerOpen} rhythmMonsterMessage={rhythmMonsterMessage} setRhythmMonsterMessage={setRhythmMonsterMessage} applyRhythmMonsterSlots={applyRhythmMonsterSlots} masuMons={masuMons}/></div>
@@ -46873,6 +47042,7 @@ const createAnimationStyle = () => {
     .mon-idle__part--flapL, .mon-idle__part--flapR { animation-name:monIdleFlap; animation-timing-function:cubic-bezier(.45,0,.35,1); }
     .mon-idle__part--flapR { --idle-flip:-1; }
     .mon-idle__part--swing { animation-name:monIdleSwing; }
+    .mon-idle__part--swingIn { animation-name:monIdleSwingIn; }
     .mon-idle__part--wag { animation-name:monIdleWag; }
     .mon-idle__part--twitch { animation-name:monIdleTwitch; }
     .mon-idle__part--bob { animation-name:monIdleBob; }
@@ -46885,6 +47055,13 @@ const createAnimationStyle = () => {
     /* ゆったり揺れる(花・ヒレ・腕の刃)。amp の符号で揺れ始めの向きが変わる */
     @keyframes monIdleSwing {
       0%,100% { transform:rotate(calc(var(--idle-amp) * -.4)); }
+      50% { transform:rotate(var(--idle-amp)); }
+    }
+    /* 片側だけへ揺れる(体の手前の手など)。止まった位置から amp の向きへだけ振って戻る。
+       手前の部分が外へ振れると、その下に隠れていた体のふち(絵に無い所)がすき間になるので、
+       体へ重なる向きにだけ動かす(2026-09-26 ユーザー指摘「直ってない」モッチーの手) */
+    @keyframes monIdleSwingIn {
+      0%,100% { transform:rotate(0deg); }
       50% { transform:rotate(var(--idle-amp)); }
     }
     /* しっぽ振り。左右へ同じだけ */

@@ -12,7 +12,7 @@
 // RIGS の1体ぶん = { id, img, body, parts:[{ name, poly, pivot, anim, amp, dur, delay, layer }] }
 //   poly  : 切り抜く範囲。元絵の左上を(0,0)、右下を(100,100)とした % の多角形
 //   pivot : 回す軸。同じく元絵の %
-//   anim  : flapL / flapR(羽ばたき) / swing(ゆったり揺れ) / wag(しっぽ振り) / twitch(ときどきピクッ) / bob(上下)
+//   anim  : flapL / flapR(羽ばたき) / swing(ゆったり揺れ) / swingIn(amp の向きへだけ揺れる。体の手前の手など) / wag(しっぽ振り) / twitch(ときどきピクッ) / bob(上下)
 //   layer : back(体の後ろ) / front(体の前)。翼・しっぽは back、頭の上の花や耳は front
 //   keep  : 多角形の中でも、この色の画素だけを部分にする(毛・腕・体を巻き込まないため)。
 //           { minLum, maxLum }(明るさ0〜255) / { hue:[下,上], minSat }(色相0〜360・彩度0〜1)
@@ -60,11 +60,10 @@ const BACKFILL_DEFAULT = 1.2;
 const RIGS = [
   // 頭の葉は切れ目が頭の上を横切り、傾けると継ぎ目が見えたので動かさない(全体の弾みだけ)
   // 待機が地味だった子に動きを足す(2026-09-25 ユーザー指示「待機中の動きが地味なモンスターがいるからもう少し改良したい」)。
-  // 平たい手は体の外側に付いているので、肩を軸に交互に小さく振る(体の前の層。内へ振っても体の上に重なるだけ)
-  { id:'Mocchi', img:'images/monsters/mocchi.png', body:'jelly', parts:[
-    { name:'armL', poly:[[30.5,37],[29,40],[24.5,44.5],[20,51.5],[17,59],[16.5,66],[19,70.5],[24,70.3],[26.5,68],[27.3,62],[27.8,55],[28.6,48],[29.8,42]], joint:3, pivot:[29.5,40], anim:'swing', amp:-7, dur:1800, layer:'front' },
-    { name:'armR', poly:[[68.8,37],[71,39.5],[75.5,44.5],[80,51.5],[83,59],[84,66],[81,70.5],[76,70.3],[74,68],[73.4,62],[72.5,55],[71.3,48],[70,42]], joint:3, pivot:[70,40], anim:'swing', amp:7, dur:1800, delay:900, layer:'front' },
-  ]},
+  // モッチーの手は体の輪郭そのものに付いていて、体の手前に重なって描かれている。手を回すと、外へ振れば
+  // 手の下(絵に無い所)がすき間になり、内へ振っても肩の外ふちが細い筋になって残った(2026-09-26 ユーザー指摘
+  // 「動いてる部分でまだ切れてる」「直ってない」)。手は動かさず、体全体のぷるぷる(jelly)だけで動かす
+  { id:'Mocchi', img:'images/monsters/mocchi.png', body:'jelly', parts:[] },
   { id:'Suezo', img:'images/monsters/suezo.png', body:'hop', parts:[] },
   // 肩の岩は胸と重なっているので動かさず、肩から下の腕だけを重たく小さく揺らす(脚の後ろの層)
   { id:'Golem', img:'images/monsters/golem.png', body:'heavy', parts:[

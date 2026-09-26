@@ -647,6 +647,7 @@ const createAnimationStyle = () => {
     .mon-idle__part--flapL, .mon-idle__part--flapR { animation-name:monIdleFlap; animation-timing-function:cubic-bezier(.45,0,.35,1); }
     .mon-idle__part--flapR { --idle-flip:-1; }
     .mon-idle__part--swing { animation-name:monIdleSwing; }
+    .mon-idle__part--swingIn { animation-name:monIdleSwingIn; }
     .mon-idle__part--wag { animation-name:monIdleWag; }
     .mon-idle__part--twitch { animation-name:monIdleTwitch; }
     .mon-idle__part--bob { animation-name:monIdleBob; }
@@ -659,6 +660,13 @@ const createAnimationStyle = () => {
     /* ゆったり揺れる(花・ヒレ・腕の刃)。amp の符号で揺れ始めの向きが変わる */
     @keyframes monIdleSwing {
       0%,100% { transform:rotate(calc(var(--idle-amp) * -.4)); }
+      50% { transform:rotate(var(--idle-amp)); }
+    }
+    /* 片側だけへ揺れる(体の手前の手など)。止まった位置から amp の向きへだけ振って戻る。
+       手前の部分が外へ振れると、その下に隠れていた体のふち(絵に無い所)がすき間になるので、
+       体へ重なる向きにだけ動かす(2026-09-26 ユーザー指摘「直ってない」モッチーの手) */
+    @keyframes monIdleSwingIn {
+      0%,100% { transform:rotate(0deg); }
       50% { transform:rotate(var(--idle-amp)); }
     }
     /* しっぽ振り。左右へ同じだけ */

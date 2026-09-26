@@ -19526,15 +19526,31 @@ const rhythmCreateGL2D=canvas=>{
     'for(int i=1;i<6;i++){if(i>=uStops)break;float t0=uStopT[i-1];float t1=uStopT[i];if(t>=t0){float k=t1>t0?clamp((t-t0)/(t1-t0),0.0,1.0):1.0;c=mix(uStopC[i-1],uStopC[i],k);}}return c;}'+
     'void main(){vec4 c;if(uMode==2){c=texture2D(uTex,vUv);gl_FragColor=c*uAlpha;}else{if(uMode==1)c=grad();else c=uColor;gl_FragColor=vec4(c.rgb*c.a,c.a)*uAlpha;}}';
   let prog=null,loc=null,buf=null,lost=false,textures=new WeakMap(),stencilRef=0,viewW=0,viewH=0;
+  // ── にじむ光(ブルーム。2026-09-26・ユーザー指示「見た目の向上＋軽量化」の3。オプションで入れた人だけ・既定は切る) ──
+  // 足し算で描いた光だけを、画面の1/4の大きさの見えない画像へ描き直し、横・縦にぼかして、画面の上へ足し算で重ねる。
+  // 小さな画像をぼかすだけなので、画面全体をぼかすより軽い。作業用の画像は画面の大きさが変わったときだけ作り直す
+  const BLOOM_DOWN=4,BLOOM_SPREAD=2.6;
+  let bloomOn=false,bloomGain=.45,bloomList=[],bloom=null;
+  const BLUR_VS='attribute vec2 aPos;attribute vec2 aUv;varying vec2 vUv;void main(){vUv=aUv;gl_Position=vec4(aPos,0.0,1.0);}';
+  // 9点のガウスぼかし(線形補間で5回の読み取りにしたもの)。uGain で強さ
+  const BLUR_FS='precision mediump float;varying vec2 vUv;uniform sampler2D uSrc;uniform vec2 uStep;uniform float uGain;'+
+    'void main(){vec4 c=texture2D(uSrc,vUv)*0.2270270270;'+
+    'c+=texture2D(uSrc,vUv+uStep*1.3846153846)*0.3162162162;c+=texture2D(uSrc,vUv-uStep*1.3846153846)*0.3162162162;'+
+    'c+=texture2D(uSrc,vUv+uStep*3.2307692308)*0.0702702703;c+=texture2D(uSrc,vUv-uStep*3.2307692308)*0.0702702703;'+
+    'gl_FragColor=c*uGain;}';
   // GPU へ送った値の覚え(2026-09-26)。同じ値を毎回送り直さない(スマホのブラウザは命令1回ごとの手間が大きい)。
   // 作り直したとき(init)は忘れて、次の描画で全部送り直す
-  let sentM0=[NaN,NaN,NaN],sentM1=[NaN,NaN,NaN],sentViewW=NaN,sentViewH=NaN,sentAlpha=NaN,sentMode=NaN,sentColor=[NaN,NaN,NaN,NaN],sentTex=null,sentStencil=NaN;
-  const resetSent=()=>{sentM0=[NaN,NaN,NaN];sentM1=[NaN,NaN,NaN];sentViewW=sentViewH=sentAlpha=sentMode=sentStencil=NaN;sentColor=[NaN,NaN,NaN,NaN];sentTex=null;};
+  let sentM0=[NaN,NaN,NaN],sentM1=[NaN,NaN,NaN],sentViewW=NaN,sentViewH=NaN,sentAlpha=NaN,sentMode=NaN,sentColor=[NaN,NaN,NaN,NaN],sentTex=null,sentStencil=NaN,sentComp='';
+  // 重ね方(2026-09-26)。'lighter' は色だけ足し、透明さはふつうに重ねる(下の画面にも光が足されるように見える)
+  let comp='source-over';
+  const resetSent=()=>{sentM0=[NaN,NaN,NaN];sentM1=[NaN,NaN,NaN];sentViewW=sentViewH=sentAlpha=sentMode=sentStencil=NaN;sentColor=[NaN,NaN,NaN,NaN];sentTex=null;sentComp='';};
   // 三角形へ分けるとき、重なりうる分け方(逃げ道の扇)を使ったか。使ったときだけステンシルで「1画素1度」を守る
   let triOverlap=false;
   const compile=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s)||'shader');return s;};
   const init=()=>{
-    prog=gl.createProgram();gl.attachShader(prog,compile(gl.VERTEX_SHADER,VS));gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,FS));gl.linkProgram(prog);
+    prog=gl.createProgram();gl.attachShader(prog,compile(gl.VERTEX_SHADER,VS));gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,FS));
+    // 頂点の並び(位置・絵の座標)の番号を固定する。ブルームの描き方も同じ番号を使うので、切り替えても食い違わない
+    gl.bindAttribLocation(prog,0,'aPos');gl.bindAttribLocation(prog,1,'aUv');gl.linkProgram(prog);
     if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog)||'link');
     gl.useProgram(prog);
     loc={aPos:gl.getAttribLocation(prog,'aPos'),aUv:gl.getAttribLocation(prog,'aUv')};
@@ -19545,7 +19561,7 @@ const rhythmCreateGL2D=canvas=>{
     gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.STENCIL_TEST);gl.stencilOp(gl.KEEP,gl.KEEP,gl.REPLACE);
     gl.uniform1i(loc.uTex,0);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.activeTexture(gl.TEXTURE0);
-    textures=new WeakMap();stencilRef=0;viewW=viewH=0;resetSent();
+    textures=new WeakMap();stencilRef=0;viewW=viewH=0;resetSent();bloom=null;bloomList=[];
   };
   try{init();}catch(e){return null;}
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;},false);
@@ -19574,14 +19590,16 @@ const rhythmCreateGL2D=canvas=>{
   // グラデーションの色と位置も、塗るたびに作らず使い回す
   const gradColors=new Float32Array(24),gradTimes=new Float32Array(6);
   // 1回ぶんの描画。verts は [x,y,u,v,...] の三角形の並び
-  const flush=(count,mode,paint,texture,needStencil=true)=>{
-    if(lost||!prog||!count)return;
+  // 1回ぶんの描画を GPU へ頼む。data の [from,to) の頂点を、渡された状態(位置の変換 mm・透明度 aa・重ね方 cc)で描く
+  // GPU の状態(位置の変換・画面の大きさ・透明度・塗り方・重ね方・色/グラデーション/絵・ステンシル)を、描く前に合わせる
+  const applyState=(mode,paint,texture,needStencil,mm,aa,cc)=>{
     syncView();
-    if(m[0]!==sentM0[0]||m[2]!==sentM0[1]||m[4]!==sentM0[2]){gl.uniform3f(loc.uM0,m[0],m[2],m[4]);sentM0=[m[0],m[2],m[4]];}
-    if(m[1]!==sentM1[0]||m[3]!==sentM1[1]||m[5]!==sentM1[2]){gl.uniform3f(loc.uM1,m[1],m[3],m[5]);sentM1=[m[1],m[3],m[5]];}
+    if(mm[0]!==sentM0[0]||mm[2]!==sentM0[1]||mm[4]!==sentM0[2]){gl.uniform3f(loc.uM0,mm[0],mm[2],mm[4]);sentM0=[mm[0],mm[2],mm[4]];}
+    if(mm[1]!==sentM1[0]||mm[3]!==sentM1[1]||mm[5]!==sentM1[2]){gl.uniform3f(loc.uM1,mm[1],mm[3],mm[5]);sentM1=[mm[1],mm[3],mm[5]];}
     if(viewW!==sentViewW||viewH!==sentViewH){gl.uniform2f(loc.uView,viewW,viewH);sentViewW=viewW;sentViewH=viewH;}
-    const a=Math.max(0,Math.min(1,alpha));if(a!==sentAlpha){gl.uniform1f(loc.uAlpha,a);sentAlpha=a;}
+    const a=Math.max(0,Math.min(1,aa));if(a!==sentAlpha){gl.uniform1f(loc.uAlpha,a);sentAlpha=a;}
     if(mode!==sentMode){gl.uniform1i(loc.uMode,mode);sentMode=mode;}
+    if(cc!==sentComp){if(cc==='lighter')gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);else gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);sentComp=cc;}
     if(mode===0){const c=parseColor(paint);if(c[0]!==sentColor[0]||c[1]!==sentColor[1]||c[2]!==sentColor[2]||c[3]!==sentColor[3]){gl.uniform4f(loc.uColor,c[0],c[1],c[2],c[3]);sentColor=c.slice();}}
     else if(mode===1){
       const stops=paint.stops.slice().sort((a,b)=>a[0]-b[0]).slice(0,6);
@@ -19594,14 +19612,42 @@ const rhythmCreateGL2D=canvas=>{
     //   (そのとき書かれる 0 は、次に線を引くときの新しい番号とは重ならない)
     if(needStencil){stencilRef++;if(stencilRef>255){gl.clear(gl.STENCIL_BUFFER_BIT);stencilRef=1;}gl.stencilFunc(gl.NOTEQUAL,stencilRef,0xff);sentStencil=stencilRef;}
     else if(sentStencil!==0){gl.stencilFunc(gl.ALWAYS,0,0xff);sentStencil=0;}
+  };
+  const issue=(from,to,mode,paint,texture,needStencil,mm,aa,cc)=>{
+    const count=to-from;
+    if(lost||!prog||!(count>0))return;
+    applyState(mode,paint,texture,needStencil,mm,aa,cc);
+    // にじむ光(ブルーム)が入っているときは、足し算で描いた光だけを覚えておき、フレームの終わりに小さな画像へ描き直す
+    if(bloomOn&&cc==='lighter')bloomList.push({verts:data.slice(from*4,to*4),mode,paint,texture,mm,aa});
     // 入れ物(buf)は1つだけなので、準備のときに結び付けたまま使う
     // ★塗るたびに新しい入れ物を用意して渡す(bufferData)。1つの入れ物へ上書きして使い回す形(bufferSubData)にすると、
     //   iPhone の Safari(WebGL を Metal で動かしている)では、まだ終わっていない前の描画が上書き後の形を使ってしまい、
     //   前のフレームの帯の形が別の場所に描かれて残像のように見えた(2026-09-26・実機「ノーツ数が多い曲の
     //   ホールドで、ノーツラインが残像になる」「Canvas では起きない」「今までは起きてなかった」)。
     //   テスト環境(CPU で描く GPU)では起きないので、使い回しに戻さない。rhythm-webgl-notes-check.js が見張る
-    gl.bufferData(gl.ARRAY_BUFFER,data.subarray(0,count*4),gl.STREAM_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER,data.subarray(from*4,to*4),gl.STREAM_DRAW);
     gl.drawArrays(gl.TRIANGLES,0,count);
+  };
+  // 描く回数をまとめる(2026-09-26・ユーザー指示「見た目の向上＋軽量化」の4)。続けて同じ状態で描くもの(同じ絵の貼り付け・
+  // 同じ色の塗り。重なりを防ぐステンシルを使わないもの)は、GPU へ頼むのを待って1回にまとめる。光の3分割の絵などが1回になる。
+  // ★待っている分は、状態が変わる前・画面を消す前・絵を捨てる前・その場の処理の終わり(マイクロタスク)に必ず描き切る。
+  // ★入れ物は毎回新しく用意する(bufferData)ままにする。上書きの使い回しは iPhone で残像になった(上の issue の説明)
+  let pend=null,pendQueued=false;
+  const flushPending=()=>{if(pend){const p=pend;pend=null;issue(0,n,p.mode,p.paint,p.texture,false,p.m,p.alpha,p.comp);}n=0;};
+  const queuePending=()=>{if(pendQueued)return;pendQueued=true;const run=()=>{pendQueued=false;flushPending();};if(typeof queueMicrotask==='function')queueMicrotask(run);else Promise.resolve().then(run);};
+  const sameM=(a,b)=>a===b||(a[0]===b[0]&&a[1]===b[1]&&a[2]===b[2]&&a[3]===b[3]&&a[4]===b[4]&&a[5]===b[5]);
+  // 描く1回ぶん。頂点は data の [start,n) に積んである(その前 [0,start) は待っている分)
+  const flush=(start,mode,paint,texture,needStencil=true)=>{
+    if(lost||!prog){n=0;pend=null;return;}
+    if(!(n>start)){if(!pend)n=0;return;}
+    const mergeable=!needStencil&&(mode===0||mode===2),paintKey=mode===0?paint:null,a=alpha;
+    if(pend){
+      if(mergeable&&pend.mode===mode&&pend.texture===texture&&pend.paint===paintKey&&pend.alpha===a&&pend.comp===comp&&sameM(pend.m,m))return;
+      const p=pend;pend=null;issue(0,start,p.mode,p.paint,p.texture,false,p.m,p.alpha,p.comp);
+      data.copyWithin(0,start*4,n*4);n-=start;start=0;
+    }
+    if(mergeable){pend={mode,paint:paintKey,texture,alpha:a,comp,m};queuePending();return;}
+    issue(start,n,mode,paint,texture,needStencil,m,a,comp);n=0;
   };
   let n=0;
   // 三角形1つ。作業用の配列を作らず、じかに書き込む(毎フレーム数千回呼ばれるため)
@@ -19670,9 +19716,11 @@ const rhythmCreateGL2D=canvas=>{
     get lineWidth(){return lineWidth;},set lineWidth(v){const x=Number(v);if(x>0)lineWidth=x;},
     get lineJoin(){return lineJoin;},set lineJoin(v){lineJoin=v;},
     get lineCap(){return lineCap;},set lineCap(v){lineCap=v;},
-    globalCompositeOperation:'source-over',imageSmoothingEnabled:true,imageSmoothingQuality:'low',
-    save(){stack.push([m.slice(),alpha,fillStyle,strokeStyle,lineWidth,lineJoin,lineCap]);},
-    restore(){const s=stack.pop();if(s)[m,alpha,fillStyle,strokeStyle,lineWidth,lineJoin,lineCap]=s;},
+    // 重ね方。'lighter'(足し算)だけ受け付け、それ以外はふつうの重ね方(source-over)にする
+    get globalCompositeOperation(){return comp;},set globalCompositeOperation(v){comp=v==='lighter'?'lighter':'source-over';},
+    imageSmoothingEnabled:true,imageSmoothingQuality:'low',
+    save(){stack.push([m.slice(),alpha,fillStyle,strokeStyle,lineWidth,lineJoin,lineCap,comp]);},
+    restore(){const s=stack.pop();if(s)[m,alpha,fillStyle,strokeStyle,lineWidth,lineJoin,lineCap,comp]=s;},
     setTransform(a,b,c,d,e,f){m=[a,b,c,d,e,f];},
     transform(a,b,c,d,e,f){const o=m;m=[o[0]*a+o[2]*b,o[1]*a+o[3]*b,o[0]*c+o[2]*d,o[1]*c+o[3]*d,o[0]*e+o[2]*f+o[4],o[1]*e+o[3]*f+o[5]];},
     translate(x,y){this.transform(1,0,0,1,x,y);},scale(x,y){this.transform(x,0,0,y,0,0);},
@@ -19682,7 +19730,9 @@ const rhythmCreateGL2D=canvas=>{
       // 全面を消すのがふつう。一部だけのときは、はさみで切った範囲だけ消す
       const full=x<=0&&y<=0&&(x+w)*m[0]>=viewW-1&&(y+h)*m[3]>=viewH-1;
       gl.clearColor(0,0,0,0);gl.clearStencil(0);
-      if(full){gl.clear(gl.COLOR_BUFFER_BIT|gl.STENCIL_BUFFER_BIT);stencilRef=0;return;}
+      // 全面を消すなら、待っている描画は描かずに捨ててよい(どうせ消える)。一部だけ消すときは先に描き切る
+      if(full){pend=null;n=0;bloomList.length=0;gl.clear(gl.COLOR_BUFFER_BIT|gl.STENCIL_BUFFER_BIT);stencilRef=0;return;}
+      flushPending();
       const sx=Math.round(x*m[0]+m[4]),sy=Math.round(y*m[3]+m[5]),sw=Math.round(w*m[0]),sh=Math.round(h*m[3]);
       gl.enable(gl.SCISSOR_TEST);gl.scissor(sx,viewH-sy-sh,sw,sh);gl.clear(gl.COLOR_BUFFER_BIT);gl.disable(gl.SCISSOR_TEST);
     },
@@ -19715,13 +19765,13 @@ const rhythmCreateGL2D=canvas=>{
     },
     rect(x,y,w,h){this.moveTo(x,y);point(x+w,y);point(x+w,y+h);point(x,y+h);this.closePath();},
     fill(){
-      if(lost)return;n=0;triOverlap=false;let shapes=0;
+      if(lost)return;const start=n;triOverlap=false;let shapes=0;
       for(const sp of subpaths){if(sp.pts.length>=6){triangulate(sp.pts);shapes++;}}
       // 形が2つ以上か、重なりうる分け方をしたときだけ「1画素1度」を守る
-      const paint=fillStyle;flush(n,paint&&typeof paint==='object'&&paint.stops?1:0,paint,shapes>1||triOverlap);
+      const paint=fillStyle;flush(start,paint&&typeof paint==='object'&&paint.stops?1:0,paint,shapes>1||triOverlap);
     },
     stroke(){
-      if(lost)return;n=0;const hw=lineWidth/2;
+      if(lost)return;const start=n;const hw=lineWidth/2;
       for(const sp of subpaths){
         const p=sp.pts;const count=p.length/2;if(count<2)continue;
         const closed=sp.closed;const segs=closed?count:count-1;
@@ -19737,9 +19787,9 @@ const rhythmCreateGL2D=canvas=>{
         if(!closed&&lineCap==='round'){disc(p[0],p[1],hw);disc(p[(count-1)*2],p[(count-1)*2+1],hw);}
         if(!closed&&lineCap==='square'){/* ノーツでは使っていない */}
       }
-      const paint=strokeStyle;flush(n,paint&&typeof paint==='object'&&paint.stops?1:0,paint);
+      const paint=strokeStyle;flush(start,paint&&typeof paint==='object'&&paint.stops?1:0,paint);
     },
-    fillRect(x,y,w,h){if(lost||!(w>0)||!(h>0))return;n=0;quad(x,y,x+w,y,x+w,y+h,x,y+h);const paint=fillStyle;flush(n,paint&&typeof paint==='object'&&paint.stops?1:0,paint,false);},
+    fillRect(x,y,w,h){if(lost||!(w>0)||!(h>0))return;const start=n;quad(x,y,x+w,y,x+w,y+h,x,y+h);const paint=fillStyle;flush(start,paint&&typeof paint==='object'&&paint.stops?1:0,paint,false);},
     createLinearGradient(x0,y0,x1,y1){const g={x0,y0,x1,y1,stops:[],addColorStop(t,color){this.stops.push([Math.max(0,Math.min(1,Number(t)||0)),color]);}};return g;},
     drawImage(source,...args){
       if(lost||!source)return;
@@ -19750,16 +19800,78 @@ const rhythmCreateGL2D=canvas=>{
       else if(args.length>=8){[sx,sy,sw,sh,dx,dy,dw,dh]=args;}else return;
       if(!(dw>0)||!(dh>0))return;
       const u0=sx/entry.w,v0=sy/entry.h,u1=(sx+sw)/entry.w,v1=(sy+sh)/entry.h;
-      ensure(24);n=0;
-      data.set([dx,dy,u0,v0,dx+dw,dy,u1,v0,dx+dw,dy+dh,u1,v1,dx,dy,u0,v0,dx+dw,dy+dh,u1,v1,dx,dy+dh,u0,v1],0);n=6;
-      flush(n,2,null,entry.tex,false);
+      const start=n;ensure((n+6)*4);
+      data.set([dx,dy,u0,v0,dx+dw,dy,u1,v0,dx+dw,dy+dh,u1,v1,dx,dy,u0,v0,dx+dw,dy+dh,u1,v1,dx,dy+dh,u0,v1],start*4);n=start+6;
+      flush(start,2,null,entry.tex,false);
     },
     // 焼き直した画像(同じ canvas を描き直したもの)を GPU へ渡し直す
-    forgetImage(source){const entry=textures.get(source);if(entry){if(sentTex===entry.tex)sentTex=null;gl.deleteTexture(entry.tex);textures.delete(source);}},
+    forgetImage(source){flushPending();const entry=textures.get(source);if(entry){if(sentTex===entry.tex)sentTex=null;gl.deleteTexture(entry.tex);textures.delete(source);}},
     // 絵を先に GPU へ渡しておく(演奏の途中で初めて出た瞬間に渡すと、そこで一瞬引っかかるため)
     preloadImage(source){if(!lost&&source)textureOf(source);},
     // 使い終えたら片付ける。iPhone などは同時に持てる WebGL の数に上限があり、曲ごとに作ると古いものから消されていく
-    dispose(){try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
+    // 待っている描画を今すぐ描き切る(読み取る前など)
+    flushPending(){flushPending();},
+    // にじむ光を使うか(演奏画面が毎フレームの始めに決める)。gain は重ねる強さ
+    setBloom(on,gain){bloomOn=!!on;if(Number.isFinite(gain))bloomGain=gain;if(!bloomOn)bloomList.length=0;},
+    get bloomReady(){return !!bloom;},
+    // フレームの終わりに呼ぶ。覚えた光を小さな画像へ描き直し、横・縦にぼかして画面へ足し算で重ねる
+    bloomFinish(){
+      flushPending();
+      if(!bloomOn||!bloomList.length||lost||!prog){bloomList.length=0;return;}
+      try{
+        syncView();
+        const bw=Math.max(1,Math.ceil(viewW/BLOOM_DOWN)),bh=Math.max(1,Math.ceil(viewH/BLOOM_DOWN));
+        if(!bloom||bloom.w!==bw||bloom.h!==bh){
+          if(bloom){bloom.tex.forEach(t=>gl.deleteTexture(t));bloom.fbo.forEach(f=>gl.deleteFramebuffer(f));}
+          if(!bloom||!bloom.prog){
+            const p=gl.createProgram();gl.attachShader(p,compile(gl.VERTEX_SHADER,BLUR_VS));gl.attachShader(p,compile(gl.FRAGMENT_SHADER,BLUR_FS));
+            gl.bindAttribLocation(p,0,'aPos');gl.bindAttribLocation(p,1,'aUv');gl.linkProgram(p);
+            if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error('bloom link');
+            const quad=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,quad);
+            gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,0,0, 1,-1,1,0, 1,1,1,1, -1,-1,0,0, 1,1,1,1, -1,1,0,1]),gl.STATIC_DRAW);
+            bloom={prog:p,quad,uSrc:gl.getUniformLocation(p,'uSrc'),uStep:gl.getUniformLocation(p,'uStep'),uGain:gl.getUniformLocation(p,'uGain')};
+            gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+          }
+          bloom.tex=[];bloom.fbo=[];
+          for(let i=0;i<2;i++){
+            const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+            gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+            gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,bw,bh,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+            const f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);
+            if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw new Error('bloom fbo');
+            bloom.tex.push(t);bloom.fbo.push(f);
+          }
+          bloom.w=bw;bloom.h=bh;
+          gl.bindFramebuffer(gl.FRAMEBUFFER,null);sentTex=null;
+        }
+        // ① 光だけを小さな画像 A へ描き直す(位置は画面と同じ計算。映す先が小さいだけ)
+        gl.bindFramebuffer(gl.FRAMEBUFFER,bloom.fbo[0]);gl.viewport(0,0,bw,bh);gl.disable(gl.STENCIL_TEST);
+        gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+        for(const item of bloomList){
+          applyState(item.mode,item.paint,item.texture,false,item.mm,item.aa,'lighter');
+          gl.bufferData(gl.ARRAY_BUFFER,item.verts,gl.STREAM_DRAW);gl.drawArrays(gl.TRIANGLES,0,item.verts.length/4);
+        }
+        // ② 横にぼかして B へ、③ 縦にぼかして A へ
+        gl.useProgram(bloom.prog);gl.bindBuffer(gl.ARRAY_BUFFER,bloom.quad);
+        gl.vertexAttribPointer(0,2,gl.FLOAT,false,16,0);gl.vertexAttribPointer(1,2,gl.FLOAT,false,16,8);
+        gl.uniform1i(bloom.uSrc,0);gl.disable(gl.BLEND);
+        gl.bindFramebuffer(gl.FRAMEBUFFER,bloom.fbo[1]);gl.bindTexture(gl.TEXTURE_2D,bloom.tex[0]);
+        gl.uniform2f(bloom.uStep,BLOOM_SPREAD/bw,0);gl.uniform1f(bloom.uGain,1);gl.drawArrays(gl.TRIANGLES,0,6);
+        gl.bindFramebuffer(gl.FRAMEBUFFER,bloom.fbo[0]);gl.bindTexture(gl.TEXTURE_2D,bloom.tex[1]);
+        gl.uniform2f(bloom.uStep,0,BLOOM_SPREAD/bh);gl.drawArrays(gl.TRIANGLES,0,6);
+        // ④ 画面へ足し算で重ねる
+        gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,viewW,viewH);gl.enable(gl.BLEND);
+        gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+        gl.bindTexture(gl.TEXTURE_2D,bloom.tex[0]);gl.uniform2f(bloom.uStep,0,0);gl.uniform1f(bloom.uGain,bloomGain);gl.drawArrays(gl.TRIANGLES,0,6);
+      }catch(e){bloomOn=false;}
+      // ふだんの描き方へ戻す(頂点の並び・入れ物・ステンシル。覚えていた状態は送り直させる)
+      gl.useProgram(prog);gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+      gl.vertexAttribPointer(0,2,gl.FLOAT,false,16,0);gl.vertexAttribPointer(1,2,gl.FLOAT,false,16,8);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,viewW,viewH);gl.enable(gl.BLEND);gl.enable(gl.STENCIL_TEST);
+      resetSent();bloomList.length=0;
+    },
+    dispose(){pend=null;n=0;try{const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
   };
   return ctx;
 };
@@ -19831,6 +19943,13 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     c.save();c.globalCompositeOperation='destination-out';c.fillStyle='#000';shape();c.fill();c.restore();
     const sprite={...s,capL:CAP,capR:CAP,mid:MID,glow:GLOW};sprites.set(id,sprite);return sprite;
   };
+  // 光を足し算で重ねる(2026-09-26・ユーザー指示「見た目の向上＋軽量化」の1つ目)。WebGL のときだけ。
+  // 光どうしが重なると白く抜け、下のレーンにも光が足される(音ゲーの発光の見え方)。Canvas で足し算にすると
+  // 60→30fps に落ちたので(上の「強い光」の説明)、Canvas はふつうの重ね方のまま。粒・帯の本体はどちらもふつうに重ねる
+  // additiveGlow … 検査で 2D と同じ絵かを比べるときだけ切る(RHYTHM_CANVAS_RENDERER.additiveGlow=false)
+  let additiveGlow=true;
+  const glowBegin=()=>{if(backend==='webgl'&&additiveGlow)ctx.globalCompositeOperation='lighter';};
+  const glowEnd=()=>{if(backend==='webgl'&&additiveGlow)ctx.globalCompositeOperation='source-over';};
   // 3分割画像を、幅 w・高さ h(粒の高さ)の箱へ貼る。両端は幅そのまま、中央だけ横へ伸ばす。縦は h/HEAD_H で伸縮。
   const draw3Slice=(sprite,cx,cy,w,h,alpha=1)=>{
     const sy=h/HEAD_H,marginY=sprite.glow*sy,top=cy-h/2-marginY,height=h+marginY*2;
@@ -19935,6 +20054,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const w=geo.head.w*sizeMul,h=HEAD_H*HEAD_THICK*depthScale*sizeMul,cx=geo.head.cx,cy=geo.head.cy,radius=(wide?7:style.radius)*sizeMul;
     const x=cx-w/2,y=cy-h/2;
     ctx.globalAlpha=alpha;
+    glowBegin();
     if(style.glow.length&&!failed){
       const glow=effect==='MINIMAL'||lightweight?glowSprite(monster?'MONSTER':note.type,style.radius,style.glow):null;
       if(effect==='MINIMAL'||lightweight)draw3Slice(glow,cx,cy,w,h,alpha);
@@ -19946,6 +20066,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       draw3Slice(auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',AURA_OUTER_GLOWS,AURA_OUTER_DOTS),cx,cy,w,h,alpha*pulse);
       draw3Slice(auraSprite('inner',1,-2,9999,'rgba(255,250,205,.98)',AURA_INNER_GLOWS),cx,cy,w,h,alpha);
     }
+    glowEnd();
     ctx.globalAlpha=alpha;
     if(style.ring){ctx.lineWidth=2*sizeMul;ctx.strokeStyle=style.ring;roundRectPath(ctx,x-1*sizeMul,y-1*sizeMul,w+2*sizeMul,h+2*sizeMul,radius+1);ctx.stroke();}
     roundRectPath(ctx,x,y,w,h,radius);
@@ -20019,6 +20140,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const SPARK_DOTS=5,SPARK_CYCLE_MS=520;
   const drawHoldSpark=(note,geo,opts)=>{
     const head=geo.head;if(!head)return;
+    glowBegin();
     const kind=rhythmNoteIsSlide(note)?'SLIDE':'HOLD',depth=opts.depthScale||1;
     const w=Math.max(18,head.w*sizeScale),pulse=.5-.5*Math.cos(frameNow/140);
     const sw=w*2.1*(1+.08*pulse),sh=72*depth*(1+.12*pulse);
@@ -20037,6 +20159,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       }
     }
     ctx.globalAlpha=1;
+    glowEnd();
   };
   // 帯・SLIDE・終わりの横棒の横幅も、粒と同じノーツサイズの倍率にする(中心は動かさない。2026-09-26)。
   // 以前は粒だけが倍率で細く・太くなり、HOLD/SLIDE の先頭だけ細いのに帯は元の幅のまま残って見えた
@@ -20108,7 +20231,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
       const low=effect==='LOW'||effect==='LIGHT',kind=endBarKind(note,flick);
       const sprite=glowSprite(`end:${kind}:${low?'low':'full'}`,4,END_BAR_GLOWS[kind][low?'low':'full']);
-      draw3Slice(sprite,end.cx,end.cy,w,h,alpha);
+      glowBegin();draw3Slice(sprite,end.cx,end.cy,w,h,alpha);glowEnd();
     }
     roundRectPath(ctx,x,top,w,h,h/2);
     const g=ctx.createLinearGradient(x,0,x+w,0);
@@ -20274,6 +20397,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
     attach(next,options={}){canvas=next||null;backend='2d';ctx=null;hitArea=null;hitSlots.fill(null);if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
     get backend(){return backend;},
+    get additiveGlow(){return additiveGlow;},set additiveGlow(v){additiveGlow=v!==false;},
     // 描き込み先が取れているか。WebGL の準備が途中で失敗すると、その canvas からは 2D も取り出せず
     // ctx が無いままになる(ノーツが1つも描かれない)。演奏画面はこれを見て canvas を作り直す
     get ready(){return !!ctx;},
@@ -20346,7 +20470,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         const hit=hitSlots[slot];if(!hit)continue;
         const t=(now-hit.start)/hit.ms;
         if(t>=1){hitSlots[slot]=null;continue;}
-        drawOneHit(hit,Math.max(0,t),hitY);count++;
+        glowBegin();drawOneHit(hit,Math.max(0,t),hitY);glowEnd();count++;
       }
       if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
       return count;
@@ -20370,6 +20494,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       ctx.setTransform(dpr,0,0,dpr,0,0);
       ctx.clearRect(0,0,cssW,cssH);
       frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';lightweight=!!options.lightweight;sizeScale=Number(options.sizeScale)||1;drawn=0;faces.length=0;
+      // にじむ光(ブルーム)。オプションで入れた人だけ・WebGL で光を足し算で描いているときだけ。演出量「最小」と軽量モードでは使わない
+      if(typeof ctx.setBloom==='function')ctx.setBloom(!!options.bloom&&additiveGlow&&effect!=='MINIMAL'&&!lightweight);
       return true;
     },
     // ノーツ1個。geo は rhythmNoteCanvasGeometry の結果。opts: {failed,monster,wide,pressed,alpha,pop(0..1|null),depthScale,brightness,hideBody}
@@ -20393,15 +20519,20 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       faces.push(bitmap,cx,cy,size,alpha);
     },
     end(){
-      if(!ctx||!faces.length)return;
-      ctx.setTransform(dpr,0,0,dpr,0,0);
-      for(let i=0;i<faces.length;i+=5){
-        const size=faces[i+3];
-        ctx.globalAlpha=Math.min(1,faces[i+4]);
-        ctx.drawImage(faces[i],faces[i+1]-size/2,faces[i+2]-size/2,size,size);
+      if(!ctx)return;
+      if(faces.length){
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+        for(let i=0;i<faces.length;i+=5){
+          const size=faces[i+3];
+          ctx.globalAlpha=Math.min(1,faces[i+4]);
+          ctx.drawImage(faces[i],faces[i+1]-size/2,faces[i+2]-size/2,size,size);
+        }
+        ctx.globalAlpha=1;
+        faces.length=0;
       }
-      ctx.globalAlpha=1;
-      faces.length=0;
+      // WebGL で待っている描画(まとめて頼む分)を、フレームの終わりに描き切る。にじむ光はそのあとに重ねる
+      if(typeof ctx.flushPending==='function')ctx.flushPending();
+      if(typeof ctx.bloomFinish==='function')ctx.bloomFinish();
     },
     clear(){faces.length=0;if(ctx&&cssW&&cssH){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);}},
   };

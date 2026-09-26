@@ -53,7 +53,7 @@ const NOTES=[
   // 形を GPU へ渡す入れ物は、塗るたびに新しく用意する(bufferData)。1つの入れ物を上書きして使い回す(bufferSubData)と、
   // iPhone の Safari(Metal)でまだ終わっていない前の描画が上書き後の形を使い、帯が残像のように残った(2026-09-26・実機)
   const glText=(src.match(/const rhythmCreateGL2D=[\s\S]*?\n\};\n/)||[''])[0];
-  check('形は塗るたびに新しい入れ物で渡す(bufferSubData で使い回さない)',/gl\.bufferData\(gl\.ARRAY_BUFFER,data\.subarray\(0,count\*4\),gl\.STREAM_DRAW\)/.test(glText)&&!/bufferSubData\(/.test(glText));
+  check('形は塗るたびに新しい入れ物で渡す(bufferSubData で使い回さない)',/gl\.bufferData\(gl\.ARRAY_BUFFER,data\.subarray\([^)]*\),gl\.STREAM_DRAW\)/.test(glText)&&!/bufferSubData\(/.test(glText));
 }
 (async()=>{
   let playwright;
@@ -91,8 +91,9 @@ const NOTES=[
       };
       const built=notes.map(build);
       // 何フレームか進めてから写す(押さえている最中の光のように、時刻で形が変わるものも比べるため)
-      const draw=(canvas,webgl,effect)=>{
-        const R=RHYTHM_CANVAS_RENDERER;R.attach(canvas,{webgl});
+      // additive … WebGL のときだけ光を足し算で重ねる(2026-09-26)。2D と同じ絵かを比べるときは切る
+      const draw=(canvas,webgl,effect,additive=false)=>{
+        const R=RHYTHM_CANVAS_RENDERER;R.attach(canvas,{webgl});R.additiveGlow=additive;
         R.warmSprites({effect,lightweight:false,maxDpr:2});
         let backend=R.backend;
         for(let step=0;step<6;step++){
@@ -109,13 +110,13 @@ const NOTES=[
         }
         // WebGL の絵は、描き終わった直後(同じ処理の中)なら 2D へ写して読める
         const snap=document.createElement('canvas');snap.width=canvas.width;snap.height=canvas.height;snap.getContext('2d').drawImage(canvas,0,0);
-        R.release();
+        R.release();R.additiveGlow=true;
         return {backend,data:snap.getContext('2d').getImageData(0,0,snap.width,snap.height).data};
       };
       const out={};
       for(const effect of ['NORMAL','LIGHT','MINIMAL']){
-        let a,b,error='';
-        try{a=draw(document.createElement('canvas'),false,effect);b=draw(document.createElement('canvas'),true,effect);}
+        let a,b,c,error='';
+        try{a=draw(document.createElement('canvas'),false,effect);b=draw(document.createElement('canvas'),true,effect);c=draw(document.createElement('canvas'),true,effect,true);}
         catch(e){error=String(e&&e.message||e);}
         if(error){out[effect]={error};continue;}
         const A=a.data,B=b.data;let sum=0,opaqueA=0,opaqueB=0,missingInGl=0,extraInGl=0;
@@ -124,7 +125,10 @@ const NOTES=[
           if(A[i+3]>128){opaqueA++;if(B[i+3]<32)missingInGl++;}
           if(B[i+3]>128){opaqueB++;if(A[i+3]<32)extraInGl++;}
         }
-        out[effect]={backends:[a.backend,b.backend],avg:sum/A.length,opaqueA,opaqueB,missingInGl,extraInGl};
+        // 足し算ありの WebGL: 2D で描けている画素が抜けていないか、光のぶん明るくなっているか(色の合計)
+        const C=c.data;let missingAdd=0,lumB=0,lumC=0;
+        for(let i=0;i<A.length;i+=4){if(A[i+3]>128&&C[i+3]<32)missingAdd++;lumB+=B[i]+B[i+1]+B[i+2];lumC+=C[i]+C[i+1]+C[i+2];}
+        out[effect]={backends:[a.backend,b.backend],avg:sum/A.length,opaqueA,opaqueB,missingInGl,extraInGl,missingAdd,brighter:lumB>0?lumC/lumB:0};
       }
       return out;
     },{notes:NOTES,travelMs:2150});
@@ -133,6 +137,8 @@ const NOTES=[
       if(r.error){check(`演出量 ${effect}: WebGL で描いても例外が出ない`,false,r.error);continue;}
       check(`演出量 ${effect}: WebGL の描き込み先で描けている`,r.backends[0]==='2d'&&r.backends[1]==='webgl',r.backends.join(' / '));
       check(`演出量 ${effect}: 何かが描かれている`,r.opaqueA>2000,`${r.opaqueA}画素`);
+      check(`演出量 ${effect}: 光の足し算ありでも、2D で描けている画素が抜けていない`,r.missingAdd<r.opaqueA*.005,`${r.missingAdd} / ${r.opaqueA}`);
+      check(`演出量 ${effect}: 光の足し算で明るくなる(暗くならない)`,r.brighter>=1,r.brighter.toFixed(3));
       // 輪郭のなめらかさだけ違うので、平均の差はごく小さい(実測 0.6/255 前後)
       check(`演出量 ${effect}: 2D と WebGL の画素の差が小さい(平均 1.5/255 未満)`,r.avg<1.5,r.avg.toFixed(3));
       check(`演出量 ${effect}: 2D で描けていて WebGL で抜けている画素がほぼ無い(0.5%未満)`,r.missingInGl<r.opaqueA*.005,`${r.missingInGl} / ${r.opaqueA}`);

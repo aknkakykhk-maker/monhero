@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6fa0b9a1a97bc5b4
+// source-sha256: dc4211da70febe54
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 23:41";
+const BUILD_DATE = "2026-09-26 23:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4970,6 +4970,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   frameRateMode: 'DEVICE',
   renderQuality: 'HIGH',
   noteDrawMode: 'AUTO',
+  noteBloom: false,
   stageEffect: 'SIMPLE',
   laneCover: 0,
   timingDisplay: 'STANDARD',
@@ -5024,6 +5025,7 @@ const normalizeRhythmSettings = value => {
     frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode,
     renderQuality: RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality) ? source.renderQuality : DEFAULT_RHYTHM_SETTINGS.renderQuality,
     noteDrawMode: RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode) ? source.noteDrawMode : DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
+    noteBloom: typeof source.noteBloom === 'boolean' ? source.noteBloom : DEFAULT_RHYTHM_SETTINGS.noteBloom,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -16003,24 +16005,8 @@ const AttackTargetFx = ({
 const MONSTER_IDLE_RIGS = Object.freeze({
   Mocchi: {
     body: 'jelly',
-    bodyMask: IDLE_MOCCHI_BODY_MASK,
-    parts: [{
-      mask: IDLE_MOCCHI_ARM_L_MASK,
-      origin: '29.5% 40%',
-      anim: 'swing',
-      amp: -7,
-      dur: 1800,
-      delay: 0,
-      layer: 'front'
-    }, {
-      mask: IDLE_MOCCHI_ARM_R_MASK,
-      origin: '70% 40%',
-      anim: 'swing',
-      amp: 7,
-      dur: 1800,
-      delay: 900,
-      layer: 'front'
-    }]
+    bodyMask: null,
+    parts: []
   },
   Suezo: {
     body: 'hop',
@@ -21096,7 +21082,7 @@ const RhythmOptions = ({
   }), field('画質', segments('renderQuality', RHYTHM_RENDER_QUALITY_LABELS), '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。'), field('描画方式', React.createElement(React.Fragment, null, segments('noteDrawMode', RHYTHM_NOTE_DRAW_LABELS), React.createElement("p", {
     "data-rhythm-draw-mode-now": true,
     className: "mt-1.5 text-center text-[10px] font-bold text-cyan-100/80"
-  }, "この端末では「", rhythmWebglNotesActive(draft.noteDrawMode) ? 'WebGL' : 'Canvas', "」で描きます")), 'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。見た目・判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
+  }, "この端末では「", rhythmWebglNotesActive(draft.noteDrawMode) ? 'WebGL' : 'Canvas', "」で描きます")), 'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。見た目・判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。ライブ背景も GPU で1枚にまとめて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。ノーツの光や叩いたときの光は、重なるほど白く輝くように描きます（光の見え方だけが「Canvas」と少し違います）。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
   }), field('軽量モード', toggle('lightweightMode'), '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。', {
     full: true
@@ -22269,6 +22255,216 @@ const rhythmStageSparkSprite = (layer, scale) => {
   g.fillRect(0, 0, size, size);
   return c;
 };
+const RHYTHM_STAGE_GL_KEY = 'mh_rhythm_stage_gl_v1';
+const rhythmStageGlPreference = () => {
+  try {
+    if (typeof localStorage === 'undefined') return '';
+    const value = localStorage.getItem(RHYTHM_STAGE_GL_KEY);
+    return value === 'css' || value === 'webgl' ? value : '';
+  } catch {
+    return '';
+  }
+};
+const rhythmStageGlSetPreference = value => {
+  const next = value === 'css' || value === 'webgl' ? value : '';
+  try {
+    if (typeof localStorage !== 'undefined') {
+      if (next) localStorage.setItem(RHYTHM_STAGE_GL_KEY, next);else localStorage.removeItem(RHYTHM_STAGE_GL_KEY);
+    }
+  } catch {}
+  return next;
+};
+const rhythmStageGlActive = webglNotes => {
+  const pref = rhythmStageGlPreference();
+  if (pref) return pref === 'webgl';
+  return !!webglNotes;
+};
+const rhythmCubicBezier = (x1, y1, x2, y2) => {
+  const at = (a, b, t) => ((1 - 3 * b + 3 * a) * t + (3 * b - 6 * a)) * t * t + 3 * a * t;
+  return x => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let lo = 0,
+      hi = 1,
+      t = x;
+    for (let i = 0; i < 20; i++) {
+      const v = at(x1, x2, t);
+      if (Math.abs(v - x) < 1e-5) break;
+      if (v < x) lo = t;else hi = t;
+      t = (lo + hi) / 2;
+    }
+    return at(y1, y2, t);
+  };
+};
+const rhythmStageEaseInOut = rhythmCubicBezier(.42, 0, .58, 1),
+  rhythmStageEaseOut = rhythmCubicBezier(0, 0, .58, 1);
+const RHYTHM_STAGE_GL_DOTS = RHYTHM_STAGE_SPARKS.flatMap((layer, index) => layer.dots.map(([x, y]) => [x / 100, y / 100, index]));
+const RHYTHM_STAGE_GL_BEAM_RGBA = RHYTHM_STAGE_BEAM_COLORS.map(color => (color.match(/[\d.]+/g) || []).map(Number));
+const RHYTHM_STAGE_GL_VS = 'attribute vec2 aPos;uniform vec2 uSize;varying vec2 vP;void main(){vP=vec2((aPos.x+1.)*.5*uSize.x,(1.-aPos.y)*.5*uSize.y);gl_Position=vec4(aPos,0.,1.);}';
+const RHYTHM_STAGE_GL_FS = `#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec2 vP;
+uniform vec2 uSize;uniform sampler2D uArt;uniform float uArtA,uFx;
+uniform vec4 uBeamL,uBeamR,uBeamC;uniform vec2 uBeamBox;uniform vec4 uDots[${RHYTHM_STAGE_GL_DOTS.length}];
+vec4 over(vec4 c,vec4 s){return s+c*(1.-s.a);}
+vec4 tint(vec3 rgb,float a){return vec4(rgb*a,a);}
+float beam(vec4 b){vec2 d=vP-b.zw;vec2 l=vec2(b.x*d.x+b.y*d.y,-b.y*d.x+b.x*d.y);
+  float hw=mix(.06,.5,clamp(l.y/uBeamBox.y,0.,1.))*uBeamBox.x;
+  return clamp(hw-abs(l.x)+.5,0.,1.)*clamp(l.y+.5,0.,1.)*clamp(1.-l.y/(.78*uBeamBox.y),0.,1.);}
+vec4 spark(float r,float core,float mid,float end){
+  vec4 a=vec4(vec3(236.,254.,255.)/255.*.95,.95),b=vec4(vec3(103.,232.,249.)/255.*.35,.35);
+  if(r<=core)return a;if(r<=mid)return mix(a,b,(r-core)/(mid-core));if(r<end)return mix(b,vec4(0.),(r-mid)/(end-mid));return vec4(0.);}
+void main(){
+  vec4 c=vec4(0.);
+  vec2 uv=(vP-vec2(-.12,-.08)*uSize)/(vec2(1.24,1.16)*uSize);
+  vec4 art=texture2D(uArt,uv);c=art*uArtA;
+  float y=vP.y/uSize.y;
+  float lin=y<.12?mix(.62,.3,y/.12):y<.35?mix(.3,.05,(y-.12)/.23):y<.7?mix(.05,.2,(y-.35)/.35):mix(.2,.55,(y-.7)/.3);
+  vec3 dark=vec3(3.,4.,11.)/255.;
+  c=over(c,tint(dark,lin));
+  float t=length((vP-vec2(.5,.45)*uSize)/(vec2(.7,.55)*uSize));
+  float rad=t<.7?mix(.62,.18,t/.7):t<1.?mix(.18,0.,(t-.7)/.3):0.;
+  c=over(c,tint(dark,rad));
+  if(uFx>.5){
+    c=over(c,tint(uBeamC.rgb,uBeamC.a*beam(uBeamL)));
+    c=over(c,tint(uBeamC.rgb,uBeamC.a*beam(uBeamR)));
+    vec4 far=vec4(0.),near=vec4(0.);
+    for(int i=0;i<${RHYTHM_STAGE_GL_DOTS.length};i++){vec4 d=uDots[i];
+      float r=min(length(vP-d.xy),length(vP-vec2(d.x,d.y+uSize.y)));
+      if(d.w<.5)far=over(far,spark(r,1.,2.,4.));else near=over(near,spark(r,2.,3.,5.));}
+    c=over(c,far*.55);c=over(c,near*.7);
+  }
+  gl_FragColor=c;
+}`;
+const rhythmCreateStageGL = canvas => {
+  if (!canvas || typeof canvas.getContext !== 'function') return null;
+  const attrs = {
+    alpha: true,
+    premultipliedAlpha: true,
+    antialias: false,
+    depth: false,
+    stencil: false,
+    preserveDrawingBuffer: false
+  };
+  let gl = null;
+  try {
+    gl = canvas.getContext('webgl', attrs) || canvas.getContext('experimental-webgl', attrs);
+  } catch (e) {
+    gl = null;
+  }
+  if (!gl) return null;
+  const shader = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
+  };
+  const vs = shader(gl.VERTEX_SHADER, RHYTHM_STAGE_GL_VS),
+    fs = shader(gl.FRAGMENT_SHADER, RHYTHM_STAGE_GL_FS);
+  if (!vs || !fs) return null;
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.bindAttribLocation(prog, 0, 'aPos');
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+  gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+  gl.disable(gl.BLEND);
+  gl.disable(gl.DEPTH_TEST);
+  gl.clearColor(0, 0, 0, 0);
+  const u = {};
+  ['uSize', 'uArt', 'uArtA', 'uFx', 'uBeamL', 'uBeamR', 'uBeamC', 'uBeamBox', 'uDots'].forEach(name => {
+    u[name] = gl.getUniformLocation(prog, name);
+  });
+  gl.uniform1i(u.uArt, 0);
+  const dots = new Float32Array(RHYTHM_STAGE_GL_DOTS.length * 4);
+  return {
+    setArt(source) {
+      try {
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    draw({
+      w,
+      h,
+      scale,
+      timeMs,
+      artA,
+      fx,
+      tier
+    }) {
+      if (gl.isContextLost()) return;
+      const pw = Math.max(1, Math.round(w * scale)),
+        ph = Math.max(1, Math.round(h * scale));
+      if (canvas.width !== pw || canvas.height !== ph) {
+        canvas.width = pw;
+        canvas.height = ph;
+      }
+      gl.viewport(0, 0, pw, ph);
+      gl.uniform2f(u.uSize, w, h);
+      gl.uniform1f(u.uArtA, artA);
+      gl.uniform1f(u.uFx, fx ? 1 : 0);
+      if (fx) {
+        const bw = .38 * w,
+          bh = 1.35 * h,
+          top = -.12 * h;
+        const swing = offset => {
+          const p = (timeMs + offset) / 7000 % 2;
+          return rhythmStageEaseInOut(p > 1 ? 2 - p : p);
+        };
+        const put = (loc, deg, cx) => {
+          const a = deg * Math.PI / 180;
+          gl.uniform4f(loc, Math.cos(a), Math.sin(a), cx, top);
+        };
+        put(u.uBeamL, -22 + 28 * swing(0), -.1 * w + bw / 2);
+        put(u.uBeamR, 22 - 28 * swing(3500), w + .1 * w - bw / 2);
+        const rgba = RHYTHM_STAGE_GL_BEAM_RGBA[tier] || RHYTHM_STAGE_GL_BEAM_RGBA[0];
+        gl.uniform4f(u.uBeamC, rgba[0] / 255, rgba[1] / 255, rgba[2] / 255, (rgba[3] || 0) * .75);
+        gl.uniform2f(u.uBeamBox, bw, bh);
+        RHYTHM_STAGE_GL_DOTS.forEach(([x, y, layer], i) => {
+          const off = timeMs / RHYTHM_STAGE_SPARKS[layer].duration % 1 * h;
+          dots[i * 4] = x * w;
+          dots[i * 4 + 1] = y * h - off;
+          dots[i * 4 + 2] = 0;
+          dots[i * 4 + 3] = layer;
+        });
+        gl.uniform4fv(u.uDots, dots);
+      }
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    },
+    release() {
+      try {
+        gl.deleteTexture(tex);
+        gl.deleteBuffer(buf);
+        gl.deleteProgram(prog);
+        gl.deleteShader(vs);
+        gl.deleteShader(fs);
+        const lose = gl.getExtension('WEBGL_lose_context');
+        if (lose) lose.loseContext();
+      } catch (e) {}
+    }
+  };
+};
 const rhythmAutoQualityMemory = {
   level: 'HIGH'
 };
@@ -22902,6 +23098,10 @@ const RhythmTapTest = ({
   const stageLevel = rhythmStageLevel(settings);
   const stageArtRef = useRef(null),
     stagePulseRef = useRef(null);
+  const stageGlWanted = useState(() => stageLevel !== 'SIMPLE' && rhythmStageGlActive(webglWanted))[0];
+  const [stageGlLost, setStageGlLost] = useState(false);
+  const stageGl = stageGlWanted && stageLevel !== 'SIMPLE' && !stageGlLost;
+  const stageGlRef = useRef(null);
   const stageArtSrc = stageLevel !== 'SIMPLE' && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
   const hudArtSrc = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
   useEffect(() => {
@@ -22923,7 +23123,7 @@ const RhythmTapTest = ({
       alive = false;
       img.onload = null;
     };
-  }, [stageArtSrc]);
+  }, [stageArtSrc, stageGl]);
   const sideMonsterElements = useMemo(() => {
     if (settings.sideMonsterOpacity === 'OFF') return null;
     const opacity = rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -23115,7 +23315,7 @@ const RhythmTapTest = ({
   const stageFxOn = stageLevel === 'VIVID' && settings.effectAmount !== 'MINIMAL';
   useEffect(() => {
     const host = stageHostRef.current;
-    if (!host || !stageFxOn || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+    if (!host || !stageFxOn || stageGl || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
     let alive = true,
       made = [],
       timer = 0,
@@ -23188,7 +23388,108 @@ const RhythmTapTest = ({
       setStageImages(null);
       made.forEach(url => URL.revokeObjectURL(url));
     };
-  }, [stageFxOn, renderQualityStill]);
+  }, [stageFxOn, stageGl, renderQualityStill]);
+  const stageGlLiveRef = useRef(null);
+  stageGlLiveRef.current = {
+    tier: stageTierNow,
+    fx: stageFxOn
+  };
+  useEffect(() => {
+    const canvas = stageGlRef.current,
+      host = stageHostRef.current;
+    if (!stageGl || !canvas || !host || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+    const renderer = rhythmCreateStageGL(canvas);
+    if (!renderer) {
+      setStageGlLost(true);
+      return undefined;
+    }
+    let alive = true,
+      frame = 0,
+      last = -1e9,
+      artAt = -1,
+      artSettled = false,
+      dirty = true,
+      lastTier = -1,
+      lastFx = null,
+      w = host.clientWidth,
+      h = host.clientHeight;
+    const start = performance.now();
+    const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const cap = renderQualityStill === 'STANDARD' ? 1.25 : rhythmRenderQualityCap(renderQualityStill, 1.5);
+    const scale = Math.min(cap, Math.max(1, Number(window.devicePixelRatio) || 1));
+    const fullArt = stageLevel === 'CALM' ? .34 : .5;
+    if (stageArtSrc) {
+      const img = new Image();
+      img.onload = () => {
+        if (!alive) return;
+        const c = document.createElement('canvas');
+        c.width = 24;
+        c.height = 24;
+        const g = c.getContext('2d');
+        if (!g) return;
+        try {
+          g.drawImage(img, 0, 0, 24, 24);
+        } catch (_) {
+          return;
+        }
+        if (renderer.setArt(c)) {
+          artAt = performance.now();
+          dirty = true;
+        }
+      };
+      img.src = stageArtSrc;
+    }
+    const onLost = event => {
+      if (event && typeof event.preventDefault === 'function') event.preventDefault();
+      setStageGlLost(true);
+    };
+    canvas.addEventListener('webglcontextlost', onLost);
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
+      w = host.clientWidth;
+      h = host.clientHeight;
+      dirty = true;
+    }) : null;
+    if (observer) observer.observe(host);
+    const loop = now => {
+      frame = requestAnimationFrame(loop);
+      const live = stageGlLiveRef.current || {},
+        fx = !!live.fx && !reduce,
+        tier = Number(live.tier) || 0;
+      if (tier !== lastTier || fx !== lastFx) {
+        lastTier = tier;
+        lastFx = fx;
+        dirty = true;
+      }
+      const fading = artAt >= 0 && now - artAt < 800;
+      if (artAt >= 0 && !fading && !artSettled) {
+        artSettled = true;
+        dirty = true;
+      }
+      if (!dirty && !fx && !fading) return;
+      if (!dirty && now - last < 28) return;
+      if (!(w > 0 && h > 0)) return;
+      last = now;
+      dirty = false;
+      const artA = artAt < 0 ? 0 : fullArt * rhythmStageEaseOut(Math.min(1, (now - artAt) / 800));
+      renderer.draw({
+        w,
+        h,
+        scale,
+        timeMs: now - start,
+        artA,
+        fx,
+        tier
+      });
+    };
+    frame = requestAnimationFrame(loop);
+    return () => {
+      alive = false;
+      cancelAnimationFrame(frame);
+      if (observer) observer.disconnect();
+      canvas.removeEventListener('webglcontextlost', onLost);
+      renderer.release();
+    };
+  }, [stageGl, stageLevel, stageArtSrc, renderQualityStill]);
   const comboStatus = (() => {
     if (settings.comboStatusDisplay === false || assistOn || !view.counts) return '';
     const c = view.counts;
@@ -23893,7 +24194,8 @@ const RhythmTapTest = ({
         effect: settings.effectAmount,
         lightweight: settings.lightweightMode,
         maxDpr: noteCanvasMaxDprRef.current,
-        sizeScale: settings.noteSize / 100
+        sizeScale: settings.noteSize / 100,
+        bloom: settings.noteBloom === true
       });
       if (canvasReady) RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
       const paintCanvasNote = note => {
@@ -25538,13 +25840,18 @@ const RhythmTapTest = ({
     ref: stageHostRef,
     "data-rhythm-stage": stageLevel,
     "data-stage-tier": String(stageTierNow),
+    "data-stage-gl": stageGl ? '1' : undefined,
     "aria-hidden": "true"
-  }, stageArtSrc && React.createElement("canvas", {
+  }, stageGl && React.createElement("canvas", {
+    key: `stage-gl-${stageLevel}-${renderQualityStill}`,
+    ref: stageGlRef,
+    "data-rhythm-stage-gl": true
+  }), !stageGl && stageArtSrc && React.createElement("canvas", {
     ref: stageArtRef,
     "data-rhythm-stage-art": true,
     width: "24",
     height: "24"
-  }), stageFxOn && stageImages && React.createElement(React.Fragment, null, React.createElement("img", {
+  }), !stageGl && stageFxOn && stageImages && React.createElement(React.Fragment, null, React.createElement("img", {
     "data-rhythm-stage-beam": "left",
     src: stageImages.beams[stageTierNow] || stageImages.beams[0],
     alt: "",
@@ -42815,6 +43122,7 @@ function MonsterHeroGame() {
   const [rhythmPerfStats, setRhythmPerfStats] = useState(null);
   const [rhythmStrip, setRhythmStrip] = useState(() => RHYTHM_STRIP.value);
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
+  const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
   const [rhythmOptionsBack, setRhythmOptionsBack] = useState('RHYTHM_DEBUG');
   const [rhythmSelectedSongId, setRhythmSelectedSongId] = useState(() => {
@@ -62854,6 +63162,22 @@ function MonsterHeroGame() {
       "aria-pressed": rhythmCanvasPref === value,
       onClick: () => setRhythmCanvasPref(rhythmCanvasNotesSetPreference(value)),
       className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), React.createElement("section", {
+      "data-rhythm-stage-gl-panel": true,
+      className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-cyan-200"
+    }, "ライブ背景の描き方（検証用）"), React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
+    }, "ライブ背景（控えめ・派手）を、これまでの CSS の重ね合わせで描くか、WebGL の canvas 1枚で描くかを切り替えます。次の演奏から効きます。「自動」はノーツが WebGL で描かれるときだけ WebGL にします。"), React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [['', '自動'], ['css', 'CSS'], ['webgl', 'WebGL']].map(([value, label]) => React.createElement("button", {
+      key: value || 'auto',
+      type: "button",
+      "data-rhythm-stage-gl-pref": value || 'auto',
+      "aria-pressed": rhythmStageGlPref === value,
+      onClick: () => setRhythmStageGlPref(rhythmStageGlSetPreference(value)),
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmStageGlPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, label)))), React.createElement("div", {
       className: "mb-3"
     }, React.createElement(RhythmMonsterSlotsPanel, {
@@ -69753,6 +70077,7 @@ const createAnimationStyle = () => {
     .mon-idle__part--flapL, .mon-idle__part--flapR { animation-name:monIdleFlap; animation-timing-function:cubic-bezier(.45,0,.35,1); }
     .mon-idle__part--flapR { --idle-flip:-1; }
     .mon-idle__part--swing { animation-name:monIdleSwing; }
+    .mon-idle__part--swingIn { animation-name:monIdleSwingIn; }
     .mon-idle__part--wag { animation-name:monIdleWag; }
     .mon-idle__part--twitch { animation-name:monIdleTwitch; }
     .mon-idle__part--bob { animation-name:monIdleBob; }
@@ -69765,6 +70090,13 @@ const createAnimationStyle = () => {
     /* ゆったり揺れる(花・ヒレ・腕の刃)。amp の符号で揺れ始めの向きが変わる */
     @keyframes monIdleSwing {
       0%,100% { transform:rotate(calc(var(--idle-amp) * -.4)); }
+      50% { transform:rotate(var(--idle-amp)); }
+    }
+    /* 片側だけへ揺れる(体の手前の手など)。止まった位置から amp の向きへだけ振って戻る。
+       手前の部分が外へ振れると、その下に隠れていた体のふち(絵に無い所)がすき間になるので、
+       体へ重なる向きにだけ動かす(2026-09-26 ユーザー指摘「直ってない」モッチーの手) */
+    @keyframes monIdleSwingIn {
+      0%,100% { transform:rotate(0deg); }
       50% { transform:rotate(var(--idle-amp)); }
     }
     /* しっぽ振り。左右へ同じだけ */
