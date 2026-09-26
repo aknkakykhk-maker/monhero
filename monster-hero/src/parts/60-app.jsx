@@ -3769,7 +3769,10 @@ function MonsterHeroGame() {
   // イベントの開催とは関係なく、HOMEで1度だけ流す。見たかどうかは同じ保存キーの配列へ入れる
   // (新しいキーは作らない)。ビートPの公開フラグが立っているときだけ並べる
   const BEAT_POINT_ALWAYS_STORY_ID = 'beat_point_always_2026_09_24';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID];
+  // モンヒロビートが6レーンになった知らせ(2026-09-26・ユーザー指示「したらストーリーも作って」)。
+  // ビートPの知らせと同じく、イベントとは関係なくHOMEで1度だけ流す。見たかどうかも同じ保存キーの配列へ入れる
+  const RHYTHM_SIX_LANE_STORY_ID = 'rhythm_six_lane_2026_09_26';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -3857,8 +3860,11 @@ function MonsterHeroGame() {
       const liveEvent = rhythmLimitedEventAt(Date.now());
       // ビートPの知らせ。イベントの会話が先に並んでいれば、そちらが終わったあとの見回りで並ぶ
       const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
+      // 6レーンの知らせ。ほかの会話が並んでいれば、そちらが終わったあとの見回りで並ぶ
+      const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
       if (!liveEvent) {
         if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+        else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
       // ① 会話。まだ見ていなければ、HOMEに着いたところで流す
@@ -3867,6 +3873,7 @@ function MonsterHeroGame() {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
       }
       else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+      else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
       //    組み直すのは起動時とまったく同じ道すじ(planUpdateNoticesForLogin)なので、
       //    すでに見たものが未読へ戻ることはない
@@ -5191,6 +5198,11 @@ function MonsterHeroGame() {
         && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(BEAT_POINT_ALWAYS_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
       }
+      // 6レーンの知らせ。ほかの会話が並んでいればそちらを先にする
+      if (RELEASE_FLAGS.rhythmMode === true && wasOnboarded
+        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RHYTHM_SIX_LANE_STORY_ID)) {
+        setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+      }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
       // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
@@ -6197,6 +6209,7 @@ function MonsterHeroGame() {
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
+    rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
