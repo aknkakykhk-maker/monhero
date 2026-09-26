@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7539a8d972191ff5
+// source-sha256: 09992fe0ad8e689c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 11:33";
+const BUILD_DATE = "2026-09-26 11:37";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15843,6 +15843,88 @@ const ThemedAttackMotion = ({
   }), React.createElement(ThemedAttackBits, {
     list: bits.hit2
   })));
+};
+const TACTICS_EX_CUTIN_MS = 1600;
+const TACTICS_EX_CUTIN_THEME = Object.freeze({
+  coverAll: {
+    c1: '#ddd6fe',
+    c2: '#7c3aed',
+    motif: 'shield'
+  },
+  allIn: {
+    c1: '#fed7aa',
+    c2: '#dc2626',
+    motif: 'flame'
+  },
+  statBoost: {
+    c1: '#fef08a',
+    c2: '#f59e0b',
+    motif: 'rise'
+  },
+  weaponChange: {
+    c1: '#cffafe',
+    c2: '#0891b2',
+    motif: 'blade'
+  },
+  default: {
+    c1: '#f5d0fe',
+    c2: '#c026d3',
+    motif: 'rise'
+  }
+});
+const tacticsExCutinTheme = effect => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;
+const TacticsExCutin = ({
+  cutin
+}) => {
+  if (!cutin) return null;
+  const t = tacticsExCutinTheme(cutin.effect);
+  return ReactDOM.createPortal(React.createElement("div", {
+    key: cutin.key,
+    "data-tactics-ex-cutin": cutin.effect || 'default',
+    className: "ex-cutin",
+    style: {
+      '--ex-c1': t.c1,
+      '--ex-c2': t.c2
+    },
+    "aria-hidden": "true"
+  }, React.createElement("div", {
+    className: "ex-cutin__shade"
+  }), React.createElement("div", {
+    className: "ex-cutin__rays"
+  }), React.createElement("div", {
+    className: `ex-cutin__motif ex-cutin__motif--${t.motif}`
+  }, [0, 1, 2, 3, 4, 5].map(i => React.createElement("i", {
+    key: i,
+    style: {
+      '--i': i
+    }
+  }))), React.createElement("div", {
+    className: "ex-cutin__band"
+  }, React.createElement("div", {
+    className: "ex-cutin__lines"
+  }), React.createElement("div", {
+    className: "ex-cutin__art"
+  }, React.createElement(DyedMonsterImage, {
+    baseId: cutin.monId,
+    src: cutin.imgUrl,
+    alt: "",
+    masuColors: cutin.colors,
+    draggable: false,
+    className: "w-full h-full object-contain"
+  })), React.createElement("div", {
+    className: "ex-cutin__text"
+  }, React.createElement("div", {
+    className: "ex-cutin__tag"
+  }, "EX SKILL"), React.createElement("div", {
+    className: "ex-cutin__name",
+    style: {
+      fontSize: `${Math.max(15, Math.min(30, Math.floor(165 / Math.max(1, String(cutin.exName || '').length))))}px`
+    }
+  }, cutin.exName), React.createElement("div", {
+    className: "ex-cutin__sub"
+  }, cutin.monName, cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''))), React.createElement("div", {
+    className: "ex-cutin__flash"
+  })), document.body);
 };
 const AttackTargetFx = ({
   anim,
@@ -37271,6 +37353,7 @@ function BattleScreen({
   tacticsUnits,
   tacticsExInfo,
   activateTacticsEx,
+  tacticsExCutin,
   tacticsExTurnUsed,
   passTacticsTurn,
   tacticsCoverSlot,
@@ -38227,6 +38310,8 @@ function BattleScreen({
   }, enemy?.emoji)), !ecoBattleView && attackAnim && React.createElement(AttackTargetFx, {
     anim: attackAnim,
     attackerId: slots[attackAnim.slotIndex]?.id
+  }), React.createElement(TacticsExCutin, {
+    cutin: tacticsExCutin
   }), !ecoBattleView && isMooBoss(enemy?.id) && React.createElement("div", {
     className: "absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible",
     style: {
@@ -39149,7 +39234,16 @@ function BattleScreen({
           zIndex: 30
         } : {})
       }
-    }, slotHitKind && (() => {
+    }, tacticsExCutin && tacticsExCutin.slotIndex === i && React.createElement("span", {
+      key: tacticsExCutin.key,
+      "data-tactics-ex-aura": tacticsExCutin.effect || 'default',
+      className: "ex-aura",
+      "aria-hidden": "true",
+      style: {
+        '--ex-c1': tacticsExCutinTheme(tacticsExCutin.effect).c1,
+        '--ex-c2': tacticsExCutinTheme(tacticsExCutin.effect).c2
+      }
+    }, React.createElement("i", null), React.createElement("i", null)), slotHitKind && (() => {
       const hitFx = TACTICS_SLOT_FX_STYLE[slotHitKind];
       return React.createElement("div", {
         "data-tactics-hit-fx": slotHitKind,
@@ -53004,6 +53098,19 @@ function MonsterHeroGame() {
     };
   };
   const TACTICS_EX_ON_USE = {};
+  const [tacticsExCutin, setTacticsExCutin] = useState(null);
+  const tacticsExCutinTimerRef = useRef(null);
+  const showTacticsExCutin = cutin => {
+    if (tacticsExCutinTimerRef.current) clearTimeout(tacticsExCutinTimerRef.current);
+    setTacticsExCutin({
+      ...cutin,
+      key: Date.now()
+    });
+    tacticsExCutinTimerRef.current = setTimeout(() => {
+      tacticsExCutinTimerRef.current = null;
+      setTacticsExCutin(null);
+    }, TACTICS_EX_CUTIN_MS);
+  };
   const activateTacticsEx = (slotIdx, choice = null) => {
     if (!tacticsExEnabled || isBusy || autoBattleRef.current) return false;
     const mon = slots[slotIdx];
@@ -53057,6 +53164,17 @@ function MonsterHeroGame() {
     const onUse = TACTICS_EX_ON_USE[def.effect];
     if (isTacticsExEffectImplemented(def)) {
       addPopup(`EX ${def.name}！${toggled}`, 'hero', 'text-fuchsia-300 font-black text-xl drop-shadow-md', undefined, slotIdx);
+      Audio_.se.special();
+      showTacticsExCutin({
+        slotIndex: slotIdx,
+        effect: def.effect,
+        monId: mon.id,
+        imgUrl: mon.imgUrl,
+        colors: mon.colors,
+        monName: mon.masuName || mon.name,
+        exName: def.name,
+        styleLabel: def.duration === 'style' ? tacticsExStyleLabel(def, next, slotIdx, mon.id) : ''
+      });
       if (typeof onUse === 'function') onUse({
         def,
         slotIdx,
@@ -65201,6 +65319,7 @@ function MonsterHeroGame() {
       tacticsSlotGuardValue: tacticsSlotGuardValue,
       tacticsExInfo: tacticsExInfo,
       activateTacticsEx: activateTacticsEx,
+      tacticsExCutin: tacticsExCutin,
       tacticsExIntroVisible: tacticsExIntroVisible,
       dismissTacticsExIntro: dismissTacticsExIntro,
       tacticsExTurnUsed: tacticsExTurnUsed,
@@ -69488,6 +69607,85 @@ const createAnimationStyle = () => {
       .thm-atk__monster { animation:thmReduced var(--thm-ms,450ms) ease-out forwards !important; }
       .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit { display:none; }
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
+    }
+    /* ==== タクティクスのEXスキルを使った瞬間のカットイン(24-battle-fx.jsx の TacticsExCutin・1600ms) ====
+       暗転 → 斜めの帯が左から入る(立ち絵・EX SKILL・名前)→ 効果ごとの模様 → 帯が右へ抜ける。色は --ex-c1(明)/--ex-c2(濃)。
+       押せる場所は塞がない(pointer-events:none)。 */
+    .ex-cutin { position:fixed; inset:0; z-index:9600; pointer-events:none; overflow:hidden; }
+    .ex-cutin > * { position:absolute; pointer-events:none; }
+    .ex-cutin__shade { inset:0; opacity:0; background:radial-gradient(ellipse at 50% 50%, rgba(8,6,20,.55), rgba(2,2,8,.82));
+      animation:exShade 1600ms ease-out forwards; }
+    @keyframes exShade { 0% { opacity:0; } 8%,80% { opacity:1; } 100% { opacity:0; } }
+    .ex-cutin__rays { left:50%; top:50%; width:160vmax; height:160vmax; margin:-80vmax 0 0 -80vmax; opacity:0;
+      background:repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--ex-c2) 45%, transparent) 0 6deg, transparent 6deg 18deg);
+      -webkit-mask-image:radial-gradient(circle, #000 0 18%, transparent 55%); mask-image:radial-gradient(circle, #000 0 18%, transparent 55%);
+      animation:exRays 1600ms ease-out forwards; }
+    @keyframes exRays { 0% { opacity:0; transform:rotate(0deg) scale(.6); } 12% { opacity:.9; } 78% { opacity:.7; } 100% { opacity:0; transform:rotate(40deg) scale(1.1); } }
+    .ex-cutin__band { left:-12%; right:-12%; top:50%; height:148px; margin-top:-74px; overflow:visible;
+      background:linear-gradient(90deg, rgba(6,8,18,.35), rgba(8,10,24,.94) 18%, rgba(8,10,24,.94) 82%, rgba(6,8,18,.35));
+      border-top:3px solid var(--ex-c1); border-bottom:3px solid var(--ex-c1);
+      box-shadow:0 0 18px var(--ex-c2), 0 0 42px color-mix(in srgb, var(--ex-c2) 60%, transparent), inset 0 0 30px color-mix(in srgb, var(--ex-c2) 45%, transparent);
+      transform:translateX(-120%) skewY(-7deg); animation:exBand 1600ms cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes exBand {
+      0% { transform:translateX(-120%) skewY(-7deg); }
+      13% { transform:translateX(0) skewY(-7deg); }
+      80% { transform:translateX(2%) skewY(-7deg); opacity:1; }
+      100% { transform:translateX(125%) skewY(-7deg); opacity:.6; }
+    }
+    .ex-cutin__lines { position:absolute; inset:0; opacity:.9;
+      background:repeating-linear-gradient(90deg, transparent 0 46px, color-mix(in srgb, var(--ex-c1) 22%, transparent) 46px 48px);
+      animation:exLines 260ms linear infinite; }
+    @keyframes exLines { from { background-position:0 0; } to { background-position:-48px 0; } }
+    .ex-cutin__art { position:absolute; left:calc(12% + 2px); bottom:-12px; width:156px; height:156px; transform:skewY(7deg);
+      filter:drop-shadow(0 0 10px var(--ex-c2)) drop-shadow(0 6px 10px rgba(0,0,0,.7)); animation:exArt 1600ms cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes exArt { 0%,6% { opacity:0; translate:-70px 0; scale:.85; } 20% { opacity:1; translate:0 0; scale:1.08; } 30%,82% { opacity:1; translate:6px 0; scale:1; } 100% { opacity:0; translate:60px 0; scale:1; } }
+    .ex-cutin__text { position:absolute; left:calc(12% + 162px); right:calc(12% + 8px); top:50%; transform:translateY(-50%) skewY(7deg); min-width:0; }
+    .ex-cutin__tag { font:900 12px/1 system-ui, sans-serif; letter-spacing:.32em; color:var(--ex-c1);
+      text-shadow:0 0 8px var(--ex-c2); opacity:0; animation:exTag 1600ms ease-out forwards; }
+    @keyframes exTag { 0%,10% { opacity:0; translate:30px 0; } 20%,84% { opacity:1; translate:0 0; } 100% { opacity:0; } }
+    .ex-cutin__name { margin-top:6px; font:italic 900 26px/1.15 system-ui, sans-serif; color:#fff; white-space:nowrap;
+      text-shadow:0 0 2px var(--ex-c2), 2px 2px 0 var(--ex-c2), -1px -1px 0 color-mix(in srgb, var(--ex-c2) 70%, #000), 0 0 16px var(--ex-c2);
+      opacity:0; animation:exName 1600ms cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes exName { 0%,12% { opacity:0; translate:46px 0; scale:1.35; } 24% { opacity:1; translate:0 0; scale:.96; } 30%,84% { opacity:1; scale:1; } 100% { opacity:0; translate:-20px 0; } }
+    .ex-cutin__sub { margin-top:6px; font:800 11px/1.2 system-ui, sans-serif; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      opacity:0; animation:exTag 1600ms ease-out 60ms forwards; }
+    .ex-cutin__flash { inset:0; background:#fff; opacity:0; animation:exFlash 1600ms linear forwards; }
+    @keyframes exFlash { 0% { opacity:0; } 5% { opacity:.7; } 15% { opacity:0; } 84% { opacity:0; } 90% { opacity:.3; } 100% { opacity:0; } }
+    .ex-cutin__motif { inset:0; }
+    .ex-cutin__motif i { position:absolute; opacity:0; }
+    /* 盾(みんなをかばう): 画面の中心から六角形の輪が広がる */
+    .ex-cutin__motif--shield i { left:50%; top:50%; width:120px; height:120px; margin:-60px 0 0 -60px;
+      clip-path:polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%);
+      background:radial-gradient(circle, transparent 0 56%, var(--ex-c1) 60% 66%, color-mix(in srgb, var(--ex-c2) 70%, transparent) 70%, transparent 74%);
+      animation:exShield 900ms ease-out forwards; animation-delay:calc(180ms + var(--i) * 110ms); }
+    @keyframes exShield { 0% { opacity:0; transform:scale(.3); } 20% { opacity:1; } 100% { opacity:0; transform:scale(4.2); } }
+    /* 炎(捨て身): 下から炎の舌が立ちのぼる */
+    .ex-cutin__motif--flame i { bottom:-60px; left:calc(var(--i) * 17% - 4%); width:34%; height:62vh; border-radius:50% 50% 40% 40%;
+      background:radial-gradient(ellipse at 50% 85%, #fff7 0 8%, var(--ex-c1) 18%, var(--ex-c2) 45%, transparent 70%); filter:blur(2px);
+      animation:exFlame 1100ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 60ms); }
+    @keyframes exFlame { 0% { opacity:0; transform:translateY(40%) scaleY(.4); } 25% { opacity:.95; } 60% { opacity:.8; transform:translateY(0) scaleY(1.05) scaleX(.9); } 100% { opacity:0; transform:translateY(-18%) scaleY(1.2) scaleX(.7); } }
+    /* 光(ガッツ全開っちー): 金の光の柱と粒が下から上へ */
+    .ex-cutin__motif--rise i { bottom:0; left:calc(8% + var(--i) * 16%); width:10px; height:70vh; border-radius:999px;
+      background:linear-gradient(0deg, transparent, var(--ex-c2) 30%, var(--ex-c1) 70%, #fff); box-shadow:0 0 14px var(--ex-c2);
+      animation:exRise 1000ms ease-out forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
+    @keyframes exRise { 0% { opacity:0; transform:translateY(80%) scaleX(.5); } 30% { opacity:.95; } 100% { opacity:0; transform:translateY(-40%) scaleX(1.4); } }
+    /* 斬撃(ソード・コンバージョン): 画面を斜めに横切る青い光の筋 */
+    .ex-cutin__motif--blade i { left:-20%; top:calc(20% + var(--i) * 12%); width:140%; height:4px; border-radius:999px; transform-origin:0 50%;
+      background:linear-gradient(90deg, transparent, var(--ex-c1) 30%, #fff 50%, var(--ex-c1) 70%, transparent); box-shadow:0 0 10px var(--ex-c2), 0 0 22px var(--ex-c2);
+      rotate:calc(-24deg + (var(--i) - 2.5) * 6deg); animation:exBlade 520ms ease-out forwards; animation-delay:calc(200ms + var(--i) * 80ms); }
+    @keyframes exBlade { 0% { opacity:0; transform:scaleX(0); } 30% { opacity:1; transform:scaleX(1); } 100% { opacity:0; transform:scaleX(1) translateY(6px); } }
+    /* 使った子の距離枠の光 */
+    .ex-aura { position:absolute; inset:-2px; z-index:57; pointer-events:none; border-radius:18px; opacity:0;
+      border:2px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 22px color-mix(in srgb, var(--ex-c2) 70%, transparent);
+      animation:exAura 1600ms ease-out forwards; }
+    @keyframes exAura { 0% { opacity:0; } 10% { opacity:1; } 30% { opacity:.55; } 45% { opacity:1; } 60% { opacity:.55; } 75% { opacity:1; } 100% { opacity:0; } }
+    .ex-aura i { position:absolute; left:50%; top:50%; width:60px; height:60px; margin:-30px 0 0 -30px; border-radius:50%;
+      border:3px solid var(--ex-c1); box-shadow:0 0 12px var(--ex-c2); animation:exAuraRing 800ms ease-out forwards; }
+    .ex-aura i + i { animation-delay:260ms; }
+    @keyframes exAuraRing { 0% { opacity:0; transform:scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:scale(2.6); } }
+    @media (prefers-reduced-motion: reduce) {
+      .ex-cutin__rays, .ex-cutin__motif, .ex-cutin__lines, .ex-aura i { display:none; }
+      .ex-cutin__band { animation:exShade 1600ms ease-out forwards; transform:skewY(-7deg); }
     }
     /* 敵の側に出す着弾(24-battle-fx.jsx の AttackTargetFx)。敵の丸枠の中心に重ね、攻撃の尺の中で消える。 */
     .atk-target-fx { position:absolute; left:50%; top:50%; width:0; height:0; z-index:9500; pointer-events:none; overflow:visible; }
