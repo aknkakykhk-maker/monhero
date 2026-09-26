@@ -1391,7 +1391,7 @@ Rev.2では、外側に余地が無いときだけ**HOLDを内側へ1〜2レー�
 - 効いた作法はノーツに `knowledge:[id]` として印を残す（作者用の譜面だけ。ゲームへ書き出す形には入らない）
 - 新しい作法は `KNOWLEDGE` へ1件足すだけで効く。足したら `rhythm-chart-knowledge-check.js` に「効く場面」を1つ書く
 
-#### 学び直し（Rev.9〜。Rev.8 は作り方の改良 3.1.22 に使った）
+#### 学び直し（作り方の最新の次の番号から。2026-09-26 時点で Rev.10〜。Rev.8・Rev.9 は作り方の改良 3.1.22・3.1.23 に使った）
 
 作法の重みの初めの値（すべて1）は、よその作品の一般的な作り方から決めた仮の値。このゲームで遊んだ感想で直していく。
 
@@ -1459,6 +1459,25 @@ Rev.2では、外側に余地が無いときだけ**HOLDを内側へ1〜2レー�
 `node tools/mode/rhythm-chart-rev8-check.js`（学び直しの番号／手のモデルの切り替え／中央の直書きが無い／
 Rev.7 の譜面が authoring/ と1バイトも同じ／Rev.8 の横フリックが生成直後も自動修正後も決め方どおり）。
 生成器を今までの向きの付け方に戻すと落ちることを確認済み。
+
+### 3.1.23 主役の追跡（2026-09-26・Rev.9）
+
+段取りと実測は [`RHYTHM_CHART_ENGINE_ROADMAP.md`](RHYTHM_CHART_ENGINE_ROADMAP.md) の段2・段3。人は全部の音をノーツにせず、その瞬間に耳へ入る層
+（歌・主旋律・ドラム）を選んで叩かせる。Rev.7 の作法 `layer_follow` はこれを区切りの盛り上がりだけで決める簡易版だった。
+
+- 材料は音の層の解析（`rhythm-audio-layers-v3.js` → `<曲>-v3-layers.json`）。32kHz で読み、打楽器と音程楽器を分けて（HPSS）、
+  16分ごとの層の強さを曲の中の順位で 0〜1 にしたもの。既存の `*-v3-audio.json` は読むだけ
+- 小節ごとの証拠＝打楽器の強さ − 歌や主旋律の帯（250〜4000Hz）の音程楽器の強さ。状態は drums / melody / mix の3つで、
+  切り替えにコストを付けて動的計画法で並べる（`rhythm-chart-focus.js`）。区切りの頭と区切りの中の4小節ごとの頭では安く切り替えられる。
+  差の小さい1小節のぶれでは切り替えず、区切りの直前で打楽器がはっきり前に出る小節（フィル）ではそこだけドラムを追う
+- 拾う優先度への後押し（×0.35。作法の後押しと同じ目盛り）: drums は打点の打楽器成分の割合（その曲の打点の中の順位）が高いほど上げる。
+  melody は音程のある打点と、歌や主旋律の帯が強いグリッドを上げ、音程の無い打楽器だけの打点を下げる。mix は後押ししない。
+  **難易度によらず同じ後押し**なので、下の難易度は上の難易度の部分集合のまま（6章）
+- 層の解析が無い・いまの解析ファイルと合わない（`basedOn.sha256` が違う）ときは効かず、Rev.8 と同じノーツになる。譜面の JSON に `focus.bars` を残す
+- 打点ごとのキック・スネア・ハイハットの分類も出すが、実際の曲では当てにならない所があるので**使わない**（ROADMAP の段2）
+
+検査: `node tools/mode/rhythm-chart-rev9-check.js`（主役の追跡の決め方／後押しの向き／層の解析が無ければ Rev.8 と同じ／
+狙いどおりに選び直している／合わない層の解析を使わない／パイプライン）。後押しを外すと落ちることを確認済み。
 
 ### 3.1.6 譜面文法 — 形を「順位」でなく「点数」で選ぶ（2026-09-07）
 
@@ -1856,6 +1875,7 @@ maimai の無理配置の分類など。動画そのものは見ていない）�
 | 3.1.19 フレーズの写し | 生成器の `phraseCopy`（Rev.2・`rhythm-chart-v3-revision.js`）＋ レポートの `phraseEcho` | `rhythm-phrase-copy-check.js` |
 | 3.1.20 音の性格でノーツの種類 | 生成器の `soundTypes`（Rev.6）＋ `rhythm-sound-traits.js` ＋ 測る道具 `rhythm-note-type-fit.js` ＋ 譜面メモ `rhythm-chart-feedback.js` | `rhythm-sound-types-check.js` |
 | 3.1.22 手の動きと繰り返しを揃える | 生成器の `rev8` / `phraseEchoTypes` / `CENTER_LANE`（Rev.8）＋ `rhythm-side-flick.js` ＋ 手のモデルの `useRuntimeSlideLanes` ＋ 物差し `rhythm-chart-feel-report.js` | `rhythm-chart-rev8-check.js` / `rhythm-chart-feel-report-check.js` |
+| 3.1.23 主役の追跡 | 生成器の `focusData` / `FOCUS_SCALE`（Rev.9）＋ `rhythm-chart-focus.js` ＋ 音の層の解析 `rhythm-audio-layers-v3.js` | `rhythm-chart-rev9-check.js` / `rhythm-audio-layers-v3-check.js` |
 | 3.1.6 譜面文法 / 3.1.7 指紋 | `rhythm-chart-v3-patterns.js` の `rankShapes` / 生成器の `motifKeyOf` | `rhythm-chart-quality-report.js`（語彙・偏り・フレーズ一致） |
 | 10. 品質の6軸 | `rhythm-chart-quality-report.js` | パイプラインのゲート |
 | 2. レイヤリング | `rhythm-audio-analyze-v3.js`（音の性格）＋ V3生成 | `rhythm-audio-analyze-v3-check.js` |

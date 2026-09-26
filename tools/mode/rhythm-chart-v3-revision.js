@@ -50,7 +50,10 @@
 //        ・フレーズの写しで、元の小節の FLICK・同時押し・区切りの一発も揃える
 //        ・6レーンの中央を 2 ではなく (LANES-1)/2 で数える(Rev.5〜7 は左へ半レーン偏っていた)
 //        ・手のモデルが SLIDE の位置をゲーム本体と同じ座標(レーンの値＋0.5が中心)で測る
-//   9〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   9 … 主役の追跡(2026-09-26・ROADMAP の段3・rhythm-chart-focus.js)。音の層の解析(<曲>-v3-layers.json)から小節ごとに
+//        「ドラム / 歌・主旋律 / 混ざり」のどれを追うかを決め、追っている層に合う打点を拾う優先度で後押しする
+//        (難易度によらず同じ後押し)。Rev.7 の作法 layer_follow は止める(同じことの簡易版なので二重に効く)
+//   10〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)と重みの最新の大きいほう＋1」を次の番号にする
 //        (同じ番号が「作り方の改良」と「重みの学び直し」の2つの意味を持たないように)
@@ -60,7 +63,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=8;
+const CHART_REVISION_CODE_LATEST=9;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const CHART_REVISION_LATEST=Math.max(CHART_REVISION_CODE_LATEST,latestKnowledgeRevision());
