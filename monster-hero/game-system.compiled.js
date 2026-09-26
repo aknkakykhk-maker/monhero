@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 64ebf42b5924b388
+// source-sha256: d3463b218b54b7a7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 23:04";
+const BUILD_DATE = "2026-09-26 23:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4970,6 +4970,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   frameRateMode: 'DEVICE',
   renderQuality: 'HIGH',
   noteDrawMode: 'AUTO',
+  noteBloom: false,
   stageEffect: 'SIMPLE',
   laneCover: 0,
   timingDisplay: 'STANDARD',
@@ -5024,6 +5025,7 @@ const normalizeRhythmSettings = value => {
     frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode,
     renderQuality: RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality) ? source.renderQuality : DEFAULT_RHYTHM_SETTINGS.renderQuality,
     noteDrawMode: RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode) ? source.noteDrawMode : DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
+    noteBloom: typeof source.noteBloom === 'boolean' ? source.noteBloom : DEFAULT_RHYTHM_SETTINGS.noteBloom,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -21080,7 +21082,7 @@ const RhythmOptions = ({
   }), field('画質', segments('renderQuality', RHYTHM_RENDER_QUALITY_LABELS), '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。'), field('描画方式', React.createElement(React.Fragment, null, segments('noteDrawMode', RHYTHM_NOTE_DRAW_LABELS), React.createElement("p", {
     "data-rhythm-draw-mode-now": true,
     className: "mt-1.5 text-center text-[10px] font-bold text-cyan-100/80"
-  }, "この端末では「", rhythmWebglNotesActive(draft.noteDrawMode) ? 'WebGL' : 'Canvas', "」で描きます")), 'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。見た目・判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。ノーツの光や叩いたときの光は、重なるほど白く輝くように描きます（光の見え方だけが「Canvas」と少し違います）。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
+  }, "この端末では「", rhythmWebglNotesActive(draft.noteDrawMode) ? 'WebGL' : 'Canvas', "」で描きます")), 'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。見た目・判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。ノーツの光や叩いたときの光は、重なるほど白く輝くように描きます（光の見え方だけが「Canvas」と少し違います）。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
   }), field('軽量モード', toggle('lightweightMode'), '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。', {
     full: true
@@ -23877,7 +23879,8 @@ const RhythmTapTest = ({
         effect: settings.effectAmount,
         lightweight: settings.lightweightMode,
         maxDpr: noteCanvasMaxDprRef.current,
-        sizeScale: settings.noteSize / 100
+        sizeScale: settings.noteSize / 100,
+        bloom: settings.noteBloom === true
       });
       if (canvasReady) RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
       const paintCanvasNote = note => {

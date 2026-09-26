@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 843dcd819e436c35
+// generated-sha256: 0a68d23affab0b6c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 23:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 23:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4275,6 +4275,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   renderQuality:'HIGH',
   // 描画方式(2026-09-26)。既存の保存値に無い人は、読み込み時に既定(自動)で補われる
   noteDrawMode:'AUTO',
+  // にじむ光(2026-09-26)。WebGL で描いているときだけ効く。既存の保存値には無いので、読み込み時は既定(OFF)で補われる
+  noteBloom:false,
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -4333,6 +4335,7 @@ const normalizeRhythmSettings = value => {
     frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
     renderQuality:RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality)?source.renderQuality:DEFAULT_RHYTHM_SETTINGS.renderQuality,
     noteDrawMode:RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode)?source.noteDrawMode:DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
+    noteBloom:typeof source.noteBloom==='boolean'?source.noteBloom:DEFAULT_RHYTHM_SETTINGS.noteBloom,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -14929,6 +14932,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
                   デバッグ画面の指定があればそれも含めて決める(rhythmWebglNotesActive)。見極めは初回の1回だけ */}
               <p data-rhythm-draw-mode-now className="mt-1.5 text-center text-[10px] font-bold text-cyan-100/80">この端末では「{rhythmWebglNotesActive(draft.noteDrawMode)?'WebGL':'Canvas'}」で描きます</p></>,
               'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。見た目・判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。ノーツの光や叩いたときの光は、重なるほど白く輝くように描きます（光の見え方だけが「Canvas」と少し違います）。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。')}
+            {/* にじむ光(2026-09-26・ユーザー指示「見た目の向上＋軽量化」の3。既定は OFF)。WebGL で描いているときだけ効く */}
+            {field('にじむ光',toggle('noteBloom'),
+              'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。')}
             {/* モンスターノーツだけを軽くしたい人向け(2026-09-13・ユーザー依頼
                 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」) */}
             {field('モンスターノーツの演出',segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS),
@@ -16869,7 +16875,7 @@ if(stagePulseOn){const pulseEl=stagePulseRef.current,notes=run.notes;let index=r
 // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
-const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100});
+const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:settings.noteBloom===true});
 // 叩いたときの光(WebGL のときだけ canvas で描く)。光の層はノーツの下なので、ノーツより先に描く
 if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
 
