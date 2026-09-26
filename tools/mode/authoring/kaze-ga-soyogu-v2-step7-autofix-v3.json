@@ -35,16 +35,16 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 26,
-    "cost": 26
+    "spread": 25,
+    "cost": 25
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 26,
-    "cost": 26
+    "spread": 25,
+    "cost": 25
    },
    "fixes": []
   },
@@ -57,16 +57,16 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 21,
-    "cost": 21
+    "spread": 20,
+    "cost": 20
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 21,
-    "cost": 21
+    "spread": 20,
+    "cost": 20
    },
    "fixes": []
   },
@@ -78,17 +78,17 @@
     "impossible": 0,
     "strained": 0,
     "reach": 0,
-    "hardJumps": 0,
-    "spread": 43,
-    "cost": 43
+    "hardJumps": 1,
+    "spread": 40,
+    "cost": 160
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
-    "hardJumps": 0,
-    "spread": 43,
-    "cost": 43
+    "hardJumps": 1,
+    "spread": 40,
+    "cost": 160
    },
    "fixes": []
   },
@@ -101,16 +101,16 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 1,
-    "spread": 41,
-    "cost": 161
+    "spread": 40,
+    "cost": 160
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 1,
-    "spread": 41,
-    "cost": 161
+    "spread": 40,
+    "cost": 160
    },
    "fixes": []
   },
@@ -122,17 +122,17 @@
     "impossible": 0,
     "strained": 0,
     "reach": 2,
-    "hardJumps": 1,
-    "spread": 39,
-    "cost": 20159
+    "hardJumps": 4,
+    "spread": 38,
+    "cost": 20518
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
-    "hardJumps": 1,
-    "spread": 39,
-    "cost": 159
+    "hardJumps": 4,
+    "spread": 38,
+    "cost": 518
    },
    "fixes": [
     {
@@ -142,8 +142,8 @@
      "type": "SLIDE",
      "move": "レーン0.5→0.0",
      "pass": 1,
-     "costBefore": 20159,
-     "costAfter": 10159,
+     "costBefore": 20518,
+     "costAfter": 10518,
      "impossibleAfter": 0,
      "strainedAfter": 0
     },
@@ -154,8 +154,8 @@
      "type": "TAP",
      "move": "サブレーン7→8",
      "pass": 1,
-     "costBefore": 10159,
-     "costAfter": 159,
+     "costBefore": 10518,
+     "costAfter": 518,
      "impossibleAfter": 0,
      "strainedAfter": 0
     }

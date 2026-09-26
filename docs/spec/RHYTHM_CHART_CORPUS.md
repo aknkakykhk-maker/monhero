@@ -9,6 +9,10 @@
 > 区間ごとに 👍/👎 を付けて渡してもらい、`tools/mode/rhythm-chart-feedback.js --import` で
 > `tools/mode/authoring/feedback/` へためる。下の「人が良いと確かめた印」はこれを使う。
 > 数え上げを生成器の点数へ足すのは、メモがたまってから（`RHYTHM_CHART_DESIGN.md` 3.1.20）。
+>
+> **2026-09-26: 学び直しの仕組みができた（版7〜）。** 生成器は、よその音ゲーの一般的な作り方（`rhythm-chart-knowledge.js`）を
+> 曲の音に裏づけがあるときだけ少し後押しし、効いた所のノーツに印を残す。`rhythm-chart-learn.js` が、たまった譜面メモの
+> 👍/👎 と印を突き合わせて作法の重みを上げ下げし、新しい版として書き足す（`RHYTHM_CHART_DESIGN.md` 3.1.21）。
 
 ## 目的
 

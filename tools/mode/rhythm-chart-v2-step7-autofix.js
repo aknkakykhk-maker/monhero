@@ -65,6 +65,13 @@ const COST_STRAINED=100;      // 忙しい: 次に減らす
 // 8分未満で3レーン以上跳ぶ配置は、遊ぶ側にはっきり効く難しさなので、
 // 「忙しい」1件(100)を消すためでも増やさない重みにする。
 const COST_HARD_JUMP=120;
+// その難易度の上限を超える跳び(1拍未満で続く2つのノーツの、指が実際に動く距離)。
+// 【2026-09-26】「3レーン以上」しか見ていなかったので、NORMAL・HARD(上限2レーン)で2.5レーンの跳びを
+// 自動修正が**作ってしまっていた**(同時押しを左端に置いた8分あとのノーツを、忙しさを減らすために動かした)。
+// 上限は検査(rhythm-chart-v3-check.js)と同じ値。重さは3レーン以上の跳びと同じ(「忙しい」1件と引き換えにしない)
+const COST_OVER_STEP=120;
+const MAX_STEP_LANES=Object.freeze({EASY:1,NORMAL:2,HARD:2,EXPERT:3,MASTER:4});
+let currentMaxStep=Infinity;
 const COST_LANE_SPREAD=1;     // レーンの偏り(いちばん多い-いちばん少ない): 同上
 const COST_MOVE=3;            // 元の場所からの移動(サブレーン1つあたり)。近い場所で直せるならそちらを選ぶ
 const MAX_PASSES=8;           // これ以上は回さない(下がらなくなれば早く止まる)
@@ -211,12 +218,20 @@ const evaluate=notes=>{
     if(gap<=0||gap>=BEAT)continue;
     if(Math.abs(laneCenter(sorted[i])-laneCenter(sorted[i-1]))>=3)hardJumps++;
   }
+  let overSteps=0;
+  if(Number.isFinite(currentMaxStep)){
+    for(let i=1;i<sorted.length;i++){
+      const gap=sorted[i].grid-sorted[i-1].grid;
+      if(gap<=0||gap>=BEAT)continue;
+      if(separationRange(usableTouchSpan(sorted[i]),usableTouchSpan(sorted[i-1])).min>currentMaxStep+1e-9)overSteps++;
+    }
+  }
   const use=Array(LANE_COUNT).fill(0);
   for(const note of notes)use[Math.max(0,Math.min(LANE_COUNT-1,Math.floor(laneCenter(note))))]++;
   const spread=Math.max(...use)-Math.min(...use);
-  return {issues,impossible,strained,hardJumps,spread,reach:reachList.length,reachList,
+  return {issues,impossible,strained,hardJumps,overSteps,spread,reach:reachList.length,reachList,
     cost:(impossible+reachList.length)*COST_IMPOSSIBLE
-      +strained*COST_STRAINED+hardJumps*COST_HARD_JUMP+spread*COST_LANE_SPREAD};
+      +strained*COST_STRAINED+hardJumps*COST_HARD_JUMP+overSteps*COST_OVER_STEP+spread*COST_LANE_SPREAD};
 };
 
 // --- そのノーツを置ける場所を全部あげる(いまの場所も含む) ---
@@ -293,7 +308,7 @@ const autofix=notes=>{
   let current=notes.map(n=>({...n}));
   let state=evaluate(current);
   const before={impossible:state.impossible,strained:state.strained,reach:state.reach,
-    hardJumps:state.hardJumps,spread:state.spread,cost:state.cost};
+    hardJumps:state.hardJumps,overSteps:state.overSteps,spread:state.spread,cost:state.cost};
   const fixes=[];
   let passes=0;
   for(;passes<MAX_PASSES;passes++){
@@ -360,7 +375,7 @@ const autofix=notes=>{
     if(!improvedInPass)break;
   }
   const after={impossible:state.impossible,strained:state.strained,reach:state.reach,
-    hardJumps:state.hardJumps,spread:state.spread,cost:state.cost};
+    hardJumps:state.hardJumps,overSteps:state.overSteps,spread:state.spread,cost:state.cost};
   return {notes:current,fixes,passes,before,after,issues:state.issues};
 };
 
@@ -387,6 +402,7 @@ for(const difficulty of DIFFICULTIES){
   const chart=JSON.parse(fs.readFileSync(file,'utf8'));
   const key=difficulty||chart.difficulty||'FILE';
   LANE_COUNT=laneCountOfChart(chart);
+  currentMaxStep=MAX_STEP_LANES[chart.difficulty||difficulty]??Infinity;
   const {notes,fixes,passes,before,after}=autofix(chart.notes||[]);
   if(after.impossible)anyImpossible=true;
 
@@ -394,7 +410,7 @@ for(const difficulty of DIFFICULTIES){
   console.log(`${key}: ${notes.length}ノーツ  直した ${fixes.length}箇所`);
   console.log(`    押せない ${arrow(before.impossible,after.impossible)}件 / 帯に指が入らない ${arrow(before.reach,after.reach)}件`
     +` / 忙しい ${arrow(before.strained,after.strained)}件`
-    +` / 3レーン以上の跳び ${arrow(before.hardJumps,after.hardJumps)} / レーンの偏り ${arrow(before.spread,after.spread)}`);
+    +` / 3レーン以上の跳び ${arrow(before.hardJumps,after.hardJumps)} / 上限を超える跳び ${arrow(before.overSteps,after.overSteps)} / レーンの偏り ${arrow(before.spread,after.spread)}`);
   const show=verbose?fixes:fixes.slice(0,5);
   for(const fix of show)console.log(`      ${(fix.timeMs/1000).toFixed(1)}s 第${fix.bar+1}小節 ${fix.type}: ${fix.move}`);
   if(!verbose&&fixes.length>5)console.log(`      … ほか${fixes.length-5}箇所(--verbose で全件)`);

@@ -35,16 +35,16 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 85,
-    "cost": 85
+    "spread": 83,
+    "cost": 83
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 85,
-    "cost": 85
+    "spread": 83,
+    "cost": 83
    },
    "fixes": []
   },
@@ -57,71 +57,71 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 87,
-    "cost": 87
+    "spread": 85,
+    "cost": 85
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 87,
-    "cost": 87
+    "spread": 85,
+    "cost": 85
    },
    "fixes": []
   },
   "HARD": {
-   "noteCount": 400,
+   "noteCount": 401,
    "fixCount": 0,
    "passes": 0,
    "before": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
-    "hardJumps": 0,
-    "spread": 129,
-    "cost": 129
+    "hardJumps": 1,
+    "spread": 128,
+    "cost": 248
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
-    "hardJumps": 0,
-    "spread": 129,
-    "cost": 129
+    "hardJumps": 1,
+    "spread": 128,
+    "cost": 248
    },
    "fixes": []
   },
   "EXPERT": {
-   "noteCount": 486,
-   "fixCount": 3,
+   "noteCount": 497,
+   "fixCount": 4,
    "passes": 1,
    "before": {
     "impossible": 0,
     "strained": 1,
-    "reach": 4,
-    "hardJumps": 7,
-    "spread": 134,
-    "cost": 41074
+    "reach": 3,
+    "hardJumps": 9,
+    "spread": 158,
+    "cost": 31338
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
-    "hardJumps": 7,
-    "spread": 134,
-    "cost": 974
+    "hardJumps": 8,
+    "spread": 157,
+    "cost": 1117
    },
    "fixes": [
     {
-     "grid": 76,
-     "bar": 4,
-     "timeMs": 8203,
-     "type": "HOLD",
-     "move": "サブレーン6→7",
+     "grid": 836,
+     "bar": 52,
+     "timeMs": 84203,
+     "type": "SLIDE",
+     "move": "レーン1.5→3.0",
      "pass": 1,
-     "costBefore": 41074,
-     "costAfter": 31074,
+     "costBefore": 31338,
+     "costAfter": 11338,
      "impossibleAfter": 0,
      "strainedAfter": 1
     },
@@ -130,22 +130,34 @@
      "bar": 74,
      "timeMs": 120403,
      "type": "HOLD",
-     "move": "サブレーン8→6",
+     "move": "サブレーン6→9",
      "pass": 1,
-     "costBefore": 31074,
-     "costAfter": 1074,
+     "costBefore": 11338,
+     "costAfter": 1339,
      "impossibleAfter": 0,
      "strainedAfter": 1
     },
     {
-     "grid": 844,
-     "bar": 52,
-     "timeMs": 85003,
-     "type": "SLIDE",
-     "move": "レーン1.0→1.5",
+     "grid": 1175,
+     "bar": 73,
+     "timeMs": 118103,
+     "type": "HOLD",
+     "move": "サブレーン6→5",
      "pass": 1,
-     "costBefore": 1074,
-     "costAfter": 974,
+     "costBefore": 1339,
+     "costAfter": 1238,
+     "impossibleAfter": 0,
+     "strainedAfter": 0
+    },
+    {
+     "grid": 1174,
+     "bar": 73,
+     "timeMs": 118003,
+     "type": "TAP",
+     "move": "サブレーン7→4",
+     "pass": 1,
+     "costBefore": 1238,
+     "costAfter": 1117,
      "impossibleAfter": 0,
      "strainedAfter": 0
     }
@@ -153,23 +165,23 @@
   },
   "MASTER": {
    "noteCount": 561,
-   "fixCount": 10,
+   "fixCount": 8,
    "passes": 1,
    "before": {
     "impossible": 0,
-    "strained": 5,
+    "strained": 4,
     "reach": 4,
-    "hardJumps": 9,
-    "spread": 140,
-    "cost": 41720
+    "hardJumps": 11,
+    "spread": 144,
+    "cost": 41864
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
-    "hardJumps": 8,
-    "spread": 141,
-    "cost": 1101
+    "hardJumps": 11,
+    "spread": 143,
+    "cost": 1463
    },
    "fixes": [
     {
@@ -179,10 +191,10 @@
      "type": "TAP",
      "move": "サブレーン8→5",
      "pass": 1,
-     "costBefore": 41720,
-     "costAfter": 31720,
+     "costBefore": 41864,
+     "costAfter": 31864,
      "impossibleAfter": 0,
-     "strainedAfter": 5
+     "strainedAfter": 4
     },
     {
      "grid": 840,
@@ -191,10 +203,10 @@
      "type": "TAP",
      "move": "サブレーン5→3",
      "pass": 1,
-     "costBefore": 31720,
-     "costAfter": 21720,
+     "costBefore": 31864,
+     "costAfter": 21864,
      "impossibleAfter": 0,
-     "strainedAfter": 5
+     "strainedAfter": 4
     },
     {
      "grid": 876,
@@ -203,10 +215,10 @@
      "type": "HOLD",
      "move": "サブレーン9→7",
      "pass": 1,
-     "costBefore": 21720,
-     "costAfter": 11720,
+     "costBefore": 21864,
+     "costAfter": 11864,
      "impossibleAfter": 0,
-     "strainedAfter": 5
+     "strainedAfter": 4
     },
     {
      "grid": 1199,
@@ -215,20 +227,8 @@
      "type": "HOLD",
      "move": "サブレーン3→4",
      "pass": 1,
-     "costBefore": 11720,
-     "costAfter": 1719,
-     "impossibleAfter": 0,
-     "strainedAfter": 5
-    },
-    {
-     "grid": 136,
-     "bar": 8,
-     "timeMs": 14203,
-     "type": "TAP",
-     "move": "サブレーン0→8",
-     "pass": 1,
-     "costBefore": 1719,
-     "costAfter": 1620,
+     "costBefore": 11864,
+     "costAfter": 1863,
      "impossibleAfter": 0,
      "strainedAfter": 4
     },
@@ -239,8 +239,8 @@
      "type": "TAP",
      "move": "サブレーン1→2",
      "pass": 1,
-     "costBefore": 1620,
-     "costAfter": 1520,
+     "costBefore": 1863,
+     "costAfter": 1763,
      "impossibleAfter": 0,
      "strainedAfter": 3
     },
@@ -251,20 +251,8 @@
      "type": "TAP",
      "move": "サブレーン7→5",
      "pass": 1,
-     "costBefore": 1520,
-     "costAfter": 1420,
-     "impossibleAfter": 0,
-     "strainedAfter": 2
-    },
-    {
-     "grid": 460,
-     "bar": 28,
-     "timeMs": 46603,
-     "type": "TAP",
-     "move": "サブレーン10→2",
-     "pass": 1,
-     "costBefore": 1420,
-     "costAfter": 1301,
+     "costBefore": 1763,
+     "costAfter": 1663,
      "impossibleAfter": 0,
      "strainedAfter": 2
     },
@@ -275,8 +263,8 @@
      "type": "TAP",
      "move": "サブレーン1→2",
      "pass": 1,
-     "costBefore": 1301,
-     "costAfter": 1201,
+     "costBefore": 1663,
+     "costAfter": 1563,
      "impossibleAfter": 0,
      "strainedAfter": 1
     },
@@ -287,8 +275,8 @@
      "type": "TAP",
      "move": "サブレーン7→4",
      "pass": 1,
-     "costBefore": 1201,
-     "costAfter": 1101,
+     "costBefore": 1563,
+     "costAfter": 1463,
      "impossibleAfter": 0,
      "strainedAfter": 0
     }
