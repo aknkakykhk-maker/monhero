@@ -329,8 +329,11 @@ const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['AUTO','自動'],['HIGH','�
 // LIGHT＝ノーツと叩いたときの光を WebGL で描く(GPU にまとめて任せる)。見た目は Canvas と同じ。
 // 既定は Canvas(これまでの描き方)。WebGL が使えない端末・途中で使えなくなったときは、自動で「ふつう」の描き方に戻す。
 // デバッグ画面の「ノーツの描き方(検証用)」を選んでいるときは、そちらが優先される(rhythmWebglNotesActive)。
-const RHYTHM_NOTE_DRAW_MODES = Object.freeze(['STANDARD','LIGHT']);
-const RHYTHM_NOTE_DRAW_LABELS = Object.freeze([['STANDARD','Canvas'],['LIGHT','WebGL']]);
+// 「自動」(2026-09-26・ユーザー指示「WebGLをデフォルトにしたい」)。端末にちゃんとした GPU があれば WebGL、
+// 無ければ(ブラウザが CPU で WebGL を肩代わりしている端末など)Canvas で描く。見極めは rhythmWebglGpuUsable。
+// ★既定は「自動」。すでに保存した STANDARD(Canvas)・LIGHT(WebGL)は意味を変えずにそのまま使う(移行はしない)。
+const RHYTHM_NOTE_DRAW_MODES = Object.freeze(['AUTO','STANDARD','LIGHT']);
+const RHYTHM_NOTE_DRAW_LABELS = Object.freeze([['AUTO','自動'],['STANDARD','Canvas'],['LIGHT','WebGL']]);
 const RHYTHM_RENDER_QUALITY_STEPS = Object.freeze(['HIGH','STANDARD','SAVE']);
 const RHYTHM_AUTO_QUALITY_WINDOW_MS = 3000;
 const RHYTHM_AUTO_QUALITY_SLOW_RATIO = .08;
@@ -487,8 +490,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   //   「もしもとより操作性変わるならもとのやつをデフォルトに」(2026-09-24・ユーザー指示)で戻した
   frameRateMode:'DEVICE',
   renderQuality:'HIGH',
-  // 描き方(2026-09-26)。既存の保存値には無いので、読み込み時は既定(ふつう)で補われる
-  noteDrawMode:'STANDARD',
+  // 描画方式(2026-09-26)。既存の保存値に無い人は、読み込み時に既定(自動)で補われる
+  noteDrawMode:'AUTO',
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8edd9c8b8b09660a
+// generated-sha256: b6e90d1504d9a75c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 16:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 16:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4112,8 +4112,11 @@ const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['AUTO','自動'],['HIGH','�
 // LIGHT＝ノーツと叩いたときの光を WebGL で描く(GPU にまとめて任せる)。見た目は Canvas と同じ。
 // 既定は Canvas(これまでの描き方)。WebGL が使えない端末・途中で使えなくなったときは、自動で「ふつう」の描き方に戻す。
 // デバッグ画面の「ノーツの描き方(検証用)」を選んでいるときは、そちらが優先される(rhythmWebglNotesActive)。
-const RHYTHM_NOTE_DRAW_MODES = Object.freeze(['STANDARD','LIGHT']);
-const RHYTHM_NOTE_DRAW_LABELS = Object.freeze([['STANDARD','Canvas'],['LIGHT','WebGL']]);
+// 「自動」(2026-09-26・ユーザー指示「WebGLをデフォルトにしたい」)。端末にちゃんとした GPU があれば WebGL、
+// 無ければ(ブラウザが CPU で WebGL を肩代わりしている端末など)Canvas で描く。見極めは rhythmWebglGpuUsable。
+// ★既定は「自動」。すでに保存した STANDARD(Canvas)・LIGHT(WebGL)は意味を変えずにそのまま使う(移行はしない)。
+const RHYTHM_NOTE_DRAW_MODES = Object.freeze(['AUTO','STANDARD','LIGHT']);
+const RHYTHM_NOTE_DRAW_LABELS = Object.freeze([['AUTO','自動'],['STANDARD','Canvas'],['LIGHT','WebGL']]);
 const RHYTHM_RENDER_QUALITY_STEPS = Object.freeze(['HIGH','STANDARD','SAVE']);
 const RHYTHM_AUTO_QUALITY_WINDOW_MS = 3000;
 const RHYTHM_AUTO_QUALITY_SLOW_RATIO = .08;
@@ -4270,8 +4273,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   //   「もしもとより操作性変わるならもとのやつをデフォルトに」(2026-09-24・ユーザー指示)で戻した
   frameRateMode:'DEVICE',
   renderQuality:'HIGH',
-  // 描き方(2026-09-26)。既存の保存値には無いので、読み込み時は既定(ふつう)で補われる
-  noteDrawMode:'STANDARD',
+  // 描画方式(2026-09-26)。既存の保存値に無い人は、読み込み時に既定(自動)で補われる
+  noteDrawMode:'AUTO',
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -14910,9 +14913,9 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {field('画質',segments('renderQuality',RHYTHM_RENDER_QUALITY_LABELS),
               '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。')}
             {/* 描画方式(2026-09-26・ユーザー指示「設定で選べるようにしてほしい」「専門用語使っていいから説明で補完しよう」)。
-                既定は Canvas(これまでの描き方)。ボタンは専門用語のまま、何で描くのかを説明に書く */}
+                既定は「自動」(2026-09-26・ユーザー指示「WebGLをデフォルトにしたい」)。ボタンは専門用語のまま、何で描くのかを説明に書く */}
             {field('描画方式',segments('noteDrawMode',RHYTHM_NOTE_DRAW_LABELS),
-              'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「Canvas」（これまでの描き方）です。見た目・判定・スコア・叩く位置はどちらでも変わりません。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝絵を描くのが得意な専用の部分（GPU）に、ノーツと光をまとめて任せて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減ることがあります。新しく加えた描き方で、まだ試している段階です。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。')}
+              'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。見た目・判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。')}
             {/* モンスターノーツだけを軽くしたい人向け(2026-09-13・ユーザー依頼
                 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」) */}
             {field('モンスターノーツの演出',segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS),
