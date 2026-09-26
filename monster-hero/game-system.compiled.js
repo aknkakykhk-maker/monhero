@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 91bd7be9301c82ff
+// source-sha256: 4c64a24f030ced69
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 18:00";
+const BUILD_DATE = "2026-09-26 18:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -21284,6 +21284,15 @@ const centerCarouselChild = (root, index, behavior = 'auto') => {
     behavior
   });else root.scrollLeft = left;
 };
+const rhythmTitleFitEm = text => {
+  let em = 0;
+  for (const ch of String(text || '')) {
+    const code = ch.codePointAt(0);
+    em += code >= 0x2e80 ? 1 : ch === ' ' ? .3 : /[A-Z0-9]/.test(ch) ? .72 : /[a-z]/.test(ch) ? .6 : .62;
+  }
+  return Math.max(1, em * 1.1);
+};
+const rhythmTitleFitSize = (text, maxPx, minPx, reservePx = 0) => `clamp(${minPx}px, calc((100cqw - ${reservePx}px) / ${rhythmTitleFitEm(text).toFixed(2)}), ${maxPx}px)`;
 const RhythmSongArt = ({
   song,
   large = false,
@@ -21662,13 +21671,29 @@ const RhythmSongSelect = ({
       song: entry,
       marked: main
     }), React.createElement("span", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("b", _extends({}, main ? {
+      className: "min-w-0 flex-1 [container-type:inline-size]"
+    }, React.createElement("span", _extends({}, main ? {
       'data-rhythm-song-row-title': ''
     } : {}, {
-      className: "block truncate text-[15px] font-black leading-snug text-white"
-    }), rhythmSongFullName(entry)), React.createElement("span", {
-      className: `mt-0.5 flex items-center gap-1${spot('achievement')}`
+      className: "flex items-center overflow-hidden",
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        overflow: 'hidden',
+        height: '36px'
+      }
+    }), React.createElement("b", {
+      className: "line-clamp-2 block font-black text-white",
+      style: {
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+        lineHeight: 1.2,
+        fontSize: rhythmTitleFitSize(rhythmSongFullName(entry), 15, 12)
+      }
+    }, rhythmSongFullName(entry))), React.createElement("span", {
+      className: `flex items-center gap-1${spot('achievement')}`
     }, React.createElement("span", {
       className: "mr-1 inline-flex shrink-0 items-baseline gap-0.5 rounded-md bg-gradient-to-b from-rose-500 to-rose-700 px-1.5 py-0.5 leading-none shadow-[0_1px_0_rgba(0,0,0,.4)]"
     }, React.createElement("small", {
@@ -21744,10 +21769,13 @@ const RhythmSongSelect = ({
       gridArea: 'title'
     }
   }, React.createElement("div", {
-    className: "flex items-start gap-1.5"
+    className: "flex items-start gap-1.5 [container-type:inline-size]"
   }, React.createElement("b", {
     "data-rhythm-song-title": true,
-    className: "line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white landscape:line-clamp-1 landscape:h-[1.25em] landscape:text-[16px]"
+    className: "line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]",
+    style: {
+      '--mh-title-fit': rhythmTitleFitSize(rhythmSongFullName(song), 16, 12, 44)
+    }
   }, rhythmSongFullName(song)), React.createElement("button", {
     type: "button",
     "data-rhythm-song-favorite": true,
@@ -21781,8 +21809,10 @@ const RhythmSongSelect = ({
     } : undefined
   }, best && best.played ? best.bestScore.toLocaleString() : 'まだ遊んでいません'), React.createElement("span", {
     "data-rhythm-demo-combo": true,
-    className: "block text-[9px] font-black text-slate-400"
-  }, "MAX COMBO ", React.createElement("b", {
+    className: "block whitespace-nowrap text-[9px] font-black text-slate-400"
+  }, React.createElement("span", {
+    className: "[@container(max-width:120px)]:hidden"
+  }, "MAX "), "COMBO ", React.createElement("b", {
     className: `text-[12px] tabular-nums ${best && best.played ? 'text-white' : 'text-slate-500'}`
   }, best && best.played ? best.maxCombo : '—'))), React.createElement("span", {
     "data-rhythm-demo-rank": true,
@@ -21811,18 +21841,22 @@ const RhythmSongSelect = ({
       onClick: () => {
         if (open) setDifficultyId(item.id);
       },
-      className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none landscape:h-[48px] ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
+      className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
     }, React.createElement("b", {
       className: "block text-[18px] tabular-nums"
     }, song.difficulties[item.id].level), React.createElement("span", {
       className: "block text-[8px] tracking-wide"
-    }, open ? item.id : `🔒${item.id}`), React.createElement("span", {
-      "data-rhythm-difficulty-best": item.id,
-      className: "block max-w-full truncate text-[8px] font-black tabular-nums opacity-80"
-    }, open ? (() => {
-      const record = rhythmBestRecord(bestRecords, song.songId, item.id);
-      return record && record.played ? record.bestScore.toLocaleString() : '—';
-    })() : `${need}で解放`));
+    }, open ? item.id : `🔒${item.id}`), (() => {
+      const record = open ? rhythmBestRecord(bestRecords, song.songId, item.id) : null;
+      const text = open ? record && record.played ? record.bestScore.toLocaleString() : '—' : `${need}で解放`;
+      return React.createElement("span", {
+        "data-rhythm-difficulty-best": item.id,
+        className: "block max-w-full truncate text-[8px] font-black tabular-nums opacity-80",
+        style: {
+          fontSize: rhythmTitleFitSize(text, 8, 6, 2)
+        }
+      }, text);
+    })());
   })), React.createElement("div", {
     className: "flex gap-2",
     style: {
