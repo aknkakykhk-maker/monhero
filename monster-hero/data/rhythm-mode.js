@@ -19524,7 +19524,12 @@ const rhythmCreateGL2D=canvas=>{
   // 画面の大きさ(ほんとうの画素)に合わせる
   const syncView=()=>{if(viewW!==canvas.width||viewH!==canvas.height){viewW=canvas.width;viewH=canvas.height;gl.viewport(0,0,viewW,viewH);}};
   let data=new Float32Array(4096);
-  const ensure=n=>{if(data.length<n){let size=data.length;while(size<n)size*=2;data=new Float32Array(size);}};
+  // ★大きくするときは、それまでに積んだ三角形を写してから替える(写さないと、点の多い形で前半が消える)
+  const ensure=count=>{if(data.length<count){let size=data.length;while(size<count)size*=2;const next=new Float32Array(size);next.set(data.subarray(0,n*4));data=next;}};
+  // GPU 側の入れ物も使い回す。足りないときだけ大きく取り直す
+  let bufFloats=0;
+  // グラデーションの色と位置も、塗るたびに作らず使い回す
+  const gradColors=new Float32Array(24),gradTimes=new Float32Array(6);
   // 1回ぶんの描画。verts は [x,y,u,v,...] の三角形の並び
   const flush=(count,mode,paint,texture)=>{
     if(lost||!prog||!count)return;
@@ -19534,23 +19539,44 @@ const rhythmCreateGL2D=canvas=>{
     if(mode===0){const c=parseColor(paint);gl.uniform4f(loc.uColor,c[0],c[1],c[2],c[3]);}
     else if(mode===1){
       const stops=paint.stops.slice().sort((a,b)=>a[0]-b[0]).slice(0,6);
-      const cs=new Float32Array(24),ts=new Float32Array(6);
+      const cs=gradColors,ts=gradTimes;cs.fill(0);ts.fill(0);
       stops.forEach(([t,color],i)=>{const c=parseColor(color);cs.set(c,i*4);ts[i]=t;});
       gl.uniform2f(loc.uG0,paint.x0,paint.y0);gl.uniform2f(loc.uG1,paint.x1,paint.y1);gl.uniform4fv(loc.uStopC,cs);gl.uniform1fv(loc.uStopT,ts);gl.uniform1i(loc.uStops,Math.max(1,stops.length));
     }else if(mode===2){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);}
     // 同じ画素を1度しか塗らない(1回ごとに違う番号をステンシルへ書く。255回で消して数え直す)
     stencilRef++;if(stencilRef>255){gl.clear(gl.STENCIL_BUFFER_BIT);stencilRef=1;}
     gl.stencilFunc(gl.NOTEQUAL,stencilRef,0xff);
-    gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,data.subarray(0,count*4),gl.STREAM_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    if(count*4>bufFloats){bufFloats=data.length;gl.bufferData(gl.ARRAY_BUFFER,bufFloats*4,gl.DYNAMIC_DRAW);}
+    gl.bufferSubData(gl.ARRAY_BUFFER,0,data.subarray(0,count*4));
     gl.drawArrays(gl.TRIANGLES,0,count);
   };
   let n=0;
-  const tri=(x1,y1,x2,y2,x3,y3)=>{ensure((n+3)*4);data.set([x1,y1,0,0,x2,y2,0,0,x3,y3,0,0],n*4);n+=3;};
+  // 三角形1つ。作業用の配列を作らず、じかに書き込む(毎フレーム数千回呼ばれるため)
+  const tri=(x1,y1,x2,y2,x3,y3)=>{ensure((n+3)*4);const o=n*4;
+    data[o]=x1;data[o+1]=y1;data[o+2]=0;data[o+3]=0;data[o+4]=x2;data[o+5]=y2;data[o+6]=0;data[o+7]=0;data[o+8]=x3;data[o+9]=y3;data[o+10]=0;data[o+11]=0;n+=3;};
   const quad=(ax,ay,bx,by,cx,cy,dx,dy)=>{tri(ax,ay,bx,by,cx,cy);tri(ax,ay,cx,cy,dx,dy);};
-  const disc=(x,y,r)=>{const seg=Math.max(8,Math.min(24,Math.ceil(r*3)));for(let i=0;i<seg;i++){const a0=i/seg*Math.PI*2,a1=(i+1)/seg*Math.PI*2;tri(x,y,x+Math.cos(a0)*r,y+Math.sin(a0)*r,x+Math.cos(a1)*r,y+Math.sin(a1)*r);}};
+  // 丸。分け方(8〜24)ごとに単位円の点を一度だけ計算して使い回す
+  const unitCircles=new Map();
+  const unitCircle=seg=>{let t=unitCircles.get(seg);if(!t){t=new Float32Array((seg+1)*2);for(let i=0;i<=seg;i++){const a=i/seg*Math.PI*2;t[i*2]=Math.cos(a);t[i*2+1]=Math.sin(a);}unitCircles.set(seg,t);}return t;};
+  const disc=(x,y,r)=>{const seg=Math.max(8,Math.min(24,Math.ceil(r*3))),t=unitCircle(seg);for(let i=0;i<seg;i++)tri(x,y,x+t[i*2]*r,y+t[i*2+1]*r,x+t[i*2+2]*r,y+t[i*2+3]*r);};
   // 単純な多角形を三角形に分ける(耳を切り落とす方式。ノーツの形は点が少ないので十分)
+  // 凸形か(曲がる向きがずっと同じで、x・y の進む向きが2回までしか入れ替わらない)。ノーツの形はほとんどこれ
+  const isConvex=pts=>{
+    const count=pts.length/2;let sign=0,flipsX=0,flipsY=0,lastDx=0,lastDy=0;
+    for(let i=0;i<count;i++){
+      const j=(i+1)%count,k=(i+2)%count,dx=pts[j*2]-pts[i*2],dy=pts[j*2+1]-pts[i*2+1];
+      const cr=dx*(pts[k*2+1]-pts[j*2+1])-dy*(pts[k*2]-pts[j*2]);
+      if(cr>1e-9){if(sign<0)return false;sign=1;}else if(cr<-1e-9){if(sign>0)return false;sign=-1;}
+      if(dx!==0){if(lastDx!==0&&(dx>0)!==(lastDx>0))flipsX++;lastDx=dx;}
+      if(dy!==0){if(lastDy!==0&&(dy>0)!==(lastDy>0))flipsY++;lastDy=dy;}
+    }
+    return flipsX<=2&&flipsY<=2;
+  };
   const triangulate=pts=>{
     const count=pts.length/2;if(count<3)return;
+    // 凸形は1点から扇に分けるだけでよい(塗る範囲は耳を切る方式と同じ。1画素を1度しか塗らないのもステンシルが守る)
+    if(isConvex(pts)){for(let k=1;k<count-1;k++)tri(pts[0],pts[1],pts[k*2],pts[k*2+1],pts[k*2+2],pts[k*2+3]);return;}
     const idx=[];for(let i=0;i<count;i++)idx.push(i);
     let area=0;for(let i=0;i<count;i++){const j=(i+1)%count;area+=pts[i*2]*pts[j*2+1]-pts[j*2]*pts[i*2+1];}
     const ccw=area>0;
