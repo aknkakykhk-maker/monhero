@@ -214,8 +214,9 @@ ok('コンボ数の色は、遊んでいるときと同じ段(rhythmComboTier)�
   game.includes('const rhythmComboTextColor=combo=>RHYTHM_COMBO_TIER_TEXT[')
   &&game.includes('rhythmComboTier(combo)'));
 ok('リザルトで難易度とコンボ数に色が付いている',
-  /rhythmSongFullName\(song\)\}・<b data-rhythm-difficulty-name className=\{`font-black \$\{rhythmDifficultyTextColor\(difficulty\.id\)\}`\}/.test(game)
-  &&/data-rhythm-max-combo className=\{`text-right tabular-nums \$\{rhythmComboTextColor\(view\.maxCombo\)\}`\}/.test(game));
+  // 2026-09-26 にリザルトの並びを作り替えた(曲名の下に難易度、MAX COMBO は判定の表の右の札)。色の付け方は同じ
+  /data-rhythm-result-song-name[^\n]{0,120}\{rhythmSongFullName\(song\)\}[\s\S]{0,200}<b data-rhythm-difficulty-name className=\{`font-black \$\{rhythmDifficultyTextColor\(difficulty\.id\)\}`\}/.test(game)
+  &&/data-rhythm-max-combo className=\{`[^`]*\$\{rhythmComboTextColor\(view\.maxCombo\)\}`\}/.test(game));
 ok('ランキングでも難易度・ランク・コンボ数に色が付いている',
   /data-rhythm-difficulty-name className=\{`font-black \$\{rhythmDifficultyTextColor\(entry\.difficultyId\)\}`\}/.test(game)
   &&/data-rhythm-rank-name className=\{`font-black \$\{RHYTHM_RANK_COLORS\[detailRank\]\}`\}/.test(game)
