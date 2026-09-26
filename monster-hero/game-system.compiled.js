@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 656a436ea0d68905
+// source-sha256: 9f6e52eed6242fb9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 19:26";
+const BUILD_DATE = "2026-09-26 19:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -24814,11 +24814,18 @@ const RhythmTapTest = ({
       className: "relative flex min-h-0 flex-1 flex-col [@container(min-width:680px)]:flex-row"
     }, (() => {
       const art = heroArt;
-      if (!art && !hudArtSrc) return null;
+      const runOk = !!quickRunAward && quickRunAward.loops > 0,
+        runFailed = !!quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false;
+      const beat = result.eventPointAward && result.eventPointAward.amount > 0 ? result.eventPointAward : null;
+      const luck = result.luck && (result.luck.draws > 0 || result.luck.points > 0) ? result.luck : null;
+      const gains = runOk || runFailed || !!beat || !!luck;
+      if (!art && !hudArtSrc && !gains) return null;
       return React.createElement("aside", {
         "data-rhythm-result-hero": true,
+        className: "relative hidden w-[22%] max-w-[220px] shrink-0 flex-col items-center justify-center gap-2 p-2 [@container(min-width:680px)]:flex"
+      }, (art || hudArtSrc) && React.createElement("div", {
         "aria-hidden": "true",
-        className: "relative hidden w-[22%] max-w-[220px] shrink-0 items-center justify-center p-2 [@container(min-width:680px)]:flex"
+        className: "relative flex min-h-0 w-full flex-1 items-center justify-center"
       }, art ? React.createElement("img", {
         "data-rhythm-result-hero-art": true,
         src: art,
@@ -24833,7 +24840,60 @@ const RhythmTapTest = ({
         draggable: false,
         decoding: "async",
         className: "relative aspect-square w-[82%] rounded-2xl border border-white/20 object-cover"
-      }));
+      })), gains && React.createElement("div", {
+        "data-rhythm-result-hero-gains": true,
+        className: "relative w-full shrink-0 space-y-1.5 text-left"
+      }, runOk && React.createElement("div", {
+        "data-rhythm-result-hero-gains-run": true,
+        className: "rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/60 px-2 py-1.5"
+      }, React.createElement("div", {
+        className: "flex items-baseline justify-between gap-1"
+      }, React.createElement("span", {
+        className: "text-[9px] font-black text-fuchsia-200"
+      }, "クイック∞周回"), React.createElement("b", {
+        className: "text-[15px] font-black leading-none text-white"
+      }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
+        className: "mt-0.5 text-[9px] font-black text-amber-200"
+      }, "🏆 イベント対象曲 ×", quickRunAward.scale), React.createElement("div", {
+        className: "mt-0.5 text-[9px] font-black text-slate-300"
+      }, quickRunAward.fromLoop, "周目 → ", quickRunAward.toLoop, "周目"), React.createElement("div", {
+        className: "mt-0.5 flex flex-wrap gap-x-2 text-[9px] font-bold text-slate-300"
+      }, React.createElement("span", null, "経験値 ", React.createElement("b", {
+        className: "text-cyan-300"
+      }, "+", Number(quickRunAward.xp || 0).toLocaleString())), React.createElement("span", null, "ダイヤ ", React.createElement("b", {
+        className: "text-amber-300"
+      }, "+", Number(quickRunAward.gold || 0).toLocaleString())), quickRunAward.bond > 0 && React.createElement("span", null, "絆 ", React.createElement("b", {
+        className: "text-pink-300"
+      }, "+", Number(quickRunAward.bond).toLocaleString())), quickRunAward.psyche > 0 && React.createElement("span", null, "🌈 ", React.createElement("b", {
+        className: "text-fuchsia-200"
+      }, "+", Number(quickRunAward.psyche).toLocaleString())), quickRunAward.shard > 0 && React.createElement("span", null, "🎖️ ", React.createElement("b", {
+        className: "text-amber-200"
+      }, "+", Number(quickRunAward.shard).toLocaleString())))), runFailed && React.createElement("div", {
+        "data-rhythm-result-hero-gains-run-failed": true,
+        className: "rounded-xl border border-rose-400/50 bg-rose-950/60 px-2 py-1.5"
+      }, React.createElement("div", {
+        className: "flex items-baseline justify-between gap-1"
+      }, React.createElement("span", {
+        className: "text-[9px] font-black text-rose-200"
+      }, "クイック∞周回"), React.createElement("b", {
+        className: "text-[15px] font-black leading-none text-rose-200"
+      }, "+0周")), React.createElement("p", {
+        className: "mt-0.5 text-[9px] font-bold leading-snug text-rose-100"
+      }, "ライフが0になったので周回クリアになりません（クリアなら +", Number(quickRunAward.baseLoops || 0), "周）")), beat && React.createElement("div", {
+        "data-rhythm-result-hero-gains-beat": true,
+        className: "flex items-baseline justify-between gap-1 rounded-xl border border-violet-400/50 bg-violet-950/60 px-2 py-1.5"
+      }, React.createElement("span", {
+        className: "whitespace-nowrap text-[9px] font-black text-violet-200"
+      }, "🎟️ ビートP", beat.target ? ' ×1.5' : ''), React.createElement("b", {
+        className: "text-[15px] font-black leading-none text-white"
+      }, "+", beat.amount.toLocaleString(), "P")), luck && React.createElement("div", {
+        "data-rhythm-result-hero-gains-luck": true,
+        className: "flex items-baseline justify-between gap-1 rounded-xl border border-lime-300/50 bg-lime-950/50 px-2 py-1.5"
+      }, React.createElement("span", {
+        className: "text-[9px] font-black text-lime-200"
+      }, "🍀 ラッキー"), React.createElement("b", {
+        className: "text-[13px] font-black leading-none tabular-nums text-white"
+      }, Number(luck.points).toLocaleString(), "pt"))));
     })(), React.createElement("div", {
       "data-rhythm-result-body": true,
       className: "relative flex min-h-0 min-w-0 flex-1 flex-col"
@@ -25075,7 +25135,7 @@ const RhythmTapTest = ({
       className: "my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300"
     }, result.fullCombo && React.createElement("span", null, "FULL COMBO"), result.allExcellent && React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && React.createElement("span", null, "ALL MARVELOUS")), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && React.createElement("div", {
       "data-rhythm-result-quick-run-failed": true,
-      className: "my-3 rounded-2xl border border-rose-400/50 bg-rose-950/30 p-3 text-left"
+      className: "my-3 rounded-2xl border border-rose-400/50 bg-rose-950/30 p-3 text-left [@container(min-width:680px)]:hidden"
     }, React.createElement("div", {
       className: "flex items-baseline justify-between gap-2"
     }, React.createElement("span", {
@@ -25088,7 +25148,7 @@ const RhythmTapTest = ({
       className: "mt-1 text-[9px] font-bold leading-relaxed text-slate-400"
     }, "裏の周回は止まっていたぶんを取り戻しながら、そのまま続きます。")), quickRunAward && quickRunAward.loops > 0 && React.createElement("div", {
       "data-rhythm-result-quick-run": true,
-      className: "my-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/30 p-3 text-left"
+      className: "my-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/30 p-3 text-left [@container(min-width:680px)]:hidden"
     }, React.createElement("div", {
       className: "flex items-baseline justify-between gap-2"
     }, React.createElement("span", {
@@ -25130,7 +25190,7 @@ const RhythmTapTest = ({
       }, "この曲の ", opened, "（Lv.", song.difficulties[opened].level, "）を曲えらびで選べます"));
     })(), result.luck && (result.luck.draws > 0 || result.luck.points > 0) && React.createElement("div", {
       "data-rhythm-result-luck": true,
-      className: "mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center"
+      className: "mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"
     }, React.createElement("small", {
       className: "block text-[10px] font-black tracking-wider text-lime-200"
     }, "🍀 ラッキーラッシュ"), React.createElement("b", {
@@ -25139,7 +25199,7 @@ const RhythmTapTest = ({
       className: "mt-0.5 block text-[10px] font-bold text-lime-100"
     }, "抽選 ", result.luck.draws, "回・RUSH ", result.luck.rush, "回", result.luck.bonus > 0 ? `・おまけビートP +${result.luck.bonus}P` : '')), result.eventPointAward && result.eventPointAward.amount > 0 && React.createElement("div", {
       "data-rhythm-result-beat-points": true,
-      className: "mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center"
+      className: "mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"
     }, React.createElement("small", {
       className: "block text-[10px] font-black tracking-wider text-violet-200"
     }, "🎟️ ビートP獲得"), React.createElement("b", {
