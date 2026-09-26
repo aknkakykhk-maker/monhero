@@ -17602,21 +17602,23 @@ const RHYTHM_CHART_LEVELS_AFTER_SWITCH=Object.freeze({
 // </rhythm-chart-levels-after-switch>
 });
 // ===== リザルトの左に大きく出すマスモン(2026-09-26) =====
-// ユーザー「マスモン4体選ぶ中でどれが選ばれるの？」に答えた決め方。
-//   ・その曲で能力がいちばん多く出た子
-//   ・同じ回数なら編成の先の子
-//   ・1回も出なければ、絵のある先頭の子
-// arts … 枠ごとの絵(無い枠は空)、counts … 枠ごとの能力が出た回数(演奏中の控え。保存しない)。
+// 最初は「その曲で能力がいちばん多く出た子」にしたが、モンスターノーツは1体につき1曲1回しか出ないので
+// 取れた子はみな同点になり、ほぼいつも編成の1体目が出ていた(ユーザー指摘「基本的にモンスターノーツって1回ずつしか出ないよ」)。
+// ユーザーが選んだ決め方(「毎回ランダム」):
+//   ・その演奏でモンスターノーツを取れた(能力が出た)子の中から、ランダムに1体
+//   ・誰も取れなかったときは、絵のある子の中からランダムに1体
+// arts … 枠ごとの絵(無い枠は空)、counts … 枠ごとの能力が出た回数(演奏中の控え。保存しない)、
+// seed … 0以上1未満の数。演奏を始めるときに1回だけ決める(リザルトを描き直すたびに入れ替わらないように)。
 // 絵のある子が1体もいなければ -1(リザルトは曲のジャケットを出す)
-const rhythmResultHeroIndex=(arts,counts)=>{
+const rhythmResultHeroIndex=(arts,counts,seed=0)=>{
   const list=Array.isArray(arts)?arts:[];
-  let best=-1,bestCount=0;
-  list.forEach((art,index)=>{
-    if(!art)return;
-    const count=Math.max(0,Number(Array.isArray(counts)?counts[index]:0)||0);
-    if(best<0||count>bestCount){best=index;bestCount=count;}
-  });
-  return best;
+  const withArt=list.map((art,index)=>art?index:-1).filter(index=>index>=0);
+  if(!withArt.length)return -1;
+  const fired=withArt.filter(index=>Math.max(0,Number(Array.isArray(counts)?counts[index]:0)||0)>0);
+  const pool=fired.length?fired:withArt;
+  const r=Number(seed);
+  const at=Number.isFinite(r)&&r>=0&&r<1?Math.floor(r*pool.length):0;
+  return pool[Math.min(pool.length-1,at)];
 };
 // ===== 5レーン時代の譜面を6レーンの道で使う(2026-09-26) =====
 // 譜面が laneCount を持っていなければ5レーン時代のもの。サブレーンを (12-10)/2=1 本ずつ右へずらし、

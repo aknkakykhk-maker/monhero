@@ -8,6 +8,9 @@ beatmania IIDX／Dance Dance Revolution／osu!／Arcaea／Beat Saber など）�
 この文書を実装したものであり、検査（`tools/mode/rhythm-chart-*-check.js`）は
 この文書が守られているかを機械で見張るためにある。
 
+> **これからの強化の段取りと進み具合**は [`RHYTHM_CHART_ENGINE_ROADMAP.md`](RHYTHM_CHART_ENGINE_ROADMAP.md)
+> （2026-09-26。いまの弱点・受け取った案の評価・段0〜段6）。強化を再開するときはそちらを先に開く。
+
 ---
 
 ## 0. いちばん大事な順
