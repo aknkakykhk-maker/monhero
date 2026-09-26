@@ -69,7 +69,7 @@ diff /tmp/before.txt /tmp/after.txt     # ← 差が出たら既存曲へ影響�
 上の突き合わせは、リビジョンを上げたあとも**既存曲(Rev.1)について**そのまま通す。
 詳細: [`RHYTHM_CHART_DESIGN.md`](../spec/RHYTHM_CHART_DESIGN.md) 3.1.19。
 
-**作り方の最新(`CHART_REVISION_CODE_LATEST`)より後の番号は、遊んだ感想で自動に増える**(2026-09-26。Rev.8・Rev.9 は作り方の改良に使った)。`rhythm-chart-learn.js --write` が音ゲーの作法の
+**作り方の最新(`CHART_REVISION_CODE_LATEST`)より後の番号は、遊んだ感想で自動に増える**(2026-09-26。Rev.8〜10 は作り方の改良に使った)。`rhythm-chart-learn.js --write` が音ゲーの作法の
 重みを学び直すと、`tools/mode/authoring/chart-knowledge-weights.json` へ新しいリビジョンを書き足し、最新リビジョンの番号がひとつ上がる。
 これも「次に解析する曲から効く」だけで、公開中の曲は変わらない。作り直すかはユーザーが数字を見て決める。
 重みのリビジョンは消さない(前のリビジョンの曲をいつでも同じに作り直せるように)。詳細: 同 3.1.21。
