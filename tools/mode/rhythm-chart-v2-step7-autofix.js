@@ -37,6 +37,9 @@
 // ゲームのランタイム・既存の正式候補v1・V1生成器へは一切接続しない。
 const fs=require('fs');
 const path=require('path');
+const {laneCountOfChart}=require('./rhythm-chart-v3-revision.js');
+// 道のレーン数。譜面ごとに読み直す(譜面の作り方の版5から6。書いていない譜面は5)
+let LANE_COUNT=5;
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -208,8 +211,8 @@ const evaluate=notes=>{
     if(gap<=0||gap>=BEAT)continue;
     if(Math.abs(laneCenter(sorted[i])-laneCenter(sorted[i-1]))>=3)hardJumps++;
   }
-  const use=[0,0,0,0,0];
-  for(const note of notes)use[Math.max(0,Math.min(4,Math.floor(laneCenter(note))))]++;
+  const use=Array(LANE_COUNT).fill(0);
+  for(const note of notes)use[Math.max(0,Math.min(LANE_COUNT-1,Math.floor(laneCenter(note))))]++;
   const spread=Math.max(...use)-Math.min(...use);
   return {issues,impossible,strained,hardJumps,spread,reach:reachList.length,reachList,
     cost:(impossible+reachList.length)*COST_IMPOSSIBLE
@@ -255,7 +258,7 @@ const placements=(notes,index)=>{
     const lanes=points.map(p=>Number(p.lane));
     for(let step=-8;step<=8;step++){
       const delta=step*.5;
-      if(lanes.some(lane=>lane+delta<0||lane+delta>4))continue;
+      if(lanes.some(lane=>lane+delta<0||lane+delta>LANE_COUNT-1))continue;
       const moved={...note,
         lane:lanes[0]+delta,
         endLane:lanes[lanes.length-1]+delta,
@@ -272,9 +275,9 @@ const placements=(notes,index)=>{
   const points=Array.isArray(note.holdPoints)?note.holdPoints:null;
   const widest=points?Math.max(width,...points.map(point=>Number(point.subLaneWidth)||width)):width;
   const lowestStart=points?Math.min(...points.map(point=>Number(point.subLane)??Number(note.subLane))):Number(note.subLane);
-  for(let subLane=0;subLane+width<=10;subLane++){
+  for(let subLane=0;subLane+width<=LANE_COUNT*2;subLane++){
     const delta=subLane-Number(note.subLane);
-    if(points&&(lowestStart+delta<0||lowestStart+delta+widest>10))continue;
+    if(points&&(lowestStart+delta<0||lowestStart+delta+widest>LANE_COUNT*2))continue;
     const moved={...note,subLane,lane:Math.floor(subLane/2),
       ...(points?{holdPoints:points.map(point=>({...point,subLane:Number(point.subLane)+delta}))}:{})};
     if(!fits({start:subLane,end:subLane+width}))continue;
@@ -383,6 +386,7 @@ for(const difficulty of DIFFICULTIES){
   if(!fs.existsSync(file)){console.log(`${difficulty}: 入力が無いので飛ばす (${path.relative(ROOT,file)})`);continue;}
   const chart=JSON.parse(fs.readFileSync(file,'utf8'));
   const key=difficulty||chart.difficulty||'FILE';
+  LANE_COUNT=laneCountOfChart(chart);
   const {notes,fixes,passes,before,after}=autofix(chart.notes||[]);
   if(after.impossible)anyImpossible=true;
 

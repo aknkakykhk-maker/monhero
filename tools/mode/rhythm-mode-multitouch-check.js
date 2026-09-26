@@ -25,7 +25,7 @@ check('Touch由来PointerEventの二重処理を防ぐ',game.includes("if(e.poin
 // 見たいこと(指ごとに clientX/clientY からレーンを出している)は変わっていない。
 check('各指のclientX/clientYから個別レーンを判定',
   game.includes('const tp=inputPoint(touch.clientX,touch.clientY),lane=rhythmLaneAtPoint(tp.x,tp.y,rect)'));
-check('レーン表示は入力面を分断しない非操作div',game.includes('pointer-events-none absolute inset-0 grid grid-cols-5')&&!game.includes('onTouchStart={touchStart}'));
+check('レーン表示は入力面を分断しない非操作div',game.includes('pointer-events-none absolute inset-0 grid" style={{gridTemplateColumns:`repeat(${RHYTHM_LANE_COUNT},minmax(0,1fr))`}}')&&!game.includes('onTouchStart={touchStart}'));
 check('ノーツ描画もタッチ面を遮らない',game.includes("pointerEvents:'none'"));
 check('play areaでブラウザ既定ジェスチャを抑止',game.includes("touchAction:'none'")&&game.includes("WebkitTouchCallout:'none'"));
 check('Pointer Eventsはマウス/ペン用フォールバックとして維持',game.includes("rhythmInputKey('pointer',e.pointerId)")&&game.includes('input.captureTarget.setPointerCapture(input.pointerId)'));

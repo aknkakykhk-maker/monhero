@@ -26,7 +26,7 @@ function RhythmInfoScreen({
           <div className="my-6 text-center text-6xl">🎵</div>
           <h3 className="text-center text-xl font-black text-cyan-200">モンヒロビートは準備中です</h3>
           <p className="mt-3 text-[11px] leading-relaxed text-slate-300">
-            曲に合わせて、5つのレーンを流れてくるノーツを演奏する音ゲーのモードです。
+            曲に合わせて、6つのレーンを流れてくるノーツを演奏する音ゲーのモードです。
           </p>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-300">
             設定したマスモンが曲の途中で「モンスターノーツ」になって流れてきて、取ると血統ごとの力が働く予定です。
@@ -44,7 +44,7 @@ function RhythmInfoScreen({
 }
 
 function RhythmSongSelectScreen({
-  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, exitingQuickRun, handleGiveUp, mainHero,
+  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, exitingQuickRun, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
   onPlaySong, onToggleRhythmSetting, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
@@ -254,6 +254,13 @@ function RhythmSongSelectScreen({
           </div>
         </div>}
         {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}{beatPointReleased&&!beatPointEvent&&<div data-rhythm-beat-point-always className="shrink-0 border-b border-violet-400/15 bg-violet-950/15 px-3 py-1 text-center text-[10px] font-black text-violet-200/90">🎟️ ビートPはいつでも貯まります・イベント開催中は5倍</div>}
+        {/* 6レーンになったこと・MASTERの横フリックを、曲えらびを開いた最初の1回だけ伝える(2026-09-26) */}
+        {rhythmSixLaneIntroVisible&&<div data-rhythm-six-lane-intro className="shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1">
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1"><AssistantBubble scene="rhythmSixLaneIntro" compact/></div>
+            <button type="button" onClick={dismissRhythmSixLaneIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+          </div>
+        </div>}
         {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}
         {quickRhythmBackgroundVisible&&<div data-quick-rhythm-background className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">

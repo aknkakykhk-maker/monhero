@@ -124,6 +124,11 @@ node tools/mode/rhythm-audio-analyze-v3.js --track <track_id> --write
 新しい曲だけがこれで作られる（既存曲は版1のまま。`docs/spec/RHYTHM_CHART_DESIGN.md` 3.1.19）。
 生成のときに `譜面の作り方: 版2（フレーズの写しあり）` と出ていれば効いている。
 
+> 入る版は `rhythm-chart-v3-revision.js` の `CHART_REVISION_LATEST`(最新版)。**版5からは6レーン**の譜面になる
+> (2026-09-26。道が6レーン・サブレーン12本になった)。パイプラインの `--release` が、譜面を束ねる
+> `mhChart(レベル,ノーツ,長さ,6)` の4つ目も書くので、手で `,6` を足さなくてよい。
+> 空のマーカーを足すときの `mhChart(…)` は3つのままでよい(書き出しのときに直る)。
+
 `tempo-ambiguous`（ほかの候補と拮抗）が出たら、**必ず候補を比べる**。
 このスキルで足した3曲は**全部これが出た**。
 

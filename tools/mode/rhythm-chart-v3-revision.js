@@ -25,10 +25,23 @@
 //   4 … 横フリック(2026-09-26・ユーザー指示「横フリックはマスターから譜面にのるようにして」)。
 //        **MASTERだけ**、FLICK に向き(flickDir: left / right)を付ける。次のノーツへ向かって払う向き、
 //        次が近くに無ければ道の端に近いものだけ外向き。ノーツ数も位置も変わらない(向きが付くだけ)
+//   5 … 6レーンの道(2026-09-26・ユーザー判断「全曲6レーンで作り直す」)。道が5レーン(サブレーン10本)から
+//        6レーン(12本)になる。置き方の決めごとは同じで、使える幅だけが広がる。
+//        できあがった譜面は laneCount:6 を持ち、本体の mhChart の4つ目にも 6 を書く。
+//        版4までの譜面は5レーンのまま作られ(1音も変わらない)、本体が道の真ん中へ寄せて使う(rhythmChartOnRoad)
 'use strict';
 
 const CHART_REVISION_LEGACY=1;
-const CHART_REVISION_LATEST=4;
+const CHART_REVISION_LATEST=5;
+// 版ごとの道のレーン数。版5から6レーン
+const CHART_LANE_COUNT_LEGACY=5;
+const CHART_SIX_LANE_REVISION=5;
+const laneCountForRevision=revision=>Number(revision)>=CHART_SIX_LANE_REVISION?6:CHART_LANE_COUNT_LEGACY;
+// 譜面(生成器・自動修正が書き出すJSON)のレーン数。書いていなければ5レーン時代のもの
+const laneCountOfChart=chart=>{
+  const value=Number(chart&&chart.laneCount);
+  return value===5||value===6?value:CHART_LANE_COUNT_LEGACY;
+};
 
 // 曲の一覧の1件から版を読む。無い・壊れている・範囲外なら版1(今までの作り方)。
 const chartRevisionOf=entry=>{
@@ -47,4 +60,5 @@ const chartRevisionForRegistry=previousEntry=>{
   return {chartRevision:CHART_REVISION_LATEST};
 };
 
-module.exports={CHART_REVISION_LEGACY,CHART_REVISION_LATEST,chartRevisionOf,chartRevisionForRegistry};
+module.exports={CHART_REVISION_LEGACY,CHART_REVISION_LATEST,chartRevisionOf,chartRevisionForRegistry,
+  CHART_LANE_COUNT_LEGACY,CHART_SIX_LANE_REVISION,laneCountForRevision,laneCountOfChart};

@@ -40,7 +40,7 @@ const verbose=process.argv.includes('--verbose');
 
 const runtime=rt0.loadRuntime();
 const spanAt=rt0.makeSpanAt(runtime);
-const SUB_MAX=runtime.RHYTHM_SUB_LANE_COUNT;                 // 10
+const SUB_MAX=runtime.RHYTHM_SUB_LANE_COUNT;                 // 12(6レーン)
 const WIDTH_MAX=runtime.RHYTHM_MAX_SUB_LANE_WIDTH;
 const GAP=rt0.FINGER_GAP_SUB;                                // 指の太さ(サブレーン)
 const RESTRIKE_MS=HAND_MODEL.restrikeLimitMs;
@@ -90,7 +90,7 @@ const fits=(notes,index,candidate)=>{
   return true;
 };
 
-let totalBefore=0,totalBeforeFast=0,totalMoved=0,totalNarrowed=0,totalDropped=0,changedCharts=0;
+let totalBefore=0,totalBeforeFast=0,totalMoved=0,totalNarrowed=0,totalDropped=0,totalStraightened=0,changedCharts=0;
 let source=runtime.source;
 // 触ってよいのは先行公開5曲のマーカーだけ。ほかの譜面(v1・候補v2・デバッグ曲)を
 // 巻き添えで書き換えていないことを、書き込む前に必ず確かめる
@@ -107,6 +107,9 @@ for(const [songId,marker] of Object.entries(rt0.RELEASED_MARKERS)){
   for(const difficulty of ['EASY','NORMAL','HARD','EXPERT','MASTER']){
     const chart=song.difficulties[difficulty];
     if(!chart||!chart.notes.length)continue;
+    // 5レーン時代の譜面は、本体が道の真ん中へ寄せたもの(rhythmChartOnRoad)が見えている。
+    // 寄せたまま書き戻すと、マーカーの中身が二重にずれるので触らない
+    if(chart.laneCenteredFrom){console.log(`  ${songId} ${difficulty}: 5レーン時代の譜面なので飛ばす(作り直すと直せる)`);continue;}
     let notes=chart.notes.map(cloneNote);
     const before=rt0.overlapConflicts(notes,spanAt);
     // 「近いのに速い」2音も、指が2本入らないという点では同じ不具合。
@@ -149,6 +152,24 @@ for(const [songId,marker] of Object.entries(rt0.RELEASED_MARKERS)){
       }
     }
     if(dropped.size)notes=notes.filter((_,index)=>!dropped.has(index));
+    // 押さえている帯どうし(SLIDEとSLIDE)が、曲線(ease)のせいで近づいて重なることがある。
+    // 帯は動かせないので、生成器の applySlideEase と同じく**その曲線を直線へ戻す**(経路の点・ノーツ数は変えない)。
+    // 自動修正(rhythm-chart-v2-step7-autofix.js)は曲線を知らずに直線で測って SLIDE をずらすため、
+    // ずらした先で曲線どうしが近づくのを見逃す(2026-09-26・6レーンで作り直したとき kiki_issen の MASTER に2件)
+    {
+      const hasEase=note=>note&&note.type==='SLIDE'&&Array.isArray(note.slidePoints)&&note.slidePoints.some(point=>point&&point.ease);
+      for(let pass=0;pass<4;pass++){
+        const remaining=rt0.overlapConflicts(notes,spanAt).filter(c=>hasEase(notes[c.heldIndex])||hasEase(notes[c.noteIndex]));
+        if(!remaining.length)break;
+        for(const c of remaining)for(const index of [c.heldIndex,c.noteIndex]){
+          if(!hasEase(notes[index]))continue;
+          const straight=cloneNote(notes[index]);
+          straight.slidePoints=straight.slidePoints.map(point=>{const {ease,...rest}=point;return rest;});
+          notes[index]=straight;totalStraightened++;
+          if(verbose)console.log(`  ${songId} ${difficulty} ${Math.round(straight.timeMs)}ms SLIDE の曲線を直線へ戻しました`);
+        }
+      }
+    }
     const after=rt0.overlapConflicts(notes,spanAt);
     const afterFast=rt0.fastPairConflicts(notes,spanAt);
     console.log(`${songId} ${difficulty}: 重なり ${before.length}→${after.length}件`
@@ -160,7 +181,8 @@ for(const [songId,marker] of Object.entries(rt0.RELEASED_MARKERS)){
 }
 
 console.log(`\n押せない重なり ${totalBefore}件 / 近いのに速い ${totalBeforeFast}件`
-  +` → 寄せた ${totalMoved} ・ 細くして寄せた ${totalNarrowed} ・ 外した ${totalDropped}`);
+  +` → 寄せた ${totalMoved} ・ 細くして寄せた ${totalNarrowed} ・ 外した ${totalDropped}`
+  +(totalStraightened?` ・ 曲線を直線へ戻した ${totalStraightened}`:''));
 if(!changedCharts){console.log('直すところはありません。');process.exit(0);}
 if(!write){console.log('※ --write を付けると rhythm-mode.js のマーカーの内側だけを直します。');process.exit(0);}
 const afterSnapshot=snapshot(source);

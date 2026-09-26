@@ -13,7 +13,11 @@
 //   node tools/mode/rhythm-chart-v3-patterns.js   # 語彙と選び方を並べて見る
 'use strict';
 
-const LANES=5;
+// 道のレーン数。譜面の作り方の版5から6(rhythm-chart-v3-revision.js)。生成器が setLaneCount で決める。
+// 形の並び(下の語彙)は相対レーンなので、レーン数が変わっても形そのものは同じ
+let LANES=5;
+const setLaneCount=count=>{LANES=count===6?6:5;};
+const laneCount=()=>LANES;
 
 // --- 形の語彙 ---
 // lanes(length) … 相対レーンの並び（0起点。負にもなる）
@@ -119,7 +123,7 @@ const maxStepOf=offsets=>{
 };
 // 形を左右反転する（反復フレーズの2回目に使う）
 const mirror=offsets=>offsets.map(value=>-value);
-// 並びを実際のレーン（0〜4）へ収まるようにずらす。収まらなければ null。
+// 並びを実際のレーン（0〜LANES-1）へ収まるようにずらす。収まらなければ null。
 const fitToLanes=(offsets,base)=>{
   const lanes=offsets.map(value=>base+value);
   if(lanes.some(lane=>lane<0||lane>LANES-1))return null;
@@ -429,7 +433,7 @@ const heldPairShapeCandidates=({level,bassMove,melodyMove,usage=null,previousId=
   return scored.map(entry=>entry.shape);
 };
 
-module.exports={LANES,PATTERNS,PATTERN_BY_ID,mirror,fitToLanes,baseRange,maxStepOf,shapeCandidatesFor,rankShapes,hash32,FRESH_WINDOW,
+module.exports={LANES,setLaneCount,laneCount,PATTERNS,PATTERN_BY_ID,mirror,fitToLanes,baseRange,maxStepOf,shapeCandidatesFor,rankShapes,hash32,FRESH_WINDOW,
   HELD_PAIR_SHAPES,heldPairShapeCandidates,heldPairMoveScale,HELD_PAIR_MOVE_UNIT};
 
 
