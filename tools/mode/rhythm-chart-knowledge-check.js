@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 版7「音ゲーの作法」と、遊んだ感想からの学び直しを見張る(2026-09-26)。
+// Rev.7「音ゲーの作法」と、遊んだ感想からの学び直しを見張る(2026-09-26)。
 //
 //   node tools/mode/rhythm-chart-knowledge-check.js
 //   node tools/mode/rhythm-chart-knowledge-check.js --tracks a,b,c
@@ -12,9 +12,9 @@
 //   ・作法の一覧の形(出どころ・効く段・好む形が実在する)
 //   ・決めつけない: 曲の音の裏づけが無いときは、どの作法も 0(何もしない)
 //   ・学び直しの式: 1回で ±20% まで／区間が少ないと動かさない／0〜2 に収まる
-//   ・版の数え方: 重みを書き足した版まで最新版が上がる。前の版の重みは消えない
-//   ・実際に版6・版7で生成し、版7は作法が効き、ノーツに印が残り、押せない配置・ノーツ数・質を悪くしない。
-//     版6以前の生成には作法の印が一切付かない(公開中の譜面を作り直しても同じものができる)
+//   ・リビジョンの数え方: 重みを書き足したリビジョンまで最新リビジョンが上がる。前のリビジョンの重みは消えない
+//   ・実際にRev.6・Rev.7で生成し、Rev.7は作法が効き、ノーツに印が残り、押せない配置・ノーツ数・質を悪くしない。
+//     Rev.6以前の生成には作法の印が一切付かない(公開中の譜面を作り直しても同じものができる)
 'use strict';
 const fs=require('fs'),path=require('path'),os=require('os');
 const {spawnSync}=require('child_process');
@@ -91,13 +91,13 @@ for(const entry of KNOWLEDGE){
     &&!authoringMatches(chart,'4:1000:3000')&&!authoringMatches(chart,'3:1000:3250')&&!authoringMatches({notes:[]},'0:0:0'));
 }
 
-// ── 4. 版の数え方 ────────────────────────────────────────────────────────────
+// ── 4. リビジョンの数え方 ────────────────────────────────────────────────────────────
 {
   const file=knowledge.readWeightsFile();
   const numbers=Object.keys(file.revisions).map(Number);
   ok('重みの置き場が読める',file.schemaVersion===1&&numbers.length>0&&numbers.every(n=>Number.isInteger(n)&&n>=knowledge.KNOWLEDGE_BASE_REVISION));
-  ok('最新版は、重みを書き足した版まで上がる',CHART_REVISION_LATEST===Math.max(7,...numbers)&&CHART_REVISION_LATEST===knowledge.latestKnowledgeRevision());
-  ok('版7以降は版として読める',chartRevisionOf({chartRevision:7})===7&&chartRevisionOf({chartRevision:CHART_REVISION_LATEST})===CHART_REVISION_LATEST);
+  ok('最新リビジョンは、重みを書き足したリビジョンまで上がる',CHART_REVISION_LATEST===Math.max(7,...numbers)&&CHART_REVISION_LATEST===knowledge.latestKnowledgeRevision());
+  ok('Rev.7以降はリビジョンとして読める',chartRevisionOf({chartRevision:7})===7&&chartRevisionOf({chartRevision:CHART_REVISION_LATEST})===CHART_REVISION_LATEST);
   let shapeOk=true;
   for(const [key,revision] of Object.entries(file.revisions)){
     const n=Number(key);
@@ -105,12 +105,12 @@ for(const entry of KNOWLEDGE){
     else for(const [id,value] of Object.entries(revision.weights))if(!knowledge.KNOWLEDGE_BY_ID[id]||!(Number(value)>=0&&Number(value)<=2))shapeOk=false;
     if(n>knowledge.KNOWLEDGE_BASE_REVISION&&!(Number.isInteger(revision.basedOn)&&revision.basedOn<n&&file.revisions[String(revision.basedOn)]))shapeOk=false;
   }
-  ok('各版の重みは既知の作法だけ・0〜2・学び直した版は元の版を指す',shapeOk);
+  ok('各リビジョンの重みは既知の作法だけ・0〜2・学び直したリビジョンは元のリビジョンを指す',shapeOk);
   const weights=knowledge.weightsForRevision(CHART_REVISION_LATEST);
-  ok('最新版の重みが全部の作法にある',KNOWLEDGE.every(entry=>Number.isFinite(weights[entry.id])));
+  ok('最新リビジョンの重みが全部の作法にある',KNOWLEDGE.every(entry=>Number.isFinite(weights[entry.id])));
 }
 
-// ── 5. 版6・版7で実際に作って比べる ─────────────────────────────────────────
+// ── 5. Rev.6・Rev.7で実際に作って比べる ─────────────────────────────────────────
 const tracks=(arg('--tracks','nothing_without_you,dullahan,kindan_no_resistance,monster_hero_theme')||'').split(',').filter(Boolean);
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'chart-knowledge-'));
 try{
@@ -123,7 +123,7 @@ try{
       fs.mkdirSync(dir,{recursive:true});
       const run=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),'--track',trackId,
         '--chart-revision',String(revision),'--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:1<<26});
-      if(run.status!==0){ok(`${trackId} 版${revision}を生成できる`,false,(run.stderr||'').split('\n')[0]);continue;}
+      if(run.status!==0){ok(`${trackId} Rev.${revision}を生成できる`,false,(run.stderr||'').split('\n')[0]);continue;}
       const quality=qualityReportFor(trackId,{dir,source:'v3'});
       const fit=fitReportFor(trackId,{dir,source:'v3'});
       for(const file of fs.readdirSync(dir).filter(f=>f.endsWith('.json'))){
@@ -147,21 +147,21 @@ try{
       }
     }
   }
-  ok('版6以前の生成には作法の印が付かない',sum[6].marked===0,`${sum[6].marked}件`);
-  ok('版7は作法が効いてノーツに印が残る',sum[7].marked>0,Object.entries(fired).map(([id,n])=>`${id} ${n}`).join(' / '));
+  ok('Rev.6以前の生成には作法の印が付かない',sum[6].marked===0,`${sum[6].marked}件`);
+  ok('Rev.7は作法が効いてノーツに印が残る',sum[7].marked>0,Object.entries(fired).map(([id,n])=>`${id} ${n}`).join(' / '));
   ok('印は既知の作法だけ・同時押しの2本目には付けない',badIds===0&&chordPartnerMarked===0);
-  ok('版7で押せない配置を増やしていない',sum[7].impossible<=sum[6].impossible,`版6 ${sum[6].impossible} → 版7 ${sum[7].impossible}`);
-  ok('版7でノーツ数を大きく変えていない',Math.abs(sum[7].notes-sum[6].notes)<=sum[6].notes*.03,`版6 ${sum[6].notes} → 版7 ${sum[7].notes}`);
+  ok('Rev.7で押せない配置を増やしていない',sum[7].impossible<=sum[6].impossible,`Rev.6 ${sum[6].impossible} → Rev.7 ${sum[7].impossible}`);
+  ok('Rev.7でノーツ数を大きく変えていない',Math.abs(sum[7].notes-sum[6].notes)<=sum[6].notes*.03,`Rev.6 ${sum[6].notes} → Rev.7 ${sum[7].notes}`);
   const avg=(s,axis)=>rows?s.axes[axis]/rows:0;
   const worse=AXES.filter(axis=>avg(sum[7],axis)<avg(sum[6],axis)-3);
-  ok('版7で質の6軸がどれも3点より下がらない',worse.length===0,
+  ok('Rev.7で質の6軸がどれも3点より下がらない',worse.length===0,
     AXES.map(axis=>`${axis} ${avg(sum[6],axis).toFixed(0)}→${avg(sum[7],axis).toFixed(0)}`).join(' / '));
   const fitAvg=(s,key)=>s.fitN?s[key]/s.fitN:0;
-  ok('版7でノーツの種類が音に合う割合を下げていない',fitAvg(sum[7],'flickFit')>=fitAvg(sum[6],'flickFit')-.05&&fitAvg(sum[7],'chordFit')>=fitAvg(sum[6],'chordFit')-.05,
+  ok('Rev.7でノーツの種類が音に合う割合を下げていない',fitAvg(sum[7],'flickFit')>=fitAvg(sum[6],'flickFit')-.05&&fitAvg(sum[7],'chordFit')>=fitAvg(sum[6],'chordFit')-.05,
     `フリック ${Math.round(fitAvg(sum[6],'flickFit')*100)}%→${Math.round(fitAvg(sum[7],'flickFit')*100)}% / 同時押し ${Math.round(fitAvg(sum[6],'chordFit')*100)}%→${Math.round(fitAvg(sum[7],'chordFit')*100)}%`);
 }finally{
   fs.rmSync(tmp,{recursive:true,force:true});
 }
 
-console.log(failed?`\n✗ ${failed}件NG`:'\n✓ 音ゲーの作法(版7)と学び直しは期待どおり');
+console.log(failed?`\n✗ ${failed}件NG`:'\n✓ 音ゲーの作法(Rev.7)と学び直しは期待どおり');
 process.exit(failed?1:0);

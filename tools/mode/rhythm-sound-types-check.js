@@ -1,17 +1,17 @@
 #!/usr/bin/env node
-// 版6「音の性格でノーツの種類を決める」と、譜面メモ(遊んだ感想を残す仕組み)を見張る(2026-09-26)。
+// Rev.6「音の性格でノーツの種類を決める」と、譜面メモ(遊んだ感想を残す仕組み)を見張る(2026-09-26)。
 //
 //   node tools/mode/rhythm-sound-types-check.js
 //   node tools/mode/rhythm-sound-types-check.js --tracks a,b,c
 //
 // 【なぜ要るか】ユーザー指摘「ただ適当にフリックとかを置くじゃなくて、譜面にあわせてあった配置や
 // ノーツの種類があるとおもう」／「遊んだ感想を譜面に残す仕組みも」。
-// 版5までは、フリック・同時押しを数だけ決めて曲全体へ散らしていた(音の性格に乗る割合がTAP全体と同じ)。
-// 版6は rhythm-sound-traits.js の物差しで「その音にふさわしい種類」を選ぶ。
+// Rev.5までは、フリック・同時押しを数だけ決めて曲全体へ散らしていた(音の性格に乗る割合がTAP全体と同じ)。
+// Rev.6は rhythm-sound-traits.js の物差しで「その音にふさわしい種類」を選ぶ。
 //
 // 見るもの:
 //   ・音の性格の物差しが、作った音(シンバル・切れる音・語尾・旋律の上下)を正しく見分ける
-//   ・実際に版5・版6で生成し、版6のフリック・同時押しが音の性格に乗る割合がはっきり上がる
+//   ・実際にRev.5・Rev.6で生成し、Rev.6のフリック・同時押しが音の性格に乗る割合がはっきり上がる
 //     (押せない・ノーツ数は悪くしない)。横フリックの向きが旋律の上下と合う
 //   ・譜面メモ: 結果画面の部品がデバッグから始めた演奏にだけ出る／新しい保存キーが一覧に載っている／
 //     指紋の式がランタイムと取り込み道具で同じ／貼り付けを読める
@@ -50,8 +50,8 @@ const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name}${detail
   ok('同時押しはシンバル・大きな一発でない音を選ばない',chordScoreOf(at(250))===0);
 }
 
-// ── 2. 版6で実際に作って比べる ──────────────────────────────────────────────
-ok('最新版は6以上',CHART_REVISION_LATEST>=6);
+// ── 2. Rev.6で実際に作って比べる ──────────────────────────────────────────────
+ok('最新リビジョンは6以上',CHART_REVISION_LATEST>=6);
 const tracks=(arg('--tracks','nothing_without_you,dullahan,kindan_no_resistance,monster_hero_theme')||'').split(',').filter(Boolean);
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'sound-types-'));
 try{
@@ -62,7 +62,7 @@ try{
       fs.mkdirSync(dir,{recursive:true});
       const run=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),'--track',trackId,
         '--chart-revision',String(revision),'--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:1<<26});
-      if(run.status!==0){ok(`${trackId} 版${revision}を生成できる`,false,(run.stderr||'').split('\n')[0]);continue;}
+      if(run.status!==0){ok(`${trackId} Rev.${revision}を生成できる`,false,(run.stderr||'').split('\n')[0]);continue;}
       const fit=fitReportFor(trackId,{dir,source:'v3'});
       const quality=qualityReportFor(trackId,{dir,source:'v3'});
       for(const [difficulty,m] of Object.entries(fit.difficulties)){
@@ -78,13 +78,13 @@ try{
   const rate=(hit,total)=>total?hit/total:0;
   const f5=rate(sum[5].flickHit,sum[5].flicks),f6=rate(sum[6].flickHit,sum[6].flicks);
   const c5=rate(sum[5].chordHit,sum[5].chords),c6=rate(sum[6].chordHit,sum[6].chords);
-  ok('版6のフリックは音の性格(切れる・語尾・シンバル)に乗る',f6>=.8&&f6>=f5+.25,`版5 ${Math.round(f5*100)}% → 版6 ${Math.round(f6*100)}%`);
-  ok('版6の同時押し(EASY〜HARD)はシンバル・大きな一発に乗る',c6>=.6&&c6>=c5+.3,`版5 ${Math.round(c5*100)}% → 版6 ${Math.round(c6*100)}%`);
-  ok('版6の横フリックは旋律の上がり下がりと同じ向き',sum[6].side===0||rate(sum[6].sideHit,sum[6].side)>=.95,
+  ok('Rev.6のフリックは音の性格(切れる・語尾・シンバル)に乗る',f6>=.8&&f6>=f5+.25,`Rev.5 ${Math.round(f5*100)}% → Rev.6 ${Math.round(f6*100)}%`);
+  ok('Rev.6の同時押し(EASY〜HARD)はシンバル・大きな一発に乗る',c6>=.6&&c6>=c5+.3,`Rev.5 ${Math.round(c5*100)}% → Rev.6 ${Math.round(c6*100)}%`);
+  ok('Rev.6の横フリックは旋律の上がり下がりと同じ向き',sum[6].side===0||rate(sum[6].sideHit,sum[6].side)>=.95,
     `${sum[6].sideHit}/${sum[6].side}`);
-  ok('版6で押せない配置を増やしていない',sum[6].impossible<=sum[5].impossible,`版5 ${sum[5].impossible} → 版6 ${sum[6].impossible}`);
-  ok('版6でノーツ数を大きく変えていない(種類を選び直すだけ)',Math.abs(sum[6].notes-sum[5].notes)<=sum[5].notes*.03,
-    `版5 ${sum[5].notes} → 版6 ${sum[6].notes}`);
+  ok('Rev.6で押せない配置を増やしていない',sum[6].impossible<=sum[5].impossible,`Rev.5 ${sum[5].impossible} → Rev.6 ${sum[6].impossible}`);
+  ok('Rev.6でノーツ数を大きく変えていない(種類を選び直すだけ)',Math.abs(sum[6].notes-sum[5].notes)<=sum[5].notes*.03,
+    `Rev.5 ${sum[5].notes} → Rev.6 ${sum[6].notes}`);
 }finally{
   fs.rmSync(tmp,{recursive:true,force:true});
 }
@@ -111,5 +111,5 @@ try{
   ok('区間の中身を数えられる',feedback.segmentFeatures({notes:[{type:'FLICK',timeMs:100,flickDir:'left'},{type:'TAP',timeMs:100},{type:'TAP',timeMs:9000}]},0,8000).chords===1);
 }
 
-console.log(failed?`\n✗ ${failed}件NG`:'\n✓ 音の性格でノーツの種類を決める版6と、譜面メモは期待どおり');
+console.log(failed?`\n✗ ${failed}件NG`:'\n✓ 音の性格でノーツの種類を決めるRev.6と、譜面メモは期待どおり');
 process.exit(failed?1:0);

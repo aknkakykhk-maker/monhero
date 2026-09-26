@@ -1,4 +1,4 @@
-// 音ゲーの作法の一覧(知識の置き場)と、その重み(2026-09-26・版7)。
+// 音ゲーの作法の一覧(知識の置き場)と、その重み(2026-09-26・Rev.7)。
 //
 // 【なぜ要るか】ユーザー指示「よその作品の譜面知識や音ゲーとしての一般的知識は生成器にいれとてほしい」
 // 「決めつけはしないであくまでも曲に合わせた作りをできるようにして」
@@ -10,8 +10,8 @@
 // ・作法は「選ばれやすさ」を少し足すだけ。押せるか・音に乗るかの関門は今までどおり生成器が見る。
 // ・よその作品の**譜面データは取り込まない**(ノーツの並びを写さない)。採るのは公開されている
 //   作り方の考え方(一般原則)だけ。出どころは sources に残す。
-// ・重みは tools/mode/authoring/chart-knowledge-weights.json に**版ごと**に残す。遊んだ感想(譜面メモ)から
-//   rhythm-chart-learn.js が重みを上げ下げし、新しい版として書き足す(前の版の重みは消さない＝戻せる)。
+// ・重みは tools/mode/authoring/chart-knowledge-weights.json に**リビジョンごと**に残す。遊んだ感想(譜面メモ)から
+//   rhythm-chart-learn.js が重みを上げ下げし、新しいリビジョンとして書き足す(前のリビジョンの重みは消さない＝戻せる)。
 //
 // 新しい作法は KNOWLEDGE へ1件足すだけで生成器に効く(stage が生成器の段に対応する)。
 //   stage: 'pick'   … 拾う音の優先度に足す
@@ -96,12 +96,12 @@ const readWeightsFile=()=>{
     return value&&typeof value==='object'&&value.revisions&&typeof value.revisions==='object'?value:{schemaVersion:1,revisions:{}};
   }catch{return {schemaVersion:1,revisions:{}};}
 };
-// 重みを書き足した版のうち、いちばん新しい番号(書いていなければ版7)
+// 重みを書き足したリビジョンのうち、いちばん新しい番号(書いていなければRev.7)
 const latestKnowledgeRevision=()=>{
   const numbers=Object.keys(readWeightsFile().revisions).map(Number).filter(Number.isInteger);
   return Math.max(KNOWLEDGE_BASE_REVISION,...numbers);
 };
-// その版で使う重み。その版以下で書いてあるいちばん新しい重みを使い、書いていない作法は既定値
+// そのリビジョンで使う重み。そのリビジョン以下で書いてあるいちばん新しい重みを使い、書いていない作法は既定値
 const weightsForRevision=revision=>{
   const revisions=readWeightsFile().revisions;
   const usable=Object.keys(revisions).map(Number).filter(n=>Number.isInteger(n)&&n<=revision).sort((a,b)=>b-a);

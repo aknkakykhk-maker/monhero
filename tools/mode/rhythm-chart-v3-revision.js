@@ -1,4 +1,11 @@
-// 自動譜面制作V3の「譜面の作り方の版」(chartRevision)。
+// MHB CHART ENGINE(モンヒロビート譜面エンジン)のリビジョン(chartRevision)。
+//
+// 【名前】(2026-09-26・ユーザー指示「このツール自体にちゃんとした名前をつけて、それにバージョン的なのをつけてほしい」)
+// 自動譜面制作V3(解析 → 生成 → 自動修正 → 書き出し)をまとめて「MHB CHART ENGINE」と呼び、
+// 譜面の作り方の世代を「Rev.7」のように書く(以前は「版7」と書いていた。数字はそのまま)。
+// 表示は chartRevisionLabel(7) → 'MHB CHART ENGINE Rev.7'。曲の一覧・譜面のJSONの項目名 chartRevision と、
+// そこに入る数字は変えない(書き換えると既存曲の作り方が変わる)。
+// ファイル名の「v3」は生成器の作り直しの世代で、Rev. とは別の数え方。
 //
 // 【なぜ要るか】(2026-09-24)
 // 運用ルール ⑩-2 で「生成器は強化してよいが、既存曲の生成結果(ノーツ数)は変えない」と決めている。
@@ -6,14 +13,14 @@
 // たまたま閉じられる形の強化しか入れられなかった。拾う音の選び方そのものを良くすると、
 // 既存曲のノーツ数も少しずつ動いてしまう。
 //
-// そこで曲ごとに「どの版の作り方で作るか」を曲の一覧(rhythm-song-registry.json)へ持たせる。
-//   ・書いていない曲(= 2026-09-24 までに入った曲)は版1。今までと1音も変わらない
-//   ・解析器(rhythm-audio-analyze-v3.js)は、**まだ解析していない曲**を登録するときに最新版を書く
+// そこで曲ごとに「どのリビジョンの作り方で作るか」を曲の一覧(rhythm-song-registry.json)へ持たせる。
+//   ・書いていない曲(= 2026-09-24 までに入った曲)はRev.1。今までと1音も変わらない
+//   ・解析器(rhythm-audio-analyze-v3.js)は、**まだ解析していない曲**を登録するときに最新リビジョンを書く
 //     (新しく足す曲だけが、自動で新しい作り方になる)
-//   ・既存曲を作り直すと決めたときは、その曲へ手で `"chartRevision": <版>` を書く
-//   ・試しに別の版で作るだけなら、生成器へ `--chart-revision <版>` を渡す(一覧は書き換えない)
+//   ・既存曲を作り直すと決めたときは、その曲へ手で `"chartRevision": <リビジョン>` を書く
+//   ・試しに別のリビジョンで作るだけなら、生成器へ `--chart-revision <リビジョン>` を渡す(一覧は書き換えない)
 //
-// 版の中身(上の版は下の版を全部含む)
+// リビジョンの中身(上のリビジョンは下のリビジョンを全部含む)
 //   1 … 2026-09-24 までの作り方
 //   2 … フレーズの写し。繰り返しの区切りでは、元の小節と同じ位置の音を拾い、
 //        同じレーン(区切りの出現ごとに左右反転)へ置く(docs/spec/RHYTHM_CHART_DESIGN.md 3.1.19)
@@ -28,7 +35,7 @@
 //   5 … 6レーンの道(2026-09-26・ユーザー判断「全曲6レーンで作り直す」)。道が5レーン(サブレーン10本)から
 //        6レーン(12本)になる。置き方の決めごとは同じで、使える幅だけが広がる。
 //        できあがった譜面は laneCount:6 を持ち、本体の mhChart の4つ目にも 6 を書く。
-//        版4までの譜面は5レーンのまま作られ(1音も変わらない)、本体が道の真ん中へ寄せて使う(rhythmChartOnRoad)
+//        Rev.4までの譜面は5レーンのまま作られ(1音も変わらない)、本体が道の真ん中へ寄せて使う(rhythmChartOnRoad)
 //   6 … 音の性格でノーツの種類を決める(2026-09-26・ユーザー指摘「ただ適当にフリックとかを置くじゃなくて、
 //        譜面にあわせてあった配置やノーツの種類があるとおもう」)。フリックは切れる音・歌の語尾・シンバルに、
 //        同時押しはシンバル・大きな一発に、音の性格の点が高い順に置く(数は上限としてだけ使う)。
@@ -36,15 +43,17 @@
 //   7 … 音ゲーの作法(2026-09-26・ユーザー指示「よその作品の譜面知識や音ゲーとしての一般的知識は生成器にいれとてほしい」
 //        「決めつけはしないであくまでも曲に合わせた作りを」)。作法の一覧(rhythm-chart-knowledge.js)が、
 //        曲にその音の裏づけがあるときだけ選ばれやすさを少し足す。区切りの一発も強さの順に選ぶ
-//   8〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直した版。rhythm-chart-learn.js --write が
-//        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新版になる
+//   8〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる
 'use strict';
 
+const CHART_ENGINE_NAME='MHB CHART ENGINE';
+const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
-// 最新版は、作法の重みを書き足した版まで自動で上がる(学び直すたびに新しい版になる)
+// 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const CHART_REVISION_LATEST=Math.max(7,latestKnowledgeRevision());
-// 版ごとの道のレーン数。版5から6レーン
+// リビジョンごとの道のレーン数。Rev.5から6レーン
 const CHART_LANE_COUNT_LEGACY=5;
 const CHART_SIX_LANE_REVISION=5;
 const laneCountForRevision=revision=>Number(revision)>=CHART_SIX_LANE_REVISION?6:CHART_LANE_COUNT_LEGACY;
@@ -54,22 +63,22 @@ const laneCountOfChart=chart=>{
   return value===5||value===6?value:CHART_LANE_COUNT_LEGACY;
 };
 
-// 曲の一覧の1件から版を読む。無い・壊れている・範囲外なら版1(今までの作り方)。
+// 曲の一覧の1件からリビジョンを読む。無い・壊れている・範囲外ならRev.1(今までの作り方)。
 const chartRevisionOf=entry=>{
   const value=Number(entry&&entry.chartRevision);
   if(!Number.isInteger(value)||value<CHART_REVISION_LEGACY||value>CHART_REVISION_LATEST)return CHART_REVISION_LEGACY;
   return value;
 };
 
-// 解析器が曲の一覧へ書くときに付ける版。
-//   ・すでに版が書いてある … そのまま(人が決めた版を解析のやり直しで消さない)
-//   ・一度でも解析した曲(audioSha256 がある) … 付けない(= 版1。既存曲を黙って新しい作り方にしない)
-//   ・まだ解析していない曲(音源のパスだけ手で足した直後など) … 最新版
+// 解析器が曲の一覧へ書くときに付けるリビジョン。
+//   ・すでにリビジョンが書いてある … そのまま(人が決めたリビジョンを解析のやり直しで消さない)
+//   ・一度でも解析した曲(audioSha256 がある) … 付けない(= Rev.1。既存曲を黙って新しい作り方にしない)
+//   ・まだ解析していない曲(音源のパスだけ手で足した直後など) … 最新リビジョン
 const chartRevisionForRegistry=previousEntry=>{
   if(previousEntry&&previousEntry.chartRevision!=null)return {chartRevision:previousEntry.chartRevision};
   if(previousEntry&&typeof previousEntry.audioSha256==='string'&&previousEntry.audioSha256)return {};
   return {chartRevision:CHART_REVISION_LATEST};
 };
 
-module.exports={CHART_REVISION_LEGACY,CHART_REVISION_LATEST,chartRevisionOf,chartRevisionForRegistry,
+module.exports={CHART_ENGINE_NAME,chartRevisionLabel,CHART_REVISION_LEGACY,CHART_REVISION_LATEST,chartRevisionOf,chartRevisionForRegistry,
   CHART_LANE_COUNT_LEGACY,CHART_SIX_LANE_REVISION,laneCountForRevision,laneCountOfChart};

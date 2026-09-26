@@ -73,9 +73,9 @@ ok('書き出し: 向きがあれば4つ目に番号・無ければ今までど�
 const pipeline=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-pipeline.js'),'utf8');
 ok('パイプラインも同じ番号で書き出す',pipeline.includes('FLICK_DIR_CODES.indexOf(note.flickDir)'));
 
-// 5. 自動譜面制作は版4のMASTERだけに付ける
+// 5. 自動譜面制作はRev.4のMASTERだけに付ける
 const generator=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-generate.js'),'utf8');
-ok('自動譜面制作: 版4以上で、MASTERの譜面だけに横フリックを付ける',
+ok('自動譜面制作: Rev.4以上で、MASTERの譜面だけに横フリックを付ける',
   generator.includes('const sideFlick=chartRevision>=4;')&&generator.includes('if(sideFlick&&results.MASTER){')
   &&(generator.match(/applySideFlicks\(/g)||[]).length===2);
 
