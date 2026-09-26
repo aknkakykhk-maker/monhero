@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 460b1611b148a509
+// source-sha256: 97c31c020cdc1991
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 15:04";
+const BUILD_DATE = "2026-09-26 15:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -23362,6 +23362,8 @@ const RhythmTapTest = ({
         if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.abilityOwners.KONJO = slot;
         run.abilityFlashSlot = slot;
         run.abilityFlashUntilMs = songTimeMs + RHYTHM_SIDE_MONSTER_FLASH_MS;
+        run.abilityCounts = run.abilityCounts || [];
+        if (slot >= 1) run.abilityCounts[slot - 1] = (Number(run.abilityCounts[slot - 1]) || 0) + 1;
         if (cutInOn) {
           const cutIn = cutInRefs.current[slot - 1];
           if (cutIn) rhythmRestartAnimations([{
@@ -24575,7 +24577,7 @@ const RhythmTapTest = ({
       "data-rhythm-result-frame": true,
       className: "relative flex min-h-0 flex-1 flex-col [@container(min-width:680px)]:flex-row"
     }, (() => {
-      const index = sideArtUrls.findIndex(Boolean);
+      const index = rhythmResultHeroIndex(sideArtUrls, runRef.current?.abilityCounts);
       const art = index >= 0 ? sideArtUrls[index] : '';
       if (!art && !hudArtSrc) return null;
       return React.createElement("aside", {

@@ -73,6 +73,19 @@ ok('リザルトとランキングの両方で、判定ごとの印を付けて�
   &&/data-rhythm-ranking-precise[^\n]{0,60}data-rhythm-judgment-row="JUST"/.test(game));
 
 // ---- 実ブラウザ: 段ごとの計算済みの値を測る ----
+// リザルトの左に大きく出すマスモン(2026-09-26・ユーザー「マスモン4体選ぶ中でどれが選ばれるの？」)。
+// その曲で能力がいちばん多く出た子 → 同じ回数なら先の子 → 1回も出なければ絵のある先頭の子
+{
+  const vm=require('vm'),ctx={};vm.createContext(ctx);
+  vm.runInContext(`${fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8')}\n;this.f=rhythmResultHeroIndex;`,ctx);
+  const f=ctx.f;
+  ok('リザルトのマスモンは、能力がいちばん多く出た子',f(['a','b','c','d'],[1,3,2,0])===1);
+  ok('同じ回数なら先の子・絵の無い枠は選ばない',f(['a','b','c','d'],[0,4,4,0])===1&&f(['a','','c'],[0,9,0])===0);
+  ok('1回も出なければ絵のある先頭の子・誰もいなければジャケット(-1)',f(['','b','c'],[])===1&&f(['',''],[3])===-1);
+  ok('演奏中に能力の回数を数え、リザルトはその数で選ぶ',
+    game.includes('run.abilityCounts[slot-1]=(Number(run.abilityCounts[slot-1])||0)+1;')
+    &&game.includes('const index=rhythmResultHeroIndex(sideArtUrls,runRef.current?.abilityCounts);'));
+}
 const MIME={'.html':'text/html','.js':'text/javascript','.css':'text/css'};
 const serve=page=>new Promise(r=>{const s=http.createServer((req,res)=>{
   res.writeHead(200,{'Content-Type':'text/html'});res.end(page);});s.listen(PORT,()=>r(s));});
