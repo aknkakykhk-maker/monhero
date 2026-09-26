@@ -19558,8 +19558,6 @@ const rhythmCreateGL2D=canvas=>{
   let data=new Float32Array(4096);
   // ★大きくするときは、それまでに積んだ三角形を写してから替える(写さないと、点の多い形で前半が消える)
   const ensure=count=>{if(data.length<count){let size=data.length;while(size<count)size*=2;const next=new Float32Array(size);next.set(data.subarray(0,n*4));data=next;}};
-  // GPU 側の入れ物も使い回す。足りないときだけ大きく取り直す
-  let bufFloats=0;
   // グラデーションの色と位置も、塗るたびに作らず使い回す
   const gradColors=new Float32Array(24),gradTimes=new Float32Array(6);
   // 1回ぶんの描画。verts は [x,y,u,v,...] の三角形の並び
@@ -19584,8 +19582,12 @@ const rhythmCreateGL2D=canvas=>{
     if(needStencil){stencilRef++;if(stencilRef>255){gl.clear(gl.STENCIL_BUFFER_BIT);stencilRef=1;}gl.stencilFunc(gl.NOTEQUAL,stencilRef,0xff);sentStencil=stencilRef;}
     else if(sentStencil!==0){gl.stencilFunc(gl.ALWAYS,0,0xff);sentStencil=0;}
     // 入れ物(buf)は1つだけなので、準備のときに結び付けたまま使う
-    if(count*4>bufFloats){bufFloats=data.length;gl.bufferData(gl.ARRAY_BUFFER,bufFloats*4,gl.DYNAMIC_DRAW);}
-    gl.bufferSubData(gl.ARRAY_BUFFER,0,data.subarray(0,count*4));
+    // ★塗るたびに新しい入れ物を用意して渡す(bufferData)。1つの入れ物へ上書きして使い回す形(bufferSubData)にすると、
+    //   iPhone の Safari(WebGL を Metal で動かしている)では、まだ終わっていない前の描画が上書き後の形を使ってしまい、
+    //   前のフレームの帯の形が別の場所に描かれて残像のように見えた(2026-09-26・実機「ノーツ数が多い曲の
+    //   ホールドで、ノーツラインが残像になる」「Canvas では起きない」「今までは起きてなかった」)。
+    //   テスト環境(CPU で描く GPU)では起きないので、使い回しに戻さない。rhythm-webgl-notes-check.js が見張る
+    gl.bufferData(gl.ARRAY_BUFFER,data.subarray(0,count*4),gl.STREAM_DRAW);
     gl.drawArrays(gl.TRIANGLES,0,count);
   };
   let n=0;
