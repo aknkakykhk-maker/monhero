@@ -43,11 +43,9 @@ const {songs,difficulties}=ctx.out;
     +'.map(s=>({id:s.songId,name:s.displayName,ms:Math.max(...RHYTHM_DEMO_DIFFICULTY_IDS'
     +'.map(d=>(s.difficulties[d]&&s.difficulties[d].notes[0])?s.difficulties[d].notes[0].timeMs:0))}));',ctx);
   for(const entry of ctx.first)firsts.push(entry);
-  // 公開済みで、出だしが3秒を少し超えている曲(2026-09-24 公開)。音源の頭に叩ける音が無く、生成器の歯止めでも前へ寄せられなかった。
-  // 配信中の譜面は作り直さない決まり(CLAUDE.md ⑩-2)なので、この2曲だけは「4秒まで」を許す。
-  // ここへ書かずに NG のまま置くと、次に足した曲の出だしが遅くても埋もれて気づけない(2026-09-27)
-  const KNOWN_LATE_MS={mou_hitotsu_no_sekai_e:4000,senjou_no_shippuu:4000};
-  const late=firsts.filter(entry=>entry.ms>(KNOWN_LATE_MS[entry.id]||FIRST_NOTE_LIMIT_MS));
+  // 2026-09-27、「もう一つの世界へ」「戦場の疾風」が3秒を超えていたのを、頭に1つ足して直した(rhythm-intro-head-fix.js)。
+  // 次に足した曲で落ちたら、同じ道具で頭へ1つ足せる
+  const late=firsts.filter(entry=>entry.ms>FIRST_NOTE_LIMIT_MS);
   ok(`最初のノーツが${FIRST_NOTE_LIMIT_MS/1000}秒より後になっている曲が無い`,late.length===0,
     (late.length?late:firsts).map(entry=>`${entry.name} ${Math.round(entry.ms)}ms`).join(' / '));
   // 生成器の側にも歯止めが入っていること（データだけ直しても、次の曲でまた起きるため）

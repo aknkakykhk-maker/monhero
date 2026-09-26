@@ -55,7 +55,11 @@ if (!effectRegion) { console.log('\n1件のNGがあります'); process.exit(1);
 const branchOf = (monId) => {
   // 多くは1行で書かれているが、剣士モッチーのように複数行の分岐もあるので、
   // 対応する } までを波括弧の対応で取る(行末までにすると2行目以降を見落とす)
-  const m = effectRegion.match(new RegExp(`card\\.monId==='${monId}'`));
+  // ★条件の付かない分岐(card.monId==='X'){)を先に探す。剣士モッチーは、タクティクスで片手盾のとき用の
+  //   分岐(card.monId==='KenshiMocchi'&&tacticsExStyleAt(…)==='shield')が前に書かれていて、
+  //   そちらを取ると「実装が見つからない」と出ていた(2026-09-27)
+  const m = effectRegion.match(new RegExp(`card\\.monId==='${monId}'\\)\\{`))
+    || effectRegion.match(new RegExp(`card\\.monId==='${monId}'`));
   if (!m) return null;
   const start = m.index;
   const brace = effectRegion.indexOf('{', start);
@@ -196,7 +200,12 @@ check('被ダメージの固定軽減に実効の丈夫さを使う',
     && source.includes(': effectiveDef;'));
 check('被ダメージの割合軽減に実効の丈夫さを使う',
   /const defenseRate = Math\.min\(0\.5,defVal\*[\d.]+\);/.test(source));
-check('ガードの軽減量(表示)に実効の丈夫さを使う', /Math\.floor\(flat \+ effectiveDef \* mult\)/.test(source));
+// 表示は guardDefFor(slotIdx) を通す形になった(2026-09-22・タクティクスではその子の丈夫さを使う)。
+// 既存のモードでは guardDefFor が effectiveDef を返すことまで見る
+check('ガードの軽減量(表示)に実効の丈夫さを使う',
+  /Math\.floor\(flat \+ effectiveDef \* mult\)/.test(source)
+  || (/Math\.floor\(flat \+ guardDefFor\(slotIdx\) \* mult\)/.test(source)
+    && /const guardDefFor = \(slotIdx = null\) => \{\s*if \(slotIdx == null \|\| !isTacticsMode\(runMode\)\) return effectiveDef;/.test(source)));
 check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.floor\(immediateEffects\.guardFlat \+ effectiveDef\*immediateEffects\.guardMult\)/.test(source));
 
 // --- 「そのターンから効く」か「次のターンから効く」かが説明文と合っていること ---
@@ -246,13 +255,14 @@ check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.f
 // 「被ダメージ軽減」を「DEF +3%」と出していたため、丈夫さが増えたように見えていた
 // 2026-09-20: 強化の札を1つずつ書くのをやめ、chip(...) で配列へ足す形にした(アイコン1行＋詳細)。
 // 見張りたいこと(丈夫さと被ダメ軽減を別の名前で出す)は変わっていない
-check('丈夫さバフが「DEF +◯%」として出る',
+check('丈夫さバフが「丈夫さ +◯%」として出る',
   /const defPct=Math\.floor\(getPermaBuff\('defPct'\)\*100\);/.test(source)
-    && /chip\('def',[^\n]*'DEF',`\+\$\{defPct\}%`/.test(source));
+    // 札の文字は「DEF」から「丈夫さ」に変わった(ゲームの中の呼び方にそろえた)。どちらでも通す
+    && /chip\('def',[^\n]*'(?:DEF|丈夫さ)',`\+\$\{defPct\}%`/.test(source));
 check('被ダメージ軽減は「被ダメ -◯%」として別に出る',
   /const dmgCutPct=Math\.floor\(getPermaBuff\('dmgCutPct'\)\*100\);/.test(source)
     && /chip\('dmgCut',[^\n]*'被ダメ',`-\$\{dmgCutPct\}%`/.test(source));
-check('被ダメージ軽減を「DEF +◯%」と表示していない', !/'DEF',`[+-]\$\{dmgCutPct\}%`/.test(source));
+check('被ダメージ軽減を「丈夫さ +◯%」と表示していない', !/'(?:DEF|丈夫さ)',`[+-]\$\{dmgCutPct\}%`/.test(source));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exitCode = failed ? 1 : 0;
