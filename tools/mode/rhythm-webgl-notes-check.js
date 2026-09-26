@@ -27,6 +27,9 @@ html,body{margin:0;background:#000}
 </body></html>`;
 // rhythm-canvas-render-check.js と同じ並びに、押さえている最中(pressed)の HOLD・SLIDE と横フリックを足した
 const NOTES=[
+  // 太さが変わるホールド(holdPoints: [経過ms, サブレーン, 幅])。2026-09-26 ユーザー報告「形の変わるホールドが犯人」
+  {type:'HOLD',subLane:4,subLaneWidth:2,holdMs:1400,progress:.95,points:[[0,4,2],[500,2,6],[900,2,6],[1400,4,2]]},
+  {type:'HOLD',subLane:8,subLaneWidth:2,holdMs:1800,progress:.7,points:[[0,8,2],[200,7,4],[400,6,6],[600,7,4],[800,8,2],[1000,7,4],[1200,6,6],[1800,8,2]]},
   {type:'TAP',subLane:4,subLaneWidth:2,progress:.6},
   {type:'FLICK',subLane:8,subLaneWidth:2,progress:.7},
   {type:'FLICK',subLane:2,subLaneWidth:2,progress:.45,flickDir:'left'},
@@ -86,6 +89,7 @@ const NOTES=[
         if(source.subLaneWidth!=null)note.subLaneWidth=source.subLaneWidth;
         if(source.flickDir)note.flickDir=source.flickDir;
         if(source.endFlick)note.endFlick=true;
+        if(source.points)note.holdPoints=source.points.map(([at,sl,w])=>({timeMs:note.timeMs+at,subLane:sl,subLaneWidth:w}));
         if(source.holdMs){note.endTimeMs=note.timeMs+source.holdMs;if(source.type==='SLIDE'){note.endLane=source.endLane??note.lane;note.slidePoints=[{timeMs:note.timeMs,lane:note.lane},{timeMs:note.endTimeMs,lane:note.endLane}];}}
         return note;
       };
@@ -143,6 +147,47 @@ const NOTES=[
       check(`演出量 ${effect}: 2D と WebGL の画素の差が小さい(平均 1.5/255 未満)`,r.avg<1.5,r.avg.toFixed(3));
       check(`演出量 ${effect}: 2D で描けていて WebGL で抜けている画素がほぼ無い(0.5%未満)`,r.missingInGl<r.opaqueA*.005,`${r.missingInGl} / ${r.opaqueA}`);
       check(`演出量 ${effect}: WebGL だけに余計に描かれた画素がほぼ無い(0.5%未満)`,r.extraInGl<r.opaqueB*.005,`${r.extraInGl} / ${r.opaqueB}`);
+    }
+    // ---- 太さが変わるホールドの帯を、WebGL の三角形分けがはみ出さずに塗れるか(2026-09-26) ----
+    // ユーザー報告「ノーツ残像バグ / 形の変わるホールドが犯人」。へこんだ帯で耳を切る方式が行き詰まり、
+    // 1点からの扇に逃げてへこみの外まで塗っていた(細くなったところに前の太さが残って見えた)。
+    // 実際の譜面の太さが変わるホールドを、いろいろな高さで帯の形にして、WebGL と同じ三角形分けに通し、
+    // 帯の外を塗った画素・帯の中の抜けを数える。三角形分けのコードは rhythm-mode.js からそのまま切り出す
+    {
+      const src=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
+      const from=src.indexOf('  const isConvex=pts=>{'),to=src.indexOf('  const textureOf=source=>{');
+      check('三角形分けのコードを切り出せた',from>0&&to>from);
+      const audit=await page.evaluate(({TRI})=>{
+        let data=[],fellBack=false;
+        const T=new Function('tri','markOverlap',TRI.replace(/triOverlap=true/g,'markOverlap()')+';return {triangulate};')((...t)=>data.push(t),()=>{fellBack=true;});
+        const rect={width:390,height:700},noteHeight=20,spawnY=-noteHeight,travelMs=2150,travelPx=rect.height*.86-spawnY;
+        const yFor=p=>spawnY+rhythmProjectTravelProgress(p)*travelPx;
+        const inPoly=(x,y,pts)=>{let c=false;const k=pts.length/2;for(let i=0,j=k-1;i<k;j=i++){const xi=pts[i*2],yi=pts[i*2+1],xj=pts[j*2],yj=pts[j*2+1];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))c=!c;}return c;};
+        const inTri=(x,y,t)=>{const s=(ax,ay,bx,by)=>(bx-ax)*(y-ay)-(by-ay)*(x-ax);const d1=s(t[0],t[1],t[2],t[3]),d2=s(t[2],t[3],t[4],t[5]),d3=s(t[4],t[5],t[0],t[1]);return !((d1<0||d2<0||d3<0)&&(d1>0||d2>0||d3>0));};
+        const out={holds:0,shapes:0,fellBack:0,outside:0,missing:0,worst:''};
+        for(const song of RHYTHM_SONGS)for(const [id,chart] of Object.entries(song.difficulties||{}))for(const note of (chart&&chart.notes)||[]){
+          if(!rhythmNoteHasHoldPoints(note))continue;out.holds++;
+          const hold=note.endTimeMs-note.timeMs;
+          for(let p=.05;p<1.5;p+=.05){
+            const yPx=Math.round(yFor(Math.min(p,1.3))),releaseYpx=Math.round(yFor(p-hold/travelMs)),bodyPx=Math.max(0,yPx-releaseYpx);if(!(bodyPx>0))continue;
+            const visualTime=note.timeMs-(1-p)*travelMs;
+            const geo=rhythmNoteCanvasGeometry(note,yPx,note.lane,rect,noteHeight,releaseYpx,{chartNowMs:visualTime,visualTime,travelMs,spawnY,travelPx},bodyPx);
+            const band=geo.band;if(!band||band.length<2)continue;
+            const pts=[];band.forEach(e=>pts.push(e.right,e.y));for(let i=band.length-1;i>=0;i--)pts.push(band[i].left,band[i].y);
+            data=[];fellBack=false;T.triangulate(pts);out.shapes++;if(fellBack)out.fellBack++;
+            let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;for(let i=0;i<pts.length;i+=2){minX=Math.min(minX,pts[i]);maxX=Math.max(maxX,pts[i]);minY=Math.min(minY,pts[i+1]);maxY=Math.max(maxY,pts[i+1]);}
+            let outside=0,missing=0;
+            for(let y=Math.floor(Math.max(minY,0))+.5;y<Math.min(maxY,rect.height);y+=2)for(let x=Math.floor(minX)+.5;x<maxX;x+=2){const inside=inPoly(x,y,pts),cov=data.some(t=>inTri(x,y,t));if(cov&&!inside)outside++;if(inside&&!cov)missing++;}
+            out.outside+=outside;out.missing+=missing;
+            if((outside+missing)>0&&!out.worst)out.worst=`${song.songId} ${id} ${note.timeMs}ms 外${outside}/抜け${missing}`;
+          }
+        }
+        return out;
+      },{TRI:src.slice(from,to)});
+      console.log(`      太さが変わるホールド ${audit.holds}本・形 ${audit.shapes}通り`);
+      check('実際の譜面に太さが変わるホールドがある(この確認が空振りしていない)',audit.holds>0&&audit.shapes>0,`${audit.holds}本`);
+      check('太さが変わるホールドの帯で、1点からの扇に逃げない',audit.fellBack===0,`${audit.fellBack} / ${audit.shapes}`);
+      check('太さが変わるホールドの帯を、帯の外まで塗らない・抜けを作らない',audit.outside===0&&audit.missing===0,audit.worst||'はみ出し 0・抜け 0');
     }
   }catch(error){check('実行中にエラー',false,String(error));}
   finally{if(browser)await browser.close();server.close();}
