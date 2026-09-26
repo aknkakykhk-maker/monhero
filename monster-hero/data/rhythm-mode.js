@@ -18166,6 +18166,35 @@ const RHYTHM_CALIBRATION_SONG=Object.freeze({
 });
 const RHYTHM_CALIBRATION_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:600000,label:'タイミング合わせ'});
 
+// 曲ごとの拍(2026-09-26・道の演出で使う)。[1拍の長さ(ms), 最初の拍の時刻(ms), 1小節の拍数]。
+// 譜面を作ったときの音源の解析(tools/mode/authoring/*-v3-audio.json の timing)をそのまま写したもの。公開中の曲はノーツが全部この格子に乗っている。
+// 見た目(拍の線・道のふちの光)にだけ使い、判定・スコア・譜面には関わらない。曲を足したら1行足す(tools/mode/rhythm-song-beats-check.js が見張る)
+const RHYTHM_SONG_BEATS=Object.freeze({
+  mf_ichika_mix:[355.03,40,4],
+  monster_hero:[346.515,206,4],
+  monster_hero_another:[350.678,1268.3,4],
+  six_eternel_beat:[217.399,562.4,4],
+  six_eternel_remix:[368.91,1452.6,4],
+  stay_with_me:[352.962,440,4],
+  kiki_issen:[387.07,188.4,4],
+  kaze_ga_soyogu:[504.71,209,4],
+  close_to_your_heart:[461.655,570.5,4],
+  eiki_boss_remix:[389.196,992.5,4],
+  pandora_boss_remix:[371.017,452.7,4],
+  dullahan:[400.002,602.7,4],
+  dullahan_clockwork:[394.732,99.8,4],
+  toriko:[444.472,32.2,3],
+  "4u_hitasura":[413.812,1442.8,4],
+  kindan_no_resistance:[333.339,76.1,4],
+  crossing_field:[335.252,792.7,4],
+  nothing_without_you:[309.271,83.1,4],
+  mou_hitotsu_no_sekai_e:[320,384.1,4],
+  senjou_no_shippuu:[428.676,321.3,4],
+  makutsu_no_senritsu:[416.947,38,4],
+  the_city_beneath_the_comets:[351.976,1054.3,4],
+  freedom_dive:[270.003,117,4],
+});
+const rhythmSongBeatGrid=songId=>{const row=RHYTHM_SONG_BEATS[songId];if(!Array.isArray(row))return null;const [beatMs,zeroMs,bar]=row.map(Number);return beatMs>50&&Number.isFinite(zeroMs)&&bar>=1?{beatMs,zeroMs,bar:Math.round(bar)}:null;};
 const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>{
   const pair=RHYTHM_SWITCHING_CHARTS[song.songId];
   if(!pair)return Object.freeze({...song,
@@ -20474,6 +20503,43 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       }
       if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
       return count;
+    },
+    // 道の演出(オプション「道の演出」・2026-09-26)。begin() のすぐあと、叩いたときの光・ノーツより先に呼ぶ(道の上・ノーツの下)。
+    // lines … 拍の線。1本につき [y, 左端x, 右端x, 小節の頭なら1, 奥行きの倍率(0..1), 濃さ(0..1)] の6つを並べた配列(CSS px)。count は本数
+    // pulse … 道のふち(左右の境目)の光の強さ(0..1)。拍を過ぎた瞬間に強く、すぐ消える
+    // 線は横まっすぐなので四角(fillRect)で描く。ふちは道の境目と同じ投影(rhythmProjectBoundary)から形を作る
+    drawRoadFx(lines,count,pulse){
+      if(!ctx||!cssW||!cssH)return 0;
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      glowBegin();
+      let painted=0;
+      for(let i=0;i<count;i++){
+        const o=i*6,y=lines[o],x1=lines[o+1],x2=lines[o+2],bar=lines[o+3]===1,scale=lines[o+4],alpha=lines[o+5];
+        if(!(alpha>0)||!(x2>x1))continue;
+        const t=Math.max(.6,(bar?2.2:1.1)*scale);
+        // 小節の頭だけ、線のまわりにうっすら光の帯を敷く
+        if(bar){ctx.globalAlpha=alpha*.2;ctx.fillStyle='rgb(125,211,252)';ctx.fillRect(x1,y-t*3,x2-x1,t*6);}
+        ctx.globalAlpha=alpha*(bar?.72:.36);ctx.fillStyle=bar?'rgb(224,242,254)':'rgb(165,243,252)';ctx.fillRect(x1,y-t/2,x2-x1,t);
+        painted++;
+      }
+      if(pulse>.01){
+        const samples=[0,.25,.5,.75,1];
+        const edge=(boundary,width)=>{
+          ctx.beginPath();
+          samples.forEach((yr,index)=>{const x=rhythmProjectBoundary(boundary,yr)*cssW,w=width*rhythmProjectionScale(yr)/2;if(index)ctx.lineTo(x-w,yr*cssH);else ctx.moveTo(x-w,yr*cssH);});
+          for(let index=samples.length-1;index>=0;index--){const yr=samples[index],x=rhythmProjectBoundary(boundary,yr)*cssW,w=width*rhythmProjectionScale(yr)/2;ctx.lineTo(x+w,yr*cssH);}
+          ctx.closePath();ctx.fill();
+        };
+        const fade=(color)=>{const g=ctx.createLinearGradient(0,0,0,cssH);g.addColorStop(0,`rgba(${color},0)`);g.addColorStop(.45,`rgba(${color},.55)`);g.addColorStop(1,`rgba(${color},1)`);return g;};
+        for(const boundary of [0,RHYTHM_LANE_COUNT]){
+          ctx.globalAlpha=Math.min(1,pulse)*.3;ctx.fillStyle=fade('56,189,248');edge(boundary,14);
+          ctx.globalAlpha=Math.min(1,pulse)*.9;ctx.fillStyle=fade('224,242,254');edge(boundary,3);
+        }
+        painted++;
+      }
+      ctx.globalAlpha=1;
+      glowEnd();
+      return painted;
     },
     get drawn(){return drawn;},
 

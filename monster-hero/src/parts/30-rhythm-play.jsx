@@ -668,6 +668,12 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const [stageGlLost,setStageGlLost]=useState(false);
   const stageGl=stageGlWanted&&stageLevel!=='SIMPLE'&&!stageGlLost;
   const stageGlRef=useRef(null);
+  // 道の演出(オプション「道の演出」・2026-09-26)。拍の線・道のふちの光は毎フレームの処理(tick)が canvas へ描き、
+  // 奥のもやと光は動かない層で置く(光だけ小節の頭で脈打つ)。拍は曲ごとの表(RHYTHM_SONG_BEATS)から。判定・スコアには触らない
+  const roadFxOn=settings.roadFx===true&&settings.effectAmount!=='MINIMAL'&&!settings.lightweightMode;
+  const roadFxRef=useRef(null);roadFxRef.current=roadFxOn&&!tutorial?rhythmSongBeatGrid(song.songId):null;
+  const roadLinesRef=useRef(null);if(!roadLinesRef.current)roadLinesRef.current=new Float32Array(6*64);
+  const roadGlowRef=useRef(null);
   const stageArtSrc=stageLevel!=='SIMPLE'&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
   // 曲名のとなりに出す小さなジャケット(ライブ背景の設定とは関係なく、絵がある曲なら出す)
   const hudArtSrc=typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
@@ -1361,6 +1367,21 @@ const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
 const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:settings.noteBloom===true});
 // 叩いたときの光(WebGL のときだけ canvas で描く)。光の層はノーツの下なので、ノーツより先に描く
+// 道の演出。拍の線(奥から流れる。小節の頭は明るい線)と、道のふちの光(拍を過ぎた瞬間に光ってすぐ消える)。
+// 線の高さはノーツと同じ式(rhythmProjectTravelProgress)、幅は道の境目と同じ投影から出す。叩いたときの光・ノーツより下に描く
+const roadGrid=roadFxRef.current;
+if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-zeroMs)/beatMs,beatIndex=Math.floor(phase),since=(phase-beatIndex)*beatMs,onBar=((beatIndex%bar)+bar)%bar===0;
+  if(canvasReady){const lines=roadLinesRef.current,areaH=travel.rect.height,areaW=travel.rect.width;let count=0;
+    for(let k=Math.ceil((visualTime-travelMs*.35-zeroMs)/beatMs);count<64;k++){const t=zeroMs+k*beatMs;if(t>visualTime+travelMs*1.05)break;if(t<0)continue;
+      const progress=1-(t-visualTime)/travelMs,y=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx+travel.noteHeight/2;
+      if(!(y>=0&&y<=areaH))continue;const yr=y/areaH,o=count*6;
+      lines[o]=y;lines[o+1]=rhythmProjectBoundary(0,yr)*areaW;lines[o+2]=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yr)*areaW;lines[o+3]=((k%bar)+bar)%bar===0?1:0;lines[o+4]=rhythmProjectionScale(yr);
+      // 奥で生まれるときはふわっと出し、判定ラインを過ぎたら消していく
+      lines[o+5]=Math.min(1,Math.max(0,progress/.25))*(progress>1?Math.max(0,1-(progress-1)/.3):1);count++;}
+    RHYTHM_CANVAS_RENDERER.drawRoadFx(lines,count,beatIndex>=0?Math.exp(-since/(onBar?260:170))*(onBar?1:.55):0);}
+  // 奥の光は小節の頭で脈打つ(Web Animations の opacity だけ。合成だけで済む)
+  const glowEl=roadGlowRef.current;if(glowEl&&onBar&&beatIndex>=0&&run._roadBarAt!==beatIndex&&typeof glowEl.animate==='function'){run._roadBarAt=beatIndex;try{glowEl.animate([{opacity:1},{opacity:.5}],{duration:Math.min(900,beatMs*2),easing:'cubic-bezier(.2,.7,.3,1)'});}catch(_){}}
+}
 if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
 
 // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
@@ -1976,7 +1997,7 @@ scheduleTick();};
     <img data-rhythm-stage-sparks="far" src={stageImages.sparks[0]} alt="" draggable={false}/><img data-rhythm-stage-sparks="near" src={stageImages.sparks[1]} alt="" draggable={false}/></>}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
-{stageLevel!=='SIMPLE'&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
+{roadFxOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{stageLevel!=='SIMPLE'&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
     「コンボももう少し目立つように段階的に / あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
     右上のHUDから**プレイエリアの真ん中**へ移した。
     ★HUDの左右の列は、レーンの台形の外側の空きに置いてある。その空きは上へ行くほど広く、

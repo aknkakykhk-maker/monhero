@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dc4211da70febe54
+// source-sha256: 93c3c54e51b4f55a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 23:46";
+const BUILD_DATE = "2026-09-27 00:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4971,6 +4971,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   renderQuality: 'HIGH',
   noteDrawMode: 'AUTO',
   noteBloom: false,
+  roadFx: false,
   stageEffect: 'SIMPLE',
   laneCover: 0,
   timingDisplay: 'STANDARD',
@@ -5026,6 +5027,7 @@ const normalizeRhythmSettings = value => {
     renderQuality: RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality) ? source.renderQuality : DEFAULT_RHYTHM_SETTINGS.renderQuality,
     noteDrawMode: RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode) ? source.noteDrawMode : DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
     noteBloom: typeof source.noteBloom === 'boolean' ? source.noteBloom : DEFAULT_RHYTHM_SETTINGS.noteBloom,
+    roadFx: typeof source.roadFx === 'boolean' ? source.roadFx : DEFAULT_RHYTHM_SETTINGS.roadFx,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -21077,7 +21079,7 @@ const RhythmOptions = ({
     full: true
   }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライトと光の粒は出しません。', {
     full: true
-  }), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
+  }), field('道の演出', toggle('roadFx'), '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。'), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
   }), field('画質', segments('renderQuality', RHYTHM_RENDER_QUALITY_LABELS), '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。'), field('描画方式', React.createElement(React.Fragment, null, segments('noteDrawMode', RHYTHM_NOTE_DRAW_LABELS), React.createElement("p", {
     "data-rhythm-draw-mode-now": true,
@@ -23102,6 +23104,12 @@ const RhythmTapTest = ({
   const [stageGlLost, setStageGlLost] = useState(false);
   const stageGl = stageGlWanted && stageLevel !== 'SIMPLE' && !stageGlLost;
   const stageGlRef = useRef(null);
+  const roadFxOn = settings.roadFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode;
+  const roadFxRef = useRef(null);
+  roadFxRef.current = roadFxOn && !tutorial ? rhythmSongBeatGrid(song.songId) : null;
+  const roadLinesRef = useRef(null);
+  if (!roadLinesRef.current) roadLinesRef.current = new Float32Array(6 * 64);
+  const roadGlowRef = useRef(null);
   const stageArtSrc = stageLevel !== 'SIMPLE' && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
   const hudArtSrc = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
   useEffect(() => {
@@ -24197,6 +24205,56 @@ const RhythmTapTest = ({
         sizeScale: settings.noteSize / 100,
         bloom: settings.noteBloom === true
       });
+      const roadGrid = roadFxRef.current;
+      if (roadGrid && placeable) {
+        const {
+            beatMs,
+            zeroMs,
+            bar
+          } = roadGrid,
+          phase = (visualTime - zeroMs) / beatMs,
+          beatIndex = Math.floor(phase),
+          since = (phase - beatIndex) * beatMs,
+          onBar = (beatIndex % bar + bar) % bar === 0;
+        if (canvasReady) {
+          const lines = roadLinesRef.current,
+            areaH = travel.rect.height,
+            areaW = travel.rect.width;
+          let count = 0;
+          for (let k = Math.ceil((visualTime - travelMs * .35 - zeroMs) / beatMs); count < 64; k++) {
+            const t = zeroMs + k * beatMs;
+            if (t > visualTime + travelMs * 1.05) break;
+            if (t < 0) continue;
+            const progress = 1 - (t - visualTime) / travelMs,
+              y = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx + travel.noteHeight / 2;
+            if (!(y >= 0 && y <= areaH)) continue;
+            const yr = y / areaH,
+              o = count * 6;
+            lines[o] = y;
+            lines[o + 1] = rhythmProjectBoundary(0, yr) * areaW;
+            lines[o + 2] = rhythmProjectBoundary(RHYTHM_LANE_COUNT, yr) * areaW;
+            lines[o + 3] = (k % bar + bar) % bar === 0 ? 1 : 0;
+            lines[o + 4] = rhythmProjectionScale(yr);
+            lines[o + 5] = Math.min(1, Math.max(0, progress / .25)) * (progress > 1 ? Math.max(0, 1 - (progress - 1) / .3) : 1);
+            count++;
+          }
+          RHYTHM_CANVAS_RENDERER.drawRoadFx(lines, count, beatIndex >= 0 ? Math.exp(-since / (onBar ? 260 : 170)) * (onBar ? 1 : .55) : 0);
+        }
+        const glowEl = roadGlowRef.current;
+        if (glowEl && onBar && beatIndex >= 0 && run._roadBarAt !== beatIndex && typeof glowEl.animate === 'function') {
+          run._roadBarAt = beatIndex;
+          try {
+            glowEl.animate([{
+              opacity: 1
+            }, {
+              opacity: .5
+            }], {
+              duration: Math.min(900, beatMs * 2),
+              easing: 'cubic-bezier(.2,.7,.3,1)'
+            });
+          } catch (_) {}
+        }
+      }
       if (canvasReady) RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
       const paintCanvasNote = note => {
         const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && rhythmNoteHasBody(note) && songTimeMs < rhythmReleaseTargetMs(note);
@@ -25871,7 +25929,14 @@ const RhythmTapTest = ({
     src: stageImages.sparks[1],
     alt: "",
     draggable: false
-  }))), stageLevel !== 'SIMPLE' && React.createElement("i", {
+  }))), roadFxOn && React.createElement(React.Fragment, null, React.createElement("i", {
+    "data-rhythm-road-haze": true,
+    "aria-hidden": "true"
+  }), React.createElement("i", {
+    ref: roadGlowRef,
+    "data-rhythm-road-glow": true,
+    "aria-hidden": "true"
+  })), stageLevel !== 'SIMPLE' && React.createElement("i", {
     ref: stagePulseRef,
     "data-rhythm-stage-pulse": true,
     "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),

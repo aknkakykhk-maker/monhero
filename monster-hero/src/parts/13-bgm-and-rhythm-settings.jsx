@@ -494,6 +494,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   noteDrawMode:'AUTO',
   // にじむ光(2026-09-26)。WebGL で描いているときだけ効く。既存の保存値には無いので、読み込み時は既定(OFF)で補われる
   noteBloom:false,
+  // 道の演出(2026-09-26・ユーザー指示「重くなると思うから設定で切り替えられる前提で」)。拍の線・道のふちの光・奥のもやと光。既定は OFF
+  roadFx:false,
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -553,6 +555,7 @@ const normalizeRhythmSettings = value => {
     renderQuality:RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality)?source.renderQuality:DEFAULT_RHYTHM_SETTINGS.renderQuality,
     noteDrawMode:RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode)?source.noteDrawMode:DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
     noteBloom:typeof source.noteBloom==='boolean'?source.noteBloom:DEFAULT_RHYTHM_SETTINGS.noteBloom,
+    roadFx:typeof source.roadFx==='boolean'?source.roadFx:DEFAULT_RHYTHM_SETTINGS.roadFx,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
