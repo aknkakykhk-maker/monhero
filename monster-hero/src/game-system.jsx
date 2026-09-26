@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 85be22f062f660d5
+// generated-sha256: 2a1eb483d7c99ea9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-27 00:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-27 01:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4280,6 +4280,11 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   noteBloom:false,
   // 道の演出(2026-09-26・ユーザー指示「重くなると思うから設定で切り替えられる前提で」)。拍の線・道のふちの光・奥のもやと光。既定は OFF
   roadFx:false,
+  // 判定の演出・ノーツの動き・コンボの節目の演出(2026-09-27・ユーザー指示「全部やって」。重くなりうるので設定で切り替え)。既定は OFF
+  //   judgmentFx … GREAT 以上で判定の文字の後ろに光がはじけ、文字が大きく弾む
+  //   noteMotionFx … フリックの矢印と SLIDE の帯に流れる光
+  //   comboMilestoneFx … 100コンボごとに「100 COMBO!」の帯と光の輪
+  judgmentFx:false, noteMotionFx:false, comboMilestoneFx:false,
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -4340,6 +4345,9 @@ const normalizeRhythmSettings = value => {
     noteDrawMode:RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode)?source.noteDrawMode:DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
     noteBloom:typeof source.noteBloom==='boolean'?source.noteBloom:DEFAULT_RHYTHM_SETTINGS.noteBloom,
     roadFx:typeof source.roadFx==='boolean'?source.roadFx:DEFAULT_RHYTHM_SETTINGS.roadFx,
+    judgmentFx:typeof source.judgmentFx==='boolean'?source.judgmentFx:DEFAULT_RHYTHM_SETTINGS.judgmentFx,
+    noteMotionFx:typeof source.noteMotionFx==='boolean'?source.noteMotionFx:DEFAULT_RHYTHM_SETTINGS.noteMotionFx,
+    comboMilestoneFx:typeof source.comboMilestoneFx==='boolean'?source.comboMilestoneFx:DEFAULT_RHYTHM_SETTINGS.comboMilestoneFx,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -14927,6 +14935,13 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {/* 道の演出(2026-09-26・ユーザー指示「重くなると思うから設定で切り替えられる前提で作って」)。既定は OFF */}
             {field('道の演出',toggle('roadFx'),
               '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。')}
+            {/* 判定の演出・ノーツの動き・コンボの節目の演出(2026-09-27・ユーザー指示「全部やって」)。どれも既定は OFF */}
+            {field('判定の演出',toggle('judgmentFx'),
+              'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。')}
+            {field('ノーツの動き',toggle('noteMotionFx'),
+              'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。')}
+            {field('コンボの節目',toggle('comboMilestoneFx'),
+              'コンボが100のくぎりに届くたび（100・200・300…）、画面に「100 COMBO!」の文字と光の輪が出ます。既定は「OFF」です。判定・スコアは変わりません。\nコンボ数の表示のところに短く出します（コンボ数を出さない設定のときは出ません）。演出量が「最小」のときと軽量モードでは出ません。')}
             {field('描く回数',segments('frameRateMode',RHYTHM_FRAME_RATE_LABELS),
               '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。',{full:true})}
             {/* 画質(2026-09-26・ユーザー指示「画質の設定を入れて」)。既定は「高」(これまでの細かさ) */}
@@ -16355,7 +16370,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
-  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null);
+  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboMilestoneRef=useRef(null);
   // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
   // 焼けるまで・焼けなかったとき・影が1枚だけの判定は、今までどおり CSS のぼかしで出す(haloKeys に入っていない)。
   const [haloKeys,setHaloKeys]=useState(null);
@@ -16921,6 +16936,10 @@ if(judgment!=='MISS'){
     // 判定文字を一度だけ弾ませる
     const judgmentText=judgmentTextRef.current;
     if(judgmentText)restarts.push({el:judgmentText,attr:'rhythmJudgmentPop'});
+    // 判定の演出(オプション「判定の演出」)。GREAT 以上のとき、文字の後ろで光をはじけさせる。
+    // 色の印は React を通さずここで直接付ける(弾ませ直すのと同じ瞬間にそろえるため)
+    const burst=judgmentBurstRef.current;
+    if(burst&&settings.judgmentFx===true&&(judgment==='GREAT'||judgment==='EXCELLENT'||judgment==='MARVELOUS')){burst.dataset.judgment=judgment;burst.dataset.judgmentPrecise=preciseHit?'1':'';restarts.push({el:burst,attr:'rhythmBurst'});}
     // コンボ数も1つ増えるたびに弾ませる(プロセカのように数字が跳ねる)
     const comboText=comboRef.current;
     if(comboText)restarts.push({el:comboText,attr:'rhythmComboPop'});
@@ -16950,6 +16969,9 @@ if(luckOn){const luckNow=run.audio?.songTimeMs?.()??0;const rushActive=run.luckR
     else showLuckyBanner(`+${draw.points}pt`,'small');}
   const gaugeEl=luckGaugeRef.current;if(gaugeEl){const ratio=Math.min(1,run.luckGauge/RHYTHM_LUCK_GAUGE_MAX);gaugeEl.style.transform=`scaleX(${ratio.toFixed(3)})`;}
   const ptEl=luckPointsRef.current;if(ptEl&&ptEl._mhLuck!==run.luckPoints){ptEl._mhLuck=run.luckPoints||0;ptEl.textContent=`${run.luckPoints||0}pt`;}}
+/* コンボの節目(オプション「コンボの節目」)。100のくぎりに届いた瞬間だけ、コンボ数の表示に「100 COMBO!」と光の輪を出す。
+   コンボガードで数が据え置きのとき(増えていないとき)は出さない */
+if(settings.comboMilestoneFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'&&keptCombo>run.combo&&keptCombo>=100&&keptCombo%100===0){const el=comboMilestoneRef.current;if(el){el.dataset.milestone=String(keptCombo);rhythmRestartAnimations([{el,attr:'rhythmMilestone'}]);}}
 run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
@@ -17100,7 +17122,7 @@ if(stagePulseOn){const pulseEl=stagePulseRef.current,notes=run.notes;let index=r
 // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
-const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:settings.noteBloom===true});
+const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:settings.noteBloom===true,motion:settings.noteMotionFx===true});
 // 叩いたときの光(WebGL のときだけ canvas で描く)。光の層はノーツの下なので、ノーツより先に描く
 // ライブ背景「ライブ」の拍は、背景の描き直し(別の描き直しの輪)がこの時刻から数える
 {const stageClock=stageClockRef.current;stageClock.t=visualTime;stageClock.at=frameNowMs;}
@@ -17494,7 +17516,7 @@ scheduleTick();};
     // ★演出量と軽量モードはここでも効かせる(器へそのまま渡して、CSS側で止める)。
     const rankTier=result.cleared===false?0:({M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);
     return <main data-rhythm-result data-rank={rank} data-rank-tier={String(rankTier)}
-      data-rhythm-effect={settings.effectAmount} data-rhythm-lightweight={settings.lightweightMode?'true':'false'}
+      data-rhythm-effect={settings.effectAmount} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-judgment-fx={settings.judgmentFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'?'1':undefined}
       className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" style={{paddingTop:'env(safe-area-inset-top)'}}>
 {/* ===== リザルトの並び(2026-09-26・ユーザー依頼「リザルト画面や曲選択画面をこれを参考にしたい」＝バンドリ！のリザルト) =====
     上から「曲の札(ジャケット・曲名・難易度・ランクのゲージ・ランク)」→「SCORE と自己ベスト」→「判定の表と MAX COMBO」。
@@ -17745,7 +17767,7 @@ scheduleTick();};
       少し透かす。コンボが0のあいだは出さない。
     ★大きさの上限が無くなったので、段(comboTier)でしっかり大きくできる
       (HUDに居たころは台形にかかるので1.13倍までしか上げられなかった)。 */}
-{settings.comboDisplay!==false&&view.combo>0&&<div data-rhythm-combo-box data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{view.combo}</b><span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>}{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
+{settings.comboDisplay!==false&&view.combo>0&&<div data-rhythm-combo-box data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{view.combo}</b>{settings.comboMilestoneFx===true&&<i ref={comboMilestoneRef} data-rhythm-combo-milestone aria-hidden="true"/>}<span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>}{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
     Tailwindは外部CDNのJITが後からCSSを作るため、間に合わないあいだ
     bottom-[12%] も h-[3px] も bg-gradient-to-r も効かず、
     「高さ0・背景なし＝見えない線」になる。実機で「演奏を始めたときに
@@ -17774,7 +17796,7 @@ scheduleTick();};
       判定ラインで弾ける光の単色は data/rhythm-mode.js の RHYTHM_JUDGMENT_COLORS が正本で、
       文字のグラデーションにも必ずその色を含める(rhythm-hit-effect-check.js が突き合わせる)。
       ここが渡すのは「どの判定か」「ぴったりか」の2つだけ。
-      text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}<b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={view.last||''} data-judgment-precise={view.lastPrecise?'1':''} data-halo={haloKeys&&settings.judgmentTextDisplay&&view.last&&view.status!=='error'&&view.status!=='loading'&&haloKeys.has(`${view.last}|${view.lastPrecise?'1':''}`)?'1':undefined} className="block text-[26px] font-black leading-none tracking-wide text-white">{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow?(timingDisplay!=='STANDARD'&&typeof view.lastDeltaMs==='number'?`${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms`:view.fastSlow):'—'):'—'}</small>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
+      text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}{settings.judgmentFx===true&&<i ref={judgmentBurstRef} data-rhythm-judgment-burst aria-hidden="true"/>}<b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={view.last||''} data-judgment-precise={view.lastPrecise?'1':''} data-halo={haloKeys&&settings.judgmentTextDisplay&&view.last&&view.status!=='error'&&view.status!=='loading'&&haloKeys.has(`${view.last}|${view.lastPrecise?'1':''}`)?'1':undefined} className="block text-[26px] font-black leading-none tracking-wide text-white">{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow?(timingDisplay!=='STANDARD'&&typeof view.lastDeltaMs==='number'?`${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms`:view.fastSlow):'—'):'—'}</small>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
     帯の色は判定窓(MARVELOUS 金・EXCELLENT 紫・GREAT 赤・GOOD 緑・BAD 青)で、真ん中がぴったり */}
 {timingDisplay==='METER'&&<div data-rhythm-timing-meter aria-hidden="true" className="absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2" style={{'--meter-mar':`${(55/185*50).toFixed(2)}%`,'--meter-exc':`${(100/185*50).toFixed(2)}%`,'--meter-gre':`${(150/185*50).toFixed(2)}%`,'--meter-goo':`${(170/185*50).toFixed(2)}%`}}><i data-rhythm-timing-meter-band/><i data-rhythm-timing-meter-center/>{Array.from({length:12},(_,i)=><i key={i} ref={el=>{meterTicksRef.current[i]=el;}} data-rhythm-timing-meter-tick style={{opacity:0}}/>)}</div>}</div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
 {/* ラッキーラッシュ中は、プレイエリアのふちが金色に光る(ノーツより後ろ・入力に触らない) */}
