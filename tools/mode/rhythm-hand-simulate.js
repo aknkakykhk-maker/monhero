@@ -22,7 +22,7 @@
 //   strainStreaks … 「忙しい」が続いた区間(ms)
 // 判定・スコア・ランタイムには一切関与しない。
 'use strict';
-const {HAND_MODEL,fingerPairFeasible,noteTouchLane}=require('./rhythm-hand-model.js');
+const {HAND_MODEL,fingerPairFeasible,noteTouchLane,slideLaneOffset}=require('./rhythm-hand-model.js');
 
 const HANDS=HAND_MODEL.hands;
 const DEFAULT_BEAM=8;
@@ -39,8 +39,11 @@ const toActions=(notes,gridTimeMs,BAR)=>notes.map((note,index)=>{
   if(note.type==='SLIDE'){
     const points=Array.isArray(note.slidePoints)&&note.slidePoints.length?note.slidePoints:null;
     const endGrid=note.grid+(Number(note.durationGrids)||0);
-    const endLane=points?Number(points[points.length-1].lane):Number(note.endLane??note.lane??lane);
-    return {index,type:note.type,startMs,endMs:gridTimeMs(endGrid),startLane:Number(note.lane)||0,endLane,grid:note.grid,endFlick,note};
+    // Rev.8〜は SLIDE のレーンの値をゲーム本体と同じ座標で読む(rhythm-hand-model.js の useRuntimeSlideLanes)
+    const shift=slideLaneOffset();
+    const rawEnd=points?points[points.length-1].lane:(note.endLane??note.lane);
+    const endLane=Number.isFinite(Number(rawEnd))&&rawEnd!=null?Number(rawEnd)+shift:lane;   // lane は補正済み
+    return {index,type:note.type,startMs,endMs:gridTimeMs(endGrid),startLane:(Number(note.lane)||0)+shift,endLane,grid:note.grid,endFlick,note};
   }
   return {index,type:note.type,startMs,endMs:startMs,startLane:lane,endLane:lane,grid:note.grid,endFlick:false,note};
 }).sort((a,b)=>a.startMs-b.startMs||a.startLane-b.startLane).map(action=>({...action,bar:Math.floor(action.grid/BAR)}));

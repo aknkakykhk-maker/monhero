@@ -27,9 +27,9 @@
 'use strict';
 const fs=require('fs');
 const path=require('path');
-const {HAND_MODEL,noteTouchLane,usableTouchSpan,heldTouchSpan,separationRange}=require('./rhythm-hand-model.js');
+const {HAND_MODEL,noteTouchLane,usableTouchSpan,heldTouchSpan,separationRange,useRuntimeSlideLanes,slideLaneOffset}=require('./rhythm-hand-model.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
-const {laneCountOfChart}=require('./rhythm-chart-v3-revision.js');
+const {laneCountOfChart,chartRevisionOf}=require('./rhythm-chart-v3-revision.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -58,7 +58,15 @@ const STRAIN_STREAK_LIMIT_MS=Object.freeze({EASY:0,NORMAL:400,HARD:900,EXPERT:16
 // ============================================================================
 // 測る
 // ============================================================================
+// Rev.8〜の譜面は、SLIDE の位置をゲーム本体と同じ座標で測る(生成器・自動修正と同じ読み方)。
+// 測り終えたら元の読み方へ戻す(同じ手のモデルを使うほかの道具の結果を変えないため)
 const measure=(chart,audio,options={})=>{
+  const previous=slideLaneOffset();
+  useRuntimeSlideLanes(chartRevisionOf(chart)>=8);
+  try{return measureInner(chart,audio,options);}
+  finally{useRuntimeSlideLanes(previous>0);}
+};
+const measureInner=(chart,audio,options={})=>{
   // 道のレーン数(譜面の作り方の版5から6。書いていない譜面は5)
   const laneCount=laneCountOfChart(chart),lastLane=laneCount-1,half=Math.floor(laneCount/2);
   const timing=audio.timing;

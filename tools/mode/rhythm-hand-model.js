@@ -58,12 +58,23 @@ const HAND_MODEL=Object.freeze({
 // ノーツの「指を置ける範囲」。レーン単位([0,5])で返す。
 // 幅の広いノーツは端から端まで好きな場所を押せるので、1点ではなく範囲で持つ。
 // (幅8のノーツの真ん中しか押せない、という前提で見ると、実際には押せる配置まで弾いてしまう)
+// SLIDE のレーンの値の読み方(2026-09-26・Rev.8〜)。
+// ゲーム本体は SLIDE の lane / slidePoints[].lane を「レーンの番号」として持ち、中心を 値＋0.5 に描く
+// (rhythm-mode.js の rhythmSlideFittedLane。TAP は subLane から [subLane/2, subLane/2+幅/2] で同じ座標)。
+// ここは長く「値そのものが中心」と読んでいて、SLIDE を半レーン左に置いて押せるかを測っていた
+// (公開曲の HARD〜MASTER で、SLIDE を押さえている最中の TAP 728組のうち82組を「指が入る」と見逃し、
+//  最後の rhythm-overlap-reach-fix.js が公開データの側で TAP を動かして直していた)。
+// 既存曲の生成結果とレベルを変えないため、既定は今までの読み方のまま。Rev.8 以降の譜面を扱う道具だけが
+// useRuntimeSlideLanes(true) にする(生成器・自動修正・品質レポートが、その譜面のリビジョンで切り替える)。
+let slideLaneShift=0;
+const useRuntimeSlideLanes=on=>{slideLaneShift=on?.5:0;};
+const slideLaneOffset=()=>slideLaneShift;
 const noteTouchSpan=note=>{
   if(!note)return [0,0];
   const widthLanes=(Number(note.subLaneWidth)||2)/2;
   const subLane=Number(note.subLane);
   if(Number.isFinite(subLane))return [subLane/2,subLane/2+widthLanes];
-  const lane=Number(note.lane)||0;   // SLIDEの lane は経路の中心線
+  const lane=(Number(note.lane)||0)+(note.type==='SLIDE'?slideLaneShift:0);   // SLIDEの lane は経路の中心線
   return [lane-widthLanes/2,lane+widthLanes/2];
 };
 // 指にも太さがあるので、ノーツの端ぎりぎりには置けない。
@@ -136,16 +147,16 @@ const slideLaneAtGrid=(note,grid)=>{
   const points=Array.isArray(note?.slidePoints)?note.slidePoints:null;
   if(!points||points.length<2||!Number.isFinite(Number(grid)))return null;
   const g=Number(grid);
-  if(g<=Number(points[0].grid))return Number(points[0].lane);
+  if(g<=Number(points[0].grid))return Number(points[0].lane)+slideLaneShift;
   for(let i=1;i<points.length;i++){
     const a=points[i-1],b=points[i];
     if(g<=Number(b.grid)){
       const span=Math.max(1e-9,Number(b.grid)-Number(a.grid));
       const t=Math.max(0,Math.min(1,(g-Number(a.grid))/span));
-      return Number(a.lane)+(Number(b.lane)-Number(a.lane))*t;
+      return Number(a.lane)+(Number(b.lane)-Number(a.lane))*t+slideLaneShift;
     }
   }
-  return Number(points[points.length-1].lane);
+  return Number(points[points.length-1].lane)+slideLaneShift;
 };
 // 押さえ続けているノーツ(HOLD/SLIDE)の「指が実際にいられる範囲」。
 //
@@ -173,4 +184,5 @@ const noteTouchLane=note=>{
 };
 
 module.exports={HAND_MODEL,fingerPairFeasible,fingerPairStrain,
-  noteTouchLane,noteTouchSpan,usableTouchSpan,heldTouchSpan,slideLaneAtGrid,fingerSpan,separationRange};
+  noteTouchLane,noteTouchSpan,usableTouchSpan,heldTouchSpan,slideLaneAtGrid,fingerSpan,separationRange,
+  useRuntimeSlideLanes,slideLaneOffset};

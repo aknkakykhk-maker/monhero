@@ -18,8 +18,9 @@
 //   単調さ(monotony) … 音(リズム)が違うのに、同じ動き(レーンの動きの並び)が直前4小節・8小節に出ている。
 //                       形の名前ではなく実際の動きを見る(名前が違っても指の動きが同じなら同じに感じる)。
 //                       リズムも同じなら「同じフレーズは同じ形」なので数えない
-//   横フリック(sideFlick) … 向きが ①近くの次のノーツの方向 ②(次が無ければ)来た向き ③(どちらも無ければ)
-//                       もう片方の指から離れる外向き、と合っているか。もう片方の指へ向かって払うのは「ぶつかる」
+//   横フリック(sideFlick) … 向きが ①同じ指が次に取るノーツの方向 ②(次が無ければ)同じ指が来た向き ③(どちらも無ければ)
+//                       もう片方の指から離れる外向き、と合っているか。もう片方の指へ向かって払うのは「ぶつかる」。
+//                       決め方は Rev.8 の生成器と同じ(rhythm-side-flick.js)
 //   手の流れ(handFlow) … 1本の指の急な切り返し(1拍以内に1.5レーン以上行って戻る)・
 //                       SLIDE の終わりから同じ指の次の打鍵までが快適な速さを超える(荒い着地)
 //                       ⚠️ 両手の交差は測らない。手のシミュレートは親指の左右を区別せず近いほうの指で取るので、
@@ -34,7 +35,8 @@
 'use strict';
 const fs=require('fs');
 const path=require('path');
-const {HAND_MODEL,noteTouchSpan}=require('./rhythm-hand-model.js');
+const {HAND_MODEL,noteTouchSpan,useRuntimeSlideLanes,slideLaneOffset}=require('./rhythm-hand-model.js');
+const {sideFlickContexts,chooseSideFlickDir,collides}=require('./rhythm-side-flick.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {measure:measureQuality}=require('./rhythm-chart-quality-report.js');
 
@@ -52,23 +54,27 @@ const SEGMENT_MS=8000;
 const MOTION_GRAM=4;
 // 動きの大きさの段(レーン)。0.5未満は「その場」
 const motionStep=delta=>{const size=Math.abs(delta);return size<.5?0:size<1.5?1:size<2.5?2:3;};
-// 次のノーツ・来たノーツを「近い」とみなす時間(ms)
-const FLICK_NEIGHBOR_MS=500;
-// もう片方の指にこれより近い所で、その指へ向かって払うと「ぶつかる」
-const FLICK_COLLIDE_LANES=1.5;
 // 区間の気になり点の重み(暫定。感想と合わせて直す)
 const CONCERN_WEIGHTS=Object.freeze({monotony:1,flickOff:3,flickCollide:5,sharpTurn:2,hardLanding:2,strained:1});
 
 const noteCenter=note=>{const [lo,hi]=noteTouchSpan(note);return (lo+hi)/2;};
 const slideEndCenter=note=>{
   const points=Array.isArray(note.slidePoints)&&note.slidePoints.length?note.slidePoints:null;
-  return points?Number(points[points.length-1].lane):Number(note.endLane??note.lane)||noteCenter(note);
+  return points?Number(points[points.length-1].lane)+slideLaneOffset():noteCenter(note);
 };
 
 // ============================================================================
 // 測る
 // ============================================================================
+// SLIDE はどの譜面でもゲーム本体と同じ座標で測る(rhythm-hand-model.js の useRuntimeSlideLanes)。
+// 測り終えたら元の読み方へ戻す(同じ手のモデルを使うほかの道具の結果を変えないため)
 const measureFeel=(chart,audio,options={})=>{
+  const previous=slideLaneOffset();
+  useRuntimeSlideLanes(true);
+  try{return measureFeelInner(chart,audio,options);}
+  finally{useRuntimeSlideLanes(previous>0);}
+};
+const measureFeelInner=(chart,audio,options={})=>{
   const timing=audio.timing;
   const gridMs=Number.isFinite(Number(timing.gridMs))?Number(timing.gridMs):timing.beatMs/timing.subdivisionsPerBeat;
   const BEAT=timing.subdivisionsPerBeat;
@@ -134,42 +140,27 @@ const measureFeel=(chart,audio,options={})=>{
   const monotony4=repeatWithin(4),monotony8=repeatWithin(8);
   for(const gram of monotony8.flagged)segment(gram.ms).monotony++;
 
-  // --- 横フリック ---
-  const mainHits=hits.filter(hit=>!hit.note.chord);
+  // --- 横フリック(向きの決め方は rhythm-side-flick.js と同じ物差しで見る) ---
   const sideFlicks={count:0,natural:0,byNext:0,byIncoming:0,byOutward:0,undecided:0,collide:0,notes:[]};
-  // その時刻に、もう片方の指がどこにいるか(直前に取ったノーツの終わりの位置)
-  const otherFingerLane=(finger,ms)=>{
-    if(finger==null)return null;
-    let lane=null;
-    for(const hit of hits){
-      if(hit.ms>ms)break;
-      if(hit.finger!=null&&hit.finger!==finger)lane=hit.endMs<=ms?hit.endLane:hit.lane;
-    }
-    return lane;
-  };
-  mainHits.forEach((hit,position)=>{
-    const dir=hit.note.flickDir==='left'?-1:hit.note.flickDir==='right'?1:0;
-    if(hit.note.type!=='FLICK'||!dir)return;
+  for(const context of sideFlickContexts(notes,timing,{beam:options.beam})){
+    const note=notes[context.index];
+    const dir=note.flickDir==='left'?-1:note.flickDir==='right'?1:0;
+    if(!dir)continue;
     sideFlicks.count++;
-    const next=mainHits.slice(position+1).find(other=>other.note.grid>hit.note.grid);
-    const prev=mainHits.slice(0,position).reverse().find(other=>other.note.grid<hit.note.grid);
-    const toNext=next&&next.ms-hit.ms<=FLICK_NEIGHBOR_MS&&Math.abs(next.lane-hit.lane)>=.5?Math.sign(next.lane-hit.lane):0;
-    const incoming=prev&&hit.ms-prev.ms<=FLICK_NEIGHBOR_MS&&Math.abs(hit.lane-prev.endLane)>=.5?Math.sign(hit.lane-prev.endLane):0;
-    const other=otherFingerLane(hit.finger,hit.ms);
-    const outward=other==null||Math.abs(hit.lane-other)<.25?0:Math.sign(hit.lane-other);
-    let basis='undecided',ok=true;
-    if(toNext){basis='next';ok=dir===toNext;}
-    else if(incoming){basis='incoming';ok=dir===incoming;}
-    else if(outward){basis='outward';ok=dir===outward;}
-    const collide=other!=null&&Math.sign(other-hit.lane)===dir&&Math.abs(other-hit.lane)<FLICK_COLLIDE_LANES;
+    const expected=chooseSideFlickDir(context);
+    const basis=expected.basis;
+    // 決め手になった材料の向きと同じなら自然(材料が何も無い所の向きは問わない)
+    const basisDir=basis==='next'?context.toNext:basis==='incoming'?context.incoming:context.outward;
+    const ok=basis==='none'||dir===basisDir;
+    const collide=collides(context,dir);
     if(basis==='next')sideFlicks.byNext++;else if(basis==='incoming')sideFlicks.byIncoming++;else if(basis==='outward')sideFlicks.byOutward++;else sideFlicks.undecided++;
     if(ok&&!collide)sideFlicks.natural++;
     if(collide)sideFlicks.collide++;
-    const seg=segment(hit.ms);
-    if(!ok){seg.flickOff++;seg.details.push(`${hit.note.flickDir}フリックが${basis==='next'?'次のノーツ':basis==='incoming'?'来た向き':'外向き'}と逆`);}
-    if(collide){seg.flickCollide++;seg.details.push(`${hit.note.flickDir}フリックがもう片方の指へ向かう`);}
-    sideFlicks.notes.push({grid:hit.note.grid,ms:Math.round(hit.ms),dir:hit.note.flickDir,basis,ok,collide});
-  });
+    const seg=segment(context.ms);
+    if(!ok){seg.flickOff++;seg.details.push(`${note.flickDir}フリックが${basis==='next'?'同じ指の次のノーツ':basis==='incoming'?'来た向き':'外向き'}と逆`);}
+    if(collide){seg.flickCollide++;seg.details.push(`${note.flickDir}フリックがもう片方の指へ向かう`);}
+    sideFlicks.notes.push({grid:note.grid,ms:Math.round(context.ms),dir:note.flickDir,basis,ok,collide});
+  }
 
   // --- 手の流れ ---
   const byFinger=new Map();
