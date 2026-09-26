@@ -28,7 +28,7 @@ const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {setLaneCount:setPatternLaneCount,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
 const {soundTraitsFor,flickScoreOf,chordScoreOf}=require('./rhythm-sound-traits.js');
 const {weightsForRevision,knowledgeBoost,knowledgeShapePrefer}=require('./rhythm-chart-knowledge.js');
-const {chartRevisionOf,laneCountForRevision}=require('./rhythm-chart-v3-revision.js');
+const {chartRevisionOf,chartRevisionLabel,laneCountForRevision}=require('./rhythm-chart-v3-revision.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -414,31 +414,31 @@ let registryEntry=null;
     registryEntry=entry||null;
   }
 }
-// 譜面の作り方の版(rhythm-chart-v3-revision.js)。一覧に書いていない曲は版1＝今までと1音も変わらない。
-// --chart-revision は試しに別の版で作るとき用(一覧は書き換えない)。
+// 譜面の作り方のリビジョン(rhythm-chart-v3-revision.js)。一覧に書いていない曲はRev.1＝今までと1音も変わらない。
+// --chart-revision は試しに別のリビジョンで作るとき用(一覧は書き換えない)。
 const chartRevision=(()=>{
   const forced=arg('--chart-revision',null);
   if(forced!=null)return chartRevisionOf({chartRevision:Number(forced)});
   return chartRevisionOf(registryEntry);
 })();
-// 版2: フレーズの写し(繰り返しの区切りを元の小節と同じリズム・同じレーンで作る)
+// Rev.2: フレーズの写し(繰り返しの区切りを元の小節と同じリズム・同じレーンで作る)
 const phraseCopy=chartRevision>=2;
-// 版3: SLIDEの区間を曲線でつなぐ(下の applySlideEase)
+// Rev.3: SLIDEの区間を曲線でつなぐ(下の applySlideEase)
 const slideEase=chartRevision>=3;
-// 版4: MASTERだけ横フリックを付ける(下の applySideFlicks)
+// Rev.4: MASTERだけ横フリックを付ける(下の applySideFlicks)
 const sideFlick=chartRevision>=4;
-// 版6: 音の性格でノーツの種類を決める(フリック・同時押し・横フリックの向き)。物差しは rhythm-sound-traits.js
+// Rev.6: 音の性格でノーツの種類を決める(フリック・同時押し・横フリックの向き)。物差しは rhythm-sound-traits.js
 const soundTypes=chartRevision>=6;
 const traitsByGrid=soundTypes?soundTraitsFor(audio):null;
 const soundTraitAt=grid=>traitsByGrid?traitsByGrid.get(grid)||null:null;
-// 版7: 音ゲーの作法(rhythm-chart-knowledge.js)。曲にその音の裏づけがあるときだけ、選ばれやすさを少し足す。
-// 重みは版ごとに chart-knowledge-weights.json から読む(遊んだ感想から学び直すと新しい版になる)
+// Rev.7: 音ゲーの作法(rhythm-chart-knowledge.js)。曲にその音の裏づけがあるときだけ、選ばれやすさを少し足す。
+// 重みはリビジョンごとに chart-knowledge-weights.json から読む(遊んだ感想から学び直すと新しいリビジョンになる)
 const knowledgeOn=chartRevision>=7;
 const knowledgeWeights=knowledgeOn?weightsForRevision(chartRevision):null;
 // 作法の後押しの大きさ(段ごとの点数の目盛りに合わせる)。
 //   拾う音の優先度は 0.3〜3 ほど、同時押し・フリックの音の性格の点は 0〜2.5 ほど、区切りの一発は強さ 0〜1
 const KNOWLEDGE_SCALE=Object.freeze({pick:.35,chord:.8,accent:.6});
-// 版5: 6レーンの道。版4までは5レーン(サブレーン10本)のまま作る。
+// Rev.5: 6レーンの道。Rev.4までは5レーン(サブレーン10本)のまま作る。
 // ★レーン数の数字(5・4・10)を直接書かない。LANES(レーン数)・LANES-1(右はしのレーン)・SUB_LANES(サブレーン数)を使う
 const LANES=laneCountForRevision(chartRevision);
 const SUB_LANES=LANES*2;
@@ -554,7 +554,7 @@ const repeatSourceBar=bar=>{
   if(!section||section.repeatOf==null)return null;
   return section.repeatOf+(bar-section.startBar);
 };
-// その小節が「同じフレーズの何回目の繰り返しか」(版2のフレーズの写し)。元の小節は0。
+// その小節が「同じフレーズの何回目の繰り返しか」(Rev.2のフレーズの写し)。元の小節は0。
 // 同じ元を持つ区切りは出てくる順に1,2,…と数え、元がさらに繰り返し(4小節の輪が続く曲など)なら、その分も足す。
 const phraseOccurrence=bar=>{
   let count=0,current=bar;
@@ -576,7 +576,7 @@ const phraseOccurrence=bar=>{
 const phraseDevelopForBar=bar=>{const count=phraseOccurrence(bar)+1;return count>1&&count%3===0;};
 const phraseMirrorForBar=bar=>phraseOccurrence(bar)%2===1;
 const musicalOnsetsInBar=bar=>allOnsets.filter(o=>o.grid>=bar*BAR&&o.grid<(bar+1)*BAR).length;
-// 版7の作法に渡す「その場の様子」。区切りの前後・盛り上がり・その小節の打点の多さ(区切りの平均との比)
+// Rev.7の作法に渡す「その場の様子」。区切りの前後・盛り上がり・その小節の打点の多さ(区切りの平均との比)
 const sortedSections=(Array.isArray(structure.sections)?structure.sections:[]).slice().sort((a,b)=>a.startBar-b.startBar);
 const sectionDensity=new Map(sortedSections.map(section=>{
   let total=0,count=0;
@@ -810,7 +810,7 @@ const buildChart=(difficulty,options={})=>{
   const picked=[];
   // 小節ごとに「小節の中のどの位置を取ったか」。繰り返しの小節がリズムをそろえるのに使う
   const takenOffsetsByBar=new Map();
-  // 版7: 拾う音の優先度に作法の後押しを足す(静かな区切りは歌、盛り上がる区切りは打楽器を先に)。
+  // Rev.7: 拾う音の優先度に作法の後押しを足す(静かな区切りは歌、盛り上がる区切りは打楽器を先に)。
   //   効いた作法はグリッドごとに覚え、あとでそのノーツへ印(knowledge)を付ける
   const knowledgeMarks=new Map();
   const markKnowledge=(grid,ids)=>{if(!ids.length)return;const set=knowledgeMarks.get(grid)||new Set();for(const id of ids)set.add(id);knowledgeMarks.set(grid,set);};
@@ -1128,7 +1128,7 @@ const buildChart=(difficulty,options={})=>{
   const laneUse=Array(LANES).fill(0);
   let lastLane=2,lastPlacedGrid=-Infinity;
   const placed=[];
-  // 置いたノーツのレーン(グリッド → レーン)。版2のフレーズの写しが、元の小節のレーンを引くのに使う
+  // 置いたノーツのレーン(グリッド → レーン)。Rev.2のフレーズの写しが、元の小節のレーンを引くのに使う
   const laneByGrid=new Map();
   // 置いたノーツがどの形から来たか(グリッド → {patternId, mirrored, fromGrid})。写したかたまりは元の形の名前を引き継ぐ
   const shapeByGrid=new Map();
@@ -1200,7 +1200,7 @@ const buildChart=(difficulty,options={})=>{
     const remembered=(memoryKey?shapeMemory.get(memoryKey):null)||(length>=3?motifMemory.get(motifKey):null)||null;
     const chunkIndex=runs.indexOf(runGroup);
     const role=sectionRoleForBar(bar);
-    // 版7: 作法の形の好み(盛り上がる前の溜めは流れる階段へ)。音の裏づけがあるかたまりにだけ足す
+    // Rev.7: 作法の形の好み(盛り上がる前の溜めは流れる階段へ)。音の裏づけがあるかたまりにだけ足す
     let shapePreferIds=SECTION_SHAPE_PREFERENCE[role]||{},chunkKnowledge=[];
     if(knowledgeOn){
       const preferred=knowledgeShapePrefer(knowledgeContext(grids[0],onsetByGrid.get(grids[0])),knowledgeWeights);
@@ -1218,7 +1218,7 @@ const buildChart=(difficulty,options={})=>{
     // fallback は形にならない(読めない)うえ、左端から順に空きを探すので継ぎ目で大きく跳んでいた
     // (実測: MASTERで8%が fallback、HARDで継ぎ目に3レーンの跳び)。
     const attempts=[];
-    // --- フレーズの写し(版2・レーン側) ---
+    // --- フレーズの写し(Rev.2・レーン側) ---
     // かたまりの音の半分以上に、元の小節の同じ位置のノーツがあれば、そのレーンを写す案を先頭に置く。
     // 本物の譜面は、2番のサビを1番のサビと同じ配置(か左右反転)で書く。覚えた形がそのまま効くので
     // 「この曲を覚えた」という手応えになる(docs/spec/RHYTHM_CHART_DESIGN.md 3.1.19)。
@@ -1493,7 +1493,7 @@ const buildChart=(difficulty,options={})=>{
       .filter(({note})=>note.type==='TAP'&&note.sourceCharacter==='FULL'
         &&!notes.some(other=>other!==note&&other.grid===note.grid))
       .sort((a,b)=>b.note.sourceStrength-a.note.sourceStrength);
-    // 版7: 強さを見ずに曲全体へ均等に散らすのをやめ、強い一発から取る。作法(区切りの頭・曲の締め)に
+    // Rev.7: 強さを見ずに曲全体へ均等に散らすのをやめ、強い一発から取る。作法(区切りの頭・曲の締め)に
     //   音の裏づけがあれば少し足す
     const lastGrid=notes.reduce((max,note)=>Math.max(max,note.grid),-Infinity);
     const accentBoost=new Map();
@@ -1529,9 +1529,9 @@ const buildChart=(difficulty,options={})=>{
       if(note.sourceCharacter==='LIGHT')return;
       candidates.push(index);
     });
-    // 版6: 音を見ずに曲全体へ散らすのをやめ、「切れる音・歌の語尾・シンバル」に乗る候補から
+    // Rev.6: 音を見ずに曲全体へ散らすのをやめ、「切れる音・歌の語尾・シンバル」に乗る候補から
     //   音の性格の点が高い順に取る。flickMax は上限としてだけ使う(ふさわしい音が少ない曲はフリックも少ない)。
-    //   実測(版5・全曲): フリックが音の性格に乗っている割合は 42〜43% で、TAP全体の割合(36〜42%)とほぼ同じ
+    //   実測(Rev.5・全曲): フリックが音の性格に乗っている割合は 42〜43% で、TAP全体の割合(36〜42%)とほぼ同じ
     //   ＝音を見ずに散らしていた(tools/mode/rhythm-note-type-fit.js)
     const picked=soundTypes
       ?soundPick(candidates,flickMax,4,index=>flickScoreOf(soundTraitAt(notes[index].grid)))
@@ -1602,7 +1602,7 @@ const buildChart=(difficulty,options={})=>{
         &&(gridCount.get(note.grid)||0)===1
         &&nearestOther(note)>=CHORD.clearGrids
         &&nearestOther(note)>=restrikeGrids
-        // 版6: EASY・NORMAL(左端と右端の同時押し)は前後を1拍空ける所だけ。大きな一発は前後が詰まりやすく、
+        // Rev.6: EASY・NORMAL(左端と右端の同時押し)は前後を1拍空ける所だけ。大きな一発は前後が詰まりやすく、
         //   8分あとに続くノーツを自動修正が動かすと、端から2.5レーン跳ぶ形が残った(Monster Hero NORMAL)
         &&(!soundTypes||!CHORD.edge||nearestOther(note)>=BEAT)
         &&!sustainSpans.some(span=>span.startGrid<note.grid&&note.grid<=span.endGrid))
@@ -1621,8 +1621,8 @@ const buildChart=(difficulty,options={})=>{
     const nextBatch=()=>{
       const rest=candidates.filter(index=>!tried.has(index)&&(!preferred||preferred.has(index)||tried.size>=intense.length));
       if(!rest.length)return [];
-      // 版6: シンバル・大きな一発から、音の性格の点が高い順に取る(音の無い静かな所には置かない)。
-      //   版5までは「前後が空いている」所を選ぶので、かえって弱い音に乗っていた
+      // Rev.6: シンバル・大きな一発から、音の性格の点が高い順に取る(音の無い静かな所には置かない)。
+      //   Rev.5までは「前後が空いている」所を選ぶので、かえって弱い音に乗っていた
       //   (実測: EASY〜HARDの同時押しのうちシンバル・大きな一発に乗っていたのは 0〜1%)。
       //   幅の上限(4)も外す。大きな一発はいちばん太く置かれるので、上限があると最初から候補に入らなかった
       let picked=soundTypes
@@ -1653,7 +1653,7 @@ const buildChart=(difficulty,options={})=>{
       // 相方の幅。細いノーツの同時押しは狙いが要るので、難易度ごとの下限を守る。
       const width=Math.max(CHORD.minWidth,Math.min(3,note.subLaneWidth));
       const baseWidth=CHORD.edge?width:Math.max(CHORD.minWidth,Math.min(4,note.subLaneWidth));
-      // レーンは5つ（サブレーン10。版5からは6つ・12）しかない。2つ置いたときに空けられる最大の隙間はここまで。
+      // レーンは5つ（サブレーン10。Rev.5からは6つ・12）しかない。2つ置いたときに空けられる最大の隙間はここまで。
       const room=SUB_LANES-baseWidth-width;
       const need=Math.round(CHORD.minGapLanes*2);
       if(room<need)continue;
@@ -1702,7 +1702,7 @@ const buildChart=(difficulty,options={})=>{
   // 「右・左・右」と振られる見せ場になる。
   //
   // 【なぜEXPERT以上なのか】
-  // 5レーン（サブレーン10。版5からは6レーン・12）しかないので、EASY〜HARDの同時押しの条件
+  // 5レーン（サブレーン10。Rev.5からは6レーン・12）しかないので、EASY〜HARDの同時押しの条件
   // （太いノーツ・大きく離す）を満たすと、2つで場所を使い切って**動かす余地が残らない**。
   //   EASY/NORMAL: 幅3+幅3+間隔4 = 10（余り0）  HARD: 幅3+幅3+間隔3 = 9（余り1＝0.5レーン）
   // 動けないものを「連なり」と呼んでも意味が無いので、下の難易度には置かない。
@@ -2058,7 +2058,7 @@ const buildChart=(difficulty,options={})=>{
         return null;
       };
       let placed=findOutside();
-      // ★版2: 押さえているHOLDが画面の端に寄っていて、外側に指の入る余地が無いときは、
+      // ★Rev.2: 押さえているHOLDが画面の端に寄っていて、外側に指の入る余地が無いときは、
       //   HOLDを内側へ1〜2レーン寄せてから試す(実測: MASTERで置けなかった候補のほとんどが
       //   「押さえている指が端から1レーン以内で、外側に叩く指が入らない」だった。そのため
       //   MASTERのほうがEXPERTより交差が少ない曲が12曲あった)。
@@ -2784,8 +2784,8 @@ const buildChart=(difficulty,options={})=>{
         const note=notes[issue.noteIndex];
         // 押さえノーツは譜面の骨格なので、そちらではなく打点のほうを落とす
         if(note&&note.type!=='HOLD'&&note.type!=='SLIDE')blame.add(note);
-        // 版5: 押せないのが押さえノーツの頭のときは、その直前(叩き直しに要る間隔より近く)に叩いた打点を落とす。
-        // 版4までは何も落とさずに素通りしていたので、同時スライドの88ms前に16分のTAPがある形が
+        // Rev.5: 押せないのが押さえノーツの頭のときは、その直前(叩き直しに要る間隔より近く)に叩いた打点を落とす。
+        // Rev.4までは何も落とさずに素通りしていたので、同時スライドの88ms前に16分のTAPがある形が
         // 自動修正でも直せずに残った(2026-09-26・6レーンで作り直したとき the_city_beneath_the_comets の MASTER)
         else if(note&&chartRevision>=5){
           const limitGrids=HAND_MODEL.restrikeLimitMs/gridMs;
@@ -2857,7 +2857,7 @@ const buildChart=(difficulty,options={})=>{
     notice.push(`フレーズの写し: 繰り返しの${phraseRhythmCount.bars}小節で元と同じ位置の音 ${phraseRhythmCount.same}/${phraseRhythmCount.source}`
       +` / 同じレーンへ写したかたまり ${phraseCopyCount.placed}/${phraseCopyCount.tried}（${phraseCopyCount.notes}ノーツ）`);
   }
-  // 版7: 効いた作法の印をノーツへ残す(学び直し rhythm-chart-learn.js が「良い／変」と言われた区間で数える)。
+  // Rev.7: 効いた作法の印をノーツへ残す(学び直し rhythm-chart-learn.js が「良い／変」と言われた区間で数える)。
   //   同時押しの2本目には付けない(1つの出来事を2回数えない)
   const knowledgeCounts={};
   if(knowledgeOn){
@@ -2898,7 +2898,7 @@ function spreadPick(candidates,count,minGap){
   return chosen.sort((a,b)=>a-b);
 }
 
-// 版6: 候補を「音の性格の点」が高い順に取る。点が0の候補(その種類にふさわしい音ではない)は取らない。
+// Rev.6: 候補を「音の性格の点」が高い順に取る。点が0の候補(その種類にふさわしい音ではない)は取らない。
 // 近すぎる候補は飛ばす(minGap は spreadPick と同じく候補の番号の差)。点が同じなら曲の前から。
 function soundPick(candidates,count,minGap,scoreOf){
   const scored=candidates.map(index=>({index,score:scoreOf(index)})).filter(entry=>entry.score>0)
@@ -3245,7 +3245,7 @@ function slidePathFor(reserved,startLane,width,P,onset){
 }
 
 // ============================================================================
-// 版3: SLIDEの曲線(2026-09-26)
+// Rev.3: SLIDEの曲線(2026-09-26)
 // ============================================================================
 // できあがった譜面のSLIDEの区間へ ease を付ける。本体(monster-hero/data/rhythm-mode.js)の
 // rhythmSlideExpectedLane が同じ ease を読むので、見た目・追従の的・速さの上乗せがそろって曲がる。
@@ -3312,7 +3312,7 @@ function applySlideEase(notes){
 }
 
 // ============================================================================
-// 版4: 横フリック(2026-09-26)
+// Rev.4: 横フリック(2026-09-26)
 // ============================================================================
 // MASTERの FLICK に向き(flickDir)を付ける。本体の rhythmFlickMatches が同じ向きを読む。
 //   ・次のノーツ(SIDE_FLICK_NEXT_MS 以内)が SIDE_FLICK_MIN_SHIFT サブレーン以上右なら right、左なら left
@@ -3331,7 +3331,7 @@ function applySideFlicks(notes){
     delete note.flickDir;
     const next=order.slice(k+1).find(other=>other.t-item.t>1);
     let dir='';
-    // 版6: 旋律が上がる音は右・下がる音は左へ払う(音の高さを横へ並べる譜面の約束ごと。
+    // Rev.6: 旋律が上がる音は右・下がる音は左へ払う(音の高さを横へ並べる譜面の約束ごと。
     //   形の語彙も「高いほど右」で並べている)。旋律が動かない音だけ、次のノーツへ向かう向きにする
     const move=soundTypes?(soundTraitAt(note.grid)?.pitchMove||0):0;
     if(move>0)dir='right';else if(move<0)dir='left';
@@ -3380,7 +3380,7 @@ if(sideFlick&&results.MASTER){
   (r.notice||(r.notice=[])).push(`横フリック: 左${side.left}本・右${side.right}本`);
 }
 
-console.log(`譜面の作り方: 版${chartRevision}${phraseCopy?'（フレーズの写しあり）':'（2026-09-24までの作り方）'}${slideEase?'（スライドの曲線あり）':''}${sideFlick?'（MASTERに横フリックあり）':''}`);
+console.log(`譜面の作り方: ${chartRevisionLabel(chartRevision)}${phraseCopy?'（フレーズの写しあり）':'（2026-09-24までの作り方）'}${slideEase?'（スライドの曲線あり）':''}${sideFlick?'（MASTERに横フリックあり）':''}`);
 for(const difficulty of targets){
   const {notes,profile,runs}=results[difficulty];
   const typeCounts=notes.reduce((acc,n)=>{acc[n.type]=(acc[n.type]||0)+1;return acc;},{});
@@ -3416,9 +3416,9 @@ if(write){
       trackId,difficulty,
       candidateVersion:'v3',
       chartRevision,
-      // 道のレーン数(版5から6)。自動修正・品質の報告・本体への書き出しがこれを見る
+      // 道のレーン数(Rev.5から6)。自動修正・品質の報告・本体への書き出しがこれを見る
       laneCount:LANES,
-      // 版7: 使った作法の重みと、効いた回数
+      // Rev.7: 使った作法の重みと、効いた回数
       ...(knowledgeOn?{knowledge:{weights:knowledgeWeights,fired:results[difficulty].knowledgeCounts||{}}}:{}),
       status:'draft',
       reviewRequired:true,
