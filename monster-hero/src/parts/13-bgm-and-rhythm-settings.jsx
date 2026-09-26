@@ -118,22 +118,20 @@ const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
 //     whileEvent  … いま開催しているイベントの対象曲(開催していないあいだは押せない)
 //     favorite    … お気に入りに入れた曲(曲えらびの保存値の favorites)
 //   id は保存値になるので、増やすことはあっても名前は変えない('all' と 'event' は前からある)。
+// ★同じ日のうちに、常に並べるタブをやめて「押して選ぶ」形へ戻した(ユーザー指示
+//   「ジャンルは常時出すより押して選べるタイプにしたい / いまのとこはイベントとお気に入り以外は作らなくていい」)。
+//   'original' / 'collab' は半日だけ出していたので、保存値に残っている人がいる。一覧に無い id は
+//   normalizeRhythmSelectView が 'all' へ倒すので、消しても一覧が空になる人は出ない。
+//   また出すときは同じ id で足し直す(別の意味で使い回さない)。
 const RHYTHM_GENRES = Object.freeze([
   Object.freeze({ id:'all',      label:'ALL',        note:'遊べる曲を全部' }),
-  Object.freeze({ id:'original', label:'オリジナル', note:'モンスターヒーローのために作られた曲', tag:'original' }),
-  Object.freeze({ id:'collab',   label:'コラボ',     note:'ほかの作り手と一緒に届けている曲', tag:'collab' }),
   Object.freeze({ id:'event',    label:'イベント',   note:'いま開催しているイベントの対象曲', whileEvent:true }),
   Object.freeze({ id:'favorite', label:'お気に入り', note:'♡を付けた曲', favorite:true }),
 ]);
 // 曲に付ける印(ジャンルの tag)。書いていない曲は 'original'。
-// ★曲を足したり、振り分けを変えたりするときは、ここへ1行足す・直すだけでよい。
-//   コラボの4曲は、更新履歴とイベントの告知に作り手の名前が出ている曲(2026-09-26。ユーザーの確認待ち)
-const RHYTHM_SONG_GENRE_TAGS = Object.freeze({
-  mf_ichika_mix: Object.freeze(['collab']),
-  pandora_boss_remix: Object.freeze(['collab']),
-  the_city_beneath_the_comets: Object.freeze(['collab']),
-  mou_hitotsu_no_sekai_e: Object.freeze(['collab']),
-});
+// ★tag で見分けるジャンルを足すときは、上の一覧へ1件足して、ここへ曲ごとの印を1行ずつ書く。
+//   例: mf_ichika_mix: Object.freeze(['collab'])
+const RHYTHM_SONG_GENRE_TAGS = Object.freeze({});
 const rhythmSongGenreTags = song => {
   const tags = song && RHYTHM_SONG_GENRE_TAGS[song.songId];
   return Array.isArray(tags) && tags.length ? tags : ['original'];
