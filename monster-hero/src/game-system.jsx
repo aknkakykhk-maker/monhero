@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4e29aef5d1145e50
+// generated-sha256: 69d0509693426aec
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 18:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 19:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -33017,7 +33017,12 @@ function MonsterHeroGame() {
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
         const tacticsIntroSeen = await storeGet(TACTICS_INTRO_SEEN_KEY, false, false);
         setTacticsIntroSeenFlag(tacticsIntroSeen === true);
-        if (tacticsIntroSeen !== true) setTacticsIntroPending(true);
+        // ★ききの会話と同じく、流すのは「すでに遊んでいた人」だけ。中身は「バトルに新しい仕組みが来た」という
+        //   お知らせで、新しく始めた人にはまだ会っていない仲間も出てくる(2026-09-26 ユーザー指摘
+        //   「新規で始めたときに過去ストーリーが流れる」)。新しく始めた人は、ここで見たことにする
+        //   (プロフィールのイベント回想からはいつでも見られる)
+        if (wasOnboarded && tacticsIntroSeen !== true) setTacticsIntroPending(true);
+        else if (!wasOnboarded && tacticsIntroSeen !== true) { try { await storeSet(TACTICS_INTRO_SEEN_KEY, true, false); setTacticsIntroSeenFlag(true); } catch {} }
       }
       // モンヒロビートのイベント会話。開催中で、まだ見ていなければHOMEで1度だけ流す。
       // ★ここに置くのは wasOnboarded が決まったあとだから。前に置くと
@@ -33034,6 +33039,25 @@ function MonsterHeroGame() {
         .map(rhythmEventThanksStoryIdFor).find(id => id && !bootSeenThanks.includes(id)) || null;
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootThanksId) {
         setRhythmEventStoryPending(bootThanksId);
+      }
+      // ★新しく始めた人には、始めた時点ですでにある「お知らせの会話」(ビートP・6レーン)と、
+      //   もう終わったイベントの「閉幕とお礼」を見たことにしておく(2026-09-26 ユーザー指摘
+      //   「新規で始めたときに過去ストーリーが流れる」)。起動時のここは wasOnboarded で絞っていたが、
+      //   1分おきの見回り(上の look)は絞っておらず、プロフィールを決め終わった直後の見回りで流れていた。
+      //   更新のお知らせ(助手の告知)を新規プレイヤーには既読で渡すのと同じ考え方。
+      //   開催中のイベントの会話はいまの話なので、ここには入れない(今までどおり流れる)。
+      //   お知らせの会話を足したら、下の一覧へも足すこと
+      if (!wasOnboarded) {
+        const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID,
+          ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
+        const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
+        if (add.length) {
+          const next = [...seenNow, ...add];
+          rhythmEventStorySeenRef.current = next;
+          setRhythmEventStorySeen(next);
+          try { await storeSet(RHYTHM_EVENT_STORY_KEY, next, false); } catch {}
+        }
       }
       // ビートPの知らせ。イベントの会話(開催・閉幕)が並んでいればそちらを先にする
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && RELEASE_FLAGS.rhythmEventPoints === true && wasOnboarded

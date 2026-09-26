@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// 遊んだ感想(譜面メモ)から、音ゲーの作法の重みを学び直す(2026-09-26・版7〜)。
+// 遊んだ感想(譜面メモ)から、音ゲーの作法の重みを学び直す(2026-09-26・Rev.7〜)。
 //
 //   node tools/mode/rhythm-chart-learn.js            # 学び直した重みの案を出すだけ(書き換えない)
-//   node tools/mode/rhythm-chart-learn.js --write    # 新しい版として chart-knowledge-weights.json へ書き足す
+//   node tools/mode/rhythm-chart-learn.js --write    # 新しいリビジョンとして chart-knowledge-weights.json へ書き足す
 //   node tools/mode/rhythm-chart-learn.js --json
 //
 // 【なぜ要るか】ユーザー指示「色んな音ゲーが出てるからそれを学習してかつモンビーの中でもどんどん改良出来る仕組みにしていきたい」。
@@ -12,8 +12,8 @@
 // 【決めごと】
 // ・1回で動かす幅は ±20% まで(数件のメモで作り方がひっくり返らないように)。重みは 0〜2 に収める
 // ・その作法が効いた区間が合わせて MIN_EVIDENCE 未満なら動かさない(たまたまを学ばない)
-// ・書くときは**新しい版**として書き足す。前の版の重みは消さない(良くならなければ前の版へ戻せる)。
-//   書き足すと rhythm-chart-v3-revision.js の最新版が自動で上がり、次に足す曲から効く。
+// ・書くときは**新しいリビジョン**として書き足す。前のリビジョンの重みは消さない(良くならなければ前のリビジョンへ戻せる)。
+//   書き足すと rhythm-chart-v3-revision.js の最新リビジョンが自動で上がり、次に足す曲から効く。
 //   公開中の曲を作り直すかは、ユーザーが数字を見て決める(運用ルール ⑩-2)
 // ・数えるのは「いま公開中の譜面へのメモ」だけ(譜面メモの指紋が合うもの)。作り直す前の譜面へのメモは、
 //   その譜面の作法の印が手元に無いので数えない
@@ -24,6 +24,7 @@ const fs=require('fs'),path=require('path');
 const ROOT=path.resolve(__dirname,'..','..');
 const {KNOWLEDGE,WEIGHTS_FILE,readWeightsFile,latestKnowledgeRevision,weightsForRevision}=require('./rhythm-chart-knowledge.js');
 const {loadRuntime,RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
+const {chartRevisionLabel}=require('./rhythm-chart-v3-revision.js');
 const {validNote,fingerprintOf}=require('./rhythm-chart-feedback.js');
 
 const FEEDBACK_DIR=path.join(ROOT,'tools/mode/authoring/feedback');
@@ -106,18 +107,18 @@ module.exports={nextWeight,authoringMatches,tally,learn,MAX_STEP,MIN_EVIDENCE};
 if(require.main===module){
   const result=learn();
   if(process.argv.includes('--json')){console.log(JSON.stringify(result,null,1));process.exit(0);}
-  console.log(`音ゲーの作法の学び直し（いまの版 ${result.baseRevision}）`);
+  console.log(`音ゲーの作法の学び直し（いまは ${chartRevisionLabel(result.baseRevision)}）`);
   console.log(`  使った譜面メモ ${result.used}件（👍 ${result.segments.good}区間 ／ 👎 ${result.segments.bad}区間）${result.stale?` ／ 作り直す前の譜面へのメモ ${result.stale}件は数えない`:''}${result.unreleased?` ／ 作者用の譜面が公開中と違うメモ ${result.unreleased}件は数えない`:''}`);
   for(const [id,row] of Object.entries(result.proposal)){
     console.log(`  ${row.title}\n    効いた区間 👍${row.good} 👎${row.bad}  重み ${row.before} → ${row.after}${row.good+row.bad<MIN_EVIDENCE?`（${MIN_EVIDENCE}区間に満たないので動かさない）`:''}`);
   }
-  if(!process.argv.includes('--write')){console.log('\n（--write で新しい版として書き足します）');process.exit(0);}
-  if(!result.changed){console.log('\n重みが変わらないので、新しい版は作りません');process.exit(0);}
+  if(!process.argv.includes('--write')){console.log('\n（--write で新しいリビジョンとして書き足します）');process.exit(0);}
+  if(!result.changed){console.log('\n重みが変わらないので、新しいリビジョンは作りません');process.exit(0);}
   const file=readWeightsFile();
   file.revisions[String(result.nextRevision)]={basedOn:result.baseRevision,createdAt:new Date().toISOString().slice(0,10),
     reason:`譜面メモ ${result.used}件（👍${result.segments.good}区間・👎${result.segments.bad}区間）から学び直した`,
     weights:Object.fromEntries(Object.entries(result.proposal).map(([id,row])=>[id,row.after]))};
   fs.writeFileSync(WEIGHTS_FILE,JSON.stringify(file,null,1)+'\n');
-  console.log(`\n版 ${result.nextRevision} として書き足しました: ${path.relative(ROOT,WEIGHTS_FILE)}`);
-  console.log('次に足す曲からこの版で作られます。公開中の曲を作り直すかは、数字を見て決めてください。');
+  console.log(`\n${chartRevisionLabel(result.nextRevision)} として書き足しました: ${path.relative(ROOT,WEIGHTS_FILE)}`);
+  console.log('次に足す曲からこのリビジョンで作られます。公開中の曲を作り直すかは、数字を見て決めてください。');
 }

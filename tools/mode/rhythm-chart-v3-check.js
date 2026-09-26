@@ -411,5 +411,37 @@ for(const difficulty of DIFFICULTIES){
     &&/const END_FLICK_MAX_SWING_LANES=0\.35/.test(generator));
 }
 
+// --- 公開中の全曲の交差(2026-09-26) ---
+// 上のクロスの確かめは Monster Hero だけを見ていた。Rev.7で作り直したとき、自動修正が押さえっぱなしのHOLDの側を動かして
+// 交差を内側へ入れた譜面が10曲にあった(直したのは rhythm-chart-v2-step7-autofix.js の keepsCoveredCrosses・Rev.7から)。
+// Rev.7以降の公開曲は、どの難易度でも交差が外側にあることを見る(Rev.6以前の譜面は作り直さないので対象にしない)
+{
+  const {RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
+  let total=0;const bad=[];
+  for(const trackId of new Set(Object.values(RELEASED_TRACKS))){
+    for(const difficulty of DIFFICULTIES){
+      const file=path.join(ROOT,`tools/mode/authoring/${trackId.replace(/_/g,'-')}-v3-fixed-${difficulty.toLowerCase()}.json`);
+      if(!fs.existsSync(file))continue;
+      const chart=JSON.parse(fs.readFileSync(file,'utf8'));
+      if(!(Number(chart.chartRevision)>=7))continue;
+      const holds=(chart.notes||[]).filter(note=>note.type==='HOLD');
+      const middle=((Number(chart.laneCount)===6?6:5)-1)/2;
+      for(const note of (chart.notes||[]).filter(note=>note.cross===true)){
+        total++;
+        const covering=holds.filter(hold=>hold.grid<note.grid&&note.grid<=hold.grid+(Number(hold.durationGrids)||0));
+        let good=covering.length===1;
+        if(good){
+          const holdLane=noteTouchLane(covering[0]),noteLane=noteTouchLane(note);
+          good=(holdLane<=middle?noteLane<holdLane:noteLane>holdLane)
+            &&separationRange(usableTouchSpan(note),usableTouchSpan(covering[0])).min>=HAND_MODEL.fingerMinGapLanes-1e-9;
+        }
+        if(!good)bad.push(`${trackId} ${difficulty} ${note.grid}`);
+      }
+    }
+  }
+  check('公開中の全曲(Rev.7以降): クロスが押さえっぱなしの外側にある',bad.length===0,
+    bad.length?bad.slice(0,4).join(' / '):`${total}箇所`);
+}
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
