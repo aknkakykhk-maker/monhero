@@ -19334,8 +19334,9 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
 // 公開フラグ RELEASE_FLAGS.rhythmCanvasNotes と、デバッグ画面の上書き(mh_rhythm_canvas_v1)で DOM 版と切り替える。
 const RHYTHM_CANVAS_KEY='mh_rhythm_canvas_v1';
 const rhythmCanvasNotesPreference=()=>{try{if(typeof localStorage==='undefined')return '';const value=localStorage.getItem(RHYTHM_CANVAS_KEY);return value==='canvas'||value==='dom'||value==='webgl'?value:'';}catch{return '';}};
-// 検証用の WebGL で描くか(デバッグ画面で「WebGL」を選んだときだけ。2026-09-26)
-const rhythmWebglNotesActive=()=>rhythmCanvasNotesPreference()==='webgl';
+// WebGL で描くか(2026-09-26)。デバッグ画面の「ノーツの描き方(検証用)」を選んでいればそちらに従い、
+// 選んでいなければ音ゲー設定の「描き方」(noteDrawMode)が「軽い」のときだけ WebGL で描く。
+const rhythmWebglNotesActive=noteDrawMode=>{const pref=rhythmCanvasNotesPreference();if(pref)return pref==='webgl';return noteDrawMode==='LIGHT';};
 const rhythmCanvasNotesSetPreference=value=>{
   const next=value==='canvas'||value==='dom'||value==='webgl'?value:'';
   try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_CANVAS_KEY,next);else localStorage.removeItem(RHYTHM_CANVAS_KEY);}}catch{}

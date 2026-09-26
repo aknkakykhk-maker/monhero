@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2d28a8c6671c0d37
+// generated-sha256: 3752adb899696d5a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 15:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 16:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4106,6 +4106,13 @@ const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['AUTO','自動'],['HIGH','�
 // 「自動」(2026-09-26・ユーザー指示「画質の自動を入れて」)。演奏中に、描くのが間に合わなかったフレームが
 // 3秒のうち8%を超えたら一段下げる(高→標準→省電力)。下げた段は、アプリを開いているあいだ次の曲にも引き継ぐ
 // (保存はしない。開き直すと「高」から)。上げ直しはしない(上げ下げを繰り返すと、そのたびに描き直しで詰まるため)。
+// 描き方(2026-09-26・ユーザー指示「設定で選べるようにしてほしい / 専門用語を使われてもわからないからわかるように」)。
+// 「軽い」＝ノーツと叩いたときの光を WebGL で描く(端末の絵を描く専用の部分へまとめて任せる)。見た目は「ふつう」と同じ。
+// 画面に出す名前・説明には WebGL・canvas・GPU などの言葉を使わない。
+// 既定は「ふつう」(これまでの描き方)。WebGL が使えない端末・途中で使えなくなったときは、自動で「ふつう」の描き方に戻す。
+// デバッグ画面の「ノーツの描き方(検証用)」を選んでいるときは、そちらが優先される(rhythmWebglNotesActive)。
+const RHYTHM_NOTE_DRAW_MODES = Object.freeze(['STANDARD','LIGHT']);
+const RHYTHM_NOTE_DRAW_LABELS = Object.freeze([['STANDARD','ふつう'],['LIGHT','軽い']]);
 const RHYTHM_RENDER_QUALITY_STEPS = Object.freeze(['HIGH','STANDARD','SAVE']);
 const RHYTHM_AUTO_QUALITY_WINDOW_MS = 3000;
 const RHYTHM_AUTO_QUALITY_SLOW_RATIO = .08;
@@ -4262,6 +4269,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   //   「もしもとより操作性変わるならもとのやつをデフォルトに」(2026-09-24・ユーザー指示)で戻した
   frameRateMode:'DEVICE',
   renderQuality:'HIGH',
+  // 描き方(2026-09-26)。既存の保存値には無いので、読み込み時は既定(ふつう)で補われる
+  noteDrawMode:'STANDARD',
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -4319,6 +4328,7 @@ const normalizeRhythmSettings = value => {
     quietDuringPlay:bool('quietDuringPlay'),
     frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
     renderQuality:RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality)?source.renderQuality:DEFAULT_RHYTHM_SETTINGS.renderQuality,
+    noteDrawMode:RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode)?source.noteDrawMode:DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -14898,6 +14908,10 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {/* 画質(2026-09-26・ユーザー指示「画質の設定を入れて」)。既定は「高」(これまでの細かさ) */}
             {field('画質',segments('renderQuality',RHYTHM_RENDER_QUALITY_LABELS),
               '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。')}
+            {/* 描き方(2026-09-26・ユーザー指示「設定で選べるようにしてほしい / 専門用語を使われてもわからないからわかるように」)。
+                既定は「ふつう」(これまでの描き方)。説明に WebGL・canvas・GPU などの言葉を使わない */}
+            {field('描き方',segments('noteDrawMode',RHYTHM_NOTE_DRAW_LABELS),
+              'ノーツと、ノーツを取ったときの光の描き方です。既定は「ふつう」（これまでの描き方）です。見た目・判定・スコア・叩く位置はどちらでも変わりません。\n「軽い」＝ノーツと光を、スマホの「絵を描くのが得意な部分」にまとめて任せて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減ることがあります。新しく加えた描き方で、まだ試している段階です。うまく表示できない端末では、自動で「ふつう」の描き方に戻ります。\n変えた描き方は、次に遊ぶ曲から使われます。')}
             {/* モンスターノーツだけを軽くしたい人向け(2026-09-13・ユーザー依頼
                 「設定でモンスターノーツを踏んだときの軽量化バージョンもほしい」) */}
             {field('モンスターノーツの演出',segments('monsterNoteEffect',RHYTHM_MONSTER_EFFECT_LABELS),
@@ -16048,11 +16062,17 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const noteCanvasMaxDprRef=useRef(noteCanvasMaxDpr);noteCanvasMaxDprRef.current=noteCanvasMaxDpr;
   const noteCanvasRef=useRef(null);
   // 検証用: デバッグ画面の「ノーツの描き方」で WebGL を選んだときだけ、同じ描き方を WebGL の描き込み先で描く(2026-09-26)
-  const webglNotes=useState(()=>canvasNotes&&rhythmWebglNotesActive())[0];
+  // 描き方「軽い」(またはデバッグ画面の WebGL)。途中で端末に WebGL を取り上げられたら(webglcontextlost)、
+  // canvas を作り直して「ふつう」の描き方へ戻す(一度 WebGL を使った canvas からは 2D を取り出せないため)
+  const webglWanted=useState(()=>canvasNotes&&rhythmWebglNotesActive(settings.noteDrawMode))[0];
+  const [webglLost,setWebglLost]=useState(false);
+  const webglNotes=webglWanted&&!webglLost;
   useEffect(()=>{if(!canvasNotes)return undefined;RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current,{webgl:webglNotes});const canvas=noteCanvasRef.current;if(canvas)canvas.dataset.rhythmNoteBackend=RHYTHM_CANVAS_RENDERER.backend;
+    const onLost=()=>setWebglLost(true);
+    if(canvas&&RHYTHM_CANVAS_RENDERER.backend==='webgl')canvas.addEventListener('webglcontextlost',onLost);
     // WebGL で描けたときだけ、叩いたときの光もこの canvas で描く(DOM の部品は動かさない)。2D の canvas・DOM 版は今までどおり
     RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend==='webgl'?playAreaRef.current:null);
-    return()=>RHYTHM_CANVAS_RENDERER.release();},[canvasNotes,webglNotes]);
+    return()=>{if(canvas)canvas.removeEventListener('webglcontextlost',onLost);RHYTHM_CANVAS_RENDERER.release();};},[canvasNotes,webglNotes]);
   const noteElements=useMemo(()=>canvasNotes?null:chart.notes.map((note,index)=>{const monsterSlot=rhythmNoteMonsterSlot(note),monster=monsterSlot?monsters[monsterSlot-1]||null:null;return <div key={index} ref={el=>laneRefs.current[index]=el} data-rhythm-note data-note-type={note.type} data-rhythm-note-wide={rhythmNoteIsWide(note)?'1':undefined} data-rhythm-monster-note={monster?monsterSlot:undefined} className="absolute top-0 h-5" style={{left:`calc(${note.lane*20}% + 5px)`,width:'calc(20% - 10px)',pointerEvents:'none'}}>{/* HOLDの帯は水色でそろえる。以前は根もとが emerald(緑)だったが、FLICKが緑なので
                 「フリックとホールドの色が似ていて分かりにくい」と指摘された(2026-09-07)。
                 ヘルプでも HOLD は「シアン(水色)」と説明しているので、そちらへ合わせる */}{note.type==='HOLD'&&<span data-rhythm-hold-body className="absolute left-[18%] right-[18%] bottom-1/2 rounded-t-lg bg-gradient-to-t from-cyan-500/90 to-cyan-200/70" style={{height:'var(--rhythm-hold-body, 0px)'}}/>}{(note.type==='HOLD'||note.type==='SLIDE')&&<span data-rhythm-end-bar data-rhythm-end-flick={note.endFlick===true?'1':undefined} aria-hidden="true" className="absolute z-[2] h-2 rounded-full border border-white/80 bg-gradient-to-r from-fuchsia-400 via-cyan-100 to-fuchsia-400 shadow-[0_0_10px_#67e8f9,0_0_18px_#d946ef]" style={{pointerEvents:'none',transform:'scaleY(var(--rhythm-end-depth-scale, 1))',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 7px #67e8f9':'0 0 10px #67e8f9,0 0 18px #d946ef'}}/>}<span data-rhythm-note-head className={`absolute inset-0 rounded-full ${monster?'bg-gradient-to-b from-amber-100 to-amber-500 ring-2 ring-amber-200':note.type==='HOLD'?'border-2 border-white/90 bg-gradient-to-b from-cyan-50 to-cyan-400':'bg-gradient-to-b from-amber-200 to-fuchsia-500'}`} style={{boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 2px 6px rgba(15,23,42,.45)':'0 10px 15px -3px rgba(0,0,0,.24)'}}>{/* 長押しの押し始めは、帯と同じ色の丸が帯の下でわずかに太るだけで、
@@ -17417,7 +17437,7 @@ scheduleTick();};
 {/* 抽選の結果。当たりは大きく「LUCKY RUSH!!」、はずれは小さく「+2pt」 */}
 {luckyBanner&&<div key={luckyBanner.id} data-rhythm-lucky-banner data-kind={luckyBanner.kind} aria-hidden="true"><b>{luckyBanner.text}</b></div>}
 {comboMilestone>0&&<div data-rhythm-combo-milestone data-milestone-stage={comboMilestoneStage} aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 whitespace-nowrap text-center"><b className={`block font-black leading-none tabular-nums landscape:text-4xl ${comboMilestoneStage>=3?'text-6xl':'text-5xl'}`}>{comboMilestone}</b><small className="mt-1 block text-sm font-black tracking-[0.3em]">COMBO</small></div>}
-                {view.ability&&<div data-rhythm-ability-flash className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{view.ability.ability}！</div>}{canvasNotes?<canvas ref={noteCanvasRef} data-rhythm-note-canvas aria-hidden="true"/>:noteElements}{/* レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を幕で隠し、ノーツが見えはじめる位置を手前へ寄せる。
+                {view.ability&&<div data-rhythm-ability-flash className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{view.ability.ability}！</div>}{canvasNotes?<canvas key={webglNotes?'webgl':'2d'} ref={noteCanvasRef} data-rhythm-note-canvas aria-hidden="true"/>:noteElements}{/* レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を幕で隠し、ノーツが見えはじめる位置を手前へ寄せる。
     隠すのはレーンの台形の中だけ(laneCoverStyle の clip-path)。左右の空きにあるコンボ数・マスモン・背景は隠さない。
     ノーツ(z-5)より前、判定ライン(z-6)より前(上端から伸びるので判定ラインとは重ならない)、HUD(z-30)より後ろ。
     ★隠すだけで、ノーツが流れる速さ・判定のタイミングは変わらない */}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e7042c76bd64ed0
+// source-sha256: 61e200b388253ef6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 15:58";
+const BUILD_DATE = "2026-09-26 16:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4779,6 +4779,8 @@ const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
 const RHYTHM_RENDER_QUALITY_MODES = Object.freeze(['AUTO', 'HIGH', 'STANDARD', 'SAVE']);
 const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['AUTO', '自動'], ['HIGH', '高'], ['STANDARD', '標準'], ['SAVE', '省電力']]);
+const RHYTHM_NOTE_DRAW_MODES = Object.freeze(['STANDARD', 'LIGHT']);
+const RHYTHM_NOTE_DRAW_LABELS = Object.freeze([['STANDARD', 'ふつう'], ['LIGHT', '軽い']]);
 const RHYTHM_RENDER_QUALITY_STEPS = Object.freeze(['HIGH', 'STANDARD', 'SAVE']);
 const RHYTHM_AUTO_QUALITY_WINDOW_MS = 3000;
 const RHYTHM_AUTO_QUALITY_SLOW_RATIO = .08;
@@ -4967,6 +4969,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   quietDuringPlay: false,
   frameRateMode: 'DEVICE',
   renderQuality: 'HIGH',
+  noteDrawMode: 'STANDARD',
   stageEffect: 'SIMPLE',
   laneCover: 0,
   timingDisplay: 'STANDARD',
@@ -5020,6 +5023,7 @@ const normalizeRhythmSettings = value => {
     quietDuringPlay: bool('quietDuringPlay'),
     frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode,
     renderQuality: RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality) ? source.renderQuality : DEFAULT_RHYTHM_SETTINGS.renderQuality,
+    noteDrawMode: RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode) ? source.noteDrawMode : DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -21083,7 +21087,7 @@ const RhythmOptions = ({
     full: true
   }), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
-  }), field('画質', segments('renderQuality', RHYTHM_RENDER_QUALITY_LABELS), '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
+  }), field('画質', segments('renderQuality', RHYTHM_RENDER_QUALITY_LABELS), '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。'), field('描き方', segments('noteDrawMode', RHYTHM_NOTE_DRAW_LABELS), 'ノーツと、ノーツを取ったときの光の描き方です。既定は「ふつう」（これまでの描き方）です。見た目・判定・スコア・叩く位置はどちらでも変わりません。\n「軽い」＝ノーツと光を、スマホの「絵を描くのが得意な部分」にまとめて任せて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減ることがあります。新しく加えた描き方で、まだ試している段階です。うまく表示できない端末では、自動で「ふつう」の描き方に戻ります。\n変えた描き方は、次に遊ぶ曲から使われます。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
   }), field('軽量モード', toggle('lightweightMode'), '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。', {
     full: true
@@ -22603,7 +22607,9 @@ const RhythmTapTest = ({
   const noteCanvasMaxDprRef = useRef(noteCanvasMaxDpr);
   noteCanvasMaxDprRef.current = noteCanvasMaxDpr;
   const noteCanvasRef = useRef(null);
-  const webglNotes = useState(() => canvasNotes && rhythmWebglNotesActive())[0];
+  const webglWanted = useState(() => canvasNotes && rhythmWebglNotesActive(settings.noteDrawMode))[0];
+  const [webglLost, setWebglLost] = useState(false);
+  const webglNotes = webglWanted && !webglLost;
   useEffect(() => {
     if (!canvasNotes) return undefined;
     RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current, {
@@ -22611,8 +22617,13 @@ const RhythmTapTest = ({
     });
     const canvas = noteCanvasRef.current;
     if (canvas) canvas.dataset.rhythmNoteBackend = RHYTHM_CANVAS_RENDERER.backend;
+    const onLost = () => setWebglLost(true);
+    if (canvas && RHYTHM_CANVAS_RENDERER.backend === 'webgl') canvas.addEventListener('webglcontextlost', onLost);
     RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend === 'webgl' ? playAreaRef.current : null);
-    return () => RHYTHM_CANVAS_RENDERER.release();
+    return () => {
+      if (canvas) canvas.removeEventListener('webglcontextlost', onLost);
+      RHYTHM_CANVAS_RENDERER.release();
+    };
   }, [canvasNotes, webglNotes]);
   const noteElements = useMemo(() => canvasNotes ? null : chart.notes.map((note, index) => {
     const monsterSlot = rhythmNoteMonsterSlot(note),
@@ -25604,6 +25615,7 @@ const RhythmTapTest = ({
       textShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : '0 0 10px rgba(251,191,36,.8)'
     }
   }, view.ability.ability, "！"), canvasNotes ? React.createElement("canvas", {
+    key: webglNotes ? 'webgl' : '2d',
     ref: noteCanvasRef,
     "data-rhythm-note-canvas": true,
     "aria-hidden": "true"
