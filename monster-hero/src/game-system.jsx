@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c0d0aefb2b9ce0f5
+// generated-sha256: 43bc98ef7566cfa4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 12:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 14:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9912,8 +9912,9 @@ const useAssistantBond = () => useContext(AssistantBondContext) || ASSISTANT_BON
 // セリフの中の {name} を、そのときの呼び方へ置き換える。
 // data/assistants.js が読めなかった場合でも、文が壊れないように {name} だけは消す
 // callStyleId … 絆Lv6から選べる呼び方の上書き(省略時は絆Lvの既定のまま)
-const assistantSpeakText = (text, name, level, callStyleId) => (typeof assistantSpeak === 'function')
-  ? assistantSpeak(text, name, level, callStyleId)
+// assistantId … 話している助手。助手ごとに既定の呼び方が違うので必ず渡す(ドラは呼び捨て、ききは「ちー」など)
+const assistantSpeakText = (text, name, level, callStyleId, assistantId) => (typeof assistantSpeak === 'function')
+  ? assistantSpeak(text, name, level, callStyleId, assistantId)
   : String(text == null ? '' : text).replace(/\{name\}/g, String(name || 'キミ'));
 // 表情ごとの顔画像のパスを決める。用意されていない表情は data/assistants.js 側で
 // 既定の表情(normal)へ落ちる。この関数が無い(古いデータの)ときは画像なし扱いにする
