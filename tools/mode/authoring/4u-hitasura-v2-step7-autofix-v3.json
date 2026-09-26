@@ -27,7 +27,7 @@
  },
  "difficulties": {
   "EASY": {
-   "noteCount": 137,
+   "noteCount": 129,
    "fixCount": 0,
    "passes": 0,
    "before": {
@@ -36,8 +36,8 @@
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 39,
-    "cost": 39
+    "spread": 29,
+    "cost": 29
    },
    "after": {
     "impossible": 0,
@@ -45,13 +45,13 @@
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 39,
-    "cost": 39
+    "spread": 29,
+    "cost": 29
    },
    "fixes": []
   },
   "NORMAL": {
-   "noteCount": 150,
+   "noteCount": 153,
    "fixCount": 0,
    "passes": 0,
    "before": {
@@ -82,19 +82,19 @@
     "impossible": 0,
     "strained": 0,
     "reach": 0,
-    "hardJumps": 2,
+    "hardJumps": 0,
     "overSteps": 0,
-    "spread": 54,
-    "cost": 294
+    "spread": 57,
+    "cost": 57
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
-    "hardJumps": 2,
+    "hardJumps": 0,
     "overSteps": 0,
-    "spread": 54,
-    "cost": 294
+    "spread": 57,
+    "cost": 57
    },
    "fixes": []
   },
@@ -106,19 +106,19 @@
     "impossible": 0,
     "strained": 0,
     "reach": 1,
-    "hardJumps": 0,
+    "hardJumps": 1,
     "overSteps": 0,
-    "spread": 59,
-    "cost": 10059
+    "spread": 64,
+    "cost": 10184
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
-    "hardJumps": 0,
+    "hardJumps": 1,
     "overSteps": 0,
-    "spread": 59,
-    "cost": 59
+    "spread": 64,
+    "cost": 184
    },
    "fixes": [
     {
@@ -126,17 +126,17 @@
      "bar": 41,
      "timeMs": 70549,
      "type": "HOLD",
-     "move": "サブレーン9→8",
+     "move": "サブレーン0→1",
      "pass": 1,
-     "costBefore": 10059,
-     "costAfter": 59,
+     "costBefore": 10184,
+     "costAfter": 184,
      "impossibleAfter": 0,
      "strainedAfter": 0
     }
    ]
   },
   "MASTER": {
-   "noteCount": 291,
+   "noteCount": 287,
    "fixCount": 0,
    "passes": 0,
    "before": {
@@ -144,18 +144,18 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 5,
-    "overSteps": 0,
-    "spread": 62,
-    "cost": 662
+    "overSteps": 1,
+    "spread": 70,
+    "cost": 790
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 5,
-    "overSteps": 0,
-    "spread": 62,
-    "cost": 662
+    "overSteps": 1,
+    "spread": 70,
+    "cost": 790
    },
    "fixes": []
   }

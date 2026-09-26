@@ -4,10 +4,10 @@
 //   ・手のモデルの SLIDE の読み方は既定が今までどおりで、切り替えたときだけゲーム本体と同じ座標になる
 //   ・6レーンの中央を 2 と直書きしていない(CENTER_LANE を使う)
 //   ・実際に Rev.7 と Rev.8 で作り、Rev.8 だけ横フリックの向きが払う指の動きと合い、自動修正のあとも合っている
-//   ・Rev.7 で作った譜面は公開中の作者用の譜面(authoring/)と1バイトも変わらない
+//   ・Rev.7 で作った譜面は、公開していた Rev.7 の作者用の譜面と1バイトも変わらない(sha256 で比べる)
 // 設計: docs/spec/RHYTHM_CHART_ENGINE_ROADMAP.md の段1
 'use strict';
-const fs=require('fs');
+const crypto=require('crypto'),fs=require('fs');
 const os=require('os');
 const path=require('path');
 const {spawnSync}=require('child_process');
@@ -68,12 +68,14 @@ ok('作り方の最新は Rev.8 以上',CHART_REVISION_CODE_LATEST>=8&&CHART_REV
   try{
     const rev7=generate(7),rev8=generate(8);
     ok('Rev.7・Rev.8 とも作れる',rev7.status===0&&rev8.status===0);
-    // Rev.7 は公開中の作者用の譜面と同じ(既存曲の作り方が変わっていない)
-    const same=['easy','normal','hard','expert','master'].every(d=>{
-      const committed=path.join(ROOT,'tools/mode/authoring',`${dashed}-v3-chart-${d}.json`);
-      return fs.readFileSync(committed,'utf8')===fs.readFileSync(path.join(rev7.dir,`${dashed}-v3-chart-${d}.json`),'utf8');
-    });
-    ok('Rev.7 で作った譜面は authoring/ の譜面と1バイトも変わらない',same);
+    // Rev.7 は公開していた Rev.7 の作者用の譜面と同じ(既存曲の作り方が変わっていない)。
+    // 2026-09-26 に公開曲を Rev.15 で作り直し authoring/ の譜面が変わったので、作り直す前の Rev.7 の譜面の sha256 を持って比べる
+    const REV7_SHA256={easy:'1562188e328f8205ceae7b097ffcd4d00ad771c0b8f24111ccf6732464069641',normal:'5a1f319e5d9f9adc91779ac1d660c81971b5158037d8521f5731ea07a318e5e8',
+      hard:'9cc22cbbd4510847ee477c0469e8cf050983e455d9ca8a12b0aae3dd1a1297c2',expert:'5af139c7f6d9ad40cb2dc296b6b20fc05799e7eb9b8d12a4947e625a371e74c1',
+      master:'f10c8b11ce1367942859e2d21bb517147b44fe56351b581fa531925840dd4fb0'};
+    const same=Object.entries(REV7_SHA256).every(([d,sha])=>
+      crypto.createHash('sha256').update(fs.readFileSync(path.join(rev7.dir,`${dashed}-v3-chart-${d}.json`))).digest('hex')===sha);
+    ok('Rev.7 で作った譜面は、公開していた Rev.7 の譜面と1バイトも変わらない',same);
     ok('Rev.8 だけ写しの小節の FLICK を揃える',!/写しの小節/.test(rev7.stdout)&&/写しの小節の FLICK を元の小節に揃えた/.test(rev8.stdout));
 
     const readChart=(dir,kind)=>JSON.parse(fs.readFileSync(path.join(dir,`${dashed}-v3-${kind}-master.json`),'utf8'));
@@ -104,7 +106,9 @@ ok('作り方の最新は Rev.8 以上',CHART_REVISION_CODE_LATEST>=8&&CHART_REV
     ok('自動修正のあとも横フリックの向きは決め方どおり',f8.total>0&&f8.match===f8.total&&f8.collide===0,JSON.stringify(f8));
     ok('自動修正でノーツの数は変わらない',fixed8.notes.length===gen8.notes.length);
 
-    const feel7=measureFeel(readChart(path.join(ROOT,'tools/mode/authoring'),'fixed'),audio,{withQuality:false});
+    const fix7Dir=path.join(tmp,'fix7');fs.mkdirSync(fix7Dir);
+    run([path.join(__dirname,'rhythm-chart-v2-step7-autofix.js'),'--source','v3','--track',trackId,'--input-dir',rev7.dir,'--difficulty','MASTER','--write','--output-dir',fix7Dir]);
+    const feel7=measureFeel(readChart(fix7Dir,'fixed'),audio,{withQuality:false});
     const feel8=measureFeel(fixed8,audio,{withQuality:false});
     ok('物差しでも Rev.8 の横フリックは Rev.7 より自然',feel8.sideFlick.naturalRate>feel7.sideFlick.naturalRate&&feel8.sideFlick.collide===0,
       `Rev.7 ${feel7.sideFlick.naturalRate}（ぶつかる${feel7.sideFlick.collide}） → Rev.8 ${feel8.sideFlick.naturalRate}（ぶつかる${feel8.sideFlick.collide}）`);

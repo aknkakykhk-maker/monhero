@@ -65,10 +65,14 @@ ok('手のモデルの読み方: Rev.13 は曲線・左右なし、Rev.14 はあ
     const s1=m(s,s+th),s2=m(s+th,s+2*th),s3=m(s+2*th,e);return {open:s3>s1,close:s1>s3,swell:s2>Math.max(s1,s3),pinch:s2<Math.min(s1,s3),pulse:false}[note.holdTaper];};
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'mh-rev14-'));
   try{
+    // 音の層の解析(<曲>-v3-layers.json)を使わずに確かめる。層の解析があると Rev.9 以降は主役の追跡で候補が分かれるので、
+    // 「Rev.13 は HARD の候補がほぼ同じ」という比べる前提が曲ごとの解析の有無で変わってしまう(2026-09-26、公開曲を作り直して層の解析ができたら落ちた)
+    const input=path.join(tmp,'in');fs.mkdirSync(input);
+    fs.copyFileSync(path.join(ROOT,'tools/mode/authoring',`${dashed}-v3-audio.json`),path.join(input,`${dashed}-v3-audio.json`));
     const generate=(revision,variant=0,difficulty=null)=>{
       const dir=path.join(tmp,`r${revision}v${variant}${difficulty||''}`);fs.mkdirSync(dir);
       const result=spawnSync(process.execPath,[path.join(__dirname,'rhythm-chart-v3-generate.js'),'--track',trackId,'--chart-revision',String(revision),'--variant',String(variant),
-        ...(difficulty?['--difficulty',difficulty]:[]),'--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
+        ...(difficulty?['--difficulty',difficulty]:[]),'--input-dir',input,'--write','--output-dir',dir],{cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
       return {status:result.status,chart:d=>JSON.parse(fs.readFileSync(path.join(dir,`${dashed}-v3-chart-${d}.json`),'utf8'))};
     };
     const r13=generate(13),r14=generate(14);
