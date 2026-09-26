@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 078137ff5ecb939f
+// source-sha256: 833950774ab991f8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 14:42";
+const BUILD_DATE = "2026-09-26 14:49";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -21677,15 +21677,15 @@ const RhythmSongSelect = ({
   }, notice), !song || !difficulty ? React.createElement("p", {
     className: "text-xs font-bold text-slate-400"
   }, "遊べる曲がありません。") : React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "flex items-center gap-3 landscape:block"
+    className: "grid grid-cols-[4rem_minmax(0,1fr)_auto] items-center gap-3 landscape:grid-cols-[6rem_minmax(0,1fr)] landscape:items-start landscape:gap-x-3 landscape:gap-y-1.5"
   }, React.createElement("div", {
-    className: "w-16 shrink-0 landscape:mx-auto landscape:w-36"
+    className: "w-16 shrink-0 landscape:row-span-2 landscape:w-24"
   }, React.createElement(RhythmSongArt, {
     song: song,
     large: true,
     onZoom: () => setArtZoom(true)
   })), React.createElement("div", {
-    className: "min-w-0 flex-1 landscape:mt-2 landscape:text-center"
+    className: "min-w-0"
   }, React.createElement("b", {
     "data-rhythm-song-title": true,
     className: "block text-sm font-black leading-tight text-white",
@@ -21699,7 +21699,33 @@ const RhythmSongSelect = ({
     }
   }, rhythmSongFullName(song)), React.createElement("small", {
     className: "mt-0.5 block text-[10px] font-bold text-slate-400"
-  }, rhythmSongLengthLabel(song, chart)))), React.createElement("div", {
+  }, rhythmSongLengthLabel(song, chart), React.createElement("span", {
+    "data-rhythm-demo-level": true,
+    className: "ml-1.5 text-slate-300"
+  }, "Lv.", chart.level, " / ", chart.totalNotes, "ノーツ"))), React.createElement("div", {
+    "data-rhythm-song-stats": true,
+    className: "w-[7.5rem] shrink-0 rounded-xl border border-white/10 bg-slate-900/80 px-2 py-1 landscape:col-start-2 landscape:grid landscape:w-full landscape:grid-cols-[1fr_auto_auto] landscape:items-center landscape:gap-2.5"
+  }, React.createElement("div", {
+    className: "min-w-0"
+  }, React.createElement("small", {
+    className: "block text-[8px] font-black tracking-[.15em] text-slate-400"
+  }, "HIGH SCORE", best && best.played && !best.clear && React.createElement("span", {
+    "data-rhythm-demo-uncleared": true,
+    className: "ml-1 tracking-normal text-rose-300"
+  }, "未クリア")), React.createElement("b", {
+    "data-rhythm-demo-best": true,
+    className: `block truncate font-black tabular-nums text-amber-100 ${best && best.played ? 'text-[15px] leading-tight' : 'text-[11px] leading-snug'}`
+  }, best && best.played ? best.bestScore.toLocaleString() : 'まだ遊んでいません')), React.createElement("div", {
+    className: "mt-0.5 flex items-baseline justify-between gap-2 text-[9px] font-black text-slate-400 landscape:contents"
+  }, React.createElement("span", {
+    "data-rhythm-demo-rank": true
+  }, "RANK ", React.createElement("b", {
+    className: `text-sm ${best && best.played ? RHYTHM_RANK_COLORS[rhythmRankForScore(best.bestScore)] || 'text-white' : 'text-slate-500'}`
+  }, best && best.played ? rhythmRankForScore(best.bestScore) : '—')), React.createElement("span", {
+    "data-rhythm-demo-combo": true
+  }, "COMBO ", React.createElement("b", {
+    className: `text-sm tabular-nums ${best && best.played ? 'text-white' : 'text-slate-500'}`
+  }, best && best.played ? best.maxCombo : '—'))))), React.createElement("div", {
     "data-rhythm-difficulty-row": true,
     className: `mt-1.5 flex flex-wrap gap-1${spot('difficulty')}`
   }, available.map(item => {
@@ -21730,15 +21756,7 @@ const RhythmSongSelect = ({
       const record = rhythmBestRecord(bestRecords, song.songId, item.id);
       return record && record.played ? record.bestScore.toLocaleString() : '—';
     })() : `${need}で解放`));
-  })), React.createElement("p", {
-    className: "mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[10px] font-bold"
-  }, React.createElement("span", {
-    "data-rhythm-demo-level": true,
-    className: "text-slate-300"
-  }, "Lv.", chart.level, " / ", chart.totalNotes, "ノーツ"), React.createElement("span", {
-    "data-rhythm-demo-best": true,
-    className: "text-amber-200"
-  }, best && best.played ? React.createElement(React.Fragment, null, difficulty.id, "の自己ベスト ", best.bestScore.toLocaleString(), "（ランク ", rhythmRankForScore(best.bestScore), "） / 最大コンボ ", best.maxCombo, best.clear ? '' : ' / まだクリアしていません') : React.createElement(React.Fragment, null, "まだ遊んでいません"))), React.createElement("div", {
+  })), React.createElement("div", {
     className: "mt-1.5 flex gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -24517,48 +24535,165 @@ const RhythmTapTest = ({
       "data-rank-tier": String(rankTier),
       "data-rhythm-effect": settings.effectAmount,
       "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
-      className: "relative flex-1 overflow-y-auto bg-slate-950 p-4 text-white",
+      className: "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]",
       style: {
-        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        paddingTop: 'env(safe-area-inset-top)'
       }
-    }, React.createElement("p", {
-      className: "text-center text-xs text-cyan-300"
-    }, rhythmSongFullName(song), "・", React.createElement("b", {
+    }, hudArtSrc && React.createElement("div", {
+      "data-rhythm-result-backdrop": true,
+      "aria-hidden": "true",
+      style: {
+        backgroundImage: `url("${hudArtSrc}")`
+      }
+    }), React.createElement("div", {
+      "data-rhythm-result-frame": true,
+      className: "relative flex min-h-0 flex-1 flex-col [@container(min-width:680px)]:flex-row"
+    }, (() => {
+      const index = sideArtUrls.findIndex(Boolean);
+      const art = index >= 0 ? sideArtUrls[index] : '';
+      if (!art && !hudArtSrc) return null;
+      return React.createElement("aside", {
+        "data-rhythm-result-hero": true,
+        "aria-hidden": "true",
+        className: "relative hidden w-[31%] max-w-[360px] shrink-0 items-center justify-center p-3 [@container(min-width:680px)]:flex"
+      }, art ? React.createElement("img", {
+        "data-rhythm-result-hero-art": true,
+        src: art,
+        alt: "",
+        draggable: false,
+        decoding: "async",
+        className: "relative max-h-full w-full object-contain"
+      }) : React.createElement("img", {
+        "data-rhythm-result-hero-jacket": true,
+        src: hudArtSrc,
+        alt: "",
+        draggable: false,
+        decoding: "async",
+        className: "relative aspect-square w-[82%] rounded-2xl border border-white/20 object-cover"
+      }));
+    })(), React.createElement("div", {
+      "data-rhythm-result-body": true,
+      className: "relative flex min-h-0 min-w-0 flex-1 flex-col"
+    }, React.createElement("div", {
+      "data-rhythm-result-scroll": true,
+      className: "min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3"
+    }, React.createElement("h2", {
+      className: "mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200"
+    }, "RHYTHM RESULT"), React.createElement("div", {
+      "data-rhythm-result-summary": true,
+      className: "[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-2 [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2"
+    }, React.createElement("div", {
+      "data-rhythm-result-summary-main": true
+    }, React.createElement("section", {
+      "data-rhythm-result-song": true,
+      className: "flex items-center gap-2.5 rounded-2xl border border-white/15 bg-slate-900/85 p-2.5"
+    }, hudArtSrc && React.createElement("img", {
+      "data-rhythm-result-jacket": true,
+      src: hudArtSrc,
+      alt: "",
+      draggable: false,
+      decoding: "async",
+      className: "h-16 w-16 shrink-0 rounded-xl border border-white/20 object-cover"
+    }), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      "data-rhythm-result-song-name": true,
+      className: "block truncate text-sm font-black leading-tight"
+    }, rhythmSongFullName(song)), React.createElement("div", {
+      className: "mt-0.5 flex items-baseline gap-1.5 text-[11px]"
+    }, React.createElement("b", {
       "data-rhythm-difficulty-name": true,
       className: `font-black ${rhythmDifficultyTextColor(difficulty.id)}`
-    }, difficulty.id)), React.createElement("h2", {
-      className: "text-center font-black"
-    }, "RHYTHM RESULT"), (result.assist || result.mirror) && React.createElement("div", {
+    }, difficulty.id), Number.isFinite(Number(chart.level)) && React.createElement("span", {
+      "data-rhythm-result-level": true,
+      className: "font-black tabular-nums text-slate-300"
+    }, "Lv.", chart.level)), (() => {
+      const max = Number(difficulty.maxScore) > 0 ? Number(difficulty.maxScore) : 1000000;
+      const asc = RHYTHM_RANKS.filter(item => item.min > 0 && item.min <= max).slice().reverse();
+      const marks = asc.slice(-5);
+      if (!marks.length) return null;
+      const lowIndex = asc.indexOf(marks[0]) - 1;
+      const low = lowIndex >= 0 ? asc[lowIndex].min : 0;
+      const span = Math.max(1, max - low);
+      const at = value => Math.max(0, Math.min(100, (value - low) / span * 100));
+      return React.createElement("div", {
+        "data-rhythm-result-gauge": true,
+        className: "mt-1.5 pr-1.5"
+      }, React.createElement("div", {
+        className: "relative h-2 rounded-full bg-slate-800"
+      }, React.createElement("i", {
+        "data-rhythm-result-gauge-fill": true,
+        className: "absolute inset-y-0 left-0 block rounded-full",
+        style: {
+          width: `${at(view.score).toFixed(1)}%`
+        }
+      }), marks.map(item => React.createElement("i", {
+        key: item.id,
+        className: "absolute top-1/2 block h-3 w-px -translate-y-1/2 bg-white/60",
+        style: {
+          left: `${at(item.min).toFixed(1)}%`
+        }
+      }))), React.createElement("div", {
+        className: "relative mt-0.5 h-3 text-[9px] font-black leading-none"
+      }, marks.map(item => {
+        const reached = view.score >= item.min;
+        return React.createElement("span", {
+          key: item.id,
+          "data-rhythm-result-gauge-mark": item.id,
+          "data-reached": reached ? '1' : '0',
+          className: `absolute -translate-x-1/2 ${reached ? RHYTHM_RANK_COLORS[item.id] || 'text-white' : 'text-slate-600'}`,
+          style: {
+            left: `${at(item.min).toFixed(1)}%`
+          }
+        }, item.id);
+      })));
+    })()), React.createElement("div", {
+      "data-rhythm-result-rank": true,
+      "data-rank-tier": String(rankTier),
+      className: `relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-4 border-current text-3xl font-black ${RHYTHM_RANK_COLORS[rank]}`
+    }, rank)), (result.assist || result.mirror) && React.createElement("div", {
       "data-rhythm-result-play-mode": true,
-      className: "mt-1.5 flex flex-wrap items-center justify-center gap-1.5 text-[10px] font-black"
+      className: "mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black"
     }, result.assist && React.createElement("span", {
       className: "rounded-full border border-emerald-300/60 bg-emerald-500/15 px-2 py-0.5 text-emerald-100"
     }, "🛟 アシストモード（スコア8割・記録には残りません", Number(result.assistGuarded) > 0 ? `・ガード${Number(result.assistGuarded)}回` : '', "）"), result.mirror && React.createElement("span", {
       className: "rounded-full border border-sky-300/60 bg-sky-500/15 px-2 py-0.5 text-sky-100"
-    }, "↔ ミラー譜面")), (() => {
+    }, "↔ ミラー譜面")), React.createElement("section", {
+      "data-rhythm-result-score-card": true,
+      className: "mt-2 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2"
+    }, React.createElement("div", {
+      className: "flex items-start justify-between gap-2"
+    }, React.createElement("div", {
+      className: "min-w-0"
+    }, React.createElement("div", {
+      className: "flex items-center gap-1.5"
+    }, React.createElement("small", {
+      className: "text-[10px] font-black tracking-[.25em] text-slate-400"
+    }, "SCORE"), result.isNewRecord && React.createElement("b", {
+      "data-rhythm-new-record": true,
+      className: "whitespace-nowrap rounded-full bg-amber-400 px-2 py-0.5 text-[9px] font-black leading-none text-slate-950"
+    }, "NEW RECORD")), React.createElement("div", {
+      "data-rhythm-result-score": true,
+      className: "text-[34px] font-black leading-tight tabular-nums [@container(min-width:680px)]:text-[30px]"
+    }, view.score.toLocaleString())), (() => {
       const failed = result.cleared === false;
       return React.createElement("div", {
         "data-rhythm-result-clear": true,
         "data-cleared": failed ? 'false' : 'true',
-        className: "mx-auto mt-3 w-full max-w-xs rounded-2xl border-2 px-3 py-2 text-center"
+        className: "w-[6.5rem] shrink-0 rounded-xl border-2 px-1.5 py-1 text-center"
       }, React.createElement("b", {
-        className: "block text-4xl font-black leading-none"
+        className: "block text-xl font-black leading-none"
       }, failed ? 'FAILED' : 'CLEAR'), React.createElement("small", {
-        className: "mt-1.5 block text-[10px] font-black leading-relaxed"
+        className: "mt-1 block text-[8px] font-black leading-snug"
       }, failed ? 'ライフが0になったまま曲が終わりました（DOWN）' : 'ライフを残して最後まで演奏しました'));
-    })(), React.createElement("div", {
-      "data-rhythm-result-rank": true,
-      "data-rank-tier": String(rankTier),
-      className: `relative mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`
-    }, rank), React.createElement("div", {
-      className: "my-3 text-center text-3xl font-black"
-    }, view.score.toLocaleString()), React.createElement("p", {
-      className: "text-center text-sm"
-    }, "BEST SCORE ", result.bestScore.toLocaleString()), result.isNewRecord && React.createElement("p", {
-      "data-rhythm-new-record": true,
-      className: "text-center text-xl font-black text-amber-300"
-    }, "NEW RECORD"), (() => {
+    })()), React.createElement("div", {
+      className: "mt-1 flex items-baseline justify-between gap-2 border-t border-white/10 pt-1 text-[11px] font-black"
+    }, React.createElement("span", {
+      className: "tracking-wider text-slate-400"
+    }, "BEST SCORE"), React.createElement("b", {
+      "data-rhythm-result-best": true,
+      className: "tabular-nums text-slate-100"
+    }, result.bestScore.toLocaleString())), (() => {
       const nextId = rhythmNextRankId(view.score, difficulty.maxScore);
       const next = nextId ? RHYTHM_RANKS.find(item => item.id === nextId) : null;
       if (!next) return null;
@@ -24566,7 +24701,7 @@ const RhythmTapTest = ({
       if (!(need > 0)) return null;
       return React.createElement("p", {
         "data-rhythm-next-rank": nextId,
-        className: "text-center text-[11px] font-black tabular-nums text-slate-300"
+        className: "mt-0.5 text-[11px] font-black tabular-nums text-slate-300"
       }, "次のランク ", React.createElement("b", {
         className: RHYTHM_RANK_COLORS[nextId] || 'text-white'
       }, nextId), " まで あと ", need.toLocaleString());
@@ -24577,30 +24712,84 @@ const RhythmTapTest = ({
       const diff = view.score - prev;
       return React.createElement("p", {
         "data-rhythm-best-diff": true,
-        className: `text-center text-[11px] font-black tabular-nums ${diff > 0 ? 'text-emerald-300' : 'text-slate-400'}`
+        className: `text-[11px] font-black tabular-nums ${diff > 0 ? 'text-emerald-300' : 'text-slate-400'}`
       }, diff > 0 ? `前の自己ベストから +${diff.toLocaleString()}` : diff === 0 ? '自己ベストと同じスコア' : `自己ベストまで あと ${(-diff).toLocaleString()}`);
-    })(), result.luck && (result.luck.draws > 0 || result.luck.points > 0) && React.createElement("div", {
-      "data-rhythm-result-luck": true,
-      className: "mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center"
+    })())), React.createElement("div", {
+      "data-rhythm-result-summary-judgments": true,
+      className: "mt-2 [@container(min-width:680px)]:mt-0"
+    }, (() => {
+      const total = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (Number(view.counts[id]) || 0), 0);
+      if (!(total > 0)) return null;
+      return React.createElement("div", {
+        "data-rhythm-result-ratio": true,
+        "aria-hidden": "true",
+        className: "mb-1.5 flex h-2 w-full overflow-hidden rounded-full bg-slate-800"
+      }, RHYTHM_JUDGMENT_IDS.map(id => {
+        const count = Number(view.counts[id]) || 0;
+        return count > 0 ? React.createElement("i", {
+          key: id,
+          "data-rhythm-result-ratio-part": id,
+          className: "block h-full",
+          style: {
+            width: `${(count / total * 100).toFixed(2)}%`,
+            background: rhythmJudgmentColor(id)
+          }
+        }) : null;
+      }));
+    })(), React.createElement("section", {
+      "data-rhythm-result-judgments": true,
+      className: "flex items-stretch gap-2 [@container(min-width:680px)]:flex-col"
+    }, React.createElement("dl", {
+      "data-rhythm-result-judgment-table": true,
+      className: "grid min-w-0 flex-1 grid-cols-[1fr_auto] gap-x-2 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 text-[13px]"
+    }, RHYTHM_JUDGMENT_IDS.map(id => React.createElement(React.Fragment, {
+      key: id
+    }, id === 'MARVELOUS' && React.createElement(React.Fragment, {
+      key: "precise"
+    }, React.createElement("dt", {
+      "data-rhythm-result-precise-label": true,
+      "data-rhythm-judgment-row": "JUST"
+    }, "JUST MARVELOUS"), React.createElement("dd", {
+      "data-rhythm-result-precise": true,
+      "data-rhythm-judgment-row": "JUST",
+      className: "text-right font-mono"
+    }, Number(view.precise) || 0)), React.createElement("dt", {
+      "data-rhythm-judgment-row": id
+    }, id), React.createElement("dd", {
+      "data-rhythm-judgment-row": id,
+      className: "text-right font-mono"
+    }, view.counts[id])))), React.createElement("div", {
+      "data-rhythm-result-combo": true,
+      className: "flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-full [@container(min-width:680px)]:flex-row [@container(min-width:680px)]:justify-between [@container(min-width:680px)]:gap-3 [@container(min-width:680px)]:px-3 [@container(min-width:680px)]:py-1.5"
     }, React.createElement("small", {
-      className: "block text-[10px] font-black tracking-wider text-lime-200"
-    }, "🍀 ラッキーラッシュ"), React.createElement("b", {
-      className: "mt-0.5 block text-lg font-black tabular-nums text-white"
-    }, Number(result.luck.points).toLocaleString(), "pt"), React.createElement("span", {
-      className: "mt-0.5 block text-[10px] font-bold text-lime-100"
-    }, "抽選 ", result.luck.draws, "回・RUSH ", result.luck.rush, "回", result.luck.bonus > 0 ? `・おまけビートP +${result.luck.bonus}P` : '')), result.eventPointAward && result.eventPointAward.amount > 0 && React.createElement("div", {
-      "data-rhythm-result-beat-points": true,
-      className: "mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center"
-    }, React.createElement("small", {
-      className: "block text-[10px] font-black tracking-wider text-violet-200"
-    }, "🎟️ ビートP獲得"), React.createElement("b", {
-      className: "mt-0.5 block text-2xl font-black text-white"
-    }, "+", result.eventPointAward.amount.toLocaleString(), "P"), result.eventPointAward.target && React.createElement("span", {
-      className: "mt-1 block text-[9px] font-black text-amber-200"
-    }, "イベント対象曲 1.5倍"), result.eventPointAward.offEvent && React.createElement("span", {
-      "data-rhythm-result-beat-points-off-event": true,
-      className: "mt-1 block text-[9px] font-black text-violet-200"
-    }, "イベント開催中はこの5倍もらえます")), (result.fullCombo || result.allExcellent || result.allMarvelous) && React.createElement("div", {
+      className: `text-[10px] font-black tracking-[.2em] ${rhythmComboTextColor(view.maxCombo)}`
+    }, "MAX COMBO"), React.createElement("b", {
+      "data-rhythm-max-combo": true,
+      className: `block text-[34px] font-black leading-tight tabular-nums [@container(min-width:680px)]:text-[26px] ${rhythmComboTextColor(view.maxCombo)}`
+    }, view.maxCombo), React.createElement("div", {
+      className: "mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black [@container(min-width:680px)]:mt-0 [@container(min-width:680px)]:w-32 [@container(min-width:680px)]:shrink-0"
+    }, React.createElement("span", {
+      "data-rhythm-result-fast": true,
+      className: "rounded-lg bg-cyan-500/15 py-1 text-cyan-200"
+    }, "FAST", React.createElement("b", {
+      className: "block text-sm tabular-nums text-white"
+    }, view.fast)), React.createElement("span", {
+      "data-rhythm-result-slow": true,
+      className: "rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200"
+    }, "SLOW", React.createElement("b", {
+      className: "block text-sm tabular-nums text-white"
+    }, view.slow))))), (() => {
+      const fast = Number(view.fast) || 0,
+        slow = Number(view.slow) || 0;
+      if (calibrating || fast + slow < 12) return null;
+      const early = fast >= slow * 2,
+        late = slow >= fast * 2;
+      if (!early && !late) return null;
+      return React.createElement("p", {
+        "data-rhythm-timing-tendency": true,
+        className: `mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-relaxed ${early ? 'border-cyan-400/30 bg-cyan-950/30 text-cyan-100' : 'border-fuchsia-400/30 bg-fuchsia-950/30 text-fuchsia-100'}`
+      }, early ? 'FASTが多めでした。少し早く叩くくせがあるようです。' : 'SLOWが多めでした。少し遅れて叩くくせがあるようです。', "気になるときは、オプションの「タイミング調整」→「🎯 実際の画面で合わせる」で合わせられます。");
+    })())), (result.fullCombo || result.allExcellent || result.allMarvelous) && React.createElement("div", {
       "data-rhythm-result-celebrate": true,
       className: "my-3 text-center"
     }, React.createElement("b", {
@@ -24664,26 +24853,28 @@ const RhythmTapTest = ({
       }, "🔓 ", opened, " が解放されました！"), React.createElement("small", {
         className: "mt-0.5 block text-[10px] font-bold text-amber-200/90"
       }, "この曲の ", opened, "（Lv.", song.difficulties[opened].level, "）を曲えらびで選べます"));
-    })(), (() => {
-      const total = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (Number(view.counts[id]) || 0), 0);
-      if (!(total > 0)) return null;
-      return React.createElement("div", {
-        "data-rhythm-result-ratio": true,
-        "aria-hidden": "true",
-        className: "mb-2 flex h-2.5 w-full overflow-hidden rounded-full bg-slate-800"
-      }, RHYTHM_JUDGMENT_IDS.map(id => {
-        const count = Number(view.counts[id]) || 0;
-        return count > 0 ? React.createElement("i", {
-          key: id,
-          "data-rhythm-result-ratio-part": id,
-          className: "block h-full",
-          style: {
-            width: `${(count / total * 100).toFixed(2)}%`,
-            background: rhythmJudgmentColor(id)
-          }
-        }) : null;
-      }));
-    })(), (() => {
+    })(), result.luck && (result.luck.draws > 0 || result.luck.points > 0) && React.createElement("div", {
+      "data-rhythm-result-luck": true,
+      className: "mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center"
+    }, React.createElement("small", {
+      className: "block text-[10px] font-black tracking-wider text-lime-200"
+    }, "🍀 ラッキーラッシュ"), React.createElement("b", {
+      className: "mt-0.5 block text-lg font-black tabular-nums text-white"
+    }, Number(result.luck.points).toLocaleString(), "pt"), React.createElement("span", {
+      className: "mt-0.5 block text-[10px] font-bold text-lime-100"
+    }, "抽選 ", result.luck.draws, "回・RUSH ", result.luck.rush, "回", result.luck.bonus > 0 ? `・おまけビートP +${result.luck.bonus}P` : '')), result.eventPointAward && result.eventPointAward.amount > 0 && React.createElement("div", {
+      "data-rhythm-result-beat-points": true,
+      className: "mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center"
+    }, React.createElement("small", {
+      className: "block text-[10px] font-black tracking-wider text-violet-200"
+    }, "🎟️ ビートP獲得"), React.createElement("b", {
+      className: "mt-0.5 block text-2xl font-black text-white"
+    }, "+", result.eventPointAward.amount.toLocaleString(), "P"), result.eventPointAward.target && React.createElement("span", {
+      className: "mt-1 block text-[9px] font-black text-amber-200"
+    }, "イベント対象曲 1.5倍"), result.eventPointAward.offEvent && React.createElement("span", {
+      "data-rhythm-result-beat-points-off-event": true,
+      className: "mt-1 block text-[9px] font-black text-violet-200"
+    }, "イベント開催中はこの5倍もらえます")), (() => {
       const sections = Array.isArray(result.liveLog) ? result.liveLog : [];
       if (!sections.some(section => section.total > 0)) return null;
       const worst = sections.filter(section => section.total >= 3 && section.bad + section.miss > 0).sort((a, b) => (b.bad + b.miss) / b.total - (a.bad + a.miss) / a.total)[0] || null;
@@ -24726,49 +24917,14 @@ const RhythmTapTest = ({
         "data-rhythm-live-log-worst": true,
         className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-300"
       }, worst ? `いちばん崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad + worst.miss}回）。` : 'どの区間も BAD・MISS なしで通せました。'));
-    })(), React.createElement("dl", {
-      className: "grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4"
-    }, RHYTHM_JUDGMENT_IDS.map(id => React.createElement(React.Fragment, {
-      key: id
-    }, id === 'MARVELOUS' && React.createElement(React.Fragment, {
-      key: "precise"
-    }, React.createElement("dt", {
-      "data-rhythm-result-precise-label": true,
-      "data-rhythm-judgment-row": "JUST"
-    }, "JUST MARVELOUS"), React.createElement("dd", {
-      "data-rhythm-result-precise": true,
-      "data-rhythm-judgment-row": "JUST",
-      className: "text-right font-mono"
-    }, Number(view.precise) || 0)), React.createElement("dt", {
-      "data-rhythm-judgment-row": id
-    }, id), React.createElement("dd", {
-      "data-rhythm-judgment-row": id,
-      className: "text-right font-mono"
-    }, view.counts[id]))), React.createElement("dt", {
-      className: rhythmComboTextColor(view.maxCombo)
-    }, "MAX COMBO"), React.createElement("dd", {
-      "data-rhythm-max-combo": true,
-      className: `text-right tabular-nums ${rhythmComboTextColor(view.maxCombo)}`
-    }, view.maxCombo), React.createElement("dt", null, "FAST"), React.createElement("dd", {
-      className: "text-right"
-    }, view.fast), React.createElement("dt", null, "SLOW"), React.createElement("dd", {
-      className: "text-right"
-    }, view.slow)), (() => {
-      const fast = Number(view.fast) || 0,
-        slow = Number(view.slow) || 0;
-      if (calibrating || fast + slow < 12) return null;
-      const early = fast >= slow * 2,
-        late = slow >= fast * 2;
-      if (!early && !late) return null;
-      return React.createElement("p", {
-        "data-rhythm-timing-tendency": true,
-        className: `mt-2 rounded-xl border px-3 py-2 text-[10px] font-bold leading-relaxed ${early ? 'border-cyan-400/30 bg-cyan-950/30 text-cyan-100' : 'border-fuchsia-400/30 bg-fuchsia-950/30 text-fuchsia-100'}`
-      }, early ? 'FASTが多めでした。少し早く叩くくせがあるようです。' : 'SLOWが多めでした。少し遅れて叩くくせがあるようです。', "気になるときは、オプションの「タイミング調整」→「🎯 実際の画面で合わせる」で合わせられます。");
-    })(), React.createElement("div", {
+    })()), React.createElement("div", {
       "data-rhythm-result-actions": true,
-      className: "sticky bottom-0 -mx-4 mt-3 bg-gradient-to-t from-slate-950 via-slate-950/95 to-slate-950/0 px-4 pb-1 pt-3"
+      className: "relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2",
+      style: {
+        paddingBottom: 'calc(.5rem + env(safe-area-inset-bottom))'
+      }
     }, React.createElement("div", {
-      className: "grid grid-cols-1 gap-2"
+      className: "grid grid-cols-2 gap-2"
     }, React.createElement("button", {
       className: "min-h-[48px] rounded-xl bg-fuchsia-700 font-black",
       disabled: startLockRef.current,
@@ -24776,7 +24932,7 @@ const RhythmTapTest = ({
     }, "もう一度プレイ"), React.createElement("button", {
       className: "min-h-[48px] rounded-xl bg-indigo-700 font-black",
       onClick: abort
-    }, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る'))));
+    }, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る'))))));
   }
   return React.createElement("main", {
     "data-rhythm-tap-test": true,

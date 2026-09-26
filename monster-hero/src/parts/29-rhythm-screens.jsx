@@ -784,14 +784,30 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       {!song||!difficulty
         ?<p className="text-xs font-bold text-slate-400">遊べる曲がありません。</p>
         :<>
-        <div className="flex items-center gap-3 landscape:block">
-          <div className="w-16 shrink-0 landscape:mx-auto landscape:w-36"><RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/></div>
+        {/* 横向きは「ジャケット(左・2段ぶち抜き) / 曲名(右上) / 自己ベストの札(右下)」。以前はジャケットを大きく
+            縦に積んでいて、高さ390pxの横画面では難易度と「決定」がスクロールしないと見えなかった */}
+        <div className="grid grid-cols-[4rem_minmax(0,1fr)_auto] items-center gap-3 landscape:grid-cols-[6rem_minmax(0,1fr)] landscape:items-start landscape:gap-x-3 landscape:gap-y-1.5">
+          <div className="w-16 shrink-0 landscape:row-span-2 landscape:w-24"><RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/></div>
           {/* ここも一覧と同じ理由で2行分を確保する。曲名が1行か2行かで
               「長さ」「難易度ボタン」「ノーツ数」まで丸ごと上下に動いていた。 */}
-          <div className="min-w-0 flex-1 landscape:mt-2 landscape:text-center">
+          <div className="min-w-0">
             <b data-rhythm-song-title className="block text-sm font-black leading-tight text-white"
               style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:1.25,height:'2.5em'}}>{rhythmSongFullName(song)}</b>
-            <small className="mt-0.5 block text-[10px] font-bold text-slate-400">{rhythmSongLengthLabel(song,chart)}</small>
+            <small className="mt-0.5 block text-[10px] font-bold text-slate-400">{rhythmSongLengthLabel(song,chart)}<span data-rhythm-demo-level className="ml-1.5 text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ</span></small>
+          </div>
+          {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
+              縦向きは曲名の右へ置いて、一覧の高さを減らさない。横向きは曲名の下へ1行で並べる */}
+          <div data-rhythm-song-stats className="w-[7.5rem] shrink-0 rounded-xl border border-white/10 bg-slate-900/80 px-2 py-1 landscape:col-start-2 landscape:grid landscape:w-full landscape:grid-cols-[1fr_auto_auto] landscape:items-center landscape:gap-2.5">
+            <div className="min-w-0">
+              <small className="block text-[8px] font-black tracking-[.15em] text-slate-400">HIGH SCORE{best&&best.played&&!best.clear&&<span data-rhythm-demo-uncleared className="ml-1 tracking-normal text-rose-300">未クリア</span>}</small>
+              <b data-rhythm-demo-best className={`block truncate font-black tabular-nums text-amber-100 ${best&&best.played?'text-[15px] leading-tight':'text-[11px] leading-snug'}`}>
+                {best&&best.played?best.bestScore.toLocaleString():'まだ遊んでいません'}
+              </b>
+            </div>
+            <div className="mt-0.5 flex items-baseline justify-between gap-2 text-[9px] font-black text-slate-400 landscape:contents">
+              <span data-rhythm-demo-rank>RANK <b className={`text-sm ${best&&best.played?RHYTHM_RANK_COLORS[rhythmRankForScore(best.bestScore)]||'text-white':'text-slate-500'}`}>{best&&best.played?rhythmRankForScore(best.bestScore):'—'}</b></span>
+              <span data-rhythm-demo-combo>COMBO <b className={`text-sm tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
+            </div>
           </div>
         </div>
 
@@ -822,17 +838,6 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
             </button>;
           })}
         </div>
-
-        {/* 「Lv./ノーツ」と自己ベストは同じ1本の行に置く。別々の段に分けていたころは
-            そのぶん一覧の高さを取っていた。狭い画面では折り返して2行になる。 */}
-        <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[10px] font-bold">
-          <span data-rhythm-demo-level className="text-slate-300">Lv.{chart.level} / {chart.totalNotes}ノーツ</span>
-          <span data-rhythm-demo-best className="text-amber-200">
-            {best&&best.played
-              ?<>{difficulty.id}の自己ベスト {best.bestScore.toLocaleString()}（ランク {rhythmRankForScore(best.bestScore)}） / 最大コンボ {best.maxCombo}{best.clear?'':' / まだクリアしていません'}</>
-              :<>まだ遊んでいません</>}
-          </span>
-        </p>
 
         <div className="mt-1.5 flex gap-2">
           <button type="button" data-rhythm-song-random onClick={pickRandom}
