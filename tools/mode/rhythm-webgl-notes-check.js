@@ -14,7 +14,8 @@
 // ノーツの描き方をどちらでも描ける命令へ直す。Playwright が無い環境では SKIP。
 //   node tools/mode/rhythm-webgl-notes-check.js
 const fs=require('fs'),path=require('path'),http=require('http');
-const ROOT=path.resolve(__dirname,'../..'),PORT=8987;
+// 番号はほかの検査と重ねない(まとめて回したときにぶつかるため)
+const ROOT=path.resolve(__dirname,'../..'),PORT=9173;
 let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 const PAGE=`<!doctype html><html><head><meta charset="utf-8"><style>
