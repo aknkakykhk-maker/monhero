@@ -1585,18 +1585,50 @@ scheduleTick();};
 {/* ===== リザルトの並び(2026-09-26・ユーザー依頼「リザルト画面や曲選択画面をこれを参考にしたい」＝バンドリ！のリザルト) =====
     上から「曲の札(ジャケット・曲名・難易度・ランクのゲージ・ランク)」→「SCORE と自己ベスト」→「判定の表と MAX COMBO」。
     そのあとに周回・ビートP・解放・ライブログを並べ、ボタンは下の帯へ固定する(スクロールしても隠れない・中身も隠さない)。
-    器の幅が680px以上(スマホの横向き)のときは左にマスモンの大きな絵を置き、右を2列(曲の札とスコア / 判定)にして、1画面で結果が読めるようにする。
+    器の幅が680px以上(スマホの横向き)のときは左にマスモンの絵を細めに置き(22%)、右は「曲の札(2列ぶち抜き)」の下に「スコア | 判定の表とMAX COMBO」を並べて、1画面で結果が読めるようにする
+    (2026-09-26・ユーザー指摘「マスモンで左全部取るせいで横スペースがうまく使えてない」。31%あって、スコアと判定が縦に積まれ画面の外へはみ出していた)。
     ★向き(landscape:)ではなく器の幅で分ける。タブレットの横向きは枠が600px幅のままなので、2列にすると詰まる
     ★背景のジャケットのぼかしは止まった絵を1回描くだけ。軽量モードでは出さない(index.html) */}
 {hudArtSrc&&<div data-rhythm-result-backdrop aria-hidden="true" style={{backgroundImage:`url("${hudArtSrc}")`}}/>}
 <div data-rhythm-result-frame className="relative flex min-h-0 flex-1 flex-col [@container(min-width:680px)]:flex-row">
 {/* 横に広いときだけ、左に演奏に連れていったマスモンを大きく出す。どの子かは rhythmResultHeroIndex が決める(モンスターノーツを取れた子からランダム。2026-09-26 ユーザーが選んだ決め方)。絵は両サイドのマスモン用に焼いた1枚(sideArtUrls)を使い回す。
     マスモンがいないときは曲のジャケットを出す */}
-{(()=>{const art=heroArt;if(!art&&!hudArtSrc)return null;return <aside data-rhythm-result-hero aria-hidden="true" className="relative hidden w-[31%] max-w-[360px] shrink-0 items-center justify-center p-3 [@container(min-width:680px)]:flex">{art?<img data-rhythm-result-hero-art src={art} alt="" draggable={false} decoding="async" className="relative max-h-full w-full object-contain"/>:<img data-rhythm-result-hero-jacket src={hudArtSrc} alt="" draggable={false} decoding="async" className="relative aspect-square w-[82%] rounded-2xl border border-white/20 object-cover"/>}</aside>;})()}
+{/* ★マスモンの下に、この演奏で入ったもの(クイック∞周回・経験値・ダイヤ・ビートP・ラッキーラッシュ)をまとめて出す
+    (2026-09-26・ユーザー指摘「マスモン表示エリアがもったいなく感じる」→「欄は残し、獲得物も出す」を選んだ)。
+    横に広いときは下の同じ札を隠すので、同じことが2か所に出ることはない。縦持ちは今までどおり下の札だけ */}
+{(()=>{const art=heroArt;
+  const runOk=!!quickRunAward&&quickRunAward.loops>0,runFailed=!!quickRunAward&&quickRunAward.loops===0&&quickRunAward.cleared===false;
+  const beat=result.eventPointAward&&result.eventPointAward.amount>0?result.eventPointAward:null;
+  const luck=result.luck&&(result.luck.draws>0||result.luck.points>0)?result.luck:null;
+  const gains=runOk||runFailed||!!beat||!!luck;
+  if(!art&&!hudArtSrc&&!gains)return null;
+  return <aside data-rhythm-result-hero className="relative hidden w-[22%] max-w-[220px] shrink-0 flex-col items-center justify-center gap-2 p-2 [@container(min-width:680px)]:flex">
+  {(art||hudArtSrc)&&<div aria-hidden="true" className="relative flex min-h-0 w-full flex-1 items-center justify-center">{art?<img data-rhythm-result-hero-art src={art} alt="" draggable={false} decoding="async" className="relative max-h-full w-full object-contain"/>:<img data-rhythm-result-hero-jacket src={hudArtSrc} alt="" draggable={false} decoding="async" className="relative aspect-square w-[82%] rounded-2xl border border-white/20 object-cover"/>}</div>}
+  {gains&&<div data-rhythm-result-hero-gains className="relative w-full shrink-0 space-y-1.5 text-left">
+    {runOk&&<div data-rhythm-result-hero-gains-run className="rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/60 px-2 py-1.5">
+      <div className="flex items-baseline justify-between gap-1"><span className="text-[9px] font-black text-fuchsia-200">クイック∞周回</span><b className="text-[15px] font-black leading-none text-white">+{quickRunAward.loops}周</b></div>
+      {quickRunAward.eventBoosted&&<div className="mt-0.5 text-[9px] font-black text-amber-200">🏆 イベント対象曲 ×{quickRunAward.scale}</div>}
+      <div className="mt-0.5 text-[9px] font-black text-slate-300">{quickRunAward.fromLoop}周目 → {quickRunAward.toLoop}周目</div>
+      <div className="mt-0.5 flex flex-wrap gap-x-2 text-[9px] font-bold text-slate-300">
+        <span>経験値 <b className="text-cyan-300">+{Number(quickRunAward.xp||0).toLocaleString()}</b></span>
+        <span>ダイヤ <b className="text-amber-300">+{Number(quickRunAward.gold||0).toLocaleString()}</b></span>
+        {quickRunAward.bond>0&&<span>絆 <b className="text-pink-300">+{Number(quickRunAward.bond).toLocaleString()}</b></span>}
+        {quickRunAward.psyche>0&&<span>🌈 <b className="text-fuchsia-200">+{Number(quickRunAward.psyche).toLocaleString()}</b></span>}
+        {quickRunAward.shard>0&&<span>🎖️ <b className="text-amber-200">+{Number(quickRunAward.shard).toLocaleString()}</b></span>}
+      </div>
+    </div>}
+    {runFailed&&<div data-rhythm-result-hero-gains-run-failed className="rounded-xl border border-rose-400/50 bg-rose-950/60 px-2 py-1.5">
+      <div className="flex items-baseline justify-between gap-1"><span className="text-[9px] font-black text-rose-200">クイック∞周回</span><b className="text-[15px] font-black leading-none text-rose-200">+0周</b></div>
+      <p className="mt-0.5 text-[9px] font-bold leading-snug text-rose-100">ライフが0になったので周回クリアになりません（クリアなら +{Number(quickRunAward.baseLoops||0)}周）</p>
+    </div>}
+    {beat&&<div data-rhythm-result-hero-gains-beat className="flex items-baseline justify-between gap-1 rounded-xl border border-violet-400/50 bg-violet-950/60 px-2 py-1.5"><span className="whitespace-nowrap text-[9px] font-black text-violet-200">🎟️ ビートP{beat.target?' ×1.5':''}</span><b className="text-[15px] font-black leading-none text-white">+{beat.amount.toLocaleString()}P</b></div>}
+    {luck&&<div data-rhythm-result-hero-gains-luck className="flex items-baseline justify-between gap-1 rounded-xl border border-lime-300/50 bg-lime-950/50 px-2 py-1.5"><span className="text-[9px] font-black text-lime-200">🍀 ラッキー</span><b className="text-[13px] font-black leading-none tabular-nums text-white">{Number(luck.points).toLocaleString()}pt</b></div>}
+  </div>}
+</aside>;})()}
 <div data-rhythm-result-body className="relative flex min-h-0 min-w-0 flex-1 flex-col">
 <div data-rhythm-result-scroll className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3">
-<h2 className="mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200">RHYTHM RESULT</h2>
-<div data-rhythm-result-summary className="[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-2 [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2">
+<h2 className="mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200 [@container(min-width:680px)]:hidden">RHYTHM RESULT</h2>
+<div data-rhythm-result-summary className="[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2">
 {/* 横に広いときは、曲の札だけを2列ぶち抜きで上に置く(2026-09-26・ユーザー報告「また曲名切れ」)。
     半分の幅に曲の札を入れていたら、曲名が「魔窟…」になり、Lv.とランクのゲージもランクの丸に押しつぶされていた。
     この箱は横に広いときだけ中身を格子へそのまま並べ(contents)、曲の札=1行目の2列、スコア=左、判定=右(2行ぶん)にする */}
@@ -1617,7 +1649,7 @@ scheduleTick();};
 </section>
 {/* アシストモード・ミラー譜面で遊んだことを、結果の上で言う。アシストは記録に残らないことも添える */}
 {(result.assist||result.mirror)&&<div data-rhythm-result-play-mode className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">{result.assist&&<span className="rounded-full border border-emerald-300/60 bg-emerald-500/15 px-2 py-0.5 text-emerald-100">🛟 アシストモード（スコア8割・記録には残りません{Number(result.assistGuarded)>0?`・ガード${Number(result.assistGuarded)}回`:''}）</span>}{result.mirror&&<span className="rounded-full border border-sky-300/60 bg-sky-500/15 px-2 py-0.5 text-sky-100">↔ ミラー譜面</span>}</div>}
-<section data-rhythm-result-score-card className="mt-2 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">
+<section data-rhythm-result-score-card className="mt-2 min-w-0 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">
   {/* 2026-09-26 に見本の大きさへ(ユーザー指示「見本のほうがサイズ感が見やすい」)。SCOREの数字を大きく、
       縦持ちでも左にマスモンを出す(横に広いときは左の欄に出ているので、ここでは出さない) */}
   <div className="flex items-center gap-2">
@@ -1642,11 +1674,11 @@ scheduleTick();};
 {(()=>{const before=runRef.current?.startBest;const prev=before&&before.played?Number(before.bestScore)||0:0;if(!(prev>0))return null;const diff=view.score-prev;return <p data-rhythm-best-diff className={`text-[11px] font-black tabular-nums ${diff>0?'text-emerald-300':'text-slate-400'}`}>{diff>0?`前の自己ベストから +${diff.toLocaleString()}`:diff===0?'自己ベストと同じスコア':`自己ベストまで あと ${(-diff).toLocaleString()}`}</p>;})()}
 </section>
 </div>
-<div data-rhythm-result-summary-judgments className="mt-2 [@container(min-width:680px)]:col-start-2 [@container(min-width:680px)]:row-start-2 [@container(min-width:680px)]:row-span-2 [@container(min-width:680px)]:mt-0">
+<div data-rhythm-result-summary-judgments className="mt-2 min-w-0 [@container(min-width:680px)]:col-start-2 [@container(min-width:680px)]:row-start-2 [@container(min-width:680px)]:row-span-2 [@container(min-width:680px)]:mt-0">
 {/* 判定の割合を1本の帯で。数字の表を読む前に、どの判定が多かったかが色でひと目で分かる。
     色は遊んでいるときに弾ける光と同じ(rhythmJudgmentColor)。0件の判定は帯に出さない */}
 {(()=>{const total=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(view.counts[id])||0),0);if(!(total>0))return null;return <div data-rhythm-result-ratio aria-hidden="true" className="mb-1.5 flex h-2 w-full overflow-hidden rounded-full bg-slate-800">{RHYTHM_JUDGMENT_IDS.map(id=>{const count=Number(view.counts[id])||0;return count>0?<i key={id} data-rhythm-result-ratio-part={id} className="block h-full" style={{width:`${(count/total*100).toFixed(2)}%`,background:rhythmJudgmentColor(id)}}/>:null;})}</div>;})()}
-<section data-rhythm-result-judgments className="flex items-stretch gap-2 [@container(min-width:680px)]:flex-col">
+<section data-rhythm-result-judgments className="flex items-stretch gap-2">
 <dl data-rhythm-result-judgment-table className="grid min-w-0 flex-1 grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 text-[15px] italic">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
   {/* ★ぴったりのMARVELOUS(前後0.02秒以内)の回数。MARVELOUSの**内数**だが、並びは
       MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示「普通に表示はMarvelousの上に
@@ -1665,10 +1697,10 @@ scheduleTick();};
 </React.Fragment>)}
 </dl>
 {/* MAX COMBO は判定の表の右に大きく出す(バンドリ！の COMBO の置き方)。色は遊んでいるときの段と同じ */}
-<div data-rhythm-result-combo className="flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-full [@container(min-width:680px)]:flex-row [@container(min-width:680px)]:justify-between [@container(min-width:680px)]:gap-3 [@container(min-width:680px)]:px-3 [@container(min-width:680px)]:py-1.5">
+<div data-rhythm-result-combo className="flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-[31%]">
   <small className={`text-[10px] font-black tracking-[.2em] ${rhythmComboTextColor(view.maxCombo)}`}>MAX COMBO</small>
-  <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums [@container(min-width:680px)]:text-[26px] ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</b>
-  <div className="mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black [@container(min-width:680px)]:mt-0 [@container(min-width:680px)]:w-32 [@container(min-width:680px)]:shrink-0"><span data-rhythm-result-fast className="rounded-lg bg-cyan-500/15 py-1 text-cyan-200">FAST<b className="block text-sm tabular-nums text-white">{view.fast}</b></span><span data-rhythm-result-slow className="rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200">SLOW<b className="block text-sm tabular-nums text-white">{view.slow}</b></span></div>
+  <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</b>
+  <div className="mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"><span data-rhythm-result-fast className="rounded-lg bg-cyan-500/15 py-1 text-cyan-200">FAST<b className="block text-sm tabular-nums text-white">{view.fast}</b></span><span data-rhythm-result-slow className="rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200">SLOW<b className="block text-sm tabular-nums text-white">{view.slow}</b></span></div>
 </div>
 </section>
 {/* FAST と SLOW が大きく片寄ったときだけ、くせをひとこと。
@@ -1686,7 +1718,7 @@ scheduleTick();};
 {/* 裏で∞周回していたのに失敗したとき。1周も入らないので、その理由をここで言う
     (2026-09-12・ユーザー指示「失敗しても入るようにすると放置で稼げるようになるから失敗は0にして」)。
     ★裏で周回していない人にはそもそも出ない(quickRunAwardがnullのまま) */}
-{quickRunAward&&quickRunAward.loops===0&&quickRunAward.cleared===false&&<div data-rhythm-result-quick-run-failed className="my-3 rounded-2xl border border-rose-400/50 bg-rose-950/30 p-3 text-left">
+{quickRunAward&&quickRunAward.loops===0&&quickRunAward.cleared===false&&<div data-rhythm-result-quick-run-failed className="my-3 rounded-2xl border border-rose-400/50 bg-rose-950/30 p-3 text-left [@container(min-width:680px)]:hidden">
   <div className="flex items-baseline justify-between gap-2">
     <span className="text-[10px] font-black tracking-wider text-rose-200">クイック∞周回</span>
     <b className="text-lg font-black leading-none text-rose-200">+0周</b>
@@ -1694,7 +1726,7 @@ scheduleTick();};
   <p className="mt-1 text-[10px] font-bold leading-relaxed text-rose-100">ライフが0になったので、周回クリアにはなりません（クリアしていれば +{Number(quickRunAward.baseLoops||0)}周でした）。経験値・ダイヤ・絆・虹のプシュケーも入りません。</p>
   <p className="mt-1 text-[9px] font-bold leading-relaxed text-slate-400">裏の周回は止まっていたぶんを取り戻しながら、そのまま続きます。</p>
 </div>}
-{quickRunAward&&quickRunAward.loops>0&&<div data-rhythm-result-quick-run className="my-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/30 p-3 text-left">
+{quickRunAward&&quickRunAward.loops>0&&<div data-rhythm-result-quick-run className="my-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/30 p-3 text-left [@container(min-width:680px)]:hidden">
   <div className="flex items-baseline justify-between gap-2">
     <span className="text-[10px] font-black tracking-wider text-fuchsia-200">クイック∞周回</span>
     <b className="text-lg font-black leading-none text-white">+{quickRunAward.loops}周</b>
@@ -1716,8 +1748,8 @@ scheduleTick();};
     ★前の記録がまだクリアしていなかったときだけ(=このプレイで初めて開いたときだけ)出す。
     ★練習・タイミング合わせ・デバッグから始めたプレイは記録に残らないので出さない */}
 {(()=>{if(tutorial||calibrating||debugPlay||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;const opened=Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id=>RHYTHM_DIFFICULTY_UNLOCK_BY[id]===difficulty.id&&rhythmChartPlayable(song,id));if(!opened)return null;return <div data-rhythm-result-unlock={opened} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {opened}（Lv.{song.difficulties[opened].level}）を曲えらびで選べます</small></div>;})()}
-{result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
-{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
+{result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
+{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
 {(()=>{const sections=Array.isArray(result.liveLog)?result.liveLog:[];if(!sections.some(section=>section.total>0))return null;const worst=sections.filter(section=>section.total>=3&&(section.bad+section.miss)>0).sort((a,b)=>(b.bad+b.miss)/b.total-(a.bad+a.miss)/a.total)[0]||null;return <div data-rhythm-live-log className="mb-2 rounded-2xl border border-white/10 bg-slate-900/70 px-3 py-2">
   <div className="flex items-baseline justify-between"><b className="text-[11px] font-black tracking-wider text-cyan-200">ライブログ</b><small className="text-[9px] font-bold text-slate-400">棒＝MARVELOUS・EXCELLENTの割合 / 数字＝BAD・MISS</small></div>
