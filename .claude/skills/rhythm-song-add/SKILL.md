@@ -119,9 +119,10 @@ node -e "require('./tools/node_modules/sharp')('<元絵>')
 node tools/mode/rhythm-audio-analyze-v3.js --track <track_id> --write
 ```
 
-初めて解析すると、一覧のその曲へ `"chartRevision": <最新>`（譜面の作り方のリビジョン。2026-09-26 時点で 11）が自動で入る。
+初めて解析すると、一覧のその曲へ `"chartRevision": <最新>`（譜面の作り方のリビジョン。2026-09-26 時点で 12）が自動で入る。
 Rev.9 からは、パイプライン（`--write`）が生成の前に音の層の解析 `authoring/<曲>-v3-layers.json` を作る（主役の追跡の材料。**コミットに含める**）。
 生成のときに `主役の追跡: ドラム◯小節・歌や主旋律◯小節…` と出ていれば効いている（`効かない` と出たら層の解析を作り直す）。
+Rev.12 からは、パイプラインが生成の直後に区間の差し替え（`rhythm-chart-v3-splice.js --apply`）を通す。難易度ごとに `差し替えた` / `差し替えない（理由）` と出る。
 **消さない**。新しい曲だけが最新の作り方で作られる（既存曲は書いてあるリビジョンのまま）。
 中身の一覧は `tools/mode/rhythm-chart-v3-revision.js` の冒頭。Rev.8 は横フリックの向きを払う指の動きで決め、
 写しの小節の FLICK も元の小節に揃える（`docs/spec/RHYTHM_CHART_ENGINE_ROADMAP.md` の段1）。

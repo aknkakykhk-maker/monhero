@@ -1391,7 +1391,7 @@ Rev.2では、外側に余地が無いときだけ**HOLDを内側へ1〜2レー�
 - 効いた作法はノーツに `knowledge:[id]` として印を残す（作者用の譜面だけ。ゲームへ書き出す形には入らない）
 - 新しい作法は `KNOWLEDGE` へ1件足すだけで効く。足したら `rhythm-chart-knowledge-check.js` に「効く場面」を1つ書く
 
-#### 学び直し（作り方の最新の次の番号から。2026-09-26 時点で Rev.12〜。Rev.8〜11 は作り方の改良 3.1.22〜3.1.25 に使った）
+#### 学び直し（作り方の最新の次の番号から。2026-09-26 時点で Rev.13〜。Rev.8〜12 は作り方の改良 3.1.22〜3.1.26 に使った）
 
 作法の重みの初めの値（すべて1）は、よその作品の一般的な作り方から決めた仮の値。このゲームで遊んだ感想で直していく。
 
@@ -1506,6 +1506,19 @@ Rev.7 の譜面が authoring/ と1バイトも同じ／Rev.8 の横フリック�
 - 形の記憶（3.1.7）の3回目ごとの選び直しは今までどおり（やめると記憶の形が小節単位の写しより先に採られ、写し率が下がった）
 
 実測は ROADMAP の段4。検査: `node tools/mode/rhythm-chart-rev11-check.js`（発展の後押しを外すと落ちることを確認済み）。
+
+### 3.1.26 悪い区間だけ別の候補に替える（2026-09-26・Rev.12）
+
+「品質が悪ければ譜面全体を作り直す」のではなく「悪い区間だけ直す」。生成器の `--variant` は、ノーツの位置をほぼそのままに形だけが違う候補を作る。
+`rhythm-chart-v3-splice.js` が候補を4本作り、曲の区切りごとに気になり点（`rhythm-chart-feel-report.js` と同じ数え方）を数えて、区切りごとに良い候補を継ぎ合わせる。
+
+- 同じ名札（A・B…）の区切りはまとめて同じ候補を採る（1番と2番で違う候補を採ると「同じフレーズは同じ形」が崩れる）
+- 気になり点が同じなら候補0（いまの作り方）。継ぎ目で押せない所が出たら、その区切り（と前の区切り）は候補0へ戻す
+- 公開の流れでは Rev.12 以降の曲だけ、生成の直後・自動修正の前に `--apply` で呼ばれる。関門（押せない配置が無い・品質の6軸の合計が
+  候補0より下がらない・気になり点が1以上減る）を通った難易度だけ差し替える。気になり点の重みはまだ仮なので、6軸が下がらないことで守る
+- 分かったこと: HARD では候補がどれも同じ譜面になる（候補の作り方が HARD の形の選び方に効いていない。未調査）
+
+実測は ROADMAP の段5。検査: `node tools/mode/rhythm-chart-v3-splice-check.js`（選び方を逆にすると落ちることを確認済み）。
 
 ### 3.1.6 譜面文法 — 形を「順位」でなく「点数」で選ぶ（2026-09-07）
 
@@ -1906,6 +1919,7 @@ maimai の無理配置の分類など。動画そのものは見ていない）�
 | 3.1.23 主役の追跡 | 生成器の `focusData` / `FOCUS_SCALE`（Rev.9）＋ `rhythm-chart-focus.js` ＋ 音の層の解析 `rhythm-audio-layers-v3.js` | `rhythm-chart-rev9-check.js` / `rhythm-audio-layers-v3-check.js` |
 | 3.1.24 動きの使い回しを避ける | 生成器の `motionVariety` / `motionRepeatsFor`（Rev.10） | `rhythm-chart-rev10-check.js` / `rhythm-chart-feel-report.js` |
 | 3.1.25 繰り返すたびの発展・主役に合わせた種類 | 生成器の `rev11` / `developBar` / `lastChorus` / `typeBonusRev11`（Rev.11） | `rhythm-chart-rev11-check.js` |
+| 3.1.26 悪い区間だけ別の候補に替える | `rhythm-chart-v3-splice.js`（`spliceCharts` / `spliceGate`）＋ パイプラインの差し替えの段（Rev.12） | `rhythm-chart-v3-splice-check.js` |
 | 3.1.6 譜面文法 / 3.1.7 指紋 | `rhythm-chart-v3-patterns.js` の `rankShapes` / 生成器の `motifKeyOf` | `rhythm-chart-quality-report.js`（語彙・偏り・フレーズ一致） |
 | 10. 品質の6軸 | `rhythm-chart-quality-report.js` | パイプラインのゲート |
 | 2. レイヤリング | `rhythm-audio-analyze-v3.js`（音の性格）＋ V3生成 | `rhythm-audio-analyze-v3-check.js` |

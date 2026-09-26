@@ -82,6 +82,9 @@ else console.log(`✓ 音源解析は既にある（やり直すなら --reanaly
   }
 }
 step('生成（音の種類・高さ・形の語彙から組み立てる）','rhythm-chart-v3-generate.js',write?['--write']:[]);
+// Rev.12〜: 区間の差し替え(段5)。候補を数本作り、関門(押せない配置が無い・品質の6軸が下がらない・気になり点が減る)を
+//   通った難易度だけ、生成した譜面を区間ごとに良い候補で継ぎ合わせる。Rev.12 より前の曲では何もしない(道具の側で見る)
+if(write)step('区間の差し替え（悪い区間だけ別の候補に替える）','rhythm-chart-v3-splice.js',['--apply']);
 if(write)step('自動修正（押せない・忙しい配置をレーンだけ直す）','rhythm-chart-v2-step7-autofix.js',['--source','v3','--write']);
 
 // --- 検証 ---
