@@ -19830,10 +19830,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(pressed){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fill();}
     const sideDir=rhythmNoteVisualType(note)==='FLICK'&&!failed?rhythmFlickDir(note):'';
     if(sideDir){
-      // 横フリック: 粒の上に向きの山形を重ねる。横幅は粒に合わせて伸ばしすぎない
+      // 横フリック: 向きの山形は粒の**すぐ上**に並べる(上フリックの矢印と同じ置き方)。
+      // 以前は粒の上に重ねていて、山形の光で粒が隠れ、落ちてくるあいだ矢印しか見えなかった
+      // (2026-09-26・実機「横フリックの矢印とノーツがかぶって、矢印しか見えなくて視覚性が悪い」)。横幅は粒に合わせて伸ばしすぎない
       const sprite=sideChevronSprite(sideDir);
       const aw=Math.min((sprite.tw+sprite.margin*2)*sizeMul,w+sprite.margin*2),ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
-      ctx.drawImage(sprite.canvas,cx-aw/2,cy-ah/2,aw,ah);
+      ctx.drawImage(sprite.canvas,cx-aw/2,y-2*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale,aw,ah);
     }else if(rhythmNoteVisualType(note)==='FLICK'&&!failed){
       const sprite=arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       const aw=(sprite.tw+sprite.margin*2)*sizeMul,ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
