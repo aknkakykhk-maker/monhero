@@ -186,6 +186,118 @@ const rhythmStageSparkSprite=(layer,scale)=>{
   g.fillStyle=grad;g.fillRect(0,0,size,size);
   return c;
 };
+// ===== ライブ背景を WebGL で1枚に描く(2026-09-26) =====
+// 描画方式が WebGL のとき(デバッグ画面の「ライブ背景の描き方(検証用)」で切り替えられる)は、
+// ジャケット・暗幕・サーチライト・光の粒を、canvas 1枚へ1回の描画でまとめて描く。
+// CSS 版は「引き伸ばしたジャケット」「暗幕」「サーチライト2枚」「画面の2倍の高さの粒の層2枚」を毎フレーム重ね合わせており、
+// GPU は画面およそ7枚ぶんを塗っている。こちらは画面1枚ぶんを、1秒に30回まで塗り直すだけで済む(動きがゆっくりなので見分けがつかない)。
+// 形・位置・色・動きの速さは CSS 版(index.html の [data-rhythm-stage] と RHYTHM_STAGE_*)を写した。
+// ★ノーツのタイミングの光([data-rhythm-stage-pulse])はレーンの上に置く必要があるので、ここでは描かない(CSS 版のまま)。
+const RHYTHM_STAGE_GL_KEY='mh_rhythm_stage_gl_v1';
+const rhythmStageGlPreference=()=>{try{if(typeof localStorage==='undefined')return '';const value=localStorage.getItem(RHYTHM_STAGE_GL_KEY);return value==='css'||value==='webgl'?value:'';}catch{return '';}};
+const rhythmStageGlSetPreference=value=>{
+  const next=value==='css'||value==='webgl'?value:'';
+  try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_STAGE_GL_KEY,next);else localStorage.removeItem(RHYTHM_STAGE_GL_KEY);}}catch{}
+  return next;
+};
+// デバッグ画面の指定があればそれに従い、無ければノーツの描き方に合わせる(ノーツが WebGL のときだけ)
+const rhythmStageGlActive=webglNotes=>{const pref=rhythmStageGlPreference();if(pref)return pref==='webgl';return !!webglNotes;};
+// CSS の cubic-bezier と同じ緩急(x から y を求める)
+const rhythmCubicBezier=(x1,y1,x2,y2)=>{
+  const at=(a,b,t)=>((1-3*b+3*a)*t+(3*b-6*a))*t*t+3*a*t;
+  return x=>{if(x<=0)return 0;if(x>=1)return 1;let lo=0,hi=1,t=x;for(let i=0;i<20;i++){const v=at(x1,x2,t);if(Math.abs(v-x)<1e-5)break;if(v<x)lo=t;else hi=t;t=(lo+hi)/2;}return at(y1,y2,t);};
+};
+const rhythmStageEaseInOut=rhythmCubicBezier(.42,0,.58,1),rhythmStageEaseOut=rhythmCubicBezier(0,0,.58,1);
+const RHYTHM_STAGE_GL_DOTS=RHYTHM_STAGE_SPARKS.flatMap((layer,index)=>layer.dots.map(([x,y])=>[x/100,y/100,index]));
+const RHYTHM_STAGE_GL_BEAM_RGBA=RHYTHM_STAGE_BEAM_COLORS.map(color=>(color.match(/[\d.]+/g)||[]).map(Number));
+const RHYTHM_STAGE_GL_VS='attribute vec2 aPos;uniform vec2 uSize;varying vec2 vP;void main(){vP=vec2((aPos.x+1.)*.5*uSize.x,(1.-aPos.y)*.5*uSize.y);gl_Position=vec4(aPos,0.,1.);}';
+const RHYTHM_STAGE_GL_FS=`#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec2 vP;
+uniform vec2 uSize;uniform sampler2D uArt;uniform float uArtA,uFx;
+uniform vec4 uBeamL,uBeamR,uBeamC;uniform vec2 uBeamBox;uniform vec4 uDots[${RHYTHM_STAGE_GL_DOTS.length}];
+vec4 over(vec4 c,vec4 s){return s+c*(1.-s.a);}
+vec4 tint(vec3 rgb,float a){return vec4(rgb*a,a);}
+float beam(vec4 b){vec2 d=vP-b.zw;vec2 l=vec2(b.x*d.x+b.y*d.y,-b.y*d.x+b.x*d.y);
+  float hw=mix(.06,.5,clamp(l.y/uBeamBox.y,0.,1.))*uBeamBox.x;
+  return clamp(hw-abs(l.x)+.5,0.,1.)*clamp(l.y+.5,0.,1.)*clamp(1.-l.y/(.78*uBeamBox.y),0.,1.);}
+vec4 spark(float r,float core,float mid,float end){
+  vec4 a=vec4(vec3(236.,254.,255.)/255.*.95,.95),b=vec4(vec3(103.,232.,249.)/255.*.35,.35);
+  if(r<=core)return a;if(r<=mid)return mix(a,b,(r-core)/(mid-core));if(r<end)return mix(b,vec4(0.),(r-mid)/(end-mid));return vec4(0.);}
+void main(){
+  vec4 c=vec4(0.);
+  vec2 uv=(vP-vec2(-.12,-.08)*uSize)/(vec2(1.24,1.16)*uSize);
+  vec4 art=texture2D(uArt,uv);c=art*uArtA;
+  float y=vP.y/uSize.y;
+  float lin=y<.12?mix(.62,.3,y/.12):y<.35?mix(.3,.05,(y-.12)/.23):y<.7?mix(.05,.2,(y-.35)/.35):mix(.2,.55,(y-.7)/.3);
+  vec3 dark=vec3(3.,4.,11.)/255.;
+  c=over(c,tint(dark,lin));
+  float t=length((vP-vec2(.5,.45)*uSize)/(vec2(.7,.55)*uSize));
+  float rad=t<.7?mix(.62,.18,t/.7):t<1.?mix(.18,0.,(t-.7)/.3):0.;
+  c=over(c,tint(dark,rad));
+  if(uFx>.5){
+    c=over(c,tint(uBeamC.rgb,uBeamC.a*beam(uBeamL)));
+    c=over(c,tint(uBeamC.rgb,uBeamC.a*beam(uBeamR)));
+    vec4 far=vec4(0.),near=vec4(0.);
+    for(int i=0;i<${RHYTHM_STAGE_GL_DOTS.length};i++){vec4 d=uDots[i];
+      float r=min(length(vP-d.xy),length(vP-vec2(d.x,d.y+uSize.y)));
+      if(d.w<.5)far=over(far,spark(r,1.,2.,4.));else near=over(near,spark(r,2.,3.,5.));}
+    c=over(c,far*.55);c=over(c,near*.7);
+  }
+  gl_FragColor=c;
+}`;
+// canvas へ WebGL の描き込み先を作る。作れなければ null(呼び出し側は CSS 版へ戻す)
+const rhythmCreateStageGL=canvas=>{
+  if(!canvas||typeof canvas.getContext!=='function')return null;
+  const attrs={alpha:true,premultipliedAlpha:true,antialias:false,depth:false,stencil:false,preserveDrawingBuffer:false};
+  let gl=null;try{gl=canvas.getContext('webgl',attrs)||canvas.getContext('experimental-webgl',attrs);}catch(e){gl=null;}
+  if(!gl)return null;
+  const shader=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return gl.getShaderParameter(s,gl.COMPILE_STATUS)?s:null;};
+  const vs=shader(gl.VERTEX_SHADER,RHYTHM_STAGE_GL_VS),fs=shader(gl.FRAGMENT_SHADER,RHYTHM_STAGE_GL_FS);
+  if(!vs||!fs)return null;
+  const prog=gl.createProgram();gl.attachShader(prog,vs);gl.attachShader(prog,fs);gl.bindAttribLocation(prog,0,'aPos');gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog,gl.LINK_STATUS))return null;
+  gl.useProgram(prog);
+  const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+  const tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));
+  gl.disable(gl.BLEND);gl.disable(gl.DEPTH_TEST);gl.clearColor(0,0,0,0);
+  const u={};['uSize','uArt','uArtA','uFx','uBeamL','uBeamR','uBeamC','uBeamBox','uDots'].forEach(name=>{u[name]=gl.getUniformLocation(prog,name);});
+  gl.uniform1i(u.uArt,0);
+  const dots=new Float32Array(RHYTHM_STAGE_GL_DOTS.length*4);
+  return {
+    setArt(source){try{gl.bindTexture(gl.TEXTURE_2D,tex);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);return true;}catch(e){return false;}},
+    // w,h … CSS px / scale … 画素密度 / timeMs … 動きの時刻 / artA … ジャケットの濃さ / fx … サーチライトと粒を出すか / tier … 色の段
+    draw({w,h,scale,timeMs,artA,fx,tier}){
+      if(gl.isContextLost())return;
+      const pw=Math.max(1,Math.round(w*scale)),ph=Math.max(1,Math.round(h*scale));
+      if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;}
+      gl.viewport(0,0,pw,ph);
+      gl.uniform2f(u.uSize,w,h);gl.uniform1f(u.uArtA,artA);gl.uniform1f(u.uFx,fx?1:0);
+      if(fx){
+        const bw=.38*w,bh=1.35*h,top=-.12*h;
+        // 7秒で片道・行って戻る(alternate)。右は3.5秒ずらす
+        const swing=offset=>{const p=((timeMs+offset)/7000)%2;return rhythmStageEaseInOut(p>1?2-p:p);};
+        const put=(loc,deg,cx)=>{const a=deg*Math.PI/180;gl.uniform4f(loc,Math.cos(a),Math.sin(a),cx,top);};
+        put(u.uBeamL,-22+28*swing(0),-.1*w+bw/2);
+        put(u.uBeamR,22-28*swing(3500),w+.1*w-bw/2);
+        const rgba=RHYTHM_STAGE_GL_BEAM_RGBA[tier]||RHYTHM_STAGE_GL_BEAM_RGBA[0];
+        gl.uniform4f(u.uBeamC,rgba[0]/255,rgba[1]/255,rgba[2]/255,(rgba[3]||0)*.75);
+        gl.uniform2f(u.uBeamBox,bw,bh);
+        RHYTHM_STAGE_GL_DOTS.forEach(([x,y,layer],i)=>{const off=((timeMs/RHYTHM_STAGE_SPARKS[layer].duration)%1)*h;dots[i*4]=x*w;dots[i*4+1]=y*h-off;dots[i*4+2]=0;dots[i*4+3]=layer;});
+        gl.uniform4fv(u.uDots,dots);
+      }
+      gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    },
+    release(){try{gl.deleteTexture(tex);gl.deleteBuffer(buf);gl.deleteProgram(prog);gl.deleteShader(vs);gl.deleteShader(fs);const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
+  };
+};
 // 画質「自動」で下げた段。アプリを開いているあいだだけ覚えておき、次の曲もこの段から始める(保存はしない)
 const rhythmAutoQualityMemory={level:'HIGH'};
 const RHYTHM_FACE_BOX=42,RHYTHM_FACE_ZOOM=1.28,RHYTHM_FACE_PAD=12;
@@ -550,6 +662,12 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   //   動かすのは transform と opacity だけ(合成だけで済むもの)。
   const stageLevel=rhythmStageLevel(settings);
   const stageArtRef=useRef(null),stagePulseRef=useRef(null);
+  // ライブ背景を WebGL で1枚に描くか(rhythmCreateStageGL の説明を参照)。ノーツと同じく演奏の始めに1回だけ決める。
+  // 途中で端末に WebGL を取り上げられたら(webglcontextlost)、CSS 版へ戻す
+  const stageGlWanted=useState(()=>stageLevel!=='SIMPLE'&&rhythmStageGlActive(webglWanted))[0];
+  const [stageGlLost,setStageGlLost]=useState(false);
+  const stageGl=stageGlWanted&&stageLevel!=='SIMPLE'&&!stageGlLost;
+  const stageGlRef=useRef(null);
   const stageArtSrc=stageLevel!=='SIMPLE'&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
   // 曲名のとなりに出す小さなジャケット(ライブ背景の設定とは関係なく、絵がある曲なら出す)
   const hudArtSrc=typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
@@ -560,7 +678,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
     img.onload=()=>{if(!alive)return;try{const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);canvas.dataset.ready='1';}catch(_){}};
     img.src=stageArtSrc;
     return()=>{alive=false;img.onload=null;};
-  },[stageArtSrc]);
+  },[stageArtSrc,stageGl]);
   const sideMonsterElements=useMemo(()=>{
     if(settings.sideMonsterOpacity==='OFF')return null;
     const opacity=rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -714,7 +832,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const stageFxOn=stageLevel==='VIVID'&&settings.effectAmount!=='MINIMAL';
   useEffect(()=>{
     const host=stageHostRef.current;
-    if(!host||!stageFxOn||typeof window==='undefined'||typeof document==='undefined')return undefined;
+    if(!host||!stageFxOn||stageGl||typeof window==='undefined'||typeof document==='undefined')return undefined;
     let alive=true,made=[],timer=0,lastKey='';
     const toUrl=canvas=>new Promise(resolve=>{try{canvas.toBlob(blob=>resolve(blob?URL.createObjectURL(blob):null),'image/png');}catch(e){resolve(null);}});
     const bake=async()=>{
@@ -747,7 +865,45 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
     const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(()=>{clearTimeout(timer);timer=setTimeout(bake,150);}):null;
     if(observer)observer.observe(host);
     return()=>{alive=false;clearTimeout(timer);if(observer)observer.disconnect();setStageImages(null);made.forEach(url=>URL.revokeObjectURL(url));};
-  },[stageFxOn,renderQualityStill]);
+  },[stageFxOn,stageGl,renderQualityStill]);
+  // WebGL 版のライブ背景を動かす。色の段と演出の有無は毎回の描画でここから読む(描き直しの輪を作り直さない)
+  const stageGlLiveRef=useRef(null);stageGlLiveRef.current={tier:stageTierNow,fx:stageFxOn};
+  useEffect(()=>{
+    const canvas=stageGlRef.current,host=stageHostRef.current;
+    if(!stageGl||!canvas||!host||typeof window==='undefined'||typeof document==='undefined')return undefined;
+    const renderer=rhythmCreateStageGL(canvas);
+    if(!renderer){setStageGlLost(true);return undefined;}
+    let alive=true,frame=0,last=-1e9,artAt=-1,artSettled=false,dirty=true,lastTier=-1,lastFx=null,w=host.clientWidth,h=host.clientHeight;
+    const start=performance.now();
+    // 動きを減らす設定の端末では、CSS 版と同じくサーチライトと光の粒を出さない
+    const reduce=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    // 画素密度は CSS 版の焼いた画像と同じ(1.5倍まで。画質「標準」は1.25倍、「省電力」は1倍)
+    const cap=renderQualityStill==='STANDARD'?1.25:rhythmRenderQualityCap(renderQualityStill,1.5);
+    const scale=Math.min(cap,Math.max(1,Number(window.devicePixelRatio)||1));
+    const fullArt=stageLevel==='CALM'?.34:.5;
+    if(stageArtSrc){const img=new Image();img.onload=()=>{if(!alive)return;const c=document.createElement('canvas');c.width=24;c.height=24;const g=c.getContext('2d');if(!g)return;try{g.drawImage(img,0,0,24,24);}catch(_){return;}if(renderer.setArt(c)){artAt=performance.now();dirty=true;}};img.src=stageArtSrc;}
+    const onLost=event=>{if(event&&typeof event.preventDefault==='function')event.preventDefault();setStageGlLost(true);};
+    canvas.addEventListener('webglcontextlost',onLost);
+    // 大きさは変わったときだけ測る(毎フレーム測ると配置の計算をその場でさせてしまう)
+    const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(()=>{w=host.clientWidth;h=host.clientHeight;dirty=true;}):null;
+    if(observer)observer.observe(host);
+    const loop=now=>{
+      frame=requestAnimationFrame(loop);
+      const live=stageGlLiveRef.current||{},fx=!!live.fx&&!reduce,tier=Number(live.tier)||0;
+      if(tier!==lastTier||fx!==lastFx){lastTier=tier;lastFx=fx;dirty=true;}
+      const fading=artAt>=0&&now-artAt<800;
+      if(artAt>=0&&!fading&&!artSettled){artSettled=true;dirty=true;}
+      if(!dirty&&!fx&&!fading)return;
+      // 動きはゆっくりなので、1秒に30回まで(60Hz なら1回おき)
+      if(!dirty&&now-last<28)return;
+      if(!(w>0&&h>0))return;
+      last=now;dirty=false;
+      const artA=artAt<0?0:fullArt*rhythmStageEaseOut(Math.min(1,(now-artAt)/800));
+      renderer.draw({w,h,scale,timeMs:now-start,artA,fx,tier});
+    };
+    frame=requestAnimationFrame(loop);
+    return()=>{alive=false;cancelAnimationFrame(frame);if(observer)observer.disconnect();canvas.removeEventListener('webglcontextlost',onLost);renderer.release();};
+  },[stageGl,stageLevel,stageArtSrc,renderQualityStill]);
   /* フルコンボ・オールマーベラスが続いているか(プロセカ・CHUNITHM のコンボ色)。「COMBO」の字の色で見せる。
      AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。設定で出さないこともできる */
   /* アシストモードでは称号が付かないので出さない(出すと「取れる」と思わせてしまう) */const comboStatus=(()=>{if(settings.comboStatusDisplay===false||assistOn||!view.counts)return '';const c=view.counts;if((Number(c.BAD)||0)+(Number(c.MISS)||0)>0)return '';return (Number(c.EXCELLENT)||0)+(Number(c.GREAT)||0)+(Number(c.GOOD)||0)>0?'FC':'AM';})();
@@ -1809,11 +1965,14 @@ scheduleTick();};
        ★ノーツが流れ着く先は measureTravel が**ラインを実測**して決めるので、
          ここを動かすだけで譜面も判定もそのままついてくる */
     '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{/* ライブ背景。いちばん奥(z-index:-1)。見た目は index.html の [data-rhythm-stage] が持つ */}
-{stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} aria-hidden="true">
-  {stageArtSrc&&<canvas ref={stageArtRef} data-rhythm-stage-art width="24" height="24"/>}
+{stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} data-stage-gl={stageGl?'1':undefined} aria-hidden="true">
+  {/* WebGL 版は、ジャケット・暗幕・サーチライト・光の粒をこの canvas 1枚に描く(暗幕の ::after は CSS 側で消す)。
+      描き込み先を作り直すときは canvas も作り直す(一度片付けた canvas からは描き込み先を取り出せない) */}
+  {stageGl&&<canvas key={`stage-gl-${stageLevel}-${renderQualityStill}`} ref={stageGlRef} data-rhythm-stage-gl/>}
+  {!stageGl&&stageArtSrc&&<canvas ref={stageArtRef} data-rhythm-stage-art width="24" height="24"/>}
   {/* サーチライトと光の粒は、1度だけ焼いた画像を CSS のアニメーション(合成だけで動く)で動かす(2026-09-26)。
       以前はサーチライトを clip-path で切り抜いた層、光の粒を画面の2倍の高さの CSS の模様で作っていた */}
-  {stageFxOn&&stageImages&&<><img data-rhythm-stage-beam="left" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/><img data-rhythm-stage-beam="right" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/>
+  {!stageGl&&stageFxOn&&stageImages&&<><img data-rhythm-stage-beam="left" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/><img data-rhythm-stage-beam="right" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/>
     <img data-rhythm-stage-sparks="far" src={stageImages.sparks[0]} alt="" draggable={false}/><img data-rhythm-stage-sparks="near" src={stageImages.sparks[1]} alt="" draggable={false}/></>}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
