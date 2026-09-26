@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 525cbece3ef9982b
+// generated-sha256: 15cf9cd3e88ae8e6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 19:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 19:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17283,7 +17283,7 @@ scheduleTick();};
 </section>
 {/* アシストモード・ミラー譜面で遊んだことを、結果の上で言う。アシストは記録に残らないことも添える */}
 {(result.assist||result.mirror)&&<div data-rhythm-result-play-mode className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">{result.assist&&<span className="rounded-full border border-emerald-300/60 bg-emerald-500/15 px-2 py-0.5 text-emerald-100">🛟 アシストモード（スコア8割・記録には残りません{Number(result.assistGuarded)>0?`・ガード${Number(result.assistGuarded)}回`:''}）</span>}{result.mirror&&<span className="rounded-full border border-sky-300/60 bg-sky-500/15 px-2 py-0.5 text-sky-100">↔ ミラー譜面</span>}</div>}
-<section data-rhythm-result-score-card className="mt-2 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">
+<section data-rhythm-result-score-card className="mt-2 min-w-0 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">
   {/* 2026-09-26 に見本の大きさへ(ユーザー指示「見本のほうがサイズ感が見やすい」)。SCOREの数字を大きく、
       縦持ちでも左にマスモンを出す(横に広いときは左の欄に出ているので、ここでは出さない) */}
   <div className="flex items-center gap-2">
@@ -17308,7 +17308,7 @@ scheduleTick();};
 {(()=>{const before=runRef.current?.startBest;const prev=before&&before.played?Number(before.bestScore)||0:0;if(!(prev>0))return null;const diff=view.score-prev;return <p data-rhythm-best-diff className={`text-[11px] font-black tabular-nums ${diff>0?'text-emerald-300':'text-slate-400'}`}>{diff>0?`前の自己ベストから +${diff.toLocaleString()}`:diff===0?'自己ベストと同じスコア':`自己ベストまで あと ${(-diff).toLocaleString()}`}</p>;})()}
 </section>
 </div>
-<div data-rhythm-result-summary-judgments className="mt-2 [@container(min-width:680px)]:col-start-2 [@container(min-width:680px)]:row-start-2 [@container(min-width:680px)]:row-span-2 [@container(min-width:680px)]:mt-0">
+<div data-rhythm-result-summary-judgments className="mt-2 min-w-0 [@container(min-width:680px)]:col-start-2 [@container(min-width:680px)]:row-start-2 [@container(min-width:680px)]:row-span-2 [@container(min-width:680px)]:mt-0">
 {/* 判定の割合を1本の帯で。数字の表を読む前に、どの判定が多かったかが色でひと目で分かる。
     色は遊んでいるときに弾ける光と同じ(rhythmJudgmentColor)。0件の判定は帯に出さない */}
 {(()=>{const total=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(view.counts[id])||0),0);if(!(total>0))return null;return <div data-rhythm-result-ratio aria-hidden="true" className="mb-1.5 flex h-2 w-full overflow-hidden rounded-full bg-slate-800">{RHYTHM_JUDGMENT_IDS.map(id=>{const count=Number(view.counts[id])||0;return count>0?<i key={id} data-rhythm-result-ratio-part={id} className="block h-full" style={{width:`${(count/total*100).toFixed(2)}%`,background:rhythmJudgmentColor(id)}}/>:null;})}</div>;})()}
@@ -17331,10 +17331,13 @@ scheduleTick();};
 </React.Fragment>)}
 </dl>
 {/* MAX COMBO は判定の表の右に大きく出す(バンドリ！の COMBO の置き方)。色は遊んでいるときの段と同じ */}
-<div data-rhythm-result-combo className="flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-full [@container(min-width:680px)]:flex-row [@container(min-width:680px)]:justify-between [@container(min-width:680px)]:gap-3 [@container(min-width:680px)]:px-3 [@container(min-width:680px)]:py-1.5">
-  <small className={`text-[10px] font-black tracking-[.2em] ${rhythmComboTextColor(view.maxCombo)}`}>MAX COMBO</small>
+{/* ★横に広いときは「MAX COMBO(2行)・数字・FAST/SLOW」の3枠にし、FAST/SLOW は残りの幅に合わせて縮める
+    (2026-09-26・実機「まだはみ出しがある / 横方向は調整しておさまるように」。横一列で FAST/SLOW の幅を固定していたので、
+    コンボや FAST/SLOW が3〜4桁になると右の列からはみ出していた) */}
+<div data-rhythm-result-combo className="flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:grid [@container(min-width:680px)]:w-full [@container(min-width:680px)]:grid-cols-[auto_auto_minmax(0,1fr)] [@container(min-width:680px)]:gap-2 [@container(min-width:680px)]:px-2.5 [@container(min-width:680px)]:py-1.5">
+  <small className={`text-[10px] font-black tracking-[.2em] [@container(min-width:680px)]:w-[3.2rem] [@container(min-width:680px)]:leading-tight ${rhythmComboTextColor(view.maxCombo)}`}>MAX COMBO</small>
   <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums [@container(min-width:680px)]:text-[26px] ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</b>
-  <div className="mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black [@container(min-width:680px)]:mt-0 [@container(min-width:680px)]:w-32 [@container(min-width:680px)]:shrink-0"><span data-rhythm-result-fast className="rounded-lg bg-cyan-500/15 py-1 text-cyan-200">FAST<b className="block text-sm tabular-nums text-white">{view.fast}</b></span><span data-rhythm-result-slow className="rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200">SLOW<b className="block text-sm tabular-nums text-white">{view.slow}</b></span></div>
+  <div className="mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black [@container(min-width:680px)]:mt-0 [@container(min-width:680px)]:min-w-0"><span data-rhythm-result-fast className="rounded-lg bg-cyan-500/15 py-1 text-cyan-200">FAST<b className="block text-sm tabular-nums text-white">{view.fast}</b></span><span data-rhythm-result-slow className="rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200">SLOW<b className="block text-sm tabular-nums text-white">{view.slow}</b></span></div>
 </div>
 </section>
 {/* FAST と SLOW が大きく片寄ったときだけ、くせをひとこと。

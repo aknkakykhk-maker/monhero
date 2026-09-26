@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: db0ec467b0dd69cb
+// source-sha256: 1a7031f82d29e479
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 19:12";
+const BUILD_DATE = "2026-09-26 19:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -24924,7 +24924,7 @@ const RhythmTapTest = ({
       className: "rounded-full border border-sky-300/60 bg-sky-500/15 px-2 py-0.5 text-sky-100"
     }, "↔ ミラー譜面")), React.createElement("section", {
       "data-rhythm-result-score-card": true,
-      className: "mt-2 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0"
+      className: "mt-2 min-w-0 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0"
     }, React.createElement("div", {
       className: "flex items-center gap-2"
     }, heroArt && React.createElement("div", {
@@ -24991,7 +24991,7 @@ const RhythmTapTest = ({
       }, diff > 0 ? `前の自己ベストから +${diff.toLocaleString()}` : diff === 0 ? '自己ベストと同じスコア' : `自己ベストまで あと ${(-diff).toLocaleString()}`);
     })())), React.createElement("div", {
       "data-rhythm-result-summary-judgments": true,
-      className: "mt-2 [@container(min-width:680px)]:col-start-2 [@container(min-width:680px)]:row-start-2 [@container(min-width:680px)]:row-span-2 [@container(min-width:680px)]:mt-0"
+      className: "mt-2 min-w-0 [@container(min-width:680px)]:col-start-2 [@container(min-width:680px)]:row-start-2 [@container(min-width:680px)]:row-span-2 [@container(min-width:680px)]:mt-0"
     }, (() => {
       const total = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (Number(view.counts[id]) || 0), 0);
       if (!(total > 0)) return null;
@@ -25035,14 +25035,14 @@ const RhythmTapTest = ({
       className: "text-right font-mono"
     }, view.counts[id])))), React.createElement("div", {
       "data-rhythm-result-combo": true,
-      className: "flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-full [@container(min-width:680px)]:flex-row [@container(min-width:680px)]:justify-between [@container(min-width:680px)]:gap-3 [@container(min-width:680px)]:px-3 [@container(min-width:680px)]:py-1.5"
+      className: "flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:grid [@container(min-width:680px)]:w-full [@container(min-width:680px)]:grid-cols-[auto_auto_minmax(0,1fr)] [@container(min-width:680px)]:gap-2 [@container(min-width:680px)]:px-2.5 [@container(min-width:680px)]:py-1.5"
     }, React.createElement("small", {
-      className: `text-[10px] font-black tracking-[.2em] ${rhythmComboTextColor(view.maxCombo)}`
+      className: `text-[10px] font-black tracking-[.2em] [@container(min-width:680px)]:w-[3.2rem] [@container(min-width:680px)]:leading-tight ${rhythmComboTextColor(view.maxCombo)}`
     }, "MAX COMBO"), React.createElement("b", {
       "data-rhythm-max-combo": true,
       className: `block text-[34px] font-black leading-tight tabular-nums [@container(min-width:680px)]:text-[26px] ${rhythmComboTextColor(view.maxCombo)}`
     }, view.maxCombo), React.createElement("div", {
-      className: "mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black [@container(min-width:680px)]:mt-0 [@container(min-width:680px)]:w-32 [@container(min-width:680px)]:shrink-0"
+      className: "mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black [@container(min-width:680px)]:mt-0 [@container(min-width:680px)]:min-w-0"
     }, React.createElement("span", {
       "data-rhythm-result-fast": true,
       className: "rounded-lg bg-cyan-500/15 py-1 text-cyan-200"
