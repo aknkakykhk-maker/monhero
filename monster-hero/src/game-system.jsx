@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 525cbece3ef9982b
+// generated-sha256: d7574793dd57eb5e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 19:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 19:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17251,18 +17251,19 @@ scheduleTick();};
 {/* ===== リザルトの並び(2026-09-26・ユーザー依頼「リザルト画面や曲選択画面をこれを参考にしたい」＝バンドリ！のリザルト) =====
     上から「曲の札(ジャケット・曲名・難易度・ランクのゲージ・ランク)」→「SCORE と自己ベスト」→「判定の表と MAX COMBO」。
     そのあとに周回・ビートP・解放・ライブログを並べ、ボタンは下の帯へ固定する(スクロールしても隠れない・中身も隠さない)。
-    器の幅が680px以上(スマホの横向き)のときは左にマスモンの大きな絵を置き、右を2列(曲の札とスコア / 判定)にして、1画面で結果が読めるようにする。
+    器の幅が680px以上(スマホの横向き)のときは左にマスモンの絵を細めに置き(22%)、右は「曲の札(2列ぶち抜き)」の下に「スコア | 判定の表とMAX COMBO」を並べて、1画面で結果が読めるようにする
+    (2026-09-26・ユーザー指摘「マスモンで左全部取るせいで横スペースがうまく使えてない」。31%あって、スコアと判定が縦に積まれ画面の外へはみ出していた)。
     ★向き(landscape:)ではなく器の幅で分ける。タブレットの横向きは枠が600px幅のままなので、2列にすると詰まる
     ★背景のジャケットのぼかしは止まった絵を1回描くだけ。軽量モードでは出さない(index.html) */}
 {hudArtSrc&&<div data-rhythm-result-backdrop aria-hidden="true" style={{backgroundImage:`url("${hudArtSrc}")`}}/>}
 <div data-rhythm-result-frame className="relative flex min-h-0 flex-1 flex-col [@container(min-width:680px)]:flex-row">
 {/* 横に広いときだけ、左に演奏に連れていったマスモンを大きく出す。どの子かは rhythmResultHeroIndex が決める(モンスターノーツを取れた子からランダム。2026-09-26 ユーザーが選んだ決め方)。絵は両サイドのマスモン用に焼いた1枚(sideArtUrls)を使い回す。
     マスモンがいないときは曲のジャケットを出す */}
-{(()=>{const art=heroArt;if(!art&&!hudArtSrc)return null;return <aside data-rhythm-result-hero aria-hidden="true" className="relative hidden w-[31%] max-w-[360px] shrink-0 items-center justify-center p-3 [@container(min-width:680px)]:flex">{art?<img data-rhythm-result-hero-art src={art} alt="" draggable={false} decoding="async" className="relative max-h-full w-full object-contain"/>:<img data-rhythm-result-hero-jacket src={hudArtSrc} alt="" draggable={false} decoding="async" className="relative aspect-square w-[82%] rounded-2xl border border-white/20 object-cover"/>}</aside>;})()}
+{(()=>{const art=heroArt;if(!art&&!hudArtSrc)return null;return <aside data-rhythm-result-hero aria-hidden="true" className="relative hidden w-[22%] max-w-[220px] shrink-0 items-center justify-center p-2 [@container(min-width:680px)]:flex">{art?<img data-rhythm-result-hero-art src={art} alt="" draggable={false} decoding="async" className="relative max-h-full w-full object-contain"/>:<img data-rhythm-result-hero-jacket src={hudArtSrc} alt="" draggable={false} decoding="async" className="relative aspect-square w-[82%] rounded-2xl border border-white/20 object-cover"/>}</aside>;})()}
 <div data-rhythm-result-body className="relative flex min-h-0 min-w-0 flex-1 flex-col">
 <div data-rhythm-result-scroll className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3">
-<h2 className="mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200">RHYTHM RESULT</h2>
-<div data-rhythm-result-summary className="[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-2 [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2">
+<h2 className="mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200 [@container(min-width:680px)]:hidden">RHYTHM RESULT</h2>
+<div data-rhythm-result-summary className="[@container(min-width:680px)]:grid [@container(min-width:680px)]:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] [@container(min-width:680px)]:items-start [@container(min-width:680px)]:gap-2">
 {/* 横に広いときは、曲の札だけを2列ぶち抜きで上に置く(2026-09-26・ユーザー報告「また曲名切れ」)。
     半分の幅に曲の札を入れていたら、曲名が「魔窟…」になり、Lv.とランクのゲージもランクの丸に押しつぶされていた。
     この箱は横に広いときだけ中身を格子へそのまま並べ(contents)、曲の札=1行目の2列、スコア=左、判定=右(2行ぶん)にする */}
@@ -17312,7 +17313,7 @@ scheduleTick();};
 {/* 判定の割合を1本の帯で。数字の表を読む前に、どの判定が多かったかが色でひと目で分かる。
     色は遊んでいるときに弾ける光と同じ(rhythmJudgmentColor)。0件の判定は帯に出さない */}
 {(()=>{const total=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(view.counts[id])||0),0);if(!(total>0))return null;return <div data-rhythm-result-ratio aria-hidden="true" className="mb-1.5 flex h-2 w-full overflow-hidden rounded-full bg-slate-800">{RHYTHM_JUDGMENT_IDS.map(id=>{const count=Number(view.counts[id])||0;return count>0?<i key={id} data-rhythm-result-ratio-part={id} className="block h-full" style={{width:`${(count/total*100).toFixed(2)}%`,background:rhythmJudgmentColor(id)}}/>:null;})}</div>;})()}
-<section data-rhythm-result-judgments className="flex items-stretch gap-2 [@container(min-width:680px)]:flex-col">
+<section data-rhythm-result-judgments className="flex items-stretch gap-2">
 <dl data-rhythm-result-judgment-table className="grid min-w-0 flex-1 grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 text-[15px] italic">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}>
   {/* ★ぴったりのMARVELOUS(前後0.02秒以内)の回数。MARVELOUSの**内数**だが、並びは
       MARVELOUSの**上**へ置く(2026-09-13・ユーザー指示「普通に表示はMarvelousの上に
@@ -17331,10 +17332,10 @@ scheduleTick();};
 </React.Fragment>)}
 </dl>
 {/* MAX COMBO は判定の表の右に大きく出す(バンドリ！の COMBO の置き方)。色は遊んでいるときの段と同じ */}
-<div data-rhythm-result-combo className="flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-full [@container(min-width:680px)]:flex-row [@container(min-width:680px)]:justify-between [@container(min-width:680px)]:gap-3 [@container(min-width:680px)]:px-3 [@container(min-width:680px)]:py-1.5">
+<div data-rhythm-result-combo className="flex w-[34%] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/85 px-2 py-2 text-center [@container(min-width:680px)]:w-[31%]">
   <small className={`text-[10px] font-black tracking-[.2em] ${rhythmComboTextColor(view.maxCombo)}`}>MAX COMBO</small>
-  <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums [@container(min-width:680px)]:text-[26px] ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</b>
-  <div className="mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black [@container(min-width:680px)]:mt-0 [@container(min-width:680px)]:w-32 [@container(min-width:680px)]:shrink-0"><span data-rhythm-result-fast className="rounded-lg bg-cyan-500/15 py-1 text-cyan-200">FAST<b className="block text-sm tabular-nums text-white">{view.fast}</b></span><span data-rhythm-result-slow className="rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200">SLOW<b className="block text-sm tabular-nums text-white">{view.slow}</b></span></div>
+  <b data-rhythm-max-combo className={`block text-[34px] font-black leading-tight tabular-nums ${rhythmComboTextColor(view.maxCombo)}`}>{view.maxCombo}</b>
+  <div className="mt-1.5 grid w-full grid-cols-2 gap-1 text-[10px] font-black"><span data-rhythm-result-fast className="rounded-lg bg-cyan-500/15 py-1 text-cyan-200">FAST<b className="block text-sm tabular-nums text-white">{view.fast}</b></span><span data-rhythm-result-slow className="rounded-lg bg-fuchsia-500/15 py-1 text-fuchsia-200">SLOW<b className="block text-sm tabular-nums text-white">{view.slow}</b></span></div>
 </div>
 </section>
 {/* FAST と SLOW が大きく片寄ったときだけ、くせをひとこと。
