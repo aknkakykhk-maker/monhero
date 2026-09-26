@@ -17610,6 +17610,23 @@ const RHYTHM_CHART_LEVELS_AFTER_SWITCH=Object.freeze({
   close_to_your_heart:Object.freeze({EASY:7,NORMAL:8,HARD:12,EXPERT:18,MASTER:28}),
 // </rhythm-chart-levels-after-switch>
 });
+// ===== リザルトの左に大きく出すマスモン(2026-09-26) =====
+// ユーザー「マスモン4体選ぶ中でどれが選ばれるの？」に答えた決め方。
+//   ・その曲で能力がいちばん多く出た子
+//   ・同じ回数なら編成の先の子
+//   ・1回も出なければ、絵のある先頭の子
+// arts … 枠ごとの絵(無い枠は空)、counts … 枠ごとの能力が出た回数(演奏中の控え。保存しない)。
+// 絵のある子が1体もいなければ -1(リザルトは曲のジャケットを出す)
+const rhythmResultHeroIndex=(arts,counts)=>{
+  const list=Array.isArray(arts)?arts:[];
+  let best=-1,bestCount=0;
+  list.forEach((art,index)=>{
+    if(!art)return;
+    const count=Math.max(0,Number(Array.isArray(counts)?counts[index]:0)||0);
+    if(best<0||count>bestCount){best=index;bestCount=count;}
+  });
+  return best;
+};
 // ===== 5レーン時代の譜面を6レーンの道で使う(2026-09-26) =====
 // 譜面が laneCount を持っていなければ5レーン時代のもの。サブレーンを (12-10)/2=1 本ずつ右へずらし、
 // 道の**真ん中**に置く(左右の端のサブレーンが1本ずつ空く)。形・幅・時刻・ノーツ数は変えない。

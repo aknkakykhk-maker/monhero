@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6216cc878fe9cd00
+// generated-sha256: e71361cd79aa9dc4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 15:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 15:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16603,6 +16603,9 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     // 元気のように一瞬で終わる能力は、少しのあいだだけ光らせる
     run.abilityFlashSlot=slot;
     run.abilityFlashUntilMs=songTimeMs+RHYTHM_SIDE_MONSTER_FLASH_MS;
+    // 能力が出た回数をマスモンごとに数える(リザルトの左に、いちばん多く出た子を出すため。見た目だけ・保存しない)
+    run.abilityCounts=run.abilityCounts||[];
+    if(slot>=1)run.abilityCounts[slot-1]=(Number(run.abilityCounts[slot-1])||0)+1;
     // カットインを1回だけ走らせる(見た目だけ。判定・スコア・ライフには触らない)
     if(cutInOn){const cutIn=cutInRefs.current[slot-1];if(cutIn)rhythmRestartAnimations([{el:cutIn,attr:'rhythmCutinPlay'}]);}
   }
@@ -17102,9 +17105,9 @@ scheduleTick();};
     ★背景のジャケットのぼかしは止まった絵を1回描くだけ。軽量モードでは出さない(index.html) */}
 {hudArtSrc&&<div data-rhythm-result-backdrop aria-hidden="true" style={{backgroundImage:`url("${hudArtSrc}")`}}/>}
 <div data-rhythm-result-frame className="relative flex min-h-0 flex-1 flex-col [@container(min-width:680px)]:flex-row">
-{/* 横に広いときだけ、左に演奏に連れていったマスモン(1体目)を大きく出す。絵は両サイドのマスモン用に焼いた1枚(sideArtUrls)を使い回す。
+{/* 横に広いときだけ、左に演奏に連れていったマスモンを大きく出す。どの子かは rhythmResultHeroIndex が決める(その曲で能力がいちばん多く出た子。2026-09-26 ユーザーに伝えた決め方)。絵は両サイドのマスモン用に焼いた1枚(sideArtUrls)を使い回す。
     マスモンがいないときは曲のジャケットを出す */}
-{(()=>{const index=sideArtUrls.findIndex(Boolean);const art=index>=0?sideArtUrls[index]:'';if(!art&&!hudArtSrc)return null;return <aside data-rhythm-result-hero aria-hidden="true" className="relative hidden w-[31%] max-w-[360px] shrink-0 items-center justify-center p-3 [@container(min-width:680px)]:flex">{art?<img data-rhythm-result-hero-art src={art} alt="" draggable={false} decoding="async" className="relative max-h-full w-full object-contain"/>:<img data-rhythm-result-hero-jacket src={hudArtSrc} alt="" draggable={false} decoding="async" className="relative aspect-square w-[82%] rounded-2xl border border-white/20 object-cover"/>}</aside>;})()}
+{(()=>{const index=rhythmResultHeroIndex(sideArtUrls,runRef.current?.abilityCounts);const art=index>=0?sideArtUrls[index]:'';if(!art&&!hudArtSrc)return null;return <aside data-rhythm-result-hero aria-hidden="true" className="relative hidden w-[31%] max-w-[360px] shrink-0 items-center justify-center p-3 [@container(min-width:680px)]:flex">{art?<img data-rhythm-result-hero-art src={art} alt="" draggable={false} decoding="async" className="relative max-h-full w-full object-contain"/>:<img data-rhythm-result-hero-jacket src={hudArtSrc} alt="" draggable={false} decoding="async" className="relative aspect-square w-[82%] rounded-2xl border border-white/20 object-cover"/>}</aside>;})()}
 <div data-rhythm-result-body className="relative flex min-h-0 min-w-0 flex-1 flex-col">
 <div data-rhythm-result-scroll className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3">
 <h2 className="mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200">RHYTHM RESULT</h2>
