@@ -1,0 +1,17 @@
+{
+ "schemaVersion": 1,
+ "note": "音ゲーの作法(tools/mode/rhythm-chart-knowledge.js)の重み。版ごとに残す。rhythm-chart-learn.js --write が譜面メモから新しい版を書き足す。前の版は消さない(戻せるように)",
+ "revisions": {
+  "7": {
+   "basedOn": null,
+   "createdAt": "2026-09-26",
+   "reason": "初期値(すべて1)",
+   "weights": {
+    "section_opening_hit": 1,
+    "final_hit": 1,
+    "build_up_fill": 1,
+    "layer_follow": 1
+   }
+  }
+ }
+}
