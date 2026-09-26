@@ -260,6 +260,12 @@ check('FLICKの矢印は疑似要素ではなく [data-rhythm-flick-arrow] と�
 // 片付け済みの印(_rhythmCanvasSettled)まで走査を続ける。
 // 2026-09-25: マスモンの顔は DOM の要素をやめて canvas へ描くようになったので、隠す処理(hideFace)は無い。
 // 「弾け終わるまで片付け済みにしない」ことは変わらない。
+// 2026-09-26: 画質の設定。ノーツの canvas の画素密度の上限は、begin() と warmSprites() に**同じ値**を渡す
+// (食い違うと、焼いておいた光を最初の begin() で捨てて作り直す)
+check('画質の設定がノーツの canvas の画素密度に効き、描く前の準備と同じ値を渡す',
+  gameSrc.includes("const noteCanvasMaxDpr=Math.min(settings.effectAmount==='MINIMAL'?2:RHYTHM_NOTE_CANVAS_MAX_DPR,rhythmRenderQualityCap(settings.renderQuality,RHYTHM_NOTE_CANVAS_MAX_DPR));")
+  &&gameSrc.includes('maxDpr:noteCanvasMaxDpr,sizeScale:')
+  &&gameSrc.includes('lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDpr});'));
 check('canvas 版は取り終えたノーツを片付ける(弾け終わる)まで走査の先頭を進めない',
   gameSrc.includes("if(note.done&&!failedTrail&&!clearFlash){note._rhythmCanvasSettled=true;return;}")
   &&gameSrc.includes("canvasNotes?head._rhythmCanvasSettled===true:(headEl?headEl._rhythmHidden===true:true)"));
