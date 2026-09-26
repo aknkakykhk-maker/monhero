@@ -19296,14 +19296,16 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
 // マスモンの絵(染色済み・透明部分あり)だけは DOM の要素のまま、canvas の上へ重ねて transform で動かす。
 // 公開フラグ RELEASE_FLAGS.rhythmCanvasNotes と、デバッグ画面の上書き(mh_rhythm_canvas_v1)で DOM 版と切り替える。
 const RHYTHM_CANVAS_KEY='mh_rhythm_canvas_v1';
-const rhythmCanvasNotesPreference=()=>{try{if(typeof localStorage==='undefined')return '';const value=localStorage.getItem(RHYTHM_CANVAS_KEY);return value==='canvas'||value==='dom'?value:'';}catch{return '';}};
+const rhythmCanvasNotesPreference=()=>{try{if(typeof localStorage==='undefined')return '';const value=localStorage.getItem(RHYTHM_CANVAS_KEY);return value==='canvas'||value==='dom'||value==='webgl'?value:'';}catch{return '';}};
+// 検証用の WebGL で描くか(デバッグ画面で「WebGL」を選んだときだけ。2026-09-26)
+const rhythmWebglNotesActive=()=>rhythmCanvasNotesPreference()==='webgl';
 const rhythmCanvasNotesSetPreference=value=>{
-  const next=value==='canvas'||value==='dom'?value:'';
+  const next=value==='canvas'||value==='dom'||value==='webgl'?value:'';
   try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_CANVAS_KEY,next);else localStorage.removeItem(RHYTHM_CANVAS_KEY);}}catch{}
   return next;
 };
 // 公開フラグが立っていれば canvas。デバッグ画面の上書き('canvas' / 'dom')があればそちらが勝つ(実機で交互に比べるため)
-const rhythmCanvasNotesActive=flagOn=>{const pref=rhythmCanvasNotesPreference();if(pref==='canvas')return true;if(pref==='dom')return false;return flagOn===true;};
+const rhythmCanvasNotesActive=flagOn=>{const pref=rhythmCanvasNotesPreference();if(pref==='canvas'||pref==='webgl')return true;if(pref==='dom')return false;return flagOn===true;};
 
 // SLIDE の帯の区切り。rhythmSlideSegmentPolygons と同じ手順で、文字列ではなく数値で返す(canvas 用)。
 const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
@@ -19413,6 +19415,235 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
 // 判定・入力の座標は CSS の画素で持っているので、ここを変えても当たり判定は動かない。
 const RHYTHM_NOTE_CANVAS_MAX_DPR=2;
 
+// ===================== ノーツを WebGL で描く(検証用・2026-09-26) =====================
+// ユーザー指示「WebGL をデバッグ的に作ることは可能？ → 進めて」。デバッグ画面の「ノーツの描き方」で
+// 「WebGL」を選んだときだけ使う(mh_rhythm_canvas_v1 = 'webgl')。プレイヤーの画面は何も変わらない。
+//
+// 【作り方】ノーツの描き方(RHYTHM_CANVAS_RENDERER の中身)は書き直さない。描き込み先だけを、
+// canvas の 2D と同じ使い方ができる「WebGL の描き込み先」に差し替える。形・色・光の値は1つも複製しないので、
+// ノーツの見た目を直したときも WebGL 版にそのまま効く。光の画像(ぼかしを焼いたもの)は今までどおり
+// ふつうの 2D canvas で作り、GPU には画像として1度だけ渡す。
+//
+// 【できること】RHYTHM_CANVAS_RENDERER が本体の描き込み先に使う機能だけ:
+//   setTransform / clearRect / globalAlpha / fillStyle・strokeStyle(色の文字列と直線のグラデーション)
+//   beginPath・moveTo・lineTo・arcTo・arc・closePath・fill・stroke(lineWidth / lineJoin / lineCap)
+//   fillRect / drawImage(canvas・画像。3引数・5引数・9引数) / createLinearGradient / save・restore
+// ★ここに無い機能を RHYTHM_CANVAS_RENDERER で使い始めたら、ここにも足すこと(無い機能は何も描かない)。
+//
+// 【見た目を合わせるための決めごと】
+//   ・色は「あらかじめ濃さを掛けた形」(premultiplied)で重ねる。2D canvas と同じ重なり方になる
+//   ・1回の fill / stroke の中で、同じ画素は1度しか塗らない(ステンシル)。太い半透明の線の継ぎ目が濃くならないように
+//   ・グラデーションは画素ごとに計算する(頂点の色をつなぐだけだと、途中の色の段が消える)
+//   ・ふちのギザギザは、GPU のアンチエイリアス(antialias:true)でならす
+// 【iPhone で WebGL の画面が消えたとき】(裏へ回したときなど)描き込みを止め、戻ったら作り直す。
+const rhythmCreateGL2D=canvas=>{
+  if(!canvas||typeof canvas.getContext!=='function')return null;
+  const attrs={alpha:true,antialias:true,premultipliedAlpha:true,stencil:true,preserveDrawingBuffer:false,depth:false};
+  let gl=null;
+  try{gl=canvas.getContext('webgl',attrs)||canvas.getContext('experimental-webgl',attrs);}catch(e){gl=null;}
+  if(!gl)return null;
+  const VS='attribute vec2 aPos;attribute vec2 aUv;uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;varying vec2 vUv;varying vec2 vPos;'+
+    'void main(){vUv=aUv;vPos=aPos;vec2 p=vec2(dot(uM0,vec3(aPos,1.0)),dot(uM1,vec3(aPos,1.0)));vec2 c=p/uView*2.0-1.0;gl_Position=vec4(c.x,-c.y,0.0,1.0);}';
+  const FS='precision mediump float;varying vec2 vUv;varying vec2 vPos;uniform int uMode;uniform vec4 uColor;uniform sampler2D uTex;uniform float uAlpha;'+
+    'uniform vec2 uG0;uniform vec2 uG1;uniform vec4 uStopC[6];uniform float uStopT[6];uniform int uStops;'+
+    'vec4 grad(){vec2 d=uG1-uG0;float t=clamp(dot(vPos-uG0,d)/max(dot(d,d),1e-6),0.0,1.0);vec4 c=uStopC[0];'+
+    'for(int i=1;i<6;i++){if(i>=uStops)break;float t0=uStopT[i-1];float t1=uStopT[i];if(t>=t0){float k=t1>t0?clamp((t-t0)/(t1-t0),0.0,1.0):1.0;c=mix(uStopC[i-1],uStopC[i],k);}}return c;}'+
+    'void main(){vec4 c;if(uMode==2){c=texture2D(uTex,vUv);gl_FragColor=c*uAlpha;}else{if(uMode==1)c=grad();else c=uColor;gl_FragColor=vec4(c.rgb*c.a,c.a)*uAlpha;}}';
+  let prog=null,loc=null,buf=null,lost=false,textures=new WeakMap(),stencilRef=0,viewW=0,viewH=0;
+  const compile=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s)||'shader');return s;};
+  const init=()=>{
+    prog=gl.createProgram();gl.attachShader(prog,compile(gl.VERTEX_SHADER,VS));gl.attachShader(prog,compile(gl.FRAGMENT_SHADER,FS));gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog)||'link');
+    gl.useProgram(prog);
+    loc={aPos:gl.getAttribLocation(prog,'aPos'),aUv:gl.getAttribLocation(prog,'aUv')};
+    ['uM0','uM1','uView','uMode','uColor','uTex','uAlpha','uG0','uG1','uStopC','uStopT','uStops'].forEach(name=>{loc[name]=gl.getUniformLocation(prog,name);});
+    buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    gl.enableVertexAttribArray(loc.aPos);gl.vertexAttribPointer(loc.aPos,2,gl.FLOAT,false,16,0);
+    gl.enableVertexAttribArray(loc.aUv);gl.vertexAttribPointer(loc.aUv,2,gl.FLOAT,false,16,8);
+    gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.STENCIL_TEST);gl.stencilOp(gl.KEEP,gl.KEEP,gl.REPLACE);
+    gl.uniform1i(loc.uTex,0);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
+    textures=new WeakMap();stencilRef=0;viewW=viewH=0;
+  };
+  try{init();}catch(e){return null;}
+  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;},false);
+  canvas.addEventListener('webglcontextrestored',()=>{try{init();lost=false;}catch(e){lost=true;}},false);
+  // 色の文字列 → [r,g,b,a](0〜1)。同じ文字列は覚えておく
+  const colorCache=new Map();
+  const parseColor=text=>{
+    if(colorCache.has(text))return colorCache.get(text);
+    let out=[0,0,0,0];const s=String(text||'').trim();
+    if(s[0]==='#'){const h=s.slice(1);const full=h.length===3||h.length===4?h.split('').map(ch=>ch+ch).join(''):h;
+      out=[parseInt(full.slice(0,2),16)/255,parseInt(full.slice(2,4),16)/255,parseInt(full.slice(4,6),16)/255,full.length>=8?parseInt(full.slice(6,8),16)/255:1];}
+    else{const m=s.match(/rgba?\(([^)]*)\)/i);if(m){const p=m[1].split(/[\s,\/]+/).filter(Boolean).map(Number);out=[(p[0]||0)/255,(p[1]||0)/255,(p[2]||0)/255,p.length>3?p[3]:1];}
+      else if(s==='white')out=[1,1,1,1];else if(s==='black')out=[0,0,0,1];}
+    colorCache.set(text,out);return out;
+  };
+  let m=[1,0,0,1,0,0],alpha=1,fillStyle='#000',strokeStyle='#000',lineWidth=1,lineJoin='miter',lineCap='butt';
+  const stack=[];
+  let subpaths=[],current=null;
+  const point=(x,y)=>{if(!current){current={pts:[],closed:false};subpaths.push(current);}current.pts.push(x,y);};
+  const lastPoint=()=>current&&current.pts.length?[current.pts[current.pts.length-2],current.pts[current.pts.length-1]]:null;
+  // 画面の大きさ(ほんとうの画素)に合わせる
+  const syncView=()=>{if(viewW!==canvas.width||viewH!==canvas.height){viewW=canvas.width;viewH=canvas.height;gl.viewport(0,0,viewW,viewH);}};
+  let data=new Float32Array(4096);
+  const ensure=n=>{if(data.length<n){let size=data.length;while(size<n)size*=2;data=new Float32Array(size);}};
+  // 1回ぶんの描画。verts は [x,y,u,v,...] の三角形の並び
+  const flush=(count,mode,paint,texture)=>{
+    if(lost||!prog||!count)return;
+    syncView();
+    gl.uniform3f(loc.uM0,m[0],m[2],m[4]);gl.uniform3f(loc.uM1,m[1],m[3],m[5]);gl.uniform2f(loc.uView,viewW,viewH);
+    gl.uniform1f(loc.uAlpha,Math.max(0,Math.min(1,alpha)));gl.uniform1i(loc.uMode,mode);
+    if(mode===0){const c=parseColor(paint);gl.uniform4f(loc.uColor,c[0],c[1],c[2],c[3]);}
+    else if(mode===1){
+      const stops=paint.stops.slice().sort((a,b)=>a[0]-b[0]).slice(0,6);
+      const cs=new Float32Array(24),ts=new Float32Array(6);
+      stops.forEach(([t,color],i)=>{const c=parseColor(color);cs.set(c,i*4);ts[i]=t;});
+      gl.uniform2f(loc.uG0,paint.x0,paint.y0);gl.uniform2f(loc.uG1,paint.x1,paint.y1);gl.uniform4fv(loc.uStopC,cs);gl.uniform1fv(loc.uStopT,ts);gl.uniform1i(loc.uStops,Math.max(1,stops.length));
+    }else if(mode===2){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);}
+    // 同じ画素を1度しか塗らない(1回ごとに違う番号をステンシルへ書く。255回で消して数え直す)
+    stencilRef++;if(stencilRef>255){gl.clear(gl.STENCIL_BUFFER_BIT);stencilRef=1;}
+    gl.stencilFunc(gl.NOTEQUAL,stencilRef,0xff);
+    gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,data.subarray(0,count*4),gl.STREAM_DRAW);
+    gl.drawArrays(gl.TRIANGLES,0,count);
+  };
+  let n=0;
+  const tri=(x1,y1,x2,y2,x3,y3)=>{ensure((n+3)*4);data.set([x1,y1,0,0,x2,y2,0,0,x3,y3,0,0],n*4);n+=3;};
+  const quad=(ax,ay,bx,by,cx,cy,dx,dy)=>{tri(ax,ay,bx,by,cx,cy);tri(ax,ay,cx,cy,dx,dy);};
+  const disc=(x,y,r)=>{const seg=Math.max(8,Math.min(24,Math.ceil(r*3)));for(let i=0;i<seg;i++){const a0=i/seg*Math.PI*2,a1=(i+1)/seg*Math.PI*2;tri(x,y,x+Math.cos(a0)*r,y+Math.sin(a0)*r,x+Math.cos(a1)*r,y+Math.sin(a1)*r);}};
+  // 単純な多角形を三角形に分ける(耳を切り落とす方式。ノーツの形は点が少ないので十分)
+  const triangulate=pts=>{
+    const count=pts.length/2;if(count<3)return;
+    const idx=[];for(let i=0;i<count;i++)idx.push(i);
+    let area=0;for(let i=0;i<count;i++){const j=(i+1)%count;area+=pts[i*2]*pts[j*2+1]-pts[j*2]*pts[i*2+1];}
+    const ccw=area>0;
+    const X=i=>pts[i*2],Y=i=>pts[i*2+1];
+    const cross=(a,b,c)=>(X(b)-X(a))*(Y(c)-Y(a))-(Y(b)-Y(a))*(X(c)-X(a));
+    const inside=(p,a,b,c)=>{const d1=cross(a,b,p),d2=cross(b,c,p),d3=cross(c,a,p);return ccw?(d1>=0&&d2>=0&&d3>=0):(d1<=0&&d2<=0&&d3<=0);};
+    let guard=0;
+    while(idx.length>3&&guard++<count*count){
+      let cut=false;
+      for(let k=0;k<idx.length;k++){
+        const a=idx[(k+idx.length-1)%idx.length],b=idx[k],c=idx[(k+1)%idx.length];
+        const cr=cross(a,b,c);
+        if(ccw?cr<=1e-9:cr>=-1e-9)continue;
+        let ear=true;for(const p of idx){if(p===a||p===b||p===c)continue;if(inside(p,a,b,c)){ear=false;break;}}
+        if(!ear)continue;
+        tri(X(a),Y(a),X(b),Y(b),X(c),Y(c));idx.splice(k,1);cut=true;break;
+      }
+      if(!cut)break;
+    }
+    if(idx.length===3)tri(X(idx[0]),Y(idx[0]),X(idx[1]),Y(idx[1]),X(idx[2]),Y(idx[2]));
+    else if(idx.length>3){for(let k=1;k<idx.length-1;k++)tri(X(idx[0]),Y(idx[0]),X(idx[k]),Y(idx[k]),X(idx[k+1]),Y(idx[k+1]));}
+  };
+  const textureOf=source=>{
+    let entry=textures.get(source);
+    if(entry)return entry;
+    const tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    try{gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);}catch(e){return null;}
+    entry={tex,w:source.width||source.naturalWidth||1,h:source.height||source.naturalHeight||1};
+    textures.set(source,entry);return entry;
+  };
+  const ctx={
+    canvas,
+    get isWebGL(){return true;},
+    get globalAlpha(){return alpha;},set globalAlpha(v){const x=Number(v);if(Number.isFinite(x))alpha=Math.max(0,Math.min(1,x));},
+    get fillStyle(){return fillStyle;},set fillStyle(v){fillStyle=v;},
+    get strokeStyle(){return strokeStyle;},set strokeStyle(v){strokeStyle=v;},
+    get lineWidth(){return lineWidth;},set lineWidth(v){const x=Number(v);if(x>0)lineWidth=x;},
+    get lineJoin(){return lineJoin;},set lineJoin(v){lineJoin=v;},
+    get lineCap(){return lineCap;},set lineCap(v){lineCap=v;},
+    globalCompositeOperation:'source-over',imageSmoothingEnabled:true,imageSmoothingQuality:'low',
+    save(){stack.push([m.slice(),alpha,fillStyle,strokeStyle,lineWidth,lineJoin,lineCap]);},
+    restore(){const s=stack.pop();if(s)[m,alpha,fillStyle,strokeStyle,lineWidth,lineJoin,lineCap]=s;},
+    setTransform(a,b,c,d,e,f){m=[a,b,c,d,e,f];},
+    transform(a,b,c,d,e,f){const o=m;m=[o[0]*a+o[2]*b,o[1]*a+o[3]*b,o[0]*c+o[2]*d,o[1]*c+o[3]*d,o[0]*e+o[2]*f+o[4],o[1]*e+o[3]*f+o[5]];},
+    translate(x,y){this.transform(1,0,0,1,x,y);},scale(x,y){this.transform(x,0,0,y,0,0);},
+    rotate(a){const c=Math.cos(a),s=Math.sin(a);this.transform(c,s,-s,c,0,0);},
+    clearRect(x,y,w,h){
+      if(lost||!prog)return;syncView();
+      // 全面を消すのがふつう。一部だけのときは、はさみで切った範囲だけ消す
+      const full=x<=0&&y<=0&&(x+w)*m[0]>=viewW-1&&(y+h)*m[3]>=viewH-1;
+      gl.clearColor(0,0,0,0);gl.clearStencil(0);
+      if(full){gl.clear(gl.COLOR_BUFFER_BIT|gl.STENCIL_BUFFER_BIT);stencilRef=0;return;}
+      const sx=Math.round(x*m[0]+m[4]),sy=Math.round(y*m[3]+m[5]),sw=Math.round(w*m[0]),sh=Math.round(h*m[3]);
+      gl.enable(gl.SCISSOR_TEST);gl.scissor(sx,viewH-sy-sh,sw,sh);gl.clear(gl.COLOR_BUFFER_BIT);gl.disable(gl.SCISSOR_TEST);
+    },
+    beginPath(){subpaths=[];current=null;},
+    moveTo(x,y){current={pts:[x,y],closed:false};subpaths.push(current);},
+    lineTo(x,y){point(x,y);},
+    closePath(){if(current){current.closed=true;const p=current.pts;current={pts:[p[0],p[1]],closed:false};subpaths.push(current);}},
+    arc(x,y,r,a0,a1,ccwise=false){
+      let sweep=a1-a0;if(!ccwise&&sweep<0)sweep+=Math.PI*2;if(ccwise&&sweep>0)sweep-=Math.PI*2;if(Math.abs(a1-a0)>=Math.PI*2)sweep=ccwise?-Math.PI*2:Math.PI*2;
+      const seg=Math.max(4,Math.ceil(Math.abs(sweep)/(Math.PI/12)*Math.max(1,r/6)));
+      for(let i=0;i<=seg;i++){const a=a0+sweep*i/seg;point(x+Math.cos(a)*r,y+Math.sin(a)*r);}
+    },
+    // canvas の arcTo と同じ: いまの点から (x1,y1) へ向かう線と、(x1,y1) から (x2,y2) へ向かう線の両方に接する半径 r の弧
+    arcTo(x1,y1,x2,y2,r){
+      const p0=lastPoint();if(!p0){this.moveTo(x1,y1);return;}
+      const [x0,y0]=p0;
+      const v1x=x0-x1,v1y=y0-y1,v2x=x2-x1,v2y=y2-y1,l1=Math.hypot(v1x,v1y),l2=Math.hypot(v2x,v2y);
+      if(!(r>0)||l1<1e-9||l2<1e-9){point(x1,y1);return;}
+      const cosT=(v1x*v2x+v1y*v2y)/(l1*l2),theta=Math.acos(Math.max(-1,Math.min(1,cosT)));
+      if(theta<1e-6||Math.abs(theta-Math.PI)<1e-6){point(x1,y1);return;}
+      const dist=r/Math.tan(theta/2);
+      const t1x=x1+v1x/l1*dist,t1y=y1+v1y/l1*dist,t2x=x1+v2x/l2*dist,t2y=y1+v2y/l2*dist;
+      const bx=v1x/l1+v2x/l2,by=v1y/l1+v2y/l2,bl=Math.hypot(bx,by),cd=r/Math.sin(theta/2);
+      const cx=x1+bx/bl*cd,cy=y1+by/bl*cd;
+      const a0=Math.atan2(t1y-cy,t1x-cx);let a1=Math.atan2(t2y-cy,t2x-cx);
+      let sweep=a1-a0;while(sweep>Math.PI)sweep-=Math.PI*2;while(sweep<-Math.PI)sweep+=Math.PI*2;
+      point(t1x,t1y);
+      const seg=Math.max(3,Math.ceil(Math.abs(sweep)/(Math.PI/12)*Math.max(1,r/6)));
+      for(let i=1;i<=seg;i++){const a=a0+sweep*i/seg;point(cx+Math.cos(a)*r,cy+Math.sin(a)*r);}
+    },
+    rect(x,y,w,h){this.moveTo(x,y);point(x+w,y);point(x+w,y+h);point(x,y+h);this.closePath();},
+    fill(){
+      if(lost)return;n=0;
+      for(const sp of subpaths){if(sp.pts.length>=6)triangulate(sp.pts);}
+      const paint=fillStyle;flush(n,paint&&typeof paint==='object'&&paint.stops?1:0,paint);
+    },
+    stroke(){
+      if(lost)return;n=0;const hw=lineWidth/2;
+      for(const sp of subpaths){
+        const p=sp.pts;const count=p.length/2;if(count<2)continue;
+        const closed=sp.closed;const segs=closed?count:count-1;
+        for(let i=0;i<segs;i++){
+          const j=(i+1)%count,ax=p[i*2],ay=p[i*2+1],bx=p[j*2],by=p[j*2+1],len=Math.hypot(bx-ax,by-ay);
+          if(len<1e-9)continue;
+          const nx=-(by-ay)/len*hw,ny=(bx-ax)/len*hw;
+          quad(ax+nx,ay+ny,bx+nx,by+ny,bx-nx,by-ny,ax-nx,ay-ny);
+        }
+        // つなぎ目: round は円、それ以外(miter・bevel)も隙間が見えないよう小さな円でふさぐ
+        const joinStart=closed?0:1,joinEnd=closed?count:count-1;
+        for(let i=joinStart;i<joinEnd;i++)disc(p[i*2],p[i*2+1],hw);
+        if(!closed&&lineCap==='round'){disc(p[0],p[1],hw);disc(p[(count-1)*2],p[(count-1)*2+1],hw);}
+        if(!closed&&lineCap==='square'){/* ノーツでは使っていない */}
+      }
+      const paint=strokeStyle;flush(n,paint&&typeof paint==='object'&&paint.stops?1:0,paint);
+    },
+    fillRect(x,y,w,h){if(lost||!(w>0)||!(h>0))return;n=0;quad(x,y,x+w,y,x+w,y+h,x,y+h);const paint=fillStyle;flush(n,paint&&typeof paint==='object'&&paint.stops?1:0,paint);},
+    createLinearGradient(x0,y0,x1,y1){const g={x0,y0,x1,y1,stops:[],addColorStop(t,color){this.stops.push([Math.max(0,Math.min(1,Number(t)||0)),color]);}};return g;},
+    drawImage(source,...args){
+      if(lost||!source)return;
+      const entry=textureOf(source);if(!entry)return;
+      let sx=0,sy=0,sw=entry.w,sh=entry.h,dx,dy,dw,dh;
+      if(args.length===2){[dx,dy]=args;dw=entry.w;dh=entry.h;}
+      else if(args.length===4){[dx,dy,dw,dh]=args;}
+      else if(args.length>=8){[sx,sy,sw,sh,dx,dy,dw,dh]=args;}else return;
+      if(!(dw>0)||!(dh>0))return;
+      const u0=sx/entry.w,v0=sy/entry.h,u1=(sx+sw)/entry.w,v1=(sy+sh)/entry.h;
+      ensure(24);n=0;
+      data.set([dx,dy,u0,v0,dx+dw,dy,u1,v0,dx+dw,dy+dh,u1,v1,dx,dy,u0,v0,dx+dw,dy+dh,u1,v1,dx,dy+dh,u0,v1],0);n=6;
+      flush(n,2,null,entry.tex);
+    },
+    // 焼き直した画像(同じ canvas を描き直したもの)を GPU へ渡し直す
+    forgetImage(source){const entry=textures.get(source);if(entry){gl.deleteTexture(entry.tex);textures.delete(source);}},
+  };
+  return ctx;
+};
+
 // 描画そのもの。色は DOM 版(index.html / Tailwind / rhythm-mode.js の CSS)と同じ値。
 const RHYTHM_CANVAS_RENDERER=(()=>{
   const HEAD_H=12;          // 粒の高さ(ノーツ要素 20px から inset 4px 0 を引いた値)
@@ -19436,7 +19667,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // はじめは毎フレーム「足し算(lighter)で2回貼る」形にしたが、それでフレームが60→30fpsへ落ちた
   // (CPUを1/4に絞った実測。原因を1つずつ外して特定)。焼くのは最初の1回だけなので、毎フレームの仕事は以前と同じ。
   for(const [name,style] of Object.entries(HEADS)){style.glowStrong=style.glow.length?Object.freeze([...style.glow,...style.glow]):style.glow;style.glowStrongKey=`${name}+`;}
-  let canvas=null,ctx=null,dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
+  let canvas=null,ctx=null,backend='2d',dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
   // マスモンの顔(焼いた絵)。ノーツより上に出すため、描くのはフレームの最後(end)にまとめる。
   // 以前は DOM の要素を canvas の上へ重ねて毎フレーム動かしていた(2026-09-25にやめた)
   const faces=[];
@@ -19684,7 +19915,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.globalAlpha=1;
   };
   return {
-    attach(next){canvas=next||null;ctx=canvas?canvas.getContext('2d'):null;},
+    // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
+    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx)ctx=canvas.getContext('2d');},
+    get backend(){return backend;},
     // ── 演奏が始まる前に、光のスプライトを焼いておく ──────────────────────────
     //
     // 【2026-09-12・ユーザーとのやりとり】

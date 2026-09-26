@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bba079442ea12efb
+// source-sha256: 725dcdbf6dba09f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 14:22";
+const BUILD_DATE = "2026-09-26 14:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -22421,11 +22421,16 @@ const RhythmTapTest = ({
   const noteCanvasMaxDprRef = useRef(noteCanvasMaxDpr);
   noteCanvasMaxDprRef.current = noteCanvasMaxDpr;
   const noteCanvasRef = useRef(null);
+  const webglNotes = useState(() => canvasNotes && rhythmWebglNotesActive())[0];
   useEffect(() => {
     if (!canvasNotes) return undefined;
-    RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current);
+    RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current, {
+      webgl: webglNotes
+    });
+    const canvas = noteCanvasRef.current;
+    if (canvas) canvas.dataset.rhythmNoteBackend = RHYTHM_CANVAS_RENDERER.backend;
     return () => RHYTHM_CANVAS_RENDERER.release();
-  }, [canvasNotes]);
+  }, [canvasNotes, webglNotes]);
   const noteElements = useMemo(() => canvasNotes ? null : chart.notes.map((note, index) => {
     const monsterSlot = rhythmNoteMonsterSlot(note),
       monster = monsterSlot ? monsters[monsterSlot - 1] || null : null;
@@ -62317,9 +62322,9 @@ function MonsterHeroGame() {
       className: "text-xs font-black text-cyan-200"
     }, "ノーツの描き方（検証用）"), React.createElement("p", {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
-    }, "canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは", RELEASE_FLAGS.rhythmCanvasNotes ? 'canvas' : '要素', "）に従います。"), React.createElement("div", {
+    }, "canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは", RELEASE_FLAGS.rhythmCanvasNotes ? 'canvas' : '要素', "）に従います。「WebGL」は canvas と同じ描き方を GPU で描く試作です（重さ・発熱を「性能計測」で canvas と比べるためのもの）。"), React.createElement("div", {
       className: "mt-2 flex gap-2"
-    }, [['', '自動'], ['dom', '要素'], ['canvas', 'canvas']].map(([value, label]) => React.createElement("button", {
+    }, [['', '自動'], ['dom', '要素'], ['canvas', 'canvas'], ['webgl', 'WebGL']].map(([value, label]) => React.createElement("button", {
       key: value || 'auto',
       type: "button",
       "data-rhythm-canvas-pref": value || 'auto',
