@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f6cbefe448d173e3
+// source-sha256: 33058d2132ec3798
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 01:59";
+const BUILD_DATE = "2026-09-27 02:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -21171,30 +21171,35 @@ const RhythmOptions = ({
 };
 const RHYTHM_DIFFICULTY_TONE = Object.freeze({
   EASY: Object.freeze({
+    badge: 'from-emerald-500 to-emerald-700',
     dot: 'bg-emerald-400',
     on: 'border-emerald-300 bg-emerald-600 text-white',
     off: 'border-emerald-400/40 text-emerald-200',
     text: 'text-emerald-300'
   }),
   NORMAL: Object.freeze({
+    badge: 'from-sky-500 to-sky-700',
     dot: 'bg-sky-400',
     on: 'border-sky-300 bg-sky-600 text-white',
     off: 'border-sky-400/40 text-sky-200',
     text: 'text-sky-300'
   }),
   HARD: Object.freeze({
+    badge: 'from-amber-500 to-amber-700',
     dot: 'bg-amber-400',
     on: 'border-amber-300 bg-amber-600 text-white',
     off: 'border-amber-400/40 text-amber-200',
     text: 'text-amber-300'
   }),
   EXPERT: Object.freeze({
+    badge: 'from-rose-500 to-rose-700',
     dot: 'bg-rose-400',
     on: 'border-rose-300 bg-rose-600 text-white',
     off: 'border-rose-400/40 text-rose-200',
     text: 'text-rose-300'
   }),
   MASTER: Object.freeze({
+    badge: 'from-fuchsia-500 to-fuchsia-700',
     dot: 'bg-fuchsia-400',
     on: 'border-fuchsia-300 bg-fuchsia-700 text-white',
     off: 'border-fuchsia-400/40 text-fuchsia-200',
@@ -21689,9 +21694,10 @@ const RhythmSongSelect = ({
     }, rhythmSongFullName(entry))), React.createElement("span", {
       className: `flex items-center gap-1${spot('achievement')}`
     }, React.createElement("span", {
-      className: "mr-1 inline-flex shrink-0 items-baseline gap-0.5 rounded-md bg-gradient-to-b from-rose-500 to-rose-700 px-1.5 py-0.5 leading-none shadow-[0_1px_0_rgba(0,0,0,.4)]"
+      "data-rhythm-song-row-level-tone": rowDifficultyId(entry) || '',
+      className: `mr-1 inline-flex shrink-0 items-baseline gap-0.5 rounded-md bg-gradient-to-b ${(rhythmDifficultyTone(rowDifficultyId(entry)) || rhythmDifficultyTone('EXPERT')).badge || 'from-rose-500 to-rose-700'} px-1.5 py-0.5 leading-none shadow-[0_1px_0_rgba(0,0,0,.4)]`
     }, React.createElement("small", {
-      className: "text-[8px] font-black text-rose-100"
+      className: "text-[8px] font-black text-white/80"
     }, "Lv."), React.createElement("b", _extends({}, main ? {
       'data-rhythm-song-row-level': ''
     } : {}, {
