@@ -1900,6 +1900,7 @@ function MonsterHeroGame() {
     const fused = (masu?.fusionHistory || []).length > 0;
     const power = mon !== undefined ? (mon ? monsterPowerOf(mon) : null) : (masu ? masuPowerOf(masu) : monsterPowerOf(base));
     const iconSrc = base.iconUrl || base.imgUrl || '';
+    const unusedTranscendPoints = masu ? normalizeMasuProgression(masu).transcendPoints : 0;
     return (<>
       <div className="relative shrink-0" style={{isolation:'isolate'}}>
         <div className={`${MONSTER_CARD_ICON_CLASS} border ${masu?(fused?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'):'border-white/10'}`}>
@@ -1917,6 +1918,14 @@ function MonsterHeroGame() {
           <span aria-label={`ふり分けできる強化ポイント ${masu.distAptPoints}`}
             className="absolute -left-1.5 -bottom-1 z-10 rounded-full border border-amber-200/60 bg-amber-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow"
             style={{minWidth:'17px',textAlign:'center'}}>{masu.distAptPoints}</span>
+        )}
+        {/* ふり分けできる超越ポイント。通常の強化ポイント(左下・黄)と見分けられるよう、
+            **右下**に超越強化画面と同じ空色で出す。超越していない個体も超越強化は使えるので、
+            transcended ではなく残りポイントだけで出し入れする。 */}
+        {unusedTranscendPoints>0&&(
+          <span aria-label={`ふり分けできる超越ポイント ${unusedTranscendPoints}`}
+            className="absolute -right-1.5 -bottom-1 z-10 rounded-full border border-sky-100/70 bg-sky-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow"
+            style={{minWidth:'17px',textAlign:'center'}}>{unusedTranscendPoints}</span>
         )}
         {masu&&<RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>}
         {masu&&<TranscendenceBadge transcended={normalizeMasuProgression(masu).transcended} soulRankStage={normalizeMasuProgression(masu).soulRankStage} small/>}
