@@ -220,7 +220,7 @@
 - 週次: `weeklyPeriod`, `weekly`, `sentWeekly`, `weeklyLoginDays`（月曜JST 04:00更新）
 - 月次: `monthlyPeriod`, `monthly`, `sentMonthly`, `monthlyLoginDays`, `monthlyDailyCompletePeriods`, `monthlyWeeklyCompletePeriods`（毎月1日JST 04:00更新）
 
-`daily` / `weekly` / `monthly` の数え値に `speciesClears`(種族チャレンジのクリア)と `rhythmPlays`(モンヒロビートで最後まで演奏した曲)を追加した(2026-09-26)。値を持たない既存の保存は `emptyMissionCounts` が0で補う。タクティクスバトルのクリアは、記録(`mh_tactics_*`)は分けたまま、ミッションだけクラシックの同じモードの数え値(`challengeClears` / `proClears` / `extremeClears`)へ足す。
+`daily` / `weekly` / `monthly` の数え値に `speciesClears`(種族チャレンジのクリア)を追加した(2026-09-26)。モンヒロビートはミッションに入れない(遊ぶ人が分かれるため)。いったん入れた `rhythmPlays` が残っている保存もあるが、読まないだけで害はない。値を持たない既存の保存は `emptyMissionCounts` が0で補う。タクティクスバトルのクリアは、記録(`mh_tactics_*`)は分けたまま、ミッションだけクラシックの同じモードの数え値(`challengeClears` / `proClears` / `extremeClears`)へ足す。
 
 月次のコンプリート履歴配列は、同じ日次・週次期間を二重加算しないための期間IDだけを保持する。月途中の初導入時は既存の進捗を壊さず月次を空で補い、導入前に完了していた現在の日次・週次は遡及加算しない。個別報酬とコンプリート報酬の二重送付は、`sentMonthly` と `gift_mission_monthly_<期間>_<missionId>` の固定ギフトIDで防ぐ。
 

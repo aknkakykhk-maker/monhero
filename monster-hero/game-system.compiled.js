@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e294c707fb125ef3
+// source-sha256: dfad86a85f4dd7eb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 11:50";
+const BUILD_DATE = "2026-09-26 11:55";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -10827,9 +10827,9 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   5: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'モンヒロビートで3曲演奏する',
-    key: 'rhythmPlays',
-    target: 3,
+    condition: 'アイテムを1個使用する',
+    key: 'itemUses',
+    target: 1,
     rewards: [{
       type: 'dyeMock',
       amount: 1
@@ -10846,9 +10846,9 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   0: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'モンヒロビートで3曲演奏する',
-    key: 'rhythmPlays',
-    target: 3,
+    condition: 'クイックモードを1回クリアする',
+    key: 'quickClears',
+    target: 1,
     rewards: [{
       type: 'trainingTicketLarge',
       amount: 1
@@ -10934,21 +10934,11 @@ const missionDailyDefinitions = (now = Date.now()) => [{
     amount: 300
   }]
 }, {
-  id: 'daily_rhythm',
-  name: '今日の一曲',
-  condition: 'モンヒロビートで1曲演奏する',
-  key: 'rhythmPlays',
-  target: 1,
-  rewards: [{
-    type: 'trainingTicket',
-    amount: 3
-  }]
-}, {
   ...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]
 }, {
   id: 'daily_complete',
   name: 'デイリーコンプリート',
-  condition: '通常デイリー6個のうち4個を達成する',
+  condition: '通常デイリー5個のうち4個を達成する',
   key: 'complete',
   target: 4,
   rewards: [{
@@ -11031,18 +11021,11 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
     amount: 1
   }]
 }, {
-  id: 'weekly_rhythm',
-  name: 'モンヒロビート週間',
-  condition: 'モンヒロビートで10曲演奏する',
-  key: 'rhythmPlays',
-  target: 10,
-  rewards: [missionItemReward('hero_proof_shard', 3)]
-}, {
   ...WEEKLY_ROTATION_MISSIONS[missionWeekRotationIndex(now)]
 }, {
   id: 'weekly_complete',
   name: 'ウィークリーコンプリート',
-  condition: '通常ウィークリー9個のうち6個を達成する',
+  condition: '通常ウィークリー8個のうち6個を達成する',
   key: 'complete',
   target: 6,
   rewards: [{
@@ -11135,13 +11118,6 @@ const missionMonthlyDefinitions = () => [{
   target: 10,
   rewards: [missionItemReward('hero_proof_shard', 10)]
 }, {
-  id: 'monthly_rhythm',
-  name: 'モンヒロビート月間',
-  condition: 'モンヒロビートで40曲演奏する',
-  key: 'rhythmPlays',
-  target: 40,
-  rewards: [missionItemReward('hero_proof_shard', 10)]
-}, {
   id: 'monthly_enhances',
   name: '育成月間',
   condition: 'モンスターを30回強化する',
@@ -11174,7 +11150,7 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_complete',
   name: 'マンスリーコンプリート',
-  condition: '通常マンスリー12個のうち8個を達成する',
+  condition: '通常マンスリー11個のうち8個を達成する',
   key: 'complete',
   target: 8,
   rewards: [{
@@ -11218,8 +11194,7 @@ const emptyMissionCounts = () => ({
   proClears: 0,
   extremeClears: 0,
   itemUses: 0,
-  speciesClears: 0,
-  rhythmPlays: 0
+  speciesClears: 0
 });
 const normalizeMissions = (value, now = Date.now()) => {
   const dailyPeriod = missionDailyPeriod(now),
@@ -51575,12 +51550,6 @@ function MonsterHeroGame() {
         daily: true,
         weekly: true,
         monthly: true
-      },
-      rhythmPlay: {
-        key: 'rhythmPlays',
-        daily: true,
-        weekly: true,
-        monthly: true
       }
     }[event];
     if (!rule) return;
@@ -61633,7 +61602,6 @@ function MonsterHeroGame() {
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       quickRunAward: rhythmPlayRunAward,
       onComplete: async (result, merged) => {
-        if (rhythmPlay.from === 'demo') await saveMissionProgress('rhythmPlay');
         if (rhythmPlay.from !== 'tutorial') {
           const baseLoops = rhythmPlayLoopsFor(rhythmPlay.song, rhythmPlay.difficulty);
           const loopScale = rhythmPlayRunLoopScaleFor(rhythmPlay.song);
