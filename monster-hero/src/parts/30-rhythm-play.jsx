@@ -1024,6 +1024,9 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     // 元気のように一瞬で終わる能力は、少しのあいだだけ光らせる
     run.abilityFlashSlot=slot;
     run.abilityFlashUntilMs=songTimeMs+RHYTHM_SIDE_MONSTER_FLASH_MS;
+    // 能力が出た回数をマスモンごとに数える(リザルトの左に、いちばん多く出た子を出すため。見た目だけ・保存しない)
+    run.abilityCounts=run.abilityCounts||[];
+    if(slot>=1)run.abilityCounts[slot-1]=(Number(run.abilityCounts[slot-1])||0)+1;
     // カットインを1回だけ走らせる(見た目だけ。判定・スコア・ライフには触らない)
     if(cutInOn){const cutIn=cutInRefs.current[slot-1];if(cutIn)rhythmRestartAnimations([{el:cutIn,attr:'rhythmCutinPlay'}]);}
   }
@@ -1525,9 +1528,9 @@ scheduleTick();};
     ★背景のジャケットのぼかしは止まった絵を1回描くだけ。軽量モードでは出さない(index.html) */}
 {hudArtSrc&&<div data-rhythm-result-backdrop aria-hidden="true" style={{backgroundImage:`url("${hudArtSrc}")`}}/>}
 <div data-rhythm-result-frame className="relative flex min-h-0 flex-1 flex-col [@container(min-width:680px)]:flex-row">
-{/* 横に広いときだけ、左に演奏に連れていったマスモン(1体目)を大きく出す。絵は両サイドのマスモン用に焼いた1枚(sideArtUrls)を使い回す。
+{/* 横に広いときだけ、左に演奏に連れていったマスモンを大きく出す。どの子かは rhythmResultHeroIndex が決める(その曲で能力がいちばん多く出た子。2026-09-26 ユーザーに伝えた決め方)。絵は両サイドのマスモン用に焼いた1枚(sideArtUrls)を使い回す。
     マスモンがいないときは曲のジャケットを出す */}
-{(()=>{const index=sideArtUrls.findIndex(Boolean);const art=index>=0?sideArtUrls[index]:'';if(!art&&!hudArtSrc)return null;return <aside data-rhythm-result-hero aria-hidden="true" className="relative hidden w-[31%] max-w-[360px] shrink-0 items-center justify-center p-3 [@container(min-width:680px)]:flex">{art?<img data-rhythm-result-hero-art src={art} alt="" draggable={false} decoding="async" className="relative max-h-full w-full object-contain"/>:<img data-rhythm-result-hero-jacket src={hudArtSrc} alt="" draggable={false} decoding="async" className="relative aspect-square w-[82%] rounded-2xl border border-white/20 object-cover"/>}</aside>;})()}
+{(()=>{const index=rhythmResultHeroIndex(sideArtUrls,runRef.current?.abilityCounts);const art=index>=0?sideArtUrls[index]:'';if(!art&&!hudArtSrc)return null;return <aside data-rhythm-result-hero aria-hidden="true" className="relative hidden w-[31%] max-w-[360px] shrink-0 items-center justify-center p-3 [@container(min-width:680px)]:flex">{art?<img data-rhythm-result-hero-art src={art} alt="" draggable={false} decoding="async" className="relative max-h-full w-full object-contain"/>:<img data-rhythm-result-hero-jacket src={hudArtSrc} alt="" draggable={false} decoding="async" className="relative aspect-square w-[82%] rounded-2xl border border-white/20 object-cover"/>}</aside>;})()}
 <div data-rhythm-result-body className="relative flex min-h-0 min-w-0 flex-1 flex-col">
 <div data-rhythm-result-scroll className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3">
 <h2 className="mb-2 text-[11px] font-black tracking-[.3em] text-cyan-200">RHYTHM RESULT</h2>

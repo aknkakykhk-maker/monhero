@@ -318,7 +318,8 @@ const serve=()=>new Promise(resolve=>{
     // 高さは 66px → 60px にした(2026-09-05・曲の一覧へ回す高さを増やすため)。
     // 見張りたいのは「固定の h で決めていること」なので、数字ではなくその書きぶりを見る。
     ok('難易度ボタンの高さは固定（min-h ではなく h で決めている）',
-      /flex h-\[\d+px\] flex-1 flex-col justify-center rounded-xl border-2/.test(gameSource)
+      // 2026-09-26 に見た目を変えた(Lv.の数字を大きく・角を少し小さく)。並びではなく「固定の h と border-2」を見る
+      /flex h-\[\d+px\] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2/.test(gameSource)
       &&!gameSource.includes('min-h-[52px] flex-1 rounded-xl border-2'));
 
     // ---- 並び替え(2026-09-05・ユーザー指示「曲選択のソートがほしい 入手順 難易度順 名前順」) ----

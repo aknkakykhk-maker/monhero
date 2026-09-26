@@ -17610,6 +17610,23 @@ const RHYTHM_CHART_LEVELS_AFTER_SWITCH=Object.freeze({
   close_to_your_heart:Object.freeze({EASY:7,NORMAL:8,HARD:12,EXPERT:18,MASTER:28}),
 // </rhythm-chart-levels-after-switch>
 });
+// ===== リザルトの左に大きく出すマスモン(2026-09-26) =====
+// ユーザー「マスモン4体選ぶ中でどれが選ばれるの？」に答えた決め方。
+//   ・その曲で能力がいちばん多く出た子
+//   ・同じ回数なら編成の先の子
+//   ・1回も出なければ、絵のある先頭の子
+// arts … 枠ごとの絵(無い枠は空)、counts … 枠ごとの能力が出た回数(演奏中の控え。保存しない)。
+// 絵のある子が1体もいなければ -1(リザルトは曲のジャケットを出す)
+const rhythmResultHeroIndex=(arts,counts)=>{
+  const list=Array.isArray(arts)?arts:[];
+  let best=-1,bestCount=0;
+  list.forEach((art,index)=>{
+    if(!art)return;
+    const count=Math.max(0,Number(Array.isArray(counts)?counts[index]:0)||0);
+    if(best<0||count>bestCount){best=index;bestCount=count;}
+  });
+  return best;
+};
 // ===== 5レーン時代の譜面を6レーンの道で使う(2026-09-26) =====
 // 譜面が laneCount を持っていなければ5レーン時代のもの。サブレーンを (12-10)/2=1 本ずつ右へずらし、
 // 道の**真ん中**に置く(左右の端のサブレーンが1本ずつ空く)。形・幅・時刻・ノーツ数は変えない。
@@ -18083,8 +18100,8 @@ const RHYTHM_TUTORIAL_STEPS=Object.freeze([
   {fromMs:rhythmTutorialMs(14), title:'2つ同時に「同時押し」', text:'左右に1つずつ出ます。指を2本置いて、同時に叩きます。'},
   {fromMs:rhythmTutorialMs(22), title:'押さえ続ける「ホールド」', text:'叩いたまま押さえて、終わりの光る横棒が判定ラインへ来たら離します。'},
   {fromMs:rhythmTutorialMs(34), title:'なぞる「スライド」',   text:'押さえたまま、帯の道すじを指でなぞります。途中で指を離さないように。'},
-  {fromMs:rhythmTutorialMs(43), title:'払う「フリック」',     text:'緑のノーツは、叩いたあと指を上へ払います。MASTERには、矢印の向き（左か右）へ払うノーツも出ます。'},
-  {fromMs:rhythmTutorialMs(50), title:'「終点フリック」',     text:'終わりの横棒が緑で上向きの矢印が付いているホールドは、離さずにそのまま上へ払って終わります。'},
+  {fromMs:rhythmTutorialMs(43), title:'払う「フリック」',     text:'ピンクのノーツは、叩いたあと指を上へ払います。MASTERには、矢印の向き（左か右）へ払うノーツも出ます（左はオレンジ・右は黄緑）。'},
+  {fromMs:rhythmTutorialMs(50), title:'「終点フリック」',     text:'終わりの横棒がピンクで上向きの矢印が付いているホールドは、離さずにそのまま上へ払って終わります。'},
   {fromMs:rhythmTutorialMs(58), title:'「モンスターノーツ」', text:'金色のノーツです。GREATより良い判定で取ると、設定したマスモンの能力が出ます。'},
   {fromMs:rhythmTutorialMs(63), title:'ここまで！',           text:'おつかれさま。あとは曲をえらんで遊んでみてください。'},
 ]);
@@ -19665,6 +19682,18 @@ const rhythmCreateGL2D=canvas=>{
 };
 
 // 描画そのもの。色は DOM 版(index.html / Tailwind / rhythm-mode.js の CSS)と同じ値。
+// ===== ノーツの色(2026-09-26・ユーザー指示「ノーツごとにちゃんと色分けしたい」「全部のノーツの色を変えたい、矢印も含めて」。案Bに決定) =====
+// 粒・帯・矢印・終わりの横棒・押さえている最中の光は、どれもこの表から色を取る(色をあちこちに書き写さない)。
+//   hi … いちばん明るい色(粒の上・矢印の芯) / mid … その種類の色 / lo … 暗い側 / rgb … 光(rgba)に使う
+// ★横フリックは左右で色を分ける(左=オレンジ・右=黄緑)。以前は粒が緑のまま矢印だけ左緑・右ピンクで、統一感がなかった
+const RHYTHM_NOTE_COLORS=Object.freeze({
+  TAP:  Object.freeze({hi:'#f0f9ff',mid:'#38bdf8',lo:'#0284c7',rgb:'56,189,248',label:'水色'}),
+  HOLD: Object.freeze({hi:'#ecfdf5',mid:'#34d399',lo:'#059669',rgb:'52,211,153',label:'緑'}),
+  SLIDE:Object.freeze({hi:'#f5f3ff',mid:'#a78bfa',lo:'#7c3aed',rgb:'167,139,250',label:'紫'}),
+  FLICK:Object.freeze({hi:'#fdf2f8',mid:'#f472b6',lo:'#db2777',rgb:'244,114,182',label:'ピンク'}),
+  LEFT: Object.freeze({hi:'#fff7ed',mid:'#fb923c',lo:'#ea580c',rgb:'251,146,60',label:'オレンジ'}),
+  RIGHT:Object.freeze({hi:'#f7fee7',mid:'#a3e635',lo:'#4d7c0f',rgb:'163,230,53',label:'黄緑'}),
+});
 const RHYTHM_CANVAS_RENDERER=(()=>{
   const HEAD_H=12;          // 粒の高さ(ノーツ要素 20px から inset 4px 0 を引いた値)
   const GLOW=20;            // 光の画像の余白(px)。いちばん広い光(18px)が収まる
@@ -19675,11 +19704,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 粒の厚み。2026-09-26 に1.55倍へ厚くしたが、実機で「ノーツが太くなってて違和感が凄い」と言われて元の1倍へ戻した。
   // (当たり判定はノーツサイズにも粒の見た目にも左右されない)。
   const HEAD_THICK=1;
+  // 粒の色は RHYTHM_NOTE_COLORS から作る(2026-09-26)。光は その色(濃い) → 白 → その色(薄い) の3層
+  const headOf=c=>({radius:5,gradient:[c.hi,[c.mid,.55],c.lo],border:'rgba(255,255,255,.82)',inset:'rgba(255,255,255,.7)',glow:[[13,`rgba(${c.rgb},.5)`],[6,'rgba(255,255,255,.22)'],[10,`rgba(${c.rgb},.26)`]]});
   const HEADS={
-    TAP:    {radius:5,gradient:['#fde68a','#d946ef'],border:'rgba(255,255,255,.72)',inset:'rgba(255,255,255,.58)',glow:[[12,'rgba(217,70,239,.32)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
-    HOLD:   {radius:5,gradient:['#ecfeff','#22d3ee'],border:'rgba(207,250,254,.86)',inset:'rgba(255,255,255,.72)',glow:[[13,'rgba(34,211,238,.42)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
-    FLICK:  {radius:5,gradient:['#f0fdf4',['#86efac',.34],['#22c55e',.62],'#15803d'],border:'rgba(220,252,231,.98)',inset:'rgba(255,255,255,.95)',glow:[[10,'rgba(34,197,94,.92)'],[18,'rgba(21,128,61,.62)'],[6,'rgba(255,255,255,.20)']]},
-    SLIDE:  {radius:5,gradient:['#ddd6fe',['#a855f7',.58],'#6d28d9'],border:'rgba(221,214,254,.95)',inset:'rgba(255,255,255,.82)',glow:[[16,'rgba(168,85,247,.64)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
+    TAP:    headOf(RHYTHM_NOTE_COLORS.TAP),
+    HOLD:   headOf(RHYTHM_NOTE_COLORS.HOLD),
+    FLICK:  headOf(RHYTHM_NOTE_COLORS.FLICK),
+    SLIDE:  headOf(RHYTHM_NOTE_COLORS.SLIDE),
+    // 横フリック(左・右)。粒も矢印も同じ色
+    LEFT:   headOf(RHYTHM_NOTE_COLORS.LEFT),
+    RIGHT:  headOf(RHYTHM_NOTE_COLORS.RIGHT),
     MONSTER:{radius:5,gradient:['#fef3c7','#f59e0b'],border:'rgba(255,255,255,.72)',inset:'rgba(255,255,255,.58)',ring:'#fde68a',glow:[[12,'rgba(217,70,239,.32)'],[5,'rgba(253,224,71,.72)'],[10,'rgba(217,70,239,.42)'],[14,'rgba(34,211,238,.24)']]},
     FAILED: {radius:5,gradient:['#94a3b8','#475569'],border:'rgba(148,163,184,.6)',inset:'rgba(255,255,255,.3)',glow:[]},
   };
@@ -19730,7 +19764,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     ctx.globalAlpha=1;
   };
-  // 矢印(FLICK / 終点フリック)。三角に緑の光。
+  // 矢印(FLICK / 終点フリック)。三角にピンクの光(色は RHYTHM_NOTE_COLORS.FLICK)。
   const arrowSprite=(key,w,h,glows,gradientStops)=>{
     const id=`arrow:${key}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
@@ -19766,14 +19800,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const AURA_OUTER_GLOWS=Object.freeze([[8,'rgba(217,70,239,.45)'],[12,'rgba(34,211,238,.28)']]);
   const AURA_OUTER_DOTS=Object.freeze([[.08,.45,'rgba(255,255,255,.85)'],[.93,.58,'rgba(103,232,249,.85)'],[.20,.88,'rgba(253,224,71,.8)'],[.78,.08,'rgba(232,121,249,.82)']]);
   const AURA_INNER_GLOWS=Object.freeze([[5,'rgba(253,224,71,.92)'],[9,'rgba(232,121,249,.58)'],[13,'rgba(34,211,238,.34)']]);
-  const FLICK_ARROW_GLOWS=Object.freeze([[5,'rgba(34,197,94,.95)'],[11,'rgba(21,128,61,.7)'],[2,'rgba(2,6,23,.9)']]);
-  const FLICK_ARROW_FILL=Object.freeze([[0,'#ffffff'],[.38,'#bbf7d0'],[1,'#22c55e']]);
-  // 横フリックの山形(<<< / >>>)。左は緑・右はピンクで、形と色の両方で向きがわかるようにする(2026-09-26)。
+  const FLICK_ARROW_GLOWS=Object.freeze([[5,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.95)`],[11,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.6)`],[2,'rgba(2,6,23,.9)']]);
+  const FLICK_ARROW_FILL=Object.freeze([[0,'#ffffff'],[.38,RHYTHM_NOTE_COLORS.FLICK.hi],[1,RHYTHM_NOTE_COLORS.FLICK.mid]]);
+  // 横フリックの山形(<<< / >>>)。粒と同じ色(左=オレンジ・右=黄緑)で、形と色の両方で向きがわかるようにする(2026-09-26)。
   // 焼くのは最初の1回だけ(ぼかしは焼くときにだけ使う)。
-  const SIDE_FLICK_STYLE=Object.freeze({
-    left:Object.freeze({stroke:'#f0fdf4',glows:Object.freeze([[6,'rgba(34,197,94,.95)'],[12,'rgba(21,128,61,.7)']])}),
-    right:Object.freeze({stroke:'#fdf2f8',glows:Object.freeze([[6,'rgba(236,72,153,.95)'],[12,'rgba(190,24,93,.7)']])}),
-  });
+  const sideFlickStyle=c=>Object.freeze({stroke:c.hi,glows:Object.freeze([[6,`rgba(${c.rgb},.95)`],[12,`rgba(${c.rgb},.6)`]])});
+  const SIDE_FLICK_STYLE=Object.freeze({left:sideFlickStyle(RHYTHM_NOTE_COLORS.LEFT),right:sideFlickStyle(RHYTHM_NOTE_COLORS.RIGHT)});
   const SIDE_CHEVRON_W=46,SIDE_CHEVRON_H=18,SIDE_CHEVRON_MARGIN=12;
   const sideChevronSprite=dir=>{
     const id=`chevron:${dir}:${dpr}`;
@@ -19793,11 +19825,21 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     c.strokeStyle=style.stroke;c.lineWidth=3.2;chevrons();c.stroke();
     const sprite={...s,margin:m,tw:w,th:h};sprites.set(id,sprite);return sprite;
   };
-  const END_BAR_GLOWS_LOW=Object.freeze([[7,'#67e8f9']]);
-  const END_BAR_GLOWS=Object.freeze([[10,'#67e8f9'],[18,'#d946ef']]);
-  const END_FLICK_ARROW_GLOWS=Object.freeze([[4,'rgba(34,197,94,.95)'],[2,'rgba(2,6,23,.85)']]);
-  const END_FLICK_ARROW_FILL=Object.freeze([[0,'#f0fdf4'],[.6,'#4ade80'],[1,'#16a34a']]);
-  const headStyle=(note,failed,monster)=>failed?HEADS.FAILED:monster?HEADS.MONSTER:HEADS[rhythmNoteVisualType(note)]||HEADS.TAP;
+  // 終わりの横棒は、そのノーツと同じ色(HOLD=緑・SLIDE=紫・終点フリック=ピンク)
+  const endBarColor=(note,flick)=>flick?RHYTHM_NOTE_COLORS.FLICK:rhythmNoteIsSlide(note)?RHYTHM_NOTE_COLORS.SLIDE:RHYTHM_NOTE_COLORS.HOLD;
+  // 光の並びは定数として1度だけ作る(毎フレーム配列を作らない)
+  const END_BAR_GLOWS=Object.freeze(Object.fromEntries(['HOLD','SLIDE','FLICK'].map(kind=>{const c=RHYTHM_NOTE_COLORS[kind];
+    return [kind,Object.freeze({full:Object.freeze([[10,c.mid],[18,c.lo]]),low:Object.freeze([[7,c.mid]])})];})));
+  const endBarKind=(note,flick)=>flick?'FLICK':rhythmNoteIsSlide(note)?'SLIDE':'HOLD';
+  const END_FLICK_ARROW_GLOWS=Object.freeze([[4,`rgba(${RHYTHM_NOTE_COLORS.FLICK.rgb},.95)`],[2,'rgba(2,6,23,.85)']]);
+  const END_FLICK_ARROW_FILL=Object.freeze([[0,RHYTHM_NOTE_COLORS.FLICK.hi],[.6,RHYTHM_NOTE_COLORS.FLICK.mid],[1,RHYTHM_NOTE_COLORS.FLICK.lo]]);
+  const headStyle=(note,failed,monster)=>{
+    if(failed)return HEADS.FAILED;
+    if(monster)return HEADS.MONSTER;
+    const type=rhythmNoteVisualType(note);
+    if(type==='FLICK'){const dir=rhythmFlickDir(note);if(dir==='left')return HEADS.LEFT;if(dir==='right')return HEADS.RIGHT;}
+    return HEADS[type]||HEADS.TAP;
+  };
   const fillGradient=(x,y,h,stops)=>{
     const g=ctx.createLinearGradient(0,y,0,y+h);
     stops.forEach((stop,index)=>{const offset=Array.isArray(stop)?stop[1]:index/(stops.length-1);const color=Array.isArray(stop)?stop[0]:stop;g.addColorStop(offset,color);});
@@ -19842,10 +19884,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(pressed){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fill();}
     const sideDir=rhythmNoteVisualType(note)==='FLICK'&&!failed?rhythmFlickDir(note):'';
     if(sideDir){
-      // 横フリック: 粒の上に向きの山形を重ねる。横幅は粒に合わせて伸ばしすぎない
+      // 横フリック: 向きの山形は粒の**すぐ上**に並べる(上フリックの矢印と同じ置き方)。
+      // 以前は粒の上に重ねていて、山形の光で粒が隠れ、落ちてくるあいだ矢印しか見えなかった
+      // (2026-09-26・実機「横フリックの矢印とノーツがかぶって、矢印しか見えなくて視覚性が悪い」)。横幅は粒に合わせて伸ばしすぎない
       const sprite=sideChevronSprite(sideDir);
       const aw=Math.min((sprite.tw+sprite.margin*2)*sizeMul,w+sprite.margin*2),ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
-      ctx.drawImage(sprite.canvas,cx-aw/2,cy-ah/2,aw,ah);
+      ctx.drawImage(sprite.canvas,cx-aw/2,y-2*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale,aw,ah);
     }else if(rhythmNoteVisualType(note)==='FLICK'&&!failed){
       const sprite=arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       const aw=(sprite.tw+sprite.margin*2)*sizeMul,ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
@@ -19857,7 +19901,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 判定ラインにとどまっている粒のまわりに、光のたまり(楕円)と、上へ昇る小さな光の粒を出す。
   // どちらも最初の1回だけ焼いた絵を貼るだけ(毎フレームのグラデーション作成・ぼかしは無し)。
   // 押さえているノーツ1本につき drawImage が 1 + 4 回。押さえられるのは指の数(2本)まで
-  const HOLD_SPARK_TINT=Object.freeze({HOLD:'103,232,249',SLIDE:'192,132,252'});
+  const HOLD_SPARK_TINT=Object.freeze({HOLD:RHYTHM_NOTE_COLORS.HOLD.rgb,SLIDE:RHYTHM_NOTE_COLORS.SLIDE.rgb});
   const holdSparkSprite=kind=>{
     const id=`spark:${kind}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
@@ -19926,13 +19970,13 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     for(let index=band.length-1;index>=0;index--)ctx.lineTo(sizeX(band[index].left,band[index].right)[0],band[index].y);
     ctx.closePath();
     // 帯のまわりの光(ノーツ全体の drop-shadow 相当)は、外周の太い半透明の線で出す
-    if(!failed&&effect!=='MINIMAL'&&!lightweight){ctx.lineWidth=5;ctx.strokeStyle='rgba(180,240,255,.16)';ctx.lineJoin='round';ctx.stroke();}
+    if(!failed&&effect!=='MINIMAL'&&!lightweight){ctx.lineWidth=5;ctx.strokeStyle=`rgba(${RHYTHM_NOTE_COLORS.HOLD.rgb},.18)`;ctx.lineJoin='round';ctx.stroke();}
     const g=ctx.createLinearGradient(0,bottom,0,top);
     if(failed){g.addColorStop(0,'rgba(120,130,145,.9)');g.addColorStop(1,'rgba(150,160,175,.7)');}
-    else{g.addColorStop(0,'rgba(56,189,248,.62)');g.addColorStop(.6,'rgba(59,130,246,.42)');g.addColorStop(1,'rgba(165,243,252,.55)');}
+    else{const c=RHYTHM_NOTE_COLORS.HOLD.rgb;g.addColorStop(0,`rgba(${c},.62)`);g.addColorStop(.6,`rgba(${c},.40)`);g.addColorStop(1,`rgba(${c},.55)`);}
     ctx.fillStyle=g;ctx.fill();
     // 押さえている最中は帯を明るくする(押せている合図の1つ。以前は .22)
-    if(pressed&&!failed){ctx.fillStyle='rgba(224,247,255,.34)';ctx.fill();}
+    if(pressed&&!failed){ctx.fillStyle='rgba(236,253,245,.34)';ctx.fill();}
     ctx.globalAlpha=1;
   };
   const drawSlide=(geo,opts)=>{
@@ -19948,9 +19992,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       quads.forEach(q=>ctx.lineTo(q.r1,q.y1));
       for(let index=quads.length-1;index>=0;index--)ctx.lineTo(quads[index].l1,quads[index].y1);
       ctx.lineTo(quads[0].l0,quads[0].y0);ctx.closePath();
-      ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle='rgba(168,85,247,.16)';ctx.stroke();
+      ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle=`rgba(${RHYTHM_NOTE_COLORS.SLIDE.rgb},.18)`;ctx.stroke();
     }
-    ctx.fillStyle=failed?'rgba(120,120,135,.48)':'rgba(168,85,247,.48)';
+    ctx.fillStyle=failed?'rgba(120,120,135,.48)':`rgba(${RHYTHM_NOTE_COLORS.SLIDE.rgb},.5)`;
     // 継ぎ目(10等分の境目)は判定と無関係なので線を引かない。塗りだけ。
     quads.forEach(q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();});
     // 帯のふち。DOM版の[data-rhythm-slide-edge]と同じ濃さで外周だけをなぞる。
@@ -19979,16 +20023,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const flick=note.endFlick===true,h=8*(0.52+end.scale*.48),w=end.w*sizeScale,x=end.cx-w/2,top=end.cy-h/2;
     ctx.globalAlpha=alpha;
     if(!failed&&effect!=='MINIMAL'&&!lightweight){
-      const sprite=glowSprite(flick?'endFlick':'end',4,(effect==='LOW'||effect==='LIGHT')?END_BAR_GLOWS_LOW:END_BAR_GLOWS);
+      const low=effect==='LOW'||effect==='LIGHT',kind=endBarKind(note,flick);
+      const sprite=glowSprite(`end:${kind}:${low?'low':'full'}`,4,END_BAR_GLOWS[kind][low?'low':'full']);
       draw3Slice(sprite,end.cx,end.cy,w,h,alpha);
     }
     roundRectPath(ctx,x,top,w,h,h/2);
     const g=ctx.createLinearGradient(x,0,x+w,0);
     if(failed){g.addColorStop(0,'#94a3b8');g.addColorStop(.5,'#e2e8f0');g.addColorStop(1,'#94a3b8');}
-    else if(flick){g.addColorStop(0,'#22c55e');g.addColorStop(.5,'#f0fdf4');g.addColorStop(1,'#22c55e');}
-    else{g.addColorStop(0,'#e879f9');g.addColorStop(.5,'#cffafe');g.addColorStop(1,'#e879f9');}
+    else{const c=endBarColor(note,flick);g.addColorStop(0,c.mid);g.addColorStop(.5,c.hi);g.addColorStop(1,c.mid);}
     ctx.fillStyle=g;ctx.fill();
-    ctx.lineWidth=1;ctx.strokeStyle=failed?'rgba(148,163,184,.6)':flick?'rgba(220,252,231,.98)':'rgba(255,255,255,.8)';ctx.stroke();
+    ctx.lineWidth=1;ctx.strokeStyle=failed?'rgba(148,163,184,.6)':'rgba(255,255,255,.85)';ctx.stroke();
     if(flick&&!failed){
       const sprite=arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
       const aw=sprite.tw+sprite.margin*2,ah=sprite.th+sprite.margin*2;
@@ -20184,10 +20228,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       sideChevronSprite('left');sideChevronSprite('right');
       // 終端バーの光と、終点フリックの矢印
-      const endGlows=(effect==='LOW'||effect==='LIGHT')?END_BAR_GLOWS_LOW:END_BAR_GLOWS;
-      glowSprite('end',4,endGlows);
-      glowSprite('endFlick',4,endGlows);
+      // (種類ごとの色。drawEndBar と同じ名前で焼く)
+      const low=effect==='LOW'||effect==='LIGHT';
+      for(const kind of ['HOLD','SLIDE','FLICK'])glowSprite(`end:${kind}:${low?'low':'full'}`,4,END_BAR_GLOWS[kind][low?'low':'full']);
       arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
+      // 押さえている最中の光(演奏の途中で新しく絵を作らないよう、ここで焼いておく)
+      if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);}sparkDotSprite();}
       // 叩いたときの光(canvas で描くときだけ)
       if(effect!=='MINIMAL'&&!options.lightweight)warmHitSprites();
       return sprites.size-before;
