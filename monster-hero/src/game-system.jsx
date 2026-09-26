@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 30c8b7808ba3757e
+// generated-sha256: 33629cce0c0dfd85
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 12:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 13:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20037,7 +20037,7 @@ function RhythmInfoScreen({
 }
 
 function RhythmSongSelectScreen({
-  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, exitingQuickRun, handleGiveUp, mainHero,
+  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, exitingQuickRun, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
   onPlaySong, onToggleRhythmSetting, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
@@ -20247,6 +20247,13 @@ function RhythmSongSelectScreen({
           </div>
         </div>}
         {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}{beatPointReleased&&!beatPointEvent&&<div data-rhythm-beat-point-always className="shrink-0 border-b border-violet-400/15 bg-violet-950/15 px-3 py-1 text-center text-[10px] font-black text-violet-200/90">🎟️ ビートPはいつでも貯まります・イベント開催中は5倍</div>}
+        {/* 6レーンになったこと・MASTERの横フリックを、曲えらびを開いた最初の1回だけ伝える(2026-09-26) */}
+        {rhythmSixLaneIntroVisible&&<div data-rhythm-six-lane-intro className="shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1">
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1"><AssistantBubble scene="rhythmSixLaneIntro" compact/></div>
+            <button type="button" onClick={dismissRhythmSixLaneIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+          </div>
+        </div>}
         {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}
         {quickRhythmBackgroundVisible&&<div data-quick-rhythm-background className="shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1">
           <div className="flex items-start gap-1">
@@ -31001,6 +31008,14 @@ function MonsterHeroGame() {
   // 裏で周回したままモンビーを開いた最初の1回だけ
   const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && rhythmBackgroundRun;
   const dismissQuickRhythmBackground = () => { setQuickRhythmBackgroundSeen(true); storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false); };
+  // ---- モンヒロビートの6レーン化の案内(CLAUDE.md ⑤。2026-09-26) ----
+  // 道が6レーンになり、MASTERに左右へ払う横フリックが出るようになった。横フリックは
+  // 上へ払っても取れないので、知らないまま遊ぶと取り逃がす。曲えらびを開いた最初の1回だけ、助手が伝える。
+  // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。保存が無いうちは「まだ見ていない」
+  const RHYTHM_SIX_LANE_INTRO_KEY = 'mh_rhythm_six_lane_seen_v1';
+  const [rhythmSixLaneIntroSeen, setRhythmSixLaneIntroSeen] = useState(true);
+  const rhythmSixLaneIntroVisible = !rhythmSixLaneIntroSeen;
+  const dismissRhythmSixLaneIntro = () => { setRhythmSixLaneIntroSeen(true); storeSet(RHYTHM_SIX_LANE_INTRO_KEY, true, false); };
   // ---- オート強化の使い方案内(CLAUDE.md ⑤) ----
   // 「強化ポイントが入るたび裏で自動的に振られる」は、遊んでいるだけでは気づけない仕組み。
   // ヘルプと更新履歴は探しに行った人しか読まないので、強化画面を開いた最初の1回だけ、
@@ -32122,6 +32137,7 @@ function MonsterHeroGame() {
       //   「一度も出ない」ほうがはるかに困る
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false) === true);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false) === true);
+      setRhythmSixLaneIntroSeen(await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false) === true);
       // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
       //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
       setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
@@ -42377,6 +42393,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             catchingUp={catchingUp}
             difficulty={difficulty}
             dismissQuickRhythmBackground={dismissQuickRhythmBackground}
+            dismissRhythmSixLaneIntro={dismissRhythmSixLaneIntro}
             dismissRhythmEventNotice={dismissRhythmEventNotice}
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
@@ -42397,6 +42414,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onPlaySong={(song,difficulty)=>{/* 全画面へ入れるのは「指で押した直後」だけなので、決定を押したこの場で頼む。\n              画面が変わってから頼むと、ブラウザに断られる */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
             quickClearCounts={quickClearCounts}
             quickRhythmBackgroundVisible={quickRhythmBackgroundVisible}
+            rhythmSixLaneIntroVisible={rhythmSixLaneIntroVisible}
             quickRunDetailOpen={quickRunDetailOpen}
             quickRunFinishReasonText={quickRunFinishReasonText}
             quickRunPendingRewards={quickRunPendingRewards}

@@ -35,16 +35,16 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 18,
-    "cost": 18
+    "spread": 14,
+    "cost": 14
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 18,
-    "cost": 18
+    "spread": 14,
+    "cost": 14
    },
    "fixes": []
   },
@@ -57,16 +57,16 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 24,
-    "cost": 24
+    "spread": 21,
+    "cost": 21
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 24,
-    "cost": 24
+    "spread": 21,
+    "cost": 21
    },
    "fixes": []
   },
@@ -79,16 +79,16 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 31,
-    "cost": 31
+    "spread": 25,
+    "cost": 25
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 31,
-    "cost": 31
+    "spread": 25,
+    "cost": 25
    },
    "fixes": []
   },
@@ -101,38 +101,38 @@
     "strained": 2,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 40,
-    "cost": 240
+    "spread": 39,
+    "cost": 239
    },
    "after": {
     "impossible": 0,
     "strained": 2,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 40,
-    "cost": 240
+    "spread": 39,
+    "cost": 239
    },
    "fixes": []
   },
   "MASTER": {
-   "noteCount": 150,
+   "noteCount": 149,
    "fixCount": 0,
    "passes": 0,
    "before": {
     "impossible": 0,
-    "strained": 4,
+    "strained": 3,
     "reach": 0,
-    "hardJumps": 0,
-    "spread": 44,
-    "cost": 444
+    "hardJumps": 1,
+    "spread": 39,
+    "cost": 459
    },
    "after": {
     "impossible": 0,
-    "strained": 4,
+    "strained": 3,
     "reach": 0,
-    "hardJumps": 0,
-    "spread": 44,
-    "cost": 444
+    "hardJumps": 1,
+    "spread": 39,
+    "cost": 459
    },
    "fixes": []
   }

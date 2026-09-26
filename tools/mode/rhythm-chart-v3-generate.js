@@ -2688,6 +2688,15 @@ const buildChart=(difficulty,options={})=>{
         const note=notes[issue.noteIndex];
         // 押さえノーツは譜面の骨格なので、そちらではなく打点のほうを落とす
         if(note&&note.type!=='HOLD'&&note.type!=='SLIDE')blame.add(note);
+        // 版5: 押せないのが押さえノーツの頭のときは、その直前(叩き直しに要る間隔より近く)に叩いた打点を落とす。
+        // 版4までは何も落とさずに素通りしていたので、同時スライドの88ms前に16分のTAPがある形が
+        // 自動修正でも直せずに残った(2026-09-26・6レーンで作り直したとき the_city_beneath_the_comets の MASTER)
+        else if(note&&chartRevision>=5){
+          const limitGrids=HAND_MODEL.restrikeLimitMs/gridMs;
+          const before=notes.filter(other=>other!==note&&other.type!=='HOLD'&&other.type!=='SLIDE'
+            &&other.grid<note.grid&&note.grid-other.grid<limitGrids).sort((a,b)=>b.grid-a.grid)[0];
+          if(before)blame.add(before);
+        }
       }
       if(!blame.size)break;
       notes=notes.filter(note=>!blame.has(note));

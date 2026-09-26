@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9092ac3f9aef9f16
+// source-sha256: c8db13cfa3d1b83e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 12:27";
+const BUILD_DATE = "2026-09-26 13:16";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28769,6 +28769,8 @@ function RhythmSongSelectScreen({
   difficulty,
   dismissQuickRhythmBackground,
   dismissRhythmEventNotice,
+  dismissRhythmSixLaneIntro,
+  rhythmSixLaneIntroVisible,
   exitingQuickRun,
   handleGiveUp,
   mainHero,
@@ -29048,7 +29050,22 @@ function RhythmSongSelectScreen({
   }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます'), beatPointReleased && !beatPointEvent && React.createElement("div", {
     "data-rhythm-beat-point-always": true,
     className: "shrink-0 border-b border-violet-400/15 bg-violet-950/15 px-3 py-1 text-center text-[10px] font-black text-violet-200/90"
-  }, "🎟️ ビートPはいつでも貯まります・イベント開催中は5倍"), quickRhythmBackgroundVisible && React.createElement("div", {
+  }, "🎟️ ビートPはいつでも貯まります・イベント開催中は5倍"), rhythmSixLaneIntroVisible && React.createElement("div", {
+    "data-rhythm-six-lane-intro": true,
+    className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
+  }, React.createElement("div", {
+    className: "flex items-start gap-1"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement(AssistantBubble, {
+    scene: "rhythmSixLaneIntro",
+    compact: true
+  })), React.createElement("button", {
+    type: "button",
+    onClick: dismissRhythmSixLaneIntro,
+    "aria-label": "この案内を閉じる",
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
+  }, "×"))), quickRhythmBackgroundVisible && React.createElement("div", {
     "data-quick-rhythm-background": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -45399,6 +45416,13 @@ function MonsterHeroGame() {
     setQuickRhythmBackgroundSeen(true);
     storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false);
   };
+  const RHYTHM_SIX_LANE_INTRO_KEY = 'mh_rhythm_six_lane_seen_v1';
+  const [rhythmSixLaneIntroSeen, setRhythmSixLaneIntroSeen] = useState(true);
+  const rhythmSixLaneIntroVisible = !rhythmSixLaneIntroSeen;
+  const dismissRhythmSixLaneIntro = () => {
+    setRhythmSixLaneIntroSeen(true);
+    storeSet(RHYTHM_SIX_LANE_INTRO_KEY, true, false);
+  };
   const AUTO_ENHANCE_INTRO_KEY = 'mh_masu_auto_enhance_intro_seen_v1';
   const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
   const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
@@ -46392,6 +46416,7 @@ function MonsterHeroGame() {
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
       setQuickRhythmIntroSeen((await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false)) === true);
       setQuickRhythmBackgroundSeen((await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false)) === true);
+      setRhythmSixLaneIntroSeen((await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false)) === true);
       setAutoEnhanceIntroSeen((await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false)) === true);
       setTacticsExIntroSeen((await storeGet(TACTICS_EX_INTRO_KEY, false, false)) === true);
       {
@@ -61684,6 +61709,7 @@ function MonsterHeroGame() {
       catchingUp: catchingUp,
       difficulty: difficulty,
       dismissQuickRhythmBackground: dismissQuickRhythmBackground,
+      dismissRhythmSixLaneIntro: dismissRhythmSixLaneIntro,
       dismissRhythmEventNotice: dismissRhythmEventNotice,
       handleGiveUp: handleGiveUp,
       mainHero: mainHero,
@@ -61723,6 +61749,7 @@ function MonsterHeroGame() {
       },
       quickClearCounts: quickClearCounts,
       quickRhythmBackgroundVisible: quickRhythmBackgroundVisible,
+      rhythmSixLaneIntroVisible: rhythmSixLaneIntroVisible,
       quickRunDetailOpen: quickRunDetailOpen,
       quickRunFinishReasonText: quickRunFinishReasonText,
       quickRunPendingRewards: quickRunPendingRewards,

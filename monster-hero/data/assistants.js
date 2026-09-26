@@ -713,6 +713,12 @@ const ASSISTANT_SCENES = {
     help: 'home/roster',
     lines: [],
   },
+  // モンヒロビートが6レーンになり、MASTERに横フリックが出るようになった(2026-09-26)。
+  // 曲えらびを開いた最初の1回だけ出す。本文は下の addAssistantLinePack から合流する
+  rhythmSixLaneIntro: {
+    help: 'rhythm/rhythm-note-types',
+    lines: [],
+  },
   autoQuickRunSettings: {
     help: 'home/roster',
     lines: [],
@@ -1403,6 +1409,64 @@ addAssistantLinePack({
       { e:'normal',  t:'EXはカードとは別枠や。カードの枚数は減らんで' },
       { e:'wink',    t:'使ったターンはその子だけカード使えんこともあるから気ぃつけや' },
       { e:'happy',   t:'{name}、β版のお試しらしいわ。遠慮なく試してみ' },
+    ],
+  },
+});
+
+// モンヒロビートの6レーン化(2026-09-26)。「6レーンになった」「MASTERの横フリックは矢印の向きへ払う」だけを伝える。
+// 細かい話(記録はそのまま等)はヘルプと更新履歴に任せる
+addAssistantLinePack({
+  id: 'rhythmSixLaneGuide',
+  label: 'モンヒロビート6レーン案内',
+  lines: {
+    rhythmSixLaneIntro: [
+      { e:'excited', t:'モンヒロビートが6レーンになったよ！ 全曲の譜面も新しくなったんだ♪' },
+      { e:'wink', t:'MASTERには横フリックが出るよ。緑の《《《は左、ピンクの》》》は右へ払ってね！' },
+      { e:'normal', t:'横フリックは上へ払っても取れないの。矢印の向きをよく見てね。' },
+      { e:'happy', t:'{name}、スライドもなめらかに曲がるようになったよ。新しい譜面、楽しんでね♪' },
+      { e:'normal', t:'道のまんなかに境目があって、左右3本ずつに分かれてるよ。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmSixLaneGuideKiki',
+  assistantId: 'kiki',
+  label: 'きき・モンヒロビート6レーン案内',
+  lines: {
+    rhythmSixLaneIntro: [
+      { e:'happy',  t:'モンヒロビートが6レーンになりまちた。全曲の譜面も新しいの。' },
+      { e:'normal', t:'MASTERには横フリックが出まつ。緑の《《《は左、ピンクの》》》は右へ払うの。' },
+      { e:'normal', t:'横フリックは上へ払っても取れないでつ。矢印の向きを見てね。' },
+      { e:'wink',   t:'{name}、スライドもなめらかに曲がるようになったの♪' },
+      { e:'normal', t:'道のまんなかに境目があって、左右3本ずつでつ。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmSixLaneGuideMomosuke',
+  assistantId: 'momosuke',
+  label: 'ももすけ・モンヒロビート6レーン案内',
+  lines: {
+    rhythmSixLaneIntro: [
+      { e:'excited', t:'モンヒロビート、6レーンになったよ！ 全曲の譜面も作り直しだってさ！' },
+      { e:'wink',    t:'MASTERは横フリックが出るよ。緑の《《《は左、ピンクの》》》は右に払うんだ！' },
+      { e:'normal',  t:'横フリックは上に払っても取れないから、矢印の向きをよく見てね。' },
+      { e:'happy',   t:'{name}、スライドもぐにゃっと曲がるようになったよw' },
+      { e:'normal',  t:'道のまんなかに境目ができて、左右3本ずつなんだって。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmSixLaneGuideDra',
+  assistantId: 'dra',
+  label: 'ドラ・モンヒロビート6レーン案内',
+  lines: {
+    rhythmSixLaneIntro: [
+      { e:'happy',  t:'モンヒロビートが6レーンになったで。全曲の譜面も新しなったんや' },
+      { e:'normal', t:'MASTERには横フリックが出るで。緑の《《《は左、ピンクの》》》は右へ払うんや' },
+      { e:'normal', t:'横フリックは上に払っても取れへんから、矢印の向きよう見てな' },
+      { e:'wink',   t:'{name}、スライドもなめらかに曲がるようになったで。遊んでみ' },
+      { e:'normal', t:'道のまんなかに境目があって、左右3本ずつに分かれとるで' },
     ],
   },
 });

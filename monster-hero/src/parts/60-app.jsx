@@ -3685,6 +3685,14 @@ function MonsterHeroGame() {
   // 裏で周回したままモンビーを開いた最初の1回だけ
   const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && rhythmBackgroundRun;
   const dismissQuickRhythmBackground = () => { setQuickRhythmBackgroundSeen(true); storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false); };
+  // ---- モンヒロビートの6レーン化の案内(CLAUDE.md ⑤。2026-09-26) ----
+  // 道が6レーンになり、MASTERに左右へ払う横フリックが出るようになった。横フリックは
+  // 上へ払っても取れないので、知らないまま遊ぶと取り逃がす。曲えらびを開いた最初の1回だけ、助手が伝える。
+  // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。保存が無いうちは「まだ見ていない」
+  const RHYTHM_SIX_LANE_INTRO_KEY = 'mh_rhythm_six_lane_seen_v1';
+  const [rhythmSixLaneIntroSeen, setRhythmSixLaneIntroSeen] = useState(true);
+  const rhythmSixLaneIntroVisible = !rhythmSixLaneIntroSeen;
+  const dismissRhythmSixLaneIntro = () => { setRhythmSixLaneIntroSeen(true); storeSet(RHYTHM_SIX_LANE_INTRO_KEY, true, false); };
   // ---- オート強化の使い方案内(CLAUDE.md ⑤) ----
   // 「強化ポイントが入るたび裏で自動的に振られる」は、遊んでいるだけでは気づけない仕組み。
   // ヘルプと更新履歴は探しに行った人しか読まないので、強化画面を開いた最初の1回だけ、
@@ -4806,6 +4814,7 @@ function MonsterHeroGame() {
       //   「一度も出ない」ほうがはるかに困る
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false) === true);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false) === true);
+      setRhythmSixLaneIntroSeen(await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false) === true);
       // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
       //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
       setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
@@ -15061,6 +15070,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             catchingUp={catchingUp}
             difficulty={difficulty}
             dismissQuickRhythmBackground={dismissQuickRhythmBackground}
+            dismissRhythmSixLaneIntro={dismissRhythmSixLaneIntro}
             dismissRhythmEventNotice={dismissRhythmEventNotice}
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
@@ -15081,6 +15091,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onPlaySong={(song,difficulty)=>{/* 全画面へ入れるのは「指で押した直後」だけなので、決定を押したこの場で頼む。\n              画面が変わってから頼むと、ブラウザに断られる */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
             quickClearCounts={quickClearCounts}
             quickRhythmBackgroundVisible={quickRhythmBackgroundVisible}
+            rhythmSixLaneIntroVisible={rhythmSixLaneIntroVisible}
             quickRunDetailOpen={quickRunDetailOpen}
             quickRunFinishReasonText={quickRunFinishReasonText}
             quickRunPendingRewards={quickRunPendingRewards}
