@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bef256e57e19035d
+// source-sha256: 863dff2bb61fc4ec
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 02:16";
+const BUILD_DATE = "2026-09-27 02:26";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -22985,6 +22985,221 @@ const RhythmChartNotePanel = ({
     className: "mt-1 text-center text-[10px] font-bold text-amber-100"
   }, status));
 };
+const rhythmHudInitial = () => ({
+  score: 0,
+  combo: 0,
+  last: '',
+  lastPrecise: false,
+  fastSlow: '',
+  lastDeltaMs: null,
+  counts: null,
+  life: RHYTHM_LIFE_MAX
+});
+const rhythmCreateHud = () => {
+  let state = rhythmHudInitial();
+  const subs = new Set();
+  return {
+    get: () => state,
+    set(patch) {
+      state = {
+        ...state,
+        ...patch
+      };
+      subs.forEach(fn => fn());
+    },
+    subscribe(fn) {
+      subs.add(fn);
+      return () => {
+        subs.delete(fn);
+      };
+    }
+  };
+};
+const useRhythmHud = hud => React.useSyncExternalStore(hud.subscribe, hud.get);
+const RhythmHudScore = ({
+  hud,
+  maxScore,
+  bestScore
+}) => {
+  const {
+    score
+  } = useRhythmHud(hud);
+  const rankNextId = rhythmNextRankId(score, maxScore);
+  const rankNextLabel = rankNextId ? `→${rankNextId}` : '★MAX';
+  return React.createElement("div", {
+    className: "flex items-center gap-1.5"
+  }, React.createElement("div", {
+    className: `relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(score)]}`,
+    style: {
+      boxShadow: '0 0 8px rgba(103,232,249,.35)'
+    }
+  }, React.createElement("b", {
+    "data-rhythm-rank": true,
+    className: "text-sm font-black leading-none",
+    style: {
+      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+    }
+  }, rhythmRankForScore(score))), React.createElement("div", {
+    className: "min-w-0 landscape:min-w-0"
+  }, React.createElement("div", {
+    className: "flex items-center gap-0.5 landscape:hidden"
+  }, React.createElement("div", {
+    "data-rhythm-rank-gauge": true,
+    className: "relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"
+  }, React.createElement("i", {
+    "aria-hidden": "true",
+    className: "absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300",
+    style: {
+      width: `${rhythmRankProgress(score)}%`
+    }
+  })), React.createElement("b", {
+    "data-rhythm-rank-next": true,
+    className: "shrink-0 text-[9px] font-black leading-none text-slate-300"
+  }, rankNextLabel)), React.createElement("b", {
+    "data-rhythm-score": true,
+    className: "mt-0.5 block font-black leading-none tabular-nums landscape:mt-0",
+    style: {
+      fontSize: 'min(18px,4.6cqw)',
+      textShadow: '0 1px 6px rgba(2,6,23,.96)'
+    }
+  }, score.toLocaleString()), React.createElement("small", {
+    className: "mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden",
+    style: {
+      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+    }
+  }, "BEST ", Number(bestScore || 0).toLocaleString())));
+};
+const RhythmHudCombo = ({
+  hud,
+  settings,
+  assistOn,
+  comboPosition,
+  isLandscape,
+  comboRef,
+  comboRingRef
+}) => {
+  const {
+    combo,
+    counts
+  } = useRhythmHud(hud);
+  if (settings.comboDisplay === false || !(combo > 0)) return null;
+  const comboTier = rhythmComboTier(combo);
+  const comboStatus = (() => {
+    if (settings.comboStatusDisplay === false || assistOn || !counts) return '';
+    const c = counts;
+    if ((Number(c.BAD) || 0) + (Number(c.MISS) || 0) > 0) return '';
+    return (Number(c.EXCELLENT) || 0) + (Number(c.GREAT) || 0) + (Number(c.GOOD) || 0) > 0 ? 'FC' : 'AM';
+  })();
+  return React.createElement("div", {
+    "data-rhythm-combo-box": true,
+    "data-combo-status": comboStatus,
+    "data-combo-tier": String(comboTier),
+    "data-combo-pos": comboPosition,
+    "data-combo-wide": isLandscape ? '1' : '',
+    "aria-hidden": "true",
+    style: {
+      '--mh-combo-opacity': rhythmFiniteInRange(settings.comboOpacity, RHYTHM_COMBO_OPACITY_MIN, RHYTHM_COMBO_OPACITY_MAX, 100) / 100
+    },
+    className: "pointer-events-none absolute z-[2] text-center"
+  }, React.createElement("b", {
+    ref: comboRef,
+    "data-rhythm-combo": true,
+    "data-combo-tier": String(comboTier),
+    className: "block font-black leading-none tabular-nums text-white",
+    style: {
+      '--mh-combo-scale': rhythmComboTierScale(comboTier),
+      '--mh-combo-size': rhythmFiniteInRange(settings.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, 100) / 100
+    }
+  }, combo), settings.comboMilestoneFx === true && React.createElement("i", {
+    ref: comboRingRef,
+    "data-rhythm-combo-ring": true,
+    "aria-hidden": "true"
+  }), React.createElement("span", {
+    "data-rhythm-combo-label": true,
+    className: "mt-1 block font-black leading-none tracking-[0.36em]"
+  }, "COMBO"), comboStatus && React.createElement("span", {
+    "data-rhythm-combo-status-mark": comboStatus,
+    className: "block font-black leading-none"
+  }, comboStatus === 'AM' ? 'ALL MARVELOUS' : 'FULL COMBO'));
+};
+const RhythmHudLife = ({
+  hud,
+  settings,
+  isLandscape,
+  lifeBoxRef,
+  lifeDamageRef
+}) => {
+  const {
+    life
+  } = useRhythmHud(hud);
+  const lifeRatio = rhythmLifeRatio(life),
+    lifeState = rhythmLifeState(life);
+  return React.createElement("div", {
+    ref: lifeBoxRef,
+    "data-rhythm-life": true,
+    "data-life-state": lifeState,
+    "data-life-wide": isLandscape ? '1' : '',
+    style: {
+      '--mh-life-scale': rhythmFiniteInRange(settings.lifeDisplaySize, RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, 150) / 100
+    },
+    className: "relative flex flex-nowrap items-center justify-end gap-x-1"
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    "data-rhythm-life-heart": true,
+    className: "leading-none text-rose-400",
+    style: {
+      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+    }
+  }, lifeState === 'down' ? '💔' : '♥'), React.createElement("div", {
+    "data-rhythm-life-track": true,
+    className: "relative rounded-full border bg-slate-950/80"
+  }, React.createElement("i", {
+    "data-rhythm-life-bar": true,
+    "aria-hidden": "true",
+    className: "absolute inset-y-0 left-0 rounded-full",
+    style: {
+      width: `${(lifeRatio * 100).toFixed(1)}%`,
+      background: lifeRatio > .5 ? 'linear-gradient(90deg,#34d399,#22d3ee)' : lifeRatio > .25 ? 'linear-gradient(90deg,#fbbf24,#fb923c)' : 'linear-gradient(90deg,#fb7185,#ef4444)',
+      transition: settings.lightweightMode ? 'none' : 'width 140ms linear'
+    }
+  })), React.createElement("b", {
+    "data-rhythm-life-value": true,
+    className: "font-black leading-none tabular-nums text-slate-200",
+    style: {
+      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+    }
+  }, lifeState === 'down' ? 'DOWN' : life), React.createElement("b", {
+    ref: lifeDamageRef,
+    "data-rhythm-life-damage": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"
+  }));
+};
+const RhythmHudJudgment = ({
+  hud,
+  settings,
+  status,
+  haloKeys,
+  timingDisplay,
+  judgmentTextRef
+}) => {
+  const {
+    last,
+    lastPrecise,
+    fastSlow,
+    lastDeltaMs
+  } = useRhythmHud(hud);
+  return React.createElement(React.Fragment, null, React.createElement("b", {
+    ref: judgmentTextRef,
+    "data-rhythm-judgment-text": true,
+    "data-judgment": last || '',
+    "data-judgment-precise": lastPrecise ? '1' : '',
+    "data-halo": haloKeys && settings.judgmentTextDisplay && last && status !== 'error' && status !== 'loading' && haloKeys.has(`${last}|${lastPrecise ? '1' : ''}`) ? '1' : undefined,
+    className: "block text-[26px] font-black leading-none tracking-wide text-white"
+  }, status === 'error' ? '音源を再生できません' : status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? last : ''), React.createElement("small", {
+    className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : fastSlow === 'FAST' ? 'text-cyan-300' : fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
+  }, settings.fastSlowDisplay ? fastSlow ? timingDisplay !== 'STANDARD' && typeof lastDeltaMs === 'number' ? `${fastSlow} ${Math.round(Math.abs(lastDeltaMs))}ms` : fastSlow : '—' : '—'));
+};
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -23238,6 +23453,8 @@ const RhythmTapTest = ({
     comboRef = useRef(null),
     judgmentBurstRef = useRef(null),
     comboRingRef = useRef(null);
+  const hudRef = useRef(null);
+  if (!hudRef.current) hudRef.current = rhythmCreateHud();
   const [haloKeys, setHaloKeys] = useState(null);
   useEffect(() => {
     let cancelled = false,
@@ -23485,8 +23702,6 @@ const RhythmTapTest = ({
     return () => clearTimeout(timer);
   }, [comboMilestoneTier, settings.lightweightMode, settings.effectAmount]);
   const comboMilestoneStage = Math.min(5, comboMilestoneTier);
-  const rankNextId = rhythmNextRankId(view.score, difficulty.maxScore);
-  const rankNextLabel = rankNextId ? `→${rankNextId}` : '★MAX';
   const lifeRatio = rhythmLifeRatio(view.life);
   const lifeState = rhythmLifeState(view.life);
   const comboTier = rhythmComboTier(view.combo);
@@ -23700,12 +23915,6 @@ const RhythmTapTest = ({
       renderer.release();
     };
   }, [stageGl, stageLevel, stageArtSrc, renderQualityStill]);
-  const comboStatus = (() => {
-    if (settings.comboStatusDisplay === false || assistOn || !view.counts) return '';
-    const c = view.counts;
-    if ((Number(c.BAD) || 0) + (Number(c.MISS) || 0) > 0) return '';
-    return (Number(c.EXCELLENT) || 0) + (Number(c.GREAT) || 0) + (Number(c.GOOD) || 0) > 0 ? 'FC' : 'AM';
-  })();
   const comboPosition = RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER';
   const [isLandscape, setIsLandscape] = useState(() => orientationIsLandscape());
   useEffect(() => {
@@ -23805,12 +24014,11 @@ const RhythmTapTest = ({
     judgmentTimerRef.current = setTimeout(() => {
       if (revision !== judgmentRevisionRef.current) return;
       judgmentTimerRef.current = null;
-      setView(v => ({
-        ...v,
+      hudRef.current.set({
         last: '',
         lastPrecise: false,
         fastSlow: ''
-      }));
+      });
     }, RHYTHM_JUDGMENT_DISPLAY_MS);
   }, []);
   const clearAbilityTimer = useCallback(() => {
@@ -24165,27 +24373,44 @@ const RhythmTapTest = ({
     }
     if (run.life === 0 && lifeBefore > 0) setLifeDownCount(count => count + 1);
     const showAbilityFlash = !!abilityFlash && !rhythmMonsterEffectAtMost(settings.monsterNoteEffect, 'NONE');
-    const score = run.lifeDepleted ? run.lockedScore : run.score;
-    setView(v => ({
-      ...v,
+    const score = run.lifeDepleted ? run.lockedScore : run.score,
+      lastDeltaMs = judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null;
+    hudRef.current.set({
       score,
       combo: run.combo,
-      maxCombo: run.maxCombo,
       last: judgment,
       lastPrecise: preciseHit,
       fastSlow: side || '',
+      lastDeltaMs,
       counts: {
         ...run.counts
       },
-      fast: run.fast,
-      slow: run.slow,
-      precise: run.precise,
-      life: run.life,
-      lastDeltaMs: judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null,
-      ...(showAbilityFlash ? {
-        ability: abilityFlash
-      } : {})
-    }));
+      life: run.life
+    });
+    const coarseKey = `${rhythmComboTier(run.combo)}|${Math.floor(run.combo / RHYTHM_COMBO_MILESTONE_STEP)}|${rhythmLifeState(run.life)}`;
+    if (showAbilityFlash || coarseKey !== run._viewCoarseKey) {
+      run._viewCoarseKey = coarseKey;
+      setView(v => ({
+        ...v,
+        score,
+        combo: run.combo,
+        maxCombo: run.maxCombo,
+        last: judgment,
+        lastPrecise: preciseHit,
+        fastSlow: side || '',
+        counts: {
+          ...run.counts
+        },
+        fast: run.fast,
+        slow: run.slow,
+        precise: run.precise,
+        life: run.life,
+        lastDeltaMs,
+        ...(showAbilityFlash ? {
+          ability: abilityFlash
+        } : {})
+      }));
+    }
     scheduleJudgmentClear();
     const paceEl = paceRef.current;
     if (paceEl && settings.paceDisplay !== false && !tutorial && !calibrating && Number(run.startBestScore) > 0 && chart.totalNotes > 0) {
@@ -24845,6 +25070,7 @@ const RhythmTapTest = ({
       ...initialView(),
       status: 'loading'
     });
+    hudRef.current.set(rhythmHudInitial());
     const audio = await Audio_.startRhythmTrack(song.bgmTrackId, settings.bgmVolume, {
       autoStart: false
     });
@@ -24932,6 +25158,7 @@ const RhythmTapTest = ({
       ...initialView(),
       status: 'playing'
     });
+    hudRef.current.set(rhythmHudInitial());
     setLuckyRush(false);
     setLuckyBanner(null);
     if (luckGaugeRef.current) luckGaugeRef.current.style.transform = 'scaleX(0)';
@@ -25072,12 +25299,11 @@ const RhythmTapTest = ({
           } catch {}
         }
         const side = rhythmFastSlow(deltaMs);
-        setView(v => ({
-          ...v,
+        hudRef.current.set({
           last: 'HOLD',
           lastPrecise: false,
           fastSlow: side || ''
-        }));
+        });
         scheduleJudgmentClear();
         return;
       }
@@ -25875,48 +26101,11 @@ const RhythmTapTest = ({
     className: "min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"
   }, React.createElement("div", {
     className: "landscape:flex landscape:items-center landscape:gap-2"
-  }, React.createElement("div", {
-    className: "flex items-center gap-1.5"
-  }, React.createElement("div", {
-    className: `relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`,
-    style: {
-      boxShadow: '0 0 8px rgba(103,232,249,.35)'
-    }
-  }, React.createElement("b", {
-    "data-rhythm-rank": true,
-    className: "text-sm font-black leading-none",
-    style: {
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
-    }
-  }, rhythmRankForScore(view.score))), React.createElement("div", {
-    className: "min-w-0 landscape:min-w-0"
-  }, React.createElement("div", {
-    className: "flex items-center gap-0.5 landscape:hidden"
-  }, React.createElement("div", {
-    "data-rhythm-rank-gauge": true,
-    className: "relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"
-  }, React.createElement("i", {
-    "aria-hidden": "true",
-    className: "absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300",
-    style: {
-      width: `${rhythmRankProgress(view.score)}%`
-    }
-  })), React.createElement("b", {
-    "data-rhythm-rank-next": true,
-    className: "shrink-0 text-[9px] font-black leading-none text-slate-300"
-  }, rankNextLabel)), React.createElement("b", {
-    "data-rhythm-score": true,
-    className: "mt-0.5 block font-black leading-none tabular-nums landscape:mt-0",
-    style: {
-      fontSize: 'min(18px,4.6cqw)',
-      textShadow: '0 1px 6px rgba(2,6,23,.96)'
-    }
-  }, view.score.toLocaleString()), React.createElement("small", {
-    className: "mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden",
-    style: {
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
-    }
-  }, "BEST ", Number(bestRecord?.bestScore || 0).toLocaleString()))), React.createElement("div", {
+  }, React.createElement(RhythmHudScore, {
+    hud: hudRef.current,
+    maxScore: difficulty.maxScore,
+    bestScore: bestRecord?.bestScore
+  }), React.createElement("div", {
     className: "mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"
   }, React.createElement("span", {
     className: "shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none"
@@ -25956,46 +26145,13 @@ const RhythmTapTest = ({
     className: "flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5"
   }, React.createElement("div", {
     className: "flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"
-  }, React.createElement("div", {
-    ref: lifeBoxRef,
-    "data-rhythm-life": true,
-    "data-life-state": lifeState,
-    "data-life-wide": isLandscape ? '1' : '',
-    style: {
-      '--mh-life-scale': rhythmFiniteInRange(settings.lifeDisplaySize, RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, 150) / 100
-    },
-    className: "relative flex flex-nowrap items-center justify-end gap-x-1"
-  }, React.createElement("span", {
-    "aria-hidden": "true",
-    "data-rhythm-life-heart": true,
-    className: "leading-none text-rose-400",
-    style: {
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
-    }
-  }, lifeState === 'down' ? '💔' : '♥'), React.createElement("div", {
-    "data-rhythm-life-track": true,
-    className: "relative rounded-full border bg-slate-950/80"
-  }, React.createElement("i", {
-    "data-rhythm-life-bar": true,
-    "aria-hidden": "true",
-    className: "absolute inset-y-0 left-0 rounded-full",
-    style: {
-      width: `${(lifeRatio * 100).toFixed(1)}%`,
-      background: lifeRatio > .5 ? 'linear-gradient(90deg,#34d399,#22d3ee)' : lifeRatio > .25 ? 'linear-gradient(90deg,#fbbf24,#fb923c)' : 'linear-gradient(90deg,#fb7185,#ef4444)',
-      transition: settings.lightweightMode ? 'none' : 'width 140ms linear'
-    }
-  })), React.createElement("b", {
-    "data-rhythm-life-value": true,
-    className: "font-black leading-none tabular-nums text-slate-200",
-    style: {
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
-    }
-  }, lifeState === 'down' ? 'DOWN' : view.life), React.createElement("b", {
-    ref: lifeDamageRef,
-    "data-rhythm-life-damage": true,
-    "aria-hidden": "true",
-    className: "pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"
-  })), React.createElement("button", {
+  }, React.createElement(RhythmHudLife, {
+    hud: hudRef.current,
+    settings: settings,
+    isLandscape: isLandscape,
+    lifeBoxRef: lifeBoxRef,
+    lifeDamageRef: lifeDamageRef
+  }), React.createElement("button", {
     "data-rhythm-pause": true,
     "aria-label": "ポーズ",
     className: "pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0",
@@ -26170,37 +26326,15 @@ const RhythmTapTest = ({
     ref: screenFlashRef,
     "data-rhythm-screen-flash": true,
     "aria-hidden": "true"
-  }), settings.comboDisplay !== false && view.combo > 0 && React.createElement("div", {
-    "data-rhythm-combo-box": true,
-    "data-combo-status": comboStatus,
-    "data-combo-tier": String(comboTier),
-    "data-combo-pos": comboPosition,
-    "data-combo-wide": isLandscape ? '1' : '',
-    "aria-hidden": "true",
-    style: {
-      '--mh-combo-opacity': rhythmFiniteInRange(settings.comboOpacity, RHYTHM_COMBO_OPACITY_MIN, RHYTHM_COMBO_OPACITY_MAX, 100) / 100
-    },
-    className: "pointer-events-none absolute z-[2] text-center"
-  }, React.createElement("b", {
-    ref: comboRef,
-    "data-rhythm-combo": true,
-    "data-combo-tier": String(comboTier),
-    className: "block font-black leading-none tabular-nums text-white",
-    style: {
-      '--mh-combo-scale': rhythmComboTierScale(comboTier),
-      '--mh-combo-size': rhythmFiniteInRange(settings.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, 100) / 100
-    }
-  }, view.combo), settings.comboMilestoneFx === true && React.createElement("i", {
-    ref: comboRingRef,
-    "data-rhythm-combo-ring": true,
-    "aria-hidden": "true"
-  }), React.createElement("span", {
-    "data-rhythm-combo-label": true,
-    className: "mt-1 block font-black leading-none tracking-[0.36em]"
-  }, "COMBO"), comboStatus && React.createElement("span", {
-    "data-rhythm-combo-status-mark": comboStatus,
-    className: "block font-black leading-none"
-  }, comboStatus === 'AM' ? 'ALL MARVELOUS' : 'FULL COMBO')), React.createElement("div", {
+  }), React.createElement(RhythmHudCombo, {
+    hud: hudRef.current,
+    settings: settings,
+    assistOn: assistOn,
+    comboPosition: comboPosition,
+    isLandscape: isLandscape,
+    comboRef: comboRef,
+    comboRingRef: comboRingRef
+  }), React.createElement("div", {
     ref: judgmentBandRef,
     "data-rhythm-judgment-band": true,
     "aria-hidden": "true",
@@ -26304,16 +26438,14 @@ const RhythmTapTest = ({
     ref: judgmentBurstRef,
     "data-rhythm-judgment-burst": true,
     "aria-hidden": "true"
-  }), React.createElement("b", {
-    ref: judgmentTextRef,
-    "data-rhythm-judgment-text": true,
-    "data-judgment": view.last || '',
-    "data-judgment-precise": view.lastPrecise ? '1' : '',
-    "data-halo": haloKeys && settings.judgmentTextDisplay && view.last && view.status !== 'error' && view.status !== 'loading' && haloKeys.has(`${view.last}|${view.lastPrecise ? '1' : ''}`) ? '1' : undefined,
-    className: "block text-[26px] font-black leading-none tracking-wide text-white"
-  }, view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? view.last : ''), React.createElement("small", {
-    className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
-  }, settings.fastSlowDisplay ? view.fastSlow ? timingDisplay !== 'STANDARD' && typeof view.lastDeltaMs === 'number' ? `${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms` : view.fastSlow : '—' : '—'), timingDisplay === 'METER' && React.createElement("div", {
+  }), React.createElement(RhythmHudJudgment, {
+    hud: hudRef.current,
+    settings: settings,
+    status: view.status,
+    haloKeys: haloKeys,
+    timingDisplay: timingDisplay,
+    judgmentTextRef: judgmentTextRef
+  }), timingDisplay === 'METER' && React.createElement("div", {
     "data-rhythm-timing-meter": true,
     "aria-hidden": "true",
     className: "absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2",
@@ -26434,11 +26566,11 @@ const RhythmTapTest = ({
       className: "ml-auto tabular-nums text-slate-300"
     }, "SCORE ", React.createElement("b", {
       className: "text-white"
-    }, view.score.toLocaleString())), React.createElement("span", {
+    }, hudRef.current.get().score.toLocaleString())), React.createElement("span", {
       className: "tabular-nums text-slate-300"
     }, "COMBO ", React.createElement("b", {
       className: "text-white"
-    }, view.combo))), React.createElement("div", {
+    }, hudRef.current.get().combo))), React.createElement("div", {
       className: "mt-2 flex items-center gap-2"
     }, React.createElement("div", {
       className: "relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"
