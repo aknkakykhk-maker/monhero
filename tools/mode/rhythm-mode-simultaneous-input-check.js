@@ -28,5 +28,5 @@ assert(src.includes('inputStarts(starts,ageMs)'),'simultaneous starts must be su
 assert(src.includes('inputEnds(ended)'),'simultaneous ends must be submitted as one batch');
 assert(src.includes('activeTouchInputs'),'active touch ids must be tracked independently');
 assert(!src.includes('onTouchStart={touchStart}'),'React synthetic touch start must not remain on rhythm play area');
-assert(src.includes('pointer-events-none absolute inset-0 grid grid-cols-5'),'lane visuals must not be interactive buttons');
+assert(src.includes('pointer-events-none absolute inset-0 grid" style={{gridTemplateColumns:`repeat(${RHYTHM_LANE_COUNT},minmax(0,1fr))`}}'),'lane visuals must not be interactive buttons');
 console.log('OK: simultaneous rhythm input batch + native iPhone touch handling');

@@ -719,6 +719,12 @@ const ASSISTANT_SCENES = {
     help: 'home/roster',
     lines: [],
   },
+  // モンヒロビートが6レーンになり、MASTERに横フリックが出るようになった(2026-09-26)。
+  // 曲えらびを開いた最初の1回だけ出す。本文は下の addAssistantLinePack から合流する
+  rhythmSixLaneIntro: {
+    help: 'rhythm/rhythm-note-types',
+    lines: [],
+  },
   autoQuickRunSettings: {
     help: 'home/roster',
     lines: [],
@@ -1409,6 +1415,64 @@ addAssistantLinePack({
       { e:'normal',  t:'EXはカードとは別枠や。カードの枚数は減らんで' },
       { e:'wink',    t:'使ったターンはその子だけカード使えんこともあるから気ぃつけや' },
       { e:'happy',   t:'{name}、β版のお試しらしいわ。遠慮なく試してみ' },
+    ],
+  },
+});
+
+// モンヒロビートの6レーン化(2026-09-26)。「6レーンになった」「MASTERの横フリックは矢印の向きへ払う」だけを伝える。
+// 細かい話(記録はそのまま等)はヘルプと更新履歴に任せる
+addAssistantLinePack({
+  id: 'rhythmSixLaneGuide',
+  label: 'モンヒロビート6レーン案内',
+  lines: {
+    rhythmSixLaneIntro: [
+      { e:'excited', t:'モンヒロビートが6レーンになったよ！ 全曲の譜面も新しくなったんだ♪' },
+      { e:'wink', t:'MASTERには横フリックが出るよ。緑の《《《は左、ピンクの》》》は右へ払ってね！' },
+      { e:'normal', t:'横フリックは上へ払っても取れないの。矢印の向きをよく見てね。' },
+      { e:'happy', t:'{name}、スライドもなめらかに曲がるようになったよ。新しい譜面、楽しんでね♪' },
+      { e:'normal', t:'道のまんなかに境目があって、左右3本ずつに分かれてるよ。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmSixLaneGuideKiki',
+  assistantId: 'kiki',
+  label: 'きき・モンヒロビート6レーン案内',
+  lines: {
+    rhythmSixLaneIntro: [
+      { e:'happy',  t:'モンヒロビートが6レーンになりまちた。全曲の譜面も新しいの。' },
+      { e:'normal', t:'MASTERには横フリックが出まつ。緑の《《《は左、ピンクの》》》は右へ払うの。' },
+      { e:'normal', t:'横フリックは上へ払っても取れないでつ。矢印の向きを見てね。' },
+      { e:'wink',   t:'{name}、スライドもなめらかに曲がるようになったの♪' },
+      { e:'normal', t:'道のまんなかに境目があって、左右3本ずつでつ。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmSixLaneGuideMomosuke',
+  assistantId: 'momosuke',
+  label: 'ももすけ・モンヒロビート6レーン案内',
+  lines: {
+    rhythmSixLaneIntro: [
+      { e:'excited', t:'モンヒロビート、6レーンになったよ！ 全曲の譜面も作り直しだってさ！' },
+      { e:'wink',    t:'MASTERは横フリックが出るよ。緑の《《《は左、ピンクの》》》は右に払うんだ！' },
+      { e:'normal',  t:'横フリックは上に払っても取れないから、矢印の向きをよく見てね。' },
+      { e:'happy',   t:'{name}、スライドもぐにゃっと曲がるようになったよw' },
+      { e:'normal',  t:'道のまんなかに境目ができて、左右3本ずつなんだって。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmSixLaneGuideDra',
+  assistantId: 'dra',
+  label: 'ドラ・モンヒロビート6レーン案内',
+  lines: {
+    rhythmSixLaneIntro: [
+      { e:'happy',  t:'モンヒロビートが6レーンになったで。全曲の譜面も新しなったんや' },
+      { e:'normal', t:'MASTERには横フリックが出るで。緑の《《《は左、ピンクの》》》は右へ払うんや' },
+      { e:'normal', t:'横フリックは上に払っても取れへんから、矢印の向きよう見てな' },
+      { e:'wink',   t:'{name}、スライドもなめらかに曲がるようになったで。遊んでみ' },
+      { e:'normal', t:'道のまんなかに境目があって、左右3本ずつに分かれとるで' },
     ],
   },
 });
@@ -5590,6 +5654,57 @@ const ASSISTANT_BEAT_POINT_ALWAYS = [
 ];
 const ASSISTANT_BEAT_POINT_ALWAYS_CALLS = { mua: 'もも／ドラケン', kiki: 'みゅあちん／ももさん／ドラさん', momosuke: 'ドラちゃん', dra: 'みゅあ／もも' };
 
+// ---------- モンヒロビートが6レーンに(2026-09-26) ----------
+// 2026-09-26・ユーザー指示「したらストーリーも作って／ちなみにドラは指が太くて音ゲーが苦手らしい」。
+// HOMEで1度だけ流す(ビートPの知らせと同じ流し方)。伝えるのは5つだけ。
+//   ① 道が6レーン(真ん中に境目・左右3本ずつ)になり、全曲の譜面が新しくなった
+//   ② これまでの自己ベストと全国ランキングの記録はそのまま
+//   ③ SLIDE がなめらかに曲がる
+//   ④ MASTER に横フリック(緑の《《《は左・ピンクの》》》は右。上へ払っても取れない)
+//   ⑤ アシストモードならフリックは叩くだけで取れる(記録には残らない)
+// 【音ゲーの得手不得手】きき … 得意 ／ みゅあ … 苦手 ／ もも … ふつうに楽しんでいる ／
+//   ドラ … 指が太くて苦手(2026-09-26・ユーザー設定)。レーンが細くなると聞いて慌てる役。
+// ★呼び方: みゅあ→ドラケン / きき→みゅあちん / ももすけ→ドラちゃん / ドラ→きき は「靴下さん」・ももすけは「もも」。
+//   ドラの一人称は必ず「おで」。
+const ASSISTANT_RHYTHM_SIX_LANE = [
+  // 知らせ: ももすけから
+  { who:'momosuke', e:'excited',  t:'みんな〜！ モンヒロビートが6レーンになったよ♡' },
+  { who:'mua',      e:'surprise', t:'えっ、5本から6本？ 1本増えたの？' },
+  { who:'kiki',     e:'normal',   t:'道のまんなかに境目ができて、左右3本ずつに分かれたんでつ。' },
+  { who:'momosuke', e:'happy',    t:'それに合わせて、ぜんぶの曲の譜面も新しくなったんだって♪' },
+  { who:'mua',      e:'troubled', t:'ぜ、ぜんぶ……！？ せっかく覚えたのに〜' },
+  { who:'kiki',     e:'happy',    t:'これまでの自己ベストと全国ランキングの記録は、そのまま残りまつよ。' },
+  { who:'mua',      e:'normal',   t:'よかった……それなら安心して叩き直せるね' },
+  // ドラの指
+  { who:'dra',      e:'troubled', t:'ちょ、ちょっと待ってくれ……6本て、1本ずつ細なるってことやろ？' },
+  { who:'kiki',     e:'normal',   t:'同じ画面に6本並ぶので、1本は少し細くなりまつね。' },
+  { who:'dra',      e:'troubled', t:'おでの指、太いんよ。5本のときでも、となりのレーンまで押してたのに……' },
+  { who:'momosuke', e:'wink',     t:'ドラちゃんの指、ノーツより太いもんね〜w' },
+  { who:'dra',      e:'angry',    t:'もも、それは言いすぎやろ！ ……いや、ちょっと当たっとるけど' },
+  { who:'mua',      e:'happy',    t:'あたしも音ゲー苦手だから、ドラケンの気持ちわかる！' },
+  { who:'kiki',     e:'normal',   t:'幅の広いノーツは、その中のどこを押しても取れまつ。太い指でも大丈夫でつよ。' },
+  { who:'dra',      e:'surprise', t:'ほんまか、靴下さん！' },
+  { who:'kiki',     e:'angry',    t:'靴下さんじゃないでつ！' },
+  // スライドの曲線と横フリック
+  { who:'momosuke', e:'excited',  t:'それとね、スライドがなめらかに曲がるようになったの♪' },
+  { who:'mua',      e:'excited',  t:'くねくね動くやつ？ なぞるの楽しそう！' },
+  { who:'kiki',     e:'normal',   t:'MASTERには横フリックも出まつ。緑の《《《は左、ピンクの》》》は右へ払うの。' },
+  { who:'dra',      e:'surprise', t:'横に払うんか。上に払ったらあかんの？' },
+  { who:'kiki',     e:'normal',   t:'上に払っても取れないでつ。矢印の向きをよく見てね。' },
+  { who:'dra',      e:'troubled', t:'おでの指で横に払ったら、3レーンぶんくらい持っていきそうやな……' },
+  { who:'momosuke', e:'wink',     t:'横フリックはMASTERだけだから、まずはほかの難易度で慣れればいいんじゃない？' },
+  { who:'kiki',     e:'happy',    t:'アシストモードなら、フリックは叩くだけで取れまつ。記録には残らないけど、指ならしにぴったりでつ。' },
+  { who:'dra',      e:'happy',    t:'それや！ おで、まずはアシストで指ならしするわ' },
+  // 締め
+  { who:'mua',      e:'angry',    t:'あたしは最初からMASTERに挑戦するからね！' },
+  { who:'kiki',     e:'troubled', t:'みゅあちん、まずはHARDくらいからのほうが……' },
+  { who:'momosuke', e:'happy',    t:'{name}も、6レーンになったモンビー、遊んでみてね♡' },
+  { who:'kiki',     e:'happy',    t:'{name}、新しい譜面で、また自己ベストをめざしましょ♪' },
+  { who:'dra',      e:'happy',    t:'{name}、おでより先にフルコンしたら教えてな。えへへ' },
+  { who:'mua',      e:'excited',  t:'よーし、みんなで叩きに行こう！' },
+];
+const ASSISTANT_RHYTHM_SIX_LANE_CALLS = { mua: 'ドラケン', kiki: 'みゅあちん', momosuke: 'ドラちゃん', dra: '靴下さん／もも' };
+
 // ---------- タクティクスバトル登場(2026-09-21) ----------
 // β公開に合わせて1度だけ流す導入。「今までのバトルと何が違うか」を4つだけ伝える。
 //   ① ステータスを1体ずつ持つ(クラシックはパーティ全員の合計)
@@ -5672,6 +5787,8 @@ const EVENT_REPLAYS = [
   { id: 'symphony_2026_09_17_thanks', date: '2026-09-21 04:00', title: '異世界交響祭 ～閉幕とお礼～', script: ASSISTANT_SYMPHONY_THANKS, calls: ASSISTANT_SYMPHONY_THANKS_CALLS, unlockedKey: 'symphonyThanksSeen' },
   // ビートPがいつでも貯まるようになった知らせ(2026-09-24)。HOMEで1度だけ流れ、そのあとは回想から見返せる
   { id: 'beat_point_always_2026_09_24', date: '2026-09-24 23:02', title: 'いつでもビートP ～交換所のこれから～', script: ASSISTANT_BEAT_POINT_ALWAYS, calls: ASSISTANT_BEAT_POINT_ALWAYS_CALLS, unlockedKey: 'beatPointAlwaysSeen' },
+  // モンヒロビートが6レーンになった知らせ(2026-09-26)。HOMEで1度だけ流れ、そのあとは回想から見返せる
+  { id: 'rhythm_six_lane_2026_09_26', date: '2026-09-26 13:48', title: '6レーンのモンヒロビート ～ドラの指～', script: ASSISTANT_RHYTHM_SIX_LANE, calls: ASSISTANT_RHYTHM_SIX_LANE_CALLS, unlockedKey: 'rhythmSixLaneSeen' },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------

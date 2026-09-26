@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1c4e90d41b009de6
+// source-sha256: 1cd924a7a8bd571f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 14:31";
+const BUILD_DATE = "2026-09-26 14:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4764,6 +4764,13 @@ const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '�
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
+const RHYTHM_RENDER_QUALITY_MODES = Object.freeze(['AUTO', 'HIGH', 'STANDARD', 'SAVE']);
+const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['AUTO', '自動'], ['HIGH', '高'], ['STANDARD', '標準'], ['SAVE', '省電力']]);
+const RHYTHM_RENDER_QUALITY_STEPS = Object.freeze(['HIGH', 'STANDARD', 'SAVE']);
+const RHYTHM_AUTO_QUALITY_WINDOW_MS = 3000;
+const RHYTHM_AUTO_QUALITY_SLOW_RATIO = .08;
+const rhythmEffectiveRenderQuality = (quality, autoLevel) => quality === 'AUTO' ? RHYTHM_RENDER_QUALITY_STEPS.includes(autoLevel) ? autoLevel : 'HIGH' : quality;
+const rhythmRenderQualityCap = (quality, highCap) => quality === 'SAVE' ? 1 : quality === 'STANDARD' ? Math.min(highCap, 1.5) : highCap;
 const RHYTHM_STAGE_EFFECTS = Object.freeze(['VIVID', 'CALM', 'SIMPLE']);
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
 const RHYTHM_LANE_COVER_MIN = 0,
@@ -4775,20 +4782,21 @@ const RHYTHM_ASSIST_SCORE_RATE = 0.8;
 const RHYTHM_ASSIST_GUARD_MAX = 3;
 const RHYTHM_ASSIST_GUARD_RECHARGE = 20,
   RHYTHM_ASSIST_GUARD_RECHARGE_STRUGGLING = 8;
-const RHYTHM_MIRROR_SUB_LANES = 10;
 const rhythmMirrorNote = note => {
   if (!note || typeof note !== 'object') return note;
+  const RHYTHM_MIRROR_SUB_LANES = RHYTHM_SUB_LANE_COUNT,
+    RHYTHM_MIRROR_LAST_LANE = RHYTHM_LANE_COUNT - 1;
   const next = {
     ...note
   };
   const width = Number(note.subLaneWidth);
   const w = Number.isFinite(width) && width > 0 ? width : 2;
-  if (Number.isFinite(Number(note.lane))) next.lane = 4 - Number(note.lane);
-  if (Number.isFinite(Number(note.endLane))) next.endLane = 4 - Number(note.endLane);
+  if (Number.isFinite(Number(note.lane))) next.lane = RHYTHM_MIRROR_LAST_LANE - Number(note.lane);
+  if (Number.isFinite(Number(note.endLane))) next.endLane = RHYTHM_MIRROR_LAST_LANE - Number(note.endLane);
   if (Number.isFinite(Number(note.subLane))) next.subLane = RHYTHM_MIRROR_SUB_LANES - Number(note.subLane) - w;
   if (Array.isArray(note.slidePoints)) next.slidePoints = note.slidePoints.map(point => point && Number.isFinite(Number(point.lane)) ? {
     ...point,
-    lane: 4 - Number(point.lane)
+    lane: RHYTHM_MIRROR_LAST_LANE - Number(point.lane)
   } : point);
   if (note.flickDir === 'left') next.flickDir = 'right';else if (note.flickDir === 'right') next.flickDir = 'left';
   if (Array.isArray(note.holdPoints)) next.holdPoints = note.holdPoints.map(point => {
@@ -4945,6 +4953,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   songPreviewEnabled: true,
   quietDuringPlay: false,
   frameRateMode: 'DEVICE',
+  renderQuality: 'HIGH',
   stageEffect: 'SIMPLE',
   laneCover: 0,
   timingDisplay: 'STANDARD',
@@ -4997,6 +5006,7 @@ const normalizeRhythmSettings = value => {
     songPreviewEnabled: bool('songPreviewEnabled'),
     quietDuringPlay: bool('quietDuringPlay'),
     frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode,
+    renderQuality: RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality) ? source.renderQuality : DEFAULT_RHYTHM_SETTINGS.renderQuality,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -5161,7 +5171,8 @@ const EVENT_BGM_SCENES = Object.freeze({
   symphony_2026_09_17: 'symphonyEvent',
   symphony_2026_09_17_thanks: 'symphonyEvent',
   tactics_intro: 'tacticsIntroEvent',
-  beat_point_always_2026_09_24: 'monbeatCupEvent'
+  beat_point_always_2026_09_24: 'monbeatCupEvent',
+  rhythm_six_lane_2026_09_26: 'monbeatCupEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -21059,7 +21070,7 @@ const RhythmOptions = ({
     full: true
   }), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
-  }), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
+  }), field('画質', segments('renderQuality', RHYTHM_RENDER_QUALITY_LABELS), '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
   }), field('軽量モード', toggle('lightweightMode'), '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。', {
     full: true
@@ -21944,6 +21955,181 @@ const RHYTHM_HAPTICS = (() => {
   };
 })();
 const RHYTHM_SIDE_CHEER_MS = 700;
+const RHYTHM_HALO_KEYS = Object.freeze([['MISS', ''], ['BAD', ''], ['GOOD', ''], ['GREAT', ''], ['EXCELLENT', ''], ['MARVELOUS', ''], ['MARVELOUS', '1']]);
+const rhythmParseDropShadows = filter => {
+  const text = String(filter || '').trim();
+  if (!text || text === 'none') return [];
+  const list = [];
+  const rest = text.replace(/drop-shadow\(((?:[^()]|\([^()]*\))*)\)/g, (_, body) => {
+    const color = (body.match(/rgba?\([^)]*\)|#[0-9a-fA-F]{3,8}/) || ['rgb(0, 0, 0)'])[0];
+    const nums = body.replace(color, '').match(/-?[\d.]+px/g) || [];
+    list.push({
+      color,
+      x: parseFloat(nums[0]) || 0,
+      y: parseFloat(nums[1]) || 0,
+      blur: parseFloat(nums[2]) || 0
+    });
+    return '';
+  }).trim();
+  return rest ? null : list;
+};
+const rhythmBakeJudgmentHalos = async (textEl, maxScale = 2) => {
+  const host = textEl && textEl.parentElement;
+  if (!host || typeof document === 'undefined' || typeof window === 'undefined') return null;
+  try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  } catch (e) {}
+  const dpr = Math.min(Math.max(1, Number(maxScale) || 2), Math.max(1, Number(window.devicePixelRatio) || 1));
+  const baked = [];
+  const fail = () => {
+    baked.forEach(item => URL.revokeObjectURL(item.url));
+    return fail();
+  };
+  for (const [judgment, precise] of RHYTHM_HALO_KEYS) {
+    const probe = document.createElement('b');
+    probe.className = textEl.className;
+    probe.setAttribute('data-rhythm-judgment-text', '');
+    probe.dataset.judgment = judgment;
+    if (precise) probe.dataset.judgmentPrecise = precise;
+    probe.textContent = judgment;
+    probe.style.cssText = 'position:absolute;left:0;top:0;visibility:hidden;transition:none;animation:none';
+    host.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    const shadows = rhythmParseDropShadows(cs.filter);
+    const fs = parseFloat(cs.fontSize) || 26,
+      ls = parseFloat(cs.letterSpacing) || 0;
+    const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const range = document.createRange();
+    range.selectNodeContents(probe);
+    const domWidth = range.getBoundingClientRect().width;
+    host.removeChild(probe);
+    if (!shadows) return fail();
+    if (shadows.length < 2) continue;
+    const measure = document.createElement('canvas').getContext('2d');
+    if (!measure) return fail();
+    measure.font = font;
+    const metrics = measure.measureText(judgment);
+    const ascent = Number.isFinite(metrics.fontBoundingBoxAscent) ? metrics.fontBoundingBoxAscent : metrics.actualBoundingBoxAscent;
+    const descent = Number.isFinite(metrics.fontBoundingBoxDescent) ? metrics.fontBoundingBoxDescent : metrics.actualBoundingBoxDescent;
+    const runWidth = metrics.width + ls * judgment.length;
+    if (!(Math.abs(runWidth - domWidth) <= 2) || !Number.isFinite(ascent) || !Number.isFinite(descent)) return fail();
+    const sigma = Math.sqrt(shadows.reduce((sum, s) => sum + s.blur * s.blur, 0));
+    const offset = shadows.reduce((max, s) => Math.max(max, Math.abs(s.x), Math.abs(s.y)), 0);
+    const margin = Math.ceil(2.5 * sigma + offset + 2);
+    const cssW = runWidth + margin * 2,
+      cssH = fs + margin * 2,
+      W = Math.ceil(cssW * dpr),
+      H = Math.ceil(cssH * dpr);
+    const make = () => {
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      return c;
+    };
+    const glyph = make(),
+      gctx = glyph.getContext('2d');
+    if (!gctx) return fail();
+    gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gctx.font = font;
+    gctx.textBaseline = 'alphabetic';
+    gctx.fillStyle = '#000';
+    const baseline = margin + (fs - (ascent + descent)) / 2 + ascent;
+    for (let i = 0; i < judgment.length; i++) gctx.fillText(judgment[i], margin + measure.measureText(judgment.slice(0, i)).width + ls * i, baseline);
+    const halo = make(),
+      hctx = halo.getContext('2d'),
+      source = make(),
+      sctx = source.getContext('2d'),
+      shadow = make(),
+      shctx = shadow.getContext('2d');
+    if (!hctx || !sctx || !shctx) return fail();
+    sctx.drawImage(glyph, 0, 0);
+    const far = W + H + 1000;
+    for (const s of shadows) {
+      shctx.clearRect(0, 0, W, H);
+      shctx.shadowColor = s.color;
+      shctx.shadowBlur = s.blur * 2 * dpr;
+      shctx.shadowOffsetX = s.x * dpr + far;
+      shctx.shadowOffsetY = s.y * dpr;
+      shctx.drawImage(source, -far, 0);
+      hctx.globalCompositeOperation = 'destination-over';
+      hctx.drawImage(shadow, 0, 0);
+      sctx.globalCompositeOperation = 'destination-over';
+      sctx.drawImage(shadow, 0, 0);
+    }
+    const url = await new Promise(resolve => {
+      try {
+        halo.toBlob(blob => resolve(blob ? URL.createObjectURL(blob) : null), 'image/png');
+      } catch (e) {
+        resolve(null);
+      }
+    });
+    if (!url) return fail();
+    baked.push({
+      judgment,
+      precise,
+      url,
+      width: cssW / fs,
+      height: cssH / fs
+    });
+  }
+  return baked.length ? baked : null;
+};
+const RHYTHM_STAGE_BEAM_COLORS = Object.freeze(['rgba(103,232,249,.22)', 'rgba(232,121,249,.24)', 'rgba(251,191,36,.24)', 'rgba(255,255,255,.26)']);
+const RHYTHM_STAGE_SPARKS = Object.freeze([{
+  duration: 16000,
+  opacity: .55,
+  core: 1,
+  mid: 2,
+  end: 4,
+  dots: [[8, 12], [27, 63], [41, 30], [58, 85], [73, 18], [88, 52], [15, 90], [64, 45]]
+}, {
+  duration: 9000,
+  opacity: .7,
+  core: 2,
+  mid: 3,
+  end: 5,
+  dots: [[5, 40], [21, 8], [36, 77], [80, 33], [93, 70], [50, 58]]
+}]);
+const rhythmDrawStageBeam = (g, left, top, bw, bh, angleDeg, color, alpha = .75) => {
+  g.save();
+  g.translate(left + bw / 2, top);
+  g.rotate(angleDeg * Math.PI / 180);
+  g.translate(-bw / 2, 0);
+  g.beginPath();
+  g.moveTo(.44 * bw, 0);
+  g.lineTo(.56 * bw, 0);
+  g.lineTo(bw, bh);
+  g.lineTo(0, bh);
+  g.closePath();
+  const grad = g.createLinearGradient(0, 0, 0, bh);
+  grad.addColorStop(0, color);
+  grad.addColorStop(.78, color.replace(/[\d.]+\)$/, '0)'));
+  g.globalAlpha = alpha;
+  g.fillStyle = grad;
+  g.fill();
+  g.restore();
+};
+const rhythmStageSparkSprite = (layer, scale) => {
+  const r = layer.end,
+    size = Math.ceil(r * 2 * scale) + 2,
+    c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d');
+  if (!g) return c;
+  const cx = size / 2,
+    grad = g.createRadialGradient(cx, cx, 0, cx, cx, r * scale);
+  grad.addColorStop(0, 'rgba(236,254,255,.95)');
+  grad.addColorStop(layer.core / r, 'rgba(236,254,255,.95)');
+  grad.addColorStop(layer.mid / r, 'rgba(103,232,249,.35)');
+  grad.addColorStop(1, 'rgba(103,232,249,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  return c;
+};
+const rhythmAutoQualityMemory = {
+  level: 'HIGH'
+};
 const RHYTHM_FACE_BOX = 42,
   RHYTHM_FACE_ZOOM = 1.28,
   RHYTHM_FACE_PAD = 12;
@@ -22220,12 +22406,31 @@ const RhythmTapTest = ({
   monstersRef.current = monsters;
   const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
+  const [autoQuality, setAutoQuality] = useState(() => rhythmAutoQualityMemory.level);
+  const autoQualityAtStart = useState(() => rhythmAutoQualityMemory.level)[0];
+  const renderQualityNow = rhythmEffectiveRenderQuality(settings.renderQuality, autoQuality);
+  const renderQualityStill = rhythmEffectiveRenderQuality(settings.renderQuality, autoQualityAtStart);
+  const stepAutoQualityRef = useRef(null);
+  stepAutoQualityRef.current = () => setAutoQuality(level => {
+    const index = RHYTHM_RENDER_QUALITY_STEPS.indexOf(level);
+    const next = RHYTHM_RENDER_QUALITY_STEPS[Math.min(RHYTHM_RENDER_QUALITY_STEPS.length - 1, Math.max(0, index) + 1)];
+    rhythmAutoQualityMemory.level = next;
+    return next;
+  });
+  const noteCanvasMaxDpr = Math.min(settings.effectAmount === 'MINIMAL' ? 2 : RHYTHM_NOTE_CANVAS_MAX_DPR, rhythmRenderQualityCap(renderQualityNow, RHYTHM_NOTE_CANVAS_MAX_DPR));
+  const noteCanvasMaxDprRef = useRef(noteCanvasMaxDpr);
+  noteCanvasMaxDprRef.current = noteCanvasMaxDpr;
   const noteCanvasRef = useRef(null);
+  const webglNotes = useState(() => canvasNotes && rhythmWebglNotesActive())[0];
   useEffect(() => {
     if (!canvasNotes) return undefined;
-    RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current);
+    RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current, {
+      webgl: webglNotes
+    });
+    const canvas = noteCanvasRef.current;
+    if (canvas) canvas.dataset.rhythmNoteBackend = RHYTHM_CANVAS_RENDERER.backend;
     return () => RHYTHM_CANVAS_RENDERER.release();
-  }, [canvasNotes]);
+  }, [canvasNotes, webglNotes]);
   const noteElements = useMemo(() => canvasNotes ? null : chart.notes.map((note, index) => {
     const monsterSlot = rhythmNoteMonsterSlot(note),
       monster = monsterSlot ? monsters[monsterSlot - 1] || null : null;
@@ -22321,11 +22526,13 @@ const RhythmTapTest = ({
   }, [monsterSignature]);
   const faceBitmapsRef = useRef([]);
   useEffect(() => {
-    faceBitmapsRef.current = [];
-    if (!canvasNotes || monsterFaceHidden) return undefined;
+    if (!canvasNotes || monsterFaceHidden) {
+      faceBitmapsRef.current = [];
+      return undefined;
+    }
     let cancelled = false;
     const deviceDpr = typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
-    const dpr = Math.min(deviceDpr, RHYTHM_NOTE_CANVAS_MAX_DPR);
+    const dpr = Math.min(deviceDpr, noteCanvasMaxDpr);
     monsters.forEach((monster, index) => {
       rhythmBakeMonsterFace(monster, dpr).then(face => {
         if (!cancelled && face) faceBitmapsRef.current[index] = face;
@@ -22334,12 +22541,15 @@ const RhythmTapTest = ({
     return () => {
       cancelled = true;
     };
-  }, [canvasNotes, monsterSignature, monsterFaceHidden, settings.lightweightMode, settings.effectAmount]);
+  }, [canvasNotes, monsterSignature, monsterFaceHidden, settings.lightweightMode, settings.effectAmount, noteCanvasMaxDpr]);
   const RHYTHM_LANE_PRESS_GRADIENT = 'linear-gradient(to bottom,rgba(96,165,250,.16) 0%,rgba(96,165,250,.28) 40%,rgba(125,211,252,.44) calc(100% - var(--mh-judgment-line-bottom,20%) - 14%),rgba(224,242,254,.74) calc(100% - var(--mh-judgment-line-bottom,20%) - 3%),rgba(248,250,252,.9) calc(100% - var(--mh-judgment-line-bottom,20%)),rgba(147,197,253,.5) calc(100% - var(--mh-judgment-line-bottom,20%) + 4%),rgba(96,165,250,.34) 100%)';
   const laneElements = useMemo(() => React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "pointer-events-none absolute inset-0 grid grid-cols-5"
+    className: "pointer-events-none absolute inset-0 grid",
+    style: {
+      gridTemplateColumns: `repeat(${RHYTHM_LANE_COUNT},minmax(0,1fr))`
+    }
   }, Array.from({
-    length: 5
+    length: RHYTHM_LANE_COUNT
   }, (_, lane) => React.createElement("div", {
     key: lane,
     "data-rhythm-lane": lane,
@@ -22355,7 +22565,7 @@ const RhythmTapTest = ({
     className: "pointer-events-none absolute inset-0",
     "aria-hidden": "true"
   }, Array.from({
-    length: 5
+    length: RHYTHM_LANE_COUNT
   }, (_, index) => React.createElement("i", {
     key: index,
     "data-rhythm-sublane-boundary": ""
@@ -22363,7 +22573,7 @@ const RhythmTapTest = ({
     className: "pointer-events-none absolute inset-0",
     "aria-hidden": "true"
   }, Array.from({
-    length: 10
+    length: RHYTHM_SUB_LANE_COUNT
   }, (_, subLane) => React.createElement("i", {
     key: subLane,
     "data-rhythm-sublane-feedback": subLane,
@@ -22382,6 +22592,36 @@ const RhythmTapTest = ({
     screenFlashRef = useRef(null),
     judgmentTextRef = useRef(null),
     comboRef = useRef(null);
+  const [haloKeys, setHaloKeys] = useState(null);
+  useEffect(() => {
+    let cancelled = false,
+      made = null;
+    setHaloKeys(null);
+    const textEl = judgmentTextRef.current;
+    if (!textEl || typeof document === 'undefined') return undefined;
+    rhythmBakeJudgmentHalos(textEl, rhythmRenderQualityCap(renderQualityStill, 2)).then(baked => {
+      if (!baked) return;
+      if (cancelled) {
+        baked.forEach(item => URL.revokeObjectURL(item.url));
+        return;
+      }
+      made = baked;
+      let style = document.querySelector('style[data-rhythm-judgment-halo-style]');
+      if (!style) {
+        style = document.createElement('style');
+        style.setAttribute('data-rhythm-judgment-halo-style', '');
+        document.head.appendChild(style);
+      }
+      style.textContent = baked.map(item => `[data-rhythm-judgment-text][data-halo="1"][data-judgment="${item.judgment}"]${item.precise ? '[data-judgment-precise="1"]' : ':not([data-judgment-precise="1"])'}::before{background-image:url("${item.url}");width:${item.width.toFixed(4)}em;height:${item.height.toFixed(4)}em}`).join('\n');
+      setHaloKeys(new Set(baked.map(item => `${item.judgment}|${item.precise}`)));
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+      const style = document.querySelector('style[data-rhythm-judgment-halo-style]');
+      if (style) style.textContent = '';
+      if (made) made.forEach(item => URL.revokeObjectURL(item.url));
+    };
+  }, [settings.effectAmount, settings.lightweightMode, renderQualityStill]);
   const lifeBoxRef = useRef(null),
     lifeDamageRef = useRef(null);
   const stageLevel = rhythmStageLevel(settings);
@@ -22594,6 +22834,86 @@ const RhythmTapTest = ({
   const lifeRatio = rhythmLifeRatio(view.life);
   const lifeState = rhythmLifeState(view.life);
   const comboTier = rhythmComboTier(view.combo);
+  const stageTierNow = Math.min(3, Math.floor(comboTier / 2));
+  const stageHostRef = useRef(null);
+  const [stageImages, setStageImages] = useState(null);
+  const stageFxOn = stageLevel === 'VIVID' && settings.effectAmount !== 'MINIMAL';
+  useEffect(() => {
+    const host = stageHostRef.current;
+    if (!host || !stageFxOn || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+    let alive = true,
+      made = [],
+      timer = 0,
+      lastKey = '';
+    const toUrl = canvas => new Promise(resolve => {
+      try {
+        canvas.toBlob(blob => resolve(blob ? URL.createObjectURL(blob) : null), 'image/png');
+      } catch (e) {
+        resolve(null);
+      }
+    });
+    const bake = async () => {
+      const w = host.clientWidth,
+        h = host.clientHeight;
+      if (!(w > 0 && h > 0)) return;
+      const cap = renderQualityStill === 'STANDARD' ? 1.25 : rhythmRenderQualityCap(renderQualityStill, 1.5);
+      const scale = Math.min(cap, Math.max(1, Number(window.devicePixelRatio) || 1));
+      const key = `${w}x${h}@${scale}`;
+      if (key === lastKey) return;
+      lastKey = key;
+      const canvasOf = (cw, ch) => {
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(cw * scale));
+        c.height = Math.max(1, Math.round(ch * scale));
+        const g = c.getContext('2d');
+        if (g) g.setTransform(scale, 0, 0, scale, 0, 0);
+        return [c, g];
+      };
+      const bw = .38 * w,
+        bh = 1.35 * h;
+      const beams = await Promise.all(RHYTHM_STAGE_BEAM_COLORS.map(color => {
+        const [c, g] = canvasOf(bw, bh);
+        if (!g) return null;
+        rhythmDrawStageBeam(g, 0, 0, bw, bh, 0, color, 1);
+        return toUrl(c);
+      }));
+      const sparks = await Promise.all(RHYTHM_STAGE_SPARKS.map(layer => {
+        const [c, g] = canvasOf(w, h * 2);
+        if (!g) return null;
+        const sprite = rhythmStageSparkSprite(layer, scale),
+          size = sprite.width / scale;
+        for (const [px, py] of layer.dots) for (const k of [0, 1]) g.drawImage(sprite, px / 100 * w - size / 2, py / 100 * h + k * h - size / 2, size, size);
+        return toUrl(c);
+      }));
+      const urls = [...beams, ...sparks];
+      if (!alive || urls.some(url => !url)) {
+        urls.forEach(url => {
+          if (url) URL.revokeObjectURL(url);
+        });
+        return;
+      }
+      const old = made;
+      made = urls;
+      setStageImages({
+        beams,
+        sparks
+      });
+      setTimeout(() => old.forEach(url => URL.revokeObjectURL(url)), 1000);
+    };
+    bake();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(bake, 150);
+    }) : null;
+    if (observer) observer.observe(host);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+      if (observer) observer.disconnect();
+      setStageImages(null);
+      made.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [stageFxOn, renderQualityStill]);
   const comboStatus = (() => {
     if (settings.comboStatusDisplay === false || assistOn || !view.counts) return '';
     const c = view.counts;
@@ -23218,7 +23538,28 @@ const RhythmTapTest = ({
       RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
-      RHYTHM_GESTURE_RUNTIME.areaRect(playAreaRef.current);
+      if (settings.renderQuality === 'AUTO') {
+        const aq = run._autoQuality || (run._autoQuality = {
+          last: 0,
+          start: frameNowMs,
+          frames: 0,
+          slow: 0,
+          minGap: 1e9
+        });
+        const gap = aq.last ? frameNowMs - aq.last : 0;
+        aq.last = frameNowMs;
+        if (gap > 0 && gap < 250) {
+          aq.frames++;
+          if (gap >= 5 && gap < aq.minGap) aq.minGap = gap;
+          if (gap > Math.max(5, aq.minGap) * 1.8) aq.slow++;
+        }
+        if (frameNowMs - aq.start >= RHYTHM_AUTO_QUALITY_WINDOW_MS) {
+          if (aq.frames >= 30 && aq.slow / aq.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepAutoQualityRef.current) stepAutoQualityRef.current();
+          aq.start = frameNowMs;
+          aq.frames = 0;
+          aq.slow = 0;
+        }
+      }
       if (powerSave) {
         const gap = prevFrameMs ? frameNowMs - prevFrameMs : 0;
         prevFrameMs = frameNowMs;
@@ -23270,7 +23611,7 @@ const RhythmTapTest = ({
         nowMs: frameNowMs,
         effect: settings.effectAmount,
         lightweight: settings.lightweightMode,
-        maxDpr: settings.effectAmount === 'MINIMAL' ? 2 : undefined,
+        maxDpr: noteCanvasMaxDprRef.current,
         sizeScale: settings.noteSize / 100
       });
       const paintCanvasNote = note => {
@@ -23707,7 +24048,7 @@ const RhythmTapTest = ({
     if (canvasNotes) RHYTHM_CANVAS_RENDERER.warmSprites({
       effect: settings.effectAmount,
       lightweight: settings.lightweightMode,
-      maxDpr: settings.effectAmount === 'MINIMAL' ? 2 : undefined
+      maxDpr: noteCanvasMaxDpr
     });
     const sideBeatMs = rhythmSideMonsterBeatMs(song.bgmTrackId);
     sideMonsterRefs.current.forEach(el => {
@@ -23823,7 +24164,7 @@ const RhythmTapTest = ({
       standby
     }) => {
       run.inputFeedbackState.set(input.inputKey, {
-        subLane: Math.max(0, Math.min(9, Math.floor(input.subLaneCoordinate))),
+        subLane: Math.max(0, Math.min(RHYTHM_SUB_LANE_COUNT - 1, Math.floor(input.subLaneCoordinate))),
         subLaneCoordinate: Number(input.subLaneCoordinate),
         empty: !target || target.type === 'TAP'
       });
@@ -23881,7 +24222,7 @@ const RhythmTapTest = ({
       state = run?.inputFeedbackState?.get(inputKey);
     if (!state || !Number.isFinite(subLaneCoordinate)) return;
     if (Math.abs(subLaneCoordinate - state.subLaneCoordinate) < RHYTHM_TAP_REJUDGE_MOVE_SUBLANES) return;
-    const subLane = Math.max(0, Math.min(9, Math.floor(subLaneCoordinate)));
+    const subLane = Math.max(0, Math.min(RHYTHM_SUB_LANE_COUNT - 1, Math.floor(subLaneCoordinate)));
     if (subLane === state.subLane) return;
     state.subLane = subLane;
     state.subLaneCoordinate = subLaneCoordinate;
@@ -23947,7 +24288,7 @@ const RhythmTapTest = ({
   const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
-    const active = new Set(Array.from(coordinates || []).map(value => Math.max(0, Math.min(9, Math.floor(Number(value))))).filter(Number.isFinite)),
+    const active = new Set(Array.from(coordinates || []).map(value => Math.max(0, Math.min(RHYTHM_SUB_LANE_COUNT - 1, Math.floor(Number(value))))).filter(Number.isFinite)),
       glowOpacity = settings.laneGlow === 'NONE' ? '0' : settings.laneGlow === 'LOW' ? '.35' : '1';
     let nodes = glowNodesRef.current;
     if (!nodes || !nodes.length || !nodes[0].isConnected) nodes = glowNodesRef.current = Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));
@@ -24696,22 +25037,35 @@ const RhythmTapTest = ({
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
   }, laneElements, stageLevel !== 'SIMPLE' && React.createElement("div", {
+    ref: stageHostRef,
     "data-rhythm-stage": stageLevel,
-    "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
+    "data-stage-tier": String(stageTierNow),
     "aria-hidden": "true"
   }, stageArtSrc && React.createElement("canvas", {
     ref: stageArtRef,
     "data-rhythm-stage-art": true,
     width: "24",
     height: "24"
-  }), stageLevel === 'VIVID' && React.createElement(React.Fragment, null, React.createElement("i", {
-    "data-rhythm-stage-beam": "left"
-  }), React.createElement("i", {
-    "data-rhythm-stage-beam": "right"
-  }), React.createElement("i", {
-    "data-rhythm-stage-sparks": "far"
-  }), React.createElement("i", {
-    "data-rhythm-stage-sparks": "near"
+  }), stageFxOn && stageImages && React.createElement(React.Fragment, null, React.createElement("img", {
+    "data-rhythm-stage-beam": "left",
+    src: stageImages.beams[stageTierNow] || stageImages.beams[0],
+    alt: "",
+    draggable: false
+  }), React.createElement("img", {
+    "data-rhythm-stage-beam": "right",
+    src: stageImages.beams[stageTierNow] || stageImages.beams[0],
+    alt: "",
+    draggable: false
+  }), React.createElement("img", {
+    "data-rhythm-stage-sparks": "far",
+    src: stageImages.sparks[0],
+    alt: "",
+    draggable: false
+  }), React.createElement("img", {
+    "data-rhythm-stage-sparks": "near",
+    src: stageImages.sparks[1],
+    alt: "",
+    draggable: false
   }))), stageLevel !== 'SIMPLE' && React.createElement("i", {
     ref: stagePulseRef,
     "data-rhythm-stage-pulse": true,
@@ -24852,6 +25206,7 @@ const RhythmTapTest = ({
     "data-rhythm-judgment-text": true,
     "data-judgment": view.last || '',
     "data-judgment-precise": view.lastPrecise ? '1' : '',
+    "data-halo": haloKeys && settings.judgmentTextDisplay && view.last && view.status !== 'error' && view.status !== 'loading' && haloKeys.has(`${view.last}|${view.lastPrecise ? '1' : ''}`) ? '1' : undefined,
     className: "block text-[26px] font-black leading-none tracking-wide text-white"
   }, view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? view.last : ''), React.createElement("small", {
     className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
@@ -28755,7 +29110,7 @@ function RhythmInfoScreen({
     className: "text-center text-xl font-black text-cyan-200"
   }, "モンヒロビートは準備中です"), React.createElement("p", {
     className: "mt-3 text-[11px] leading-relaxed text-slate-300"
-  }, "曲に合わせて、5つのレーンを流れてくるノーツを演奏する音ゲーのモードです。"), React.createElement("p", {
+  }, "曲に合わせて、6つのレーンを流れてくるノーツを演奏する音ゲーのモードです。"), React.createElement("p", {
     className: "mt-2 text-[11px] leading-relaxed text-slate-300"
   }, "設定したマスモンが曲の途中で「モンスターノーツ」になって流れてきて、取ると血統ごとの力が働く予定です。"), React.createElement("div", {
     className: "mt-4 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3"
@@ -28773,6 +29128,8 @@ function RhythmSongSelectScreen({
   difficulty,
   dismissQuickRhythmBackground,
   dismissRhythmEventNotice,
+  dismissRhythmSixLaneIntro,
+  rhythmSixLaneIntroVisible,
   exitingQuickRun,
   handleGiveUp,
   mainHero,
@@ -29052,7 +29409,22 @@ function RhythmSongSelectScreen({
   }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます'), beatPointReleased && !beatPointEvent && React.createElement("div", {
     "data-rhythm-beat-point-always": true,
     className: "shrink-0 border-b border-violet-400/15 bg-violet-950/15 px-3 py-1 text-center text-[10px] font-black text-violet-200/90"
-  }, "🎟️ ビートPはいつでも貯まります・イベント開催中は5倍"), quickRhythmBackgroundVisible && React.createElement("div", {
+  }, "🎟️ ビートPはいつでも貯まります・イベント開催中は5倍"), rhythmSixLaneIntroVisible && React.createElement("div", {
+    "data-rhythm-six-lane-intro": true,
+    className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
+  }, React.createElement("div", {
+    className: "flex items-start gap-1"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement(AssistantBubble, {
+    scene: "rhythmSixLaneIntro",
+    compact: true
+  })), React.createElement("button", {
+    type: "button",
+    onClick: dismissRhythmSixLaneIntro,
+    "aria-label": "この案内を閉じる",
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
+  }, "×"))), quickRhythmBackgroundVisible && React.createElement("div", {
     "data-quick-rhythm-background": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -45411,6 +45783,13 @@ function MonsterHeroGame() {
     setQuickRhythmBackgroundSeen(true);
     storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false);
   };
+  const RHYTHM_SIX_LANE_INTRO_KEY = 'mh_rhythm_six_lane_seen_v1';
+  const [rhythmSixLaneIntroSeen, setRhythmSixLaneIntroSeen] = useState(true);
+  const rhythmSixLaneIntroVisible = !rhythmSixLaneIntroSeen;
+  const dismissRhythmSixLaneIntro = () => {
+    setRhythmSixLaneIntroSeen(true);
+    storeSet(RHYTHM_SIX_LANE_INTRO_KEY, true, false);
+  };
   const AUTO_ENHANCE_INTRO_KEY = 'mh_masu_auto_enhance_intro_seen_v1';
   const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
   const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
@@ -45442,7 +45821,8 @@ function MonsterHeroGame() {
   const SYMPHONY_STORY_ID = 'symphony_2026_09_17';
   const SYMPHONY_THANKS_STORY_ID = 'symphony_2026_09_17_thanks';
   const BEAT_POINT_ALWAYS_STORY_ID = 'beat_point_always_2026_09_24';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID];
+  const RHYTHM_SIX_LANE_STORY_ID = 'rhythm_six_lane_2026_09_26';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -45501,14 +45881,15 @@ function MonsterHeroGame() {
       if (endedThanksId) setRhythmEventStoryPending(prev => prev || endedThanksId);
       const liveEvent = rhythmLimitedEventAt(Date.now());
       const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
+      const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
       if (!liveEvent) {
-        if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+        if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
-      } else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+      } else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       if (rhythmEventLiveCatchUpRef.current) return;
       rhythmEventLiveCatchUpRef.current = true;
       try {
@@ -46404,6 +46785,7 @@ function MonsterHeroGame() {
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
       setQuickRhythmIntroSeen((await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false)) === true);
       setQuickRhythmBackgroundSeen((await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false)) === true);
+      setRhythmSixLaneIntroSeen((await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false)) === true);
       setAutoEnhanceIntroSeen((await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false)) === true);
       setTacticsExIntroSeen((await storeGet(TACTICS_EX_INTRO_KEY, false, false)) === true);
       {
@@ -46730,6 +47112,9 @@ function MonsterHeroGame() {
       }
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && RELEASE_FLAGS.rhythmEventPoints === true && wasOnboarded && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(BEAT_POINT_ALWAYS_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+      }
+      if (RELEASE_FLAGS.rhythmMode === true && wasOnboarded && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RHYTHM_SIX_LANE_STORY_ID)) {
+        setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       if (wasOnboarded) {
@@ -47786,6 +48171,7 @@ function MonsterHeroGame() {
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
+    rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -61705,6 +62091,7 @@ function MonsterHeroGame() {
       catchingUp: catchingUp,
       difficulty: difficulty,
       dismissQuickRhythmBackground: dismissQuickRhythmBackground,
+      dismissRhythmSixLaneIntro: dismissRhythmSixLaneIntro,
       dismissRhythmEventNotice: dismissRhythmEventNotice,
       handleGiveUp: handleGiveUp,
       mainHero: mainHero,
@@ -61744,6 +62131,7 @@ function MonsterHeroGame() {
       },
       quickClearCounts: quickClearCounts,
       quickRhythmBackgroundVisible: quickRhythmBackgroundVisible,
+      rhythmSixLaneIntroVisible: rhythmSixLaneIntroVisible,
       quickRunDetailOpen: quickRunDetailOpen,
       quickRunFinishReasonText: quickRunFinishReasonText,
       quickRunPendingRewards: quickRunPendingRewards,
@@ -61934,9 +62322,9 @@ function MonsterHeroGame() {
       className: "text-xs font-black text-cyan-200"
     }, "ノーツの描き方（検証用）"), React.createElement("p", {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
-    }, "canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは", RELEASE_FLAGS.rhythmCanvasNotes ? 'canvas' : '要素', "）に従います。"), React.createElement("div", {
+    }, "canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは", RELEASE_FLAGS.rhythmCanvasNotes ? 'canvas' : '要素', "）に従います。「WebGL」は canvas と同じ描き方を GPU で描く試作です（重さ・発熱を「性能計測」で canvas と比べるためのもの）。"), React.createElement("div", {
       className: "mt-2 flex gap-2"
-    }, [['', '自動'], ['dom', '要素'], ['canvas', 'canvas']].map(([value, label]) => React.createElement("button", {
+    }, [['', '自動'], ['dom', '要素'], ['canvas', 'canvas'], ['webgl', 'WebGL']].map(([value, label]) => React.createElement("button", {
       key: value || 'auto',
       type: "button",
       "data-rhythm-canvas-pref": value || 'auto',

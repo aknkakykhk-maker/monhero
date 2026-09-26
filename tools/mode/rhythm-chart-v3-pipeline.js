@@ -183,7 +183,7 @@ const assertRow=(row,note)=>{
   if(!/undefined|NaN|null/.test(row))return row;
   console.error(`✗ 譜面の行に座標の欠けがあります: ${row}`);
   console.error(`  もとのノーツ: ${JSON.stringify(note)}`);
-  console.error('  HOLD/TAP/FLICKは subLane（サブレーン0〜9）、SLIDEは中継点の lane と subLaneWidth が要ります。');
+  console.error('  HOLD/TAP/FLICKは subLane（5レーンの譜面はサブレーン0〜9、6レーンは0〜11）、SLIDEは中継点の lane と subLaneWidth が要ります。');
   process.exit(1);
 };
 
@@ -226,7 +226,24 @@ for(const difficulty of DIFFICULTIES){
   const lines=[];
   for(let i=0;i<rows.length;i+=4)lines.push('  '+rows.slice(i,i+4).join(',')+',');
   runtimeSource=`${runtimeSource.slice(0,b+begin.length)}\n${lines.join('\n')}\n${runtimeSource.slice(e)}`;
-  console.log(`  ${difficulty}: ${chart.notes.length}ノーツ  → ${path.relative(ROOT,out)}`);
+  // 道のレーン数を、その譜面を束ねている mhChart(レベル,ノーツ,長さ,レーン数) の4つ目へ書く。
+  // 6レーン(版5)の譜面は 6、5レーンの譜面は書かない(本体が道の真ん中へ寄せて使う)。
+  // マーカーのすぐ上の「const ◯◯Notes=((t,h,f,s)=>[」から名前を拾い、その名前の mhChart だけを直す
+  {
+    const head=runtimeSource.slice(0,runtimeSource.indexOf(begin));
+    const found=[...head.matchAll(/const ([A-Za-z0-9_]+)=\(\(t,h,f,s\)=>\[\s*$/gm)].pop();
+    const name=found&&found[1];
+    const laneCount=Number(chart.laneCount)===6?6:5;
+    const pattern=name?new RegExp(`mhChart\\((\\d+),${name},([A-Za-z0-9_]+)(?:,\\d+)?\\)`,'g'):null;
+    const uses=pattern?(runtimeSource.match(pattern)||[]).length:0;
+    if(uses!==1){
+      console.error(`✗ ${begin} の譜面を束ねる mhChart(…,${name||'?'},…) が${uses}か所見つかりました(1か所のはず)。`);
+      console.error('  レーン数を書けないので中止します。');
+      process.exit(1);
+    }
+    runtimeSource=runtimeSource.replace(pattern,(_,level,duration)=>`mhChart(${level},${name},${duration}${laneCount===6?',6':''})`);
+  }
+  console.log(`  ${difficulty}: ${chart.notes.length}ノーツ（${Number(chart.laneCount)===6?6:5}レーン）  → ${path.relative(ROOT,out)}`);
 }
 const after=snapshot(runtimeSource);
 if(before.some((text,i)=>text!==after[i])){

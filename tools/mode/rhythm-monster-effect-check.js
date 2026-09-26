@@ -30,10 +30,10 @@ ok('既定は「標準」の段',game.includes("monsterNoteEffect:'LIGHT'"));
 // いちばん軽い段では**焼かない**(=描かない)。DOM 版は今までどおり要素を作らない。
 ok('いちばん軽い段ではマスモンの絵を用意しない(canvas 版は焼かない・DOM 版は要素を作らない)',
   game.includes("const monsterFaceHidden=rhythmMonsterEffectAtMost(monsterNoteEffect,'NONE');")
-  &&game.includes('useEffect(()=>{faceBitmapsRef.current=[];if(!canvasNotes||monsterFaceHidden)return undefined;')
+  &&game.includes('useEffect(()=>{if(!canvasNotes||monsterFaceHidden){faceBitmapsRef.current=[];return undefined;}')
   &&game.includes('{monster&&!monsterFaceHidden&&<span data-rhythm-monster-face'));
 ok('用意する・しないが変わったら作り直す(依存に入っている)',
-  /\[canvasNotes,monsterSignature,monsterFaceHidden,settings\.lightweightMode,settings\.effectAmount\]/.test(game)
+  /\[canvasNotes,monsterSignature,monsterFaceHidden,settings\.lightweightMode,settings\.effectAmount,noteCanvasMaxDpr\]/.test(game)
   &&/\[chart\.notes,monsterSignature,settings\.lightweightMode,settings\.effectAmount,monsterFaceHidden\]/.test(game));
 ok('canvas 版の顔は DOM の要素を重ねない(毎フレーム拡大して描き直させない)',
   !game.includes('data-rhythm-canvas-face aria-hidden')&&game.includes('RHYTHM_CANVAS_RENDERER.drawFace(faceBitmap.glow'));

@@ -91,10 +91,11 @@ assert(calibration.includes("dataset.rhythmGeometryCalibration='ready'")&&calibr
 assert(calibration.includes('rhythmProjectBoundary(boundary/2,0)')&&calibration.includes('rhythmProjectSubLaneSpan(sample.subLane,sample.width,y)')&&calibration.includes('rhythmProjectSlideSpan(sample.lane,note,y,0)'),'校正ガイドはレーン・可変幅・SLIDEの共通projection helperだけを使用');
 assert(calibration.includes("{subLane:0,width:1")&&calibration.includes("{subLane:2,width:2")&&calibration.includes("{subLane:4,width:3")&&calibration.includes("{subLane:6,width:4"),'TAP/HOLD/FLICK幅1〜4の基準帯を表示');
 assert(calibration.includes("{lane:.5,width:1")&&calibration.includes("{lane:1.5,width:2")&&calibration.includes("{lane:2.5,width:3")&&calibration.includes("{lane:3.5,width:4"),'SLIDE half-lane幅1〜4の基準帯を表示');
-assert(calibration.includes("for(let subLane=0;subLane<10;subLane++)")&&calibration.includes('rhythmProjectSubLaneSpan(subLane,1,judgeY)'),'判定ライン上の10サブレーン中心を同じprojectionで表示');
+assert(calibration.includes("for(let subLane=0;subLane<RHYTHM_SUB_LANE_COUNT;subLane++)")&&calibration.includes('rhythmProjectSubLaneSpan(subLane,1,judgeY)'),'判定ライン上の10サブレーン中心を同じprojectionで表示');
 assert(indexHtml.includes('data/rhythm-geometry-calibration.js?v='),'座標校正ガイドを起動経路へ登録');
 assert(calibration.includes("const label=enabled?'座標校正 ON':'座標校正';")&&calibration.includes('if(toggle.textContent!==label)toggle.textContent=label;')&&!calibration.includes("toggle.textContent=enabled?'座標校正 ON':'座標校正';"),'MutationObserver監視中は同じボタン文字を再代入せず自己ループを防止');
-const touchRect={left:0,top:0,width:400,height:800};
+// 2026-09-26 に6レーンへ。1サブレーンの幅を5レーン・幅400pxのとき(40px)とそろえるため、幅を 400×6/5=480px にする
+const touchRect={left:0,top:0,width:480,height:800};
 const centerX=run(`rhythmProjectBoundary(2.25,1)`)*touchRect.width;
 const contact=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:45},${JSON.stringify(touchRect)})`);
 assert.deepEqual(Array.from(contact.subLanes),[3,4,5],'Touch.radiusXを70%へ縮小してprojectionへ通す');

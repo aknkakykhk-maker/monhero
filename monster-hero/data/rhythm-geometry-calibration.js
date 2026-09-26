@@ -98,8 +98,8 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
     const group=svgEl('g',{'data-rhythm-calibration-guide':'','pointer-events':'none'});
     group.style.display=enabled?'':'none';
 
-    // 青=5メインレーン境界、黄=その中間の10サブレーン境界。
-    for(let boundary=0;boundary<=10;boundary++){
+    // 青=メインレーン境界、黄=その中間のサブレーン境界(2026-09-26 に6レーン・12サブレーンへ。本数は定数から)。
+    for(let boundary=0;boundary<=RHYTHM_SUB_LANE_COUNT;boundary++){
       const main=boundary%2===0,topX=rhythmProjectBoundary(boundary/2,0),bottomX=rhythmProjectBoundary(boundary/2,1);
       group.appendChild(svgEl('line',{
         x1:(topX*1000).toFixed(3),y1:'0',x2:(bottomX*1000).toFixed(3),y2:'1000',
@@ -152,8 +152,8 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
       addText(group,sample.label,spanAt(sample.y).center,sample.y-.018,{fill:'#f3e8ff','font-size':'18'});
     });
 
-    // 判定ライン上の10サブレーン中心。既存の入力発光とこの丸が一致するかを実機で確認する。
-    for(let subLane=0;subLane<10;subLane++){
+    // 判定ライン上のサブレーン中心。既存の入力発光とこの丸が一致するかを実機で確認する。
+    for(let subLane=0;subLane<RHYTHM_SUB_LANE_COUNT;subLane++){
       const span=rhythmProjectSubLaneSpan(subLane,1,judgeY);
       group.appendChild(svgEl('circle',{
         cx:(span.center*1000).toFixed(3),cy:(judgeY*1000).toFixed(3),r:'7',
@@ -162,7 +162,7 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
       addText(group,String(subLane+1),span.center,Math.min(.985,judgeY+.035),{fill:'#fdf2f8','font-size':'17'});
     }
 
-    addText(group,'5 LANE / 10 SUB / WIDTH 1-4 / SLIDE',.5,.055,{fill:'#f8fafc','font-size':'24'});
+    addText(group,`${RHYTHM_LANE_COUNT} LANE / ${RHYTHM_SUB_LANE_COUNT} SUB / WIDTH 1-4 / SLIDE`,.5,.055,{fill:'#f8fafc','font-size':'24'});
     svg.appendChild(group);
     return true;
   };

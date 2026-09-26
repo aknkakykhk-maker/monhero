@@ -29,6 +29,7 @@ const fs=require('fs');
 const path=require('path');
 const {HAND_MODEL,noteTouchLane,usableTouchSpan,heldTouchSpan,separationRange}=require('./rhythm-hand-model.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
+const {laneCountOfChart}=require('./rhythm-chart-v3-revision.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -58,6 +59,8 @@ const STRAIN_STREAK_LIMIT_MS=Object.freeze({EASY:0,NORMAL:400,HARD:900,EXPERT:16
 // 測る
 // ============================================================================
 const measure=(chart,audio,options={})=>{
+  // 道のレーン数(譜面の作り方の版5から6。書いていない譜面は5)
+  const laneCount=laneCountOfChart(chart),lastLane=laneCount-1,half=Math.floor(laneCount/2);
   const timing=audio.timing;
   const gridMs=timing.gridMs||timing.beatMs/timing.subdivisionsPerBeat;
   const BEAT=timing.subdivisionsPerBeat;
@@ -194,7 +197,7 @@ const measure=(chart,audio,options={})=>{
   let phraseEchoHit=0,phraseEchoTotal=0;
   {
     const lastBar=notes.length?Math.floor(notes[notes.length-1].grid/BAR):-1;
-    const touchLaneOf=note=>Math.max(0,Math.min(4,Math.floor(noteTouchLane(note)+1e-9)));
+    const touchLaneOf=note=>Math.max(0,Math.min(lastLane,Math.floor(noteTouchLane(note)+1e-9)));
     const keysByBar=new Map();
     for(const note of main){
       const bar=Math.floor(note.grid/BAR);
@@ -210,7 +213,7 @@ const measure=(chart,audio,options={})=>{
         const sourceKeys=new Set(source.map(key=>`${key.offset}:${key.lane}`));
         total+=own.length;
         same+=own.filter(key=>sourceKeys.has(`${key.offset}:${key.lane}`)).length;
-        mirrored+=own.filter(key=>sourceKeys.has(`${key.offset}:${4-key.lane}`)).length;
+        mirrored+=own.filter(key=>sourceKeys.has(`${key.offset}:${lastLane-key.lane}`)).length;
       }
       phraseEchoHit+=Math.max(same,mirrored);
       phraseEchoTotal+=total;
@@ -247,13 +250,17 @@ const measure=(chart,audio,options={})=>{
   })();
 
   // --- レーン ---
-  const laneUse=[0,0,0,0,0];
-  for(const note of notes)laneUse[Math.max(0,Math.min(4,Math.floor(noteTouchLane(note))))]++;
+  const laneUse=Array(laneCount).fill(0);
+  for(const note of notes)laneUse[Math.max(0,Math.min(lastLane,Math.floor(noteTouchLane(note))))]++;
   const laneShare=laneUse.map(count=>round(notes.length?count/notes.length:0));
-  const left=laneUse[0]+laneUse[1],right=laneUse[3]+laneUse[4];
+  // 左右は真ん中のレーンを除いた左半分・右半分(5レーンなら0〜1と3〜4、6レーンなら0〜2と3〜5)
+  const sum=list=>list.reduce((a,b)=>a+b,0);
+  const left=sum(laneUse.slice(0,half)),right=sum(laneUse.slice(laneCount-half));
   const leftRightBias=left+right?Math.abs(left-right)/(left+right):0;
-  const centerShare=notes.length?laneUse[2]/notes.length:0;
-  const edgeShare=notes.length?(laneUse[0]+laneUse[4])/notes.length:0;
+  // 真ん中のレーン(5レーンなら2、6レーンなら2と3)
+  const middle=laneCount%2?laneUse[half]:laneUse[half-1]+laneUse[half];
+  const centerShare=notes.length?middle/notes.length:0;
+  const edgeShare=notes.length?(laneUse[0]+laneUse[lastLane])/notes.length:0;
   const moves=[];
   let hardJumps=0,fastPairs=0;
   for(let i=1;i<main.length;i++){

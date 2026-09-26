@@ -15,7 +15,7 @@ const context={};
 // 切り出した normalize だけをVMで動かすので、その定数もここで一緒に取り出して渡す。
 vm.runInNewContext(`${data}\nthis.out={RHYTHM_LANE_COUNT,RHYTHM_NOTE_TYPES,RHYTHM_DIFFICULTIES,RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS,RHYTHM_SONGS,RHYTHM_SIDE_MONSTER_OPACITIES,RHYTHM_SIDE_MONSTER_MOTIONS};`,context);
 const D=context.out;
-check('5レーン・4ノーツ種別',D.RHYTHM_LANE_COUNT===5&&D.RHYTHM_NOTE_TYPES.join(',')==='TAP,HOLD,FLICK,SLIDE');
+check('6レーン・4ノーツ種別(2026-09-26 に5から6へ)',D.RHYTHM_LANE_COUNT===6&&D.RHYTHM_NOTE_TYPES.join(',')==='TAP,HOLD,FLICK,SLIDE');
 check('5難易度と最大スコア',JSON.stringify(D.RHYTHM_DIFFICULTIES.map(x=>[x.id,x.maxScore]))===JSON.stringify([['EASY',600000],['NORMAL',700000],['HARD',800000],['EXPERT',900000],['MASTER',1000000]]));
 // 判定幅は 2026-09-05 にゆるくした（実機で「めちゃくちゃむずい」という指摘）。
 // スコア率は変えていない。BADの200msは入力を結びつける窓と同じ値なので動かさない。

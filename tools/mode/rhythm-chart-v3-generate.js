@@ -25,8 +25,8 @@ const path=require('path');
 const vm=require('vm');
 const {HAND_MODEL,fingerPairFeasible,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange}=require('./rhythm-hand-model.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
-const {LANES,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
-const {chartRevisionOf}=require('./rhythm-chart-v3-revision.js');
+const {setLaneCount:setPatternLaneCount,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
+const {chartRevisionOf,laneCountForRevision}=require('./rhythm-chart-v3-revision.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -425,6 +425,11 @@ const phraseCopy=chartRevision>=2;
 const slideEase=chartRevision>=3;
 // 版4: MASTERだけ横フリックを付ける(下の applySideFlicks)
 const sideFlick=chartRevision>=4;
+// 版5: 6レーンの道。版4までは5レーン(サブレーン10本)のまま作る。
+// ★レーン数の数字(5・4・10)を直接書かない。LANES(レーン数)・LANES-1(右はしのレーン)・SUB_LANES(サブレーン数)を使う
+const LANES=laneCountForRevision(chartRevision);
+const SUB_LANES=LANES*2;
+setPatternLaneCount(LANES);
 if(audio.analysisType!=='rhythm-audio-v3')throw new Error('V3音源解析のJSONではありません');
 if(!audio.structure)throw new Error('V3音源解析が古い形です。rhythm-audio-analyze-v3.js を通し直してください');
 const structure=audio.structure;
@@ -1076,7 +1081,7 @@ const buildChart=(difficulty,options={})=>{
   const shapeUsage=new Map();
   // 直前のかたまりの並び(つなぎの向きを見る)と、同じ向きへ流れ続けた回数
   let lastOffsets=null,driftCount=0,lastDirection=0;
-  const laneUse=[0,0,0,0,0];
+  const laneUse=Array(LANES).fill(0);
   let lastLane=2,lastPlacedGrid=-Infinity;
   const placed=[];
   // 置いたノーツのレーン(グリッド → レーン)。版2のフレーズの写しが、元の小節のレーンを引くのに使う
@@ -1113,7 +1118,7 @@ const buildChart=(difficulty,options={})=>{
       default:      return at(.5);
     }
   };
-  const centeredSubLane=(lane,width)=>Math.max(0,Math.min(10-width,lane*2+1-Math.ceil(width/2)));
+  const centeredSubLane=(lane,width)=>Math.max(0,Math.min(SUB_LANES-width,lane*2+1-Math.ceil(width/2)));
   // 跳びの上限。難易度の歩幅(maxLaneStep)だけでなく、**その時間で指が動ける距離**でも抑える。
   // MASTERの歩幅4は「1拍あれば4レーン動ける」の意味で、97msで4レーンは限界(18レーン毎秒)を超える。
   // 同時押し・連なり・クロスは形を決めたあとに中心を動かすので、ここで時間も見る
@@ -1339,7 +1344,7 @@ const buildChart=(difficulty,options={})=>{
         const width=widths[i];
         const center=centeredSubLane(fromLane,width);
         const order=[];
-        for(let sub=0;sub<=10-width;sub++)order.push(sub);
+        for(let sub=0;sub<=SUB_LANES-width;sub++)order.push(sub);
         order.sort((a,b)=>Math.abs(a-center)-Math.abs(b-center)||a-b);
         let chosen=null;
         for(const sub of order){
@@ -1374,7 +1379,7 @@ const buildChart=(difficulty,options={})=>{
     list.forEach((event,i)=>{
       const item=best.trial[i];
       const lane=Math.floor(item.subLane/2);
-      laneUse[Math.max(0,Math.min(4,best.lanes?best.lanes[i]:lane))]++;
+      laneUse[Math.max(0,Math.min(LANES-1,best.lanes?best.lanes[i]:lane))]++;
       lastLane=best.lanes?best.lanes[i]:lane;
       lastPlacedGrid=grids[i];
       laneByGrid.set(grids[i],best.lanes?best.lanes[i]:lane);
@@ -1436,9 +1441,9 @@ const buildChart=(difficulty,options={})=>{
     const chosen=spreadPick(candidates.map(c=>c.index),accentMax,8);
     for(const index of chosen){
       const note=notes[index];
-      const width=Math.max(1,Math.min(10,P.accentWidth));
+      const width=Math.max(1,Math.min(SUB_LANES,P.accentWidth>=10?SUB_LANES:P.accentWidth));
       const center=(note.subLane+note.subLaneWidth/2);
-      note.subLane=Math.max(0,Math.min(10-width,Math.round(center-width/2)));
+      note.subLane=Math.max(0,Math.min(SUB_LANES-width,Math.round(center-width/2)));
       note.subLaneWidth=width;
       note.lane=Math.floor(note.subLane/2);
       note.sectionAccent=true;
@@ -1553,20 +1558,20 @@ const buildChart=(difficulty,options={})=>{
       // 相方の幅。細いノーツの同時押しは狙いが要るので、難易度ごとの下限を守る。
       const width=Math.max(CHORD.minWidth,Math.min(3,note.subLaneWidth));
       const baseWidth=CHORD.edge?width:Math.max(CHORD.minWidth,Math.min(4,note.subLaneWidth));
-      // レーンは5つ（サブレーン10）しかない。2つ置いたときに空けられる最大の隙間はここまで。
-      const room=10-baseWidth-width;
+      // レーンは5つ（サブレーン10。版5からは6つ・12）しかない。2つ置いたときに空けられる最大の隙間はここまで。
+      const room=SUB_LANES-baseWidth-width;
       const need=Math.round(CHORD.minGapLanes*2);
       if(room<need)continue;
       // EASY・NORMALは目いっぱい離す（左端と右端）。上位はその難易度の最低限だけ離す。
       const gapSub=CHORD.edge?room:need;
       // 元のノーツも動かす。同時押しは決めの一発なので位置を動かしてよく、
       // 真ん中に置いたままでは5レーンの中で十分に離せない。動きの少ないほうを選ぶ。
-      const leftBase=Math.max(0,Math.min(10-width-gapSub-baseWidth,note.subLane));
-      const rightBase=Math.max(gapSub+width,Math.min(10-baseWidth,note.subLane));
+      const leftBase=Math.max(0,Math.min(SUB_LANES-width-gapSub-baseWidth,note.subLane));
+      const rightBase=Math.max(gapSub+width,Math.min(SUB_LANES-baseWidth,note.subLane));
       const plans=[
         {base:leftBase,partner:leftBase+baseWidth+gapSub,move:Math.abs(leftBase-note.subLane)},
         {base:rightBase,partner:rightBase-gapSub-width,move:Math.abs(rightBase-note.subLane)},
-      ].filter(plan=>plan.partner>=0&&plan.partner<=10-width)
+      ].filter(plan=>plan.partner>=0&&plan.partner<=SUB_LANES-width)
        .sort((a,b)=>a.move-b.move);
       if(!plans.length)continue;
       const plan=plans[0];
@@ -1601,7 +1606,7 @@ const buildChart=(difficulty,options={})=>{
   // 「右・左・右」と振られる見せ場になる。
   //
   // 【なぜEXPERT以上なのか】
-  // 5レーン（サブレーン10）しかないので、EASY〜HARDの同時押しの条件
+  // 5レーン（サブレーン10。版5からは6レーン・12）しかないので、EASY〜HARDの同時押しの条件
   // （太いノーツ・大きく離す）を満たすと、2つで場所を使い切って**動かす余地が残らない**。
   //   EASY/NORMAL: 幅3+幅3+間隔4 = 10（余り0）  HARD: 幅3+幅3+間隔3 = 9（余り1＝0.5レーン）
   // 動けないものを「連なり」と呼んでも意味が無いので、下の難易度には置かない。
@@ -1617,11 +1622,11 @@ const buildChart=(difficulty,options={})=>{
     // 見た目にも1レーンは空ける（サブレーン2つ）。数字のうえで指が入っても、
     // ぴったり隣り合っていると「同時押し」に見えないため。
     let gapSub=null;
-    for(let g=2;g<=10-2*width;g++){
+    for(let g=2;g<=SUB_LANES-2*width;g++){
       if(separationRange(spanOf(0),spanOf(width+g)).min+1e-9>=P.chord.minGapLanes){gapSub=g;break;}
     }
     if(gapSub!=null){
-      const room=10-2*width-gapSub;
+      const room=SUB_LANES-2*width-gapSub;
       const sustainSpans=notes.filter(note=>note.type==='HOLD'||note.type==='SLIDE')
         .map(note=>({startGrid:note.grid,endGrid:note.grid+(Number(note.durationGrids)||0)}));
       const gridCount=new Map();
@@ -1676,7 +1681,7 @@ const buildChart=(difficulty,options={})=>{
             const {offset,gap}=shapeAt(shape,index,chain.length,amp);
             return {note,left:offset,right:offset+width+gap};
           });
-          if(draft.some(entry=>entry.left<0||entry.right+width>10))continue;
+          if(draft.some(entry=>entry.left<0||entry.right+width>SUB_LANES))continue;
           // 指の移動速度（ペアごと動くので、左右それぞれの移動を見る）
           const tooFast=draft.some((entry,index)=>{
             if(index===0)return false;
@@ -1812,7 +1817,7 @@ const buildChart=(difficulty,options={})=>{
         seen.add(grid);
         const width=widthsAsc[Math.max(0,Math.min(widthsAsc.length-1,
           Math.round(shape.at(t)*(widthsAsc.length-1))))];
-        points.push({grid,subLane:Math.max(0,Math.min(10-width,Math.round(center-width/2))),subLaneWidth:width});
+        points.push({grid,subLane:Math.max(0,Math.min(SUB_LANES-width,Math.round(center-width/2))),subLaneWidth:width});
       }
       if(points.length<2)return;
       points[points.length-1].grid=note.grid+duration;
@@ -1867,7 +1872,7 @@ const buildChart=(difficulty,options={})=>{
       if(!conflicts(note,note))continue;
       const width=Number(note.subLaneWidth)||2;
       let bestSub=null,bestDistance=Infinity;
-      for(let sub=0;sub<=10-width;sub++){
+      for(let sub=0;sub<=SUB_LANES-width;sub++){
         if(conflicts(note,{subLane:sub,subLaneWidth:width}))continue;
         const distance=Math.abs(sub-Number(note.subLane));
         if(distance<bestDistance){bestDistance=distance;bestSub=sub;}
@@ -1939,8 +1944,8 @@ const buildChart=(difficulty,options={})=>{
         const toLeftNow=holdCenterNow<=(LANES-1)/2;
         for(const width of widthOptions){
           const order=[];
-          if(toLeftNow)for(let sub=0;sub<=10-width;sub++)order.push(sub);
-          else for(let sub=10-width;sub>=0;sub--)order.push(sub);
+          if(toLeftNow)for(let sub=0;sub<=SUB_LANES-width;sub++)order.push(sub);
+          else for(let sub=SUB_LANES-width;sub>=0;sub--)order.push(sub);
           for(const sub of order){
             const candidate={subLane:sub,subLaneWidth:width};
             // 押さえている指より外側にあること（内側では交差にならない）
@@ -1972,7 +1977,7 @@ const buildChart=(difficulty,options={})=>{
             ||separationRange(usableTouchSpan(other),usableTouchSpan(hold)).min>=HAND_MODEL.fingerMinGapLanes-1e-9);
         for(const shift of [2,4]){
           const sub=originalSub+inward*shift;
-          if(sub<0||sub>10-holdWidth)continue;
+          if(sub<0||sub>SUB_LANES-holdWidth)continue;
           hold.subLane=sub;
           if(holdFits()){placed=findOutside();if(placed)break;}
           hold.subLane=originalSub;
@@ -2165,7 +2170,7 @@ const buildChart=(difficulty,options={})=>{
         slidePoints:[{grid:startGrid,lane:lanes.from,subLaneWidth:width},
           {grid:endGrid,lane:lanes.to,subLaneWidth:width}],...extra}};
     }
-    const subLane=Math.max(0,Math.min(10-width,Math.round(lanes.from*2-width/2)));
+    const subLane=Math.max(0,Math.min(SUB_LANES-width,Math.round(lanes.from*2-width/2)));
     const center=subLane/2+width/4;
     return {lanes:{from:center,to:center},
       note:{type:'HOLD',grid:startGrid,durationGrids,
@@ -2683,6 +2688,15 @@ const buildChart=(difficulty,options={})=>{
         const note=notes[issue.noteIndex];
         // 押さえノーツは譜面の骨格なので、そちらではなく打点のほうを落とす
         if(note&&note.type!=='HOLD'&&note.type!=='SLIDE')blame.add(note);
+        // 版5: 押せないのが押さえノーツの頭のときは、その直前(叩き直しに要る間隔より近く)に叩いた打点を落とす。
+        // 版4までは何も落とさずに素通りしていたので、同時スライドの88ms前に16分のTAPがある形が
+        // 自動修正でも直せずに残った(2026-09-26・6レーンで作り直したとき the_city_beneath_the_comets の MASTER)
+        else if(note&&chartRevision>=5){
+          const limitGrids=HAND_MODEL.restrikeLimitMs/gridMs;
+          const before=notes.filter(other=>other!==note&&other.type!=='HOLD'&&other.type!=='SLIDE'
+            &&other.grid<note.grid&&note.grid-other.grid<limitGrids).sort((a,b)=>b.grid-a.grid)[0];
+          if(before)blame.add(before);
+        }
       }
       if(!blame.size)break;
       notes=notes.filter(note=>!blame.has(note));
@@ -3200,7 +3214,7 @@ function applySideFlicks(notes){
     }
     if(!dir){
       const c=center(note);
-      if(c<=SIDE_FLICK_EDGE)dir='left';else if(c>=10-SIDE_FLICK_EDGE)dir='right';
+      if(c<=SIDE_FLICK_EDGE)dir='left';else if(c>=SUB_LANES-SIDE_FLICK_EDGE)dir='right';
     }
     if(dir){note.flickDir=dir;if(dir==='left')left++;else right++;}
   });
@@ -3275,6 +3289,8 @@ if(write){
       trackId,difficulty,
       candidateVersion:'v3',
       chartRevision,
+      // 道のレーン数(版5から6)。自動修正・品質の報告・本体への書き出しがこれを見る
+      laneCount:LANES,
       status:'draft',
       reviewRequired:true,
       runtimeConnected:false,
