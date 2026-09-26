@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1c4f6dea77c35b2e
+// generated-sha256: af9a5a8483ee255c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-27 02:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-27 02:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15026,11 +15026,11 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
 //   2026-09-13・ユーザー指示「マスターとかランクとかコンボ数とかも色が
 //   決められてるやつは色つけたい」。off には枠の色も混ざっているので別に持つ。
 const RHYTHM_DIFFICULTY_TONE=Object.freeze({
-  EASY:  Object.freeze({dot:'bg-emerald-400', on:'border-emerald-300 bg-emerald-600 text-white', off:'border-emerald-400/40 text-emerald-200', text:'text-emerald-300'}),
-  NORMAL:Object.freeze({dot:'bg-sky-400',     on:'border-sky-300 bg-sky-600 text-white',         off:'border-sky-400/40 text-sky-200',         text:'text-sky-300'}),
-  HARD:  Object.freeze({dot:'bg-amber-400',   on:'border-amber-300 bg-amber-600 text-white',     off:'border-amber-400/40 text-amber-200',     text:'text-amber-300'}),
-  EXPERT:Object.freeze({dot:'bg-rose-400',    on:'border-rose-300 bg-rose-600 text-white',       off:'border-rose-400/40 text-rose-200',       text:'text-rose-300'}),
-  MASTER:Object.freeze({dot:'bg-fuchsia-400', on:'border-fuchsia-300 bg-fuchsia-700 text-white', off:'border-fuchsia-400/40 text-fuchsia-200', text:'text-fuchsia-300'}),
+  EASY:  Object.freeze({badge:'from-emerald-500 to-emerald-700',dot:'bg-emerald-400', on:'border-emerald-300 bg-emerald-600 text-white', off:'border-emerald-400/40 text-emerald-200', text:'text-emerald-300'}),
+  NORMAL:Object.freeze({badge:'from-sky-500 to-sky-700',dot:'bg-sky-400',     on:'border-sky-300 bg-sky-600 text-white',         off:'border-sky-400/40 text-sky-200',         text:'text-sky-300'}),
+  HARD:  Object.freeze({badge:'from-amber-500 to-amber-700',dot:'bg-amber-400',   on:'border-amber-300 bg-amber-600 text-white',     off:'border-amber-400/40 text-amber-200',     text:'text-amber-300'}),
+  EXPERT:Object.freeze({badge:'from-rose-500 to-rose-700',dot:'bg-rose-400',    on:'border-rose-300 bg-rose-600 text-white',       off:'border-rose-400/40 text-rose-200',       text:'text-rose-300'}),
+  MASTER:Object.freeze({badge:'from-fuchsia-500 to-fuchsia-700',dot:'bg-fuchsia-400', on:'border-fuchsia-300 bg-fuchsia-700 text-white', off:'border-fuchsia-400/40 text-fuchsia-200', text:'text-fuchsia-300'}),
 });
 const rhythmDifficultyTone=id=>RHYTHM_DIFFICULTY_TONE[id]||RHYTHM_DIFFICULTY_TONE.EASY;
 // 難易度の字の色だけを欲しいところへ。知らないidは灰に倒す(勝手にEASYの緑にしない)
@@ -15470,9 +15470,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                       lineHeight:1.2,fontSize:rhythmTitleFitSize(rhythmSongFullName(entry),15,12)}}>{rhythmSongFullName(entry)}</b>
                 </span>
                 <span className={`flex items-center gap-1${spot('achievement')}`}>
-                  {/* 楽曲Lv.(いま選んでいる難易度のLv.)。参考画像にならって赤い札にする(2026-09-26) */}
-                  <span className="mr-1 inline-flex shrink-0 items-baseline gap-0.5 rounded-md bg-gradient-to-b from-rose-500 to-rose-700 px-1.5 py-0.5 leading-none shadow-[0_1px_0_rgba(0,0,0,.4)]">
-                    <small className="text-[8px] font-black text-rose-100">Lv.</small>
+                  {/* 楽曲Lv.(いま選んでいる難易度のLv.)。札の色は、その難易度のボタンと同じ色にする
+                      (2026-09-26・ユーザー指摘「左側の曲選択と右側の難易度の数字の色があってない」。はじめは赤で固定していた) */}
+                  <span data-rhythm-song-row-level-tone={rowDifficultyId(entry)||''} className={`mr-1 inline-flex shrink-0 items-baseline gap-0.5 rounded-md bg-gradient-to-b ${(rhythmDifficultyTone(rowDifficultyId(entry))||rhythmDifficultyTone('EXPERT')).badge||'from-rose-500 to-rose-700'} px-1.5 py-0.5 leading-none shadow-[0_1px_0_rgba(0,0,0,.4)]`}>
+                    <small className="text-[8px] font-black text-white/80">Lv.</small>
                     <b {...(main?{'data-rhythm-song-row-level':''}:{})} className={`text-[14px] font-black leading-none tabular-nums text-white${spot('songLevel')}`}>{rowLevel(entry)}</b>
                   </span>
                   {(difficulties||[]).map(item=>{
@@ -15605,22 +15606,26 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         並びを変えても、選んでいる曲・難易度・自己ベスト・全国ランキングは何も変わらない。 */}
     {/* ジャケットの拡大。曲えらびの上に重ねるだけで、選んでいる曲・難易度・再生中の曲は動かさない。
         Tailwindが遅れて届いても真っ黒の背景と中央寄せだけは効くよう、位置と色は style にも書く。 */}
-    {artZoom&&song&&<div data-rhythm-song-art-modal role="dialog" aria-modal="true" aria-label={`${rhythmSongFullName(song)}のジャケット`}
-      className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-4"
-      style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:9000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}
+    {/* ★大きさは画面の単位(vh・vw)ではなく、この幕の中の割合で決める(2026-09-26・ユーザー報告「ジャケットアップ画面が切れてる」)。
+        「🔄 横」で絵を回したとき、vh は端末の縦の長さ(縦持ちの高さ)のままなので、高さ390pxの横長の幕へ624pxの絵が入って切れていた。
+        絵の高さは「幕の74%」と「幕から下の曲名・紹介・ボタンのぶんを引いた高さ」の小さいほう。入りきらないときは幕の中でスクロールできる */}
+    {artZoom&&song&&(()=>{const reserve=150+(song.credit&&song.credit.text?44:0)+(song.credit&&changelogSafeLink(song.credit.link)?52:0);return <div data-rhythm-song-art-modal role="dialog" aria-modal="true" aria-label={`${rhythmSongFullName(song)}のジャケット`}
+      className="fixed inset-0 z-[9000] flex flex-col items-center justify-center overflow-y-auto p-4 landscape:flex-row landscape:gap-6"
+      style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',overflowY:'auto','--mh-art-max-h':`min(74%, calc(100% - ${reserve}px))`}}
       onClick={()=>setArtZoom(false)}>
+      {/* 横長の幕では、絵を左に大きく、曲名・紹介・ボタンを右へ並べる(縦に積むと絵が小さくなるため) */}
       <img src={typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):song.artwork} alt={`${rhythmSongFullName(song)}のジャケット`}
         onClick={e=>e.stopPropagation()}
-        className="max-h-[74vh] w-auto max-w-[92vw] rounded-2xl border border-white/25 object-contain"
-        style={{maxHeight:'74vh',maxWidth:'92vw'}}/>
-      <b className="mt-3 max-w-[92vw] text-center text-sm font-black leading-tight text-white">{rhythmSongFullName(song)}</b>
+        className="max-h-[var(--mh-art-max-h)] min-h-[120px] w-auto max-w-[92%] shrink-0 rounded-2xl border border-white/25 object-contain landscape:max-h-[88%] landscape:max-w-[55%]"/>
+      <div className="flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]">
+      <b className="mt-3 max-w-full text-center text-sm font-black leading-tight text-white landscape:mt-0">{rhythmSongFullName(song)}</b>
       {/* よその作品の曲のときだけ、ひとこと紹介と相手のページへのリンクを出す
           (2026-09-14・ユーザー「ジャケットを押してアップにしたときに紹介文やリンクを載せることってできる？」)。
           曲のデータ(RHYTHM_SONG_ENTRIES)に credit を書いた曲だけに出るので、ほかの曲は見た目が変わらない。
           リンクは更新履歴と同じ関門(changelogSafeLink)を通す。https だけ通り、
           target="_blank" と rel="noopener noreferrer" が付く */}
       {song.credit&&song.credit.text&&<p data-rhythm-song-credit
-        className="mt-2 max-w-[92vw] text-center text-[11px] leading-relaxed text-slate-300">{song.credit.text}</p>}
+        className="mt-2 max-w-full text-center text-[11px] leading-relaxed text-slate-300">{song.credit.text}</p>}
       {song.credit&&changelogSafeLink(song.credit.link)&&<a data-rhythm-song-credit-link
         href={changelogSafeLink(song.credit.link)} target="_blank" rel="noopener noreferrer"
         onClick={e=>e.stopPropagation()}
@@ -15631,7 +15636,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       <button type="button" data-rhythm-song-art-close onClick={()=>setArtZoom(false)}
         className="mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white"
         style={{minHeight:'52px'}}>とじる</button>
-    </div>}
+      </div>
+    </div>;})()}
     {/* ジャンルのシート。並び替えと同じ形で下から出す。選んだらすぐ閉じる */}
     {genreOpen&&<div data-rhythm-genre-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
       style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.72)',zIndex:9000}}

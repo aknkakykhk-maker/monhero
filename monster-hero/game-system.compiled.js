@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ddc1c9148d370b09
+// source-sha256: 8a99507fb6fb059f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 02:13";
+const BUILD_DATE = "2026-09-27 02:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -21171,30 +21171,35 @@ const RhythmOptions = ({
 };
 const RHYTHM_DIFFICULTY_TONE = Object.freeze({
   EASY: Object.freeze({
+    badge: 'from-emerald-500 to-emerald-700',
     dot: 'bg-emerald-400',
     on: 'border-emerald-300 bg-emerald-600 text-white',
     off: 'border-emerald-400/40 text-emerald-200',
     text: 'text-emerald-300'
   }),
   NORMAL: Object.freeze({
+    badge: 'from-sky-500 to-sky-700',
     dot: 'bg-sky-400',
     on: 'border-sky-300 bg-sky-600 text-white',
     off: 'border-sky-400/40 text-sky-200',
     text: 'text-sky-300'
   }),
   HARD: Object.freeze({
+    badge: 'from-amber-500 to-amber-700',
     dot: 'bg-amber-400',
     on: 'border-amber-300 bg-amber-600 text-white',
     off: 'border-amber-400/40 text-amber-200',
     text: 'text-amber-300'
   }),
   EXPERT: Object.freeze({
+    badge: 'from-rose-500 to-rose-700',
     dot: 'bg-rose-400',
     on: 'border-rose-300 bg-rose-600 text-white',
     off: 'border-rose-400/40 text-rose-200',
     text: 'text-rose-300'
   }),
   MASTER: Object.freeze({
+    badge: 'from-fuchsia-500 to-fuchsia-700',
     dot: 'bg-fuchsia-400',
     on: 'border-fuchsia-300 bg-fuchsia-700 text-white',
     off: 'border-fuchsia-400/40 text-fuchsia-200',
@@ -21689,9 +21694,10 @@ const RhythmSongSelect = ({
     }, rhythmSongFullName(entry))), React.createElement("span", {
       className: `flex items-center gap-1${spot('achievement')}`
     }, React.createElement("span", {
-      className: "mr-1 inline-flex shrink-0 items-baseline gap-0.5 rounded-md bg-gradient-to-b from-rose-500 to-rose-700 px-1.5 py-0.5 leading-none shadow-[0_1px_0_rgba(0,0,0,.4)]"
+      "data-rhythm-song-row-level-tone": rowDifficultyId(entry) || '',
+      className: `mr-1 inline-flex shrink-0 items-baseline gap-0.5 rounded-md bg-gradient-to-b ${(rhythmDifficultyTone(rowDifficultyId(entry)) || rhythmDifficultyTone('EXPERT')).badge || 'from-rose-500 to-rose-700'} px-1.5 py-0.5 leading-none shadow-[0_1px_0_rgba(0,0,0,.4)]`
     }, React.createElement("small", {
-      className: "text-[8px] font-black text-rose-100"
+      className: "text-[8px] font-black text-white/80"
     }, "Lv."), React.createElement("b", _extends({}, main ? {
       'data-rhythm-song-row-level': ''
     } : {}, {
@@ -21875,56 +21881,58 @@ const RhythmSongSelect = ({
   }, typeof footer === 'function' ? footer(song, difficulty) : footer))), notice && state.noticeOpen && React.createElement("div", {
     "data-rhythm-song-notice-landscape": true,
     className: "mt-2 hidden landscape:block"
-  }, notice)), artZoom && song && React.createElement("div", {
-    "data-rhythm-song-art-modal": true,
-    role: "dialog",
-    "aria-modal": "true",
-    "aria-label": `${rhythmSongFullName(song)}のジャケット`,
-    className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-4",
-    style: {
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: 'rgba(0,0,0,0.92)',
-      zIndex: 9000,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    onClick: () => setArtZoom(false)
-  }, React.createElement("img", {
-    src: typeof rhythmSongArtSrc !== 'undefined' ? rhythmSongArtSrc(song) : song.artwork,
-    alt: `${rhythmSongFullName(song)}のジャケット`,
-    onClick: e => e.stopPropagation(),
-    className: "max-h-[74vh] w-auto max-w-[92vw] rounded-2xl border border-white/25 object-contain",
-    style: {
-      maxHeight: '74vh',
-      maxWidth: '92vw'
-    }
-  }), React.createElement("b", {
-    className: "mt-3 max-w-[92vw] text-center text-sm font-black leading-tight text-white"
-  }, rhythmSongFullName(song)), song.credit && song.credit.text && React.createElement("p", {
-    "data-rhythm-song-credit": true,
-    className: "mt-2 max-w-[92vw] text-center text-[11px] leading-relaxed text-slate-300"
-  }, song.credit.text), song.credit && changelogSafeLink(song.credit.link) && React.createElement("a", {
-    "data-rhythm-song-credit-link": true,
-    href: changelogSafeLink(song.credit.link),
-    target: "_blank",
-    rel: "noopener noreferrer",
-    onClick: e => e.stopPropagation(),
-    className: "mt-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-sky-300/40 bg-sky-500/15 px-4 text-[11px] font-black text-sky-200",
-    style: {
-      minHeight: '44px'
-    }
-  }, song.credit.link && song.credit.link.label || 'くわしく見る', " ↗"), React.createElement("button", {
-    type: "button",
-    "data-rhythm-song-art-close": true,
-    onClick: () => setArtZoom(false),
-    className: "mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white",
-    style: {
-      minHeight: '52px'
-    }
-  }, "とじる")), genreOpen && React.createElement("div", {
+  }, notice)), artZoom && song && (() => {
+    const reserve = 150 + (song.credit && song.credit.text ? 44 : 0) + (song.credit && changelogSafeLink(song.credit.link) ? 52 : 0);
+    return React.createElement("div", {
+      "data-rhythm-song-art-modal": true,
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-label": `${rhythmSongFullName(song)}のジャケット`,
+      className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center overflow-y-auto p-4 landscape:flex-row landscape:gap-6",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.92)',
+        zIndex: 9000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflowY: 'auto',
+        '--mh-art-max-h': `min(74%, calc(100% - ${reserve}px))`
+      },
+      onClick: () => setArtZoom(false)
+    }, React.createElement("img", {
+      src: typeof rhythmSongArtSrc !== 'undefined' ? rhythmSongArtSrc(song) : song.artwork,
+      alt: `${rhythmSongFullName(song)}のジャケット`,
+      onClick: e => e.stopPropagation(),
+      className: "max-h-[var(--mh-art-max-h)] min-h-[120px] w-auto max-w-[92%] shrink-0 rounded-2xl border border-white/25 object-contain landscape:max-h-[88%] landscape:max-w-[55%]"
+    }), React.createElement("div", {
+      className: "flex w-full max-w-[92%] flex-col items-center landscape:w-auto landscape:max-w-[38%]"
+    }, React.createElement("b", {
+      className: "mt-3 max-w-full text-center text-sm font-black leading-tight text-white landscape:mt-0"
+    }, rhythmSongFullName(song)), song.credit && song.credit.text && React.createElement("p", {
+      "data-rhythm-song-credit": true,
+      className: "mt-2 max-w-full text-center text-[11px] leading-relaxed text-slate-300"
+    }, song.credit.text), song.credit && changelogSafeLink(song.credit.link) && React.createElement("a", {
+      "data-rhythm-song-credit-link": true,
+      href: changelogSafeLink(song.credit.link),
+      target: "_blank",
+      rel: "noopener noreferrer",
+      onClick: e => e.stopPropagation(),
+      className: "mt-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-sky-300/40 bg-sky-500/15 px-4 text-[11px] font-black text-sky-200",
+      style: {
+        minHeight: '44px'
+      }
+    }, song.credit.link && song.credit.link.label || 'くわしく見る', " ↗"), React.createElement("button", {
+      type: "button",
+      "data-rhythm-song-art-close": true,
+      onClick: () => setArtZoom(false),
+      className: "mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white",
+      style: {
+        minHeight: '52px'
+      }
+    }, "とじる")));
+  })(), genreOpen && React.createElement("div", {
     "data-rhythm-genre-sheet": true,
     className: "fixed inset-0 z-[9000] flex items-end justify-center",
     style: {
