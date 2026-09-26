@@ -37,9 +37,11 @@
 // ゲームのランタイム・既存の正式候補v1・V1生成器へは一切接続しない。
 const fs=require('fs');
 const path=require('path');
-const {laneCountOfChart}=require('./rhythm-chart-v3-revision.js');
+const {laneCountOfChart,chartRevisionOf}=require('./rhythm-chart-v3-revision.js');
 // 道のレーン数。譜面ごとに読み直す(譜面の作り方の版5から6。書いていない譜面は5)
 let LANE_COUNT=5;
+// HOLDを動かすときに、その上の交差を守るか(譜面の作り方の版7から。版6以前の譜面の結果は変えない)
+let GUARD_COVERED_CROSSES=false;
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -265,6 +267,21 @@ const placements=(notes,index)=>{
     const apart=separationRange(usableTouchSpan(moved),usableTouchSpan(crossHold)).min>=HAND_MODEL.fingerMinGapLanes-1e-9;
     return sameSide&&apart;
   };
+  // 逆に、押さえっぱなしのHOLDの側を動かすときも、その上に乗った交差を壊さない(2026-09-26)。
+  // 交差のノーツと同じ側へ回り込んだり、2本入らない近さへ寄ったりしない。
+  // (版7で作り直した Monster Hero MASTER で、HOLDを左へ2サブレーン寄せて交差のノーツと重ねていた。rhythm-chart-v3-check.js が見つけた)
+  const coveredCrosses=GUARD_COVERED_CROSSES&&note.type==='HOLD'?notes.filter(other=>other.cross===true&&note.grid<other.grid
+    &&other.grid<=note.grid+(Number(note.durationGrids)||0)):[];
+  // 「外側」は検査(rhythm-chart-v3-check.js)と同じ物差し: HOLDが道の左半分なら交差はその左、右半分ならその右。
+  // 動かす前から外側でなかった交差は、ここでは縛らない(直す前の譜面の結果を変えないため)
+  const ROAD_MIDDLE=(LANE_COUNT-1)/2;
+  const crossIsOutside=(cross,hold)=>{
+    const holdLane=laneCenter(hold),crossLane=laneCenter(cross);
+    const outside=holdLane<=ROAD_MIDDLE?crossLane<holdLane:crossLane>holdLane;
+    return outside&&separationRange(usableTouchSpan(cross),usableTouchSpan(hold)).min>=HAND_MODEL.fingerMinGapLanes-1e-9;
+  };
+  const guardedCrosses=coveredCrosses.filter(cross=>crossIsOutside(cross,note));
+  const keepsCoveredCrosses=moved=>guardedCrosses.every(cross=>crossIsOutside(cross,moved));
   const out=[];
   if(note.type==='SLIDE'){
     // 経路の形は変えず、まるごと0.5レーンずつ平行移動する
@@ -298,6 +315,7 @@ const placements=(notes,index)=>{
     if(!fits({start:subLane,end:subLane+width}))continue;
     if(!keepsChord(moved))continue;
     if(!keepsCross(moved))continue;
+    if(!keepsCoveredCrosses(moved))continue;
     out.push({note:moved,label:`サブレーン${note.subLane}→${subLane}`,delta});
   }
   return out;
@@ -402,6 +420,7 @@ for(const difficulty of DIFFICULTIES){
   const chart=JSON.parse(fs.readFileSync(file,'utf8'));
   const key=difficulty||chart.difficulty||'FILE';
   LANE_COUNT=laneCountOfChart(chart);
+  GUARD_COVERED_CROSSES=chartRevisionOf(chart)>=7;
   currentMaxStep=MAX_STEP_LANES[chart.difficulty||difficulty]??Infinity;
   const {notes,fixes,passes,before,after}=autofix(chart.notes||[]);
   if(after.impossible)anyImpossible=true;

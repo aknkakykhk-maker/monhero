@@ -2,7 +2,7 @@
  "schemaVersion": 1,
  "songs": {
   "monster_hero_theme": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-monster-hero-theme.mp3",
    "audioSha256": "083a1d9db2810a4a77a304e8d53fc862b16db71553af7d97040da78fea577fda",
    "durationMs": 152761,
@@ -15,7 +15,7 @@
    }
   },
   "atsu_cup_theme": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-atsu-cup-theme.mp3",
    "audioSha256": "e93502c4df763a80afae82dc3fcc95cd69670028a4f24566305d74a394e19184",
    "durationMs": 144640,
@@ -28,7 +28,7 @@
    }
   },
   "six_eternel_beat": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-six-eternel-beat.mp3",
    "audioSha256": "151f94091a341f19dffb41049bf55d4f2296503e6bc6c73f5eb0032015e36e86",
    "durationMs": 157968,
@@ -41,7 +41,7 @@
    }
   },
   "six_eternel_remix_beat": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-six-eternel-remix-beat.mp3",
    "audioSha256": "b1a024d5b16f6e50c93dfc56f1eebd11e6743bd228df5c0c5bd0b97ab0b4d5a5",
    "durationMs": 150408,
@@ -78,7 +78,7 @@
    }
   },
   "pandora_boss": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-pandora-boss.mp3",
    "audioSha256": "b6683818f250cb8777113961ddc522b02a60687f9a3f6830184a3924ec956fd2",
    "durationMs": 274400,
@@ -91,7 +91,7 @@
    }
   },
   "eiki_boss": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/綺季一閃_～花雪に舞う詠姫～.mp3",
    "audioSha256": "099d201c53b1b635a4e00a1f3fe35c8ce3153f0e3c2c4dafa704088ffc47fecb",
    "durationMs": 261841,
@@ -116,7 +116,7 @@
    }
   },
   "kaze_ga_soyogu": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-kaze-ga-soyogu-basho.mp3",
    "audioSha256": "9cc789151e7ec4c96c74a653cd0f96938c478f4636f11a3a850537aefaaf30dd",
    "durationMs": 99250,
@@ -129,7 +129,7 @@
    }
   },
   "close_to_your_heart": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-close-to-your-heart.mp3",
    "audioSha256": "990493074a9113bf32f70cfd43c8a65114aefaf2d8904a4d4253c5df726f9659",
    "durationMs": 120204,
@@ -142,7 +142,7 @@
    }
   },
   "eiki_boss_remix": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-eiki-boss-remix.mp3",
    "audioSha256": "83093750c9ec8fb66195d6bb1ed290bdf72ba3ce5b289faa032f9b211fd9fde6",
    "durationMs": 218014,
@@ -155,7 +155,7 @@
    }
   },
   "pandora_boss_remix": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-pandora-boss-remix.mp3",
    "audioSha256": "0faa4d713fdccd01e4a3924e95600bcf4fd011f4973dcbff7858a3694e87a825",
    "durationMs": 199414,
@@ -168,7 +168,7 @@
    }
   },
   "dullahan": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-dullahan.mp3",
    "audioSha256": "434fcea866a3cc465ef9da34f5eced94f34db1737765a95df5d116885f73f3dc",
    "durationMs": 214600,
@@ -182,7 +182,7 @@
    }
   },
   "dullahan_clockwork": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-dullahan-clockwork.mp3",
    "audioSha256": "e87bd8466b2ccce70fe28b6275b4cb03818f3c5b710f757514884b407bff5de6",
    "durationMs": 292214,
@@ -196,7 +196,7 @@
    }
   },
   "toriko": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-toriko.mp3",
    "audioSha256": "3870d26f6322d8dae8f18f19c6b70008511046ad20863b9921b4bf08c2384e4d",
    "durationMs": 79341,
@@ -209,7 +209,7 @@
    }
   },
   "4u_hitasura": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-4u-hitasura.mp3",
    "audioSha256": "f4fb42472438eb97fb61512fb295479a637707623c958960f2d5df8447711015",
    "durationMs": 120440,
@@ -222,7 +222,7 @@
    }
   },
   "kindan_no_resistance": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-kindan-no-resistance.mp3",
    "audioSha256": "efca5c01d0b738b44317dafd6504f9b7a4212a638878cc085a9703635f2df65d",
    "durationMs": 163440,
@@ -235,7 +235,7 @@
    }
   },
   "monster_hero_theme_alt": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-monster-hero-theme-alt.mp3",
    "audioSha256": "6b4eb065c2e238d68225deb33d4340c2a8491eb4a8edef3cd7e351e56e50b0f9",
    "durationMs": 154720,
@@ -253,7 +253,7 @@
    }
   },
   "crossing_field": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-crossing-field.mp3",
    "audioSha256": "1e2e7cc1d3d53d1ac999bc5c03e1534e635de515b297daf65c00bcab21ce294f",
    "durationMs": 89208,
@@ -267,7 +267,7 @@
    "challengeFactor": 1.16
   },
   "nothing_without_you": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-nothing-without-you.mp3",
    "audioSha256": "4cb261cf1cd9fcbb3592d0854503bf40db54bb99ef357efed598f074959d0884",
    "durationMs": 189504,
@@ -281,7 +281,7 @@
    "challengeFactor": 0.9
   },
   "freedom_dive": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-freedom-dive.mp3",
    "audioSha256": "34616b2fccd33a1201305344b615f2441b1a9219045c8c2629676ad6cfc8c42c",
    "durationMs": 145404,
@@ -295,7 +295,7 @@
    "chartIntensity": "extreme"
   },
   "the_city_beneath_the_comets": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-the-city-beneath-the-comets.mp3",
    "audioSha256": "900fda0dc05ef4d85259f3467c3b662934ea25ec4789807d2f31e750272a24eb",
    "durationMs": 160020,
@@ -308,7 +308,7 @@
    }
   },
   "mou_hitotsu_no_sekai_e": {
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audio": "monster-hero/audio/bgm-mou-hitotsu-no-sekai-e.mp3",
    "audioSha256": "633ed0ee2501b3b6bcf36daf4328c95dbd01fe1e5a4d06b489cc4de51afd054f",
    "durationMs": 226980,
@@ -322,7 +322,7 @@
   },
   "senjou_no_shippuu": {
    "audio": "monster-hero/audio/bgm-senjou-no-shippuu.mp3",
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audioSha256": "dfcd5d833fec961569e2d8c82ad79f4db89c6c8fb58331817027c266c07639fe",
    "durationMs": 193593,
    "analyzedTiming": {
@@ -336,7 +336,7 @@
   },
   "makutsu_no_senritsu": {
    "audio": "monster-hero/audio/bgm-makutsu-no-senritsu.mp3",
-   "chartRevision": 6,
+   "chartRevision": 7,
    "audioSha256": "8db199451f0b9a9d1d6bd3a3f0c249601e49f403c464dae16d7dbe6362adb998",
    "durationMs": 148584,
    "analyzedTiming": {
