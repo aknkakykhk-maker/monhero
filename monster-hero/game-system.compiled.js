@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3ebcc5e56c4b1fe3
+// source-sha256: 79977d156f13b98e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 18:18";
+const BUILD_DATE = "2026-09-26 18:39";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -47542,7 +47542,12 @@ function MonsterHeroGame() {
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
         const tacticsIntroSeen = await storeGet(TACTICS_INTRO_SEEN_KEY, false, false);
         setTacticsIntroSeenFlag(tacticsIntroSeen === true);
-        if (tacticsIntroSeen !== true) setTacticsIntroPending(true);
+        if (wasOnboarded && tacticsIntroSeen !== true) setTacticsIntroPending(true);else if (!wasOnboarded && tacticsIntroSeen !== true) {
+          try {
+            await storeSet(TACTICS_INTRO_SEEN_KEY, true, false);
+            setTacticsIntroSeenFlag(true);
+          } catch {}
+        }
       }
       const bootStoryId = rhythmEventStoryIdFor(rhythmLimitedEventAt(Date.now()));
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootStoryId && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(bootStoryId)) {
@@ -47552,6 +47557,19 @@ function MonsterHeroGame() {
       const bootThanksId = rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).find(id => id && !bootSeenThanks.includes(id)) || null;
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootThanksId) {
         setRhythmEventStoryPending(bootThanksId);
+      }
+      if (!wasOnboarded) {
+        const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
+        const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
+        if (add.length) {
+          const next = [...seenNow, ...add];
+          rhythmEventStorySeenRef.current = next;
+          setRhythmEventStorySeen(next);
+          try {
+            await storeSet(RHYTHM_EVENT_STORY_KEY, next, false);
+          } catch {}
+        }
       }
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && RELEASE_FLAGS.rhythmEventPoints === true && wasOnboarded && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(BEAT_POINT_ALWAYS_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
