@@ -291,8 +291,16 @@ const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE','省電力'],['DEV
 // (ノーツ・マスモンの顔・判定文字の光・ライブ背景の光)を、どこまで細かく描くか。
 // iPhone は画面の画素がとても細かい(3倍)ので、少し下げても見分けにくく、端末の負担と発熱が減る。
 // 既定は「高」(これまでの細かさ)。判定・スコア・叩く位置には一切関わらない。
-const RHYTHM_RENDER_QUALITY_MODES = Object.freeze(['HIGH','STANDARD','SAVE']);
-const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['HIGH','高'],['STANDARD','標準'],['SAVE','省電力']]);
+const RHYTHM_RENDER_QUALITY_MODES = Object.freeze(['AUTO','HIGH','STANDARD','SAVE']);
+const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['AUTO','自動'],['HIGH','高'],['STANDARD','標準'],['SAVE','省電力']]);
+// 「自動」(2026-09-26・ユーザー指示「画質の自動を入れて」)。演奏中に、描くのが間に合わなかったフレームが
+// 3秒のうち8%を超えたら一段下げる(高→標準→省電力)。下げた段は、アプリを開いているあいだ次の曲にも引き継ぐ
+// (保存はしない。開き直すと「高」から)。上げ直しはしない(上げ下げを繰り返すと、そのたびに描き直しで詰まるため)。
+const RHYTHM_RENDER_QUALITY_STEPS = Object.freeze(['HIGH','STANDARD','SAVE']);
+const RHYTHM_AUTO_QUALITY_WINDOW_MS = 3000;
+const RHYTHM_AUTO_QUALITY_SLOW_RATIO = .08;
+// 「自動」のとき、いま使う段。それ以外はそのまま
+const rhythmEffectiveRenderQuality = (quality, autoLevel) => (quality==='AUTO' ? (RHYTHM_RENDER_QUALITY_STEPS.includes(autoLevel) ? autoLevel : 'HIGH') : quality);
 // 画素密度の上限。highCap は「高」のときの上限(描くものごとに違う)。標準は1.5倍まで、省電力は1倍
 const rhythmRenderQualityCap = (quality, highCap) => (quality==='SAVE' ? 1 : quality==='STANDARD' ? Math.min(highCap, 1.5) : highCap);
 // 演奏中の背景の演出(2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」)。
