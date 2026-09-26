@@ -19948,6 +19948,11 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   let canvas=null,ctx=null,backend='2d',dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
   // ノーツの動き(オプション「ノーツの動き」・2026-09-27)。フリックの矢印と SLIDE の帯に流れる光を足す。演出量「最小」・軽量モードでは切る
   let motion=false;
+  // 何も映らないフレームは描き直さない(2026-09-27・ユーザー指示「見た目を変えずに軽く」)。
+  // begin() では消さずに「消す予定」だけ立て、最初に何かを描く瞬間に消す(touch)。最後まで何も描かなかったフレームは、
+  // 前のフレームがもう空(blank)なら何もしない。前奏・間奏・曲の終わりで、canvas の消去・GPU への命令・画面の合成し直しがなくなる
+  let pendingClear=false,blank=true;
+  const touch=()=>{if(!pendingClear)return;pendingClear=false;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);blank=false;};
   // マスモンの顔(焼いた絵)。ノーツより上に出すため、描くのはフレームの最後(end)にまとめる。
   // 以前は DOM の要素を canvas の上へ重ねて毎フレーム動かしていた(2026-09-25にやめた)
   const faces=[];
@@ -20444,7 +20449,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   };
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
-    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;hitArea=null;hitSlots.fill(null);if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
+    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;hitArea=null;hitSlots.fill(null);pendingClear=false;blank=true;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
     get backend(){return backend;},
     get additiveGlow(){return additiveGlow;},set additiveGlow(v){additiveGlow=v!==false;},
     // 描き込み先が取れているか。WebGL の準備が途中で失敗すると、その canvas からは 2D も取り出せず
@@ -20519,7 +20524,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         const hit=hitSlots[slot];if(!hit)continue;
         const t=(now-hit.start)/hit.ms;
         if(t>=1){hitSlots[slot]=null;continue;}
-        glowBegin();drawOneHit(hit,Math.max(0,t),hitY);glowEnd();count++;
+        touch();glowBegin();drawOneHit(hit,Math.max(0,t),hitY);glowEnd();count++;
       }
       if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
       return count;
@@ -20529,7 +20534,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // pulse … 道のふち(左右の境目)の光の強さ(0..1)。拍を過ぎた瞬間に強く、すぐ消える
     // 線は横まっすぐなので四角(fillRect)で描く。ふちは道の境目と同じ投影(rhythmProjectBoundary)から形を作る
     drawRoadFx(lines,count,pulse){
-      if(!ctx||!cssW||!cssH)return 0;
+      if(!ctx||!cssW||!cssH||!(count>0||pulse>.01))return 0;
+      touch();
       ctx.setTransform(dpr,0,0,dpr,0,0);
       glowBegin();
       let painted=0;
@@ -20576,9 +20582,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         cssW=rect.width;cssH=rect.height;
         canvas.width=Math.round(cssW*dpr);canvas.height=Math.round(cssH*dpr);
         canvas.style.width=`${cssW}px`;canvas.style.height=`${cssH}px`;
+        blank=true;
       }
       ctx.setTransform(dpr,0,0,dpr,0,0);
-      ctx.clearRect(0,0,cssW,cssH);
+      pendingClear=true;
       frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';motion=options.motion===true&&options.effect!=='MINIMAL'&&!options.lightweight;lightweight=!!options.lightweight;sizeScale=Number(options.sizeScale)||1;drawn=0;faces.length=0;
       // にじむ光(ブルーム)。オプションで入れた人だけ・WebGL で光を足し算で描いているときだけ。演出量「最小」と軽量モードでは使わない
       if(typeof ctx.setBloom==='function')ctx.setBloom(!!options.bloom&&additiveGlow&&effect!=='MINIMAL'&&!lightweight);
@@ -20587,6 +20594,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // ノーツ1個。geo は rhythmNoteCanvasGeometry の結果。opts: {failed,monster,wide,pressed,alpha,pop(0..1|null),depthScale,brightness,hideBody}
     drawNote(note,geo,opts){
       if(!ctx||!geo)return;
+      touch();
       drawn++;
       const o={failed:false,monster:false,wide:false,pressed:false,alpha:1,pop:null,depthScale:1,brightness:1,...opts};
       if(o.pop===null){
@@ -20606,6 +20614,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     },
     end(){
       if(!ctx)return;
+      if(faces.length)touch();
+      // 何も描かなかったフレーム。前のフレームに何か残っているときだけ消す(空なら GPU には何も頼まない)
+      if(pendingClear){pendingClear=false;if(!blank){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);blank=true;if(typeof ctx.flushPending==='function')ctx.flushPending();}return;}
       if(faces.length){
         ctx.setTransform(dpr,0,0,dpr,0,0);
         for(let i=0;i<faces.length;i+=5){
@@ -20620,7 +20631,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(typeof ctx.flushPending==='function')ctx.flushPending();
       if(typeof ctx.bloomFinish==='function')ctx.bloomFinish();
     },
-    clear(){faces.length=0;if(ctx&&cssW&&cssH){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);}},
+    clear(){faces.length=0;pendingClear=false;if(ctx&&cssW&&cssH){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);blank=true;}},
   };
 })();
 

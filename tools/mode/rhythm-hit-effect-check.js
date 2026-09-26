@@ -341,8 +341,9 @@ const serve=()=>new Promise(resolve=>{
   check('WebGL で描けたときだけ光を canvas へ回す(2D の canvas・DOM 版は部品のまま)',
     game.includes("RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend==='webgl'?playAreaRef.current:null);")
     &&/const rhythmSpawnHitEffect=[^\n]*\n[\s\S]{0,400}RHYTHM_CANVAS_RENDERER\.hitsFor\(area\)/.test(source));
-  check('光はノーツより先に描く(光の層はノーツの canvas の下)',
-    /RHYTHM_CANVAS_RENDERER\.begin\([^\n]*\n[^\n]*\nif\(canvasReady\)RHYTHM_CANVAS_RENDERER\.drawHits\(travel\.hitY\);/.test(game));
+  // 描き始め(begin) → 叩いたときの光(drawHits) → ノーツ(drawNote) の順。間に道の演出(drawRoadFx。光より下)が入ってよい
+  {const begin=game.indexOf('RHYTHM_CANVAS_RENDERER.begin('),hits=game.indexOf('if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);'),note=game.indexOf('RHYTHM_CANVAS_RENDERER.drawNote(');
+  check('光はノーツより先に描く(光の層はノーツの canvas の下)',begin>=0&&hits>begin&&note>hits);}
 }
 
 const PAGE=`<!doctype html><html><head><meta charset="utf-8"><style>

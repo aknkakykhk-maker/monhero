@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bd1022d90d163113
+// source-sha256: 80242caf4a08935f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 01:15";
+const BUILD_DATE = "2026-09-27 01:45";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -21085,7 +21085,7 @@ const RhythmOptions = ({
     full: true
   }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、画面の下では観客のペンライトが拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
-  }), field('道の演出', toggle('roadFx'), '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。'), field('判定の演出', toggle('judgmentFx'), 'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('コンボの節目', toggle('comboMilestoneFx'), 'コンボが100のくぎりに届くたび（100・200・300…）、画面に「100 COMBO!」の文字と光の輪が出ます。既定は「OFF」です。判定・スコアは変わりません。\nコンボ数の表示のところに短く出します（コンボ数を出さない設定のときは出ません）。演出量が「最小」のときと軽量モードでは出ません。'), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
+  }), field('道の演出', toggle('roadFx'), '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。'), field('判定の演出', toggle('judgmentFx'), 'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('コンボの節目', toggle('comboMilestoneFx'), 'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。'), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
   }), field('画質', segments('renderQuality', RHYTHM_RENDER_QUALITY_LABELS), '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。'), field('描画方式', React.createElement(React.Fragment, null, segments('noteDrawMode', RHYTHM_NOTE_DRAW_LABELS), React.createElement("p", {
     "data-rhythm-draw-mode-now": true,
@@ -22338,8 +22338,8 @@ precision highp float;
 precision mediump float;
 #endif
 varying vec2 vP;
-uniform vec2 uSize;uniform sampler2D uArt;uniform float uArtA,uFx;
-uniform vec4 uBeamL,uBeamR,uBeamC;uniform vec2 uBeamBox;uniform vec4 uDots[${RHYTHM_STAGE_GL_DOTS.length}];
+uniform vec2 uSize,uRes;uniform sampler2D uArt,uStatic;uniform float uArtA,uFx,uMode;
+uniform vec4 uBeamL,uBeamR,uBeamC;uniform vec2 uBeamBox;
 uniform float uLive,uPulse,uBeats;uniform vec3 uPenA,uPenB;uniform vec4 uLas[4],uLasC[4];
 vec4 over(vec4 c,vec4 s){return s+c*(1.-s.a);}
 vec4 tint(vec3 rgb,float a){return vec4(rgb*a,a);}
@@ -22360,10 +22360,19 @@ vec4 pens(){
 float beam(vec4 b){vec2 d=vP-b.zw;vec2 l=vec2(b.x*d.x+b.y*d.y,-b.y*d.x+b.x*d.y);
   float hw=mix(.06,.5,clamp(l.y/uBeamBox.y,0.,1.))*uBeamBox.x;
   return clamp(hw-abs(l.x)+.5,0.,1.)*clamp(l.y+.5,0.,1.)*clamp(1.-l.y/(.78*uBeamBox.y),0.,1.);}
-vec4 spark(float r,float core,float mid,float end){
-  vec4 a=vec4(vec3(236.,254.,255.)/255.*.95,.95),b=vec4(vec3(103.,232.,249.)/255.*.35,.35);
-  if(r<=core)return a;if(r<=mid)return mix(a,b,(r-core)/(mid-core));if(r<end)return mix(b,vec4(0.),(r-mid)/(end-mid));return vec4(0.);}
+// uMode … 0: 動かない部分(ジャケット・暗幕)を焼く / 1: 焼いた絵にサーチライト・レーザーを重ねる / 2: ペンライト(足し算で重ねる)
 void main(){
+  if(uMode>1.5){gl_FragColor=pens()+vec4(uPenA*.05*uPulse,.05*uPulse);return;}
+  if(uMode>.5){
+    vec4 c=texture2D(uStatic,gl_FragCoord.xy/uRes);
+    if(uFx>.5){
+      float beamA=uBeamC.a*(1.+uLive*uPulse*.9);
+      c=over(c,tint(uBeamC.rgb,min(1.,beamA*beam(uBeamL))));
+      c=over(c,tint(uBeamC.rgb,min(1.,beamA*beam(uBeamR))));
+      if(uLive>.5)c=min(c+lasers(),vec4(1.));
+    }
+    gl_FragColor=c;return;
+  }
   vec4 c=vec4(0.);
   vec2 uv=(vP-vec2(-.12,-.08)*uSize)/(vec2(1.24,1.16)*uSize);
   vec4 art=texture2D(uArt,uv);c=art*uArtA;
@@ -22374,23 +22383,19 @@ void main(){
   float t=length((vP-vec2(.5,.45)*uSize)/(vec2(.7,.55)*uSize));
   float rad=t<.7?mix(.62,.18,t/.7):t<1.?mix(.18,0.,(t-.7)/.3):0.;
   c=over(c,tint(dark,rad));
-  if(uFx>.5){
-    float beamA=uBeamC.a*(1.+uLive*uPulse*.9);
-    c=over(c,tint(uBeamC.rgb,min(1.,beamA*beam(uBeamL))));
-    c=over(c,tint(uBeamC.rgb,min(1.,beamA*beam(uBeamR))));
-    if(uLive>.5)c=min(c+lasers(),vec4(1.));
-    vec4 far=vec4(0.),near=vec4(0.);
-    for(int i=0;i<${RHYTHM_STAGE_GL_DOTS.length};i++){vec4 d=uDots[i];
-      float r=min(length(vP-d.xy),length(vP-vec2(d.x,d.y+uSize.y)));
-      if(d.w<.5)far=over(far,spark(r,1.,2.,4.));else near=over(near,spark(r,2.,3.,5.));}
-    c=over(c,far*.55);c=over(c,near*.7);
-    if(uLive>.5){
-      c=min(c+pens(),vec4(1.));
-      c=min(c+vec4(uPenA*.05*uPulse,.05*uPulse),vec4(1.));
-    }
-  }
   gl_FragColor=c;
 }`;
+const RHYTHM_STAGE_GL_SPARK_VS = 'attribute vec2 aPos;uniform vec2 uSize;uniform vec4 uDot;varying vec2 vL;void main(){vL=aPos*uDot.z;vec2 p=uDot.xy+vL;gl_Position=vec4(p.x/uSize.x*2.-1.,1.-p.y/uSize.y*2.,0.,1.);}';
+const RHYTHM_STAGE_GL_SPARK_FS = `#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec2 vL;uniform vec4 uLayer;
+vec4 spark(float r,float core,float mid,float end){
+  vec4 a=vec4(vec3(236.,254.,255.)/255.*.95,.95),b=vec4(vec3(103.,232.,249.)/255.*.35,.35);
+  if(r<=core)return a;if(r<=mid)return mix(a,b,(r-core)/(mid-core));if(r<end)return mix(b,vec4(0.),(r-mid)/(end-mid));return vec4(0.);}
+void main(){gl_FragColor=spark(length(vL),uLayer.x,uLayer.y,uLayer.z)*uLayer.w;}`;
 const rhythmCreateStageGL = canvas => {
   if (!canvas || typeof canvas.getContext !== 'function') return null;
   const attrs = {
@@ -22416,13 +22421,20 @@ const rhythmCreateStageGL = canvas => {
   };
   const vs = shader(gl.VERTEX_SHADER, RHYTHM_STAGE_GL_VS),
     fs = shader(gl.FRAGMENT_SHADER, RHYTHM_STAGE_GL_FS);
-  if (!vs || !fs) return null;
-  const prog = gl.createProgram();
-  gl.attachShader(prog, vs);
-  gl.attachShader(prog, fs);
-  gl.bindAttribLocation(prog, 0, 'aPos');
-  gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+  const svs = shader(gl.VERTEX_SHADER, RHYTHM_STAGE_GL_SPARK_VS),
+    sfs = shader(gl.FRAGMENT_SHADER, RHYTHM_STAGE_GL_SPARK_FS);
+  if (!vs || !fs || !svs || !sfs) return null;
+  const link = (a, b) => {
+    const p = gl.createProgram();
+    gl.attachShader(p, a);
+    gl.attachShader(p, b);
+    gl.bindAttribLocation(p, 0, 'aPos');
+    gl.linkProgram(p);
+    return gl.getProgramParameter(p, gl.LINK_STATUS) ? p : null;
+  };
+  const prog = link(vs, fs),
+    sparkProg = link(svs, sfs);
+  if (!prog || !sparkProg) return null;
   gl.useProgram(prog);
   const buf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buf);
@@ -22440,19 +22452,36 @@ const rhythmCreateStageGL = canvas => {
   gl.disable(gl.DEPTH_TEST);
   gl.clearColor(0, 0, 0, 0);
   const u = {};
-  ['uSize', 'uArt', 'uArtA', 'uFx', 'uBeamL', 'uBeamR', 'uBeamC', 'uBeamBox', 'uDots', 'uLive', 'uPulse', 'uBeats', 'uPenA', 'uPenB', 'uLas', 'uLasC'].forEach(name => {
+  ['uSize', 'uRes', 'uArt', 'uStatic', 'uArtA', 'uFx', 'uMode', 'uBeamL', 'uBeamR', 'uBeamC', 'uBeamBox', 'uLive', 'uPulse', 'uBeats', 'uPenA', 'uPenB', 'uLas', 'uLasC'].forEach(name => {
     u[name] = gl.getUniformLocation(prog, name);
   });
   gl.uniform1i(u.uArt, 0);
-  const dots = new Float32Array(RHYTHM_STAGE_GL_DOTS.length * 4),
-    lasers = new Float32Array(16),
+  gl.uniform1i(u.uStatic, 1);
+  const su = {};
+  ['uSize', 'uDot', 'uLayer'].forEach(name => {
+    su[name] = gl.getUniformLocation(sparkProg, name);
+  });
+  const staticTex = gl.createTexture(),
+    fbo = gl.createFramebuffer();
+  let staticKey = '',
+    artVersion = 0;
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, staticTex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.activeTexture(gl.TEXTURE0);
+  const lasers = new Float32Array(16),
     laserColors = new Float32Array(16);
   return {
     setArt(source) {
       try {
+        gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, tex);
         gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        artVersion++;
         return true;
       } catch (e) {
         return false;
@@ -22476,9 +22505,30 @@ const rhythmCreateStageGL = canvas => {
         canvas.height = ph;
       }
       gl.viewport(0, 0, pw, ph);
+      gl.useProgram(prog);
+      gl.disable(gl.BLEND);
       gl.uniform2f(u.uSize, w, h);
+      gl.uniform2f(u.uRes, pw, ph);
       gl.uniform1f(u.uArtA, artA);
       gl.uniform1f(u.uFx, fx ? 1 : 0);
+      const key = `${pw}x${ph}|${artA.toFixed(3)}|${artVersion}`;
+      if (key !== staticKey) {
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, staticTex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, pw, ph, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, staticTex, 0);
+        gl.uniform1f(u.uMode, 0);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        staticKey = key;
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, staticTex);
+        gl.activeTexture(gl.TEXTURE0);
+      }
+      gl.uniform1f(u.uMode, 1);
       if (fx) {
         const bw = .38 * w,
           bh = 1.35 * h,
@@ -22496,14 +22546,6 @@ const rhythmCreateStageGL = canvas => {
         const rgba = RHYTHM_STAGE_GL_BEAM_RGBA[tier] || RHYTHM_STAGE_GL_BEAM_RGBA[0];
         gl.uniform4f(u.uBeamC, rgba[0] / 255, rgba[1] / 255, rgba[2] / 255, (rgba[3] || 0) * .75);
         gl.uniform2f(u.uBeamBox, bw, bh);
-        RHYTHM_STAGE_GL_DOTS.forEach(([x, y, layer], i) => {
-          const off = timeMs / RHYTHM_STAGE_SPARKS[layer].duration % 1 * h;
-          dots[i * 4] = x * w;
-          dots[i * 4 + 1] = y * h - off;
-          dots[i * 4 + 2] = 0;
-          dots[i * 4 + 3] = layer;
-        });
-        gl.uniform4fv(u.uDots, dots);
       }
       const liveOn = !!(fx && live);
       gl.uniform1f(u.uLive, liveOn ? 1 : 0);
@@ -22537,14 +22579,45 @@ const rhythmCreateStageGL = canvas => {
         gl.uniform4fv(u.uLasC, laserColors);
       }
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      if (!fx) return;
+      gl.useProgram(sparkProg);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.uniform2f(su.uSize, w, h);
+      for (const layer of [0, 1]) {
+        const spec = RHYTHM_STAGE_SPARKS[layer],
+          end = spec.end,
+          off = timeMs / spec.duration % 1 * h;
+        gl.uniform4f(su.uLayer, spec.core, spec.mid, end, spec.opacity);
+        for (const [x, y, index] of RHYTHM_STAGE_GL_DOTS) {
+          if (index !== layer) continue;
+          for (const cy of [y * h - off, y * h - off + h]) {
+            if (cy < -end - 1 || cy > h + end + 1) continue;
+            gl.uniform4f(su.uDot, x * w, cy, end + 1, 0);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+          }
+        }
+      }
+      if (liveOn) {
+        gl.useProgram(prog);
+        gl.uniform1f(u.uMode, 2);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+      gl.disable(gl.BLEND);
     },
     release() {
       try {
         gl.deleteTexture(tex);
+        gl.deleteTexture(staticTex);
+        gl.deleteFramebuffer(fbo);
         gl.deleteBuffer(buf);
         gl.deleteProgram(prog);
+        gl.deleteProgram(sparkProg);
         gl.deleteShader(vs);
         gl.deleteShader(fs);
+        gl.deleteShader(svs);
+        gl.deleteShader(sfs);
         const lose = gl.getExtension('WEBGL_lose_context');
         if (lose) lose.loseContext();
       } catch (e) {}
@@ -23150,7 +23223,7 @@ const RhythmTapTest = ({
     judgmentTextRef = useRef(null),
     comboRef = useRef(null),
     judgmentBurstRef = useRef(null),
-    comboMilestoneRef = useRef(null);
+    comboRingRef = useRef(null);
   const [haloKeys, setHaloKeys] = useState(null);
   useEffect(() => {
     let cancelled = false,
@@ -23980,15 +24053,12 @@ const RhythmTapTest = ({
         ptEl.textContent = `${run.luckPoints || 0}pt`;
       }
     }
-    if (settings.comboMilestoneFx === true && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' && keptCombo > run.combo && keptCombo >= 100 && keptCombo % 100 === 0) {
-      const el = comboMilestoneRef.current;
-      if (el) {
-        el.dataset.milestone = String(keptCombo);
-        rhythmRestartAnimations([{
-          el,
-          attr: 'rhythmMilestone'
-        }]);
-      }
+    if (settings.comboMilestoneFx === true && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' && keptCombo > run.combo && keptCombo >= RHYTHM_COMBO_MILESTONE_STEP && keptCombo % RHYTHM_COMBO_MILESTONE_STEP === 0) {
+      const el = comboRingRef.current;
+      if (el) rhythmRestartAnimations([{
+        el,
+        attr: 'rhythmRing'
+      }]);
     }
     run.combo = keptCombo;
     run.maxCombo = Math.max(run.maxCombo, keptCombo);
@@ -26107,8 +26177,8 @@ const RhythmTapTest = ({
       '--mh-combo-size': rhythmFiniteInRange(settings.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, 100) / 100
     }
   }, view.combo), settings.comboMilestoneFx === true && React.createElement("i", {
-    ref: comboMilestoneRef,
-    "data-rhythm-combo-milestone": true,
+    ref: comboRingRef,
+    "data-rhythm-combo-ring": true,
     "aria-hidden": "true"
   }), React.createElement("span", {
     "data-rhythm-combo-label": true,

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2a1eb483d7c99ea9
+// generated-sha256: a781db1e6671099f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-27 01:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-27 01:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14941,7 +14941,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {field('ノーツの動き',toggle('noteMotionFx'),
               'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。')}
             {field('コンボの節目',toggle('comboMilestoneFx'),
-              'コンボが100のくぎりに届くたび（100・200・300…）、画面に「100 COMBO!」の文字と光の輪が出ます。既定は「OFF」です。判定・スコアは変わりません。\nコンボ数の表示のところに短く出します（コンボ数を出さない設定のときは出ません）。演出量が「最小」のときと軽量モードでは出ません。')}
+              'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。')}
             {field('描く回数',segments('frameRateMode',RHYTHM_FRAME_RATE_LABELS),
               '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。',{full:true})}
             {/* 画質(2026-09-26・ユーザー指示「画質の設定を入れて」)。既定は「高」(これまでの細かさ) */}
@@ -15916,8 +15916,8 @@ precision highp float;
 precision mediump float;
 #endif
 varying vec2 vP;
-uniform vec2 uSize;uniform sampler2D uArt;uniform float uArtA,uFx;
-uniform vec4 uBeamL,uBeamR,uBeamC;uniform vec2 uBeamBox;uniform vec4 uDots[${RHYTHM_STAGE_GL_DOTS.length}];
+uniform vec2 uSize,uRes;uniform sampler2D uArt,uStatic;uniform float uArtA,uFx,uMode;
+uniform vec4 uBeamL,uBeamR,uBeamC;uniform vec2 uBeamBox;
 uniform float uLive,uPulse,uBeats;uniform vec3 uPenA,uPenB;uniform vec4 uLas[4],uLasC[4];
 vec4 over(vec4 c,vec4 s){return s+c*(1.-s.a);}
 vec4 tint(vec3 rgb,float a){return vec4(rgb*a,a);}
@@ -15938,10 +15938,19 @@ vec4 pens(){
 float beam(vec4 b){vec2 d=vP-b.zw;vec2 l=vec2(b.x*d.x+b.y*d.y,-b.y*d.x+b.x*d.y);
   float hw=mix(.06,.5,clamp(l.y/uBeamBox.y,0.,1.))*uBeamBox.x;
   return clamp(hw-abs(l.x)+.5,0.,1.)*clamp(l.y+.5,0.,1.)*clamp(1.-l.y/(.78*uBeamBox.y),0.,1.);}
-vec4 spark(float r,float core,float mid,float end){
-  vec4 a=vec4(vec3(236.,254.,255.)/255.*.95,.95),b=vec4(vec3(103.,232.,249.)/255.*.35,.35);
-  if(r<=core)return a;if(r<=mid)return mix(a,b,(r-core)/(mid-core));if(r<end)return mix(b,vec4(0.),(r-mid)/(end-mid));return vec4(0.);}
+// uMode … 0: 動かない部分(ジャケット・暗幕)を焼く / 1: 焼いた絵にサーチライト・レーザーを重ねる / 2: ペンライト(足し算で重ねる)
 void main(){
+  if(uMode>1.5){gl_FragColor=pens()+vec4(uPenA*.05*uPulse,.05*uPulse);return;}
+  if(uMode>.5){
+    vec4 c=texture2D(uStatic,gl_FragCoord.xy/uRes);
+    if(uFx>.5){
+      float beamA=uBeamC.a*(1.+uLive*uPulse*.9);
+      c=over(c,tint(uBeamC.rgb,min(1.,beamA*beam(uBeamL))));
+      c=over(c,tint(uBeamC.rgb,min(1.,beamA*beam(uBeamR))));
+      if(uLive>.5)c=min(c+lasers(),vec4(1.));
+    }
+    gl_FragColor=c;return;
+  }
   vec4 c=vec4(0.);
   vec2 uv=(vP-vec2(-.12,-.08)*uSize)/(vec2(1.24,1.16)*uSize);
   vec4 art=texture2D(uArt,uv);c=art*uArtA;
@@ -15952,23 +15961,21 @@ void main(){
   float t=length((vP-vec2(.5,.45)*uSize)/(vec2(.7,.55)*uSize));
   float rad=t<.7?mix(.62,.18,t/.7):t<1.?mix(.18,0.,(t-.7)/.3):0.;
   c=over(c,tint(dark,rad));
-  if(uFx>.5){
-    float beamA=uBeamC.a*(1.+uLive*uPulse*.9);
-    c=over(c,tint(uBeamC.rgb,min(1.,beamA*beam(uBeamL))));
-    c=over(c,tint(uBeamC.rgb,min(1.,beamA*beam(uBeamR))));
-    if(uLive>.5)c=min(c+lasers(),vec4(1.));
-    vec4 far=vec4(0.),near=vec4(0.);
-    for(int i=0;i<${RHYTHM_STAGE_GL_DOTS.length};i++){vec4 d=uDots[i];
-      float r=min(length(vP-d.xy),length(vP-vec2(d.x,d.y+uSize.y)));
-      if(d.w<.5)far=over(far,spark(r,1.,2.,4.));else near=over(near,spark(r,2.,3.,5.));}
-    c=over(c,far*.55);c=over(c,near*.7);
-    if(uLive>.5){
-      c=min(c+pens(),vec4(1.));
-      c=min(c+vec4(uPenA*.05*uPulse,.05*uPulse),vec4(1.));
-    }
-  }
   gl_FragColor=c;
 }`;
+// 光の粒1つを、粒のまわりの四角だけで描く(以前は画面の全画素で、粒28個との距離を毎回計算していた)。
+// uDot … 中心(CSS px)と四角の半径 / uLayer … 芯・中・端の半径と、層の濃さ(奥.55・手前.7)。重ね方は「上に重ねる」(乗算済みアルファ)
+const RHYTHM_STAGE_GL_SPARK_VS='attribute vec2 aPos;uniform vec2 uSize;uniform vec4 uDot;varying vec2 vL;void main(){vL=aPos*uDot.z;vec2 p=uDot.xy+vL;gl_Position=vec4(p.x/uSize.x*2.-1.,1.-p.y/uSize.y*2.,0.,1.);}';
+const RHYTHM_STAGE_GL_SPARK_FS=`#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec2 vL;uniform vec4 uLayer;
+vec4 spark(float r,float core,float mid,float end){
+  vec4 a=vec4(vec3(236.,254.,255.)/255.*.95,.95),b=vec4(vec3(103.,232.,249.)/255.*.35,.35);
+  if(r<=core)return a;if(r<=mid)return mix(a,b,(r-core)/(mid-core));if(r<end)return mix(b,vec4(0.),(r-mid)/(end-mid));return vec4(0.);}
+void main(){gl_FragColor=spark(length(vL),uLayer.x,uLayer.y,uLayer.z)*uLayer.w;}`;
 // canvas へ WebGL の描き込み先を作る。作れなければ null(呼び出し側は CSS 版へ戻す)
 const rhythmCreateStageGL=canvas=>{
   if(!canvas||typeof canvas.getContext!=='function')return null;
@@ -15977,9 +15984,11 @@ const rhythmCreateStageGL=canvas=>{
   if(!gl)return null;
   const shader=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return gl.getShaderParameter(s,gl.COMPILE_STATUS)?s:null;};
   const vs=shader(gl.VERTEX_SHADER,RHYTHM_STAGE_GL_VS),fs=shader(gl.FRAGMENT_SHADER,RHYTHM_STAGE_GL_FS);
-  if(!vs||!fs)return null;
-  const prog=gl.createProgram();gl.attachShader(prog,vs);gl.attachShader(prog,fs);gl.bindAttribLocation(prog,0,'aPos');gl.linkProgram(prog);
-  if(!gl.getProgramParameter(prog,gl.LINK_STATUS))return null;
+  const svs=shader(gl.VERTEX_SHADER,RHYTHM_STAGE_GL_SPARK_VS),sfs=shader(gl.FRAGMENT_SHADER,RHYTHM_STAGE_GL_SPARK_FS);
+  if(!vs||!fs||!svs||!sfs)return null;
+  const link=(a,b)=>{const p=gl.createProgram();gl.attachShader(p,a);gl.attachShader(p,b);gl.bindAttribLocation(p,0,'aPos');gl.linkProgram(p);return gl.getProgramParameter(p,gl.LINK_STATUS)?p:null;};
+  const prog=link(vs,fs),sparkProg=link(svs,sfs);
+  if(!prog||!sparkProg)return null;
   gl.useProgram(prog);
   const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
@@ -15988,11 +15997,18 @@ const rhythmCreateStageGL=canvas=>{
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));
   gl.disable(gl.BLEND);gl.disable(gl.DEPTH_TEST);gl.clearColor(0,0,0,0);
-  const u={};['uSize','uArt','uArtA','uFx','uBeamL','uBeamR','uBeamC','uBeamBox','uDots','uLive','uPulse','uBeats','uPenA','uPenB','uLas','uLasC'].forEach(name=>{u[name]=gl.getUniformLocation(prog,name);});
-  gl.uniform1i(u.uArt,0);
-  const dots=new Float32Array(RHYTHM_STAGE_GL_DOTS.length*4),lasers=new Float32Array(16),laserColors=new Float32Array(16);
+  const u={};['uSize','uRes','uArt','uStatic','uArtA','uFx','uMode','uBeamL','uBeamR','uBeamC','uBeamBox','uLive','uPulse','uBeats','uPenA','uPenB','uLas','uLasC'].forEach(name=>{u[name]=gl.getUniformLocation(prog,name);});
+  gl.uniform1i(u.uArt,0);gl.uniform1i(u.uStatic,1);
+  const su={};['uSize','uDot','uLayer'].forEach(name=>{su[name]=gl.getUniformLocation(sparkProg,name);});
+  // 動かない部分(ジャケット・暗幕)を焼いておく絵。大きさ・ジャケットの濃さ・ジャケットが変わったときだけ焼き直す
+  const staticTex=gl.createTexture(),fbo=gl.createFramebuffer();let staticKey='',artVersion=0;
+  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,staticTex);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.activeTexture(gl.TEXTURE0);
+  const lasers=new Float32Array(16),laserColors=new Float32Array(16);
   return {
-    setArt(source){try{gl.bindTexture(gl.TEXTURE_2D,tex);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);return true;}catch(e){return false;}},
+    setArt(source){try{gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,tex);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);artVersion++;return true;}catch(e){return false;}},
     // w,h … CSS px / scale … 画素密度 / timeMs … 動きの時刻 / artA … ジャケットの濃さ / fx … サーチライトと粒を出すか / tier … 色の段
     // live … 「ライブ」のときだけ {beats:曲の頭から数えた拍(小数), bar:1小節の拍数, pulse:拍の頭の光(0..1)}。無ければ「派手」と同じ
     draw({w,h,scale,timeMs,artA,fx,tier,live=null}){
@@ -16000,7 +16016,19 @@ const rhythmCreateStageGL=canvas=>{
       const pw=Math.max(1,Math.round(w*scale)),ph=Math.max(1,Math.round(h*scale));
       if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;}
       gl.viewport(0,0,pw,ph);
-      gl.uniform2f(u.uSize,w,h);gl.uniform1f(u.uArtA,artA);gl.uniform1f(u.uFx,fx?1:0);
+      gl.useProgram(prog);gl.disable(gl.BLEND);
+      gl.uniform2f(u.uSize,w,h);gl.uniform2f(u.uRes,pw,ph);gl.uniform1f(u.uArtA,artA);gl.uniform1f(u.uFx,fx?1:0);
+      // 1. 動かない部分を焼き直す(変わったときだけ)
+      const key=`${pw}x${ph}|${artA.toFixed(3)}|${artVersion}`;
+      if(key!==staticKey){
+        // ★焼いている間は、焼き先の絵を読み取り側(TEXTURE1)から外す。付けたままだと「読みながら書く」とみなされて描けない
+        gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,staticTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,pw,ph,0,gl.RGBA,gl.UNSIGNED_BYTE,null);gl.bindTexture(gl.TEXTURE_2D,null);gl.activeTexture(gl.TEXTURE0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,staticTex,0);
+        gl.uniform1f(u.uMode,0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+        gl.bindFramebuffer(gl.FRAMEBUFFER,null);staticKey=key;
+        gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,staticTex);gl.activeTexture(gl.TEXTURE0);
+      }
+      gl.uniform1f(u.uMode,1);
       if(fx){
         const bw=.38*w,bh=1.35*h,top=-.12*h;
         // 7秒で片道・行って戻る(alternate)。右は3.5秒ずらす
@@ -16011,8 +16039,6 @@ const rhythmCreateStageGL=canvas=>{
         const rgba=RHYTHM_STAGE_GL_BEAM_RGBA[tier]||RHYTHM_STAGE_GL_BEAM_RGBA[0];
         gl.uniform4f(u.uBeamC,rgba[0]/255,rgba[1]/255,rgba[2]/255,(rgba[3]||0)*.75);
         gl.uniform2f(u.uBeamBox,bw,bh);
-        RHYTHM_STAGE_GL_DOTS.forEach(([x,y,layer],i)=>{const off=((timeMs/RHYTHM_STAGE_SPARKS[layer].duration)%1)*h;dots[i*4]=x*w;dots[i*4+1]=y*h-off;dots[i*4+2]=0;dots[i*4+3]=layer;});
-        gl.uniform4fv(u.uDots,dots);
       }
       const liveOn=!!(fx&&live);
       gl.uniform1f(u.uLive,liveOn?1:0);
@@ -16032,9 +16058,23 @@ const rhythmCreateStageGL=canvas=>{
         });
         gl.uniform4fv(u.uLas,lasers);gl.uniform4fv(u.uLasC,laserColors);
       }
+      // 2. 焼いた絵にサーチライト・レーザーを重ねて、画面全体を1回で描く
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+      if(!fx)return;
+      // 3. 光の粒(奥の層 → 手前の層)。層の上半分と下半分に同じ並びがあるので、画面にかかる方だけ描く
+      gl.useProgram(sparkProg);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+      gl.uniform2f(su.uSize,w,h);
+      for(const layer of [0,1]){
+        const spec=RHYTHM_STAGE_SPARKS[layer],end=spec.end,off=((timeMs/spec.duration)%1)*h;
+        gl.uniform4f(su.uLayer,spec.core,spec.mid,end,spec.opacity);
+        for(const [x,y,index] of RHYTHM_STAGE_GL_DOTS){if(index!==layer)continue;
+          for(const cy of [y*h-off,y*h-off+h]){if(cy<-end-1||cy>h+end+1)continue;gl.uniform4f(su.uDot,x*w,cy,end+1,0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);}}
+      }
+      // 4. 「ライブ」のペンライトと拍の頭の色み。足し算で重ねる(以前の min(c+光,1) と同じ)
+      if(liveOn){gl.useProgram(prog);gl.uniform1f(u.uMode,2);gl.blendFunc(gl.ONE,gl.ONE);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);}
+      gl.disable(gl.BLEND);
     },
-    release(){try{gl.deleteTexture(tex);gl.deleteBuffer(buf);gl.deleteProgram(prog);gl.deleteShader(vs);gl.deleteShader(fs);const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
+    release(){try{gl.deleteTexture(tex);gl.deleteTexture(staticTex);gl.deleteFramebuffer(fbo);gl.deleteBuffer(buf);gl.deleteProgram(prog);gl.deleteProgram(sparkProg);gl.deleteShader(vs);gl.deleteShader(fs);gl.deleteShader(svs);gl.deleteShader(sfs);const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},
   };
 };
 // 画質「自動」で下げた段。アプリを開いているあいだだけ覚えておき、次の曲もこの段から始める(保存はしない)
@@ -16370,7 +16410,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
-  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboMilestoneRef=useRef(null);
+  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
   // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
   // 焼けるまで・焼けなかったとき・影が1枚だけの判定は、今までどおり CSS のぼかしで出す(haloKeys に入っていない)。
   const [haloKeys,setHaloKeys]=useState(null);
@@ -16969,9 +17009,9 @@ if(luckOn){const luckNow=run.audio?.songTimeMs?.()??0;const rushActive=run.luckR
     else showLuckyBanner(`+${draw.points}pt`,'small');}
   const gaugeEl=luckGaugeRef.current;if(gaugeEl){const ratio=Math.min(1,run.luckGauge/RHYTHM_LUCK_GAUGE_MAX);gaugeEl.style.transform=`scaleX(${ratio.toFixed(3)})`;}
   const ptEl=luckPointsRef.current;if(ptEl&&ptEl._mhLuck!==run.luckPoints){ptEl._mhLuck=run.luckPoints||0;ptEl.textContent=`${run.luckPoints||0}pt`;}}
-/* コンボの節目(オプション「コンボの節目」)。100のくぎりに届いた瞬間だけ、コンボ数の表示に「100 COMBO!」と光の輪を出す。
-   コンボガードで数が据え置きのとき(増えていないとき)は出さない */
-if(settings.comboMilestoneFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'&&keptCombo>run.combo&&keptCombo>=100&&keptCombo%100===0){const el=comboMilestoneRef.current;if(el){el.dataset.milestone=String(keptCombo);rhythmRestartAnimations([{el,attr:'rhythmMilestone'}]);}}
+/* コンボの節目(オプション「コンボの節目」)。100のくぎりに届いた瞬間だけ、コンボ数のまわりに金の光の輪を広げる
+   (「100 COMBO」の大きな数字は、もとからある演出 comboMilestone が出す)。コンボガードで数が据え置きのとき(増えていないとき)は出さない */
+if(settings.comboMilestoneFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'&&keptCombo>run.combo&&keptCombo>=RHYTHM_COMBO_MILESTONE_STEP&&keptCombo%RHYTHM_COMBO_MILESTONE_STEP===0){const el=comboRingRef.current;if(el)rhythmRestartAnimations([{el,attr:'rhythmRing'}]);}
 run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
@@ -17767,7 +17807,7 @@ scheduleTick();};
       少し透かす。コンボが0のあいだは出さない。
     ★大きさの上限が無くなったので、段(comboTier)でしっかり大きくできる
       (HUDに居たころは台形にかかるので1.13倍までしか上げられなかった)。 */}
-{settings.comboDisplay!==false&&view.combo>0&&<div data-rhythm-combo-box data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{view.combo}</b>{settings.comboMilestoneFx===true&&<i ref={comboMilestoneRef} data-rhythm-combo-milestone aria-hidden="true"/>}<span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>}{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
+{settings.comboDisplay!==false&&view.combo>0&&<div data-rhythm-combo-box data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{view.combo}</b>{settings.comboMilestoneFx===true&&<i ref={comboRingRef} data-rhythm-combo-ring aria-hidden="true"/>}<span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>}{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
     Tailwindは外部CDNのJITが後からCSSを作るため、間に合わないあいだ
     bottom-[12%] も h-[3px] も bg-gradient-to-r も効かず、
     「高さ0・背景なし＝見えない線」になる。実機で「演奏を始めたときに
