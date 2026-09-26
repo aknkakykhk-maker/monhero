@@ -97,7 +97,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
       <span className={draft[key]===flag?'text-white':'text-slate-400'}>{text}</span>
     </button>)}
   </div>;
-  const segments=(key,items)=><div className={`grid ${items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} aria-pressed={draft[key]===id} onClick={()=>set(key,id)} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
+  // onPick … 選んだ直後に呼ぶ(タップ音の種類は、選んだその場で鳴らして聞き比べられるようにする)
+  const segments=(key,items,onPick=null)=><div className={`grid ${items.length>=5?'grid-cols-5':items.length>=4?'grid-cols-4':items.length===2?'grid-cols-2':'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`}>{items.map(([id,text])=><button type="button" key={id} data-rhythm-option-choice={`${key}:${id}`} aria-pressed={draft[key]===id} onClick={()=>{set(key,id);if(onPick)onPick(id);}} className={`border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide?'min-h-[38px]':'min-h-[44px]'} ${draft[key]===id?'bg-cyan-600 text-white':'bg-slate-900 text-slate-300'}`}>{text}</button>)}</div>;
   // 1項目=1枠。頭に帯のラベルを置く(参考にした画面と同じ形)。
   // ★ここは項目の「入れ物」なので、余白・字の大きさは2026-09-05に広げたまま触らない。
   // ★数値のように横幅の要る項目は wide。縦持ち(2列)ではぶち抜き、
@@ -226,7 +227,11 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
           {!wide&&<h3 className={head}>◆ 音量設定</h3>}
           <div className={wide?grid:`mt-3 ${grid}`}>
             {field('BGM音量',stepper('bgmVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10}),null,{full:true})}
-            {field('タップ音量',stepper('noteSeVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10}),null,{full:true})}
+            {field('タップ音量',stepper('noteSeVolume',0,RHYTHM_NOTE_SE_VOLUME_MAX,1,{fine:1,coarse:10}),null,{full:true})}
+            {/* タップ音の種類(2026-09-26・ユーザー指示「ノーツを押したときの音のバリエーションがほしい / 設定で変えられるように」)。
+                選んだその場で1回鳴らす(タップ音がOFFでも、聞き比べのために鳴らす) */}
+            {field('タップ音の種類',segments('noteSeType',RHYTHM_NOTE_SE_TYPES.map(item=>[item.id,item.label]),id=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeType:id,noteSeEnabled:true})),
+              `ノーツを叩いたときの音です。${RHYTHM_NOTE_SE_TYPES.map(item=>`${item.label}＝${item.note}`).join('／')}。取り終えたとき・モンスターノーツ・フルコンボの音は変わりません。`,{full:true})}
             {field('タップ音',toggle('noteSeEnabled'))}
             <div className="grid gap-2">
               <button type="button" onClick={previewBgm} className="min-h-[44px] rounded-xl bg-indigo-700 text-[12px] font-black">♪ BGM試聴</button>
@@ -239,7 +244,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {/* タップ音を10倍にしたので、前に合わせていた人は必ず設定し直すことになる(2026-09-12) */}
             <p className={`mt-2 ${note}`}>2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。</p>
             {/* 上限を200まで開けた(2026-09-12・ユーザー指示)。100の意味は今までと同じ */}
-            <p className={`mt-2 ${note}`}>音量は0〜{RHYTHM_VOLUME_MAX}まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。</p>
+            <p className={`mt-2 ${note}`}>タップ音量は0〜{RHYTHM_NOTE_SE_VOLUME_MAX}まで上げられます（{RHYTHM_VOLUME_MAX}より上は、割れないように大きい音だけ丸めて鳴らします）。</p>
+            <p className={`mt-2 ${note}`}>BGM音量は0〜{RHYTHM_VOLUME_MAX}まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。</p>
           </details>
         </section>}
         {tab==='system'&&<section data-rhythm-options-panel="system" className={card}>

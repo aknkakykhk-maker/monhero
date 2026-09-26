@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33058d2132ec3798
+// source-sha256: deb77b47b7e1bd46
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 02:06";
+const BUILD_DATE = "2026-09-27 02:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4960,6 +4960,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   vibrationEnabled: false,
   effectAmount: 'LIGHT',
   lightweightMode: false,
+  noteSeType: 'STANDARD',
   livePartnerVisible: true,
   sideMonsterOpacity: 'NORMAL',
   sideMonsterMotion: 'NORMAL',
@@ -5014,7 +5015,8 @@ const normalizeRhythmSettings = value => {
     monsterNoteEffect: RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect) ? source.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
-    noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
+    noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
+    noteSeType: rhythmNoteSeTypeOf(source.noteSeType),
     noteSeEnabled: bool('noteSeEnabled'),
     vibrationEnabled: bool('vibrationEnabled'),
     effectAmount: RHYTHM_EFFECT_LEVELS.includes(source.effectAmount) ? source.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount,
@@ -20838,13 +20840,17 @@ const RhythmOptions = ({
   })), React.createElement("span", {
     className: draft[key] === flag ? 'text-white' : 'text-slate-400'
   }, text))));
-  const segments = (key, items) => React.createElement("div", {
+  const segments = (key, items, onPick = null) => React.createElement("div", {
     className: `grid ${items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
   }, items.map(([id, text]) => React.createElement("button", {
     type: "button",
     key: id,
+    "data-rhythm-option-choice": `${key}:${id}`,
     "aria-pressed": draft[key] === id,
-    onClick: () => set(key, id),
+    onClick: () => {
+      set(key, id);
+      if (onPick) onPick(id);
+    },
     className: `border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide ? 'min-h-[38px]' : 'min-h-[44px]'} ${draft[key] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
   }, text)));
   const field = (title, control, description = null, {
@@ -21048,10 +21054,16 @@ const RhythmOptions = ({
     coarse: 10
   }), null, {
     full: true
-  }), field('タップ音量', stepper('noteSeVolume', 0, RHYTHM_VOLUME_MAX, 1, {
+  }), field('タップ音量', stepper('noteSeVolume', 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, {
     fine: 1,
     coarse: 10
   }), null, {
+    full: true
+  }), field('タップ音の種類', segments('noteSeType', RHYTHM_NOTE_SE_TYPES.map(item => [item.id, item.label]), id => RHYTHM_NOTE_SE_RUNTIME.preview({
+    ...draft,
+    noteSeType: id,
+    noteSeEnabled: true
+  })), `ノーツを叩いたときの音です。${RHYTHM_NOTE_SE_TYPES.map(item => `${item.label}＝${item.note}`).join('／')}。取り終えたとき・モンスターノーツ・フルコンボの音は変わりません。`, {
     full: true
   }), field('タップ音', toggle('noteSeEnabled')), React.createElement("div", {
     className: "grid gap-2"
@@ -21074,7 +21086,9 @@ const RhythmOptions = ({
     className: `mt-2 ${note}`
   }, "2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。"), React.createElement("p", {
     className: `mt-2 ${note}`
-  }, "音量は0〜", RHYTHM_VOLUME_MAX, "まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。"))), tab === 'system' && React.createElement("section", {
+  }, "タップ音量は0〜", RHYTHM_NOTE_SE_VOLUME_MAX, "まで上げられます（", RHYTHM_VOLUME_MAX, "より上は、割れないように大きい音だけ丸めて鳴らします）。"), React.createElement("p", {
+    className: `mt-2 ${note}`
+  }, "BGM音量は0〜", RHYTHM_VOLUME_MAX, "まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。"))), tab === 'system' && React.createElement("section", {
     "data-rhythm-options-panel": "system",
     className: card
   }, !wide && React.createElement("h3", {
