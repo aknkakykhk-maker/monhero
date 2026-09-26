@@ -110,6 +110,9 @@ node -e "require('./tools/node_modules/sharp')('<元絵>')
 `tools/mode/rhythm-runtime-notes.js` の `RELEASED_MARKERS` と `RELEASED_TRACKS` への
 **1行ずつを書き忘れると、検査だけが静かに対象外になる**（落ちないので気づけない）。
 
+`monster-hero/data/rhythm-mode.js` の `RHYTHM_SONG_BEATS` にも1行足す（道の演出の拍の線が使う）。
+値は解析ファイルの `timing` の `[beatMs, beatZeroMs, beatsPerBar]`。`node tools/mode/rhythm-song-beats-check.js` が抜けと写し間違いを見つける。
+
 ---
 
 ## 5. 解析（テンポは必ず候補を比べる）
