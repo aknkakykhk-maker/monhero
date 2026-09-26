@@ -457,3 +457,16 @@ WebGL のときは、通常の canvas より JavaScript が多かった(CPU プ�
   MARVELOUS の金の流れは、光のぼかしが 9/26 に絵へ焼かれていて、流れのたびに塗り直すのは字のグラデーションだけだった(CSS の説明が古かった)
 - ⚠️ 「コンボの節目」(PR #1849)で足した CSS が、もとからある 100コンボの大きな数字 `[data-rhythm-combo-milestone]` と同じ名前で、
   大きさ・::before・::after を上書きして崩していた。部品の名前を `[data-rhythm-combo-ring]` に変え、文字は出さず金の輪だけにした
+
+## 2026-09-27 判定のたびの演奏画面全体の作り直しをやめた
+
+- 以前は判定のたびに setView で RhythmTapTest(2,000行ほど)をまるごと作り直していた。
+  いまはスコアの札・コンボ数・判定の文字・ライフの数字を、小さな入れ物(`rhythmCreateHud`)を直接読む4つの部品
+  (`RhythmHudScore` / `RhythmHudCombo` / `RhythmHudJudgment` / `RhythmHudLife`)に切り出した。見た目(要素・クラス・属性)は同じ
+- 演奏画面全体を作り直すのは、コンボの段・100のくぎり・ライフの状態(ふつう・ピンチ・DOWN)が変わったときと、能力が出たときだけ(`coarseKey`)
+- ★`view.score`・`view.combo`・`view.life` は「段が変わったときの値」になった。判定ごとの数字を出すところでは hud を読む(ポーズ中の SCORE・COMBO も hud)
+- 計測(freedom_dive HARD・ノーツの多い8秒・CPU 1/4・自動で叩く): 演奏画面の作り直し 約50回 → 2回。ゲーム本体の JavaScript 240ms → 183〜209ms。
+  React の時間(react-dom)は 163ms → 144〜163ms とあまり変わらない(残りは小さな部品の作り直しと、叩く操作の受け付け)
+- 見た目の文字列を探す検査(rhythm-life / rank / hit-effect / presentation)を、部品の書き方に合わせて直した
+- ⚠️ 切り出しの途中で、同じ説明文が部品にもある状態で「本体の説明文から消す」をしたため、部品の側から消してしまった。控えから戻してやり直した。
+  本体の古い計算を消すのは、部品を足す前にする

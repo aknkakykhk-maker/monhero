@@ -93,7 +93,7 @@ check('maxScoreを渡さない/0以下/壊れているときは今までどお�
 check('ランク色マップを持つ',
   game.includes('const RHYTHM_RANK_COLORS = Object.freeze({')&&game.includes("G:'text-slate-500'")&&game.includes("M:'text-yellow-200'"));
 check('HUDのSCORE横にライブランクを表示',
-  game.includes('data-rhythm-rank')&&game.includes('RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]'));
+  game.includes('data-rhythm-rank')&&game.includes('RHYTHM_RANK_COLORS[rhythmRankForScore(score)]'));  // スコアの札の部品(RhythmHudScore)が hud のスコアから出す(2026-09-27)
 check('リザルト画面にも大きくランクを表示',
   game.includes('data-rhythm-result-rank')&&game.includes('rank=rhythmRankForScore(view.score)'));
 check('ランクはスコアから毎回計算するだけで、保存形式(BEST)を増やしていない',
@@ -110,9 +110,9 @@ check('保存キーを増やしていない(ランク判定自体は既存のBES
 check('丸バッジ横のバーがランクゲージとして目盛りを持つ',
   game.includes('data-rhythm-rank-gauge')&&indexHtml.includes('[data-rhythm-rank-gauge]{'));
 check('バーの伸び自体はrhythmRankProgressのまま(判定を増やしていない)',
-  /data-rhythm-rank-gauge[\s\S]{0,260}rhythmRankProgress\(view\.score\)/.test(game));
+  /data-rhythm-rank-gauge[\s\S]{0,260}rhythmRankProgress\(score\)/.test(game));
 check('バーの横に次のランクを文字でも示す(rhythmNextRankIdを使う)',
-  game.includes('data-rhythm-rank-next')&&game.includes('const rankNextId=rhythmNextRankId(view.score,difficulty.maxScore);')
+  game.includes('data-rhythm-rank-next')&&game.includes('const rankNextId=rhythmNextRankId(score,maxScore)')
   &&game.includes("const rankNextLabel=rankNextId?`→${rankNextId}`:'★MAX';"));
 check('目盛りは見た目だけの背景画像で、判定・スコアには関与しない',
   /\[data-rhythm-rank-gauge\]\{\s*background-image:/.test(indexHtml));

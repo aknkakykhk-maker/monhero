@@ -75,7 +75,8 @@ ok('FLICKは上へ払うことが分かる印を出す',
 // 置いてあり、その空きは上ほど広いが、上の中央は台形の頂点(ノーツが湧く点・幅18%)なので、
 // HUDの中では「真ん中へ寄せる」余地がそもそも無かった。
 ok('コンボ数はプレイエリアの真ん中に出す(既定)',
-  /\{settings\.comboDisplay!==false&&view\.combo>0&&<div data-rhythm-combo-box[^>]*data-combo-pos=/.test(game)
+  // コンボ数は部品(RhythmHudCombo)が hud から出す(2026-09-27)。出さない条件は「設定で消した・コンボ0」
+  game.includes('if(settings.comboDisplay===false||!(combo>0))return null;')&&/<div data-rhythm-combo-box[^>]*data-combo-pos=/.test(game)
   &&html.includes('[data-rhythm-combo-box]{')
   &&/\[data-rhythm-combo-box\]\{[\s\S]{0,160}top:21%/.test(html)
   &&/\[data-rhythm-combo-box\]\{[\s\S]{0,160}left:50%;[\s\S]{0,40}transform:translateX\(-50%\)/.test(html)
@@ -112,7 +113,7 @@ ok('ノーツより後ろに描いて透かす(邪魔にならない)',
   &&html.includes('[data-rhythm-note] {'));
 // 場に重なるので、邪魔だと感じた人が消せるようにする(設定は前からあったが使われていなかった)
 ok('コンボ数表示のON/OFFを設定から切り替えられる',
-  game.includes("toggle('comboDisplay')")&&game.includes('settings.comboDisplay!==false'));
+  game.includes("toggle('comboDisplay')")&&game.includes('settings.comboDisplay===false||!(combo>0)'));
 ok('コンボ数を大きく出す',
   /\[data-rhythm-combo\]\{[\s\S]{0,160}font-size:calc\(min\(52px,13\.5vw\) \* var\(--mh-combo-size,1\)\)/.test(html)
   // 横持ちは data-combo-wide="1" で出し分ける。@media (orientation:landscape) は

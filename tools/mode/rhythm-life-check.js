@@ -79,7 +79,8 @@ check('HUDは段をdata属性で伝える(見た目だけ・判定には触ら�
   &&html.includes('[data-rhythm-life][data-life-state="down"] [data-rhythm-life-track]'));
 check('0だとハート・数字・バーの見た目が変わる(赤くなる・割れる)',
   game.includes("{lifeState==='down'?'💔':'♥'}")
-  &&game.includes("{lifeState==='down'?'DOWN':view.life}")
+  // 数字はライフの部品(RhythmHudLife)が hud から出す(2026-09-27。以前は view.life)
+  &&game.includes("{lifeState==='down'?'DOWN':life}")
   // ひび割れは、要素を増やさずバーの ::before / ::after をハの字に置いて描く
   &&html.includes('[data-rhythm-life][data-life-state="down"] [data-rhythm-life-track]::before')
   &&html.includes('[data-rhythm-life][data-life-state="down"] [data-rhythm-life-track]::after'));
