@@ -60,7 +60,9 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   check('レベル表がマーカーの内側にある',
     runtime.includes('// <rhythm-chart-levels>')&&runtime.includes('// </rhythm-chart-levels>'));
   check('レベルを差し替える口が1か所にまとまっている',
-    runtime.includes('const rhythmChartWithLevel=')&&runtime.includes('rhythmChartWithLevel(song.songId,id,song.difficulties[id])'));
+    // 6レーン化(2026-09-26)で、譜面は道の上へ寄せる rhythmChartOnRoad(…) に包んでから渡す形になった。どちらの形でも通す
+    runtime.includes('const rhythmChartWithLevel=')
+      &&/rhythmChartWithLevel\(song\.songId,id,(?:rhythmChartOnRoad\()?song\.difficulties\[id\]/.test(runtime));
   check('レベル表は手で決めない、と書いてある',runtime.includes('rhythm-chart-level.js が'));
 }
 

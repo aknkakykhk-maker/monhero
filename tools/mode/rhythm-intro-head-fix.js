@@ -15,6 +15,9 @@
 //   ・置くのは音源の解析(authoring/*-v3-audio.json の onsets)に実際にある音だけ。音の無いところへは置かない
 //     (生成器の「1b. 出だしが空きすぎないようにする」と同じ考え方)
 //   ・置く時刻は拍の格子の上(beatZeroMs + grid × gridMs)。道の拍の線とずれないように
+//   ・格子から 43ms より離れて鳴っている音は使わない(生成器の earReviewMaxOffsetMs と同じ線)。
+//     格子へ寄せて置くので、離れた音に置くと「音より早い(遅い)ノーツ」になる。
+//     ★最初はこの線が無く、戦場の疾風は実際の音より47ms早い所へ置いていた(2026-09-27 に気づいて置き直した)
 //   ・範囲は 1.8〜3.0秒(配信中の曲でいちばん早い出だしが約1.9秒。それより前は落ちてくるのを見る間が無い)。
 //     その中でいちばん強い音。拍の頭の音は少しだけ優先する
 //   ・種類は TAP。レーンは、その譜面のいまの最初のノーツと同じ場所(手の動きが増えない)
@@ -26,7 +29,7 @@ const {loadRuntime,renderBlock,markerBlock,replaceBlock,RUNTIME,RELEASED_TRACKS}
 
 const ROOT=path.resolve(__dirname,'..','..');
 const AUTHORING=path.join(ROOT,'tools','mode','authoring');
-const FIRST_NOTE_LIMIT_MS=3000,EARLIEST_MS=1800,BEAT_BONUS=.1;
+const FIRST_NOTE_LIMIT_MS=3000,EARLIEST_MS=1800,BEAT_BONUS=.1,MAX_OFFSET_MS=43;
 const write=process.argv.includes('--write');
 
 const rt=loadRuntime();
@@ -67,7 +70,7 @@ for(const [songId,trackId] of Object.entries(RELEASED_TRACKS)){
     const {beatZeroMs,gridMs,subdivisionsPerBeat}=analysis.timing;
     const perBeat=Number(subdivisionsPerBeat)||4;
     const candidates=analysis.onsets
-      .filter(onset=>Number.isInteger(onset.grid))
+      .filter(onset=>Number.isInteger(onset.grid)&&Math.abs(Number(onset.gridOffsetMs))<=MAX_OFFSET_MS)
       .map(onset=>({...onset,atMs:Math.round(beatZeroMs+onset.grid*gridMs),onBeat:onset.grid%perBeat===0}))
       .filter(onset=>onset.atMs>=EARLIEST_MS&&onset.atMs<=FIRST_NOTE_LIMIT_MS&&onset.atMs<notes[0].timeMs)
       .sort((a,b)=>(b.strength+(b.onBeat?BEAT_BONUS:0))-(a.strength+(a.onBeat?BEAT_BONUS:0))||a.atMs-b.atMs);
@@ -80,7 +83,7 @@ for(const [songId,trackId] of Object.entries(RELEASED_TRACKS)){
     const marker=liveMarker(chart);
     if(!marker){console.error(`NG: ${label} の譜面がどのマーカーか決められません`);failed++;continue;}
     const note={type:'TAP',timeMs:head.atMs,lane:first.lane,subLane:first.subLane,subLaneWidth:first.subLaneWidth};
-    console.log(`${label}: ${first.timeMs}ms → ${head.atMs}ms に TAP(音の強さ ${head.strength}・${head.onBeat?'拍の頭':'拍の間'}・レーン ${first.lane}) [${marker}]`);
+    console.log(`${label}: ${first.timeMs}ms → ${head.atMs}ms に TAP(音の強さ ${head.strength}・${head.onBeat?'拍の頭':'拍の間'}・格子とのずれ ${head.gridOffsetMs}ms・レーン ${first.lane}) [${marker}]`);
     if(!byMarker.has(marker))byMarker.set(marker,{notes:[note,...notes]});
     added++;
   }

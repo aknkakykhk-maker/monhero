@@ -397,7 +397,10 @@ const RHYTHM_PERF=(()=>{
     spikes:[],lastMonsterAtMs:0,
     // GPU で描くのにかかった時間(2026-09-27)。notes … ノーツの canvas(WebGL のとき) / stage … ライブ背景(WebGL のとき)。
     // supported … その端末で測れるか(null=まだ描いていない)。測れるのは EXT_disjoint_timer_query がある端末だけ(iPhone の Safari には無い)
-    gpu:{notes:{n:0,sum:0,max:0,supported:null},stage:{n:0,sum:0,max:0,supported:null}}});
+    gpu:{notes:{n:0,sum:0,max:0,supported:null},stage:{n:0,sum:0,max:0,supported:null}},
+    // 画質「自動」・演出の自動調整が「重い」と数える線(50ms以上)を超えたフレームの数と、実際に自動で下げた記録(2026-09-27)。
+    // 実機でどのくらいの重さのときに下がったかを読み、線(8%・50ms)を合わせるために使う
+    over50:0,autoSteps:[]});
   let on=false,last=null,acc=zero();
   const api={
     get enabled(){return on;},
@@ -423,6 +426,7 @@ const RHYTHM_PERF=(()=>{
           if(acc.pendingDelayMs>acc.maxDelayMs)acc.maxDelayMs=acc.pendingDelayMs;
           if(dt>acc.maxMs){acc.maxMs=dt;acc.worstScanned=acc.pendingScanned;acc.worstDrawn=acc.pendingDrawn;acc.worstTickMs=acc.pendingTickMs;acc.worstDelayMs=acc.pendingDelayMs;}
           for(let i=0;i<RHYTHM_PERF_LONG_MS.length;i++)if(dt>RHYTHM_PERF_LONG_MS[i])acc.long[i]++;
+          if(dt>=50)acc.over50++;
           // 2フレーム以上飛んだら、そのときの状況をそのまま控える。
           // 「いつ・どれだけ飛んで・そのときJSは何をしていて・直前にモンスターノーツを
           // 踏んでいたか」が1件ずつ残るので、たまにしか起きないものでも捕まえられる。
@@ -489,6 +493,14 @@ const RHYTHM_PERF=(()=>{
         // 「踏んだあとに飛んだか」はこの時刻からの経過で見る
         if(typeof performance!=='undefined')acc.lastMonsterAtMs=performance.now();}
     },
+    // 自動で画質・演出を下げたとき、演奏画面から1回だけ呼ぶ。kind … '画質' / '演出'、label … 何へ下げたか、
+    // slow / frames … 下げる判断をした3秒の枠のうち、重いと数えたフレーム数と数えたフレーム数
+    autoStep(kind,label,slow,frames){
+      if(!on||acc.autoSteps.length>=20)return;
+      const n=Number(frames)||0,k=Number(slow)||0;
+      acc.autoSteps.push({at:Math.round(Number(acc.lastSongMs)||0),kind:String(kind),label:String(label||''),slow:k,frames:n,
+        fps:Math.round(n/3*10)/10});
+    },
     gestureFrame(){if(on)acc.gestureFrames++;},
     noteRescan(){if(on)acc.noteRescans++;},
     layoutRead(){if(on)acc.layoutReads++;},
@@ -505,6 +517,7 @@ const RHYTHM_PERF=(()=>{
         fps:acc.totalMs?1000*frames/acc.totalMs:0,
         maxMs:acc.maxMs,
         over16:acc.long[0],over25:acc.long[1],over33:acc.long[2],
+        over50:acc.over50,autoSteps:acc.autoSteps.slice(),
         layoutReadsPerFrame:per(acc.layoutReads),
         domQueriesPerFrame:per(acc.domQueries),
         slidePolygonsPerFrame:per(acc.slidePolygons),
@@ -14455,7 +14468,7 @@ const mouHitotsuNoSekaiECharts=Object.freeze({
 const SENJOU_NO_SHIPPUU_DURATION_MS=193593;
 const senjouNoShippuuEasyNotes=((t,h,f,s)=>[
 // <senjou-no-shippuu-v3-easy-notes>
-  t(2465,7,4,0),t(3965,7,4,0),t(5037,8,4,0),t(6537,7,4,0),
+  t(2036,7,4,0),t(3965,7,4,0),t(5037,8,4,0),t(6537,7,4,0),
   t(6751,8,4,0),t(7180,6,6,0),t(8895,5,4,0),t(9752,6,6,0),
   t(10181,6,6,0),t(11467,6,6,0),t(12753,7,4,0),t(13182,4,6,0),
   t(14039,0,12,0),t(14896,4,6,0),t(15325,2,6,0),t(15754,2,6,0),
@@ -14539,7 +14552,7 @@ const senjouNoShippuuEasyNotes=((t,h,f,s)=>[
 
 const senjouNoShippuuNormalNotes=((t,h,f,s)=>[
 // <senjou-no-shippuu-v3-normal-notes>
-  t(2465,7,4,0),t(3965,7,4,0),t(5037,9,3,0),t(6537,7,4,0),
+  t(2036,7,4,0),t(3965,7,4,0),t(5037,9,3,0),t(6537,7,4,0),
   t(6751,8,4,0),f(7180,6,6),t(8466,9,3,0),t(8895,5,4,0),
   t(9752,0,6,0),t(10181,4,6,0),t(10610,8,4,0),f(11467,4,6),
   t(12753,5,3,0),t(13182,2,6,0),t(14039,0,12,0),t(14896,2,6,0),
@@ -14634,7 +14647,7 @@ const senjouNoShippuuNormalNotes=((t,h,f,s)=>[
 
 const senjouNoShippuuHardNotes=((t,h,f,s)=>[
 // <senjou-no-shippuu-v3-hard-notes>
-  t(2465,3,4,0),t(3536,3,4,0),t(3965,7,4,0),t(5037,9,3,0),
+  t(2036,3,4,0),t(3536,3,4,0),t(3965,7,4,0),t(5037,9,3,0),
   t(6323,5,3,0),t(6537,7,4,0),t(6751,8,4,0),f(7180,6,5),
   t(8252,5,4,0),t(8466,7,3,0),t(8895,5,4,0),t(9752,6,5,0),
   t(10181,7,5,0),t(10610,7,4,0),f(11467,4,5),s(11896,12646,[[11896,2,4],[12003,2,4,3],[12110,1.5,4,3],[12217,2,4,1],[12324,1.5,4],[12431,0,4],[12539,0,4],[12646,0,4]]),
@@ -14763,7 +14776,7 @@ const senjouNoShippuuHardNotes=((t,h,f,s)=>[
 
 const senjouNoShippuuExpertNotes=((t,h,f,s)=>[
 // <senjou-no-shippuu-v3-expert-notes>
-  t(2465,1,4,0),t(3536,1,4,0),t(3965,5,4,0),t(5037,7,3,0),
+  t(2036,1,4,0),t(3536,1,4,0),t(3965,5,4,0),t(5037,7,3,0),
   t(6323,0,2,0),t(6323,4,2,0),t(6537,3,2,0),t(6537,7,2,0),
   t(6751,6,2,0),t(6751,10,2,0),f(7180,6,5),s(7502,8788,[[7502,2,2,3],[8788,1,2]]),
   h(7823,7,1,8680,0,[[7823,7,1],[8252,6,3],[8680,5,5]]),t(8895,5,4,0),t(9752,2,2,0),t(9752,6,2,0),
@@ -14916,7 +14929,7 @@ const senjouNoShippuuExpertNotes=((t,h,f,s)=>[
 
 const senjouNoShippuuMasterNotes=((t,h,f,s)=>[
 // <senjou-no-shippuu-v3-master-notes>
-  t(2465,5,3,0),t(3536,5,3,0),t(3965,9,3,0),t(5037,4,2,0),
+  t(2036,5,3,0),t(3536,5,3,0),t(3965,9,3,0),t(5037,4,2,0),
   t(5680,6,2,0),t(6108,2,2,0),t(6108,6,2,0),t(6323,4,2,0),
   t(6323,8,2,0),t(6537,2,2,0),t(6537,6,2,0),t(6751,4,2,0),
   t(6751,8,2,0),f(7180,8,4,2),h(7502,0,2,8788),h(7823,8,1,8680,0,[[7823,8,1],[8252,7,3],[8680,7,4]]),

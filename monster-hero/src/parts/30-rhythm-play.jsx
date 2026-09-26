@@ -1507,20 +1507,21 @@ const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.i
 /* 画質「自動」。rAF の間隔から「描くのが間に合わなかったフレーム」(いちばん短い間隔の1.8倍より長いもの)を数え、
    3秒のうち8%を超えたら一段下げる。止まっていた間(1秒以上あいた)は数えない。数えるだけで、判定・描画には触らない。
    (以前は250ms以上を数えなかったが、1フレームに200〜500msかかるほど遅い端末では、ほとんどのフレームが数えられず判断しなかった)
-   3秒で10フレームあれば判断する(以前は30フレーム。1秒に10フレームを割るほど遅い端末では、いつまでも判断しなかった) */
+   3秒で5フレームあれば判断する(RHYTHM_AUTO_QUALITY_MIN_FRAMES。以前は30→10フレーム。10のときも、1秒に3フレームを割る端末では
+   3秒の枠に10フレーム入らず、いつまでも判断しなかった。2026-09-27、性能計測の「自動で下げた記録」を足して確かめたら約2fpsで0件だった) */
 if(settings.renderQuality==='AUTO'){const aq=run._autoQuality||(run._autoQuality={last:0,start:frameNowMs,frames:0,slow:0,minGap:1e9});const gap=aq.last?frameNowMs-aq.last:0;aq.last=frameNowMs;
   // ★ずっと一様に遅い端末(1秒に20フレームを割る)は「いちばん短い間隔の1.8倍」では拾えないので、50ms 以上のフレームは常に遅いと数える(2026-09-27)
   if(gap>0&&gap<1000){aq.frames++;if(gap>=5&&gap<aq.minGap)aq.minGap=gap;if(gap>Math.max(5,aq.minGap)*1.8||gap>=50)aq.slow++;}
   // ★一段下げた直後の枠は数えない。下げると光の絵やマスモンの顔を焼き直すので、その一瞬の詰まりで
   //   続けてもう一段下げてしまっていた(高→標準→省電力と一気に落ちる。2026-09-26 の点検で見つけた)
-  if(frameNowMs-aq.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){if(aq.settle>0)aq.settle--;else if(aq.frames>=10&&aq.slow/aq.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepAutoQualityRef.current){stepAutoQualityRef.current();aq.settle=1;}aq.start=frameNowMs;aq.frames=0;aq.slow=0;}}
+  if(frameNowMs-aq.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){if(aq.settle>0)aq.settle--;else if(aq.frames>=RHYTHM_AUTO_QUALITY_MIN_FRAMES&&aq.slow/aq.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepAutoQualityRef.current){const qi=RHYTHM_RENDER_QUALITY_STEPS.indexOf(autoQualityLevelRef.current);RHYTHM_PERF.autoStep('画質',RHYTHM_RENDER_QUALITY_STEPS[Math.min(RHYTHM_RENDER_QUALITY_STEPS.length-1,Math.max(0,qi)+1)],aq.slow,aq.frames);stepAutoQualityRef.current();aq.settle=1;}aq.start=frameNowMs;aq.frames=0;aq.slow=0;}}
 /* 演出の自動調整(設定「重いときは演出を自動で控えめに」)。画質「自動」と同じ数え方で、3秒のうち8%を超えたら重い演出から一段下げる。
    画質「自動」を使っているときは、画質を下げきってから演出を下げる。下げた直後の枠は数えない(背景の絵の焼き直しで一瞬詰まるため) */
 if(settingsLiveRef.current.autoEffectDown!==false&&stepEffectCapRef.current){const ae=run._autoEffect||(run._autoEffect={last:0,start:frameNowMs,frames:0,slow:0,minGap:1e9,settle:0});const gap=ae.last?frameNowMs-ae.last:0;ae.last=frameNowMs;
   // ★ずっと一様に遅い端末(1秒に20フレームを割る)は「いちばん短い間隔の1.8倍」では拾えないので、50ms 以上のフレームは常に遅いと数える
   if(gap>0&&gap<1000){ae.frames++;if(gap>=5&&gap<ae.minGap)ae.minGap=gap;if(gap>Math.max(5,ae.minGap)*1.8||gap>=50)ae.slow++;}
   if(frameNowMs-ae.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){const qualityFirst=settings.renderQuality==='AUTO'&&autoQualityLevelRef.current!==RHYTHM_RENDER_QUALITY_STEPS[RHYTHM_RENDER_QUALITY_STEPS.length-1];
-    if(ae.settle>0)ae.settle--;else if(!qualityFirst&&ae.frames>=10&&ae.slow/ae.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepEffectCapRef.current())ae.settle=1;ae.start=frameNowMs;ae.frames=0;ae.slow=0;}}
+    if(ae.settle>0)ae.settle--;else if(!qualityFirst&&ae.frames>=RHYTHM_AUTO_QUALITY_MIN_FRAMES&&ae.slow/ae.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepEffectCapRef.current()){ae.settle=1;RHYTHM_PERF.autoStep('演出',RHYTHM_AUTO_EFFECT_STEP_LABELS[rhythmAutoEffectMemory.level-1]||'',ae.slow,ae.frames);}ae.start=frameNowMs;ae.frames=0;ae.slow=0;}}
 if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
 /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
    取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
