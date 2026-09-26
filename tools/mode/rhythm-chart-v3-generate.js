@@ -761,6 +761,23 @@ const rev11=chartRevision>=11;
 // Rev.14: 終点フリックと HOLD の太さの形を音で決める・候補(--variant)が HARD でも分かれるようにする(ROADMAP の残り)。
 //   手のモデルが SLIDE の曲線どおりに動き、親指の左右を区別するのも Rev.14 から(handModelFlagsForRevision)
 const rev14=chartRevision>=14;
+// Rev.15: 旋律の上下に沿って動かす(最初にもらった案の2・形の語彙の約束ごと「音の高さが上がれば右へ」)。
+//   Rev.14 までは形の中だけが旋律の上下に合い、かたまりの継ぎ目の起点と、フレーズの写しの左右反転は旋律を見ていなかった
+//   (実測: 5曲の HARD〜MASTER で旋律がはっきり動く所の46%が逆向き。うち継ぎ目が 59/111・写しが 14/21)。
+//   ・継ぎ目: 旋律と逆へ動く起点に MELODY_DIRECTION_COST を足す
+//   ・写し: 反転の規則どおりに写すと旋律と逆に動く所が増えるなら、もう片方の向きで写す(形はそのまま・向きだけ)
+//   数え方は気持ちよさの物差しの「旋律と逆」と同じ(音高が取れている所で 0.08 以上動き、レーンが1以上動く)
+const rev15=chartRevision>=15;
+const MELODY_TURN_MIN=.08,MELODY_DIRECTION_COST=4;
+const melodyHeightAt=(()=>{
+  const map=new Map((audio.pitchCurve||[]).filter(point=>Number(point.clarity)>=.5&&Number(point.hz)>0&&Number.isFinite(Number(point.height))).map(point=>[point.grid,Number(point.height)]));
+  return grid=>map.has(grid)?map.get(grid):null;
+})();
+const againstMelodyMove=(fromGrid,fromLane,toGrid,toLane)=>{
+  const a=melodyHeightAt(fromGrid),b=melodyHeightAt(toGrid);
+  if(a==null||b==null||Math.abs(b-a)<MELODY_TURN_MIN||Math.abs(toLane-fromLane)<1)return false;
+  return Math.sign(b-a)!==Math.sign(toLane-fromLane);
+};
 const lastChorus=(()=>{
   if(!rev11)return null;
   const list=(Array.isArray(structure.sections)?structure.sections:[]).slice().sort((a,b)=>a.startBar-b.startBar);
@@ -1466,6 +1483,17 @@ const buildChart=(difficulty,options={})=>{
           if(previous!=null&&lane===previous&&!allowJack)lane+=lane>=CENTER_LANE?-1:1;
           lanesNow[i]=Math.max(0,Math.min(LANES-1,lane));
         }
+        // Rev.15: 規則どおりの向きで写すと旋律と逆に動く所(継ぎ目を含む)が増えるなら、もう片方の向きで写す
+        let flipped=false;
+        if(rev15){
+          const againstCount=lanes=>{
+            let count=againstMelodyMove(lastPlacedGrid,lastLane,grids[0],lanes[0])?1:0;
+            for(let i=1;i<length;i++)if(againstMelodyMove(grids[i-1],lanes[i-1],grids[i],lanes[i]))count++;
+            return count;
+          };
+          const other=lanesNow.map(lane=>LANES-1-lane);
+          if(againstCount(other)<againstCount(lanesNow)){for(let i=0;i<length;i++)lanesNow[i]=other[i];flipped=true;}
+        }
         const low=Math.min(...lanesNow);
         const offsetsNow=lanesNow.map(lane=>lane-low);
         // 同じレーンの連続は、元の譜面で置けていたもの(元どうし)なら写す。押せるかは下の関門が決める
@@ -1473,7 +1501,7 @@ const buildChart=(difficulty,options={})=>{
           // 形の名前は元のかたまりのものを引き継ぐ(写しは新しい形ではない。語彙や偏りの数え方を元と同じにする)。
           // 左右は「元が反転していたか」と「今回反転して写すか」の組み合わせ
           attempts.push({offsets:offsetsNow,patternId:sourceShape?sourceShape.patternId:null,
-            mirrored:(sourceShape?sourceShape.mirrored:false)!==(mirrorNow===true),
+            mirrored:((sourceShape?sourceShape.mirrored:false)!==(mirrorNow===true))!==flipped,
             fromMemory:false,fromCopy:true,fixedBase:low,copyOf:sourceShape?sourceShape.fromGrid:null});
         }
       }
@@ -1502,7 +1530,12 @@ const buildChart=(difficulty,options={})=>{
       const ranked=rankShapes(candidates,{usage:shapeUsage,previousOffsets:lastOffsets,
         prefer:{ids:shapePreferIds,turn:driftCount>=variantStyle.driftTurnAfter},
         seed:`${trackId}:${difficulty}:${chunkIndex}${variantSeed}`,maxStep});
-      for(const chosen of ranked.slice(0,6))attempts.push({offsets:chosen.offsets.slice(),patternId:chosen.pattern.id,mirrored:false,fromMemory:false});
+      // Rev.15: 形の中の動きが、左右反転したほうが旋律の上下に合うなら反転して置く(交互・ジグザグのように旋律を見ない形の向き)
+      const againstInside=values=>{let count=0;for(let i=1;i<values.length;i++)if(againstMelodyMove(grids[i-1],values[i-1],grids[i],values[i]))count++;return count;};
+      for(const chosen of ranked.slice(0,6)){
+        const flip=rev15&&againstInside(mirror(chosen.offsets))<againstInside(chosen.offsets);
+        attempts.push({offsets:flip?mirror(chosen.offsets):chosen.offsets.slice(),patternId:chosen.pattern.id,mirrored:flip,fromMemory:false});
+      }
       if(!attempts.length)attempts.push({offsets:Array.from({length},()=>0),patternId:null,mirrored:false,fromMemory:false});
     }
 
@@ -1540,6 +1573,8 @@ const buildChart=(difficulty,options={})=>{
         // ただし同じ向きへ3かたまり以上流れ続けると端に張り付くので、そのときは折り返す側を好む
         const direction=Math.sign(lanes[0]-lastLane);
         if(lastDirection!==0&&direction!==0)cost+=(driftCount>=2?direction===lastDirection:direction!==lastDirection)?1.5:0;
+        // Rev.15: 継ぎ目で旋律と逆へ動く起点を避ける
+        if(rev15&&againstMelodyMove(lastPlacedGrid,lastLane,grids[0],lanes[0]))cost+=MELODY_DIRECTION_COST;
         // 中央前提の形は中央へ
         if(pattern&&pattern.centered)cost+=Math.abs(base-CENTER_LANE)*3;
         // 同じフレーズの3回目以降は、起点を1つずらして「少し発展」させる(HARD以上)

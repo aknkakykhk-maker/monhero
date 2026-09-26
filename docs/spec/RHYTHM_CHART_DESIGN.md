@@ -1541,6 +1541,17 @@ Rev.7 の譜面が authoring/ と1バイトも同じ／Rev.8 の横フリック�
 
 実測は ROADMAP の段1の残り。検査: `node tools/mode/rhythm-chart-rev14-check.js`（交差の費用を0にすると落ちることを確認済み）。
 
+### 3.1.29 旋律の上下に沿って動かす（2026-09-26・Rev.15）
+
+形の語彙の約束「音の高さが上がれば右へ」（3.2）は、Rev.14 までは**形の中だけ**で守られていた。旋律と逆向きの動きの多くは次の3つから生まれていた。
+
+- **かたまりの継ぎ目**: 次のかたまりの起点を、跳びの大きさ・手の流れ・レーンの偏りだけで選んでいた → 旋律と逆へ動く起点に費用4（`MELODY_DIRECTION_COST`）
+- **フレーズの写しの左右反転**: 1回ごとに反転して写すと、上がる旋律が左へ動く → 規則どおりの向きで逆の動きが増えるなら、もう片方の向きで写す（形はそのまま）
+- **旋律を見ない形の向き**（交互・ジグザグ・内外）: 候補の形を左右反転したほうが旋律に合うなら反転して置く
+
+「旋律と逆」の数え方は気持ちよさの物差しと同じ（音高が取れている所で 0.08 以上動き、レーンが1以上動く。`againstMelodyMove`）。
+実測は ROADMAP の段4の後ろ。検査: `node tools/mode/rhythm-chart-rev15-check.js`（形の向きを止めると数字の項目でも落ちることを確認済み）。
+
 ### 3.1.6 譜面文法 — 形を「順位」でなく「点数」で選ぶ（2026-09-07）
 
 `shapeCandidatesFor` は候補を**音との合いかたの順**に並べる。ここまでは以前と同じ。
@@ -1943,6 +1954,7 @@ maimai の無理配置の分類など。動画そのものは見ていない）�
 | 3.1.26 悪い区間だけ別の候補に替える | `rhythm-chart-v3-splice.js`（`spliceCharts` / `spliceGate`）＋ パイプラインの差し替えの段（Rev.12） | `rhythm-chart-v3-splice-check.js` |
 | 3.1.27 旋律の有無 | `rhythm-chart-focus.js` の `melodyPresence`・生成器の Rev.13 | `rhythm-chart-rev13-check.js` |
 | 3.1.28 手と種類の仕上げ | 生成器の `rev14`（終点フリック・HOLD の太さ・候補の同点崩し）＋ 手のモデルの `setHandModelFlags` / `handModelFlagsForRevision` ＋ 自動修正の曲線の確かめ | `rhythm-chart-rev14-check.js` |
+| 3.1.29 旋律の上下に沿って動かす | 生成器の `rev15`（`againstMelodyMove`・継ぎ目の費用・写しと形の向き） | `rhythm-chart-rev15-check.js` |
 | 3.1.6 譜面文法 / 3.1.7 指紋 | `rhythm-chart-v3-patterns.js` の `rankShapes` / 生成器の `motifKeyOf` | `rhythm-chart-quality-report.js`（語彙・偏り・フレーズ一致） |
 | 10. 品質の6軸 | `rhythm-chart-quality-report.js` | パイプラインのゲート |
 | 2. レイヤリング | `rhythm-audio-analyze-v3.js`（音の性格）＋ V3生成 | `rhythm-audio-analyze-v3-check.js` |
