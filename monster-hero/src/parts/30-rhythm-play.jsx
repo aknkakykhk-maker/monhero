@@ -1618,7 +1618,7 @@ scheduleTick();};
 </section>
 {/* アシストモード・ミラー譜面で遊んだことを、結果の上で言う。アシストは記録に残らないことも添える */}
 {(result.assist||result.mirror)&&<div data-rhythm-result-play-mode className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">{result.assist&&<span className="rounded-full border border-emerald-300/60 bg-emerald-500/15 px-2 py-0.5 text-emerald-100">🛟 アシストモード（スコア8割・記録には残りません{Number(result.assistGuarded)>0?`・ガード${Number(result.assistGuarded)}回`:''}）</span>}{result.mirror&&<span className="rounded-full border border-sky-300/60 bg-sky-500/15 px-2 py-0.5 text-sky-100">↔ ミラー譜面</span>}</div>}
-<section data-rhythm-result-score-card className="mt-2 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">
+<section data-rhythm-result-score-card className="mt-2 min-w-0 rounded-2xl border border-white/10 bg-slate-900/85 px-3 py-2 [@container(min-width:680px)]:col-start-1 [@container(min-width:680px)]:mt-0">
   {/* 2026-09-26 に見本の大きさへ(ユーザー指示「見本のほうがサイズ感が見やすい」)。SCOREの数字を大きく、
       縦持ちでも左にマスモンを出す(横に広いときは左の欄に出ているので、ここでは出さない) */}
   <div className="flex items-center gap-2">
@@ -1643,7 +1643,7 @@ scheduleTick();};
 {(()=>{const before=runRef.current?.startBest;const prev=before&&before.played?Number(before.bestScore)||0:0;if(!(prev>0))return null;const diff=view.score-prev;return <p data-rhythm-best-diff className={`text-[11px] font-black tabular-nums ${diff>0?'text-emerald-300':'text-slate-400'}`}>{diff>0?`前の自己ベストから +${diff.toLocaleString()}`:diff===0?'自己ベストと同じスコア':`自己ベストまで あと ${(-diff).toLocaleString()}`}</p>;})()}
 </section>
 </div>
-<div data-rhythm-result-summary-judgments className="mt-2 [@container(min-width:680px)]:col-start-2 [@container(min-width:680px)]:row-start-2 [@container(min-width:680px)]:row-span-2 [@container(min-width:680px)]:mt-0">
+<div data-rhythm-result-summary-judgments className="mt-2 min-w-0 [@container(min-width:680px)]:col-start-2 [@container(min-width:680px)]:row-start-2 [@container(min-width:680px)]:row-span-2 [@container(min-width:680px)]:mt-0">
 {/* 判定の割合を1本の帯で。数字の表を読む前に、どの判定が多かったかが色でひと目で分かる。
     色は遊んでいるときに弾ける光と同じ(rhythmJudgmentColor)。0件の判定は帯に出さない */}
 {(()=>{const total=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(view.counts[id])||0),0);if(!(total>0))return null;return <div data-rhythm-result-ratio aria-hidden="true" className="mb-1.5 flex h-2 w-full overflow-hidden rounded-full bg-slate-800">{RHYTHM_JUDGMENT_IDS.map(id=>{const count=Number(view.counts[id])||0;return count>0?<i key={id} data-rhythm-result-ratio-part={id} className="block h-full" style={{width:`${(count/total*100).toFixed(2)}%`,background:rhythmJudgmentColor(id)}}/>:null;})}</div>;})()}
