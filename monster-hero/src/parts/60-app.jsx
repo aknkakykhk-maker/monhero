@@ -7867,6 +7867,9 @@ function MonsterHeroGame() {
     // チャレンジの mh_clears_* と極限の mh_extreme_clears_* はどちらも書き換えない。
     // 極限難易度で遊んでも極限チャレンジのクリア数には数えない
     if (speciesChallengeBattleRunRef.current) {
+      // ミッションの「種族チャレンジをクリア」はクラシック・タクティクスどちらでも進む。
+      // 保存しない確認の周回では進めない
+      if (speciesChallengeSaveRunRef.current) await saveMissionProgress('speciesClear');
       addAssistantBond('clear');
       return;
     }
@@ -7878,6 +7881,9 @@ function MonsterHeroGame() {
       const nextTactics = (Number(tacticsRecordsOf(runMode).clears[tacticsDiff]) || 0) + 1;
       bumpTacticsRecord(runMode, 'clears', tacticsDiff, nextTactics);
       await storeSet(clearCountKey(runMode, tacticsDiff), nextTactics, false);
+      // ミッションはクラシックと共通(2026-09-26 ユーザー指示「タクティクスも共通にする」)。
+      // 記録の置き場は分けたまま、ミッションの数え方だけクラシックの同じモードへそろえる
+      await saveMissionProgress(extremeRunRef.current ? 'extremeClear' : isProMode(runMode) ? 'proClear' : 'challengeClear');
       addAssistantBond('clear');
       return;
     }
@@ -8823,9 +8829,12 @@ function MonsterHeroGame() {
       modeRun:{key:'modeRuns',daily:false,weekly:false,monthly:true},
       challengeClear:{key:'challengeClears',daily:true,weekly:true},
       quickClear:{key:'quickClears',daily:true,weekly:true},
-      proClear:{key:'proClears',daily:true,weekly:true},
+      proClear:{key:'proClears',daily:true,weekly:true,monthly:true},
       extremeClear:{key:'extremeClears',daily:false,weekly:true},
       itemUse:{key:'itemUses',daily:true,weekly:true},
+      // 種族チャレンジのクリアと、モンヒロビートで最後まで演奏した曲の数(2026-09-26)
+      speciesClear:{key:'speciesClears',daily:true,weekly:true,monthly:true},
+      rhythmPlay:{key:'rhythmPlays',daily:true,weekly:true,monthly:true},
     }[event];
     if(!rule)return;
     const next=normalizeMissions(missionsRef.current);
@@ -12156,7 +12165,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // デバッグ・練習・保存しない種族チャレンジはdebugBattleRefで除外される。
     if (!enemy && !debugBattleRef.current) {
       if (isQuickMode(runMode)) void saveMissionProgress('quickRun');
-      else if (runMode===BATTLE_MODE_CHALLENGE&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');
+      // タクティクスチャレンジもクラシックのチャレンジと同じ項目へ数える(2026-09-26)
+      else if ((runMode===BATTLE_MODE_CHALLENGE||runMode===BATTLE_MODE_TACTICS)&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');
       else void saveMissionProgress('modeRun');
     }
     setTimeout(()=>{setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},battleMs(150));
@@ -14987,6 +14997,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 最後まで演奏したこの場でだけ行う。途中でやめたときは onComplete を通らないので何も入らない
           // (1秒だけ演奏してやめる、で稼げないようにするため)。
           // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
+          // ミッションの「モンヒロビートで演奏する」。曲えらびから遊んで最後まで演奏した曲だけ数える
+          // (練習・タイミング調整・デバッグからの演奏は数えない)
+          if(rhythmPlay.from==='demo')await saveMissionProgress('rhythmPlay');
           if(rhythmPlay.from!=='tutorial'){
             const baseLoops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
             const loopScale=rhythmPlayRunLoopScaleFor(rhythmPlay.song);
