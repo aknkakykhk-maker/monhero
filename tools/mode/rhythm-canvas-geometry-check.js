@@ -132,7 +132,7 @@ check('HOLD 帯の外周が DOM 版の clipPath と一致(0.05px 以内・点の
 check('SLIDE 帯の区切りが DOM 版の polygon と一致(0.05px 以内・数も同じ)',worstSlide<=.05,`最大ズレ ${worstSlide.toFixed(3)}px`);
 check('終わりの横棒の中心と幅が DOM 版と一致(0.05px 以内)',worstEnd<=.05,`最大ズレ ${worstEnd.toFixed(3)}px`);
 check('触って HOLD に化けた FLICK には帯も横棒も付かない(終端60秒先の帯を渡しても)',touchedLeak===0,`${touchedLeak}件で帯か横棒が出た`);
-check('canvas 版は粒の種類を元の種類(rhythmNoteVisualType)で決める',/HEADS\[rhythmNoteVisualType\(note\)\]/.test(source)&&/rhythmNoteIsHold\(note\)&&height>0/.test(source));
+check('canvas 版は粒の種類を元の種類(rhythmNoteVisualType)で決める',/const type=rhythmNoteVisualType\(note\);[\s\S]{0,240}return HEADS\[type\]\|\|HEADS\.TAP;/.test(source)&&/rhythmNoteIsHold\(note\)&&height>0/.test(source));
 // 判定・入力には触っていない
 check('canvas 版は判定・入力の関数を呼ばない',!/rhythmNoteCanvasGeometry[\s\S]*?\n};/.test(source)||!/const rhythmNoteCanvasGeometry=[\s\S]*?\n};/.exec(source)[0].match(/rhythmMatchInputBatch|applyJudgment|rhythmJudge/));
 console.log(failed?`\n${failed}件のNGがあります`:'\nOK: canvas 版の座標は DOM 版と一致');
