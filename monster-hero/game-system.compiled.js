@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 352801080322e128
+// source-sha256: 09992fe0ad8e689c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 11:25";
+const BUILD_DATE = "2026-09-26 11:37";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4941,6 +4941,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   sideMonsterOpacity: 'NORMAL',
   sideMonsterMotion: 'NORMAL',
   sideMonsterAbilityHighlight: true,
+  monsterCutIn: true,
   songPreviewEnabled: true,
   quietDuringPlay: false,
   frameRateMode: 'DEVICE',
@@ -4992,6 +4993,7 @@ const normalizeRhythmSettings = value => {
     sideMonsterOpacity: RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity) ? source.sideMonsterOpacity : DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion: RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion) ? source.sideMonsterMotion : DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight: bool('sideMonsterAbilityHighlight'),
+    monsterCutIn: bool('monsterCutIn'),
     songPreviewEnabled: bool('songPreviewEnabled'),
     quietDuringPlay: bool('quietDuringPlay'),
     frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode,
@@ -20996,6 +20998,8 @@ const RhythmOptions = ({
     full: true
   }), field('マスモン｜能力中に光らせる', toggle('sideMonsterAbilityHighlight'), null, {
     full: true
+  }), field('マスモン｜能力のカットイン', toggle('monsterCutIn'), 'マスモンの能力が出たとき、画面の端からそのマスモンの絵が差し込まれます。ノーツより後ろに出るので、ノーツは隠れません。「軽量モード」と演出量「最小」では出ません。', {
+    full: true
   }))), tab === 'volume' && React.createElement("section", {
     "data-rhythm-options-panel": "volume",
     className: card
@@ -22197,7 +22201,6 @@ const RhythmTapTest = ({
     mountedRef = useRef(false),
     glowNodesRef = useRef(null),
     liveTouchSubLanesRef = useRef([]);
-  const laneGlowStateRef = useRef(null);
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
   const calibrationBannerRef = useRef(null),
@@ -22324,6 +22327,7 @@ const RhythmTapTest = ({
       cancelled = true;
     };
   }, [canvasNotes, monsterSignature, monsterFaceHidden, settings.lightweightMode, settings.effectAmount]);
+  const RHYTHM_LANE_PRESS_GRADIENT = 'linear-gradient(to bottom,rgba(96,165,250,.16) 0%,rgba(96,165,250,.28) 40%,rgba(125,211,252,.44) calc(100% - var(--mh-judgment-line-bottom,20%) - 14%),rgba(224,242,254,.74) calc(100% - var(--mh-judgment-line-bottom,20%) - 3%),rgba(248,250,252,.9) calc(100% - var(--mh-judgment-line-bottom,20%)),rgba(147,197,253,.5) calc(100% - var(--mh-judgment-line-bottom,20%) + 4%),rgba(96,165,250,.34) 100%)';
   const laneElements = useMemo(() => React.createElement(React.Fragment, null, React.createElement("div", {
     className: "pointer-events-none absolute inset-0 grid grid-cols-5"
   }, Array.from({
@@ -22359,10 +22363,7 @@ const RhythmTapTest = ({
     className: "absolute inset-0 opacity-0",
     style: {
       clipPath: rhythmSubLanePolygon(subLane),
-      background: 'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',
-      boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)' : 'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',
-      filter: settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'brightness(1.08)' : 'brightness(1.22)',
-      transition: settings.lightweightMode ? 'none' : 'opacity 45ms linear'
+      background: RHYTHM_LANE_PRESS_GRADIENT
     }
   })))), [settings.lightweightMode, settings.effectAmount]);
   const monsterForNote = note => {
@@ -22441,6 +22442,32 @@ const RhythmTapTest = ({
       })));
     }));
   }, [monsterSignature, settings.sideMonsterOpacity, settings.sideMonsterMotion, settings.lightweightMode, sideArtUrls]);
+  const cutInRefs = useRef([]);
+  const cutInOn = settings.monsterCutIn !== false && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
+  const cutInElements = useMemo(() => {
+    if (!cutInOn) return null;
+    return React.createElement("div", {
+      "data-rhythm-cutin": true,
+      "aria-hidden": "true"
+    }, monsters.map((monster, index) => {
+      if (!monster || !sideArtUrls[index]) return null;
+      return React.createElement("div", {
+        key: index + 1,
+        ref: el => {
+          cutInRefs.current[index] = el;
+        },
+        "data-rhythm-cutin-slot": index + 1,
+        "data-side": index % 2 === 0 ? 'left' : 'right'
+      }, React.createElement("i", {
+        "data-rhythm-cutin-band": true
+      }), React.createElement("img", {
+        src: sideArtUrls[index],
+        alt: "",
+        draggable: false,
+        decoding: "async"
+      }));
+    }));
+  }, [cutInOn, monsterSignature, sideArtUrls]);
   const abilityTimerRef = useRef(null),
     abilityRevisionRef = useRef(0),
     abilityBadgeRef = useRef(null);
@@ -22652,8 +22679,6 @@ const RhythmTapTest = ({
   const stopFrame = useCallback(() => {
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     frameRef.current = null;
-    const area = playAreaRef.current;
-    if (area && area.dataset.rhythmGlowLive) delete area.dataset.rhythmGlowLive;
   }, []);
   const clearJudgmentTimer = useCallback(() => {
     if (judgmentTimerRef.current !== null) clearTimeout(judgmentTimerRef.current);
@@ -22962,6 +22987,13 @@ const RhythmTapTest = ({
         if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.abilityOwners.KONJO = slot;
         run.abilityFlashSlot = slot;
         run.abilityFlashUntilMs = songTimeMs + RHYTHM_SIDE_MONSTER_FLASH_MS;
+        if (cutInOn) {
+          const cutIn = cutInRefs.current[slot - 1];
+          if (cutIn) rhythmRestartAnimations([{
+            el: cutIn,
+            attr: 'rhythmCutinPlay'
+          }]);
+        }
       }
     }
     const calculatedScore = Math.floor(rhythmCalculateScore({
@@ -23049,7 +23081,7 @@ const RhythmTapTest = ({
     }
     if (showAbilityFlash) scheduleAbilityClear();
     if (_judgeT0) RHYTHM_PERF.judge(performance.now() - _judgeT0, !!monster);
-  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, settings.paceDisplay, settings.timingDisplay, tutorial, calibrating, assistOn, luckOn, showLuckyBanner]);
+  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, settings.paceDisplay, settings.timingDisplay, tutorial, calibrating, assistOn, luckOn, showLuckyBanner, cutInOn]);
   const finish = useCallback(() => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
@@ -23233,25 +23265,6 @@ const RhythmTapTest = ({
         maxDpr: settings.effectAmount === 'MINIMAL' ? 2 : undefined,
         sizeScale: settings.noteSize / 100
       });
-      if (canvasReady && settings.laneGlow !== 'NONE') {
-        const glowArea = playAreaRef.current;
-        let glowNodes = glowNodesRef.current;
-        if (glowArea && glowArea.dataset.rhythmGlowLive !== '1') glowArea.dataset.rhythmGlowLive = '1';
-        if (glowArea && (!glowNodes || !glowNodes.length || !glowNodes[0].isConnected)) glowNodes = glowNodesRef.current = Array.from(glowArea.querySelectorAll('[data-rhythm-sublane-feedback]'));
-        const glow = laneGlowStateRef.current || (laneGlowStateRef.current = {
-          levels: new Float32Array(10),
-          lastOn: new Float64Array(10).fill(-1e9)
-        });
-        const glowGain = settings.laneGlow === 'LOW' ? .35 : 1;
-        for (let sub = 0; sub < 10; sub++) {
-          const el = glowNodes && glowNodes[sub],
-            on = !!el && (el.dataset.pressed === 'true' || el.dataset.rhythmTouchspan === 'true');
-          if (on) glow.lastOn[sub] = frameNowMs;
-          const since = frameNowMs - glow.lastOn[sub];
-          glow.levels[sub] = on ? glowGain : since < RHYTHM_LANE_GLOW_FADE_MS ? glowGain * (1 - since / RHYTHM_LANE_GLOW_FADE_MS) : 0;
-        }
-        RHYTHM_CANVAS_RENDERER.drawLaneGlow(glow.levels, (travel.judgmentY + travel.noteHeight / 2) / travel.rect.height);
-      }
       const paintCanvasNote = note => {
         const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && rhythmNoteHasBody(note) && songTimeMs < rhythmReleaseTargetMs(note);
         const clearFlash = note.done && Number.isFinite(note._rhythmClearAt) && songTimeMs - note._rhythmClearAt < RHYTHM_CLEAR_FLASH_MS;
@@ -24654,7 +24667,6 @@ const RhythmTapTest = ({
   }, "DOWN")), React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
-    "data-rhythm-canvas-glow": canvasNotes ? '1' : undefined,
     "data-rhythm-counting": countdownStep !== null ? '1' : undefined,
     "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
@@ -24697,7 +24709,7 @@ const RhythmTapTest = ({
     "data-rhythm-stage-pulse": true,
     "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
     "aria-hidden": "true"
-  }), sideMonsterElements, React.createElement("div", {
+  }), sideMonsterElements, cutInElements, React.createElement("div", {
     ref: screenFlashRef,
     "data-rhythm-screen-flash": true,
     "aria-hidden": "true"

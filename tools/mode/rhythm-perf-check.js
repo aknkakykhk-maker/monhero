@@ -206,7 +206,10 @@ check('プレイ開始でstyleを戻すとき、覚えている値も一緒に�
 check('サブレーン発光に will-change を付けっぱなしにしない',
   !gameSrc.includes("willChange:settings.lightweightMode?'auto':'opacity'")
   &&gameSrc.includes('data-rhythm-sublane-feedback={subLane}')
-  &&gameSrc.includes("transition:settings.lightweightMode?'none':'opacity 45ms linear'"));
+  // 2026-09-26、消え方を CSS(rhythm-mode.js)へ移した(押した瞬間40ms・離すと190msでふわっと消える)。
+  // 部品にはぼかしの影・filter を付けない(押すたびのぼかしの描き直しが重さの原因だった)
+  &&data.includes('[data-rhythm-sublane-feedback]{transition:opacity 190ms ease-out}')
+  &&!/data-rhythm-sublane-feedback=\{subLane\}[^>]{0,400}(boxShadow|filter):/.test(gameSrc));
 // プレイエリア全面サイズのSVGは、幅・高さ・viewBoxが遊んでいるあいだ変わらない。
 // 毎フレーム書き直すと中身の再構築を招くので、変わったときだけ書く。
 check('SLIDE帯SVGの変わらない値(幅・viewBox)を毎フレーム書き直さない',

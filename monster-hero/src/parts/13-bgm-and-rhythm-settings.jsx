@@ -420,6 +420,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,
+  // マスモンの能力が出たときのカットイン(2026-09-26)。新しい項目なので、保存値に無い人は既定(出す)で補う
+  monsterCutIn:true,
   // 曲えらびで、選んでいる曲を鳴らすかどうか(2026-09-05)。
   // 既存の保存値には無いので、読み込み時に既定(ON)で補われる。既存のキーは変えない。
   songPreviewEnabled:true,
@@ -483,6 +485,7 @@ const normalizeRhythmSettings = value => {
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight:bool('sideMonsterAbilityHighlight'),
+    monsterCutIn:bool('monsterCutIn'),
     songPreviewEnabled:bool('songPreviewEnabled'),
     quietDuringPlay:bool('quietDuringPlay'),
     frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
