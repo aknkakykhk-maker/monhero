@@ -61,6 +61,19 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-09-26 ユーザー指摘「ただ適当にフリックとかを置くじゃなくて、譜面にあわせてあった配置やノーツの種類があるとおもう」。
+    // 譜面の作り方の版6(音の性格でノーツの種類を決める)で公開中の23曲を作り直した(ユーザー判断)
+    date: "2026-09-26 16:11", type:'update', group:'rhythm', title:'モンヒロビート: フリックや同時押しが、曲に合う場所に来るようになりました', status:'new',
+    items:[
+      'モンヒロビートのすべての曲の譜面を新しくしました。',
+      'フリックは、音がすっと止まる所・歌やメロディの語尾・シンバルが鳴る所に来るようになりました。',
+      '同時押しは、シンバルが鳴る所や大きな一発の所から先に置くようになりました。',
+      'MASTERの横フリックは、メロディが上がる音は右、下がる音は左に向くようになりました。',
+      'それにあわせて、曲によってはレベルが少し上がったり下がったりしています。いまのレベルは曲えらびで確かめられます。',
+      'これまでのスコア・自己ベスト・クリアの記録はそのまま残ります。',
+    ],
+  },
+  {
     date: "2026-09-26 16:10", type:'update', group:'rhythm', title:'モンヒロビートで、動きを軽くする「描画方式」を選べるようになりました', status:'new',
     items:[
       'オプションの「システム」に「描画方式」が加わりました。「Canvas」と「WebGL」から選べます。',
@@ -604,7 +617,7 @@ const CHANGELOG = [
     image: 'images/song-art/makutsu-no-senritsu.jpg?v=fdac185e6f69',
     items:[
       'モンヒロビートに「魔窟の旋律」（2分28秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.17 ／ EXPERT Lv.22 ／ MASTER Lv.28 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.16 ／ EXPERT Lv.21 ／ MASTER Lv.26 です。',
       'ノーツ数は 271 ／ 313 ／ 434 ／ 501 ／ 513 です。',
       '暗い洞窟の奥へ進んでいくような、重くて緊張感のある曲です。',
     ],
@@ -616,8 +629,8 @@ const CHANGELOG = [
     image: 'images/song-art/senjou-no-shippuu.jpg?v=50e3ed20ee08',
     items:[
       'モンヒロビートに「戦場の疾風」（3分13秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.15 ／ EXPERT Lv.21 ／ MASTER Lv.30 です。',
-      'ノーツ数は 313 ／ 355 ／ 493 ／ 597 ／ 665 です。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.20 ／ MASTER Lv.29 です。',
+      'ノーツ数は 313 ／ 355 ／ 493 ／ 597 ／ 668 です。',
       '戦いの始まりを思わせる、疾走感のある曲です。',
     ],
     assistantNotice: { id:'update_notice_senjou_no_shippuu_v1', type:'content' },
@@ -2211,8 +2224,8 @@ const CHANGELOG = [
       'モンヒロビートに「もう一つの世界へ」（3分47秒）を追加しました。曲えらびからすぐ遊べます。',
       'この曲は、ドラさんが自作しているゲーム「CREATE MONSTERS（クリエイトモンスターズ）」のために作られた曲です。本人の許可をいただいて入れさせてもらいました。',
       'ブラウザでそのまま遊べるゲームだそうです。下のボタンから開けるので、この曲が気に入った方はのぞいてみてください。',
-      'レベルは EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.13 ／ EXPERT Lv.18 ／ MASTER Lv.24 です。',
-      'ノーツ数は 327 ／ 372 ／ 535 ／ 634 ／ 739 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.13 ／ EXPERT Lv.19 ／ MASTER Lv.25 です。',
+      'ノーツ数は 327 ／ 372 ／ 535 ／ 634 ／ 732 です。',
       '3分47秒で、モンヒロビートでいちばん長い曲になりました。ゆったり始まって終盤で盛り上がるので、最後まで走り切る手応えがあります。',
       '音の大きさはほかの曲と同じくらいにそろえてあります。',
     ],
@@ -2394,8 +2407,8 @@ const CHANGELOG = [
     items:[
       'モンヒロビートに「The City Beneath the Comets」（2分40秒）を追加しました。曲えらびからすぐ遊べます。',
       'BPM170の曲です。音数が多く、MASTERはいちばん詰まったところで4秒に37回押します。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.12 ／ HARD Lv.18 ／ EXPERT Lv.23 ／ MASTER Lv.36 です。',
-      'ノーツ数は 291 ／ 337 ／ 467 ／ 572 ／ 671 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.11 ／ HARD Lv.19 ／ EXPERT Lv.24 ／ MASTER Lv.35 です。',
+      'ノーツ数は 291 ／ 337 ／ 467 ／ 568 ／ 656 です。',
       '長押し・スライド・フリックもひととおり入っています（MASTERは長押し23・スライド18・フリック26）。',
       '音の大きさはほかの曲と同じ -14 LUFS にそろえてあります。',
     ],
@@ -2929,8 +2942,8 @@ const CHANGELOG = [
     items:[
       'モンヒロビートに「FREEDOM DiVE↓」（2分25秒）を追加しました。曲えらびからすぐ遊べます。',
       'BPM222.22の高速曲です。5つの難易度すべてが、いままででいちばん難しい譜面になりました。',
-      'レベルは EASY Lv.15 ／ NORMAL Lv.22 ／ HARD Lv.28 ／ EXPERT Lv.36 ／ MASTER Lv.49 です。',
-      'ノーツ数は 371 ／ 481 ／ 554 ／ 743 ／ 815 です。',
+      'レベルは EASY Lv.15 ／ NORMAL Lv.23 ／ HARD Lv.27 ／ EXPERT Lv.37 ／ MASTER Lv.48 です。',
+      'ノーツ数は 371 ／ 481 ／ 554 ／ 742 ／ 814 です。',
       'この曲はEASYとNORMALでも16分（最短0.067秒の間隔）が出ます。ほかの曲では8分までなので、いちばん大きな違いはここです。ただし押す種類は難易度ごとの決まりどおりで、EASYにフリックやスライドは出ません。',
       'MASTERは毎秒5.74ノーツで、全曲でいちばん濃い譜面です。いちばん詰まったところは4秒で36回押します。',
       'Lv.の上限（これまで50）をなくしました。Lv.は「忙しさ」にそのまま比例する数字なので、上限で頭打ちになると、もっと難しい曲が来たときに区別がつかなくなるためです。ほかの曲のLv.は1つも変わっていません。',
@@ -3897,7 +3910,7 @@ const CHANGELOG = [
     assistantNotice: { id:'update_notice_nothing_without_you_v1', type:'content' },
     items:[
       'モンヒロビートの16曲目として「Nothing Without You」を追加しました。3分09秒の全尺で遊べます。',
-      '難易度はEASY Lv.6 / NORMAL Lv.7 / HARD Lv.12 / EXPERT Lv.19 / MASTER Lv.25。ノーツ数は297 / 342 / 460 / 566 / 661です。',
+      '難易度はEASY Lv.7 / NORMAL Lv.8 / HARD Lv.11 / EXPERT Lv.19 / MASTER Lv.25。ノーツ数は290 / 344 / 464 / 566 / 661です。',
       '明るい曲調と3分を超える長さに合わせて、詰めこみすぎない密度にしました。最後まで気持ちよく押せるはずです。',
       '曲えらびにジャケットが出ます。ジャケットをタップすると大きく見られます。',
       '音の大きさは、ほかの曲とそろえてあります。',
@@ -4073,7 +4086,7 @@ const CHANGELOG = [
     assistantNotice:{id:'update_notice_crossing_field_v1',type:'content'},
     items:[
       '「crossing field」（1分29秒）を追加しました。EASY・NORMAL・HARD・EXPERT・MASTERの5難易度で遊べます。曲えらびの一覧にジャケットの絵も出ます。',
-      'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.14 ／ EXPERT Lv.20 ／ MASTER Lv.27。ノーツ数は 163 ／ 190 ／ 260 ／ 313 ／ 360 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.15 ／ EXPERT Lv.20 ／ MASTER Lv.25。ノーツ数は 163 ／ 190 ／ 260 ／ 309 ／ 363 です。',
       '179BPMと速い曲なので、上の難易度ほど手が忙しくなります。MASTERのLv.27は「禁断のレジスタンス」と同じで、いまある曲のまん中あたりです。',
       '自己ベストも全国ランキングも、ほかの曲と同じように記録されます。',
     ],
@@ -4093,7 +4106,7 @@ const CHANGELOG = [
     assistantNotice:{id:'update_notice_monster_hero_another_v1',type:'content'},
     items:[
       '「Monster Hero -Another-」（約155秒）を追加しました。本編ですでに使っている別テイクのBGMをそのまま使い、音源は複製していません。ジャケットは「Monster Hero」と同じ絵です。',
-      'EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.13 ／ EXPERT Lv.18 ／ MASTER Lv.22。ノーツ数は 225 ／ 257 ／ 354 ／ 437 ／ 495 です。',
+      'EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.18 ／ MASTER Lv.22。ノーツ数は 225 ／ 257 ／ 354 ／ 437 ／ 500 です。',
       '譜面はAnotherの音源そのものを解析して作っています（約171.1BPM・4拍子）。元の「Monster Hero」の譜面コピーではありません。',
       '自己ベスト・全国ランキングは「Monster Hero」と別の曲として記録されます。EXPERT以上は、同じ曲の1つ下の難易度をクリアすると遊べます。',
     ],
@@ -4160,7 +4173,7 @@ const CHANGELOG = [
     assistantNotice:{id:'update_notice_kindan_no_resistance_v1',type:'content'},
     items:[
       '「禁断のレジスタンス」（2分43秒）を追加しました。EASY・NORMAL・HARD・EXPERT・MASTERの5難易度で遊べます。曲えらびの一覧にジャケットの絵も出ます。',
-      'レベルは EASY Lv.8 ／ NORMAL Lv.11 ／ HARD Lv.14 ／ EXPERT Lv.22 ／ MASTER Lv.31。ノーツ数は 289 ／ 334 ／ 453 ／ 551 ／ 639 です。',
+      'レベルは EASY Lv.8 ／ NORMAL Lv.10 ／ HARD Lv.15 ／ EXPERT Lv.22 ／ MASTER Lv.28。ノーツ数は 289 ／ 334 ／ 453 ／ 551 ／ 638 です。',
       '譜面は曲そのものを解析して作っています（180.0BPM・4拍子）。速くて打点の多い曲なので、MASTERは1秒あたり3.86ノーツと、いまある曲の中でいちばん詰まった譜面になりました。EXPERT以上は、同じ曲の1つ下の難易度をクリアすると遊べます。',
       'レベルは手で決めず、譜面から計算した値をそのまま使っています。自己ベストも全国ランキングも、ほかの曲と同じように記録されます。',
     ],
