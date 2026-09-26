@@ -554,6 +554,48 @@ const allOnsets=[...onsetByGrid.values()].sort((a,b)=>a.grid-b.grid);
 // 層の解析が無い・いまの解析ファイルと合わない(作り直された)曲では効かない(黙って別の格子で数えないため)。
 // Rev.7 の作法 layer_follow(区切りの盛り上がりだけで歌か打楽器かを決める簡易版)は、ここと二重に効くので止める。
 const FOCUS_SCALE=.35;
+// Rev.10: 動きの使い回しを避ける(ROADMAP の段4)。形の名前ではなく、置いた結果のレーンの動きの並び(ノーツ5個ぶん)が
+// 直前8小節の「リズムの違う所」と同じになる置き方に費用を足す。リズムも同じなら「同じフレーズは同じ形」なので数えない。
+// 物差し(rhythm-chart-feel-report.js の単調さ)と同じ数え方。遊んだ感想「似たようなレーン移動・似た配置が続く」への手当て
+const motionVariety=chartRevision>=10;
+const MOTION_GRAM=4,MOTION_WINDOW_BARS=8,MOTION_REPEAT_COST=1.5,MOTION_EXTRA_ATTEMPTS=3;
+const laneCenterOfNote=note=>(Number(note.subLane)+Number(note.subLaneWidth||2)/2)/2;
+const motionStepOf=delta=>{const size=Math.abs(delta);return size<.5?0:size<1.5?1:size<2.5?2:3;};
+// これまでに置いたノーツ(placed・時刻順)に試しのノーツ(trial)を続けたとき、試しのノーツを含む並びのうち
+// 直前8小節に「同じ動き・違うリズム」で出ていたものの数
+function motionRepeatsFor(placed,trial){
+  if(!trial.length)return 0;
+  const from=trial[0].grid-MOTION_WINDOW_BARS*BAR-BEAT*4;
+  const flow=[];
+  for(const note of placed.filter(n=>n.grid>=from).concat(trial)){
+    const center=laneCenterOfNote(note),last=flow[flow.length-1];
+    if(last&&last.grid===note.grid){last.sum+=center;last.count++;continue;}
+    flow.push({grid:note.grid,sum:center,count:1});
+  }
+  const tokens=[];
+  for(let i=1;i<flow.length;i++){
+    const delta=flow[i].sum/flow[i].count-flow[i-1].sum/flow[i-1].count;
+    tokens.push({motion:Math.sign(delta)*motionStepOf(delta),gap:flow[i].grid-flow[i-1].grid,grid:flow[i].grid});
+  }
+  const grams=[];
+  for(let end=MOTION_GRAM-1;end<tokens.length;end++){
+    const part=tokens.slice(end-MOTION_GRAM+1,end+1);
+    if(part.every(token=>token.motion===0))continue;
+    grams.push({motion:part.map(t=>t.motion).join(','),rhythm:part.map(t=>t.gap).join(','),fromGrid:part[0].grid,grid:part[part.length-1].grid});
+  }
+  let repeats=0;
+  for(let i=0;i<grams.length;i++){
+    const gram=grams[i];
+    if(gram.grid<trial[0].grid)continue;
+    for(let k=i-1;k>=0;k--){
+      const earlier=grams[k];
+      if(gram.grid-earlier.grid>MOTION_WINDOW_BARS*BAR)break;
+      if(earlier.grid>=gram.fromGrid)continue;
+      if(earlier.motion===gram.motion&&earlier.rhythm!==gram.rhythm){repeats++;break;}
+    }
+  }
+  return repeats;
+}
 const focusData=(()=>{
   if(!(chartRevision>=9))return null;
   const layersFile=authoring(`${dashed}-v3-layers.json`);
@@ -1388,6 +1430,17 @@ const buildChart=(difficulty,options={})=>{
     const widths=list.map(event=>widthFor(event.onset,event.kind));
     const pattern0=null;
     let best=null,offsets=null,patternId=null,mirrored=false,motifSource=null,phraseCopyOf=null;
+    // 採った候補の記録(形の記憶・写しの数)。Rev.10 で選び直したときも同じ処理を通す
+    const acceptAttempt=attempt=>{
+      if(attempt.fromMemory){remembered.count=attempt.count;motifSource=remembered.firstGrid;}
+      else if(attempt.fromCopy){phraseCopyCount.placed++;phraseCopyCount.notes+=length;phraseCopyOf=attempt.copyOf;}
+      else{
+        const memo={patternId,offsets:offsets.slice(),mirrored:false,count:1,firstGrid:grids[0],base:best.base};
+        if(memoryKey&&!shapeMemory.has(memoryKey))shapeMemory.set(memoryKey,memo);
+        if(length>=3&&!motifMemory.has(motifKey))motifMemory.set(motifKey,memo);
+      }
+    };
+    let held=null,heldTries=0;
     for(const attempt of attempts){
       offsets=attempt.offsets;patternId=attempt.patternId;mirrored=attempt.mirrored;
       const pattern=patternId?PATTERN_BY_ID[patternId]:null;
@@ -1453,19 +1506,26 @@ const buildChart=(difficulty,options={})=>{
         const recentPlaced=placed.filter(note=>note.grid>=windowFrom);
         const sim=simulateNotes(recentPlaced.concat(trial),timing,{beam:4});
         if(sim.issues.some(issue=>issue.severity==='impossible'&&issue.noteIndex>=recentPlaced.length)){continue;}
-        if(!best||scored.cost<best.cost)best={...scored,base,trial};
+        // Rev.10: 動きの使い回し(写しと形の記憶はわざと同じにしているので数えない)
+        const mono=motionVariety&&!attempt.fromMemory&&!attempt.fromCopy?motionRepeatsFor(placed,trial):0;
+        const total=scored.cost+mono*MOTION_REPEAT_COST;
+        if(!best||total<best.total)best={...scored,total,mono,base,trial};
       }
       if(best){
-        if(attempt.fromMemory){remembered.count=attempt.count;motifSource=remembered.firstGrid;}
-        else if(attempt.fromCopy){phraseCopyCount.placed++;phraseCopyCount.notes+=length;phraseCopyOf=attempt.copyOf;}
-        else{
-          const memo={patternId,offsets:offsets.slice(),mirrored:false,count:1,firstGrid:grids[0],base:best.base};
-          if(memoryKey&&!shapeMemory.has(memoryKey))shapeMemory.set(memoryKey,memo);
-          if(length>=3&&!motifMemory.has(motifKey))motifMemory.set(motifKey,memo);
+        // Rev.10: どの起点でも動きを使い回す形なら、次の候補の形も MOTION_EXTRA_ATTEMPTS 個まで試し、
+        //   使い回しのいちばん少ないもの(同じなら元の順位が上のもの)を採る
+        if(motionVariety&&best.mono>0&&!attempt.fromMemory&&!attempt.fromCopy){
+          if(!held||best.mono<held.best.mono)held={best,attempt,offsets,patternId,mirrored};
+          if(heldTries<MOTION_EXTRA_ATTEMPTS){heldTries++;best=null;continue;}
+          ({best,offsets,patternId,mirrored}=held);
+          acceptAttempt(held.attempt);
+          break;
         }
+        acceptAttempt(attempt);
         break;
       }
     }
+    if(!best&&held){({best,offsets,patternId,mirrored}=held);acceptAttempt(held.attempt);}
     if(patternId&&best){recentShapes.push(patternId);shapeUsage.set(patternId,(shapeUsage.get(patternId)||0)+1);}
     if(!best){
       // どの形・どの起点でも置けないときは、1つずつ逃がす（まれ）。

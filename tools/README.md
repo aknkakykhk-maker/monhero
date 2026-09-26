@@ -212,6 +212,10 @@ node tools/build.js --check
 
 `mode/rhythm-chart-focus.js` は、主役の追跡(Rev.9〜)。音の層の解析から小節ごとに「ドラム / 歌・主旋律 / 混ざり」のどれを追うかを決め(切り替えにコストを付けた動的計画法)、追っている層に合う打点を拾う優先度で後押しする。`node mode/rhythm-chart-rev9-check.js` が、決め方・後押しの向き・層の解析が無い曲では Rev.8 と同じになること・狙いどおりに選び直していることを見張る。
 
+`node mode/rhythm-chart-rev10-check.js` は、Rev.10(動きの使い回しを避ける)を見張る。実際に Rev.9 と Rev.10 で作り、リズムの違う所で同じ動きの並びが出る割合(気持ちよさの物差しの単調さ)がはっきり減ること・ノーツの数がほとんど変わらないこと・押せない配置を作らないこと・写しの数を減らさないことを確かめる。
+
+`node mode/rhythm-chart-v3-splice.js --track <曲id> [--count 4] [--chart-revision <版>] [--output-dir <dir>]` は、区間ごとに良い候補を継ぎ合わせる(2026-09-26・段5)。生成器の `--variant` で候補を作り、曲の区切りごとに気になり点(気持ちよさの物差しと同じ数え方)を数えて、同じ名札の区切りはまとめて同じ候補を採る。継ぎ目で押せない所が出た区切りは候補0へ戻す。authoring/ も公開データも書き換えない(書き出すのは `--output-dir` を渡したときの自動修正前の譜面だけ)。手で呼ぶ道具で、公開の流れには入っていない。`node mode/rhythm-chart-v3-splice-check.js` が見張る。
+
 `node mode/rhythm-mode-tap-completion-check.js` は、STEP 2Bのプレイエリア基準ノーツ移動、ポーズ／再開／リスタート／中断のライフサイクル、正式リザルト条件、BEST統合、NEW RECORD、音源・入力セッション・rAFのcleanup、非公開状態を確認する。
 `node mode/rhythm-options-step1-check.js` は、既存 `mh_rhythm_settings_v1` の後方互換normalize、音量・速度・サイズ・判定補正・表示・演出・端末設定、直接タップ試聴、保存時だけの確定、判定窓／hitbox／DOM判定ラインの不変を確認する。
 `node mode/rhythm-debug-short-check.js` は、同一のあつ杯テーマ音源を使う約60秒のDEBUG専用総合譜面について、短縮時間、4ノーツ種別、幅1〜4、0.5レーン／可変幅SLIDE、複合入力、audio clock終了、再スタート分離、正式EASY候補とMP3の非変更を確認する。
