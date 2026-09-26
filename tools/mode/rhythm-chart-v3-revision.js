@@ -29,10 +29,14 @@
 //        6レーン(12本)になる。置き方の決めごとは同じで、使える幅だけが広がる。
 //        できあがった譜面は laneCount:6 を持ち、本体の mhChart の4つ目にも 6 を書く。
 //        版4までの譜面は5レーンのまま作られ(1音も変わらない)、本体が道の真ん中へ寄せて使う(rhythmChartOnRoad)
+//   6 … 音の性格でノーツの種類を決める(2026-09-26・ユーザー指摘「ただ適当にフリックとかを置くじゃなくて、
+//        譜面にあわせてあった配置やノーツの種類があるとおもう」)。フリックは切れる音・歌の語尾・シンバルに、
+//        同時押しはシンバル・大きな一発に、音の性格の点が高い順に置く(数は上限としてだけ使う)。
+//        横フリックの向きは旋律の上がり下がりに合わせる。物差しは rhythm-sound-traits.js
 'use strict';
 
 const CHART_REVISION_LEGACY=1;
-const CHART_REVISION_LATEST=5;
+const CHART_REVISION_LATEST=6;
 // 版ごとの道のレーン数。版5から6レーン
 const CHART_LANE_COUNT_LEGACY=5;
 const CHART_SIX_LANE_REVISION=5;
