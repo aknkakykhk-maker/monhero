@@ -223,7 +223,7 @@ const AttackTargetFx = ({anim, attackerId}) => {
 // ・軽量表示・設定の「待機中の動き：止める」では呼び出し側が使わない。calm と「動きを減らす」は CSS で止める
 // ==== MONSTER_IDLE_RIGS(tools/monster/idle-rig-build.js が書く。手で直さない) ====
 const MONSTER_IDLE_RIGS = Object.freeze({
-  Mocchi: { body:'jelly', bodyMask:IDLE_MOCCHI_BODY_MASK, parts:[{ mask:IDLE_MOCCHI_ARM_L_MASK, origin:'29.5% 40%', anim:'swing', amp:-7, dur:1800, delay:0, layer:'front' }, { mask:IDLE_MOCCHI_ARM_R_MASK, origin:'70% 40%', anim:'swing', amp:7, dur:1800, delay:900, layer:'front' }] },
+  Mocchi: { body:'jelly', bodyMask:null, parts:[] },
   Suezo: { body:'hop', bodyMask:null, parts:[] },
   Golem: { body:'heavy', bodyMask:IDLE_GOLEM_BODY_MASK, parts:[{ mask:IDLE_GOLEM_ARM_L_MASK, origin:'22% 43%', anim:'swing', amp:-4, dur:3000, delay:0, layer:'back' }, { mask:IDLE_GOLEM_ARM_R_MASK, origin:'77% 43%', anim:'swing', amp:4, dur:3000, delay:1500, layer:'back' }] },
   Tiger: { body:'breathe', bodyMask:IDLE_TIGER_BODY_MASK, parts:[{ mask:IDLE_TIGER_TAIL_MASK, origin:'67.8% 53%', anim:'wag', amp:7, dur:1100, delay:0, layer:'back' }] },

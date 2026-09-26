@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 788b1e8eae4f8e4c
+// source-sha256: 646c4b91fdcffef3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 21:52";
+const BUILD_DATE = "2026-09-26 22:50";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16003,24 +16003,8 @@ const AttackTargetFx = ({
 const MONSTER_IDLE_RIGS = Object.freeze({
   Mocchi: {
     body: 'jelly',
-    bodyMask: IDLE_MOCCHI_BODY_MASK,
-    parts: [{
-      mask: IDLE_MOCCHI_ARM_L_MASK,
-      origin: '29.5% 40%',
-      anim: 'swing',
-      amp: -7,
-      dur: 1800,
-      delay: 0,
-      layer: 'front'
-    }, {
-      mask: IDLE_MOCCHI_ARM_R_MASK,
-      origin: '70% 40%',
-      anim: 'swing',
-      amp: 7,
-      dur: 1800,
-      delay: 900,
-      layer: 'front'
-    }]
+    bodyMask: null,
+    parts: []
   },
   Suezo: {
     body: 'hop',
@@ -69753,6 +69737,7 @@ const createAnimationStyle = () => {
     .mon-idle__part--flapL, .mon-idle__part--flapR { animation-name:monIdleFlap; animation-timing-function:cubic-bezier(.45,0,.35,1); }
     .mon-idle__part--flapR { --idle-flip:-1; }
     .mon-idle__part--swing { animation-name:monIdleSwing; }
+    .mon-idle__part--swingIn { animation-name:monIdleSwingIn; }
     .mon-idle__part--wag { animation-name:monIdleWag; }
     .mon-idle__part--twitch { animation-name:monIdleTwitch; }
     .mon-idle__part--bob { animation-name:monIdleBob; }
@@ -69765,6 +69750,13 @@ const createAnimationStyle = () => {
     /* ゆったり揺れる(花・ヒレ・腕の刃)。amp の符号で揺れ始めの向きが変わる */
     @keyframes monIdleSwing {
       0%,100% { transform:rotate(calc(var(--idle-amp) * -.4)); }
+      50% { transform:rotate(var(--idle-amp)); }
+    }
+    /* 片側だけへ揺れる(体の手前の手など)。止まった位置から amp の向きへだけ振って戻る。
+       手前の部分が外へ振れると、その下に隠れていた体のふち(絵に無い所)がすき間になるので、
+       体へ重なる向きにだけ動かす(2026-09-26 ユーザー指摘「直ってない」モッチーの手) */
+    @keyframes monIdleSwingIn {
+      0%,100% { transform:rotate(0deg); }
       50% { transform:rotate(var(--idle-amp)); }
     }
     /* しっぽ振り。左右へ同じだけ */
