@@ -5,6 +5,7 @@
 //   node tools/mode/rhythm-gpu-load-report.js --compare origin/main … 同じ場面を、指定した版と今の手元で測って並べる
 //   オプション: --song freedom_dive --diff HARD --from 1:04 --seconds 6 --runs 1 --draw webgl|canvas
 //               --settings '{"stageEffect":"VIVID"}'(音ゲー設定に重ねる) --no-tap(叩かない) --port 9181
+//               --hide '[data-rhythm-stage-pulse]'(その部品を隠して測る。どの層が重いかを切り分けるとき)
 //
 // 【なぜ要るか】(2026-09-27・ユーザー「ここでGPUの軽さを測れるようにできないの？」)
 // この作業環境には GPU が無く、WebGL も画面の合成も CPU が肩代わりしている(SwiftShader)。
@@ -30,7 +31,7 @@ const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback)=>{const i=process.argv.indexOf(`--${name}`);return i>=0&&process.argv[i+1]&&!process.argv[i+1].startsWith('--')?process.argv[i+1]:fallback;};
 const flag=name=>process.argv.includes(`--${name}`);
 const SONG=arg('song','freedom_dive'),DIFF=arg('diff','HARD'),FROM=arg('from','1:04'),SECONDS=Number(arg('seconds','6'))||6,RUNS=Math.max(1,Number(arg('runs','1'))||1);
-const DRAW=arg('draw','webgl'),TAP=!flag('no-tap'),PORT=Number(arg('port','9181'))||9181;
+const DRAW=arg('draw','webgl'),TAP=!flag('no-tap'),PORT=Number(arg('port','9181'))||9181,HIDE=arg('hide','');
 let EXTRA={};try{EXTRA=JSON.parse(arg('settings','{}'));}catch(e){console.log('--settings は JSON で書いてください');process.exit(1);}
 const SUITE=[
   {label:'シンプル・Canvas',draw:'canvas',settings:{stageEffect:'SIMPLE'}},
@@ -48,7 +49,7 @@ const measure=async(playwright,port,scene)=>{
   try{
     const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:3,hasTouch:true,isMobile:true});
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
-    await page.addInitScript(([song,settings,draw])=>{
+    await page.addInitScript(([song,settings,draw,hide])=>{
       const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
       put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
       put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
@@ -62,7 +63,8 @@ const measure=async(playwright,port,scene)=>{
       window.__glDraws=0;for(const proto of [window.WebGLRenderingContext&&WebGLRenderingContext.prototype,window.WebGL2RenderingContext&&WebGL2RenderingContext.prototype].filter(Boolean)){
         for(const name of ['drawArrays','drawElements']){const orig=proto[name];proto[name]=function(){window.__glDraws++;return orig.apply(this,arguments);};}}
       window.__frames=0;const tick=()=>{window.__frames++;requestAnimationFrame(tick);};requestAnimationFrame(tick);
-    },[SONG,scene.settings,scene.draw]);
+      if(hide)document.addEventListener('DOMContentLoaded',()=>{const st=document.createElement('style');st.textContent=`${hide}{display:none!important}`;document.head.appendChild(st);});
+    },[SONG,scene.settings,scene.draw,HIDE]);
     const clickText=pattern=>page.evaluate(s=>{const rx=new RegExp(s);const b=[...document.querySelectorAll('button')].find(x=>rx.test((x.innerText||'').replace(/\s+/g,' ').trim()));if(!b)return false;b.click();return true;},pattern);
     await page.goto(`http://localhost:${port}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
     await page.waitForFunction(()=>document.body&&document.body.innerText.includes('TAP TO START'),{timeout:60000});
@@ -119,7 +121,7 @@ const pct=(a,b)=>b>0?`${a>=b?'+':''}${Math.round((a-b)/b*100)}%`:'-';
   try{playwright=require(path.join(ROOT,'tools/node_modules/playwright'));}
   catch{try{playwright=require('playwright');}catch{console.log('SKIP: playwright が入っていないので測れません');process.exit(0);}}
   const scenes=flag('suite')?SUITE:[{label:`指定の設定・${DRAW==='canvas'?'Canvas':'WebGL'}`,draw:DRAW,settings:EXTRA}];
-  console.log(`場面: ${SONG} ${DIFF} の ${FROM} から ${SECONDS}秒 ・ ${TAP?'自動で叩く':'叩かない'} ・ 各${RUNS}回の中央値`);
+  console.log(`場面: ${SONG} ${DIFF} の ${FROM} から ${SECONDS}秒 ・ ${TAP?'自動で叩く':'叩かない'} ・ 各${RUNS}回の中央値${HIDE?` ・ 隠す: ${HIDE}`:''}`);
   const compareRef=arg('compare',null);
   let baseRoot=null,baseServer=null;
   if(compareRef){
