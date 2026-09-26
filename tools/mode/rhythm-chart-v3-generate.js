@@ -26,6 +26,7 @@ const vm=require('vm');
 const {HAND_MODEL,fingerPairFeasible,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange,useRuntimeSlideLanes}=require('./rhythm-hand-model.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {assignSideFlickDirs}=require('./rhythm-side-flick.js');
+const {trackFocus,focusBoost}=require('./rhythm-chart-focus.js');
 const {setLaneCount:setPatternLaneCount,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
 const {soundTraitsFor,flickScoreOf,chordScoreOf}=require('./rhythm-sound-traits.js');
 const {weightsForRevision,knowledgeBoost,knowledgeShapePrefer}=require('./rhythm-chart-knowledge.js');
@@ -546,6 +547,41 @@ for(const onset of audio.onsets){
   if(!prev||onset.strength>prev.strength)onsetByGrid.set(onset.grid,onset);
 }
 const allOnsets=[...onsetByGrid.values()].sort((a,b)=>a.grid-b.grid);
+
+// Rev.9: 主役の追跡(rhythm-chart-focus.js・ROADMAP の段3)。小節ごとに「ドラム / 歌・主旋律 / 混ざり」のどれを追うかを
+// 音の層の解析(<曲>-v3-layers.json)から決め、追っている層に合う打点を拾う優先度で後押しする。
+// 後押しは難易度によらず同じ(拾う順番が同じなので、下の難易度は上の難易度の部分集合のまま)。
+// 層の解析が無い・いまの解析ファイルと合わない(作り直された)曲では効かない(黙って別の格子で数えないため)。
+// Rev.7 の作法 layer_follow(区切りの盛り上がりだけで歌か打楽器かを決める簡易版)は、ここと二重に効くので止める。
+const FOCUS_SCALE=.35;
+const focusData=(()=>{
+  if(!(chartRevision>=9))return null;
+  const layersFile=authoring(`${dashed}-v3-layers.json`);
+  const absolute=path.isAbsolute(layersFile)?layersFile:path.join(ROOT,layersFile);
+  if(!fs.existsSync(absolute))return {missing:'音の層の解析が無い'};
+  const layers=readJson(layersFile);
+  const audioFile=authoring(`${dashed}-v3-audio.json`);
+  const audioSha=require('crypto').createHash('sha256').update(fs.readFileSync(path.isAbsolute(audioFile)?audioFile:path.join(ROOT,audioFile))).digest('hex');
+  if(!layers.basedOn||layers.basedOn.sha256!==audioSha)return {missing:'音の層の解析が、いまの解析ファイルと合わない(作り直す)'};
+  const sectionStarts=new Set((structure.sections||[]).map(section=>section.startBar));
+  const focus=trackFocus(layers,{bar:BAR,sectionStarts});
+  // 打点ごとの打楽器成分の割合(解析ファイルの打点と同じ並び)を、その曲の打点の中の順位(0〜1)にして持つ。
+  //   割合そのものは曲の混ざり具合で大きく違い(中央値が 0.08〜0.18)、0.5 を境にすると、ドラムを追う小節の
+  //   ほぼすべての打点が一律に下がるだけで順番が変わらなかった(5曲で試して、打楽器寄りの打点が1〜2ポイントしか増えなかった)
+  const shares=[];
+  (audio.onsets||[]).forEach((onset,index)=>{const layer=layers.onsets&&layers.onsets[index];if(layer&&layer.timeMs===onset.timeMs&&Number.isFinite(layer.percussiveShare))shares.push([onset.timeMs,layer.percussiveShare]);});
+  const sorted=shares.map(([,share])=>share).sort((a,b)=>a-b);
+  const rankOf=value=>{let lo=0,hi=sorted.length;while(lo<hi){const mid=(lo+hi)>>1;if(sorted[mid]<value)lo=mid+1;else hi=mid;}return sorted.length>1?lo/(sorted.length-1):.5;};
+  const percussiveShareByTime=new Map(shares.map(([timeMs,share])=>[timeMs,rankOf(share)]));
+  const leadAt=grid=>{const i=grid-layers.grid.firstGrid;return i>=0&&i<layers.series.lead.length?layers.series.lead[i]:null;};
+  const counts={drums:0,melody:0,mix:0};
+  for(const state of focus.byBar.values())counts[state]++;
+  return {focus,percussiveShareByTime,leadAt,counts};
+})();
+const focusOn=!!(focusData&&focusData.focus);
+const focusStateAt=grid=>focusOn?focusData.focus.byBar.get(Math.floor(grid/BAR))||'mix':'mix';
+const focusBoostOf=onset=>focusOn?focusBoost(focusStateAt(onset.grid),{
+  percussiveShare:focusData.percussiveShareByTime.get(onset.timeMs),pitched:onset.pitchHz>0,lead:focusData.leadAt(onset.grid)}):0;
 const heightByGrid=new Map();
 for(const point of audio.pitchCurve)if(point.height!=null)heightByGrid.set(point.grid,point.height);
 
@@ -857,10 +893,12 @@ const buildChart=(difficulty,options={})=>{
   const knowledgeMarks=new Map();
   const markKnowledge=(grid,ids)=>{if(!ids.length)return;const set=knowledgeMarks.get(grid)||new Set();for(const id of ids)set.add(id);knowledgeMarks.set(grid,set);};
   const pickBoostCache=new Map();
+  // Rev.9: 主役の追跡があるときは layer_follow を止める(同じことを二重に後押ししない)
+  const pickWeights=focusOn&&knowledgeWeights?{...knowledgeWeights,layer_follow:0}:knowledgeWeights;
   const pickPriority=onset=>{
-    const base=priorityByGrid.get(onset.grid);
+    const base=priorityByGrid.get(onset.grid)+focusBoostOf(onset)*FOCUS_SCALE;
     if(!knowledgeOn)return base;
-    if(!pickBoostCache.has(onset.grid))pickBoostCache.set(onset.grid,knowledgeBoost('pick',knowledgeContext(onset.grid,onset),knowledgeWeights));
+    if(!pickBoostCache.has(onset.grid))pickBoostCache.set(onset.grid,knowledgeBoost('pick',knowledgeContext(onset.grid,onset),pickWeights));
     return base+pickBoostCache.get(onset.grid).total*KNOWLEDGE_SCALE.pick;
   };
   const phraseRhythmCount={bars:0,same:0,source:0};
@@ -3440,6 +3478,7 @@ if(sideFlick&&results.MASTER){
   (r.notice||(r.notice=[])).push(`横フリック: 左${side.left}本・右${side.right}本`+(rev8?`・向きなし${side.plain}本(うち、もう片方の指へ向かうので付けない${side.blocked}本)`:''));
 }
 
+if(focusData)console.log(focusOn?`主役の追跡: ドラム${focusData.counts.drums}小節・歌や主旋律${focusData.counts.melody}小節・混ざり${focusData.counts.mix}小節`:`主役の追跡: 効かない（${focusData.missing}）`);
 console.log(`譜面の作り方: ${chartRevisionLabel(chartRevision)}${phraseCopy?'（フレーズの写しあり）':'（2026-09-24までの作り方）'}${slideEase?'（スライドの曲線あり）':''}${sideFlick?'（MASTERに横フリックあり）':''}`);
 for(const difficulty of targets){
   const {notes,profile,runs}=results[difficulty];
@@ -3478,6 +3517,8 @@ if(write){
       chartRevision,
       // 道のレーン数(Rev.5から6)。自動修正・品質の報告・本体への書き出しがこれを見る
       laneCount:LANES,
+      // Rev.9: 主役の追跡で追った層(小節ごと。d=ドラム・v=歌や主旋律・m=混ざり)
+      ...(focusOn?{focus:{source:`${dashed}-v3-layers.json`,bars:[...focusData.focus.byBar.entries()].map(([bar,state])=>`${bar}:${state[0]==='d'?'d':state==='melody'?'v':'m'}`).join(' ')}}:{}),
       // Rev.7: 使った作法の重みと、効いた回数
       ...(knowledgeOn?{knowledge:{weights:knowledgeWeights,fired:results[difficulty].knowledgeCounts||{}}}:{}),
       status:'draft',

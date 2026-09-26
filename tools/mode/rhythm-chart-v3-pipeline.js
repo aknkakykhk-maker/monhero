@@ -27,6 +27,7 @@ const path=require('path');
 const {spawnSync}=require('child_process');
 const {criticalWarnings,formatWarnings}=require('./rhythm-audio-warnings.js');
 const {SLIDE_EASE_CODES,FLICK_DIR_CODES}=require('./rhythm-runtime-notes.js');
+const {chartRevisionOf}=require('./rhythm-chart-v3-revision.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -65,6 +66,21 @@ console.log(write?(release?'書き出し: 設計資料 + ランタイム（Monst
 const audioFile=path.join(ROOT,`tools/mode/authoring/${dashed}-v3-audio.json`);
 if(reanalyze||!fs.existsSync(audioFile))step('音源解析（音の種類・高さ・伸び）','rhythm-audio-analyze-v3.js',['--write']);
 else console.log(`✓ 音源解析は既にある（やり直すなら --reanalyze）  ${path.relative(ROOT,audioFile)}`);
+// Rev.9〜: 主役の追跡が使う音の層の解析(<曲>-v3-layers.json)。無い・いまの解析ファイルと合わないときだけ作る
+//   (既存の解析ファイルは読むだけ。層の解析は別のファイル)
+{
+  const registryFile=path.join(ROOT,'tools/mode/authoring/rhythm-song-registry.json');
+  const registry=fs.existsSync(registryFile)?JSON.parse(fs.readFileSync(registryFile,'utf8')):{songs:{}};
+  if(chartRevisionOf((registry.songs||{})[trackId])>=9){
+    const layersFile=path.join(ROOT,`tools/mode/authoring/${dashed}-v3-layers.json`);
+    const audioSha=fs.existsSync(audioFile)?require('crypto').createHash('sha256').update(fs.readFileSync(audioFile)).digest('hex'):null;
+    let fresh=false;
+    try{fresh=JSON.parse(fs.readFileSync(layersFile,'utf8')).basedOn.sha256===audioSha;}catch{}
+    if(!fresh&&write)step('音の層の解析（打楽器と音程楽器を分ける・主役の追跡の材料）','rhythm-audio-layers-v3.js',['--write']);
+    else if(!fresh)console.log('… 音の層の解析が無い（--write のときだけ作る。無いあいだ主役の追跡は効かない）');
+    else console.log(`✓ 音の層の解析は既にある  ${path.relative(ROOT,layersFile)}`);
+  }
+}
 step('生成（音の種類・高さ・形の語彙から組み立てる）','rhythm-chart-v3-generate.js',write?['--write']:[]);
 if(write)step('自動修正（押せない・忙しい配置をレーンだけ直す）','rhythm-chart-v2-step7-autofix.js',['--source','v3','--write']);
 

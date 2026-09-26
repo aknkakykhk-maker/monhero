@@ -210,6 +210,8 @@ node tools/build.js --check
 
 `node mode/rhythm-audio-layers-v3.js --track <曲id> [--write]` は、音の「層」を解析する(2026-09-26・段2)。32kHz で読み、打楽器と音程楽器を分け(HPSS。スペクトルを時間方向・周波数方向の中央値でならす)、16分ごとの層の強さと、既存の打点ごとのキック・スネア・ハイハットの分類を出す。既存の `*-v3-audio.json` は読むだけで、書き出しは `authoring/<曲>-v3-layers.json`。分類は検証音では正しいが、実際の曲では参考値(生成器には使わない)。`node mode/rhythm-audio-layers-v3-check.js` が、正解の分かっている音(キック・スネア・ハイハット・裏拍のベース・伸びる和音)で見張る。
 
+`mode/rhythm-chart-focus.js` は、主役の追跡(Rev.9〜)。音の層の解析から小節ごとに「ドラム / 歌・主旋律 / 混ざり」のどれを追うかを決め(切り替えにコストを付けた動的計画法)、追っている層に合う打点を拾う優先度で後押しする。`node mode/rhythm-chart-rev9-check.js` が、決め方・後押しの向き・層の解析が無い曲では Rev.8 と同じになること・狙いどおりに選び直していることを見張る。
+
 `node mode/rhythm-mode-tap-completion-check.js` は、STEP 2Bのプレイエリア基準ノーツ移動、ポーズ／再開／リスタート／中断のライフサイクル、正式リザルト条件、BEST統合、NEW RECORD、音源・入力セッション・rAFのcleanup、非公開状態を確認する。
 `node mode/rhythm-options-step1-check.js` は、既存 `mh_rhythm_settings_v1` の後方互換normalize、音量・速度・サイズ・判定補正・表示・演出・端末設定、直接タップ試聴、保存時だけの確定、判定窓／hitbox／DOM判定ラインの不変を確認する。
 `node mode/rhythm-debug-short-check.js` は、同一のあつ杯テーマ音源を使う約60秒のDEBUG専用総合譜面について、短縮時間、4ノーツ種別、幅1〜4、0.5レーン／可変幅SLIDE、複合入力、audio clock終了、再スタート分離、正式EASY候補とMP3の非変更を確認する。
