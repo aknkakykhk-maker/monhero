@@ -22,7 +22,9 @@
 //   strainStreaks … 「忙しい」が続いた区間(ms)
 // 判定・スコア・ランタイムには一切関与しない。
 'use strict';
-const {HAND_MODEL,fingerPairFeasible,noteTouchLane,slideLaneOffset}=require('./rhythm-hand-model.js');
+const {HAND_MODEL,fingerPairFeasible,noteTouchLane,slideLaneOffset,handSidesEnabled}=require('./rhythm-hand-model.js');
+// Rev.14〜: 左の指(0)が右の指(1)よりこれ以上右で叩く割り振りに付ける費用(同じ指の続けての使用 400 と「忙しい」1000 のあいだ)
+const HAND_CROSS_MARGIN=.5,HAND_CROSS_COST=600;
 
 const HANDS=HAND_MODEL.hands;
 const DEFAULT_BEAM=8;
@@ -180,6 +182,7 @@ const simulateActions=(actions,options={})=>{
           const f=fingers[fi];
           travel[fi]+=Math.abs(f.lane-action.startLane)+Math.abs(action.endLane-action.startLane);
           f.lane=action.endLane;
+          if(handSidesEnabled()&&HANDS===2&&fingers[0].lane-fingers[1].lane>HAND_CROSS_MARGIN)cost+=HAND_CROSS_COST;
           f.lastHitMs=action.startMs;
           f.freeAtMs=(action.endMs>action.startMs?action.endMs:action.startMs)+(action.endFlick?HAND_MODEL.endFlickReleaseMs:0);
         });

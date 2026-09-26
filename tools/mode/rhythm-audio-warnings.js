@@ -11,6 +11,7 @@
 //   'critical' … このまま譜面にすると音とずれる恐れが高い。--release を止める
 //   'notice'   … 気に留めておく程度。止めない
 'use strict';
+const {meterOpinion}=require('./rhythm-audio-meter-opinion.js');
 
 const THRESHOLD=Object.freeze({
   // 2位のテンポ候補と点が拮抗しているか。実曲30曲で測ると、正しく当たっている曲でも
@@ -25,7 +26,7 @@ const THRESHOLD=Object.freeze({
   longSongMs:90000,
 });
 
-const collectWarnings=({timing,detected,durationMs,onsetCount,sectionCount})=>{
+const collectWarnings=({timing,detected,durationMs,onsetCount,sectionCount,onsets=null})=>{
   const warnings=[];
   const trusted=timing&&timing.source&&timing.source!=='detected';
   const add=(code,severity,message,detail)=>{
@@ -51,6 +52,11 @@ const collectWarnings=({timing,detected,durationMs,onsetCount,sectionCount})=>{
     }
     if((detected.gridFit??1)<THRESHOLD.gridFit){
       add('grid-loose','critical','打点が16分の格子に乗っていません',{gridFit:detected.gridFit});
+    }
+    // 拍子の二つ目の意見(rhythm-audio-meter-opinion.js): 3拍子と判定したのに、強い打点が小節の4等分の位置に偏っている
+    const opinion=onsets?meterOpinion(detected,onsets):null;
+    if(opinion&&opinion.level){
+      add('meter-doubt',opinion.level,`3拍子と判定しましたが、強い打点が4拍子の位置に多いです（代わりの候補 ${opinion.suggestion.bpm} BPM・4拍子）`,opinion);
     }
     if((detected.beatPresence??1)<THRESHOLD.beatPresence){
       add('beat-weak','notice','拍のところに音が無い拍が多いです',{beatPresence:detected.beatPresence});

@@ -69,6 +69,32 @@ const HAND_MODEL=Object.freeze({
 let slideLaneShift=0;
 const useRuntimeSlideLanes=on=>{slideLaneShift=on?.5:0;};
 const slideLaneOffset=()=>slideLaneShift;
+// SLIDE の中継点のあいだの動き方(2026-09-26・Rev.14〜)。ゲーム本体は区間ごとの ease(in / out / inout)で動かすのに、
+// ここは直線で補間していた。曲線の途中で指が近づく所を見落とし、公開のときの rhythm-overlap-reach-fix.js が
+// あとから TAP を動かして直していた(Rev.8 の23曲で5組)。既定は直線のまま。Rev.14 以降の譜面を扱う道具だけが切り替える
+let slideEaseOn=false;
+const useSlideEase=on=>{slideEaseOn=!!on;};
+const slideEaseEnabled=()=>slideEaseOn;
+// ゲーム本体の rhythmSlideEaseProgress と同じ式
+const slideEaseProgress=(ease,p)=>{
+  const x=Math.max(0,Math.min(1,Number(p)||0));
+  if(ease==='in')return x*x;
+  if(ease==='out')return 1-(1-x)*(1-x);
+  if(ease==='inout')return x*x*(3-2*x);
+  return x;
+};
+// 親指の左右(2026-09-26・Rev.14〜)。手のシミュレートは親指の左右を区別せず、近いほうの指で取っていた。
+// 実際の親指は交差しにくいので、切り替えると左の指が右の指より右で叩く割り振りに費用を付ける(rhythm-hand-simulate.js)
+let handSidesOn=false;
+const useHandSides=on=>{handSidesOn=!!on;};
+const handSidesEnabled=()=>handSidesOn;
+// 切り替えをまとめて読む・書く(道具が測り終えたら元へ戻すのに使う)
+const handModelFlags=()=>({runtimeSlideLanes:slideLaneShift>0,slideEase:slideEaseOn,handSides:handSidesOn});
+const setHandModelFlags=flags=>{
+  const previous=handModelFlags();
+  useRuntimeSlideLanes(!!flags.runtimeSlideLanes);useSlideEase(!!flags.slideEase);useHandSides(!!flags.handSides);
+  return previous;
+};
 const noteTouchSpan=note=>{
   if(!note)return [0,0];
   const widthLanes=(Number(note.subLaneWidth)||2)/2;
@@ -152,7 +178,8 @@ const slideLaneAtGrid=(note,grid)=>{
     const a=points[i-1],b=points[i];
     if(g<=Number(b.grid)){
       const span=Math.max(1e-9,Number(b.grid)-Number(a.grid));
-      const t=Math.max(0,Math.min(1,(g-Number(a.grid))/span));
+      let t=Math.max(0,Math.min(1,(g-Number(a.grid))/span));
+      if(slideEaseOn)t=slideEaseProgress(a.ease??note.slideEase,t);
       return Number(a.lane)+(Number(b.lane)-Number(a.lane))*t+slideLaneShift;
     }
   }
@@ -185,4 +212,4 @@ const noteTouchLane=note=>{
 
 module.exports={HAND_MODEL,fingerPairFeasible,fingerPairStrain,
   noteTouchLane,noteTouchSpan,usableTouchSpan,heldTouchSpan,slideLaneAtGrid,fingerSpan,separationRange,
-  useRuntimeSlideLanes,slideLaneOffset};
+  useRuntimeSlideLanes,slideLaneOffset,useSlideEase,slideEaseEnabled,slideEaseProgress,useHandSides,handSidesEnabled,handModelFlags,setHandModelFlags};

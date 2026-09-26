@@ -373,7 +373,7 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
 
   // --- 7. あやしさ（このまま譜面にしてよいか） ---
   const warnings=collectWarnings({timing,detected,durationMs:features.durationMs,
-    onsetCount:onsets.length,sectionCount:structure.sections.length});
+    onsetCount:onsets.length,sectionCount:structure.sections.length,onsets});
 
   const report={
     schemaVersion:2,

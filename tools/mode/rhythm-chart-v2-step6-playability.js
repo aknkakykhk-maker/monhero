@@ -47,8 +47,8 @@ const canWrite=write&&!fileArg;
 
 // --- 手のモデルの定数 ---
 // 値は tools/mode/rhythm-hand-model.js に一本化してある(STEP3の生成側と必ず同じ物差しを使うため)。
-const {HAND_MODEL,fingerPairFeasible,fingerPairStrain,noteTouchLane,useRuntimeSlideLanes}=require('./rhythm-hand-model.js');
-const {chartRevisionOf}=require('./rhythm-chart-v3-revision.js');
+const {HAND_MODEL,fingerPairFeasible,fingerPairStrain,noteTouchLane,setHandModelFlags}=require('./rhythm-hand-model.js');
+const {chartRevisionOf,handModelFlagsForRevision}=require('./rhythm-chart-v3-revision.js');
 const HANDS=HAND_MODEL.hands;
 const LANE_SPEED_COMFORT=HAND_MODEL.laneSpeedComfort;
 const LANE_SPEED_LIMIT=HAND_MODEL.laneSpeedLimit;
@@ -165,7 +165,7 @@ for(const difficulty of DIFFICULTIES){
   if(!fs.existsSync(file)){console.log(`${difficulty}: 入力が無いので飛ばす (${path.relative(ROOT,file)})`);continue;}
   const chart=JSON.parse(fs.readFileSync(file,'utf8'));
   // Rev.8〜: SLIDE の位置をゲーム本体と同じ座標で測る(生成器・自動修正と同じ読み方で確かめる)
-  useRuntimeSlideLanes(chartRevisionOf(chart)>=8);
+  setHandModelFlags(handModelFlagsForRevision(chartRevisionOf(chart)));
   const actions=toActions(chart.notes||[]);
   const issues=simulate(actions);
   const impossible=issues.filter(x=>x.severity==='impossible');

@@ -61,6 +61,21 @@ const measure=notes=>measureFeel(chartOf(notes),audio,{withQuality:false});
   ok('同じ所の連打(縦連)は単調に数えない',jack.monotony.grams===0);
 }
 
+// ── 2b. 次を予想しやすいか・見やすさ・頭の負担 ──
+{
+  // 旋律が上がる(高さ .2 → .8)のに左へ動く
+  const withPitch={timing:audio.timing,pitchCurve:[{grid:0,hz:440,clarity:1,height:.2},{grid:4,hz:660,clarity:1,height:.8},{grid:8,hz:880,clarity:1,height:.9}]};
+  const against=measureFeel(chartOf([tap(0,8),tap(4,2)]),withPitch,{withQuality:false});
+  const along=measureFeel(chartOf([tap(0,2),tap(4,8)]),withPitch,{withQuality:false});
+  ok('旋律と逆向きの動きを数える',against.readability.againstMelodyRate===1&&along.readability.againstMelodyRate===0);
+  // 0.1秒以内に横に重なって続く(グリッド0と1は125ms・0.5グリッドは62.5ms)
+  const quick=measureFeel(chartOf([{type:'TAP',grid:0,subLane:4,subLaneWidth:2},{type:'TAP',grid:0.5,subLane:4,subLaneWidth:2}]),audio,{withQuality:false});
+  ok('0.1秒以内に重なって続くノーツを数える',quick.readability.overlapLookPerMinute>0);
+  const switched=measureFeel(chartOf([tap(0,2),{...tap(2,6),type:'FLICK'}]),audio,{withQuality:false});
+  const same=measureFeel(chartOf([tap(0,2),tap(2,6)]),audio,{withQuality:false});
+  ok('0.25秒以内の種類の切り替わりを数える',switched.readability.typeSwitchPerMinute>0&&same.readability.typeSwitchPerMinute===0);
+}
+
 // ── 3. 公開曲で毎回同じ結果 ──
 {
   const trackId='monster_hero_theme';

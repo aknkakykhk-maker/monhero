@@ -23,14 +23,14 @@
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');
-const {HAND_MODEL,fingerPairFeasible,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange,useRuntimeSlideLanes}=require('./rhythm-hand-model.js');
+const {HAND_MODEL,fingerPairFeasible,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange,setHandModelFlags}=require('./rhythm-hand-model.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {assignSideFlickDirs}=require('./rhythm-side-flick.js');
 const {trackFocus,focusBoost}=require('./rhythm-chart-focus.js');
 const {setLaneCount:setPatternLaneCount,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
 const {soundTraitsFor,flickScoreOf,chordScoreOf}=require('./rhythm-sound-traits.js');
 const {weightsForRevision,knowledgeBoost,knowledgeShapePrefer}=require('./rhythm-chart-knowledge.js');
-const {chartRevisionOf,chartRevisionLabel,laneCountForRevision}=require('./rhythm-chart-v3-revision.js');
+const {chartRevisionOf,chartRevisionLabel,laneCountForRevision,handModelFlagsForRevision}=require('./rhythm-chart-v3-revision.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -447,7 +447,8 @@ const KNOWLEDGE_SCALE=Object.freeze({pick:.35,chord:.8,accent:.6});
 //   ・手のモデルが SLIDE の位置をゲーム本体と同じ座標で測る(useRuntimeSlideLanes)
 const rev8=chartRevision>=8;
 const phraseEchoTypes=rev8&&phraseCopy;
-useRuntimeSlideLanes(rev8);
+// 手のモデルの読み方(Rev.8〜 SLIDE の座標 / Rev.14〜 SLIDE の曲線・親指の左右)
+setHandModelFlags(handModelFlagsForRevision(chartRevision));
 // Rev.5: 6レーンの道。Rev.4までは5レーン(サブレーン10本)のまま作る。
 // ★レーン数の数字(5・4・10)を直接書かない。LANES(レーン数)・LANES-1(右はしのレーン)・SUB_LANES(サブレーン数)を使う
 const LANES=laneCountForRevision(chartRevision);
@@ -757,6 +758,9 @@ const sectionRoleForBar=bar=>{const section=sectionForBar(bar);return section?se
 //   Rev.11 は発展の回も元の形を写し(左右反転の規則はそのまま)、その小節では締めの FLICK と拍の頭の同時押しを選ばれやすくする(HARD以上)。
 //   ラスサビ = 最後の盛り上がり(climax)の区切りで、前に同じ名札の区切りがあるもの。その区切りの小節はすべて発展の回にする
 const rev11=chartRevision>=11;
+// Rev.14: 終点フリックと HOLD の太さの形を音で決める・候補(--variant)が HARD でも分かれるようにする(ROADMAP の残り)。
+//   手のモデルが SLIDE の曲線どおりに動き、親指の左右を区別するのも Rev.14 から(handModelFlagsForRevision)
+const rev14=chartRevision>=14;
 const lastChorus=(()=>{
   if(!rev11)return null;
   const list=(Array.isArray(structure.sections)?structure.sections:[]).slice().sort((a,b)=>a.startBar-b.startBar);
@@ -1543,7 +1547,8 @@ const buildChart=(difficulty,options={})=>{
         // レーンの偏りをならす
         for(const lane of lanes)cost+=laneUse[lane]*.05;
         // 同点のときの決定的な散らし(乱数は使わない)
-        cost+=(hash32(`${trackId}:${difficulty}:${chunkIndex}:${base}`)%10)/20;
+        // Rev.14: 候補(--variant)ごとに起点の同点崩しも変える(形の候補の少ない HARD で、候補がどれも同じ譜面になっていた)。候補0は変わらない
+        cost+=(hash32(`${trackId}:${difficulty}:${chunkIndex}:${base}${rev14?variantSeed:''}`)%10)/20;
         return {lanes,cost};
       };
       for(const base of bases){
@@ -1781,7 +1786,25 @@ const buildChart=(difficulty,options={})=>{
       if(endFlickPathSwingLanes(note)>=END_FLICK_MAX_SWING_LANES)return;
       candidates.push(index);
     });
-    for(const index of spreadPick(candidates,endFlickMax,3))notes[index].endFlick=true;
+    // Rev.14: 散らして選ぶのをやめ、音で選ぶ。終点フリックは「伸ばしていた音がそこで切れる」所に置く。
+    //   終わったあと半拍のあいだ旋律の音高が取れない(息継ぎ)なら1点、押さえている音がフレーズの語尾なら0.6点。
+    //   点の高い順に選び、0点のものには付けない(数は上限としてだけ使う)。
+    //   (初めは「終わったあと1拍のあいだ音が鳴らない」で見たが、伴奏がずっと鳴っている曲ではほとんど当てはまらず、
+    //    5曲の HARD〜MASTER で終点フリックが 46本 → 1本に減った。切れるのは伴奏ではなく旋律)
+    const pitchByGrid=new Map((audio.pitchCurve||[]).map(point=>[point.grid,point]));
+    const breathAfter=endGrid=>{
+      let clear=0,total=0;
+      for(let grid=endGrid+1;grid<=endGrid+BEAT/2;grid++){const point=pitchByGrid.get(grid);total++;if(point&&Number(point.clarity)>=.5&&Number(point.hz)>0)clear++;}
+      return total>0&&clear/total<.5;
+    };
+    const endPick=rev14
+      ?soundPick(candidates,endFlickMax,3,index=>{
+        const note=notes[index],endGrid=note.grid+(Number(note.durationGrids)||0);
+        const trait=soundTraitAt(note.grid);
+        return (breathAfter(endGrid)?1:0)+(trait&&trait.phraseEnd?.6:0);
+      })
+      :spreadPick(candidates,endFlickMax,3);
+    for(const index of endPick)notes[index].endFlick=true;
   }
 
   // --- 9. 同時押し ---
@@ -2131,10 +2154,24 @@ const buildChart=(difficulty,options={})=>{
     const widthsAsc=[...P.widths].sort((a,b)=>a-b);
     const candidates=notes.map((note,index)=>({note,index}))
       .filter(({note})=>note.type==='HOLD'&&Number(note.durationGrids)>=6).map(c=>c.index);
-    spreadPick(candidates,Math.max(2,Math.round(holdMax/3)),2).forEach((index,ordinal)=>{
+    // Rev.14: 形を順番に回すのをやめ、押さえているあいだの伴奏の打点の強さの変化で決める。
+    //   始め・中・終わりの3つに分けて強さの平均を比べ、強くなる → open / 弱くなる → close / 中が山 → swell / 中が谷 → pinch。
+    //   変化がはっきりしない HOLD には付けない。変化の大きい順に選ぶ
+    const holdShapeByAudio=index=>{
+      const note=notes[index],start=note.grid,end=note.grid+Number(note.durationGrids);
+      const third=(end-start)/3,mean=(from,to)=>{const list=allOnsets.filter(o=>o.grid>from&&o.grid<=to).map(o=>o.strength);return list.length?list.reduce((a,b)=>a+b,0)/list.length:0;};
+      const s1=mean(start,start+third),s2=mean(start+third,start+2*third),s3=mean(start+2*third,end);
+      const options=[{id:'open',score:s3-s1-.15},{id:'close',score:s1-s3-.15},{id:'swell',score:s2-Math.max(s1,s3)-.1},{id:'pinch',score:Math.min(s1,s3)-s2-.1}];
+      const best=options.sort((a,b)=>b.score-a.score)[0];
+      return best.score>0?best:null;
+    };
+    const holdPicks=rev14
+      ?soundPick(candidates,Math.max(2,Math.round(holdMax/3)),2,index=>{const shape=holdShapeByAudio(index);return shape?shape.score+.01:0;})
+      :spreadPick(candidates,Math.max(2,Math.round(holdMax/3)),2);
+    holdPicks.forEach((index,ordinal)=>{
       const note=notes[index];
       const duration=Number(note.durationGrids);
-      const shape=shapes[ordinal%shapes.length];
+      const shape=rev14?shapes.find(entry=>entry.id===holdShapeByAudio(index).id):shapes[ordinal%shapes.length];
       const count=Math.max(3,Math.min(9,Math.round(duration/BEAT)+1));
       const center=note.subLane+note.subLaneWidth/2;
       const points=[];
