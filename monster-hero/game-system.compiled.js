@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5223d4ea9104944d
+// source-sha256: 096f8913849e5025
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 15:48";
+const BUILD_DATE = "2026-09-26 15:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -22424,6 +22424,122 @@ const RhythmMonsterSlotsPanel = ({
 }), masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).length === 0 && React.createElement("li", {
   className: "rounded-xl border border-white/10 p-4 text-center text-[11px] font-bold text-slate-500"
 }, "設定できるマスモンがいません")));
+const RHYTHM_CHART_NOTES_KEY = 'mh_rhythm_chart_notes_v1';
+const RHYTHM_CHART_NOTE_SEGMENT_MS = 8000;
+const RHYTHM_CHART_NOTE_MARKS = ['', 'good', 'bad'];
+const normalizeRhythmChartNotes = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+const rhythmChartFingerprint = chart => {
+  const notes = Array.isArray(chart?.notes) ? chart.notes : [];
+  const times = notes.map(note => Number(note.timeMs)).filter(Number.isFinite).sort((a, b) => a - b);
+  return `${notes.length}:${times.length ? Math.round(times[0]) : 0}:${times.length ? Math.round(times[times.length - 1]) : 0}`;
+};
+const RhythmChartNotePanel = ({
+  song,
+  difficulty,
+  chart
+}) => {
+  const durationMs = Math.max(RHYTHM_CHART_NOTE_SEGMENT_MS, Number(song?.playDurationMs) || Number(chart?.durationMs) || 0);
+  const count = Math.ceil(durationMs / RHYTHM_CHART_NOTE_SEGMENT_MS);
+  const key = `${song?.songId || ''}|${difficulty?.id || ''}`;
+  const fingerprint = rhythmChartFingerprint(chart);
+  const [marks, setMarks] = useState(() => Array.from({
+    length: count
+  }, () => ''));
+  const [memo, setMemo] = useState('');
+  const [status, setStatus] = useState('');
+  useEffect(() => {
+    let alive = true;
+    storeGet(RHYTHM_CHART_NOTES_KEY, {}).then(value => {
+      if (!alive) return;
+      const saved = normalizeRhythmChartNotes(value)[key];
+      if (!saved || saved.fingerprint !== fingerprint) return;
+      const list = Array.isArray(saved.marks) ? saved.marks : [];
+      setMarks(Array.from({
+        length: count
+      }, (_, i) => RHYTHM_CHART_NOTE_MARKS.includes(list[i]) ? list[i] : ''));
+      setMemo(typeof saved.memo === 'string' ? saved.memo : '');
+    });
+    return () => {
+      alive = false;
+    };
+  }, [key, fingerprint, count]);
+  const entry = () => ({
+    songId: song?.songId || '',
+    displayName: song?.displayName || '',
+    difficulty: difficulty?.id || '',
+    level: Number(chart?.level) || 0,
+    fingerprint,
+    segmentMs: RHYTHM_CHART_NOTE_SEGMENT_MS,
+    marks,
+    memo: memo.slice(0, 1000),
+    savedAt: new Date().toISOString()
+  });
+  const save = async () => {
+    const all = normalizeRhythmChartNotes(await storeGet(RHYTHM_CHART_NOTES_KEY, {}));
+    const ok = await storeSet(RHYTHM_CHART_NOTES_KEY, {
+      ...all,
+      [key]: entry()
+    });
+    setStatus(ok ? '保存しました' : '保存できませんでした');
+  };
+  const copy = async () => {
+    const text = JSON.stringify({
+      kind: 'monhero-rhythm-chart-note',
+      version: 1,
+      ...entry()
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      setStatus('コピーしました。チャットへ貼ってください');
+    } catch {
+      setStatus('コピーできませんでした');
+    }
+  };
+  const cycle = i => setMarks(list => list.map((mark, k) => k !== i ? mark : RHYTHM_CHART_NOTE_MARKS[(RHYTHM_CHART_NOTE_MARKS.indexOf(mark) + 1) % RHYTHM_CHART_NOTE_MARKS.length]));
+  return React.createElement("div", {
+    "data-rhythm-chart-note": true,
+    className: "mx-auto my-3 max-w-md rounded-2xl border border-amber-300/50 bg-slate-900/80 p-3 text-left"
+  }, React.createElement("div", {
+    className: "flex items-baseline justify-between"
+  }, React.createElement("b", {
+    className: "text-[11px] font-black tracking-wider text-amber-200"
+  }, "譜面メモ（DEBUG）"), React.createElement("small", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, "区間を押すたびに 👍 → 👎 → なし")), React.createElement("div", {
+    className: "mt-2 grid grid-cols-6 gap-1"
+  }, marks.map((mark, i) => React.createElement("button", {
+    key: i,
+    "data-rhythm-chart-note-segment": i,
+    "data-mark": mark || 'none',
+    onClick: () => cycle(i),
+    className: `min-h-[40px] rounded-lg border text-[9px] font-black tabular-nums ${mark === 'good' ? 'border-emerald-300 bg-emerald-800/70 text-emerald-50' : mark === 'bad' ? 'border-rose-300 bg-rose-900/70 text-rose-50' : 'border-white/15 bg-slate-800/70 text-slate-300'}`
+  }, React.createElement("span", {
+    className: "block"
+  }, rhythmClockLabel(i * RHYTHM_CHART_NOTE_SEGMENT_MS)), React.createElement("span", {
+    className: "block text-[11px]"
+  }, mark === 'good' ? '👍' : mark === 'bad' ? '👎' : '・')))), React.createElement("textarea", {
+    "data-rhythm-chart-note-memo": true,
+    value: memo,
+    onChange: e => setMemo(e.target.value),
+    maxLength: 1000,
+    rows: 2,
+    placeholder: "気になったところ（例: 1:20 のフリックが音と合っていない）",
+    className: "mt-2 w-full rounded-lg border border-white/15 bg-slate-950/80 p-2 text-[11px] font-bold text-slate-100"
+  }), React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, React.createElement("button", {
+    "data-rhythm-chart-note-save": true,
+    onClick: save,
+    className: "min-h-[44px] rounded-xl bg-amber-700 text-[12px] font-black"
+  }, "保存"), React.createElement("button", {
+    "data-rhythm-chart-note-copy": true,
+    onClick: copy,
+    className: "min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black"
+  }, "コピー")), status && React.createElement("p", {
+    "data-rhythm-chart-note-status": true,
+    className: "mt-1 text-center text-[10px] font-bold text-amber-100"
+  }, status));
+};
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -24982,7 +25098,11 @@ const RhythmTapTest = ({
         "data-rhythm-live-log-worst": true,
         className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-300"
       }, worst ? `いちばん崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad + worst.miss}回）。` : 'どの区間も BAD・MISS なしで通せました。'));
-    })()), React.createElement("div", {
+    })(), debugPlay && !tutorial && !calibrating && React.createElement(RhythmChartNotePanel, {
+      song: song,
+      difficulty: difficulty,
+      chart: chart
+    })), React.createElement("div", {
       "data-rhythm-result-actions": true,
       className: "relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2",
       style: {
