@@ -1391,7 +1391,7 @@ Rev.2では、外側に余地が無いときだけ**HOLDを内側へ1〜2レー�
 - 効いた作法はノーツに `knowledge:[id]` として印を残す（作者用の譜面だけ。ゲームへ書き出す形には入らない）
 - 新しい作法は `KNOWLEDGE` へ1件足すだけで効く。足したら `rhythm-chart-knowledge-check.js` に「効く場面」を1つ書く
 
-#### 学び直し（作り方の最新の次の番号から。2026-09-26 時点で Rev.13〜。Rev.8〜12 は作り方の改良 3.1.22〜3.1.26 に使った）
+#### 学び直し（作り方の最新の次の番号から。2026-09-26 時点で Rev.14〜。Rev.8〜13 は作り方の改良 3.1.22〜3.1.27 に使った）
 
 作法の重みの初めの値（すべて1）は、よその作品の一般的な作り方から決めた仮の値。このゲームで遊んだ感想で直していく。
 
@@ -1519,6 +1519,14 @@ Rev.7 の譜面が authoring/ と1バイトも同じ／Rev.8 の横フリック�
 - 分かったこと: HARD では候補がどれも同じ譜面になる（候補の作り方が HARD の形の選び方に効いていない。未調査）
 
 実測は ROADMAP の段5。検査: `node tools/mode/rhythm-chart-v3-splice-check.js`（選び方を逆にすると落ちることを確認済み）。
+
+### 3.1.27 旋律の有無（2026-09-26・Rev.13）
+
+主役の追跡（3.1.23）は「歌や主旋律の帯（250〜4000Hz）の音程楽器が強い」小節でメロディを追う。ところが伴奏だけの間奏でも和音楽器がこの帯を鳴らすので、
+旋律の無い所で「歌を追う」ことがあった。Rev.13 は、解析ファイルの `pitchCurve` で小節の中で旋律の音高が取れている割合を数え、
+2割未満の小節ではメロディを追う得点から0.3引く。フレーズの途中で1小節だけ途切れる所（息継ぎ）は、切り替えのコストでそのまま追い続ける。
+5曲の実測: メロディを追う小節 122→95、その小節で旋律が取れている割合 0.62→0.69。6軸は ±1 程度、押せない配置は0。
+検査: `node tools/mode/rhythm-chart-rev13-check.js`（仕組みを止めると落ちることを確認済み）。
 
 ### 3.1.6 譜面文法 — 形を「順位」でなく「点数」で選ぶ（2026-09-07）
 
@@ -1920,6 +1928,7 @@ maimai の無理配置の分類など。動画そのものは見ていない）�
 | 3.1.24 動きの使い回しを避ける | 生成器の `motionVariety` / `motionRepeatsFor`（Rev.10） | `rhythm-chart-rev10-check.js` / `rhythm-chart-feel-report.js` |
 | 3.1.25 繰り返すたびの発展・主役に合わせた種類 | 生成器の `rev11` / `developBar` / `lastChorus` / `typeBonusRev11`（Rev.11） | `rhythm-chart-rev11-check.js` |
 | 3.1.26 悪い区間だけ別の候補に替える | `rhythm-chart-v3-splice.js`（`spliceCharts` / `spliceGate`）＋ パイプラインの差し替えの段（Rev.12） | `rhythm-chart-v3-splice-check.js` |
+| 3.1.27 旋律の有無 | `rhythm-chart-focus.js` の `melodyPresence`・生成器の Rev.13 | `rhythm-chart-rev13-check.js` |
 | 3.1.6 譜面文法 / 3.1.7 指紋 | `rhythm-chart-v3-patterns.js` の `rankShapes` / 生成器の `motifKeyOf` | `rhythm-chart-quality-report.js`（語彙・偏り・フレーズ一致） |
 | 10. 品質の6軸 | `rhythm-chart-quality-report.js` | パイプラインのゲート |
 | 2. レイヤリング | `rhythm-audio-analyze-v3.js`（音の性格）＋ V3生成 | `rhythm-audio-analyze-v3-check.js` |

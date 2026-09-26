@@ -62,7 +62,9 @@
 //   12 … 悪い区間だけ別の候補に替える(2026-09-26・ROADMAP の段5・rhythm-chart-v3-splice.js)。パイプラインが生成の直後に候補を数本作り、
 //        曲の区切りごとに気になり点の少ない候補を継ぎ合わせる(同じ名札の区切りは同じ候補)。関門(押せない配置が無い・品質の6軸の合計が
 //        下がらない・気になり点が減る)を通った難易度だけ。生成器そのものは Rev.11 と同じ
-//   13〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   13 … 旋律の有無(2026-09-26・最初にもらった案の1)。旋律の音高がほとんど取れない小節(伴奏だけの間奏など)では、
+//        主役の追跡で歌・主旋律を追いにくくする(解析ファイルの pitchCurve で、小節の中で音高が取れている割合が2割未満)
+//   14〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)と重みの最新の大きいほう＋1」を次の番号にする
 //        (同じ番号が「作り方の改良」と「重みの学び直し」の2つの意味を持たないように)
@@ -72,7 +74,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=12;
+const CHART_REVISION_CODE_LATEST=13;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const CHART_REVISION_LATEST=Math.max(CHART_REVISION_CODE_LATEST,latestKnowledgeRevision());

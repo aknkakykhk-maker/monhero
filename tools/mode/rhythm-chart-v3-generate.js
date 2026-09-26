@@ -606,7 +606,17 @@ const focusData=(()=>{
   const audioSha=require('crypto').createHash('sha256').update(fs.readFileSync(path.isAbsolute(audioFile)?audioFile:path.join(ROOT,audioFile))).digest('hex');
   if(!layers.basedOn||layers.basedOn.sha256!==audioSha)return {missing:'音の層の解析が、いまの解析ファイルと合わない(作り直す)'};
   const sectionStarts=new Set((structure.sections||[]).map(section=>section.startBar));
-  const focus=trackFocus(layers,{bar:BAR,sectionStarts});
+  // Rev.13: 小節の中で旋律の音高が取れている割合(解析ファイルの pitchCurve)。取れない小節では歌・主旋律を追いにくくする
+  const melodyPresence=chartRevision>=13?(()=>{
+    const per=new Map();
+    for(const point of audio.pitchCurve||[]){
+      if(!Number.isFinite(Number(point.grid)))continue;
+      const bar=Math.floor(point.grid/BAR),o=per.get(bar)||{n:0,clear:0};
+      o.n++;if(Number(point.clarity)>=.5&&Number(point.hz)>0)o.clear++;per.set(bar,o);
+    }
+    return new Map([...per.entries()].map(([bar,o])=>[bar,o.n?o.clear/o.n:0]));
+  })():null;
+  const focus=trackFocus(layers,{bar:BAR,sectionStarts,melodyPresence});
   // 打点ごとの打楽器成分の割合(解析ファイルの打点と同じ並び)を、その曲の打点の中の順位(0〜1)にして持つ。
   //   割合そのものは曲の混ざり具合で大きく違い(中央値が 0.08〜0.18)、0.5 を境にすると、ドラムを追う小節の
   //   ほぼすべての打点が一律に下がるだけで順番が変わらなかった(5曲で試して、打楽器寄りの打点が1〜2ポイントしか増えなかった)
