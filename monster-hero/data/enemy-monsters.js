@@ -76,7 +76,7 @@ const TACTICS_ENEMY_DATA = {
     normal:"覇王爪", special:"アポカリプス",
     actions:{ sweep:"ドラゴンパンチ", rush:"クラッシュエンド", pierce:"クラッシュバースト", roar:"神威", regen:"神の恩寵", allout:"パンゲアの嵐" },
     // 必殺技のときに画面いっぱいで流すムービー(2026-09-25 ユーザー指示)。?v= は tools/stamp-version.js が付ける
-    specialMovie:"movies/awakened-moo-apocalypse.mp4?v=084e909f0304"
+    specialMovie:"movies/awakened-moo-apocalypse.mp4?v=53c57562a6fe"
   },
 };
 
