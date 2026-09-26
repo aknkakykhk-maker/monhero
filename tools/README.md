@@ -204,6 +204,8 @@ node tools/build.js --check
 
 `node mode/rhythm-chart-quality-report.js --all [--baseline <dir>] [--write]` は、自動生成した譜面を6つの軸（押せる／音／読める／流れ／飽きない／難易度なり）で数値化する。impossible が1件でもあれば不合格。`--baseline` で前回の JSON と比べ、↑↓を付ける。パイプライン（`rhythm-chart-v3-pipeline.js`）が自動修正のあとに呼ぶ。
 
+`node mode/rhythm-chart-feel-report.js --track <曲id> [--difficulty MASTER]` は、遊んだときの気持ちよさに近いものを**区間(8秒・譜面メモと同じ区切り)ごと**に測り、気になる区間を順に並べる(2026-09-26・`docs/spec/RHYTHM_CHART_ENGINE_ROADMAP.md` の段0)。単調さ(リズムが違うのに同じ動きの並びが直前4・8小節に出る)・横フリックの向きの自然さ(次のノーツ／来た向き／外向き、もう片方の指へ向かう「ぶつかる」)・1本の指の急な切り返し・SLIDEの荒い着地・忙しさ。重みは暫定で、感想と合うまで品質の6軸には入れない。`--all` で全曲の要約。`node mode/rhythm-chart-feel-report-check.js` が、正解の分かっている小さな譜面で数え方を見張る。
+
 `node mode/rhythm-mode-tap-completion-check.js` は、STEP 2Bのプレイエリア基準ノーツ移動、ポーズ／再開／リスタート／中断のライフサイクル、正式リザルト条件、BEST統合、NEW RECORD、音源・入力セッション・rAFのcleanup、非公開状態を確認する。
 `node mode/rhythm-options-step1-check.js` は、既存 `mh_rhythm_settings_v1` の後方互換normalize、音量・速度・サイズ・判定補正・表示・演出・端末設定、直接タップ試聴、保存時だけの確定、判定窓／hitbox／DOM判定ラインの不変を確認する。
 `node mode/rhythm-debug-short-check.js` は、同一のあつ杯テーマ音源を使う約60秒のDEBUG専用総合譜面について、短縮時間、4ノーツ種別、幅1〜4、0.5レーン／可変幅SLIDE、複合入力、audio clock終了、再スタート分離、正式EASY候補とMP3の非変更を確認する。

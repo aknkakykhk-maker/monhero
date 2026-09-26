@@ -40,6 +40,17 @@ const NOTES=[
   {type:'HOLD',subLane:10,subLaneWidth:2,holdMs:1200,progress:1.15,pressed:true},
   {type:'SLIDE',lane:4,endLane:2,subLaneWidth:2,holdMs:1400,progress:1.2,pressed:true},
 ];
+// 塗り側(フラグメントシェーダ)で画素座標のまま大きな数を掛けない(2026-09-26・実機「スライドやホールドで
+// ノーツラインが残像になるみたい」)。塗り側の精度が低い(16ビットの)GPU では長い帯で桁があふれ、色が崩れて線や段が残る。
+// グラデーションの位置は頂点側で 0〜1 にしてから渡す(vT)。
+{
+  const src=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
+  const fsText=(src.match(/const FS='([\s\S]*?)';\n/)||[])[1]||'';
+  const vsText=(src.match(/const VS='([\s\S]*?)';\n/)||[])[1]||'';
+  check('シェーダを読めた',!!fsText&&!!vsText);
+  check('グラデーションの位置は頂点側で計算して渡している(vT)',/varying float vT/.test(vsText)&&/vT=dot\(aPos-uG0,d\)/.test(vsText)&&/clamp\(vT,0\.0,1\.0\)/.test(fsText));
+  check('塗り側で画素座標(vPos・uG0・uG1)を使っていない',!/vPos|uG0|uG1/.test(fsText));
+}
 (async()=>{
   let playwright;
   try{playwright=require(path.join(ROOT,'tools/node_modules/playwright'));}
