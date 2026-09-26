@@ -50,6 +50,10 @@ const NOTES=[
   check('シェーダを読めた',!!fsText&&!!vsText);
   check('グラデーションの位置は頂点側で計算して渡している(vT)',/varying float vT/.test(vsText)&&/vT=dot\(aPos-uG0,d\)/.test(vsText)&&/clamp\(vT,0\.0,1\.0\)/.test(fsText));
   check('塗り側で画素座標(vPos・uG0・uG1)を使っていない',!/vPos|uG0|uG1/.test(fsText));
+  // 形を GPU へ渡す入れ物は、塗るたびに新しく用意する(bufferData)。1つの入れ物を上書きして使い回す(bufferSubData)と、
+  // iPhone の Safari(Metal)でまだ終わっていない前の描画が上書き後の形を使い、帯が残像のように残った(2026-09-26・実機)
+  const glText=(src.match(/const rhythmCreateGL2D=[\s\S]*?\n\};\n/)||[''])[0];
+  check('形は塗るたびに新しい入れ物で渡す(bufferSubData で使い回さない)',/gl\.bufferData\(gl\.ARRAY_BUFFER,data\.subarray\(0,count\*4\),gl\.STREAM_DRAW\)/.test(glText)&&!/bufferSubData\(/.test(glText));
 }
 (async()=>{
   let playwright;
