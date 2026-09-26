@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b6e90d1504d9a75c
+// generated-sha256: ea4943a45519b2b4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 16:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 16:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15398,7 +15398,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
             <button type="button" {...(main?{'data-rhythm-song-row':entry.songId}:{'data-rhythm-song-row-loop':entry.songId})}
               tabIndex={main?undefined:-1} aria-pressed={selected}
               onClick={()=>setSongId(entry.songId)}
-              className={`flex w-full min-h-[58px] items-center gap-2.5 rounded-xl border px-2 py-1 text-left ${selected?'border-sky-200/90 bg-gradient-to-r from-sky-400/40 to-sky-400/5 shadow-[0_0_12px_rgba(56,189,248,.25)]':eventSong?'border-amber-300/50 bg-amber-500/[0.07]':'border-transparent border-b-white/10 bg-transparent'}`}>
+              className={`flex w-full min-h-[58px] items-center gap-2.5 rounded-xl border px-2 py-1 text-left [container-type:inline-size] ${selected?'border-sky-200/90 bg-gradient-to-r from-sky-400/40 to-sky-400/5 shadow-[0_0_12px_rgba(56,189,248,.25)]':eventSong?'border-amber-300/50 bg-amber-500/[0.07]':'border-transparent border-b-white/10 bg-transparent'}`}>
               <RhythmSongArt song={entry} marked={main}/>
               {/* 曲名は**1行**で高さを固定する(はみ出すぶんは「…」)。行の高さがそろい、枠がずれない
                   (2026-09-05・ユーザー指摘「文字数で枠がずれるのがださい」)。
@@ -15417,7 +15417,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                     const markId=rhythmAchievementMarkId(playable,playable?rhythmBestRecord(bestRecords,entry.songId,item.id):null);
                     const mark=RHYTHM_ACHIEVEMENT_MARKS[markId];
                     return <i key={item.id} {...(main?{'data-rhythm-achievement':markId}:{})} title={`${item.id}: ${mark.label}`}
-                      className="block h-2 w-2 rotate-45 rounded-[1px]" style={mark.style}/>;
+                      className="block h-2 w-2 rotate-45 rounded-[1px] [@container(max-width:250px)]:hidden" style={mark.style}/>;
                   })}
                   {/* 「いま選んでいる難易度」での自己ベストのランクを、行のまま見せる。
                       それまでは「5難易度」とだけ出ていて、どの曲をどこまで遊んだかは
@@ -15430,7 +15430,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                     const rank=played?rhythmRankForScore(record.bestScore):'';
                     return <small {...(main?{'data-rhythm-song-row-rank':played?rank:''}:{})}
                       className="ml-1 flex min-w-0 items-baseline gap-1 text-[9px] font-bold text-slate-400">
-                      {rowId&&<span className={`shrink-0 font-black ${rhythmDifficultyTextColor(rowId)}`}>{rowId}</span>}
+                      {/* 行が狭いとき(横持ちで絵を回したiPhoneなど)は、難易度の名前から先に外してスコアを切らさない
+                          (2026-09-26・ユーザー報告「スコアの文字が切れてる」)。さらに狭ければ達成の印も外す */}
+                      {rowId&&<span className={`shrink-0 font-black [@container(max-width:350px)]:hidden ${rhythmDifficultyTextColor(rowId)}`}>{rowId}</span>}
                       {played
                         ?<><b className={`text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank]||'text-slate-300'}`}>{rank}</b>
                           <span className="truncate tabular-nums text-slate-300">{record.bestScore.toLocaleString()}</span></>
@@ -15479,14 +15481,18 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           {/* 選んでいる難易度の自己ベスト・ランク・最大コンボ(2026-09-26・バンドリ！の曲えらびを参考に、文章の1行から札にした)。
               スコアを大きく、ランクは右端に大きな字で */}
           <div data-rhythm-song-stats style={{gridArea:'stats'}} className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5">
-            <div className="min-w-0">
+            {/* スコアの字の大きさは、置ける幅と桁数から決める(2026-09-26・ユーザー報告「スコアの文字が切れてる」)。
+                端末の字(iPhone の太字の数字)は検査の端末より幅が広く、決め打ちの22pxでは「954,0…」と切れていた。
+                この列を器(container)にして、100cqw ÷ (文字数×0.72) を上限22pxで使う。cqw が使えない端末では22pxのまま */}
+            <div className="min-w-0 [container-type:inline-size]">
               <small className="block text-[9px] font-black tracking-[.15em] text-slate-400">HIGH SCORE{best&&best.played&&!best.clear&&<span data-rhythm-demo-uncleared className="ml-1 tracking-normal text-rose-300">未クリア</span>}</small>
-              <b data-rhythm-demo-best className={`block truncate font-black tabular-nums text-amber-100 ${best&&best.played?'text-[22px] leading-tight':'text-[12px] leading-snug'}`}>
+              <b data-rhythm-demo-best className={`block truncate font-black tabular-nums text-amber-100 ${best&&best.played?'text-[22px] leading-tight':'text-[12px] leading-snug'}`}
+                style={best&&best.played?{fontSize:`min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length*.72).toFixed(2)}))`}:undefined}>
                 {best&&best.played?best.bestScore.toLocaleString():'まだ遊んでいません'}
               </b>
               <span data-rhythm-demo-combo className="block text-[9px] font-black text-slate-400">MAX COMBO <b className={`text-[12px] tabular-nums ${best&&best.played?'text-white':'text-slate-500'}`}>{best&&best.played?best.maxCombo:'—'}</b></span>
             </div>
-            <span data-rhythm-demo-rank className="flex flex-col items-center text-[8px] font-black tracking-[.15em] text-slate-400">RANK<b className={`text-[28px] italic leading-none tracking-normal ${best&&best.played?RHYTHM_RANK_COLORS[rhythmRankForScore(best.bestScore)]||'text-white':'text-slate-500'}`}>{best&&best.played?rhythmRankForScore(best.bestScore):'—'}</b></span>
+            <span data-rhythm-demo-rank className="flex flex-col items-center text-[8px] font-black tracking-[.15em] text-slate-400">RANK<b className={`text-[28px] italic leading-none tracking-normal landscape:text-[24px] ${best&&best.played?RHYTHM_RANK_COLORS[rhythmRankForScore(best.bestScore)]||'text-white':'text-slate-500'}`}>{best&&best.played?rhythmRankForScore(best.bestScore):'—'}</b></span>
           </div>
 
           {/* 難易度をえらぶ。高さは固定(ロック中だけ「◯◯で解放」が2行になって、その曲だけ高くならないように) */}

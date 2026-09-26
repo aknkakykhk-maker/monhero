@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 843be1431ced0895
+// source-sha256: 34fe917f78c2754a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 16:31";
+const BUILD_DATE = "2026-09-26 16:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -21648,7 +21648,7 @@ const RhythmSongSelect = ({
       tabIndex: main ? undefined : -1,
       "aria-pressed": selected,
       onClick: () => setSongId(entry.songId),
-      className: `flex w-full min-h-[58px] items-center gap-2.5 rounded-xl border px-2 py-1 text-left ${selected ? 'border-sky-200/90 bg-gradient-to-r from-sky-400/40 to-sky-400/5 shadow-[0_0_12px_rgba(56,189,248,.25)]' : eventSong ? 'border-amber-300/50 bg-amber-500/[0.07]' : 'border-transparent border-b-white/10 bg-transparent'}`
+      className: `flex w-full min-h-[58px] items-center gap-2.5 rounded-xl border px-2 py-1 text-left [container-type:inline-size] ${selected ? 'border-sky-200/90 bg-gradient-to-r from-sky-400/40 to-sky-400/5 shadow-[0_0_12px_rgba(56,189,248,.25)]' : eventSong ? 'border-amber-300/50 bg-amber-500/[0.07]' : 'border-transparent border-b-white/10 bg-transparent'}`
     }), React.createElement(RhythmSongArt, {
       song: entry,
       marked: main
@@ -21678,7 +21678,7 @@ const RhythmSongSelect = ({
         'data-rhythm-achievement': markId
       } : {}, {
         title: `${item.id}: ${mark.label}`,
-        className: "block h-2 w-2 rotate-45 rounded-[1px]",
+        className: "block h-2 w-2 rotate-45 rounded-[1px] [@container(max-width:250px)]:hidden",
         style: mark.style
       }));
     }), (() => {
@@ -21691,7 +21691,7 @@ const RhythmSongSelect = ({
       } : {}, {
         className: "ml-1 flex min-w-0 items-baseline gap-1 text-[9px] font-bold text-slate-400"
       }), rowId && React.createElement("span", {
-        className: `shrink-0 font-black ${rhythmDifficultyTextColor(rowId)}`
+        className: `shrink-0 font-black [@container(max-width:350px)]:hidden ${rhythmDifficultyTextColor(rowId)}`
       }, rowId), played ? React.createElement(React.Fragment, null, React.createElement("b", {
         className: `text-[12px] font-black leading-none ${RHYTHM_RANK_COLORS[rank] || 'text-slate-300'}`
       }, rank), React.createElement("span", {
@@ -21758,7 +21758,7 @@ const RhythmSongSelect = ({
     },
     className: "grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 rounded-xl border border-white/10 bg-slate-900/80 px-2.5 py-1.5"
   }, React.createElement("div", {
-    className: "min-w-0"
+    className: "min-w-0 [container-type:inline-size]"
   }, React.createElement("small", {
     className: "block text-[9px] font-black tracking-[.15em] text-slate-400"
   }, "HIGH SCORE", best && best.played && !best.clear && React.createElement("span", {
@@ -21766,7 +21766,10 @@ const RhythmSongSelect = ({
     className: "ml-1 tracking-normal text-rose-300"
   }, "未クリア")), React.createElement("b", {
     "data-rhythm-demo-best": true,
-    className: `block truncate font-black tabular-nums text-amber-100 ${best && best.played ? 'text-[22px] leading-tight' : 'text-[12px] leading-snug'}`
+    className: `block truncate font-black tabular-nums text-amber-100 ${best && best.played ? 'text-[22px] leading-tight' : 'text-[12px] leading-snug'}`,
+    style: best && best.played ? {
+      fontSize: `min(22px, calc(100cqw / ${(best.bestScore.toLocaleString().length * .72).toFixed(2)}))`
+    } : undefined
   }, best && best.played ? best.bestScore.toLocaleString() : 'まだ遊んでいません'), React.createElement("span", {
     "data-rhythm-demo-combo": true,
     className: "block text-[9px] font-black text-slate-400"
@@ -21776,7 +21779,7 @@ const RhythmSongSelect = ({
     "data-rhythm-demo-rank": true,
     className: "flex flex-col items-center text-[8px] font-black tracking-[.15em] text-slate-400"
   }, "RANK", React.createElement("b", {
-    className: `text-[28px] italic leading-none tracking-normal ${best && best.played ? RHYTHM_RANK_COLORS[rhythmRankForScore(best.bestScore)] || 'text-white' : 'text-slate-500'}`
+    className: `text-[28px] italic leading-none tracking-normal landscape:text-[24px] ${best && best.played ? RHYTHM_RANK_COLORS[rhythmRankForScore(best.bestScore)] || 'text-white' : 'text-slate-500'}`
   }, best && best.played ? rhythmRankForScore(best.bestScore) : '—'))), React.createElement("div", {
     "data-rhythm-difficulty-row": true,
     className: `flex gap-1${spot('difficulty')}`,
