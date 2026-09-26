@@ -33,10 +33,17 @@
 //        譜面にあわせてあった配置やノーツの種類があるとおもう」)。フリックは切れる音・歌の語尾・シンバルに、
 //        同時押しはシンバル・大きな一発に、音の性格の点が高い順に置く(数は上限としてだけ使う)。
 //        横フリックの向きは旋律の上がり下がりに合わせる。物差しは rhythm-sound-traits.js
+//   7 … 音ゲーの作法(2026-09-26・ユーザー指示「よその作品の譜面知識や音ゲーとしての一般的知識は生成器にいれとてほしい」
+//        「決めつけはしないであくまでも曲に合わせた作りを」)。作法の一覧(rhythm-chart-knowledge.js)が、
+//        曲にその音の裏づけがあるときだけ選ばれやすさを少し足す。区切りの一発も強さの順に選ぶ
+//   8〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直した版。rhythm-chart-learn.js --write が
+//        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新版になる
 'use strict';
 
 const CHART_REVISION_LEGACY=1;
-const CHART_REVISION_LATEST=6;
+// 最新版は、作法の重みを書き足した版まで自動で上がる(学び直すたびに新しい版になる)
+const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
+const CHART_REVISION_LATEST=Math.max(7,latestKnowledgeRevision());
 // 版ごとの道のレーン数。版5から6レーン
 const CHART_LANE_COUNT_LEGACY=5;
 const CHART_SIX_LANE_REVISION=5;
