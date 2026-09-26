@@ -156,7 +156,7 @@ const normalizeRhythmEventPoints=value=>{
   return Number.isFinite(n)?Math.min(Number.MAX_SAFE_INTEGER,Math.max(0,Math.floor(n))):0;
 };
 const loadRhythmEventPoints=async()=>normalizeRhythmEventPoints(await storeGet(RHYTHM_EVENT_POINTS_KEY,0,false));
-const addRhythmEventPoints=async amount=>{
+const addRhythmEventPointsNow=async amount=>{
   const requested=normalizeRhythmEventPoints(amount);
   const before=await loadRhythmEventPoints();
   if(requested<=0)return {before,after:before,added:0};
@@ -164,6 +164,16 @@ const addRhythmEventPoints=async amount=>{
   const added=after-before;
   if(added>0)await storeSet(RHYTHM_EVENT_POINTS_KEY,after,false);
   return {before,after,added};
+};
+// ★「読む → 待つ → 足して書く」なので、待たずに2回続けて呼ぶと、2回とも同じ古い値を読み、
+//   あとから書いたほうだけが残る。曲の終わりに本体のビートPとラッキーラッシュのおまけを続けて
+//   足していて、本体のぶんが消えていた(2026-09-26 に見つけた。09-25 のラッキーラッシュ追加から)。
+//   前の足し算が書き終わってから次を始める順番待ちにして、どこから呼んでも取りこぼさないようにする
+let rhythmEventPointsQueue=Promise.resolve();
+const addRhythmEventPoints=amount=>{
+  const run=rhythmEventPointsQueue.then(()=>addRhythmEventPointsNow(amount));
+  rhythmEventPointsQueue=run.catch(()=>{});
+  return run;
 };
 
 const storeList = async (prefix, shared=false) => {

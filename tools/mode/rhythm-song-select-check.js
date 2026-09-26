@@ -321,6 +321,13 @@ const serve=()=>new Promise(resolve=>{
       // 2026-09-26 に見た目を変えた(Lv.の数字を大きく・角を少し小さく)。並びではなく「固定の h と border-2」を見る
       /flex h-\[\d+px\] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2/.test(gameSource)
       &&!gameSource.includes('min-h-[52px] flex-1 rounded-xl border-2'));
+    // 曲名・スコアは「…」で切らず、幅に合わせて字を小さくする(2026-09-26・ユーザー報告
+    // 「スコアの文字が切れてる」「曲選択画面の曲名が切れてる」。iPhone の字は検査の端末より幅が広い)
+    ok('一覧の曲名は幅に合わせて縮め、入らなければ2行まで折り返す(1行で切らない)',
+      /data-rhythm-song-row-title[\s\S]{0,200}height:'36px'[\s\S]{0,120}<b className="line-clamp-2 [^"]*"\s*style=\{\{display:'-webkit-box',WebkitLineClamp:2,[\s\S]{0,160}fontSize:rhythmTitleFitSize\(/.test(gameSource)
+      &&!/data-rhythm-song-row-title[^>]*className="block truncate/.test(gameSource));
+    ok('自己ベストの数字は置ける幅から字の大きさを決める',
+      /data-rhythm-demo-best[\s\S]{0,300}fontSize:`min\(22px, calc\(100cqw/.test(gameSource));
 
     // ---- 並び替え(2026-09-05・ユーザー指示「曲選択のソートがほしい 入手順 難易度順 名前順」) ----
     const rowIdsNow=()=>page.evaluate(()=>[...document.getElementById('song-select-probe')

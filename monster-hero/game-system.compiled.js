@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 671b0939889f9c26
+// source-sha256: a6ee46a03377f02f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 18:41";
+const BUILD_DATE = "2026-09-26 18:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -17467,7 +17467,7 @@ const normalizeRhythmEventPoints = value => {
   return Number.isFinite(n) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(n))) : 0;
 };
 const loadRhythmEventPoints = async () => normalizeRhythmEventPoints(await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false));
-const addRhythmEventPoints = async amount => {
+const addRhythmEventPointsNow = async amount => {
   const requested = normalizeRhythmEventPoints(amount);
   const before = await loadRhythmEventPoints();
   if (requested <= 0) return {
@@ -17483,6 +17483,12 @@ const addRhythmEventPoints = async amount => {
     after,
     added
   };
+};
+let rhythmEventPointsQueue = Promise.resolve();
+const addRhythmEventPoints = amount => {
+  const run = rhythmEventPointsQueue.then(() => addRhythmEventPointsNow(amount));
+  rhythmEventPointsQueue = run.catch(() => {});
+  return run;
 };
 const storeList = async (prefix, shared = false) => {
   try {
@@ -21278,6 +21284,15 @@ const centerCarouselChild = (root, index, behavior = 'auto') => {
     behavior
   });else root.scrollLeft = left;
 };
+const rhythmTitleFitEm = text => {
+  let em = 0;
+  for (const ch of String(text || '')) {
+    const code = ch.codePointAt(0);
+    em += code >= 0x2e80 ? 1 : ch === ' ' ? .3 : /[A-Z0-9]/.test(ch) ? .72 : /[a-z]/.test(ch) ? .6 : .62;
+  }
+  return Math.max(1, em * 1.1);
+};
+const rhythmTitleFitSize = (text, maxPx, minPx, reservePx = 0) => `clamp(${minPx}px, calc((100cqw - ${reservePx}px) / ${rhythmTitleFitEm(text).toFixed(2)}), ${maxPx}px)`;
 const RhythmSongArt = ({
   song,
   large = false,
@@ -21656,13 +21671,29 @@ const RhythmSongSelect = ({
       song: entry,
       marked: main
     }), React.createElement("span", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("b", _extends({}, main ? {
+      className: "min-w-0 flex-1 [container-type:inline-size]"
+    }, React.createElement("span", _extends({}, main ? {
       'data-rhythm-song-row-title': ''
     } : {}, {
-      className: "block truncate text-[15px] font-black leading-snug text-white"
-    }), rhythmSongFullName(entry)), React.createElement("span", {
-      className: `mt-0.5 flex items-center gap-1${spot('achievement')}`
+      className: "flex items-center overflow-hidden",
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        overflow: 'hidden',
+        height: '36px'
+      }
+    }), React.createElement("b", {
+      className: "line-clamp-2 block font-black text-white",
+      style: {
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+        lineHeight: 1.2,
+        fontSize: rhythmTitleFitSize(rhythmSongFullName(entry), 15, 12)
+      }
+    }, rhythmSongFullName(entry))), React.createElement("span", {
+      className: `flex items-center gap-1${spot('achievement')}`
     }, React.createElement("span", {
       className: "mr-1 inline-flex shrink-0 items-baseline gap-0.5 rounded-md bg-gradient-to-b from-rose-500 to-rose-700 px-1.5 py-0.5 leading-none shadow-[0_1px_0_rgba(0,0,0,.4)]"
     }, React.createElement("small", {
@@ -21738,10 +21769,13 @@ const RhythmSongSelect = ({
       gridArea: 'title'
     }
   }, React.createElement("div", {
-    className: "flex items-start gap-1.5"
+    className: "flex items-start gap-1.5 [container-type:inline-size]"
   }, React.createElement("b", {
     "data-rhythm-song-title": true,
-    className: "line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white landscape:line-clamp-1 landscape:h-[1.25em] landscape:text-[16px]"
+    className: "line-clamp-2 block h-[2.5em] min-w-0 flex-1 overflow-hidden text-[17px] font-black leading-[1.25] text-white landscape:line-clamp-1 landscape:h-[1.25em] landscape:[font-size:var(--mh-title-fit)]",
+    style: {
+      '--mh-title-fit': rhythmTitleFitSize(rhythmSongFullName(song), 16, 12, 44)
+    }
   }, rhythmSongFullName(song)), React.createElement("button", {
     type: "button",
     "data-rhythm-song-favorite": true,
@@ -21775,8 +21809,10 @@ const RhythmSongSelect = ({
     } : undefined
   }, best && best.played ? best.bestScore.toLocaleString() : 'まだ遊んでいません'), React.createElement("span", {
     "data-rhythm-demo-combo": true,
-    className: "block text-[9px] font-black text-slate-400"
-  }, "MAX COMBO ", React.createElement("b", {
+    className: "block whitespace-nowrap text-[9px] font-black text-slate-400"
+  }, React.createElement("span", {
+    className: "[@container(max-width:120px)]:hidden"
+  }, "MAX "), "COMBO ", React.createElement("b", {
     className: `text-[12px] tabular-nums ${best && best.played ? 'text-white' : 'text-slate-500'}`
   }, best && best.played ? best.maxCombo : '—'))), React.createElement("span", {
     "data-rhythm-demo-rank": true,
@@ -21805,18 +21841,22 @@ const RhythmSongSelect = ({
       onClick: () => {
         if (open) setDifficultyId(item.id);
       },
-      className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none landscape:h-[48px] ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
+      className: `flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center rounded-lg border-2 px-0.5 font-black leading-none [container-type:inline-size] landscape:h-[48px] ${open ? on ? `${tone.on} shadow-[0_0_10px_rgba(255,255,255,.25)]` : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
     }, React.createElement("b", {
       className: "block text-[18px] tabular-nums"
     }, song.difficulties[item.id].level), React.createElement("span", {
       className: "block text-[8px] tracking-wide"
-    }, open ? item.id : `🔒${item.id}`), React.createElement("span", {
-      "data-rhythm-difficulty-best": item.id,
-      className: "block max-w-full truncate text-[8px] font-black tabular-nums opacity-80"
-    }, open ? (() => {
-      const record = rhythmBestRecord(bestRecords, song.songId, item.id);
-      return record && record.played ? record.bestScore.toLocaleString() : '—';
-    })() : `${need}で解放`));
+    }, open ? item.id : `🔒${item.id}`), (() => {
+      const record = open ? rhythmBestRecord(bestRecords, song.songId, item.id) : null;
+      const text = open ? record && record.played ? record.bestScore.toLocaleString() : '—' : `${need}で解放`;
+      return React.createElement("span", {
+        "data-rhythm-difficulty-best": item.id,
+        className: "block max-w-full truncate text-[8px] font-black tabular-nums opacity-80",
+        style: {
+          fontSize: rhythmTitleFitSize(text, 8, 6, 2)
+        }
+      }, text);
+    })());
   })), React.createElement("div", {
     className: "flex gap-2",
     style: {
@@ -22649,6 +22689,12 @@ const RhythmTapTest = ({
     });
     const canvas = noteCanvasRef.current;
     if (canvas) canvas.dataset.rhythmNoteBackend = RHYTHM_CANVAS_RENDERER.backend;
+    if (webglNotes && canvas && RHYTHM_CANVAS_RENDERER.ready === false) {
+      setWebglLost(true);
+      return () => {
+        RHYTHM_CANVAS_RENDERER.release();
+      };
+    }
     const onLost = () => setWebglLost(true);
     if (canvas && RHYTHM_CANVAS_RENDERER.backend === 'webgl') canvas.addEventListener('webglcontextlost', onLost);
     RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend === 'webgl' ? playAreaRef.current : null);
@@ -23786,7 +23832,10 @@ const RhythmTapTest = ({
           if (gap > Math.max(5, aq.minGap) * 1.8) aq.slow++;
         }
         if (frameNowMs - aq.start >= RHYTHM_AUTO_QUALITY_WINDOW_MS) {
-          if (aq.frames >= 30 && aq.slow / aq.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepAutoQualityRef.current) stepAutoQualityRef.current();
+          if (aq.settle > 0) aq.settle--;else if (aq.frames >= 30 && aq.slow / aq.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepAutoQualityRef.current) {
+            stepAutoQualityRef.current();
+            aq.settle = 1;
+          }
           aq.start = frameNowMs;
           aq.frames = 0;
           aq.slow = 0;
@@ -25164,7 +25213,7 @@ const RhythmTapTest = ({
   }
   return React.createElement("main", {
     "data-rhythm-tap-test": true,
-    className: "relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]",
+    className: "relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)] [container-type:inline-size]",
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
     style: {
@@ -25176,7 +25225,7 @@ const RhythmTapTest = ({
   }, React.createElement("div", {
     ref: hudLeftRef,
     "data-rhythm-hud-left": true,
-    className: "min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"
+    className: "min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"
   }, React.createElement("div", {
     className: "landscape:flex landscape:items-center landscape:gap-2"
   }, React.createElement("div", {
@@ -25212,7 +25261,7 @@ const RhythmTapTest = ({
     "data-rhythm-score": true,
     className: "mt-0.5 block font-black leading-none tabular-nums landscape:mt-0",
     style: {
-      fontSize: 'min(18px,4.6vw)',
+      fontSize: 'min(18px,4.6cqw)',
       textShadow: '0 1px 6px rgba(2,6,23,.96)'
     }
   }, view.score.toLocaleString()), React.createElement("small", {
@@ -25221,7 +25270,7 @@ const RhythmTapTest = ({
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
   }, "BEST ", Number(bestRecord?.bestScore || 0).toLocaleString()))), React.createElement("div", {
-    className: "mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"
+    className: "mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"
   }, React.createElement("span", {
     className: "shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none"
   }, difficulty.id), React.createElement("small", {
@@ -25245,11 +25294,11 @@ const RhythmTapTest = ({
     }
   }), React.createElement("div", {
     "data-rhythm-hud-song": true,
-    className: "min-w-0 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:max-w-none",
+    className: "min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none",
     style: {
-      maxWidth: hudArtSrc && !isLandscape ? 'calc(31vw - 34px)' : undefined,
+      maxWidth: hudArtSrc && !isLandscape ? 'calc(31cqw - 34px)' : undefined,
       display: '-webkit-box',
-      WebkitLineClamp: isLandscape ? '1' : '3',
+      WebkitLineClamp: isLandscape ? '2' : '3',
       WebkitBoxOrient: 'vertical',
       overflow: 'hidden',
       lineHeight: '1.25',
@@ -25257,7 +25306,7 @@ const RhythmTapTest = ({
     }
   }, "♪ ", rhythmSongFullName(song)))), React.createElement("div", {
     "data-rhythm-hud-right": true,
-    className: "flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"
+    className: "flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5"
   }, React.createElement("div", {
     className: "flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"
   }, React.createElement("div", {
@@ -25661,8 +25710,8 @@ const RhythmTapTest = ({
     className: "pointer-events-none absolute z-20 rounded-2xl border border-amber-300/60 bg-slate-950/92 text-center shadow-[0_0_18px_rgba(251,191,36,.18)]",
     style: isLandscape ? {
       left: '19%',
-      right: '36%',
-      top: '2%',
+      right: '39%',
+      top: 'calc(2% + 18px)',
       padding: '4px 10px'
     } : {
       left: '12px',
@@ -47493,7 +47542,12 @@ function MonsterHeroGame() {
       if (EVENT_REPLAY_RELEASE_FLAGS.tacticsBattle) {
         const tacticsIntroSeen = await storeGet(TACTICS_INTRO_SEEN_KEY, false, false);
         setTacticsIntroSeenFlag(tacticsIntroSeen === true);
-        if (tacticsIntroSeen !== true) setTacticsIntroPending(true);
+        if (wasOnboarded && tacticsIntroSeen !== true) setTacticsIntroPending(true);else if (!wasOnboarded && tacticsIntroSeen !== true) {
+          try {
+            await storeSet(TACTICS_INTRO_SEEN_KEY, true, false);
+            setTacticsIntroSeenFlag(true);
+          } catch {}
+        }
       }
       const bootStoryId = rhythmEventStoryIdFor(rhythmLimitedEventAt(Date.now()));
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootStoryId && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(bootStoryId)) {
@@ -47503,6 +47557,19 @@ function MonsterHeroGame() {
       const bootThanksId = rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).find(id => id && !bootSeenThanks.includes(id)) || null;
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootThanksId) {
         setRhythmEventStoryPending(bootThanksId);
+      }
+      if (!wasOnboarded) {
+        const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
+        const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
+        if (add.length) {
+          const next = [...seenNow, ...add];
+          rhythmEventStorySeenRef.current = next;
+          setRhythmEventStorySeen(next);
+          try {
+            await storeSet(RHYTHM_EVENT_STORY_KEY, next, false);
+          } catch {}
+        }
       }
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && RELEASE_FLAGS.rhythmEventPoints === true && wasOnboarded && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(BEAT_POINT_ALWAYS_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);

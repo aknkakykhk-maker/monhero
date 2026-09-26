@@ -112,7 +112,8 @@ ok('測った値をその場で設定へ入れる口がある',
         //   ポーズボタンや行が案内に重なっているのを見逃す(2026-09-13に実際に見逃した)
         return {banner:r('[data-rhythm-calibration-banner]'),hudL:r('[data-rhythm-hud-left]'),hudR:r('[data-rhythm-hud-right]'),
           life:r('[data-rhythm-life]'),pause:r('[data-rhythm-pause]'),
-          combo:r('[data-rhythm-combo-box]'),judgment:r('[data-rhythm-judgment-display]'),line:r('[data-rhythm-judgment-line]')};
+          combo:r('[data-rhythm-combo-box]'),judgment:r('[data-rhythm-judgment-display]'),line:r('[data-rhythm-judgment-line]'),
+          songTime:r('[data-rhythm-song-time]')};
       });
       const overlap=(a,b)=>!!a&&!!b&&a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom;
       ok(`[${mode}] 案内がスコアの表示に重ならない`,!overlap(boxes.banner,boxes.hudL),
@@ -122,6 +123,9 @@ ok('測った値をその場で設定へ入れる口がある',
       ok(`[${mode}] 案内がポーズボタンに重ならない`,!overlap(boxes.banner,boxes.pause),
         boxes.pause&&boxes.banner?`案内 ${boxes.banner.left.toFixed(0)}〜${boxes.banner.right.toFixed(0)} / ポーズ ${boxes.pause.left.toFixed(0)}〜${boxes.pause.right.toFixed(0)}`:'');
       ok(`[${mode}] 案内が判定の文字に重ならない`,!overlap(boxes.banner,boxes.judgment));
+      // 横持ちでは経過時間がスコアの右どなりへ来た(2026-09-26)。案内の上端がかからないこと
+      ok(`[${mode}] 案内が経過時間に重ならない`,!overlap(boxes.banner,boxes.songTime),
+        boxes.songTime&&boxes.banner?`案内 ${boxes.banner.top.toFixed(0)}〜${boxes.banner.bottom.toFixed(0)} / 経過時間 ${boxes.songTime.top.toFixed(0)}〜${boxes.songTime.bottom.toFixed(0)}`:'');
       ok(`[${mode}] 案内が判定ラインを隠さない`,!overlap(boxes.banner,boxes.line));
 
       // 叩く。判定が出ること・例外が出ないこと・リザルトへ進むこと

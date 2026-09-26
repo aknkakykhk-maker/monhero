@@ -19496,7 +19496,10 @@ const rhythmCreateGL2D=canvas=>{
   if(!gl)return null;
   const VS='attribute vec2 aPos;attribute vec2 aUv;uniform vec3 uM0;uniform vec3 uM1;uniform vec2 uView;varying vec2 vUv;varying vec2 vPos;'+
     'void main(){vUv=aUv;vPos=aPos;vec2 p=vec2(dot(uM0,vec3(aPos,1.0)),dot(uM1,vec3(aPos,1.0)));vec2 c=p/uView*2.0-1.0;gl_Position=vec4(c.x,-c.y,0.0,1.0);}';
-  const FS='precision mediump float;varying vec2 vUv;varying vec2 vPos;uniform int uMode;uniform vec4 uColor;uniform sampler2D uTex;uniform float uAlpha;'+
+  // ★精度は使えるなら highp。帯のグラデーションの位置は CSS の画素座標のまま掛け算するので、
+  //   16ビット(mediump が16ビットの GPU。iPhone など)だと長い帯で 65504 を超えてあふれ、
+  //   帯が1色になったり段が出たりして Canvas 2D の見た目とずれる(2026-09-26 の点検で見つけた)
+  const FS='#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nvarying vec2 vUv;varying vec2 vPos;uniform int uMode;uniform vec4 uColor;uniform sampler2D uTex;uniform float uAlpha;'+
     'uniform vec2 uG0;uniform vec2 uG1;uniform vec4 uStopC[6];uniform float uStopT[6];uniform int uStops;'+
     'vec4 grad(){vec2 d=uG1-uG0;float t=clamp(dot(vPos-uG0,d)/max(dot(d,d),1e-6),0.0,1.0);vec4 c=uStopC[0];'+
     'for(int i=1;i<6;i++){if(i>=uStops)break;float t0=uStopT[i-1];float t1=uStopT[i];if(t>=t0){float k=t1>t0?clamp((t-t0)/(t1-t0),0.0,1.0):1.0;c=mix(uStopC[i-1],uStopC[i],k);}}return c;}'+
@@ -20246,8 +20249,11 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   };
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
-    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;hitArea=null;hitSlots.fill(null);if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx)ctx=canvas.getContext('2d');},
+    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;hitArea=null;hitSlots.fill(null);if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx){try{ctx=canvas.getContext('2d');}catch(e){ctx=null;}}},
     get backend(){return backend;},
+    // 描き込み先が取れているか。WebGL の準備が途中で失敗すると、その canvas からは 2D も取り出せず
+    // ctx が無いままになる(ノーツが1つも描かれない)。演奏画面はこれを見て canvas を作り直す
+    get ready(){return !!ctx;},
     // ── 演奏が始まる前に、光のスプライトを焼いておく ──────────────────────────
     //
     // 【2026-09-12・ユーザーとのやりとり】
