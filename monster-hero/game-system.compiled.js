@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8b19b23c2a2b8f51
+// source-sha256: 8b812b7de905c02b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 01:26";
+const BUILD_DATE = "2026-09-27 01:32";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4786,8 +4786,8 @@ const RHYTHM_AUTO_QUALITY_WINDOW_MS = 3000;
 const RHYTHM_AUTO_QUALITY_SLOW_RATIO = .08;
 const rhythmEffectiveRenderQuality = (quality, autoLevel) => quality === 'AUTO' ? RHYTHM_RENDER_QUALITY_STEPS.includes(autoLevel) ? autoLevel : 'HIGH' : quality;
 const rhythmRenderQualityCap = (quality, highCap) => quality === 'SAVE' ? 1 : quality === 'STANDARD' ? Math.min(highCap, 1.5) : highCap;
-const RHYTHM_STAGE_EFFECTS = Object.freeze(['VIVID', 'CALM', 'SIMPLE']);
-const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
+const RHYTHM_STAGE_EFFECTS = Object.freeze(['LIVE', 'VIVID', 'CALM', 'SIMPLE']);
+const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE', 'ライブ'], ['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
 const RHYTHM_LANE_COVER_MIN = 0,
   RHYTHM_LANE_COVER_MAX = 60,
   RHYTHM_LANE_COVER_STEP = 5;
@@ -4971,6 +4971,10 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   renderQuality: 'HIGH',
   noteDrawMode: 'AUTO',
   noteBloom: false,
+  roadFx: false,
+  judgmentFx: false,
+  noteMotionFx: false,
+  comboMilestoneFx: false,
   stageEffect: 'SIMPLE',
   laneCover: 0,
   timingDisplay: 'STANDARD',
@@ -5026,6 +5030,10 @@ const normalizeRhythmSettings = value => {
     renderQuality: RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality) ? source.renderQuality : DEFAULT_RHYTHM_SETTINGS.renderQuality,
     noteDrawMode: RHYTHM_NOTE_DRAW_MODES.includes(source.noteDrawMode) ? source.noteDrawMode : DEFAULT_RHYTHM_SETTINGS.noteDrawMode,
     noteBloom: typeof source.noteBloom === 'boolean' ? source.noteBloom : DEFAULT_RHYTHM_SETTINGS.noteBloom,
+    roadFx: typeof source.roadFx === 'boolean' ? source.roadFx : DEFAULT_RHYTHM_SETTINGS.roadFx,
+    judgmentFx: typeof source.judgmentFx === 'boolean' ? source.judgmentFx : DEFAULT_RHYTHM_SETTINGS.judgmentFx,
+    noteMotionFx: typeof source.noteMotionFx === 'boolean' ? source.noteMotionFx : DEFAULT_RHYTHM_SETTINGS.noteMotionFx,
+    comboMilestoneFx: typeof source.comboMilestoneFx === 'boolean' ? source.comboMilestoneFx : DEFAULT_RHYTHM_SETTINGS.comboMilestoneFx,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -21075,9 +21083,9 @@ const RhythmOptions = ({
     className: wide ? grid : `mt-3 ${grid}`
   }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
     full: true
-  }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライトと光の粒は出しません。', {
+  }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、画面の下では観客のペンライトが拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
-  }), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
+  }), field('道の演出', toggle('roadFx'), '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。'), field('判定の演出', toggle('judgmentFx'), 'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('コンボの節目', toggle('comboMilestoneFx'), 'コンボが100のくぎりに届くたび（100・200・300…）、画面に「100 COMBO!」の文字と光の輪が出ます。既定は「OFF」です。判定・スコアは変わりません。\nコンボ数の表示のところに短く出します（コンボ数を出さない設定のときは出ません）。演出量が「最小」のときと軽量モードでは出ません。'), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
   }), field('画質', segments('renderQuality', RHYTHM_RENDER_QUALITY_LABELS), '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。'), field('描画方式', React.createElement(React.Fragment, null, segments('noteDrawMode', RHYTHM_NOTE_DRAW_LABELS), React.createElement("p", {
     "data-rhythm-draw-mode-now": true,
@@ -22300,6 +22308,29 @@ const rhythmStageEaseInOut = rhythmCubicBezier(.42, 0, .58, 1),
   rhythmStageEaseOut = rhythmCubicBezier(0, 0, .58, 1);
 const RHYTHM_STAGE_GL_DOTS = RHYTHM_STAGE_SPARKS.flatMap((layer, index) => layer.dots.map(([x, y]) => [x / 100, y / 100, index]));
 const RHYTHM_STAGE_GL_BEAM_RGBA = RHYTHM_STAGE_BEAM_COLORS.map(color => (color.match(/[\d.]+/g) || []).map(Number));
+const RHYTHM_STAGE_LIVE_PENS = Object.freeze([[[103, 232, 249], [244, 114, 182]], [[232, 121, 249], [34, 211, 238]], [[251, 191, 36], [244, 114, 182]], [[253, 224, 71], [167, 139, 250]]]);
+const RHYTHM_STAGE_LIVE_LASERS = Object.freeze([{
+  x: -.02,
+  y: 1.02,
+  base: -62,
+  swing: 22
+}, {
+  x: 1.02,
+  y: 1.02,
+  base: -118,
+  swing: 22
+}, {
+  x: .12,
+  y: -.02,
+  base: 70,
+  swing: 26
+}, {
+  x: .88,
+  y: -.02,
+  base: 110,
+  swing: 26
+}]);
+const RHYTHM_STAGE_LIVE_LASER_COLORS = Object.freeze([[34, 211, 238], [232, 121, 249], [251, 191, 36], [167, 139, 250], [74, 222, 128]]);
 const RHYTHM_STAGE_GL_VS = 'attribute vec2 aPos;uniform vec2 uSize;varying vec2 vP;void main(){vP=vec2((aPos.x+1.)*.5*uSize.x,(1.-aPos.y)*.5*uSize.y);gl_Position=vec4(aPos,0.,1.);}';
 const RHYTHM_STAGE_GL_FS = `#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -22309,8 +22340,23 @@ precision mediump float;
 varying vec2 vP;
 uniform vec2 uSize;uniform sampler2D uArt;uniform float uArtA,uFx;
 uniform vec4 uBeamL,uBeamR,uBeamC;uniform vec2 uBeamBox;uniform vec4 uDots[${RHYTHM_STAGE_GL_DOTS.length}];
+uniform float uLive,uPulse,uBeats;uniform vec3 uPenA,uPenB;uniform vec4 uLas[4],uLasC[4];
 vec4 over(vec4 c,vec4 s){return s+c*(1.-s.a);}
 vec4 tint(vec3 rgb,float a){return vec4(rgb*a,a);}
+float hash(float n){return fract(sin(n*127.1)*43758.5453);}
+vec4 lasers(){vec4 s=vec4(0.);for(int i=0;i<4;i++){vec4 L=uLas[i],C=uLasC[i];if(C.a<.01)continue;vec2 v=vP-L.xy;float along=dot(v,L.zw);if(along<0.)continue;
+  float perp=abs(v.x*L.w-v.y*L.z);float k=(exp(-perp*perp/1.4)*.9+exp(-perp*perp/40.)*.3)*C.a*exp(-along/(1.6*uSize.y));s+=vec4(C.rgb*k,k);}return s;}
+// 観客のペンライト。道の両側に、奥(上)ほど小さく詰まった列で地平線まで並ぶ(道そのものはレーンが上に重なって隠す)。
+// 列は奥から18本。画素ごとに近い2列・左右1つずつの席だけを見る。席ごとに高さ・明るさを散らし、拍に合わせて傾いて揺れ、拍の頭で明るくなる
+vec4 pens(){
+  float y=vP.y/uSize.y;if(y<.16)return vec4(0.);
+  float fi=18.*pow((y-.16)/.84,1./1.5);vec4 s=vec4(0.);
+  for(int k=0;k<2;k++){float row=floor(fi)+float(k),ry=.16+.84*pow(row/18.,1.5),sc=mix(.35,1.,ry),cell=26.*sc,r=7.*sc,by=ry*uSize.y,i=floor(vP.x/cell);
+    for(int j=-1;j<=1;j++){float n=i+float(j)+row*37.,h=hash(n);if(hash(n*3.1)>.8)continue;
+      float sw=sin(uBeats*3.14159+h*6.2832),cs=cos(sw*.35),sn=sin(sw*.35);
+      vec2 q=vP-vec2((i+float(j)+.5)*cell+(h-.5)*cell*.5+sw*r*.8,by-r*1.5+(hash(n*7.7)-.5)*r*1.6);q=vec2(cs*q.x+sn*q.y,-sn*q.x+cs*q.y);q.y*=.38;float d=dot(q,q)/(r*r);
+      float a=(exp(-d/.06)*.95+exp(-d/.7)*.3)*mix(.45,1.,sc)*(.55+.45*hash(n*9.1))*(.5+.5*uPulse);s+=vec4((hash(n*5.3)<.5?uPenA:uPenB)*a,a);}}
+  return s;}
 float beam(vec4 b){vec2 d=vP-b.zw;vec2 l=vec2(b.x*d.x+b.y*d.y,-b.y*d.x+b.x*d.y);
   float hw=mix(.06,.5,clamp(l.y/uBeamBox.y,0.,1.))*uBeamBox.x;
   return clamp(hw-abs(l.x)+.5,0.,1.)*clamp(l.y+.5,0.,1.)*clamp(1.-l.y/(.78*uBeamBox.y),0.,1.);}
@@ -22329,13 +22375,19 @@ void main(){
   float rad=t<.7?mix(.62,.18,t/.7):t<1.?mix(.18,0.,(t-.7)/.3):0.;
   c=over(c,tint(dark,rad));
   if(uFx>.5){
-    c=over(c,tint(uBeamC.rgb,uBeamC.a*beam(uBeamL)));
-    c=over(c,tint(uBeamC.rgb,uBeamC.a*beam(uBeamR)));
+    float beamA=uBeamC.a*(1.+uLive*uPulse*.9);
+    c=over(c,tint(uBeamC.rgb,min(1.,beamA*beam(uBeamL))));
+    c=over(c,tint(uBeamC.rgb,min(1.,beamA*beam(uBeamR))));
+    if(uLive>.5)c=min(c+lasers(),vec4(1.));
     vec4 far=vec4(0.),near=vec4(0.);
     for(int i=0;i<${RHYTHM_STAGE_GL_DOTS.length};i++){vec4 d=uDots[i];
       float r=min(length(vP-d.xy),length(vP-vec2(d.x,d.y+uSize.y)));
       if(d.w<.5)far=over(far,spark(r,1.,2.,4.));else near=over(near,spark(r,2.,3.,5.));}
     c=over(c,far*.55);c=over(c,near*.7);
+    if(uLive>.5){
+      c=min(c+pens(),vec4(1.));
+      c=min(c+vec4(uPenA*.05*uPulse,.05*uPulse),vec4(1.));
+    }
   }
   gl_FragColor=c;
 }`;
@@ -22388,11 +22440,13 @@ const rhythmCreateStageGL = canvas => {
   gl.disable(gl.DEPTH_TEST);
   gl.clearColor(0, 0, 0, 0);
   const u = {};
-  ['uSize', 'uArt', 'uArtA', 'uFx', 'uBeamL', 'uBeamR', 'uBeamC', 'uBeamBox', 'uDots'].forEach(name => {
+  ['uSize', 'uArt', 'uArtA', 'uFx', 'uBeamL', 'uBeamR', 'uBeamC', 'uBeamBox', 'uDots', 'uLive', 'uPulse', 'uBeats', 'uPenA', 'uPenB', 'uLas', 'uLasC'].forEach(name => {
     u[name] = gl.getUniformLocation(prog, name);
   });
   gl.uniform1i(u.uArt, 0);
-  const dots = new Float32Array(RHYTHM_STAGE_GL_DOTS.length * 4);
+  const dots = new Float32Array(RHYTHM_STAGE_GL_DOTS.length * 4),
+    lasers = new Float32Array(16),
+    laserColors = new Float32Array(16);
   return {
     setArt(source) {
       try {
@@ -22411,7 +22465,8 @@ const rhythmCreateStageGL = canvas => {
       timeMs,
       artA,
       fx,
-      tier
+      tier,
+      live = null
     }) {
       if (gl.isContextLost()) return;
       const pw = Math.max(1, Math.round(w * scale)),
@@ -22449,6 +22504,37 @@ const rhythmCreateStageGL = canvas => {
           dots[i * 4 + 3] = layer;
         });
         gl.uniform4fv(u.uDots, dots);
+      }
+      const liveOn = !!(fx && live);
+      gl.uniform1f(u.uLive, liveOn ? 1 : 0);
+      if (liveOn) {
+        const beats = Number(live.beats) || 0,
+          bar = Math.max(1, Number(live.bar) || 4),
+          pulse = Math.max(0, Math.min(1, Number(live.pulse) || 0));
+        gl.uniform1f(u.uPulse, pulse);
+        gl.uniform1f(u.uBeats, beats);
+        const pens = RHYTHM_STAGE_LIVE_PENS[tier] || RHYTHM_STAGE_LIVE_PENS[0];
+        gl.uniform3f(u.uPenA, pens[0][0] / 255, pens[0][1] / 255, pens[0][2] / 255);
+        gl.uniform3f(u.uPenB, pens[1][0] / 255, pens[1][1] / 255, pens[1][2] / 255);
+        const barIndex = Math.floor(Math.max(0, beats) / bar),
+          pattern = Math.floor(barIndex / 4) % 3,
+          sweep = beats / (bar * 2) * Math.PI;
+        RHYTHM_STAGE_LIVE_LASERS.forEach((laser, i) => {
+          const on = pattern === 1 || (pattern === 0 ? i < 2 : i >= 2);
+          const deg = laser.base + laser.swing * Math.sin(sweep + i * 1.3),
+            a = deg * Math.PI / 180;
+          lasers[i * 4] = laser.x * w;
+          lasers[i * 4 + 1] = laser.y * h;
+          lasers[i * 4 + 2] = Math.cos(a);
+          lasers[i * 4 + 3] = Math.sin(a);
+          const color = RHYTHM_STAGE_LIVE_LASER_COLORS[(barIndex + i) % RHYTHM_STAGE_LIVE_LASER_COLORS.length];
+          laserColors[i * 4] = color[0] / 255;
+          laserColors[i * 4 + 1] = color[1] / 255;
+          laserColors[i * 4 + 2] = color[2] / 255;
+          laserColors[i * 4 + 3] = on ? (.3 + .7 * pulse) * .8 : 0;
+        });
+        gl.uniform4fv(u.uLas, lasers);
+        gl.uniform4fv(u.uLasC, laserColors);
       }
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     },
@@ -23062,7 +23148,9 @@ const RhythmTapTest = ({
   const sideMonsterRefs = useRef([]),
     screenFlashRef = useRef(null),
     judgmentTextRef = useRef(null),
-    comboRef = useRef(null);
+    comboRef = useRef(null),
+    judgmentBurstRef = useRef(null),
+    comboMilestoneRef = useRef(null);
   const [haloKeys, setHaloKeys] = useState(null);
   useEffect(() => {
     let cancelled = false,
@@ -23098,10 +23186,16 @@ const RhythmTapTest = ({
   const stageLevel = rhythmStageLevel(settings);
   const stageArtRef = useRef(null),
     stagePulseRef = useRef(null);
-  const stageGlWanted = useState(() => stageLevel !== 'SIMPLE' && rhythmStageGlActive(webglWanted))[0];
+  const stageGlWanted = useState(() => stageLevel !== 'SIMPLE' && (rhythmStageGlActive(webglWanted) || stageLevel === 'LIVE' && rhythmStageGlPreference() !== 'css' && rhythmWebglGpuUsable()))[0];
   const [stageGlLost, setStageGlLost] = useState(false);
   const stageGl = stageGlWanted && stageLevel !== 'SIMPLE' && !stageGlLost;
   const stageGlRef = useRef(null);
+  const roadFxOn = settings.roadFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode;
+  const roadFxRef = useRef(null);
+  roadFxRef.current = roadFxOn && !tutorial ? rhythmSongBeatGrid(song.songId) : null;
+  const roadLinesRef = useRef(null);
+  if (!roadLinesRef.current) roadLinesRef.current = new Float32Array(6 * 64);
+  const roadGlowRef = useRef(null);
   const stageArtSrc = stageLevel !== 'SIMPLE' && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
   const hudArtSrc = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
   useEffect(() => {
@@ -23312,7 +23406,7 @@ const RhythmTapTest = ({
   const stageTierNow = Math.min(3, Math.floor(comboTier / 2));
   const stageHostRef = useRef(null);
   const [stageImages, setStageImages] = useState(null);
-  const stageFxOn = stageLevel === 'VIVID' && settings.effectAmount !== 'MINIMAL';
+  const stageFxOn = (stageLevel === 'VIVID' || stageLevel === 'LIVE') && settings.effectAmount !== 'MINIMAL';
   useEffect(() => {
     const host = stageHostRef.current;
     if (!host || !stageFxOn || stageGl || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
@@ -23392,7 +23486,14 @@ const RhythmTapTest = ({
   const stageGlLiveRef = useRef(null);
   stageGlLiveRef.current = {
     tier: stageTierNow,
-    fx: stageFxOn
+    fx: stageFxOn,
+    live: stageLevel === 'LIVE',
+    grid: stageLevel === 'LIVE' && !tutorial ? rhythmSongBeatGrid(song.songId) : null
+  };
+  const stageClockRef = useRef(null);
+  if (!stageClockRef.current) stageClockRef.current = {
+    t: null,
+    at: 0
   };
   useEffect(() => {
     const canvas = stageGlRef.current,
@@ -23471,6 +23572,27 @@ const RhythmTapTest = ({
       last = now;
       dirty = false;
       const artA = artAt < 0 ? 0 : fullArt * rhythmStageEaseOut(Math.min(1, (now - artAt) / 800));
+      let liveArg = null;
+      if (live.live && fx) {
+        const clock = stageClockRef.current,
+          grid = live.grid,
+          songMs = clock && Number.isFinite(clock.t) ? clock.t + Math.min(250, Math.max(0, now - clock.at)) : null;
+        if (grid && songMs !== null) {
+          const beats = (songMs - grid.zeroMs) / grid.beatMs,
+            index = Math.floor(beats),
+            since = (beats - index) * grid.beatMs,
+            onBar = (index % grid.bar + grid.bar) % grid.bar === 0;
+          liveArg = {
+            beats,
+            bar: grid.bar,
+            pulse: beats >= 0 ? Math.exp(-since / (onBar ? 240 : 160)) * (onBar ? 1 : .6) : 0
+          };
+        } else liveArg = {
+          beats: (now - start) / 500,
+          bar: 4,
+          pulse: 0
+        };
+      }
       renderer.draw({
         w,
         h,
@@ -23478,7 +23600,8 @@ const RhythmTapTest = ({
         timeMs: now - start,
         artA,
         fx,
-        tier
+        tier,
+        live: liveArg
       });
     };
     frame = requestAnimationFrame(loop);
@@ -23787,6 +23910,15 @@ const RhythmTapTest = ({
           el: judgmentText,
           attr: 'rhythmJudgmentPop'
         });
+        const burst = judgmentBurstRef.current;
+        if (burst && settings.judgmentFx === true && (judgment === 'GREAT' || judgment === 'EXCELLENT' || judgment === 'MARVELOUS')) {
+          burst.dataset.judgment = judgment;
+          burst.dataset.judgmentPrecise = preciseHit ? '1' : '';
+          restarts.push({
+            el: burst,
+            attr: 'rhythmBurst'
+          });
+        }
         const comboText = comboRef.current;
         if (comboText) restarts.push({
           el: comboText,
@@ -23846,6 +23978,16 @@ const RhythmTapTest = ({
       if (ptEl && ptEl._mhLuck !== run.luckPoints) {
         ptEl._mhLuck = run.luckPoints || 0;
         ptEl.textContent = `${run.luckPoints || 0}pt`;
+      }
+    }
+    if (settings.comboMilestoneFx === true && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' && keptCombo > run.combo && keptCombo >= 100 && keptCombo % 100 === 0) {
+      const el = comboMilestoneRef.current;
+      if (el) {
+        el.dataset.milestone = String(keptCombo);
+        rhythmRestartAnimations([{
+          el,
+          attr: 'rhythmMilestone'
+        }]);
       }
     }
     run.combo = keptCombo;
@@ -24195,8 +24337,64 @@ const RhythmTapTest = ({
         lightweight: settings.lightweightMode,
         maxDpr: noteCanvasMaxDprRef.current,
         sizeScale: settings.noteSize / 100,
-        bloom: settings.noteBloom === true
+        bloom: settings.noteBloom === true,
+        motion: settings.noteMotionFx === true
       });
+      {
+        const stageClock = stageClockRef.current;
+        stageClock.t = visualTime;
+        stageClock.at = frameNowMs;
+      }
+      const roadGrid = roadFxRef.current;
+      if (roadGrid && placeable) {
+        const {
+            beatMs,
+            zeroMs,
+            bar
+          } = roadGrid,
+          phase = (visualTime - zeroMs) / beatMs,
+          beatIndex = Math.floor(phase),
+          since = (phase - beatIndex) * beatMs,
+          onBar = (beatIndex % bar + bar) % bar === 0;
+        if (canvasReady) {
+          const lines = roadLinesRef.current,
+            areaH = travel.rect.height,
+            areaW = travel.rect.width;
+          let count = 0;
+          for (let k = Math.ceil((visualTime - travelMs * .35 - zeroMs) / beatMs); count < 64; k++) {
+            const t = zeroMs + k * beatMs;
+            if (t > visualTime + travelMs * 1.05) break;
+            if (t < 0) continue;
+            const progress = 1 - (t - visualTime) / travelMs,
+              y = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx + travel.noteHeight / 2;
+            if (!(y >= 0 && y <= areaH)) continue;
+            const yr = y / areaH,
+              o = count * 6;
+            lines[o] = y;
+            lines[o + 1] = rhythmProjectBoundary(0, yr) * areaW;
+            lines[o + 2] = rhythmProjectBoundary(RHYTHM_LANE_COUNT, yr) * areaW;
+            lines[o + 3] = (k % bar + bar) % bar === 0 ? 1 : 0;
+            lines[o + 4] = rhythmProjectionScale(yr);
+            lines[o + 5] = Math.min(1, Math.max(0, progress / .25)) * (progress > 1 ? Math.max(0, 1 - (progress - 1) / .3) : 1);
+            count++;
+          }
+          RHYTHM_CANVAS_RENDERER.drawRoadFx(lines, count, beatIndex >= 0 ? Math.exp(-since / (onBar ? 260 : 170)) * (onBar ? 1 : .55) : 0);
+        }
+        const glowEl = roadGlowRef.current;
+        if (glowEl && onBar && beatIndex >= 0 && run._roadBarAt !== beatIndex && typeof glowEl.animate === 'function') {
+          run._roadBarAt = beatIndex;
+          try {
+            glowEl.animate([{
+              opacity: 1
+            }, {
+              opacity: .5
+            }], {
+              duration: Math.min(900, beatMs * 2),
+              easing: 'cubic-bezier(.2,.7,.3,1)'
+            });
+          } catch (_) {}
+        }
+      }
       if (canvasReady) RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
       const paintCanvasNote = note => {
         const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && rhythmNoteHasBody(note) && songTimeMs < rhythmReleaseTargetMs(note);
@@ -25101,6 +25299,7 @@ const RhythmTapTest = ({
       "data-rank-tier": String(rankTier),
       "data-rhythm-effect": settings.effectAmount,
       "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
+      "data-rhythm-judgment-fx": settings.judgmentFx === true && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' ? '1' : undefined,
       className: "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]",
       style: {
         paddingTop: 'env(safe-area-inset-top)'
@@ -25871,7 +26070,14 @@ const RhythmTapTest = ({
     src: stageImages.sparks[1],
     alt: "",
     draggable: false
-  }))), stageLevel !== 'SIMPLE' && React.createElement("i", {
+  }))), roadFxOn && React.createElement(React.Fragment, null, React.createElement("i", {
+    "data-rhythm-road-haze": true,
+    "aria-hidden": "true"
+  }), React.createElement("i", {
+    ref: roadGlowRef,
+    "data-rhythm-road-glow": true,
+    "aria-hidden": "true"
+  })), stageLevel !== 'SIMPLE' && React.createElement("i", {
     ref: stagePulseRef,
     "data-rhythm-stage-pulse": true,
     "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
@@ -25900,7 +26106,11 @@ const RhythmTapTest = ({
       '--mh-combo-scale': rhythmComboTierScale(comboTier),
       '--mh-combo-size': rhythmFiniteInRange(settings.comboSize, RHYTHM_COMBO_SIZE_MIN, RHYTHM_COMBO_SIZE_MAX, 100) / 100
     }
-  }, view.combo), React.createElement("span", {
+  }, view.combo), settings.comboMilestoneFx === true && React.createElement("i", {
+    ref: comboMilestoneRef,
+    "data-rhythm-combo-milestone": true,
+    "aria-hidden": "true"
+  }), React.createElement("span", {
     "data-rhythm-combo-label": true,
     className: "mt-1 block font-black leading-none tracking-[0.36em]"
   }, "COMBO"), comboStatus && React.createElement("span", {
@@ -26006,7 +26216,11 @@ const RhythmTapTest = ({
     style: {
       bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 38px)'
     }
-  }, React.createElement("b", {
+  }, settings.judgmentFx === true && React.createElement("i", {
+    ref: judgmentBurstRef,
+    "data-rhythm-judgment-burst": true,
+    "aria-hidden": "true"
+  }), React.createElement("b", {
     ref: judgmentTextRef,
     "data-rhythm-judgment-text": true,
     "data-judgment": view.last || '',

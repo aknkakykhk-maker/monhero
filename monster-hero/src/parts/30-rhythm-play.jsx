@@ -210,6 +210,11 @@ const rhythmCubicBezier=(x1,y1,x2,y2)=>{
 const rhythmStageEaseInOut=rhythmCubicBezier(.42,0,.58,1),rhythmStageEaseOut=rhythmCubicBezier(0,0,.58,1);
 const RHYTHM_STAGE_GL_DOTS=RHYTHM_STAGE_SPARKS.flatMap((layer,index)=>layer.dots.map(([x,y])=>[x/100,y/100,index]));
 const RHYTHM_STAGE_GL_BEAM_RGBA=RHYTHM_STAGE_BEAM_COLORS.map(color=>(color.match(/[\d.]+/g)||[]).map(Number));
+// ライブ背景「ライブ」(2026-09-27)で足すもの。ペンライトの2色(コンボの段ごと。CSS の --stage-c1 / --stage-c2 と同じ色味)と、
+// レーザー4本の出どころ(x,y は画面の割合)・向き(度。0が右・90が下)・首振りの幅、レーザーの色の順番
+const RHYTHM_STAGE_LIVE_PENS=Object.freeze([[[103,232,249],[244,114,182]],[[232,121,249],[34,211,238]],[[251,191,36],[244,114,182]],[[253,224,71],[167,139,250]]]);
+const RHYTHM_STAGE_LIVE_LASERS=Object.freeze([{x:-.02,y:1.02,base:-62,swing:22},{x:1.02,y:1.02,base:-118,swing:22},{x:.12,y:-.02,base:70,swing:26},{x:.88,y:-.02,base:110,swing:26}]);
+const RHYTHM_STAGE_LIVE_LASER_COLORS=Object.freeze([[34,211,238],[232,121,249],[251,191,36],[167,139,250],[74,222,128]]);
 const RHYTHM_STAGE_GL_VS='attribute vec2 aPos;uniform vec2 uSize;varying vec2 vP;void main(){vP=vec2((aPos.x+1.)*.5*uSize.x,(1.-aPos.y)*.5*uSize.y);gl_Position=vec4(aPos,0.,1.);}';
 const RHYTHM_STAGE_GL_FS=`#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -219,8 +224,23 @@ precision mediump float;
 varying vec2 vP;
 uniform vec2 uSize;uniform sampler2D uArt;uniform float uArtA,uFx;
 uniform vec4 uBeamL,uBeamR,uBeamC;uniform vec2 uBeamBox;uniform vec4 uDots[${RHYTHM_STAGE_GL_DOTS.length}];
+uniform float uLive,uPulse,uBeats;uniform vec3 uPenA,uPenB;uniform vec4 uLas[4],uLasC[4];
 vec4 over(vec4 c,vec4 s){return s+c*(1.-s.a);}
 vec4 tint(vec3 rgb,float a){return vec4(rgb*a,a);}
+float hash(float n){return fract(sin(n*127.1)*43758.5453);}
+vec4 lasers(){vec4 s=vec4(0.);for(int i=0;i<4;i++){vec4 L=uLas[i],C=uLasC[i];if(C.a<.01)continue;vec2 v=vP-L.xy;float along=dot(v,L.zw);if(along<0.)continue;
+  float perp=abs(v.x*L.w-v.y*L.z);float k=(exp(-perp*perp/1.4)*.9+exp(-perp*perp/40.)*.3)*C.a*exp(-along/(1.6*uSize.y));s+=vec4(C.rgb*k,k);}return s;}
+// 観客のペンライト。道の両側に、奥(上)ほど小さく詰まった列で地平線まで並ぶ(道そのものはレーンが上に重なって隠す)。
+// 列は奥から18本。画素ごとに近い2列・左右1つずつの席だけを見る。席ごとに高さ・明るさを散らし、拍に合わせて傾いて揺れ、拍の頭で明るくなる
+vec4 pens(){
+  float y=vP.y/uSize.y;if(y<.16)return vec4(0.);
+  float fi=18.*pow((y-.16)/.84,1./1.5);vec4 s=vec4(0.);
+  for(int k=0;k<2;k++){float row=floor(fi)+float(k),ry=.16+.84*pow(row/18.,1.5),sc=mix(.35,1.,ry),cell=26.*sc,r=7.*sc,by=ry*uSize.y,i=floor(vP.x/cell);
+    for(int j=-1;j<=1;j++){float n=i+float(j)+row*37.,h=hash(n);if(hash(n*3.1)>.8)continue;
+      float sw=sin(uBeats*3.14159+h*6.2832),cs=cos(sw*.35),sn=sin(sw*.35);
+      vec2 q=vP-vec2((i+float(j)+.5)*cell+(h-.5)*cell*.5+sw*r*.8,by-r*1.5+(hash(n*7.7)-.5)*r*1.6);q=vec2(cs*q.x+sn*q.y,-sn*q.x+cs*q.y);q.y*=.38;float d=dot(q,q)/(r*r);
+      float a=(exp(-d/.06)*.95+exp(-d/.7)*.3)*mix(.45,1.,sc)*(.55+.45*hash(n*9.1))*(.5+.5*uPulse);s+=vec4((hash(n*5.3)<.5?uPenA:uPenB)*a,a);}}
+  return s;}
 float beam(vec4 b){vec2 d=vP-b.zw;vec2 l=vec2(b.x*d.x+b.y*d.y,-b.y*d.x+b.x*d.y);
   float hw=mix(.06,.5,clamp(l.y/uBeamBox.y,0.,1.))*uBeamBox.x;
   return clamp(hw-abs(l.x)+.5,0.,1.)*clamp(l.y+.5,0.,1.)*clamp(1.-l.y/(.78*uBeamBox.y),0.,1.);}
@@ -239,13 +259,19 @@ void main(){
   float rad=t<.7?mix(.62,.18,t/.7):t<1.?mix(.18,0.,(t-.7)/.3):0.;
   c=over(c,tint(dark,rad));
   if(uFx>.5){
-    c=over(c,tint(uBeamC.rgb,uBeamC.a*beam(uBeamL)));
-    c=over(c,tint(uBeamC.rgb,uBeamC.a*beam(uBeamR)));
+    float beamA=uBeamC.a*(1.+uLive*uPulse*.9);
+    c=over(c,tint(uBeamC.rgb,min(1.,beamA*beam(uBeamL))));
+    c=over(c,tint(uBeamC.rgb,min(1.,beamA*beam(uBeamR))));
+    if(uLive>.5)c=min(c+lasers(),vec4(1.));
     vec4 far=vec4(0.),near=vec4(0.);
     for(int i=0;i<${RHYTHM_STAGE_GL_DOTS.length};i++){vec4 d=uDots[i];
       float r=min(length(vP-d.xy),length(vP-vec2(d.x,d.y+uSize.y)));
       if(d.w<.5)far=over(far,spark(r,1.,2.,4.));else near=over(near,spark(r,2.,3.,5.));}
     c=over(c,far*.55);c=over(c,near*.7);
+    if(uLive>.5){
+      c=min(c+pens(),vec4(1.));
+      c=min(c+vec4(uPenA*.05*uPulse,.05*uPulse),vec4(1.));
+    }
   }
   gl_FragColor=c;
 }`;
@@ -268,13 +294,14 @@ const rhythmCreateStageGL=canvas=>{
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(4));
   gl.disable(gl.BLEND);gl.disable(gl.DEPTH_TEST);gl.clearColor(0,0,0,0);
-  const u={};['uSize','uArt','uArtA','uFx','uBeamL','uBeamR','uBeamC','uBeamBox','uDots'].forEach(name=>{u[name]=gl.getUniformLocation(prog,name);});
+  const u={};['uSize','uArt','uArtA','uFx','uBeamL','uBeamR','uBeamC','uBeamBox','uDots','uLive','uPulse','uBeats','uPenA','uPenB','uLas','uLasC'].forEach(name=>{u[name]=gl.getUniformLocation(prog,name);});
   gl.uniform1i(u.uArt,0);
-  const dots=new Float32Array(RHYTHM_STAGE_GL_DOTS.length*4);
+  const dots=new Float32Array(RHYTHM_STAGE_GL_DOTS.length*4),lasers=new Float32Array(16),laserColors=new Float32Array(16);
   return {
     setArt(source){try{gl.bindTexture(gl.TEXTURE_2D,tex);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);return true;}catch(e){return false;}},
     // w,h … CSS px / scale … 画素密度 / timeMs … 動きの時刻 / artA … ジャケットの濃さ / fx … サーチライトと粒を出すか / tier … 色の段
-    draw({w,h,scale,timeMs,artA,fx,tier}){
+    // live … 「ライブ」のときだけ {beats:曲の頭から数えた拍(小数), bar:1小節の拍数, pulse:拍の頭の光(0..1)}。無ければ「派手」と同じ
+    draw({w,h,scale,timeMs,artA,fx,tier,live=null}){
       if(gl.isContextLost())return;
       const pw=Math.max(1,Math.round(w*scale)),ph=Math.max(1,Math.round(h*scale));
       if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;}
@@ -292,6 +319,24 @@ const rhythmCreateStageGL=canvas=>{
         gl.uniform2f(u.uBeamBox,bw,bh);
         RHYTHM_STAGE_GL_DOTS.forEach(([x,y,layer],i)=>{const off=((timeMs/RHYTHM_STAGE_SPARKS[layer].duration)%1)*h;dots[i*4]=x*w;dots[i*4+1]=y*h-off;dots[i*4+2]=0;dots[i*4+3]=layer;});
         gl.uniform4fv(u.uDots,dots);
+      }
+      const liveOn=!!(fx&&live);
+      gl.uniform1f(u.uLive,liveOn?1:0);
+      if(liveOn){
+        const beats=Number(live.beats)||0,bar=Math.max(1,Number(live.bar)||4),pulse=Math.max(0,Math.min(1,Number(live.pulse)||0));
+        gl.uniform1f(u.uPulse,pulse);gl.uniform1f(u.uBeats,beats);
+        const pens=RHYTHM_STAGE_LIVE_PENS[tier]||RHYTHM_STAGE_LIVE_PENS[0];
+        gl.uniform3f(u.uPenA,pens[0][0]/255,pens[0][1]/255,pens[0][2]/255);gl.uniform3f(u.uPenB,pens[1][0]/255,pens[1][1]/255,pens[1][2]/255);
+        // レーザー4本(下の左右の角から上へ・上の左右から下へ)。4小節ごとに出す組と色が替わり、2小節かけて首を振る
+        const barIndex=Math.floor(Math.max(0,beats)/bar),pattern=Math.floor(barIndex/4)%3,sweep=beats/(bar*2)*Math.PI;
+        RHYTHM_STAGE_LIVE_LASERS.forEach((laser,i)=>{
+          const on=pattern===1||(pattern===0?i<2:i>=2);
+          const deg=laser.base+laser.swing*Math.sin(sweep+i*1.3),a=deg*Math.PI/180;
+          lasers[i*4]=laser.x*w;lasers[i*4+1]=laser.y*h;lasers[i*4+2]=Math.cos(a);lasers[i*4+3]=Math.sin(a);
+          const color=RHYTHM_STAGE_LIVE_LASER_COLORS[(barIndex+i)%RHYTHM_STAGE_LIVE_LASER_COLORS.length];
+          laserColors[i*4]=color[0]/255;laserColors[i*4+1]=color[1]/255;laserColors[i*4+2]=color[2]/255;laserColors[i*4+3]=on?(.3+.7*pulse)*.8:0;
+        });
+        gl.uniform4fv(u.uLas,lasers);gl.uniform4fv(u.uLasC,laserColors);
       }
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
     },
@@ -631,7 +676,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
-  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null);
+  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboMilestoneRef=useRef(null);
   // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
   // 焼けるまで・焼けなかったとき・影が1枚だけの判定は、今までどおり CSS のぼかしで出す(haloKeys に入っていない)。
   const [haloKeys,setHaloKeys]=useState(null);
@@ -664,10 +709,17 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const stageArtRef=useRef(null),stagePulseRef=useRef(null);
   // ライブ背景を WebGL で1枚に描くか(rhythmCreateStageGL の説明を参照)。ノーツと同じく演奏の始めに1回だけ決める。
   // 途中で端末に WebGL を取り上げられたら(webglcontextlost)、CSS 版へ戻す
-  const stageGlWanted=useState(()=>stageLevel!=='SIMPLE'&&rhythmStageGlActive(webglWanted))[0];
+  // 「ライブ」は GPU で背景を描ける端末なら、ノーツが Canvas でも WebGL で描く(デバッグ画面で CSS を選んでいるときは除く)
+  const stageGlWanted=useState(()=>stageLevel!=='SIMPLE'&&(rhythmStageGlActive(webglWanted)||(stageLevel==='LIVE'&&rhythmStageGlPreference()!=='css'&&rhythmWebglGpuUsable())))[0];
   const [stageGlLost,setStageGlLost]=useState(false);
   const stageGl=stageGlWanted&&stageLevel!=='SIMPLE'&&!stageGlLost;
   const stageGlRef=useRef(null);
+  // 道の演出(オプション「道の演出」・2026-09-26)。拍の線・道のふちの光は毎フレームの処理(tick)が canvas へ描き、
+  // 奥のもやと光は動かない層で置く(光だけ小節の頭で脈打つ)。拍は曲ごとの表(RHYTHM_SONG_BEATS)から。判定・スコアには触らない
+  const roadFxOn=settings.roadFx===true&&settings.effectAmount!=='MINIMAL'&&!settings.lightweightMode;
+  const roadFxRef=useRef(null);roadFxRef.current=roadFxOn&&!tutorial?rhythmSongBeatGrid(song.songId):null;
+  const roadLinesRef=useRef(null);if(!roadLinesRef.current)roadLinesRef.current=new Float32Array(6*64);
+  const roadGlowRef=useRef(null);
   const stageArtSrc=stageLevel!=='SIMPLE'&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
   // 曲名のとなりに出す小さなジャケット(ライブ背景の設定とは関係なく、絵がある曲なら出す)
   const hudArtSrc=typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
@@ -829,7 +881,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const stageTierNow=Math.min(3,Math.floor(comboTier/2));
   const stageHostRef=useRef(null);
   const [stageImages,setStageImages]=useState(null);
-  const stageFxOn=stageLevel==='VIVID'&&settings.effectAmount!=='MINIMAL';
+  const stageFxOn=(stageLevel==='VIVID'||stageLevel==='LIVE')&&settings.effectAmount!=='MINIMAL';
   useEffect(()=>{
     const host=stageHostRef.current;
     if(!host||!stageFxOn||stageGl||typeof window==='undefined'||typeof document==='undefined')return undefined;
@@ -867,7 +919,9 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
     return()=>{alive=false;clearTimeout(timer);if(observer)observer.disconnect();setStageImages(null);made.forEach(url=>URL.revokeObjectURL(url));};
   },[stageFxOn,stageGl,renderQualityStill]);
   // WebGL 版のライブ背景を動かす。色の段と演出の有無は毎回の描画でここから読む(描き直しの輪を作り直さない)
-  const stageGlLiveRef=useRef(null);stageGlLiveRef.current={tier:stageTierNow,fx:stageFxOn};
+  // live … 「ライブ」のとき、曲の拍(RHYTHM_SONG_BEATS)。曲の時刻は毎フレームの処理(tick)が stageClockRef へ書く
+  const stageGlLiveRef=useRef(null);stageGlLiveRef.current={tier:stageTierNow,fx:stageFxOn,live:stageLevel==='LIVE',grid:stageLevel==='LIVE'&&!tutorial?rhythmSongBeatGrid(song.songId):null};
+  const stageClockRef=useRef(null);if(!stageClockRef.current)stageClockRef.current={t:null,at:0};
   useEffect(()=>{
     const canvas=stageGlRef.current,host=stageHostRef.current;
     if(!stageGl||!canvas||!host||typeof window==='undefined'||typeof document==='undefined')return undefined;
@@ -899,7 +953,15 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
       if(!(w>0&&h>0))return;
       last=now;dirty=false;
       const artA=artAt<0?0:fullArt*rhythmStageEaseOut(Math.min(1,(now-artAt)/800));
-      renderer.draw({w,h,scale,timeMs:now-start,artA,fx,tier});
+      // 「ライブ」: 曲の時刻から拍を数える。止めている間(時刻が届かない間)は、最後の時刻から0.25秒先で止める
+      let liveArg=null;
+      if(live.live&&fx){
+        const clock=stageClockRef.current,grid=live.grid,songMs=clock&&Number.isFinite(clock.t)?clock.t+Math.min(250,Math.max(0,now-clock.at)):null;
+        if(grid&&songMs!==null){const beats=(songMs-grid.zeroMs)/grid.beatMs,index=Math.floor(beats),since=(beats-index)*grid.beatMs,onBar=((index%grid.bar)+grid.bar)%grid.bar===0;
+          liveArg={beats,bar:grid.bar,pulse:beats>=0?Math.exp(-since/(onBar?240:160))*(onBar?1:.6):0};}
+        else liveArg={beats:(now-start)/500,bar:4,pulse:0};
+      }
+      renderer.draw({w,h,scale,timeMs:now-start,artA,fx,tier,live:liveArg});
     };
     frame=requestAnimationFrame(loop);
     return()=>{alive=false;cancelAnimationFrame(frame);if(observer)observer.disconnect();canvas.removeEventListener('webglcontextlost',onLost);renderer.release();};
@@ -1180,6 +1242,10 @@ if(judgment!=='MISS'){
     // 判定文字を一度だけ弾ませる
     const judgmentText=judgmentTextRef.current;
     if(judgmentText)restarts.push({el:judgmentText,attr:'rhythmJudgmentPop'});
+    // 判定の演出(オプション「判定の演出」)。GREAT 以上のとき、文字の後ろで光をはじけさせる。
+    // 色の印は React を通さずここで直接付ける(弾ませ直すのと同じ瞬間にそろえるため)
+    const burst=judgmentBurstRef.current;
+    if(burst&&settings.judgmentFx===true&&(judgment==='GREAT'||judgment==='EXCELLENT'||judgment==='MARVELOUS')){burst.dataset.judgment=judgment;burst.dataset.judgmentPrecise=preciseHit?'1':'';restarts.push({el:burst,attr:'rhythmBurst'});}
     // コンボ数も1つ増えるたびに弾ませる(プロセカのように数字が跳ねる)
     const comboText=comboRef.current;
     if(comboText)restarts.push({el:comboText,attr:'rhythmComboPop'});
@@ -1209,6 +1275,9 @@ if(luckOn){const luckNow=run.audio?.songTimeMs?.()??0;const rushActive=run.luckR
     else showLuckyBanner(`+${draw.points}pt`,'small');}
   const gaugeEl=luckGaugeRef.current;if(gaugeEl){const ratio=Math.min(1,run.luckGauge/RHYTHM_LUCK_GAUGE_MAX);gaugeEl.style.transform=`scaleX(${ratio.toFixed(3)})`;}
   const ptEl=luckPointsRef.current;if(ptEl&&ptEl._mhLuck!==run.luckPoints){ptEl._mhLuck=run.luckPoints||0;ptEl.textContent=`${run.luckPoints||0}pt`;}}
+/* コンボの節目(オプション「コンボの節目」)。100のくぎりに届いた瞬間だけ、コンボ数の表示に「100 COMBO!」と光の輪を出す。
+   コンボガードで数が据え置きのとき(増えていないとき)は出さない */
+if(settings.comboMilestoneFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'&&keptCombo>run.combo&&keptCombo>=100&&keptCombo%100===0){const el=comboMilestoneRef.current;if(el){el.dataset.milestone=String(keptCombo);rhythmRestartAnimations([{el,attr:'rhythmMilestone'}]);}}
 run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
@@ -1359,8 +1428,25 @@ if(stagePulseOn){const pulseEl=stagePulseRef.current,notes=run.notes;let index=r
 // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
-const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:settings.noteBloom===true});
+const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:settings.noteBloom===true,motion:settings.noteMotionFx===true});
 // 叩いたときの光(WebGL のときだけ canvas で描く)。光の層はノーツの下なので、ノーツより先に描く
+// ライブ背景「ライブ」の拍は、背景の描き直し(別の描き直しの輪)がこの時刻から数える
+{const stageClock=stageClockRef.current;stageClock.t=visualTime;stageClock.at=frameNowMs;}
+// 道の演出。拍の線(奥から流れる。小節の頭は明るい線)と、道のふちの光(拍を過ぎた瞬間に光ってすぐ消える)。
+// 線の高さはノーツと同じ式(rhythmProjectTravelProgress)、幅は道の境目と同じ投影から出す。叩いたときの光・ノーツより下に描く
+const roadGrid=roadFxRef.current;
+if(roadGrid&&placeable){const {beatMs,zeroMs,bar}=roadGrid,phase=(visualTime-zeroMs)/beatMs,beatIndex=Math.floor(phase),since=(phase-beatIndex)*beatMs,onBar=((beatIndex%bar)+bar)%bar===0;
+  if(canvasReady){const lines=roadLinesRef.current,areaH=travel.rect.height,areaW=travel.rect.width;let count=0;
+    for(let k=Math.ceil((visualTime-travelMs*.35-zeroMs)/beatMs);count<64;k++){const t=zeroMs+k*beatMs;if(t>visualTime+travelMs*1.05)break;if(t<0)continue;
+      const progress=1-(t-visualTime)/travelMs,y=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx+travel.noteHeight/2;
+      if(!(y>=0&&y<=areaH))continue;const yr=y/areaH,o=count*6;
+      lines[o]=y;lines[o+1]=rhythmProjectBoundary(0,yr)*areaW;lines[o+2]=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yr)*areaW;lines[o+3]=((k%bar)+bar)%bar===0?1:0;lines[o+4]=rhythmProjectionScale(yr);
+      // 奥で生まれるときはふわっと出し、判定ラインを過ぎたら消していく
+      lines[o+5]=Math.min(1,Math.max(0,progress/.25))*(progress>1?Math.max(0,1-(progress-1)/.3):1);count++;}
+    RHYTHM_CANVAS_RENDERER.drawRoadFx(lines,count,beatIndex>=0?Math.exp(-since/(onBar?260:170))*(onBar?1:.55):0);}
+  // 奥の光は小節の頭で脈打つ(Web Animations の opacity だけ。合成だけで済む)
+  const glowEl=roadGlowRef.current;if(glowEl&&onBar&&beatIndex>=0&&run._roadBarAt!==beatIndex&&typeof glowEl.animate==='function'){run._roadBarAt=beatIndex;try{glowEl.animate([{opacity:1},{opacity:.5}],{duration:Math.min(900,beatMs*2),easing:'cubic-bezier(.2,.7,.3,1)'});}catch(_){}}
+}
 if(canvasReady)RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
 
 // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
@@ -1736,7 +1822,7 @@ scheduleTick();};
     // ★演出量と軽量モードはここでも効かせる(器へそのまま渡して、CSS側で止める)。
     const rankTier=result.cleared===false?0:({M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);
     return <main data-rhythm-result data-rank={rank} data-rank-tier={String(rankTier)}
-      data-rhythm-effect={settings.effectAmount} data-rhythm-lightweight={settings.lightweightMode?'true':'false'}
+      data-rhythm-effect={settings.effectAmount} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-judgment-fx={settings.judgmentFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'?'1':undefined}
       className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" style={{paddingTop:'env(safe-area-inset-top)'}}>
 {/* ===== リザルトの並び(2026-09-26・ユーザー依頼「リザルト画面や曲選択画面をこれを参考にしたい」＝バンドリ！のリザルト) =====
     上から「曲の札(ジャケット・曲名・難易度・ランクのゲージ・ランク)」→「SCORE と自己ベスト」→「判定の表と MAX COMBO」。
@@ -1976,7 +2062,7 @@ scheduleTick();};
     <img data-rhythm-stage-sparks="far" src={stageImages.sparks[0]} alt="" draggable={false}/><img data-rhythm-stage-sparks="near" src={stageImages.sparks[1]} alt="" draggable={false}/></>}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
-{stageLevel!=='SIMPLE'&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
+{roadFxOn&&<><i data-rhythm-road-haze aria-hidden="true"/><i ref={roadGlowRef} data-rhythm-road-glow aria-hidden="true"/></>}{stageLevel!=='SIMPLE'&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
     「コンボももう少し目立つように段階的に / あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
     右上のHUDから**プレイエリアの真ん中**へ移した。
     ★HUDの左右の列は、レーンの台形の外側の空きに置いてある。その空きは上へ行くほど広く、
@@ -1987,7 +2073,7 @@ scheduleTick();};
       少し透かす。コンボが0のあいだは出さない。
     ★大きさの上限が無くなったので、段(comboTier)でしっかり大きくできる
       (HUDに居たころは台形にかかるので1.13倍までしか上げられなかった)。 */}
-{settings.comboDisplay!==false&&view.combo>0&&<div data-rhythm-combo-box data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{view.combo}</b><span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>}{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
+{settings.comboDisplay!==false&&view.combo>0&&<div data-rhythm-combo-box data-combo-status={comboStatus} data-combo-tier={String(comboTier)} data-combo-pos={comboPosition} data-combo-wide={isLandscape?'1':''} aria-hidden="true" style={{'--mh-combo-opacity':rhythmFiniteInRange(settings.comboOpacity,RHYTHM_COMBO_OPACITY_MIN,RHYTHM_COMBO_OPACITY_MAX,100)/100}} className="pointer-events-none absolute z-[2] text-center"><b ref={comboRef} data-rhythm-combo data-combo-tier={String(comboTier)} className="block font-black leading-none tabular-nums text-white" style={{'--mh-combo-scale':rhythmComboTierScale(comboTier),'--mh-combo-size':rhythmFiniteInRange(settings.comboSize,RHYTHM_COMBO_SIZE_MIN,RHYTHM_COMBO_SIZE_MAX,100)/100}}>{view.combo}</b>{settings.comboMilestoneFx===true&&<i ref={comboMilestoneRef} data-rhythm-combo-milestone aria-hidden="true"/>}<span data-rhythm-combo-label className="mt-1 block font-black leading-none tracking-[0.36em]">COMBO</span>{comboStatus&&<span data-rhythm-combo-status-mark={comboStatus} className="block font-black leading-none">{comboStatus==='AM'?'ALL MARVELOUS':'FULL COMBO'}</span>}</div>}{/* 判定ラインはTailwindのクラスを使わず、位置・高さ・色をすべてここへ直接書く。
     Tailwindは外部CDNのJITが後からCSSを作るため、間に合わないあいだ
     bottom-[12%] も h-[3px] も bg-gradient-to-r も効かず、
     「高さ0・背景なし＝見えない線」になる。実機で「演奏を始めたときに
@@ -2016,7 +2102,7 @@ scheduleTick();};
       判定ラインで弾ける光の単色は data/rhythm-mode.js の RHYTHM_JUDGMENT_COLORS が正本で、
       文字のグラデーションにも必ずその色を含める(rhythm-hit-effect-check.js が突き合わせる)。
       ここが渡すのは「どの判定か」「ぴったりか」の2つだけ。
-      text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}<b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={view.last||''} data-judgment-precise={view.lastPrecise?'1':''} data-halo={haloKeys&&settings.judgmentTextDisplay&&view.last&&view.status!=='error'&&view.status!=='loading'&&haloKeys.has(`${view.last}|${view.lastPrecise?'1':''}`)?'1':undefined} className="block text-[26px] font-black leading-none tracking-wide text-white">{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow?(timingDisplay!=='STANDARD'&&typeof view.lastDeltaMs==='number'?`${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms`:view.fastSlow):'—'):'—'}</small>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
+      text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}{settings.judgmentFx===true&&<i ref={judgmentBurstRef} data-rhythm-judgment-burst aria-hidden="true"/>}<b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={view.last||''} data-judgment-precise={view.lastPrecise?'1':''} data-halo={haloKeys&&settings.judgmentTextDisplay&&view.last&&view.status!=='error'&&view.status!=='loading'&&haloKeys.has(`${view.last}|${view.lastPrecise?'1':''}`)?'1':undefined} className="block text-[26px] font-black leading-none tracking-wide text-white">{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow?(timingDisplay!=='STANDARD'&&typeof view.lastDeltaMs==='number'?`${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms`:view.fastSlow):'—'):'—'}</small>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
     帯の色は判定窓(MARVELOUS 金・EXCELLENT 紫・GREAT 赤・GOOD 緑・BAD 青)で、真ん中がぴったり */}
 {timingDisplay==='METER'&&<div data-rhythm-timing-meter aria-hidden="true" className="absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2" style={{'--meter-mar':`${(55/185*50).toFixed(2)}%`,'--meter-exc':`${(100/185*50).toFixed(2)}%`,'--meter-gre':`${(150/185*50).toFixed(2)}%`,'--meter-goo':`${(170/185*50).toFixed(2)}%`}}><i data-rhythm-timing-meter-band/><i data-rhythm-timing-meter-center/>{Array.from({length:12},(_,i)=><i key={i} ref={el=>{meterTicksRef.current[i]=el;}} data-rhythm-timing-meter-tick style={{opacity:0}}/>)}</div>}</div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
 {/* ラッキーラッシュ中は、プレイエリアのふちが金色に光る(ノーツより後ろ・入力に触らない) */}
