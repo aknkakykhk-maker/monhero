@@ -346,8 +346,9 @@ const rhythmRenderQualityCap = (quality, highCap) => (quality==='SAVE' ? 1 : qua
 // CALM   … ジャケットとノーツのタイミングの光だけ(動き続けるものは出さない)
 // SIMPLE … これまでの見た目のまま(何も足さない)
 // ★軽量モードのときは、ここの値に関わらず SIMPLE として扱う(rhythmStageLevel)
-const RHYTHM_STAGE_EFFECTS = Object.freeze(['VIVID','CALM','SIMPLE']);
-const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
+// LIVE   … 派手に加えて、拍に合わせて光るサーチライト・レーザー・観客のペンライト(2026-09-27)。GPU で背景を描ける端末だけ。無ければ派手と同じ
+const RHYTHM_STAGE_EFFECTS = Object.freeze(['LIVE','VIVID','CALM','SIMPLE']);
+const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE','ライブ'],['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
 // ===== 他の音ゲーから取り入れた表示(2026-09-24・ユーザー指示「他の音ゲーを学習して取り入れるとこを取り入れて / 設定でいじれるように」) =====
 // レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を何%隠すか。0で出さない
 const RHYTHM_LANE_COVER_MIN = 0, RHYTHM_LANE_COVER_MAX = 60, RHYTHM_LANE_COVER_STEP = 5;
