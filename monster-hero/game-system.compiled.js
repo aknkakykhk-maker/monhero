@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 833950774ab991f8
+// source-sha256: 95a5b8dbff7437a6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 14:49";
+const BUILD_DATE = "2026-09-26 15:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -22447,6 +22447,7 @@ const RhythmTapTest = ({
     });
     const canvas = noteCanvasRef.current;
     if (canvas) canvas.dataset.rhythmNoteBackend = RHYTHM_CANVAS_RENDERER.backend;
+    RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend === 'webgl' ? playAreaRef.current : null);
     return () => RHYTHM_CANVAS_RENDERER.release();
   }, [canvasNotes, webglNotes]);
   const noteElements = useMemo(() => canvasNotes ? null : chart.notes.map((note, index) => {
@@ -23112,7 +23113,8 @@ const RhythmTapTest = ({
       playAreaHeight: areaRect.height,
       rect: areaRect,
       noteHeight,
-      ready
+      ready,
+      hitY: lineRect.top + lineRect.height - areaRect.top
     };
     if (ready) travelCacheRef.current = result;
     return result;
@@ -23635,6 +23637,7 @@ const RhythmTapTest = ({
         maxDpr: noteCanvasMaxDprRef.current,
         sizeScale: settings.noteSize / 100
       });
+      if (canvasReady) RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
       const paintCanvasNote = note => {
         const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && rhythmNoteHasBody(note) && songTimeMs < rhythmReleaseTargetMs(note);
         const clearFlash = note.done && Number.isFinite(note._rhythmClearAt) && songTimeMs - note._rhythmClearAt < RHYTHM_CLEAR_FLASH_MS;

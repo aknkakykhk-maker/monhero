@@ -18909,6 +18909,18 @@ const rhythmRestartAnimations=entries=>{
 // defer:true を渡すと、印を付けずに「付けるべき印」だけを返す。
 // 呼び出し側が rhythmRestartAnimations へまとめて渡すことで、レイアウトの読み取りを1回にできる。
 const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false})=>{
+  // 検証用に WebGL で描いているときは、同じ光をノーツの canvas へ描く(RHYTHM_CANVAS_RENDERER の「叩いたときの光」)。
+  // DOM の部品には触らないので、返すもの(流し直す印)も無い
+  if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&RHYTHM_CANVAS_RENDERER.hitsFor(area)){
+    const big=!!monster,rainbow=!big&&precise&&judgment==='MARVELOUS';
+    RHYTHM_CANVAS_RENDERER.pushHit({
+      center:Math.max(0,Math.min(1,Number(centerRatio)||.5)),
+      width:Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(big?1.5:1.15),
+      color:big?'#fde047':rhythmHitEffectColor(judgment),judgment:big?'':String(judgment||''),
+      precise:rainbow,big,sparkScale:big?2.1:(rainbow?1.45:1),
+    });
+    return null;
+  }
   const layer=rhythmEnsureHitEffects(area);
   if(!layer||!layer._rhythmPool.length)return null;
   const item=layer._rhythmPool[layer._rhythmNext%layer._rhythmPool.length];
@@ -19984,9 +19996,156 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     ctx.globalAlpha=1;
   };
+  // ── 叩いたときの光(検証用・WebGL で描くときだけ。2026-09-26) ─────────────────────────
+  // ふだんは DOM の部品(rhythmSpawnHitEffect)を CSS アニメーションで動かしている。WebGL で描くときだけ、
+  // 同じ形・同じ動き・同じ色をこの canvas へ描き、部品は動かさない。叩くたびに走っていたスタイルの計算と
+  // 重なりの組み立て(実測でそれぞれ約2割)が要らなくなる。
+  // ★形と動きは [data-rhythm-hit-effect] の CSS と @keyframes mhRhythmHit* を写したもの。向こうを変えたらこちらも直す。
+  // ★明るさのフィルター(brightness・saturate)は、使い回す部品へ判定の印を付けて、実際に効いている値を読む
+  //   (index.html と rhythm-mode.js のどちらの指定が勝っているかに左右されないように)。
+  // ★重なり順も DOM と同じにする。光の層(z-index:3)はノーツの canvas(z-index:5)の下なので、ノーツより先に描く。
+  const HIT_KEYS={
+    core:[[0,{o:0,sx:.28,sy:.4}],[.12,{o:1,sx:1.02,sy:1.9}],[1,{o:0,sx:1.34,sy:.28}]],
+    beam:[[0,{o:0,sx:.68,sy:.08}],[.14,{o:.82,sx:1,sy:.74}],[1,{o:0,sx:.52,sy:1.3}]],
+    coreBig:[[0,{o:0,sx:.3,sy:.5}],[.09,{o:1,sx:1.3,sy:3.2}],[.42,{o:.9,sx:1.7,sy:1.6}],[1,{o:0,sx:2.1,sy:.3}]],
+    beamBig:[[0,{o:0,sx:.7,sy:.1}],[.1,{o:1,sx:1.16,sy:1.5}],[.48,{o:.72,sx:1,sy:2.1}],[1,{o:0,sx:.6,sy:2.9}]],
+    spark:[[0,{o:0,k:0,s:.3}],[.12,{o:1,k:.3,s:1}],[1,{o:0,k:1,s:.2}]],
+    flare:[[0,{o:0,sx:.35,sy:.35,r:-6}],[.14,{o:1,sx:1,sy:1,r:0}],[1,{o:0,sx:1.25,sy:.8,r:4}]],
+  };
+  const HIT_SPARK_OFFSETS=[[-54,-56],[-24,-86],[0,-104],[24,-86],[54,-56]];
+  const HIT_CORE_RAINBOW=['#f87171','#fbbf24','#a3e635','#22d3ee','#a78bfa','#f472b6'];
+  const HIT_BEAM_RAINBOW=[[0,'#f472b6'],[.24,'#a78bfa'],[.46,'#22d3ee'],[.64,'#a3e635'],[.82,'rgba(251,191,36,.35)'],[1,'rgba(251,191,36,0)']];
+  // cubic-bezier(.16,.9,.3,1)。CSS と同じく、キーフレームの区間ごとにかける
+  const hitEase=(()=>{const x1=.16,y1=.9,x2=.3,y2=1,cx=3*x1,bx=3*(x2-x1)-cx,ax=1-cx-bx,cy=3*y1,by=3*(y2-y1)-cy,ay=1-cy-by;
+    const sx=t=>((ax*t+bx)*t+cx)*t,sy=t=>((ay*t+by)*t+cy)*t,dx=t=>(3*ax*t+2*bx)*t+cx;
+    return x=>{if(x<=0)return 0;if(x>=1)return 1;let t=x;
+      for(let i=0;i<8;i++){const e=sx(t)-x;if(Math.abs(e)<1e-6)return sy(t);const d=dx(t);if(Math.abs(d)<1e-6)break;t-=e/d;}
+      let lo=0,hi=1;t=x;for(let i=0;i<30;i++){const v=sx(t);if(Math.abs(v-x)<1e-6)break;if(v<x)lo=t;else hi=t;t=(lo+hi)/2;}
+      return sy(t);};})();
+  const hitFrame=(keys,t)=>{let i=1;while(i<keys.length-1&&t>keys[i][0])i++;
+    const t0=keys[i-1][0],t1=keys[i][0],a=keys[i-1][1],b=keys[i][1];
+    const k=hitEase(t1>t0?Math.max(0,Math.min(1,(t-t0)/(t1-t0))):1),out={};
+    for(const key in a)out[key]=a[key]+(b[key]-a[key])*k;return out;};
+  const hitRgba=text=>{const str=String(text||'').trim();
+    if(str[0]==='#'){const h=str.slice(1),full=h.length<=4?h.split('').map(ch=>ch+ch).join(''):h;
+      return [parseInt(full.slice(0,2),16),parseInt(full.slice(2,4),16),parseInt(full.slice(4,6),16),full.length>=8?parseInt(full.slice(6,8),16)/255:1];}
+    const m=str.match(/rgba?\(([^)]*)\)/i);if(m){const p=m[1].split(/[\s,\/]+/).filter(Boolean).map(Number);return [p[0]||0,p[1]||0,p[2]||0,p.length>3?p[3]:1];}
+    return [255,255,255,1];};
+  const hitText=c=>`rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${Math.round(c[3]*1000)/1000})`;
+  // CSS の brightness → saturate を色へかける(どちらも1段ごとに0〜255へ丸める)
+  const hitFilter=(c,f)=>{if(!f)return c;const cl=v=>Math.max(0,Math.min(255,v));
+    const r=cl(c[0]*f[0]),g=cl(c[1]*f[0]),b=cl(c[2]*f[0]),s=f[1];
+    return [cl((.213+.787*s)*r+(.715-.715*s)*g+(.072-.072*s)*b),cl((.213-.213*s)*r+(.715+.285*s)*g+(.072-.072*s)*b),cl((.213-.213*s)*r+(.715-.715*s)*g+(.072+.928*s)*b),c[3]];};
+  // CSS のグラデーションは乗算済みの色で混ぜる。canvas は混ぜ方が違うので、あいだの色を乗算済みで作って足す
+  const hitPremulMix=(a,b,u)=>{const al=a[3]+(b[3]-a[3])*u;if(!(al>0))return [b[0],b[1],b[2],0];
+    return [(a[0]*a[3]+(b[0]*b[3]-a[0]*a[3])*u)/al,(a[1]*a[3]+(b[1]*b[3]-a[1]*a[3])*u)/al,(a[2]*a[3]+(b[2]*b[3]-a[2]*a[3])*u)/al,al];};
+  const hitParseFilter=text=>{const str=String(text||'');if(!str||str==='none')return null;
+    const num=re=>{const m=str.match(re);return m?Number(m[1])/(m[2]?100:1):1;};
+    const f=[num(/brightness\(([\d.]+)(%)?\)/),num(/saturate\(([\d.]+)(%)?\)/)];
+    return f[0]===1&&f[1]===1?null:f;};
+  let hitArea=null,hitNext=0;
+  const hitSlots=new Array(RHYTHM_HIT_EFFECT_POOL).fill(null),hitFilters=new Map();
+  const readHitFilters=area=>{
+    hitFilters.clear();
+    try{
+      const layer=rhythmEnsureHitEffects(area),item=layer&&layer._rhythmPool&&layer._rhythmPool[0];
+      if(!item)return;
+      const keep=[item.dataset.hitJudgment||'',item.dataset.hitPrecise||''],i=item.querySelector('i'),b=item.querySelector('b');
+      for(const judgment of ['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD',''])for(const precise of judgment==='MARVELOUS'?['','1']:['']){
+        item.dataset.hitJudgment=judgment;item.dataset.hitPrecise=precise;
+        hitFilters.set(`${judgment}|${precise}`,{core:i?hitParseFilter(getComputedStyle(i).filter):null,beam:b?hitParseFilter(getComputedStyle(b).filter):null});
+      }
+      item.dataset.hitJudgment=keep[0];item.dataset.hitPrecise=keep[1];
+    }catch(e){}
+  };
+  // 中心のフラッシュ(ふつう)。横長の楕円の放射グラデーションを1枚焼き、幅に合わせて伸ばして貼る(楕円なので伸ばしても形は同じ)
+  const hitCoreSprite=(color,filter)=>{
+    const id=`hitcore:${color}:${filter?filter.join(','):''}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const s=makeSpriteCanvas(128,16),c=s.ctx,mid=hitFilter(hitRgba(color),filter),center=hitFilter([255,255,255,1],filter);
+    c.save();c.translate(64,8);c.scale(8,1);
+    const g=c.createRadialGradient(0,0,0,0,0,8);
+    g.addColorStop(0,hitText(center));g.addColorStop(.4,hitText(mid));g.addColorStop(1,hitText([mid[0],mid[1],mid[2],0]));
+    c.fillStyle=g;c.fillRect(-8,-8,16,16);c.restore();
+    sprites.set(id,s);return s;
+  };
+  // 白い十字の光。形も色も固定なので1枚だけ焼く。CSS の背景は先に書いたものが上なので、縦の帯→横の帯→中心の丸の順に重ねる
+  const hitFlareSprite=()=>{
+    const id=`hitflare:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const s=makeSpriteCanvas(190,110),c=s.ctx,fillStops=(g,stops)=>{stops.forEach(([t,col])=>g.addColorStop(t,col));return g;};
+    c.fillStyle=fillStops(c.createLinearGradient(0,0,0,110),[[0,'rgba(255,255,255,0)'],[.35,'rgba(255,255,255,.6)'],[.5,'#fff'],[.65,'rgba(255,255,255,.6)'],[1,'rgba(255,255,255,0)']]);
+    c.fillRect(93,0,4,110);
+    c.fillStyle=fillStops(c.createLinearGradient(0,0,190,0),[[0,'rgba(255,255,255,0)'],[.3,'rgba(255,255,255,.55)'],[.5,'#fff'],[.7,'rgba(255,255,255,.55)'],[1,'rgba(255,255,255,0)']]);
+    c.fillRect(0,52.5,190,5);
+    c.save();c.translate(95,55);c.scale(95/55,1);
+    c.fillStyle=fillStops(c.createRadialGradient(0,0,0,0,0,55),[[0,'rgba(255,255,255,1)'],[.14,'rgba(255,255,255,.7)'],[.3,'rgba(224,242,254,.25)'],[.48,'rgba(224,242,254,0)']]);
+    c.fillRect(-55,-55,110,110);c.restore();
+    sprites.set(id,s);return s;
+  };
+  const warmHitSprites=()=>{
+    if(!hitArea)return;
+    hitFlareSprite();
+    for(const judgment of ['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD']){const f=hitFilters.get(`${judgment}|`);hitCoreSprite(rhythmHitEffectColor(judgment),f?f.core:null);}
+    const monster=hitFilters.get('|');hitCoreSprite('#fde047',monster?monster.core:null);
+  };
+  // (ox,oy) を中心に拡大(sx,sy)→回転(deg)。CSS の transform:scale() rotate() と同じ順
+  const hitTransform=(ox,oy,sx,sy,deg=0)=>{
+    const rad=deg*Math.PI/180,cos=Math.cos(rad),sin=Math.sin(rad);
+    const a=sx*cos,b=sy*sin,c=-sx*sin,d=sy*cos;
+    ctx.setTransform(a*dpr,b*dpr,c*dpr,d*dpr,(ox-(a*ox+c*oy))*dpr,(oy-(b*ox+d*oy))*dpr);
+  };
+  const hitBeamPath=(x,y,w,h)=>{
+    // border-radius:999px 999px 0 0 は、幅が高さの2倍までは「幅の半分」の丸になる
+    const r=Math.max(0,Math.min(w/2,h));
+    ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x,y+r);ctx.arc(x+r,y+r,r,Math.PI,Math.PI*1.5);
+    ctx.lineTo(x+w-r,y);ctx.arc(x+w-r,y+r,r,Math.PI*1.5,Math.PI*2);ctx.lineTo(x+w,y+h);ctx.closePath();
+  };
+  const drawOneHit=(h,p,hitY)=>{
+    const W=h.width*cssW,cx=h.center*cssW,left=cx-W/2;
+    // 中心のフラッシュ(判定ラインの上下7px・幅いっぱい)
+    let f=hitFrame(h.big?HIT_KEYS.coreBig:HIT_KEYS.core,p);
+    if(f.o>.002){
+      ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy);
+      if(h.precise){
+        roundRectPath(ctx,left,hitY-7,W,14,7);
+        const g=ctx.createLinearGradient(left,0,left+W,0);
+        HIT_CORE_RAINBOW.forEach((col,i)=>g.addColorStop(i/(HIT_CORE_RAINBOW.length-1),hitText(hitFilter(hitRgba(col),h.filter.core))));
+        ctx.fillStyle=g;ctx.fill();
+      }else ctx.drawImage(hitCoreSprite(h.color,h.filter.core).canvas,left,hitY-7,W,14);
+    }
+    // 立ち上がる光の柱(判定ラインから上へ96px)
+    f=hitFrame(h.big?HIT_KEYS.beamBig:HIT_KEYS.beam,p);
+    if(f.o>.002){
+      ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy);
+      hitBeamPath(left,hitY-96,W,96);
+      const g=ctx.createLinearGradient(0,hitY,0,hitY-96);
+      if(h.precise)HIT_BEAM_RAINBOW.forEach(([t,col])=>g.addColorStop(t,hitText(hitFilter(hitRgba(col),h.filter.beam))));
+      else{
+        const base=hitFilter(hitRgba(h.color),h.filter.beam),white=hitFilter([255,255,255,.32],h.filter.beam);
+        [0,1/3,2/3,1].forEach(u=>g.addColorStop(.42*u,hitText(hitPremulMix(base,white,u))));
+        g.addColorStop(1,hitText([white[0],white[1],white[2],0]));
+      }
+      ctx.fillStyle=g;ctx.fill();
+    }
+    // はじける粒(7pxの丸が5つ)。フィルターはかからない
+    f=hitFrame(HIT_KEYS.spark,p);
+    if(f.o>.002&&f.s>0){
+      ctx.globalAlpha=Math.min(1,f.o);ctx.setTransform(dpr,0,0,dpr,0,0);
+      HIT_SPARK_OFFSETS.forEach(([ox,oy],i)=>{
+        ctx.fillStyle=h.precise?RHYTHM_JUDGMENT_RAINBOW[i]:h.color;
+        ctx.beginPath();ctx.arc(cx+ox*h.sparkScale*f.k,hitY+oy*h.sparkScale*f.k,3.5*f.s,0,Math.PI*2);ctx.fill();
+      });
+    }
+    // 白い十字の光(演出量「多め」では出さない)
+    if(h.flare){
+      f=hitFrame(HIT_KEYS.flare,p);
+      if(f.o>.002){ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy,f.r);ctx.drawImage(hitFlareSprite().canvas,cx-95,hitY-55,190,110);}
+    }
+  };
   return {
     // options.webgl … 検証用。WebGL の描き込み先(rhythmCreateGL2D)で描く。作れなければ今までどおり 2D で描く
-    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx)ctx=canvas.getContext('2d');},
+    attach(next,options={}){canvas=next||null;backend='2d';ctx=null;hitArea=null;hitSlots.fill(null);if(canvas&&options.webgl){ctx=rhythmCreateGL2D(canvas);if(ctx)backend='webgl';}if(canvas&&!ctx)ctx=canvas.getContext('2d');},
     get backend(){return backend;},
     // ── 演奏が始まる前に、光のスプライトを焼いておく ──────────────────────────
     //
@@ -20029,9 +20188,35 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       glowSprite('end',4,endGlows);
       glowSprite('endFlick',4,endGlows);
       arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
+      // 叩いたときの光(canvas で描くときだけ)
+      if(effect!=='MINIMAL'&&!options.lightweight)warmHitSprites();
       return sprites.size-before;
     },
-    release(){canvas=null;ctx=null;sprites.clear();},
+    release(){canvas=null;ctx=null;sprites.clear();hitArea=null;hitSlots.fill(null);},
+    // 叩いたときの光をこの canvas で描くか(検証用・WebGL のときだけ演奏画面が area を渡す)。null で DOM の部品へ戻す
+    enableHits(area){hitArea=area&&ctx?area:null;hitSlots.fill(null);hitNext=0;if(hitArea)readHitFilters(hitArea);},
+    hitsFor(area){return !!hitArea&&!!ctx&&area===hitArea;},
+    // DOM の部品と同じく10枠を順に使い回す(11個目は1個目を切って上書きする)。演出量「最小」・軽量モードでは出さない
+    pushHit(hit){
+      if(!hitArea||effect==='MINIMAL'||lightweight)return;
+      const key=`${hit.judgment||''}|${hit.precise?'1':''}`;
+      hitSlots[hitNext]={...hit,filter:hitFilters.get(key)||{core:null,beam:null},start:typeof performance!=='undefined'?performance.now():Date.now(),
+        ms:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW'};
+      hitNext=(hitNext+1)%hitSlots.length;
+    },
+    // begin() のすぐあと(ノーツより先)に呼ぶ。hitY は判定ラインの下端(光の入れ物の bottom)の高さ
+    drawHits(hitY){
+      if(!ctx||!hitArea||!Number.isFinite(hitY))return 0;
+      const now=frameNow||(typeof performance!=='undefined'?performance.now():Date.now());let count=0;
+      for(let slot=0;slot<hitSlots.length;slot++){
+        const hit=hitSlots[slot];if(!hit)continue;
+        const t=(now-hit.start)/hit.ms;
+        if(t>=1){hitSlots[slot]=null;continue;}
+        drawOneHit(hit,Math.max(0,t),hitY);count++;
+      }
+      if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
+      return count;
+    },
     get drawn(){return drawn;},
 
     // 焼いてあるスプライトの枚数(検査で「曲の中で増えないこと」を見るために使う)
