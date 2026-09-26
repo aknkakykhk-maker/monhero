@@ -346,6 +346,54 @@ const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhy
 //   そこへ知らせを重ねると肝心の進捗が読めなくなっていた
 //   (2026-09-07・ユーザー提案「曲リザルトの画面で出すほうがいい。
 //    そうしたら帯にわざわざ何周分追加とか表示する必要もない」)。
+// 譜面メモ(DEBUG ONLY・2026-09-26)。音ゲーデバッグ画面から始めた演奏の結果画面にだけ出る。
+// ユーザー指示「遊んだ感想を譜面に残す仕組みも」。曲を RHYTHM_CHART_NOTE_SEGMENT_MS ごとの区間に分け、
+// 区間ごとに 👍/👎 と、ひとことメモを残す。「コピー」で JSON を渡してもらい、
+// tools/mode/rhythm-chart-feedback.js --import で設計資料(tools/mode/authoring/feedback/)へ取り込む。
+// 良い／変と言われた区間にどんな形・種類が多いかを数えるのが、自動譜面の「学習」の土台になる
+// (docs/spec/RHYTHM_CHART_CORPUS.md)。プレイヤーには出ないので、更新履歴・ヘルプには載せない。
+// 保存は新しいキー mh_rhythm_chart_notes_v1 だけ(既存の保存キーには触らない)。
+const RHYTHM_CHART_NOTES_KEY='mh_rhythm_chart_notes_v1';
+const RHYTHM_CHART_NOTE_SEGMENT_MS=8000;
+const RHYTHM_CHART_NOTE_MARKS=['', 'good', 'bad'];
+// 保存値は「曲id|難易度 → メモ1件」。壊れている・形が違うときは空として扱う(消さない・上書きしない)
+const normalizeRhythmChartNotes=value=>value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+// 同じ曲・難易度でも譜面を作り直すと中身が変わる。メモがどの譜面に対するものかを、ノーツ数と最初・最後の時刻で残す
+const rhythmChartFingerprint=chart=>{
+  const notes=Array.isArray(chart?.notes)?chart.notes:[];
+  const times=notes.map(note=>Number(note.timeMs)).filter(Number.isFinite).sort((a,b)=>a-b);
+  return `${notes.length}:${times.length?Math.round(times[0]):0}:${times.length?Math.round(times[times.length-1]):0}`;
+};
+const RhythmChartNotePanel=({song,difficulty,chart})=>{
+  const durationMs=Math.max(RHYTHM_CHART_NOTE_SEGMENT_MS,Number(song?.playDurationMs)||Number(chart?.durationMs)||0);
+  const count=Math.ceil(durationMs/RHYTHM_CHART_NOTE_SEGMENT_MS);
+  const key=`${song?.songId||''}|${difficulty?.id||''}`;
+  const fingerprint=rhythmChartFingerprint(chart);
+  const [marks,setMarks]=useState(()=>Array.from({length:count},()=>''));
+  const [memo,setMemo]=useState('');
+  const [status,setStatus]=useState('');
+  useEffect(()=>{let alive=true;storeGet(RHYTHM_CHART_NOTES_KEY,{}).then(value=>{if(!alive)return;const saved=normalizeRhythmChartNotes(value)[key];
+    if(!saved||saved.fingerprint!==fingerprint)return;
+    const list=Array.isArray(saved.marks)?saved.marks:[];
+    setMarks(Array.from({length:count},(_,i)=>RHYTHM_CHART_NOTE_MARKS.includes(list[i])?list[i]:''));
+    setMemo(typeof saved.memo==='string'?saved.memo:'');});return()=>{alive=false;};},[key,fingerprint,count]);
+  const entry=()=>({songId:song?.songId||'',displayName:song?.displayName||'',difficulty:difficulty?.id||'',level:Number(chart?.level)||0,
+    fingerprint,segmentMs:RHYTHM_CHART_NOTE_SEGMENT_MS,marks,memo:memo.slice(0,1000),savedAt:new Date().toISOString()});
+  const save=async()=>{const all=normalizeRhythmChartNotes(await storeGet(RHYTHM_CHART_NOTES_KEY,{}));const ok=await storeSet(RHYTHM_CHART_NOTES_KEY,{...all,[key]:entry()});setStatus(ok?'保存しました':'保存できませんでした');};
+  const copy=async()=>{const text=JSON.stringify({kind:'monhero-rhythm-chart-note',version:1,...entry()});
+    try{await navigator.clipboard.writeText(text);setStatus('コピーしました。チャットへ貼ってください');}catch{setStatus('コピーできませんでした');}};
+  const cycle=i=>setMarks(list=>list.map((mark,k)=>k!==i?mark:RHYTHM_CHART_NOTE_MARKS[(RHYTHM_CHART_NOTE_MARKS.indexOf(mark)+1)%RHYTHM_CHART_NOTE_MARKS.length]));
+  return <div data-rhythm-chart-note className="mx-auto my-3 max-w-md rounded-2xl border border-amber-300/50 bg-slate-900/80 p-3 text-left">
+    <div className="flex items-baseline justify-between"><b className="text-[11px] font-black tracking-wider text-amber-200">譜面メモ（DEBUG）</b><small className="text-[9px] font-bold text-slate-400">区間を押すたびに 👍 → 👎 → なし</small></div>
+    <div className="mt-2 grid grid-cols-6 gap-1">{marks.map((mark,i)=><button key={i} data-rhythm-chart-note-segment={i} data-mark={mark||'none'} onClick={()=>cycle(i)}
+      className={`min-h-[40px] rounded-lg border text-[9px] font-black tabular-nums ${mark==='good'?'border-emerald-300 bg-emerald-800/70 text-emerald-50':mark==='bad'?'border-rose-300 bg-rose-900/70 text-rose-50':'border-white/15 bg-slate-800/70 text-slate-300'}`}>
+      <span className="block">{rhythmClockLabel(i*RHYTHM_CHART_NOTE_SEGMENT_MS)}</span><span className="block text-[11px]">{mark==='good'?'👍':mark==='bad'?'👎':'・'}</span></button>)}</div>
+    <textarea data-rhythm-chart-note-memo value={memo} onChange={e=>setMemo(e.target.value)} maxLength={1000} rows={2} placeholder="気になったところ（例: 1:20 のフリックが音と合っていない）"
+      className="mt-2 w-full rounded-lg border border-white/15 bg-slate-950/80 p-2 text-[11px] font-bold text-slate-100"/>
+    <div className="mt-2 grid grid-cols-2 gap-2"><button data-rhythm-chart-note-save onClick={save} className="min-h-[44px] rounded-xl bg-amber-700 text-[12px] font-black">保存</button><button data-rhythm-chart-note-copy onClick={copy} className="min-h-[44px] rounded-xl bg-slate-700 text-[12px] font-black">コピー</button></div>
+    {status&&<p data-rhythm-chart-note-status className="mt-1 text-center text-[10px] font-bold text-amber-100">{status}</p>}
+  </div>;
+};
 const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onComplete,onExit,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null})=>{
   // モンスターノーツの演出の段。いちばん軽い段(NONE)では、ノーツへ重ねるマスモンの絵を
   // 作らない(2026-09-13・ユーザー指摘「あれは踏んだときまだカクつきがある / 設定は最小」)。
@@ -1657,6 +1705,8 @@ scheduleTick();};
   <div className="mt-0.5 flex justify-between text-[8px] font-bold tabular-nums text-slate-500"><span>0:00</span><span>{rhythmClockLabel(result.liveLogEndMs)}</span></div>
   <p data-rhythm-live-log-worst className="mt-1 text-[10px] font-bold leading-relaxed text-slate-300">{worst?`いちばん崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad+worst.miss}回）。`:'どの区間も BAD・MISS なしで通せました。'}</p>
 </div>;})()}
+{/* 譜面メモ(DEBUG ONLY)。デバッグ画面から始めた演奏にだけ出す */}
+{debugPlay&&!tutorial&&!calibrating&&<RhythmChartNotePanel song={song} difficulty={difficulty} chart={chart}/>}
 </div>
 <div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + env(safe-area-inset-bottom))'}}><div className="grid grid-cols-2 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</button></div></div></div></div></main>}
   /* ★ここへ属性を足すときは className の「後ろ」へ置く。

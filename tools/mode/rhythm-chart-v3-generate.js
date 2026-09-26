@@ -26,6 +26,7 @@ const vm=require('vm');
 const {HAND_MODEL,fingerPairFeasible,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange}=require('./rhythm-hand-model.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {setLaneCount:setPatternLaneCount,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
+const {soundTraitsFor,flickScoreOf,chordScoreOf}=require('./rhythm-sound-traits.js');
 const {chartRevisionOf,laneCountForRevision}=require('./rhythm-chart-v3-revision.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
@@ -425,6 +426,10 @@ const phraseCopy=chartRevision>=2;
 const slideEase=chartRevision>=3;
 // 版4: MASTERだけ横フリックを付ける(下の applySideFlicks)
 const sideFlick=chartRevision>=4;
+// 版6: 音の性格でノーツの種類を決める(フリック・同時押し・横フリックの向き)。物差しは rhythm-sound-traits.js
+const soundTypes=chartRevision>=6;
+const traitsByGrid=soundTypes?soundTraitsFor(audio):null;
+const soundTraitAt=grid=>traitsByGrid?traitsByGrid.get(grid)||null:null;
 // 版5: 6レーンの道。版4までは5レーン(サブレーン10本)のまま作る。
 // ★レーン数の数字(5・4・10)を直接書かない。LANES(レーン数)・LANES-1(右はしのレーン)・SUB_LANES(サブレーン数)を使う
 const LANES=laneCountForRevision(chartRevision);
@@ -1462,7 +1467,14 @@ const buildChart=(difficulty,options={})=>{
       if(note.sourceCharacter==='LIGHT')return;
       candidates.push(index);
     });
-    for(const index of spreadPick(candidates,flickMax,4))notes[index].type='FLICK';
+    // 版6: 音を見ずに曲全体へ散らすのをやめ、「切れる音・歌の語尾・シンバル」に乗る候補から
+    //   音の性格の点が高い順に取る。flickMax は上限としてだけ使う(ふさわしい音が少ない曲はフリックも少ない)。
+    //   実測(版5・全曲): フリックが音の性格に乗っている割合は 42〜43% で、TAP全体の割合(36〜42%)とほぼ同じ
+    //   ＝音を見ずに散らしていた(tools/mode/rhythm-note-type-fit.js)
+    const picked=soundTypes
+      ?soundPick(candidates,flickMax,4,index=>flickScoreOf(soundTraitAt(notes[index].grid)))
+      :spreadPick(candidates,flickMax,4);
+    for(const index of picked)notes[index].type='FLICK';
   }
 
   // --- 8. 終点フリック（HOLD/SLIDEの終わりで弾く） ---
@@ -1523,7 +1535,7 @@ const buildChart=(difficulty,options={})=>{
     const candidates=notes
       .map((note,index)=>({note,index}))
       .filter(({note})=>note.type==='TAP'&&!note.sectionAccent
-        &&note.subLaneWidth>=CHORD.minWidth&&note.subLaneWidth<=4
+        &&note.subLaneWidth>=CHORD.minWidth&&(soundTypes||note.subLaneWidth<=4)
         &&(!CHORD.onBeat||note.grid%BEAT===0)
         &&(gridCount.get(note.grid)||0)===1
         &&nearestOther(note)>=CHORD.clearGrids
@@ -1543,8 +1555,15 @@ const buildChart=(difficulty,options={})=>{
     const nextBatch=()=>{
       const rest=candidates.filter(index=>!tried.has(index)&&(!preferred||preferred.has(index)||tried.size>=intense.length));
       if(!rest.length)return [];
-      const picked=spreadPick(rest,chordMax-chordCount,CHORD.spacingGrids);
+      // 版6: シンバル・大きな一発から、音の性格の点が高い順に取る(音の無い静かな所には置かない)。
+      //   版5までは「前後が空いている」所を選ぶので、かえって弱い音に乗っていた
+      //   (実測: EASY〜HARDの同時押しのうちシンバル・大きな一発に乗っていたのは 0〜1%)。
+      //   幅の上限(4)も外す。大きな一発はいちばん太く置かれるので、上限があると最初から候補に入らなかった
+      const picked=soundTypes
+        ?soundPick(rest,chordMax-chordCount,CHORD.spacingGrids,index=>chordScoreOf(soundTraitAt(notes[index].grid)))
+        :spreadPick(rest,chordMax-chordCount,CHORD.spacingGrids);
       for(const index of picked)tried.add(index);
+      if(soundTypes&&!picked.length)for(const index of rest)tried.add(index);
       return picked;
     };
     const queue=[];
@@ -2789,6 +2808,20 @@ function spreadPick(candidates,count,minGap){
   return chosen.sort((a,b)=>a-b);
 }
 
+// 版6: 候補を「音の性格の点」が高い順に取る。点が0の候補(その種類にふさわしい音ではない)は取らない。
+// 近すぎる候補は飛ばす(minGap は spreadPick と同じく候補の番号の差)。点が同じなら曲の前から。
+function soundPick(candidates,count,minGap,scoreOf){
+  const scored=candidates.map(index=>({index,score:scoreOf(index)})).filter(entry=>entry.score>0)
+    .sort((a,b)=>b.score-a.score||a.index-b.index);
+  const chosen=[];
+  for(const entry of scored){
+    if(chosen.length>=count)break;
+    if(chosen.some(taken=>Math.abs(taken-entry.index)<minGap))continue;
+    chosen.push(entry.index);
+  }
+  return chosen.sort((a,b)=>a-b);
+}
+
 // スイープの中継点の上限。多いほど経路はなめらかだが、譜面データも大きくなる。
 const SWEEP_MAX_POINTS=20;
 // 高さをならす幅（前後いくつぶんの平均を取るか）と、中継点の間隔（グリッド）。
@@ -3208,7 +3241,11 @@ function applySideFlicks(notes){
     delete note.flickDir;
     const next=order.slice(k+1).find(other=>other.t-item.t>1);
     let dir='';
-    if(next&&next.t-item.t<=SIDE_FLICK_NEXT_MS){
+    // 版6: 旋律が上がる音は右・下がる音は左へ払う(音の高さを横へ並べる譜面の約束ごと。
+    //   形の語彙も「高いほど右」で並べている)。旋律が動かない音だけ、次のノーツへ向かう向きにする
+    const move=soundTypes?(soundTraitAt(note.grid)?.pitchMove||0):0;
+    if(move>0)dir='right';else if(move<0)dir='left';
+    if(!dir&&next&&next.t-item.t<=SIDE_FLICK_NEXT_MS){
       const shift=(next.note.type==='SLIDE'&&Array.isArray(next.note.slidePoints)?Number(next.note.slidePoints[0].lane)*2+1:center(next.note))-center(note);
       if(shift>=SIDE_FLICK_MIN_SHIFT)dir='right';else if(shift<=-SIDE_FLICK_MIN_SHIFT)dir='left';
     }
