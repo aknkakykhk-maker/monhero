@@ -985,7 +985,7 @@ const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   const margin=laneWidth/2*RHYTHM_INPUT_EDGE_MARGIN_SUB_LANES;
   if(nx<left-margin||nx>right+margin)return null;
   // 台形の外は端のレーンの延長として、そのまま外側の座標を返す。
-  // 受け取る側は subLane を 0〜9 へ丸める(setPressedLanes / inputStarts)ので、
+  // 受け取る側は subLane を 0〜(サブレーン数-1) へ丸める(setPressedLanes / inputStarts)ので、
   // 少しはみ出した値がそのまま使われることはない。
   return (nx-left)/laneWidth-.5;
 };
@@ -2280,7 +2280,10 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
   if(typeof document!=='undefined'){
     const style=document.createElement('style');
     style.dataset.rhythmTouchSpan='';
-    style.textContent='[data-rhythm-sublane-feedback][data-rhythm-touchspan="true"]{opacity:1!important}';
+    // 指の太さぶん光らせるサブレーン。ふだんは演奏画面の CSS の「叩いた瞬間に光って薄く落ち着く」アニメーションで出す
+    // (!important で固定すると、アニメーションが効かず押しっぱなしで光り続ける。2026-09-26)。
+    // 軽量モードはアニメーションを止めるので、そのときだけ光の強さで固定する
+    style.textContent='[data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-sublane-feedback][data-rhythm-touchspan="true"]{opacity:var(--mh-lane-glow,1)!important}';
     document.head.appendChild(style);
     document.addEventListener('touchstart',event=>startOrMove(event,true),{capture:true,passive:true});
     document.addEventListener('touchmove',event=>{if(Array.from(event.changedTouches||[]).some(touch=>touchStates.has(Number(touch.identifier))))startOrMove(event,false);},{capture:true,passive:true});
@@ -18461,8 +18464,13 @@ const installRhythmGeometryStyles=()=>{
     /* 押したレーンの光の消え方(2026-09-26)。押した瞬間はすぐ光り、離すと約0.2秒でふわっと消える。
        動くのは opacity だけ(合成だけで済む)。軽量モードでは切り替えを瞬時にする */
     [data-rhythm-sublane-feedback]{transition:opacity 190ms ease-out}
-    [data-rhythm-sublane-feedback][data-pressed="true"],[data-rhythm-sublane-feedback][data-rhythm-touchspan="true"]{transition:opacity 40ms linear}
-    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-sublane-feedback]{transition:none}
+    /* 叩いた瞬間は光り、指を置いたままなら約0.4秒で3割の明るさへ落ち着く(2026-09-26・ユーザー指摘
+       「スライドやホールドを押してる最中もレーンが光ってる。他の音ゲーは押せてるような感じになってる」)。
+       押さえている最中の合図は、レーンではなくノーツの側(判定ラインの接点の光)が受け持つ。
+       明るさの設定(レーンの光 強/弱/なし)は --mh-lane-glow で渡す。動くのは opacity だけ(合成だけで済む) */
+    [data-rhythm-sublane-feedback][data-pressed="true"],[data-rhythm-sublane-feedback][data-rhythm-touchspan="true"]{transition:opacity 40ms linear;animation:mhRhythmLaneTap 460ms ease-out forwards}
+    @keyframes mhRhythmLaneTap{0%,30%{opacity:var(--mh-lane-glow,1)}100%{opacity:calc(var(--mh-lane-glow,1) * .3)}}
+    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-sublane-feedback]{transition:none;animation:none}
     /* canvas でノーツを描くとき(2026-09-07)。canvas はノーツと同じ層に置く。
        マスモンの顔も、演奏の前に焼いた絵を同じ canvas へ描く(2026-09-25。以前は DOM の要素を重ねていた)。 */
     [data-rhythm-note-canvas]{position:absolute;left:0;top:0;pointer-events:none;z-index:5}
@@ -19818,7 +19826,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(rhythmNoteIsHold(note)&&!monster){ctx.fillStyle='rgba(8,47,73,.55)';ctx.fillRect(x+w*.24,cy-1,w*.52,2);}
     // 奥ほど暗い(filter:brightness 相当。不透明な粒の上では黒を (1-明るさ) の濃さで重ねると同じ色になる)
     if(brightness<1){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
-    if(pressed){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();}
+    // 押さえている最中は粒を白く明るくする(以前は .22)
+    if(pressed){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.4)';ctx.fill();}
     const sideDir=rhythmNoteVisualType(note)==='FLICK'&&!failed?rhythmFlickDir(note):'';
     if(sideDir){
       // 横フリック: 粒の上に向きの山形を重ねる。横幅は粒に合わせて伸ばしすぎない
@@ -19829,6 +19838,64 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const sprite=arrowSprite('flick',26,19,FLICK_ARROW_GLOWS,FLICK_ARROW_FILL);
       const aw=(sprite.tw+sprite.margin*2)*sizeMul,ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
       ctx.drawImage(sprite.canvas,cx-aw/2,y-3*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale,aw,ah);
+    }
+    ctx.globalAlpha=1;
+  };
+  // ===== 押さえている最中の合図(2026-09-26・ユーザー指摘「他の音ゲーはスライドやホールドを押せてるような感じになってる」) =====
+  // 判定ラインにとどまっている粒のまわりに、光のたまり(楕円)と、上へ昇る小さな光の粒を出す。
+  // どちらも最初の1回だけ焼いた絵を貼るだけ(毎フレームのグラデーション作成・ぼかしは無し)。
+  // 押さえているノーツ1本につき drawImage が 1 + 4 回。押さえられるのは指の数(2本)まで
+  const HOLD_SPARK_TINT=Object.freeze({HOLD:'103,232,249',SLIDE:'192,132,252'});
+  const holdSparkSprite=kind=>{
+    const id=`spark:${kind}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const W=128,H=64,s=makeSpriteCanvas(W,H),c=s.ctx,tint=HOLD_SPARK_TINT[kind]||HOLD_SPARK_TINT.HOLD;
+    c.save();c.translate(W/2,H/2);c.scale(1,H/W);
+    const g=c.createRadialGradient(0,0,0,0,0,W/2);
+    g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.22,'rgba(255,255,255,.88)');
+    g.addColorStop(.5,`rgba(${tint},.6)`);g.addColorStop(1,`rgba(${tint},0)`);
+    c.fillStyle=g;c.beginPath();c.arc(0,0,W/2,0,Math.PI*2);c.fill();c.restore();
+    const sprite={...s};sprites.set(id,sprite);return sprite;
+  };
+  const sparkDotSprite=()=>{
+    const id=`sparkdot:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const D=12,s=makeSpriteCanvas(D,D),c=s.ctx,g=c.createRadialGradient(D/2,D/2,0,D/2,D/2,D/2);
+    g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.4,'rgba(224,242,254,.8)');g.addColorStop(1,'rgba(224,242,254,0)');
+    c.fillStyle=g;c.fillRect(0,0,D,D);
+    const sprite={...s};sprites.set(id,sprite);return sprite;
+  };
+  // 判定ラインに沿った横一文字の光(レンズフレアの横すじ)。中央ほど明るく両端へ消える
+  const sparkStreakSprite=kind=>{
+    const id=`streak:${kind}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const W=256,H=16,s=makeSpriteCanvas(W,H),c=s.ctx,tint=HOLD_SPARK_TINT[kind]||HOLD_SPARK_TINT.HOLD;
+    const gx=c.createLinearGradient(0,0,W,0);
+    gx.addColorStop(0,`rgba(${tint},0)`);gx.addColorStop(.35,`rgba(${tint},.55)`);gx.addColorStop(.5,'rgba(255,255,255,1)');
+    gx.addColorStop(.65,`rgba(${tint},.55)`);gx.addColorStop(1,`rgba(${tint},0)`);
+    c.fillStyle=gx;c.fillRect(0,H/2-1.5,W,3);
+    c.globalAlpha=.45;c.fillRect(0,H/2-4,W,8);
+    const sprite={...s};sprites.set(id,sprite);return sprite;
+  };
+  const SPARK_DOTS=5,SPARK_CYCLE_MS=520;
+  const drawHoldSpark=(note,geo,opts)=>{
+    const head=geo.head;if(!head)return;
+    const kind=rhythmNoteIsSlide(note)?'SLIDE':'HOLD',depth=opts.depthScale||1;
+    const w=Math.max(18,head.w*sizeScale),pulse=.5-.5*Math.cos(frameNow/140);
+    const sw=w*2.1*(1+.08*pulse),sh=72*depth*(1+.12*pulse);
+    ctx.globalAlpha=(.8+.2*pulse)*opts.alpha;
+    ctx.drawImage(holdSparkSprite(kind).canvas,head.cx-sw/2,head.cy-sh/2,sw,sh);
+    const streakW=w*2.8,streakH=16*depth;
+    ctx.globalAlpha=(.7+.3*pulse)*opts.alpha;
+    ctx.drawImage(sparkStreakSprite(kind).canvas,head.cx-streakW/2,head.cy-streakH/2,streakW,streakH);
+    if(!lightweight&&effect!=='LOW'&&effect!=='LIGHT'){
+      const dot=sparkDotSprite().canvas,cycle=frameNow/SPARK_CYCLE_MS;
+      for(let i=0;i<SPARK_DOTS;i++){
+        const t=cycle+i/SPARK_DOTS,phase=t-Math.floor(t),seed=Math.floor(t)*.61+i*.37,offset=(seed-Math.floor(seed))-.5;
+        const size=10*(1-phase*.45);
+        ctx.globalAlpha=(1-phase)*.95*opts.alpha;
+        ctx.drawImage(dot,head.cx+offset*w*.85-size/2,head.cy-phase*52*depth-size/2,size,size);
+      }
     }
     ctx.globalAlpha=1;
   };
@@ -19852,11 +19919,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     if(failed){g.addColorStop(0,'rgba(120,130,145,.9)');g.addColorStop(1,'rgba(150,160,175,.7)');}
     else{g.addColorStop(0,'rgba(56,189,248,.62)');g.addColorStop(.6,'rgba(59,130,246,.42)');g.addColorStop(1,'rgba(165,243,252,.55)');}
     ctx.fillStyle=g;ctx.fill();
-    if(pressed&&!failed){ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();}
+    // 押さえている最中は帯を明るくする(押せている合図の1つ。以前は .22)
+    if(pressed&&!failed){ctx.fillStyle='rgba(224,247,255,.34)';ctx.fill();}
     ctx.globalAlpha=1;
   };
   const drawSlide=(geo,opts)=>{
-    const {failed,alpha}=opts;
+    const {failed,alpha,pressed}=opts;
     if(!geo.slide||!geo.slide.length)return;
     // ノーツサイズが100%以外のときだけ、帯の左右を中心のまわりで倍率にした写しを作る(100%は元のまま)
     const quads=sizeScale===1?geo.slide:geo.slide.map(q=>{const [l0,r0]=sizeX(q.l0,q.r0),[l1,r1]=sizeX(q.l1,q.r1);return {l0,r0,y0:q.y0,l1,r1,y1:q.y1};});
@@ -19880,6 +19948,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     for(let index=quads.length-1;index>=0;index--)ctx.lineTo(quads[index].l1,quads[index].y1);
     ctx.lineTo(quads[0].l0,quads[0].y0);ctx.closePath();
     ctx.lineWidth=1;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':'rgba(233,213,255,.56)';ctx.stroke();
+    // 押さえている最中は帯を明るくする(2026-09-26。以前はSLIDEだけ何も変わらなかった)。外周の道すじをそのまま塗る
+    if(pressed&&!failed){ctx.fillStyle='rgba(243,232,255,.30)';ctx.fill();}
     // チェックポイント＝そこで判定が入るところ。DOM版の[data-rhythm-slide-checkpoint]と同じ見た目。
     const checkpoints=geo.checkpoints;
     if(checkpoints&&checkpoints.length){
@@ -19994,6 +20064,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         drawEndBar(note,geo,o);
       }
       const headOpts=o.pop===null?o:{...o,alpha:o.alpha*.95*(1-easeOut(o.pop)),brightness:1};
+      // 押さえている最中の光は粒の下に敷く(粒の形は隠さない)。演出量「最小」では出さない
+      if(o.pressed&&!o.failed&&o.pop===null&&effect!=='MINIMAL')drawHoldSpark(note,geo,o);
       drawHead(note,geo,headOpts);
     },
     // マスモンの顔を1つ積む。bitmap は焼いた canvas、(cx,cy) は中心、size は一辺(どれも CSS px)。
