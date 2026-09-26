@@ -43,7 +43,7 @@ check('タップ音(SE)もメインの全体ミュートだけ共通で見る',
   data.includes("const rhythmAudioGloballyEnabled=()=>typeof window==='undefined'||window.__mhAudioEnabled!==false;")
   &&(data.match(/rhythmAudioGloballyEnabled\(\)/g)||[]).length>=2);
 check('タップ音のplay/emitEmptyの両方でミュートを判定',
-  /if\(!settings\.enabled\|\|settings\.volume<=0\|\|!rhythmAudioGloballyEnabled\(\)\)return false;[\s\S]*?const audio=context\(\);\s*if\(!audio\)return false;\s*if\(audio\.state==='suspended'&&typeof audio\.resume==='function'\)audio\.resume\(\)\.catch\(\(\)=>\{\}\);\s*const oscillator=/.test(data)
+  /if\(!settings\.enabled\|\|settings\.volume<=0\|\|!rhythmAudioGloballyEnabled\(\)\)return false;[\s\S]*?const audio=context\(\);\s*if\(!audio\)return false;\s*if\(audio\.state==='suspended'&&typeof audio\.resume==='function'\)audio\.resume\(\)\.catch\(\(\)=>\{\}\);\s*const now=audio\.currentTime/.test(data)
   &&/if\(!settings\.enabled\|\|settings\.volume<=0\|\|!rhythmAudioGloballyEnabled\(\)\)return false;[\s\S]*?const duration=\.055/.test(data));
 
 check('デフォルト(window.__mhAudioEnabledが未設定)ではミュート扱いにしない',
