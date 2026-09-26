@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 88a8291bcbc03682
+// source-sha256: 5335ed74d86ea16b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 13:48";
+const BUILD_DATE = "2026-09-26 13:53";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4764,6 +4764,9 @@ const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '�
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
+const RHYTHM_RENDER_QUALITY_MODES = Object.freeze(['HIGH', 'STANDARD', 'SAVE']);
+const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['HIGH', '高'], ['STANDARD', '標準'], ['SAVE', '省電力']]);
+const rhythmRenderQualityCap = (quality, highCap) => quality === 'SAVE' ? 1 : quality === 'STANDARD' ? Math.min(highCap, 1.5) : highCap;
 const RHYTHM_STAGE_EFFECTS = Object.freeze(['VIVID', 'CALM', 'SIMPLE']);
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
 const RHYTHM_LANE_COVER_MIN = 0,
@@ -4946,6 +4949,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   songPreviewEnabled: true,
   quietDuringPlay: false,
   frameRateMode: 'DEVICE',
+  renderQuality: 'HIGH',
   stageEffect: 'SIMPLE',
   laneCover: 0,
   timingDisplay: 'STANDARD',
@@ -4998,6 +5002,7 @@ const normalizeRhythmSettings = value => {
     songPreviewEnabled: bool('songPreviewEnabled'),
     quietDuringPlay: bool('quietDuringPlay'),
     frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode,
+    renderQuality: RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality) ? source.renderQuality : DEFAULT_RHYTHM_SETTINGS.renderQuality,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -21061,7 +21066,7 @@ const RhythmOptions = ({
     full: true
   }), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
-  }), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
+  }), field('画質', segments('renderQuality', RHYTHM_RENDER_QUALITY_LABELS), '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
   }), field('軽量モード', toggle('lightweightMode'), '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。', {
     full: true
@@ -21964,13 +21969,13 @@ const rhythmParseDropShadows = filter => {
   }).trim();
   return rest ? null : list;
 };
-const rhythmBakeJudgmentHalos = async textEl => {
+const rhythmBakeJudgmentHalos = async (textEl, maxScale = 2) => {
   const host = textEl && textEl.parentElement;
   if (!host || typeof document === 'undefined' || typeof window === 'undefined') return null;
   try {
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
   } catch (e) {}
-  const dpr = Math.min(2, Math.max(1, Number(window.devicePixelRatio) || 1));
+  const dpr = Math.min(Math.max(1, Number(maxScale) || 2), Math.max(1, Number(window.devicePixelRatio) || 1));
   const baked = [];
   const fail = () => {
     baked.forEach(item => URL.revokeObjectURL(item.url));
@@ -22394,6 +22399,7 @@ const RhythmTapTest = ({
   monstersRef.current = monsters;
   const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
+  const noteCanvasMaxDpr = Math.min(settings.effectAmount === 'MINIMAL' ? 2 : RHYTHM_NOTE_CANVAS_MAX_DPR, rhythmRenderQualityCap(settings.renderQuality, RHYTHM_NOTE_CANVAS_MAX_DPR));
   const noteCanvasRef = useRef(null);
   useEffect(() => {
     if (!canvasNotes) return undefined;
@@ -22499,7 +22505,7 @@ const RhythmTapTest = ({
     if (!canvasNotes || monsterFaceHidden) return undefined;
     let cancelled = false;
     const deviceDpr = typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
-    const dpr = Math.min(deviceDpr, RHYTHM_NOTE_CANVAS_MAX_DPR);
+    const dpr = Math.min(deviceDpr, noteCanvasMaxDpr);
     monsters.forEach((monster, index) => {
       rhythmBakeMonsterFace(monster, dpr).then(face => {
         if (!cancelled && face) faceBitmapsRef.current[index] = face;
@@ -22508,7 +22514,7 @@ const RhythmTapTest = ({
     return () => {
       cancelled = true;
     };
-  }, [canvasNotes, monsterSignature, monsterFaceHidden, settings.lightweightMode, settings.effectAmount]);
+  }, [canvasNotes, monsterSignature, monsterFaceHidden, settings.lightweightMode, settings.effectAmount, noteCanvasMaxDpr]);
   const RHYTHM_LANE_PRESS_GRADIENT = 'linear-gradient(to bottom,rgba(96,165,250,.16) 0%,rgba(96,165,250,.28) 40%,rgba(125,211,252,.44) calc(100% - var(--mh-judgment-line-bottom,20%) - 14%),rgba(224,242,254,.74) calc(100% - var(--mh-judgment-line-bottom,20%) - 3%),rgba(248,250,252,.9) calc(100% - var(--mh-judgment-line-bottom,20%)),rgba(147,197,253,.5) calc(100% - var(--mh-judgment-line-bottom,20%) + 4%),rgba(96,165,250,.34) 100%)';
   const laneElements = useMemo(() => React.createElement(React.Fragment, null, React.createElement("div", {
     className: "pointer-events-none absolute inset-0 grid",
@@ -22566,7 +22572,7 @@ const RhythmTapTest = ({
     setHaloKeys(null);
     const textEl = judgmentTextRef.current;
     if (!textEl || typeof document === 'undefined') return undefined;
-    rhythmBakeJudgmentHalos(textEl).then(baked => {
+    rhythmBakeJudgmentHalos(textEl, rhythmRenderQualityCap(settings.renderQuality, 2)).then(baked => {
       if (!baked) return;
       if (cancelled) {
         baked.forEach(item => URL.revokeObjectURL(item.url));
@@ -22588,7 +22594,7 @@ const RhythmTapTest = ({
       if (style) style.textContent = '';
       if (made) made.forEach(item => URL.revokeObjectURL(item.url));
     };
-  }, [settings.effectAmount, settings.lightweightMode]);
+  }, [settings.effectAmount, settings.lightweightMode, settings.renderQuality]);
   const lifeBoxRef = useRef(null),
     lifeDamageRef = useRef(null);
   const stageLevel = rhythmStageLevel(settings);
@@ -22823,7 +22829,8 @@ const RhythmTapTest = ({
       const w = host.clientWidth,
         h = host.clientHeight;
       if (!(w > 0 && h > 0)) return;
-      const scale = Math.min(1.5, Math.max(1, Number(window.devicePixelRatio) || 1));
+      const cap = settings.renderQuality === 'STANDARD' ? 1.25 : rhythmRenderQualityCap(settings.renderQuality, 1.5);
+      const scale = Math.min(cap, Math.max(1, Number(window.devicePixelRatio) || 1));
       const key = `${w}x${h}@${scale}`;
       if (key === lastKey) return;
       lastKey = key;
@@ -22879,7 +22886,7 @@ const RhythmTapTest = ({
       setStageImages(null);
       made.forEach(url => URL.revokeObjectURL(url));
     };
-  }, [stageFxOn]);
+  }, [stageFxOn, settings.renderQuality]);
   const comboStatus = (() => {
     if (settings.comboStatusDisplay === false || assistOn || !view.counts) return '';
     const c = view.counts;
@@ -23555,7 +23562,7 @@ const RhythmTapTest = ({
         nowMs: frameNowMs,
         effect: settings.effectAmount,
         lightweight: settings.lightweightMode,
-        maxDpr: settings.effectAmount === 'MINIMAL' ? 2 : undefined,
+        maxDpr: noteCanvasMaxDpr,
         sizeScale: settings.noteSize / 100
       });
       const paintCanvasNote = note => {
@@ -23992,7 +23999,7 @@ const RhythmTapTest = ({
     if (canvasNotes) RHYTHM_CANVAS_RENDERER.warmSprites({
       effect: settings.effectAmount,
       lightweight: settings.lightweightMode,
-      maxDpr: settings.effectAmount === 'MINIMAL' ? 2 : undefined
+      maxDpr: noteCanvasMaxDpr
     });
     const sideBeatMs = rhythmSideMonsterBeatMs(song.bgmTrackId);
     sideMonsterRefs.current.forEach(el => {

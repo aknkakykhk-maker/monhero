@@ -271,7 +271,7 @@ check('演奏中の判定処理に offsetWidth の読み取りを残さない',
 // 大きなレイヤーを作り直すので、実測で描画が20倍以上になっていた)。光は演奏前に1枚の絵へ焼き、
 // 字は ::after に重ね直す。ここが崩れると、また毎回ぼかしを計算し直す。
 check('判定文字の光を焼いて出す(焼いた判定だけ目印を付け、本体のぼかしを外す)',
-  game.includes('const rhythmBakeJudgmentHalos=async textEl=>{')
+  game.includes('const rhythmBakeJudgmentHalos=async(textEl,maxScale=2)=>{')
   &&game.includes("haloKeys.has(`${view.last}|${view.lastPrecise?'1':''}`)?'1':undefined}")
   &&html.includes('[data-rhythm-judgment-text][data-halo="1"]{position:relative;z-index:0;filter:none!important}'));
 check('重ね直した字は模様の位置を本体から受け継ぐ(金・虹の流れがそのまま動く)',

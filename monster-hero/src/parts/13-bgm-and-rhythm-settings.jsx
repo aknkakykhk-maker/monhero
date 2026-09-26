@@ -287,6 +287,14 @@ const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL','最大'],['LOW','多め']
 // ★判定は指が触れた時刻と曲の時刻で決めているので、どちらでも判定の正確さは変わらない
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE','DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE','省電力'],['DEVICE','端末に合わせる']]);
+// 画質(2026-09-26・ユーザー指示「画質の設定を入れて」)。演奏中に canvas で描くもの
+// (ノーツ・マスモンの顔・判定文字の光・ライブ背景の光)を、どこまで細かく描くか。
+// iPhone は画面の画素がとても細かい(3倍)ので、少し下げても見分けにくく、端末の負担と発熱が減る。
+// 既定は「高」(これまでの細かさ)。判定・スコア・叩く位置には一切関わらない。
+const RHYTHM_RENDER_QUALITY_MODES = Object.freeze(['HIGH','STANDARD','SAVE']);
+const RHYTHM_RENDER_QUALITY_LABELS = Object.freeze([['HIGH','高'],['STANDARD','標準'],['SAVE','省電力']]);
+// 画素密度の上限。highCap は「高」のときの上限(描くものごとに違う)。標準は1.5倍まで、省電力は1倍
+const rhythmRenderQualityCap = (quality, highCap) => (quality==='SAVE' ? 1 : quality==='STANDARD' ? Math.min(highCap, 1.5) : highCap);
 // 演奏中の背景の演出(2026-09-24・ユーザー指示「全体的に地味だから設定ありきで派手な感じにしたい」)。
 // VIVID  … 曲のジャケットをぼかして敷き、ノーツのタイミングで背景が光り、光の粒とサーチライトが動く
 // CALM   … ジャケットとノーツのタイミングの光だけ(動き続けるものは出さない)
@@ -435,6 +443,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // ★既定は「端末に合わせる」(=これまでの動き)。一度は省電力を既定にしたが、
   //   「もしもとより操作性変わるならもとのやつをデフォルトに」(2026-09-24・ユーザー指示)で戻した
   frameRateMode:'DEVICE',
+  renderQuality:'HIGH',
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -491,6 +500,7 @@ const normalizeRhythmSettings = value => {
     songPreviewEnabled:bool('songPreviewEnabled'),
     quietDuringPlay:bool('quietDuringPlay'),
     frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
+    renderQuality:RHYTHM_RENDER_QUALITY_MODES.includes(source.renderQuality)?source.renderQuality:DEFAULT_RHYTHM_SETTINGS.renderQuality,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
