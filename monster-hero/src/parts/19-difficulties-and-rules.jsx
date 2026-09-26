@@ -792,6 +792,11 @@ const TRAINING_OPTIONS = Object.freeze([
   Object.freeze({ id:'def',  name:'丸太うけ',   stat:'def',  flat:0, rate:0.20, statLabel:'丈夫さ',  effect:'丈夫さ +20%' }),
   Object.freeze({ id:'guts', name:'猛勉強',     stat:'guts', flat:5, rate:0.05, statLabel:'ガッツ',  effect:'ガッツ +5 ＆ +5%' }),
 ]);
+// タクティクスプロだけ、ドミノ倒しを猛勉強と同じ「+5 ＆ +5%」にする(2026-09-26 ユーザー指示)。
+// ほかのモードは TRAINING_OPTIONS のまま。項目の並びとidは変えない(AUTOの選び方もidで決まる)
+const TACTICS_PRO_TRAINING_OPTIONS = Object.freeze(TRAINING_OPTIONS.map(option=>option.id==='atk'
+  ? Object.freeze({ ...option, flat:5, effect:'ちから +5 ＆ +5%' }) : option));
+const trainingOptionsFor = (mode=null) => mode===BATTLE_MODE_TACTICS_PRO ? TACTICS_PRO_TRAINING_OPTIONS : TRAINING_OPTIONS;
 // ===== 強化フェーズ(WAVEクリア後にバトルへ戻るまで)の手順 =====
 // 画面の上に「トレーニング → 供モン → 配置 → 固有技 → アシストカード」のように、
 // いまどこにいて、あと何画面でバトルへ戻るのかを出すための並び。
@@ -838,15 +843,15 @@ const resolveRepeatInitialTeaching = (candidates, teachingId) => {
   if (!Array.isArray(candidates) || !teachingId) return null;
   return candidates.find(card => card && card.id === teachingId) || null;
 };
-const trainingOptionOf = (id) => TRAINING_OPTIONS.find(option=>option.id===id) || null;
+const trainingOptionOf = (id, mode=null) => trainingOptionsFor(mode).find(option=>option.id===id) || null;
 // トレーニング1回ぶんを適用する。掛かり方は次の順:
 //   ・まず通常どおりの増加後の値を出す(固定値を足してから割合を掛け、Math.floor)
 //   ・ULTIMATE / INFINITYは、その増加量へ trainingGainRate を掛ける
 //     (率から引かない。4種すべてが同じ割合で目減りする)
 //   ・NIGHTMAREは増えたぶんだけをapplyNightmareStatGainで調整する
-const resolveTrainingStep = (stats, optionId, turns, specialDifficulty=null) => {
+const resolveTrainingStep = (stats, optionId, turns, specialDifficulty=null, mode=null) => {
   const before={atk:Number(stats?.atk)||0,def:Number(stats?.def)||0,hp:Number(stats?.hp)||0,guts:Number(stats?.guts)||0};
-  const option=trainingOptionOf(optionId);
+  const option=trainingOptionOf(optionId,mode);
   if(!option)return before;
   const base=before[option.stat];
   // 通常の増加量を先に出してから、低下ぶんを「増加量へ掛ける」。
@@ -857,8 +862,8 @@ const resolveTrainingStep = (stats, optionId, turns, specialDifficulty=null) => 
   return {...before,[option.stat]:applyNightmareStatGain(base,after,specialDifficulty)};
 };
 // 選んだ順に1回ずつ重ねてかける。同じ項目を2回選んだときも、この積み重ねで自然に複利になる
-const resolveTrainingStats = (stats, picks, turns, specialDifficulty=null) =>
-  (Array.isArray(picks)?picks:[]).reduce((acc,id)=>resolveTrainingStep(acc,id,turns,specialDifficulty),
+const resolveTrainingStats = (stats, picks, turns, specialDifficulty=null, mode=null) =>
+  (Array.isArray(picks)?picks:[]).reduce((acc,id)=>resolveTrainingStep(acc,id,turns,specialDifficulty,mode),
     {atk:Number(stats?.atk)||0,def:Number(stats?.def)||0,hp:Number(stats?.hp)||0,guts:Number(stats?.guts)||0});
 // 整数で扱うバトル値の特殊ルール倍率はここでだけ丸める。対象ルールがない難易度は
 // extremeSpecialRule が1を返すため、EXTREME / NIGHTMAREを含む既存値は変化しない。

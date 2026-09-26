@@ -39,13 +39,14 @@ const slice = (from, to) => {
 // ---- ② 本体の計算をそのまま動かす(式を書き写さないので、実装が変われば必ずここに出る) ----
 const calcSrc = `
 const ULTIMATE_SETTING={id:'ULTIMATE',specialRules:{awakeningPenaltyRate:0.0075}};
+const BATTLE_MODE_TACTICS_PRO='tacticsPro';
 const extremeSpecialRule=(d,r)=>(d==='NIGHTMARE'&&r==='waveEnhancement')?0.5:1;
 // トレーニング低下は難易度名ではなく「その難易度がawakeningZeroTurnsを持つか」で効く。
 // ここではULTIMATE / INFINITYだけが持つ状態を再現する(本体の表と同じ20T)。
 const extremeRuleNumber=(d,r)=>(['ULTIMATE','INFINITY'].includes(d)&&r==='awakeningZeroTurns')?20:null;
 ${slice('const applyNightmareWaveEnhancement', 'const ultimateEnemyTurnMultiplier')}
 ${slice('// トレーニングで「上がる量」へ掛かる倍率', '// 整数で扱うバトル値の特殊ルール倍率')}
-module.exports={TRAINING_PICK_COUNT,TRAINING_OPTIONS,chooseAutoTrainingPicks,trainingOptionOf,resolveTrainingStep,resolveTrainingStats,trainingGainRate};`;
+module.exports={TRAINING_PICK_COUNT,TRAINING_OPTIONS,TACTICS_PRO_TRAINING_OPTIONS,trainingOptionsFor,chooseAutoTrainingPicks,trainingOptionOf,resolveTrainingStep,resolveTrainingStats,trainingGainRate};`;
 const mod = { exports: {} };
 new Function('module', 'exports', calcSrc)(mod, mod.exports);
 const T = mod.exports;
@@ -97,6 +98,26 @@ check('猛勉強×2 は 100→110→120 (毎回 +5 してから +5%)',
   twice('guts').guts === 120, String(twice('guts').guts));
 check('ドミノ倒し×2 は 100→105→110',
   twice('atk').atk === 110, String(twice('atk').atk));
+
+// ---- タクティクスプロだけ、ドミノ倒しは猛勉強と同じ「+5 ＆ +5%」(2026-09-26) ----
+const TP = 'tacticsPro';
+const tpAtk = T.trainingOptionOf('atk', TP);
+check('タクティクスプロのドミノ倒しは ちから +5 ＆ +5%',
+  !!tpAtk && tpAtk.flat === 5 && Math.abs(tpAtk.rate - 0.05) < 1e-9 && tpAtk.effect === 'ちから +5 ＆ +5%',
+  tpAtk ? `flat=${tpAtk.flat} rate=${tpAtk.rate} ${tpAtk.effect}` : '定義なし');
+check('タクティクスプロ: ドミノ倒し ちから100→110 (+5してから+5%)',
+  T.resolveTrainingStep(base, 'atk', 0, null, TP).atk === 110, String(T.resolveTrainingStep(base, 'atk', 0, null, TP).atk));
+check('タクティクスプロ: ドミノ倒し×2 は 100→110→120',
+  T.resolveTrainingStats(base, ['atk', 'atk'], 0, null, TP).atk === 120, String(T.resolveTrainingStats(base, ['atk', 'atk'], 0, null, TP).atk));
+check('タクティクスプロ: ほかの3項目は変わらない',
+  ['hp', 'def', 'guts'].every(id => JSON.stringify(T.trainingOptionOf(id, TP)) === JSON.stringify(T.trainingOptionOf(id))));
+check('タクティクスプロ: 項目の並びとidは同じ',
+  T.trainingOptionsFor(TP).map(o => o.id).join() === T.TRAINING_OPTIONS.map(o => o.id).join());
+check('ほかのモードのドミノ倒しは ちから +5% のまま',
+  ['challenge', 'pro', 'tactics', null].every(m => T.resolveTrainingStep(base, 'atk', 0, null, m).atk === 105));
+check('トレーニングの適用と画面の数字にモードを渡している',
+  (source.match(/resolveTraining(?:Stats|Step)\([^;]*,runMode\)/g) || []).length >= 6
+  && has('trainingOptionsFor(runMode)'));
 
 // ---- 異なる2項目 ----
 const mixed = T.resolveTrainingStats(base, ['hp', 'atk'], 0, null);
@@ -170,7 +191,7 @@ if (REWARD_PICK_HEAD.test(component)) {
   const transformed = babel.transformSync(
     jsx.replace(REWARD_PICK_HEAD, 'const Screen = ({ gameState, trainingPicks, setTrainingPicks, atk, def, maxHp, maxGuts, waveResult, effect,\n'
     + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep, ULTIMATE_SETTING, extremeRuleNumber, trainingGainRate, compactPercent, specialRulePercent, extremeSpecialRule, quickGrowthRateForRun, isQuickMode,\n'
-    + '  TRAINING_PICK_COUNT, TRAINING_OPTIONS, handleTraining, AssistantBubble, battleTutorialSpotClass, cardIconNode,\n'
+    + '  TRAINING_PICK_COUNT, TRAINING_OPTIONS, trainingOptionsFor, handleTraining, AssistantBubble, battleTutorialSpotClass, cardIconNode,\n'
     + '  slots, tacticsUnits, phasePlan, PhaseSteps,\n'
     + '  Trophy, Heart, Sword, ShieldCheck, Sparkles }) => {')
     + '\nmodule.exports = { Screen };',
@@ -188,7 +209,7 @@ if (REWARD_PICK_HEAD.test(component)) {
     extremeRuleNumber: () => null, trainingGainRate: T.trainingGainRate, specialRulePercent: value => `${Math.round(value*100)}%`,
     extremeSpecialRule: () => 1, quickGrowthRateForRun: () => 0.1, isQuickMode: () => false,
     resolveTrainingStats: T.resolveTrainingStats, resolveTrainingStep: T.resolveTrainingStep,
-    TRAINING_PICK_COUNT: T.TRAINING_PICK_COUNT, TRAINING_OPTIONS: T.TRAINING_OPTIONS,
+    TRAINING_PICK_COUNT: T.TRAINING_PICK_COUNT, TRAINING_OPTIONS: T.TRAINING_OPTIONS, trainingOptionsFor: T.trainingOptionsFor,
     handleTraining: () => {}, AssistantBubble: () => null, battleTutorialSpotClass: () => '',
     // アイコンは共通部品(cardIconNode)を通すようになった。見た目は見ないので置き換えて描く
     cardIconNode: (icon) => React.createElement('i', { 'data-card-icon': String(icon) }),

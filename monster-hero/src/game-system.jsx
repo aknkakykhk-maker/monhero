@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3b77a5593a9f71a5
+// generated-sha256: a7952ef57eb4c1d2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-27 02:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-27 02:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9162,6 +9162,11 @@ const TRAINING_OPTIONS = Object.freeze([
   Object.freeze({ id:'def',  name:'丸太うけ',   stat:'def',  flat:0, rate:0.20, statLabel:'丈夫さ',  effect:'丈夫さ +20%' }),
   Object.freeze({ id:'guts', name:'猛勉強',     stat:'guts', flat:5, rate:0.05, statLabel:'ガッツ',  effect:'ガッツ +5 ＆ +5%' }),
 ]);
+// タクティクスプロだけ、ドミノ倒しを猛勉強と同じ「+5 ＆ +5%」にする(2026-09-26 ユーザー指示)。
+// ほかのモードは TRAINING_OPTIONS のまま。項目の並びとidは変えない(AUTOの選び方もidで決まる)
+const TACTICS_PRO_TRAINING_OPTIONS = Object.freeze(TRAINING_OPTIONS.map(option=>option.id==='atk'
+  ? Object.freeze({ ...option, flat:5, effect:'ちから +5 ＆ +5%' }) : option));
+const trainingOptionsFor = (mode=null) => mode===BATTLE_MODE_TACTICS_PRO ? TACTICS_PRO_TRAINING_OPTIONS : TRAINING_OPTIONS;
 // ===== 強化フェーズ(WAVEクリア後にバトルへ戻るまで)の手順 =====
 // 画面の上に「トレーニング → 供モン → 配置 → 固有技 → アシストカード」のように、
 // いまどこにいて、あと何画面でバトルへ戻るのかを出すための並び。
@@ -9208,15 +9213,15 @@ const resolveRepeatInitialTeaching = (candidates, teachingId) => {
   if (!Array.isArray(candidates) || !teachingId) return null;
   return candidates.find(card => card && card.id === teachingId) || null;
 };
-const trainingOptionOf = (id) => TRAINING_OPTIONS.find(option=>option.id===id) || null;
+const trainingOptionOf = (id, mode=null) => trainingOptionsFor(mode).find(option=>option.id===id) || null;
 // トレーニング1回ぶんを適用する。掛かり方は次の順:
 //   ・まず通常どおりの増加後の値を出す(固定値を足してから割合を掛け、Math.floor)
 //   ・ULTIMATE / INFINITYは、その増加量へ trainingGainRate を掛ける
 //     (率から引かない。4種すべてが同じ割合で目減りする)
 //   ・NIGHTMAREは増えたぶんだけをapplyNightmareStatGainで調整する
-const resolveTrainingStep = (stats, optionId, turns, specialDifficulty=null) => {
+const resolveTrainingStep = (stats, optionId, turns, specialDifficulty=null, mode=null) => {
   const before={atk:Number(stats?.atk)||0,def:Number(stats?.def)||0,hp:Number(stats?.hp)||0,guts:Number(stats?.guts)||0};
-  const option=trainingOptionOf(optionId);
+  const option=trainingOptionOf(optionId,mode);
   if(!option)return before;
   const base=before[option.stat];
   // 通常の増加量を先に出してから、低下ぶんを「増加量へ掛ける」。
@@ -9227,8 +9232,8 @@ const resolveTrainingStep = (stats, optionId, turns, specialDifficulty=null) => 
   return {...before,[option.stat]:applyNightmareStatGain(base,after,specialDifficulty)};
 };
 // 選んだ順に1回ずつ重ねてかける。同じ項目を2回選んだときも、この積み重ねで自然に複利になる
-const resolveTrainingStats = (stats, picks, turns, specialDifficulty=null) =>
-  (Array.isArray(picks)?picks:[]).reduce((acc,id)=>resolveTrainingStep(acc,id,turns,specialDifficulty),
+const resolveTrainingStats = (stats, picks, turns, specialDifficulty=null, mode=null) =>
+  (Array.isArray(picks)?picks:[]).reduce((acc,id)=>resolveTrainingStep(acc,id,turns,specialDifficulty,mode),
     {atk:Number(stats?.atk)||0,def:Number(stats?.def)||0,hp:Number(stats?.hp)||0,guts:Number(stats?.guts)||0});
 // 整数で扱うバトル値の特殊ルール倍率はここでだけ丸める。対象ルールがない難易度は
 // extremeSpecialRule が1を返すため、EXTREME / NIGHTMAREを含む既存値は変化しない。
@@ -24211,7 +24216,7 @@ function RewardPickScreen({
       ? {atk:currentUnit.atk,def:currentUnit.def,hp:currentUnit.baseMaxHp,guts:currentUnit.baseMaxGuts}
       : {atk,def,hp:maxHp,guts:maxGuts};
     // いま選んでいるぶんまでを適用した値。次の1回はこの値からさらに伸びる
-    const current=resolveTrainingStats(baseStats,activePicks,waveResult?.turn,specialRule);
+    const current=resolveTrainingStats(baseStats,activePicks,waveResult?.turn,specialRule,runMode);
     const remaining=TRAINING_PICK_COUNT-activePicks.length;
     const ready=tacticsMode
       ? (trainableSlots.length>0&&trainableSlots.every(index=>picksOf(index).length===TRAINING_PICK_COUNT))
@@ -24225,7 +24230,8 @@ function RewardPickScreen({
       def: {icon:<ShieldCheck size={18}/>, tint:'text-emerald-300', bar:'bg-emerald-400'},
       guts:{icon:<Sparkles size={18}/>,    tint:'text-amber-300',   bar:'bg-amber-400'},
     };
-    const optionById=(id)=>TRAINING_OPTIONS.find(option=>option.id===id);
+    const trainingOptions=trainingOptionsFor(runMode);
+    const optionById=(id)=>trainingOptions.find(option=>option.id===id);
     const unitName=(slotIdx)=>slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`;
     // 「1回目」「2回目」の枠を押すと、その1回だけを取り消す。以前は「選び直す」で
     // 2つとも消すしかなく、2回目だけ変えたいときも1回目から選び直していた
@@ -24311,7 +24317,7 @@ function RewardPickScreen({
       {(!tacticsMode||currentUnit)&&<div className="mh-phase-tall mh-ph-panel shrink-0 w-full max-w-sm px-2 py-1.5 mt-2" data-training-status>
         <div className="mh-ph-panel-label text-[8px] font-black text-left mb-1">現在のステータス{trainingPicks.length>0&&<span className="text-amber-300">（選択中の変化）</span>}</div>
         <div className="grid grid-cols-4 gap-1">
-          {TRAINING_OPTIONS.map(option=>{
+          {trainingOptions.map(option=>{
             const st=STYLES[option.id]||STYLES.hp;
             const beforeAll=baseStats[option.stat];
             const afterAll=current[option.stat];
@@ -24329,11 +24335,11 @@ function RewardPickScreen({
       {/* 4項目。1画面に収めるため2列2行。空きがあればカードが伸びて画面を埋める。
           同じ項目をもう一度タップすると2回目として積める */}
       <div className={`mh-phase-cards w-full max-w-sm mt-2 grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`}>
-        {TRAINING_OPTIONS.map((option,optionIndex)=>{
+        {trainingOptions.map((option,optionIndex)=>{
           const count=activePicks.filter(id=>id===option.id).length;
           const st=STYLES[option.id]||STYLES.hp;
           const before=current[option.stat];
-          const after=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
+          const after=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule,runMode)[option.stat];
           const full=remaining<=0;
           return (
             <button key={option.id} type="button" disabled={full||!!effect||!pickable}
@@ -24357,8 +24363,8 @@ function RewardPickScreen({
                 <span className="min-w-0">
                   <b className="mh-phase-card-name block text-[14px] font-black text-white leading-tight">{option.name}</b>
                   <span className={`block text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{(extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null||extremeRuleNumber(specialRule,'waveEnhancement')!=null)&&(()=>{
-                    const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null)[option.stat];
-                    const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
+                    const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null,runMode)[option.stat];
+                    const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule,runMode)[option.stat];
                     const normalGain=normalAfter-current[option.stat],effectiveGain=effectiveAfter-current[option.stat];
                     return <span className="block text-purple-200">通常 +{normalGain} → 実際 +{effectiveGain}</span>;
                   })()}</span>
@@ -40439,7 +40445,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(!ids.length) return;
         const unit=normalizeTacticsUnit(units[slotIdx]);
         const after=resolveTrainingStats({atk:unit.atk,def:unit.def,hp:unit.baseMaxHp,guts:unit.baseMaxGuts},
-          ids,waveResult?.turn,specialRuleDifficulty);
+          ids,waveResult?.turn,specialRuleDifficulty,runMode);
         units=applyTacticsTraining(units,slotIdx,after,getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
       });
       commitTacticsUnits(units);
@@ -40447,7 +40453,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       nGuardDef=tacticsMaxDef(units);
       nMaxHp=tacticsTotalBaseMaxHp(units); nMaxGuts=tacticsTotalBaseMaxGuts(units);
     } else {
-      const nextStats=resolveTrainingStats({atk,def,hp:maxHp,guts:maxGuts},picks,waveResult?.turn,specialRuleDifficulty);
+      const nextStats=resolveTrainingStats({atk,def,hp:maxHp,guts:maxGuts},picks,waveResult?.turn,specialRuleDifficulty,runMode);
       nMaxHp=nextStats.hp; nAtk=nextStats.atk; nDef=nextStats.def; nMaxGuts=nextStats.guts;
       setMaxHp(nMaxHp); setMaxGuts(nMaxGuts); setAtk(nAtk); setDef(nDef);
       nGuardDef=nDef;
