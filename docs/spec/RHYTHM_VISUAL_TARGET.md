@@ -78,6 +78,8 @@
 
 **改修のたびに重さを測る**(ユーザー指示)。CPUを1/4に絞った実ブラウザで、叩かないとき
 (`tools/mode/rhythm-live-frame-report.js --cpu 4 --runs 3`)と叩き続けたときの両方を、main と比べる。
+GPU の仕事量(見た目の演出・WebGL・層の重なり)は `tools/mode/rhythm-gpu-load-report.js --compare origin/main` で main と比べる
+(`--suite` でシンプル・派手・ライブ・全部ONの4つ)。この環境に GPU は無いので、実機の速さではなく「GPU にやらせている仕事の量」の比較。
 
 ## 4. 気をつけること
 
