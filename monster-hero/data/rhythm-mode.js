@@ -18414,12 +18414,11 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-lane]:last-child::after{content:""!important;position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:var(--rhythm-right-clip,none)!important}
     [data-rhythm-sublane-boundary]{display:block;position:absolute;z-index:1;inset:0;pointer-events:none;opacity:.12;background:linear-gradient(180deg,rgba(216,180,254,.12),rgba(103,232,249,.20) 70%,rgba(236,254,255,.38));clip-path:var(--rhythm-sub-clip,none)}
     [data-rhythm-note]{z-index:2}
-    /* canvas で光の柱を描くとき(2026-09-26)は、DOM の押下表示は「どこを押しているか」の目印としてだけ残し、描かない。
-       visibility:hidden の要素は描かれないので、押すたびの内側の影・filter の描き直しが起きない。
-       ★隠すのは演奏ループが canvas へ光を描いているあいだ(data-rhythm-glow-live="1")だけ。
-         ループはカウントダウンの後に動き出すので、常に隠すとカウントダウン中に押しても光らない
-         (2026-09-26・実機「演奏前にタップはきくのにレーンが光らない」)。止まっている間は DOM の光が出る */
-    [data-rhythm-play-area][data-rhythm-canvas-glow="1"][data-rhythm-glow-live="1"] [data-rhythm-sublane-feedback]{visibility:hidden!important}
+    /* 押したレーンの光の消え方(2026-09-26)。押した瞬間はすぐ光り、離すと約0.2秒でふわっと消える。
+       動くのは opacity だけ(合成だけで済む)。軽量モードでは切り替えを瞬時にする */
+    [data-rhythm-sublane-feedback]{transition:opacity 190ms ease-out}
+    [data-rhythm-sublane-feedback][data-pressed="true"],[data-rhythm-sublane-feedback][data-rhythm-touchspan="true"]{transition:opacity 40ms linear}
+    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-sublane-feedback]{transition:none}
     /* canvas でノーツを描くとき(2026-09-07)。canvas はノーツと同じ層に置く。
        マスモンの顔も、演奏の前に焼いた絵を同じ canvas へ描く(2026-09-25。以前は DOM の要素を重ねていた)。 */
     [data-rhythm-note-canvas]{position:absolute;left:0;top:0;pointer-events:none;z-index:5}
@@ -18583,20 +18582,22 @@ const installRhythmGeometryStyles=()=>{
        跳ねる速さは1拍の長さ(--rhythm-side-beat)。曲ごとにプレイ開始時へ一度だけ書く。 */
     /* --- マスモンの能力のカットイン(2026-09-26) ---
        ノーツより後ろ(z-index:1。両サイドのマスモンと同じ層)。帯と絵は動かない形で、動かすのは transform と opacity だけ。
-       ふだんは visibility:hidden(描かない)。data-rhythm-cutin="1" のあいだだけ 0.9秒のアニメーションで見える */
+       ふだんは visibility:hidden(描かない)。data-rhythm-cutin-play="1" のあいだだけ 0.9秒のアニメーションで見える。
+       ★印の名前を入れ物([data-rhythm-cutin])と同じにしない。同じだと入れ物の inset:0 が部品にも当たり、右の部品が左端へ寄った */
     [data-rhythm-cutin]{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
-    [data-rhythm-cutin-slot]{position:absolute;top:14%;height:36%;width:58%;visibility:hidden;opacity:0}
+    /* 道の外の空いたところ(画面の端・上寄り)に収める。道の真ん中まで入り込むとノーツの流れる場所がごちゃつく */
+    [data-rhythm-cutin-slot]{position:absolute;top:8%;height:32%;width:40%;visibility:hidden;opacity:0}
     [data-rhythm-cutin-slot][data-side="left"]{left:0}
     [data-rhythm-cutin-slot][data-side="right"]{right:0}
     [data-rhythm-cutin-band]{position:absolute;left:-10%;right:-10%;top:30%;height:40%;transform:skewY(-9deg);
       background:linear-gradient(90deg,rgba(250,204,21,0) 0%,rgba(250,204,21,.75) 22%,rgba(244,114,182,.72) 62%,rgba(168,85,247,0) 100%)}
     [data-rhythm-cutin-slot][data-side="right"] [data-rhythm-cutin-band]{transform:skewY(9deg);
       background:linear-gradient(270deg,rgba(250,204,21,0) 0%,rgba(250,204,21,.75) 22%,rgba(244,114,182,.72) 62%,rgba(168,85,247,0) 100%)}
-    [data-rhythm-cutin-slot]>img{position:absolute;bottom:0;height:120%;width:auto;max-width:none;object-fit:contain}
-    [data-rhythm-cutin-slot][data-side="left"]>img{left:10%}
-    [data-rhythm-cutin-slot][data-side="right"]>img{right:10%}
-    [data-rhythm-cutin-slot][data-side="left"][data-rhythm-cutin="1"]{animation:mhRhythmCutinLeft 900ms cubic-bezier(.2,.8,.3,1) 1}
-    [data-rhythm-cutin-slot][data-side="right"][data-rhythm-cutin="1"]{animation:mhRhythmCutinRight 900ms cubic-bezier(.2,.8,.3,1) 1}
+    [data-rhythm-cutin-slot]>img{position:absolute;bottom:0;height:115%;width:auto;max-width:70%;object-fit:contain}
+    [data-rhythm-cutin-slot][data-side="left"]>img{left:3%}
+    [data-rhythm-cutin-slot][data-side="right"]>img{right:3%}
+    [data-rhythm-cutin-slot][data-side="left"][data-rhythm-cutin-play="1"]{animation:mhRhythmCutinLeft 900ms cubic-bezier(.2,.8,.3,1) 1}
+    [data-rhythm-cutin-slot][data-side="right"][data-rhythm-cutin-play="1"]{animation:mhRhythmCutinRight 900ms cubic-bezier(.2,.8,.3,1) 1}
     @keyframes mhRhythmCutinLeft{
       0%{visibility:visible;opacity:0;transform:translate3d(-70%,0,0)}
       16%{visibility:visible;opacity:1;transform:translate3d(0,0,0)}
@@ -19367,8 +19368,6 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
 // ノーツは光の画像を重ねて描いているので、2倍を3倍の画面へ引き伸ばしても見た目の差はほとんど出ない。
 // 判定・入力の座標は CSS の画素で持っているので、ここを変えても当たり判定は動かない。
 const RHYTHM_NOTE_CANVAS_MAX_DPR=2;
-// 押したサブレーンの光の柱を、指を離してから消し切るまでの時間(ms)。
-const RHYTHM_LANE_GLOW_FADE_MS=180;
 
 // 描画そのもの。色は DOM 版(index.html / Tailwind / rhythm-mode.js の CSS)と同じ値。
 const RHYTHM_CANVAS_RENDERER=(()=>{
@@ -19397,12 +19396,6 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // マスモンの顔(焼いた絵)。ノーツより上に出すため、描くのはフレームの最後(end)にまとめる。
   // 以前は DOM の要素を canvas の上へ重ねて毎フレーム動かしていた(2026-09-25にやめた)
   const faces=[];
-  // 光の柱の段(判定ラインの高さに対する割合 from〜to と色)。to が null なら画面の下端まで
-  const LANE_GLOW_BANDS=Object.freeze([
-    // レーン全体(奥の端から手前の端まで)を光らせる(2026-09-26・実機「光が薄すぎて見にくい」「下の方ちょっとしか光らない」)。
-    // 重いのはグラデーションで塗ることで、単色なら広い面でも軽い(実測)。段は5つまで(7段では叩き続けたときに1割減った)
-    [0,.5,'rgba(96,165,250,.22)'],[.5,.8,'rgba(125,211,252,.34)'],[.8,.95,'rgba(186,230,253,.5)'],[.95,1.03,'rgba(240,249,255,.78)'],[1.03,null,'rgba(96,165,250,.32)'],
-  ].map(Object.freeze));
   const sprites=new Map();
   const roundRectPath=(c,x,y,w,h,r)=>{
     const rr=Math.max(0,Math.min(r,w/2,h/2));
@@ -19692,45 +19685,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       return sprites.size-before;
     },
     release(){canvas=null;ctx=null;sprites.clear();},
-    // 押しているサブレーンの光の柱(2026-09-26・ユーザー指示「見た目も含めてこんぐらいに仕上げたい」)。
-    // 以前は DOM の10枚([data-rhythm-sublane-feedback])を出し入れしており、1枚ごとに半径52pxの
-    // 内側の影と filter を持つ全高の板だったので、押すたび・離すたびにぼかしを描き直していた。
-    // canvas はもともと毎フレーム描き直しているので、ここへ描けば描き直しは増えない。
-    // levels はサブレーンごとの明るさ(0〜1。離したあとは RHYTHM_LANE_GLOW_FADE_MS で0へ)。
-    // 形はレーン枠と同じ投影(rhythmBoundaryEdgePoints)なので、道の遠近にそのまま沿う。
-    // ノーツより先に呼ぶ(粒が光の上に乗る)。見た目だけで、判定・入力には一切触らない。
-    drawLaneGlow(levels,judgmentRatio){
-      if(!ctx||!levels||!(cssW>0&&cssH>0))return;
-      let any=false;
-      for(let i=0;i<levels.length;i++)if(levels[i]>0){any=true;break;}
-      if(!any)return;
-      // 判定ラインのところがいちばん明るく、奥へ向かって青く消えていく。
-      // ★グラデーションでは塗らない。縦のグラデーションで広い面を塗ると、叩き続けたときに
-      //   フレームが2割減った(単色なら減らない。2026-09-26 実測)。明るさの違う単色の段を重ねて近づける
-      const ratio=Math.max(.5,Math.min(.95,Number(judgmentRatio)||.88)),steps=RHYTHM_PROJECTION_CURVE===1?1:8;
-      const fillSpan=(left,right,y0,y1)=>{
-        ctx.beginPath();
-        for(let k=0;k<=steps;k++){const y=y0+(y1-y0)*k/steps,x=rhythmProjectBoundary(right,y)*cssW;if(k===0)ctx.moveTo(x,y*cssH);else ctx.lineTo(x,y*cssH);}
-        for(let k=steps;k>=0;k--){const y=y0+(y1-y0)*k/steps;ctx.lineTo(rhythmProjectBoundary(left,y)*cssW,y*cssH);}
-        ctx.closePath();ctx.fill();
-      };
-      // 隣り合って同じ明るさのサブレーンは1枚にまとめて塗る
-      for(let sub=0;sub<levels.length;){
-        const level=levels[sub];
-        if(!(level>0)){sub++;continue;}
-        let end=sub+1;
-        while(end<levels.length&&levels[end]===level)end++;
-        const left=sub/2,right=end/2;
-        ctx.globalAlpha=Math.min(1,level);
-        for(const [from,to,color] of LANE_GLOW_BANDS){
-          ctx.fillStyle=color;
-          fillSpan(left,right,Math.min(1,ratio*from),to===null?1:Math.min(1,ratio*to));
-        }
-        sub=end;
-      }
-      ctx.globalAlpha=1;
-    },
     get drawn(){return drawn;},
+
     // 焼いてあるスプライトの枚数(検査で「曲の中で増えないこと」を見るために使う)
     spriteCount(){return sprites.size;},
     // 毎フレームの最初に呼ぶ。プレイエリアの大きさ・画素密度が変わっていたら canvas を作り直し、全面を消す
