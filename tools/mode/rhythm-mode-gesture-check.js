@@ -5,12 +5,15 @@ const vm=require('vm');
 const source=fs.readFileSync(path.join(__dirname,'..','..','monster-hero','data','rhythm-mode.js'),'utf8');
 const context={console,performance};
 vm.createContext(context);
-vm.runInContext(`${source}\n;globalThis.__rhythmGestureTest={RHYTHM_SONGS,RHYTHM_NOTE_TYPES,rhythmMatchInputBatch,RHYTHM_GESTURE_RUNTIME,rhythmSlideExpectedLane};`,context);
+vm.runInContext(`${source}\n;globalThis.__rhythmGestureTest={RHYTHM_SONGS,RHYTHM_NOTE_TYPES,rhythmMatchInputBatch,RHYTHM_GESTURE_RUNTIME,rhythmSlideExpectedLane,atsuCupGestureTestChart,rhythmChartOnRoad};`,context);
 const api=context.__rhythmGestureTest;
-const hard=api.RHYTHM_SONGS[0].difficulties.HARD;
+// 入力の仕組みは、書いたままの確認用の譜面(5レーンで書いたもの)で見る。
+// 曲一覧には道の真ん中へ寄せたもの(rhythmChartOnRoad)が入る(2026-09-26 に6レーンへ)。寄せていることは下で別に見る
+const hard=api.atsuCupGestureTestChart;
 const fail=[];
 const ok=(name,value)=>{console.log(`${value?'OK':'NG'}: ${name}`);if(!value)fail.push(name);};
 ok('4ノーツ種別を正式定義', ['TAP','HOLD','FLICK','SLIDE'].every(type=>api.RHYTHM_NOTE_TYPES.includes(type)));
+ok('曲一覧のHARDは確認用の譜面を道の真ん中へ寄せたもの',api.RHYTHM_SONGS[0].difficulties.HARD.notes===api.rhythmChartOnRoad(hard).notes);
 ok('HARDに4種混在テスト譜面', ['TAP','HOLD','FLICK','SLIDE'].every(type=>hard.notes.some(note=>note.type===type)));
 ok('EASY/NORMALは既存テストを維持', api.RHYTHM_SONGS[0].difficulties.EASY.notes.every(note=>note.type==='TAP')&&api.RHYTHM_SONGS[0].difficulties.NORMAL.notes.some(note=>note.type==='HOLD'));
 // データ側からHUDの表記を'MIX TEST'へ書き換えるのはやめた。

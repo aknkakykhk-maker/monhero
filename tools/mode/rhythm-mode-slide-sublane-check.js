@@ -8,15 +8,17 @@ const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),
 let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
 const context={console};
-vm.runInNewContext(`${source}\nthis.out={RHYTHM_SONGS,RHYTHM_SLIDE_TOLERANCE_LANES,rhythmSlideAuthoredLane,rhythmSlideWidth,rhythmSlideWidthAt,rhythmSlideInputSpan,rhythmSlideTrackingTolerance,rhythmSlideExpectedLane,rhythmReleaseLane,rhythmProjectLane,rhythmProjectSlideSpan,rhythmNoteVisualSpan,rhythmNoteHasVariableSpan,rhythmMatchInputBatch,rhythmSlideSegmentPolygons,rhythmSlideFittedLane,rhythmProjectBoundary,RHYTHM_GESTURE_RUNTIME,widthSlideTestChart,widthSlideVariableTestChart,widthSlideChangingTestChart};`,context);
+vm.runInNewContext(`${source}\nthis.out={RHYTHM_LANE_COUNT,RHYTHM_SUB_LANE_COUNT,rhythmChartOnRoad,RHYTHM_SONGS,RHYTHM_SLIDE_TOLERANCE_LANES,rhythmSlideAuthoredLane,rhythmSlideWidth,rhythmSlideWidthAt,rhythmSlideInputSpan,rhythmSlideTrackingTolerance,rhythmSlideExpectedLane,rhythmReleaseLane,rhythmProjectLane,rhythmProjectSlideSpan,rhythmNoteVisualSpan,rhythmNoteHasVariableSpan,rhythmMatchInputBatch,rhythmSlideSegmentPolygons,rhythmSlideFittedLane,rhythmProjectBoundary,RHYTHM_GESTURE_RUNTIME,widthSlideTestChart,widthSlideVariableTestChart,widthSlideChangingTestChart};`,context);
 const {
-  RHYTHM_SONGS,RHYTHM_SLIDE_TOLERANCE_LANES,rhythmSlideAuthoredLane,rhythmSlideWidth,rhythmSlideWidthAt,
+  RHYTHM_LANE_COUNT:L,RHYTHM_SUB_LANE_COUNT:S,rhythmChartOnRoad,RHYTHM_SONGS,RHYTHM_SLIDE_TOLERANCE_LANES,rhythmSlideAuthoredLane,rhythmSlideWidth,rhythmSlideWidthAt,
   rhythmSlideInputSpan,rhythmSlideTrackingTolerance,rhythmSlideExpectedLane,rhythmReleaseLane,
   rhythmProjectLane,rhythmProjectSlideSpan,rhythmNoteVisualSpan,rhythmNoteHasVariableSpan,
   rhythmMatchInputBatch,rhythmSlideSegmentPolygons,rhythmSlideFittedLane,rhythmProjectBoundary,
   RHYTHM_GESTURE_RUNTIME,widthSlideTestChart,
   widthSlideVariableTestChart,widthSlideChangingTestChart,
 }=context.out;
+// 道のレーン数(2026-09-26 に5から6へ)。数字は L(レーン数)・S(サブレーン数)から作る
+const LANES=Array.from({length:L},(_,i)=>i),HALF_LANES=[0,.5,1,2,L-2,L-1.5,L-1],WIDTHS=Array.from({length:S},(_,i)=>i+1);
 const close=(a,b,epsilon=1e-9)=>Math.abs(Number(a)-Number(b))<epsilon;
 const makeSlide=(overrides={})=>({
   type:'SLIDE',timeMs:1000,endTimeMs:2200,lane:.5,endLane:1.5,done:false,activePointerId:null,
@@ -25,7 +27,7 @@ const makeSlide=(overrides={})=>({
 });
 
 check('SLIDE authored laneは0.5刻みを受け付ける',rhythmSlideAuthoredLane(.5)===.5&&rhythmSlideAuthoredLane(3.5)===3.5&&rhythmSlideAuthoredLane(4)===4);
-check('0.25刻みや範囲外はSTEP2B-1以降も受け付けない',rhythmSlideAuthoredLane(.25)===null&&rhythmSlideAuthoredLane(4.5)===null);
+check('0.25刻みや範囲外はSTEP2B-1以降も受け付けない',rhythmSlideAuthoredLane(.25)===null&&rhythmSlideAuthoredLane(L-.5)===null);
 
 const slide=makeSlide();
 check('slidePointsの0.5刻みを時間補間できる',close(rhythmSlideExpectedLane(slide,1300),.75)&&close(rhythmSlideExpectedLane(slide,1900),1.25));
@@ -36,25 +38,25 @@ check('幅指定なしSLIDE頭は従来幅・連続座標を維持する',close(
 check('SLIDEはTAP/HOLDのleft-edge可変span扱いにはしない',!rhythmNoteHasVariableSpan(slide));
 // 幅の上限は4→全幅(10)へ広げた(2026-09-04の実機指摘「上限を無くして全幅もありに」)。
 // 0や11、小数のような「幅として書けない値」を幅2へ戻す約束はそのまま。
-check('幅指定なし/不正幅は従来の幅2へ正規化する',rhythmSlideWidth(slide)===2&&rhythmSlideWidth(makeSlide({subLaneWidth:0}))===2&&rhythmSlideWidth(makeSlide({subLaneWidth:11}))===2&&rhythmSlideWidth(makeSlide({subLaneWidth:2.5}))===2);
-check('SLIDEはsubLaneWidth 1〜10(全幅)を受け付ける',[1,2,3,4,5,6,7,8,9,10].every(width=>rhythmSlideWidth(makeSlide({subLaneWidth:width}))===width));
+check('幅指定なし/不正幅は従来の幅2へ正規化する',rhythmSlideWidth(slide)===2&&rhythmSlideWidth(makeSlide({subLaneWidth:0}))===2&&rhythmSlideWidth(makeSlide({subLaneWidth:S+1}))===2&&rhythmSlideWidth(makeSlide({subLaneWidth:2.5}))===2);
+check('SLIDEはsubLaneWidth 1〜全幅を受け付ける',WIDTHS.every(width=>rhythmSlideWidth(makeSlide({subLaneWidth:width}))===width));
 // 太いSLIDEが端のレーンを通ると、中心線のまわりへ幅を広げただけではレーンの外へ出る
 // (実機で「スライドがレーンからはみ出て表示される場面がある」と報告があった 2026-09-05)。
 // 幅は変えずに中心線を内側へ寄せて収める。見た目・入力の受け付け・追従の的が同じだけ動く。
 check('幅2は寄せない(既存の正式候補v1が使う唯一の幅なので、譜面の見た目が変わらない)',
-  [0,.5,1,2,3,3.5,4].every(lane=>close(rhythmSlideFittedLane(lane,2),lane)));
+  HALF_LANES.every(lane=>close(rhythmSlideFittedLane(lane,2),lane)));
 check('太いSLIDEは中心線を内側へ寄せてレーンへ収める',
-  close(rhythmSlideFittedLane(0,5),.75)&&close(rhythmSlideFittedLane(4,5),3.25)
-  &&close(rhythmSlideFittedLane(0,8),1.5)&&close(rhythmSlideFittedLane(0,10),2)&&close(rhythmSlideFittedLane(4,10),2));
-check('寄せても幅は変わらない',[2,4,5,8,10].every(width=>{
+  close(rhythmSlideFittedLane(0,5),.75)&&close(rhythmSlideFittedLane(L-1,5),L-1.75)
+  &&close(rhythmSlideFittedLane(0,8),1.5)&&close(rhythmSlideFittedLane(0,S),L/2-.5)&&close(rhythmSlideFittedLane(L-1,S),L/2-.5));
+check('寄せても幅は変わらない',[2,4,5,8,S].every(width=>{
   const note=makeSlide({subLaneWidth:width,slidePoints:[{timeMs:1000,lane:0},{timeMs:2200,lane:4}]});
   return close(rhythmProjectSlideSpan(0,note,1,1000).subLaneWidth,width);
 }));
-check('寄せたあとの帯が5レーンの外へ出ない',[1,2,3,4,5,6,7,8,9,10].every(width=>{
+check('寄せたあとの帯が道の外へ出ない',WIDTHS.every(width=>{
   const note=makeSlide({subLaneWidth:width,slidePoints:[{timeMs:1000,lane:0},{timeMs:2200,lane:4}]});
-  return [0,.5,1,2,3,3.5,4].every(lane=>{
+  return HALF_LANES.every(lane=>{
     const span=rhythmProjectSlideSpan(lane,note,1,1000);
-    return span.left>=rhythmProjectBoundary(0,1)-1e-9&&span.right<=rhythmProjectBoundary(5,1)+1e-9;
+    return span.left>=rhythmProjectBoundary(0,1)-1e-9&&span.right<=rhythmProjectBoundary(L,1)+1e-9;
   });
 }));
 check('追従の的も同じだけ寄る(見えている帯をなぞって外れた扱いにならない)',(()=>{
@@ -142,20 +144,22 @@ const firstWidth=polygon=>{const coords=polygon.trim().split(/\s+/).slice(0,2).m
 check('SLIDE帯SVGも幅1〜4を反映する',firstWidth(widePolygon)>firstWidth(narrowPolygon)*3.9);
 
 const hard=RHYTHM_SONGS.find(song=>song.songId==='width_test')?.difficulties?.HARD;
-check('WIDTH TEST HARDにSTEP2B-1位置確認譜面を維持する',hard.notes===widthSlideTestChart.notes&&hard.notes.some(note=>note.type==='SLIDE'));
-const authoredSlides=hard?.notes?.filter(note=>note.type==='SLIDE')||[];
+// 2026-09-26 に6レーンへ。確認用の譜面は5レーンで書いたまま、曲一覧には道の真ん中へ寄せたもの(rhythmChartOnRoad)が入る。
+// 入っていることは寄せたものと同じかで見て、中身は書いたままの譜面で見る
+check('WIDTH TEST HARDにSTEP2B-1位置確認譜面を維持する',hard.notes===rhythmChartOnRoad(widthSlideTestChart).notes&&hard.notes.some(note=>note.type==='SLIDE'));
+const authoredSlides=widthSlideTestChart.notes.filter(note=>note.type==='SLIDE')||[];
 check('HARDの authored point は0.5刻みを維持する',authoredSlides.length>0&&authoredSlides.every(note=>[note.lane,note.endLane,...note.slidePoints.map(point=>point.lane)].every(lane=>close(Number(lane)*2,Math.round(Number(lane)*2)))));
 check('HARDは旧幅2相当のまま残す',authoredSlides.every(note=>note.subLaneWidth==null));
 
 const expert=RHYTHM_SONGS.find(song=>song.songId==='width_test')?.difficulties?.EXPERT;
-const variableSlides=expert?.notes?.filter(note=>note.type==='SLIDE')||[];
-check('WIDTH TEST EXPERTに可変幅SLIDE確認譜面がある',expert.notes===widthSlideVariableTestChart.notes&&variableSlides.length>=4);
+const variableSlides=widthSlideVariableTestChart.notes.filter(note=>note.type==='SLIDE')||[];
+check('WIDTH TEST EXPERTに可変幅SLIDE確認譜面がある',expert.notes===rhythmChartOnRoad(widthSlideVariableTestChart).notes&&variableSlides.length>=4);
 check('EXPERTに幅1〜4をすべて収録する',[1,2,3,4].every(width=>variableSlides.some(note=>note.subLaneWidth===width)));
 check('STEP2B-2では1ノーツ内の途中幅変化をまだ入れない',variableSlides.every(note=>note.slidePoints.every(point=>point.subLaneWidth==null&&point.width==null)));
 
 const changing=makeSlide({subLaneWidth:3,slidePoints:[{timeMs:1000,lane:.5,subLaneWidth:1},{timeMs:1600,lane:1,subLaneWidth:4},{timeMs:2200,lane:1.5}]});
 check('point幅を位置と同じ時間軸で連続補間する',close(rhythmSlideWidthAt(changing,1300),2.5)&&close(rhythmSlideWidthAt(changing,1900),3.5));
-check('point→note→2の順で幅をfallbackする',rhythmSlideWidthAt(changing,2200)===3&&rhythmSlideWidthAt(makeSlide({slidePoints:[{timeMs:1000,lane:.5},{timeMs:2200,lane:1.5}]}),1600)===2&&rhythmSlideWidthAt(makeSlide({subLaneWidth:4,slidePoints:[{timeMs:1000,lane:.5,subLaneWidth:0},{timeMs:2200,lane:1.5,subLaneWidth:11}]}),1600)===4);
+check('point→note→2の順で幅をfallbackする',rhythmSlideWidthAt(changing,2200)===3&&rhythmSlideWidthAt(makeSlide({slidePoints:[{timeMs:1000,lane:.5},{timeMs:2200,lane:1.5}]}),1600)===2&&rhythmSlideWidthAt(makeSlide({subLaneWidth:4,slidePoints:[{timeMs:1000,lane:.5,subLaneWidth:0},{timeMs:2200,lane:1.5,subLaneWidth:S+1}]}),1600)===4);
 check('開始ノーツ幅は先頭pointの実効幅を使う',rhythmSlideInputSpan(changing).width===1);
 check('END幅は最終pointの実効幅を使う',close(rhythmProjectSlideSpan(1.5,changing,.7,2200).subLaneWidth,3));
 // 幅の連動を見たいので、ここも動かない形にして速さの項を0にする
@@ -168,8 +172,8 @@ check('途中の実効幅2でも追従許容±0.82を厳守する',close(rhythmS
 // RHYTHM_SONGS は難易度レベル（Lv.）だけを差し替えた新しい入れ物を返すことがあるので、
 // 入れ物の同一性（===）で見ると、レベルが変わっただけで落ちてしまう。
 // ノーツの配列は差し替えないので、こちらで見れば「同じ譜面か」を確かめられる。
-const master=RHYTHM_SONGS.find(song=>song.songId==='width_test')?.difficulties?.MASTER,masterSlides=master?.notes?.filter(note=>note.type==='SLIDE')||[];
-check('WIDTH TEST MASTERへSTEP2B-3譜面を追加する',master.notes===widthSlideChangingTestChart.notes&&masterSlides.length>=4);
+const masterSong=RHYTHM_SONGS.find(song=>song.songId==='width_test')?.difficulties?.MASTER,master=widthSlideChangingTestChart,masterSlides=master.notes.filter(note=>note.type==='SLIDE');
+check('WIDTH TEST MASTERへSTEP2B-3譜面を追加する',masterSong.notes===rhythmChartOnRoad(widthSlideChangingTestChart).notes&&masterSlides.length>=4);
 check('MASTERに幅1→4・4→1・1→3→2→4を収録する',masterSlides.some(note=>note.slidePoints.map(point=>point.subLaneWidth).join(',')==='1,4')&&masterSlides.some(note=>note.slidePoints.map(point=>point.subLaneWidth).join(',')==='4,1')&&masterSlides.some(note=>note.slidePoints.map(point=>point.subLaneWidth).join(',')==='1,3,2,4'));
 check('MASTERに幅変化しながら曲がるSLIDEと途中TAPを収録する',masterSlides.some(note=>new Set(note.slidePoints.map(point=>point.lane)).size>=3&&new Set(note.slidePoints.map(point=>point.subLaneWidth)).size>=3)&&master.notes.some(note=>note.type==='TAP'&&masterSlides.some(slide=>note.timeMs>slide.timeMs&&note.timeMs<slide.endTimeMs)));
 const masterSlideAt=timeMs=>masterSlides.find(note=>note.timeMs===timeMs);

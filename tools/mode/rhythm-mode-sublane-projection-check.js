@@ -19,7 +19,8 @@ if(helper){
   }
   check('奥側と手前側で同じprojection scaleを共有',[.05,.88].every(y=>[1,2,3,4].every(width=>close(h.rhythmProjectSubLaneSpan(4,width,y).scale,h.rhythmProjectLane(2,y).scale))));
 }
-check('薄い5本のサブレーン境界を共通boundaryで配置',game.includes('Array.from({length:5},(_,index)=><i key={index} data-rhythm-sublane-boundary="" />)')&&source.includes("boundary.style.setProperty('--rhythm-sub-clip',rhythmBoundaryLinePolygon(index+.5))"));
+// 2026-09-26 に6レーンへ。本数はレーン数の定数から作る(5本 → 6本)
+check('レーン数ぶんの薄いサブレーン境界を共通boundaryで配置',game.includes('Array.from({length:RHYTHM_LANE_COUNT},(_,index)=><i key={index} data-rhythm-sublane-boundary="" />)')&&source.includes("boundary.style.setProperty('--rhythm-sub-clip',rhythmBoundaryLinePolygon(index+.5))"));
 check('補助線は入力を遮らずノーツより下の専用レイヤーへ表示',source.includes('[data-rhythm-sublane-boundary]{display:block;position:absolute;z-index:1;inset:0;pointer-events:none')&&source.includes('[data-rhythm-note]{z-index:2}'));
 // 再マウント時に加えて、端末を回して大きさが変わったときも組み直す(詳しくは rhythm-orientation-check.js)
 check('play-area再マウント時も静的形状を再設定',source.includes("const next=document.querySelector('[data-rhythm-play-area]')")&&source.includes('if(next!==area)layoutFor(next);'));

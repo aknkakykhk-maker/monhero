@@ -325,7 +325,9 @@ for(const difficulty of DIFFICULTIES){
           &&note.grid<=hold.grid+(Number(hold.durationGrids)||0));
         if(covering.length!==1)return true;
         const holdLane=noteTouchLane(covering[0]),noteLane=noteTouchLane(note);
-        const outside=holdLane<=2?noteLane<holdLane:noteLane>holdLane;
+        // 道の真ん中は譜面のレーン数から(5レーンなら2、6レーンなら2.5)。生成器の (LANES-1)/2 とそろえる
+        const middle=((Number(charts[difficulty].laneCount)===6?6:5)-1)/2;
+        const outside=holdLane<=middle?noteLane<holdLane:noteLane>holdLane;
         const apart=separationRange(usableTouchSpan(note),usableTouchSpan(covering[0])).min
           >=HAND_MODEL.fingerMinGapLanes-1e-9;
         return !(outside&&apart);

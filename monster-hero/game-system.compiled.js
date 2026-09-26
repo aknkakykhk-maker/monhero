@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: afaa3925e40b372d
+// source-sha256: 5335ed74d86ea16b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 13:37";
+const BUILD_DATE = "2026-09-26 13:53";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4778,20 +4778,21 @@ const RHYTHM_ASSIST_SCORE_RATE = 0.8;
 const RHYTHM_ASSIST_GUARD_MAX = 3;
 const RHYTHM_ASSIST_GUARD_RECHARGE = 20,
   RHYTHM_ASSIST_GUARD_RECHARGE_STRUGGLING = 8;
-const RHYTHM_MIRROR_SUB_LANES = 10;
 const rhythmMirrorNote = note => {
   if (!note || typeof note !== 'object') return note;
+  const RHYTHM_MIRROR_SUB_LANES = RHYTHM_SUB_LANE_COUNT,
+    RHYTHM_MIRROR_LAST_LANE = RHYTHM_LANE_COUNT - 1;
   const next = {
     ...note
   };
   const width = Number(note.subLaneWidth);
   const w = Number.isFinite(width) && width > 0 ? width : 2;
-  if (Number.isFinite(Number(note.lane))) next.lane = 4 - Number(note.lane);
-  if (Number.isFinite(Number(note.endLane))) next.endLane = 4 - Number(note.endLane);
+  if (Number.isFinite(Number(note.lane))) next.lane = RHYTHM_MIRROR_LAST_LANE - Number(note.lane);
+  if (Number.isFinite(Number(note.endLane))) next.endLane = RHYTHM_MIRROR_LAST_LANE - Number(note.endLane);
   if (Number.isFinite(Number(note.subLane))) next.subLane = RHYTHM_MIRROR_SUB_LANES - Number(note.subLane) - w;
   if (Array.isArray(note.slidePoints)) next.slidePoints = note.slidePoints.map(point => point && Number.isFinite(Number(point.lane)) ? {
     ...point,
-    lane: 4 - Number(point.lane)
+    lane: RHYTHM_MIRROR_LAST_LANE - Number(point.lane)
   } : point);
   if (note.flickDir === 'left') next.flickDir = 'right';else if (note.flickDir === 'right') next.flickDir = 'left';
   if (Array.isArray(note.holdPoints)) next.holdPoints = note.holdPoints.map(point => {
@@ -5166,7 +5167,8 @@ const EVENT_BGM_SCENES = Object.freeze({
   symphony_2026_09_17: 'symphonyEvent',
   symphony_2026_09_17_thanks: 'symphonyEvent',
   tactics_intro: 'tacticsIntroEvent',
-  beat_point_always_2026_09_24: 'monbeatCupEvent'
+  beat_point_always_2026_09_24: 'monbeatCupEvent',
+  rhythm_six_lane_2026_09_26: 'monbeatCupEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -22515,9 +22517,12 @@ const RhythmTapTest = ({
   }, [canvasNotes, monsterSignature, monsterFaceHidden, settings.lightweightMode, settings.effectAmount, noteCanvasMaxDpr]);
   const RHYTHM_LANE_PRESS_GRADIENT = 'linear-gradient(to bottom,rgba(96,165,250,.16) 0%,rgba(96,165,250,.28) 40%,rgba(125,211,252,.44) calc(100% - var(--mh-judgment-line-bottom,20%) - 14%),rgba(224,242,254,.74) calc(100% - var(--mh-judgment-line-bottom,20%) - 3%),rgba(248,250,252,.9) calc(100% - var(--mh-judgment-line-bottom,20%)),rgba(147,197,253,.5) calc(100% - var(--mh-judgment-line-bottom,20%) + 4%),rgba(96,165,250,.34) 100%)';
   const laneElements = useMemo(() => React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "pointer-events-none absolute inset-0 grid grid-cols-5"
+    className: "pointer-events-none absolute inset-0 grid",
+    style: {
+      gridTemplateColumns: `repeat(${RHYTHM_LANE_COUNT},minmax(0,1fr))`
+    }
   }, Array.from({
-    length: 5
+    length: RHYTHM_LANE_COUNT
   }, (_, lane) => React.createElement("div", {
     key: lane,
     "data-rhythm-lane": lane,
@@ -22533,7 +22538,7 @@ const RhythmTapTest = ({
     className: "pointer-events-none absolute inset-0",
     "aria-hidden": "true"
   }, Array.from({
-    length: 5
+    length: RHYTHM_LANE_COUNT
   }, (_, index) => React.createElement("i", {
     key: index,
     "data-rhythm-sublane-boundary": ""
@@ -22541,7 +22546,7 @@ const RhythmTapTest = ({
     className: "pointer-events-none absolute inset-0",
     "aria-hidden": "true"
   }, Array.from({
-    length: 10
+    length: RHYTHM_SUB_LANE_COUNT
   }, (_, subLane) => React.createElement("i", {
     key: subLane,
     "data-rhythm-sublane-feedback": subLane,
@@ -29056,7 +29061,7 @@ function RhythmInfoScreen({
     className: "text-center text-xl font-black text-cyan-200"
   }, "モンヒロビートは準備中です"), React.createElement("p", {
     className: "mt-3 text-[11px] leading-relaxed text-slate-300"
-  }, "曲に合わせて、5つのレーンを流れてくるノーツを演奏する音ゲーのモードです。"), React.createElement("p", {
+  }, "曲に合わせて、6つのレーンを流れてくるノーツを演奏する音ゲーのモードです。"), React.createElement("p", {
     className: "mt-2 text-[11px] leading-relaxed text-slate-300"
   }, "設定したマスモンが曲の途中で「モンスターノーツ」になって流れてきて、取ると血統ごとの力が働く予定です。"), React.createElement("div", {
     className: "mt-4 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3"
@@ -29074,6 +29079,8 @@ function RhythmSongSelectScreen({
   difficulty,
   dismissQuickRhythmBackground,
   dismissRhythmEventNotice,
+  dismissRhythmSixLaneIntro,
+  rhythmSixLaneIntroVisible,
   exitingQuickRun,
   handleGiveUp,
   mainHero,
@@ -29353,7 +29360,22 @@ function RhythmSongSelectScreen({
   }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます'), beatPointReleased && !beatPointEvent && React.createElement("div", {
     "data-rhythm-beat-point-always": true,
     className: "shrink-0 border-b border-violet-400/15 bg-violet-950/15 px-3 py-1 text-center text-[10px] font-black text-violet-200/90"
-  }, "🎟️ ビートPはいつでも貯まります・イベント開催中は5倍"), quickRhythmBackgroundVisible && React.createElement("div", {
+  }, "🎟️ ビートPはいつでも貯まります・イベント開催中は5倍"), rhythmSixLaneIntroVisible && React.createElement("div", {
+    "data-rhythm-six-lane-intro": true,
+    className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
+  }, React.createElement("div", {
+    className: "flex items-start gap-1"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement(AssistantBubble, {
+    scene: "rhythmSixLaneIntro",
+    compact: true
+  })), React.createElement("button", {
+    type: "button",
+    onClick: dismissRhythmSixLaneIntro,
+    "aria-label": "この案内を閉じる",
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
+  }, "×"))), quickRhythmBackgroundVisible && React.createElement("div", {
     "data-quick-rhythm-background": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -45712,6 +45734,13 @@ function MonsterHeroGame() {
     setQuickRhythmBackgroundSeen(true);
     storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false);
   };
+  const RHYTHM_SIX_LANE_INTRO_KEY = 'mh_rhythm_six_lane_seen_v1';
+  const [rhythmSixLaneIntroSeen, setRhythmSixLaneIntroSeen] = useState(true);
+  const rhythmSixLaneIntroVisible = !rhythmSixLaneIntroSeen;
+  const dismissRhythmSixLaneIntro = () => {
+    setRhythmSixLaneIntroSeen(true);
+    storeSet(RHYTHM_SIX_LANE_INTRO_KEY, true, false);
+  };
   const AUTO_ENHANCE_INTRO_KEY = 'mh_masu_auto_enhance_intro_seen_v1';
   const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
   const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
@@ -45743,7 +45772,8 @@ function MonsterHeroGame() {
   const SYMPHONY_STORY_ID = 'symphony_2026_09_17';
   const SYMPHONY_THANKS_STORY_ID = 'symphony_2026_09_17_thanks';
   const BEAT_POINT_ALWAYS_STORY_ID = 'beat_point_always_2026_09_24';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID];
+  const RHYTHM_SIX_LANE_STORY_ID = 'rhythm_six_lane_2026_09_26';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -45802,14 +45832,15 @@ function MonsterHeroGame() {
       if (endedThanksId) setRhythmEventStoryPending(prev => prev || endedThanksId);
       const liveEvent = rhythmLimitedEventAt(Date.now());
       const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
+      const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
       if (!liveEvent) {
-        if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+        if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
-      } else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+      } else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       if (rhythmEventLiveCatchUpRef.current) return;
       rhythmEventLiveCatchUpRef.current = true;
       try {
@@ -46705,6 +46736,7 @@ function MonsterHeroGame() {
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
       setQuickRhythmIntroSeen((await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false)) === true);
       setQuickRhythmBackgroundSeen((await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false)) === true);
+      setRhythmSixLaneIntroSeen((await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false)) === true);
       setAutoEnhanceIntroSeen((await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false)) === true);
       setTacticsExIntroSeen((await storeGet(TACTICS_EX_INTRO_KEY, false, false)) === true);
       {
@@ -47031,6 +47063,9 @@ function MonsterHeroGame() {
       }
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && RELEASE_FLAGS.rhythmEventPoints === true && wasOnboarded && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(BEAT_POINT_ALWAYS_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+      }
+      if (RELEASE_FLAGS.rhythmMode === true && wasOnboarded && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RHYTHM_SIX_LANE_STORY_ID)) {
+        setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       if (wasOnboarded) {
@@ -48087,6 +48122,7 @@ function MonsterHeroGame() {
     monbeatCupThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONBEAT_CUP_THANKS_STORY_ID),
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
+    rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -62006,6 +62042,7 @@ function MonsterHeroGame() {
       catchingUp: catchingUp,
       difficulty: difficulty,
       dismissQuickRhythmBackground: dismissQuickRhythmBackground,
+      dismissRhythmSixLaneIntro: dismissRhythmSixLaneIntro,
       dismissRhythmEventNotice: dismissRhythmEventNotice,
       handleGiveUp: handleGiveUp,
       mainHero: mainHero,
@@ -62045,6 +62082,7 @@ function MonsterHeroGame() {
       },
       quickClearCounts: quickClearCounts,
       quickRhythmBackgroundVisible: quickRhythmBackgroundVisible,
+      rhythmSixLaneIntroVisible: rhythmSixLaneIntroVisible,
       quickRunDetailOpen: quickRunDetailOpen,
       quickRunFinishReasonText: quickRunFinishReasonText,
       quickRunPendingRewards: quickRunPendingRewards,

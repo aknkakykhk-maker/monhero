@@ -52,7 +52,9 @@ check('置き換え先は同じ時刻の他のノーツと重ならないもの�
   &&/if\(!fits\(span\(moved\)\)\)continue;/.test(source));
 check('SLIDEは経路の形を変えずまるごと平行移動する(始点だけ動かして経路が壊れない)',
   source.includes('slidePoints:points.map(p=>({...p,lane:Number(p.lane)+delta}))')
-  &&source.includes('if(lanes.some(lane=>lane+delta<0||lane+delta>4))continue;'));
+  // 右はしは道のレーン数から(2026-09-26 に6レーンへ。譜面ごとに LANE_COUNT を読む)
+  &&source.includes('if(lanes.some(lane=>lane+delta<0||lane+delta>LANE_COUNT-1))continue;')
+  &&source.includes('LANE_COUNT=laneCountOfChart(chart);'));
 check('直すのはレーンだけだと明示している(悪さの重みが定数で見える)',
   ['COST_IMPOSSIBLE','COST_STRAINED','COST_HARD_JUMP','COST_LANE_SPREAD','COST_MOVE','MAX_PASSES']
     .every(k=>new RegExp(`const ${k}=`).test(source)));
