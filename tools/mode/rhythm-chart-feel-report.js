@@ -35,7 +35,8 @@
 'use strict';
 const fs=require('fs');
 const path=require('path');
-const {HAND_MODEL,noteTouchSpan,useRuntimeSlideLanes,slideLaneOffset}=require('./rhythm-hand-model.js');
+const {HAND_MODEL,noteTouchSpan,setHandModelFlags,slideLaneOffset}=require('./rhythm-hand-model.js');
+const {chartRevisionOf,handModelFlagsForRevision}=require('./rhythm-chart-v3-revision.js');
 const {sideFlickContexts,chooseSideFlickDir,collides}=require('./rhythm-side-flick.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {measure:measureQuality}=require('./rhythm-chart-quality-report.js');
@@ -69,10 +70,10 @@ const slideEndCenter=note=>{
 // SLIDE はどの譜面でもゲーム本体と同じ座標で測る(rhythm-hand-model.js の useRuntimeSlideLanes)。
 // 測り終えたら元の読み方へ戻す(同じ手のモデルを使うほかの道具の結果を変えないため)
 const measureFeel=(chart,audio,options={})=>{
-  const previous=slideLaneOffset();
-  useRuntimeSlideLanes(true);
+  // SLIDE の座標はどの譜面でもゲーム本体と同じ。曲線と親指の左右は、その譜面のリビジョンの作り方に合わせる(Rev.14〜)
+  const previous=setHandModelFlags({...handModelFlagsForRevision(chartRevisionOf(chart)),runtimeSlideLanes:true});
   try{return measureFeelInner(chart,audio,options);}
-  finally{useRuntimeSlideLanes(previous>0);}
+  finally{setHandModelFlags(previous);}
 };
 const measureFeelInner=(chart,audio,options={})=>{
   const timing=audio.timing;

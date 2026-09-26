@@ -29,8 +29,8 @@ const fs=require('fs'),path=require('path'),os=require('os');
 const {spawnSync}=require('child_process');
 const {measureFeel,CONCERN_WEIGHTS}=require('./rhythm-chart-feel-report.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
-const {useRuntimeSlideLanes,slideLaneOffset}=require('./rhythm-hand-model.js');
-const {chartRevisionOf}=require('./rhythm-chart-v3-revision.js');
+const {setHandModelFlags}=require('./rhythm-hand-model.js');
+const {chartRevisionOf,handModelFlagsForRevision}=require('./rhythm-chart-v3-revision.js');
 const {measure:measureQuality,AXES}=require('./rhythm-chart-quality-report.js');
 // 公開の流れで差し替えるのは、このリビジョン以降の曲だけ(それより前の曲の作り方は変えない)
 const SPLICE_REVISION=12;
@@ -79,8 +79,7 @@ const spliceCharts=(charts,audio)=>{
   const chosen=sections.map((_,i)=>choice.get(labelOf(i)));
   // 押せない所が出た区切り(継ぎ目なので、その前の区切りも)を候補0へ戻す。戻すたびに全体を測り直す
   let reverted=0,notes=build(chosen);
-  const rev8=chartRevisionOf(charts[0])>=8,previous=slideLaneOffset();
-  useRuntimeSlideLanes(rev8);
+  const previous=setHandModelFlags(handModelFlagsForRevision(chartRevisionOf(charts[0])));
   try{
     for(let guard=0;guard<sections.length;guard++){
       const issues=simulateNotes(notes,timing).issues.filter(issue=>issue.severity==='impossible');
@@ -93,7 +92,7 @@ const spliceCharts=(charts,audio)=>{
       if(!changed)break;
       notes=build(chosen);
     }
-  }finally{useRuntimeSlideLanes(previous>0);}
+  }finally{setHandModelFlags(previous);}
   const sum=list=>list.reduce((a,b)=>a+b,0);
   const after=sum(sections.map((_,i)=>costs[chosen[i]][i]));
   return {notes,chosen,choice,before:sum(costs[0]),after,bestSingle:Math.min(...costs.map(sum)),reverted,sections:sections.length};

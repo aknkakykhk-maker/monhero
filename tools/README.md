@@ -218,6 +218,8 @@ node tools/build.js --check
 
 `node mode/rhythm-chart-rev13-check.js` は、Rev.13(旋律の有無)を見張る。旋律の音高がほとんど取れない小節では主役の追跡が「メロディを追う」を選ばないこと、旋律の有無を渡さなければ Rev.12 までと同じ決め方であること、実際に作るとメロディを追う小節が旋律の取れる小節へ絞られることを確かめる。
 
+`node mode/rhythm-chart-rev14-check.js` は、Rev.14(手と種類の仕上げ)を見張る。手のモデルの SLIDE の曲線と親指の左右が切り替えたときだけ効くこと、左右を区別すると交差する割り振りが減ること、自動修正が曲線の途中も見ること、終点フリックが旋律の息継ぎに付き HOLD の太さの形が伴奏の変化と合うこと、候補が HARD でもよく分かれることを確かめる。
+
 `node mode/rhythm-chart-v3-splice.js --track <曲id> [--count 4] [--chart-revision <版>] [--output-dir <dir>]` は、区間ごとに良い候補を継ぎ合わせる(2026-09-26・段5)。生成器の `--variant` で候補を作り、曲の区切りごとに気になり点(気持ちよさの物差しと同じ数え方)を数えて、同じ名札の区切りはまとめて同じ候補を採る。継ぎ目で押せない所が出た区切りは候補0へ戻す。authoring/ も公開データも書き換えない(書き出すのは `--output-dir` を渡したときの自動修正前の譜面だけ)。`--apply` はパイプラインが Rev.12 以降の曲で生成の直後に呼び、関門(押せない配置が無い・品質の6軸の合計が下がらない・気になり点が減る)を通った難易度だけ authoring/ の生成結果を差し替える(`--chart-dir` で書き出し先、`--chart-revision` で試すリビジョンを変えられる)。`node mode/rhythm-chart-v3-splice-check.js` が見張る。
 
 `node mode/rhythm-mode-tap-completion-check.js` は、STEP 2Bのプレイエリア基準ノーツ移動、ポーズ／再開／リスタート／中断のライフサイクル、正式リザルト条件、BEST統合、NEW RECORD、音源・入力セッション・rAFのcleanup、非公開状態を確認する。

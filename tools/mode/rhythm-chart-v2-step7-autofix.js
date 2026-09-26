@@ -38,7 +38,7 @@
 // ゲームのランタイム・既存の正式候補v1・V1生成器へは一切接続しない。
 const fs=require('fs');
 const path=require('path');
-const {laneCountOfChart,chartRevisionOf}=require('./rhythm-chart-v3-revision.js');
+const {laneCountOfChart,chartRevisionOf,handModelFlagsForRevision}=require('./rhythm-chart-v3-revision.js');
 // 道のレーン数。譜面ごとに読み直す(譜面の作り方の版5から6。書いていない譜面は5)
 let LANE_COUNT=5;
 // HOLDを動かすときに、その上の交差を守るか(譜面の作り方のRev.7から。Rev.6以前の譜面の結果は変えない)
@@ -91,7 +91,7 @@ if(!source){console.error(`未知の --source です: ${sourceKind} (${Object.ke
 
 // --- ノーツの位置 ---
 // 指が触るのは中心。式は rhythm-hand-model.js に一本化してある(STEP3・STEP6と同じ物差しにするため)。
-const {HAND_MODEL,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange,slideLaneAtGrid,useRuntimeSlideLanes}=require('./rhythm-hand-model.js');
+const {HAND_MODEL,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange,slideLaneAtGrid,setHandModelFlags,slideEaseEnabled}=require('./rhythm-hand-model.js');
 const {assignSideFlickDirs}=require('./rhythm-side-flick.js');
 const laneCenter=note=>noteTouchLane(note);
 // 重なり判定のため、どのノーツもサブレーン座標の範囲へ揃える
@@ -194,6 +194,8 @@ const reachConflicts=notes=>{
           for(const point of list){const g=Number(point.grid);if(g>from&&g<to)stops.add(g);}
         }
       }
+      // Rev.14〜: SLIDE は曲線で動くので、折れる点のあいだでも近づく。途中のグリッドも全部見る
+      if(slideEaseEnabled()&&(held.type==='SLIDE'||other.type==='SLIDE'))for(let g=Math.ceil(from);g<to;g++)stops.add(g);
       let worst=Infinity,previous=null;
       for(const grid of [...stops].sort((a,b)=>a-b)){
         const a=fingerAtGrid(held,grid),b=fingerAtGrid(other,grid);
@@ -426,7 +428,8 @@ for(const difficulty of DIFFICULTIES){
   GUARD_COVERED_CROSSES=chartRevisionOf(chart)>=7;
   // Rev.8〜: SLIDE の位置をゲーム本体と同じ座標で測る(rhythm-hand-model.js の useRuntimeSlideLanes)
   const rev8=chartRevisionOf(chart)>=8;
-  useRuntimeSlideLanes(rev8);
+  // 手のモデルの読み方(Rev.8〜 SLIDE の座標 / Rev.14〜 SLIDE の曲線・親指の左右)
+  setHandModelFlags(handModelFlagsForRevision(chartRevisionOf(chart)));
   currentMaxStep=MAX_STEP_LANES[chart.difficulty||difficulty]??Infinity;
   const {notes,fixes,passes,before,after}=autofix(chart.notes||[]);
   // Rev.8〜: レーンを動かしたので、横フリックの向きを払う指の動きで付け直す(生成器と同じ決め方)。
