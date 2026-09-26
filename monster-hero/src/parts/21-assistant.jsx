@@ -22,8 +22,9 @@ const useAssistantBond = () => useContext(AssistantBondContext) || ASSISTANT_BON
 // セリフの中の {name} を、そのときの呼び方へ置き換える。
 // data/assistants.js が読めなかった場合でも、文が壊れないように {name} だけは消す
 // callStyleId … 絆Lv6から選べる呼び方の上書き(省略時は絆Lvの既定のまま)
-const assistantSpeakText = (text, name, level, callStyleId) => (typeof assistantSpeak === 'function')
-  ? assistantSpeak(text, name, level, callStyleId)
+// assistantId … 話している助手。助手ごとに既定の呼び方が違うので必ず渡す(ドラは呼び捨て、ききは「ちー」など)
+const assistantSpeakText = (text, name, level, callStyleId, assistantId) => (typeof assistantSpeak === 'function')
+  ? assistantSpeak(text, name, level, callStyleId, assistantId)
   : String(text == null ? '' : text).replace(/\{name\}/g, String(name || 'キミ'));
 // 表情ごとの顔画像のパスを決める。用意されていない表情は data/assistants.js 側で
 // 既定の表情(normal)へ落ちる。この関数が無い(古いデータの)ときは画像なし扱いにする

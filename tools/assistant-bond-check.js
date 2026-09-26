@@ -311,6 +311,14 @@ check('デバッグはデバッグ設定からだけ開ける',
 // ==========================================================================
 // 第2助手「きき」。みゅあの回帰を壊さずに、ききも同じ仕組みで動くことを見る
 // ==========================================================================
+// ドラはLv3から呼び捨てのまま(Lv5でも「ちん」付けにしない。2026-09-26・ユーザー指示)
+const draCall = (lv) => A.assistantCallName('あつ', lv, null, 'dra');
+check('ドラはLv1・2がさん付け、Lv3以降は呼び捨てのまま',
+  draCall(1) === 'あつさん' && draCall(2) === 'あつさん' && [3, 4, 5, 6, 20].every(lv => draCall(lv) === 'あつ'),
+  [1, 2, 3, 5, 6].map(draCall).join(' / '));
+// 画面側の吹き出しが助手idを捨てると、どの助手もみゅあの呼び方になる(2026-09-26に実際に起きた)
+check('画面側の呼び方の関数が助手idを assistantSpeak へ渡している',
+  /const assistantSpeakText = \(text, name, level, callStyleId, assistantId\)[\s\S]{0,120}assistantSpeak\(text, name, level, callStyleId, assistantId\)/.test(source));
 const KIKI = 'kiki';
 check('ききが助手として定義されている', A.ASSISTANTS.some(x => x.id === KIKI));
 // --- 段階(必要量は共通・タイトルと呼び方は専用) ---
