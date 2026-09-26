@@ -229,7 +229,9 @@ ok('既定になっている段の名前が「標準」になっている',(()=>
     const src=(game.match(new RegExp(`${name} *= *Object\\.freeze\\(\\[(.*?)\\]\\);`))||[])[1]||'';
     return [...src.matchAll(/\['([A-Z]+)','([^']+)'\]/g)].map(m=>[m[1],m[2]]);
   };
-  const defaultOf=key=>((game.match(new RegExp(`${key}:'([A-Z]+)'`))||[])[1])||'';
+  // 既定値は DEFAULT_RHYTHM_SETTINGS の中から探す(2026-09-27。その前に「見た目のおまかせ」の effectAmount:'MINIMAL' などがあり、最初に見つかったものだと取り違える)
+  const defaultsSrc=game.slice(Math.max(0,game.indexOf('const DEFAULT_RHYTHM_SETTINGS')));
+  const defaultOf=key=>((defaultsSrc.match(new RegExp(`${key}:'([A-Z]+)'`))||[])[1])||'';
   const pairs=[['RHYTHM_EFFECT_LABELS','effectAmount'],['RHYTHM_MONSTER_EFFECT_LABELS','monsterNoteEffect']];
   return pairs.every(([labels,key])=>{
     const found=labelsOf(labels).find(([id])=>id===defaultOf(key));

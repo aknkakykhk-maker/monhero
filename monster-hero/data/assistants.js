@@ -725,6 +725,12 @@ const ASSISTANT_SCENES = {
     help: 'rhythm/rhythm-note-types',
     lines: [],
   },
+  // モンヒロビートの見た目の設定が増えた(見た目のおまかせ・道の演出など。2026-09-27)。
+  // 曲えらびを開いた最初の1回だけ出す。本文は下の addAssistantLinePack から合流する
+  rhythmLookIntro: {
+    help: 'rhythm/rhythm-options',
+    lines: [],
+  },
   autoQuickRunSettings: {
     help: 'home/roster',
     lines: [],
@@ -1419,6 +1425,63 @@ addAssistantLinePack({
   },
 });
 
+// モンヒロビートの見た目の設定(2026-09-27)。「見た目を華やかにできる」「おまかせで1回で切り替わる」「重いときは自動で控えめ」だけを伝える。
+// 案内の下の「華やかにしてみる」ボタンで、その場で「華やか」を試せる
+addAssistantLinePack({
+  id: 'rhythmLookGuide',
+  label: 'モンヒロビート見た目の設定案内',
+  lines: {
+    rhythmLookIntro: [
+      { e:'excited', t:'モンヒロビートの見た目を、もっと華やかにできるようになったよ！' },
+      { e:'wink', t:'オプションの「システム」にある「見た目のおまかせ」なら、1回押すだけで切り替わるよ♪' },
+      { e:'normal', t:'重いときは、演出を自動で控えめにしてくれるから安心してね。' },
+      { e:'happy', t:'{name}、下のボタンで「華やか」を試してみる？' },
+      { e:'normal', t:'道が拍に合わせて光ったり、サーチライトが揺れたりもするよ♪' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmLookGuideKiki',
+  assistantId: 'kiki',
+  label: 'きき・モンヒロビート見た目の設定案内',
+  lines: {
+    rhythmLookIntro: [
+      { e:'happy',  t:'モンヒロビートの見た目を、もっと華やかにできるようになりまちた。' },
+      { e:'normal', t:'オプションの「システム」の「見た目のおまかせ」で、1回で切り替わるの。' },
+      { e:'normal', t:'重いときは、演出を自動で控えめにしてくれまつ。' },
+      { e:'wink',   t:'{name}、下のボタンで「華やか」を試してみまつか？' },
+      { e:'normal', t:'道が拍に合わせて光ったり、サーチライトが揺れたりするの。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmLookGuideMomosuke',
+  assistantId: 'momosuke',
+  label: 'ももすけ・モンヒロビート見た目の設定案内',
+  lines: {
+    rhythmLookIntro: [
+      { e:'excited', t:'モンヒロビートの見た目、もっと派手にできるようになったよ！' },
+      { e:'wink',    t:'オプションの「システム」の「見た目のおまかせ」なら、ポチッと1回で切り替わるんだ！' },
+      { e:'normal',  t:'重くなったら、演出を勝手に控えめにしてくれるんだってさ。' },
+      { e:'happy',   t:'{name}、下のボタンで「華やか」を試してみようよw' },
+      { e:'excited', t:'道が拍で光ったり、サーチライトが揺れたりするんだよ！' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmLookGuideDra',
+  assistantId: 'dra',
+  label: 'ドラ・モンヒロビート見た目の設定案内',
+  lines: {
+    rhythmLookIntro: [
+      { e:'happy',  t:'モンヒロビートの見た目、もっと華やかにできるようになったで' },
+      { e:'normal', t:'オプションの「システム」の「見た目のおまかせ」で、1回押すだけで切り替わるんや' },
+      { e:'normal', t:'重いときは、演出を勝手に控えめにしてくれるで' },
+      { e:'wink',   t:'{name}、下のボタンで「華やか」を試してみ' },
+      { e:'normal', t:'道が拍に合わせて光ったり、サーチライトが揺れたりもするで' },
+    ],
+  },
+});
 // モンヒロビートの6レーン化(2026-09-26)。「6レーンになった」「MASTERの横フリックは矢印の向きへ払う」だけを伝える。
 // 細かい話(記録はそのまま等)はヘルプと更新履歴に任せる
 addAssistantLinePack({
