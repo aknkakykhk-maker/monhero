@@ -1391,7 +1391,7 @@ Rev.2では、外側に余地が無いときだけ**HOLDを内側へ1〜2レー�
 - 効いた作法はノーツに `knowledge:[id]` として印を残す（作者用の譜面だけ。ゲームへ書き出す形には入らない）
 - 新しい作法は `KNOWLEDGE` へ1件足すだけで効く。足したら `rhythm-chart-knowledge-check.js` に「効く場面」を1つ書く
 
-#### 学び直し（作り方の最新の次の番号から。2026-09-26 時点で Rev.11〜。Rev.8〜10 は作り方の改良 3.1.22〜3.1.24 に使った）
+#### 学び直し（作り方の最新の次の番号から。2026-09-26 時点で Rev.12〜。Rev.8〜11 は作り方の改良 3.1.22〜3.1.25 に使った）
 
 作法の重みの初めの値（すべて1）は、よその作品の一般的な作り方から決めた仮の値。このゲームで遊んだ感想で直していく。
 
@@ -1492,6 +1492,20 @@ Rev.7 の譜面が authoring/ と1バイトも同じ／Rev.8 の横フリック�
 
 実測（5曲・自動修正後）: 単調さ（8小節）は各難易度で 3〜9% → 1〜5%。6軸は ±1.2 以内（「流れ」だけ MASTER で −2）。
 検査: `node tools/mode/rhythm-chart-rev10-check.js`（仕組みを止めると落ちることを確認済み）。
+
+### 3.1.25 繰り返すたびの発展とラスサビ・主役に合わせた種類（2026-09-26・Rev.11）
+
+- **発展の回**: Rev.2〜10 の「発展」（3回目ごとの繰り返し）は、写さずに形を選び直すだけで、覚えた形とも発展とも感じにくかった。
+  Rev.11 は発展の回も小節単位で元の形を写し（左右反転の規則はそのまま）、その小節では締めの FLICK と拍の頭の同時押しを選ばれやすくする（HARD以上・後押し 0.8）。
+  種類の揃え（Rev.8）は、発展の回では足すだけ（発展で足した種類は外さない）
+- **ラスサビ**: 最後の盛り上がり（climax）の区切りで、前に同じ名札の区切りがあるもの。その区切りの小節はすべて発展の回にする
+- **主役に合わせた種類**（Rev.9 の主役の追跡とつなぐ）: ドラムを追う小節は同時押し、歌・主旋律を追う小節は FLICK を選ばれやすくする（後押し 0.4）。
+  ドラムのフィルの締め（次の小節が区切りの頭で、この小節はドラムを追っている、その最後の拍）は FLICK（0.8）
+- どの後押しも、**その種類にふさわしい音（音の性格の点が0より大きい）にだけ**効く。音に合わない所へ置かない
+- 同時押しの主役の後押しは、写しの小節と写しの元の小節では効かせない（同時押しは形を決めたあとで置くので、元のノーツが動くと写した側と食い違う）
+- 形の記憶（3.1.7）の3回目ごとの選び直しは今までどおり（やめると記憶の形が小節単位の写しより先に採られ、写し率が下がった）
+
+実測は ROADMAP の段4。検査: `node tools/mode/rhythm-chart-rev11-check.js`（発展の後押しを外すと落ちることを確認済み）。
 
 ### 3.1.6 譜面文法 — 形を「順位」でなく「点数」で選ぶ（2026-09-07）
 
@@ -1891,6 +1905,7 @@ maimai の無理配置の分類など。動画そのものは見ていない）�
 | 3.1.22 手の動きと繰り返しを揃える | 生成器の `rev8` / `phraseEchoTypes` / `CENTER_LANE`（Rev.8）＋ `rhythm-side-flick.js` ＋ 手のモデルの `useRuntimeSlideLanes` ＋ 物差し `rhythm-chart-feel-report.js` | `rhythm-chart-rev8-check.js` / `rhythm-chart-feel-report-check.js` |
 | 3.1.23 主役の追跡 | 生成器の `focusData` / `FOCUS_SCALE`（Rev.9）＋ `rhythm-chart-focus.js` ＋ 音の層の解析 `rhythm-audio-layers-v3.js` | `rhythm-chart-rev9-check.js` / `rhythm-audio-layers-v3-check.js` |
 | 3.1.24 動きの使い回しを避ける | 生成器の `motionVariety` / `motionRepeatsFor`（Rev.10） | `rhythm-chart-rev10-check.js` / `rhythm-chart-feel-report.js` |
+| 3.1.25 繰り返すたびの発展・主役に合わせた種類 | 生成器の `rev11` / `developBar` / `lastChorus` / `typeBonusRev11`（Rev.11） | `rhythm-chart-rev11-check.js` |
 | 3.1.6 譜面文法 / 3.1.7 指紋 | `rhythm-chart-v3-patterns.js` の `rankShapes` / 生成器の `motifKeyOf` | `rhythm-chart-quality-report.js`（語彙・偏り・フレーズ一致） |
 | 10. 品質の6軸 | `rhythm-chart-quality-report.js` | パイプラインのゲート |
 | 2. レイヤリング | `rhythm-audio-analyze-v3.js`（音の性格）＋ V3生成 | `rhythm-audio-analyze-v3-check.js` |
