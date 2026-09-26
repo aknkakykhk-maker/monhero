@@ -37,7 +37,8 @@ const grab = (from, to) => {
 
 // ---- 出し分けの土台 ----
 check('演奏画面が「デバッグから始めたか」を受け取る',
-  /const RhythmTapTest=\(\{[^}]*debugPlay=false,tutorial=false\}\)/.test(game));
+  // 受け取る値は増えていく(タイミング合わせの calibrating など)。debugPlay と tutorial を既定 false で受けていればよい
+  /const RhythmTapTest=\(\{[^}]*debugPlay=false,tutorial=false[,}]/.test(game));
 check('デバッグ画面から始めたときだけ true になる',
   game.includes("debugPlay={rhythmPlay.from==='debug'}")
   && game.includes("setRhythmPlay({song,difficulty,from:'debug'})"));
@@ -48,7 +49,8 @@ check('画面を2つに分けていない(判定や描画を二重管理しな�
 
 // ---- HUD ----
 check('プレイヤーの画面に「HOLD TEST / TAP TEST / MIX TEST」を出さない',
-  game.includes("{tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}"));
+  // 前にタイミング合わせ(calibrating・2026-09-26)の分岐が付いてもよい
+  /\{(?:calibrating\?'タイミング合わせ':)?tutorial\?'れんしゅう':debugPlay\?debugChartLabel:`Lv\.\$\{chart\.level\}`\}/.test(game));
 // data/rhythm-mode.js が DOM を直接書き換えて 'MIX TEST' にしていた。
 // React側で出し分けても、こちらが動いていればプレイヤーの画面へ出てしまう
 // (FLICK/SLIDEを含む譜面＝HARD以上のすべての曲で出ていた)
@@ -61,7 +63,8 @@ check('譜面の中身の表記はデバッグのときだけ使う',
 // ---- ポーズ ----
 const pause = grab('data-rhythm-pause-menu', '</div>}</div></main>;');
 check('ポーズの戻り先がプレイヤー向けの言い方になる',
-  pause.includes("{tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}"));
+  // 前にタイミング合わせ(calibrating)の「やめてオプションへ戻る」が付いてもよい
+  /\{(?:calibrating\?'やめてオプションへ戻る':)?tutorial\?'練習をやめて曲えらびへ戻る':debugPlay\?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'\}/.test(pause));
 // 「中断して」が付く形だけを見ていたため、結果画面の「音ゲーデバッグへ戻る」
 // (前置きなし)を素通りさせていた。あそびかた練習を終えた画面にそのまま出ていた
 // (2026-09-05・実機の指摘「ここもデバッグに戻るみたいな表記になってる」)。
@@ -95,7 +98,17 @@ check('結果画面の戻り先がプレイヤー向けの言い方になる',
 // (2026-09-10 の STEP 6-10 で音ゲーの画面部品が入って実際にそうなった)。
 // 演奏画面はそれ専用の部品ファイルなので、そのファイルをそのまま見る
 const play = fs.readFileSync(path.join(root, 'monster-hero/src/parts/30-rhythm-play.jsx'), 'utf8');
-const stripped = play.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
+// 譜面メモ(RhythmChartNotePanel・2026-09-26)は部品の中に「DEBUG」と書いてあるが、呼ぶ側で debugPlay を通したときだけ出る。
+// 呼ぶ所が debugPlay で守られていれば、その部品の本体は数えない
+const withoutGuardedPanels = src => {
+  const name = 'RhythmChartNotePanel';
+  if (!new RegExp(`\\{debugPlay&&[^{}]{0,80}<${name}\\b`).test(src)) return src;
+  const at = src.indexOf(`const ${name}=`);
+  if (at < 0) return src;
+  const end = src.indexOf('\nconst ', at + 10);
+  return src.slice(0, at) + (end < 0 ? '' : src.slice(end));
+};
+const stripped = withoutGuardedPanels(play).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
 for (const word of ['DEBUG', 'デバッグ']) {
   const hits = [...stripped.matchAll(new RegExp(word, 'g'))].length;
   const guarded = [...stripped.matchAll(new RegExp(`debugPlay[^\\n]{0,120}${word}`, 'g'))].length;

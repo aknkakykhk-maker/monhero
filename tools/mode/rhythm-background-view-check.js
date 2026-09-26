@@ -38,7 +38,8 @@ for (const file of files) {
   const compact = src.replace(/\s+/g, '');
 
   check(`${rel}: モンビーを開いている間は画面を揺らさない`,
-    compact.includes('screenShake&&!ecoBattleView&&!rhythmScreenOpen?'));
+    // 後ろに条件が足されてもよい(バトルの揺れの設定 battleFxSettings.shake など)。!rhythmScreenOpen が付いていることを見る
+    /screenShake&&!ecoBattleView&&!rhythmScreenOpen(?:&&[^?]{0,80})?\?/.test(compact));
   // 生成物は `&&/*#__PURE__*/React.createElement(` の形になるので、条件式までを見る
   check(`${rel}: モンビーを開いている間は全画面演出を出さない`,
     compact.includes('effect&&!rhythmScreenOpen&&'));

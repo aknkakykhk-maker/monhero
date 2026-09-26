@@ -272,8 +272,8 @@ function RhythmSongSelectScreen({
             <button type="button" onClick={dismissRhythmLookIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
           <div className="mt-1 flex gap-2 pb-1">
-            <button type="button" data-rhythm-look-intro-try onClick={()=>onTryRhythmLook&&onTryRhythmLook('VIVID')} className="min-h-[40px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950">華やかにしてみる</button>
-            <button type="button" onClick={dismissRhythmLookIntro} className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200">いまのままにする</button>
+            <button type="button" data-rhythm-look-intro-try onClick={()=>onTryRhythmLook&&onTryRhythmLook('VIVID')} className="min-h-[44px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950">華やかにしてみる</button>
+            <button type="button" onClick={dismissRhythmLookIntro} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200">いまのままにする</button>
           </div>
         </div>}
         {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}
@@ -330,10 +330,10 @@ function RhythmSongSelectScreen({
                 return <button key={key} type="button" data-rhythm-play-mode-toggle={key} aria-pressed={active}
                   aria-label={`${name} ${active?'ON':'OFF'}`} title={name}
                   onClick={()=>onToggleRhythmSetting&&onToggleRhythmSetting(key)}
-                  className={`flex min-h-[40px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}><span aria-hidden="true">{icon}</span><span className="landscape:hidden">{name}</span><span className="text-[10px]">{active?'ON':'OFF'}</span></button>;
+                  className={`flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}><span aria-hidden="true">{icon}</span><span className="landscape:hidden">{name}</span><span className="text-[10px]">{active?'ON':'OFF'}</span></button>;
               })}
               <button data-rhythm-demo-ranking onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング" title="全国ランキング"
-                className="flex min-h-[40px] items-center justify-center gap-1 rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"><span aria-hidden="true">🏆</span><span className="landscape:hidden">ランキング</span></button>
+                className="flex min-h-[44px] items-center justify-center gap-1 rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"><span aria-hidden="true">🏆</span><span className="landscape:hidden">ランキング</span></button>
             </div>
             {rhythmSettings&&rhythmSettings.assistMode&&<p data-rhythm-assist-note className="mt-1 text-[9px] font-bold leading-snug text-emerald-200">アシストON：フリックはタップで取れて、コンボをガードが守ります。スコアは8割で、自己ベスト・ランキングには残りません。</p>}
           </>}/>

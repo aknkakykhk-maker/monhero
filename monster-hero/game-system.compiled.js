@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 388a745998fe7d27
+// source-sha256: 39e1dfb583358396
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 08:31";
+const BUILD_DATE = "2026-09-27 08:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -30904,11 +30904,11 @@ function RhythmSongSelectScreen({
     type: "button",
     "data-rhythm-look-intro-try": true,
     onClick: () => onTryRhythmLook && onTryRhythmLook('VIVID'),
-    className: "min-h-[40px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950"
+    className: "min-h-[44px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950"
   }, "華やかにしてみる"), React.createElement("button", {
     type: "button",
     onClick: dismissRhythmLookIntro,
-    className: "min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200"
+    className: "min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200"
   }, "いまのままにする"))), quickRhythmBackgroundVisible && React.createElement("div", {
     "data-quick-rhythm-background": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
@@ -30963,7 +30963,7 @@ function RhythmSongSelectScreen({
         "aria-label": `${name} ${active ? 'ON' : 'OFF'}`,
         title: name,
         onClick: () => onToggleRhythmSetting && onToggleRhythmSetting(key),
-        className: `flex min-h-[40px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${active ? on : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+        className: `flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${active ? on : 'border-white/15 bg-slate-900/80 text-slate-300'}`
       }, React.createElement("span", {
         "aria-hidden": "true"
       }, icon), React.createElement("span", {
@@ -30976,7 +30976,7 @@ function RhythmSongSelectScreen({
       onClick: () => onOpenRanking(song),
       "aria-label": "この曲の全国ランキング",
       title: "全国ランキング",
-      className: "flex min-h-[40px] items-center justify-center gap-1 rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"
+      className: "flex min-h-[44px] items-center justify-center gap-1 rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100"
     }, React.createElement("span", {
       "aria-hidden": "true"
     }, "🏆"), React.createElement("span", {

@@ -40,7 +40,8 @@ check('短縮値を持つのはデバッグ専用曲だけで、既存曲は従�
 // 用意する時点では autoStart:false を渡す(鳴らし始めるのは waitUntilPlayable のあと)。
 // リスタートが新しいrunを作って音と入力を捨てるところは変わっていない
 check('リスタートは新run生成・入力と音声を破棄',game.includes('const restart=()=>{const startBest=runRef.current?.startBest;if(startBest)beginRun(startBest);};')// ライフ0(DOWN)の表示も、やり直しのときは一緒に戻す(2026-09-12に追加)
-&&game.includes('disposeRun();setLifeDownCount(0);setView({...initialView(),status:\'loading\'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false})'));
+// HUDの数字は部品(RhythmHud*)が持つので、やり直しのときは hudRef も戻す(2026-09-27)。あいだに入ってよい
+&&/disposeRun\(\);setLifeDownCount\(0\);setView\(\{\.\.\.initialView\(\),status:'loading'\}\);(?:hudRef\.current\.set\(rhythmHudInitial\(\)\);)?const audio=await Audio_\.startRhythmTrack\(song\.bgmTrackId,settings\.bgmVolume,\{autoStart:false\}\)/.test(game));
 // どこから始めたプレイかを from で持つようにしたので 'debug' が付く(2026-09-05)。
 // 音を鳴らし始めるのがボタンのonClick経路のまま(自動クリックを挟んでいない)ことは変わらない
 check('音声開始は直接ボタンonClick経路',game.includes("onClick={()=>{setRhythmPlay({song,difficulty,from:'debug'});setGameState('RHYTHM_PLAY');}}")&&!game.includes("data-rhythm-tap-start')?.click"));

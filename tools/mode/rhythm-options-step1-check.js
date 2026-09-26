@@ -26,9 +26,10 @@ ok('数値5項目は粗細4つのボタンとスライダーで変えられる',
   &&['bgmVolume','noteSeVolume','noteSpeed','noteSize','judgmentTimingOffsetMs'].every(key=>game.includes(`stepper('${key}'`))
   // 音量は0〜200(2026-09-12・ユーザー指示)。100の意味は今までと同じで、上へ広げただけ
   &&game.includes("stepper('bgmVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10})")
-  &&game.includes("stepper('noteSeVolume',0,RHYTHM_VOLUME_MAX,1,{fine:1,coarse:10})")
+  // タップ音量はユーザー指示(2026-09-26「タップ音量の上限をもっと上げて」)で専用の上限 RHYTHM_NOTE_SE_VOLUME_MAX になった。どちらでも通す
+  &&/stepper\('noteSeVolume',0,RHYTHM_(?:NOTE_SE_)?VOLUME_MAX,1,\{fine:1,coarse:10\}\)/.test(game)
   &&game.includes('rhythmFiniteStep(source.bgmVolume,0,RHYTHM_VOLUME_MAX,1')
-  &&game.includes('rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_VOLUME_MAX,1')
+  &&/rhythmFiniteStep\(source\.noteSeVolume,0,RHYTHM_(?:NOTE_SE_)?VOLUME_MAX,1/.test(game)
   &&game.includes('data-rhythm-option-stepper={key}')
   // 押す場所は44px以上を保つ(字を詰めて入れる量を増やさない)
   &&game.includes("${wide?'min-h-[38px]':'min-h-[46px]'} rounded-xl border ${dim?'border-white/25 bg-slate-300 text-slate-900':'border-white/40 bg-slate-100 text-slate-900'}")
@@ -95,7 +96,8 @@ ok('サイズはノーツ頭の描画scaleだけで、帯・ENDバー・入力hi
   &&!game.includes('scale(${settings.noteSize/100})')
   &&!game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.noteSize'));
 ok('表示と入力で同じ判定offsetを使い窓幅は不変',game.includes('visualTime=songTimeMs-settings.judgmentTimingOffsetMs')&&game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs)')&&game.includes('const rhythmJudgeTap = deltaMs => RHYTHM_JUDGMENTS.find'));
-ok('表示切替・レーン発光は入力を消さない',game.includes('settings.judgmentTextDisplay?view.last')&&game.includes('settings.fastSlowDisplay?(view.fastSlow')&&game.includes("settings.laneGlow==='NONE'?'0'")&&game.includes('inputStarts(starts,ageMs)'));
+// 判定の文字は部品(RhythmHudJudgment・2026-09-27)に分けたので、view.last / view.fastSlow が last / fastSlow になった。どちらの形でも通す
+ok('表示切替・レーン発光は入力を消さない',/settings\.judgmentTextDisplay\?(?:view\.)?last\b/.test(game)&&/settings\.fastSlowDisplay\?\((?:view\.)?fastSlow\b/.test(game)&&game.includes("settings.laneGlow==='NONE'?'0'")&&game.includes('inputStarts(starts,ageMs)'));
 // 振動は 2026-09-05 に作り直した（iPhoneには Vibration API が無く、8msは短すぎた）。
 // 見ているのは「対応していない端末で落ちない・黙って何も起きないままにしない」こと。
 ok('振動未対応を安全に扱う',

@@ -50,7 +50,11 @@ for (const file of files) {
   // 前提: モンビーの画面はBGMのキーを持たない(だから止まる)
   if (file.includes('/src/')) {
     const map = src.slice(src.indexOf('const BGM_STATE_MAP = {'), src.indexOf('};', src.indexOf('const BGM_STATE_MAP = {')));
-    check(`${rel}: モンビーの画面はBGMのキーを持たない（止まるのが前提）`, !/RHYTHM_/.test(map));
+    // 「これまでの記録」(RHYTHM_HISTORY・2026-09-22)は演奏の画面ではなく、HOMEの曲を続けるよう意図して足された。
+    // 演奏まわりの画面(曲えらび・演奏・リザルトなど)がキーを持たないことを見る
+    const RHYTHM_KEYS_WITH_BGM = ['RHYTHM_HISTORY'];
+    const rhythmKeys = [...map.matchAll(/\b(RHYTHM_[A-Z_]+)\s*:/g)].map(m => m[1]).filter(k => !RHYTHM_KEYS_WITH_BGM.includes(k));
+    check(`${rel}: モンビーの画面はBGMのキーを持たない（止まるのが前提）`, rhythmKeys.length === 0, rhythmKeys.join(', '));
   }
 
   // ===== 負けたときの音は、モンビーを開いていても鳴らす(2026-09-12・ユーザー指示) =====
