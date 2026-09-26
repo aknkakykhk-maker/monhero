@@ -451,6 +451,9 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const [webglLost,setWebglLost]=useState(false);
   const webglNotes=webglWanted&&!webglLost;
   useEffect(()=>{if(!canvasNotes)return undefined;RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current,{webgl:webglNotes});const canvas=noteCanvasRef.current;if(canvas)canvas.dataset.rhythmNoteBackend=RHYTHM_CANVAS_RENDERER.backend;
+    // ★WebGL を頼んだのに描き込み先が取れなかった(準備の途中で失敗した)ときは、文脈を失ったときと同じく
+    //   canvas を作り直して「ふつう」の描き方へ戻す。そのままだと判定は進むのにノーツが見えない(2026-09-26)
+    if(webglNotes&&canvas&&RHYTHM_CANVAS_RENDERER.ready===false){setWebglLost(true);return()=>{RHYTHM_CANVAS_RENDERER.release();};}
     const onLost=()=>setWebglLost(true);
     if(canvas&&RHYTHM_CANVAS_RENDERER.backend==='webgl')canvas.addEventListener('webglcontextlost',onLost);
     // WebGL で描けたときだけ、叩いたときの光もこの canvas で描く(DOM の部品は動かさない)。2D の canvas・DOM 版は今までどおり
@@ -1188,7 +1191,9 @@ const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.i
    3秒のうち8%を超えたら一段下げる。止まっていた間(250ms以上あいた)は数えない。数えるだけで、判定・描画には触らない */
 if(settings.renderQuality==='AUTO'){const aq=run._autoQuality||(run._autoQuality={last:0,start:frameNowMs,frames:0,slow:0,minGap:1e9});const gap=aq.last?frameNowMs-aq.last:0;aq.last=frameNowMs;
   if(gap>0&&gap<250){aq.frames++;if(gap>=5&&gap<aq.minGap)aq.minGap=gap;if(gap>Math.max(5,aq.minGap)*1.8)aq.slow++;}
-  if(frameNowMs-aq.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){if(aq.frames>=30&&aq.slow/aq.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepAutoQualityRef.current)stepAutoQualityRef.current();aq.start=frameNowMs;aq.frames=0;aq.slow=0;}}
+  // ★一段下げた直後の枠は数えない。下げると光の絵やマスモンの顔を焼き直すので、その一瞬の詰まりで
+  //   続けてもう一段下げてしまっていた(高→標準→省電力と一気に落ちる。2026-09-26 の点検で見つけた)
+  if(frameNowMs-aq.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){if(aq.settle>0)aq.settle--;else if(aq.frames>=30&&aq.slow/aq.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepAutoQualityRef.current){stepAutoQualityRef.current();aq.settle=1;}aq.start=frameNowMs;aq.frames=0;aq.slow=0;}}
 if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
 /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
    取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
@@ -1835,7 +1840,9 @@ scheduleTick();};
       //   ★真ん中に置かない。ライフ表示は設定で最大200%まで伸びて左へせり出すので、
       //     中央そろえだと大きくしたときにポーズボタンと重なる(2026-09-13に実測して分かった)。
       //     左のスコア(器の 12〜145px)と右のライフ(最大で 563px あたりまで)の**あいだ**へ置く。
-      ?{left:'19%',right:'36%',top:'2%',padding:'4px 10px'}
+      // ★2026-09-26: 横持ちで経過時間をスコアの右どなりへ移したので、上端を合わせると経過時間に、
+      //   右端がライフの♥にかかるようになっていた。少し下げて、右端を内側へ寄せる
+      ?{left:'19%',right:'39%',top:'calc(2% + 18px)',padding:'4px 10px'}
       // 縦持ち: 判定ラインの下の空き(bottom 12%より下)。上に置くとコンボ数と重なった
       //   (2026-09-13、実画面で確認)。ここなら目線も判定ラインの近くで済む
       :{left:'12px',right:'12px',bottom:'1.5%',padding:'8px 12px'}}><b data-rhythm-calibration-title className="block font-black text-amber-200" style={{fontSize:isLandscape?'12px':'14px',lineHeight:1.2}}>かまえて（はじめの{RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）</b><span data-rhythm-calibration-text className="mt-1 block font-bold text-slate-200" style={{fontSize:isLandscape?'9px':'11px',lineHeight:isLandscape?1.3:1.6}}>判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます</span></div>}{tutorial&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{RHYTHM_TUTORIAL_STEPS[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{RHYTHM_TUTORIAL_STEPS[0].text}</span></div>}{view.status==='paused'&&!resumeCountdown&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3>{/* いま何を・どこまで遊んでいるか。止めた位置・スコア・コンボをここで見られる */}

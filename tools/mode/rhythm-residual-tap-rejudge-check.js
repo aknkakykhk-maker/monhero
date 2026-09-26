@@ -29,7 +29,9 @@ const threshold=Number(game.match(/RHYTHM_TAP_REJUDGE_MOVE_SUBLANES=([\d.]+)/)?.
 const inputMovesSource=game.match(/const inputMoves=\(inputKey,subLaneCoordinate\)=>\{[^\n]+?\};/)?.[0];
 const moveCalls=[];
 if(Number.isFinite(threshold)&&inputMovesSource){
-  const moveContext={runRef:{current:{inputFeedbackState:new Map([['touch:1',{subLane:4,subLaneCoordinate:4.99,empty:true}]])}},inputStarts:inputs=>moveCalls.push(inputs)};
+  // 道のサブレーン数は本物のデータ(rhythm-mode.js)から読む(2026-09-26 に6レーン=12サブレーンへ)
+  const laneCount=Number(fs.readFileSync(path.join(__dirname,'..','..','monster-hero','data','rhythm-mode.js'),'utf8').match(/const RHYTHM_LANE_COUNT = (\d+);/)?.[1]);
+  const moveContext={RHYTHM_SUB_LANE_COUNT:laneCount*2,runRef:{current:{inputFeedbackState:new Map([['touch:1',{subLane:4,subLaneCoordinate:4.99,empty:true}]])}},inputStarts:inputs=>moveCalls.push(inputs)};
   vm.createContext(moveContext);
   vm.runInContext(`const RHYTHM_TAP_REJUDGE_MOVE_SUBLANES=${threshold};${inputMovesSource}inputMoves('touch:1',5.01);inputMoves('touch:1',5.25);`,moveContext);
 }

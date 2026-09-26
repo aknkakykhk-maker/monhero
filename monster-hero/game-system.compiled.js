@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b9402ecd4e3418a7
+// source-sha256: 3ebcc5e56c4b1fe3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -17467,7 +17467,7 @@ const normalizeRhythmEventPoints = value => {
   return Number.isFinite(n) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(n))) : 0;
 };
 const loadRhythmEventPoints = async () => normalizeRhythmEventPoints(await storeGet(RHYTHM_EVENT_POINTS_KEY, 0, false));
-const addRhythmEventPoints = async amount => {
+const addRhythmEventPointsNow = async amount => {
   const requested = normalizeRhythmEventPoints(amount);
   const before = await loadRhythmEventPoints();
   if (requested <= 0) return {
@@ -17483,6 +17483,12 @@ const addRhythmEventPoints = async amount => {
     after,
     added
   };
+};
+let rhythmEventPointsQueue = Promise.resolve();
+const addRhythmEventPoints = amount => {
+  const run = rhythmEventPointsQueue.then(() => addRhythmEventPointsNow(amount));
+  rhythmEventPointsQueue = run.catch(() => {});
+  return run;
 };
 const storeList = async (prefix, shared = false) => {
   try {
@@ -22683,6 +22689,12 @@ const RhythmTapTest = ({
     });
     const canvas = noteCanvasRef.current;
     if (canvas) canvas.dataset.rhythmNoteBackend = RHYTHM_CANVAS_RENDERER.backend;
+    if (webglNotes && canvas && RHYTHM_CANVAS_RENDERER.ready === false) {
+      setWebglLost(true);
+      return () => {
+        RHYTHM_CANVAS_RENDERER.release();
+      };
+    }
     const onLost = () => setWebglLost(true);
     if (canvas && RHYTHM_CANVAS_RENDERER.backend === 'webgl') canvas.addEventListener('webglcontextlost', onLost);
     RHYTHM_CANVAS_RENDERER.enableHits(RHYTHM_CANVAS_RENDERER.backend === 'webgl' ? playAreaRef.current : null);
@@ -23820,7 +23832,10 @@ const RhythmTapTest = ({
           if (gap > Math.max(5, aq.minGap) * 1.8) aq.slow++;
         }
         if (frameNowMs - aq.start >= RHYTHM_AUTO_QUALITY_WINDOW_MS) {
-          if (aq.frames >= 30 && aq.slow / aq.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepAutoQualityRef.current) stepAutoQualityRef.current();
+          if (aq.settle > 0) aq.settle--;else if (aq.frames >= 30 && aq.slow / aq.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepAutoQualityRef.current) {
+            stepAutoQualityRef.current();
+            aq.settle = 1;
+          }
           aq.start = frameNowMs;
           aq.frames = 0;
           aq.slow = 0;
@@ -25695,8 +25710,8 @@ const RhythmTapTest = ({
     className: "pointer-events-none absolute z-20 rounded-2xl border border-amber-300/60 bg-slate-950/92 text-center shadow-[0_0_18px_rgba(251,191,36,.18)]",
     style: isLandscape ? {
       left: '19%',
-      right: '36%',
-      top: '2%',
+      right: '39%',
+      top: 'calc(2% + 18px)',
       padding: '4px 10px'
     } : {
       left: '12px',
