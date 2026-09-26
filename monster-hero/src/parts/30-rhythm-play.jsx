@@ -62,6 +62,95 @@ const RHYTHM_SIDE_CHEER_MS=700;
 // 最大1024pxの絵を描き直していた。踏んだ瞬間の「弾ける」動きも同じところで起きる。
 // いまは顔を焼いた絵にして、ノーツと同じ canvas へ drawImage するだけにした。見た目は同じ。
 // 顔の枠(42px)・拡大(1.28倍)・影は、以前の CSS([data-rhythm-canvas-face])の値そのまま。
+// ===== 判定文字の光を、演奏の前に1枚の絵へ焼いておく(2026-09-26) =====
+// ユーザー報告「設定で軽くしてると平気だけど、演出量を上げるとやっぱり重くてカクつく(iPhone 16e)」。
+// 判定文字(MARVELOUS など)の光は filter:drop-shadow を最大6枚重ねたもの(いちばん外はぼかし40px)。
+// ぼかしは文字を描き直すたび・合成するたびに計算し直される。判定は1秒に何度も変わり、
+// 「多め」「最大」ではそのたびに弾ませるので、文字の何倍もの大きさのレイヤーを作ってはぼかし直していた
+// (実測: 6秒で約230回・合計6秒ぶんの描画。影を1枚にすると56msまで減る)。
+// そこで、光(影の重なり)だけを判定の種類ごとに canvas で1度だけ焼き、文字の後ろ(::before)へ置く。
+// 文字の色・金や虹の流れ・弾み・大きさの切り替えは今までどおり CSS が動かす(::after に同じ文字を重ねる)。
+// 影の色・ずれ・ぼかしは、画面に当たっている CSS の値をそのまま読んで焼くので、演出量ごとの違いも同じになる。
+// canvas の shadowBlur は、CSS の drop-shadow の2倍の値で同じぼけ方になる(ブラウザで測って合わせた)。
+// 焼けないとき(フォントの幅が合わない・drop-shadow 以外の filter がある)は、今までどおり CSS のぼかしで出す。
+const RHYTHM_HALO_KEYS=Object.freeze([['MISS',''],['BAD',''],['GOOD',''],['GREAT',''],['EXCELLENT',''],['MARVELOUS',''],['MARVELOUS','1']]);
+// 画面に当たっている filter(getComputedStyle の値)を drop-shadow の並びへ分ける。ほかの関数が混ざっていれば null
+const rhythmParseDropShadows=filter=>{
+  const text=String(filter||'').trim();
+  if(!text||text==='none')return [];
+  const list=[];
+  const rest=text.replace(/drop-shadow\(((?:[^()]|\([^()]*\))*)\)/g,(_,body)=>{
+    const color=(body.match(/rgba?\([^)]*\)|#[0-9a-fA-F]{3,8}/)||['rgb(0, 0, 0)'])[0];
+    const nums=body.replace(color,'').match(/-?[\d.]+px/g)||[];
+    list.push({color,x:parseFloat(nums[0])||0,y:parseFloat(nums[1])||0,blur:parseFloat(nums[2])||0});
+    return '';
+  }).trim();
+  return rest?null:list;
+};
+const rhythmBakeJudgmentHalos=async textEl=>{
+  const host=textEl&&textEl.parentElement;
+  if(!host||typeof document==='undefined'||typeof window==='undefined')return null;
+  try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;}catch(e){}
+  // 光はぼけた絵なので、画面の画素密度の2倍までで足りる(3倍の端末でも見分けがつかない)
+  const dpr=Math.min(2,Math.max(1,Number(window.devicePixelRatio)||1));
+  const baked=[];
+  const fail=()=>{baked.forEach(item=>URL.revokeObjectURL(item.url));return fail();};
+  for(const [judgment,precise] of RHYTHM_HALO_KEYS){
+    // 本物と同じ場所に、見えない見本を置いて CSS の値を読む(演出量・軽量モードの目印も同じように当たる)
+    const probe=document.createElement('b');
+    probe.className=textEl.className;probe.setAttribute('data-rhythm-judgment-text','');
+    probe.dataset.judgment=judgment;if(precise)probe.dataset.judgmentPrecise=precise;
+    probe.textContent=judgment;
+    probe.style.cssText='position:absolute;left:0;top:0;visibility:hidden;transition:none;animation:none';
+    host.appendChild(probe);
+    const cs=getComputedStyle(probe);
+    const shadows=rhythmParseDropShadows(cs.filter);
+    const fs=parseFloat(cs.fontSize)||26,ls=parseFloat(cs.letterSpacing)||0;
+    const font=`${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const range=document.createRange();range.selectNodeContents(probe);
+    const domWidth=range.getBoundingClientRect().width;
+    host.removeChild(probe);
+    if(!shadows)return fail();
+    // 影が1枚だけなら焼かない(1枚の小さなぼかしは軽い。「最小」「軽量モード」はここに当たる)
+    if(shadows.length<2)continue;
+    const measure=document.createElement('canvas').getContext('2d');
+    if(!measure)return fail();
+    measure.font=font;
+    const metrics=measure.measureText(judgment);
+    const ascent=Number.isFinite(metrics.fontBoundingBoxAscent)?metrics.fontBoundingBoxAscent:metrics.actualBoundingBoxAscent;
+    const descent=Number.isFinite(metrics.fontBoundingBoxDescent)?metrics.fontBoundingBoxDescent:metrics.actualBoundingBoxDescent;
+    const runWidth=metrics.width+ls*judgment.length;
+    // 画面の文字と canvas の文字で幅が合わなければ、フォントが違う。形がずれた光を出さないよう焼くのをやめる
+    if(!(Math.abs(runWidth-domWidth)<=2)||!Number.isFinite(ascent)||!Number.isFinite(descent))return fail();
+    const sigma=Math.sqrt(shadows.reduce((sum,s)=>sum+s.blur*s.blur,0));
+    const offset=shadows.reduce((max,s)=>Math.max(max,Math.abs(s.x),Math.abs(s.y)),0);
+    const margin=Math.ceil(2.5*sigma+offset+2);
+    const cssW=runWidth+margin*2,cssH=fs+margin*2,W=Math.ceil(cssW*dpr),H=Math.ceil(cssH*dpr);
+    const make=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
+    // 字の形(色は使わない。影は形だけから作られる)。行の高さ=字の大きさなので、上下の余り(ハーフレディング)を同じに取る
+    const glyph=make(),gctx=glyph.getContext('2d');
+    if(!gctx)return fail();
+    gctx.setTransform(dpr,0,0,dpr,0,0);gctx.font=font;gctx.textBaseline='alphabetic';gctx.fillStyle='#000';
+    const baseline=margin+(fs-(ascent+descent))/2+ascent;
+    for(let i=0;i<judgment.length;i++)gctx.fillText(judgment[i],margin+measure.measureText(judgment.slice(0,i)).width+ls*i,baseline);
+    // filter の並びと同じ順に、「それまでの全部(字＋影)」の影を下へ足していく。残すのは影だけ(字は ::after が描く)
+    const halo=make(),hctx=halo.getContext('2d'),source=make(),sctx=source.getContext('2d'),shadow=make(),shctx=shadow.getContext('2d');
+    if(!hctx||!sctx||!shctx)return fail();
+    sctx.drawImage(glyph,0,0);
+    const far=W+H+1000;
+    for(const s of shadows){
+      shctx.clearRect(0,0,W,H);
+      shctx.shadowColor=s.color;shctx.shadowBlur=s.blur*2*dpr;shctx.shadowOffsetX=s.x*dpr+far;shctx.shadowOffsetY=s.y*dpr;
+      shctx.drawImage(source,-far,0);
+      hctx.globalCompositeOperation='destination-over';hctx.drawImage(shadow,0,0);
+      sctx.globalCompositeOperation='destination-over';sctx.drawImage(shadow,0,0);
+    }
+    const url=await new Promise(resolve=>{try{halo.toBlob(blob=>resolve(blob?URL.createObjectURL(blob):null),'image/png');}catch(e){resolve(null);}});
+    if(!url)return fail();
+    baked.push({judgment,precise,url,width:cssW/fs,height:cssH/fs});
+  }
+  return baked.length?baked:null;
+};
 const RHYTHM_FACE_BOX=42,RHYTHM_FACE_ZOOM=1.28,RHYTHM_FACE_PAD=12;
 const rhythmBakeMonsterFace=async(monster,dpr)=>{
   if(!monster||!monster.imageUrl||typeof document==='undefined')return null;
@@ -318,6 +407,25 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
   const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null);
+  // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
+  // 焼けるまで・焼けなかったとき・影が1枚だけの判定は、今までどおり CSS のぼかしで出す(haloKeys に入っていない)。
+  const [haloKeys,setHaloKeys]=useState(null);
+  useEffect(()=>{
+    let cancelled=false,made=null;
+    setHaloKeys(null);
+    const textEl=judgmentTextRef.current;
+    if(!textEl||typeof document==='undefined')return undefined;
+    rhythmBakeJudgmentHalos(textEl).then(baked=>{
+      if(!baked)return;
+      if(cancelled){baked.forEach(item=>URL.revokeObjectURL(item.url));return;}
+      made=baked;
+      let style=document.querySelector('style[data-rhythm-judgment-halo-style]');
+      if(!style){style=document.createElement('style');style.setAttribute('data-rhythm-judgment-halo-style','');document.head.appendChild(style);}
+      style.textContent=baked.map(item=>`[data-rhythm-judgment-text][data-halo="1"][data-judgment="${item.judgment}"]${item.precise?'[data-judgment-precise="1"]':':not([data-judgment-precise="1"])'}::before{background-image:url("${item.url}");width:${item.width.toFixed(4)}em;height:${item.height.toFixed(4)}em}`).join('\n');
+      setHaloKeys(new Set(baked.map(item=>`${item.judgment}|${item.precise}`)));
+    }).catch(()=>{});
+    return()=>{cancelled=true;const style=document.querySelector('style[data-rhythm-judgment-halo-style]');if(style)style.textContent='';if(made)made.forEach(item=>URL.revokeObjectURL(item.url));};
+  },[settings.effectAmount,settings.lightweightMode]);
   // ライフの強調(2026-09-12)。DOM へ data 属性を書くだけで、判定・スコア・ライフの数値には触らない。
   // lifeBoxRef … 減った瞬間にHUDのライフ表示を揺らす／lifeDamageRef … 減った量(「-50」)を一瞬出す
   const lifeBoxRef=useRef(null),lifeDamageRef=useRef(null);
@@ -1482,7 +1590,7 @@ scheduleTick();};
       判定ラインで弾ける光の単色は data/rhythm-mode.js の RHYTHM_JUDGMENT_COLORS が正本で、
       文字のグラデーションにも必ずその色を含める(rhythm-hit-effect-check.js が突き合わせる)。
       ここが渡すのは「どの判定か」「ぴったりか」の2つだけ。
-      text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}<b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={view.last||''} data-judgment-precise={view.lastPrecise?'1':''} className="block text-[26px] font-black leading-none tracking-wide text-white">{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow?(timingDisplay!=='STANDARD'&&typeof view.lastDeltaMs==='number'?`${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms`:view.fastSlow):'—'):'—'}</small>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
+      text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}<b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={view.last||''} data-judgment-precise={view.lastPrecise?'1':''} data-halo={haloKeys&&settings.judgmentTextDisplay&&view.last&&view.status!=='error'&&view.status!=='loading'&&haloKeys.has(`${view.last}|${view.lastPrecise?'1':''}`)?'1':undefined} className="block text-[26px] font-black leading-none tracking-wide text-white">{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow?(timingDisplay!=='STANDARD'&&typeof view.lastDeltaMs==='number'?`${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms`:view.fastSlow):'—'):'—'}</small>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
     帯の色は判定窓(MARVELOUS 金・EXCELLENT 紫・GREAT 赤・GOOD 緑・BAD 青)で、真ん中がぴったり */}
 {timingDisplay==='METER'&&<div data-rhythm-timing-meter aria-hidden="true" className="absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2" style={{'--meter-mar':`${(55/185*50).toFixed(2)}%`,'--meter-exc':`${(100/185*50).toFixed(2)}%`,'--meter-gre':`${(150/185*50).toFixed(2)}%`,'--meter-goo':`${(170/185*50).toFixed(2)}%`}}><i data-rhythm-timing-meter-band/><i data-rhythm-timing-meter-center/>{Array.from({length:12},(_,i)=><i key={i} ref={el=>{meterTicksRef.current[i]=el;}} data-rhythm-timing-meter-tick style={{opacity:0}}/>)}</div>}</div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
 {/* ラッキーラッシュ中は、プレイエリアのふちが金色に光る(ノーツより後ろ・入力に触らない) */}

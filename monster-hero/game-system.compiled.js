@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 15bb0cca4bf27658
+// source-sha256: d4ce697f53ae1e45
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 12:32";
+const BUILD_DATE = "2026-09-26 12:35";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -21944,6 +21944,125 @@ const RHYTHM_HAPTICS = (() => {
   };
 })();
 const RHYTHM_SIDE_CHEER_MS = 700;
+const RHYTHM_HALO_KEYS = Object.freeze([['MISS', ''], ['BAD', ''], ['GOOD', ''], ['GREAT', ''], ['EXCELLENT', ''], ['MARVELOUS', ''], ['MARVELOUS', '1']]);
+const rhythmParseDropShadows = filter => {
+  const text = String(filter || '').trim();
+  if (!text || text === 'none') return [];
+  const list = [];
+  const rest = text.replace(/drop-shadow\(((?:[^()]|\([^()]*\))*)\)/g, (_, body) => {
+    const color = (body.match(/rgba?\([^)]*\)|#[0-9a-fA-F]{3,8}/) || ['rgb(0, 0, 0)'])[0];
+    const nums = body.replace(color, '').match(/-?[\d.]+px/g) || [];
+    list.push({
+      color,
+      x: parseFloat(nums[0]) || 0,
+      y: parseFloat(nums[1]) || 0,
+      blur: parseFloat(nums[2]) || 0
+    });
+    return '';
+  }).trim();
+  return rest ? null : list;
+};
+const rhythmBakeJudgmentHalos = async textEl => {
+  const host = textEl && textEl.parentElement;
+  if (!host || typeof document === 'undefined' || typeof window === 'undefined') return null;
+  try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  } catch (e) {}
+  const dpr = Math.min(2, Math.max(1, Number(window.devicePixelRatio) || 1));
+  const baked = [];
+  const fail = () => {
+    baked.forEach(item => URL.revokeObjectURL(item.url));
+    return fail();
+  };
+  for (const [judgment, precise] of RHYTHM_HALO_KEYS) {
+    const probe = document.createElement('b');
+    probe.className = textEl.className;
+    probe.setAttribute('data-rhythm-judgment-text', '');
+    probe.dataset.judgment = judgment;
+    if (precise) probe.dataset.judgmentPrecise = precise;
+    probe.textContent = judgment;
+    probe.style.cssText = 'position:absolute;left:0;top:0;visibility:hidden;transition:none;animation:none';
+    host.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    const shadows = rhythmParseDropShadows(cs.filter);
+    const fs = parseFloat(cs.fontSize) || 26,
+      ls = parseFloat(cs.letterSpacing) || 0;
+    const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const range = document.createRange();
+    range.selectNodeContents(probe);
+    const domWidth = range.getBoundingClientRect().width;
+    host.removeChild(probe);
+    if (!shadows) return fail();
+    if (shadows.length < 2) continue;
+    const measure = document.createElement('canvas').getContext('2d');
+    if (!measure) return fail();
+    measure.font = font;
+    const metrics = measure.measureText(judgment);
+    const ascent = Number.isFinite(metrics.fontBoundingBoxAscent) ? metrics.fontBoundingBoxAscent : metrics.actualBoundingBoxAscent;
+    const descent = Number.isFinite(metrics.fontBoundingBoxDescent) ? metrics.fontBoundingBoxDescent : metrics.actualBoundingBoxDescent;
+    const runWidth = metrics.width + ls * judgment.length;
+    if (!(Math.abs(runWidth - domWidth) <= 2) || !Number.isFinite(ascent) || !Number.isFinite(descent)) return fail();
+    const sigma = Math.sqrt(shadows.reduce((sum, s) => sum + s.blur * s.blur, 0));
+    const offset = shadows.reduce((max, s) => Math.max(max, Math.abs(s.x), Math.abs(s.y)), 0);
+    const margin = Math.ceil(2.5 * sigma + offset + 2);
+    const cssW = runWidth + margin * 2,
+      cssH = fs + margin * 2,
+      W = Math.ceil(cssW * dpr),
+      H = Math.ceil(cssH * dpr);
+    const make = () => {
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      return c;
+    };
+    const glyph = make(),
+      gctx = glyph.getContext('2d');
+    if (!gctx) return fail();
+    gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gctx.font = font;
+    gctx.textBaseline = 'alphabetic';
+    gctx.fillStyle = '#000';
+    const baseline = margin + (fs - (ascent + descent)) / 2 + ascent;
+    for (let i = 0; i < judgment.length; i++) gctx.fillText(judgment[i], margin + measure.measureText(judgment.slice(0, i)).width + ls * i, baseline);
+    const halo = make(),
+      hctx = halo.getContext('2d'),
+      source = make(),
+      sctx = source.getContext('2d'),
+      shadow = make(),
+      shctx = shadow.getContext('2d');
+    if (!hctx || !sctx || !shctx) return fail();
+    sctx.drawImage(glyph, 0, 0);
+    const far = W + H + 1000;
+    for (const s of shadows) {
+      shctx.clearRect(0, 0, W, H);
+      shctx.shadowColor = s.color;
+      shctx.shadowBlur = s.blur * 2 * dpr;
+      shctx.shadowOffsetX = s.x * dpr + far;
+      shctx.shadowOffsetY = s.y * dpr;
+      shctx.drawImage(source, -far, 0);
+      hctx.globalCompositeOperation = 'destination-over';
+      hctx.drawImage(shadow, 0, 0);
+      sctx.globalCompositeOperation = 'destination-over';
+      sctx.drawImage(shadow, 0, 0);
+    }
+    const url = await new Promise(resolve => {
+      try {
+        halo.toBlob(blob => resolve(blob ? URL.createObjectURL(blob) : null), 'image/png');
+      } catch (e) {
+        resolve(null);
+      }
+    });
+    if (!url) return fail();
+    baked.push({
+      judgment,
+      precise,
+      url,
+      width: cssW / fs,
+      height: cssH / fs
+    });
+  }
+  return baked.length ? baked : null;
+};
 const RHYTHM_FACE_BOX = 42,
   RHYTHM_FACE_ZOOM = 1.28,
   RHYTHM_FACE_PAD = 12;
@@ -22382,6 +22501,36 @@ const RhythmTapTest = ({
     screenFlashRef = useRef(null),
     judgmentTextRef = useRef(null),
     comboRef = useRef(null);
+  const [haloKeys, setHaloKeys] = useState(null);
+  useEffect(() => {
+    let cancelled = false,
+      made = null;
+    setHaloKeys(null);
+    const textEl = judgmentTextRef.current;
+    if (!textEl || typeof document === 'undefined') return undefined;
+    rhythmBakeJudgmentHalos(textEl).then(baked => {
+      if (!baked) return;
+      if (cancelled) {
+        baked.forEach(item => URL.revokeObjectURL(item.url));
+        return;
+      }
+      made = baked;
+      let style = document.querySelector('style[data-rhythm-judgment-halo-style]');
+      if (!style) {
+        style = document.createElement('style');
+        style.setAttribute('data-rhythm-judgment-halo-style', '');
+        document.head.appendChild(style);
+      }
+      style.textContent = baked.map(item => `[data-rhythm-judgment-text][data-halo="1"][data-judgment="${item.judgment}"]${item.precise ? '[data-judgment-precise="1"]' : ':not([data-judgment-precise="1"])'}::before{background-image:url("${item.url}");width:${item.width.toFixed(4)}em;height:${item.height.toFixed(4)}em}`).join('\n');
+      setHaloKeys(new Set(baked.map(item => `${item.judgment}|${item.precise}`)));
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+      const style = document.querySelector('style[data-rhythm-judgment-halo-style]');
+      if (style) style.textContent = '';
+      if (made) made.forEach(item => URL.revokeObjectURL(item.url));
+    };
+  }, [settings.effectAmount, settings.lightweightMode]);
   const lifeBoxRef = useRef(null),
     lifeDamageRef = useRef(null);
   const stageLevel = rhythmStageLevel(settings);
@@ -24852,6 +25001,7 @@ const RhythmTapTest = ({
     "data-rhythm-judgment-text": true,
     "data-judgment": view.last || '',
     "data-judgment-precise": view.lastPrecise ? '1' : '',
+    "data-halo": haloKeys && settings.judgmentTextDisplay && view.last && view.status !== 'error' && view.status !== 'loading' && haloKeys.has(`${view.last}|${view.lastPrecise ? '1' : ''}`) ? '1' : undefined,
     className: "block text-[26px] font-black leading-none tracking-wide text-white"
   }, view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? view.last : ''), React.createElement("small", {
     className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
