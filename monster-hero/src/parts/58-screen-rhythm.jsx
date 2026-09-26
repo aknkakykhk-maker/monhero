@@ -44,7 +44,7 @@ function RhythmInfoScreen({
 }
 
 function RhythmSongSelectScreen({
-  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, exitingQuickRun, handleGiveUp, mainHero,
+  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, dismissRhythmLookIntro, rhythmLookIntroVisible, onTryRhythmLook, exitingQuickRun, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
   onPlaySong, onToggleRhythmSetting, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
@@ -263,6 +263,17 @@ function RhythmSongSelectScreen({
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1"><AssistantBubble scene="rhythmSixLaneIntro" compact/></div>
             <button type="button" onClick={dismissRhythmSixLaneIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+          </div>
+        </div>}
+        {/* 見た目の設定が増えたことを、曲えらびを開いた最初の1回だけ伝える(2026-09-27)。その場で「華やか」を試せる */}
+        {rhythmLookIntroVisible&&<div data-rhythm-look-intro className="shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1">
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1"><AssistantBubble scene="rhythmLookIntro" compact/></div>
+            <button type="button" onClick={dismissRhythmLookIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+          </div>
+          <div className="mt-1 flex gap-2 pb-1">
+            <button type="button" data-rhythm-look-intro-try onClick={()=>onTryRhythmLook&&onTryRhythmLook('VIVID')} className="min-h-[40px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950">華やかにしてみる</button>
+            <button type="button" onClick={dismissRhythmLookIntro} className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200">いまのままにする</button>
           </div>
         </div>}
         {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}

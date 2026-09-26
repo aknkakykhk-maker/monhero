@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: df2b7b27cb8859d4
+// generated-sha256: 80d5b01ebcbc7efb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-27 03:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-27 03:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4131,6 +4131,29 @@ const rhythmRenderQualityCap = (quality, highCap) => (quality==='SAVE' ? 1 : qua
 // ★軽量モードのときは、ここの値に関わらず SIMPLE として扱う(rhythmStageLevel)
 // LIVE   … 派手に加えて、拍に合わせて光るサーチライト・レーザー・観客のペンライト(2026-09-27)。GPU で背景を描ける端末だけ。無ければ派手と同じ
 const RHYTHM_STAGE_EFFECTS = Object.freeze(['LIVE','VIVID','CALM','SIMPLE']);
+// 見た目の「おまかせ」(2026-09-27・ユーザー指示「UIUXの改良 全部やって」)。押すと見た目の設定だけをまとめて切り替える
+// (音・判定・操作・画質・描画方式には触らない)。いまの設定がどれかにぴったり当てはまるときは、そのボタンを光らせる。
+// image … その見た目で演奏しているところの見本(同じ曲・同じ場面を撮って、幅240の JPEG に縮めたもの。オプションを開いたときだけ読む)
+const RHYTHM_LOOK_PRESETS = Object.freeze([
+  {id:'LIGHT',label:'軽さ優先',image:'images/rhythm-look/look-light-v1.jpg',values:{effectAmount:'MINIMAL',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
+  {id:'STANDARD',label:'標準',image:'images/rhythm-look/look-standard-v1.jpg',values:{effectAmount:'LIGHT',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
+  {id:'VIVID',label:'華やか',image:'images/rhythm-look/look-vivid-v1.jpg',values:{effectAmount:'LOW',stageEffect:'VIVID',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:false}},
+  {id:'FULL',label:'全部のせ',image:'images/rhythm-look/look-full-v1.jpg',values:{effectAmount:'NORMAL',stageEffect:'LIVE',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:true}},
+]);
+// 演出の自動調整(設定「重いときは演出を自動で控えめに」・2026-09-27)で下げる順番。重いものから。
+// 段 n では 1〜n 番目を当てる(当てるものが無い段は飛ばす)。演奏中の見た目だけを変え、保存してある設定は変えない
+const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([
+  s=>s.noteBloom?{noteBloom:false}:null,
+  s=>s.stageEffect==='LIVE'?{stageEffect:'VIVID'}:null,
+  s=>s.roadFx||s.noteMotionFx?{roadFx:false,noteMotionFx:false}:null,
+  s=>s.judgmentFx||s.comboMilestoneFx?{judgmentFx:false,comboMilestoneFx:false}:null,
+  s=>s.stageEffect==='VIVID'?{stageEffect:'CALM'}:null,
+  s=>s.stageEffect==='CALM'?{stageEffect:'SIMPLE'}:null,
+]);
+const rhythmCapEffects = (settings,level) => {let out=settings;for(let i=0;i<Math.min(Number(level)||0,RHYTHM_AUTO_EFFECT_STEPS.length);i++){const patch=RHYTHM_AUTO_EFFECT_STEPS[i](out);if(patch)out={...out,...patch};}return out;};
+// 次に下げる段(当てるものがある段)。もう下げるものが無ければ null
+const rhythmNextEffectCap = (settings,level) => {const now=rhythmCapEffects(settings,level);for(let i=Math.max(0,Number(level)||0);i<RHYTHM_AUTO_EFFECT_STEPS.length;i++){if(RHYTHM_AUTO_EFFECT_STEPS[i](now))return i+1;}return null;};
+const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset=>Object.entries(preset.values).every(([key,value])=>settings&&settings[key]===value))||{id:''}).id;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE','ライブ'],['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
 // ===== 他の音ゲーから取り入れた表示(2026-09-24・ユーザー指示「他の音ゲーを学習して取り入れるとこを取り入れて / 設定でいじれるように」) =====
 // レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を何%隠すか。0で出さない
@@ -4287,6 +4310,10 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   //   noteMotionFx … フリックの矢印と SLIDE の帯に流れる光
   //   comboMilestoneFx … 100コンボごとに「100 COMBO!」の帯と光の輪
   judgmentFx:false, noteMotionFx:false, comboMilestoneFx:false,
+  // 演奏中は左上の曲名とジャケットを薄くする(2026-09-27)。始まって4秒で薄くなり、ポーズ中は元に戻る。目線を道に集めるため。既定は ON
+  hudSongFade:true,
+  // 重いときは演出を自動で控えめにする(2026-09-27)。演奏中にカクつき続けたら、重い演出から一段ずつ下げる(保存値は変えない)。既定は ON
+  autoEffectDown:true,
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -4352,6 +4379,8 @@ const normalizeRhythmSettings = value => {
     judgmentFx:typeof source.judgmentFx==='boolean'?source.judgmentFx:DEFAULT_RHYTHM_SETTINGS.judgmentFx,
     noteMotionFx:typeof source.noteMotionFx==='boolean'?source.noteMotionFx:DEFAULT_RHYTHM_SETTINGS.noteMotionFx,
     comboMilestoneFx:typeof source.comboMilestoneFx==='boolean'?source.comboMilestoneFx:DEFAULT_RHYTHM_SETTINGS.comboMilestoneFx,
+    hudSongFade:typeof source.hudSongFade==='boolean'?source.hudSongFade:DEFAULT_RHYTHM_SETTINGS.hudSongFade,
+    autoEffectDown:typeof source.autoEffectDown==='boolean'?source.autoEffectDown:DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -14861,6 +14890,12 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
                 ★判定の幅(秒数)も譜面も変わらない。ノーツが流れ着く先を一緒に上げるだけ */}
             {field('判定ラインの高さ',stepper('judgmentLineHeight',RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,{fine:RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,coarse:RHYTHM_JUDGMENT_LINE_HEIGHT_STEP*4,suffix:'%'}),
               'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。',{full:true})}
+            {/* 重いときは演出を自動で控えめにする(2026-09-27)。既定は ON */}
+            {field('重いときは演出を自動で控えめに',toggle('autoEffectDown'),
+              '演奏中にカクつきが続いたら、重い演出から順に自動で控えめにします。既定は「ON」です。保存してある設定は変わらず、アプリを開き直すと元に戻ります。判定・スコアは変わりません。\n下げる順番は、にじむ光 → ライブ背景「ライブ」を「派手」に → 道の演出・ノーツの動き → 判定の演出・コンボの節目 → ライブ背景を「控えめ」→「シンプル」です。\n画質を「自動」にしているときは、先に画質を下げ、それでもカクつくときに演出を下げます。')}
+            {/* 演奏中は曲名を薄くする(2026-09-27)。既定は ON */}
+            {field('演奏中は曲名を薄くする',toggle('hudSongFade'),
+              '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。')}
             {/* ライフ表示の大きさ(2026-09-13・ユーザー依頼「ライフ表示が目立たないから
                 もっと大きく見やくしてほしい（設定調整可能）」)。既定は150% */}
             {field('ライフ表示の大きさ',stepper('lifeDisplaySize',RHYTHM_LIFE_SIZE_MIN,RHYTHM_LIFE_SIZE_MAX,RHYTHM_LIFE_SIZE_STEP,{fine:RHYTHM_LIFE_SIZE_STEP,coarse:RHYTHM_LIFE_SIZE_STEP*5,suffix:'%'}),
@@ -14937,6 +14972,17 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
         {tab==='system'&&<section data-rhythm-options-panel="system" className={card}>
           {!wide&&<h3 className={head}>◆ システム設定</h3>}
           <div className={wide?grid:`mt-3 ${grid}`}>
+            {/* 見た目のおまかせ(2026-09-27)。見た目の設定が増えたので、1回押せばまとめて切り替わるようにする。細かい調整はこの下でできる */}
+            {field('見た目のおまかせ',<div data-rhythm-look-presets>
+              {/* 見本の絵(その見た目で演奏しているところ)を押して選ぶ。押す前に見比べられる。横向きは高さが足りないので絵を出さない */}
+              <div className="grid grid-cols-4 gap-1.5">{RHYTHM_LOOK_PRESETS.map(preset=>{const on=rhythmLookPresetOf(draft)===preset.id;return <button type="button" key={preset.id} data-rhythm-look-preset={preset.id} aria-pressed={on}
+                onClick={()=>{setDraft(current=>normalizeRhythmSettings({...current,...preset.values}));setMessage(`見た目を「${preset.label}」にしました（まだ保存していません）`);}}
+                className={`overflow-hidden rounded-xl border-2 text-[11px] font-black leading-tight ${on?'border-cyan-300 bg-cyan-400 text-slate-950':'border-white/15 bg-slate-900 text-slate-200'}`}>
+                {!wide&&<img src={preset.image} alt="" aria-hidden="true" loading="lazy" decoding="async" draggable={false} className="block aspect-[240/427] w-full object-cover"/>}
+                <span className={`block px-0.5 ${wide?'py-2.5':'py-1.5'}`}>{preset.label}</span></button>;})}</div>
+              {!rhythmLookPresetOf(draft)&&<p data-rhythm-look-custom className="mt-1.5 text-center text-[10px] font-bold text-cyan-100/80">いまは自分で選んだ組み合わせです</p>}
+            </div>,
+              '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。',{full:true})}
             {/* 「少なめ」が何を止めるのかを、ここで言い切る(2026-09-13・Android勢から
                 「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
                 動きがカクつく端末ではここがいちばん効く */}
@@ -16335,7 +16381,16 @@ const RhythmHudLife=({hud,settings,isLandscape,lifeBoxRef,lifeDamageRef})=>{cons
         気づきやすさは大きさではなく、色・点滅・ひび割れ・減った量の数字で出す */}<div data-rhythm-life-track className="relative rounded-full border bg-slate-950/80"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(lifeRatio*100).toFixed(1)}%`,background:lifeRatio>.5?'linear-gradient(90deg,#34d399,#22d3ee)':lifeRatio>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'DOWN':life}</b>{/* 減った量(「-50」)を、減ったその場に一瞬だけ出す。中身はapplyJudgmentが直接書く */}<b ref={lifeDamageRef} data-rhythm-life-damage aria-hidden="true" className="pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"/></div>;};
 const RhythmHudJudgment=({hud,settings,status,haloKeys,timingDisplay,judgmentTextRef})=>{const {last,lastPrecise,fastSlow,lastDeltaMs}=useRhythmHud(hud);
   return <><b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={last||''} data-judgment-precise={lastPrecise?'1':''} data-halo={haloKeys&&settings.judgmentTextDisplay&&last&&status!=='error'&&status!=='loading'&&haloKeys.has(`${last}|${lastPrecise?'1':''}`)?'1':undefined} className="block text-[26px] font-black leading-none tracking-wide text-white">{status==='error'?'音源を再生できません':status==='loading'?'LOADING…':settings.judgmentTextDisplay?last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':fastSlow==='FAST'?'text-cyan-300':fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(fastSlow?(timingDisplay!=='STANDARD'&&typeof lastDeltaMs==='number'?`${fastSlow} ${Math.round(Math.abs(lastDeltaMs))}ms`:fastSlow):'—'):'—'}</small></>;};
-const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onComplete,onExit,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null})=>{
+// 演出の自動調整で下げた段。アプリを開いているあいだだけ覚えておき、次の曲もこの段から始める(保存はしない)
+const rhythmAutoEffectMemory={level:0};
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null})=>{
+  // 重いときは演出を自動で控えめにする(設定 autoEffectDown・rhythmCapEffects)。この部品の中の settings は、下げた段を当てたもの
+  const [effectCap,setEffectCap]=useState(()=>rhythmAutoEffectMemory.level);
+  const settings=useMemo(()=>settingsIn&&settingsIn.autoEffectDown!==false?rhythmCapEffects(settingsIn,effectCap):settingsIn,[settingsIn,effectCap]);
+  // 演奏の途中で段が下がっても、作り直されない処理(毎フレームの処理・判定の処理)が最新の設定を読めるように
+  const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
+  const stepEffectCapRef=useRef(null);
+  stepEffectCapRef.current=()=>{const next=rhythmNextEffectCap(settingsIn,effectCap);if(next===null)return false;rhythmAutoEffectMemory.level=next;setEffectCap(next);return true;};
   // モンスターノーツの演出の段。いちばん軽い段(NONE)では、ノーツへ重ねるマスモンの絵を
   // 作らない(2026-09-13・ユーザー指摘「あれは踏んだときまだカクつきがある / 設定は最小」)。
   // ★この絵だけは canvas ではなくDOMの要素で、毎フレーム transform と scale を書き換えている。
@@ -16377,6 +16432,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // 判定文字の光とライブ背景の光は、焼き直すあいだ一瞬消えるので、曲の始めの段のままにする
   const [autoQuality,setAutoQuality]=useState(()=>rhythmAutoQualityMemory.level);
   const autoQualityAtStart=useState(()=>rhythmAutoQualityMemory.level)[0];
+  const autoQualityLevelRef=useRef(autoQuality);autoQualityLevelRef.current=autoQuality;
   const renderQualityNow=rhythmEffectiveRenderQuality(settings.renderQuality,autoQuality);
   const renderQualityStill=rhythmEffectiveRenderQuality(settings.renderQuality,autoQualityAtStart);
   const stepAutoQualityRef=useRef(null);
@@ -16578,6 +16634,10 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const makeRuntimeNotes=()=>{const tracking=rhythmSlideTrackingFor(difficulty.id);const checkpointIntervalMs=rhythmSlideCheckpointIntervalMs(difficulty.id,chart?.level);return chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0,_rhythmSlideToleranceBonusLanes:tracking.toleranceBonusLanes,_rhythmTrackingGraceMs:tracking.graceMs,...(note.type==='SLIDE'?{_rhythmSlideRenderPoints:rhythmSlidePoints(note),_rhythmSlideCheckpoints:rhythmSlideCheckpointTimes(note,checkpointIntervalMs)}:{})}));};
   const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',lastPrecise:false,fastSlow:'',counts:emptyCounts(),fast:0,slow:0,precise:0,life:RHYTHM_LIFE_MAX,ability:null,result:null});
   const [view,setView]=useState(initialView);
+  // 演奏中は左上の曲名とジャケットを薄くする(設定 hudSongFade)。始まって4秒で薄く、ポーズ中(status が playing でない間)は元に戻す
+  const [hudSongDim,setHudSongDim]=useState(false);
+  useEffect(()=>{if(view.status!=='playing'||settings.hudSongFade===false){setHudSongDim(false);return undefined;}
+    const timer=setTimeout(()=>setHudSongDim(true),4000);return()=>clearTimeout(timer);},[view.status,settings.hudSongFade]);
   /* 演奏を始める前のカウントダウン(READY→3→2→1)。
      null のあいだは出さない。曲と毎フレームの処理はこれが終わってから動かす */
   const [countdownStep,setCountdownStep]=useState(null);
@@ -17030,7 +17090,7 @@ if(judgment!=='MISS'){
     // 判定の演出(オプション「判定の演出」)。GREAT 以上のとき、文字の後ろで光をはじけさせる。
     // 色の印は React を通さずここで直接付ける(弾ませ直すのと同じ瞬間にそろえるため)
     const burst=judgmentBurstRef.current;
-    if(burst&&settings.judgmentFx===true&&(judgment==='GREAT'||judgment==='EXCELLENT'||judgment==='MARVELOUS')){burst.dataset.judgment=judgment;burst.dataset.judgmentPrecise=preciseHit?'1':'';restarts.push({el:burst,attr:'rhythmBurst'});}
+    if(burst&&settingsLiveRef.current.judgmentFx===true&&(judgment==='GREAT'||judgment==='EXCELLENT'||judgment==='MARVELOUS')){burst.dataset.judgment=judgment;burst.dataset.judgmentPrecise=preciseHit?'1':'';restarts.push({el:burst,attr:'rhythmBurst'});}
     // コンボ数も1つ増えるたびに弾ませる(プロセカのように数字が跳ねる)
     const comboText=comboRef.current;
     if(comboText)restarts.push({el:comboText,attr:'rhythmComboPop'});
@@ -17062,7 +17122,7 @@ if(luckOn){const luckNow=run.audio?.songTimeMs?.()??0;const rushActive=run.luckR
   const ptEl=luckPointsRef.current;if(ptEl&&ptEl._mhLuck!==run.luckPoints){ptEl._mhLuck=run.luckPoints||0;ptEl.textContent=`${run.luckPoints||0}pt`;}}
 /* コンボの節目(オプション「コンボの節目」)。100のくぎりに届いた瞬間だけ、コンボ数のまわりに金の光の輪を広げる
    (「100 COMBO」の大きな数字は、もとからある演出 comboMilestone が出す)。コンボガードで数が据え置きのとき(増えていないとき)は出さない */
-if(settings.comboMilestoneFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'&&keptCombo>run.combo&&keptCombo>=RHYTHM_COMBO_MILESTONE_STEP&&keptCombo%RHYTHM_COMBO_MILESTONE_STEP===0){const el=comboRingRef.current;if(el)rhythmRestartAnimations([{el,attr:'rhythmRing'}]);}
+if(settingsLiveRef.current.comboMilestoneFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'&&keptCombo>run.combo&&keptCombo>=RHYTHM_COMBO_MILESTONE_STEP&&keptCombo%RHYTHM_COMBO_MILESTONE_STEP===0){const el=comboRingRef.current;if(el)rhythmRestartAnimations([{el,attr:'rhythmRing'}]);}
 run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
@@ -17209,6 +17269,13 @@ if(settings.renderQuality==='AUTO'){const aq=run._autoQuality||(run._autoQuality
   // ★一段下げた直後の枠は数えない。下げると光の絵やマスモンの顔を焼き直すので、その一瞬の詰まりで
   //   続けてもう一段下げてしまっていた(高→標準→省電力と一気に落ちる。2026-09-26 の点検で見つけた)
   if(frameNowMs-aq.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){if(aq.settle>0)aq.settle--;else if(aq.frames>=30&&aq.slow/aq.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepAutoQualityRef.current){stepAutoQualityRef.current();aq.settle=1;}aq.start=frameNowMs;aq.frames=0;aq.slow=0;}}
+/* 演出の自動調整(設定「重いときは演出を自動で控えめに」)。画質「自動」と同じ数え方で、3秒のうち8%を超えたら重い演出から一段下げる。
+   画質「自動」を使っているときは、画質を下げきってから演出を下げる。下げた直後の枠は数えない(背景の絵の焼き直しで一瞬詰まるため) */
+if(settingsLiveRef.current.autoEffectDown!==false&&stepEffectCapRef.current){const ae=run._autoEffect||(run._autoEffect={last:0,start:frameNowMs,frames:0,slow:0,minGap:1e9,settle:0});const gap=ae.last?frameNowMs-ae.last:0;ae.last=frameNowMs;
+  // ★ずっと一様に遅い端末(1秒に20フレームを割る)は「いちばん短い間隔の1.8倍」では拾えないので、50ms 以上のフレームは常に遅いと数える
+  if(gap>0&&gap<250){ae.frames++;if(gap>=5&&gap<ae.minGap)ae.minGap=gap;if(gap>Math.max(5,ae.minGap)*1.8||gap>=50)ae.slow++;}
+  if(frameNowMs-ae.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){const qualityFirst=settings.renderQuality==='AUTO'&&autoQualityLevelRef.current!==RHYTHM_RENDER_QUALITY_STEPS[RHYTHM_RENDER_QUALITY_STEPS.length-1];
+    if(ae.settle>0)ae.settle--;else if(!qualityFirst&&ae.frames>=10&&ae.slow/ae.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepEffectCapRef.current())ae.settle=1;ae.start=frameNowMs;ae.frames=0;ae.slow=0;}}
 if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
 /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
    取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
@@ -17218,7 +17285,7 @@ if(stagePulseOn){const pulseEl=stagePulseRef.current,notes=run.notes;let index=r
 // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
-const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:settings.noteBloom===true,motion:settings.noteMotionFx===true});
+const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:noteCanvasMaxDprRef.current,sizeScale:settings.noteSize/100,bloom:settingsLiveRef.current.noteBloom===true,motion:settingsLiveRef.current.noteMotionFx===true});
 // 叩いたときの光(WebGL のときだけ canvas で描く)。光の層はノーツの下なので、ノーツより先に描く
 // ライブ背景「ライブ」の拍は、背景の描き直し(別の描き直しの輪)がこの時刻から数える
 {const stageClock=stageClockRef.current;stageClock.t=visualTime;stageClock.at=frameNowMs;}
@@ -17612,7 +17679,7 @@ scheduleTick();};
     // ★演出量と軽量モードはここでも効かせる(器へそのまま渡して、CSS側で止める)。
     const rankTier=result.cleared===false?0:({M:5,SS:4,S:3,A:2,B:1,C:1}[rank]||0);
     return <main data-rhythm-result data-rank={rank} data-rank-tier={String(rankTier)}
-      data-rhythm-effect={settings.effectAmount} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-judgment-fx={settings.judgmentFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'?'1':undefined}
+      data-rhythm-effect={settings.effectAmount} data-rhythm-lightweight={settings.lightweightMode?'true':'false'}
       className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" style={{paddingTop:'env(safe-area-inset-top)'}}>
 {/* ===== リザルトの並び(2026-09-26・ユーザー依頼「リザルト画面や曲選択画面をこれを参考にしたい」＝バンドリ！のリザルト) =====
     上から「曲の札(ジャケット・曲名・難易度・ランクのゲージ・ランク)」→「SCORE と自己ベスト」→「判定の表と MAX COMBO」。
@@ -17804,7 +17871,7 @@ scheduleTick();};
      文字列の並びをそのまま見ているので、あいだに挟むと「1画面になっていない」と落ちる。 */
   return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)] [container-type:inline-size]" data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div ref={hudLeftRef} data-rhythm-hud-left className="min-w-0 max-w-[35cqw] text-left landscape:max-w-[28cqw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><RhythmHudScore hud={hudRef.current} maxScore={difficulty.maxScore} bestScore={bestRecord?.bestScore}/><div className="mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div>{/* 曲名のとなり(レーンの外)に小さくジャケットを出す(2026-09-26・ユーザー指示「ジャケットは置くにもレーン外の曲名のあたりがいい」)。
     絵が無い曲は出さない。動かないので毎フレームの仕事は増えない。縦向きは左上の表示が道にかからないよう、絵のぶん曲名の幅を縮める */}
-<div className="mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0">{hudArtSrc&&<img data-rhythm-hud-art src={hudArtSrc} alt="" aria-hidden="true" decoding="async" draggable={false} className="h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6" style={{boxShadow:'0 1px 6px rgba(2,6,23,.8)'}}/>}<div data-rhythm-hud-song className="min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none" style={{maxWidth:hudArtSrc&&!isLandscape?'calc(31cqw - 34px)':undefined,display:'-webkit-box',WebkitLineClamp:isLandscape?'2':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div></div><div data-rhythm-hud-right className="flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5">{/* ★縦持ちでも中身を右へそろえる(flex-col items-end)。ブロックのままだとポーズがライフの行の**左端**に並び、
+<div data-rhythm-hud-songline data-hud-song-dim={hudSongDim?'1':undefined} className="mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0">{hudArtSrc&&<img data-rhythm-hud-art src={hudArtSrc} alt="" aria-hidden="true" decoding="async" draggable={false} className="h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6" style={{boxShadow:'0 1px 6px rgba(2,6,23,.8)'}}/>}<div data-rhythm-hud-song className="min-w-0 max-w-[31cqw] text-[10px] font-black text-slate-100 landscape:max-w-none" style={{maxWidth:hudArtSrc&&!isLandscape?'calc(31cqw - 34px)':undefined,display:'-webkit-box',WebkitLineClamp:isLandscape?'2':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div></div><div data-rhythm-hud-right className="flex w-[33cqw] max-w-[33cqw] flex-col items-end gap-1.5">{/* ★縦持ちでも中身を右へそろえる(flex-col items-end)。ブロックのままだとポーズがライフの行の**左端**に並び、
     ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><RhythmHudLife hud={hudRef.current} settings={settings} isLandscape={isLandscape} lifeBoxRef={lifeBoxRef} lifeDamageRef={lifeDamageRef}/><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
     ★レーン(台形)の右のふちに寄せて置く。音ゲーは目線がレーンに集まるので、レーンから遠いほど読みにくい
       (ユーザー指摘「残り時間がちょっと目に入りづらい / レーンより遠くなればなるほど目線的にきつくなる」)。
@@ -17830,7 +17897,7 @@ scheduleTick();};
 {lifeState==='down'&&<div data-rhythm-down-vignette aria-hidden="true" className="pointer-events-none absolute inset-0 z-20"/>}
 {/* 0になったその瞬間だけ、大きく1度だけ出す(1.4秒で消える) */}
 {lifeDownSlam&&<div data-rhythm-life-down-slam aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"><b className="block text-5xl font-black leading-none">LIFE 0</b><small className="mt-1 block text-xs font-black tracking-[0.34em]">DOWN</small></div>}
-<div ref={playAreaRef} data-rhythm-play-area data-rhythm-counting={countdownStep!==null?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
+<div ref={playAreaRef} data-rhythm-play-area data-rhythm-judgment-fx={settings.judgmentFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'?'1':undefined} data-rhythm-counting={countdownStep!==null?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
     置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
     判定ラインが画面の変なところへ出る(2026-09-05)。中身の置き場所に関わるものは
     外部CSSに任せない */position:'relative',overflow:'hidden',touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,
@@ -20939,7 +21006,7 @@ function RhythmInfoScreen({
 }
 
 function RhythmSongSelectScreen({
-  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, exitingQuickRun, handleGiveUp, mainHero,
+  catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, dismissRhythmLookIntro, rhythmLookIntroVisible, onTryRhythmLook, exitingQuickRun, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
   onPlaySong, onToggleRhythmSetting, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
@@ -21158,6 +21225,17 @@ function RhythmSongSelectScreen({
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1"><AssistantBubble scene="rhythmSixLaneIntro" compact/></div>
             <button type="button" onClick={dismissRhythmSixLaneIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+          </div>
+        </div>}
+        {/* 見た目の設定が増えたことを、曲えらびを開いた最初の1回だけ伝える(2026-09-27)。その場で「華やか」を試せる */}
+        {rhythmLookIntroVisible&&<div data-rhythm-look-intro className="shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1">
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1"><AssistantBubble scene="rhythmLookIntro" compact/></div>
+            <button type="button" onClick={dismissRhythmLookIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+          </div>
+          <div className="mt-1 flex gap-2 pb-1">
+            <button type="button" data-rhythm-look-intro-try onClick={()=>onTryRhythmLook&&onTryRhythmLook('VIVID')} className="min-h-[40px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950">華やかにしてみる</button>
+            <button type="button" onClick={dismissRhythmLookIntro} className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200">いまのままにする</button>
           </div>
         </div>}
         {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}
@@ -31936,6 +32014,14 @@ function MonsterHeroGame() {
   const [rhythmSixLaneIntroSeen, setRhythmSixLaneIntroSeen] = useState(true);
   const rhythmSixLaneIntroVisible = !rhythmSixLaneIntroSeen;
   const dismissRhythmSixLaneIntro = () => { setRhythmSixLaneIntroSeen(true); storeSet(RHYTHM_SIX_LANE_INTRO_KEY, true, false); };
+  // ---- モンヒロビートの見た目の設定の案内(CLAUDE.md ⑤。2026-09-27) ----
+  // 見た目の設定(見た目のおまかせ・道の演出など)は既定が OFF で、オプションを開かないと気づけない。
+  // 曲えらびを開いた最初の1回だけ、助手が伝え、その場で「華やか」を試せるボタンを出す。
+  // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。保存が無いうちは「まだ見ていない」。6レーン化の案内が出ているあいだは出さない(1つずつ)
+  const RHYTHM_LOOK_INTRO_KEY = 'mh_rhythm_look_intro_seen_v1';
+  const [rhythmLookIntroSeen, setRhythmLookIntroSeen] = useState(true);
+  const rhythmLookIntroVisible = !rhythmLookIntroSeen && !rhythmSixLaneIntroVisible;
+  const dismissRhythmLookIntro = () => { setRhythmLookIntroSeen(true); storeSet(RHYTHM_LOOK_INTRO_KEY, true, false); };
   // ---- オート強化の使い方案内(CLAUDE.md ⑤) ----
   // 「強化ポイントが入るたび裏で自動的に振られる」は、遊んでいるだけでは気づけない仕組み。
   // ヘルプと更新履歴は探しに行った人しか読まないので、強化画面を開いた最初の1回だけ、
@@ -33065,6 +33151,7 @@ function MonsterHeroGame() {
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false) === true);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false) === true);
       setRhythmSixLaneIntroSeen(await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false) === true);
+      setRhythmLookIntroSeen(await storeGet(RHYTHM_LOOK_INTRO_KEY, false, false) === true);
       // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
       //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
       setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
@@ -43360,6 +43447,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             difficulty={difficulty}
             dismissQuickRhythmBackground={dismissQuickRhythmBackground}
             dismissRhythmSixLaneIntro={dismissRhythmSixLaneIntro}
+            dismissRhythmLookIntro={dismissRhythmLookIntro}
+            rhythmLookIntroVisible={rhythmLookIntroVisible}
+            onTryRhythmLook={async presetId=>{const preset=RHYTHM_LOOK_PRESETS.find(item=>item.id===presetId);if(!preset)return;const saved=await saveRhythmSettings({...rhythmSettings,...preset.values});setRhythmSettings(saved);dismissRhythmLookIntro();}}
             dismissRhythmEventNotice={dismissRhythmEventNotice}
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}

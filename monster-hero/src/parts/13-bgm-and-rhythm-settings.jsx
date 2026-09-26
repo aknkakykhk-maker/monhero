@@ -348,6 +348,29 @@ const rhythmRenderQualityCap = (quality, highCap) => (quality==='SAVE' ? 1 : qua
 // ★軽量モードのときは、ここの値に関わらず SIMPLE として扱う(rhythmStageLevel)
 // LIVE   … 派手に加えて、拍に合わせて光るサーチライト・レーザー・観客のペンライト(2026-09-27)。GPU で背景を描ける端末だけ。無ければ派手と同じ
 const RHYTHM_STAGE_EFFECTS = Object.freeze(['LIVE','VIVID','CALM','SIMPLE']);
+// 見た目の「おまかせ」(2026-09-27・ユーザー指示「UIUXの改良 全部やって」)。押すと見た目の設定だけをまとめて切り替える
+// (音・判定・操作・画質・描画方式には触らない)。いまの設定がどれかにぴったり当てはまるときは、そのボタンを光らせる。
+// image … その見た目で演奏しているところの見本(同じ曲・同じ場面を撮って、幅240の JPEG に縮めたもの。オプションを開いたときだけ読む)
+const RHYTHM_LOOK_PRESETS = Object.freeze([
+  {id:'LIGHT',label:'軽さ優先',image:'images/rhythm-look/look-light-v1.jpg',values:{effectAmount:'MINIMAL',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
+  {id:'STANDARD',label:'標準',image:'images/rhythm-look/look-standard-v1.jpg',values:{effectAmount:'LIGHT',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
+  {id:'VIVID',label:'華やか',image:'images/rhythm-look/look-vivid-v1.jpg',values:{effectAmount:'LOW',stageEffect:'VIVID',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:false}},
+  {id:'FULL',label:'全部のせ',image:'images/rhythm-look/look-full-v1.jpg',values:{effectAmount:'NORMAL',stageEffect:'LIVE',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:true}},
+]);
+// 演出の自動調整(設定「重いときは演出を自動で控えめに」・2026-09-27)で下げる順番。重いものから。
+// 段 n では 1〜n 番目を当てる(当てるものが無い段は飛ばす)。演奏中の見た目だけを変え、保存してある設定は変えない
+const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([
+  s=>s.noteBloom?{noteBloom:false}:null,
+  s=>s.stageEffect==='LIVE'?{stageEffect:'VIVID'}:null,
+  s=>s.roadFx||s.noteMotionFx?{roadFx:false,noteMotionFx:false}:null,
+  s=>s.judgmentFx||s.comboMilestoneFx?{judgmentFx:false,comboMilestoneFx:false}:null,
+  s=>s.stageEffect==='VIVID'?{stageEffect:'CALM'}:null,
+  s=>s.stageEffect==='CALM'?{stageEffect:'SIMPLE'}:null,
+]);
+const rhythmCapEffects = (settings,level) => {let out=settings;for(let i=0;i<Math.min(Number(level)||0,RHYTHM_AUTO_EFFECT_STEPS.length);i++){const patch=RHYTHM_AUTO_EFFECT_STEPS[i](out);if(patch)out={...out,...patch};}return out;};
+// 次に下げる段(当てるものがある段)。もう下げるものが無ければ null
+const rhythmNextEffectCap = (settings,level) => {const now=rhythmCapEffects(settings,level);for(let i=Math.max(0,Number(level)||0);i<RHYTHM_AUTO_EFFECT_STEPS.length;i++){if(RHYTHM_AUTO_EFFECT_STEPS[i](now))return i+1;}return null;};
+const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset=>Object.entries(preset.values).every(([key,value])=>settings&&settings[key]===value))||{id:''}).id;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE','ライブ'],['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
 // ===== 他の音ゲーから取り入れた表示(2026-09-24・ユーザー指示「他の音ゲーを学習して取り入れるとこを取り入れて / 設定でいじれるように」) =====
 // レーンカバー(beatmania IIDX・SOUND VOLTEX の SUDDEN)。レーンの奥を何%隠すか。0で出さない
@@ -504,6 +527,10 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   //   noteMotionFx … フリックの矢印と SLIDE の帯に流れる光
   //   comboMilestoneFx … 100コンボごとに「100 COMBO!」の帯と光の輪
   judgmentFx:false, noteMotionFx:false, comboMilestoneFx:false,
+  // 演奏中は左上の曲名とジャケットを薄くする(2026-09-27)。始まって4秒で薄くなり、ポーズ中は元に戻る。目線を道に集めるため。既定は ON
+  hudSongFade:true,
+  // 重いときは演出を自動で控えめにする(2026-09-27)。演奏中にカクつき続けたら、重い演出から一段ずつ下げる(保存値は変えない)。既定は ON
+  autoEffectDown:true,
   // 背景の演出(2026-09-24)。既存の保存値には無いので、読み込み時は既定で補われる。
   // ★既定は「シンプル」(=これまでの見た目)。一度は派手を既定にしたが、実機で
   //   「タップ感度が悪くなってる気がする」と言われ、上と同じ指示で元へ戻した
@@ -569,6 +596,8 @@ const normalizeRhythmSettings = value => {
     judgmentFx:typeof source.judgmentFx==='boolean'?source.judgmentFx:DEFAULT_RHYTHM_SETTINGS.judgmentFx,
     noteMotionFx:typeof source.noteMotionFx==='boolean'?source.noteMotionFx:DEFAULT_RHYTHM_SETTINGS.noteMotionFx,
     comboMilestoneFx:typeof source.comboMilestoneFx==='boolean'?source.comboMilestoneFx:DEFAULT_RHYTHM_SETTINGS.comboMilestoneFx,
+    hudSongFade:typeof source.hudSongFade==='boolean'?source.hudSongFade:DEFAULT_RHYTHM_SETTINGS.hudSongFade,
+    autoEffectDown:typeof source.autoEffectDown==='boolean'?source.autoEffectDown:DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
     stageEffect:RHYTHM_STAGE_EFFECTS.includes(source.stageEffect)?source.stageEffect:DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover:rhythmFiniteStep(source.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay:RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay)?source.timingDisplay:DEFAULT_RHYTHM_SETTINGS.timingDisplay,

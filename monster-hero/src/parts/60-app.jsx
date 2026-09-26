@@ -3703,6 +3703,14 @@ function MonsterHeroGame() {
   const [rhythmSixLaneIntroSeen, setRhythmSixLaneIntroSeen] = useState(true);
   const rhythmSixLaneIntroVisible = !rhythmSixLaneIntroSeen;
   const dismissRhythmSixLaneIntro = () => { setRhythmSixLaneIntroSeen(true); storeSet(RHYTHM_SIX_LANE_INTRO_KEY, true, false); };
+  // ---- モンヒロビートの見た目の設定の案内(CLAUDE.md ⑤。2026-09-27) ----
+  // 見た目の設定(見た目のおまかせ・道の演出など)は既定が OFF で、オプションを開かないと気づけない。
+  // 曲えらびを開いた最初の1回だけ、助手が伝え、その場で「華やか」を試せるボタンを出す。
+  // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。保存が無いうちは「まだ見ていない」。6レーン化の案内が出ているあいだは出さない(1つずつ)
+  const RHYTHM_LOOK_INTRO_KEY = 'mh_rhythm_look_intro_seen_v1';
+  const [rhythmLookIntroSeen, setRhythmLookIntroSeen] = useState(true);
+  const rhythmLookIntroVisible = !rhythmLookIntroSeen && !rhythmSixLaneIntroVisible;
+  const dismissRhythmLookIntro = () => { setRhythmLookIntroSeen(true); storeSet(RHYTHM_LOOK_INTRO_KEY, true, false); };
   // ---- オート強化の使い方案内(CLAUDE.md ⑤) ----
   // 「強化ポイントが入るたび裏で自動的に振られる」は、遊んでいるだけでは気づけない仕組み。
   // ヘルプと更新履歴は探しに行った人しか読まないので、強化画面を開いた最初の1回だけ、
@@ -4832,6 +4840,7 @@ function MonsterHeroGame() {
       setQuickRhythmIntroSeen(await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false) === true);
       setQuickRhythmBackgroundSeen(await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false) === true);
       setRhythmSixLaneIntroSeen(await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false) === true);
+      setRhythmLookIntroSeen(await storeGet(RHYTHM_LOOK_INTRO_KEY, false, false) === true);
       // オート強化の使い方案内。★保存が無いとき(既存ユーザー・新規ともに)は「まだ見ていない」。
       //   既定値を true にすると、保存が無い＝見た扱いになり、案内が一度も出ない
       setAutoEnhanceIntroSeen(await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false) === true);
@@ -15127,6 +15136,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             difficulty={difficulty}
             dismissQuickRhythmBackground={dismissQuickRhythmBackground}
             dismissRhythmSixLaneIntro={dismissRhythmSixLaneIntro}
+            dismissRhythmLookIntro={dismissRhythmLookIntro}
+            rhythmLookIntroVisible={rhythmLookIntroVisible}
+            onTryRhythmLook={async presetId=>{const preset=RHYTHM_LOOK_PRESETS.find(item=>item.id===presetId);if(!preset)return;const saved=await saveRhythmSettings({...rhythmSettings,...preset.values});setRhythmSettings(saved);dismissRhythmLookIntro();}}
             dismissRhythmEventNotice={dismissRhythmEventNotice}
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
