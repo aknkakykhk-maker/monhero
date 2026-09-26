@@ -218,6 +218,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               'レーンの外側のマスモンが拍に合わせて跳ねる動きです。動く・動かないはここだけで決まり、「演出量」を下げても変わりません。止めたいときは「動かない」を選んでください（「軽量モード」を入れたときは、重いものをまとめて止めるためここも止まります）。',{full:true})}
             {/* マスモンの項目なので、マスモンの並びへ置く(コンボ数のあいだに挟まっていた) */}
             {field('マスモン｜能力中に光らせる',toggle('sideMonsterAbilityHighlight'),null,{full:true})}
+            {field('マスモン｜能力のカットイン',toggle('monsterCutIn'),
+              'マスモンの能力が出たとき、画面の端からそのマスモンの絵が差し込まれます。ノーツより後ろに出るので、ノーツは隠れません。「軽量モード」と演出量「最小」では出ません。',{full:true})}
           </div>
         </section>}
         {tab==='volume'&&<section data-rhythm-options-panel="volume" className={card}>

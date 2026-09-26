@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 281c263ba4d22835
+// source-sha256: 0d8424c04762231a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 06:27";
+const BUILD_DATE = "2026-09-26 11:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4941,6 +4941,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   sideMonsterOpacity: 'NORMAL',
   sideMonsterMotion: 'NORMAL',
   sideMonsterAbilityHighlight: true,
+  monsterCutIn: true,
   songPreviewEnabled: true,
   quietDuringPlay: false,
   frameRateMode: 'DEVICE',
@@ -4992,6 +4993,7 @@ const normalizeRhythmSettings = value => {
     sideMonsterOpacity: RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity) ? source.sideMonsterOpacity : DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion: RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion) ? source.sideMonsterMotion : DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight: bool('sideMonsterAbilityHighlight'),
+    monsterCutIn: bool('monsterCutIn'),
     songPreviewEnabled: bool('songPreviewEnabled'),
     quietDuringPlay: bool('quietDuringPlay'),
     frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode,
@@ -20914,6 +20916,8 @@ const RhythmOptions = ({
     full: true
   }), field('マスモン｜能力中に光らせる', toggle('sideMonsterAbilityHighlight'), null, {
     full: true
+  }), field('マスモン｜能力のカットイン', toggle('monsterCutIn'), 'マスモンの能力が出たとき、画面の端からそのマスモンの絵が差し込まれます。ノーツより後ろに出るので、ノーツは隠れません。「軽量モード」と演出量「最小」では出ません。', {
+    full: true
   }))), tab === 'volume' && React.createElement("section", {
     "data-rhythm-options-panel": "volume",
     className: card
@@ -22359,6 +22363,32 @@ const RhythmTapTest = ({
       })));
     }));
   }, [monsterSignature, settings.sideMonsterOpacity, settings.sideMonsterMotion, settings.lightweightMode, sideArtUrls]);
+  const cutInRefs = useRef([]);
+  const cutInOn = settings.monsterCutIn !== false && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
+  const cutInElements = useMemo(() => {
+    if (!cutInOn) return null;
+    return React.createElement("div", {
+      "data-rhythm-cutin": true,
+      "aria-hidden": "true"
+    }, monsters.map((monster, index) => {
+      if (!monster || !sideArtUrls[index]) return null;
+      return React.createElement("div", {
+        key: index + 1,
+        ref: el => {
+          cutInRefs.current[index] = el;
+        },
+        "data-rhythm-cutin-slot": index + 1,
+        "data-side": index % 2 === 0 ? 'left' : 'right'
+      }, React.createElement("i", {
+        "data-rhythm-cutin-band": true
+      }), React.createElement("img", {
+        src: sideArtUrls[index],
+        alt: "",
+        draggable: false,
+        decoding: "async"
+      }));
+    }));
+  }, [cutInOn, monsterSignature, sideArtUrls]);
   const abilityTimerRef = useRef(null),
     abilityRevisionRef = useRef(0),
     abilityBadgeRef = useRef(null);
@@ -22880,6 +22910,13 @@ const RhythmTapTest = ({
         if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.abilityOwners.KONJO = slot;
         run.abilityFlashSlot = slot;
         run.abilityFlashUntilMs = songTimeMs + RHYTHM_SIDE_MONSTER_FLASH_MS;
+        if (cutInOn) {
+          const cutIn = cutInRefs.current[slot - 1];
+          if (cutIn) rhythmRestartAnimations([{
+            el: cutIn,
+            attr: 'rhythmCutin'
+          }]);
+        }
       }
     }
     const calculatedScore = Math.floor(rhythmCalculateScore({
@@ -22967,7 +23004,7 @@ const RhythmTapTest = ({
     }
     if (showAbilityFlash) scheduleAbilityClear();
     if (_judgeT0) RHYTHM_PERF.judge(performance.now() - _judgeT0, !!monster);
-  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, settings.paceDisplay, settings.timingDisplay, tutorial, calibrating, assistOn, luckOn, showLuckyBanner]);
+  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, settings.paceDisplay, settings.timingDisplay, tutorial, calibrating, assistOn, luckOn, showLuckyBanner, cutInOn]);
   const finish = useCallback(() => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
@@ -24615,7 +24652,7 @@ const RhythmTapTest = ({
     "data-rhythm-stage-pulse": true,
     "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
     "aria-hidden": "true"
-  }), sideMonsterElements, React.createElement("div", {
+  }), sideMonsterElements, cutInElements, React.createElement("div", {
     ref: screenFlashRef,
     "data-rhythm-screen-flash": true,
     "aria-hidden": "true"

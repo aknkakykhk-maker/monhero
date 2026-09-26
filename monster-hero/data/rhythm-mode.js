@@ -18581,6 +18581,34 @@ const installRhythmGeometryStyles=()=>{
     /* --- 両サイドのマスモン --- */
     /* 動かすのは transform だけ。影・ぼかし・色は動かさないので、跳ねても塗り直しは起きない。
        跳ねる速さは1拍の長さ(--rhythm-side-beat)。曲ごとにプレイ開始時へ一度だけ書く。 */
+    /* --- マスモンの能力のカットイン(2026-09-26) ---
+       ノーツより後ろ(z-index:1。両サイドのマスモンと同じ層)。帯と絵は動かない形で、動かすのは transform と opacity だけ。
+       ふだんは visibility:hidden(描かない)。data-rhythm-cutin="1" のあいだだけ 0.9秒のアニメーションで見える */
+    [data-rhythm-cutin]{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+    [data-rhythm-cutin-slot]{position:absolute;top:14%;height:36%;width:58%;visibility:hidden;opacity:0}
+    [data-rhythm-cutin-slot][data-side="left"]{left:0}
+    [data-rhythm-cutin-slot][data-side="right"]{right:0}
+    [data-rhythm-cutin-band]{position:absolute;left:-10%;right:-10%;top:30%;height:40%;transform:skewY(-9deg);
+      background:linear-gradient(90deg,rgba(250,204,21,0) 0%,rgba(250,204,21,.75) 22%,rgba(244,114,182,.72) 62%,rgba(168,85,247,0) 100%)}
+    [data-rhythm-cutin-slot][data-side="right"] [data-rhythm-cutin-band]{transform:skewY(9deg);
+      background:linear-gradient(270deg,rgba(250,204,21,0) 0%,rgba(250,204,21,.75) 22%,rgba(244,114,182,.72) 62%,rgba(168,85,247,0) 100%)}
+    [data-rhythm-cutin-slot]>img{position:absolute;bottom:0;height:120%;width:auto;max-width:none;object-fit:contain}
+    [data-rhythm-cutin-slot][data-side="left"]>img{left:10%}
+    [data-rhythm-cutin-slot][data-side="right"]>img{right:10%}
+    [data-rhythm-cutin-slot][data-side="left"][data-rhythm-cutin="1"]{animation:mhRhythmCutinLeft 900ms cubic-bezier(.2,.8,.3,1) 1}
+    [data-rhythm-cutin-slot][data-side="right"][data-rhythm-cutin="1"]{animation:mhRhythmCutinRight 900ms cubic-bezier(.2,.8,.3,1) 1}
+    @keyframes mhRhythmCutinLeft{
+      0%{visibility:visible;opacity:0;transform:translate3d(-70%,0,0)}
+      16%{visibility:visible;opacity:1;transform:translate3d(0,0,0)}
+      72%{visibility:visible;opacity:1;transform:translate3d(4%,0,0)}
+      100%{visibility:visible;opacity:0;transform:translate3d(22%,0,0)}}
+    @keyframes mhRhythmCutinRight{
+      0%{visibility:visible;opacity:0;transform:translate3d(70%,0,0)}
+      16%{visibility:visible;opacity:1;transform:translate3d(0,0,0)}
+      72%{visibility:visible;opacity:1;transform:translate3d(-4%,0,0)}
+      100%{visibility:visible;opacity:0;transform:translate3d(-22%,0,0)}}
+    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-cutin],
+    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-cutin]{display:none}
     [data-rhythm-side-monster]{position:absolute;pointer-events:none;z-index:1;
       opacity:var(--rhythm-side-opacity,.8);will-change:transform}
     /* 絵の入れ物。DyedMonsterImage は染色ありのとき<div>で返るので、ここで大きさを与える。
@@ -19371,8 +19399,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const faces=[];
   // 光の柱の段(判定ラインの高さに対する割合 from〜to と色)。to が null なら画面の下端まで
   const LANE_GLOW_BANDS=Object.freeze([
-    // 4段にとどめる(7段では叩き続けたときにフレームが1割減った)。段の明るさの差を小さくして境目を目立たせない
-    [.62,.8,'rgba(96,165,250,.1)'],[.8,.93,'rgba(147,197,253,.24)'],[.93,1.03,'rgba(224,242,254,.52)'],[1.03,null,'rgba(59,130,246,.18)'],
+    // レーン全体(奥の端から手前の端まで)を光らせる(2026-09-26・実機「光が薄すぎて見にくい」「下の方ちょっとしか光らない」)。
+    // 重いのはグラデーションで塗ることで、単色なら広い面でも軽い(実測)。段は5つまで(7段では叩き続けたときに1割減った)
+    [0,.5,'rgba(96,165,250,.22)'],[.5,.8,'rgba(125,211,252,.34)'],[.8,.95,'rgba(186,230,253,.5)'],[.95,1.03,'rgba(240,249,255,.78)'],[1.03,null,'rgba(96,165,250,.32)'],
   ].map(Object.freeze));
   const sprites=new Map();
   const roundRectPath=(c,x,y,w,h,r)=>{
