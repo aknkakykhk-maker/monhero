@@ -355,3 +355,19 @@ DOM の部品ではなくノーツの canvas へ描く。2D の canvas と DOM �
 - 部品と canvas を同じ経過時間で止めて比べ、大きく違う画素は0.1%以下(時刻・演出量・幅・モンスターノーツ・ぴったりの虹)
 - 実測(monster_hero HARD・演出最大・ライブ背景 VIVID・CPU 1/4・6秒): style 981〜1,065ms → 664〜711ms、UpdateLayoutTree 254〜261ms → 197〜205ms、光の CSS アニメーション 320本 → 0本。JavaScript の時間は変わらず
 - CSS の動きを直したら canvas 側(HIT_KEYS)も直す。`tools/mode/rhythm-hit-effect-check.js` が数字のずれを見張る
+
+## 2026-09-26 WebGL(検証用)の描き込み先の JavaScript を軽くした
+
+WebGL のときは、通常の canvas より JavaScript が多かった(CPU プロファイル 10秒・CPU 1/4・演出最大: `rhythm-mode.js` 971ms 対 441ms)。
+上位は形を三角形に分ける処理(`tri` `disc` `triangulate` `cross`)。次の4つで、描く絵は変えずに軽くした(2D との画素の差 0.471 → 0.470)。
+
+- 三角形を足すたびに作業用の配列を作っていた → じかに書き込む
+- 凸形でも毎回「耳を切る」方式で分けていた → 凸形は1点から扇に分ける(ノーツの形はほとんど凸形)
+- 丸を描くたびに sin・cos を計算していた → 分け方ごとに一度だけ計算して使い回す
+- 塗るたびに GPU の入れ物を作り直していた → 使い回す(`bufferSubData`)
+- ついでに、入れ物を大きくするときにそれまでの三角形を捨てていた不具合を直した(点の多い形で前半が消える)
+
+結果: `tick` の合計 1,304ms → 約865ms、`rhythm-mode.js` 971ms → 約608ms(通常の canvas の `tick` 947ms より少ない)。
+
+ノーツの描き方に WebGL の描き込み先が知らない命令を足すと、WebGL のときだけその部分が出なくなる。
+`tools/mode/rhythm-webgl-notes-check.js` が、同じノーツの並びを 2D と WebGL で描いて画素を比べて見張る。
