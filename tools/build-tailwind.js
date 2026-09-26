@@ -19,7 +19,11 @@
 // 自前で画面を回しているとき(端末が向きの指定を受け付けない端末のための逃げ道)は、
 // 端末そのものは縦のままなので @media (orientation: landscape) が成立せず、
 // landscape: がひとつも効かない。横長の器に縦持ち用の並びが入って一覧がほぼ消える。
-// 以前は index.html の tailwind.config でこれを差し替えていたので、同じものをここへ移した。
+// ★Tailwind 3.4 は landscape: を最初から持っていて、addVariant で同じ名前を足しても
+//   **無視される**(@media の規則しか出ない)。静的化してからずっと、回したときの規則が
+//   1つも出ていなかった(2026-09-26・ユーザー報告「縦横画面で変えたら表示がえぐい」)。
+//   そこで、作ったCSSの @media (orientation:landscape) の中身を、
+//   [data-mh-view-rotation=true] の下にもう一度書き写す(withRotationCopy)。
 //
 // 【古くなっていないかの見張り方】
 // tailwindcss は optionalDependencies なので CI(npm ci --omit=optional)には入らない。
@@ -52,21 +56,14 @@ const DATA_DIR = path.join(ROOT, 'monster-hero', 'data');
 // (実際に GitHub Actions でだけ build.js --check が落ちた)。
 // 置き場所は設定ファイル自身の位置(tools/.tailwind-build/)から数える。
 const CONFIG_SOURCE = `const path = require('path');
-const plugin = require('tailwindcss/plugin');
 const ROOT = path.resolve(__dirname, '..', '..');
 module.exports = {
   content: [path.join(ROOT, 'monster-hero', 'src', 'game-system.jsx'),
             path.join(ROOT, 'monster-hero', 'data', '*.js')],
   theme: { extend: {} },
-  plugins: [
-    // index.html の tailwind.config から移した。既存の書き方(landscape:mt-0 など)はそのまま使える
-    plugin(function ({ addVariant }) {
-      addVariant('landscape', [
-        '@media (orientation: landscape)',
-        '&:is([data-mh-view-rotation="true"] *)',
-      ]);
-    }),
-  ],
+  // landscape: は Tailwind が最初から持っている(@media (orientation: landscape))。
+  // 自前で回したとき用の写しは build-tailwind.js の withRotationCopy が足す(rotation-copy v1)
+  plugins: [],
 };
 `;
 
@@ -102,6 +99,59 @@ function embeddedFingerprint() {
   return m ? m[1] : null;
 }
 
+// 作ったCSSの @media (orientation:landscape){…} の中の規則を、
+// [data-mh-view-rotation=true] の下へ書き写して、その @media のすぐ後ろへ置く。
+// 位置を同じにするのは、@media 版と同じく「ふだんのクラスより後ろ」で勝たせるため。
+const ROTATION_SCOPE = '[data-mh-view-rotation=true]';
+// 丸かっこの外にあるカンマで分ける(:is(a,b) の中のカンマでは切らない)
+function splitSelectors(text) {
+  const out = []; let depth = 0, from = 0;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '(' || c === '[') depth++;
+    else if (c === ')' || c === ']') depth--;
+    else if (c === ',' && depth === 0) { out.push(text.slice(from, i)); from = i + 1; }
+  }
+  out.push(text.slice(from));
+  return out.map((sel) => sel.trim()).filter(Boolean);
+}
+// 中身を「セレクタ{宣言}」の並びとして読む。入れ子の @ 規則が来たら null(写さない)
+function rotatedRules(body) {
+  const rules = []; let i = 0;
+  while (i < body.length) {
+    const open = body.indexOf('{', i);
+    if (open < 0) break;
+    const selector = body.slice(i, open);
+    if (selector.trim().startsWith('@')) return null;
+    const close = body.indexOf('}', open);
+    if (close < 0) return null;
+    const decls = body.slice(open + 1, close);
+    rules.push(`${splitSelectors(selector).map((sel) => `${ROTATION_SCOPE} ${sel}`).join(',')}{${decls}}`);
+    i = close + 1;
+  }
+  return rules.join('');
+}
+function withRotationCopy(css) {
+  const head = /@media \(orientation:\s*landscape\)\{/g;
+  let out = '', last = 0, m, copied = 0;
+  while ((m = head.exec(css))) {
+    let depth = 1, j = m.index + m[0].length;
+    for (; j < css.length && depth > 0; j++) {
+      if (css[j] === '{') depth++;
+      else if (css[j] === '}') depth--;
+    }
+    const body = css.slice(m.index + m[0].length, j - 1);
+    const copy = rotatedRules(body);
+    out += css.slice(last, j);
+    if (copy) { out += copy; copied++; }
+    last = j;
+    head.lastIndex = j;
+  }
+  out += css.slice(last);
+  if (!copied) throw new Error('@media (orientation:landscape) が見つからず、回したとき用の規則を作れませんでした');
+  return out;
+}
+
 // 作り直す。tailwindcss が入っていないときは null を返す(呼び出し側が判断する)
 function generate(fp) {
   if (!fs.existsSync(BIN)) return null;
@@ -109,7 +159,7 @@ function generate(fp) {
   fs.writeFileSync(CONFIG, CONFIG_SOURCE);
   fs.writeFileSync(INPUT, '@tailwind base;\n@tailwind components;\n@tailwind utilities;\n');
   execFileSync(BIN, ['-c', CONFIG, '-i', INPUT, '-o', OUT, '--minify'], { stdio: ['ignore', 'ignore', 'inherit'] });
-  const css = fs.readFileSync(OUT, 'utf8');
+  const css = withRotationCopy(fs.readFileSync(OUT, 'utf8'));
   fs.writeFileSync(OUT, `/*! ${MARK}: ${fp} — tools/build-tailwind.js が作った生成物。直接編集しないこと */\n${css}`);
   return fs.statSync(OUT).size;
 }
@@ -133,7 +183,7 @@ function checkTailwind() {
   return { ok: true, fingerprint: fp };
 }
 
-module.exports = { buildTailwindIfNeeded, checkTailwind, fingerprint, OUT, CONFIG_SOURCE };
+module.exports = { buildTailwindIfNeeded, checkTailwind, fingerprint, withRotationCopy, OUT, CONFIG_SOURCE };
 
 if (require.main === module) {
   if (process.argv.includes('--check')) {
