@@ -5,6 +5,8 @@
 //   node tools/mode/rhythm-chart-v3-splice.js --track <曲id> --count 6 --chart-revision 10
 //   node tools/mode/rhythm-chart-v3-splice.js --track <曲id> --input-dir <dir>     # 解析ファイルの置き場を変える
 //   node tools/mode/rhythm-chart-v3-splice.js --track <曲id> --output-dir <dir>    # 継ぎ合わせた譜面(自動修正の前)を書き出す
+//   node tools/mode/rhythm-chart-v3-splice.js --track <曲id> --apply               # 公開の流れ(パイプライン)から呼ぶ。Rev.12 以降の曲だけ、
+//                                                                                   関門を通った難易度の authoring/<曲>-v3-chart-*.json を差し替える
 //
 // 【なぜ要るか】
 // 「品質が悪ければ譜面全体を作り直す」のではなく「悪い区間だけ直す」(ROADMAP の段5)。
@@ -16,7 +18,12 @@
 //     (1番と2番で違う候補を採ると「同じフレーズは同じ形」が崩れる)
 //   ・気になり点が同じなら候補0(=いまの作り方)を採る。ほかの候補は、はっきり良いときだけ
 //   ・継ぎ合わせたあと両手のシミュレートにかけ、押せない所が出た区切り(とその前)は候補0へ戻す
-//   ・authoring/ も公開データも書き換えない。書き出すのは --output-dir を渡したときだけ(自動修正の前の譜面)
+//   ・authoring/ も公開データも書き換えない。書き出すのは --output-dir を渡したときだけ(自動修正の前の譜面)。
+//     例外は --apply(Rev.12 以降の曲だけ・パイプラインが生成の直後に呼ぶ): 関門を通った難易度だけ、生成器が書いたばかりの
+//     authoring/<曲>-v3-chart-<難易度>.json を差し替える。関門 = 押せない配置が無い・品質の6軸の合計が候補0より下がらない・
+//     気になり点が SPLICE_MIN_GAIN 以上減る。通らなければ候補0(生成器が書いたまま)
+//     (2026-09-26・ユーザー指示「俺にやらせないではじめに出した案を取り入れるように進めて」で公開の流れへ入れた。
+//      気になり点の重みはまだ仮なので、6軸が下がらないことを関門にして守る)
 'use strict';
 const fs=require('fs'),path=require('path'),os=require('os');
 const {spawnSync}=require('child_process');
@@ -24,6 +31,9 @@ const {measureFeel,CONCERN_WEIGHTS}=require('./rhythm-chart-feel-report.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {useRuntimeSlideLanes,slideLaneOffset}=require('./rhythm-hand-model.js');
 const {chartRevisionOf}=require('./rhythm-chart-v3-revision.js');
+const {measure:measureQuality,AXES}=require('./rhythm-chart-quality-report.js');
+// 公開の流れで差し替えるのは、このリビジョン以降の曲だけ(それより前の曲の作り方は変えない)
+const SPLICE_REVISION=12;
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -89,12 +99,32 @@ const spliceCharts=(charts,audio)=>{
   return {notes,chosen,choice,before:sum(costs[0]),after,bestSingle:Math.min(...costs.map(sum)),reverted,sections:sections.length};
 };
 
-module.exports={spliceCharts,SPLICE_MIN_GAIN};
+// 関門: 押せない配置が無い・品質の6軸の合計が候補0より下がらない・気になり点が SPLICE_MIN_GAIN 以上減る
+const spliceGate=(charts,audio,result)=>{
+  if(!(result.before-result.after>=SPLICE_MIN_GAIN))return {pass:false,reason:'気になり点がほとんど減らない'};
+  const total=chart=>{const m=measureQuality(chart,audio);return {sum:AXES.reduce((a,axis)=>a+m.scores[axis],0),impossible:m.gate.impossible};};
+  const before=total(charts[0]),after=total({...charts[0],notes:result.notes});
+  if(after.impossible>0)return {pass:false,reason:`押せない配置が${after.impossible}件`};
+  if(after.sum<before.sum)return {pass:false,reason:`品質の6軸の合計が下がる(${before.sum.toFixed(1)}→${after.sum.toFixed(1)})`};
+  return {pass:true,reason:`品質の6軸の合計 ${before.sum.toFixed(1)}→${after.sum.toFixed(1)}`};
+};
+
+module.exports={spliceCharts,spliceGate,SPLICE_MIN_GAIN,SPLICE_REVISION};
 
 if(require.main===module){
   const trackId=arg('--track','monster_hero_theme'),dashed=trackId.replace(/_/g,'-');
   const count=Math.max(2,Math.min(8,Number(arg('--count',4))||4));
   const inputDir=arg('--input-dir',null),outputDir=arg('--output-dir',null),revision=arg('--chart-revision',null);
+  const apply=process.argv.includes('--apply');
+  const authoringDir=path.join(ROOT,'tools/mode/authoring');
+  // --apply の書き出し先(生成器が譜面を書いた場所)。既定は authoring/
+  const chartDir=arg('--chart-dir',null)?path.resolve(ROOT,arg('--chart-dir')):authoringDir;
+  if(apply){
+    const registry=JSON.parse(fs.readFileSync(path.join(authoringDir,'rhythm-song-registry.json'),'utf8'));
+    // --chart-revision があればそれで試す(生成器と同じ。一覧は書き換えない)
+    const songRevision=revision!=null?chartRevisionOf({chartRevision:Number(revision)}):chartRevisionOf((registry.songs||{})[trackId]);
+    if(songRevision<SPLICE_REVISION){console.log(`区間の差し替え: Rev.${songRevision} の曲なので差し替えない（Rev.${SPLICE_REVISION} から）`);process.exit(0);}
+  }
   const audioFile=path.join(inputDir?path.resolve(ROOT,inputDir):path.join(ROOT,'tools/mode/authoring'),`${dashed}-v3-audio.json`);
   const audio=JSON.parse(fs.readFileSync(audioFile,'utf8'));
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'v3-splice-'));
@@ -114,6 +144,14 @@ if(require.main===module){
       const result=spliceCharts(charts,audio);
       const picked=[...result.choice.entries()].filter(([,k])=>k!==0).map(([label,k])=>`${label}→候補${k}`).join(' ')||'すべて候補0';
       console.log(`  ${difficulty}: 気になり点 ${result.before} → ${result.after}（1本だけ選ぶなら最良 ${result.bestSingle}）  ${picked}${result.reverted?`  押せないので候補0へ戻した区切り ${result.reverted}`:''}`);
+      if(apply){
+        const gate=spliceGate(charts,audio,result);
+        if(gate.pass){
+          const out={...charts[0],notes:result.notes,splice:{count,choice:Object.fromEntries(result.choice),gate:gate.reason}};
+          fs.writeFileSync(path.join(chartDir,path.basename(file(0))),JSON.stringify(out,null,1)+'\n');
+          console.log(`    → 差し替えた（${gate.reason}）`);
+        }else console.log(`    → 差し替えない（${gate.reason}）`);
+      }
       if(outputDir){
         const out={...charts[0],notes:result.notes,splice:{count,choice:Object.fromEntries(result.choice)}};
         fs.mkdirSync(path.resolve(ROOT,outputDir),{recursive:true});

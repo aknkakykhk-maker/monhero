@@ -7,7 +7,7 @@
 'use strict';
 const fs=require('fs'),path=require('path'),os=require('os');
 const {spawnSync}=require('child_process');
-const {spliceCharts}=require('./rhythm-chart-v3-splice.js');
+const {spliceCharts,spliceGate,SPLICE_REVISION}=require('./rhythm-chart-v3-splice.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {useRuntimeSlideLanes}=require('./rhythm-hand-model.js');
 
@@ -38,12 +38,23 @@ try{
   const impossible=simulateNotes(result.notes,audio.timing).issues.filter(issue=>issue.severity==='impossible').length;
   useRuntimeSlideLanes(false);
   ok('継ぎ合わせた譜面に押せない配置が無い',impossible===0,`${impossible}件`);
+  // 関門(公開の流れで差し替えてよいか)
+  const gate=spliceGate(charts,audio,result);
+  ok('関門は理由を返す',typeof gate.pass==='boolean'&&typeof gate.reason==='string',gate.reason);
+  const same={...result,after:result.before};
+  ok('気になり点が減らなければ関門を通らない',spliceGate(charts,audio,same).pass===false);
+  const first=result.notes.find(n=>n.type==='TAP');
+  const crowded={...result,notes:result.notes.concat([{...first,subLane:0},{...first,subLane:4},{...first,subLane:8}])};
+  ok('押せない配置があれば関門を通らない',spliceGate(charts,audio,crowded).pass===false,spliceGate(charts,audio,crowded).reason);
   ok('ノーツの数は候補とほぼ同じ',Math.abs(result.notes.length-charts[0].notes.length)<=charts[0].notes.length*.03,`${charts[0].notes.length} → ${result.notes.length}`);
 }finally{fs.rmSync(tmp,{recursive:true,force:true});}
 {
   const source=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-splice.js'),'utf8');
   const writes=source.match(/writeFileSync\([^\n]*/g)||[];
-  ok('書き出すのは --output-dir を渡したときだけ',writes.length===1&&/if\(outputDir\)\{/.test(source)&&!/authoring\/[^'`]*-v3-(chart|fixed)/.test(source));
+  ok('書き出すのは --output-dir のときと、--apply で関門を通ったときだけ',writes.length===2&&/if\(outputDir\)\{/.test(source)&&/if\(gate\.pass\)\{\s*const out=/.test(source));
+  ok('--apply は Rev.12 以降の曲だけ',SPLICE_REVISION===12&&/if\(songRevision<SPLICE_REVISION\)\{[\s\S]{0,200}?process\.exit\(0\);\}/.test(source));
+  const pipeline=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-pipeline.js'),'utf8');
+  ok('パイプラインは生成の直後・自動修正の前に差し替えを呼ぶ',/step\('区間の差し替え[^']*','rhythm-chart-v3-splice\.js',\['--apply'\]\);\s*if\(write\)step\('自動修正/.test(pipeline));
 }
 console.log(failed?`\n✗ ${failed}件NG`:'\n✓ 区間の差し替えは期待どおり');
 process.exit(failed?1:0);

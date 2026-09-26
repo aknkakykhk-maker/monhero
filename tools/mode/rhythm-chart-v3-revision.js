@@ -55,7 +55,14 @@
 //        (難易度によらず同じ後押し)。Rev.7 の作法 layer_follow は止める(同じことの簡易版なので二重に効く)
 //   10 … 動きの使い回しを避ける(2026-09-26・ROADMAP の段4)。置いた結果のレーンの動きの並びが、直前8小節の
 //        リズムの違う所と同じになる置き方に費用を足し、それしか置けない形なら次の候補の形も試す(写し・形の記憶は除く)
-//   11〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   11 … 繰り返すたびの発展とラスサビ・主役に合わせた種類(2026-09-26・ROADMAP の段4)。3回目ごとの繰り返しとラスサビ
+//        (最後の盛り上がりの区切りで、前に同じ名札の区切りがあるもの)も元の形を写し、その小節では締めの FLICK と拍の頭の同時押しを
+//        選ばれやすくする(HARD以上)。ドラムを追う小節は同時押し、歌・主旋律を追う小節は FLICK、ドラムのフィルの締めは FLICK を
+//        選ばれやすくする。どれも音の性格の点が0より大きい(裏づけのある)音にだけ効く
+//   12 … 悪い区間だけ別の候補に替える(2026-09-26・ROADMAP の段5・rhythm-chart-v3-splice.js)。パイプラインが生成の直後に候補を数本作り、
+//        曲の区切りごとに気になり点の少ない候補を継ぎ合わせる(同じ名札の区切りは同じ候補)。関門(押せない配置が無い・品質の6軸の合計が
+//        下がらない・気になり点が減る)を通った難易度だけ。生成器そのものは Rev.11 と同じ
+//   13〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)と重みの最新の大きいほう＋1」を次の番号にする
 //        (同じ番号が「作り方の改良」と「重みの学び直し」の2つの意味を持たないように)
@@ -65,7 +72,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=10;
+const CHART_REVISION_CODE_LATEST=12;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const CHART_REVISION_LATEST=Math.max(CHART_REVISION_CODE_LATEST,latestKnowledgeRevision());

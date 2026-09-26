@@ -685,13 +685,15 @@ const echoPhraseTypes=(notes,{pickedOf,canAdd,add,remove,removeOk=true})=>{
   notes.forEach((note,index)=>{if(!note.chord&&(note.type==='TAP'||note.type==='FLICK')&&!byGrid.has(note.grid))byGrid.set(note.grid,index);});
   const order=[...byGrid.values()].sort((a,b)=>notes[a].grid-notes[b].grid);
   for(const index of order){
-    const sourceGrid=phraseEchoSourceGrid(notes[index].grid);
+    // Rev.11: 発展の回(3回目ごと・ラスサビ)も元の小節に揃えるが、足すだけ(発展で足した種類は外さない)
+    const echo=developEchoFor(notes[index].grid);
+    const sourceGrid=echo?echo.sourceGrid:phraseEchoSourceGrid(notes[index].grid);
     if(sourceGrid==null)continue;
     const source=byGrid.get(sourceGrid);
     if(source==null)continue;
     const want=pickedOf(source),has=pickedOf(index);
     if(want&&!has&&canAdd(index)){add(index);added++;}
-    else if(!want&&has&&removeOk){remove(index);removed++;}
+    else if(!want&&has&&removeOk&&!(echo&&echo.develop)){remove(index);removed++;}
   }
   return {added,removed};
 };
@@ -740,6 +742,66 @@ const sectionRoles=(()=>{
   return roles;
 })();
 const sectionRoleForBar=bar=>{const section=sectionForBar(bar);return section?sectionRoles.get(section)||'body':'body';};
+// Rev.11: 繰り返すたびの発展とラスサビ(ROADMAP の段4・最初にもらった案の3)。
+//   Rev.2〜10 の「発展」(3回目ごと)は、写さずに形を選び直すだけだった(覚えた形だと感じられない・発展にもなっていない)。
+//   Rev.11 は発展の回も元の形を写し(左右反転の規則はそのまま)、その小節では締めの FLICK と拍の頭の同時押しを選ばれやすくする(HARD以上)。
+//   ラスサビ = 最後の盛り上がり(climax)の区切りで、前に同じ名札の区切りがあるもの。その区切りの小節はすべて発展の回にする
+const rev11=chartRevision>=11;
+const lastChorus=(()=>{
+  if(!rev11)return null;
+  const list=(Array.isArray(structure.sections)?structure.sections:[]).slice().sort((a,b)=>a.startBar-b.startBar);
+  for(let i=list.length-1;i>=0;i--){
+    const section=list[i];
+    if(sectionRoles.get(section)!=='climax')continue;
+    if(list.slice(0,i).some(earlier=>earlier.label&&earlier.label===section.label))return section;
+    return null;
+  }
+  return null;
+})();
+const inLastChorus=bar=>!!lastChorus&&bar>=lastChorus.startBar&&bar<lastChorus.endBarExclusive;
+const developBar=bar=>rev11&&repeatSourceBar(bar)!=null&&repeatSourceBar(bar)<bar&&(phraseDevelopForBar(bar)||inLastChorus(bar));
+// 発展の回の、元の小節での位置(種類を揃えるのに使う)。発展の回でなければ null(従来どおり phraseEchoSourceGrid を使う)
+const developEchoFor=grid=>{
+  const bar=Math.floor(grid/BAR);
+  if(!developBar(bar))return null;
+  const source=repeatSourceBar(bar);
+  return {sourceGrid:source*BAR+(grid-bar*BAR),develop:true};
+};
+// 発展の回・主役の追跡で足す、種類の選ばれやすさ(音の性格の点が0より大きい、裏づけのある音にだけ足す)
+const DEVELOP_TYPE_BONUS=.8,FOCUS_TYPE_BONUS=.4,FILL_FLICK_BONUS=.8;
+// 写しの元になっている小節(どこかの繰り返しの小節が、この小節を写している)
+const copySourceBars=(()=>{
+  const set=new Set();
+  for(const section of (Array.isArray(structure.sections)?structure.sections:[]))
+    for(let bar=section.startBar;bar<section.endBarExclusive;bar++){const source=repeatSourceBar(bar);if(source!=null&&source<bar)set.add(source);}
+  return set;
+})();
+// ドラムのフィルの締め: 次の小節が区切りの頭で、この小節はドラムを追っていて、その小節の最後の拍にある打点
+const sectionStartBars=new Set((Array.isArray(structure.sections)?structure.sections:[]).map(section=>section.startBar));
+const fillEndAt=grid=>{
+  const bar=Math.floor(grid/BAR);
+  return rev11&&focusStateAt(grid)==='drums'&&sectionStartBars.has(bar+1)&&grid-bar*BAR>=BAR-BEAT;
+};
+const typeBonusRev11=(kind,grid,base)=>{
+  if(!rev11||!(base>0))return 0;
+  const bar=Math.floor(grid/BAR);
+  let bonus=0;
+  if(P_LEVEL_AT_LEAST_HARD()&&developBar(bar)&&(kind==='flick'||grid%BEAT===0))bonus+=DEVELOP_TYPE_BONUS;
+  const focus=focusStateAt(grid);
+  // 同時押しを足すと、相方の場所を空けるために元のノーツが動くことがあり、写しの小節の形が崩れる
+  //   (5曲で試して、写し率が EXPERT 0.267→0.235・MASTER 0.187→0.162 に下がった)。写しの小節では、元の小節に同時押しが
+  //   あればそろって選ばれる仕組み(Rev.8)に任せ、主役の後押しは写しではない小節と発展の回にだけ効かせる
+  //   写しの**元**の小節も同じ: 同時押しは形を決めたあとで置くので、元の小節のノーツが動くと、先に写した側と食い違う
+  //   (crossing_field は発展の小節が0なのに、元の小節へ足した同時押しで EXPERT の写し率が 0.432→0.324 に下がった)
+  const copyBar=phraseCopy&&repeatSourceBar(bar)!=null&&repeatSourceBar(bar)<bar;
+  if(kind==='chord'&&focus==='drums'&&((!copyBar&&!copySourceBars.has(bar))||developBar(bar)))bonus+=FOCUS_TYPE_BONUS;
+  if(kind==='flick'&&focus==='melody')bonus+=FOCUS_TYPE_BONUS;
+  if(kind==='flick'&&fillEndAt(grid))bonus+=FILL_FLICK_BONUS;
+  return bonus;
+};
+// 難易度の段(buildChart の中で決まる)を typeBonusRev11 から見る
+let currentProfileLevel=0;
+const P_LEVEL_AT_LEAST_HARD=()=>currentProfileLevel>=5;
 // 場面ごとの「形の好み」。点数を引くほど前へ出る(rankShapes の prefer.ids)。
 // 音との合いかたが同じくらいの候補の中でしか効かないので、サビだからといって音に合わない形は出ない。
 const SECTION_SHAPE_PREFERENCE=Object.freeze({
@@ -831,6 +893,7 @@ const buildChart=(difficulty,options={})=>{
       chordRun:base.chordRun?Object.freeze({...base.chordRun,perMinute:boost(scaleRate(base.chordRun.perMinute),I.chordRun)}):base.chordRun,
     });
   })();
+  currentProfileLevel=P.level;   // Rev.11 の発展の回の種類の後押しは HARD 以上(typeBonusRev11)
   let notes=[];
   // 分あたりの割合を、この曲の長さぶんの個数へ直す
   const playableMinutes=Math.max(.25,(gridTimeMs(maxGrid)-gridTimeMs(minGrid))/60000);
@@ -1357,7 +1420,7 @@ const buildChart=(difficulty,options={})=>{
         const ownBar=Math.floor(grid/BAR);
         const sourceBar=repeatSourceBar(ownBar);
         let lane=null;
-        if(sourceBar!=null&&sourceBar<ownBar&&!phraseDevelopForBar(ownBar)){
+        if(sourceBar!=null&&sourceBar<ownBar&&(rev11||!phraseDevelopForBar(ownBar))){
           const mirrorHere=phraseMirrorForBar(ownBar);
           if(mirrorNow==null)mirrorNow=mirrorHere;
           if(mirrorNow===mirrorHere){
@@ -1407,6 +1470,8 @@ const buildChart=(difficulty,options={})=>{
       // 4回目は元へ…と3つで一巡させる。ずっと同じ形だと、左右対称の形(トリル・縦連・ゆれ)は
       // 反転しても見た目が変わらず、同じフレーズが続く曲で7回同じ形が並んだ(実測)。
       const count=(remembered.count||1)+1;
+      // Rev.11 でも形の記憶の3回目ごとは選び直す。記憶の形を先に採ると、起点のずれた置き方になって小節単位の写しが効かなくなる
+      //   (crossing_field EXPERT で写し率が 0.432→0.324 に下がった)。発展の回で元の形を写すのは、小節単位のフレーズの写しに任せる
       const develop=count%3===0;
       const mirroredNow=!develop&&count%2===0;
       const offsetsNow=mirroredNow?mirror(remembered.offsets):remembered.offsets.slice();
@@ -1682,7 +1747,7 @@ const buildChart=(difficulty,options={})=>{
     //   実測(Rev.5・全曲): フリックが音の性格に乗っている割合は 42〜43% で、TAP全体の割合(36〜42%)とほぼ同じ
     //   ＝音を見ずに散らしていた(tools/mode/rhythm-note-type-fit.js)
     const picked=soundTypes
-      ?soundPick(candidates,flickMax,4,index=>flickScoreOf(soundTraitAt(notes[index].grid)))
+      ?soundPick(candidates,flickMax,4,index=>{const grid=notes[index].grid,base=flickScoreOf(soundTraitAt(grid));return base+typeBonusRev11('flick',grid,base);})
       :spreadPick(candidates,flickMax,4);
     for(const index of picked)notes[index].type='FLICK';
     // Rev.8: 元の小節で FLICK だった位置は写しでも FLICK、TAP だった位置は写しでも TAP
@@ -1784,7 +1849,8 @@ const buildChart=(difficulty,options={})=>{
         ?soundPick(rest,chordMax-chordCount,CHORD.spacingGrids,index=>{
           const grid=notes[index].grid,sourceGrid=phraseEchoSourceGrid(grid);
           // Rev.8: 写しの小節の候補は、元の位置と同じ点を持つ(元と写しがそろって選ばれやすくする)
-          const base=Math.max(chordScoreOf(soundTraitAt(grid)),sourceGrid==null?0:chordScoreOf(soundTraitAt(sourceGrid)));
+          const sound=Math.max(chordScoreOf(soundTraitAt(grid)),sourceGrid==null?0:chordScoreOf(soundTraitAt(sourceGrid)));
+          const base=sound+typeBonusRev11('chord',grid,sound);
           if(!knowledgeOn||!(base>0))return base;
           const boost=knowledgeBoost('chord',knowledgeContext(grid,onsetByGrid.get(grid)),knowledgeWeights);
           chordKnowledge.set(index,boost.fired);
@@ -3538,6 +3604,10 @@ if(sideFlick&&results.MASTER){
   (r.notice||(r.notice=[])).push(`横フリック: 左${side.left}本・右${side.right}本`+(rev8?`・向きなし${side.plain}本(うち、もう片方の指へ向かうので付けない${side.blocked}本)`:''));
 }
 
+if(rev11){
+  const developBars=[];for(let bar=0;bar<=Math.ceil((allOnsets[allOnsets.length-1]?.grid||0)/BAR);bar++)if(developBar(bar))developBars.push(bar);
+  console.log(`発展の回: ${developBars.length}小節${lastChorus?`（ラスサビ ${lastChorus.startBar}〜${lastChorus.endBarExclusive-1}小節・名札 ${lastChorus.label}）`:'（ラスサビは見つからない）'}`);
+}
 if(focusData)console.log(focusOn?`主役の追跡: ドラム${focusData.counts.drums}小節・歌や主旋律${focusData.counts.melody}小節・混ざり${focusData.counts.mix}小節`:`主役の追跡: 効かない（${focusData.missing}）`);
 console.log(`譜面の作り方: ${chartRevisionLabel(chartRevision)}${phraseCopy?'（フレーズの写しあり）':'（2026-09-24までの作り方）'}${slideEase?'（スライドの曲線あり）':''}${sideFlick?'（MASTERに横フリックあり）':''}`);
 for(const difficulty of targets){
@@ -3577,6 +3647,9 @@ if(write){
       chartRevision,
       // 道のレーン数(Rev.5から6)。自動修正・品質の報告・本体への書き出しがこれを見る
       laneCount:LANES,
+      // Rev.11: 発展の回にした小節とラスサビ
+      ...(rev11?{develop:{bars:(()=>{const list=[];for(let bar=0;bar<=Math.ceil((allOnsets[allOnsets.length-1]?.grid||0)/BAR);bar++)if(developBar(bar))list.push(bar);return list;})(),
+        lastChorus:lastChorus?{startBar:lastChorus.startBar,endBarExclusive:lastChorus.endBarExclusive,label:lastChorus.label}:null}}:{}),
       // Rev.9: 主役の追跡で追った層(小節ごと。d=ドラム・v=歌や主旋律・m=混ざり)
       ...(focusOn?{focus:{source:`${dashed}-v3-layers.json`,bars:[...focusData.focus.byBar.entries()].map(([bar,state])=>`${bar}:${state[0]==='d'?'d':state==='melody'?'v':'m'}`).join(' ')}}:{}),
       // Rev.7: 使った作法の重みと、効いた回数
