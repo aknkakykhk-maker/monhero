@@ -531,6 +531,16 @@ const makeWorld = ({
   const play = grab('const RhythmTapTest=', '\nconst RhythmMonsterSlotsPanel');
   check('演奏中の画面には置いていない', !play.includes('RhythmOrientationButton'));
 
+  // ---- ⑨ 回したときにも landscape: が効く ----
+  // Tailwind 3.4 は landscape: を最初から持っていて、addVariant で足した「回したとき用」は
+  // 無視されていた。静的CSSに1つも出ておらず、絵を回すと横長の器へ縦持ちの並びが入っていた
+  // (2026-09-26・ユーザー報告「縦横画面で変えたら表示がえぐい」)。作ったCSSに写しがあるかを見る
+  const tailwindCss = fs.readFileSync(path.join(root, 'monster-hero/tailwind.css'), 'utf8');
+  check('静的CSSに、回したとき用の landscape: の写しがある',
+    tailwindCss.includes('[data-mh-view-rotation=true] .landscape\\:flex-row{flex-direction:row}')
+    && (tailwindCss.match(/\[data-mh-view-rotation=true\] \.landscape\\:/g) || []).length
+      >= (tailwindCss.match(/(^|[}{,])\.landscape\\:/g) || []).length);
+
   console.log(failed === 0 ? '\nすべてOK' : `\n${failed}件のNGがあります`);
   process.exit(failed === 0 ? 0 : 1);
 })();
