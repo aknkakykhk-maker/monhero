@@ -148,6 +148,46 @@ const ThemedAttackMotion = ({kind, image, lunge=false}) => {
     </span>
   );
 };
+// ==== タクティクスのEXスキルを使った瞬間のカットイン(2026-09-26 ユーザー指示「EXスキルが演出もなくて寂しい。特別なアクションだから演出はつけてほしい」) ====
+// 画面を暗くして、斜めの帯に使った子の立ち絵と「EX SKILL / EX名」を流し、効果の種類ごとの模様と色を重ねる。
+// 使った子の距離枠にも同じ色の光(.ex-aura)を出す(71-screen-battle.jsx)。
+// 見た目だけで、押せる場所は塞がない(pointer-events:none)。バトルの進行も止めない。
+// 色と模様は効果の種類(effect)で決める。モンスターごとには分けない(EXを足しても効果が同じなら同じ演出)
+const TACTICS_EX_CUTIN_MS = 1600;
+const TACTICS_EX_CUTIN_THEME = Object.freeze({
+  coverAll:     { c1:'#ddd6fe', c2:'#7c3aed', motif:'shield' }, // みんなをかばう: 紫の盾
+  allIn:        { c1:'#fed7aa', c2:'#dc2626', motif:'flame' },  // 捨て身: 赤い炎
+  statBoost:    { c1:'#fef08a', c2:'#f59e0b', motif:'rise' },   // ガッツ全開っちー: 金の光が立ちのぼる
+  weaponChange: { c1:'#cffafe', c2:'#0891b2', motif:'blade' },  // ソード・コンバージョン: 青い斬撃
+  default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },
+});
+const tacticsExCutinTheme = (effect) => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;
+const TacticsExCutin = ({ cutin }) => {
+  if (!cutin) return null;
+  const t = tacticsExCutinTheme(cutin.effect);
+  // 盤面の入れ物(transform を持つことがある)の中だと fixed が画面いっぱいにならないので、body へ出す
+  return ReactDOM.createPortal(
+    <div key={cutin.key} data-tactics-ex-cutin={cutin.effect || 'default'} className="ex-cutin" style={{ '--ex-c1':t.c1, '--ex-c2':t.c2 }} aria-hidden="true">
+      <div className="ex-cutin__shade"/>
+      <div className="ex-cutin__rays"/>
+      <div className={`ex-cutin__motif ex-cutin__motif--${t.motif}`}>{[0,1,2,3,4,5].map(i => <i key={i} style={{ '--i':i }}/>)}</div>
+      <div className="ex-cutin__band">
+        <div className="ex-cutin__lines"/>
+        <div className="ex-cutin__art">
+          <DyedMonsterImage baseId={cutin.monId} src={cutin.imgUrl} alt="" masuColors={cutin.colors} draggable={false} className="w-full h-full object-contain"/>
+        </div>
+        <div className="ex-cutin__text">
+          <div className="ex-cutin__tag">EX SKILL</div>
+          {/* 名前は1行に収める(「みんなをか/ばう」のように途中で折り返さない)。長い名前ほど字を小さくする */}
+          <div className="ex-cutin__name" style={{ fontSize:`${Math.max(15, Math.min(30, Math.floor(165 / Math.max(1, String(cutin.exName || '').length))))}px` }}>{cutin.exName}</div>
+          <div className="ex-cutin__sub">{cutin.monName}{cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}</div>
+        </div>
+      </div>
+      <div className="ex-cutin__flash"/>
+    </div>,
+    document.body
+  );
+};
 const AttackTargetFx = ({anim, attackerId}) => {
   if (!anim || anim.charge === true || anim.twinBlade) return null;
   // 種族ごとの攻撃(ThemedAttackMotion)は、自分で敵の位置へ着弾を描く
