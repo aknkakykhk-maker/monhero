@@ -201,7 +201,7 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
                 :rhythmNoteVisualSpan(note,note.lane,yRatio,visualTime);
               const row={id:source.id,type:note.type,size,speed,progress,travelMs,bodyPx,
                 head:headRect,expectedCenter:expected.center,expectedWidth:expected.width,
-                laneLeft:rhythmProjectBoundary(0,yRatio),laneRight:rhythmProjectBoundary(5,yRatio)};
+                laneLeft:rhythmProjectBoundary(0,yRatio),laneRight:rhythmProjectBoundary(RHYTHM_LANE_COUNT,yRatio)};
 
               const bodyEl=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');
               if(bodyEl){
@@ -238,7 +238,7 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
                         const right=bodyRect.left+edgeAt(rightEdge,ratio)*bodyRect.width;
                         const yArea=Math.max(0,Math.min(1,(bodyTopY+bodyPx*ratio)/areaRect.height));
                         return {ratio,center:(left+right)/2,width:right-left,left,right,
-                          laneLeft:rhythmProjectBoundary(0,yArea),laneRight:rhythmProjectBoundary(5,yArea)};
+                          laneLeft:rhythmProjectBoundary(0,yArea),laneRight:rhythmProjectBoundary(RHYTHM_LANE_COUNT,yArea)};
                       };
                       const headSpan=rhythmNoteVisualSpan(note,note.lane,Math.max(0,Math.min(1,centerY/areaRect.height)),note.timeMs);
                       const endY=Math.max(0,Math.min(1,(releaseYpx+noteHeight/2)/areaRect.height));
@@ -261,7 +261,7 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
                       row.bandSamples.push({yArea,
                         center:(drawnLeft+drawnRight)/2,width:drawnRight-drawnLeft,
                         expectedCenter:span.center,expectedWidth:expectedHalf*2,
-                        laneLeft:rhythmProjectBoundary(0,yArea),laneRight:rhythmProjectBoundary(5,yArea)});
+                        laneLeft:rhythmProjectBoundary(0,yArea),laneRight:rhythmProjectBoundary(RHYTHM_LANE_COUNT,yArea)});
                     });
                   }
                 }
@@ -282,7 +282,7 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
                     row.bandSamples.push({yArea,laneFixed,
                       center:(drawnLeft+drawnRight)/2,width:drawnRight-drawnLeft,
                       expectedCenter:span.center,expectedWidth:span.width*RHYTHM_BODY_WIDTH_RATIO,
-                      laneLeft:rhythmProjectBoundary(0,yArea),laneRight:rhythmProjectBoundary(5,yArea)});
+                      laneLeft:rhythmProjectBoundary(0,yArea),laneRight:rhythmProjectBoundary(RHYTHM_LANE_COUNT,yArea)});
                   });
                 }
               }
@@ -296,7 +296,7 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
                   :(note.subLane!=null?rhythmNoteVisualSpan(note,note.lane,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(note.lane,endY));
                 row.endExpectedCenter=endSpan.center;
                 row.endLaneLeft=rhythmProjectBoundary(0,endY);
-                row.endLaneRight=rhythmProjectBoundary(5,endY);
+                row.endLaneRight=rhythmProjectBoundary(RHYTHM_LANE_COUNT,endY);
               }
               out.push(row);
               el.remove();
@@ -323,7 +323,7 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
         // 箱の上端・中央・下端それぞれで、その高さのレーン境界と比べる
         const margins=[topRatio,(topRatio+bottomRatio)/2,bottomRatio].map(y=>{
           const laneLeft=rhythmProjectBoundary(0,Math.max(0,Math.min(1,y)));
-          const laneRight=rhythmProjectBoundary(5,Math.max(0,Math.min(1,y)));
+          const laneRight=rhythmProjectBoundary(RHYTHM_LANE_COUNT,Math.max(0,Math.min(1,y)));
           return left<.5?laneLeft-right:left-laneRight;
         });
         return {slot:el.dataset.rhythmSideMonster,left,right,width:right-left,
@@ -381,7 +381,7 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
     });
     check('ノーツ頭の大きさはnoteSizeにそのまま比例する',scaled,scaleDetail);
     const headOut=results.filter(row=>row.head.left<row.laneLeft-.002||row.head.left+row.head.width>row.laneRight+.002);
-    check('ノーツ頭は速度12×サイズ120%でも5レーンの外へ出ない',headOut.length===0,headOut[0]?`${headOut[0].id} 速度${headOut[0].speed} サイズ${headOut[0].size}%`:'');
+    check('ノーツ頭は速度12×サイズ120%でも道の外へ出ない',headOut.length===0,headOut[0]?`${headOut[0].id} 速度${headOut[0].speed} サイズ${headOut[0].size}%`:'');
 
     // 3. HOLD帯・SLIDE帯はnoteSizeの影響を受けない(親のscaleが波及していない)
     const bodyRows=results.filter(row=>row.bodyWidthRatio!=null);
@@ -397,17 +397,17 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
     const taperTopOff=worst(taperRows,row=>Math.abs(row.taper.top.width-row.taper.topExpectedWidth));
     check('帯の上端(終端の時刻)の幅が終端の幅と一致',taperTopOff<=.006,`最大ズレ ${(taperTopOff*390).toFixed(2)}px`);
     const grew=results.filter(row=>row.taper&&row.id==='HOLD 幅2→全幅10');
-    // 「太い / 細い」は画面上のpxではなく**5レーン全体に対する割合**で見る。
+    // 「太い / 細い」は画面上のpxではなく**道全体に対する割合**で見る。
     // 奥(画面の上)ほどprojectionで全体が細く描かれるため、pxのまま比べると
     // 高速で帯が奥まで伸びたときに「広がっているのに数字は縮む」ことになる。
     const fieldRatio=sample=>sample.width/(sample.laneRight-sample.laneLeft);
     const grewBad=grew.filter(row=>!(fieldRatio(row.taper.top)>fieldRatio(row.taper.bottom)*1.5));
-    check('広がるHOLDは終端へ向かうほど帯が太い(5レーンに対する割合で比較)',grew.length>0&&grewBad.length===0,
+    check('広がるHOLDは終端へ向かうほど帯が太い(道全体に対する割合で比較)',grew.length>0&&grewBad.length===0,
       grewBad[0]?`NG例 ${grewBad[0].id} 速度${grewBad[0].speed} 進み${grewBad[0].progress}: 始点${fieldRatio(grewBad[0].taper.bottom).toFixed(2)} → 終端${fieldRatio(grewBad[0].taper.top).toFixed(2)}割`
         :`始点${fieldRatio(grew[0].taper.bottom).toFixed(2)} → 終端${fieldRatio(grew[0].taper.top).toFixed(2)}割`);
     const shrank=results.filter(row=>row.taper&&row.id==='HOLD 幅8→幅2');
     const shrankBad=shrank.filter(row=>!(fieldRatio(row.taper.top)<fieldRatio(row.taper.bottom)*.75));
-    check('細くなるHOLDは終端へ向かうほど帯が細い(5レーンに対する割合で比較)',shrank.length>0&&shrankBad.length===0,
+    check('細くなるHOLDは終端へ向かうほど帯が細い(道全体に対する割合で比較)',shrank.length>0&&shrankBad.length===0,
       shrankBad[0]?`NG例 速度${shrankBad[0].speed} 進み${shrankBad[0].progress}`
         :`始点${fieldRatio(shrank[0].taper.bottom).toFixed(2)} → 終端${fieldRatio(shrank[0].taper.top).toFixed(2)}割`);
     const bump=results.filter(row=>row.taper&&row.id==='HOLD 幅2→8→2 長尺');
@@ -420,7 +420,7 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
       bumpBad[0]?`NG例 速度${bumpBad[0].speed} 進み${bumpBad[0].progress}: ${bumpBad[0].taper.samples.map(sample=>fieldRatio(sample).toFixed(2)).join(' / ')}割`
         :`${bump[0].taper.samples.map(sample=>fieldRatio(sample).toFixed(2)).join(' / ')}割`);
     const taperOut=taperRows.filter(row=>row.taper.samples.some(sample=>sample.left<sample.laneLeft-.01||sample.right>sample.laneRight+.01));
-    check('幅が変わるHOLDでも帯が5レーンの外へ出ない',taperOut.length===0,taperOut[0]?`${taperOut[0].id} 速度${taperOut[0].speed}`:'');
+    check('幅が変わるHOLDでも帯が道の外へ出ない',taperOut.length===0,taperOut[0]?`${taperOut[0].id} 速度${taperOut[0].speed}`:'');
 
     // 4. HOLD帯が「画面内のどの高さでも」その高さのレーンgeometryに乗る
     //    上端・下端の2点だけを見ると、間を直線で結んだときの歪みを見逃す。

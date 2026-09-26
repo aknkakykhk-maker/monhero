@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e744771fe2108cff
+// source-sha256: 9092ac3f9aef9f16
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 11:53";
+const BUILD_DATE = "2026-09-26 12:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4775,10 +4775,10 @@ const RHYTHM_ASSIST_SCORE_RATE = 0.8;
 const RHYTHM_ASSIST_GUARD_MAX = 3;
 const RHYTHM_ASSIST_GUARD_RECHARGE = 20,
   RHYTHM_ASSIST_GUARD_RECHARGE_STRUGGLING = 8;
-const RHYTHM_MIRROR_SUB_LANES = RHYTHM_SUB_LANE_COUNT;
-const RHYTHM_MIRROR_LAST_LANE = RHYTHM_LANE_COUNT - 1;
 const rhythmMirrorNote = note => {
   if (!note || typeof note !== 'object') return note;
+  const RHYTHM_MIRROR_SUB_LANES = RHYTHM_SUB_LANE_COUNT,
+    RHYTHM_MIRROR_LAST_LANE = RHYTHM_LANE_COUNT - 1;
   const next = {
     ...note
   };
@@ -28751,7 +28751,7 @@ function RhythmInfoScreen({
     className: "text-center text-xl font-black text-cyan-200"
   }, "モンヒロビートは準備中です"), React.createElement("p", {
     className: "mt-3 text-[11px] leading-relaxed text-slate-300"
-  }, "曲に合わせて、5つのレーンを流れてくるノーツを演奏する音ゲーのモードです。"), React.createElement("p", {
+  }, "曲に合わせて、6つのレーンを流れてくるノーツを演奏する音ゲーのモードです。"), React.createElement("p", {
     className: "mt-2 text-[11px] leading-relaxed text-slate-300"
   }, "設定したマスモンが曲の途中で「モンスターノーツ」になって流れてきて、取ると血統ごとの力が働く予定です。"), React.createElement("div", {
     className: "mt-4 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3"

@@ -26,7 +26,7 @@ function RhythmInfoScreen({
           <div className="my-6 text-center text-6xl">🎵</div>
           <h3 className="text-center text-xl font-black text-cyan-200">モンヒロビートは準備中です</h3>
           <p className="mt-3 text-[11px] leading-relaxed text-slate-300">
-            曲に合わせて、5つのレーンを流れてくるノーツを演奏する音ゲーのモードです。
+            曲に合わせて、6つのレーンを流れてくるノーツを演奏する音ゲーのモードです。
           </p>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-300">
             設定したマスモンが曲の途中で「モンスターノーツ」になって流れてきて、取ると血統ごとの力が働く予定です。

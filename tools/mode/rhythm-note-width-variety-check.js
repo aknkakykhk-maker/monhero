@@ -22,24 +22,26 @@ const close=(a,b,tolerance=1e-9)=>Math.abs(Number(a)-Number(b))<=tolerance;
 const ctx={};vm.createContext(ctx);vm.runInContext(source,ctx);
 const run=code=>vm.runInContext(code,ctx);
 
+// 道のサブレーン数(2026-09-26 に10から12へ)。本体の決めごとはこの数から見る
+const S=run('RHYTHM_SUB_LANE_COUNT'),WIDTHS=Array.from({length:S},(_,i)=>i+1);
 // --- 幅の上限 ---
-check('幅の上限は全幅(10サブレーン=5レーン)',run('RHYTHM_MAX_SUB_LANE_WIDTH')===10);
-for(const width of [1,2,3,4,5,6,7,8,9,10]){
+check('幅の上限は全幅(道のサブレーンすべて)',run('RHYTHM_MAX_SUB_LANE_WIDTH')===S);
+for(const width of WIDTHS){
   const span=run(`rhythmProjectSubLaneSpan(0,${width},1)`);
   check(`TAP/HOLD/FLICKは幅${width}をそのまま出せる`,span.subLaneWidth===width);
 }
 check('全幅ノーツはレーンの端から端までを占める',(()=>{
-  const span=run('rhythmProjectSubLaneSpan(0,10,1)');
+  const span=run(`rhythmProjectSubLaneSpan(0,${S},1)`);
   return close(span.left,0)&&close(span.right,1)&&close(span.center,.5);
 })());
 check('幅が右端をはみ出すときは左へ寄せて収める',(()=>{
-  const span=run('rhythmProjectSubLaneSpan(6,8,1)');
-  return span.subLane===2&&span.subLaneWidth===8;
+  const span=run(`rhythmProjectSubLaneSpan(${S-4},8,1)`);
+  return span.subLane===S-8&&span.subLaneWidth===8;
 })());
-check('SLIDEも幅1〜10を受け付ける',[1,2,3,4,5,6,7,8,9,10].every(width=>
+check('SLIDEも幅1〜全幅を受け付ける',WIDTHS.every(width=>
   run(`rhythmSlideWidth({type:'SLIDE',subLaneWidth:${width}})`)===width));
-check('幅として書けない値(0・11・小数)はこれまでどおり幅2へ戻す',
-  [0,11,2.5,'abc',null].every(value=>run(`rhythmSlideWidth({type:'SLIDE',subLaneWidth:${JSON.stringify(value)}})`)===2));
+check('幅として書けない値(0・全幅+1・小数)はこれまでどおり幅2へ戻す',
+  [0,S+1,2.5,'abc',null].every(value=>run(`rhythmSlideWidth({type:'SLIDE',subLaneWidth:${JSON.stringify(value)}})`)===2));
 check('譜面エディタの不正配置チェックも幅1〜10を通す',
   /const validWidth=value=>integer\(value\)&&Number\(value\)>=1&&Number\(value\)<=10;/.test(editor)
   &&editor.includes('幅は1〜10の整数が必要です')&&!editor.includes('幅は1〜4の整数'));
@@ -80,7 +82,7 @@ check('点に幅を書かなければノーツ本体の幅を使う',(()=>{
 })());
 check('見た目の幅(rhythmNoteVisualSpan)もその時刻の幅になる',(()=>{
   const head=run(`rhythmNoteVisualSpan(${widening},2,1,1000)`),tail=run(`rhythmNoteVisualSpan(${widening},2,1,5000)`);
-  return close(head.width,.2)&&close(tail.width,1);
+  return close(head.width,2/S)&&close(tail.width,10/S);
 })());
 check('途中追従の的も、その時刻の幅になる(細くなる帯を見逃さない)',(()=>{
   const head=run(`rhythmHoldTrackedLane(${widening},1000)`),tail=run(`rhythmHoldTrackedLane(${widening},5000)`);
@@ -130,7 +132,12 @@ const songs=run('RHYTHM_SONGS');
 const song=songs.find(entry=>entry.songId==='wide_width_test');
 check('デバッグ曲「WIDE / TAPER TEST」がある',!!song&&song.displayName==='WIDE / TAPER TEST');
 if(song){
-  const easy=song.difficulties.EASY.notes,hard=song.difficulties.HARD.notes,expert=song.difficulties.EXPERT.notes;
+  // 確認用の譜面は5レーン(サブレーン10)で書いたまま。曲一覧には道の真ん中へ寄せたものが入るので、
+  // 入っていることは寄せたものと同じかで見て、中身は書いたままの譜面で見る(2026-09-26 に6レーンへ)
+  const raw=run('({easy:wideWidthTestChart,hard:wideHoldTaperTestChart,expert:wideSlideTestChart})');
+  check('確認用の譜面が道の真ん中へ寄せて入っている',song.difficulties.EASY.notes===run('rhythmChartOnRoad(wideWidthTestChart).notes')
+    &&song.difficulties.HARD.notes===run('rhythmChartOnRoad(wideHoldTaperTestChart).notes')&&song.difficulties.EXPERT.notes===run('rhythmChartOnRoad(wideSlideTestChart).notes'));
+  const easy=raw.easy.notes,hard=raw.hard.notes,expert=raw.expert.notes;
   check('EASYに全幅(10)のノーツがある',easy.some(note=>note.subLaneWidth===10),`最大幅${Math.max(...easy.map(note=>note.subLaneWidth))}`);
   check('EASYは幅2から全幅まで段階を並べている',[2,4,6,8,10].every(width=>easy.some(note=>note.subLaneWidth===width)));
   check('HARDに「広がるHOLD」と「細くなるHOLD」の両方がある',(()=>{

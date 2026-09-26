@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 44c108c1fbd74c72
+// generated-sha256: 30c8b7808ba3757e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 11:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 12:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4093,13 +4093,13 @@ const RHYTHM_ASSIST_SCORE_RATE = 0.8;
 const RHYTHM_ASSIST_GUARD_MAX = 3;
 // ガードが1つたまるまでに要る「コンボをつないだ判定」の数。最近ガードを使った(崩れている)ほど少なくて済む
 const RHYTHM_ASSIST_GUARD_RECHARGE = 20, RHYTHM_ASSIST_GUARD_RECHARGE_STRUGGLING = 8;
-// 道のサブレーン数と右はしのレーン番号(2026-09-26 に6レーン=12サブレーンへ)。道の数え方は rhythm-mode.js が正本
-const RHYTHM_MIRROR_SUB_LANES = RHYTHM_SUB_LANE_COUNT;
-const RHYTHM_MIRROR_LAST_LANE = RHYTHM_LANE_COUNT-1;
 // 左右反対の譜面を作る。位置は「左はしの半レーン+幅」(TAP・HOLD・FLICK)と「レーンの中心」(SLIDE)の2通り。
 // ★元の譜面は書き換えない(新しいオブジェクトを返す)。レベル・ノーツ数・長さはそのまま
 const rhythmMirrorNote = note => {
   if(!note||typeof note!=='object')return note;
+  // 道のサブレーン数と右はしのレーン番号(2026-09-26 に6レーン=12サブレーンへ)。道の数え方は rhythm-mode.js が正本。
+  // ★ここ(呼ばれたとき)で読む。設定の検査は、このファイルの設定まわりだけを切り出して動かすため
+  const RHYTHM_MIRROR_SUB_LANES=RHYTHM_SUB_LANE_COUNT,RHYTHM_MIRROR_LAST_LANE=RHYTHM_LANE_COUNT-1;
   const next={...note};
   const width=Number(note.subLaneWidth);
   const w=Number.isFinite(width)&&width>0?width:2;
@@ -20019,7 +20019,7 @@ function RhythmInfoScreen({
           <div className="my-6 text-center text-6xl">🎵</div>
           <h3 className="text-center text-xl font-black text-cyan-200">モンヒロビートは準備中です</h3>
           <p className="mt-3 text-[11px] leading-relaxed text-slate-300">
-            曲に合わせて、5つのレーンを流れてくるノーツを演奏する音ゲーのモードです。
+            曲に合わせて、6つのレーンを流れてくるノーツを演奏する音ゲーのモードです。
           </p>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-300">
             設定したマスモンが曲の途中で「モンスターノーツ」になって流れてきて、取ると血統ごとの力が働く予定です。
