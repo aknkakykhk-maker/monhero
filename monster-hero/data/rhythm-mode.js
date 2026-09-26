@@ -985,7 +985,7 @@ const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   const margin=laneWidth/2*RHYTHM_INPUT_EDGE_MARGIN_SUB_LANES;
   if(nx<left-margin||nx>right+margin)return null;
   // 台形の外は端のレーンの延長として、そのまま外側の座標を返す。
-  // 受け取る側は subLane を 0〜9 へ丸める(setPressedLanes / inputStarts)ので、
+  // 受け取る側は subLane を 0〜(サブレーン数-1) へ丸める(setPressedLanes / inputStarts)ので、
   // 少しはみ出した値がそのまま使われることはない。
   return (nx-left)/laneWidth-.5;
 };
