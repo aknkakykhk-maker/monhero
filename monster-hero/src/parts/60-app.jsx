@@ -8832,9 +8832,8 @@ function MonsterHeroGame() {
       proClear:{key:'proClears',daily:true,weekly:true,monthly:true},
       extremeClear:{key:'extremeClears',daily:false,weekly:true},
       itemUse:{key:'itemUses',daily:true,weekly:true},
-      // 種族チャレンジのクリアと、モンヒロビートで最後まで演奏した曲の数(2026-09-26)
+      // 種族チャレンジのクリア(2026-09-26)
       speciesClear:{key:'speciesClears',daily:true,weekly:true,monthly:true},
-      rhythmPlay:{key:'rhythmPlays',daily:true,weekly:true,monthly:true},
     }[event];
     if(!rule)return;
     const next=normalizeMissions(missionsRef.current);
@@ -14997,9 +14996,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 最後まで演奏したこの場でだけ行う。途中でやめたときは onComplete を通らないので何も入らない
           // (1秒だけ演奏してやめる、で稼げないようにするため)。
           // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
-          // ミッションの「モンヒロビートで演奏する」。曲えらびから遊んで最後まで演奏した曲だけ数える
-          // (練習・タイミング調整・デバッグからの演奏は数えない)
-          if(rhythmPlay.from==='demo')await saveMissionProgress('rhythmPlay');
           if(rhythmPlay.from!=='tutorial'){
             const baseLoops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
             const loopScale=rhythmPlayRunLoopScaleFor(rhythmPlay.song);
