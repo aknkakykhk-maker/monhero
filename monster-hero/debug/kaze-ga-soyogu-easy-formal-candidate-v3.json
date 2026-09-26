@@ -4,7 +4,7 @@
  "trackId": "kaze_ga_soyogu",
  "difficulty": "EASY",
  "candidateVersion": 3,
- "chartRevision": 5,
+ "chartRevision": 6,
  "laneCount": 6,
  "status": "V3_PIPELINE_CANDIDATE",
  "reviewRequired": true,
@@ -808,12 +808,23 @@
   {
    "type": "TAP",
    "grid": 36,
-   "lane": 3,
-   "subLane": 6,
-   "subLaneWidth": 6,
+   "lane": 4,
+   "subLane": 9,
+   "subLaneWidth": 3,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -15.39,
    "sourceCharacter": "FULL"
+  },
+  {
+   "type": "TAP",
+   "grid": 36,
+   "lane": 0,
+   "subLane": 0,
+   "subLaneWidth": 3,
+   "sourceStrength": 1,
+   "sourcePeakOffsetMs": -15.39,
+   "sourceCharacter": "FULL",
+   "chord": true
   },
   {
    "type": "TAP",
@@ -848,23 +859,12 @@
   {
    "type": "TAP",
    "grid": 80,
-   "lane": 4,
-   "subLane": 9,
-   "subLaneWidth": 3,
+   "lane": 3,
+   "subLane": 7,
+   "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 24.8,
    "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 80,
-   "lane": 0,
-   "subLane": 0,
-   "subLaneWidth": 3,
-   "sourceStrength": 1,
-   "sourcePeakOffsetMs": 24.8,
-   "sourceCharacter": "PUNCH",
-   "chord": true
   },
   {
    "type": "TAP",
@@ -1040,12 +1040,23 @@
   {
    "type": "TAP",
    "grid": 292,
-   "lane": 3,
-   "subLane": 6,
-   "subLaneWidth": 6,
+   "lane": 4,
+   "subLane": 9,
+   "subLaneWidth": 3,
    "sourceStrength": 0.89,
    "sourcePeakOffsetMs": -12.83,
    "sourceCharacter": "FULL"
+  },
+  {
+   "type": "TAP",
+   "grid": 292,
+   "lane": 0,
+   "subLane": 0,
+   "subLaneWidth": 3,
+   "sourceStrength": 0.89,
+   "sourcePeakOffsetMs": -12.83,
+   "sourceCharacter": "FULL",
+   "chord": true
   },
   {
    "type": "TAP",
@@ -1202,12 +1213,23 @@
   {
    "type": "TAP",
    "grid": 412,
-   "lane": 2,
-   "subLane": 4,
-   "subLaneWidth": 6,
+   "lane": 0,
+   "subLane": 0,
+   "subLaneWidth": 3,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -10.13,
    "sourceCharacter": "FULL"
+  },
+  {
+   "type": "TAP",
+   "grid": 412,
+   "lane": 4,
+   "subLane": 9,
+   "subLaneWidth": 3,
+   "sourceStrength": 1,
+   "sourcePeakOffsetMs": -10.13,
+   "sourceCharacter": "FULL",
+   "chord": true
   },
   {
    "type": "TAP",
@@ -1344,21 +1366,10 @@
    "grid": 512,
    "lane": 0,
    "subLane": 0,
-   "subLaneWidth": 3,
+   "subLaneWidth": 4,
    "sourceStrength": 0.95,
    "sourcePeakOffsetMs": 12.12,
    "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 512,
-   "lane": 4,
-   "subLane": 9,
-   "subLaneWidth": 3,
-   "sourceStrength": 0.95,
-   "sourcePeakOffsetMs": 12.12,
-   "sourceCharacter": "PUNCH",
-   "chord": true
   },
   {
    "type": "TAP",
@@ -1536,22 +1547,11 @@
    "type": "TAP",
    "grid": 680,
    "lane": 4,
-   "subLane": 9,
-   "subLaneWidth": 3,
+   "subLane": 8,
+   "subLaneWidth": 4,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": 6.3,
    "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 680,
-   "lane": 0,
-   "subLane": 0,
-   "subLaneWidth": 3,
-   "sourceStrength": 1,
-   "sourcePeakOffsetMs": 6.3,
-   "sourceCharacter": "PUNCH",
-   "chord": true
   },
   {
    "type": "HOLD",
@@ -1653,16 +1653,16 @@
    "strained": 0,
    "reach": 0,
    "hardJumps": 0,
-   "spread": 26,
-   "cost": 26
+   "spread": 25,
+   "cost": 25
   },
   "after": {
    "impossible": 0,
    "strained": 0,
    "reach": 0,
    "hardJumps": 0,
-   "spread": 26,
-   "cost": 26
+   "spread": 25,
+   "cost": 25
   },
   "weights": {
    "impossible": 10000,

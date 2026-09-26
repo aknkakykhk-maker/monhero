@@ -27,6 +27,7 @@ const {HAND_MODEL,fingerPairFeasible,noteTouchLane,noteTouchSpan,usableTouchSpan
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {setLaneCount:setPatternLaneCount,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
 const {soundTraitsFor,flickScoreOf,chordScoreOf}=require('./rhythm-sound-traits.js');
+const {weightsForRevision,knowledgeBoost,knowledgeShapePrefer}=require('./rhythm-chart-knowledge.js');
 const {chartRevisionOf,laneCountForRevision}=require('./rhythm-chart-v3-revision.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
@@ -430,6 +431,13 @@ const sideFlick=chartRevision>=4;
 const soundTypes=chartRevision>=6;
 const traitsByGrid=soundTypes?soundTraitsFor(audio):null;
 const soundTraitAt=grid=>traitsByGrid?traitsByGrid.get(grid)||null:null;
+// 版7: 音ゲーの作法(rhythm-chart-knowledge.js)。曲にその音の裏づけがあるときだけ、選ばれやすさを少し足す。
+// 重みは版ごとに chart-knowledge-weights.json から読む(遊んだ感想から学び直すと新しい版になる)
+const knowledgeOn=chartRevision>=7;
+const knowledgeWeights=knowledgeOn?weightsForRevision(chartRevision):null;
+// 作法の後押しの大きさ(段ごとの点数の目盛りに合わせる)。
+//   拾う音の優先度は 0.3〜3 ほど、同時押し・フリックの音の性格の点は 0〜2.5 ほど、区切りの一発は強さ 0〜1
+const KNOWLEDGE_SCALE=Object.freeze({pick:.35,chord:.8,accent:.6});
 // 版5: 6レーンの道。版4までは5レーン(サブレーン10本)のまま作る。
 // ★レーン数の数字(5・4・10)を直接書かない。LANES(レーン数)・LANES-1(右はしのレーン)・SUB_LANES(サブレーン数)を使う
 const LANES=laneCountForRevision(chartRevision);
@@ -568,6 +576,25 @@ const phraseOccurrence=bar=>{
 const phraseDevelopForBar=bar=>{const count=phraseOccurrence(bar)+1;return count>1&&count%3===0;};
 const phraseMirrorForBar=bar=>phraseOccurrence(bar)%2===1;
 const musicalOnsetsInBar=bar=>allOnsets.filter(o=>o.grid>=bar*BAR&&o.grid<(bar+1)*BAR).length;
+// 版7の作法に渡す「その場の様子」。区切りの前後・盛り上がり・その小節の打点の多さ(区切りの平均との比)
+const sortedSections=(Array.isArray(structure.sections)?structure.sections:[]).slice().sort((a,b)=>a.startBar-b.startBar);
+const sectionDensity=new Map(sortedSections.map(section=>{
+  let total=0,count=0;
+  for(let bar=section.startBar;bar<section.endBarExclusive;bar++){total+=musicalOnsetsInBar(bar);count++;}
+  return [section,count?total/count:0];
+}));
+const knowledgeContext=(grid,onset,extra={})=>{
+  const bar=Math.floor(grid/BAR);
+  const section=sectionForBar(bar);
+  const index=section?sortedSections.indexOf(section):-1;
+  const mean=section?sectionDensity.get(section):0;
+  return {traits:soundTraitAt(grid),bar,grid,BAR,BEAT,section,
+    previousSection:index>0?sortedSections[index-1]:null,
+    nextSection:index>=0&&index<sortedSections.length-1?sortedSections[index+1]:null,
+    sectionIntensity:section?Number(section.intensity):NaN,
+    barDensityRatio:mean>0?musicalOnsetsInBar(bar)/mean:0,
+    isLastNote:false,onset:onset||null,...extra};
+};
 
 // --- 区切りの役割(場面) ---
 // 構造解析は「サビ」「Aメロ」の名前を付けない(外すと譜面まで外れるため)。ここでも名前は付けず、
@@ -783,6 +810,17 @@ const buildChart=(difficulty,options={})=>{
   const picked=[];
   // 小節ごとに「小節の中のどの位置を取ったか」。繰り返しの小節がリズムをそろえるのに使う
   const takenOffsetsByBar=new Map();
+  // 版7: 拾う音の優先度に作法の後押しを足す(静かな区切りは歌、盛り上がる区切りは打楽器を先に)。
+  //   効いた作法はグリッドごとに覚え、あとでそのノーツへ印(knowledge)を付ける
+  const knowledgeMarks=new Map();
+  const markKnowledge=(grid,ids)=>{if(!ids.length)return;const set=knowledgeMarks.get(grid)||new Set();for(const id of ids)set.add(id);knowledgeMarks.set(grid,set);};
+  const pickBoostCache=new Map();
+  const pickPriority=onset=>{
+    const base=priorityByGrid.get(onset.grid);
+    if(!knowledgeOn)return base;
+    if(!pickBoostCache.has(onset.grid))pickBoostCache.set(onset.grid,knowledgeBoost('pick',knowledgeContext(onset.grid,onset),knowledgeWeights));
+    return base+pickBoostCache.get(onset.grid).total*KNOWLEDGE_SCALE.pick;
+  };
   const phraseRhythmCount={bars:0,same:0,source:0};
   let carry=0;
   for(let bar=minBar;bar<=maxBar;bar++){
@@ -808,7 +846,7 @@ const buildChart=(difficulty,options={})=>{
     if(limit<=0){takenOffsetsByBar.set(bar,new Set());continue;}
     const tier=onset=>sourceOffsets&&!(sourceOffsets.has(onset.grid-bar*BAR)||onset.character==='FULL')?1:0;
     const inBar=pool.filter(onset=>onset.grid>=bar*BAR&&onset.grid<(bar+1)*BAR)
-      .sort((a,b)=>tier(a)-tier(b)||priorityByGrid.get(b.grid)-priorityByGrid.get(a.grid)||a.grid-b.grid);
+      .sort((a,b)=>tier(a)-tier(b)||pickPriority(b)-pickPriority(a)||a.grid-b.grid);
     const taken=[];
     for(const onset of inBar){
       if(taken.length>=limit)break;
@@ -817,6 +855,7 @@ const buildChart=(difficulty,options={})=>{
       taken.push(onset);
     }
     takenOffsetsByBar.set(bar,new Set(taken.map(onset=>onset.grid-bar*BAR)));
+    if(knowledgeOn)for(const onset of taken){const boost=pickBoostCache.get(onset.grid);if(boost)markKnowledge(onset.grid,boost.fired);}
     if(sourceOffsets){
       phraseRhythmCount.bars++;
       phraseRhythmCount.source+=sourceOffsets.size;
@@ -1161,6 +1200,16 @@ const buildChart=(difficulty,options={})=>{
     const remembered=(memoryKey?shapeMemory.get(memoryKey):null)||(length>=3?motifMemory.get(motifKey):null)||null;
     const chunkIndex=runs.indexOf(runGroup);
     const role=sectionRoleForBar(bar);
+    // 版7: 作法の形の好み(盛り上がる前の溜めは流れる階段へ)。音の裏づけがあるかたまりにだけ足す
+    let shapePreferIds=SECTION_SHAPE_PREFERENCE[role]||{},chunkKnowledge=[];
+    if(knowledgeOn){
+      const preferred=knowledgeShapePrefer(knowledgeContext(grids[0],onsetByGrid.get(grids[0])),knowledgeWeights);
+      if(preferred.fired.length){
+        shapePreferIds={...shapePreferIds};
+        for(const [id,value] of Object.entries(preferred.ids))shapePreferIds[id]=(shapePreferIds[id]||0)+value;
+        chunkKnowledge=preferred.fired;
+      }
+    }
 
     // --- 形の候補を作る ---
     // 覚えている形(同じフレーズ)があればそれを先頭に、続けて音に合う順(＋文法の点数)の候補を並べる。
@@ -1250,7 +1299,7 @@ const buildChart=(difficulty,options={})=>{
         rhythmShape,rotate:chunkIndex,recent:recentShapes.slice(-COMMON.shapeAvoidRecent)});
       // 音との合いかたが同じくらいの候補の中で、つなぎ・使用回数・場面・決定的な散らしで選ぶ(譜面文法)
       const ranked=rankShapes(candidates,{usage:shapeUsage,previousOffsets:lastOffsets,
-        prefer:{ids:SECTION_SHAPE_PREFERENCE[role]||{},turn:driftCount>=variantStyle.driftTurnAfter},
+        prefer:{ids:shapePreferIds,turn:driftCount>=variantStyle.driftTurnAfter},
         seed:`${trackId}:${difficulty}:${chunkIndex}${variantSeed}`,maxStep});
       for(const chosen of ranked.slice(0,6))attempts.push({offsets:chosen.offsets.slice(),patternId:chosen.pattern.id,mirrored:false,fromMemory:false});
       if(!attempts.length)attempts.push({offsets:Array.from({length},()=>0),patternId:null,mirrored:false,fromMemory:false});
@@ -1412,7 +1461,7 @@ const buildChart=(difficulty,options={})=>{
     const entry={fromGrid:grids[0],toGrid:grids[length-1],length,pattern:patternId,mirrored,
       lanes:best.lanes?best.lanes.slice():null,
       heights:heights.map(h=>h==null?null:Math.round(h*100)/100),
-      motifKey,motifSource,role,...(phraseCopyOf!=null?{phraseCopyOf}:{})};
+      motifKey,motifSource,role,...(phraseCopyOf!=null?{phraseCopyOf}:{}),...(chunkKnowledge.length?{knowledge:chunkKnowledge}:{})};
     // 元の1つのかたまりを、繰り返し側では2つに割って写すことがある(かたまりの切れ目は元とずれうる)。
     // 見た目は元の1つの形なので、記録も1つにまとめる(同じ形が2回続いたように数えない)
     const previousEntry=log[log.length-1];
@@ -1430,6 +1479,7 @@ const buildChart=(difficulty,options={})=>{
       previousEntryGrids=grids.slice();
     }
     for(const grid of grids)shapeByGrid.set(grid,{patternId,mirrored,fromGrid:grids[0]});
+    if(chunkKnowledge.length)for(const grid of grids)markKnowledge(grid,chunkKnowledge);
   }
 
   notes.sort((a,b)=>a.grid-b.grid);
@@ -1443,7 +1493,19 @@ const buildChart=(difficulty,options={})=>{
       .filter(({note})=>note.type==='TAP'&&note.sourceCharacter==='FULL'
         &&!notes.some(other=>other!==note&&other.grid===note.grid))
       .sort((a,b)=>b.note.sourceStrength-a.note.sourceStrength);
-    const chosen=spreadPick(candidates.map(c=>c.index),accentMax,8);
+    // 版7: 強さを見ずに曲全体へ均等に散らすのをやめ、強い一発から取る。作法(区切りの頭・曲の締め)に
+    //   音の裏づけがあれば少し足す
+    const lastGrid=notes.reduce((max,note)=>Math.max(max,note.grid),-Infinity);
+    const accentBoost=new Map();
+    const chosen=knowledgeOn
+      ?soundPick(candidates.map(c=>c.index),accentMax,8,index=>{
+        const note=notes[index];
+        const boost=knowledgeBoost('accent',knowledgeContext(note.grid,onsetByGrid.get(note.grid),{isLastNote:note.grid===lastGrid}),knowledgeWeights);
+        accentBoost.set(index,boost.fired);
+        return (Number(note.sourceStrength)||0)+boost.total*KNOWLEDGE_SCALE.accent;
+      })
+      :spreadPick(candidates.map(c=>c.index),accentMax,8);
+    if(knowledgeOn)for(const index of chosen)markKnowledge(notes[index].grid,accentBoost.get(index)||[]);
     for(const index of chosen){
       const note=notes[index];
       const width=Math.max(1,Math.min(SUB_LANES,P.accentWidth>=10?SUB_LANES:P.accentWidth));
@@ -1540,6 +1602,9 @@ const buildChart=(difficulty,options={})=>{
         &&(gridCount.get(note.grid)||0)===1
         &&nearestOther(note)>=CHORD.clearGrids
         &&nearestOther(note)>=restrikeGrids
+        // 版6: EASY・NORMAL(左端と右端の同時押し)は前後を1拍空ける所だけ。大きな一発は前後が詰まりやすく、
+        //   8分あとに続くノーツを自動修正が動かすと、端から2.5レーン跳ぶ形が残った(Monster Hero NORMAL)
+        &&(!soundTypes||!CHORD.edge||nearestOther(note)>=BEAT)
         &&!sustainSpans.some(span=>span.startGrid<note.grid&&note.grid<=span.endGrid))
       .map(entry=>entry.index);
     // 選んだ場所が「置いてみたら条件に合わなかった」ときは、そのぶんを取り戻す。
@@ -1552,6 +1617,7 @@ const buildChart=(difficulty,options={})=>{
     const intense=candidates.filter(index=>intensityPosition(Math.floor(notes[index].grid/BAR))>=.4);
     const preferred=intense.length>=chordMax*1.5?new Set(intense):null;
     const tried=new Set();
+    const chordKnowledge=new Map();
     const nextBatch=()=>{
       const rest=candidates.filter(index=>!tried.has(index)&&(!preferred||preferred.has(index)||tried.size>=intense.length));
       if(!rest.length)return [];
@@ -1559,11 +1625,21 @@ const buildChart=(difficulty,options={})=>{
       //   版5までは「前後が空いている」所を選ぶので、かえって弱い音に乗っていた
       //   (実測: EASY〜HARDの同時押しのうちシンバル・大きな一発に乗っていたのは 0〜1%)。
       //   幅の上限(4)も外す。大きな一発はいちばん太く置かれるので、上限があると最初から候補に入らなかった
-      const picked=soundTypes
-        ?soundPick(rest,chordMax-chordCount,CHORD.spacingGrids,index=>chordScoreOf(soundTraitAt(notes[index].grid)))
+      let picked=soundTypes
+        ?soundPick(rest,chordMax-chordCount,CHORD.spacingGrids,index=>{
+          const grid=notes[index].grid,base=chordScoreOf(soundTraitAt(grid));
+          if(!knowledgeOn||!(base>0))return base;
+          const boost=knowledgeBoost('chord',knowledgeContext(grid,onsetByGrid.get(grid)),knowledgeWeights);
+          chordKnowledge.set(index,boost.fired);
+          return base+boost.total*KNOWLEDGE_SCALE.chord;
+        })
         :spreadPick(rest,chordMax-chordCount,CHORD.spacingGrids);
+      // ふさわしい音を使い切っても狙いの数に届かないときだけ、残りを今までの置き方で補う。
+      //   同時押しは2本目のぶんノーツが増えるので、数が減ると難しさの段そのものが下がる
+      //   (実測: 補わないと FREEDOM DiVE↓ MASTER が Lv.49 → 38・ノーツ 815 → 750 になった。
+      //    ユーザーが「ダントツで難しく」と決めた曲)。ふさわしい音が先なのは変わらない
+      if(soundTypes&&!picked.length)picked=spreadPick(rest,chordMax-chordCount,CHORD.spacingGrids);
       for(const index of picked)tried.add(index);
-      if(soundTypes&&!picked.length)for(const index of rest)tried.add(index);
       return picked;
     };
     const queue=[];
@@ -1613,6 +1689,7 @@ const buildChart=(difficulty,options={})=>{
       note.subLane=plan.base;note.subLaneWidth=baseWidth;note.lane=Math.floor(plan.base/2);
       notes.push(partner);
       chordCount++;
+      if(knowledgeOn)markKnowledge(note.grid,chordKnowledge.get(index)||[]);
     }
     }
     notice.push(`同時押し ${chordCount}組（狙い${chordMax}組・置ける場所${candidates.length}箇所）`);
@@ -2780,7 +2857,20 @@ const buildChart=(difficulty,options={})=>{
     notice.push(`フレーズの写し: 繰り返しの${phraseRhythmCount.bars}小節で元と同じ位置の音 ${phraseRhythmCount.same}/${phraseRhythmCount.source}`
       +` / 同じレーンへ写したかたまり ${phraseCopyCount.placed}/${phraseCopyCount.tried}（${phraseCopyCount.notes}ノーツ）`);
   }
-  return {notes,log,notice,profile:P,runs:runs.length,chordCount,chordRunCount,sweepCount,crossCount,monsterSlotGrids,
+  // 版7: 効いた作法の印をノーツへ残す(学び直し rhythm-chart-learn.js が「良い／変」と言われた区間で数える)。
+  //   同時押しの2本目には付けない(1つの出来事を2回数えない)
+  const knowledgeCounts={};
+  if(knowledgeOn){
+    for(const note of notes){
+      if(note.chord)continue;
+      const set=knowledgeMarks.get(note.grid);
+      if(!set||!set.size)continue;
+      note.knowledge=[...set].sort();
+      for(const id of note.knowledge)knowledgeCounts[id]=(knowledgeCounts[id]||0)+1;
+    }
+    notice.push(`音ゲーの作法: ${Object.entries(knowledgeCounts).map(([id,count])=>`${id} ${count}`).join(' / ')||'効いた所なし'}`);
+  }
+  return {notes,log,notice,profile:P,runs:runs.length,knowledgeCounts,chordCount,chordRunCount,sweepCount,crossCount,monsterSlotGrids,
     targetCount,notesPerSecondTarget:round3(notesPerSecond),
     counts:{holdMax,slideMax,flickMax,endFlickMax,chordMax,accentMax,
       playableMinutes:round3(playableMinutes)}};
@@ -3328,6 +3418,8 @@ if(write){
       chartRevision,
       // 道のレーン数(版5から6)。自動修正・品質の報告・本体への書き出しがこれを見る
       laneCount:LANES,
+      // 版7: 使った作法の重みと、効いた回数
+      ...(knowledgeOn?{knowledge:{weights:knowledgeWeights,fired:results[difficulty].knowledgeCounts||{}}}:{}),
       status:'draft',
       reviewRequired:true,
       runtimeConnected:false,

@@ -35,16 +35,16 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 14,
-    "cost": 14
+    "spread": 15,
+    "cost": 15
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 14,
-    "cost": 14
+    "spread": 15,
+    "cost": 15
    },
    "fixes": []
   },
@@ -57,16 +57,16 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 21,
-    "cost": 21
+    "spread": 19,
+    "cost": 19
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 21,
-    "cost": 21
+    "spread": 19,
+    "cost": 19
    },
    "fixes": []
   },
@@ -79,16 +79,16 @@
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 25,
-    "cost": 25
+    "spread": 23,
+    "cost": 23
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "reach": 0,
     "hardJumps": 0,
-    "spread": 25,
-    "cost": 25
+    "spread": 23,
+    "cost": 23
    },
    "fixes": []
   },
@@ -100,17 +100,17 @@
     "impossible": 0,
     "strained": 2,
     "reach": 0,
-    "hardJumps": 0,
-    "spread": 39,
-    "cost": 239
+    "hardJumps": 1,
+    "spread": 37,
+    "cost": 357
    },
    "after": {
     "impossible": 0,
     "strained": 2,
     "reach": 0,
-    "hardJumps": 0,
-    "spread": 39,
-    "cost": 239
+    "hardJumps": 1,
+    "spread": 37,
+    "cost": 357
    },
    "fixes": []
   },
@@ -120,19 +120,19 @@
    "passes": 0,
    "before": {
     "impossible": 0,
-    "strained": 3,
+    "strained": 2,
     "reach": 0,
     "hardJumps": 1,
-    "spread": 39,
-    "cost": 459
+    "spread": 37,
+    "cost": 357
    },
    "after": {
     "impossible": 0,
-    "strained": 3,
+    "strained": 2,
     "reach": 0,
     "hardJumps": 1,
-    "spread": 39,
-    "cost": 459
+    "spread": 37,
+    "cost": 357
    },
    "fixes": []
   }
