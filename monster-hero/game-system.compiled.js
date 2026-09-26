@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 09992fe0ad8e689c
+// source-sha256: e744771fe2108cff
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 11:37";
+const BUILD_DATE = "2026-09-26 11:53";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4775,7 +4775,8 @@ const RHYTHM_ASSIST_SCORE_RATE = 0.8;
 const RHYTHM_ASSIST_GUARD_MAX = 3;
 const RHYTHM_ASSIST_GUARD_RECHARGE = 20,
   RHYTHM_ASSIST_GUARD_RECHARGE_STRUGGLING = 8;
-const RHYTHM_MIRROR_SUB_LANES = 10;
+const RHYTHM_MIRROR_SUB_LANES = RHYTHM_SUB_LANE_COUNT;
+const RHYTHM_MIRROR_LAST_LANE = RHYTHM_LANE_COUNT - 1;
 const rhythmMirrorNote = note => {
   if (!note || typeof note !== 'object') return note;
   const next = {
@@ -4783,12 +4784,12 @@ const rhythmMirrorNote = note => {
   };
   const width = Number(note.subLaneWidth);
   const w = Number.isFinite(width) && width > 0 ? width : 2;
-  if (Number.isFinite(Number(note.lane))) next.lane = 4 - Number(note.lane);
-  if (Number.isFinite(Number(note.endLane))) next.endLane = 4 - Number(note.endLane);
+  if (Number.isFinite(Number(note.lane))) next.lane = RHYTHM_MIRROR_LAST_LANE - Number(note.lane);
+  if (Number.isFinite(Number(note.endLane))) next.endLane = RHYTHM_MIRROR_LAST_LANE - Number(note.endLane);
   if (Number.isFinite(Number(note.subLane))) next.subLane = RHYTHM_MIRROR_SUB_LANES - Number(note.subLane) - w;
   if (Array.isArray(note.slidePoints)) next.slidePoints = note.slidePoints.map(point => point && Number.isFinite(Number(point.lane)) ? {
     ...point,
-    lane: 4 - Number(point.lane)
+    lane: RHYTHM_MIRROR_LAST_LANE - Number(point.lane)
   } : point);
   if (note.flickDir === 'left') next.flickDir = 'right';else if (note.flickDir === 'right') next.flickDir = 'left';
   if (Array.isArray(note.holdPoints)) next.holdPoints = note.holdPoints.map(point => {
@@ -22329,9 +22330,12 @@ const RhythmTapTest = ({
   }, [canvasNotes, monsterSignature, monsterFaceHidden, settings.lightweightMode, settings.effectAmount]);
   const RHYTHM_LANE_PRESS_GRADIENT = 'linear-gradient(to bottom,rgba(96,165,250,.16) 0%,rgba(96,165,250,.28) 40%,rgba(125,211,252,.44) calc(100% - var(--mh-judgment-line-bottom,20%) - 14%),rgba(224,242,254,.74) calc(100% - var(--mh-judgment-line-bottom,20%) - 3%),rgba(248,250,252,.9) calc(100% - var(--mh-judgment-line-bottom,20%)),rgba(147,197,253,.5) calc(100% - var(--mh-judgment-line-bottom,20%) + 4%),rgba(96,165,250,.34) 100%)';
   const laneElements = useMemo(() => React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "pointer-events-none absolute inset-0 grid grid-cols-5"
+    className: "pointer-events-none absolute inset-0 grid",
+    style: {
+      gridTemplateColumns: `repeat(${RHYTHM_LANE_COUNT},minmax(0,1fr))`
+    }
   }, Array.from({
-    length: 5
+    length: RHYTHM_LANE_COUNT
   }, (_, lane) => React.createElement("div", {
     key: lane,
     "data-rhythm-lane": lane,
@@ -22347,7 +22351,7 @@ const RhythmTapTest = ({
     className: "pointer-events-none absolute inset-0",
     "aria-hidden": "true"
   }, Array.from({
-    length: 5
+    length: RHYTHM_LANE_COUNT
   }, (_, index) => React.createElement("i", {
     key: index,
     "data-rhythm-sublane-boundary": ""
@@ -22355,7 +22359,7 @@ const RhythmTapTest = ({
     className: "pointer-events-none absolute inset-0",
     "aria-hidden": "true"
   }, Array.from({
-    length: 10
+    length: RHYTHM_SUB_LANE_COUNT
   }, (_, subLane) => React.createElement("i", {
     key: subLane,
     "data-rhythm-sublane-feedback": subLane,

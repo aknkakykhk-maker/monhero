@@ -310,7 +310,9 @@ const RHYTHM_ASSIST_SCORE_RATE = 0.8;
 const RHYTHM_ASSIST_GUARD_MAX = 3;
 // ガードが1つたまるまでに要る「コンボをつないだ判定」の数。最近ガードを使った(崩れている)ほど少なくて済む
 const RHYTHM_ASSIST_GUARD_RECHARGE = 20, RHYTHM_ASSIST_GUARD_RECHARGE_STRUGGLING = 8;
-const RHYTHM_MIRROR_SUB_LANES = 10;
+// 道のサブレーン数と右はしのレーン番号(2026-09-26 に6レーン=12サブレーンへ)。道の数え方は rhythm-mode.js が正本
+const RHYTHM_MIRROR_SUB_LANES = RHYTHM_SUB_LANE_COUNT;
+const RHYTHM_MIRROR_LAST_LANE = RHYTHM_LANE_COUNT-1;
 // 左右反対の譜面を作る。位置は「左はしの半レーン+幅」(TAP・HOLD・FLICK)と「レーンの中心」(SLIDE)の2通り。
 // ★元の譜面は書き換えない(新しいオブジェクトを返す)。レベル・ノーツ数・長さはそのまま
 const rhythmMirrorNote = note => {
@@ -318,10 +320,10 @@ const rhythmMirrorNote = note => {
   const next={...note};
   const width=Number(note.subLaneWidth);
   const w=Number.isFinite(width)&&width>0?width:2;
-  if(Number.isFinite(Number(note.lane)))next.lane=4-Number(note.lane);
-  if(Number.isFinite(Number(note.endLane)))next.endLane=4-Number(note.endLane);
+  if(Number.isFinite(Number(note.lane)))next.lane=RHYTHM_MIRROR_LAST_LANE-Number(note.lane);
+  if(Number.isFinite(Number(note.endLane)))next.endLane=RHYTHM_MIRROR_LAST_LANE-Number(note.endLane);
   if(Number.isFinite(Number(note.subLane)))next.subLane=RHYTHM_MIRROR_SUB_LANES-Number(note.subLane)-w;
-  if(Array.isArray(note.slidePoints))next.slidePoints=note.slidePoints.map(point=>point&&Number.isFinite(Number(point.lane))?{...point,lane:4-Number(point.lane)}:point);
+  if(Array.isArray(note.slidePoints))next.slidePoints=note.slidePoints.map(point=>point&&Number.isFinite(Number(point.lane))?{...point,lane:RHYTHM_MIRROR_LAST_LANE-Number(point.lane)}:point);
   // 横フリックの向きも左右を入れ替える(2026-09-26)
   if(note.flickDir==='left')next.flickDir='right';else if(note.flickDir==='right')next.flickDir='left';
   if(Array.isArray(note.holdPoints))next.holdPoints=note.holdPoints.map(point=>{

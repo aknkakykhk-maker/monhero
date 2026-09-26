@@ -40,7 +40,7 @@ const verbose=process.argv.includes('--verbose');
 
 const runtime=rt0.loadRuntime();
 const spanAt=rt0.makeSpanAt(runtime);
-const SUB_MAX=runtime.RHYTHM_SUB_LANE_COUNT;                 // 10
+const SUB_MAX=runtime.RHYTHM_SUB_LANE_COUNT;                 // 12(6レーン)
 const WIDTH_MAX=runtime.RHYTHM_MAX_SUB_LANE_WIDTH;
 const GAP=rt0.FINGER_GAP_SUB;                                // 指の太さ(サブレーン)
 const RESTRIKE_MS=HAND_MODEL.restrikeLimitMs;
@@ -107,6 +107,9 @@ for(const [songId,marker] of Object.entries(rt0.RELEASED_MARKERS)){
   for(const difficulty of ['EASY','NORMAL','HARD','EXPERT','MASTER']){
     const chart=song.difficulties[difficulty];
     if(!chart||!chart.notes.length)continue;
+    // 5レーン時代の譜面は、本体が道の真ん中へ寄せたもの(rhythmChartOnRoad)が見えている。
+    // 寄せたまま書き戻すと、マーカーの中身が二重にずれるので触らない
+    if(chart.laneCenteredFrom){console.log(`  ${songId} ${difficulty}: 5レーン時代の譜面なので飛ばす(作り直すと直せる)`);continue;}
     let notes=chart.notes.map(cloneNote);
     const before=rt0.overlapConflicts(notes,spanAt);
     // 「近いのに速い」2音も、指が2本入らないという点では同じ不具合。

@@ -1,6 +1,10 @@
 // 音ゲーモードの拡張用データ。音源そのものは既存 BGM_TRACKS を正本とし、trackId だけを参照する。
-const RHYTHM_LANE_COUNT = 5;
+// 道のレーン数。2026-09-26 に5から6へ(ユーザー判断「全曲6レーンで作り直す」)。サブレーンは6×2=12本。
+// 参考にしたアワーノーツが6レーンで、真ん中に境目の線がある形(docs/spec/RHYTHM_VISUAL_TARGET.md)。
+const RHYTHM_LANE_COUNT = 6;
 const RHYTHM_SUB_LANE_COUNT = RHYTHM_LANE_COUNT*2;
+// laneCount を書いていない譜面は5レーン時代のもの。rhythmChartOnRoad が道の真ん中へ寄せて使う
+const RHYTHM_LEGACY_LANE_COUNT = 5;
 const RHYTHM_NOTE_TYPES = Object.freeze(['TAP', 'HOLD', 'FLICK', 'SLIDE']);
 const RHYTHM_DIFFICULTIES = Object.freeze([
   Object.freeze({ id:'EASY', maxScore:600000 }),
@@ -610,7 +614,7 @@ const rhythmProjectLane=(lane,yRatio)=>{
   return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio)};
 };
 // ノーツの幅(サブレーン数)の上限。以前は4(=2レーンぶん)で頭打ちにしていたが、実機で
-// 「上限を無くして全幅もありにして」と言われたので、全幅(=5レーンぶん)まで出せるようにした。
+// 「上限を無くして全幅もありにして」と言われたので、全幅(=道のレーンすべて)まで出せるようにした。
 // (RHYTHM_SUB_LANE_COUNT と同じ数。検査がこのブロックだけを切り出して動かすので、
 //  ここでは RHYTHM_LANE_COUNT から作る)
 const RHYTHM_MAX_SUB_LANE_WIDTH=RHYTHM_LANE_COUNT*2;
@@ -3028,7 +3032,9 @@ const mhSlideV2=(timeMs,endTimeMs,points,endFlick)=>{
     ...(endFlick?{endFlick:true}:{}),
   });
 };
-const mhChart=(level,notes,durationMs)=>Object.freeze({level,notes:Object.freeze(notes),totalNotes:notes.length,durationMs});
+// 4つ目は道のレーン数。自動譜面制作の版5(6レーン)で作った譜面は 6 を書く。書かなければ5レーン時代の譜面
+const mhChart=(level,notes,durationMs,laneCount)=>Object.freeze({level,notes:Object.freeze(notes),totalNotes:notes.length,durationMs,
+  ...(laneCount?{laneCount}:{})});
 const MONSTER_HERO_EASY_DURATION_MS=152761;
 
 const monsterHeroEasyNotes=((t,h,f,s)=>[
@@ -17606,6 +17612,49 @@ const RHYTHM_CHART_LEVELS_AFTER_SWITCH=Object.freeze({
   close_to_your_heart:Object.freeze({EASY:7,NORMAL:8,HARD:11,EXPERT:19,MASTER:28}),
 // </rhythm-chart-levels-after-switch>
 });
+// ===== 5レーン時代の譜面を6レーンの道で使う(2026-09-26) =====
+// 譜面が laneCount を持っていなければ5レーン時代のもの。サブレーンを (12-10)/2=1 本ずつ右へずらし、
+// 道の**真ん中**に置く(左右の端のサブレーンが1本ずつ空く)。形・幅・時刻・ノーツ数は変えない。
+// 自動譜面制作で作り直した譜面は laneCount:6 を持つので、ここは素通りする。
+// 練習用・確認用に手で書いた譜面が、作り直さなくてもそのまま遊べるようにするためのもの。
+// ★元の譜面は書き換えない(新しいオブジェクトを返す)。同じ譜面は1回だけ作る
+const rhythmChartLaneCount=chart=>{
+  const count=Number(chart&&chart.laneCount);
+  return Number.isInteger(count)&&count>=1&&count<=RHYTHM_LANE_COUNT?count:RHYTHM_LEGACY_LANE_COUNT;
+};
+const rhythmNoteOnRoad=(note,shift)=>{
+  if(!note||typeof note!=='object')return note;
+  const next={...note},half=shift/2,sub=Number(note.subLane);
+  if(note.type==='SLIDE'){
+    if(Number.isFinite(Number(note.lane)))next.lane=Number(note.lane)+half;
+    if(Number.isFinite(Number(note.endLane)))next.endLane=Number(note.endLane)+half;
+    if(Array.isArray(note.slidePoints))next.slidePoints=Object.freeze(note.slidePoints.map(point=>
+      point&&Number.isFinite(Number(point.lane))?Object.freeze({...point,lane:Number(point.lane)+half}):point));
+  }else if(Number.isFinite(sub)){
+    next.subLane=sub+shift;
+    next.lane=Math.floor((sub+shift)/2);
+  }else if(Number.isFinite(Number(note.lane))){
+    // レーンだけで書いた古い形(幅2)。サブレーンの形へ直してから寄せる
+    next.subLane=Number(note.lane)*2+shift;
+    if(!Number.isFinite(Number(note.subLaneWidth)))next.subLaneWidth=2;
+    next.lane=Math.floor(next.subLane/2);
+  }
+  if(Array.isArray(note.holdPoints))next.holdPoints=Object.freeze(note.holdPoints.map(point=>
+    point&&Number.isFinite(Number(point.subLane))?Object.freeze({...point,subLane:Number(point.subLane)+shift}):point));
+  return Object.freeze(next);
+};
+const rhythmChartsOnRoad=new WeakMap();
+const rhythmChartOnRoad=chart=>{
+  if(!chart||typeof chart!=='object'||!Array.isArray(chart.notes))return chart;
+  const shift=RHYTHM_LANE_COUNT-rhythmChartLaneCount(chart);
+  if(shift<=0)return chart;
+  const cached=rhythmChartsOnRoad.get(chart);
+  if(cached)return cached;
+  // laneCenteredFrom … 寄せる前のレーン数。本体の譜面を読んで書き戻す道具が、寄せたものを書き戻さないための印
+  const moved=Object.freeze({...chart,laneCount:RHYTHM_LANE_COUNT,laneCenteredFrom:rhythmChartLaneCount(chart),notes:Object.freeze(chart.notes.map(note=>rhythmNoteOnRoad(note,shift)))});
+  rhythmChartsOnRoad.set(chart,moved);
+  return moved;
+};
 // レベルだけを差し替える。表に無い曲・難易度は、譜面が持っている値をそのまま使う。
 const rhythmChartWithLevel=(songId,difficultyId,chart,afterSwitch)=>{
   // 切り替え後の譜面には、そちら用の表を先に見る（書いていない曲は今までの表のまま）。
@@ -18055,7 +18104,7 @@ const RHYTHM_TUTORIAL_SONG=Object.freeze({
   displayName:'あそびかた練習',
   bgmTrackId:RHYTHM_TUTORIAL_TRACK_ID,
   playDurationMs:RHYTHM_TUTORIAL_END_MS,
-  difficulties:Object.freeze({TUTORIAL:RHYTHM_TUTORIAL_CHART}),
+  difficulties:Object.freeze({TUTORIAL:rhythmChartOnRoad(RHYTHM_TUTORIAL_CHART)}),
 });
 // 練習の満点は EASY と同じ値にしておく。スコアは記録に残さないが、
 // ランクのゲージや「→次のランク」の表示が満点を分母に使うので、0や1にすると壊れる
@@ -18092,7 +18141,7 @@ const RHYTHM_CALIBRATION_SONG=Object.freeze({
   displayName:'タイミング合わせ',
   bgmTrackId:RHYTHM_TUTORIAL_TRACK_ID,
   playDurationMs:RHYTHM_CALIBRATION_END_MS,
-  difficulties:Object.freeze({TUTORIAL:RHYTHM_CALIBRATION_CHART}),
+  difficulties:Object.freeze({TUTORIAL:rhythmChartOnRoad(RHYTHM_CALIBRATION_CHART)}),
 });
 const RHYTHM_CALIBRATION_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:600000,label:'タイミング合わせ'});
 
@@ -18100,7 +18149,7 @@ const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>{
   const pair=RHYTHM_SWITCHING_CHARTS[song.songId];
   if(!pair)return Object.freeze({...song,
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>
-      [id,rhythmChartWithLevel(song.songId,id,song.difficulties[id])])))});
+      [id,rhythmChartWithLevel(song.songId,id,rhythmChartOnRoad(song.difficulties[id]))])))});
   // 時刻で入れ替わる曲。**参照するたびに**どちらかを選ぶ（getter）。
   // 選んだ結果は before / after ごとに1回だけ作って覚えるので、毎回の手間は時刻の比較だけ。
   const resolved={before:null,after:null};
@@ -18109,7 +18158,7 @@ const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>{
     if(!resolved[key]){
       const src=after?pair.after:pair.before;
       resolved[key]=Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>
-        [id,rhythmChartWithLevel(song.songId,id,src[id]||emptyRhythmChart(),after)])));
+        [id,rhythmChartWithLevel(song.songId,id,rhythmChartOnRoad(src[id]||emptyRhythmChart()),after)])));
     }
     return resolved[key];
   };
