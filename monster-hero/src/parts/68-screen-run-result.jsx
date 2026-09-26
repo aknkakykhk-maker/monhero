@@ -182,7 +182,7 @@ function RewardPickScreen({
       ? {atk:currentUnit.atk,def:currentUnit.def,hp:currentUnit.baseMaxHp,guts:currentUnit.baseMaxGuts}
       : {atk,def,hp:maxHp,guts:maxGuts};
     // いま選んでいるぶんまでを適用した値。次の1回はこの値からさらに伸びる
-    const current=resolveTrainingStats(baseStats,activePicks,waveResult?.turn,specialRule);
+    const current=resolveTrainingStats(baseStats,activePicks,waveResult?.turn,specialRule,runMode);
     const remaining=TRAINING_PICK_COUNT-activePicks.length;
     const ready=tacticsMode
       ? (trainableSlots.length>0&&trainableSlots.every(index=>picksOf(index).length===TRAINING_PICK_COUNT))
@@ -196,7 +196,8 @@ function RewardPickScreen({
       def: {icon:<ShieldCheck size={18}/>, tint:'text-emerald-300', bar:'bg-emerald-400'},
       guts:{icon:<Sparkles size={18}/>,    tint:'text-amber-300',   bar:'bg-amber-400'},
     };
-    const optionById=(id)=>TRAINING_OPTIONS.find(option=>option.id===id);
+    const trainingOptions=trainingOptionsFor(runMode);
+    const optionById=(id)=>trainingOptions.find(option=>option.id===id);
     const unitName=(slotIdx)=>slots?.[slotIdx]?.masuName||slots?.[slotIdx]?.name||`${slotIdx+1}番目の子`;
     // 「1回目」「2回目」の枠を押すと、その1回だけを取り消す。以前は「選び直す」で
     // 2つとも消すしかなく、2回目だけ変えたいときも1回目から選び直していた
@@ -282,7 +283,7 @@ function RewardPickScreen({
       {(!tacticsMode||currentUnit)&&<div className="mh-phase-tall mh-ph-panel shrink-0 w-full max-w-sm px-2 py-1.5 mt-2" data-training-status>
         <div className="mh-ph-panel-label text-[8px] font-black text-left mb-1">現在のステータス{trainingPicks.length>0&&<span className="text-amber-300">（選択中の変化）</span>}</div>
         <div className="grid grid-cols-4 gap-1">
-          {TRAINING_OPTIONS.map(option=>{
+          {trainingOptions.map(option=>{
             const st=STYLES[option.id]||STYLES.hp;
             const beforeAll=baseStats[option.stat];
             const afterAll=current[option.stat];
@@ -300,11 +301,11 @@ function RewardPickScreen({
       {/* 4項目。1画面に収めるため2列2行。空きがあればカードが伸びて画面を埋める。
           同じ項目をもう一度タップすると2回目として積める */}
       <div className={`mh-phase-cards w-full max-w-sm mt-2 grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`}>
-        {TRAINING_OPTIONS.map((option,optionIndex)=>{
+        {trainingOptions.map((option,optionIndex)=>{
           const count=activePicks.filter(id=>id===option.id).length;
           const st=STYLES[option.id]||STYLES.hp;
           const before=current[option.stat];
-          const after=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
+          const after=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule,runMode)[option.stat];
           const full=remaining<=0;
           return (
             <button key={option.id} type="button" disabled={full||!!effect||!pickable}
@@ -328,8 +329,8 @@ function RewardPickScreen({
                 <span className="min-w-0">
                   <b className="mh-phase-card-name block text-[14px] font-black text-white leading-tight">{option.name}</b>
                   <span className={`block text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{(extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null||extremeRuleNumber(specialRule,'waveEnhancement')!=null)&&(()=>{
-                    const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null)[option.stat];
-                    const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
+                    const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null,runMode)[option.stat];
+                    const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule,runMode)[option.stat];
                     const normalGain=normalAfter-current[option.stat],effectiveGain=effectiveAfter-current[option.stat];
                     return <span className="block text-purple-200">通常 +{normalGain} → 実際 +{effectiveGain}</span>;
                   })()}</span>
