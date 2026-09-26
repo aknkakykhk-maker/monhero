@@ -365,7 +365,11 @@ const normalizeProfileFrameId=(v)=>(v==='gold'||v==='pink')?v:'none';
 
 // ===== ⑦ 配信用JSにも入っている(build忘れではない) =====
   check('配信用JSにフレームの描画が入っている', compiled.includes('mh-profile-frame-ring') && compiled.includes('mh-profile-avatar'));
-  check('配信用JSに保存キーが入っている', compiled.includes('mh_profile_frame_v1'));
+  // キーの文字列そのものは data/breeder.js にある(本体の中にあったのは説明コメントだけ)。
+  // 配信用JSはコメントを外すので、「その定数で読み書きしている」ことを実コードで見る
+  check('配信用JSに保存キーが入っている',
+    /const PROFILE_FRAME_KEY = 'mh_profile_frame_v1';/.test(breeder)
+    && /storeSet\(PROFILE_FRAME_KEY,/.test(compiled) && /storeGet\(PROFILE_FRAME_KEY,/.test(compiled));
 
   console.log(failed === 0 ? '\nすべてOK' : `\n${failed}件のNGがあります`);
   process.exit(failed === 0 ? 0 : 1);

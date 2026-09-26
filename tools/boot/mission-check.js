@@ -8,7 +8,7 @@ const start = source.indexOf('const LOGIN_BONUS_REWARDS');
 const end = source.indexOf('const STAT_POINT_GAIN');
 const context = {};
 vm.createContext(context);
-vm.runInContext(`${source.slice(start,end)}\nglobalThis.__m={LOGIN_BONUS_REWARDS,MISSION_DEFS,missionDailyPeriod,missionWeeklyPeriod,missionMonthlyPeriod,missionPeriodWeekday,missionWeekRotationIndex,normalizeMissions,missionValue,missionClaimableCount,missionNextReset,reconcileMonthlyMissionCompletions,buildGiftClaim};`,context);
+vm.runInContext(`${source.slice(start,end)}\nglobalThis.__m={LOGIN_BONUS_REWARDS,MISSION_DEFS,missionDailyPeriod,missionWeeklyPeriod,missionMonthlyPeriod,missionPeriodWeekday,missionWeekRotationIndex,normalizeMissions,missionValue,missionClaimableCount,missionNextReset,reconcileMonthlyMissionCompletions,buildGiftClaim,emptyMissionCounts};`,context);
 const m=context.__m;
 let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'OK':'NG'}: ${name}`);if(!ok)failed++;};
@@ -34,22 +34,23 @@ check('週アイテム5個使用',items?.key==='itemUses'&&items?.target===5&&it
 check('週間ローテーションは4週周期',m.missionWeekRotationIndex(at('2026-08-24T05:00:00Z'))===0&&m.missionWeekRotationIndex(at('2026-08-31T05:00:00Z'))===1&&m.missionWeekRotationIndex(at('2026-09-21T05:00:00Z'))===0);
 state.weekly={...state.weekly,battles:20,enhances:10,quickClears:5,challengeClears:3,marketTrades:3,itemUses:5,proClears:3};state.weeklyLoginDays=['a','b','c','d','e'];
 check('ウィークリー6/8でコンプリート可能',m.missionValue(state,'weekly',m.MISSION_DEFS.weekly.find(x=>x.complete))>=6);
-check('マンスリーは通常10個+8個達成コンプリート',monthly.filter(x=>!x.complete).length===10&&monthly.find(x=>x.complete)?.target===8);
+check('マンスリーは通常11個+8個達成コンプリート',monthly.filter(x=>!x.complete).length===11&&monthly.find(x=>x.complete)?.target===8);
 const monthlyComplete=monthly.find(x=>x.complete);
 check('月次コンプリート報酬が指定どおり',monthlyComplete.rewards.some(r=>r.type==='diamond'&&r.amount===10000)&&monthlyComplete.rewards.some(r=>r.type==='rainbowPsyche'&&r.amount===200)&&monthlyComplete.rewards.some(r=>r.type==='rainbowTranscendFruit'&&r.amount===1));
 const monthlyExpected=[
-  ['monthly_logins','loginDays',20,'diamond',3000],
+  ['monthly_logins','loginDays',20,'diamond',5000],
   ['monthly_battles','battles',100,'rainbowPsyche',50],
   ['monthly_wins','wins',200,'trainingTicketLarge',5],
   ['monthly_daily_completes','dailyCompletes',20,'diamond',5000],
   ['monthly_weekly_completes','weeklyCompletes',3,'rainbowPsyche',100],
   ['monthly_quick_runs','quickRuns',20,'skipTicketKyu',2],
   ['monthly_challenge_runs','challengeRuns',10,'rainbowPsyche',50],
+  ['monthly_pro_clears','proClears',10,'gameItem',10],
   ['monthly_enhances','enhances',30,'uniqueSkillResetTicket',2],
   ['monthly_market','marketTrades',10,'dyeMock',5],
   ['monthly_mode_runs','modeRuns',30,'bondPointReset',2],
 ];
-check('月次10項目の条件・目標・個別報酬が指定どおり',monthlyExpected.every(([id,key,target,type,amount])=>{const def=monthly.find(x=>x.id===id);return def?.key===key&&def?.target===target&&def?.rewards?.length===1&&def.rewards[0].type===type&&def.rewards[0].amount===amount;}));
+check('月次11項目の条件・目標・個別報酬が指定どおり',monthlyExpected.every(([id,key,target,type,amount])=>{const def=monthly.find(x=>x.id===id);return def?.key===key&&def?.target===target&&def?.rewards?.length===1&&def.rewards[0].type===type&&def.rewards[0].amount===amount;}));
 let monthlyState=m.normalizeMissions(null,at('2026-08-15T05:00:00Z'));
 monthlyState.monthly={...monthlyState.monthly,battles:100,wins:200,dailyCompletes:20,weeklyCompletes:3,quickRuns:20,challengeRuns:10,enhances:30,marketTrades:10};
 check('月次は10個中8個でコンプリート',m.missionValue(monthlyState,'monthly',monthlyComplete)===8);
@@ -169,5 +170,24 @@ check('読み込み時の補填は本来の数との差額だけ',
     && source.includes('savedPoints += expectedPoints - grantedPoints;')
     && source.includes("await storeSet('mh_breeder_points_granted', grantedPoints, false);")
     && source.includes('const expectedPoints = Math.max(0, levelInfo(savedXp).level - 1);'));
+
+// --- ミッションの見直し(2026-09-26) ---
+// クラシックとタクティクスで同じモードのミッションが進むこと。記録の置き場は分けたまま
+check('タクティクスのクリアもチャレンジ・プロ・極限のミッションへ数える',
+  source.includes("await saveMissionProgress(extremeRunRef.current ? 'extremeClear' : isProMode(runMode) ? 'proClear' : 'challengeClear');"));
+check('タクティクスチャレンジのプレイもチャレンジのプレイ回数へ数える',
+  source.includes("(runMode===BATTLE_MODE_CHALLENGE||runMode===BATTLE_MODE_TACTICS)&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun')"));
+check('種族チャレンジのクリアは保存する周回だけ数える',
+  source.includes("if (speciesChallengeSaveRunRef.current) await saveMissionProgress('speciesClear');"));
+// モンヒロビートは遊ぶ人と遊ばない人が分かれるので、ミッションに入れない(2026-09-26 ユーザー指示)
+check('モンヒロビートをミッションの条件に入れない',[...daily,...weekly,...monthly].every(x=>!/モンヒロビート|rhythm/i.test(`${x.condition}${x.key}${x.id}`))&&!source.includes("saveMissionProgress('rhythmPlay')"));
+const usedKeys=new Set([...daily,...weekly,...monthly].filter(x=>!x.complete).map(x=>x.key));
+const counted=new Set(['login','loginDays','extremeOrQuick','dailyCompletes','weeklyCompletes',...Object.keys(m.emptyMissionCounts())]);
+check('ミッションの条件はすべて数えている値を指す',[...usedKeys].every(k=>counted.has(k)));
+check('新しい数え方(種族チャレンジ)は既定値0で補われる',m.normalizeMissions({daily:{battles:1}},at('2026-09-26T05:00:00Z')).daily.speciesClears===0&&m.normalizeMissions(null).monthly.speciesClears===0);
+const itemRewardIds=[...daily,...weekly,...monthly].flatMap(x=>x.rewards).filter(r=>r.type==='gameItem').map(r=>r.itemId);
+check('アイテムの報酬は実在するアイテムidだけを指す',itemRewardIds.length>0&&itemRewardIds.every(id=>id==='hero_proof_shard'||breederSrc.includes(`id:'${id}'`)));
+check('既存ミッションのidを残している(受取履歴の互換)',['daily_login','daily_battles','daily_wins','daily_enhance','daily_rotation','daily_complete'].every(id=>daily.some(x=>x.id===id))
+  &&['weekly_logins','weekly_battles','weekly_enhance','weekly_wins','weekly_donations','weekly_market','weekly_daily_claims','weekly_rotation','weekly_complete'].every(id=>weekly.some(x=>x.id===id)));
 
 process.exit(failed?1:0);

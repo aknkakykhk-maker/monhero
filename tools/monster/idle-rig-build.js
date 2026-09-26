@@ -4,6 +4,9 @@
 // 【仕組み】(2026-09-24 ユーザー指示「ミーアで試して」→「他の味方モンスターもアニメーション実装よろしく」)
 // 絵は1枚のPNGなので描き足しはしない。同じ絵を「体」と「動かす部分(翼・しっぽ・耳・花…)」に
 // マスクで切り抜いて重ね、部分だけを付け根を軸に回す。全体の動き(浮く・跳ねる・呼吸…)は種ごとに1つ。
+// 全体の動き body: hover(浮く) / bounce(弾む) / breathe(呼吸) / sway(揺れる) / swim(泳ぐ) /
+//   jelly(ぷるぷる) / hop(跳ねて見回す) / heavy(体重を移す) / glide(大きく浮いて傾く) / drift(漂って回る)。
+//   動きそのものは 70-bootstrap.jsx の .mon-idle--<body> と keyframes
 //
 // 【ここで書くもの】
 // RIGS の1体ぶん = { id, img, body, parts:[{ name, poly, pivot, anim, amp, dur, delay, layer }] }
@@ -50,9 +53,18 @@ const JOINT_DEFAULT = 7;
 
 const RIGS = [
   // 頭の葉は切れ目が頭の上を横切り、傾けると継ぎ目が見えたので動かさない(全体の弾みだけ)
-  { id:'Mocchi', img:'images/monsters/mocchi.png', body:'bounce', parts:[] },
-  { id:'Suezo', img:'images/monsters/suezo.png', body:'bounce', parts:[] },
-  { id:'Golem', img:'images/monsters/golem.png', body:'breathe', parts:[] },
+  // 待機が地味だった子に動きを足す(2026-09-25 ユーザー指示「待機中の動きが地味なモンスターがいるからもう少し改良したい」)。
+  // 平たい手は体の外側に付いているので、肩を軸に交互に小さく振る(体の前の層。内へ振っても体の上に重なるだけ)
+  { id:'Mocchi', img:'images/monsters/mocchi.png', body:'jelly', parts:[
+    { name:'armL', poly:[[30.5,37],[29,40],[24.5,44.5],[20,51.5],[17,59],[16.5,66],[19,70.5],[24,70.3],[26.5,68],[27.3,62],[27.8,55],[28.6,48],[29.8,42]], pivot:[29.5,40], anim:'swing', amp:-7, dur:1800, layer:'front' },
+    { name:'armR', poly:[[68.8,37],[71,39.5],[75.5,44.5],[80,51.5],[83,59],[84,66],[81,70.5],[76,70.3],[74,68],[73.4,62],[72.5,55],[71.3,48],[70,42]], pivot:[70,40], anim:'swing', amp:7, dur:1800, delay:900, layer:'front' },
+  ]},
+  { id:'Suezo', img:'images/monsters/suezo.png', body:'hop', parts:[] },
+  // 肩の岩は胸と重なっているので動かさず、肩から下の腕だけを重たく小さく揺らす(脚の後ろの層)
+  { id:'Golem', img:'images/monsters/golem.png', body:'heavy', parts:[
+    { name:'armL', poly:[[16,43],[26,41],[29,46],[28,52],[28,66],[27,74],[24,83],[10,83],[9.5,70],[12.5,58],[16,48]], pivot:[22,43], anim:'swing', amp:-4, dur:3000, layer:'back' },
+    { name:'armR', poly:[[71,43],[80,41],[84,46],[86,58],[88,72],[86,83],[72,83],[70,72],[71,58],[72,50]], pivot:[77,43], anim:'swing', amp:4, dur:3000, delay:1500, layer:'back' },
+  ]},
   { id:'Tiger', img:'images/monsters/tiger.PNG', body:'breathe', parts:[
     { name:'tail', poly:[[67.4,43],[70,42.6],[74,42.4],[78,40],[99,33],[99.5,70],[70.5,70],[69,66],[68.2,63.5],[68,61],[67.9,56],[67.8,50],[67.6,46]], share:[[67.2,42.4],[70.2,42.4],[70.2,46],[67.2,46]], pivot:[67.8,53], anim:'wag', amp:7, dur:1100, layer:'back' },
   ]},
@@ -78,7 +90,7 @@ const RIGS = [
     { name:'tailL', poly:[[12,72],[20,69.5],[26.5,64],[31.5,61],[34,60.3],[36.6,60.5],[36.4,61.2],[35.8,63],[33.5,66],[31.5,68.5],[29.8,70.5],[28,73],[27.8,78],[26,83],[21,84.5],[11,80]], pivot:[35.2,61.2], anim:'swing', amp:7, dur:2000, layer:'back' },
     { name:'tailR', poly:[[66,61.8],[70,61.6],[72.5,64.5],[76,68.5],[79,71.5],[86,73],[86,85],[73,85],[71,76],[69,70.5],[66.8,66]], pivot:[67.6,63], anim:'swing', amp:-7, dur:2200, delay:400, layer:'back' },
   ]},
-  { id:'Monol', img:'images/monsters/monol.png', body:'hover', parts:[] },
+  { id:'Monol', img:'images/monsters/monol.png', body:'drift', parts:[] },
   // 花は花びらの形に沿って切り抜く(四角で切ると、花びらの先が体の側に残り、傾けたとき線が出た)。
   // 軸は茎の付け根。脇の花の下の花びらは葉に重なっているので、葉を少し含むのは許す
   { id:'Oboro', img:'images/monsters/oboro.png', body:'sway', parts:[
@@ -106,7 +118,11 @@ const RIGS = [
   // 翼は半透明で、右は大きなしっぽの前、左は体の上に重なっている。翼を切り抜いて動かすと、翼の後ろの
   // (絵に描かれていない)しっぽ・体の所が穴になり、明るさで翼だけ拾うと細かい点が体に散らばった
   // (2026-09-24 ユーザー指摘「まだ怪しいの結構いそう」)。翼は動かさず、全体をふわりと浮かせるだけにする
-  { id:'Ark', img:'images/monsters/ark.png', body:'hover', parts:[] },
+  { id:'Ark', img:'images/monsters/ark.png', body:'glide', parts:[
+    // 頭の上に浮いている王冠と光の輪は体から離れているので、それぞれ少しずれた調子で上下させる
+    { name:'crown', poly:[[44.3,20],[56,20],[56,27.3],[44.3,27.3]], joint:0, pivot:[50,24], anim:'bob', amp:-2.2, dur:1800, layer:'front' },
+    { name:'halo', poly:[[44.5,27.3],[55.5,27.3],[57,29.2],[56.8,31],[53.5,32.4],[46.5,32.4],[43.2,31],[43,29.2]], joint:0, pivot:[50,30], anim:'bob', amp:-1.4, dur:1800, delay:300, layer:'front' },
+  ]},
   { id:'Iblis', img:'images/monsters/iblis.png', body:'hover', parts:[
     // 翼は前足(手)の後ろ、右はさらに三日月の前にある。暗い色で拾うと手まで翼と一緒に動き、手のふちに穴が開いた
     // (2026-09-24 ユーザー指摘「まだ怪しいの結構いそう」)。手と三日月を避けて翼の見えている所だけを囲み、
@@ -127,8 +143,12 @@ const RIGS = [
   ]},
   // 外側の刃の翼は、剣・房飾り・内側の刃と何重にも重なっていて、どこで切っても動かすと重なりに切れ目が出た
   // (2026-09-24 ユーザー指摘「まだ怪しいの結構いそう」)。刃は動かさず、全体をふわりと浮かせるだけにする
-  { id:'Eiki', img:'images/monsters/eiki.png', body:'hover', parts:[] },
-  { id:'KenshiMocchi', img:'images/monsters/kenshi-mocchi.png', body:'bounce', parts:[] },
+  { id:'Eiki', img:'images/monsters/eiki.png', body:'glide', parts:[] },
+  // 背中の2本の剣を、頭の後ろに差してある所を軸に小さく揺らす(頭と髪の後ろの層)
+  { id:'KenshiMocchi', img:'images/monsters/kenshi-mocchi.png', body:'jelly', parts:[
+    { name:'swordL', poly:[[16,6],[23,6],[27,13],[30.5,17],[30,20],[29.3,23],[29,27],[29.8,32],[27,34],[19,29],[16,20]], pivot:[29.5,26], anim:'swing', amp:-4, dur:2400, layer:'back' },
+    { name:'swordR', poly:[[77,6],[85,6],[84.5,12],[81,20],[80.5,27],[79.5,31],[73,32.5],[70,30],[69.6,24],[70,19],[74,14]], pivot:[70.5,26], anim:'swing', amp:4, dur:2400, delay:1200, layer:'back' },
+  ]},
 ];
 
 const constName = (id, name) => `IDLE_${id.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_${name.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()}_MASK`;

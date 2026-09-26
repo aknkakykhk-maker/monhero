@@ -126,10 +126,15 @@ const fastPairConflicts=(notes,spanAt)=>{
 // --- マーカーの内側を書き戻す ---
 // 行の書き方は tools/mode/rhythm-chart-v3-pipeline.js の runtimeRow と同じにする。
 // ここがずれると、直していないノーツまで差分に出てしまう。
+// 本体の RHYTHM_SLIDE_EASES と同じ並び(rhythm-slide-ease-check.js が突き合わせる)
+const SLIDE_EASE_CODES=Object.freeze(['linear','in','out','inout']);
+// 横フリックの向きの番号。本体の RHYTHM_FLICK_DIRS と同じ並び(rhythm-side-flick-check.js が突き合わせる)
+const FLICK_DIR_CODES=Object.freeze(['','left','right']);
 const runtimeRow=note=>{
   const time=Math.round(Number(note.timeMs));
   if(note.type==='SLIDE'){
-    const points=note.slidePoints.map(p=>`[${Math.round(Number(p.timeMs))},${p.lane},${p.subLaneWidth}]`).join(',');
+    // 4つ目は曲線の番号(1=in・2=out・3=inout)。直線の点は今までどおり3つだけ書く
+    const points=note.slidePoints.map(p=>{const ease=SLIDE_EASE_CODES.indexOf(p.ease);return `[${Math.round(Number(p.timeMs))},${p.lane},${p.subLaneWidth}${ease>0?`,${ease}`:''}]`;}).join(',');
     return `s(${time},${Math.round(noteEndMs(note))},[${points}]${note.endFlick===true?',1':''})`;
   }
   if(note.type==='HOLD'){
@@ -139,7 +144,7 @@ const runtimeRow=note=>{
     const flick=taper?(note.endFlick===true?',1':',0'):(note.endFlick===true?',1':'');
     return `h(${time},${note.subLane},${note.subLaneWidth},${Math.round(noteEndMs(note))}${flick}${taper})`;
   }
-  if(note.type==='FLICK')return `f(${time},${note.subLane},${note.subLaneWidth})`;
+  if(note.type==='FLICK'){const dir=FLICK_DIR_CODES.indexOf(note.flickDir);return `f(${time},${note.subLane},${note.subLaneWidth}${dir>0?`,${dir}`:''})`;}
   return `t(${time},${note.subLane},${note.subLaneWidth},${note.monsterSlot||0})`;
 };
 const markerBlock=(source,marker)=>{
@@ -222,6 +227,6 @@ const RELEASED_TRACKS=Object.freeze({
   makutsu_no_senritsu:'makutsu_no_senritsu',
 });
 
-module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
+module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
   RELEASED_TRACKS,
   noteEndMs,isHeld,overlapConflicts,fastPairConflicts,runtimeRow,markerBlock,renderBlock,replaceBlock,RELEASED_MARKERS};

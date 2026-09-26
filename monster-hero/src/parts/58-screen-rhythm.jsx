@@ -46,10 +46,10 @@ function RhythmInfoScreen({
 function RhythmSongSelectScreen({
   catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, exitingQuickRun, handleGiveUp, mainHero,
   onExit, onOpenEventRanking, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
-  onPlaySong, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
+  onPlaySong, onToggleRhythmSetting, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
   repeatTemplateForNewRun, resultProcessing, resumeQuickRunFromRhythm, returnToBackgroundRun, returnToHome,
-  rhythmBackgroundRun, rhythmBestRecords, rhythmEventNotice, rhythmSelectView, rhythmSelectedDifficultyId, rhythmSelectedSongId,
+  rhythmBackgroundRun, rhythmBestRecords, rhythmSettings, rhythmEventNotice, rhythmSelectView, rhythmSelectedDifficultyId, rhythmSelectedSongId,
   rhythmSongListScrollRef, runStage, runStageRef, saveRhythmSelectView, setQuickRunDetailOpen,
   setQuickRunStartError, setQuickRunStopConfirm, setRhythmSelectedDifficultyId, setRhythmSelectedSongId, spotClass,
   startQuickRunFromRhythm, wave,
@@ -292,12 +292,25 @@ function RhythmSongSelectScreen({
           listScrollTop={rhythmSongListScrollRef.current}
           onListScrollTop={top=>{rhythmSongListScrollRef.current=top;}}
           footer={song=><>
-            {/* 全国ランキングは曲ごとなので、いま選んでいる曲のぶんを開く。
+            {/* アシストモードとミラー譜面は、アワーノーツと同じく「遊ぶ前にその場で」切り替えられるようにする
+                (2026-09-24)。オプションの「ライブ」にも同じ設定があり、どちらで変えても同じ値が保存される */}
+            {/* アシスト・ミラー・全国ランキングは1行に3つ並べる。2行に分けていたら縦画面で曲が2曲しか
+                見えなくなった(2026-09-25・ユーザー指摘「曲選択画面が狭くなっちゃってる」)。
+                全国ランキングは曲ごとなので、いま選んでいる曲のぶんを開く。
                 ここにあったマスモンの説明文は外した。同じ内容が「📖 遊びかた」にあり、
                 曲えらびでは1行でも多く曲を並べたいため
                 (2026-09-05・ユーザー指摘「縦画面の楽曲選択が2曲までしか出ないのがやりづらい」)。 */}
-            <button data-rhythm-demo-ranking onClick={()=>onOpenRanking(song)}
-              className="mt-1.5 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100">🏆 この曲の全国ランキング</button>
+            <div data-rhythm-play-modes className="mt-1.5 grid grid-cols-3 gap-1.5">
+              {[['assistMode','🛟 アシスト','border-emerald-300 bg-emerald-600/80 text-white'],['mirrorChart','↔ ミラー譜面','border-sky-300 bg-sky-600/80 text-white']].map(([key,label,on])=>{
+                const active=!!(rhythmSettings&&rhythmSettings[key]);
+                return <button key={key} type="button" data-rhythm-play-mode-toggle={key} aria-pressed={active}
+                  onClick={()=>onToggleRhythmSetting&&onToggleRhythmSetting(key)}
+                  className={`min-h-[44px] rounded-xl border px-1 text-[11px] font-black leading-tight ${active?on:'border-white/15 bg-slate-900/80 text-slate-300'}`}>{label}<span className="block text-[10px]">{active?'ON':'OFF'}</span></button>;
+              })}
+              <button data-rhythm-demo-ranking onClick={()=>onOpenRanking(song)} aria-label="この曲の全国ランキング"
+                className="min-h-[44px] rounded-xl border border-amber-300/60 bg-amber-500/10 px-1 text-[11px] font-black leading-tight text-amber-100">🏆 全国<span className="block">ランキング</span></button>
+            </div>
+            {rhythmSettings&&rhythmSettings.assistMode&&<p data-rhythm-assist-note className="mt-1 text-[9px] font-bold leading-snug text-emerald-200">アシストON：フリックはタップで取れて、コンボをガードが守ります。スコアは8割で、自己ベスト・ランキングには残りません。</p>}
           </>}/>
       </main>
       );

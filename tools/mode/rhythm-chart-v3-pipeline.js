@@ -26,6 +26,7 @@ const fs=require('fs');
 const path=require('path');
 const {spawnSync}=require('child_process');
 const {criticalWarnings,formatWarnings}=require('./rhythm-audio-warnings.js');
+const {SLIDE_EASE_CODES,FLICK_DIR_CODES}=require('./rhythm-runtime-notes.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -157,7 +158,8 @@ const runtimeRow=note=>{
   const timeMs=gridTimeMs(note.grid);
   const endFlick=note.endFlick===true?',1':'';
   if(note.type==='SLIDE'){
-    const points=note.slidePoints.map(p=>`[${gridTimeMs(p.grid)},${p.lane},${p.subLaneWidth}]`).join(',');
+    // 4つ目は曲線の番号(1=in・2=out・3=inout。版3)。直線の点は今までどおり3つだけ書く
+    const points=note.slidePoints.map(p=>{const ease=SLIDE_EASE_CODES.indexOf(p.ease);return `[${gridTimeMs(p.grid)},${p.lane},${p.subLaneWidth}${ease>0?`,${ease}`:''}]`;}).join(',');
     return `s(${timeMs},${gridTimeMs(note.grid+note.durationGrids)},[${points}]${endFlick})`;
   }
   if(note.type==='HOLD'){
@@ -167,7 +169,8 @@ const runtimeRow=note=>{
     const flickArg=taper?(note.endFlick===true?',1':',0'):endFlick;
     return `h(${timeMs},${note.subLane},${note.subLaneWidth},${gridTimeMs(note.grid+note.durationGrids)}${flickArg}${taper})`;
   }
-  if(note.type==='FLICK')return `f(${timeMs},${note.subLane},${note.subLaneWidth})`;
+  // 4つ目は横フリックの向き(1=左・2=右。版4のMASTER)。向きの無いFLICKは今までどおり3つだけ書く
+  if(note.type==='FLICK'){const dir=FLICK_DIR_CODES.indexOf(note.flickDir);return `f(${timeMs},${note.subLane},${note.subLaneWidth}${dir>0?`,${dir}`:''})`;}
   return `t(${timeMs},${note.subLane},${note.subLaneWidth},${note.monsterSlot||0})`;
 };
 // ★書いた行に座標の欠けが残っていないか、ここで必ず見る。

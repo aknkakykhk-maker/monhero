@@ -206,7 +206,10 @@ check('プレイ開始でstyleを戻すとき、覚えている値も一緒に�
 check('サブレーン発光に will-change を付けっぱなしにしない',
   !gameSrc.includes("willChange:settings.lightweightMode?'auto':'opacity'")
   &&gameSrc.includes('data-rhythm-sublane-feedback={subLane}')
-  &&gameSrc.includes("transition:settings.lightweightMode?'none':'opacity 45ms linear'"));
+  // 2026-09-26、消え方を CSS(rhythm-mode.js)へ移した(押した瞬間40ms・離すと190msでふわっと消える)。
+  // 部品にはぼかしの影・filter を付けない(押すたびのぼかしの描き直しが重さの原因だった)
+  &&data.includes('[data-rhythm-sublane-feedback]{transition:opacity 190ms ease-out}')
+  &&!/data-rhythm-sublane-feedback=\{subLane\}[^>]{0,400}(boxShadow|filter):/.test(gameSrc));
 // プレイエリア全面サイズのSVGは、幅・高さ・viewBoxが遊んでいるあいだ変わらない。
 // 毎フレーム書き直すと中身の再構築を招くので、変わったときだけ書く。
 check('SLIDE帯SVGの変わらない値(幅・viewBox)を毎フレーム書き直さない',
@@ -255,8 +258,10 @@ check('FLICKの矢印は疑似要素ではなく [data-rhythm-flick-arrow] と�
 // 2026-09-07・実機「canvas 版でモンスターノーツを押したらマスモンが残る」。canvas 版は要素が無いので、
 // 取った瞬間に走査の先頭が進んでしまい、絵を隠す処理と弾ける演出が一度も走らなかった。
 // 片付け済みの印(_rhythmCanvasSettled)まで走査を続ける。
-check('canvas 版は取り終えたノーツを片付ける(絵を隠す・弾け終わる)まで走査の先頭を進めない',
-  gameSrc.includes("if(note.done&&!failedTrail&&!clearFlash){hideFace();note._rhythmCanvasSettled=true;return;}")
+// 2026-09-25: マスモンの顔は DOM の要素をやめて canvas へ描くようになったので、隠す処理(hideFace)は無い。
+// 「弾け終わるまで片付け済みにしない」ことは変わらない。
+check('canvas 版は取り終えたノーツを片付ける(弾け終わる)まで走査の先頭を進めない',
+  gameSrc.includes("if(note.done&&!failedTrail&&!clearFlash){note._rhythmCanvasSettled=true;return;}")
   &&gameSrc.includes("canvasNotes?head._rhythmCanvasSettled===true:(headEl?headEl._rhythmHidden===true:true)"));
 check('失敗表示フラグをdatasetから毎フレーム読み直さない',
   gameSrc.includes('el._rhythmFailedFlag!==failedFlag')

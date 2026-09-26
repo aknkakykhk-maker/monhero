@@ -33,6 +33,17 @@
       [data-rhythm-sublane-feedback]{z-index:2!important}
       [data-rhythm-note]{z-index:4}
       [data-rhythm-note]{filter:none!important}
+      /* 開始演出(2026-09-26・参考動画「始まる直前、レーンの線が光のレーザーのように奥へ走って道が組み上がる」)。
+         境目と同じ形の光る線を、手前から奥へ描き出してから消す。1回だけ・約1秒。終わったら要素ごと外す。
+         描き出し(stroke-dashoffset)は塗り直しを伴うが、演奏が始まる前の一度きりなので発熱には効かない */
+      [data-rhythm-lane-intro] polyline{fill:none;stroke:#e0f2fe;stroke-width:3.2;stroke-linecap:round;
+        stroke-dasharray:1;stroke-dashoffset:1;opacity:0}
+      /* 走らせるのはカウントダウン(READY→3→2→1)が始まってから。読み込み中に流れて見えないのを防ぐ。
+         印(data-rhythm-counting)はプレイ画面がカウントダウン中だけ付ける */
+      [data-rhythm-play-area][data-rhythm-counting="1"] [data-rhythm-lane-intro] polyline{animation:mhRhythmLaneIntro 1000ms cubic-bezier(.3,.7,.3,1) 1 forwards}
+      @keyframes mhRhythmLaneIntro{0%{stroke-dashoffset:1;opacity:1}60%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+      [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-lane-intro],
+      [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-lane-intro]{display:none}
     `;
     document.head.appendChild(style);
   };
@@ -55,9 +66,9 @@
     const defs = svgEl('defs');
     const laneFill = svgEl('linearGradient', { id:'rhythmLaneSvgFill', x1:'0', y1:'0', x2:'0', y2:'1' });
     laneFill.append(
-      svgEl('stop', { offset:'0%', 'stop-color':'#111827', 'stop-opacity':'.18' }),
-      svgEl('stop', { offset:'72%', 'stop-color':'#0e7490', 'stop-opacity':'.16' }),
-      svgEl('stop', { offset:'100%', 'stop-color':'#164e63', 'stop-opacity':'.26' })
+      svgEl('stop', { offset:'0%', 'stop-color':'#020617', 'stop-opacity':'.9' }),
+      svgEl('stop', { offset:'72%', 'stop-color':'#1e3a8a', 'stop-opacity':'.55' }),
+      svgEl('stop', { offset:'100%', 'stop-color':'#2563eb', 'stop-opacity':'.6' })
     );
     const pressedFill = svgEl('linearGradient', { id:'rhythmLaneSvgPressed', x1:'0', y1:'0', x2:'0', y2:'1' });
     pressedFill.append(
@@ -81,22 +92,32 @@
       svg.appendChild(press);
     }
 
-    for (const y of [.25, .5, .75]) {
-      svg.appendChild(svgEl('line', {
-        x1:(rhythmProjectBoundary(0,y)*1000).toFixed(3), y1:(y*1000).toFixed(3),
-        x2:(rhythmProjectBoundary(RHYTHM_LANE_COUNT,y)*1000).toFixed(3), y2:(y*1000).toFixed(3),
-        stroke:'#67e8f9', 'stroke-opacity':'.09', 'stroke-width':'1.2'
-      }));
-    }
+    // 横の格子線(高さ25/50/75%)は2026-09-26に外した。道を奥が暗く手前ほど明るい濃い青にし、
+    // 内側のレーン境界も控えめにして、ノーツが道から浮き上がって見えるようにした
+    // (ユーザー指示「見た目も含めてこんぐらいに仕上げたい」。外周の2本だけは強めに残す)。
     for (let boundary = 0; boundary <= RHYTHM_LANE_COUNT; boundary++) {
       const outer = boundary === 0 || boundary === RHYTHM_LANE_COUNT;
       svg.appendChild(svgEl('polyline', {
         points:edgePoints(boundary).join(' '), fill:'none',
         stroke:outer ? '#e0f2fe' : '#a5f3fc',
-        'stroke-opacity':outer ? '.72' : '.46',
+        'stroke-opacity':outer ? '.9' : '.22',
         'stroke-width':outer ? '2.4' : '1.6'
       }));
     }
+
+    // 開始演出の光る線。手前(下)から奥(上)へ走らせるので、点の並びを下からにする。
+    // pathLength=1 にしておくと、線の長さに関係なく dasharray/dashoffset を 0〜1 で書ける
+    const intro = svgEl('g', { 'aria-hidden':'true' });
+    intro.dataset.rhythmLaneIntro = '';
+    for (let boundary = 0; boundary <= RHYTHM_LANE_COUNT; boundary++) {
+      const line = svgEl('polyline', { points:edgePoints(boundary).reverse().join(' '), pathLength:'1' });
+      line.style.animationDelay = `${Math.abs(boundary - RHYTHM_LANE_COUNT / 2) * 60}ms`;
+      intro.appendChild(line);
+    }
+    // 線ごとに animationend が来るので、全部そろったら要素ごと外す(forwards で止まった線を残さない)
+    let introEnded = 0;
+    intro.addEventListener('animationend', () => { if (++introEnded >= RHYTHM_LANE_COUNT + 1) intro.remove(); });
+    svg.appendChild(intro);
 
     // 手元のレーン番号(1〜5)はここで描いていた。2026-09-05にユーザー指示で消した。
     // プレイ中は判定ラインとノーツだけを見るので、番号は目の邪魔になるだけだった。

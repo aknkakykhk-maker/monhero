@@ -110,7 +110,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       await page.waitForTimeout(1500);
       const hero = await page.evaluate((name) => {
         const b = [...document.querySelectorAll('button')].find(x => !x.disabled && x.offsetParent
-          && /HP\s*\d+/.test(x.textContent) && x.textContent.trim().startsWith(name) && !/DEBUG/.test(x.textContent));
+          && /ライフ\s*\d+/.test(x.textContent) && x.textContent.trim().startsWith(name) && !/DEBUG/.test(x.textContent));
         if (b) b.click(); return !!b;
       }, heroName);
       if (!hero) return `勇者モンに ${heroName} が並んでいない: ` + await page.evaluate(() => [...document.querySelectorAll('button')].filter(x=>x.offsetParent).map(x=>x.textContent.trim().slice(0,30)).join(' | ').slice(0,1500));
@@ -133,7 +133,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
           const confirm = pick(/^(習得する|強化する)$/); if (confirm) { confirm.click(); return 'confirm'; }
           const teaching = pick(/新規習得|強化後/); if (teaching) { teaching.click(); return 'teach'; }
           const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }
-          const mons = live.filter(x => /HP\s*\d+/.test(x.textContent) && !x.textContent.trim().startsWith(heroName)
+          const mons = live.filter(x => /ライフ\s*\d+/.test(x.textContent) && !x.textContent.trim().startsWith(heroName)
             && x.textContent.trim() !== '詳細を見る' && !/DEBUG/.test(x.textContent));
           if (mons.length) { mons[0].click(); return 'mon'; }
           const changes = live.filter(x => x.textContent.trim() === '変更');
@@ -469,14 +469,14 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await page.waitForTimeout(900);
     const after = await party();
     const full = (v) => { const m = /^(\d+)\/(\d+)$/.exec(v || ''); return !!m && m[1] === m[2]; };
-    // ★上限も20%上がってから満タン(モッチー ライフ600→720・ガッツ100→120)
-    check('使うとライフとガッツの上限が20%上がり、そこまで満タンになる(600→720/720・100→120/120)', !!before && !!after && !full(before.guts)
-      && after.hp === '720/720' && after.guts === '120/120',
+    // ★上限も30%上がってから満タン(モッチー ライフ600→780・ガッツ100→130)
+    check('使うとライフとガッツの上限が30%上がり、そこまで満タンになる(600→780/780・100→130/130)', !!before && !!after && !full(before.guts)
+      && after.hp === '780/780' && after.guts === '130/130',
       `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
     check('枠の札が「あと5ターン」になる', await page.locator(`[data-tactics-ex-mark="${moSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと5ターン');
     await tapSlot(moSlot);
     p = await panel();
-    check('力／丈夫さが 144／144 に上がり、残りが 2/3', !!p && /144／144/.test(p.text) && /2 \/ 3/.test(p.uses), p && p.text.slice(0, 220));
+    check('力／丈夫さが 156／156 に上がり、残りが 2/3', !!p && /156／156/.test(p.text) && /2 \/ 3/.test(p.uses), p && p.text.slice(0, 220));
     await closePanel();
     await tapFirstCard();
     check('使ったターンもモッチーはカードを使える', (await selectedCount()) > 0);

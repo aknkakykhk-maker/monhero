@@ -421,6 +421,10 @@ const chartRevision=(()=>{
 })();
 // 版2: フレーズの写し(繰り返しの区切りを元の小節と同じリズム・同じレーンで作る)
 const phraseCopy=chartRevision>=2;
+// 版3: SLIDEの区間を曲線でつなぐ(下の applySlideEase)
+const slideEase=chartRevision>=3;
+// 版4: MASTERだけ横フリックを付ける(下の applySideFlicks)
+const sideFlick=chartRevision>=4;
 if(audio.analysisType!=='rhythm-audio-v3')throw new Error('V3音源解析のJSONではありません');
 if(!audio.structure)throw new Error('V3音源解析が古い形です。rhythm-audio-analyze-v3.js を通し直してください');
 const structure=audio.structure;
@@ -3104,6 +3108,106 @@ function slidePathFor(reserved,startLane,width,P,onset){
 }
 
 // ============================================================================
+// 版3: SLIDEの曲線(2026-09-26)
+// ============================================================================
+// できあがった譜面のSLIDEの区間へ ease を付ける。本体(monster-hero/data/rhythm-mode.js)の
+// rhythmSlideExpectedLane が同じ ease を読むので、見た目・追従の的・速さの上乗せがそろって曲がる。
+//   ・横へ動かない区間 … 付けない(直線のまま)
+//   ・向きが変わる点(始点・終点・折り返し)… そこではゆっくり動く
+//     両端とも向きが変わる → 'inout'(S字) / 始まりだけ → 'in' / 終わりだけ → 'out'
+//   ・同じ向きへ続く点 … 止まらずに流れる(その端は速いまま)
+//   ・区間の平均が SLIDE_EASE_MAX_LANES_PER_SEC を超える速い区間 … 付けない
+//     (曲線は真ん中の速さが平均の1.5倍になる。振り回す区間をさらに難しくしない)
+// 付けたあと、配信前の検査(rhythm-runtime-notes.js)と同じ式で「指が2本入らない重なり」を数え、
+// 付ける前に無かった重なりに関わったSLIDEは直線へ戻す。ノーツ数は変わらない。
+const SLIDE_EASE_MAX_LANES_PER_SEC=6;
+function applySlideEase(notes){
+  const runtime=require('./rhythm-runtime-notes.js');
+  const rt=runtime.loadRuntime(),spanAt=runtime.makeSpanAt(rt);
+  const toRuntime=n=>{
+    const timeMs=gridTimeMs(n.grid),endTimeMs=gridTimeMs(n.grid+(Number(n.durationGrids)||0));
+    if(n.type==='SLIDE'){
+      const slidePoints=n.slidePoints.map(p=>({timeMs:gridTimeMs(p.grid),lane:p.lane,subLaneWidth:p.subLaneWidth,...(p.ease?{ease:p.ease}:{})}));
+      return {type:'SLIDE',timeMs,endTimeMs,lane:slidePoints[0].lane,endLane:slidePoints[slidePoints.length-1].lane,subLaneWidth:slidePoints[0].subLaneWidth,slidePoints};
+    }
+    const base={type:n.type,timeMs,lane:Math.floor(Number(n.subLane)/2),subLane:n.subLane,subLaneWidth:n.subLaneWidth};
+    if(n.type==='HOLD'){
+      base.endTimeMs=endTimeMs;
+      if(Array.isArray(n.holdPoints)&&n.holdPoints.length>=2)base.holdPoints=n.holdPoints.map(p=>({timeMs:gridTimeMs(p.grid),subLane:p.subLane,subLaneWidth:p.subLaneWidth}));
+    }
+    return base;
+  };
+  const conflictKeys=()=>{
+    const list=notes.map(toRuntime),keys=new Map();
+    for(const c of runtime.overlapConflicts(list,spanAt))keys.set(`o${c.heldIndex}:${c.noteIndex}`,[c.heldIndex,c.noteIndex]);
+    for(const c of runtime.fastPairConflicts(list,spanAt))keys.set(`f${c.laterIndex}:${c.earlierIndex}`,[c.laterIndex,c.earlierIndex]);
+    return keys;
+  };
+  const strip=note=>{for(const p of note.slidePoints)delete p.ease;};
+  const baseline=conflictKeys();
+  const easedNotes=new Set();
+  let segments=0;
+  notes.forEach((note,index)=>{
+    if(note.type!=='SLIDE'||!Array.isArray(note.slidePoints)||note.slidePoints.length<2)return;
+    const pts=note.slidePoints,dir=(a,b)=>Math.sign(Number(b.lane)-Number(a.lane));
+    for(let i=0;i<pts.length-1;i++){
+      const d=dir(pts[i],pts[i+1]);
+      const seconds=(gridTimeMs(pts[i+1].grid)-gridTimeMs(pts[i].grid))/1000;
+      const speed=seconds>0?Math.abs(Number(pts[i+1].lane)-Number(pts[i].lane))/seconds:Infinity;
+      if(d===0||speed>SLIDE_EASE_MAX_LANES_PER_SEC)continue;
+      const slowStart=(i>0?dir(pts[i-1],pts[i]):0)!==d,slowEnd=(i+2<pts.length?dir(pts[i+1],pts[i+2]):0)!==d;
+      const ease=slowStart&&slowEnd?'inout':slowStart?'in':slowEnd?'out':null;
+      if(!ease)continue;
+      pts[i].ease=ease;segments++;easedNotes.add(index);
+    }
+  });
+  let reverted=0;
+  for(let pass=0;pass<6;pass++){
+    const extra=[...conflictKeys()].filter(([key])=>!baseline.has(key));
+    if(!extra.length)break;
+    for(const [,pair] of extra)for(const index of pair){
+      if(!easedNotes.has(index))continue;
+      strip(notes[index]);easedNotes.delete(index);reverted++;
+    }
+  }
+  const kept=notes.reduce((sum,note)=>sum+(note.type==='SLIDE'?note.slidePoints.filter(p=>p.ease).length:0),0);
+  return {segments:kept,notes:easedNotes.size,reverted};
+}
+
+// ============================================================================
+// 版4: 横フリック(2026-09-26)
+// ============================================================================
+// MASTERの FLICK に向き(flickDir)を付ける。本体の rhythmFlickMatches が同じ向きを読む。
+//   ・次のノーツ(SIDE_FLICK_NEXT_MS 以内)が SIDE_FLICK_MIN_SHIFT サブレーン以上右なら right、左なら left
+//     (次のノーツへ向かって払うので、手の流れが途切れない)
+//   ・次が近くに無い・ほぼ真上に続くときは、道の端に近い(中心が端から SIDE_FLICK_EDGE サブレーン以内)ものだけ外向き
+//   ・それ以外は今までどおり向きなし(上向きの矢印)
+// ノーツの数・時刻・位置は変えない。終点フリック(HOLD/SLIDE の endFlick)には付けない。
+const SIDE_FLICK_NEXT_MS=700,SIDE_FLICK_MIN_SHIFT=2,SIDE_FLICK_EDGE=1.5;
+function applySideFlicks(notes){
+  const center=n=>Number(n.subLane)+Number(n.subLaneWidth||2)/2;
+  const order=notes.map((note,index)=>({note,index,t:gridTimeMs(note.grid)})).sort((a,b)=>a.t-b.t);
+  let left=0,right=0;
+  order.forEach((item,k)=>{
+    const note=item.note;
+    if(note.type!=='FLICK')return;
+    delete note.flickDir;
+    const next=order.slice(k+1).find(other=>other.t-item.t>1);
+    let dir='';
+    if(next&&next.t-item.t<=SIDE_FLICK_NEXT_MS){
+      const shift=(next.note.type==='SLIDE'&&Array.isArray(next.note.slidePoints)?Number(next.note.slidePoints[0].lane)*2+1:center(next.note))-center(note);
+      if(shift>=SIDE_FLICK_MIN_SHIFT)dir='right';else if(shift<=-SIDE_FLICK_MIN_SHIFT)dir='left';
+    }
+    if(!dir){
+      const c=center(note);
+      if(c<=SIDE_FLICK_EDGE)dir='left';else if(c>=10-SIDE_FLICK_EDGE)dir='right';
+    }
+    if(dir){note.flickDir=dir;if(dir==='left')left++;else right++;}
+  });
+  return {left,right};
+}
+
+// ============================================================================
 // 実行
 // ============================================================================
 const targets=only?[only]:DIFFICULTIES;
@@ -3124,8 +3228,18 @@ for(const difficulty of targets){
   }
   results[difficulty]=result;
 }
+if(slideEase){
+  for(const difficulty of targets){
+    const r=results[difficulty],eased=applySlideEase(r.notes);
+    (r.notice||(r.notice=[])).push(`スライドの曲線: ${eased.notes}本・${eased.segments}区間`+(eased.reverted?`（重なるので直線へ戻した ${eased.reverted}本）`:''));
+  }
+}
+if(sideFlick&&results.MASTER){
+  const r=results.MASTER,side=applySideFlicks(r.notes);
+  (r.notice||(r.notice=[])).push(`横フリック: 左${side.left}本・右${side.right}本`);
+}
 
-console.log(`譜面の作り方: 版${chartRevision}${phraseCopy?'（フレーズの写しあり）':'（2026-09-24までの作り方）'}`);
+console.log(`譜面の作り方: 版${chartRevision}${phraseCopy?'（フレーズの写しあり）':'（2026-09-24までの作り方）'}${slideEase?'（スライドの曲線あり）':''}${sideFlick?'（MASTERに横フリックあり）':''}`);
 for(const difficulty of targets){
   const {notes,profile,runs}=results[difficulty];
   const typeCounts=notes.reduce((acc,n)=>{acc[n.type]=(acc[n.type]||0)+1;return acc;},{});

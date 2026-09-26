@@ -155,7 +155,15 @@
     }
   } catch (_) {}
 
-  const scheduleEnhance = () => window.requestAnimationFrame(enhanceModal);
+  // DOM が変わるたびに呼ばれるので、次のフレームへの予約は1つにまとめる(以前は変わった回数だけ積んでいた)。
+  // モンヒロビートの演奏中は引き継ぎの画面が開かないので探さない。演奏中は判定文字・タップの波紋などで
+  // 1秒に何度も DOM が変わり、そのたびに画面中の見出しを読んでいた(2026-09-25・演奏中のカクつき対策)
+  let enhancePending = 0;
+  const scheduleEnhance = () => {
+    if (enhancePending) return;
+    if (document.documentElement.dataset.rhythmPlayActive === 'true') return;
+    enhancePending = window.requestAnimationFrame(() => { enhancePending = 0; enhanceModal(); });
+  };
   new MutationObserver(scheduleEnhance).observe(document.documentElement, { childList:true, subtree:true });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', enhanceModal, { once:true });
   else enhanceModal();

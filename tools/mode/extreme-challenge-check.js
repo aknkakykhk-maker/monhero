@@ -149,7 +149,9 @@ assert(source.includes('左右にスワイプして難易度を選択') && sourc
 assert(source.includes('mh-extreme-enemy-image') && source.includes("extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'"), 'all EXTREME enemies must receive the image-bound dedicated aura');
 assert(source.includes('mh-nightmare-enemy-aura-shell') && source.includes('@keyframes mhNightmareMist') && source.includes('mh-extreme-enemy-aura-shell') && source.includes('@keyframes mhExtremeEnemyMist') && source.includes('@keyframes mhExtremeEnemyFloor'), 'EXTREME and NIGHTMARE auras must remain distinct; EXTREME must combine silhouette glow, rising evil energy, and a foot glow with lightweight CSS-only motion');
 assert(source.includes('h-[366px]') && source.includes('flex items-start gap-2.5'), 'mode cards must share a fixed outer height and aligned carousel');
-assert(/const packedLines = scene \? ASSISTANT_LINE_PACKS\.flatMap/.test(assistants), 'line-pack-only EXTREME assistant dialogue must remain reachable');
+// 場面の定義がある場面では束のセリフを組み立てない形にした(2026-09-26)。束だけで足した場面は今までどおり束から読む
+assert(/const packedLines = \(scene && !sceneDef\) \? ASSISTANT_LINE_PACKS\.flatMap/.test(assistants)
+  && assistants.includes('const def = sceneDef || (packedLines.length ? { lines:packedLines } : null);'), 'line-pack-only EXTREME assistant dialogue must remain reachable');
 assert(source.includes("? 'extremeChallenge'") && source.includes('const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;') && source.includes('key={extremeDifficultyAssistantScene}') && source.includes('scene={extremeDifficultyAssistantScene}') && !source.includes('extremeGuideStep'), 'the centered EXTREME tier card must select its own shared assistant scene regardless of unlock state');
 const sceneLines = (name) => {
   const start = assistants.indexOf(`${name}: [`);
@@ -162,13 +164,13 @@ for (const name of ['chaosDifficulty', 'ultimateDifficulty', 'infinityDifficulty
   assert(sceneLines(name) >= 5, `the ${name} preview scene needs at least 5 lines`);
 }
 assert(source.includes('data-extreme-difficulty-card={setting.id}') && source.includes('h-[400px] flex flex-col') && !source.includes('h-[382px]'), 'all five EXTREME tier cards must share one expanded fixed outer height');
-assert(source.includes("lines.push(['自動回復補正',signed],['距離適性補正',signed])") && source.includes('grid grid-cols-[auto_1fr] items-start gap-2 text-[11px] leading-snug'), 'rule-detail labels and values must remain aligned and unbroken');
+assert(source.includes("lines.push(['自動回復補正',signed],['間合い適性補正',signed])") && source.includes('grid grid-cols-[auto_1fr] items-start gap-2 text-[11px] leading-snug'), 'rule-detail labels and values must remain aligned and unbroken');
 for (const expected of ["['与ダメージ',specialRulePercent(rules.damageDealt)]", "['供モン加入ボーナス',specialRulePercent(rules.allyJoinBonus)]", "['消費ガッツ',specialRulePercent(rules.gutsCost)]"]) {
   assert(source.includes(expected), `CHAOS debug card must label its planned special rule: ${expected}`);
 }
-assert(source.includes('有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。'), 'NIGHTMARE card must use the approved natural description');
+assert(source.includes('有利な補正は弱まり、不利な補正は重くなる。間合い適性とWAVEごとの立ち回りが重要な高難易度。'), 'NIGHTMARE card must use the approved natural description');
 assert(source.includes('h-[42px] shrink-0') && source.includes('h-[34px] shrink-0') && source.includes('mt-auto pt-2 pb-1'), 'available tier cards must reserve equal record, rule, and footer regions');
-for (const expected of ['EXTREMEの次', '有利な補正', '不利な補正', '距離適性', 'WAVEごとの戦い方']) assert(assistants.includes(expected), `NIGHTMARE assistant guidance must include: ${expected}`);
+for (const expected of ['EXTREMEの次', '有利な補正', '不利な補正', '間合い適性', 'WAVEごとの戦い方']) assert(assistants.includes(expected), `NIGHTMARE assistant guidance must include: ${expected}`);
 const modeScene = assistants.slice(assistants.indexOf('extremeChallenge: ['), assistants.indexOf('extremeDifficulty: ['));
 assert(!modeScene.includes('アシストカード'), 'the mode scene must not explain the EXTREME-only breeder-card rule');
 for (const forbidden of ['×13', '×20', '×25', '×7.5', '75', '50%']) {
