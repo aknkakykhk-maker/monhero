@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 357f1a29e744affa
+// generated-sha256: a786680f16143a27
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 12:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 12:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4105,6 +4105,8 @@ const rhythmMirrorNote = note => {
   if(Number.isFinite(Number(note.endLane)))next.endLane=4-Number(note.endLane);
   if(Number.isFinite(Number(note.subLane)))next.subLane=RHYTHM_MIRROR_SUB_LANES-Number(note.subLane)-w;
   if(Array.isArray(note.slidePoints))next.slidePoints=note.slidePoints.map(point=>point&&Number.isFinite(Number(point.lane))?{...point,lane:4-Number(point.lane)}:point);
+  // 横フリックの向きも左右を入れ替える(2026-09-26)
+  if(note.flickDir==='left')next.flickDir='right';else if(note.flickDir==='right')next.flickDir='left';
   if(Array.isArray(note.holdPoints))next.holdPoints=note.holdPoints.map(point=>{
     if(!point||typeof point!=='object')return point;
     const pw=Number(point.subLaneWidth),pointWidth=Number.isFinite(pw)&&pw>0?pw:w;
@@ -4196,11 +4198,13 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
   fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'AUTO', comboSize:100, comboOpacity:100, lifeDisplaySize:150, holdSlideOpacity:80, laneGlow:'NORMAL',
   monsterNoteEffect:'LIGHT',
-  judgmentLineHeight:12,
+  judgmentLineHeight:20,
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LIGHT', lightweightMode:false,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,
+  // マスモンの能力が出たときのカットイン(2026-09-26)。新しい項目なので、保存値に無い人は既定(出す)で補う
+  monsterCutIn:true,
   // 曲えらびで、選んでいる曲を鳴らすかどうか(2026-09-05)。
   // 既存の保存値には無いので、読み込み時に既定(ON)で補われる。既存のキーは変えない。
   songPreviewEnabled:true,
@@ -4264,6 +4268,7 @@ const normalizeRhythmSettings = value => {
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight:bool('sideMonsterAbilityHighlight'),
+    monsterCutIn:bool('monsterCutIn'),
     songPreviewEnabled:bool('songPreviewEnabled'),
     quietDuringPlay:bool('quietDuringPlay'),
     frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,
@@ -6193,12 +6198,21 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
   // 書き分けていないモンスターでは作る枚数はこれまでと変わらない
   useEffect(() => {
     const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
-    if (wanted.length === 0) { setRecolored({}); return; }
+    // 中身が同じなら前のものをそのまま使う(新しい空の箱を入れるたびに描き直しが1回増えていた。
+    // 待機の動きで部位ごとに絵を重ねる子は、その枚数ぶん増えていた)
+    if (wanted.length === 0) { setRecolored((prev) => (Object.keys(prev).length === 0 ? prev : {})); return; }
     let cancelled = false;
     // 濃さ(@NN)は重ねる透明度で出すので、作る絵は濃さ抜きの色で1枚。
     // 置き場所の名前も濃さ抜きにしておくと、スライダーを動かしている間に絵を作り直さない
     Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then((url) => [_recoloredKey(idx, c), url])))
-      .then((entries) => { if (!cancelled) setRecolored(Object.fromEntries(entries)); });
+      .then((entries) => {
+        if (cancelled) return;
+        const next = Object.fromEntries(entries);
+        setRecolored((prev) => {
+          const keys = Object.keys(next);
+          return (keys.length === Object.keys(prev).length && keys.every((k) => prev[k] === next[k])) ? prev : next;
+        });
+      });
     return () => { cancelled = true; };
   }, [baseId, src, colorKey]);
   if (!hues || hues.length === 0) {
@@ -7826,56 +7840,70 @@ const missionWeekRotationIndex = (now=Date.now()) => {
   const index=Math.floor((periodMs-epochMs)/(7*24*60*60*1000));
   return ((index%4)+4)%4;
 };
+// ★ミッションの見直し(2026-09-26 ユーザー指示「プロモードをクリアとかだとチャレンジだけになってるのを
+//   タクティクスも共通にする / 現在の機能や報酬にあわせて中身も変えて」)。
+//   ・「チャレンジモード」「プロモード」「種族チャレンジ」「極限チャレンジ」は、クラシックバトルと
+//     タクティクスバトルのどちらで遊んでも同じ項目が進む(数える側: saveMissionProgress の呼び出し)
+//   ・モンヒロビートは遊ぶ人と遊ばない人が分かれるので、ミッションには入れない(2026-09-26 ユーザー指示)
+//   ・報酬に勇者の証片・スキップチケット・極を足した(gameItem で実データのアイテムidを指す)
+//   ・コンプリートに要る個数は据え置き(項目が増えたぶん、選べる幅だけが広がる)。
+//     期間の途中で入れ替わっても、それまでの進捗で届いていたコンプリートが届かなくなることはない
+//   ★既存のミッションidは受取履歴(sentDaily など)と固定ギフトidに使われているので、同じ意味の項目は
+//     idを変えない。新しい項目だけ新しいidを使う(CLAUDE.md ⑦)
+const MISSION_BATTLE_BOTH = '（クラシック・タクティクスどちらでも）';
+// 'gameItem' は GIFT_ITEM_REWARD_TYPE と同じ値。ここだけを切り出して読む検査でも動くよう、文字で書く
+const missionItemReward = (itemId, amount) => ({ type:'gameItem', itemId, amount });
 const DAILY_ROTATION_MISSIONS = Object.freeze({
-  1:{id:'daily_rotation',name:'本日のミッション',condition:'クイックモードを1回クリアする',key:'quickClears',target:1,rewards:[{type:'diamond',amount:200}]},
+  1:{id:'daily_rotation',name:'本日のミッション',condition:'クイックモードを1回クリアする',key:'quickClears',target:1,rewards:[{type:'diamond',amount:300}]},
   2:{id:'daily_rotation',name:'本日のミッション',condition:'アイテムを1個使用する',key:'itemUses',target:1,rewards:[{type:'trainingTicket',amount:3}]},
-  3:{id:'daily_rotation',name:'本日のミッション',condition:'プロモードを1回クリアする',key:'proClears',target:1,rewards:[{type:'trainingTicketLarge',amount:1}]},
-  4:{id:'daily_rotation',name:'本日のミッション',condition:'クイックモードを1回クリアする',key:'quickClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
+  3:{id:'daily_rotation',name:'本日のミッション',condition:`プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:1,rewards:[{type:'trainingTicketLarge',amount:1}]},
+  4:{id:'daily_rotation',name:'本日のミッション',condition:`種族チャレンジを1回クリアする${MISSION_BATTLE_BOTH}`,key:'speciesClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
   5:{id:'daily_rotation',name:'本日のミッション',condition:'アイテムを1個使用する',key:'itemUses',target:1,rewards:[{type:'dyeMock',amount:1}]},
-  6:{id:'daily_rotation',name:'本日のミッション',condition:'プロモードを1回クリアする',key:'proClears',target:1,rewards:[{type:'diamond',amount:300}]},
+  6:{id:'daily_rotation',name:'本日のミッション',condition:`プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:1,rewards:[missionItemReward('hero_proof_shard',1)]},
   0:{id:'daily_rotation',name:'本日のミッション',condition:'クイックモードを1回クリアする',key:'quickClears',target:1,rewards:[{type:'trainingTicketLarge',amount:1}]},
 });
 const WEEKLY_ROTATION_MISSIONS = Object.freeze([
-  {id:'weekly_rotation',name:'今週のミッション',condition:'プロモードを3回クリアする',key:'proClears',target:3,rewards:[{type:'uniqueSkillResetTicket',amount:1}]},
+  {id:'weekly_rotation',name:'今週のミッション',condition:`プロモードを3回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:3,rewards:[missionItemReward('hero_proof_shard',3)]},
   {id:'weekly_rotation',name:'今週のミッション',condition:'極限チャレンジを1回クリアする（未解放ならクイックモードを10回クリア）',key:'extremeOrQuick',target:1,rewards:[{type:'rainbowPsyche',amount:30}]},
-  {id:'weekly_rotation',name:'今週のミッション',condition:'クイックモードを10回クリアする',key:'quickClears',target:10,rewards:[{type:'trainingTicketLarge',amount:2}]},
+  {id:'weekly_rotation',name:'今週のミッション',condition:`種族チャレンジを3回クリアする${MISSION_BATTLE_BOTH}`,key:'speciesClears',target:3,rewards:[{type:'trainingTicketLarge',amount:2}]},
   {id:'weekly_rotation',name:'今週のミッション',condition:'アイテムを10個使用する',key:'itemUses',target:10,rewards:[{type:'bondPointReset',amount:1}]},
 ]);
 const missionDailyDefinitions = (now=Date.now()) => [
-  {id:'daily_login',name:'今日もMonster Hero！',condition:'その期間中にログインする',key:'login',target:1,rewards:[{type:'diamond',amount:100}]},
+  {id:'daily_login',name:'今日もMonster Hero！',condition:'その期間中にログインする',key:'login',target:1,rewards:[{type:'diamond',amount:200}]},
   {id:'daily_battles',name:'バトルに挑戦',condition:'バトルを3回行う',key:'battles',target:3,rewards:[{type:'trainingTicket',amount:3}]},
-  // 旧 daily_wins のIDは受取履歴互換のため維持。条件は通常チャレンジのクリアへ置き換える。
-  {id:'daily_wins',name:'デイリーチャレンジ',condition:'チャレンジモードを1回クリアする',key:'challengeClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
-  {id:'daily_enhance',name:'モンスター育成',condition:'モンスターを1回強化する',key:'enhances',target:1,rewards:[{type:'diamond',amount:200}]},
+  // 旧 daily_wins のIDは受取履歴互換のため維持。条件はチャレンジモードのクリア(タクティクスも含む)
+  {id:'daily_wins',name:'デイリーチャレンジ',condition:`チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'challengeClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
+  {id:'daily_enhance',name:'モンスター育成',condition:'モンスターを1回強化する',key:'enhances',target:1,rewards:[{type:'diamond',amount:300}]},
   {...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]},
   {id:'daily_complete',name:'デイリーコンプリート',condition:'通常デイリー5個のうち4個を達成する',key:'complete',target:4,rewards:[{type:'diamond',amount:500},{type:'skipTicketHa',amount:1}],complete:true},
 ];
 const missionWeeklyDefinitions = (now=Date.now()) => [
-  {id:'weekly_logins',name:'継続は力なり',condition:'異なる5日分のログインを行う',key:'loginDays',target:5,rewards:[{type:'diamond',amount:500}]},
-  {id:'weekly_battles',name:'バトル週間',condition:'バトルを20回行う',key:'battles',target:20,rewards:[{type:'diamond',amount:500}]},
+  {id:'weekly_logins',name:'継続は力なり',condition:'異なる5日分のログインを行う',key:'loginDays',target:5,rewards:[{type:'diamond',amount:1000}]},
+  {id:'weekly_battles',name:'バトル週間',condition:'バトルを20回行う',key:'battles',target:20,rewards:[{type:'diamond',amount:1000}]},
   {id:'weekly_enhance',name:'育成週間',condition:'モンスターを10回強化する',key:'enhances',target:10,rewards:[{type:'trainingTicketLarge',amount:2}]},
   // 旧 weekly_wins のIDをクイック枠へ再利用し、同期間の二重受取を防ぐ。
   {id:'weekly_wins',name:'クイック育成',condition:'クイックモードを5回クリアする',key:'quickClears',target:5,rewards:[{type:'rainbowPsyche',amount:20}]},
-  // 旧IDは受取履歴互換のため維持。旧「プレイ」から通常チャレンジのクリアへ変更する。
-  {id:'weekly_donations',name:'チャレンジャー',condition:'チャレンジモードを3回クリアする',key:'challengeClears',target:3,rewards:[{type:'breederXp',amount:300}]},
+  // 旧IDは受取履歴互換のため維持。条件はチャレンジモードのクリア(タクティクスも含む)
+  {id:'weekly_donations',name:'チャレンジャー',condition:`チャレンジモードを3回クリアする${MISSION_BATTLE_BOTH}`,key:'challengeClears',target:3,rewards:[{type:'breederXp',amount:300}]},
   {id:'weekly_market',name:'マーケット常連',condition:'マーケットで3回購入する',key:'marketTrades',target:3,rewards:[{type:'dyeMock',amount:2}]},
   // 旧 weekly_daily_claims のIDをアイテム使用枠へ再利用する。
   {id:'weekly_daily_claims',name:'アイテム活用',condition:'アイテムを5個使用する',key:'itemUses',target:5,rewards:[{type:'uniqueSkillResetTicket',amount:1}]},
   {...WEEKLY_ROTATION_MISSIONS[missionWeekRotationIndex(now)]},
-  {id:'weekly_complete',name:'ウィークリーコンプリート',condition:'通常ウィークリー8個のうち6個を達成する',key:'complete',target:6,rewards:[{type:'diamond',amount:2000},{type:'skipTicketKyu',amount:1},{type:'rainbowPsyche',amount:30}],complete:true},
+  {id:'weekly_complete',name:'ウィークリーコンプリート',condition:'通常ウィークリー8個のうち6個を達成する',key:'complete',target:6,rewards:[{type:'diamond',amount:3000},{type:'skipTicketKyu',amount:1},{type:'rainbowPsyche',amount:30},missionItemReward('hero_proof_shard',5)],complete:true},
 ];
 const missionMonthlyDefinitions = () => [
-  {id:'monthly_logins',name:'月間ログイン',condition:'異なる20日分のログインを行う',key:'loginDays',target:20,rewards:[{type:'diamond',amount:3000}]},
+  {id:'monthly_logins',name:'月間ログイン',condition:'異なる20日分のログインを行う',key:'loginDays',target:20,rewards:[{type:'diamond',amount:5000}]},
   {id:'monthly_battles',name:'月間バトル',condition:'バトルを100回行う',key:'battles',target:100,rewards:[{type:'rainbowPsyche',amount:50}]},
   {id:'monthly_wins',name:'月間勝利',condition:'バトルで200回勝利する',key:'wins',target:200,rewards:[{type:'trainingTicketLarge',amount:5}]},
   {id:'monthly_daily_completes',name:'デイリーマスター',condition:'デイリーコンプリートを20回達成する',key:'dailyCompletes',target:20,rewards:[{type:'diamond',amount:5000}]},
   {id:'monthly_weekly_completes',name:'ウィークリーマスター',condition:'ウィークリーコンプリートを3回達成する',key:'weeklyCompletes',target:3,rewards:[{type:'rainbowPsyche',amount:100}]},
   {id:'monthly_quick_runs',name:'クイック月間',condition:'クイックモードを20回プレイする',key:'quickRuns',target:20,rewards:[{type:'skipTicketKyu',amount:2}]},
-  {id:'monthly_challenge_runs',name:'チャレンジ月間',condition:'チャレンジモードを10回プレイする',key:'challengeRuns',target:10,rewards:[{type:'rainbowPsyche',amount:50}]},
+  {id:'monthly_challenge_runs',name:'チャレンジ月間',condition:`チャレンジモードを10回プレイする${MISSION_BATTLE_BOTH}`,key:'challengeRuns',target:10,rewards:[{type:'rainbowPsyche',amount:50}]},
+  {id:'monthly_pro_clears',name:'プロ月間',condition:`プロモードを10回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:10,rewards:[missionItemReward('hero_proof_shard',10)]},
   {id:'monthly_enhances',name:'育成月間',condition:'モンスターを30回強化する',key:'enhances',target:30,rewards:[{type:'uniqueSkillResetTicket',amount:2}]},
   {id:'monthly_market',name:'マーケット月間',condition:'マーケットで10回取引する',key:'marketTrades',target:10,rewards:[{type:'dyeMock',amount:5}]},
   {id:'monthly_mode_runs',name:'モードプレイヤー',condition:'各種モードを合計30回プレイする',key:'modeRuns',target:30,rewards:[{type:'bondPointReset',amount:2}]},
-  {id:'monthly_complete',name:'マンスリーコンプリート',condition:'通常マンスリー10個のうち8個を達成する',key:'complete',target:8,rewards:[{type:'diamond',amount:10000},{type:'rainbowPsyche',amount:200},{type:'rainbowTranscendFruit',amount:1}],complete:true},
+  {id:'monthly_complete',name:'マンスリーコンプリート',condition:'通常マンスリー11個のうち8個を達成する',key:'complete',target:8,rewards:[{type:'diamond',amount:10000},{type:'rainbowPsyche',amount:200},{type:'rainbowTranscendFruit',amount:1},missionItemReward('skip_ticket_kiwami',1)],complete:true},
 ];
 // 日次・週次はJST期間に応じてローテーションするため、参照時に現在の定義を返す。
 const MISSION_DEFS = {
@@ -7883,7 +7911,7 @@ const MISSION_DEFS = {
   get weekly(){ return missionWeeklyDefinitions(); },
   get monthly(){ return missionMonthlyDefinitions(); },
 };
-const emptyMissionCounts = () => ({login:0,battles:0,wins:0,enhances:0,dailyClaims:0,dailyCompletes:0,weeklyCompletes:0,marketTrades:0,donations:0,challengeRuns:0,quickRuns:0,modeRuns:0,challengeClears:0,quickClears:0,proClears:0,extremeClears:0,itemUses:0});
+const emptyMissionCounts = () => ({login:0,battles:0,wins:0,enhances:0,dailyClaims:0,dailyCompletes:0,weeklyCompletes:0,marketTrades:0,donations:0,challengeRuns:0,quickRuns:0,modeRuns:0,challengeClears:0,quickClears:0,proClears:0,extremeClears:0,itemUses:0,speciesClears:0});
 const normalizeMissions = (value,now=Date.now()) => {
   const dailyPeriod=missionDailyPeriod(now), weeklyPeriod=missionWeeklyPeriod(now), monthlyPeriod=missionMonthlyPeriod(now), old=value&&typeof value==='object'?value:{};
   const dailySame=old.dailyPeriod===dailyPeriod, weeklySame=old.weeklyPeriod===weeklyPeriod, monthlySame=old.monthlyPeriod===monthlyPeriod;
@@ -11318,6 +11346,46 @@ const ThemedAttackMotion = ({kind, image, lunge=false}) => {
     </span>
   );
 };
+// ==== タクティクスのEXスキルを使った瞬間のカットイン(2026-09-26 ユーザー指示「EXスキルが演出もなくて寂しい。特別なアクションだから演出はつけてほしい」) ====
+// 画面を暗くして、斜めの帯に使った子の立ち絵と「EX SKILL / EX名」を流し、効果の種類ごとの模様と色を重ねる。
+// 使った子の距離枠にも同じ色の光(.ex-aura)を出す(71-screen-battle.jsx)。
+// 見た目だけで、押せる場所は塞がない(pointer-events:none)。バトルの進行も止めない。
+// 色と模様は効果の種類(effect)で決める。モンスターごとには分けない(EXを足しても効果が同じなら同じ演出)
+const TACTICS_EX_CUTIN_MS = 1600;
+const TACTICS_EX_CUTIN_THEME = Object.freeze({
+  coverAll:     { c1:'#ddd6fe', c2:'#7c3aed', motif:'shield' }, // みんなをかばう: 紫の盾
+  allIn:        { c1:'#fed7aa', c2:'#dc2626', motif:'flame' },  // 捨て身: 赤い炎
+  statBoost:    { c1:'#fef08a', c2:'#f59e0b', motif:'rise' },   // ガッツ全開っちー: 金の光が立ちのぼる
+  weaponChange: { c1:'#cffafe', c2:'#0891b2', motif:'blade' },  // ソード・コンバージョン: 青い斬撃
+  default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },
+});
+const tacticsExCutinTheme = (effect) => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;
+const TacticsExCutin = ({ cutin }) => {
+  if (!cutin) return null;
+  const t = tacticsExCutinTheme(cutin.effect);
+  // 盤面の入れ物(transform を持つことがある)の中だと fixed が画面いっぱいにならないので、body へ出す
+  return ReactDOM.createPortal(
+    <div key={cutin.key} data-tactics-ex-cutin={cutin.effect || 'default'} className="ex-cutin" style={{ '--ex-c1':t.c1, '--ex-c2':t.c2 }} aria-hidden="true">
+      <div className="ex-cutin__shade"/>
+      <div className="ex-cutin__rays"/>
+      <div className={`ex-cutin__motif ex-cutin__motif--${t.motif}`}>{[0,1,2,3,4,5].map(i => <i key={i} style={{ '--i':i }}/>)}</div>
+      <div className="ex-cutin__band">
+        <div className="ex-cutin__lines"/>
+        <div className="ex-cutin__art">
+          <DyedMonsterImage baseId={cutin.monId} src={cutin.imgUrl} alt="" masuColors={cutin.colors} draggable={false} className="w-full h-full object-contain"/>
+        </div>
+        <div className="ex-cutin__text">
+          <div className="ex-cutin__tag">EX SKILL</div>
+          {/* 名前は1行に収める(「みんなをか/ばう」のように途中で折り返さない)。長い名前ほど字を小さくする */}
+          <div className="ex-cutin__name" style={{ fontSize:`${Math.max(15, Math.min(30, Math.floor(165 / Math.max(1, String(cutin.exName || '').length))))}px` }}>{cutin.exName}</div>
+          <div className="ex-cutin__sub">{cutin.monName}{cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}</div>
+        </div>
+      </div>
+      <div className="ex-cutin__flash"/>
+    </div>,
+    document.body
+  );
+};
 const AttackTargetFx = ({anim, attackerId}) => {
   if (!anim || anim.charge === true || anim.twinBlade) return null;
   // 種族ごとの攻撃(ThemedAttackMotion)は、自分で敵の位置へ着弾を描く
@@ -14740,6 +14808,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               'レーンの外側のマスモンが拍に合わせて跳ねる動きです。動く・動かないはここだけで決まり、「演出量」を下げても変わりません。止めたいときは「動かない」を選んでください（「軽量モード」を入れたときは、重いものをまとめて止めるためここも止まります）。',{full:true})}
             {/* マスモンの項目なので、マスモンの並びへ置く(コンボ数のあいだに挟まっていた) */}
             {field('マスモン｜能力中に光らせる',toggle('sideMonsterAbilityHighlight'),null,{full:true})}
+            {field('マスモン｜能力のカットイン',toggle('monsterCutIn'),
+              'マスモンの能力が出たとき、画面の端からそのマスモンの絵が差し込まれます。ノーツより後ろに出るので、ノーツは隠れません。「軽量モード」と演出量「最小」では出ません。',{full:true})}
           </div>
         </section>}
         {tab==='volume'&&<section data-rhythm-options-panel="volume" className={card}>
@@ -15773,8 +15843,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const rawChart=song.difficulties[difficulty.id];
   const transformedChart=useMemo(()=>assistOn||mirrorOn?rhythmTransformChart(song.difficulties[difficulty.id],{mirror:mirrorOn,assist:assistOn}):null,[song.songId,difficulty.id,assistOn,mirrorOn]);
   const chart=transformedChart||rawChart,laneRefs=useRef([]),runRef=useRef(null),frameRef=useRef(null),playAreaRef=useRef(null),judgmentLineRef=useRef(null),judgmentBandRef=useRef(null),judgmentTimerRef=useRef(null),judgmentRevisionRef=useRef(0),startLockRef=useRef(false),generationRef=useRef(0),mountedRef=useRef(false),glowNodesRef=useRef(null),liveTouchSubLanesRef=useRef([]);
-  // canvas に描く光の柱の明るさ(サブレーンごと)と、最後に押していた時刻。見た目だけの控え
-  const laneGlowStateRef=useRef(null);
+
   const tutorialBannerRef=useRef(null),tutorialStepRef=useRef(null);
   // タイミング合わせの案内(いま何回ぶん数えたか・途中経過のずれ)を書き換えるための控え。
   // 数えた回数が変わったときだけDOMへ書く(毎フレームReactを動かさない)
@@ -15844,7 +15913,14 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   },[canvasNotes,monsterSignature,monsterFaceHidden,settings.lightweightMode,settings.effectAmount]);
   // レーン枠・サブレーン境界・サブレーン発光も、遊んでいるあいだは中身が変わらない。
   // 発光の ON/OFF は setPressedLanes が直接DOMへ書くので、Reactが作り直す必要はない。
-  const laneElements=useMemo(()=><><div className="pointer-events-none absolute inset-0 grid grid-cols-5">{Array.from({length:5},(_,lane)=><div key={lane} data-rhythm-lane={lane} data-pressed="false" aria-hidden="true" className="relative border-r border-white/20 bg-slate-900/40" style={{/* ★filter をここへ入れない。押したレーンの filter を変えると、変化の60msのあいだ そのレーンが毎フレーム作り直しになる(2026-09-12・実機のカクつき調査) */transition:settings.lightweightMode?'none':'background-color 60ms linear, box-shadow 60ms linear, border-color 60ms linear',borderBottom:'3px solid transparent',boxSizing:'border-box'}}></div>)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{Array.from({length:5},(_,index)=><i key={index} data-rhythm-sublane-boundary="" />)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{/* ★will-change は置かない。以前は10枚すべてに willChange:"opacity" を常時付けていたが、 will-change は「これから変わる」と前もって伝えるものなので、付けっぱなしにすると 押していないあいだも10枚が合成レイヤーとして居座り続ける。opacity の45msの変化は will-change 無しでも十分間に合う(2026-09-12・実機のカクつき調査)。 */}{Array.from({length:10},(_,subLane)=><i key={subLane} data-rhythm-sublane-feedback={subLane} data-pressed="false" className="absolute inset-0 opacity-0" style={{clipPath:rhythmSubLanePolygon(subLane),background:'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)':'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',filter:settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'brightness(1.08)':'brightness(1.22)',transition:settings.lightweightMode?'none':'opacity 45ms linear'}}/>)}</div></>,[settings.lightweightMode,settings.effectAmount]);
+  // 押したレーンの光(2026-09-26 見直し)。奥の端から手前の端までなめらかに光り、判定ラインのところがいちばん明るい。
+  // いちばん明るい位置は判定ラインの高さの設定(--mh-judgment-line-bottom)に合わせて動く。
+  // ★ぼかしの影(box-shadow)と filter は付けない。以前は付けていて、押すたびにぼかしを描き直していた。
+  //   付けなければ、出した瞬間に1回描いたあとは透明度が変わるだけなので軽い。
+  //   canvas の光の柱も試したが、canvas は毎フレーム全体を描き直すので、光る面が広いと叩き続けたときに
+  //   フレームが4割減った(実測)。そのため部品(DOM)の光へ戻した。消え方は CSS の transition(rhythm-mode.js)
+  const RHYTHM_LANE_PRESS_GRADIENT='linear-gradient(to bottom,rgba(96,165,250,.16) 0%,rgba(96,165,250,.28) 40%,rgba(125,211,252,.44) calc(100% - var(--mh-judgment-line-bottom,20%) - 14%),rgba(224,242,254,.74) calc(100% - var(--mh-judgment-line-bottom,20%) - 3%),rgba(248,250,252,.9) calc(100% - var(--mh-judgment-line-bottom,20%)),rgba(147,197,253,.5) calc(100% - var(--mh-judgment-line-bottom,20%) + 4%),rgba(96,165,250,.34) 100%)';
+  const laneElements=useMemo(()=><><div className="pointer-events-none absolute inset-0 grid grid-cols-5">{Array.from({length:5},(_,lane)=><div key={lane} data-rhythm-lane={lane} data-pressed="false" aria-hidden="true" className="relative border-r border-white/20 bg-slate-900/40" style={{/* ★filter をここへ入れない。押したレーンの filter を変えると、変化の60msのあいだ そのレーンが毎フレーム作り直しになる(2026-09-12・実機のカクつき調査) */transition:settings.lightweightMode?'none':'background-color 60ms linear, box-shadow 60ms linear, border-color 60ms linear',borderBottom:'3px solid transparent',boxSizing:'border-box'}}></div>)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{Array.from({length:5},(_,index)=><i key={index} data-rhythm-sublane-boundary="" />)}</div><div className="pointer-events-none absolute inset-0" aria-hidden="true">{/* ★will-change は置かない。以前は10枚すべてに willChange:"opacity" を常時付けていたが、 will-change は「これから変わる」と前もって伝えるものなので、付けっぱなしにすると 押していないあいだも10枚が合成レイヤーとして居座り続ける。opacity の45msの変化は will-change 無しでも十分間に合う(2026-09-12・実機のカクつき調査)。 */}{Array.from({length:10},(_,subLane)=><i key={subLane} data-rhythm-sublane-feedback={subLane} data-pressed="false" className="absolute inset-0 opacity-0" style={{clipPath:rhythmSubLanePolygon(subLane),background:RHYTHM_LANE_PRESS_GRADIENT}}/>)}</div></>,[settings.lightweightMode,settings.effectAmount]);
   const monsterForNote=note=>{const slot=rhythmNoteMonsterSlot(note);return slot?monstersRef.current[slot-1]||null:null;};
   // --- 両サイドのマスモン ---
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
@@ -15882,6 +15958,8 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const stageLevel=rhythmStageLevel(settings);
   const stageArtRef=useRef(null),stagePulseRef=useRef(null);
   const stageArtSrc=stageLevel!=='SIMPLE'&&typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
+  // 曲名のとなりに出す小さなジャケット(ライブ背景の設定とは関係なく、絵がある曲なら出す)
+  const hudArtSrc=typeof rhythmSongArtSrc==='function'?rhythmSongArtSrc(song):'';
   useEffect(()=>{
     const canvas=stageArtRef.current;
     if(!canvas||!stageArtSrc)return;
@@ -15921,6 +15999,25 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
       })}
     </div>;
   },[monsterSignature,settings.sideMonsterOpacity,settings.sideMonsterMotion,settings.lightweightMode,sideArtUrls]);
+  // --- マスモンの能力のカットイン(2026-09-26・ユーザー指示「マスモンのカットインは重くなる気しかしないならそのへんもちゃんと確認しながら」) ---
+  // 能力が出たとき、そのマスモンの絵(両サイドと同じ焼いた1枚の画像)を画面の端から差し込む。
+  // ★重さ: 部品は演奏開始時にマスモンの数だけ作って使い回す(途中で要素を増やさない)。
+  //   動かすのは transform と opacity だけ(CSSアニメーション)。ぼかし・影は使わない。1曲に数回しか出ない。
+  // ★演奏の邪魔をしない: ノーツより後ろ(道と同じ層)に置くので、ノーツは常にカットインの上に見える。
+  // 設定「マスモン｜能力のカットイン」で出さないにできる。軽量モード・演出量「最小」では出さない。
+  const cutInRefs=useRef([]);
+  const cutInOn=settings.monsterCutIn!==false&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
+  const cutInElements=useMemo(()=>{
+    if(!cutInOn)return null;
+    return <div data-rhythm-cutin aria-hidden="true">
+      {monsters.map((monster,index)=>{
+        if(!monster||!sideArtUrls[index])return null;
+        return <div key={index+1} ref={el=>{cutInRefs.current[index]=el;}} data-rhythm-cutin-slot={index+1} data-side={index%2===0?'left':'right'}>
+          <i data-rhythm-cutin-band/><img src={sideArtUrls[index]} alt="" draggable={false} decoding="async"/>
+        </div>;
+      })}
+    </div>;
+  },[cutInOn,monsterSignature,sideArtUrls]);
   const abilityTimerRef=useRef(null),abilityRevisionRef=useRef(0),abilityBadgeRef=useRef(null);
   const emptyCounts=()=>Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]));
   // HOLD/SLIDEの追従を難易度ごとにやさしくする値を、演奏を始めるときにノーツへ焼き込む。
@@ -16348,6 +16445,8 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     // 元気のように一瞬で終わる能力は、少しのあいだだけ光らせる
     run.abilityFlashSlot=slot;
     run.abilityFlashUntilMs=songTimeMs+RHYTHM_SIDE_MONSTER_FLASH_MS;
+    // カットインを1回だけ走らせる(見た目だけ。判定・スコア・ライフには触らない)
+    if(cutInOn){const cutIn=cutInRefs.current[slot-1];if(cutIn)rhythmRestartAnimations([{el:cutIn,attr:'rhythmCutinPlay'}]);}
   }
 }
 const calculatedScore=Math.floor(rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore})*(assistOn?RHYTHM_ASSIST_SCORE_RATE:1));if(!run.lifeDepleted)run.score=calculatedScore-run.scoreOffset;if(!run.lifeDepleted&&run.life===0){run.lifeDepleted=true;run.lockedScore=run.score;}
@@ -16382,7 +16481,7 @@ const paceEl=paceRef.current;
 if(paceEl&&settings.paceDisplay!==false&&!tutorial&&!calibrating&&Number(run.startBestScore)>0&&chart.totalNotes>0){const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(run.counts[id])||0),0);const diff=Math.round(score-Number(run.startBestScore)*judged/chart.totalNotes);paceEl.hidden=false;paceEl.dataset.pace=diff>=0?'up':'down';paceEl.textContent=`ベスト比 ${diff>=0?'+':'−'}${Math.abs(diff).toLocaleString()}`;}
 /* ずれメーター(osu! のヒットエラーメーター)。直近12回のずれを目盛りに並べ、古いものほど薄くする。
    目盛りの幅は BAD の窓(±185ms)。判定には一切関わらない */
-if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)){const ticks=meterTicksRef.current;if(ticks.length){const slot=(run._meterSlot=((run._meterSlot??-1)+1)%ticks.length);const range=RHYTHM_JUDGMENTS.find(item=>item.id==='BAD')?.windowMs||185;const tick=ticks[slot];if(tick){tick.style.left=`${(50+Math.max(-1,Math.min(1,deltaMs/range))*50).toFixed(2)}%`;tick.dataset.judgment=judgment;}ticks.forEach((el,i)=>{if(!el)return;const age=(slot-i+ticks.length)%ticks.length;el.style.opacity=el.dataset.judgment?String(Math.max(.12,1-age/ticks.length).toFixed(2)):'0';});}}if(showAbilityFlash)scheduleAbilityClear();if(_judgeT0)RHYTHM_PERF.judge(performance.now()-_judgeT0,!!monster);},[chart.totalNotes,difficulty.maxScore,scheduleAbilityClear,scheduleJudgmentClear,settings.vibrationEnabled,settings.monsterNoteEffect,settings.paceDisplay,settings.timingDisplay,tutorial,calibrating,assistOn,luckOn,showLuckyBanner]);
+if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)){const ticks=meterTicksRef.current;if(ticks.length){const slot=(run._meterSlot=((run._meterSlot??-1)+1)%ticks.length);const range=RHYTHM_JUDGMENTS.find(item=>item.id==='BAD')?.windowMs||185;const tick=ticks[slot];if(tick){tick.style.left=`${(50+Math.max(-1,Math.min(1,deltaMs/range))*50).toFixed(2)}%`;tick.dataset.judgment=judgment;}ticks.forEach((el,i)=>{if(!el)return;const age=(slot-i+ticks.length)%ticks.length;el.style.opacity=el.dataset.judgment?String(Math.max(.12,1-age/ticks.length).toFixed(2)):'0';});}}if(showAbilityFlash)scheduleAbilityClear();if(_judgeT0)RHYTHM_PERF.judge(performance.now()-_judgeT0,!!monster);},[chart.totalNotes,difficulty.maxScore,scheduleAbilityClear,scheduleJudgmentClear,settings.vibrationEnabled,settings.monsterNoteEffect,settings.paceDisplay,settings.timingDisplay,tutorial,calibrating,assistOn,luckOn,showLuckyBanner,cutInOn]);
   const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.finished=true;stopFrame();RHYTHM_GESTURE_RUNTIME.clear();run.activePointers.clear();run.activeTouchInputs?.clear();run.audio?.stop();const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);/* アシストモードでは FULL COMBO 等の称号を付けない(アワーノーツと同じ) */if(assistOn){achievements.fullCombo=false;achievements.allExcellent=false;achievements.allMarvelous=false;}
     // ===== クリアか失敗か(2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして」) =====
     // 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。根性で蘇生して0を脱していれば
@@ -16462,17 +16561,7 @@ if(stagePulseOn){const pulseEl=stagePulseRef.current,notes=run.notes;let index=r
 const placeable=!!travel&&travel.ready!==false;
 // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
 const canvasReady=canvasNotes&&placeable&&RHYTHM_CANVAS_RENDERER.begin(travel.rect,{nowMs:frameNowMs,effect:settings.effectAmount,lightweight:settings.lightweightMode,maxDpr:settings.effectAmount==='MINIMAL'?2:undefined,sizeScale:settings.noteSize/100});
-// 押しているサブレーンの光の柱(2026-09-26)。どこを押しているかは DOM の押下表示の印(data-pressed /
-// data-rhythm-touchspan)をそのまま読む。印を付ける2か所(setPressedLanes と接触幅の補助)は触らない。
-// 離したあとは RHYTHM_LANE_GLOW_FADE_MS かけて消す。ノーツより先に描いて、粒が光の上に乗るようにする
-if(canvasReady&&settings.laneGlow!=='NONE'){
-  const glowArea=playAreaRef.current;let glowNodes=glowNodesRef.current;
-  if(glowArea&&(!glowNodes||!glowNodes.length||!glowNodes[0].isConnected))glowNodes=glowNodesRef.current=Array.from(glowArea.querySelectorAll('[data-rhythm-sublane-feedback]'));
-  const glow=laneGlowStateRef.current||(laneGlowStateRef.current={levels:new Float32Array(10),lastOn:new Float64Array(10).fill(-1e9)});
-  const glowGain=settings.laneGlow==='LOW'?.35:1;
-  for(let sub=0;sub<10;sub++){const el=glowNodes&&glowNodes[sub],on=!!el&&(el.dataset.pressed==='true'||el.dataset.rhythmTouchspan==='true');if(on)glow.lastOn[sub]=frameNowMs;const since=frameNowMs-glow.lastOn[sub];glow.levels[sub]=on?glowGain:since<RHYTHM_LANE_GLOW_FADE_MS?glowGain*(1-since/RHYTHM_LANE_GLOW_FADE_MS):0;}
-  RHYTHM_CANVAS_RENDERER.drawLaneGlow(glow.levels,(travel.judgmentY+travel.noteHeight/2)/travel.rect.height);
-}
+
 // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
 // 判定はここへ来る前に visitNote が済ませている。描くだけで、judgment・score・input には触らない
 const paintCanvasNote=note=>{
@@ -16934,7 +17023,9 @@ scheduleTick();};
   /* ★ここへ属性を足すときは className の「後ろ」へ置く。
      rhythm-screen-layout-check.js が <main data-rhythm-tap-test className="…overflow-hidden という
      文字列の並びをそのまま見ているので、あいだに挟むと「1画面になっていない」と落ちる。 */
-  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div ref={hudLeftRef} data-rhythm-hud-left className="min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center gap-1.5"><div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rhythmRankForScore(view.score)}</b></div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(view.score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6vw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{view.score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestRecord?.bestScore||0).toLocaleString()}</small></div></div><div className="mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div><div data-rhythm-hud-song className="mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0" style={{display:'-webkit-box',WebkitLineClamp:isLandscape?'1':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div><div data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5">{/* ★縦持ちでも中身を右へそろえる(flex-col items-end)。ブロックのままだとポーズがライフの行の**左端**に並び、
+  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div ref={hudLeftRef} data-rhythm-hud-left className="min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center gap-1.5"><div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rhythmRankForScore(view.score)}</b></div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(view.score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6vw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{view.score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestRecord?.bestScore||0).toLocaleString()}</small></div></div><div className="mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{calibrating?'タイミング合わせ':tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}</small></div></div>{/* 曲名のとなり(レーンの外)に小さくジャケットを出す(2026-09-26・ユーザー指示「ジャケットは置くにもレーン外の曲名のあたりがいい」)。
+    絵が無い曲は出さない。動かないので毎フレームの仕事は増えない。縦向きは左上の表示が道にかからないよう、絵のぶん曲名の幅を縮める */}
+<div className="mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0">{hudArtSrc&&<img data-rhythm-hud-art src={hudArtSrc} alt="" aria-hidden="true" decoding="async" draggable={false} className="h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6" style={{boxShadow:'0 1px 6px rgba(2,6,23,.8)'}}/>}<div data-rhythm-hud-song className="min-w-0 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:max-w-none" style={{maxWidth:hudArtSrc&&!isLandscape?'calc(31vw - 34px)':undefined,display:'-webkit-box',WebkitLineClamp:isLandscape?'1':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div></div><div data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5">{/* ★縦持ちでも中身を右へそろえる(flex-col items-end)。ブロックのままだとポーズがライフの行の**左端**に並び、
     ライフ表示を大きくして行が左へ伸びると、ポーズもいっしょにレーンの上へ出ていた(2026-09-24・ユーザーの実機の指摘) */}<div className="flex flex-col items-end landscape:flex-row landscape:items-center landscape:gap-2"><div ref={lifeBoxRef} data-rhythm-life data-life-state={lifeState} data-life-wide={isLandscape?'1':''} style={{'--mh-life-scale':rhythmFiniteInRange(settings.lifeDisplaySize,RHYTHM_LIFE_SIZE_MIN,RHYTHM_LIFE_SIZE_MAX,150)/100}} className="relative flex flex-nowrap items-center justify-end gap-x-1"><span aria-hidden="true" data-rhythm-life-heart className="leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'💔':'♥'}</span>{/* ★太さ・幅は「小さい端末(320px)でも台形の外の空きへ収まる」ところで止めてある。
         これ以上太く・広くすると tools/mode/rhythm-hud-wedge-check.js が落ちる。
         気づきやすさは大きさではなく、色・点滅・ひび割れ・減った量の数字で出す */}<div data-rhythm-life-track className="relative rounded-full border bg-slate-950/80"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(lifeRatio*100).toFixed(1)}%`,background:lifeRatio>.5?'linear-gradient(90deg,#34d399,#22d3ee)':lifeRatio>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{lifeState==='down'?'DOWN':view.life}</b>{/* 減った量(「-50」)を、減ったその場に一瞬だけ出す。中身はapplyJudgmentが直接書く */}<b ref={lifeDamageRef} data-rhythm-life-damage aria-hidden="true" className="pointer-events-none absolute right-0 top-full mt-0.5 text-[11px] font-black leading-none tabular-nums"/></div><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/></div></header>{/* ===== 曲の進みぐあい・経過時間・自己ベスト比(2026-09-24) =====
@@ -16962,7 +17053,7 @@ scheduleTick();};
 {lifeState==='down'&&<div data-rhythm-down-vignette aria-hidden="true" className="pointer-events-none absolute inset-0 z-20"/>}
 {/* 0になったその瞬間だけ、大きく1度だけ出す(1.4秒で消える) */}
 {lifeDownSlam&&<div data-rhythm-life-down-slam aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[32%] z-40 text-center"><b className="block text-5xl font-black leading-none">LIFE 0</b><small className="mt-1 block text-xs font-black tracking-[0.34em]">DOWN</small></div>}
-<div ref={playAreaRef} data-rhythm-play-area data-rhythm-canvas-glow={canvasNotes?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
+<div ref={playAreaRef} data-rhythm-play-area data-rhythm-counting={countdownStep!==null?'1':undefined} data-rhythm-strip={RHYTHM_STRIP.value||undefined} data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{/* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
     置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
     判定ラインが画面の変なところへ出る(2026-09-05)。中身の置き場所に関わるものは
     外部CSSに任せない */position:'relative',overflow:'hidden',touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,
@@ -16979,7 +17070,7 @@ scheduleTick();};
     <i data-rhythm-stage-sparks="far"/><i data-rhythm-stage-sparks="near"/></>}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
-{stageLevel!=='SIMPLE'&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
+{stageLevel!=='SIMPLE'&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
     「コンボももう少し目立つように段階的に / あと右より過ぎるから邪魔にならないように真ん中に寄せて」。
     右上のHUDから**プレイエリアの真ん中**へ移した。
     ★HUDの左右の列は、レーンの台形の外側の空きに置いてある。その空きは上へ行くほど広く、
@@ -24163,7 +24254,10 @@ const BossMovieLayer = ({ shake = true }) => {
       if (extras && extras.sound && Audio_.playSeFile) sound = Audio_.playSeFile(extras.sound);
       timers.push(setTimeout(() => finish(true), BOSS_MOVIE_MAX_MS));
       timers.push(setTimeout(() => setCanSkip(true), 900));
+      // 揺れの合図を見るためだけのループ。合図が無いムービーでは回さず、全部出し終えたら止める
+      // (以前は合図が無くても・出し終えてもムービーが終わるまで毎コマ回っていた)
       const tick = () => {
+        raf = 0;
         if (settled) return;
         const pos = Number.isFinite(el.currentTime) ? el.currentTime * 1000 : Date.now() - startWall;
         shakes.forEach((c) => {
@@ -24171,9 +24265,9 @@ const BossMovieLayer = ({ shake = true }) => {
           c.fired = true;
           if (shake) setShakeKey((k) => k + 1);
         });
-        raf = requestAnimationFrame(tick);
+        if (shakes.some((c) => !c.fired)) raf = requestAnimationFrame(tick);
       };
-      raf = requestAnimationFrame(tick);
+      if (shakes.length) raf = requestAnimationFrame(tick);
     };
     // ★最後まで流れたときは、効果音の余韻をそのまま残す。途中で閉じたとき(スキップ・読めない・画面ごと閉じた)は音も消す
     const onEnded = () => finish(true, true);
@@ -24374,7 +24468,7 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
-  tacticsExInfo, activateTacticsEx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
+  tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
   tacticsExIntroVisible, dismissTacticsExIntro,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
   unifiedSpecialDefense, useEmergency, wave,
@@ -25013,6 +25107,7 @@ function BattleScreen({
               {enemy?.imgUrl?(isMooBoss(enemy?.id)?<div style={{width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}>{enemyMotion&&<i aria-hidden="true" data-enemy-glow/>}<img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>{enemyFlashNode}</span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,10.5dvh,96px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
               {/* 味方の攻撃が敵に当たった瞬間の着弾(体当たり・突進・ザン/エイキの斬撃)。攻撃中だけ出る */}
               {!ecoBattleView&&attackAnim&&<AttackTargetFx anim={attackAnim} attackerId={slots[attackAnim.slotIndex]?.id}/>}
+              <TacticsExCutin cutin={tacticsExCutin}/>
               {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
               {!ecoBattleView&&isMooBoss(enemy?.id)&&(
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible" style={{zIndex:1}}>
@@ -25652,6 +25747,9 @@ function BattleScreen({
                     色と輪で「どこを見ればよいか」を先に伝える(2026-09-22 ユーザー指示
                     「食らったモンスターにエフェクトなどがつくようにしたい」)。
                     数字(z-[70])より下へ重ねて、数字が読めなくならないようにする */}
+                {/* EXスキルを使った子の枠の光(カットインと同じ色。TacticsExCutin と同じ時間で消える) */}
+                {tacticsExCutin&&tacticsExCutin.slotIndex===i&&<span key={tacticsExCutin.key} data-tactics-ex-aura={tacticsExCutin.effect||'default'} className="ex-aura" aria-hidden="true"
+                  style={{'--ex-c1':tacticsExCutinTheme(tacticsExCutin.effect).c1,'--ex-c2':tacticsExCutinTheme(tacticsExCutin.effect).c2}}><i/><i/></span>}
                 {slotHitKind&&(()=>{
                   const hitFx=TACTICS_SLOT_FX_STYLE[slotHitKind];
                   return(<div data-tactics-hit-fx={slotHitKind} className="absolute inset-0 z-[58] pointer-events-none overflow-visible">
@@ -26005,7 +26103,7 @@ function BattleScreen({
               const tutorialAllowed=battleTutorialCardAllowed(c);
               // 光らせるのは「いま触ってほしい種類」だけ。技変更の番は名前のところも光らせる
               const tutorialTargeted=!!battleTutorialCardTarget&&battleTutorialCardKind(c)===battleTutorialCardTarget;
-              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex"><button data-hand-card={i} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
+              const handCardButton=(<button data-hand-card={i} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
                 if(isBusy||autoBattleRef.current||!tutorialAllowed)return;
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;
@@ -26060,7 +26158,15 @@ function BattleScreen({
                   className={`flex w-full shrink-0 flex-col overflow-hidden rounded-[7px] border border-white/60 bg-white/[.12] shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>
                   <div style={{height:HAND_CARD_FIT.band}} className="flex shrink-0 items-center justify-center gap-0.5 text-[9px] font-black leading-none text-white"><span aria-hidden="true">⇄</span>技変更</div>
                   <div className="text-[10px] font-black bg-black/30 text-white rounded-[5px] flex items-center justify-center gap-0.5" style={{paddingTop:HAND_CARD_FIT.gutsPad,paddingBottom:HAND_CARD_FIT.gutsPad}}><Zap size={9}/>{curGuts}</div>
-                </div>):<div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] flex items-center justify-center gap-0.5" style={{paddingTop:HAND_CARD_FIT.gutsPad,paddingBottom:HAND_CARD_FIT.gutsPad}}><Zap size={9}/>{curGuts}</div>)}</div></button>{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{isDragging&&ReactDOM.createPortal(<div data-tactics-drag-card-ghost className={`fixed w-[72px] rounded-[12px] border p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]`} style={{left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,pointerEvents:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))',...(TYPE_INLINE_STYLE[c.type]||{})}}><div data-decoration className="mt-1.5 flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20">{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5" style={{containerType:'inline-size'}}><div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5" style={handCardNameFit(c.name)}>{c.name}</div><div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></div>,document.body)}{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
+                </div>):<div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] flex items-center justify-center gap-0.5" style={{paddingTop:HAND_CARD_FIT.gutsPad,paddingBottom:HAND_CARD_FIT.gutsPad}}><Zap size={9}/>{curGuts}</div>)}</div></button>);
+              // ★引きずっているカードは、本物のカード1枚だけを画面の最上層(body の直下)へ出して指につける
+              //   (2026-09-26 ユーザー指摘「上に持ってくと下からまたカードが出てくる」「ドラッグしてるカードの表示が古いやつのまま」)。
+              //   手札の欄には backdrop-filter が掛かっていて、中に置いたまま position:fixed にすると
+              //   基準が欄になってずれた位置にもう1枚見え、指が動くたびに欄のぼかしも描き直しになる。
+              //   以前は古い見た目の写しを別に出していて、本物と写しの2枚を毎回描いていた。
+              //   手札の飾り(金の縁・宝石など)は [data-tactics-look] の下でだけ効くので、同じ印を付けた箱で包む。
+              //   body の直下なのは、画面の揺れ(transform)の影響を受けないようにするため
+              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex">{isDragging?ReactDOM.createPortal(<div data-drag-card-layer data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined}>{handCardButton}</div>,document.body):handCardButton}{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
             })}
           </div>
         </div>
@@ -28276,9 +28382,8 @@ function MonsterHeroGame() {
   const [attackAnim, setAttackAnim] = useState(null); // {slotIndex}
   const [slotSkill, setSlotSkill] = useState(null); // {slotIndex, name, type} スロット上の技名インライン表示
   const [dragState, setDragState] = useState(null); // {cardIndex, x, y, active, card} カードドラッグ
-  // 引きずっているあいだの指の位置。動くたびに state を更新すると画面全体(予測の計算も)が
-  // 描き直されるので、位置はここへ入れてカード1枚の left/top だけを直接動かす。
-  // 描き直しが起きたときもここから読むので、カードが古い位置へ戻らない
+  // 引きずっているあいだの指の位置(下の onMove を参照)。描き直しが起きたときもここから読むので、
+  // カードが古い位置へ戻らない
   const dragPosRef = useRef(null);
   const cardDragActiveRef = useRef(false); // 閾値を越えたあと始点へ戻っても、スワイプ成立を保持する
   const suppressCardClickRef = useRef(0); // pointerup後にブラウザが合成するclickを捕捉して捨てる期限
@@ -29231,6 +29336,7 @@ function MonsterHeroGame() {
     const fused = (masu?.fusionHistory || []).length > 0;
     const power = mon !== undefined ? (mon ? monsterPowerOf(mon) : null) : (masu ? masuPowerOf(masu) : monsterPowerOf(base));
     const iconSrc = base.iconUrl || base.imgUrl || '';
+    const unusedTranscendPoints = masu ? normalizeMasuProgression(masu).transcendPoints : 0;
     return (<>
       <div className="relative shrink-0" style={{isolation:'isolate'}}>
         <div className={`${MONSTER_CARD_ICON_CLASS} border ${masu?(fused?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'):'border-white/10'}`}>
@@ -29248,6 +29354,14 @@ function MonsterHeroGame() {
           <span aria-label={`ふり分けできる強化ポイント ${masu.distAptPoints}`}
             className="absolute -left-1.5 -bottom-1 z-10 rounded-full border border-amber-200/60 bg-amber-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow"
             style={{minWidth:'17px',textAlign:'center'}}>{masu.distAptPoints}</span>
+        )}
+        {/* ふり分けできる超越ポイント。通常の強化ポイント(左下・黄)と見分けられるよう、
+            **右下**に超越強化画面と同じ空色で出す。超越していない個体も超越強化は使えるので、
+            transcended ではなく残りポイントだけで出し入れする。 */}
+        {unusedTranscendPoints>0&&(
+          <span aria-label={`ふり分けできる超越ポイント ${unusedTranscendPoints}`}
+            className="absolute -right-1.5 -bottom-1 z-10 rounded-full border border-sky-100/70 bg-sky-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow"
+            style={{minWidth:'17px',textAlign:'center'}}>{unusedTranscendPoints}</span>
         )}
         {masu&&<RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>}
         {masu&&<TranscendenceBadge transcended={normalizeMasuProgression(masu).transcended} soulRankStage={normalizeMasuProgression(masu).soulRankStage} small/>}
@@ -30490,7 +30604,8 @@ function MonsterHeroGame() {
     pushAutoEnhanceLog(result.results);
   }, [masuMons, dataLoaded]);
 
-  const homePastureMasumons = homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]);
+  // 画面に関係なく毎回マスモン全体から探し直していたので、並びかマスモンが変わったときだけにする
+  const homePastureMasumons = useMemo(() => homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]), [homePastureIds, masuMons]);
   // セーブ読込後のタイトル中に、最初のHOMEで必ず使う画像だけを最優先で先読みする。
   // 完了をタイトル操作やHOME遷移の条件にはせず、失敗時も通常のimg読込へそのまま任せる。
   useEffect(() => {
@@ -31871,7 +31986,7 @@ function MonsterHeroGame() {
     const DRAG_THRESHOLD=10;
     const startX=dragState.x, startY=dragState.y;
     dragPosRef.current={x:startX,y:startY};
-    // 画面へ出している active。これが変わるとき(引きずり始め)だけ state を更新する
+    // 画面へ出している active(引きずり始めを state で描いたか)
     let shownActive=!!dragState.active;
     const findSlot=(x,y)=>{
       const el=document.elementFromPoint(x,y);
@@ -31886,12 +32001,19 @@ function MonsterHeroGame() {
       if(moved>=DRAG_THRESHOLD) cardDragActiveRef.current=true;
       const active=cardDragActiveRef.current;
       dragPosRef.current={x,y};
-      if(active!==shownActive){
+      // ★引きずっているカードは body 直下の箱([data-drag-card-layer])に1枚だけ出ている(71-screen-battle)。
+      //   そこに出ていれば、位置だけを直接動かして画面全体は描き直さない(指が動くたびに
+      //   予測の計算ごと描き直していて、重さ・発熱の原因になっていた)。
+      //   引きずり始め(まだ箱に出ていない)や、箱が見つからないときは、今までどおり state で描く。
+      //   ⚠️ 2026-09-26 に一度、手札の欄(backdrop-filter の中)に置いたまま直接動かして、iPhone で
+      //   カードがずれて2枚に見えた。直接動かすのは body 直下の箱の中のカードだけにすること
+      const layerCard=active&&shownActive?document.querySelector('[data-drag-card-layer] [data-dragging-card]'):null;
+      if(layerCard){
+        layerCard.style.left=`${x}px`;
+        layerCard.style.top=`${y}px`;
+      } else {
         shownActive=active;
         setDragState(prev=>prev?{...prev,x,y,active}:null);
-      } else if(active){
-        const el=document.querySelector('[data-dragging-card]');
-        if(el){ el.style.left=`${x}px`; el.style.top=`${y}px`; }
       }
       if(active){ setDragOverSlot(findSlot(x,y)); }
       if(active&&e.cancelable) e.preventDefault();
@@ -35190,6 +35312,9 @@ function MonsterHeroGame() {
     // チャレンジの mh_clears_* と極限の mh_extreme_clears_* はどちらも書き換えない。
     // 極限難易度で遊んでも極限チャレンジのクリア数には数えない
     if (speciesChallengeBattleRunRef.current) {
+      // ミッションの「種族チャレンジをクリア」はクラシック・タクティクスどちらでも進む。
+      // 保存しない確認の周回では進めない
+      if (speciesChallengeSaveRunRef.current) await saveMissionProgress('speciesClear');
       addAssistantBond('clear');
       return;
     }
@@ -35201,6 +35326,9 @@ function MonsterHeroGame() {
       const nextTactics = (Number(tacticsRecordsOf(runMode).clears[tacticsDiff]) || 0) + 1;
       bumpTacticsRecord(runMode, 'clears', tacticsDiff, nextTactics);
       await storeSet(clearCountKey(runMode, tacticsDiff), nextTactics, false);
+      // ミッションはクラシックと共通(2026-09-26 ユーザー指示「タクティクスも共通にする」)。
+      // 記録の置き場は分けたまま、ミッションの数え方だけクラシックの同じモードへそろえる
+      await saveMissionProgress(extremeRunRef.current ? 'extremeClear' : isProMode(runMode) ? 'proClear' : 'challengeClear');
       addAssistantBond('clear');
       return;
     }
@@ -36146,9 +36274,11 @@ function MonsterHeroGame() {
       modeRun:{key:'modeRuns',daily:false,weekly:false,monthly:true},
       challengeClear:{key:'challengeClears',daily:true,weekly:true},
       quickClear:{key:'quickClears',daily:true,weekly:true},
-      proClear:{key:'proClears',daily:true,weekly:true},
+      proClear:{key:'proClears',daily:true,weekly:true,monthly:true},
       extremeClear:{key:'extremeClears',daily:false,weekly:true},
       itemUse:{key:'itemUses',daily:true,weekly:true},
+      // 種族チャレンジのクリア(2026-09-26)
+      speciesClear:{key:'speciesClears',daily:true,weekly:true,monthly:true},
     }[event];
     if(!rule)return;
     const next=normalizeMissions(missionsRef.current);
@@ -37709,6 +37839,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★効き目そのもの(攻撃の引き受け・ステータスの上下・固有技の切り替え)は、戦闘の計算側で
   //   isTacticsExEffectActive を見て決める。ここは「使った瞬間」に1度だけ起こすもの(演出・ログ)の置き場
   const TACTICS_EX_ON_USE = {};
+  // EXを使った瞬間のカットイン(TacticsExCutin)。見た目だけなので、進行は待たずに時間で片付ける
+  const [tacticsExCutin, setTacticsExCutin] = useState(null);
+  const tacticsExCutinTimerRef = useRef(null);
+  const showTacticsExCutin = (cutin) => {
+    if (tacticsExCutinTimerRef.current) clearTimeout(tacticsExCutinTimerRef.current);
+    setTacticsExCutin({ ...cutin, key: Date.now() });
+    tacticsExCutinTimerRef.current = setTimeout(() => { tacticsExCutinTimerRef.current = null; setTacticsExCutin(null); }, TACTICS_EX_CUTIN_MS);
+  };
   // choice … スタイル式のEX(ソード・コンバージョン)で選んだスタイルの id
   const activateTacticsEx = (slotIdx, choice = null) => {
     if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
@@ -37744,6 +37882,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
       addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md',undefined,slotIdx);
+      Audio_.se.special();
+      showTacticsExCutin({ slotIndex:slotIdx, effect:def.effect, monId:mon.id, imgUrl:mon.imgUrl, colors:mon.colors, monName:mon.masuName||mon.name, exName:def.name,
+        styleLabel:def.duration==='style'?tacticsExStyleLabel(def,next,slotIdx,mon.id):'' });
       if(typeof onUse==='function') onUse({ def, slotIdx, mon, state:next });
     }
     else pushBattleLog('（開発中）このEXの効果はまだ出ない。回数と併用のルールだけ動いている', 'info');
@@ -39468,7 +39609,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // デバッグ・練習・保存しない種族チャレンジはdebugBattleRefで除外される。
     if (!enemy && !debugBattleRef.current) {
       if (isQuickMode(runMode)) void saveMissionProgress('quickRun');
-      else if (runMode===BATTLE_MODE_CHALLENGE&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');
+      // タクティクスチャレンジもクラシックのチャレンジと同じ項目へ数える(2026-09-26)
+      else if ((runMode===BATTLE_MODE_CHALLENGE||runMode===BATTLE_MODE_TACTICS)&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');
       else void saveMissionProgress('modeRun');
     }
     setTimeout(()=>{setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},battleMs(150));
@@ -44133,7 +44275,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getNextTurnBuff={getNextTurnBuff} getPermaBuff={getPermaBuff} getTurnBuff={getTurnBuff}
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
-            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx}
+            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}
@@ -47045,6 +47187,85 @@ const createAnimationStyle = () => {
       .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit { display:none; }
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
     }
+    /* ==== タクティクスのEXスキルを使った瞬間のカットイン(24-battle-fx.jsx の TacticsExCutin・1600ms) ====
+       暗転 → 斜めの帯が左から入る(立ち絵・EX SKILL・名前)→ 効果ごとの模様 → 帯が右へ抜ける。色は --ex-c1(明)/--ex-c2(濃)。
+       押せる場所は塞がない(pointer-events:none)。 */
+    .ex-cutin { position:fixed; inset:0; z-index:9600; pointer-events:none; overflow:hidden; }
+    .ex-cutin > * { position:absolute; pointer-events:none; }
+    .ex-cutin__shade { inset:0; opacity:0; background:radial-gradient(ellipse at 50% 50%, rgba(8,6,20,.55), rgba(2,2,8,.82));
+      animation:exShade 1600ms ease-out forwards; }
+    @keyframes exShade { 0% { opacity:0; } 8%,80% { opacity:1; } 100% { opacity:0; } }
+    .ex-cutin__rays { left:50%; top:50%; width:160vmax; height:160vmax; margin:-80vmax 0 0 -80vmax; opacity:0;
+      background:repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--ex-c2) 45%, transparent) 0 6deg, transparent 6deg 18deg);
+      -webkit-mask-image:radial-gradient(circle, #000 0 18%, transparent 55%); mask-image:radial-gradient(circle, #000 0 18%, transparent 55%);
+      animation:exRays 1600ms ease-out forwards; }
+    @keyframes exRays { 0% { opacity:0; transform:rotate(0deg) scale(.6); } 12% { opacity:.9; } 78% { opacity:.7; } 100% { opacity:0; transform:rotate(40deg) scale(1.1); } }
+    .ex-cutin__band { left:-12%; right:-12%; top:50%; height:148px; margin-top:-74px; overflow:visible;
+      background:linear-gradient(90deg, rgba(6,8,18,.35), rgba(8,10,24,.94) 18%, rgba(8,10,24,.94) 82%, rgba(6,8,18,.35));
+      border-top:3px solid var(--ex-c1); border-bottom:3px solid var(--ex-c1);
+      box-shadow:0 0 18px var(--ex-c2), 0 0 42px color-mix(in srgb, var(--ex-c2) 60%, transparent), inset 0 0 30px color-mix(in srgb, var(--ex-c2) 45%, transparent);
+      transform:translateX(-120%) skewY(-7deg); animation:exBand 1600ms cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes exBand {
+      0% { transform:translateX(-120%) skewY(-7deg); }
+      13% { transform:translateX(0) skewY(-7deg); }
+      80% { transform:translateX(2%) skewY(-7deg); opacity:1; }
+      100% { transform:translateX(125%) skewY(-7deg); opacity:.6; }
+    }
+    .ex-cutin__lines { position:absolute; inset:0; opacity:.9;
+      background:repeating-linear-gradient(90deg, transparent 0 46px, color-mix(in srgb, var(--ex-c1) 22%, transparent) 46px 48px);
+      animation:exLines 260ms linear infinite; }
+    @keyframes exLines { from { background-position:0 0; } to { background-position:-48px 0; } }
+    .ex-cutin__art { position:absolute; left:calc(12% + 2px); bottom:-12px; width:156px; height:156px; transform:skewY(7deg);
+      filter:drop-shadow(0 0 10px var(--ex-c2)) drop-shadow(0 6px 10px rgba(0,0,0,.7)); animation:exArt 1600ms cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes exArt { 0%,6% { opacity:0; translate:-70px 0; scale:.85; } 20% { opacity:1; translate:0 0; scale:1.08; } 30%,82% { opacity:1; translate:6px 0; scale:1; } 100% { opacity:0; translate:60px 0; scale:1; } }
+    .ex-cutin__text { position:absolute; left:calc(12% + 162px); right:calc(12% + 8px); top:50%; transform:translateY(-50%) skewY(7deg); min-width:0; }
+    .ex-cutin__tag { font:900 12px/1 system-ui, sans-serif; letter-spacing:.32em; color:var(--ex-c1);
+      text-shadow:0 0 8px var(--ex-c2); opacity:0; animation:exTag 1600ms ease-out forwards; }
+    @keyframes exTag { 0%,10% { opacity:0; translate:30px 0; } 20%,84% { opacity:1; translate:0 0; } 100% { opacity:0; } }
+    .ex-cutin__name { margin-top:6px; font:italic 900 26px/1.15 system-ui, sans-serif; color:#fff; white-space:nowrap;
+      text-shadow:0 0 2px var(--ex-c2), 2px 2px 0 var(--ex-c2), -1px -1px 0 color-mix(in srgb, var(--ex-c2) 70%, #000), 0 0 16px var(--ex-c2);
+      opacity:0; animation:exName 1600ms cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes exName { 0%,12% { opacity:0; translate:46px 0; scale:1.35; } 24% { opacity:1; translate:0 0; scale:.96; } 30%,84% { opacity:1; scale:1; } 100% { opacity:0; translate:-20px 0; } }
+    .ex-cutin__sub { margin-top:6px; font:800 11px/1.2 system-ui, sans-serif; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      opacity:0; animation:exTag 1600ms ease-out 60ms forwards; }
+    .ex-cutin__flash { inset:0; background:#fff; opacity:0; animation:exFlash 1600ms linear forwards; }
+    @keyframes exFlash { 0% { opacity:0; } 5% { opacity:.7; } 15% { opacity:0; } 84% { opacity:0; } 90% { opacity:.3; } 100% { opacity:0; } }
+    .ex-cutin__motif { inset:0; }
+    .ex-cutin__motif i { position:absolute; opacity:0; }
+    /* 盾(みんなをかばう): 画面の中心から六角形の輪が広がる */
+    .ex-cutin__motif--shield i { left:50%; top:50%; width:120px; height:120px; margin:-60px 0 0 -60px;
+      clip-path:polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%);
+      background:radial-gradient(circle, transparent 0 56%, var(--ex-c1) 60% 66%, color-mix(in srgb, var(--ex-c2) 70%, transparent) 70%, transparent 74%);
+      animation:exShield 900ms ease-out forwards; animation-delay:calc(180ms + var(--i) * 110ms); }
+    @keyframes exShield { 0% { opacity:0; transform:scale(.3); } 20% { opacity:1; } 100% { opacity:0; transform:scale(4.2); } }
+    /* 炎(捨て身): 下から炎の舌が立ちのぼる */
+    .ex-cutin__motif--flame i { bottom:-60px; left:calc(var(--i) * 17% - 4%); width:34%; height:62vh; border-radius:50% 50% 40% 40%;
+      background:radial-gradient(ellipse at 50% 85%, #fff7 0 8%, var(--ex-c1) 18%, var(--ex-c2) 45%, transparent 70%); filter:blur(2px);
+      animation:exFlame 1100ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 60ms); }
+    @keyframes exFlame { 0% { opacity:0; transform:translateY(40%) scaleY(.4); } 25% { opacity:.95; } 60% { opacity:.8; transform:translateY(0) scaleY(1.05) scaleX(.9); } 100% { opacity:0; transform:translateY(-18%) scaleY(1.2) scaleX(.7); } }
+    /* 光(ガッツ全開っちー): 金の光の柱と粒が下から上へ */
+    .ex-cutin__motif--rise i { bottom:0; left:calc(8% + var(--i) * 16%); width:10px; height:70vh; border-radius:999px;
+      background:linear-gradient(0deg, transparent, var(--ex-c2) 30%, var(--ex-c1) 70%, #fff); box-shadow:0 0 14px var(--ex-c2);
+      animation:exRise 1000ms ease-out forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
+    @keyframes exRise { 0% { opacity:0; transform:translateY(80%) scaleX(.5); } 30% { opacity:.95; } 100% { opacity:0; transform:translateY(-40%) scaleX(1.4); } }
+    /* 斬撃(ソード・コンバージョン): 画面を斜めに横切る青い光の筋 */
+    .ex-cutin__motif--blade i { left:-20%; top:calc(20% + var(--i) * 12%); width:140%; height:4px; border-radius:999px; transform-origin:0 50%;
+      background:linear-gradient(90deg, transparent, var(--ex-c1) 30%, #fff 50%, var(--ex-c1) 70%, transparent); box-shadow:0 0 10px var(--ex-c2), 0 0 22px var(--ex-c2);
+      rotate:calc(-24deg + (var(--i) - 2.5) * 6deg); animation:exBlade 520ms ease-out forwards; animation-delay:calc(200ms + var(--i) * 80ms); }
+    @keyframes exBlade { 0% { opacity:0; transform:scaleX(0); } 30% { opacity:1; transform:scaleX(1); } 100% { opacity:0; transform:scaleX(1) translateY(6px); } }
+    /* 使った子の距離枠の光 */
+    .ex-aura { position:absolute; inset:-2px; z-index:57; pointer-events:none; border-radius:18px; opacity:0;
+      border:2px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 22px color-mix(in srgb, var(--ex-c2) 70%, transparent);
+      animation:exAura 1600ms ease-out forwards; }
+    @keyframes exAura { 0% { opacity:0; } 10% { opacity:1; } 30% { opacity:.55; } 45% { opacity:1; } 60% { opacity:.55; } 75% { opacity:1; } 100% { opacity:0; } }
+    .ex-aura i { position:absolute; left:50%; top:50%; width:60px; height:60px; margin:-30px 0 0 -30px; border-radius:50%;
+      border:3px solid var(--ex-c1); box-shadow:0 0 12px var(--ex-c2); animation:exAuraRing 800ms ease-out forwards; }
+    .ex-aura i + i { animation-delay:260ms; }
+    @keyframes exAuraRing { 0% { opacity:0; transform:scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:scale(2.6); } }
+    @media (prefers-reduced-motion: reduce) {
+      .ex-cutin__rays, .ex-cutin__motif, .ex-cutin__lines, .ex-aura i { display:none; }
+      .ex-cutin__band { animation:exShade 1600ms ease-out forwards; transform:skewY(-7deg); }
+    }
     /* 敵の側に出す着弾(24-battle-fx.jsx の AttackTargetFx)。敵の丸枠の中心に重ね、攻撃の尺の中で消える。 */
     .atk-target-fx { position:absolute; left:50%; top:50%; width:0; height:0; z-index:9500; pointer-events:none; overflow:visible; }
     /* 図鑑などのプレビューでは敵が居ないので、「敵の位置」(--atk-dx/dy)へずらして重ねる */
@@ -48174,7 +48395,7 @@ const createAnimationStyle = () => {
     [data-moo-reticle] { width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; opacity: 0; border: 3px dashed rgba(250,204,21,.95);
       box-shadow: 0 0 16px rgba(220,38,38,.9), inset 0 0 16px rgba(220,38,38,.6); animation: emLock 800ms ease-out both; }
     /* ---- ボスの必殺技ムービー(71-screen-battle の BossMovieLayer)。画面を切り替えて、上に技名・まんなかにムービー ----
-       ★ムービーは横長(768×488)。縦のスマホでは幅いっぱいより少し大きく(116vw)して左右を少しだけ切り、上下のふちはぼかして背景へなじませる。
+       ★ムービーは横長(1024×682)。縦のスマホでは幅いっぱいより少し大きく(116vw)して左右を少しだけ切り、上下のふちはぼかして背景へなじませる。
        ★技名の札(z 65000)・敵の技の演出(z 64000)より上に出す */
     [data-boss-movie] { position: fixed; inset: 0; z-index: 66000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); -webkit-tap-highlight-color: transparent; user-select: none;
@@ -48182,7 +48403,7 @@ const createAnimationStyle = () => {
     /* ★背景は不透明にする。半透明だと、うしろの戦闘画面(敵の絵・枠)が透けて見える */
     @keyframes bossMovieIn { from { opacity: 0; } to { opacity: 1; } }
     [data-boss-movie-stage] { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-    [data-boss-movie-frame] { position: relative; flex-shrink: 0; width: min(116vw, calc(66vh * 768 / 488)); aspect-ratio: 768 / 488; overflow: hidden;
+    [data-boss-movie-frame] { position: relative; flex-shrink: 0; width: min(116vw, calc(66vh * 1024 / 682)); aspect-ratio: 1024 / 682; overflow: hidden;
       -webkit-mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); }
     [data-boss-movie-frame] > video { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
     [data-boss-movie-title] { text-align: center; line-height: 1.15; animation: bossMovieTitle 900ms cubic-bezier(.2,.8,.2,1) both; }

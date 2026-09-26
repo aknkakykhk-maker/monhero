@@ -946,9 +946,8 @@ function MonsterHeroGame() {
   const [attackAnim, setAttackAnim] = useState(null); // {slotIndex}
   const [slotSkill, setSlotSkill] = useState(null); // {slotIndex, name, type} スロット上の技名インライン表示
   const [dragState, setDragState] = useState(null); // {cardIndex, x, y, active, card} カードドラッグ
-  // 引きずっているあいだの指の位置。動くたびに state を更新すると画面全体(予測の計算も)が
-  // 描き直されるので、位置はここへ入れてカード1枚の left/top だけを直接動かす。
-  // 描き直しが起きたときもここから読むので、カードが古い位置へ戻らない
+  // 引きずっているあいだの指の位置(下の onMove を参照)。描き直しが起きたときもここから読むので、
+  // カードが古い位置へ戻らない
   const dragPosRef = useRef(null);
   const cardDragActiveRef = useRef(false); // 閾値を越えたあと始点へ戻っても、スワイプ成立を保持する
   const suppressCardClickRef = useRef(0); // pointerup後にブラウザが合成するclickを捕捉して捨てる期限
@@ -1901,6 +1900,7 @@ function MonsterHeroGame() {
     const fused = (masu?.fusionHistory || []).length > 0;
     const power = mon !== undefined ? (mon ? monsterPowerOf(mon) : null) : (masu ? masuPowerOf(masu) : monsterPowerOf(base));
     const iconSrc = base.iconUrl || base.imgUrl || '';
+    const unusedTranscendPoints = masu ? normalizeMasuProgression(masu).transcendPoints : 0;
     return (<>
       <div className="relative shrink-0" style={{isolation:'isolate'}}>
         <div className={`${MONSTER_CARD_ICON_CLASS} border ${masu?(fused?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'):'border-white/10'}`}>
@@ -1918,6 +1918,14 @@ function MonsterHeroGame() {
           <span aria-label={`ふり分けできる強化ポイント ${masu.distAptPoints}`}
             className="absolute -left-1.5 -bottom-1 z-10 rounded-full border border-amber-200/60 bg-amber-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow"
             style={{minWidth:'17px',textAlign:'center'}}>{masu.distAptPoints}</span>
+        )}
+        {/* ふり分けできる超越ポイント。通常の強化ポイント(左下・黄)と見分けられるよう、
+            **右下**に超越強化画面と同じ空色で出す。超越していない個体も超越強化は使えるので、
+            transcended ではなく残りポイントだけで出し入れする。 */}
+        {unusedTranscendPoints>0&&(
+          <span aria-label={`ふり分けできる超越ポイント ${unusedTranscendPoints}`}
+            className="absolute -right-1.5 -bottom-1 z-10 rounded-full border border-sky-100/70 bg-sky-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow"
+            style={{minWidth:'17px',textAlign:'center'}}>{unusedTranscendPoints}</span>
         )}
         {masu&&<RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>}
         {masu&&<TranscendenceBadge transcended={normalizeMasuProgression(masu).transcended} soulRankStage={normalizeMasuProgression(masu).soulRankStage} small/>}
@@ -3160,7 +3168,8 @@ function MonsterHeroGame() {
     pushAutoEnhanceLog(result.results);
   }, [masuMons, dataLoaded]);
 
-  const homePastureMasumons = homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]);
+  // 画面に関係なく毎回マスモン全体から探し直していたので、並びかマスモンが変わったときだけにする
+  const homePastureMasumons = useMemo(() => homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]), [homePastureIds, masuMons]);
   // セーブ読込後のタイトル中に、最初のHOMEで必ず使う画像だけを最優先で先読みする。
   // 完了をタイトル操作やHOME遷移の条件にはせず、失敗時も通常のimg読込へそのまま任せる。
   useEffect(() => {
@@ -4541,7 +4550,7 @@ function MonsterHeroGame() {
     const DRAG_THRESHOLD=10;
     const startX=dragState.x, startY=dragState.y;
     dragPosRef.current={x:startX,y:startY};
-    // 画面へ出している active。これが変わるとき(引きずり始め)だけ state を更新する
+    // 画面へ出している active(引きずり始めを state で描いたか)
     let shownActive=!!dragState.active;
     const findSlot=(x,y)=>{
       const el=document.elementFromPoint(x,y);
@@ -4556,12 +4565,19 @@ function MonsterHeroGame() {
       if(moved>=DRAG_THRESHOLD) cardDragActiveRef.current=true;
       const active=cardDragActiveRef.current;
       dragPosRef.current={x,y};
-      if(active!==shownActive){
+      // ★引きずっているカードは body 直下の箱([data-drag-card-layer])に1枚だけ出ている(71-screen-battle)。
+      //   そこに出ていれば、位置だけを直接動かして画面全体は描き直さない(指が動くたびに
+      //   予測の計算ごと描き直していて、重さ・発熱の原因になっていた)。
+      //   引きずり始め(まだ箱に出ていない)や、箱が見つからないときは、今までどおり state で描く。
+      //   ⚠️ 2026-09-26 に一度、手札の欄(backdrop-filter の中)に置いたまま直接動かして、iPhone で
+      //   カードがずれて2枚に見えた。直接動かすのは body 直下の箱の中のカードだけにすること
+      const layerCard=active&&shownActive?document.querySelector('[data-drag-card-layer] [data-dragging-card]'):null;
+      if(layerCard){
+        layerCard.style.left=`${x}px`;
+        layerCard.style.top=`${y}px`;
+      } else {
         shownActive=active;
         setDragState(prev=>prev?{...prev,x,y,active}:null);
-      } else if(active){
-        const el=document.querySelector('[data-dragging-card]');
-        if(el){ el.style.left=`${x}px`; el.style.top=`${y}px`; }
       }
       if(active){ setDragOverSlot(findSlot(x,y)); }
       if(active&&e.cancelable) e.preventDefault();
@@ -7860,6 +7876,9 @@ function MonsterHeroGame() {
     // チャレンジの mh_clears_* と極限の mh_extreme_clears_* はどちらも書き換えない。
     // 極限難易度で遊んでも極限チャレンジのクリア数には数えない
     if (speciesChallengeBattleRunRef.current) {
+      // ミッションの「種族チャレンジをクリア」はクラシック・タクティクスどちらでも進む。
+      // 保存しない確認の周回では進めない
+      if (speciesChallengeSaveRunRef.current) await saveMissionProgress('speciesClear');
       addAssistantBond('clear');
       return;
     }
@@ -7871,6 +7890,9 @@ function MonsterHeroGame() {
       const nextTactics = (Number(tacticsRecordsOf(runMode).clears[tacticsDiff]) || 0) + 1;
       bumpTacticsRecord(runMode, 'clears', tacticsDiff, nextTactics);
       await storeSet(clearCountKey(runMode, tacticsDiff), nextTactics, false);
+      // ミッションはクラシックと共通(2026-09-26 ユーザー指示「タクティクスも共通にする」)。
+      // 記録の置き場は分けたまま、ミッションの数え方だけクラシックの同じモードへそろえる
+      await saveMissionProgress(extremeRunRef.current ? 'extremeClear' : isProMode(runMode) ? 'proClear' : 'challengeClear');
       addAssistantBond('clear');
       return;
     }
@@ -8816,9 +8838,11 @@ function MonsterHeroGame() {
       modeRun:{key:'modeRuns',daily:false,weekly:false,monthly:true},
       challengeClear:{key:'challengeClears',daily:true,weekly:true},
       quickClear:{key:'quickClears',daily:true,weekly:true},
-      proClear:{key:'proClears',daily:true,weekly:true},
+      proClear:{key:'proClears',daily:true,weekly:true,monthly:true},
       extremeClear:{key:'extremeClears',daily:false,weekly:true},
       itemUse:{key:'itemUses',daily:true,weekly:true},
+      // 種族チャレンジのクリア(2026-09-26)
+      speciesClear:{key:'speciesClears',daily:true,weekly:true,monthly:true},
     }[event];
     if(!rule)return;
     const next=normalizeMissions(missionsRef.current);
@@ -10379,6 +10403,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ★効き目そのもの(攻撃の引き受け・ステータスの上下・固有技の切り替え)は、戦闘の計算側で
   //   isTacticsExEffectActive を見て決める。ここは「使った瞬間」に1度だけ起こすもの(演出・ログ)の置き場
   const TACTICS_EX_ON_USE = {};
+  // EXを使った瞬間のカットイン(TacticsExCutin)。見た目だけなので、進行は待たずに時間で片付ける
+  const [tacticsExCutin, setTacticsExCutin] = useState(null);
+  const tacticsExCutinTimerRef = useRef(null);
+  const showTacticsExCutin = (cutin) => {
+    if (tacticsExCutinTimerRef.current) clearTimeout(tacticsExCutinTimerRef.current);
+    setTacticsExCutin({ ...cutin, key: Date.now() });
+    tacticsExCutinTimerRef.current = setTimeout(() => { tacticsExCutinTimerRef.current = null; setTacticsExCutin(null); }, TACTICS_EX_CUTIN_MS);
+  };
   // choice … スタイル式のEX(ソード・コンバージョン)で選んだスタイルの id
   const activateTacticsEx = (slotIdx, choice = null) => {
     if(!tacticsExEnabled||isBusy||autoBattleRef.current) return false;
@@ -10414,6 +10446,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const onUse=TACTICS_EX_ON_USE[def.effect];
     if(isTacticsExEffectImplemented(def)){
       addPopup(`EX ${def.name}！${toggled}`,'hero','text-fuchsia-300 font-black text-xl drop-shadow-md',undefined,slotIdx);
+      Audio_.se.special();
+      showTacticsExCutin({ slotIndex:slotIdx, effect:def.effect, monId:mon.id, imgUrl:mon.imgUrl, colors:mon.colors, monName:mon.masuName||mon.name, exName:def.name,
+        styleLabel:def.duration==='style'?tacticsExStyleLabel(def,next,slotIdx,mon.id):'' });
       if(typeof onUse==='function') onUse({ def, slotIdx, mon, state:next });
     }
     else pushBattleLog('（開発中）このEXの効果はまだ出ない。回数と併用のルールだけ動いている', 'info');
@@ -12138,7 +12173,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // デバッグ・練習・保存しない種族チャレンジはdebugBattleRefで除外される。
     if (!enemy && !debugBattleRef.current) {
       if (isQuickMode(runMode)) void saveMissionProgress('quickRun');
-      else if (runMode===BATTLE_MODE_CHALLENGE&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');
+      // タクティクスチャレンジもクラシックのチャレンジと同じ項目へ数える(2026-09-26)
+      else if ((runMode===BATTLE_MODE_CHALLENGE||runMode===BATTLE_MODE_TACTICS)&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');
       else void saveMissionProgress('modeRun');
     }
     setTimeout(()=>{setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},battleMs(150));
@@ -16803,7 +16839,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getNextTurnBuff={getNextTurnBuff} getPermaBuff={getPermaBuff} getTurnBuff={getTurnBuff}
             getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
-            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx}
+            tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro}
             tacticsExTurnUsed={tacticsExTurnUsed} passTacticsTurn={passTacticsTurn} tacticsCoverSlot={tacticsExEnabled?tacticsExCoverSlot(tacticsExState,tacticsUnits,tacticsExNow):null}
             guts={guts} hand={hand} heroCardBonus={heroCardBonus} heroDist={heroDist}

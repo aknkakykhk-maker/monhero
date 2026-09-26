@@ -322,6 +322,8 @@ const rhythmMirrorNote = note => {
   if(Number.isFinite(Number(note.endLane)))next.endLane=4-Number(note.endLane);
   if(Number.isFinite(Number(note.subLane)))next.subLane=RHYTHM_MIRROR_SUB_LANES-Number(note.subLane)-w;
   if(Array.isArray(note.slidePoints))next.slidePoints=note.slidePoints.map(point=>point&&Number.isFinite(Number(point.lane))?{...point,lane:4-Number(point.lane)}:point);
+  // 横フリックの向きも左右を入れ替える(2026-09-26)
+  if(note.flickDir==='left')next.flickDir='right';else if(note.flickDir==='right')next.flickDir='left';
   if(Array.isArray(note.holdPoints))next.holdPoints=note.holdPoints.map(point=>{
     if(!point||typeof point!=='object')return point;
     const pw=Number(point.subLaneWidth),pointWidth=Number.isFinite(pw)&&pw>0?pw:w;
@@ -413,11 +415,13 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume:100, noteSpeed:6, noteSize:100, noteStartPosition:0, displayTimingOffsetMs:0, judgmentTimingOffsetMs:0,
   fastSlowDisplay:true, judgmentTextDisplay:true, judgmentTextPosition:50, comboDisplay:true, comboPosition:'AUTO', comboSize:100, comboOpacity:100, lifeDisplaySize:150, holdSlideOpacity:80, laneGlow:'NORMAL',
   monsterNoteEffect:'LIGHT',
-  judgmentLineHeight:12,
+  judgmentLineHeight:20,
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LIGHT', lightweightMode:false,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,
+  // マスモンの能力が出たときのカットイン(2026-09-26)。新しい項目なので、保存値に無い人は既定(出す)で補う
+  monsterCutIn:true,
   // 曲えらびで、選んでいる曲を鳴らすかどうか(2026-09-05)。
   // 既存の保存値には無いので、読み込み時に既定(ON)で補われる。既存のキーは変えない。
   songPreviewEnabled:true,
@@ -481,6 +485,7 @@ const normalizeRhythmSettings = value => {
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight:bool('sideMonsterAbilityHighlight'),
+    monsterCutIn:bool('monsterCutIn'),
     songPreviewEnabled:bool('songPreviewEnabled'),
     quietDuringPlay:bool('quietDuringPlay'),
     frameRateMode:RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode)?source.frameRateMode:DEFAULT_RHYTHM_SETTINGS.frameRateMode,

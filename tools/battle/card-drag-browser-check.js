@@ -4,17 +4,19 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   node tools/battle/card-drag-browser-check.js
 //
 // 【なぜ要るか】
-// 引きずっているあいだ、以前は指が動くたびに state を更新して画面全体(ダメージ予測の計算も)を
-// 描き直していた(1秒に60〜120回)。2026-09-26 から、位置は ref に持ってカード1枚の left/top だけを
-// 直接動かし、state を変えるのは「引きずり始め・置き先の枠が変わった・離した」ときだけにした。
-// この形は、作りを間違えると「カードが一瞬前の位置へ戻る」「離しても置かれない」になり、
-// 例外も出ないので静的な検査では拾えない。ここで実際に引きずって見張る。
+// 2026-09-26 に、引きずっているあいだは state を変えずにカード1枚の left/top だけを直接動かす形を試した。
+// パソコン相当のブラウザでは問題なかったが、iPhone の Safari では手札の欄の backdrop-filter が
+// position:fixed の基準を変え、カードが指についてこず、下から別の位置のカードが追いかけてくる表示になった
+// (ユーザーの画面録画で確認)。元の「動くたびに state で描く」形へ戻してある。
+// 指についてくる・置ける・押すだけなら選ぶ、は壊れても例外が出ないので、ここで実際に引きずって見張る。
+// 同じ日の後の作業で、引きずっているカードは本物1枚だけを body 直下の箱へ出す形にした(二重表示の解消)。
+// その箱の中のカードに限って位置を直接動かし、画面全体の描き直しを減らしている。
+// ⚠️ この道具は Chromium で動くので、Safari だけで起きるずれは拾えない。引きずりの作りを変えたら実機で確かめる。
 //
 // 見るもの:
 //   ・少し動かすと引きずり始める(カードが指についてくる)
 //   ・どこへ動かしても、カードの位置が指の位置と一致している
 //   ・置き先の枠が光って画面が描き直されても、カードが古い位置へ戻らない
-//   ・動かしているあいだに画面全体の描き直しが起きすぎない(以前の作りなら動かした回数ぶん起きる)
 //   ・枠の上で離すとカードが置かれ、引きずりの表示が消える
 //   ・動かさずに押して離したときは、今までどおり「選ぶ」になる
 const http = require('http');
@@ -142,7 +144,11 @@ const check = (name, ok, detail = '') => {
     const dragged = async () => page.evaluate(() => {
       const el = document.querySelector('[data-dragging-card]');
       if (!el) return null;
-      return { left: parseFloat(el.style.left), top: parseFloat(el.style.top), fixed: el.style.position === 'fixed' };
+      // 書き込んだ値(style)だけでなく、画面上の実際の位置(中心)も返す。
+      // 2026-09-26 のずれは「値は正しいのに、手札の欄が基準になって見た目だけ下にずれる」ものだった
+      const r = el.getBoundingClientRect();
+      return { left: parseFloat(el.style.left), top: parseFloat(el.style.top), fixed: el.style.position === 'fixed',
+        cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
     });
     const actionEnabled = async () => page.evaluate(() => {
       const b = document.querySelector('[data-battle-action]');
@@ -163,6 +169,13 @@ const check = (name, ok, detail = '') => {
     await page.waitForTimeout(150);
     const first = await dragged();
     check('しきい値を超えると引きずり始める', !!first && first.fixed, JSON.stringify(first));
+    const layered = await page.evaluate(() => {
+      const el = document.querySelector('[data-dragging-card]');
+      return { inLayer: !!(el && el.closest('[data-drag-card-layer]')), layerIsBodyChild: !!(el && el.closest('[data-drag-card-layer]')?.parentElement === document.body),
+        ghosts: document.querySelectorAll('[data-tactics-drag-card-ghost]').length, cards: document.querySelectorAll('[data-dragging-card]').length };
+    });
+    check('引きずっているカードは body 直下の箱に1枚だけ出る(手札の欄の中で動かさない)',
+      layered.inLayer && layered.layerIsBodyChild && layered.ghosts === 0 && layered.cards === 1, JSON.stringify(layered));
     check('引きずり始めた位置が指と一致する', !!first && Math.abs(first.left - (start.x + 20)) < 1 && Math.abs(first.top - (start.y - 30)) < 1,
       JSON.stringify(first));
     const commitsBefore = await page.evaluate(() => window.__mhCommits);
@@ -173,13 +186,13 @@ const check = (name, ok, detail = '') => {
       await page.mouse.move(x, y);
       await page.waitForTimeout(16);
       const d = await dragged();
-      if (d) worst = Math.max(worst, Math.abs(d.left - x), Math.abs(d.top - y));
+      if (d) worst = Math.max(worst, Math.abs(d.left - x), Math.abs(d.top - y), Math.abs(d.cx - x), Math.abs(d.cy - y));
       else worst = Infinity;
     }
     check('動かしているあいだカードが指についてくる', worst < 1, `最大のずれ ${worst}px`);
     const commits = await page.evaluate((n) => window.__mhCommits - n, commitsBefore);
-    // 以前の作りでは20回動かすと20回以上描き直していた。指の波紋(小さな部品だけの描き直し)や
-    // 敵の動きなど、別の理由の描き直しは少し入るので、上限は動かした回数の半分にしてある
+    // 以前は20回動かすと20回以上描き直していた。指の波紋(小さな部品だけの描き直し)や敵の動きなど、
+    // 別の理由の描き直しは少し入るので、上限は動かした回数の半分にしてある
     check('置き先が変わらないあいだは、動かすたびに画面全体を描き直さない', commits <= 10, `20回動かして ${commits}回`);
     // 枠の上へ(置き先が光る = 画面の描き直しが起きる)。描き直しのあとも位置が戻らない
     const steps = 8;
@@ -190,7 +203,8 @@ const check = (name, ok, detail = '') => {
     }
     await page.waitForTimeout(200);
     const onSlot = await dragged();
-    check('置き先の枠の上でも、カードが指の位置にある', !!onSlot && Math.abs(onSlot.left - target.x) < 1 && Math.abs(onSlot.top - target.y) < 1,
+    check('置き先の枠の上でも、カードが指の位置にある', !!onSlot && Math.abs(onSlot.left - target.x) < 1 && Math.abs(onSlot.top - target.y) < 1
+      && Math.abs(onSlot.cx - target.x) < 1.5 && Math.abs(onSlot.cy - target.y) < 1.5,
       JSON.stringify(onSlot));
     await page.mouse.up();
     await page.waitForTimeout(800);

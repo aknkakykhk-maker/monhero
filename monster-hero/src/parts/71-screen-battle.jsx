@@ -277,7 +277,10 @@ const BossMovieLayer = ({ shake = true }) => {
       if (extras && extras.sound && Audio_.playSeFile) sound = Audio_.playSeFile(extras.sound);
       timers.push(setTimeout(() => finish(true), BOSS_MOVIE_MAX_MS));
       timers.push(setTimeout(() => setCanSkip(true), 900));
+      // 揺れの合図を見るためだけのループ。合図が無いムービーでは回さず、全部出し終えたら止める
+      // (以前は合図が無くても・出し終えてもムービーが終わるまで毎コマ回っていた)
       const tick = () => {
+        raf = 0;
         if (settled) return;
         const pos = Number.isFinite(el.currentTime) ? el.currentTime * 1000 : Date.now() - startWall;
         shakes.forEach((c) => {
@@ -285,9 +288,9 @@ const BossMovieLayer = ({ shake = true }) => {
           c.fired = true;
           if (shake) setShakeKey((k) => k + 1);
         });
-        raf = requestAnimationFrame(tick);
+        if (shakes.some((c) => !c.fired)) raf = requestAnimationFrame(tick);
       };
-      raf = requestAnimationFrame(tick);
+      if (shakes.length) raf = requestAnimationFrame(tick);
     };
     // ★最後まで流れたときは、効果音の余韻をそのまま残す。途中で閉じたとき(スキップ・読めない・画面ごと閉じた)は音も消す
     const onEnded = () => finish(true, true);
@@ -488,7 +491,7 @@ function BattleScreen({
   setShowSoulBattleEffects, setSkillPicker, setSlotSettle, slotMaxUses, slotSettle, slotSkill,
   slotUniqueChoice, slots, soulBattleParty, soulCoordinationCardBonus, suppressCardClickRef,
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
-  tacticsExInfo, activateTacticsEx, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
+  tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
   tacticsExIntroVisible, dismissTacticsExIntro,
   teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
   unifiedSpecialDefense, useEmergency, wave,
@@ -1127,6 +1130,7 @@ function BattleScreen({
               {enemy?.imgUrl?(isMooBoss(enemy?.id)?<div style={{width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'clamp(92px,16dvh,142px)',height:'clamp(86px,15dvh,132px)'}}>{enemyMotion&&<i aria-hidden="true" data-enemy-glow/>}<img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>{enemyFlashNode}</span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,10.5dvh,96px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
               {/* 味方の攻撃が敵に当たった瞬間の着弾(体当たり・突進・ザン/エイキの斬撃)。攻撃中だけ出る */}
               {!ecoBattleView&&attackAnim&&<AttackTargetFx anim={attackAnim} attackerId={slots[attackAnim.slotIndex]?.id}/>}
+              <TacticsExCutin cutin={tacticsExCutin}/>
               {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
               {!ecoBattleView&&isMooBoss(enemy?.id)&&(
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible" style={{zIndex:1}}>
@@ -1766,6 +1770,9 @@ function BattleScreen({
                     色と輪で「どこを見ればよいか」を先に伝える(2026-09-22 ユーザー指示
                     「食らったモンスターにエフェクトなどがつくようにしたい」)。
                     数字(z-[70])より下へ重ねて、数字が読めなくならないようにする */}
+                {/* EXスキルを使った子の枠の光(カットインと同じ色。TacticsExCutin と同じ時間で消える) */}
+                {tacticsExCutin&&tacticsExCutin.slotIndex===i&&<span key={tacticsExCutin.key} data-tactics-ex-aura={tacticsExCutin.effect||'default'} className="ex-aura" aria-hidden="true"
+                  style={{'--ex-c1':tacticsExCutinTheme(tacticsExCutin.effect).c1,'--ex-c2':tacticsExCutinTheme(tacticsExCutin.effect).c2}}><i/><i/></span>}
                 {slotHitKind&&(()=>{
                   const hitFx=TACTICS_SLOT_FX_STYLE[slotHitKind];
                   return(<div data-tactics-hit-fx={slotHitKind} className="absolute inset-0 z-[58] pointer-events-none overflow-visible">
@@ -2119,7 +2126,7 @@ function BattleScreen({
               const tutorialAllowed=battleTutorialCardAllowed(c);
               // 光らせるのは「いま触ってほしい種類」だけ。技変更の番は名前のところも光らせる
               const tutorialTargeted=!!battleTutorialCardTarget&&battleTutorialCardKind(c)===battleTutorialCardTarget;
-              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex"><button data-hand-card={i} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
+              const handCardButton=(<button data-hand-card={i} data-dragging-card={isDragging?'true':undefined} data-card-cost={requiredGuts} data-card-type={c.type} data-card-usable={isSelectable?'true':'false'} data-card-block={cardBlock&&!cardBlock.ok?cardBlock.kind:undefined} onPointerDown={(e)=>{
                 if(isBusy||autoBattleRef.current||!tutorialAllowed)return;
                 const pt=e.touches?e.touches[0]:e;
                 cardDragActiveRef.current=false;
@@ -2174,7 +2181,15 @@ function BattleScreen({
                   className={`flex w-full shrink-0 flex-col overflow-hidden rounded-[7px] border border-white/60 bg-white/[.12] shadow-[inset_0_1px_0_rgba(255,255,255,.25),0_0_6px_rgba(255,255,255,.12)] active:scale-95 active:bg-white/30${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>
                   <div style={{height:HAND_CARD_FIT.band}} className="flex shrink-0 items-center justify-center gap-0.5 text-[9px] font-black leading-none text-white"><span aria-hidden="true">⇄</span>技変更</div>
                   <div className="text-[10px] font-black bg-black/30 text-white rounded-[5px] flex items-center justify-center gap-0.5" style={{paddingTop:HAND_CARD_FIT.gutsPad,paddingBottom:HAND_CARD_FIT.gutsPad}}><Zap size={9}/>{curGuts}</div>
-                </div>):<div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] flex items-center justify-center gap-0.5" style={{paddingTop:HAND_CARD_FIT.gutsPad,paddingBottom:HAND_CARD_FIT.gutsPad}}><Zap size={9}/>{curGuts}</div>)}</div></button>{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{isDragging&&ReactDOM.createPortal(<div data-tactics-drag-card-ghost className={`fixed w-[72px] rounded-[12px] border p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]`} style={{left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,pointerEvents:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))',...(TYPE_INLINE_STYLE[c.type]||{})}}><div data-decoration className="mt-1.5 flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20">{cardIconNode(c.icon,26,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5" style={{containerType:'inline-size'}}><div className="text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5" style={handCardNameFit(c.name)}>{c.name}</div><div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></div>,document.body)}{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
+                </div>):<div className="text-[10px] font-black bg-black/30 text-white rounded-[6px] flex items-center justify-center gap-0.5" style={{paddingTop:HAND_CARD_FIT.gutsPad,paddingBottom:HAND_CARD_FIT.gutsPad}}><Zap size={9}/>{curGuts}</div>)}</div></button>);
+              // ★引きずっているカードは、本物のカード1枚だけを画面の最上層(body の直下)へ出して指につける
+              //   (2026-09-26 ユーザー指摘「上に持ってくと下からまたカードが出てくる」「ドラッグしてるカードの表示が古いやつのまま」)。
+              //   手札の欄には backdrop-filter が掛かっていて、中に置いたまま position:fixed にすると
+              //   基準が欄になってずれた位置にもう1枚見え、指が動くたびに欄のぼかしも描き直しになる。
+              //   以前は古い見た目の写しを別に出していて、本物と写しの2枚を毎回描いていた。
+              //   手札の飾り(金の縁・宝石など)は [data-tactics-look] の下でだけ効くので、同じ印を付けた箱で包む。
+              //   body の直下なのは、画面の揺れ(transform)の影響を受けないようにするため
+              return(<div key={c.uid} className="relative flex-1 min-w-0 max-w-[20%] flex">{isDragging?ReactDOM.createPortal(<div data-drag-card-layer data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined}>{handCardButton}</div>,document.body):handCardButton}{isDragging&&<div data-tactics-drag-card-placeholder className="absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"/>}{cardBlock&&!cardBlock.ok&&cardBlock.short&&!isDragging&&(<div data-tactics-card-block={cardBlock.short} className="pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]">{cardBlock.short}</div>)}</div>);
             })}
           </div>
         </div>

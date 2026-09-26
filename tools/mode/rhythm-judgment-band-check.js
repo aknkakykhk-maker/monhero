@@ -31,7 +31,11 @@ const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
 // ノーツの縦位置は progress(0=出た瞬間 / 1=判定ライン) に対してこの曲がり方で進む。
 // 実装(rhythm-mode.js の rhythmProjectTravelProgress)と同じ式を、ここへ書き写して持つ。
 // 片方だけ変えたら食い違って落ちる＝どちらかが勝手に変わったことに気づける。
-const travelProgress=p=>p<0?p*.72:p>1?1+(p-1)*1.28:p*(.54+.46*p);
+// 2026-09-26 奥行きの見直しで、本物の遠近の式(出るところを手前の0.4倍に見える距離とする)へ変えた
+const TRAVEL_FAR=.4,TRAVEL_K=1/TRAVEL_FAR;
+const travelProgress=p=>p<0?p*(TRAVEL_K-1)/(TRAVEL_K*TRAVEL_K)/(1-TRAVEL_FAR)
+  :p>1?1+(p-1)*(TRAVEL_K-1)/(1-TRAVEL_FAR)
+  :(1/(TRAVEL_K-(TRAVEL_K-1)*p)-TRAVEL_FAR)/(1-TRAVEL_FAR);
 // 既定のノーツ速度 6.0 のときに、ノーツが出てから判定ラインへ着くまでの時間
 const TRAVEL_MS=2150;
 // 判定の幅だけは実データから読む。ここへ数字を書き写すと、判定表を変えたときに
@@ -131,11 +135,12 @@ const GOOD_MS=judgmentWindow('GOOD'),MARVELOUS_MS=judgmentWindow('MARVELOUS');
         ok('帯の下のふちがGOODの端（遅い側）に合っている',Math.abs(gotBottom-wantBottom)<=2,
           `実測 ${gotBottom.toFixed(1)}px / 計算 ${wantBottom.toFixed(1)}px`);
         // 判定ラインの手前と奥では、同じ1msあたりに進むpxが違う。
-        // 曲がりの傾きは判定ラインの直前が1.46、通り過ぎたあとが1.28なので、
-        // **早い側(線より上)のほうが広くなる**。ここを左右対称に均すと
-        // 「見えている幅」と「本当に取れる幅」が食い違うので、そのまま出しているかを見る。
+        // 2026-09-26 に本物の遠近の進み方へ変えたので、ノーツは奥ほど遅く、判定ラインを過ぎても
+        // 速いまま進む(線の直前も直後も傾き2.5で、上へ行くほど遅くなる)。
+        // そのため**遅い側(線より下)のほうが広くなる**(以前の式では上が広かった)。
+        // ここを左右対称に均すと「見えている幅」と「本当に取れる幅」が食い違うので、そのまま出しているかを見る。
         const above=lineCenter-gotTop,below=gotBottom-lineCenter;
-        ok('上側のほうが広い（遠近の曲がりを均して左右対称にしていない）',above>below+2,
+        ok('下側のほうが広い（遠近の曲がりを均して左右対称にしていない）',below>above+2,
           `上 ${above.toFixed(1)}px / 下 ${below.toFixed(1)}px`);
         ok('判定ラインが帯の中にある',lineCenter>gotTop&&lineCenter<gotBottom,
           `線 ${lineCenter.toFixed(1)}px / 帯 ${gotTop.toFixed(1)}〜${gotBottom.toFixed(1)}px`);

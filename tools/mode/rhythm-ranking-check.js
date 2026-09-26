@@ -215,7 +215,8 @@ check('一覧・詳細のボタンはiPhoneで押せる大きさ(44px以上)',((
 check('BEST記録の保存形式(RHYTHM_BEST_RECORDS_KEY)は変更していない',
   game.includes("const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';"));
 check('判定窓・スコアの重み・落下時間は変更していない',
-  data.includes('const RHYTHM_PROJECTION_TOP_SCALE=.18')
+  // 奥行き(投影)は2026-09-26にユーザーの判断で .18→.07・直線へ変えた(見た目の道の形。判定窓と落下時間は変えていない)
+  data.includes('const RHYTHM_PROJECTION_TOP_SCALE=.07;')
   &&game.includes('const rhythmTravelMsForSpeed=value=>'));
 
 // --- ヘルプ・更新履歴・仕様書 ---

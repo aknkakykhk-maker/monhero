@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b3b51485265bf7b3
+// source-sha256: 12af8bd7e0e79e96
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 12:30";
+const BUILD_DATE = "2026-09-26 12:33";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4790,6 +4790,7 @@ const rhythmMirrorNote = note => {
     ...point,
     lane: 4 - Number(point.lane)
   } : point);
+  if (note.flickDir === 'left') next.flickDir = 'right';else if (note.flickDir === 'right') next.flickDir = 'left';
   if (Array.isArray(note.holdPoints)) next.holdPoints = note.holdPoints.map(point => {
     if (!point || typeof point !== 'object') return point;
     const pw = Number(point.subLaneWidth),
@@ -4930,7 +4931,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   holdSlideOpacity: 80,
   laneGlow: 'NORMAL',
   monsterNoteEffect: 'LIGHT',
-  judgmentLineHeight: 12,
+  judgmentLineHeight: 20,
   noteSeVolume: 70,
   noteSeEnabled: true,
   vibrationEnabled: false,
@@ -4940,6 +4941,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   sideMonsterOpacity: 'NORMAL',
   sideMonsterMotion: 'NORMAL',
   sideMonsterAbilityHighlight: true,
+  monsterCutIn: true,
   songPreviewEnabled: true,
   quietDuringPlay: false,
   frameRateMode: 'DEVICE',
@@ -4991,6 +4993,7 @@ const normalizeRhythmSettings = value => {
     sideMonsterOpacity: RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity) ? source.sideMonsterOpacity : DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion: RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion) ? source.sideMonsterMotion : DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight: bool('sideMonsterAbilityHighlight'),
+    monsterCutIn: bool('monsterCutIn'),
     songPreviewEnabled: bool('songPreviewEnabled'),
     quietDuringPlay: bool('quietDuringPlay'),
     frameRateMode: RHYTHM_FRAME_RATE_MODES.includes(source.frameRateMode) ? source.frameRateMode : DEFAULT_RHYTHM_SETTINGS.frameRateMode,
@@ -8284,12 +8287,17 @@ const DyedMonsterImage = ({
   useEffect(() => {
     const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
     if (wanted.length === 0) {
-      setRecolored({});
+      setRecolored(prev => Object.keys(prev).length === 0 ? prev : {});
       return;
     }
     let cancelled = false;
     Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then(url => [_recoloredKey(idx, c), url]))).then(entries => {
-      if (!cancelled) setRecolored(Object.fromEntries(entries));
+      if (cancelled) return;
+      const next = Object.fromEntries(entries);
+      setRecolored(prev => {
+        const keys = Object.keys(next);
+        return keys.length === Object.keys(prev).length && keys.every(k => prev[k] === next[k]) ? prev : next;
+      });
     });
     return () => {
       cancelled = true;
@@ -10765,6 +10773,12 @@ const missionWeekRotationIndex = (now = Date.now()) => {
   const index = Math.floor((periodMs - epochMs) / (7 * 24 * 60 * 60 * 1000));
   return (index % 4 + 4) % 4;
 };
+const MISSION_BATTLE_BOTH = '（クラシック・タクティクスどちらでも）';
+const missionItemReward = (itemId, amount) => ({
+  type: 'gameItem',
+  itemId,
+  amount
+});
 const DAILY_ROTATION_MISSIONS = Object.freeze({
   1: {
     id: 'daily_rotation',
@@ -10774,7 +10788,7 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
     target: 1,
     rewards: [{
       type: 'diamond',
-      amount: 200
+      amount: 300
     }]
   },
   2: {
@@ -10791,7 +10805,7 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   3: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'プロモードを1回クリアする',
+    condition: `プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,
     key: 'proClears',
     target: 1,
     rewards: [{
@@ -10802,8 +10816,8 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   4: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'クイックモードを1回クリアする',
-    key: 'quickClears',
+    condition: `種族チャレンジを1回クリアする${MISSION_BATTLE_BOTH}`,
+    key: 'speciesClears',
     target: 1,
     rewards: [{
       type: 'rainbowPsyche',
@@ -10824,13 +10838,10 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   6: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'プロモードを1回クリアする',
+    condition: `プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,
     key: 'proClears',
     target: 1,
-    rewards: [{
-      type: 'diamond',
-      amount: 300
-    }]
+    rewards: [missionItemReward('hero_proof_shard', 1)]
   },
   0: {
     id: 'daily_rotation',
@@ -10847,13 +10858,10 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
 const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
   id: 'weekly_rotation',
   name: '今週のミッション',
-  condition: 'プロモードを3回クリアする',
+  condition: `プロモードを3回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'proClears',
   target: 3,
-  rewards: [{
-    type: 'uniqueSkillResetTicket',
-    amount: 1
-  }]
+  rewards: [missionItemReward('hero_proof_shard', 3)]
 }, {
   id: 'weekly_rotation',
   name: '今週のミッション',
@@ -10867,9 +10875,9 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
 }, {
   id: 'weekly_rotation',
   name: '今週のミッション',
-  condition: 'クイックモードを10回クリアする',
-  key: 'quickClears',
-  target: 10,
+  condition: `種族チャレンジを3回クリアする${MISSION_BATTLE_BOTH}`,
+  key: 'speciesClears',
+  target: 3,
   rewards: [{
     type: 'trainingTicketLarge',
     amount: 2
@@ -10893,7 +10901,7 @@ const missionDailyDefinitions = (now = Date.now()) => [{
   target: 1,
   rewards: [{
     type: 'diamond',
-    amount: 100
+    amount: 200
   }]
 }, {
   id: 'daily_battles',
@@ -10908,7 +10916,7 @@ const missionDailyDefinitions = (now = Date.now()) => [{
 }, {
   id: 'daily_wins',
   name: 'デイリーチャレンジ',
-  condition: 'チャレンジモードを1回クリアする',
+  condition: `チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'challengeClears',
   target: 1,
   rewards: [{
@@ -10923,7 +10931,7 @@ const missionDailyDefinitions = (now = Date.now()) => [{
   target: 1,
   rewards: [{
     type: 'diamond',
-    amount: 200
+    amount: 300
   }]
 }, {
   ...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]
@@ -10950,7 +10958,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   target: 5,
   rewards: [{
     type: 'diamond',
-    amount: 500
+    amount: 1000
   }]
 }, {
   id: 'weekly_battles',
@@ -10960,7 +10968,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   target: 20,
   rewards: [{
     type: 'diamond',
-    amount: 500
+    amount: 1000
   }]
 }, {
   id: 'weekly_enhance',
@@ -10985,7 +10993,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
 }, {
   id: 'weekly_donations',
   name: 'チャレンジャー',
-  condition: 'チャレンジモードを3回クリアする',
+  condition: `チャレンジモードを3回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'challengeClears',
   target: 3,
   rewards: [{
@@ -11022,14 +11030,14 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   target: 6,
   rewards: [{
     type: 'diamond',
-    amount: 2000
+    amount: 3000
   }, {
     type: 'skipTicketKyu',
     amount: 1
   }, {
     type: 'rainbowPsyche',
     amount: 30
-  }],
+  }, missionItemReward('hero_proof_shard', 5)],
   complete: true
 }];
 const missionMonthlyDefinitions = () => [{
@@ -11040,7 +11048,7 @@ const missionMonthlyDefinitions = () => [{
   target: 20,
   rewards: [{
     type: 'diamond',
-    amount: 3000
+    amount: 5000
   }]
 }, {
   id: 'monthly_battles',
@@ -11095,13 +11103,20 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_challenge_runs',
   name: 'チャレンジ月間',
-  condition: 'チャレンジモードを10回プレイする',
+  condition: `チャレンジモードを10回プレイする${MISSION_BATTLE_BOTH}`,
   key: 'challengeRuns',
   target: 10,
   rewards: [{
     type: 'rainbowPsyche',
     amount: 50
   }]
+}, {
+  id: 'monthly_pro_clears',
+  name: 'プロ月間',
+  condition: `プロモードを10回クリアする${MISSION_BATTLE_BOTH}`,
+  key: 'proClears',
+  target: 10,
+  rewards: [missionItemReward('hero_proof_shard', 10)]
 }, {
   id: 'monthly_enhances',
   name: '育成月間',
@@ -11135,7 +11150,7 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_complete',
   name: 'マンスリーコンプリート',
-  condition: '通常マンスリー10個のうち8個を達成する',
+  condition: '通常マンスリー11個のうち8個を達成する',
   key: 'complete',
   target: 8,
   rewards: [{
@@ -11147,7 +11162,7 @@ const missionMonthlyDefinitions = () => [{
   }, {
     type: 'rainbowTranscendFruit',
     amount: 1
-  }],
+  }, missionItemReward('skip_ticket_kiwami', 1)],
   complete: true
 }];
 const MISSION_DEFS = {
@@ -11178,7 +11193,8 @@ const emptyMissionCounts = () => ({
   quickClears: 0,
   proClears: 0,
   extremeClears: 0,
-  itemUses: 0
+  itemUses: 0,
+  speciesClears: 0
 });
 const normalizeMissions = (value, now = Date.now()) => {
   const dailyPeriod = missionDailyPeriod(now),
@@ -15835,6 +15851,88 @@ const ThemedAttackMotion = ({
   }), React.createElement(ThemedAttackBits, {
     list: bits.hit2
   })));
+};
+const TACTICS_EX_CUTIN_MS = 1600;
+const TACTICS_EX_CUTIN_THEME = Object.freeze({
+  coverAll: {
+    c1: '#ddd6fe',
+    c2: '#7c3aed',
+    motif: 'shield'
+  },
+  allIn: {
+    c1: '#fed7aa',
+    c2: '#dc2626',
+    motif: 'flame'
+  },
+  statBoost: {
+    c1: '#fef08a',
+    c2: '#f59e0b',
+    motif: 'rise'
+  },
+  weaponChange: {
+    c1: '#cffafe',
+    c2: '#0891b2',
+    motif: 'blade'
+  },
+  default: {
+    c1: '#f5d0fe',
+    c2: '#c026d3',
+    motif: 'rise'
+  }
+});
+const tacticsExCutinTheme = effect => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;
+const TacticsExCutin = ({
+  cutin
+}) => {
+  if (!cutin) return null;
+  const t = tacticsExCutinTheme(cutin.effect);
+  return ReactDOM.createPortal(React.createElement("div", {
+    key: cutin.key,
+    "data-tactics-ex-cutin": cutin.effect || 'default',
+    className: "ex-cutin",
+    style: {
+      '--ex-c1': t.c1,
+      '--ex-c2': t.c2
+    },
+    "aria-hidden": "true"
+  }, React.createElement("div", {
+    className: "ex-cutin__shade"
+  }), React.createElement("div", {
+    className: "ex-cutin__rays"
+  }), React.createElement("div", {
+    className: `ex-cutin__motif ex-cutin__motif--${t.motif}`
+  }, [0, 1, 2, 3, 4, 5].map(i => React.createElement("i", {
+    key: i,
+    style: {
+      '--i': i
+    }
+  }))), React.createElement("div", {
+    className: "ex-cutin__band"
+  }, React.createElement("div", {
+    className: "ex-cutin__lines"
+  }), React.createElement("div", {
+    className: "ex-cutin__art"
+  }, React.createElement(DyedMonsterImage, {
+    baseId: cutin.monId,
+    src: cutin.imgUrl,
+    alt: "",
+    masuColors: cutin.colors,
+    draggable: false,
+    className: "w-full h-full object-contain"
+  })), React.createElement("div", {
+    className: "ex-cutin__text"
+  }, React.createElement("div", {
+    className: "ex-cutin__tag"
+  }, "EX SKILL"), React.createElement("div", {
+    className: "ex-cutin__name",
+    style: {
+      fontSize: `${Math.max(15, Math.min(30, Math.floor(165 / Math.max(1, String(cutin.exName || '').length))))}px`
+    }
+  }, cutin.exName), React.createElement("div", {
+    className: "ex-cutin__sub"
+  }, cutin.monName, cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''))), React.createElement("div", {
+    className: "ex-cutin__flash"
+  })), document.body);
 };
 const AttackTargetFx = ({
   anim,
@@ -20908,6 +21006,8 @@ const RhythmOptions = ({
     full: true
   }), field('マスモン｜能力中に光らせる', toggle('sideMonsterAbilityHighlight'), null, {
     full: true
+  }), field('マスモン｜能力のカットイン', toggle('monsterCutIn'), 'マスモンの能力が出たとき、画面の端からそのマスモンの絵が差し込まれます。ノーツより後ろに出るので、ノーツは隠れません。「軽量モード」と演出量「最小」では出ません。', {
+    full: true
   }))), tab === 'volume' && React.createElement("section", {
     "data-rhythm-options-panel": "volume",
     className: card
@@ -22228,7 +22328,6 @@ const RhythmTapTest = ({
     mountedRef = useRef(false),
     glowNodesRef = useRef(null),
     liveTouchSubLanesRef = useRef([]);
-  const laneGlowStateRef = useRef(null);
   const tutorialBannerRef = useRef(null),
     tutorialStepRef = useRef(null);
   const calibrationBannerRef = useRef(null),
@@ -22355,6 +22454,7 @@ const RhythmTapTest = ({
       cancelled = true;
     };
   }, [canvasNotes, monsterSignature, monsterFaceHidden, settings.lightweightMode, settings.effectAmount]);
+  const RHYTHM_LANE_PRESS_GRADIENT = 'linear-gradient(to bottom,rgba(96,165,250,.16) 0%,rgba(96,165,250,.28) 40%,rgba(125,211,252,.44) calc(100% - var(--mh-judgment-line-bottom,20%) - 14%),rgba(224,242,254,.74) calc(100% - var(--mh-judgment-line-bottom,20%) - 3%),rgba(248,250,252,.9) calc(100% - var(--mh-judgment-line-bottom,20%)),rgba(147,197,253,.5) calc(100% - var(--mh-judgment-line-bottom,20%) + 4%),rgba(96,165,250,.34) 100%)';
   const laneElements = useMemo(() => React.createElement(React.Fragment, null, React.createElement("div", {
     className: "pointer-events-none absolute inset-0 grid grid-cols-5"
   }, Array.from({
@@ -22390,10 +22490,7 @@ const RhythmTapTest = ({
     className: "absolute inset-0 opacity-0",
     style: {
       clipPath: rhythmSubLanePolygon(subLane),
-      background: 'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',
-      boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)' : 'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',
-      filter: settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'brightness(1.08)' : 'brightness(1.22)',
-      transition: settings.lightweightMode ? 'none' : 'opacity 45ms linear'
+      background: RHYTHM_LANE_PRESS_GRADIENT
     }
   })))), [settings.lightweightMode, settings.effectAmount]);
   const monsterForNote = note => {
@@ -22440,6 +22537,7 @@ const RhythmTapTest = ({
   const stageArtRef = useRef(null),
     stagePulseRef = useRef(null);
   const stageArtSrc = stageLevel !== 'SIMPLE' && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+  const hudArtSrc = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
   useEffect(() => {
     const canvas = stageArtRef.current;
     if (!canvas || !stageArtSrc) return;
@@ -22501,6 +22599,32 @@ const RhythmTapTest = ({
       })));
     }));
   }, [monsterSignature, settings.sideMonsterOpacity, settings.sideMonsterMotion, settings.lightweightMode, sideArtUrls]);
+  const cutInRefs = useRef([]);
+  const cutInOn = settings.monsterCutIn !== false && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
+  const cutInElements = useMemo(() => {
+    if (!cutInOn) return null;
+    return React.createElement("div", {
+      "data-rhythm-cutin": true,
+      "aria-hidden": "true"
+    }, monsters.map((monster, index) => {
+      if (!monster || !sideArtUrls[index]) return null;
+      return React.createElement("div", {
+        key: index + 1,
+        ref: el => {
+          cutInRefs.current[index] = el;
+        },
+        "data-rhythm-cutin-slot": index + 1,
+        "data-side": index % 2 === 0 ? 'left' : 'right'
+      }, React.createElement("i", {
+        "data-rhythm-cutin-band": true
+      }), React.createElement("img", {
+        src: sideArtUrls[index],
+        alt: "",
+        draggable: false,
+        decoding: "async"
+      }));
+    }));
+  }, [cutInOn, monsterSignature, sideArtUrls]);
   const abilityTimerRef = useRef(null),
     abilityRevisionRef = useRef(0),
     abilityBadgeRef = useRef(null);
@@ -23020,6 +23144,13 @@ const RhythmTapTest = ({
         if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.abilityOwners.KONJO = slot;
         run.abilityFlashSlot = slot;
         run.abilityFlashUntilMs = songTimeMs + RHYTHM_SIDE_MONSTER_FLASH_MS;
+        if (cutInOn) {
+          const cutIn = cutInRefs.current[slot - 1];
+          if (cutIn) rhythmRestartAnimations([{
+            el: cutIn,
+            attr: 'rhythmCutinPlay'
+          }]);
+        }
       }
     }
     const calculatedScore = Math.floor(rhythmCalculateScore({
@@ -23107,7 +23238,7 @@ const RhythmTapTest = ({
     }
     if (showAbilityFlash) scheduleAbilityClear();
     if (_judgeT0) RHYTHM_PERF.judge(performance.now() - _judgeT0, !!monster);
-  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, settings.paceDisplay, settings.timingDisplay, tutorial, calibrating, assistOn, luckOn, showLuckyBanner]);
+  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, settings.monsterNoteEffect, settings.paceDisplay, settings.timingDisplay, tutorial, calibrating, assistOn, luckOn, showLuckyBanner, cutInOn]);
   const finish = useCallback(() => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
@@ -23291,24 +23422,6 @@ const RhythmTapTest = ({
         maxDpr: settings.effectAmount === 'MINIMAL' ? 2 : undefined,
         sizeScale: settings.noteSize / 100
       });
-      if (canvasReady && settings.laneGlow !== 'NONE') {
-        const glowArea = playAreaRef.current;
-        let glowNodes = glowNodesRef.current;
-        if (glowArea && (!glowNodes || !glowNodes.length || !glowNodes[0].isConnected)) glowNodes = glowNodesRef.current = Array.from(glowArea.querySelectorAll('[data-rhythm-sublane-feedback]'));
-        const glow = laneGlowStateRef.current || (laneGlowStateRef.current = {
-          levels: new Float32Array(10),
-          lastOn: new Float64Array(10).fill(-1e9)
-        });
-        const glowGain = settings.laneGlow === 'LOW' ? .35 : 1;
-        for (let sub = 0; sub < 10; sub++) {
-          const el = glowNodes && glowNodes[sub],
-            on = !!el && (el.dataset.pressed === 'true' || el.dataset.rhythmTouchspan === 'true');
-          if (on) glow.lastOn[sub] = frameNowMs;
-          const since = frameNowMs - glow.lastOn[sub];
-          glow.levels[sub] = on ? glowGain : since < RHYTHM_LANE_GLOW_FADE_MS ? glowGain * (1 - since / RHYTHM_LANE_GLOW_FADE_MS) : 0;
-        }
-        RHYTHM_CANVAS_RENDERER.drawLaneGlow(glow.levels, (travel.judgmentY + travel.noteHeight / 2) / travel.rect.height);
-      }
       const paintCanvasNote = note => {
         const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && rhythmNoteHasBody(note) && songTimeMs < rhythmReleaseTargetMs(note);
         const clearFlash = note.done && Number.isFinite(note._rhythmClearAt) && songTimeMs - note._rhythmClearAt < RHYTHM_CLEAR_FLASH_MS;
@@ -24539,9 +24652,23 @@ const RhythmTapTest = ({
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
   }, calibrating ? 'タイミング合わせ' : tutorial ? 'れんしゅう' : debugPlay ? debugChartLabel : `Lv.${chart.level}`))), React.createElement("div", {
-    "data-rhythm-hud-song": true,
-    className: "mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0",
+    className: "mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0"
+  }, hudArtSrc && React.createElement("img", {
+    "data-rhythm-hud-art": true,
+    src: hudArtSrc,
+    alt: "",
+    "aria-hidden": "true",
+    decoding: "async",
+    draggable: false,
+    className: "h-7 w-7 shrink-0 rounded-md border border-white/25 object-cover landscape:h-6 landscape:w-6",
     style: {
+      boxShadow: '0 1px 6px rgba(2,6,23,.8)'
+    }
+  }), React.createElement("div", {
+    "data-rhythm-hud-song": true,
+    className: "min-w-0 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:max-w-none",
+    style: {
+      maxWidth: hudArtSrc && !isLandscape ? 'calc(31vw - 34px)' : undefined,
       display: '-webkit-box',
       WebkitLineClamp: isLandscape ? '1' : '3',
       WebkitBoxOrient: 'vertical',
@@ -24549,7 +24676,7 @@ const RhythmTapTest = ({
       lineHeight: '1.25',
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, "♪ ", rhythmSongFullName(song))), React.createElement("div", {
+  }, "♪ ", rhythmSongFullName(song)))), React.createElement("div", {
     "data-rhythm-hud-right": true,
     className: "flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"
   }, React.createElement("div", {
@@ -24697,7 +24824,7 @@ const RhythmTapTest = ({
   }, "DOWN")), React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
-    "data-rhythm-canvas-glow": canvasNotes ? '1' : undefined,
+    "data-rhythm-counting": countdownStep !== null ? '1' : undefined,
     "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
@@ -24739,7 +24866,7 @@ const RhythmTapTest = ({
     "data-rhythm-stage-pulse": true,
     "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
     "aria-hidden": "true"
-  }), sideMonsterElements, React.createElement("div", {
+  }), sideMonsterElements, cutInElements, React.createElement("div", {
     ref: screenFlashRef,
     "data-rhythm-screen-flash": true,
     "aria-hidden": "true"
@@ -36955,6 +37082,7 @@ const BossMovieLayer = ({
       timers.push(setTimeout(() => finish(true), BOSS_MOVIE_MAX_MS));
       timers.push(setTimeout(() => setCanSkip(true), 900));
       const tick = () => {
+        raf = 0;
         if (settled) return;
         const pos = Number.isFinite(el.currentTime) ? el.currentTime * 1000 : Date.now() - startWall;
         shakes.forEach(c => {
@@ -36962,9 +37090,9 @@ const BossMovieLayer = ({
           c.fired = true;
           if (shake) setShakeKey(k => k + 1);
         });
-        raf = requestAnimationFrame(tick);
+        if (shakes.some(c => !c.fired)) raf = requestAnimationFrame(tick);
       };
-      raf = requestAnimationFrame(tick);
+      if (shakes.length) raf = requestAnimationFrame(tick);
     };
     const onEnded = () => finish(true, true);
     const onError = () => finish(started);
@@ -37383,6 +37511,7 @@ function BattleScreen({
   tacticsUnits,
   tacticsExInfo,
   activateTacticsEx,
+  tacticsExCutin,
   tacticsExTurnUsed,
   passTacticsTurn,
   tacticsCoverSlot,
@@ -38339,6 +38468,8 @@ function BattleScreen({
   }, enemy?.emoji)), !ecoBattleView && attackAnim && React.createElement(AttackTargetFx, {
     anim: attackAnim,
     attackerId: slots[attackAnim.slotIndex]?.id
+  }), React.createElement(TacticsExCutin, {
+    cutin: tacticsExCutin
   }), !ecoBattleView && isMooBoss(enemy?.id) && React.createElement("div", {
     className: "absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible",
     style: {
@@ -39261,7 +39392,16 @@ function BattleScreen({
           zIndex: 30
         } : {})
       }
-    }, slotHitKind && (() => {
+    }, tacticsExCutin && tacticsExCutin.slotIndex === i && React.createElement("span", {
+      key: tacticsExCutin.key,
+      "data-tactics-ex-aura": tacticsExCutin.effect || 'default',
+      className: "ex-aura",
+      "aria-hidden": "true",
+      style: {
+        '--ex-c1': tacticsExCutinTheme(tacticsExCutin.effect).c1,
+        '--ex-c2': tacticsExCutinTheme(tacticsExCutin.effect).c2
+      }
+    }, React.createElement("i", null), React.createElement("i", null)), slotHitKind && (() => {
       const hitFx = TACTICS_SLOT_FX_STYLE[slotHitKind];
       return React.createElement("div", {
         "data-tactics-hit-fx": slotHitKind,
@@ -39895,10 +40035,7 @@ function BattleScreen({
     const isDragging = dragState?.active && dragState?.cardIndex === i;
     const tutorialAllowed = battleTutorialCardAllowed(c);
     const tutorialTargeted = !!battleTutorialCardTarget && battleTutorialCardKind(c) === battleTutorialCardTarget;
-    return React.createElement("div", {
-      key: c.uid,
-      className: "relative flex-1 min-w-0 max-w-[20%] flex"
-    }, React.createElement("button", {
+    const handCardButton = React.createElement("button", {
       "data-hand-card": i,
       "data-dragging-card": isDragging ? 'true' : undefined,
       "data-card-cost": requiredGuts,
@@ -40063,37 +40200,17 @@ function BattleScreen({
       }
     }, React.createElement(Zap, {
       size: 9
-    }), curGuts))), isDragging && React.createElement("div", {
+    }), curGuts)));
+    return React.createElement("div", {
+      key: c.uid,
+      className: "relative flex-1 min-w-0 max-w-[20%] flex"
+    }, isDragging ? ReactDOM.createPortal(React.createElement("div", {
+      "data-drag-card-layer": true,
+      "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined
+    }, handCardButton), document.body) : handCardButton, isDragging && React.createElement("div", {
       "data-tactics-drag-card-placeholder": true,
       className: "absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"
-    }), isDragging && ReactDOM.createPortal(React.createElement("div", {
-      "data-tactics-drag-card-ghost": true,
-      className: `fixed w-[72px] rounded-[12px] border p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]`,
-      style: {
-        left: dragState.x,
-        top: dragState.y,
-        transform: 'translate(-50%,-50%) rotate(-3deg) scale(1.15)',
-        zIndex: 70000,
-        pointerEvents: 'none',
-        filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.65))',
-        ...(TYPE_INLINE_STYLE[c.type] || {})
-      }
-    }, React.createElement("div", {
-      "data-decoration": true,
-      className: "mt-1.5 flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[11px] border border-white/[.16] bg-black/20"
-    }, cardIconNode(c.icon, 26, c.id)), React.createElement("div", {
-      className: "w-full text-center flex flex-col justify-end gap-0.5",
-      style: {
-        containerType: 'inline-size'
-      }
-    }, React.createElement("div", {
-      className: "text-[11px] font-black leading-[13px] w-full whitespace-normal h-[30px] flex items-center justify-center overflow-hidden px-0.5",
-      style: handCardNameFit(c.name)
-    }, c.name), React.createElement("div", {
-      className: "text-[10px] font-black bg-black/30 text-white rounded-[6px] py-1 flex items-center justify-center gap-0.5"
-    }, React.createElement(Zap, {
-      size: 9
-    }), curGuts))), document.body), cardBlock && !cardBlock.ok && cardBlock.short && !isDragging && React.createElement("div", {
+    }), cardBlock && !cardBlock.ok && cardBlock.short && !isDragging && React.createElement("div", {
       "data-tactics-card-block": cardBlock.short,
       className: "pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]"
     }, cardBlock.short));
@@ -43513,6 +43630,7 @@ function MonsterHeroGame() {
     const fused = (masu?.fusionHistory || []).length > 0;
     const power = mon !== undefined ? mon ? monsterPowerOf(mon) : null : masu ? masuPowerOf(masu) : monsterPowerOf(base);
     const iconSrc = base.iconUrl || base.imgUrl || '';
+    const unusedTranscendPoints = masu ? normalizeMasuProgression(masu).transcendPoints : 0;
     return React.createElement(React.Fragment, null, React.createElement("div", {
       className: "relative shrink-0",
       style: {
@@ -43543,7 +43661,14 @@ function MonsterHeroGame() {
         minWidth: '17px',
         textAlign: 'center'
       }
-    }, masu.distAptPoints), masu && React.createElement(RebirthStars, {
+    }, masu.distAptPoints), unusedTranscendPoints > 0 && React.createElement("span", {
+      "aria-label": `ふり分けできる超越ポイント ${unusedTranscendPoints}`,
+      className: "absolute -right-1.5 -bottom-1 z-10 rounded-full border border-sky-100/70 bg-sky-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow",
+      style: {
+        minWidth: '17px',
+        textAlign: 'center'
+      }
+    }, unusedTranscendPoints), masu && React.createElement(RebirthStars, {
       count: masu.rebirthCount,
       className: "mh-rebirth-stars-overlay"
     }), masu && React.createElement(TranscendenceBadge, {
@@ -45039,7 +45164,7 @@ function MonsterHeroGame() {
     setMasuMonDetail(prev => prev ? result.next.find(m => String(m.id) === String(prev.id)) || prev : prev);
     pushAutoEnhanceLog(result.results);
   }, [masuMons, dataLoaded]);
-  const homePastureMasumons = homePastureIds.map(id => masuMons.find(m => String(m.id) === String(id))).filter(m => m && ALL_PLAYER_MONSTERS[m.baseId]);
+  const homePastureMasumons = useMemo(() => homePastureIds.map(id => masuMons.find(m => String(m.id) === String(id))).filter(m => m && ALL_PLAYER_MONSTERS[m.baseId]), [homePastureIds, masuMons]);
   useEffect(() => {
     if (bootPhase !== 'TITLE' || !dataLoaded) return;
     const pastureUrls = homePastureMasumons.map(masu => {
@@ -46211,7 +46336,11 @@ function MonsterHeroGame() {
         x,
         y
       };
-      if (active !== shownActive) {
+      const layerCard = active && shownActive ? document.querySelector('[data-drag-card-layer] [data-dragging-card]') : null;
+      if (layerCard) {
+        layerCard.style.left = `${x}px`;
+        layerCard.style.top = `${y}px`;
+      } else {
         shownActive = active;
         setDragState(prev => prev ? {
           ...prev,
@@ -46219,12 +46348,6 @@ function MonsterHeroGame() {
           y,
           active
         } : null);
-      } else if (active) {
-        const el = document.querySelector('[data-dragging-card]');
-        if (el) {
-          el.style.left = `${x}px`;
-          el.style.top = `${y}px`;
-        }
       }
       if (active) {
         setDragOverSlot(findSlot(x, y));
@@ -50355,6 +50478,7 @@ function MonsterHeroGame() {
     await awardHeroProofForClear();
     await awardHeroProofShardForClear();
     if (speciesChallengeBattleRunRef.current) {
+      if (speciesChallengeSaveRunRef.current) await saveMissionProgress('speciesClear');
       addAssistantBond('clear');
       return;
     }
@@ -50363,6 +50487,7 @@ function MonsterHeroGame() {
       const nextTactics = (Number(tacticsRecordsOf(runMode).clears[tacticsDiff]) || 0) + 1;
       bumpTacticsRecord(runMode, 'clears', tacticsDiff, nextTactics);
       await storeSet(clearCountKey(runMode, tacticsDiff), nextTactics, false);
+      await saveMissionProgress(extremeRunRef.current ? 'extremeClear' : isProMode(runMode) ? 'proClear' : 'challengeClear');
       addAssistantBond('clear');
       return;
     }
@@ -51565,7 +51690,8 @@ function MonsterHeroGame() {
       proClear: {
         key: 'proClears',
         daily: true,
-        weekly: true
+        weekly: true,
+        monthly: true
       },
       extremeClear: {
         key: 'extremeClears',
@@ -51576,6 +51702,12 @@ function MonsterHeroGame() {
         key: 'itemUses',
         daily: true,
         weekly: true
+      },
+      speciesClear: {
+        key: 'speciesClears',
+        daily: true,
+        weekly: true,
+        monthly: true
       }
     }[event];
     if (!rule) return;
@@ -53141,6 +53273,19 @@ function MonsterHeroGame() {
     };
   };
   const TACTICS_EX_ON_USE = {};
+  const [tacticsExCutin, setTacticsExCutin] = useState(null);
+  const tacticsExCutinTimerRef = useRef(null);
+  const showTacticsExCutin = cutin => {
+    if (tacticsExCutinTimerRef.current) clearTimeout(tacticsExCutinTimerRef.current);
+    setTacticsExCutin({
+      ...cutin,
+      key: Date.now()
+    });
+    tacticsExCutinTimerRef.current = setTimeout(() => {
+      tacticsExCutinTimerRef.current = null;
+      setTacticsExCutin(null);
+    }, TACTICS_EX_CUTIN_MS);
+  };
   const activateTacticsEx = (slotIdx, choice = null) => {
     if (!tacticsExEnabled || isBusy || autoBattleRef.current) return false;
     const mon = slots[slotIdx];
@@ -53194,6 +53339,17 @@ function MonsterHeroGame() {
     const onUse = TACTICS_EX_ON_USE[def.effect];
     if (isTacticsExEffectImplemented(def)) {
       addPopup(`EX ${def.name}！${toggled}`, 'hero', 'text-fuchsia-300 font-black text-xl drop-shadow-md', undefined, slotIdx);
+      Audio_.se.special();
+      showTacticsExCutin({
+        slotIndex: slotIdx,
+        effect: def.effect,
+        monId: mon.id,
+        imgUrl: mon.imgUrl,
+        colors: mon.colors,
+        monName: mon.masuName || mon.name,
+        exName: def.name,
+        styleLabel: def.duration === 'style' ? tacticsExStyleLabel(def, next, slotIdx, mon.id) : ''
+      });
       if (typeof onUse === 'function') onUse({
         def,
         slotIdx,
@@ -55232,7 +55388,7 @@ function MonsterHeroGame() {
       });
     }
     if (!enemy && !debugBattleRef.current) {
-      if (isQuickMode(runMode)) void saveMissionProgress('quickRun');else if (runMode === BATTLE_MODE_CHALLENGE && !extremeRunRef.current && !speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');else void saveMissionProgress('modeRun');
+      if (isQuickMode(runMode)) void saveMissionProgress('quickRun');else if ((runMode === BATTLE_MODE_CHALLENGE || runMode === BATTLE_MODE_TACTICS) && !extremeRunRef.current && !speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');else void saveMissionProgress('modeRun');
     }
     setTimeout(() => {
       setOwnedTeachings(nextTeachings);
@@ -65338,6 +65494,7 @@ function MonsterHeroGame() {
       tacticsSlotGuardValue: tacticsSlotGuardValue,
       tacticsExInfo: tacticsExInfo,
       activateTacticsEx: activateTacticsEx,
+      tacticsExCutin: tacticsExCutin,
       tacticsExIntroVisible: tacticsExIntroVisible,
       dismissTacticsExIntro: dismissTacticsExIntro,
       tacticsExTurnUsed: tacticsExTurnUsed,
@@ -69626,6 +69783,85 @@ const createAnimationStyle = () => {
       .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit { display:none; }
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
     }
+    /* ==== タクティクスのEXスキルを使った瞬間のカットイン(24-battle-fx.jsx の TacticsExCutin・1600ms) ====
+       暗転 → 斜めの帯が左から入る(立ち絵・EX SKILL・名前)→ 効果ごとの模様 → 帯が右へ抜ける。色は --ex-c1(明)/--ex-c2(濃)。
+       押せる場所は塞がない(pointer-events:none)。 */
+    .ex-cutin { position:fixed; inset:0; z-index:9600; pointer-events:none; overflow:hidden; }
+    .ex-cutin > * { position:absolute; pointer-events:none; }
+    .ex-cutin__shade { inset:0; opacity:0; background:radial-gradient(ellipse at 50% 50%, rgba(8,6,20,.55), rgba(2,2,8,.82));
+      animation:exShade 1600ms ease-out forwards; }
+    @keyframes exShade { 0% { opacity:0; } 8%,80% { opacity:1; } 100% { opacity:0; } }
+    .ex-cutin__rays { left:50%; top:50%; width:160vmax; height:160vmax; margin:-80vmax 0 0 -80vmax; opacity:0;
+      background:repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--ex-c2) 45%, transparent) 0 6deg, transparent 6deg 18deg);
+      -webkit-mask-image:radial-gradient(circle, #000 0 18%, transparent 55%); mask-image:radial-gradient(circle, #000 0 18%, transparent 55%);
+      animation:exRays 1600ms ease-out forwards; }
+    @keyframes exRays { 0% { opacity:0; transform:rotate(0deg) scale(.6); } 12% { opacity:.9; } 78% { opacity:.7; } 100% { opacity:0; transform:rotate(40deg) scale(1.1); } }
+    .ex-cutin__band { left:-12%; right:-12%; top:50%; height:148px; margin-top:-74px; overflow:visible;
+      background:linear-gradient(90deg, rgba(6,8,18,.35), rgba(8,10,24,.94) 18%, rgba(8,10,24,.94) 82%, rgba(6,8,18,.35));
+      border-top:3px solid var(--ex-c1); border-bottom:3px solid var(--ex-c1);
+      box-shadow:0 0 18px var(--ex-c2), 0 0 42px color-mix(in srgb, var(--ex-c2) 60%, transparent), inset 0 0 30px color-mix(in srgb, var(--ex-c2) 45%, transparent);
+      transform:translateX(-120%) skewY(-7deg); animation:exBand 1600ms cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes exBand {
+      0% { transform:translateX(-120%) skewY(-7deg); }
+      13% { transform:translateX(0) skewY(-7deg); }
+      80% { transform:translateX(2%) skewY(-7deg); opacity:1; }
+      100% { transform:translateX(125%) skewY(-7deg); opacity:.6; }
+    }
+    .ex-cutin__lines { position:absolute; inset:0; opacity:.9;
+      background:repeating-linear-gradient(90deg, transparent 0 46px, color-mix(in srgb, var(--ex-c1) 22%, transparent) 46px 48px);
+      animation:exLines 260ms linear infinite; }
+    @keyframes exLines { from { background-position:0 0; } to { background-position:-48px 0; } }
+    .ex-cutin__art { position:absolute; left:calc(12% + 2px); bottom:-12px; width:156px; height:156px; transform:skewY(7deg);
+      filter:drop-shadow(0 0 10px var(--ex-c2)) drop-shadow(0 6px 10px rgba(0,0,0,.7)); animation:exArt 1600ms cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes exArt { 0%,6% { opacity:0; translate:-70px 0; scale:.85; } 20% { opacity:1; translate:0 0; scale:1.08; } 30%,82% { opacity:1; translate:6px 0; scale:1; } 100% { opacity:0; translate:60px 0; scale:1; } }
+    .ex-cutin__text { position:absolute; left:calc(12% + 162px); right:calc(12% + 8px); top:50%; transform:translateY(-50%) skewY(7deg); min-width:0; }
+    .ex-cutin__tag { font:900 12px/1 system-ui, sans-serif; letter-spacing:.32em; color:var(--ex-c1);
+      text-shadow:0 0 8px var(--ex-c2); opacity:0; animation:exTag 1600ms ease-out forwards; }
+    @keyframes exTag { 0%,10% { opacity:0; translate:30px 0; } 20%,84% { opacity:1; translate:0 0; } 100% { opacity:0; } }
+    .ex-cutin__name { margin-top:6px; font:italic 900 26px/1.15 system-ui, sans-serif; color:#fff; white-space:nowrap;
+      text-shadow:0 0 2px var(--ex-c2), 2px 2px 0 var(--ex-c2), -1px -1px 0 color-mix(in srgb, var(--ex-c2) 70%, #000), 0 0 16px var(--ex-c2);
+      opacity:0; animation:exName 1600ms cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes exName { 0%,12% { opacity:0; translate:46px 0; scale:1.35; } 24% { opacity:1; translate:0 0; scale:.96; } 30%,84% { opacity:1; scale:1; } 100% { opacity:0; translate:-20px 0; } }
+    .ex-cutin__sub { margin-top:6px; font:800 11px/1.2 system-ui, sans-serif; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      opacity:0; animation:exTag 1600ms ease-out 60ms forwards; }
+    .ex-cutin__flash { inset:0; background:#fff; opacity:0; animation:exFlash 1600ms linear forwards; }
+    @keyframes exFlash { 0% { opacity:0; } 5% { opacity:.7; } 15% { opacity:0; } 84% { opacity:0; } 90% { opacity:.3; } 100% { opacity:0; } }
+    .ex-cutin__motif { inset:0; }
+    .ex-cutin__motif i { position:absolute; opacity:0; }
+    /* 盾(みんなをかばう): 画面の中心から六角形の輪が広がる */
+    .ex-cutin__motif--shield i { left:50%; top:50%; width:120px; height:120px; margin:-60px 0 0 -60px;
+      clip-path:polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%);
+      background:radial-gradient(circle, transparent 0 56%, var(--ex-c1) 60% 66%, color-mix(in srgb, var(--ex-c2) 70%, transparent) 70%, transparent 74%);
+      animation:exShield 900ms ease-out forwards; animation-delay:calc(180ms + var(--i) * 110ms); }
+    @keyframes exShield { 0% { opacity:0; transform:scale(.3); } 20% { opacity:1; } 100% { opacity:0; transform:scale(4.2); } }
+    /* 炎(捨て身): 下から炎の舌が立ちのぼる */
+    .ex-cutin__motif--flame i { bottom:-60px; left:calc(var(--i) * 17% - 4%); width:34%; height:62vh; border-radius:50% 50% 40% 40%;
+      background:radial-gradient(ellipse at 50% 85%, #fff7 0 8%, var(--ex-c1) 18%, var(--ex-c2) 45%, transparent 70%); filter:blur(2px);
+      animation:exFlame 1100ms ease-out forwards; animation-delay:calc(140ms + var(--i) * 60ms); }
+    @keyframes exFlame { 0% { opacity:0; transform:translateY(40%) scaleY(.4); } 25% { opacity:.95; } 60% { opacity:.8; transform:translateY(0) scaleY(1.05) scaleX(.9); } 100% { opacity:0; transform:translateY(-18%) scaleY(1.2) scaleX(.7); } }
+    /* 光(ガッツ全開っちー): 金の光の柱と粒が下から上へ */
+    .ex-cutin__motif--rise i { bottom:0; left:calc(8% + var(--i) * 16%); width:10px; height:70vh; border-radius:999px;
+      background:linear-gradient(0deg, transparent, var(--ex-c2) 30%, var(--ex-c1) 70%, #fff); box-shadow:0 0 14px var(--ex-c2);
+      animation:exRise 1000ms ease-out forwards; animation-delay:calc(160ms + var(--i) * 70ms); }
+    @keyframes exRise { 0% { opacity:0; transform:translateY(80%) scaleX(.5); } 30% { opacity:.95; } 100% { opacity:0; transform:translateY(-40%) scaleX(1.4); } }
+    /* 斬撃(ソード・コンバージョン): 画面を斜めに横切る青い光の筋 */
+    .ex-cutin__motif--blade i { left:-20%; top:calc(20% + var(--i) * 12%); width:140%; height:4px; border-radius:999px; transform-origin:0 50%;
+      background:linear-gradient(90deg, transparent, var(--ex-c1) 30%, #fff 50%, var(--ex-c1) 70%, transparent); box-shadow:0 0 10px var(--ex-c2), 0 0 22px var(--ex-c2);
+      rotate:calc(-24deg + (var(--i) - 2.5) * 6deg); animation:exBlade 520ms ease-out forwards; animation-delay:calc(200ms + var(--i) * 80ms); }
+    @keyframes exBlade { 0% { opacity:0; transform:scaleX(0); } 30% { opacity:1; transform:scaleX(1); } 100% { opacity:0; transform:scaleX(1) translateY(6px); } }
+    /* 使った子の距離枠の光 */
+    .ex-aura { position:absolute; inset:-2px; z-index:57; pointer-events:none; border-radius:18px; opacity:0;
+      border:2px solid var(--ex-c1); box-shadow:0 0 14px var(--ex-c2), inset 0 0 22px color-mix(in srgb, var(--ex-c2) 70%, transparent);
+      animation:exAura 1600ms ease-out forwards; }
+    @keyframes exAura { 0% { opacity:0; } 10% { opacity:1; } 30% { opacity:.55; } 45% { opacity:1; } 60% { opacity:.55; } 75% { opacity:1; } 100% { opacity:0; } }
+    .ex-aura i { position:absolute; left:50%; top:50%; width:60px; height:60px; margin:-30px 0 0 -30px; border-radius:50%;
+      border:3px solid var(--ex-c1); box-shadow:0 0 12px var(--ex-c2); animation:exAuraRing 800ms ease-out forwards; }
+    .ex-aura i + i { animation-delay:260ms; }
+    @keyframes exAuraRing { 0% { opacity:0; transform:scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:scale(2.6); } }
+    @media (prefers-reduced-motion: reduce) {
+      .ex-cutin__rays, .ex-cutin__motif, .ex-cutin__lines, .ex-aura i { display:none; }
+      .ex-cutin__band { animation:exShade 1600ms ease-out forwards; transform:skewY(-7deg); }
+    }
     /* 敵の側に出す着弾(24-battle-fx.jsx の AttackTargetFx)。敵の丸枠の中心に重ね、攻撃の尺の中で消える。 */
     .atk-target-fx { position:absolute; left:50%; top:50%; width:0; height:0; z-index:9500; pointer-events:none; overflow:visible; }
     /* 図鑑などのプレビューでは敵が居ないので、「敵の位置」(--atk-dx/dy)へずらして重ねる */
@@ -70755,7 +70991,7 @@ const createAnimationStyle = () => {
     [data-moo-reticle] { width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; opacity: 0; border: 3px dashed rgba(250,204,21,.95);
       box-shadow: 0 0 16px rgba(220,38,38,.9), inset 0 0 16px rgba(220,38,38,.6); animation: emLock 800ms ease-out both; }
     /* ---- ボスの必殺技ムービー(71-screen-battle の BossMovieLayer)。画面を切り替えて、上に技名・まんなかにムービー ----
-       ★ムービーは横長(768×488)。縦のスマホでは幅いっぱいより少し大きく(116vw)して左右を少しだけ切り、上下のふちはぼかして背景へなじませる。
+       ★ムービーは横長(1024×682)。縦のスマホでは幅いっぱいより少し大きく(116vw)して左右を少しだけ切り、上下のふちはぼかして背景へなじませる。
        ★技名の札(z 65000)・敵の技の演出(z 64000)より上に出す */
     [data-boss-movie] { position: fixed; inset: 0; z-index: 66000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); -webkit-tap-highlight-color: transparent; user-select: none;
@@ -70763,7 +70999,7 @@ const createAnimationStyle = () => {
     /* ★背景は不透明にする。半透明だと、うしろの戦闘画面(敵の絵・枠)が透けて見える */
     @keyframes bossMovieIn { from { opacity: 0; } to { opacity: 1; } }
     [data-boss-movie-stage] { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-    [data-boss-movie-frame] { position: relative; flex-shrink: 0; width: min(116vw, calc(66vh * 768 / 488)); aspect-ratio: 768 / 488; overflow: hidden;
+    [data-boss-movie-frame] { position: relative; flex-shrink: 0; width: min(116vw, calc(66vh * 1024 / 682)); aspect-ratio: 1024 / 682; overflow: hidden;
       -webkit-mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); }
     [data-boss-movie-frame] > video { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
     [data-boss-movie-title] { text-align: center; line-height: 1.15; animation: bossMovieTitle 900ms cubic-bezier(.2,.8,.2,1) both; }
