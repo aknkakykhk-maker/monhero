@@ -62,6 +62,130 @@ const RHYTHM_SIDE_CHEER_MS=700;
 // 最大1024pxの絵を描き直していた。踏んだ瞬間の「弾ける」動きも同じところで起きる。
 // いまは顔を焼いた絵にして、ノーツと同じ canvas へ drawImage するだけにした。見た目は同じ。
 // 顔の枠(42px)・拡大(1.28倍)・影は、以前の CSS([data-rhythm-canvas-face])の値そのまま。
+// ===== 判定文字の光を、演奏の前に1枚の絵へ焼いておく(2026-09-26) =====
+// ユーザー報告「設定で軽くしてると平気だけど、演出量を上げるとやっぱり重くてカクつく(iPhone 16e)」。
+// 判定文字(MARVELOUS など)の光は filter:drop-shadow を最大6枚重ねたもの(いちばん外はぼかし40px)。
+// ぼかしは文字を描き直すたび・合成するたびに計算し直される。判定は1秒に何度も変わり、
+// 「多め」「最大」ではそのたびに弾ませるので、文字の何倍もの大きさのレイヤーを作ってはぼかし直していた
+// (実測: 6秒で約230回・合計6秒ぶんの描画。影を1枚にすると56msまで減る)。
+// そこで、光(影の重なり)だけを判定の種類ごとに canvas で1度だけ焼き、文字の後ろ(::before)へ置く。
+// 文字の色・金や虹の流れ・弾み・大きさの切り替えは今までどおり CSS が動かす(::after に同じ文字を重ねる)。
+// 影の色・ずれ・ぼかしは、画面に当たっている CSS の値をそのまま読んで焼くので、演出量ごとの違いも同じになる。
+// canvas の shadowBlur は、CSS の drop-shadow の2倍の値で同じぼけ方になる(ブラウザで測って合わせた)。
+// 焼けないとき(フォントの幅が合わない・drop-shadow 以外の filter がある)は、今までどおり CSS のぼかしで出す。
+const RHYTHM_HALO_KEYS=Object.freeze([['MISS',''],['BAD',''],['GOOD',''],['GREAT',''],['EXCELLENT',''],['MARVELOUS',''],['MARVELOUS','1']]);
+// 画面に当たっている filter(getComputedStyle の値)を drop-shadow の並びへ分ける。ほかの関数が混ざっていれば null
+const rhythmParseDropShadows=filter=>{
+  const text=String(filter||'').trim();
+  if(!text||text==='none')return [];
+  const list=[];
+  const rest=text.replace(/drop-shadow\(((?:[^()]|\([^()]*\))*)\)/g,(_,body)=>{
+    const color=(body.match(/rgba?\([^)]*\)|#[0-9a-fA-F]{3,8}/)||['rgb(0, 0, 0)'])[0];
+    const nums=body.replace(color,'').match(/-?[\d.]+px/g)||[];
+    list.push({color,x:parseFloat(nums[0])||0,y:parseFloat(nums[1])||0,blur:parseFloat(nums[2])||0});
+    return '';
+  }).trim();
+  return rest?null:list;
+};
+const rhythmBakeJudgmentHalos=async textEl=>{
+  const host=textEl&&textEl.parentElement;
+  if(!host||typeof document==='undefined'||typeof window==='undefined')return null;
+  try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;}catch(e){}
+  // 光はぼけた絵なので、画面の画素密度の2倍までで足りる(3倍の端末でも見分けがつかない)
+  const dpr=Math.min(2,Math.max(1,Number(window.devicePixelRatio)||1));
+  const baked=[];
+  const fail=()=>{baked.forEach(item=>URL.revokeObjectURL(item.url));return fail();};
+  for(const [judgment,precise] of RHYTHM_HALO_KEYS){
+    // 本物と同じ場所に、見えない見本を置いて CSS の値を読む(演出量・軽量モードの目印も同じように当たる)
+    const probe=document.createElement('b');
+    probe.className=textEl.className;probe.setAttribute('data-rhythm-judgment-text','');
+    probe.dataset.judgment=judgment;if(precise)probe.dataset.judgmentPrecise=precise;
+    probe.textContent=judgment;
+    probe.style.cssText='position:absolute;left:0;top:0;visibility:hidden;transition:none;animation:none';
+    host.appendChild(probe);
+    const cs=getComputedStyle(probe);
+    const shadows=rhythmParseDropShadows(cs.filter);
+    const fs=parseFloat(cs.fontSize)||26,ls=parseFloat(cs.letterSpacing)||0;
+    const font=`${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const range=document.createRange();range.selectNodeContents(probe);
+    const domWidth=range.getBoundingClientRect().width;
+    host.removeChild(probe);
+    if(!shadows)return fail();
+    // 影が1枚だけなら焼かない(1枚の小さなぼかしは軽い。「最小」「軽量モード」はここに当たる)
+    if(shadows.length<2)continue;
+    const measure=document.createElement('canvas').getContext('2d');
+    if(!measure)return fail();
+    measure.font=font;
+    const metrics=measure.measureText(judgment);
+    const ascent=Number.isFinite(metrics.fontBoundingBoxAscent)?metrics.fontBoundingBoxAscent:metrics.actualBoundingBoxAscent;
+    const descent=Number.isFinite(metrics.fontBoundingBoxDescent)?metrics.fontBoundingBoxDescent:metrics.actualBoundingBoxDescent;
+    const runWidth=metrics.width+ls*judgment.length;
+    // 画面の文字と canvas の文字で幅が合わなければ、フォントが違う。形がずれた光を出さないよう焼くのをやめる
+    if(!(Math.abs(runWidth-domWidth)<=2)||!Number.isFinite(ascent)||!Number.isFinite(descent))return fail();
+    const sigma=Math.sqrt(shadows.reduce((sum,s)=>sum+s.blur*s.blur,0));
+    const offset=shadows.reduce((max,s)=>Math.max(max,Math.abs(s.x),Math.abs(s.y)),0);
+    const margin=Math.ceil(2.5*sigma+offset+2);
+    const cssW=runWidth+margin*2,cssH=fs+margin*2,W=Math.ceil(cssW*dpr),H=Math.ceil(cssH*dpr);
+    const make=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
+    // 字の形(色は使わない。影は形だけから作られる)。行の高さ=字の大きさなので、上下の余り(ハーフレディング)を同じに取る
+    const glyph=make(),gctx=glyph.getContext('2d');
+    if(!gctx)return fail();
+    gctx.setTransform(dpr,0,0,dpr,0,0);gctx.font=font;gctx.textBaseline='alphabetic';gctx.fillStyle='#000';
+    const baseline=margin+(fs-(ascent+descent))/2+ascent;
+    for(let i=0;i<judgment.length;i++)gctx.fillText(judgment[i],margin+measure.measureText(judgment.slice(0,i)).width+ls*i,baseline);
+    // filter の並びと同じ順に、「それまでの全部(字＋影)」の影を下へ足していく。残すのは影だけ(字は ::after が描く)
+    const halo=make(),hctx=halo.getContext('2d'),source=make(),sctx=source.getContext('2d'),shadow=make(),shctx=shadow.getContext('2d');
+    if(!hctx||!sctx||!shctx)return fail();
+    sctx.drawImage(glyph,0,0);
+    const far=W+H+1000;
+    for(const s of shadows){
+      shctx.clearRect(0,0,W,H);
+      shctx.shadowColor=s.color;shctx.shadowBlur=s.blur*2*dpr;shctx.shadowOffsetX=s.x*dpr+far;shctx.shadowOffsetY=s.y*dpr;
+      shctx.drawImage(source,-far,0);
+      hctx.globalCompositeOperation='destination-over';hctx.drawImage(shadow,0,0);
+      sctx.globalCompositeOperation='destination-over';sctx.drawImage(shadow,0,0);
+    }
+    const url=await new Promise(resolve=>{try{halo.toBlob(blob=>resolve(blob?URL.createObjectURL(blob):null),'image/png');}catch(e){resolve(null);}});
+    if(!url)return fail();
+    baked.push({judgment,precise,url,width:cssW/fs,height:cssH/fs});
+  }
+  return baked.length?baked:null;
+};
+// ===== ライブ背景「派手」のサーチライトと光の粒を、1度だけ画像に焼く(2026-09-26) =====
+// ユーザー報告「演出量とライブ背景をマックスに上げると重くなるし発熱がすごい」。
+// 以前は、サーチライトを clip-path で台形に切り抜いた層として回し、光の粒は CSS の模様(radial-gradient)を
+// 並べた「画面の2倍の高さ」の層を、画面の画素数そのままで上へ流していた。回転する層の切り抜きは合成のたびに
+// マスクを通り、粒の層は大きな絵を2枚抱えることになる。
+// いまは形を1度だけ canvas で描いて画像にし、<img> を CSS のアニメーション(合成だけで動く)で動かす。
+// 画素密度は1.5倍まで(ぼけた光なので見分けがつかない)。位置・動き・速さ・色は以前の CSS のまま。
+//   サーチライト … 幅38%・高さ135%。上の辺の44%〜56%から下の辺いっぱいへ広がる台形。色は上から78%で消える
+//   光の粒 … 奥8粒(16秒で1周・濃さ.55)、手前6粒(9秒で1周・濃さ.7)。層の上半分と下半分に同じ並び
+// ★動くものを毎フレーム canvas へ描き直す形は試してやめた。合成だけで済んでいた動きが毎フレームの塗りになり、
+//   この環境の計測でも処理時間が倍近くに増えた。ジャケットと暗幕はもともと軽い(24×24 の絵の引き伸ばし・動かない層)ので変えていない。
+const RHYTHM_STAGE_BEAM_COLORS=Object.freeze(['rgba(103,232,249,.22)','rgba(232,121,249,.24)','rgba(251,191,36,.24)','rgba(255,255,255,.26)']);
+const RHYTHM_STAGE_SPARKS=Object.freeze([
+  {duration:16000,opacity:.55,core:1,mid:2,end:4,dots:[[8,12],[27,63],[41,30],[58,85],[73,18],[88,52],[15,90],[64,45]]},
+  {duration:9000,opacity:.7,core:2,mid:3,end:5,dots:[[5,40],[21,8],[36,77],[80,33],[93,70],[50,58]]},
+]);
+// サーチライト1本。box は要素の箱(CSS px)、回転の中心は箱の上辺の真ん中
+const rhythmDrawStageBeam=(g,left,top,bw,bh,angleDeg,color,alpha=.75)=>{
+  g.save();
+  g.translate(left+bw/2,top);g.rotate(angleDeg*Math.PI/180);g.translate(-bw/2,0);
+  g.beginPath();g.moveTo(.44*bw,0);g.lineTo(.56*bw,0);g.lineTo(bw,bh);g.lineTo(0,bh);g.closePath();
+  const grad=g.createLinearGradient(0,0,0,bh);grad.addColorStop(0,color);grad.addColorStop(.78,color.replace(/[\d.]+\)$/,'0)'));
+  g.globalAlpha=alpha;g.fillStyle=grad;g.fill();
+  g.restore();
+};
+// 光の粒1つ(円の中心から core まで白、mid で水色.35、end で透明)
+const rhythmStageSparkSprite=(layer,scale)=>{
+  const r=layer.end,size=Math.ceil(r*2*scale)+2,c=document.createElement('canvas');c.width=size;c.height=size;
+  const g=c.getContext('2d');if(!g)return c;
+  const cx=size/2,grad=g.createRadialGradient(cx,cx,0,cx,cx,r*scale);
+  grad.addColorStop(0,'rgba(236,254,255,.95)');grad.addColorStop(layer.core/r,'rgba(236,254,255,.95)');
+  grad.addColorStop(layer.mid/r,'rgba(103,232,249,.35)');grad.addColorStop(1,'rgba(103,232,249,0)');
+  g.fillStyle=grad;g.fillRect(0,0,size,size);
+  return c;
+};
 const RHYTHM_FACE_BOX=42,RHYTHM_FACE_ZOOM=1.28,RHYTHM_FACE_PAD=12;
 const rhythmBakeMonsterFace=async(monster,dpr)=>{
   if(!monster||!monster.imageUrl||typeof document==='undefined')return null;
@@ -318,6 +442,25 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
   const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null);
+  // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
+  // 焼けるまで・焼けなかったとき・影が1枚だけの判定は、今までどおり CSS のぼかしで出す(haloKeys に入っていない)。
+  const [haloKeys,setHaloKeys]=useState(null);
+  useEffect(()=>{
+    let cancelled=false,made=null;
+    setHaloKeys(null);
+    const textEl=judgmentTextRef.current;
+    if(!textEl||typeof document==='undefined')return undefined;
+    rhythmBakeJudgmentHalos(textEl).then(baked=>{
+      if(!baked)return;
+      if(cancelled){baked.forEach(item=>URL.revokeObjectURL(item.url));return;}
+      made=baked;
+      let style=document.querySelector('style[data-rhythm-judgment-halo-style]');
+      if(!style){style=document.createElement('style');style.setAttribute('data-rhythm-judgment-halo-style','');document.head.appendChild(style);}
+      style.textContent=baked.map(item=>`[data-rhythm-judgment-text][data-halo="1"][data-judgment="${item.judgment}"]${item.precise?'[data-judgment-precise="1"]':':not([data-judgment-precise="1"])'}::before{background-image:url("${item.url}");width:${item.width.toFixed(4)}em;height:${item.height.toFixed(4)}em}`).join('\n');
+      setHaloKeys(new Set(baked.map(item=>`${item.judgment}|${item.precise}`)));
+    }).catch(()=>{});
+    return()=>{cancelled=true;const style=document.querySelector('style[data-rhythm-judgment-halo-style]');if(style)style.textContent='';if(made)made.forEach(item=>URL.revokeObjectURL(item.url));};
+  },[settings.effectAmount,settings.lightweightMode]);
   // ライフの強調(2026-09-12)。DOM へ data 属性を書くだけで、判定・スコア・ライフの数値には触らない。
   // lifeBoxRef … 減った瞬間にHUDのライフ表示を揺らす／lifeDamageRef … 減った量(「-50」)を一瞬出す
   const lifeBoxRef=useRef(null),lifeDamageRef=useRef(null);
@@ -485,6 +628,46 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const lifeRatio=rhythmLifeRatio(view.life);
   const lifeState=rhythmLifeState(view.life);
   const comboTier=rhythmComboTier(view.combo);
+  // ライブ背景「派手」のサーチライトと光の粒を、1度だけ画像に焼く(RHYTHM_STAGE_* の説明を参照)。
+  // 大きさはプレイエリアから決めるので、画面の大きさが変わったら焼き直す。サーチライトは色の段ごとに4枚
+  const stageTierNow=Math.min(3,Math.floor(comboTier/2));
+  const stageHostRef=useRef(null);
+  const [stageImages,setStageImages]=useState(null);
+  const stageFxOn=stageLevel==='VIVID'&&settings.effectAmount!=='MINIMAL';
+  useEffect(()=>{
+    const host=stageHostRef.current;
+    if(!host||!stageFxOn||typeof window==='undefined'||typeof document==='undefined')return undefined;
+    let alive=true,made=[],timer=0,lastKey='';
+    const toUrl=canvas=>new Promise(resolve=>{try{canvas.toBlob(blob=>resolve(blob?URL.createObjectURL(blob):null),'image/png');}catch(e){resolve(null);}});
+    const bake=async()=>{
+      const w=host.clientWidth,h=host.clientHeight;
+      if(!(w>0&&h>0))return;
+      // ぼけた光なので画素密度は1.5倍まで(以前は画面の画素数そのまま)
+      const scale=Math.min(1.5,Math.max(1,Number(window.devicePixelRatio)||1));
+      const key=`${w}x${h}@${scale}`;
+      if(key===lastKey)return;
+      lastKey=key;
+      const canvasOf=(cw,ch)=>{const c=document.createElement('canvas');c.width=Math.max(1,Math.round(cw*scale));c.height=Math.max(1,Math.round(ch*scale));const g=c.getContext('2d');if(g)g.setTransform(scale,0,0,scale,0,0);return [c,g];};
+      const bw=.38*w,bh=1.35*h;
+      const beams=await Promise.all(RHYTHM_STAGE_BEAM_COLORS.map(color=>{const [c,g]=canvasOf(bw,bh);if(!g)return null;rhythmDrawStageBeam(g,0,0,bw,bh,0,color,1);return toUrl(c);}));
+      const sparks=await Promise.all(RHYTHM_STAGE_SPARKS.map(layer=>{
+        const [c,g]=canvasOf(w,h*2);if(!g)return null;
+        const sprite=rhythmStageSparkSprite(layer,scale),size=sprite.width/scale;
+        for(const [px,py] of layer.dots)for(const k of [0,1])g.drawImage(sprite,px/100*w-size/2,py/100*h+k*h-size/2,size,size);
+        return toUrl(c);
+      }));
+      const urls=[...beams,...sparks];
+      if(!alive||urls.some(url=>!url)){urls.forEach(url=>{if(url)URL.revokeObjectURL(url);});return;}
+      const old=made;made=urls;
+      setStageImages({beams,sparks});
+      // 差し替えた古い画像は、読み替えが終わったころに片付ける
+      setTimeout(()=>old.forEach(url=>URL.revokeObjectURL(url)),1000);
+    };
+    bake();
+    const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(()=>{clearTimeout(timer);timer=setTimeout(bake,150);}):null;
+    if(observer)observer.observe(host);
+    return()=>{alive=false;clearTimeout(timer);if(observer)observer.disconnect();setStageImages(null);made.forEach(url=>URL.revokeObjectURL(url));};
+  },[stageFxOn]);
   /* フルコンボ・オールマーベラスが続いているか(プロセカ・CHUNITHM のコンボ色)。「COMBO」の字の色で見せる。
      AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。設定で出さないこともできる */
   /* アシストモードでは称号が付かないので出さない(出すと「取れる」と思わせてしまう) */const comboStatus=(()=>{if(settings.comboStatusDisplay===false||assistOn||!view.counts)return '';const c=view.counts;if((Number(c.BAD)||0)+(Number(c.MISS)||0)>0)return '';return (Number(c.EXCELLENT)||0)+(Number(c.GREAT)||0)+(Number(c.GOOD)||0)>0?'FC':'AM';})();
@@ -917,12 +1100,9 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
      取り逃しのMISSや長押しの終わりも、次に描くフレーム(8ms後)でいつもどおり数える */
 const powerSave=settings.frameRateMode!=='DEVICE';const stagePulseOn=rhythmStageLevel(settings)!=='SIMPLE';let prevFrameMs=0,avgFrameMs=1000/60,lastDrawnMs=0;
 const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();const run=runRef.current;if(!run||run.finished||run.paused)return;
-/* 入力の座標変換に使うプレイエリアの箱を、**このフレームでまだ何も書き換えていないうち**に測っておく(2026-09-25)。
-   箱は毎フレーム捨てている(ずれると入力位置がずれるため)。以前はタップが来たときに初めて測っていたので、
-   そのフレームで書き換えたぶんを片付けるための配置計算を、タップのたびにその場でさせていた
-   (叩いた10秒のうち66ms。CPUを1/4に絞った環境)。ここなら配置はまだ崩れておらず、ほぼただで測れる。
-   測った値はこのフレームのあいだのタップがそのまま使う。値そのものは以前と同じ(同じ関数で測る) */
-RHYTHM_GESTURE_RUNTIME.areaRect(playAreaRef.current);
+/* ★ここでプレイエリアの箱を先に測っておく形は、2026-09-25に入れて26日にやめた。毎フレームの最初の時点で
+   配置の計算がたまっていることが多く、測るたびにその場で計算させていた(8秒で560ms。タップのときだけ測る
+   以前の形は10秒で66ms)。箱はタップが来たときに初めて測る(同じフレームのタップは使い回す) */
 if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
 /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
    取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
@@ -1434,12 +1614,12 @@ scheduleTick();};
        ★ノーツが流れ着く先は measureTravel が**ラインを実測**して決めるので、
          ここを動かすだけで譜面も判定もそのままついてくる */
     '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{/* ライブ背景。いちばん奥(z-index:-1)。見た目は index.html の [data-rhythm-stage] が持つ */}
-{stageLevel!=='SIMPLE'&&<div data-rhythm-stage={stageLevel} data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true">
+{stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} aria-hidden="true">
   {stageArtSrc&&<canvas ref={stageArtRef} data-rhythm-stage-art width="24" height="24"/>}
-  {stageLevel==='VIVID'&&<><i data-rhythm-stage-beam="left"/><i data-rhythm-stage-beam="right"/>
-    {/* 光の粒は1粒ずつ動かさず、粒を並べた層を2枚(奥と手前)だけ動かす。
-        1粒ずつ別のアニメーションにしていたころは、それだけで毎フレームの計算が倍以上に増えた */}
-    <i data-rhythm-stage-sparks="far"/><i data-rhythm-stage-sparks="near"/></>}
+  {/* サーチライトと光の粒は、1度だけ焼いた画像を CSS のアニメーション(合成だけで動く)で動かす(2026-09-26)。
+      以前はサーチライトを clip-path で切り抜いた層、光の粒を画面の2倍の高さの CSS の模様で作っていた */}
+  {stageFxOn&&stageImages&&<><img data-rhythm-stage-beam="left" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/><img data-rhythm-stage-beam="right" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/>
+    <img data-rhythm-stage-sparks="far" src={stageImages.sparks[0]} alt="" draggable={false}/><img data-rhythm-stage-sparks="near" src={stageImages.sparks[1]} alt="" draggable={false}/></>}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
 {stageLevel!=='SIMPLE'&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
@@ -1482,7 +1662,7 @@ scheduleTick();};
       判定ラインで弾ける光の単色は data/rhythm-mode.js の RHYTHM_JUDGMENT_COLORS が正本で、
       文字のグラデーションにも必ずその色を含める(rhythm-hit-effect-check.js が突き合わせる)。
       ここが渡すのは「どの判定か」「ぴったりか」の2つだけ。
-      text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}<b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={view.last||''} data-judgment-precise={view.lastPrecise?'1':''} className="block text-[26px] font-black leading-none tracking-wide text-white">{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow?(timingDisplay!=='STANDARD'&&typeof view.lastDeltaMs==='number'?`${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms`:view.fastSlow):'—'):'—'}</small>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
+      text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}<b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={view.last||''} data-judgment-precise={view.lastPrecise?'1':''} data-halo={haloKeys&&settings.judgmentTextDisplay&&view.last&&view.status!=='error'&&view.status!=='loading'&&haloKeys.has(`${view.last}|${view.lastPrecise?'1':''}`)?'1':undefined} className="block text-[26px] font-black leading-none tracking-wide text-white">{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow?(timingDisplay!=='STANDARD'&&typeof view.lastDeltaMs==='number'?`${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms`:view.fastSlow):'—'):'—'}</small>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
     帯の色は判定窓(MARVELOUS 金・EXCELLENT 紫・GREAT 赤・GOOD 緑・BAD 青)で、真ん中がぴったり */}
 {timingDisplay==='METER'&&<div data-rhythm-timing-meter aria-hidden="true" className="absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2" style={{'--meter-mar':`${(55/185*50).toFixed(2)}%`,'--meter-exc':`${(100/185*50).toFixed(2)}%`,'--meter-gre':`${(150/185*50).toFixed(2)}%`,'--meter-goo':`${(170/185*50).toFixed(2)}%`}}><i data-rhythm-timing-meter-band/><i data-rhythm-timing-meter-center/>{Array.from({length:12},(_,i)=><i key={i} ref={el=>{meterTicksRef.current[i]=el;}} data-rhythm-timing-meter-tick style={{opacity:0}}/>)}</div>}</div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
 {/* ラッキーラッシュ中は、プレイエリアのふちが金色に光る(ノーツより後ろ・入力に触らない) */}

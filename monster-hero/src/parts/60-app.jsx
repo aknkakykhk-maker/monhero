@@ -1900,6 +1900,7 @@ function MonsterHeroGame() {
     const fused = (masu?.fusionHistory || []).length > 0;
     const power = mon !== undefined ? (mon ? monsterPowerOf(mon) : null) : (masu ? masuPowerOf(masu) : monsterPowerOf(base));
     const iconSrc = base.iconUrl || base.imgUrl || '';
+    const unusedTranscendPoints = masu ? normalizeMasuProgression(masu).transcendPoints : 0;
     return (<>
       <div className="relative shrink-0" style={{isolation:'isolate'}}>
         <div className={`${MONSTER_CARD_ICON_CLASS} border ${masu?(fused?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'):'border-white/10'}`}>
@@ -1917,6 +1918,14 @@ function MonsterHeroGame() {
           <span aria-label={`ふり分けできる強化ポイント ${masu.distAptPoints}`}
             className="absolute -left-1.5 -bottom-1 z-10 rounded-full border border-amber-200/60 bg-amber-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow"
             style={{minWidth:'17px',textAlign:'center'}}>{masu.distAptPoints}</span>
+        )}
+        {/* ふり分けできる超越ポイント。通常の強化ポイント(左下・黄)と見分けられるよう、
+            **右下**に超越強化画面と同じ空色で出す。超越していない個体も超越強化は使えるので、
+            transcended ではなく残りポイントだけで出し入れする。 */}
+        {unusedTranscendPoints>0&&(
+          <span aria-label={`ふり分けできる超越ポイント ${unusedTranscendPoints}`}
+            className="absolute -right-1.5 -bottom-1 z-10 rounded-full border border-sky-100/70 bg-sky-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow"
+            style={{minWidth:'17px',textAlign:'center'}}>{unusedTranscendPoints}</span>
         )}
         {masu&&<RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>}
         {masu&&<TranscendenceBadge transcended={normalizeMasuProgression(masu).transcended} soulRankStage={normalizeMasuProgression(masu).soulRankStage} small/>}
@@ -7889,6 +7898,9 @@ function MonsterHeroGame() {
     // チャレンジの mh_clears_* と極限の mh_extreme_clears_* はどちらも書き換えない。
     // 極限難易度で遊んでも極限チャレンジのクリア数には数えない
     if (speciesChallengeBattleRunRef.current) {
+      // ミッションの「種族チャレンジをクリア」はクラシック・タクティクスどちらでも進む。
+      // 保存しない確認の周回では進めない
+      if (speciesChallengeSaveRunRef.current) await saveMissionProgress('speciesClear');
       addAssistantBond('clear');
       return;
     }
@@ -7900,6 +7912,9 @@ function MonsterHeroGame() {
       const nextTactics = (Number(tacticsRecordsOf(runMode).clears[tacticsDiff]) || 0) + 1;
       bumpTacticsRecord(runMode, 'clears', tacticsDiff, nextTactics);
       await storeSet(clearCountKey(runMode, tacticsDiff), nextTactics, false);
+      // ミッションはクラシックと共通(2026-09-26 ユーザー指示「タクティクスも共通にする」)。
+      // 記録の置き場は分けたまま、ミッションの数え方だけクラシックの同じモードへそろえる
+      await saveMissionProgress(extremeRunRef.current ? 'extremeClear' : isProMode(runMode) ? 'proClear' : 'challengeClear');
       addAssistantBond('clear');
       return;
     }
@@ -8845,9 +8860,11 @@ function MonsterHeroGame() {
       modeRun:{key:'modeRuns',daily:false,weekly:false,monthly:true},
       challengeClear:{key:'challengeClears',daily:true,weekly:true},
       quickClear:{key:'quickClears',daily:true,weekly:true},
-      proClear:{key:'proClears',daily:true,weekly:true},
+      proClear:{key:'proClears',daily:true,weekly:true,monthly:true},
       extremeClear:{key:'extremeClears',daily:false,weekly:true},
       itemUse:{key:'itemUses',daily:true,weekly:true},
+      // 種族チャレンジのクリア(2026-09-26)
+      speciesClear:{key:'speciesClears',daily:true,weekly:true,monthly:true},
     }[event];
     if(!rule)return;
     const next=normalizeMissions(missionsRef.current);
@@ -12178,7 +12195,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // デバッグ・練習・保存しない種族チャレンジはdebugBattleRefで除外される。
     if (!enemy && !debugBattleRef.current) {
       if (isQuickMode(runMode)) void saveMissionProgress('quickRun');
-      else if (runMode===BATTLE_MODE_CHALLENGE&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');
+      // タクティクスチャレンジもクラシックのチャレンジと同じ項目へ数える(2026-09-26)
+      else if ((runMode===BATTLE_MODE_CHALLENGE||runMode===BATTLE_MODE_TACTICS)&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');
       else void saveMissionProgress('modeRun');
     }
     setTimeout(()=>{setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},battleMs(150));

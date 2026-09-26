@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c065ad35b283e92f
+// source-sha256: 88a8291bcbc03682
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-26 13:32";
+const BUILD_DATE = "2026-09-26 13:48";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -10775,6 +10775,12 @@ const missionWeekRotationIndex = (now = Date.now()) => {
   const index = Math.floor((periodMs - epochMs) / (7 * 24 * 60 * 60 * 1000));
   return (index % 4 + 4) % 4;
 };
+const MISSION_BATTLE_BOTH = '（クラシック・タクティクスどちらでも）';
+const missionItemReward = (itemId, amount) => ({
+  type: 'gameItem',
+  itemId,
+  amount
+});
 const DAILY_ROTATION_MISSIONS = Object.freeze({
   1: {
     id: 'daily_rotation',
@@ -10784,7 +10790,7 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
     target: 1,
     rewards: [{
       type: 'diamond',
-      amount: 200
+      amount: 300
     }]
   },
   2: {
@@ -10801,7 +10807,7 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   3: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'プロモードを1回クリアする',
+    condition: `プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,
     key: 'proClears',
     target: 1,
     rewards: [{
@@ -10812,8 +10818,8 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   4: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'クイックモードを1回クリアする',
-    key: 'quickClears',
+    condition: `種族チャレンジを1回クリアする${MISSION_BATTLE_BOTH}`,
+    key: 'speciesClears',
     target: 1,
     rewards: [{
       type: 'rainbowPsyche',
@@ -10834,13 +10840,10 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
   6: {
     id: 'daily_rotation',
     name: '本日のミッション',
-    condition: 'プロモードを1回クリアする',
+    condition: `プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,
     key: 'proClears',
     target: 1,
-    rewards: [{
-      type: 'diamond',
-      amount: 300
-    }]
+    rewards: [missionItemReward('hero_proof_shard', 1)]
   },
   0: {
     id: 'daily_rotation',
@@ -10857,13 +10860,10 @@ const DAILY_ROTATION_MISSIONS = Object.freeze({
 const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
   id: 'weekly_rotation',
   name: '今週のミッション',
-  condition: 'プロモードを3回クリアする',
+  condition: `プロモードを3回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'proClears',
   target: 3,
-  rewards: [{
-    type: 'uniqueSkillResetTicket',
-    amount: 1
-  }]
+  rewards: [missionItemReward('hero_proof_shard', 3)]
 }, {
   id: 'weekly_rotation',
   name: '今週のミッション',
@@ -10877,9 +10877,9 @@ const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
 }, {
   id: 'weekly_rotation',
   name: '今週のミッション',
-  condition: 'クイックモードを10回クリアする',
-  key: 'quickClears',
-  target: 10,
+  condition: `種族チャレンジを3回クリアする${MISSION_BATTLE_BOTH}`,
+  key: 'speciesClears',
+  target: 3,
   rewards: [{
     type: 'trainingTicketLarge',
     amount: 2
@@ -10903,7 +10903,7 @@ const missionDailyDefinitions = (now = Date.now()) => [{
   target: 1,
   rewards: [{
     type: 'diamond',
-    amount: 100
+    amount: 200
   }]
 }, {
   id: 'daily_battles',
@@ -10918,7 +10918,7 @@ const missionDailyDefinitions = (now = Date.now()) => [{
 }, {
   id: 'daily_wins',
   name: 'デイリーチャレンジ',
-  condition: 'チャレンジモードを1回クリアする',
+  condition: `チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'challengeClears',
   target: 1,
   rewards: [{
@@ -10933,7 +10933,7 @@ const missionDailyDefinitions = (now = Date.now()) => [{
   target: 1,
   rewards: [{
     type: 'diamond',
-    amount: 200
+    amount: 300
   }]
 }, {
   ...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]
@@ -10960,7 +10960,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   target: 5,
   rewards: [{
     type: 'diamond',
-    amount: 500
+    amount: 1000
   }]
 }, {
   id: 'weekly_battles',
@@ -10970,7 +10970,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   target: 20,
   rewards: [{
     type: 'diamond',
-    amount: 500
+    amount: 1000
   }]
 }, {
   id: 'weekly_enhance',
@@ -10995,7 +10995,7 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
 }, {
   id: 'weekly_donations',
   name: 'チャレンジャー',
-  condition: 'チャレンジモードを3回クリアする',
+  condition: `チャレンジモードを3回クリアする${MISSION_BATTLE_BOTH}`,
   key: 'challengeClears',
   target: 3,
   rewards: [{
@@ -11032,14 +11032,14 @@ const missionWeeklyDefinitions = (now = Date.now()) => [{
   target: 6,
   rewards: [{
     type: 'diamond',
-    amount: 2000
+    amount: 3000
   }, {
     type: 'skipTicketKyu',
     amount: 1
   }, {
     type: 'rainbowPsyche',
     amount: 30
-  }],
+  }, missionItemReward('hero_proof_shard', 5)],
   complete: true
 }];
 const missionMonthlyDefinitions = () => [{
@@ -11050,7 +11050,7 @@ const missionMonthlyDefinitions = () => [{
   target: 20,
   rewards: [{
     type: 'diamond',
-    amount: 3000
+    amount: 5000
   }]
 }, {
   id: 'monthly_battles',
@@ -11105,13 +11105,20 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_challenge_runs',
   name: 'チャレンジ月間',
-  condition: 'チャレンジモードを10回プレイする',
+  condition: `チャレンジモードを10回プレイする${MISSION_BATTLE_BOTH}`,
   key: 'challengeRuns',
   target: 10,
   rewards: [{
     type: 'rainbowPsyche',
     amount: 50
   }]
+}, {
+  id: 'monthly_pro_clears',
+  name: 'プロ月間',
+  condition: `プロモードを10回クリアする${MISSION_BATTLE_BOTH}`,
+  key: 'proClears',
+  target: 10,
+  rewards: [missionItemReward('hero_proof_shard', 10)]
 }, {
   id: 'monthly_enhances',
   name: '育成月間',
@@ -11145,7 +11152,7 @@ const missionMonthlyDefinitions = () => [{
 }, {
   id: 'monthly_complete',
   name: 'マンスリーコンプリート',
-  condition: '通常マンスリー10個のうち8個を達成する',
+  condition: '通常マンスリー11個のうち8個を達成する',
   key: 'complete',
   target: 8,
   rewards: [{
@@ -11157,7 +11164,7 @@ const missionMonthlyDefinitions = () => [{
   }, {
     type: 'rainbowTranscendFruit',
     amount: 1
-  }],
+  }, missionItemReward('skip_ticket_kiwami', 1)],
   complete: true
 }];
 const MISSION_DEFS = {
@@ -11188,7 +11195,8 @@ const emptyMissionCounts = () => ({
   quickClears: 0,
   proClears: 0,
   extremeClears: 0,
-  itemUses: 0
+  itemUses: 0,
+  speciesClears: 0
 });
 const normalizeMissions = (value, now = Date.now()) => {
   const dailyPeriod = missionDailyPeriod(now),
@@ -21938,6 +21946,178 @@ const RHYTHM_HAPTICS = (() => {
   };
 })();
 const RHYTHM_SIDE_CHEER_MS = 700;
+const RHYTHM_HALO_KEYS = Object.freeze([['MISS', ''], ['BAD', ''], ['GOOD', ''], ['GREAT', ''], ['EXCELLENT', ''], ['MARVELOUS', ''], ['MARVELOUS', '1']]);
+const rhythmParseDropShadows = filter => {
+  const text = String(filter || '').trim();
+  if (!text || text === 'none') return [];
+  const list = [];
+  const rest = text.replace(/drop-shadow\(((?:[^()]|\([^()]*\))*)\)/g, (_, body) => {
+    const color = (body.match(/rgba?\([^)]*\)|#[0-9a-fA-F]{3,8}/) || ['rgb(0, 0, 0)'])[0];
+    const nums = body.replace(color, '').match(/-?[\d.]+px/g) || [];
+    list.push({
+      color,
+      x: parseFloat(nums[0]) || 0,
+      y: parseFloat(nums[1]) || 0,
+      blur: parseFloat(nums[2]) || 0
+    });
+    return '';
+  }).trim();
+  return rest ? null : list;
+};
+const rhythmBakeJudgmentHalos = async textEl => {
+  const host = textEl && textEl.parentElement;
+  if (!host || typeof document === 'undefined' || typeof window === 'undefined') return null;
+  try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  } catch (e) {}
+  const dpr = Math.min(2, Math.max(1, Number(window.devicePixelRatio) || 1));
+  const baked = [];
+  const fail = () => {
+    baked.forEach(item => URL.revokeObjectURL(item.url));
+    return fail();
+  };
+  for (const [judgment, precise] of RHYTHM_HALO_KEYS) {
+    const probe = document.createElement('b');
+    probe.className = textEl.className;
+    probe.setAttribute('data-rhythm-judgment-text', '');
+    probe.dataset.judgment = judgment;
+    if (precise) probe.dataset.judgmentPrecise = precise;
+    probe.textContent = judgment;
+    probe.style.cssText = 'position:absolute;left:0;top:0;visibility:hidden;transition:none;animation:none';
+    host.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    const shadows = rhythmParseDropShadows(cs.filter);
+    const fs = parseFloat(cs.fontSize) || 26,
+      ls = parseFloat(cs.letterSpacing) || 0;
+    const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const range = document.createRange();
+    range.selectNodeContents(probe);
+    const domWidth = range.getBoundingClientRect().width;
+    host.removeChild(probe);
+    if (!shadows) return fail();
+    if (shadows.length < 2) continue;
+    const measure = document.createElement('canvas').getContext('2d');
+    if (!measure) return fail();
+    measure.font = font;
+    const metrics = measure.measureText(judgment);
+    const ascent = Number.isFinite(metrics.fontBoundingBoxAscent) ? metrics.fontBoundingBoxAscent : metrics.actualBoundingBoxAscent;
+    const descent = Number.isFinite(metrics.fontBoundingBoxDescent) ? metrics.fontBoundingBoxDescent : metrics.actualBoundingBoxDescent;
+    const runWidth = metrics.width + ls * judgment.length;
+    if (!(Math.abs(runWidth - domWidth) <= 2) || !Number.isFinite(ascent) || !Number.isFinite(descent)) return fail();
+    const sigma = Math.sqrt(shadows.reduce((sum, s) => sum + s.blur * s.blur, 0));
+    const offset = shadows.reduce((max, s) => Math.max(max, Math.abs(s.x), Math.abs(s.y)), 0);
+    const margin = Math.ceil(2.5 * sigma + offset + 2);
+    const cssW = runWidth + margin * 2,
+      cssH = fs + margin * 2,
+      W = Math.ceil(cssW * dpr),
+      H = Math.ceil(cssH * dpr);
+    const make = () => {
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      return c;
+    };
+    const glyph = make(),
+      gctx = glyph.getContext('2d');
+    if (!gctx) return fail();
+    gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gctx.font = font;
+    gctx.textBaseline = 'alphabetic';
+    gctx.fillStyle = '#000';
+    const baseline = margin + (fs - (ascent + descent)) / 2 + ascent;
+    for (let i = 0; i < judgment.length; i++) gctx.fillText(judgment[i], margin + measure.measureText(judgment.slice(0, i)).width + ls * i, baseline);
+    const halo = make(),
+      hctx = halo.getContext('2d'),
+      source = make(),
+      sctx = source.getContext('2d'),
+      shadow = make(),
+      shctx = shadow.getContext('2d');
+    if (!hctx || !sctx || !shctx) return fail();
+    sctx.drawImage(glyph, 0, 0);
+    const far = W + H + 1000;
+    for (const s of shadows) {
+      shctx.clearRect(0, 0, W, H);
+      shctx.shadowColor = s.color;
+      shctx.shadowBlur = s.blur * 2 * dpr;
+      shctx.shadowOffsetX = s.x * dpr + far;
+      shctx.shadowOffsetY = s.y * dpr;
+      shctx.drawImage(source, -far, 0);
+      hctx.globalCompositeOperation = 'destination-over';
+      hctx.drawImage(shadow, 0, 0);
+      sctx.globalCompositeOperation = 'destination-over';
+      sctx.drawImage(shadow, 0, 0);
+    }
+    const url = await new Promise(resolve => {
+      try {
+        halo.toBlob(blob => resolve(blob ? URL.createObjectURL(blob) : null), 'image/png');
+      } catch (e) {
+        resolve(null);
+      }
+    });
+    if (!url) return fail();
+    baked.push({
+      judgment,
+      precise,
+      url,
+      width: cssW / fs,
+      height: cssH / fs
+    });
+  }
+  return baked.length ? baked : null;
+};
+const RHYTHM_STAGE_BEAM_COLORS = Object.freeze(['rgba(103,232,249,.22)', 'rgba(232,121,249,.24)', 'rgba(251,191,36,.24)', 'rgba(255,255,255,.26)']);
+const RHYTHM_STAGE_SPARKS = Object.freeze([{
+  duration: 16000,
+  opacity: .55,
+  core: 1,
+  mid: 2,
+  end: 4,
+  dots: [[8, 12], [27, 63], [41, 30], [58, 85], [73, 18], [88, 52], [15, 90], [64, 45]]
+}, {
+  duration: 9000,
+  opacity: .7,
+  core: 2,
+  mid: 3,
+  end: 5,
+  dots: [[5, 40], [21, 8], [36, 77], [80, 33], [93, 70], [50, 58]]
+}]);
+const rhythmDrawStageBeam = (g, left, top, bw, bh, angleDeg, color, alpha = .75) => {
+  g.save();
+  g.translate(left + bw / 2, top);
+  g.rotate(angleDeg * Math.PI / 180);
+  g.translate(-bw / 2, 0);
+  g.beginPath();
+  g.moveTo(.44 * bw, 0);
+  g.lineTo(.56 * bw, 0);
+  g.lineTo(bw, bh);
+  g.lineTo(0, bh);
+  g.closePath();
+  const grad = g.createLinearGradient(0, 0, 0, bh);
+  grad.addColorStop(0, color);
+  grad.addColorStop(.78, color.replace(/[\d.]+\)$/, '0)'));
+  g.globalAlpha = alpha;
+  g.fillStyle = grad;
+  g.fill();
+  g.restore();
+};
+const rhythmStageSparkSprite = (layer, scale) => {
+  const r = layer.end,
+    size = Math.ceil(r * 2 * scale) + 2,
+    c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d');
+  if (!g) return c;
+  const cx = size / 2,
+    grad = g.createRadialGradient(cx, cx, 0, cx, cx, r * scale);
+  grad.addColorStop(0, 'rgba(236,254,255,.95)');
+  grad.addColorStop(layer.core / r, 'rgba(236,254,255,.95)');
+  grad.addColorStop(layer.mid / r, 'rgba(103,232,249,.35)');
+  grad.addColorStop(1, 'rgba(103,232,249,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  return c;
+};
 const RHYTHM_FACE_BOX = 42,
   RHYTHM_FACE_ZOOM = 1.28,
   RHYTHM_FACE_PAD = 12;
@@ -22379,6 +22559,36 @@ const RhythmTapTest = ({
     screenFlashRef = useRef(null),
     judgmentTextRef = useRef(null),
     comboRef = useRef(null);
+  const [haloKeys, setHaloKeys] = useState(null);
+  useEffect(() => {
+    let cancelled = false,
+      made = null;
+    setHaloKeys(null);
+    const textEl = judgmentTextRef.current;
+    if (!textEl || typeof document === 'undefined') return undefined;
+    rhythmBakeJudgmentHalos(textEl).then(baked => {
+      if (!baked) return;
+      if (cancelled) {
+        baked.forEach(item => URL.revokeObjectURL(item.url));
+        return;
+      }
+      made = baked;
+      let style = document.querySelector('style[data-rhythm-judgment-halo-style]');
+      if (!style) {
+        style = document.createElement('style');
+        style.setAttribute('data-rhythm-judgment-halo-style', '');
+        document.head.appendChild(style);
+      }
+      style.textContent = baked.map(item => `[data-rhythm-judgment-text][data-halo="1"][data-judgment="${item.judgment}"]${item.precise ? '[data-judgment-precise="1"]' : ':not([data-judgment-precise="1"])'}::before{background-image:url("${item.url}");width:${item.width.toFixed(4)}em;height:${item.height.toFixed(4)}em}`).join('\n');
+      setHaloKeys(new Set(baked.map(item => `${item.judgment}|${item.precise}`)));
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+      const style = document.querySelector('style[data-rhythm-judgment-halo-style]');
+      if (style) style.textContent = '';
+      if (made) made.forEach(item => URL.revokeObjectURL(item.url));
+    };
+  }, [settings.effectAmount, settings.lightweightMode]);
   const lifeBoxRef = useRef(null),
     lifeDamageRef = useRef(null);
   const stageLevel = rhythmStageLevel(settings);
@@ -22591,6 +22801,85 @@ const RhythmTapTest = ({
   const lifeRatio = rhythmLifeRatio(view.life);
   const lifeState = rhythmLifeState(view.life);
   const comboTier = rhythmComboTier(view.combo);
+  const stageTierNow = Math.min(3, Math.floor(comboTier / 2));
+  const stageHostRef = useRef(null);
+  const [stageImages, setStageImages] = useState(null);
+  const stageFxOn = stageLevel === 'VIVID' && settings.effectAmount !== 'MINIMAL';
+  useEffect(() => {
+    const host = stageHostRef.current;
+    if (!host || !stageFxOn || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+    let alive = true,
+      made = [],
+      timer = 0,
+      lastKey = '';
+    const toUrl = canvas => new Promise(resolve => {
+      try {
+        canvas.toBlob(blob => resolve(blob ? URL.createObjectURL(blob) : null), 'image/png');
+      } catch (e) {
+        resolve(null);
+      }
+    });
+    const bake = async () => {
+      const w = host.clientWidth,
+        h = host.clientHeight;
+      if (!(w > 0 && h > 0)) return;
+      const scale = Math.min(1.5, Math.max(1, Number(window.devicePixelRatio) || 1));
+      const key = `${w}x${h}@${scale}`;
+      if (key === lastKey) return;
+      lastKey = key;
+      const canvasOf = (cw, ch) => {
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(cw * scale));
+        c.height = Math.max(1, Math.round(ch * scale));
+        const g = c.getContext('2d');
+        if (g) g.setTransform(scale, 0, 0, scale, 0, 0);
+        return [c, g];
+      };
+      const bw = .38 * w,
+        bh = 1.35 * h;
+      const beams = await Promise.all(RHYTHM_STAGE_BEAM_COLORS.map(color => {
+        const [c, g] = canvasOf(bw, bh);
+        if (!g) return null;
+        rhythmDrawStageBeam(g, 0, 0, bw, bh, 0, color, 1);
+        return toUrl(c);
+      }));
+      const sparks = await Promise.all(RHYTHM_STAGE_SPARKS.map(layer => {
+        const [c, g] = canvasOf(w, h * 2);
+        if (!g) return null;
+        const sprite = rhythmStageSparkSprite(layer, scale),
+          size = sprite.width / scale;
+        for (const [px, py] of layer.dots) for (const k of [0, 1]) g.drawImage(sprite, px / 100 * w - size / 2, py / 100 * h + k * h - size / 2, size, size);
+        return toUrl(c);
+      }));
+      const urls = [...beams, ...sparks];
+      if (!alive || urls.some(url => !url)) {
+        urls.forEach(url => {
+          if (url) URL.revokeObjectURL(url);
+        });
+        return;
+      }
+      const old = made;
+      made = urls;
+      setStageImages({
+        beams,
+        sparks
+      });
+      setTimeout(() => old.forEach(url => URL.revokeObjectURL(url)), 1000);
+    };
+    bake();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(bake, 150);
+    }) : null;
+    if (observer) observer.observe(host);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+      if (observer) observer.disconnect();
+      setStageImages(null);
+      made.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [stageFxOn]);
   const comboStatus = (() => {
     if (settings.comboStatusDisplay === false || assistOn || !view.counts) return '';
     const c = view.counts;
@@ -23215,7 +23504,6 @@ const RhythmTapTest = ({
       RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
-      RHYTHM_GESTURE_RUNTIME.areaRect(playAreaRef.current);
       if (powerSave) {
         const gap = prevFrameMs ? frameNowMs - prevFrameMs : 0;
         prevFrameMs = frameNowMs;
@@ -24693,22 +24981,35 @@ const RhythmTapTest = ({
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
   }, laneElements, stageLevel !== 'SIMPLE' && React.createElement("div", {
+    ref: stageHostRef,
     "data-rhythm-stage": stageLevel,
-    "data-stage-tier": String(Math.min(3, Math.floor(comboTier / 2))),
+    "data-stage-tier": String(stageTierNow),
     "aria-hidden": "true"
   }, stageArtSrc && React.createElement("canvas", {
     ref: stageArtRef,
     "data-rhythm-stage-art": true,
     width: "24",
     height: "24"
-  }), stageLevel === 'VIVID' && React.createElement(React.Fragment, null, React.createElement("i", {
-    "data-rhythm-stage-beam": "left"
-  }), React.createElement("i", {
-    "data-rhythm-stage-beam": "right"
-  }), React.createElement("i", {
-    "data-rhythm-stage-sparks": "far"
-  }), React.createElement("i", {
-    "data-rhythm-stage-sparks": "near"
+  }), stageFxOn && stageImages && React.createElement(React.Fragment, null, React.createElement("img", {
+    "data-rhythm-stage-beam": "left",
+    src: stageImages.beams[stageTierNow] || stageImages.beams[0],
+    alt: "",
+    draggable: false
+  }), React.createElement("img", {
+    "data-rhythm-stage-beam": "right",
+    src: stageImages.beams[stageTierNow] || stageImages.beams[0],
+    alt: "",
+    draggable: false
+  }), React.createElement("img", {
+    "data-rhythm-stage-sparks": "far",
+    src: stageImages.sparks[0],
+    alt: "",
+    draggable: false
+  }), React.createElement("img", {
+    "data-rhythm-stage-sparks": "near",
+    src: stageImages.sparks[1],
+    alt: "",
+    draggable: false
   }))), stageLevel !== 'SIMPLE' && React.createElement("i", {
     ref: stagePulseRef,
     "data-rhythm-stage-pulse": true,
@@ -24849,6 +25150,7 @@ const RhythmTapTest = ({
     "data-rhythm-judgment-text": true,
     "data-judgment": view.last || '',
     "data-judgment-precise": view.lastPrecise ? '1' : '',
+    "data-halo": haloKeys && settings.judgmentTextDisplay && view.last && view.status !== 'error' && view.status !== 'loading' && haloKeys.has(`${view.last}|${view.lastPrecise ? '1' : ''}`) ? '1' : undefined,
     className: "block text-[26px] font-black leading-none tracking-wide text-white"
   }, view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? view.last : ''), React.createElement("small", {
     className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
@@ -43494,6 +43796,7 @@ function MonsterHeroGame() {
     const fused = (masu?.fusionHistory || []).length > 0;
     const power = mon !== undefined ? mon ? monsterPowerOf(mon) : null : masu ? masuPowerOf(masu) : monsterPowerOf(base);
     const iconSrc = base.iconUrl || base.imgUrl || '';
+    const unusedTranscendPoints = masu ? normalizeMasuProgression(masu).transcendPoints : 0;
     return React.createElement(React.Fragment, null, React.createElement("div", {
       className: "relative shrink-0",
       style: {
@@ -43524,7 +43827,14 @@ function MonsterHeroGame() {
         minWidth: '17px',
         textAlign: 'center'
       }
-    }, masu.distAptPoints), masu && React.createElement(RebirthStars, {
+    }, masu.distAptPoints), unusedTranscendPoints > 0 && React.createElement("span", {
+      "aria-label": `ふり分けできる超越ポイント ${unusedTranscendPoints}`,
+      className: "absolute -right-1.5 -bottom-1 z-10 rounded-full border border-sky-100/70 bg-sky-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow",
+      style: {
+        minWidth: '17px',
+        textAlign: 'center'
+      }
+    }, unusedTranscendPoints), masu && React.createElement(RebirthStars, {
       count: masu.rebirthCount,
       className: "mh-rebirth-stars-overlay"
     }), masu && React.createElement(TranscendenceBadge, {
@@ -50348,6 +50658,7 @@ function MonsterHeroGame() {
     await awardHeroProofForClear();
     await awardHeroProofShardForClear();
     if (speciesChallengeBattleRunRef.current) {
+      if (speciesChallengeSaveRunRef.current) await saveMissionProgress('speciesClear');
       addAssistantBond('clear');
       return;
     }
@@ -50356,6 +50667,7 @@ function MonsterHeroGame() {
       const nextTactics = (Number(tacticsRecordsOf(runMode).clears[tacticsDiff]) || 0) + 1;
       bumpTacticsRecord(runMode, 'clears', tacticsDiff, nextTactics);
       await storeSet(clearCountKey(runMode, tacticsDiff), nextTactics, false);
+      await saveMissionProgress(extremeRunRef.current ? 'extremeClear' : isProMode(runMode) ? 'proClear' : 'challengeClear');
       addAssistantBond('clear');
       return;
     }
@@ -51558,7 +51870,8 @@ function MonsterHeroGame() {
       proClear: {
         key: 'proClears',
         daily: true,
-        weekly: true
+        weekly: true,
+        monthly: true
       },
       extremeClear: {
         key: 'extremeClears',
@@ -51569,6 +51882,12 @@ function MonsterHeroGame() {
         key: 'itemUses',
         daily: true,
         weekly: true
+      },
+      speciesClear: {
+        key: 'speciesClears',
+        daily: true,
+        weekly: true,
+        monthly: true
       }
     }[event];
     if (!rule) return;
@@ -55249,7 +55568,7 @@ function MonsterHeroGame() {
       });
     }
     if (!enemy && !debugBattleRef.current) {
-      if (isQuickMode(runMode)) void saveMissionProgress('quickRun');else if (runMode === BATTLE_MODE_CHALLENGE && !extremeRunRef.current && !speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');else void saveMissionProgress('modeRun');
+      if (isQuickMode(runMode)) void saveMissionProgress('quickRun');else if ((runMode === BATTLE_MODE_CHALLENGE || runMode === BATTLE_MODE_TACTICS) && !extremeRunRef.current && !speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');else void saveMissionProgress('modeRun');
     }
     setTimeout(() => {
       setOwnedTeachings(nextTeachings);
@@ -70854,7 +71173,7 @@ const createAnimationStyle = () => {
     [data-moo-reticle] { width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; opacity: 0; border: 3px dashed rgba(250,204,21,.95);
       box-shadow: 0 0 16px rgba(220,38,38,.9), inset 0 0 16px rgba(220,38,38,.6); animation: emLock 800ms ease-out both; }
     /* ---- ボスの必殺技ムービー(71-screen-battle の BossMovieLayer)。画面を切り替えて、上に技名・まんなかにムービー ----
-       ★ムービーは横長(768×488)。縦のスマホでは幅いっぱいより少し大きく(116vw)して左右を少しだけ切り、上下のふちはぼかして背景へなじませる。
+       ★ムービーは横長(1024×682)。縦のスマホでは幅いっぱいより少し大きく(116vw)して左右を少しだけ切り、上下のふちはぼかして背景へなじませる。
        ★技名の札(z 65000)・敵の技の演出(z 64000)より上に出す */
     [data-boss-movie] { position: fixed; inset: 0; z-index: 66000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); -webkit-tap-highlight-color: transparent; user-select: none;
@@ -70862,7 +71181,7 @@ const createAnimationStyle = () => {
     /* ★背景は不透明にする。半透明だと、うしろの戦闘画面(敵の絵・枠)が透けて見える */
     @keyframes bossMovieIn { from { opacity: 0; } to { opacity: 1; } }
     [data-boss-movie-stage] { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-    [data-boss-movie-frame] { position: relative; flex-shrink: 0; width: min(116vw, calc(66vh * 768 / 488)); aspect-ratio: 768 / 488; overflow: hidden;
+    [data-boss-movie-frame] { position: relative; flex-shrink: 0; width: min(116vw, calc(66vh * 1024 / 682)); aspect-ratio: 1024 / 682; overflow: hidden;
       -webkit-mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); }
     [data-boss-movie-frame] > video { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
     [data-boss-movie-title] { text-align: center; line-height: 1.15; animation: bossMovieTitle 900ms cubic-bezier(.2,.8,.2,1) both; }

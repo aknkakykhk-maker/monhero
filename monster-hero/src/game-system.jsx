@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e8b6a5b057531540
+// generated-sha256: c004bc8ed303c1dc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-26 13:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-26 13:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7842,56 +7842,70 @@ const missionWeekRotationIndex = (now=Date.now()) => {
   const index=Math.floor((periodMs-epochMs)/(7*24*60*60*1000));
   return ((index%4)+4)%4;
 };
+// ★ミッションの見直し(2026-09-26 ユーザー指示「プロモードをクリアとかだとチャレンジだけになってるのを
+//   タクティクスも共通にする / 現在の機能や報酬にあわせて中身も変えて」)。
+//   ・「チャレンジモード」「プロモード」「種族チャレンジ」「極限チャレンジ」は、クラシックバトルと
+//     タクティクスバトルのどちらで遊んでも同じ項目が進む(数える側: saveMissionProgress の呼び出し)
+//   ・モンヒロビートは遊ぶ人と遊ばない人が分かれるので、ミッションには入れない(2026-09-26 ユーザー指示)
+//   ・報酬に勇者の証片・スキップチケット・極を足した(gameItem で実データのアイテムidを指す)
+//   ・コンプリートに要る個数は据え置き(項目が増えたぶん、選べる幅だけが広がる)。
+//     期間の途中で入れ替わっても、それまでの進捗で届いていたコンプリートが届かなくなることはない
+//   ★既存のミッションidは受取履歴(sentDaily など)と固定ギフトidに使われているので、同じ意味の項目は
+//     idを変えない。新しい項目だけ新しいidを使う(CLAUDE.md ⑦)
+const MISSION_BATTLE_BOTH = '（クラシック・タクティクスどちらでも）';
+// 'gameItem' は GIFT_ITEM_REWARD_TYPE と同じ値。ここだけを切り出して読む検査でも動くよう、文字で書く
+const missionItemReward = (itemId, amount) => ({ type:'gameItem', itemId, amount });
 const DAILY_ROTATION_MISSIONS = Object.freeze({
-  1:{id:'daily_rotation',name:'本日のミッション',condition:'クイックモードを1回クリアする',key:'quickClears',target:1,rewards:[{type:'diamond',amount:200}]},
+  1:{id:'daily_rotation',name:'本日のミッション',condition:'クイックモードを1回クリアする',key:'quickClears',target:1,rewards:[{type:'diamond',amount:300}]},
   2:{id:'daily_rotation',name:'本日のミッション',condition:'アイテムを1個使用する',key:'itemUses',target:1,rewards:[{type:'trainingTicket',amount:3}]},
-  3:{id:'daily_rotation',name:'本日のミッション',condition:'プロモードを1回クリアする',key:'proClears',target:1,rewards:[{type:'trainingTicketLarge',amount:1}]},
-  4:{id:'daily_rotation',name:'本日のミッション',condition:'クイックモードを1回クリアする',key:'quickClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
+  3:{id:'daily_rotation',name:'本日のミッション',condition:`プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:1,rewards:[{type:'trainingTicketLarge',amount:1}]},
+  4:{id:'daily_rotation',name:'本日のミッション',condition:`種族チャレンジを1回クリアする${MISSION_BATTLE_BOTH}`,key:'speciesClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
   5:{id:'daily_rotation',name:'本日のミッション',condition:'アイテムを1個使用する',key:'itemUses',target:1,rewards:[{type:'dyeMock',amount:1}]},
-  6:{id:'daily_rotation',name:'本日のミッション',condition:'プロモードを1回クリアする',key:'proClears',target:1,rewards:[{type:'diamond',amount:300}]},
+  6:{id:'daily_rotation',name:'本日のミッション',condition:`プロモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:1,rewards:[missionItemReward('hero_proof_shard',1)]},
   0:{id:'daily_rotation',name:'本日のミッション',condition:'クイックモードを1回クリアする',key:'quickClears',target:1,rewards:[{type:'trainingTicketLarge',amount:1}]},
 });
 const WEEKLY_ROTATION_MISSIONS = Object.freeze([
-  {id:'weekly_rotation',name:'今週のミッション',condition:'プロモードを3回クリアする',key:'proClears',target:3,rewards:[{type:'uniqueSkillResetTicket',amount:1}]},
+  {id:'weekly_rotation',name:'今週のミッション',condition:`プロモードを3回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:3,rewards:[missionItemReward('hero_proof_shard',3)]},
   {id:'weekly_rotation',name:'今週のミッション',condition:'極限チャレンジを1回クリアする（未解放ならクイックモードを10回クリア）',key:'extremeOrQuick',target:1,rewards:[{type:'rainbowPsyche',amount:30}]},
-  {id:'weekly_rotation',name:'今週のミッション',condition:'クイックモードを10回クリアする',key:'quickClears',target:10,rewards:[{type:'trainingTicketLarge',amount:2}]},
+  {id:'weekly_rotation',name:'今週のミッション',condition:`種族チャレンジを3回クリアする${MISSION_BATTLE_BOTH}`,key:'speciesClears',target:3,rewards:[{type:'trainingTicketLarge',amount:2}]},
   {id:'weekly_rotation',name:'今週のミッション',condition:'アイテムを10個使用する',key:'itemUses',target:10,rewards:[{type:'bondPointReset',amount:1}]},
 ]);
 const missionDailyDefinitions = (now=Date.now()) => [
-  {id:'daily_login',name:'今日もMonster Hero！',condition:'その期間中にログインする',key:'login',target:1,rewards:[{type:'diamond',amount:100}]},
+  {id:'daily_login',name:'今日もMonster Hero！',condition:'その期間中にログインする',key:'login',target:1,rewards:[{type:'diamond',amount:200}]},
   {id:'daily_battles',name:'バトルに挑戦',condition:'バトルを3回行う',key:'battles',target:3,rewards:[{type:'trainingTicket',amount:3}]},
-  // 旧 daily_wins のIDは受取履歴互換のため維持。条件は通常チャレンジのクリアへ置き換える。
-  {id:'daily_wins',name:'デイリーチャレンジ',condition:'チャレンジモードを1回クリアする',key:'challengeClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
-  {id:'daily_enhance',name:'モンスター育成',condition:'モンスターを1回強化する',key:'enhances',target:1,rewards:[{type:'diamond',amount:200}]},
+  // 旧 daily_wins のIDは受取履歴互換のため維持。条件はチャレンジモードのクリア(タクティクスも含む)
+  {id:'daily_wins',name:'デイリーチャレンジ',condition:`チャレンジモードを1回クリアする${MISSION_BATTLE_BOTH}`,key:'challengeClears',target:1,rewards:[{type:'rainbowPsyche',amount:5}]},
+  {id:'daily_enhance',name:'モンスター育成',condition:'モンスターを1回強化する',key:'enhances',target:1,rewards:[{type:'diamond',amount:300}]},
   {...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]},
   {id:'daily_complete',name:'デイリーコンプリート',condition:'通常デイリー5個のうち4個を達成する',key:'complete',target:4,rewards:[{type:'diamond',amount:500},{type:'skipTicketHa',amount:1}],complete:true},
 ];
 const missionWeeklyDefinitions = (now=Date.now()) => [
-  {id:'weekly_logins',name:'継続は力なり',condition:'異なる5日分のログインを行う',key:'loginDays',target:5,rewards:[{type:'diamond',amount:500}]},
-  {id:'weekly_battles',name:'バトル週間',condition:'バトルを20回行う',key:'battles',target:20,rewards:[{type:'diamond',amount:500}]},
+  {id:'weekly_logins',name:'継続は力なり',condition:'異なる5日分のログインを行う',key:'loginDays',target:5,rewards:[{type:'diamond',amount:1000}]},
+  {id:'weekly_battles',name:'バトル週間',condition:'バトルを20回行う',key:'battles',target:20,rewards:[{type:'diamond',amount:1000}]},
   {id:'weekly_enhance',name:'育成週間',condition:'モンスターを10回強化する',key:'enhances',target:10,rewards:[{type:'trainingTicketLarge',amount:2}]},
   // 旧 weekly_wins のIDをクイック枠へ再利用し、同期間の二重受取を防ぐ。
   {id:'weekly_wins',name:'クイック育成',condition:'クイックモードを5回クリアする',key:'quickClears',target:5,rewards:[{type:'rainbowPsyche',amount:20}]},
-  // 旧IDは受取履歴互換のため維持。旧「プレイ」から通常チャレンジのクリアへ変更する。
-  {id:'weekly_donations',name:'チャレンジャー',condition:'チャレンジモードを3回クリアする',key:'challengeClears',target:3,rewards:[{type:'breederXp',amount:300}]},
+  // 旧IDは受取履歴互換のため維持。条件はチャレンジモードのクリア(タクティクスも含む)
+  {id:'weekly_donations',name:'チャレンジャー',condition:`チャレンジモードを3回クリアする${MISSION_BATTLE_BOTH}`,key:'challengeClears',target:3,rewards:[{type:'breederXp',amount:300}]},
   {id:'weekly_market',name:'マーケット常連',condition:'マーケットで3回購入する',key:'marketTrades',target:3,rewards:[{type:'dyeMock',amount:2}]},
   // 旧 weekly_daily_claims のIDをアイテム使用枠へ再利用する。
   {id:'weekly_daily_claims',name:'アイテム活用',condition:'アイテムを5個使用する',key:'itemUses',target:5,rewards:[{type:'uniqueSkillResetTicket',amount:1}]},
   {...WEEKLY_ROTATION_MISSIONS[missionWeekRotationIndex(now)]},
-  {id:'weekly_complete',name:'ウィークリーコンプリート',condition:'通常ウィークリー8個のうち6個を達成する',key:'complete',target:6,rewards:[{type:'diamond',amount:2000},{type:'skipTicketKyu',amount:1},{type:'rainbowPsyche',amount:30}],complete:true},
+  {id:'weekly_complete',name:'ウィークリーコンプリート',condition:'通常ウィークリー8個のうち6個を達成する',key:'complete',target:6,rewards:[{type:'diamond',amount:3000},{type:'skipTicketKyu',amount:1},{type:'rainbowPsyche',amount:30},missionItemReward('hero_proof_shard',5)],complete:true},
 ];
 const missionMonthlyDefinitions = () => [
-  {id:'monthly_logins',name:'月間ログイン',condition:'異なる20日分のログインを行う',key:'loginDays',target:20,rewards:[{type:'diamond',amount:3000}]},
+  {id:'monthly_logins',name:'月間ログイン',condition:'異なる20日分のログインを行う',key:'loginDays',target:20,rewards:[{type:'diamond',amount:5000}]},
   {id:'monthly_battles',name:'月間バトル',condition:'バトルを100回行う',key:'battles',target:100,rewards:[{type:'rainbowPsyche',amount:50}]},
   {id:'monthly_wins',name:'月間勝利',condition:'バトルで200回勝利する',key:'wins',target:200,rewards:[{type:'trainingTicketLarge',amount:5}]},
   {id:'monthly_daily_completes',name:'デイリーマスター',condition:'デイリーコンプリートを20回達成する',key:'dailyCompletes',target:20,rewards:[{type:'diamond',amount:5000}]},
   {id:'monthly_weekly_completes',name:'ウィークリーマスター',condition:'ウィークリーコンプリートを3回達成する',key:'weeklyCompletes',target:3,rewards:[{type:'rainbowPsyche',amount:100}]},
   {id:'monthly_quick_runs',name:'クイック月間',condition:'クイックモードを20回プレイする',key:'quickRuns',target:20,rewards:[{type:'skipTicketKyu',amount:2}]},
-  {id:'monthly_challenge_runs',name:'チャレンジ月間',condition:'チャレンジモードを10回プレイする',key:'challengeRuns',target:10,rewards:[{type:'rainbowPsyche',amount:50}]},
+  {id:'monthly_challenge_runs',name:'チャレンジ月間',condition:`チャレンジモードを10回プレイする${MISSION_BATTLE_BOTH}`,key:'challengeRuns',target:10,rewards:[{type:'rainbowPsyche',amount:50}]},
+  {id:'monthly_pro_clears',name:'プロ月間',condition:`プロモードを10回クリアする${MISSION_BATTLE_BOTH}`,key:'proClears',target:10,rewards:[missionItemReward('hero_proof_shard',10)]},
   {id:'monthly_enhances',name:'育成月間',condition:'モンスターを30回強化する',key:'enhances',target:30,rewards:[{type:'uniqueSkillResetTicket',amount:2}]},
   {id:'monthly_market',name:'マーケット月間',condition:'マーケットで10回取引する',key:'marketTrades',target:10,rewards:[{type:'dyeMock',amount:5}]},
   {id:'monthly_mode_runs',name:'モードプレイヤー',condition:'各種モードを合計30回プレイする',key:'modeRuns',target:30,rewards:[{type:'bondPointReset',amount:2}]},
-  {id:'monthly_complete',name:'マンスリーコンプリート',condition:'通常マンスリー10個のうち8個を達成する',key:'complete',target:8,rewards:[{type:'diamond',amount:10000},{type:'rainbowPsyche',amount:200},{type:'rainbowTranscendFruit',amount:1}],complete:true},
+  {id:'monthly_complete',name:'マンスリーコンプリート',condition:'通常マンスリー11個のうち8個を達成する',key:'complete',target:8,rewards:[{type:'diamond',amount:10000},{type:'rainbowPsyche',amount:200},{type:'rainbowTranscendFruit',amount:1},missionItemReward('skip_ticket_kiwami',1)],complete:true},
 ];
 // 日次・週次はJST期間に応じてローテーションするため、参照時に現在の定義を返す。
 const MISSION_DEFS = {
@@ -7899,7 +7913,7 @@ const MISSION_DEFS = {
   get weekly(){ return missionWeeklyDefinitions(); },
   get monthly(){ return missionMonthlyDefinitions(); },
 };
-const emptyMissionCounts = () => ({login:0,battles:0,wins:0,enhances:0,dailyClaims:0,dailyCompletes:0,weeklyCompletes:0,marketTrades:0,donations:0,challengeRuns:0,quickRuns:0,modeRuns:0,challengeClears:0,quickClears:0,proClears:0,extremeClears:0,itemUses:0});
+const emptyMissionCounts = () => ({login:0,battles:0,wins:0,enhances:0,dailyClaims:0,dailyCompletes:0,weeklyCompletes:0,marketTrades:0,donations:0,challengeRuns:0,quickRuns:0,modeRuns:0,challengeClears:0,quickClears:0,proClears:0,extremeClears:0,itemUses:0,speciesClears:0});
 const normalizeMissions = (value,now=Date.now()) => {
   const dailyPeriod=missionDailyPeriod(now), weeklyPeriod=missionWeeklyPeriod(now), monthlyPeriod=missionMonthlyPeriod(now), old=value&&typeof value==='object'?value:{};
   const dailySame=old.dailyPeriod===dailyPeriod, weeklySame=old.weeklyPeriod===weeklyPeriod, monthlySame=old.monthlyPeriod===monthlyPeriod;
@@ -15570,6 +15584,130 @@ const RHYTHM_SIDE_CHEER_MS=700;
 // 最大1024pxの絵を描き直していた。踏んだ瞬間の「弾ける」動きも同じところで起きる。
 // いまは顔を焼いた絵にして、ノーツと同じ canvas へ drawImage するだけにした。見た目は同じ。
 // 顔の枠(42px)・拡大(1.28倍)・影は、以前の CSS([data-rhythm-canvas-face])の値そのまま。
+// ===== 判定文字の光を、演奏の前に1枚の絵へ焼いておく(2026-09-26) =====
+// ユーザー報告「設定で軽くしてると平気だけど、演出量を上げるとやっぱり重くてカクつく(iPhone 16e)」。
+// 判定文字(MARVELOUS など)の光は filter:drop-shadow を最大6枚重ねたもの(いちばん外はぼかし40px)。
+// ぼかしは文字を描き直すたび・合成するたびに計算し直される。判定は1秒に何度も変わり、
+// 「多め」「最大」ではそのたびに弾ませるので、文字の何倍もの大きさのレイヤーを作ってはぼかし直していた
+// (実測: 6秒で約230回・合計6秒ぶんの描画。影を1枚にすると56msまで減る)。
+// そこで、光(影の重なり)だけを判定の種類ごとに canvas で1度だけ焼き、文字の後ろ(::before)へ置く。
+// 文字の色・金や虹の流れ・弾み・大きさの切り替えは今までどおり CSS が動かす(::after に同じ文字を重ねる)。
+// 影の色・ずれ・ぼかしは、画面に当たっている CSS の値をそのまま読んで焼くので、演出量ごとの違いも同じになる。
+// canvas の shadowBlur は、CSS の drop-shadow の2倍の値で同じぼけ方になる(ブラウザで測って合わせた)。
+// 焼けないとき(フォントの幅が合わない・drop-shadow 以外の filter がある)は、今までどおり CSS のぼかしで出す。
+const RHYTHM_HALO_KEYS=Object.freeze([['MISS',''],['BAD',''],['GOOD',''],['GREAT',''],['EXCELLENT',''],['MARVELOUS',''],['MARVELOUS','1']]);
+// 画面に当たっている filter(getComputedStyle の値)を drop-shadow の並びへ分ける。ほかの関数が混ざっていれば null
+const rhythmParseDropShadows=filter=>{
+  const text=String(filter||'').trim();
+  if(!text||text==='none')return [];
+  const list=[];
+  const rest=text.replace(/drop-shadow\(((?:[^()]|\([^()]*\))*)\)/g,(_,body)=>{
+    const color=(body.match(/rgba?\([^)]*\)|#[0-9a-fA-F]{3,8}/)||['rgb(0, 0, 0)'])[0];
+    const nums=body.replace(color,'').match(/-?[\d.]+px/g)||[];
+    list.push({color,x:parseFloat(nums[0])||0,y:parseFloat(nums[1])||0,blur:parseFloat(nums[2])||0});
+    return '';
+  }).trim();
+  return rest?null:list;
+};
+const rhythmBakeJudgmentHalos=async textEl=>{
+  const host=textEl&&textEl.parentElement;
+  if(!host||typeof document==='undefined'||typeof window==='undefined')return null;
+  try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;}catch(e){}
+  // 光はぼけた絵なので、画面の画素密度の2倍までで足りる(3倍の端末でも見分けがつかない)
+  const dpr=Math.min(2,Math.max(1,Number(window.devicePixelRatio)||1));
+  const baked=[];
+  const fail=()=>{baked.forEach(item=>URL.revokeObjectURL(item.url));return fail();};
+  for(const [judgment,precise] of RHYTHM_HALO_KEYS){
+    // 本物と同じ場所に、見えない見本を置いて CSS の値を読む(演出量・軽量モードの目印も同じように当たる)
+    const probe=document.createElement('b');
+    probe.className=textEl.className;probe.setAttribute('data-rhythm-judgment-text','');
+    probe.dataset.judgment=judgment;if(precise)probe.dataset.judgmentPrecise=precise;
+    probe.textContent=judgment;
+    probe.style.cssText='position:absolute;left:0;top:0;visibility:hidden;transition:none;animation:none';
+    host.appendChild(probe);
+    const cs=getComputedStyle(probe);
+    const shadows=rhythmParseDropShadows(cs.filter);
+    const fs=parseFloat(cs.fontSize)||26,ls=parseFloat(cs.letterSpacing)||0;
+    const font=`${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const range=document.createRange();range.selectNodeContents(probe);
+    const domWidth=range.getBoundingClientRect().width;
+    host.removeChild(probe);
+    if(!shadows)return fail();
+    // 影が1枚だけなら焼かない(1枚の小さなぼかしは軽い。「最小」「軽量モード」はここに当たる)
+    if(shadows.length<2)continue;
+    const measure=document.createElement('canvas').getContext('2d');
+    if(!measure)return fail();
+    measure.font=font;
+    const metrics=measure.measureText(judgment);
+    const ascent=Number.isFinite(metrics.fontBoundingBoxAscent)?metrics.fontBoundingBoxAscent:metrics.actualBoundingBoxAscent;
+    const descent=Number.isFinite(metrics.fontBoundingBoxDescent)?metrics.fontBoundingBoxDescent:metrics.actualBoundingBoxDescent;
+    const runWidth=metrics.width+ls*judgment.length;
+    // 画面の文字と canvas の文字で幅が合わなければ、フォントが違う。形がずれた光を出さないよう焼くのをやめる
+    if(!(Math.abs(runWidth-domWidth)<=2)||!Number.isFinite(ascent)||!Number.isFinite(descent))return fail();
+    const sigma=Math.sqrt(shadows.reduce((sum,s)=>sum+s.blur*s.blur,0));
+    const offset=shadows.reduce((max,s)=>Math.max(max,Math.abs(s.x),Math.abs(s.y)),0);
+    const margin=Math.ceil(2.5*sigma+offset+2);
+    const cssW=runWidth+margin*2,cssH=fs+margin*2,W=Math.ceil(cssW*dpr),H=Math.ceil(cssH*dpr);
+    const make=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
+    // 字の形(色は使わない。影は形だけから作られる)。行の高さ=字の大きさなので、上下の余り(ハーフレディング)を同じに取る
+    const glyph=make(),gctx=glyph.getContext('2d');
+    if(!gctx)return fail();
+    gctx.setTransform(dpr,0,0,dpr,0,0);gctx.font=font;gctx.textBaseline='alphabetic';gctx.fillStyle='#000';
+    const baseline=margin+(fs-(ascent+descent))/2+ascent;
+    for(let i=0;i<judgment.length;i++)gctx.fillText(judgment[i],margin+measure.measureText(judgment.slice(0,i)).width+ls*i,baseline);
+    // filter の並びと同じ順に、「それまでの全部(字＋影)」の影を下へ足していく。残すのは影だけ(字は ::after が描く)
+    const halo=make(),hctx=halo.getContext('2d'),source=make(),sctx=source.getContext('2d'),shadow=make(),shctx=shadow.getContext('2d');
+    if(!hctx||!sctx||!shctx)return fail();
+    sctx.drawImage(glyph,0,0);
+    const far=W+H+1000;
+    for(const s of shadows){
+      shctx.clearRect(0,0,W,H);
+      shctx.shadowColor=s.color;shctx.shadowBlur=s.blur*2*dpr;shctx.shadowOffsetX=s.x*dpr+far;shctx.shadowOffsetY=s.y*dpr;
+      shctx.drawImage(source,-far,0);
+      hctx.globalCompositeOperation='destination-over';hctx.drawImage(shadow,0,0);
+      sctx.globalCompositeOperation='destination-over';sctx.drawImage(shadow,0,0);
+    }
+    const url=await new Promise(resolve=>{try{halo.toBlob(blob=>resolve(blob?URL.createObjectURL(blob):null),'image/png');}catch(e){resolve(null);}});
+    if(!url)return fail();
+    baked.push({judgment,precise,url,width:cssW/fs,height:cssH/fs});
+  }
+  return baked.length?baked:null;
+};
+// ===== ライブ背景「派手」のサーチライトと光の粒を、1度だけ画像に焼く(2026-09-26) =====
+// ユーザー報告「演出量とライブ背景をマックスに上げると重くなるし発熱がすごい」。
+// 以前は、サーチライトを clip-path で台形に切り抜いた層として回し、光の粒は CSS の模様(radial-gradient)を
+// 並べた「画面の2倍の高さ」の層を、画面の画素数そのままで上へ流していた。回転する層の切り抜きは合成のたびに
+// マスクを通り、粒の層は大きな絵を2枚抱えることになる。
+// いまは形を1度だけ canvas で描いて画像にし、<img> を CSS のアニメーション(合成だけで動く)で動かす。
+// 画素密度は1.5倍まで(ぼけた光なので見分けがつかない)。位置・動き・速さ・色は以前の CSS のまま。
+//   サーチライト … 幅38%・高さ135%。上の辺の44%〜56%から下の辺いっぱいへ広がる台形。色は上から78%で消える
+//   光の粒 … 奥8粒(16秒で1周・濃さ.55)、手前6粒(9秒で1周・濃さ.7)。層の上半分と下半分に同じ並び
+// ★動くものを毎フレーム canvas へ描き直す形は試してやめた。合成だけで済んでいた動きが毎フレームの塗りになり、
+//   この環境の計測でも処理時間が倍近くに増えた。ジャケットと暗幕はもともと軽い(24×24 の絵の引き伸ばし・動かない層)ので変えていない。
+const RHYTHM_STAGE_BEAM_COLORS=Object.freeze(['rgba(103,232,249,.22)','rgba(232,121,249,.24)','rgba(251,191,36,.24)','rgba(255,255,255,.26)']);
+const RHYTHM_STAGE_SPARKS=Object.freeze([
+  {duration:16000,opacity:.55,core:1,mid:2,end:4,dots:[[8,12],[27,63],[41,30],[58,85],[73,18],[88,52],[15,90],[64,45]]},
+  {duration:9000,opacity:.7,core:2,mid:3,end:5,dots:[[5,40],[21,8],[36,77],[80,33],[93,70],[50,58]]},
+]);
+// サーチライト1本。box は要素の箱(CSS px)、回転の中心は箱の上辺の真ん中
+const rhythmDrawStageBeam=(g,left,top,bw,bh,angleDeg,color,alpha=.75)=>{
+  g.save();
+  g.translate(left+bw/2,top);g.rotate(angleDeg*Math.PI/180);g.translate(-bw/2,0);
+  g.beginPath();g.moveTo(.44*bw,0);g.lineTo(.56*bw,0);g.lineTo(bw,bh);g.lineTo(0,bh);g.closePath();
+  const grad=g.createLinearGradient(0,0,0,bh);grad.addColorStop(0,color);grad.addColorStop(.78,color.replace(/[\d.]+\)$/,'0)'));
+  g.globalAlpha=alpha;g.fillStyle=grad;g.fill();
+  g.restore();
+};
+// 光の粒1つ(円の中心から core まで白、mid で水色.35、end で透明)
+const rhythmStageSparkSprite=(layer,scale)=>{
+  const r=layer.end,size=Math.ceil(r*2*scale)+2,c=document.createElement('canvas');c.width=size;c.height=size;
+  const g=c.getContext('2d');if(!g)return c;
+  const cx=size/2,grad=g.createRadialGradient(cx,cx,0,cx,cx,r*scale);
+  grad.addColorStop(0,'rgba(236,254,255,.95)');grad.addColorStop(layer.core/r,'rgba(236,254,255,.95)');
+  grad.addColorStop(layer.mid/r,'rgba(103,232,249,.35)');grad.addColorStop(1,'rgba(103,232,249,0)');
+  g.fillStyle=grad;g.fillRect(0,0,size,size);
+  return c;
+};
 const RHYTHM_FACE_BOX=42,RHYTHM_FACE_ZOOM=1.28,RHYTHM_FACE_PAD=12;
 const rhythmBakeMonsterFace=async(monster,dpr)=>{
   if(!monster||!monster.imageUrl||typeof document==='undefined')return null;
@@ -15826,6 +15964,25 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
   const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null);
+  // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
+  // 焼けるまで・焼けなかったとき・影が1枚だけの判定は、今までどおり CSS のぼかしで出す(haloKeys に入っていない)。
+  const [haloKeys,setHaloKeys]=useState(null);
+  useEffect(()=>{
+    let cancelled=false,made=null;
+    setHaloKeys(null);
+    const textEl=judgmentTextRef.current;
+    if(!textEl||typeof document==='undefined')return undefined;
+    rhythmBakeJudgmentHalos(textEl).then(baked=>{
+      if(!baked)return;
+      if(cancelled){baked.forEach(item=>URL.revokeObjectURL(item.url));return;}
+      made=baked;
+      let style=document.querySelector('style[data-rhythm-judgment-halo-style]');
+      if(!style){style=document.createElement('style');style.setAttribute('data-rhythm-judgment-halo-style','');document.head.appendChild(style);}
+      style.textContent=baked.map(item=>`[data-rhythm-judgment-text][data-halo="1"][data-judgment="${item.judgment}"]${item.precise?'[data-judgment-precise="1"]':':not([data-judgment-precise="1"])'}::before{background-image:url("${item.url}");width:${item.width.toFixed(4)}em;height:${item.height.toFixed(4)}em}`).join('\n');
+      setHaloKeys(new Set(baked.map(item=>`${item.judgment}|${item.precise}`)));
+    }).catch(()=>{});
+    return()=>{cancelled=true;const style=document.querySelector('style[data-rhythm-judgment-halo-style]');if(style)style.textContent='';if(made)made.forEach(item=>URL.revokeObjectURL(item.url));};
+  },[settings.effectAmount,settings.lightweightMode]);
   // ライフの強調(2026-09-12)。DOM へ data 属性を書くだけで、判定・スコア・ライフの数値には触らない。
   // lifeBoxRef … 減った瞬間にHUDのライフ表示を揺らす／lifeDamageRef … 減った量(「-50」)を一瞬出す
   const lifeBoxRef=useRef(null),lifeDamageRef=useRef(null);
@@ -15993,6 +16150,46 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   const lifeRatio=rhythmLifeRatio(view.life);
   const lifeState=rhythmLifeState(view.life);
   const comboTier=rhythmComboTier(view.combo);
+  // ライブ背景「派手」のサーチライトと光の粒を、1度だけ画像に焼く(RHYTHM_STAGE_* の説明を参照)。
+  // 大きさはプレイエリアから決めるので、画面の大きさが変わったら焼き直す。サーチライトは色の段ごとに4枚
+  const stageTierNow=Math.min(3,Math.floor(comboTier/2));
+  const stageHostRef=useRef(null);
+  const [stageImages,setStageImages]=useState(null);
+  const stageFxOn=stageLevel==='VIVID'&&settings.effectAmount!=='MINIMAL';
+  useEffect(()=>{
+    const host=stageHostRef.current;
+    if(!host||!stageFxOn||typeof window==='undefined'||typeof document==='undefined')return undefined;
+    let alive=true,made=[],timer=0,lastKey='';
+    const toUrl=canvas=>new Promise(resolve=>{try{canvas.toBlob(blob=>resolve(blob?URL.createObjectURL(blob):null),'image/png');}catch(e){resolve(null);}});
+    const bake=async()=>{
+      const w=host.clientWidth,h=host.clientHeight;
+      if(!(w>0&&h>0))return;
+      // ぼけた光なので画素密度は1.5倍まで(以前は画面の画素数そのまま)
+      const scale=Math.min(1.5,Math.max(1,Number(window.devicePixelRatio)||1));
+      const key=`${w}x${h}@${scale}`;
+      if(key===lastKey)return;
+      lastKey=key;
+      const canvasOf=(cw,ch)=>{const c=document.createElement('canvas');c.width=Math.max(1,Math.round(cw*scale));c.height=Math.max(1,Math.round(ch*scale));const g=c.getContext('2d');if(g)g.setTransform(scale,0,0,scale,0,0);return [c,g];};
+      const bw=.38*w,bh=1.35*h;
+      const beams=await Promise.all(RHYTHM_STAGE_BEAM_COLORS.map(color=>{const [c,g]=canvasOf(bw,bh);if(!g)return null;rhythmDrawStageBeam(g,0,0,bw,bh,0,color,1);return toUrl(c);}));
+      const sparks=await Promise.all(RHYTHM_STAGE_SPARKS.map(layer=>{
+        const [c,g]=canvasOf(w,h*2);if(!g)return null;
+        const sprite=rhythmStageSparkSprite(layer,scale),size=sprite.width/scale;
+        for(const [px,py] of layer.dots)for(const k of [0,1])g.drawImage(sprite,px/100*w-size/2,py/100*h+k*h-size/2,size,size);
+        return toUrl(c);
+      }));
+      const urls=[...beams,...sparks];
+      if(!alive||urls.some(url=>!url)){urls.forEach(url=>{if(url)URL.revokeObjectURL(url);});return;}
+      const old=made;made=urls;
+      setStageImages({beams,sparks});
+      // 差し替えた古い画像は、読み替えが終わったころに片付ける
+      setTimeout(()=>old.forEach(url=>URL.revokeObjectURL(url)),1000);
+    };
+    bake();
+    const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(()=>{clearTimeout(timer);timer=setTimeout(bake,150);}):null;
+    if(observer)observer.observe(host);
+    return()=>{alive=false;clearTimeout(timer);if(observer)observer.disconnect();setStageImages(null);made.forEach(url=>URL.revokeObjectURL(url));};
+  },[stageFxOn]);
   /* フルコンボ・オールマーベラスが続いているか(プロセカ・CHUNITHM のコンボ色)。「COMBO」の字の色で見せる。
      AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。設定で出さないこともできる */
   /* アシストモードでは称号が付かないので出さない(出すと「取れる」と思わせてしまう) */const comboStatus=(()=>{if(settings.comboStatusDisplay===false||assistOn||!view.counts)return '';const c=view.counts;if((Number(c.BAD)||0)+(Number(c.MISS)||0)>0)return '';return (Number(c.EXCELLENT)||0)+(Number(c.GREAT)||0)+(Number(c.GOOD)||0)>0?'FC':'AM';})();
@@ -16425,12 +16622,9 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
      取り逃しのMISSや長押しの終わりも、次に描くフレーム(8ms後)でいつもどおり数える */
 const powerSave=settings.frameRateMode!=='DEVICE';const stagePulseOn=rhythmStageLevel(settings)!=='SIMPLE';let prevFrameMs=0,avgFrameMs=1000/60,lastDrawnMs=0;
 const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();const run=runRef.current;if(!run||run.finished||run.paused)return;
-/* 入力の座標変換に使うプレイエリアの箱を、**このフレームでまだ何も書き換えていないうち**に測っておく(2026-09-25)。
-   箱は毎フレーム捨てている(ずれると入力位置がずれるため)。以前はタップが来たときに初めて測っていたので、
-   そのフレームで書き換えたぶんを片付けるための配置計算を、タップのたびにその場でさせていた
-   (叩いた10秒のうち66ms。CPUを1/4に絞った環境)。ここなら配置はまだ崩れておらず、ほぼただで測れる。
-   測った値はこのフレームのあいだのタップがそのまま使う。値そのものは以前と同じ(同じ関数で測る) */
-RHYTHM_GESTURE_RUNTIME.areaRect(playAreaRef.current);
+/* ★ここでプレイエリアの箱を先に測っておく形は、2026-09-25に入れて26日にやめた。毎フレームの最初の時点で
+   配置の計算がたまっていることが多く、測るたびにその場で計算させていた(8秒で560ms。タップのときだけ測る
+   以前の形は10秒で66ms)。箱はタップが来たときに初めて測る(同じフレームのタップは使い回す) */
 if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
 /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
    取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
@@ -16942,12 +17136,12 @@ scheduleTick();};
        ★ノーツが流れ着く先は measureTravel が**ラインを実測**して決めるので、
          ここを動かすだけで譜面も判定もそのままついてくる */
     '--mh-judgment-line-bottom':`${rhythmFiniteStep(settings.judgmentLineHeight,RHYTHM_JUDGMENT_LINE_HEIGHT_MIN,RHYTHM_JUDGMENT_LINE_HEIGHT_MAX,RHYTHM_JUDGMENT_LINE_HEIGHT_STEP,DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{/* ライブ背景。いちばん奥(z-index:-1)。見た目は index.html の [data-rhythm-stage] が持つ */}
-{stageLevel!=='SIMPLE'&&<div data-rhythm-stage={stageLevel} data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true">
+{stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} aria-hidden="true">
   {stageArtSrc&&<canvas ref={stageArtRef} data-rhythm-stage-art width="24" height="24"/>}
-  {stageLevel==='VIVID'&&<><i data-rhythm-stage-beam="left"/><i data-rhythm-stage-beam="right"/>
-    {/* 光の粒は1粒ずつ動かさず、粒を並べた層を2枚(奥と手前)だけ動かす。
-        1粒ずつ別のアニメーションにしていたころは、それだけで毎フレームの計算が倍以上に増えた */}
-    <i data-rhythm-stage-sparks="far"/><i data-rhythm-stage-sparks="near"/></>}
+  {/* サーチライトと光の粒は、1度だけ焼いた画像を CSS のアニメーション(合成だけで動く)で動かす(2026-09-26)。
+      以前はサーチライトを clip-path で切り抜いた層、光の粒を画面の2倍の高さの CSS の模様で作っていた */}
+  {stageFxOn&&stageImages&&<><img data-rhythm-stage-beam="left" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/><img data-rhythm-stage-beam="right" src={stageImages.beams[stageTierNow]||stageImages.beams[0]} alt="" draggable={false}/>
+    <img data-rhythm-stage-sparks="far" src={stageImages.sparks[0]} alt="" draggable={false}/><img data-rhythm-stage-sparks="near" src={stageImages.sparks[1]} alt="" draggable={false}/></>}
 </div>}{/* ノーツのタイミングの光だけは、レーンの上(z-index:1)・判定の帯とノーツ(2〜6)の下へ置く。
     背景の側に置くとレーンの暗い面に隠れて、下のふちがうっすら光るだけになっていた */}
 {stageLevel!=='SIMPLE'&&<i ref={stagePulseRef} data-rhythm-stage-pulse data-stage-tier={String(Math.min(3,Math.floor(comboTier/2)))} aria-hidden="true"/>}{sideMonsterElements}{cutInElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/>{/* ===== コンボ数(2026-09-12・ユーザー指示) =====
@@ -16990,7 +17184,7 @@ scheduleTick();};
       判定ラインで弾ける光の単色は data/rhythm-mode.js の RHYTHM_JUDGMENT_COLORS が正本で、
       文字のグラデーションにも必ずその色を含める(rhythm-hit-effect-check.js が突き合わせる)。
       ここが渡すのは「どの判定か」「ぴったりか」の2つだけ。
-      text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}<b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={view.last||''} data-judgment-precise={view.lastPrecise?'1':''} className="block text-[26px] font-black leading-none tracking-wide text-white">{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow?(timingDisplay!=='STANDARD'&&typeof view.lastDeltaMs==='number'?`${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms`:view.fastSlow):'—'):'—'}</small>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
+      text-[26px] と text-white は、判定がまだ無いとき(LOADING…など)の見た目 */}<b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={view.last||''} data-judgment-precise={view.lastPrecise?'1':''} data-halo={haloKeys&&settings.judgmentTextDisplay&&view.last&&view.status!=='error'&&view.status!=='loading'&&haloKeys.has(`${view.last}|${view.lastPrecise?'1':''}`)?'1':undefined} className="block text-[26px] font-black leading-none tracking-wide text-white">{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow?(timingDisplay!=='STANDARD'&&typeof view.lastDeltaMs==='number'?`${view.fastSlow} ${Math.round(Math.abs(view.lastDeltaMs))}ms`:view.fastSlow):'—'):'—'}</small>{/* ずれメーター。判定文字のすぐ上へ置く(文字の位置は動かさない)。判定ラインのすぐ上は叩く指で隠れるため。
     帯の色は判定窓(MARVELOUS 金・EXCELLENT 紫・GREAT 赤・GOOD 緑・BAD 青)で、真ん中がぴったり */}
 {timingDisplay==='METER'&&<div data-rhythm-timing-meter aria-hidden="true" className="absolute bottom-full left-1/2 mb-1.5 h-[10px] w-[160px] -translate-x-1/2" style={{'--meter-mar':`${(55/185*50).toFixed(2)}%`,'--meter-exc':`${(100/185*50).toFixed(2)}%`,'--meter-gre':`${(150/185*50).toFixed(2)}%`,'--meter-goo':`${(170/185*50).toFixed(2)}%`}}><i data-rhythm-timing-meter-band/><i data-rhythm-timing-meter-center/>{Array.from({length:12},(_,i)=><i key={i} ref={el=>{meterTicksRef.current[i]=el;}} data-rhythm-timing-meter-tick style={{opacity:0}}/>)}</div>}</div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
 {/* ラッキーラッシュ中は、プレイエリアのふちが金色に光る(ノーツより後ろ・入力に触らない) */}
@@ -29223,6 +29417,7 @@ function MonsterHeroGame() {
     const fused = (masu?.fusionHistory || []).length > 0;
     const power = mon !== undefined ? (mon ? monsterPowerOf(mon) : null) : (masu ? masuPowerOf(masu) : monsterPowerOf(base));
     const iconSrc = base.iconUrl || base.imgUrl || '';
+    const unusedTranscendPoints = masu ? normalizeMasuProgression(masu).transcendPoints : 0;
     return (<>
       <div className="relative shrink-0" style={{isolation:'isolate'}}>
         <div className={`${MONSTER_CARD_ICON_CLASS} border ${masu?(fused?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'):'border-white/10'}`}>
@@ -29240,6 +29435,14 @@ function MonsterHeroGame() {
           <span aria-label={`ふり分けできる強化ポイント ${masu.distAptPoints}`}
             className="absolute -left-1.5 -bottom-1 z-10 rounded-full border border-amber-200/60 bg-amber-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow"
             style={{minWidth:'17px',textAlign:'center'}}>{masu.distAptPoints}</span>
+        )}
+        {/* ふり分けできる超越ポイント。通常の強化ポイント(左下・黄)と見分けられるよう、
+            **右下**に超越強化画面と同じ空色で出す。超越していない個体も超越強化は使えるので、
+            transcended ではなく残りポイントだけで出し入れする。 */}
+        {unusedTranscendPoints>0&&(
+          <span aria-label={`ふり分けできる超越ポイント ${unusedTranscendPoints}`}
+            className="absolute -right-1.5 -bottom-1 z-10 rounded-full border border-sky-100/70 bg-sky-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow"
+            style={{minWidth:'17px',textAlign:'center'}}>{unusedTranscendPoints}</span>
         )}
         {masu&&<RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>}
         {masu&&<TranscendenceBadge transcended={normalizeMasuProgression(masu).transcended} soulRankStage={normalizeMasuProgression(masu).soulRankStage} small/>}
@@ -35212,6 +35415,9 @@ function MonsterHeroGame() {
     // チャレンジの mh_clears_* と極限の mh_extreme_clears_* はどちらも書き換えない。
     // 極限難易度で遊んでも極限チャレンジのクリア数には数えない
     if (speciesChallengeBattleRunRef.current) {
+      // ミッションの「種族チャレンジをクリア」はクラシック・タクティクスどちらでも進む。
+      // 保存しない確認の周回では進めない
+      if (speciesChallengeSaveRunRef.current) await saveMissionProgress('speciesClear');
       addAssistantBond('clear');
       return;
     }
@@ -35223,6 +35429,9 @@ function MonsterHeroGame() {
       const nextTactics = (Number(tacticsRecordsOf(runMode).clears[tacticsDiff]) || 0) + 1;
       bumpTacticsRecord(runMode, 'clears', tacticsDiff, nextTactics);
       await storeSet(clearCountKey(runMode, tacticsDiff), nextTactics, false);
+      // ミッションはクラシックと共通(2026-09-26 ユーザー指示「タクティクスも共通にする」)。
+      // 記録の置き場は分けたまま、ミッションの数え方だけクラシックの同じモードへそろえる
+      await saveMissionProgress(extremeRunRef.current ? 'extremeClear' : isProMode(runMode) ? 'proClear' : 'challengeClear');
       addAssistantBond('clear');
       return;
     }
@@ -36168,9 +36377,11 @@ function MonsterHeroGame() {
       modeRun:{key:'modeRuns',daily:false,weekly:false,monthly:true},
       challengeClear:{key:'challengeClears',daily:true,weekly:true},
       quickClear:{key:'quickClears',daily:true,weekly:true},
-      proClear:{key:'proClears',daily:true,weekly:true},
+      proClear:{key:'proClears',daily:true,weekly:true,monthly:true},
       extremeClear:{key:'extremeClears',daily:false,weekly:true},
       itemUse:{key:'itemUses',daily:true,weekly:true},
+      // 種族チャレンジのクリア(2026-09-26)
+      speciesClear:{key:'speciesClears',daily:true,weekly:true,monthly:true},
     }[event];
     if(!rule)return;
     const next=normalizeMissions(missionsRef.current);
@@ -39501,7 +39712,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // デバッグ・練習・保存しない種族チャレンジはdebugBattleRefで除外される。
     if (!enemy && !debugBattleRef.current) {
       if (isQuickMode(runMode)) void saveMissionProgress('quickRun');
-      else if (runMode===BATTLE_MODE_CHALLENGE&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');
+      // タクティクスチャレンジもクラシックのチャレンジと同じ項目へ数える(2026-09-26)
+      else if ((runMode===BATTLE_MODE_CHALLENGE||runMode===BATTLE_MODE_TACTICS)&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');
       else void saveMissionProgress('modeRun');
     }
     setTimeout(()=>{setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},battleMs(150));
@@ -48288,7 +48500,7 @@ const createAnimationStyle = () => {
     [data-moo-reticle] { width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; opacity: 0; border: 3px dashed rgba(250,204,21,.95);
       box-shadow: 0 0 16px rgba(220,38,38,.9), inset 0 0 16px rgba(220,38,38,.6); animation: emLock 800ms ease-out both; }
     /* ---- ボスの必殺技ムービー(71-screen-battle の BossMovieLayer)。画面を切り替えて、上に技名・まんなかにムービー ----
-       ★ムービーは横長(768×488)。縦のスマホでは幅いっぱいより少し大きく(116vw)して左右を少しだけ切り、上下のふちはぼかして背景へなじませる。
+       ★ムービーは横長(1024×682)。縦のスマホでは幅いっぱいより少し大きく(116vw)して左右を少しだけ切り、上下のふちはぼかして背景へなじませる。
        ★技名の札(z 65000)・敵の技の演出(z 64000)より上に出す */
     [data-boss-movie] { position: fixed; inset: 0; z-index: 66000; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); -webkit-tap-highlight-color: transparent; user-select: none;
@@ -48296,7 +48508,7 @@ const createAnimationStyle = () => {
     /* ★背景は不透明にする。半透明だと、うしろの戦闘画面(敵の絵・枠)が透けて見える */
     @keyframes bossMovieIn { from { opacity: 0; } to { opacity: 1; } }
     [data-boss-movie-stage] { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-    [data-boss-movie-frame] { position: relative; flex-shrink: 0; width: min(116vw, calc(66vh * 768 / 488)); aspect-ratio: 768 / 488; overflow: hidden;
+    [data-boss-movie-frame] { position: relative; flex-shrink: 0; width: min(116vw, calc(66vh * 1024 / 682)); aspect-ratio: 1024 / 682; overflow: hidden;
       -webkit-mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(180deg, transparent, #000 7%, #000 93%, transparent); }
     [data-boss-movie-frame] > video { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
     [data-boss-movie-title] { text-align: center; line-height: 1.15; animation: bossMovieTitle 900ms cubic-bezier(.2,.8,.2,1) both; }

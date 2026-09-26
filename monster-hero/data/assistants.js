@@ -428,6 +428,12 @@ const ASSISTANT_BOND_STYLES = {
       '永遠の相棒。いちばん自然体で、いちばん甘えん坊',
     ],
   },
+  // ドラ: 段階の名前と話し方はみゅあと同じ。呼び方だけ、Lv3で呼び捨てになったら
+  // そのまま呼び捨てを続ける(「ちん」付けにはしない。2026-09-26・ユーザー指示)。
+  // Lv6からはプレイヤーが呼び方を決められる(既定は呼び捨て)
+  dra: {
+    call: (level) => (level <= 2 ? '{name}さん' : '{name}'),
+  },
 };
 // その助手の20段階を作る。need はみゅあと共通、タイトル・呼び方・話し方だけ差し替える
 const buildAssistantBondLevels = (style) => ASSISTANT_BOND_LEVELS.map((base, i) => ({
@@ -607,7 +613,7 @@ const assistantBondStageByLevel = (level, assistantId) => {
 // customCall … Lv6から自由に決められる呼び方の上書き。「{name}」を含めればプレイヤー名に
 //              置き換わり、含めなければ入力した文字がそのまま呼び方になる。
 //              未入力・Lv6未満なら絆Lvの既定(stage.call)のまま
-// assistantId … 助手ごとに既定の呼び方が違う(みゅあは「ちん」、ききは「ちー」)
+// assistantId … 助手ごとに既定の呼び方が違う(みゅあは「ちん」、ききは「ちー」、ドラは呼び捨て)
 const ASSISTANT_NO_NAME = 'キミ';
 const assistantCallName = (name, level, customCall, assistantId) => {
   const raw = String(name || '').trim();
@@ -5782,7 +5788,7 @@ const EVENT_REPLAYS = [
   // ビートPがいつでも貯まるようになった知らせ(2026-09-24)。HOMEで1度だけ流れ、そのあとは回想から見返せる
   { id: 'beat_point_always_2026_09_24', date: '2026-09-24 23:02', title: 'いつでもビートP ～交換所のこれから～', script: ASSISTANT_BEAT_POINT_ALWAYS, calls: ASSISTANT_BEAT_POINT_ALWAYS_CALLS, unlockedKey: 'beatPointAlwaysSeen' },
   // モンヒロビートが6レーンになった知らせ(2026-09-26)。HOMEで1度だけ流れ、そのあとは回想から見返せる
-  { id: 'rhythm_six_lane_2026_09_26', date: '2026-09-26 13:13', title: '6レーンのモンヒロビート ～ドラの指～', script: ASSISTANT_RHYTHM_SIX_LANE, calls: ASSISTANT_RHYTHM_SIX_LANE_CALLS, unlockedKey: 'rhythmSixLaneSeen' },
+  { id: 'rhythm_six_lane_2026_09_26', date: '2026-09-26 13:48', title: '6レーンのモンヒロビート ～ドラの指～', script: ASSISTANT_RHYTHM_SIX_LANE, calls: ASSISTANT_RHYTHM_SIX_LANE_CALLS, unlockedKey: 'rhythmSixLaneSeen' },
 ];
 
 // ---------- 助手ごとのあいさつ・村の案内 ----------

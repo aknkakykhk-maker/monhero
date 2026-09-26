@@ -266,6 +266,18 @@ check('まとめ処理はスタイルを1回だけ確定させ、レイアウト
 check('演奏中の判定処理に offsetWidth の読み取りを残さない',
   !/void\s+[A-Za-z_$][\w$.]*\.offsetWidth/.test(game.slice(game.indexOf('const applyJudgment'),game.indexOf('const applyJudgment')+9000)),
   'applyJudgment の中');
+// --- 2026-09-26 判定文字の光を焼いた絵で出す ---
+// 判定文字の光(drop-shadow を最大6枚)を、判定のたびにぼかし直していた(演出量「多め」「最大」で弾むたびに
+// 大きなレイヤーを作り直すので、実測で描画が20倍以上になっていた)。光は演奏前に1枚の絵へ焼き、
+// 字は ::after に重ね直す。ここが崩れると、また毎回ぼかしを計算し直す。
+check('判定文字の光を焼いて出す(焼いた判定だけ目印を付け、本体のぼかしを外す)',
+  game.includes('const rhythmBakeJudgmentHalos=async textEl=>{')
+  &&game.includes("haloKeys.has(`${view.last}|${view.lastPrecise?'1':''}`)?'1':undefined}")
+  &&html.includes('[data-rhythm-judgment-text][data-halo="1"]{position:relative;z-index:0;filter:none!important}'));
+check('重ね直した字は模様の位置を本体から受け継ぐ(金・虹の流れがそのまま動く)',
+  /\[data-rhythm-judgment-text\]\[data-halo="1"\]::after\{[\s\S]{0,200}content:attr\(data-judgment\)[\s\S]{0,300}background-position:inherit/.test(html));
+check('焼くときの影の読み取りは drop-shadow 以外が混ざれば焼かない',
+  game.includes('const rhythmParseDropShadows=filter=>{')&&game.includes('return rest?null:list;'));
 check('ヒット演出は呼び出し側のまとめへ譲れる(defer)',
   source.includes("if(defer)return {el:item,attr:'rhythmHitKind',value:kind};")
   // 2026-09-12: ぴったりのMARVELOUS(precise)を渡すようになったので、その間へ入る
