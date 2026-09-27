@@ -78,7 +78,16 @@
       svgEl('stop', { offset:'62%', 'stop-color':'#22d3ee', 'stop-opacity':'.28' }),
       svgEl('stop', { offset:'100%', 'stop-color':'#d946ef', 'stop-opacity':'.46' })
     );
-    defs.append(laneFill, pressedFill);
+    // 境目の線は、奥は薄く・判定ラインに近いほどはっきり(2026-09-27・ユーザー「前より少し押しにくく感じる」)。
+    // 道を暗くしたときに境目も薄くしすぎて、どこがレーンの切れ目か手元で見分けにくくなっていた
+    const dividerStroke = svgEl('linearGradient', { id:'rhythmLaneSvgDivider', gradientUnits:'userSpaceOnUse', x1:'0', y1:'0', x2:'0', y2:'1000' });
+    dividerStroke.append(
+      svgEl('stop', { offset:'0%', 'stop-color':'#e2e8f0', 'stop-opacity':'.06' }),
+      svgEl('stop', { offset:'55%', 'stop-color':'#e2e8f0', 'stop-opacity':'.18' }),
+      svgEl('stop', { offset:'80%', 'stop-color':'#f1f5f9', 'stop-opacity':'.42' }),
+      svgEl('stop', { offset:'100%', 'stop-color':'#e2e8f0', 'stop-opacity':'.3' })
+    );
+    defs.append(laneFill, pressedFill, dividerStroke);
     svg.appendChild(defs);
 
     svg.appendChild(svgEl('polygon', {
@@ -103,9 +112,9 @@
       if (outer) svg.appendChild(svgEl('polyline', { points:edgePoints(boundary).join(' '), fill:'none', stroke:'#a5f3fc', 'stroke-opacity':'.28', 'stroke-width':'9' }));
       svg.appendChild(svgEl('polyline', {
         points:edgePoints(boundary).join(' '), fill:'none',
-        stroke:outer ? '#ffffff' : '#e2e8f0',
-        'stroke-opacity':outer ? '1' : '.16',
-        'stroke-width':outer ? '3.2' : '1'
+        stroke:outer ? '#ffffff' : 'url(#rhythmLaneSvgDivider)',
+        'stroke-opacity':'1',
+        'stroke-width':outer ? '3.2' : '1.4'
       }));
     }
 

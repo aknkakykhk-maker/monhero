@@ -18998,7 +18998,7 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-hit-effect][data-hit-precise="1"]>i{
       background:linear-gradient(90deg,#f87171,#fbbf24,#a3e635,#22d3ee,#a78bfa,#f472b6)}
     [data-rhythm-hit-effect][data-hit-precise="1"]>b{
-      background:linear-gradient(to top,#f472b6 0%,#a78bfa 24%,#22d3ee 46%,#a3e635 64%,rgba(251,191,36,.35) 82%,rgba(255,255,255,0) 100%)}
+      background:linear-gradient(to top,rgba(244,114,182,.78) 0%,rgba(167,139,250,.6) 24%,rgba(34,211,238,.44) 46%,rgba(163,230,53,.28) 64%,rgba(251,191,36,.12) 82%,rgba(255,255,255,0) 100%)}
     /* 上の判定ほど光を明るくする(2026-09-12・ユーザー指示
        「色合い発光を判定が上がるたびにもっときれいにめだつように」) */
     [data-rhythm-hit-effect][data-hit-judgment="MARVELOUS"]>i,
@@ -20699,7 +20699,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.globalAlpha=(.7+.3*pulse)*opts.alpha;
     ctx.drawImage(sparkStreakSprite(kind).canvas,head.cx-streakW/2,head.cy-streakH/2,streakW,streakH);
     // 押さえている所で脈打つ白い十字の光(2026-09-27・参考動画「触れている所で青白い強い光が脈打つ」)。叩いたときの十字と同じ焼いた1枚
-    const fw=Math.max(w*1.5,90)*(.85+.25*pulse),fh=fw*.52;
+    // 大きさはノーツ幅の1.2倍(最小70px)。押している間は毎フレーム重ねるので、塗る面積を抑える(2026-09-27・測定で標準 +5%)
+    const fw=Math.max(w*1.2,70)*(.85+.2*pulse),fh=fw*.5;
     ctx.globalAlpha=(.45+.4*pulse)*opts.alpha;
     ctx.drawImage(hitFlareSprite().canvas,head.cx-fw/2,head.cy-fh/2,fw,fh);
     // 細い縦の光の筋(バチバチ)。0.07秒ごとに場所と長さを替える。焼いた細い線を3本貼るだけ。演出量「ふつう」以上
@@ -20856,7 +20857,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // フリックの炎の筋の向き(右が0度・画面の上がマイナス)。CSS の --rhythm-flick-angle と同じ
   const HIT_FLICK_ANGLES={up:-90,right:-35,left:-145};
   const HIT_CORE_RAINBOW=['#f87171','#fbbf24','#a3e635','#22d3ee','#a78bfa','#f472b6'];
-  const HIT_BEAM_RAINBOW=[[0,'#f472b6'],[.24,'#a78bfa'],[.46,'#22d3ee'],[.64,'#a3e635'],[.82,'rgba(251,191,36,.35)'],[1,'rgba(251,191,36,0)']];
+  // 柱を高くした(2026-09-27)ので、不透明な虹だと大きな虹色の四角に見えた。上へ行くほど透けて消えるようにする(CSS の [data-hit-precise]>b と同じ)
+  const HIT_BEAM_RAINBOW=[[0,'rgba(244,114,182,.78)'],[.24,'rgba(167,139,250,.6)'],[.46,'rgba(34,211,238,.44)'],[.64,'rgba(163,230,53,.28)'],[.82,'rgba(251,191,36,.12)'],[1,'rgba(251,191,36,0)']];
   // cubic-bezier(.16,.9,.3,1)。CSS と同じく、キーフレームの区間ごとにかける
   const hitEase=(()=>{const x1=.16,y1=.9,x2=.3,y2=1,cx=3*x1,bx=3*(x2-x1)-cx,ax=1-cx-bx,cy=3*y1,by=3*(y2-y1)-cy,ay=1-cy-by;
     const sx=t=>((ax*t+bx)*t+cx)*t,sy=t=>((ay*t+by)*t+cy)*t,dx=t=>(3*ax*t+2*bx)*t+cx;
