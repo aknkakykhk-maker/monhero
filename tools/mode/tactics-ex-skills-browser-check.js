@@ -463,20 +463,20 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     const before = await party();
     await tapSlot(moSlot);
     p = await panel();
-    check('「ガッツ全開っちー」: 3/3・カードと併用できる・5ターン・力／丈夫さ 120／120', !!p && p.name === 'ガッツ全開っちー'
-      && /3 \/ 3/.test(p.uses) && p.withCards === 'yes' && /5ターン/.test(p.text) && /120／120/.test(p.text), p && p.text.slice(0, 220));
+    check('「ガッツ全開っちー」: 3/3・カードと併用できる・5ターン・力／丈夫さ 140／140', !!p && p.name === 'ガッツ全開っちー'
+      && /3 \/ 3/.test(p.uses) && p.withCards === 'yes' && /5ターン/.test(p.text) && /140／140/.test(p.text), p && p.text.slice(0, 220));
     await page.locator('[data-tactics-ex-use]').click();
     await page.waitForTimeout(900);
     const after = await party();
     const full = (v) => { const m = /^(\d+)\/(\d+)$/.exec(v || ''); return !!m && m[1] === m[2]; };
-    // ★上限も30%上がってから満タン(モッチー ライフ600→780・ガッツ100→130)
-    check('使うとライフとガッツの上限が30%上がり、そこまで満タンになる(600→780/780・100→130/130)', !!before && !!after && !full(before.guts)
-      && after.hp === '780/780' && after.guts === '130/130',
+    // ★上限も30%上がってから満タン(モッチー ライフ720→936・ガッツ140→182。2026-09-27 に基礎値を600/100から変更)
+    check('使うとライフとガッツの上限が30%上がり、そこまで満タンになる(720→936/936・140→182/182)', !!before && !!after && !full(before.guts)
+      && after.hp === '936/936' && after.guts === '182/182',
       `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
     check('枠の札が「あと5ターン」になる', await page.locator(`[data-tactics-ex-mark="${moSlot}"]`).getAttribute('data-tactics-ex-state') === 'あと5ターン');
     await tapSlot(moSlot);
     p = await panel();
-    check('力／丈夫さが 156／156 に上がり、残りが 2/3', !!p && /156／156/.test(p.text) && /2 \/ 3/.test(p.uses), p && p.text.slice(0, 220));
+    check('力／丈夫さが 182／182 に上がり、残りが 2/3', !!p && /182／182/.test(p.text) && /2 \/ 3/.test(p.uses), p && p.text.slice(0, 220));
     await closePanel();
     await tapFirstCard();
     check('使ったターンもモッチーはカードを使える', (await selectedCount()) > 0);

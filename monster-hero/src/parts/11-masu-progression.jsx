@@ -1828,9 +1828,17 @@ const LEGACY_REGENERATION_STAT_BASELINES = {
     { id:'pre-2026-08-14', hp:250, atk:160, def:50, guts:140 },
     { id:'current', hp:250, atk:160, def:50, guts:170 },
   ],
+  // ★2026-09-27 モッチー・ミタラシの基礎値を上げた(ユーザー指示のバランス調整)。
+  //   移行前の旧再生個体(完成値を保存)は変更前のベースから生まれているので、その値を残す。
+  //   どちらのベースからも生まれうる値は AMBIGUOUS になり、移行せず保存値のまま残る(ピクシーと同じ)
   Mitarashi: [
     { id:'pre-2026-08-14', hp:600, atk:120, def:120, guts:100 },
-    { id:'current', hp:630, atk:140, def:105, guts:90 },
+    { id:'pre-2026-09-27', hp:630, atk:140, def:105, guts:90 },
+    { id:'current', hp:680, atk:150, def:115, guts:120 },
+  ],
+  Mocchi: [
+    { id:'pre-2026-09-27', hp:600, atk:120, def:120, guts:100 },
+    { id:'current', hp:720, atk:140, def:140, guts:140 },
   ],
 };
 const regenerationStatCouldBeGenerated = (value, baseValue) => {

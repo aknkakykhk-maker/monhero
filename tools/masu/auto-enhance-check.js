@@ -54,39 +54,39 @@ const makeMasu = (autoEnhance, extra = {}) => m.normalizeMasuProgression({
 
 // ---- 3. 目標のステータス値どおりに止まる(こえない) ----
 {
-  // ちからは素の値120。目標129なら、1Pで+3なので3Pで129ちょうど。10P持っていても3Pしか使わない
+  // ちからは素の値140(2026-09-27 に120から変更)。目標149なら、1Pで+3なので3Pで149ちょうど。10P持っていても3Pしか使わない
   const masu = makeMasu({ enabled:true, order:['atk','hp','def','guts','apt0','apt1','apt2','apt3'],
-    statTargets:{ hp:0, atk:129, def:0, guts:0 }, aptLimits:[null,null,null,null] });
+    statTargets:{ hp:0, atk:149, def:0, guts:0 }, aptLimits:[null,null,null,null] });
   const applied = m.applyMasuAutoEnhance(masu);
   assert.ok(applied, '振る先があれば適用される');
   assert.strictEqual(applied.used, 3, '目標までの3Pだけを使う');
   assert.strictEqual(applied.masu.statPoints.atk, 9, 'ちからは1Pあたり+3');
-  assert.strictEqual(m.resolveMasuIndividualStats(applied.masu, base).atk + applied.masu.statPoints.atk, 129, '目標ちょうどになる');
+  assert.strictEqual(m.resolveMasuIndividualStats(applied.masu, base).atk + applied.masu.statPoints.atk, 149, '目標ちょうどになる');
   assert.strictEqual(applied.masu.distAptPoints, 7, '残りは手元に残る');
   assert.strictEqual(m.applyMasuAutoEnhance(applied.masu), null, '目標に届いたら二度目は何もしない');
 }
 
 // ---- 3b. 1Pで割り切れない目標は、こえない手前で止まる ----
 {
-  // ちから素の値120、目標128。1Pで+3なので 120→123→126 まで(2P)。129にはしない
+  // ちから素の値140、目標148。1Pで+3なので 140→143→146 まで(2P)。149にはしない
   const masu = makeMasu({ enabled:true, order:['atk','hp','def','guts','apt0','apt1','apt2','apt3'],
-    statTargets:{ hp:0, atk:128, def:0, guts:0 }, aptLimits:[null,null,null,null] });
+    statTargets:{ hp:0, atk:148, def:0, guts:0 }, aptLimits:[null,null,null,null] });
   const applied = m.applyMasuAutoEnhance(masu);
   assert.strictEqual(applied.used, 2, '目標をこえない範囲で止まる');
-  assert.strictEqual(m.resolveMasuIndividualStats(applied.masu, base).atk + applied.masu.statPoints.atk, 126, '目標を1も超えない');
+  assert.strictEqual(m.resolveMasuIndividualStats(applied.masu, base).atk + applied.masu.statPoints.atk, 146, '目標を1も超えない');
 }
 
 // ---- 4. 優先順位のとおり上から埋まる ----
 {
   const order = ['def','hp','atk','guts','apt0','apt1','apt2','apt3'];
-  // 素の値: ライフ600 / ちから120 / 丈夫さ120 / ガッツ100
-  // 丈夫さ126(2P) → ライフ640(4P) → ちから上限なし(残り4P) の順で埋まる
+  // 素の値: ライフ720 / ちから140 / 丈夫さ140 / ガッツ140
+  // 丈夫さ146(2P) → ライフ760(4P) → ちから上限なし(残り4P) の順で埋まる
   const masu = makeMasu({ enabled:true, order,
-    statTargets:{ hp:640, atk:null, def:126, guts:0 }, aptLimits:[null,null,null,null] });
+    statTargets:{ hp:760, atk:null, def:146, guts:0 }, aptLimits:[null,null,null,null] });
   const applied = m.applyMasuAutoEnhance(masu);
   assert.strictEqual(applied.used, 10, '持っている10Pを使い切る');
-  assert.strictEqual(applied.masu.statPoints.def, 2 * 3, '1番目の丈夫さが先に目標126まで');
-  assert.strictEqual(applied.masu.statPoints.hp, 4 * 10, '2番目のライフが目標640まで');
+  assert.strictEqual(applied.masu.statPoints.def, 2 * 3, '1番目の丈夫さが先に目標146まで');
+  assert.strictEqual(applied.masu.statPoints.hp, 4 * 10, '2番目のライフが目標760まで');
   assert.strictEqual(applied.masu.statPoints.atk, 4 * 3, '3番目のちから(上限なし)に残り4P');
   assert.strictEqual(applied.masu.statPoints.guts, 0, '「振らない」のガッツには入らない');
   assert.strictEqual(applied.masu.distAptPoints, 0, '使い切った');
@@ -130,11 +130,11 @@ const makeMasu = (autoEnhance, extra = {}) => m.normalizeMasuProgression({
 // ---- 8. いまの配分を上限として写し取れる ----
 {
   const built = makeMasu({ enabled:true, order:['hp','atk','def','guts','apt0','apt1','apt2','apt3'],
-    statTargets:{ hp:630, atk:126, def:0, guts:0 }, aptLimits:['B',null,null,null] }, { distAptPoints:20 });
+    statTargets:{ hp:750, atk:146, def:0, guts:0 }, aptLimits:['B',null,null,null] }, { distAptPoints:20 });
   const grown = m.applyMasuAutoEnhance(built).masu;
   const captured = m.buildAutoEnhanceLimitsFromCurrent(grown, base);
-  assert.strictEqual(captured.statTargets.hp, 630, 'いまのライフの値がそのまま目標になる');
-  assert.strictEqual(captured.statTargets.atk, 126, 'いまのちからの値がそのまま目標になる');
+  assert.strictEqual(captured.statTargets.hp, 750, 'いまのライフの値がそのまま目標になる');
+  assert.strictEqual(captured.statTargets.atk, 146, 'いまのちからの値がそのまま目標になる');
   assert.strictEqual(captured.statTargets.def, 0, '振っていない能力は「振らない」');
   assert.strictEqual(captured.aptLimits[0], 'B', '上げてある距離はいまの段階が目標になる');
   assert.strictEqual(captured.aptLimits[1], null, '上げていない距離は「振らない」');
@@ -143,7 +143,7 @@ const makeMasu = (autoEnhance, extra = {}) => m.normalizeMasuProgression({
 // ---- 9. 転生しても設定は残る(この機能の目的そのもの) ----
 {
   const settings = { enabled:true, order:['guts','hp','atk','def','apt0','apt1','apt2','apt3'],
-    version:2, statTargets:{ hp:650, atk:0, def:0, guts:106 }, aptLimits:[null,'A',null,null] };
+    version:2, statTargets:{ hp:770, atk:0, def:0, guts:146 }, aptLimits:[null,'A',null,null] };
   const grown = m.normalizeMasuProgression({
     id:'r1', baseId:BASE_ID, name:'転生前', bondXp:m.totalBondXpForLevel(120), levelCap:150,
     distAptPoints:0, statPoints:{ hp:50, atk:0, def:0, guts:6 }, distAptBoosts:[0,2,0,0],
@@ -161,7 +161,7 @@ const makeMasu = (autoEnhance, extra = {}) => m.normalizeMasuProgression({
   // 転生直後に自動で振り直せる
   const rebuilt = m.applyMasuAutoEnhance(after);
   assert.ok(rebuilt && rebuilt.used > 0, '転生後の未使用Pが設定どおりに振られる');
-  assert.strictEqual(rebuilt.masu.statPoints.guts, 2 * 3, '1番目のガッツが目標106まで戻る');
+  assert.strictEqual(rebuilt.masu.statPoints.guts, 2 * 3, '1番目のガッツが目標146まで戻る');
   // AUTO∞自動限界突破の設定も同じく残す
   const withBreakthrough = m.resetMasuForRebirth(m.normalizeMasuProgression({
     ...grown, autoRepeatBreakthroughMode:'follow',
@@ -173,7 +173,7 @@ const makeMasu = (autoEnhance, extra = {}) => m.normalizeMasuProgression({
 // ---- 10. 所持マスモン全体へ一度に通す ----
 {
   const on = makeMasu({ enabled:true, order:['hp','atk','def','guts','apt0','apt1','apt2','apt3'],
-    statTargets:{ hp:620, atk:0, def:0, guts:0 }, aptLimits:[null,null,null,null] });
+    statTargets:{ hp:740, atk:0, def:0, guts:0 }, aptLimits:[null,null,null,null] });
   const off = { ...makeMasu({ enabled:false }), id:'m2' };
   const result = m.applyAutoEnhanceToMasuMons([on, off]);
   assert.ok(result, '1体でも振れば結果を返す');
@@ -219,10 +219,10 @@ const makeMasu = (autoEnhance, extra = {}) => m.normalizeMasuProgression({
   const legacy = makeMasu(undefined, {});
   legacy.autoEnhance = { enabled:true, order:['hp','guts','atk','def','apt0','apt1','apt2','apt3'],
     statLimits:{ hp:5, guts:2, atk:null, def:0 }, aptLimits:[null,'A',null,null] };
-  // 素の値: ライフ600 / ちから120 / 丈夫さ120 / ガッツ100
+  // 素の値: ライフ720 / ちから140 / 丈夫さ140 / ガッツ140
   const targets = m.autoEnhanceStatTargetsOf(legacy, base);
-  assert.strictEqual(targets.hp, 600 + 5 * 10, '5P → 素の値＋50 の合計値になる');
-  assert.strictEqual(targets.guts, 100 + 2 * 3, '2P → 素の値＋6 の合計値になる');
+  assert.strictEqual(targets.hp, 720 + 5 * 10, '5P → 素の値＋50 の合計値になる');
+  assert.strictEqual(targets.guts, 140 + 2 * 3, '2P → 素の値＋6 の合計値になる');
   assert.strictEqual(targets.atk, null, '上限なしは上限なしのまま');
   assert.strictEqual(targets.def, 0, '振らないは振らないまま');
   // 版1のままでも、振る量は読み替え後と同じになる(移行し忘れても壊れない)
@@ -235,15 +235,15 @@ const makeMasu = (autoEnhance, extra = {}) => m.normalizeMasuProgression({
   const edited = m.buildMasuAutoEnhanceUpdate(legacy, { enabled:false });
   const after = m.normalizeMasuAutoEnhance(edited.autoEnhance);
   assert.strictEqual(after.version, m.AUTO_ENHANCE_SETTINGS_VERSION, '書き換えたら版2になる');
-  assert.strictEqual(after.statTargets.hp, 650, '触っていないライフの目標が残る');
-  assert.strictEqual(after.statTargets.guts, 106, '触っていないガッツの目標が残る');
+  assert.strictEqual(after.statTargets.hp, 770, '触っていないライフの目標が残る');
+  assert.strictEqual(after.statTargets.guts, 146, '触っていないガッツの目標が残る');
   assert.strictEqual(after.statTargets.atk, null, '触っていない「上限なし」も残る');
   assert.deepStrictEqual([...after.aptLimits], [null,'A',null,null], '間合い適性の目標も残る');
   assert.strictEqual(after.enabled, false, '指定した項目だけが変わる');
 
   // 並べ替えでも同じ(buildMasuAutoEnhanceOrderMove も同じ入口を通る)
   const moved = m.normalizeMasuAutoEnhance(m.buildMasuAutoEnhanceOrderMove(legacy, 'guts', -1).autoEnhance);
-  assert.strictEqual(moved.statTargets.hp, 650, '並べ替えでも目標が消えない');
+  assert.strictEqual(moved.statTargets.hp, 770, '並べ替えでも目標が消えない');
   assert.strictEqual(moved.order[0], 'guts', '並べ替えは効いている');
 }
 
