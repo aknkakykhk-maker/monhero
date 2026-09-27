@@ -250,15 +250,18 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               'タップ音量に対する大きさです。フリックは触れた瞬間ではなく、払えたときに「シュッ」と鳴ります。0%で鳴らしません。',{full:true})}
             {field('ロングの終わりの音の大きさ',stepper('noteSeEndVolume',0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,{fine:5,coarse:20,suffix:'%'}),
               'ホールド・スライドを最後まで取れたときの音です。タップ音量に対する大きさで、0%で鳴らしません。',{full:true})}
+            {field('押さえている間の音の大きさ',stepper('noteSeHoldVolume',0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,{fine:5,coarse:20,suffix:'%'}),
+              'ホールド・スライドを押さえているあいだ、「ウィーン」と高くなっていく溜める音が鳴ります。タップ音量に対する大きさで、0%で鳴らしません。',{full:true})}
             {field('タップ音',toggle('noteSeEnabled'))}
             <div className="grid gap-2">
               <button type="button" onClick={previewBgm} className="min-h-[44px] rounded-xl bg-indigo-700 text-[12px] font-black">♪ BGM試聴</button>
               <button type="button" data-rhythm-se-preview="tap" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft,'tap')} className="min-h-[44px] rounded-xl bg-fuchsia-700 text-[12px] font-black">タップ音試聴</button>
             </div>
             {/* 音ごとの試聴。判定ごとは MARVELOUS → GREAT → GOOD の順に続けて鳴らす */}
-            <div data-rhythm-se-previews className={`grid grid-cols-3 gap-2 ${wide?'col-span-3':'col-span-2'}`}>
+            <div data-rhythm-se-previews className={`grid grid-cols-2 gap-2 ${wide?'col-span-3':'col-span-2'}`}>
               <button type="button" data-rhythm-se-preview="flick" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'flick')} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100">フリック音</button>
               <button type="button" data-rhythm-se-preview="end" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'end')} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100">ロングの終わり</button>
+              <button type="button" data-rhythm-se-preview="hold" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'hold')} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100">押さえている間</button>
               <button type="button" data-rhythm-se-preview="judge" onClick={()=>{['MARVELOUS','GREAT','GOOD'].forEach((id,i)=>setTimeout(()=>RHYTHM_NOTE_SE_RUNTIME.preview({...draft,noteSeEnabled:true},'tap',id),i*260));}} className="min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black leading-tight text-fuchsia-100">判定ごと<span className="block text-[10px] text-fuchsia-300">良い順に3回</span></button>
             </div>
           </div>

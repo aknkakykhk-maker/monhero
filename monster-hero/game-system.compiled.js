@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ca015b68d11cdcea
+// source-sha256: 82f8777f2104c263
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 07:40";
+const BUILD_DATE = "2026-09-28 08:16";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5077,6 +5077,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   noteSeFlickVolume: 100,
   noteSeEndVolume: 100,
   noteSeEmptyEnabled: true,
+  noteSeHoldVolume: 100,
   livePartnerVisible: true,
   sideMonsterOpacity: 'NORMAL',
   sideMonsterMotion: 'NORMAL',
@@ -5141,6 +5142,7 @@ const normalizeRhythmSettings = value => {
     noteSeEmptyEnabled: bool('noteSeEmptyEnabled'),
     noteSeFlickVolume: rhythmFiniteStep(source.noteSeFlickVolume, 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeFlickVolume),
     noteSeEndVolume: rhythmFiniteStep(source.noteSeEndVolume, 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeEndVolume),
+    noteSeHoldVolume: rhythmFiniteStep(source.noteSeHoldVolume, 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeHoldVolume),
     noteSeEnabled: bool('noteSeEnabled'),
     vibrationEnabled: bool('vibrationEnabled'),
     effectAmount: RHYTHM_EFFECT_LEVELS.includes(source.effectAmount) ? source.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount,
@@ -21291,6 +21293,12 @@ const RhythmOptions = ({
     suffix: '%'
   }), 'ホールド・スライドを最後まで取れたときの音です。タップ音量に対する大きさで、0%で鳴らしません。', {
     full: true
+  }), field('押さえている間の音の大きさ', stepper('noteSeHoldVolume', 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, {
+    fine: 5,
+    coarse: 20,
+    suffix: '%'
+  }), 'ホールド・スライドを押さえているあいだ、「ウィーン」と高くなっていく溜める音が鳴ります。タップ音量に対する大きさで、0%で鳴らしません。', {
+    full: true
   }), field('タップ音', toggle('noteSeEnabled')), React.createElement("div", {
     className: "grid gap-2"
   }, React.createElement("button", {
@@ -21304,7 +21312,7 @@ const RhythmOptions = ({
     className: "min-h-[44px] rounded-xl bg-fuchsia-700 text-[12px] font-black"
   }, "タップ音試聴")), React.createElement("div", {
     "data-rhythm-se-previews": true,
-    className: `grid grid-cols-3 gap-2 ${wide ? 'col-span-3' : 'col-span-2'}`
+    className: `grid grid-cols-2 gap-2 ${wide ? 'col-span-3' : 'col-span-2'}`
   }, React.createElement("button", {
     type: "button",
     "data-rhythm-se-preview": "flick",
@@ -21322,6 +21330,14 @@ const RhythmOptions = ({
     }, 'end'),
     className: "min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100"
   }, "ロングの終わり"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-se-preview": "hold",
+    onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview({
+      ...draft,
+      noteSeEnabled: true
+    }, 'hold'),
+    className: "min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100"
+  }, "押さえている間"), React.createElement("button", {
     type: "button",
     "data-rhythm-se-preview": "judge",
     onClick: () => {
@@ -23584,6 +23600,7 @@ const RhythmTapTest = ({
     laneRefs = useRef([]),
     runRef = useRef(null),
     frameRef = useRef(null),
+    heldNotesRef = useRef([]),
     playAreaRef = useRef(null),
     judgmentLineRef = useRef(null),
     judgmentBandRef = useRef(null),
@@ -24831,6 +24848,7 @@ const RhythmTapTest = ({
     if (!run || run.finished || run.paused) return;
     run.finished = true;
     stopFrame();
+    RHYTHM_NOTE_SE_RUNTIME.holdStopAll();
     RHYTHM_GESTURE_RUNTIME.clear();
     run.activePointers.clear();
     run.activeTouchInputs?.clear();
@@ -25158,6 +25176,7 @@ const RhythmTapTest = ({
           monster,
           wide: rhythmNoteIsWide(note),
           pressed: note.type === 'HOLD' && note.activePointerId !== null,
+          heldMs: songTimeMs - note.timeMs,
           alpha: failedTrail ? .34 : 1,
           pop: clearFlash ? Math.min(1, (songTimeMs - note._rhythmClearAt) / RHYTHM_CLEAR_FLASH_MS) : null,
           depthScale,
@@ -25330,12 +25349,16 @@ const RhythmTapTest = ({
       }
       run.scanFrom = scanFrom;
       const scanHorizonMs = visualTime + travelMs * 1.2;
+      const heldNotes = heldNotesRef.current;
+      heldNotes.length = 0;
       for (let i = scanFrom; i < notes.length; i++) {
         const note = notes[i];
         if (run.notesReady && run.notesAscending && note.timeMs > scanHorizonMs) break;
         perfScanned++;
         visitNote(note);
+        if (!note.done && note.activePointerId !== null && note.type === 'HOLD' && rhythmNoteHasBody(note)) heldNotes.push(note);
       }
+      RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
       run.notesReady = true;
       if (canvasNotes) RHYTHM_CANVAS_RENDERER.end();
       RHYTHM_PERF.notes(perfScanned, perfDrawn, scanFrom, run.notesAscending);
@@ -25409,6 +25432,7 @@ const RhythmTapTest = ({
   }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.frameRateMode, settings.stageEffect, settings.lightweightMode, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial, updateJudgmentBand]);
   const disposeRun = useCallback(() => {
     stopFrame();
+    RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);
     clearJudgmentTimer();
     clearAbilityTimer();
     clearCountdown();
@@ -25614,6 +25638,7 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (countdownStep !== null) return;
     if (!run || run.finished || run.paused) return;
+    RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);
     run.activePointers.clear();
     run.standbyPointers?.clear();
     run.activeTouchInputs?.clear();

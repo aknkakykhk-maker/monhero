@@ -1746,6 +1746,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
       judgeVary:typeof value?.noteSeJudgeVary==='boolean'?value.noteSeJudgeVary:true,
       flickVolume:partVolume(value?.noteSeFlickVolume,100),
       endVolume:partVolume(value?.noteSeEndVolume,100),
+      holdVolume:partVolume(value?.noteSeHoldVolume,100),
       emptyEnabled:typeof value?.noteSeEmptyEnabled==='boolean'?value.noteSeEmptyEnabled:true,
     };
   };
@@ -1977,10 +1978,89 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   // FLICK が成立したとき(終点フリックを含む)。フリックは触れた瞬間には鳴らさず、払えたときに「シュッ」と鳴らす
   // (プロセカ・バンドリ！と同じ。実機で「フリックが成功したのか分かりづらい」という報告があった)
   const playFlick=(judgment=null)=>{const settings=readSettings();return voice(settings,'flick',judgment,settings.flickVolume/100);};
-  // 設定画面の試聴。kind … 'tap' / 'flick' / 'end'
+  // ===== ホールド・スライドを押さえているあいだの「ウィーン」(溜める音) =====
+  // 2026-09-28・ユーザー「押してる間にウィーンみたいな溜めてるような音があるとさらにそれっぽくなりそう」。
+  // 押さえているノーツ1本につき「のこぎり波2つ(少しずらして厚みを出す)→ くせのある低域通過 → 大きさ」を1組だけ組む。
+  // 高さ・明るさ・ゆれは鳴らし始めに「目標へ近づいていく」予約を入れるだけで、毎フレームは何も書き換えない
+  // (押さえ始めの約1秒でぐっと上がり、そのあとは高いところで細かくゆれ続ける)。
+  // 本体は毎フレーム holdSync(いま押さえているノーツの並び) を呼ぶ。並びから消えた音は、そこで短く消して止める。
+  // ★呼ばれなくなったとき(ポーズ・曲の終わり・画面を出た・タブを隠した)のために、最後の呼び出しから0.25秒で全部止める見張りを持つ。
+  //   鳴りっぱなしにはならない。見張りは音が鳴っているあいだだけ動く
+  // 大きさはタップ音量 × 「押さえている間の音の大きさ」。タップ音OFF・全体ミュート・0%では組まない。
+  // 鳴り続ける音なので、タップ音のいちばん大きい瞬間の半分ほど(書き出して測った実効値。0.013 ではタップの2倍あった)
+  const HOLD_VOICE_MAX=4,HOLD_WATCH_MS=250;
+  const holdVoices=new Map();let holdWatch=0,holdLastSync=0;
+  const holdNow=()=>typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
+  const holdStopVoice=(id,release=.09)=>{
+    const voice=holdVoices.get(id);if(!voice)return;
+    holdVoices.delete(id);
+    try{
+      const t=voice.audio.currentTime,g=voice.gain.gain;
+      g.cancelScheduledValues(t);g.setValueAtTime(Math.max(.0001,g.value),t);g.exponentialRampToValueAtTime(.0001,t+release);
+      voice.oscillators.forEach(o=>o.stop(t+release+.02));
+    }catch{voice.cleanup();}
+  };
+  const holdStopAll=(release=.09)=>{
+    for(const id of [...holdVoices.keys()])holdStopVoice(id,release);
+    if(holdWatch){clearInterval(holdWatch);holdWatch=0;}
+  };
+  const holdStartVoice=(audio,id,kind,level)=>{
+    const now=audio.currentTime,slide=kind==='SLIDE';
+    // HOLD は G3 → D5、SLIDE は少し高く C4 → G5 へ上がる
+    const f0=slide?261.63:196,f1=slide?783.99:587.33;
+    const a=audio.createOscillator(),b=audio.createOscillator(),lfo=audio.createOscillator();
+    const lfoDepth=audio.createGain(),filter=audio.createBiquadFilter(),gain=audio.createGain();
+    a.type='sawtooth';b.type='sawtooth';b.detune.setValueAtTime(14,now);
+    for(const o of [a,b]){o.frequency.setValueAtTime(f0,now);o.frequency.setTargetAtTime(f1,now,.42);}
+    // 細かいゆれ(ビブラート)。押さえ始めは無く、溜まるにつれて深く・速くなる
+    lfo.type='sine';lfo.frequency.setValueAtTime(6,now);lfo.frequency.setTargetAtTime(11,now+.2,.5);
+    lfoDepth.gain.setValueAtTime(0,now);lfoDepth.gain.setTargetAtTime(f1*.018,now+.25,.4);
+    lfo.connect(lfoDepth);lfoDepth.connect(a.frequency);lfoDepth.connect(b.frequency);
+    // くせのある低域通過で「ウィー」の母音っぽさを出す。明るさも高さと一緒に上がる
+    filter.type='lowpass';filter.Q.setValueAtTime(7,now);filter.frequency.setValueAtTime(520,now);filter.frequency.setTargetAtTime(slide?4400:3600,now,.45);
+    gain.gain.setValueAtTime(.0001,now);gain.gain.setTargetAtTime(level,now,.035);
+    a.connect(filter);b.connect(filter);filter.connect(gain);gain.connect(output(audio));
+    const oscillators=[a,b,lfo];
+    const cleanup=()=>{try{oscillators.forEach(o=>{try{o.stop();}catch{}o.disconnect();});lfoDepth.disconnect();filter.disconnect();gain.disconnect();}catch{}};
+    a.onended=cleanup;
+    oscillators.forEach(o=>o.start(now));
+    holdVoices.set(id,{audio,gain,oscillators,cleanup});
+  };
+  // held … いま押さえている HOLD/SLIDE のノーツの並び(index で見分ける)。空なら全部止める
+  const holdSync=held=>{
+    holdLastSync=holdNow();
+    const list=Array.isArray(held)?held:[];
+    if(!list.length){if(holdVoices.size)holdStopAll();return 0;}
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0||settings.holdVolume<=0||!rhythmAudioGloballyEnabled()){if(holdVoices.size)holdStopAll(.03);return 0;}
+    for(const id of holdVoices.keys()){if(id==='preview')continue;if(!list.some(note=>note&&note.index===id))holdStopVoice(id);}
+    const audio=context();
+    if(!audio||audio.state==='closed')return holdVoices.size;
+    for(const note of list){
+      if(!note||holdVoices.has(note.index)||holdVoices.size>=HOLD_VOICE_MAX)continue;
+      try{holdStartVoice(audio,note.index,rhythmNoteIsSlide(note)?'SLIDE':'HOLD',rhythmNoteSeLevel(.0032,settings.volume/100*settings.holdVolume/100));}catch{}
+    }
+    if(holdVoices.size&&!holdWatch&&typeof setInterval==='function'){
+      holdWatch=setInterval(()=>{if(holdNow()-holdLastSync>HOLD_WATCH_MS)holdStopAll();},HOLD_WATCH_MS/2);
+    }
+    return holdVoices.size;
+  };
+  // 設定画面の試聴用。1.2秒だけ溜めて止める
+  const previewHold=settings=>{
+    if(!settings.enabled||settings.volume<=0||settings.holdVolume<=0||!rhythmAudioGloballyEnabled())return false;
+    const audio=context();
+    if(!audio)return false;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    holdStopVoice('preview',.03);
+    try{holdStartVoice(audio,'preview','HOLD',rhythmNoteSeLevel(.0032,settings.volume/100*settings.holdVolume/100));}catch{return false;}
+    if(typeof setTimeout==='function')setTimeout(()=>holdStopVoice('preview',.12),1200);
+    return true;
+  };
+  // 設定画面の試聴。kind … 'tap' / 'flick' / 'end' / 'hold'
   // 作り置きがまだなら、作り終わってから鳴らす(はじめの1回だけ、ほんの少し遅れる)
   const preview=(previewSettings,kind='tap',judgment='MARVELOUS')=>{
     const settings=settingsFrom(previewSettings);
+    if(kind==='hold')return previewHold(settings);
     const run=()=>voice(settings,kind,judgment,kind==='flick'?settings.flickVolume/100:kind==='end'?settings.endVolume/100:1);
     if(settings.type==='CLASSIC'||ready(settings.type))return run();
     warm();
@@ -2045,7 +2125,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     });
     return true;
   };
-  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,_readSettings:readSettings};
+  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -20707,6 +20787,14 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     glowBegin();
     const kind=rhythmNoteIsSlide(note)?'SLIDE':'HOLD',depth=opts.depthScale||1;
     const w=Math.max(18,head.w*sizeScale),pulse=.5-.5*Math.cos(frameNow/140);
+    // 溜め具合(0→1)。押さえ始めから0.7秒かけて、柱が伸び・光が強くなる(2026-09-28・ユーザー「もうちょい押し続けてる感じにしたい」)
+    const charge=Math.min(1,Math.max(0,Number(opts.heldMs)||0)/700);
+    // 上へ立ちのぼる光(参考動画: 押さえているレーンの上が青白く光る)。焼いた縦のグラデーションを1枚貼るだけ
+    if(!lightweight){
+      const ch=head.cy*(.34+.22*charge)*(.94+.06*pulse),cw=w*1.04;
+      ctx.globalAlpha=(.42+.22*charge+.1*pulse)*opts.alpha;
+      ctx.drawImage(holdColumnSprite(kind).canvas,head.cx-cw/2,head.cy-ch,cw,ch);
+    }
     const sw=w*2.1*(1+.08*pulse),sh=72*depth*(1+.12*pulse);
     ctx.globalAlpha=(.8+.2*pulse)*opts.alpha;
     ctx.drawImage(holdSparkSprite(kind).canvas,head.cx-sw/2,head.cy-sh/2,sw,sh);
@@ -20718,10 +20806,20 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const fw=Math.max(w*1.2,70)*(.85+.2*pulse),fh=fw*.5;
     ctx.globalAlpha=(.45+.4*pulse)*opts.alpha;
     ctx.drawImage(hitFlareSprite().canvas,head.cx-fw/2,head.cy-fh/2,fw,fh);
-    // 細い縦の光の筋(バチバチ)。0.07秒ごとに場所と長さを替える。焼いた細い線を3本貼るだけ。演出量「ふつう」以上
+    // ノーツの左右のはしに立つ光の柱(参考動画でいちばん目立つ「押さえている」合図)。押さえているあいだずっと立ち、
+    // 溜まるほど高く明るくなる。細かくゆらぐだけで消えない。焼いた1枚を2本貼るだけ(演出量「最小」以外)
+    {
+      const pillar=holdPillarSprite(kind).canvas,ph=head.cy*(.22+.2*charge),pw=Math.max(16,24*depth);
+      for(const side of [-1,1]){
+        const flicker=.9+.1*holdRand(Math.floor(frameNow/60)*5+side+2),h=ph*flicker;
+        ctx.globalAlpha=Math.min(1,(.7+.3*charge)*flicker)*opts.alpha;
+        ctx.drawImage(pillar,head.cx+side*w*.5-pw/2,head.cy+4*depth-h,pw,h);
+      }
+    }
+    // 細い縦の光の筋(バチバチ)。0.07秒ごとに場所と長さを替える。焼いた細い線を2本貼るだけ(以前は3本。柱を足したぶん減らした)。演出量「多め」以上
     if(!lightweight&&effect!=='LIGHT'){
       const bolt=holdBoltSprite().canvas,seed=Math.floor(frameNow/70);
-      for(let i=0;i<3;i++){
+      for(let i=0;i<2;i++){
         const len=(26+holdRand(seed*7+i*5)*44)*depth,bx=head.cx+(holdRand(seed*3+i)-.5)*w*.9;
         ctx.globalAlpha=(.45+.55*holdRand(seed*11+i*3))*opts.alpha;
         ctx.drawImage(bolt,bx-4,head.cy-len,8,len*1.15);
@@ -20733,11 +20831,51 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         const t=cycle+i/SPARK_DOTS,phase=t-Math.floor(t),seed=Math.floor(t)*.61+i*.37,offset=(seed-Math.floor(seed))-.5;
         const size=10*(1-phase*.45);
         ctx.globalAlpha=(1-phase)*.95*opts.alpha;
-        ctx.drawImage(dot,head.cx+offset*w*.85-size/2,head.cy-phase*52*depth-size/2,size,size);
+        ctx.drawImage(dot,head.cx+offset*w*.85-size/2,head.cy-phase*(52+40*charge)*depth-size/2,size,size);
       }
     }
     ctx.globalAlpha=1;
     glowEnd();
+  };
+  // 押さえているノーツの左右に立つ光の柱。下(判定ライン)がいちばん明るく、上へ消える。白い芯と色のにじみ(16×128を1回だけ焼く)
+  const holdPillarSprite=kind=>{
+    const id=`holdpillar:${kind}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const W=16,H=128,s=makeSpriteCanvas(W,H),c=s.ctx,tint=HOLD_SPARK_TINT[kind]||HOLD_SPARK_TINT.HOLD;
+    const glow=c.createLinearGradient(0,H,0,0);glow.addColorStop(0,`rgba(${tint},.9)`);glow.addColorStop(.35,`rgba(${tint},.45)`);glow.addColorStop(1,`rgba(${tint},0)`);
+    c.fillStyle=glow;c.fillRect(3,0,W-6,H);c.globalAlpha=.4;c.fillRect(0,0,W,H);c.globalAlpha=1;
+    const core=c.createLinearGradient(0,H,0,0);core.addColorStop(0,'rgba(255,255,255,1)');core.addColorStop(.5,'rgba(255,255,255,.7)');core.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=core;c.fillRect(W/2-1.5,0,3,H);
+    sprites.set(id,s);return s;
+  };
+  // 押さえているレーンの上へ立ちのぼる光。下ほど明るく、左右のはしはやわらかく消える(32×128を1回だけ焼く)
+  const holdColumnSprite=kind=>{
+    const id=`holdcolumn:${kind}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const W=32,H=128,s=makeSpriteCanvas(W,H),c=s.ctx,tint=HOLD_SPARK_TINT[kind]||HOLD_SPARK_TINT.HOLD;
+    const g=c.createLinearGradient(0,H,0,0);g.addColorStop(0,`rgba(${tint},.7)`);g.addColorStop(.4,`rgba(${tint},.28)`);g.addColorStop(1,`rgba(${tint},0)`);
+    c.fillStyle=g;c.fillRect(0,0,W,H);
+    // 左右のはしを消す(外側から内側へ、透明を重ねて削る)
+    c.globalCompositeOperation='destination-out';
+    const side=c.createLinearGradient(0,0,W,0);side.addColorStop(0,'rgba(0,0,0,1)');side.addColorStop(.18,'rgba(0,0,0,0)');side.addColorStop(.82,'rgba(0,0,0,0)');side.addColorStop(1,'rgba(0,0,0,1)');
+    c.fillStyle=side;c.fillRect(0,0,W,H);c.globalCompositeOperation='source-over';
+    sprites.set(id,s);return s;
+  };
+  // 押さえている帯の上を、細い光の筋が判定ラインへ吸い込まれていく(2026-09-28・参考動画「押し続けている感じ」)。
+  // 帯の形に沿った細い台形を3本塗るだけなので、帯からはみ出さない。0.45秒で1本が判定ラインへ届く
+  const PRESS_FLOW_LINES=3,PRESS_FLOW_MS=450;
+  const drawPressFlow=(edgeAt,top,bottom,color,depth)=>{
+    const span=Math.min(bottom-top,Math.max(60,bottom*.5));
+    if(!(span>8))return;
+    const base=ctx.globalAlpha;ctx.fillStyle=color;
+    for(let i=0;i<PRESS_FLOW_LINES;i++){
+      const t=frameNow/PRESS_FLOW_MS+i/PRESS_FLOW_LINES,u=t-Math.floor(t),y=bottom-(1-u)*span,h=(2+3*u)*depth;
+      const a=edgeAt(y-h/2),b=edgeAt(y+h/2);
+      if(!a||!b)continue;
+      ctx.globalAlpha=base*u*u*.9;
+      ctx.beginPath();ctx.moveTo(a[0],y-h/2);ctx.lineTo(a[1],y-h/2);ctx.lineTo(b[1],y+h/2);ctx.lineTo(b[0],y+h/2);ctx.closePath();ctx.fill();
+    }
+    ctx.globalAlpha=base;
   };
   // 押さえている所の光の筋に使う、決まった並びの乱数(同じ時刻なら同じ値。毎フレーム Math.random を引かない)
   const holdRand=n=>{const x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x);};
@@ -20774,6 +20912,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.fillStyle=g;ctx.fill();
     // 押さえている最中は帯を明るくする(押せている合図の1つ。以前は .22)
     if(pressed&&!failed){ctx.fillStyle='rgba(236,253,245,.34)';ctx.fill();}
+    if(pressed&&!failed&&effect!=='MINIMAL'&&!lightweight){
+      const edgeAt=y=>{for(let i=1;i<band.length;i++){const p=band[i-1],q=band[i];if(y>=p.y&&y<=q.y){const k=q.y>p.y?(y-p.y)/(q.y-p.y):0;return sizeX(p.left+(q.left-p.left)*k,p.right+(q.right-p.right)*k);}}return null;};
+      drawPressFlow(edgeAt,top,bottom,'rgb(236,253,245)',opts.depthScale||1);
+    }
     // 帯の左右のふちを明るい線でなぞる(2026-09-27・参考動画「帯のふちが明るく光る」)。暗い道の上で帯が浮いて見える
     if(!failed){
       ctx.lineWidth=1.6;ctx.lineJoin='round';ctx.strokeStyle='rgba(236,253,245,.8)';
@@ -20809,6 +20951,11 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.lineWidth=failed?1:1.6;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':'rgba(243,232,255,.82)';ctx.stroke();
     // 押さえている最中は帯を明るくする(2026-09-26。以前はSLIDEだけ何も変わらなかった)。外周の道すじをそのまま塗る
     if(pressed&&!failed){ctx.fillStyle='rgba(243,232,255,.30)';ctx.fill();}
+    if(pressed&&!failed&&effect!=='MINIMAL'&&!lightweight){
+      let top=Infinity,bottom=-Infinity;quads.forEach(q=>{top=Math.min(top,q.y0,q.y1);bottom=Math.max(bottom,q.y0,q.y1);});
+      const edgeAt=y=>{for(const q of quads){const lo=Math.min(q.y0,q.y1),hi=Math.max(q.y0,q.y1);if(y>=lo&&y<=hi){const k=q.y1!==q.y0?(y-q.y0)/(q.y1-q.y0):0;return [q.l0+(q.l1-q.l0)*k,q.r0+(q.r1-q.r0)*k];}}return null;};
+      drawPressFlow(edgeAt,top,bottom,'rgb(243,232,255)',opts.depthScale||1);
+    }
     // ノーツの動き: 帯の上を、判定ライン(画面の下)へ向かって光の波が流れる。明るさは画面の高さで決めるので(波長110px・0.5秒で1波長)、
     // 区切りごとに上端と下端の明るさを縦のグラデーションでつなげば、区切りの継ぎ目で段にならない
     if(motion&&!failed){
@@ -21080,7 +21227,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       for(const kind of ['HOLD','SLIDE','FLICK'])glowSprite(`end:${kind}:${low?'low':'full'}`,4,END_BAR_GLOWS[kind][low?'low':'full']);
       arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
       // 押さえている最中の光(演奏の途中で新しく絵を作らないよう、ここで焼いておく)
-      if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);}sparkDotSprite();hitFlareSprite();holdBoltSprite();}
+      if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);holdPillarSprite(kind);holdColumnSprite(kind);}sparkDotSprite();hitFlareSprite();holdBoltSprite();}
       // 叩いたときの光(canvas で描くときだけ)
       if(effect!=='MINIMAL'&&!options.lightweight)warmHitSprites();
       // WebGL のときは、焼いた絵を演奏の前に GPU へ渡しておく
@@ -21180,7 +21327,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(typeof ctx.setBloom==='function')ctx.setBloom(!!options.bloom&&additiveGlow&&effect!=='MINIMAL'&&!lightweight);
       return true;
     },
-    // ノーツ1個。geo は rhythmNoteCanvasGeometry の結果。opts: {failed,monster,wide,pressed,alpha,pop(0..1|null),depthScale,brightness,hideBody}
+    // ノーツ1個。geo は rhythmNoteCanvasGeometry の結果。opts: {failed,monster,wide,pressed,heldMs(押さえ始めからの時間),alpha,pop(0..1|null),depthScale,brightness,hideBody}
     drawNote(note,geo,opts){
       if(!ctx||!geo)return;
       touch();

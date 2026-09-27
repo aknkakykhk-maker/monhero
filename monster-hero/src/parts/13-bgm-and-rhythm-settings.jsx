@@ -509,6 +509,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // 2026-09-27(ユーザー指示「タップ音を他の音ゲーを見習って / 設定で色々変えれるように」)。どれも新しい項目で、
   // 保存値に無い人は既定で補う。判定で音を変える=する、フリック音・ロングの終わりの音=タップ音量の100%、空打ちの音=鳴らす
   noteSeJudgeVary:true, noteSeFlickVolume:100, noteSeEndVolume:100, noteSeEmptyEnabled:true,
+  // ホールド・スライドを押さえている間の「ウィーン」(溜める音)の大きさ。タップ音量に対する%。0で鳴らさない(2026-09-28)
+  noteSeHoldVolume:100,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,
@@ -595,6 +597,7 @@ const normalizeRhythmSettings = value => {
     noteSeJudgeVary:bool('noteSeJudgeVary'), noteSeEmptyEnabled:bool('noteSeEmptyEnabled'),
     noteSeFlickVolume:rhythmFiniteStep(source.noteSeFlickVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeFlickVolume),
     noteSeEndVolume:rhythmFiniteStep(source.noteSeEndVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeEndVolume),
+    noteSeHoldVolume:rhythmFiniteStep(source.noteSeHoldVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeHoldVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
     lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'),
