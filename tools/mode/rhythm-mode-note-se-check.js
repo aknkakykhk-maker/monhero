@@ -319,6 +319,16 @@ check('touchcancel/pointercancelには終端SEを追加しない',!releaseSource
   //   見本は音の7〜8割が 6.4〜12.8kHz、約30msで膨らんで150msほどで消える。曲に対する大きさも見本に合わせて上げた
   const standardTap=source.slice(source.indexOf('  STANDARD:Object.freeze({'),source.indexOf('  CLAP:Object.freeze({'));
   check('スタンダードのタップ音は、高いきらめき(8kHzあたり)をゆっくり減らす形',/K\.noise\('bandpass',8300\*s,7800\*s,1\.7,\.95,0,\{attack:\.02,tau:\.07\*L\}\)/.test(standardTap));
+  // 2026-09-28: ほかの4セットも同じ作り(持ち味の音＋叩いた瞬間の「チッ」＋ゆっくり減る高いきらめき＋空気感)にした
+  {
+    const designs=source.slice(source.indexOf('const RHYTHM_NOTE_SE_DESIGNS = Object.freeze({'),source.indexOf('const RHYTHM_NOTE_SE_RENDER_SECONDS'));
+    const lacking=['STANDARD','CLAP','DRUM','WOOD','BELL'].filter(id=>{
+      const start=designs.indexOf(`  ${id}:Object.freeze({`),block=designs.slice(start,designs.indexOf('\n  }),',start));
+      const tap=block.slice(block.indexOf('tap:'),block.indexOf('flick:'));
+      return !(/K\.noise\('bandpass',8500,8500,\.8,/.test(tap)&&/K\.noise\('bandpass',[^;]*tau:/.test(tap)&&/K\.noise\('highpass',1\d000,/.test(tap));
+    });
+    check('どのセットのタップ音も、叩いた瞬間の「チッ」・ゆっくり減るきらめき・空気感を持つ',lacking.length===0,lacking.join(','));
+  }
   check('作り置きの大きさは見本に合わせた(タップ .3)',source.includes('const RHYTHM_NOTE_SE_TARGET_RMS = Object.freeze({ tap:.3, flick:.28, end:.28 });'));
   check('空打ちはクラシック以外で明るい「シャッ」(クラシックはこれまでの音)',source.includes('filter.frequency.setValueAtTime(classic?2800:7000,now);'));
   const renderText=source.slice(source.indexOf('const renderOne=('),source.indexOf('const renderBank='));

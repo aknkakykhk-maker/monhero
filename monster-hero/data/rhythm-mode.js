@@ -1580,82 +1580,105 @@ const RHYTHM_NOTE_SE_DESIGNS = Object.freeze({
       if(!B)[7375,9722,10950].forEach(f=>K.tone('sine',f*s,f*s,.07,0,{attack:.015,tau:.05*L}));
       K.room(P?.2:B?.06:.1);},
   }),
+  // ===== ここから下の4セットも、スタンダードと同じ作り(2026-09-28・ユーザー指示「同じような作りで他の音のレベルも上げて」) =====
+  // 持ち味の音(手拍子・太鼓・木・鉄琴)＋ 叩いた瞬間の「チッ」＋ 高いきらめき(8kHzあたり)をゆっくり減らす ＋ いちばん上の空気感 ＋ 短い響き。
+  // 見本は高い帯域が7〜8割。持ち味を残すため、ここでは高い帯域を4〜6割に抑えている
   CLAP:Object.freeze({
-    tap:(K,g)=>{const {P,B}=rhythmSeGrade(g),f=B?850:g==='GREAT'?1000:1150;
+    tap:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.55:g==='GREAT'?.8:1,f=1150*s;
       // 手拍子は、手のひらが何か所かで少しずつずれて当たる。短い「パ」を3つ重ねてから「ンッ」と余韻
-      [0,.009,.019].slice(0,B?2:3).forEach(at=>K.noise('bandpass',f,f,.9,.6,.007,{at}));
-      K.noise('bandpass',f*1.1,f*.9,.8,.75,B?.06:.1,{at:B?.017:.027});
-      K.noise('highpass',3200,3200,.7,.3,.04,{at:.027});
-      if(P)K.tone('triangle',2400,2250,.12,.03,{at:.027});
-      K.room(P?.26:B?.1:.18);},
-    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
-      K.noise('bandpass',1800*s,9000*s,1.6,.7,B?.07:.11,{attack:.014});
-      K.noise('bandpass',1200,1000,.8,.35,.05,{at:.02});
-      if(P)K.tone('sine',4699,6272,.08,.12,{at:.03,glide:.05});
+      [0,.009,.019].slice(0,B?2:3).forEach(at=>K.noise('bandpass',f,f,.9,.55,.007,{at}));
+      K.noise('bandpass',f*1.1,f*.9,.8,.6,0,{at:B?.017:.027,tau:.03*L});
+      K.noise('bandpass',2600*s,2400*s,1.2,.5,.02,{at:.019});                  // パンッの割れる音
+      K.noise('bandpass',8500,8500,.8,.55,.008,{at:.019});                      // チッ
+      K.noise('bandpass',8000*s,7600*s,1.5,.7,0,{at:.02,attack:.015,tau:.06*L}); // きらめき
+      K.noise('highpass',11000,11000,.7,P?.2:.1,0,{at:.02,attack:.015,tau:.05*L});
       K.room(P?.24:B?.08:.16);},
-    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
-      K.noise('bandpass',1600*s,1400*s,1,.7,B?.05:.07);
-      K.noise('highpass',5000,5000,.7,.3,.02);
-      K.tone('sine',3136*s,3136*s,.14,.12,{at:.004});
-      if(P)K.tone('sine',6272,6272,.07,.16,{at:.01});
-      K.room(P?.24:.12);},
+    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.55:g==='GREAT'?.8:1;
+      K.noise('bandpass',1200*s,1100*s,.9,.5,.008);
+      K.noise('bandpass',8500,8500,.8,.5,.008);
+      K.noise('bandpass',2500*s,10000*s,1.4,.95,0,{attack:.012,tau:.05*L});     // シュッ(下から上へ抜ける)
+      K.noise('bandpass',1150*s,1000*s,.8,.35,0,{at:.02,tau:.025*L});
+      K.noise('highpass',11000,11000,.7,P?.3:.15,0,{attack:.025,tau:.05*L});
+      K.room(P?.24:B?.08:.16);},
+    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.55:g==='GREAT'?.8:1;
+      K.noise('bandpass',1500*s,1300*s,1,.7,0,{tau:.025*L});
+      K.noise('bandpass',3000*s,2800*s,1.2,.5,.015);
+      K.noise('bandpass',8500,8500,.8,.6,.008);
+      K.noise('bandpass',8800*s,8400*s,1.6,.7,0,{attack:.012,tau:.055*L});
+      K.noise('highpass',11500,11500,.7,P?.2:.1,0,{attack:.012,tau:.045*L});
+      K.room(P?.22:.1);},
   }),
   DRUM:Object.freeze({
-    tap:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),d=B?.1:g==='GREAT'?.13:.16;
-      K.tone('sine',200*s,112*s,.95,d,{glide:.035});      // 皮のドン
-      K.tone('sine',318*s,180*s,.3,d*.5,{glide:.03});     // 皮のゆらぎ(整数倍でない倍音)
-      K.noise('lowpass',1400,900,.7,.4,.03);              // 叩いた面の音
-      K.noise('highpass',3000,3000,.7,P?.25:.12,.008);    // バチの当たり
-      K.room(P?.14:.08);},
-    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
+    tap:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.55:g==='GREAT'?.8:1;
+      K.tone('sine',200*s,112*s,.7,0,{glide:.035,tau:.055*L});              // 皮のドン
+      K.tone('sine',318*s,180*s,.28,0,{glide:.03,tau:.03*L});              // 皮のゆらぎ(整数倍でない倍音)
+      K.noise('lowpass',1400,900,.7,.4,.03);                              // 叩いた面の音
+      K.noise('bandpass',3200*s,3000*s,1.2,.35,.012);                      // バチの当たり
+      K.noise('bandpass',8500,8500,.8,1.1,.008);                           // チッ
+      K.noise('bandpass',7600*s,7200*s,1.5,1.3,0,{attack:.015,tau:.06*L}); // 響き線のようなきらめき
+      K.noise('highpass',11000,11000,.7,P?.35:.17,0,{attack:.015,tau:.05*L});
+      K.room(P?.16:.08);},
+    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.55:g==='GREAT'?.8:1;
       // 太鼓のふち(カッ)と、払った風
-      K.tone('triangle',1900*s,1750*s,.3,B?.025:.035);
-      K.noise('bandpass',3600*s,3200*s,2,.55,.03);
-      K.noise('bandpass',1500*s,6000*s,1.6,.3,.08,{attack:.01});
-      if(P)K.noise('highpass',7000,7000,.7,.2,.01);
-      K.room(P?.14:.08);},
-    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
-      K.tone('sine',260*s,150*s,.8,B?.08:.12,{glide:.03});
-      K.tone('triangle',1900*s,1800*s,.18,.03,{at:.002});
+      K.tone('triangle',1900*s,1750*s,.4,0,{tau:.012*L});
+      K.noise('bandpass',3600*s,3200*s,2,.6,.03);
+      K.noise('bandpass',8500,8500,.8,.5,.008);
+      K.noise('bandpass',2500*s,9000*s,1.5,1.1,0,{attack:.01,tau:.045*L});
+      K.noise('highpass',11000,11000,.7,P?.25:.12,0,{attack:.02,tau:.045*L});
+      K.room(P?.16:.08);},
+    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.55:g==='GREAT'?.8:1;
+      K.tone('sine',260*s,150*s,.75,0,{glide:.03,tau:.045*L});
+      K.tone('triangle',1900*s,1800*s,.25,0,{at:.002,tau:.012*L});
       K.noise('lowpass',1800,1200,.7,.35,.025);
-      if(P)K.noise('highpass',6000,6000,.7,.2,.01);
-      K.room(P?.14:.08);},
+      K.noise('bandpass',8500,8500,.8,.5,.008);
+      K.noise('bandpass',8200*s,7800*s,1.5,1.1,0,{attack:.012,tau:.05*L});
+      K.noise('highpass',11000,11000,.7,P?.15:.07,0,{attack:.012,tau:.045*L});
+      K.room(P?.16:.08);},
   }),
   WOOD:Object.freeze({
-    tap:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),f=1250*s;
-      K.modes(f,[1,2.57,4.2],[.75,.3,.14],[B?.045:.065,.03,.014]);   // 木の鳴り(倍音が整数倍でない)
+    tap:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.55:g==='GREAT'?.8:1,f=1250*s;
+      K.modes(f,[1,2.57,4.2],[.75,.3,.14],[B?.045:.065,.03,.014]);            // 木の鳴り(倍音が整数倍でない)
       K.noise('bandpass',3000,3000,1,.35,.008);
-      if(P)K.noise('highpass',6000,6000,.7,.22,.006);
-      K.room(P?.14:.07);},
-    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
+      K.noise('bandpass',8500,8500,.8,.8,.008);                               // チッ
+      K.noise('bandpass',7200*s,6800*s,1.6,1.25,0,{attack:.012,tau:.07*L});   // きらめき
+      K.noise('highpass',11000,11000,.7,P?.25:.12,0,{attack:.012,tau:.055*L});
+      K.room(P?.18:.08);},
+    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.55:g==='GREAT'?.8:1;
       K.modes(1500*s,[1,2.57],[.55,.2],[.04,.02]);
       K.modes(2000*s,[1,2.57],[.5,.18],[.05,.025],{at:.028});
-      K.noise('bandpass',2000*s,7000*s,1.6,.25,.07,{attack:.01});
-      if(P)K.noise('highpass',6500,6500,.7,.18,.006,{at:.028});
-      K.room(P?.16:.08);},
-    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
+      K.noise('bandpass',8500,8500,.8,.45,.008);
+      K.noise('bandpass',2500*s,9000*s,1.5,.6,0,{attack:.01,tau:.045*L});
+      K.noise('highpass',11000,11000,.7,P?.2:.1,0,{attack:.02,tau:.045*L});
+      K.room(P?.18:.08);},
+    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.55:g==='GREAT'?.8:1;
       K.modes(1680*s,[1,2.57,4.2],[.7,.28,.12],[B?.05:.08,.035,.015]);
       K.noise('bandpass',3500,3500,1,.3,.008);
-      if(P)K.tone('sine',5040,5040,.06,.12,{at:.004});
-      K.room(P?.16:.08);},
+      K.noise('bandpass',8500,8500,.8,.5,.008);
+      K.noise('bandpass',8000*s,7600*s,1.6,.9,0,{attack:.01,tau:.06*L});
+      K.noise('highpass',11000,11000,.7,P?.15:.07,0,{attack:.01,tau:.045*L});
+      K.room(P?.18:.08);},
   }),
   BELL:Object.freeze({
-    tap:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),f=2093*s,L=B?.5:g==='GREAT'?.75:1;
-      K.modes(f,[1,2.76,5.4],[.6,.24,.1],[.4*L,.14*L,.05*L]);         // 鉄琴(金属の板の鳴り方)
-      K.noise('highpass',6500,6500,.7,.3,.005);                        // マレットの当たり
-      if(P)K.modes(f*1.0035,[1],[.18],[.35]);                          // わずかにずらして重ね、きらめかせる
-      K.room(P?.28:B?.1:.16);},
-    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.5:1;
-      K.modes(2637*s,[1,2.76],[.5,.16],[.14*L,.06*L]);
-      K.modes(3520*s,[1,2.76],[.5,.14],[.22*L,.07*L],{at:.04});
-      K.noise('bandpass',2500*s,8000*s,1.6,.22,.08,{attack:.012});
-      if(P)K.modes(5274,[1],[.12],[.2],{at:.05});
-      K.room(P?.3:B?.1:.18);},
-    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.5:1;
-      K.modes(2637*s,[1,2.76],[.5,.18],[.35*L,.1*L]);
-      K.modes(3951*s,[1],[.3],[.3*L],{at:.006});
-      K.noise('highpass',6500,6500,.7,.25,.005);
-      K.room(P?.3:.14);},
+    tap:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.55:g==='GREAT'?.8:1,f=2093*s;
+      // 鉄琴(金属の板の鳴り方)。消え方は tau でゆっくり
+      [[1,.55,.12],[2.76,.28,.06],[5.4,.16,.035],[8.93,.1,.02]].forEach(([r,p,t])=>K.tone('sine',f*r,f*r,p,0,{attack:.0008,tau:t*L}));
+      K.noise('bandpass',8500,8500,.8,.8,.006);                               // マレットの当たり
+      K.noise('bandpass',9000*s,8600*s,1.7,1.2,0,{attack:.012,tau:.065*L});   // きらめき
+      K.noise('highpass',11000,11000,.7,P?.25:.12,0,{attack:.012,tau:.05*L});
+      if(P)K.tone('sine',f*1.0035,f*1.0035,.18,0,{tau:.1});                  // わずかにずらして重ね、きらめかせる
+      K.room(P?.26:B?.1:.16);},
+    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.55:g==='GREAT'?.8:1;
+      [[2637,0],[3520,.04]].forEach(([f,at])=>[[1,.45,.06],[2.76,.15,.03]].forEach(([r,p,t])=>K.tone('sine',f*s*r,f*s*r,p,0,{at,attack:.0008,tau:t*L})));
+      K.noise('bandpass',8500,8500,.8,.4,.006);
+      K.noise('bandpass',2500*s,9500*s,1.6,.8,0,{attack:.012,tau:.045*L});
+      K.noise('highpass',11000,11000,.7,P?.2:.1,0,{attack:.02,tau:.05*L});
+      K.room(P?.28:B?.1:.18);},
+    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.55:g==='GREAT'?.8:1;
+      [[2637,1,.5,.1],[2637,2.76,.18,.04],[3951,1,.3,.08]].forEach(([f,r,p,t])=>K.tone('sine',f*s*r,f*s*r,p,0,{attack:.0008,tau:t*L}));
+      K.noise('bandpass',8500,8500,.8,.45,.006);
+      K.noise('bandpass',9500*s,9000*s,1.7,.8,0,{attack:.01,tau:.06*L});
+      K.noise('highpass',11500,11500,.7,P?.15:.07,0,{attack:.01,tau:.045*L});
+      K.room(P?.28:.14);},
   }),
 });
 // 作り置きの長さ(秒)と、そろえる大きさ(叩いた直後50msの平均。音量100でおおむね .1 になる)
