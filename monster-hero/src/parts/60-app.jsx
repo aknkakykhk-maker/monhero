@@ -3711,7 +3711,10 @@ function MonsterHeroGame() {
   // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。保存が無いうちは「まだ見ていない」。6レーン化の案内が出ているあいだは出さない(1つずつ)
   const RHYTHM_LOOK_INTRO_KEY = 'mh_rhythm_look_intro_seen_v1';
   const [rhythmLookIntroSeen, setRhythmLookIntroSeen] = useState(true);
-  const rhythmLookIntroVisible = !rhythmLookIntroSeen && !rhythmSixLaneIntroVisible;
+  // ★見た目を自分で調整している人には出さない。案内の「華やかにしてみる」はその場で保存するので、
+  //   調整した値が上書きされ、元に戻す手段が無かった(2026-09-27 の点検で見つけた)。
+  //   見た目がはじめのまま(おまかせの「標準」と同じ)の人だけに出す
+  const rhythmLookIntroVisible = !rhythmLookIntroSeen && !rhythmSixLaneIntroVisible && rhythmLookPresetOf(rhythmSettings) === 'STANDARD';
   const dismissRhythmLookIntro = () => { setRhythmLookIntroSeen(true); storeSet(RHYTHM_LOOK_INTRO_KEY, true, false); };
   // ---- オート強化の使い方案内(CLAUDE.md ⑤) ----
   // 「強化ポイントが入るたび裏で自動的に振られる」は、遊んでいるだけでは気づけない仕組み。
@@ -5226,6 +5229,9 @@ function MonsterHeroGame() {
       //   更新のお知らせ(助手の告知)を新規プレイヤーには既読で渡すのと同じ考え方。
       //   開催中のイベントの会話はいまの話なので、ここには入れない(今までどおり流れる)。
       //   お知らせの会話を足したら、下の一覧へも足すこと
+      // 見た目の設定の案内も「できるようになったよ」というお知らせなので、新しく始めた人には出さない
+      // (見た目のおまかせはオプションにいつでもある)
+      if (!wasOnboarded) { setRhythmLookIntroSeen(true); try { await storeSet(RHYTHM_LOOK_INTRO_KEY, true, false); } catch {} }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
         const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID,
@@ -15121,7 +15127,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
         }}/>}
 
-        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
+        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
 
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。
             出すのは Monster Hero 1曲 と EASY/NORMAL/HARD だけで、デバッグ用の曲・譜面制作UIは出さない。
@@ -15140,7 +15146,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dismissRhythmSixLaneIntro={dismissRhythmSixLaneIntro}
             dismissRhythmLookIntro={dismissRhythmLookIntro}
             rhythmLookIntroVisible={rhythmLookIntroVisible}
-            onTryRhythmLook={async presetId=>{const preset=RHYTHM_LOOK_PRESETS.find(item=>item.id===presetId);if(!preset)return;const saved=await saveRhythmSettings({...rhythmSettings,...preset.values});setRhythmSettings(saved);dismissRhythmLookIntro();}}
+            onTryRhythmLook={async presetId=>{const preset=RHYTHM_LOOK_PRESETS.find(item=>item.id===presetId);if(!preset)return;const saved=await saveRhythmSettings({...rhythmSettings,...preset.values});setRhythmSettings(saved);rhythmResetAutoEffect();dismissRhythmLookIntro();}}
             dismissRhythmEventNotice={dismissRhythmEventNotice}
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}

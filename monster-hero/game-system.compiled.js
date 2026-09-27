@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f36c3f2d027901de
+// source-sha256: ec2dbd5dd1198718
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 09:25";
+const BUILD_DATE = "2026-09-27 09:36";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5381,6 +5381,8 @@ const Audio_ = (() => {
     toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
+  const SONG_BUFFER_KEEP = 3;
+  const songBufferOrder = [];
   let bgmSource = null,
     bgmSourceKey = null,
     bgmRequest = 0,
@@ -5395,6 +5397,7 @@ const Audio_ = (() => {
     pageHidden = false;
   let enabled = false;
   const activeRhythmGains = new Set();
+  const rhythmBuffersInUse = new Set();
   const applyRhythmMute = () => {
     activeRhythmGains.forEach(entry => {
       entry.node.gain.value = enabled ? entry.raw : 0;
@@ -5644,6 +5647,29 @@ const Audio_ = (() => {
       ng(e);
     }
   });
+  const bufferInUse = url => {
+    const buffer = buffers.get(url);
+    if (!buffer) return false;
+    if (bgmSource && bgmSource.buffer === buffer) return true;
+    if (previewSource && previewSource.buffer === buffer) return true;
+    if (rhythmBuffersInUse.has(buffer)) return true;
+    const scene = currentKey ? resolveTrack(currentKey) : null;
+    return !!(scene && scene.src === url);
+  };
+  const rememberSongBuffer = url => {
+    const at = songBufferOrder.indexOf(url);
+    if (at >= 0) songBufferOrder.splice(at, 1);
+    songBufferOrder.push(url);
+    for (let i = 0; songBufferOrder.length > SONG_BUFFER_KEEP && i < songBufferOrder.length - 1;) {
+      const old = songBufferOrder[i];
+      if (bufferInUse(old)) {
+        i++;
+        continue;
+      }
+      songBufferOrder.splice(i, 1);
+      buffers.delete(old);
+    }
+  };
   const loadBuffer = url => {
     if (buffers.has(url)) return Promise.resolve(buffers.get(url));
     if (loadingBuffers.has(url)) return loadingBuffers.get(url);
@@ -5754,6 +5780,7 @@ const Audio_ = (() => {
     resumeAudioCtxNoWait();
     try {
       const buffer = await loadBuffer(track.src);
+      rememberSongBuffer(track.src);
       if (request !== previewRequest || previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
       const ctx = await ensureAudioCtxRunning();
       if (!ctx) return false;
@@ -5817,6 +5844,8 @@ const Audio_ = (() => {
     ctxTimeMark = null;
     buffers.clear();
     loadingBuffers.clear();
+    songBufferOrder.length = 0;
+    rhythmBuffersInUse.clear();
     try {
       if (old && old.state !== 'closed') await old.close();
     } catch (e) {}
@@ -5892,7 +5921,9 @@ const Audio_ = (() => {
     try {
       const buffer = await loadBuffer(track.src),
         ctx = await ensureAudioCtxRunning();
+      rememberSongBuffer(track.src);
       if (!ctx) return null;
+      rhythmBuffersInUse.add(buffer);
       let source = null,
         startedAt = ctx.currentTime,
         offsetSeconds = 0,
@@ -6000,6 +6031,7 @@ const Audio_ = (() => {
           source = null;
           stopSource(old);
           dropGainEntry();
+          rhythmBuffersInUse.delete(buffer);
         }
       };
     } catch (e) {
@@ -6160,6 +6192,8 @@ const Audio_ = (() => {
       pageHidden,
       bgmVolumePct,
       seVolumePct,
+      bufferCount: buffers.size,
+      songBufferCount: songBufferOrder.length,
       ctxState: ctx ? ctx.state : 'none',
       sampleRate: ctx ? Math.round(ctx.sampleRate) : 0,
       stalled: ctx && !pageHidden ? ctxClockStalled() : false,
@@ -21246,18 +21280,18 @@ const RhythmOptions = ({
   })), !rhythmLookPresetOf(draft) && React.createElement("p", {
     "data-rhythm-look-custom": true,
     className: "mt-1.5 text-center text-[10px] font-bold text-cyan-100/80"
-  }, "いまは自分で選んだ組み合わせです")), '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。', {
+  }, "いまは自分で選んだ組み合わせです")), '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります。にじむ光は描画方式が WebGL のときだけ効きます）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。', {
     full: true
   }), field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
     full: true
-  }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、画面の下では観客のペンライトが拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
+  }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
   }), field('道の演出', toggle('roadFx'), '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。'), field('判定の演出', toggle('judgmentFx'), 'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('コンボの節目', toggle('comboMilestoneFx'), 'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。'), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
   }), field('画質', segments('renderQuality', RHYTHM_RENDER_QUALITY_LABELS), '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。'), field('描画方式', React.createElement(React.Fragment, null, segments('noteDrawMode', RHYTHM_NOTE_DRAW_LABELS), React.createElement("p", {
     "data-rhythm-draw-mode-now": true,
     className: "mt-1.5 text-center text-[10px] font-bold text-cyan-100/80"
-  }, "この端末では「", rhythmWebglNotesActive(draft.noteDrawMode) ? 'WebGL' : 'Canvas', "」で描きます")), 'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。見た目・判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。ライブ背景も GPU で1枚にまとめて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。ノーツの光や叩いたときの光は、重なるほど白く輝くように描きます（光の見え方だけが「Canvas」と少し違います）。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
+  }, "この端末では「", rhythmWebglNotesActive(draft.noteDrawMode) ? 'WebGL' : 'Canvas', "」で描きます")), 'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。形・色・判定・スコア・叩く位置はどれでも変わりません（光の輝き方と「にじむ光」だけは、WebGL のときに変わります）。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。ライブ背景も GPU で1枚にまとめて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。ノーツの光や叩いたときの光は、重なるほど白く輝くように描きます（光の見え方だけが「Canvas」と少し違います）。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。'), field('にじむ光', toggle('noteBloom'), 'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。'), field('モンスターノーツの演出', segments('monsterNoteEffect', RHYTHM_MONSTER_EFFECT_LABELS), 'モンスターノーツを取ったときの演出の強さです。重い順に「多め」「標準」「少なめ」「最小」の4段で、既定は「標準」です。\n「多め」＝画面全体が金色に光り、粒も大きく、そのマスモンが大きく跳ねます。\n「標準」＝全画面の光をやめます（いちばん重いのがこの描き直しです）。粒と跳ねは残ります。\n「少なめ」＝光る粒もふつうのノーツと同じになり、跳ねもやめます。\n「最小」＝ノーツに乗るマスモンの絵を出さなくなります。この絵だけはふつうのノーツと違って、流れているあいだずっと位置と大きさを書き換えているので、ここを止めるといちばん効きます。さらに、取ったその瞬間に走っていた両サイドのマスモンへの反応（見た目の切り替えと700msのタイマー）も丸ごとやめます。どれがモンスターノーツかは金色の粒で分かります。能力名の大きな表示も出ません。\nどの段でも、音・振動・能力の効果はそのまま残ります（効いていることは左上のバッジでも分かります）。', {
     full: true
   }), field('軽量モード', toggle('lightweightMode'), '演出量「最小」と同じところまで演出を止めたうえで、さらに細かい動きも切ります。止まるのは、判定ラインで弾ける光と画面のフラッシュ、判定文字が弾む動きと金・虹が流れる動き、コンボ数が跳ねる動きと枠の脈動、100コンボごとのお祝いとフルコンボの大きな表示、モンスターノーツの光と能力名の弾み、判定ラインが拍に合わせて脈打つ動き、両サイドのマスモンの跳ね、明るさがじわっと変わる動きです。判定・判定窓・スコア・ライフ・譜面・音は一切変わりません。端末が熱くなるときや、演出量「標準」でもカクつくときに使ってください。', {
     full: true
@@ -23374,6 +23408,9 @@ const RhythmHudJudgment = ({
 const rhythmAutoEffectMemory = {
   level: 0
 };
+const rhythmResetAutoEffect = () => {
+  rhythmAutoEffectMemory.level = 0;
+};
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -23393,9 +23430,13 @@ const RhythmTapTest = ({
   const settingsLiveRef = useRef(settings);
   settingsLiveRef.current = settings;
   const stepEffectCapRef = useRef(null);
-  const [effectCapNotice, setEffectCapNotice] = useState(0);
+  const [effectCapNotice, setEffectCapNotice] = useState(() => settingsIn && settingsIn.autoEffectDown !== false && rhythmAutoEffectMemory.level > 0 ? 1 : 0);
   stepEffectCapRef.current = () => {
-    const next = rhythmNextEffectCap(settingsIn, effectCap);
+    const base = RHYTHM_CANVAS_RENDERER.backend === 'webgl' ? settingsIn : {
+      ...settingsIn,
+      noteBloom: false
+    };
+    const next = rhythmNextEffectCap(base, effectCap);
     if (next === null) return false;
     rhythmAutoEffectMemory.level = next;
     setEffectCap(next);
@@ -24698,6 +24739,7 @@ const RhythmTapTest = ({
       },
       fast: run.fast,
       slow: run.slow,
+      precise: run.precise,
       result: {
         ...result,
         isNewRecord,
@@ -24785,7 +24827,7 @@ const RhythmTapTest = ({
         if (gap > 0 && gap < 1000) {
           aq.frames++;
           if (gap >= 5 && gap < aq.minGap) aq.minGap = gap;
-          if (gap > Math.max(5, aq.minGap) * 1.8 || gap >= 50) aq.slow++;
+          if (gap > Math.max(5, aq.minGap) * 1.8 && gap > 20 || gap >= 50) aq.slow++;
         }
         if (frameNowMs - aq.start >= RHYTHM_AUTO_QUALITY_WINDOW_MS) {
           if (aq.settle > 0) aq.settle--;else if (aq.frames >= 10 && aq.slow / aq.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepAutoQualityRef.current) {
@@ -24811,7 +24853,7 @@ const RhythmTapTest = ({
         if (gap > 0 && gap < 1000) {
           ae.frames++;
           if (gap >= 5 && gap < ae.minGap) ae.minGap = gap;
-          if (gap > Math.max(5, ae.minGap) * 1.8 || gap >= 50) ae.slow++;
+          if (gap > Math.max(5, ae.minGap) * 1.8 && gap > 20 || gap >= 50) ae.slow++;
         }
         if (frameNowMs - ae.start >= RHYTHM_AUTO_QUALITY_WINDOW_MS) {
           const qualityFirst = settings.renderQuality === 'AUTO' && autoQualityLevelRef.current !== RHYTHM_RENDER_QUALITY_STEPS[RHYTHM_RENDER_QUALITY_STEPS.length - 1];
@@ -26707,7 +26749,7 @@ const RhythmTapTest = ({
     key: effectCapNotice,
     "data-rhythm-effect-cap-notice": true,
     role: "status",
-    className: "pointer-events-none absolute left-1/2 top-[13%] z-30 -translate-x-1/2 whitespace-nowrap rounded-full border border-cyan-300/40 bg-slate-950/85 px-3 py-1 text-[11px] font-black text-cyan-100"
+    className: "pointer-events-none absolute left-1/2 bottom-[2.5%] z-30 -translate-x-1/2 whitespace-nowrap rounded-full border border-cyan-300/40 bg-slate-950/85 px-3 py-1 text-[11px] font-black text-cyan-100"
   }, "重いので演出を控えめにしました"), luckyBanner && React.createElement("div", {
     key: luckyBanner.id,
     "data-rhythm-lucky-banner": true,
@@ -47352,7 +47394,7 @@ function MonsterHeroGame() {
   };
   const RHYTHM_LOOK_INTRO_KEY = 'mh_rhythm_look_intro_seen_v1';
   const [rhythmLookIntroSeen, setRhythmLookIntroSeen] = useState(true);
-  const rhythmLookIntroVisible = !rhythmLookIntroSeen && !rhythmSixLaneIntroVisible;
+  const rhythmLookIntroVisible = !rhythmLookIntroSeen && !rhythmSixLaneIntroVisible && rhythmLookPresetOf(rhythmSettings) === 'STANDARD';
   const dismissRhythmLookIntro = () => {
     setRhythmLookIntroSeen(true);
     storeSet(RHYTHM_LOOK_INTRO_KEY, true, false);
@@ -48682,6 +48724,12 @@ function MonsterHeroGame() {
       const bootThanksId = rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).find(id => id && !bootSeenThanks.includes(id)) || null;
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && wasOnboarded && bootThanksId) {
         setRhythmEventStoryPending(bootThanksId);
+      }
+      if (!wasOnboarded) {
+        setRhythmLookIntroSeen(true);
+        try {
+          await storeSet(RHYTHM_LOOK_INTRO_KEY, true, false);
+        } catch {}
       }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
@@ -63663,6 +63711,7 @@ function MonsterHeroGame() {
       onSave: async draft => {
         const saved = await saveRhythmSettings(draft);
         setRhythmSettings(saved);
+        rhythmResetAutoEffect();
         return saved;
       }
     }), gameState === 'RHYTHM_DEMO_HOME' && React.createElement(RhythmSongSelectScreen, {
@@ -63688,6 +63737,7 @@ function MonsterHeroGame() {
           ...preset.values
         });
         setRhythmSettings(saved);
+        rhythmResetAutoEffect();
         dismissRhythmLookIntro();
       },
       dismissRhythmEventNotice: dismissRhythmEventNotice,
