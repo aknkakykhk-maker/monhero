@@ -1178,14 +1178,16 @@ function MonsterHeroGame() {
   const tacticsRegen = (hpRate, gutsRate) => {
     if (!isTacticsMode(runMode)) return null;
     const alive = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, false);
-    // ★ガッツ全開っちーが効いている子は、その子の上限の regenRate ぶん(30%)を上乗せする
+    // ★ガッツ全開っちーが効いている子は、その子の上限の regenRate ぶん(30%)を上乗せする。
+    //   ドラゴンだっちーはライフとガッツで率が違う(regenRates)ので、別々に取る
     //   (2026-09-25 ユーザー指示「効果中ライフとガッツの自動回復を30%上昇」「1.3倍じゃなくて30%固定値でプラス」)
     let units = alive.units, hp = alive.hp, guts = alive.guts;
     const live = tacticsExLiveRef.current;
     if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
-      const boost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now);
-      if (boost <= 0) return;
-      const extra = rateHealTacticsAt(units, slotIdx, boost, boost);
+      const hpBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'hp');
+      const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts');
+      if (hpBoost <= 0 && gutsBoost <= 0) return;
+      const extra = rateHealTacticsAt(units, slotIdx, hpBoost, gutsBoost);
       units = extra.units; hp += extra.hp; guts += extra.guts;
     });
     const downed = regenDownedTacticsBoard(units);
@@ -10482,7 +10484,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★ライフ・ガッツの上限も上げてから、その上がった上限まで満タンにする(2026-09-25 ユーザー指示)
     if(def.fullRecover){
       let units=tacticsUnitsRef.current;
-      if(def.statRate>0) units=scaleTacticsUnits(setTacticsExMaxRate(units,slotIdx,def.statRate),getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+      if(def.rates.hp>0||def.rates.guts>0) units=scaleTacticsUnits(setTacticsExMaxRate(units,slotIdx,def.rates.hp,def.rates.guts),getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
       const u=normalizeTacticsUnit(units[slotIdx]);
       if(u){
         const hpGain=Math.max(0,u.maxHp-u.hp), gutsGain=Math.max(0,u.maxGuts-u.guts);

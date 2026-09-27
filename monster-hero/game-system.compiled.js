@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 863dff2bb61fc4ec
+// source-sha256: 15f0a125407b3ca9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 02:26";
+const BUILD_DATE = "2026-09-27 09:10";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -2638,11 +2638,30 @@ const LEGACY_REGENERATION_STAT_BASELINES = {
     def: 120,
     guts: 100
   }, {
-    id: 'current',
+    id: 'pre-2026-09-27',
     hp: 630,
     atk: 140,
     def: 105,
     guts: 90
+  }, {
+    id: 'current',
+    hp: 680,
+    atk: 150,
+    def: 115,
+    guts: 120
+  }],
+  Mocchi: [{
+    id: 'pre-2026-09-27',
+    hp: 600,
+    atk: 120,
+    def: 120,
+    guts: 100
+  }, {
+    id: 'current',
+    hp: 720,
+    atk: 140,
+    def: 140,
+    guts: 140
   }]
 };
 const regenerationStatCouldBeGenerated = (value, baseValue) => {
@@ -26760,8 +26779,9 @@ const tacticsHasGutsRoom = units => tacticsAliveSlots(units).some(index => {
   return unit.guts < unit.maxGuts;
 });
 const tacticsTotalBaseMaxHp = units => (Array.isArray(units) ? units : []).reduce((sum, unit) => sum + (unit ? normalizeTacticsUnit(unit).baseMaxHp : 0), 0);
-const tacticsExMaxRateOf = unit => {
-  const rate = Number(unit && unit.exMaxRate);
+const tacticsExMaxRateOf = (unit, kind = 'hp') => {
+  const own = kind === 'guts' ? Number(unit && unit.exMaxGutsRate) : NaN;
+  const rate = Number.isFinite(own) ? own : Number(unit && unit.exMaxRate);
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
 };
 const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
@@ -26779,7 +26799,7 @@ const scaleTacticsUnitMaxGuts = (unit, gutsPct = 0) => {
   const target = normalizeTacticsUnit(unit);
   if (!target) return null;
   const pct = Number.isFinite(Number(gutsPct)) ? Math.max(0, Number(gutsPct)) : 0;
-  const exRate = tacticsExMaxRateOf(target);
+  const exRate = tacticsExMaxRateOf(target, 'guts');
   const maxGuts = Math.max(0, Math.floor(target.baseMaxGuts * (1 + pct) * (1 + exRate)));
   return normalizeTacticsUnit({
     ...target,
@@ -27364,6 +27384,30 @@ const TACTICS_EX_SKILLS = Object.freeze({
     fullRecover: true,
     effect: 'statBoost'
   }),
+  Mitarashi: Object.freeze({
+    id: 'mitarashi_dragon',
+    name: 'ドラゴンだっちー',
+    desc: '5ターンのあいだ、ちからとガッツの上限が40%、丈夫さとライフの上限が20%上がり、ターンの終わりにガッツが上限の40%、ライフが上限の20%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    maxUses: 3,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 5,
+    statRate: 0.2,
+    regenRate: 0.2,
+    fullRecover: true,
+    rates: Object.freeze({
+      atk: 0.4,
+      def: 0.2,
+      hp: 0.2,
+      guts: 0.4
+    }),
+    regenRates: Object.freeze({
+      hp: 0.2,
+      guts: 0.4
+    }),
+    effect: 'statBoost'
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -27433,6 +27477,18 @@ const normalizeTacticsExDef = raw => {
     turns: safeDuration === 'turns' ? Math.max(1, tacticsSafeInt(raw.turns, 1)) : 0,
     statRate: Math.max(0, Number.isFinite(Number(raw.statRate)) ? Number(raw.statRate) : 0),
     regenRate: Math.max(0, Number.isFinite(Number(raw.regenRate)) ? Number(raw.regenRate) : 0),
+    rates: ['atk', 'def', 'hp', 'guts'].reduce((acc, key) => {
+      const v = Number(raw.rates && raw.rates[key]);
+      const fallback = Number(raw.statRate);
+      acc[key] = Math.max(0, Number.isFinite(v) ? v : Number.isFinite(fallback) ? fallback : 0);
+      return acc;
+    }, {}),
+    regenRates: ['hp', 'guts'].reduce((acc, key) => {
+      const v = Number(raw.regenRates && raw.regenRates[key]);
+      const fallback = Number(raw.regenRate);
+      acc[key] = Math.max(0, Number.isFinite(v) ? v : Number.isFinite(fallback) ? fallback : 0);
+      return acc;
+    }, {}),
     fullRecover: raw.fullRecover === true,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
@@ -27600,6 +27656,12 @@ const applyTacticsExUse = (state, {
         turns: def.duration === 'turns' ? def.turns : 0,
         statRate: def.statRate || 0,
         regenRate: def.regenRate || 0,
+        rates: def.rates ? {
+          ...def.rates
+        } : null,
+        regenRates: def.regenRates ? {
+          ...def.regenRates
+        } : null,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -27664,10 +27726,12 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
   if (!effect || !isTacticsExEffectActive(state, slot, monId, now)) return null;
   return typeof effect.effect === 'string' ? effect.effect : null;
 };
-const tacticsExRegenRateAt = (state, units, slot, now) => {
+const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
   const unit = Array.isArray(units) ? units[slot] : null;
   if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'statBoost') return 0;
-  const rate = Number(normalizeTacticsExState(state).effects[slot].regenRate);
+  const effect = normalizeTacticsExState(state).effects[slot];
+  const own = Number(effect.regenRates && effect.regenRates[kind]);
+  const rate = Number.isFinite(own) ? own : Number(effect.regenRate);
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
 };
 const applyTacticsExStats = (unit, state, slot, now) => {
@@ -27683,11 +27747,15 @@ const applyTacticsExStats = (unit, state, slot, now) => {
     };
   }
   if (kind === 'statBoost') {
-    const rate = Math.max(0, Number(normalizeTacticsExState(state).effects[slot].statRate) || 0);
+    const effect = normalizeTacticsExState(state).effects[slot];
+    const rateOf = key => {
+      const own = Number(effect.rates && effect.rates[key]);
+      return Math.max(0, Number.isFinite(own) ? own : Number(effect.statRate) || 0);
+    };
     return {
       ...unit,
-      atk: Math.floor(Math.max(0, tacticsSafeInt(unit.atk, 0)) * (1 + rate)),
-      def: Math.floor(Math.max(0, tacticsSafeInt(unit.def, 0)) * (1 + rate))
+      atk: Math.floor(Math.max(0, tacticsSafeInt(unit.atk, 0)) * (1 + rateOf('atk'))),
+      def: Math.floor(Math.max(0, tacticsSafeInt(unit.def, 0)) * (1 + rateOf('def')))
     };
   }
   if (kind === 'weaponChange') {
@@ -27705,19 +27773,21 @@ const applyTacticsExStats = (unit, state, slot, now) => {
   }
   return unit;
 };
-const setTacticsExMaxRate = (units, slot, rate) => (Array.isArray(units) ? units : []).map((unit, i) => unit && i === slot ? {
+const setTacticsExMaxRate = (units, slot, rate, gutsRate = rate) => (Array.isArray(units) ? units : []).map((unit, i) => unit && i === slot ? {
   ...unit,
-  exMaxRate: Math.max(0, Number(rate) || 0)
+  exMaxRate: Math.max(0, Number(rate) || 0),
+  exMaxGutsRate: Math.max(0, Number(gutsRate) || 0)
 } : unit);
 const expireTacticsExMaxRates = (units, state, now) => {
   let changed = false;
   const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
-    if (!unit || !(tacticsExMaxRateOf(unit) > 0)) return unit;
+    if (!unit || !(tacticsExMaxRateOf(unit) > 0 || tacticsExMaxRateOf(unit, 'guts') > 0)) return unit;
     if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
     changed = true;
     return {
       ...unit,
-      exMaxRate: 0
+      exMaxRate: 0,
+      exMaxGutsRate: 0
     };
   });
   return {
@@ -44419,9 +44489,10 @@ function MonsterHeroGame() {
       guts = alive.guts;
     const live = tacticsExLiveRef.current;
     if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
-      const boost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now);
-      if (boost <= 0) return;
-      const extra = rateHealTacticsAt(units, slotIdx, boost, boost);
+      const hpBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'hp');
+      const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts');
+      if (hpBoost <= 0 && gutsBoost <= 0) return;
+      const extra = rateHealTacticsAt(units, slotIdx, hpBoost, gutsBoost);
       units = extra.units;
       hp += extra.hp;
       guts += extra.guts;
@@ -54821,7 +54892,7 @@ function MonsterHeroGame() {
     pushBattleLog(`EX ${mon.masuName || mon.name}「${def.name}」${toggled}`, 'ally');
     if (def.fullRecover) {
       let units = tacticsUnitsRef.current;
-      if (def.statRate > 0) units = scaleTacticsUnits(setTacticsExMaxRate(units, slotIdx, def.statRate), getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct'));
+      if (def.rates.hp > 0 || def.rates.guts > 0) units = scaleTacticsUnits(setTacticsExMaxRate(units, slotIdx, def.rates.hp, def.rates.guts), getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct'));
       const u = normalizeTacticsUnit(units[slotIdx]);
       if (u) {
         const hpGain = Math.max(0, u.maxHp - u.hp),

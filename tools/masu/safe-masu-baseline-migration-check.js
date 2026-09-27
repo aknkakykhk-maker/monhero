@@ -58,7 +58,8 @@ const oldMitarashi={...baseMasu('Mitarashi'),individualStats:{hp:600,atk:120,def
 const reconciledMitarashi=reconcileMasuPoints(oldMitarashi); const mitarashiBefore=mergeMasuIntoMon(reconciledMitarashi); const mitarashiResult=migrate([reconciledMitarashi]); const migratedMitarashi=mitarashiResult.nextMasuMons[0]; const mitarashiAfter=mergeMasuIntoMon(migratedMitarashi);
 check('旧MitarashiはSAFE_EXACTから実移行',diagnose(oldMitarashi).overallStatus==='SAFE_EXACT'&&mitarashiResult.changed&&mitarashiResult.summary.migrated===1);
 check('旧Mitarashiは個体差を保持',snap(migratedMitarashi.individualStatOffsets)===snap({hp:0,atk:0,def:0,guts:0}));
-check('旧Mitarashiの能力変化量はHP+30/攻+20/防-15/G-10',[30,20,-15,-10].every((delta,index)=>delta===[mitarashiAfter.baseHp-mitarashiBefore.baseHp,mitarashiAfter.baseAtk-mitarashiBefore.baseAtk,mitarashiAfter.baseDef-mitarashiBefore.baseDef,mitarashiAfter.baseGuts-mitarashiBefore.baseGuts][index]));
+// 2026-08-14以前のベース(600/120/120/100)から、いまのベース(680/150/115/120。2026-09-27 変更)へ
+check('旧Mitarashiの能力変化量はHP+80/攻+30/防-5/G+20',[80,30,-5,20].every((delta,index)=>delta===[mitarashiAfter.baseHp-mitarashiBefore.baseHp,mitarashiAfter.baseAtk-mitarashiBefore.baseAtk,mitarashiAfter.baseDef-mitarashiBefore.baseDef,mitarashiAfter.baseGuts-mitarashiBefore.baseGuts][index]));
 check('旧Mitarashiの総合力は移行後能力から現行式で再計算',masuPowerOf(migratedMitarashi)===monsterPowerOf(mitarashiAfter)&&monsterPowerOf(mitarashiAfter)===Math.round(monsterPowerParts(mitarashiAfter).total));
 
 const currentPixie={...baseMasu('Pixie'),individualStats:{hp:250,atk:160,def:50,guts:170}};

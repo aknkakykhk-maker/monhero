@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b9a6d1cbf4f51c13
+// generated-sha256: afa73b8494d01394
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-27 02:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-27 09:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2725,9 +2725,17 @@ const LEGACY_REGENERATION_STAT_BASELINES = {
     { id:'pre-2026-08-14', hp:250, atk:160, def:50, guts:140 },
     { id:'current', hp:250, atk:160, def:50, guts:170 },
   ],
+  // ★2026-09-27 モッチー・ミタラシの基礎値を上げた(ユーザー指示のバランス調整)。
+  //   移行前の旧再生個体(完成値を保存)は変更前のベースから生まれているので、その値を残す。
+  //   どちらのベースからも生まれうる値は AMBIGUOUS になり、移行せず保存値のまま残る(ピクシーと同じ)
   Mitarashi: [
     { id:'pre-2026-08-14', hp:600, atk:120, def:120, guts:100 },
-    { id:'current', hp:630, atk:140, def:105, guts:90 },
+    { id:'pre-2026-09-27', hp:630, atk:140, def:105, guts:90 },
+    { id:'current', hp:680, atk:150, def:115, guts:120 },
+  ],
+  Mocchi: [
+    { id:'pre-2026-09-27', hp:600, atk:120, def:120, guts:100 },
+    { id:'current', hp:720, atk:140, def:140, guts:140 },
   ],
 };
 const regenerationStatCouldBeGenerated = (value, baseValue) => {
@@ -18139,8 +18147,11 @@ const tacticsTotalBaseMaxHp = (units) => (Array.isArray(units) ? units : [])
 //   素の上限(baseMaxHp)は残したまま計算し直すので、倍率が下がっても元へ戻せる
 // ★exMaxRate … タクティクスのEX(ガッツ全開っちー)で上がっている上限の割合。無ければ0。
 //   みゅあ補正で上限を作り直しても消えないよう、ここで一緒に掛ける(既存の子は0なので値は今までどおり)
-const tacticsExMaxRateOf = (unit) => {
-  const rate = Number(unit && unit.exMaxRate);
+//   ★ガッツの上限は exMaxGutsRate を別に持てる(ミタラシのように上げ幅がライフと違うEX)。
+//     無ければ exMaxRate と同じ(ガッツ全開っちーはライフ・ガッツとも同じ率)
+const tacticsExMaxRateOf = (unit, kind = 'hp') => {
+  const own = kind === 'guts' ? Number(unit && unit.exMaxGutsRate) : NaN;
+  const rate = Number.isFinite(own) ? own : Number(unit && unit.exMaxRate);
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
 };
 const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
@@ -18156,7 +18167,7 @@ const scaleTacticsUnitMaxGuts = (unit, gutsPct = 0) => {
   const target = normalizeTacticsUnit(unit);
   if (!target) return null;
   const pct = Number.isFinite(Number(gutsPct)) ? Math.max(0, Number(gutsPct)) : 0;
-  const exRate = tacticsExMaxRateOf(target);
+  const exRate = tacticsExMaxRateOf(target, 'guts');
   const maxGuts = Math.max(0, Math.floor(target.baseMaxGuts * (1 + pct) * (1 + exRate)));
   return normalizeTacticsUnit({ ...target, maxGuts });
 };
@@ -18876,6 +18887,8 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   turns     … duration:'turns' のときのターン数
 //   statRate  … 効いているあいだ、力と丈夫さを何割上げるか(0.3 なら30%)
 //   regenRate … 効いているあいだ、ターン終わりのライフ・ガッツの自動回復の率へそのまま足す値(0.3 なら上限の30%ぶんを上乗せ)
+//   rates     … ステータスごとに上げ幅を変えるとき { atk, def, hp, guts }(hp・guts は上限)。書かなかった項目は statRate
+//   regenRates … 自動回復の上乗せをライフとガッツで変えるとき { hp, guts }。書かなかった項目は regenRate
 //   fullRecover … true なら、使った瞬間にその子のライフとガッツを満タンにする
 //   styles    … duration:'style' のときの選択肢 [{ id, label, desc }]。使うたびに1つ選ぶ(いまのものは選べない)
 //   defaultStyle … バトルを始めたときのスタイル(styles の id)
@@ -18911,6 +18924,20 @@ const TACTICS_EX_SKILLS = Object.freeze({
     desc: '5ターンのあいだ、ちから・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     statRate: 0.3, regenRate: 0.3, fullRecover: true,
+    effect: 'statBoost',
+  }),
+  // ★2026-09-27 ユーザー指示「ミタラシ EXスキル【ドラゴンだっちー】ガッツ全開だっちーの上がるステが違う版
+  //   同じようなバランスで少し攻撃寄りにして」。回数・ターン・併用はモッチーと同じ。
+  //   上げ幅はユーザーが3案から選んだ「ちから＋ガッツ」(ちから・ガッツ上限40% / 丈夫さ・ライフ上限20%、
+  //   自動回復の上乗せはガッツ40%・ライフ20%)。効果の種類はガッツ全開っちーと同じ statBoost
+  Mitarashi: Object.freeze({
+    id: 'mitarashi_dragon',
+    name: 'ドラゴンだっちー',
+    desc: '5ターンのあいだ、ちからとガッツの上限が40%、丈夫さとライフの上限が20%上がり、ターンの終わりにガッツが上限の40%、ライフが上限の20%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    statRate: 0.2, regenRate: 0.2, fullRecover: true,
+    rates: Object.freeze({ atk: 0.4, def: 0.2, hp: 0.2, guts: 0.4 }),
+    regenRates: Object.freeze({ hp: 0.2, guts: 0.4 }),
     effect: 'statBoost',
   }),
   Golem: Object.freeze({
@@ -18987,6 +19014,19 @@ const normalizeTacticsExDef = (raw) => {
     turns: safeDuration === 'turns' ? Math.max(1, tacticsSafeInt(raw.turns, 1)) : 0,
     statRate: Math.max(0, Number.isFinite(Number(raw.statRate)) ? Number(raw.statRate) : 0),
     regenRate: Math.max(0, Number.isFinite(Number(raw.regenRate)) ? Number(raw.regenRate) : 0),
+    // ステータスごとの上げ幅。書いていない項目は statRate / regenRate(ガッツ全開っちーはすべて同じ率)
+    rates: ['atk', 'def', 'hp', 'guts'].reduce((acc, key) => {
+      const v = Number(raw.rates && raw.rates[key]);
+      const fallback = Number(raw.statRate);
+      acc[key] = Math.max(0, Number.isFinite(v) ? v : (Number.isFinite(fallback) ? fallback : 0));
+      return acc;
+    }, {}),
+    regenRates: ['hp', 'guts'].reduce((acc, key) => {
+      const v = Number(raw.regenRates && raw.regenRates[key]);
+      const fallback = Number(raw.regenRate);
+      acc[key] = Math.max(0, Number.isFinite(v) ? v : (Number.isFinite(fallback) ? fallback : 0));
+      return acc;
+    }, {}),
     fullRecover: raw.fullRecover === true,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
@@ -19101,6 +19141,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       on: def.duration === 'style' ? style !== def.defaultStyle : true,
       style,
       turns: def.duration === 'turns' ? def.turns : 0, statRate: def.statRate || 0, regenRate: def.regenRate || 0,
+      rates: def.rates ? { ...def.rates } : null, regenRates: def.regenRates ? { ...def.regenRates } : null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -19152,10 +19193,13 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
 //                                         二刀流 … 丈夫さを半分にする(ヒット列の2回ぶんは tacticsExActiveStyle を見て別に掛ける)
 // ターン終わりの自動回復の率へ足す値(ガッツ全開っちーが効いている子だけ。ほかは0)。
 // ★倍率ではなく固定値で足す(いまの率 + regenRate)。倒れている子の戻り(10%ずつ)には乗せない
-const tacticsExRegenRateAt = (state, units, slot, now) => {
+// kind … 'hp' か 'guts'。regenRates があればその項目、無ければ regenRate(ライフ・ガッツ共通)
+const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
   const unit = Array.isArray(units) ? units[slot] : null;
   if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'statBoost') return 0;
-  const rate = Number(normalizeTacticsExState(state).effects[slot].regenRate);
+  const effect = normalizeTacticsExState(state).effects[slot];
+  const own = Number(effect.regenRates && effect.regenRates[kind]);
+  const rate = Number.isFinite(own) ? own : Number(effect.regenRate);
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
 };
 const applyTacticsExStats = (unit, state, slot, now) => {
@@ -19166,11 +19210,16 @@ const applyTacticsExStats = (unit, state, slot, now) => {
     const usedDef = Math.max(0, tacticsSafeInt(snap && snap.def, tacticsSafeInt(unit.def, 0)));
     return { ...unit, atk: Math.max(0, tacticsSafeInt(unit.atk, 0)) + Math.floor(usedDef * TACTICS_EX_ALL_IN_ATK_RATE), def: 0 };
   }
-  // ステータスアップ(ガッツ全開っちー): 力と丈夫さを statRate ぶん上げる(切り捨て)
+  // ステータスアップ(ガッツ全開っちー・ドラゴンだっちー): 力と丈夫さを上げる(切り捨て)。
+  // 上げ幅は rates の項目、無ければ statRate(力・丈夫さ共通)
   if (kind === 'statBoost') {
-    const rate = Math.max(0, Number(normalizeTacticsExState(state).effects[slot].statRate) || 0);
-    return { ...unit, atk: Math.floor(Math.max(0, tacticsSafeInt(unit.atk, 0)) * (1 + rate)),
-      def: Math.floor(Math.max(0, tacticsSafeInt(unit.def, 0)) * (1 + rate)) };
+    const effect = normalizeTacticsExState(state).effects[slot];
+    const rateOf = (key) => {
+      const own = Number(effect.rates && effect.rates[key]);
+      return Math.max(0, Number.isFinite(own) ? own : (Number(effect.statRate) || 0));
+    };
+    return { ...unit, atk: Math.floor(Math.max(0, tacticsSafeInt(unit.atk, 0)) * (1 + rateOf('atk'))),
+      def: Math.floor(Math.max(0, tacticsSafeInt(unit.def, 0)) * (1 + rateOf('def'))) };
   }
   // ★スタイルの効き目は、いつも「元のステータス」(盤面の値)から数え直す。積み重ならない
   if (kind === 'weaponChange') {
@@ -19186,16 +19235,18 @@ const applyTacticsExStats = (unit, state, slot, now) => {
 // ★上限そのものは盤面の値なので、効いているあいだは unit.exMaxRate に割合を持たせ、
 //   scaleTacticsUnits(みゅあ補正と同じ作り直し)で上限へ掛ける。切れたら0へ戻して作り直す
 //   (ライフ・ガッツは normalizeTacticsUnit が新しい上限で丸める)
-const setTacticsExMaxRate = (units, slot, rate) => (Array.isArray(units) ? units : [])
-  .map((unit, i) => (unit && i === slot ? { ...unit, exMaxRate: Math.max(0, Number(rate) || 0) } : unit));
+//   gutsRate … ガッツの上限だけ別の率にするとき(ドラゴンだっちー)。省くとライフと同じ率
+const setTacticsExMaxRate = (units, slot, rate, gutsRate = rate) => (Array.isArray(units) ? units : [])
+  .map((unit, i) => (unit && i === slot
+    ? { ...unit, exMaxRate: Math.max(0, Number(rate) || 0), exMaxGutsRate: Math.max(0, Number(gutsRate) || 0) } : unit));
 // 効果が切れているのに上限が上がったままの枠を、0へ戻す。戻した枠があれば changed:true
 const expireTacticsExMaxRates = (units, state, now) => {
   let changed = false;
   const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
-    if (!unit || !(tacticsExMaxRateOf(unit) > 0)) return unit;
+    if (!unit || !(tacticsExMaxRateOf(unit) > 0 || tacticsExMaxRateOf(unit, 'guts') > 0)) return unit;
     if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
     changed = true;
-    return { ...unit, exMaxRate: 0 };
+    return { ...unit, exMaxRate: 0, exMaxGutsRate: 0 };
   });
   return { units: next, changed };
 };
@@ -29399,14 +29450,16 @@ function MonsterHeroGame() {
   const tacticsRegen = (hpRate, gutsRate) => {
     if (!isTacticsMode(runMode)) return null;
     const alive = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, false);
-    // ★ガッツ全開っちーが効いている子は、その子の上限の regenRate ぶん(30%)を上乗せする
+    // ★ガッツ全開っちーが効いている子は、その子の上限の regenRate ぶん(30%)を上乗せする。
+    //   ドラゴンだっちーはライフとガッツで率が違う(regenRates)ので、別々に取る
     //   (2026-09-25 ユーザー指示「効果中ライフとガッツの自動回復を30%上昇」「1.3倍じゃなくて30%固定値でプラス」)
     let units = alive.units, hp = alive.hp, guts = alive.guts;
     const live = tacticsExLiveRef.current;
     if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
-      const boost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now);
-      if (boost <= 0) return;
-      const extra = rateHealTacticsAt(units, slotIdx, boost, boost);
+      const hpBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'hp');
+      const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts');
+      if (hpBoost <= 0 && gutsBoost <= 0) return;
+      const extra = rateHealTacticsAt(units, slotIdx, hpBoost, gutsBoost);
       units = extra.units; hp += extra.hp; guts += extra.guts;
     });
     const downed = regenDownedTacticsBoard(units);
@@ -38703,7 +38756,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★ライフ・ガッツの上限も上げてから、その上がった上限まで満タンにする(2026-09-25 ユーザー指示)
     if(def.fullRecover){
       let units=tacticsUnitsRef.current;
-      if(def.statRate>0) units=scaleTacticsUnits(setTacticsExMaxRate(units,slotIdx,def.statRate),getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+      if(def.rates.hp>0||def.rates.guts>0) units=scaleTacticsUnits(setTacticsExMaxRate(units,slotIdx,def.rates.hp,def.rates.guts),getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
       const u=normalizeTacticsUnit(units[slotIdx]);
       if(u){
         const hpGain=Math.max(0,u.maxHp-u.hp), gutsGain=Math.max(0,u.maxGuts-u.guts);
