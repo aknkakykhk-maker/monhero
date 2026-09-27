@@ -146,6 +146,10 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   // 使うとレベルが上がり、所持数が減る
   await clickText('枚 使う');
   await page.waitForTimeout(1200);
+  // 保存は少し遅れて書かれることがある。時間を決め打ちにすると、重いとき(検査を全部回しているときなど)だけ
+  // 「まだ消費されていない」と落ちる(2026-09-27)。所持数が書き換わるまで待ってから読む(待ちきれなければそのまま判定)
+  await page.waitForFunction(() => (JSON.parse(localStorage.getItem('mh_owned_items') || '{}').training_ticket || 0) === 0,
+    null, { timeout: 10000 }).catch(() => {});
   const done = await bodyText();
   check('使ったあとアイテム欄に戻る', done.includes('トレーニングチケット') || done.includes('アイテム'));
   const remain = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_owned_items') || '{}'));

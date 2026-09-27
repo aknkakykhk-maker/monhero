@@ -616,7 +616,8 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
       && hasScreen('data-tactics-guts={`${tacticsUnit.guts}/${tacticsUnit.maxGuts}`}')
       // ★末尾の ${...} は、タクティクスのれんしゅうで光らせるための印(2026-09-21)。
       //   帯を枠へ移したときに落とすと、案内が何も指さないまま進む
-      && hasScreen('px-1${battleTutorialSpotClass(\'tacticsParty\')}'));
+      // (帯の並べ方は枠の形で変わるので、クラスの並びではなく「帯の要素に印が付いているか」で見る・2026-09-27)
+      && /data-tactics-party-slot=\{i\}[\s\S]{0,800}?battleTutorialSpotClass\('tacticsParty'\)/.test(screen));
   check('1体ずつの帯を上の段としては出さない', !hasScreen('<div data-tactics-party className='));
   // ★ライフ・ガッツのポップアップ(吸収・ガードの余り・回復カード)は、合計の帯に重ねて出していた。
   //   その帯をやめたときに出す場所ごと消えていたので、1体ずつの帯の上へ置き直した(2026-09-20)
@@ -702,12 +703,14 @@ check('置けるかの判定も画面へ渡す', has('tacticsCanAssign={tacticsC
   //   それまでは札ごとに top-0 / top-[18px] / top-[21px] と上からの距離で避けていて、
   //   札が2枚になる・連撃で内訳が2行になると必ず重なった。位置で避ける書き方へ戻さない
   check('枠の中の札は1本の縦積みにまとめる',
-    hasScreen('<div data-tactics-slot-marks className="absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[60] pointer-events-none px-0.5">')
+    // 置き場所(枠の中・枠の右)は枠の形で変わる。見るのは「1本の縦積み(flex-col)になっている」こと(2026-09-27)
+    /<div data-tactics-slot-marks className=\{`[^\n]*\} flex flex-col gap-px z-\[60\] pointer-events-none`\}>/.test(screen)
       && !hasScreen("${slotAssignedCards.length>0?'top-[18px]':'top-0'}")
       && !hasScreen('absolute top-[21px] right-0.5'));
   // ★合計DMG・合計軽減も浮かせない。枠の上に1行ぶんの場所を作る
   check('合計の札は浮かせず、枠の上の行に置く',
-    hasScreen('<div data-battle-total-preview className="shrink-0 w-full flex flex-wrap')
+    // タクティクスの新しい枠ではバフ帯の上へ重ねる形にした(下の「バフ帯へ統合する」)。ここで見るのは古い浮かせ方をしていないこと
+    hasScreen('<div data-battle-total-preview ')
       && !hasScreen("style={{bottom:'calc(78% + 2px)'}}"));
   // ★1つの数字にまとめると、どの子がどれだけ減るのか分からなくなる
   check('全体攻撃は札に1つの数字を出さない',
@@ -1551,8 +1554,9 @@ check('固有技の効果も枠の印に出る',
 {
   const battleScreen = fs.readFileSync(path.join(root, 'monster-hero/src/parts/71-screen-battle.jsx'), 'utf8');
   check('タクティクス戦では2x2確認UIを維持する',
-    battleScreen.includes('const tacticsDebugLayout = Array.isArray(tacticsUnits);')
-      && battleScreen.includes('data-tactics-debug-layout={tacticsDebugLayout?\'2x2\':undefined}'));
+    // 画面の見た目の選択(battleScreenStyle)が加わったので、条件の頭だけを見る(2026-09-27)
+    /const tacticsNewLayout = Array\.isArray\(tacticsUnits\)[ ;&]/.test(battleScreen)
+      && battleScreen.includes('data-tactics-debug-layout={tacticsNewLayout?\'2x2\':undefined}'));
   check('タクティクスのHP/GUTS帯を詰める',
     battleScreen.includes('flex h-[10px] items-center justify-between leading-none')
       && battleScreen.includes('h-[2px] overflow-hidden rounded-full bg-black/60'));
@@ -1561,33 +1565,34 @@ check('固有技の効果も枠の印に出る',
     appSource.includes("data-tactics-card-detail={isTacticsMode(runMode)?'raised':undefined}")
       && appSource.includes("top:'max(calc(env(safe-area-inset-top) + 96px),14dvh)'"));
   check('カード詳細中もタクティクスの敵行動予測を隠さない',
-    battleScreen.includes("focusedCard&&!tacticsDebugLayout?'invisible':'visible'"));
+    battleScreen.includes("focusedCard&&!tacticsNewLayout?'invisible':'visible'"));
   check('タクティクス確認UIは細い枠と半透明HUDで表示する',
     battleScreen.includes("rounded-[18px] border grid grid-cols-[40%_60%]")
       && battleScreen.includes("bg-[linear-gradient(145deg,rgba(15,23,42,.88),rgba(5,10,24,.96))] backdrop-blur-[3px]")
-      && battleScreen.includes("tacticsDebugLayout?'rounded-[12px] border':'rounded-xl border-2'"));
+      && battleScreen.includes("tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'"));
   check('HP/GUTS帯の上枠線を重ねない',
     battleScreen.includes("w-[60%] min-w-0 border-l flex flex-col justify-end")
       && !battleScreen.includes("w-[60%] min-w-0 border-l border-t flex flex-col justify-end"));
   check('タクティクス攻撃モーションでスロット外枠を動かさない',
-    battleScreen.includes("isAnimating&&!tacticsDebugLayout?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}")
-      && battleScreen.includes("data-tactics-attack-content={tacticsDebugLayout?'content-only':undefined}")
-      && battleScreen.includes("isAnimating&&tacticsDebugLayout?{zIndex:9999,animation:attackMotionAnimation(attackAnim)}:undefined"));
+    // 攻撃の種類ごとの演出(themedAttack)で分岐が挟まったので、「どちらの要素に攻撃の動きを付けるか」だけを見る(2026-09-27)
+    /isAnimating&&!tacticsNewLayout\?\{zIndex:9999, ?animation:[^}]*attackMotionAnimation\(attackAnim\)/.test(battleScreen)
+      && battleScreen.includes("data-tactics-attack-content={tacticsNewLayout?'content-only':undefined}")
+      && /isAnimating&&tacticsNewLayout\?\{zIndex:9999, ?animation:[^}]*attackMotionAnimation\(attackAnim\)/.test(battleScreen));
   check('タクティクス操作帯とカードの装飾を統一する',
     battleScreen.includes("rounded-[10px] border border-blue-300/55 bg-blue-500/10")
-      && battleScreen.includes("tacticsDebugLayout?'rounded-[12px] border':'rounded-xl border-2'")
+      && battleScreen.includes("tacticsNewLayout?'rounded-[12px] border':'rounded-xl border-2'")
       && battleScreen.includes("rounded-[11px] border border-white/[.16] bg-black/20"));
   check('タクティクス合計予測はバフ帯へ統合する',
-    battleScreen.includes("data-tactics-preview-band={tacticsDebugLayout?'buff-overlay':undefined}")
+    battleScreen.includes("data-tactics-preview-band={tacticsNewLayout?'buff-overlay':undefined}")
       && !battleScreen.includes("absolute left-1/2 -translate-x-1/2 bottom-0 z-[55]"));
   check('タクティクスGUTS表示を下端から離して欠けを防ぐ',
     battleScreen.includes("absolute right-0 bottom-[3px] w-[60%]"));
   check('カード詳細中も合計予測をバフ帯上へ残す',
-    battleScreen.includes("focusedCard&&!tacticsDebugLayout?'invisible':'visible'")
-      && battleScreen.includes("focusedCard&&tacticsDebugLayout?'invisible':'visible'")
+    battleScreen.includes("focusedCard&&!tacticsNewLayout?'invisible':'visible'")
+      && battleScreen.includes("focusedCard&&tacticsNewLayout?'invisible':'visible'")
       && battleScreen.includes("absolute left-1/2 top-0 z-[65] w-max max-w-[78%] -translate-x-1/2 -translate-y-full pb-1"));
   check('タクティクス合計DMGと軽減を縦積みにする',
-    battleScreen.includes("flex ${tacticsDebugLayout?'flex-col':'flex-wrap'} items-center justify-center"));
+    battleScreen.includes("flex ${tacticsNewLayout?'flex-col':'flex-wrap'} items-center justify-center"));
   check('選択済みカードの文字を暗くしすぎない',
     battleScreen.includes("opacity-90 saturate-[0.95]"));
   // ★2026-09-26 ユーザー指摘「上に持ってくと下からまたカードが出てくる」「ドラッグしてるカードの表示が古いやつのまま」。

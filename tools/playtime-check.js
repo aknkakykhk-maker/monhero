@@ -142,7 +142,7 @@ check('数える処理の中でsetStateを呼ばない',!/set[A-Z]/.test(tick));
 
 // --- 7. プロフィールに出る ---
 check('プロフィールにプレイ時間が出る',
-  game.includes('<span className="text-[10px] font-black text-indigo-200">プレイ時間</span>')
+  /<span className="text-\[\d+px\] font-black text-indigo-200">プレイ時間<\/span>/.test(game)
   &&game.includes('{formatPlaytime(playtimeView.totalMs)}'));
 check('今日のぶんと遊んだ日数も出る',
   game.includes('{formatPlaytime(playtimeTodayMs(playtimeView))}')

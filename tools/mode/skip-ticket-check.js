@@ -80,10 +80,11 @@ check('ログインボーナスの既存報酬は残っている',
   amountOf(r.LOGIN_BONUS_REWARDS[0], 'diamond') === 500 && amountOf(r.LOGIN_BONUS_REWARDS[5], 'diamond') === 2000
     && amountOf(r.LOGIN_BONUS_REWARDS[1], 'dyeMock') === 1 && amountOf(r.LOGIN_BONUS_REWARDS[6], 'bondPointReset') === 1);
 
+// ダイヤの数は報酬の調整で変わる(ウィークリーは 2000→3000)。ここで見るのは「チケットが足されてダイヤも残っている」ことだけ
 const dailyComplete = r.MISSION_DEFS.daily.find(x => x.id === 'daily_complete');
 const weeklyComplete = r.MISSION_DEFS.weekly.find(x => x.id === 'weekly_complete');
-check('デイリーコンプリート報酬に 破 を1枚追加', amountOf(dailyComplete.rewards, 'skipTicketHa') === 1 && amountOf(dailyComplete.rewards, 'diamond') === 500);
-check('ウィークリーコンプリート報酬に 急 を1枚追加', amountOf(weeklyComplete.rewards, 'skipTicketKyu') === 1 && amountOf(weeklyComplete.rewards, 'diamond') === 2000);
+check('デイリーコンプリート報酬に 破 を1枚追加', amountOf(dailyComplete.rewards, 'skipTicketHa') === 1 && amountOf(dailyComplete.rewards, 'diamond') > 0);
+check('ウィークリーコンプリート報酬に 急 を1枚追加', amountOf(weeklyComplete.rewards, 'skipTicketKyu') === 1 && amountOf(weeklyComplete.rewards, 'diamond') > 0);
 check('配布対象3種のギフト表示名はそのまま',
   r.GIFT_REWARD_LABELS.skipTicketJo === 'スキップチケット・序' && r.GIFT_REWARD_LABELS.skipTicketHa === 'スキップチケット・破' && r.GIFT_REWARD_LABELS.skipTicketKyu === 'スキップチケット・急');
 check('配布対象3種はギフト受取で正しいアイテムidへ変換する',
