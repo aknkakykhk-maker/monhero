@@ -1510,14 +1510,19 @@ const RHYTHM_NOTE_SE_LOUD_LEVEL_MAX = 3.2;
 const RHYTHM_NOTE_SE_SOFT_CLIP_KNEE = .72;
 // ===== タップ音の種類(2026-09-26・ユーザー指示「ノーツを押したときの音のバリエーションがほしい / 設定で変えられるように」) =====
 // どれも合成音(音源ファイルは増やさない)。id は保存値(mh_rhythm_settings_v1 の noteSeType)になるので、名前は変えない。
-// 2026-09-27 からは1つのセットに「タップ」「フリック」「ロングの終わり」の3つの音を持つ(RHYTHM_NOTE_SE_SETS)。
+// 2026-09-27 からは1つのセットに「タップ」「フリック」「ロングの終わり」の3つの音を持つ(RHYTHM_NOTE_SE_DESIGNS)。
 // モンスターノーツ・フルコンボの音は、どのセットでも同じ。
+// 2026-09-27 夜、音そのものを作り直した(ユーザー指示「音の種類と言うか音の質自体をほかの音ゲーにならって作ってほしい」)。
+// 音ゲーの叩いた音は「当たりの芯(チッ)」「はじける音」「音程のある胴鳴り」「きらめき(PERFECTのとき)」「短い響き」を重ねてできている。
+// それを RHYTHM_NOTE_SE_DESIGNS で組み、演奏の前に1回だけ作り置きする。これまでの標準の音は「クラシック」として残す。
+// ★id は保存値なので変えない。STANDARD は「スタンダード」(新しい音)、これまでの音は新しい id の CLASSIC
 const RHYTHM_NOTE_SE_TYPES = Object.freeze([
-  Object.freeze({ id:'STANDARD', label:'標準',     note:'ピッ。これまでの音' }),
-  Object.freeze({ id:'CLAP',     label:'クラップ', note:'パン。手拍子のような音' }),
-  Object.freeze({ id:'DRUM',     label:'ドラム',   note:'トン。低くて丸い太鼓の音' }),
-  Object.freeze({ id:'WOOD',     label:'ウッド',   note:'コッ。木を叩いたような短い音' }),
-  Object.freeze({ id:'BELL',     label:'ベル',     note:'キン。高く澄んだ鈴の音' }),
+  Object.freeze({ id:'STANDARD', label:'スタンダード', note:'タッ。音ゲーらしい歯切れのいい音' }),
+  Object.freeze({ id:'CLAP',     label:'クラップ', note:'パンッ。手拍子の音' }),
+  Object.freeze({ id:'DRUM',     label:'ドラム',   note:'ドン。太鼓の音(フリックはカッ)' }),
+  Object.freeze({ id:'WOOD',     label:'ウッド',   note:'コッ。拍子木の音' }),
+  Object.freeze({ id:'BELL',     label:'ベル',     note:'キン。鉄琴の澄んだ音' }),
+  Object.freeze({ id:'CLASSIC',  label:'クラシック', note:'ピッ。これまでの標準の音' }),
 ]);
 const RHYTHM_NOTE_SE_TYPE_IDS = Object.freeze(RHYTHM_NOTE_SE_TYPES.map(item => item.id));
 const rhythmNoteSeTypeOf = value => RHYTHM_NOTE_SE_TYPE_IDS.includes(value) ? value : 'STANDARD';
@@ -1536,6 +1541,120 @@ const rhythmNoteSeLevel = (base, volumeIn) => {
   const cap = volume > 2 ? Math.min(RHYTHM_NOTE_SE_LOUD_LEVEL_MAX, RHYTHM_NOTE_SE_LEVEL_MAX * volume / 2) : RHYTHM_NOTE_SE_LEVEL_MAX;
   return Math.max(.0001, Math.min(cap, raw));
 };
+// ===== 音の設計図(2026-09-27) =====
+// 1つのセットに tap(タップ・ホールドとスライドの始点) / flick(払えたとき) / end(ロングの終わり)。
+// g … 判定の段('PERFECT' / 'GREAT' / 'GOOD')。PERFECT だけ「きらめき」を重ね、ずれるほど低く・短く・響きを少なくする。
+// K の部品: K.tone(波形,高さ,終わりの高さ,大きさ,消えるまで,{at,attack,glide}) / K.noise(絞り方,高さ,終わりの高さ,Q,大きさ,消えるまで,{at,attack})
+//          K.modes(高さ,[倍率],[大きさ],[消えるまで],{at}) … 木や金属の「整数倍でない」鳴り方 / K.room(響きの量)
+// 大きさはあとでそろえる(作り置きのときに、叩いた直後の平均の大きさで合わせる)ので、ここでの値は音の中の釣り合いだけ
+const rhythmSeGrade = g => ({ P:g==='PERFECT', B:g==='GOOD', s:g==='GOOD'?.9:g==='GREAT'?.96:1 });
+const RHYTHM_NOTE_SE_DESIGNS = Object.freeze({
+  STANDARD:Object.freeze({
+    tap:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
+      if(!B)K.noise('highpass',7000,7000,.7,.35,.012);              // チッ(当たりの芯)
+      K.noise('bandpass',2600*s,1800*s,1.3,.55,B?.022:.03);          // タッ(はじける音)
+      K.tone('triangle',1568*s,1397*s,.5,B?.05:.07,{glide:.02});     // 音程のある芯
+      K.tone('sine',784*s,698*s,.32,.05,{glide:.02});                // 胴鳴り
+      if(P){K.tone('sine',4186,4186,.13,.16,{at:.004});K.tone('sine',6272,6272,.08,.12,{at:.007});K.tone('sine',5588,5588,.05,.2,{at:.012});} // キラッ
+      K.room(P?.2:B?.06:.12);},
+    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
+      K.noise('highpass',6000,6000,.7,.25,.01);
+      K.noise('bandpass',1400*s,7500*s,1.8,.7,B?.08:.12,{attack:.018}); // シュッ(下から上へ抜ける風)
+      K.tone('sine',1760*s,3520*s,.2,.1,{at:.008,glide:.07});            // キュイン
+      if(P){K.tone('sine',5274,5274,.1,.18,{at:.05});K.tone('sine',7040,7040,.06,.14,{at:.06});}
+      K.room(P?.24:B?.08:.14);},
+    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
+      K.noise('highpass',7000,7000,.7,.3,.012);
+      K.noise('bandpass',3200*s,2400*s,1.2,.45,.03);
+      K.tone('triangle',2093*s,1976*s,.4,B?.06:.09,{glide:.03});
+      K.tone('triangle',1568*s,1568*s,.28,B?.07:.1);
+      if(P){K.tone('sine',6272,6272,.1,.2,{at:.01});K.tone('sine',8372,8372,.05,.16,{at:.014});}
+      K.room(P?.22:B?.06:.1);},
+  }),
+  CLAP:Object.freeze({
+    tap:(K,g)=>{const {P,B}=rhythmSeGrade(g),f=B?850:g==='GREAT'?1000:1150;
+      // 手拍子は、手のひらが何か所かで少しずつずれて当たる。短い「パ」を3つ重ねてから「ンッ」と余韻
+      [0,.009,.019].slice(0,B?2:3).forEach(at=>K.noise('bandpass',f,f,.9,.6,.007,{at}));
+      K.noise('bandpass',f*1.1,f*.9,.8,.75,B?.06:.1,{at:B?.017:.027});
+      K.noise('highpass',3200,3200,.7,.3,.04,{at:.027});
+      if(P)K.tone('triangle',2400,2250,.12,.03,{at:.027});
+      K.room(P?.26:B?.1:.18);},
+    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
+      K.noise('bandpass',1800*s,9000*s,1.6,.7,B?.07:.11,{attack:.014});
+      K.noise('bandpass',1200,1000,.8,.35,.05,{at:.02});
+      if(P)K.tone('sine',4699,6272,.08,.12,{at:.03,glide:.05});
+      K.room(P?.24:B?.08:.16);},
+    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
+      K.noise('bandpass',1600*s,1400*s,1,.7,B?.05:.07);
+      K.noise('highpass',5000,5000,.7,.3,.02);
+      K.tone('sine',3136*s,3136*s,.14,.12,{at:.004});
+      if(P)K.tone('sine',6272,6272,.07,.16,{at:.01});
+      K.room(P?.24:.12);},
+  }),
+  DRUM:Object.freeze({
+    tap:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),d=B?.1:g==='GREAT'?.13:.16;
+      K.tone('sine',200*s,112*s,.95,d,{glide:.035});      // 皮のドン
+      K.tone('sine',318*s,180*s,.3,d*.5,{glide:.03});     // 皮のゆらぎ(整数倍でない倍音)
+      K.noise('lowpass',1400,900,.7,.4,.03);              // 叩いた面の音
+      K.noise('highpass',3000,3000,.7,P?.25:.12,.008);    // バチの当たり
+      K.room(P?.14:.08);},
+    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
+      // 太鼓のふち(カッ)と、払った風
+      K.tone('triangle',1900*s,1750*s,.3,B?.025:.035);
+      K.noise('bandpass',3600*s,3200*s,2,.55,.03);
+      K.noise('bandpass',1500*s,6000*s,1.6,.3,.08,{attack:.01});
+      if(P)K.noise('highpass',7000,7000,.7,.2,.01);
+      K.room(P?.14:.08);},
+    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
+      K.tone('sine',260*s,150*s,.8,B?.08:.12,{glide:.03});
+      K.tone('triangle',1900*s,1800*s,.18,.03,{at:.002});
+      K.noise('lowpass',1800,1200,.7,.35,.025);
+      if(P)K.noise('highpass',6000,6000,.7,.2,.01);
+      K.room(P?.14:.08);},
+  }),
+  WOOD:Object.freeze({
+    tap:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),f=1250*s;
+      K.modes(f,[1,2.57,4.2],[.75,.3,.14],[B?.045:.065,.03,.014]);   // 木の鳴り(倍音が整数倍でない)
+      K.noise('bandpass',3000,3000,1,.35,.008);
+      if(P)K.noise('highpass',6000,6000,.7,.22,.006);
+      K.room(P?.14:.07);},
+    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
+      K.modes(1500*s,[1,2.57],[.55,.2],[.04,.02]);
+      K.modes(2000*s,[1,2.57],[.5,.18],[.05,.025],{at:.028});
+      K.noise('bandpass',2000*s,7000*s,1.6,.25,.07,{attack:.01});
+      if(P)K.noise('highpass',6500,6500,.7,.18,.006,{at:.028});
+      K.room(P?.16:.08);},
+    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g);
+      K.modes(1680*s,[1,2.57,4.2],[.7,.28,.12],[B?.05:.08,.035,.015]);
+      K.noise('bandpass',3500,3500,1,.3,.008);
+      if(P)K.tone('sine',5040,5040,.06,.12,{at:.004});
+      K.room(P?.16:.08);},
+  }),
+  BELL:Object.freeze({
+    tap:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),f=2093*s,L=B?.5:g==='GREAT'?.75:1;
+      K.modes(f,[1,2.76,5.4],[.6,.24,.1],[.4*L,.14*L,.05*L]);         // 鉄琴(金属の板の鳴り方)
+      K.noise('highpass',6500,6500,.7,.3,.005);                        // マレットの当たり
+      if(P)K.modes(f*1.0035,[1],[.18],[.35]);                          // わずかにずらして重ね、きらめかせる
+      K.room(P?.28:B?.1:.16);},
+    flick:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.5:1;
+      K.modes(2637*s,[1,2.76],[.5,.16],[.14*L,.06*L]);
+      K.modes(3520*s,[1,2.76],[.5,.14],[.22*L,.07*L],{at:.04});
+      K.noise('bandpass',2500*s,8000*s,1.6,.22,.08,{attack:.012});
+      if(P)K.modes(5274,[1],[.12],[.2],{at:.05});
+      K.room(P?.3:B?.1:.18);},
+    end:(K,g)=>{const {P,B,s}=rhythmSeGrade(g),L=B?.5:1;
+      K.modes(2637*s,[1,2.76],[.5,.18],[.35*L,.1*L]);
+      K.modes(3951*s,[1],[.3],[.3*L],{at:.006});
+      K.noise('highpass',6500,6500,.7,.25,.005);
+      K.room(P?.3:.14);},
+  }),
+});
+// 作り置きの長さ(秒)と、そろえる大きさ(叩いた直後50msの平均。音量100でおおむね .06 になる)
+const RHYTHM_NOTE_SE_RENDER_SECONDS = .7;
+const RHYTHM_NOTE_SE_TARGET_RMS = Object.freeze({ tap:.17, flick:.16, end:.16 });
+// 判定の段ごとの大きさ(音色も段ごとに作り分けてあるので、差は控えめ)
+const RHYTHM_NOTE_SE_GRADE_GAIN = Object.freeze({ PERFECT:1, GREAT:.82, GOOD:.64 });
+const rhythmNoteSeGradeOf = judgment => judgment==='GREAT' ? 'GREAT' : (judgment==='GOOD'||judgment==='BAD'||judgment==='MISS') ? 'GOOD' : 'PERFECT';
 const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   let ctx=null,cachedRaw=null,cachedSettings={enabled:true,volume:70,type:'STANDARD'},inputGroupDepth=0,inputGroupHit=false;
   // 出口(割れ止めを1つ通してから destination へ)。音の作り(context)ごとに1つだけ作って使い回す
@@ -1606,6 +1725,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   };
   // ===== 判定で鳴らし分ける(バンドリ！・プロセカなどと同じ考え方) =====
   // いちばん良い判定がいちばん気持ちよく鳴り、ずれるほど小さく・低く・短くなる。耳でも「いまの当たりはどうだったか」が分かる。
+  // 作り置きの音は段('PERFECT'/'GREAT'/'GOOD')ごとに音色から作り分ける。下の JUDGE_VOICE はクラシック(その場で鳴らす音)用。
   //   gain … 大きさの倍率 / pitch … 高さの倍率 / short … 長さの倍率。「判定で音を変える」を切ると、いつも MARVELOUS の音
   const JUDGE_VOICE=Object.freeze({
     MARVELOUS:Object.freeze({gain:1,pitch:1,short:1}),EXCELLENT:Object.freeze({gain:1,pitch:1,short:1}),
@@ -1613,47 +1733,122 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     BAD:Object.freeze({gain:.42,pitch:.76,short:.62}),MISS:Object.freeze({gain:.42,pitch:.76,short:.62}),
   });
   const voiceOf=(settings,judgment)=>settings.judgeVary&&JUDGE_VOICE[judgment]?JUDGE_VOICE[judgment]:JUDGE_VOICE.MARVELOUS;
-  // ===== 音のセット =====
-  // 1つのセットに「タップ」「フリック」「ロングの終わり」の3つの音を持たせる(プロセカ・バンドリ！はノーツの種類で音が違う)。
-  // 引数: T=音(波形,高さ,終わりの高さ,係数,長さ,始まり) / B=雑音(絞り方,高さ,Q,係数,長さ,始まり,持ち上げ) / W=シュッ(高さ→高さ,係数,長さ,始まり,持ち上げ)
-  // ★「標準」のタップはこれまでと同じ音、ロングの終わりはこれまでの「取れた」音と同じ高さ
-  const RHYTHM_NOTE_SE_SETS=Object.freeze({
-    STANDARD:Object.freeze({
-      tap:(T)=>{T('triangle',1120,820,.035,.045);},
-      flick:(T,B,W)=>{W(1800,5200,.03,.07,0,3);T('triangle',1320,2200,.018,.06);},
-      end:(T)=>{T('triangle',1318.51,1975.53,.028,.13);},
-    }),
-    CLAP:Object.freeze({
-      tap:(T,B)=>{B('bandpass',1500,1.1,.027,.012,0,3);B('bandpass',1500,1.1,.027,.012,.009,3);B('bandpass',1200,.8,.03,.07,.018,3);},
-      flick:(T,B,W)=>{W(2500,7000,.032,.065,0,3);},
-      end:(T,B)=>{B('bandpass',1800,1.2,.034,.035,0,3);T('sine',2637,2637,.012,.07);},
-    }),
-    DRUM:Object.freeze({
-      tap:(T,B)=>{T('sine',260,110,.045,.1);B('lowpass',3000,.7,.03,.012);},
-      flick:(T,B)=>{B('highpass',5000,.7,.022,.055,0,2);T('sine',520,300,.02,.05);},
-      end:(T,B)=>{T('sine',390,200,.035,.09);B('lowpass',3500,.7,.02,.012);},
-    }),
-    WOOD:Object.freeze({
-      tap:(T)=>{T('sine',1650,1500,.03,.04);T('triangle',820,780,.02,.035);},
-      flick:(T,B,W)=>{T('sine',1650,2500,.028,.05);W(3000,6000,.015,.05,0,2);},
-      end:(T)=>{T('sine',2200,2000,.03,.05);T('triangle',1100,1050,.015,.04);},
-    }),
-    BELL:Object.freeze({
-      tap:(T)=>{T('sine',2093,2093,.017,.22);T('sine',3136,3136,.01,.12);T('triangle',1046.5,1046.5,.008,.08);},
-      flick:(T)=>{T('sine',2093,3136,.017,.12);T('sine',3136,4186,.01,.08);},
-      end:(T)=>{T('sine',2637,2637,.017,.25);T('sine',3951,3951,.01,.15);},
-    }),
+  // ===== クラシック(これまでの標準の音)。作り置きが済むまでの代わりにも使う =====
+  // 引数: T=音(波形,高さ,終わりの高さ,係数,長さ,始まり) / B=雑音 / W=シュッ
+  const RHYTHM_NOTE_SE_CLASSIC=Object.freeze({
+    tap:(T)=>{T('triangle',1120,820,.035,.045);},
+    flick:(T,B,W)=>{W(1800,5200,.03,.07,0,3);T('triangle',1320,2200,.018,.06);},
+    end:(T)=>{T('triangle',1318.51,1975.53,.028,.13);},
   });
-  // 1つの音を組み立てて鳴らす。kind … 'tap' / 'flick' / 'end'、part … その音の大きさの倍率(フリック・ロングの終わり)
+  // ===== 作り置き =====
+  // 叩くたびに発振器やフィルターを何個も組むと重く、音も薄い。セットごとに 3つの音 × 判定3段 を
+  // OfflineAudioContext で1回だけ作り、叩いたときは「再生1つ＋大きさ1つ」だけにする(1回あたりの処理はクラシックより軽い)。
+  // 作るのは曲えらび・演奏の画面を開いたとき(prepare)。作り終わる前に叩いた音はクラシックで鳴らす
+  const banks=new Map();
+  const renderRate=()=>ctx&&ctx.state!=='closed'&&ctx.sampleRate?ctx.sampleRate:48000;
+  // 同じ雑音を毎回使う(作るたびに音が変わらないように、決まった並びの乱数)
+  const seededNoise=(off,seconds)=>{
+    const rate=off.sampleRate,length=Math.max(1,Math.floor(rate*seconds)),buffer=off.createBuffer(1,length,rate),data=buffer.getChannelData(0);
+    let seed=0x2f6b1d;for(let i=0;i<length;i++){seed=(seed*1664525+1013904223)>>>0;data[i]=seed/2147483648-1;}
+    return buffer;
+  };
+  // 響き(小さな部屋)。減っていく雑音をこもらせたもの
+  const roomImpulse=off=>{
+    const rate=off.sampleRate,length=Math.floor(rate*.45),buffer=off.createBuffer(2,length,rate);
+    for(let ch=0;ch<2;ch++){const data=buffer.getChannelData(ch);let seed=0x51a3+ch*977,low=0;
+      for(let i=0;i<length;i++){seed=(seed*1664525+1013904223)>>>0;const white=seed/2147483648-1;low+=(white-low)*.35;data[i]=low*Math.exp(-i/(rate*.09));}}
+    return buffer;
+  };
+  const renderOne=(design,grade,target)=>{
+    const OfflineClass=typeof window!=='undefined'?(window.OfflineAudioContext||window.webkitOfflineAudioContext):null;
+    if(!OfflineClass)return Promise.reject(new Error('OfflineAudioContext がありません'));
+    const rate=renderRate(),off=new OfflineClass(1,Math.ceil(rate*RHYTHM_NOTE_SE_RENDER_SECONDS),rate);
+    const dry=off.createGain(),send=off.createGain(),convolver=off.createConvolver(),noiseBuffer=seededNoise(off,.5);
+    dry.connect(off.destination);convolver.buffer=roomImpulse(off);send.gain.value=0;send.connect(convolver);convolver.connect(off.destination);
+    const envelope=(gain,start,peak,attack,decay)=>{
+      gain.gain.setValueAtTime(.0001,start);gain.gain.linearRampToValueAtTime(peak,start+attack);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+attack+decay);
+    };
+    const route=node=>{node.connect(dry);node.connect(send);};
+    const K={
+      tone:(type,f0,f1,peak,decay,{at=0,attack=.0015,glide=.03}={})=>{
+        const start=at,oscillator=off.createOscillator(),gain=off.createGain();
+        oscillator.type=type;oscillator.frequency.setValueAtTime(f0,start);
+        if(f1&&f1!==f0)oscillator.frequency.exponentialRampToValueAtTime(f1,start+glide);
+        envelope(gain,start,peak,attack,decay);oscillator.connect(gain);route(gain);
+        oscillator.start(start);oscillator.stop(start+attack+decay+.01);
+      },
+      noise:(type,f0,f1,q,peak,decay,{at=0,attack=.0008}={})=>{
+        const start=at,source=off.createBufferSource(),filter=off.createBiquadFilter(),gain=off.createGain();
+        source.buffer=noiseBuffer;filter.type=type;filter.Q.value=q;filter.frequency.setValueAtTime(f0,start);
+        if(f1&&f1!==f0)filter.frequency.exponentialRampToValueAtTime(f1,start+attack+decay);
+        envelope(gain,start,peak,attack,decay);source.connect(filter);filter.connect(gain);route(gain);
+        source.start(start);source.stop(start+attack+decay+.01);
+      },
+      modes:(f,ratios,peaks,decays,{at=0}={})=>ratios.forEach((ratio,i)=>K.tone('sine',f*ratio,f*ratio,peaks[i]||0,decays[i]||.05,{at,attack:.0008})),
+      room:amount=>{send.gain.value=Math.max(0,Number(amount)||0);},
+    };
+    design(K,grade);
+    return new Promise((resolve,reject)=>{
+      let pending=null;
+      try{pending=off.startRendering();}catch(error){reject(error);return;}
+      if(pending&&typeof pending.then==='function')pending.then(resolve,reject);
+      else off.oncomplete=event=>resolve(event.renderedBuffer);
+    }).then(rendered=>{
+      // 大きさをそろえる: 叩いた直後50msの平均を target へ。ただし山が大きすぎるときは山で止める
+      const data=rendered.getChannelData(0),window50=Math.min(data.length,Math.floor(rate*.05));
+      let sum=0,peak=0;for(let i=0;i<data.length;i++){const a=Math.abs(data[i]);if(a>peak)peak=a;if(i<window50)sum+=data[i]*data[i];}
+      const rms=Math.sqrt(sum/Math.max(1,window50));
+      let scale=rms>0?target/rms:1;if(peak*scale>2.4)scale=2.4/peak;
+      // 鳴り終わったあとの無音を切る(再生の時間を短くする)
+      let last=data.length-1;while(last>0&&Math.abs(data[last])*scale<.001)last--;
+      const length=Math.min(data.length,last+Math.floor(rate*.01)+1),buffer=off.createBuffer(1,length,rate),out=buffer.getChannelData(0);
+      for(let i=0;i<length;i++)out[i]=data[i]*scale;
+      return buffer;
+    });
+  };
+  const renderBank=type=>{
+    const design=RHYTHM_NOTE_SE_DESIGNS[type],jobs=[];
+    ['tap','flick','end'].forEach(kind=>['PERFECT','GREAT','GOOD'].forEach(grade=>
+      jobs.push(renderOne(design[kind],grade,RHYTHM_NOTE_SE_TARGET_RMS[kind]).then(buffer=>[kind,grade,buffer]))));
+    return Promise.all(jobs).then(list=>{const out={tap:{},flick:{},end:{}};list.forEach(([kind,grade,buffer])=>{out[kind][grade]=buffer;});return out;});
+  };
+  const ready=type=>banks.get(type)?.buffers||null;
+  const prepare=typeIn=>{
+    const type=rhythmNoteSeTypeOf(typeIn||readSettings().type);
+    if(!RHYTHM_NOTE_SE_DESIGNS[type])return Promise.resolve(null);
+    const hit=banks.get(type);if(hit)return hit.promise;
+    const entry={buffers:null,promise:null};
+    // 作れなかった端末(古いブラウザなど)は、以後もクラシックで鳴らす(叩くたびに作り直しに行かない)
+    entry.promise=renderBank(type).then(buffers=>{entry.buffers=buffers;return buffers;}).catch(()=>null);
+    banks.set(type,entry);
+    // 作り置きは3セットまで(設定で聞き比べても増え続けない)
+    for(const key of banks.keys()){if(banks.size<=3)break;if(key!==type)banks.delete(key);}
+    return entry.promise;
+  };
+  // 1つの音を鳴らす。kind … 'tap' / 'flick' / 'end'、part … その音の大きさの倍率(フリック・ロングの終わり)
   const voice=(settings,kind,judgment,part=1)=>{
     if(!(part>0))return false;
     if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
-    const now=audio.currentTime,judge=voiceOf(settings,judgment),volume=settings.volume/100*part*judge.gain,out=output(audio);
+    const now=audio.currentTime,out=output(audio);
+    const bank=settings.type==='CLASSIC'?null:ready(settings.type);
+    if(bank){
+      const grade=settings.judgeVary?rhythmNoteSeGradeOf(judgment):'PERFECT',buffer=bank[kind]?.[grade]||bank.tap.PERFECT;
+      const source=audio.createBufferSource(),gain=audio.createGain();
+      source.buffer=buffer;
+      gain.gain.setValueAtTime(rhythmNoteSeLevel(.035,settings.volume/100*part*RHYTHM_NOTE_SE_GRADE_GAIN[grade]),now);
+      source.connect(gain);gain.connect(out);
+      source.start(now);
+      source.onended=()=>{try{source.disconnect();gain.disconnect();}catch{}};
+      return true;
+    }
+    if(settings.type!=='CLASSIC')prepare(settings.type);
+    // ここから下はクラシック(その場で組んで鳴らす)
+    const judge=voiceOf(settings,judgment),volume=settings.volume/100*part*judge.gain;
     const P=judge.pitch,L=judge.short;
-    // 音を1つ鳴らす部品。type … 波形、f0→f1 … 高さの動き、peak … 元の係数、decay … 消えるまで
     const tone=(type,f0,f1,peak,decay,at=0)=>{
       const start=now+at,d=decay*L,oscillator=audio.createOscillator(),gain=audio.createGain();
       oscillator.type=type;
@@ -1665,20 +1860,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
       oscillator.start(start);oscillator.stop(start+d+.005);
       oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
     };
-    // makeup … 雑音は帯域を絞ると小さくなるので、そのぶんを絞ったあとで持ち上げる倍率。
-    //   係数(peak)を大きくして補うと、音量200の蓋(.8)に先に当たって「200のほうが100より小さい」になった
-    const burst=(filterType,freq,q,peak,decay,at=0,makeup=1)=>{
-      const start=now+at,d=decay*L,source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain(),boost=audio.createGain();
-      source.buffer=noise(audio);
-      filter.type=filterType;filter.frequency.setValueAtTime(freq*P,start);filter.Q.setValueAtTime(q,start);
-      gain.gain.setValueAtTime(rhythmNoteSeLevel(peak,volume),start);
-      gain.gain.exponentialRampToValueAtTime(.0001,start+d);
-      boost.gain.value=makeup;
-      source.connect(gain);gain.connect(filter);filter.connect(boost);boost.connect(out);
-      source.start(start);source.stop(start+d+.005);
-      source.onended=()=>{try{source.disconnect();filter.disconnect();gain.disconnect();boost.disconnect();}catch{}};
-    };
-    // フリックの「シュッ」。雑音を絞る高さを下から上へ動かす(払った向きに風が抜けるような音)
+    // フリックの「シュッ」。雑音を絞る高さを下から上へ動かす
     const whoosh=(f0,f1,peak,decay,at=0,makeup=1)=>{
       const start=now+at,d=decay*L,source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain(),boost=audio.createGain();
       source.buffer=noise(audio);
@@ -1692,8 +1874,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
       source.start(start);source.stop(start+d+.005);
       source.onended=()=>{try{source.disconnect();filter.disconnect();gain.disconnect();boost.disconnect();}catch{}};
     };
-    const set=RHYTHM_NOTE_SE_SETS[settings.type]||RHYTHM_NOTE_SE_SETS.STANDARD;
-    (set[kind]||set.tap)(tone,burst,whoosh);
+    (RHYTHM_NOTE_SE_CLASSIC[kind]||RHYTHM_NOTE_SE_CLASSIC.tap)(tone,null,whoosh);
     return true;
   };
   // ノーツに触れたとき(タップ・ホールドとスライドの始点)。judgment … 触れた瞬間のずれから出した判定(無ければいちばん良い音)
@@ -1742,9 +1923,14 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   // (プロセカ・バンドリ！と同じ。実機で「フリックが成功したのか分かりづらい」という報告があった)
   const playFlick=(judgment=null)=>{const settings=readSettings();return voice(settings,'flick',judgment,settings.flickVolume/100);};
   // 設定画面の試聴。kind … 'tap' / 'flick' / 'end'
+  // 作り置きがまだなら、作り終わってから鳴らす(はじめの1回だけ、ほんの少し遅れる)
   const preview=(previewSettings,kind='tap',judgment='MARVELOUS')=>{
     const settings=settingsFrom(previewSettings);
-    return voice(settings,kind,judgment,kind==='flick'?settings.flickVolume/100:kind==='end'?settings.endVolume/100:1);
+    const run=()=>voice(settings,kind,judgment,kind==='flick'?settings.flickVolume/100:kind==='end'?settings.endVolume/100:1);
+    if(settings.type==='CLASSIC'||ready(settings.type))return run();
+    warm();
+    prepare(settings.type).then(run);
+    return true;
   };
   // モンスターノーツを取ったときの音。実機で「モンスターノーツ踏んだときは音も演出も地味すぎる」と
   // 言われたので(2026-09-05)、ふつうのノーツとは**はっきり違う音**にする。
@@ -1804,7 +1990,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     });
     return true;
   };
-  return {warm,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,_readSettings:readSettings};
+  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。

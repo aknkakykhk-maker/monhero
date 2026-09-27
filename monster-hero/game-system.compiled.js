@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 28a6e743ab5b4644
+// source-sha256: 6aaa6cb9278b3b3a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 20:10";
+const BUILD_DATE = "2026-09-27 23:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -21049,7 +21049,7 @@ const RhythmOptions = ({
     className: draft[key] === flag ? 'text-white' : 'text-slate-400'
   }, text))));
   const segments = (key, items, onPick = null) => React.createElement("div", {
-    className: `grid ${items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
+    className: `grid ${items.length === 6 ? 'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10' : items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
   }, items.map(([id, text]) => React.createElement("button", {
     type: "button",
     key: id,
@@ -21273,7 +21273,7 @@ const RhythmOptions = ({
     noteSeEnabled: true
   }, 'tap')), `ノーツを叩いたとき・フリックしたとき・ロングを取り終えたときの音が、セットごとにそろって変わります。${RHYTHM_NOTE_SE_TYPES.map(item => `${item.label}＝${item.note}`).join('／')}。`, {
     full: true
-  }), field('判定で音を変える', toggle('noteSeJudgeVary'), 'ONのときは、MARVELOUS・EXCELLENTでいちばん気持ちよく鳴り、GREAT・GOOD・BADとずれるほど小さく・低く鳴ります。耳でも当たり具合が分かります。'), field('空打ちの音', toggle('noteSeEmptyEnabled'), 'ノーツの無いところを叩いたときの「シャッ」という音です。'), field('フリック音の大きさ', stepper('noteSeFlickVolume', 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, {
+  }), field('判定で音を変える', toggle('noteSeJudgeVary'), 'ONのときは、MARVELOUS・EXCELLENTできらめく音が重なり、GREAT・GOOD・BADとずれるほど小さく・低く・短く鳴ります。耳でも当たり具合が分かります。'), field('空打ちの音', toggle('noteSeEmptyEnabled'), 'ノーツの無いところを叩いたときの「シャッ」という音です。'), field('フリック音の大きさ', stepper('noteSeFlickVolume', 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, {
     fine: 5,
     coarse: 20,
     suffix: '%'
@@ -21326,8 +21326,8 @@ const RhythmOptions = ({
     },
     className: "min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black leading-tight text-fuchsia-100"
   }, "判定ごと", React.createElement("span", {
-    className: "block text-[9px] text-fuchsia-300"
-  }, "MAR→GRE→GOOD")))), React.createElement("details", {
+    className: "block text-[10px] text-fuchsia-300"
+  }, "良い順に3回")))), React.createElement("details", {
     "data-rhythm-option-help": true,
     className: "mt-3"
   }, React.createElement("summary", {
@@ -21723,6 +21723,9 @@ const RhythmSongSelect = ({
   onListScrollTop = null
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
+  useEffect(() => {
+    RHYTHM_NOTE_SE_RUNTIME.prepare?.();
+  }, []);
   const setView = next => {
     if (typeof onView === 'function') onView(next);
   };
@@ -23540,6 +23543,9 @@ const RhythmTapTest = ({
   const settings = useMemo(() => settingsIn && settingsIn.autoEffectDown !== false ? rhythmCapEffects(settingsIn, effectCap) : settingsIn, [settingsIn, effectCap]);
   const settingsLiveRef = useRef(settings);
   settingsLiveRef.current = settings;
+  useEffect(() => {
+    RHYTHM_NOTE_SE_RUNTIME.prepare?.();
+  }, []);
   const stepEffectCapRef = useRef(null);
   const [effectCapNotice, setEffectCapNotice] = useState(() => settingsIn && settingsIn.autoEffectDown !== false && rhythmAutoEffectMemory.level > 0 ? 1 : 0);
   stepEffectCapRef.current = () => {
