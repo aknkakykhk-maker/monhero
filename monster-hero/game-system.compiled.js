@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6167ad0bd0e46f2f
+// source-sha256: 2aa2658ce9f4d00f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 00:41";
+const BUILD_DATE = "2026-09-28 00:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5071,6 +5071,10 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   effectAmount: 'LIGHT',
   lightweightMode: false,
   noteSeType: 'STANDARD',
+  noteSeJudgeVary: true,
+  noteSeFlickVolume: 100,
+  noteSeEndVolume: 100,
+  noteSeEmptyEnabled: true,
   livePartnerVisible: true,
   sideMonsterOpacity: 'NORMAL',
   sideMonsterMotion: 'NORMAL',
@@ -5129,6 +5133,10 @@ const normalizeRhythmSettings = value => {
     laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
     noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType: rhythmNoteSeTypeOf(source.noteSeType),
+    noteSeJudgeVary: bool('noteSeJudgeVary'),
+    noteSeEmptyEnabled: bool('noteSeEmptyEnabled'),
+    noteSeFlickVolume: rhythmFiniteStep(source.noteSeFlickVolume, 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeFlickVolume),
+    noteSeEndVolume: rhythmFiniteStep(source.noteSeEndVolume, 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeEndVolume),
     noteSeEnabled: bool('noteSeEnabled'),
     vibrationEnabled: bool('vibrationEnabled'),
     effectAmount: RHYTHM_EFFECT_LEVELS.includes(source.effectAmount) ? source.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount,
@@ -21041,7 +21049,7 @@ const RhythmOptions = ({
     className: draft[key] === flag ? 'text-white' : 'text-slate-400'
   }, text))));
   const segments = (key, items, onPick = null) => React.createElement("div", {
-    className: `grid ${items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
+    className: `grid ${items.length === 6 ? 'grid-cols-3 [&>button:nth-child(3n)]:border-r-0 [&>button:nth-child(-n+3)]:border-b [&>button:nth-child(-n+3)]:border-b-white/10' : items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
   }, items.map(([id, text]) => React.createElement("button", {
     type: "button",
     key: id,
@@ -21259,11 +21267,23 @@ const RhythmOptions = ({
     coarse: 10
   }), null, {
     full: true
-  }), field('タップ音の種類', segments('noteSeType', RHYTHM_NOTE_SE_TYPES.map(item => [item.id, item.label]), id => RHYTHM_NOTE_SE_RUNTIME.preview({
+  }), field('タップ音のセット', segments('noteSeType', RHYTHM_NOTE_SE_TYPES.map(item => [item.id, item.label]), id => RHYTHM_NOTE_SE_RUNTIME.preview({
     ...draft,
     noteSeType: id,
     noteSeEnabled: true
-  })), `ノーツを叩いたときの音です。${RHYTHM_NOTE_SE_TYPES.map(item => `${item.label}＝${item.note}`).join('／')}。取り終えたとき・モンスターノーツ・フルコンボの音は変わりません。`, {
+  }, 'tap')), `ノーツを叩いたとき・フリックしたとき・ロングを取り終えたときの音が、セットごとにそろって変わります。${RHYTHM_NOTE_SE_TYPES.map(item => `${item.label}＝${item.note}`).join('／')}。`, {
+    full: true
+  }), field('判定で音を変える', toggle('noteSeJudgeVary'), 'ONのときは、MARVELOUS・EXCELLENTできらめく音が重なり、GREAT・GOOD・BADとずれるほど小さく・低く・短く鳴ります。耳でも当たり具合が分かります。'), field('空打ちの音', toggle('noteSeEmptyEnabled'), 'ノーツの無いところを叩いたときの「シャッ」という音です。'), field('フリック音の大きさ', stepper('noteSeFlickVolume', 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, {
+    fine: 5,
+    coarse: 20,
+    suffix: '%'
+  }), 'タップ音量に対する大きさです。フリックは触れた瞬間ではなく、払えたときに「シュッ」と鳴ります。0%で鳴らしません。', {
+    full: true
+  }), field('ロングの終わりの音の大きさ', stepper('noteSeEndVolume', 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, {
+    fine: 5,
+    coarse: 20,
+    suffix: '%'
+  }), 'ホールド・スライドを最後まで取れたときの音です。タップ音量に対する大きさで、0%で鳴らしません。', {
     full: true
   }), field('タップ音', toggle('noteSeEnabled')), React.createElement("div", {
     className: "grid gap-2"
@@ -21273,9 +21293,41 @@ const RhythmOptions = ({
     className: "min-h-[44px] rounded-xl bg-indigo-700 text-[12px] font-black"
   }, "♪ BGM試聴"), React.createElement("button", {
     type: "button",
-    onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview(draft),
+    "data-rhythm-se-preview": "tap",
+    onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview(draft, 'tap'),
     className: "min-h-[44px] rounded-xl bg-fuchsia-700 text-[12px] font-black"
-  }, "タップ音試聴"))), React.createElement("details", {
+  }, "タップ音試聴")), React.createElement("div", {
+    "data-rhythm-se-previews": true,
+    className: `grid grid-cols-3 gap-2 ${wide ? 'col-span-3' : 'col-span-2'}`
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-se-preview": "flick",
+    onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview({
+      ...draft,
+      noteSeEnabled: true
+    }, 'flick'),
+    className: "min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100"
+  }, "フリック音"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-se-preview": "end",
+    onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview({
+      ...draft,
+      noteSeEnabled: true
+    }, 'end'),
+    className: "min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100"
+  }, "ロングの終わり"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-se-preview": "judge",
+    onClick: () => {
+      ['MARVELOUS', 'GREAT', 'GOOD'].forEach((id, i) => setTimeout(() => RHYTHM_NOTE_SE_RUNTIME.preview({
+        ...draft,
+        noteSeEnabled: true
+      }, 'tap', id), i * 260));
+    },
+    className: "min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black leading-tight text-fuchsia-100"
+  }, "判定ごと", React.createElement("span", {
+    className: "block text-[10px] text-fuchsia-300"
+  }, "良い順に3回")))), React.createElement("details", {
     "data-rhythm-option-help": true,
     className: "mt-3"
   }, React.createElement("summary", {
@@ -21671,6 +21723,9 @@ const RhythmSongSelect = ({
   onListScrollTop = null
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
+  useEffect(() => {
+    RHYTHM_NOTE_SE_RUNTIME.prepare?.();
+  }, []);
   const setView = next => {
     if (typeof onView === 'function') onView(next);
   };
@@ -23488,6 +23543,9 @@ const RhythmTapTest = ({
   const settings = useMemo(() => settingsIn && settingsIn.autoEffectDown !== false ? rhythmCapEffects(settingsIn, effectCap) : settingsIn, [settingsIn, effectCap]);
   const settingsLiveRef = useRef(settings);
   settingsLiveRef.current = settings;
+  useEffect(() => {
+    RHYTHM_NOTE_SE_RUNTIME.prepare?.();
+  }, []);
   const stepEffectCapRef = useRef(null);
   const [effectCapNotice, setEffectCapNotice] = useState(() => settingsIn && settingsIn.autoEffectDown !== false && rhythmAutoEffectMemory.level > 0 ? 1 : 0);
   stepEffectCapRef.current = () => {
@@ -24468,7 +24526,7 @@ const RhythmTapTest = ({
     }
     const clearedGesture = judgment !== 'MISS' && (note.type === 'HOLD' || rhythmNoteIsSlide(note) || note._rhythmOriginalType === 'FLICK');
     if (clearedGesture) {
-      RHYTHM_NOTE_SE_RUNTIME.playClear();
+      if (note._rhythmOriginalType === 'FLICK' || note.type === 'FLICK' || note.endFlick) RHYTHM_NOTE_SE_RUNTIME.playFlick(judgment);else RHYTHM_NOTE_SE_RUNTIME.playClear(judgment);
       if (!settings.lightweightMode && !rhythmEffectAtMost(settings.effectAmount, 'LIGHT')) note._rhythmClearAt = run.audio?.songTimeMs?.() ?? 0;
     }
     const monsterHit = judgment !== 'MISS' && !!monsterForNote(note);

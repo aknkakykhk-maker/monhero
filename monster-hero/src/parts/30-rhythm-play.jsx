@@ -646,6 +646,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const settings=useMemo(()=>settingsIn&&settingsIn.autoEffectDown!==false?rhythmCapEffects(settingsIn,effectCap):settingsIn,[settingsIn,effectCap]);
   // 演奏の途中で段が下がっても、作り直されない処理(毎フレームの処理・判定の処理)が最新の設定を読めるように
   const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
+  // タップ音を作り置きしておく(1回だけ。作り終わる前に叩いた音はクラシックで鳴る)
+  useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
   const stepEffectCapRef=useRef(null);
   // 下げたときは画面の上のほうへ一瞬だけ知らせる(黙って下がると「設定したのに演出が出ない」と思われるため)
   // 前の曲で下げた段のまま始めるときも、始めに1回知らせる(黙って控えめなまま始まらないように)
@@ -1298,7 +1300,9 @@ if(calibrating&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(de
 // (実機で「フリックが成功したのか分かりづらい」「取れた手ごたえがほしい」という報告があった)
 const clearedGesture=judgment!=='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(note)||note._rhythmOriginalType==='FLICK');
 if(clearedGesture){
-  RHYTHM_NOTE_SE_RUNTIME.playClear();
+  // フリック(終点フリックを含む)は「シュッ」、ホールド・スライドの終わりは終わりの音。どちらも判定で鳴らし分ける(2026-09-27)
+  if(note._rhythmOriginalType==='FLICK'||note.type==='FLICK'||note.endFlick)RHYTHM_NOTE_SE_RUNTIME.playFlick(judgment);
+  else RHYTHM_NOTE_SE_RUNTIME.playClear(judgment);
   // 光は演出量の設定に従う(MINIMAL・軽量モードでは出さない)。音は設定に関わらず鳴らす
   if(!settings.lightweightMode&&!rhythmEffectAtMost(settings.effectAmount,'LIGHT'))note._rhythmClearAt=run.audio?.songTimeMs?.()??0;
 }

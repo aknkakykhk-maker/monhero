@@ -503,6 +503,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   noteSeVolume:70, noteSeEnabled:true, vibrationEnabled:false, effectAmount:'LIGHT', lightweightMode:false,
   // タップ音の種類(2026-09-26)。新しい項目なので、保存値に無い人は「標準」(これまでの音)で補う
   noteSeType:'STANDARD',
+  // 2026-09-27(ユーザー指示「タップ音を他の音ゲーを見習って / 設定で色々変えれるように」)。どれも新しい項目で、
+  // 保存値に無い人は既定で補う。判定で音を変える=する、フリック音・ロングの終わりの音=タップ音量の100%、空打ちの音=鳴らす
+  noteSeJudgeVary:true, noteSeFlickVolume:100, noteSeEndVolume:100, noteSeEmptyEnabled:true,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,
@@ -583,6 +586,9 @@ const normalizeRhythmSettings = value => {
     // タップ音量だけ上限を400へ広げた(2026-09-26)。広げただけなので、保存してある0〜200はそのまま読める
     noteSeVolume:rhythmFiniteStep(source.noteSeVolume,0,RHYTHM_NOTE_SE_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType:rhythmNoteSeTypeOf(source.noteSeType),
+    noteSeJudgeVary:bool('noteSeJudgeVary'), noteSeEmptyEnabled:bool('noteSeEmptyEnabled'),
+    noteSeFlickVolume:rhythmFiniteStep(source.noteSeFlickVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeFlickVolume),
+    noteSeEndVolume:rhythmFiniteStep(source.noteSeEndVolume,0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,DEFAULT_RHYTHM_SETTINGS.noteSeEndVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
     lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'),
