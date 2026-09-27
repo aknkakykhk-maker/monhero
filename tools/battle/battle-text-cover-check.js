@@ -167,6 +167,14 @@ const OVERLAP_FN = () => {
 
     // カードの詳細パネルは開いたままだと舞台を覆うので、測る前に必ず閉じる
     const closeDetail = async () => {
+      // タクティクスの EXスキルの説明のシート(2026-09-23 公開)は、枠を押すと開く。画面全体にかぶさる別の層なので、
+      // 開いたままだと後ろのバトル画面の文字と「重なる」と数えてしまう。測る前に「閉じる」で閉じる
+      await page.evaluate(() => {
+        const sheet = [...document.querySelectorAll('div.fixed')].find((d) => /EXスキルを使用/.test(d.textContent || ''));
+        const close = sheet && [...sheet.querySelectorAll('button')].find((b) => (b.textContent || '').trim() === '閉じる');
+        if (close) close.click();
+      });
+      await page.waitForTimeout(300);
       for (let k = 0; k < 3; k += 1) {
         const open = await page.evaluate(() => /技威力:/.test(document.body.innerText));
         if (!open) return;

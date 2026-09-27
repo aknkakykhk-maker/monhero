@@ -178,7 +178,8 @@ const extremeTabInfo = () => {
     const waves = await page.evaluate(() => [...document.querySelectorAll('[data-wave]')].map(row => row.innerText.replace(/\s+/g, ' ')));
     check('EXTREMEで全10WAVE詳細を開ける', waves.length === 10, `${waves.length} WAVE`);
     // 敵の基礎値は増減するので固定値では見ない。あとで実戦のWAVE1と突き合わせる
-    waveOneDetailHp = Number(String((waves[0] || '').match(/HP ([\d,]+)/)?.[1] || '').replace(/,/g, '')) || 0;
+    // 表示の呼び方は「HP」から「ライフ」に変わった(ゲームの中の呼び方にそろえた)。どちらでも読む
+    waveOneDetailHp = Number(String((waves[0] || '').match(/(?:HP|ライフ) ([\d,]+)/)?.[1] || '').replace(/,/g, '')) || 0;
     check('全WAVE詳細のWAVE1に敵の能力が出る', waveOneDetailHp > 0, waves[0]);
     check('デュラハン・ムーとボス表示がある', waves.some(w => w.includes('デュラハン')) && waves.at(-1)?.includes('ムー') && waves.at(-1)?.includes('BOSS'), waves.slice(-2).join(' / '));
     await page.getByRole('button', { name:'閉じる' }).click();

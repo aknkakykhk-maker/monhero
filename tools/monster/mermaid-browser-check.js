@@ -5,7 +5,11 @@
 //
 // マーケットの6商品 → 購入 → 円盤石でモンスターが解放される → 4つのアイコンが
 // プロフィール選択に並びプロフィールへ設定できる → 再読み込みしても残る、までを通しで見る。
-const { chromium } = require('playwright');
+const path = require('path');
+let chromium;
+try { ({ chromium } = require(path.join(__dirname, '..', 'node_modules', 'playwright'))); } catch { ({ chromium } = require('playwright')); }
+// イベントのお話(閉幕とお礼など)は、ほかのブラウザ検査と同じく「見た扱い」にしてから始める(2026-09-27・マーケットでかぶさって止まっていた)
+const { eventStorySeed } = require(path.join(__dirname, '..', 'boot', 'quiet-boot-seed'));
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const results = [];
@@ -41,6 +45,7 @@ const MARKET_ITEMS = [
   const fatal = [];
   page.on('pageerror', e => fatal.push(e.message));
   await page.addInitScript(seed);
+  await page.addInitScript(eventStorySeed());
 
   const down = (f) => page.evaluate((s) => {
     const b = s.aria ? document.querySelector(`button[aria-label="${s.aria}"]`)
@@ -57,14 +62,23 @@ const MARKET_ITEMS = [
     await page.waitForFunction(() => !!document.querySelector('button[aria-label="トップ画面へ進む"]'), { timeout: 40000 });
     await down({ aria: 'トップ画面へ進む' });
     await page.waitForTimeout(3000);
-    for (let i = 0; i < 8; i++) {
+    // お知らせは何枚も続けて出る(ログインボーナス → ギフト → 更新 → 助手の解放のお知らせ)。
+    // 助手の解放のお知らせは「次へ」で進み、ほかを閉じたあと少し遅れて出るので、2回続けて何も無いまで送る
+    // (2026-09-27・「次へ」を押せずにマーケットを開けないまま止まっていた。battle-menu-browser-check と同じ閉じ方)
+    let quiet = 0;
+    for (let i = 0; i < 40 && quiet < 2; i++) {
       const closed = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('button')].find(x => /受け取|閉じる|あとで|スキップ/.test(x.textContent));
+        const dialog = document.querySelector('[role="dialog"]');
+        if (dialog) {
+          const inner = [...dialog.querySelectorAll('button')];
+          if (inner.length) { inner[inner.length - 1].click(); return true; }
+        }
+        const b = [...document.querySelectorAll('button')].find(x => /^(受け取る|閉じる|とじる|あとで|スキップ|次へ|つぎへ|確認|OK|今は見ない)$/.test((x.innerText || '').replace(/\s+/g, ' ').trim()));
         if (b) b.click();
         return !!b;
       });
-      await page.waitForTimeout(700);
-      if (!closed) break;
+      await page.waitForTimeout(closed ? 500 : 900);
+      quiet = closed ? 0 : quiet + 1;
     }
     await page.waitForFunction(() => !!document.querySelector('button[aria-label="マーケット"]'), { timeout: 30000 });
   };
@@ -74,7 +88,8 @@ const MARKET_ITEMS = [
     return ok;
   };
   const clickText = async (t) => {
-    const ok = await page.evaluate((x) => { const b = [...document.querySelectorAll('button')].find(y => y.textContent.trim() === x); if (b) b.click(); return !!b; }, t);
+    // M/B管理などのボタンは、名前の下に説明を添える形になった。全文か1行目(名前)が合えば押す
+    const ok = await page.evaluate((x) => { const b = [...document.querySelectorAll('button')].find(y => y.textContent.trim() === x || ((y.innerText || '').split('\n')[0] || '').trim() === x); if (b) b.click(); return !!b; }, t);
     await page.waitForTimeout(1200);
     return ok;
   };
@@ -83,14 +98,24 @@ const MARKET_ITEMS = [
   await boot();
 
   // --- ① マーケットに6商品が並び、購入できる ---
-  // マーケットは「アイコン」「円盤石」…のタブに分かれているので、タブごとに見る
+  // マーケットは「ダイヤショップ」「ブリーダーP交換所」…の入口に分かれた(2026-09-22)。
+  //   アイコン … ブリーダーP交換所(ポイントで交換) / 円盤石 … ダイヤショップの「円盤石」タブ
+  // 売り場の中から別の売り場へは、見出しの「戻る」でマーケットの入口へ戻ってから入り直す
   await clickAria('マーケット');
+  const openSection = async (tab) => {
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.body.innerText.includes('ダイヤで購入')) b.click(); });
+    await page.waitForTimeout(600);
+    const entry = tab === 'アイコン' ? 'ブリーダーP' : 'ダイヤショップ';
+    await page.evaluate((e) => { const b = [...document.querySelectorAll('button')].find(x => (x.innerText || '').includes(e)); if (b) b.click(); }, entry);
+    await page.waitForTimeout(1000);
+    if (tab === '円盤石') await clickText('円盤石');
+  };
   const marketByTab = {};
-  for (const tab of ['アイコン', '円盤石']) { await clickText(tab); marketByTab[tab] = await text(); }
+  for (const tab of ['アイコン', '円盤石']) { await openSection(tab); marketByTab[tab] = await text(); }
   for (const [name, tab] of MARKET_ITEMS) check(`マーケットの「${tab}」に「${name}」がある`, marketByTab[tab].includes(name));
 
   for (const [name, tab, buyLabel] of MARKET_ITEMS) {
-    await clickText(tab);
+    await openSection(tab);
     const found = await page.evaluate((l) => {
       const b = document.querySelector(`button[aria-label="${l}"]`);
       if (!b) return 'ボタンなし';
