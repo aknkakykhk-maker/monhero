@@ -27,6 +27,7 @@ class FakeParam{
   setValueAtTime(value){lastGain=Number(value)||0;}
   exponentialRampToValueAtTime(){}
   linearRampToValueAtTime(){}
+  setTargetAtTime(){}
 }
 class FakeNode{
   connect(){}
@@ -314,6 +315,12 @@ check('touchcancel/pointercancelには終端SEを追加しない',!releaseSource
     if(startCount===before)silent.push(`${type}/${kind}`);
   }
   check('試聴で全セットの3つの音が鳴る',silent.length===0,silent.join(','));
+  // 2026-09-28: 見本(プロセカのプレイ動画から叩いた音を重ねて取り出したもの)を測って、スタンダードと空打ちをそろえた。
+  //   見本は音の7〜8割が 6.4〜12.8kHz、約30msで膨らんで150msほどで消える。曲に対する大きさも見本に合わせて上げた
+  const standardTap=source.slice(source.indexOf('  STANDARD:Object.freeze({'),source.indexOf('  CLAP:Object.freeze({'));
+  check('スタンダードのタップ音は、高いきらめき(8kHzあたり)をゆっくり減らす形',/K\.noise\('bandpass',8300\*s,7800\*s,1\.7,\.95,0,\{attack:\.02,tau:\.07\*L\}\)/.test(standardTap));
+  check('作り置きの大きさは見本に合わせた(タップ .3)',source.includes('const RHYTHM_NOTE_SE_TARGET_RMS = Object.freeze({ tap:.3, flick:.28, end:.28 });'));
+  check('空打ちはクラシック以外で明るい「シャッ」(クラシックはこれまでの音)',source.includes('filter.frequency.setValueAtTime(classic?2800:7000,now);'));
   const renderText=source.slice(source.indexOf('const renderOne=('),source.indexOf('const renderBank='));
   check('作り置きは決まった並びの雑音で作る(開くたびに音が変わらない)',source.includes('const seededNoise=(off,seconds)=>')&&!/Math\.random/.test(renderText));
   check('作り置きのあと大きさをそろえる',renderText.includes('let scale=rms>0?target/rms:1;'));
