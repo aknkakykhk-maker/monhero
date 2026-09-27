@@ -205,6 +205,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {field('自己ベスト比',toggle('paceDisplay'),
               'いまのペースが自己ベストより上か下かを、レーンの左のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。')}
             {field('レーン発光',segments('laneGlow',RHYTHM_LANE_GLOW_LABELS),null,{full:true})}
+            {field('道の幅（横向き）',segments('roadWidth',RHYTHM_ROAD_WIDTH_LABELS),
+              '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。',{full:true})}
             {/* ★出す/出さないと置き場所は**同じ枠にまとめる**(2026-09-13・ユーザー指摘
                 「オプションの配置もコンボを出すとコンボの位置選択から隣り合わせにないのも
                  意味わからない」)。別々の枠に置くと、あいだに関係ない項目が挟まる。 */}

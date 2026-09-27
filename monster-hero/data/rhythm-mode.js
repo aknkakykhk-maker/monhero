@@ -604,6 +604,18 @@ const RHYTHM_STRIP=(()=>{
 // 判定・入力・見た目はすべてこの投影を通るので、ここを変えれば3つがそろって変わる。
 const RHYTHM_PROJECTION_TOP_SCALE=.07;
 const RHYTHM_PROJECTION_CURVE=1;
+// 横向きの道の幅(2026-09-27・ユーザー指示「オプションでパターン選べるにして。不具合とかおきないように」)。
+// 道の横の広がりにだけ掛ける倍率。見た目・判定・入力・叩いた光・レーンの SVG はどれも rhythmProjectionScale /
+// rhythmProjectBoundary を通るので、ここを変えれば全部がそろって変わる(どこか1つだけ古い幅が残ることがない)。
+// 奥行き(ノーツの太さ・明るさ・終わりの横棒の太さ)には掛けない(rhythmProjectionDepth)。
+// 演奏画面が、演奏中の向きと設定から set する(縦向きは常に1)。演奏の外では1(これまでの幅)
+//   WIDE … 判定ラインの高さで画面の約81%(これまで) / STANDARD … 約75% / NARROW … 約70%(参考動画の68%に近い)
+const RHYTHM_ROAD_WIDTHS=Object.freeze({WIDE:1,STANDARD:.92,NARROW:.86});
+const RHYTHM_ROAD_WIDTH={
+  factor:1,
+  set(value){const next=Number(value);this.factor=Number.isFinite(next)&&next>=.5&&next<=1?next:1;},
+  reset(){this.factor=1;},
+};
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
 // 終わりの横棒は最低10pxにするが、道の奥でレーンがそれより細いときはレーンの幅までにする(2026-09-26。奥行きを深くしてはみ出したため)
 // HOLD/SLIDEの帯の太さ。ノーツの頭(.78)より細い。
@@ -638,18 +650,21 @@ const rhythmClamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
 // 画面より上(yRatio<0)は、道がまっすぐ(CURVE=1)なら消える一点まで細くなり続ける(0で止める)。
 // 以前のように上端の幅で止めると、画面の上端をまたぐ帯がそこで折れて見える(2026-09-26)。
 // 曲線(CURVE≠1)のときは今までどおり上端の幅で止める。画面の中(0〜1)の値はどちらも変わらない。
-const rhythmProjectionScale=yRatio=>{
+// 奥行き(0〜1)。道の横幅の倍率は掛けない。ノーツの太さ・明るさはこちらで決める
+const rhythmProjectionDepth=yRatio=>{
   const y=Math.min(1,Number(yRatio)||0);
   if(y<0&&RHYTHM_PROJECTION_CURVE===1)return Math.max(0,RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*y);
   return RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*Math.pow(rhythmClamp01(y),RHYTHM_PROJECTION_CURVE);
 };
+// 道の横の広がり。奥行きに横向きの道の幅の倍率を掛けたもの
+const rhythmProjectionScale=yRatio=>rhythmProjectionDepth(yRatio)*RHYTHM_ROAD_WIDTH.factor;
 const rhythmProjectBoundary=(boundary,yRatio)=>{
   const scale=rhythmProjectionScale(yRatio),flat=Number(boundary)/RHYTHM_LANE_COUNT;
   return .5+(flat-.5)*scale;
 };
 const rhythmProjectLane=(lane,yRatio)=>{
   const value=Number(lane),left=rhythmProjectBoundary(value,yRatio),right=rhythmProjectBoundary(value+1,yRatio);
-  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio)};
+  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionDepth(yRatio)};
 };
 // ノーツの幅(サブレーン数)の上限。以前は4(=2レーンぶん)で頭打ちにしていたが、実機で
 // 「上限を無くして全幅もありにして」と言われたので、全幅(=道のレーンすべて)まで出せるようにした。
@@ -661,7 +676,7 @@ const rhythmProjectSubLaneRange=(subLane,width,yRatio)=>{
   const span=Math.max(1,Math.min(RHYTHM_MAX_SUB_LANE_WIDTH,Number(width)||2));
   const start=Math.max(0,Math.min(RHYTHM_MAX_SUB_LANE_WIDTH-span,Number(subLane)||0));
   const left=rhythmProjectBoundary(start/2,yRatio),right=rhythmProjectBoundary((start+span)/2,yRatio);
-  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio),subLane:start,subLaneWidth:span};
+  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionDepth(yRatio),subLane:start,subLaneWidth:span};
 };
 const rhythmProjectSubLaneSpan=(subLane,width,yRatio)=>rhythmProjectSubLaneRange(Math.trunc(Number(subLane))||0,Math.trunc(Number(width))||2,yRatio);
 // 旧譜面は lane を正本のまま使い、従来と同じ中央・2サブレーン幅へ写す。
@@ -703,7 +718,7 @@ const rhythmProjectSlideSpan=(lane,note,yRatio,chartTimeMs=note?.timeMs)=>{
   const width=rhythmSlideWidthAt(note,chartTimeMs),half=width/4;
   const centerBoundary=rhythmSlideFittedLane(lane,width)+.5;
   const left=rhythmProjectBoundary(centerBoundary-half,yRatio),right=rhythmProjectBoundary(centerBoundary+half,yRatio);
-  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio),subLaneWidth:width};
+  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionDepth(yRatio),subLaneWidth:width};
 };
 const rhythmSlideInputSpan=note=>{
   if(!rhythmNoteIsSlide(note))return null;
@@ -21117,7 +21132,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         painted++;
       }
       if(pulse>.01){
-        if(!roadEdgeCache||roadEdgeCache.ctx!==ctx||roadEdgeCache.w!==cssW||roadEdgeCache.h!==cssH){
+        // 道の幅の倍率(横向きの道の幅)が変わったときも作り直す
+        if(!roadEdgeCache||roadEdgeCache.ctx!==ctx||roadEdgeCache.w!==cssW||roadEdgeCache.h!==cssH||roadEdgeCache.road!==RHYTHM_ROAD_WIDTH.factor){
           const samples=[0,.25,.5,.75,1];
           // 左右の境目ごとに、太さ14(にじみ)と3(芯)の外周の点を「左の縁を上→下、右の縁を下→上」の順で持つ
           const edgePoints=(boundary,width)=>{const out=[];
@@ -21125,7 +21141,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
             for(let index=samples.length-1;index>=0;index--){const yr=samples[index],x=rhythmProjectBoundary(boundary,yr)*cssW,w=width*rhythmProjectionScale(yr)/2;out.push(x+w,yr*cssH);}
             return out;};
           const fade=(color)=>{const g=ctx.createLinearGradient(0,0,0,cssH);g.addColorStop(0,`rgba(${color},0)`);g.addColorStop(.45,`rgba(${color},.55)`);g.addColorStop(1,`rgba(${color},1)`);return g;};
-          roadEdgeCache={ctx,w:cssW,h:cssH,soft:fade('56,189,248'),core:fade('224,242,254'),
+          roadEdgeCache={ctx,w:cssW,h:cssH,road:RHYTHM_ROAD_WIDTH.factor,soft:fade('56,189,248'),core:fade('224,242,254'),
             edges:[0,RHYTHM_LANE_COUNT].map(boundary=>({soft:edgePoints(boundary,14),core:edgePoints(boundary,3)}))};
         }
         const edge=points=>{ctx.beginPath();ctx.moveTo(points[0],points[1]);for(let i=2;i<points.length;i+=2)ctx.lineTo(points[i],points[i+1]);ctx.closePath();ctx.fill();};

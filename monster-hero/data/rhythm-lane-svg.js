@@ -6,6 +6,8 @@
   document.documentElement.dataset.rhythmLaneSvgOverlay = 'ready';
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
+  // 横向きの道の幅の倍率(data/rhythm-mode.js の RHYTHM_ROAD_WIDTH)。このファイルだけを読んだときは1(これまでの幅)
+  const roadFactor = () => (typeof RHYTHM_ROAD_WIDTH !== 'undefined' && Number.isFinite(RHYTHM_ROAD_WIDTH.factor) ? RHYTHM_ROAD_WIDTH.factor : 1);
   const observedAreas = new WeakSet();
   let currentArea = null;
   let currentSvg = null;
@@ -55,13 +57,16 @@
   const mount = area => {
     if (!area) return;
     const existing = area.querySelector(':scope > [data-rhythm-lane-svg]');
-    if (existing) {
+    // 道の幅の倍率(横向きの道の幅)が作ったときと違えば、作り直す(古い幅のレーンが残らないように)
+    if (existing && existing.dataset.roadFactor !== String(roadFactor())) existing.remove();
+    else if (existing) {
       currentArea = area;
       currentSvg = existing;
       return;
     }
     const svg = svgEl('svg', { viewBox:'0 0 1000 1000', preserveAspectRatio:'none', 'aria-hidden':'true' });
     svg.dataset.rhythmLaneSvg = '';
+    svg.dataset.roadFactor = String(roadFactor());
 
     const defs = svgEl('defs');
     // 道はほぼ黒の半透明(2026-09-27・ユーザー指示「背景よりレーンやノーツ演出を重視」「全部やって」)。
@@ -154,6 +159,14 @@
     currentSvg = currentArea?.querySelector(':scope > [data-rhythm-lane-svg]') || null;
     document.documentElement.dataset.rhythmPlayActive=currentArea?'true':'false';
     if (currentArea) mount(currentArea);
+  };
+  // 演奏画面が道の幅の倍率を変えたときに呼ぶ(横向きの道の幅)。いまのレーンを外して作り直す
+  window.rhythmLaneSvgRefresh = () => {
+    if (currentSvg && currentSvg.isConnected && currentSvg.dataset.roadFactor === String(roadFactor())) return false;
+    if (currentSvg) currentSvg.remove();
+    currentSvg = null; currentArea = null;
+    scan();
+    return true;
   };
   const start = () => {
     scan();
