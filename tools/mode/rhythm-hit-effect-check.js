@@ -28,8 +28,8 @@ let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` (${detail})`:''}`);if(!ok)failed++;};
 
 const ctx={};vm.createContext(ctx);
-vm.runInContext(`${source}\nthis.out={RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,RHYTHM_JUDGMENT_RAINBOW,RHYTHM_JUDGMENT_PRECISE_MS,rhythmJudgmentIsPrecise,RHYTHM_JUDGMENTS};`,ctx);
-const {RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,RHYTHM_JUDGMENT_RAINBOW,RHYTHM_JUDGMENT_PRECISE_MS,rhythmJudgmentIsPrecise,RHYTHM_JUDGMENTS}=ctx.out;
+vm.runInContext(`${source}\nthis.out={RHYTHM_HIT_EFFECT_COLORS,RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,RHYTHM_JUDGMENT_RAINBOW,RHYTHM_JUDGMENT_PRECISE_MS,rhythmJudgmentIsPrecise,RHYTHM_JUDGMENTS};`,ctx);
+const {RHYTHM_HIT_EFFECT_COLORS,RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,RHYTHM_JUDGMENT_RAINBOW,RHYTHM_JUDGMENT_PRECISE_MS,rhythmJudgmentIsPrecise,RHYTHM_JUDGMENTS}=ctx.out;
 
 // --- 道のふちの光は、描く先と大きさが同じあいだ形とグラデーションを使い回す(2026-09-27) ---
 {
@@ -75,8 +75,11 @@ const JUDGMENTS=['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS'];
 check('判定の色は1つの表(RHYTHM_JUDGMENT_COLORS)にまとまっている',
   JUDGMENTS.every(id=>/^#[0-9a-f]{6}$/i.test(RHYTHM_JUDGMENT_COLORS[id])));
 check('MISSを入れた6判定がすべて違う色',new Set(JUDGMENTS.map(rhythmJudgmentColor)).size===6);
-check('判定ラインの光も同じ表から取る',
-  JUDGMENTS.every(id=>rhythmHitEffectColor(id)===rhythmJudgmentColor(id)));
+// 2026-09-27、ユーザー指示(参考動画の青い光に寄せる「全部やって」)で、判定ラインの光だけは文字と別の色にした。
+// それでも色の置き場所が散らばらないよう、光の色は光専用の1つの表(RHYTHM_HIT_EFFECT_COLORS)から取る
+check('判定ラインの光は光専用の1つの表から取る(MISS 以外の5判定がそろっている)',
+  typeof RHYTHM_HIT_EFFECT_COLORS==='object'
+  &&JUDGMENTS.filter(id=>id!=='MISS').every(id=>/^#[0-9a-f]{6}$/i.test(RHYTHM_HIT_EFFECT_COLORS[id])&&rhythmHitEffectColor(id)===RHYTHM_HIT_EFFECT_COLORS[id]));
 // 判定ごとのCSSを切り出す。以降はこの中身だけを見る
 const judgmentRule=id=>{
   const head=`[data-rhythm-judgment-text][data-judgment="${id}"]{`;
