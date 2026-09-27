@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9d2695a7f53feee7
+// generated-sha256: e2eed59e48bd353f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-27 16:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-27 17:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16074,6 +16074,10 @@ const RHYTHM_STAGE_LIVE_PENS=Object.freeze([[[103,232,249],[244,114,182]],[[232,
 const RHYTHM_STAGE_LIVE_LASERS=Object.freeze([{x:-.02,y:1.02,base:-62,swing:22},{x:1.02,y:1.02,base:-118,swing:22},{x:.12,y:-.02,base:70,swing:26},{x:.88,y:-.02,base:110,swing:26}]);
 const RHYTHM_STAGE_LIVE_LASER_COLORS=Object.freeze([[34,211,238],[232,121,249],[251,191,36],[167,139,250],[74,222,128]]);
 const RHYTHM_STAGE_GL_VS='attribute vec2 aPos;uniform vec2 uSize;varying vec2 vP;void main(){vP=vec2((aPos.x+1.)*.5*uSize.x,(1.-aPos.y)*.5*uSize.y);gl_Position=vec4(aPos,0.,1.);}';
+// ★レーザーは光の筋から離れた画素(perp²>480)、ペンライトは席から離れた画素(d>9)で計算を打ち切る(2026-09-27)。
+//   そこでの明るさはどちらも 1/255 の1万分の1に届かないので、色は1段階も変わらない。実機の GPU は近くの画素がそろって
+//   同じ分かれ道を通るので、画面の大半(筋や席から遠いところ)で指数関数の計算が丸ごと省ける。
+//   (この作業環境の GPU のまね(SwiftShader)は分かれ道の両方を計算するので、rhythm-gpu-load-report.js の数字には出ない)
 const RHYTHM_STAGE_GL_FS=`#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -16087,7 +16091,7 @@ vec4 over(vec4 c,vec4 s){return s+c*(1.-s.a);}
 vec4 tint(vec3 rgb,float a){return vec4(rgb*a,a);}
 float hash(float n){return fract(sin(n*127.1)*43758.5453);}
 vec4 lasers(){vec4 s=vec4(0.);for(int i=0;i<4;i++){vec4 L=uLas[i],C=uLasC[i];if(C.a<.01)continue;vec2 v=vP-L.xy;float along=dot(v,L.zw);if(along<0.)continue;
-  float perp=abs(v.x*L.w-v.y*L.z);float k=(exp(-perp*perp/1.4)*.9+exp(-perp*perp/40.)*.3)*C.a*exp(-along/(1.6*uSize.y));s+=vec4(C.rgb*k,k);}return s;}
+  float perp=abs(v.x*L.w-v.y*L.z);if(perp*perp>480.)continue;float k=(exp(-perp*perp/1.4)*.9+exp(-perp*perp/40.)*.3)*C.a*exp(-along/(1.6*uSize.y));s+=vec4(C.rgb*k,k);}return s;}
 // 観客のペンライト。道の両側に、奥(上)ほど小さく詰まった列で地平線まで並ぶ(道そのものはレーンが上に重なって隠す)。
 // 列は奥から18本。画素ごとに近い2列・左右1つずつの席だけを見る。席ごとに高さ・明るさを散らし、拍に合わせて傾いて揺れ、拍の頭で明るくなる
 vec4 pens(){
@@ -16096,14 +16100,16 @@ vec4 pens(){
   for(int k=0;k<2;k++){float row=floor(fi)+float(k),ry=.16+.84*pow(row/18.,1.5),sc=mix(.35,1.,ry),cell=26.*sc,r=7.*sc,by=ry*uSize.y,i=floor(vP.x/cell);
     for(int j=-1;j<=1;j++){float n=i+float(j)+row*37.,h=hash(n);if(hash(n*3.1)>.8)continue;
       float sw=sin(uBeats*3.14159+h*6.2832),cs=cos(sw*.35),sn=sin(sw*.35);
-      vec2 q=vP-vec2((i+float(j)+.5)*cell+(h-.5)*cell*.5+sw*r*.8,by-r*1.5+(hash(n*7.7)-.5)*r*1.6);q=vec2(cs*q.x+sn*q.y,-sn*q.x+cs*q.y);q.y*=.38;float d=dot(q,q)/(r*r);
+      vec2 q=vP-vec2((i+float(j)+.5)*cell+(h-.5)*cell*.5+sw*r*.8,by-r*1.5+(hash(n*7.7)-.5)*r*1.6);q=vec2(cs*q.x+sn*q.y,-sn*q.x+cs*q.y);q.y*=.38;float d=dot(q,q)/(r*r);if(d>9.)continue;
       float a=(exp(-d/.06)*.95+exp(-d/.7)*.3)*mix(.45,1.,sc)*(.55+.45*hash(n*9.1))*(.5+.5*uPulse);s+=vec4((hash(n*5.3)<.5?uPenA:uPenB)*a,a);}}
   return s;}
 float beam(vec4 b){vec2 d=vP-b.zw;vec2 l=vec2(b.x*d.x+b.y*d.y,-b.y*d.x+b.x*d.y);
   float hw=mix(.06,.5,clamp(l.y/uBeamBox.y,0.,1.))*uBeamBox.x;
   return clamp(hw-abs(l.x)+.5,0.,1.)*clamp(l.y+.5,0.,1.)*clamp(1.-l.y/(.78*uBeamBox.y),0.,1.);}
 // uMode … 0: 動かない部分(ジャケット・暗幕)を焼く / 1: 焼いた絵にサーチライト・レーザーを重ねる / 2: ペンライト(足し算で重ねる)
+//         3: 拍の頭の色みだけ(ペンライトの無い画面の上の帯。pens() はそこで0を返すので、2 と同じ色になる)
 void main(){
+  if(uMode>2.5){gl_FragColor=vec4(uPenA*.05*uPulse,.05*uPulse);return;}
   if(uMode>1.5){gl_FragColor=pens()+vec4(uPenA*.05*uPulse,.05*uPulse);return;}
   if(uMode>.5){
     vec4 c=texture2D(uStatic,gl_FragCoord.xy/uRes);
@@ -16237,7 +16243,16 @@ const rhythmCreateStageGL=canvas=>{
           for(const cy of [y*h-off,y*h-off+h]){if(cy<-end-1||cy>h+end+1)continue;gl.uniform4f(su.uDot,x*w,cy,end+1,0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);}}
       }
       // 4. 「ライブ」のペンライトと拍の頭の色み。足し算で重ねる(以前の min(c+光,1) と同じ)
-      if(liveOn){gl.useProgram(prog);gl.uniform1f(u.uMode,2);gl.blendFunc(gl.ONE,gl.ONE);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);}
+      //    ペンライトは画面の上 16% には無い(pens() が0を返す)。その帯は色みだけの軽い処理で塗り、ペンライトの計算は下の帯だけにする
+      //    (2026-09-27・色は同じ。帯の境目は、画素の中心が 16% より上にある行だけを上の帯に入れる)
+      if(liveOn){
+        gl.useProgram(prog);gl.blendFunc(gl.ONE,gl.ONE);
+        const top=Math.max(0,Math.min(ph,Math.floor(.16*ph-.5)));
+        gl.enable(gl.SCISSOR_TEST);
+        if(top>0){gl.uniform1f(u.uMode,3);gl.scissor(0,ph-top,pw,top);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);}
+        gl.uniform1f(u.uMode,2);gl.scissor(0,0,pw,ph-top);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+        gl.disable(gl.SCISSOR_TEST);
+      }
       gl.disable(gl.BLEND);
     },
     release(){try{if(gpuTimer)gpuTimer.dispose();gl.deleteTexture(tex);gl.deleteTexture(staticTex);gl.deleteFramebuffer(fbo);gl.deleteBuffer(buf);gl.deleteProgram(prog);gl.deleteProgram(sparkProg);gl.deleteShader(vs);gl.deleteShader(fs);gl.deleteShader(svs);gl.deleteShader(sfs);const lose=gl.getExtension('WEBGL_lose_context');if(lose)lose.loseContext();}catch(e){}},

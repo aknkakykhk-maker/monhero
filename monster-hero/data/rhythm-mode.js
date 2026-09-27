@@ -19702,6 +19702,9 @@ const rhythmCreateGL2D=canvas=>{
     'c+=texture2D(uSrc,vUv+uStep*1.3846153846)*0.3162162162;c+=texture2D(uSrc,vUv-uStep*1.3846153846)*0.3162162162;'+
     'c+=texture2D(uSrc,vUv+uStep*3.2307692308)*0.0702702703;c+=texture2D(uSrc,vUv-uStep*3.2307692308)*0.0702702703;'+
     'gl_FragColor=c*uGain;}';
+  // ④ 画面へ重ねるときは、ずらし幅が0なので5回読んでも同じ画素を5回足すだけ(重みの合計はちょうど1)。
+  //   画面の大きさで塗るのはここだけなので、1回だけ読む専用の処理にする(2026-09-27・見た目は同じで、読む量が1/5)
+  const BLOOM_COPY_FS='precision mediump float;varying vec2 vUv;uniform sampler2D uSrc;uniform float uGain;void main(){gl_FragColor=texture2D(uSrc,vUv)*uGain;}';
   // GPU へ送った値の覚え(2026-09-26)。同じ値を毎回送り直さない(スマホのブラウザは命令1回ごとの手間が大きい)。
   // 作り直したとき(init)は忘れて、次の描画で全部送り直す
   let sentM0=[NaN,NaN,NaN],sentM1=[NaN,NaN,NaN],sentViewW=NaN,sentViewH=NaN,sentAlpha=NaN,sentMode=NaN,sentColor=[NaN,NaN,NaN,NaN],sentTex=null,sentStencil=NaN,sentComp='';
@@ -20031,7 +20034,11 @@ const rhythmCreateGL2D=canvas=>{
             if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error('bloom link');
             const quad=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,quad);
             gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,0,0, 1,-1,1,0, 1,1,1,1, -1,-1,0,0, 1,1,1,1, -1,1,0,1]),gl.STATIC_DRAW);
-            bloom={prog:p,quad,uSrc:gl.getUniformLocation(p,'uSrc'),uStep:gl.getUniformLocation(p,'uStep'),uGain:gl.getUniformLocation(p,'uGain')};
+            const cp=gl.createProgram();gl.attachShader(cp,compile(gl.VERTEX_SHADER,BLUR_VS));gl.attachShader(cp,compile(gl.FRAGMENT_SHADER,BLOOM_COPY_FS));
+            gl.bindAttribLocation(cp,0,'aPos');gl.bindAttribLocation(cp,1,'aUv');gl.linkProgram(cp);
+            if(!gl.getProgramParameter(cp,gl.LINK_STATUS))throw new Error('bloom copy link');
+            bloom={prog:p,quad,uSrc:gl.getUniformLocation(p,'uSrc'),uStep:gl.getUniformLocation(p,'uStep'),uGain:gl.getUniformLocation(p,'uGain'),
+              copy:cp,copySrc:gl.getUniformLocation(cp,'uSrc'),copyGain:gl.getUniformLocation(cp,'uGain')};
             gl.bindBuffer(gl.ARRAY_BUFFER,buf);
           }
           bloom.tex=[];bloom.fbo=[];
@@ -20047,6 +20054,15 @@ const rhythmCreateGL2D=canvas=>{
           bloom.w=bw;bloom.h=bh;
           gl.bindFramebuffer(gl.FRAMEBUFFER,null);sentTex=null;
         }
+        // ④ で塗る範囲(画面の画素)。光を描いた範囲に、ぼかしが届く幅を足したところだけ。
+        //   その外はぼかした画像が0なので、足し算で重ねても何も変わらない(2026-09-27・見た目は同じ)。
+        //   届く幅 = ぼかしの一番外の読み取り(3.23×広がり)+ 線形補間と小さな画像の画素のまるめのぶん(4)を、小さな画像の倍率で戻したもの
+        let bx0=Infinity,by0=Infinity,bx1=-Infinity,by1=-Infinity;
+        for(const item of bloomList){const m=item.mm,v=item.verts;
+          for(let i=0;i<v.length;i+=4){const x=v[i],y=v[i+1],px=m[0]*x+m[2]*y+m[4],py=m[1]*x+m[3]*y+m[5];
+            if(px<bx0)bx0=px;if(px>bx1)bx1=px;if(py<by0)by0=py;if(py>by1)by1=py;}}
+        const reach=Math.ceil((3.2307692308*BLOOM_SPREAD+4)*BLOOM_DOWN);
+        const sx0=Math.max(0,Math.floor(bx0-reach)),sy0=Math.max(0,Math.floor(by0-reach)),sx1=Math.min(viewW,Math.ceil(bx1+reach)),sy1=Math.min(viewH,Math.ceil(by1+reach));
         // ① 光だけを小さな画像 A へ描き直す(位置は画面と同じ計算。映す先が小さいだけ)
         gl.bindFramebuffer(gl.FRAMEBUFFER,bloom.fbo[0]);gl.viewport(0,0,bw,bh);gl.disable(gl.STENCIL_TEST);
         gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
@@ -20065,7 +20081,10 @@ const rhythmCreateGL2D=canvas=>{
         // ④ 画面へ足し算で重ねる
         gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,viewW,viewH);gl.enable(gl.BLEND);
         gl.blendFuncSeparate(gl.ONE,gl.ONE,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
-        gl.bindTexture(gl.TEXTURE_2D,bloom.tex[0]);gl.uniform2f(bloom.uStep,0,0);gl.uniform1f(bloom.uGain,bloomGain);gl.drawArrays(gl.TRIANGLES,0,6);
+        if(sx1>sx0&&sy1>sy0){
+          gl.useProgram(bloom.copy);gl.uniform1i(bloom.copySrc,0);gl.uniform1f(bloom.copyGain,bloomGain);gl.bindTexture(gl.TEXTURE_2D,bloom.tex[0]);
+          gl.enable(gl.SCISSOR_TEST);gl.scissor(sx0,viewH-sy1,sx1-sx0,sy1-sy0);gl.drawArrays(gl.TRIANGLES,0,6);gl.disable(gl.SCISSOR_TEST);
+        }
       }catch(e){bloomOn=false;}
       // ふだんの描き方へ戻す(頂点の並び・入れ物・ステンシル。覚えていた状態は送り直させる)
       gl.useProgram(prog);gl.bindBuffer(gl.ARRAY_BUFFER,buf);
