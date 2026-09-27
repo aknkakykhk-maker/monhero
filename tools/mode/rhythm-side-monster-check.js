@@ -119,10 +119,11 @@ check('輪はあらかじめ用意して出し入れするだけ(押すたびに
 check('跳ねるのはCSSアニメーション(毎フレームのJSを増やさない)',
   sideCss.includes('animation:mhRhythmSideHop var(--rhythm-side-beat')
   &&!/requestAnimationFrame[\s\S]{0,200}rhythm-side/.test(game));
-check('軽量モード・演出量MINIMALでは動きを止める',
-  sideCss.includes('[data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster]')
-  &&sideCss.includes('[data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-side-monster]')
-  &&sideCss.includes('animation:none!important'));
+// 2026-09-13 のユーザー指摘「マスモンの動きが演出量で制御されてる / マスモンの動きは別に設定がある」で、
+// 演出量では止めないことにした(動く・動かないは「両サイドのマスモン｜動き」で決める)。止めるのは軽量モードだけ
+check('軽量モードでは動きを止め、演出量では止めない',
+  sideCss.includes('[data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster]{animation:none!important}')
+  &&!sideCss.includes('[data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-side-monster]{'));
 check('置き場所と大きさは変わったときだけ書く',
   source.includes('if(el._rhythmSideBox===next)return;'));
 check('置き直しはプレイエリアの形を組み直すときにだけ走る',

@@ -30,9 +30,12 @@ vm.runInContext(`const RHYTHM_DEMO_SONG_IDS=['a','b'];\n${event}\nout={
   rhythmHistoryEntries, rhythmHistoryWeeks, rhythmHistoryEvents, rhythmHistoryName,
   rhythmHistoryPeriodText, rhythmHistoryBoardEvent, rhythmHistoryRange,
   RHYTHM_WEEKLY_REWARD_FROM_MS, RHYTHM_WEEK_MS, RHYTHM_EVENTS, rhythmWeekId,
+  rhythmHistoryWeekFromMs,
 };`, ctx);
 const h = ctx.out;
-const FROM = h.RHYTHM_WEEKLY_REWARD_FROM_MS;                 // 2026-09-14 05:00 JST
+// さかのぼる境界は、報酬の開始(9/14)より1週前の 9/07 05:00 JST(RHYTHM_WEEKLY_HISTORY_FROM_MS)。
+// 累計方式へ変えたのが 9/07〜9/14 の週の途中だったため、その週も「そのとき見えていた順位」として出す(rhythm-event.js の経緯)
+const FROM = h.rhythmHistoryWeekFromMs();
 const WEEK = h.RHYTHM_WEEK_MS;
 
 ok('履歴の関数がそろっている',
@@ -94,8 +97,10 @@ ok('イベントの見出しは付けた名前そのまま', h.rhythmHistoryName
 ok('期間は始まりと終わりの両方を出す', h.rhythmHistoryPeriodText(week).includes('〜'));
 
 // ── ② 境界の値を2か所に持たない ────────────────────────────────────────
-ok('さかのぼる境界は、受け取りの開始時刻をそのまま使う(値を2か所に持たない)',
-  event.includes('const rhythmHistoryWeekFromMs = () => RHYTHM_WEEKLY_REWARD_FROM_MS;'));
+// 以前は受け取りの開始時刻をそのまま使っていたが、上の理由で専用の値にした。境界は1か所(この関数)から読む
+ok('さかのぼる境界は1か所で決める(rhythmHistoryWeekFromMs)',
+  (event.match(/const RHYTHM_WEEKLY_HISTORY_FROM_MS = /g) || []).length === 1
+  && event.includes('const rhythmHistoryWeekFromMs = () => RHYTHM_WEEKLY_HISTORY_FROM_MS;'));
 
 // ── ③ 表示専用であること ──────────────────────────────────────────────
 const screen = read('monster-hero/src/parts/73-screen-rhythm-history.jsx');
@@ -106,12 +111,15 @@ ok('履歴の画面は報酬の受け取りに触らない',
 ok('履歴だと分かる説明が画面に出ている', screen.includes('報酬を受け取ることはできません'));
 // 集計は今週・開催中と同じ関数を通す(集計の仕方を履歴側に持たない)
 ok('集計は既存の読み込みをそのまま使う(kind に history を足しただけ)',
-  game.includes("if (kind !== 'weekly' && kind !== 'limited' && kind !== 'history') return;")
+  // 「前回のイベント」(prevEvent)の種類が足された。history が同じ入口を通ることを見る
+  /if \(kind !== 'weekly' && kind !== 'limited' (?:&& kind !== 'prevEvent' )?&& kind !== 'history'\) return/.test(game)
   && game.includes("const loadRhythmEventRanking = useCallback(async (kind, divisionId, historyEntry = null) => {"));
 ok('履歴の週も累計スコア方式で数える',
   game.includes("const weeklyTotals = (kind === 'weekly' || (kind === 'history' && historyEntry.kind === 'weekly')) && !targetSongId;"));
 ok('履歴では週の窓をサーバーへ聞きに行かない',
-  game.includes("const range = kind === 'history' ? rhythmHistoryRange(historyEntry) : rhythmEventWindow(event, weekWindow);"));
+  // 前回のイベントも同じく記録の範囲を使うので、pastEntry(history と prevEvent の両方)で分ける形になった
+  (game.includes("const range = kind === 'history' ? rhythmHistoryRange(historyEntry) : rhythmEventWindow(event, weekWindow);")
+    || game.includes("const range = pastEntry ? rhythmHistoryRange(pastEntry) : rhythmEventWindow(event, weekWindow);")));
 // 入口は公開フラグで出し入れする(週間ランキングと同じフラグ)
 ok('公開前は入口ごと出さない',
   game.includes("const rhythmHistoryReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;"));

@@ -1,6 +1,9 @@
 const fs=require('fs');
 const game=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
-const must=["const setPressedLanes=coordinates=>","Array.from({length:RHYTHM_SUB_LANE_COUNT},(_,subLane)","data-rhythm-sublane-feedback={subLane}","rhythmSubLanePolygon(subLane)","liveSubLanes=[]","setPressedLanes(liveSubLanes)","activePointerFeedback.set(e.pointerId,subLaneCoordinate)","setPressedLanes([]);run.notes.forEach","onPointerMove={pointerMove}","inputMoves(inputKey,subLaneCoordinate)","if(subLane===state.subLane)return","if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey}])","RHYTHM_JUDGMENT_DISPLAY_MS=450","revision!==judgmentRevisionRef.current","last:'',fastSlow:''","inset 0 -52px 42px","'brightness(1.08)':'brightness(1.22)'","run.audio?.stop();}runRef.current=null;setPressedLanes([])"];
+const must=["const setPressedLanes=coordinates=>","Array.from({length:RHYTHM_SUB_LANE_COUNT},(_,subLane)","data-rhythm-sublane-feedback={subLane}","rhythmSubLanePolygon(subLane)","liveSubLanes=[]","liveTouchSubLanesRef.current=liveSubLanes;setPressedLanes(pressedLanesNow())","activePointerFeedback.set(e.pointerId,subLaneCoordinate)","setPressedLanes([]);run.notes.forEach","onPointerMove={pointerMove}","inputMoves(inputKey,subLaneCoordinate)","if(subLane===state.subLane)return","if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey","RHYTHM_JUDGMENT_DISPLAY_MS=450","revision!==judgmentRevisionRef.current","last:''","fastSlow:''","run.audio?.stop();}runRef.current=null;setPressedLanes([])"];
+// 2026-09-27 に今の形へ合わせた: 指の光はタッチとマウスの指をまとめて出す(pressedLanesNow)・入力は押し直しの判定(rejudge)が付く・
+// 判定の文字の初期値は HUD の部品(rhythmHudInitial)が持つ。光の見た目の細かい値(影・明るさ)は「押したレーンの光をレーン全体へなめらかに」で
+// 作り替えたので見ない(光の部品 data-rhythm-sublane-feedback があることは上で見る)
 for(const token of must){if(!game.includes(token)){console.error('missing lane feedback token:',token);process.exit(1);}}
 if(!game.includes("rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs)")){console.error('simultaneous batch input path regressed');process.exit(1);}
 // 2026-09-06: 自前で画面を回せるようにしたので、指の位置は inputPoint(=RHYTHM_VIEW_ROTATION.point)
