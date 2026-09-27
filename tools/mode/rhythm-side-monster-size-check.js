@@ -44,7 +44,9 @@ const pieces = [
   pickLine('const RHYTHM_LANE_COUNT = '),
   pickLine('const RHYTHM_PROJECTION_TOP_SCALE='),
   pickLine('const rhythmClamp01='),
-  pickLine('const rhythmProjectionScale='),
+  // rhythmProjectionScale は複数行で、RHYTHM_PROJECTION_CURVE も使う(道を深くした 2026-09-25 から。1行目だけを取ると途中で切れて読み込めなかった)
+  pickLine('const RHYTHM_PROJECTION_CURVE='),
+  pickBlock('const rhythmProjectionScale='),
   pickBlock('const rhythmProjectBoundary='),
   pickLine('const RHYTHM_SIDE_MONSTER_ANCHORS='),
   pickLine('const RHYTHM_SIDE_MONSTER_FILL='),

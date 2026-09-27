@@ -37,7 +37,8 @@ assert(source.includes('return hasExtremeSpecialRules(candidate) ? candidate : n
 assert(!source.includes('extremeRunRef.current?extremeSpecialRule(extremeDifficulty'), 'special rule activation must not depend only on extremeRunRef');
 assert(source.includes("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect')"));
 for (const use of [
-  'applyDistanceEnhancement(d*0.001/100,specialRuleDifficulty,wave)',
+  // 係数は DIST_BONUS_PER_DAMAGE(= 0.001/100)へまとめた
+  'applyDistanceEnhancement(d*DIST_BONUS_PER_DAMAGE,specialRuleDifficulty,wave)',
   'applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty,wave)',
   'getMonsterAptPct(m,specialRuleDifficulty)',
   'applyNightmareStatGain(base,after,specialDifficulty)',

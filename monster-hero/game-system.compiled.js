@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1fd5439f6488e575
+// source-sha256: 374e85e52f1f252e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 10:31";
+const BUILD_DATE = "2026-09-27 11:45";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -42067,7 +42067,10 @@ function BattleScreen({
       className: "absolute inset-0 z-10 pointer-events-none rounded-[12px] border border-white/25 bg-slate-900/95"
     }), cardBlock && !cardBlock.ok && cardBlock.short && !isDragging && React.createElement("div", {
       "data-tactics-card-block": cardBlock.short,
-      className: "pointer-events-none absolute inset-x-0.5 top-1 z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]"
+      style: tacticsNewLayout ? {
+        top: `calc(4px + ${HAND_CARD_FIT.iconTop} + ${HAND_CARD_FIT.icon} - 15px)`
+      } : undefined,
+      className: `pointer-events-none absolute inset-x-0.5 ${tacticsNewLayout ? '' : 'top-1'} z-30 rounded-md border border-rose-200 bg-rose-600 px-0.5 py-0.5 text-center text-[8px] font-black leading-tight text-white shadow-[0_2px_8px_rgba(0,0,0,.85)]`
     }, cardBlock.short));
   })))), exPanel && ReactDOM.createPortal(React.createElement("div", {
     "data-tactics-ex-panel": exPanel.slot,

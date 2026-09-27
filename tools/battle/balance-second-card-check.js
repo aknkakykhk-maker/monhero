@@ -134,7 +134,11 @@ check('ドラッグ中のカードも「次の1枚」として半減判定する
   has('if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=counter.peek(hand[pendingIdx],cardAssignments[pendingIdx]!=null?cardAssignments[pendingIdx]:null);'));
 
 // スワイプではカード効果のパネルを出さない(出したままだと合計表示が隠れる)
-check('タップとスワイプでカード効果の表示を切り替えられる', has('const selectCardAt = (i, showDetail = true)') && has('const focus=(card)=>setFocusedCard(showDetail?card:null);'));
+// 説明のパネルはダブルタップで出す形になった(2026-09-24 ユーザー指示「カードタップ後の詳細画面が毎回出るのが鬱陶しい」)。
+// タップ経由(showDetail)のときだけ、同じカードを CARD_DOUBLE_TAP_MS 以内にもう一度押すとパネルを出す
+check('タップ(ダブルタップ)とスワイプでカード効果の表示を切り替えられる',
+  has('const selectCardAt = (i, showDetail = true)')
+  && /if\(showDetail\)\{[\s\S]{0,160}now-last\.t<=CARD_DOUBLE_TAP_MS\)\{[\s\S]{0,80}setFocusedCard\(c\); return; \}/.test(source));
 check('スワイプ経由の選択はパネルを出さない', has('selectCardAt(cardIndex, false);'));
 const dragBlock = source.slice(source.indexOf('const dragAssignToSlot'), source.indexOf('const isAssistCard'));
 check('スワイプで置いたときにパネルを出さない', !dragBlock.includes('setFocusedCard(c)'), `${(dragBlock.match(/setFocusedCard\(null\)/g)||[]).length}か所でパネルを閉じる`);

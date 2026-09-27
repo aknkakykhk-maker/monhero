@@ -83,6 +83,10 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
   // ★2026-09-20 にモード選択の1つ上へ「どのバトルで遊ぶか」の画面が増えた。
   //   HOME → 入口(クラシック) → モード選択 → 難易度 と1段ずつ降りる
   const openModeSelect = async () => {
+    // 助手の解放のお知らせ(EXスキルなど)は、ほかのお知らせを閉じたあと少し遅れて出る。
+    // 押す直前にもう一度送り切る(2026-09-27・ここでお知らせにふさがれて止まっていた)
+    await page.waitForTimeout(1500);
+    await dismissOverlays();
     await page.getByRole('button', { name:'モンヒロバトル' }).click();
     await page.locator('[data-battle-system="systemClassic"]').click();
     await page.getByText('BATTLE MODE').first().waitFor();

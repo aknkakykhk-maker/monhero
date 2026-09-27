@@ -72,7 +72,11 @@ const run = async (browser, scenario) => {
   const clickButton = async pattern => {
     const clicked = await page.evaluate(source => {
       const rx = new RegExp(source);
-      const button = [...document.querySelectorAll('button')].find(node => rx.test((node.innerText || '').replace(/\s+/g, ' ')));
+      // 神殿のボタンは「合体」の下に説明を添える形(templeLink)になった。全文か、1行目(名前)のどちらかが合えば押す
+      const button = [...document.querySelectorAll('button')].find(node => {
+        const text = node.innerText || '';
+        return rx.test(text.replace(/\s+/g, ' ')) || rx.test((text.split('\n')[0] || '').trim());
+      });
       if (!button) return false;
       button.click();
       return true;

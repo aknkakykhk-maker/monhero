@@ -163,7 +163,9 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
       const score = document.querySelector('[data-battle-score]');
       const scoreValue = document.querySelector('[data-battle-score-value]');
       const controlsBox = document.querySelector('[data-battle-controls]');
-      const quit = document.querySelector('[data-battle-quit]');
+      // 諦めるボタンは「バトル中の設定」の中へ移り(2026-09-22 ユーザー指示)、ヘッダーの右端は設定ボタンになった。
+      // ヘッダーの中に諦めるボタンがあればそれを、無ければ設定ボタンを「右端の押せる操作」として測る
+      const quit = header?.querySelector('[data-battle-quit]') || header?.querySelector('[data-battle-menu-button]');
       if (!header || !turn || !score || !scoreValue || !controlsBox || !quit) {
         return { missing: ['header','turn','score','scoreValue','controls','quit']
           .filter((k, i) => ![header, turn, score, scoreValue, controlsBox, quit][i]).join(',') };

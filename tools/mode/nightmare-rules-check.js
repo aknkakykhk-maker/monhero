@@ -16,7 +16,10 @@ assert.strictEqual(wave(10, false), 10, 'non-NIGHTMARE WAVE enhancement must sta
 assert.strictEqual(signed(-0.025, false), -0.025, 'non-NIGHTMARE signed modifiers must stay unchanged');
 
 assert(source.includes("specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 })"));
-assert(source.includes('applyDistanceEnhancement(d*0.001/100,specialRuleDifficulty,wave)'), 'WAVE distance gain must go through the shared distance-enhancement rule');
+// 係数(0.001/100)は DIST_BONUS_PER_DAMAGE へまとめた(追いつき補正と同じ値を使うため)。どちらの書き方でも共通の入口を通っていればよい
+assert(source.includes('applyDistanceEnhancement(d*0.001/100,specialRuleDifficulty,wave)')
+  || (source.includes('applyDistanceEnhancement(d*DIST_BONUS_PER_DAMAGE,specialRuleDifficulty,wave)') && source.includes('const DIST_BONUS_PER_DAMAGE = 0.001 / 100;')),
+  'WAVE distance gain must go through the shared distance-enhancement rule');
 // 距離強化はINFINITY専用ルールが無ければ従来どおりNIGHTMAREのWAVE後強化へ落ちる
 assert(/const applyDistanceEnhancement[\s\S]{0,320}applyNightmareWaveEnhancement\(value,specialDifficulty\)/.test(source), 'NIGHTMARE distance gain must still fall back to the WAVE enhancement rule');
 // 符号付き補正は WAVE 番号も受け取る(ULTIMATE 以降のターン倍率のため)
