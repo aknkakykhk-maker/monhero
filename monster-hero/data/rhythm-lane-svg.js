@@ -64,11 +64,13 @@
     svg.dataset.rhythmLaneSvg = '';
 
     const defs = svgEl('defs');
+    // 道はほぼ黒の半透明(2026-09-27・ユーザー指示「背景よりレーンやノーツ演出を重視」「全部やって」)。
+    // 参考動画(アワーノーツ)と同じく、後ろの舞台がうっすら透け、手前だけ少し青い。以前の「不透明に近い濃い青」(2026-09-26 の A)から変えた
     const laneFill = svgEl('linearGradient', { id:'rhythmLaneSvgFill', x1:'0', y1:'0', x2:'0', y2:'1' });
     laneFill.append(
-      svgEl('stop', { offset:'0%', 'stop-color':'#020617', 'stop-opacity':'.9' }),
-      svgEl('stop', { offset:'72%', 'stop-color':'#1e3a8a', 'stop-opacity':'.55' }),
-      svgEl('stop', { offset:'100%', 'stop-color':'#2563eb', 'stop-opacity':'.6' })
+      svgEl('stop', { offset:'0%', 'stop-color':'#000000', 'stop-opacity':'.55' }),
+      svgEl('stop', { offset:'72%', 'stop-color':'#060b1c', 'stop-opacity':'.55' }),
+      svgEl('stop', { offset:'100%', 'stop-color':'#1d4ed8', 'stop-opacity':'.42' })
     );
     const pressedFill = svgEl('linearGradient', { id:'rhythmLaneSvgPressed', x1:'0', y1:'0', x2:'0', y2:'1' });
     pressedFill.append(
@@ -81,11 +83,11 @@
 
     svg.appendChild(svgEl('polygon', {
       points:spanPoints(0, RHYTHM_LANE_COUNT),
-      fill:'#07111f', 'fill-opacity':'.94'
+      fill:'#000000', 'fill-opacity':'.5'
     }));
 
     for (let lane = 0; lane < RHYTHM_LANE_COUNT; lane++) {
-      svg.appendChild(svgEl('polygon', { points:lanePoints(lane), fill:'url(#rhythmLaneSvgFill)', 'fill-opacity':lane % 2 ? '.72' : '.9' }));
+      svg.appendChild(svgEl('polygon', { points:lanePoints(lane), fill:'url(#rhythmLaneSvgFill)', 'fill-opacity':'.8' }));
       const press = svgEl('polygon', { points:lanePoints(lane), fill:'url(#rhythmLaneSvgPressed)', opacity:'0' });
       press.dataset.rhythmSvgPress = String(lane);
       press.style.transition = 'opacity 55ms linear';
@@ -97,11 +99,13 @@
     // (ユーザー指示「見た目も含めてこんぐらいに仕上げたい」。外周の2本だけは強めに残す)。
     for (let boundary = 0; boundary <= RHYTHM_LANE_COUNT; boundary++) {
       const outer = boundary === 0 || boundary === RHYTHM_LANE_COUNT;
+      // 外のふちは、白い線の下に水色の太い線を薄く敷いてにじませる(ぼかしは使わない。SVG は一度描けば動かない)
+      if (outer) svg.appendChild(svgEl('polyline', { points:edgePoints(boundary).join(' '), fill:'none', stroke:'#a5f3fc', 'stroke-opacity':'.28', 'stroke-width':'9' }));
       svg.appendChild(svgEl('polyline', {
         points:edgePoints(boundary).join(' '), fill:'none',
-        stroke:outer ? '#e0f2fe' : '#a5f3fc',
-        'stroke-opacity':outer ? '.9' : '.22',
-        'stroke-width':outer ? '2.4' : '1.6'
+        stroke:outer ? '#ffffff' : '#e2e8f0',
+        'stroke-opacity':outer ? '1' : '.16',
+        'stroke-width':outer ? '3.2' : '1'
       }));
     }
 

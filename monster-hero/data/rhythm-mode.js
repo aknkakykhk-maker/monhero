@@ -18650,7 +18650,7 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-note]{z-index:2}
     /* 押したレーンの光の消え方(2026-09-26)。押した瞬間はすぐ光り、離すと約0.2秒でふわっと消える。
        動くのは opacity だけ(合成だけで済む)。軽量モードでは切り替えを瞬時にする */
-    [data-rhythm-sublane-feedback]{transition:opacity 190ms ease-out}
+    [data-rhythm-sublane-feedback]{transition:opacity 320ms ease-out}
     /* 叩いた瞬間は光り、指を置いたままなら約0.4秒で3割の明るさへ落ち着く(2026-09-26・ユーザー指摘
        「スライドやホールドを押してる最中もレーンが光ってる。他の音ゲーは押せてるような感じになってる」)。
        押さえている最中の合図は、レーンではなくノーツの側(判定ラインの接点の光)が受け持つ。
@@ -18699,13 +18699,14 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-hit-effect]>i{left:0;right:0;top:-7px;height:14px;transform-origin:center;
       background:radial-gradient(closest-side,#fff 0%,var(--rhythm-hit-color,#fff) 40%,rgba(255,255,255,0) 100%)}
     /* 立ち上がる光の柱: 判定ラインから上へ抜ける(チュウニズムの光柱) */
-    [data-rhythm-hit-effect]>b{left:0;right:0;bottom:0;height:96px;border-radius:999px 999px 0 0;
+    /* 高さは道の4割ほど(2026-09-27・参考動画)。canvas 版(drawOneHit)の min(200, 判定ラインまでの高さ×0.42) とそろえる */
+    [data-rhythm-hit-effect]>b{left:0;right:0;bottom:0;height:clamp(96px,34vh,200px);border-radius:14px 14px 0 0;
       transform-origin:bottom center;
       background:linear-gradient(to top,var(--rhythm-hit-color,#fff) 0%,rgba(255,255,255,.32) 42%,rgba(255,255,255,0) 100%)}
     /* はじける粒: 判定ラインから外へ飛ぶ。飛ぶ向きはCSSで固定なので毎回の計算は要らない */
     /* 粒の色は1つずつ変えられるようにしておく(MARVELOUSの虹)。
        ふだんは全部 --rhythm-hit-color と同じ値が入るので、見た目は変わらない */
-    [data-rhythm-hit-effect]>u{left:50%;top:0;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;
+    [data-rhythm-hit-effect]>u{left:50%;top:0;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;
       background:var(--rhythm-hit-color,#fff)}
     [data-rhythm-hit-effect]>u:nth-of-type(1){background:var(--rhythm-spark-color-1,var(--rhythm-hit-color,#fff))}
     [data-rhythm-hit-effect]>u:nth-of-type(2){background:var(--rhythm-spark-color-2,var(--rhythm-hit-color,#fff))}
@@ -18725,11 +18726,12 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-hit-effect][data-hit-judgment="MARVELOUS"]>b{filter:brightness(1.22) saturate(1.15)}
     [data-rhythm-hit-effect][data-hit-judgment="EXCELLENT"]>i,
     [data-rhythm-hit-effect][data-hit-judgment="EXCELLENT"]>b{filter:brightness(1.12) saturate(1.1)}
-    [data-rhythm-hit-effect]>u:nth-of-type(1){--rhythm-spark-x:-54px;--rhythm-spark-y:-56px}
-    [data-rhythm-hit-effect]>u:nth-of-type(2){--rhythm-spark-x:-24px;--rhythm-spark-y:-86px}
-    [data-rhythm-hit-effect]>u:nth-of-type(3){--rhythm-spark-x:0px;--rhythm-spark-y:-104px}
-    [data-rhythm-hit-effect]>u:nth-of-type(4){--rhythm-spark-x:24px;--rhythm-spark-y:-86px}
-    [data-rhythm-hit-effect]>u:nth-of-type(5){--rhythm-spark-x:54px;--rhythm-spark-y:-56px}
+    /* 粒は横へ散らさず、上へ舞い上がる(2026-09-27・参考動画)。canvas 版の HIT_SPARK_OFFSETS と同じ値 */
+    [data-rhythm-hit-effect]>u:nth-of-type(1){--rhythm-spark-x:-30px;--rhythm-spark-y:-96px}
+    [data-rhythm-hit-effect]>u:nth-of-type(2){--rhythm-spark-x:-14px;--rhythm-spark-y:-150px}
+    [data-rhythm-hit-effect]>u:nth-of-type(3){--rhythm-spark-x:2px;--rhythm-spark-y:-124px}
+    [data-rhythm-hit-effect]>u:nth-of-type(4){--rhythm-spark-x:16px;--rhythm-spark-y:-168px}
+    [data-rhythm-hit-effect]>u:nth-of-type(5){--rhythm-spark-x:30px;--rhythm-spark-y:-110px}
     [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>i{animation:mhRhythmHitCore var(--rhythm-hit-ms,340ms) cubic-bezier(.16,.9,.3,1) 1}
     [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>b{animation:mhRhythmHitBeam var(--rhythm-hit-ms,340ms) cubic-bezier(.16,.9,.3,1) 1}
     [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>u{animation:mhRhythmHitSpark var(--rhythm-hit-ms,340ms) cubic-bezier(.16,.9,.3,1) 1}
@@ -18752,14 +18754,32 @@ const installRhythmGeometryStyles=()=>{
       14%{opacity:1;transform:scale(1) rotate(0deg)}
       100%{opacity:0;transform:scale(1.25,.8) rotate(4deg)}}
     [data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-hit-effect]>s{display:none}
+    /* フリックを取ったとき、払った向きへ飛ぶ炎の筋(2026-09-27・参考動画)。先端(右のはし)を判定ラインの位置に置き、
+       向きへ回してから進める。1枚の背景を transform と opacity で動かすだけ(ぼかし・影は使わない) */
+    [data-rhythm-hit-effect]>em{position:absolute;display:block;opacity:0;left:50%;top:0;width:180px;height:44px;margin:-22px 0 0 -180px;
+      pointer-events:none;font-style:normal;transform-origin:100% 50%;border-radius:999px;
+      background:radial-gradient(60% 50% at 88% 50%,rgba(255,251,235,1) 0%,rgba(253,224,71,.9) 26%,rgba(251,146,60,.7) 52%,rgba(251,146,60,0) 100%),
+        linear-gradient(90deg,rgba(251,146,60,0) 0%,rgba(249,115,22,.55) 55%,rgba(253,186,116,.85) 100%) center/100% 34% no-repeat}
+    [data-rhythm-hit-effect][data-hit-flick="up"]{--rhythm-flick-angle:-90deg}
+    [data-rhythm-hit-effect][data-hit-flick="right"]{--rhythm-flick-angle:-35deg}
+    [data-rhythm-hit-effect][data-hit-flick="left"]{--rhythm-flick-angle:-145deg}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="up"]>em,
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="right"]>em,
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="left"]>em{animation:mhRhythmHitStreak var(--rhythm-hit-ms,340ms) cubic-bezier(.16,.9,.3,1) 1}
+    @keyframes mhRhythmHitStreak{
+      0%{opacity:0;transform:rotate(var(--rhythm-flick-angle,-90deg)) translateX(30px) scaleX(.5)}
+      12%{opacity:1;transform:rotate(var(--rhythm-flick-angle,-90deg)) translateX(80px) scaleX(1)}
+      100%{opacity:0;transform:rotate(var(--rhythm-flick-angle,-90deg)) translateX(190px) scaleX(1.2)}}
     @keyframes mhRhythmHitCore{
       0%{opacity:0;transform:scale(.28,.4)}
       12%{opacity:1;transform:scale(1.02,1.9)}
       100%{opacity:0;transform:scale(1.34,.28)}}
+    /* 光の柱は 0.3秒の半ばまで明るさを保つ(2026-09-27・参考動画は3〜4コマ残る)。canvas 版の HIT_KEYS.beam と同じ値 */
     @keyframes mhRhythmHitBeam{
-      0%{opacity:0;transform:scale(.68,.08)}
-      14%{opacity:.82;transform:scale(1,.74)}
-      100%{opacity:0;transform:scale(.52,1.3)}}
+      0%{opacity:0;transform:scale(.8,.2)}
+      10%{opacity:1;transform:scale(1,.9)}
+      55%{opacity:.78;transform:scale(.96,1)}
+      100%{opacity:0;transform:scale(.7,1.06)}}
     @keyframes mhRhythmHitSpark{
       0%{opacity:0;transform:translate(0,0) scale(.3)}
       12%{opacity:1;transform:translate(calc(var(--rhythm-spark-x,0px)*var(--rhythm-spark-scale,1)*.3),calc(var(--rhythm-spark-y,0px)*var(--rhythm-spark-scale,1)*.3)) scale(1)}
@@ -19034,8 +19054,11 @@ const rhythmJudgmentIsPrecise=(judgment,deltaMs)=>{
   const delta=Number(deltaMs);
   return Number.isFinite(delta)&&Math.abs(delta)<=RHYTHM_JUDGMENT_PRECISE_MS;
 };
-// 判定ラインで弾ける光の色。MISSでは光を出さないので、そこは使われない
-const rhythmHitEffectColor=judgment=>rhythmJudgmentColor(judgment);
+// 判定ラインで弾ける光の色。MISSでは光を出さないので、そこは使われない。
+// 2026-09-27: 判定の文字の色とは分け、上の判定ほど水色〜青の光にした(参考動画の PERFECT の青い光・ユーザー指示「全部やって」)。
+// 文字の色(RHYTHM_JUDGMENT_COLORS)はそのまま。虹はジャストマーベラスだけ(下の precise)
+const RHYTHM_HIT_EFFECT_COLORS=Object.freeze({MARVELOUS:'#7dd3fc',EXCELLENT:'#38bdf8',GREAT:'#818cf8',GOOD:'#a3e635',BAD:'#94a3b8'});
+const rhythmHitEffectColor=judgment=>RHYTHM_HIT_EFFECT_COLORS[String(judgment||'')]||rhythmJudgmentColor(judgment);
 // プレイエリアの中に、使い回すエフェクトの入れ物を用意する。すでにあれば作り直さない。
 const rhythmEnsureHitEffects=area=>{
   if(!area||typeof document==='undefined')return null;
@@ -19057,6 +19080,7 @@ const rhythmEnsureHitEffects=area=>{
     // はじける粒。飛ぶ向きはCSSの nth-of-type で決めてあるので、ここでは数だけ揃える
     for(let spark=0;spark<RHYTHM_HIT_SPARK_COUNT;spark++)item.appendChild(document.createElement('u'));
     item.appendChild(document.createElement('s'));   // 白い十字の光(2026-09-26)
+    item.appendChild(document.createElement('em'));  // フリックの炎の筋(2026-09-27)
     layer.appendChild(item);
     layer._rhythmPool.push(item);
   }
@@ -19095,7 +19119,8 @@ const rhythmRestartAnimations=entries=>{
 };
 // defer:true を渡すと、印を付けずに「付けるべき印」だけを返す。
 // 呼び出し側が rhythmRestartAnimations へまとめて渡すことで、レイアウトの読み取りを1回にできる。
-const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false})=>{
+// flick … フリックを取ったときの払った向き('up'|'left'|'right')。炎の筋を飛ばす。それ以外は ''
+const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false,flick=''})=>{
   // 検証用に WebGL で描いているときは、同じ光をノーツの canvas へ描く(RHYTHM_CANVAS_RENDERER の「叩いたときの光」)。
   // DOM の部品には触らないので、返すもの(流し直す印)も無い
   if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&RHYTHM_CANVAS_RENDERER.hitsFor(area)){
@@ -19104,7 +19129,7 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
       center:Math.max(0,Math.min(1,Number(centerRatio)||.5)),
       width:Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(big?1.5:1.15),
       color:big?'#fde047':rhythmHitEffectColor(judgment),judgment:big?'':String(judgment||''),
-      precise:rainbow,big,sparkScale:big?2.1:(rainbow?1.45:1),
+      precise:rainbow,big,sparkScale:big?2.1:(rainbow?1.45:1),flick:big?'':String(flick||''),
     });
     return null;
   }
@@ -19128,6 +19153,7 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
   // 判定ごとに光の強さを変えられるようにする(上の判定ほど明るく)。モンスターノーツは別扱い
   item.dataset.hitJudgment=monster?'':String(judgment||'');
   item.dataset.hitPrecise=rainbowHit?'1':'';
+  item.dataset.hitFlick=monster?'':String(flick||'');
   item.style.setProperty('--rhythm-hit-ms',`${RHYTHM_HIT_EFFECT_MS[kind]}ms`);
   // ぴったりのMARVELOUSは粒を遠くまで飛ばす(見た目だけ・2026-09-12)。
   // モンスターノーツの2.1倍はそのまま優先する(そちらが特別扱いのため)
@@ -20121,7 +20147,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // (当たり判定はノーツサイズにも粒の見た目にも左右されない)。
   const HEAD_THICK=1;
   // 粒の色は RHYTHM_NOTE_COLORS から作る(2026-09-26)。光は その色(濃い) → 白 → その色(薄い) の3層
-  const headOf=c=>({radius:5,gradient:[c.hi,[c.mid,.55],c.lo],border:'rgba(255,255,255,.82)',inset:'rgba(255,255,255,.7)',glow:[[13,`rgba(${c.rgb},.5)`],[6,'rgba(255,255,255,.22)'],[10,`rgba(${c.rgb},.26)`]]});
+  // 2026-09-27: 参考動画に寄せて、角の丸みを小さく(5→2)・真ん中に白い芯の帯・光を少し強く。厚みと色の種類は変えない
+  const headOf=c=>({radius:2,gradient:[c.hi,['#ffffff',.36],[c.mid,.66],c.lo],border:'rgba(255,255,255,.96)',inset:'rgba(255,255,255,.8)',glow:[[15,`rgba(${c.rgb},.62)`],[6,'rgba(255,255,255,.34)'],[12,`rgba(${c.rgb},.34)`]]});
   const HEADS={
     TAP:    headOf(RHYTHM_NOTE_COLORS.TAP),
     HOLD:   headOf(RHYTHM_NOTE_COLORS.HOLD),
@@ -20505,13 +20532,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // ★重なり順も DOM と同じにする。光の層(z-index:3)はノーツの canvas(z-index:5)の下なので、ノーツより先に描く。
   const HIT_KEYS={
     core:[[0,{o:0,sx:.28,sy:.4}],[.12,{o:1,sx:1.02,sy:1.9}],[1,{o:0,sx:1.34,sy:.28}]],
-    beam:[[0,{o:0,sx:.68,sy:.08}],[.14,{o:.82,sx:1,sy:.74}],[1,{o:0,sx:.52,sy:1.3}]],
+    beam:[[0,{o:0,sx:.8,sy:.2}],[.1,{o:1,sx:1,sy:.9}],[.55,{o:.78,sx:.96,sy:1}],[1,{o:0,sx:.7,sy:1.06}]],
+    streak:[[0,{o:0,k:0,sx:.5}],[.12,{o:1,k:.3,sx:1}],[1,{o:0,k:1,sx:1.2}]],
     coreBig:[[0,{o:0,sx:.3,sy:.5}],[.09,{o:1,sx:1.3,sy:3.2}],[.42,{o:.9,sx:1.7,sy:1.6}],[1,{o:0,sx:2.1,sy:.3}]],
     beamBig:[[0,{o:0,sx:.7,sy:.1}],[.1,{o:1,sx:1.16,sy:1.5}],[.48,{o:.72,sx:1,sy:2.1}],[1,{o:0,sx:.6,sy:2.9}]],
     spark:[[0,{o:0,k:0,s:.3}],[.12,{o:1,k:.3,s:1}],[1,{o:0,k:1,s:.2}]],
     flare:[[0,{o:0,sx:.35,sy:.35,r:-6}],[.14,{o:1,sx:1,sy:1,r:0}],[1,{o:0,sx:1.25,sy:.8,r:4}]],
   };
-  const HIT_SPARK_OFFSETS=[[-54,-56],[-24,-86],[0,-104],[24,-86],[54,-56]];
+  const HIT_SPARK_OFFSETS=[[-30,-96],[-14,-150],[2,-124],[16,-168],[30,-110]];
+  // フリックの炎の筋の向き(右が0度・画面の上がマイナス)。CSS の --rhythm-flick-angle と同じ
+  const HIT_FLICK_ANGLES={up:-90,right:-35,left:-145};
   const HIT_CORE_RAINBOW=['#f87171','#fbbf24','#a3e635','#22d3ee','#a78bfa','#f472b6'];
   const HIT_BEAM_RAINBOW=[[0,'#f472b6'],[.24,'#a78bfa'],[.46,'#22d3ee'],[.64,'#a3e635'],[.82,'rgba(251,191,36,.35)'],[1,'rgba(251,191,36,0)']];
   // cubic-bezier(.16,.9,.3,1)。CSS と同じく、キーフレームの区間ごとにかける
@@ -20582,9 +20612,21 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     c.fillRect(-55,-55,110,110);c.restore();
     sprites.set(id,s);return s;
   };
+  // フリックの炎の筋(右向き・先端が右のはし)。CSS の [data-rhythm-hit-effect]>em と同じ見た目を1枚だけ焼く
+  const hitStreakSprite=()=>{
+    const id=`hitstreak:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const s=makeSpriteCanvas(180,44),c=s.ctx;
+    const band=c.createLinearGradient(0,0,180,0);band.addColorStop(0,'rgba(251,146,60,0)');band.addColorStop(.55,'rgba(249,115,22,.55)');band.addColorStop(1,'rgba(253,186,116,.85)');
+    c.fillStyle=band;c.fillRect(0,22-7.5,180,15);
+    c.save();c.translate(158,22);c.scale(108/22,1);
+    const head=c.createRadialGradient(0,0,0,0,0,22);head.addColorStop(0,'rgba(255,251,235,1)');head.addColorStop(.26,'rgba(253,224,71,.9)');head.addColorStop(.52,'rgba(251,146,60,.7)');head.addColorStop(1,'rgba(251,146,60,0)');
+    c.fillStyle=head;c.fillRect(-22,-22,44,44);c.restore();
+    sprites.set(id,s);return s;
+  };
   const warmHitSprites=()=>{
     if(!hitArea)return;
-    hitFlareSprite();
+    hitFlareSprite();hitStreakSprite();
     for(const judgment of ['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD']){const f=hitFilters.get(`${judgment}|`);hitCoreSprite(rhythmHitEffectColor(judgment),f?f.core:null);}
     const monster=hitFilters.get('|');hitCoreSprite('#fde047',monster?monster.core:null);
   };
@@ -20595,8 +20637,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.setTransform(a*dpr,b*dpr,c*dpr,d*dpr,(ox-(a*ox+c*oy))*dpr,(oy-(b*ox+d*oy))*dpr);
   };
   const hitBeamPath=(x,y,w,h)=>{
-    // border-radius:999px 999px 0 0 は、幅が高さの2倍までは「幅の半分」の丸になる
-    const r=Math.max(0,Math.min(w/2,h));
+    // 上の角は 14px まで丸める(CSS の border-radius:14px 14px 0 0 と同じ)。柱を高くした(2026-09-27)ので、
+    // 以前の「幅の半分の丸」だと幅の広いノーツで半円のお椀に見えた
+    const r=Math.max(0,Math.min(w/2,h,14));
     ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x,y+r);ctx.arc(x+r,y+r,r,Math.PI,Math.PI*1.5);
     ctx.lineTo(x+w-r,y);ctx.arc(x+w-r,y+r,r,Math.PI*1.5,Math.PI*2);ctx.lineTo(x+w,y+h);ctx.closePath();
   };
@@ -20613,12 +20656,13 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         ctx.fillStyle=g;ctx.fill();
       }else ctx.drawImage(hitCoreSprite(h.color,h.filter.core).canvas,left,hitY-7,W,14);
     }
-    // 立ち上がる光の柱(判定ラインから上へ96px)
+    // 立ち上がる光の柱(判定ラインから上へ、道の4割ほど。96〜200px。CSS の clamp(96px,34vh,200px) とそろえる)
     f=hitFrame(h.big?HIT_KEYS.beamBig:HIT_KEYS.beam,p);
     if(f.o>.002){
+      const BH=Math.max(96,Math.min(200,hitY*.42));
       ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy);
-      hitBeamPath(left,hitY-96,W,96);
-      const g=ctx.createLinearGradient(0,hitY,0,hitY-96);
+      hitBeamPath(left,hitY-BH,W,BH);
+      const g=ctx.createLinearGradient(0,hitY,0,hitY-BH);
       if(h.precise)HIT_BEAM_RAINBOW.forEach(([t,col])=>g.addColorStop(t,hitText(hitFilter(hitRgba(col),h.filter.beam))));
       else{
         const base=hitFilter(hitRgba(h.color),h.filter.beam),white=hitFilter([255,255,255,.32],h.filter.beam);
@@ -20633,10 +20677,19 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       ctx.globalAlpha=Math.min(1,f.o);ctx.setTransform(dpr,0,0,dpr,0,0);
       HIT_SPARK_OFFSETS.forEach(([ox,oy],i)=>{
         ctx.fillStyle=h.precise?RHYTHM_JUDGMENT_RAINBOW[i]:h.color;
-        ctx.beginPath();ctx.arc(cx+ox*h.sparkScale*f.k,hitY+oy*h.sparkScale*f.k,3.5*f.s,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(cx+ox*h.sparkScale*f.k,hitY+oy*h.sparkScale*f.k,2.5*f.s,0,Math.PI*2);ctx.fill();
       });
     }
     // 白い十字の光(演出量「多め」では出さない)
+    // フリックの炎の筋。焼いた1枚を、払った向きへ回して進める(先端が判定ラインの位置から飛び出す)
+    if(h.flick&&HIT_FLICK_ANGLES[h.flick]!==undefined){
+      f=hitFrame(HIT_KEYS.streak,p);
+      if(f.o>.002){
+        const a=HIT_FLICK_ANGLES[h.flick]*Math.PI/180,cos=Math.cos(a),sin=Math.sin(a),d=30+160*f.k,px=cx+cos*d,py=hitY+sin*d,L=180*f.sx;
+        ctx.globalAlpha=Math.min(1,f.o);ctx.setTransform(cos*dpr,sin*dpr,-sin*dpr,cos*dpr,px*dpr,py*dpr);
+        ctx.drawImage(hitStreakSprite().canvas,-L,-22,L,44);
+      }
+    }
     if(h.flare){
       f=hitFrame(HIT_KEYS.flare,p);
       if(f.o>.002){ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy,f.r);ctx.drawImage(hitFlareSprite().canvas,cx-95,hitY-55,190,110);}
