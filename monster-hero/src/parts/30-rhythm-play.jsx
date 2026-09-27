@@ -933,16 +933,6 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const showLuckyBanner=useCallback((text,kind)=>{if(luckBannerTimerRef.current)clearTimeout(luckBannerTimerRef.current);setLuckyBanner({text,kind,id:Date.now()});luckBannerTimerRef.current=setTimeout(()=>{luckBannerTimerRef.current=null;setLuckyBanner(null);},kind==='rush'?1400:800);},[]);
   useEffect(()=>()=>{if(luckBannerTimerRef.current)clearTimeout(luckBannerTimerRef.current);},[]);
   const timingDisplay=RHYTHM_TIMING_DISPLAYS.includes(settings.timingDisplay)?settings.timingDisplay:'STANDARD';
-  /* レーンカバーの形。高さは設定の%で、横はレーンの台形(rhythmProjectionScale)に沿って切り抜く。
-     台形のふちは少し曲がっているので、8か所で折って近づける(外へ1%だけはみ出させて、ふちの隙間を作らない) */
-  const laneCoverStyle=useMemo(()=>{
-    const percent=rhythmFiniteStep(settings.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,0);
-    if(!(percent>0))return null;
-    const steps=8,left=[],right=[];
-    for(let i=0;i<=steps;i++){const t=i/steps,half=Math.min(50,50*rhythmProjectionScale(t*percent/100)+1);left.push(`${(50-half).toFixed(2)}% ${(t*100).toFixed(2)}%`);right.unshift(`${(50+half).toFixed(2)}% ${(t*100).toFixed(2)}%`);}
-    const clip=`polygon(${left.concat(right).join(',')})`;
-    return {height:`${percent}%`,clipPath:clip,WebkitClipPath:clip};
-  },[settings.laneCover]);
   // 100コンボごとの演出。
   // 「段階(tier)が変わったときだけ」effectを動かすのが肝心で、以前は view.combo(=ノーツを取るたび
   // 毎回変わる値)を依存にしていたため、100→101など非節目の増加でも毎回effectが再実行され、
@@ -1107,6 +1097,30 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
       if(mql.removeEventListener)mql.removeEventListener('change',onChange);else mql.removeListener?.(onChange);
     };
   },[]);
+  // 横向きの道の幅(オプション・2026-09-27)。横向きのときだけ効き、縦向きは常にこれまでの幅(1)。
+  // 見た目・判定・入力はどれも RHYTHM_ROAD_WIDTH を読むので、ここで入れた値で全部がそろう。
+  // ★描き始めより前に効かせるため、組み立ての中でも入れる(何度入れても同じ値)。
+  //   向きが変わったら、配置(レーンの切り抜き・判定ラインの左右・両サイドのマスモン)とレーンの SVG を作り直す
+  const roadFactor=isLandscape?(RHYTHM_ROAD_WIDTHS[settings.roadWidth]||1):1;
+  RHYTHM_ROAD_WIDTH.set(roadFactor);
+  React.useLayoutEffect(()=>{
+    RHYTHM_ROAD_WIDTH.set(roadFactor);
+    const area=playAreaRef.current;
+    if(area){rhythmLayoutPlayArea(area);if(typeof window!=='undefined'&&typeof window.rhythmLaneSvgRefresh==='function')window.rhythmLaneSvgRefresh();}
+  },[roadFactor]);
+  // 演奏画面を離れたら、これまでの幅へ戻す(曲えらびの見本などに持ち越さない)
+  useEffect(()=>()=>RHYTHM_ROAD_WIDTH.reset(),[]);
+  /* レーンカバーの形。高さは設定の%で、横はレーンの台形(rhythmProjectionScale)に沿って切り抜く。
+     台形のふちは少し曲がっているので、8か所で折って近づける(外へ1%だけはみ出させて、ふちの隙間を作らない) */
+  // 道の幅の倍率(roadFactor)が変わったときも作り直す(台形の幅が変わるため)
+  const laneCoverStyle=useMemo(()=>{
+    const percent=rhythmFiniteStep(settings.laneCover,RHYTHM_LANE_COVER_MIN,RHYTHM_LANE_COVER_MAX,RHYTHM_LANE_COVER_STEP,0);
+    if(!(percent>0))return null;
+    const steps=8,left=[],right=[];
+    for(let i=0;i<=steps;i++){const t=i/steps,half=Math.min(50,50*rhythmProjectionScale(t*percent/100)+1);left.push(`${(50-half).toFixed(2)}% ${(t*100).toFixed(2)}%`);right.unshift(`${(50+half).toFixed(2)}% ${(t*100).toFixed(2)}%`);}
+    const clip=`polygon(${left.concat(right).join(',')})`;
+    return {height:`${percent}%`,clipPath:clip,WebkitClipPath:clip};
+  },[settings.laneCover,roadFactor]);
   /* ===== 経過時間の箱の置き場所(2026-09-25) =====
      縦持ちと「🔄 横」で回した横画面では、左上のスコア表示のすぐ下・レーンの左ふちへ寄せて置く。
      右上に置いていたころは、ラッキーゲージと自己ベスト比が加わって縦に伸び、右上のコンボ数と重なっていた

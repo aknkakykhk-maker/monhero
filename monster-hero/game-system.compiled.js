@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e46656728e745b3
+// source-sha256: ca015b68d11cdcea
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 07:07";
+const BUILD_DATE = "2026-09-28 07:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4793,6 +4793,7 @@ const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
 const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
+const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE', '広い'], ['STANDARD', 'ふつう'], ['NARROW', '細い']]);
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
@@ -5033,6 +5034,7 @@ const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL', '跳ねる']
 const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO', 'おすすめ'], ['LEFT', '左'], ['CENTER', '中央'], ['RIGHT', '右'], ['HUD', '右上']]);
 const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id]) => id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL', 'LOW', 'NONE']);
+const RHYTHM_ROAD_WIDTH_LEVELS = Object.freeze(['WIDE', 'STANDARD', 'NARROW']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 const RHYTHM_RANK_COLORS = Object.freeze({
   G: 'text-slate-400',
@@ -5093,6 +5095,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   hudSongFade: true,
   autoEffectDown: true,
   stageEffect: 'SIMPLE',
+  roadWidth: 'WIDE',
   laneCover: 0,
   timingDisplay: 'STANDARD',
   comboStatusDisplay: true,
@@ -5131,6 +5134,7 @@ const normalizeRhythmSettings = value => {
     monsterNoteEffect: RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect) ? source.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
+    roadWidth: RHYTHM_ROAD_WIDTH_LEVELS.includes(source.roadWidth) ? source.roadWidth : DEFAULT_RHYTHM_SETTINGS.roadWidth,
     noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType: rhythmNoteSeTypeOf(source.noteSeType),
     noteSeJudgeVary: bool('noteSeJudgeVary'),
@@ -21224,6 +21228,8 @@ const RhythmOptions = ({
     full: true
   }), field('アシストモード', toggle('assistMode'), 'リズムゲームが苦手でも気軽に遊べるモードです（バンドリ！アワーノーツのアシストモードを見習いました）。既定はOFFです。ONにすると、フリックはタップするだけで取れ、ホールド・スライドの終わりのフリックも離すだけでよくなります。BAD・MISSでコンボが切れそうなときは「コンボガード」が代わりに受け止めます（最大3回ぶん。コンボをつなぐと少しずつたまり、崩れているときほど早くたまります）。そのかわりスコアは8割になり、FULL COMBO などの称号は付かず、自己ベスト・全国ランキング・ビートPには残りません。曲えらびの「🛟 アシスト」でも切り替えられます。'), field('ミラー譜面', toggle('mirrorChart'), '譜面を左右反対にして遊びます（バンドリ！アワーノーツなどにある設定です）。既定はOFFです。同じ曲でも手の動きが変わるので、苦手な配置の練習や気分転換に使えます。判定・スコア・記録はふだんどおりです。曲えらびの「↔ ミラー譜面」でも切り替えられます。'), field('ラッキーラッシュ', toggle('luckyRush'), 'うまく叩くと、経過時間の下の🍀ゲージがたまり、満タンで抽選します（バンドリ！アワーノーツの「LUCK撃奏」を見習いました）。当たると「LUCKY RUSH!!」になり、しばらくのあいだ画面のふちが金色に光って、ゲージが2倍の速さでたまり、次の抽選も当たりやすくなります。抽選のたびにラッキーptが入り、曲の終わりにおまけのビートPになります（1曲で最大10P。イベントを開いていない期間は1/5。アシストモードでは入りません）。スコア・判定・ランキングには関わりません。既定はONです。'), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだはコンボ数のすぐ上に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、レーンの左のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
+  }), field('道の幅（横向き）', segments('roadWidth', RHYTHM_ROAD_WIDTH_LABELS), '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。', {
+    full: true
   }), field('コンボ数', React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && React.createElement(React.Fragment, null, React.createElement("div", {
     className: wide ? 'mt-1.5' : 'mt-2'
   }, segments('comboPosition', RHYTHM_COMBO_POSITION_LABELS)), React.createElement("div", {
@@ -24022,25 +24028,6 @@ const RhythmTapTest = ({
     if (luckBannerTimerRef.current) clearTimeout(luckBannerTimerRef.current);
   }, []);
   const timingDisplay = RHYTHM_TIMING_DISPLAYS.includes(settings.timingDisplay) ? settings.timingDisplay : 'STANDARD';
-  const laneCoverStyle = useMemo(() => {
-    const percent = rhythmFiniteStep(settings.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, 0);
-    if (!(percent > 0)) return null;
-    const steps = 8,
-      left = [],
-      right = [];
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps,
-        half = Math.min(50, 50 * rhythmProjectionScale(t * percent / 100) + 1);
-      left.push(`${(50 - half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
-      right.unshift(`${(50 + half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
-    }
-    const clip = `polygon(${left.concat(right).join(',')})`;
-    return {
-      height: `${percent}%`,
-      clipPath: clip,
-      WebkitClipPath: clip
-    };
-  }, [settings.laneCover]);
   const [lifeDownCount, setLifeDownCount] = useState(0);
   const [lifeDownSlam, setLifeDownSlam] = useState(false);
   useEffect(() => {
@@ -24294,6 +24281,36 @@ const RhythmTapTest = ({
       if (mql.removeEventListener) mql.removeEventListener('change', onChange);else mql.removeListener?.(onChange);
     };
   }, []);
+  const roadFactor = isLandscape ? RHYTHM_ROAD_WIDTHS[settings.roadWidth] || 1 : 1;
+  RHYTHM_ROAD_WIDTH.set(roadFactor);
+  React.useLayoutEffect(() => {
+    RHYTHM_ROAD_WIDTH.set(roadFactor);
+    const area = playAreaRef.current;
+    if (area) {
+      rhythmLayoutPlayArea(area);
+      if (typeof window !== 'undefined' && typeof window.rhythmLaneSvgRefresh === 'function') window.rhythmLaneSvgRefresh();
+    }
+  }, [roadFactor]);
+  useEffect(() => () => RHYTHM_ROAD_WIDTH.reset(), []);
+  const laneCoverStyle = useMemo(() => {
+    const percent = rhythmFiniteStep(settings.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, 0);
+    if (!(percent > 0)) return null;
+    const steps = 8,
+      left = [],
+      right = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps,
+        half = Math.min(50, 50 * rhythmProjectionScale(t * percent / 100) + 1);
+      left.push(`${(50 - half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
+      right.unshift(`${(50 + half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
+    }
+    const clip = `polygon(${left.concat(right).join(',')})`;
+    return {
+      height: `${percent}%`,
+      clipPath: clip,
+      WebkitClipPath: clip
+    };
+  }, [settings.laneCover, roadFactor]);
   const hudLeftRef = useRef(null);
   const RHYTHM_CLOCK_SIDE_MIN_WIDTH = 100;
   const [clockPlace, setClockPlace] = useState(null);

@@ -60,7 +60,9 @@ ok('現在量が溝の色で見えて、現在値も常時表示',
   &&game.includes('aria-label={`${key}を変える`}')
   &&game.includes('<output aria-live="polite"'));
 ok('変更時に保存ボタンを明示',game.includes("data-dirty={dirty?'true':'false'}")&&game.includes("dirty?'変更を保存':'保存'"));
-ok('試聴はボタンの直接イベントから既存音声経路を使う',game.includes('onClick={previewBgm}')&&game.includes("Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume)")&&game.includes('onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)}')&&data.includes('preview:settings=>play(settings)'));
+// 2026-09-27: 打鍵音の試聴が「タップ音/フリック音」を選べるようになり、preview(draft,'tap') と
+// 第2引数が付いた。データ側も preview を独立した関数にして return へ並べる形になった。意図は同じ。
+ok('試聴はボタンの直接イベントから既存音声経路を使う',game.includes('onClick={previewBgm}')&&game.includes("Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume)")&&/onClick=\{\(\)=>RHYTHM_NOTE_SE_RUNTIME\.preview\(draft(?:,'[a-z]+')?\)\}/.test(game)&&/const preview=\(previewSettings[^)]*\)=>\{/.test(data)&&/return \{[^}]*\bpreview\b/.test(data));
 // 2026-09-12: 音量の上限を200まで開けた(ユーザー指示)。100までの値は今までとまったく同じで、
 // クランプの上限だけが 1 → RHYTHM_VOLUME_MAX/100 へ広がっている。
 ok('音ゲーBGM音量だけを専用gainへ反映(メインのbgmGainは経由しない)',

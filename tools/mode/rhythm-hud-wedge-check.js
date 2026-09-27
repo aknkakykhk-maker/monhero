@@ -29,14 +29,8 @@ let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 
 // ── レーンの台形(遠近)は実装から取り出してそのまま使う ──────────────────────────
-const projectionSource=[
-  rhythm.match(/const RHYTHM_LANE_COUNT\s*=[^\n]*/)[0],
-  rhythm.match(/const RHYTHM_PROJECTION_TOP_SCALE=[^\n]*/)[0],
-  rhythm.match(/const rhythmClamp01=[^\n]*/)[0],
-  // rhythmProjectionScale は複数行で、RHYTHM_PROJECTION_CURVE も使う(2026-09-27 に追従。1行目だけを取ると途中で切れて読み込めなかった)
-  rhythm.match(/const RHYTHM_PROJECTION_CURVE=[^\n]*/)[0],
-  rhythm.match(/const rhythmProjectionScale=[\s\S]*?\n\};/)[0],
-].join('\n');
+// 道の遠近の計算は丸ごと切り出す(rhythm-projection-source.js。名前ごとに切り出すと、計算を分けるたびに壊れた)
+const projectionSource=require('./rhythm-projection-source.js').rhythmProjectionSource(rhythm);
 const rhythmProjectionScale=new Function(`${projectionSource}\nreturn rhythmProjectionScale;`)();
 
 // ── HUDのJSXを取り出してHTMLへ写す ──────────────────────────────────────────
