@@ -20662,14 +20662,19 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const BH=Math.max(96,Math.min(200,hitY*.42));
       ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy);
       hitBeamPath(left,hitY-BH,W,BH);
-      const g=ctx.createLinearGradient(0,hitY,0,hitY-BH);
-      if(h.precise)HIT_BEAM_RAINBOW.forEach(([t,col])=>g.addColorStop(t,hitText(hitFilter(hitRgba(col),h.filter.beam))));
-      else{
-        const base=hitFilter(hitRgba(h.color),h.filter.beam),white=hitFilter([255,255,255,.32],h.filter.beam);
-        [0,1/3,2/3,1].forEach(u=>g.addColorStop(.42*u,hitText(hitPremulMix(base,white,u))));
-        g.addColorStop(1,hitText([white[0],white[1],white[2],0]));
+      // 色の段は叩いた1回につき1度だけ作り、消えるまで使い回す(2026-09-27・柱を高く長くしたぶん、毎フレーム作り直さない)。
+      // 判定ラインの高さが変わったら作り直す
+      if(!h._beam||h._beamY!==hitY||h._beamH!==BH){
+        const g=ctx.createLinearGradient(0,hitY,0,hitY-BH);
+        if(h.precise)HIT_BEAM_RAINBOW.forEach(([t,col])=>g.addColorStop(t,hitText(hitFilter(hitRgba(col),h.filter.beam))));
+        else{
+          const base=hitFilter(hitRgba(h.color),h.filter.beam),white=hitFilter([255,255,255,.32],h.filter.beam);
+          [0,1/3,2/3,1].forEach(u=>g.addColorStop(.42*u,hitText(hitPremulMix(base,white,u))));
+          g.addColorStop(1,hitText([white[0],white[1],white[2],0]));
+        }
+        h._beam=g;h._beamY=hitY;h._beamH=BH;
       }
-      ctx.fillStyle=g;ctx.fill();
+      ctx.fillStyle=h._beam;ctx.fill();
     }
     // はじける粒(7pxの丸が5つ)。フィルターはかからない
     f=hitFrame(HIT_KEYS.spark,p);
