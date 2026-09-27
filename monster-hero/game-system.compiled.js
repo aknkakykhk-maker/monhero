@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 72791641c38dd7e3
+// source-sha256: 2e46656728e745b3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 06:54";
+const BUILD_DATE = "2026-09-28 07:07";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -24534,7 +24534,8 @@ const RhythmTapTest = ({
       if (monsterHit) RHYTHM_NOTE_SE_RUNTIME.playMonster();
       if (!settings.lightweightMode && settings.effectAmount !== 'MINIMAL') {
         const area = playAreaRef.current;
-        const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, 1, run.audio?.songTimeMs?.() ?? note.timeMs) : rhythmNoteVisualSpan(note, note.lane, 1, run.audio?.songTimeMs?.() ?? note.timeMs);
+        const lineY = RHYTHM_JUDGMENT_LINE_Y.ratio;
+        const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, run.audio?.songTimeMs?.() ?? note.timeMs) : rhythmNoteVisualSpan(note, note.lane, lineY, run.audio?.songTimeMs?.() ?? note.timeMs);
         const restarts = [];
         const monsterEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect;
         const bigMonsterEffect = monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'OFF');

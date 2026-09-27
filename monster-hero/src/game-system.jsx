@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d5dbfa83cac43f3f
+// generated-sha256: 4f4a4dfa7dc88fb4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 06:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-28 07:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17199,10 +17199,13 @@ if(judgment!=='MISS'){
   if(monsterHit)RHYTHM_NOTE_SE_RUNTIME.playMonster();
   if(!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'){
     const area=playAreaRef.current;
-    // 光の位置と幅はノーツと同じ投影から出す(判定ラインの高さ=1)。
+    // 光の位置と幅はノーツと同じ投影から、**判定ラインの高さ**で出す(実測した比。ノーツの中心がラインに来たときと同じ値)。
+    // ★2026-09-27 まで 1(=演奏の枠の下端)で出していた。道はラインの高さで枠の約8割に細くなるので、
+    //   外側のレーンほど光が外へずれて広がり、道の外まではみ出していた(コマ送りで見つけた)
+    const lineY=RHYTHM_JUDGMENT_LINE_Y.ratio;
     const span=rhythmNoteIsSlide(note)
-      ?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,1,run.audio?.songTimeMs?.()??note.timeMs)
-      :rhythmNoteVisualSpan(note,note.lane,1,run.audio?.songTimeMs?.()??note.timeMs);
+      ?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,lineY,run.audio?.songTimeMs?.()??note.timeMs)
+      :rhythmNoteVisualSpan(note,note.lane,lineY,run.audio?.songTimeMs?.()??note.timeMs);
     // 流し直す印はここで集めて、最後にまとめて1回のレイアウトで付け直す
     // (箇所ごとに void offsetWidth を書くと、その回数ぶんページ全体のレイアウトが走る)。
     const restarts=[];
