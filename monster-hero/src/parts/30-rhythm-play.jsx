@@ -668,7 +668,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const assistOn=!!settings.assistMode&&!tutorial&&!calibrating&&!debugPlay,mirrorOn=!!settings.mirrorChart&&!tutorial&&!calibrating;
   const rawChart=song.difficulties[difficulty.id];
   const transformedChart=useMemo(()=>assistOn||mirrorOn?rhythmTransformChart(song.difficulties[difficulty.id],{mirror:mirrorOn,assist:assistOn}):null,[song.songId,difficulty.id,assistOn,mirrorOn]);
-  const chart=transformedChart||rawChart,laneRefs=useRef([]),runRef=useRef(null),frameRef=useRef(null),playAreaRef=useRef(null),judgmentLineRef=useRef(null),judgmentBandRef=useRef(null),judgmentTimerRef=useRef(null),judgmentRevisionRef=useRef(0),startLockRef=useRef(false),generationRef=useRef(0),mountedRef=useRef(false),glowNodesRef=useRef(null),liveTouchSubLanesRef=useRef([]);
+  const chart=transformedChart||rawChart,laneRefs=useRef([]),runRef=useRef(null),frameRef=useRef(null),heldNotesRef=useRef([]),playAreaRef=useRef(null),judgmentLineRef=useRef(null),judgmentBandRef=useRef(null),judgmentTimerRef=useRef(null),judgmentRevisionRef=useRef(0),startLockRef=useRef(false),generationRef=useRef(0),mountedRef=useRef(false),glowNodesRef=useRef(null),liveTouchSubLanesRef=useRef([]);
 
   const tutorialBannerRef=useRef(null),tutorialStepRef=useRef(null);
   // タイミング合わせの案内(いま何回ぶん数えたか・途中経過のずれ)を書き換えるための控え。
@@ -1488,7 +1488,7 @@ if(paceEl&&settings.paceDisplay!==false&&!tutorial&&!calibrating&&Number(run.sta
 /* ずれメーター(osu! のヒットエラーメーター)。直近12回のずれを目盛りに並べ、古いものほど薄くする。
    目盛りの幅は BAD の窓(±185ms)。判定には一切関わらない */
 if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)){const ticks=meterTicksRef.current;if(ticks.length){const slot=(run._meterSlot=((run._meterSlot??-1)+1)%ticks.length);const range=RHYTHM_JUDGMENTS.find(item=>item.id==='BAD')?.windowMs||185;const tick=ticks[slot];if(tick){tick.style.left=`${(50+Math.max(-1,Math.min(1,deltaMs/range))*50).toFixed(2)}%`;tick.dataset.judgment=judgment;}ticks.forEach((el,i)=>{if(!el)return;const age=(slot-i+ticks.length)%ticks.length;el.style.opacity=el.dataset.judgment?String(Math.max(.12,1-age/ticks.length).toFixed(2)):'0';});}}if(showAbilityFlash)scheduleAbilityClear();if(_judgeT0)RHYTHM_PERF.judge(performance.now()-_judgeT0,!!monster);},[chart.totalNotes,difficulty.maxScore,scheduleAbilityClear,scheduleJudgmentClear,settings.vibrationEnabled,settings.monsterNoteEffect,settings.paceDisplay,settings.timingDisplay,tutorial,calibrating,assistOn,luckOn,showLuckyBanner,cutInOn]);
-  const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.finished=true;stopFrame();RHYTHM_GESTURE_RUNTIME.clear();run.activePointers.clear();run.activeTouchInputs?.clear();run.audio?.stop();const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);/* アシストモードでは FULL COMBO 等の称号を付けない(アワーノーツと同じ) */if(assistOn){achievements.fullCombo=false;achievements.allExcellent=false;achievements.allMarvelous=false;}
+  const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.finished=true;stopFrame();RHYTHM_NOTE_SE_RUNTIME.holdStopAll();RHYTHM_GESTURE_RUNTIME.clear();run.activePointers.clear();run.activeTouchInputs?.clear();run.audio?.stop();const score=run.lifeDepleted?run.lockedScore:run.score;const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);/* アシストモードでは FULL COMBO 等の称号を付けない(アワーノーツと同じ) */if(assistOn){achievements.fullCombo=false;achievements.allExcellent=false;achievements.allMarvelous=false;}
     // ===== クリアか失敗か(2026-09-12・ユーザー指示「終了後にクリアか失敗かもわかるようにして」) =====
     // 失敗＝ライフが0になったまま曲を終えた(不可逆のDOWN)こと。根性で蘇生して0を脱していれば
     // run.lifeDepleted は false に戻っているので、そのときはクリア扱いになる。
@@ -1629,7 +1629,7 @@ const paintCanvasNote=note=>{
   const geo=rhythmNoteCanvasGeometry(note,yPx,visualLane,travel.rect,travel.noteHeight,hasBody?releaseYpx:null,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx},hasBody?bodyPx:0);
   const monster=!!monsterForNote(note);
   const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
-  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
+  RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:failedTrail,monster,wide:rhythmNoteIsWide(note),pressed:note.type==='HOLD'&&note.activePointerId!==null,heldMs:songTimeMs-note.timeMs,alpha:failedTrail?.34:1,pop:clearFlash?Math.min(1,(songTimeMs-note._rhythmClearAt)/RHYTHM_CLEAR_FLASH_MS):null,depthScale,brightness});
   // マスモンの顔(焼いた絵)。以前の DOM 版と同じく、落下中は「奥行き×1.28倍」、
   // 取った瞬間は枠の大きさから2.1倍へ広がりながら消える(0.26秒・影なし)
   const monsterSlot=monster?rhythmNoteMonsterSlot(note):0,faceBitmap=monsterSlot?faceBitmapsRef.current[monsterSlot-1]:null;
@@ -1714,12 +1714,17 @@ while(scanFrom<notes.length){
 }
 run.scanFrom=scanFrom;
 const scanHorizonMs=visualTime+travelMs*1.2;
+// 押さえている HOLD/SLIDE を集めて、押さえている間の「ウィーン」(溜める音)へ渡す(2026-09-28)。
+// 渡すだけで、判定・スコアには触らない。並びは使い回す(毎フレーム配列を作らない)
+const heldNotes=heldNotesRef.current;heldNotes.length=0;
 for(let i=scanFrom;i<notes.length;i++){
   const note=notes[i];
   if(run.notesReady&&run.notesAscending&&note.timeMs>scanHorizonMs)break;
   perfScanned++;
   visitNote(note);
+  if(!note.done&&note.activePointerId!==null&&note.type==='HOLD'&&rhythmNoteHasBody(note))heldNotes.push(note);
 }
+RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
 run.notesReady=true;
 if(canvasNotes)RHYTHM_CANVAS_RENDERER.end();
 RHYTHM_PERF.notes(perfScanned,perfDrawn,scanFrom,run.notesAscending);
@@ -1779,7 +1784,7 @@ if(!run.fadedOut&&audioDurationMs>playEndTimeMs+RHYTHM_END_FADE_MARGIN_MS
   run.audio.fadeOut?.(RHYTHM_END_FADE_MS);
 }
 if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.frameRateMode,settings.stageEffect,settings.lightweightMode,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial,updateJudgmentBand]);
-  const disposeRun=useCallback(()=>{stopFrame();clearJudgmentTimer();clearAbilityTimer();clearCountdown();RHYTHM_GESTURE_RUNTIME.clear();rhythmFloatingNotesClear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearCountdown,clearJudgmentTimer,stopFrame]);
+  const disposeRun=useCallback(()=>{stopFrame();RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);clearJudgmentTimer();clearAbilityTimer();clearCountdown();RHYTHM_GESTURE_RUNTIME.clear();rhythmFloatingNotesClear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearCountdown,clearJudgmentTimer,stopFrame]);
   /* プレイエリアが「遊べる大きさ」になるまで待つ。
      毎フレーム測り直し、整ったらすぐ返す。整わないまま上限に達したら、
      待ち続けて遊べなくなるより始めたほうがましなので諦めて返す。 */
@@ -1854,7 +1859,7 @@ scheduleTick();};
        (rhythm-hud-wedge-check など)がHUDのJSXをそのまま写して使うため、
        式や disabled: 変種を持ち込むと測れなくなるから */
     if(countdownStep!==null)return;
-    if(!run||run.finished||run.paused)return;run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.activePointerFeedback?.clear();setPressedLanes([]);run.notes.forEach(note=>{if(note.type==='HOLD'&&note.activePointerId!==null)note.activePointerId=-1;});setPausedSongMs(Math.max(0,Number(run.audio.songTimeMs())||0));run.paused=true;stopFrame();run.audio.pause();setView(v=>({...v,status:'paused'}));};
+    if(!run||run.finished||run.paused)return;RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.activePointerFeedback?.clear();setPressedLanes([]);run.notes.forEach(note=>{if(note.type==='HOLD'&&note.activePointerId!==null)note.activePointerId=-1;});setPausedSongMs(Math.max(0,Number(run.audio.songTimeMs())||0));run.paused=true;stopFrame();run.audio.pause();setView(v=>({...v,status:'paused'}));};
   /* 再開は 3→2→1 と数えてから(開始のカウントダウンと同じ部品を使い、READYだけ省く)。
      数えているあいだに画面を離れた・リスタートした(generationが変わった)ら鳴らさない。
      二度押しで数えが2本走らないよう resumingRef で止める */
