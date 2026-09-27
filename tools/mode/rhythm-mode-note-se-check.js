@@ -26,6 +26,7 @@ let contextCount=0,startCount=0,lastGain=0;
 class FakeParam{
   setValueAtTime(value){lastGain=Number(value)||0;}
   exponentialRampToValueAtTime(){}
+  linearRampToValueAtTime(){}
 }
 class FakeNode{
   connect(){}
@@ -51,6 +52,13 @@ class FakeAudioContext{
   createBufferSource(){return new FakeBufferSource();}
   createBiquadFilter(){return new FakeFilter();}
   resume(){this.state='running';return Promise.resolve();}
+}
+// 作り置き(OfflineAudioContext)の偽物。はじめは置かない(作れない端末ではクラシックで鳴ることを先に見る)
+class FakeOffline extends FakeAudioContext{
+  constructor(channels,length,rate){super();contextCount--;this.length=length;this.sampleRate=rate;}
+  createConvolver(){return new FakeNode();}
+  createBuffer(channels,length){const data=new Float32Array(length);return {length,getChannelData:()=>data};}
+  startRendering(){const data=new Float32Array(this.length);for(let i=0;i<400;i++)data[i]=.5*Math.sin(i*.3);return Promise.resolve({length:this.length,getChannelData:()=>data});}
 }
 const context={
   window:{AudioContext:FakeAudioContext},
@@ -126,16 +134,18 @@ check('200までの蓋はこれまでと同じ(.8)で、それより上だけ開
 // タップ音の種類(2026-09-26・ユーザー指示「ノーツを押したときの音のバリエーションがほしい / 設定で変えられるように」)
 {
   const ids=[...source.matchAll(/Object\.freeze\(\{ id:'([A-Z]+)', +label:'[^']+'/g)].map(m=>m[1]);
-  check('タップ音の種類は 標準・クラップ・ドラム・ウッド・ベル の5つ',JSON.stringify(ids.filter(id=>['STANDARD','CLAP','DRUM','WOOD','BELL'].includes(id)))==='["STANDARD","CLAP","DRUM","WOOD","BELL"]',ids.join(','));
+  check('タップ音の種類は スタンダード・クラップ・ドラム・ウッド・ベル・クラシック の6つ',JSON.stringify(ids.filter(id=>['STANDARD','CLAP','DRUM','WOOD','BELL','CLASSIC'].includes(id)))==='["STANDARD","CLAP","DRUM","WOOD","BELL","CLASSIC"]',ids.join(','));
   check('保存値に無い・知らない種類は「標準」で鳴らす',source.includes("const rhythmNoteSeTypeOf = value => RHYTHM_NOTE_SE_TYPE_IDS.includes(value) ? value : 'STANDARD';")
     &&source.includes('type:rhythmNoteSeTypeOf(value?.noteSeType)'));
-  // 2026-09-27 から、1つのセットに タップ・フリック・ロングの終わり の3つの音を持つ
-  const setsText=source.slice(source.indexOf('const RHYTHM_NOTE_SE_SETS=Object.freeze({'),source.indexOf('const voice=(settings,kind,judgment,part=1)=>'));
-  const setIds=[...setsText.matchAll(/^    ([A-Z]+):Object\.freeze\(\{/gm)].map(m=>m[1]);
-  check('種類ごとに鳴らし分けている(5つのセットがそろっている)',JSON.stringify(setIds)==='["STANDARD","CLAP","DRUM","WOOD","BELL"]',setIds.join(','));
-  const blocks=setsText.split(/^    [A-Z]+:Object\.freeze\(\{/m).slice(1);
+  // 2026-09-27 から、1つのセットに タップ・フリック・ロングの終わり の3つの音を持つ。
+  // 同じ日の夜に音そのものを作り直し、設計図(RHYTHM_NOTE_SE_DESIGNS)から作り置きする形にした。これまでの音は「クラシック」
+  const setsText=source.slice(source.indexOf('const RHYTHM_NOTE_SE_DESIGNS = Object.freeze({'),source.indexOf('const RHYTHM_NOTE_SE_RENDER_SECONDS'));
+  const setIds=[...setsText.matchAll(/^  ([A-Z]+):Object\.freeze\(\{/gm)].map(m=>m[1]);
+  check('種類ごとに鳴らし分けている(5つのセットの設計図がそろっている)',JSON.stringify(setIds)==='["STANDARD","CLAP","DRUM","WOOD","BELL"]',setIds.join(','));
+  const blocks=setsText.split(/^  [A-Z]+:Object\.freeze\(\{/m).slice(1);
   check('どのセットも タップ・フリック・ロングの終わり の3つの音を持つ',blocks.length===5&&blocks.every(b=>/\btap:/.test(b)&&/\bflick:/.test(b)&&/\bend:/.test(b)));
-  check('標準のタップ音はこれまでと同じ音',/STANDARD:Object\.freeze\(\{\s*tap:\(T\)=>\{T\('triangle',1120,820,\.035,\.045\);\}/.test(setsText));
+  check('これまでの標準の音は「クラシック」として残す',source.includes("Object.freeze({ id:'CLASSIC',")
+    &&/const RHYTHM_NOTE_SE_CLASSIC=Object\.freeze\(\{\s*tap:\(T\)=>\{T\('triangle',1120,820,\.035,\.045\);\}/.test(source));
 }
 // タップ音は上限の音量でもちょうど2倍まで素直に伸びる(蓋に当たらない)
 check('タップ音は音量200でも蓋に当たらない(100のちょうど2倍まで伸びる)',
@@ -217,12 +227,6 @@ check('同じ接触イベントで成功SEがあれば空押しSEを追加しな
   saved=JSON.stringify({noteSeEnabled:true,noteSeVolume:70,noteSeFlickVolume:'x',noteSeEndVolume:9999,noteSeJudgeVary:'yes',noteSeType:'NOPE'});
   const broken=read();
   check('壊れた値は既定へ戻すか範囲へ収める',broken.flickVolume===100&&broken.endVolume===200&&broken.judgeVary===true&&broken.type==='STANDARD');
-  for(const type of ['STANDARD','CLAP','DRUM','WOOD','BELL'])for(const kind of ['tap','flick','end']){
-    const before=startCount;
-    RHYTHM_NOTE_SE_RUNTIME.preview({noteSeEnabled:true,noteSeVolume:100,noteSeType:type},kind,'MARVELOUS');
-    if(startCount===before)check(`試聴で ${type} の ${kind} が鳴る`,false);
-  }
-  check('試聴で全セットの3つの音が鳴る',true);
 }
 {
   const settingsSource=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx'),'utf8');
@@ -283,5 +287,38 @@ check('touch由来pointerupはtouchendと二重再生しない',releasePlayCount
 check('終端SEも既存RHYTHM_NOTE_SE_RUNTIMEを再利用',releaseSource.includes('RHYTHM_NOTE_SE_RUNTIME.play()'));
 check('touchcancel/pointercancelには終端SEを追加しない',!releaseSource.includes("addEventListener('touchcancel'")&&!releaseSource.includes("addEventListener('pointercancel'"));
 
-console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
-process.exit(failed?1:0);
+
+// ===== 作り置き(2026-09-27 夜・ユーザー指示「音の種類と言うか音の質自体をほかの音ゲーにならって作ってほしい」) =====
+(async()=>{
+  const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
+  context.window.OfflineAudioContext=FakeOffline;
+  const bank=await RHYTHM_NOTE_SE_RUNTIME.prepare('CLAP');
+  check('作り置きは 3つの音 × 判定3段',!!bank&&['tap','flick','end'].every(kind=>['PERFECT','GREAT','GOOD'].every(grade=>bank[kind]?.[grade])));
+  check('クラシックは作り置きしない(その場で鳴らす)',(await RHYTHM_NOTE_SE_RUNTIME.prepare('CLASSIC'))===null);
+  saved=JSON.stringify({noteSeEnabled:true,noteSeVolume:100,noteSeType:'CLAP'});
+  let before=startCount;
+  RHYTHM_NOTE_SE_RUNTIME.play(null,'MARVELOUS');
+  check('作り置きのあとは、叩くたびに鳴らすのは再生1つだけ',startCount===before+1&&Math.abs(lastGain-.035*seScale)<1e-9,String(lastGain));
+  RHYTHM_NOTE_SE_RUNTIME.play(null,'GOOD');
+  check('作り置きの音も、判定がずれるほど小さい',Math.abs(lastGain-.035*seScale*.64)<1e-9,String(lastGain));
+  saved=JSON.stringify({noteSeEnabled:true,noteSeVolume:100,noteSeType:'CLAP',noteSeJudgeVary:false});
+  RHYTHM_NOTE_SE_RUNTIME.play(null,'GOOD');
+  check('「判定で音を変える」を切ると、作り置きの音もいつもいちばん良い音',Math.abs(lastGain-.035*seScale)<1e-9);
+  delete context.window.OfflineAudioContext;
+  // 試聴: 作り置きの無い端末でも、全セットの3つの音が(クラシックで)鳴る
+  let silent=[];
+  for(const type of ['STANDARD','CLAP','DRUM','WOOD','BELL','CLASSIC'])for(const kind of ['tap','flick','end']){
+    before=startCount;
+    RHYTHM_NOTE_SE_RUNTIME.preview({noteSeEnabled:true,noteSeVolume:100,noteSeType:type},kind,'MARVELOUS');
+    await tick();await tick();
+    if(startCount===before)silent.push(`${type}/${kind}`);
+  }
+  check('試聴で全セットの3つの音が鳴る',silent.length===0,silent.join(','));
+  const renderText=source.slice(source.indexOf('const renderOne=('),source.indexOf('const renderBank='));
+  check('作り置きは決まった並びの雑音で作る(開くたびに音が変わらない)',source.includes('const seededNoise=(off,seconds)=>')&&!/Math\.random/.test(renderText));
+  check('作り置きのあと大きさをそろえる',renderText.includes('let scale=rms>0?target/rms:1;'));
+  const gameText=gameSource;
+  check('曲えらび・演奏の画面を開いたときに作り置きする',(gameText.match(/RHYTHM_NOTE_SE_RUNTIME\.prepare\?\.\(\)/g)||[]).length>=2);
+  console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
+  process.exit(failed?1:0);
+})().catch(error=>{console.error(error);process.exit(1);});
