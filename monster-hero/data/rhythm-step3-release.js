@@ -23,14 +23,22 @@
       const area=document.querySelector('[data-rhythm-play-area]');
       return area?Array.from(area.querySelectorAll('[data-rhythm-note]'))[Number(index)]?.querySelector('[data-rhythm-slide-body]')||null:null;
     };
+    // 高さを書き込んだことのある番号。書き込んだ本体から消すとき以外は、DOM を探しに行かない
+    const touched=new Set();
     const updateBody=(index)=>{
-      const body=bodyForIndex(index);
-      if(!body)return;
       let session=null;
       for(const candidate of runtime._sessions.values()){
         if(candidate?.kind==='SLIDE'&&Number(candidate.note?.index)===Number(index)&&!candidate.note?.done){session=candidate;break;}
       }
-      if(!session){body.style.removeProperty('--rhythm-slide-visible-height');return;}
+      // ★押さえている最中の SLIDE でもなく、前に高さを書き込んでもいない番号なら、DOM を探しても
+      //   何も変わらない。ここは毎フレーム・見えているノーツごとに呼ばれ、以前は毎回
+      //   querySelectorAll で全ノーツを集めていた(Canvas・WebGL で描いているときは要素がそもそも無い)。
+      //   2026-09-27 の点検で、1フレームあたり20〜30回の検索になっていたのを見つけた
+      if(!session&&!touched.has(Number(index)))return;
+      const body=bodyForIndex(index);
+      if(!body)return;
+      if(!session){body.style.removeProperty('--rhythm-slide-visible-height');touched.delete(Number(index));return;}
+      touched.add(Number(index));
       const chartNote=typeof atsuCupGestureTestChart!=='undefined'?atsuCupGestureTestChart.notes?.[Number(index)]:null;
       const start=Number(chartNote?.timeMs??session.note?.timeMs)||0,end=Number(chartNote?.endTimeMs??session.note?.endTimeMs)||start;
       const chartNow=(Number(session.startSongMs)||0)+Math.max(0,nowPerf()-(Number(session.startPerfMs)||0))-(Number(session.offsetMs)||0);

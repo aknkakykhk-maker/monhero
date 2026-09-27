@@ -13,7 +13,7 @@ const game=read('monster-hero/src/game-system.jsx');
 const context={};
 // 設定のnormalizeは、両サイドのマスモン(2026-09-05)の段階名も rhythm-mode.js から読む。
 // 切り出した normalize だけをVMで動かすので、その定数もここで一緒に取り出して渡す。
-vm.runInNewContext(`${data}\nthis.out={RHYTHM_LANE_COUNT,RHYTHM_NOTE_TYPES,RHYTHM_DIFFICULTIES,RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS,RHYTHM_SONGS,RHYTHM_SIDE_MONSTER_OPACITIES,RHYTHM_SIDE_MONSTER_MOTIONS};`,context);
+vm.runInNewContext(`${data}\nthis.out={RHYTHM_VOLUME_MAX,RHYTHM_NOTE_SE_VOLUME_MAX,rhythmNoteSeTypeOf,RHYTHM_LANE_COUNT,RHYTHM_NOTE_TYPES,RHYTHM_DIFFICULTIES,RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS,RHYTHM_SONGS,RHYTHM_SIDE_MONSTER_OPACITIES,RHYTHM_SIDE_MONSTER_MOTIONS};`,context);
 const D=context.out;
 check('6レーン・4ノーツ種別(2026-09-26 に5から6へ)',D.RHYTHM_LANE_COUNT===6&&D.RHYTHM_NOTE_TYPES.join(',')==='TAP,HOLD,FLICK,SLIDE');
 check('5難易度と最大スコア',JSON.stringify(D.RHYTHM_DIFFICULTIES.map(x=>[x.id,x.maxScore]))===JSON.stringify([['EASY',600000],['NORMAL',700000],['HARD',800000],['EXPERT',900000],['MASTER',1000000]]));
@@ -31,7 +31,8 @@ const logic=game.match(/const RHYTHM_SETTINGS_KEY = [\s\S]*?const rhythmBestReco
 check('normalizeロジックを抽出できる',!!logic);
 // 音量の上限は data/rhythm-mode.js が持つ(0〜200)。切り出したnormalizeが参照するので、
 // 実データからそのまま渡す(検査へ数値を書き写さない)
-if(logic){const c={RHYTHM_VOLUME_MAX:D.RHYTHM_VOLUME_MAX,RHYTHM_SONGS:D.RHYTHM_SONGS,RHYTHM_DIFFICULTIES:D.RHYTHM_DIFFICULTIES,
+// タップ音量の上限は別の定数(0〜400・2026-09-26)。これも実データから渡す
+if(logic){const c={RHYTHM_VOLUME_MAX:D.RHYTHM_VOLUME_MAX,RHYTHM_NOTE_SE_VOLUME_MAX:D.RHYTHM_NOTE_SE_VOLUME_MAX,rhythmNoteSeTypeOf:D.rhythmNoteSeTypeOf,RHYTHM_SONGS:D.RHYTHM_SONGS,RHYTHM_DIFFICULTIES:D.RHYTHM_DIFFICULTIES,
   RHYTHM_SIDE_MONSTER_OPACITIES:D.RHYTHM_SIDE_MONSTER_OPACITIES,RHYTHM_SIDE_MONSTER_MOTIONS:D.RHYTHM_SIDE_MONSTER_MOTIONS};vm.runInNewContext(`${logic}\nthis.out={DEFAULT_RHYTHM_SETTINGS,normalizeRhythmSettings,normalizeRhythmBestRecord,normalizeRhythmBestRecords};`,c);const L=c.out;
   const settings=L.normalizeRhythmSettings({noteSpeed:'bad',noteSize:999,fastSlowDisplay:'yes',effectAmount:'MAX'});
   // ★並び順ではなく中身で比べる。normalize は項目を足した順に組み直すので、

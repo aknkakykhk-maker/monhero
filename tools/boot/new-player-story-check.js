@@ -110,6 +110,9 @@ const NEWS_IDS = /^(tactics_intro|kiki_intro|momosuke_intro|beat_point_always_.*
     }
     check('ホームに着ける', atHome);
     check('お知らせ系の会話(過去のストーリー)が流れない', seen.size === 0, [...seen].join(' / ') || 'なし');
+    // モンヒロビートの「見た目を華やかにできるようになったよ」の案内も、新しく始めた人には出さない(2026-09-27)
+    const lookIntroSeen = await page.evaluate(() => localStorage.getItem('mh_rhythm_look_intro_seen_v1'));
+    check('見た目の設定の案内(お知らせ)を、新しく始めた人には見たことにしている', lookIntroSeen === 'true', String(lookIntroSeen));
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
     check('最後まで確かめられた', false, String(e).slice(0, 200));

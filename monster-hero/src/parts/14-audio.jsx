@@ -7,6 +7,13 @@ const Audio_ = (() => {
   let ctxTimeMark = null, ctxRebuildCount = 0, toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
+  // ★曲えらびの試聴と演奏で読んだ曲の音は、直近の数曲ぶんだけ持っておく(2026-09-27 の点検で見つけた)。
+  //   解いた音は1曲で数十〜百MBあり、以前は一度読んだら二度と捨てなかったので、試聴しながら
+  //   何曲も眺めるだけで数百MBに増え、iPhone ではメモリ不足で落ちる・発熱の原因になり得た。
+  //   場面のBGM(タイトル・ホーム・バトルなど)は今までどおり持ち続ける。捨てても、次に読むときは
+  //   通信のキャッシュが効くので、解き直すだけで済む
+  const SONG_BUFFER_KEEP = 3;
+  const songBufferOrder = [];
   // previewRequest は試聴の「この呼び出しが今も最新か」を見るための番号。
   // 通常BGM(bgmRequest)と同じ役目で、読み込みを待っているあいだに止められたり
   // 押し直されたりした古い呼び出しが、あとから音を鳴らし始めるのを防ぐ
@@ -18,6 +25,8 @@ const Audio_ = (() => {
   // ただし全体ミュート(タイトルの「音がオフです」)だけは共通で効かせる。
   // 稼働中のgainノードを覚えておき、ミュート切り替え時にまとめて反映する。
   const activeRhythmGains = new Set();
+  // 演奏で鳴らしている曲の音(直近の曲を捨てるときに、鳴らしている最中のものは残すため)
+  const rhythmBuffersInUse = new Set();
   const applyRhythmMute = () => { activeRhythmGains.forEach(entry => { entry.node.gain.value = enabled ? entry.raw : 0; }); };
 
   const load = () => {
@@ -210,6 +219,27 @@ const Audio_ = (() => {
     const ng = (error) => { if (!settled) { settled = true; reject(error); } };
     try { const p = ctx.decodeAudioData(data, ok, ng); if (p && p.then) p.then(ok, ng); } catch (e) { ng(e); }
   });
+  // いま鳴らしている音(BGM・試聴・演奏)と、いまの場面のBGMは捨てない
+  const bufferInUse = (url) => {
+    const buffer = buffers.get(url);
+    if (!buffer) return false;
+    if (bgmSource && bgmSource.buffer === buffer) return true;
+    if (previewSource && previewSource.buffer === buffer) return true;
+    if (rhythmBuffersInUse.has(buffer)) return true;
+    const scene = currentKey ? resolveTrack(currentKey) : null;
+    return !!(scene && scene.src === url);
+  };
+  const rememberSongBuffer = (url) => {
+    const at = songBufferOrder.indexOf(url);
+    if (at >= 0) songBufferOrder.splice(at, 1);
+    songBufferOrder.push(url);
+    for (let i = 0; songBufferOrder.length > SONG_BUFFER_KEEP && i < songBufferOrder.length - 1;) {
+      const old = songBufferOrder[i];
+      if (bufferInUse(old)) { i++; continue; }
+      songBufferOrder.splice(i, 1);
+      buffers.delete(old);
+    }
+  };
   const loadBuffer = (url) => {
     if (buffers.has(url)) return Promise.resolve(buffers.get(url));
     if (loadingBuffers.has(url)) return loadingBuffers.get(url);
@@ -277,6 +307,7 @@ const Audio_ = (() => {
     // 読み込みを待ってから初めてresumeすると、user activationが切れていて復帰できない端末がある
     resumeAudioCtxNoWait();
     try { const buffer = await loadBuffer(track.src);
+      rememberSongBuffer(track.src);
       if (request !== previewRequest || previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
       const ctx = await ensureAudioCtxRunning(); if (!ctx) return false;
       // ensureAudioCtxRunning も待つので、そのあいだに止められていないかもう一度見る
@@ -309,7 +340,7 @@ const Audio_ = (() => {
     audioCtx = null; bgmGain = null; masterOut = null; analyser = null; analyserData = null; ctxTimeMark = null;
     // 音源(AudioBuffer)は作り直したcontextのサンプリングレートが違うと速さが変わってしまう。
     // 取り直しても通信キャッシュから読めるので、ここは安全側に倒して捨てる
-    buffers.clear(); loadingBuffers.clear();
+    buffers.clear(); loadingBuffers.clear(); songBufferOrder.length = 0; rhythmBuffersInUse.clear();
     try { if (old && old.state !== 'closed') await old.close(); } catch (e) {}
     const ctx = getAudioCtx();
     if (!ctx) return false;
@@ -368,7 +399,9 @@ const Audio_ = (() => {
     resumeAudioCtxNoWait();
     try {
       const buffer=await loadBuffer(track.src),ctx=await ensureAudioCtxRunning();
+      rememberSongBuffer(track.src);
       if(!ctx) return null;
+      rhythmBuffersInUse.add(buffer);
       // outputLatencySeconds … 音が耳へ届くまでの遅れ。曲を鳴らしはじめるたびに1回だけ測って固定する
       // (data/rhythm-mode.js の rhythmAudioOutputLatencyMs。鳴っている最中に読み直すと曲の時刻が飛ぶ)
       let source=null,startedAt=ctx.currentTime,offsetSeconds=0,playing=false,stopped=false,naturallyEnded=false,gainEntry=null,outputLatencySeconds=0;
@@ -425,7 +458,7 @@ const Audio_ = (() => {
           }catch{return false;}
           return true;
         },
-        stop:()=>{if(stopped)return;stopped=true;playing=false;const old=source;source=null;stopSource(old);dropGainEntry();},
+        stop:()=>{if(stopped)return;stopped=true;playing=false;const old=source;source=null;stopSource(old);dropGainEntry();rhythmBuffersInUse.delete(buffer);},
       };
     } catch(e){ return null; }
   };
@@ -521,6 +554,8 @@ const Audio_ = (() => {
     return {
       enabled, pageHidden,
       bgmVolumePct, seVolumePct,
+      // 持っている解いた音の数と、そのうち試聴・演奏で読んだ曲の数(直近 SONG_BUFFER_KEEP 曲まで)
+      bufferCount: buffers.size, songBufferCount: songBufferOrder.length,
       ctxState: ctx ? ctx.state : 'none',
       sampleRate: ctx ? Math.round(ctx.sampleRate) : 0,
       // getAudioCtx()を呼ばない(見ただけで出口を作らない)。作る前は判定しようがないので false。
