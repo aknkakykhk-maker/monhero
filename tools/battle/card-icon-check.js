@@ -67,7 +67,8 @@ console.log(`   (画像 ${entries.length - emojiEntries.length}件 / 絵文字 $
 // icon を絵文字前提でそのまま描いている箇所が残っていないか(素通しは文字化けの元)
 const source = read('src/game-system.jsx');
 // src={...} のような属性の中は<img>なので対象外。JSXの本文に素で置いてある箇所だけを見る
-const raw = [...source.matchAll(/(?<!=)\{\s*([A-Za-z_$][\w$]*(?:\?\.|\.)icon)\s*\}/g)].map(m => m[1]);
+// 文字列の中へ値を埋め込む `${…}`(例: 寸法の calc の中の HAND_CARD_FIT.icon)は画面に描く所ではないので数えない(2026-09-27)
+const raw = [...source.matchAll(/(?<![=$])\{\s*([A-Za-z_$][\w$]*(?:\?\.|\.)icon)\s*\}/g)].map(m => m[1]);
 check('iconをそのまま描いている箇所が残っていない', raw.length === 0,
   `${[...new Set(raw)].join(', ')} — cardIconNode() を通すこと`);
 
