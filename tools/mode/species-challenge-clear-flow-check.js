@@ -98,9 +98,12 @@ const rankBodyEnd = source.indexOf('const renderBreederRankingBody =', rankBodyS
 check('種族チャレンジのランキング本文がある', rankBodyStart >= 0 && rankBodyEnd > rankBodyStart);
 const rankBody = rankBodyStart >= 0 ? source.slice(rankBodyStart, rankBodyEnd) : '';
 check('他モードと同じ「◯◯ランキング」の見出しにする',
-  source.includes('{`${mode.label}ランキング`}') && !source.includes('`${mode.label}の記録`'));
+  // 見出しは「モード名」の下に小さく「ランキング」を添える形になった(2026-09-22)。どちらの形でも「◯◯ランキング」と読める
+  (source.includes('{`${mode.label}ランキング`}') || /\{mode\.label\}<\/h2><div[^>]*>ランキング<\/div>/.test(source))
+    && !source.includes('`${mode.label}の記録`'));
 check('モードカードの導線も他モードと同じ「ランキング」表記',
-  source.includes('🏆 {m.label}のランキング') && !source.includes('🏅 {m.label}の記録'));
+  // モードカードのボタンは「🏆 このモードのランキング」にそろった(2026-09-22)。「の記録」へ戻っていないことを見る
+  (source.includes('🏆 {m.label}のランキング') || source.includes('🏆 このモードのランキング')) && !source.includes('🏅 {m.label}の記録'));
 check('種族で絞り込むタブがある', rankBody.includes('data-species-rank-tabs'));
 // タブは 全種族(種族を問わない全国ランキング) → 種族別(その種族の全国ランキング) → 自己ベスト。
 // ★タブの並び・取得キーの決め方・全種族キーの展開は

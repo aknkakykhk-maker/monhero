@@ -137,7 +137,9 @@ const check = (name, ok, detail = '') => {
     // ここは他モードと同じ「🏆 ◯◯のランキング」。以前は種族タブが「すべて」(自分の記録)で
     // 始まっていたため、開いても全国ランキングが無いように見えていた
     await speciesCard.locator('[data-species-record-link]').dispatchEvent('click');
-    await page.getByRole('heading', { name: /種族チャレンジランキング/ }).waitFor({ timeout: 20000 });
+    // 見出しは「種族チャレンジ」の下に小さく「ランキング」を添える形になった(2026-09-22)。見出しと種族のタブが出るのを待つ
+    await page.getByRole('heading', { name: /種族チャレンジ/ }).first().waitFor({ timeout: 20000 });
+    await page.locator('[data-species-rank-tabs]').waitFor({ timeout: 20000 });
     const openedTab = String(await page.locator('[data-species-rank-tabs] button.bg-cyan-600').textContent()).trim();
     check('種族を指定せず開いたら「全種族」の全国ランキングから始まる',
       openedTab === '全種族', openedTab);
@@ -190,7 +192,9 @@ const check = (name, ok, detail = '') => {
 
     // --- ⑥ 種族チャレンジのランキング画面 ---
     await beginner.locator('[data-species-difficulty-record-link]').dispatchEvent('click');
-    await page.getByRole('heading', { name: /種族チャレンジランキング/ }).waitFor({ timeout: 20000 });
+    // 見出しは「種族チャレンジ」の下に小さく「ランキング」を添える形になった(2026-09-22)。見出しと種族のタブが出るのを待つ
+    await page.getByRole('heading', { name: /種族チャレンジ/ }).first().waitFor({ timeout: 20000 });
+    await page.locator('[data-species-rank-tabs]').waitFor({ timeout: 20000 });
     check('種族チャレンジのランキングを開ける', true);
     const rankTabs = page.locator('[data-species-rank-tabs] button');
     // 全種族(1) + 種族別(11) + 自己ベスト(1)

@@ -52,9 +52,15 @@ check('説明を画面へ置いている', game.includes('<RhythmMonsterNoteGuid
 check('助手のひとことがある(CLAUDE.md ⑤-4)',
   game.includes('<AssistantBubble scene="rhythmMonsters" compact/>')
   && /rhythmMonsters: \{/.test(assistants));
-check('助手のセリフが3人ぶんある',
-  (assistants.match(/^\s{4}rhythmMonsters: \[/gm) || []).length === 3,
-  `${(assistants.match(/^\s{4}rhythmMonsters: \[/gm) || []).length}人ぶん`);
+// 助手は4人に増え、1人に「基本」と「バリエーション追加」の2つの束があるので、束の数は人数と合わない(2026-09-27 まで「3人ぶん」で落ちていた)。
+// 束ごとの assistantId(書いていない束はみゅあ)を集め、助手の一覧(ASSISTANTS)の全員ぶんがそろっているかを見る
+const assistantIds = [...(assistants.slice(assistants.indexOf('const ASSISTANTS = ['), assistants.indexOf('];', assistants.indexOf('const ASSISTANTS = ['))).matchAll(/\bid:\s*'([a-z_]+)'/g))].map(m => m[1]);
+const monsterGuideSpeakers = new Set(assistants.split('addAssistantLinePack({').slice(1)
+  .filter(chunk => /^\s{4}rhythmMonsters: \[/m.test(chunk.split('\naddAssistantLinePack(')[0]))
+  .map(chunk => (chunk.match(/^\s*id:\s*'[^']*',\s*assistantId:\s*'([a-z_]+)'/) || [])[1] || 'mua'));
+check('助手のセリフが全員ぶんある',
+  assistantIds.length >= 3 && assistantIds.every(id => monsterGuideSpeakers.has(id)),
+  `助手 ${assistantIds.join('・')} / セリフあり ${[...monsterGuideSpeakers].join('・')}`);
 
 // ---- 能力の一覧が実データから作られているか ----
 const guide = grab('const RhythmMonsterNoteGuide=', 'const RhythmMonsterSlotsPanel=');

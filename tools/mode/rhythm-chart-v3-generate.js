@@ -768,6 +768,15 @@ const rev14=chartRevision>=14;
 //   ・写し: 反転の規則どおりに写すと旋律と逆に動く所が増えるなら、もう片方の向きで写す(形はそのまま・向きだけ)
 //   数え方は気持ちよさの物差しの「旋律と逆」と同じ(音高が取れている所で 0.08 以上動き、レーンが1以上動く)
 const rev15=chartRevision>=15;
+// ── Rev.16: 出だしの歯止めを、格子から少しずれた音にも効かせる(2026-09-27) ───────────────
+//   1b(出だしが空きすぎないようにする)は、候補(pool)から最初の3秒の音を探す。pool は格子から30ms(大きい一発は43ms)より
+//   離れた音を外してあるので、頭の音がそろって格子からずれている曲では1つも残らず、歯止めが働かなかった
+//   (戦場の疾風は頭の音が35〜50msずれていて最初のノーツが4.0秒、もう一つの世界へは頭の音が拍の間だけで3.6秒)。
+//   Rev.16 からは pool で見つからないとき、耳で確かめるときの許容(43ms)までずれた音と、拍の間の音も探す。
+//   置くのは格子の上。落ちてくるのを見る間が要るので 1.8秒より前には置かない(公開中の曲でいちばん早い出だしが約1.9秒)。
+//   ノーツが1つ増えるので、既存曲の作り方(Rev.15 まで)には入れない
+const rev16=chartRevision>=16;
+const HEAD_EARLIEST_MS=1800,HEAD_BEAT_BONUS=.1;
 const MELODY_TURN_MIN=.08,MELODY_DIRECTION_COST=4;
 const melodyHeightAt=(()=>{
   const map=new Map((audio.pitchCurve||[]).filter(point=>Number(point.clarity)>=.5&&Number(point.hz)>0&&Number.isFinite(Number(point.height))).map(point=>[point.grid,Number(point.height)]));
@@ -1105,6 +1114,16 @@ const buildChart=(difficulty,options={})=>{
         const head=early.slice().sort((a,b)=>
           (priorityByGrid.get(b.grid)-priorityByGrid.get(a.grid))||(a.grid-b.grid))[0];
         picked.unshift(head);
+      }else if(rev16){
+        // Rev.16: pool に無くても、43ms までずれた音・拍の間の音から探す(上の rev16 の説明)。強い音を、拍の頭を少し優先して1つ
+        const perBeat=Number(timing.subdivisionsPerBeat)||4;
+        const head=allOnsets.filter(onset=>{
+          const ms=gridTimeMs(onset.grid);
+          return Number.isInteger(onset.grid)&&ms>=HEAD_EARLIEST_MS&&ms<=firstNoteLimitMs&&ms<firstMs
+            &&Math.abs(Number(onset.gridOffsetMs))<=COMMON.earReviewMaxOffsetMs;
+        }).sort((a,b)=>(b.strength+(b.grid%perBeat===0?HEAD_BEAT_BONUS:0))-(a.strength+(a.grid%perBeat===0?HEAD_BEAT_BONUS:0))
+          ||(a.grid-b.grid))[0];
+        if(head)picked.unshift(head);
       }
     }
   }
