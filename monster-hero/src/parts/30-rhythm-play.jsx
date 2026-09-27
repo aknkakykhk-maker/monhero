@@ -1297,7 +1297,9 @@ if(calibrating&&judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(de
 // (実機で「フリックが成功したのか分かりづらい」「取れた手ごたえがほしい」という報告があった)
 const clearedGesture=judgment!=='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(note)||note._rhythmOriginalType==='FLICK');
 if(clearedGesture){
-  RHYTHM_NOTE_SE_RUNTIME.playClear();
+  // フリック(終点フリックを含む)は「シュッ」、ホールド・スライドの終わりは終わりの音。どちらも判定で鳴らし分ける(2026-09-27)
+  if(note._rhythmOriginalType==='FLICK'||note.type==='FLICK'||note.endFlick)RHYTHM_NOTE_SE_RUNTIME.playFlick(judgment);
+  else RHYTHM_NOTE_SE_RUNTIME.playClear(judgment);
   // 光は演出量の設定に従う(MINIMAL・軽量モードでは出さない)。音は設定に関わらず鳴らす
   if(!settings.lightweightMode&&!rhythmEffectAtMost(settings.effectAmount,'LIGHT'))note._rhythmClearAt=run.audio?.songTimeMs?.()??0;
 }
