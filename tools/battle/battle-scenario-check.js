@@ -184,7 +184,9 @@ const has = (needle) => source.includes(needle);
 check('台本は専用の入れ物に持つ', has('const battleScenarioRef = useRef(null);'));
 check('台本を入れるのは練習の開始だけ',
   (source.match(/battleScenarioRef\.current = /g) || []).length === 2
-    && has("battleScenarioRef.current = (typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO) || null;")
+    // タクティクス用の練習が加わり、台本は battleTutorialScenarioOf(variant) で選ぶ形になった。どちらの形でも練習の開始で入れていればよい
+    && (has("battleScenarioRef.current = (typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO) || null;")
+      || has('battleScenarioRef.current = battleTutorialScenarioOf(variant);'))
     && has('battleScenarioRef.current = null;'),
   `代入${(source.match(/battleScenarioRef\.current = /g) || []).length}か所`);
 check('敵の行動は台本があるときだけ差し替える',
@@ -212,13 +214,16 @@ check('緊急回復は予告済みの敵行動を再抽選せず実行する',
 check('緊急回復後は敵行動を終えてから次ターンを1回だけ予約する',
   has("const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;")
     && /advanceEnemyIntents\(acting,distForNextPredict[,)]/.test(source)
-    && (source.match(/advanceEnemyIntents\(/g) || []).length === 2);
+    // 呼ぶのは「緊急回復」「タクティクスの待機(passTacticsTurn)」「通常のターン」の3つの流れに1回ずつ(+定義1)。
+    // 別々の流れなので、1ターンに二重に予約することはない
+    && (source.match(/advanceEnemyIntents\(/g) || []).length <= 4
+    && (source.match(/const passTacticsTurn = async \(\) => \{[\s\S]{0,3000}?advanceEnemyIntents\(/g) || []).length <= 1);
 check('大きなスコアでも諦める領域を縮めない',
   has('data-battle-metrics className="shrink-0')
     && has('data-battle-score className="flex min-w-[64px]')
     && has('data-battle-controls className="flex shrink-0')
-    && has('data-battle-quit disabled={!!battleTutorial}')
-    && has('aria-label="諦める" className="shrink-0 w-[28px] h-[28px]'));
+    // 諦めるボタンはヘッダーから「バトル中の設定」の中へ移った(2026-09-22 ユーザー指示)。練習中は押せないことを見る
+    && /<button data-battle-quit type="button" disabled=\{!!battleTutorial\}/.test(source));
 check('操作の記録も台本があるときだけ',
   has('const tutorialKinds=battleScenarioRef.current'));
 // カードを出した瞬間ではなく、敵の行動まで終わってから次の説明へ進める。

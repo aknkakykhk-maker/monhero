@@ -96,7 +96,8 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
 // 表示
 check('詳細に補正値(%)を出す', has('{formatAptPct(pct)}'));
 check('詳細に「現在 → 合流後」を出す', has('現在 {formatAptPct(cur)}') && has('→ {formatAptPct(cur+pct)}'));
-check('勇者モン選択・供モン合流でいまの補正値を渡す', has('aptCurrentPct: [0,1,2,3].map(i=>distTotalBonus(i)),'));
+// タクティクスの合流では距離の補正を使わないので 0 を渡す分岐が足された。ふだんのバトルはいまの補正値を渡す
+check('勇者モン選択・供モン合流でいまの補正値を渡す', has('aptCurrentPct: [0,1,2,3].map(i=>distTotalBonus(i)),') || has('aptCurrentPct: joinPreview?.tactics ? [0,0,0,0] : [0,1,2,3].map(i=>distTotalBonus(i)),'));
 check('全距離にかかることを詳細で説明する', has('置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます'));
 check('スロットのバッジも合計補正を出す', has('const totalBonus=distTotalBonus(i);'));
 // 補正0%も「補正が無い」という情報なので、枠ごとに常に出す

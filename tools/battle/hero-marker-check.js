@@ -34,7 +34,8 @@ check('名前ではなく種idで見分けている',
 check('モンスター枠に王冠を出す',
   has('{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}'));
 check('勇者モンの名前欄だけ色を変える',
-  has("${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}")
+  // 色合いは作り替えた(amber の薄い地)。勇者モンだけ amber の地と文字に切り替える形を見る
+  /\$\{isHeroSlotMon\(s\)\?'bg-amber-[^']*':'[^']*'\}/.test(source)
     && has("${isHeroSlotMon(s)?'text-amber-100':'text-white'}"));
 check('配信用JSにも王冠が入っている', compiled.includes('isHeroSlotMon'),
   compiled.includes('isHeroSlotMon') ? '' : 'ビルドし直してください');

@@ -549,7 +549,8 @@ check('スコアランキングはモードのカードと難易度のカード�
 // 極限チャレンジと種族チャレンジは、モードカードから開く共通スコアランキングの対象外
 // (極限は難易度カードから、種族チャレンジは専用の種族別ランキングから開く)
 check('ランキングが無いモードには導線も高さ合わせの空枠も出さない',
-  has('{ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,')
+  // モードカードのボタンには目印 data-mode-ranking-link が足された(条件 ranked&& はそのまま)
+  /\{ranked&&<button (?:data-mode-ranking-link=\{m\.id\} )?disabled=\{!!battleTutorial\} onClick=\{\(\)=>openModeScoreRanking\(m\.id,safeDifficulty,/.test(source)
     && has('{ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,')
     && has('ranked=modeHasRanking(battleMode);') && has('ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),'));
 check('種族チャレンジは専用の種族別ランキングへ入る',
@@ -640,12 +641,15 @@ check('ラン中の加入候補はモードで切り替える',
   has('if (!isProMode(runMode)) return getActiveMonsterList();')
     && has('const joinOfferSize = () => isProMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;'));
 check('加入の抽選は2か所とも共通の入口を通る',
-  count('pickJoinCandidates(joinCandidatePool()') === 2 && count('joinOfferSize()') === 2
+  // 強化フェーズの並びを組む postWaveJoinPossible(「このあと供モンが来るか」)が3か所目として足された。
+  // 何か所あっても、呼び出しがすべて共通の入口(joinCandidatePool と joinOfferSize)を通っていることを見る
+  count('pickJoinCandidates(joinCandidatePool()') >= 2 && count('pickJoinCandidates(joinCandidatePool()') === count('joinOfferSize()')
+    && count('pickJoinCandidates(') - 1 === count('pickJoinCandidates(joinCandidatePool()')
     && !/getActiveMonsterList\(\)\.filter\(m\s*=>\s*!activeIds/.test(source));
 check('プロは5体から3体だけを候補に出す', m.PRO_ALLY_POOL_SIZE === 5 && m.PRO_ALLY_OFFER_SIZE === 3);
 check('候補の抽選は1か所の関数にまとめてある',
   has('const pickJoinCandidates = (pool, activeIds, heroId, offerSize) => {')
-    && count('pickJoinCandidates(joinCandidatePool()') === 2
+    && count('pickJoinCandidates(joinCandidatePool()') >= 2
     && !/setMonSelection\(avail\.sort\(/.test(source));
 // 抽選そのものを何度も回して確かめる。「勇者モンが混ざる」「選んだ5体の外から出る」を確実に潰す
 {
@@ -743,7 +747,9 @@ for (const [label, gameState, component] of [
   ['プロの供モン候補', 'PICK_PRO_ALLIES', 'PickProAlliesScreen'],
 ]) {
   const body = screenSource(gameState, component);
-  check(`${label}の画面は全画面でかぶせる`, body.includes(RUN_OVERLAY), body ? '' : '画面が見つからない');
+  // 背景色は場面ごとの背景(mh-ph-bg・--ph)へ移った画面がある。見るのは「全画面の位置と重なり順」
+  const overlaid = body.includes(RUN_OVERLAY) || /style=\{[^}]*position:"absolute",inset:0,[^}]*zIndex:30000/.test(body);
+  check(`${label}の画面は全画面でかぶせる`, overlaid, body ? '' : '画面が見つからない');
 }
 check('ベースモンが足りないときはプロを始められない',
   has('const proReady=getUnlockedBaseMonsterList().length>=PRO_ALLY_POOL_SIZE+1;')

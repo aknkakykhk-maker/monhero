@@ -105,7 +105,8 @@ check('SCANは乱数を使わない', !scanBlock.includes('Math.random'));
 check('予測ダメージが出るのは通常攻撃と必殺技だけ',
   has("if (!intent||(intent.type!=='ATTACK'&&intent.type!=='SPECIAL')) return 0;"));
 check('ためるターンは専用の演出でダメージを与えない',
-  has("} else if (intent.type==='CHARGE') {") && has("setEnemyAttackFx({kind:'charge'})"));
+  // 演出には技の名前(skill)と長さ(ms)が足された。ためるターンは charge の演出だけでダメージの処理を通らないことを見る
+  has("} else if (intent.type==='CHARGE') {") && /setEnemyAttackFx\(\{kind:'charge'(?:,[^}]*)?\}\)/.test(src));
 // ★2026-09-22 から、この大きな警告は**タクティクス以外のモードだけ**に出す。
 //   タクティクスには敵の絵の右上に出る札があり、同じことを2か所で言って重なっていた
 check('必殺技の警告は発動ターンの予告で出る',
@@ -131,7 +132,10 @@ check('吹き出しは行動予告と同じ大きさで右へ寄せる',
   /font-size: 9px; font-weight: 1000;/.test(src) && has('translateX(calc(min(50vw, 300px) - 100% - 8px))'));
 // ムーは丸枠の外へ巨大に描いているので、丸枠の中に置くと本体の裏へ回る。
 // 必殺技の警告と同じく画面基準で前面に出すこと
-const hintBlock = src.slice(src.indexOf("enemyNextIntent.type==='MOVE'&&("), src.indexOf('mh-enemy-move-hint') + 400);
+// 吹き出しは揺れの間に位置が飛ばないよう body の直下へ出す(ReactDOM.createPortal)形になった。どちらの書き方でも切り出す
+const hintStart = src.indexOf("enemyNextIntent.type==='MOVE'&&ReactDOM.createPortal(") >= 0
+  ? src.indexOf("enemyNextIntent.type==='MOVE'&&ReactDOM.createPortal(") : src.indexOf("enemyNextIntent.type==='MOVE'&&(");
+const hintBlock = src.slice(hintStart, src.indexOf('className="mh-enemy-move-hint"', hintStart) + 400);
 check('吹き出しはムーの手前に出る(画面基準で前面に置く)',
   /fixed left-1\/2 pointer-events-none/.test(hintBlock) && /zIndex:65000/.test(hintBlock));
 // 丸枠(敵の円)は transform を持つので独自の重ね順の島になる。
