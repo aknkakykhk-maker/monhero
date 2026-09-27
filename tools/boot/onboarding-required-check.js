@@ -103,7 +103,9 @@ const check = (name, ok, detail = '') => {
     // そこから遊べてしまう。戻ってくる先が「はじめての設定」のままであることを見る
     await tap(/^アイテム（/);
     check('寄り道してもHOMEへは出られない', !(await textOf()).includes('バトル記録'));
-    await page.locator('button').nth(1).dispatchEvent('click'); // 見出しの左にある戻る
+    // 見出しの左にある戻る。★番号(nth)で押さない。以前は新しく始めた人にも出ていた継承固有技Lvのお詫びの
+    // 「確認」ボタンが先頭にあり、2番目が戻るだった。お詫びを出さなくしたら(2026-09-27)順番がずれて押し違えた
+    await page.getByRole('button', { name: '戻る', exact: true }).first().dispatchEvent('click');
     await page.waitForTimeout(800);
     check('寄り道から戻る先ははじめての設定', (await textOf()).includes('はじめての設定'));
     check('寄り道しても何も保存されていない',

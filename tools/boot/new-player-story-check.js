@@ -100,10 +100,12 @@ const NEWS_IDS = /^(tactics_intro|kiki_intro|momosuke_intro|beat_point_always_.*
 
     // --- 村の案内などを最後まで進めて、ホームで待つ ---
     const seen = new Set();
+    let apologyShown = false;
     let atHome = false;
     const deadline = Date.now() + 85000; // 見回りは1分おき。1回はまたぐ
     while (Date.now() < deadline) {
       (await shownNews()).forEach((id) => seen.add(id));
+      if (await page.evaluate(() => document.body.innerText.includes('継承固有技Lv不具合修正のお詫び'))) apologyShown = true;
       const moved = await clickText('^(つぎへ|次へ|とじる|閉じる|OK|スキップ|はじめる|さっそく|わかった|うん)');
       if (!moved) atHome = atHome || await page.evaluate(() => document.body.innerText.includes('モンヒロバトル'));
       await page.waitForTimeout(moved ? 400 : 2000);
@@ -113,6 +115,16 @@ const NEWS_IDS = /^(tactics_intro|kiki_intro|momosuke_intro|beat_point_always_.*
     // モンヒロビートの「見た目を華やかにできるようになったよ」の案内も、新しく始めた人には出さない(2026-09-27)
     const lookIntroSeen = await page.evaluate(() => localStorage.getItem('mh_rhythm_look_intro_seen_v1'));
     check('見た目の設定の案内(お知らせ)を、新しく始めた人には見たことにしている', lookIntroSeen === 'true', String(lookIntroSeen));
+    // 継承固有技Lvのお詫びは、不具合に遭っていない新しく始めた人には配らない・出さない(2026-09-27)
+    check('継承固有技Lvのお詫びの画面が、新しく始めた人には出ない', !apologyShown);
+    const apology = await page.evaluate(() => ({
+      done: localStorage.getItem('mh_inherited_unique_level_compensation_v1'),
+      items: localStorage.getItem('mh_owned_items'),
+    }));
+    let psyche = 0;
+    try { psyche = Number((JSON.parse(apology.items || '{}') || {}).rainbow_psyche) || 0; } catch {}
+    check('お詫びの虹のプシュケーを、新しく始めた人には配らない', psyche === 0, `rainbow_psyche=${psyche}`);
+    check('お詫びは済んだ印だけ付けて、あとから配られないようにしている', apology.done === 'true', String(apology.done));
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {
     check('最後まで確かめられた', false, String(e).slice(0, 200));

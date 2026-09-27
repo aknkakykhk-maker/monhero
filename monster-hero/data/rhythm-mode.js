@@ -1503,7 +1503,8 @@ const RHYTHM_NOTE_SE_LEVEL_MAX = .8;
 //   しきい値(RHYTHM_NOTE_SE_SOFT_CLIP_KNEE)より小さい音は素通りで、大きい音だけ丸めて 1 を超えないようにする。
 //   コンプレッサー(DynamicsCompressorNode)は先読みのぶん数ms遅れて鳴るので使わない(叩いた瞬間の音が遅れると音ゲーでは困る)
 const RHYTHM_NOTE_SE_VOLUME_MAX = 400;
-const RHYTHM_NOTE_SE_LOUD_LEVEL_MAX = 2.4;
+// 2.4 → 3.2(2026-09-27)。400 で 8 倍まで伸ばすので、その大きさ(.8×8/2)まで蓋を開ける
+const RHYTHM_NOTE_SE_LOUD_LEVEL_MAX = 3.2;
 const RHYTHM_NOTE_SE_SOFT_CLIP_KNEE = .72;
 // ===== タップ音の種類(2026-09-26・ユーザー指示「ノーツを押したときの音のバリエーションがほしい / 設定で変えられるように」) =====
 // どれも合成音(音源ファイルは増やさない)。id は保存値(mh_rhythm_settings_v1 の noteSeType)になるので、名前は変えない。
@@ -1520,7 +1521,14 @@ const rhythmNoteSeTypeOf = value => RHYTHM_NOTE_SE_TYPE_IDS.includes(value) ? va
 // 元の係数 × 倍率 × 音量(0〜1)。
 // 下限(.0001)は exponentialRampToValueAtTime が0を受け取れないためで、これまでと同じ。
 // ★音量200(=2)までは今までと同じ蓋(.8)。それより上だけ、200での大きさから音量に比例して蓋を開ける
-const rhythmNoteSeLevel = (base, volume) => {
+// ===== 200より上は「100ごとに2倍」(2026-09-27・ユーザー指示「400まで効くようにする」) =====
+// 割れ止めで頭が丸まるぶん、音量に比例させただけでは 300→400 の差が +2dB ほどしかなく
+// 「ほとんど大きくならない」になっていた。200より上だけ倍々(300で4倍・400で8倍)にして、
+// 1段ごとの差を耳で分かる大きさにする(計算で 300→400 が +2.1dB → +3.6dB、400 は今より +3.6dB)。
+// ★200 までは volume をそのまま使うので、これまでの音と1つも変わらない。
+const rhythmNoteSeDrive = volume => volume > 2 ? 2 * Math.pow(2, volume - 2) : volume;
+const rhythmNoteSeLevel = (base, volumeIn) => {
+  const volume = rhythmNoteSeDrive(volumeIn);
   const raw = base * RHYTHM_NOTE_SE_GAIN_SCALE * volume;
   const cap = volume > 2 ? Math.min(RHYTHM_NOTE_SE_LOUD_LEVEL_MAX, RHYTHM_NOTE_SE_LEVEL_MAX * volume / 2) : RHYTHM_NOTE_SE_LEVEL_MAX;
   return Math.max(.0001, Math.min(cap, raw));
@@ -20111,6 +20119,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // (CPUを1/4に絞った実測。原因を1つずつ外して特定)。焼くのは最初の1回だけなので、毎フレームの仕事は以前と同じ。
   for(const [name,style] of Object.entries(HEADS)){style.glowStrong=style.glow.length?Object.freeze([...style.glow,...style.glow]):style.glow;style.glowStrongKey=`${name}+`;}
   let canvas=null,ctx=null,backend='2d',dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
+  // 道のふちの光(drawRoadFx)の形とグラデーションは、描く先と大きさが同じあいだは毎回同じなので使い回す(2026-09-27)。
+  // 拍ごとに光るあいだ、毎フレーム4本のグラデーションと20点の投影計算を作り直していた。描く先か大きさが変われば作り直す
+  let roadEdgeCache=null;
   // ノーツの動き(オプション「ノーツの動き」・2026-09-27)。フリックの矢印と SLIDE の帯に流れる光を足す。演出量「最小」・軽量モードでは切る
   let motion=false;
   // 何も映らないフレームは描き直さない(2026-09-27・ユーザー指示「見た目を変えずに軽く」)。
@@ -20714,17 +20725,21 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         painted++;
       }
       if(pulse>.01){
-        const samples=[0,.25,.5,.75,1];
-        const edge=(boundary,width)=>{
-          ctx.beginPath();
-          samples.forEach((yr,index)=>{const x=rhythmProjectBoundary(boundary,yr)*cssW,w=width*rhythmProjectionScale(yr)/2;if(index)ctx.lineTo(x-w,yr*cssH);else ctx.moveTo(x-w,yr*cssH);});
-          for(let index=samples.length-1;index>=0;index--){const yr=samples[index],x=rhythmProjectBoundary(boundary,yr)*cssW,w=width*rhythmProjectionScale(yr)/2;ctx.lineTo(x+w,yr*cssH);}
-          ctx.closePath();ctx.fill();
-        };
-        const fade=(color)=>{const g=ctx.createLinearGradient(0,0,0,cssH);g.addColorStop(0,`rgba(${color},0)`);g.addColorStop(.45,`rgba(${color},.55)`);g.addColorStop(1,`rgba(${color},1)`);return g;};
-        for(const boundary of [0,RHYTHM_LANE_COUNT]){
-          ctx.globalAlpha=Math.min(1,pulse)*.3;ctx.fillStyle=fade('56,189,248');edge(boundary,14);
-          ctx.globalAlpha=Math.min(1,pulse)*.9;ctx.fillStyle=fade('224,242,254');edge(boundary,3);
+        if(!roadEdgeCache||roadEdgeCache.ctx!==ctx||roadEdgeCache.w!==cssW||roadEdgeCache.h!==cssH){
+          const samples=[0,.25,.5,.75,1];
+          // 左右の境目ごとに、太さ14(にじみ)と3(芯)の外周の点を「左の縁を上→下、右の縁を下→上」の順で持つ
+          const edgePoints=(boundary,width)=>{const out=[];
+            samples.forEach(yr=>{const x=rhythmProjectBoundary(boundary,yr)*cssW,w=width*rhythmProjectionScale(yr)/2;out.push(x-w,yr*cssH);});
+            for(let index=samples.length-1;index>=0;index--){const yr=samples[index],x=rhythmProjectBoundary(boundary,yr)*cssW,w=width*rhythmProjectionScale(yr)/2;out.push(x+w,yr*cssH);}
+            return out;};
+          const fade=(color)=>{const g=ctx.createLinearGradient(0,0,0,cssH);g.addColorStop(0,`rgba(${color},0)`);g.addColorStop(.45,`rgba(${color},.55)`);g.addColorStop(1,`rgba(${color},1)`);return g;};
+          roadEdgeCache={ctx,w:cssW,h:cssH,soft:fade('56,189,248'),core:fade('224,242,254'),
+            edges:[0,RHYTHM_LANE_COUNT].map(boundary=>({soft:edgePoints(boundary,14),core:edgePoints(boundary,3)}))};
+        }
+        const edge=points=>{ctx.beginPath();ctx.moveTo(points[0],points[1]);for(let i=2;i<points.length;i+=2)ctx.lineTo(points[i],points[i+1]);ctx.closePath();ctx.fill();};
+        for(const item of roadEdgeCache.edges){
+          ctx.globalAlpha=Math.min(1,pulse)*.3;ctx.fillStyle=roadEdgeCache.soft;edge(item.soft);
+          ctx.globalAlpha=Math.min(1,pulse)*.9;ctx.fillStyle=roadEdgeCache.core;edge(item.core);
         }
         painted++;
       }

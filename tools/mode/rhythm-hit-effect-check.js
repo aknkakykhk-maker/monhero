@@ -31,6 +31,14 @@ const ctx={};vm.createContext(ctx);
 vm.runInContext(`${source}\nthis.out={RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,RHYTHM_JUDGMENT_RAINBOW,RHYTHM_JUDGMENT_PRECISE_MS,rhythmJudgmentIsPrecise,RHYTHM_JUDGMENTS};`,ctx);
 const {RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,RHYTHM_JUDGMENT_RAINBOW,RHYTHM_JUDGMENT_PRECISE_MS,rhythmJudgmentIsPrecise,RHYTHM_JUDGMENTS}=ctx.out;
 
+// --- 道のふちの光は、描く先と大きさが同じあいだ形とグラデーションを使い回す(2026-09-27) ---
+{
+  const body=source.slice(source.indexOf('    drawRoadFx(lines,count,pulse){'),source.indexOf('    get drawn(){return drawn;},'));
+  check('道のふちの光は、形とグラデーションを使い回す(毎フレーム作り直さない)',
+    /if\(!roadEdgeCache\|\|roadEdgeCache\.ctx!==ctx\|\|roadEdgeCache\.w!==cssW\|\|roadEdgeCache\.h!==cssH\)\{/.test(body)
+    &&(body.match(/createLinearGradient/g)||[]).length===1&&body.indexOf('createLinearGradient')<body.indexOf('const edge=points=>'));
+}
+
 // --- 音 ---
 check('モンスターノーツ専用の音がある',typeof RHYTHM_NOTE_SE_RUNTIME.playMonster==='function');
 check('音が出せない環境でも落ちない',RHYTHM_NOTE_SE_RUNTIME.playMonster()===false);

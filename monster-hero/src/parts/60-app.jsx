@@ -4984,7 +4984,16 @@ function MonsterHeroGame() {
       // 継承固有技Lv不具合のお詫び。付与後の所持品全体をpendingへ先に保存しておき、
       // 書き込み途中で終了しても同じ値を再適用することで二重加算を防ぐ。
       const inheritedUniqueCompensationDone = await storeGet('mh_inherited_unique_level_compensation_v1', false, false);
-      if (!inheritedUniqueCompensationDone) {
+      // はじめて遊ぶ人は不具合に遭っていないので、アイテムもお詫びの画面も出さず、済んだ印だけ付ける。
+      // 見分け方は下の wasOnboarded / everOnboarded と同じ(保存された完了フラグ、無ければ完成済みプロフィール)
+      const compensationStoredOnboarded = await storeGet('mh_onboarded', null, false);
+      const compensationEverPlayed = compensationStoredOnboarded === true
+        || (compensationStoredOnboarded === null
+          && typeof savedName === 'string' && !!savedName.trim() && savedName !== '名無しのブリーダー'
+          && typeof savedIcon === 'string' && savedIcon.length > 0);
+      if (!inheritedUniqueCompensationDone && !compensationEverPlayed) {
+        await storeSet('mh_inherited_unique_level_compensation_v1', true, false);
+      } else if (!inheritedUniqueCompensationDone) {
         let pendingItems = await storeGet('mh_inherited_unique_level_compensation_pending_v1', null, false);
         if (!pendingItems || typeof pendingItems !== 'object' || Array.isArray(pendingItems)) {
           pendingItems = { ...savedOwnedItems, [BREAKTHROUGH_ITEM_ID]:Math.max(0, Math.floor(Number(savedOwnedItems?.[BREAKTHROUGH_ITEM_ID]) || 0)) + 20 };

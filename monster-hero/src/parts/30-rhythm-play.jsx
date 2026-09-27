@@ -1013,21 +1013,23 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   },[stageFxOn,stageGl,renderQualityStill]);
   // WebGL 版のライブ背景を動かす。色の段と演出の有無は毎回の描画でここから読む(描き直しの輪を作り直さない)
   // live … 「ライブ」のとき、曲の拍(RHYTHM_SONG_BEATS)。曲の時刻は毎フレームの処理(tick)が stageClockRef へ書く
-  const stageGlLiveRef=useRef(null);stageGlLiveRef.current={tier:stageTierNow,fx:stageFxOn,live:stageLevel==='LIVE',grid:stageLevel==='LIVE'&&!tutorial?rhythmSongBeatGrid(song.songId):null};
+  // art … 背景の絵の濃さ(「おだやか」は薄め)。これも毎回の描画で読むので、演出の段階が変わっても背景を作り直さない(2026-09-27)。
+  //   以前は段階(stageLevel)が変わるたびに WebGL を作り直していた。「重いときは演出を自動で控えめに」が働いた瞬間、
+  //   ただでさえ重い端末でシェーダーの組み立てをやり直すことになっていた
+  const stageGlLiveRef=useRef(null);stageGlLiveRef.current={tier:stageTierNow,fx:stageFxOn,live:stageLevel==='LIVE',art:stageLevel==='CALM'?.34:.5,grid:stageLevel==='LIVE'&&!tutorial?rhythmSongBeatGrid(song.songId):null};
   const stageClockRef=useRef(null);if(!stageClockRef.current)stageClockRef.current={t:null,at:0};
   useEffect(()=>{
     const canvas=stageGlRef.current,host=stageHostRef.current;
     if(!stageGl||!canvas||!host||typeof window==='undefined'||typeof document==='undefined')return undefined;
     const renderer=rhythmCreateStageGL(canvas);
     if(!renderer){setStageGlLost(true);return undefined;}
-    let alive=true,frame=0,last=-1e9,artAt=-1,artSettled=false,dirty=true,lastTier=-1,lastFx=null,w=host.clientWidth,h=host.clientHeight;
+    let alive=true,frame=0,last=-1e9,artAt=-1,artSettled=false,dirty=true,lastTier=-1,lastFx=null,lastArt=null,w=host.clientWidth,h=host.clientHeight;
     const start=performance.now();
     // 動きを減らす設定の端末では、CSS 版と同じくサーチライトと光の粒を出さない
     const reduce=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     // 画素密度は CSS 版の焼いた画像と同じ(1.5倍まで。画質「標準」は1.25倍、「省電力」は1倍)
     const cap=renderQualityStill==='STANDARD'?1.25:rhythmRenderQualityCap(renderQualityStill,1.5);
     const scale=Math.min(cap,Math.max(1,Number(window.devicePixelRatio)||1));
-    const fullArt=stageLevel==='CALM'?.34:.5;
     if(stageArtSrc){const img=new Image();img.onload=()=>{if(!alive)return;const c=document.createElement('canvas');c.width=24;c.height=24;const g=c.getContext('2d');if(!g)return;try{g.drawImage(img,0,0,24,24);}catch(_){return;}if(renderer.setArt(c)){artAt=performance.now();dirty=true;}};img.src=stageArtSrc;}
     const onLost=event=>{if(event&&typeof event.preventDefault==='function')event.preventDefault();setStageGlLost(true);};
     canvas.addEventListener('webglcontextlost',onLost);
@@ -1037,7 +1039,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     const loop=now=>{
       frame=requestAnimationFrame(loop);
       const live=stageGlLiveRef.current||{},fx=!!live.fx&&!reduce,tier=Number(live.tier)||0;
-      if(tier!==lastTier||fx!==lastFx){lastTier=tier;lastFx=fx;dirty=true;}
+      const fullArt=Number(live.art)||.5;
+      if(tier!==lastTier||fx!==lastFx||fullArt!==lastArt){lastTier=tier;lastFx=fx;lastArt=fullArt;dirty=true;}
       const fading=artAt>=0&&now-artAt<800;
       if(artAt>=0&&!fading&&!artSettled){artSettled=true;dirty=true;}
       if(!dirty&&!fx&&!fading)return;
@@ -1058,7 +1061,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     };
     frame=requestAnimationFrame(loop);
     return()=>{alive=false;cancelAnimationFrame(frame);if(observer)observer.disconnect();canvas.removeEventListener('webglcontextlost',onLost);renderer.release();};
-  },[stageGl,stageLevel,stageArtSrc,renderQualityStill]);
+  },[stageGl,stageArtSrc,renderQualityStill]);
   /* フルコンボ・オールマーベラスが続いているか(プロセカ・CHUNITHM のコンボ色)。「COMBO」の字の色で見せる。
      AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。設定で出さないこともできる */
   /* アシストモードでは称号が付かないので出さない(出すと「取れる」と思わせてしまう) *//* フルコンボ・オールマーベラスの印(comboStatus)は、コンボ数の部品(RhythmHudCombo)が hud から決める */
@@ -2165,7 +2168,7 @@ scheduleTick();};
 {stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} data-stage-gl={stageGl?'1':undefined} aria-hidden="true">
   {/* WebGL 版は、ジャケット・暗幕・サーチライト・光の粒をこの canvas 1枚に描く(暗幕の ::after は CSS 側で消す)。
       描き込み先を作り直すときは canvas も作り直す(一度片付けた canvas からは描き込み先を取り出せない) */}
-  {stageGl&&<canvas key={`stage-gl-${stageLevel}-${renderQualityStill}`} ref={stageGlRef} data-rhythm-stage-gl/>}
+  {stageGl&&<canvas key={`stage-gl-${renderQualityStill}`} ref={stageGlRef} data-rhythm-stage-gl/>}
   {!stageGl&&stageArtSrc&&<canvas ref={stageArtRef} data-rhythm-stage-art width="24" height="24"/>}
   {/* サーチライトと光の粒は、1度だけ焼いた画像を CSS のアニメーション(合成だけで動く)で動かす(2026-09-26)。
       以前はサーチライトを clip-path で切り抜いた層、光の粒を画面の2倍の高さの CSS の模様で作っていた */}
