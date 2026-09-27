@@ -5315,6 +5315,49 @@ function MonsterHeroGame() {
     storeSet('mh_bgm_arrangement', normalizeBgmArrangement(bgmArrangement), false);
   }, [dataLoaded, bgmArrangement]);
 
+  // 絆Lv・総合力ランキングのリアルタイム更新(2026-09-27・ユーザー指示「リアルタイムで」)。
+  // マスモン・名前・アイコン・フレームが変わったら、落ち着くのを待ってから
+  // 変わった個体の行だけを bond_levels へ上書きする。周回の終わりの送信はそのまま残す。
+  // ランキングは記録の保存だけなので、送れなくても遊ぶのは止めない(次の変化か次の起動で送り直す)
+  const bondLiveSyncRef = useRef({ loaded: null, running: false, again: false, lastAt: 0 });
+  const syncBondLevelsLive = async () => {
+    const state = bondLiveSyncRef.current;
+    if (state.running) { state.again = true; return; }
+    if (bondLevelsUnavailable()) return;
+    state.running = true;
+    try {
+      if (!state.loaded) state.loaded = normalizeBondLiveSync(await storeGet(BOND_LIVE_SYNC_KEY, null, false));
+      const breederId = await ensureBreederId();
+      const rows = bondLevelRowsFromMasuMons(breederName || '名無しのブリーダー', breederIcon,
+        masuMonsRef.current, rankingProfileFrameValue(profileFrameId), breederId);
+      const pending = bondLevelRowsToSync(rows, state.loaded.sent);
+      for (let i = 0; i < pending.length; i += BOND_LIVE_SYNC_CHUNK) {
+        const chunk = pending.slice(i, i + BOND_LIVE_SYNC_CHUNK);
+        state.lastAt = Date.now();
+        const ok = await sbUpsertBondLevels(chunk);
+        if (!ok) break;
+        // 送れた行だけ指紋を覚える(送れなかった行は次の機会に送り直す)
+        const sent = { ...state.loaded.sent };
+        chunk.forEach(row => { sent[bondLiveSyncKeyOf(row)] = bondLevelRowSignature(row); });
+        state.loaded = { version: 1, sent };
+        await storeSet(BOND_LIVE_SYNC_KEY, state.loaded, false);
+      }
+    } catch (err) {
+      console.error('[ranking] bond_levels live sync failed:', err && err.message ? err.message : err);
+    } finally {
+      state.running = false;
+      if (state.again) { state.again = false; setBondLiveSyncTick(t => t + 1); }
+    }
+  };
+  const [bondLiveSyncTick, setBondLiveSyncTick] = useState(0);
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const state = bondLiveSyncRef.current;
+    const wait = Math.max(BOND_LIVE_SYNC_DELAY_MS, state.lastAt + BOND_LIVE_SYNC_MIN_INTERVAL_MS - Date.now());
+    const timer = setTimeout(() => { void syncBondLevelsLive(); }, wait);
+    return () => clearTimeout(timer);
+  }, [dataLoaded, masuMons, breederName, breederIcon, profileFrameId, bondLiveSyncTick]);
+
   const submitLocalScore = async (diff, finalScore, clearId) => {
     // マスモン(絆レベルを持つ育成済みインスタンス)で編成していた場合、ランキング表示にも絆レベルを出せるよう記録する。
     // 表示名はマスモンの個体名(ブリーダーが自由につけた名前)ではなく、血統(種族)の名前を使う
