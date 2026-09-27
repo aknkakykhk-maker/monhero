@@ -276,8 +276,8 @@ function RhythmSongSelectScreen({
               <button type="button" onClick={dismissRhythmLookIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
             </div>
             <div className="flex gap-2 pb-1">
-              <button type="button" onClick={()=>onTryRhythmLook&&onTryRhythmLook('VIVID')} className="min-h-[40px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950">華やかにしてみる</button>
-              <button type="button" onClick={dismissRhythmLookIntro} className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200">いまのままにする</button>
+              <button type="button" onClick={()=>onTryRhythmLook&&onTryRhythmLook('VIVID')} className="min-h-[44px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950">華やかにしてみる</button>
+              <button type="button" onClick={dismissRhythmLookIntro} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200">いまのままにする</button>
             </div>
           </div>
           <div data-rhythm-look-intro-portrait>
