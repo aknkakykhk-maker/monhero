@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6069326f424df524
+// generated-sha256: 9d2695a7f53feee7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-27 13:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-27 16:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12696,6 +12696,56 @@ const bondLevelRowsFromParty = (userName, icon, party, profileFrame = null, bree
   });
   return [...byIndividual.values()];
 };
+// ==================== 絆Lv・総合力のリアルタイム更新(2026-09-27) ====================
+// これまでは周回の終わりに「編成にいたマスモン」の行だけを書いていたため、
+// アイテム・融合・強化・モンヒロビートで育てた分は、その子を次に周回へ連れて行くまで
+// 順位に出なかった(ユーザー指示「リアルタイムで」)。手持ちのマスモン全員から、周回の終わりと
+// まったく同じ形の行を作り、前に送った内容から変わった行だけを上書きする。
+// 送った内容は新しい保存キーへ指紋だけ残す(起動のたびに全員を送り直さないため)。
+const BOND_LIVE_SYNC_KEY = 'mh_bond_live_sync_v1';
+// 変化が落ち着いてから送るまでの待ち時間と、送る間隔の下限。
+// 絆経験値は周回やアイテムのたびに細かく動くので、1回ごとに送らない
+const BOND_LIVE_SYNC_DELAY_MS = 4000;
+const BOND_LIVE_SYNC_MIN_INTERVAL_MS = 20000;
+// 1回の送信に詰める行数の上限(1行が数百バイト〜1KB程度。手持ちが多い人でも分けて送る)
+const BOND_LIVE_SYNC_CHUNK = 50;
+// 周回の終わりの party[] と同じ形の要素をマスモン1体から作り、同じ bondLevelRowsFromParty を通す
+// (行の作り方を2通りにしない)
+const bondLevelRowsFromMasuMons = (userName, icon, masuMons, profileFrame = null, breederId = null) => {
+  const members = (Array.isArray(masuMons) ? masuMons : []).map(masu => {
+    if (!masu || masu.id == null || !ALL_PLAYER_MONSTERS[masu.baseId]) return null;
+    const colors = rankingPartyColors(masu.baseId, getMasuColors(masu));
+    const dyed = colors.some(Boolean);
+    return {
+      id: masu.baseId, baseId: masu.baseId, monsterId: masu.baseId, masuId: masu.id,
+      name: ALL_PLAYER_MONSTERS[masu.baseId]?.name || null,
+      bondLevel: masuBondLevelInfo(masu).level,
+      ...(dyed ? { colors } : {}),
+      detail: rankingMasuDetail(masu),
+    };
+  }).filter(Boolean);
+  return bondLevelRowsFromParty(userName, icon, members, profileFrame, breederId);
+};
+// 行の指紋。名前・アイコン・フレームも含めるので、どれが変わっても送り直す
+const bondLevelRowSignature = (row) => {
+  const source = JSON.stringify(row || null);
+  let hash = 2166136261;
+  for (let i = 0; i < source.length; i++) { hash ^= source.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+  return (hash >>> 0).toString(36);
+};
+// 保存した指紋の一覧を読む。壊れていたら空から(全員を1回送り直すだけで、記録は壊れない)
+const normalizeBondLiveSync = (raw) => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) && raw.sent && typeof raw.sent === 'object' && !Array.isArray(raw.sent)
+    ? raw.sent : {};
+  const sent = {};
+  Object.keys(src).forEach(key => { if (typeof src[key] === 'string') sent[key] = src[key]; });
+  return { version: 1, sent };
+};
+// 指紋の見出し。主キー (user_name, individual_id) と同じ組み合わせにする
+const bondLiveSyncKeyOf = (row) => `${row.user_name}\u001f${row.individual_id}`;
+// 前に送った指紋と違う行だけを返す
+const bondLevelRowsToSync = (rows, sent) =>
+  (Array.isArray(rows) ? rows : []).filter(row => (sent || {})[bondLiveSyncKeyOf(row)] !== bondLevelRowSignature(row));
 const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.desc.nullslast', offset=0, requestId='untracked', selectColumns=RANKING_SELECT_FULL) => {
   // 行を組み立てる前に「いまの見た目」をそろえておく(失敗しても投げない・TTLで間引く)
   await ensureBreederProfiles(requestId);
@@ -33754,6 +33804,49 @@ function MonsterHeroGame() {
     if (!dataLoaded) return;
     storeSet('mh_bgm_arrangement', normalizeBgmArrangement(bgmArrangement), false);
   }, [dataLoaded, bgmArrangement]);
+
+  // 絆Lv・総合力ランキングのリアルタイム更新(2026-09-27・ユーザー指示「リアルタイムで」)。
+  // マスモン・名前・アイコン・フレームが変わったら、落ち着くのを待ってから
+  // 変わった個体の行だけを bond_levels へ上書きする。周回の終わりの送信はそのまま残す。
+  // ランキングは記録の保存だけなので、送れなくても遊ぶのは止めない(次の変化か次の起動で送り直す)
+  const bondLiveSyncRef = useRef({ loaded: null, running: false, again: false, lastAt: 0 });
+  const syncBondLevelsLive = async () => {
+    const state = bondLiveSyncRef.current;
+    if (state.running) { state.again = true; return; }
+    if (bondLevelsUnavailable()) return;
+    state.running = true;
+    try {
+      if (!state.loaded) state.loaded = normalizeBondLiveSync(await storeGet(BOND_LIVE_SYNC_KEY, null, false));
+      const breederId = await ensureBreederId();
+      const rows = bondLevelRowsFromMasuMons(breederName || '名無しのブリーダー', breederIcon,
+        masuMonsRef.current, rankingProfileFrameValue(profileFrameId), breederId);
+      const pending = bondLevelRowsToSync(rows, state.loaded.sent);
+      for (let i = 0; i < pending.length; i += BOND_LIVE_SYNC_CHUNK) {
+        const chunk = pending.slice(i, i + BOND_LIVE_SYNC_CHUNK);
+        state.lastAt = Date.now();
+        const ok = await sbUpsertBondLevels(chunk);
+        if (!ok) break;
+        // 送れた行だけ指紋を覚える(送れなかった行は次の機会に送り直す)
+        const sent = { ...state.loaded.sent };
+        chunk.forEach(row => { sent[bondLiveSyncKeyOf(row)] = bondLevelRowSignature(row); });
+        state.loaded = { version: 1, sent };
+        await storeSet(BOND_LIVE_SYNC_KEY, state.loaded, false);
+      }
+    } catch (err) {
+      console.error('[ranking] bond_levels live sync failed:', err && err.message ? err.message : err);
+    } finally {
+      state.running = false;
+      if (state.again) { state.again = false; setBondLiveSyncTick(t => t + 1); }
+    }
+  };
+  const [bondLiveSyncTick, setBondLiveSyncTick] = useState(0);
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const state = bondLiveSyncRef.current;
+    const wait = Math.max(BOND_LIVE_SYNC_DELAY_MS, state.lastAt + BOND_LIVE_SYNC_MIN_INTERVAL_MS - Date.now());
+    const timer = setTimeout(() => { void syncBondLevelsLive(); }, wait);
+    return () => clearTimeout(timer);
+  }, [dataLoaded, masuMons, breederName, breederIcon, profileFrameId, bondLiveSyncTick]);
 
   const submitLocalScore = async (diff, finalScore, clearId) => {
     // マスモン(絆レベルを持つ育成済みインスタンス)で編成していた場合、ランキング表示にも絆レベルを出せるよう記録する。
