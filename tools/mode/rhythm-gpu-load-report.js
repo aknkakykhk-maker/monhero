@@ -116,7 +116,9 @@ const runScene=async(playwright,port,scene)=>{const results=[];for(let i=0;i<RUN
 const fmt=r=>`GPU の仕事 ${r.gpuPerFrame.toFixed(1)}ms/フレーム(${Math.round(r.gpuMs)}ms/秒) ・ 描く側 ${Math.round(r.rendererMs)}ms/秒 ・ フレーム ${r.fps.toFixed(1)}/秒 ・ WebGL の命令 ${r.glPerFrame.toFixed(1)}/フレーム ・ 合成する層 ${r.layers.toFixed(1)}枚(画面${r.layerScreens.toFixed(2)}枚ぶん) ・ 塗り直し 画面${r.repaintScreens.toFixed(2)}枚ぶん/秒`;
 const pct=(a,b)=>b>0?`${a>=b?'+':''}${Math.round((a-b)/b*100)}%`:'-';
 
-(async()=>{
+// 見積もりの道具(rhythm-gpu-estimate.js)からも同じ測り方を使えるようにする(2026-09-27)
+module.exports={measure,runScene,serve,SUITE,MIME};
+if(require.main===module)(async()=>{
   let playwright;
   try{playwright=require(path.join(ROOT,'tools/node_modules/playwright'));}
   catch{try{playwright=require('playwright');}catch{console.log('SKIP: playwright が入っていないので測れません');process.exit(0);}}
