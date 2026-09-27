@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ec2dbd5dd1198718
+// source-sha256: 7f568419878f6b88
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 09:36";
+const BUILD_DATE = "2026-09-27 10:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4809,7 +4809,7 @@ const RHYTHM_STAGE_EFFECTS = Object.freeze(['LIVE', 'VIVID', 'CALM', 'SIMPLE']);
 const RHYTHM_LOOK_PRESETS = Object.freeze([{
   id: 'LIGHT',
   label: '軽さ優先',
-  image: 'images/rhythm-look/look-light-v1.jpg',
+  image: 'images/rhythm-look/look-light-v2.jpg',
   values: {
     effectAmount: 'MINIMAL',
     stageEffect: 'SIMPLE',
@@ -4822,7 +4822,7 @@ const RHYTHM_LOOK_PRESETS = Object.freeze([{
 }, {
   id: 'STANDARD',
   label: '標準',
-  image: 'images/rhythm-look/look-standard-v1.jpg',
+  image: 'images/rhythm-look/look-standard-v2.jpg',
   values: {
     effectAmount: 'LIGHT',
     stageEffect: 'SIMPLE',
@@ -4835,7 +4835,7 @@ const RHYTHM_LOOK_PRESETS = Object.freeze([{
 }, {
   id: 'VIVID',
   label: '華やか',
-  image: 'images/rhythm-look/look-vivid-v1.jpg',
+  image: 'images/rhythm-look/look-vivid-v2.jpg',
   values: {
     effectAmount: 'LOW',
     stageEffect: 'VIVID',
@@ -4848,7 +4848,7 @@ const RHYTHM_LOOK_PRESETS = Object.freeze([{
 }, {
   id: 'FULL',
   label: '全部のせ',
-  image: 'images/rhythm-look/look-full-v1.jpg',
+  image: 'images/rhythm-look/look-full-v2.jpg',
   values: {
     effectAmount: 'NORMAL',
     stageEffect: 'LIVE',
@@ -21238,7 +21238,7 @@ const RhythmOptions = ({
     className: `mt-2 ${note}`
   }, "2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。"), React.createElement("p", {
     className: `mt-2 ${note}`
-  }, "タップ音量は0〜", RHYTHM_NOTE_SE_VOLUME_MAX, "まで上げられます（", RHYTHM_VOLUME_MAX, "より上は、割れないように大きい音だけ丸めて鳴らします）。"), React.createElement("p", {
+  }, "タップ音量は0〜", RHYTHM_NOTE_SE_VOLUME_MAX, "まで上げられます（", RHYTHM_VOLUME_MAX, "より上は100上げるごとに2倍の大きさになり、割れないように大きい音だけ丸めて鳴らします）。"), React.createElement("p", {
     className: `mt-2 ${note}`
   }, "BGM音量は0〜", RHYTHM_VOLUME_MAX, "まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。"))), tab === 'system' && React.createElement("section", {
     "data-rhythm-options-panel": "system",
@@ -24035,6 +24035,7 @@ const RhythmTapTest = ({
     tier: stageTierNow,
     fx: stageFxOn,
     live: stageLevel === 'LIVE',
+    art: stageLevel === 'CALM' ? .34 : .5,
     grid: stageLevel === 'LIVE' && !tutorial ? rhythmSongBeatGrid(song.songId) : null
   };
   const stageClockRef = useRef(null);
@@ -24059,13 +24060,13 @@ const RhythmTapTest = ({
       dirty = true,
       lastTier = -1,
       lastFx = null,
+      lastArt = null,
       w = host.clientWidth,
       h = host.clientHeight;
     const start = performance.now();
     const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const cap = renderQualityStill === 'STANDARD' ? 1.25 : rhythmRenderQualityCap(renderQualityStill, 1.5);
     const scale = Math.min(cap, Math.max(1, Number(window.devicePixelRatio) || 1));
-    const fullArt = stageLevel === 'CALM' ? .34 : .5;
     if (stageArtSrc) {
       const img = new Image();
       img.onload = () => {
@@ -24103,9 +24104,11 @@ const RhythmTapTest = ({
       const live = stageGlLiveRef.current || {},
         fx = !!live.fx && !reduce,
         tier = Number(live.tier) || 0;
-      if (tier !== lastTier || fx !== lastFx) {
+      const fullArt = Number(live.art) || .5;
+      if (tier !== lastTier || fx !== lastFx || fullArt !== lastArt) {
         lastTier = tier;
         lastFx = fx;
+        lastArt = fullArt;
         dirty = true;
       }
       const fading = artAt >= 0 && now - artAt < 800;
@@ -24159,7 +24162,7 @@ const RhythmTapTest = ({
       canvas.removeEventListener('webglcontextlost', onLost);
       renderer.release();
     };
-  }, [stageGl, stageLevel, stageArtSrc, renderQualityStill]);
+  }, [stageGl, stageArtSrc, renderQualityStill]);
   const comboPosition = RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER';
   const [isLandscape, setIsLandscape] = useState(() => orientationIsLandscape());
   useEffect(() => {
@@ -26554,7 +26557,7 @@ const RhythmTapTest = ({
     "data-stage-gl": stageGl ? '1' : undefined,
     "aria-hidden": "true"
   }, stageGl && React.createElement("canvas", {
-    key: `stage-gl-${stageLevel}-${renderQualityStill}`,
+    key: `stage-gl-${renderQualityStill}`,
     ref: stageGlRef,
     "data-rhythm-stage-gl": true
   }), !stageGl && stageArtSrc && React.createElement("canvas", {
@@ -30992,6 +30995,29 @@ function RhythmSongSelectScreen({
     "data-rhythm-look-intro": true,
     className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
+    "data-rhythm-look-intro-landscape": true
+  }, React.createElement("div", {
+    className: "flex items-start gap-1"
+  }, React.createElement("p", {
+    className: "min-w-0 flex-1 pt-1 text-[11px] font-black leading-snug text-cyan-100"
+  }, "✨ モンヒロビートの見た目を、もっと華やかにできるようになりました"), React.createElement("button", {
+    type: "button",
+    onClick: dismissRhythmLookIntro,
+    "aria-label": "この案内を閉じる",
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
+  }, "×")), React.createElement("div", {
+    className: "flex gap-2 pb-1"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => onTryRhythmLook && onTryRhythmLook('VIVID'),
+    className: "min-h-[40px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950"
+  }, "華やかにしてみる"), React.createElement("button", {
+    type: "button",
+    onClick: dismissRhythmLookIntro,
+    className: "min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200"
+  }, "いまのままにする"))), React.createElement("div", {
+    "data-rhythm-look-intro-portrait": true
+  }, React.createElement("div", {
     className: "flex items-start gap-1"
   }, React.createElement("div", {
     className: "min-w-0 flex-1"
@@ -31014,7 +31040,7 @@ function RhythmSongSelectScreen({
     type: "button",
     onClick: dismissRhythmLookIntro,
     className: "min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200"
-  }, "いまのままにする"))), quickRhythmBackgroundVisible && React.createElement("div", {
+  }, "いまのままにする")))), quickRhythmBackgroundVisible && React.createElement("div", {
     "data-quick-rhythm-background": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -48504,7 +48530,11 @@ function MonsterHeroGame() {
       setOwnedMarketIcons(savedMarketIcons);
       let savedOwnedItems = await storeGet('mh_owned_items', {}, false);
       const inheritedUniqueCompensationDone = await storeGet('mh_inherited_unique_level_compensation_v1', false, false);
-      if (!inheritedUniqueCompensationDone) {
+      const compensationStoredOnboarded = await storeGet('mh_onboarded', null, false);
+      const compensationEverPlayed = compensationStoredOnboarded === true || compensationStoredOnboarded === null && typeof savedName === 'string' && !!savedName.trim() && savedName !== '名無しのブリーダー' && typeof savedIcon === 'string' && savedIcon.length > 0;
+      if (!inheritedUniqueCompensationDone && !compensationEverPlayed) {
+        await storeSet('mh_inherited_unique_level_compensation_v1', true, false);
+      } else if (!inheritedUniqueCompensationDone) {
         let pendingItems = await storeGet('mh_inherited_unique_level_compensation_pending_v1', null, false);
         if (!pendingItems || typeof pendingItems !== 'object' || Array.isArray(pendingItems)) {
           pendingItems = {

@@ -352,10 +352,10 @@ const RHYTHM_STAGE_EFFECTS = Object.freeze(['LIVE','VIVID','CALM','SIMPLE']);
 // (音・判定・操作・画質・描画方式には触らない)。いまの設定がどれかにぴったり当てはまるときは、そのボタンを光らせる。
 // image … その見た目で演奏しているところの見本(同じ曲・同じ場面を撮って、幅240の JPEG に縮めたもの。オプションを開いたときだけ読む)
 const RHYTHM_LOOK_PRESETS = Object.freeze([
-  {id:'LIGHT',label:'軽さ優先',image:'images/rhythm-look/look-light-v1.jpg',values:{effectAmount:'MINIMAL',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
-  {id:'STANDARD',label:'標準',image:'images/rhythm-look/look-standard-v1.jpg',values:{effectAmount:'LIGHT',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
-  {id:'VIVID',label:'華やか',image:'images/rhythm-look/look-vivid-v1.jpg',values:{effectAmount:'LOW',stageEffect:'VIVID',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:false}},
-  {id:'FULL',label:'全部のせ',image:'images/rhythm-look/look-full-v1.jpg',values:{effectAmount:'NORMAL',stageEffect:'LIVE',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:true}},
+  {id:'LIGHT',label:'軽さ優先',image:'images/rhythm-look/look-light-v2.jpg',values:{effectAmount:'MINIMAL',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
+  {id:'STANDARD',label:'標準',image:'images/rhythm-look/look-standard-v2.jpg',values:{effectAmount:'LIGHT',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
+  {id:'VIVID',label:'華やか',image:'images/rhythm-look/look-vivid-v2.jpg',values:{effectAmount:'LOW',stageEffect:'VIVID',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:false}},
+  {id:'FULL',label:'全部のせ',image:'images/rhythm-look/look-full-v2.jpg',values:{effectAmount:'NORMAL',stageEffect:'LIVE',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:true}},
 ]);
 // 演出の自動調整(設定「重いときは演出を自動で控えめに」・2026-09-27)で下げる順番。重いものから。
 // 段 n では 1〜n 番目を当てる(当てるものが無い段は飛ばす)。演奏中の見た目だけを変え、保存してある設定は変えない

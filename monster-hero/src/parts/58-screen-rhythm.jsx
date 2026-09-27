@@ -266,7 +266,21 @@ function RhythmSongSelectScreen({
           </div>
         </div>}
         {/* 見た目の設定が増えたことを、曲えらびを開いた最初の1回だけ伝える(2026-09-27)。その場で「華やか」を試せる */}
+        {/* 横持ちは高さが足りず、吹き出し＋ボタン2段(118px)で「決定」が画面の外へ押し出されていた(2026-09-27)。
+            1行にまとめても高さ360pxの端末でははみ出すので、横持ちだけ左下(曲の一覧の上)へ浮かせ、
+            右の列(難易度・決定)を押し下げないようにする。出し分けは index.html の素のCSS(クイック周回の帯と同じ考え方) */}
         {rhythmLookIntroVisible&&<div data-rhythm-look-intro className="shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1">
+          <div data-rhythm-look-intro-landscape>
+            <div className="flex items-start gap-1">
+              <p className="min-w-0 flex-1 pt-1 text-[11px] font-black leading-snug text-cyan-100">✨ モンヒロビートの見た目を、もっと華やかにできるようになりました</p>
+              <button type="button" onClick={dismissRhythmLookIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+            </div>
+            <div className="flex gap-2 pb-1">
+              <button type="button" onClick={()=>onTryRhythmLook&&onTryRhythmLook('VIVID')} className="min-h-[40px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950">華やかにしてみる</button>
+              <button type="button" onClick={dismissRhythmLookIntro} className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200">いまのままにする</button>
+            </div>
+          </div>
+          <div data-rhythm-look-intro-portrait>
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1"><AssistantBubble scene="rhythmLookIntro" compact/></div>
             <button type="button" onClick={dismissRhythmLookIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
@@ -274,6 +288,7 @@ function RhythmSongSelectScreen({
           <div className="mt-1 flex gap-2 pb-1">
             <button type="button" data-rhythm-look-intro-try onClick={()=>onTryRhythmLook&&onTryRhythmLook('VIVID')} className="min-h-[40px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950">華やかにしてみる</button>
             <button type="button" onClick={dismissRhythmLookIntro} className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200">いまのままにする</button>
+          </div>
           </div>
         </div>}
         {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}

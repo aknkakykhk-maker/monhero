@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2001b787fad05878
+// generated-sha256: 1a501e9f6f256fe6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-27 09:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-27 10:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4143,10 +4143,10 @@ const RHYTHM_STAGE_EFFECTS = Object.freeze(['LIVE','VIVID','CALM','SIMPLE']);
 // (音・判定・操作・画質・描画方式には触らない)。いまの設定がどれかにぴったり当てはまるときは、そのボタンを光らせる。
 // image … その見た目で演奏しているところの見本(同じ曲・同じ場面を撮って、幅240の JPEG に縮めたもの。オプションを開いたときだけ読む)
 const RHYTHM_LOOK_PRESETS = Object.freeze([
-  {id:'LIGHT',label:'軽さ優先',image:'images/rhythm-look/look-light-v1.jpg',values:{effectAmount:'MINIMAL',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
-  {id:'STANDARD',label:'標準',image:'images/rhythm-look/look-standard-v1.jpg',values:{effectAmount:'LIGHT',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
-  {id:'VIVID',label:'華やか',image:'images/rhythm-look/look-vivid-v1.jpg',values:{effectAmount:'LOW',stageEffect:'VIVID',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:false}},
-  {id:'FULL',label:'全部のせ',image:'images/rhythm-look/look-full-v1.jpg',values:{effectAmount:'NORMAL',stageEffect:'LIVE',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:true}},
+  {id:'LIGHT',label:'軽さ優先',image:'images/rhythm-look/look-light-v2.jpg',values:{effectAmount:'MINIMAL',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
+  {id:'STANDARD',label:'標準',image:'images/rhythm-look/look-standard-v2.jpg',values:{effectAmount:'LIGHT',stageEffect:'SIMPLE',roadFx:false,judgmentFx:false,noteMotionFx:false,comboMilestoneFx:false,noteBloom:false}},
+  {id:'VIVID',label:'華やか',image:'images/rhythm-look/look-vivid-v2.jpg',values:{effectAmount:'LOW',stageEffect:'VIVID',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:false}},
+  {id:'FULL',label:'全部のせ',image:'images/rhythm-look/look-full-v2.jpg',values:{effectAmount:'NORMAL',stageEffect:'LIVE',roadFx:true,judgmentFx:true,noteMotionFx:true,comboMilestoneFx:true,noteBloom:true}},
 ]);
 // 演出の自動調整(設定「重いときは演出を自動で控えめに」・2026-09-27)で下げる順番。重いものから。
 // 段 n では 1〜n 番目を当てる(当てるものが無い段は飛ばす)。演奏中の見た目だけを変え、保存してある設定は変えない
@@ -15008,7 +15008,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {/* タップ音を10倍にしたので、前に合わせていた人は必ず設定し直すことになる(2026-09-12) */}
             <p className={`mt-2 ${note}`}>2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。</p>
             {/* 上限を200まで開けた(2026-09-12・ユーザー指示)。100の意味は今までと同じ */}
-            <p className={`mt-2 ${note}`}>タップ音量は0〜{RHYTHM_NOTE_SE_VOLUME_MAX}まで上げられます（{RHYTHM_VOLUME_MAX}より上は、割れないように大きい音だけ丸めて鳴らします）。</p>
+            <p className={`mt-2 ${note}`}>タップ音量は0〜{RHYTHM_NOTE_SE_VOLUME_MAX}まで上げられます（{RHYTHM_VOLUME_MAX}より上は100上げるごとに2倍の大きさになり、割れないように大きい音だけ丸めて鳴らします）。</p>
             <p className={`mt-2 ${note}`}>BGM音量は0〜{RHYTHM_VOLUME_MAX}まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。</p>
           </details>
         </section>}
@@ -16817,21 +16817,23 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   },[stageFxOn,stageGl,renderQualityStill]);
   // WebGL 版のライブ背景を動かす。色の段と演出の有無は毎回の描画でここから読む(描き直しの輪を作り直さない)
   // live … 「ライブ」のとき、曲の拍(RHYTHM_SONG_BEATS)。曲の時刻は毎フレームの処理(tick)が stageClockRef へ書く
-  const stageGlLiveRef=useRef(null);stageGlLiveRef.current={tier:stageTierNow,fx:stageFxOn,live:stageLevel==='LIVE',grid:stageLevel==='LIVE'&&!tutorial?rhythmSongBeatGrid(song.songId):null};
+  // art … 背景の絵の濃さ(「おだやか」は薄め)。これも毎回の描画で読むので、演出の段階が変わっても背景を作り直さない(2026-09-27)。
+  //   以前は段階(stageLevel)が変わるたびに WebGL を作り直していた。「重いときは演出を自動で控えめに」が働いた瞬間、
+  //   ただでさえ重い端末でシェーダーの組み立てをやり直すことになっていた
+  const stageGlLiveRef=useRef(null);stageGlLiveRef.current={tier:stageTierNow,fx:stageFxOn,live:stageLevel==='LIVE',art:stageLevel==='CALM'?.34:.5,grid:stageLevel==='LIVE'&&!tutorial?rhythmSongBeatGrid(song.songId):null};
   const stageClockRef=useRef(null);if(!stageClockRef.current)stageClockRef.current={t:null,at:0};
   useEffect(()=>{
     const canvas=stageGlRef.current,host=stageHostRef.current;
     if(!stageGl||!canvas||!host||typeof window==='undefined'||typeof document==='undefined')return undefined;
     const renderer=rhythmCreateStageGL(canvas);
     if(!renderer){setStageGlLost(true);return undefined;}
-    let alive=true,frame=0,last=-1e9,artAt=-1,artSettled=false,dirty=true,lastTier=-1,lastFx=null,w=host.clientWidth,h=host.clientHeight;
+    let alive=true,frame=0,last=-1e9,artAt=-1,artSettled=false,dirty=true,lastTier=-1,lastFx=null,lastArt=null,w=host.clientWidth,h=host.clientHeight;
     const start=performance.now();
     // 動きを減らす設定の端末では、CSS 版と同じくサーチライトと光の粒を出さない
     const reduce=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     // 画素密度は CSS 版の焼いた画像と同じ(1.5倍まで。画質「標準」は1.25倍、「省電力」は1倍)
     const cap=renderQualityStill==='STANDARD'?1.25:rhythmRenderQualityCap(renderQualityStill,1.5);
     const scale=Math.min(cap,Math.max(1,Number(window.devicePixelRatio)||1));
-    const fullArt=stageLevel==='CALM'?.34:.5;
     if(stageArtSrc){const img=new Image();img.onload=()=>{if(!alive)return;const c=document.createElement('canvas');c.width=24;c.height=24;const g=c.getContext('2d');if(!g)return;try{g.drawImage(img,0,0,24,24);}catch(_){return;}if(renderer.setArt(c)){artAt=performance.now();dirty=true;}};img.src=stageArtSrc;}
     const onLost=event=>{if(event&&typeof event.preventDefault==='function')event.preventDefault();setStageGlLost(true);};
     canvas.addEventListener('webglcontextlost',onLost);
@@ -16841,7 +16843,8 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     const loop=now=>{
       frame=requestAnimationFrame(loop);
       const live=stageGlLiveRef.current||{},fx=!!live.fx&&!reduce,tier=Number(live.tier)||0;
-      if(tier!==lastTier||fx!==lastFx){lastTier=tier;lastFx=fx;dirty=true;}
+      const fullArt=Number(live.art)||.5;
+      if(tier!==lastTier||fx!==lastFx||fullArt!==lastArt){lastTier=tier;lastFx=fx;lastArt=fullArt;dirty=true;}
       const fading=artAt>=0&&now-artAt<800;
       if(artAt>=0&&!fading&&!artSettled){artSettled=true;dirty=true;}
       if(!dirty&&!fx&&!fading)return;
@@ -16862,7 +16865,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
     };
     frame=requestAnimationFrame(loop);
     return()=>{alive=false;cancelAnimationFrame(frame);if(observer)observer.disconnect();canvas.removeEventListener('webglcontextlost',onLost);renderer.release();};
-  },[stageGl,stageLevel,stageArtSrc,renderQualityStill]);
+  },[stageGl,stageArtSrc,renderQualityStill]);
   /* フルコンボ・オールマーベラスが続いているか(プロセカ・CHUNITHM のコンボ色)。「COMBO」の字の色で見せる。
      AM=ここまで全部MARVELOUS / FC=ここまでBAD・MISSなし / 空=切れた。設定で出さないこともできる */
   /* アシストモードでは称号が付かないので出さない(出すと「取れる」と思わせてしまう) *//* フルコンボ・オールマーベラスの印(comboStatus)は、コンボ数の部品(RhythmHudCombo)が hud から決める */
@@ -17968,7 +17971,7 @@ scheduleTick();};
 {stageLevel!=='SIMPLE'&&<div ref={stageHostRef} data-rhythm-stage={stageLevel} data-stage-tier={String(stageTierNow)} data-stage-gl={stageGl?'1':undefined} aria-hidden="true">
   {/* WebGL 版は、ジャケット・暗幕・サーチライト・光の粒をこの canvas 1枚に描く(暗幕の ::after は CSS 側で消す)。
       描き込み先を作り直すときは canvas も作り直す(一度片付けた canvas からは描き込み先を取り出せない) */}
-  {stageGl&&<canvas key={`stage-gl-${stageLevel}-${renderQualityStill}`} ref={stageGlRef} data-rhythm-stage-gl/>}
+  {stageGl&&<canvas key={`stage-gl-${renderQualityStill}`} ref={stageGlRef} data-rhythm-stage-gl/>}
   {!stageGl&&stageArtSrc&&<canvas ref={stageArtRef} data-rhythm-stage-art width="24" height="24"/>}
   {/* サーチライトと光の粒は、1度だけ焼いた画像を CSS のアニメーション(合成だけで動く)で動かす(2026-09-26)。
       以前はサーチライトを clip-path で切り抜いた層、光の粒を画面の2倍の高さの CSS の模様で作っていた */}
@@ -21332,7 +21335,21 @@ function RhythmSongSelectScreen({
           </div>
         </div>}
         {/* 見た目の設定が増えたことを、曲えらびを開いた最初の1回だけ伝える(2026-09-27)。その場で「華やか」を試せる */}
+        {/* 横持ちは高さが足りず、吹き出し＋ボタン2段(118px)で「決定」が画面の外へ押し出されていた(2026-09-27)。
+            1行にまとめても高さ360pxの端末でははみ出すので、横持ちだけ左下(曲の一覧の上)へ浮かせ、
+            右の列(難易度・決定)を押し下げないようにする。出し分けは index.html の素のCSS(クイック周回の帯と同じ考え方) */}
         {rhythmLookIntroVisible&&<div data-rhythm-look-intro className="shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1">
+          <div data-rhythm-look-intro-landscape>
+            <div className="flex items-start gap-1">
+              <p className="min-w-0 flex-1 pt-1 text-[11px] font-black leading-snug text-cyan-100">✨ モンヒロビートの見た目を、もっと華やかにできるようになりました</p>
+              <button type="button" onClick={dismissRhythmLookIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
+            </div>
+            <div className="flex gap-2 pb-1">
+              <button type="button" onClick={()=>onTryRhythmLook&&onTryRhythmLook('VIVID')} className="min-h-[40px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950">華やかにしてみる</button>
+              <button type="button" onClick={dismissRhythmLookIntro} className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200">いまのままにする</button>
+            </div>
+          </div>
+          <div data-rhythm-look-intro-portrait>
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1"><AssistantBubble scene="rhythmLookIntro" compact/></div>
             <button type="button" onClick={dismissRhythmLookIntro} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
@@ -21340,6 +21357,7 @@ function RhythmSongSelectScreen({
           <div className="mt-1 flex gap-2 pb-1">
             <button type="button" data-rhythm-look-intro-try onClick={()=>onTryRhythmLook&&onTryRhythmLook('VIVID')} className="min-h-[40px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950">華やかにしてみる</button>
             <button type="button" onClick={dismissRhythmLookIntro} className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200">いまのままにする</button>
+          </div>
           </div>
         </div>}
         {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}
@@ -33399,7 +33417,16 @@ function MonsterHeroGame() {
       // 継承固有技Lv不具合のお詫び。付与後の所持品全体をpendingへ先に保存しておき、
       // 書き込み途中で終了しても同じ値を再適用することで二重加算を防ぐ。
       const inheritedUniqueCompensationDone = await storeGet('mh_inherited_unique_level_compensation_v1', false, false);
-      if (!inheritedUniqueCompensationDone) {
+      // はじめて遊ぶ人は不具合に遭っていないので、アイテムもお詫びの画面も出さず、済んだ印だけ付ける。
+      // 見分け方は下の wasOnboarded / everOnboarded と同じ(保存された完了フラグ、無ければ完成済みプロフィール)
+      const compensationStoredOnboarded = await storeGet('mh_onboarded', null, false);
+      const compensationEverPlayed = compensationStoredOnboarded === true
+        || (compensationStoredOnboarded === null
+          && typeof savedName === 'string' && !!savedName.trim() && savedName !== '名無しのブリーダー'
+          && typeof savedIcon === 'string' && savedIcon.length > 0);
+      if (!inheritedUniqueCompensationDone && !compensationEverPlayed) {
+        await storeSet('mh_inherited_unique_level_compensation_v1', true, false);
+      } else if (!inheritedUniqueCompensationDone) {
         let pendingItems = await storeGet('mh_inherited_unique_level_compensation_pending_v1', null, false);
         if (!pendingItems || typeof pendingItems !== 'object' || Array.isArray(pendingItems)) {
           pendingItems = { ...savedOwnedItems, [BREAKTHROUGH_ITEM_ID]:Math.max(0, Math.floor(Number(savedOwnedItems?.[BREAKTHROUGH_ITEM_ID]) || 0)) + 20 };

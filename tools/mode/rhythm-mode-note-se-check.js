@@ -110,6 +110,16 @@ check('200より上は割れ止めを通す(遅れの出るコンプレッサー
   &&!/createDynamicsCompressor/.test(source.slice(source.indexOf('const RHYTHM_NOTE_SE_RUNTIME='),source.indexOf('const RHYTHM_NOTE_SE_RUNTIME=')+20000)));
 check('200までの蓋はこれまでと同じ(.8)で、それより上だけ開ける',
   /const cap = volume > 2 \? Math\.min\(RHYTHM_NOTE_SE_LOUD_LEVEL_MAX, RHYTHM_NOTE_SE_LEVEL_MAX \* volume \/ 2\) : RHYTHM_NOTE_SE_LEVEL_MAX;/.test(source));
+// 200より上は100ごとに2倍(2026-09-27・ユーザー指示「400まで効くようにする」)。200以下は1つも変えない
+{
+  const m=source.match(/const rhythmNoteSeDrive = volume => (.+);/);
+  const drive=m?new Function('volume','return '+m[1]):null;
+  const loud=Number(source.match(/const RHYTHM_NOTE_SE_LOUD_LEVEL_MAX = ([\d.]+);/)?.[1]);
+  check('200以下の音量はこれまでと同じ大きさで鳴る',!!drive&&[0,.35,.7,1,1.5,2].every(v=>drive(v)===v));
+  check('200より上は100ごとに2倍(300で4倍・400で8倍)',!!drive&&drive(3)===4&&drive(4)===8);
+  check('400の大きさまで蓋を開けている',loud>=.8*8/2,String(loud));
+  check('音の大きさを決める関数が倍々の値を使う',/const rhythmNoteSeLevel = \(base, volumeIn\) => \{\s*const volume = rhythmNoteSeDrive\(volumeIn\);/.test(source));
+}
 // タップ音の種類(2026-09-26・ユーザー指示「ノーツを押したときの音のバリエーションがほしい / 設定で変えられるように」)
 {
   const ids=[...source.matchAll(/Object\.freeze\(\{ id:'([A-Z]+)', +label:'[^']+'/g)].map(m=>m[1]);

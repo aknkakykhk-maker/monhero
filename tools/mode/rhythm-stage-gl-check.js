@@ -20,6 +20,18 @@ check('背景の部品を本体から切り出せる',from>=0&&makeAt>from&&to>m
 const PARTS=from>=0&&to>0?SRC.slice(from,to+4):'';
 const PAGE=`<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000"><script>${PARTS}\nwindow.__stage={rhythmCreateStageGL,RHYTHM_STAGE_GL_FS};</script>`;
 
+// 演出の段階(ライブ→華やか→おだやか)が変わっても、背景の WebGL を作り直さない(2026-09-27)。
+// 「重いときは演出を自動で控えめに」が働いた瞬間に、シェーダーの組み立てをやり直させないため。
+// 段階ごとに違う絵の濃さ・拍の扱いは、毎回の描画で stageGlLiveRef から読む
+{
+  const canvasKey=(SRC.match(/<canvas key=\{`(stage-gl-[^`]*)`\} ref=\{stageGlRef\}/)||[])[1]||'';
+  check('背景の canvas は演出の段階が変わっても作り直さない(key に段階を入れない)',!!canvasKey&&!canvasKey.includes('stageLevel'),canvasKey);
+  const effectAt=SRC.indexOf('const renderer=rhythmCreateStageGL(canvas);');
+  const deps=effectAt<0?'':(SRC.slice(effectAt).match(/\n  \},\[([^\]]*)\]\);/)||[])[1]||'';
+  check('背景を動かす処理も演出の段階で作り直さない(依存に段階を入れない)',!!deps&&!/\bstageLevel\b/.test(deps),deps);
+  check('絵の濃さは毎回の描画で読む',/stageGlLiveRef\.current=\{[^}]*art:stageLevel==='CALM'\?\.34:\.5/.test(SRC)&&SRC.includes('const fullArt=Number(live.art)||.5;'));
+}
+
 (async()=>{
   if(!PARTS){console.log(`\n${failures}件のNGがあります`);process.exit(1);}
   let playwright;
