@@ -13,7 +13,10 @@ assert.notStrictEqual(enemy(550,70,18).hp,Math.floor(enemy(550,70,10).hp*1.06),'
 // トレーニング(旧・能力覚醒)のULTIMATE低下。**低下は増える量へ掛ける**(率から引かない)。
 // 率から引いていたころは ちから+5%・ガッツ+5% だけが7ターンで増加0になっていた。
 // 式を書き写すとテストだけ古くなるので、本体の実装をそのまま取り出して動かす。
-const trainingSrc=`const extremeRuleNumber=(d,r)=>(d==='ULTIMATE'&&r==='awakeningZeroTurns')?20:null;
+// 切り出す範囲でタクティクスのモード(BATTLE_MODE_TACTICS_PRO など)を見るようになったので、モードの定数も本体から持ち込む(2026-09-27)
+const modeConsts=(source.match(/^const BATTLE_MODE_[A-Z0-9_]+ = '[^']*';$/gm)||[]).join('\n');
+const trainingSrc=`${modeConsts}
+const extremeRuleNumber=(d,r)=>(d==='ULTIMATE'&&r==='awakeningZeroTurns')?20:null;
 const extremeSpecialRule=()=>1;
 ${source.slice(source.indexOf('const applyNightmareWaveEnhancement'),source.indexOf('const ultimateEnemyTurnMultiplier'))}
 ${source.slice(source.indexOf('// トレーニングで「上がる量」へ掛かる倍率'),source.indexOf('// 整数で扱うバトル値の特殊ルール倍率'))}

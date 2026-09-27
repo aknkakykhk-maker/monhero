@@ -19,7 +19,13 @@ const check = (name, ok, detail = '') => {
   if (!ok) failed++;
 };
 
-const seed = () => {
+// 目標は「モッチーの元の値 + ちから9(3P)・ライフ20(2P)」。元の値は能力値の調整で変わるので、data から読む
+// (2026-09-27・決め打ちの 129 / 620 のままだと、今の元の値 ちから140・ライフ720 で最初から届いていて何も振られなかった)
+const ALLY_SRC = require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'monster-hero', 'data', 'ally-monsters.js'), 'utf8');
+const MOCCHI_LINE = (ALLY_SRC.match(/^\s*Mocchi: \{[^\n]*/m) || [''])[0];
+const MOCCHI_BASE = { hp: Number((MOCCHI_LINE.match(/baseHp:(\d+)/) || [])[1]), atk: Number((MOCCHI_LINE.match(/baseAtk:(\d+)/) || [])[1]) };
+const TARGET = { atk: MOCCHI_BASE.atk + 9, hp: MOCCHI_BASE.hp + 20 };
+const seed = (TARGET) => {
   // addInitScript は再読み込みのたびに走る。あとで書き換えた保存内容を上書きしないよう、
   // 一度そろえたら二度目からは何もしない(下で「リセット直後」を作って再読み込みするため)
   if (localStorage.getItem('mh_check_seeded')) return;
@@ -38,7 +44,7 @@ const seed = () => {
     { id: 'auto1', baseId: 'Mocchi', name: 'オートON', bondXp: 0, rebirthCount: 0, levelCap: 30,
       distAptPoints: 10, statPoints: { hp: 0, atk: 0, def: 0, guts: 0 }, distAptBoosts: [0, 0, 0, 0],
       autoEnhance: { version: 2, enabled: true, order: ['atk', 'hp', 'def', 'guts', 'apt0', 'apt1', 'apt2', 'apt3'],
-        statTargets: { hp: 620, atk: 129, def: 0, guts: 0 }, aptLimits: [null, null, null, null] } },
+        statTargets: { hp: TARGET.hp, atk: TARGET.atk, def: 0, guts: 0 }, aptLimits: [null, null, null, null] } },
     { id: 'auto2', baseId: 'Mocchi', name: 'オートOFF', bondXp: 0, rebirthCount: 0, levelCap: 30,
       distAptPoints: 10, statPoints: { hp: 0, atk: 0, def: 0, guts: 0 }, distAptBoosts: [0, 0, 0, 0] },
   ]));
@@ -64,7 +70,7 @@ const masuOf = (id) => (JSON.parse(localStorage.getItem('mh_masu_mons')) || []).
     browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     page.on('pageerror', (e) => errors.push(String(e)));
-    await page.addInitScript(seed);
+    await page.addInitScript(seed, TARGET);
     await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => document.getElementById('root')?.children.length > 0, { timeout: 60000 });
 
@@ -189,7 +195,7 @@ const masuOf = (id) => (JSON.parse(localStorage.getItem('mh_masu_mons')) || []).
     await page.waitForTimeout(700);
     const captured = await page.evaluate(masuOf, 'auto1');
     check('いまの値を目標として取り込める',
-      captured.autoEnhance.statTargets.atk === 129 && captured.autoEnhance.statTargets.hp === 620,
+      captured.autoEnhance.statTargets.atk === TARGET.atk && captured.autoEnhance.statTargets.hp === TARGET.hp,
       JSON.stringify(captured.autoEnhance.statTargets));
     check('画面に「いくつまで上げてよいか」で出ている',
       await page.evaluate(() => /ここまで/.test(document.body.innerText) && /素の値/.test(document.body.innerText)));

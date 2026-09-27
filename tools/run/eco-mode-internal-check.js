@@ -17,7 +17,8 @@ for(const token of [
   'const setEcoModeSafe = (mode) =>',
   "autoRepeatRef.current===true&&ECO_MODES.includes(mode)?mode:'off'",
   'const cycleEcoMode = () =>',
-  "const liteBattleView = gameState==='BATTLE'&&ecoMode==='lite'",
+  // 簡易表示にはバトル設定の「画面の軽さ:最軽量」(battleFxLoad==='MINIMAL'・2026-09-24)でも入る。省エネの lite で入るのは同じ
+  "const liteBattleView = gameState==='BATTLE'&&(ecoMode==='lite'",
   "const ultraEcoSession = ecoMode==='ultra'&&autoRepeat===true",
   "const ultraBattleView = gameState==='BATTLE'&&ultraEcoSession",
   'const ecoBattleView = liteBattleView||ultraBattleView',

@@ -56,7 +56,9 @@ const checks = [
   ['専用水攻撃モーション', /atkMotion:'waterBurst'/.test(ally) && /@keyframes waterBurstAttack/.test(game) && /@keyframes waterBurstLunge/.test(game)],
   ['固有技の共通タメは専用モーションより先に下沈みを行う', game.includes('setAttackAnim({slotIndex: animSlot, charge:true});')
     && !game.includes("setAttackAnim({slotIndex: animSlot, charge:true, ...((motion==='waterBurst'||motion==='arkHolyRain')?{motion}: {})});")
-    && game.includes('setMonsterImageDebugMotionPlaying({charge:true});')
+    // 画像デバッグ・図鑑の確認は、共通の手順 attackMotionUniquePreviewSequence(タメ650msだけ → 専用の動き)へまとめ直した
+    && (game.includes('setMonsterImageDebugMotionPlaying({charge:true});')
+      || /const attackMotionUniquePreviewSequence = [\s\S]{0,1200}?\{anim:\{charge:true\},ms:650\},\s*\{\s*anim:\{charge:false,motion,/.test(game))
     && !game.includes("setMonsterImageDebugMotionPlaying({charge:true, ...((atkMotion==='waterBurst'||atkMotion==='arkHolyRain')?{motion:atkMotion}: {})});")
     && game.includes('setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura:')],
   ['水攻撃は距離枠を動かさず本体だけ横移動', game.includes("if (anim.motion==='waterBurst') return undefined")

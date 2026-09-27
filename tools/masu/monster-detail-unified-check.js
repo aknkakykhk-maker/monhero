@@ -30,7 +30,9 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 共通表示に合流ボーナスがある`, body.includes('合流ボーナス') && body.includes('formatAptBonus(mon)'));
   check(`${label}: 共通表示に間合い適性がある`, body.includes('間合い適性') && body.includes('getDistAptitude(mon, idx)') || body.includes('getDistAptitude(mon,idx)'));
   check(`${label}: 共通表示に技セクションがある`, body.includes('renderSkillSection(mon)'));
-  check(`${label}: 共通詳細にEXスキル表示の土台がある`, body.includes('data-monster-detail-ex') && body.includes("tacticsExDefOf(mon.id)") && body.includes('EX《{exDef.name}》'));
+  // 配信用JSでは JSX の本文が React.createElement の引数へ直るので「EX《", exDef.name, "》」の形になる。どちらでも通す
+  check(`${label}: 共通詳細にEXスキル表示の土台がある`, body.includes('data-monster-detail-ex') && body.includes("tacticsExDefOf(mon.id)")
+    && (body.includes('EX《{exDef.name}》') || body.includes('EX《", exDef.name, "》')));
   check(`${label}: 画面ごとの差分を引数で受け取る`,
     body.includes('statValues') && body.includes('aptExtra') && body.includes('aptPointsLabel'));
 
@@ -50,7 +52,10 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
       && /function MasuRegenerationDetailScreen\(\{[\s\S]*?renderMonsterDetailInfo\(selectedBase\)/.test(code),
     `${detailInfoCalls}回の呼び出し`);
   check(`${label}: 編成・ベースモン一覧の詳細がマスターUIを使う`, /rosterDetailMon\s*&&\s*renderMonsterDetailModal\(/.test(code));
-  check(`${label}: 勇者モン選択・供モン合流の詳細がマスターUIを使う`, /currentPickingMon\s*&&\s*renderMonsterDetailModal\(/.test(code));
+  // 合流のときの見込み(allyJoinPreview)を先に計算してから渡す形(currentPickingMon&&(()=>{ … return renderMonsterDetailModal({)になった
+  check(`${label}: 勇者モン選択・供モン合流の詳細がマスターUIを使う`,
+    /currentPickingMon\s*&&\s*renderMonsterDetailModal\(/.test(code)
+    || /currentPickingMon\s*&&\s*\(\s*(?:\(\)\s*=>|function\s*\(\))\s*\{[\s\S]{0,600}?return\s+renderMonsterDetailModal\(/.test(code));
   check(`${label}: マスモン一覧の詳細がマスターUIを使う`, code.includes('mon: mergedMasu,'));
   check(`${label}: ランキングの詳細もマスターUIを使う`, /return renderMonsterDetailModal\(\{\s*mon,/.test(code));
   // 呼び出し元固有の操作だけを外から渡す形になっていること

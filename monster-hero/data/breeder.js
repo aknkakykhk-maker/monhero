@@ -186,6 +186,19 @@ const MOMOSUKE_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   cost: 1,
 }));
 
+// 助手ドラの顔アイコンも、みゅあ・きき・ももすけと同じ仕様(8表情・各1pt)で並べる(2026-09-27)。
+// ドラを助手に足したとき、表情アイコンの商品だけ作り忘れていた(tools/monster/market-icon-check.js が見つけた)。
+// 画像は吹き出しに使っているもの(images/assistant/face/dra_*.PNG)をそのまま使う。
+// 既存の「ドラのアイコン」(id:'dra', images/breeder-icons/dra.png)は別の絵で、購入済みの人がいるのでそのまま残す。
+// こちらは id を dra_* に分けているので、既存の保存データには影響しない。
+const DRA_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `dra_${key}`,
+  name: `ドラ（${label}）のアイコン`,
+  type: 'icon',
+  icon: `images/assistant/face/dra_${key}.PNG`,
+  cost: 1,
+}));
+
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:KIKI_FACE_ICON, cost:1 },
@@ -284,7 +297,9 @@ const BREEDER_MARKET_ITEMS = [
   ...MYUA_MARKET_ICONS,
   // 助手ききの表情アイコン(8種)。みゅあと同じ並びで続ける
   ...KIKI_MARKET_ICONS,
-  ...MOMOSUKE_MARKET_ICONS
+  ...MOMOSUKE_MARKET_ICONS,
+  // 助手ドラの表情アイコン(8種)
+  ...DRA_MARKET_ICONS
 ];
 // 難易度キー → その難易度で使えるスキップチケットのid
 const SKIP_TICKET_BY_DIFFICULTY = Object.freeze(Object.fromEntries(

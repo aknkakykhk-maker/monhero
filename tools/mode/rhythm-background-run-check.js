@@ -161,7 +161,9 @@ const seed = () => {
     // ★2026-09-13から、曲えらびの「戻る」はHOMEへ抜ける(周回も終える)ようになったので、
     //   バトルへ戻る導線は周回の帯の詳細にある [data-quick-run-progress-back] を使う
     //   (ユーザー指摘「止めないでもホームに戻れて自動的に周回も終わるようにしたい」)。
-    await page.evaluate(() => document.querySelector('[data-quick-run-progress-header] button, [data-quick-run-progress] button')?.click());
+    // 周回の進み具合の帯は、今は最初から開いている。閉じているときだけ見出しを押して開く
+    // (2026-09-27・開いているのに押して閉じてしまい、「バトルへ戻る」が消えて止まっていた)
+    await page.evaluate(() => { const h = document.querySelector('[data-quick-run-progress-header] button, [data-quick-run-progress] button'); if (h && h.getAttribute('aria-expanded') !== 'true') h.click(); });
     await page.waitForTimeout(400);
     await clickSelector('[data-quick-run-progress-back]');
     await page.waitForTimeout(2000);
@@ -205,7 +207,9 @@ const seed = () => {
     //   省エネボタンはバトル画面にしかないので、先にバトルへ戻す。
     //   戻さずに探していたため「ボタンが見つからない」で2本とも落ち続けていた
     //   (往復チェックを足したときに戻す手順を入れ忘れた。本体は壊れていない)
-    await page.evaluate(() => document.querySelector('[data-quick-run-progress-header] button, [data-quick-run-progress] button')?.click());
+    // 周回の進み具合の帯は、今は最初から開いている。閉じているときだけ見出しを押して開く
+    // (2026-09-27・開いているのに押して閉じてしまい、「バトルへ戻る」が消えて止まっていた)
+    await page.evaluate(() => { const h = document.querySelector('[data-quick-run-progress-header] button, [data-quick-run-progress] button'); if (h && h.getAttribute('aria-expanded') !== 'true') h.click(); });
     await page.waitForTimeout(400);
     await clickSelector('[data-quick-run-progress-back]');
     await page.waitForTimeout(2000);

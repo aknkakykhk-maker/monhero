@@ -28,7 +28,9 @@ const checks = [
   ['固有技の共通タメに専用モーションを混ぜていない',
     game.includes('setAttackAnim({slotIndex: animSlot, charge:true});')
     && !/setAttackAnim\(\{slotIndex: animSlot, charge:true,[^\n]*miaSongNotes/.test(game)
-    && game.includes('setMonsterImageDebugMotionPlaying({charge:true});')
+    // 画像デバッグ・図鑑の確認は、共通の手順 attackMotionUniquePreviewSequence(タメ650msだけ → 専用の動き)へまとめ直した
+    && (game.includes('setMonsterImageDebugMotionPlaying({charge:true});')
+      || /const attackMotionUniquePreviewSequence = [\s\S]{0,1200}?\{anim:\{charge:true\},ms:650\},\s*\{\s*anim:\{charge:false,motion,/.test(game))
     && !/setMonsterImageDebugMotionPlaying\(\{charge:true,[^\n]*miaSongNotes/.test(game)],
   ['タメは全モンスター共通の specialCharge 650ms のまま',
     game.includes("if (anim.charge) return 'specialCharge 650ms ease-out forwards';")
@@ -73,9 +75,13 @@ const checks = [
   ['図鑑プレビューも同じ MiaSongNotesMotion を使う',
     game.includes("anim?.motion==='miaSongNotes'") && game.includes('<MiaSongNotesMotion image={image}')],
   ['画像デバッグの攻撃モーション確認も同じ演出を使う',
-    game.includes("monsterImageDebugMotionPlaying?.motion==='miaSongNotes'")
-    && game.includes("atkMotion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS")
-    && game.includes("atkMotion==='miaSongNotes')?'overflow-visible'")],
+    // 画像デバッグの確認は、図鑑の攻撃アクション再生(playDexAttackPreview)と同じ共通の手順を使う形になった。
+    // 手順の中で miaSongNotes の長さに MIA_SONG_NOTES_MOTION_MS を使っていることを見る
+    (game.includes("monsterImageDebugMotionPlaying?.motion==='miaSongNotes'")
+      && game.includes("atkMotion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS")
+      && game.includes("atkMotion==='miaSongNotes')?'overflow-visible'"))
+    || (game.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id):attackMotionPreviewSequence(atkMotion, mon?.id);")
+      && (game.match(/\(motion==='miaSongNotes'\?MIA_SONG_NOTES_MOTION_MS:/g) || []).length >= 2)],
   ['演出のコンポーネントは1つだけ(図鑑用の別物を作っていない)',
     (game.match(/const MiaSongNotesMotion = /g) || []).length === 1],
   ['RPGデバッグの対応表に載っている(未対応 atkMotion にならない)',

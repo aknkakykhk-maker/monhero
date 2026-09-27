@@ -136,7 +136,10 @@ check('動きを減らす設定では重い層を出さない',
 check('転生完了の全面光は本体より背面で、発光フィルターはオーラだけに掛ける',source.includes('.mh-reincarnation-light{position:absolute;inset:0;z-index:0;')&&source.includes('.mh-reincarnation-mon{position:relative;z-index:1;')&&!source.includes('.mh-reincarnation-mon{position:relative;width'));
 check('HOMEの霊炎は文字なしで、限界突破★を変えない',source.includes('object-fit:contain')&&source.includes('<SoulRankAura soulRankStage={masu.soulRankStage} className="is-home"/>')&&source.includes('<RebirthStars count={masu.rebirthCount} className="mh-home-masumon-stars"/>')&&!/mh-reincarnate-aura[^}]*ReincarnateBadge/.test(source));
 check('神殿BGMを限界突破・転生の画面でも継続',/MASU_REBIRTH:\s*'temple'/.test(source)&&/MASU_REINCARNATE:\s*'temple'/.test(source));
-check('神殿から限界突破と転生の両方へ入れる',source.includes(">限界突破</button>")&&source.includes("setGameState('MASU_REINCARNATE')"));
+// 神殿のボタンは templeLink(アイコン, 名前, 説明, …) で作る形になった(2026-09-22)。どちらの形でも入口があることを見る
+check('神殿から限界突破と転生の両方へ入れる',
+  (source.includes(">限界突破</button>") || /templeLink\(<[^>]*\/>,'限界突破',/.test(source))
+  && source.includes("setGameState('MASU_REINCARNATE')") && /templeLink\(<[^>]*\/>,'転生',/.test(source) || (source.includes(">限界突破</button>") && source.includes("setGameState('MASU_REINCARNATE')")));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
