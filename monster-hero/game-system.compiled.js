@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7e28507faf6e397f
+// source-sha256: 8e9b9e6fb42ef680
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 13:11";
+const BUILD_DATE = "2026-09-27 17:13";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -22556,7 +22556,7 @@ vec4 over(vec4 c,vec4 s){return s+c*(1.-s.a);}
 vec4 tint(vec3 rgb,float a){return vec4(rgb*a,a);}
 float hash(float n){return fract(sin(n*127.1)*43758.5453);}
 vec4 lasers(){vec4 s=vec4(0.);for(int i=0;i<4;i++){vec4 L=uLas[i],C=uLasC[i];if(C.a<.01)continue;vec2 v=vP-L.xy;float along=dot(v,L.zw);if(along<0.)continue;
-  float perp=abs(v.x*L.w-v.y*L.z);float k=(exp(-perp*perp/1.4)*.9+exp(-perp*perp/40.)*.3)*C.a*exp(-along/(1.6*uSize.y));s+=vec4(C.rgb*k,k);}return s;}
+  float perp=abs(v.x*L.w-v.y*L.z);if(perp*perp>480.)continue;float k=(exp(-perp*perp/1.4)*.9+exp(-perp*perp/40.)*.3)*C.a*exp(-along/(1.6*uSize.y));s+=vec4(C.rgb*k,k);}return s;}
 // 観客のペンライト。道の両側に、奥(上)ほど小さく詰まった列で地平線まで並ぶ(道そのものはレーンが上に重なって隠す)。
 // 列は奥から18本。画素ごとに近い2列・左右1つずつの席だけを見る。席ごとに高さ・明るさを散らし、拍に合わせて傾いて揺れ、拍の頭で明るくなる
 vec4 pens(){
@@ -22565,14 +22565,16 @@ vec4 pens(){
   for(int k=0;k<2;k++){float row=floor(fi)+float(k),ry=.16+.84*pow(row/18.,1.5),sc=mix(.35,1.,ry),cell=26.*sc,r=7.*sc,by=ry*uSize.y,i=floor(vP.x/cell);
     for(int j=-1;j<=1;j++){float n=i+float(j)+row*37.,h=hash(n);if(hash(n*3.1)>.8)continue;
       float sw=sin(uBeats*3.14159+h*6.2832),cs=cos(sw*.35),sn=sin(sw*.35);
-      vec2 q=vP-vec2((i+float(j)+.5)*cell+(h-.5)*cell*.5+sw*r*.8,by-r*1.5+(hash(n*7.7)-.5)*r*1.6);q=vec2(cs*q.x+sn*q.y,-sn*q.x+cs*q.y);q.y*=.38;float d=dot(q,q)/(r*r);
+      vec2 q=vP-vec2((i+float(j)+.5)*cell+(h-.5)*cell*.5+sw*r*.8,by-r*1.5+(hash(n*7.7)-.5)*r*1.6);q=vec2(cs*q.x+sn*q.y,-sn*q.x+cs*q.y);q.y*=.38;float d=dot(q,q)/(r*r);if(d>9.)continue;
       float a=(exp(-d/.06)*.95+exp(-d/.7)*.3)*mix(.45,1.,sc)*(.55+.45*hash(n*9.1))*(.5+.5*uPulse);s+=vec4((hash(n*5.3)<.5?uPenA:uPenB)*a,a);}}
   return s;}
 float beam(vec4 b){vec2 d=vP-b.zw;vec2 l=vec2(b.x*d.x+b.y*d.y,-b.y*d.x+b.x*d.y);
   float hw=mix(.06,.5,clamp(l.y/uBeamBox.y,0.,1.))*uBeamBox.x;
   return clamp(hw-abs(l.x)+.5,0.,1.)*clamp(l.y+.5,0.,1.)*clamp(1.-l.y/(.78*uBeamBox.y),0.,1.);}
 // uMode … 0: 動かない部分(ジャケット・暗幕)を焼く / 1: 焼いた絵にサーチライト・レーザーを重ねる / 2: ペンライト(足し算で重ねる)
+//         3: 拍の頭の色みだけ(ペンライトの無い画面の上の帯。pens() はそこで0を返すので、2 と同じ色になる)
 void main(){
+  if(uMode>2.5){gl_FragColor=vec4(uPenA*.05*uPulse,.05*uPulse);return;}
   if(uMode>1.5){gl_FragColor=pens()+vec4(uPenA*.05*uPulse,.05*uPulse);return;}
   if(uMode>.5){
     vec4 c=texture2D(uStatic,gl_FragCoord.xy/uRes);
@@ -22820,9 +22822,18 @@ const rhythmCreateStageGL = canvas => {
       }
       if (liveOn) {
         gl.useProgram(prog);
-        gl.uniform1f(u.uMode, 2);
         gl.blendFunc(gl.ONE, gl.ONE);
+        const top = Math.max(0, Math.min(ph, Math.floor(.16 * ph - .5)));
+        gl.enable(gl.SCISSOR_TEST);
+        if (top > 0) {
+          gl.uniform1f(u.uMode, 3);
+          gl.scissor(0, ph - top, pw, top);
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+        gl.uniform1f(u.uMode, 2);
+        gl.scissor(0, 0, pw, ph - top);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disable(gl.SCISSOR_TEST);
       }
       gl.disable(gl.BLEND);
     },

@@ -6,6 +6,7 @@
 //   オプション: --song freedom_dive --diff HARD --from 1:04 --seconds 6 --runs 1 --draw webgl|canvas
 //               --settings '{"stageEffect":"VIVID"}'(音ゲー設定に重ねる) --no-tap(叩かない) --port 9181
 //               --hide '[data-rhythm-stage-pulse]'(その部品を隠して測る。どの層が重いかを切り分けるとき)
+//   ほかの道具から measure() を呼ぶときは、場面に shaderPatch:[[探す文字,置き換える文字],…] を付けると、シェーダーを書き換えて測れる
 //
 // 【なぜ要るか】(2026-09-27・ユーザー「ここでGPUの軽さを測れるようにできないの？」)
 // この作業環境には GPU が無く、WebGL も画面の合成も CPU が肩代わりしている(SwiftShader)。
@@ -65,6 +66,12 @@ const measure=async(playwright,port,scene)=>{
       window.__frames=0;const tick=()=>{window.__frames++;requestAnimationFrame(tick);};requestAnimationFrame(tick);
       if(hide)document.addEventListener('DOMContentLoaded',()=>{const st=document.createElement('style');st.textContent=`${hide}{display:none!important}`;document.head.appendChild(st);});
     },[SONG,scene.settings,scene.draw,HIDE]);
+    // 切り分け用: シェーダーの文字を置き換えて測る(scene.shaderPatch = [[探す文字, 置き換える文字], …])。本体を書き換えずに
+    // 「この部分を消したら・この書き方にしたら GPU の仕事がどれだけ変わるか」を見るためのもの(2026-09-27)
+    if(scene.shaderPatch&&scene.shaderPatch.length)await page.addInitScript(patches=>{
+      for(const proto of [window.WebGLRenderingContext&&WebGLRenderingContext.prototype,window.WebGL2RenderingContext&&WebGL2RenderingContext.prototype].filter(Boolean)){
+        const orig=proto.shaderSource;proto.shaderSource=function(sh,src){let out=src;for(const [from,to] of patches)out=out.split(from).join(to);return orig.call(this,sh,out);};}
+    },scene.shaderPatch);
     const clickText=pattern=>page.evaluate(s=>{const rx=new RegExp(s);const b=[...document.querySelectorAll('button')].find(x=>rx.test((x.innerText||'').replace(/\s+/g,' ').trim()));if(!b)return false;b.click();return true;},pattern);
     await page.goto(`http://localhost:${port}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
     await page.waitForFunction(()=>document.body&&document.body.innerText.includes('TAP TO START'),{timeout:60000});
