@@ -8,8 +8,10 @@ if (start < 0 || end < 0) throw new Error('判定関数を抽出できません'
 
 const bases = {
   Pixie: { baseHp:250, baseAtk:160, baseDef:50, baseGuts:170 },
-  Mitarashi: { baseHp:630, baseAtk:140, baseDef:105, baseGuts:90 },
-  Mocchi: { baseHp:500, baseAtk:100, baseDef:100, baseGuts:120 },
+  Mitarashi: { baseHp:680, baseAtk:150, baseDef:115, baseGuts:120 },
+  Mocchi: { baseHp:720, baseAtk:140, baseDef:140, baseGuts:140 },
+  // 履歴表に載っていない種は現在のベースだけが候補になる(以前はモッチーで確かめていた)
+  Ham: { baseHp:500, baseAtk:100, baseDef:100, baseGuts:120 },
 };
 const context = { ALL_PLAYER_MONSTERS:bases };
 vm.createContext(context);
@@ -39,9 +41,20 @@ check('ミタラシ旧だけ: 旧ベースとの差を算出', mitarashiOld.indi
 run('ミタラシ新だけ', 'Mitarashi', { hp:680, atk:150, def:100, guts:85 }, 'SAFE_EXACT');
 run('ミタラシ旧新両方', 'Mitarashi', { hp:620, atk:130, def:110, guts:95 }, 'AMBIGUOUS');
 run('ミタラシ不成立', 'Mitarashi', { hp:700, atk:130, def:110, guts:95 }, 'BLOCKED');
+// 2026-09-27 モッチー・ミタラシの基礎値を上げた。変更前のベースから生まれた旧個体は、変更前との差で移行する
+const mitarashiPrev = run('ミタラシ09-27前だけ', 'Mitarashi', { hp:640, atk:145, def:100, guts:88 }, 'SAFE_EXACT');
+check('ミタラシ09-27前だけ: 変更前ベースとの差を算出', mitarashiPrev.candidates[0].id === 'pre-2026-09-27'
+  && mitarashiPrev.individualStatOffsets.hp === 10 && mitarashiPrev.individualStatOffsets.guts === -2);
+run('ミタラシ現行だけ', 'Mitarashi', { hp:700, atk:160, def:120, guts:125 }, 'SAFE_EXACT');
+const mocchiPrev = run('モッチー09-27前だけ', 'Mocchi', { hp:600, atk:120, def:120, guts:100 }, 'SAFE_EXACT');
+check('モッチー09-27前だけ: 変更前ベースとの差を算出', mocchiPrev.candidates[0].id === 'pre-2026-09-27'
+  && Object.values(mocchiPrev.individualStatOffsets).every(v => v === 0));
+run('モッチー現行だけ', 'Mocchi', { hp:720, atk:140, def:140, guts:140 }, 'SAFE_EXACT');
+// ガッツの範囲が変更前(90〜110)と現行(126〜154)で重ならないので、モッチーはどちらとも取れる値が無い
+run('モッチーどちらからも生まれない', 'Mocchi', { hp:655, atk:130, def:130, guts:118 }, 'BLOCKED');
 
-run('その他の現行ベース成立', 'Mocchi', { hp:450, atk:110, def:100, guts:108 }, 'SAFE_EXACT');
-run('その他の生成不可能値', 'Mocchi', { hp:449, atk:110, def:100, guts:108 }, 'BLOCKED');
+run('その他の現行ベース成立', 'Ham', { hp:450, atk:110, def:100, guts:108 }, 'SAFE_EXACT');
+run('その他の生成不可能値', 'Ham', { hp:449, atk:110, def:100, guts:108 }, 'BLOCKED');
 check('base=105から116は1.1倍上端で生成不能', !context.out.regenerationStatCouldBeGenerated(116, 105));
 check('0.9倍側境界は生成可能', context.out.regenerationStatCouldBeGenerated(95, 105));
 check('1.1未満から四捨五入で届く値は生成可能', context.out.regenerationStatCouldBeGenerated(115, 105));
