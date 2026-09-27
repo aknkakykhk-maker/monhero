@@ -85,6 +85,7 @@ node tools/build.js --check
 | `node ctx.js diff [パス…]` | 生成物を除いた差分。素の `git diff` の代わり(`--staged` `--base <ref>` `--all`)。 |
 | `node where.js` | 場所だけを知る道具(`--screens` / `--outline` / `--text`)。`ctx.js` が内部で呼ぶ。 |
 | `node check-drift.js <検査>` | **落ちた検査が探している本体の文字の並びのうち、今は無いものと、本体でいちばん似ている行を並べる。**「書き方が変わっただけ」か「本当に消えた」かの見分けに使う(読むだけ)。 |
+| `node mode/rhythm-gpu-estimate.js [--check]` | **実機が無くても GPU の重さを見積もる。**「おまかせ」4つが画面いっぱいを何回塗ったのと同じかを測り、機種の帯ごとの GPU の時間と fps の目安に直す。`--check` で `mode/gpu-budget.json` の上限を超えていないかを見る(1回5分ほど)。 |
 | `node run-checks.js --changed` | **変更したファイルから、要る検査だけを選んで回す。** `--plan` で選んだ検査と理由だけ出す。上限は既定40本で、切ったぶんは本数を必ず出す(`--limit` / `--wide` で広げる)。 |
 | `node rules-index-check.js` | `CLAUDE.md` の大きさ・`docs/rules/` とのリンク・**要のことばが消えていないか**を見る。CIでも回す。 |
 

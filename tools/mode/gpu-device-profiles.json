@@ -1,9 +1,9 @@
 {
-  "note": "rhythm-gpu-estimate.js が使う機種の帯。pixels は画面の画素数(横×縦)、pixelsPerMs は「半透明で画面を塗るとき、1ms に塗れる画素の数」の目安。公開されている GPU の理論上の塗りの速さのおよそ 1/3 を実効として置いた仮の値(2026-09-27)。実機の GPU の時間が分かったら(デバッグの性能計測の「GPU(ノーツ)/(背景)」。Android の Chrome なら出る)、その機種の pixelsPerMs を直す。",
+  "note": "rhythm-gpu-estimate.js が使う機種の帯。pixels は画面の画素数(横×縦)、pixelsPerMs は「半透明で画面を塗るとき、1ms に塗れる画素の数(1000000 = 1ms に100万画素)」の目安。公開されている GPU の理論上の塗りの速さのおよそ 1/3 を実効として置いた仮の値(2026-09-27)。実機の GPU の時間が分かったら(デバッグの性能計測の「GPU(ノーツ)/(背景)」。Android の Chrome なら出る)、その機種の pixelsPerMs を直す。",
   "profiles": [
-    { "id": "low_android", "label": "安いAndroid(Mali-G52 級・720×1600)", "short": "安いAndroid", "pixels": 1152000, "pixelsPerMs": 1000, "refreshHz": 60 },
-    { "id": "mid_android", "label": "ふつうのAndroid(Adreno 619 級・1080×2400)", "short": "ふつうのAndroid", "pixels": 2592000, "pixelsPerMs": 2000, "refreshHz": 60 },
-    { "id": "iphone_se", "label": "iPhone SE 第2・第3世代(750×1334)", "short": "iPhone SE", "pixels": 1000500, "pixelsPerMs": 4000, "refreshHz": 60 },
-    { "id": "iphone_std", "label": "ふつうのiPhone(iPhone 13 級・1170×2532)", "short": "iPhone 13", "pixels": 2962440, "pixelsPerMs": 5000, "refreshHz": 60 }
+    { "id": "low_android", "label": "安いAndroid(Mali-G52 級・720×1600)", "short": "安いAndroid", "pixels": 1152000, "pixelsPerMs": 1000000, "refreshHz": 60 },
+    { "id": "mid_android", "label": "ふつうのAndroid(Adreno 619 級・1080×2400)", "short": "ふつうのAndroid", "pixels": 2592000, "pixelsPerMs": 2000000, "refreshHz": 60 },
+    { "id": "iphone_se", "label": "iPhone SE 第2・第3世代(750×1334)", "short": "iPhone SE", "pixels": 1000500, "pixelsPerMs": 4000000, "refreshHz": 60 },
+    { "id": "iphone_std", "label": "ふつうのiPhone(iPhone 13 級・1170×2532)", "short": "iPhone 13", "pixels": 2962440, "pixelsPerMs": 5000000, "refreshHz": 60 }
   ]
 }
