@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7e28507faf6e397f
+// source-sha256: 6e0c4996802b3706
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 13:11";
+const BUILD_DATE = "2026-09-27 16:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -18001,6 +18001,52 @@ const bondLevelRowsFromParty = (userName, icon, party, profileFrame = null, bree
   });
   return [...byIndividual.values()];
 };
+const BOND_LIVE_SYNC_KEY = 'mh_bond_live_sync_v1';
+const BOND_LIVE_SYNC_DELAY_MS = 4000;
+const BOND_LIVE_SYNC_MIN_INTERVAL_MS = 20000;
+const BOND_LIVE_SYNC_CHUNK = 50;
+const bondLevelRowsFromMasuMons = (userName, icon, masuMons, profileFrame = null, breederId = null) => {
+  const members = (Array.isArray(masuMons) ? masuMons : []).map(masu => {
+    if (!masu || masu.id == null || !ALL_PLAYER_MONSTERS[masu.baseId]) return null;
+    const colors = rankingPartyColors(masu.baseId, getMasuColors(masu));
+    const dyed = colors.some(Boolean);
+    return {
+      id: masu.baseId,
+      baseId: masu.baseId,
+      monsterId: masu.baseId,
+      masuId: masu.id,
+      name: ALL_PLAYER_MONSTERS[masu.baseId]?.name || null,
+      bondLevel: masuBondLevelInfo(masu).level,
+      ...(dyed ? {
+        colors
+      } : {}),
+      detail: rankingMasuDetail(masu)
+    };
+  }).filter(Boolean);
+  return bondLevelRowsFromParty(userName, icon, members, profileFrame, breederId);
+};
+const bondLevelRowSignature = row => {
+  const source = JSON.stringify(row || null);
+  let hash = 2166136261;
+  for (let i = 0; i < source.length; i++) {
+    hash ^= source.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+};
+const normalizeBondLiveSync = raw => {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) && raw.sent && typeof raw.sent === 'object' && !Array.isArray(raw.sent) ? raw.sent : {};
+  const sent = {};
+  Object.keys(src).forEach(key => {
+    if (typeof src[key] === 'string') sent[key] = src[key];
+  });
+  return {
+    version: 1,
+    sent
+  };
+};
+const bondLiveSyncKeyOf = row => `${row.user_name}\u001f${row.individual_id}`;
+const bondLevelRowsToSync = (rows, sent) => (Array.isArray(rows) ? rows : []).filter(row => (sent || {})[bondLiveSyncKeyOf(row)] !== bondLevelRowSignature(row));
 const sbFetchRankings = async (diff, limit = RANKING_SCORE_LIMIT, order = 'score.desc.nullslast', offset = 0, requestId = 'untracked', selectColumns = RANKING_SELECT_FULL) => {
   await ensureBreederProfiles(requestId);
   const normalizedDifficulty = diff == null ? null : normalizeRankingDifficulty(diff);
@@ -48842,6 +48888,62 @@ function MonsterHeroGame() {
     if (!dataLoaded) return;
     storeSet('mh_bgm_arrangement', normalizeBgmArrangement(bgmArrangement), false);
   }, [dataLoaded, bgmArrangement]);
+  const bondLiveSyncRef = useRef({
+    loaded: null,
+    running: false,
+    again: false,
+    lastAt: 0
+  });
+  const syncBondLevelsLive = async () => {
+    const state = bondLiveSyncRef.current;
+    if (state.running) {
+      state.again = true;
+      return;
+    }
+    if (bondLevelsUnavailable()) return;
+    state.running = true;
+    try {
+      if (!state.loaded) state.loaded = normalizeBondLiveSync(await storeGet(BOND_LIVE_SYNC_KEY, null, false));
+      const breederId = await ensureBreederId();
+      const rows = bondLevelRowsFromMasuMons(breederName || '名無しのブリーダー', breederIcon, masuMonsRef.current, rankingProfileFrameValue(profileFrameId), breederId);
+      const pending = bondLevelRowsToSync(rows, state.loaded.sent);
+      for (let i = 0; i < pending.length; i += BOND_LIVE_SYNC_CHUNK) {
+        const chunk = pending.slice(i, i + BOND_LIVE_SYNC_CHUNK);
+        state.lastAt = Date.now();
+        const ok = await sbUpsertBondLevels(chunk);
+        if (!ok) break;
+        const sent = {
+          ...state.loaded.sent
+        };
+        chunk.forEach(row => {
+          sent[bondLiveSyncKeyOf(row)] = bondLevelRowSignature(row);
+        });
+        state.loaded = {
+          version: 1,
+          sent
+        };
+        await storeSet(BOND_LIVE_SYNC_KEY, state.loaded, false);
+      }
+    } catch (err) {
+      console.error('[ranking] bond_levels live sync failed:', err && err.message ? err.message : err);
+    } finally {
+      state.running = false;
+      if (state.again) {
+        state.again = false;
+        setBondLiveSyncTick(t => t + 1);
+      }
+    }
+  };
+  const [bondLiveSyncTick, setBondLiveSyncTick] = useState(0);
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const state = bondLiveSyncRef.current;
+    const wait = Math.max(BOND_LIVE_SYNC_DELAY_MS, state.lastAt + BOND_LIVE_SYNC_MIN_INTERVAL_MS - Date.now());
+    const timer = setTimeout(() => {
+      void syncBondLevelsLive();
+    }, wait);
+    return () => clearTimeout(timer);
+  }, [dataLoaded, masuMons, breederName, breederIcon, profileFrameId, bondLiveSyncTick]);
   const submitLocalScore = async (diff, finalScore, clearId) => {
     let heroSlotIndex = slots.findIndex(s => s === mainHero);
     if (heroSlotIndex < 0 && mainHero?.masuId != null) heroSlotIndex = slots.findIndex(s => s?.masuId != null && String(s.masuId) === String(mainHero.masuId));

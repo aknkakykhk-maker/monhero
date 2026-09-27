@@ -476,6 +476,7 @@ SIX ÉTERNEL(BPM207)のEXPERTが毎秒4.56＝MASTERの上限4.6に迫ってい�
 | `node ranking/bond-ranking-check.js` | 絆ランキングの全party集計、新旧個体識別、最高Lv重複排除、空・失敗表示を確認する。 |
 | `node ranking/bond-ranking-dedupe-check.js` | 同じ人・同じ種類のマスモンが、個体ID付きの記録と古い記録に分かれて二重に並ばないことを確認する。 |
 | `node ranking/power-ranking-check.js` | 総合力ランキング（バトルモード選択画面の「総合力」タブ）を確認する。並べ替えの本体 `collectPowerRankingEntries` を実際に動かして、総合力の高い順になること・総合力が残っていない古い記録を参考値で補わないこと・同点のときの並びが安定することを見る。あわせて、種族タブが絆Lvと同じ血統idで絞れているか、タブを押したときの取得が `levelKind='bond'`（絆Lvと同じ1回）になっているかも見る。ここをタブ名の `'power'` のまま渡すと、存在しない取得になって一覧が永久に空になる。 |
+| `node ranking/bond-levels-live-sync-check.js` | 絆Lv・総合力ランキングのリアルタイム更新(2026-09-27)を確認する。手持ちのマスモンから作る行が周回の終わりと同じ `bondLevelRowsFromParty` を通ること、前に送った内容と同じ行は送らず育てた個体だけを送ること、保存した指紋(`mh_bond_live_sync_v1`)が壊れていても落ちないこと、画面側が読み込み完了前に送らず・送れた行だけを覚えることを見る。 |
 | `node ranking/power-ranking-browser-check.js` | 総合力ランキングのタブを、Supabaseをスタブした実ブラウザで開いて確かめる。文字列の検査では拾えない「タブを開いた瞬間だけ真っ白」を防ぐためのもので、バトル → 「総合力」タブまで実際に進み、一覧が出ること・絆Lvではなく総合力の高い順に並ぶこと・総合力が残っていない古い記録が載らないこと・行の「詳細 ›」から1体ぶんの詳細が開くことを見る（`python3 -m http.server 8899` でルートを配信した状態で実行する）。 |
 | `node ranking/bond-ranking-species-check.js` | 絆Lvランキングのタブが主血統（種族）ごとにまとまっていることを確認する。タブの並びを画面側へ書き写していないか、全モンスターに主血統があるか（タブから漏れないか）、モンスターidを持たない古い記録も名前から種族を引けるかを見る。 |
 | `node ranking/bond-ranking-submit-check.js` | 絆Lvランキングへ、そのプレイの絆Lv(`party[].bondLevel`)がちゃんと載るかを確認する。 |
