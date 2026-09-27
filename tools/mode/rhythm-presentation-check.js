@@ -229,7 +229,9 @@ ok('既定になっている段の名前が「標準」になっている',(()=>
     const src=(game.match(new RegExp(`${name} *= *Object\\.freeze\\(\\[(.*?)\\]\\);`))||[])[1]||'';
     return [...src.matchAll(/\['([A-Z]+)','([^']+)'\]/g)].map(m=>[m[1],m[2]]);
   };
-  const defaultOf=key=>((game.match(new RegExp(`${key}:'([A-Z]+)'`))||[])[1])||'';
+  // 既定値は DEFAULT_RHYTHM_SETTINGS の中から探す(2026-09-27。その前に「見た目のおまかせ」の effectAmount:'MINIMAL' などがあり、最初に見つかったものだと取り違える)
+  const defaultsSrc=game.slice(Math.max(0,game.indexOf('const DEFAULT_RHYTHM_SETTINGS')));
+  const defaultOf=key=>((defaultsSrc.match(new RegExp(`${key}:'([A-Z]+)'`))||[])[1])||'';
   const pairs=[['RHYTHM_EFFECT_LABELS','effectAmount'],['RHYTHM_MONSTER_EFFECT_LABELS','monsterNoteEffect']];
   return pairs.every(([labels,key])=>{
     const found=labelsOf(labels).find(([id])=>id===defaultOf(key));
@@ -340,8 +342,10 @@ ok('動きを減らす設定の端末では、演出を動かさない',
   (html.match(/prefers-reduced-motion:reduce/g)||[]).length>=2);
 
 // --- 触ってはいけないもの ---
+// 道の奥の細さ(RHYTHM_PROJECTION_TOP_SCALE)は、ユーザーの依頼で道を深くしたとき .18 → .07 へ変えた(2026-09-25)。
+// 値を決め打ちで見ると落ち続けるので、「遠近と落下時間の決め方が本体にある」ことだけを見る
 ok('判定窓・スコアの重み・落下時間は変更していない',
-  rhythm.includes('const RHYTHM_PROJECTION_TOP_SCALE=.18')
+  /const RHYTHM_PROJECTION_TOP_SCALE=\.\d+/.test(rhythm)
   &&game.includes('const rhythmTravelMsForSpeed=value=>'));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

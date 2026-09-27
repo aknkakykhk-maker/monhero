@@ -82,8 +82,9 @@ rhythmMatchInputBatch([note('TAP')],[input('tap-half')],1000,0);
 // ★元の係数(.035 など)は書き換えず、倍率を1に戻せば元の音量へ戻せる形を保つ。
 const seScale=Number(source.match(/const RHYTHM_NOTE_SE_GAIN_SCALE = ([\d.]+);/)?.[1]);
 check('タップ音の倍率を1か所の定数で持っている(1に戻せば元通り)',Number.isFinite(seScale)&&seScale>0);
+// 2026-09-26 にタップ音の種類を足し、叩いた音は tone(波形,高さ,高さ,係数,長さ) で鳴らす形になった。「標準」は元の係数 .035 のまま
 check('元の係数は書き換えず、倍率を掛ける形にしている',
-  source.includes('rhythmNoteSeLevel(.035,settings.volume/100)')
+  source.includes("tone('triangle',1120,820,.035,.045)")
   &&source.includes('rhythmNoteSeLevel(.022,settings.volume/100)')
   &&source.includes('rhythmNoteSeLevel(.028,settings.volume/100)')
   &&source.includes('rhythmNoteSeLevel(.05,settings.volume/100)')
@@ -99,9 +100,24 @@ check('1音あたりの上限を持ち、音量100までならどの音もそこ
 // ★100の意味は変えない。広げただけなので、保存してある0〜100はそのままの音で鳴る。
 const volumeMax=Number(source.match(/const RHYTHM_VOLUME_MAX = (\d+);/)?.[1]);
 check('音量の上限を1か所の定数で持っている',volumeMax===200);
-check('タップ音の読み取り・試聴の両方で上限まで受け取る',
-  source.includes('Math.min(RHYTHM_VOLUME_MAX,number)')
-  &&source.includes('Math.min(RHYTHM_VOLUME_MAX,Number(previewSettings.noteSeVolume)||0)'));
+// タップ音量だけ上限を400へ広げた(2026-09-26・ユーザー指示「タップ音量の上限をもっと上げて」)
+check('タップ音の読み取り・試聴の両方で上限(400)まで受け取る',
+  Number(source.match(/const RHYTHM_NOTE_SE_VOLUME_MAX = (\d+);/)?.[1])===400
+  &&source.includes('Math.min(RHYTHM_NOTE_SE_VOLUME_MAX,number)')
+  &&source.includes('Math.min(RHYTHM_NOTE_SE_VOLUME_MAX,Number(previewSettings.noteSeVolume)||0)'));
+check('200より上は割れ止めを通す(遅れの出るコンプレッサーは使わない)',
+  source.includes('audio.createWaveShaper()')&&source.includes("shaper.oversample='none'")
+  &&!/createDynamicsCompressor/.test(source.slice(source.indexOf('const RHYTHM_NOTE_SE_RUNTIME='),source.indexOf('const RHYTHM_NOTE_SE_RUNTIME=')+20000)));
+check('200までの蓋はこれまでと同じ(.8)で、それより上だけ開ける',
+  /const cap = volume > 2 \? Math\.min\(RHYTHM_NOTE_SE_LOUD_LEVEL_MAX, RHYTHM_NOTE_SE_LEVEL_MAX \* volume \/ 2\) : RHYTHM_NOTE_SE_LEVEL_MAX;/.test(source));
+// タップ音の種類(2026-09-26・ユーザー指示「ノーツを押したときの音のバリエーションがほしい / 設定で変えられるように」)
+{
+  const ids=[...source.matchAll(/Object\.freeze\(\{ id:'([A-Z]+)', +label:'[^']+'/g)].map(m=>m[1]);
+  check('タップ音の種類は 標準・クラップ・ドラム・ウッド・ベル の5つ',JSON.stringify(ids.filter(id=>['STANDARD','CLAP','DRUM','WOOD','BELL'].includes(id)))==='["STANDARD","CLAP","DRUM","WOOD","BELL"]',ids.join(','));
+  check('保存値に無い・知らない種類は「標準」で鳴らす',source.includes("const rhythmNoteSeTypeOf = value => RHYTHM_NOTE_SE_TYPE_IDS.includes(value) ? value : 'STANDARD';")
+    &&source.includes('type:rhythmNoteSeTypeOf(value?.noteSeType)'));
+  check('種類ごとに鳴らし分けている(標準は元の音のまま)',["case 'CLAP':","case 'DRUM':","case 'WOOD':","case 'BELL':"].every(k=>source.includes(k))&&/default:\s*\/\/ 標準\(ピッ\): これまでと同じ音\s*tone\('triangle',1120,820,\.035,\.045\);/.test(source));
+}
 // タップ音は上限の音量でもちょうど2倍まで素直に伸びる(蓋に当たらない)
 check('タップ音は音量200でも蓋に当たらない(100のちょうど2倍まで伸びる)',
   .035*seScale*(volumeMax/100)<=seMax);

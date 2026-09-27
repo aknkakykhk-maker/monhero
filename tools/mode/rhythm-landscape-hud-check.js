@@ -52,17 +52,20 @@ const projectionSource=[
   rhythm.match(/const RHYTHM_LANE_COUNT\s*=[^\n]*/)[0],
   rhythm.match(/const RHYTHM_PROJECTION_TOP_SCALE=[^\n]*/)[0],
   rhythm.match(/const rhythmClamp01=[^\n]*/)[0],
-  rhythm.match(/const rhythmProjectionScale=[^\n]*/)[0],
+  // rhythmProjectionScale は複数行で、RHYTHM_PROJECTION_CURVE も使う(2026-09-27 に追従。1行目だけを取ると途中で切れて読み込めなかった)
+  rhythm.match(/const RHYTHM_PROJECTION_CURVE=[^\n]*/)[0],
+  rhythm.match(/const rhythmProjectionScale=[\s\S]*?\n\};/)[0],
 ].join('\n');
 const rhythmProjectionScale=new Function(`${projectionSource}\nreturn rhythmProjectionScale;`)();
 
 // ── HUDのJSXを取り出してHTMLへ写す(rhythm-hud-wedge-check.jsと同じ変換) ─────────
-const headerStart=game.indexOf('<header data-rhythm-hud');
-const headerEnd=game.indexOf('</header>',headerStart)+'</header>'.length;
+// スコア・ライフは部品(RhythmHudScore / RhythmHudLife)に分けてあるので、中身を展開してから写す(rhythm-hud-jsx.js)
+const {rhythmHudHeaderJsx}=require('./rhythm-hud-jsx.js');
+const {jsx:headerJsx,start:headerStart,missing:headerMissing}=rhythmHudHeaderJsx(game,{landscape:true});
 check('プレイ画面のHUDを取り出せる',headerStart>0);
-const headerJsx=game.slice(headerStart,headerEnd);
+check('HUDの部品をすべて展開できる',!headerMissing.length,headerMissing.join(', '));
 
-const LAYOUT_STYLE_PROPS=new Set(['fontSize','paddingTop','lineHeight','display','WebkitLineClamp','WebkitBoxOrient','overflow']);
+const LAYOUT_STYLE_PROPS=new Set(['maxWidth','fontSize','paddingTop','lineHeight','display','WebkitLineClamp','WebkitBoxOrient','overflow']);
 const kebab=name=>name.replace(/[A-Z]/g,c=>`-${c.toLowerCase()}`);
 const inlineStyle=body=>{
   const kept=[];
@@ -116,7 +119,8 @@ const headerHtml=headerJsxLandscape
   .replace(/\{rhythmRankForScore\(view\.score\)\}/g,SAMPLE.rank)
   // プレイヤーの画面は譜面のLv.、デバッグから始めたときだけ HOLD TEST / TAP TEST
   // (2026-09-05・実機の指摘でデバッグ表記を出し分けた)
-  .replace(/\{tutorial\?'れんしゅう':debugPlay\?debugChartLabel:`Lv\.\$\{chart\.level\}`\}/g,'Lv.12')
+  // 2026-09-26 に「タイミング合わせ」が前に付いた。どちらの形でも Lv.12 へ写す
+  .replace(/\{(?:calibrating\?'タイミング合わせ':)?tutorial\?'れんしゅう':debugPlay\?debugChartLabel:`Lv\.\$\{chart\.level\}`\}/g,'Lv.12')
   .replace(/\{hasHold\?'HOLD TEST':'TAP TEST'\}/g,'HOLD TEST')
   // 自分で閉じるタグ(<i .../>・<b .../>)はHTMLには無い書き方なので、開き+閉じへ直す
   .replace(/<([a-z]+) ([^>]*?)\/>/g,'<$1 $2></$1>')
@@ -130,7 +134,7 @@ const PALETTE={
   'slate-100':'#f1f5f9','slate-900':'#0f172a','slate-950':'#020617','cyan-200':'#a5f3fc','cyan-300':'#67e8f9','emerald-200':'#a7f3d0',
   'fuchsia-200':'#f5d0fe','fuchsia-300':'#f0abfc','fuchsia-700':'#a21caf','amber-200':'#fde68a','rose-400':'#fb7185',
 };
-const SPACE={'0':'0px','0.5':'2px','1':'4px','1.5':'6px','2':'8px','2.5':'10px','3':'12px','7':'28px','8':'32px','12':'48px','14':'56px','16':'64px','20':'80px'};
+const SPACE={'0':'0px','0.5':'2px','1':'4px','1.5':'6px','2':'8px','2.5':'10px','3':'12px','6':'24px','7':'28px','8':'32px','12':'48px','14':'56px','16':'64px','20':'80px'};
 const STATIC={
   'absolute':'position:absolute','relative':'position:relative','block':'display:block','flex':'display:flex',
   'inline-block':'display:inline-block',
@@ -142,7 +146,7 @@ const STATIC={
   'justify-between':'justify-content:space-between','justify-center':'justify-content:center','text-left':'text-align:left','text-right':'text-align:right',
   'font-black':'font-weight:900','font-bold':'font-weight:700','leading-none':'line-height:1',
   'tabular-nums':'font-variant-numeric:tabular-nums','truncate':'overflow:hidden;text-overflow:ellipsis;white-space:nowrap',
-  'rounded':'border-radius:4px','rounded-full':'border-radius:9999px','rounded-xl':'border-radius:12px',
+  'rounded':'border-radius:4px','rounded-md':'border-radius:6px','object-cover':'object-fit:cover','rounded-full':'border-radius:9999px','rounded-xl':'border-radius:12px',
   'border':'border-width:1px;border-style:solid','border-2':'border-width:2px','border-current':'border-color:currentColor',
   'inset-x-0':'left:0;right:0','inset-y-0':'top:0;bottom:0',
   'top-0':'top:0','left-0':'left:0','right-0':'right:0','top-full':'top:100%','overflow-hidden':'overflow:hidden','w-full':'width:100%',

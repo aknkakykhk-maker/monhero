@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 15f0a125407b3ca9
+// source-sha256: f36c3f2d027901de
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -242,7 +242,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-27 09:10";
+const BUILD_DATE = "2026-09-27 09:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4806,6 +4806,95 @@ const RHYTHM_AUTO_QUALITY_SLOW_RATIO = .08;
 const rhythmEffectiveRenderQuality = (quality, autoLevel) => quality === 'AUTO' ? RHYTHM_RENDER_QUALITY_STEPS.includes(autoLevel) ? autoLevel : 'HIGH' : quality;
 const rhythmRenderQualityCap = (quality, highCap) => quality === 'SAVE' ? 1 : quality === 'STANDARD' ? Math.min(highCap, 1.5) : highCap;
 const RHYTHM_STAGE_EFFECTS = Object.freeze(['LIVE', 'VIVID', 'CALM', 'SIMPLE']);
+const RHYTHM_LOOK_PRESETS = Object.freeze([{
+  id: 'LIGHT',
+  label: '軽さ優先',
+  image: 'images/rhythm-look/look-light-v1.jpg',
+  values: {
+    effectAmount: 'MINIMAL',
+    stageEffect: 'SIMPLE',
+    roadFx: false,
+    judgmentFx: false,
+    noteMotionFx: false,
+    comboMilestoneFx: false,
+    noteBloom: false
+  }
+}, {
+  id: 'STANDARD',
+  label: '標準',
+  image: 'images/rhythm-look/look-standard-v1.jpg',
+  values: {
+    effectAmount: 'LIGHT',
+    stageEffect: 'SIMPLE',
+    roadFx: false,
+    judgmentFx: false,
+    noteMotionFx: false,
+    comboMilestoneFx: false,
+    noteBloom: false
+  }
+}, {
+  id: 'VIVID',
+  label: '華やか',
+  image: 'images/rhythm-look/look-vivid-v1.jpg',
+  values: {
+    effectAmount: 'LOW',
+    stageEffect: 'VIVID',
+    roadFx: true,
+    judgmentFx: true,
+    noteMotionFx: true,
+    comboMilestoneFx: true,
+    noteBloom: false
+  }
+}, {
+  id: 'FULL',
+  label: '全部のせ',
+  image: 'images/rhythm-look/look-full-v1.jpg',
+  values: {
+    effectAmount: 'NORMAL',
+    stageEffect: 'LIVE',
+    roadFx: true,
+    judgmentFx: true,
+    noteMotionFx: true,
+    comboMilestoneFx: true,
+    noteBloom: true
+  }
+}]);
+const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([s => s.noteBloom ? {
+  noteBloom: false
+} : null, s => s.stageEffect === 'LIVE' ? {
+  stageEffect: 'VIVID'
+} : null, s => s.roadFx || s.noteMotionFx ? {
+  roadFx: false,
+  noteMotionFx: false
+} : null, s => s.judgmentFx || s.comboMilestoneFx ? {
+  judgmentFx: false,
+  comboMilestoneFx: false
+} : null, s => s.stageEffect === 'VIVID' ? {
+  stageEffect: 'CALM'
+} : null, s => s.stageEffect === 'CALM' ? {
+  stageEffect: 'SIMPLE'
+} : null]);
+const rhythmCapEffects = (settings, level) => {
+  let out = settings;
+  for (let i = 0; i < Math.min(Number(level) || 0, RHYTHM_AUTO_EFFECT_STEPS.length); i++) {
+    const patch = RHYTHM_AUTO_EFFECT_STEPS[i](out);
+    if (patch) out = {
+      ...out,
+      ...patch
+    };
+  }
+  return out;
+};
+const rhythmNextEffectCap = (settings, level) => {
+  const now = rhythmCapEffects(settings, level);
+  for (let i = Math.max(0, Number(level) || 0); i < RHYTHM_AUTO_EFFECT_STEPS.length; i++) {
+    if (RHYTHM_AUTO_EFFECT_STEPS[i](now)) return i + 1;
+  }
+  return null;
+};
+const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset => Object.entries(preset.values).every(([key, value]) => settings && settings[key] === value)) || {
+  id: ''
+}).id;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE', 'ライブ'], ['VIVID', '派手'], ['CALM', '控えめ'], ['SIMPLE', 'シンプル']]);
 const RHYTHM_LANE_COVER_MIN = 0,
   RHYTHM_LANE_COVER_MAX = 60,
@@ -4979,6 +5068,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   vibrationEnabled: false,
   effectAmount: 'LIGHT',
   lightweightMode: false,
+  noteSeType: 'STANDARD',
   livePartnerVisible: true,
   sideMonsterOpacity: 'NORMAL',
   sideMonsterMotion: 'NORMAL',
@@ -4994,6 +5084,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   judgmentFx: false,
   noteMotionFx: false,
   comboMilestoneFx: false,
+  hudSongFade: true,
+  autoEffectDown: true,
   stageEffect: 'SIMPLE',
   laneCover: 0,
   timingDisplay: 'STANDARD',
@@ -5033,7 +5125,8 @@ const normalizeRhythmSettings = value => {
     monsterNoteEffect: RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect) ? source.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
-    noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
+    noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
+    noteSeType: rhythmNoteSeTypeOf(source.noteSeType),
     noteSeEnabled: bool('noteSeEnabled'),
     vibrationEnabled: bool('vibrationEnabled'),
     effectAmount: RHYTHM_EFFECT_LEVELS.includes(source.effectAmount) ? source.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount,
@@ -5053,6 +5146,8 @@ const normalizeRhythmSettings = value => {
     judgmentFx: typeof source.judgmentFx === 'boolean' ? source.judgmentFx : DEFAULT_RHYTHM_SETTINGS.judgmentFx,
     noteMotionFx: typeof source.noteMotionFx === 'boolean' ? source.noteMotionFx : DEFAULT_RHYTHM_SETTINGS.noteMotionFx,
     comboMilestoneFx: typeof source.comboMilestoneFx === 'boolean' ? source.comboMilestoneFx : DEFAULT_RHYTHM_SETTINGS.comboMilestoneFx,
+    hudSongFade: typeof source.hudSongFade === 'boolean' ? source.hudSongFade : DEFAULT_RHYTHM_SETTINGS.hudSongFade,
+    autoEffectDown: typeof source.autoEffectDown === 'boolean' ? source.autoEffectDown : DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
     laneCover: rhythmFiniteStep(source.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, DEFAULT_RHYTHM_SETTINGS.laneCover),
     timingDisplay: RHYTHM_TIMING_DISPLAYS.includes(source.timingDisplay) ? source.timingDisplay : DEFAULT_RHYTHM_SETTINGS.timingDisplay,
@@ -20863,13 +20958,17 @@ const RhythmOptions = ({
   })), React.createElement("span", {
     className: draft[key] === flag ? 'text-white' : 'text-slate-400'
   }, text))));
-  const segments = (key, items) => React.createElement("div", {
+  const segments = (key, items, onPick = null) => React.createElement("div", {
     className: `grid ${items.length >= 5 ? 'grid-cols-5' : items.length >= 4 ? 'grid-cols-4' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} overflow-hidden rounded-xl border border-white/20`
   }, items.map(([id, text]) => React.createElement("button", {
     type: "button",
     key: id,
+    "data-rhythm-option-choice": `${key}:${id}`,
     "aria-pressed": draft[key] === id,
-    onClick: () => set(key, id),
+    onClick: () => {
+      set(key, id);
+      if (onPick) onPick(id);
+    },
     className: `border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${wide ? 'min-h-[38px]' : 'min-h-[44px]'} ${draft[key] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
   }, text)));
   const field = (title, control, description = null, {
@@ -21019,7 +21118,7 @@ const RhythmOptions = ({
     suffix: '%'
   }), 'タップする判定ラインを、画面の下から何％の高さに置くかです。大きくするほど上へ上がり、指が届きやすくなります（12％が2026-09-13より前の位置です）。ノーツも弾ける光も判定文字も一緒に上がります。判定の幅（秒数）・スコア・譜面は変わりません。ただしレーンは奥へ行くほど狭くなるので、上げすぎると横の幅が狭く感じられます。', {
     full: true
-  }), field('ライフ表示の大きさ', stepper('lifeDisplaySize', RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, RHYTHM_LIFE_SIZE_STEP, {
+  }), field('重いときは演出を自動で控えめに', toggle('autoEffectDown'), '演奏中にカクつきが続いたら、重い演出から順に自動で控えめにします。既定は「ON」です。保存してある設定は変わらず、アプリを開き直すと元に戻ります。判定・スコアは変わりません。\n下げる順番は、にじむ光 → ライブ背景「ライブ」を「派手」に → 道の演出・ノーツの動き → 判定の演出・コンボの節目 → ライブ背景を「控えめ」→「シンプル」です。\n画質を「自動」にしているときは、先に画質を下げ、それでもカクつくときに演出を下げます。'), field('演奏中は曲名を薄くする', toggle('hudSongFade'), '演奏が始まって4秒たつと、左上の曲名とジャケットを薄くします。目線を道に集めやすくするためです。既定は「ON」です。\nポーズ中は元の濃さに戻ります。スコア・ランク・ライフの表示は薄くなりません。'), field('ライフ表示の大きさ', stepper('lifeDisplaySize', RHYTHM_LIFE_SIZE_MIN, RHYTHM_LIFE_SIZE_MAX, RHYTHM_LIFE_SIZE_STEP, {
     fine: RHYTHM_LIFE_SIZE_STEP,
     coarse: RHYTHM_LIFE_SIZE_STEP * 5,
     suffix: '%'
@@ -21073,10 +21172,16 @@ const RhythmOptions = ({
     coarse: 10
   }), null, {
     full: true
-  }), field('タップ音量', stepper('noteSeVolume', 0, RHYTHM_VOLUME_MAX, 1, {
+  }), field('タップ音量', stepper('noteSeVolume', 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, {
     fine: 1,
     coarse: 10
   }), null, {
+    full: true
+  }), field('タップ音の種類', segments('noteSeType', RHYTHM_NOTE_SE_TYPES.map(item => [item.id, item.label]), id => RHYTHM_NOTE_SE_RUNTIME.preview({
+    ...draft,
+    noteSeType: id,
+    noteSeEnabled: true
+  })), `ノーツを叩いたときの音です。${RHYTHM_NOTE_SE_TYPES.map(item => `${item.label}＝${item.note}`).join('／')}。取り終えたとき・モンスターノーツ・フルコンボの音は変わりません。`, {
     full: true
   }), field('タップ音', toggle('noteSeEnabled')), React.createElement("div", {
     className: "grid gap-2"
@@ -21099,14 +21204,51 @@ const RhythmOptions = ({
     className: `mt-2 ${note}`
   }, "2026-09-12にタップ音を大きくしました（それまでの10倍）。以前に音量を合わせていた場合は、タップ音量を下げるかBGM音量を上げて合わせ直してください。"), React.createElement("p", {
     className: `mt-2 ${note}`
-  }, "音量は0〜", RHYTHM_VOLUME_MAX, "まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。"))), tab === 'system' && React.createElement("section", {
+  }, "タップ音量は0〜", RHYTHM_NOTE_SE_VOLUME_MAX, "まで上げられます（", RHYTHM_VOLUME_MAX, "より上は、割れないように大きい音だけ丸めて鳴らします）。"), React.createElement("p", {
+    className: `mt-2 ${note}`
+  }, "BGM音量は0〜", RHYTHM_VOLUME_MAX, "まで上げられます。100はこれまでと同じ大きさです。100より上は端末の音量を上げても足りないときの逃げ道で、とくにBGM音量は上げすぎると曲の大きいところが割れて聞こえることがあります。"))), tab === 'system' && React.createElement("section", {
     "data-rhythm-options-panel": "system",
     className: card
   }, !wide && React.createElement("h3", {
     className: head
   }, "◆ システム設定"), React.createElement("div", {
     className: wide ? grid : `mt-3 ${grid}`
-  }, field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
+  }, field('見た目のおまかせ', React.createElement("div", {
+    "data-rhythm-look-presets": true
+  }, React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5"
+  }, RHYTHM_LOOK_PRESETS.map(preset => {
+    const on = rhythmLookPresetOf(draft) === preset.id;
+    return React.createElement("button", {
+      type: "button",
+      key: preset.id,
+      "data-rhythm-look-preset": preset.id,
+      "aria-pressed": on,
+      onClick: () => {
+        setDraft(current => normalizeRhythmSettings({
+          ...current,
+          ...preset.values
+        }));
+        setMessage(`見た目を「${preset.label}」にしました（まだ保存していません）`);
+      },
+      className: `overflow-hidden rounded-xl border-2 text-[11px] font-black leading-tight ${on ? 'border-cyan-300 bg-cyan-400 text-slate-950' : 'border-white/15 bg-slate-900 text-slate-200'}`
+    }, !wide && React.createElement("img", {
+      src: preset.image,
+      alt: "",
+      "aria-hidden": "true",
+      loading: "lazy",
+      decoding: "async",
+      draggable: false,
+      className: "block aspect-[240/427] w-full object-cover"
+    }), React.createElement("span", {
+      className: `block px-0.5 ${wide ? 'py-2.5' : 'py-1.5'}`
+    }, preset.label));
+  })), !rhythmLookPresetOf(draft) && React.createElement("p", {
+    "data-rhythm-look-custom": true,
+    className: "mt-1.5 text-center text-[10px] font-bold text-cyan-100/80"
+  }, "いまは自分で選んだ組み合わせです")), '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。', {
+    full: true
+  }), field('演出量', segments('effectAmount', RHYTHM_EFFECT_LABELS), '重い順に「最大」「多め」「標準」「最小」の4段で、既定は「標準」です。判定・判定窓・スコアはどの段でも変わりません。\n「最大」＝2026-09-13より前の見た目そのまま。判定文字の金色の帯や虹が流れ、判定ラインが拍に合わせて脈打ち、コンボ数が跳ね、両サイドのマスモンも跳ねます。\n「多め」＝判定文字の流れと光のにじみだけ止めます（色・大きさはそのまま）。\n「標準」＝それに加えて、曲のあいだずっと動き続けるものを止めます。判定ラインの脈打ち、コンボ数の跳ねと枠の脈動、判定文字が出た瞬間に弾む動き、ノーツを取り切ったときの光です。判定ラインで弾ける光・100コンボごとのお祝い・フルコンボの大きな表示は残るので、手ごたえは変わりません。両サイドのマスモンの動きはここでは変わりません（専用の「両サイドのマスモン｜動き」で決めます）。\n「最小」＝光そのものと100コンボごとの演出も出なくなります。高精細な画面では、ノーツを描く細かさも3倍から2倍に下げて軽くします（見た目はほんの少しやわらかくなります）。', {
     full: true
   }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、画面の下では観客のペンライトが拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
@@ -22507,6 +22649,7 @@ const rhythmCreateStageGL = canvas => {
   gl.activeTexture(gl.TEXTURE0);
   const lasers = new Float32Array(16),
     laserColors = new Float32Array(16);
+  const gpuTimer = typeof rhythmCreateGpuTimer === 'function' ? rhythmCreateGpuTimer(gl, 'stage') : null;
   return {
     setArt(source) {
       try {
@@ -22520,7 +22663,16 @@ const rhythmCreateStageGL = canvas => {
         return false;
       }
     },
-    draw({
+    draw(options) {
+      if (gl.isContextLost()) return;
+      if (gpuTimer) gpuTimer.begin();
+      try {
+        this.drawFrame(options);
+      } finally {
+        if (gpuTimer) gpuTimer.end();
+      }
+    },
+    drawFrame({
       w,
       h,
       scale,
@@ -22530,7 +22682,6 @@ const rhythmCreateStageGL = canvas => {
       tier,
       live = null
     }) {
-      if (gl.isContextLost()) return;
       const pw = Math.max(1, Math.round(w * scale)),
         ph = Math.max(1, Math.round(h * scale));
       if (canvas.width !== pw || canvas.height !== ph) {
@@ -22641,6 +22792,7 @@ const rhythmCreateStageGL = canvas => {
     },
     release() {
       try {
+        if (gpuTimer) gpuTimer.dispose();
         gl.deleteTexture(tex);
         gl.deleteTexture(staticTex);
         gl.deleteFramebuffer(fbo);
@@ -23219,10 +23371,13 @@ const RhythmHudJudgment = ({
     className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : fastSlow === 'FAST' ? 'text-cyan-300' : fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
   }, settings.fastSlowDisplay ? fastSlow ? timingDisplay !== 'STANDARD' && typeof lastDeltaMs === 'number' ? `${fastSlow} ${Math.round(Math.abs(lastDeltaMs))}ms` : fastSlow : '—' : '—'));
 };
+const rhythmAutoEffectMemory = {
+  level: 0
+};
 const RhythmTapTest = ({
   song,
   difficulty,
-  settings,
+  settings: settingsIn,
   bestRecord,
   monsterEntries,
   onComplete,
@@ -23233,6 +23388,25 @@ const RhythmTapTest = ({
   calibrating = false,
   onApplyCalibration = null
 }) => {
+  const [effectCap, setEffectCap] = useState(() => rhythmAutoEffectMemory.level);
+  const settings = useMemo(() => settingsIn && settingsIn.autoEffectDown !== false ? rhythmCapEffects(settingsIn, effectCap) : settingsIn, [settingsIn, effectCap]);
+  const settingsLiveRef = useRef(settings);
+  settingsLiveRef.current = settings;
+  const stepEffectCapRef = useRef(null);
+  const [effectCapNotice, setEffectCapNotice] = useState(0);
+  stepEffectCapRef.current = () => {
+    const next = rhythmNextEffectCap(settingsIn, effectCap);
+    if (next === null) return false;
+    rhythmAutoEffectMemory.level = next;
+    setEffectCap(next);
+    setEffectCapNotice(value => value + 1);
+    return true;
+  };
+  useEffect(() => {
+    if (!effectCapNotice) return undefined;
+    const timer = setTimeout(() => setEffectCapNotice(0), 2500);
+    return () => clearTimeout(timer);
+  }, [effectCapNotice]);
   const monsterNoteEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect;
   const monsterFaceHidden = rhythmMonsterEffectAtMost(monsterNoteEffect, 'NONE');
   const assistOn = !!settings.assistMode && !tutorial && !calibrating && !debugPlay,
@@ -23269,6 +23443,8 @@ const RhythmTapTest = ({
   const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
   const [autoQuality, setAutoQuality] = useState(() => rhythmAutoQualityMemory.level);
   const autoQualityAtStart = useState(() => rhythmAutoQualityMemory.level)[0];
+  const autoQualityLevelRef = useRef(autoQuality);
+  autoQualityLevelRef.current = autoQuality;
   const renderQualityNow = rhythmEffectiveRenderQuality(settings.renderQuality, autoQuality);
   const renderQualityStill = rhythmEffectiveRenderQuality(settings.renderQuality, autoQualityAtStart);
   const stepAutoQualityRef = useRef(null);
@@ -23647,6 +23823,15 @@ const RhythmTapTest = ({
     result: null
   });
   const [view, setView] = useState(initialView);
+  const [hudSongDim, setHudSongDim] = useState(false);
+  useEffect(() => {
+    if (view.status !== 'playing' || settings.hudSongFade === false) {
+      setHudSongDim(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => setHudSongDim(true), 4000);
+    return () => clearTimeout(timer);
+  }, [view.status, settings.hudSongFade]);
   const [countdownStep, setCountdownStep] = useState(null);
   const countdownTimerRef = useRef(null);
   const countdownResolveRef = useRef(null);
@@ -24225,7 +24410,7 @@ const RhythmTapTest = ({
           attr: 'rhythmJudgmentPop'
         });
         const burst = judgmentBurstRef.current;
-        if (burst && settings.judgmentFx === true && (judgment === 'GREAT' || judgment === 'EXCELLENT' || judgment === 'MARVELOUS')) {
+        if (burst && settingsLiveRef.current.judgmentFx === true && (judgment === 'GREAT' || judgment === 'EXCELLENT' || judgment === 'MARVELOUS')) {
           burst.dataset.judgment = judgment;
           burst.dataset.judgmentPrecise = preciseHit ? '1' : '';
           restarts.push({
@@ -24294,7 +24479,7 @@ const RhythmTapTest = ({
         ptEl.textContent = `${run.luckPoints || 0}pt`;
       }
     }
-    if (settings.comboMilestoneFx === true && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' && keptCombo > run.combo && keptCombo >= RHYTHM_COMBO_MILESTONE_STEP && keptCombo % RHYTHM_COMBO_MILESTONE_STEP === 0) {
+    if (settingsLiveRef.current.comboMilestoneFx === true && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' && keptCombo > run.combo && keptCombo >= RHYTHM_COMBO_MILESTONE_STEP && keptCombo % RHYTHM_COMBO_MILESTONE_STEP === 0) {
       const el = comboRingRef.current;
       if (el) rhythmRestartAnimations([{
         el,
@@ -24597,19 +24782,43 @@ const RhythmTapTest = ({
         });
         const gap = aq.last ? frameNowMs - aq.last : 0;
         aq.last = frameNowMs;
-        if (gap > 0 && gap < 250) {
+        if (gap > 0 && gap < 1000) {
           aq.frames++;
           if (gap >= 5 && gap < aq.minGap) aq.minGap = gap;
-          if (gap > Math.max(5, aq.minGap) * 1.8) aq.slow++;
+          if (gap > Math.max(5, aq.minGap) * 1.8 || gap >= 50) aq.slow++;
         }
         if (frameNowMs - aq.start >= RHYTHM_AUTO_QUALITY_WINDOW_MS) {
-          if (aq.settle > 0) aq.settle--;else if (aq.frames >= 30 && aq.slow / aq.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepAutoQualityRef.current) {
+          if (aq.settle > 0) aq.settle--;else if (aq.frames >= 10 && aq.slow / aq.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepAutoQualityRef.current) {
             stepAutoQualityRef.current();
             aq.settle = 1;
           }
           aq.start = frameNowMs;
           aq.frames = 0;
           aq.slow = 0;
+        }
+      }
+      if (settingsLiveRef.current.autoEffectDown !== false && stepEffectCapRef.current) {
+        const ae = run._autoEffect || (run._autoEffect = {
+          last: 0,
+          start: frameNowMs,
+          frames: 0,
+          slow: 0,
+          minGap: 1e9,
+          settle: 0
+        });
+        const gap = ae.last ? frameNowMs - ae.last : 0;
+        ae.last = frameNowMs;
+        if (gap > 0 && gap < 1000) {
+          ae.frames++;
+          if (gap >= 5 && gap < ae.minGap) ae.minGap = gap;
+          if (gap > Math.max(5, ae.minGap) * 1.8 || gap >= 50) ae.slow++;
+        }
+        if (frameNowMs - ae.start >= RHYTHM_AUTO_QUALITY_WINDOW_MS) {
+          const qualityFirst = settings.renderQuality === 'AUTO' && autoQualityLevelRef.current !== RHYTHM_RENDER_QUALITY_STEPS[RHYTHM_RENDER_QUALITY_STEPS.length - 1];
+          if (ae.settle > 0) ae.settle--;else if (!qualityFirst && ae.frames >= 10 && ae.slow / ae.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepEffectCapRef.current()) ae.settle = 1;
+          ae.start = frameNowMs;
+          ae.frames = 0;
+          ae.slow = 0;
         }
       }
       if (powerSave) {
@@ -24665,8 +24874,8 @@ const RhythmTapTest = ({
         lightweight: settings.lightweightMode,
         maxDpr: noteCanvasMaxDprRef.current,
         sizeScale: settings.noteSize / 100,
-        bloom: settings.noteBloom === true,
-        motion: settings.noteMotionFx === true
+        bloom: settingsLiveRef.current.noteBloom === true,
+        motion: settingsLiveRef.current.noteMotionFx === true
       });
       {
         const stageClock = stageClockRef.current;
@@ -25628,7 +25837,6 @@ const RhythmTapTest = ({
       "data-rank-tier": String(rankTier),
       "data-rhythm-effect": settings.effectAmount,
       "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
-      "data-rhythm-judgment-fx": settings.judgmentFx === true && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' ? '1' : undefined,
       className: "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]",
       style: {
         paddingTop: 'env(safe-area-inset-top)'
@@ -26135,6 +26343,8 @@ const RhythmTapTest = ({
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
   }, calibrating ? 'タイミング合わせ' : tutorial ? 'れんしゅう' : debugPlay ? debugChartLabel : `Lv.${chart.level}`))), React.createElement("div", {
+    "data-rhythm-hud-songline": true,
+    "data-hud-song-dim": hudSongDim ? '1' : undefined,
     className: "mt-1 flex items-center gap-1.5 landscape:mt-0.5 landscape:min-w-0"
   }, hudArtSrc && React.createElement("img", {
     "data-rhythm-hud-art": true,
@@ -26274,6 +26484,7 @@ const RhythmTapTest = ({
   }, "DOWN")), React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
+    "data-rhythm-judgment-fx": settings.judgmentFx === true && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL' ? '1' : undefined,
     "data-rhythm-counting": countdownStep !== null ? '1' : undefined,
     "data-rhythm-strip": RHYTHM_STRIP.value || undefined,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
@@ -26492,7 +26703,12 @@ const RhythmTapTest = ({
   })))), luckyRush && React.createElement("div", {
     "data-rhythm-lucky-rush": true,
     "aria-hidden": "true"
-  }), luckyBanner && React.createElement("div", {
+  }), effectCapNotice > 0 && React.createElement("div", {
+    key: effectCapNotice,
+    "data-rhythm-effect-cap-notice": true,
+    role: "status",
+    className: "pointer-events-none absolute left-1/2 top-[13%] z-30 -translate-x-1/2 whitespace-nowrap rounded-full border border-cyan-300/40 bg-slate-950/85 px-3 py-1 text-[11px] font-black text-cyan-100"
+  }, "重いので演出を控えめにしました"), luckyBanner && React.createElement("div", {
     key: luckyBanner.id,
     "data-rhythm-lucky-banner": true,
     "data-kind": luckyBanner.kind,
@@ -30436,6 +30652,9 @@ function RhythmSongSelectScreen({
   dismissRhythmEventNotice,
   dismissRhythmSixLaneIntro,
   rhythmSixLaneIntroVisible,
+  dismissRhythmLookIntro,
+  rhythmLookIntroVisible,
+  onTryRhythmLook,
   exitingQuickRun,
   handleGiveUp,
   mainHero,
@@ -30727,7 +30946,33 @@ function RhythmSongSelectScreen({
     onClick: dismissRhythmSixLaneIntro,
     "aria-label": "この案内を閉じる",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
-  }, "×"))), quickRhythmBackgroundVisible && React.createElement("div", {
+  }, "×"))), rhythmLookIntroVisible && React.createElement("div", {
+    "data-rhythm-look-intro": true,
+    className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
+  }, React.createElement("div", {
+    className: "flex items-start gap-1"
+  }, React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement(AssistantBubble, {
+    scene: "rhythmLookIntro",
+    compact: true
+  })), React.createElement("button", {
+    type: "button",
+    onClick: dismissRhythmLookIntro,
+    "aria-label": "この案内を閉じる",
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
+  }, "×")), React.createElement("div", {
+    className: "mt-1 flex gap-2 pb-1"
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-look-intro-try": true,
+    onClick: () => onTryRhythmLook && onTryRhythmLook('VIVID'),
+    className: "min-h-[40px] flex-1 rounded-xl bg-cyan-400 text-[12px] font-black text-slate-950"
+  }, "華やかにしてみる"), React.createElement("button", {
+    type: "button",
+    onClick: dismissRhythmLookIntro,
+    className: "min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[12px] font-black text-slate-200"
+  }, "いまのままにする"))), quickRhythmBackgroundVisible && React.createElement("div", {
     "data-quick-rhythm-background": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -47105,6 +47350,13 @@ function MonsterHeroGame() {
     setRhythmSixLaneIntroSeen(true);
     storeSet(RHYTHM_SIX_LANE_INTRO_KEY, true, false);
   };
+  const RHYTHM_LOOK_INTRO_KEY = 'mh_rhythm_look_intro_seen_v1';
+  const [rhythmLookIntroSeen, setRhythmLookIntroSeen] = useState(true);
+  const rhythmLookIntroVisible = !rhythmLookIntroSeen && !rhythmSixLaneIntroVisible;
+  const dismissRhythmLookIntro = () => {
+    setRhythmLookIntroSeen(true);
+    storeSet(RHYTHM_LOOK_INTRO_KEY, true, false);
+  };
   const AUTO_ENHANCE_INTRO_KEY = 'mh_masu_auto_enhance_intro_seen_v1';
   const [autoEnhanceIntroSeen, setAutoEnhanceIntroSeen] = useState(true);
   const autoEnhanceIntroVisible = !autoEnhanceIntroSeen;
@@ -48101,6 +48353,7 @@ function MonsterHeroGame() {
       setQuickRhythmIntroSeen((await storeGet(QUICK_RHYTHM_INTRO_KEY, false, false)) === true);
       setQuickRhythmBackgroundSeen((await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, false, false)) === true);
       setRhythmSixLaneIntroSeen((await storeGet(RHYTHM_SIX_LANE_INTRO_KEY, false, false)) === true);
+      setRhythmLookIntroSeen((await storeGet(RHYTHM_LOOK_INTRO_KEY, false, false)) === true);
       setAutoEnhanceIntroSeen((await storeGet(AUTO_ENHANCE_INTRO_KEY, false, false)) === true);
       setTacticsExIntroSeen((await storeGet(TACTICS_EX_INTRO_KEY, false, false)) === true);
       {
@@ -63425,6 +63678,18 @@ function MonsterHeroGame() {
       difficulty: difficulty,
       dismissQuickRhythmBackground: dismissQuickRhythmBackground,
       dismissRhythmSixLaneIntro: dismissRhythmSixLaneIntro,
+      dismissRhythmLookIntro: dismissRhythmLookIntro,
+      rhythmLookIntroVisible: rhythmLookIntroVisible,
+      onTryRhythmLook: async presetId => {
+        const preset = RHYTHM_LOOK_PRESETS.find(item => item.id === presetId);
+        if (!preset) return;
+        const saved = await saveRhythmSettings({
+          ...rhythmSettings,
+          ...preset.values
+        });
+        setRhythmSettings(saved);
+        dismissRhythmLookIntro();
+      },
       dismissRhythmEventNotice: dismissRhythmEventNotice,
       handleGiveUp: handleGiveUp,
       mainHero: mainHero,
@@ -63611,7 +63876,7 @@ function MonsterHeroGame() {
     }, "記録をクリア")), rhythmPerfStats && React.createElement("dl", {
       "data-rhythm-perf-stats": true,
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
-    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`], ['曲の時刻の進み/frame', `${(rhythmPerfStats.songStepMsPerFrame ?? 0).toFixed(2)}ms`], ['曲の時刻が進まないframe', `${((rhythmPerfStats.songStallRate ?? 0) * 100).toFixed(1)}%`], ['曲の時刻の最大の飛び', `${(rhythmPerfStats.songStepMaxMs ?? 0).toFixed(1)}ms`], ['ノーツを取る処理/回', `${(rhythmPerfStats.judgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.judgeCount ?? 0}回）`], ['取る処理の最大', `${(rhythmPerfStats.judgeMsMax ?? 0).toFixed(1)}ms`], ['モンスターノーツ/回', `${(rhythmPerfStats.monsterJudgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount ?? 0}回）`], ['モンスターノーツの最大', `${(rhythmPerfStats.monsterJudgeMsMax ?? 0).toFixed(1)}ms`]].map(([label, value]) => React.createElement(React.Fragment, {
+    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ...[['GPU(ノーツ)', rhythmPerfStats.gpuNotes], ['GPU(背景)', rhythmPerfStats.gpuStage]].map(([label, g]) => [label, !g || g.supported === null ? '—' : g.supported === false ? 'この端末は測れない' : g.count ? `平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms` : 'まだ届いていない']), ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`], ['曲の時刻の進み/frame', `${(rhythmPerfStats.songStepMsPerFrame ?? 0).toFixed(2)}ms`], ['曲の時刻が進まないframe', `${((rhythmPerfStats.songStallRate ?? 0) * 100).toFixed(1)}%`], ['曲の時刻の最大の飛び', `${(rhythmPerfStats.songStepMaxMs ?? 0).toFixed(1)}ms`], ['ノーツを取る処理/回', `${(rhythmPerfStats.judgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.judgeCount ?? 0}回）`], ['取る処理の最大', `${(rhythmPerfStats.judgeMsMax ?? 0).toFixed(1)}ms`], ['モンスターノーツ/回', `${(rhythmPerfStats.monsterJudgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount ?? 0}回）`], ['モンスターノーツの最大', `${(rhythmPerfStats.monsterJudgeMsMax ?? 0).toFixed(1)}ms`]].map(([label, value]) => React.createElement(React.Fragment, {
       key: label
     }, React.createElement("dt", {
       className: "text-slate-400"
