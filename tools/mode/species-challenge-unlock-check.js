@@ -61,7 +61,8 @@ for (const key of ['Master', 'GrandMaster', 'Hell', 'Legend']) {
 // 解放していないあいだは、モードカードから始められない
 check('解放前は開始ボタンを押せない',
   source.includes('speciesLocked=isSpecies&&!speciesChallengeUnlocked&&!debugBattle')
-    && source.includes('disabled={extremeLocked||speciesLocked||(!!battleTutorial'));
+    // 「準備中」のモード(modeSoon・2026-09-20)の条件が間に1つ増えた。どちらの形でも通す
+    && /disabled=\{extremeLocked\|\|speciesLocked\|\|(?:modeSoon\|\|)?\(!!battleTutorial/.test(source));
 check('解放前のカードに条件を出す',
   source.includes("speciesLocked?SPECIES_CHALLENGE_UNLOCK_TEXT")
     && source.includes("isSpecies?(speciesLocked?'🔒 未解放'"));
@@ -105,7 +106,9 @@ check('解放の案内は既存の既読キーへ記録する(新しい保存キ
 const releaseSrc = source.slice(source.indexOf('const RELEASE_FLAGS = {'), source.indexOf('const CHANGELOG_TYPES = ['));
 // RELEASE_FLAGS は他の機能の公開フラグも見るので、実装側の宣言をまとめて持ち込む
 // (種族チャレンジのぶんだけ、このあとで false / true へ上書きする)
-const releaseFlagDecls = (source.match(/^const \w+_PUBLIC_RELEASE = (?:true|false);$/gm) || [])
+// ★名前が _PUBLIC_RELEASE で終わらない公開フラグ(TACTICS_BETA_PRO_RELEASE・TACTICS_EX_SKILLS_RELEASE など)も
+//   RELEASE_FLAGS が見るので、_RELEASE で終わる true / false の宣言をすべて持ち込む(2026-09-27・ここで止まっていた)
+const releaseFlagDecls = (source.match(/^const \w+_RELEASE = (?:true|false);$/gm) || [])
   .map(line => line.replace(/^const /, 'var ')).join('\n');
 const filterCtx = { console };
 vm.createContext(filterCtx);

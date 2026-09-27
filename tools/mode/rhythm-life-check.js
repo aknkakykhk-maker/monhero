@@ -41,7 +41,8 @@ const resultScore=run.lifeDepleted?run.lockedScore:run.score;
 check('リザルトは再計算せず固定スコアを使う',resultScore===atDown&&game.includes('const score=run.lifeDepleted?run.lockedScore:run.score;'));
 check('スコアランクは固定スコア基準',rhythmRankForScore(resultScore)===rhythmRankForScore(atDown)&&game.includes('rank=rhythmRankForScore(view.score)'));
 const previousBest=atDown+1,isNewRecord=resultScore>previousBest;
-check('DOWN後の判定ではBESTを更新できない',!isNewRecord&&game.includes('const isNewRecord=score>run.startBestScore;'));
+// アシストモード(2026-09-2x)では新記録にしない条件が前に付いた(!assistOn&&)。どちらの形でも、比べるのは固定スコアと開始時のBEST
+check('DOWN後の判定ではBESTを更新できない',!isNewRecord&&/const isNewRecord=(?:!assistOn&&)?score>run\.startBestScore;/.test(game));
 check('ライフ0でもfinishせず曲・判定処理を継続',!game.includes('if(run.life===0)finish')&&!game.includes('if(run.life<=0)finish')&&game.includes('run.lifeDepleted=true;run.lockedScore=run.score;'));
 // モンスターノーツの蘇生でスコア加算を再開できるよう、差し引く量(scoreOffset)も0から始める
 check('run開始時にDOWNと固定スコアを初期化',game.includes('lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,'));

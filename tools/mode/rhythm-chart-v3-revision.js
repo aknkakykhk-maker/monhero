@@ -68,7 +68,10 @@
 //        手のモデルが SLIDE の曲線どおりに動き親指の左右を区別する(自動修正が曲線の途中の近さも見る)・候補(--variant)が HARD でも分かれる
 //   15 … 旋律の上下に沿って動かす(2026-09-26・最初にもらった案の2)。かたまりの継ぎ目の起点と、フレーズの写しの左右の向きを
 //        旋律の上がり下がりに合わせる(形の中は Rev.14 までも合っていた)
-//   16〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   16 … 出だしの歯止めを、格子から少しずれた音・拍の間の音にも効かせる(2026-09-27)。頭の音がそろって格子から
+//        ずれている曲では、最初の3秒に置ける音が候補に残らず、最初のノーツが3秒を超えていた(戦場の疾風 4.0秒・もう一つの世界へ 3.6秒)。
+//        見つからないときだけ、43ms までずれた音と拍の間の音から1つ置く。ノーツ数は、出だしが3秒を超える曲だけ1つ増える
+//   17〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)と重みの最新の大きいほう＋1」を次の番号にする
 //        (同じ番号が「作り方の改良」と「重みの学び直し」の2つの意味を持たないように)
@@ -78,7 +81,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=15;
+const CHART_REVISION_CODE_LATEST=16;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const CHART_REVISION_LATEST=Math.max(CHART_REVISION_CODE_LATEST,latestKnowledgeRevision());

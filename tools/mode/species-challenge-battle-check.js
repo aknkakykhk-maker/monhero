@@ -63,7 +63,9 @@ assert(retryFn.includes('if (speciesChallengeBattleRunRef.current) {')
 // ★モード選択の並びは battleSystemModes が作る(2026-09-20 に「バトルの仕組み」を1段足した)。
 //   種族チャレンジは公開フラグが立つまで出さず、デバッグからだけ見える。
 //   BATTLE_MODES(既存3モードの表)へは今までどおり入れない
-assert(source.includes("if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle;")
+//   battleModePlayable は「先にデバッグなら true・そのあと種族チャレンジは公開フラグ」の形になった(同じ意味)。どちらの形でも通す
+assert((source.includes("if (id === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle;")
+    || /const battleModePlayable = \(id, \{ debugBattle = false \} = \{\}\) => \{\s*if \(debugBattle\) return true;\s*if \(id === BATTLE_MODE_SPECIES_CHALLENGE\) return SPECIES_CHALLENGE_PUBLIC_RELEASE;/.test(source))
   && source.includes('const modes=battleSystemModes(battleSystem,{debugBattle}).map(id=>battleModeInfo(id));')
   && !source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// ===== バトルの仕組み(モード選択の1つ上) =====')).includes('BATTLE_MODE_SPECIES_CHALLENGE'),
   '共通BATTLE MODEへ入口を出す(公開前はデバッグのときだけ)');

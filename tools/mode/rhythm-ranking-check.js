@@ -117,7 +117,10 @@ check('entry変換: partyが配列でない、空配列、要素がオブジェ�
 
 // --- 画面側の結線・既存モードとの分離(src/game-system.jsx) ---
 check('専用の保存先(RHYTHM_RANKING_SELECT)を持ち、difficulty列も取得している(合算表示に必要)',
-  game.includes("const RHYTHM_RANKING_SELECT = 'user_name,hero,party,score,level,icon,difficulty';"));
+  // 列は足されていく(created_at など)。要る列がそろっていることを見る
+  (() => { const m = game.match(/const RHYTHM_RANKING_SELECT = '([^']*)';/); if (!m) return false;
+    const cols = m[1].split(',').map(c => c.trim());
+    return ['user_name','hero','party','score','level','icon','difficulty'].every(c => cols.includes(c)); })());
 check('専用の送信関数(sbInsertRhythmScore)を持つ',game.includes('const sbInsertRhythmScore = async (row) => {'));
 check('送信はclear_id必須(重複防止)',
   /const sbInsertRhythmScore = async \(row\) => \{\s*if \(typeof row\?\.clear_id !== 'string' \|\| !row\.clear_id\.trim\(\)\)/.test(game));

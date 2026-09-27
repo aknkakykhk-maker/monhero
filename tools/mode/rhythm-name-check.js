@@ -41,9 +41,16 @@ const NICKNAME_ALLOWED = [
   'モンビー始めたばっかりの子でも',
 ];
 const allowed = (line) => NICKNAME_ALLOWED.some(phrase => line.includes(phrase));
+// 助手のセリフ({ e:'…', t:'…' })は、キャラクターが話す会話。愛称はここで使ってよい(CLAUDE.md ⑤)。
+// 誰が愛称で呼ぶかは会話の側で決めてある(例: 異世界交響祭の告知は「みゅあ・ももすけはモンビー、きき・ドラはモンヒロビート」)。
+// 以前は許可リストの言い回しだけを通していたので、新しい会話を足すたびに落ちていた(2026-09-27)
+// 物語の会話は { who:'mua', e:'…', t:'…' } の形(話し手が先に付く)
+const assistantSpeech = (file, line) => file.endsWith('assistants.js') && /\{\s*(?:who\s*:\s*'[^']*'\s*,\s*)?e\s*:\s*'[^']*'\s*,\s*t\s*:\s*'/.test(line);
+// 行末のコメント(コードのあとの「  // …」)も開発者向けなので外す
+const withoutTrailingComment = (line) => line.replace(/\s{2,}\/\/.*$/, '');
 
 for (const file of ['monster-hero/src/parts/60-app.jsx', 'monster-hero/data/help.js', 'monster-hero/data/changelog.js', 'monster-hero/data/assistants.js']) {
-  const hits = displayLines(file).filter(({ line }) => line.includes('モンビー') && !allowed(line));
+  const hits = displayLines(file).filter(({ line }) => withoutTrailingComment(line).includes('モンビー') && !allowed(line) && !assistantSpeech(file, line));
   check(`${file}: 画面に出す名前が正式名称になっている`, hits.length === 0,
     hits.slice(0, 2).map(h => `${h.no}行目: ${h.line.trim().slice(0, 60)}`).join(' / '));
 }

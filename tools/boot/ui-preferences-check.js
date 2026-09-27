@@ -41,7 +41,9 @@ const pick = (name) => {
 // QUICK_RHYTHM_LINK_PUBLIC_RELEASE が足されて実際にそうなった)。
 // 実ソースから名前を拾って組み立てる。
 const releaseFlagNames = [...new Set(
-  [...source.matchAll(/^const ([A-Z0-9_]+_PUBLIC_RELEASE)\s*=/gm)].map((m) => m[1]),
+  // ★_PUBLIC_RELEASE で終わらない公開フラグ(TACTICS_BETA_PRO_RELEASE・TACTICS_EX_SKILLS_RELEASE など)も
+  //   RELEASE_FLAGS が見るので、_RELEASE で終わる const をすべて拾う(2026-09-27・ここで ReferenceError になっていた)
+  [...source.matchAll(/^const ([A-Z0-9_]+_RELEASE)\s*=/gm)].map((m) => m[1]),
 )];
 assert(releaseFlagNames.length > 0, '公開フラグ(*_PUBLIC_RELEASE)を1つ以上拾えること');
 const prelude = [...releaseFlagNames, 'RELEASE_FLAGS', 'releasedForPlayers']

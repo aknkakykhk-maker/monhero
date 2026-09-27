@@ -11,10 +11,12 @@
 'use strict';
 const fs=require('fs');
 const path=require('path');
-const {chartLevel,chartStrain,songLevels,loadRuntimeSongs,LEVEL_ANCHOR,LEVEL_MIN,LEVEL_MAX,LEVEL_MIN_NOTES}
+const {chartLevel,chartStrain,songLevels,loadRuntimeSongs,LEVEL_ANCHOR,LEVEL_SCALE,LEVEL_MIN,LEVEL_MAX,LEVEL_MIN_NOTES}
   =require('./rhythm-chart-level.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
+// 固定した物差しと、基準の曲に許すずれ(下の「1. 基準点」を見る)
+const LEVEL_SCALE_FIXED=23.2739,LEVEL_ANCHOR_TOLERANCE=1;
 let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` (${detail})`:''}`);if(!ok)failed++;};
 
@@ -27,10 +29,16 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   check('基準の曲がランタイムにある',!!song,LEVEL_ANCHOR.songId);
   if(song){
     const chart=song.difficulties[LEVEL_ANCHOR.difficulty];
-    check(`基準（${LEVEL_ANCHOR.songId} ${LEVEL_ANCHOR.difficulty}）が Lv.${LEVEL_ANCHOR.level} になっている`,
-      chart.level===LEVEL_ANCHOR.level,`いま Lv.${chart.level}`);
-    check('基準の譜面から計算した値も同じ',chartLevel(chart).level===LEVEL_ANCHOR.level,
+    // ★物差し(LEVEL_SCALE)は固定する(2026-09-27・ユーザー指示「今後の運用に適した設定にして」)。
+    //   基準の曲も作り直しのたびに少し変わる(6レーンで作り直したあと Lv.29 になった)。そのたびに取り直すと、
+    //   何も変わっていない他の曲のレベルまで上下する(取り直すと115譜面のうち57譜面が +1 だった)。
+    //   基準は「物差しを決めたときの目印」として扱い、作り直しで ±1 動くのは許す。大きくずれたら物差しを見直す合図
+    check(`基準（${LEVEL_ANCHOR.songId} ${LEVEL_ANCHOR.difficulty}）が Lv.${LEVEL_ANCHOR.level}±${LEVEL_ANCHOR_TOLERANCE} に収まっている`,
+      Math.abs(chart.level-LEVEL_ANCHOR.level)<=LEVEL_ANCHOR_TOLERANCE,`いま Lv.${chart.level}`);
+    check('基準の譜面から計算した値も同じ範囲',Math.abs(chartLevel(chart).level-LEVEL_ANCHOR.level)<=LEVEL_ANCHOR_TOLERANCE,
       `計算 Lv.${chartLevel(chart).level} / 生の値 ${chartStrain(chart)?.raw}`);
+    check('物差し(LEVEL_SCALE)を黙って取り直していない',LEVEL_SCALE===LEVEL_SCALE_FIXED,
+      `いま ${LEVEL_SCALE} / 決めた値 ${LEVEL_SCALE_FIXED}(取り直すと全曲のレベルが動く。変えるときはユーザーに確かめてからここも直す)`);
   }
 }
 
@@ -60,7 +68,9 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
   check('レベル表がマーカーの内側にある',
     runtime.includes('// <rhythm-chart-levels>')&&runtime.includes('// </rhythm-chart-levels>'));
   check('レベルを差し替える口が1か所にまとまっている',
-    runtime.includes('const rhythmChartWithLevel=')&&runtime.includes('rhythmChartWithLevel(song.songId,id,song.difficulties[id])'));
+    // 6レーン化(2026-09-26)で、譜面は道の上へ寄せる rhythmChartOnRoad(…) に包んでから渡す形になった。どちらの形でも通す
+    runtime.includes('const rhythmChartWithLevel=')
+      &&/rhythmChartWithLevel\(song\.songId,id,(?:rhythmChartOnRoad\()?song\.difficulties\[id\]/.test(runtime));
   check('レベル表は手で決めない、と書いてある',runtime.includes('rhythm-chart-level.js が'));
 }
 

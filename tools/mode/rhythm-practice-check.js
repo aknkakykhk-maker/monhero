@@ -87,7 +87,8 @@ check('練習は from:\'tutorial\' で始める',
 check('練習の結果は自己ベストにも全国ランキングにも保存しない',
   game.includes("if(rhythmPlay.from==='tutorial')return;"));
 check('練習ではライフを減らさない(途中で倒れて最後まで届かない、を防ぐ)',
-  game.includes('run.life=tutorial?RHYTHM_LIFE_MAX:rhythmLifeAfterWithMonsterAbilities'));
+  // タイミング合わせ(calibrating・2026-09-26)も同じくライフを減らさない形になった。どちらの形でも通す
+  /run\.life=(?:tutorial|\(tutorial\|\|calibrating\))\?RHYTHM_LIFE_MAX:rhythmLifeAfterWithMonsterAbilities/.test(game));
 check('練習の満点は0や1になっていない(ランクの表示が壊れる)',
   Number(difficulty.maxScore) >= 100000, String(difficulty.maxScore));
 

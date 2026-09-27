@@ -336,6 +336,8 @@ const RHYTHM_NOTE_DRAW_MODES = Object.freeze(['AUTO','STANDARD','LIGHT']);
 const RHYTHM_NOTE_DRAW_LABELS = Object.freeze([['AUTO','自動'],['STANDARD','Canvas'],['LIGHT','WebGL']]);
 const RHYTHM_RENDER_QUALITY_STEPS = Object.freeze(['HIGH','STANDARD','SAVE']);
 const RHYTHM_AUTO_QUALITY_WINDOW_MS = 3000;
+// 3秒の枠で判断するのに要るフレーム数。とても遅い端末(1秒に2フレームほど)でも判断できるよう、少なめにしてある(2026-09-27・10→5)
+const RHYTHM_AUTO_QUALITY_MIN_FRAMES = 5;
 const RHYTHM_AUTO_QUALITY_SLOW_RATIO = .08;
 // 「自動」のとき、いま使う段。それ以外はそのまま
 const rhythmEffectiveRenderQuality = (quality, autoLevel) => (quality==='AUTO' ? (RHYTHM_RENDER_QUALITY_STEPS.includes(autoLevel) ? autoLevel : 'HIGH') : quality);
@@ -368,6 +370,8 @@ const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([
   s=>s.stageEffect==='CALM'?{stageEffect:'SIMPLE'}:null,
 ]);
 const rhythmCapEffects = (settings,level) => {let out=settings;for(let i=0;i<Math.min(Number(level)||0,RHYTHM_AUTO_EFFECT_STEPS.length);i++){const patch=RHYTHM_AUTO_EFFECT_STEPS[i](out);if(patch)out={...out,...patch};}return out;};
+// 段ごとの名前(デバッグの性能計測に「何を下げたか」を出すためだけに使う。並びは RHYTHM_AUTO_EFFECT_STEPS と同じ)
+const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光','ライブ→派手','道の演出・ノーツの動き','判定の演出・コンボの節目','派手→控えめ','控えめ→シンプル']);
 // 次に下げる段(当てるものがある段)。もう下げるものが無ければ null
 const rhythmNextEffectCap = (settings,level) => {const now=rhythmCapEffects(settings,level);for(let i=Math.max(0,Number(level)||0);i<RHYTHM_AUTO_EFFECT_STEPS.length;i++){if(RHYTHM_AUTO_EFFECT_STEPS[i](now))return i+1;}return null;};
 const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset=>Object.entries(preset.values).every(([key,value])=>settings&&settings[key]===value))||{id:''}).id;

@@ -47,6 +47,11 @@ const LEVEL_ANCHOR=Object.freeze({
 // 自動修正が1拍前まで動かせる／拍が立たない曲は16分裏を絞る／曲ごとの歯ごたえで量を変える）
 // ので、基準の譜面も変わった。--calibrate で取り直した値。
 // 基準(Monster Hero 候補v3 MASTER = 30)そのものは動かしていない。
+// ★2026-09-27 からは**この値を固定する**(ユーザー指示「今後の運用に適した設定にして」)。
+// 基準の曲も作り直しで少し変わる(6レーンで作り直したあと Lv.29 に)。そのたびに --calibrate で取り直すと、
+// 何も変わっていない他の曲のレベルまで上下してしまう(取り直すと115譜面のうち57譜面が +1)。
+// 基準の曲が Lv.30±1 に収まっているうちは取り直さない。変えるときはユーザーに確かめてから
+// (rhythm-chart-level-check.js の LEVEL_SCALE_FIXED も一緒に直す)
 const LEVEL_SCALE=23.2739;
 // レベルは仕事量に**そのまま比例**させる（曲がりを付けない）。
 // こうしておくと「Lv.が2倍なら忙しさも2倍」と説明でき、
@@ -325,6 +330,7 @@ if(require.main===module){
     console.log(`基準: ${LEVEL_ANCHOR.songId} ${LEVEL_ANCHOR.difficulty} = Lv.${LEVEL_ANCHOR.level}`);
     console.log(`  生の値 ${strain.raw} / ピーク ${strain.peak} / 平均 ${strain.average}`);
     console.log(`  LEVEL_SCALE=${Math.round(scale*10000)/10000}  (いまは ${LEVEL_SCALE})`);
+    console.log('  ※ 物差しは固定の運用(2026-09-27)。取り直すと全曲のレベルが動くので、書き換える前にユーザーに確かめる');
     process.exit(0);
   }
   for(const song of RHYTHM_SONGS){
