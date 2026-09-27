@@ -71,7 +71,7 @@ assert(source.includes("requestAnimationFrame(()=>{previewFrameRef.current=null;
 assert(!source.includes("{view==='composite'&&<div className=\"grid shrink-0 grid-cols-3"),'色選択UIで合成時だけviewportを縮めない');
 assert(source.includes("<section className=\"relative m-2 min-h-0 flex-1")&&source.includes("transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`"),'4表示モードで単一viewportとzoom/panを共有する');
 assert(source.includes('debugMaskPlacement?.maskUrl, debugMaskPlacement?.xPx'),'一時マスクURLの変更時に本番マスクを再読込する');
-assert(source.includes('onTryInGame(target,blob,previewColors)')&&source.includes('setMonsterImageDebugColors(colors||getMasuColors(preview))'),'合成とゲーム内確認で同じ色設定を引き継ぐ');
+assert(source.includes('onTryInGame(target,blob,previewColors)')&&source.includes('setMonsterCheckDebugColors(colors||[])'),'合成とゲーム内確認で同じ色設定を引き継ぐ(確認先は「新モンスター確認」・2026-09-17)');
 assert(source.includes('Object.values(ALL_PLAYER_MONSTERS).map(monster => ({')&&source.includes('hasMask:Array.isArray(MASU_COLOR_REGION_HUES[monster.id])'),'正式登録済みMiaを通常モンスターと同じエディタ候補生成経路へ含める');
 assert(source.includes('const MIA_EXACT_REGION_2BIT =')&&source.includes("baseId === 'Mia'"),'Miaは埋め込み部位マップを使う');
 // GitHub Pagesへ配るのは index.html と monster-hero/ だけ。ゲームが tools/ の下や

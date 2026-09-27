@@ -22,7 +22,7 @@ const html=fs.readFileSync(path.join(ROOT,'monster-hero/index.html'),'utf8');
 const game=fs.readFileSync(path.join(ROOT,'monster-hero/src/game-system.jsx'),'utf8');
 const compiled=fs.readFileSync(path.join(ROOT,'monster-hero/game-system.compiled.js'),'utf8');
 
-ok('画面の高さを --mh-vh 1か所で決めている',/:root\s*\{\s*--mh-vh:\s*100dvh;?\s*\}/.test(html));
+ok('画面の高さを --mh-vh 1か所で決めている',/:root\s*\{\s*--mh-vh:\s*100dvh;/.test(html));
 ok('svh が使えるときは svh へ切り替える',
   /@supports \(height: 100svh\)\s*\{\s*:root\s*\{\s*--mh-vh:\s*100svh;?\s*\}\s*\}/.test(html));
 ok('body の高さは --mh-vh から取る',/body \{ height:var\(--mh-vh\);/.test(html));

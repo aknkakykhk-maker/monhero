@@ -33,6 +33,9 @@ for (const rel of DATA_FILES) {
   fs.readFileSync(p, 'utf8').split('\n').forEach((line, i) => {
     if (/^\s*(?:\/\/|\*)/.test(line)) return;                     // コメントは対象外
     if (/^\s*const\s+[A-Z0-9_]+\s*=\s*["']images\//.test(line)) return; // 定数の宣言はよい
+    // プロフィール枠は「1枠に1枚」で、ほかの場所から同じ絵を指さない。書き方(src に images/profile-frames/… を
+    // そのまま書く)は tools/ranking/profile-frame-check.js が決めている(2026-09-16 に足したとき、ここと食い違っていた)
+    if (/\bsrc:\s*["']images\/profile-frames\//.test(line)) return;
     if (!/["']images\/[^"']+["']/.test(line)) return;
     inlineRefs.push(`${rel}:${i + 1}`);
   });
@@ -79,8 +82,9 @@ ok('マーケットの商品を読めている', marketItems.length > 0, `${mark
 const GRANDFATHERED = new Set([
   // アシストカードのアイコン(_icon が付く前からあるもの)
   'oryo', 'dra', 'cadmium', 'mua', 'atsu', 'myaru', 'mocchi_pet', 'gezudero', 'melopanman',
-  // 助手の表情アイコン(みゅあ・きき・ももすけ 各8種)
-  ...['myua', 'kiki', 'momosuke'].flatMap(who =>
+  // 助手の表情アイコン(みゅあ・きき・ももすけ・ドラ 各8種)。ドラの8種は 2026-09-27 に公開した
+  // (ほかの3人とそろえた形で出したので、もう変えられない)
+  ...['myua', 'kiki', 'momosuke', 'dra'].flatMap(who =>
     ['normal', 'happy', 'wink', 'excited', 'surprise', 'troubled', 'angry', 'crying'].map(e => `${who}_${e}`)),
 ]);
 const shapeOf = {
