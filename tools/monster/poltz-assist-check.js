@@ -97,6 +97,9 @@ const runPoltz = async (level, effMul) => {
     addPermaBuff: (key, delta) => { perma[key] = (perma[key] || 0) + delta; },
     liveEffectiveMaxGuts: () => 1000,
     setGuts: (fn) => { guts = fn(guts); },
+    // ふだんのバトルでは「1体ずつ回復」(タクティクス用)は null を返し、ガッツは gainGuts で足す(2026-09-20 からの形)
+    tacticsRateHeal: () => null,
+    gainGuts: (n) => { guts += n; },
     addPopup: (text) => popups.push(text),
     battleWait: async () => {},
   };
@@ -162,6 +165,9 @@ const round = (v) => Math.round(v * 1e6) / 1e6;
       addPermaBuff: (key, delta) => { perma[key] = (perma[key] || 0) + delta; },
       liveEffectiveMaxGuts: () => 1000,
       setGuts: (fn) => { guts = fn(guts); },
+      // ふだんのバトルでは「1体ずつ回復」(タクティクス用)は null を返し、ガッツは gainGuts で足す(2026-09-20 からの形)
+      tacticsRateHeal: () => null,
+      gainGuts: (n) => { guts += n; },
       addPopup: () => {},
       battleWait: async () => {},
     };
@@ -181,10 +187,15 @@ const round = (v) => Math.round(v * 1e6) / 1e6;
   const enemyTurn = grab(gameSource, '  const handleEnemyTurn = async (', '  const useEmergency = async () => {');
   const guardBranch = grab(enemyTurn, '} else if (guardValue>0) {', '        } else {');
   const plainBranch = grab(enemyTurn, `        } else {\n          tookEnemyAttack=true;`, 'if (tookEnemyAttack)');
-  const reflectBranch = grab(enemyTurn, 'if (isReflect) {', '} else if (guardValue>0) {');
+  // 反射の条件には「タクティクスでは反射しない(強制の反射を除く)」が足された
+  // 反射のあとに「タクティクスの受け方」(} else if (isTacticsMode(runMode)) {)が足された。反射の範囲はそこまでで切る
+  const reflectStart = enemyTurn.includes('if (isReflect) {') ? 'if (isReflect) {' : 'if (isReflect && (forcedReflect || !isTacticsMode(runMode))) {';
+  const reflectEnd = enemyTurn.indexOf('} else if (isTacticsMode(runMode)) {', enemyTurn.indexOf(reflectStart)) >= 0 ? '} else if (isTacticsMode(runMode)) {' : '} else if (guardValue>0) {';
+  const reflectBranch = grab(enemyTurn, reflectStart, reflectEnd);
 
   check('待機を消化するのは敵の攻撃(ATTACK/SPECIAL)を受け止めたときだけ',
-    (enemyTurn.match(/tookEnemyAttack=true;/g) || []).length === 2
+    // ふだんのバトルの「ガード」「そのまま受ける」の2か所と、タクティクスの受け方の1か所
+    (enemyTurn.match(/tookEnemyAttack=true;/g) || []).length === (enemyTurn.includes('} else if (isTacticsMode(runMode)) {') ? 3 : 2)
     && (enemyTurn.match(/if \(tookEnemyAttack\) await consumePoltzCharge\(\);/g) || []).length === 1);
   check('ガードで受け止めたときは発動する(最終ダメージ0・余剰回復でも同じ)',
     guardBranch.includes('tookEnemyAttack=true;')
@@ -204,9 +215,10 @@ const round = (v) => Math.round(v * 1e6) / 1e6;
     gameSource.includes("else if (card.subType==='buff_poltz') {")
     && gameSource.includes('writePermaBuffs(p=>({...p, poltzTier:tier, poltzEffMul:effMul, poltzCharges:conf.charges}));'));
   check('待機の残り回数をバフ欄に出す',
-    gameSource.includes("{getPermaBuff('poltzCharges')>0&&")
+    // バフ欄は札(chip)で出す形になった。段の名前と「×残り回数」を出すのは同じ
+    (gameSource.includes("{getPermaBuff('poltzCharges')>0&&") || gameSource.includes("if(getPermaBuff('poltzCharges')>0) chip('poltz',"))
     && gameSource.includes("BREEDER_EVO_NAMES.poltz[Math.max(0,Math.min(getPermaBuff('poltzTier'),2))]")
-    && gameSource.includes("×{Math.floor(getPermaBuff('poltzCharges'))}"));
+    && (gameSource.includes("×{Math.floor(getPermaBuff('poltzCharges'))}") || gameSource.includes("`×${Math.floor(getPermaBuff('poltzCharges'))}`")));
   check('カード説明(getDynamicDesc)を POLTZ_TIERS から作っている',
     gameSource.includes("if(t.id==='poltz'){")
     && gameSource.includes('const tier=POLTZ_TIERS[Math.min(level,POLTZ_TIERS.length-1)];')

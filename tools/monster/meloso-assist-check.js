@@ -25,7 +25,8 @@ assert(!starter.includes('meloso') && starter.split(',').length === 6);
 assert(breeder.includes(`id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:1500`));
 
 // ---- 実処理 ----
-assert(game.includes(`liveEffectiveMaxHp()*0.3*effMul`) && game.includes(`liveEffectiveMaxGuts()*0.3*effMul`));
+// ガッツは共通の gainGutsByRateAll(率) で全員へ戻す形になった(タクティクスでも1体ずつ効くように)
+assert(game.includes(`liveEffectiveMaxHp()*0.3*effMul`) && (game.includes(`liveEffectiveMaxGuts()*0.3*effMul`) || game.includes('const gutsVal=gainGutsByRateAll(0.3*effMul);')));
 
 // ---- ターン中の実効最大値は「いまの値」を読む ----
 // みゅあ・かどみうむ・回復カードは同じターンにライフ/ガッツの上限を上げる。
@@ -67,7 +68,8 @@ assert(game.includes(`card?.subType === 'heal_guard_meloso'`) && game.includes(`
 assert(game.includes(`getTurnBuff('takenDamageMult',1.0)`) && game.includes(`getNextTurnBuff('melosoFullRecoveryMult',0)`));
 assert(game.includes(`prev.length >= TEACHING_ROSTER_SIZE`));
 // ガッツは消費を先に反映してから回復する(ゲージが上がってから下がる見え方にしない)
-const gutsCostAt = game.indexOf(`setGuts(p=>Math.max(0,p-getCardGuts(card,slotIdx)));`);
+// 消費は cardCost へ切り出し、タクティクスでは1体ずつ払う分岐が足された。どちらの書き方でも消費の位置を取る
+const gutsCostAt = Math.max(game.indexOf(`setGuts(p=>Math.max(0,p-getCardGuts(card,slotIdx)));`), game.indexOf('else setGuts(p=>Math.max(0,p-cardCost));'));
 const melosoAt = game.indexOf(`if (card.id==='meloso')`);
 assert(gutsCostAt > 0 && melosoAt > gutsCostAt, 'ガッツの消費より先にメロソの回復が走っている');
 // 回復後のライフはローカル値で持ち回り、敵ターンへ引数で渡す(古いstateを読ませない)
@@ -101,15 +103,23 @@ assert(help.includes('次のWAVEへ持ち越されません'));
 // ================= 本体と同じ式を書き写したモデル =================
 // DRIFT GUARD: 下のモデルが写している式が実コードに残っているか先に確かめる。
 // 丈夫さのバランス調整で式が変わると、モデルだけ古いまま通り続けてしまうため。
-assert(game.includes(`const defenseRate = Math.min(0.5,effectiveDef*0.00015);`),
+// 丈夫さは defVal(ふだんのバトルは effectiveDef・タクティクスは狙われた子の丈夫さ)という名前へ切り出した。式は同じ
+const defValIsEffectiveDef = game.includes('resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff(\'defPct\')) : effectiveDef;');
+assert(game.includes(`const defenseRate = Math.min(0.5,effectiveDef*0.00015);`)
+  || (defValIsEffectiveDef && game.includes(`const defenseRate = Math.min(0.5,defVal*0.00015);`)),
   '丈夫さの割合軽減の式が変わっている。モデル側も新しい式へ直すこと');
-assert(game.includes(`Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))`),
+assert(game.includes(`Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))`)
+  || (defValIsEffectiveDef && game.includes(`Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))`)),
   '丈夫さの固定軽減と下限の式が変わっている。モデル側も新しい式へ直すこと');
 assert(game.includes(`Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining))`),
   '永続軽減の適用が変わっている。モデル側も新しい式へ直すこと');
-assert(game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)))`),
+// タクティクスでは「狙われた子だけ」のぶん(tacticsSlotRate)も掛ける形になった。ふだんのバトルは bySlot を渡さないので 1.0 で今までと同じ
+assert(game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)))`)
+  || game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)\n      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)))`),
   '次ターン被ダメージ軽減の適用が変わっている。モデル側も新しい式へ直すこと');
-assert(game.includes(`applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult)))`));
+// 予測表示は1発ずつ数えるため、ガードを引いた値(hit.taken)を resolveTacticsGuardedHit で出してから軽減を掛ける形になった(順番は同じ)
+assert(game.includes(`applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult)))`)
+  || (game.includes('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);') && game.includes('const taken = applyTurnDamageReduction(hit.taken, slotIdx);')));
 assert(game.includes(`const fd=applyTurnDamageReduction(Math.abs(diff))`));
 
 // getIncomingDamageBeforeTurnReduction と同じ計算(丈夫さ→固定軽減→割合軽減→永続軽減)
@@ -219,8 +229,11 @@ let exSoloTurn=advanceCombatTurn(advanceCombatTurn(exSolo));
 assert.strictEqual(exSoloTurn.damage,103); // 118の12.5%減(floor)
 
 // 回復量は「不足分の割合」ではなく「最大値の割合」を現在値へ加える
-assert(game.includes(`p+Math.floor(liveEffectiveMaxHp()*recoveryMult)`));
-assert(game.includes(`p+Math.floor(liveEffectiveMaxGuts()*recoveryMult)`));
+// 値を melosoHeal へ切り出し、ガッツは gainGuts で足す形になった(どちらも「最大値×率を今の値へ足す」のまま)
+assert(game.includes(`p+Math.floor(liveEffectiveMaxHp()*recoveryMult)`)
+  || (game.includes('const melosoHeal=Math.floor(liveEffectiveMaxHp()*recoveryMult);') && game.includes('setHp(p=>Math.min(liveEffectiveMaxHp(),p+melosoHeal));')));
+assert(game.includes(`p+Math.floor(liveEffectiveMaxGuts()*recoveryMult)`)
+  || game.includes('gainGuts(Math.floor(liveEffectiveMaxGuts()*recoveryMult));'));
 assert(!game.includes(`(liveEffectiveMaxHp()-p)*recoveryMult`) && !game.includes(`(liveEffectiveMaxGuts()-p)*recoveryMult`));
 for (const [before, after] of [[20,70],[50,100],[80,100]]) {
   const r = startPlayerTurn({...base,hp:before,guts:before,turnBuffs:{melosoFullRecoveryMult:0.5}});

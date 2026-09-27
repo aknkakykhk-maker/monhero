@@ -173,7 +173,9 @@ check('加算する種を一覧で持っている',
   source.includes("const HERO_CARD_BONUS_MONSTER_IDS = Object.freeze(['Ham', 'KenshiMocchi']);")
   && source.includes("const heroCardBonusOf = (heroId) => (HERO_CARD_BONUS_MONSTER_IDS.includes(heroId) ? 1 : 0);"));
 check('枚数の計算はその一覧だけを見る',
-  source.includes("const heroCardBonus = useMemo(() => heroCardBonusOf(mainHero?.id), [mainHero]);")
+  // タクティクスでは生きている勇者の数で数える分岐が足された(ふだんのバトルは heroCardBonusOf(mainHero?.id) のまま)
+  (source.includes("const heroCardBonus = useMemo(() => heroCardBonusOf(mainHero?.id), [mainHero]);")
+    || /const heroCardBonus = useMemo\(\(\) => \(isTacticsMode\(runMode\)[\s\S]{0,200}?: heroCardBonusOf\(mainHero\?\.id\)\), \[mainHero, runMode, tacticsUnits\]\);/.test(source))
   && source.includes('return Math.min(5,limit + heroCardBonus + kikiCardBonus);'));
 check('剣士モッチー専用の枚数分岐を書き足していない',
   !/if \(mainHero\?\.id === 'KenshiMocchi'\) limit \+= 1;/.test(source));
@@ -198,12 +200,16 @@ check('剣士モッチー専用の枚数分岐を書き足していない',
 }
 // AUTOは手動と同じ cardLimit / slotMaxUses を受け取る。ここが切れると手動とAUTOで食い違う
 check('AUTOへ手動と同じ枚数ルールを渡している',
-  source.includes('hand, slots, guts, cardLimit, strategy:autoSettings.strategy,')
+  // スロットは slots:autoSlots(タクティクスの並びにも使う形)で渡すようになった
+  (source.includes('hand, slots, guts, cardLimit, strategy:autoSettings.strategy,') || source.includes('hand, slots:autoSlots, guts, cardLimit, strategy:autoSettings.strategy,'))
   && source.includes('getCardGuts, cardNeedsMonster, slotMaxUses,'));
 // 1つのスロットへ重ねられる枚数も、枚数+1の勇者特性を持つ種の共通ルール(heroCardBonusOf)へ乗せる。
 // 種ごとの分岐(mainHero?.id==='Ham' のような直書き)へ戻っていないことを見る
 check('同じスロットへ重ねる条件も共通ルールで決めている',
-  source.includes("const base=((heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id)||kikiCardBonus>0) ? baseCardLimit : 1;"));
+  // 条件は bonusOwner へ切り出した(意味は同じ)
+  source.includes("const base=((heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id)||kikiCardBonus>0) ? baseCardLimit : 1;")
+  || (source.includes("const bonusOwner=heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id;")
+    && source.includes("const base=(bonusOwner||kikiCardBonus>0) ? baseCardLimit : 1;")));
 {
   // 実際に同じ式を動かして、ハム・ききの既存の答えが1つも変わっていないことと、
   // 剣士モッチーだけが新しく重ねられるようになったことを突き合わせる
@@ -357,7 +363,9 @@ check('ヒット列へ本数を渡している(予測と実処理の3経路す�
 check('予測ダメージも同じ buildAttackHits を通る',
   /const hits=buildAttackHits\(\{ d:baseDmg, card, attackerId:mon\?\.id, heroId:mainHero\?\.id/.test(source));
 check('状態表示に連撃パワーと追加連撃を出している',
-  /連撃パワー \{getPermaBuff\('kenshiComboPower'\)\}\/\{KENSHI_COMBO_POWER_MAX\}/.test(source));
+  // 状態表示は「連撃パワー」の札(chip)で、値と追加連撃を1つの札に出す形になった
+  /連撃パワー \{getPermaBuff\('kenshiComboPower'\)\}\/\{KENSHI_COMBO_POWER_MAX\}/.test(source)
+  || (/chip\('kenshi',[^\n]*'連撃パワー',/.test(source) && source.includes("`${getPermaBuff('kenshiComboPower')}/${KENSHI_COMBO_POWER_MAX}${kenshiExtra>0?`・追加連撃 +${kenshiExtra}`:''}`")));
 
 console.log('--- ⑨ 専用の二刀流モーション ---');
 check('atkMotion が専用種別になっている', mon.atkMotion === 'kenshiTwinBlade', String(mon.atkMotion));

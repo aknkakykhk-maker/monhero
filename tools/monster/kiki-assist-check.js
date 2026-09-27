@@ -35,11 +35,13 @@ assert(gameSource.includes("if(t.id==='kiki') return `次の${level+2}ターン 
   "getPermaBuff('globalComboDmgPct')",
   "addPermaBuff('globalComboDmgPct',comboAdd)",
   "combo(globalComboRate, '全体連撃', true)",
-  "全体連撃 +{Math.round(getPermaBuff('globalComboDmgPct')*100)}%",
+  // 状態の表示は「全体連撃」の札(chip)で値を出す形になった
+  "'全体連撃',`+${Math.round(getPermaBuff('globalComboDmgPct')*100)}%`",
   "kikiCardBonusTurns",
   'heroCardBonus + kikiCardBonus',
   "prev.length >= TEACHING_ROSTER_SIZE",
-  "getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo)",
+  // 予測ダメージにはスロットの番号(タクティクスの距離)が足された
+  "getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo,slotIdx)",
 ].forEach(text=>assert(gameSource.includes(text),`実装結線が不足: ${text}`));
 assert(gameSource.includes("globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo") && gameSource.includes("if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true);"),'共通予測に全体連撃を含める');
 assert(gameSource.includes('const KIKI_FACE_ICON_ADJUSTMENT = Object.freeze({ scale:2.37, x:0, y:19 })'),'ききの顔寄り調整値を1か所で定義する');
@@ -47,7 +49,8 @@ assert(gameSource.includes('kiki: KIKI_FACE_ICON_ADJUSTMENT')&&gameSource.includ
 assert(gameSource.includes('ASSIST_CARD_ICON_STYLES[cardId]'),'画像パスではなくアシストカードIDで専用表示を適用する');
 assert(gameSource.includes("item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon"),'マーケット一覧と拡大表示へアシストカード専用表示を適用する');
 assert((gameSource.match(/item\.type==='assist'&&ASSIST_CARD_ICON_STYLES\[item\.id\]\?<AssistCardIcon/g)||[]).length===2,'マーケット一覧と拡大表示の両方へ適用する');
-assert(gameSource.includes('cardIconNode(t.icon,40,t.id)'),'編成画面のカード一覧へ専用表示を適用する');
+// アイコンの大きさは画面の作り替えで変わる(40 → 52 など)。カードIDを渡して専用表示を通していればよい
+assert(/cardIconNode\(t\.icon,\d+,t\.id\)/.test(gameSource),'編成画面のカード一覧へ専用表示を適用する');
 assert(gameSource.includes('cardIconNode(c.icon,32,c.id)'),'バトル中のカードへ専用表示を適用する');
 assert(gameSource.includes('zanHero: 0.3,')&&gameSource.includes('zanUnique: 0.2,')
   &&gameSource.includes('combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus)')
@@ -55,8 +58,11 @@ assert(gameSource.includes('zanHero: 0.3,')&&gameSource.includes('zanUnique: 0.2
 assert(!/globalComboDmgPct[^\n]*comboDmgPct|comboDmgPct[^\n]*globalComboDmgPct/.test(gameSource),'ザン補正と全体連撃を混ぜない');
 const actionHeaderStart=gameSource.indexOf('flex-1 min-w-0 flex flex-wrap');
 const actionHeader=gameSource.slice(actionHeaderStart,gameSource.indexOf('使うカードが決まっている番は',actionHeaderStart));
-['flex-1 min-w-0 flex flex-wrap','gap-y-0.5','flex items-center gap-0.5 shrink-0','min-h-[44px] min-w-[84px] shrink-0'].forEach(text=>
+['flex-1 min-w-0 flex flex-wrap','gap-y-0.5','flex items-center gap-0.5 shrink-0'].forEach(text=>
   assert(actionHeader.includes(text),`ACTION操作列を守るレイアウトが不足: ${text}`));
+// ACTIONボタンは幅が 84px → 96px へ広がった。高さ44px以上・幅84px以上で縮まないことを見る
+assert(/data-battle-action [\s\S]{0,120}?className=\{`min-h-\[(4[4-9]|[5-9]\d)px\] min-w-\[(8[4-9]|9\d|1\d\d)px\] shrink-0/.test(gameSource),
+  'ACTION操作列を守るレイアウトが不足: ACTIONボタンの大きさ(min-h 44px・min-w 84px以上・shrink-0)');
 for(const width of [320,390,430]) {
   // 右側はVIEW約40px + 統合AUTO44px + ACTION84px + gap。ACTIONを縮めず左側だけを折り返す。
   assert(width-16-(40+44+84+4)>=100,`${width}pxで左側の折り返し領域を確保できない`);

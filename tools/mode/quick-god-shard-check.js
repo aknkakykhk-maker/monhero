@@ -71,7 +71,9 @@ check('実バトルのクリアで証片を配る',
   app.includes('await awardHeroProofShardForClear();')
   && app.includes('[HERO_PROOF_SHARD_ITEM_ID]:ownedItemCount(ownedItemsRef.current, HERO_PROOF_SHARD_ITEM_ID) + gain'));
 check('モンヒロビート換算の周回にも、同じ関数で周回数ぶん配る',
-  app.includes('const oneShard = heroProofShardClearReward({ runMode, difficulty });')
+  // 曲ごとの報酬の段(awardMode / awardDifficulty・2026-09-22 #1639)を通す形になった。どちらの形でも同じ関数で決めていればよい
+  (app.includes('const oneShard = heroProofShardClearReward({ runMode, difficulty });')
+    || app.includes('const oneShard = heroProofShardClearReward({ runMode: awardMode, difficulty: awardDifficulty });'))
   && app.includes('const shardGain = Math.max(0, Math.floor(oneShard * count));'));
 check('個数の正本は1か所だけ(画面や換算処理へ数字を書き写していない)',
   !/HERO_PROOF_SHARD_CLEAR_REWARDS\s*\[/.test(app)
