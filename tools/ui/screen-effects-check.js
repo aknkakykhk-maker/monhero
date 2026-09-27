@@ -214,7 +214,7 @@ check('目印が重複していない', new Set(marks).size === marks.length,
 
 const missing = rows.filter((r) => app.split(r.mark).length - 1 !== 1);
 check('表の目印はすべて本体か切り出した画面にちょうど1つある', missing.length === 0,
-  missing.slice(0, 3).map((r) => `${r.mark}(${app.split(r.mark).length - 1}件)`).join(' / '));
+  missing.map((r) => `${r.mark}(${app.split(r.mark).length - 1}件)`).join(' / '));
 
 // setTimeout の実際の呼び出し数。コメント中の「setTimeout」は数えない
 const callCount = app.split('\n').reduce((n, line) => (/^\s*\/\//.test(line) ? n : n + (line.split('setTimeout').length - 1)), 0);

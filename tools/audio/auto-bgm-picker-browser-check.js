@@ -86,21 +86,33 @@ const seed = () => {
     // バトル画面(AUTOボタン)が出るまで待ってから先へ進む
     await page.waitForFunction(() => !!document.querySelector('button[aria-label^="AUTO"]'), { timeout: 25000 }).catch(() => {});
     const autoLabel = () => page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.getAttribute('aria-label'));
-    for (let i=0;i<3 && (await autoLabel())!=='AUTO ∞';i++) {
-      await page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.click()); await page.waitForTimeout(900); }
+    // ★押したあとは「表示が変わるまで」待つ。時間を決め打ちにすると、検査を全部回して重いときだけ
+    //   押し直しが早すぎて AUTO を行き過ぎる・開ききる前に見て落ちる(2026-09-27 の一括実行で 2/8 だった)
+    const clickAndWaitChange = async (selector, read) => {
+      const was = await read();
+      await page.evaluate((sel) => document.querySelector(sel)?.click(), selector);
+      await page.waitForFunction(([sel, prev]) => document.querySelector(sel)?.getAttribute('aria-label') !== prev,
+        [selector, was], { timeout: 8000 }).catch(() => {});
+    };
+    for (let i=0;i<3 && (await autoLabel())!=='AUTO ∞';i++) await clickAndWaitChange('button[aria-label^="AUTO"]', autoLabel);
     check('クイックで∞周回を始められる', (await autoLabel())==='AUTO ∞', await autoLabel());
     const ecoLabel = () => page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.getAttribute('aria-label'));
-    for (let i=0;i<4 && (await ecoLabel())!=='省エネ 超';i++) {
-      await page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.click()); await page.waitForTimeout(700); }
+    for (let i=0;i<4 && (await ecoLabel())!=='省エネ 超';i++) await clickAndWaitChange('button[aria-label^="省エネ"]', ecoLabel);
     check('超省エネに切り替えられる', (await ecoLabel())==='省エネ 超', await ecoLabel());
 
     const opened = () => page.evaluate(() => !!document.querySelector('[data-auto-bgm-picker]'));
     const before = await progress();
     await page.evaluate(() => document.querySelector('[data-auto-bgm-button]')?.click());
-    await page.waitForTimeout(600);
+    await page.waitForFunction(() => !!document.querySelector('[data-auto-bgm-picker]'), null, { timeout: 8000 }).catch(() => {});
     check('バトル中にBGM設定を開ける', await opened());
-    await page.waitForTimeout(WATCH_MS);
-    const during = await progress();
+    // 進んだかどうかは「進むまで見張る」。重いときは1ターンに時間がかかるので、上限だけ決めて早く進めば早く抜ける
+    const waitAdvance = async (from) => {
+      const end = Date.now() + WATCH_MS * 2;
+      let now = await progress();
+      while (!advanced(from, now) && Date.now() < end) { await page.waitForTimeout(500); now = await progress(); }
+      return now;
+    };
+    const during = await waitAdvance(before);
     // ★開いているあいだも進むこと。止めてしまうと、放置で回す超省エネの意味が薄れる
     check('BGM設定を開いているあいだも周回が進む', advanced(before, during),
       `W${before.wave}/T${before.turn} → W${during.wave}/T${during.turn}`);
@@ -109,11 +121,10 @@ const seed = () => {
 
     await page.evaluate(() => { const p=document.querySelector('[data-auto-bgm-picker]');
       const x=p&&[...p.querySelectorAll('button')].find(b=>(b.innerText||'').trim()==='×'); x?.click(); });
-    await page.waitForTimeout(600);
+    await page.waitForFunction(() => !document.querySelector('[data-auto-bgm-picker]'), null, { timeout: 8000 }).catch(() => {});
     check('BGM設定を閉じられる', !(await opened()));
     const closed = await progress();
-    await page.waitForTimeout(WATCH_MS);
-    const after = await progress();
+    const after = await waitAdvance(closed);
     check('閉じたあとも周回が続く', advanced(closed, after),
       `W${closed.wave}/T${closed.turn} → W${after.wave}/T${after.turn}`);
 

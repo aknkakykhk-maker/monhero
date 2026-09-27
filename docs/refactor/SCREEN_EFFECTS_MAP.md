@@ -1,4 +1,4 @@
-# 画面ライフサイクルの分類表 — setTimeout 62 箇所を「画面専用 / 進行 / 対象外」に仕分ける
+# 画面ライフサイクルの分類表 — setTimeout 68 箇所を「画面専用 / 進行 / 対象外」に仕分ける
 
 2026-09-10 作成(STEP 6-1)。対象は `monster-hero/src/parts/60-app.jsx`(`MonsterHeroGame`)。
 `tools/ui/screen-effects-check.js` がこの表を読み、目印が本体にちょうど1つあることと、
@@ -19,7 +19,8 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `progress` | 進行。フラグ戻し・次の画面へ進む・保存・掃除・`await` の resolve | **止めない**(登録簿から手を離すだけ) |
 | 対象外 | 画面(`gameState`)に紐づかない。起動経路・アプリ常駐 | 登録簿に載せない |
 
-内訳は **画面専用 16 / 進行 31 / 対象外 15**。`interval` `raf` `listen` は種別を取らず常に画面専用
+内訳は **画面専用 22 / 進行 30 / 対象外 16**(2026-09-27 に表を今に合わせた。作成時は 16 / 31 / 15。
+タップの波紋は 24-battle-fx.jsx へ、画像デバッグのモーション再生3つは 23-rpg-debug.jsx の `attackMotionPreviewSequence` へ移ったので表から外した)。`interval` `raf` `listen` は種別を取らず常に画面専用
 (放っておくと永久に走る・参照を掴んだままになるため)。
 
 ## 表の読みかた
@@ -31,7 +32,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 検査(`tools/ui/screen-effects-check.js`)は本体と切り出した画面を合わせて数えるので、
 移しただけでは落ちない。落ちるのは「表に書き忘れた」「表から消えた」ときだけ。
 
-## 画面専用(`screen`)— 16 箇所
+## 画面専用(`screen`)— 22 箇所
 
 | 目印 | 分類 | 現状 | 何をしているか / 判断の理由 |
 | --- | --- | --- | --- |
@@ -51,16 +52,21 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(measure, 80);` | screen | 止める | バトルの案内を出す位置を、描画が落ち着いてから測る |
 | `setTimeout(recenterModeL` | screen | 投げっぱなし | モード選びの横スクロールを中央へ寄せ直す |
 | `setTimeout(()=>setReinca` | screen | 投げっぱなし | 転生演出の見本(デバッグ)を消す |
+| `battleMs(Math.round(fxMs*0.12))` | screen | 投げっぱなし | ムーのムービーのあと、技が当たる瞬間に画面を揺らす。止めても揺れないだけ |
+| `battleMs(Math.round(fxMs*tacticsEnemyHitFrac(` | screen | 投げっぱなし | タクティクスの敵の動きに合わせて、当たる瞬間に揺らす。止めても揺れないだけ |
+| `setTimeout(() => finish(true), BOSS_MOVIE_MAX_MS)` | screen | 止める(71-screen-battle.jsx の `BossMovieLayer`) | ボスのムービーを長さの上限で打ち切る。部品が閉じるときは後片付けが `finish(false)` で待っている側を起こす |
+| `setTimeout(() => setCanSkip(true), 900)` | screen | 止める(71-screen-battle.jsx の `BossMovieLayer`) | ボスのムービーのスキップを出す |
+| `if (!started) finish(false); }, BOSS_MOVIE_START_TIMEOUT_MS` | screen | 止める(71-screen-battle.jsx の `BossMovieLayer`) | ボスのムービーが始まらないときに打ち切る。部品が閉じるときは後片付けが待っている側を起こす |
+| `fxRestTimerRef.current = setTimeout(` | screen | 止める(71-screen-battle.jsx) | タクティクスで操作が無いあいだ演出を休ませる。止めても休まないだけ |
 
-## 進行(`progress`)— 31 箇所
+## 進行(`progress`)— 30 箇所
 
 止めると何が起きるかを「壊れ方」に書いた。**ここを画面専用にしてはいけない。**
 
 | 目印 | 分類 | 現状 | 何をしているか / 壊れ方 |
 | --- | --- | --- | --- |
 | `setTimeout(()=>{setScreenShake(false)` | progress | 投げっぱなし | 画面の揺れを戻す。止めると揺れたままバトルへ入る |
-| `setTimeout(() => setRipples(prev => prev.filter` | progress | 投げっぱなし | タップ波紋を1件消す。止めると配列に溜まり続ける |
-| `setTimeout(resolve, battleMs(baseMs))` | progress | await | `battleWait`。止めるとバトルの `await` が永久に止まり進行不能 |
+| `if (runGenerationRef.current === generation) resolve();` | progress | await | `battleWait`。止めるとバトルの `await` が永久に止まり進行不能 |
 | `dragAssignToSlot(cardIndex, si)` | progress | 投げっぱなし | ドラッグで入れた枠の光を戻す。止めると光ったまま |
 | `atob(restoreInput.trim())` | progress | 投げっぱなし | コード復元後の再読み込み。止めると復元が画面に反映されない |
 | `setTimeout(() => URL.rev` | progress | 投げっぱなし | バックアップファイルの ObjectURL を解放する。止めると掴んだまま |
@@ -82,22 +88,22 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(()=>{setUltim` | progress | 投げっぱなし | 極限の距離開放の表示を消し `setIsBusy(false)`。止めると操作を受け付けない |
 | `setTimeout(()=>{setEffec` | progress | 投げっぱなし | 合流演出のあと固有技強化へ進む。止めると進行が止まる |
 | `setTimeout(()=>{setOwned` | progress | 投げっぱなし | 教えを反映して次の WAVE を始める。止めると次の WAVE が来ない |
-| `const activeIds=slots.filter(Boolean).map(joinRosterEntry)` | progress | 投げっぱなし | トレーニング後に供モン合流・次の WAVE へ。止めると進行が止まる |
+| `setEffect({type:'heal',label:guardLevelUp?` | progress | 投げっぱなし | トレーニング後に供モン合流・次の WAVE へ。止めると進行が止まる |
 | `setTimeout(resolve,step.ms)` | progress | await | 図鑑の攻撃プレビューの1コマ待ち。打ち切りは `dexAttackPreviewRunRef` が持っている |
-| `setTimeout(r,650))` | progress | await | 画像デバッグのモーション再生(ため) |
-| `setTimeout(r,atkMotion==='eikiSa` | progress | await | 画像デバッグのモーション再生(踏み込み) |
-| `setTimeout(r,atkMotion==='arkHol` | progress | await | 画像デバッグのモーション再生(技ごとの尺) |
-| `setTimeout(()=>setEffect` | progress | 投げっぱなし(65-screen-masu-enhance.jsx へ移動済み) | まとめて強化の演出を消す。止めると出たまま |
+| `setTimeout(()=>setEffect(null),1200)` | progress | 投げっぱなし(65-screen-masu-enhance.jsx へ移動済み) | まとめて強化の演出を消す。止めると出たまま |
 | `setSlotSettle(i);` | progress | 投げっぱなし | タップで入れた枠の光を戻す。止めると光ったまま |
+| `}, TACTICS_SLOT_FX_MS);` | progress | 止める(次を出すとき) | タクティクスの枠の出来事の札を消す。止めると出たまま |
+| `setTacticsExCutin(null); }, TACTICS_EX_CUTIN_MS` | progress | 止める(次を出すとき) | EXのカットインを消す。止めると出たまま |
+| `setEffect(null), TRANSCEND_ENHANCE_FX_MS` | progress | 投げっぱなし | 超越強化の演出を消す。止めると出たまま |
 
-## 対象外 — 15 箇所
+## 対象外 — 16 箇所
 
 画面(`gameState`)ではなく、起動経路やアプリ全体に紐づくもの。**登録簿には載せない**。
 起動経路は `REGRESSION_RISK_MAP.md` §4-6 の「触らない領域」でもある。
 
 | 目印 | 分類 | 現状 | 何をしているか / 対象外の理由 |
 | --- | --- | --- | --- |
-| `setTimeout(() => { if (!` | 対象外 | 止める | 追いつき表示を戻す。依存は `catchingUp / rhythmScreenOpen / runStage` で画面をまたぐ |
+| `setTimeout(() => { if (!(catchUpUntilRef` | 対象外 | 止める | 追いつき表示を戻す。依存は `catchingUp / rhythmScreenOpen / runStage` で画面をまたぐ |
 | `setTimeout(r, 260))` | 対象外 | await | 起動ゲージを 100% まで見せる待ち |
 | `setTimeout(runRequired, ` | 対象外 | 止める | 起動時の必須読み込みの再試行 |
 | `setTimeout(() => cb({tim` | 対象外 | 投げっぱなし | `requestIdleCallback` が無いブラウザの代替(染色マスクの先読み) |
@@ -112,6 +118,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(() => preload('score'` | 対象外 | 投げっぱなし | ランキングの裏での先読み(スコア) |
 | `setTimeout(() => preload('breeder'` | 対象外 | 投げっぱなし | ランキングの裏での先読み(ブリーダー Lv) |
 | `setTimeout(() => preload('bond',` | 対象外 | 投げっぱなし | ランキングの裏での先読み(絆 Lv) |
+| `resendPendingRankingScores(); }, RANKING_RESEND_DELAY_MS` | 対象外 | 止める | 送れなかったランキングの記録を、HOMEに落ち着いてから1回だけ送り直す(アプリ全体で1回) |
 
 ## 次の本でやること
 

@@ -26,6 +26,9 @@ const names = readPartsManifest();
 const misnamed = names.filter((n) => /screen-/.test(n) && !/^\d+-screen-/.test(n));
 const screens = names.filter((n) => /^\d+-screen-/.test(n) && n !== '40-screen-effects.jsx');
 const appIndex = names.indexOf('60-app.jsx');
+// 画面そのものではなく、画面が共通で使う土台(見出し・パネル・タブなど)。名前は readAppSource() に拾わせるため
+// 「数字-screen-」にそろえてあるが、画面コンポーネントは持たない(2026-09-18 に足した)。画面の定義の決まりは当てない
+const SHARED_SCREEN_PARTS = new Set(['41-screen-ui.jsx']);
 const app = fs.readFileSync(path.join(PARTS_DIR, '60-app.jsx'), 'utf8');
 
 check('切り出した画面部品がある', screens.length > 0, screens.join(' / '));
@@ -43,8 +46,9 @@ for (const name of screens) {
   // 1ファイルに複数の画面を置くことがある(図鑑は 一覧・詳細・攻撃プレビューの3つで1組)。
   // 定義したものが全部使われていることまで見る
   const components = [...src.matchAll(/^function ([A-Z][A-Za-z0-9]*)\(/gm)].map((m) => m[1]);
-  check(`${label}: 画面コンポーネントを定義している`, components.length > 0, components.join(' / ') || '見つからない');
-  const unused = components.filter((c) => !app.includes(`<${c}`));
+  if (!SHARED_SCREEN_PARTS.has(name)) check(`${label}: 画面コンポーネントを定義している`, components.length > 0, components.join(' / ') || '見つからない');
+  // 画面の中だけで使う小さな部品(結果画面の RankingFailedNote など)は、同じファイルの中で使われていればよい
+  const unused = components.filter((c) => !app.includes(`<${c}`) && !code.includes(`<${c}`));
   check(`${label}: 定義した画面がすべて 60-app.jsx から使われている`, unused.length === 0,
     unused.length ? `使われていない: ${unused.join(' / ')}` : `${components.length}個`);
 
