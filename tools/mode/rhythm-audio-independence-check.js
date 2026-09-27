@@ -37,7 +37,7 @@ check('setEnabledは稼働中の音ゲーgainへもミュートを反映する',
 check('unlock()経由でミュート解除された場合も反映する',
   /if \(!enabled\) \{ enabled = true; if \(typeof window !== 'undefined'\) window\.__mhAudioEnabled = true; applyRhythmMute\(\); \}/.test(game));
 check('音源停止時はgainノードの登録を解除する(古いノードにミュート操作が残らない)',
-  game.includes('stop:()=>{if(stopped)return;stopped=true;playing=false;const old=source;source=null;stopSource(old);dropGainEntry();}'));
+  game.includes('stop:()=>{if(stopped)return;stopped=true;playing=false;const old=source;source=null;stopSource(old);dropGainEntry();'));
 
 check('タップ音(SE)もメインの全体ミュートだけ共通で見る',
   data.includes("const rhythmAudioGloballyEnabled=()=>typeof window==='undefined'||window.__mhAudioEnabled!==false;")
