@@ -344,8 +344,50 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && ex.tacticsExRegenRateAt(g, [unit], 0, A(2, 8)) === 0 && ex.tacticsExRegenRateAt(g, [unit, unit], 1, A(2, 3)) === 0
     && ex.tacticsExRegenRateAt(late, [unit], 0, A(3, 1)) === 0);
   check('ほかの子に入れ替わっていたら上乗せしない', ex.tacticsExRegenRateAt(g, [{ ...unit, id: 'Golem' }], 0, A(2, 3)) === 0);
-  check('自動回復は1体ずつ「上限の30%」を固定値で足す(率への倍率ではない・倒れている子の戻りには乗せない)',
-    /const boost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now\);[\s\S]{0,120}rateHealTacticsAt\(units, slotIdx, boost, boost\)[\s\S]{0,120}const downed = regenDownedTacticsBoard\(units\)/.test(app));
+  check('自動回復は1体ずつ「上限の30%」を固定値で足す(率への倍率ではない・ライフとガッツは別々の率・倒れている子の戻りには乗せない)',
+    /const hpBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'hp'\);[\s\S]{0,160}const gutsBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'guts'\);[\s\S]{0,160}rateHealTacticsAt\(units, slotIdx, hpBoost, gutsBoost\)[\s\S]{0,120}const downed = regenDownedTacticsBoard\(units\)/.test(app));
+}
+
+// ---------- ⑪-2 ミタラシ「ドラゴンだっちー」(2026-09-27 ユーザー指示) ----------
+// ガッツ全開っちーの上がるステが違う版。ユーザーが選んだ「ちから＋ガッツ」:
+// ちから・ガッツ上限40% / 丈夫さ・ライフ上限20%、自動回復の上乗せはガッツ40%・ライフ20%。回数・ターン・併用はモッチーと同じ
+{
+  const dm = ex.tacticsExDefOf('Mitarashi');
+  check('ミタラシ「ドラゴンだっちー」: ラン3回・カードと併用できる・5ターン・全回復・効果はガッツ全開っちーと同じ種類', !!dm && dm.name === 'ドラゴンだっちー'
+    && dm.maxUses === 3 && !dm.unlimited && dm.withCards && dm.duration === 'turns' && dm.turns === 5 && dm.fullRecover
+    && dm.effect === 'statBoost' && ex.isTacticsExEffectImplemented(dm), JSON.stringify(dm));
+  check('上げ幅: ちから40%・丈夫さ20%・ライフ上限20%・ガッツ上限40%、回復はライフ20%・ガッツ40%',
+    JSON.stringify(dm.rates) === JSON.stringify({ atk: 0.4, def: 0.2, hp: 0.2, guts: 0.4 })
+    && JSON.stringify(dm.regenRates) === JSON.stringify({ hp: 0.2, guts: 0.4 }), JSON.stringify([dm.rates, dm.regenRates]));
+  const gm = ex.tacticsExDefOf('Mocchi');
+  check('ガッツ全開っちーは rates を書かなくても4つとも30%・回復も30%ずつ(今までどおり)',
+    JSON.stringify(gm.rates) === JSON.stringify({ atk: 0.3, def: 0.3, hp: 0.3, guts: 0.3 })
+    && JSON.stringify(gm.regenRates) === JSON.stringify({ hp: 0.3, guts: 0.3 }), JSON.stringify([gm.rates, gm.regenRates]));
+  const A = (wave, turn) => ({ wave, turn });
+  const s0 = ex.createTacticsExState();
+  const d = ex.applyTacticsExUse(s0, { def: dm, slot: 1, monId: 'Mitarashi', now: A(1, 2) });
+  const unit = { id: 'Mitarashi', hp: 300, maxHp: 680, atk: 150, def: 115, guts: 50, maxGuts: 120, downed: false };
+  const on = ex.applyTacticsExStats(unit, d, 1, A(1, 2));
+  check('力150/丈夫さ115 → 210/138(40%・20%アップ)', on.atk === 210 && on.def === 138, `${on.atk}/${on.def}`);
+  check('6ターン目には切れて元の値に戻る', ex.applyTacticsExStats(unit, d, 1, A(1, 7)).atk === 150);
+  const base = { id: 'Mitarashi', hp: 300, maxHp: 680, baseMaxHp: 680, atk: 150, def: 115, guts: 50, maxGuts: 120, baseMaxGuts: 120, downed: false };
+  const up = ex.scaleTacticsUnits(ex.setTacticsExMaxRate([null, base], 1, dm.rates.hp, dm.rates.guts), 0, 0)[1];
+  check('上限はライフ20%・ガッツ40%(680→816・120→168)', up.maxHp === 816 && up.maxGuts === 168, `${up.maxHp}/${up.maxGuts}`);
+  const upMua = ex.scaleTacticsUnits(ex.setTacticsExMaxRate([null, base], 1, dm.rates.hp, dm.rates.guts), 0.1, 0.1)[1];
+  check('みゅあ補正(+10%)で作り直しても消えない(680×1.1×1.2＝897・120×1.1×1.4＝184)', upMua.maxHp === 897 && upMua.maxGuts === 184, `${upMua.maxHp}/${upMua.maxGuts}`);
+  const exp = ex.expireTacticsExMaxRates([null, { ...up, hp: 816, guts: 168 }], d, A(1, 7));
+  const down = ex.scaleTacticsUnits(exp.units, 0, 0)[1];
+  check('切れたらライフ・ガッツとも上限が元へ戻る', exp.changed && down.maxHp === 680 && down.maxGuts === 120 && down.hp === 680 && down.guts === 120,
+    `${down.hp}/${down.maxHp} ${down.guts}/${down.maxGuts}`);
+  check('自動回復の上乗せはライフ0.2・ガッツ0.4、切れたら0',
+    ex.tacticsExRegenRateAt(d, [null, unit], 1, A(1, 2), 'hp') === 0.2 && ex.tacticsExRegenRateAt(d, [null, unit], 1, A(1, 2), 'guts') === 0.4
+    && ex.tacticsExRegenRateAt(d, [null, unit], 1, A(1, 7), 'guts') === 0);
+  const g = ex.applyTacticsExUse(s0, { def: gm, slot: 0, monId: 'Mocchi', now: A(1, 2) });
+  const mUnit = { id: 'Mocchi', hp: 1, maxHp: 720, atk: 140, def: 140, guts: 1, maxGuts: 140, downed: false };
+  check('ガッツ全開っちーの自動回復はライフ・ガッツとも0.3のまま', ex.tacticsExRegenRateAt(g, [mUnit], 0, A(1, 2), 'hp') === 0.3
+    && ex.tacticsExRegenRateAt(g, [mUnit], 0, A(1, 2), 'guts') === 0.3);
+  const legacyUnit = { id: 'Mocchi', hp: 1, maxHp: 600, baseMaxHp: 600, atk: 1, def: 1, guts: 1, maxGuts: 100, baseMaxGuts: 100, exMaxRate: 0.3, downed: false };
+  check('ガッツの率を持っていない子は、ライフと同じ率でガッツの上限を上げる', ex.scaleTacticsUnits([legacyUnit], 0, 0)[0].maxGuts === 130);
 }
 
 // ---------- ⑧ 壊れた値 ----------
@@ -417,7 +459,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('使った瞬間にその子のライフとガッツを満タンにする(ガッツ全開っちー)',
     /if\(def\.fullRecover\)\{[\s\S]{0,600}recoverTacticsGutsAt\(healTacticsAt\(units,slotIdx,hpGain\),slotIdx,gutsGain\)/.test(app)
     && /const tacticsExNow = \{ wave, turn:turnCount \};/.test(app)
-    && /if\(def\.statRate>0\) units=scaleTacticsUnits\(setTacticsExMaxRate\(units,slotIdx,def\.statRate\)/.test(app)
+    && /if\(def\.rates\.hp>0\|\|def\.rates\.guts>0\) units=scaleTacticsUnits\(setTacticsExMaxRate\(units,slotIdx,def\.rates\.hp,def\.rates\.guts\)/.test(app)
     && /const result = expireTacticsExMaxRates\(tacticsUnitsRef\.current, tacticsExStateRef\.current, \{ wave, turn:turnCount \}\);/.test(app));
   check('発動は詳細パネルの「EXスキルを使用」(スタイル式はその先の選択肢)からだけ',
     (screen.match(/activateTacticsEx\(/g) || []).length === (panelSrc.match(/activateTacticsEx\(/g) || []).length

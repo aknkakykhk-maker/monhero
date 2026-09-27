@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0751f2f54dd05c7b
+// generated-sha256: 0bb537217ed4a23f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -151,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-27 08:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-27 09:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2725,9 +2725,17 @@ const LEGACY_REGENERATION_STAT_BASELINES = {
     { id:'pre-2026-08-14', hp:250, atk:160, def:50, guts:140 },
     { id:'current', hp:250, atk:160, def:50, guts:170 },
   ],
+  // ★2026-09-27 モッチー・ミタラシの基礎値を上げた(ユーザー指示のバランス調整)。
+  //   移行前の旧再生個体(完成値を保存)は変更前のベースから生まれているので、その値を残す。
+  //   どちらのベースからも生まれうる値は AMBIGUOUS になり、移行せず保存値のまま残る(ピクシーと同じ)
   Mitarashi: [
     { id:'pre-2026-08-14', hp:600, atk:120, def:120, guts:100 },
-    { id:'current', hp:630, atk:140, def:105, guts:90 },
+    { id:'pre-2026-09-27', hp:630, atk:140, def:105, guts:90 },
+    { id:'current', hp:680, atk:150, def:115, guts:120 },
+  ],
+  Mocchi: [
+    { id:'pre-2026-09-27', hp:600, atk:120, def:120, guts:100 },
+    { id:'current', hp:720, atk:140, def:140, guts:140 },
   ],
 };
 const regenerationStatCouldBeGenerated = (value, baseValue) => {
@@ -4540,6 +4548,13 @@ const Audio_ = (() => {
   let ctxTimeMark = null, ctxRebuildCount = 0, toneLoadFailed = false;
   const buffers = new Map();
   const loadingBuffers = new Map();
+  // ★曲えらびの試聴と演奏で読んだ曲の音は、直近の数曲ぶんだけ持っておく(2026-09-27 の点検で見つけた)。
+  //   解いた音は1曲で数十〜百MBあり、以前は一度読んだら二度と捨てなかったので、試聴しながら
+  //   何曲も眺めるだけで数百MBに増え、iPhone ではメモリ不足で落ちる・発熱の原因になり得た。
+  //   場面のBGM(タイトル・ホーム・バトルなど)は今までどおり持ち続ける。捨てても、次に読むときは
+  //   通信のキャッシュが効くので、解き直すだけで済む
+  const SONG_BUFFER_KEEP = 3;
+  const songBufferOrder = [];
   // previewRequest は試聴の「この呼び出しが今も最新か」を見るための番号。
   // 通常BGM(bgmRequest)と同じ役目で、読み込みを待っているあいだに止められたり
   // 押し直されたりした古い呼び出しが、あとから音を鳴らし始めるのを防ぐ
@@ -4551,6 +4566,8 @@ const Audio_ = (() => {
   // ただし全体ミュート(タイトルの「音がオフです」)だけは共通で効かせる。
   // 稼働中のgainノードを覚えておき、ミュート切り替え時にまとめて反映する。
   const activeRhythmGains = new Set();
+  // 演奏で鳴らしている曲の音(直近の曲を捨てるときに、鳴らしている最中のものは残すため)
+  const rhythmBuffersInUse = new Set();
   const applyRhythmMute = () => { activeRhythmGains.forEach(entry => { entry.node.gain.value = enabled ? entry.raw : 0; }); };
 
   const load = () => {
@@ -4743,6 +4760,27 @@ const Audio_ = (() => {
     const ng = (error) => { if (!settled) { settled = true; reject(error); } };
     try { const p = ctx.decodeAudioData(data, ok, ng); if (p && p.then) p.then(ok, ng); } catch (e) { ng(e); }
   });
+  // いま鳴らしている音(BGM・試聴・演奏)と、いまの場面のBGMは捨てない
+  const bufferInUse = (url) => {
+    const buffer = buffers.get(url);
+    if (!buffer) return false;
+    if (bgmSource && bgmSource.buffer === buffer) return true;
+    if (previewSource && previewSource.buffer === buffer) return true;
+    if (rhythmBuffersInUse.has(buffer)) return true;
+    const scene = currentKey ? resolveTrack(currentKey) : null;
+    return !!(scene && scene.src === url);
+  };
+  const rememberSongBuffer = (url) => {
+    const at = songBufferOrder.indexOf(url);
+    if (at >= 0) songBufferOrder.splice(at, 1);
+    songBufferOrder.push(url);
+    for (let i = 0; songBufferOrder.length > SONG_BUFFER_KEEP && i < songBufferOrder.length - 1;) {
+      const old = songBufferOrder[i];
+      if (bufferInUse(old)) { i++; continue; }
+      songBufferOrder.splice(i, 1);
+      buffers.delete(old);
+    }
+  };
   const loadBuffer = (url) => {
     if (buffers.has(url)) return Promise.resolve(buffers.get(url));
     if (loadingBuffers.has(url)) return loadingBuffers.get(url);
@@ -4810,6 +4848,7 @@ const Audio_ = (() => {
     // 読み込みを待ってから初めてresumeすると、user activationが切れていて復帰できない端末がある
     resumeAudioCtxNoWait();
     try { const buffer = await loadBuffer(track.src);
+      rememberSongBuffer(track.src);
       if (request !== previewRequest || previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
       const ctx = await ensureAudioCtxRunning(); if (!ctx) return false;
       // ensureAudioCtxRunning も待つので、そのあいだに止められていないかもう一度見る
@@ -4842,7 +4881,7 @@ const Audio_ = (() => {
     audioCtx = null; bgmGain = null; masterOut = null; analyser = null; analyserData = null; ctxTimeMark = null;
     // 音源(AudioBuffer)は作り直したcontextのサンプリングレートが違うと速さが変わってしまう。
     // 取り直しても通信キャッシュから読めるので、ここは安全側に倒して捨てる
-    buffers.clear(); loadingBuffers.clear();
+    buffers.clear(); loadingBuffers.clear(); songBufferOrder.length = 0; rhythmBuffersInUse.clear();
     try { if (old && old.state !== 'closed') await old.close(); } catch (e) {}
     const ctx = getAudioCtx();
     if (!ctx) return false;
@@ -4901,7 +4940,9 @@ const Audio_ = (() => {
     resumeAudioCtxNoWait();
     try {
       const buffer=await loadBuffer(track.src),ctx=await ensureAudioCtxRunning();
+      rememberSongBuffer(track.src);
       if(!ctx) return null;
+      rhythmBuffersInUse.add(buffer);
       // outputLatencySeconds … 音が耳へ届くまでの遅れ。曲を鳴らしはじめるたびに1回だけ測って固定する
       // (data/rhythm-mode.js の rhythmAudioOutputLatencyMs。鳴っている最中に読み直すと曲の時刻が飛ぶ)
       let source=null,startedAt=ctx.currentTime,offsetSeconds=0,playing=false,stopped=false,naturallyEnded=false,gainEntry=null,outputLatencySeconds=0;
@@ -4958,7 +4999,7 @@ const Audio_ = (() => {
           }catch{return false;}
           return true;
         },
-        stop:()=>{if(stopped)return;stopped=true;playing=false;const old=source;source=null;stopSource(old);dropGainEntry();},
+        stop:()=>{if(stopped)return;stopped=true;playing=false;const old=source;source=null;stopSource(old);dropGainEntry();rhythmBuffersInUse.delete(buffer);},
       };
     } catch(e){ return null; }
   };
@@ -5054,6 +5095,8 @@ const Audio_ = (() => {
     return {
       enabled, pageHidden,
       bgmVolumePct, seVolumePct,
+      // 持っている解いた音の数と、そのうち試聴・演奏で読んだ曲の数(直近 SONG_BUFFER_KEEP 曲まで)
+      bufferCount: buffers.size, songBufferCount: songBufferOrder.length,
       ctxState: ctx ? ctx.state : 'none',
       sampleRate: ctx ? Math.round(ctx.sampleRate) : 0,
       // getAudioCtx()を呼ばない(見ただけで出口を作らない)。作る前は判定しようがないので false。
@@ -14986,7 +15029,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
                 <span className={`block px-0.5 ${wide?'py-2.5':'py-1.5'}`}>{preset.label}</span></button>;})}</div>
               {!rhythmLookPresetOf(draft)&&<p data-rhythm-look-custom className="mt-1.5 text-center text-[10px] font-bold text-cyan-100/80">いまは自分で選んだ組み合わせです</p>}
             </div>,
-              '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。',{full:true})}
+              '演奏中の見た目の設定（演出量・ライブ背景・道の演出・判定の演出・ノーツの動き・コンボの節目・にじむ光）を、1回押すだけでまとめて切り替えます。絵は、それぞれの見た目で同じ曲の同じ場面を演奏しているところです。音・判定・操作・画質の設定は変わりません。切り替えたあとも、この下で1つずつ変えられます。\n「軽さ優先」＝いちばん軽い見た目です。端末が熱くなるとき・カクつくときに。\n「標準」＝最初の設定と同じ見た目です。\n「華やか」＝曲のジャケットの背景・サーチライト・道の演出・判定の演出・ノーツの動き・コンボの節目が加わります。\n「全部のせ」＝いちばん華やかな見た目です（ライブ背景「ライブ」・にじむ光も入ります。にじむ光は描画方式が WebGL のときだけ効きます）。重くなるので、カクつくときは「華やか」以下にしてください。\n押しただけではまだ保存されません。下の「保存」を押してください。',{full:true})}
             {/* 「少なめ」が何を止めるのかを、ここで言い切る(2026-09-13・Android勢から
                 「重い」との声)。判定文字の金の帯・虹の流れは毎フレーム字を塗り直すので、
                 動きがカクつく端末ではここがいちばん効く */}
@@ -14996,7 +15039,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
                 120Hz以上の画面でだけ効く。60Hz・90Hzの画面ではどちらを選んでも同じ */}
             {/* 背景の演出(2026-09-24・ユーザー指示「設定ありきで派手な感じにしたい」)。既定はシンプル(操作感を変えないため) */}
             {field('ライブ背景',segments('stageEffect',RHYTHM_STAGE_EFFECT_LABELS),
-              '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、画面の下では観客のペンライトが拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。',{full:true})}
+              '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。',{full:true})}
             {/* 道の演出(2026-09-26・ユーザー指示「重くなると思うから設定で切り替えられる前提で作って」)。既定は OFF */}
             {field('道の演出',toggle('roadFx'),
               '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。')}
@@ -15018,7 +15061,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               {/* いまの選び方で、この端末ではどちらで描くか(「自動」の結果を実機で確かめられるように)。
                   デバッグ画面の指定があればそれも含めて決める(rhythmWebglNotesActive)。見極めは初回の1回だけ */}
               <p data-rhythm-draw-mode-now className="mt-1.5 text-center text-[10px] font-bold text-cyan-100/80">この端末では「{rhythmWebglNotesActive(draft.noteDrawMode)?'WebGL':'Canvas'}」で描きます</p></>,
-              'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。見た目・判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。ライブ背景も GPU で1枚にまとめて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。ノーツの光や叩いたときの光は、重なるほど白く輝くように描きます（光の見え方だけが「Canvas」と少し違います）。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。')}
+              'ノーツと、ノーツを取ったときの光を、何で描くかです。既定は「自動」です。形・色・判定・スコア・叩く位置はどれでも変わりません（光の輝き方と「にじむ光」だけは、WebGL のときに変わります）。\n「自動」＝端末に絵を描くのが得意な専用の部分（GPU）があれば「WebGL」、無ければ「Canvas」で描きます。\n「Canvas」＝スマホの頭脳にあたる部分（CPU）が、毎回の絵を描いて画面へ渡します。どの端末でも同じように動く、これまでの描き方です。\n「WebGL」＝GPU にノーツと光をまとめて任せて描きます。ライブ背景も GPU で1枚にまとめて描きます。演出量やライブ背景を上げたときのカクつきや、端末の熱さが減りやすい描き方です。ノーツの光や叩いたときの光は、重なるほど白く輝くように描きます（光の見え方だけが「Canvas」と少し違います）。うまく表示できない端末や、演奏の途中でうまく描けなくなったときは、自動で「Canvas」に戻ります。\n変えた描画方式は、次に遊ぶ曲から使われます。')}
             {/* にじむ光(2026-09-26・ユーザー指示「見た目の向上＋軽量化」の3。既定は OFF)。WebGL で描いているときだけ効く */}
             {field('にじむ光',toggle('noteBloom'),
               'ノーツの光や、ノーツを取ったときの光のまわりを、ふわっとにじませます。既定は「OFF」です。判定・スコアは変わりません。\n描画方式が「WebGL」のとき(「自動」で WebGL になっているときを含む)だけ効きます。「Canvas」のときは何も変わりません。\n光を小さな絵にぼかしてから重ねるので、GPU の仕事が少し増えます。端末が熱くなるときは OFF にしてください。演出量「最小」と軽量モードでは出しません。')}
@@ -16386,7 +16429,10 @@ const RhythmHudLife=({hud,settings,isLandscape,lifeBoxRef,lifeDamageRef})=>{cons
 const RhythmHudJudgment=({hud,settings,status,haloKeys,timingDisplay,judgmentTextRef})=>{const {last,lastPrecise,fastSlow,lastDeltaMs}=useRhythmHud(hud);
   return <><b ref={judgmentTextRef} data-rhythm-judgment-text data-judgment={last||''} data-judgment-precise={lastPrecise?'1':''} data-halo={haloKeys&&settings.judgmentTextDisplay&&last&&status!=='error'&&status!=='loading'&&haloKeys.has(`${last}|${lastPrecise?'1':''}`)?'1':undefined} className="block text-[26px] font-black leading-none tracking-wide text-white">{status==='error'?'音源を再生できません':status==='loading'?'LOADING…':settings.judgmentTextDisplay?last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':fastSlow==='FAST'?'text-cyan-300':fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(fastSlow?(timingDisplay!=='STANDARD'&&typeof lastDeltaMs==='number'?`${fastSlow} ${Math.round(Math.abs(lastDeltaMs))}ms`:fastSlow):'—'):'—'}</small></>;};
 // 演出の自動調整で下げた段。アプリを開いているあいだだけ覚えておき、次の曲もこの段から始める(保存はしない)
+// ★オプションで見た目の設定を保存し直したら0へ戻す(rhythmResetAutoEffect)。戻さないと、「全部のせ」を選び直しても
+//   アプリを開き直すまで下げたまま、しかも知らせも出なかった(2026-09-27 の点検で見つけた)
 const rhythmAutoEffectMemory={level:0};
+const rhythmResetAutoEffect=()=>{rhythmAutoEffectMemory.level=0;};
 const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null})=>{
   // 重いときは演出を自動で控えめにする(設定 autoEffectDown・rhythmCapEffects)。この部品の中の settings は、下げた段を当てたもの
   const [effectCap,setEffectCap]=useState(()=>rhythmAutoEffectMemory.level);
@@ -16395,8 +16441,11 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const settingsLiveRef=useRef(settings);settingsLiveRef.current=settings;
   const stepEffectCapRef=useRef(null);
   // 下げたときは画面の上のほうへ一瞬だけ知らせる(黙って下がると「設定したのに演出が出ない」と思われるため)
-  const [effectCapNotice,setEffectCapNotice]=useState(0);
-  stepEffectCapRef.current=()=>{const next=rhythmNextEffectCap(settingsIn,effectCap);if(next===null)return false;rhythmAutoEffectMemory.level=next;setEffectCap(next);setEffectCapNotice(value=>value+1);return true;};
+  // 前の曲で下げた段のまま始めるときも、始めに1回知らせる(黙って控えめなまま始まらないように)
+  const [effectCapNotice,setEffectCapNotice]=useState(()=>settingsIn&&settingsIn.autoEffectDown!==false&&rhythmAutoEffectMemory.level>0?1:0);
+  // ★「にじむ光」は WebGL で描いているときしか効かない。そうでないときにその段を下げても何も変わらず、
+  //   「控えめにしました」と知らせるだけで本当に軽くなるのが6秒ほど遅れていた(2026-09-27 の点検で見つけた)
+  stepEffectCapRef.current=()=>{const base=RHYTHM_CANVAS_RENDERER.backend==='webgl'?settingsIn:{...settingsIn,noteBloom:false};const next=rhythmNextEffectCap(base,effectCap);if(next===null)return false;rhythmAutoEffectMemory.level=next;setEffectCap(next);setEffectCapNotice(value=>value+1);return true;};
   useEffect(()=>{if(!effectCapNotice)return undefined;const timer=setTimeout(()=>setEffectCapNotice(0),2500);return()=>clearTimeout(timer);},[effectCapNotice]);
   // モンスターノーツの演出の段。いちばん軽い段(NONE)では、ノーツへ重ねるマスモンの絵を
   // 作らない(2026-09-13・ユーザー指摘「あれは踏んだときまだカクつきがある / 設定は最小」)。
@@ -17232,7 +17281,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     // 従来どおりそのままリザルトへ進む(演出だけの分岐で、判定・保存には関わらない)。
     const celebrateTitle=achievements.allMarvelous?'ALL MARVELOUS!!':achievements.allExcellent?'ALL EXCELLENT!!':achievements.fullCombo?'FULL COMBO!':null;
     const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
-    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,result:{...result,isNewRecord,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn}}));
+    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn}}));
     if(eventPointAward&&eventPointAward.amount>0&&typeof addRhythmEventPoints==='function')void addRhythmEventPoints(eventPointAward.amount);
     /* ラッキーラッシュのおまけ。公開の曲を最後まで遊んだときだけ(アシスト・練習・デバッグは除く)。上限10P、イベント期間外は1/5 */
     setLuckyRush(false);
@@ -17276,15 +17325,19 @@ const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.i
    3秒の枠に10フレーム入らず、いつまでも判断しなかった。2026-09-27、性能計測の「自動で下げた記録」を足して確かめたら約2fpsで0件だった) */
 if(settings.renderQuality==='AUTO'){const aq=run._autoQuality||(run._autoQuality={last:0,start:frameNowMs,frames:0,slow:0,minGap:1e9});const gap=aq.last?frameNowMs-aq.last:0;aq.last=frameNowMs;
   // ★ずっと一様に遅い端末(1秒に20フレームを割る)は「いちばん短い間隔の1.8倍」では拾えないので、50ms 以上のフレームは常に遅いと数える(2026-09-27)
-  if(gap>0&&gap<1000){aq.frames++;if(gap>=5&&gap<aq.minGap)aq.minGap=gap;if(gap>Math.max(5,aq.minGap)*1.8||gap>=50)aq.slow++;}
+  if(gap>0&&gap<1000){aq.frames++;if(gap>=5&&gap<aq.minGap)aq.minGap=gap;if((gap>Math.max(5,aq.minGap)*1.8&&gap>20)||gap>=50)aq.slow++;}
   // ★一段下げた直後の枠は数えない。下げると光の絵やマスモンの顔を焼き直すので、その一瞬の詰まりで
   //   続けてもう一段下げてしまっていた(高→標準→省電力と一気に落ちる。2026-09-26 の点検で見つけた)
   if(frameNowMs-aq.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){if(aq.settle>0)aq.settle--;else if(aq.frames>=RHYTHM_AUTO_QUALITY_MIN_FRAMES&&aq.slow/aq.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepAutoQualityRef.current){const qi=RHYTHM_RENDER_QUALITY_STEPS.indexOf(autoQualityLevelRef.current);RHYTHM_PERF.autoStep('画質',RHYTHM_RENDER_QUALITY_STEPS[Math.min(RHYTHM_RENDER_QUALITY_STEPS.length-1,Math.max(0,qi)+1)],aq.slow,aq.frames);stepAutoQualityRef.current();aq.settle=1;}aq.start=frameNowMs;aq.frames=0;aq.slow=0;}}
 /* 演出の自動調整(設定「重いときは演出を自動で控えめに」)。画質「自動」と同じ数え方で、3秒のうち8%を超えたら重い演出から一段下げる。
    画質「自動」を使っているときは、画質を下げきってから演出を下げる。下げた直後の枠は数えない(背景の絵の焼き直しで一瞬詰まるため) */
+// ★「遅い」は、いちばん短い間隔の1.8倍を超え、**しかも20msを超えた(50fpsを割った)**コマだけ。
+//   120Hz の画面では 1.8 倍が 15ms になり、ふつうの 60fps のコマ(16.7ms)まで遅いと数えて、なめらかな端末ほど
+//   演出を削っていた。60Hz でも、追いつきの短い間隔(8ms など)が1回出ると以後のふつうのコマが全部遅い扱いになっていた
+//   (2026-09-27 の点検で見つけた。画質の自動も同じ数え方)
 if(settingsLiveRef.current.autoEffectDown!==false&&stepEffectCapRef.current){const ae=run._autoEffect||(run._autoEffect={last:0,start:frameNowMs,frames:0,slow:0,minGap:1e9,settle:0});const gap=ae.last?frameNowMs-ae.last:0;ae.last=frameNowMs;
   // ★ずっと一様に遅い端末(1秒に20フレームを割る)は「いちばん短い間隔の1.8倍」では拾えないので、50ms 以上のフレームは常に遅いと数える
-  if(gap>0&&gap<1000){ae.frames++;if(gap>=5&&gap<ae.minGap)ae.minGap=gap;if(gap>Math.max(5,ae.minGap)*1.8||gap>=50)ae.slow++;}
+  if(gap>0&&gap<1000){ae.frames++;if(gap>=5&&gap<ae.minGap)ae.minGap=gap;if((gap>Math.max(5,ae.minGap)*1.8&&gap>20)||gap>=50)ae.slow++;}
   if(frameNowMs-ae.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){const qualityFirst=settings.renderQuality==='AUTO'&&autoQualityLevelRef.current!==RHYTHM_RENDER_QUALITY_STEPS[RHYTHM_RENDER_QUALITY_STEPS.length-1];
     if(ae.settle>0)ae.settle--;else if(!qualityFirst&&ae.frames>=RHYTHM_AUTO_QUALITY_MIN_FRAMES&&ae.slow/ae.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepEffectCapRef.current()){ae.settle=1;RHYTHM_PERF.autoStep('演出',RHYTHM_AUTO_EFFECT_STEP_LABELS[rhythmAutoEffectMemory.level-1]||'',ae.slow,ae.frames);}ae.start=frameNowMs;ae.frames=0;ae.slow=0;}}
 if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
@@ -17974,7 +18027,7 @@ scheduleTick();};
 {/* ラッキーラッシュ中は、プレイエリアのふちが金色に光る(ノーツより後ろ・入力に触らない) */}
 {luckyRush&&<div data-rhythm-lucky-rush aria-hidden="true"/>}
 {/* 演出を自動で控えめにしたお知らせ(設定「重いときは演出を自動で控えめに」)。2.5秒だけ出す */}
-{effectCapNotice>0&&<div key={effectCapNotice} data-rhythm-effect-cap-notice role="status" className="pointer-events-none absolute left-1/2 top-[13%] z-30 -translate-x-1/2 whitespace-nowrap rounded-full border border-cyan-300/40 bg-slate-950/85 px-3 py-1 text-[11px] font-black text-cyan-100">重いので演出を控えめにしました</div>}
+{/* ★判定ラインより下の空いた帯へ出す。上から13%だと、縦では経過時間・ラッキーの表示に、横では道の奥(ノーツの出てくるところ)にかかっていた(2026-09-27) */}{effectCapNotice>0&&<div key={effectCapNotice} data-rhythm-effect-cap-notice role="status" className="pointer-events-none absolute left-1/2 bottom-[2.5%] z-30 -translate-x-1/2 whitespace-nowrap rounded-full border border-cyan-300/40 bg-slate-950/85 px-3 py-1 text-[11px] font-black text-cyan-100">重いので演出を控えめにしました</div>}
 {/* 抽選の結果。当たりは大きく「LUCKY RUSH!!」、はずれは小さく「+2pt」 */}
 {luckyBanner&&<div key={luckyBanner.id} data-rhythm-lucky-banner data-kind={luckyBanner.kind} aria-hidden="true"><b>{luckyBanner.text}</b></div>}
 {comboMilestone>0&&<div data-rhythm-combo-milestone data-milestone-stage={comboMilestoneStage} aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 whitespace-nowrap text-center"><b className={`block font-black leading-none tabular-nums landscape:text-4xl ${comboMilestoneStage>=3?'text-6xl':'text-5xl'}`}>{comboMilestone}</b><small className="mt-1 block text-sm font-black tracking-[0.3em]">COMBO</small></div>}
@@ -18231,8 +18284,11 @@ const tacticsTotalBaseMaxHp = (units) => (Array.isArray(units) ? units : [])
 //   素の上限(baseMaxHp)は残したまま計算し直すので、倍率が下がっても元へ戻せる
 // ★exMaxRate … タクティクスのEX(ガッツ全開っちー)で上がっている上限の割合。無ければ0。
 //   みゅあ補正で上限を作り直しても消えないよう、ここで一緒に掛ける(既存の子は0なので値は今までどおり)
-const tacticsExMaxRateOf = (unit) => {
-  const rate = Number(unit && unit.exMaxRate);
+//   ★ガッツの上限は exMaxGutsRate を別に持てる(ミタラシのように上げ幅がライフと違うEX)。
+//     無ければ exMaxRate と同じ(ガッツ全開っちーはライフ・ガッツとも同じ率)
+const tacticsExMaxRateOf = (unit, kind = 'hp') => {
+  const own = kind === 'guts' ? Number(unit && unit.exMaxGutsRate) : NaN;
+  const rate = Number.isFinite(own) ? own : Number(unit && unit.exMaxRate);
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
 };
 const scaleTacticsUnitMaxHp = (unit, hpPct = 0) => {
@@ -18248,7 +18304,7 @@ const scaleTacticsUnitMaxGuts = (unit, gutsPct = 0) => {
   const target = normalizeTacticsUnit(unit);
   if (!target) return null;
   const pct = Number.isFinite(Number(gutsPct)) ? Math.max(0, Number(gutsPct)) : 0;
-  const exRate = tacticsExMaxRateOf(target);
+  const exRate = tacticsExMaxRateOf(target, 'guts');
   const maxGuts = Math.max(0, Math.floor(target.baseMaxGuts * (1 + pct) * (1 + exRate)));
   return normalizeTacticsUnit({ ...target, maxGuts });
 };
@@ -18968,6 +19024,8 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   turns     … duration:'turns' のときのターン数
 //   statRate  … 効いているあいだ、力と丈夫さを何割上げるか(0.3 なら30%)
 //   regenRate … 効いているあいだ、ターン終わりのライフ・ガッツの自動回復の率へそのまま足す値(0.3 なら上限の30%ぶんを上乗せ)
+//   rates     … ステータスごとに上げ幅を変えるとき { atk, def, hp, guts }(hp・guts は上限)。書かなかった項目は statRate
+//   regenRates … 自動回復の上乗せをライフとガッツで変えるとき { hp, guts }。書かなかった項目は regenRate
 //   fullRecover … true なら、使った瞬間にその子のライフとガッツを満タンにする
 //   styles    … duration:'style' のときの選択肢 [{ id, label, desc }]。使うたびに1つ選ぶ(いまのものは選べない)
 //   defaultStyle … バトルを始めたときのスタイル(styles の id)
@@ -19003,6 +19061,20 @@ const TACTICS_EX_SKILLS = Object.freeze({
     desc: '5ターンのあいだ、ちから・丈夫さ・ライフの上限・ガッツの上限が30%上がり、ターンの終わりにライフとガッツが上限の30%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
     maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
     statRate: 0.3, regenRate: 0.3, fullRecover: true,
+    effect: 'statBoost',
+  }),
+  // ★2026-09-27 ユーザー指示「ミタラシ EXスキル【ドラゴンだっちー】ガッツ全開だっちーの上がるステが違う版
+  //   同じようなバランスで少し攻撃寄りにして」。回数・ターン・併用はモッチーと同じ。
+  //   上げ幅はユーザーが3案から選んだ「ちから＋ガッツ」(ちから・ガッツ上限40% / 丈夫さ・ライフ上限20%、
+  //   自動回復の上乗せはガッツ40%・ライフ20%)。効果の種類はガッツ全開っちーと同じ statBoost
+  Mitarashi: Object.freeze({
+    id: 'mitarashi_dragon',
+    name: 'ドラゴンだっちー',
+    desc: '5ターンのあいだ、ちからとガッツの上限が40%、丈夫さとライフの上限が20%上がり、ターンの終わりにガッツが上限の40%、ライフが上限の20%ずつ多く回復する。使った瞬間に、上がった上限までライフとガッツを満タンにする。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    statRate: 0.2, regenRate: 0.2, fullRecover: true,
+    rates: Object.freeze({ atk: 0.4, def: 0.2, hp: 0.2, guts: 0.4 }),
+    regenRates: Object.freeze({ hp: 0.2, guts: 0.4 }),
     effect: 'statBoost',
   }),
   Golem: Object.freeze({
@@ -19079,6 +19151,19 @@ const normalizeTacticsExDef = (raw) => {
     turns: safeDuration === 'turns' ? Math.max(1, tacticsSafeInt(raw.turns, 1)) : 0,
     statRate: Math.max(0, Number.isFinite(Number(raw.statRate)) ? Number(raw.statRate) : 0),
     regenRate: Math.max(0, Number.isFinite(Number(raw.regenRate)) ? Number(raw.regenRate) : 0),
+    // ステータスごとの上げ幅。書いていない項目は statRate / regenRate(ガッツ全開っちーはすべて同じ率)
+    rates: ['atk', 'def', 'hp', 'guts'].reduce((acc, key) => {
+      const v = Number(raw.rates && raw.rates[key]);
+      const fallback = Number(raw.statRate);
+      acc[key] = Math.max(0, Number.isFinite(v) ? v : (Number.isFinite(fallback) ? fallback : 0));
+      return acc;
+    }, {}),
+    regenRates: ['hp', 'guts'].reduce((acc, key) => {
+      const v = Number(raw.regenRates && raw.regenRates[key]);
+      const fallback = Number(raw.regenRate);
+      acc[key] = Math.max(0, Number.isFinite(v) ? v : (Number.isFinite(fallback) ? fallback : 0));
+      return acc;
+    }, {}),
     fullRecover: raw.fullRecover === true,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
@@ -19193,6 +19278,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       on: def.duration === 'style' ? style !== def.defaultStyle : true,
       style,
       turns: def.duration === 'turns' ? def.turns : 0, statRate: def.statRate || 0, regenRate: def.regenRate || 0,
+      rates: def.rates ? { ...def.rates } : null, regenRates: def.regenRates ? { ...def.regenRates } : null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -19244,10 +19330,13 @@ const tacticsExActiveEffect = (state, slot, monId, now) => {
 //                                         二刀流 … 丈夫さを半分にする(ヒット列の2回ぶんは tacticsExActiveStyle を見て別に掛ける)
 // ターン終わりの自動回復の率へ足す値(ガッツ全開っちーが効いている子だけ。ほかは0)。
 // ★倍率ではなく固定値で足す(いまの率 + regenRate)。倒れている子の戻り(10%ずつ)には乗せない
-const tacticsExRegenRateAt = (state, units, slot, now) => {
+// kind … 'hp' か 'guts'。regenRates があればその項目、無ければ regenRate(ライフ・ガッツ共通)
+const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
   const unit = Array.isArray(units) ? units[slot] : null;
   if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'statBoost') return 0;
-  const rate = Number(normalizeTacticsExState(state).effects[slot].regenRate);
+  const effect = normalizeTacticsExState(state).effects[slot];
+  const own = Number(effect.regenRates && effect.regenRates[kind]);
+  const rate = Number.isFinite(own) ? own : Number(effect.regenRate);
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
 };
 const applyTacticsExStats = (unit, state, slot, now) => {
@@ -19258,11 +19347,16 @@ const applyTacticsExStats = (unit, state, slot, now) => {
     const usedDef = Math.max(0, tacticsSafeInt(snap && snap.def, tacticsSafeInt(unit.def, 0)));
     return { ...unit, atk: Math.max(0, tacticsSafeInt(unit.atk, 0)) + Math.floor(usedDef * TACTICS_EX_ALL_IN_ATK_RATE), def: 0 };
   }
-  // ステータスアップ(ガッツ全開っちー): 力と丈夫さを statRate ぶん上げる(切り捨て)
+  // ステータスアップ(ガッツ全開っちー・ドラゴンだっちー): 力と丈夫さを上げる(切り捨て)。
+  // 上げ幅は rates の項目、無ければ statRate(力・丈夫さ共通)
   if (kind === 'statBoost') {
-    const rate = Math.max(0, Number(normalizeTacticsExState(state).effects[slot].statRate) || 0);
-    return { ...unit, atk: Math.floor(Math.max(0, tacticsSafeInt(unit.atk, 0)) * (1 + rate)),
-      def: Math.floor(Math.max(0, tacticsSafeInt(unit.def, 0)) * (1 + rate)) };
+    const effect = normalizeTacticsExState(state).effects[slot];
+    const rateOf = (key) => {
+      const own = Number(effect.rates && effect.rates[key]);
+      return Math.max(0, Number.isFinite(own) ? own : (Number(effect.statRate) || 0));
+    };
+    return { ...unit, atk: Math.floor(Math.max(0, tacticsSafeInt(unit.atk, 0)) * (1 + rateOf('atk'))),
+      def: Math.floor(Math.max(0, tacticsSafeInt(unit.def, 0)) * (1 + rateOf('def'))) };
   }
   // ★スタイルの効き目は、いつも「元のステータス」(盤面の値)から数え直す。積み重ならない
   if (kind === 'weaponChange') {
@@ -19278,16 +19372,18 @@ const applyTacticsExStats = (unit, state, slot, now) => {
 // ★上限そのものは盤面の値なので、効いているあいだは unit.exMaxRate に割合を持たせ、
 //   scaleTacticsUnits(みゅあ補正と同じ作り直し)で上限へ掛ける。切れたら0へ戻して作り直す
 //   (ライフ・ガッツは normalizeTacticsUnit が新しい上限で丸める)
-const setTacticsExMaxRate = (units, slot, rate) => (Array.isArray(units) ? units : [])
-  .map((unit, i) => (unit && i === slot ? { ...unit, exMaxRate: Math.max(0, Number(rate) || 0) } : unit));
+//   gutsRate … ガッツの上限だけ別の率にするとき(ドラゴンだっちー)。省くとライフと同じ率
+const setTacticsExMaxRate = (units, slot, rate, gutsRate = rate) => (Array.isArray(units) ? units : [])
+  .map((unit, i) => (unit && i === slot
+    ? { ...unit, exMaxRate: Math.max(0, Number(rate) || 0), exMaxGutsRate: Math.max(0, Number(gutsRate) || 0) } : unit));
 // 効果が切れているのに上限が上がったままの枠を、0へ戻す。戻した枠があれば changed:true
 const expireTacticsExMaxRates = (units, state, now) => {
   let changed = false;
   const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
-    if (!unit || !(tacticsExMaxRateOf(unit) > 0)) return unit;
+    if (!unit || !(tacticsExMaxRateOf(unit) > 0 || tacticsExMaxRateOf(unit, 'guts') > 0)) return unit;
     if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
     changed = true;
-    return { ...unit, exMaxRate: 0 };
+    return { ...unit, exMaxRate: 0, exMaxGutsRate: 0 };
   });
   return { units: next, changed };
 };
@@ -29502,14 +29598,16 @@ function MonsterHeroGame() {
   const tacticsRegen = (hpRate, gutsRate) => {
     if (!isTacticsMode(runMode)) return null;
     const alive = rateHealTacticsBoard(tacticsUnitsRef.current, hpRate, gutsRate, false);
-    // ★ガッツ全開っちーが効いている子は、その子の上限の regenRate ぶん(30%)を上乗せする
+    // ★ガッツ全開っちーが効いている子は、その子の上限の regenRate ぶん(30%)を上乗せする。
+    //   ドラゴンだっちーはライフとガッツで率が違う(regenRates)ので、別々に取る
     //   (2026-09-25 ユーザー指示「効果中ライフとガッツの自動回復を30%上昇」「1.3倍じゃなくて30%固定値でプラス」)
     let units = alive.units, hp = alive.hp, guts = alive.guts;
     const live = tacticsExLiveRef.current;
     if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
-      const boost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now);
-      if (boost <= 0) return;
-      const extra = rateHealTacticsAt(units, slotIdx, boost, boost);
+      const hpBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'hp');
+      const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts');
+      if (hpBoost <= 0 && gutsBoost <= 0) return;
+      const extra = rateHealTacticsAt(units, slotIdx, hpBoost, gutsBoost);
       units = extra.units; hp += extra.hp; guts += extra.guts;
     });
     const downed = regenDownedTacticsBoard(units);
@@ -32033,7 +32131,10 @@ function MonsterHeroGame() {
   // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。保存が無いうちは「まだ見ていない」。6レーン化の案内が出ているあいだは出さない(1つずつ)
   const RHYTHM_LOOK_INTRO_KEY = 'mh_rhythm_look_intro_seen_v1';
   const [rhythmLookIntroSeen, setRhythmLookIntroSeen] = useState(true);
-  const rhythmLookIntroVisible = !rhythmLookIntroSeen && !rhythmSixLaneIntroVisible;
+  // ★見た目を自分で調整している人には出さない。案内の「華やかにしてみる」はその場で保存するので、
+  //   調整した値が上書きされ、元に戻す手段が無かった(2026-09-27 の点検で見つけた)。
+  //   見た目がはじめのまま(おまかせの「標準」と同じ)の人だけに出す
+  const rhythmLookIntroVisible = !rhythmLookIntroSeen && !rhythmSixLaneIntroVisible && rhythmLookPresetOf(rhythmSettings) === 'STANDARD';
   const dismissRhythmLookIntro = () => { setRhythmLookIntroSeen(true); storeSet(RHYTHM_LOOK_INTRO_KEY, true, false); };
   // ---- オート強化の使い方案内(CLAUDE.md ⑤) ----
   // 「強化ポイントが入るたび裏で自動的に振られる」は、遊んでいるだけでは気づけない仕組み。
@@ -33548,6 +33649,9 @@ function MonsterHeroGame() {
       //   更新のお知らせ(助手の告知)を新規プレイヤーには既読で渡すのと同じ考え方。
       //   開催中のイベントの会話はいまの話なので、ここには入れない(今までどおり流れる)。
       //   お知らせの会話を足したら、下の一覧へも足すこと
+      // 見た目の設定の案内も「できるようになったよ」というお知らせなので、新しく始めた人には出さない
+      // (見た目のおまかせはオプションにいつでもある)
+      if (!wasOnboarded) { setRhythmLookIntroSeen(true); try { await storeSet(RHYTHM_LOOK_INTRO_KEY, true, false); } catch {} }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
         const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID,
@@ -38815,7 +38919,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★ライフ・ガッツの上限も上げてから、その上がった上限まで満タンにする(2026-09-25 ユーザー指示)
     if(def.fullRecover){
       let units=tacticsUnitsRef.current;
-      if(def.statRate>0) units=scaleTacticsUnits(setTacticsExMaxRate(units,slotIdx,def.statRate),getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+      if(def.rates.hp>0||def.rates.guts>0) units=scaleTacticsUnits(setTacticsExMaxRate(units,slotIdx,def.rates.hp,def.rates.guts),getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
       const u=normalizeTacticsUnit(units[slotIdx]);
       if(u){
         const hpGain=Math.max(0,u.maxHp-u.hp), gutsGain=Math.max(0,u.maxGuts-u.guts);
@@ -43443,7 +43547,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
         }}/>}
 
-        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
+        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
 
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。
             出すのは Monster Hero 1曲 と EASY/NORMAL/HARD だけで、デバッグ用の曲・譜面制作UIは出さない。
@@ -43462,7 +43566,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             dismissRhythmSixLaneIntro={dismissRhythmSixLaneIntro}
             dismissRhythmLookIntro={dismissRhythmLookIntro}
             rhythmLookIntroVisible={rhythmLookIntroVisible}
-            onTryRhythmLook={async presetId=>{const preset=RHYTHM_LOOK_PRESETS.find(item=>item.id===presetId);if(!preset)return;const saved=await saveRhythmSettings({...rhythmSettings,...preset.values});setRhythmSettings(saved);dismissRhythmLookIntro();}}
+            onTryRhythmLook={async presetId=>{const preset=RHYTHM_LOOK_PRESETS.find(item=>item.id===presetId);if(!preset)return;const saved=await saveRhythmSettings({...rhythmSettings,...preset.values});setRhythmSettings(saved);rhythmResetAutoEffect();dismissRhythmLookIntro();}}
             dismissRhythmEventNotice={dismissRhythmEventNotice}
             handleGiveUp={handleGiveUp}
             mainHero={mainHero}
