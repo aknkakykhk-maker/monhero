@@ -113,7 +113,7 @@ const estimateFor=(passes,profile)=>{
   }finally{server.close();}
 
   console.log('\n③④ 見積もり(画面いっぱいを何回塗ったのと同じか → 機種の帯ごとの GPU の時間と fps の目安)');
-  console.log(`   機種の帯: ${profiles.map(p=>`${p.label}(${(p.pixels/1e6).toFixed(2)}M画素・${p.pixelsPerMs/1000}M画素/ms)`).join(' / ')}`);
+  console.log(`   機種の帯: ${profiles.map(p=>`${p.label}(${(p.pixels/1e6).toFixed(2)}M画素・${(p.pixelsPerMs/1e6).toFixed(1)}M画素/ms)`).join(' / ')}`);
   for(const r of results){
     const cells=profiles.map(p=>{const e=estimateFor(r.passes,p);return `${p.short} ${e.ms.toFixed(1)}ms(${Math.round(e.fps)}fps)`;});
     console.log(`   「${r.label}」 画面 ${r.passes.toFixed(1)} 回ぶん(GPU の仕事 ${r.gpuPerFrame.toFixed(1)}ms) ・ ${cells.join(' ・ ')}`);

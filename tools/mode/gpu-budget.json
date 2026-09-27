@@ -1,0 +1,10 @@
+{
+  "note": "rhythm-gpu-estimate.js --write-budget で書いた。値は「画面いっぱいを何回塗ったのと同じか」の上限(いまの値×1.25)",
+  "writtenAt": "2026-09-27T04:24:55.812Z",
+  "passesMax": {
+    "LIGHT": 1.4,
+    "STANDARD": 2.8,
+    "VIVID": 6.9,
+    "FULL": 18.8
+  }
+}
