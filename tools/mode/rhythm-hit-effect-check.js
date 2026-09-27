@@ -40,6 +40,10 @@ const {RHYTHM_HIT_EFFECT_COLORS,RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RH
 }
 
 // --- 音 ---
+// 光の位置は判定ラインの高さの道幅で出す(2026-09-27)。1(=演奏の枠の下端)で出すと、道はラインの高さで枠の約8割に細いので、
+// 外側のレーンほど光が外へずれて道の外まではみ出した(コマ送りで見つけた)
+check('叩いた光の位置と幅は、判定ラインの高さ(RHYTHM_JUDGMENT_LINE_Y)の道幅で出す',
+  /const lineY=RHYTHM_JUDGMENT_LINE_Y\.ratio;[\s\S]{0,200}rhythmProjectSlideSpan\(rhythmReleaseLane\(note\),note,lineY,[\s\S]{0,120}rhythmNoteVisualSpan\(note,note\.lane,lineY,/.test(game));
 check('モンスターノーツ専用の音がある',typeof RHYTHM_NOTE_SE_RUNTIME.playMonster==='function');
 check('音が出せない環境でも落ちない',RHYTHM_NOTE_SE_RUNTIME.playMonster()===false);
 const monsterSe=/const playMonster=\(\)=>\{[\s\S]*?\n  \};/.exec(source)?.[0]||'';

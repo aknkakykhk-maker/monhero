@@ -1317,10 +1317,13 @@ if(judgment!=='MISS'){
   if(monsterHit)RHYTHM_NOTE_SE_RUNTIME.playMonster();
   if(!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'){
     const area=playAreaRef.current;
-    // 光の位置と幅はノーツと同じ投影から出す(判定ラインの高さ=1)。
+    // 光の位置と幅はノーツと同じ投影から、**判定ラインの高さ**で出す(実測した比。ノーツの中心がラインに来たときと同じ値)。
+    // ★2026-09-27 まで 1(=演奏の枠の下端)で出していた。道はラインの高さで枠の約8割に細くなるので、
+    //   外側のレーンほど光が外へずれて広がり、道の外まではみ出していた(コマ送りで見つけた)
+    const lineY=RHYTHM_JUDGMENT_LINE_Y.ratio;
     const span=rhythmNoteIsSlide(note)
-      ?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,1,run.audio?.songTimeMs?.()??note.timeMs)
-      :rhythmNoteVisualSpan(note,note.lane,1,run.audio?.songTimeMs?.()??note.timeMs);
+      ?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,lineY,run.audio?.songTimeMs?.()??note.timeMs)
+      :rhythmNoteVisualSpan(note,note.lane,lineY,run.audio?.songTimeMs?.()??note.timeMs);
     // 流し直す印はここで集めて、最後にまとめて1回のレイアウトで付け直す
     // (箇所ごとに void offsetWidth を書くと、その回数ぶんページ全体のレイアウトが走る)。
     const restarts=[];
