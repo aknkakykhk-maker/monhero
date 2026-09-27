@@ -18978,6 +18978,7 @@ const installRhythmGeometryStyles=()=>{
       background:radial-gradient(closest-side,#fff 0%,var(--rhythm-hit-color,#fff) 40%,rgba(255,255,255,0) 100%)}
     /* 立ち上がる光の柱: 判定ラインから上へ抜ける(チュウニズムの光柱) */
     /* 高さは道の4割ほど(2026-09-27・参考動画)。canvas 版(drawOneHit)の min(200, 判定ラインまでの高さ×0.42) とそろえる */
+    [data-rhythm-hit-effect][data-hit-finish="1"]>b{height:clamp(120px,45vh,260px)}
     [data-rhythm-hit-effect]>b{left:0;right:0;bottom:0;height:clamp(96px,34vh,200px);border-radius:14px 14px 0 0;
       transform-origin:bottom center;
       background:linear-gradient(to top,var(--rhythm-hit-color,#fff) 0%,rgba(255,255,255,.32) 42%,rgba(255,255,255,0) 100%)}
@@ -19398,16 +19399,17 @@ const rhythmRestartAnimations=entries=>{
 // defer:true を渡すと、印を付けずに「付けるべき印」だけを返す。
 // 呼び出し側が rhythmRestartAnimations へまとめて渡すことで、レイアウトの読み取りを1回にできる。
 // flick … フリックを取ったときの払った向き('up'|'left'|'right')。炎の筋を飛ばす。それ以外は ''
-const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false,flick=''})=>{
+// finish … ホールド・スライドを押し切ったとき。光の柱を高く・粒を遠くまで・光を少し幅広にする(2026-09-27)
+const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false,flick='',finish=false})=>{
   // 検証用に WebGL で描いているときは、同じ光をノーツの canvas へ描く(RHYTHM_CANVAS_RENDERER の「叩いたときの光」)。
   // DOM の部品には触らないので、返すもの(流し直す印)も無い
   if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&RHYTHM_CANVAS_RENDERER.hitsFor(area)){
     const big=!!monster,rainbow=!big&&precise&&judgment==='MARVELOUS';
     RHYTHM_CANVAS_RENDERER.pushHit({
       center:Math.max(0,Math.min(1,Number(centerRatio)||.5)),
-      width:Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(big?1.5:1.15),
+      width:Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(big?1.5:(finish?1.3:1.15)),
       color:big?'#fde047':rhythmHitEffectColor(judgment),judgment:big?'':String(judgment||''),
-      precise:rainbow,big,sparkScale:big?2.1:(rainbow?1.45:1),flick:big?'':String(flick||''),
+      precise:rainbow,big,sparkScale:big?2.1:(finish?1.6:(rainbow?1.45:1)),flick:big?'':String(flick||''),finish:!big&&!!finish,
     });
     return null;
   }
@@ -19416,7 +19418,7 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
   const item=layer._rhythmPool[layer._rhythmNext%layer._rhythmPool.length];
   layer._rhythmNext=(layer._rhythmNext+1)%layer._rhythmPool.length;
   const kind=monster?'MONSTER':'NORMAL';
-  const width=Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(monster?1.5:1.15);
+  const width=Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(monster?1.5:(finish?1.3:1.15));
   item.style.setProperty('--rhythm-hit-center',`${(Math.max(0,Math.min(1,Number(centerRatio)||.5))*100).toFixed(2)}%`);
   item.style.setProperty('--rhythm-hit-width',`${(width*100).toFixed(2)}%`);
   item.style.setProperty('--rhythm-hit-color',monster?'#fde047':rhythmHitEffectColor(judgment));
@@ -19432,10 +19434,11 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
   item.dataset.hitJudgment=monster?'':String(judgment||'');
   item.dataset.hitPrecise=rainbowHit?'1':'';
   item.dataset.hitFlick=monster?'':String(flick||'');
+  item.dataset.hitFinish=!monster&&finish?'1':'';
   item.style.setProperty('--rhythm-hit-ms',`${RHYTHM_HIT_EFFECT_MS[kind]}ms`);
   // ぴったりのMARVELOUSは粒を遠くまで飛ばす(見た目だけ・2026-09-12)。
   // モンスターノーツの2.1倍はそのまま優先する(そちらが特別扱いのため)
-  item.style.setProperty('--rhythm-spark-scale',monster?'2.1':(rainbowHit?'1.45':'1'));
+  item.style.setProperty('--rhythm-spark-scale',monster?'2.1':(finish?'1.6':(rainbowHit?'1.45':'1')));
   // 同じ要素をすぐ使い回すときは、アニメーションを一度切らないと最初から再生されない。
   // defer なら「切って付け直す」を呼び出し側のまとめ処理へ譲る(レイアウトの読み取りを1回にするため)。
   if(defer)return {el:item,attr:'rhythmHitKind',value:kind};
@@ -20695,6 +20698,19 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     const streakW=w*2.8,streakH=16*depth;
     ctx.globalAlpha=(.7+.3*pulse)*opts.alpha;
     ctx.drawImage(sparkStreakSprite(kind).canvas,head.cx-streakW/2,head.cy-streakH/2,streakW,streakH);
+    // 押さえている所で脈打つ白い十字の光(2026-09-27・参考動画「触れている所で青白い強い光が脈打つ」)。叩いたときの十字と同じ焼いた1枚
+    const fw=Math.max(w*1.5,90)*(.85+.25*pulse),fh=fw*.52;
+    ctx.globalAlpha=(.45+.4*pulse)*opts.alpha;
+    ctx.drawImage(hitFlareSprite().canvas,head.cx-fw/2,head.cy-fh/2,fw,fh);
+    // 細い縦の光の筋(バチバチ)。0.07秒ごとに場所と長さを替える。焼いた細い線を3本貼るだけ。演出量「ふつう」以上
+    if(!lightweight&&effect!=='LIGHT'){
+      const bolt=holdBoltSprite().canvas,seed=Math.floor(frameNow/70);
+      for(let i=0;i<3;i++){
+        const len=(26+holdRand(seed*7+i*5)*44)*depth,bx=head.cx+(holdRand(seed*3+i)-.5)*w*.9;
+        ctx.globalAlpha=(.45+.55*holdRand(seed*11+i*3))*opts.alpha;
+        ctx.drawImage(bolt,bx-4,head.cy-len,8,len*1.15);
+      }
+    }
     if(!lightweight&&effect!=='LOW'&&effect!=='LIGHT'){
       const dot=sparkDotSprite().canvas,cycle=frameNow/SPARK_CYCLE_MS;
       for(let i=0;i<SPARK_DOTS;i++){
@@ -20706,6 +20722,19 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     ctx.globalAlpha=1;
     glowEnd();
+  };
+  // 押さえている所の光の筋に使う、決まった並びの乱数(同じ時刻なら同じ値。毎フレーム Math.random を引かない)
+  const holdRand=n=>{const x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x);};
+  // 細い縦の光の筋。白い芯と水色のにじみを縦のグラデーションで1枚だけ焼く(8×64)
+  const holdBoltSprite=()=>{
+    const id=`holdbolt:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const s=makeSpriteCanvas(8,64),c=s.ctx;
+    const glow=c.createLinearGradient(0,0,0,64);glow.addColorStop(0,'rgba(125,211,252,0)');glow.addColorStop(.5,'rgba(125,211,252,.55)');glow.addColorStop(1,'rgba(125,211,252,0)');
+    c.fillStyle=glow;c.fillRect(1,0,6,64);
+    const core=c.createLinearGradient(0,0,0,64);core.addColorStop(0,'rgba(255,255,255,0)');core.addColorStop(.55,'rgba(255,255,255,1)');core.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=core;c.fillRect(3.25,0,1.5,64);
+    sprites.set(id,s);return s;
   };
   // 帯・SLIDE・終わりの横棒の横幅も、粒と同じノーツサイズの倍率にする(中心は動かさない。2026-09-26)。
   // 以前は粒だけが倍率で細く・太くなり、HOLD/SLIDE の先頭だけ細いのに帯は元の幅のまま残って見えた
@@ -20729,6 +20758,11 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.fillStyle=g;ctx.fill();
     // 押さえている最中は帯を明るくする(押せている合図の1つ。以前は .22)
     if(pressed&&!failed){ctx.fillStyle='rgba(236,253,245,.34)';ctx.fill();}
+    // 帯の左右のふちを明るい線でなぞる(2026-09-27・参考動画「帯のふちが明るく光る」)。暗い道の上で帯が浮いて見える
+    if(!failed){
+      ctx.lineWidth=1.6;ctx.lineJoin='round';ctx.strokeStyle='rgba(236,253,245,.8)';
+      for(const side of [0,1]){ctx.beginPath();band.forEach((edge,index)=>{const x=sizeX(edge.left,edge.right)[side];if(index===0)ctx.moveTo(x,edge.y);else ctx.lineTo(x,edge.y);});ctx.stroke();}
+    }
     ctx.globalAlpha=1;
   };
   const drawSlide=(geo,opts)=>{
@@ -20755,7 +20789,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     quads.forEach(q=>ctx.lineTo(q.r1,q.y1));
     for(let index=quads.length-1;index>=0;index--)ctx.lineTo(quads[index].l1,quads[index].y1);
     ctx.lineTo(quads[0].l0,quads[0].y0);ctx.closePath();
-    ctx.lineWidth=1;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':'rgba(233,213,255,.56)';ctx.stroke();
+    // ふちは明るく(2026-09-27・参考動画。以前は 1px・.56)
+    ctx.lineWidth=failed?1:1.6;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':'rgba(243,232,255,.82)';ctx.stroke();
     // 押さえている最中は帯を明るくする(2026-09-26。以前はSLIDEだけ何も変わらなかった)。外周の道すじをそのまま塗る
     if(pressed&&!failed){ctx.fillStyle='rgba(243,232,255,.30)';ctx.fill();}
     // ノーツの動き: 帯の上を、判定ライン(画面の下)へ向かって光の波が流れる。明るさは画面の高さで決めるので(波長110px・0.5秒で1波長)、
@@ -20937,7 +20972,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 立ち上がる光の柱(判定ラインから上へ、道の4割ほど。96〜200px。CSS の clamp(96px,34vh,200px) とそろえる)
     f=hitFrame(h.big?HIT_KEYS.beamBig:HIT_KEYS.beam,p);
     if(f.o>.002){
-      const BH=Math.max(96,Math.min(200,hitY*.42));
+      const BH=h.finish?Math.max(120,Math.min(260,hitY*.56)):Math.max(96,Math.min(200,hitY*.42));
       ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy);
       hitBeamPath(left,hitY-BH,W,BH);
       // 色の段は叩いた1回につき1度だけ作り、消えるまで使い回す(2026-09-27・柱を高く長くしたぶん、毎フレーム作り直さない)。
@@ -21028,7 +21063,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       for(const kind of ['HOLD','SLIDE','FLICK'])glowSprite(`end:${kind}:${low?'low':'full'}`,4,END_BAR_GLOWS[kind][low?'low':'full']);
       arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
       // 押さえている最中の光(演奏の途中で新しく絵を作らないよう、ここで焼いておく)
-      if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);}sparkDotSprite();}
+      if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);}sparkDotSprite();hitFlareSprite();holdBoltSprite();}
       // 叩いたときの光(canvas で描くときだけ)
       if(effect!=='MINIMAL'&&!options.lightweight)warmHitSprites();
       // WebGL のときは、焼いた絵を演奏の前に GPU へ渡しておく
