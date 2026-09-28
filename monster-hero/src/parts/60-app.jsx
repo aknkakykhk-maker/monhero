@@ -157,6 +157,8 @@ function MonsterHeroGame() {
   const [marketPurchaseQuantity, setMarketPurchaseQuantity] = useState(1);
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
+  // 近日公開予定の新モンスターの詳細(マーケットの円盤石から開く。中身は UPCOMING_MONSTER_DRAFTS)
+  const [upcomingMonsterDetail, setUpcomingMonsterDetail] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
   // 中身は固定の一覧だけから決まるので、最初の1回だけ作る
   const debugIconItems = useMemo(() => breederIconOptions({includeUnowned:true}), []);
@@ -15829,6 +15831,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onExchangeHeroProof={exchangeHeroProofByShard}
             eventPoints={rhythmEventPoints}
             onExchangeEventPoints={exchangeRhythmEventPoints}
+            onOpenUpcomingDetail={setUpcomingMonsterDetail}
           />
         )}
 
@@ -17044,6 +17047,43 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             <div className="text-center text-sm font-black text-white leading-tight">{item.name}</div>
             <button onClick={()=>setMarketIconZoom(null)} className="w-full min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98]">とじる</button>
+          </div>
+        </div>
+      );})()}
+      {/* 近日公開予定の新モンスターの詳細(2026-09-28 ユーザー指摘「詳細ボタンがない」「他のショップとあわせて」)。
+          能力値と技はまだ決まっていないので、ふつうのモンスター詳細(能力・技の表)は使わず、
+          立ち絵・血統・図鑑の説明・予定の値段だけを出す */}
+      {upcomingMonsterDetail&&(()=>{
+        const disc=upcomingMonsterDetail;
+        const mon=typeof UPCOMING_MONSTER_DRAFTS!=='undefined'?UPCOMING_MONSTER_DRAFTS[disc.id]:null;
+        if(!mon) return null;
+        const lineageName=(id)=>MONSTER_LINEAGES[id]?.name||'？？？';
+        const lineage=mon.draftLineage?(mon.draftLineage.main===mon.draftLineage.sub?`${lineageName(mon.draftLineage.main)}(純血)`:`${lineageName(mon.draftLineage.main)} × ${lineageName(mon.draftLineage.sub)}`):null;
+        const dex=(typeof MONSTER_DEX_DESCRIPTIONS!=='undefined'&&MONSTER_DEX_DESCRIPTIONS[mon.id])||'';
+        const beat=typeof RHYTHM_EVENT_POINT_SHOP_COMING_SOON!=='undefined'?RHYTHM_EVENT_POINT_SHOP_COMING_SOON.find(o=>o.monsterId===mon.id):null;
+        const close=()=>setUpcomingMonsterDetail(null);
+        return(
+        <div onClick={close} className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:41000}} role="dialog" aria-modal="true" aria-label={`${mon.name}の詳細`} data-upcoming-monster-detail={mon.id}>
+          <div onClick={e=>e.stopPropagation()} className="w-full max-w-sm rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col gap-3 overflow-y-auto mh-scroll" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'}}>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-base font-black text-white">{mon.name}</h3>
+              <span className="text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap">近日公開予定</span>
+            </div>
+            <div className="w-full aspect-square rounded-2xl border border-white/10 bg-black/40 overflow-hidden flex items-center justify-center">
+              <img src={mon.imgUrl} alt={mon.name} className="w-full h-full object-contain" draggable={false}/>
+            </div>
+            {lineage&&<div className="flex items-center justify-between text-[12px] font-black"><span className="text-slate-400">血統</span><span className="text-emerald-300">{lineage}</span></div>}
+            {dex&&<p className="text-[12px] text-slate-200 leading-relaxed whitespace-pre-line rounded-xl border border-white/10 bg-black/30 p-3">{dex}</p>}
+            <section className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3">
+              <img src={disc.icon} alt={disc.name} className="w-12 h-12 rounded-full object-cover border border-white/10 shrink-0"/>
+              <div className="min-w-0 text-[11px] font-black leading-snug">
+                <div className="text-amber-200">{disc.name}<span className="ml-1 text-[10px] text-slate-400">(予定の値段)</span></div>
+                <div className="text-slate-300 whitespace-nowrap">ダイヤショップ：{Number(disc.cost).toLocaleString()}ダイヤ</div>
+                {beat&&<div className="text-violet-200 whitespace-nowrap">ビートP交換所：{Number(beat.cost).toLocaleString()}P</div>}
+              </div>
+            </section>
+            <p className="text-[11px] text-slate-400 leading-relaxed">能力値や技は、公開のときにお知らせします。</p>
+            <button onClick={close} className="w-full min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98] shrink-0">とじる</button>
           </div>
         </div>
       );})()}
