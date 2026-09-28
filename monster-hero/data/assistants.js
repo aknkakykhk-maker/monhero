@@ -5547,9 +5547,9 @@ const ASSISTANT_SYMPHONY_EVENT = [
   { who:'dra',      e:'happy',    t:'そういうこと' },
   // SCENE 7 スコアとビートP
   { who:'mua',      e:'normal',   t:'どれくらい貰えるの？' },
-  { who:'dra',      e:'normal',   t:'スコアで変わる。たとえば普通の曲なら、80万点で80P、95万点で95P' },
-  { who:'kiki',     e:'normal',   t:'そこまでは比較的ゆっくり増えるんでつね' },
-  { who:'dra',      e:'happy',    t:'そう。でも95万点を超えてから伸びが大きくなる' },
+  { who:'dra',      e:'normal',   t:'スコアで変わる。たとえば普通の曲なら、80万点で80P、90万点で110P、95万点で148P' },
+  { who:'kiki',     e:'normal',   t:'点が上がるほど、増え方も大きくなるんでつね' },
+  { who:'dra',      e:'happy',    t:'そう。上に行くほど、1万点ぶんの差が大きくなる' },
   { who:'dra',      e:'normal',   t:'100万点なら基本200P' },
   { who:'kiki',     e:'surprise', t:'じゃあ今回のイベント曲で100万点なら……' },
   { who:'dra',      e:'excited',  t:'1.5倍で300P' },
