@@ -671,6 +671,8 @@ const intensityPosition=bar=>{
 //   4つの手がかり(メロディ・リズム・低音・音の層)のうち3つが「前にほぼ同じ4小節があった」と言う所の元の小節を足す。
 //   解析の繰り返しがある小節はそのまま(今まで効いていた所は変えない)。解析ファイルは作り直さない
 const rev18=chartRevision>=18;
+// Rev.19: 写す小節のリズムもそろえる(下の拾う音の選び方)
+const rev19=chartRevision>=19;
 const extraRepeat=(()=>{
   if(!rev18)return {sourceByBar:new Map(),falsePositiveRate:0};
   let layers=null;
@@ -1085,6 +1087,7 @@ const buildChart=(difficulty,options={})=>{
   const pool=allOnsets.filter(onset=>
     onset.grid%P.lattice===0&&Math.abs(onset.gridOffsetMs)<=peakOffsetAllowance(onset)
     &&(offBeatFloor<=0||onBeatOrEighth(onset)||onset.strength>=offBeatFloor));
+  const poolGrids=new Set(pool.map(onset=>onset.grid));
   // 全体で何個置くかを先に決める（1拍あたりの目標を、毎秒の下限・上限で挟む）。
   // これで曲が変わっても、遊んだ感じの忙しさがそろう。
   const [liftMin,liftMax]=MUSICAL_LIFT;
@@ -1165,7 +1168,14 @@ const buildChart=(difficulty,options={})=>{
       :share;
     if(limit<=0){takenOffsetsByBar.set(bar,new Set());continue;}
     const tier=onset=>sourceOffsets&&!(sourceOffsets.has(onset.grid-bar*BAR)||onset.character==='FULL')?1:0;
-    const inBar=pool.filter(onset=>onset.grid>=bar*BAR&&onset.grid<(bar+1)*BAR)
+    // Rev.19: 写す小節では、元の小節で拾った位置の音を、候補の絞り込み(格子からのずれ30ms・拍の裏の弱い音)から外して加える。
+    //   写す小節の同じ位置には9割がた音があるのに、絞り込みで外れてリズムがそろわなかった(Rev.18 の足した小節でリズムがそろうのは約6割)。
+    //   格子の刻み(P.lattice)と、耳で確かめるときの許容(43ms)は守る
+    const barPool=rev19&&sourceOffsets
+      ?pool.concat(allOnsets.filter(onset=>onset.grid>=bar*BAR&&onset.grid<(bar+1)*BAR&&onset.grid%P.lattice===0
+        &&sourceOffsets.has(onset.grid-bar*BAR)&&!poolGrids.has(onset.grid)))
+      :pool;
+    const inBar=barPool.filter(onset=>onset.grid>=bar*BAR&&onset.grid<(bar+1)*BAR)
       .sort((a,b)=>tier(a)-tier(b)||pickPriority(b)-pickPriority(a)||a.grid-b.grid);
     const taken=[];
     for(const onset of inBar){
