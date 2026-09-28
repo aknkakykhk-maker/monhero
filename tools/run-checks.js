@@ -150,6 +150,12 @@ const FORCE_CHECKS = [
   // バトルの演出は「出す→待つ→消す」。ランを片付けると**消すほうへ到達しない**ので、
   // 片付けで捨て忘れると次のランの画面に残る(2026-09-20・誰もいない間合いに技名が出た)
   { re: /^monster-hero\/src\/parts\/60-app\.jsx$/, checks: ['battle/run-abandon-fx-check.js'], why: 'ランを片付けたときの演出' },
+  // バトル画面の重さ(2026-09-28)。飾りの CSS は 70-bootstrap に、見張りは 71-screen-battle にある。
+  // 描き直しになる書き方・マスクは手元の速い端末では分からず、iPhone で熱くなってから気づく(2026-09-24〜25 に踏んだ)
+  { re: /^monster-hero\/src\/parts\/(10-core|13-bgm-and-rhythm-settings|70-bootstrap|71-screen-battle)\.jsx$/,
+    checks: ['battle/battle-fx-lint-check.js'], why: 'バトルの飾りの書き方(描き直し・マスク)と重さの見張り' },
+  { re: /^monster-hero\/src\/parts\/(10-core|60-app|67-screen-pick|68-screen-run-result|70-bootstrap|71-screen-battle)\.jsx$/,
+    checks: ['battle/battle-perf-budget-check.js'], why: 'バトル画面の重さの予算と「重いときは自動で軽く」' },
   // 入力の割り当て(rhythmMatchInputBatch)は、片側を直すともう片側が静かに壊れる。
   // 2026-09-18、持ち替えの直しが「押さえている上に重なるノーツを叩けない」を生んだ
   { re: /^monster-hero\/data\/rhythm-mode\.js$/, checks: ['mode/rhythm-tap-during-hold-check.js', 'mode/rhythm-finger-swap-check.js'], why: '押さえながら叩く・指の持ち替え' },

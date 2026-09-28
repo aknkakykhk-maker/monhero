@@ -1780,7 +1780,9 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-notice] { outline: 1.5px solid rgba(243,210,122,.9); outline-offset: 1px;
       background-image: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 50%) !important; }
     /* 敵の攻撃・ためるは絵だけを動かす(丸枠とルーンの輪はその場に残す)。> span は敵の絵を包む要素 */
-    [data-tactics-look] [data-enemy-ring][data-enemy-attack="fly"] > span { display: block; position: relative; z-index: 9999; animation: enemyAttackFly 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-attack="fly"] > span { display: block; position: relative; z-index: 9999; animation: enemyAttackFly 450ms ease-in forwards;
+      /* ★赤い光は動かさず一定にする(キーフレームで filter を動かすと毎コマ描き直しになる。2026-09-28 battle-fx-lint-check) */
+      filter: drop-shadow(0 0 16px rgba(239,68,68,.85)); }
     [data-tactics-look] [data-enemy-ring][data-enemy-attack="charge"] > span { display: block; position: relative; animation: enemyChargeShake 1100ms ease-in-out forwards; }
     /* ==== 敵ごとの動き(2026-09-24 ユーザー指示「待機時間も動いてる感じに」「実際に動いてるように」「まずはカワズモー」)。
        絵は1枚のまま。支点は足元(transform-origin 50% 92%)にして、伸び縮み・傾き・重心移動で「生きている」ように見せる。
@@ -2623,12 +2625,13 @@ const createAnimationStyle = () => {
       background: linear-gradient(90deg, rgba(20,0,10,.95), rgba(88,10,30,.96) 30%, rgba(40,0,15,.96) 70%, rgba(20,0,10,.95));
       border-top: 3px solid #facc15; border-bottom: 3px solid #facc15; box-shadow: 0 0 40px rgba(250,204,21,.6), 0 0 90px rgba(220,38,38,.5);
       display: flex; align-items: center; justify-content: center; overflow: hidden; animation: mooCutinBand var(--em-dur) cubic-bezier(.2,.8,.2,1) both; }
-    [data-moo-cutin-band]::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(100deg, transparent 0 40px, rgba(250,204,21,.08) 40px 44px); animation: mooCutinStreak 400ms linear infinite; }
+    [data-moo-cutin-band]::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; right: -88px; background: repeating-linear-gradient(100deg, transparent 0 40px, rgba(250,204,21,.08) 40px 44px); animation: mooCutinStreak 400ms linear infinite; }
     [data-moo-cutin-band] > span { position: relative; font-weight: 900; font-size: clamp(30px, 10vw, 48px); letter-spacing: .12em; color: #fff; white-space: nowrap;
       text-shadow: 0 0 10px #facc15, 0 0 24px #dc2626, 0 3px 0 #7f1d1d; -webkit-text-stroke: 1px #facc15; animation: mooCutinText var(--em-dur) cubic-bezier(.2,.8,.2,1) both; }
     @keyframes mooCutinBand { 0% { opacity: 0; transform: skewY(-7deg) scaleY(0); } 6% { opacity: 1; transform: skewY(-7deg) scaleY(1.15); } 10%, 38% { opacity: 1; transform: skewY(-7deg) scaleY(1); } 46%, 100% { opacity: 0; transform: skewY(-7deg) scaleY(0); } }
     @keyframes mooCutinText { 0% { transform: translateX(120vw); } 10% { transform: translateX(-4vw); } 14%, 34% { transform: translateX(0); } 44%, 100% { transform: translateX(-130vw); } }
-    @keyframes mooCutinStreak { to { background-position: -88px 0; } }
+    /* 流れる筋は、88px 広げた板を横へずらして作る(背景の位置を動かすと毎コマ描き直しになる) */
+    @keyframes mooCutinStreak { to { transform: translateX(-88px); } }
     [data-moo-flash] { inset: 0; opacity: 0; background: radial-gradient(circle at 50% 55%, #fff, rgba(255,240,200,.9) 40%, rgba(250,204,21,.4) 75%); animation: mooFlash 420ms ease-out both; }
     @keyframes mooFlash { 0% { opacity: 0; } 10% { opacity: .7; } 100% { opacity: 0; } }
     [data-moo-crack] { left: 0; top: 0; opacity: 0; overflow: visible; animation: mooCrack 900ms ease-out both; }
@@ -2838,19 +2841,15 @@ const createAnimationStyle = () => {
     @keyframes enemyAttackFly {
       0% {
         transform: translateY(0) scale(1);
-        filter: drop-shadow(0 0 6px rgba(239,68,68,0.5));
       }
       45% {
         transform: translateY(90px) scale(1.18);
-        filter: drop-shadow(0 0 20px rgba(239,68,68,0.9));
       }
       60% {
         transform: translateY(90px) scale(1.18);
-        filter: drop-shadow(0 0 28px rgba(220,38,38,1));
       }
       100% {
         transform: translateY(0) scale(1);
-        filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
     }
     @keyframes enemyMoveSlide {
@@ -3167,18 +3166,21 @@ const createAnimationStyle = () => {
       box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.5), inset 0 0 10px rgba(0,0,0,.5) !important; }
     /* 絵の後ろで回るルーンの輪 */
     .mh-ph-rune { position: absolute; left: 50%; top: 50%; width: 150%; height: 150%; margin: -75% 0 0 -75%; border-radius: 50%; pointer-events: none; z-index: 0;
-      background: repeating-conic-gradient(rgba(243,210,122,.85) 0 3deg, transparent 3deg 15deg), radial-gradient(circle, rgba(var(--ph,243,210,122),.25), transparent 70%);
-      -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
-      mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
-      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),.9)); }
+      /* ★マスクは使わない(メモリが足りないと外れて、円すいの模様が丸ごと見える。2026-09-28 battle-fx-lint-check)。
+         2本の輪の刻みを SVG の破線で描く(破線の端は円の中心へ向くので、円すいを輪で切り抜いた形と同じになる) */
+      background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g transform='rotate(-90 50 50)' fill='none'><circle cx='50' cy='50' r='42.75' stroke='rgba(243,210,122,.85)' stroke-width='3.5' stroke-dasharray='2.238 8.953'/><circle cx='50' cy='50' r='49.75' stroke='rgba(243,210,122,.85)' stroke-width='.5' stroke-dasharray='2.605 10.42'/></g></svg>") center / 100% 100% no-repeat,
+        radial-gradient(circle, transparent 58%, rgba(var(--ph,243,210,122),.14) 59%, rgba(var(--ph,243,210,122),.14) 63%, transparent 64%, transparent 70%, rgba(var(--ph,243,210,122),.14) 71%, rgba(var(--ph,243,210,122),.14) 72.5%, transparent 73.5%);
+      filter: drop-shadow(0 0 1.5px rgba(var(--ph,243,210,122),.9)); }
     [data-phase-look="rich"] .mh-ph-rune { animation: mhRuneSpin 16s linear infinite; }
     /* 足元の魔法陣(タクティクスの枠の足元と同じ) */
     .mh-ph-floor { position: absolute; left: 50%; bottom: -14px; width: 96px; height: 96px; margin-left: -48px; pointer-events: none; z-index: 0;
       transform: rotateX(68deg);
       background: radial-gradient(circle, transparent 52%, rgba(255,240,200,.95) 53%, rgba(255,240,200,.95) 55%, transparent 56%, transparent 66%, rgba(var(--ph,243,210,122),.9) 67%, rgba(var(--ph,243,210,122),.9) 70%, transparent 71%),
-        repeating-conic-gradient(rgba(255,240,200,.8) 0 4deg, transparent 4deg 30deg);
-      -webkit-mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%); mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%);
-      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),1)); }
+        url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='43.15' fill='none' stroke='rgba(255,240,200,.8)' stroke-width='15.5' stroke-dasharray='3.012 19.58' transform='rotate(-90 50 50)'/></svg>") center / 100% 100% no-repeat,
+        radial-gradient(circle, transparent 50%, rgba(var(--ph,243,210,122),.2) 51%, rgba(var(--ph,243,210,122),.2) 72%, transparent 73%);
+      /* ★マスクは使わない。放射の刻みは輪の中だけに SVG で描く(上の .mh-ph-rune と同じ理由)。
+         以前は光(drop-shadow)もマスクで輪の中に収まっていたので、輪の地を薄く塗り、外へのにじみは弱くする */
+      filter: drop-shadow(0 0 1.5px rgba(var(--ph,243,210,122),1)); }
     [data-phase-look="rich"] .mh-ph-floor { animation: mhPhFloor 7s linear infinite; }
     @keyframes mhPhFloor { to { transform: rotateX(68deg) rotate(360deg); } }
     /* ボタン。金 = 決めるボタン(押せるとき)、夜 = そのほか。ボタンの意味の色は変えず、縁と照りを重ねる */

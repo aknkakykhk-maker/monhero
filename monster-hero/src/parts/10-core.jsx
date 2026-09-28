@@ -111,6 +111,10 @@ const normalizeBattleFxSettings = (value) => {
     // 操作が無いときの一時停止(2026-09-25 ユーザー指示「それも設定で作って」)。
     // ★既定は OFF(休ませない)。5秒で止まるのが「動きが止まった」ように見えていたため、選んだ人だけ休ませる
     restPause: v.restPause === 'ON' ? 'ON' : 'OFF',
+    // 重いときに画面の軽さを自動で下げる(2026-09-28 ユーザー指示「モンビーみたいに重さチェックやその他点検ツールを取り入れて
+    // 軽くて見た目が良く出来る仕組みを作って」)。モンヒロビートの「重いときは演出を自動で控えめに」と同じ考え方。
+    // ★足す前に保存した人(autoLoad が無い)は ON。下げたぶんは保存せず、アプリを開き直すと元の軽さに戻る
+    autoLoad: v.autoLoad === 'OFF' ? 'OFF' : 'ON',
     // ボスの必殺技ムービー(2026-09-25 ユーザー指示「設定でオンオフもつけて」)。
     // ★足す前に保存した人(specialMovie が無い)は ON(流す)で始まる
     specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON',
@@ -126,6 +130,9 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
       { id:'LIGHT', label:'軽め', note:'待機の動きも止める' },
       { id:'MINIMAL', label:'最軽量', note:'いちばん軽い表示' },
     ] },
+  { key:'autoLoad', title:'重いときは自動で軽く',
+    desc:'タクティクス新画面で動きのかくつきが続いたとき、画面の軽さを一段ずつ自動で下げます（「軽め」まで）。下げたぶんは、アプリを開き直すか画面の軽さを選び直すと元に戻ります。ダメージや進行は変わりません。',
+    options:[{ id:'ON', label:'自動で下げる', note:'かくつきを防ぐ' }, { id:'OFF', label:'下げない', note:'選んだ軽さのまま' }] },
   { key:'restPause', title:'操作がないときの一時停止',
     desc:'タクティクス新画面で、5秒ほど何も操作せず戦闘も進んでいないあいだ、飾りやモンスターの動きを一時停止してスマホを休ませます。画面に触れるか戦闘が進むと、止まったところからすぐに動き出します。',
     options:[{ id:'OFF', label:'止めない', note:'いつも動かす' }, { id:'ON', label:'5秒で止める', note:'スマホが熱くなりにくい' }] },
@@ -144,7 +151,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 09:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-28 09:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
