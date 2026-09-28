@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c50be74bca142cb3
+// source-sha256: 45ef73ef067ce310
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 19:24";
+const BUILD_DATE = "2026-09-28 19:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -21864,7 +21864,8 @@ const RhythmSongSelect = ({
   view = null,
   onView = null,
   listScrollTop = null,
-  onListScrollTop = null
+  onListScrollTop = null,
+  toolbarExtra = null
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -22085,7 +22086,7 @@ const RhythmSongSelect = ({
     "aria-hidden": "true"
   }, "💬"), React.createElement("span", {
     "aria-hidden": "true"
-  }, state.noticeOpen ? '▲' : '▼'))), React.createElement("div", {
+  }, state.noticeOpen ? '▲' : '▼')), toolbarExtra), React.createElement("div", {
     ref: listRef,
     onScroll: handleListScroll,
     "data-rhythm-song-list": true,
@@ -31091,6 +31092,25 @@ function RhythmSongSelectScreen({
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
   const beatPointTargetSong = !!beatPointEvent && Array.isArray(beatPointEvent.songIds) && beatPointEvent.songIds.includes(rhythmSelectedSongId);
   const beatPointCampaign = beatPointReleased && !beatPointEvent ? rhythmEventPointCampaignAt(Date.now()) : null;
+  const beatPointSideCard = beatPointCampaign ? React.createElement("div", {
+    "data-rhythm-beat-band-landscape": true,
+    "data-rhythm-beat-point-campaign-side": true,
+    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-amber-100"
+  }, React.createElement("span", {
+    className: "block rounded-full bg-amber-400 px-1 text-[10px] leading-4 text-slate-950"
+  }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
+    className: "mt-0.5 block"
+  }, "キャンペーン中"), React.createElement("span", {
+    className: "block text-amber-200/80"
+  }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.endAt)))) : beatPointEvent ? React.createElement("div", {
+    "data-rhythm-beat-band-landscape": true,
+    "data-rhythm-beat-point-active-side": true,
+    className: "rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100"
+  }, React.createElement("span", {
+    className: "block"
+  }, "🎟️ ビートP獲得期間中"), React.createElement("span", {
+    className: "mt-0.5 block text-violet-200/80"
+  }, beatPointTargetSong ? '選択中のイベント対象曲は1.5倍' : '公開曲なら獲得できます')) : null;
   const [beatPointBalance, setBeatPointBalance] = React.useState(null);
   React.useEffect(() => {
     if (!beatPointReleased) return undefined;
@@ -31330,7 +31350,10 @@ function RhythmSongSelectScreen({
     onClick: dismissRhythmEventNotice,
     "aria-label": "この案内を閉じる",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
-  }, "×"))), beatPointCampaign && React.createElement("div", {
+  }, "×"))), (beatPointCampaign || beatPointEvent) && React.createElement("div", {
+    "data-rhythm-beat-band-portrait": true,
+    className: "shrink-0"
+  }, beatPointCampaign && React.createElement("div", {
     "data-rhythm-beat-point-campaign": true,
     className: "shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100"
   }, React.createElement("span", {
@@ -31343,7 +31366,7 @@ function RhythmSongSelectScreen({
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
-  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます'), rhythmSixLaneIntroVisible && React.createElement("div", {
+  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます')), rhythmSixLaneIntroVisible && React.createElement("div", {
     "data-rhythm-six-lane-intro": true,
     className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -31442,6 +31465,7 @@ function RhythmSongSelectScreen({
       scene: "rhythmHome",
       compact: true
     }),
+    toolbarExtra: beatPointSideCard,
     view: rhythmSelectView,
     onView: saveRhythmSelectView,
     listScrollTop: rhythmSongListScrollRef.current,
