@@ -9,10 +9,11 @@
 // 手で塗った絵を載せると、実際に染めたときと違う見本になるため。
 //
 // 書き出すのは monster-hero/images/events/ の2枚(1000x520・JPEG quality 80・mozjpeg)。
-//   yggdrasil-dye-preview.jpg … 紅葉(髪と葉=深い紅80% / カエル=橙70% / 角とマント=茶45%)
-//   mel-whip-dye-preview.jpg  … いちごチョコ(髪と傘の緑=いちごミルク85% / ケーキと白=チョコ85%・赤い実はそのまま)
+//   yggdrasil-dye-preview.jpg … 紅葉(髪と葉=深い紅 / カエル=橙85% / 角とマント=茶70%)
+//   mel-whip-dye-preview.jpg  … いちごチョコ(髪と傘の緑=いちごミルク / ケーキと白=チョコ・赤い実はそのまま)
 // 色は「濃さ」(@NN)も使う(2026-09-28・ユーザー指示「透明度も活用して見本カラーもいい感じに仕上げて」)。
-// 濃さを下げると元の陰影が残ってなじむが、下げすぎると元の緑が透けてくすむので、65〜85%あたりにしてある
+// 部位ごとの染め方(MASU_COLOR_REGION_DYE の gloss)で元の淡い所は淡く残るので、濃さは下げすぎない。
+// 下げると全体が薄くなり、元の緑が透けてくすむ。脇役の部位(カエル・角とマント)だけ70〜85%にしてなじませた
 //     図鑑の「本当はチョコクリームを使ったスイーツが一番得意だとか」に合わせた
 // フォントは make-yggdrasil-lineage-notice.js と同じ M PLUS Rounded 1c ExtraBold(リポジトリには入れない)。
 const path = require('path');
@@ -28,9 +29,9 @@ registerFont(FONT, { family: 'MPR' });
 
 const PREVIEWS = [
   { baseId: 'Yggdrasil', out: 'yggdrasil-dye-preview.jpg', name: 'ユグドラシル', style: '紅葉カラー',
-    colors: ['custom:356:78:78@80', 'custom:30:82:94@70', 'custom:20:50:45@45'], bg: ['#3a1407', '#8a3a10', '#e08a2a'], accent: '#ffcf5a', dots: ['rgba(255,120,40,.6)', 'rgba(255,200,60,.55)', 'rgba(200,40,30,.5)'] },
+    colors: ['custom:6:88:78', 'custom:34:85:96@85', 'custom:18:60:38@70'], bg: ['#3a1407', '#8a3a10', '#e08a2a'], accent: '#ffcf5a', dots: ['rgba(255,120,40,.6)', 'rgba(255,200,60,.55)', 'rgba(200,40,30,.5)'] },
   { baseId: 'MelWhip', out: 'mel-whip-dye-preview.jpg', name: 'メルホイップ', style: 'いちごチョコ',
-    colors: ['custom:342:38:98@85', null, 'custom:22:62:44@85'], bg: ['#2a120b', '#6b3320', '#e79ab4'], accent: '#ffd6e6', dots: ['rgba(255,170,200,.6)', 'rgba(140,80,50,.6)', 'rgba(255,255,255,.55)'] },
+    colors: ['custom:338:58:98', null, 'custom:20:65:40'], bg: ['#2a120b', '#6b3320', '#e79ab4'], accent: '#ffd6e6', dots: ['rgba(255,170,200,.6)', 'rgba(140,80,50,.6)', 'rgba(255,255,255,.55)'] },
 ];
 
 const dyed = async (dye, url, baseId, colors) => {

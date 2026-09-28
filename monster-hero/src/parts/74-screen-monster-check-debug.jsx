@@ -366,15 +366,18 @@ function MonsterCheckDebugScreen({
   // 1枚ぶんの枠。絵のURLと染色を指定できるようにしてあるので、「本番の表示条件」だけでなく
   // 「部位ごとの切り分け」「ライガーの新旧比較」も同じ部品で出せる。
   // 読み込みに失敗した絵は赤くして、「パスの綴り間違いで絵が出ない」を公開前に気づけるようにする
-  const artBox = (label, src, palette, frameClass, fit, imgStyle, note) => {
+  // idle を付けた枠は、図鑑・バトルと同じ待機アニメ(MonsterIdleArt)で動かす。
+  // 公開前の子(案の段階)でも、リグを書いた時点で動きをここで確かめられる
+  const artBox = (label, src, palette, frameClass, fit, imgStyle, note, idle = false) => {
     const broken = !!brokenImages[src];
+    const art = src && <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>;
     return (
       <section key={label} className="rounded-xl bg-black/30 p-2 text-center">
         <b className="block text-[10px] font-black text-cyan-200">{label}</b>
         {note && <small className="mb-1 block text-[8px] font-bold text-slate-400">{note}</small>}
         <div className={`${frameClass} overflow-hidden border ${broken ? 'border-rose-500' : 'border-white/20'}`} style={bgStyle}>
           {src
-            ? <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>
+            ? (idle ? withMonsterIdleArt(mon.id, art, {fill:true, own:true}) : art)
             : <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-rose-300">未設定</span>}
         </div>
         {/* 綴りを間違えた絵は、染色を通すと「何も出ない」だけで理由が分からない。
@@ -474,6 +477,8 @@ function MonsterCheckDebugScreen({
                 {artFrame('顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸')}
                 {artFrame('プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸')}
                 {artFrame('小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸')}
+                {artBox('待機アニメ', artSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null,
+                  monsterIdleRigOf(mon.id) ? '図鑑・バトルと同じ動き' : 'リグ未設定（止まったまま）', true)}
               </div>
               <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-2.5">
                 <h3 className="mb-2 text-[11px] font-black text-fuchsia-300">染色（{regionCount}部位・本番と共通）</h3>

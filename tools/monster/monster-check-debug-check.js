@@ -60,6 +60,17 @@ check('一覧を所持マスモンで絞っていない', !/masuMons/.test(listF
 check('一覧を解放済みで絞っていない', !/unlockedMonsterIds/.test(listFn));
 check('一覧を debugOnly で絞っていない(実装したら消える、を作らない)', !/debugOnly/.test(listFn));
 
+// 待機アニメも、図鑑・バトルと同じ部品で動かして見せる(2026-09-28。案の段階の子もリグを書けばここで動く)
+check('待機アニメの枠があり、図鑑・バトルと同じ withMonsterIdleArt を通す',
+  part.includes("artBox('待機アニメ'") && part.includes('withMonsterIdleArt(mon.id, art, {fill:true, own:true})'));
+{
+  const fx = fs.readFileSync(path.join(root, 'monster-hero/src/parts/24-battle-fx.jsx'), 'utf8');
+  const ally = fs.readFileSync(path.join(root, 'monster-hero/data/ally-monsters.js'), 'utf8');
+  const draftIds = [...(ally.match(/const UPCOMING_MONSTER_DRAFTS = Object\.freeze\(\{[\s\S]*?\n\}\);/) || [''])[0].matchAll(/^  (\w+): Object\.freeze/gm)].map(m => m[1]);
+  const noRig = draftIds.filter(id => !new RegExp(`^  ${id}: \\{ body:`, 'm').test(fx));
+  check('案の段階の子にも待機アニメのリグがある', draftIds.length > 0 && noRig.length === 0, noRig.join('・') || draftIds.join('・'));
+}
+
 // 模様テストも同じ理由で全種を並べる
 check('マスモン模様カスタムテストも所持を問わず全種を並べる',
   /Object\.values\(ALL_PLAYER_MONSTERS\)\.forEach\(mon=>\{if\(mon\?\.id&&!eligible\.some\(m=>m\.baseId===mon\.id\)\)eligible\.push\(/.test(source));
