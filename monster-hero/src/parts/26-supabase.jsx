@@ -1726,3 +1726,33 @@ const beginNewRankingRun = ({ runIdRef, scoreSubmittedRef, runFinalizingRef, rew
   runIdRef.current = createRunId();
   return runIdRef.current;
 };
+
+// ===== モンヒロビートの遊んだ記録(2026-09-28) =====
+// ユーザー指示「人間が関与しないで完璧なツールに仕上がる仕組みを」「全プレイヤーから送る」。
+// 公開中の曲をふつうに最後まで遊んだとき、ノーツごとの判定のずれを縮めて rhythm_play_logs へ1行送る。
+// 譜面生成ツール(tools/mode/rhythm-play-log.js)が週1回これを読み、「音に合わせて押せているか」を測って
+// 次に足す曲の作り方を決める(docs/spec/RHYTHM_PLAY_LOG.md)。
+//   ・名前・ブリーダーID・セーブデータは送らない。端末ごとのでたらめなID(mh_rhythm_play_log_device_v1)だけ
+//     (1人の記録が多すぎるときに重みをならすため)
+//   ・送れなくてもゲームは何も変わらない(黙って捨てる。やり直さない)
+//   ・置き場所(表)がまだ無い(404)・権限が無い(401/403)と分かったら、そのページを閉じるまで送らない
+//   ・表の作り方は docs/sql/rankings/RHYTHM_PLAY_LOG_APPLY.sql(先にアプリを公開しても壊れない)
+const RHYTHM_PLAY_LOG_TABLE = 'rhythm_play_logs';
+let rhythmPlayLogDisabled = false;
+const sbSendRhythmPlayLog = async (row) => {
+  if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function') return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_PLAY_LOG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) rhythmPlayLogDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};

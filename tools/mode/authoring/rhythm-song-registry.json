@@ -362,6 +362,19 @@
     "source": "command"
    },
    "challengeFactor": 1.3
+  },
+  "big_bridge_no_shitou": {
+   "audio": "monster-hero/audio/bgm-big-bridge-no-shitou.mp3",
+   "chartRevision": 18,
+   "audioSha256": "466468405f445845dd896375e3e0af91b9b2977b9710d60f9bec8ae2466f2840",
+   "durationMs": 148320,
+   "analyzedTiming": {
+    "bpm": 177.72,
+    "beatZeroMs": 349.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

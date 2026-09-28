@@ -567,6 +567,44 @@ const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhy
 // 良い／変と言われた区間にどんな形・種類が多いかを数えるのが、自動譜面の「学習」の土台になる
 // (docs/spec/RHYTHM_CHART_CORPUS.md)。プレイヤーには出ないので、更新履歴・ヘルプには載せない。
 // 保存は新しいキー mh_rhythm_chart_notes_v1 だけ(既存の保存キーには触らない)。
+// ===== 遊んだ記録(2026-09-28) =====
+// 公開中の曲をふつうに最後まで遊んだとき、ノーツごとの判定のずれを縮めてサーバーへ送る(26-supabase.jsx の sbSendRhythmPlayLog)。
+// 譜面生成ツールが「音に合わせて押せているか」を測るのに使う(docs/spec/RHYTHM_PLAY_LOG.md)。判定・スコア・保存には一切関わらない。
+//   縮め方: 譜面のノーツの並び順に1ノーツ2文字。ずれ(ms・判定タイミング調整を通したあと)に600を足して0〜1200に挟み、36進2桁。
+//           MISS は 'zz'、判定されずに終わったノーツは '--'、ずれの無い判定は '__'。HOLD / SLIDE は押し始めのずれ
+//   保存は新しいキー mh_rhythm_play_log_device_v1(端末ごとのでたらめなID)だけ。既存の保存キーには触らない
+const RHYTHM_PLAY_LOG_DEVICE_KEY='mh_rhythm_play_log_device_v1';
+const RHYTHM_PLAY_LOG_VERSION=1;
+const rhythmPlayLogEncode=notes=>(Array.isArray(notes)?notes:[]).map(note=>{
+  const judgment=note&&note._rhythmFinalJudgment;
+  if(!judgment)return '--';
+  if(judgment==='MISS')return 'zz';
+  const held=(note.type==='HOLD'||note.type==='SLIDE')&&note.holdJudgment&&Number.isFinite(Number(note.holdDeltaMs));
+  const delta=held?Number(note.holdDeltaMs):note._rhythmDeltaMs;
+  if(typeof delta!=='number'||!Number.isFinite(delta))return '__';
+  return Math.max(0,Math.min(1200,Math.round(delta)+600)).toString(36).padStart(2,'0');
+}).join('');
+const rhythmPlayLogDeviceKey=async()=>{
+  const saved=await storeGet(RHYTHM_PLAY_LOG_DEVICE_KEY,null);
+  if(typeof saved==='string'&&/^[0-9a-z]{8,40}$/.test(saved))return saved;
+  const made=Array.from({length:20},()=>Math.floor(Math.random()*36).toString(36)).join('');
+  await storeSet(RHYTHM_PLAY_LOG_DEVICE_KEY,made);
+  return made;
+};
+// 送るのは、公開中の曲(RHYTHM_DEMO_SONG_IDS)をデバッグ・練習・タイミング合わせ・アシストモード以外で最後まで遊んだときだけ
+const rhythmPlayLogSend=async({song,difficulty,rawChart,notes,settings,mirror,cleared})=>{
+  try{
+    if(typeof sbSendRhythmPlayLog!=='function')return false;
+    if(typeof RHYTHM_DEMO_SONG_IDS==='undefined'||!RHYTHM_DEMO_SONG_IDS.includes(song?.songId))return false;
+    const deltas=rhythmPlayLogEncode(notes);
+    if(!deltas||deltas.length>12000)return false;
+    const deviceKey=await rhythmPlayLogDeviceKey();
+    return await sbSendRhythmPlayLog({song_id:song.songId,difficulty:String(difficulty?.id||''),fingerprint:rhythmChartFingerprint(rawChart),
+      app_build:typeof BUILD_DATE==='string'?BUILD_DATE:'',device_key:deviceKey,
+      judge_offset_ms:Math.round(Number(settings?.judgmentTimingOffsetMs)||0),note_count:Array.isArray(notes)?notes.length:0,
+      mirror:!!mirror,cleared:!!cleared,deltas,schema_version:RHYTHM_PLAY_LOG_VERSION});
+  }catch{return false;}
+};
 const RHYTHM_CHART_NOTES_KEY='mh_rhythm_chart_notes_v1';
 const RHYTHM_CHART_NOTE_SEGMENT_MS=8000;
 const RHYTHM_CHART_NOTE_MARKS=['', 'good', 'bad'];
@@ -1300,7 +1338,7 @@ useEffect(()=>{
   window.addEventListener('orientationchange',invalidate);
   return ()=>{window.removeEventListener('resize',invalidate);window.removeEventListener('orientationchange',invalidate);};
 },[settings.noteStartPosition,settings.noteSize,settings.judgmentLineHeight,view.status]);
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;note._rhythmDeltaMs=typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // MARVELOUSの中でも、とくにぴったり(±20ms)だったか。**見た目にしか使わない**(2026-09-12)。
 // 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れないので、
 // run にも result にも残さない。judgmentTimingOffsetMs を通したあとのズレを見ている
@@ -1512,6 +1550,8 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     /* アシストモードのプレイは自己ベスト・ランキングに残さない(受け取る側が result.assist を見て保存しない)。
        ここでも自己ベストを混ぜない(NEW RECORD を出さない) */
     const isNewRecord=!assistOn&&score>run.startBestScore;const merged=assistOn?normalizeRhythmBestRecord(run.startBest):mergeRhythmBestRecord(run.startBest,result);
+    // 遊んだ記録を送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせ・アシストモードは送らない
+    if(!debugPlay&&!tutorial&&!calibrating&&!assistOn)rhythmPlayLogSend({song,difficulty,rawChart,notes:run.notes,settings,mirror:mirrorOn,cleared:!failed});
     const liveLogEndMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;
     const liveLog=rhythmLiveLogSections(run.liveLog,liveLogEndMs);
     // フルコンボ等を達成していれば、リザルトの数字を出す前に一度「FULL COMBO!」等を
@@ -1531,7 +1571,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     }
     if(luckOn)setView(v=>v.result?{...v,result:{...v.result,luck:{points:run.luckPoints||0,draws:run.luckDraws||0,rush:run.luckRushCount||0,bonus:run.luckBonus||0}}}:v);
     onComplete(result,merged);
-  },[chart.totalNotes,chart.durationMs,difficulty.maxScore,onComplete,settings.effectAmount,settings.lightweightMode,stopFrame,tutorial,calibrating,debugPlay,song.songId,song.playDurationMs,assistOn,mirrorOn,luckOn]);
+  },[chart.totalNotes,chart.durationMs,difficulty.maxScore,difficulty.id,onComplete,settings.effectAmount,settings.lightweightMode,settings.judgmentTimingOffsetMs,stopFrame,tutorial,calibrating,debugPlay,song.songId,song.playDurationMs,assistOn,mirrorOn,luckOn]);
   // celebrate画面: 出た瞬間に合成SEを1回鳴らし、既定の時間で自動的にresultへ進む。
   // 依存はview.statusだけにしてある。もしview.comboなど毎ノーツ変わる値を依存に入れると、
   // (かつてコンボ演出で実際に踏んだ通り)途中でeffectが再実行されるたびcleanupが走り、

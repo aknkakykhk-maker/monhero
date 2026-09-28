@@ -352,6 +352,7 @@ const EXPORTED_NAMES = [
   'saveStoredValuesOrRollback',
   'saveTranscendFruitPair',
   'buildMarketItemPurchase',
+  'marketPriceText',
   'saveMarketBalances',
   'CLEAR_PSYCHE_REWARD',
   'QUICK_DIFFICULTY_SETTINGS',
