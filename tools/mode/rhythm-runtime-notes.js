@@ -197,6 +197,7 @@ const RELEASED_MARKERS=Object.freeze({
   senjou_no_shippuu:'senjou-no-shippuu-v3',
   makutsu_no_senritsu:'makutsu-no-senritsu-v3',
   only_my_railgun:'only-my-railgun-v3',
+  big_bridge_no_shitou:'big-bridge-no-shitou-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -227,6 +228,7 @@ const RELEASED_TRACKS=Object.freeze({
   senjou_no_shippuu:'senjou_no_shippuu',
   makutsu_no_senritsu:'makutsu_no_senritsu',
   only_my_railgun:'only_my_railgun',
+  big_bridge_no_shitou:'big_bridge_no_shitou',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
