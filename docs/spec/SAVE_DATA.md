@@ -138,6 +138,7 @@
 | `mh_rhythm_rank_pending_v1` | object[] | 全国ランキングへ送れなかったモンビーの記録(次回に再送) |
 | `mh_rhythm_perf_v1` | boolean / `false` | 性能計測(デバッグ限定)の ON/OFF |
 | `mh_rhythm_chart_notes_v1` | object / `{}` | 譜面メモ(デバッグ限定・2026-09-26)。`曲id|難易度` → 区間ごとの 👍/👎 とひとことメモ。譜面の作り直しを見分ける `fingerprint` 付き(`normalizeRhythmChartNotes`) |
+| `mh_rhythm_play_log_device_v1` | string / 無し | 遊んだ記録(2026-09-28)の端末ごとのでたらめなID(英小文字と数字20文字)。記録の送信(`rhythmPlayLogSend`)だけが使い、無い・形が違うときは作り直す。名前・ブリーダーIDとは結び付かない(`docs/spec/RHYTHM_PLAY_LOG.md`) |
 | `mh_rhythm_event_notice_v1` | string / `''` | 曲えらびで「今週の対象曲」の案内を見たイベントのID(週が変わると新しいIDになり、その週の初回にもう一度だけ出る。`docs/spec/RHYTHM_RANKING.md` §10.2) |
 | `mh_changelog_timed_seen_fix_v1` | boolean / `false` | `visibleFrom` 付きの更新履歴（時刻が来てから出る項目）を、一度きりで未読へ戻したか。開始前に一覧を開いた端末で既読になり、公開時刻にNEWが付かなかったための補正フラグ（二重適用を防ぐ） |
 | `mh_rhythm_event_story_v1` | string[] / `[]` | イベントの会話ストーリーを最後まで見たイベントのID(開催中に1度だけ流すためのフラグ。回想からはいつでも見られる) |
