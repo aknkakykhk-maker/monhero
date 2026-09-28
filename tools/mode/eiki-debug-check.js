@@ -106,8 +106,8 @@ const marketSrc = marketStart >= 0 ? breederSrc.slice(marketStart) : '';
 check('マーケットの商品一覧を取り出せる', marketStart >= 0);
 check("マーケットに「エイキのアイコン」がある(pt購入)", /\{ id:'eiki_icon', name:"エイキのアイコン", type:'icon'/.test(marketSrc));
 check("マーケットに「エイキの円盤石アイコン」がある(pt購入)", /\{ id:'eiki_disc_icon', name:"エイキの円盤石アイコン", type:'icon'/.test(marketSrc));
-check("マーケットに「エイキの円盤石」が3000ダイヤである(パンドラと同じ最上位価格)",
-  /\{ id:'Eiki', name:"エイキの円盤石", type:'disc', icon:EIKI_DISC_ICON, cost:3000 \}/.test(marketSrc));
+check("マーケットに「エイキの円盤石」が300000ダイヤである(パンドラと同じ最上位価格)",
+  /\{ id:'Eiki', name:"エイキの円盤石", type:'disc', icon:EIKI_DISC_ICON, cost:300000 \}/.test(marketSrc));
 check('商品アイコンは専用の顔クロップ(EIKI_FACE_ICON)を使う(全身画像ではない)',
   /\{ id:'eiki_icon', name:"エイキのアイコン", type:'icon', icon:EIKI_FACE_ICON, cost:1 \}/.test(marketSrc));
 // 顔クロップ(EIKI_FACE_ICON)を持っているアイコンのほうへ、さらに拡大位置調整を足さないこと。
@@ -122,7 +122,7 @@ check('更新履歴のマーケット追加は助手の告知(assistantNotice)�
 // 3000ダイヤの円盤石は増えていくので、並びを丸ごと写さない(1体足すだけで落ちるため)。
 // 見たいのは「エイキが3000ダイヤ側の並びに居るか」だけ
 check('ヘルプのマーケット項目にエイキが載っている(アイコン・円盤石の一覧)',
-  /エイキ[^]{0,30}の円盤石は各3000ダイヤ/.test(helpSrc) || /・エイキ・[^]{0,30}円盤石は各3000ダイヤ/.test(helpSrc));
+  /エイキ[^]{0,30}の円盤石は各300000ダイヤ/.test(helpSrc) || /・エイキ・[^]{0,30}円盤石は各300000ダイヤ/.test(helpSrc));
 check('ヘルプの図鑑項目にエイキ専用の解説がある', /title:'エイキ', text:'エイキは「ザン × ？？？」のレアモンスター/.test(helpSrc));
 check('はじめから解放されるモンスターには入れない(円盤石購入で解放する仕様のまま)',
   !/STARTER_MONSTER_IDS[^\n]*Eiki/.test(source));

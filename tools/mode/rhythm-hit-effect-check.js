@@ -28,18 +28,44 @@ let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` (${detail})`:''}`);if(!ok)failed++;};
 
 const ctx={};vm.createContext(ctx);
-vm.runInContext(`${source}\nthis.out={RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,RHYTHM_JUDGMENT_RAINBOW,RHYTHM_JUDGMENT_PRECISE_MS,rhythmJudgmentIsPrecise,RHYTHM_JUDGMENTS};`,ctx);
-const {RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,RHYTHM_JUDGMENT_RAINBOW,RHYTHM_JUDGMENT_PRECISE_MS,rhythmJudgmentIsPrecise,RHYTHM_JUDGMENTS}=ctx.out;
+vm.runInContext(`${source}\nthis.out={RHYTHM_HIT_EFFECT_COLORS,RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,RHYTHM_JUDGMENT_RAINBOW,RHYTHM_JUDGMENT_PRECISE_MS,rhythmJudgmentIsPrecise,RHYTHM_JUDGMENTS};`,ctx);
+const {RHYTHM_HIT_EFFECT_COLORS,RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME,RHYTHM_JUDGMENT_COLORS,rhythmJudgmentColor,RHYTHM_JUDGMENT_RAINBOW,RHYTHM_JUDGMENT_PRECISE_MS,rhythmJudgmentIsPrecise,RHYTHM_JUDGMENTS}=ctx.out;
 
 // --- 道のふちの光は、描く先と大きさが同じあいだ形とグラデーションを使い回す(2026-09-27) ---
+// 2026-09-28: 横画面の道の幅を選べるようにしたので、鍵に道の幅(road)も入った。鍵が増えるのは許す。
 {
   const body=source.slice(source.indexOf('    drawRoadFx(lines,count,pulse){'),source.indexOf('    get drawn(){return drawn;},'));
   check('道のふちの光は、形とグラデーションを使い回す(毎フレーム作り直さない)',
-    /if\(!roadEdgeCache\|\|roadEdgeCache\.ctx!==ctx\|\|roadEdgeCache\.w!==cssW\|\|roadEdgeCache\.h!==cssH\)\{/.test(body)
+    /if\(!roadEdgeCache\|\|roadEdgeCache\.ctx!==ctx\|\|roadEdgeCache\.w!==cssW\|\|roadEdgeCache\.h!==cssH(?:\|\|roadEdgeCache\.\w+!==[\w.]+)*\)\{/.test(body)
     &&(body.match(/createLinearGradient/g)||[]).length===1&&body.indexOf('createLinearGradient')<body.indexOf('const edge=points=>'));
 }
 
+// --- フリックの炎の羽(2026-09-28)。canvas 版と CSS 版で、長さ・傾き・色・絵がずれないこと ---
+{
+  const plumeCtx={};vm.createContext(plumeCtx);
+  vm.runInContext(`${source}\nthis.out={RHYTHM_FLICK_PLUME,rhythmPaintFlickPlume};`,plumeCtx);
+  const {RHYTHM_FLICK_PLUME:P}=plumeCtx.out;
+  const flat=source.replace(/\s+/g,'');
+  check('炎の羽の長さ・傾き・色を1か所(RHYTHM_FLICK_PLUME)にまとめている',!!P&&P.ms>0&&P.tilt&&P.rgb&&['up','left','right'].every(d=>Number.isFinite(P.tilt[d])&&/^\d+,\d+,\d+$/.test(P.rgb[d])));
+  check('canvas 版は RHYTHM_FLICK_PLUME と共通の描き方(rhythmPaintFlickPlume)を使う',/constHIT_PLUME_MS=RHYTHM_FLICK_PLUME\.ms,HIT_PLUME_TILT=RHYTHM_FLICK_PLUME\.tilt,HIT_PLUME_RGB=RHYTHM_FLICK_PLUME\.rgb;/.test(flat)&&flat.includes('rhythmPaintFlickPlume(s.ctx,'));
+  check('CSS 版は同じ絵を演奏の前に1回だけ作って渡す',/for\(const\[dir,rgb\]ofObject\.entries\(RHYTHM_FLICK_PLUME\.rgb\)\)\{consturl=rhythmFlickPlumeImage\(rgb\)[,;]/.test(flat));
+  const cssFor=dir=>{const m=source.match(new RegExp(`\\[data-rhythm-hit-effect\\]\\[data-hit-flick="${dir}"\\]\\{--rhythm-plume-tilt:(-?[\\d.]+)deg;--rhythm-plume-img:var\\(--rhythm-plume-${dir}\\);(?:--rhythm-wisp-img:var\\(--rhythm-wisp-${dir}\\);)?--rhythm-plume-rgb:([\\d,]+)\\}`));return m?{tilt:Number(m[1]),rgb:m[2]}:null;};
+  check('CSS 版の傾き・色が RHYTHM_FLICK_PLUME と同じ',['up','left','right'].every(d=>{const c=cssFor(d);return c&&c.tilt===P.tilt[d]&&c.rgb===P.rgb[d];}));
+  check('CSS 版の炎と手前の光の長さが RHYTHM_FLICK_PLUME.ms と同じ',new RegExp(`>em\\{animation:mhRhythmHitPlume${P.ms}ms`).test(flat)&&new RegExp(`>small\\{animation:mhRhythmHitFloor${P.ms}ms`).test(flat));
+  check('器に炎(em)と手前の光(small)がある(押すたびに作らない)',flat.includes("item.appendChild(document.createElement('em'));")&&flat.includes("item.appendChild(document.createElement('small'));"));
+  // 2026-09-28: 「動きが硬い・毎回同じ形」で、炎の舌をフリックごとの乱数で飛ばす形にした。canvas 版・CSS 版とも同じ決め方を使う
+  check('炎の舌の飛び方は canvas 版・CSS 版とも rhythmFlickWisps で決める(フリックごとの乱数)',flat.includes('rhythmFlickWisps(h.seed,RHYTHM_FLICK_PLUME.wisps)')&&flat.includes('rhythmFlickWisps((Math.random()*4294967296)>>>0,RHYTHM_FLICK_PLUME.cssWisps)')&&/plume,seed:plume\?\(Math\.random\(\)\*4294967296\)>>>0:0/.test(flat));
+  {const {rhythmFlickWisps:W}=(()=>{const c={};vm.createContext(c);vm.runInContext(`${source}\nthis.out={rhythmFlickWisps};`,c);return c.out;})();
+    const a=W(12345,14),b=W(12345,14),d=W(999,14);
+    check('同じ seed なら同じ並び・ちがう seed ならちがう形になる',JSON.stringify(a)===JSON.stringify(b)&&JSON.stringify(a)!==JSON.stringify(d)&&a.length===14&&a.every(w=>w.life>0&&w.dist>0&&w.len>0&&w.wid>0));}
+  check('終点フリックも炎を出す',/constflickHit=rhythmNoteVisualType\(note\)==='FLICK'\?\(rhythmFlickDir\(note\)\|\|'up'\):\(note\.endFlick\?'up':''\);/.test(game.replace(/\s+/g,'')));
+}
+
 // --- 音 ---
+// 光の位置は判定ラインの高さの道幅で出す(2026-09-27)。1(=演奏の枠の下端)で出すと、道はラインの高さで枠の約8割に細いので、
+// 外側のレーンほど光が外へずれて道の外まではみ出した(コマ送りで見つけた)
+check('叩いた光の位置と幅は、判定ラインの高さ(RHYTHM_JUDGMENT_LINE_Y)の道幅で出す',
+  /const lineY=RHYTHM_JUDGMENT_LINE_Y\.ratio;[\s\S]{0,200}rhythmProjectSlideSpan\(rhythmReleaseLane\(note\),note,lineY,[\s\S]{0,120}rhythmNoteVisualSpan\(note,note\.lane,lineY,/.test(game));
 check('モンスターノーツ専用の音がある',typeof RHYTHM_NOTE_SE_RUNTIME.playMonster==='function');
 check('音が出せない環境でも落ちない',RHYTHM_NOTE_SE_RUNTIME.playMonster()===false);
 const monsterSe=/const playMonster=\(\)=>\{[\s\S]*?\n  \};/.exec(source)?.[0]||'';
@@ -75,8 +101,11 @@ const JUDGMENTS=['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS'];
 check('判定の色は1つの表(RHYTHM_JUDGMENT_COLORS)にまとまっている',
   JUDGMENTS.every(id=>/^#[0-9a-f]{6}$/i.test(RHYTHM_JUDGMENT_COLORS[id])));
 check('MISSを入れた6判定がすべて違う色',new Set(JUDGMENTS.map(rhythmJudgmentColor)).size===6);
-check('判定ラインの光も同じ表から取る',
-  JUDGMENTS.every(id=>rhythmHitEffectColor(id)===rhythmJudgmentColor(id)));
+// 2026-09-27、ユーザー指示(参考動画の青い光に寄せる「全部やって」)で、判定ラインの光だけは文字と別の色にした。
+// それでも色の置き場所が散らばらないよう、光の色は光専用の1つの表(RHYTHM_HIT_EFFECT_COLORS)から取る
+check('判定ラインの光は光専用の1つの表から取る(MISS 以外の5判定がそろっている)',
+  typeof RHYTHM_HIT_EFFECT_COLORS==='object'
+  &&JUDGMENTS.filter(id=>id!=='MISS').every(id=>/^#[0-9a-f]{6}$/i.test(RHYTHM_HIT_EFFECT_COLORS[id])&&rhythmHitEffectColor(id)===RHYTHM_HIT_EFFECT_COLORS[id]));
 // 判定ごとのCSSを切り出す。以降はこの中身だけを見る
 const judgmentRule=id=>{
   const head=`[data-rhythm-judgment-text][data-judgment="${id}"]{`;

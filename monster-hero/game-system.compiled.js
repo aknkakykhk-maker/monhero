@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8c7d9a101bf587f5
+// source-sha256: 7611c990a60ad8e0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -152,6 +152,7 @@ const normalizeBattleFxSettings = value => {
     shake: v.shake === 'OFF' ? 'OFF' : 'ON',
     load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH',
     restPause: v.restPause === 'ON' ? 'ON' : 'OFF',
+    autoLoad: v.autoLoad === 'OFF' ? 'OFF' : 'ON',
     specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON'
   };
 };
@@ -175,6 +176,19 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
     id: 'MINIMAL',
     label: '最軽量',
     note: 'いちばん軽い表示'
+  }]
+}, {
+  key: 'autoLoad',
+  title: '重いときは自動で軽く',
+  desc: 'タクティクス新画面で動きのかくつきが続いたとき、画面の軽さを一段ずつ自動で下げます（「軽め」まで）。下げたぶんは、アプリを開き直すか画面の軽さを選び直すと元に戻ります。ダメージや進行は変わりません。',
+  options: [{
+    id: 'ON',
+    label: '自動で下げる',
+    note: 'かくつきを防ぐ'
+  }, {
+    id: 'OFF',
+    label: '下げない',
+    note: '選んだ軽さのまま'
   }]
 }, {
   key: 'restPause',
@@ -242,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 19:01";
+const BUILD_DATE = "2026-09-28 19:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4560,6 +4574,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_only_my_railgun',
+  name: 'only my railgun',
+  creator: 'オリジナル',
+  src: 'audio/bgm-only-my-railgun.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -4793,6 +4814,7 @@ const RHYTHM_COMBO_SIZE_MIN = 70;
 const RHYTHM_COMBO_SIZE_MAX = 150;
 const RHYTHM_COMBO_SIZE_STEP = 10;
 const RHYTHM_LANE_GLOW_LABELS = Object.freeze([['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]);
+const RHYTHM_ROAD_WIDTH_LABELS = Object.freeze([['WIDE', '広い'], ['STANDARD', 'ふつう'], ['NARROW', '細い']]);
 const RHYTHM_EFFECT_LABELS = Object.freeze([['NORMAL', '最大'], ['LOW', '多め'], ['LIGHT', '標準'], ['MINIMAL', '最小']]);
 const RHYTHM_FRAME_RATE_MODES = Object.freeze(['POWER_SAVE', 'DEVICE']);
 const RHYTHM_FRAME_RATE_LABELS = Object.freeze([['POWER_SAVE', '省電力'], ['DEVICE', '端末に合わせる']]);
@@ -5033,6 +5055,7 @@ const RHYTHM_SIDE_MONSTER_MOTION_LABELS = Object.freeze([['NORMAL', '跳ねる']
 const RHYTHM_COMBO_POSITION_LABELS = Object.freeze([['AUTO', 'おすすめ'], ['LEFT', '左'], ['CENTER', '中央'], ['RIGHT', '右'], ['HUD', '右上']]);
 const RHYTHM_COMBO_POSITIONS = Object.freeze(RHYTHM_COMBO_POSITION_LABELS.map(([id]) => id));
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL', 'LOW', 'NONE']);
+const RHYTHM_ROAD_WIDTH_LEVELS = Object.freeze(['WIDE', 'STANDARD', 'NARROW']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 const RHYTHM_RANK_COLORS = Object.freeze({
   G: 'text-slate-400',
@@ -5075,6 +5098,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   noteSeFlickVolume: 100,
   noteSeEndVolume: 100,
   noteSeEmptyEnabled: true,
+  noteSeHoldVolume: 100,
   livePartnerVisible: true,
   sideMonsterOpacity: 'NORMAL',
   sideMonsterMotion: 'NORMAL',
@@ -5093,6 +5117,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   hudSongFade: true,
   autoEffectDown: true,
   stageEffect: 'SIMPLE',
+  roadWidth: 'WIDE',
   laneCover: 0,
   timingDisplay: 'STANDARD',
   comboStatusDisplay: true,
@@ -5131,12 +5156,14 @@ const normalizeRhythmSettings = value => {
     monsterNoteEffect: RHYTHM_MONSTER_EFFECT_LEVELS.includes(source.monsterNoteEffect) ? source.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect,
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
     laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
+    roadWidth: RHYTHM_ROAD_WIDTH_LEVELS.includes(source.roadWidth) ? source.roadWidth : DEFAULT_RHYTHM_SETTINGS.roadWidth,
     noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, RHYTHM_NOTE_SE_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeType: rhythmNoteSeTypeOf(source.noteSeType),
     noteSeJudgeVary: bool('noteSeJudgeVary'),
     noteSeEmptyEnabled: bool('noteSeEmptyEnabled'),
     noteSeFlickVolume: rhythmFiniteStep(source.noteSeFlickVolume, 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeFlickVolume),
     noteSeEndVolume: rhythmFiniteStep(source.noteSeEndVolume, 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeEndVolume),
+    noteSeHoldVolume: rhythmFiniteStep(source.noteSeHoldVolume, 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, DEFAULT_RHYTHM_SETTINGS.noteSeHoldVolume),
     noteSeEnabled: bool('noteSeEnabled'),
     vibrationEnabled: bool('vibrationEnabled'),
     effectAmount: RHYTHM_EFFECT_LEVELS.includes(source.effectAmount) ? source.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount,
@@ -5323,7 +5350,8 @@ const EVENT_BGM_SCENES = Object.freeze({
   symphony_2026_09_17_thanks: 'symphonyEvent',
   tactics_intro: 'tacticsIntroEvent',
   beat_point_always_2026_09_24: 'monbeatCupEvent',
-  rhythm_six_lane_2026_09_26: 'monbeatCupEvent'
+  rhythm_six_lane_2026_09_26: 'monbeatCupEvent',
+  beat_point_up_2026_09_28: 'monbeatCupEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -5506,6 +5534,7 @@ const Audio_ = (() => {
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
     "audio/bgm-mou-hitotsu-no-sekai-e.mp3": "633ed0ee2501",
     "audio/bgm-nothing-without-you.mp3": "4cb261cf1cd9",
+    "audio/bgm-only-my-railgun.mp3": "62fb741fe3f1",
     "audio/bgm-pandora-boss-beat.mp3": "b70636c619b2",
     "audio/bgm-pandora-boss-remix.mp3": "0faa4d713fdc",
     "audio/bgm-pandora-boss.mp3": "b6683818f250",
@@ -7553,6 +7582,32 @@ const MASU_COLOR_REGION_HUES = {
     noAAGuard: true,
     noEdgeGuard: true
   }],
+  Yggdrasil: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
+  MelWhip: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
   Mitarashi: [{
     hue: 0,
     sMin: 0.3
@@ -7985,7 +8040,9 @@ const EXACT_DYE_MASKS = Object.freeze({
   Plant: PLANT_DYE_MASK,
   Eiki: EIKI_DYE_MASK,
   Pandora: PANDORA_DYE_MASK,
-  KenshiMocchi: KENSHI_MOCCHI_DYE_MASK
+  KenshiMocchi: KENSHI_MOCCHI_DYE_MASK,
+  Yggdrasil: YGGDRASIL_DYE_MASK,
+  MelWhip: MEL_WHIP_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -8310,7 +8367,19 @@ const MASU_COLOR_REGION_DYE = {
   },
   Mocchi: {
     gloss: 0.22
-  }
+  },
+  Yggdrasil: [{
+    gloss: 0.9
+  }, {
+    gloss: 0.93
+  }, {
+    gloss: 0.72
+  }],
+  MelWhip: [{
+    gloss: 0.8
+  }, {
+    gloss: 0.9
+  }, {}]
 };
 const _NO_REGION_DYE = {
   gloss: false,
@@ -10166,6 +10235,11 @@ const CHANGELOG_TIMED_SEEN_FIX_KEY = 'mh_changelog_timed_seen_fix_v1';
 const CHANGELOG_ISSUE_TAB_TYPES = Object.freeze(['issue', 'fix']);
 const changelogEntriesOfTab = tab => CHANGELOG_ENTRIES.filter(entry => CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) === (tab === 'issue'));
 const CHANGELOG_GROUPS = Object.freeze([{
+  id: 'monster',
+  label: '新モンスター',
+  emoji: '🐣',
+  match: /新モンスター|新しいモンスター|新しい仲間|新血統/
+}, {
   id: 'rhythm',
   label: 'モンヒロビート',
   emoji: '🎵',
@@ -13233,6 +13307,26 @@ const MARKET_PROFILE_ICON_STYLES = {
     y: 0
   },
   KenshiMocchi: {
+    scale: 0.95,
+    x: 0,
+    y: 0
+  },
+  yggdrasil_disc_icon: {
+    scale: 0.95,
+    x: 0,
+    y: 0
+  },
+  Yggdrasil: {
+    scale: 0.95,
+    x: 0,
+    y: 0
+  },
+  mel_whip_disc_icon: {
+    scale: 0.95,
+    x: 0,
+    y: 0
+  },
+  MelWhip: {
     scale: 0.95,
     x: 0,
     y: 0
@@ -16544,6 +16638,40 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       amp: 4,
       dur: 2400,
       delay: 1200,
+      layer: 'back'
+    }]
+  },
+  Yggdrasil: {
+    body: 'breathe',
+    bodyMask: IDLE_YGGDRASIL_BODY_MASK,
+    parts: [{
+      mask: IDLE_YGGDRASIL_LEAF_TOP_MASK,
+      origin: '35.9% 7.3%',
+      anim: 'swingIn',
+      amp: 3,
+      dur: 3200,
+      delay: 0,
+      layer: 'front'
+    }, {
+      mask: IDLE_YGGDRASIL_LEAF_SIDE_MASK,
+      origin: '27.8% 15.8%',
+      anim: 'swing',
+      amp: -7,
+      dur: 2600,
+      delay: 700,
+      layer: 'front'
+    }]
+  },
+  MelWhip: {
+    body: 'sway',
+    bodyMask: IDLE_MEL_WHIP_BODY_MASK,
+    parts: [{
+      mask: IDLE_MEL_WHIP_UMBRELLA_MASK,
+      origin: '41.2% 40.5%',
+      anim: 'swing',
+      amp: 2,
+      dur: 3000,
+      delay: 0,
       layer: 'back'
     }]
   }
@@ -21224,6 +21352,8 @@ const RhythmOptions = ({
     full: true
   }), field('アシストモード', toggle('assistMode'), 'リズムゲームが苦手でも気軽に遊べるモードです（バンドリ！アワーノーツのアシストモードを見習いました）。既定はOFFです。ONにすると、フリックはタップするだけで取れ、ホールド・スライドの終わりのフリックも離すだけでよくなります。BAD・MISSでコンボが切れそうなときは「コンボガード」が代わりに受け止めます（最大3回ぶん。コンボをつなぐと少しずつたまり、崩れているときほど早くたまります）。そのかわりスコアは8割になり、FULL COMBO などの称号は付かず、自己ベスト・全国ランキング・ビートPには残りません。曲えらびの「🛟 アシスト」でも切り替えられます。'), field('ミラー譜面', toggle('mirrorChart'), '譜面を左右反対にして遊びます（バンドリ！アワーノーツなどにある設定です）。既定はOFFです。同じ曲でも手の動きが変わるので、苦手な配置の練習や気分転換に使えます。判定・スコア・記録はふだんどおりです。曲えらびの「↔ ミラー譜面」でも切り替えられます。'), field('ラッキーラッシュ', toggle('luckyRush'), 'うまく叩くと、経過時間の下の🍀ゲージがたまり、満タンで抽選します（バンドリ！アワーノーツの「LUCK撃奏」を見習いました）。当たると「LUCKY RUSH!!」になり、しばらくのあいだ画面のふちが金色に光って、ゲージが2倍の速さでたまり、次の抽選も当たりやすくなります。抽選のたびにラッキーptが入り、曲の終わりにおまけのビートPになります（1曲で最大10P。イベントを開いていない期間は1/5。アシストモードでは入りません）。スコア・判定・ランキングには関わりません。既定はONです。'), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだはコンボ数のすぐ上に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、レーンの左のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
+  }), field('道の幅（横向き）', segments('roadWidth', RHYTHM_ROAD_WIDTH_LABELS), '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。', {
+    full: true
   }), field('コンボ数', React.createElement(React.Fragment, null, toggle('comboDisplay'), draft.comboDisplay !== false && React.createElement(React.Fragment, null, React.createElement("div", {
     className: wide ? 'mt-1.5' : 'mt-2'
   }, segments('comboPosition', RHYTHM_COMBO_POSITION_LABELS)), React.createElement("div", {
@@ -21285,6 +21415,12 @@ const RhythmOptions = ({
     suffix: '%'
   }), 'ホールド・スライドを最後まで取れたときの音です。タップ音量に対する大きさで、0%で鳴らしません。', {
     full: true
+  }), field('押さえている間の音の大きさ', stepper('noteSeHoldVolume', 0, RHYTHM_NOTE_SE_PART_VOLUME_MAX, 1, {
+    fine: 5,
+    coarse: 20,
+    suffix: '%'
+  }), 'ホールド・スライドを押さえているあいだ、高く細かい「シャラシャラ」ときらめく音が鳴ります。タップ音量に対する大きさで、0%で鳴らしません。', {
+    full: true
   }), field('タップ音', toggle('noteSeEnabled')), React.createElement("div", {
     className: "grid gap-2"
   }, React.createElement("button", {
@@ -21298,7 +21434,7 @@ const RhythmOptions = ({
     className: "min-h-[44px] rounded-xl bg-fuchsia-700 text-[12px] font-black"
   }, "タップ音試聴")), React.createElement("div", {
     "data-rhythm-se-previews": true,
-    className: `grid grid-cols-3 gap-2 ${wide ? 'col-span-3' : 'col-span-2'}`
+    className: `grid grid-cols-2 gap-2 ${wide ? 'col-span-3' : 'col-span-2'}`
   }, React.createElement("button", {
     type: "button",
     "data-rhythm-se-preview": "flick",
@@ -21316,6 +21452,14 @@ const RhythmOptions = ({
     }, 'end'),
     className: "min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100"
   }, "ロングの終わり"), React.createElement("button", {
+    type: "button",
+    "data-rhythm-se-preview": "hold",
+    onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview({
+      ...draft,
+      noteSeEnabled: true
+    }, 'hold'),
+    className: "min-h-[44px] rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/60 text-[11px] font-black text-fuchsia-100"
+  }, "押さえている間"), React.createElement("button", {
     type: "button",
     "data-rhythm-se-preview": "judge",
     onClick: () => {
@@ -23578,6 +23722,7 @@ const RhythmTapTest = ({
     laneRefs = useRef([]),
     runRef = useRef(null),
     frameRef = useRef(null),
+    heldNotesRef = useRef([]),
     playAreaRef = useRef(null),
     judgmentLineRef = useRef(null),
     judgmentBandRef = useRef(null),
@@ -23751,7 +23896,7 @@ const RhythmTapTest = ({
       cancelled = true;
     };
   }, [canvasNotes, monsterSignature, monsterFaceHidden, settings.lightweightMode, settings.effectAmount, noteCanvasMaxDpr]);
-  const RHYTHM_LANE_PRESS_GRADIENT = 'linear-gradient(to bottom,rgba(96,165,250,.16) 0%,rgba(96,165,250,.28) 40%,rgba(125,211,252,.44) calc(100% - var(--mh-judgment-line-bottom,20%) - 14%),rgba(224,242,254,.74) calc(100% - var(--mh-judgment-line-bottom,20%) - 3%),rgba(248,250,252,.9) calc(100% - var(--mh-judgment-line-bottom,20%)),rgba(147,197,253,.5) calc(100% - var(--mh-judgment-line-bottom,20%) + 4%),rgba(96,165,250,.34) 100%)';
+  const RHYTHM_LANE_PRESS_GRADIENT = 'linear-gradient(to bottom,rgba(56,189,248,.05) 0%,rgba(56,189,248,.1) 42%,rgba(56,189,248,.24) 58%,rgba(125,211,252,.5) calc(100% - var(--mh-judgment-line-bottom,20%) - 14%),rgba(224,242,254,.74) calc(100% - var(--mh-judgment-line-bottom,20%) - 3%),rgba(248,250,252,.9) calc(100% - var(--mh-judgment-line-bottom,20%)),rgba(56,189,248,.72) calc(100% - var(--mh-judgment-line-bottom,20%) + 4%),rgba(37,99,235,.55) 100%)';
   const laneElements = useMemo(() => React.createElement(React.Fragment, null, React.createElement("div", {
     className: "pointer-events-none absolute inset-0 grid",
     style: {
@@ -24022,25 +24167,6 @@ const RhythmTapTest = ({
     if (luckBannerTimerRef.current) clearTimeout(luckBannerTimerRef.current);
   }, []);
   const timingDisplay = RHYTHM_TIMING_DISPLAYS.includes(settings.timingDisplay) ? settings.timingDisplay : 'STANDARD';
-  const laneCoverStyle = useMemo(() => {
-    const percent = rhythmFiniteStep(settings.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, 0);
-    if (!(percent > 0)) return null;
-    const steps = 8,
-      left = [],
-      right = [];
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps,
-        half = Math.min(50, 50 * rhythmProjectionScale(t * percent / 100) + 1);
-      left.push(`${(50 - half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
-      right.unshift(`${(50 + half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
-    }
-    const clip = `polygon(${left.concat(right).join(',')})`;
-    return {
-      height: `${percent}%`,
-      clipPath: clip,
-      WebkitClipPath: clip
-    };
-  }, [settings.laneCover]);
   const [lifeDownCount, setLifeDownCount] = useState(0);
   const [lifeDownSlam, setLifeDownSlam] = useState(false);
   useEffect(() => {
@@ -24294,6 +24420,36 @@ const RhythmTapTest = ({
       if (mql.removeEventListener) mql.removeEventListener('change', onChange);else mql.removeListener?.(onChange);
     };
   }, []);
+  const roadFactor = isLandscape ? RHYTHM_ROAD_WIDTHS[settings.roadWidth] || 1 : 1;
+  RHYTHM_ROAD_WIDTH.set(roadFactor);
+  React.useLayoutEffect(() => {
+    RHYTHM_ROAD_WIDTH.set(roadFactor);
+    const area = playAreaRef.current;
+    if (area) {
+      rhythmLayoutPlayArea(area);
+      if (typeof window !== 'undefined' && typeof window.rhythmLaneSvgRefresh === 'function') window.rhythmLaneSvgRefresh();
+    }
+  }, [roadFactor]);
+  useEffect(() => () => RHYTHM_ROAD_WIDTH.reset(), []);
+  const laneCoverStyle = useMemo(() => {
+    const percent = rhythmFiniteStep(settings.laneCover, RHYTHM_LANE_COVER_MIN, RHYTHM_LANE_COVER_MAX, RHYTHM_LANE_COVER_STEP, 0);
+    if (!(percent > 0)) return null;
+    const steps = 8,
+      left = [],
+      right = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps,
+        half = Math.min(50, 50 * rhythmProjectionScale(t * percent / 100) + 1);
+      left.push(`${(50 - half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
+      right.unshift(`${(50 + half).toFixed(2)}% ${(t * 100).toFixed(2)}%`);
+    }
+    const clip = `polygon(${left.concat(right).join(',')})`;
+    return {
+      height: `${percent}%`,
+      clipPath: clip,
+      WebkitClipPath: clip
+    };
+  }, [settings.laneCover, roadFactor]);
   const hudLeftRef = useRef(null);
   const RHYTHM_CLOCK_SIDE_MIN_WIDTH = 100;
   const [clockPlace, setClockPlace] = useState(null);
@@ -24534,17 +24690,21 @@ const RhythmTapTest = ({
       if (monsterHit) RHYTHM_NOTE_SE_RUNTIME.playMonster();
       if (!settings.lightweightMode && settings.effectAmount !== 'MINIMAL') {
         const area = playAreaRef.current;
-        const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, 1, run.audio?.songTimeMs?.() ?? note.timeMs) : rhythmNoteVisualSpan(note, note.lane, 1, run.audio?.songTimeMs?.() ?? note.timeMs);
+        const lineY = RHYTHM_JUDGMENT_LINE_Y.ratio;
+        const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, run.audio?.songTimeMs?.() ?? note.timeMs) : rhythmNoteVisualSpan(note, note.lane, lineY, run.audio?.songTimeMs?.() ?? note.timeMs);
         const restarts = [];
         const monsterEffect = RHYTHM_MONSTER_EFFECT_LEVELS.includes(settings.monsterNoteEffect) ? settings.monsterNoteEffect : DEFAULT_RHYTHM_SETTINGS.monsterNoteEffect;
         const bigMonsterEffect = monsterHit && !rhythmMonsterEffectAtMost(monsterEffect, 'OFF');
+        const flickHit = rhythmNoteVisualType(note) === 'FLICK' ? rhythmFlickDir(note) || 'up' : note.endFlick ? 'up' : '';
         const hitEffect = rhythmSpawnHitEffect(area, {
           centerRatio: span.center,
           widthRatio: span.width,
           judgment,
           monster: bigMonsterEffect,
           precise: preciseHit,
-          defer: true
+          defer: true,
+          flick: flickHit,
+          finish: rhythmNoteHasBody(note)
         });
         if (hitEffect) restarts.push(hitEffect);
         if (monsterHit && monsterEffect === 'NORMAL' && screenFlashRef.current) restarts.push({
@@ -24810,6 +24970,7 @@ const RhythmTapTest = ({
     if (!run || run.finished || run.paused) return;
     run.finished = true;
     stopFrame();
+    RHYTHM_NOTE_SE_RUNTIME.holdStopAll();
     RHYTHM_GESTURE_RUNTIME.clear();
     run.activePointers.clear();
     run.activeTouchInputs?.clear();
@@ -24874,7 +25035,7 @@ const RhythmTapTest = ({
     if (eventPointAward && eventPointAward.amount > 0 && typeof addRhythmEventPoints === 'function') void addRhythmEventPoints(eventPointAward.amount);
     setLuckyRush(false);
     if (luckOn && !assistOn && !debugPlay && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof addRhythmEventPoints === 'function') {
-      const offEvent = !(typeof rhythmLimitedEventAt === 'function' && rhythmLimitedEventAt(Date.now()));
+      const offEvent = !(typeof rhythmEventPointFullRateAt === 'function' && rhythmEventPointFullRateAt(Date.now()));
       const luckBonus = rhythmLuckBonusPoints(run.luckPoints, offEvent);
       if (luckBonus > 0) {
         run.luckBonus = luckBonus;
@@ -25137,6 +25298,7 @@ const RhythmTapTest = ({
           monster,
           wide: rhythmNoteIsWide(note),
           pressed: note.type === 'HOLD' && note.activePointerId !== null,
+          heldMs: songTimeMs - note.timeMs,
           alpha: failedTrail ? .34 : 1,
           pop: clearFlash ? Math.min(1, (songTimeMs - note._rhythmClearAt) / RHYTHM_CLEAR_FLASH_MS) : null,
           depthScale,
@@ -25309,12 +25471,16 @@ const RhythmTapTest = ({
       }
       run.scanFrom = scanFrom;
       const scanHorizonMs = visualTime + travelMs * 1.2;
+      const heldNotes = heldNotesRef.current;
+      heldNotes.length = 0;
       for (let i = scanFrom; i < notes.length; i++) {
         const note = notes[i];
         if (run.notesReady && run.notesAscending && note.timeMs > scanHorizonMs) break;
         perfScanned++;
         visitNote(note);
+        if (!note.done && note.activePointerId !== null && note.type === 'HOLD' && rhythmNoteHasBody(note)) heldNotes.push(note);
       }
+      RHYTHM_NOTE_SE_RUNTIME.holdSync(heldNotes);
       run.notesReady = true;
       if (canvasNotes) RHYTHM_CANVAS_RENDERER.end();
       RHYTHM_PERF.notes(perfScanned, perfDrawn, scanFrom, run.notesAscending);
@@ -25388,6 +25554,7 @@ const RhythmTapTest = ({
   }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.frameRateMode, settings.stageEffect, settings.lightweightMode, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial, updateJudgmentBand]);
   const disposeRun = useCallback(() => {
     stopFrame();
+    RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);
     clearJudgmentTimer();
     clearAbilityTimer();
     clearCountdown();
@@ -25593,6 +25760,7 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (countdownStep !== null) return;
     if (!run || run.finished || run.paused) return;
+    RHYTHM_NOTE_SE_RUNTIME.holdStopAll(.03);
     run.activePointers.clear();
     run.standbyPointers?.clear();
     run.activeTouchInputs?.clear();
@@ -26411,7 +26579,10 @@ const RhythmTapTest = ({
       className: "mt-0.5 block text-2xl font-black text-white"
     }, "+", result.eventPointAward.amount.toLocaleString(), "P"), result.eventPointAward.target && React.createElement("span", {
       className: "mt-1 block text-[9px] font-black text-amber-200"
-    }, "イベント対象曲 1.5倍"), result.eventPointAward.offEvent && React.createElement("span", {
+    }, "イベント対象曲 1.5倍"), result.eventPointAward.campaign && React.createElement("span", {
+      "data-rhythm-result-beat-points-campaign": true,
+      className: "mt-1 block text-[9px] font-black text-amber-200"
+    }, "ビートPアップキャンペーン いつもの", result.eventPointAward.boost, "倍"), result.eventPointAward.offEvent && React.createElement("span", {
       "data-rhythm-result-beat-points-off-event": true,
       className: "mt-1 block text-[9px] font-black text-violet-200"
     }, "イベント開催中はこの5倍もらえます")), (() => {
@@ -28664,7 +28835,8 @@ function SettingsScreen({
   battleScreenStyle,
   onChangeBattleScreenStyle,
   battleFxSettings,
-  onChangeBattleFxSetting
+  onChangeBattleFxSetting,
+  battleFxAutoLoad
 }) {
   const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
   const [battleSettingsOpen, setBattleSettingsOpen] = useState(false);
@@ -28712,7 +28884,10 @@ function SettingsScreen({
         className: "block text-[13px] font-black text-slate-200"
       }, item.title), React.createElement("p", {
         className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
-      }, item.desc), React.createElement("div", {
+      }, item.desc), item.key === 'load' && battleFxAutoLoad && battleFxAutoLoad !== current && React.createElement("p", {
+        "data-battle-fx-auto-note": true,
+        className: "mt-1 rounded-lg border border-amber-400/40 bg-amber-950/30 px-2 py-1 text-[10px] font-bold leading-relaxed text-amber-100"
+      }, "かくつきが続いたので、いまは「", (item.options.find(o => o.id === battleFxAutoLoad) || {}).label, "」で表示しています。アプリを開き直すか、ここで選び直すと元に戻ります。"), React.createElement("div", {
         className: "mt-2 grid grid-cols-2 gap-2"
       }, item.options.map(option => React.createElement("button", {
         key: option.id,
@@ -29390,7 +29565,13 @@ function BreederMarketScreen({
     className: "font-mono text-base font-black text-violet-100"
   }, safeEventPoints.toLocaleString()), React.createElement("span", {
     className: "text-[10px] font-bold text-slate-400"
-  }, "所持ビートP")), marketExchangeError && React.createElement("div", {
+  }, "所持ビートP")), (() => {
+    const campaign = typeof rhythmEventPointCampaignAt === 'function' && !rhythmLimitedEventAt(Date.now()) ? rhythmEventPointCampaignAt(Date.now()) : null;
+    return campaign ? React.createElement("div", {
+      "data-event-point-campaign": true,
+      className: "mb-2 shrink-0 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-1.5 text-center text-[10px] font-black text-amber-100"
+    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍（", rhythmEventJstText(Date.parse(campaign.endAt)), "まで）") : null;
+  })(), marketExchangeError && React.createElement("div", {
     className: "mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[11px] font-black text-red-300"
   }, marketExchangeError), React.createElement("div", {
     className: SCREEN_LIST_CLASS
@@ -29427,6 +29608,36 @@ function BreederMarketScreen({
       },
       className: "mh-button mh-button-primary min-h-[44px] rounded-xl bg-violet-500 px-4 text-[11px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
     }, "交換")));
+  }), RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer => {
+    const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
+    return React.createElement("div", {
+      key: offer.id,
+      "data-event-point-coming-soon": offer.id,
+      className: "rounded-2xl border border-white/10 bg-slate-950/60 p-3 flex flex-col min-h-[132px]"
+    }, React.createElement("div", {
+      className: "flex items-start gap-2"
+    }, disc ? React.createElement(MarketProductIcon, {
+      item: disc
+    }) : React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-xl shrink-0"
+    }, "💿"), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("div", {
+      className: "text-[11px] leading-tight font-black text-slate-300",
+      style: {
+        wordBreak: 'keep-all',
+        overflowWrap: 'anywhere'
+      }
+    }, marketNameNodes(offer.name)), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold text-slate-400"
+    }, "1回：", offer.grantAmount.toLocaleString(), offer.unit))), React.createElement("div", {
+      className: "mt-auto pt-2 flex items-end justify-between gap-2"
+    }, React.createElement("div", {
+      className: "font-mono text-sm font-black text-violet-300/70"
+    }, offer.cost.toLocaleString(), "P"), React.createElement("div", {
+      className: "text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap"
+    }, "先行公開予定")));
   })))), eventQuantityOffer && (() => {
     const maxQuantity = Math.floor(safeEventPoints / eventQuantityOffer.cost);
     const quantity = Math.max(1, Math.min(Math.max(1, maxQuantity), Math.floor(Number(eventQuantity) || 1)));
@@ -30873,6 +31084,18 @@ function RhythmSongSelectScreen({
   const beatPointReleased = RELEASE_FLAGS.rhythmEventPoints === true;
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
   const beatPointTargetSong = !!beatPointEvent && Array.isArray(beatPointEvent.songIds) && beatPointEvent.songIds.includes(rhythmSelectedSongId);
+  const beatPointCampaign = beatPointReleased && !beatPointEvent ? rhythmEventPointCampaignAt(Date.now()) : null;
+  const [beatPointBalance, setBeatPointBalance] = React.useState(null);
+  React.useEffect(() => {
+    if (!beatPointReleased) return undefined;
+    let alive = true;
+    loadRhythmEventPoints().then(value => {
+      if (alive) setBeatPointBalance(value);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [beatPointReleased]);
   const quickRunBandLabel = quickRunProgress ? quickRunProgress.finished ? `${quickRunFinishReasonText(quickRunProgress.reason)}（タップで結果へ）` : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp ? ' ・ 追いつき中' : ''}` : '';
   const quickRunBandButton = quickRunProgress ? React.createElement("button", {
     type: "button",
@@ -30943,7 +31166,13 @@ function RhythmSongSelectScreen({
     className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
   }, "MONBEAT"), React.createElement("h2", {
     className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200"
-  }, "🎵 楽曲選択")), quickRunProgress && React.createElement("div", {
+  }, "🎵 楽曲選択"), beatPointReleased && Number.isFinite(beatPointBalance) && React.createElement("small", {
+    "data-rhythm-beat-point-balance": true,
+    "aria-label": `所持ビートP ${beatPointBalance.toLocaleString()}`,
+    className: "block truncate text-[9px] font-black leading-tight text-violet-200/90"
+  }, "🎟️ ", beatPointBalance.toLocaleString(), " ", React.createElement("span", {
+    className: "text-violet-300/80"
+  }, "ビートP"))), quickRunProgress && React.createElement("div", {
     "data-quick-run-progress-header": true,
     className: "min-w-0 max-w-[260px] flex-1 rounded-lg border border-fuchsia-400/30 bg-slate-900/70"
   }, quickRunBandButton), quickRunStartNode && React.createElement("div", {
@@ -31094,7 +31323,16 @@ function RhythmSongSelectScreen({
     onClick: dismissRhythmEventNotice,
     "aria-label": "この案内を閉じる",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
-  }, "×"))), beatPointEvent && React.createElement("div", {
+  }, "×"))), beatPointCampaign && React.createElement("div", {
+    "data-rhythm-beat-point-campaign": true,
+    className: "shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100"
+  }, React.createElement("span", {
+    className: "shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950"
+  }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, "キャンペーン中"), React.createElement("span", {
+    className: "ml-auto shrink-0 text-amber-200/80"
+  }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.endAt)))), beatPointEvent && React.createElement("div", {
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
@@ -38729,6 +38967,136 @@ const tacticsAuraKindOf = (text = '', side = '') => {
   return 'buff';
 };
 const TACTICS_FX_REST_MS = 5000;
+const BATTLE_AUTO_LOAD_WINDOW_MS = 3000;
+const BATTLE_AUTO_LOAD_MIN_FRAMES = 5;
+const BATTLE_AUTO_LOAD_SLOW_RATIO = 0.08;
+const BATTLE_AUTO_LOAD_FLOOR = 'LIGHT';
+const BATTLE_AUTO_LOAD_WARMUP_MS = 2000;
+const battleSlowFrame = (gap, minGap) => gap > Math.max(5, minGap) * 1.8 && gap > 20 || gap >= 50;
+const BATTLE_PERF_KEY = 'mh_battle_perf_v1';
+const BATTLE_PERF = (() => {
+  const zero = () => ({
+    frames: 0,
+    totalMs: 0,
+    maxMs: 0,
+    slow: 0,
+    over50: 0,
+    over100: 0,
+    minGap: 1e9,
+    longTasks: 0,
+    longTaskMs: 0,
+    autoSteps: [],
+    since: 0
+  });
+  let on = false,
+    last = null,
+    acc = zero(),
+    observer = null;
+  const watchLongTasks = () => {
+    if (observer || typeof PerformanceObserver === 'undefined') return;
+    try {
+      observer = new PerformanceObserver(list => {
+        if (!on) return;
+        for (const e of list.getEntries()) {
+          acc.longTasks++;
+          acc.longTaskMs += e.duration;
+        }
+      });
+      observer.observe({
+        type: 'longtask',
+        buffered: false
+      });
+    } catch {
+      observer = null;
+    }
+  };
+  const api = {
+    get enabled() {
+      return on;
+    },
+    setEnabled(next) {
+      on = !!next;
+      last = null;
+      acc = zero();
+      try {
+        if (typeof localStorage !== 'undefined') localStorage.setItem(BATTLE_PERF_KEY, on ? '1' : '0');
+      } catch {}
+      if (on) watchLongTasks();else if (observer) {
+        try {
+          observer.disconnect();
+        } catch {}
+        observer = null;
+      }
+      return on;
+    },
+    restore() {
+      try {
+        if (typeof localStorage !== 'undefined') on = localStorage.getItem(BATTLE_PERF_KEY) === '1';
+      } catch {}
+      if (on) watchLongTasks();
+      return on;
+    },
+    reset() {
+      last = null;
+      acc = zero();
+    },
+    frame(nowMs) {
+      if (!on) return;
+      const t = Number(nowMs);
+      if (!Number.isFinite(t)) return;
+      if (!acc.since) acc.since = t;
+      if (last !== null) {
+        const dt = t - last;
+        if (dt > 0 && dt < 1000) {
+          acc.frames++;
+          acc.totalMs += dt;
+          if (dt > acc.maxMs) acc.maxMs = dt;
+          if (dt >= 5 && dt < acc.minGap) acc.minGap = dt;
+          if (battleSlowFrame(dt, acc.minGap)) acc.slow++;
+          if (dt >= 50) acc.over50++;
+          if (dt >= 100) acc.over100++;
+        }
+      }
+      last = t;
+    },
+    pause() {
+      last = null;
+    },
+    autoStep(from, to, slow, frames) {
+      if (!on) return;
+      if (acc.autoSteps.length < 20) acc.autoSteps.push({
+        at: Math.round(typeof performance !== 'undefined' ? performance.now() : 0),
+        from,
+        to,
+        slow,
+        frames
+      });
+    },
+    snapshot() {
+      if (!on) return null;
+      let infinite = null;
+      try {
+        if (typeof document !== 'undefined' && document.getAnimations) infinite = document.getAnimations().filter(a => a.playState === 'running' && a.effect && a.effect.getComputedTiming && a.effect.getComputedTiming().iterations === Infinity).length;
+      } catch {}
+      const avg = acc.frames ? acc.totalMs / acc.frames : 0;
+      return {
+        frames: acc.frames,
+        fps: avg ? Math.round(1000 / avg) : 0,
+        avgMs: Math.round(avg * 10) / 10,
+        maxMs: Math.round(acc.maxMs),
+        slowPct: acc.frames ? Math.round(acc.slow / acc.frames * 1000) / 10 : 0,
+        over50: acc.over50,
+        over100: acc.over100,
+        longTasks: acc.longTasks,
+        longTaskMs: Math.round(acc.longTaskMs),
+        infinite,
+        autoSteps: acc.autoSteps.slice()
+      };
+    }
+  };
+  api.restore();
+  return api;
+})();
 const TACTICS_ENEMY_MOTIONS = Object.freeze({
   Kawazumo: 'kawazumo',
   Metalner: 'metalner',
@@ -39360,6 +39728,7 @@ function BattleScreen({
   autoBattleRef,
   autoRepeat,
   battleFxSettings,
+  onBattleFxAutoStep,
   battleIntimidate,
   battleScenarioRef,
   battleScreenActive,
@@ -39555,6 +39924,67 @@ function BattleScreen({
       if (fxRestTimerRef.current) clearTimeout(fxRestTimerRef.current);
     };
   }, [tacticsNewLayout, wakeBattleFx]);
+  const fxLoadIndex = BATTLE_FX_LOADS.indexOf(fxLoad);
+  const autoLoadOn = tacticsNewLayout && !ecoBattleView && battleFx.autoLoad !== 'OFF' && typeof onBattleFxAutoStep === 'function' && fxLoadIndex >= 0 && fxLoadIndex < BATTLE_FX_LOADS.indexOf(BATTLE_AUTO_LOAD_FLOOR);
+  const [perfOn] = useState(() => BATTLE_PERF.enabled);
+  const watchFrames = tacticsNewLayout && !(fxRestEnabled && fxRest) && (autoLoadOn || perfOn);
+  const autoLoadRef = useRef(null);
+  autoLoadRef.current = autoLoadOn ? {
+    from: fxLoad,
+    to: BATTLE_FX_LOADS[fxLoadIndex + 1],
+    step: onBattleFxAutoStep
+  } : null;
+  useEffect(() => {
+    if (!watchFrames || typeof requestAnimationFrame !== 'function') return undefined;
+    let raf = 0,
+      begin = 0,
+      stepped = false;
+    const w = {
+      last: 0,
+      start: 0,
+      frames: 0,
+      slow: 0,
+      minGap: 1e9
+    };
+    const tick = now => {
+      BATTLE_PERF.frame(now);
+      const auto = autoLoadRef.current;
+      if (auto && !stepped) {
+        if (!begin) begin = now;
+        const gap = w.last ? now - w.last : 0;
+        w.last = now;
+        if (now - begin >= BATTLE_AUTO_LOAD_WARMUP_MS) {
+          if (!w.start) w.start = now;else if (gap > 0 && gap < 1000) {
+            w.frames++;
+            if (gap >= 5 && gap < w.minGap) w.minGap = gap;
+            if (battleSlowFrame(gap, w.minGap)) w.slow++;
+          }
+          if (now - w.start >= BATTLE_AUTO_LOAD_WINDOW_MS) {
+            if (w.frames >= BATTLE_AUTO_LOAD_MIN_FRAMES && w.slow / w.frames > BATTLE_AUTO_LOAD_SLOW_RATIO && auto.to) {
+              stepped = true;
+              BATTLE_PERF.autoStep(auto.from, auto.to, w.slow, w.frames);
+              auto.step(auto.to);
+            }
+            w.start = now;
+            w.frames = 0;
+            w.slow = 0;
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      BATTLE_PERF.pause();
+    };
+  }, [watchFrames, fxLoad]);
+  const [perfSnap, setPerfSnap] = useState(null);
+  useEffect(() => {
+    if (!perfOn || !tacticsNewLayout) return undefined;
+    const id = setInterval(() => setPerfSnap(BATTLE_PERF.snapshot()), 1000);
+    return () => clearInterval(id);
+  }, [perfOn, tacticsNewLayout]);
   const enemyIsMoo = isMooBoss(enemy?.id);
   const enemySkillNow = enemyMotion && enemyAttackFx?.skill && (enemyImageOnlyAttack || enemyAttackFx.kind === 'regen' || enemyIsMoo && !!enemyAttackAnim) ? enemyAttackFx.skill : null;
   const emSet = enemyMotion ? TACTICS_ENEMY_MOTION_SETS[enemyMotion] || null : null;
@@ -39711,8 +40141,17 @@ function BattleScreen({
     "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined,
     "data-fx-rest": tacticsNewLayout && fxRestEnabled && fxRest ? 'true' : undefined,
     "data-fx-level": tacticsNewLayout ? fxLoad : undefined,
-    "data-moo-front": tacticsNewLayout && enemyIsMoo && !enemyAttackAnim ? 'true' : undefined
-  }, React.createElement("div", {
+    "data-moo-front": tacticsNewLayout && enemyIsMoo && !enemyAttackAnim ? 'true' : undefined,
+    "data-fx-auto": autoLoadOn ? 'watch' : undefined
+  }, perfOn && tacticsNewLayout && perfSnap && React.createElement("div", {
+    "data-battle-perf-panel": true,
+    className: "pointer-events-none fixed left-1 z-[65000] rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold leading-tight text-amber-100",
+    style: {
+      top: 'calc(env(safe-area-inset-top) + 2px)'
+    }
+  }, React.createElement("div", null, perfSnap.fps, "fps 平均", perfSnap.avgMs, "ms 最長", perfSnap.maxMs, "ms"), React.createElement("div", null, "遅いコマ", perfSnap.slowPct, "% 50ms超", perfSnap.over50, " 100ms超", perfSnap.over100), React.createElement("div", null, "長い処理", perfSnap.longTasks, "回/", perfSnap.longTaskMs, "ms 動き続け", perfSnap.infinite ?? '?'), React.createElement("div", null, "軽さ ", fxLoad, autoLoadOn ? '(見張り中)' : '', fxRestEnabled && fxRest ? ' 休止中' : ''), perfSnap.autoSteps.map((st, i) => React.createElement("div", {
+    key: i
+  }, "自動 ", st.from, "→", st.to, " ", st.slow, "/", st.frames))), React.createElement("div", {
     "data-battle-stage-bg": true,
     "aria-hidden": "true",
     className: "absolute inset-0 pointer-events-none",
@@ -40295,9 +40734,7 @@ function BattleScreen({
       width: '100%',
       height: '100%',
       animation: liteBattleView || emSpec || enemyHurtNow || emSet && !enemyAttackAnim ? undefined : enemyAttackAnim ? enemyAttackFx?.kind === 'move' ? 'mooMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'mooChargeGather 1100ms ease-in-out forwards' : 'mooAttackLunge 900ms ease-in-out forwards' : 'mooFloat 3000ms ease-in-out infinite',
-      imageRendering: 'auto',
-      WebkitMaskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',
-      maskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'
+      imageRendering: 'auto'
     },
     className: `relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
   }), emSet && enemyFlashNode)), !ecoBattleView && isMooBoss(enemy?.id) && enemyAttackFx?.kind === 'moo' && !emSet && React.createElement("div", {
@@ -43100,7 +43537,8 @@ const monsterCheckAllMonsters = () => {
   const ordered = dexMonsterList();
   const seen = new Set(ordered.map(mon => mon.id));
   const rest = Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && mon.id && !seen.has(mon.id));
-  return [...ordered, ...rest];
+  const drafts = typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' && UPCOMING_MONSTER_DRAFTS ? Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id]) : [];
+  return [...ordered, ...rest, ...drafts];
 };
 const monsterCheckMarketItems = mon => {
   const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
@@ -43131,7 +43569,17 @@ const monsterCheckImplRows = mon => {
   const apt = Array.isArray(mon.distAptitude) ? mon.distAptitude : [];
   const containFixed = typeof MONSTER_ART_CONTAIN_IDS !== 'undefined' && MONSTER_ART_CONTAIN_IDS.includes(id);
   const sameArt = bare(mon.faceIconUrl) === bare(mon.imgUrl);
-  return [{
+  const draftLineage = mon.draft && mon.draftLineage && typeof MONSTER_LINEAGES !== 'undefined' ? {
+    main: MONSTER_LINEAGES[mon.draftLineage.main],
+    sub: MONSTER_LINEAGES[mon.draftLineage.sub]
+  } : null;
+  return [...(mon.draft ? [{
+    label: '段階',
+    code: 'UPCOMING_MONSTER_DRAFTS',
+    state: 'warn',
+    value: '案の段階（本体に未登録）',
+    note: '図鑑・ロースター・マーケットの解放には出ない。正式実装で ALL_PLAYER_MONSTERS へ移す'
+  }] : []), {
     label: '立ち絵',
     code: 'imgUrl',
     state: mon.imgUrl ? 'ok' : 'ng',
@@ -43198,9 +43646,9 @@ const monsterCheckImplRows = mon => {
   }, {
     label: '血統',
     code: 'MONSTER_LINEAGE_MAP',
-    state: lineage.known ? 'ok' : 'ng',
-    value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）` : '未登録',
-    note: lineage.known ? '' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る'
+    state: lineage.known ? 'ok' : draftLineage?.main && draftLineage?.sub ? 'warn' : 'ng',
+    value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）` : draftLineage?.main && draftLineage?.sub ? `${draftLineage.main.name} × ${draftLineage.sub.name}（案）` : '未登録',
+    note: lineage.known ? '' : draftLineage ? '正式実装のときに data/lineages.js の MONSTER_LINEAGE_MAP へ足す' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る'
   }, {
     label: '図鑑の説明文',
     code: 'MONSTER_DEX_DESCRIPTIONS',
@@ -43217,7 +43665,7 @@ const monsterCheckImplRows = mon => {
     label: '入手方法',
     code: 'disc / STARTER',
     state: starter || disc ? 'ok' : 'ng',
-    value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ` : '入手できない',
+    value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ${disc.available === false ? '（近日追加・まだ買えない）' : ''}` : '入手できない',
     note: starter || disc ? '' : 'BREEDER_MARKET_ITEMS へ type:\'disc\' の円盤石を足す'
   }, {
     label: 'アイコン商品',
@@ -43560,8 +44008,19 @@ function MonsterCheckDebugScreen({
   }, "消費G", skill.guts), React.createElement("span", {
     className: "text-yellow-300"
   }, "会心", skill.crit, "%")))));
-  const artBox = (label, src, palette, frameClass, fit, imgStyle, note) => {
+  const artBox = (label, src, palette, frameClass, fit, imgStyle, note, idle = false) => {
     const broken = !!brokenImages[src];
+    const art = src && React.createElement(DyedMonsterImage, {
+      baseId: mon.id,
+      src: src,
+      alt: label,
+      masuColors: palette,
+      className: `w-full h-full ${fit}`,
+      style: {
+        ...monsterArtFitStyle(mon.id, undefined),
+        ...(imgStyle || {})
+      }
+    });
     return React.createElement("section", {
       key: label,
       className: "rounded-xl bg-black/30 p-2 text-center"
@@ -43572,17 +44031,10 @@ function MonsterCheckDebugScreen({
     }, note), React.createElement("div", {
       className: `${frameClass} overflow-hidden border ${broken ? 'border-rose-500' : 'border-white/20'}`,
       style: bgStyle
-    }, src ? React.createElement(DyedMonsterImage, {
-      baseId: mon.id,
-      src: src,
-      alt: label,
-      masuColors: palette,
-      className: `w-full h-full ${fit}`,
-      style: {
-        ...monsterArtFitStyle(mon.id, undefined),
-        ...(imgStyle || {})
-      }
-    }) : React.createElement("span", {
+    }, src ? idle ? withMonsterIdleArt(mon.id, art, {
+      fill: true,
+      own: true
+    }) : art : React.createElement("span", {
       className: "flex h-full w-full items-center justify-center text-[9px] font-black text-rose-300"
     }, "未設定")), src && React.createElement("img", {
       src: src,
@@ -43756,7 +44208,7 @@ function MonsterCheckDebugScreen({
     className: "grid grid-cols-2 gap-2"
   }, artBox('旧画像', rollbackSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, '差し替える前'), artBox('高画質版', productionSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, 'いまの本番')), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
-  }, artFrame('バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain', null, '本番 64px・角丸なし'), artFrame('一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸'), artFrame('図鑑／大きな全身', 'imgUrl', 'h-36', 'object-contain', null, '本番 図鑑詳細の枠'), artFrame('顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸'), artFrame('プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸'), artFrame('小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸')), React.createElement("section", {
+  }, artFrame('バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain', null, '本番 64px・角丸なし'), artFrame('一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸'), artFrame('図鑑／大きな全身', 'imgUrl', 'h-36', 'object-contain', null, '本番 図鑑詳細の枠'), artFrame('顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸'), artFrame('プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸'), artFrame('小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸'), artBox('待機アニメ', artSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, monsterIdleRigOf(mon.id) ? '図鑑・バトルと同じ動き' : 'リグ未設定（止まったまま）', true)), React.createElement("section", {
     className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-2.5"
   }, React.createElement("h3", {
     className: "mb-2 text-[11px] font-black text-fuchsia-300"
@@ -43838,9 +44290,13 @@ function MonsterCheckDebugScreen({
     block: true
   }), React.createElement("div", null, React.createElement("div", {
     className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
-  }, "通常技"), skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')), React.createElement("div", null, React.createElement("div", {
+  }, "通常技"), typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] ? skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25') : React.createElement("div", {
+    className: "text-center text-[11px] font-bold text-rose-300"
+  }, "未設定")), React.createElement("div", null, React.createElement("div", {
     className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
-  }, "固有技（進化段階）"), skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30'), React.createElement("div", {
+  }, "固有技（進化段階）"), mon.unique ? skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30') : React.createElement("div", {
+    className: "text-center text-[11px] font-bold text-rose-300"
+  }, "未設定"), React.createElement("div", {
     className: "mt-1.5 break-words text-[10px] font-bold italic leading-relaxed text-slate-300"
   }, "\"", mon.unique?.effectDesc || '', "\""))), tab === 'data' && React.createElement("div", {
     "data-monster-check-tab-data": true,
@@ -44059,6 +44515,7 @@ function MonsterHeroGame() {
   const [rhythmDebugTab, setRhythmDebugTab] = useState('play');
   const [rhythmPerfOn, setRhythmPerfOn] = useState(() => RHYTHM_PERF.enabled);
   const [rhythmPerfStats, setRhythmPerfStats] = useState(null);
+  const [battlePerfOn, setBattlePerfOn] = useState(() => BATTLE_PERF.enabled);
   const [rhythmStrip, setRhythmStrip] = useState(() => RHYTHM_STRIP.value);
   const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmStageGlPref, setRhythmStageGlPref] = useState(() => rhythmStageGlPreference());
@@ -44547,7 +45004,16 @@ function MonsterHeroGame() {
     return setEcoModeSafe(ECO_MODES[(currentIndex + 1) % ECO_MODES.length]);
   };
   const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
-  const battleFxLoad = normalizeBattleFxSettings(battleFxSettings).load;
+  const [battleFxAutoLoad, setBattleFxAutoLoad] = useState(null);
+  const battleFxEffective = useMemo(() => {
+    const base = normalizeBattleFxSettings(battleFxSettings);
+    if (!battleFxAutoLoad || base.autoLoad === 'OFF') return base;
+    return BATTLE_FX_LOADS.indexOf(battleFxAutoLoad) > BATTLE_FX_LOADS.indexOf(base.load) ? {
+      ...base,
+      load: battleFxAutoLoad
+    } : base;
+  }, [battleFxSettings, battleFxAutoLoad]);
+  const battleFxLoad = battleFxEffective.load;
   const liteBattleView = gameState === 'BATTLE' && (ecoMode === 'lite' || battleFxLoad === 'MINIMAL');
   const ultraEcoSession = ecoMode === 'ultra' && autoRepeat === true;
   const ultraBattleView = gameState === 'BATTLE' && ultraEcoSession;
@@ -45362,6 +45828,7 @@ function MonsterHeroGame() {
     storeSet(BATTLE_SCREEN_STYLE_KEY, value, false);
   };
   const setBattleFxSetting = (key, value) => {
+    if (key === 'load' || key === 'autoLoad') setBattleFxAutoLoad(null);
     setBattleFxSettingsState(prev => {
       const next = normalizeBattleFxSettings({
         ...prev,
@@ -47582,7 +48049,8 @@ function MonsterHeroGame() {
   const SYMPHONY_THANKS_STORY_ID = 'symphony_2026_09_17_thanks';
   const BEAT_POINT_ALWAYS_STORY_ID = 'beat_point_always_2026_09_24';
   const RHYTHM_SIX_LANE_STORY_ID = 'rhythm_six_lane_2026_09_26';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID];
+  const BEAT_POINT_UP_STORY_ID = 'beat_point_up_2026_09_28';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -47642,14 +48110,16 @@ function MonsterHeroGame() {
       const liveEvent = rhythmLimitedEventAt(Date.now());
       const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
       const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
+      const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
+      const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
       if (!liveEvent) {
-        if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+        if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
-      } else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+      } else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       if (rhythmEventLiveCatchUpRef.current) return;
       rhythmEventLiveCatchUpRef.current = true;
       try {
@@ -50017,6 +50487,7 @@ function MonsterHeroGame() {
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
+    beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -58944,7 +59415,30 @@ function MonsterHeroGame() {
         }
       }), (c.items || []).map((x, j) => React.createElement("p", {
         key: j
-      }, "・", x)), changelogSafeLink(c.link) && React.createElement("a", {
+      }, "・", x)), (Array.isArray(c.gallery) ? c.gallery : []).filter(g => g && typeof g.image === 'string' && g.image).map((g, j) => React.createElement("figure", {
+        key: `g${j}`,
+        "data-changelog-gallery": true,
+        style: {
+          margin: '10px 0 0'
+        }
+      }, g.caption && React.createElement("figcaption", {
+        style: {
+          fontWeight: 900,
+          margin: '0 0 4px'
+        }
+      }, "■ ", g.caption), React.createElement("img", {
+        src: g.image,
+        alt: g.caption || `${c.title}の見本`,
+        onError: e => {
+          e.currentTarget.style.display = 'none';
+        },
+        loading: "lazy",
+        decoding: "async",
+        style: {
+          width: '100%',
+          borderRadius: '12px'
+        }
+      }))), changelogSafeLink(c.link) && React.createElement("a", {
         "data-changelog-link": true,
         href: changelogSafeLink(c.link),
         target: "_blank",
@@ -62422,7 +62916,8 @@ function MonsterHeroGame() {
       battleScreenStyle: battleScreenStyle,
       onChangeBattleScreenStyle: setBattleScreenStyle,
       battleFxSettings: battleFxSettings,
-      onChangeBattleFxSetting: setBattleFxSetting
+      onChangeBattleFxSetting: setBattleFxSetting,
+      battleFxAutoLoad: battleFxAutoLoad
     }), gameState === 'MASU_PATTERN_DEBUG' && (() => {
       const eligible = [...masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId])];
       Object.values(ALL_PLAYER_MONSTERS).forEach(mon => {
@@ -64496,7 +64991,15 @@ function MonsterHeroGame() {
       className: "w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95"
     }, "⚔️ バトルモード", React.createElement("small", {
       className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
-    }, "種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません")), React.createElement(DebugMenuRow, {
+    }, "種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません")), React.createElement("button", {
+      type: "button",
+      "data-battle-perf-toggle": true,
+      "aria-pressed": battlePerfOn,
+      onClick: () => setBattlePerfOn(BATTLE_PERF.setEnabled(!battlePerfOn)),
+      className: `w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battlePerfOn ? 'border-2 border-amber-300 bg-amber-500 text-slate-900' : 'border-2 border-amber-400/40 bg-amber-950/30 text-amber-100'}`
+    }, "📈 バトルの性能計測：", battlePerfOn ? 'ON' : 'OFF', React.createElement("small", {
+      className: "mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75"
+    }, "タクティクス新画面の左上に、コマの速さ・かくつき・自動で軽くした記録を出します（次のバトルから）")), React.createElement(DebugMenuRow, {
       "data-debug-battle-setup": true,
       icon: "🛠",
       label: "デバッグ戦",
@@ -67555,7 +68058,8 @@ function MonsterHeroGame() {
       battleScenarioRef: battleScenarioRef,
       battleScreenActive: gameState === 'BATTLE',
       battleScreenStyle: battleScreenStyle,
-      battleFxSettings: battleFxSettings,
+      battleFxSettings: battleFxEffective,
+      onBattleFxAutoStep: setBattleFxAutoLoad,
       battleSoulMasus: battleSoulMasus,
       battleSpeed: battleSpeed,
       battleTutorial: battleTutorial,
@@ -72251,7 +72755,9 @@ const createAnimationStyle = () => {
     [data-tactics-look] [data-enemy-notice] { outline: 1.5px solid rgba(243,210,122,.9); outline-offset: 1px;
       background-image: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 50%) !important; }
     /* 敵の攻撃・ためるは絵だけを動かす(丸枠とルーンの輪はその場に残す)。> span は敵の絵を包む要素 */
-    [data-tactics-look] [data-enemy-ring][data-enemy-attack="fly"] > span { display: block; position: relative; z-index: 9999; animation: enemyAttackFly 450ms ease-in forwards; }
+    [data-tactics-look] [data-enemy-ring][data-enemy-attack="fly"] > span { display: block; position: relative; z-index: 9999; animation: enemyAttackFly 450ms ease-in forwards;
+      /* ★赤い光は動かさず一定にする(キーフレームで filter を動かすと毎コマ描き直しになる。2026-09-28 battle-fx-lint-check) */
+      filter: drop-shadow(0 0 16px rgba(239,68,68,.85)); }
     [data-tactics-look] [data-enemy-ring][data-enemy-attack="charge"] > span { display: block; position: relative; animation: enemyChargeShake 1100ms ease-in-out forwards; }
     /* ==== 敵ごとの動き(2026-09-24 ユーザー指示「待機時間も動いてる感じに」「実際に動いてるように」「まずはカワズモー」)。
        絵は1枚のまま。支点は足元(transform-origin 50% 92%)にして、伸び縮み・傾き・重心移動で「生きている」ように見せる。
@@ -73094,12 +73600,13 @@ const createAnimationStyle = () => {
       background: linear-gradient(90deg, rgba(20,0,10,.95), rgba(88,10,30,.96) 30%, rgba(40,0,15,.96) 70%, rgba(20,0,10,.95));
       border-top: 3px solid #facc15; border-bottom: 3px solid #facc15; box-shadow: 0 0 40px rgba(250,204,21,.6), 0 0 90px rgba(220,38,38,.5);
       display: flex; align-items: center; justify-content: center; overflow: hidden; animation: mooCutinBand var(--em-dur) cubic-bezier(.2,.8,.2,1) both; }
-    [data-moo-cutin-band]::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(100deg, transparent 0 40px, rgba(250,204,21,.08) 40px 44px); animation: mooCutinStreak 400ms linear infinite; }
+    [data-moo-cutin-band]::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; right: -88px; background: repeating-linear-gradient(100deg, transparent 0 40px, rgba(250,204,21,.08) 40px 44px); animation: mooCutinStreak 400ms linear infinite; }
     [data-moo-cutin-band] > span { position: relative; font-weight: 900; font-size: clamp(30px, 10vw, 48px); letter-spacing: .12em; color: #fff; white-space: nowrap;
       text-shadow: 0 0 10px #facc15, 0 0 24px #dc2626, 0 3px 0 #7f1d1d; -webkit-text-stroke: 1px #facc15; animation: mooCutinText var(--em-dur) cubic-bezier(.2,.8,.2,1) both; }
     @keyframes mooCutinBand { 0% { opacity: 0; transform: skewY(-7deg) scaleY(0); } 6% { opacity: 1; transform: skewY(-7deg) scaleY(1.15); } 10%, 38% { opacity: 1; transform: skewY(-7deg) scaleY(1); } 46%, 100% { opacity: 0; transform: skewY(-7deg) scaleY(0); } }
     @keyframes mooCutinText { 0% { transform: translateX(120vw); } 10% { transform: translateX(-4vw); } 14%, 34% { transform: translateX(0); } 44%, 100% { transform: translateX(-130vw); } }
-    @keyframes mooCutinStreak { to { background-position: -88px 0; } }
+    /* 流れる筋は、88px 広げた板を横へずらして作る(背景の位置を動かすと毎コマ描き直しになる) */
+    @keyframes mooCutinStreak { to { transform: translateX(-88px); } }
     [data-moo-flash] { inset: 0; opacity: 0; background: radial-gradient(circle at 50% 55%, #fff, rgba(255,240,200,.9) 40%, rgba(250,204,21,.4) 75%); animation: mooFlash 420ms ease-out both; }
     @keyframes mooFlash { 0% { opacity: 0; } 10% { opacity: .7; } 100% { opacity: 0; } }
     [data-moo-crack] { left: 0; top: 0; opacity: 0; overflow: visible; animation: mooCrack 900ms ease-out both; }
@@ -73309,19 +73816,15 @@ const createAnimationStyle = () => {
     @keyframes enemyAttackFly {
       0% {
         transform: translateY(0) scale(1);
-        filter: drop-shadow(0 0 6px rgba(239,68,68,0.5));
       }
       45% {
         transform: translateY(90px) scale(1.18);
-        filter: drop-shadow(0 0 20px rgba(239,68,68,0.9));
       }
       60% {
         transform: translateY(90px) scale(1.18);
-        filter: drop-shadow(0 0 28px rgba(220,38,38,1));
       }
       100% {
         transform: translateY(0) scale(1);
-        filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
     }
     @keyframes enemyMoveSlide {
@@ -73638,18 +74141,21 @@ const createAnimationStyle = () => {
       box-shadow: 0 0 0 2px rgba(60,40,10,.9), 0 0 12px rgba(255,210,120,.5), inset 0 0 10px rgba(0,0,0,.5) !important; }
     /* 絵の後ろで回るルーンの輪 */
     .mh-ph-rune { position: absolute; left: 50%; top: 50%; width: 150%; height: 150%; margin: -75% 0 0 -75%; border-radius: 50%; pointer-events: none; z-index: 0;
-      background: repeating-conic-gradient(rgba(243,210,122,.85) 0 3deg, transparent 3deg 15deg), radial-gradient(circle, rgba(var(--ph,243,210,122),.25), transparent 70%);
-      -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
-      mask: radial-gradient(circle, transparent 58%, #000 59%, #000 63%, transparent 64%, transparent 70%, #000 71%, #000 72.5%, transparent 73.5%);
-      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),.9)); }
+      /* ★マスクは使わない(メモリが足りないと外れて、円すいの模様が丸ごと見える。2026-09-28 battle-fx-lint-check)。
+         2本の輪の刻みを SVG の破線で描く(破線の端は円の中心へ向くので、円すいを輪で切り抜いた形と同じになる) */
+      background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g transform='rotate(-90 50 50)' fill='none'><circle cx='50' cy='50' r='42.75' stroke='rgba(243,210,122,.85)' stroke-width='3.5' stroke-dasharray='2.238 8.953'/><circle cx='50' cy='50' r='49.75' stroke='rgba(243,210,122,.85)' stroke-width='.5' stroke-dasharray='2.605 10.42'/></g></svg>") center / 100% 100% no-repeat,
+        radial-gradient(circle, transparent 58%, rgba(var(--ph,243,210,122),.14) 59%, rgba(var(--ph,243,210,122),.14) 63%, transparent 64%, transparent 70%, rgba(var(--ph,243,210,122),.14) 71%, rgba(var(--ph,243,210,122),.14) 72.5%, transparent 73.5%);
+      filter: drop-shadow(0 0 1.5px rgba(var(--ph,243,210,122),.9)); }
     [data-phase-look="rich"] .mh-ph-rune { animation: mhRuneSpin 16s linear infinite; }
     /* 足元の魔法陣(タクティクスの枠の足元と同じ) */
     .mh-ph-floor { position: absolute; left: 50%; bottom: -14px; width: 96px; height: 96px; margin-left: -48px; pointer-events: none; z-index: 0;
       transform: rotateX(68deg);
       background: radial-gradient(circle, transparent 52%, rgba(255,240,200,.95) 53%, rgba(255,240,200,.95) 55%, transparent 56%, transparent 66%, rgba(var(--ph,243,210,122),.9) 67%, rgba(var(--ph,243,210,122),.9) 70%, transparent 71%),
-        repeating-conic-gradient(rgba(255,240,200,.8) 0 4deg, transparent 4deg 30deg);
-      -webkit-mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%); mask: radial-gradient(circle, transparent 50%, #000 51%, #000 72%, transparent 73%);
-      filter: drop-shadow(0 0 5px rgba(var(--ph,243,210,122),1)); }
+        url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='43.15' fill='none' stroke='rgba(255,240,200,.8)' stroke-width='15.5' stroke-dasharray='3.012 19.58' transform='rotate(-90 50 50)'/></svg>") center / 100% 100% no-repeat,
+        radial-gradient(circle, transparent 50%, rgba(var(--ph,243,210,122),.2) 51%, rgba(var(--ph,243,210,122),.2) 72%, transparent 73%);
+      /* ★マスクは使わない。放射の刻みは輪の中だけに SVG で描く(上の .mh-ph-rune と同じ理由)。
+         以前は光(drop-shadow)もマスクで輪の中に収まっていたので、輪の地を薄く塗り、外へのにじみは弱くする */
+      filter: drop-shadow(0 0 1.5px rgba(var(--ph,243,210,122),1)); }
     [data-phase-look="rich"] .mh-ph-floor { animation: mhPhFloor 7s linear infinite; }
     @keyframes mhPhFloor { to { transform: rotateX(68deg) rotate(360deg); } }
     /* ボタン。金 = 決めるボタン(押せるとき)、夜 = そのほか。ボタンの意味の色は変えず、縁と照りを重ねる */

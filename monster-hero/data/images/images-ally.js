@@ -79,6 +79,11 @@ const IDLE_YAOBIKUNI_BODY_MASK = "images/monsters/idle/yaobikuni-body.png?v=9b2b
 const IDLE_KENSHI_MOCCHI_SWORD_L_MASK = "images/monsters/idle/kenshi-mocchi-sword-l.png?v=f8c00ae74cb6";
 const IDLE_KENSHI_MOCCHI_SWORD_R_MASK = "images/monsters/idle/kenshi-mocchi-sword-r.png?v=12c5dc690c0f";
 const IDLE_KENSHI_MOCCHI_BODY_MASK = "images/monsters/idle/kenshi-mocchi-body.png?v=a0b84fe94ad6";
+const IDLE_YGGDRASIL_LEAF_TOP_MASK = "images/monsters/idle/yggdrasil-leaf-top.png?v=c467be4a9cca";
+const IDLE_YGGDRASIL_LEAF_SIDE_MASK = "images/monsters/idle/yggdrasil-leaf-side.png?v=4aa91a581ac5";
+const IDLE_YGGDRASIL_BODY_MASK = "images/monsters/idle/yggdrasil-body.png?v=af0d075f168e";
+const IDLE_MEL_WHIP_UMBRELLA_MASK = "images/monsters/idle/mel-whip-umbrella.png?v=591894879058";
+const IDLE_MEL_WHIP_BODY_MASK = "images/monsters/idle/mel-whip-body.png?v=819b121a5e2d";
 // ==== 待機アニメのマスク ここまで ====
 const PANDORA_IMG = "images/monsters/pandora.PNG?v=f8009b5d2b5e";
 const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=3dae0c26d9a1";
@@ -112,6 +117,16 @@ const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=6b5ab28ef5b4";
 // 描き直していない原本は tools/art-sources/dye-masks/kenshi-mocchi-dye-mask.PNG に置いてある
 const KENSHI_MOCCHI_IMG = "images/monsters/kenshi-mocchi.png?v=63509132e701";
 const KENSHI_MOCCHI_DYE_MASK = "images/monsters/kenshi-mocchi-dye-mask.PNG?v=25a6a1282265";
+// 2026年9月に近日公開予定として絵だけ先に入れた2体(2026-09-28)。能力値・技はまだ決まっていないので
+// ALL_PLAYER_MONSTERS には入れていない。マーケットとビートP交換所には近日公開(available:false)で並ぶ。
+//   ユグドラシル … 新しい血統(ユグドラシル×ユグドラシル)
+//   メルホイップ … ユグドラシル×？？？のレア
+// 染色マスクは、いただいた3色マスクを立ち絵と同じ座標へ合わせて純色へそろえたもの
+// (赤=① / 緑=② / 青=③。原本は tools/art-sources/dye-masks/ に置いてある)
+const YGGDRASIL_IMG = "images/monsters/yggdrasil.png?v=8dddbfc4328f";
+const YGGDRASIL_DYE_MASK = "images/monsters/yggdrasil-dye-mask.PNG?v=296998e6622f";
+const MEL_WHIP_IMG = "images/monsters/mel-whip.png?v=629452e35b02";
+const MEL_WHIP_DYE_MASK = "images/monsters/mel-whip-dye-mask.PNG?v=9df8a032e6c4";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
@@ -165,3 +180,5 @@ const YAOBIKUNI_FACE_ICON = "images/monster-icons/face/yaobikuni.png?v=32838d8bd
 // 立ち絵から切り出した顔クロップ(tools/image/make-face-icons.js)
 const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=9605be0feb75";
 const KENSHI_MOCCHI_FACE_ICON = "images/monster-icons/face/kenshi-mocchi.png?v=fed887e4c278";
+const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=da9792f6708f";
+const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=5016f704506c";

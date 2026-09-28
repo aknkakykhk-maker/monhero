@@ -52,7 +52,11 @@ const monsterCheckAllMonsters = () => {
   const ordered = dexMonsterList();
   const seen = new Set(ordered.map(mon => mon.id));
   const rest = Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && mon.id && !seen.has(mon.id));
-  return [...ordered, ...rest];
+  // 案の段階のモンスター(UPCOMING_MONSTER_DRAFTS・2026-09-28)。本体にまだいない子だけ、いちばん後ろへ足す。
+  // 能力値や技が無いまま並ぶので、確認の一覧で「未設定」がそのまま見える
+  const drafts = (typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' && UPCOMING_MONSTER_DRAFTS)
+    ? Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id]) : [];
+  return [...ordered, ...rest, ...drafts];
 };
 
 // マーケットの商品を引く。円盤石(type:'disc')は解放用でidがモンスターidと一致する決まり。
@@ -87,7 +91,12 @@ const monsterCheckImplRows = (mon) => {
   const apt = Array.isArray(mon.distAptitude) ? mon.distAptitude : [];
   const containFixed = (typeof MONSTER_ART_CONTAIN_IDS !== 'undefined' && MONSTER_ART_CONTAIN_IDS.includes(id));
   const sameArt = bare(mon.faceIconUrl) === bare(mon.imgUrl);
+  // 案の段階のモンスターの血統は draftLineage に書いてある(本体の MONSTER_LINEAGE_MAP へはまだ足せない)
+  const draftLineage = mon.draft && mon.draftLineage && typeof MONSTER_LINEAGES !== 'undefined'
+    ? { main: MONSTER_LINEAGES[mon.draftLineage.main], sub: MONSTER_LINEAGES[mon.draftLineage.sub] } : null;
   return [
+    ...(mon.draft ? [{ label: '段階', code: 'UPCOMING_MONSTER_DRAFTS', state: 'warn', value: '案の段階（本体に未登録）',
+      note: '図鑑・ロースター・マーケットの解放には出ない。正式実装で ALL_PLAYER_MONSTERS へ移す' }] : []),
     { label: '立ち絵', code: 'imgUrl', state: mon.imgUrl ? 'ok' : 'ng', value: bare(mon.imgUrl) || '未設定' },
     { label: '一覧アイコン', code: 'iconUrl', state: mon.iconUrl ? 'ok' : 'ng', value: bare(mon.iconUrl) || '未設定' },
     { label: '顔アイコン', code: 'faceIconUrl', state: mon.faceIconUrl ? (sameArt ? 'warn' : 'ok') : 'ng',
@@ -113,16 +122,17 @@ const monsterCheckImplRows = (mon) => {
       value: `ライフ${plus.hp}／ちから${plus.atk}／丈夫さ${plus.def}／ガッツ${plus.guts}` },
     { label: '距離適性', code: 'distAptitude', state: apt.length === 4 ? 'ok' : 'ng',
       value: apt.length ? monsterCheckDistanceLabels().map((label, i) => `${label} ${apt[i]}`).join('／') : '未設定' },
-    { label: '血統', code: 'MONSTER_LINEAGE_MAP', state: lineage.known ? 'ok' : 'ng',
-      value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）` : '未登録',
-      note: lineage.known ? '' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る' },
+    { label: '血統', code: 'MONSTER_LINEAGE_MAP', state: lineage.known ? 'ok' : (draftLineage?.main && draftLineage?.sub ? 'warn' : 'ng'),
+      value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）`
+        : draftLineage?.main && draftLineage?.sub ? `${draftLineage.main.name} × ${draftLineage.sub.name}（案）` : '未登録',
+      note: lineage.known ? '' : draftLineage ? '正式実装のときに data/lineages.js の MONSTER_LINEAGE_MAP へ足す' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る' },
     { label: '図鑑の説明文', code: 'MONSTER_DEX_DESCRIPTIONS', state: dexText ? 'ok' : 'ng', value: dexText ? `${dexText.length}文字` : '未記入',
       note: dexText ? '' : '無いと図鑑に「調査中」と出る' },
     { label: '図鑑に並ぶか', code: 'debugOnly', state: mon.debugOnly ? 'warn' : 'ok',
       value: mon.debugOnly ? '出ない（debugOnly）' : '出る',
       note: mon.debugOnly ? '正式実装前。図鑑・RPG一覧・マスモン登録から外れている' : '' },
     { label: '入手方法', code: 'disc / STARTER', state: (starter || disc) ? 'ok' : 'ng',
-      value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ` : '入手できない',
+      value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ${disc.available === false ? '（近日追加・まだ買えない）' : ''}` : '入手できない',
       note: (starter || disc) ? '' : 'BREEDER_MARKET_ITEMS へ type:\'disc\' の円盤石を足す' },
     // 初期解放の8種は、この決まりができる前からいるので商品を持っていない。そこは注意にしない
     { label: 'アイコン商品', code: "type:'icon'", state: (faceIcon || starter) ? 'ok' : 'warn',
@@ -356,15 +366,18 @@ function MonsterCheckDebugScreen({
   // 1枚ぶんの枠。絵のURLと染色を指定できるようにしてあるので、「本番の表示条件」だけでなく
   // 「部位ごとの切り分け」「ライガーの新旧比較」も同じ部品で出せる。
   // 読み込みに失敗した絵は赤くして、「パスの綴り間違いで絵が出ない」を公開前に気づけるようにする
-  const artBox = (label, src, palette, frameClass, fit, imgStyle, note) => {
+  // idle を付けた枠は、図鑑・バトルと同じ待機アニメ(MonsterIdleArt)で動かす。
+  // 公開前の子(案の段階)でも、リグを書いた時点で動きをここで確かめられる
+  const artBox = (label, src, palette, frameClass, fit, imgStyle, note, idle = false) => {
     const broken = !!brokenImages[src];
+    const art = src && <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>;
     return (
       <section key={label} className="rounded-xl bg-black/30 p-2 text-center">
         <b className="block text-[10px] font-black text-cyan-200">{label}</b>
         {note && <small className="mb-1 block text-[8px] font-bold text-slate-400">{note}</small>}
         <div className={`${frameClass} overflow-hidden border ${broken ? 'border-rose-500' : 'border-white/20'}`} style={bgStyle}>
           {src
-            ? <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>
+            ? (idle ? withMonsterIdleArt(mon.id, art, {fill:true, own:true}) : art)
             : <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-rose-300">未設定</span>}
         </div>
         {/* 綴りを間違えた絵は、染色を通すと「何も出ない」だけで理由が分からない。
@@ -464,6 +477,8 @@ function MonsterCheckDebugScreen({
                 {artFrame('顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸')}
                 {artFrame('プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸')}
                 {artFrame('小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸')}
+                {artBox('待機アニメ', artSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null,
+                  monsterIdleRigOf(mon.id) ? '図鑑・バトルと同じ動き' : 'リグ未設定（止まったまま）', true)}
               </div>
               <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-2.5">
                 <h3 className="mb-2 text-[11px] font-black text-fuchsia-300">染色（{regionCount}部位・本番と共通）</h3>
@@ -523,11 +538,15 @@ function MonsterCheckDebugScreen({
               {row('特性の効果', mon.traitDesc || '特性なし', { block: true })}
               <div>
                 <div className="mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90">通常技</div>
-                {skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')}
+                {/* 技名が無いと getAtkSkillLevels はモッチーの技名を静かに出すので、無いときは「未設定」と出す */}
+                {(typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id]) ? skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')
+                  : <div className="text-center text-[11px] font-bold text-rose-300">未設定</div>}
               </div>
               <div>
                 <div className="mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90">固有技（進化段階）</div>
-                {skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30')}
+                {/* 案の段階のモンスターは固有技がまだ無い(getUniqueSkillLevels は unique が無いと落ちる) */}
+                {mon.unique ? skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30')
+                  : <div className="text-center text-[11px] font-bold text-rose-300">未設定</div>}
                 <div className="mt-1.5 break-words text-[10px] font-bold italic leading-relaxed text-slate-300">"{mon.unique?.effectDesc || ''}"</div>
               </div>
             </div>)}

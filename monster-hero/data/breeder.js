@@ -35,6 +35,9 @@ const PANDORA_DISC_ICON = "images/disc-icons/pandora-disc.PNG?v=adee72203d0a";
 const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=0b8dca1d94c0";
 // 剣士モッチーの円盤石。絵は node tools/image/make-disc-icon.js が共通の土台へ重ねて作ったもの
 const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG?v=57ec53a942c7";
+// 近日公開予定のユグドラシル・メルホイップの円盤石(2026-09-28)。作り方は剣士モッチーと同じ
+const YGGDRASIL_DISC_ICON = "images/disc-icons/yggdrasil-disc.PNG?v=16a7bd3b4eed";
+const MEL_WHIP_DISC_ICON = "images/disc-icons/mel-whip-disc.PNG?v=aeabb9f0992b";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["ニコラオの力", "ニコラオの気合", "ニコラオの憤怒"],
@@ -218,16 +221,16 @@ const BREEDER_MARKET_ITEMS = [
   // (きき/kiki_icon と同じ作り)。顔が中央にある正方形の絵なので寄せ調整は不要
   { id:'poltz_icon', name:"ポルツのアイコン",      type:'icon', icon:POLTZ_FACE_ICON,   cost:1 },
   { id:'zan_icon', name:"ザンのアイコン", type:'icon', icon:ZAN_FACE_ICON, cost:1 },
-  { id:'Zan', name:"ザンの円盤石", type:'disc', icon:ZAN_DISC_ICON, cost:1500 },
+  { id:'Zan', name:"ザンの円盤石", type:'disc', icon:ZAN_DISC_ICON, cost:150000 },
   { id:'mitarashi_icon', name:"ミタラシのアイコン", type:'icon', icon:MITARASHI_FACE_ICON, cost:1 },
-  { id:'Mitarashi', name:"ミタラシの円盤石", type:'disc', icon:MITARASHI_DISC_ICON, cost:500 },
+  { id:'Mitarashi', name:"ミタラシの円盤石", type:'disc', icon:MITARASHI_DISC_ICON, cost:50000 },
   { id:'ark_icon', name:"アークのアイコン", type:'icon', icon:ARK_FACE_ICON, cost:1 },
-  { id:'Ark', name:"アークの円盤石", type:'disc', icon:ARK_DISC_ICON, cost:1500 },
+  { id:'Ark', name:"アークの円盤石", type:'disc', icon:ARK_DISC_ICON, cost:150000 },
   { id:'iblis_icon', name:"イブリースのアイコン", type:'icon', icon:IBLIS_FACE_ICON, cost:1 },
-  { id:'Iblis', name:"イブリースの円盤石", type:'disc', icon:IBLIS_DISC_ICON, cost:1500 },
+  { id:'Iblis', name:"イブリースの円盤石", type:'disc', icon:IBLIS_DISC_ICON, cost:150000 },
   { id:'snegurochka_icon', name:"スネグーラチカのアイコン", type:'icon', icon:SNEGUROCHKA_MARKET_ICON, cost:1 },
   { id:'snegurochka_awakened_icon', name:"スネグーラチカ（覚醒）のアイコン", type:'icon', icon:SNEGUROCHKA_AWAKENED_MARKET_ICON, cost:1 },
-  { id:'Snegurochka', name:"スネグーラチカの円盤石", type:'disc', icon:SNEGUROCHKA_DISC_ICON, cost:1500 },
+  { id:'Snegurochka', name:"スネグーラチカの円盤石", type:'disc', icon:SNEGUROCHKA_DISC_ICON, cost:150000 },
   // ウンディーネ。本人アイコン・円盤石アイコン・解放用の円盤石の3商品。
   // アイコンは立ち絵/円盤石の絵をそのまま使い、丸い枠での見え方は
   // MARKET_PROFILE_ICON_STYLES の scale/x/y で寄せる(画像は複製しない)
@@ -236,35 +239,47 @@ const BREEDER_MARKET_ITEMS = [
   // どちらかにしかならなかった(2026-09-19)。エイキ・剣士モッチーと同じ扱い。
   { id:'undine_icon', name:"ウンディーネのアイコン", type:'icon', icon:UNDINE_FACE_ICON, cost:1 },
   { id:'undine_disc_icon', name:"ウンディーネの円盤石アイコン", type:'icon', icon:UNDINE_DISC_ICON, cost:1 },
-  { id:'Undine', name:"ウンディーネの円盤石", type:'disc', icon:UNDINE_DISC_ICON, cost:1500 },
+  { id:'Undine', name:"ウンディーネの円盤石", type:'disc', icon:UNDINE_DISC_ICON, cost:150000 },
   // ヤオビクニ
   // ウンディーネと同じ理由で顔クロップを使う
   { id:'yaobikuni_icon', name:"ヤオビクニのアイコン", type:'icon', icon:YAOBIKUNI_FACE_ICON, cost:1 },
   { id:'yaobikuni_disc_icon', name:"ヤオビクニの円盤石アイコン", type:'icon', icon:YAOBIKUNI_DISC_ICON, cost:1 },
-  { id:'Yaobikuni', name:"ヤオビクニの円盤石", type:'disc', icon:YAOBIKUNI_DISC_ICON, cost:1500 },
+  { id:'Yaobikuni', name:"ヤオビクニの円盤石", type:'disc', icon:YAOBIKUNI_DISC_ICON, cost:150000 },
   // プラント。既存の本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
   { id:'plant_icon', name:"プラントのアイコン", type:'icon', icon:PLANT_IMG, cost:1 },
   { id:'plant_disc_icon', name:"プラントの円盤石アイコン", type:'icon', icon:PLANT_DISC_ICON, cost:1 },
-  { id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:1500 },
+  { id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:150000 },
   // ミーア。正式な本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
   { id:'mia_icon', name:"ミーアのアイコン", type:'icon', icon:MIA_IMG, cost:1 },
   { id:'mia_disc_icon', name:"ミーアの円盤石アイコン", type:'icon', icon:MIA_DISC_ICON, cost:1 },
-  { id:'Mia', name:"ミーアの円盤石", type:'disc', icon:MIA_DISC_ICON, cost:1500 },
+  { id:'Mia', name:"ミーアの円盤石", type:'disc', icon:MIA_DISC_ICON, cost:150000 },
   // パンドラ。保存済みの本体・円盤石画像を各商品で共用する。
   { id:'pandora_icon', name:"パンドラのアイコン", type:'icon', icon:PANDORA_IMG, cost:1 },
   { id:'pandora_disc_icon', name:"パンドラの円盤石アイコン", type:'icon', icon:PANDORA_DISC_ICON, cost:1 },
-  { id:'Pandora', name:"パンドラの円盤石", type:'disc', icon:PANDORA_DISC_ICON, cost:3000 },
+  { id:'Pandora', name:"パンドラの円盤石", type:'disc', icon:PANDORA_DISC_ICON, cost:300000 },
   // エイキ。ザン・ミタラシ・アーク・イブリースと同じく専用の顔クロップ(EIKI_FACE_ICON)を
   // 商品アイコンにも使うため、パンドラ・ミーアのような MARKET_PROFILE_ICON_STYLES の
   // 拡大・位置調整は不要(元から丸枠向けに切り出し済み)。
   { id:'eiki_icon', name:"エイキのアイコン", type:'icon', icon:EIKI_FACE_ICON, cost:1 },
   { id:'eiki_disc_icon', name:"エイキの円盤石アイコン", type:'icon', icon:EIKI_DISC_ICON, cost:1 },
-  { id:'Eiki', name:"エイキの円盤石", type:'disc', icon:EIKI_DISC_ICON, cost:3000 },
+  { id:'Eiki', name:"エイキの円盤石", type:'disc', icon:EIKI_DISC_ICON, cost:300000 },
   // 剣士モッチー。エイキと同じく専用の顔クロップ(KENSHI_MOCCHI_FACE_ICON)を商品アイコンにも使うため、
   // 本人アイコン側の MARKET_PROFILE_ICON_STYLES は不要(元から丸枠向けに切り出し済み)。
   { id:'kenshi_mocchi_icon', name:"剣士モッチーのアイコン", type:'icon', icon:KENSHI_MOCCHI_FACE_ICON, cost:1 },
   { id:'kenshi_mocchi_disc_icon', name:"剣士モッチーの円盤石アイコン", type:'icon', icon:KENSHI_MOCCHI_DISC_ICON, cost:1 },
-  { id:'KenshiMocchi', name:"剣士モッチーの円盤石", type:'disc', icon:KENSHI_MOCCHI_DISC_ICON, cost:3000 },
+  { id:'KenshiMocchi', name:"剣士モッチーの円盤石", type:'disc', icon:KENSHI_MOCCHI_DISC_ICON, cost:300000 },
+  // ユグドラシル(新しい血統・ユグドラシル×ユグドラシル)とメルホイップ(ユグドラシル×？？？のレア)。
+  // 2026-09-28 ユーザー指示「近日公開予定でマーケットにおいて」。絵・顔アイコン・円盤石・染色マスクだけ先に入れ、
+  // 能力値・技はまだ決まっていないので ALL_PLAYER_MONSTERS にはいない。3件とも available:false で
+  // 「近日追加」と出るだけで買えない(buyMarketItem と marketPurchasePreview が available:false をはじく)。
+  // 正式実装のときに available:false を外す。円盤石の値段は既存の円盤石と同じ150,000ダイヤ。
+  // ビートP交換所にも同じ円盤石を10,000P(仮)で先行公開予定として並べている(data/rhythm-event.js)。
+  { id:'yggdrasil_icon', name:"ユグドラシルのアイコン", type:'icon', icon:YGGDRASIL_FACE_ICON, cost:1, available:false },
+  { id:'yggdrasil_disc_icon', name:"ユグドラシルの円盤石アイコン", type:'icon', icon:YGGDRASIL_DISC_ICON, cost:1, available:false },
+  { id:'Yggdrasil', name:"ユグドラシルの円盤石", type:'disc', icon:YGGDRASIL_DISC_ICON, cost:150000, available:false },
+  { id:'mel_whip_icon', name:"メルホイップのアイコン", type:'icon', icon:MEL_WHIP_FACE_ICON, cost:1, available:false },
+  { id:'mel_whip_disc_icon', name:"メルホイップの円盤石アイコン", type:'icon', icon:MEL_WHIP_DISC_ICON, cost:1, available:false },
+  { id:'MelWhip', name:"メルホイップの円盤石", type:'disc', icon:MEL_WHIP_DISC_ICON, cost:150000, available:false },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
   { id:'soul_rank_respec_scroll', name:"魂格再編の書", type:'item', emoji:"🌀", cost:1000000, usage:'soulRankRespec', desc:"マスモンの魂格特性に使った魂格Pをすべて未使用へ戻す。魂格段階・Lv・最高初到達Lvは変わらない。マーケットでは100万ダイヤ、または勇者の証1個と交換できる。" },

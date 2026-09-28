@@ -4,7 +4,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ① 指定どおりのステータス・合流ボーナス・距離適性
 //   ② 通常技9段階・固有技9段階の名前、固有技の初期倍率2.2・基礎消費44
 //   ③ 専用モーション waterBurst、勇者特性「氷海の支配者」、固有効果「絶氷の楔」を共有している
-//   ④ マーケット6商品(本人アイコン1pt/円盤石アイコン1pt/解放用円盤石1500pt)
+//   ④ マーケット6商品(本人アイコン1pt/円盤石アイコン1pt/解放用円盤石150000ダイヤ)
 //   ⑤ アイコンは画像を複製せず scale/x/y で寄せている
 //   ⑥ 3色染色の部位定義がある
 //   ⑦ スネグーラチカの性能・見た目に手を入れていない
@@ -80,10 +80,10 @@ const item = (id) => market.find(i => i.id === id);
 const expectItems = [
   ['undine_icon', 'icon', 1, 'ウンディーネのアイコン'],
   ['undine_disc_icon', 'icon', 1, 'ウンディーネの円盤石アイコン'],
-  ['Undine', 'disc', 1500, 'ウンディーネの円盤石'],
+  ['Undine', 'disc', 150000, 'ウンディーネの円盤石'],
   ['yaobikuni_icon', 'icon', 1, 'ヤオビクニのアイコン'],
   ['yaobikuni_disc_icon', 'icon', 1, 'ヤオビクニの円盤石アイコン'],
-  ['Yaobikuni', 'disc', 1500, 'ヤオビクニの円盤石'],
+  ['Yaobikuni', 'disc', 150000, 'ヤオビクニの円盤石'],
 ];
 for (const [id, type, cost, name] of expectItems) {
   const it = item(id);

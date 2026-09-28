@@ -36,7 +36,7 @@ const checks = [
   ['基礎能力・適性・合流値', /Snegurochka:[\s\S]*?baseHp:400, baseGuts:150, baseAtk:135, baseDef:80[\s\S]*?plusStats:\{hp:150,atk:40,def:10,guts:40\}[\s\S]*?distAptitude:\['D','E','B','A'\]/.test(ally)],
   ['通常技9段階', /Snegurochka: \["アイスブレード"[\s\S]*?"ジングルベル"\]/.test(ally)],
   ['固有技9段階・倍率・消費', /name:"アイスアロー"[\s\S]*?baseMult:2\.2,baseGuts:44[\s\S]*?"メリークリスマス"/.test(ally)],
-  ['マーケット1500ダイヤ', /id:'Snegurochka'[\s\S]*?type:'disc'[\s\S]*?cost:1500/.test(breeder)],
+  ['マーケット150000ダイヤ', /id:'Snegurochka'[\s\S]*?type:'disc'[\s\S]*?cost:150000/.test(breeder)],
   ['専用円盤石画像を商品に使用', /const SNEGUROCHKA_DISC_ICON = "images\/disc-icons\/snegurochka-disc\.PNG\?v=[a-f0-9]{12}"/.test(breeder) && /id:'Snegurochka'[\s\S]*?type:'disc'[\s\S]*?icon:SNEGUROCHKA_DISC_ICON/.test(breeder)],
   ['円盤石の商品詳細も共通表示を使用', game.includes('marketDiscIcon:item.icon') && game.includes('detailOpts.marketDiscIcon')],
   ['移動封印は有効中のMOVEを失敗し行動済みを維持', /intent\.type==='MOVE' && getWaveBuff\('iceLockTurns'\)>0[\s\S]*?移動できない！/.test(game)],

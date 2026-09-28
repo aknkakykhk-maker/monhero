@@ -604,6 +604,18 @@ const RHYTHM_STRIP=(()=>{
 // 判定・入力・見た目はすべてこの投影を通るので、ここを変えれば3つがそろって変わる。
 const RHYTHM_PROJECTION_TOP_SCALE=.07;
 const RHYTHM_PROJECTION_CURVE=1;
+// 横向きの道の幅(2026-09-27・ユーザー指示「オプションでパターン選べるにして。不具合とかおきないように」)。
+// 道の横の広がりにだけ掛ける倍率。見た目・判定・入力・叩いた光・レーンの SVG はどれも rhythmProjectionScale /
+// rhythmProjectBoundary を通るので、ここを変えれば全部がそろって変わる(どこか1つだけ古い幅が残ることがない)。
+// 奥行き(ノーツの太さ・明るさ・終わりの横棒の太さ)には掛けない(rhythmProjectionDepth)。
+// 演奏画面が、演奏中の向きと設定から set する(縦向きは常に1)。演奏の外では1(これまでの幅)
+//   WIDE … 判定ラインの高さで画面の約81%(これまで) / STANDARD … 約75% / NARROW … 約70%(参考動画の68%に近い)
+const RHYTHM_ROAD_WIDTHS=Object.freeze({WIDE:1,STANDARD:.92,NARROW:.86});
+const RHYTHM_ROAD_WIDTH={
+  factor:1,
+  set(value){const next=Number(value);this.factor=Number.isFinite(next)&&next>=.5&&next<=1?next:1;},
+  reset(){this.factor=1;},
+};
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
 // 終わりの横棒は最低10pxにするが、道の奥でレーンがそれより細いときはレーンの幅までにする(2026-09-26。奥行きを深くしてはみ出したため)
 // HOLD/SLIDEの帯の太さ。ノーツの頭(.78)より細い。
@@ -638,18 +650,21 @@ const rhythmClamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
 // 画面より上(yRatio<0)は、道がまっすぐ(CURVE=1)なら消える一点まで細くなり続ける(0で止める)。
 // 以前のように上端の幅で止めると、画面の上端をまたぐ帯がそこで折れて見える(2026-09-26)。
 // 曲線(CURVE≠1)のときは今までどおり上端の幅で止める。画面の中(0〜1)の値はどちらも変わらない。
-const rhythmProjectionScale=yRatio=>{
+// 奥行き(0〜1)。道の横幅の倍率は掛けない。ノーツの太さ・明るさはこちらで決める
+const rhythmProjectionDepth=yRatio=>{
   const y=Math.min(1,Number(yRatio)||0);
   if(y<0&&RHYTHM_PROJECTION_CURVE===1)return Math.max(0,RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*y);
   return RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*Math.pow(rhythmClamp01(y),RHYTHM_PROJECTION_CURVE);
 };
+// 道の横の広がり。奥行きに横向きの道の幅の倍率を掛けたもの
+const rhythmProjectionScale=yRatio=>rhythmProjectionDepth(yRatio)*RHYTHM_ROAD_WIDTH.factor;
 const rhythmProjectBoundary=(boundary,yRatio)=>{
   const scale=rhythmProjectionScale(yRatio),flat=Number(boundary)/RHYTHM_LANE_COUNT;
   return .5+(flat-.5)*scale;
 };
 const rhythmProjectLane=(lane,yRatio)=>{
   const value=Number(lane),left=rhythmProjectBoundary(value,yRatio),right=rhythmProjectBoundary(value+1,yRatio);
-  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio)};
+  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionDepth(yRatio)};
 };
 // ノーツの幅(サブレーン数)の上限。以前は4(=2レーンぶん)で頭打ちにしていたが、実機で
 // 「上限を無くして全幅もありにして」と言われたので、全幅(=道のレーンすべて)まで出せるようにした。
@@ -661,7 +676,7 @@ const rhythmProjectSubLaneRange=(subLane,width,yRatio)=>{
   const span=Math.max(1,Math.min(RHYTHM_MAX_SUB_LANE_WIDTH,Number(width)||2));
   const start=Math.max(0,Math.min(RHYTHM_MAX_SUB_LANE_WIDTH-span,Number(subLane)||0));
   const left=rhythmProjectBoundary(start/2,yRatio),right=rhythmProjectBoundary((start+span)/2,yRatio);
-  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio),subLane:start,subLaneWidth:span};
+  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionDepth(yRatio),subLane:start,subLaneWidth:span};
 };
 const rhythmProjectSubLaneSpan=(subLane,width,yRatio)=>rhythmProjectSubLaneRange(Math.trunc(Number(subLane))||0,Math.trunc(Number(width))||2,yRatio);
 // 旧譜面は lane を正本のまま使い、従来と同じ中央・2サブレーン幅へ写す。
@@ -703,7 +718,7 @@ const rhythmProjectSlideSpan=(lane,note,yRatio,chartTimeMs=note?.timeMs)=>{
   const width=rhythmSlideWidthAt(note,chartTimeMs),half=width/4;
   const centerBoundary=rhythmSlideFittedLane(lane,width)+.5;
   const left=rhythmProjectBoundary(centerBoundary-half,yRatio),right=rhythmProjectBoundary(centerBoundary+half,yRatio);
-  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio),subLaneWidth:width};
+  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionDepth(yRatio),subLaneWidth:width};
 };
 const rhythmSlideInputSpan=note=>{
   if(!rhythmNoteIsSlide(note))return null;
@@ -1731,6 +1746,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
       judgeVary:typeof value?.noteSeJudgeVary==='boolean'?value.noteSeJudgeVary:true,
       flickVolume:partVolume(value?.noteSeFlickVolume,100),
       endVolume:partVolume(value?.noteSeEndVolume,100),
+      holdVolume:partVolume(value?.noteSeHoldVolume,100),
       emptyEnabled:typeof value?.noteSeEmptyEnabled==='boolean'?value.noteSeEmptyEnabled:true,
     };
   };
@@ -1852,6 +1868,8 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   };
   const ready=type=>banks.get(type)?.buffers||null;
   const prepare=typeIn=>{
+    // 押さえているあいだの音も、ここで作っておく(押した瞬間に作ると一瞬かたまる)。画面の表示を待たせないよう少しあとで
+    {const audio=context();if(audio&&typeof setTimeout==='function')setTimeout(()=>{try{holdLoop(audio);}catch{}},60);}
     const type=rhythmNoteSeTypeOf(typeIn||readSettings().type);
     if(!RHYTHM_NOTE_SE_DESIGNS[type])return Promise.resolve(null);
     const hit=banks.get(type);if(hit)return hit.promise;
@@ -1962,10 +1980,129 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   // FLICK が成立したとき(終点フリックを含む)。フリックは触れた瞬間には鳴らさず、払えたときに「シュッ」と鳴らす
   // (プロセカ・バンドリ！と同じ。実機で「フリックが成功したのか分かりづらい」という報告があった)
   const playFlick=(judgment=null)=>{const settings=readSettings();return voice(settings,'flick',judgment,settings.flickVolume/100);};
-  // 設定画面の試聴。kind … 'tap' / 'flick' / 'end'
+  // ===== ホールド・スライドを押さえているあいだの「シャラシャラ」(高いきらめき) =====
+  // 経緯(2026-09-28・すべて同じ日):
+  //   ① ユーザー「押してる間にウィーンみたいな溜めてるような音」→ のこぎり波が上がる「ウィーン」を入れた
+  //   ② 「イメージと違う」「音ゲーってなんかしゃらららみたいな」→ 鈴の粒(2〜6kHz のドレミの高さ)に変えた
+  //   ③ 「なんか微妙」「もっと馴染める音に」→ ユーザーが送ってくれたバンドリ！アワーノーツの録画(曲を消した効果音だけの動画)を分析した。
+  //      押さえている時間だけ強くなるのは 8.5〜13.6kHz(+15〜19dB)と 3.4〜5.4kHz(+6〜9dB)。6〜8kHz は谷、3kHz より下は何も鳴っていない。
+  //      高いほうは細い成分がびっしり並ぶ(=ドレミの高さを持たない、きらめく「シャラシャラ」)。強さの揺れは平均の15%ほどで、決まった刻みは無い。
+  //   鈴の粒は曲の音域の中でドレミを鳴らすので曲の和音とぶつかって浮いた。この形なら曲の音域より上で鳴るので、曲に馴染む。
+  //   録画の音そのものは使っていない。成分の形(どの高さがどれだけ鳴っているか)だけをまねて、1から作っている。
+  // 作り方: 周波数ごとの強さを決めて、でたらめな位相で逆FFTする(約1.4秒)。長さが2のべき乗なので、頭と終わりがそのままつながる(つなぎ目が無い)。
+  // 作るのは音の作りごとに1回だけ。押した瞬間に作ると一瞬かたまるので、曲えらび・演奏画面を開いたとき(prepare)に作っておく。
+  // 押さえているノーツ1本につき「繰り返し再生1つ → 大きさ1つ」だけ。押さえ始めの0.35秒でふわっと大きくなる。
+  // 音の高さは上げない。SLIDE は同じ音を少しだけ高く(1.06倍)鳴らして区別する。
+  // 本体は毎フレーム holdSync(いま押さえているノーツの並び) を呼ぶ。並びから消えた音は、そこで短く消して止める。
+  // ★呼ばれなくなったとき(ポーズ・曲の終わり・画面を出た・タブを隠した)のために、最後の呼び出しから0.25秒で全部止める見張りを持つ。
+  //   鳴りっぱなしにはならない。見張りは音が鳴っているあいだだけ動く
+  // 大きさはタップ音量 × 「押さえている間の音の大きさ」。タップ音OFF・全体ミュート・0%では組まない。
+  const HOLD_VOICE_MAX=4,HOLD_WATCH_MS=250,HOLD_LOOP_SIZE=1<<16;
+  const holdVoices=new Map();let holdWatch=0,holdLastSync=0,holdLoopCtx=null,holdLoopBuffer=null;
+  const holdNow=()=>typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
+  // 逆FFT(長さは2のべき乗)。結果は re に入る
+  const holdIfft=(re,im)=>{
+    const n=re.length;
+    for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}}
+    for(let len=2;len<=n;len<<=1){const ang=2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang),half=len>>1;
+      for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<half;k++){const a=i+k,b=a+half,vr=re[b]*cr-im[b]*ci,vi=re[b]*ci+im[b]*cr;re[b]=re[a]-vr;im[b]=im[a]-vi;re[a]+=vr;im[a]+=vi;const nr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=nr;}}}
+  };
+  // 周波数ごとの強さ(振幅)。録画の「押さえ中 − 押さえ無し」の形に合わせた2つの山
+  const holdShape=f=>{
+    const ramp=(x,a,b)=>x<=a?0:x>=b?1:(x-a)/(b-a);
+    const low=ramp(f,2800,3300)*(1-ramp(f,5400,6200));          // 3.4〜5.4kHz の山
+    const high=ramp(f,7600,8600)*(1-.45*ramp(f,11000,13000))*(1-ramp(f,13600,15200)); // 8.5〜13.6kHz の山(12kHz から上は少し弱く)
+    return Math.max(low*.9,high*.75,(f>5400&&f<8600)?.22:0);      // あいだの谷は約 -12dB
+  };
+  // 繰り返し用の音を作る(音の作りごとに1回だけ)
+  const holdLoop=audio=>{
+    if(holdLoopCtx===audio&&holdLoopBuffer)return holdLoopBuffer;
+    const rate=audio.sampleRate||48000,n=HOLD_LOOP_SIZE,buffer=audio.createBuffer(2,n,rate),binHz=rate/n;
+    let seed=0x51f15e;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+    let peak=0;const channels=[buffer.getChannelData(0),buffer.getChannelData(1)];
+    // ゆっくりした細かなきらめき(強さの揺れ15%ほど)。回数を整数にして、繰り返しのつなぎ目でもずれない
+    const c1=Math.max(1,Math.round(6.4*n/rate)),c2=Math.max(1,Math.round(2.3*n/rate)),c3=Math.max(1,Math.round(11.7*n/rate));
+    for(const data of channels){
+      const re=new Float64Array(n),im=new Float64Array(n);
+      for(let k=1;k<n/2;k++){
+        const f=k*binHz,shape=holdShape(f);if(!(shape>0))continue;
+        // 高いほうは細い成分をまばらに(きらめき)、低いほうはやや密に(やわらかいシャー)
+        const keep=f>7000?.16:.45;if(rand()>keep)continue;
+        const a=shape*(.35+.65*rand())/Math.sqrt(keep),ph=rand()*Math.PI*2;
+        re[k]=a*Math.cos(ph);im[k]=a*Math.sin(ph);re[n-k]=re[k];im[n-k]=-im[k];
+      }
+      holdIfft(re,im);
+      const p1=rand()*Math.PI*2,p2=rand()*Math.PI*2,p3=rand()*Math.PI*2;
+      for(let i=0;i<n;i++){
+        const e=1+.09*Math.sin(2*Math.PI*c1*i/n+p1)+.07*Math.sin(2*Math.PI*c2*i/n+p2)+.05*Math.sin(2*Math.PI*c3*i/n+p3);
+        const v=re[i]*e;data[i]=v;if(Math.abs(v)>peak)peak=Math.abs(v);
+      }
+    }
+    if(peak>0){const k=1/peak;for(const data of channels)for(let i=0;i<n;i++)data[i]*=k;}
+    holdLoopCtx=audio;holdLoopBuffer=buffer;
+    return buffer;
+  };
+  const holdStopVoice=(id,release=.12)=>{
+    const voice=holdVoices.get(id);if(!voice)return;
+    holdVoices.delete(id);
+    try{
+      const t=voice.audio.currentTime,g=voice.gain.gain;
+      g.cancelScheduledValues(t);g.setValueAtTime(Math.max(.0001,g.value),t);g.exponentialRampToValueAtTime(.0001,t+release);
+      voice.sources.forEach(o=>o.stop(t+release+.02));
+    }catch{voice.cleanup();}
+  };
+  const holdStopAll=(release=.12)=>{
+    for(const id of [...holdVoices.keys()])holdStopVoice(id,release);
+    if(holdWatch){clearInterval(holdWatch);holdWatch=0;}
+  };
+  const holdStartVoice=(audio,id,kind,level)=>{
+    const now=audio.currentTime,source=audio.createBufferSource(),gain=audio.createGain();
+    source.buffer=holdLoop(audio);source.loop=true;
+    source.playbackRate.setValueAtTime(kind==='SLIDE'?1.06:1,now);
+    gain.gain.setValueAtTime(.0001,now);gain.gain.setTargetAtTime(level,now,.12);
+    source.connect(gain);gain.connect(output(audio));
+    const sources=[source];
+    const cleanup=()=>{try{try{source.stop();}catch{}source.disconnect();gain.disconnect();}catch{}};
+    source.onended=cleanup;
+    // 毎回同じ所から始めると同じ粒の並びが聞こえるので、始める位置をずらす
+    source.start(now,(holdVoices.size*.53+(Number(id)||0)*.37)%(source.buffer.duration||1));
+    holdVoices.set(id,{audio,gain,sources,cleanup});
+  };
+  // held … いま押さえている HOLD/SLIDE のノーツの並び(index で見分ける)。空なら全部止める
+  const holdSync=held=>{
+    holdLastSync=holdNow();
+    const list=Array.isArray(held)?held:[];
+    if(!list.length){if(holdVoices.size)holdStopAll();return 0;}
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0||settings.holdVolume<=0||!rhythmAudioGloballyEnabled()){if(holdVoices.size)holdStopAll(.03);return 0;}
+    for(const id of holdVoices.keys()){if(id==='preview')continue;if(!list.some(note=>note&&note.index===id))holdStopVoice(id);}
+    const audio=context();
+    if(!audio||audio.state==='closed')return holdVoices.size;
+    for(const note of list){
+      if(!note||holdVoices.has(note.index)||holdVoices.size>=HOLD_VOICE_MAX)continue;
+      try{holdStartVoice(audio,note.index,rhythmNoteIsSlide(note)?'SLIDE':'HOLD',rhythmNoteSeLevel(.008,settings.volume/100*settings.holdVolume/100));}catch{}
+    }
+    if(holdVoices.size&&!holdWatch&&typeof setInterval==='function'){
+      holdWatch=setInterval(()=>{if(holdNow()-holdLastSync>HOLD_WATCH_MS)holdStopAll();},HOLD_WATCH_MS/2);
+    }
+    return holdVoices.size;
+  };
+  // 設定画面の試聴用。1.2秒だけ溜めて止める
+  const previewHold=settings=>{
+    if(!settings.enabled||settings.volume<=0||settings.holdVolume<=0||!rhythmAudioGloballyEnabled())return false;
+    const audio=context();
+    if(!audio)return false;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    holdStopVoice('preview',.03);
+    try{holdStartVoice(audio,'preview','HOLD',rhythmNoteSeLevel(.008,settings.volume/100*settings.holdVolume/100));}catch{return false;}
+    if(typeof setTimeout==='function')setTimeout(()=>holdStopVoice('preview',.12),1200);
+    return true;
+  };
+  // 設定画面の試聴。kind … 'tap' / 'flick' / 'end' / 'hold'
   // 作り置きがまだなら、作り終わってから鳴らす(はじめの1回だけ、ほんの少し遅れる)
   const preview=(previewSettings,kind='tap',judgment='MARVELOUS')=>{
     const settings=settingsFrom(previewSettings);
+    if(kind==='hold')return previewHold(settings);
     const run=()=>voice(settings,kind,judgment,kind==='flick'?settings.flickVolume/100:kind==='end'?settings.endVolume/100:1);
     if(settings.type==='CLASSIC'||ready(settings.type))return run();
     warm();
@@ -2030,7 +2167,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     });
     return true;
   };
-  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,_readSettings:readSettings};
+  return {warm,prepare,play,playClear,playFlick,playMonster,preview,playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,holdSync,holdStopAll,_holdVoiceCount:()=>holdVoices.size,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -15939,6 +16076,329 @@ const makutsuNoSenritsuCharts=Object.freeze({
   EXPERT:mhChart(7,makutsuNoSenritsuExpertNotes,MAKUTSU_NO_SENRITSU_DURATION_MS,6),
   MASTER:mhChart(9,makutsuNoSenritsuMasterNotes,MAKUTSU_NO_SENRITSU_DURATION_MS,6),
 });
+const ONLY_MY_RAILGUN_DURATION_MS=90000;
+const onlyMyRailgunEasyNotes=((t,h,f,s)=>[
+// <only-my-railgun-v3-easy-notes>
+  t(1831,1,4,0),t(2670,3,4,0),t(3510,5,4,0),t(4349,7,4,0),
+  t(4768,4,6,0),t(5188,0,3,0),t(5188,9,3,0),t(6027,6,6,0),
+  t(6656,7,4,0),t(6866,5,4,0),h(7286,8,3,7915,0,[[7286,8,3],[7600,7,4],[7915,6,6]]),h(8125,5,4,8649),
+  t(9803,3,4,0),t(10223,0,12,0),t(10433,3,4,0),t(11691,1,4,0),
+  t(11901,3,4,0),t(12321,5,4,0),t(12531,7,4,0),t(13999,3,4,0),
+  t(14838,4,6,0),t(15258,7,4,0),t(15677,5,4,0),t(16517,4,6,0),
+  t(16726,3,4,0),t(17356,1,4,0),t(17775,0,4,0),t(18195,0,6,0),
+  t(18614,0,6,0),t(19454,2,6,1),t(19873,0,3,0),t(19873,9,3,0),
+  t(20293,7,4,0),t(20712,8,4,0),t(21132,7,4,0),t(21552,8,4,0),
+  t(21761,7,4,0),t(22810,1,4,0),t(23230,3,4,0),t(24069,5,4,0),
+  t(24489,3,4,0),t(24908,1,4,0),t(26167,0,3,0),h(26796,0,4,28475),
+  t(28684,0,4,0),h(29524,1,4,30258),h(31202,3,4,32041),h(32461,6,3,33195,0,[[32461,6,3],[32880,4,6],[33195,6,3]]),
+  t(33719,0,12,0),t(34558,7,4,0),t(35188,6,6,0),t(36656,6,6,2),
+  t(37076,4,6,0),t(37915,2,6,0),t(38754,0,6,0),t(39593,0,4,0),
+  t(40013,1,4,0),t(40852,3,4,0),t(42111,0,6,0),t(43370,3,4,0),
+  t(43789,1,4,0),t(44628,0,6,0),t(45468,1,4,0),t(45887,2,6,0),
+  t(47146,5,4,0),t(48195,7,4,0),t(48824,6,6,0),t(50083,5,4,0),
+  t(50293,6,6,0),t(50922,8,4,0),t(52181,5,4,0),t(52600,7,4,0),
+  t(53020,8,4,0),t(53440,7,4,0),t(53859,6,6,3),t(54279,8,4,0),
+  t(54698,7,4,0),t(54908,6,6,0),t(55538,7,4,0),t(56377,5,4,0),
+  t(57216,2,6,0),t(58055,0,6,0),t(58475,3,4,0),t(59314,1,4,0),
+  t(59733,0,6,0),t(60153,0,3,0),t(60153,9,3,0),t(60992,3,4,0),
+  t(61412,5,4,0),t(61831,3,4,0),t(62670,1,4,0),t(63090,3,4,0),
+  t(63510,1,4,0),t(63929,0,4,0),t(64349,0,6,0),t(64768,3,4,0),
+  t(65188,5,4,0),t(65607,7,4,0),t(66027,8,4,0),t(66447,0,12,0),
+  t(66866,6,6,0),t(67286,8,4,0),t(67496,7,4,0),t(68125,5,4,0),
+  t(68545,5,4,0),t(69803,3,4,0),t(70223,5,4,0),t(70642,3,4,0),
+  t(71062,5,4,0),t(71482,7,4,4),t(71901,5,4,0),t(73160,1,4,0),
+  t(73579,2,6,0),t(73999,5,3,0),t(74209,7,4,0),t(74838,7,4,0),
+  t(75258,8,4,0),t(75677,7,4,0),t(76097,8,4,0),t(76517,5,4,0),
+  t(76936,6,6,0),t(77775,8,4,0),t(78195,7,4,0),t(78614,4,6,0),
+  t(79034,3,4,0),t(79454,5,4,0),t(80293,7,4,0),t(80712,1,4,0),
+  t(81132,2,6,0),h(81551,5,3,81971),t(82391,7,4,0),t(82810,5,4,0),
+  t(83649,7,4,0),t(84069,5,4,0),t(84489,3,4,0),t(84908,1,4,0),
+  t(85328,0,4,0),t(85747,1,4,0),t(85957,0,4,0),t(86586,1,4,0),
+  t(87006,3,4,0),t(87216,4,6,0),t(87845,7,4,0),t(88684,8,4,0),
+// </only-my-railgun-v3-easy-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+
+const onlyMyRailgunNormalNotes=((t,h,f,s)=>[
+// <only-my-railgun-v3-normal-notes>
+  t(1831,5,3,0),t(2670,9,3,0),t(3510,5,3,0),t(4349,9,3,0),
+  t(4768,2,6,0),t(5188,0,3,0),t(5188,9,3,0),t(6027,9,3,0),
+  t(6027,0,3,0),t(6447,8,4,0),t(6656,7,3,0),t(6866,9,3,0),
+  h(7286,8,2,7915,0,[[7286,8,2],[7600,7,4],[7915,6,6]]),h(8125,9,3,8649),t(8964,3,3,0),t(9803,7,3,0),
+  t(10223,0,12,0),t(10433,8,4,0),t(11691,5,4,0),t(11901,1,3,0),
+  t(12321,5,3,0),t(12531,9,3,0),t(12740,5,3,0),t(13999,3,3,0),
+  t(14419,5,3,0),t(14838,6,6,0),t(15258,9,3,0),t(15677,9,3,0),
+  t(16517,6,6,0),t(16726,5,4,0),t(16936,3,3,0),t(17356,5,3,0),
+  t(17775,3,3,0),t(18195,0,6,0),t(18614,0,6,0),t(19034,0,3,1),
+  t(19454,2,6,0),t(19873,0,3,0),t(19873,9,3,0),t(20293,7,3,0),
+  t(20712,9,3,0),t(21132,7,3,0),t(21552,9,3,0),t(21761,8,4,0),
+  f(21971,9,3),t(22810,9,3,0),t(23230,1,3,0),t(23649,3,3,0),
+  f(24069,5,3),t(24489,7,3,0),t(24908,9,3,0),t(26167,6,2,0),
+  h(26796,8,4,28475),t(28684,7,3,0),h(29524,9,3,30258),h(31202,9,3,32041),
+  h(32461,8,2,33195,1,[[32461,8,2],[32880,6,6],[33195,8,2]]),t(33719,0,12,0),t(34558,7,3,0),f(35188,2,6),
+  t(36237,0,6,0),t(36656,0,6,2),t(37076,0,6,0),f(37915,0,6),
+  t(38754,0,6,0),t(39593,1,3,0),t(40013,0,3,0),t(40852,1,3,0),
+  t(41691,3,3,0),t(42111,6,6,0),t(43370,3,3,0),t(43789,7,3,0),
+  t(44628,4,6,0),t(45468,7,3,0),t(45887,6,6,0),t(47146,5,3,0),
+  t(48195,3,3,0),t(48824,4,6,0),t(50083,3,3,0),t(50293,6,6,0),
+  t(50503,4,6,0),t(50922,9,3,0),t(51761,7,3,0),t(52181,5,3,0),
+  t(52600,3,3,0),t(53020,1,3,0),t(53440,0,3,0),t(53649,0,3,0),
+  t(53859,0,6,0),t(54279,1,4,3),t(54698,3,4,0),t(54908,0,6,0),
+  t(55118,4,2,0),t(55538,1,3,0),f(56377,0,3),t(57216,0,6,0),
+  t(57635,3,3,0),t(58055,0,6,0),t(58475,3,3,0),t(59314,1,3,0),
+  t(59733,0,6,0),t(60153,0,3,0),t(60153,9,3,0),t(60572,0,3,0),
+  t(60572,9,3,0),t(60992,1,3,0),t(61412,3,3,0),t(61831,5,3,0),
+  t(62670,7,3,0),t(63090,9,3,0),t(63510,7,4,0),t(63929,5,3,0),
+  t(64349,2,6,0),t(64768,5,3,0),t(65188,7,3,0),t(65607,9,3,0),
+  t(66027,7,3,0),t(66447,0,12,0),t(66866,2,6,0),t(67286,1,3,0),
+  t(67496,1,3,0),t(68125,3,3,0),t(68545,5,3,0),t(69384,3,3,0),
+  t(69803,3,3,0),t(70223,5,3,0),t(70642,3,3,0),t(71062,1,3,0),
+  t(71482,0,3,4),t(71901,1,3,0),t(73160,0,3,0),t(73579,0,6,0),
+  t(73789,0,4,0),t(73999,0,2,0),t(74838,5,3,0),t(75258,3,3,0),
+  t(75677,1,3,0),t(76097,0,3,0),t(76517,1,3,0),t(76936,4,6,0),
+  t(77146,3,4,0),t(77775,7,3,0),f(78195,7,3),t(78614,6,6,0),
+  t(79034,9,3,0),t(79454,9,3,0),t(79873,7,3,0),f(80293,5,3),
+  t(80712,3,3,0),t(81132,0,6,0),h(81551,4,2,81971,1),t(82391,5,3,0),
+  t(82810,3,3,0),t(83649,1,3,0),t(84069,5,3,0),t(84279,1,3,0),
+  t(84489,3,3,0),t(84908,0,3,0),t(85328,1,3,0),t(85747,1,3,0),
+  t(85957,1,4,0),t(86167,1,3,0),t(86586,0,3,0),t(86796,1,3,0),
+  t(87006,0,3,0),f(87845,1,4),t(88684,0,4,0),
+// </only-my-railgun-v3-normal-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+
+const onlyMyRailgunHardNotes=((t,h,f,s)=>[
+// <only-my-railgun-v3-hard-notes>
+  t(1831,3,3,0),t(2670,5,3,0),t(2880,8,1,0),t(3510,5,3,0),
+  t(3929,3,3,0),t(4349,5,3,0),t(4768,4,8,0),t(4978,7,5,0),
+  t(5188,2,4,0),t(5188,9,3,0),t(5607,7,4,0),t(5607,1,3,0),
+  t(6027,2,4,0),t(6027,9,3,0),t(6447,3,4,0),t(6656,1,3,0),
+  t(6866,3,3,0),t(7076,1,3,0),h(7286,4,1,7915,0,[[7286,4,1],[7600,3,3],[7915,2,5]]),h(8125,3,3,8649),
+  t(8964,5,3,0),t(9803,7,3,0),t(10013,7,5,0),t(10223,4,8,0),
+  t(10433,8,4,0),t(10538,7,3,0),t(11586,3,4,0),t(11691,7,4,0),
+  t(11901,5,3,0),t(12111,8,4,0),t(12321,7,3,0),t(12531,9,3,0),
+  t(12740,7,3,0),t(13999,5,3,0),t(14419,3,3,0),t(14838,0,5,0),
+  t(15048,0,4,0),t(15258,1,3,0),t(15677,0,3,0),t(16307,1,4,0),
+  t(16517,2,5,0),t(16621,1,4,0),t(16936,3,3,0),t(17356,1,3,0),
+  t(17775,0,3,0),t(17985,0,3,0),t(18195,0,5,0),t(18614,2,4,0),
+  t(18614,9,3,0),t(19034,1,3,1),t(19454,2,5,0),t(19558,1,4,0),
+  t(19873,2,5,0),t(20293,5,3,0),t(20398,5,4,0),t(20712,7,3,0),
+  t(21132,5,3,0),t(21237,7,4,0),t(21552,9,3,0),t(21761,8,4,0),
+  t(21971,9,3,0),f(22391,9,3),t(22810,5,3,0),t(23230,7,3,0),
+  t(23440,9,3,0),t(23649,7,3,0),f(24069,3,3),t(24489,5,3,0),
+  t(24908,7,3,0),t(25118,9,3,0),t(26482,7,4,0),s(26796,28475,[[26796,4,4],[26901,2,4],[27006,2,3],[27111,2,3,3],[27216,2.5,3],[27426,2.5,3],[27635,2.5,2],[27845,2.5,3],[28055,2.5,3],[28265,2.5,3,3],[28475,3,4]]),
+  t(28684,7,3,0),t(29104,3,3,0),s(29524,30258,[[29524,2,4],[29628,2,4,3],[29733,1.5,4],[29943,1.5,4],[30153,0,4],[30258,0,4]]),t(30363,5,3,0),
+  h(31202,1,3,32041),s(32461,33195,[[32461,1,4],[32565,1,3],[32670,1,3],[32775,1,2],[32880,0,2],[32985,0,3],[33090,1.5,3],[33195,1.5,4]]),f(33300,0,5),t(33719,0,8,0),
+  t(34558,1,3,0),t(34978,3,3,0),f(35188,0,5),t(36237,2,5,0),
+  t(36656,4,5,2),t(37076,2,5,0),f(37915,0,5),t(38545,2,5,0),
+  t(38754,4,5,0),t(39593,5,3,0),t(39803,8,4,0),t(40013,5,3,0),
+  t(40852,1,3,0),t(41482,5,3,0),f(41691,9,3),t(42111,4,5,0),
+  t(43160,6,5,0),t(43370,5,3,0),t(43789,7,3,0),t(44628,4,5,0),
+  t(45468,1,3,0),t(45887,2,5,0),t(46307,5,3,0),t(46726,7,3,0),
+  t(47146,9,3,0),t(48195,9,3,0),t(48824,6,5,0),t(49244,5,3,0),
+  t(49454,3,3,0),t(50083,3,3,0),t(50293,4,5,0),t(50503,2,5,0),
+  t(50922,1,3,0),t(51551,2,5,0),t(51761,1,3,0),t(52181,0,3,0),
+  t(52600,1,3,0),t(53020,0,3,3),t(53440,1,3,0),t(53545,0,4,0),
+  t(53859,0,5,0),t(54069,3,4,0),t(54279,1,4,0),t(54489,3,3,0),
+  t(54698,1,4,0),t(54908,4,5,0),t(55118,4,1,0),t(55328,1,3,0),
+  t(55538,3,3,0),t(55957,3,3,0),f(56377,5,3),t(57006,7,3,0),
+  t(57216,7,5,0),t(57635,9,3,0),t(58055,6,5,0),t(58265,5,4,0),
+  t(58475,7,3,0),t(59314,5,3,0),t(59733,2,5,0),t(60153,0,5,0),
+  t(60363,0,4,0),t(60572,1,3,0),t(60782,0,4,0),t(60992,1,3,0),
+  t(61412,3,3,0),t(61831,5,3,0),t(62251,4,1,0),t(62670,5,3,0),
+  t(63090,7,3,0),t(63510,5,4,0),t(63719,7,3,0),t(63929,9,3,0),
+  t(64349,6,5,0),t(64768,3,3,0),t(65188,5,3,0),t(65398,7,4,0),
+  t(65607,9,3,0),t(66027,7,3,0),t(66447,3,8,0),t(66656,3,4,0),
+  t(66866,4,5,0),t(67076,1,4,0),t(67286,0,3,0),t(67391,1,4,0),
+  t(67810,0,4,0),t(68125,1,3,0),t(68545,3,3,0),t(68859,1,3,0),
+  t(69384,0,3,0),t(69803,0,3,0),t(70223,3,3,0),t(70433,0,4,0),
+  t(70433,7,3,0),t(70642,3,3,0),t(71062,1,3,0),t(71482,3,3,4),
+  t(71901,5,3,0),t(72111,7,4,0),t(72845,7,4,0),t(73160,7,3,0),
+  t(73579,7,5,0),t(73789,8,4,0),t(73999,6,1,0),t(74209,8,4,0),
+  t(74838,5,3,0),t(74943,8,4,0),t(75258,5,3,0),t(75468,3,3,0),
+  t(75677,5,3,0),t(76097,7,3,0),t(76202,8,4,0),t(76517,7,3,0),
+  t(76936,7,5,0),t(77041,7,4,0),t(77775,5,3,0),f(78195,5,3),
+  t(78614,6,5,0),t(78824,7,4,0),t(79034,5,3,0),t(79454,7,3,0),
+  t(79873,9,3,0),t(80083,7,3,0),f(80293,3,3),t(80712,7,3,0),
+  t(81132,4,5,0),t(81237,8,4,0),h(81551,8,1,81971,1),t(82391,5,3,0),
+  t(82496,3,4,0),t(82810,1,3,0),t(83230,6,1,0),t(83649,1,3,0),
+  t(84069,3,3,0),t(84174,0,4,0),t(84489,1,3,0),t(84908,3,3,0),
+  t(85118,5,4,0),t(85328,3,3,0),t(85747,7,3,0),t(85852,8,4,0),
+  t(86167,7,3,0),t(86272,8,4,0),t(86586,7,3,0),t(86796,9,3,0),
+  t(86901,6,5,0),t(87216,7,4,0),t(87216,1,3,0),f(87845,5,4),
+  t(88684,8,4,0),
+// </only-my-railgun-v3-hard-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+
+const onlyMyRailgunExpertNotes=((t,h,f,s)=>[
+// <only-my-railgun-v3-expert-notes>
+  t(1831,5,3,0),t(2670,7,3,0),t(2880,10,1,0),t(3510,0,2,0),
+  t(3510,4,2,0),t(3929,3,2,0),t(3929,7,2,0),t(4349,6,2,0),
+  t(4349,10,2,0),t(4768,3,8,0),t(4873,7,5,0),t(4978,4,5,0),
+  t(5188,6,5,0),t(5398,9,3,0),t(5607,7,4,0),t(6027,4,5,0),
+  t(6447,7,4,0),t(6656,5,3,0),t(6866,7,3,0),t(7076,3,3,0),
+  t(7181,5,3,0),h(7286,4,1,7915,0,[[7286,4,1],[7600,3,3],[7915,2,5]]),h(8125,5,3,8649),t(8964,5,3,0),
+  t(9803,3,3,0),t(10013,0,4,0),t(10013,7,3,0),t(10223,0,8,0),
+  t(10433,1,4,0),t(10538,5,3,0),t(11586,3,4,0),t(11691,7,4,0),
+  t(11901,5,3,0),t(12111,8,4,0),t(12321,7,3,0),t(12426,5,4,0),
+  t(12531,3,3,0),t(12740,1,3,0),f(12845,0,4),t(13999,3,3,0),
+  t(14104,7,4,0),t(14419,5,3,0),t(14838,2,2,0),t(14838,6,2,0),
+  t(15048,4,2,0),t(15048,8,2,0),t(15258,2,2,0),t(15258,6,2,0),
+  t(15677,7,3,0),t(16307,8,4,0),t(16517,6,5,0),t(16621,5,4,0),
+  t(16726,3,4,0),t(16936,1,3,0),t(17356,0,3,1),t(17775,1,3,0),
+  t(17985,3,3,0),t(18195,0,5,0),t(18405,0,4,0),t(18614,2,5,0),
+  t(18719,1,4,0),t(19034,5,3,0),t(19454,2,5,0),t(19558,5,4,0),
+  t(19873,0,3,0),t(19873,6,4,0),t(20293,9,3,0),t(20398,5,4,0),
+  t(20712,9,3,0),t(21132,5,3,0),t(21237,8,4,0),t(21447,9,3,0),
+  t(21552,7,3,0),t(21761,5,4,0),t(21971,7,3,0),f(22391,3,3),
+  t(22810,7,3,0),t(22915,5,4,0),t(23230,9,3,0),t(23440,5,3,0),
+  t(23649,7,3,0),f(24069,9,3),t(24489,7,3,0),t(24908,5,3,0),
+  t(25118,7,3,0),t(26167,0,1,0),t(26482,1,4,0),s(26796,28475,[[26796,2,4],[26901,0,4],[27006,0,3],[27111,0,3],[27216,0,3],[27426,0,3],[27635,0,2],[27845,0,3],[28055,0,3],[28265,0,3,3],[28475,1,4]]),
+  s(26796,28475,[[26796,4,2,3],[28475,3,2]]),t(28684,1,3,0),t(29104,0,3,0),s(29524,30258,[[29524,1.5,4],[29628,1.5,4,3],[29733,1,4],[29943,1,4,3],[30153,0,4],[30258,0,4]]),
+  t(30363,3,3,0),t(30782,0,3,0),h(31202,3,3,32041),t(31621,0,3,0),
+  s(32461,33195,[[32461,1.5,4,3],[32565,1,3],[32670,1,3],[32775,1,2],[32880,0,2],[32985,0,3],[33090,2,3],[33195,2,4]]),f(33300,2,5),t(33719,0,8,0),t(34558,3,3,2),
+  t(34978,1,3,0),t(35188,2,5,0),t(35398,0,5,0),f(36237,0,5),
+  t(36656,0,5,0),t(36866,4,5,0),t(37076,2,5,0),f(37915,4,5),
+  t(38545,2,5,0),t(38754,0,5,0),t(38964,3,4,0),t(39593,5,3,0),
+  t(39803,8,4,0),t(40013,5,3,0),t(40852,1,3,0),t(41482,5,3,0),
+  f(41691,9,3),t(42111,4,5,0),t(43160,6,5,0),t(43370,3,3,0),
+  t(43579,5,4,0),t(43789,1,3,0),t(44628,2,5,0),t(45468,3,3,0),
+  t(45887,4,5,0),t(46307,7,3,0),t(46726,9,3,0),t(47146,9,3,0),
+  t(47985,7,3,0),t(48195,5,3,0),t(48824,6,5,0),t(49244,7,3,0),
+  t(49454,7,3,0),t(50083,9,3,0),t(50293,7,5,0),t(50503,6,5,0),
+  t(50922,5,3,0),t(51132,3,4,0),t(51551,4,5,0),t(51761,5,3,0),
+  t(52181,1,3,0),t(52286,3,4,0),t(52600,0,3,0),t(53020,0,3,0),
+  t(53125,1,4,0),t(53440,0,3,0),t(53545,1,4,0),t(53649,3,3,0),
+  t(53859,0,4,0),t(53859,7,3,0),t(54069,0,4,0),t(54279,1,4,0),
+  t(54489,0,3,0),t(54698,3,4,0),t(54803,0,4,0),t(54908,2,5,0),
+  t(55118,6,1,0),t(55328,3,3,0),t(55538,1,3,0),t(55957,3,3,3),
+  f(56377,0,3),t(57006,1,3,0),t(57216,2,5,0),t(57635,5,3,0),
+  t(57950,7,4,0),t(58055,2,5,0),t(58265,5,4,0),t(58475,1,3,0),
+  t(59314,0,3,0),t(59733,2,5,0),t(59838,1,4,0),t(60153,2,4,0),
+  t(60153,9,3,0),t(60363,5,4,0),t(60572,1,3,0),t(60572,7,3,0),
+  t(60782,8,4,0),t(60992,7,3,0),t(61097,3,4,0),t(61412,5,3,0),
+  t(61831,3,3,0),t(62251,2,1,0),t(62670,5,3,0),t(63090,7,3,0),
+  t(63510,0,3,0),t(63510,6,4,0),t(63719,3,3,0),t(63929,3,3,0),
+  t(64349,0,5,0),t(64558,0,3,0),t(64768,1,3,0),t(65188,0,3,0),
+  t(65293,1,4,0),t(65398,0,4,0),t(65607,1,3,0),t(66027,0,3,0),
+  t(66447,0,8,0),t(66551,0,4,0),t(66656,1,4,0),t(66866,0,5,0),
+  t(67076,0,4,0),t(67286,1,3,0),t(67391,0,4,0),t(67496,0,3,0),
+  t(67810,3,4,0),t(68125,1,3,0),t(68230,5,4,0),t(68545,3,3,0),
+  f(68859,5,3),t(69384,7,3,0),t(69803,9,3,0),t(70223,7,3,0),
+  t(70433,0,3,0),t(70433,6,4,0),t(70642,7,3,0),t(71062,7,3,4),
+  t(71482,7,3,0),t(71691,8,4,0),t(71901,7,3,0),t(72111,8,4,0),
+  t(72845,5,4,0),t(73160,9,3,0),t(73579,4,5,0),t(73684,1,4,0),
+  t(73789,1,4,0),t(73999,2,1,0),t(74209,3,4,0),t(74838,5,3,0),
+  t(74943,3,4,0),t(75258,7,3,0),t(75363,5,4,0),t(75468,9,3,0),
+  f(75677,5,3),t(76097,7,3,0),t(76202,5,4,0),t(76412,7,4,0),
+  t(76517,9,3,0),t(76936,6,5,0),t(77041,8,4,0),t(77146,7,4,0),
+  t(77565,5,4,0),t(77775,5,3,0),f(78195,7,3),t(78614,6,5,0),
+  t(78824,3,4,0),t(79034,7,3,0),t(79454,5,3,0),t(79558,8,4,0),
+  t(79873,9,3,0),t(80083,7,3,0),f(80293,9,3),t(80712,7,3,0),
+  t(80817,3,4,0),t(81132,0,5,0),t(81237,3,4,0),h(81551,8,1,81971,1),
+  t(82391,9,3,0),t(82496,7,4,0),t(82810,5,3,0),t(83020,3,4,0),
+  t(83230,6,1,0),t(83649,1,3,0),t(84069,3,3,0),t(84174,0,4,0),
+  t(84279,1,3,0),t(84489,3,3,0),t(84908,1,3,0),t(85013,0,4,0),
+  t(85118,0,4,0),t(85328,1,3,0),t(85747,0,3,0),t(85852,1,4,0),
+  t(85957,3,4,0),t(86167,1,3,0),t(86272,3,4,0),t(86586,0,3,0),
+  t(86691,0,4,0),t(86796,3,3,0),t(86901,0,5,0),t(87006,3,3,0),
+  t(87216,2,5,0),f(87845,5,4),t(88265,7,4,0),t(88684,8,4,0),
+// </only-my-railgun-v3-expert-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+
+const onlyMyRailgunMasterNotes=((t,h,f,s)=>[
+// <only-my-railgun-v3-master-notes>
+  t(1831,6,2,0),t(2670,8,2,0),t(2775,5,3,0),t(2880,8,1,0),
+  t(3510,4,2,0),t(3929,6,2,0),t(4349,8,2,0),t(4768,6,6,0),
+  t(4873,7,4,0),t(4978,8,4,0),t(5188,7,4,0),t(5398,6,2,0),
+  t(5398,10,2,0),t(5607,7,3,0),t(6027,0,3,0),t(6027,5,4,0),
+  t(6237,2,2,0),t(6237,6,2,0),t(6447,4,2,0),t(6447,8,2,0),
+  t(6656,2,2,0),t(6656,6,2,0),t(6866,4,2,0),t(6866,8,2,0),
+  t(7076,4,2,0),t(7181,2,2,0),h(7286,7,1,7915,0,[[7286,7,1],[7600,6,3],[7915,5,4]]),h(8125,8,2,8649),
+  t(8964,10,2,0),t(9279,8,2,0),t(9489,3,3,0),t(9803,6,2,0),
+  t(10013,2,3,0),t(10013,7,4,0),t(10223,4,6,0),t(10433,3,3,0),
+  t(10538,8,2,0),t(11586,5,3,0),t(11691,3,3,0),t(11901,6,2,0),
+  t(12111,3,3,0),t(12321,0,2,0),t(12426,3,3,0),t(12531,2,2,0),
+  t(12740,6,2,0),f(12845,3,3,1),t(13265,0,3,0),t(13999,4,2,0),
+  t(14104,7,3,0),t(14419,4,2,0),t(14838,2,2,0),t(14838,6,2,0),
+  t(15048,3,2,0),t(15048,7,2,0),t(15258,3,2,0),t(15258,7,2,0),
+  t(15468,4,2,0),t(15468,8,2,0),t(15677,2,2,0),t(16307,5,3,0),
+  t(16517,1,4,0),t(16621,0,3,0),t(16726,3,3,0),t(16936,2,2,0),
+  t(17356,6,2,1),t(17775,8,2,0),t(17880,3,3,0),t(17985,6,2,0),
+  t(18195,1,4,0),t(18405,0,3,0),t(18614,1,4,0),t(18719,0,3,0),
+  t(19034,2,2,0),t(19454,3,4,0),t(19558,5,3,0),t(19873,7,4,0),
+  t(19978,5,3,0),t(20293,6,2,0),t(20398,9,3,0),t(20712,6,2,0),
+  t(21132,10,2,0),t(21237,5,3,0),t(21447,10,2,0),t(21552,6,2,0),
+  t(21656,9,3,0),t(21761,7,3,0),t(21971,8,2,0),f(22391,10,2,2),
+  t(22810,10,2,0),t(22915,7,3,0),t(23230,6,2,0),t(23440,4,2,0),
+  t(23649,6,2,0),t(23754,1,3,0),f(24069,4,2),t(24489,6,2,0),
+  t(24908,4,2,0),t(24908,8,2,0),t(25118,2,2,0),t(25223,4,2,0),
+  t(25538,8,2,0),t(26167,4,1,0),t(26482,0,3,0),s(26796,28475,[[26796,2,3],[26901,0,3],[27006,0,2],[27111,0,2],[27216,0,2],[27426,0,2],[27635,0,2],[27845,0,2],[28055,0,2],[28265,0,2,3],[28475,1,3]]),
+  s(26796,28475,[[26796,4,2,3],[28475,3,2]]),t(28684,2,2,0),t(29104,0,2,0),s(29524,30258,[[29524,1.5,3],[29628,1.5,3,3],[29733,1,3],[29943,1,3,3],[30153,0,3],[30258,0,3]]),
+  t(30363,4,2,0),t(30782,2,2,0),t(30782,6,2,0),t(31202,4,2,0),
+  t(31202,8,2,0),t(31621,6,2,0),t(31621,10,2,0),s(32041,33195,[[32041,4,2,1],[32146,4.5,2,2],[32251,5,2],[32356,5,2],[32461,5,2],[32565,5,2],[32670,5,2],[32775,5,2],[32880,4,2],[32985,4,3],[33090,5,3],[33195,5,3]]),
+  s(32251,32775,[[32251,1,2,3],[32775,3,2]]),f(33300,7,4,1),t(33719,4,6,0),t(34139,10,2,0),
+  t(34558,4,2,2),t(34978,6,2,0),t(35188,7,4,0),t(35398,8,4,0),
+  f(36237,7,4,1),t(36656,8,4,0),t(36866,7,4,0),t(37076,8,4,0),
+  t(37915,5,4,0),f(38125,7,4,2),t(38545,8,4,0),t(38754,7,4,0),
+  t(38964,5,3,0),t(39593,4,2,0),t(39803,1,3,0),t(40013,4,2,0),
+  t(40852,2,2,0),t(41482,0,2,0),f(41691,2,2,1),t(42111,0,4,0),
+  t(43160,3,2,0),t(43160,7,2,0),t(43370,3,2,0),t(43370,8,2,0),
+  t(43579,2,2,0),t(43579,8,2,0),t(43789,2,2,0),t(43789,9,2,0),
+  f(44628,1,4,1),t(45048,2,2,0),t(45468,4,2,0),t(45887,1,4,0),
+  t(46307,4,2,0),t(46517,3,3,0),t(46726,6,2,0),t(47146,8,2,0),
+  t(47985,10,2,0),t(48195,10,2,0),t(48824,6,6,3),t(49244,10,2,0),
+  t(49454,8,2,0),t(49768,3,3,0),t(50083,6,2,0),t(50293,3,4,0),
+  t(50503,1,4,0),t(50922,6,2,0),t(51132,1,3,0),t(51551,3,4,0),
+  t(51761,0,2,0),t(52181,4,2,0),t(52286,7,3,0),t(52600,4,2,0),
+  t(53020,0,2,0),t(53125,3,3,0),t(53440,6,2,0),t(53545,3,3,0),
+  t(53649,6,2,0),t(53754,1,3,0),t(53859,5,4,0),t(53964,3,3,0),
+  t(54069,7,3,0),t(54279,4,3,0),t(54279,9,3,0),t(54489,8,2,0),
+  t(54698,9,3,0),t(54803,7,3,0),t(54908,5,4,0),t(55118,2,1,0),
+  t(55328,0,2,0),t(55538,2,2,0),t(55957,4,2,0),t(56062,7,3,0),
+  f(56377,4,2,1),t(57006,8,2,0),t(57216,2,3,0),t(57216,7,4,0),
+  t(57531,10,2,0),t(57635,8,2,0),t(57950,9,3,0),t(58055,8,4,0),
+  t(58265,7,3,0),t(58475,6,2,0),t(59314,4,2,0),t(59733,1,4,0),
+  t(59838,5,3,0),t(60153,3,4,0),t(60153,9,3,0),t(60363,7,3,0),
+  t(60572,6,2,0),t(60572,10,2,0),t(60782,9,3,0),t(60992,6,2,0),
+  t(61097,9,3,0),t(61412,6,2,0),t(61517,9,3,0),t(61831,6,2,0),
+  t(62251,10,1,0),t(62670,8,2,0),t(63090,4,2,0),t(63510,5,3,0),
+  t(63614,1,3,0),t(63719,4,2,0),t(63929,2,2,0),t(64349,3,4,0),
+  t(64558,6,2,0),t(64768,8,2,0),t(65188,10,2,0),t(65293,7,3,0),
+  t(65398,9,3,0),t(65607,6,2,0),t(66027,2,2,0),t(66447,4,6,0),
+  t(66551,9,3,0),t(66656,7,3,0),t(66866,8,4,0),t(66971,7,3,0),
+  t(67076,9,3,0),t(67286,6,2,0),t(67391,3,3,0),t(67496,2,2,0),
+  t(67810,0,3,0),t(68125,0,2,0),t(68230,3,3,0),t(68545,2,2,0),
+  f(68859,6,2,2),t(69384,6,2,0),t(69803,8,2,0),t(70223,10,2,0),
+  t(70433,7,4,0),t(70642,4,2,0),t(71062,6,2,4),t(71482,8,2,0),
+  t(71586,10,2,0),t(71691,5,3,0),t(71901,4,2,0),t(71901,8,2,0),
+  t(72111,9,3,0),t(72845,7,3,0),t(73160,6,2,0),t(73579,7,4,0),
+  t(73684,5,3,0),t(73789,4,3,0),t(73999,6,1,0),t(74209,3,3,0),
+  t(74524,1,3,0),t(74838,0,2,0),t(74943,1,3,0),t(75258,0,2,0),
+  t(75363,1,3,0),t(75468,0,2,0),f(75677,0,2,1),t(76097,2,2,0),
+  t(76202,0,3,0),t(76412,1,3,0),t(76517,4,2,0),t(76621,5,3,0),
+  t(76936,5,4,0),t(77041,9,3,0),t(77146,7,3,0),t(77565,5,3,0),
+  t(77775,4,2,0),f(78195,2,2,1),t(78614,0,4,0),t(78719,3,3,0),
+  t(78824,0,3,0),t(79034,4,2,0),t(79454,6,2,0),t(79558,1,3,0),
+  t(79873,4,2,0),t(80083,0,2,0),f(80293,4,2,2),t(80712,0,2,0),
+  t(80817,3,3,0),t(81132,7,4,0),t(81237,5,3,0),h(81551,8,1,81971),
+  t(82076,9,3,0),t(82391,2,2,0),t(82496,5,3,0),t(82810,4,2,0),
+  t(82915,5,3,0),t(83020,3,3,0),t(83230,2,1,0),t(83649,0,2,0),
+  t(84069,2,2,0),t(84174,0,3,0),t(84279,4,2,0),t(84489,6,2,0),
+  t(84908,8,2,0),t(85013,9,3,0),t(85118,7,3,0),t(85328,4,2,0),
+  t(85433,5,3,0),t(85747,2,2,0),t(85852,3,3,0),t(85957,5,3,0),
+  t(86167,4,2,0),t(86272,1,3,0),t(86586,2,2,0),t(86691,0,3,0),
+  t(86796,2,2,0),t(86901,0,4,0),t(87006,2,2,0),t(87111,5,2,0),
+  t(87216,1,4,0),f(87845,5,3,2),t(88265,7,3,0),t(88684,2,3,0),
+  t(88684,7,3,0),
+// </only-my-railgun-v3-master-notes>
+])(mhTap,mhHoldV2,mhFlick,mhSlideV2);
+
+const onlyMyRailgunCharts=Object.freeze({
+  EASY:mhChart(1,onlyMyRailgunEasyNotes,ONLY_MY_RAILGUN_DURATION_MS,6),
+  NORMAL:mhChart(3,onlyMyRailgunNormalNotes,ONLY_MY_RAILGUN_DURATION_MS,6),
+  HARD:mhChart(5,onlyMyRailgunHardNotes,ONLY_MY_RAILGUN_DURATION_MS,6),
+  EXPERT:mhChart(7,onlyMyRailgunExpertNotes,ONLY_MY_RAILGUN_DURATION_MS,6),
+  MASTER:mhChart(9,onlyMyRailgunMasterNotes,ONLY_MY_RAILGUN_DURATION_MS,6),
+});
 const theCityBeneathTheCometsCharts=Object.freeze({
   EASY:mhChart(1,theCityBeneathTheCometsEasyNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
   NORMAL:mhChart(3,theCityBeneathTheCometsNormalNotes,THE_CITY_BENEATH_THE_COMETS_DURATION_MS,6),
@@ -18014,6 +18474,7 @@ const RHYTHM_CHART_LEVELS = Object.freeze({
   makutsu_no_senritsu:Object.freeze({EASY:8,NORMAL:10,HARD:16,EXPERT:22,MASTER:27}),
   the_city_beneath_the_comets:Object.freeze({EASY:9,NORMAL:11,HARD:20,EXPERT:24,MASTER:35}),
   freedom_dive:Object.freeze({EASY:14,NORMAL:23,HARD:27,EXPERT:37,MASTER:49}),
+  only_my_railgun:Object.freeze({EASY:7,NORMAL:10,HARD:14,EXPERT:21,MASTER:29}),
   atsu_cup_theme_debug_short:Object.freeze({HARD:9}),
 // </rhythm-chart-levels>
 });
@@ -18457,6 +18918,15 @@ const RHYTHM_SONG_ENTRIES = [
     ])))
   }),
   Object.freeze({
+    songId:'only_my_railgun',
+    displayName:'only my railgun',
+    bgmTrackId:'melo_only_my_railgun',
+    artwork:'images/song-art/only-my-railgun.jpg?v=a79e2735865b',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
+      id,onlyMyRailgunCharts[id]||emptyRhythmChart()
+    ])))
+  }),
+  Object.freeze({
     songId:'atsu_cup_theme_debug_short',
     displayName:'あつ杯テーマ DEBUG 60s',
     debugDescription:'約60秒の総合テスト（正式候補・WIDTH TESTとは別）',
@@ -18606,6 +19076,7 @@ const RHYTHM_SONG_BEATS=Object.freeze({
   makutsu_no_senritsu:[416.947,38,4],
   the_city_beneath_the_comets:[351.976,1054.3,4],
   freedom_dive:[270.003,117,4],
+  only_my_railgun:[419.58,152.9,4],
 });
 const rhythmSongBeatGrid=songId=>{const row=RHYTHM_SONG_BEATS[songId];if(!Array.isArray(row))return null;const [beatMs,zeroMs,bar]=row.map(Number);return beatMs>50&&Number.isFinite(zeroMs)&&bar>=1?{beatMs,zeroMs,bar:Math.round(bar)}:null;};
 const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>{
@@ -18684,6 +19155,8 @@ const RHYTHM_DEMO_SONG_IDS=Object.freeze([
   // 2026-09-24 追加。タクティクスバトルのBGM(戦場=通常戦・魔窟=ボス戦)をモンヒロビートでも遊べるようにした。
   'senjou_no_shippuu',
   'makutsu_no_senritsu',
+  // 2026-09-28 追加。ユーザーからmp4で受け取った新曲。
+  'only_my_railgun',
 ]);
 // 1曲だけを指す場面(全国ランキングの既定など)のために先頭を別名で持つ。
 const RHYTHM_DEMO_SONG_ID=RHYTHM_DEMO_SONG_IDS[0];
@@ -18928,7 +19401,7 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-note]{z-index:2}
     /* 押したレーンの光の消え方(2026-09-26)。押した瞬間はすぐ光り、離すと約0.2秒でふわっと消える。
        動くのは opacity だけ(合成だけで済む)。軽量モードでは切り替えを瞬時にする */
-    [data-rhythm-sublane-feedback]{transition:opacity 190ms ease-out}
+    [data-rhythm-sublane-feedback]{transition:opacity 320ms ease-out}
     /* 叩いた瞬間は光り、指を置いたままなら約0.4秒で3割の明るさへ落ち着く(2026-09-26・ユーザー指摘
        「スライドやホールドを押してる最中もレーンが光ってる。他の音ゲーは押せてるような感じになってる」)。
        押さえている最中の合図は、レーンではなくノーツの側(判定ラインの接点の光)が受け持つ。
@@ -18977,13 +19450,15 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-hit-effect]>i{left:0;right:0;top:-7px;height:14px;transform-origin:center;
       background:radial-gradient(closest-side,#fff 0%,var(--rhythm-hit-color,#fff) 40%,rgba(255,255,255,0) 100%)}
     /* 立ち上がる光の柱: 判定ラインから上へ抜ける(チュウニズムの光柱) */
-    [data-rhythm-hit-effect]>b{left:0;right:0;bottom:0;height:96px;border-radius:999px 999px 0 0;
+    /* 高さは道の4割ほど(2026-09-27・参考動画)。canvas 版(drawOneHit)の min(200, 判定ラインまでの高さ×0.42) とそろえる */
+    [data-rhythm-hit-effect][data-hit-finish="1"]>b{height:clamp(120px,45vh,260px)}
+    [data-rhythm-hit-effect]>b{left:0;right:0;bottom:0;height:clamp(96px,34vh,200px);border-radius:14px 14px 0 0;
       transform-origin:bottom center;
       background:linear-gradient(to top,var(--rhythm-hit-color,#fff) 0%,rgba(255,255,255,.32) 42%,rgba(255,255,255,0) 100%)}
     /* はじける粒: 判定ラインから外へ飛ぶ。飛ぶ向きはCSSで固定なので毎回の計算は要らない */
     /* 粒の色は1つずつ変えられるようにしておく(MARVELOUSの虹)。
        ふだんは全部 --rhythm-hit-color と同じ値が入るので、見た目は変わらない */
-    [data-rhythm-hit-effect]>u{left:50%;top:0;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;
+    [data-rhythm-hit-effect]>u{left:50%;top:0;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;
       background:var(--rhythm-hit-color,#fff)}
     [data-rhythm-hit-effect]>u:nth-of-type(1){background:var(--rhythm-spark-color-1,var(--rhythm-hit-color,#fff))}
     [data-rhythm-hit-effect]>u:nth-of-type(2){background:var(--rhythm-spark-color-2,var(--rhythm-hit-color,#fff))}
@@ -18996,18 +19471,19 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-hit-effect][data-hit-precise="1"]>i{
       background:linear-gradient(90deg,#f87171,#fbbf24,#a3e635,#22d3ee,#a78bfa,#f472b6)}
     [data-rhythm-hit-effect][data-hit-precise="1"]>b{
-      background:linear-gradient(to top,#f472b6 0%,#a78bfa 24%,#22d3ee 46%,#a3e635 64%,rgba(251,191,36,.35) 82%,rgba(255,255,255,0) 100%)}
+      background:linear-gradient(to top,rgba(244,114,182,.78) 0%,rgba(167,139,250,.6) 24%,rgba(34,211,238,.44) 46%,rgba(163,230,53,.28) 64%,rgba(251,191,36,.12) 82%,rgba(255,255,255,0) 100%)}
     /* 上の判定ほど光を明るくする(2026-09-12・ユーザー指示
        「色合い発光を判定が上がるたびにもっときれいにめだつように」) */
     [data-rhythm-hit-effect][data-hit-judgment="MARVELOUS"]>i,
     [data-rhythm-hit-effect][data-hit-judgment="MARVELOUS"]>b{filter:brightness(1.22) saturate(1.15)}
     [data-rhythm-hit-effect][data-hit-judgment="EXCELLENT"]>i,
     [data-rhythm-hit-effect][data-hit-judgment="EXCELLENT"]>b{filter:brightness(1.12) saturate(1.1)}
-    [data-rhythm-hit-effect]>u:nth-of-type(1){--rhythm-spark-x:-54px;--rhythm-spark-y:-56px}
-    [data-rhythm-hit-effect]>u:nth-of-type(2){--rhythm-spark-x:-24px;--rhythm-spark-y:-86px}
-    [data-rhythm-hit-effect]>u:nth-of-type(3){--rhythm-spark-x:0px;--rhythm-spark-y:-104px}
-    [data-rhythm-hit-effect]>u:nth-of-type(4){--rhythm-spark-x:24px;--rhythm-spark-y:-86px}
-    [data-rhythm-hit-effect]>u:nth-of-type(5){--rhythm-spark-x:54px;--rhythm-spark-y:-56px}
+    /* 粒は横へ散らさず、上へ舞い上がる(2026-09-27・参考動画)。canvas 版の HIT_SPARK_OFFSETS と同じ値 */
+    [data-rhythm-hit-effect]>u:nth-of-type(1){--rhythm-spark-x:-30px;--rhythm-spark-y:-96px}
+    [data-rhythm-hit-effect]>u:nth-of-type(2){--rhythm-spark-x:-14px;--rhythm-spark-y:-150px}
+    [data-rhythm-hit-effect]>u:nth-of-type(3){--rhythm-spark-x:2px;--rhythm-spark-y:-124px}
+    [data-rhythm-hit-effect]>u:nth-of-type(4){--rhythm-spark-x:16px;--rhythm-spark-y:-168px}
+    [data-rhythm-hit-effect]>u:nth-of-type(5){--rhythm-spark-x:30px;--rhythm-spark-y:-110px}
     [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>i{animation:mhRhythmHitCore var(--rhythm-hit-ms,340ms) cubic-bezier(.16,.9,.3,1) 1}
     [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>b{animation:mhRhythmHitBeam var(--rhythm-hit-ms,340ms) cubic-bezier(.16,.9,.3,1) 1}
     [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>u{animation:mhRhythmHitSpark var(--rhythm-hit-ms,340ms) cubic-bezier(.16,.9,.3,1) 1}
@@ -19030,14 +19506,54 @@ const installRhythmGeometryStyles=()=>{
       14%{opacity:1;transform:scale(1) rotate(0deg)}
       100%{opacity:0;transform:scale(1.25,.8) rotate(4deg)}}
     [data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-hit-effect]>s{display:none}
+    /* フリックを取ったとき、払った向きへ吹き上がる炎の羽(2026-09-28・ユーザーが送ったアワーノーツの動画)。canvas 版の drawPlume と同じ絵
+       (rhythmPaintFlickPlume で1回だけ焼いた画像)を、根元を判定ラインに置いて向きへ傾ける。動かすのは transform と opacity だけ */
+    [data-rhythm-hit-effect]>em{position:absolute;display:block;opacity:0;left:50%;bottom:-4px;width:max(96px,190%);height:clamp(180px,80vh,720px);
+      transform:translateX(-50%) rotate(var(--rhythm-plume-tilt,0deg));transform-origin:50% 100%;pointer-events:none;font-style:normal;
+      background:var(--rhythm-plume-img,none) center bottom/100% 100% no-repeat}
+    /* 手前のレーンの光: 判定ラインから画面の下まで、レーンの形(手前ほど広い台形)でノーツの色に光る */
+    [data-rhythm-hit-effect]>small{position:absolute;display:block;opacity:0;top:0;left:-100%;width:300%;height:var(--mh-below-line-px,22vh);
+      pointer-events:none;clip-path:var(--rhythm-floor-clip,none);
+      background:linear-gradient(to bottom,rgba(var(--rhythm-plume-rgb,244,114,182),.62),rgba(var(--rhythm-plume-rgb,244,114,182),.18))}
+    [data-rhythm-hit-effect][data-hit-flick="up"]{--rhythm-plume-tilt:0deg;--rhythm-plume-img:var(--rhythm-plume-up);--rhythm-wisp-img:var(--rhythm-wisp-up);--rhythm-plume-rgb:244,114,182}
+    [data-rhythm-hit-effect][data-hit-flick="right"]{--rhythm-plume-tilt:34deg;--rhythm-plume-img:var(--rhythm-plume-right);--rhythm-wisp-img:var(--rhythm-wisp-right);--rhythm-plume-rgb:163,230,53}
+    [data-rhythm-hit-effect][data-hit-flick="left"]{--rhythm-plume-tilt:-34deg;--rhythm-plume-img:var(--rhythm-plume-left);--rhythm-wisp-img:var(--rhythm-wisp-left);--rhythm-plume-rgb:251,146,60}
+    /* 炎の舌: 根元から向きへ進みながら伸びて細くなり、消える。1本ずつの飛び方は JS が CSS 変数で渡す(canvas 版と同じ決め方) */
+    [data-rhythm-hit-effect]>ins{position:absolute;display:block;opacity:0;left:calc(50% + var(--wx0,0%));bottom:-2px;width:var(--ww,34px);height:var(--wl,110px);
+      margin-left:calc(var(--ww,34px) / -2);transform-origin:50% 100%;pointer-events:none;text-decoration:none;
+      /* CSS 版は光を足し算で重ねられないので、同じ絵を2枚重ねて明るさを canvas 版へ寄せる(合成の重い重ね方は使わない) */
+      background:var(--rhythm-wisp-img,none) center/100% 100% no-repeat,var(--rhythm-wisp-img,none) center/100% 100% no-repeat}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="up"]>ins,
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="right"]>ins,
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="left"]>ins{animation:mhRhythmHitWisp var(--wt,380ms) cubic-bezier(.25,.7,.35,1) var(--wd,0ms) 1 both}
+    @keyframes mhRhythmHitWisp{
+      0%{opacity:0;transform:translate(0,0) rotate(var(--wa0,0deg)) scale(.75,.55)}
+      12%{opacity:1}
+      100%{opacity:0;transform:translate(calc(var(--mh-above-line-px,300px) * var(--wsx,0)),calc(var(--mh-above-line-px,300px) * var(--wsy,-.5))) rotate(var(--wa1,0deg)) scale(.55,1.45)}}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="up"]>em,
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="right"]>em,
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="left"]>em{animation:mhRhythmHitPlume 460ms linear 1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="up"]>small,
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="right"]>small,
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="left"]>small{animation:mhRhythmHitFloor 460ms linear 1}
+    /* canvas 版と同じ: 0.15秒(32%)で大きくなり、42%まで明るさを保って消える */
+    /* 炎の体は最初の一瞬だけ薄く出して、舌のあいだを埋める(canvas 版と同じ: 12%で .62、50%で消える) */
+    @keyframes mhRhythmHitPlume{
+      0%{opacity:0;transform:translateX(-50%) rotate(var(--rhythm-plume-tilt,0deg)) scale(.85,.45)}
+      12%{opacity:.62;transform:translateX(-50%) rotate(var(--rhythm-plume-tilt,0deg)) scale(.92,.7)}
+      50%{opacity:0;transform:translateX(-50%) rotate(var(--rhythm-plume-tilt,0deg)) scale(1,1)}
+      100%{opacity:0;transform:translateX(-50%) rotate(var(--rhythm-plume-tilt,0deg)) scale(1,1)}}
+    @keyframes mhRhythmHitFloor{0%{opacity:.95}42%{opacity:.95}100%{opacity:0}}
     @keyframes mhRhythmHitCore{
       0%{opacity:0;transform:scale(.28,.4)}
       12%{opacity:1;transform:scale(1.02,1.9)}
       100%{opacity:0;transform:scale(1.34,.28)}}
+    /* 光の柱は 0.3秒の半ばまで明るさを保つ(2026-09-27・参考動画は3〜4コマ残る)。canvas 版の HIT_KEYS.beam と同じ値 */
     @keyframes mhRhythmHitBeam{
-      0%{opacity:0;transform:scale(.68,.08)}
-      14%{opacity:.82;transform:scale(1,.74)}
-      100%{opacity:0;transform:scale(.52,1.3)}}
+      0%{opacity:0;transform:scale(.8,.2)}
+      10%{opacity:1;transform:scale(1,.9)}
+      55%{opacity:.78;transform:scale(.96,1)}
+      100%{opacity:0;transform:scale(.7,1.06)}}
     @keyframes mhRhythmHitSpark{
       0%{opacity:0;transform:translate(0,0) scale(.3)}
       12%{opacity:1;transform:translate(calc(var(--rhythm-spark-x,0px)*var(--rhythm-spark-scale,1)*.3),calc(var(--rhythm-spark-y,0px)*var(--rhythm-spark-scale,1)*.3)) scale(1)}
@@ -19312,9 +19828,101 @@ const rhythmJudgmentIsPrecise=(judgment,deltaMs)=>{
   const delta=Number(deltaMs);
   return Number.isFinite(delta)&&Math.abs(delta)<=RHYTHM_JUDGMENT_PRECISE_MS;
 };
-// 判定ラインで弾ける光の色。MISSでは光を出さないので、そこは使われない
-const rhythmHitEffectColor=judgment=>rhythmJudgmentColor(judgment);
+// 判定ラインで弾ける光の色。MISSでは光を出さないので、そこは使われない。
+// 2026-09-27: 判定の文字の色とは分け、上の判定ほど水色〜青の光にした(参考動画の PERFECT の青い光・ユーザー指示「全部やって」)。
+// 文字の色(RHYTHM_JUDGMENT_COLORS)はそのまま。虹はジャストマーベラスだけ(下の precise)
+const RHYTHM_HIT_EFFECT_COLORS=Object.freeze({MARVELOUS:'#7dd3fc',EXCELLENT:'#38bdf8',GREAT:'#818cf8',GOOD:'#a3e635',BAD:'#94a3b8'});
+const rhythmHitEffectColor=judgment=>RHYTHM_HIT_EFFECT_COLORS[String(judgment||'')]||rhythmJudgmentColor(judgment);
 // プレイエリアの中に、使い回すエフェクトの入れ物を用意する。すでにあれば作り直さない。
+// ===== フリックを取ったときの「炎の羽」(2026-09-28・ユーザーが送ったアワーノーツの動画「フリック後のエフェクトがだいぶちがう」) =====
+// 見本: 判定ラインから払った向きへ、画面の高さの6〜7割まで大きな炎が吹き上がる。根元は白く、先はノーツの色で、ふちはほどけた羽のよう。
+// 0.2秒ほどで大きくなり、0.45秒ほどで消える。同時に、払ったレーンの判定ラインより手前(下)がその色で光る。
+// 色はノーツの色にそろえる(上=ピンク・左=オレンジ・右=黄緑。ユーザーが見本を見て選んだ)。上向きの絵を1色につき1回だけ焼き、払った向きへ傾けて貼る。
+// 終点フリック(ホールド・スライドの最後で払う)も上向きの炎を出す(同じくユーザー指示)。
+// canvas 版(WebGL のとき・RHYTHM_CANVAS_RENDERER.drawPlume)と CSS 版([data-rhythm-hit-effect]>em)は、同じ絵・同じ長さ・同じ傾きで描く
+const RHYTHM_FLICK_PLUME=Object.freeze({
+  ms:460,w:160,h:420,wispW:48,wispH:150,wisps:14,sparks:10,cssWisps:6,
+  tilt:Object.freeze({up:0,left:-34,right:34}),
+  rgb:Object.freeze({up:'244,114,182',left:'251,146,60',right:'163,230,53'}),
+});
+// 炎の絵を c(左上が原点・幅 W・高さ H)へ描く。根元が下の中央、先が上。同じ乱数の並びなので、いつ描いても同じ絵になる
+const rhythmPaintFlickPlume=(c,W,H,rgb)=>{
+  let seed=0x2f1ce;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+  c.globalCompositeOperation='lighter';
+  // 芯: 下から上へ、やわらかい光の玉を重ねる。下ほど太く白く、上ほど細くノーツの色になり、先で消える
+  const spine=u=>W/2+Math.sin(u*6.2)*9*u;
+  for(let i=0;i<46;i++){
+    const u=i/45,y=H-16-u*(H-36),x=spine(u)+(rand()-.5)*6*u,r=(26-19*u)*(.8+.4*rand());
+    const g=c.createRadialGradient(x,y,0,x,y,r);
+    const white=Math.max(0,1-u*2.2);
+    g.addColorStop(0,`rgba(255,255,255,${(.42*white+.08).toFixed(3)})`);g.addColorStop(.4,`rgba(${rgb},${(.3*(1-u*.6)).toFixed(3)})`);g.addColorStop(1,`rgba(${rgb},0)`);
+    c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
+  }
+  // 筆でなぞったような長い筋。根元から先へ、少しうねりながら伸びる。白い筋とノーツの色の筋を混ぜる
+  c.lineCap='round';
+  for(let i=0;i<42;i++){
+    const u0=rand()*.35,u1=Math.min(1,u0+.35+.55*rand()),off=(rand()-.5)*(38-20*u0),white=rand()<.35;
+    const seg=8,pts=[];for(let k=0;k<=seg;k++){const u=u0+(u1-u0)*k/seg;pts.push([spine(u)+off*(1-u*.7)+Math.sin(u*11+i)*3,H-16-u*(H-36)]);}
+    const grad=c.createLinearGradient(0,pts[0][1],0,pts[seg][1]);
+    grad.addColorStop(0,white?'rgba(255,255,255,.55)':`rgba(${rgb},.45)`);grad.addColorStop(1,`rgba(${rgb},0)`);
+    c.strokeStyle=grad;c.lineWidth=(1.2+4*rand())*(1-u0*.8);
+    c.beginPath();c.moveTo(pts[0][0],pts[0][1]);for(let k=1;k<=seg;k++)c.lineTo(pts[k][0],pts[k][1]);c.stroke();
+  }
+  // 羽: 芯から外へ斜め上に伸びる細い筋(ふちがほどけて見える)
+  for(let i=0;i<40;i++){
+    const u=.06+.88*rand(),y=H-16-u*(H-36),x=spine(u),side=rand()<.5?-1:1,len=(14+38*rand())*(1-u*.45);
+    c.strokeStyle=`rgba(${rgb},${((.2+.3*rand())*(1-u*.4)).toFixed(3)})`;c.lineWidth=1+2.2*rand()*(1-u);
+    c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+side*len*.5,y-len*.15,x+side*len,y-len*.8);c.stroke();
+  }
+  // きらめきの点
+  for(let i=0;i<26;i++){
+    const u=rand(),y=H-16-u*(H-50),x=W/2+(rand()-.5)*(76-40*u),r=.8+2*rand();
+    c.fillStyle=`rgba(255,255,255,${(.5+.5*rand()).toFixed(3)})`;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();
+  }
+};
+// ===== 炎の舌(2026-09-28・ユーザー「自然さがない」「動きが硬い・毎回同じ形・生きてる動きに感じない」) =====
+// 1枚の炎の絵が伸びて消えるだけだと硬く見えたので、小さな炎の舌をたくさん、少しずつ違う向き・速さ・長さで飛ばす。
+// 舌はゆらぎながら先へ伸び、細くなってちぎれるように消える。火の粉はもっと速く遠くまで飛ぶ。
+// 飛び方はフリックごとの乱数(seed)で決めるので、毎回ちがう形になる。同じ seed なら毎フレーム同じ並びになる(毎フレーム Math.random を引かない)
+// 炎の舌の絵: 下(根元)が白く太く、上(先)へ細くノーツの色になって消える。幅 W・高さ H
+const rhythmPaintFlickWisp=(c,W,H,rgb)=>{
+  c.globalCompositeOperation='lighter';
+  for(let k=0;k<=26;k++){
+    const v=k/26,y=H-8-v*(H-18),x=W/2+Math.sin(v*3.2)*3.5*v,r=(W*.36)*(1-v*.78);
+    const g=c.createRadialGradient(x,y,0,x,y,r),white=Math.max(0,1-v*2.1);
+    g.addColorStop(0,`rgba(255,255,255,${(.5*white+.08).toFixed(3)})`);g.addColorStop(.45,`rgba(${rgb},${(.3*(1-v*.5)).toFixed(3)})`);g.addColorStop(1,`rgba(${rgb},0)`);
+    c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
+  }
+};
+// フリック1回ぶんの舌の飛び方。angle … 向きからのずれ(度) / x0 … 根元の横位置(レーン幅の倍率) / delay・life … ms /
+// dist … 進む長さ(判定ラインの高さの倍率) / len・wid … 舌の長さ・太さ(px) / curl … 進むあいだに曲がる角度(度) / phase … ゆらぎの位相
+const rhythmFlickWisps=(seed,count)=>{
+  let s=(seed>>>0)||1;const r=()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};
+  const out=[];
+  for(let i=0;i<count;i++){
+    const centerish=(r()+r())/2;
+    out.push({angle:(centerish-.5)*34,x0:(r()-.5)*.8,delay:r()*80,life:230+r()*200,dist:.3+.55*r()*r()+.15*(i%3===0?1:0),
+      len:56+r()*96,wid:24+r()*26,curl:(r()-.5)*40,phase:r()*Math.PI*2});
+  }
+  return out;
+};
+// CSS 版で使う炎の絵(画像の URL)。1色につき1回だけ作る。作れない環境では空文字(炎だけ出ない)
+const rhythmFlickPlumeImages=new Map();
+const rhythmFlickImage=(kind,rgb)=>{
+  const key=`${kind}:${rgb}`;
+  if(rhythmFlickPlumeImages.has(key))return rhythmFlickPlumeImages.get(key);
+  let url='';
+  try{
+    const W=kind==='wisp'?RHYTHM_FLICK_PLUME.wispW:RHYTHM_FLICK_PLUME.w,H=kind==='wisp'?RHYTHM_FLICK_PLUME.wispH:RHYTHM_FLICK_PLUME.h;
+    const canvas=document.createElement('canvas'),k=1.5;
+    canvas.width=Math.round(W*k);canvas.height=Math.round(H*k);
+    const c=canvas.getContext('2d');
+    if(c){c.scale(k,k);(kind==='wisp'?rhythmPaintFlickWisp:rhythmPaintFlickPlume)(c,W,H,rgb);url=canvas.toDataURL('image/png');}
+  }catch(e){url='';}
+  rhythmFlickPlumeImages.set(key,url);
+  return url;
+};
+const rhythmFlickPlumeImage=rgb=>rhythmFlickImage('plume',rgb);
 const rhythmEnsureHitEffects=area=>{
   if(!area||typeof document==='undefined')return null;
   let layer=area.querySelector('[data-rhythm-hit-layer]');
@@ -19325,6 +19933,12 @@ const rhythmEnsureHitEffects=area=>{
     area.appendChild(layer);
   }
   layer.innerHTML='';
+  // フリックの炎の絵(3色)。演奏の前に1回だけ作って、器の CSS 変数へ渡す(演奏の途中で作らない)
+  for(const [dir,rgb] of Object.entries(RHYTHM_FLICK_PLUME.rgb)){
+    const url=rhythmFlickPlumeImage(rgb),wisp=rhythmFlickImage('wisp',rgb);
+    if(url)layer.style.setProperty(`--rhythm-plume-${dir}`,`url("${url}")`);
+    if(wisp)layer.style.setProperty(`--rhythm-wisp-${dir}`,`url("${wisp}")`);
+  }
   layer._rhythmPool=[];
   layer._rhythmNext=0;
   for(let index=0;index<RHYTHM_HIT_EFFECT_POOL;index++){
@@ -19335,6 +19949,11 @@ const rhythmEnsureHitEffects=area=>{
     // はじける粒。飛ぶ向きはCSSの nth-of-type で決めてあるので、ここでは数だけ揃える
     for(let spark=0;spark<RHYTHM_HIT_SPARK_COUNT;spark++)item.appendChild(document.createElement('u'));
     item.appendChild(document.createElement('s'));   // 白い十字の光(2026-09-26)
+    item.appendChild(document.createElement('em'));  // フリックの炎の羽(2026-09-27 に炎の筋、2026-09-28 に炎の羽へ)
+    item.appendChild(document.createElement('small'));// フリックを取ったとき、判定ラインより手前のレーンを光らせる(2026-09-28)
+    // フリックの炎の舌(2026-09-28・「動きが硬い・毎回同じ形」)。飛び方はフリックごとに JS が CSS 変数で渡す
+    item._rhythmWisps=[];
+    for(let wisp=0;wisp<RHYTHM_FLICK_PLUME.cssWisps;wisp++){const el=document.createElement('ins');item.appendChild(el);item._rhythmWisps.push(el);}
     layer.appendChild(item);
     layer._rhythmPool.push(item);
   }
@@ -19373,16 +19992,18 @@ const rhythmRestartAnimations=entries=>{
 };
 // defer:true を渡すと、印を付けずに「付けるべき印」だけを返す。
 // 呼び出し側が rhythmRestartAnimations へまとめて渡すことで、レイアウトの読み取りを1回にできる。
-const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false})=>{
+// flick … フリックを取ったときの払った向き('up'|'left'|'right')。炎の筋を飛ばす。それ以外は ''
+// finish … ホールド・スライドを押し切ったとき。光の柱を高く・粒を遠くまで・光を少し幅広にする(2026-09-27)
+const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,precise=false,defer=false,flick='',finish=false})=>{
   // 検証用に WebGL で描いているときは、同じ光をノーツの canvas へ描く(RHYTHM_CANVAS_RENDERER の「叩いたときの光」)。
   // DOM の部品には触らないので、返すもの(流し直す印)も無い
   if(typeof RHYTHM_CANVAS_RENDERER!=='undefined'&&RHYTHM_CANVAS_RENDERER.hitsFor(area)){
     const big=!!monster,rainbow=!big&&precise&&judgment==='MARVELOUS';
     RHYTHM_CANVAS_RENDERER.pushHit({
       center:Math.max(0,Math.min(1,Number(centerRatio)||.5)),
-      width:Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(big?1.5:1.15),
+      width:Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(big?1.5:(finish?1.3:1.15)),
       color:big?'#fde047':rhythmHitEffectColor(judgment),judgment:big?'':String(judgment||''),
-      precise:rainbow,big,sparkScale:big?2.1:(rainbow?1.45:1),
+      precise:rainbow,big,sparkScale:big?2.1:(finish?1.6:(rainbow?1.45:1)),flick:big?'':String(flick||''),finish:!big&&!!finish,
     });
     return null;
   }
@@ -19391,7 +20012,7 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
   const item=layer._rhythmPool[layer._rhythmNext%layer._rhythmPool.length];
   layer._rhythmNext=(layer._rhythmNext+1)%layer._rhythmPool.length;
   const kind=monster?'MONSTER':'NORMAL';
-  const width=Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(monster?1.5:1.15);
+  const width=Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(monster?1.5:(finish?1.3:1.15));
   item.style.setProperty('--rhythm-hit-center',`${(Math.max(0,Math.min(1,Number(centerRatio)||.5))*100).toFixed(2)}%`);
   item.style.setProperty('--rhythm-hit-width',`${(width*100).toFixed(2)}%`);
   item.style.setProperty('--rhythm-hit-color',monster?'#fde047':rhythmHitEffectColor(judgment));
@@ -19406,10 +20027,31 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
   // 判定ごとに光の強さを変えられるようにする(上の判定ほど明るく)。モンスターノーツは別扱い
   item.dataset.hitJudgment=monster?'':String(judgment||'');
   item.dataset.hitPrecise=rainbowHit?'1':'';
+  item.dataset.hitFlick=monster?'':String(flick||'');
+  // 手前のレーンの光は、判定ラインから画面の下へ向かって広がる台形。要素はレーン幅の3倍にしてあり、その中で形を切り抜く。
+  // 下の辺は道の投影(rhythmProjectionScale)で広げ、道の中心から外へずらす(canvas 版の drawPlume と同じ形)
+  if(flick&&!monster){
+    const line=Math.max(.05,Math.min(.99,Number(RHYTHM_JUDGMENT_LINE_Y.ratio)||.8)),base=rhythmProjectionScale(line),k=base>0?rhythmProjectionScale(1)/base:1;
+    const c=Math.max(0,Math.min(1,Number(centerRatio)||.5)),shift=(c-.5)*(k-1)/Math.max(.001,width)*100/3;
+    const pct=v=>`${(Math.max(-50,Math.min(150,v))).toFixed(2)}%`,half=100/6;
+    item.style.setProperty('--rhythm-floor-clip',`polygon(${pct(50-half)} 0,${pct(50+half)} 0,${pct(50+half*k+shift)} 100%,${pct(50-half*k+shift)} 100%)`);
+    // 炎の舌。canvas 版と同じ乱数の決め方(rhythmFlickWisps)で、向き・根元・遅れ・寿命・進む長さ・曲がり方を1本ずつ変える
+    const tilt=RHYTHM_FLICK_PLUME.tilt[flick]||0,wisps=rhythmFlickWisps((Math.random()*4294967296)>>>0,RHYTHM_FLICK_PLUME.cssWisps);
+    (item._rhythmWisps||[]).forEach((el,i)=>{
+      const w=wisps[i];if(!w)return;
+      const a0=tilt+w.angle,a1=a0+w.curl,rad=a1*Math.PI/180,st=el.style;
+      st.setProperty('--wx0',`${(w.x0*100).toFixed(1)}%`);
+      st.setProperty('--wsx',(Math.sin(rad)*w.dist).toFixed(3));st.setProperty('--wsy',(-Math.cos(rad)*w.dist).toFixed(3));
+      st.setProperty('--wa0',`${a0.toFixed(1)}deg`);st.setProperty('--wa1',`${a1.toFixed(1)}deg`);
+      st.setProperty('--wl',`${Math.round(w.len)}px`);st.setProperty('--ww',`${Math.round(w.wid)}px`);
+      st.setProperty('--wt',`${Math.round(w.life)}ms`);st.setProperty('--wd',`${Math.round(w.delay)}ms`);
+    });
+  }
+  item.dataset.hitFinish=!monster&&finish?'1':'';
   item.style.setProperty('--rhythm-hit-ms',`${RHYTHM_HIT_EFFECT_MS[kind]}ms`);
   // ぴったりのMARVELOUSは粒を遠くまで飛ばす(見た目だけ・2026-09-12)。
   // モンスターノーツの2.1倍はそのまま優先する(そちらが特別扱いのため)
-  item.style.setProperty('--rhythm-spark-scale',monster?'2.1':(rainbowHit?'1.45':'1'));
+  item.style.setProperty('--rhythm-spark-scale',monster?'2.1':(finish?'1.6':(rainbowHit?'1.45':'1')));
   // 同じ要素をすぐ使い回すときは、アニメーションを一度切らないと最初から再生されない。
   // defer なら「切って付け直す」を呼び出し側のまとめ処理へ譲る(レイアウトの読み取りを1回にするため)。
   if(defer)return {el:item,attr:'rhythmHitKind',value:kind};
@@ -19530,6 +20172,9 @@ const rhythmLayoutPlayArea=area=>{
     const y=rhythmClamp01((lineRect.top-rect.top+lineRect.height/2)/rect.height),left=rhythmProjectBoundary(0,y),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,y);
     line.style.left=`${(left*100).toFixed(4)}%`;
     line.style.right=`${((1-right)*100).toFixed(4)}%`;
+    // 判定ラインから画面の下までの長さ(フリックを取ったときの「手前のレーンの光」の高さに使う・2026-09-28)
+    area.style.setProperty('--mh-below-line-px',`${Math.max(0,Math.round((1-y)*rect.height))}px`);
+    area.style.setProperty('--mh-above-line-px',`${Math.max(0,Math.round(y*rect.height))}px`);
   }
 };
 const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
@@ -20399,7 +21044,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // (当たり判定はノーツサイズにも粒の見た目にも左右されない)。
   const HEAD_THICK=1;
   // 粒の色は RHYTHM_NOTE_COLORS から作る(2026-09-26)。光は その色(濃い) → 白 → その色(薄い) の3層
-  const headOf=c=>({radius:5,gradient:[c.hi,[c.mid,.55],c.lo],border:'rgba(255,255,255,.82)',inset:'rgba(255,255,255,.7)',glow:[[13,`rgba(${c.rgb},.5)`],[6,'rgba(255,255,255,.22)'],[10,`rgba(${c.rgb},.26)`]]});
+  // 2026-09-27: 参考動画に寄せて、角の丸みを小さく(5→2)・真ん中に白い芯の帯・光を少し強く。厚みと色の種類は変えない
+  const headOf=c=>({radius:2,gradient:[c.hi,['#ffffff',.36],[c.mid,.66],c.lo],border:'rgba(255,255,255,.96)',inset:'rgba(255,255,255,.8)',glow:[[15,`rgba(${c.rgb},.62)`],[6,'rgba(255,255,255,.34)'],[12,`rgba(${c.rgb},.34)`]]});
   const HEADS={
     TAP:    headOf(RHYTHM_NOTE_COLORS.TAP),
     HOLD:   headOf(RHYTHM_NOTE_COLORS.HOLD),
@@ -20624,7 +21270,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 判定ラインにとどまっている粒のまわりに、光のたまり(楕円)と、上へ昇る小さな光の粒を出す。
   // どちらも最初の1回だけ焼いた絵を貼るだけ(毎フレームのグラデーション作成・ぼかしは無し)。
   // 押さえているノーツ1本につき drawImage が 1 + 4 回。押さえられるのは指の数(2本)まで
-  const HOLD_SPARK_TINT=Object.freeze({HOLD:RHYTHM_NOTE_COLORS.HOLD.rgb,SLIDE:RHYTHM_NOTE_COLORS.SLIDE.rgb});
+  // 押さえているあいだの光の色。ノーツの色(HOLD 緑・SLIDE 紫)ではなく、参考動画と同じ青白い光にする(2026-09-28)。
+  // ノーツの色のままだと暗い道の上で「光っている」より「塗られている」に見えた。SLIDE だけ紫へ少し寄せて見分けを残す。
+  // ノーツ本体・帯・終わりの横棒の色分けは変えない
+  const HOLD_SPARK_TINT=Object.freeze({HOLD:'96,200,255',SLIDE:'140,170,255'});
   const holdSparkSprite=kind=>{
     const id=`spark:${kind}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
@@ -20656,29 +21305,126 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     c.globalAlpha=.45;c.fillRect(0,H/2-4,W,8);
     const sprite={...s};sprites.set(id,sprite);return sprite;
   };
-  const SPARK_DOTS=5,SPARK_CYCLE_MS=520;
+  const SPARK_DOTS=12,SPARK_CYCLE_MS=900;
   const drawHoldSpark=(note,geo,opts)=>{
     const head=geo.head;if(!head)return;
     glowBegin();
     const kind=rhythmNoteIsSlide(note)?'SLIDE':'HOLD',depth=opts.depthScale||1;
     const w=Math.max(18,head.w*sizeScale),pulse=.5-.5*Math.cos(frameNow/140);
+    // 溜め具合(0→1)。押さえ始めから0.7秒かけて、柱が伸び・光が強くなる(2026-09-28・ユーザー「もうちょい押し続けてる感じにしたい」)
+    const charge=Math.min(1,Math.max(0,Number(opts.heldMs)||0)/700);
+    // 上へ立ちのぼる光(参考動画: 押さえているレーンの上が青白く光る)。焼いた縦のグラデーションを1枚貼るだけ
+    // 1枚目はレーンの形(奥ほど細くなる台形)に沿って道の中ほどまで届く光、2枚目は中央のやわらかく明るい芯
+    const columnH=head.cy*(.46+.2*charge)*(.95+.05*pulse),tint=HOLD_SPARK_TINT[kind]||HOLD_SPARK_TINT.HOLD;
+    if(!lightweight&&cssH>0){
+      const topY=Math.max(0,head.cy-columnH),baseScale=rhythmProjectionScale(head.cy/cssH),k=baseScale>0?rhythmProjectionScale(topY/cssH)/baseScale:1;
+      const half=w*.56,mid=cssW/2,topCx=mid+(head.cx-mid)*k;
+      const g=ctx.createLinearGradient(0,head.cy,0,topY);
+      g.addColorStop(0,`rgba(${tint},.62)`);g.addColorStop(.3,`rgba(${tint},.3)`);g.addColorStop(1,`rgba(${tint},0)`);
+      ctx.globalAlpha=(.62+.26*charge+.12*pulse)*opts.alpha;ctx.fillStyle=g;
+      ctx.beginPath();ctx.moveTo(head.cx-half,head.cy);ctx.lineTo(head.cx+half,head.cy);ctx.lineTo(topCx+half*k,topY);ctx.lineTo(topCx-half*k,topY);ctx.closePath();ctx.fill();
+      const ch=columnH*.62,cw=w*.9;
+      ctx.globalAlpha=(.5+.25*charge+.1*pulse)*opts.alpha;
+      ctx.drawImage(holdColumnSprite(kind).canvas,head.cx-cw/2,head.cy-ch,cw,ch);
+    }
     const sw=w*2.1*(1+.08*pulse),sh=72*depth*(1+.12*pulse);
     ctx.globalAlpha=(.8+.2*pulse)*opts.alpha;
     ctx.drawImage(holdSparkSprite(kind).canvas,head.cx-sw/2,head.cy-sh/2,sw,sh);
     const streakW=w*2.8,streakH=16*depth;
     ctx.globalAlpha=(.7+.3*pulse)*opts.alpha;
     ctx.drawImage(sparkStreakSprite(kind).canvas,head.cx-streakW/2,head.cy-streakH/2,streakW,streakH);
-    if(!lightweight&&effect!=='LOW'&&effect!=='LIGHT'){
-      const dot=sparkDotSprite().canvas,cycle=frameNow/SPARK_CYCLE_MS;
+    // 押さえている所で脈打つ白い十字の光(2026-09-27・参考動画「触れている所で青白い強い光が脈打つ」)。叩いたときの十字と同じ焼いた1枚
+    // 大きさはノーツ幅の1.2倍(最小70px)。押している間は毎フレーム重ねるので、塗る面積を抑える(2026-09-27・測定で標準 +5%)
+    const fw=Math.max(w*1.2,70)*(.85+.2*pulse),fh=fw*.5;
+    ctx.globalAlpha=(.45+.4*pulse)*opts.alpha;
+    ctx.drawImage(hitFlareSprite().canvas,head.cx-fw/2,head.cy-fh/2,fw,fh);
+    // ノーツの左右のはしに立つ光の柱(参考動画でいちばん目立つ「押さえている」合図)。押さえているあいだずっと立ち、
+    // 溜まるほど高く明るくなる。細かくゆらぐだけで消えない。焼いた1枚を2本貼るだけ(演出量「最小」以外)
+    {
+      // 道の高さの3〜4割まで伸びる(溜まるほど高い)。根元には星形の光(叩いたときの十字と同じ焼いた1枚)を小さく置く
+      const pillar=holdPillarSprite(kind).canvas,ph=head.cy*(.3+.14*charge),pw=Math.max(20,30*depth),star=hitFlareSprite().canvas,sw2=Math.max(40,56*depth)*(.9+.2*pulse);
+      for(const side of [-1,1]){
+        const flicker=.9+.1*holdRand(Math.floor(frameNow/60)*5+side+2),h=ph*flicker,px=head.cx+side*w*.5;
+        ctx.globalAlpha=Math.min(1,(.75+.25*charge)*flicker)*opts.alpha;
+        ctx.drawImage(pillar,px-pw/2,head.cy+4*depth-h,pw,h);
+        ctx.globalAlpha=(.55+.35*charge)*flicker*opts.alpha;
+        ctx.drawImage(star,px-sw2/2,head.cy-sw2*.25,sw2,sw2*.5);
+      }
+    }
+    // 細い縦の光の筋(バチバチ)。0.07秒ごとに場所と長さを替える。焼いた細い線を2本貼るだけ(以前は3本。柱を足したぶん減らした)。演出量「多め」以上
+    if(!lightweight&&effect!=='LIGHT'){
+      const bolt=holdBoltSprite().canvas,seed=Math.floor(frameNow/70);
+      for(let i=0;i<2;i++){
+        const len=(26+holdRand(seed*7+i*5)*44)*depth,bx=head.cx+(holdRand(seed*3+i)-.5)*w*.9;
+        ctx.globalAlpha=(.45+.55*holdRand(seed*11+i*3))*opts.alpha;
+        ctx.drawImage(bolt,bx-4,head.cy-len,8,len*1.15);
+      }
+    }
+    // レーンの中に散ってまたたきながら昇る光の粒(参考動画のキラキラ)。演出量「多め」以上。焼いた小さな点を12個貼るだけ
+    if(!lightweight&&effect!=='LIGHT'){
+      const dot=sparkDotSprite().canvas,cycle=frameNow/SPARK_CYCLE_MS,rise=columnH*.85;
       for(let i=0;i<SPARK_DOTS;i++){
-        const t=cycle+i/SPARK_DOTS,phase=t-Math.floor(t),seed=Math.floor(t)*.61+i*.37,offset=(seed-Math.floor(seed))-.5;
-        const size=10*(1-phase*.45);
-        ctx.globalAlpha=(1-phase)*.95*opts.alpha;
-        ctx.drawImage(dot,head.cx+offset*w*.85-size/2,head.cy-phase*52*depth-size/2,size,size);
+        const t=cycle+i/SPARK_DOTS,phase=t-Math.floor(t),n=Math.floor(t)*13+i*7,offset=holdRand(n)-.5;
+        const twinkle=.55+.45*Math.cos(frameNow/(90+i*7)+i),size=(5+6*holdRand(n+3))*(1-phase*.4);
+        ctx.globalAlpha=Math.min(1,(1-phase)*twinkle*1.1)*opts.alpha;
+        ctx.drawImage(dot,head.cx+offset*w*.95*(1-phase*.35)-size/2,head.cy-phase*rise-size/2,size,size);
       }
     }
     ctx.globalAlpha=1;
     glowEnd();
+  };
+  // 押さえているノーツの左右に立つ光の柱。下(判定ライン)がいちばん明るく、上へ消える。白い芯と色のにじみ(16×128を1回だけ焼く)
+  const holdPillarSprite=kind=>{
+    const id=`holdpillar:${kind}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const W=16,H=128,s=makeSpriteCanvas(W,H),c=s.ctx,tint=HOLD_SPARK_TINT[kind]||HOLD_SPARK_TINT.HOLD;
+    const glow=c.createLinearGradient(0,H,0,0);glow.addColorStop(0,`rgba(${tint},.9)`);glow.addColorStop(.35,`rgba(${tint},.45)`);glow.addColorStop(1,`rgba(${tint},0)`);
+    c.fillStyle=glow;c.fillRect(3,0,W-6,H);c.globalAlpha=.4;c.fillRect(0,0,W,H);c.globalAlpha=1;
+    const core=c.createLinearGradient(0,H,0,0);core.addColorStop(0,'rgba(255,255,255,1)');core.addColorStop(.5,'rgba(255,255,255,.7)');core.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=core;c.fillRect(W/2-1.5,0,3,H);
+    sprites.set(id,s);return s;
+  };
+  // 押さえているレーンの上へ立ちのぼる光。下ほど明るく、左右のはしはやわらかく消える(32×128を1回だけ焼く)
+  const holdColumnSprite=kind=>{
+    const id=`holdcolumn:${kind}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const W=32,H=128,s=makeSpriteCanvas(W,H),c=s.ctx,tint=HOLD_SPARK_TINT[kind]||HOLD_SPARK_TINT.HOLD;
+    const g=c.createLinearGradient(0,H,0,0);g.addColorStop(0,`rgba(${tint},.7)`);g.addColorStop(.4,`rgba(${tint},.28)`);g.addColorStop(1,`rgba(${tint},0)`);
+    c.fillStyle=g;c.fillRect(0,0,W,H);
+    // 左右のはしを消す(外側から内側へ、透明を重ねて削る)
+    c.globalCompositeOperation='destination-out';
+    const side=c.createLinearGradient(0,0,W,0);side.addColorStop(0,'rgba(0,0,0,1)');side.addColorStop(.18,'rgba(0,0,0,0)');side.addColorStop(.82,'rgba(0,0,0,0)');side.addColorStop(1,'rgba(0,0,0,1)');
+    c.fillStyle=side;c.fillRect(0,0,W,H);c.globalCompositeOperation='source-over';
+    sprites.set(id,s);return s;
+  };
+  // 押さえている帯の上を、細い光の筋が判定ラインへ吸い込まれていく(2026-09-28・参考動画「押し続けている感じ」)。
+  // 帯の形に沿った細い台形を3本塗るだけなので、帯からはみ出さない。0.45秒で1本が判定ラインへ届く
+  const PRESS_FLOW_LINES=3,PRESS_FLOW_MS=450;
+  const drawPressFlow=(edgeAt,top,bottom,color,depth)=>{
+    const span=Math.min(bottom-top,Math.max(60,bottom*.5));
+    if(!(span>8))return;
+    const base=ctx.globalAlpha;ctx.fillStyle=color;
+    for(let i=0;i<PRESS_FLOW_LINES;i++){
+      const t=frameNow/PRESS_FLOW_MS+i/PRESS_FLOW_LINES,u=t-Math.floor(t),y=bottom-(1-u)*span,h=(2+3*u)*depth;
+      const a=edgeAt(y-h/2),b=edgeAt(y+h/2);
+      if(!a||!b)continue;
+      ctx.globalAlpha=base*u*u*.9;
+      ctx.beginPath();ctx.moveTo(a[0],y-h/2);ctx.lineTo(a[1],y-h/2);ctx.lineTo(b[1],y+h/2);ctx.lineTo(b[0],y+h/2);ctx.closePath();ctx.fill();
+    }
+    ctx.globalAlpha=base;
+  };
+  // 押さえている所の光の筋に使う、決まった並びの乱数(同じ時刻なら同じ値。毎フレーム Math.random を引かない)
+  const holdRand=n=>{const x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x);};
+  // 細い縦の光の筋。白い芯と水色のにじみを縦のグラデーションで1枚だけ焼く(8×64)
+  const holdBoltSprite=()=>{
+    const id=`holdbolt:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const s=makeSpriteCanvas(8,64),c=s.ctx;
+    const glow=c.createLinearGradient(0,0,0,64);glow.addColorStop(0,'rgba(125,211,252,0)');glow.addColorStop(.5,'rgba(125,211,252,.55)');glow.addColorStop(1,'rgba(125,211,252,0)');
+    c.fillStyle=glow;c.fillRect(1,0,6,64);
+    const core=c.createLinearGradient(0,0,0,64);core.addColorStop(0,'rgba(255,255,255,0)');core.addColorStop(.55,'rgba(255,255,255,1)');core.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=core;c.fillRect(3.25,0,1.5,64);
+    sprites.set(id,s);return s;
   };
   // 帯・SLIDE・終わりの横棒の横幅も、粒と同じノーツサイズの倍率にする(中心は動かさない。2026-09-26)。
   // 以前は粒だけが倍率で細く・太くなり、HOLD/SLIDE の先頭だけ細いのに帯は元の幅のまま残って見えた
@@ -20701,7 +21447,17 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     else{const c=RHYTHM_NOTE_COLORS.HOLD.rgb;g.addColorStop(0,`rgba(${c},.62)`);g.addColorStop(.6,`rgba(${c},.40)`);g.addColorStop(1,`rgba(${c},.55)`);}
     ctx.fillStyle=g;ctx.fill();
     // 押さえている最中は帯を明るくする(押せている合図の1つ。以前は .22)
-    if(pressed&&!failed){ctx.fillStyle='rgba(236,253,245,.34)';ctx.fill();}
+    // 押さえている最中は帯を明るくする。判定ライン寄りほど明るく、光に溶けていくように(2026-09-28・参考動画。以前は一様に .34)
+    if(pressed&&!failed){const pg=ctx.createLinearGradient(0,bottom,0,Math.max(top,bottom-Math.max(90,bottom*.5)));pg.addColorStop(0,'rgba(240,249,255,.6)');pg.addColorStop(.35,'rgba(236,253,245,.4)');pg.addColorStop(1,'rgba(236,253,245,.22)');ctx.fillStyle=pg;ctx.fill();}
+    if(pressed&&!failed&&effect!=='MINIMAL'&&!lightweight){
+      const edgeAt=y=>{for(let i=1;i<band.length;i++){const p=band[i-1],q=band[i];if(y>=p.y&&y<=q.y){const k=q.y>p.y?(y-p.y)/(q.y-p.y):0;return sizeX(p.left+(q.left-p.left)*k,p.right+(q.right-p.right)*k);}}return null;};
+      drawPressFlow(edgeAt,top,bottom,'rgb(236,253,245)',opts.depthScale||1);
+    }
+    // 帯の左右のふちを明るい線でなぞる(2026-09-27・参考動画「帯のふちが明るく光る」)。暗い道の上で帯が浮いて見える
+    if(!failed){
+      ctx.lineWidth=1.6;ctx.lineJoin='round';ctx.strokeStyle='rgba(236,253,245,.8)';
+      for(const side of [0,1]){ctx.beginPath();band.forEach((edge,index)=>{const x=sizeX(edge.left,edge.right)[side];if(index===0)ctx.moveTo(x,edge.y);else ctx.lineTo(x,edge.y);});ctx.stroke();}
+    }
     ctx.globalAlpha=1;
   };
   const drawSlide=(geo,opts)=>{
@@ -20728,9 +21484,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     quads.forEach(q=>ctx.lineTo(q.r1,q.y1));
     for(let index=quads.length-1;index>=0;index--)ctx.lineTo(quads[index].l1,quads[index].y1);
     ctx.lineTo(quads[0].l0,quads[0].y0);ctx.closePath();
-    ctx.lineWidth=1;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':'rgba(233,213,255,.56)';ctx.stroke();
+    // ふちは明るく(2026-09-27・参考動画。以前は 1px・.56)
+    ctx.lineWidth=failed?1:1.6;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':'rgba(243,232,255,.82)';ctx.stroke();
     // 押さえている最中は帯を明るくする(2026-09-26。以前はSLIDEだけ何も変わらなかった)。外周の道すじをそのまま塗る
-    if(pressed&&!failed){ctx.fillStyle='rgba(243,232,255,.30)';ctx.fill();}
+    let top=Infinity,bottom=-Infinity;quads.forEach(q=>{top=Math.min(top,q.y0,q.y1);bottom=Math.max(bottom,q.y0,q.y1);});
+    // 押さえている最中は帯を明るくする。判定ライン寄りほど明るく(2026-09-28・参考動画。以前は一様に .30)
+    if(pressed&&!failed){const pg=ctx.createLinearGradient(0,bottom,0,Math.max(top,bottom-Math.max(90,bottom*.5)));pg.addColorStop(0,'rgba(245,243,255,.56)');pg.addColorStop(.35,'rgba(243,232,255,.36)');pg.addColorStop(1,'rgba(243,232,255,.2)');ctx.fillStyle=pg;ctx.fill();}
+    if(pressed&&!failed&&effect!=='MINIMAL'&&!lightweight){
+      const edgeAt=y=>{for(const q of quads){const lo=Math.min(q.y0,q.y1),hi=Math.max(q.y0,q.y1);if(y>=lo&&y<=hi){const k=q.y1!==q.y0?(y-q.y0)/(q.y1-q.y0):0;return [q.l0+(q.l1-q.l0)*k,q.r0+(q.r1-q.r0)*k];}}return null;};
+      drawPressFlow(edgeAt,top,bottom,'rgb(243,232,255)',opts.depthScale||1);
+    }
     // ノーツの動き: 帯の上を、判定ライン(画面の下)へ向かって光の波が流れる。明るさは画面の高さで決めるので(波長110px・0.5秒で1波長)、
     // 区切りごとに上端と下端の明るさを縦のグラデーションでつなげば、区切りの継ぎ目で段にならない
     if(motion&&!failed){
@@ -20783,15 +21546,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // ★重なり順も DOM と同じにする。光の層(z-index:3)はノーツの canvas(z-index:5)の下なので、ノーツより先に描く。
   const HIT_KEYS={
     core:[[0,{o:0,sx:.28,sy:.4}],[.12,{o:1,sx:1.02,sy:1.9}],[1,{o:0,sx:1.34,sy:.28}]],
-    beam:[[0,{o:0,sx:.68,sy:.08}],[.14,{o:.82,sx:1,sy:.74}],[1,{o:0,sx:.52,sy:1.3}]],
+    beam:[[0,{o:0,sx:.8,sy:.2}],[.1,{o:1,sx:1,sy:.9}],[.55,{o:.78,sx:.96,sy:1}],[1,{o:0,sx:.7,sy:1.06}]],
     coreBig:[[0,{o:0,sx:.3,sy:.5}],[.09,{o:1,sx:1.3,sy:3.2}],[.42,{o:.9,sx:1.7,sy:1.6}],[1,{o:0,sx:2.1,sy:.3}]],
     beamBig:[[0,{o:0,sx:.7,sy:.1}],[.1,{o:1,sx:1.16,sy:1.5}],[.48,{o:.72,sx:1,sy:2.1}],[1,{o:0,sx:.6,sy:2.9}]],
     spark:[[0,{o:0,k:0,s:.3}],[.12,{o:1,k:.3,s:1}],[1,{o:0,k:1,s:.2}]],
     flare:[[0,{o:0,sx:.35,sy:.35,r:-6}],[.14,{o:1,sx:1,sy:1,r:0}],[1,{o:0,sx:1.25,sy:.8,r:4}]],
   };
-  const HIT_SPARK_OFFSETS=[[-54,-56],[-24,-86],[0,-104],[24,-86],[54,-56]];
+  const HIT_SPARK_OFFSETS=[[-30,-96],[-14,-150],[2,-124],[16,-168],[30,-110]];
   const HIT_CORE_RAINBOW=['#f87171','#fbbf24','#a3e635','#22d3ee','#a78bfa','#f472b6'];
-  const HIT_BEAM_RAINBOW=[[0,'#f472b6'],[.24,'#a78bfa'],[.46,'#22d3ee'],[.64,'#a3e635'],[.82,'rgba(251,191,36,.35)'],[1,'rgba(251,191,36,0)']];
+  // 柱を高くした(2026-09-27)ので、不透明な虹だと大きな虹色の四角に見えた。上へ行くほど透けて消えるようにする(CSS の [data-hit-precise]>b と同じ)
+  const HIT_BEAM_RAINBOW=[[0,'rgba(244,114,182,.78)'],[.24,'rgba(167,139,250,.6)'],[.46,'rgba(34,211,238,.44)'],[.64,'rgba(163,230,53,.28)'],[.82,'rgba(251,191,36,.12)'],[1,'rgba(251,191,36,0)']];
   // cubic-bezier(.16,.9,.3,1)。CSS と同じく、キーフレームの区間ごとにかける
   const hitEase=(()=>{const x1=.16,y1=.9,x2=.3,y2=1,cx=3*x1,bx=3*(x2-x1)-cx,ax=1-cx-bx,cy=3*y1,by=3*(y2-y1)-cy,ay=1-cy-by;
     const sx=t=>((ax*t+bx)*t+cx)*t,sy=t=>((ay*t+by)*t+cy)*t,dx=t=>(3*ax*t+2*bx)*t+cx;
@@ -20860,9 +21624,69 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     c.fillRect(-55,-55,110,110);c.restore();
     sprites.set(id,s);return s;
   };
+  // フリックの炎の羽(2026-09-28)。描き方は rhythmPaintFlickPlume、色・傾き・長さは RHYTHM_FLICK_PLUME にまとめてある(CSS 版と同じ絵)
+  const HIT_PLUME_MS=RHYTHM_FLICK_PLUME.ms,HIT_PLUME_TILT=RHYTHM_FLICK_PLUME.tilt,HIT_PLUME_RGB=RHYTHM_FLICK_PLUME.rgb;
+  const hitWispSprite=rgb=>{
+    const id=`hitwisp:${rgb}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const s=makeSpriteCanvas(RHYTHM_FLICK_PLUME.wispW,RHYTHM_FLICK_PLUME.wispH);
+    rhythmPaintFlickWisp(s.ctx,RHYTHM_FLICK_PLUME.wispW,RHYTHM_FLICK_PLUME.wispH,rgb);
+    sprites.set(id,s);return s;
+  };
+  const hitPlumeSprite=rgb=>{
+    const id=`hitplume:${rgb}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const s=makeSpriteCanvas(RHYTHM_FLICK_PLUME.w,RHYTHM_FLICK_PLUME.h);
+    rhythmPaintFlickPlume(s.ctx,RHYTHM_FLICK_PLUME.w,RHYTHM_FLICK_PLUME.h,rgb);
+    sprites.set(id,s);return s;
+  };
+  const drawPlume=(h,elapsed,hitY)=>{
+    const p=elapsed/HIT_PLUME_MS;if(!(p>=0&&p<1))return;
+    const dir=HIT_PLUME_TILT[h.flick]!==undefined?h.flick:'up',rgb=HIT_PLUME_RGB[dir],W=h.width*cssW,cx=h.center*cssW;
+    const grow=hitEase(Math.min(1,p/.32)),alpha=p<.42?1:Math.max(0,1-(p-.42)/.58);
+    // 払ったレーンの判定ラインより手前(下)を、その色で光らせる。レーンの形(手前ほど広い)に沿った台形
+    if(cssH>hitY+2){
+      const base=rhythmProjectionScale(Math.min(1,hitY/cssH)),k=base>0?rhythmProjectionScale(1)/base:1,mid=cssW/2,half=W*.5,bx=mid+(cx-mid)*k;
+      const g=ctx.createLinearGradient(0,hitY,0,cssH);g.addColorStop(0,`rgba(${rgb},.62)`);g.addColorStop(1,`rgba(${rgb},.18)`);
+      ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=Math.min(1,alpha*.95);ctx.fillStyle=g;
+      ctx.beginPath();ctx.moveTo(cx-half,hitY);ctx.lineTo(cx+half,hitY);ctx.lineTo(bx+half*k,cssH);ctx.lineTo(bx-half*k,cssH);ctx.closePath();ctx.fill();
+    }
+    // 炎の体。最初の一瞬だけ薄く出して、舌のあいだを埋める(以前はこれ1枚が伸びて消えるだけで、動きが硬かった)
+    const tilt=HIT_PLUME_TILT[dir]*Math.PI/180;
+    if(p<.5){
+      const bodyA=(p<.12?p/.12:1-(p-.12)/.38)*.62,PH=Math.max(180,hitY*1.08)*(.45+.55*grow),PW=Math.max(96,W*1.9)*(.85+.15*grow);
+      const flip=(h.seed&1)?-1:1,ang=tilt+((h.seed>>>3)%7-3)*.02,cos=Math.cos(ang),sin=Math.sin(ang);
+      ctx.setTransform(cos*dpr*flip,sin*dpr*flip,-sin*dpr,cos*dpr,cx*dpr,(hitY+4)*dpr);
+      ctx.globalAlpha=Math.max(0,Math.min(1,bodyA));
+      ctx.drawImage(hitPlumeSprite(rgb).canvas,-PW/2,-PH,PW,PH);
+    }
+    // 炎の舌。1本ずつ、向き・根元・遅れ・寿命・進む長さ・曲がり方がちがう。根元が進んだ先で、先へ伸びながら細くなって消える
+    const wisp=hitWispSprite(rgb).canvas,list=h._wisps||(h._wisps=rhythmFlickWisps(h.seed,RHYTHM_FLICK_PLUME.wisps));
+    for(const w of list){
+      const u=(elapsed-w.delay)/w.life;if(!(u>0&&u<1))continue;
+      const e=1-(1-u)*(1-u),ang=tilt+(w.angle+w.curl*u)*Math.PI/180,cos=Math.cos(ang),sin=Math.sin(ang);
+      const d=w.dist*hitY*e,wob=Math.sin(u*Math.PI*2.2+w.phase)*7*u;
+      // 向き(上が0°)へ d だけ進み、横へ少しゆらぐ。画面の座標では「上」は -y
+      const px=cx+w.x0*W+sin*d+cos*wob,py=hitY+2-cos*d+sin*wob;
+      const len=w.len*(.55+.9*e),wid=w.wid*(1-.45*u),a=u<.12?u/.12:Math.pow(1-u,1.25);
+      ctx.setTransform(cos*dpr,sin*dpr,-sin*dpr,cos*dpr,px*dpr,py*dpr);
+      ctx.globalAlpha=Math.min(1,a);
+      ctx.drawImage(wisp,-wid/2,-len,wid,len);
+    }
+    // 火の粉。舌より速く遠くへ飛び、少しずつ落ちる
+    const dot=sparkDotSprite().canvas;
+    for(let i=0;i<RHYTHM_FLICK_PLUME.sparks;i++){
+      const w=list[i%list.length],u=(elapsed-w.delay*.5)/(w.life*.9);if(!(u>0&&u<1))continue;
+      const ang=tilt+(w.angle*1.6+(i%2?12:-12))*Math.PI/180,cos=Math.cos(ang),sin=Math.sin(ang),d=(w.dist+.25)*hitY*(1-(1-u)*(1-u));
+      const px=cx+w.x0*W*.6+sin*d,py=hitY-cos*d+u*u*28,size=(3+((i*7)%4))*(1-.5*u);
+      ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=Math.min(1,(1-u)*1.2);
+      ctx.drawImage(dot,px-size/2,py-size/2,size,size);
+    }
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  };
   const warmHitSprites=()=>{
     if(!hitArea)return;
-    hitFlareSprite();
+    hitFlareSprite();sparkDotSprite();for(const rgb of Object.values(HIT_PLUME_RGB)){hitPlumeSprite(rgb);hitWispSprite(rgb);}
     for(const judgment of ['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD']){const f=hitFilters.get(`${judgment}|`);hitCoreSprite(rhythmHitEffectColor(judgment),f?f.core:null);}
     const monster=hitFilters.get('|');hitCoreSprite('#fde047',monster?monster.core:null);
   };
@@ -20873,13 +21697,16 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.setTransform(a*dpr,b*dpr,c*dpr,d*dpr,(ox-(a*ox+c*oy))*dpr,(oy-(b*ox+d*oy))*dpr);
   };
   const hitBeamPath=(x,y,w,h)=>{
-    // border-radius:999px 999px 0 0 は、幅が高さの2倍までは「幅の半分」の丸になる
-    const r=Math.max(0,Math.min(w/2,h));
+    // 上の角は 14px まで丸める(CSS の border-radius:14px 14px 0 0 と同じ)。柱を高くした(2026-09-27)ので、
+    // 以前の「幅の半分の丸」だと幅の広いノーツで半円のお椀に見えた
+    const r=Math.max(0,Math.min(w/2,h,14));
     ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x,y+r);ctx.arc(x+r,y+r,r,Math.PI,Math.PI*1.5);
     ctx.lineTo(x+w-r,y);ctx.arc(x+w-r,y+r,r,Math.PI*1.5,Math.PI*2);ctx.lineTo(x+w,y+h);ctx.closePath();
   };
-  const drawOneHit=(h,p,hitY)=>{
+  const drawOneHit=(h,p,hitY,elapsed=0)=>{
     const W=h.width*cssW,cx=h.center*cssW,left=cx-W/2;
+    // フリックの炎の羽は、ほかの光より長く残る(0.46秒)。ほかの光は元の長さで終える
+    if(h.plume){drawPlume(h,elapsed,hitY);if(p>=1)return;}
     // 中心のフラッシュ(判定ラインの上下7px・幅いっぱい)
     let f=hitFrame(h.big?HIT_KEYS.coreBig:HIT_KEYS.core,p);
     if(f.o>.002){
@@ -20891,19 +21718,25 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         ctx.fillStyle=g;ctx.fill();
       }else ctx.drawImage(hitCoreSprite(h.color,h.filter.core).canvas,left,hitY-7,W,14);
     }
-    // 立ち上がる光の柱(判定ラインから上へ96px)
+    // 立ち上がる光の柱(判定ラインから上へ、道の4割ほど。96〜200px。CSS の clamp(96px,34vh,200px) とそろえる)
     f=hitFrame(h.big?HIT_KEYS.beamBig:HIT_KEYS.beam,p);
     if(f.o>.002){
+      const BH=h.finish?Math.max(120,Math.min(260,hitY*.56)):Math.max(96,Math.min(200,hitY*.42));
       ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy);
-      hitBeamPath(left,hitY-96,W,96);
-      const g=ctx.createLinearGradient(0,hitY,0,hitY-96);
-      if(h.precise)HIT_BEAM_RAINBOW.forEach(([t,col])=>g.addColorStop(t,hitText(hitFilter(hitRgba(col),h.filter.beam))));
-      else{
-        const base=hitFilter(hitRgba(h.color),h.filter.beam),white=hitFilter([255,255,255,.32],h.filter.beam);
-        [0,1/3,2/3,1].forEach(u=>g.addColorStop(.42*u,hitText(hitPremulMix(base,white,u))));
-        g.addColorStop(1,hitText([white[0],white[1],white[2],0]));
+      hitBeamPath(left,hitY-BH,W,BH);
+      // 色の段は叩いた1回につき1度だけ作り、消えるまで使い回す(2026-09-27・柱を高く長くしたぶん、毎フレーム作り直さない)。
+      // 判定ラインの高さが変わったら作り直す
+      if(!h._beam||h._beamY!==hitY||h._beamH!==BH){
+        const g=ctx.createLinearGradient(0,hitY,0,hitY-BH);
+        if(h.precise)HIT_BEAM_RAINBOW.forEach(([t,col])=>g.addColorStop(t,hitText(hitFilter(hitRgba(col),h.filter.beam))));
+        else{
+          const base=hitFilter(hitRgba(h.color),h.filter.beam),white=hitFilter([255,255,255,.32],h.filter.beam);
+          [0,1/3,2/3,1].forEach(u=>g.addColorStop(.42*u,hitText(hitPremulMix(base,white,u))));
+          g.addColorStop(1,hitText([white[0],white[1],white[2],0]));
+        }
+        h._beam=g;h._beamY=hitY;h._beamH=BH;
       }
-      ctx.fillStyle=g;ctx.fill();
+      ctx.fillStyle=h._beam;ctx.fill();
     }
     // はじける粒(7pxの丸が5つ)。フィルターはかからない
     f=hitFrame(HIT_KEYS.spark,p);
@@ -20911,10 +21744,11 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       ctx.globalAlpha=Math.min(1,f.o);ctx.setTransform(dpr,0,0,dpr,0,0);
       HIT_SPARK_OFFSETS.forEach(([ox,oy],i)=>{
         ctx.fillStyle=h.precise?RHYTHM_JUDGMENT_RAINBOW[i]:h.color;
-        ctx.beginPath();ctx.arc(cx+ox*h.sparkScale*f.k,hitY+oy*h.sparkScale*f.k,3.5*f.s,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(cx+ox*h.sparkScale*f.k,hitY+oy*h.sparkScale*f.k,2.5*f.s,0,Math.PI*2);ctx.fill();
       });
     }
     // 白い十字の光(演出量「多め」では出さない)
+    // フリックの炎の筋。焼いた1枚を、払った向きへ回して進める(先端が判定ラインの位置から飛び出す)
     if(h.flare){
       f=hitFrame(HIT_KEYS.flare,p);
       if(f.o>.002){ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy,f.r);ctx.drawImage(hitFlareSprite().canvas,cx-95,hitY-55,190,110);}
@@ -20970,7 +21804,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       for(const kind of ['HOLD','SLIDE','FLICK'])glowSprite(`end:${kind}:${low?'low':'full'}`,4,END_BAR_GLOWS[kind][low?'low':'full']);
       arrowSprite('endFlick',24,17,END_FLICK_ARROW_GLOWS,END_FLICK_ARROW_FILL);
       // 押さえている最中の光(演奏の途中で新しく絵を作らないよう、ここで焼いておく)
-      if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);}sparkDotSprite();}
+      if(effect!=='MINIMAL'){for(const kind of ['HOLD','SLIDE']){holdSparkSprite(kind);sparkStreakSprite(kind);holdPillarSprite(kind);holdColumnSprite(kind);}sparkDotSprite();hitFlareSprite();holdBoltSprite();}
       // 叩いたときの光(canvas で描くときだけ)
       if(effect!=='MINIMAL'&&!options.lightweight)warmHitSprites();
       // WebGL のときは、焼いた絵を演奏の前に GPU へ渡しておく
@@ -20985,8 +21819,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     pushHit(hit){
       if(!hitArea||effect==='MINIMAL'||lightweight)return;
       const key=`${hit.judgment||''}|${hit.precise?'1':''}`;
+      const plume=!hit.big&&!!hit.flick&&HIT_PLUME_TILT[hit.flick]!==undefined;
       hitSlots[hitNext]={...hit,filter:hitFilters.get(key)||{core:null,beam:null},start:typeof performance!=='undefined'?performance.now():Date.now(),
-        ms:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW'};
+        ms:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW',plume,seed:plume?(Math.random()*4294967296)>>>0:0};
       hitNext=(hitNext+1)%hitSlots.length;
     },
     // begin() のすぐあと(ノーツより先)に呼ぶ。hitY は判定ラインの下端(光の入れ物の bottom)の高さ
@@ -20995,9 +21830,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const now=frameNow||(typeof performance!=='undefined'?performance.now():Date.now());let count=0;
       for(let slot=0;slot<hitSlots.length;slot++){
         const hit=hitSlots[slot];if(!hit)continue;
-        const t=(now-hit.start)/hit.ms;
-        if(t>=1){hitSlots[slot]=null;continue;}
-        touch();glowBegin();drawOneHit(hit,Math.max(0,t),hitY);glowEnd();count++;
+        const elapsed=now-hit.start,t=elapsed/hit.ms,end=hit.plume?Math.max(hit.ms,HIT_PLUME_MS):hit.ms;
+        if(elapsed>=end){hitSlots[slot]=null;continue;}
+        touch();glowBegin();drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
       }
       if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
       return count;
@@ -21022,7 +21857,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         painted++;
       }
       if(pulse>.01){
-        if(!roadEdgeCache||roadEdgeCache.ctx!==ctx||roadEdgeCache.w!==cssW||roadEdgeCache.h!==cssH){
+        // 道の幅の倍率(横向きの道の幅)が変わったときも作り直す
+        if(!roadEdgeCache||roadEdgeCache.ctx!==ctx||roadEdgeCache.w!==cssW||roadEdgeCache.h!==cssH||roadEdgeCache.road!==RHYTHM_ROAD_WIDTH.factor){
           const samples=[0,.25,.5,.75,1];
           // 左右の境目ごとに、太さ14(にじみ)と3(芯)の外周の点を「左の縁を上→下、右の縁を下→上」の順で持つ
           const edgePoints=(boundary,width)=>{const out=[];
@@ -21030,7 +21866,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
             for(let index=samples.length-1;index>=0;index--){const yr=samples[index],x=rhythmProjectBoundary(boundary,yr)*cssW,w=width*rhythmProjectionScale(yr)/2;out.push(x+w,yr*cssH);}
             return out;};
           const fade=(color)=>{const g=ctx.createLinearGradient(0,0,0,cssH);g.addColorStop(0,`rgba(${color},0)`);g.addColorStop(.45,`rgba(${color},.55)`);g.addColorStop(1,`rgba(${color},1)`);return g;};
-          roadEdgeCache={ctx,w:cssW,h:cssH,soft:fade('56,189,248'),core:fade('224,242,254'),
+          roadEdgeCache={ctx,w:cssW,h:cssH,road:RHYTHM_ROAD_WIDTH.factor,soft:fade('56,189,248'),core:fade('224,242,254'),
             edges:[0,RHYTHM_LANE_COUNT].map(boundary=>({soft:edgePoints(boundary,14),core:edgePoints(boundary,3)}))};
         }
         const edge=points=>{ctx.beginPath();ctx.moveTo(points[0],points[1]);for(let i=2;i<points.length;i+=2)ctx.lineTo(points[i],points[i+1]);ctx.closePath();ctx.fill();};
@@ -21069,7 +21905,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       if(typeof ctx.setBloom==='function')ctx.setBloom(!!options.bloom&&additiveGlow&&effect!=='MINIMAL'&&!lightweight);
       return true;
     },
-    // ノーツ1個。geo は rhythmNoteCanvasGeometry の結果。opts: {failed,monster,wide,pressed,alpha,pop(0..1|null),depthScale,brightness,hideBody}
+    // ノーツ1個。geo は rhythmNoteCanvasGeometry の結果。opts: {failed,monster,wide,pressed,heldMs(押さえ始めからの時間),alpha,pop(0..1|null),depthScale,brightness,hideBody}
     drawNote(note,geo,opts){
       if(!ctx||!geo)return;
       touch();

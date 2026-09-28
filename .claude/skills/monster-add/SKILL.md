@@ -8,6 +8,27 @@ description: Add a new playable ally monster (味方モンスター) to モン�
 **参照実装は「ミーア」(`Mia`)。** 必要なものがひととおり揃っている唯一の例なので、
 新しい子を足すときは `grep -n "Mia" <ファイル>` で当たりを取ってから同じ場所へ1行ずつ足す。
 
+## 0-1. 案が出た段階で、デバッグの確認画面へ先に入れる
+
+2026-09-28・ユーザー指示「新モンスターの案が出た段階でデバッグには追加して、いま入れられるぶんは入れて。
+確認しやすいように。そこで足りないのも確認して補完できるし、いまの現状も見れるから」。
+
+絵が届いたら、能力値や技が決まる前でも `data/ally-monsters.js` の **`UPCOMING_MONSTER_DRAFTS`** へ1件足す。
+`ALL_PLAYER_MONSTERS` には入れない(図鑑・ロースター・マーケットの解放・保存のどこにも出ない)。
+デバッグ設定 →「新モンスター確認」の一覧のいちばん後ろに並び、決まっていない項目が「未設定」と赤く出る。
+
+```js
+Yggdrasil: Object.freeze({ id:'Yggdrasil', name:"ユグドラシル", emoji:"🌳", imgUrl:YGGDRASIL_IMG, iconUrl:YGGDRASIL_IMG,
+  faceIconUrl:YGGDRASIL_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'yggdrasil' }) }),
+```
+
+- 入れられるものは先に入れる: 立ち絵・顔アイコン・円盤石(`available:false`)・染色マスク(`EXACT_DYE_MASKS`)・図鑑の文
+- 待機アニメのリグ(§6)も先に書ける。`idle-rig-build.js` の `RIGS` へ足せば、確認画面の「待機アニメ」の枠で動く。
+  `idle-rig-preview.js` も案の子を読める。`monster-check-debug-check.js` が「案の子にもリグがある」ことを見る
+- 血統は `draftLineage` に書く(`MONSTER_LINEAGE_MAP` へ本体より先に書くと lineage-dex-check.js が止める)
+- 正式に実装したら `ALL_PLAYER_MONSTERS` へ移し、`UPCOMING_MONSTER_DRAFTS` からは消す
+- `tools/monster/monster-check-debug-check.js` が「案の子も一覧に並び、要確認になっている」ことを見る
+
 ## 0. 数値を決めてもらう(比較を出してから聞く)
 
 **絵はユーザーが用意する。** 数値のほうは勝手に決めない。
@@ -53,7 +74,7 @@ node tools/monster/monster-stats-table.js --hp 420 --guts 140 --atk 200 --def 40
 | 勇者特性と説明 | 魔力開放 / 固有技のダメージが2倍 | **選択肢を2〜3案**出して選んでもらう |
 | 固有技の名前・倍率・消費ガッツ・効果 | バン / 2.1倍 / 42 / 次ターン、カード消費ガッツ0 | 倍率と消費は連動する(下記) |
 | 血統(`main`/`sub`)と区分 | `pixie` / `unknown` | 既存の血統一覧を見せて |
-| 円盤石の値段 | 1500 | だいたい1500で固定 |
+| 円盤石の値段 | 150000 | だいたい150000で固定(2026-09-28に100倍へ) |
 
 **答えが分かれそうなもの・好みで決まるもの(特性の方向性、固有技の効果、名前)は
 選択肢を並べて質問の形で聞く。** 数値は②の表を添えて聞く。
@@ -164,6 +185,16 @@ node tools/image/monster-image-quality-check.js
 - 承認済みのマスクを取り込むときは `node tools/image/convert-dye-mask.js <入力> <出力> --snap`
   (本番と同じ判定で純色へそろえる。953KB→37KB になった例がある)
 - 境目に元の色の筋が出るなら `noEdgeGuard:true`、輪郭が荒れるなら `MASU_COLOR_SMOOTH[id]` を調整
+- **手で塗ったマスクは仕上げてから配信する**(2026-09-28・ユーザー指示「染色はこのゲームの重要な部分だから本気で仕上げて」)。
+  位置を合わせただけのマスクを `tools/art-sources/dye-masks/<名前>-dye-mask-aligned.png` に置き、
+  `node tools/image/finish-dye-mask.js <名前>` で仕上げる(輪郭線の塗り残し・暗い線・境目のずれを直す)。
+  設定はモンスターごとに `CONFIGS` へ書く。仕上げたら白・黒・パステル・濃い色で染めて全身を見る
+- **届いたマスクは元の絵をなぞったものか確かめる**。描き直された絵から作ったマスクは、位置を合わせても
+  果物やひだの形が合わない(メルホイップの1回目)。白背景で作ったマスクは、絵のいちばん白い所を
+  背景と同じ扱いで抜いていることがある(3回目)。そのときは前のマスクと組み合わせる
+- **部位ごとの染め方(`MASU_COLOR_REGION_DYE`)も決める**。gloss を付けないと、青や紫に染めたとき髪のハイライトや
+  体の光沢が消えて1色に潰れる。gloss はその部位の元の彩度の中央値〜上のほうに合わせる。
+  白・クリームの部位は元の彩度がほぼ0なので gloss を付けない(付けると色が乗らない)
 - 正解見本と画素単位で比べる検査を1本足す(`tools/image/<id>-dye-mask-check.js`。
   ミーア・永輝・モッチー・プラント・ウンディーネ・ヤオビクニに前例がある)
 
@@ -302,6 +333,8 @@ node tools/run-checks.js --area monster,image 2>&1 | tail -25
   「今回は書かなくてよい」と判断する前に、似た効果の子がどう書かれているかを必ず見る。ミーアには「ミーアの歌う攻撃モーション」という
   囲み(`{t:'note'}`)があり、固有技の説明にも「ピクシー・ミーアの『次ターン消費0』」と
   名指しで入っている。`grep -n "ミーア" monster-hero/data/help.js` で実例を見てから書く
+- 新しいモンスター・新しい血統のお知らせには `group:'monster'` を書く（更新情報の「🐣 新モンスター」にまとまる。
+  書かないと本文の言葉で見当が付き、モンヒロビートやマーケットの下へ入ってしまう。2026-09-28 ユーザー指示）
 - マーケットに円盤石を並べたので、更新履歴へ
   `assistantNotice:{id:'update_notice_◯◯_v1', type:'market'}` を**必ず**付ける
   (`node tools/boot/market-notice-check.js` が見張る)

@@ -35,7 +35,8 @@ const loadRigs = () => {
   vm.runInContext(fs.readFileSync(path.join(GAME, 'data/ally-monsters.js'), 'utf8'), ctx);
   const fx = fs.readFileSync(path.join(GAME, 'src/parts/24-battle-fx.jsx'), 'utf8');
   const a = fx.indexOf('const MONSTER_IDLE_RIGS ='), b = fx.indexOf('// ==== MONSTER_IDLE_RIGS ここまで');
-  vm.runInContext(fx.slice(a, b) + '\nthis.__r = MONSTER_IDLE_RIGS; this.__m = ALL_PLAYER_MONSTERS;', ctx);
+  // 近日公開予定の子(UPCOMING_MONSTER_DRAFTS)も、公開前にリグを確かめられるようにする
+  vm.runInContext(fx.slice(a, b) + '\nthis.__r = MONSTER_IDLE_RIGS; this.__m = Object.assign({}, typeof UPCOMING_MONSTER_DRAFTS === "object" ? UPCOMING_MONSTER_DRAFTS : {}, ALL_PLAYER_MONSTERS);', ctx);
   return { rigs: ctx.__r, monsters: ctx.__m };
 };
 const fileOf = (url) => path.join(GAME, String(url).split('?')[0]);

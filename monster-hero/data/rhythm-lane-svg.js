@@ -6,6 +6,8 @@
   document.documentElement.dataset.rhythmLaneSvgOverlay = 'ready';
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
+  // 横向きの道の幅の倍率(data/rhythm-mode.js の RHYTHM_ROAD_WIDTH)。このファイルだけを読んだときは1(これまでの幅)
+  const roadFactor = () => (typeof RHYTHM_ROAD_WIDTH !== 'undefined' && Number.isFinite(RHYTHM_ROAD_WIDTH.factor) ? RHYTHM_ROAD_WIDTH.factor : 1);
   const observedAreas = new WeakSet();
   let currentArea = null;
   let currentSvg = null;
@@ -55,20 +57,25 @@
   const mount = area => {
     if (!area) return;
     const existing = area.querySelector(':scope > [data-rhythm-lane-svg]');
-    if (existing) {
+    // 道の幅の倍率(横向きの道の幅)が作ったときと違えば、作り直す(古い幅のレーンが残らないように)
+    if (existing && existing.dataset.roadFactor !== String(roadFactor())) existing.remove();
+    else if (existing) {
       currentArea = area;
       currentSvg = existing;
       return;
     }
     const svg = svgEl('svg', { viewBox:'0 0 1000 1000', preserveAspectRatio:'none', 'aria-hidden':'true' });
     svg.dataset.rhythmLaneSvg = '';
+    svg.dataset.roadFactor = String(roadFactor());
 
     const defs = svgEl('defs');
+    // 道はほぼ黒の半透明(2026-09-27・ユーザー指示「背景よりレーンやノーツ演出を重視」「全部やって」)。
+    // 参考動画(アワーノーツ)と同じく、後ろの舞台がうっすら透け、手前だけ少し青い。以前の「不透明に近い濃い青」(2026-09-26 の A)から変えた
     const laneFill = svgEl('linearGradient', { id:'rhythmLaneSvgFill', x1:'0', y1:'0', x2:'0', y2:'1' });
     laneFill.append(
-      svgEl('stop', { offset:'0%', 'stop-color':'#020617', 'stop-opacity':'.9' }),
-      svgEl('stop', { offset:'72%', 'stop-color':'#1e3a8a', 'stop-opacity':'.55' }),
-      svgEl('stop', { offset:'100%', 'stop-color':'#2563eb', 'stop-opacity':'.6' })
+      svgEl('stop', { offset:'0%', 'stop-color':'#000000', 'stop-opacity':'.55' }),
+      svgEl('stop', { offset:'72%', 'stop-color':'#060b1c', 'stop-opacity':'.55' }),
+      svgEl('stop', { offset:'100%', 'stop-color':'#1d4ed8', 'stop-opacity':'.42' })
     );
     const pressedFill = svgEl('linearGradient', { id:'rhythmLaneSvgPressed', x1:'0', y1:'0', x2:'0', y2:'1' });
     pressedFill.append(
@@ -76,16 +83,25 @@
       svgEl('stop', { offset:'62%', 'stop-color':'#22d3ee', 'stop-opacity':'.28' }),
       svgEl('stop', { offset:'100%', 'stop-color':'#d946ef', 'stop-opacity':'.46' })
     );
-    defs.append(laneFill, pressedFill);
+    // 境目の線は、奥は薄く・判定ラインに近いほどはっきり(2026-09-27・ユーザー「前より少し押しにくく感じる」)。
+    // 道を暗くしたときに境目も薄くしすぎて、どこがレーンの切れ目か手元で見分けにくくなっていた
+    const dividerStroke = svgEl('linearGradient', { id:'rhythmLaneSvgDivider', gradientUnits:'userSpaceOnUse', x1:'0', y1:'0', x2:'0', y2:'1000' });
+    dividerStroke.append(
+      svgEl('stop', { offset:'0%', 'stop-color':'#e2e8f0', 'stop-opacity':'.06' }),
+      svgEl('stop', { offset:'55%', 'stop-color':'#e2e8f0', 'stop-opacity':'.18' }),
+      svgEl('stop', { offset:'80%', 'stop-color':'#f1f5f9', 'stop-opacity':'.42' }),
+      svgEl('stop', { offset:'100%', 'stop-color':'#e2e8f0', 'stop-opacity':'.3' })
+    );
+    defs.append(laneFill, pressedFill, dividerStroke);
     svg.appendChild(defs);
 
     svg.appendChild(svgEl('polygon', {
       points:spanPoints(0, RHYTHM_LANE_COUNT),
-      fill:'#07111f', 'fill-opacity':'.94'
+      fill:'#000000', 'fill-opacity':'.5'
     }));
 
     for (let lane = 0; lane < RHYTHM_LANE_COUNT; lane++) {
-      svg.appendChild(svgEl('polygon', { points:lanePoints(lane), fill:'url(#rhythmLaneSvgFill)', 'fill-opacity':lane % 2 ? '.72' : '.9' }));
+      svg.appendChild(svgEl('polygon', { points:lanePoints(lane), fill:'url(#rhythmLaneSvgFill)', 'fill-opacity':'.8' }));
       const press = svgEl('polygon', { points:lanePoints(lane), fill:'url(#rhythmLaneSvgPressed)', opacity:'0' });
       press.dataset.rhythmSvgPress = String(lane);
       press.style.transition = 'opacity 55ms linear';
@@ -97,11 +113,13 @@
     // (ユーザー指示「見た目も含めてこんぐらいに仕上げたい」。外周の2本だけは強めに残す)。
     for (let boundary = 0; boundary <= RHYTHM_LANE_COUNT; boundary++) {
       const outer = boundary === 0 || boundary === RHYTHM_LANE_COUNT;
+      // 外のふちは、白い線の下に水色の太い線を薄く敷いてにじませる(ぼかしは使わない。SVG は一度描けば動かない)
+      if (outer) svg.appendChild(svgEl('polyline', { points:edgePoints(boundary).join(' '), fill:'none', stroke:'#a5f3fc', 'stroke-opacity':'.28', 'stroke-width':'9' }));
       svg.appendChild(svgEl('polyline', {
         points:edgePoints(boundary).join(' '), fill:'none',
-        stroke:outer ? '#e0f2fe' : '#a5f3fc',
-        'stroke-opacity':outer ? '.9' : '.22',
-        'stroke-width':outer ? '2.4' : '1.6'
+        stroke:outer ? '#ffffff' : 'url(#rhythmLaneSvgDivider)',
+        'stroke-opacity':'1',
+        'stroke-width':outer ? '3.2' : '1.4'
       }));
     }
 
@@ -141,6 +159,14 @@
     currentSvg = currentArea?.querySelector(':scope > [data-rhythm-lane-svg]') || null;
     document.documentElement.dataset.rhythmPlayActive=currentArea?'true':'false';
     if (currentArea) mount(currentArea);
+  };
+  // 演奏画面が道の幅の倍率を変えたときに呼ぶ(横向きの道の幅)。いまのレーンを外して作り直す
+  window.rhythmLaneSvgRefresh = () => {
+    if (currentSvg && currentSvg.isConnected && currentSvg.dataset.roadFactor === String(roadFactor())) return false;
+    if (currentSvg) currentSvg.remove();
+    currentSvg = null; currentArea = null;
+    scan();
+    return true;
   };
   const start = () => {
     scan();

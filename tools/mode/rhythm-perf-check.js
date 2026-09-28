@@ -208,7 +208,8 @@ check('サブレーン発光に will-change を付けっぱなしにしない',
   &&gameSrc.includes('data-rhythm-sublane-feedback={subLane}')
   // 2026-09-26、消え方を CSS(rhythm-mode.js)へ移した(押した瞬間40ms・離すと190msでふわっと消える)。
   // 部品にはぼかしの影・filter を付けない(押すたびのぼかしの描き直しが重さの原因だった)
-  &&data.includes('[data-rhythm-sublane-feedback]{transition:opacity 190ms ease-out}')
+  // 離したあとの消える長さは見た目の調整で変わる(2026-09-27 に 190→320ms)。見るのは「CSS の opacity の変化で消す」こと
+  &&/\[data-rhythm-sublane-feedback\]\{transition:opacity \d+ms ease-out\}/.test(data)
   &&!/data-rhythm-sublane-feedback=\{subLane\}[^>]{0,400}(boxShadow|filter):/.test(gameSrc));
 // プレイエリア全面サイズのSVGは、幅・高さ・viewBoxが遊んでいるあいだ変わらない。
 // 毎フレーム書き直すと中身の再構築を招くので、変わったときだけ書く。
