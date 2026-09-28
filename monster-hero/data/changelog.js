@@ -45,6 +45,17 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-09-28 ユーザー指示(mp4とジャケットだけ)。歯ごたえは自動のままとユーザーが決めた
+    date: "2026-09-28 23:53", type:'update', title:'モンヒロビート：新曲「ビッグブリッヂの死闘」を追加しました', status:'new',
+    image: 'images/song-art/big-bridge-no-shitou.jpg?v=2a3180288c72',
+    items:[
+      'モンヒロビートに「ビッグブリッヂの死闘」（2分28秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.11 ／ NORMAL Lv.13 ／ HARD Lv.19 ／ EXPERT Lv.28 ／ MASTER Lv.35 です。',
+      'ノーツ数は 388 ／ 445 ／ 566 ／ 697 ／ 774 です。',
+    ],
+    assistantNotice: { id:'update_notice_big_bridge_no_shitou_v1', type:'content' },
+  },
+  {
     // 2026-09-28 ユーザー指示「ショップの作りを全部統一して / レイアウトやUI / 詳細とかそのへんのつくり」
     date: "2026-09-28 22:27", type:'update', title:'マーケットのどの売り場も、同じ見やすい作りになりました', status:'new',
     items:[
