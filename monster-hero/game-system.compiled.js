@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f7c19da8fccffc9a
+// source-sha256: e23f15e79e80d9a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 19:11";
+const BUILD_DATE = "2026-09-28 19:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31085,6 +31085,17 @@ function RhythmSongSelectScreen({
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
   const beatPointTargetSong = !!beatPointEvent && Array.isArray(beatPointEvent.songIds) && beatPointEvent.songIds.includes(rhythmSelectedSongId);
   const beatPointCampaign = beatPointReleased && !beatPointEvent ? rhythmEventPointCampaignAt(Date.now()) : null;
+  const [beatPointBalance, setBeatPointBalance] = React.useState(null);
+  React.useEffect(() => {
+    if (!beatPointReleased) return undefined;
+    let alive = true;
+    loadRhythmEventPoints().then(value => {
+      if (alive) setBeatPointBalance(value);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [beatPointReleased]);
   const quickRunBandLabel = quickRunProgress ? quickRunProgress.finished ? `${quickRunFinishReasonText(quickRunProgress.reason)}（タップで結果へ）` : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp ? ' ・ 追いつき中' : ''}` : '';
   const quickRunBandButton = quickRunProgress ? React.createElement("button", {
     type: "button",
@@ -31155,7 +31166,13 @@ function RhythmSongSelectScreen({
     className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
   }, "MONBEAT"), React.createElement("h2", {
     className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200"
-  }, "🎵 楽曲選択")), quickRunProgress && React.createElement("div", {
+  }, "🎵 楽曲選択"), beatPointReleased && Number.isFinite(beatPointBalance) && React.createElement("small", {
+    "data-rhythm-beat-point-balance": true,
+    "aria-label": `所持ビートP ${beatPointBalance.toLocaleString()}`,
+    className: "block truncate text-[9px] font-black leading-tight text-violet-200/90"
+  }, "🎟️ ", beatPointBalance.toLocaleString(), " ", React.createElement("span", {
+    className: "text-violet-300/80"
+  }, "ビートP"))), quickRunProgress && React.createElement("div", {
     "data-quick-run-progress-header": true,
     className: "min-w-0 max-w-[260px] flex-1 rounded-lg border border-fuchsia-400/30 bg-slate-900/70"
   }, quickRunBandButton), quickRunStartNode && React.createElement("div", {
