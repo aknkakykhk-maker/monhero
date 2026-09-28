@@ -257,7 +257,15 @@ function RhythmSongSelectScreen({
             <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
         </div>}
-        {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 border-b border-amber-300/25 bg-amber-500/10 px-3 py-1 text-center text-[10px] font-black text-amber-100">🎟️ {beatPointCampaign.name}中・公開曲ならビートPがいつもの{beatPointCampaign.boost}倍（{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}まで）</div>}
+        {/* ビートPアップキャンペーン中の帯。2行に折り返して曲の一覧を押し下げていた
+            (2026-09-28 ユーザー指摘「縦スペース取られてるし文字列が悪い」)。
+            いちばん知りたい「ビートP×5」を札にして左へ、終わりの時刻を右へ置き、必ず1行に収める。
+            「公開曲なら」などの細かい条件は交換所の知らせとヘルプに任せる */}
+        {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
+          <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
+          <span className="min-w-0 truncate">キャンペーン中</span>
+          <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+        </div>}
         {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
         {/* 開催していないときの「ビートPはいつでも貯まります」の帯は外した(2026-09-26・ユーザー指示
             「ビートPがいつでももらえるはここに書く必要はない / この分でもスペース無駄にしてる」)。
