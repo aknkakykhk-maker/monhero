@@ -3,7 +3,8 @@
 //   ・ゲーム側: 公開中の曲をふつうに最後まで遊んだときだけ送る(デバッグ・練習・タイミング合わせ・アシストモードは送らない)。
 //     縮め方は道具側でほどける。新しい保存キーだけを使う。置き場所が無いと分かったら送るのをやめる
 //   ・SQL: 新しい表を作るだけ(ほかの表に触らない)。予行演習は rollback で終わる。ゲームが送る形を表の制約が通す
-//   ・道具側: 同じ端末の記録は上限まで・左右反転は数えない。低音の遅れと1本の線は、記録に証拠があるときだけ、その向きへ動く
+//   ・道具側: 同じ端末の記録は上限まで・左右反転は数えない。低音の遅れと1本の線は、記録に証拠があるときだけ、その向きへ動く。
+//     仮想プレイヤーのばらつきの倍率は、実際の記録に合わせて動く
 //   ・生成器: 調整値がすべて0の Rev.17 は Rev.16 と同じ譜面。調整値を入れると譜面が変わる
 'use strict';
 const fs=require('fs'),os=require('os'),path=require('path'),vm=require('vm');
@@ -56,7 +57,7 @@ try{
   const gauss=()=>{let u=0;for(let i=0;i<6;i++)u+=rnd();return u-3;};
   // trueFactor: 解析の遅れの何倍が本当か(低音だけが鳴っている所のノーツで、プレイヤーは本当の低音に合わせて押す)
   // mixNoise: 歌とドラムの線が切り替わるノーツほど押す時刻がばらつく強さ
-  const simulate=({trueFactor=0,mixNoise=0,difficulties=['HARD'],devices=6,plays=3})=>{
+  const simulate=({trueFactor=0,mixNoise=0,noise=12,difficulties=['HARD'],devices=6,plays=3})=>{
     const rows=[];let id=1;
     for(const songId of songs)for(const difficulty of difficulties){
       const chart=log.chartFor(songId,difficulty),audio=log.audioFor(songId);
@@ -70,7 +71,7 @@ try{
             let sound=note.timeMs;if(low.length===1&&!others.length)sound=low[0].timeMs-lag*trueFactor;
             if(rnd()<.03)return 'zz';
             const switched=i>0&&kinds[i]&&kinds[i-1]&&kinds[i]!==kinds[i-1];
-            const delta=sound-note.timeMs+bias+gauss()*(12+(switched?mixNoise:0));
+            const delta=sound-note.timeMs+bias+gauss()*(noise+(switched?mixNoise:0));
             return Math.max(0,Math.min(1200,Math.round(delta)+600)).toString(36).padStart(2,'0');
           }).join('');
           rows.push({id:id++,song_id:songId,difficulty,fingerprint:log.fingerprintOf(chart.notes),app_build:'check',device_key:device,judge_offset_ms:0,
@@ -95,6 +96,11 @@ try{
   const lineHurt=lineWith(40),lineFlat=lineWith(0);
   ok('つまみ食いの多い小節ほど合わせにくいなら、1本の線を強める',lineHurt.next.lineBoost>0,lineHurt.reasons[1]);
   ok('関係が無ければ、1本の線は動かさない',lineFlat.next.lineBoost===0,lineFlat.reasons[1]);
+  // 仮想プレイヤーの合わせ込み: 実際の押す時刻のばらつきが見込みより小さければ倍率を下げ、大きければ上げる
+  const virtualWith=noise=>log.learn(measuresOf(summaryOf(simulate({noise})).summary));
+  const calm=virtualWith(8),shaky=virtualWith(70);
+  ok('実際のばらつきが仮想プレイヤーより小さければ、ばらつきの倍率を下げる',calm.next.virtualSigmaScale<1,calm.reasons[2]);
+  ok('大きければ、ばらつきの倍率を上げる',shaky.next.virtualSigmaScale>1,shaky.reasons[2]);
 
   // ── 4. 生成器 ──
   const generate=(revision,tuning,tag)=>{

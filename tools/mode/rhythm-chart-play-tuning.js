@@ -6,6 +6,7 @@
 //   lowLagFactor … 低音の打点の遅れ(rhythm-chart-low-lag.js)を何倍差し引くか。0 = 差し引かない(Rev.16 までと同じ)
 //   lineBoost    … フレーズごとに決めた1本の線(歌・旋律かドラム)の打点を、拾う順でどれだけ前へ出すか。0 = 出さない
 //   lineDemote   … もう一方の線だけの打点を、どれだけ後ろへ回すか(大きい一発は回さない)。0 = 回さない
+//   virtualSigmaScale / virtualMissScale … 仮想プレイヤー(rhythm-virtual-player.js)の押す時刻のばらつき・ミスの倍率(Rev.18 の区間の差し替えが使う)。1 = 見込みのまま
 // 番号は「作り方の最新(CHART_REVISION_CODE_LATEST)・作法の重み・この調整値」の最新の大きいほう＋1(rhythm-chart-v3-revision.js)。
 // 既存の曲(一覧に書いてあるリビジョン)は、作り直すと決めない限り変わらない(CLAUDE.md ⑩-2)。
 'use strict';
@@ -15,8 +16,8 @@ const path=require('path');
 const ROOT=path.resolve(__dirname,'..','..');
 // 検査のときだけ MH_PLAY_TUNING_FILE で別のファイルを読ませる(本物の調整値を書き換えずに効き方を試すため)
 const TUNING_FILE=process.env.MH_PLAY_TUNING_FILE?path.resolve(process.env.MH_PLAY_TUNING_FILE):path.join(ROOT,'tools/mode/authoring/chart-play-tuning.json');
-const DEFAULT_PLAY_TUNING=Object.freeze({lowLagFactor:0,lineBoost:0,lineDemote:0});
-const PLAY_TUNING_LIMITS=Object.freeze({lowLagFactor:[0,1.2],lineBoost:[0,1.2],lineDemote:[0,.6]});
+const DEFAULT_PLAY_TUNING=Object.freeze({lowLagFactor:0,lineBoost:0,lineDemote:0,virtualSigmaScale:1,virtualMissScale:1});
+const PLAY_TUNING_LIMITS=Object.freeze({lowLagFactor:[0,1.2],lineBoost:[0,1.2],lineDemote:[0,.6],virtualSigmaScale:[.5,2],virtualMissScale:[.5,2]});
 
 const clampTuning=values=>Object.fromEntries(Object.entries(DEFAULT_PLAY_TUNING).map(([key,fallback])=>{
   const value=Number(values&&values[key]);

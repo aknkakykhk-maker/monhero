@@ -31,6 +31,12 @@ const {measureFeel,CONCERN_WEIGHTS}=require('./rhythm-chart-feel-report.js');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {setHandModelFlags}=require('./rhythm-hand-model.js');
 const {chartRevisionOf,handModelFlagsForRevision}=require('./rhythm-chart-v3-revision.js');
+const {playChart,segmentCost}=require('./rhythm-virtual-player.js');
+const {playTuningForRevision}=require('./rhythm-chart-play-tuning.js');
+// 仮想プレイヤーを差し替えの費用に使うのは Rev.18 から。1候補あたり遊ばせる回数
+const VIRTUAL_SPLICE_REVISION=18,VIRTUAL_SPLICE_RUNS=60;
+// 表示だけ小数1桁に丸める(Rev.18 から仮想プレイヤーの費用が小数になる。Rev.17 までは .5 刻みなので表示も変わらない)
+const round1=value=>value==null?value:Math.round(value*10)/10;
 const {measure:measureQuality,AXES}=require('./rhythm-chart-quality-report.js');
 // 公開の流れで差し替えるのは、このリビジョン以降の曲だけ(それより前の曲の作り方は変えない)
 const SPLICE_REVISION=12;
@@ -54,10 +60,18 @@ const spliceCharts=(charts,audio)=>{
   const startsMs=sections.map(section=>timing.beatZeroMs+section.startBar*BAR*gridMs);
   const labelOf=index=>sections[index].label||`#${index}`;
   // 候補ごとの区切りの気になり点
+  // Rev.18: 仮想プレイヤー(rhythm-virtual-player.js)を候補ごとに遊ばせ、区切りごとの見込みのミスとばらつきも費用に足す
+  //   (公開前に、つまずく区切りを別の候補に替える)。ばらつき・ミスの倍率は遊んだ記録から学ぶ調整値。Rev.17 までは足さない
+  const revision=chartRevisionOf(charts[0]);
+  const virtualParams=revision>=VIRTUAL_SPLICE_REVISION?(()=>{const t=playTuningForRevision(revision);return {sigmaScale:t.virtualSigmaScale,missScale:t.virtualMissScale};})():null;
   const costs=charts.map(chart=>{
     const feel=measureFeel(chart,audio,{withQuality:false,segmentStartsMs:startsMs});
     const bySection=new Array(sections.length).fill(0);
     for(const seg of feel.segments)bySection[seg.index]+=rawConcern(seg);
+    if(virtualParams){
+      const played=playChart(chart,audio,{runs:VIRTUAL_SPLICE_RUNS,params:virtualParams,segmentStartsMs:startsMs});
+      for(const seg of played.segments)if(seg.index<bySection.length)bySection[seg.index]+=segmentCost(seg,virtualParams);
+    }
     return bySection;
   });
   // 同じ名札の区切りはまとめて選ぶ
@@ -163,11 +177,11 @@ if(require.main===module){
         const stillBad=badSections(retry).length;
         const adopted=retry.after<result.after,firstAfter=result.after;
         if(adopted){charts=charts.concat(more);result=retry;}
-        regenerated=adopted?`  気になり点の高い区切り ${bad.length}つを作り直した（候補を${SPLICE_EXTRA_COUNT}本足す・一巡目 ${firstAfter} → ${result.after}・まだ高い区切り ${stillBad}つ）`
+        regenerated=adopted?`  気になり点の高い区切り ${bad.length}つを作り直した（候補を${SPLICE_EXTRA_COUNT}本足す・一巡目 ${round1(firstAfter)} → ${round1(result.after)}・まだ高い区切り ${stillBad}つ）`
           :`  気になり点の高い区切り ${bad.length}つを作り直そうとしたが、足した候補では良くならなかった`;
       }
       const picked=[...result.choice.entries()].filter(([,k])=>k!==0).map(([label,k])=>`${label}→候補${k}`).join(' ')||'すべて候補0';
-      console.log(`  ${difficulty}: 気になり点 ${result.before} → ${result.after}（1本だけ選ぶなら最良 ${result.bestSingle}）  ${picked}${result.reverted?`  押せないので候補0へ戻した区切り ${result.reverted}`:''}${regenerated}`);
+      console.log(`  ${difficulty}: 気になり点 ${round1(result.before)} → ${round1(result.after)}（1本だけ選ぶなら最良 ${round1(result.bestSingle)}）  ${picked}${result.reverted?`  押せないので候補0へ戻した区切り ${result.reverted}`:''}${regenerated}`);
       if(apply){
         const gate=spliceGate(charts,audio,result);
         if(gate.pass){
