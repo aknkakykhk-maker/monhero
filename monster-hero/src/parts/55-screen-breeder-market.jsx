@@ -18,7 +18,7 @@
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
-  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints,
+  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
@@ -53,7 +53,8 @@ function BreederMarketScreen({
     const owned = !comingSoon && isItemOwned(item);
     const balance = item.currency==='psyche' ? psycheHave : item.type==='disc' || item.type==='assist' || item.type==='item' ? gold : breederPoints;
     const canBuy = !comingSoon && !owned && balance>=item.cost;
-    const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+    // 近日公開予定の子(まだ ALL_PLAYER_MONSTERS にいない)も、案の段階の中身で詳細を開けるようにする
+    const detailMon = item.type==='disc' ? (ALL_PLAYER_MONSTERS[item.id] || (comingSoon && typeof UPCOMING_MONSTER_DRAFTS!=='undefined' ? UPCOMING_MONSTER_DRAFTS[item.id] : null) || null) : null;
     const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
     const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
@@ -63,7 +64,7 @@ function BreederMarketScreen({
           item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)} onBuy={()=>onBuy(item)}
           detail={detailMon||detailTeaching}
-          onDetail={()=>onOpenDetail(item,detailMon,detailTeaching)}
+          onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
           middle={item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
@@ -203,15 +204,18 @@ function BreederMarketScreen({
             })}
             {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。
                 ダイヤショップより先にここで公開する(ユーザー指示「新モンスター先行実装はビートポイントから」)ので「先行公開予定」と出す。
-                絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする */}
+                絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする。
+                ほかのショップと同じく、絵を押すと大きく見られ、「詳細」で中身を開ける
+                (2026-09-28 ユーザー指摘「押してもアップにならない」「詳細ボタンがない」「他のショップとあわせて」) */}
             {RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer=>{
               const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
               return <div key={offer.id} data-event-point-coming-soon={offer.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-3 flex flex-col min-h-[132px]">
                 <div className="flex items-start gap-2">
-                  {disc?<MarketProductIcon item={disc}/>:<span aria-hidden="true" className="text-xl shrink-0">💿</span>}
+                  {disc?<MarketProductIcon item={disc} onZoom={()=>onZoomIcon(disc)}/>:<span aria-hidden="true" className="text-xl shrink-0">💿</span>}
                   <div className="min-w-0 flex-1">
                     <div className="text-[11px] leading-tight font-black text-slate-300" style={{wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(offer.name)}</div>
                     <div className="mt-1 text-[10px] font-bold text-slate-400">1回：{offer.grantAmount.toLocaleString()}{offer.unit}</div>
+                    {disc&&onOpenUpcomingDetail&&<div className="mt-1 flex"><MarketDetailChip label={`${offer.name}の詳細を見る`} onClick={()=>onOpenUpcomingDetail(disc)}/></div>}
                   </div>
                 </div>
                 <div className="mt-auto pt-2 flex items-end justify-between gap-2">

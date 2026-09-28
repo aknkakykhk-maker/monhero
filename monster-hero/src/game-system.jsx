@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 08439719a754afeb
+// generated-sha256: 00cf9827d2d715a8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 20:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-28 21:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9687,7 +9687,8 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, m
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
     <div className={`w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
-    <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail&&!comingSoon?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
+    {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
+    <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
     <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;
 };
@@ -20339,7 +20340,7 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
-  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints,
+  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
@@ -20374,7 +20375,8 @@ function BreederMarketScreen({
     const owned = !comingSoon && isItemOwned(item);
     const balance = item.currency==='psyche' ? psycheHave : item.type==='disc' || item.type==='assist' || item.type==='item' ? gold : breederPoints;
     const canBuy = !comingSoon && !owned && balance>=item.cost;
-    const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+    // 近日公開予定の子(まだ ALL_PLAYER_MONSTERS にいない)も、案の段階の中身で詳細を開けるようにする
+    const detailMon = item.type==='disc' ? (ALL_PLAYER_MONSTERS[item.id] || (comingSoon && typeof UPCOMING_MONSTER_DRAFTS!=='undefined' ? UPCOMING_MONSTER_DRAFTS[item.id] : null) || null) : null;
     const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
     const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
@@ -20384,7 +20386,7 @@ function BreederMarketScreen({
           item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)} onBuy={()=>onBuy(item)}
           detail={detailMon||detailTeaching}
-          onDetail={()=>onOpenDetail(item,detailMon,detailTeaching)}
+          onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
           middle={item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
@@ -20524,15 +20526,18 @@ function BreederMarketScreen({
             })}
             {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。
                 ダイヤショップより先にここで公開する(ユーザー指示「新モンスター先行実装はビートポイントから」)ので「先行公開予定」と出す。
-                絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする */}
+                絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする。
+                ほかのショップと同じく、絵を押すと大きく見られ、「詳細」で中身を開ける
+                (2026-09-28 ユーザー指摘「押してもアップにならない」「詳細ボタンがない」「他のショップとあわせて」) */}
             {RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer=>{
               const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
               return <div key={offer.id} data-event-point-coming-soon={offer.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-3 flex flex-col min-h-[132px]">
                 <div className="flex items-start gap-2">
-                  {disc?<MarketProductIcon item={disc}/>:<span aria-hidden="true" className="text-xl shrink-0">💿</span>}
+                  {disc?<MarketProductIcon item={disc} onZoom={()=>onZoomIcon(disc)}/>:<span aria-hidden="true" className="text-xl shrink-0">💿</span>}
                   <div className="min-w-0 flex-1">
                     <div className="text-[11px] leading-tight font-black text-slate-300" style={{wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(offer.name)}</div>
                     <div className="mt-1 text-[10px] font-bold text-slate-400">1回：{offer.grantAmount.toLocaleString()}{offer.unit}</div>
+                    {disc&&onOpenUpcomingDetail&&<div className="mt-1 flex"><MarketDetailChip label={`${offer.name}の詳細を見る`} onClick={()=>onOpenUpcomingDetail(disc)}/></div>}
                   </div>
                 </div>
                 <div className="mt-auto pt-2 flex items-end justify-between gap-2">
@@ -29015,6 +29020,8 @@ function MonsterHeroGame() {
   const [marketPurchaseQuantity, setMarketPurchaseQuantity] = useState(1);
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
+  // 近日公開予定の新モンスターの詳細(マーケットの円盤石から開く。中身は UPCOMING_MONSTER_DRAFTS)
+  const [upcomingMonsterDetail, setUpcomingMonsterDetail] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
   // 中身は固定の一覧だけから決まるので、最初の1回だけ作る
   const debugIconItems = useMemo(() => breederIconOptions({includeUnowned:true}), []);
@@ -44687,6 +44694,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onExchangeHeroProof={exchangeHeroProofByShard}
             eventPoints={rhythmEventPoints}
             onExchangeEventPoints={exchangeRhythmEventPoints}
+            onOpenUpcomingDetail={setUpcomingMonsterDetail}
           />
         )}
 
@@ -45902,6 +45910,43 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             <div className="text-center text-sm font-black text-white leading-tight">{item.name}</div>
             <button onClick={()=>setMarketIconZoom(null)} className="w-full min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98]">とじる</button>
+          </div>
+        </div>
+      );})()}
+      {/* 近日公開予定の新モンスターの詳細(2026-09-28 ユーザー指摘「詳細ボタンがない」「他のショップとあわせて」)。
+          能力値と技はまだ決まっていないので、ふつうのモンスター詳細(能力・技の表)は使わず、
+          立ち絵・血統・図鑑の説明・予定の値段だけを出す */}
+      {upcomingMonsterDetail&&(()=>{
+        const disc=upcomingMonsterDetail;
+        const mon=typeof UPCOMING_MONSTER_DRAFTS!=='undefined'?UPCOMING_MONSTER_DRAFTS[disc.id]:null;
+        if(!mon) return null;
+        const lineageName=(id)=>MONSTER_LINEAGES[id]?.name||'？？？';
+        const lineage=mon.draftLineage?(mon.draftLineage.main===mon.draftLineage.sub?`${lineageName(mon.draftLineage.main)}(純血)`:`${lineageName(mon.draftLineage.main)} × ${lineageName(mon.draftLineage.sub)}`):null;
+        const dex=(typeof MONSTER_DEX_DESCRIPTIONS!=='undefined'&&MONSTER_DEX_DESCRIPTIONS[mon.id])||'';
+        const beat=typeof RHYTHM_EVENT_POINT_SHOP_COMING_SOON!=='undefined'?RHYTHM_EVENT_POINT_SHOP_COMING_SOON.find(o=>o.monsterId===mon.id):null;
+        const close=()=>setUpcomingMonsterDetail(null);
+        return(
+        <div onClick={close} className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:41000}} role="dialog" aria-modal="true" aria-label={`${mon.name}の詳細`} data-upcoming-monster-detail={mon.id}>
+          <div onClick={e=>e.stopPropagation()} className="w-full max-w-sm rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col gap-3 overflow-y-auto mh-scroll" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'}}>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-base font-black text-white">{mon.name}</h3>
+              <span className="text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap">近日公開予定</span>
+            </div>
+            <div className="w-full aspect-square rounded-2xl border border-white/10 bg-black/40 overflow-hidden flex items-center justify-center">
+              <img src={mon.imgUrl} alt={mon.name} className="w-full h-full object-contain" draggable={false}/>
+            </div>
+            {lineage&&<div className="flex items-center justify-between text-[12px] font-black"><span className="text-slate-400">血統</span><span className="text-emerald-300">{lineage}</span></div>}
+            {dex&&<p className="text-[12px] text-slate-200 leading-relaxed whitespace-pre-line rounded-xl border border-white/10 bg-black/30 p-3">{dex}</p>}
+            <section className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3">
+              <img src={disc.icon} alt={disc.name} className="w-12 h-12 rounded-full object-cover border border-white/10 shrink-0"/>
+              <div className="min-w-0 text-[11px] font-black leading-snug">
+                <div className="text-amber-200">{disc.name}<span className="ml-1 text-[10px] text-slate-400">(予定の値段)</span></div>
+                <div className="text-slate-300 whitespace-nowrap">ダイヤショップ：{Number(disc.cost).toLocaleString()}ダイヤ</div>
+                {beat&&<div className="text-violet-200 whitespace-nowrap">ビートP交換所：{Number(beat.cost).toLocaleString()}P</div>}
+              </div>
+            </section>
+            <p className="text-[11px] text-slate-400 leading-relaxed">能力値や技は、公開のときにお知らせします。</p>
+            <button onClick={close} className="w-full min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98] shrink-0">とじる</button>
           </div>
         </div>
       );})()}

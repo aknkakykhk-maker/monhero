@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 86bc3ef1a72aba53
+// source-sha256: 9077ad5d73b4fb3a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 20:47";
+const BUILD_DATE = "2026-09-28 21:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -13613,7 +13613,7 @@ const MarketProductCard = ({
     style: {
       height: '22px'
     }
-  }, middle || detail && !comingSoon ? React.createElement(React.Fragment, null, middle, !middle && React.createElement(MarketDetailChip, {
+  }, middle || detail ? React.createElement(React.Fragment, null, middle, !middle && React.createElement(MarketDetailChip, {
     label: `${item.name}の詳細を見る`,
     onClick: onDetail
   })) : null), React.createElement("div", {
@@ -29285,7 +29285,8 @@ function BreederMarketScreen({
   onExchangeSoulRankRespec,
   onExchangeHeroProof,
   eventPoints = 0,
-  onExchangeEventPoints
+  onExchangeEventPoints,
+  onOpenUpcomingDetail
 }) {
   const [marketSection, setMarketSection] = useState(null);
   const [eventQuantityOffer, setEventQuantityOffer] = useState(null);
@@ -29337,7 +29338,7 @@ function BreederMarketScreen({
     const owned = !comingSoon && isItemOwned(item);
     const balance = item.currency === 'psyche' ? psycheHave : item.type === 'disc' || item.type === 'assist' || item.type === 'item' ? gold : breederPoints;
     const canBuy = !comingSoon && !owned && balance >= item.cost;
-    const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+    const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] || (comingSoon && typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' ? UPCOMING_MONSTER_DRAFTS[item.id] : null) || null : null;
     const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
     const isSoulRankRespec = item.id === SOUL_RANK_RESPEC_ITEM_ID;
     const exchangeItem = isSoulRankRespec ? {
@@ -29355,7 +29356,7 @@ function BreederMarketScreen({
       onZoom: () => onZoomIcon(item),
       onBuy: () => onBuy(item),
       detail: detailMon || detailTeaching,
-      onDetail: () => onOpenDetail(item, detailMon, detailTeaching),
+      onDetail: () => detailMon?.draft && onOpenUpcomingDetail ? onOpenUpcomingDetail(item) : onOpenDetail(item, detailMon, detailTeaching),
       middle: item.type === 'item' ? React.createElement(React.Fragment, null, React.createElement("span", {
         className: `text-[11px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-400'}`
       }, "×", ownedItems[item.id] || 0), item.desc && React.createElement(MarketDetailChip, {
@@ -29634,7 +29635,8 @@ function BreederMarketScreen({
     }, React.createElement("div", {
       className: "flex items-start gap-2"
     }, disc ? React.createElement(MarketProductIcon, {
-      item: disc
+      item: disc,
+      onZoom: () => onZoomIcon(disc)
     }) : React.createElement("span", {
       "aria-hidden": "true",
       className: "text-xl shrink-0"
@@ -29648,7 +29650,12 @@ function BreederMarketScreen({
       }
     }, marketNameNodes(offer.name)), React.createElement("div", {
       className: "mt-1 text-[10px] font-bold text-slate-400"
-    }, "1回：", offer.grantAmount.toLocaleString(), offer.unit))), React.createElement("div", {
+    }, "1回：", offer.grantAmount.toLocaleString(), offer.unit), disc && onOpenUpcomingDetail && React.createElement("div", {
+      className: "mt-1 flex"
+    }, React.createElement(MarketDetailChip, {
+      label: `${offer.name}の詳細を見る`,
+      onClick: () => onOpenUpcomingDetail(disc)
+    })))), React.createElement("div", {
       className: "mt-auto pt-2 flex items-end justify-between gap-2"
     }, React.createElement("div", {
       className: "font-mono text-sm font-black text-violet-300/70"
@@ -44607,6 +44614,7 @@ function MonsterHeroGame() {
   const [marketQuantityItem, setMarketQuantityItem] = useState(null);
   const [marketPurchaseQuantity, setMarketPurchaseQuantity] = useState(1);
   const [marketIconZoom, setMarketIconZoom] = useState(null);
+  const [upcomingMonsterDetail, setUpcomingMonsterDetail] = useState(null);
   const debugIconItems = useMemo(() => breederIconOptions({
     includeUnowned: true
   }), []);
@@ -66071,7 +66079,8 @@ function MonsterHeroGame() {
       onExchangeSoulRankRespec: exchangeSoulRankRespecByProof,
       onExchangeHeroProof: exchangeHeroProofByShard,
       eventPoints: rhythmEventPoints,
-      onExchangeEventPoints: exchangeRhythmEventPoints
+      onExchangeEventPoints: exchangeRhythmEventPoints,
+      onOpenUpcomingDetail: setUpcomingMonsterDetail
     }), gameState === 'ROSTER' && React.createElement("div", {
       "data-mh-screen": true,
       className: SCREEN_SHELL_CLASS
@@ -68278,6 +68287,77 @@ function MonsterHeroGame() {
       }, item.name), React.createElement("button", {
         onClick: () => setMarketIconZoom(null),
         className: "w-full min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98]"
+      }, "とじる")));
+    })(), upcomingMonsterDetail && (() => {
+      const disc = upcomingMonsterDetail;
+      const mon = typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' ? UPCOMING_MONSTER_DRAFTS[disc.id] : null;
+      if (!mon) return null;
+      const lineageName = id => MONSTER_LINEAGES[id]?.name || '？？？';
+      const lineage = mon.draftLineage ? mon.draftLineage.main === mon.draftLineage.sub ? `${lineageName(mon.draftLineage.main)}(純血)` : `${lineageName(mon.draftLineage.main)} × ${lineageName(mon.draftLineage.sub)}` : null;
+      const dex = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS[mon.id] || '';
+      const beat = typeof RHYTHM_EVENT_POINT_SHOP_COMING_SOON !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_COMING_SOON.find(o => o.monsterId === mon.id) : null;
+      const close = () => setUpcomingMonsterDetail(null);
+      return React.createElement("div", {
+        onClick: close,
+        className: "fixed inset-0 flex items-center justify-center p-4",
+        style: {
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(2,6,23,0.94)',
+          zIndex: 41000
+        },
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": `${mon.name}の詳細`,
+        "data-upcoming-monster-detail": mon.id
+      }, React.createElement("div", {
+        onClick: e => e.stopPropagation(),
+        className: "w-full max-w-sm rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col gap-3 overflow-y-auto mh-scroll",
+        style: {
+          maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'
+        }
+      }, React.createElement("div", {
+        className: "flex items-center justify-between gap-2"
+      }, React.createElement("h3", {
+        className: "text-base font-black text-white"
+      }, mon.name), React.createElement("span", {
+        className: "text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap"
+      }, "近日公開予定")), React.createElement("div", {
+        className: "w-full aspect-square rounded-2xl border border-white/10 bg-black/40 overflow-hidden flex items-center justify-center"
+      }, React.createElement("img", {
+        src: mon.imgUrl,
+        alt: mon.name,
+        className: "w-full h-full object-contain",
+        draggable: false
+      })), lineage && React.createElement("div", {
+        className: "flex items-center justify-between text-[12px] font-black"
+      }, React.createElement("span", {
+        className: "text-slate-400"
+      }, "血統"), React.createElement("span", {
+        className: "text-emerald-300"
+      }, lineage)), dex && React.createElement("p", {
+        className: "text-[12px] text-slate-200 leading-relaxed whitespace-pre-line rounded-xl border border-white/10 bg-black/30 p-3"
+      }, dex), React.createElement("section", {
+        className: "rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3"
+      }, React.createElement("img", {
+        src: disc.icon,
+        alt: disc.name,
+        className: "w-12 h-12 rounded-full object-cover border border-white/10 shrink-0"
+      }), React.createElement("div", {
+        className: "min-w-0 text-[11px] font-black leading-snug"
+      }, React.createElement("div", {
+        className: "text-amber-200"
+      }, disc.name, React.createElement("span", {
+        className: "ml-1 text-[10px] text-slate-400"
+      }, "(予定の値段)")), React.createElement("div", {
+        className: "text-slate-300 whitespace-nowrap"
+      }, "ダイヤショップ：", Number(disc.cost).toLocaleString(), "ダイヤ"), beat && React.createElement("div", {
+        className: "text-violet-200 whitespace-nowrap"
+      }, "ビートP交換所：", Number(beat.cost).toLocaleString(), "P"))), React.createElement("p", {
+        className: "text-[11px] text-slate-400 leading-relaxed"
+      }, "能力値や技は、公開のときにお知らせします。"), React.createElement("button", {
+        onClick: close,
+        className: "w-full min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98] shrink-0"
       }, "とじる")));
     })(), marketItemDetail && React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-4",
