@@ -27,6 +27,8 @@ const {HAND_MODEL,fingerPairFeasible,noteTouchLane,noteTouchSpan,usableTouchSpan
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {assignSideFlickDirs}=require('./rhythm-side-flick.js');
 const {trackFocus,focusBoost}=require('./rhythm-chart-focus.js');
+const {lowLagOf,isLowHit}=require('./rhythm-chart-low-lag.js');
+const {DEFAULT_PLAY_TUNING,playTuningForRevision}=require('./rhythm-chart-play-tuning.js');
 const {setLaneCount:setPatternLaneCount,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
 const {soundTraitsFor,flickScoreOf,chordScoreOf}=require('./rhythm-sound-traits.js');
 const {weightsForRevision,knowledgeBoost,knowledgeShapePrefer}=require('./rhythm-chart-knowledge.js');
@@ -539,9 +541,24 @@ if(chartEndMs<Number(audio.durationMs)){
     +`（音源は ${(Number(audio.durationMs)/1000).toFixed(1)}秒。音源そのものは切りません）`);
 }
 
+// Rev.17: 遊んだ記録から学ぶ調整値(rhythm-chart-play-tuning.js)を読む。すべて0なら Rev.16 と同じ譜面
+//   ・低音の打点の遅れ(rhythm-chart-low-lag.js)を lowLagFactor 倍だけ差し引いて格子へ置き直す(解析ファイルは書き換えない)
+//   ・フレーズごとに1本の線を追う(lineBoost / lineDemote。下の phraseLineByBar)
+//   どちらも only my railgun の遊んだ感想「音楽にあわせて気持ちよくノーツが流れてきてる感じがない」から(ROADMAP の8章)。
+//   物差しでは良し悪しが決まらなかったので、どれだけ効かせるかはプレイヤーの遊んだ記録に決めさせる(rhythm-play-log.js --learn)
+const rev17=chartRevision>=17;
+const playTuning=rev17?playTuningForRevision(chartRevision):{...DEFAULT_PLAY_TUNING};
+const lowLagMs=rev17&&playTuning.lowLagFactor>0?lowLagOf(audio,{beatZeroMs:timing.beatZeroMs,gridMs}).lagMs*playTuning.lowLagFactor:0;
+const lagCorrected=onset=>{
+  if(!lowLagMs||!isLowHit(onset))return onset;
+  const timeMs=onset.timeMs-lowLagMs;
+  const grid=Math.round((timeMs-timing.beatZeroMs)/gridMs);
+  return {...onset,grid,gridOffsetMs:Math.round((timeMs-(timing.beatZeroMs+grid*gridMs))*100)/100};
+};
 // 打点をグリッドごとに1つへまとめる（同じ位置に2つ以上あれば強いほうを残す）
 const onsetByGrid=new Map();
-for(const onset of audio.onsets){
+for(const rawOnset of audio.onsets){
+  const onset=lagCorrected(rawOnset);
   if(onset.grid<minGrid||onset.grid>maxGrid)continue;
   if(Math.abs(onset.gridOffsetMs)>COMMON.earReviewMaxOffsetMs)continue;
   const prev=onsetByGrid.get(onset.grid);
@@ -818,6 +835,55 @@ const copySourceBars=(()=>{
 })();
 // ドラムのフィルの締め: 次の小節が区切りの頭で、この小節はドラムを追っていて、その小節の最後の拍にある打点
 const sectionStartBars=new Set((Array.isArray(structure.sections)?structure.sections:[]).map(section=>section.startBar));
+// Rev.17: フレーズごとに1本の線を追う。区切りの中の4小節ずつで追う線を「歌・旋律」か「ドラム」に決め、その線の打点を
+//   lineBoost だけ先に、もう一方の線だけの打点を lineDemote だけ後に拾う(主役の追跡が「混ざり」の小節で、目立つ音をつまみ食いしていた)。
+//   ・決め方: 主役の追跡の多数がドラムならドラム、歌・主旋律なら歌。混ざり(か層の解析が無い曲)なら、旋律の音の頭が1小節に
+//     LINE_MELODY_HEADS_PER_BAR 以上あれば歌、なければドラム
+//   ・歌の線 = 旋律の音高が取れていて、音の頭(前のグリッドは音高が無いか、0.8半音以上違う)の打点(1グリッドずれまで)
+//     ドラムの線 = 太い一発・低い一発(FULL / PUNCH)で音程の無い打点。両方に当たる打点と、どちらでもない打点は動かさない
+//   ・大きい一発(FULL)は後ろへ回さない。後押しは難易度によらず同じ(下の難易度は上の部分集合のまま)
+const LINE_MELODY_HEADS_PER_BAR=1.5;
+const lineOn=rev17&&(playTuning.lineBoost>0||playTuning.lineDemote>0);
+const linePitch=new Map((audio.pitchCurve||[]).map(point=>[point.grid,point]));
+const lineClear=point=>!!point&&Number(point.clarity)>=.5&&Number(point.hz)>0;
+const melodyHeadExact=grid=>{
+  const here=linePitch.get(grid);
+  if(!lineClear(here))return false;
+  const before=linePitch.get(grid-1);
+  return !lineClear(before)||Math.abs(12*Math.log2(Number(here.hz)/Number(before.hz)))>=.8;
+};
+const melodyHeadAt=grid=>melodyHeadExact(grid)||melodyHeadExact(grid-1)||melodyHeadExact(grid+1);
+const lineOfOnset=onset=>{
+  const melody=melodyHeadAt(onset.grid);
+  const drums=(onset.character==='PUNCH'||onset.character==='FULL')&&!(Number(onset.pitchClarity)>=.5&&Number(onset.pitchHz)>0);
+  return melody&&!drums?'melody':drums&&!melody?'drums':null;
+};
+const phraseLineByBar=(()=>{
+  if(!lineOn||!allOnsets.length)return new Map();
+  const starts=[...sectionStartBars].sort((a,b)=>a-b);
+  const phraseOf=bar=>{let start=0;for(const s of starts)if(s<=bar)start=s;return `${start}:${Math.floor((bar-start)/4)}`;};
+  const minBar=Math.floor(allOnsets[0].grid/BAR),maxBar=Math.floor(allOnsets[allOnsets.length-1].grid/BAR);
+  const phrases=new Map();
+  for(let bar=minBar;bar<=maxBar;bar++){
+    const key=phraseOf(bar),o=phrases.get(key)||{bars:[],heads:0,drums:0,melody:0,mix:0};
+    o.bars.push(bar);o[focusStateAt(bar*BAR)]++;phrases.set(key,o);
+  }
+  for(const onset of allOnsets){const o=phrases.get(phraseOf(Math.floor(onset.grid/BAR)));if(o&&melodyHeadAt(onset.grid))o.heads++;}
+  const byBar=new Map();
+  for(const o of phrases.values()){
+    const line=o.drums>o.melody&&o.drums>=o.mix?'drums':o.melody>o.drums&&o.melody>=o.mix?'melody'
+      :o.heads/o.bars.length>=LINE_MELODY_HEADS_PER_BAR?'melody':'drums';
+    for(const bar of o.bars)byBar.set(bar,line);
+  }
+  return byBar;
+})();
+const lineBoostOf=onset=>{
+  if(!lineOn)return 0;
+  const line=phraseLineByBar.get(Math.floor(onset.grid/BAR)),own=lineOfOnset(onset);
+  if(!line||!own)return 0;
+  if(own===line)return playTuning.lineBoost;
+  return onset.character==='FULL'?0:-playTuning.lineDemote;
+};
 const fillEndAt=grid=>{
   const bar=Math.floor(grid/BAR);
   return rev11&&focusStateAt(grid)==='drums'&&sectionStartBars.has(bar+1)&&grid-bar*BAR>=BAR-BEAT;
@@ -1041,7 +1107,7 @@ const buildChart=(difficulty,options={})=>{
   // Rev.9: 主役の追跡があるときは layer_follow を止める(同じことを二重に後押ししない)
   const pickWeights=focusOn&&knowledgeWeights?{...knowledgeWeights,layer_follow:0}:knowledgeWeights;
   const pickPriority=onset=>{
-    const base=priorityByGrid.get(onset.grid)+focusBoostOf(onset)*FOCUS_SCALE;
+    const base=priorityByGrid.get(onset.grid)+focusBoostOf(onset)*FOCUS_SCALE+lineBoostOf(onset);
     if(!knowledgeOn)return base;
     if(!pickBoostCache.has(onset.grid))pickBoostCache.set(onset.grid,knowledgeBoost('pick',knowledgeContext(onset.grid,onset),pickWeights));
     return base+pickBoostCache.get(onset.grid).total*KNOWLEDGE_SCALE.pick;
@@ -3709,6 +3775,7 @@ if(rev11){
   const developBars=[];for(let bar=0;bar<=Math.ceil((allOnsets[allOnsets.length-1]?.grid||0)/BAR);bar++)if(developBar(bar))developBars.push(bar);
   console.log(`発展の回: ${developBars.length}小節${lastChorus?`（ラスサビ ${lastChorus.startBar}〜${lastChorus.endBarExclusive-1}小節・名札 ${lastChorus.label}）`:'（ラスサビは見つからない）'}`);
 }
+if(rev17)console.log(`遊んだ記録から学ぶ調整値: 低音の遅れ ${playTuning.lowLagFactor}倍${lowLagMs?`(${lowLagMs.toFixed(1)}ms を差し引いた)`:''}・1本の線 +${playTuning.lineBoost} / -${playTuning.lineDemote}`);
 if(focusData)console.log(focusOn?`主役の追跡: ドラム${focusData.counts.drums}小節・歌や主旋律${focusData.counts.melody}小節・混ざり${focusData.counts.mix}小節`:`主役の追跡: 効かない（${focusData.missing}）`);
 console.log(`譜面の作り方: ${chartRevisionLabel(chartRevision)}${phraseCopy?'（フレーズの写しあり）':'（2026-09-24までの作り方）'}${slideEase?'（スライドの曲線あり）':''}${sideFlick?'（MASTERに横フリックあり）':''}`);
 for(const difficulty of targets){

@@ -8057,7 +8057,7 @@ songId `only_my_railgun` / bgmTrackId `melo_only_my_railgun` / 譜面は MHB CHA
 ## 「ビッグブリッヂの死闘」をモンヒロビートへ足した（2026-09-28）
 
 ユーザー指示（mp4とジャケットだけ）。ファイル名は UTF-8 の16進（`E38393…E99798`）で、読むと「ビッグブリッヂの死闘」。
-mp4（2分28秒）とジャケット1枚で受け取った。songId `big_bridge_no_shitou` / bgmTrackId `melo_big_bridge_no_shitou` / 譜面は MHB CHART ENGINE Rev.16。
+mp4（2分28秒）とジャケット1枚で受け取った。songId `big_bridge_no_shitou` / bgmTrackId `melo_big_bridge_no_shitou` / 譜面は MHB CHART ENGINE Rev.17（遊んだ記録の調整値はまだ0なので、Rev.16 で作ったものと1バイトも違わない）。
 
 - **音量**: -14.47 LUFS / -0.33 dBTP で、真のピークが上限を超えていた。-0.67dB では mp3 にしたあと -0.95 dBTP と
   わずかに超えたので、-0.75dB（0.917倍）で **-15.22 LUFS / -1.15 dBTP**（ピークの上限で止めた形・許容範囲内）
