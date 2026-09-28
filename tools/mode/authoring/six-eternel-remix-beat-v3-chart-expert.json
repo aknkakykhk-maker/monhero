@@ -5942,8 +5942,7 @@
    "subLaneWidth": 5,
    "sourceStrength": 0.77,
    "sourcePeakOffsetMs": -12.09,
-   "sourceCharacter": "FULL",
-   "monsterSlot": 4
+   "sourceCharacter": "FULL"
   },
   {
    "type": "TAP",

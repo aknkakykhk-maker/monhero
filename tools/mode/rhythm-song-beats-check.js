@@ -9,6 +9,7 @@
 // ・その曲の譜面のノーツが、表の拍から作った格子に乗っているか(拍の線とノーツがずれていないか)
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const {RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
+const {tempoWarpForChart}=require('./rhythm-chart-tempo-warp.js');
 const ROOT=path.resolve(__dirname,'..','..');
 const RUNTIME=path.join(ROOT,'monster-hero','data','rhythm-mode.js');
 const AUTHORING=path.join(ROOT,'tools','mode','authoring');
@@ -17,10 +18,11 @@ const context={console};vm.createContext(context);
 vm.runInContext(`${fs.readFileSync(RUNTIME,'utf8')}\nglobalThis.__x={RHYTHM_SONGS,RHYTHM_SONG_BEATS,rhythmSongBeatGrid};`,context);
 const {RHYTHM_SONGS,RHYTHM_SONG_BEATS,rhythmSongBeatGrid}=context.__x;
 
-const timingByTrack={};
+const timingByTrack={},audioByTrack={};
+const registry=JSON.parse(fs.readFileSync(path.join(AUTHORING,'rhythm-song-registry.json'),'utf8')).songs;
 for(const file of fs.readdirSync(AUTHORING).filter(name=>name.endsWith('-v3-audio.json'))){
   const json=JSON.parse(fs.readFileSync(path.join(AUTHORING,file),'utf8'));
-  if(json&&json.trackId&&json.timing)timingByTrack[json.trackId]=json.timing;
+  if(json&&json.trackId&&json.timing){timingByTrack[json.trackId]=json.timing;audioByTrack[json.trackId]=json;}
 }
 
 let failures=0;
@@ -35,10 +37,13 @@ for(const [songId,trackId] of Object.entries(RELEASED_TRACKS)){
   const song=RHYTHM_SONGS.find(entry=>entry.songId===songId);
   if(!song)continue;
   const step=grid.beatMs/(Number(timing.subdivisionsPerBeat)||4);
+  // Rev.21 のテンポの揺れに合わせた曲(rhythm-chart-tempo-warp.js)は、ノーツを揺れの分だけ音へ寄せて書いている。
+  // 拍の線は一定のテンポのままなので、揺れを差し引いて格子と比べる(線とノーツの差は揺れの幅の半分ほど・いまは最大 25ms 前後)
+  const warp=tempoWarpForChart((registry[trackId]||{}),audioByTrack[trackId]);
   for(const [difficulty,chart] of Object.entries(song.difficulties)){
     const notes=chart&&Array.isArray(chart.notes)?chart.notes:[];
     if(!notes.length)continue;
-    const on=notes.filter(note=>{const k=(note.timeMs-grid.zeroMs)/step;return Math.abs(k-Math.round(k))*step<=20;}).length;
+    const on=notes.filter(note=>{const shift=warp.at(Math.round((note.timeMs-grid.zeroMs)/step));const k=(note.timeMs-shift-grid.zeroMs)/step;return Math.abs(k-Math.round(k))*step<=20;}).length;
     if(on/notes.length<.98)offGrid.push(`${songId} ${difficulty} ${(on/notes.length*100).toFixed(1)}%`);
   }
 }

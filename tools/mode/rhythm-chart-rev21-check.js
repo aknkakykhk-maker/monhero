@@ -4,6 +4,7 @@
 //   ・揺れていない曲は Rev.20 と同じ譜面
 //   ・揺れに合わせた曲は、ノーツの時刻(揺れを足した時刻)が、もとの音の時刻へ近づく
 //   ・作り物の曲: ゆっくり揺れる曲は揺れを見つけ、ずれがでたらめな曲・揺れの無い曲は見つけない
+//   ・区間の差し替えが、継ぎ目をまたいで同じ枠のモンスターノーツを2つ残さない
 'use strict';
 const fs=require('fs'),os=require('os'),path=require('path');
 const {spawnSync}=require('child_process');
@@ -75,5 +76,8 @@ try{
 
 const pipeline=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-pipeline.js'),'utf8');
 ok('書き出す時刻に揺れを足す',/const gridTimeMs=grid=>Math\.round\(timing\.beatZeroMs\+grid\*gridMs\+warp\.at\(grid\)\);/.test(pipeline));
+const splice=fs.readFileSync(path.join(__dirname,'rhythm-chart-v3-splice.js'),'utf8');
+ok('区間の差し替えは、継ぎ目をまたいだ同じ枠のモンスターノーツを1つにする(Rev.21 から)',/const MONSTER_DEDUPE_REVISION=21;/.test(splice)
+  &&/if\(revision>=MONSTER_DEDUPE_REVISION\)\{/.test(splice)&&/if\(seen\.has\(note\.monsterSlot\)\)delete note\.monsterSlot;/.test(splice));
 console.log(failed?`\n✗ ${failed}件NG`:'\n✓ Rev.21(テンポの揺れに合わせる)は期待どおり');
 process.exit(failed?1:0);
