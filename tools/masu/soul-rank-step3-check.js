@@ -206,7 +206,8 @@ check('勇者の証1→再編の書は同じアイテムの隣に出す別商品
   app.includes("const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID")
   && app.includes("const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null")
   && app.includes('<React.Fragment key={item.id}>')
-  && app.includes('onBuy={onExchangeSoulRankRespec}')
+  // 2026-09-28「ショップの作りを全部統一して」から、交換も確認の窓(openSheet)を通してから実行する
+  && app.includes('onBuy={()=>openSheet({ item:exchangeItem, confirm:()=>onExchangeSoulRankRespec() })}')
   && marketUi.includes("const usesHeroProof=item.currency==='heroProof'")
   && marketUi.includes('勇者の証 ×{item.cost.toLocaleString()}'));
 check('魂格特性画面はSafe Areaと44px以上の主要操作を守る',

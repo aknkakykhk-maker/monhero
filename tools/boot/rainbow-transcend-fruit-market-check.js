@@ -28,9 +28,11 @@ const diamond = api.buildMarketItemPurchase({ item:diamondItem, gold:1500, owned
 assert(diamond.ok && diamond.currency === 'diamond' && diamond.gold === 500 && diamond.ownedItems[diamondItem.id] === 1 && diamond.ownedItems[api.BREAKTHROUGH_ITEM_ID] === 2500, '既存ダイヤ商品は従来どおりダイヤを消費する');
 
 const source = require('fs').readFileSync(require('path').join(__dirname, '../../monster-hero/src/game-system.jsx'), 'utf8');
-assert(source.includes("marketItemDetail.currency==='psyche'?'プシュケー':marketItemDetail.type==='icon'?'pt':'ダイヤ'"), '詳細は商品通貨に応じてプシュケー・pt・ダイヤを表示する');
-assert(source.includes('setMarketPurchaseQuantity(1);setMarketQuantityItem(item)') && source.includes('プシュケーが足りません'), '価格タップは購入せず個数選択を初期値1で開き、不足を表示する');
-assert(source.includes('MAX（{maxQuantity.toLocaleString()}個）') && source.includes('changeQuantity(-10)') && source.includes('changeQuantity(10)'), '個数選択に±1・±10・MAXを用意する');
+// 2026-09-28「ショップの作りを全部統一して」で、詳細と個数選択はマーケット共通の部品
+// (MarketItemDetail / MarketPurchaseSheet)になった。通貨の呼び名は MARKET_CURRENCY_META が1か所で決める
+assert(api.marketPriceText(fruit) === '1,000プシュケー' && api.marketPriceText(diamondItem) === '1,000ダイヤ', '詳細は商品通貨に応じてプシュケー・ダイヤを表示する');
+assert(source.includes("onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count) })}") && source.includes('const [sheetQuantity,setSheetQuantity]=useState(1);') && source.includes("psyche:         Object.freeze({ have:'虹のプシュケー', label:'虹のプシュケー'") && source.includes('{meta.label}が足りません'), '価格タップは購入せず個数選択を初期値1で開き、不足を表示する');
+assert(source.includes('MAX（{Math.max(0, maxQuantity).toLocaleString()}{countUnit}）') && source.includes('onClick={()=>setCount(count-10)}') && source.includes('onClick={()=>setCount(count+10)}'), '個数選択に±1・±10・MAXを用意する');
 // 「🌈 プシュケー」「×1,000」の2行表示は、カード内で折り返されて窮屈だったため1行表示へ改めた。
 // ダイヤ購入(amber)と紛れないよう、プシュケー購入だけボタン色を変えて区別する。
 assert(!source.includes('🌈 プシュケー</span>'), 'プシュケー価格をカード内で2行に折り返していない(窮屈になるため)');

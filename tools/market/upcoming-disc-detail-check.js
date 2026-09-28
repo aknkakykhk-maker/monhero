@@ -48,7 +48,7 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     await page.waitForTimeout(600); await dismiss();
 
     const detailText = () => page.evaluate(() => { const d = document.querySelector('[data-upcoming-monster-detail]'); return d ? { id: d.getAttribute('data-upcoming-monster-detail'), text: d.innerText } : null; });
-    const closeDetail = () => page.evaluate(() => { const d = document.querySelector('[data-upcoming-monster-detail]'); const b = d && [...d.querySelectorAll('button')].find(b => b.innerText.trim() === 'とじる'); if (b) b.click(); });
+    const closeDetail = () => page.evaluate(() => { const d = document.querySelector('[data-upcoming-monster-detail]'); const b = d && [...d.querySelectorAll('button')].find(b => /^(閉じる|とじる)$/.test(b.innerText.trim())); if (b) b.click(); });
 
     // ① ビートP交換所
     const intoEvent = await page.evaluate(() => { const b = document.querySelector('[data-market-section="event"]'); if (!b) return false; b.click(); return true; });
@@ -58,9 +58,9 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     for (const id of cards) {
       const zoomed = await page.evaluate(id => { const c = document.querySelector(`[data-event-point-coming-soon="${id}"]`); const b = c && c.querySelector('button[aria-label$="を大きく見る"]'); if (!b) return null; b.click(); return b.getAttribute('aria-label'); }, id);
       await page.waitForTimeout(250);
-      const zoomOpen = await page.evaluate(() => [...document.querySelectorAll('[role="dialog"]')].some(d => /の拡大|を大きく/.test(d.getAttribute('aria-label') || '') || d.innerText.includes('とじる')));
+      const zoomOpen = await page.evaluate(() => [...document.querySelectorAll('[role="dialog"]')].some(d => /の拡大|を大きく/.test(d.getAttribute('aria-label') || '') || /閉じる|とじる/.test(d.innerText)));
       ok(`${id}: 絵を押すと大きく見られる`, !!zoomed && zoomOpen, zoomed || '絵のボタンが無い');
-      await page.evaluate(() => { const b = [...document.querySelectorAll('[role="dialog"] button')].find(b => b.innerText.trim() === 'とじる'); if (b) b.click(); });
+      await page.evaluate(() => { const b = [...document.querySelectorAll('[role="dialog"] button')].find(b => /^(閉じる|とじる)$/.test(b.innerText.trim())); if (b) b.click(); });
       await page.waitForTimeout(200);
       const hasChip = await page.evaluate(id => { const c = document.querySelector(`[data-event-point-coming-soon="${id}"]`); const b = c && c.querySelector('button[aria-label$="の詳細を見る"]'); if (!b) return false; b.click(); return true; }, id);
       await page.waitForTimeout(250);
@@ -68,11 +68,12 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
       ok(`${id}: 「詳細」があり、中身が開く`, hasChip && !!d, d ? d.id : '開かない');
       if (d) {
         ok(`${id}: 詳細に「近日公開予定」・血統・図鑑の説明・予定の値段が出る`,
-          d.text.includes('近日公開予定') && d.text.includes('血統') && d.text.includes('ユグドラシル') && /ダイヤショップ：150,000ダイヤ/.test(d.text) && /ビートP交換所：[\d,]+P/.test(d.text) && d.text.includes('公開のときにお知らせ'),
+          d.text.includes('近日公開予定') && d.text.includes('血統') && d.text.includes('ユグドラシル') && /ダイヤショップ：150,000ダイヤ/.test(d.text) && /ビートP交換所：[\d,]+ビートP/.test(d.text) && d.text.includes('公開のときにお知らせ'),
           d.text.replace(/\s+/g, ' ').slice(0, 90));
       }
       await closeDetail(); await page.waitForTimeout(200);
-      ok(`${id}: 詳細を「とじる」で閉じられる`, !(await detailText()));
+      // 2026-09-28「ショップの作りを全部統一して」から、マーケットの窓はどれも「閉じる」(共通部品 MarketModalClose)
+      ok(`${id}: 詳細を「閉じる」で閉じられる`, !(await detailText()));
     }
     // ② ダイヤショップ(円盤石のタブ)
     // 見出しの「戻る」で入口へ戻る
