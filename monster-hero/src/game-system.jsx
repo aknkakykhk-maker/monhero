@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0f0054a911070420
+// generated-sha256: ed07360a58e72088
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 09:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-28 09:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4307,7 +4307,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // 2026-09-27(ユーザー指示「タップ音を他の音ゲーを見習って / 設定で色々変えれるように」)。どれも新しい項目で、
   // 保存値に無い人は既定で補う。判定で音を変える=する、フリック音・ロングの終わりの音=タップ音量の100%、空打ちの音=鳴らす
   noteSeJudgeVary:true, noteSeFlickVolume:100, noteSeEndVolume:100, noteSeEmptyEnabled:true,
-  // ホールド・スライドを押さえている間の「ウィーン」(溜める音)の大きさ。タップ音量に対する%。0で鳴らさない(2026-09-28)
+  // ホールド・スライドを押さえている間の音(はじめは「ウィーン」、同じ日に「シャラララ」ときらめく音へ作り替えた)の大きさ。タップ音量に対する%。0で鳴らさない(2026-09-28)
   noteSeHoldVolume:100,
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
@@ -15085,7 +15085,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {field('ロングの終わりの音の大きさ',stepper('noteSeEndVolume',0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,{fine:5,coarse:20,suffix:'%'}),
               'ホールド・スライドを最後まで取れたときの音です。タップ音量に対する大きさで、0%で鳴らしません。',{full:true})}
             {field('押さえている間の音の大きさ',stepper('noteSeHoldVolume',0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,{fine:5,coarse:20,suffix:'%'}),
-              'ホールド・スライドを押さえているあいだ、「ウィーン」と高くなっていく溜める音が鳴ります。タップ音量に対する大きさで、0%で鳴らしません。',{full:true})}
+              'ホールド・スライドを押さえているあいだ、「シャラララ」ときらめく音が鳴ります。タップ音量に対する大きさで、0%で鳴らしません。',{full:true})}
             {field('タップ音',toggle('noteSeEnabled'))}
             <div className="grid gap-2">
               <button type="button" onClick={previewBgm} className="min-h-[44px] rounded-xl bg-indigo-700 text-[12px] font-black">♪ BGM試聴</button>
@@ -17617,7 +17617,7 @@ while(scanFrom<notes.length){
 }
 run.scanFrom=scanFrom;
 const scanHorizonMs=visualTime+travelMs*1.2;
-// 押さえている HOLD/SLIDE を集めて、押さえている間の「ウィーン」(溜める音)へ渡す(2026-09-28)。
+// 押さえている HOLD/SLIDE を集めて、押さえている間の音(「シャラララ」ときらめく音)へ渡す(2026-09-28)。
 // 渡すだけで、判定・スコアには触らない。並びは使い回す(毎フレーム配列を作らない)
 const heldNotes=heldNotesRef.current;heldNotes.length=0;
 for(let i=scanFrom;i<notes.length;i++){

@@ -251,7 +251,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
             {field('ロングの終わりの音の大きさ',stepper('noteSeEndVolume',0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,{fine:5,coarse:20,suffix:'%'}),
               'ホールド・スライドを最後まで取れたときの音です。タップ音量に対する大きさで、0%で鳴らしません。',{full:true})}
             {field('押さえている間の音の大きさ',stepper('noteSeHoldVolume',0,RHYTHM_NOTE_SE_PART_VOLUME_MAX,1,{fine:5,coarse:20,suffix:'%'}),
-              'ホールド・スライドを押さえているあいだ、「ウィーン」と高くなっていく溜める音が鳴ります。タップ音量に対する大きさで、0%で鳴らしません。',{full:true})}
+              'ホールド・スライドを押さえているあいだ、「シャラララ」ときらめく音が鳴ります。タップ音量に対する大きさで、0%で鳴らしません。',{full:true})}
             {field('タップ音',toggle('noteSeEnabled'))}
             <div className="grid gap-2">
               <button type="button" onClick={previewBgm} className="min-h-[44px] rounded-xl bg-indigo-700 text-[12px] font-black">♪ BGM試聴</button>
