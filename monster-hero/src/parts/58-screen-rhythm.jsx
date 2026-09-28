@@ -70,6 +70,19 @@ function RhythmSongSelectScreen({
       // ビートPアップキャンペーン(2026-09-28)。ランキングイベントと重なったときはイベントの帯を出す
       // (計算もイベントのほうを使う。rhythmEventPointAwardAt)。開いているあいだは描き直すたびに数え直す
       const beatPointCampaign=beatPointReleased&&!beatPointEvent?rhythmEventPointCampaignAt(Date.now()):null;
+      // 横持ちの左の細い列(幅104px)へ入れる札。中身は縦持ちの帯と同じ
+      const beatPointSideCard=beatPointCampaign
+        ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-campaign-side className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-amber-100">
+          <span className="block rounded-full bg-amber-400 px-1 text-[10px] leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
+          <span className="mt-0.5 block">キャンペーン中</span>
+          <span className="block text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+        </div>
+        :beatPointEvent
+          ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-active-side className="rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100">
+            <span className="block">🎟️ ビートP獲得期間中</span>
+            <span className="mt-0.5 block text-violet-200/80">{beatPointTargetSong?'選択中のイベント対象曲は1.5倍':'公開曲なら獲得できます'}</span>
+          </div>
+          :null;
       // 所持ビートP(2026-09-28・ユーザー指示「曲選択画面で邪魔にならないところにビートPの表示を作って」)。
       // 題名の下に小さく1行だけ出す。ヘッダーの高さはボタン(44px)で決まっているので、この1行を足しても高さは変わらず、曲の一覧も減らない。
       // 画面を開くたびに保存値から読み直す(演奏から戻るとこの部品は作り直されるので、そのたびに最新になる)。読めないあいだは出さない
@@ -276,12 +289,17 @@ function RhythmSongSelectScreen({
             (2026-09-28 ユーザー指摘「縦スペース取られてるし文字列が悪い」)。
             いちばん知りたい「ビートP×5」を札にして左へ、終わりの時刻を右へ置き、必ず1行に収める。
             「公開曲なら」などの細かい条件は交換所の知らせとヘルプに任せる */}
-        {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
-          <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
-          <span className="min-w-0 truncate">キャンペーン中</span>
-          <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+        {/* 横持ちでは、この帯が右の列(難易度・決定)まで押し下げ、高さ360pxの端末で「決定」が画面の下へ5pxはみ出していた
+            (2026-09-28)。縦持ちだけここへ置き、横持ちは曲の一覧の左の細い列へ小さな札として移す(beatPointSideCard)。
+            出し分けは index.html の素のCSS(見た目の案内・クイック周回の帯と同じ考え方) */}
+        {(beatPointCampaign||beatPointEvent)&&<div data-rhythm-beat-band-portrait className="shrink-0">
+          {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
+            <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
+            <span className="min-w-0 truncate">キャンペーン中</span>
+            <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+          </div>}
+          {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
         </div>}
-        {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
         {/* 開催していないときの「ビートPはいつでも貯まります」の帯は外した(2026-09-26・ユーザー指示
             「ビートPがいつでももらえるはここに書く必要はない / この分でもスペース無駄にしてる」)。
             同じことはヘルプとリザルト(獲得したとき)で分かる。開催中の帯だけ残す */}
@@ -351,6 +369,7 @@ function RhythmSongSelectScreen({
           spotClass={spotClass}
           onPlay={onPlaySong}
           notice={<AssistantBubble scene="rhythmHome" compact/>}
+          toolbarExtra={beatPointSideCard}
           view={rhythmSelectView}
           onView={saveRhythmSelectView}
           listScrollTop={rhythmSongListScrollRef.current}
