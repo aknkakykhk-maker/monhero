@@ -216,27 +216,49 @@ const rhythmEventPointCampaignAt = (nowMs) => {
 // ラッキーラッシュのおまけビートPも、これを見て1/5にするかどうかを決める
 const rhythmEventPointFullRateAt = (nowMs) => !!(rhythmLimitedEventAt(nowMs) || rhythmEventPointCampaignAt(nowMs));
 
-const rhythmEventPointAwardAt = (nowMs, songId, score) => {
+// ===== 曲の長さの補正(2026-09-28・ユーザー指示「2分以上の曲は10秒毎に10%の補正が掛かるようにして」) =====
+// 長い曲は1回に時間がかかるので、2分を超えたぶんの10秒ごとに +10%。上限は付けない(4分34秒なら +150%)。
+// 長さは曲えらびに出ている長さと同じ(曲の再生時間。無ければ譜面の長さ)を、秒へ四捨五入してから数える。
+//   2分00秒 → +0% / 2分09秒 → +0% / 2分10秒 → +10% / 2分25秒 → +20% / 3分00秒 → +60%
+// ★倍率は「10 + 段数」を10で割った整数の比で掛け、小数の誤差で1つ少なく切り捨てないようにする
+const RHYTHM_EVENT_POINT_LENGTH_FROM_SEC = 120;
+const RHYTHM_EVENT_POINT_LENGTH_STEP_SEC = 10;
+const RHYTHM_EVENT_POINT_LENGTH_STEP_PERCENT = 10;
+const rhythmEventPointLengthSteps = (durationMs) => {
+  const ms = Number(durationMs);
+  if (!Number.isFinite(ms) || ms <= 0) return 0;
+  const sec = Math.round(ms / 1000);
+  return sec > RHYTHM_EVENT_POINT_LENGTH_FROM_SEC ? Math.floor((sec - RHYTHM_EVENT_POINT_LENGTH_FROM_SEC) / RHYTHM_EVENT_POINT_LENGTH_STEP_SEC) : 0;
+};
+const rhythmEventPointAwardAt = (nowMs, songId, score, durationMs = 0) => {
   const published = (typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' && Array.isArray(RHYTHM_DEMO_SONG_IDS)) ? RHYTHM_DEMO_SONG_IDS : [];
   const id = typeof songId === 'string' ? songId : '';
   if (!id || !published.includes(id)) return null;
   const event = rhythmLimitedEventAt(nowMs);
   const base = rhythmEventPointBaseForScore(score);
+  const lengthSteps = rhythmEventPointLengthSteps(durationMs);
+  const lengthBonusPercent = lengthSteps * RHYTHM_EVENT_POINT_LENGTH_STEP_PERCENT;
+  // 長さの倍率 = L ÷ 10(L = 10 + 段数)。補正が無いとき(L=10)は、これまでとまったく同じ値になる
+  const L = 10 + lengthSteps;
+  const length = { lengthSteps, lengthBonusPercent };
   if (!event) {
     const campaign = rhythmEventPointCampaignAt(nowMs);
     if (campaign) {
       const boost = Number(campaign.boost);
       // 0.2×boost を先に掛けると2進数の誤差で1つ少なく切り捨てることがあるので、boost倍してから5で割る
-      return Object.freeze({ eventId:null, campaignId:campaign.id, campaign:true, boost, base, target:false, offEvent:false,
-        multiplier:RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER * boost, amount:Math.floor(base * boost / 5) });
+      // floor(base × boost × L ÷ 50)。boost が小数のときの誤差に備えて、ごく小さい値を足してから切り捨てる
+      // (分母は50なので、整数でない答えの端数は 0.02 より小さくならない)
+      return Object.freeze({ eventId:null, campaignId:campaign.id, campaign:true, boost, base, target:false, offEvent:false, ...length,
+        multiplier:RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER * boost, amount:Math.floor(base * boost * L / 50 + 1e-9) });
     }
     const multiplier = RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER;
     // 0.2 は2進数で割り切れないので、先に5で割って切り捨てる(floor(base×0.2)と同じ値)
-    return Object.freeze({ eventId:null, base, target:false, offEvent:true, multiplier, amount:Math.floor(base / 5) });
+    return Object.freeze({ eventId:null, base, target:false, offEvent:true, ...length, multiplier, amount:Math.floor(base * L / 50) });
   }
   const target = Array.isArray(event.songIds) && event.songIds.includes(id);
   const multiplier = target ? RHYTHM_EVENT_POINT_TARGET_MULTIPLIER : 1;
-  return Object.freeze({ eventId:event.id, base, target, offEvent:false, multiplier, amount:Math.floor(base * multiplier) });
+  // 対象曲1.5倍は 3/2 として整数で掛ける: floor(base × (3 or 2) × L ÷ 20)
+  return Object.freeze({ eventId:event.id, base, target, offEvent:false, ...length, multiplier, amount:Math.floor(base * (target ? 3 : 2) * L / 20) });
 };
 
 // ===== イベントP交換所 STEP3 =====

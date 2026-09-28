@@ -48,7 +48,7 @@ vm.runInContext(`${demoIds}\n${eventData}\n`
   +'rhythmEventSongDivisionId,RHYTHM_EVENT_REWARD_RANKS,rhythmEventsAwaitingReward,'
   +'normalizeRhythmEventRewardClaims,rhythmEventDivisionIds,rhythmEventParticipationReward,rhythmEventParticipationCleared,'
   +'rhythmEventSongDivisionId,rhythmEventMaxScore,rhythmEventEntryScore,RHYTHM_EVENT_TOTAL_DIVISION,'
-  +'RHYTHM_EVENT_POINT_TARGET_MULTIPLIER,RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER,rhythmEventPointBaseForScore,rhythmEventPointAwardAt,'
+  +'RHYTHM_EVENT_POINT_TARGET_MULTIPLIER,RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER,rhythmEventPointBaseForScore,rhythmEventPointAwardAt,rhythmEventPointLengthSteps,'
   +'RHYTHM_EVENT_POINT_SHOP_OFFERS,rhythmEventPointExchangePreview,'
   +'rhythmPreviousLimitedEvent,rhythmNextLimitedEvent,rhythmHistoryEvents};',context);
 const O=context.out;
@@ -651,6 +651,24 @@ if(limited.length){
     const off95=O.rhythmEventPointAwardAt(Date.parse(e.endAt),target,950000);
     check('イベント期間外は開催中(通常曲)の1/5のビートPを出す',!!off&&off.amount===40&&off.offEvent===true&&off.target===false
       &&off.eventId===null&&!!off95&&off95.amount===29,off?`100万点→${off.amount}P / 95万点→${off95&&off95.amount}P`:'null');
+    // 2026-09-28: 2分を超えたぶんの10秒ごとに +10%(ユーザー指示「2分以上の曲は10秒毎に10%の補正が掛かるようにして」)
+    check('曲の長さの補正は、2分を超えたぶんの10秒ごとに1段',
+      [[0,0],[119000,0],[120000,0],[129000,0],[130000,1],[145000,2],[180000,6],[274000,15],[NaN,0],[-5,0]]
+        .every(([ms,want])=>O.rhythmEventPointLengthSteps(ms)===want));
+    {
+      const at=Date.parse(e.endAt);
+      const offLong=O.rhythmEventPointAwardAt(at,target,1000000,180000);   // 3分: +60%
+      const tLong=O.rhythmEventPointAwardAt(mid,target,1000000,145000);    // 2分25秒: +20%
+      const nLong=normal?O.rhythmEventPointAwardAt(mid,normal,950000,274000):null; // 4分34秒: +150%
+      const plain=O.rhythmEventPointAwardAt(mid,target,1000000,120000);
+      check('長さの補正はイベント外(1/5)・対象曲(1.5倍)・通常曲に掛かる',
+        !!offLong&&offLong.amount===64&&offLong.lengthBonusPercent===60
+        &&!!tLong&&tLong.amount===360&&tLong.lengthBonusPercent===20
+        &&(!normal||!!nLong&&nLong.amount===370&&nLong.lengthBonusPercent===150),
+        `${offLong&&offLong.amount} / ${tLong&&tLong.amount} / ${nLong&&nLong.amount}`);
+      check('2分ちょうど・長さ不明の曲は補正なし(これまでと同じ値)',!!plain&&plain.amount===300&&plain.lengthBonusPercent===0
+        &&O.rhythmEventPointAwardAt(mid,target,1000000).amount===300);
+    }
     check('開催中の付与は期間外の印を持たない',!!targetAward&&targetAward.offEvent===false);
     check('期間外の倍率は0.2',O.RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER===0.2);
   }
@@ -664,7 +682,8 @@ check('ビートPは既存の後方互換キーへ保存する',
 check('イベント終了でビートPを0へ戻す処理を持たない',!game.includes('storeSet(RHYTHM_EVENT_POINTS_KEY,0'));
 check('正常リザルトのfinishでだけビートP付与を判定する',
   game.includes('const eventPointAward=(!debugPlay&&!tutorial&&!calibrating')
-  &&game.includes('rhythmEventPointAwardAt(Date.now(),song.songId,score)')
+  // 2026-09-28 から曲の長さ(4つめ)も渡す
+  &&game.includes('rhythmEventPointAwardAt(Date.now(),song.songId,score,Number(song.playDurationMs)||Number(rawChart&&rawChart.durationMs)||0)')
   &&game.includes('void addRhythmEventPoints(eventPointAward.amount)'));
 check('STEP4でビートP公開フラグをONにする',
   /const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;/.test(flags)
