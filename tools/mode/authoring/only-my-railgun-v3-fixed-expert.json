@@ -4,7 +4,7 @@
  "trackId": "only_my_railgun",
  "difficulty": "EXPERT",
  "candidateVersion": "v3",
- "chartRevision": 19,
+ "chartRevision": 21,
  "laneCount": 6,
  "develop": {
   "bars": [
