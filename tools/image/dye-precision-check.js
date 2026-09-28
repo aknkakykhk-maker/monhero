@@ -36,6 +36,9 @@ const APPROVED_MASKS = {
   Eiki: 'images/monsters/eiki-dye-mask.PNG',
   Pandora: 'images/monsters/pandora-dye-mask.PNG',
   KenshiMocchi: 'images/monsters/kenshi-mocchi-dye-mask.PNG',
+  // 近日公開予定の2体(2026-09-28)。本体(ALL_PLAYER_MONSTERS)より先にマスクだけ入っている
+  Yggdrasil: 'images/monsters/yggdrasil-dye-mask.PNG',
+  MelWhip: 'images/monsters/mel-whip-dye-mask.PNG',
 };
 // これ未満しか染まらない画素を「染まっていない」とみなす
 const COVER_MIN = 0.5;

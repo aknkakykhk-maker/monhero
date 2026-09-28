@@ -208,6 +208,17 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
   Object.freeze({ id:'transcend_fruit_rainbow', name:'虹の超越の実', emoji:'🍇', kind:'item', itemId:'transcend_fruit_rainbow', grantAmount:1, unit:'個', cost:5000 }),
   Object.freeze({ id:'hero_proof', name:'勇者の証', emoji:'🏅', kind:'item', itemId:'hero_proof', grantAmount:1, unit:'個', cost:10000 }),
 ]);
+// 近日公開予定の商品(2026-09-28 ユーザー指示「ビートポイントの方にも追加で、どっちも1500P」)。
+// ユグドラシル・メルホイップの円盤石。モンスター本体(能力値・技)がまだ無いので、
+// **交換の一覧(RHYTHM_EVENT_POINT_SHOP_OFFERS)には入れず**、ここで予告として並べるだけにする。
+// 交換ボタンは出さず「近日追加」と出る。rhythmEventPointExchangePreview も kind:'disc' をはじく。
+// 正式実装のときは、円盤石を渡す交換(解放済みモンスターへの追加)を作ってから交換の一覧へ移す。
+// 絵はここに書かない。画面が monsterId と同じidの円盤石(data/breeder.js の BREEDER_MARKET_ITEMS)から引く
+// (このファイルは検査で単独で読まれることがあり、breeder.js の定数を参照すると落ちるため)。
+const RHYTHM_EVENT_POINT_SHOP_COMING_SOON = Object.freeze([
+  Object.freeze({ id:'disc_yggdrasil', name:'ユグドラシルの円盤石', kind:'disc', monsterId:'Yggdrasil', grantAmount:1, unit:'個', cost:1500, available:false }),
+  Object.freeze({ id:'disc_mel_whip', name:'メルホイップの円盤石', kind:'disc', monsterId:'MelWhip', grantAmount:1, unit:'個', cost:1500, available:false }),
+]);
 const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1 } = {}) => {
   const max = Number.MAX_SAFE_INTEGER;
   const safeInt = (value) => {

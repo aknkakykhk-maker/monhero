@@ -112,6 +112,16 @@ const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=6b5ab28ef5b4";
 // 描き直していない原本は tools/art-sources/dye-masks/kenshi-mocchi-dye-mask.PNG に置いてある
 const KENSHI_MOCCHI_IMG = "images/monsters/kenshi-mocchi.png?v=63509132e701";
 const KENSHI_MOCCHI_DYE_MASK = "images/monsters/kenshi-mocchi-dye-mask.PNG?v=25a6a1282265";
+// 2026年9月に近日公開予定として絵だけ先に入れた2体(2026-09-28)。能力値・技はまだ決まっていないので
+// ALL_PLAYER_MONSTERS には入れていない。マーケットとビートP交換所には近日公開(available:false)で並ぶ。
+//   ユグドラシル … 新しい血統(ユグドラシル×ユグドラシル)
+//   メルホイップ … ユグドラシル×？？？のレア
+// 染色マスクは、いただいた3色マスクを立ち絵と同じ座標へ合わせて純色へそろえたもの
+// (赤=① / 緑=② / 青=③。原本は tools/art-sources/dye-masks/ に置いてある)
+const YGGDRASIL_IMG = "images/monsters/yggdrasil.png?v=8dddbfc4328f";
+const YGGDRASIL_DYE_MASK = "images/monsters/yggdrasil-dye-mask.PNG?v=97a8b27629d6";
+const MEL_WHIP_IMG = "images/monsters/mel-whip.png?v=629452e35b02";
+const MEL_WHIP_DYE_MASK = "images/monsters/mel-whip-dye-mask.PNG?v=11edba576c7f";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
@@ -165,3 +175,5 @@ const YAOBIKUNI_FACE_ICON = "images/monster-icons/face/yaobikuni.png?v=32838d8bd
 // 立ち絵から切り出した顔クロップ(tools/image/make-face-icons.js)
 const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=9605be0feb75";
 const KENSHI_MOCCHI_FACE_ICON = "images/monster-icons/face/kenshi-mocchi.png?v=fed887e4c278";
+const YGGDRASIL_FACE_ICON = "images/monster-icons/face/yggdrasil.png?v=da9792f6708f";
+const MEL_WHIP_FACE_ICON = "images/monster-icons/face/mel-whip.png?v=5016f704506c";
