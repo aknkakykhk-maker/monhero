@@ -1714,7 +1714,7 @@ while(scanFrom<notes.length){
 }
 run.scanFrom=scanFrom;
 const scanHorizonMs=visualTime+travelMs*1.2;
-// 押さえている HOLD/SLIDE を集めて、押さえている間の音(「シャラララ」ときらめく音)へ渡す(2026-09-28)。
+// 押さえている HOLD/SLIDE を集めて、押さえている間の音(高い「シャラシャラ」)へ渡す(2026-09-28)。
 // 渡すだけで、判定・スコアには触らない。並びは使い回す(毎フレーム配列を作らない)
 const heldNotes=heldNotesRef.current;heldNotes.length=0;
 for(let i=scanFrom;i<notes.length;i++){
