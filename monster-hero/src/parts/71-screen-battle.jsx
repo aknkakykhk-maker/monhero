@@ -85,6 +85,84 @@ const tacticsAuraKindOf = (text = '', side = '') => {
 };
 // 何も起きていない間、画面の動きを休ませるまでの時間(ミリ秒)。BattleScreen の data-fx-rest を参照
 const TACTICS_FX_REST_MS = 5000;
+// ==== バトルの重さの見張り(2026-09-28 ユーザー指示「モンビーみたいに重さチェックやその他点検ツールを取り入れて
+// 軽くて見た目が良く出来る仕組みを作って」) ====
+// モンヒロビートの「重いときは演出を自動で控えめに」(30-rhythm-play)と同じ数え方。rAF の間隔から
+// 「描くのが間に合わなかったコマ」(いちばん短い間隔の1.8倍を超え、しかも20msを超えたもの・または50ms以上)を数え、
+// 3秒のうち8%を超えたら画面の軽さを一段下げる。1秒以上あいた間(裏に回った・止まっていた)は数えない。
+// ★下げるのは「軽め」まで。最軽量は並びごと変わるので、自分で選んだ人だけ。
+// ★見張るのはタクティクス新画面で、一時停止していない間だけ。休んでいる間は rAF も回さない(スマホを休ませる)
+const BATTLE_AUTO_LOAD_WINDOW_MS = 3000;
+const BATTLE_AUTO_LOAD_MIN_FRAMES = 5;
+const BATTLE_AUTO_LOAD_SLOW_RATIO = 0.08;
+const BATTLE_AUTO_LOAD_FLOOR = 'LIGHT';
+// 見張りを始めた直後(バトルの立ち上がり・軽さを下げた直後の描き直し)は、一瞬詰まるのがふつうなので数えない
+const BATTLE_AUTO_LOAD_WARMUP_MS = 2000;
+// 1コマが「遅い」か。rhythm と同じ線(一様に遅い端末は1.8倍では拾えないので、50ms 以上は常に遅い)
+const battleSlowFrame = (gap, minGap) => (gap > Math.max(5, minGap) * 1.8 && gap > 20) || gap >= 50;
+// 性能計測(デバッグ限定・既定OFF)。ONの記憶は専用キー mh_battle_perf_v1。
+// **OFFのあいだは加算も配列追加も一切しない**(計測のために重くしない)。戦闘の計算・進行には一切関与しない。
+// プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない
+const BATTLE_PERF_KEY = 'mh_battle_perf_v1';
+const BATTLE_PERF = (() => {
+  const zero = () => ({ frames: 0, totalMs: 0, maxMs: 0, slow: 0, over50: 0, over100: 0, minGap: 1e9, longTasks: 0, longTaskMs: 0, autoSteps: [], since: 0 });
+  let on = false, last = null, acc = zero(), observer = null;
+  const watchLongTasks = () => {
+    if (observer || typeof PerformanceObserver === 'undefined') return;
+    try {
+      observer = new PerformanceObserver((list) => { if (!on) return; for (const e of list.getEntries()) { acc.longTasks++; acc.longTaskMs += e.duration; } });
+      observer.observe({ type: 'longtask', buffered: false });
+    } catch { observer = null; }
+  };
+  const api = {
+    get enabled() { return on; },
+    setEnabled(next) {
+      on = !!next; last = null; acc = zero();
+      try { if (typeof localStorage !== 'undefined') localStorage.setItem(BATTLE_PERF_KEY, on ? '1' : '0'); } catch {}
+      if (on) watchLongTasks(); else if (observer) { try { observer.disconnect(); } catch {} observer = null; }
+      return on;
+    },
+    restore() { try { if (typeof localStorage !== 'undefined') on = localStorage.getItem(BATTLE_PERF_KEY) === '1'; } catch {} if (on) watchLongTasks(); return on; },
+    reset() { last = null; acc = zero(); },
+    // 見張りの rAF から毎コマ1回だけ呼ぶ(計測用の rAF は増やさない)
+    frame(nowMs) {
+      if (!on) return;
+      const t = Number(nowMs);
+      if (!Number.isFinite(t)) return;
+      if (!acc.since) acc.since = t;
+      if (last !== null) {
+        const dt = t - last;
+        if (dt > 0 && dt < 1000) {
+          acc.frames++; acc.totalMs += dt; if (dt > acc.maxMs) acc.maxMs = dt;
+          if (dt >= 5 && dt < acc.minGap) acc.minGap = dt;
+          if (battleSlowFrame(dt, acc.minGap)) acc.slow++;
+          if (dt >= 50) acc.over50++;
+          if (dt >= 100) acc.over100++;
+        }
+      }
+      last = t;
+    },
+    // 見張りをやめた(休止・画面を離れた)ときは、次のコマとの間を数えない
+    pause() { last = null; },
+    // 自動で軽さを下げた記録(いつ・何から何へ・そのときの遅いコマの割合)
+    autoStep(from, to, slow, frames) {
+      if (!on) return;
+      if (acc.autoSteps.length < 20) acc.autoSteps.push({ at: Math.round(typeof performance !== 'undefined' ? performance.now() : 0), from, to, slow, frames });
+    },
+    // いまの記録の要約(パネル表示・検査用)。infinite … ずっと動き続けているアニメーションの数
+    snapshot() {
+      if (!on) return null;
+      let infinite = null;
+      try { if (typeof document !== 'undefined' && document.getAnimations) infinite = document.getAnimations().filter(a => a.playState === 'running' && a.effect && a.effect.getComputedTiming && a.effect.getComputedTiming().iterations === Infinity).length; } catch {}
+      const avg = acc.frames ? acc.totalMs / acc.frames : 0;
+      return { frames: acc.frames, fps: avg ? Math.round(1000 / avg) : 0, avgMs: Math.round(avg * 10) / 10, maxMs: Math.round(acc.maxMs),
+        slowPct: acc.frames ? Math.round(acc.slow / acc.frames * 1000) / 10 : 0, over50: acc.over50, over100: acc.over100,
+        longTasks: acc.longTasks, longTaskMs: Math.round(acc.longTaskMs), infinite, autoSteps: acc.autoSteps.slice() };
+    },
+  };
+  api.restore();
+  return api;
+})();
 // タクティクスの敵ごとの動き方(新しい画面だけ)。値は 70-bootstrap の data-enemy-motion の CSS 名
 // (2026-09-24 ユーザー指示「次はタクティクスの全モンスターも実装して」で10体すべてに広げた)
 const TACTICS_ENEMY_MOTIONS = Object.freeze({
@@ -469,7 +547,7 @@ const kindOfTacticsSlotFx = (fx) => {
 //   画面は gameState を知らない約束(ui/screen-parts-check)なので、
 //   本体から battleScreenActive として渡している(綴りだけの違い)
 function BattleScreen({
-  applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, battleIntimidate,
+  applyTurnDamageReduction, attackAnim, autoBattle, autoBattleRef, autoRepeat, battleFxSettings, onBattleFxAutoStep, battleIntimidate,
   battleScenarioRef, battleScreenActive, battleScreenStyle, battleSoulMasus, battleSpeed, battleTutorial,
   battleTutorialAllowsEmergency, battleTutorialCardAllowed, battleTutorialCardKind,
   battleTutorialCardTarget, battleTutorialNeed, battleTutorialNeedCard, battleTutorialSpotClass,
@@ -572,6 +650,52 @@ function BattleScreen({
       if (fxRestTimerRef.current) clearTimeout(fxRestTimerRef.current);
     };
   }, [tacticsNewLayout, wakeBattleFx]);
+  // 重さの見張り(上の BATTLE_AUTO_LOAD_* を参照)。自動で下げるのは設定「重いときは自動で軽く」が ON のときだけ。
+  // 性能計測(デバッグ)が ON なら、下げるものが無くても見張って数える
+  const fxLoadIndex = BATTLE_FX_LOADS.indexOf(fxLoad);
+  const autoLoadOn = tacticsNewLayout && !ecoBattleView && battleFx.autoLoad !== 'OFF' && typeof onBattleFxAutoStep === 'function'
+    && fxLoadIndex >= 0 && fxLoadIndex < BATTLE_FX_LOADS.indexOf(BATTLE_AUTO_LOAD_FLOOR);
+  const [perfOn] = useState(() => BATTLE_PERF.enabled);
+  const watchFrames = tacticsNewLayout && !(fxRestEnabled && fxRest) && (autoLoadOn || perfOn);
+  const autoLoadRef = useRef(null);
+  autoLoadRef.current = autoLoadOn ? { from: fxLoad, to: BATTLE_FX_LOADS[fxLoadIndex + 1], step: onBattleFxAutoStep } : null;
+  useEffect(() => {
+    if (!watchFrames || typeof requestAnimationFrame !== 'function') return undefined;
+    let raf = 0, begin = 0, stepped = false;
+    const w = { last: 0, start: 0, frames: 0, slow: 0, minGap: 1e9 };
+    const tick = (now) => {
+      BATTLE_PERF.frame(now);
+      const auto = autoLoadRef.current;
+      if (auto && !stepped) {
+        if (!begin) begin = now;
+        const gap = w.last ? now - w.last : 0;
+        w.last = now;
+        if (now - begin >= BATTLE_AUTO_LOAD_WARMUP_MS) {
+          if (!w.start) w.start = now;
+          else if (gap > 0 && gap < 1000) { w.frames++; if (gap >= 5 && gap < w.minGap) w.minGap = gap; if (battleSlowFrame(gap, w.minGap)) w.slow++; }
+          if (now - w.start >= BATTLE_AUTO_LOAD_WINDOW_MS) {
+            if (w.frames >= BATTLE_AUTO_LOAD_MIN_FRAMES && w.slow / w.frames > BATTLE_AUTO_LOAD_SLOW_RATIO && auto.to) {
+              // ★一段下げたら、この見張りはそこで終わる。軽さが変わると作り直され、立ち上がりの詰まりを数えずに見張り直す
+              stepped = true;
+              BATTLE_PERF.autoStep(auto.from, auto.to, w.slow, w.frames);
+              auto.step(auto.to);
+            }
+            w.start = now; w.frames = 0; w.slow = 0;
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { cancelAnimationFrame(raf); BATTLE_PERF.pause(); };
+  }, [watchFrames, fxLoad]);
+  // 性能計測のパネル(デバッグで ON にしたときだけ)。1秒ごとに要約を読み直す
+  const [perfSnap, setPerfSnap] = useState(null);
+  useEffect(() => {
+    if (!perfOn || !tacticsNewLayout) return undefined;
+    const id = setInterval(() => setPerfSnap(BATTLE_PERF.snapshot()), 1000);
+    return () => clearInterval(id);
+  }, [perfOn, tacticsNewLayout]);
   // いま動いている技(data-enemy-skill)。ムーは丸枠ではなく枠の外の大きな絵が動く
   const enemyIsMoo = isMooBoss(enemy?.id);
   const enemySkillNow = enemyMotion && enemyAttackFx?.skill
@@ -750,7 +874,17 @@ function BattleScreen({
   };
   return (
 
-      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRestEnabled&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined}>
+      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRestEnabled&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined} data-fx-auto={autoLoadOn?'watch':undefined}>
+        {/* 性能計測(デバッグ限定)。デバッグ設定で ON にしたときだけ出る。触っても戦闘の邪魔をしないよう、指は素通りさせる */}
+        {perfOn&&tacticsNewLayout&&perfSnap&&(
+          <div data-battle-perf-panel className="pointer-events-none fixed left-1 z-[65000] rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold leading-tight text-amber-100" style={{top:'calc(env(safe-area-inset-top) + 2px)'}}>
+            <div>{perfSnap.fps}fps 平均{perfSnap.avgMs}ms 最長{perfSnap.maxMs}ms</div>
+            <div>遅いコマ{perfSnap.slowPct}% 50ms超{perfSnap.over50} 100ms超{perfSnap.over100}</div>
+            <div>長い処理{perfSnap.longTasks}回/{perfSnap.longTaskMs}ms 動き続け{perfSnap.infinite??'?'}</div>
+            <div>軽さ {fxLoad}{autoLoadOn?'(見張り中)':''}{fxRestEnabled&&fxRest?' 休止中':''}</div>
+            {perfSnap.autoSteps.map((st,i)=><div key={i}>自動 {st.from}→{st.to} {st.slow}/{st.frames}</div>)}
+          </div>
+        )}
         {/* 舞台の照明(2026-09-22 ユーザー指示「全体的に安っぽい作りをなんとかしたい。
             イメージ画みたいにかっこよくできないかな？」)。
             ★画像は足さない。スマホの通信量に直に効くうえ、敵ごとに背景を用意すると際限がない
@@ -1077,7 +1211,9 @@ function BattleScreen({
                 {/* data-moo-body: 絵と光(後ろの光の輪・絵の形の光の板)をひとまとめにして、動きはこの箱に掛ける(光が絵について動く) */}
                 <div data-moo-body={emSet?'true':undefined} className="relative w-full h-full">
                 {emSet&&<i aria-hidden="true" data-enemy-glow/>}
-                <img src={enemy.imgUrl} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',animation:(liteBattleView||emSpec||enemyHurtNow||(emSet&&!enemyAttackAnim))?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
+                {/* ★ふちをぼかすマスクは外した(2026-09-28 battle-fx-lint-check)。絵はもともと切り抜きで、マスクで薄くなっていたのは
+                    翼の先など2%ほど。大きな絵のマスクはメモリが足りないと外れ、そのたびに描き直しで固まる原因になる */}
+                <img src={enemy.imgUrl} alt={enemy?.name||"ムー"} style={{width:'100%',height:'100%',animation:(liteBattleView||emSpec||enemyHurtNow||(emSet&&!enemyAttackAnim))?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
                 {emSet&&enemyFlashNode}
                 </div>
               </div>
