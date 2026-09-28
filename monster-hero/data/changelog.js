@@ -94,7 +94,7 @@ const CHANGELOG = [
     // (tools/image/make-yggdrasil-dye-preview.js)。一覧の詳細にだけ出る(助手の告知は image の1枚)
     gallery: [
       { caption:'ユグドラシル 染色イメージ「紅葉カラー」', image:'images/events/yggdrasil-dye-preview.jpg?v=1fc38d84ced6' },
-      { caption:'メルホイップ 染色イメージ「いちごチョコ」', image:'images/events/mel-whip-dye-preview.jpg?v=411d90f664b9' },
+      { caption:'メルホイップ 染色イメージ「いちごチョコ」', image:'images/events/mel-whip-dye-preview.jpg?v=fa286afdecdb' },
     ],
     assistantNotice: { id:'update_notice_yggdrasil_lineage_preview_v1', type:'content' },
   },

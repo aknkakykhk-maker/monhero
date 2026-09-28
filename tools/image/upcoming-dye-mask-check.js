@@ -53,6 +53,29 @@ const regionOf = (d, o) => d[o + 3] < 20 ? 0 : d[o] > 200 ? 1 : d[o + 1] > 200 ?
     }
     check('メルホイップ: ケーキの目と口の暗い線を染めない', darkDyed === 0, `${darkDyed}画素が染まる`);
     check('メルホイップ: ブルーベリーの紺を染めない', berries > 100 && berryDyed / berries < 0.02, `${berryDyed} / ${berries}画素`);
+
+    // 4回目のマスク(2026-09-28)で決めたこと。立ち絵の幅・高さに対する割合の範囲で数える
+    const hsv = (o) => { const r = art.d[o] / 255, g = art.d[o + 1] / 255, b = art.d[o + 2] / 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0; if (d) { if (mx === r) h = 60 * (((g - b) / d) % 6); else if (mx === g) h = 60 * ((b - r) / d + 2); else h = 60 * ((r - g) / d + 4); } if (h < 0) h += 360; return [h, mx ? d / mx : 0, mx]; };
+    const scan = (x0, x1, y0, y1, pick) => {
+      const c = [0, 0, 0, 0]; let n = 0;
+      for (let y = Math.floor(y0 * H); y < y1 * H; y++) for (let x = Math.floor(x0 * W); x < x1 * W; x++) {
+        const o = (y * W + x) * 4; if (art.d[o + 3] < 200 || !pick(hsv(o))) continue; n++; c[regionOf(mask.d, o)]++;
+      }
+      return { n, c };
+    };
+    const hoof = scan(0.4, 0.6, 0.64, 0.74, ([, , v]) => v < 0.27);
+    check('メルホイップ: 黒い蹄を染めない', hoof.n > 100 && hoof.c[1] + hoof.c[2] + hoof.c[3] === 0, `${hoof.n - hoof.c[0]} / ${hoof.n}画素が染まる`);
+    // 傘のストライプは細く、いただいたマスクでは黄緑の帯と白い線が入れ替わっていた
+    const stripe = scan(0.2, 0.6, 0.06, 0.11, ([, s, v]) => s < 0.1 && v > 0.9);
+    check('メルホイップ: 傘の白いストライプは③(白・クリーム)', stripe.n > 500 && stripe.c[3] / stripe.n > 0.95, `${stripe.c[3]} / ${stripe.n}画素`);
+    const band = scan(0.2, 0.6, 0.06, 0.13, ([h, s]) => s > 0.55 && h >= 45 && h < 110);
+    check('メルホイップ: 傘の帯の黄緑は①(緑系)', band.n > 5000 && band.c[1] / band.n > 0.85, `${band.c[1]} / ${band.n}画素`);
+    // バラの芯(淡い緑)は、いただいたマスクで毎回②に塗られていた。色で①へ付け直さない
+    const rose = scan(0.5, 0.56, 0.37, 0.41, () => true);
+    check('メルホイップ: 胸のバラの芯は②(いただいたマスクのとおり)', rose.c[2] / rose.n > 0.5, `${rose.c[2]} / ${rose.n}画素`);
+    // 顔(目と口のまわり)に髪の色の点を散らさない。境目の寄せ直しを、染めない所との境目にまで広げたときに起きた
+    const face = scan(0.49, 0.57, 0.33, 0.36, ([h, s, v]) => (h < 40 || h >= 340) && s > 0.08 && v > 0.7);
+    check('メルホイップ: 顔の肌を染めない', face.n > 200 && (face.n - face.c[0]) / face.n < 0.03, `${face.n - face.c[0]} / ${face.n}画素`);
   }
 
   // ③ 部位ごとの染め方
