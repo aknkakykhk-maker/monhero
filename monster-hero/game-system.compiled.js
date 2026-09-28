@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c36e9756e3dac790
+// source-sha256: 7760c82e37f31430
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 16:11";
+const BUILD_DATE = "2026-09-28 16:30";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5350,7 +5350,8 @@ const EVENT_BGM_SCENES = Object.freeze({
   symphony_2026_09_17_thanks: 'symphonyEvent',
   tactics_intro: 'tacticsIntroEvent',
   beat_point_always_2026_09_24: 'monbeatCupEvent',
-  rhythm_six_lane_2026_09_26: 'monbeatCupEvent'
+  rhythm_six_lane_2026_09_26: 'monbeatCupEvent',
+  beat_point_up_2026_09_28: 'monbeatCupEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -24983,7 +24984,7 @@ const RhythmTapTest = ({
     if (eventPointAward && eventPointAward.amount > 0 && typeof addRhythmEventPoints === 'function') void addRhythmEventPoints(eventPointAward.amount);
     setLuckyRush(false);
     if (luckOn && !assistOn && !debugPlay && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof addRhythmEventPoints === 'function') {
-      const offEvent = !(typeof rhythmLimitedEventAt === 'function' && rhythmLimitedEventAt(Date.now()));
+      const offEvent = !(typeof rhythmEventPointFullRateAt === 'function' && rhythmEventPointFullRateAt(Date.now()));
       const luckBonus = rhythmLuckBonusPoints(run.luckPoints, offEvent);
       if (luckBonus > 0) {
         run.luckBonus = luckBonus;
@@ -26527,7 +26528,10 @@ const RhythmTapTest = ({
       className: "mt-0.5 block text-2xl font-black text-white"
     }, "+", result.eventPointAward.amount.toLocaleString(), "P"), result.eventPointAward.target && React.createElement("span", {
       className: "mt-1 block text-[9px] font-black text-amber-200"
-    }, "イベント対象曲 1.5倍"), result.eventPointAward.offEvent && React.createElement("span", {
+    }, "イベント対象曲 1.5倍"), result.eventPointAward.campaign && React.createElement("span", {
+      "data-rhythm-result-beat-points-campaign": true,
+      className: "mt-1 block text-[9px] font-black text-amber-200"
+    }, "ビートPアップキャンペーン いつもの", result.eventPointAward.boost, "倍"), result.eventPointAward.offEvent && React.createElement("span", {
       "data-rhythm-result-beat-points-off-event": true,
       className: "mt-1 block text-[9px] font-black text-violet-200"
     }, "イベント開催中はこの5倍もらえます")), (() => {
@@ -29510,7 +29514,13 @@ function BreederMarketScreen({
     className: "font-mono text-base font-black text-violet-100"
   }, safeEventPoints.toLocaleString()), React.createElement("span", {
     className: "text-[10px] font-bold text-slate-400"
-  }, "所持ビートP")), marketExchangeError && React.createElement("div", {
+  }, "所持ビートP")), (() => {
+    const campaign = typeof rhythmEventPointCampaignAt === 'function' && !rhythmLimitedEventAt(Date.now()) ? rhythmEventPointCampaignAt(Date.now()) : null;
+    return campaign ? React.createElement("div", {
+      "data-event-point-campaign": true,
+      className: "mb-2 shrink-0 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-1.5 text-center text-[10px] font-black text-amber-100"
+    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍（", rhythmEventJstText(Date.parse(campaign.endAt)), "まで）") : null;
+  })(), marketExchangeError && React.createElement("div", {
     className: "mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[11px] font-black text-red-300"
   }, marketExchangeError), React.createElement("div", {
     className: SCREEN_LIST_CLASS
@@ -29575,8 +29585,8 @@ function BreederMarketScreen({
     }, React.createElement("div", {
       className: "font-mono text-sm font-black text-violet-300/70"
     }, offer.cost.toLocaleString(), "P"), React.createElement("div", {
-      className: "text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap"
-    }, "近日追加")));
+      className: "text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap"
+    }, "先行公開予定")));
   })))), eventQuantityOffer && (() => {
     const maxQuantity = Math.floor(safeEventPoints / eventQuantityOffer.cost);
     const quantity = Math.max(1, Math.min(Math.max(1, maxQuantity), Math.floor(Number(eventQuantity) || 1)));
@@ -31023,6 +31033,7 @@ function RhythmSongSelectScreen({
   const beatPointReleased = RELEASE_FLAGS.rhythmEventPoints === true;
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
   const beatPointTargetSong = !!beatPointEvent && Array.isArray(beatPointEvent.songIds) && beatPointEvent.songIds.includes(rhythmSelectedSongId);
+  const beatPointCampaign = beatPointReleased && !beatPointEvent ? rhythmEventPointCampaignAt(Date.now()) : null;
   const quickRunBandLabel = quickRunProgress ? quickRunProgress.finished ? `${quickRunFinishReasonText(quickRunProgress.reason)}（タップで結果へ）` : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp ? ' ・ 追いつき中' : ''}` : '';
   const quickRunBandButton = quickRunProgress ? React.createElement("button", {
     type: "button",
@@ -31244,7 +31255,10 @@ function RhythmSongSelectScreen({
     onClick: dismissRhythmEventNotice,
     "aria-label": "この案内を閉じる",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
-  }, "×"))), beatPointEvent && React.createElement("div", {
+  }, "×"))), beatPointCampaign && React.createElement("div", {
+    "data-rhythm-beat-point-campaign": true,
+    className: "shrink-0 border-b border-amber-300/25 bg-amber-500/10 px-3 py-1 text-center text-[10px] font-black text-amber-100"
+  }, "🎟️ ", beatPointCampaign.name, "中・公開曲ならビートPがいつもの", beatPointCampaign.boost, "倍（", rhythmEventJstText(Date.parse(beatPointCampaign.endAt)), "まで）"), beatPointEvent && React.createElement("div", {
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
@@ -47942,7 +47956,8 @@ function MonsterHeroGame() {
   const SYMPHONY_THANKS_STORY_ID = 'symphony_2026_09_17_thanks';
   const BEAT_POINT_ALWAYS_STORY_ID = 'beat_point_always_2026_09_24';
   const RHYTHM_SIX_LANE_STORY_ID = 'rhythm_six_lane_2026_09_26';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID];
+  const BEAT_POINT_UP_STORY_ID = 'beat_point_up_2026_09_28';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -48002,14 +48017,16 @@ function MonsterHeroGame() {
       const liveEvent = rhythmLimitedEventAt(Date.now());
       const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
       const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
+      const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
+      const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
       if (!liveEvent) {
-        if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+        if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
-      } else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+      } else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       if (rhythmEventLiveCatchUpRef.current) return;
       rhythmEventLiveCatchUpRef.current = true;
       try {
@@ -50377,6 +50394,7 @@ function MonsterHeroGame() {
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
+    beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];

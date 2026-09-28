@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f161c606961546cd
+// generated-sha256: 2389d3f264d71adb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 16:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-28 16:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4517,7 +4517,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 // 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -17446,10 +17446,11 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
     setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn}}));
     if(eventPointAward&&eventPointAward.amount>0&&typeof addRhythmEventPoints==='function')void addRhythmEventPoints(eventPointAward.amount);
-    /* ラッキーラッシュのおまけ。公開の曲を最後まで遊んだときだけ(アシスト・練習・デバッグは除く)。上限10P、イベント期間外は1/5 */
+    /* ラッキーラッシュのおまけ。公開の曲を最後まで遊んだときだけ(アシスト・練習・デバッグは除く)。上限10P、イベント・キャンペーンの期間外は1/5 */
     setLuckyRush(false);
     if(luckOn&&!assistOn&&!debugPlay&&typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS?.rhythmEventPoints===true&&typeof addRhythmEventPoints==='function'){
-      const offEvent=!(typeof rhythmLimitedEventAt==='function'&&rhythmLimitedEventAt(Date.now()));
+      // ビートPアップキャンペーン中も満額(2026-09-28)。ランキングイベント中と同じ扱い
+      const offEvent=!(typeof rhythmEventPointFullRateAt==='function'&&rhythmEventPointFullRateAt(Date.now()));
       const luckBonus=rhythmLuckBonusPoints(run.luckPoints,offEvent);
       if(luckBonus>0){run.luckBonus=luckBonus;void addRhythmEventPoints(luckBonus);}
     }
@@ -18080,7 +18081,7 @@ scheduleTick();};
     ★練習・タイミング合わせ・デバッグから始めたプレイは記録に残らないので出さない */}
 {(()=>{if(tutorial||calibrating||debugPlay||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;const opened=Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id=>RHYTHM_DIFFICULTY_UNLOCK_BY[id]===difficulty.id&&rhythmChartPlayable(song,id));if(!opened)return null;return <div data-rhythm-result-unlock={opened} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {opened}（Lv.{song.difficulties[opened].level}）を曲えらびで選べます</small></div>;})()}
 {result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
-{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
+{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
 {(()=>{const sections=Array.isArray(result.liveLog)?result.liveLog:[];if(!sections.some(section=>section.total>0))return null;const worst=sections.filter(section=>section.total>=3&&(section.bad+section.miss)>0).sort((a,b)=>(b.bad+b.miss)/b.total-(a.bad+a.miss)/a.total)[0]||null;return <div data-rhythm-live-log className="mb-2 rounded-2xl border border-white/10 bg-slate-900/70 px-3 py-2">
   <div className="flex items-baseline justify-between"><b className="text-[11px] font-black tracking-wider text-cyan-200">ライブログ</b><small className="text-[9px] font-bold text-slate-400">棒＝MARVELOUS・EXCELLENTの割合 / 数字＝BAD・MISS</small></div>
@@ -20476,6 +20477,9 @@ function BreederMarketScreen({
           <span className="font-mono text-base font-black text-violet-100">{safeEventPoints.toLocaleString()}</span>
           <span className="text-[10px] font-bold text-slate-400">所持ビートP</span>
         </div>
+        {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す */}
+        {(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
+          return campaign?<div data-event-point-campaign className="mb-2 shrink-0 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-1.5 text-center text-[10px] font-black text-amber-100">🎟️ {campaign.name}中：モンヒロビートの公開曲でビートPがいつもの{campaign.boost}倍（{rhythmEventJstText(Date.parse(campaign.endAt))}まで）</div>:null;})()}
         {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[11px] font-black text-red-300">{marketExchangeError}</div>}
         <div className={SCREEN_LIST_CLASS}>
           <div data-event-point-shop className="grid grid-cols-2 gap-2.5 pb-4">
@@ -20496,6 +20500,7 @@ function BreederMarketScreen({
               </div>;
             })}
             {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。
+                ダイヤショップより先にここで公開する(ユーザー指示「新モンスター先行実装はビートポイントから」)ので「先行公開予定」と出す。
                 絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする */}
             {RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer=>{
               const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
@@ -20509,7 +20514,7 @@ function BreederMarketScreen({
                 </div>
                 <div className="mt-auto pt-2 flex items-end justify-between gap-2">
                   <div className="font-mono text-sm font-black text-violet-300/70">{offer.cost.toLocaleString()}P</div>
-                  <div className="text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>
+                  <div className="text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap">先行公開予定</div>
                 </div>
               </div>;
             })}
@@ -21330,6 +21335,9 @@ function RhythmSongSelectScreen({
       const beatPointReleased=RELEASE_FLAGS.rhythmEventPoints===true;
       const beatPointEvent=beatPointReleased?rhythmLimitedEventAt(Date.now()):null;
       const beatPointTargetSong=!!beatPointEvent&&Array.isArray(beatPointEvent.songIds)&&beatPointEvent.songIds.includes(rhythmSelectedSongId);
+      // ビートPアップキャンペーン(2026-09-28)。ランキングイベントと重なったときはイベントの帯を出す
+      // (計算もイベントのほうを使う。rhythmEventPointAwardAt)。開いているあいだは描き直すたびに数え直す
+      const beatPointCampaign=beatPointReleased&&!beatPointEvent?rhythmEventPointCampaignAt(Date.now()):null;
       // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
       // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
       // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
@@ -21517,6 +21525,7 @@ function RhythmSongSelectScreen({
             <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
         </div>}
+        {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 border-b border-amber-300/25 bg-amber-500/10 px-3 py-1 text-center text-[10px] font-black text-amber-100">🎟️ {beatPointCampaign.name}中・公開曲ならビートPがいつもの{beatPointCampaign.boost}倍（{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}まで）</div>}
         {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
         {/* 開催していないときの「ビートPはいつでも貯まります」の帯は外した(2026-09-26・ユーザー指示
             「ビートPがいつでももらえるはここに書く必要はない / この分でもスペース無駄にしてる」)。
@@ -32573,7 +32582,12 @@ function MonsterHeroGame() {
   // モンヒロビートが6レーンになった知らせ(2026-09-26・ユーザー指示「したらストーリーも作って」)。
   // ビートPの知らせと同じく、イベントとは関係なくHOMEで1度だけ流す。見たかどうかも同じ保存キーの配列へ入れる
   const RHYTHM_SIX_LANE_STORY_ID = 'rhythm_six_lane_2026_09_26';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID];
+  // ビートPアップキャンペーンと新しい仲間の先行公開の知らせ(2026-09-28・ユーザー指示「ストーリーも作って」)。
+  // **キャンペーンの期間中だけ**、HOMEで1度だけ流す(終わったあとは回想から見られる)。
+  // 見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)。
+  // キャンペーンの id と会話の id は同じにしてある(RHYTHM_EVENT_POINT_CAMPAIGNS)
+  const BEAT_POINT_UP_STORY_ID = 'beat_point_up_2026_09_28';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -32663,8 +32677,13 @@ function MonsterHeroGame() {
       const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
       // 6レーンの知らせ。ほかの会話が並んでいれば、そちらが終わったあとの見回りで並ぶ
       const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
+      // ビートPアップキャンペーンの知らせ。期間中かどうかは見回りのたびに数え直す(CLAUDE.md ⑥-4)。
+      // 期間の決まった「いまの話」なので、ほかのお知らせの会話より先に流す(開催中のイベントの会話よりは後)
+      const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
+      const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
       if (!liveEvent) {
-        if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+        if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
+        else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
         else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
@@ -32673,6 +32692,7 @@ function MonsterHeroGame() {
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
       }
+      else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
       else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
       else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
@@ -35091,6 +35111,7 @@ function MonsterHeroGame() {
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
+    beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
