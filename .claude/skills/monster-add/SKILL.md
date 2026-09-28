@@ -23,6 +23,8 @@ Yggdrasil: Object.freeze({ id:'Yggdrasil', name:"ユグドラシル", emoji:"�
 ```
 
 - 入れられるものは先に入れる: 立ち絵・顔アイコン・円盤石(`available:false`)・染色マスク(`EXACT_DYE_MASKS`)・図鑑の文
+- 待機アニメのリグ(§6)も先に書ける。`idle-rig-build.js` の `RIGS` へ足せば、確認画面の「待機アニメ」の枠で動く。
+  `idle-rig-preview.js` も案の子を読める。`monster-check-debug-check.js` が「案の子にもリグがある」ことを見る
 - 血統は `draftLineage` に書く(`MONSTER_LINEAGE_MAP` へ本体より先に書くと lineage-dex-check.js が止める)
 - 正式に実装したら `ALL_PLAYER_MONSTERS` へ移し、`UPCOMING_MONSTER_DRAFTS` からは消す
 - `tools/monster/monster-check-debug-check.js` が「案の子も一覧に並び、要確認になっている」ことを見る
@@ -183,6 +185,16 @@ node tools/image/monster-image-quality-check.js
 - 承認済みのマスクを取り込むときは `node tools/image/convert-dye-mask.js <入力> <出力> --snap`
   (本番と同じ判定で純色へそろえる。953KB→37KB になった例がある)
 - 境目に元の色の筋が出るなら `noEdgeGuard:true`、輪郭が荒れるなら `MASU_COLOR_SMOOTH[id]` を調整
+- **手で塗ったマスクは仕上げてから配信する**(2026-09-28・ユーザー指示「染色はこのゲームの重要な部分だから本気で仕上げて」)。
+  位置を合わせただけのマスクを `tools/art-sources/dye-masks/<名前>-dye-mask-aligned.png` に置き、
+  `node tools/image/finish-dye-mask.js <名前>` で仕上げる(輪郭線の塗り残し・暗い線・境目のずれを直す)。
+  設定はモンスターごとに `CONFIGS` へ書く。仕上げたら白・黒・パステル・濃い色で染めて全身を見る
+- **届いたマスクは元の絵をなぞったものか確かめる**。描き直された絵から作ったマスクは、位置を合わせても
+  果物やひだの形が合わない(メルホイップの1回目)。白背景で作ったマスクは、絵のいちばん白い所を
+  背景と同じ扱いで抜いていることがある(3回目)。そのときは前のマスクと組み合わせる
+- **部位ごとの染め方(`MASU_COLOR_REGION_DYE`)も決める**。gloss を付けないと、青や紫に染めたとき髪のハイライトや
+  体の光沢が消えて1色に潰れる。gloss はその部位の元の彩度の中央値〜上のほうに合わせる。
+  白・クリームの部位は元の彩度がほぼ0なので gloss を付けない(付けると色が乗らない)
 - 正解見本と画素単位で比べる検査を1本足す(`tools/image/<id>-dye-mask-check.js`。
   ミーア・永輝・モッチー・プラント・ウンディーネ・ヤオビクニに前例がある)
 

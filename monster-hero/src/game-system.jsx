@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6302a2588be7802d
+// generated-sha256: d041f5c189a24445
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 17:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-28 18:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6222,6 +6222,13 @@ const MASU_COLOR_REGION_DYE = {
   Ark: [{ gloss: 1.0, sat: 0.45 }, { sat: 0.72 }, { gloss: 0.45, sat: 0.85 }],
   Tiger: { gloss: true },
   Mocchi: { gloss: 0.22 },
+  // 近日公開予定の2体(2026-09-28・ユーザー指示「染色はこのゲームの重要な部分だから本気で仕上げて」)。
+  // gloss の値は、その部位の元の絵の彩度の中央値〜上のほう(濃い所)に合わせた。濃い所は選んだ色になり、
+  // 髪のハイライト・カエルのツヤ・淡い緑のドレスのように元が淡い所は淡いまま残るので、立体感が消えない
+  // (gloss なしだと、青や紫に染めたとき髪がべったり1色になっていた)。
+  // メルホイップの③(白・クリーム)は元の彩度がほぼ0(中央値0.13)なので、比例させると色が乗らない。gloss を付けない
+  Yggdrasil: [{ gloss: 0.9 }, { gloss: 0.93 }, { gloss: 0.72 }],
+  MelWhip: [{ gloss: 0.8 }, { gloss: 0.9 }, {}],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
@@ -11654,6 +11661,8 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Yaobikuni: { body:'swim', bodyMask:IDLE_YAOBIKUNI_BODY_MASK, parts:[{ mask:IDLE_YAOBIKUNI_FIN_MASK, origin:'60.7% 82%', anim:'swing', amp:3, dur:1500, delay:0, layer:'front' }] },
   Eiki: { body:'glide', bodyMask:null, parts:[] },
   KenshiMocchi: { body:'jelly', bodyMask:IDLE_KENSHI_MOCCHI_BODY_MASK, parts:[{ mask:IDLE_KENSHI_MOCCHI_SWORD_L_MASK, origin:'29.5% 26%', anim:'swing', amp:-4, dur:2400, delay:0, layer:'back' }, { mask:IDLE_KENSHI_MOCCHI_SWORD_R_MASK, origin:'70.5% 26%', anim:'swing', amp:4, dur:2400, delay:1200, layer:'back' }] },
+  Yggdrasil: { body:'breathe', bodyMask:IDLE_YGGDRASIL_BODY_MASK, parts:[{ mask:IDLE_YGGDRASIL_LEAF_TOP_MASK, origin:'35.9% 7.3%', anim:'swingIn', amp:3, dur:3200, delay:0, layer:'front' }, { mask:IDLE_YGGDRASIL_LEAF_SIDE_MASK, origin:'27.8% 15.8%', anim:'swing', amp:-7, dur:2600, delay:700, layer:'front' }] },
+  MelWhip: { body:'sway', bodyMask:IDLE_MEL_WHIP_BODY_MASK, parts:[{ mask:IDLE_MEL_WHIP_UMBRELLA_MASK, origin:'41.2% 40.5%', anim:'swing', amp:2, dur:3000, delay:0, layer:'back' }] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
@@ -28456,15 +28465,18 @@ function MonsterCheckDebugScreen({
   // 1枚ぶんの枠。絵のURLと染色を指定できるようにしてあるので、「本番の表示条件」だけでなく
   // 「部位ごとの切り分け」「ライガーの新旧比較」も同じ部品で出せる。
   // 読み込みに失敗した絵は赤くして、「パスの綴り間違いで絵が出ない」を公開前に気づけるようにする
-  const artBox = (label, src, palette, frameClass, fit, imgStyle, note) => {
+  // idle を付けた枠は、図鑑・バトルと同じ待機アニメ(MonsterIdleArt)で動かす。
+  // 公開前の子(案の段階)でも、リグを書いた時点で動きをここで確かめられる
+  const artBox = (label, src, palette, frameClass, fit, imgStyle, note, idle = false) => {
     const broken = !!brokenImages[src];
+    const art = src && <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>;
     return (
       <section key={label} className="rounded-xl bg-black/30 p-2 text-center">
         <b className="block text-[10px] font-black text-cyan-200">{label}</b>
         {note && <small className="mb-1 block text-[8px] font-bold text-slate-400">{note}</small>}
         <div className={`${frameClass} overflow-hidden border ${broken ? 'border-rose-500' : 'border-white/20'}`} style={bgStyle}>
           {src
-            ? <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>
+            ? (idle ? withMonsterIdleArt(mon.id, art, {fill:true, own:true}) : art)
             : <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-rose-300">未設定</span>}
         </div>
         {/* 綴りを間違えた絵は、染色を通すと「何も出ない」だけで理由が分からない。
@@ -28564,6 +28576,8 @@ function MonsterCheckDebugScreen({
                 {artFrame('顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸')}
                 {artFrame('プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸')}
                 {artFrame('小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸')}
+                {artBox('待機アニメ', artSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null,
+                  monsterIdleRigOf(mon.id) ? '図鑑・バトルと同じ動き' : 'リグ未設定（止まったまま）', true)}
               </div>
               <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-2.5">
                 <h3 className="mb-2 text-[11px] font-black text-fuchsia-300">染色（{regionCount}部位・本番と共通）</h3>

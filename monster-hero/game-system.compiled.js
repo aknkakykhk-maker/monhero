@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1c790d2fcf4199ae
+// source-sha256: 398fb3ff44940961
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 17:41";
+const BUILD_DATE = "2026-09-28 18:19";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -8367,7 +8367,19 @@ const MASU_COLOR_REGION_DYE = {
   },
   Mocchi: {
     gloss: 0.22
-  }
+  },
+  Yggdrasil: [{
+    gloss: 0.9
+  }, {
+    gloss: 0.93
+  }, {
+    gloss: 0.72
+  }],
+  MelWhip: [{
+    gloss: 0.8
+  }, {
+    gloss: 0.9
+  }, {}]
 };
 const _NO_REGION_DYE = {
   gloss: false,
@@ -16626,6 +16638,40 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       amp: 4,
       dur: 2400,
       delay: 1200,
+      layer: 'back'
+    }]
+  },
+  Yggdrasil: {
+    body: 'breathe',
+    bodyMask: IDLE_YGGDRASIL_BODY_MASK,
+    parts: [{
+      mask: IDLE_YGGDRASIL_LEAF_TOP_MASK,
+      origin: '35.9% 7.3%',
+      anim: 'swingIn',
+      amp: 3,
+      dur: 3200,
+      delay: 0,
+      layer: 'front'
+    }, {
+      mask: IDLE_YGGDRASIL_LEAF_SIDE_MASK,
+      origin: '27.8% 15.8%',
+      anim: 'swing',
+      amp: -7,
+      dur: 2600,
+      delay: 700,
+      layer: 'front'
+    }]
+  },
+  MelWhip: {
+    body: 'sway',
+    bodyMask: IDLE_MEL_WHIP_BODY_MASK,
+    parts: [{
+      mask: IDLE_MEL_WHIP_UMBRELLA_MASK,
+      origin: '41.2% 40.5%',
+      anim: 'swing',
+      amp: 2,
+      dur: 3000,
+      delay: 0,
       layer: 'back'
     }]
   }
@@ -43939,8 +43985,19 @@ function MonsterCheckDebugScreen({
   }, "消費G", skill.guts), React.createElement("span", {
     className: "text-yellow-300"
   }, "会心", skill.crit, "%")))));
-  const artBox = (label, src, palette, frameClass, fit, imgStyle, note) => {
+  const artBox = (label, src, palette, frameClass, fit, imgStyle, note, idle = false) => {
     const broken = !!brokenImages[src];
+    const art = src && React.createElement(DyedMonsterImage, {
+      baseId: mon.id,
+      src: src,
+      alt: label,
+      masuColors: palette,
+      className: `w-full h-full ${fit}`,
+      style: {
+        ...monsterArtFitStyle(mon.id, undefined),
+        ...(imgStyle || {})
+      }
+    });
     return React.createElement("section", {
       key: label,
       className: "rounded-xl bg-black/30 p-2 text-center"
@@ -43951,17 +44008,10 @@ function MonsterCheckDebugScreen({
     }, note), React.createElement("div", {
       className: `${frameClass} overflow-hidden border ${broken ? 'border-rose-500' : 'border-white/20'}`,
       style: bgStyle
-    }, src ? React.createElement(DyedMonsterImage, {
-      baseId: mon.id,
-      src: src,
-      alt: label,
-      masuColors: palette,
-      className: `w-full h-full ${fit}`,
-      style: {
-        ...monsterArtFitStyle(mon.id, undefined),
-        ...(imgStyle || {})
-      }
-    }) : React.createElement("span", {
+    }, src ? idle ? withMonsterIdleArt(mon.id, art, {
+      fill: true,
+      own: true
+    }) : art : React.createElement("span", {
       className: "flex h-full w-full items-center justify-center text-[9px] font-black text-rose-300"
     }, "未設定")), src && React.createElement("img", {
       src: src,
@@ -44135,7 +44185,7 @@ function MonsterCheckDebugScreen({
     className: "grid grid-cols-2 gap-2"
   }, artBox('旧画像', rollbackSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, '差し替える前'), artBox('高画質版', productionSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, 'いまの本番')), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
-  }, artFrame('バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain', null, '本番 64px・角丸なし'), artFrame('一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸'), artFrame('図鑑／大きな全身', 'imgUrl', 'h-36', 'object-contain', null, '本番 図鑑詳細の枠'), artFrame('顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸'), artFrame('プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸'), artFrame('小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸')), React.createElement("section", {
+  }, artFrame('バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain', null, '本番 64px・角丸なし'), artFrame('一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸'), artFrame('図鑑／大きな全身', 'imgUrl', 'h-36', 'object-contain', null, '本番 図鑑詳細の枠'), artFrame('顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸'), artFrame('プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸'), artFrame('小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸'), artBox('待機アニメ', artSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, monsterIdleRigOf(mon.id) ? '図鑑・バトルと同じ動き' : 'リグ未設定（止まったまま）', true)), React.createElement("section", {
     className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-2.5"
   }, React.createElement("h3", {
     className: "mb-2 text-[11px] font-black text-fuchsia-300"
