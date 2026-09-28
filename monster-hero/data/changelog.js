@@ -34,6 +34,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-09-28 ユーザー判断。遊んだ感想「音楽にあわせて気持ちよくノーツが流れてきてる感じがない」の曲を MHB CHART ENGINE Rev.19 で作り直した
+    date: "2026-09-29 04:49", type:'update', group:'rhythm', title:'モンヒロビート:「only my railgun」で、同じフレーズが同じ形で来るようになりました', status:'new',
+    items:[
+      '「only my railgun」の譜面を作り直しました。',
+      '曲の中で同じフレーズが繰り返される所では、前と同じ形・同じリズムでノーツが来るようになりました。一度覚えた動きで取れます。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.29 です。',
+      'ノーツ数は 146 ／ 169 ／ 227 ／ 282 ／ 325 です。',
+      'これまでのスコア・自己ベスト・クリアの記録はそのまま残ります。',
+    ],
+  },
+  {
     // 2026-09-28 ユーザー指示「人間が関与しないで完璧なツールに仕上がる仕組みを」「全プレイヤーから送る」「新曲にだけ使う」。docs/spec/RHYTHM_PLAY_LOG.md
     date: "2026-09-29 00:13", type:'update', group:'rhythm', title:'モンヒロビート: 遊んだ記録で、これから追加する曲の譜面が良くなるようになりました', status:'new',
     items:[
@@ -197,8 +208,8 @@ const CHANGELOG = [
     image: 'images/song-art/only-my-railgun.jpg?v=a79e2735865b',
     items:[
       'モンヒロビートに「only my railgun」（1分30秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.29 です。',
-      'ノーツ数は 144 ／ 167 ／ 229 ／ 284 ／ 329 です。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.29 です。',
+      'ノーツ数は 146 ／ 169 ／ 227 ／ 282 ／ 325 です。',
     ],
     assistantNotice: { id:'update_notice_only_my_railgun_v1', type:'content' },
   },
