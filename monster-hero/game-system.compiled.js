@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c50be74bca142cb3
+// source-sha256: 7155a86cd0cbe177
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 19:24";
+const BUILD_DATE = "2026-09-28 22:36";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -7607,6 +7607,14 @@ const MASU_COLOR_REGION_HUES = {
     hue: 240,
     noAAGuard: true,
     noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
   }],
   Mitarashi: [{
     hue: 0,
@@ -8376,10 +8384,12 @@ const MASU_COLOR_REGION_DYE = {
     gloss: 0.72
   }],
   MelWhip: [{
-    gloss: 0.8
+    gloss: 0.9
   }, {
     gloss: 0.9
-  }, {}]
+  }, {}, {}, {
+    gloss: 0.7
+  }]
 };
 const _NO_REGION_DYE = {
   gloss: false,
@@ -13572,22 +13582,25 @@ const MarketProductCard = ({
   item,
   owned = false,
   comingSoon = false,
+  comingSoonLabel = '近日追加',
   detail = null,
   middle = null,
   onDetail,
   onZoom,
   onBuy,
   canBuy = false,
-  disabled = false
+  disabled = false,
+  dataAttrs = null
 }) => {
   const usesGold = item.type === 'disc' || item.type === 'assist' || item.type === 'item';
   const usesPsyche = item.currency === 'psyche';
   const usesHeroProof = item.currency === 'heroProof';
   const usesHeroProofShard = item.currency === 'heroProofShard';
-  const priceLabel = usesHeroProofShard ? `勇者の証片${item.cost}個` : usesHeroProof ? `勇者の証${item.cost}個` : usesPsyche ? `${item.cost}プシュケー` : usesGold ? `${item.cost}ダイヤ` : `${item.cost}pt`;
-  return React.createElement("div", {
+  const usesBeatPoint = item.currency === 'beatPoint';
+  const priceLabel = usesBeatPoint ? `${item.cost}ビートP` : usesHeroProofShard ? `勇者の証片${item.cost}個` : usesHeroProof ? `勇者の証${item.cost}個` : usesPsyche ? `${item.cost}プシュケー` : usesGold ? `${item.cost}ダイヤ` : `${item.cost}pt`;
+  return React.createElement("div", _extends({}, dataAttrs || {}, {
     className: `rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned ? 'bg-emerald-900/30 border-emerald-500/60' : comingSoon ? 'bg-slate-900/60 border-white/10' : 'bg-slate-900 border-white/10'}`
-  }, React.createElement(MarketProductIcon, {
+  }), React.createElement(MarketProductIcon, {
     item: item,
     onZoom: onZoom,
     disabled: disabled
@@ -13603,21 +13616,28 @@ const MarketProductCard = ({
     style: {
       height: '22px'
     }
-  }, middle || detail && !comingSoon ? React.createElement(React.Fragment, null, middle, !middle && React.createElement(MarketDetailChip, {
+  }, middle || detail ? React.createElement(React.Fragment, null, middle, !middle && React.createElement(MarketDetailChip, {
     label: `${item.name}の詳細を見る`,
     onClick: onDetail
   })) : null), React.createElement("div", {
     className: "w-full flex items-center justify-center mt-auto pt-2"
   }, comingSoon ? React.createElement("div", {
+    className: "flex flex-col items-center gap-1"
+  }, React.createElement("span", {
+    "data-market-coming-soon-price": true,
+    className: "text-[10px] font-black text-slate-400 whitespace-nowrap"
+  }, marketPriceText(item)), React.createElement("div", {
     className: "text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap"
-  }, "近日追加") : owned ? React.createElement("div", {
+  }, comingSoonLabel)) : owned ? React.createElement("div", {
     className: "text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap"
   }, "所持済み") : React.createElement("button", {
     onClick: onBuy,
     disabled: disabled || !canBuy,
-    "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${priceLabel}で${usesHeroProof || usesHeroProofShard ? '交換' : '購入'}`}`,
-    className: `mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled || !canBuy ? 'bg-slate-800 text-slate-500' : usesPsyche ? 'bg-fuchsia-600 text-white active:scale-95' : 'bg-amber-500 text-black active:scale-95'}`
-  }, usesHeroProofShard ? React.createElement(React.Fragment, null, React.createElement("span", {
+    "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${priceLabel}で${usesHeroProof || usesHeroProofShard || usesBeatPoint ? '交換' : '購入'}`}`,
+    className: `mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled || !canBuy ? 'bg-slate-800 text-slate-500' : usesBeatPoint ? 'bg-violet-500 text-white active:scale-95' : usesPsyche ? 'bg-fuchsia-600 text-white active:scale-95' : 'bg-amber-500 text-black active:scale-95'}`
+  }, usesBeatPoint ? React.createElement(React.Fragment, null, React.createElement("span", {
+    "aria-hidden": "true"
+  }, "🎟️"), React.createElement("span", null, item.cost.toLocaleString())) : usesHeroProofShard ? React.createElement(React.Fragment, null, React.createElement("span", {
     "aria-hidden": "true"
   }, "🎖️"), React.createElement("span", {
     className: "text-[10px]"
@@ -13634,6 +13654,305 @@ const MarketProductCard = ({
     size: 11,
     className: "shrink-0"
   }), React.createElement("span", null, item.cost.toLocaleString())))));
+};
+const MARKET_CURRENCY_META = Object.freeze({
+  diamond: Object.freeze({
+    have: '所持ダイヤ',
+    label: 'ダイヤ',
+    emoji: '💎',
+    verb: '購入',
+    format: n => `${n}ダイヤ`,
+    text: 'text-cyan-200',
+    bar: 'text-cyan-100 border-cyan-500/30 bg-cyan-950/30',
+    border: 'border-amber-400/70',
+    button: 'bg-amber-500 text-black',
+    max: 'bg-amber-700'
+  }),
+  breederPoint: Object.freeze({
+    have: '所持ブリーダーP',
+    label: 'ブリーダーP',
+    emoji: '🪙',
+    verb: '購入',
+    format: n => `${n}ブリーダーP`,
+    text: 'text-amber-200',
+    bar: 'text-amber-100 border-amber-500/30 bg-amber-950/30',
+    border: 'border-amber-400/70',
+    button: 'bg-amber-500 text-black',
+    max: 'bg-amber-700'
+  }),
+  psyche: Object.freeze({
+    have: '虹のプシュケー',
+    label: '虹のプシュケー',
+    emoji: '🌈',
+    verb: '購入',
+    format: n => `${n}プシュケー`,
+    text: 'text-fuchsia-200',
+    bar: 'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-950/30',
+    border: 'border-fuchsia-400/70',
+    button: 'bg-fuchsia-600 text-white',
+    max: 'bg-fuchsia-800'
+  }),
+  heroProofShard: Object.freeze({
+    have: '勇者の証片',
+    label: '勇者の証片',
+    emoji: '🎖️',
+    verb: '交換',
+    format: n => `勇者の証片${n}個`,
+    text: 'text-amber-100',
+    bar: 'text-amber-100 border-amber-400/30 bg-amber-950/30',
+    border: 'border-amber-400/70',
+    button: 'bg-amber-500 text-black',
+    max: 'bg-amber-700'
+  }),
+  heroProof: Object.freeze({
+    have: '勇者の証',
+    label: '勇者の証',
+    emoji: '🏅',
+    verb: '交換',
+    format: n => `勇者の証${n}個`,
+    text: 'text-amber-200',
+    bar: 'text-amber-200 border-amber-400/30 bg-amber-950/30',
+    border: 'border-amber-400/70',
+    button: 'bg-amber-500 text-black',
+    max: 'bg-amber-700'
+  }),
+  beatPoint: Object.freeze({
+    have: '所持ビートP',
+    label: 'ビートP',
+    emoji: '🎟️',
+    verb: '交換',
+    format: n => `${n}ビートP`,
+    text: 'text-violet-200',
+    bar: 'text-violet-100 border-violet-500/30 bg-violet-950/30',
+    border: 'border-violet-400/70',
+    button: 'bg-violet-500 text-white',
+    max: 'bg-violet-800'
+  })
+});
+const marketCurrencyOf = item => MARKET_CURRENCY_META[item?.currency] ? item.currency : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' ? 'diamond' : 'breederPoint';
+const marketPriceText = item => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost) || 0)).toLocaleString());
+const MarketBalanceBar = ({
+  balances
+}) => React.createElement("div", {
+  "data-market-balances": true,
+  className: `mb-2 shrink-0 grid gap-2 ${balances.length >= 3 ? 'grid-cols-3' : balances.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`
+}, balances.map(({
+  currency,
+  value
+}) => {
+  const meta = MARKET_CURRENCY_META[currency];
+  return React.createElement("div", {
+    key: currency,
+    "data-market-balance": currency,
+    className: `flex flex-col items-center justify-center rounded-2xl border py-2 ${meta.bar}`
+  }, React.createElement("div", {
+    className: "flex items-baseline gap-1"
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-[11px]"
+  }, meta.emoji), React.createElement("span", {
+    className: "font-mono text-base font-black"
+  }, Math.max(0, Math.floor(Number(value) || 0)).toLocaleString())), React.createElement("span", {
+    className: "text-[10px] font-bold leading-tight text-slate-400"
+  }, meta.have));
+}));
+const MarketNotice = ({
+  tone = 'error',
+  children,
+  ...rest
+}) => React.createElement("div", _extends({}, rest, {
+  className: `mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[11px] font-black ${tone === 'error' ? 'border-red-500/40 bg-red-950/30 text-red-300' : 'border-amber-300/30 bg-amber-500/10 text-amber-100'}`
+}), children);
+const MarketModal = ({
+  label,
+  border = 'border-amber-400/70',
+  onClose,
+  children,
+  narrow = false
+}) => React.createElement("div", {
+  onClick: onClose || undefined,
+  className: "fixed inset-0 flex items-center justify-center overflow-y-auto px-4",
+  style: {
+    position: 'fixed',
+    inset: 0,
+    paddingTop: 'max(16px, env(safe-area-inset-top))',
+    paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+    backgroundColor: 'rgba(2,6,23,0.94)',
+    zIndex: 42000
+  },
+  role: "dialog",
+  "aria-modal": "true",
+  "aria-label": label
+}, React.createElement("div", {
+  onClick: e => e.stopPropagation(),
+  className: `w-full ${narrow ? 'max-w-[280px]' : 'max-w-sm'} rounded-3xl border-2 ${border} bg-slate-950 p-4 shadow-2xl`
+}, children));
+const MarketModalClose = ({
+  onClick,
+  label = '閉じる',
+  disabled = false
+}) => React.createElement("button", {
+  type: "button",
+  disabled: disabled,
+  onClick: onClick,
+  className: "mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
+}, label);
+const MarketModalHead = ({
+  item,
+  accent = 'text-white'
+}) => React.createElement("div", {
+  className: "flex flex-col items-center gap-2"
+}, React.createElement(MarketProductIcon, {
+  item: item
+}), React.createElement("h3", {
+  className: `text-center text-lg font-black leading-tight ${accent}`
+}, item.name));
+const MarketItemDetail = ({
+  item,
+  owned = 0,
+  grantText = '',
+  onClose
+}) => {
+  const meta = MARKET_CURRENCY_META[marketCurrencyOf(item)];
+  return React.createElement(MarketModal, {
+    label: `${item.name}の効果`,
+    border: meta.border,
+    onClose: onClose
+  }, React.createElement(MarketModalHead, {
+    item: item,
+    accent: meta.text
+  }), item.desc && React.createElement("p", {
+    className: "mt-3 text-[12px] text-slate-200 leading-relaxed"
+  }, item.desc), React.createElement("div", {
+    className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
+  }, React.createElement("div", {
+    className: "flex justify-between"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, "所持数"), React.createElement("span", {
+    className: "font-mono text-cyan-300"
+  }, Math.max(0, Math.floor(Number(owned) || 0)).toLocaleString())), grantText && React.createElement("div", {
+    className: "flex justify-between"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, "1回で受け取る数"), React.createElement("span", null, grantText)), React.createElement("div", {
+    className: "flex justify-between"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, "ねだん"), React.createElement("span", {
+    className: `font-mono ${meta.text}`
+  }, marketPriceText(item)))), React.createElement("div", {
+    className: "mt-3"
+  }, React.createElement(MarketModalClose, {
+    onClick: onClose
+  })));
+};
+const MarketPurchaseSheet = ({
+  item,
+  balance,
+  stackable = false,
+  countUnit = '個',
+  grantAmount = 0,
+  grantUnit = '',
+  quantity = 1,
+  onQuantity,
+  pending = false,
+  error = '',
+  onConfirm,
+  onCancel
+}) => {
+  const meta = MARKET_CURRENCY_META[marketCurrencyOf(item)];
+  const unitCost = Math.max(0, Math.floor(Number(item.cost) || 0));
+  const safeBalance = Math.max(0, Math.floor(Number(balance) || 0));
+  const affordable = unitCost > 0 ? Math.floor(safeBalance / unitCost) : 0;
+  const maxQuantity = stackable ? affordable : Math.min(1, affordable);
+  const count = stackable ? Math.min(Math.max(1, Math.floor(Number(quantity) || 1)), Math.max(1, maxQuantity)) : 1;
+  const total = unitCost * count;
+  const canConfirm = maxQuantity > 0 && !pending;
+  const setCount = next => onQuantity && onQuantity(Math.min(Math.max(1, next), Math.max(1, maxQuantity)));
+  const stepClass = 'mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30';
+  return React.createElement(MarketModal, {
+    label: `${item.name}の${meta.verb}`,
+    border: meta.border,
+    onClose: pending ? null : onCancel
+  }, React.createElement(MarketModalHead, {
+    item: item,
+    accent: meta.text
+  }), React.createElement("div", {
+    className: "mt-3 rounded-2xl bg-slate-900 p-3 text-center"
+  }, React.createElement("span", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, meta.have), React.createElement("strong", {
+    className: `mt-1 block text-xl font-black font-mono ${meta.text}`
+  }, meta.emoji, " ", safeBalance.toLocaleString())), stackable && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mt-3 text-center text-[11px] font-black text-slate-300"
+  }, meta.verb, "する数"), React.createElement("div", {
+    className: "mt-2 grid grid-cols-5 items-center gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    disabled: count <= 1,
+    onClick: () => setCount(count - 10),
+    className: stepClass
+  }, "-10"), React.createElement("button", {
+    type: "button",
+    disabled: count <= 1,
+    onClick: () => setCount(count - 1),
+    className: stepClass
+  }, "-1"), React.createElement("strong", {
+    className: "text-center text-xl font-black font-mono"
+  }, count), React.createElement("button", {
+    type: "button",
+    disabled: count >= maxQuantity,
+    onClick: () => setCount(count + 1),
+    className: stepClass
+  }, "+1"), React.createElement("button", {
+    type: "button",
+    disabled: count >= maxQuantity,
+    onClick: () => setCount(count + 10),
+    className: stepClass
+  }, "+10")), React.createElement("button", {
+    type: "button",
+    disabled: maxQuantity <= 0,
+    onClick: () => setCount(maxQuantity),
+    className: `mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${meta.max}`
+  }, "MAX（", Math.max(0, maxQuantity).toLocaleString(), countUnit, "）")), React.createElement("div", {
+    className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
+  }, stackable && React.createElement("div", {
+    className: "flex justify-between"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, "単価"), React.createElement("span", null, "1", countUnit, " = ", meta.format(unitCost.toLocaleString()))), grantAmount > 0 && React.createElement("div", {
+    className: "flex justify-between"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, "受け取り"), React.createElement("span", null, (grantAmount * count).toLocaleString(), grantUnit)), React.createElement("div", {
+    className: "flex justify-between text-base"
+  }, React.createElement("span", {
+    className: "text-slate-300"
+  }, "合計"), React.createElement("span", {
+    className: meta.text
+  }, meta.format(total.toLocaleString()))), React.createElement("div", {
+    className: "flex justify-between"
+  }, React.createElement("span", {
+    className: "text-slate-400"
+  }, meta.verb, "後"), React.createElement("span", {
+    className: meta.text
+  }, "残り", meta.format(Math.max(0, safeBalance - total).toLocaleString())))), maxQuantity <= 0 && React.createElement("p", {
+    className: "mt-2 text-center text-[12px] font-black text-red-300"
+  }, meta.label, "が足りません"), error && React.createElement("p", {
+    className: "mt-2 text-center text-[11px] font-black text-red-300"
+  }, error), React.createElement("div", {
+    className: "mt-3 grid grid-cols-1 gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    disabled: !canConfirm,
+    onClick: () => onConfirm && onConfirm(count),
+    className: `mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500 ${meta.button}`
+  }, meta.verb, "する"), React.createElement(MarketModalClose, {
+    onClick: onCancel,
+    label: "キャンセル",
+    disabled: pending
+  })));
 };
 const imagePreloadQueue = (() => {
   const queued = new Set();
@@ -21864,7 +22183,8 @@ const RhythmSongSelect = ({
   view = null,
   onView = null,
   listScrollTop = null,
-  onListScrollTop = null
+  onListScrollTop = null,
+  toolbarExtra = null
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -22085,7 +22405,7 @@ const RhythmSongSelect = ({
     "aria-hidden": "true"
   }, "💬"), React.createElement("span", {
     "aria-hidden": "true"
-  }, state.noticeOpen ? '▲' : '▼'))), React.createElement("div", {
+  }, state.noticeOpen ? '▲' : '▼')), toolbarExtra), React.createElement("div", {
     ref: listRef,
     onScroll: handleListScroll,
     "data-rhythm-song-list": true,
@@ -29274,12 +29594,13 @@ function BreederMarketScreen({
   onExchangeSoulRankRespec,
   onExchangeHeroProof,
   eventPoints = 0,
-  onExchangeEventPoints
+  onExchangeEventPoints,
+  onOpenUpcomingDetail
 }) {
   const [marketSection, setMarketSection] = useState(null);
-  const [eventQuantityOffer, setEventQuantityOffer] = useState(null);
-  const [eventQuantity, setEventQuantity] = useState(1);
-  const [eventExchangePending, setEventExchangePending] = useState(false);
+  const [sheet, setSheet] = useState(null);
+  const [sheetQuantity, setSheetQuantity] = useState(1);
+  const [sheetPending, setSheetPending] = useState(false);
   const safeEventPoints = normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
@@ -29318,15 +29639,43 @@ function BreederMarketScreen({
       emoji: '🎟️'
     }
   };
+  const balanceOf = currency => currency === 'psyche' ? psycheHave : currency === 'heroProofShard' ? shardHave : currency === 'heroProof' ? proofHave : currency === 'beatPoint' ? safeEventPoints : currency === 'breederPoint' ? breederPoints : gold;
+  const busy = purchaseProcessing || sheetPending;
+  const openSheet = next => {
+    setSheetQuantity(1);
+    setSheet(next);
+  };
+  const closeSheet = () => {
+    if (!sheetPending) setSheet(null);
+  };
+  const confirmSheet = async count => {
+    if (!sheet || sheetPending) return;
+    setSheetPending(true);
+    try {
+      const result = await sheet.confirm(count);
+      if (result === true || result?.ok) setSheet(null);
+    } finally {
+      setSheetPending(false);
+    }
+  };
+  const ownedMiddle = (count, detailItem, extraDetail = null) => React.createElement(React.Fragment, null, React.createElement("span", {
+    className: `text-[11px] font-black ${count > 0 ? 'text-cyan-300' : 'text-slate-400'}`
+  }, "×", count), detailItem?.desc && React.createElement(MarketDetailChip, {
+    label: `${detailItem.name}の効果を見る`,
+    onClick: () => onOpenItemDetail(extraDetail ? {
+      ...detailItem,
+      ...extraDetail
+    } : detailItem)
+  }));
   const renderMarketItem = (item, {
     showBase = true,
     showHeroProofExchange = false
   } = {}) => {
     const comingSoon = item.available === false;
     const owned = !comingSoon && isItemOwned(item);
-    const balance = item.currency === 'psyche' ? psycheHave : item.type === 'disc' || item.type === 'assist' || item.type === 'item' ? gold : breederPoints;
-    const canBuy = !comingSoon && !owned && balance >= item.cost;
-    const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+    const balance = balanceOf(marketCurrencyOf(item));
+    const canBuy = !comingSoon && !owned && balance >= item.cost && !busy;
+    const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] || (comingSoon && typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' ? UPCOMING_MONSTER_DRAFTS[item.id] : null) || null : null;
     const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
     const isSoulRankRespec = item.id === SOUL_RANK_RESPEC_ITEM_ID;
     const exchangeItem = isSoulRankRespec ? {
@@ -29342,9 +29691,13 @@ function BreederMarketScreen({
       comingSoon: comingSoon,
       canBuy: canBuy,
       onZoom: () => onZoomIcon(item),
-      onBuy: () => onBuy(item),
+      onBuy: () => openSheet({
+        item,
+        stackable: item.type === 'item',
+        confirm: count => onBuy(item, count)
+      }),
       detail: detailMon || detailTeaching,
-      onDetail: () => onOpenDetail(item, detailMon, detailTeaching),
+      onDetail: () => detailMon?.draft && onOpenUpcomingDetail ? onOpenUpcomingDetail(item) : onOpenDetail(item, detailMon, detailTeaching),
       middle: item.type === 'item' ? React.createElement(React.Fragment, null, React.createElement("span", {
         className: `text-[11px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-400'}`
       }, "×", ownedItems[item.id] || 0), item.desc && React.createElement(MarketDetailChip, {
@@ -29355,16 +29708,29 @@ function BreederMarketScreen({
       item: exchangeItem,
       owned: false,
       comingSoon: false,
-      canBuy: proofHave > 0 && !purchaseProcessing,
+      canBuy: proofHave > 0 && !busy,
       disabled: purchaseProcessing,
-      onBuy: onExchangeSoulRankRespec,
-      middle: React.createElement(React.Fragment, null, React.createElement("span", {
-        className: `text-[11px] font-black ${ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID) > 0 ? 'text-cyan-300' : 'text-slate-400'}`
-      }, "×", ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID)), item.desc && React.createElement(MarketDetailChip, {
-        label: `${item.name}の効果を見る`,
-        onClick: () => onOpenItemDetail(item)
-      }))
+      onZoom: () => onZoomIcon(item),
+      onBuy: () => openSheet({
+        item: exchangeItem,
+        confirm: () => onExchangeSoulRankRespec()
+      }),
+      middle: ownedMiddle(ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID), item)
     }));
+  };
+  const beatPointItemOf = offer => {
+    const base = offer.itemId ? BREEDER_MARKET_ITEMS.find(item => item.id === offer.itemId) || [HERO_PROOF_ITEM, HERO_PROOF_SHARD_ITEM].find(item => item.id === offer.itemId) || null : null;
+    return {
+      id: offer.id,
+      name: offer.grantAmount > 1 ? `${offer.name} ×${offer.grantAmount.toLocaleString()}` : offer.name,
+      emoji: offer.emoji,
+      icon: base?.icon,
+      type: 'item',
+      currency: 'beatPoint',
+      cost: offer.cost,
+      desc: base?.desc || '',
+      base
+    };
   };
   const headerTitle = marketSection ? sectionMeta[marketSection].label : 'マーケット';
   const handleBack = () => {
@@ -29455,21 +29821,38 @@ function BreederMarketScreen({
     className: "block"
   }, line)) : section.label)), React.createElement("div", {
     className: "mt-2.5 font-mono text-xl font-black text-white"
-  }, section.value !== null ? section.value : '\u00a0'), React.createElement("div", {
+  }, section.value !== null ? section.value : ' '), React.createElement("div", {
     className: "mt-0.5 text-[10px] font-bold text-slate-400"
   }, section.hint), React.createElement("span", {
     "aria-hidden": "true",
     className: `absolute bottom-3 right-3 text-xl font-black ${section.arrow}`
-  }, "›"))))), marketSection === 'diamond' && React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/30 bg-cyan-950/30 py-2"
-  }, React.createElement(Gem, {
-    size: 15,
-    className: "text-cyan-300"
-  }), React.createElement("span", {
-    className: "font-mono text-base font-black text-cyan-100"
-  }, gold.toLocaleString()), React.createElement("span", {
-    className: "text-[10px] font-bold text-slate-400"
-  }, "所持ダイヤ")), React.createElement(ScreenTabs, {
+  }, "›"))))), marketSection && React.createElement(React.Fragment, null, React.createElement(MarketBalanceBar, {
+    balances: marketSection === 'diamond' ? [{
+      currency: 'diamond',
+      value: gold
+    }] : marketSection === 'breeder' ? [{
+      currency: 'breederPoint',
+      value: breederPoints
+    }] : marketSection === 'exchange' ? [{
+      currency: 'psyche',
+      value: psycheHave
+    }, {
+      currency: 'heroProofShard',
+      value: shardHave
+    }, {
+      currency: 'heroProof',
+      value: proofHave
+    }] : [{
+      currency: 'beatPoint',
+      value: safeEventPoints
+    }]
+  }), marketSection === 'event' && (() => {
+    const campaign = typeof rhythmEventPointCampaignAt === 'function' && !rhythmLimitedEventAt(Date.now()) ? rhythmEventPointCampaignAt(Date.now()) : null;
+    return campaign ? React.createElement(MarketNotice, {
+      tone: "info",
+      "data-event-point-campaign": true
+    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍（", rhythmEventJstText(Date.parse(campaign.endAt)), "まで）") : null;
+  })(), marketExchangeError && !sheet && React.createElement(MarketNotice, null, marketExchangeError)), marketSection === 'diamond' && React.createElement(React.Fragment, null, React.createElement(ScreenTabs, {
     value: activeDiamondTab,
     onChange: onSelectTab,
     items: diamondTabs.map(tab => ({
@@ -29484,254 +29867,113 @@ function BreederMarketScreen({
     lines: ['まだ商品がありません']
   }) : React.createElement("div", {
     className: MARKET_GRID_CLASS
-  }, diamondItems.map(item => renderMarketItem(item))))), marketSection === 'breeder' && React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-950/30 py-2"
-  }, React.createElement(Coins, {
-    size: 15,
-    className: "text-amber-300"
-  }), React.createElement("span", {
-    className: "font-mono text-base font-black text-amber-100"
-  }, breederPoints.toLocaleString()), React.createElement("span", {
-    className: "text-[10px] font-bold text-slate-400"
-  }, "所持ブリーダーP")), React.createElement("div", {
+  }, diamondItems.map(item => renderMarketItem(item))))), marketSection === 'breeder' && React.createElement("div", {
     className: SCREEN_LIST_CLASS
   }, breederPointItems.length === 0 ? React.createElement(ScreenEmpty, {
     emoji: "🛒",
     lines: ['まだ商品がありません']
   }) : React.createElement("div", {
     className: MARKET_GRID_CLASS
-  }, breederPointItems.map(item => renderMarketItem(item))))), marketSection === 'exchange' && React.createElement(React.Fragment, null, React.createElement("div", {
-    "data-market-balances": true,
-    className: "grid grid-cols-3 gap-2 mb-2 shrink-0"
-  }, [{
-    key: 'psyche',
-    emoji: '🌈',
-    label: '虹のプシュケー',
-    value: psycheHave,
-    tone: 'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-950/30'
-  }, {
-    key: 'shard',
-    emoji: '🎖️',
-    label: '勇者の証片',
-    value: shardHave,
-    tone: 'text-amber-100 border-amber-400/30 bg-amber-950/30'
-  }, {
-    key: 'proof',
-    emoji: '🏅',
-    label: '勇者の証',
-    value: proofHave,
-    tone: 'text-amber-200 border-amber-400/30 bg-amber-950/30'
-  }].map(row => React.createElement("div", {
-    key: row.key,
-    "data-market-balance": row.key,
-    className: `flex flex-col items-center justify-center rounded-2xl border py-2 ${row.tone}`
-  }, React.createElement("div", {
-    className: "flex items-baseline gap-1"
-  }, React.createElement("span", {
-    "aria-hidden": "true",
-    className: "text-[11px]"
-  }, row.emoji), React.createElement("span", {
-    className: "font-mono text-sm font-black"
-  }, row.value.toLocaleString())), React.createElement("span", {
-    className: "text-[10px] font-bold leading-tight text-slate-400"
-  }, row.label)))), marketExchangeError && React.createElement("div", {
-    className: "mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[11px] font-black text-red-300"
-  }, marketExchangeError), React.createElement("div", {
+  }, breederPointItems.map(item => renderMarketItem(item)))), marketSection === 'exchange' && React.createElement("div", {
     className: SCREEN_LIST_CLASS
   }, React.createElement("div", {
     className: MARKET_GRID_CLASS
   }, itemExchangeItems.map(item => renderMarketItem(item)), soulRankRespecItem && renderMarketItem(soulRankRespecItem, {
     showBase: false,
     showHeroProofExchange: true
-  }), React.createElement(MarketProductCard, {
-    item: {
+  }), (() => {
+    const shardExchange = {
       ...HERO_PROOF_ITEM,
       type: 'item',
       currency: 'heroProofShard',
       cost: HERO_PROOF_SHARD_PER_PROOF
-    },
-    owned: false,
-    comingSoon: false,
-    canBuy: shardHave >= HERO_PROOF_SHARD_PER_PROOF && !purchaseProcessing,
-    disabled: purchaseProcessing,
-    onBuy: onExchangeHeroProof,
-    middle: React.createElement(React.Fragment, null, React.createElement("span", {
-      className: `text-[11px] font-black ${proofHave > 0 ? 'text-cyan-300' : 'text-slate-400'}`
-    }, "×", proofHave), React.createElement(MarketDetailChip, {
-      label: "勇者の証の効果を見る",
-      onClick: () => onOpenItemDetail(HERO_PROOF_ITEM)
-    }))
-  })))), marketSection === 'event' && React.createElement(React.Fragment, null, React.createElement("div", {
-    "data-event-point-balance": true,
-    className: "mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-violet-500/30 bg-violet-950/30 py-2"
-  }, React.createElement("span", {
-    "aria-hidden": "true",
-    className: "text-[15px]"
-  }, "🎟️"), React.createElement("span", {
-    className: "font-mono text-base font-black text-violet-100"
-  }, safeEventPoints.toLocaleString()), React.createElement("span", {
-    className: "text-[10px] font-bold text-slate-400"
-  }, "所持ビートP")), (() => {
-    const campaign = typeof rhythmEventPointCampaignAt === 'function' && !rhythmLimitedEventAt(Date.now()) ? rhythmEventPointCampaignAt(Date.now()) : null;
-    return campaign ? React.createElement("div", {
-      "data-event-point-campaign": true,
-      className: "mb-2 shrink-0 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-1.5 text-center text-[10px] font-black text-amber-100"
-    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍（", rhythmEventJstText(Date.parse(campaign.endAt)), "まで）") : null;
-  })(), marketExchangeError && React.createElement("div", {
-    className: "mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[11px] font-black text-red-300"
-  }, marketExchangeError), React.createElement("div", {
+    };
+    return React.createElement(MarketProductCard, {
+      item: shardExchange,
+      owned: false,
+      comingSoon: false,
+      canBuy: shardHave >= HERO_PROOF_SHARD_PER_PROOF && !busy,
+      disabled: purchaseProcessing,
+      onZoom: () => onZoomIcon(HERO_PROOF_ITEM),
+      onBuy: () => openSheet({
+        item: shardExchange,
+        confirm: () => onExchangeHeroProof()
+      }),
+      middle: ownedMiddle(proofHave, HERO_PROOF_ITEM)
+    });
+  })())), marketSection === 'event' && React.createElement(React.Fragment, null, React.createElement("div", {
     className: SCREEN_LIST_CLASS
   }, React.createElement("div", {
     "data-event-point-shop": true,
-    className: "grid grid-cols-2 gap-2.5 pb-4"
+    className: MARKET_GRID_CLASS
   }, RHYTHM_EVENT_POINT_SHOP_OFFERS.map(offer => {
-    const maxQuantity = Math.floor(safeEventPoints / offer.cost);
-    return React.createElement("div", {
+    const item = beatPointItemOf(offer);
+    const grantText = `${offer.grantAmount.toLocaleString()}${offer.unit}`;
+    const middle = offer.kind === 'diamond' ? null : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base ? {
+      ...item.base,
+      cost: offer.cost,
+      currency: 'beatPoint'
+    } : null, {
+      grantText
+    });
+    return React.createElement(MarketProductCard, {
       key: offer.id,
-      "data-event-point-offer": offer.id,
-      className: "rounded-2xl border border-white/10 bg-slate-950/80 p-3 flex flex-col min-h-[132px]"
-    }, React.createElement("div", {
-      className: "flex items-start gap-2"
-    }, React.createElement("span", {
-      "aria-hidden": "true",
-      className: "text-xl shrink-0"
-    }, offer.emoji), React.createElement("div", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("div", {
-      className: "text-[11px] leading-tight font-black text-slate-100"
-    }, offer.name), React.createElement("div", {
-      className: "mt-1 text-[10px] font-bold text-slate-400"
-    }, "1回：", offer.grantAmount.toLocaleString(), offer.unit))), React.createElement("div", {
-      className: "mt-auto pt-2 flex items-end justify-between gap-2"
-    }, React.createElement("div", {
-      className: "font-mono text-sm font-black text-violet-300"
-    }, offer.cost.toLocaleString(), "P"), React.createElement("button", {
-      type: "button",
-      disabled: maxQuantity <= 0 || eventExchangePending || purchaseProcessing,
-      onClick: () => {
-        setEventQuantityOffer(offer);
-        setEventQuantity(1);
+      dataAttrs: {
+        'data-event-point-offer': offer.id
       },
-      className: "mh-button mh-button-primary min-h-[44px] rounded-xl bg-violet-500 px-4 text-[11px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
-    }, "交換")));
+      item: item,
+      owned: false,
+      comingSoon: false,
+      canBuy: safeEventPoints >= offer.cost && !busy,
+      disabled: purchaseProcessing,
+      onZoom: () => onZoomIcon(item),
+      onBuy: () => openSheet({
+        item,
+        stackable: true,
+        countUnit: '回',
+        grantAmount: offer.grantAmount,
+        grantUnit: offer.unit,
+        confirm: count => onExchangeEventPoints ? onExchangeEventPoints(offer, count) : false
+      }),
+      middle: middle
+    });
   }), RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer => {
     const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
-    return React.createElement("div", {
+    const item = {
+      id: offer.id,
+      name: offer.name,
+      emoji: '💿',
+      icon: disc?.icon,
+      type: 'disc',
+      currency: 'beatPoint',
+      cost: offer.cost
+    };
+    return React.createElement(MarketProductCard, {
       key: offer.id,
-      "data-event-point-coming-soon": offer.id,
-      className: "rounded-2xl border border-white/10 bg-slate-950/60 p-3 flex flex-col min-h-[132px]"
-    }, React.createElement("div", {
-      className: "flex items-start gap-2"
-    }, disc ? React.createElement(MarketProductIcon, {
-      item: disc
-    }) : React.createElement("span", {
-      "aria-hidden": "true",
-      className: "text-xl shrink-0"
-    }, "💿"), React.createElement("div", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("div", {
-      className: "text-[11px] leading-tight font-black text-slate-300",
-      style: {
-        wordBreak: 'keep-all',
-        overflowWrap: 'anywhere'
-      }
-    }, marketNameNodes(offer.name)), React.createElement("div", {
-      className: "mt-1 text-[10px] font-bold text-slate-400"
-    }, "1回：", offer.grantAmount.toLocaleString(), offer.unit))), React.createElement("div", {
-      className: "mt-auto pt-2 flex items-end justify-between gap-2"
-    }, React.createElement("div", {
-      className: "font-mono text-sm font-black text-violet-300/70"
-    }, offer.cost.toLocaleString(), "P"), React.createElement("div", {
-      className: "text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap"
-    }, "先行公開予定")));
-  })))), eventQuantityOffer && (() => {
-    const maxQuantity = Math.floor(safeEventPoints / eventQuantityOffer.cost);
-    const quantity = Math.max(1, Math.min(Math.max(1, maxQuantity), Math.floor(Number(eventQuantity) || 1)));
-    const totalCost = eventQuantityOffer.cost * quantity;
-    const totalGrant = eventQuantityOffer.grantAmount * quantity;
-    const changeQuantity = delta => setEventQuantity(Math.max(1, Math.min(Math.max(1, maxQuantity), quantity + delta)));
-    const canExchange = maxQuantity > 0 && !eventExchangePending && !purchaseProcessing;
-    return React.createElement("div", {
-      className: "fixed inset-0 z-[42000] flex items-center justify-center bg-black/90 p-4",
-      role: "dialog",
-      "aria-modal": "true",
-      "aria-label": "ビートP交換数を選ぶ"
-    }, React.createElement("div", {
-      className: "w-full max-w-sm rounded-2xl border border-violet-500/60 bg-slate-950 p-5 shadow-2xl"
-    }, React.createElement("div", {
-      className: "flex items-center gap-2"
-    }, React.createElement("span", {
-      className: "text-3xl",
-      "aria-hidden": "true"
-    }, eventQuantityOffer.emoji), React.createElement("div", null, React.createElement("div", {
-      className: "text-base font-black text-violet-200"
-    }, eventQuantityOffer.name), React.createElement("div", {
-      className: "text-[10px] font-bold text-slate-400"
-    }, "1回 ", eventQuantityOffer.grantAmount.toLocaleString(), eventQuantityOffer.unit, " ／ ", eventQuantityOffer.cost.toLocaleString(), "P"))), React.createElement("div", {
-      className: "mt-4 grid grid-cols-[1fr_1fr_1.4fr_1fr_1fr] items-center gap-1.5"
-    }, React.createElement("button", {
-      disabled: quantity <= 1,
-      onClick: () => changeQuantity(-10),
-      className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40"
-    }, "-10"), React.createElement("button", {
-      disabled: quantity <= 1,
-      onClick: () => changeQuantity(-1),
-      className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40"
-    }, "-1"), React.createElement("strong", {
-      className: "text-center text-xl font-black font-mono"
-    }, quantity), React.createElement("button", {
-      disabled: quantity >= maxQuantity,
-      onClick: () => changeQuantity(1),
-      className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40"
-    }, "+1"), React.createElement("button", {
-      disabled: quantity >= maxQuantity,
-      onClick: () => changeQuantity(10),
-      className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40"
-    }, "+10")), React.createElement("button", {
-      disabled: maxQuantity <= 0,
-      onClick: () => setEventQuantity(Math.max(1, maxQuantity)),
-      className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl bg-violet-900 font-black active:scale-95 disabled:opacity-40"
-    }, "MAX（", Math.max(0, maxQuantity).toLocaleString(), "回）"), React.createElement("div", {
-      className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
-    }, React.createElement("div", {
-      className: "flex justify-between"
-    }, React.createElement("span", {
-      className: "text-slate-400"
-    }, "受け取り"), React.createElement("span", null, totalGrant.toLocaleString(), eventQuantityOffer.unit)), React.createElement("div", {
-      className: "flex justify-between text-base"
-    }, React.createElement("span", {
-      className: "text-slate-300"
-    }, "合計"), React.createElement("span", {
-      className: "text-violet-300"
-    }, totalCost.toLocaleString(), "P")), React.createElement("div", {
-      className: "flex justify-between"
-    }, React.createElement("span", {
-      className: "text-slate-400"
-    }, "交換後"), React.createElement("span", {
-      className: "text-violet-200"
-    }, "残り", Math.max(0, safeEventPoints - totalCost).toLocaleString(), "P"))), marketExchangeError && React.createElement("p", {
-      className: "mt-2 text-center text-[11px] font-black text-red-300"
-    }, marketExchangeError), React.createElement("div", {
-      className: "mt-3 grid grid-cols-1 gap-2"
-    }, React.createElement("button", {
-      disabled: !canExchange,
-      onClick: async () => {
-        if (!onExchangeEventPoints) return;
-        setEventExchangePending(true);
-        try {
-          const result = await onExchangeEventPoints(eventQuantityOffer, quantity);
-          if (result?.ok) setEventQuantityOffer(null);
-        } finally {
-          setEventExchangePending(false);
-        }
+      dataAttrs: {
+        'data-event-point-coming-soon': offer.id
       },
-      className: "mh-button mh-button-primary min-h-[52px] rounded-xl bg-violet-500 text-white font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500"
-    }, "交換する"), React.createElement("button", {
-      disabled: eventExchangePending,
-      onClick: () => setEventQuantityOffer(null),
-      className: "mh-button mh-button-secondary min-h-[52px] rounded-xl border border-white/10 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
-    }, "キャンセル"))));
-  })());
+      item: item,
+      comingSoon: true,
+      comingSoonLabel: "先行公開予定",
+      onZoom: () => onZoomIcon(disc || item),
+      detail: disc && onOpenUpcomingDetail ? disc : null,
+      onDetail: () => disc && onOpenUpcomingDetail && onOpenUpcomingDetail(disc)
+    });
+  })))), sheet && React.createElement(MarketPurchaseSheet, {
+    item: sheet.item,
+    balance: balanceOf(marketCurrencyOf(sheet.item)),
+    stackable: !!sheet.stackable,
+    countUnit: sheet.countUnit || '個',
+    grantAmount: sheet.grantAmount || 0,
+    grantUnit: sheet.grantUnit || '',
+    quantity: sheetQuantity,
+    onQuantity: setSheetQuantity,
+    pending: sheetPending || purchaseProcessing,
+    error: marketExchangeError,
+    onConfirm: confirmSheet,
+    onCancel: closeSheet
+  }));
 }
 function ProfileScreen({
   activeAssistant,
@@ -31091,6 +31333,25 @@ function RhythmSongSelectScreen({
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
   const beatPointTargetSong = !!beatPointEvent && Array.isArray(beatPointEvent.songIds) && beatPointEvent.songIds.includes(rhythmSelectedSongId);
   const beatPointCampaign = beatPointReleased && !beatPointEvent ? rhythmEventPointCampaignAt(Date.now()) : null;
+  const beatPointSideCard = beatPointCampaign ? React.createElement("div", {
+    "data-rhythm-beat-band-landscape": true,
+    "data-rhythm-beat-point-campaign-side": true,
+    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-amber-100"
+  }, React.createElement("span", {
+    className: "block rounded-full bg-amber-400 px-1 text-[10px] leading-4 text-slate-950"
+  }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
+    className: "mt-0.5 block"
+  }, "キャンペーン中"), React.createElement("span", {
+    className: "block text-amber-200/80"
+  }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.endAt)))) : beatPointEvent ? React.createElement("div", {
+    "data-rhythm-beat-band-landscape": true,
+    "data-rhythm-beat-point-active-side": true,
+    className: "rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100"
+  }, React.createElement("span", {
+    className: "block"
+  }, "🎟️ ビートP獲得期間中"), React.createElement("span", {
+    className: "mt-0.5 block text-violet-200/80"
+  }, beatPointTargetSong ? '選択中のイベント対象曲は1.5倍' : '公開曲なら獲得できます')) : null;
   const [beatPointBalance, setBeatPointBalance] = React.useState(null);
   React.useEffect(() => {
     if (!beatPointReleased) return undefined;
@@ -31330,7 +31591,10 @@ function RhythmSongSelectScreen({
     onClick: dismissRhythmEventNotice,
     "aria-label": "この案内を閉じる",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
-  }, "×"))), beatPointCampaign && React.createElement("div", {
+  }, "×"))), (beatPointCampaign || beatPointEvent) && React.createElement("div", {
+    "data-rhythm-beat-band-portrait": true,
+    className: "shrink-0"
+  }, beatPointCampaign && React.createElement("div", {
     "data-rhythm-beat-point-campaign": true,
     className: "shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100"
   }, React.createElement("span", {
@@ -31343,7 +31607,7 @@ function RhythmSongSelectScreen({
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
-  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます'), rhythmSixLaneIntroVisible && React.createElement("div", {
+  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます')), rhythmSixLaneIntroVisible && React.createElement("div", {
     "data-rhythm-six-lane-intro": true,
     className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -31442,6 +31706,7 @@ function RhythmSongSelectScreen({
       scene: "rhythmHome",
       compact: true
     }),
+    toolbarExtra: beatPointSideCard,
     view: rhythmSelectView,
     onView: saveRhythmSelectView,
     listScrollTop: rhythmSongListScrollRef.current,
@@ -44570,9 +44835,8 @@ function MonsterHeroGame() {
   const dailyMasuAdviceCheckedRef = useRef(false);
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
-  const [marketQuantityItem, setMarketQuantityItem] = useState(null);
-  const [marketPurchaseQuantity, setMarketPurchaseQuantity] = useState(1);
   const [marketIconZoom, setMarketIconZoom] = useState(null);
+  const [upcomingMonsterDetail, setUpcomingMonsterDetail] = useState(null);
   const debugIconItems = useMemo(() => breederIconOptions({
     includeUnowned: true
   }), []);
@@ -50627,9 +50891,9 @@ function MonsterHeroGame() {
     setDraftMonsterRoster(prev => editingPartySetIndex === saved.activeIndex ? saved.rosters[editingPartySetIndex] : prev.filter(id => !entries.has(id)));
   };
   const buyMarketItem = async (item, quantity = 1) => {
-    if (marketPurchaseProcessingRef.current) return;
-    if (item.available === false) return;
-    if (isMarketItemOwned(item)) return;
+    if (marketPurchaseProcessingRef.current) return false;
+    if (item.available === false) return false;
+    if (isMarketItemOwned(item)) return false;
     const purchase = buildMarketItemPurchase({
       item,
       gold,
@@ -50637,12 +50901,12 @@ function MonsterHeroGame() {
       ownedItems: ownedItemsRef.current,
       quantity
     });
-    if (!purchase.ok) return;
+    if (!purchase.ok) return false;
     marketPurchaseProcessingRef.current = true;
     try {
       if (item.type === 'item') {
         const saved = await saveMarketBalances(gold, ownedItemsRef.current, purchase.gold, purchase.ownedItems, storeGet, storeSet);
-        if (!saved) return;
+        if (!saved) return false;
         ownedItemsRef.current = purchase.ownedItems;
         setOwnedItems(purchase.ownedItems);
       }
@@ -50686,18 +50950,18 @@ function MonsterHeroGame() {
         });
       }
       saveMissionProgress('market');
-      if (item.type === 'item') setMarketQuantityItem(null);
+      return true;
     } finally {
       marketPurchaseProcessingRef.current = false;
     }
   };
   const exchangeSoulRankRespecByProof = async () => {
-    if (marketPurchaseProcessingRef.current) return;
+    if (marketPurchaseProcessingRef.current) return false;
     const before = ownedItemsRef.current;
     const exchange = buildSoulRankRespecProofExchange(before, 1);
     if (!exchange.ok) {
       setMarketExchangeError('勇者の証が1個必要です。');
-      return;
+      return false;
     }
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
@@ -50711,19 +50975,21 @@ function MonsterHeroGame() {
       ownedItemsRef.current = exchange.ownedItems;
       setOwnedItems(exchange.ownedItems);
       saveMissionProgress('market');
+      return true;
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証は消費していません。');
+      return false;
     } finally {
       marketPurchaseProcessingRef.current = false;
     }
   };
   const exchangeHeroProofByShard = async () => {
-    if (marketPurchaseProcessingRef.current) return;
+    if (marketPurchaseProcessingRef.current) return false;
     const before = ownedItemsRef.current;
     const exchange = buildHeroProofShardExchange(before, 1);
     if (!exchange.ok) {
       setMarketExchangeError(`勇者の証片が${HERO_PROOF_SHARD_PER_PROOF}個必要です（いま${exchange.shardHave}個）。`);
-      return;
+      return false;
     }
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
@@ -50737,8 +51003,10 @@ function MonsterHeroGame() {
       ownedItemsRef.current = exchange.ownedItems;
       setOwnedItems(exchange.ownedItems);
       saveMissionProgress('market');
+      return true;
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証片は消費していません。');
+      return false;
     } finally {
       marketPurchaseProcessingRef.current = false;
     }
@@ -66020,12 +66288,7 @@ function MonsterHeroGame() {
         setMarketExchangeError('');
       },
       onZoomIcon: setMarketIconZoom,
-      onBuy: item => {
-        if (item.type === 'item') {
-          setMarketPurchaseQuantity(1);
-          setMarketQuantityItem(item);
-        } else buyMarketItem(item);
-      },
+      onBuy: buyMarketItem,
       onOpenDetail: (item, detailMon, detailTeaching) => {
         if (detailMon) setRosterDetailMon({
           ...detailMon,
@@ -66037,7 +66300,8 @@ function MonsterHeroGame() {
       onExchangeSoulRankRespec: exchangeSoulRankRespecByProof,
       onExchangeHeroProof: exchangeHeroProofByShard,
       eventPoints: rhythmEventPoints,
-      onExchangeEventPoints: exchangeRhythmEventPoints
+      onExchangeEventPoints: exchangeRhythmEventPoints,
+      onOpenUpcomingDetail: setUpcomingMonsterDetail
     }), gameState === 'ROSTER' && React.createElement("div", {
       "data-mh-screen": true,
       className: SCREEN_SHELL_CLASS
@@ -68205,21 +68469,12 @@ function MonsterHeroGame() {
     })), marketIconZoom && (() => {
       const item = marketIconZoom;
       const round = item.type === 'icon' || item.type === 'assist';
-      return React.createElement("div", {
-        onClick: () => setMarketIconZoom(null),
-        className: "fixed inset-0 flex items-center justify-center p-6",
-        style: {
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(2,6,23,0.94)',
-          zIndex: 41500
-        },
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": `${item.name}の拡大表示`
+      return React.createElement(MarketModal, {
+        narrow: true,
+        label: `${item.name}の拡大表示`,
+        onClose: () => setMarketIconZoom(null)
       }, React.createElement("div", {
-        onClick: e => e.stopPropagation(),
-        className: "w-full max-w-[280px] rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col items-center gap-3"
+        className: "flex flex-col items-center gap-3"
       }, React.createElement("div", {
         className: `w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round ? 'rounded-full' : 'rounded-2xl'}`
       }, item.icon ? item.type === 'icon' ? React.createElement(BreederIcon, {
@@ -68241,142 +68496,75 @@ function MonsterHeroGame() {
         }
       }, item.emoji)), React.createElement("div", {
         className: "text-center text-sm font-black text-white leading-tight"
-      }, item.name), React.createElement("button", {
-        onClick: () => setMarketIconZoom(null),
-        className: "w-full min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98]"
-      }, "とじる")));
-    })(), marketItemDetail && React.createElement("div", {
-      className: "fixed inset-0 flex items-center justify-center p-4",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.92)',
-        zIndex: 41000
-      },
-      role: "dialog",
-      "aria-modal": "true",
-      "aria-label": `${marketItemDetail.name}の効果`
-    }, React.createElement("div", {
-      className: "bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl"
-    }, React.createElement("div", {
-      className: "flex items-center gap-2 mb-3"
-    }, marketItemDetail.icon ? React.createElement("img", {
-      src: marketItemDetail.icon,
-      alt: marketItemDetail.name,
-      className: "w-10 h-10 rounded-full object-cover border border-white/10"
-    }) : React.createElement("span", {
-      className: "text-3xl"
-    }, marketItemDetail.emoji), React.createElement("h3", {
-      className: "text-base font-black text-teal-300"
-    }, marketItemDetail.name)), React.createElement("p", {
-      className: "text-[12px] text-slate-200 leading-relaxed"
-    }, marketItemDetail.desc), React.createElement("div", {
-      className: "mt-3 flex items-center justify-between text-[11px] font-black"
-    }, React.createElement("span", {
-      className: "text-slate-400"
-    }, "所持数"), React.createElement("span", {
-      className: "text-cyan-300 font-mono"
-    }, ownedItems[marketItemDetail.id] || 0)), React.createElement("div", {
-      className: "mt-1 flex items-center justify-between text-[11px] font-black"
-    }, React.createElement("span", {
-      className: "text-slate-400"
-    }, "ねだん"), React.createElement("span", {
-      className: "text-amber-300 font-mono"
-    }, Number(marketItemDetail.cost || 0).toLocaleString(), " ", marketItemDetail.currency === 'psyche' ? 'プシュケー' : marketItemDetail.type === 'icon' ? 'pt' : 'ダイヤ')), React.createElement("button", {
-      onClick: () => setMarketItemDetail(null),
-      className: "w-full mt-4 min-h-[48px] rounded-2xl bg-teal-600 text-white font-black active:scale-[.98]"
-    }, "とじる"))), marketQuantityItem && (() => {
-      const usesPsyche = marketQuantityItem.currency === 'psyche';
-      const balance = usesPsyche ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : gold;
-      const unit = usesPsyche ? 'プシュケー' : 'ダイヤ';
-      const unitCost = Math.max(0, Math.floor(Number(marketQuantityItem.cost) || 0));
-      const maxQuantity = unitCost > 0 ? Math.floor(balance / unitCost) : 0;
-      const quantity = Math.min(Math.max(1, marketPurchaseQuantity), Math.max(1, maxQuantity));
-      const total = unitCost * quantity;
-      const canPurchase = maxQuantity > 0 && !marketPurchaseProcessingRef.current;
-      const changeQuantity = delta => setMarketPurchaseQuantity(current => Math.min(Math.max(1, current + delta), Math.max(1, maxQuantity)));
-      const accentText = usesPsyche ? 'text-fuchsia-200' : 'text-amber-200';
-      return React.createElement("div", {
-        className: "fixed inset-0 flex items-center justify-center overflow-y-auto px-4",
+      }, item.name), React.createElement(MarketModalClose, {
+        onClick: () => setMarketIconZoom(null)
+      })));
+    })(), upcomingMonsterDetail && (() => {
+      const disc = upcomingMonsterDetail;
+      const mon = typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' ? UPCOMING_MONSTER_DRAFTS[disc.id] : null;
+      if (!mon) return null;
+      const lineageName = id => MONSTER_LINEAGES[id]?.name || '？？？';
+      const lineage = mon.draftLineage ? mon.draftLineage.main === mon.draftLineage.sub ? `${lineageName(mon.draftLineage.main)}(純血)` : `${lineageName(mon.draftLineage.main)} × ${lineageName(mon.draftLineage.sub)}` : null;
+      const dex = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS[mon.id] || '';
+      const beat = typeof RHYTHM_EVENT_POINT_SHOP_COMING_SOON !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_COMING_SOON.find(o => o.monsterId === mon.id) : null;
+      const close = () => setUpcomingMonsterDetail(null);
+      return React.createElement(MarketModal, {
+        label: `${mon.name}の詳細`,
+        onClose: close
+      }, React.createElement("div", {
+        "data-upcoming-monster-detail": mon.id,
+        className: "flex flex-col gap-3 overflow-y-auto mh-scroll",
         style: {
-          position: 'fixed',
-          inset: 0,
-          paddingTop: 'max(16px, env(safe-area-inset-top))',
-          paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
-          backgroundColor: 'rgba(0,0,0,0.92)',
-          zIndex: 42000
-        },
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": `${marketQuantityItem.name}の購入個数選択`
+          maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 64px)'
+        }
       }, React.createElement("div", {
-        onClick: e => e.stopPropagation(),
-        className: `w-full max-w-sm rounded-3xl border-2 ${usesPsyche ? 'border-fuchsia-400/70' : 'border-amber-400/70'} bg-slate-950 p-4 shadow-2xl`
+        className: "flex items-center justify-between gap-2"
       }, React.createElement("h3", {
-        className: `text-center text-lg font-black ${accentText}`
-      }, marketQuantityItem.name), React.createElement("div", {
-        className: "mt-3 rounded-2xl bg-slate-900 p-3 text-center"
+        className: "text-base font-black text-white"
+      }, mon.name), React.createElement("span", {
+        className: "text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap"
+      }, "近日公開予定")), React.createElement("div", {
+        className: "w-full aspect-square rounded-2xl border border-white/10 bg-black/40 overflow-hidden flex items-center justify-center"
+      }, React.createElement("img", {
+        src: mon.imgUrl,
+        alt: mon.name,
+        className: "w-full h-full object-contain",
+        draggable: false
+      })), lineage && React.createElement("div", {
+        className: "flex items-center justify-between text-[12px] font-black"
       }, React.createElement("span", {
-        className: "block text-[10px] font-bold text-slate-400"
-      }, "所持数"), React.createElement("strong", {
-        className: `mt-1 block text-xl font-black ${accentText}`
-      }, balance.toLocaleString(), " ", unit)), React.createElement("div", {
-        className: "mt-3 text-center text-[11px] font-black text-slate-300"
-      }, "購入個数"), React.createElement("div", {
-        className: "mt-2 grid grid-cols-5 items-center gap-1.5"
-      }, React.createElement("button", {
-        disabled: quantity <= 1,
-        onClick: () => changeQuantity(-10),
-        className: "min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30"
-      }, "-10"), React.createElement("button", {
-        disabled: quantity <= 1,
-        onClick: () => changeQuantity(-1),
-        className: "min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30"
-      }, "-1"), React.createElement("strong", {
-        className: "text-center text-xl font-black font-mono"
-      }, quantity), React.createElement("button", {
-        disabled: quantity >= maxQuantity,
-        onClick: () => changeQuantity(1),
-        className: "min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30"
-      }, "+1"), React.createElement("button", {
-        disabled: quantity >= maxQuantity,
-        onClick: () => changeQuantity(10),
-        className: "min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30"
-      }, "+10")), React.createElement("button", {
-        disabled: maxQuantity <= 0,
-        onClick: () => setMarketPurchaseQuantity(maxQuantity),
-        className: `mt-2 min-h-[44px] w-full rounded-xl font-black disabled:opacity-30 ${usesPsyche ? 'bg-fuchsia-800' : 'bg-amber-700'}`
-      }, "MAX（", maxQuantity.toLocaleString(), "個）"), React.createElement("div", {
-        className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
+        className: "text-slate-400"
+      }, "血統"), React.createElement("span", {
+        className: "text-emerald-300"
+      }, lineage)), dex && React.createElement("p", {
+        className: "text-[12px] text-slate-200 leading-relaxed whitespace-pre-line rounded-xl border border-white/10 bg-black/30 p-3"
+      }, dex), React.createElement("section", {
+        className: "rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3"
+      }, React.createElement("img", {
+        src: disc.icon,
+        alt: disc.name,
+        className: "w-12 h-12 rounded-full object-cover border border-white/10 shrink-0"
+      }), React.createElement("div", {
+        className: "min-w-0 text-[11px] font-black leading-snug"
       }, React.createElement("div", {
-        className: "flex justify-between"
-      }, React.createElement("span", {
-        className: "text-slate-400"
-      }, "単価"), React.createElement("span", null, "1個 = ", unitCost.toLocaleString(), unit)), React.createElement("div", {
-        className: "flex justify-between text-base"
-      }, React.createElement("span", {
-        className: "text-slate-300"
-      }, "合計"), React.createElement("span", {
-        className: "text-amber-300"
-      }, total.toLocaleString(), unit)), React.createElement("div", {
-        className: "flex justify-between"
-      }, React.createElement("span", {
-        className: "text-slate-400"
-      }, "購入後"), React.createElement("span", {
-        className: accentText
-      }, "残り", Math.max(0, balance - total).toLocaleString(), unit))), maxQuantity <= 0 && React.createElement("p", {
-        className: "mt-2 text-center text-[12px] font-black text-red-300"
-      }, unit, "が足りません"), React.createElement("div", {
-        className: "mt-3 grid grid-cols-1 gap-2"
-      }, React.createElement("button", {
-        disabled: !canPurchase,
-        onClick: () => buyMarketItem(marketQuantityItem, quantity),
-        className: "min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500"
-      }, "購入する"), React.createElement("button", {
-        onClick: () => setMarketQuantityItem(null),
-        className: "min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98]"
-      }, "キャンセル"))));
-    })(), skipInfoItemId && (() => {
+        className: "text-amber-200"
+      }, disc.name, React.createElement("span", {
+        className: "ml-1 text-[10px] text-slate-400"
+      }, "(予定の値段)")), React.createElement("div", {
+        className: "text-slate-300 whitespace-nowrap"
+      }, "ダイヤショップ：", Number(disc.cost).toLocaleString(), "ダイヤ"), beat && React.createElement("div", {
+        className: "text-violet-200 whitespace-nowrap"
+      }, "ビートP交換所：", Number(beat.cost).toLocaleString(), "ビートP"))), React.createElement("p", {
+        className: "text-[11px] text-slate-400 leading-relaxed"
+      }, "能力値や技は、公開のときにお知らせします。"), React.createElement(MarketModalClose, {
+        onClick: close
+      })));
+    })(), marketItemDetail && React.createElement(MarketItemDetail, {
+      item: marketItemDetail,
+      owned: ownedItemCount(ownedItems, marketItemDetail.id),
+      grantText: marketItemDetail.grantText || '',
+      onClose: () => setMarketItemDetail(null)
+    }), skipInfoItemId && (() => {
       const item = BREEDER_MARKET_ITEMS.find(i => i.id === skipInfoItemId);
       if (!item) return null;
       const label = DIFFICULTY_SETTINGS[item.skipDifficulty]?.label || item.skipDifficulty;

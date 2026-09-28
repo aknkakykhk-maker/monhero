@@ -752,11 +752,15 @@ check('ビートP交換所はイベント非開催中・0Pでも常設表示す�
   &&marketScreen.includes('所持ビートP')
   &&!marketScreen.includes("marketSection==='event'&&!eventPointReleased")
   &&!marketScreen.includes('ビートP交換所は準備中'));
+// 2026-09-28「ショップの作りを全部統一して」から、数量選択はマーケット共通の窓(MarketPurchaseSheet)。
+// ビートPの品は「回」で数え、MAX・受け取り・交換後の残りをその窓が出す
 check('ビートP交換所は数量選択とMAX・交換後残高を出す',
   marketScreen.includes('data-event-point-shop')
-  &&marketScreen.includes('MAX（{Math.max(0,maxQuantity).toLocaleString()}回）')
-  &&marketScreen.includes('交換後')
-  &&marketScreen.includes('onExchangeEventPoints(eventQuantityOffer,quantity)'));
+  &&marketScreen.includes("openSheet({ item, stackable:true, countUnit:'回', grantAmount:offer.grantAmount, grantUnit:offer.unit,")
+  &&marketScreen.includes('onExchangeEventPoints(offer,count)')
+  &&game.includes('MAX（{Math.max(0, maxQuantity).toLocaleString()}{countUnit}）')
+  &&game.includes("beatPoint:      Object.freeze({ have:'所持ビートP', label:'ビートP',      emoji:'🎟️', verb:'交換'")
+  &&game.includes('<span className="text-slate-400">{meta.verb}後</span>'));
 check('STEP3の更新履歴も開発メモとして隠す',(()=>{
   const at=changelog.indexOf('イベントP交換所の基盤を実装しました');
   if(at<0)return false;

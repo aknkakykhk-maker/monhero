@@ -125,8 +125,18 @@ const MARKET_ITEMS = [
       b.click();
       return 'ok';
     }, buyLabel);
+    await page.waitForTimeout(600);
+    // 2026-09-28「ショップの作りを全部統一して」から、どの品も確認の窓を通して買う。窓の「購入する」を押す
+    const confirmed = found === 'ok' ? await page.evaluate((n) => {
+      const dialog = document.querySelector(`[role="dialog"][aria-label="${n}の購入"]`);
+      const b = dialog && [...dialog.querySelectorAll('button')].find(x => (x.textContent || '').trim() === '購入する');
+      if (!b) return '確認の窓なし';
+      if (b.disabled) return '確認の窓で購入不可';
+      b.click();
+      return 'ok';
+    }, name) : found;
     await page.waitForTimeout(900);
-    if (found !== 'ok') check(`「${name}」の購入ボタンを押せる`, false, found);
+    if (confirmed !== 'ok') check(`「${name}」の購入ボタンを押せる`, false, confirmed);
   }
 
   const store = await page.evaluate(() => ({

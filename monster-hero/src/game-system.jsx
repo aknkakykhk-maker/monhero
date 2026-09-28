@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1f53c879ea4a465c
+// generated-sha256: 88592289d052fc12
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 19:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-28 22:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5481,12 +5481,16 @@ const MASU_COLOR_REGION_HUES = {
     { hue: 120, noAAGuard: true, noEdgeGuard: true },
     { hue: 240, noAAGuard: true, noEdgeGuard: true },
   ],
-  // メルホイップ: ①=緑系(髪・葉っぱ・緑の果実・ドレスと傘の緑) / ②=赤系(イチゴ・赤い果実・リボン) /
-  // ③=白・クリーム系(ケーキ・クリーム・ドレスと傘の白)。顔・肌・蹄・ケーキの目と口・傘の軸は対象外
+  // メルホイップ(5部位。2026-09-28 ユーザーが用意した部位の指示図から作った。剣士モッチーと同じ5色マスク):
+  // ①=イチゴ(頭)・腰の赤い実 / ②=服・スカート・首元の花と葉・耳の上側・頭の緑の玉・傘の本体 /
+  // ③=傘のフリルと白い線・袖口のフリル・服の装飾の葉 / ④=ケーキのクリーム・座っている台座・ホイップ /
+  // ⑤=髪・目。顔・肌・脚・蹄・傘の柄・ケーキの上の果物と葉・スポンジ・ケーキの目と口は対象外
   MelWhip: [
     { hue: 0, noAAGuard: true, noEdgeGuard: true },
     { hue: 120, noAAGuard: true, noEdgeGuard: true },
     { hue: 240, noAAGuard: true, noEdgeGuard: true },
+    { hue: 60, noAAGuard: true, noEdgeGuard: true },
+    { hue: 300, noAAGuard: true, noEdgeGuard: true },
   ],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
@@ -6226,9 +6230,10 @@ const MASU_COLOR_REGION_DYE = {
   // gloss の値は、その部位の元の絵の彩度の中央値〜上のほう(濃い所)に合わせた。濃い所は選んだ色になり、
   // 髪のハイライト・カエルのツヤ・淡い緑のドレスのように元が淡い所は淡いまま残るので、立体感が消えない
   // (gloss なしだと、青や紫に染めたとき髪がべったり1色になっていた)。
-  // メルホイップの③(白・クリーム)は元の彩度がほぼ0(中央値0.13)なので、比例させると色が乗らない。gloss を付けない
+  // メルホイップ(5部位): ①イチゴと②服・傘は元が濃い(中央値0.90/0.88)。⑤髪は白いつやが多い(中央値0.38)ので
+  // 0.7 にして、つやを残す。③フリル・白い線と④ケーキは元がほぼ白で、比例させると色が乗らないので gloss を付けない
   Yggdrasil: [{ gloss: 0.9 }, { gloss: 0.93 }, { gloss: 0.72 }],
-  MelWhip: [{ gloss: 0.8 }, { gloss: 0.9 }, {}],
+  MelWhip: [{ gloss: 0.9 }, { gloss: 0.9 }, {}, {}, { gloss: 0.7 }],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
@@ -9664,13 +9669,17 @@ const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
 //   <wbr> は「ここで折り返してよい」だけを表し、innerText には現れない。
 const marketNameNodes = (name) => marketNameForWrap(name).split('​')
   .map((seg, index) => <React.Fragment key={index}>{index>0&&<wbr/>}{seg}</React.Fragment>);
-const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false }) => {
+// comingSoonLabel: 買えない予告の札。ふつうは「近日追加」。ビートP交換所の円盤石だけ、
+// ダイヤショップより先に出す予定なので「先行公開予定」と書く(札の形は同じ)。
+// dataAttrs: 検査や画面の文字拾いが商品を見分けるための data-* をそのままカードへ付ける。
+const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabel='近日追加', detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false, dataAttrs=null }) => {
   const usesGold=item.type==='disc'||item.type==='assist'||item.type==='item';
   const usesPsyche=item.currency==='psyche';
   const usesHeroProof=item.currency==='heroProof';
   const usesHeroProofShard=item.currency==='heroProofShard';
-  const priceLabel=usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
-  return <div className={`rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
+  const usesBeatPoint=item.currency==='beatPoint';
+  const priceLabel=usesBeatPoint?`${item.cost}ビートP`:usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
+  return <div {...(dataAttrs||{})} className={`rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
     <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled}/>
     {/* 商品名(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
         ★縦は**上寄せ**にする。中央寄せだと、1行で収まる品(魂格再編の書・染色もどき)だけが
@@ -9682,9 +9691,131 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, m
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
     <div className={`w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
-    <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail&&!comingSoon?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
-    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
+    {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
+    <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
+    {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
+    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="flex flex-col items-center gap-1"><span data-market-coming-soon-price className="text-[10px] font-black text-slate-400 whitespace-nowrap">{marketPriceText(item)}</span><div className="text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">{comingSoonLabel}</div></div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesBeatPoint?'bg-violet-500 text-white active:scale-95':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;
+};
+
+// ==== マーケットの共通部品(2026-09-28 ユーザー指示「ショップの作りを全部統一して / レイアウトやUI / 詳細とかそのへんのつくり」) ====
+// 以前は売り場ごとに作りが違っていた。
+//   ・ビートP交換所だけ2列・横長の独自カードで、絵も所持数も詳細も無かった
+//   ・数を選ぶ窓が2つ(消耗品用とビートP用)あり、枠・ボタン・文言がそれぞれ違った
+//   ・円盤石・アシスト・アイコン・勇者の証の交換は、押した瞬間に確認なしで買えていた
+//   ・所持している通貨の帯が売り場ごとに手書きで、形が1行型と3列型の2種類あった
+//   ・「とじる」「閉じる」が混ざっていた
+// いまはどの売り場も、商品カード(MarketProductCard)・残高帯(MarketBalanceBar)・
+// 窓の枠(MarketModal)・詳細(MarketItemDetail)・購入/交換の確認(MarketPurchaseSheet)の同じ部品で描く。
+// 通貨ごとの呼び名・色は MARKET_CURRENCY_META の1か所で決める(have は残高の帯と確認の窓に出す持ち高の呼び名)。
+// ★Tailwind は静的に書き出しているので、クラス名は必ず文字列のまま書く(組み立てない)。
+const MARKET_CURRENCY_META = Object.freeze({
+  diamond:        Object.freeze({ have:'所持ダイヤ', label:'ダイヤ',       emoji:'💎', verb:'購入', format:n=>`${n}ダイヤ`,         text:'text-cyan-200',    bar:'text-cyan-100 border-cyan-500/30 bg-cyan-950/30',          border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
+  breederPoint:   Object.freeze({ have:'所持ブリーダーP', label:'ブリーダーP', emoji:'🪙', verb:'購入', format:n=>`${n}ブリーダーP`,     text:'text-amber-200',   bar:'text-amber-100 border-amber-500/30 bg-amber-950/30',       border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
+  psyche:         Object.freeze({ have:'虹のプシュケー', label:'虹のプシュケー', emoji:'🌈', verb:'購入', format:n=>`${n}プシュケー`,   text:'text-fuchsia-200', bar:'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-950/30', border:'border-fuchsia-400/70', button:'bg-fuchsia-600 text-white', max:'bg-fuchsia-800' }),
+  heroProofShard: Object.freeze({ have:'勇者の証片', label:'勇者の証片',   emoji:'🎖️', verb:'交換', format:n=>`勇者の証片${n}個`,   text:'text-amber-100',   bar:'text-amber-100 border-amber-400/30 bg-amber-950/30',       border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
+  heroProof:      Object.freeze({ have:'勇者の証', label:'勇者の証',     emoji:'🏅', verb:'交換', format:n=>`勇者の証${n}個`,     text:'text-amber-200',   bar:'text-amber-200 border-amber-400/30 bg-amber-950/30',       border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
+  beatPoint:      Object.freeze({ have:'所持ビートP', label:'ビートP',      emoji:'🎟️', verb:'交換', format:n=>`${n}ビートP`,        text:'text-violet-200',  bar:'text-violet-100 border-violet-500/30 bg-violet-950/30',    border:'border-violet-400/70',  button:'bg-violet-500 text-white',  max:'bg-violet-800' }),
+});
+// 商品が何で買うものか。currency を書いた商品はそれ、無ければ種類で決める(アイコンはブリーダーP、ほかはダイヤ)
+const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.currency
+  : (item?.type==='disc'||item?.type==='assist'||item?.type==='item') ? 'diamond' : 'breederPoint';
+const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
+
+// 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
+const MarketBalanceBar = ({ balances }) => (
+  <div data-market-balances className={`mb-2 shrink-0 grid gap-2 ${balances.length>=3?'grid-cols-3':balances.length===2?'grid-cols-2':'grid-cols-1'}`}>
+    {balances.map(({ currency, value })=>{const meta=MARKET_CURRENCY_META[currency];return(
+      <div key={currency} data-market-balance={currency} className={`flex flex-col items-center justify-center rounded-2xl border py-2 ${meta.bar}`}>
+        <div className="flex items-baseline gap-1">
+          <span aria-hidden="true" className="text-[11px]">{meta.emoji}</span>
+          <span className="font-mono text-base font-black">{Math.max(0, Math.floor(Number(value)||0)).toLocaleString()}</span>
+        </div>
+        <span className="text-[10px] font-bold leading-tight text-slate-400">{meta.have}</span>
+      </div>
+    );})}
+  </div>
+);
+// 売り場の中に出す知らせ(失敗したとき・キャンペーン中など)。どの売り場も同じ場所・同じ形
+const MarketNotice = ({ tone='error', children, ...rest }) => (
+  <div {...rest} className={`mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[11px] font-black ${tone==='error'?'border-red-500/40 bg-red-950/30 text-red-300':'border-amber-300/30 bg-amber-500/10 text-amber-100'}`}>{children}</div>
+);
+
+// マーケットで開く窓の枠。拡大・詳細・購入/交換の確認はすべてこれに入れる。
+// 外側を押すと閉じる(閉じてよくないとき=保存中は onClose を渡さない)
+const MarketModal = ({ label, border='border-amber-400/70', onClose, children, narrow=false }) => (
+  <div onClick={onClose||undefined} className="fixed inset-0 flex items-center justify-center overflow-y-auto px-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(2,6,23,0.94)',zIndex:42000}} role="dialog" aria-modal="true" aria-label={label}>
+    <div onClick={e=>e.stopPropagation()} className={`w-full ${narrow?'max-w-[280px]':'max-w-sm'} rounded-3xl border-2 ${border} bg-slate-950 p-4 shadow-2xl`}>{children}</div>
+  </div>
+);
+const MarketModalClose = ({ onClick, label='閉じる', disabled=false }) => (
+  <button type="button" disabled={disabled} onClick={onClick} className="mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">{label}</button>
+);
+// 窓の頭。商品の絵と名前を真ん中にそろえて出す
+const MarketModalHead = ({ item, accent='text-white' }) => (
+  <div className="flex flex-col items-center gap-2">
+    <MarketProductIcon item={item}/>
+    <h3 className={`text-center text-lg font-black leading-tight ${accent}`}>{item.name}</h3>
+  </div>
+);
+
+// アイテムの詳細。効果の説明・所持数・ねだん(何で買うかに合わせる)を出す。
+// ビートP交換所の品は1回で受け取る数(grantText)も出す
+const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
+  const meta=MARKET_CURRENCY_META[marketCurrencyOf(item)];
+  return <MarketModal label={`${item.name}の効果`} border={meta.border} onClose={onClose}>
+    <MarketModalHead item={item} accent={meta.text}/>
+    {item.desc&&<p className="mt-3 text-[12px] text-slate-200 leading-relaxed">{item.desc}</p>}
+    <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
+      <div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>
+      {grantText&&<div className="flex justify-between"><span className="text-slate-400">1回で受け取る数</span><span>{grantText}</span></div>}
+      <div className="flex justify-between"><span className="text-slate-400">ねだん</span><span className={`font-mono ${meta.text}`}>{marketPriceText(item)}</span></div>
+    </div>
+    <div className="mt-3"><MarketModalClose onClick={onClose}/></div>
+  </MarketModal>;
+};
+
+// 購入・交換の確認。どの通貨で買う品も、この1枚を通してから買う。
+// stackable(消耗品・ビートPの品)だけ数を選べる。円盤石・アシスト・アイコン・証の交換は1つずつ。
+// grantAmount/grantUnit は「1回で何を受け取るか」(ビートP交換所)。無い品は出さない
+const MarketPurchaseSheet = ({ item, balance, stackable=false, countUnit='個', grantAmount=0, grantUnit='', quantity=1, onQuantity, pending=false, error='', onConfirm, onCancel }) => {
+  const meta=MARKET_CURRENCY_META[marketCurrencyOf(item)];
+  const unitCost=Math.max(0, Math.floor(Number(item.cost)||0));
+  const safeBalance=Math.max(0, Math.floor(Number(balance)||0));
+  const affordable=unitCost>0?Math.floor(safeBalance/unitCost):0;
+  const maxQuantity=stackable?affordable:Math.min(1, affordable);
+  const count=stackable?Math.min(Math.max(1, Math.floor(Number(quantity)||1)), Math.max(1, maxQuantity)):1;
+  const total=unitCost*count;
+  const canConfirm=maxQuantity>0&&!pending;
+  const setCount=(next)=>onQuantity&&onQuantity(Math.min(Math.max(1, next), Math.max(1, maxQuantity)));
+  const stepClass='mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30';
+  return <MarketModal label={`${item.name}の${meta.verb}`} border={meta.border} onClose={pending?null:onCancel}>
+    <MarketModalHead item={item} accent={meta.text}/>
+    <div className="mt-3 rounded-2xl bg-slate-900 p-3 text-center"><span className="block text-[10px] font-bold text-slate-400">{meta.have}</span><strong className={`mt-1 block text-xl font-black font-mono ${meta.text}`}>{meta.emoji} {safeBalance.toLocaleString()}</strong></div>
+    {stackable&&<>
+      <div className="mt-3 text-center text-[11px] font-black text-slate-300">{meta.verb}する数</div>
+      <div className="mt-2 grid grid-cols-5 items-center gap-1.5">
+        <button type="button" disabled={count<=1} onClick={()=>setCount(count-10)} className={stepClass}>-10</button>
+        <button type="button" disabled={count<=1} onClick={()=>setCount(count-1)} className={stepClass}>-1</button>
+        <strong className="text-center text-xl font-black font-mono">{count}</strong>
+        <button type="button" disabled={count>=maxQuantity} onClick={()=>setCount(count+1)} className={stepClass}>+1</button>
+        <button type="button" disabled={count>=maxQuantity} onClick={()=>setCount(count+10)} className={stepClass}>+10</button>
+      </div>
+      <button type="button" disabled={maxQuantity<=0} onClick={()=>setCount(maxQuantity)} className={`mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${meta.max}`}>MAX（{Math.max(0, maxQuantity).toLocaleString()}{countUnit}）</button>
+    </>}
+    <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
+      {stackable&&<div className="flex justify-between"><span className="text-slate-400">単価</span><span>1{countUnit} = {meta.format(unitCost.toLocaleString())}</span></div>}
+      {grantAmount>0&&<div className="flex justify-between"><span className="text-slate-400">受け取り</span><span>{(grantAmount*count).toLocaleString()}{grantUnit}</span></div>}
+      <div className="flex justify-between text-base"><span className="text-slate-300">合計</span><span className={meta.text}>{meta.format(total.toLocaleString())}</span></div>
+      <div className="flex justify-between"><span className="text-slate-400">{meta.verb}後</span><span className={meta.text}>残り{meta.format(Math.max(0, safeBalance-total).toLocaleString())}</span></div>
+    </div>
+    {maxQuantity<=0&&<p className="mt-2 text-center text-[12px] font-black text-red-300">{meta.label}が足りません</p>}
+    {error&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{error}</p>}
+    <div className="mt-3 grid grid-cols-1 gap-2">
+      <button type="button" disabled={!canConfirm} onClick={()=>onConfirm&&onConfirm(count)} className={`mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500 ${meta.button}`}>{meta.verb}する</button>
+      <MarketModalClose onClick={onCancel} label="キャンセル" disabled={pending}/>
+    </div>
+  </MarketModal>;
 };
 
 // 表示を待たせず、ブラウザキャッシュとデコードだけを少しずつ先へ進める画像キュー。
@@ -15459,7 +15590,7 @@ const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP
 // (2026-09-05・ユーザー指示「選んでいた音楽が鳴り続けるようにして」)。
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -15680,6 +15811,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${state.noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
           <span aria-hidden="true">💬</span><span aria-hidden="true">{state.noticeOpen?'▲':'▼'}</span>
         </button>}
+        {/* 呼ぶ側が足す小さな札(横持ちのビートPキャンペーンなど)。縦持ちで出すかどうかは呼ぶ側が決める */}
+        {toolbarExtra}
       </div>
     <div ref={listRef} onScroll={handleListScroll}
       data-rhythm-song-list data-rhythm-song-loop={loopEnabled?'1':'0'}
@@ -20329,17 +20462,25 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
 // ・助手の告知(assistantNotice)は更新履歴 → data/assistants.js の仕組みで、この画面とは別。
 //   ここが変わっても boot/market-notice-check の対象は動かない
 // ・この画面にタイマーは無い(docs/refactor/SCREEN_EFFECTS_MAP.md に BREEDER_MARKET の行が無い)
+//
+// 【どの売り場も同じ部品で描く】(2026-09-28 ユーザー指示「ショップの作りを全部統一して」)
+// ・商品は MarketProductCard を MARKET_GRID_CLASS(3列)で並べる。ビートP交換所も同じ
+// ・上の残高は MarketBalanceBar、知らせは MarketNotice
+// ・買う/交換するときは、どの品も MarketPurchaseSheet(確認の窓)を通す。
+//   以前は円盤石・アシスト・アイコン・勇者の証の交換が、押した瞬間に確認なしで実行されていた
+// ・窓はこの画面が1つだけ持つ(sheet)。保存の中身は本体のまま(onBuy などは成功したら true / {ok:true} を返す)
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
-  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints,
+  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
   const [marketSection,setMarketSection]=useState(null);
-  const [eventQuantityOffer,setEventQuantityOffer]=useState(null);
-  const [eventQuantity,setEventQuantity]=useState(1);
-  const [eventExchangePending,setEventExchangePending]=useState(false);
+  // 開いている購入/交換の確認窓。{ item, balance, stackable, countUnit, grantAmount, grantUnit, confirm(count) }
+  const [sheet,setSheet]=useState(null);
+  const [sheetQuantity,setSheetQuantity]=useState(1);
+  const [sheetPending,setSheetPending]=useState(false);
   const safeEventPoints=normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
@@ -20361,13 +20502,33 @@ function BreederMarketScreen({
     exchange:{label:'アイテム交換所',emoji:'🔄'},
     event:{label:'ビートP交換所',emoji:'🎟️'},
   };
+  const balanceOf = (currency) => currency==='psyche' ? psycheHave : currency==='heroProofShard' ? shardHave : currency==='heroProof' ? proofHave
+    : currency==='beatPoint' ? safeEventPoints : currency==='breederPoint' ? breederPoints : gold;
+  const busy = purchaseProcessing || sheetPending;
+
+  const openSheet = (next) => { setSheetQuantity(1); setSheet(next); };
+  const closeSheet = () => { if(!sheetPending) setSheet(null); };
+  const confirmSheet = async (count) => {
+    if(!sheet||sheetPending) return;
+    setSheetPending(true);
+    try {
+      const result = await sheet.confirm(count);
+      if(result===true||result?.ok) setSheet(null);
+    } finally { setSheetPending(false); }
+  };
+  // 所持数と詳細ボタン。消耗品のカードはどの売り場でもこの形
+  const ownedMiddle = (count, detailItem, extraDetail=null) => <>
+    <span className={`text-[11px] font-black ${count>0?'text-cyan-300':'text-slate-400'}`}>×{count}</span>
+    {detailItem?.desc&&<MarketDetailChip label={`${detailItem.name}の効果を見る`} onClick={()=>onOpenItemDetail(extraDetail?{...detailItem,...extraDetail}:detailItem)}/>}
+  </>;
 
   const renderMarketItem=(item,{showBase=true,showHeroProofExchange=false}={})=>{
     const comingSoon = item.available === false;
     const owned = !comingSoon && isItemOwned(item);
-    const balance = item.currency==='psyche' ? psycheHave : item.type==='disc' || item.type==='assist' || item.type==='item' ? gold : breederPoints;
-    const canBuy = !comingSoon && !owned && balance>=item.cost;
-    const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+    const balance = balanceOf(marketCurrencyOf(item));
+    const canBuy = !comingSoon && !owned && balance>=item.cost && !busy;
+    // 近日公開予定の子(まだ ALL_PLAYER_MONSTERS にいない)も、案の段階の中身で詳細を開けるようにする
+    const detailMon = item.type==='disc' ? (ALL_PLAYER_MONSTERS[item.id] || (comingSoon && typeof UPCOMING_MONSTER_DRAFTS!=='undefined' ? UPCOMING_MONSTER_DRAFTS[item.id] : null) || null) : null;
     const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
     const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
@@ -20375,20 +20536,30 @@ function BreederMarketScreen({
       <React.Fragment key={item.id}>
         {showBase&&<MarketProductCard
           item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
-          onZoom={()=>onZoomIcon(item)} onBuy={()=>onBuy(item)}
+          onZoom={()=>onZoomIcon(item)}
+          onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count) })}
           detail={detailMon||detailTeaching}
-          onDetail={()=>onOpenDetail(item,detailMon,detailTeaching)}
+          onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
           middle={item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
           item={exchangeItem} owned={false} comingSoon={false}
-          canBuy={proofHave>0&&!purchaseProcessing}
+          canBuy={proofHave>0&&!busy}
           disabled={purchaseProcessing}
-          onBuy={onExchangeSoulRankRespec}
-          middle={<><span className={`text-[11px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>}
+          onZoom={()=>onZoomIcon(item)}
+          onBuy={()=>openSheet({ item:exchangeItem, confirm:()=>onExchangeSoulRankRespec() })}
+          middle={ownedMiddle(ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID), item)}
         />}
       </React.Fragment>
     );
+  };
+
+  // ビートP交換所の品を、ほかの売り場と同じ商品カードの形にする。
+  // 1回で2つ以上もらえる品は名前に「×数」を付け、詳細と確認の窓に「受け取り」を出す
+  const beatPointItemOf = (offer) => {
+    const base = offer.itemId ? (BREEDER_MARKET_ITEMS.find(item=>item.id===offer.itemId) || [HERO_PROOF_ITEM,HERO_PROOF_SHARD_ITEM].find(item=>item.id===offer.itemId) || null) : null;
+    return { id:offer.id, name:offer.grantAmount>1?`${offer.name} ×${offer.grantAmount.toLocaleString()}`:offer.name, emoji:offer.emoji,
+      icon:base?.icon, type:'item', currency:'beatPoint', cost:offer.cost, desc:base?.desc||'', base };
   };
 
   const headerTitle = marketSection ? sectionMeta[marketSection].label : 'マーケット';
@@ -20422,7 +20593,7 @@ function BreederMarketScreen({
                 <span aria-hidden="true" className="text-2xl">{section.emoji}</span>
                 <span className={`text-[12px] font-black leading-tight ${section.title}`}>{section.titleLines?section.titleLines.map(line=><span key={line} className="block">{line}</span>):section.label}</span>
               </div>
-              <div className="mt-2.5 font-mono text-xl font-black text-white">{section.value!==null?section.value:'\u00a0'}</div>
+              <div className="mt-2.5 font-mono text-xl font-black text-white">{section.value!==null?section.value:' '}</div>
               <div className="mt-0.5 text-[10px] font-bold text-slate-400">{section.hint}</div>
               <span aria-hidden="true" className={`absolute bottom-3 right-3 text-xl font-black ${section.arrow}`}>›</span>
             </button>
@@ -20430,12 +20601,19 @@ function BreederMarketScreen({
         </div>
       </div>}
 
+      {marketSection&&<>
+        <MarketBalanceBar balances={
+          marketSection==='diamond'?[{currency:'diamond',value:gold}]
+          :marketSection==='breeder'?[{currency:'breederPoint',value:breederPoints}]
+          :marketSection==='exchange'?[{currency:'psyche',value:psycheHave},{currency:'heroProofShard',value:shardHave},{currency:'heroProof',value:proofHave}]
+          :[{currency:'beatPoint',value:safeEventPoints}]}/>
+        {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す */}
+        {marketSection==='event'&&(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
+          return campaign?<MarketNotice tone="info" data-event-point-campaign>🎟️ {campaign.name}中：モンヒロビートの公開曲でビートPがいつもの{campaign.boost}倍（{rhythmEventJstText(Date.parse(campaign.endAt))}まで）</MarketNotice>:null;})()}
+        {marketExchangeError&&!sheet&&<MarketNotice>{marketExchangeError}</MarketNotice>}
+      </>}
+
       {marketSection==='diamond'&&<>
-        <div className="mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/30 bg-cyan-950/30 py-2">
-          <Gem size={15} className="text-cyan-300"/>
-          <span className="font-mono text-base font-black text-cyan-100">{gold.toLocaleString()}</span>
-          <span className="text-[10px] font-bold text-slate-400">所持ダイヤ</span>
-        </div>
         <ScreenTabs value={activeDiamondTab} onChange={onSelectTab}
           items={diamondTabs.map(tab=>({id:tab.key,label:tab.label,color:'#0891b2'}))}/>
         <div className={SCREEN_LIST_CLASS}>
@@ -20443,132 +20621,77 @@ function BreederMarketScreen({
         </div>
       </>}
 
-      {marketSection==='breeder'&&<>
-        <div className="mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-950/30 py-2">
-          <Coins size={15} className="text-amber-300"/>
-          <span className="font-mono text-base font-black text-amber-100">{breederPoints.toLocaleString()}</span>
-          <span className="text-[10px] font-bold text-slate-400">所持ブリーダーP</span>
-        </div>
-        <div className={SCREEN_LIST_CLASS}>
-          {breederPointItems.length===0?<ScreenEmpty emoji="🛒" lines={['まだ商品がありません']}/>:<div className={MARKET_GRID_CLASS}>{breederPointItems.map(item=>renderMarketItem(item))}</div>}
-        </div>
-      </>}
+      {marketSection==='breeder'&&<div className={SCREEN_LIST_CLASS}>
+        {breederPointItems.length===0?<ScreenEmpty emoji="🛒" lines={['まだ商品がありません']}/>:<div className={MARKET_GRID_CLASS}>{breederPointItems.map(item=>renderMarketItem(item))}</div>}
+      </div>}
 
-      {marketSection==='exchange'&&<>
-        <div data-market-balances className="grid grid-cols-3 gap-2 mb-2 shrink-0">
-          {[
-            { key:'psyche', emoji:'🌈', label:'虹のプシュケー', value:psycheHave, tone:'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-950/30' },
-            { key:'shard',  emoji:'🎖️', label:'勇者の証片',     value:shardHave,  tone:'text-amber-100 border-amber-400/30 bg-amber-950/30' },
-            { key:'proof',  emoji:'🏅', label:'勇者の証',       value:proofHave,  tone:'text-amber-200 border-amber-400/30 bg-amber-950/30' },
-          ].map(row=>(
-            <div key={row.key} data-market-balance={row.key} className={`flex flex-col items-center justify-center rounded-2xl border py-2 ${row.tone}`}>
-              <div className="flex items-baseline gap-1">
-                <span aria-hidden="true" className="text-[11px]">{row.emoji}</span>
-                <span className="font-mono text-sm font-black">{row.value.toLocaleString()}</span>
-              </div>
-              <span className="text-[10px] font-bold leading-tight text-slate-400">{row.label}</span>
-            </div>
-          ))}
+      {marketSection==='exchange'&&<div className={SCREEN_LIST_CLASS}>
+        <div className={MARKET_GRID_CLASS}>
+          {itemExchangeItems.map(item=>renderMarketItem(item))}
+          {soulRankRespecItem&&renderMarketItem(soulRankRespecItem,{showBase:false,showHeroProofExchange:true})}
+          {(()=>{const shardExchange={...HERO_PROOF_ITEM, type:'item', currency:'heroProofShard', cost:HERO_PROOF_SHARD_PER_PROOF};return <MarketProductCard
+            item={shardExchange}
+            owned={false} comingSoon={false}
+            canBuy={shardHave>=HERO_PROOF_SHARD_PER_PROOF&&!busy}
+            disabled={purchaseProcessing}
+            onZoom={()=>onZoomIcon(HERO_PROOF_ITEM)}
+            onBuy={()=>openSheet({ item:shardExchange, confirm:()=>onExchangeHeroProof() })}
+            middle={ownedMiddle(proofHave, HERO_PROOF_ITEM)}
+          />;})()}
         </div>
-        {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[11px] font-black text-red-300">{marketExchangeError}</div>}
-        <div className={SCREEN_LIST_CLASS}>
-          <div className={MARKET_GRID_CLASS}>
-            {itemExchangeItems.map(item=>renderMarketItem(item))}
-            {soulRankRespecItem&&renderMarketItem(soulRankRespecItem,{showBase:false,showHeroProofExchange:true})}
-            <MarketProductCard
-              item={{...HERO_PROOF_ITEM, type:'item', currency:'heroProofShard', cost:HERO_PROOF_SHARD_PER_PROOF}}
-              owned={false} comingSoon={false}
-              canBuy={shardHave>=HERO_PROOF_SHARD_PER_PROOF&&!purchaseProcessing}
+      </div>}
+
+      {marketSection==='event'&&<><div className={SCREEN_LIST_CLASS}>
+        <div data-event-point-shop className={MARKET_GRID_CLASS}>
+          {RHYTHM_EVENT_POINT_SHOP_OFFERS.map(offer=>{
+            const item=beatPointItemOf(offer);
+            const grantText=`${offer.grantAmount.toLocaleString()}${offer.unit}`;
+            // ダイヤの品は受け取る数が名前(ダイヤ ×300)に入っていて、持ち数は所持ダイヤと同じなので中段は空ける
+            const middle=offer.kind==='diamond'
+              ? null
+              : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base?{...item.base,cost:offer.cost,currency:'beatPoint'}:null, {grantText});
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id}}
+              item={item} owned={false} comingSoon={false}
+              canBuy={safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
-              onBuy={onExchangeHeroProof}
-              middle={<><span className={`text-[11px] font-black ${proofHave>0?'text-cyan-300':'text-slate-400'}`}>×{proofHave}</span><MarketDetailChip label="勇者の証の効果を見る" onClick={()=>onOpenItemDetail(HERO_PROOF_ITEM)}/></>}
-            />
-          </div>
+              onZoom={()=>onZoomIcon(item)}
+              onBuy={()=>openSheet({ item, stackable:true, countUnit:'回', grantAmount:offer.grantAmount, grantUnit:offer.unit,
+                confirm:(count)=>onExchangeEventPoints?onExchangeEventPoints(offer,count):false })}
+              middle={middle}
+            />;
+          })}
+          {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。
+              ダイヤショップより先にここで公開する(ユーザー指示「新モンスター先行実装はビートポイントから」)ので「先行公開予定」と出す。
+              絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする。
+              ほかのショップと同じく、絵を押すと大きく見られ、「詳細」で中身を開ける
+              (2026-09-28 ユーザー指摘「押してもアップにならない」「詳細ボタンがない」「他のショップとあわせて」) */}
+          {RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer=>{
+            const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
+            const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'beatPoint', cost:offer.cost };
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-coming-soon':offer.id}}
+              item={item} comingSoon comingSoonLabel="先行公開予定"
+              onZoom={()=>onZoomIcon(disc||item)}
+              detail={disc&&onOpenUpcomingDetail?disc:null}
+              onDetail={()=>disc&&onOpenUpcomingDetail&&onOpenUpcomingDetail(disc)}
+            />;
+          })}
         </div>
-      </>}
+      </div></>}
 
-      {marketSection==='event'&&<>
-        <div data-event-point-balance className="mb-2 shrink-0 flex items-center justify-center gap-2 rounded-2xl border border-violet-500/30 bg-violet-950/30 py-2">
-          <span aria-hidden="true" className="text-[15px]">🎟️</span>
-          <span className="font-mono text-base font-black text-violet-100">{safeEventPoints.toLocaleString()}</span>
-          <span className="text-[10px] font-bold text-slate-400">所持ビートP</span>
-        </div>
-        {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す */}
-        {(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
-          return campaign?<div data-event-point-campaign className="mb-2 shrink-0 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-1.5 text-center text-[10px] font-black text-amber-100">🎟️ {campaign.name}中：モンヒロビートの公開曲でビートPがいつもの{campaign.boost}倍（{rhythmEventJstText(Date.parse(campaign.endAt))}まで）</div>:null;})()}
-        {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[11px] font-black text-red-300">{marketExchangeError}</div>}
-        <div className={SCREEN_LIST_CLASS}>
-          <div data-event-point-shop className="grid grid-cols-2 gap-2.5 pb-4">
-            {RHYTHM_EVENT_POINT_SHOP_OFFERS.map(offer=>{
-              const maxQuantity=Math.floor(safeEventPoints/offer.cost);
-              return <div key={offer.id} data-event-point-offer={offer.id} className="rounded-2xl border border-white/10 bg-slate-950/80 p-3 flex flex-col min-h-[132px]">
-                <div className="flex items-start gap-2">
-                  <span aria-hidden="true" className="text-xl shrink-0">{offer.emoji}</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] leading-tight font-black text-slate-100">{offer.name}</div>
-                    <div className="mt-1 text-[10px] font-bold text-slate-400">1回：{offer.grantAmount.toLocaleString()}{offer.unit}</div>
-                  </div>
-                </div>
-                <div className="mt-auto pt-2 flex items-end justify-between gap-2">
-                  <div className="font-mono text-sm font-black text-violet-300">{offer.cost.toLocaleString()}P</div>
-                  <button type="button" disabled={maxQuantity<=0||eventExchangePending||purchaseProcessing} onClick={()=>{setEventQuantityOffer(offer);setEventQuantity(1);}} className="mh-button mh-button-primary min-h-[44px] rounded-xl bg-violet-500 px-4 text-[11px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">交換</button>
-                </div>
-              </div>;
-            })}
-            {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。
-                ダイヤショップより先にここで公開する(ユーザー指示「新モンスター先行実装はビートポイントから」)ので「先行公開予定」と出す。
-                絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする */}
-            {RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer=>{
-              const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
-              return <div key={offer.id} data-event-point-coming-soon={offer.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-3 flex flex-col min-h-[132px]">
-                <div className="flex items-start gap-2">
-                  {disc?<MarketProductIcon item={disc}/>:<span aria-hidden="true" className="text-xl shrink-0">💿</span>}
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] leading-tight font-black text-slate-300" style={{wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(offer.name)}</div>
-                    <div className="mt-1 text-[10px] font-bold text-slate-400">1回：{offer.grantAmount.toLocaleString()}{offer.unit}</div>
-                  </div>
-                </div>
-                <div className="mt-auto pt-2 flex items-end justify-between gap-2">
-                  <div className="font-mono text-sm font-black text-violet-300/70">{offer.cost.toLocaleString()}P</div>
-                  <div className="text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap">先行公開予定</div>
-                </div>
-              </div>;
-            })}
-          </div>
-        </div>
-      </>}
-
-      {eventQuantityOffer&&(()=>{
-        const maxQuantity=Math.floor(safeEventPoints/eventQuantityOffer.cost);
-        const quantity=Math.max(1,Math.min(Math.max(1,maxQuantity),Math.floor(Number(eventQuantity)||1)));
-        const totalCost=eventQuantityOffer.cost*quantity;
-        const totalGrant=eventQuantityOffer.grantAmount*quantity;
-        const changeQuantity=(delta)=>setEventQuantity(Math.max(1,Math.min(Math.max(1,maxQuantity),quantity+delta)));
-        const canExchange=maxQuantity>0&&!eventExchangePending&&!purchaseProcessing;
-        return <div className="fixed inset-0 z-[42000] flex items-center justify-center bg-black/90 p-4" role="dialog" aria-modal="true" aria-label="ビートP交換数を選ぶ">
-          <div className="w-full max-w-sm rounded-2xl border border-violet-500/60 bg-slate-950 p-5 shadow-2xl">
-            <div className="flex items-center gap-2"><span className="text-3xl" aria-hidden="true">{eventQuantityOffer.emoji}</span><div><div className="text-base font-black text-violet-200">{eventQuantityOffer.name}</div><div className="text-[10px] font-bold text-slate-400">1回 {eventQuantityOffer.grantAmount.toLocaleString()}{eventQuantityOffer.unit} ／ {eventQuantityOffer.cost.toLocaleString()}P</div></div></div>
-            <div className="mt-4 grid grid-cols-[1fr_1fr_1.4fr_1fr_1fr] items-center gap-1.5">
-              <button disabled={quantity<=1} onClick={()=>changeQuantity(-10)} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40">-10</button>
-              <button disabled={quantity<=1} onClick={()=>changeQuantity(-1)} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40">-1</button>
-              <strong className="text-center text-xl font-black font-mono">{quantity}</strong>
-              <button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(1)} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40">+1</button>
-              <button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(10)} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-40">+10</button>
-            </div>
-            <button disabled={maxQuantity<=0} onClick={()=>setEventQuantity(Math.max(1,maxQuantity))} className="mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl bg-violet-900 font-black active:scale-95 disabled:opacity-40">MAX（{Math.max(0,maxQuantity).toLocaleString()}回）</button>
-            <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
-              <div className="flex justify-between"><span className="text-slate-400">受け取り</span><span>{totalGrant.toLocaleString()}{eventQuantityOffer.unit}</span></div>
-              <div className="flex justify-between text-base"><span className="text-slate-300">合計</span><span className="text-violet-300">{totalCost.toLocaleString()}P</span></div>
-              <div className="flex justify-between"><span className="text-slate-400">交換後</span><span className="text-violet-200">残り{Math.max(0,safeEventPoints-totalCost).toLocaleString()}P</span></div>
-            </div>
-            {marketExchangeError&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{marketExchangeError}</p>}
-            <div className="mt-3 grid grid-cols-1 gap-2">
-              <button disabled={!canExchange} onClick={async()=>{if(!onExchangeEventPoints)return;setEventExchangePending(true);try{const result=await onExchangeEventPoints(eventQuantityOffer,quantity);if(result?.ok)setEventQuantityOffer(null);}finally{setEventExchangePending(false);}}} className="mh-button mh-button-primary min-h-[52px] rounded-xl bg-violet-500 text-white font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500">交換する</button>
-              <button disabled={eventExchangePending} onClick={()=>setEventQuantityOffer(null)} className="mh-button mh-button-secondary min-h-[52px] rounded-xl border border-white/10 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">キャンセル</button>
-            </div>
-          </div>
-        </div>;
-      })()}
+      {sheet&&<MarketPurchaseSheet
+        item={sheet.item}
+        balance={balanceOf(marketCurrencyOf(sheet.item))}
+        stackable={!!sheet.stackable}
+        countUnit={sheet.countUnit||'個'}
+        grantAmount={sheet.grantAmount||0}
+        grantUnit={sheet.grantUnit||''}
+        quantity={sheetQuantity}
+        onQuantity={setSheetQuantity}
+        pending={sheetPending||purchaseProcessing}
+        error={marketExchangeError}
+        onConfirm={confirmSheet}
+        onCancel={closeSheet}
+      />}
     </div>
   );
 }
@@ -21354,6 +21477,19 @@ function RhythmSongSelectScreen({
       // ビートPアップキャンペーン(2026-09-28)。ランキングイベントと重なったときはイベントの帯を出す
       // (計算もイベントのほうを使う。rhythmEventPointAwardAt)。開いているあいだは描き直すたびに数え直す
       const beatPointCampaign=beatPointReleased&&!beatPointEvent?rhythmEventPointCampaignAt(Date.now()):null;
+      // 横持ちの左の細い列(幅104px)へ入れる札。中身は縦持ちの帯と同じ
+      const beatPointSideCard=beatPointCampaign
+        ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-campaign-side className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-amber-100">
+          <span className="block rounded-full bg-amber-400 px-1 text-[10px] leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
+          <span className="mt-0.5 block">キャンペーン中</span>
+          <span className="block text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+        </div>
+        :beatPointEvent
+          ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-active-side className="rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100">
+            <span className="block">🎟️ ビートP獲得期間中</span>
+            <span className="mt-0.5 block text-violet-200/80">{beatPointTargetSong?'選択中のイベント対象曲は1.5倍':'公開曲なら獲得できます'}</span>
+          </div>
+          :null;
       // 所持ビートP(2026-09-28・ユーザー指示「曲選択画面で邪魔にならないところにビートPの表示を作って」)。
       // 題名の下に小さく1行だけ出す。ヘッダーの高さはボタン(44px)で決まっているので、この1行を足しても高さは変わらず、曲の一覧も減らない。
       // 画面を開くたびに保存値から読み直す(演奏から戻るとこの部品は作り直されるので、そのたびに最新になる)。読めないあいだは出さない
@@ -21560,12 +21696,17 @@ function RhythmSongSelectScreen({
             (2026-09-28 ユーザー指摘「縦スペース取られてるし文字列が悪い」)。
             いちばん知りたい「ビートP×5」を札にして左へ、終わりの時刻を右へ置き、必ず1行に収める。
             「公開曲なら」などの細かい条件は交換所の知らせとヘルプに任せる */}
-        {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
-          <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
-          <span className="min-w-0 truncate">キャンペーン中</span>
-          <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+        {/* 横持ちでは、この帯が右の列(難易度・決定)まで押し下げ、高さ360pxの端末で「決定」が画面の下へ5pxはみ出していた
+            (2026-09-28)。縦持ちだけここへ置き、横持ちは曲の一覧の左の細い列へ小さな札として移す(beatPointSideCard)。
+            出し分けは index.html の素のCSS(見た目の案内・クイック周回の帯と同じ考え方) */}
+        {(beatPointCampaign||beatPointEvent)&&<div data-rhythm-beat-band-portrait className="shrink-0">
+          {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
+            <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
+            <span className="min-w-0 truncate">キャンペーン中</span>
+            <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+          </div>}
+          {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
         </div>}
-        {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
         {/* 開催していないときの「ビートPはいつでも貯まります」の帯は外した(2026-09-26・ユーザー指示
             「ビートPがいつでももらえるはここに書く必要はない / この分でもスペース無駄にしてる」)。
             同じことはヘルプとリザルト(獲得したとき)で分かる。開催中の帯だけ残す */}
@@ -21635,6 +21776,7 @@ function RhythmSongSelectScreen({
           spotClass={spotClass}
           onPlay={onPlaySong}
           notice={<AssistantBubble scene="rhythmHome" compact/>}
+          toolbarExtra={beatPointSideCard}
           view={rhythmSelectView}
           onView={saveRhythmSelectView}
           listScrollTop={rhythmSongListScrollRef.current}
@@ -28985,10 +29127,10 @@ function MonsterHeroGame() {
   // ビートPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
   // 虹の超越の実だけは、価格タップ後に数量と購入後残高を確認してから一括購入する。
-  const [marketQuantityItem, setMarketQuantityItem] = useState(null);
-  const [marketPurchaseQuantity, setMarketPurchaseQuantity] = useState(1);
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
+  // 近日公開予定の新モンスターの詳細(マーケットの円盤石から開く。中身は UPCOMING_MONSTER_DRAFTS)
+  const [upcomingMonsterDetail, setUpcomingMonsterDetail] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
   // 中身は固定の一覧だけから決まるので、最初の1回だけ作る
   const debugIconItems = useMemo(() => breederIconOptions({includeUnowned:true}), []);
@@ -35276,17 +35418,18 @@ function MonsterHeroGame() {
 
   // ブリーダーマーケットでアイテムを購入。アイコンはpt、円盤石/ブリーダー/消耗品はゴールドを消費し、
   // 種別ごとの解放リストに追加(端末保存)。円盤石/ブリーダーは解放と同時に編成へも自動追加する
+  // 画面(BreederMarketScreen)の確認の窓から呼ばれる。買えたら true を返し、窓はそれを見て閉じる
   const buyMarketItem = async (item, quantity=1) => {
-    if (marketPurchaseProcessingRef.current) return;
-    if (item.available === false) return; // 実装準備中のアイテムは購入不可
-    if (isMarketItemOwned(item)) return;
+    if (marketPurchaseProcessingRef.current) return false;
+    if (item.available === false) return false; // 実装準備中のアイテムは購入不可
+    if (isMarketItemOwned(item)) return false;
     const purchase = buildMarketItemPurchase({ item, gold, breederPoints, ownedItems:ownedItemsRef.current, quantity });
-    if (!purchase.ok) return;
+    if (!purchase.ok) return false;
     marketPurchaseProcessingRef.current = true;
     try {
       if (item.type === 'item') {
         const saved = await saveMarketBalances(gold, ownedItemsRef.current, purchase.gold, purchase.ownedItems, storeGet, storeSet);
-        if (!saved) return;
+        if (!saved) return false;
         ownedItemsRef.current = purchase.ownedItems;
         setOwnedItems(purchase.ownedItems);
       }
@@ -35307,16 +35450,16 @@ function MonsterHeroGame() {
       setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
     }
     saveMissionProgress('market');
-    if (item.type === 'item') setMarketQuantityItem(null);
+    return true;
     } finally { marketPurchaseProcessingRef.current = false; }
   };
   // 魂格再編の書は、通常の100万ダイヤ商品とは別カードで
   // 勇者の証1個→1冊へ交換できる。同じ所持品IDだけを検証付き保存し、失敗時は元へ戻す。
   const exchangeSoulRankRespecByProof = async () => {
-    if (marketPurchaseProcessingRef.current) return;
+    if (marketPurchaseProcessingRef.current) return false;
     const before = ownedItemsRef.current;
     const exchange = buildSoulRankRespecProofExchange(before, 1);
-    if (!exchange.ok) { setMarketExchangeError('勇者の証が1個必要です。'); return; }
+    if (!exchange.ok) { setMarketExchangeError('勇者の証が1個必要です。'); return false; }
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
@@ -35327,17 +35470,19 @@ function MonsterHeroGame() {
       ownedItemsRef.current = exchange.ownedItems;
       setOwnedItems(exchange.ownedItems);
       saveMissionProgress('market');
+      return true;
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証は消費していません。');
+      return false;
     } finally { marketPurchaseProcessingRef.current = false; }
   };
   // 勇者の証片20個 → 勇者の証1個。魂格再編の書と同じ作りで、失敗したら元へ戻す
   // (2026-09-13・週間ランキングの報酬で証片がたまるようにしたのに合わせて追加)
   const exchangeHeroProofByShard = async () => {
-    if (marketPurchaseProcessingRef.current) return;
+    if (marketPurchaseProcessingRef.current) return false;
     const before = ownedItemsRef.current;
     const exchange = buildHeroProofShardExchange(before, 1);
-    if (!exchange.ok) { setMarketExchangeError(`勇者の証片が${HERO_PROOF_SHARD_PER_PROOF}個必要です（いま${exchange.shardHave}個）。`); return; }
+    if (!exchange.ok) { setMarketExchangeError(`勇者の証片が${HERO_PROOF_SHARD_PER_PROOF}個必要です（いま${exchange.shardHave}個）。`); return false; }
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
@@ -35348,8 +35493,10 @@ function MonsterHeroGame() {
       ownedItemsRef.current = exchange.ownedItems;
       setOwnedItems(exchange.ownedItems);
       saveMissionProgress('market');
+      return true;
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証片は消費していません。');
+      return false;
     } finally { marketPurchaseProcessingRef.current = false; }
   };
 
@@ -44654,13 +44801,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onBack={returnToHome}
             onSelectTab={(key)=>{setMarketTab(key);setMarketExchangeError('');}}
             onZoomIcon={setMarketIconZoom}
-            onBuy={(item)=>{if(item.type==='item'){setMarketPurchaseQuantity(1);setMarketQuantityItem(item);}else buyMarketItem(item);}}
+            onBuy={buyMarketItem}
             onOpenDetail={(item,detailMon,detailTeaching)=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
             onOpenItemDetail={setMarketItemDetail}
             onExchangeSoulRankRespec={exchangeSoulRankRespecByProof}
             onExchangeHeroProof={exchangeHeroProofByShard}
             eventPoints={rhythmEventPoints}
             onExchangeEventPoints={exchangeRhythmEventPoints}
+            onOpenUpcomingDetail={setUpcomingMonsterDetail}
           />
         )}
 
@@ -45867,57 +46015,58 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* マーケットの商品アイコンを大きく見る。カードの中では小さいので、絵を確かめたいとき用。
           アイコンはプロフィール画像になるので、実際に使われるのと同じ丸い形で出す */}
       {marketIconZoom&&(()=>{const item=marketIconZoom;const round=item.type==='icon'||item.type==='assist';return(
-        <div onClick={()=>setMarketIconZoom(null)} className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:41500}} role="dialog" aria-modal="true" aria-label={`${item.name}の拡大表示`}>
-          <div onClick={e=>e.stopPropagation()} className="w-full max-w-[280px] rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col items-center gap-3">
+        <MarketModal narrow label={`${item.name}の拡大表示`} onClose={()=>setMarketIconZoom(null)}>
+          <div className="flex flex-col items-center gap-3">
             <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`}>
               {item.icon
                 ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
                 : <span style={{fontSize:'96px'}}>{item.emoji}</span>}
             </div>
             <div className="text-center text-sm font-black text-white leading-tight">{item.name}</div>
-            <button onClick={()=>setMarketIconZoom(null)} className="w-full min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98]">とじる</button>
+            <MarketModalClose onClick={()=>setMarketIconZoom(null)}/>
           </div>
-        </div>
+        </MarketModal>
       );})()}
-      {marketItemDetail&&(
-        <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:41000}} role="dialog" aria-modal="true" aria-label={`${marketItemDetail.name}の効果`}>
-          <div className="bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl">
-            <div className="flex items-center gap-2 mb-3">
-              {marketItemDetail.icon
-                ? <img src={marketItemDetail.icon} alt={marketItemDetail.name} className="w-10 h-10 rounded-full object-cover border border-white/10"/>
-                : <span className="text-3xl">{marketItemDetail.emoji}</span>}
-              <h3 className="text-base font-black text-teal-300">{marketItemDetail.name}</h3>
+      {/* 近日公開予定の新モンスターの詳細(2026-09-28 ユーザー指摘「詳細ボタンがない」「他のショップとあわせて」)。
+          能力値と技はまだ決まっていないので、ふつうのモンスター詳細(能力・技の表)は使わず、
+          立ち絵・血統・図鑑の説明・予定の値段だけを出す。枠と「閉じる」はマーケットの共通部品(MarketModal) */}
+      {upcomingMonsterDetail&&(()=>{
+        const disc=upcomingMonsterDetail;
+        const mon=typeof UPCOMING_MONSTER_DRAFTS!=='undefined'?UPCOMING_MONSTER_DRAFTS[disc.id]:null;
+        if(!mon) return null;
+        const lineageName=(id)=>MONSTER_LINEAGES[id]?.name||'？？？';
+        const lineage=mon.draftLineage?(mon.draftLineage.main===mon.draftLineage.sub?`${lineageName(mon.draftLineage.main)}(純血)`:`${lineageName(mon.draftLineage.main)} × ${lineageName(mon.draftLineage.sub)}`):null;
+        const dex=(typeof MONSTER_DEX_DESCRIPTIONS!=='undefined'&&MONSTER_DEX_DESCRIPTIONS[mon.id])||'';
+        const beat=typeof RHYTHM_EVENT_POINT_SHOP_COMING_SOON!=='undefined'?RHYTHM_EVENT_POINT_SHOP_COMING_SOON.find(o=>o.monsterId===mon.id):null;
+        const close=()=>setUpcomingMonsterDetail(null);
+        return(
+        <MarketModal label={`${mon.name}の詳細`} onClose={close}>
+          <div data-upcoming-monster-detail={mon.id} className="flex flex-col gap-3 overflow-y-auto mh-scroll" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 64px)'}}>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-base font-black text-white">{mon.name}</h3>
+              <span className="text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap">近日公開予定</span>
             </div>
-            <p className="text-[12px] text-slate-200 leading-relaxed">{marketItemDetail.desc}</p>
-            <div className="mt-3 flex items-center justify-between text-[11px] font-black">
-              <span className="text-slate-400">所持数</span>
-              <span className="text-cyan-300 font-mono">{ownedItems[marketItemDetail.id]||0}</span>
+            <div className="w-full aspect-square rounded-2xl border border-white/10 bg-black/40 overflow-hidden flex items-center justify-center">
+              <img src={mon.imgUrl} alt={mon.name} className="w-full h-full object-contain" draggable={false}/>
             </div>
-            <div className="mt-1 flex items-center justify-between text-[11px] font-black">
-              <span className="text-slate-400">ねだん</span>
-              <span className="text-amber-300 font-mono">{Number(marketItemDetail.cost||0).toLocaleString()} {marketItemDetail.currency==='psyche'?'プシュケー':marketItemDetail.type==='icon'?'pt':'ダイヤ'}</span>
-            </div>
-            <button onClick={()=>setMarketItemDetail(null)} className="w-full mt-4 min-h-[48px] rounded-2xl bg-teal-600 text-white font-black active:scale-[.98]">とじる</button>
+            {lineage&&<div className="flex items-center justify-between text-[12px] font-black"><span className="text-slate-400">血統</span><span className="text-emerald-300">{lineage}</span></div>}
+            {dex&&<p className="text-[12px] text-slate-200 leading-relaxed whitespace-pre-line rounded-xl border border-white/10 bg-black/30 p-3">{dex}</p>}
+            <section className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3">
+              <img src={disc.icon} alt={disc.name} className="w-12 h-12 rounded-full object-cover border border-white/10 shrink-0"/>
+              <div className="min-w-0 text-[11px] font-black leading-snug">
+                <div className="text-amber-200">{disc.name}<span className="ml-1 text-[10px] text-slate-400">(予定の値段)</span></div>
+                <div className="text-slate-300 whitespace-nowrap">ダイヤショップ：{Number(disc.cost).toLocaleString()}ダイヤ</div>
+                {beat&&<div className="text-violet-200 whitespace-nowrap">ビートP交換所：{Number(beat.cost).toLocaleString()}ビートP</div>}
+              </div>
+            </section>
+            <p className="text-[11px] text-slate-400 leading-relaxed">能力値や技は、公開のときにお知らせします。</p>
+            <MarketModalClose onClick={close}/>
           </div>
-        </div>
-      )}
-
-      {marketQuantityItem&&(()=>{const usesPsyche=marketQuantityItem.currency==='psyche';const balance=usesPsyche?ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID):gold;const unit=usesPsyche?'プシュケー':'ダイヤ';const unitCost=Math.max(0,Math.floor(Number(marketQuantityItem.cost)||0));const maxQuantity=unitCost>0?Math.floor(balance/unitCost):0;const quantity=Math.min(Math.max(1,marketPurchaseQuantity),Math.max(1,maxQuantity));const total=unitCost*quantity;const canPurchase=maxQuantity>0&&!marketPurchaseProcessingRef.current;const changeQuantity=(delta)=>setMarketPurchaseQuantity(current=>Math.min(Math.max(1,current+delta),Math.max(1,maxQuantity)));const accentText=usesPsyche?'text-fuchsia-200':'text-amber-200';return(
-        <div className="fixed inset-0 flex items-center justify-center overflow-y-auto px-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(0,0,0,0.92)',zIndex:42000}} role="dialog" aria-modal="true" aria-label={`${marketQuantityItem.name}の購入個数選択`}>
-          <div onClick={e=>e.stopPropagation()} className={`w-full max-w-sm rounded-3xl border-2 ${usesPsyche?'border-fuchsia-400/70':'border-amber-400/70'} bg-slate-950 p-4 shadow-2xl`}>
-            <h3 className={`text-center text-lg font-black ${accentText}`}>{marketQuantityItem.name}</h3>
-            <div className="mt-3 rounded-2xl bg-slate-900 p-3 text-center"><span className="block text-[10px] font-bold text-slate-400">所持数</span><strong className={`mt-1 block text-xl font-black ${accentText}`}>{balance.toLocaleString()} {unit}</strong></div>
-            <div className="mt-3 text-center text-[11px] font-black text-slate-300">購入個数</div>
-            <div className="mt-2 grid grid-cols-5 items-center gap-1.5">
-              <button disabled={quantity<=1} onClick={()=>changeQuantity(-10)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">-10</button><button disabled={quantity<=1} onClick={()=>changeQuantity(-1)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">-1</button><strong className="text-center text-xl font-black font-mono">{quantity}</strong><button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(1)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">+1</button><button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(10)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">+10</button>
-            </div>
-            <button disabled={maxQuantity<=0} onClick={()=>setMarketPurchaseQuantity(maxQuantity)} className={`mt-2 min-h-[44px] w-full rounded-xl font-black disabled:opacity-30 ${usesPsyche?'bg-fuchsia-800':'bg-amber-700'}`}>MAX（{maxQuantity.toLocaleString()}個）</button>
-            <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"><div className="flex justify-between"><span className="text-slate-400">単価</span><span>1個 = {unitCost.toLocaleString()}{unit}</span></div><div className="flex justify-between text-base"><span className="text-slate-300">合計</span><span className="text-amber-300">{total.toLocaleString()}{unit}</span></div><div className="flex justify-between"><span className="text-slate-400">購入後</span><span className={accentText}>残り{Math.max(0,balance-total).toLocaleString()}{unit}</span></div></div>
-            {maxQuantity<=0&&<p className="mt-2 text-center text-[12px] font-black text-red-300">{unit}が足りません</p>}
-            <div className="mt-3 grid grid-cols-1 gap-2"><button disabled={!canPurchase} onClick={()=>buyMarketItem(marketQuantityItem,quantity)} className="min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500">購入する</button><button onClick={()=>setMarketQuantityItem(null)} className="min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98]">キャンセル</button></div>
-          </div>
-        </div>
+        </MarketModal>
       );})()}
+      {/* アイテムの効果。どの売り場の品も同じ詳細(MarketItemDetail)で出す。
+          ビートP交換所の品は grantText(1回で受け取る数)が付いてくる */}
+      {marketItemDetail&&<MarketItemDetail item={marketItemDetail} owned={ownedItemCount(ownedItems, marketItemDetail.id)} grantText={marketItemDetail.grantText||''} onClose={()=>setMarketItemDetail(null)}/>}
 
       {skipInfoItemId&&(()=>{const item=BREEDER_MARKET_ITEMS.find(i=>i.id===skipInfoItemId); if(!item) return null; const label=DIFFICULTY_SETTINGS[item.skipDifficulty]?.label||item.skipDifficulty; return(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:41000}} role="dialog" aria-modal="true" aria-label="スキップの説明">

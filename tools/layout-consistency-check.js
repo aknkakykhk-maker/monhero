@@ -159,7 +159,8 @@ check('購入ボタンの通貨表示がカード内に収まる',
     && has('usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>')
     // 勇者の証は名前が長いので、字を小さくして1行(whitespace-nowrap)に収めている
     && has('usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>'));
-check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">近日追加</div>') && has('rounded-full whitespace-nowrap">所持済み</div>'));
+// 予告の札は既定で「近日追加」。ビートP交換所の円盤石だけ「先行公開予定」と書く(札の形は同じ)
+check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">{comingSoonLabel}</div>') && has("comingSoonLabel='近日追加'") && has('rounded-full whitespace-nowrap">所持済み</div>'));
 // 拡大量は表示コードへ直接書かず、アイコンIDごとの表を1か所に持つ。
 // ききはマーケット商品とアシストカードの両方で同じ値を使うので、定数を共有する
 check('ききの拡大量を1か所の表で持ち、縦横比と円形クリップを保つ',

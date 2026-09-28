@@ -587,7 +587,7 @@ const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP
 // (2026-09-05・ユーザー指示「選んでいた音楽が鳴り続けるようにして」)。
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -808,6 +808,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${state.noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
           <span aria-hidden="true">💬</span><span aria-hidden="true">{state.noticeOpen?'▲':'▼'}</span>
         </button>}
+        {/* 呼ぶ側が足す小さな札(横持ちのビートPキャンペーンなど)。縦持ちで出すかどうかは呼ぶ側が決める */}
+        {toolbarExtra}
       </div>
     <div ref={listRef} onScroll={handleListScroll}
       data-rhythm-song-list data-rhythm-song-loop={loopEnabled?'1':'0'}
