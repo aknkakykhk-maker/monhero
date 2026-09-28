@@ -360,7 +360,8 @@
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "command"
-   }
+   },
+   "challengeFactor": 1.3
   }
  }
 }
