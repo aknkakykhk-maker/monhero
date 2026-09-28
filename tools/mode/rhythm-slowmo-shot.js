@@ -4,6 +4,8 @@
 //   ONLY=FULL T=47 FRAMES=12 STEP=83 node tools/mode/rhythm-slowmo-shot.js
 //   環境変数: OUT(書き出す先・既定は一時フォルダ) NAME(ファイル名の頭) W H DPR(画面の大きさ。既定は横向き 844×390・1倍)
 //             ONLY(おまかせの id) PATCH(音ゲー設定に重ねる JSON) CSS(撮るときだけ足す CSS) ROOT(配るフォルダ。別の作業場所の見本を撮るとき)
+//             CSSANIM=1(CSS のアニメーションも仮想の時間で進める。光を CSS で描くときに使う)
+//             SONG(曲名) DIFF(難易度) SEED(撮るときだけ入れる保存データの JSON。例: '{"mh_rhythm_best_v1":{"monster_hero":{"HARD":{"clear":true},"EXPERT":{"clear":true}}}}' で MASTER まで開く)
 //
 // 【なぜ要るか】
 // この作業環境はとても遅く(GPU のまね)、演奏画面は1秒に数コマしか描けない。そのまま撮ると自動で叩くのが間に合わず、
@@ -32,6 +34,8 @@ fs.mkdirSync(OUT,{recursive:true});
    put('mh_inherited_unique_level_compensation_v1',true);
    localStorage.setItem('mh_rhythm_settings_v1',JSON.stringify({...values,...(values.__patch||{}),autoEffectDown:false,renderQuality:'HIGH'}));
    localStorage.setItem('mh_rhythm_canvas_v1','webgl');localStorage.setItem('mh_rhythm_stage_gl_v1','webgl');
+   // SEED … 撮るときだけ入れておく保存データ({キー:値})。EXPERT以上を撮るときの「1つ下をクリア済み」など。最後に入れるので、描き方({"mh_rhythm_canvas_v1":"canvas"} など)も上書きできる
+   for(const [k,v] of Object.entries(values.__seed||{}))localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));
    // 撮影のときだけ: 描き直しの合図(rAF)の時刻を performance.now にそろえる(仮想の時間では2つがずれる)
    {const raf=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=cb=>raf(()=>cb(performance.now()));}
    // 曲の時計を止める仕掛け: 曲の音を鳴らしはじめた時刻を覚え、__mhFreezeSong を入れたらその位置で時計を止める
@@ -40,7 +44,7 @@ fs.mkdirSync(OUT,{recursive:true});
    const start=AudioBufferSourceNode.prototype.start;
    AudioBufferSourceNode.prototype.start=function(...a){if(this.buffer&&this.buffer.duration>30)window.__mhSong={ctx:this.context,t:desc.get.call(this.context),offset:Number(a[1])||0};return start.apply(this,a);};
    window.__mhFreezeSong=sec=>{const s=window.__mhSong;if(!s)return false;const lat=typeof rhythmAudioOutputLatencyMs==='function'?rhythmAudioOutputLatencyMs(s.ctx)/1000:0;window.__mhFrozen={ctx:s.ctx,t:s.t+(sec-s.offset)+lat};return true;};
-  },{...preset.values,__patch:JSON.parse(process.env.PATCH||'{}')});
+  },{...preset.values,__patch:JSON.parse(process.env.PATCH||'{}'),__seed:JSON.parse(process.env.SEED||'{}')});
   const clickText=p=>page.evaluate(s=>{const rx=new RegExp(s);const x=[...document.querySelectorAll('button')].find(x=>rx.test((x.innerText||'').replace(/\s+/g,' ').trim()));if(!x)return false;x.click();return true;},p);
   await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
   await page.getByRole('button',{name:'TAP TO START'}).click({force:true,timeout:60000});
@@ -86,6 +90,10 @@ fs.mkdirSync(OUT,{recursive:true});
   const advance=ms=>new Promise(res=>{cdp.once('Emulation.virtualTimeBudgetExpired',res);cdp.send('Emulation.setVirtualTimePolicy',{policy:'advance',budget:ms});});
   const FRAMES=Number(process.env.FRAMES||8),STEP=Number(process.env.STEP||83);
   for(let k=0;k<FRAMES;k++){await advance(STEP);
+    // CSSANIM=1 … CSS のアニメーションも仮想の時間で進める。ブラウザの CSS アニメーションは仮想の時間に乗らず、
+    // 撮るあいだの本当の時間で進んで1コマ目のあとに終わってしまう(光を CSS で描くときの見本が撮れなかった・2026-09-28)。
+    // 新しく始まったものは止めて頭から、すでに止めたものは1コマぶん進める
+    if(process.env.CSSANIM==='1')await page.evaluate(step=>{for(const a of document.getAnimations()){if(!a.__mhVirtual){a.__mhVirtual=true;a.pause();a.currentTime=0;}else{a.currentTime=(Number(a.currentTime)||0)+step;}}},STEP);
     const shotK=path.join(OUT,(process.env.NAME||'seq')+'-'+preset.id.toLowerCase()+'-'+String(k).padStart(2,'0')+'.png');await page.screenshot({path:shotK});}
   await cdp.send('Emulation.setVirtualTimePolicy',{policy:'advance'});
   console.log(preset.id,`${FRAMES}コマ`,OUT);
