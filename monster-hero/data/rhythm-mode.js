@@ -20749,7 +20749,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   // 判定ラインにとどまっている粒のまわりに、光のたまり(楕円)と、上へ昇る小さな光の粒を出す。
   // どちらも最初の1回だけ焼いた絵を貼るだけ(毎フレームのグラデーション作成・ぼかしは無し)。
   // 押さえているノーツ1本につき drawImage が 1 + 4 回。押さえられるのは指の数(2本)まで
-  const HOLD_SPARK_TINT=Object.freeze({HOLD:RHYTHM_NOTE_COLORS.HOLD.rgb,SLIDE:RHYTHM_NOTE_COLORS.SLIDE.rgb});
+  // 押さえているあいだの光の色。ノーツの色(HOLD 緑・SLIDE 紫)ではなく、参考動画と同じ青白い光にする(2026-09-28)。
+  // ノーツの色のままだと暗い道の上で「光っている」より「塗られている」に見えた。SLIDE だけ紫へ少し寄せて見分けを残す。
+  // ノーツ本体・帯・終わりの横棒の色分けは変えない
+  const HOLD_SPARK_TINT=Object.freeze({HOLD:'96,200,255',SLIDE:'140,170,255'});
   const holdSparkSprite=kind=>{
     const id=`spark:${kind}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
@@ -20781,7 +20784,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     c.globalAlpha=.45;c.fillRect(0,H/2-4,W,8);
     const sprite={...s};sprites.set(id,sprite);return sprite;
   };
-  const SPARK_DOTS=5,SPARK_CYCLE_MS=520;
+  const SPARK_DOTS=12,SPARK_CYCLE_MS=900;
   const drawHoldSpark=(note,geo,opts)=>{
     const head=geo.head;if(!head)return;
     glowBegin();
@@ -20790,9 +20793,17 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // 溜め具合(0→1)。押さえ始めから0.7秒かけて、柱が伸び・光が強くなる(2026-09-28・ユーザー「もうちょい押し続けてる感じにしたい」)
     const charge=Math.min(1,Math.max(0,Number(opts.heldMs)||0)/700);
     // 上へ立ちのぼる光(参考動画: 押さえているレーンの上が青白く光る)。焼いた縦のグラデーションを1枚貼るだけ
-    if(!lightweight){
-      const ch=head.cy*(.34+.22*charge)*(.94+.06*pulse),cw=w*1.04;
-      ctx.globalAlpha=(.42+.22*charge+.1*pulse)*opts.alpha;
+    // 1枚目はレーンの形(奥ほど細くなる台形)に沿って道の中ほどまで届く光、2枚目は中央のやわらかく明るい芯
+    const columnH=head.cy*(.46+.2*charge)*(.95+.05*pulse),tint=HOLD_SPARK_TINT[kind]||HOLD_SPARK_TINT.HOLD;
+    if(!lightweight&&cssH>0){
+      const topY=Math.max(0,head.cy-columnH),baseScale=rhythmProjectionScale(head.cy/cssH),k=baseScale>0?rhythmProjectionScale(topY/cssH)/baseScale:1;
+      const half=w*.56,mid=cssW/2,topCx=mid+(head.cx-mid)*k;
+      const g=ctx.createLinearGradient(0,head.cy,0,topY);
+      g.addColorStop(0,`rgba(${tint},.62)`);g.addColorStop(.3,`rgba(${tint},.3)`);g.addColorStop(1,`rgba(${tint},0)`);
+      ctx.globalAlpha=(.62+.26*charge+.12*pulse)*opts.alpha;ctx.fillStyle=g;
+      ctx.beginPath();ctx.moveTo(head.cx-half,head.cy);ctx.lineTo(head.cx+half,head.cy);ctx.lineTo(topCx+half*k,topY);ctx.lineTo(topCx-half*k,topY);ctx.closePath();ctx.fill();
+      const ch=columnH*.62,cw=w*.9;
+      ctx.globalAlpha=(.5+.25*charge+.1*pulse)*opts.alpha;
       ctx.drawImage(holdColumnSprite(kind).canvas,head.cx-cw/2,head.cy-ch,cw,ch);
     }
     const sw=w*2.1*(1+.08*pulse),sh=72*depth*(1+.12*pulse);
@@ -20809,11 +20820,14 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // ノーツの左右のはしに立つ光の柱(参考動画でいちばん目立つ「押さえている」合図)。押さえているあいだずっと立ち、
     // 溜まるほど高く明るくなる。細かくゆらぐだけで消えない。焼いた1枚を2本貼るだけ(演出量「最小」以外)
     {
-      const pillar=holdPillarSprite(kind).canvas,ph=head.cy*(.22+.2*charge),pw=Math.max(16,24*depth);
+      // 道の高さの3〜4割まで伸びる(溜まるほど高い)。根元には星形の光(叩いたときの十字と同じ焼いた1枚)を小さく置く
+      const pillar=holdPillarSprite(kind).canvas,ph=head.cy*(.3+.14*charge),pw=Math.max(20,30*depth),star=hitFlareSprite().canvas,sw2=Math.max(40,56*depth)*(.9+.2*pulse);
       for(const side of [-1,1]){
-        const flicker=.9+.1*holdRand(Math.floor(frameNow/60)*5+side+2),h=ph*flicker;
-        ctx.globalAlpha=Math.min(1,(.7+.3*charge)*flicker)*opts.alpha;
-        ctx.drawImage(pillar,head.cx+side*w*.5-pw/2,head.cy+4*depth-h,pw,h);
+        const flicker=.9+.1*holdRand(Math.floor(frameNow/60)*5+side+2),h=ph*flicker,px=head.cx+side*w*.5;
+        ctx.globalAlpha=Math.min(1,(.75+.25*charge)*flicker)*opts.alpha;
+        ctx.drawImage(pillar,px-pw/2,head.cy+4*depth-h,pw,h);
+        ctx.globalAlpha=(.55+.35*charge)*flicker*opts.alpha;
+        ctx.drawImage(star,px-sw2/2,head.cy-sw2*.25,sw2,sw2*.5);
       }
     }
     // 細い縦の光の筋(バチバチ)。0.07秒ごとに場所と長さを替える。焼いた細い線を2本貼るだけ(以前は3本。柱を足したぶん減らした)。演出量「多め」以上
@@ -20825,13 +20839,14 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
         ctx.drawImage(bolt,bx-4,head.cy-len,8,len*1.15);
       }
     }
-    if(!lightweight&&effect!=='LOW'&&effect!=='LIGHT'){
-      const dot=sparkDotSprite().canvas,cycle=frameNow/SPARK_CYCLE_MS;
+    // レーンの中に散ってまたたきながら昇る光の粒(参考動画のキラキラ)。演出量「多め」以上。焼いた小さな点を12個貼るだけ
+    if(!lightweight&&effect!=='LIGHT'){
+      const dot=sparkDotSprite().canvas,cycle=frameNow/SPARK_CYCLE_MS,rise=columnH*.85;
       for(let i=0;i<SPARK_DOTS;i++){
-        const t=cycle+i/SPARK_DOTS,phase=t-Math.floor(t),seed=Math.floor(t)*.61+i*.37,offset=(seed-Math.floor(seed))-.5;
-        const size=10*(1-phase*.45);
-        ctx.globalAlpha=(1-phase)*.95*opts.alpha;
-        ctx.drawImage(dot,head.cx+offset*w*.85-size/2,head.cy-phase*(52+40*charge)*depth-size/2,size,size);
+        const t=cycle+i/SPARK_DOTS,phase=t-Math.floor(t),n=Math.floor(t)*13+i*7,offset=holdRand(n)-.5;
+        const twinkle=.55+.45*Math.cos(frameNow/(90+i*7)+i),size=(5+6*holdRand(n+3))*(1-phase*.4);
+        ctx.globalAlpha=Math.min(1,(1-phase)*twinkle*1.1)*opts.alpha;
+        ctx.drawImage(dot,head.cx+offset*w*.95*(1-phase*.35)-size/2,head.cy-phase*rise-size/2,size,size);
       }
     }
     ctx.globalAlpha=1;
@@ -20911,7 +20926,8 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     else{const c=RHYTHM_NOTE_COLORS.HOLD.rgb;g.addColorStop(0,`rgba(${c},.62)`);g.addColorStop(.6,`rgba(${c},.40)`);g.addColorStop(1,`rgba(${c},.55)`);}
     ctx.fillStyle=g;ctx.fill();
     // 押さえている最中は帯を明るくする(押せている合図の1つ。以前は .22)
-    if(pressed&&!failed){ctx.fillStyle='rgba(236,253,245,.34)';ctx.fill();}
+    // 押さえている最中は帯を明るくする。判定ライン寄りほど明るく、光に溶けていくように(2026-09-28・参考動画。以前は一様に .34)
+    if(pressed&&!failed){const pg=ctx.createLinearGradient(0,bottom,0,Math.max(top,bottom-Math.max(90,bottom*.5)));pg.addColorStop(0,'rgba(240,249,255,.6)');pg.addColorStop(.35,'rgba(236,253,245,.4)');pg.addColorStop(1,'rgba(236,253,245,.22)');ctx.fillStyle=pg;ctx.fill();}
     if(pressed&&!failed&&effect!=='MINIMAL'&&!lightweight){
       const edgeAt=y=>{for(let i=1;i<band.length;i++){const p=band[i-1],q=band[i];if(y>=p.y&&y<=q.y){const k=q.y>p.y?(y-p.y)/(q.y-p.y):0;return sizeX(p.left+(q.left-p.left)*k,p.right+(q.right-p.right)*k);}}return null;};
       drawPressFlow(edgeAt,top,bottom,'rgb(236,253,245)',opts.depthScale||1);
@@ -20950,9 +20966,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     // ふちは明るく(2026-09-27・参考動画。以前は 1px・.56)
     ctx.lineWidth=failed?1:1.6;ctx.lineJoin='round';ctx.strokeStyle=failed?'rgba(190,190,200,.5)':'rgba(243,232,255,.82)';ctx.stroke();
     // 押さえている最中は帯を明るくする(2026-09-26。以前はSLIDEだけ何も変わらなかった)。外周の道すじをそのまま塗る
-    if(pressed&&!failed){ctx.fillStyle='rgba(243,232,255,.30)';ctx.fill();}
+    let top=Infinity,bottom=-Infinity;quads.forEach(q=>{top=Math.min(top,q.y0,q.y1);bottom=Math.max(bottom,q.y0,q.y1);});
+    // 押さえている最中は帯を明るくする。判定ライン寄りほど明るく(2026-09-28・参考動画。以前は一様に .30)
+    if(pressed&&!failed){const pg=ctx.createLinearGradient(0,bottom,0,Math.max(top,bottom-Math.max(90,bottom*.5)));pg.addColorStop(0,'rgba(245,243,255,.56)');pg.addColorStop(.35,'rgba(243,232,255,.36)');pg.addColorStop(1,'rgba(243,232,255,.2)');ctx.fillStyle=pg;ctx.fill();}
     if(pressed&&!failed&&effect!=='MINIMAL'&&!lightweight){
-      let top=Infinity,bottom=-Infinity;quads.forEach(q=>{top=Math.min(top,q.y0,q.y1);bottom=Math.max(bottom,q.y0,q.y1);});
       const edgeAt=y=>{for(const q of quads){const lo=Math.min(q.y0,q.y1),hi=Math.max(q.y0,q.y1);if(y>=lo&&y<=hi){const k=q.y1!==q.y0?(y-q.y0)/(q.y1-q.y0):0;return [q.l0+(q.l1-q.l0)*k,q.r0+(q.r1-q.r0)*k];}}return null;};
       drawPressFlow(edgeAt,top,bottom,'rgb(243,232,255)',opts.depthScale||1);
     }
