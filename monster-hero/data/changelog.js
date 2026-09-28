@@ -48,6 +48,20 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-09-28 ユーザー指示「新血統実装予告で画像とかもうまい具合につけといて」。
+    // 画像は tools/image/make-yggdrasil-lineage-notice.js で立ち絵2枚から作った正方形(880px)
+    date: "2026-09-28 16:55", type:'update', group:'monster', title:'新血統「ユグドラシル」実装予告', status:'new',
+    image: 'images/events/yggdrasil-lineage-notice.jpg?v=bdf973efa1bc',
+    items:[
+      '新しい血統「ユグドラシル」を近日実装します。森の奥でひっそりと暮らす、新しい種族です。',
+      '純血の「ユグドラシル」は、むじゃきなユグと、のんびり屋のカエル・ドラシルのふたり組。いつも一緒に行動します。',
+      'ユグドラシルの血を引くレアモンスター「メルホイップ」も一緒に登場します。甘い香りをまとった、ケーキに乗った女の子です。',
+      'ふたりはダイヤショップより先に、ビートP交換所で先行公開します。9/28(月) 18:00からのビートPアップキャンペーンで、いまのうちにビートPを貯めておきましょう。',
+      '能力や技は、公開のときにお知らせします。',
+    ],
+    assistantNotice: { id:'update_notice_yggdrasil_lineage_preview_v1', type:'content' },
+  },
+  {
     // 2026-09-28 ユーザー指示「新モンスターは新モンスターとか新血統とかそういうタブにして」
     date: "2026-09-28 16:47", type:'update', group:'ui', title:'更新情報に「新モンスター」のまとまりができました', status:'new',
     items:[
