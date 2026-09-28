@@ -302,6 +302,8 @@ node tools/run-checks.js --area monster,image 2>&1 | tail -25
   「今回は書かなくてよい」と判断する前に、似た効果の子がどう書かれているかを必ず見る。ミーアには「ミーアの歌う攻撃モーション」という
   囲み(`{t:'note'}`)があり、固有技の説明にも「ピクシー・ミーアの『次ターン消費0』」と
   名指しで入っている。`grep -n "ミーア" monster-hero/data/help.js` で実例を見てから書く
+- 新しいモンスター・新しい血統のお知らせには `group:'monster'` を書く（更新情報の「🐣 新モンスター」にまとまる。
+  書かないと本文の言葉で見当が付き、モンヒロビートやマーケットの下へ入ってしまう。2026-09-28 ユーザー指示）
 - マーケットに円盤石を並べたので、更新履歴へ
   `assistantNotice:{id:'update_notice_◯◯_v1', type:'market'}` を**必ず**付ける
   (`node tools/boot/market-notice-check.js` が見張る)
