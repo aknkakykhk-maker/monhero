@@ -8,6 +8,25 @@ description: Add a new playable ally monster (味方モンスター) to モン�
 **参照実装は「ミーア」(`Mia`)。** 必要なものがひととおり揃っている唯一の例なので、
 新しい子を足すときは `grep -n "Mia" <ファイル>` で当たりを取ってから同じ場所へ1行ずつ足す。
 
+## 0-1. 案が出た段階で、デバッグの確認画面へ先に入れる
+
+2026-09-28・ユーザー指示「新モンスターの案が出た段階でデバッグには追加して、いま入れられるぶんは入れて。
+確認しやすいように。そこで足りないのも確認して補完できるし、いまの現状も見れるから」。
+
+絵が届いたら、能力値や技が決まる前でも `data/ally-monsters.js` の **`UPCOMING_MONSTER_DRAFTS`** へ1件足す。
+`ALL_PLAYER_MONSTERS` には入れない(図鑑・ロースター・マーケットの解放・保存のどこにも出ない)。
+デバッグ設定 →「新モンスター確認」の一覧のいちばん後ろに並び、決まっていない項目が「未設定」と赤く出る。
+
+```js
+Yggdrasil: Object.freeze({ id:'Yggdrasil', name:"ユグドラシル", emoji:"🌳", imgUrl:YGGDRASIL_IMG, iconUrl:YGGDRASIL_IMG,
+  faceIconUrl:YGGDRASIL_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'yggdrasil' }) }),
+```
+
+- 入れられるものは先に入れる: 立ち絵・顔アイコン・円盤石(`available:false`)・染色マスク(`EXACT_DYE_MASKS`)・図鑑の文
+- 血統は `draftLineage` に書く(`MONSTER_LINEAGE_MAP` へ本体より先に書くと lineage-dex-check.js が止める)
+- 正式に実装したら `ALL_PLAYER_MONSTERS` へ移し、`UPCOMING_MONSTER_DRAFTS` からは消す
+- `tools/monster/monster-check-debug-check.js` が「案の子も一覧に並び、要確認になっている」ことを見る
+
 ## 0. 数値を決めてもらう(比較を出してから聞く)
 
 **絵はユーザーが用意する。** 数値のほうは勝手に決めない。

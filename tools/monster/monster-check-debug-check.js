@@ -38,8 +38,11 @@ vm.createContext(ctx);
 for (const f of ['data/images/images-ally.js', 'data/ally-monsters.js']) {
   vm.runInContext(fs.readFileSync(path.join(root, 'monster-hero', f), 'utf8'), ctx, { filename: f });
 }
-vm.runInContext('globalThis.api = { ALL_PLAYER_MONSTERS };', ctx);
+vm.runInContext('globalThis.api = { ALL_PLAYER_MONSTERS, UPCOMING_MONSTER_DRAFTS: typeof UPCOMING_MONSTER_DRAFTS === "undefined" ? {} : UPCOMING_MONSTER_DRAFTS };', ctx);
 const MONSTERS = Object.values(ctx.api.ALL_PLAYER_MONSTERS).filter(mon => mon && mon.id);
+// 案の段階のモンスター(2026-09-28・ユーザー指示「新モンスターの案が出た段階でデバッグに追加して」)。
+// 本体にまだいない子だけが、確認画面の後ろへ並ぶ。能力や技が無いので「要確認」になるのが正しい
+const DRAFTS = Object.values(ctx.api.UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !ctx.api.ALL_PLAYER_MONSTERS[mon.id]);
 
 console.log('--- ① ソース ---');
 const names = manifest.parts.map(p => p.file);
@@ -154,15 +157,19 @@ const seed = () => {
       opened: !!document.querySelector('[data-monster-check-debug]'),
       options: document.querySelectorAll('[data-monster-check-option]').length,
       ids: [...document.querySelectorAll('[data-monster-check-option]')].map(b => b.getAttribute('data-monster-check-option')),
-      needsFix: [...document.querySelectorAll('[data-monster-check-option]')].filter(b => /要確認/.test(b.textContent)).length,
+      needsFixIds: [...document.querySelectorAll('[data-monster-check-option]')].filter(b => /要確認/.test(b.textContent)).map(b => b.getAttribute('data-monster-check-option')),
       hasScroller: !!document.querySelector('.mh-scroll'),
     }));
     check('新モンスター確認の画面が開く', list.opened);
-    check('全種が並ぶ(所持も解放も関係なく)', list.options === MONSTERS.length,
-      `画面 ${list.options}種 / 実データ ${MONSTERS.length}種`);
-    const missing = MONSTERS.map(m => m.id).filter(id => !list.ids.includes(id));
+    check('全種が並ぶ(所持も解放も関係なく・案の段階の子も)', list.options === MONSTERS.length + DRAFTS.length,
+      `画面 ${list.options}種 / 実データ ${MONSTERS.length}種＋案 ${DRAFTS.length}種`);
+    const missing = [...MONSTERS, ...DRAFTS].map(m => m.id).filter(id => !list.ids.includes(id));
     check('欠けているモンスターがいない', missing.length === 0, missing.join(', '));
-    check('いまの全種は「足りない項目」が無い', list.needsFix === 0, `${list.needsFix}種に要確認`);
+    const draftIds = new Set(DRAFTS.map(m => m.id));
+    const realNeedsFix = list.needsFixIds.filter(id => !draftIds.has(id));
+    check('いまの全種(案の段階の子を除く)は「足りない項目」が無い', realNeedsFix.length === 0, `${realNeedsFix.join(', ')} に要確認`);
+    check('案の段階の子は「要確認」として並ぶ(足りない項目が見える)',
+      DRAFTS.every(m => list.needsFixIds.includes(m.id)), DRAFTS.map(m => m.id).join(', '));
     check('一覧が縦スクロールできる', list.hasScroller);
 
     // --- 詳細(タブ) ---

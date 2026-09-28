@@ -9,8 +9,10 @@
 // 手で塗った絵を載せると、実際に染めたときと違う見本になるため。
 //
 // 書き出すのは monster-hero/images/events/ の2枚(1000x520・JPEG quality 80・mozjpeg)。
-//   yggdrasil-dye-preview.jpg … 紅葉(髪と葉=赤 / カエル=橙)
-//   mel-whip-dye-preview.jpg  … いちごチョコ(髪と傘の緑=いちごミルク / ケーキと白=チョコ)
+//   yggdrasil-dye-preview.jpg … 紅葉(髪と葉=深い紅80% / カエル=橙70% / 角とマント=茶45%)
+//   mel-whip-dye-preview.jpg  … いちごチョコ(髪と傘の緑=いちごミルク85% / ケーキと白=チョコ85%・赤い実はそのまま)
+// 色は「濃さ」(@NN)も使う(2026-09-28・ユーザー指示「透明度も活用して見本カラーもいい感じに仕上げて」)。
+// 濃さを下げると元の陰影が残ってなじむが、下げすぎると元の緑が透けてくすむので、65〜85%あたりにしてある
 //     図鑑の「本当はチョコクリームを使ったスイーツが一番得意だとか」に合わせた
 // フォントは make-yggdrasil-lineage-notice.js と同じ M PLUS Rounded 1c ExtraBold(リポジトリには入れない)。
 const path = require('path');
@@ -26,9 +28,9 @@ registerFont(FONT, { family: 'MPR' });
 
 const PREVIEWS = [
   { baseId: 'Yggdrasil', out: 'yggdrasil-dye-preview.jpg', name: 'ユグドラシル', style: '紅葉カラー',
-    colors: ['red', 'orange', null], bg: ['#3a1407', '#8a3a10', '#e08a2a'], accent: '#ffcf5a', dots: ['rgba(255,120,40,.6)', 'rgba(255,200,60,.55)', 'rgba(200,40,30,.5)'] },
+    colors: ['custom:356:78:78@80', 'custom:30:82:94@70', 'custom:20:50:45@45'], bg: ['#3a1407', '#8a3a10', '#e08a2a'], accent: '#ffcf5a', dots: ['rgba(255,120,40,.6)', 'rgba(255,200,60,.55)', 'rgba(200,40,30,.5)'] },
   { baseId: 'MelWhip', out: 'mel-whip-dye-preview.jpg', name: 'メルホイップ', style: 'いちごチョコ',
-    colors: ['pink_light', null, 'custom:22:60:45'], bg: ['#2a120b', '#6b3320', '#e79ab4'], accent: '#ffd6e6', dots: ['rgba(255,170,200,.6)', 'rgba(140,80,50,.6)', 'rgba(255,255,255,.55)'] },
+    colors: ['custom:342:38:98@85', null, 'custom:22:62:44@85'], bg: ['#2a120b', '#6b3320', '#e79ab4'], accent: '#ffd6e6', dots: ['rgba(255,170,200,.6)', 'rgba(140,80,50,.6)', 'rgba(255,255,255,.55)'] },
 ];
 
 const dyed = async (dye, url, baseId, colors) => {
@@ -39,18 +41,27 @@ const dyed = async (dye, url, baseId, colors) => {
   const masks = await dye.getDyeRegionMasks(baseId, url);
   for (let i = 0; i < colors.length; i++) {
     if (!colors[i]) continue;
-    const [re, ma] = await Promise.all([decodeDataUrl(await dye.getRecoloredImage(url, colors[i], baseId, i)), decodeDataUrl(masks[i])]);
+    // 「濃さ」(色id の末尾 @NN)は、ゲームと同じく染め直した絵を重ねるときの不透明度にする
+    // (DyedMonsterImage の opacity:alpha/100)。濃さを下げると元の絵の陰影や色味が少し透けてなじむ
+    const at = colors[i].lastIndexOf('@');
+    const base = at >= 0 ? colors[i].slice(0, at) : colors[i];
+    const alpha = at >= 0 ? Math.max(0, Math.min(100, Number(colors[i].slice(at + 1)))) / 100 : 1;
+    const [re, ma] = await Promise.all([decodeDataUrl(await dye.getRecoloredImage(url, base, baseId, i)), decodeDataUrl(masks[i])]);
     const t = createCanvas(W, H), tx = t.getContext('2d');
     tx.drawImage(re, 0, 0, W, H);
     tx.globalCompositeOperation = 'destination-in';
     tx.imageSmoothingEnabled = true;
     tx.drawImage(ma, 0, 0, W, H);
-    x.drawImage(t, 0, 0);
+    x.save(); x.globalAlpha = alpha; x.drawImage(t, 0, 0); x.restore();
   }
   return { src, dyedCanvas: c };
 };
 
 (async () => {
+  // 試し塗り用: YGG_COLORS / MEL_COLORS に「①,②,③」を書くと、その色で作る(- は染めない)
+  const over = { Yggdrasil: process.env.YGG_COLORS, MelWhip: process.env.MEL_COLORS };
+  for (const p of PREVIEWS) if (over[p.baseId]) p.colors = over[p.baseId].split(',').map(v => v === '-' ? null : v);
+  if (process.env.OUT_SUFFIX) for (const p of PREVIEWS) p.out = p.out.replace('.jpg', `${process.env.OUT_SUFFIX}.jpg`);
   const dye = loadDyeModule();
   const images = loadEmbeddedImages();
   for (const p of PREVIEWS) {

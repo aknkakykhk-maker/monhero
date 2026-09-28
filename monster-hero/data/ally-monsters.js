@@ -78,3 +78,20 @@ const ALL_PLAYER_MONSTERS = {
 // 今後ALL_PLAYER_MONSTERSに新規モンスターを追加しても、ここに含めない限り
 // 自動では解放されず、ブリーダーマーケットで円盤石を購入して解放する対象になる。
 const STARTER_MONSTER_IDS = ['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro'];
+
+// ===== 案の段階のモンスター(デバッグの「新モンスター確認」にだけ並ぶ) =====
+// 2026-09-28・ユーザー指示「新モンスターの案が出た段階でデバッグには追加して、いま入れられるぶんは入れて。
+// 確認しやすいように。そこで足りないのも確認して補完できるし、いまの現状も見れるから」。
+// **ALL_PLAYER_MONSTERS には入れない**(図鑑・ロースター・マーケット・保存のどこにも出ない)。
+// デバッグの確認画面(74-screen-monster-check-debug.jsx)だけが、本体の一覧のうしろへ足して並べる。
+// 決まっていない項目(能力値・技・勇者特性・攻撃モーション)は書かない。画面で「未設定」と赤く出るので、
+// 何が足りないかがそのまま一覧になる。正式に実装したら ALL_PLAYER_MONSTERS へ移し、ここからは消す。
+//   draftLineage … 血統の案。本体の MONSTER_LINEAGE_MAP へ足すのは正式実装のとき(lineage-dex-check.js の決まり)
+const UPCOMING_MONSTER_DRAFTS = Object.freeze({
+  // ユグドラシル(新しい血統・純血)。絵・顔アイコン・円盤石・染色マスク・図鑑の文までそろっている
+  Yggdrasil: Object.freeze({ id:'Yggdrasil', name:"ユグドラシル", emoji:"🌳", imgUrl:YGGDRASIL_IMG, iconUrl:YGGDRASIL_IMG,
+    faceIconUrl:YGGDRASIL_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'yggdrasil' }) }),
+  // メルホイップ(ユグドラシル×？？？のレア)
+  MelWhip: Object.freeze({ id:'MelWhip', name:"メルホイップ", emoji:"🍰", imgUrl:MEL_WHIP_IMG, iconUrl:MEL_WHIP_IMG,
+    faceIconUrl:MEL_WHIP_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'unknown' }) }),
+});
