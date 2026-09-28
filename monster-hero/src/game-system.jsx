@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0aeab724dd2761c7
+// generated-sha256: 284651d01b642ede
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 19:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-28 19:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21379,9 +21379,12 @@ function RhythmSongSelectScreen({
           //    そうしたら帯にわざわざ何周分追加とか表示する必要もない」)
           : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp?' ・ 追いつき中':''}`)
         : '';
+      // ★縦の帯は1行の文字(10px)だけなので、高さは30pxにする(2026-09-28・ユーザー指示
+      //   「クイック周回の帯が縦に無駄に広いから狭くして縦幅の確保して」。以前は44pxで、そのぶん曲の一覧が狭かった)。
+      //   横幅いっぱいのボタンなので、30pxでも押し損ねにくい
       const quickRunBandButton = quickRunProgress
-        ? <button type="button" onClick={()=>setQuickRunDetailOpen(open=>!open)} aria-expanded={quickRunDetailOpen} aria-label="クイック周回の進捗"
-            className="flex min-h-[44px] w-full items-center gap-2 px-3 py-1 text-left active:scale-[.995]">
+        ? <button type="button" data-quick-run-band onClick={()=>setQuickRunDetailOpen(open=>!open)} aria-expanded={quickRunDetailOpen} aria-label="クイック周回の進捗"
+            className="flex min-h-[30px] w-full items-center gap-2 px-3 py-0.5 text-left active:scale-[.995]">
             <span className={`shrink-0 text-[10px] font-black ${quickRunProgress.finished?'text-amber-200':'text-fuchsia-200'}`}>{quickRunProgress.finished?'⏹':'⚔'}</span>
             <span className="min-w-0 flex-1 truncate text-[10px] font-black text-slate-200">{quickRunBandLabel}</span>
             <span className="shrink-0 text-[9px] font-black text-slate-400">{quickRunDetailOpen?'▲':'▼'}</span>

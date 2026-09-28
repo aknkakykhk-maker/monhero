@@ -96,9 +96,12 @@ function RhythmSongSelectScreen({
           //    そうしたら帯にわざわざ何周分追加とか表示する必要もない」)
           : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp?' ・ 追いつき中':''}`)
         : '';
+      // ★縦の帯は1行の文字(10px)だけなので、高さは30pxにする(2026-09-28・ユーザー指示
+      //   「クイック周回の帯が縦に無駄に広いから狭くして縦幅の確保して」。以前は44pxで、そのぶん曲の一覧が狭かった)。
+      //   横幅いっぱいのボタンなので、30pxでも押し損ねにくい
       const quickRunBandButton = quickRunProgress
-        ? <button type="button" onClick={()=>setQuickRunDetailOpen(open=>!open)} aria-expanded={quickRunDetailOpen} aria-label="クイック周回の進捗"
-            className="flex min-h-[44px] w-full items-center gap-2 px-3 py-1 text-left active:scale-[.995]">
+        ? <button type="button" data-quick-run-band onClick={()=>setQuickRunDetailOpen(open=>!open)} aria-expanded={quickRunDetailOpen} aria-label="クイック周回の進捗"
+            className="flex min-h-[30px] w-full items-center gap-2 px-3 py-0.5 text-left active:scale-[.995]">
             <span className={`shrink-0 text-[10px] font-black ${quickRunProgress.finished?'text-amber-200':'text-fuchsia-200'}`}>{quickRunProgress.finished?'⏹':'⚔'}</span>
             <span className="min-w-0 flex-1 truncate text-[10px] font-black text-slate-200">{quickRunBandLabel}</span>
             <span className="shrink-0 text-[9px] font-black text-slate-400">{quickRunDetailOpen?'▲':'▼'}</span>
