@@ -348,6 +348,20 @@
     "source": "command"
    },
    "challengeFactor": 1.6
+  },
+  "only_my_railgun": {
+   "audio": "monster-hero/audio/bgm-only-my-railgun.mp3",
+   "chartRevision": 16,
+   "audioSha256": "62fb741fe3f16fdc67ae2a1c609a57de0a3f8112510c814d2a4473cdf1a5e7d1",
+   "durationMs": 90000,
+   "analyzedTiming": {
+    "bpm": 143,
+    "beatZeroMs": 152.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   },
+   "challengeFactor": 1.3
   }
  }
 }

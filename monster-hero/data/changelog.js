@@ -41,6 +41,17 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-09-28 ユーザー指示「モンヒロビート新曲実装③」。歯ごたえ1.3はユーザーが決めた
+    date: "2026-09-28 11:44", type:'update', title:'モンヒロビート：新曲「only my railgun」を追加しました', status:'new',
+    image: 'images/song-art/only-my-railgun.jpg?v=a79e2735865b',
+    items:[
+      'モンヒロビートに「only my railgun」（1分30秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.29 です。',
+      'ノーツ数は 144 ／ 167 ／ 229 ／ 284 ／ 329 です。',
+    ],
+    assistantNotice: { id:'update_notice_only_my_railgun_v1', type:'content' },
+  },
+  {
     date: "2026-09-28 11:41", type:'update', group:'rhythm', title:'モンヒロビートでフリックを取ると、大きな炎が吹き上がるようになりました', status:'new',
     items:[
       'フリックを取ると、判定ラインから払った向きへ大きな炎が吹き上がります。上へ払えばまっすぐ上へ、左右へ払えば斜め上へ伸びます。',
