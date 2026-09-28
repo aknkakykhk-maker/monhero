@@ -144,6 +144,13 @@ for(const difficulty of DIFFICULTIES){
   for(const line of (quality.stdout||'').trim().split('\n'))if(line.trim()&&!/^■/.test(line))console.log(`    ${line.trim()}`);
   if(quality.status!==0)problems.push('品質レポートのゲート（押せない0件）を通っていない');
 }
+// --- 仮想プレイヤー(2026-09-28・報告だけ。止める条件には入れない) ---
+// 人の反応のくせと手のモデルで譜面を遊ばせ、ミスの見込みと、いちばんつまずく区間を出す(rhythm-virtual-player.js)
+if(write){
+  const played=runTool('rhythm-virtual-player.js',[]);
+  console.log(`\n${played.status===0?'✓':'!'} 仮想プレイヤー（ミスの見込み・押す時刻のばらつき・いちばんつまずく区間）`);
+  for(const line of (played.stdout||'').trim().split('\n').slice(1))if(line.trim())console.log(`    ${line.trim()}`);
+}
 
 console.log('\n--- 出荷してよいか ---');
 if(problems.length){
