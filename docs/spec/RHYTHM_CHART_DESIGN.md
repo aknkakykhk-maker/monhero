@@ -1955,6 +1955,7 @@ maimai の無理配置の分類など。動画そのものは見ていない）�
 | 3.1.27 旋律の有無 | `rhythm-chart-focus.js` の `melodyPresence`・生成器の Rev.13 | `rhythm-chart-rev13-check.js` |
 | 3.1.28 手と種類の仕上げ | 生成器の `rev14`（終点フリック・HOLD の太さ・候補の同点崩し）＋ 手のモデルの `setHandModelFlags` / `handModelFlagsForRevision` ＋ 自動修正の曲線の確かめ | `rhythm-chart-rev14-check.js` |
 | 3.1.29 旋律の上下に沿って動かす | 生成器の `rev15`（`againstMelodyMove`・継ぎ目の費用・写しと形の向き） | `rhythm-chart-rev15-check.js` |
+| 遊んだ記録で学ぶ調整値（Rev.17） | 生成器の `playTuning`（`lowLagOf` で低音の遅れを差し引く・`phraseLineByBar` で1本の線を追う）＋ `rhythm-chart-play-tuning.js` ＋ `rhythm-play-log.js`（`docs/spec/RHYTHM_PLAY_LOG.md`） | `rhythm-play-log-check.js` |
 | 3.1.6 譜面文法 / 3.1.7 指紋 | `rhythm-chart-v3-patterns.js` の `rankShapes` / 生成器の `motifKeyOf` | `rhythm-chart-quality-report.js`（語彙・偏り・フレーズ一致） |
 | 10. 品質の6軸 | `rhythm-chart-quality-report.js` | パイプラインのゲート |
 | 2. レイヤリング | `rhythm-audio-analyze-v3.js`（音の性格）＋ V3生成 | `rhythm-audio-analyze-v3-check.js` |
