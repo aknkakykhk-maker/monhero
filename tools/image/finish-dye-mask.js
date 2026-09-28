@@ -1,8 +1,7 @@
 // いただいた染色マスク(立ち絵に位置を合わせただけのもの)を、配信する染色マスクへ仕上げる(2026-09-28)。
 //
 //   node image/finish-dye-mask.js yggdrasil
-//   node image/finish-dye-mask.js mel-whip
-//   node image/finish-dye-mask.js mel-whip --out /tmp/x.png   … 配信フォルダへ書かずに試す
+//   node image/finish-dye-mask.js yggdrasil --out /tmp/x.png  … 配信フォルダへ書かずに試す
 //
 // 入力  tools/art-sources/dye-masks/<名前>-dye-mask-aligned.png
 //         いただいた3色マスクを立ち絵と同じ座標・同じ大きさへ合わせ、色だけリポジトリの約束
@@ -27,6 +26,16 @@
 //   ⑥ 暗い線(目・口・蹄・輪郭線)は、1つの部位の中にある線だけその部位へ入れ、ほかは染めない
 //   ⑦ 絵の外周の輪郭線は、となりの部位へ入れる(白や黒に染めたとき、ふちに元の色が残らないように)
 //   ⑧ 小さな点をならす
+// メルホイップの4回目のマスク(2026-09-28)で足したもの。どれも設定に書いたときだけ効く
+//   refine.paintedOnly / labels … 境目の寄せ直しを、塗った部位どうし・指定した部位のあいだだけにする
+//   fillBoxes      … 範囲の中の塗り残しだけを、絵の色で決める(胸当ての白い布・襟の淡い緑)
+//   clearColorPolys… 多角形の中の、色のはっきりした画素だけを絵の色で決め直す(傘のストライプ)
+//   growLime       … 上のほうの塗り残しの黄緑を①へ(傘の内側)
+//   fillSmall      … 1つの部位だけに接する小さく明るい塗り残しを、その部位へ(髪の毛先のつや)
+//   islands        … ①だけに囲まれた小さな③の島を①へ(髪のつやを③で塗っていた所)
+//   darkBlobs      … 足元の暗いかたまり(黒い蹄)のまわりを③から外す
+//   smooth5        … 5×5の多数決で①と③の境目をならす(淡い緑のスカートと白い布)
+//   dropStrands    … 染めない所に挟まれた③の細い筋を外す(タイツと蹄のあいだ)
 const fs = require('fs');
 const path = require('path');
 const { createCanvas, loadImage } = require('canvas');
@@ -40,22 +49,9 @@ const CONFIGS = {
     fixNonRed: false,
     berries: false,
   },
-  'mel-whip': {
-    slack: 2,
-    refine: { band: 4, radius: 10 },
-    // 胸元(白いバラ・襟の葉・胸当て)と左右の腕。立ち絵(634x916)の座標
-    boxes: [[288, 337, 384, 440], [252, 362, 292, 425], [378, 362, 418, 425]],
-    fixNonRed: true,
-    berries: true,
-    // ケーキの下のほう(立ち絵の高さの80%より下)で、ケーキ(③)に隣り合うクリーム色は③へ広げる。
-    // いただいたマスクでは、たれの下側の明るい帯が塗られておらず、濃い色に染めるとクリームのかけらが残った。
-    // スポンジは彩度が高い(0.3以上)ので取り違えない。脚(白いタイツ)は高さで外す
-    growCream: { yFrom: 0.8, region: 3 },
-    // ケーキの上の果物(立ち絵の高さの55%より下)で、塗り残しの鮮やかな画素を、色がつながる隣の部位へ広げる。
-    // 左の黄緑の実の上半分が塗られていなかった。目(緑)に広がらないよう高さで区切る
-    growVivid: { yFrom: 0.55 },
-    darkNotIn: [3],
-  },
+  // メルホイップは 2026-09-28 から、ユーザーが用意した部位の指示図(5部位)を
+  // tools/image/finish-dye-mask-guide.js で仕上げている。ここの手順(berries・darkNotIn など)は、
+  // そのとき以前の3部位のマスクのために作ったもので、ほかの子の仕上げにも使える
 };
 
 const args = process.argv.slice(2);
@@ -125,7 +121,15 @@ const hsv = (r, g, b) => {
       for (const i of front) for (const j of nb4(i)) if (opaque(j) && dist[j] === 255) { dist[j] = d; next.push(j); }
       front = next;
     }
-    const sure = (j) => opaque(j) && dist[j] > B && !redo[j];
+    const P = !!(cfg.refine && cfg.refine.paintedOnly);
+    if (P) {
+      // 塗った部位どうしの境目だけを数え直す(染めない所との境目は境目にしない)
+      dist.fill(255); front = [];
+      for (let i = 0; i < N; i++) if (lab[i] && nb4(i).some(j => lab[j] && lab[j] !== lab[i])) { dist[i] = 0; front.push(i); }
+      for (let d = 1; d <= B; d++) { const nx = []; for (const i of front) for (const j of nb4(i)) if (lab[j] && dist[j] === 255) { dist[j] = d; nx.push(j); } front = nx; }
+    }
+    const only = cfg.refine && cfg.refine.labels;
+    const sure = (j) => opaque(j) && dist[j] > B && !redo[j] && (!P || lab[j] > 0);
     const mean = (cx, cy, L, rad) => {
       let r = 0, g = 0, b = 0, n = 0;
       for (let y = Math.max(0, cy - rad); y <= Math.min(H - 1, cy + rad); y++) for (let x = Math.max(0, cx - rad); x <= Math.min(W - 1, cx + rad); x++) {
@@ -137,12 +141,15 @@ const hsv = (r, g, b) => {
     const next = lab.slice();
     for (let i = 0; i < N; i++) {
       if (!opaque(i)) continue;
+      if (P && !lab[i]) continue;
+      if (only && !only.includes(lab[i])) continue;
       const near = cfg.refine && dist[i] <= B;
       if (!near && !redo[i]) continue;
       const x = i % W, y = (i / W) | 0, rad = redo[i] ? R * 2 : R;
       const cands = new Set();
       for (let yy = Math.max(0, y - rad); yy <= Math.min(H - 1, y + rad); yy += 2) for (let xx = Math.max(0, x - rad); xx <= Math.min(W - 1, x + rad); xx += 2) { const j = yy * W + xx; if (sure(j)) cands.add(lab[j]); }
       if (redo[i]) cands.delete(2);
+      if (only) for (const L of [...cands]) if (!only.includes(L)) cands.delete(L);
       let best = null, bd = Infinity;
       for (const L of cands) {
         const m = mean(x, y, L, rad); if (!m) continue;
@@ -163,6 +170,78 @@ const hsv = (r, g, b) => {
     else if (h >= 50 && h < 170 && s >= 0.14) lab[i] = 1;
     else if (h < 30 && s > 0.12 && v > 0.55) lab[i] = 0;
     else if (s < 0.17 && v > 0.55 && (h >= 30 || s < 0.08)) lab[i] = 3;
+  }
+
+  // ③-1 塗られていない画素だけを、元の絵の色で決める(fillBoxes)
+  for (const [x0, y0, x1, y1] of (cfg.fillBoxes || [])) for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const i = y * W + x; if (!opaque(i) || maxc(i) < 70) continue;
+    const [h, s, v] = hsvAt(i);
+    // 襟の淡い緑が③に塗られていた所は①へ(③のままだと、クリームの色で襟が染まる)
+    if (lab[i] === 3 && h >= 50 && h < 170 && s >= 0.2) { lab[i] = 1; continue; }
+    if (lab[i]) continue;
+    if (h >= 50 && h < 170 && s >= 0.14) lab[i] = 1;
+    else if (s < 0.17 && v > 0.55 && (h >= 30 || s < 0.08)) lab[i] = 3;
+  }
+
+  // ③-1a 色のはっきりした画素だけを絵の色で決め直す(clearColorPolys)
+  const inPoly = (px, py, poly) => { let c = false; for (let a = 0, b = poly.length - 1; a < poly.length; b = a++) { const [xa, ya] = poly[a], [xb, yb] = poly[b]; if ((ya > py) !== (yb > py) && px < (xb - xa) * (py - ya) / (yb - ya) + xa) c = !c; } return c; };
+  for (const poly of (cfg.clearColorPolys || [])) for (let i = 0; i < N; i++) {
+    if (!opaque(i) || A[i * 4 + 3] < 200) continue;
+    if (!inPoly((i % W + 0.5) / W * 100, (((i / W) | 0) + 0.5) / H * 100, poly)) continue;
+    const [h, s, v] = hsvAt(i);
+    if (h >= 45 && h < 110 && s >= 0.45 && v > 0.35) lab[i] = 1;
+    else if (lab[i] === 1 && s <= 0.12 && v > 0.85) lab[i] = 3;
+  }
+
+  if (cfg.growLime) {
+    // 傘の高さには目や肌の黄緑は無いので、塗られていないはっきりした黄緑はすべて①へ入れる
+    // (傘の内側の点は、骨の暗い線と影に囲まれて①と離れていた)
+    const y1 = Math.floor(H * cfg.growLime.yTo);
+    for (let i = 0; i < y1 * W; i++) {
+      if (lab[i] || !opaque(i)) continue;
+      const [h, s, v] = hsvAt(i);
+      if (h >= 45 && h < 110 && s >= 0.45 && v > 0.3) lab[i] = 1;
+    }
+  }
+
+  // ③-1b 小さく孤立した明るい塗り残しは、囲んでいる部位へ(1つの部位だけに接しているとき)
+  if (cfg.fillSmall) {
+    const seen = new Uint8Array(N);
+    for (let s0 = 0; s0 < N; s0++) {
+      if (seen[s0] || lab[s0] || !opaque(s0)) continue;
+      const comp = [s0]; seen[s0] = 1; const touch = new Set(); let bright = 0, big = false;
+      for (let k = 0; k < comp.length; k++) {
+        const i = comp[k]; bright += maxc(i);
+        if (comp.length > cfg.fillSmall.maxArea) { big = true; }
+        for (const j of nb4(i)) {
+          if (!opaque(j)) continue;
+          if (lab[j]) { touch.add(lab[j]); continue; }
+          if (!seen[j]) { seen[j] = 1; comp.push(j); }
+        }
+      }
+      if (big || touch.size !== 1 || bright / comp.length < cfg.fillSmall.minBright) continue;
+      const L = [...touch][0]; for (const i of comp) lab[i] = L;
+    }
+  }
+
+  // ③-1c 島を戻す(islands)。from の小さなかたまりが to だけに接していて、平均の彩度が minSat 以上なら to へ
+  if (cfg.islands) {
+    const { from, to, maxArea, minSat } = cfg.islands;
+    const seen = new Uint8Array(N);
+    for (let s0 = 0; s0 < N; s0++) {
+      if (seen[s0] || lab[s0] !== from) continue;
+      const comp = [s0]; seen[s0] = 1; const touch = new Set(); let sat = 0;
+      for (let k = 0; k < comp.length; k++) {
+        const i = comp[k]; sat += hsvAt(i)[1];
+        for (const j of nb4(i)) {
+          if (!opaque(j)) { touch.add(-1); continue; }
+          if (lab[j] !== from) { touch.add(lab[j]); continue; }
+          if (!seen[j]) { seen[j] = 1; comp.push(j); }
+        }
+      }
+      if (comp.length > maxArea || touch.size !== 1 || !touch.has(to) || sat / comp.length < minSat) continue;
+      for (const i of comp) lab[i] = to;
+    }
   }
 
   // ③-2 ケーキの下のクリームの塗り残しを③へ広げる
@@ -206,6 +285,31 @@ const hsv = (r, g, b) => {
     let grow = seed;
     for (let k = 0; k < 3; k++) { const next = grow.slice(); for (let i = 0; i < N; i++) if (!grow[i] && opaque(i)) { const [h, s] = hsvAt(i); if ((h >= 180 && h < 290) || s < 0.12) if (nb4(i).some(j => grow[j])) next[i] = 1; } grow = next; }
     for (let i = 0; i < N; i++) if (grow[i]) lab[i] = 0;
+  }
+
+  // ⑤-2 暗いかたまり(蹄など)のまわりを外す
+  if (cfg.darkBlobs) {
+    const { region, radius, share } = cfg.darkBlobs;
+    const yb = Math.floor(H * (cfg.darkBlobs.yFrom || 0));
+    const dark = new Uint8Array(N); for (let i = 0; i < N; i++) if (opaque(i) && maxc(i) < 70) dark[i] = 1;
+    const next = lab.slice();
+    for (let i = 0; i < N; i++) {
+      if (lab[i] !== region || i < yb * W) continue;
+      const x = i % W, y = (i / W) | 0; let d = 0, n = 0;
+      for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+        const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= W || Y >= H) continue; n++; d += dark[Y * W + X];
+      }
+      if (d / n > share) next[i] = 0;
+    }
+    // かたまりの上のほう(つやの入った灰色)は暗い画素の割合が下がって残るので、外した所から
+    // 暗めの画素(クリームよりはっきり暗い)だけを数歩たどって外す
+    let front = []; for (let i = 0; i < N; i++) if (lab[i] === region && !next[i]) front.push(i);
+    for (let step = 0; step < 6 && front.length; step++) {
+      const grown = [];
+      for (const i of front) for (const j of nb4(i)) if (j >= yb * W && next[j] === region && maxc(j) < 150) { next[j] = 0; grown.push(j); }
+      front = grown;
+    }
+    lab = next;
   }
 
   // ⑥ 暗い線。1つの部位だけに囲まれた線はその部位へ、ほかは染めない。
@@ -262,6 +366,30 @@ const hsv = (r, g, b) => {
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) c[lab[i + dy * W + dx]]++;
       let best = lab[i]; for (let k = 1; k < 4; k++) if (c[k] > c[best]) best = k;
       if (c[best] >= 6 && best !== lab[i]) next[i] = best;
+    }
+    lab = next;
+  }
+  // ⑧-2 5×5の多数決(smooth5)。指定した部位どうしのあいだだけで入れ替える(②や染めない所は動かさない)
+  if (cfg.smooth5) for (let pass = 0; pass < cfg.smooth5.passes; pass++) {
+    const ok = cfg.smooth5.labels, next = lab.slice();
+    for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) {
+      const i = y * W + x; if (!ok.includes(lab[i])) continue;
+      const c = [0, 0, 0, 0];
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (dx || dy) c[lab[i + dy * W + dx]]++;
+      let best = lab[i]; for (const k of ok) if (c[k] > c[best]) best = k;
+      if (best !== lab[i] && c[best] >= 15) next[i] = best;
+    }
+    lab = next;
+  }
+
+  // ⑨ 染めない所(脚・蹄など)に挟まれた細い筋を外す。8近傍のうち、不透明で染めない画素が
+  //    5つ以上ある画素は、塗り分けのはみ出しとみなす(タイツと蹄のあいだに③が1〜2px残っていた)
+  if (cfg.dropStrands) for (let pass = 0; pass < 2; pass++) {
+    const next = lab.slice();
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+      const i = y * W + x; if (!cfg.dropStrands.includes(lab[i])) continue;
+      let z = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const j = i + dy * W + dx; if ((dx || dy) && opaque(j) && !lab[j]) z++; }
+      if (z >= 5) next[i] = 0;
     }
     lab = next;
   }

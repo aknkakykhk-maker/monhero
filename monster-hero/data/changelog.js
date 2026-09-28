@@ -45,6 +45,21 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-09-28 21:06", type:'update', group:'monster', title:'近日登場の新モンスターの円盤石で、絵を大きく見たり詳細を開けるようにしました', status:'new',
+    items:[
+      'ビートP交換所の「先行公開予定」の円盤石も、ほかのショップと同じく、絵を押すと大きく見られるようにしました。',
+      'ユグドラシルとメルホイップの円盤石に「詳細」を付けました。ダイヤショップの「近日追加」の円盤石からも開けます。',
+      '詳細では、立ち絵・血統・図鑑の説明・予定の値段を先に見られます。能力値や技は、公開のときにお知らせします。',
+    ],
+  },
+  {
+    date: "2026-09-28 19:46", type:'fix', group:'rhythm', title:'横画面の小さい端末で、モンヒロビートの「決定」ボタンが画面の下に切れないようにしました', status:'new',
+    items:[
+      '横画面の曲えらびで、ビートPアップキャンペーンの帯が右側の難易度と「決定」を押し下げ、高さの低い端末では「決定」が画面の下に少し切れていました。',
+      '横画面では、キャンペーンの倍率と終わる日時を、ジャンル・並び替えの下に小さな札で出すようにしました。縦画面はこれまでどおりです。',
+    ],
+  },
+  {
     date: "2026-09-28 19:14", type:'update', group:'rhythm', title:'モンヒロビートの長い曲で、ビートPが多くもらえるようになりました', status:'new',
     items:[
       '2分より長い曲は、2分を超えたぶんの10秒ごとにビートPが10%増えます。',
@@ -105,7 +120,7 @@ const CHANGELOG = [
     // (tools/image/make-yggdrasil-dye-preview.js)。一覧の詳細にだけ出る(助手の告知は image の1枚)
     gallery: [
       { caption:'ユグドラシル 染色イメージ「紅葉カラー」', image:'images/events/yggdrasil-dye-preview.jpg?v=1fc38d84ced6' },
-      { caption:'メルホイップ 染色イメージ「いちごチョコ」', image:'images/events/mel-whip-dye-preview.jpg?v=411d90f664b9' },
+      { caption:'メルホイップ 染色イメージ「いちごチョコ」', image:'images/events/mel-whip-dye-preview.jpg?v=0aad0bee69af' },
     ],
     assistantNotice: { id:'update_notice_yggdrasil_lineage_preview_v1', type:'content' },
   },

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eae1b13c15382736
+// generated-sha256: 88592289d052fc12
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 22:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-28 22:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5481,12 +5481,16 @@ const MASU_COLOR_REGION_HUES = {
     { hue: 120, noAAGuard: true, noEdgeGuard: true },
     { hue: 240, noAAGuard: true, noEdgeGuard: true },
   ],
-  // メルホイップ: ①=緑系(髪・葉っぱ・緑の果実・ドレスと傘の緑) / ②=赤系(イチゴ・赤い果実・リボン) /
-  // ③=白・クリーム系(ケーキ・クリーム・ドレスと傘の白)。顔・肌・蹄・ケーキの目と口・傘の軸は対象外
+  // メルホイップ(5部位。2026-09-28 ユーザーが用意した部位の指示図から作った。剣士モッチーと同じ5色マスク):
+  // ①=イチゴ(頭)・腰の赤い実 / ②=服・スカート・首元の花と葉・耳の上側・頭の緑の玉・傘の本体 /
+  // ③=傘のフリルと白い線・袖口のフリル・服の装飾の葉 / ④=ケーキのクリーム・座っている台座・ホイップ /
+  // ⑤=髪・目。顔・肌・脚・蹄・傘の柄・ケーキの上の果物と葉・スポンジ・ケーキの目と口は対象外
   MelWhip: [
     { hue: 0, noAAGuard: true, noEdgeGuard: true },
     { hue: 120, noAAGuard: true, noEdgeGuard: true },
     { hue: 240, noAAGuard: true, noEdgeGuard: true },
+    { hue: 60, noAAGuard: true, noEdgeGuard: true },
+    { hue: 300, noAAGuard: true, noEdgeGuard: true },
   ],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
@@ -6226,9 +6230,10 @@ const MASU_COLOR_REGION_DYE = {
   // gloss の値は、その部位の元の絵の彩度の中央値〜上のほう(濃い所)に合わせた。濃い所は選んだ色になり、
   // 髪のハイライト・カエルのツヤ・淡い緑のドレスのように元が淡い所は淡いまま残るので、立体感が消えない
   // (gloss なしだと、青や紫に染めたとき髪がべったり1色になっていた)。
-  // メルホイップの③(白・クリーム)は元の彩度がほぼ0(中央値0.13)なので、比例させると色が乗らない。gloss を付けない
+  // メルホイップ(5部位): ①イチゴと②服・傘は元が濃い(中央値0.90/0.88)。⑤髪は白いつやが多い(中央値0.38)ので
+  // 0.7 にして、つやを残す。③フリル・白い線と④ケーキは元がほぼ白で、比例させると色が乗らないので gloss を付けない
   Yggdrasil: [{ gloss: 0.9 }, { gloss: 0.93 }, { gloss: 0.72 }],
-  MelWhip: [{ gloss: 0.8 }, { gloss: 0.9 }, {}],
+  MelWhip: [{ gloss: 0.9 }, { gloss: 0.9 }, {}, {}, { gloss: 0.7 }],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
@@ -9686,9 +9691,10 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
     <div className={`w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
-    {/* 予告の品は買うボタンの代わりに札が出るので、値段はこの段に出す(どの売り場でも同じ) */}
-    <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{comingSoon&&!middle?<span data-market-coming-soon-price className="text-[10px] font-black text-slate-400 whitespace-nowrap">{marketPriceText(item)}</span>:middle||detail&&!comingSoon?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
-    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">{comingSoonLabel}</div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesBeatPoint?'bg-violet-500 text-white active:scale-95':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
+    {/* 詳細は「近日追加」の品でも出す(2026-09-28。近日公開予定の新モンスターの中身を先に見られるように) */}
+    <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
+    {/* 予告の品は買うボタンの代わりに札が出るので、値段は札の上に出す(どの売り場でも同じ) */}
+    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="flex flex-col items-center gap-1"><span data-market-coming-soon-price className="text-[10px] font-black text-slate-400 whitespace-nowrap">{marketPriceText(item)}</span><div className="text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">{comingSoonLabel}</div></div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesBeatPoint?'bg-violet-500 text-white active:scale-95':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;
 };
 
@@ -15584,7 +15590,7 @@ const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP
 // (2026-09-05・ユーザー指示「選んでいた音楽が鳴り続けるようにして」)。
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -15805,6 +15811,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           className={`flex h-[40px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black landscape:h-[44px] landscape:w-full ${state.noticeOpen?'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100':'border-white/15 bg-slate-900/80 text-slate-300'}`}>
           <span aria-hidden="true">💬</span><span aria-hidden="true">{state.noticeOpen?'▲':'▼'}</span>
         </button>}
+        {/* 呼ぶ側が足す小さな札(横持ちのビートPキャンペーンなど)。縦持ちで出すかどうかは呼ぶ側が決める */}
+        {toolbarExtra}
       </div>
     <div ref={listRef} onScroll={handleListScroll}
       data-rhythm-song-list data-rhythm-song-loop={loopEnabled?'1':'0'}
@@ -20464,7 +20472,7 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
   isItemOwned, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
-  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints,
+  onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
   // 入口だけこの画面のローカル状態で持ち、購入・交換・商品タブの既存stateは親側をそのまま使う。
@@ -20519,7 +20527,8 @@ function BreederMarketScreen({
     const owned = !comingSoon && isItemOwned(item);
     const balance = balanceOf(marketCurrencyOf(item));
     const canBuy = !comingSoon && !owned && balance>=item.cost && !busy;
-    const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+    // 近日公開予定の子(まだ ALL_PLAYER_MONSTERS にいない)も、案の段階の中身で詳細を開けるようにする
+    const detailMon = item.type==='disc' ? (ALL_PLAYER_MONSTERS[item.id] || (comingSoon && typeof UPCOMING_MONSTER_DRAFTS!=='undefined' ? UPCOMING_MONSTER_DRAFTS[item.id] : null) || null) : null;
     const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
     const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
@@ -20530,7 +20539,7 @@ function BreederMarketScreen({
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count) })}
           detail={detailMon||detailTeaching}
-          onDetail={()=>onOpenDetail(item,detailMon,detailTeaching)}
+          onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
           middle={item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
         />}
         {showHeroProofExchange&&exchangeItem&&<MarketProductCard
@@ -20653,13 +20662,17 @@ function BreederMarketScreen({
           })}
           {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。
               ダイヤショップより先にここで公開する(ユーザー指示「新モンスター先行実装はビートポイントから」)ので「先行公開予定」と出す。
-              絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする */}
+              絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする。
+              ほかのショップと同じく、絵を押すと大きく見られ、「詳細」で中身を開ける
+              (2026-09-28 ユーザー指摘「押してもアップにならない」「詳細ボタンがない」「他のショップとあわせて」) */}
           {RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer=>{
             const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
             const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'beatPoint', cost:offer.cost };
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-coming-soon':offer.id}}
               item={item} comingSoon comingSoonLabel="先行公開予定"
-              onZoom={()=>onZoomIcon(item)}
+              onZoom={()=>onZoomIcon(disc||item)}
+              detail={disc&&onOpenUpcomingDetail?disc:null}
+              onDetail={()=>disc&&onOpenUpcomingDetail&&onOpenUpcomingDetail(disc)}
             />;
           })}
         </div>
@@ -21464,6 +21477,19 @@ function RhythmSongSelectScreen({
       // ビートPアップキャンペーン(2026-09-28)。ランキングイベントと重なったときはイベントの帯を出す
       // (計算もイベントのほうを使う。rhythmEventPointAwardAt)。開いているあいだは描き直すたびに数え直す
       const beatPointCampaign=beatPointReleased&&!beatPointEvent?rhythmEventPointCampaignAt(Date.now()):null;
+      // 横持ちの左の細い列(幅104px)へ入れる札。中身は縦持ちの帯と同じ
+      const beatPointSideCard=beatPointCampaign
+        ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-campaign-side className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-amber-100">
+          <span className="block rounded-full bg-amber-400 px-1 text-[10px] leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
+          <span className="mt-0.5 block">キャンペーン中</span>
+          <span className="block text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+        </div>
+        :beatPointEvent
+          ?<div data-rhythm-beat-band-landscape data-rhythm-beat-point-active-side className="rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100">
+            <span className="block">🎟️ ビートP獲得期間中</span>
+            <span className="mt-0.5 block text-violet-200/80">{beatPointTargetSong?'選択中のイベント対象曲は1.5倍':'公開曲なら獲得できます'}</span>
+          </div>
+          :null;
       // 所持ビートP(2026-09-28・ユーザー指示「曲選択画面で邪魔にならないところにビートPの表示を作って」)。
       // 題名の下に小さく1行だけ出す。ヘッダーの高さはボタン(44px)で決まっているので、この1行を足しても高さは変わらず、曲の一覧も減らない。
       // 画面を開くたびに保存値から読み直す(演奏から戻るとこの部品は作り直されるので、そのたびに最新になる)。読めないあいだは出さない
@@ -21670,12 +21696,17 @@ function RhythmSongSelectScreen({
             (2026-09-28 ユーザー指摘「縦スペース取られてるし文字列が悪い」)。
             いちばん知りたい「ビートP×5」を札にして左へ、終わりの時刻を右へ置き、必ず1行に収める。
             「公開曲なら」などの細かい条件は交換所の知らせとヘルプに任せる */}
-        {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
-          <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
-          <span className="min-w-0 truncate">キャンペーン中</span>
-          <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+        {/* 横持ちでは、この帯が右の列(難易度・決定)まで押し下げ、高さ360pxの端末で「決定」が画面の下へ5pxはみ出していた
+            (2026-09-28)。縦持ちだけここへ置き、横持ちは曲の一覧の左の細い列へ小さな札として移す(beatPointSideCard)。
+            出し分けは index.html の素のCSS(見た目の案内・クイック周回の帯と同じ考え方) */}
+        {(beatPointCampaign||beatPointEvent)&&<div data-rhythm-beat-band-portrait className="shrink-0">
+          {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
+            <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
+            <span className="min-w-0 truncate">キャンペーン中</span>
+            <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
+          </div>}
+          {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
         </div>}
-        {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
         {/* 開催していないときの「ビートPはいつでも貯まります」の帯は外した(2026-09-26・ユーザー指示
             「ビートPがいつでももらえるはここに書く必要はない / この分でもスペース無駄にしてる」)。
             同じことはヘルプとリザルト(獲得したとき)で分かる。開催中の帯だけ残す */}
@@ -21745,6 +21776,7 @@ function RhythmSongSelectScreen({
           spotClass={spotClass}
           onPlay={onPlaySong}
           notice={<AssistantBubble scene="rhythmHome" compact/>}
+          toolbarExtra={beatPointSideCard}
           view={rhythmSelectView}
           onView={saveRhythmSelectView}
           listScrollTop={rhythmSongListScrollRef.current}
@@ -29097,6 +29129,8 @@ function MonsterHeroGame() {
   // 虹の超越の実だけは、価格タップ後に数量と購入後残高を確認してから一括購入する。
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
+  // 近日公開予定の新モンスターの詳細(マーケットの円盤石から開く。中身は UPCOMING_MONSTER_DRAFTS)
+  const [upcomingMonsterDetail, setUpcomingMonsterDetail] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
   // 中身は固定の一覧だけから決まるので、最初の1回だけ作る
   const debugIconItems = useMemo(() => breederIconOptions({includeUnowned:true}), []);
@@ -44774,6 +44808,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onExchangeHeroProof={exchangeHeroProofByShard}
             eventPoints={rhythmEventPoints}
             onExchangeEventPoints={exchangeRhythmEventPoints}
+            onOpenUpcomingDetail={setUpcomingMonsterDetail}
           />
         )}
 
@@ -45989,6 +46024,43 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             <div className="text-center text-sm font-black text-white leading-tight">{item.name}</div>
             <MarketModalClose onClick={()=>setMarketIconZoom(null)}/>
+          </div>
+        </MarketModal>
+      );})()}
+      {/* 近日公開予定の新モンスターの詳細(2026-09-28 ユーザー指摘「詳細ボタンがない」「他のショップとあわせて」)。
+          能力値と技はまだ決まっていないので、ふつうのモンスター詳細(能力・技の表)は使わず、
+          立ち絵・血統・図鑑の説明・予定の値段だけを出す。枠と「閉じる」はマーケットの共通部品(MarketModal) */}
+      {upcomingMonsterDetail&&(()=>{
+        const disc=upcomingMonsterDetail;
+        const mon=typeof UPCOMING_MONSTER_DRAFTS!=='undefined'?UPCOMING_MONSTER_DRAFTS[disc.id]:null;
+        if(!mon) return null;
+        const lineageName=(id)=>MONSTER_LINEAGES[id]?.name||'？？？';
+        const lineage=mon.draftLineage?(mon.draftLineage.main===mon.draftLineage.sub?`${lineageName(mon.draftLineage.main)}(純血)`:`${lineageName(mon.draftLineage.main)} × ${lineageName(mon.draftLineage.sub)}`):null;
+        const dex=(typeof MONSTER_DEX_DESCRIPTIONS!=='undefined'&&MONSTER_DEX_DESCRIPTIONS[mon.id])||'';
+        const beat=typeof RHYTHM_EVENT_POINT_SHOP_COMING_SOON!=='undefined'?RHYTHM_EVENT_POINT_SHOP_COMING_SOON.find(o=>o.monsterId===mon.id):null;
+        const close=()=>setUpcomingMonsterDetail(null);
+        return(
+        <MarketModal label={`${mon.name}の詳細`} onClose={close}>
+          <div data-upcoming-monster-detail={mon.id} className="flex flex-col gap-3 overflow-y-auto mh-scroll" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 64px)'}}>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-base font-black text-white">{mon.name}</h3>
+              <span className="text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap">近日公開予定</span>
+            </div>
+            <div className="w-full aspect-square rounded-2xl border border-white/10 bg-black/40 overflow-hidden flex items-center justify-center">
+              <img src={mon.imgUrl} alt={mon.name} className="w-full h-full object-contain" draggable={false}/>
+            </div>
+            {lineage&&<div className="flex items-center justify-between text-[12px] font-black"><span className="text-slate-400">血統</span><span className="text-emerald-300">{lineage}</span></div>}
+            {dex&&<p className="text-[12px] text-slate-200 leading-relaxed whitespace-pre-line rounded-xl border border-white/10 bg-black/30 p-3">{dex}</p>}
+            <section className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3">
+              <img src={disc.icon} alt={disc.name} className="w-12 h-12 rounded-full object-cover border border-white/10 shrink-0"/>
+              <div className="min-w-0 text-[11px] font-black leading-snug">
+                <div className="text-amber-200">{disc.name}<span className="ml-1 text-[10px] text-slate-400">(予定の値段)</span></div>
+                <div className="text-slate-300 whitespace-nowrap">ダイヤショップ：{Number(disc.cost).toLocaleString()}ダイヤ</div>
+                {beat&&<div className="text-violet-200 whitespace-nowrap">ビートP交換所：{Number(beat.cost).toLocaleString()}ビートP</div>}
+              </div>
+            </section>
+            <p className="text-[11px] text-slate-400 leading-relaxed">能力値や技は、公開のときにお知らせします。</p>
+            <MarketModalClose onClick={close}/>
           </div>
         </MarketModal>
       );})()}

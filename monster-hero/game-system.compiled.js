@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6702cef80661b485
+// source-sha256: 7155a86cd0cbe177
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 22:27";
+const BUILD_DATE = "2026-09-28 22:36";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -7607,6 +7607,14 @@ const MASU_COLOR_REGION_HUES = {
     hue: 240,
     noAAGuard: true,
     noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
   }],
   Mitarashi: [{
     hue: 0,
@@ -8376,10 +8384,12 @@ const MASU_COLOR_REGION_DYE = {
     gloss: 0.72
   }],
   MelWhip: [{
-    gloss: 0.8
+    gloss: 0.9
   }, {
     gloss: 0.9
-  }, {}]
+  }, {}, {}, {
+    gloss: 0.7
+  }]
 };
 const _NO_REGION_DYE = {
   gloss: false,
@@ -13606,17 +13616,19 @@ const MarketProductCard = ({
     style: {
       height: '22px'
     }
-  }, comingSoon && !middle ? React.createElement("span", {
-    "data-market-coming-soon-price": true,
-    className: "text-[10px] font-black text-slate-400 whitespace-nowrap"
-  }, marketPriceText(item)) : middle || detail && !comingSoon ? React.createElement(React.Fragment, null, middle, !middle && React.createElement(MarketDetailChip, {
+  }, middle || detail ? React.createElement(React.Fragment, null, middle, !middle && React.createElement(MarketDetailChip, {
     label: `${item.name}の詳細を見る`,
     onClick: onDetail
   })) : null), React.createElement("div", {
     className: "w-full flex items-center justify-center mt-auto pt-2"
   }, comingSoon ? React.createElement("div", {
+    className: "flex flex-col items-center gap-1"
+  }, React.createElement("span", {
+    "data-market-coming-soon-price": true,
+    className: "text-[10px] font-black text-slate-400 whitespace-nowrap"
+  }, marketPriceText(item)), React.createElement("div", {
     className: "text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap"
-  }, comingSoonLabel) : owned ? React.createElement("div", {
+  }, comingSoonLabel)) : owned ? React.createElement("div", {
     className: "text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap"
   }, "所持済み") : React.createElement("button", {
     onClick: onBuy,
@@ -22171,7 +22183,8 @@ const RhythmSongSelect = ({
   view = null,
   onView = null,
   listScrollTop = null,
-  onListScrollTop = null
+  onListScrollTop = null,
+  toolbarExtra = null
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -22392,7 +22405,7 @@ const RhythmSongSelect = ({
     "aria-hidden": "true"
   }, "💬"), React.createElement("span", {
     "aria-hidden": "true"
-  }, state.noticeOpen ? '▲' : '▼'))), React.createElement("div", {
+  }, state.noticeOpen ? '▲' : '▼')), toolbarExtra), React.createElement("div", {
     ref: listRef,
     onScroll: handleListScroll,
     "data-rhythm-song-list": true,
@@ -29581,7 +29594,8 @@ function BreederMarketScreen({
   onExchangeSoulRankRespec,
   onExchangeHeroProof,
   eventPoints = 0,
-  onExchangeEventPoints
+  onExchangeEventPoints,
+  onOpenUpcomingDetail
 }) {
   const [marketSection, setMarketSection] = useState(null);
   const [sheet, setSheet] = useState(null);
@@ -29661,7 +29675,7 @@ function BreederMarketScreen({
     const owned = !comingSoon && isItemOwned(item);
     const balance = balanceOf(marketCurrencyOf(item));
     const canBuy = !comingSoon && !owned && balance >= item.cost && !busy;
-    const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+    const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] || (comingSoon && typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' ? UPCOMING_MONSTER_DRAFTS[item.id] : null) || null : null;
     const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
     const isSoulRankRespec = item.id === SOUL_RANK_RESPEC_ITEM_ID;
     const exchangeItem = isSoulRankRespec ? {
@@ -29683,7 +29697,7 @@ function BreederMarketScreen({
         confirm: count => onBuy(item, count)
       }),
       detail: detailMon || detailTeaching,
-      onDetail: () => onOpenDetail(item, detailMon, detailTeaching),
+      onDetail: () => detailMon?.draft && onOpenUpcomingDetail ? onOpenUpcomingDetail(item) : onOpenDetail(item, detailMon, detailTeaching),
       middle: item.type === 'item' ? React.createElement(React.Fragment, null, React.createElement("span", {
         className: `text-[11px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-400'}`
       }, "×", ownedItems[item.id] || 0), item.desc && React.createElement(MarketDetailChip, {
@@ -29942,7 +29956,9 @@ function BreederMarketScreen({
       item: item,
       comingSoon: true,
       comingSoonLabel: "先行公開予定",
-      onZoom: () => onZoomIcon(item)
+      onZoom: () => onZoomIcon(disc || item),
+      detail: disc && onOpenUpcomingDetail ? disc : null,
+      onDetail: () => disc && onOpenUpcomingDetail && onOpenUpcomingDetail(disc)
     });
   })))), sheet && React.createElement(MarketPurchaseSheet, {
     item: sheet.item,
@@ -31317,6 +31333,25 @@ function RhythmSongSelectScreen({
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
   const beatPointTargetSong = !!beatPointEvent && Array.isArray(beatPointEvent.songIds) && beatPointEvent.songIds.includes(rhythmSelectedSongId);
   const beatPointCampaign = beatPointReleased && !beatPointEvent ? rhythmEventPointCampaignAt(Date.now()) : null;
+  const beatPointSideCard = beatPointCampaign ? React.createElement("div", {
+    "data-rhythm-beat-band-landscape": true,
+    "data-rhythm-beat-point-campaign-side": true,
+    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-amber-100"
+  }, React.createElement("span", {
+    className: "block rounded-full bg-amber-400 px-1 text-[10px] leading-4 text-slate-950"
+  }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
+    className: "mt-0.5 block"
+  }, "キャンペーン中"), React.createElement("span", {
+    className: "block text-amber-200/80"
+  }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.endAt)))) : beatPointEvent ? React.createElement("div", {
+    "data-rhythm-beat-band-landscape": true,
+    "data-rhythm-beat-point-active-side": true,
+    className: "rounded-xl border border-violet-400/30 bg-violet-950/25 px-1.5 py-1 text-center text-[9px] font-black leading-tight text-violet-100"
+  }, React.createElement("span", {
+    className: "block"
+  }, "🎟️ ビートP獲得期間中"), React.createElement("span", {
+    className: "mt-0.5 block text-violet-200/80"
+  }, beatPointTargetSong ? '選択中のイベント対象曲は1.5倍' : '公開曲なら獲得できます')) : null;
   const [beatPointBalance, setBeatPointBalance] = React.useState(null);
   React.useEffect(() => {
     if (!beatPointReleased) return undefined;
@@ -31556,7 +31591,10 @@ function RhythmSongSelectScreen({
     onClick: dismissRhythmEventNotice,
     "aria-label": "この案内を閉じる",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
-  }, "×"))), beatPointCampaign && React.createElement("div", {
+  }, "×"))), (beatPointCampaign || beatPointEvent) && React.createElement("div", {
+    "data-rhythm-beat-band-portrait": true,
+    className: "shrink-0"
+  }, beatPointCampaign && React.createElement("div", {
     "data-rhythm-beat-point-campaign": true,
     className: "shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100"
   }, React.createElement("span", {
@@ -31569,7 +31607,7 @@ function RhythmSongSelectScreen({
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
-  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます'), rhythmSixLaneIntroVisible && React.createElement("div", {
+  }, "🎟️ ビートP獲得期間中", beatPointTargetSong ? '・選択中のイベント対象曲は1.5倍' : '・公開曲なら獲得できます')), rhythmSixLaneIntroVisible && React.createElement("div", {
     "data-rhythm-six-lane-intro": true,
     className: "shrink-0 border-b border-cyan-400/20 bg-slate-950/90 px-2 py-1"
   }, React.createElement("div", {
@@ -31668,6 +31706,7 @@ function RhythmSongSelectScreen({
       scene: "rhythmHome",
       compact: true
     }),
+    toolbarExtra: beatPointSideCard,
     view: rhythmSelectView,
     onView: saveRhythmSelectView,
     listScrollTop: rhythmSongListScrollRef.current,
@@ -44797,6 +44836,7 @@ function MonsterHeroGame() {
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
   const [marketIconZoom, setMarketIconZoom] = useState(null);
+  const [upcomingMonsterDetail, setUpcomingMonsterDetail] = useState(null);
   const debugIconItems = useMemo(() => breederIconOptions({
     includeUnowned: true
   }), []);
@@ -66260,7 +66300,8 @@ function MonsterHeroGame() {
       onExchangeSoulRankRespec: exchangeSoulRankRespecByProof,
       onExchangeHeroProof: exchangeHeroProofByShard,
       eventPoints: rhythmEventPoints,
-      onExchangeEventPoints: exchangeRhythmEventPoints
+      onExchangeEventPoints: exchangeRhythmEventPoints,
+      onOpenUpcomingDetail: setUpcomingMonsterDetail
     }), gameState === 'ROSTER' && React.createElement("div", {
       "data-mh-screen": true,
       className: SCREEN_SHELL_CLASS
@@ -68457,6 +68498,66 @@ function MonsterHeroGame() {
         className: "text-center text-sm font-black text-white leading-tight"
       }, item.name), React.createElement(MarketModalClose, {
         onClick: () => setMarketIconZoom(null)
+      })));
+    })(), upcomingMonsterDetail && (() => {
+      const disc = upcomingMonsterDetail;
+      const mon = typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' ? UPCOMING_MONSTER_DRAFTS[disc.id] : null;
+      if (!mon) return null;
+      const lineageName = id => MONSTER_LINEAGES[id]?.name || '？？？';
+      const lineage = mon.draftLineage ? mon.draftLineage.main === mon.draftLineage.sub ? `${lineageName(mon.draftLineage.main)}(純血)` : `${lineageName(mon.draftLineage.main)} × ${lineageName(mon.draftLineage.sub)}` : null;
+      const dex = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS[mon.id] || '';
+      const beat = typeof RHYTHM_EVENT_POINT_SHOP_COMING_SOON !== 'undefined' ? RHYTHM_EVENT_POINT_SHOP_COMING_SOON.find(o => o.monsterId === mon.id) : null;
+      const close = () => setUpcomingMonsterDetail(null);
+      return React.createElement(MarketModal, {
+        label: `${mon.name}の詳細`,
+        onClose: close
+      }, React.createElement("div", {
+        "data-upcoming-monster-detail": mon.id,
+        className: "flex flex-col gap-3 overflow-y-auto mh-scroll",
+        style: {
+          maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 64px)'
+        }
+      }, React.createElement("div", {
+        className: "flex items-center justify-between gap-2"
+      }, React.createElement("h3", {
+        className: "text-base font-black text-white"
+      }, mon.name), React.createElement("span", {
+        className: "text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap"
+      }, "近日公開予定")), React.createElement("div", {
+        className: "w-full aspect-square rounded-2xl border border-white/10 bg-black/40 overflow-hidden flex items-center justify-center"
+      }, React.createElement("img", {
+        src: mon.imgUrl,
+        alt: mon.name,
+        className: "w-full h-full object-contain",
+        draggable: false
+      })), lineage && React.createElement("div", {
+        className: "flex items-center justify-between text-[12px] font-black"
+      }, React.createElement("span", {
+        className: "text-slate-400"
+      }, "血統"), React.createElement("span", {
+        className: "text-emerald-300"
+      }, lineage)), dex && React.createElement("p", {
+        className: "text-[12px] text-slate-200 leading-relaxed whitespace-pre-line rounded-xl border border-white/10 bg-black/30 p-3"
+      }, dex), React.createElement("section", {
+        className: "rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3"
+      }, React.createElement("img", {
+        src: disc.icon,
+        alt: disc.name,
+        className: "w-12 h-12 rounded-full object-cover border border-white/10 shrink-0"
+      }), React.createElement("div", {
+        className: "min-w-0 text-[11px] font-black leading-snug"
+      }, React.createElement("div", {
+        className: "text-amber-200"
+      }, disc.name, React.createElement("span", {
+        className: "ml-1 text-[10px] text-slate-400"
+      }, "(予定の値段)")), React.createElement("div", {
+        className: "text-slate-300 whitespace-nowrap"
+      }, "ダイヤショップ：", Number(disc.cost).toLocaleString(), "ダイヤ"), beat && React.createElement("div", {
+        className: "text-violet-200 whitespace-nowrap"
+      }, "ビートP交換所：", Number(beat.cost).toLocaleString(), "ビートP"))), React.createElement("p", {
+        className: "text-[11px] text-slate-400 leading-relaxed"
+      }, "能力値や技は、公開のときにお知らせします。"), React.createElement(MarketModalClose, {
+        onClick: close
       })));
     })(), marketItemDetail && React.createElement(MarketItemDetail, {
       item: marketItemDetail,
