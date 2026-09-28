@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7155a86cd0cbe177
+// source-sha256: 55990984211a0b39
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 22:36";
+const BUILD_DATE = "2026-09-28 23:58";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -19673,6 +19673,32 @@ const beginNewRankingRun = ({
   runIdRef.current = createRunId();
   return runIdRef.current;
 };
+const RHYTHM_PLAY_LOG_TABLE = 'rhythm_play_logs';
+let rhythmPlayLogDisabled = false;
+const sbSendRhythmPlayLog = async row => {
+  if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function') return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_PLAY_LOG_TABLE}`, {
+      method: 'POST',
+      headers: {
+        ...SB_HEADERS,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(row),
+      ...(controller ? {
+        signal: controller.signal
+      } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) rhythmPlayLogDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
 const LevelGrowthBar = ({
   levelBefore,
   levelAfter,
@@ -23652,6 +23678,58 @@ const RhythmMonsterSlotsPanel = ({
 }), masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).length === 0 && React.createElement("li", {
   className: "rounded-xl border border-white/10 p-4 text-center text-[11px] font-bold text-slate-500"
 }, "設定できるマスモンがいません")));
+const RHYTHM_PLAY_LOG_DEVICE_KEY = 'mh_rhythm_play_log_device_v1';
+const RHYTHM_PLAY_LOG_VERSION = 1;
+const rhythmPlayLogEncode = notes => (Array.isArray(notes) ? notes : []).map(note => {
+  const judgment = note && note._rhythmFinalJudgment;
+  if (!judgment) return '--';
+  if (judgment === 'MISS') return 'zz';
+  const held = (note.type === 'HOLD' || note.type === 'SLIDE') && note.holdJudgment && Number.isFinite(Number(note.holdDeltaMs));
+  const delta = held ? Number(note.holdDeltaMs) : note._rhythmDeltaMs;
+  if (typeof delta !== 'number' || !Number.isFinite(delta)) return '__';
+  return Math.max(0, Math.min(1200, Math.round(delta) + 600)).toString(36).padStart(2, '0');
+}).join('');
+const rhythmPlayLogDeviceKey = async () => {
+  const saved = await storeGet(RHYTHM_PLAY_LOG_DEVICE_KEY, null);
+  if (typeof saved === 'string' && /^[0-9a-z]{8,40}$/.test(saved)) return saved;
+  const made = Array.from({
+    length: 20
+  }, () => Math.floor(Math.random() * 36).toString(36)).join('');
+  await storeSet(RHYTHM_PLAY_LOG_DEVICE_KEY, made);
+  return made;
+};
+const rhythmPlayLogSend = async ({
+  song,
+  difficulty,
+  rawChart,
+  notes,
+  settings,
+  mirror,
+  cleared
+}) => {
+  try {
+    if (typeof sbSendRhythmPlayLog !== 'function') return false;
+    if (typeof RHYTHM_DEMO_SONG_IDS === 'undefined' || !RHYTHM_DEMO_SONG_IDS.includes(song?.songId)) return false;
+    const deltas = rhythmPlayLogEncode(notes);
+    if (!deltas || deltas.length > 12000) return false;
+    const deviceKey = await rhythmPlayLogDeviceKey();
+    return await sbSendRhythmPlayLog({
+      song_id: song.songId,
+      difficulty: String(difficulty?.id || ''),
+      fingerprint: rhythmChartFingerprint(rawChart),
+      app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE : '',
+      device_key: deviceKey,
+      judge_offset_ms: Math.round(Number(settings?.judgmentTimingOffsetMs) || 0),
+      note_count: Array.isArray(notes) ? notes.length : 0,
+      mirror: !!mirror,
+      cleared: !!cleared,
+      deltas,
+      schema_version: RHYTHM_PLAY_LOG_VERSION
+    });
+  } catch {
+    return false;
+  }
+};
 const RHYTHM_CHART_NOTES_KEY = 'mh_rhythm_chart_notes_v1';
 const RHYTHM_CHART_NOTE_SEGMENT_MS = 8000;
 const RHYTHM_CHART_NOTE_MARKS = ['', 'good', 'bad'];
@@ -24995,6 +25073,7 @@ const RhythmTapTest = ({
     rhythmFloatingNoteRemove(note);
     note.done = true;
     note._rhythmFinalJudgment = judgment;
+    note._rhythmDeltaMs = typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null;
     const preciseHit = rhythmJudgmentIsPrecise(judgment, deltaMs);
     if (calibrating && judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs)) {
       if (!Array.isArray(run.deltas)) run.deltas = [];
@@ -25325,6 +25404,15 @@ const RhythmTapTest = ({
     };
     const isNewRecord = !assistOn && score > run.startBestScore;
     const merged = assistOn ? normalizeRhythmBestRecord(run.startBest) : mergeRhythmBestRecord(run.startBest, result);
+    if (!debugPlay && !tutorial && !calibrating && !assistOn) rhythmPlayLogSend({
+      song,
+      difficulty,
+      rawChart,
+      notes: run.notes,
+      settings,
+      mirror: mirrorOn,
+      cleared: !failed
+    });
     const liveLogEndMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;
     const liveLog = rhythmLiveLogSections(run.liveLog, liveLogEndMs);
     const celebrateTitle = achievements.allMarvelous ? 'ALL MARVELOUS!!' : achievements.allExcellent ? 'ALL EXCELLENT!!' : achievements.fullCombo ? 'FULL COMBO!' : null;
@@ -25375,7 +25463,7 @@ const RhythmTapTest = ({
       }
     } : v);
     onComplete(result, merged);
-  }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, onComplete, settings.effectAmount, settings.lightweightMode, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn]);
+  }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn]);
   const celebrateTimerRef = useRef(null);
   useEffect(() => {
     if (view.status !== 'celebrate') return;
