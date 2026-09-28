@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a887720774564330
+// generated-sha256: ee864d9386ff66b5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 18:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-28 18:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3852,6 +3852,8 @@ const BGM_TRACKS = [
   { id:'melo_the_city_beneath_the_comets', name:'The City Beneath the Comets', creator:'オリジナル', src:'audio/bgm-the-city-beneath-the-comets.mp3', gain:1, loop:true },
   // 「ドラ」さんのゲーム「CREATE MONSTERS」の曲(2026-09-14)。本人の許可を得て入れている
   { id:'melo_mou_hitotsu_no_sekai_e', name:'もう一つの世界へ', creator:'ドラ', src:'audio/bgm-mou-hitotsu-no-sekai-e.mp3', gain:1, loop:true },
+  // モンビーの新曲(2026-09-28)。mp4で受け取った音源から映像とタグを落として入れたもの
+  { id:'melo_only_my_railgun', name:'only my railgun', creator:'オリジナル', src:'audio/bgm-only-my-railgun.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -4515,7 +4517,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 // 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -4670,6 +4672,7 @@ const Audio_ = (() => {
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
     "audio/bgm-mou-hitotsu-no-sekai-e.mp3": "633ed0ee2501",
     "audio/bgm-nothing-without-you.mp3": "4cb261cf1cd9",
+    "audio/bgm-only-my-railgun.mp3": "62fb741fe3f1",
     "audio/bgm-pandora-boss-beat.mp3": "b70636c619b2",
     "audio/bgm-pandora-boss-remix.mp3": "0faa4d713fdc",
     "audio/bgm-pandora-boss.mp3": "b6683818f250",
@@ -5469,6 +5472,22 @@ const MASU_COLOR_REGION_HUES = {
     { hue: 60, noAAGuard: true, noEdgeGuard: true },
     { hue: 300, noAAGuard: true, noEdgeGuard: true },
   ],
+  // 近日公開予定の2体(2026-09-28)。承認済みの3色マスク(EXACT_DYE_MASKS)が正本で、ここは
+  // 「3レイヤーある」ことを既存経路へ知らせるための控え(エイキと同じ形)。
+  // まだ ALL_PLAYER_MONSTERS にいないので、正式実装するまで画面には出ない。
+  // ユグドラシル: ①=髪・葉っぱ(杖の葉・頭上の葉・カエルの葉) / ②=カエルの体 / ③=角・杖・マント・蹄
+  Yggdrasil: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+  ],
+  // メルホイップ: ①=緑系(髪・葉っぱ・緑の果実・ドレスと傘の緑) / ②=赤系(イチゴ・赤い果実・リボン) /
+  // ③=白・クリーム系(ケーキ・クリーム・ドレスと傘の白)。顔・肌・蹄・ケーキの目と口・傘の軸は対象外
+  MelWhip: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+  ],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
   // 以前は口元を位置だけで決めるposBboxで指定していたが、矩形を積み重ねた形が実際の口の輪郭と
@@ -5905,7 +5924,7 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK, KenshiMocchi:KENSHI_MOCCHI_DYE_MASK, Yggdrasil:YGGDRASIL_DYE_MASK, MelWhip:MEL_WHIP_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
@@ -6203,6 +6222,13 @@ const MASU_COLOR_REGION_DYE = {
   Ark: [{ gloss: 1.0, sat: 0.45 }, { sat: 0.72 }, { gloss: 0.45, sat: 0.85 }],
   Tiger: { gloss: true },
   Mocchi: { gloss: 0.22 },
+  // 近日公開予定の2体(2026-09-28・ユーザー指示「染色はこのゲームの重要な部分だから本気で仕上げて」)。
+  // gloss の値は、その部位の元の絵の彩度の中央値〜上のほう(濃い所)に合わせた。濃い所は選んだ色になり、
+  // 髪のハイライト・カエルのツヤ・淡い緑のドレスのように元が淡い所は淡いまま残るので、立体感が消えない
+  // (gloss なしだと、青や紫に染めたとき髪がべったり1色になっていた)。
+  // メルホイップの③(白・クリーム)は元の彩度がほぼ0(中央値0.13)なので、比例させると色が乗らない。gloss を付けない
+  Yggdrasil: [{ gloss: 0.9 }, { gloss: 0.93 }, { gloss: 0.72 }],
+  MelWhip: [{ gloss: 0.8 }, { gloss: 0.9 }, {}],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
@@ -7399,6 +7425,12 @@ const changelogEntriesOfTab = (tab) => CHANGELOG_ENTRIES.filter(entry => CHANGEL
 //   外れても害は「見出しが違う」だけなので、迷ったら その他 へ落とす。
 // ★新しく書く項目は group を書いておけば、見当に頼らず確実にそこへ入る。
 const CHANGELOG_GROUPS = Object.freeze([
+  // 新しいモンスター・新しい血統のお知らせ(2026-09-28・ユーザー指示「新モンスターは新モンスターとか新血統とか
+  // そういうタブにして」)。ビートP交換所で先行公開するお知らせがモンヒロビートの下に入っていた。
+  // 見当は「新モンスター」「新しい仲間」「新血統」のような言葉だけにとどめる(「円盤石」まで入れると
+  // 値段の見直しや絵の調整まで引っ張られる)。確実に入れたい項目は group:'monster' と書く。
+  // 一番上に置くのは、見当が上から順に決まるため(「新しい仲間…ビートP」をモンヒロビートより先に拾う)
+  { id:'monster',   label:'新モンスター',   emoji:'🐣', match:/新モンスター|新しいモンスター|新しい仲間|新血統/ },
   { id:'rhythm',    label:'モンヒロビート', emoji:'🎵', match:/モンヒロビート|モンビー|音ゲー|譜面|ノーツ|レーン|コンボ|判定|新曲|曲えらび|演奏|リズム/ },
   { id:'masu',      label:'マスモンの育成', emoji:'💜', match:/マスモン|強化|転生|限界突破|超越|魂格|合体|絆|トレーニング|育成|再生|染色|ブリーダー|オート強化/ },
   { id:'battle',    label:'バトル',         emoji:'⚔', match:/バトル|WAVE|難易度|勇者モン|供モン|カード|AUTO|クイック|極限|種族チャレンジ|スキップ|敵/ },
@@ -9495,6 +9527,10 @@ const MARKET_PROFILE_ICON_STYLES = {
   Eiki: { scale: 0.95, x: 0, y: 0.9 },
   kenshi_mocchi_disc_icon: { scale: 0.95, x: 0, y: 0 },
   KenshiMocchi: { scale: 0.95, x: 0, y: 0 },
+  yggdrasil_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  Yggdrasil: { scale: 0.95, x: 0, y: 0 },
+  mel_whip_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  MelWhip: { scale: 0.95, x: 0, y: 0 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。
@@ -11625,6 +11661,8 @@ const MONSTER_IDLE_RIGS = Object.freeze({
   Yaobikuni: { body:'swim', bodyMask:IDLE_YAOBIKUNI_BODY_MASK, parts:[{ mask:IDLE_YAOBIKUNI_FIN_MASK, origin:'60.7% 82%', anim:'swing', amp:3, dur:1500, delay:0, layer:'front' }] },
   Eiki: { body:'glide', bodyMask:null, parts:[] },
   KenshiMocchi: { body:'jelly', bodyMask:IDLE_KENSHI_MOCCHI_BODY_MASK, parts:[{ mask:IDLE_KENSHI_MOCCHI_SWORD_L_MASK, origin:'29.5% 26%', anim:'swing', amp:-4, dur:2400, delay:0, layer:'back' }, { mask:IDLE_KENSHI_MOCCHI_SWORD_R_MASK, origin:'70.5% 26%', anim:'swing', amp:4, dur:2400, delay:1200, layer:'back' }] },
+  Yggdrasil: { body:'breathe', bodyMask:IDLE_YGGDRASIL_BODY_MASK, parts:[{ mask:IDLE_YGGDRASIL_LEAF_TOP_MASK, origin:'35.9% 7.3%', anim:'swingIn', amp:3, dur:3200, delay:0, layer:'front' }, { mask:IDLE_YGGDRASIL_LEAF_SIDE_MASK, origin:'27.8% 15.8%', anim:'swing', amp:-7, dur:2600, delay:700, layer:'front' }] },
+  MelWhip: { body:'sway', bodyMask:IDLE_MEL_WHIP_BODY_MASK, parts:[{ mask:IDLE_MEL_WHIP_UMBRELLA_MASK, origin:'41.2% 40.5%', anim:'swing', amp:2, dur:3000, delay:0, layer:'back' }] },
 });
 // ==== MONSTER_IDLE_RIGS ここまで ====
 const MONSTER_IDLE_MASK_STYLE = (url) => ({
@@ -17423,10 +17461,11 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
     setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn}}));
     if(eventPointAward&&eventPointAward.amount>0&&typeof addRhythmEventPoints==='function')void addRhythmEventPoints(eventPointAward.amount);
-    /* ラッキーラッシュのおまけ。公開の曲を最後まで遊んだときだけ(アシスト・練習・デバッグは除く)。上限10P、イベント期間外は1/5 */
+    /* ラッキーラッシュのおまけ。公開の曲を最後まで遊んだときだけ(アシスト・練習・デバッグは除く)。上限10P、イベント・キャンペーンの期間外は1/5 */
     setLuckyRush(false);
     if(luckOn&&!assistOn&&!debugPlay&&typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS?.rhythmEventPoints===true&&typeof addRhythmEventPoints==='function'){
-      const offEvent=!(typeof rhythmLimitedEventAt==='function'&&rhythmLimitedEventAt(Date.now()));
+      // ビートPアップキャンペーン中も満額(2026-09-28)。ランキングイベント中と同じ扱い
+      const offEvent=!(typeof rhythmEventPointFullRateAt==='function'&&rhythmEventPointFullRateAt(Date.now()));
       const luckBonus=rhythmLuckBonusPoints(run.luckPoints,offEvent);
       if(luckBonus>0){run.luckBonus=luckBonus;void addRhythmEventPoints(luckBonus);}
     }
@@ -18057,7 +18096,7 @@ scheduleTick();};
     ★練習・タイミング合わせ・デバッグから始めたプレイは記録に残らないので出さない */}
 {(()=>{if(tutorial||calibrating||debugPlay||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;const opened=Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id=>RHYTHM_DIFFICULTY_UNLOCK_BY[id]===difficulty.id&&rhythmChartPlayable(song,id));if(!opened)return null;return <div data-rhythm-result-unlock={opened} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {opened}（Lv.{song.difficulties[opened].level}）を曲えらびで選べます</small></div>;})()}
 {result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
-{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
+{result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
 {(()=>{const sections=Array.isArray(result.liveLog)?result.liveLog:[];if(!sections.some(section=>section.total>0))return null;const worst=sections.filter(section=>section.total>=3&&(section.bad+section.miss)>0).sort((a,b)=>(b.bad+b.miss)/b.total-(a.bad+a.miss)/a.total)[0]||null;return <div data-rhythm-live-log className="mb-2 rounded-2xl border border-white/10 bg-slate-900/70 px-3 py-2">
   <div className="flex items-baseline justify-between"><b className="text-[11px] font-black tracking-wider text-cyan-200">ライブログ</b><small className="text-[9px] font-bold text-slate-400">棒＝MARVELOUS・EXCELLENTの割合 / 数字＝BAD・MISS</small></div>
@@ -20453,6 +20492,9 @@ function BreederMarketScreen({
           <span className="font-mono text-base font-black text-violet-100">{safeEventPoints.toLocaleString()}</span>
           <span className="text-[10px] font-bold text-slate-400">所持ビートP</span>
         </div>
+        {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す */}
+        {(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
+          return campaign?<div data-event-point-campaign className="mb-2 shrink-0 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-1.5 text-center text-[10px] font-black text-amber-100">🎟️ {campaign.name}中：モンヒロビートの公開曲でビートPがいつもの{campaign.boost}倍（{rhythmEventJstText(Date.parse(campaign.endAt))}まで）</div>:null;})()}
         {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[11px] font-black text-red-300">{marketExchangeError}</div>}
         <div className={SCREEN_LIST_CLASS}>
           <div data-event-point-shop className="grid grid-cols-2 gap-2.5 pb-4">
@@ -20469,6 +20511,25 @@ function BreederMarketScreen({
                 <div className="mt-auto pt-2 flex items-end justify-between gap-2">
                   <div className="font-mono text-sm font-black text-violet-300">{offer.cost.toLocaleString()}P</div>
                   <button type="button" disabled={maxQuantity<=0||eventExchangePending||purchaseProcessing} onClick={()=>{setEventQuantityOffer(offer);setEventQuantity(1);}} className="mh-button mh-button-primary min-h-[44px] rounded-xl bg-violet-500 px-4 text-[11px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">交換</button>
+                </div>
+              </div>;
+            })}
+            {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。
+                ダイヤショップより先にここで公開する(ユーザー指示「新モンスター先行実装はビートポイントから」)ので「先行公開予定」と出す。
+                絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする */}
+            {RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer=>{
+              const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
+              return <div key={offer.id} data-event-point-coming-soon={offer.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-3 flex flex-col min-h-[132px]">
+                <div className="flex items-start gap-2">
+                  {disc?<MarketProductIcon item={disc}/>:<span aria-hidden="true" className="text-xl shrink-0">💿</span>}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] leading-tight font-black text-slate-300" style={{wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(offer.name)}</div>
+                    <div className="mt-1 text-[10px] font-bold text-slate-400">1回：{offer.grantAmount.toLocaleString()}{offer.unit}</div>
+                  </div>
+                </div>
+                <div className="mt-auto pt-2 flex items-end justify-between gap-2">
+                  <div className="font-mono text-sm font-black text-violet-300/70">{offer.cost.toLocaleString()}P</div>
+                  <div className="text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap">先行公開予定</div>
                 </div>
               </div>;
             })}
@@ -21289,6 +21350,9 @@ function RhythmSongSelectScreen({
       const beatPointReleased=RELEASE_FLAGS.rhythmEventPoints===true;
       const beatPointEvent=beatPointReleased?rhythmLimitedEventAt(Date.now()):null;
       const beatPointTargetSong=!!beatPointEvent&&Array.isArray(beatPointEvent.songIds)&&beatPointEvent.songIds.includes(rhythmSelectedSongId);
+      // ビートPアップキャンペーン(2026-09-28)。ランキングイベントと重なったときはイベントの帯を出す
+      // (計算もイベントのほうを使う。rhythmEventPointAwardAt)。開いているあいだは描き直すたびに数え直す
+      const beatPointCampaign=beatPointReleased&&!beatPointEvent?rhythmEventPointCampaignAt(Date.now()):null;
       // 所持ビートP(2026-09-28・ユーザー指示「曲選択画面で邪魔にならないところにビートPの表示を作って」)。
       // 題名の下に小さく1行だけ出す。ヘッダーの高さはボタン(44px)で決まっているので、この1行を足しても高さは変わらず、曲の一覧も減らない。
       // 画面を開くたびに保存値から読み直す(演奏から戻るとこの部品は作り直されるので、そのたびに最新になる)。読めないあいだは出さない
@@ -21487,6 +21551,15 @@ function RhythmSongSelectScreen({
             </div>
             <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
+        </div>}
+        {/* ビートPアップキャンペーン中の帯。2行に折り返して曲の一覧を押し下げていた
+            (2026-09-28 ユーザー指摘「縦スペース取られてるし文字列が悪い」)。
+            いちばん知りたい「ビートP×5」を札にして左へ、終わりの時刻を右へ置き、必ず1行に収める。
+            「公開曲なら」などの細かい条件は交換所の知らせとヘルプに任せる */}
+        {beatPointCampaign&&<div data-rhythm-beat-point-campaign className="shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100">
+          <span className="shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950">🎟️ ビートP ×{beatPointCampaign.boost}</span>
+          <span className="min-w-0 truncate">キャンペーン中</span>
+          <span className="ml-auto shrink-0 text-amber-200/80">〜{rhythmEventJstText(Date.parse(beatPointCampaign.endAt))}</span>
         </div>}
         {beatPointEvent&&<div data-rhythm-beat-point-active data-target-song={beatPointTargetSong?'true':'false'} className="shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100">🎟️ ビートP獲得期間中{beatPointTargetSong?'・選択中のイベント対象曲は1.5倍':'・公開曲なら獲得できます'}</div>}
         {/* 開催していないときの「ビートPはいつでも貯まります」の帯は外した(2026-09-26・ユーザー指示
@@ -28098,7 +28171,11 @@ const monsterCheckAllMonsters = () => {
   const ordered = dexMonsterList();
   const seen = new Set(ordered.map(mon => mon.id));
   const rest = Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && mon.id && !seen.has(mon.id));
-  return [...ordered, ...rest];
+  // 案の段階のモンスター(UPCOMING_MONSTER_DRAFTS・2026-09-28)。本体にまだいない子だけ、いちばん後ろへ足す。
+  // 能力値や技が無いまま並ぶので、確認の一覧で「未設定」がそのまま見える
+  const drafts = (typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' && UPCOMING_MONSTER_DRAFTS)
+    ? Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id]) : [];
+  return [...ordered, ...rest, ...drafts];
 };
 
 // マーケットの商品を引く。円盤石(type:'disc')は解放用でidがモンスターidと一致する決まり。
@@ -28133,7 +28210,12 @@ const monsterCheckImplRows = (mon) => {
   const apt = Array.isArray(mon.distAptitude) ? mon.distAptitude : [];
   const containFixed = (typeof MONSTER_ART_CONTAIN_IDS !== 'undefined' && MONSTER_ART_CONTAIN_IDS.includes(id));
   const sameArt = bare(mon.faceIconUrl) === bare(mon.imgUrl);
+  // 案の段階のモンスターの血統は draftLineage に書いてある(本体の MONSTER_LINEAGE_MAP へはまだ足せない)
+  const draftLineage = mon.draft && mon.draftLineage && typeof MONSTER_LINEAGES !== 'undefined'
+    ? { main: MONSTER_LINEAGES[mon.draftLineage.main], sub: MONSTER_LINEAGES[mon.draftLineage.sub] } : null;
   return [
+    ...(mon.draft ? [{ label: '段階', code: 'UPCOMING_MONSTER_DRAFTS', state: 'warn', value: '案の段階（本体に未登録）',
+      note: '図鑑・ロースター・マーケットの解放には出ない。正式実装で ALL_PLAYER_MONSTERS へ移す' }] : []),
     { label: '立ち絵', code: 'imgUrl', state: mon.imgUrl ? 'ok' : 'ng', value: bare(mon.imgUrl) || '未設定' },
     { label: '一覧アイコン', code: 'iconUrl', state: mon.iconUrl ? 'ok' : 'ng', value: bare(mon.iconUrl) || '未設定' },
     { label: '顔アイコン', code: 'faceIconUrl', state: mon.faceIconUrl ? (sameArt ? 'warn' : 'ok') : 'ng',
@@ -28159,16 +28241,17 @@ const monsterCheckImplRows = (mon) => {
       value: `ライフ${plus.hp}／ちから${plus.atk}／丈夫さ${plus.def}／ガッツ${plus.guts}` },
     { label: '距離適性', code: 'distAptitude', state: apt.length === 4 ? 'ok' : 'ng',
       value: apt.length ? monsterCheckDistanceLabels().map((label, i) => `${label} ${apt[i]}`).join('／') : '未設定' },
-    { label: '血統', code: 'MONSTER_LINEAGE_MAP', state: lineage.known ? 'ok' : 'ng',
-      value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）` : '未登録',
-      note: lineage.known ? '' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る' },
+    { label: '血統', code: 'MONSTER_LINEAGE_MAP', state: lineage.known ? 'ok' : (draftLineage?.main && draftLineage?.sub ? 'warn' : 'ng'),
+      value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）`
+        : draftLineage?.main && draftLineage?.sub ? `${draftLineage.main.name} × ${draftLineage.sub.name}（案）` : '未登録',
+      note: lineage.known ? '' : draftLineage ? '正式実装のときに data/lineages.js の MONSTER_LINEAGE_MAP へ足す' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る' },
     { label: '図鑑の説明文', code: 'MONSTER_DEX_DESCRIPTIONS', state: dexText ? 'ok' : 'ng', value: dexText ? `${dexText.length}文字` : '未記入',
       note: dexText ? '' : '無いと図鑑に「調査中」と出る' },
     { label: '図鑑に並ぶか', code: 'debugOnly', state: mon.debugOnly ? 'warn' : 'ok',
       value: mon.debugOnly ? '出ない（debugOnly）' : '出る',
       note: mon.debugOnly ? '正式実装前。図鑑・RPG一覧・マスモン登録から外れている' : '' },
     { label: '入手方法', code: 'disc / STARTER', state: (starter || disc) ? 'ok' : 'ng',
-      value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ` : '入手できない',
+      value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ${disc.available === false ? '（近日追加・まだ買えない）' : ''}` : '入手できない',
       note: (starter || disc) ? '' : 'BREEDER_MARKET_ITEMS へ type:\'disc\' の円盤石を足す' },
     // 初期解放の8種は、この決まりができる前からいるので商品を持っていない。そこは注意にしない
     { label: 'アイコン商品', code: "type:'icon'", state: (faceIcon || starter) ? 'ok' : 'warn',
@@ -28402,15 +28485,18 @@ function MonsterCheckDebugScreen({
   // 1枚ぶんの枠。絵のURLと染色を指定できるようにしてあるので、「本番の表示条件」だけでなく
   // 「部位ごとの切り分け」「ライガーの新旧比較」も同じ部品で出せる。
   // 読み込みに失敗した絵は赤くして、「パスの綴り間違いで絵が出ない」を公開前に気づけるようにする
-  const artBox = (label, src, palette, frameClass, fit, imgStyle, note) => {
+  // idle を付けた枠は、図鑑・バトルと同じ待機アニメ(MonsterIdleArt)で動かす。
+  // 公開前の子(案の段階)でも、リグを書いた時点で動きをここで確かめられる
+  const artBox = (label, src, palette, frameClass, fit, imgStyle, note, idle = false) => {
     const broken = !!brokenImages[src];
+    const art = src && <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>;
     return (
       <section key={label} className="rounded-xl bg-black/30 p-2 text-center">
         <b className="block text-[10px] font-black text-cyan-200">{label}</b>
         {note && <small className="mb-1 block text-[8px] font-bold text-slate-400">{note}</small>}
         <div className={`${frameClass} overflow-hidden border ${broken ? 'border-rose-500' : 'border-white/20'}`} style={bgStyle}>
           {src
-            ? <DyedMonsterImage baseId={mon.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={{ ...monsterArtFitStyle(mon.id, undefined), ...(imgStyle || {}) }}/>
+            ? (idle ? withMonsterIdleArt(mon.id, art, {fill:true, own:true}) : art)
             : <span className="flex h-full w-full items-center justify-center text-[9px] font-black text-rose-300">未設定</span>}
         </div>
         {/* 綴りを間違えた絵は、染色を通すと「何も出ない」だけで理由が分からない。
@@ -28510,6 +28596,8 @@ function MonsterCheckDebugScreen({
                 {artFrame('顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸')}
                 {artFrame('プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸')}
                 {artFrame('小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸')}
+                {artBox('待機アニメ', artSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null,
+                  monsterIdleRigOf(mon.id) ? '図鑑・バトルと同じ動き' : 'リグ未設定（止まったまま）', true)}
               </div>
               <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-2.5">
                 <h3 className="mb-2 text-[11px] font-black text-fuchsia-300">染色（{regionCount}部位・本番と共通）</h3>
@@ -28569,11 +28657,15 @@ function MonsterCheckDebugScreen({
               {row('特性の効果', mon.traitDesc || '特性なし', { block: true })}
               <div>
                 <div className="mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90">通常技</div>
-                {skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')}
+                {/* 技名が無いと getAtkSkillLevels はモッチーの技名を静かに出すので、無いときは「未設定」と出す */}
+                {(typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id]) ? skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')
+                  : <div className="text-center text-[11px] font-bold text-rose-300">未設定</div>}
               </div>
               <div>
                 <div className="mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90">固有技（進化段階）</div>
-                {skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30')}
+                {/* 案の段階のモンスターは固有技がまだ無い(getUniqueSkillLevels は unique が無いと落ちる) */}
+                {mon.unique ? skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30')
+                  : <div className="text-center text-[11px] font-bold text-rose-300">未設定</div>}
                 <div className="mt-1.5 break-words text-[10px] font-bold italic leading-relaxed text-slate-300">"{mon.unique?.effectDesc || ''}"</div>
               </div>
             </div>)}
@@ -32544,7 +32636,12 @@ function MonsterHeroGame() {
   // モンヒロビートが6レーンになった知らせ(2026-09-26・ユーザー指示「したらストーリーも作って」)。
   // ビートPの知らせと同じく、イベントとは関係なくHOMEで1度だけ流す。見たかどうかも同じ保存キーの配列へ入れる
   const RHYTHM_SIX_LANE_STORY_ID = 'rhythm_six_lane_2026_09_26';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID];
+  // ビートPアップキャンペーンと新しい仲間の先行公開の知らせ(2026-09-28・ユーザー指示「ストーリーも作って」)。
+  // **キャンペーンの期間中だけ**、HOMEで1度だけ流す(終わったあとは回想から見られる)。
+  // 見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)。
+  // キャンペーンの id と会話の id は同じにしてある(RHYTHM_EVENT_POINT_CAMPAIGNS)
+  const BEAT_POINT_UP_STORY_ID = 'beat_point_up_2026_09_28';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -32634,8 +32731,13 @@ function MonsterHeroGame() {
       const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
       // 6レーンの知らせ。ほかの会話が並んでいれば、そちらが終わったあとの見回りで並ぶ
       const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
+      // ビートPアップキャンペーンの知らせ。期間中かどうかは見回りのたびに数え直す(CLAUDE.md ⑥-4)。
+      // 期間の決まった「いまの話」なので、ほかのお知らせの会話より先に流す(開催中のイベントの会話よりは後)
+      const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
+      const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
       if (!liveEvent) {
-        if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+        if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
+        else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
         else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
@@ -32644,6 +32746,7 @@ function MonsterHeroGame() {
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
       }
+      else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
       else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
       else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
@@ -35062,6 +35165,7 @@ function MonsterHeroGame() {
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
+    beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -41984,6 +42088,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
                         style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
                       {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                      {/* 本文の下に並べる見本の絵(2026-09-28・ユーザー提案「こんな感じに染色イメージを出したりしたらどう？」)。
+                          gallery:[{ caption, image }] と書いたときだけ、見出しと絵を順に出す。
+                          読めなかった絵は黙って消す(上の image と同じ)。助手の告知には出さない(告知は image の1枚だけ) */}
+                      {(Array.isArray(c.gallery)?c.gallery:[]).filter(g=>g&&typeof g.image==='string'&&g.image).map((g,j)=><figure key={`g${j}`} data-changelog-gallery style={{margin:'10px 0 0'}}>
+                        {g.caption&&<figcaption style={{fontWeight:900,margin:'0 0 4px'}}>■ {g.caption}</figcaption>}
+                        <img src={g.image} alt={g.caption||`${c.title}の見本`} onError={e=>{e.currentTarget.style.display='none';}}
+                          loading="lazy" decoding="async" style={{width:'100%',borderRadius:'12px'}}/>
+                      </figure>)}
                       {/* 外に出るリンク(2026-09-14・よそのゲームの曲を入れたときの案内用)。
                           https だけ通し、target="_blank" と rel="noopener noreferrer" を必ず付ける
                           (開いた先からこのページを触られないようにするため)。

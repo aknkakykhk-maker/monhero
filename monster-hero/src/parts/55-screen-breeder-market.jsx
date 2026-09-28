@@ -179,6 +179,9 @@ function BreederMarketScreen({
           <span className="font-mono text-base font-black text-violet-100">{safeEventPoints.toLocaleString()}</span>
           <span className="text-[10px] font-bold text-slate-400">所持ビートP</span>
         </div>
+        {/* ビートPアップキャンペーン中の知らせ(2026-09-28)。開いたときの時刻で数え直す */}
+        {(()=>{const campaign=typeof rhythmEventPointCampaignAt==='function'&&!rhythmLimitedEventAt(Date.now())?rhythmEventPointCampaignAt(Date.now()):null;
+          return campaign?<div data-event-point-campaign className="mb-2 shrink-0 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-1.5 text-center text-[10px] font-black text-amber-100">🎟️ {campaign.name}中：モンヒロビートの公開曲でビートPがいつもの{campaign.boost}倍（{rhythmEventJstText(Date.parse(campaign.endAt))}まで）</div>:null;})()}
         {marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[11px] font-black text-red-300">{marketExchangeError}</div>}
         <div className={SCREEN_LIST_CLASS}>
           <div data-event-point-shop className="grid grid-cols-2 gap-2.5 pb-4">
@@ -195,6 +198,25 @@ function BreederMarketScreen({
                 <div className="mt-auto pt-2 flex items-end justify-between gap-2">
                   <div className="font-mono text-sm font-black text-violet-300">{offer.cost.toLocaleString()}P</div>
                   <button type="button" disabled={maxQuantity<=0||eventExchangePending||purchaseProcessing} onClick={()=>{setEventQuantityOffer(offer);setEventQuantity(1);}} className="mh-button mh-button-primary min-h-[44px] rounded-xl bg-violet-500 px-4 text-[11px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">交換</button>
+                </div>
+              </div>;
+            })}
+            {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。
+                ダイヤショップより先にここで公開する(ユーザー指示「新モンスター先行実装はビートポイントから」)ので「先行公開予定」と出す。
+                絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする */}
+            {RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer=>{
+              const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
+              return <div key={offer.id} data-event-point-coming-soon={offer.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-3 flex flex-col min-h-[132px]">
+                <div className="flex items-start gap-2">
+                  {disc?<MarketProductIcon item={disc}/>:<span aria-hidden="true" className="text-xl shrink-0">💿</span>}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] leading-tight font-black text-slate-300" style={{wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(offer.name)}</div>
+                    <div className="mt-1 text-[10px] font-bold text-slate-400">1回：{offer.grantAmount.toLocaleString()}{offer.unit}</div>
+                  </div>
+                </div>
+                <div className="mt-auto pt-2 flex items-end justify-between gap-2">
+                  <div className="font-mono text-sm font-black text-violet-300/70">{offer.cost.toLocaleString()}P</div>
+                  <div className="text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap">先行公開予定</div>
                 </div>
               </div>;
             })}

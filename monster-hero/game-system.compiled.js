@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 740c04d01f850f18
+// source-sha256: bf422f74f43a482b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 18:52";
+const BUILD_DATE = "2026-09-28 18:54";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4574,6 +4574,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_only_my_railgun',
+  name: 'only my railgun',
+  creator: 'オリジナル',
+  src: 'audio/bgm-only-my-railgun.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_dullahan_clockwork_alt',
   name: '呪われた騎士の時計仕掛け -Another-',
   creator: 'オリジナル',
@@ -5343,7 +5350,8 @@ const EVENT_BGM_SCENES = Object.freeze({
   symphony_2026_09_17_thanks: 'symphonyEvent',
   tactics_intro: 'tacticsIntroEvent',
   beat_point_always_2026_09_24: 'monbeatCupEvent',
-  rhythm_six_lane_2026_09_26: 'monbeatCupEvent'
+  rhythm_six_lane_2026_09_26: 'monbeatCupEvent',
+  beat_point_up_2026_09_28: 'monbeatCupEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -5526,6 +5534,7 @@ const Audio_ = (() => {
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
     "audio/bgm-mou-hitotsu-no-sekai-e.mp3": "633ed0ee2501",
     "audio/bgm-nothing-without-you.mp3": "4cb261cf1cd9",
+    "audio/bgm-only-my-railgun.mp3": "62fb741fe3f1",
     "audio/bgm-pandora-boss-beat.mp3": "b70636c619b2",
     "audio/bgm-pandora-boss-remix.mp3": "0faa4d713fdc",
     "audio/bgm-pandora-boss.mp3": "b6683818f250",
@@ -7573,6 +7582,32 @@ const MASU_COLOR_REGION_HUES = {
     noAAGuard: true,
     noEdgeGuard: true
   }],
+  Yggdrasil: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
+  MelWhip: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
   Mitarashi: [{
     hue: 0,
     sMin: 0.3
@@ -8005,7 +8040,9 @@ const EXACT_DYE_MASKS = Object.freeze({
   Plant: PLANT_DYE_MASK,
   Eiki: EIKI_DYE_MASK,
   Pandora: PANDORA_DYE_MASK,
-  KenshiMocchi: KENSHI_MOCCHI_DYE_MASK
+  KenshiMocchi: KENSHI_MOCCHI_DYE_MASK,
+  Yggdrasil: YGGDRASIL_DYE_MASK,
+  MelWhip: MEL_WHIP_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -8330,7 +8367,19 @@ const MASU_COLOR_REGION_DYE = {
   },
   Mocchi: {
     gloss: 0.22
-  }
+  },
+  Yggdrasil: [{
+    gloss: 0.9
+  }, {
+    gloss: 0.93
+  }, {
+    gloss: 0.72
+  }],
+  MelWhip: [{
+    gloss: 0.8
+  }, {
+    gloss: 0.9
+  }, {}]
 };
 const _NO_REGION_DYE = {
   gloss: false,
@@ -10186,6 +10235,11 @@ const CHANGELOG_TIMED_SEEN_FIX_KEY = 'mh_changelog_timed_seen_fix_v1';
 const CHANGELOG_ISSUE_TAB_TYPES = Object.freeze(['issue', 'fix']);
 const changelogEntriesOfTab = tab => CHANGELOG_ENTRIES.filter(entry => CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) === (tab === 'issue'));
 const CHANGELOG_GROUPS = Object.freeze([{
+  id: 'monster',
+  label: '新モンスター',
+  emoji: '🐣',
+  match: /新モンスター|新しいモンスター|新しい仲間|新血統/
+}, {
   id: 'rhythm',
   label: 'モンヒロビート',
   emoji: '🎵',
@@ -13253,6 +13307,26 @@ const MARKET_PROFILE_ICON_STYLES = {
     y: 0
   },
   KenshiMocchi: {
+    scale: 0.95,
+    x: 0,
+    y: 0
+  },
+  yggdrasil_disc_icon: {
+    scale: 0.95,
+    x: 0,
+    y: 0
+  },
+  Yggdrasil: {
+    scale: 0.95,
+    x: 0,
+    y: 0
+  },
+  mel_whip_disc_icon: {
+    scale: 0.95,
+    x: 0,
+    y: 0
+  },
+  MelWhip: {
     scale: 0.95,
     x: 0,
     y: 0
@@ -16564,6 +16638,40 @@ const MONSTER_IDLE_RIGS = Object.freeze({
       amp: 4,
       dur: 2400,
       delay: 1200,
+      layer: 'back'
+    }]
+  },
+  Yggdrasil: {
+    body: 'breathe',
+    bodyMask: IDLE_YGGDRASIL_BODY_MASK,
+    parts: [{
+      mask: IDLE_YGGDRASIL_LEAF_TOP_MASK,
+      origin: '35.9% 7.3%',
+      anim: 'swingIn',
+      amp: 3,
+      dur: 3200,
+      delay: 0,
+      layer: 'front'
+    }, {
+      mask: IDLE_YGGDRASIL_LEAF_SIDE_MASK,
+      origin: '27.8% 15.8%',
+      anim: 'swing',
+      amp: -7,
+      dur: 2600,
+      delay: 700,
+      layer: 'front'
+    }]
+  },
+  MelWhip: {
+    body: 'sway',
+    bodyMask: IDLE_MEL_WHIP_BODY_MASK,
+    parts: [{
+      mask: IDLE_MEL_WHIP_UMBRELLA_MASK,
+      origin: '41.2% 40.5%',
+      anim: 'swing',
+      amp: 2,
+      dur: 3000,
+      delay: 0,
       layer: 'back'
     }]
   }
@@ -24927,7 +25035,7 @@ const RhythmTapTest = ({
     if (eventPointAward && eventPointAward.amount > 0 && typeof addRhythmEventPoints === 'function') void addRhythmEventPoints(eventPointAward.amount);
     setLuckyRush(false);
     if (luckOn && !assistOn && !debugPlay && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof addRhythmEventPoints === 'function') {
-      const offEvent = !(typeof rhythmLimitedEventAt === 'function' && rhythmLimitedEventAt(Date.now()));
+      const offEvent = !(typeof rhythmEventPointFullRateAt === 'function' && rhythmEventPointFullRateAt(Date.now()));
       const luckBonus = rhythmLuckBonusPoints(run.luckPoints, offEvent);
       if (luckBonus > 0) {
         run.luckBonus = luckBonus;
@@ -26471,7 +26579,10 @@ const RhythmTapTest = ({
       className: "mt-0.5 block text-2xl font-black text-white"
     }, "+", result.eventPointAward.amount.toLocaleString(), "P"), result.eventPointAward.target && React.createElement("span", {
       className: "mt-1 block text-[9px] font-black text-amber-200"
-    }, "イベント対象曲 1.5倍"), result.eventPointAward.offEvent && React.createElement("span", {
+    }, "イベント対象曲 1.5倍"), result.eventPointAward.campaign && React.createElement("span", {
+      "data-rhythm-result-beat-points-campaign": true,
+      className: "mt-1 block text-[9px] font-black text-amber-200"
+    }, "ビートPアップキャンペーン いつもの", result.eventPointAward.boost, "倍"), result.eventPointAward.offEvent && React.createElement("span", {
       "data-rhythm-result-beat-points-off-event": true,
       className: "mt-1 block text-[9px] font-black text-violet-200"
     }, "イベント開催中はこの5倍もらえます")), (() => {
@@ -29454,7 +29565,13 @@ function BreederMarketScreen({
     className: "font-mono text-base font-black text-violet-100"
   }, safeEventPoints.toLocaleString()), React.createElement("span", {
     className: "text-[10px] font-bold text-slate-400"
-  }, "所持ビートP")), marketExchangeError && React.createElement("div", {
+  }, "所持ビートP")), (() => {
+    const campaign = typeof rhythmEventPointCampaignAt === 'function' && !rhythmLimitedEventAt(Date.now()) ? rhythmEventPointCampaignAt(Date.now()) : null;
+    return campaign ? React.createElement("div", {
+      "data-event-point-campaign": true,
+      className: "mb-2 shrink-0 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-1.5 text-center text-[10px] font-black text-amber-100"
+    }, "🎟️ ", campaign.name, "中：モンヒロビートの公開曲でビートPがいつもの", campaign.boost, "倍（", rhythmEventJstText(Date.parse(campaign.endAt)), "まで）") : null;
+  })(), marketExchangeError && React.createElement("div", {
     className: "mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[11px] font-black text-red-300"
   }, marketExchangeError), React.createElement("div", {
     className: SCREEN_LIST_CLASS
@@ -29491,6 +29608,36 @@ function BreederMarketScreen({
       },
       className: "mh-button mh-button-primary min-h-[44px] rounded-xl bg-violet-500 px-4 text-[11px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
     }, "交換")));
+  }), RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer => {
+    const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
+    return React.createElement("div", {
+      key: offer.id,
+      "data-event-point-coming-soon": offer.id,
+      className: "rounded-2xl border border-white/10 bg-slate-950/60 p-3 flex flex-col min-h-[132px]"
+    }, React.createElement("div", {
+      className: "flex items-start gap-2"
+    }, disc ? React.createElement(MarketProductIcon, {
+      item: disc
+    }) : React.createElement("span", {
+      "aria-hidden": "true",
+      className: "text-xl shrink-0"
+    }, "💿"), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("div", {
+      className: "text-[11px] leading-tight font-black text-slate-300",
+      style: {
+        wordBreak: 'keep-all',
+        overflowWrap: 'anywhere'
+      }
+    }, marketNameNodes(offer.name)), React.createElement("div", {
+      className: "mt-1 text-[10px] font-bold text-slate-400"
+    }, "1回：", offer.grantAmount.toLocaleString(), offer.unit))), React.createElement("div", {
+      className: "mt-auto pt-2 flex items-end justify-between gap-2"
+    }, React.createElement("div", {
+      className: "font-mono text-sm font-black text-violet-300/70"
+    }, offer.cost.toLocaleString(), "P"), React.createElement("div", {
+      className: "text-[10px] font-black text-amber-200 bg-amber-900/40 px-2 py-1 rounded-full whitespace-nowrap"
+    }, "先行公開予定")));
   })))), eventQuantityOffer && (() => {
     const maxQuantity = Math.floor(safeEventPoints / eventQuantityOffer.cost);
     const quantity = Math.max(1, Math.min(Math.max(1, maxQuantity), Math.floor(Number(eventQuantity) || 1)));
@@ -30937,6 +31084,7 @@ function RhythmSongSelectScreen({
   const beatPointReleased = RELEASE_FLAGS.rhythmEventPoints === true;
   const beatPointEvent = beatPointReleased ? rhythmLimitedEventAt(Date.now()) : null;
   const beatPointTargetSong = !!beatPointEvent && Array.isArray(beatPointEvent.songIds) && beatPointEvent.songIds.includes(rhythmSelectedSongId);
+  const beatPointCampaign = beatPointReleased && !beatPointEvent ? rhythmEventPointCampaignAt(Date.now()) : null;
   const [beatPointBalance, setBeatPointBalance] = React.useState(null);
   React.useEffect(() => {
     if (!beatPointReleased) return undefined;
@@ -31175,7 +31323,16 @@ function RhythmSongSelectScreen({
     onClick: dismissRhythmEventNotice,
     "aria-label": "この案内を閉じる",
     className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
-  }, "×"))), beatPointEvent && React.createElement("div", {
+  }, "×"))), beatPointCampaign && React.createElement("div", {
+    "data-rhythm-beat-point-campaign": true,
+    className: "shrink-0 flex items-center gap-2 whitespace-nowrap border-b border-amber-300/25 bg-amber-500/10 px-3 py-0.5 text-[10px] font-black leading-5 text-amber-100"
+  }, React.createElement("span", {
+    className: "shrink-0 rounded-full bg-amber-400 px-2 text-[10px] font-black leading-4 text-slate-950"
+  }, "🎟️ ビートP ×", beatPointCampaign.boost), React.createElement("span", {
+    className: "min-w-0 truncate"
+  }, "キャンペーン中"), React.createElement("span", {
+    className: "ml-auto shrink-0 text-amber-200/80"
+  }, "〜", rhythmEventJstText(Date.parse(beatPointCampaign.endAt)))), beatPointEvent && React.createElement("div", {
     "data-rhythm-beat-point-active": true,
     "data-target-song": beatPointTargetSong ? 'true' : 'false',
     className: "shrink-0 border-b border-violet-400/20 bg-violet-950/25 px-3 py-1 text-center text-[10px] font-black text-violet-100"
@@ -43380,7 +43537,8 @@ const monsterCheckAllMonsters = () => {
   const ordered = dexMonsterList();
   const seen = new Set(ordered.map(mon => mon.id));
   const rest = Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && mon.id && !seen.has(mon.id));
-  return [...ordered, ...rest];
+  const drafts = typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' && UPCOMING_MONSTER_DRAFTS ? Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id]) : [];
+  return [...ordered, ...rest, ...drafts];
 };
 const monsterCheckMarketItems = mon => {
   const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
@@ -43411,7 +43569,17 @@ const monsterCheckImplRows = mon => {
   const apt = Array.isArray(mon.distAptitude) ? mon.distAptitude : [];
   const containFixed = typeof MONSTER_ART_CONTAIN_IDS !== 'undefined' && MONSTER_ART_CONTAIN_IDS.includes(id);
   const sameArt = bare(mon.faceIconUrl) === bare(mon.imgUrl);
-  return [{
+  const draftLineage = mon.draft && mon.draftLineage && typeof MONSTER_LINEAGES !== 'undefined' ? {
+    main: MONSTER_LINEAGES[mon.draftLineage.main],
+    sub: MONSTER_LINEAGES[mon.draftLineage.sub]
+  } : null;
+  return [...(mon.draft ? [{
+    label: '段階',
+    code: 'UPCOMING_MONSTER_DRAFTS',
+    state: 'warn',
+    value: '案の段階（本体に未登録）',
+    note: '図鑑・ロースター・マーケットの解放には出ない。正式実装で ALL_PLAYER_MONSTERS へ移す'
+  }] : []), {
     label: '立ち絵',
     code: 'imgUrl',
     state: mon.imgUrl ? 'ok' : 'ng',
@@ -43478,9 +43646,9 @@ const monsterCheckImplRows = mon => {
   }, {
     label: '血統',
     code: 'MONSTER_LINEAGE_MAP',
-    state: lineage.known ? 'ok' : 'ng',
-    value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）` : '未登録',
-    note: lineage.known ? '' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る'
+    state: lineage.known ? 'ok' : draftLineage?.main && draftLineage?.sub ? 'warn' : 'ng',
+    value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）` : draftLineage?.main && draftLineage?.sub ? `${draftLineage.main.name} × ${draftLineage.sub.name}（案）` : '未登録',
+    note: lineage.known ? '' : draftLineage ? '正式実装のときに data/lineages.js の MONSTER_LINEAGE_MAP へ足す' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る'
   }, {
     label: '図鑑の説明文',
     code: 'MONSTER_DEX_DESCRIPTIONS',
@@ -43497,7 +43665,7 @@ const monsterCheckImplRows = mon => {
     label: '入手方法',
     code: 'disc / STARTER',
     state: starter || disc ? 'ok' : 'ng',
-    value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ` : '入手できない',
+    value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ${disc.available === false ? '（近日追加・まだ買えない）' : ''}` : '入手できない',
     note: starter || disc ? '' : 'BREEDER_MARKET_ITEMS へ type:\'disc\' の円盤石を足す'
   }, {
     label: 'アイコン商品',
@@ -43840,8 +44008,19 @@ function MonsterCheckDebugScreen({
   }, "消費G", skill.guts), React.createElement("span", {
     className: "text-yellow-300"
   }, "会心", skill.crit, "%")))));
-  const artBox = (label, src, palette, frameClass, fit, imgStyle, note) => {
+  const artBox = (label, src, palette, frameClass, fit, imgStyle, note, idle = false) => {
     const broken = !!brokenImages[src];
+    const art = src && React.createElement(DyedMonsterImage, {
+      baseId: mon.id,
+      src: src,
+      alt: label,
+      masuColors: palette,
+      className: `w-full h-full ${fit}`,
+      style: {
+        ...monsterArtFitStyle(mon.id, undefined),
+        ...(imgStyle || {})
+      }
+    });
     return React.createElement("section", {
       key: label,
       className: "rounded-xl bg-black/30 p-2 text-center"
@@ -43852,17 +44031,10 @@ function MonsterCheckDebugScreen({
     }, note), React.createElement("div", {
       className: `${frameClass} overflow-hidden border ${broken ? 'border-rose-500' : 'border-white/20'}`,
       style: bgStyle
-    }, src ? React.createElement(DyedMonsterImage, {
-      baseId: mon.id,
-      src: src,
-      alt: label,
-      masuColors: palette,
-      className: `w-full h-full ${fit}`,
-      style: {
-        ...monsterArtFitStyle(mon.id, undefined),
-        ...(imgStyle || {})
-      }
-    }) : React.createElement("span", {
+    }, src ? idle ? withMonsterIdleArt(mon.id, art, {
+      fill: true,
+      own: true
+    }) : art : React.createElement("span", {
       className: "flex h-full w-full items-center justify-center text-[9px] font-black text-rose-300"
     }, "未設定")), src && React.createElement("img", {
       src: src,
@@ -44036,7 +44208,7 @@ function MonsterCheckDebugScreen({
     className: "grid grid-cols-2 gap-2"
   }, artBox('旧画像', rollbackSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, '差し替える前'), artBox('高画質版', productionSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, 'いまの本番')), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
-  }, artFrame('バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain', null, '本番 64px・角丸なし'), artFrame('一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸'), artFrame('図鑑／大きな全身', 'imgUrl', 'h-36', 'object-contain', null, '本番 図鑑詳細の枠'), artFrame('顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸'), artFrame('プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸'), artFrame('小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸')), React.createElement("section", {
+  }, artFrame('バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain', null, '本番 64px・角丸なし'), artFrame('一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸'), artFrame('図鑑／大きな全身', 'imgUrl', 'h-36', 'object-contain', null, '本番 図鑑詳細の枠'), artFrame('顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸'), artFrame('プロフィール／選択', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸'), artFrame('小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸'), artBox('待機アニメ', artSources.imgUrl, dyeColors, 'aspect-square', 'object-contain', null, monsterIdleRigOf(mon.id) ? '図鑑・バトルと同じ動き' : 'リグ未設定（止まったまま）', true)), React.createElement("section", {
     className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-2.5"
   }, React.createElement("h3", {
     className: "mb-2 text-[11px] font-black text-fuchsia-300"
@@ -44118,9 +44290,13 @@ function MonsterCheckDebugScreen({
     block: true
   }), React.createElement("div", null, React.createElement("div", {
     className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
-  }, "通常技"), skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')), React.createElement("div", null, React.createElement("div", {
+  }, "通常技"), typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] ? skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25') : React.createElement("div", {
+    className: "text-center text-[11px] font-bold text-rose-300"
+  }, "未設定")), React.createElement("div", null, React.createElement("div", {
     className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
-  }, "固有技（進化段階）"), skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30'), React.createElement("div", {
+  }, "固有技（進化段階）"), mon.unique ? skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30') : React.createElement("div", {
+    className: "text-center text-[11px] font-bold text-rose-300"
+  }, "未設定"), React.createElement("div", {
     className: "mt-1.5 break-words text-[10px] font-bold italic leading-relaxed text-slate-300"
   }, "\"", mon.unique?.effectDesc || '', "\""))), tab === 'data' && React.createElement("div", {
     "data-monster-check-tab-data": true,
@@ -47873,7 +48049,8 @@ function MonsterHeroGame() {
   const SYMPHONY_THANKS_STORY_ID = 'symphony_2026_09_17_thanks';
   const BEAT_POINT_ALWAYS_STORY_ID = 'beat_point_always_2026_09_24';
   const RHYTHM_SIX_LANE_STORY_ID = 'rhythm_six_lane_2026_09_26';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID];
+  const BEAT_POINT_UP_STORY_ID = 'beat_point_up_2026_09_28';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -47933,14 +48110,16 @@ function MonsterHeroGame() {
       const liveEvent = rhythmLimitedEventAt(Date.now());
       const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
       const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
+      const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
+      const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
       if (!liveEvent) {
-        if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+        if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
-      } else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+      } else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       if (rhythmEventLiveCatchUpRef.current) return;
       rhythmEventLiveCatchUpRef.current = true;
       try {
@@ -50308,6 +50487,7 @@ function MonsterHeroGame() {
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
+    beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -59235,7 +59415,30 @@ function MonsterHeroGame() {
         }
       }), (c.items || []).map((x, j) => React.createElement("p", {
         key: j
-      }, "・", x)), changelogSafeLink(c.link) && React.createElement("a", {
+      }, "・", x)), (Array.isArray(c.gallery) ? c.gallery : []).filter(g => g && typeof g.image === 'string' && g.image).map((g, j) => React.createElement("figure", {
+        key: `g${j}`,
+        "data-changelog-gallery": true,
+        style: {
+          margin: '10px 0 0'
+        }
+      }, g.caption && React.createElement("figcaption", {
+        style: {
+          fontWeight: 900,
+          margin: '0 0 4px'
+        }
+      }, "■ ", g.caption), React.createElement("img", {
+        src: g.image,
+        alt: g.caption || `${c.title}の見本`,
+        onError: e => {
+          e.currentTarget.style.display = 'none';
+        },
+        loading: "lazy",
+        decoding: "async",
+        style: {
+          width: '100%',
+          borderRadius: '12px'
+        }
+      }))), changelogSafeLink(c.link) && React.createElement("a", {
         "data-changelog-link": true,
         href: changelogSafeLink(c.link),
         target: "_blank",

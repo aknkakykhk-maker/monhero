@@ -143,8 +143,8 @@ check('マーケットに「剣士モッチーのアイコン」がある(pt購�
   /\{ id:'kenshi_mocchi_icon', name:"剣士モッチーのアイコン", type:'icon', icon:KENSHI_MOCCHI_FACE_ICON, cost:1 \}/.test(marketSrc));
 check('マーケットに「剣士モッチーの円盤石アイコン」がある(pt購入)',
   /\{ id:'kenshi_mocchi_disc_icon', name:"剣士モッチーの円盤石アイコン", type:'icon', icon:KENSHI_MOCCHI_DISC_ICON, cost:1 \}/.test(marketSrc));
-check('マーケットに「剣士モッチーの円盤石」が3000ダイヤである',
-  /\{ id:'KenshiMocchi', name:"剣士モッチーの円盤石", type:'disc', icon:KENSHI_MOCCHI_DISC_ICON, cost:3000 \}/.test(marketSrc));
+check('マーケットに「剣士モッチーの円盤石」が300000ダイヤである',
+  /\{ id:'KenshiMocchi', name:"剣士モッチーの円盤石", type:'disc', icon:KENSHI_MOCCHI_DISC_ICON, cost:300000 \}/.test(marketSrc));
 // 円盤石の商品idはモンスターidそのもの。これが解放のキーになる(購入するまでは使えない)
 check('円盤石の商品idがモンスターidと同じ(購入で解放される)', /\{ id:'KenshiMocchi',[^\n]*type:'disc'/.test(marketSrc));
 check('はじめから解放されるモンスターには入れない(円盤石購入で解放する)',
@@ -160,7 +160,7 @@ check('デバッグ段階の仕組みが残っている(次の新モンスター
 check('更新履歴のマーケット追加は助手の告知(assistantNotice)付き',
   /title: '新レアモンスター 剣士モッチーを追加'[\s\S]{0,1600}?assistantNotice: \{ id:'update_notice_kenshi_mocchi_market_v1', type:'market' \}/.test(changelogSrc));
 check('ヘルプのマーケット項目に剣士モッチーが載っている',
-  /パンドラ・エイキ・剣士モッチーの円盤石は各3000ダイヤ/.test(helpSrc));
+  /パンドラ・エイキ・剣士モッチーの円盤石は各300000ダイヤ/.test(helpSrc));
 check('ヘルプの図鑑項目に剣士モッチー専用の解説がある',
   /title:'剣士モッチー', text:'剣士モッチーは「モッチー × ？？？」のレアモンスター/.test(helpSrc));
 check('画像は仮実装のものを使い回している(円盤石を作り直していない)',

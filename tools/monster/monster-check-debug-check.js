@@ -38,8 +38,11 @@ vm.createContext(ctx);
 for (const f of ['data/images/images-ally.js', 'data/ally-monsters.js']) {
   vm.runInContext(fs.readFileSync(path.join(root, 'monster-hero', f), 'utf8'), ctx, { filename: f });
 }
-vm.runInContext('globalThis.api = { ALL_PLAYER_MONSTERS };', ctx);
+vm.runInContext('globalThis.api = { ALL_PLAYER_MONSTERS, UPCOMING_MONSTER_DRAFTS: typeof UPCOMING_MONSTER_DRAFTS === "undefined" ? {} : UPCOMING_MONSTER_DRAFTS };', ctx);
 const MONSTERS = Object.values(ctx.api.ALL_PLAYER_MONSTERS).filter(mon => mon && mon.id);
+// 案の段階のモンスター(2026-09-28・ユーザー指示「新モンスターの案が出た段階でデバッグに追加して」)。
+// 本体にまだいない子だけが、確認画面の後ろへ並ぶ。能力や技が無いので「要確認」になるのが正しい
+const DRAFTS = Object.values(ctx.api.UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !ctx.api.ALL_PLAYER_MONSTERS[mon.id]);
 
 console.log('--- ① ソース ---');
 const names = manifest.parts.map(p => p.file);
@@ -56,6 +59,17 @@ check('一覧は ALL_PLAYER_MONSTERS をそのまま使う', listFn.includes('Ob
 check('一覧を所持マスモンで絞っていない', !/masuMons/.test(listFn));
 check('一覧を解放済みで絞っていない', !/unlockedMonsterIds/.test(listFn));
 check('一覧を debugOnly で絞っていない(実装したら消える、を作らない)', !/debugOnly/.test(listFn));
+
+// 待機アニメも、図鑑・バトルと同じ部品で動かして見せる(2026-09-28。案の段階の子もリグを書けばここで動く)
+check('待機アニメの枠があり、図鑑・バトルと同じ withMonsterIdleArt を通す',
+  part.includes("artBox('待機アニメ'") && part.includes('withMonsterIdleArt(mon.id, art, {fill:true, own:true})'));
+{
+  const fx = fs.readFileSync(path.join(root, 'monster-hero/src/parts/24-battle-fx.jsx'), 'utf8');
+  const ally = fs.readFileSync(path.join(root, 'monster-hero/data/ally-monsters.js'), 'utf8');
+  const draftIds = [...(ally.match(/const UPCOMING_MONSTER_DRAFTS = Object\.freeze\(\{[\s\S]*?\n\}\);/) || [''])[0].matchAll(/^  (\w+): Object\.freeze/gm)].map(m => m[1]);
+  const noRig = draftIds.filter(id => !new RegExp(`^  ${id}: \\{ body:`, 'm').test(fx));
+  check('案の段階の子にも待機アニメのリグがある', draftIds.length > 0 && noRig.length === 0, noRig.join('・') || draftIds.join('・'));
+}
 
 // 模様テストも同じ理由で全種を並べる
 check('マスモン模様カスタムテストも所持を問わず全種を並べる',
@@ -154,15 +168,19 @@ const seed = () => {
       opened: !!document.querySelector('[data-monster-check-debug]'),
       options: document.querySelectorAll('[data-monster-check-option]').length,
       ids: [...document.querySelectorAll('[data-monster-check-option]')].map(b => b.getAttribute('data-monster-check-option')),
-      needsFix: [...document.querySelectorAll('[data-monster-check-option]')].filter(b => /要確認/.test(b.textContent)).length,
+      needsFixIds: [...document.querySelectorAll('[data-monster-check-option]')].filter(b => /要確認/.test(b.textContent)).map(b => b.getAttribute('data-monster-check-option')),
       hasScroller: !!document.querySelector('.mh-scroll'),
     }));
     check('新モンスター確認の画面が開く', list.opened);
-    check('全種が並ぶ(所持も解放も関係なく)', list.options === MONSTERS.length,
-      `画面 ${list.options}種 / 実データ ${MONSTERS.length}種`);
-    const missing = MONSTERS.map(m => m.id).filter(id => !list.ids.includes(id));
+    check('全種が並ぶ(所持も解放も関係なく・案の段階の子も)', list.options === MONSTERS.length + DRAFTS.length,
+      `画面 ${list.options}種 / 実データ ${MONSTERS.length}種＋案 ${DRAFTS.length}種`);
+    const missing = [...MONSTERS, ...DRAFTS].map(m => m.id).filter(id => !list.ids.includes(id));
     check('欠けているモンスターがいない', missing.length === 0, missing.join(', '));
-    check('いまの全種は「足りない項目」が無い', list.needsFix === 0, `${list.needsFix}種に要確認`);
+    const draftIds = new Set(DRAFTS.map(m => m.id));
+    const realNeedsFix = list.needsFixIds.filter(id => !draftIds.has(id));
+    check('いまの全種(案の段階の子を除く)は「足りない項目」が無い', realNeedsFix.length === 0, `${realNeedsFix.join(', ')} に要確認`);
+    check('案の段階の子は「要確認」として並ぶ(足りない項目が見える)',
+      DRAFTS.every(m => list.needsFixIds.includes(m.id)), DRAFTS.map(m => m.id).join(', '));
     check('一覧が縦スクロールできる', list.hasScroller);
 
     // --- 詳細(タブ) ---

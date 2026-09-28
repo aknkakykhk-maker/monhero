@@ -3808,7 +3808,12 @@ function MonsterHeroGame() {
   // モンヒロビートが6レーンになった知らせ(2026-09-26・ユーザー指示「したらストーリーも作って」)。
   // ビートPの知らせと同じく、イベントとは関係なくHOMEで1度だけ流す。見たかどうかも同じ保存キーの配列へ入れる
   const RHYTHM_SIX_LANE_STORY_ID = 'rhythm_six_lane_2026_09_26';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID];
+  // ビートPアップキャンペーンと新しい仲間の先行公開の知らせ(2026-09-28・ユーザー指示「ストーリーも作って」)。
+  // **キャンペーンの期間中だけ**、HOMEで1度だけ流す(終わったあとは回想から見られる)。
+  // 見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)。
+  // キャンペーンの id と会話の id は同じにしてある(RHYTHM_EVENT_POINT_CAMPAIGNS)
+  const BEAT_POINT_UP_STORY_ID = 'beat_point_up_2026_09_28';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -3898,8 +3903,13 @@ function MonsterHeroGame() {
       const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
       // 6レーンの知らせ。ほかの会話が並んでいれば、そちらが終わったあとの見回りで並ぶ
       const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
+      // ビートPアップキャンペーンの知らせ。期間中かどうかは見回りのたびに数え直す(CLAUDE.md ⑥-4)。
+      // 期間の決まった「いまの話」なので、ほかのお知らせの会話より先に流す(開催中のイベントの会話よりは後)
+      const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
+      const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
       if (!liveEvent) {
-        if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+        if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
+        else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
         else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
@@ -3908,6 +3918,7 @@ function MonsterHeroGame() {
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
       }
+      else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
       else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
       else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
@@ -6326,6 +6337,7 @@ function MonsterHeroGame() {
     symphonyThanksSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_THANKS_STORY_ID),
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
+    beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -13248,6 +13260,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
                         style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
                       {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                      {/* 本文の下に並べる見本の絵(2026-09-28・ユーザー提案「こんな感じに染色イメージを出したりしたらどう？」)。
+                          gallery:[{ caption, image }] と書いたときだけ、見出しと絵を順に出す。
+                          読めなかった絵は黙って消す(上の image と同じ)。助手の告知には出さない(告知は image の1枚だけ) */}
+                      {(Array.isArray(c.gallery)?c.gallery:[]).filter(g=>g&&typeof g.image==='string'&&g.image).map((g,j)=><figure key={`g${j}`} data-changelog-gallery style={{margin:'10px 0 0'}}>
+                        {g.caption&&<figcaption style={{fontWeight:900,margin:'0 0 4px'}}>■ {g.caption}</figcaption>}
+                        <img src={g.image} alt={g.caption||`${c.title}の見本`} onError={e=>{e.currentTarget.style.display='none';}}
+                          loading="lazy" decoding="async" style={{width:'100%',borderRadius:'12px'}}/>
+                      </figure>)}
                       {/* 外に出るリンク(2026-09-14・よそのゲームの曲を入れたときの案内用)。
                           https だけ通し、target="_blank" と rel="noopener noreferrer" を必ず付ける
                           (開いた先からこのページを触られないようにするため)。

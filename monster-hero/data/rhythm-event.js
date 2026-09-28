@@ -170,6 +170,41 @@ const rhythmEventPointBaseForScore = (score) => {
 //   イベント中の計算(通常曲1.0倍・対象曲1.5倍)は変えない。
 //   ★開催中かどうかは呼ばれるたびに数え直す(読み込み時に決めない・CLAUDE.md ⑥-4)。
 const RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER = 0.2;
+
+// ===== ビートPアップキャンペーン(2026-09-28) =====
+// 2026-09-28・ユーザー指示「今日の18時から来週の月曜までビートポイントアップキャンペーンみたいので
+// 通常の5倍もらえるイベントを実施」。ランキングは開かず、ビートPの貯まり方だけを上げる。
+//   boost … イベントが無い日の貯まり方(上の0.2)に掛ける倍率。5なら「いつもの5倍」で、
+//           ちょうどランキングイベント開催中(通常曲)と同じ貯まり方になる(100万点で40P→200P)
+// ★ランキングイベント(kind:'limited')と重なったときは、イベントの計算を使う(重ねがけしない)。
+// ★終わりは週の区切り(月曜5:00)に合わせる。ランキングイベントと同じ決めごと。
+// ★開催中かどうかは呼ばれるたびに数え直す(読み込み時に決めない・CLAUDE.md ⑥-4)。
+// id はイベント会話の既読の記録にも使うので、あとから変えない。
+const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
+  // ユグドラシル・メルホイップをビートP交換所で先行公開するのに合わせた、貯めるための1週間
+  Object.freeze({
+    id: 'beat_point_up_2026_09_28',
+    name: 'ビートPアップキャンペーン',
+    startAt: '2026-09-28T18:00:00+09:00',
+    endAt: '2026-10-05T05:00:00+09:00',
+    boost: 5,
+  }),
+]);
+const rhythmEventPointCampaignAt = (nowMs) => {
+  const now = (nowMs === null || nowMs === undefined || nowMs === '') ? NaN : Number(nowMs);
+  if (!Number.isFinite(now)) return null;
+  return RHYTHM_EVENT_POINT_CAMPAIGNS.find(campaign => {
+    const startMs = Date.parse(campaign.startAt);
+    const endMs = Date.parse(campaign.endAt);
+    const boost = Number(campaign.boost);
+    return Number.isFinite(startMs) && Number.isFinite(endMs) && Number.isFinite(boost) && boost > 0
+      && now >= startMs && now < endMs;
+  }) || null;
+};
+// ビートPが「いつもの1/5」ではなく満額で貯まる時間か(ランキングイベント開催中か、キャンペーン中か)。
+// ラッキーラッシュのおまけビートPも、これを見て1/5にするかどうかを決める
+const rhythmEventPointFullRateAt = (nowMs) => !!(rhythmLimitedEventAt(nowMs) || rhythmEventPointCampaignAt(nowMs));
+
 const rhythmEventPointAwardAt = (nowMs, songId, score) => {
   const published = (typeof RHYTHM_DEMO_SONG_IDS !== 'undefined' && Array.isArray(RHYTHM_DEMO_SONG_IDS)) ? RHYTHM_DEMO_SONG_IDS : [];
   const id = typeof songId === 'string' ? songId : '';
@@ -177,6 +212,13 @@ const rhythmEventPointAwardAt = (nowMs, songId, score) => {
   const event = rhythmLimitedEventAt(nowMs);
   const base = rhythmEventPointBaseForScore(score);
   if (!event) {
+    const campaign = rhythmEventPointCampaignAt(nowMs);
+    if (campaign) {
+      const boost = Number(campaign.boost);
+      // 0.2×boost を先に掛けると2進数の誤差で1つ少なく切り捨てることがあるので、boost倍してから5で割る
+      return Object.freeze({ eventId:null, campaignId:campaign.id, campaign:true, boost, base, target:false, offEvent:false,
+        multiplier:RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER * boost, amount:Math.floor(base * boost / 5) });
+    }
     const multiplier = RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER;
     // 0.2 は2進数で割り切れないので、先に5で割って切り捨てる(floor(base×0.2)と同じ値)
     return Object.freeze({ eventId:null, base, target:false, offEvent:true, multiplier, amount:Math.floor(base / 5) });
@@ -207,6 +249,18 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
   Object.freeze({ id:'hero_proof_shard', name:'勇者の証片', emoji:'🎖️', kind:'item', itemId:'hero_proof_shard', grantAmount:1, unit:'個', cost:500 }),
   Object.freeze({ id:'transcend_fruit_rainbow', name:'虹の超越の実', emoji:'🍇', kind:'item', itemId:'transcend_fruit_rainbow', grantAmount:1, unit:'個', cost:5000 }),
   Object.freeze({ id:'hero_proof', name:'勇者の証', emoji:'🏅', kind:'item', itemId:'hero_proof', grantAmount:1, unit:'個', cost:10000 }),
+]);
+// 近日公開予定の商品(2026-09-28 ユーザー指示「ビートポイントの方にも追加で、どっちも1500P」)。
+// ★同じ日に「円盤石交換のビートポイントは仮に10000に変更しといて」と指示があり、10,000Pにした(仮の値)。
+// ユグドラシル・メルホイップの円盤石。モンスター本体(能力値・技)がまだ無いので、
+// **交換の一覧(RHYTHM_EVENT_POINT_SHOP_OFFERS)には入れず**、ここで予告として並べるだけにする。
+// 交換ボタンは出さず「近日追加」と出る。rhythmEventPointExchangePreview も kind:'disc' をはじく。
+// 正式実装のときは、円盤石を渡す交換(解放済みモンスターへの追加)を作ってから交換の一覧へ移す。
+// 絵はここに書かない。画面が monsterId と同じidの円盤石(data/breeder.js の BREEDER_MARKET_ITEMS)から引く
+// (このファイルは検査で単独で読まれることがあり、breeder.js の定数を参照すると落ちるため)。
+const RHYTHM_EVENT_POINT_SHOP_COMING_SOON = Object.freeze([
+  Object.freeze({ id:'disc_yggdrasil', name:'ユグドラシルの円盤石', kind:'disc', monsterId:'Yggdrasil', grantAmount:1, unit:'個', cost:10000, available:false }),
+  Object.freeze({ id:'disc_mel_whip', name:'メルホイップの円盤石', kind:'disc', monsterId:'MelWhip', grantAmount:1, unit:'個', cost:10000, available:false }),
 ]);
 const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1 } = {}) => {
   const max = Number.MAX_SAFE_INTEGER;

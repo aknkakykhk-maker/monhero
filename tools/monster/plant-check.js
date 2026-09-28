@@ -47,7 +47,7 @@ const checks = [
   ['Plant円盤石画像参照', /const PLANT_DISC_ICON = "images\/disc-icons\/plant-disc\.PNG\?v=[0-9a-f]{12}"/.test(breeder)],
   ['プラントの通常アイコンは1pt', /id:'plant_icon', name:"プラントのアイコン", type:'icon', icon:PLANT_IMG, cost:1/.test(breeder)],
   ['プラントの円盤石アイコンは1pt', /id:'plant_disc_icon', name:"プラントの円盤石アイコン", type:'icon', icon:PLANT_DISC_ICON, cost:1/.test(breeder)],
-  ['プラントの円盤石は購入可能・1500ダイヤ', /id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:1500/.test(breeder) && !/id:'Plant'[^\n]*available:false/.test(breeder)],
+  ['プラントの円盤石は購入可能・150000ダイヤ', /id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:150000/.test(breeder) && !/id:'Plant'[^\n]*available:false/.test(breeder)],
   ['円盤石購入は既存キーへ解放IDを保存', game.includes("if (item.type === 'disc')") && game.includes("storeSet('mh_unlocked_monsters', next, false)")],
   ['購入済み円盤石の二重購入を防止', game.includes("if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);") && game.includes('if (isMarketItemOwned(item)) return;')],
   ['既存円盤石商品の価格を維持', [
