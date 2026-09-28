@@ -40,6 +40,27 @@ const {RHYTHM_HIT_EFFECT_COLORS,RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RH
     &&(body.match(/createLinearGradient/g)||[]).length===1&&body.indexOf('createLinearGradient')<body.indexOf('const edge=points=>'));
 }
 
+// --- フリックの炎の羽(2026-09-28)。canvas 版と CSS 版で、長さ・傾き・色・絵がずれないこと ---
+{
+  const plumeCtx={};vm.createContext(plumeCtx);
+  vm.runInContext(`${source}\nthis.out={RHYTHM_FLICK_PLUME,rhythmPaintFlickPlume};`,plumeCtx);
+  const {RHYTHM_FLICK_PLUME:P}=plumeCtx.out;
+  const flat=source.replace(/\s+/g,'');
+  check('炎の羽の長さ・傾き・色を1か所(RHYTHM_FLICK_PLUME)にまとめている',!!P&&P.ms>0&&P.tilt&&P.rgb&&['up','left','right'].every(d=>Number.isFinite(P.tilt[d])&&/^\d+,\d+,\d+$/.test(P.rgb[d])));
+  check('canvas 版は RHYTHM_FLICK_PLUME と共通の描き方(rhythmPaintFlickPlume)を使う',/constHIT_PLUME_MS=RHYTHM_FLICK_PLUME\.ms,HIT_PLUME_TILT=RHYTHM_FLICK_PLUME\.tilt,HIT_PLUME_RGB=RHYTHM_FLICK_PLUME\.rgb;/.test(flat)&&flat.includes('rhythmPaintFlickPlume(s.ctx,'));
+  check('CSS 版は同じ絵を演奏の前に1回だけ作って渡す',/for\(const\[dir,rgb\]ofObject\.entries\(RHYTHM_FLICK_PLUME\.rgb\)\)\{consturl=rhythmFlickPlumeImage\(rgb\)[,;]/.test(flat));
+  const cssFor=dir=>{const m=source.match(new RegExp(`\\[data-rhythm-hit-effect\\]\\[data-hit-flick="${dir}"\\]\\{--rhythm-plume-tilt:(-?[\\d.]+)deg;--rhythm-plume-img:var\\(--rhythm-plume-${dir}\\);(?:--rhythm-wisp-img:var\\(--rhythm-wisp-${dir}\\);)?--rhythm-plume-rgb:([\\d,]+)\\}`));return m?{tilt:Number(m[1]),rgb:m[2]}:null;};
+  check('CSS 版の傾き・色が RHYTHM_FLICK_PLUME と同じ',['up','left','right'].every(d=>{const c=cssFor(d);return c&&c.tilt===P.tilt[d]&&c.rgb===P.rgb[d];}));
+  check('CSS 版の炎と手前の光の長さが RHYTHM_FLICK_PLUME.ms と同じ',new RegExp(`>em\\{animation:mhRhythmHitPlume${P.ms}ms`).test(flat)&&new RegExp(`>small\\{animation:mhRhythmHitFloor${P.ms}ms`).test(flat));
+  check('器に炎(em)と手前の光(small)がある(押すたびに作らない)',flat.includes("item.appendChild(document.createElement('em'));")&&flat.includes("item.appendChild(document.createElement('small'));"));
+  // 2026-09-28: 「動きが硬い・毎回同じ形」で、炎の舌をフリックごとの乱数で飛ばす形にした。canvas 版・CSS 版とも同じ決め方を使う
+  check('炎の舌の飛び方は canvas 版・CSS 版とも rhythmFlickWisps で決める(フリックごとの乱数)',flat.includes('rhythmFlickWisps(h.seed,RHYTHM_FLICK_PLUME.wisps)')&&flat.includes('rhythmFlickWisps((Math.random()*4294967296)>>>0,RHYTHM_FLICK_PLUME.cssWisps)')&&/plume,seed:plume\?\(Math\.random\(\)\*4294967296\)>>>0:0/.test(flat));
+  {const {rhythmFlickWisps:W}=(()=>{const c={};vm.createContext(c);vm.runInContext(`${source}\nthis.out={rhythmFlickWisps};`,c);return c.out;})();
+    const a=W(12345,14),b=W(12345,14),d=W(999,14);
+    check('同じ seed なら同じ並び・ちがう seed ならちがう形になる',JSON.stringify(a)===JSON.stringify(b)&&JSON.stringify(a)!==JSON.stringify(d)&&a.length===14&&a.every(w=>w.life>0&&w.dist>0&&w.len>0&&w.wid>0));}
+  check('終点フリックも炎を出す',/constflickHit=rhythmNoteVisualType\(note\)==='FLICK'\?\(rhythmFlickDir\(note\)\|\|'up'\):\(note\.endFlick\?'up':''\);/.test(game.replace(/\s+/g,'')));
+}
+
 // --- 音 ---
 // 光の位置は判定ラインの高さの道幅で出す(2026-09-27)。1(=演奏の枠の下端)で出すと、道はラインの高さで枠の約8割に細いので、
 // 外側のレーンほど光が外へずれて道の外まではみ出した(コマ送りで見つけた)

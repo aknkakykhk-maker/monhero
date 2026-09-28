@@ -19506,22 +19506,44 @@ const installRhythmGeometryStyles=()=>{
       14%{opacity:1;transform:scale(1) rotate(0deg)}
       100%{opacity:0;transform:scale(1.25,.8) rotate(4deg)}}
     [data-rhythm-play-area][data-rhythm-effect="LOW"] [data-rhythm-hit-effect]>s{display:none}
-    /* フリックを取ったとき、払った向きへ飛ぶ炎の筋(2026-09-27・参考動画)。先端(右のはし)を判定ラインの位置に置き、
-       向きへ回してから進める。1枚の背景を transform と opacity で動かすだけ(ぼかし・影は使わない) */
-    [data-rhythm-hit-effect]>em{position:absolute;display:block;opacity:0;left:50%;top:0;width:180px;height:44px;margin:-22px 0 0 -180px;
-      pointer-events:none;font-style:normal;transform-origin:100% 50%;border-radius:999px;
-      background:radial-gradient(60% 50% at 88% 50%,rgba(255,251,235,1) 0%,rgba(253,224,71,.9) 26%,rgba(251,146,60,.7) 52%,rgba(251,146,60,0) 100%),
-        linear-gradient(90deg,rgba(251,146,60,0) 0%,rgba(249,115,22,.55) 55%,rgba(253,186,116,.85) 100%) center/100% 34% no-repeat}
-    [data-rhythm-hit-effect][data-hit-flick="up"]{--rhythm-flick-angle:-90deg}
-    [data-rhythm-hit-effect][data-hit-flick="right"]{--rhythm-flick-angle:-35deg}
-    [data-rhythm-hit-effect][data-hit-flick="left"]{--rhythm-flick-angle:-145deg}
+    /* フリックを取ったとき、払った向きへ吹き上がる炎の羽(2026-09-28・ユーザーが送ったアワーノーツの動画)。canvas 版の drawPlume と同じ絵
+       (rhythmPaintFlickPlume で1回だけ焼いた画像)を、根元を判定ラインに置いて向きへ傾ける。動かすのは transform と opacity だけ */
+    [data-rhythm-hit-effect]>em{position:absolute;display:block;opacity:0;left:50%;bottom:-4px;width:max(96px,190%);height:clamp(180px,80vh,720px);
+      transform:translateX(-50%) rotate(var(--rhythm-plume-tilt,0deg));transform-origin:50% 100%;pointer-events:none;font-style:normal;
+      background:var(--rhythm-plume-img,none) center bottom/100% 100% no-repeat}
+    /* 手前のレーンの光: 判定ラインから画面の下まで、レーンの形(手前ほど広い台形)でノーツの色に光る */
+    [data-rhythm-hit-effect]>small{position:absolute;display:block;opacity:0;top:0;left:-100%;width:300%;height:var(--mh-below-line-px,22vh);
+      pointer-events:none;clip-path:var(--rhythm-floor-clip,none);
+      background:linear-gradient(to bottom,rgba(var(--rhythm-plume-rgb,244,114,182),.62),rgba(var(--rhythm-plume-rgb,244,114,182),.18))}
+    [data-rhythm-hit-effect][data-hit-flick="up"]{--rhythm-plume-tilt:0deg;--rhythm-plume-img:var(--rhythm-plume-up);--rhythm-wisp-img:var(--rhythm-wisp-up);--rhythm-plume-rgb:244,114,182}
+    [data-rhythm-hit-effect][data-hit-flick="right"]{--rhythm-plume-tilt:34deg;--rhythm-plume-img:var(--rhythm-plume-right);--rhythm-wisp-img:var(--rhythm-wisp-right);--rhythm-plume-rgb:163,230,53}
+    [data-rhythm-hit-effect][data-hit-flick="left"]{--rhythm-plume-tilt:-34deg;--rhythm-plume-img:var(--rhythm-plume-left);--rhythm-wisp-img:var(--rhythm-wisp-left);--rhythm-plume-rgb:251,146,60}
+    /* 炎の舌: 根元から向きへ進みながら伸びて細くなり、消える。1本ずつの飛び方は JS が CSS 変数で渡す(canvas 版と同じ決め方) */
+    [data-rhythm-hit-effect]>ins{position:absolute;display:block;opacity:0;left:calc(50% + var(--wx0,0%));bottom:-2px;width:var(--ww,34px);height:var(--wl,110px);
+      margin-left:calc(var(--ww,34px) / -2);transform-origin:50% 100%;pointer-events:none;text-decoration:none;
+      /* CSS 版は光を足し算で重ねられないので、同じ絵を2枚重ねて明るさを canvas 版へ寄せる(合成の重い重ね方は使わない) */
+      background:var(--rhythm-wisp-img,none) center/100% 100% no-repeat,var(--rhythm-wisp-img,none) center/100% 100% no-repeat}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="up"]>ins,
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="right"]>ins,
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="left"]>ins{animation:mhRhythmHitWisp var(--wt,380ms) cubic-bezier(.25,.7,.35,1) var(--wd,0ms) 1 both}
+    @keyframes mhRhythmHitWisp{
+      0%{opacity:0;transform:translate(0,0) rotate(var(--wa0,0deg)) scale(.75,.55)}
+      12%{opacity:1}
+      100%{opacity:0;transform:translate(calc(var(--mh-above-line-px,300px) * var(--wsx,0)),calc(var(--mh-above-line-px,300px) * var(--wsy,-.5))) rotate(var(--wa1,0deg)) scale(.55,1.45)}}
     [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="up"]>em,
     [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="right"]>em,
-    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="left"]>em{animation:mhRhythmHitStreak var(--rhythm-hit-ms,340ms) cubic-bezier(.16,.9,.3,1) 1}
-    @keyframes mhRhythmHitStreak{
-      0%{opacity:0;transform:rotate(var(--rhythm-flick-angle,-90deg)) translateX(30px) scaleX(.5)}
-      12%{opacity:1;transform:rotate(var(--rhythm-flick-angle,-90deg)) translateX(80px) scaleX(1)}
-      100%{opacity:0;transform:rotate(var(--rhythm-flick-angle,-90deg)) translateX(190px) scaleX(1.2)}}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="left"]>em{animation:mhRhythmHitPlume 460ms linear 1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="up"]>small,
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="right"]>small,
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"][data-hit-flick="left"]>small{animation:mhRhythmHitFloor 460ms linear 1}
+    /* canvas 版と同じ: 0.15秒(32%)で大きくなり、42%まで明るさを保って消える */
+    /* 炎の体は最初の一瞬だけ薄く出して、舌のあいだを埋める(canvas 版と同じ: 12%で .62、50%で消える) */
+    @keyframes mhRhythmHitPlume{
+      0%{opacity:0;transform:translateX(-50%) rotate(var(--rhythm-plume-tilt,0deg)) scale(.85,.45)}
+      12%{opacity:.62;transform:translateX(-50%) rotate(var(--rhythm-plume-tilt,0deg)) scale(.92,.7)}
+      50%{opacity:0;transform:translateX(-50%) rotate(var(--rhythm-plume-tilt,0deg)) scale(1,1)}
+      100%{opacity:0;transform:translateX(-50%) rotate(var(--rhythm-plume-tilt,0deg)) scale(1,1)}}
+    @keyframes mhRhythmHitFloor{0%{opacity:.95}42%{opacity:.95}100%{opacity:0}}
     @keyframes mhRhythmHitCore{
       0%{opacity:0;transform:scale(.28,.4)}
       12%{opacity:1;transform:scale(1.02,1.9)}
@@ -19812,6 +19834,95 @@ const rhythmJudgmentIsPrecise=(judgment,deltaMs)=>{
 const RHYTHM_HIT_EFFECT_COLORS=Object.freeze({MARVELOUS:'#7dd3fc',EXCELLENT:'#38bdf8',GREAT:'#818cf8',GOOD:'#a3e635',BAD:'#94a3b8'});
 const rhythmHitEffectColor=judgment=>RHYTHM_HIT_EFFECT_COLORS[String(judgment||'')]||rhythmJudgmentColor(judgment);
 // プレイエリアの中に、使い回すエフェクトの入れ物を用意する。すでにあれば作り直さない。
+// ===== フリックを取ったときの「炎の羽」(2026-09-28・ユーザーが送ったアワーノーツの動画「フリック後のエフェクトがだいぶちがう」) =====
+// 見本: 判定ラインから払った向きへ、画面の高さの6〜7割まで大きな炎が吹き上がる。根元は白く、先はノーツの色で、ふちはほどけた羽のよう。
+// 0.2秒ほどで大きくなり、0.45秒ほどで消える。同時に、払ったレーンの判定ラインより手前(下)がその色で光る。
+// 色はノーツの色にそろえる(上=ピンク・左=オレンジ・右=黄緑。ユーザーが見本を見て選んだ)。上向きの絵を1色につき1回だけ焼き、払った向きへ傾けて貼る。
+// 終点フリック(ホールド・スライドの最後で払う)も上向きの炎を出す(同じくユーザー指示)。
+// canvas 版(WebGL のとき・RHYTHM_CANVAS_RENDERER.drawPlume)と CSS 版([data-rhythm-hit-effect]>em)は、同じ絵・同じ長さ・同じ傾きで描く
+const RHYTHM_FLICK_PLUME=Object.freeze({
+  ms:460,w:160,h:420,wispW:48,wispH:150,wisps:14,sparks:10,cssWisps:6,
+  tilt:Object.freeze({up:0,left:-34,right:34}),
+  rgb:Object.freeze({up:'244,114,182',left:'251,146,60',right:'163,230,53'}),
+});
+// 炎の絵を c(左上が原点・幅 W・高さ H)へ描く。根元が下の中央、先が上。同じ乱数の並びなので、いつ描いても同じ絵になる
+const rhythmPaintFlickPlume=(c,W,H,rgb)=>{
+  let seed=0x2f1ce;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+  c.globalCompositeOperation='lighter';
+  // 芯: 下から上へ、やわらかい光の玉を重ねる。下ほど太く白く、上ほど細くノーツの色になり、先で消える
+  const spine=u=>W/2+Math.sin(u*6.2)*9*u;
+  for(let i=0;i<46;i++){
+    const u=i/45,y=H-16-u*(H-36),x=spine(u)+(rand()-.5)*6*u,r=(26-19*u)*(.8+.4*rand());
+    const g=c.createRadialGradient(x,y,0,x,y,r);
+    const white=Math.max(0,1-u*2.2);
+    g.addColorStop(0,`rgba(255,255,255,${(.42*white+.08).toFixed(3)})`);g.addColorStop(.4,`rgba(${rgb},${(.3*(1-u*.6)).toFixed(3)})`);g.addColorStop(1,`rgba(${rgb},0)`);
+    c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
+  }
+  // 筆でなぞったような長い筋。根元から先へ、少しうねりながら伸びる。白い筋とノーツの色の筋を混ぜる
+  c.lineCap='round';
+  for(let i=0;i<42;i++){
+    const u0=rand()*.35,u1=Math.min(1,u0+.35+.55*rand()),off=(rand()-.5)*(38-20*u0),white=rand()<.35;
+    const seg=8,pts=[];for(let k=0;k<=seg;k++){const u=u0+(u1-u0)*k/seg;pts.push([spine(u)+off*(1-u*.7)+Math.sin(u*11+i)*3,H-16-u*(H-36)]);}
+    const grad=c.createLinearGradient(0,pts[0][1],0,pts[seg][1]);
+    grad.addColorStop(0,white?'rgba(255,255,255,.55)':`rgba(${rgb},.45)`);grad.addColorStop(1,`rgba(${rgb},0)`);
+    c.strokeStyle=grad;c.lineWidth=(1.2+4*rand())*(1-u0*.8);
+    c.beginPath();c.moveTo(pts[0][0],pts[0][1]);for(let k=1;k<=seg;k++)c.lineTo(pts[k][0],pts[k][1]);c.stroke();
+  }
+  // 羽: 芯から外へ斜め上に伸びる細い筋(ふちがほどけて見える)
+  for(let i=0;i<40;i++){
+    const u=.06+.88*rand(),y=H-16-u*(H-36),x=spine(u),side=rand()<.5?-1:1,len=(14+38*rand())*(1-u*.45);
+    c.strokeStyle=`rgba(${rgb},${((.2+.3*rand())*(1-u*.4)).toFixed(3)})`;c.lineWidth=1+2.2*rand()*(1-u);
+    c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+side*len*.5,y-len*.15,x+side*len,y-len*.8);c.stroke();
+  }
+  // きらめきの点
+  for(let i=0;i<26;i++){
+    const u=rand(),y=H-16-u*(H-50),x=W/2+(rand()-.5)*(76-40*u),r=.8+2*rand();
+    c.fillStyle=`rgba(255,255,255,${(.5+.5*rand()).toFixed(3)})`;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();
+  }
+};
+// ===== 炎の舌(2026-09-28・ユーザー「自然さがない」「動きが硬い・毎回同じ形・生きてる動きに感じない」) =====
+// 1枚の炎の絵が伸びて消えるだけだと硬く見えたので、小さな炎の舌をたくさん、少しずつ違う向き・速さ・長さで飛ばす。
+// 舌はゆらぎながら先へ伸び、細くなってちぎれるように消える。火の粉はもっと速く遠くまで飛ぶ。
+// 飛び方はフリックごとの乱数(seed)で決めるので、毎回ちがう形になる。同じ seed なら毎フレーム同じ並びになる(毎フレーム Math.random を引かない)
+// 炎の舌の絵: 下(根元)が白く太く、上(先)へ細くノーツの色になって消える。幅 W・高さ H
+const rhythmPaintFlickWisp=(c,W,H,rgb)=>{
+  c.globalCompositeOperation='lighter';
+  for(let k=0;k<=26;k++){
+    const v=k/26,y=H-8-v*(H-18),x=W/2+Math.sin(v*3.2)*3.5*v,r=(W*.36)*(1-v*.78);
+    const g=c.createRadialGradient(x,y,0,x,y,r),white=Math.max(0,1-v*2.1);
+    g.addColorStop(0,`rgba(255,255,255,${(.5*white+.08).toFixed(3)})`);g.addColorStop(.45,`rgba(${rgb},${(.3*(1-v*.5)).toFixed(3)})`);g.addColorStop(1,`rgba(${rgb},0)`);
+    c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
+  }
+};
+// フリック1回ぶんの舌の飛び方。angle … 向きからのずれ(度) / x0 … 根元の横位置(レーン幅の倍率) / delay・life … ms /
+// dist … 進む長さ(判定ラインの高さの倍率) / len・wid … 舌の長さ・太さ(px) / curl … 進むあいだに曲がる角度(度) / phase … ゆらぎの位相
+const rhythmFlickWisps=(seed,count)=>{
+  let s=(seed>>>0)||1;const r=()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};
+  const out=[];
+  for(let i=0;i<count;i++){
+    const centerish=(r()+r())/2;
+    out.push({angle:(centerish-.5)*34,x0:(r()-.5)*.8,delay:r()*80,life:230+r()*200,dist:.3+.55*r()*r()+.15*(i%3===0?1:0),
+      len:56+r()*96,wid:24+r()*26,curl:(r()-.5)*40,phase:r()*Math.PI*2});
+  }
+  return out;
+};
+// CSS 版で使う炎の絵(画像の URL)。1色につき1回だけ作る。作れない環境では空文字(炎だけ出ない)
+const rhythmFlickPlumeImages=new Map();
+const rhythmFlickImage=(kind,rgb)=>{
+  const key=`${kind}:${rgb}`;
+  if(rhythmFlickPlumeImages.has(key))return rhythmFlickPlumeImages.get(key);
+  let url='';
+  try{
+    const W=kind==='wisp'?RHYTHM_FLICK_PLUME.wispW:RHYTHM_FLICK_PLUME.w,H=kind==='wisp'?RHYTHM_FLICK_PLUME.wispH:RHYTHM_FLICK_PLUME.h;
+    const canvas=document.createElement('canvas'),k=1.5;
+    canvas.width=Math.round(W*k);canvas.height=Math.round(H*k);
+    const c=canvas.getContext('2d');
+    if(c){c.scale(k,k);(kind==='wisp'?rhythmPaintFlickWisp:rhythmPaintFlickPlume)(c,W,H,rgb);url=canvas.toDataURL('image/png');}
+  }catch(e){url='';}
+  rhythmFlickPlumeImages.set(key,url);
+  return url;
+};
+const rhythmFlickPlumeImage=rgb=>rhythmFlickImage('plume',rgb);
 const rhythmEnsureHitEffects=area=>{
   if(!area||typeof document==='undefined')return null;
   let layer=area.querySelector('[data-rhythm-hit-layer]');
@@ -19822,6 +19933,12 @@ const rhythmEnsureHitEffects=area=>{
     area.appendChild(layer);
   }
   layer.innerHTML='';
+  // フリックの炎の絵(3色)。演奏の前に1回だけ作って、器の CSS 変数へ渡す(演奏の途中で作らない)
+  for(const [dir,rgb] of Object.entries(RHYTHM_FLICK_PLUME.rgb)){
+    const url=rhythmFlickPlumeImage(rgb),wisp=rhythmFlickImage('wisp',rgb);
+    if(url)layer.style.setProperty(`--rhythm-plume-${dir}`,`url("${url}")`);
+    if(wisp)layer.style.setProperty(`--rhythm-wisp-${dir}`,`url("${wisp}")`);
+  }
   layer._rhythmPool=[];
   layer._rhythmNext=0;
   for(let index=0;index<RHYTHM_HIT_EFFECT_POOL;index++){
@@ -19832,7 +19949,11 @@ const rhythmEnsureHitEffects=area=>{
     // はじける粒。飛ぶ向きはCSSの nth-of-type で決めてあるので、ここでは数だけ揃える
     for(let spark=0;spark<RHYTHM_HIT_SPARK_COUNT;spark++)item.appendChild(document.createElement('u'));
     item.appendChild(document.createElement('s'));   // 白い十字の光(2026-09-26)
-    item.appendChild(document.createElement('em'));  // フリックの炎の筋(2026-09-27)
+    item.appendChild(document.createElement('em'));  // フリックの炎の羽(2026-09-27 に炎の筋、2026-09-28 に炎の羽へ)
+    item.appendChild(document.createElement('small'));// フリックを取ったとき、判定ラインより手前のレーンを光らせる(2026-09-28)
+    // フリックの炎の舌(2026-09-28・「動きが硬い・毎回同じ形」)。飛び方はフリックごとに JS が CSS 変数で渡す
+    item._rhythmWisps=[];
+    for(let wisp=0;wisp<RHYTHM_FLICK_PLUME.cssWisps;wisp++){const el=document.createElement('ins');item.appendChild(el);item._rhythmWisps.push(el);}
     layer.appendChild(item);
     layer._rhythmPool.push(item);
   }
@@ -19907,6 +20028,25 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
   item.dataset.hitJudgment=monster?'':String(judgment||'');
   item.dataset.hitPrecise=rainbowHit?'1':'';
   item.dataset.hitFlick=monster?'':String(flick||'');
+  // 手前のレーンの光は、判定ラインから画面の下へ向かって広がる台形。要素はレーン幅の3倍にしてあり、その中で形を切り抜く。
+  // 下の辺は道の投影(rhythmProjectionScale)で広げ、道の中心から外へずらす(canvas 版の drawPlume と同じ形)
+  if(flick&&!monster){
+    const line=Math.max(.05,Math.min(.99,Number(RHYTHM_JUDGMENT_LINE_Y.ratio)||.8)),base=rhythmProjectionScale(line),k=base>0?rhythmProjectionScale(1)/base:1;
+    const c=Math.max(0,Math.min(1,Number(centerRatio)||.5)),shift=(c-.5)*(k-1)/Math.max(.001,width)*100/3;
+    const pct=v=>`${(Math.max(-50,Math.min(150,v))).toFixed(2)}%`,half=100/6;
+    item.style.setProperty('--rhythm-floor-clip',`polygon(${pct(50-half)} 0,${pct(50+half)} 0,${pct(50+half*k+shift)} 100%,${pct(50-half*k+shift)} 100%)`);
+    // 炎の舌。canvas 版と同じ乱数の決め方(rhythmFlickWisps)で、向き・根元・遅れ・寿命・進む長さ・曲がり方を1本ずつ変える
+    const tilt=RHYTHM_FLICK_PLUME.tilt[flick]||0,wisps=rhythmFlickWisps((Math.random()*4294967296)>>>0,RHYTHM_FLICK_PLUME.cssWisps);
+    (item._rhythmWisps||[]).forEach((el,i)=>{
+      const w=wisps[i];if(!w)return;
+      const a0=tilt+w.angle,a1=a0+w.curl,rad=a1*Math.PI/180,st=el.style;
+      st.setProperty('--wx0',`${(w.x0*100).toFixed(1)}%`);
+      st.setProperty('--wsx',(Math.sin(rad)*w.dist).toFixed(3));st.setProperty('--wsy',(-Math.cos(rad)*w.dist).toFixed(3));
+      st.setProperty('--wa0',`${a0.toFixed(1)}deg`);st.setProperty('--wa1',`${a1.toFixed(1)}deg`);
+      st.setProperty('--wl',`${Math.round(w.len)}px`);st.setProperty('--ww',`${Math.round(w.wid)}px`);
+      st.setProperty('--wt',`${Math.round(w.life)}ms`);st.setProperty('--wd',`${Math.round(w.delay)}ms`);
+    });
+  }
   item.dataset.hitFinish=!monster&&finish?'1':'';
   item.style.setProperty('--rhythm-hit-ms',`${RHYTHM_HIT_EFFECT_MS[kind]}ms`);
   // ぴったりのMARVELOUSは粒を遠くまで飛ばす(見た目だけ・2026-09-12)。
@@ -20032,6 +20172,9 @@ const rhythmLayoutPlayArea=area=>{
     const y=rhythmClamp01((lineRect.top-rect.top+lineRect.height/2)/rect.height),left=rhythmProjectBoundary(0,y),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,y);
     line.style.left=`${(left*100).toFixed(4)}%`;
     line.style.right=`${((1-right)*100).toFixed(4)}%`;
+    // 判定ラインから画面の下までの長さ(フリックを取ったときの「手前のレーンの光」の高さに使う・2026-09-28)
+    area.style.setProperty('--mh-below-line-px',`${Math.max(0,Math.round((1-y)*rect.height))}px`);
+    area.style.setProperty('--mh-above-line-px',`${Math.max(0,Math.round(y*rect.height))}px`);
   }
 };
 const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
@@ -21404,15 +21547,12 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
   const HIT_KEYS={
     core:[[0,{o:0,sx:.28,sy:.4}],[.12,{o:1,sx:1.02,sy:1.9}],[1,{o:0,sx:1.34,sy:.28}]],
     beam:[[0,{o:0,sx:.8,sy:.2}],[.1,{o:1,sx:1,sy:.9}],[.55,{o:.78,sx:.96,sy:1}],[1,{o:0,sx:.7,sy:1.06}]],
-    streak:[[0,{o:0,k:0,sx:.5}],[.12,{o:1,k:.3,sx:1}],[1,{o:0,k:1,sx:1.2}]],
     coreBig:[[0,{o:0,sx:.3,sy:.5}],[.09,{o:1,sx:1.3,sy:3.2}],[.42,{o:.9,sx:1.7,sy:1.6}],[1,{o:0,sx:2.1,sy:.3}]],
     beamBig:[[0,{o:0,sx:.7,sy:.1}],[.1,{o:1,sx:1.16,sy:1.5}],[.48,{o:.72,sx:1,sy:2.1}],[1,{o:0,sx:.6,sy:2.9}]],
     spark:[[0,{o:0,k:0,s:.3}],[.12,{o:1,k:.3,s:1}],[1,{o:0,k:1,s:.2}]],
     flare:[[0,{o:0,sx:.35,sy:.35,r:-6}],[.14,{o:1,sx:1,sy:1,r:0}],[1,{o:0,sx:1.25,sy:.8,r:4}]],
   };
   const HIT_SPARK_OFFSETS=[[-30,-96],[-14,-150],[2,-124],[16,-168],[30,-110]];
-  // フリックの炎の筋の向き(右が0度・画面の上がマイナス)。CSS の --rhythm-flick-angle と同じ
-  const HIT_FLICK_ANGLES={up:-90,right:-35,left:-145};
   const HIT_CORE_RAINBOW=['#f87171','#fbbf24','#a3e635','#22d3ee','#a78bfa','#f472b6'];
   // 柱を高くした(2026-09-27)ので、不透明な虹だと大きな虹色の四角に見えた。上へ行くほど透けて消えるようにする(CSS の [data-hit-precise]>b と同じ)
   const HIT_BEAM_RAINBOW=[[0,'rgba(244,114,182,.78)'],[.24,'rgba(167,139,250,.6)'],[.46,'rgba(34,211,238,.44)'],[.64,'rgba(163,230,53,.28)'],[.82,'rgba(251,191,36,.12)'],[1,'rgba(251,191,36,0)']];
@@ -21484,21 +21624,69 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     c.fillRect(-55,-55,110,110);c.restore();
     sprites.set(id,s);return s;
   };
-  // フリックの炎の筋(右向き・先端が右のはし)。CSS の [data-rhythm-hit-effect]>em と同じ見た目を1枚だけ焼く
-  const hitStreakSprite=()=>{
-    const id=`hitstreak:${dpr}`;
+  // フリックの炎の羽(2026-09-28)。描き方は rhythmPaintFlickPlume、色・傾き・長さは RHYTHM_FLICK_PLUME にまとめてある(CSS 版と同じ絵)
+  const HIT_PLUME_MS=RHYTHM_FLICK_PLUME.ms,HIT_PLUME_TILT=RHYTHM_FLICK_PLUME.tilt,HIT_PLUME_RGB=RHYTHM_FLICK_PLUME.rgb;
+  const hitWispSprite=rgb=>{
+    const id=`hitwisp:${rgb}:${dpr}`;
     if(sprites.has(id))return sprites.get(id);
-    const s=makeSpriteCanvas(180,44),c=s.ctx;
-    const band=c.createLinearGradient(0,0,180,0);band.addColorStop(0,'rgba(251,146,60,0)');band.addColorStop(.55,'rgba(249,115,22,.55)');band.addColorStop(1,'rgba(253,186,116,.85)');
-    c.fillStyle=band;c.fillRect(0,22-7.5,180,15);
-    c.save();c.translate(158,22);c.scale(108/22,1);
-    const head=c.createRadialGradient(0,0,0,0,0,22);head.addColorStop(0,'rgba(255,251,235,1)');head.addColorStop(.26,'rgba(253,224,71,.9)');head.addColorStop(.52,'rgba(251,146,60,.7)');head.addColorStop(1,'rgba(251,146,60,0)');
-    c.fillStyle=head;c.fillRect(-22,-22,44,44);c.restore();
+    const s=makeSpriteCanvas(RHYTHM_FLICK_PLUME.wispW,RHYTHM_FLICK_PLUME.wispH);
+    rhythmPaintFlickWisp(s.ctx,RHYTHM_FLICK_PLUME.wispW,RHYTHM_FLICK_PLUME.wispH,rgb);
     sprites.set(id,s);return s;
+  };
+  const hitPlumeSprite=rgb=>{
+    const id=`hitplume:${rgb}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const s=makeSpriteCanvas(RHYTHM_FLICK_PLUME.w,RHYTHM_FLICK_PLUME.h);
+    rhythmPaintFlickPlume(s.ctx,RHYTHM_FLICK_PLUME.w,RHYTHM_FLICK_PLUME.h,rgb);
+    sprites.set(id,s);return s;
+  };
+  const drawPlume=(h,elapsed,hitY)=>{
+    const p=elapsed/HIT_PLUME_MS;if(!(p>=0&&p<1))return;
+    const dir=HIT_PLUME_TILT[h.flick]!==undefined?h.flick:'up',rgb=HIT_PLUME_RGB[dir],W=h.width*cssW,cx=h.center*cssW;
+    const grow=hitEase(Math.min(1,p/.32)),alpha=p<.42?1:Math.max(0,1-(p-.42)/.58);
+    // 払ったレーンの判定ラインより手前(下)を、その色で光らせる。レーンの形(手前ほど広い)に沿った台形
+    if(cssH>hitY+2){
+      const base=rhythmProjectionScale(Math.min(1,hitY/cssH)),k=base>0?rhythmProjectionScale(1)/base:1,mid=cssW/2,half=W*.5,bx=mid+(cx-mid)*k;
+      const g=ctx.createLinearGradient(0,hitY,0,cssH);g.addColorStop(0,`rgba(${rgb},.62)`);g.addColorStop(1,`rgba(${rgb},.18)`);
+      ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=Math.min(1,alpha*.95);ctx.fillStyle=g;
+      ctx.beginPath();ctx.moveTo(cx-half,hitY);ctx.lineTo(cx+half,hitY);ctx.lineTo(bx+half*k,cssH);ctx.lineTo(bx-half*k,cssH);ctx.closePath();ctx.fill();
+    }
+    // 炎の体。最初の一瞬だけ薄く出して、舌のあいだを埋める(以前はこれ1枚が伸びて消えるだけで、動きが硬かった)
+    const tilt=HIT_PLUME_TILT[dir]*Math.PI/180;
+    if(p<.5){
+      const bodyA=(p<.12?p/.12:1-(p-.12)/.38)*.62,PH=Math.max(180,hitY*1.08)*(.45+.55*grow),PW=Math.max(96,W*1.9)*(.85+.15*grow);
+      const flip=(h.seed&1)?-1:1,ang=tilt+((h.seed>>>3)%7-3)*.02,cos=Math.cos(ang),sin=Math.sin(ang);
+      ctx.setTransform(cos*dpr*flip,sin*dpr*flip,-sin*dpr,cos*dpr,cx*dpr,(hitY+4)*dpr);
+      ctx.globalAlpha=Math.max(0,Math.min(1,bodyA));
+      ctx.drawImage(hitPlumeSprite(rgb).canvas,-PW/2,-PH,PW,PH);
+    }
+    // 炎の舌。1本ずつ、向き・根元・遅れ・寿命・進む長さ・曲がり方がちがう。根元が進んだ先で、先へ伸びながら細くなって消える
+    const wisp=hitWispSprite(rgb).canvas,list=h._wisps||(h._wisps=rhythmFlickWisps(h.seed,RHYTHM_FLICK_PLUME.wisps));
+    for(const w of list){
+      const u=(elapsed-w.delay)/w.life;if(!(u>0&&u<1))continue;
+      const e=1-(1-u)*(1-u),ang=tilt+(w.angle+w.curl*u)*Math.PI/180,cos=Math.cos(ang),sin=Math.sin(ang);
+      const d=w.dist*hitY*e,wob=Math.sin(u*Math.PI*2.2+w.phase)*7*u;
+      // 向き(上が0°)へ d だけ進み、横へ少しゆらぐ。画面の座標では「上」は -y
+      const px=cx+w.x0*W+sin*d+cos*wob,py=hitY+2-cos*d+sin*wob;
+      const len=w.len*(.55+.9*e),wid=w.wid*(1-.45*u),a=u<.12?u/.12:Math.pow(1-u,1.25);
+      ctx.setTransform(cos*dpr,sin*dpr,-sin*dpr,cos*dpr,px*dpr,py*dpr);
+      ctx.globalAlpha=Math.min(1,a);
+      ctx.drawImage(wisp,-wid/2,-len,wid,len);
+    }
+    // 火の粉。舌より速く遠くへ飛び、少しずつ落ちる
+    const dot=sparkDotSprite().canvas;
+    for(let i=0;i<RHYTHM_FLICK_PLUME.sparks;i++){
+      const w=list[i%list.length],u=(elapsed-w.delay*.5)/(w.life*.9);if(!(u>0&&u<1))continue;
+      const ang=tilt+(w.angle*1.6+(i%2?12:-12))*Math.PI/180,cos=Math.cos(ang),sin=Math.sin(ang),d=(w.dist+.25)*hitY*(1-(1-u)*(1-u));
+      const px=cx+w.x0*W*.6+sin*d,py=hitY-cos*d+u*u*28,size=(3+((i*7)%4))*(1-.5*u);
+      ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=Math.min(1,(1-u)*1.2);
+      ctx.drawImage(dot,px-size/2,py-size/2,size,size);
+    }
+    ctx.setTransform(dpr,0,0,dpr,0,0);
   };
   const warmHitSprites=()=>{
     if(!hitArea)return;
-    hitFlareSprite();hitStreakSprite();
+    hitFlareSprite();sparkDotSprite();for(const rgb of Object.values(HIT_PLUME_RGB)){hitPlumeSprite(rgb);hitWispSprite(rgb);}
     for(const judgment of ['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD']){const f=hitFilters.get(`${judgment}|`);hitCoreSprite(rhythmHitEffectColor(judgment),f?f.core:null);}
     const monster=hitFilters.get('|');hitCoreSprite('#fde047',monster?monster.core:null);
   };
@@ -21515,8 +21703,10 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x,y+r);ctx.arc(x+r,y+r,r,Math.PI,Math.PI*1.5);
     ctx.lineTo(x+w-r,y);ctx.arc(x+w-r,y+r,r,Math.PI*1.5,Math.PI*2);ctx.lineTo(x+w,y+h);ctx.closePath();
   };
-  const drawOneHit=(h,p,hitY)=>{
+  const drawOneHit=(h,p,hitY,elapsed=0)=>{
     const W=h.width*cssW,cx=h.center*cssW,left=cx-W/2;
+    // フリックの炎の羽は、ほかの光より長く残る(0.46秒)。ほかの光は元の長さで終える
+    if(h.plume){drawPlume(h,elapsed,hitY);if(p>=1)return;}
     // 中心のフラッシュ(判定ラインの上下7px・幅いっぱい)
     let f=hitFrame(h.big?HIT_KEYS.coreBig:HIT_KEYS.core,p);
     if(f.o>.002){
@@ -21559,14 +21749,6 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     }
     // 白い十字の光(演出量「多め」では出さない)
     // フリックの炎の筋。焼いた1枚を、払った向きへ回して進める(先端が判定ラインの位置から飛び出す)
-    if(h.flick&&HIT_FLICK_ANGLES[h.flick]!==undefined){
-      f=hitFrame(HIT_KEYS.streak,p);
-      if(f.o>.002){
-        const a=HIT_FLICK_ANGLES[h.flick]*Math.PI/180,cos=Math.cos(a),sin=Math.sin(a),d=30+160*f.k,px=cx+cos*d,py=hitY+sin*d,L=180*f.sx;
-        ctx.globalAlpha=Math.min(1,f.o);ctx.setTransform(cos*dpr,sin*dpr,-sin*dpr,cos*dpr,px*dpr,py*dpr);
-        ctx.drawImage(hitStreakSprite().canvas,-L,-22,L,44);
-      }
-    }
     if(h.flare){
       f=hitFrame(HIT_KEYS.flare,p);
       if(f.o>.002){ctx.globalAlpha=Math.min(1,f.o);hitTransform(cx,hitY,f.sx,f.sy,f.r);ctx.drawImage(hitFlareSprite().canvas,cx-95,hitY-55,190,110);}
@@ -21637,8 +21819,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     pushHit(hit){
       if(!hitArea||effect==='MINIMAL'||lightweight)return;
       const key=`${hit.judgment||''}|${hit.precise?'1':''}`;
+      const plume=!hit.big&&!!hit.flick&&HIT_PLUME_TILT[hit.flick]!==undefined;
       hitSlots[hitNext]={...hit,filter:hitFilters.get(key)||{core:null,beam:null},start:typeof performance!=='undefined'?performance.now():Date.now(),
-        ms:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW'};
+        ms:RHYTHM_HIT_EFFECT_MS[hit.big?'MONSTER':'NORMAL'],flare:effect!=='LOW',plume,seed:plume?(Math.random()*4294967296)>>>0:0};
       hitNext=(hitNext+1)%hitSlots.length;
     },
     // begin() のすぐあと(ノーツより先)に呼ぶ。hitY は判定ラインの下端(光の入れ物の bottom)の高さ
@@ -21647,9 +21830,9 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const now=frameNow||(typeof performance!=='undefined'?performance.now():Date.now());let count=0;
       for(let slot=0;slot<hitSlots.length;slot++){
         const hit=hitSlots[slot];if(!hit)continue;
-        const t=(now-hit.start)/hit.ms;
-        if(t>=1){hitSlots[slot]=null;continue;}
-        touch();glowBegin();drawOneHit(hit,Math.max(0,t),hitY);glowEnd();count++;
+        const elapsed=now-hit.start,t=elapsed/hit.ms,end=hit.plume?Math.max(hit.ms,HIT_PLUME_MS):hit.ms;
+        if(elapsed>=end){hitSlots[slot]=null;continue;}
+        touch();glowBegin();drawOneHit(hit,Math.max(0,Math.min(1,t)),hitY,Math.max(0,elapsed));glowEnd();count++;
       }
       if(count){ctx.globalAlpha=1;ctx.setTransform(dpr,0,0,dpr,0,0);}
       return count;
