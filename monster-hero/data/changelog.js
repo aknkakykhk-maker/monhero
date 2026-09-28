@@ -50,8 +50,8 @@ const CHANGELOG = [
     image: 'images/song-art/big-bridge-no-shitou.jpg?v=2a3180288c72',
     items:[
       'モンヒロビートに「ビッグブリッヂの死闘」（2分28秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.11 ／ NORMAL Lv.13 ／ HARD Lv.20 ／ EXPERT Lv.29 ／ MASTER Lv.36 です。',
-      'ノーツ数は 389 ／ 445 ／ 565 ／ 677 ／ 781 です。',
+      'レベルは EASY Lv.11 ／ NORMAL Lv.13 ／ HARD Lv.19 ／ EXPERT Lv.28 ／ MASTER Lv.35 です。',
+      'ノーツ数は 388 ／ 445 ／ 566 ／ 697 ／ 774 です。',
     ],
     assistantNotice: { id:'update_notice_big_bridge_no_shitou_v1', type:'content' },
   },

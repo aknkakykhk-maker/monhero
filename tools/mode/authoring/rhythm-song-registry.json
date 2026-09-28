@@ -365,7 +365,7 @@
   },
   "big_bridge_no_shitou": {
    "audio": "monster-hero/audio/bgm-big-bridge-no-shitou.mp3",
-   "chartRevision": 17,
+   "chartRevision": 18,
    "audioSha256": "466468405f445845dd896375e3e0af91b9b2977b9710d60f9bec8ae2466f2840",
    "durationMs": 148320,
    "analyzedTiming": {
