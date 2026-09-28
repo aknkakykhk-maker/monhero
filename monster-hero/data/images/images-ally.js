@@ -121,7 +121,7 @@ const KENSHI_MOCCHI_DYE_MASK = "images/monsters/kenshi-mocchi-dye-mask.PNG?v=25a
 const YGGDRASIL_IMG = "images/monsters/yggdrasil.png?v=8dddbfc4328f";
 const YGGDRASIL_DYE_MASK = "images/monsters/yggdrasil-dye-mask.PNG?v=97a8b27629d6";
 const MEL_WHIP_IMG = "images/monsters/mel-whip.png?v=629452e35b02";
-const MEL_WHIP_DYE_MASK = "images/monsters/mel-whip-dye-mask.PNG?v=11edba576c7f";
+const MEL_WHIP_DYE_MASK = "images/monsters/mel-whip-dye-mask.PNG?v=0f5bd5742c30";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;

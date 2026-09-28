@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bb136310e8a9e65f
+// source-sha256: 1c790d2fcf4199ae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 17:00";
+const BUILD_DATE = "2026-09-28 17:41";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -43468,7 +43468,8 @@ const monsterCheckAllMonsters = () => {
   const ordered = dexMonsterList();
   const seen = new Set(ordered.map(mon => mon.id));
   const rest = Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && mon.id && !seen.has(mon.id));
-  return [...ordered, ...rest];
+  const drafts = typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' && UPCOMING_MONSTER_DRAFTS ? Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id]) : [];
+  return [...ordered, ...rest, ...drafts];
 };
 const monsterCheckMarketItems = mon => {
   const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
@@ -43499,7 +43500,17 @@ const monsterCheckImplRows = mon => {
   const apt = Array.isArray(mon.distAptitude) ? mon.distAptitude : [];
   const containFixed = typeof MONSTER_ART_CONTAIN_IDS !== 'undefined' && MONSTER_ART_CONTAIN_IDS.includes(id);
   const sameArt = bare(mon.faceIconUrl) === bare(mon.imgUrl);
-  return [{
+  const draftLineage = mon.draft && mon.draftLineage && typeof MONSTER_LINEAGES !== 'undefined' ? {
+    main: MONSTER_LINEAGES[mon.draftLineage.main],
+    sub: MONSTER_LINEAGES[mon.draftLineage.sub]
+  } : null;
+  return [...(mon.draft ? [{
+    label: '段階',
+    code: 'UPCOMING_MONSTER_DRAFTS',
+    state: 'warn',
+    value: '案の段階（本体に未登録）',
+    note: '図鑑・ロースター・マーケットの解放には出ない。正式実装で ALL_PLAYER_MONSTERS へ移す'
+  }] : []), {
     label: '立ち絵',
     code: 'imgUrl',
     state: mon.imgUrl ? 'ok' : 'ng',
@@ -43566,9 +43577,9 @@ const monsterCheckImplRows = mon => {
   }, {
     label: '血統',
     code: 'MONSTER_LINEAGE_MAP',
-    state: lineage.known ? 'ok' : 'ng',
-    value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）` : '未登録',
-    note: lineage.known ? '' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る'
+    state: lineage.known ? 'ok' : draftLineage?.main && draftLineage?.sub ? 'warn' : 'ng',
+    value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）` : draftLineage?.main && draftLineage?.sub ? `${draftLineage.main.name} × ${draftLineage.sub.name}（案）` : '未登録',
+    note: lineage.known ? '' : draftLineage ? '正式実装のときに data/lineages.js の MONSTER_LINEAGE_MAP へ足す' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る'
   }, {
     label: '図鑑の説明文',
     code: 'MONSTER_DEX_DESCRIPTIONS',
@@ -43585,7 +43596,7 @@ const monsterCheckImplRows = mon => {
     label: '入手方法',
     code: 'disc / STARTER',
     state: starter || disc ? 'ok' : 'ng',
-    value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ` : '入手できない',
+    value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ${disc.available === false ? '（近日追加・まだ買えない）' : ''}` : '入手できない',
     note: starter || disc ? '' : 'BREEDER_MARKET_ITEMS へ type:\'disc\' の円盤石を足す'
   }, {
     label: 'アイコン商品',
@@ -44206,9 +44217,13 @@ function MonsterCheckDebugScreen({
     block: true
   }), React.createElement("div", null, React.createElement("div", {
     className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
-  }, "通常技"), skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')), React.createElement("div", null, React.createElement("div", {
+  }, "通常技"), typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] ? skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25') : React.createElement("div", {
+    className: "text-center text-[11px] font-bold text-rose-300"
+  }, "未設定")), React.createElement("div", null, React.createElement("div", {
     className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
-  }, "固有技（進化段階）"), skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30'), React.createElement("div", {
+  }, "固有技（進化段階）"), mon.unique ? skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30') : React.createElement("div", {
+    className: "text-center text-[11px] font-bold text-rose-300"
+  }, "未設定"), React.createElement("div", {
     className: "mt-1.5 break-words text-[10px] font-bold italic leading-relaxed text-slate-300"
   }, "\"", mon.unique?.effectDesc || '', "\""))), tab === 'data' && React.createElement("div", {
     "data-monster-check-tab-data": true,
@@ -59327,7 +59342,30 @@ function MonsterHeroGame() {
         }
       }), (c.items || []).map((x, j) => React.createElement("p", {
         key: j
-      }, "・", x)), changelogSafeLink(c.link) && React.createElement("a", {
+      }, "・", x)), (Array.isArray(c.gallery) ? c.gallery : []).filter(g => g && typeof g.image === 'string' && g.image).map((g, j) => React.createElement("figure", {
+        key: `g${j}`,
+        "data-changelog-gallery": true,
+        style: {
+          margin: '10px 0 0'
+        }
+      }, g.caption && React.createElement("figcaption", {
+        style: {
+          fontWeight: 900,
+          margin: '0 0 4px'
+        }
+      }, "■ ", g.caption), React.createElement("img", {
+        src: g.image,
+        alt: g.caption || `${c.title}の見本`,
+        onError: e => {
+          e.currentTarget.style.display = 'none';
+        },
+        loading: "lazy",
+        decoding: "async",
+        style: {
+          width: '100%',
+          borderRadius: '12px'
+        }
+      }))), changelogSafeLink(c.link) && React.createElement("a", {
         "data-changelog-link": true,
         href: changelogSafeLink(c.link),
         target: "_blank",

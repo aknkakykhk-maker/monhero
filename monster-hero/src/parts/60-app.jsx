@@ -13260,6 +13260,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
                         style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
                       {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                      {/* 本文の下に並べる見本の絵(2026-09-28・ユーザー提案「こんな感じに染色イメージを出したりしたらどう？」)。
+                          gallery:[{ caption, image }] と書いたときだけ、見出しと絵を順に出す。
+                          読めなかった絵は黙って消す(上の image と同じ)。助手の告知には出さない(告知は image の1枚だけ) */}
+                      {(Array.isArray(c.gallery)?c.gallery:[]).filter(g=>g&&typeof g.image==='string'&&g.image).map((g,j)=><figure key={`g${j}`} data-changelog-gallery style={{margin:'10px 0 0'}}>
+                        {g.caption&&<figcaption style={{fontWeight:900,margin:'0 0 4px'}}>■ {g.caption}</figcaption>}
+                        <img src={g.image} alt={g.caption||`${c.title}の見本`} onError={e=>{e.currentTarget.style.display='none';}}
+                          loading="lazy" decoding="async" style={{width:'100%',borderRadius:'12px'}}/>
+                      </figure>)}
                       {/* 外に出るリンク(2026-09-14・よそのゲームの曲を入れたときの案内用)。
                           https だけ通し、target="_blank" と rel="noopener noreferrer" を必ず付ける
                           (開いた先からこのページを触られないようにするため)。

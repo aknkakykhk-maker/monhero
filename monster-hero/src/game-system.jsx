@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 47417879740965b3
+// generated-sha256: 6302a2588be7802d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 17:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-28 17:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -28142,7 +28142,11 @@ const monsterCheckAllMonsters = () => {
   const ordered = dexMonsterList();
   const seen = new Set(ordered.map(mon => mon.id));
   const rest = Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && mon.id && !seen.has(mon.id));
-  return [...ordered, ...rest];
+  // 案の段階のモンスター(UPCOMING_MONSTER_DRAFTS・2026-09-28)。本体にまだいない子だけ、いちばん後ろへ足す。
+  // 能力値や技が無いまま並ぶので、確認の一覧で「未設定」がそのまま見える
+  const drafts = (typeof UPCOMING_MONSTER_DRAFTS !== 'undefined' && UPCOMING_MONSTER_DRAFTS)
+    ? Object.values(UPCOMING_MONSTER_DRAFTS).filter(mon => mon && mon.id && !ALL_PLAYER_MONSTERS[mon.id]) : [];
+  return [...ordered, ...rest, ...drafts];
 };
 
 // マーケットの商品を引く。円盤石(type:'disc')は解放用でidがモンスターidと一致する決まり。
@@ -28177,7 +28181,12 @@ const monsterCheckImplRows = (mon) => {
   const apt = Array.isArray(mon.distAptitude) ? mon.distAptitude : [];
   const containFixed = (typeof MONSTER_ART_CONTAIN_IDS !== 'undefined' && MONSTER_ART_CONTAIN_IDS.includes(id));
   const sameArt = bare(mon.faceIconUrl) === bare(mon.imgUrl);
+  // 案の段階のモンスターの血統は draftLineage に書いてある(本体の MONSTER_LINEAGE_MAP へはまだ足せない)
+  const draftLineage = mon.draft && mon.draftLineage && typeof MONSTER_LINEAGES !== 'undefined'
+    ? { main: MONSTER_LINEAGES[mon.draftLineage.main], sub: MONSTER_LINEAGES[mon.draftLineage.sub] } : null;
   return [
+    ...(mon.draft ? [{ label: '段階', code: 'UPCOMING_MONSTER_DRAFTS', state: 'warn', value: '案の段階（本体に未登録）',
+      note: '図鑑・ロースター・マーケットの解放には出ない。正式実装で ALL_PLAYER_MONSTERS へ移す' }] : []),
     { label: '立ち絵', code: 'imgUrl', state: mon.imgUrl ? 'ok' : 'ng', value: bare(mon.imgUrl) || '未設定' },
     { label: '一覧アイコン', code: 'iconUrl', state: mon.iconUrl ? 'ok' : 'ng', value: bare(mon.iconUrl) || '未設定' },
     { label: '顔アイコン', code: 'faceIconUrl', state: mon.faceIconUrl ? (sameArt ? 'warn' : 'ok') : 'ng',
@@ -28203,16 +28212,17 @@ const monsterCheckImplRows = (mon) => {
       value: `ライフ${plus.hp}／ちから${plus.atk}／丈夫さ${plus.def}／ガッツ${plus.guts}` },
     { label: '距離適性', code: 'distAptitude', state: apt.length === 4 ? 'ok' : 'ng',
       value: apt.length ? monsterCheckDistanceLabels().map((label, i) => `${label} ${apt[i]}`).join('／') : '未設定' },
-    { label: '血統', code: 'MONSTER_LINEAGE_MAP', state: lineage.known ? 'ok' : 'ng',
-      value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）` : '未登録',
-      note: lineage.known ? '' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る' },
+    { label: '血統', code: 'MONSTER_LINEAGE_MAP', state: lineage.known ? 'ok' : (draftLineage?.main && draftLineage?.sub ? 'warn' : 'ng'),
+      value: lineage.known ? `${lineage.main.name} × ${lineage.sub.name}（${monsterCategoryName(monsterCategoryOf(id))}）`
+        : draftLineage?.main && draftLineage?.sub ? `${draftLineage.main.name} × ${draftLineage.sub.name}（案）` : '未登録',
+      note: lineage.known ? '' : draftLineage ? '正式実装のときに data/lineages.js の MONSTER_LINEAGE_MAP へ足す' : 'data/lineages.js へ1行足す。tools/monster/lineage-dex-check.js が見張る' },
     { label: '図鑑の説明文', code: 'MONSTER_DEX_DESCRIPTIONS', state: dexText ? 'ok' : 'ng', value: dexText ? `${dexText.length}文字` : '未記入',
       note: dexText ? '' : '無いと図鑑に「調査中」と出る' },
     { label: '図鑑に並ぶか', code: 'debugOnly', state: mon.debugOnly ? 'warn' : 'ok',
       value: mon.debugOnly ? '出ない（debugOnly）' : '出る',
       note: mon.debugOnly ? '正式実装前。図鑑・RPG一覧・マスモン登録から外れている' : '' },
     { label: '入手方法', code: 'disc / STARTER', state: (starter || disc) ? 'ok' : 'ng',
-      value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ` : '入手できない',
+      value: starter ? '初期解放' : disc ? `円盤石 ${disc.cost} ダイヤ${disc.available === false ? '（近日追加・まだ買えない）' : ''}` : '入手できない',
       note: (starter || disc) ? '' : 'BREEDER_MARKET_ITEMS へ type:\'disc\' の円盤石を足す' },
     // 初期解放の8種は、この決まりができる前からいるので商品を持っていない。そこは注意にしない
     { label: 'アイコン商品', code: "type:'icon'", state: (faceIcon || starter) ? 'ok' : 'warn',
@@ -28613,11 +28623,15 @@ function MonsterCheckDebugScreen({
               {row('特性の効果', mon.traitDesc || '特性なし', { block: true })}
               <div>
                 <div className="mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90">通常技</div>
-                {skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')}
+                {/* 技名が無いと getAtkSkillLevels はモッチーの技名を静かに出すので、無いときは「未設定」と出す */}
+                {(typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id]) ? skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')
+                  : <div className="text-center text-[11px] font-bold text-rose-300">未設定</div>}
               </div>
               <div>
                 <div className="mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90">固有技（進化段階）</div>
-                {skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30')}
+                {/* 案の段階のモンスターは固有技がまだ無い(getUniqueSkillLevels は unique が無いと落ちる) */}
+                {mon.unique ? skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30')
+                  : <div className="text-center text-[11px] font-bold text-rose-300">未設定</div>}
                 <div className="mt-1.5 break-words text-[10px] font-bold italic leading-relaxed text-slate-300">"{mon.unique?.effectDesc || ''}"</div>
               </div>
             </div>)}
@@ -42040,6 +42054,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         onError={e=>{e.currentTarget.style.display='none';}} loading="lazy" decoding="async"
                         style={{width:'100%',borderRadius:'12px',margin:'6px 0'}}/>}
                       {(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}
+                      {/* 本文の下に並べる見本の絵(2026-09-28・ユーザー提案「こんな感じに染色イメージを出したりしたらどう？」)。
+                          gallery:[{ caption, image }] と書いたときだけ、見出しと絵を順に出す。
+                          読めなかった絵は黙って消す(上の image と同じ)。助手の告知には出さない(告知は image の1枚だけ) */}
+                      {(Array.isArray(c.gallery)?c.gallery:[]).filter(g=>g&&typeof g.image==='string'&&g.image).map((g,j)=><figure key={`g${j}`} data-changelog-gallery style={{margin:'10px 0 0'}}>
+                        {g.caption&&<figcaption style={{fontWeight:900,margin:'0 0 4px'}}>■ {g.caption}</figcaption>}
+                        <img src={g.image} alt={g.caption||`${c.title}の見本`} onError={e=>{e.currentTarget.style.display='none';}}
+                          loading="lazy" decoding="async" style={{width:'100%',borderRadius:'12px'}}/>
+                      </figure>)}
                       {/* 外に出るリンク(2026-09-14・よそのゲームの曲を入れたときの案内用)。
                           https だけ通し、target="_blank" と rel="noopener noreferrer" を必ず付ける
                           (開いた先からこのページを触られないようにするため)。
