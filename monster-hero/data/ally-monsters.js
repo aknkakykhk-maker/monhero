@@ -48,7 +48,7 @@ const ALL_PLAYER_MONSTERS = {
   // エイキ(ザン×？？？のレア)。★正式実装まではデバッグ専用(debugOnly:true)。
   //   ・debugOnly により図鑑(dexMonsterList)・RPG一覧・マスモン登録から外れる
   //   ・通常ロースターは unlockedMonsterIds で絞るので、解放しない限り出てこない
-  //   ・マーケット(円盤石3000ダイヤ)は正式実装時に登録する。いまは商品化しない
+  //   ・マーケット(円盤石300000ダイヤ)は正式実装時に登録する。いまは商品化しない
   // 勇者特性「桜花連舞」と固有効果「緋桜連華」の連撃は、ザンの既存 rollCombo をそのまま使う。
   // 攻撃モーションはザンの zanCombo を土台にした専用種別(桜の花びらを攻撃時だけ重ねる)。
   Eiki:   { id:'Eiki',   name:"エイキ", emoji:"🌸", imgUrl:EIKI_IMG, iconUrl:EIKI_ICON, faceIconUrl:EIKI_FACE_ICON, atkMotion:'eikiSakuraCombo', trait:"桜花連舞", traitDesc:"勇者モン選択時：攻撃後、与ダメ10%の連撃を2回。自身の固有技使用時は、さらに与ダメ30%の連撃を1回追加。", baseHp:400, baseGuts:135, baseAtk:165, baseDef:20, plusStats:{hp:150,atk:50,def:20,guts:45}, distAptitude:['A','A','C','C'], unique:{name:"華影緋閃",icon:EIKI_ICON,monId:"Eiki",baseMult:2.8,baseGuts:56,evoLevel:0,names:["華影緋閃","氷花一閃","桜月斬華","緋雪乱刃","花氷双牙","千華氷嵐","緋桜六華閃","絶影桜華乱舞","絶華緋閃・零桜"],effectDesc:"緋桜連華：与ダメ15%で連撃×2＆連撃ダメージ+3%・攻撃力+3%(永続/重複可/次のターンから)"}},

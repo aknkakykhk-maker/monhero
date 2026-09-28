@@ -15,7 +15,7 @@ assert(data.includes('baseMult:2.3,baseGuts:52'));
 assert(data.includes("atkMotion:'pandoraDualThunder'"));
 assert.strictEqual((ally.match(/Pandora: \{ id:'Pandora'/g)||[]).length,1);
 assert(!/STARTER_MONSTER_IDS[^;]*Pandora/.test(ally));
-assert(breeder.includes("id:'pandora_icon'")&&breeder.includes("id:'pandora_disc_icon'")&&/id:'Pandora'.*cost:3000/.test(breeder));
+assert(breeder.includes("id:'pandora_icon'")&&breeder.includes("id:'pandora_disc_icon'")&&/id:'Pandora'.*cost:300000/.test(breeder));
 assert(lineage.includes("Pandora:     { main:'pixie',  sub:'unknown' }"));
 // タクティクスバトルは勇者特性を「その札を出した子自身」に効かせるため、
 // mainHero を直に見ず attackHeroId(＝新モードでは札を出した子のid)を通す(2026-09-20)。
