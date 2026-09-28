@@ -4,6 +4,7 @@
 //   ONLY=FULL T=47 FRAMES=12 STEP=83 node tools/mode/rhythm-slowmo-shot.js
 //   環境変数: OUT(書き出す先・既定は一時フォルダ) NAME(ファイル名の頭) W H DPR(画面の大きさ。既定は横向き 844×390・1倍)
 //             ONLY(おまかせの id) PATCH(音ゲー設定に重ねる JSON) CSS(撮るときだけ足す CSS) ROOT(配るフォルダ。別の作業場所の見本を撮るとき)
+//             CSSANIM=1(CSS のアニメーションも仮想の時間で進める。光を CSS で描くときに使う)
 //             SONG(曲名) DIFF(難易度) SEED(撮るときだけ入れる保存データの JSON。例: '{"mh_rhythm_best_v1":{"monster_hero":{"HARD":{"clear":true},"EXPERT":{"clear":true}}}}' で MASTER まで開く)
 //
 // 【なぜ要るか】
@@ -31,10 +32,10 @@ fs.mkdirSync(OUT,{recursive:true});
    put('mh_assistant_selected_v1','mua');put('mh_assistant_unlock_seen_v1',true);put('mh_update_notice_seen_v1',true);
    put('mh_rhythm_tutorial_seen_v1',true);put('mh_rhythm_play_defaults_restored_v1',true);put('mh_rhythm_six_lane_seen_v1',true);put('mh_rhythm_look_intro_seen_v1',true);
    put('mh_inherited_unique_level_compensation_v1',true);
-   // SEED … 撮るときだけ入れておく保存データ({キー:値})。EXPERT以上を撮るときの「1つ下をクリア済み」など
-   for(const [k,v] of Object.entries(values.__seed||{}))localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));
    localStorage.setItem('mh_rhythm_settings_v1',JSON.stringify({...values,...(values.__patch||{}),autoEffectDown:false,renderQuality:'HIGH'}));
    localStorage.setItem('mh_rhythm_canvas_v1','webgl');localStorage.setItem('mh_rhythm_stage_gl_v1','webgl');
+   // SEED … 撮るときだけ入れておく保存データ({キー:値})。EXPERT以上を撮るときの「1つ下をクリア済み」など。最後に入れるので、描き方({"mh_rhythm_canvas_v1":"canvas"} など)も上書きできる
+   for(const [k,v] of Object.entries(values.__seed||{}))localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));
    // 撮影のときだけ: 描き直しの合図(rAF)の時刻を performance.now にそろえる(仮想の時間では2つがずれる)
    {const raf=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=cb=>raf(()=>cb(performance.now()));}
    // 曲の時計を止める仕掛け: 曲の音を鳴らしはじめた時刻を覚え、__mhFreezeSong を入れたらその位置で時計を止める
@@ -89,6 +90,10 @@ fs.mkdirSync(OUT,{recursive:true});
   const advance=ms=>new Promise(res=>{cdp.once('Emulation.virtualTimeBudgetExpired',res);cdp.send('Emulation.setVirtualTimePolicy',{policy:'advance',budget:ms});});
   const FRAMES=Number(process.env.FRAMES||8),STEP=Number(process.env.STEP||83);
   for(let k=0;k<FRAMES;k++){await advance(STEP);
+    // CSSANIM=1 … CSS のアニメーションも仮想の時間で進める。ブラウザの CSS アニメーションは仮想の時間に乗らず、
+    // 撮るあいだの本当の時間で進んで1コマ目のあとに終わってしまう(光を CSS で描くときの見本が撮れなかった・2026-09-28)。
+    // 新しく始まったものは止めて頭から、すでに止めたものは1コマぶん進める
+    if(process.env.CSSANIM==='1')await page.evaluate(step=>{for(const a of document.getAnimations()){if(!a.__mhVirtual){a.__mhVirtual=true;a.pause();a.currentTime=0;}else{a.currentTime=(Number(a.currentTime)||0)+step;}}},STEP);
     const shotK=path.join(OUT,(process.env.NAME||'seq')+'-'+preset.id.toLowerCase()+'-'+String(k).padStart(2,'0')+'.png');await page.screenshot({path:shotK});}
   await cdp.send('Emulation.setVirtualTimePolicy',{policy:'advance'});
   console.log(preset.id,`${FRAMES}コマ`,OUT);
