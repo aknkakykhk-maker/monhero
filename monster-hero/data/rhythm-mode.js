@@ -1868,6 +1868,8 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   };
   const ready=type=>banks.get(type)?.buffers||null;
   const prepare=typeIn=>{
+    // 押さえているあいだの音も、ここで作っておく(押した瞬間に作ると一瞬かたまる)。画面の表示を待たせないよう少しあとで
+    {const audio=context();if(audio&&typeof setTimeout==='function')setTimeout(()=>{try{holdLoop(audio);}catch{}},60);}
     const type=rhythmNoteSeTypeOf(typeIn||readSettings().type);
     if(!RHYTHM_NOTE_SE_DESIGNS[type])return Promise.resolve(null);
     const hit=banks.get(type);if(hit)return hit.promise;
@@ -1978,45 +1980,65 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   // FLICK が成立したとき(終点フリックを含む)。フリックは触れた瞬間には鳴らさず、払えたときに「シュッ」と鳴らす
   // (プロセカ・バンドリ！と同じ。実機で「フリックが成功したのか分かりづらい」という報告があった)
   const playFlick=(judgment=null)=>{const settings=readSettings();return voice(settings,'flick',judgment,settings.flickVolume/100);};
-  // ===== ホールド・スライドを押さえているあいだの「シャラララ」(きらめく音) =====
-  // 2026-09-28・ユーザー「押してる間にウィーンみたいな溜めてるような音があるとさらにそれっぽくなりそう」で「ウィーン」(のこぎり波が上がる音)を
-  // 入れたが、同じ日に「音がイメージと違う」「音ゲーってなんかしゃらららみたいなそんなかんじ」と言われ、きらめく音に作り替えた。
-  // 小さな鈴の粒(高い正弦波がすぐ消える)を細かく散らし、うすい「シャー」を敷いた1.6秒の音を**1回だけ作って**、押さえているあいだ繰り返す。
+  // ===== ホールド・スライドを押さえているあいだの「シャラシャラ」(高いきらめき) =====
+  // 経緯(2026-09-28・すべて同じ日):
+  //   ① ユーザー「押してる間にウィーンみたいな溜めてるような音」→ のこぎり波が上がる「ウィーン」を入れた
+  //   ② 「イメージと違う」「音ゲーってなんかしゃらららみたいな」→ 鈴の粒(2〜6kHz のドレミの高さ)に変えた
+  //   ③ 「なんか微妙」「もっと馴染める音に」→ ユーザーが送ってくれたバンドリ！アワーノーツの録画(曲を消した効果音だけの動画)を分析した。
+  //      押さえている時間だけ強くなるのは 8.5〜13.6kHz(+15〜19dB)と 3.4〜5.4kHz(+6〜9dB)。6〜8kHz は谷、3kHz より下は何も鳴っていない。
+  //      高いほうは細い成分がびっしり並ぶ(=ドレミの高さを持たない、きらめく「シャラシャラ」)。強さの揺れは平均の15%ほどで、決まった刻みは無い。
+  //   鈴の粒は曲の音域の中でドレミを鳴らすので曲の和音とぶつかって浮いた。この形なら曲の音域より上で鳴るので、曲に馴染む。
+  //   録画の音そのものは使っていない。成分の形(どの高さがどれだけ鳴っているか)だけをまねて、1から作っている。
+  // 作り方: 周波数ごとの強さを決めて、でたらめな位相で逆FFTする(約1.4秒)。長さが2のべき乗なので、頭と終わりがそのままつながる(つなぎ目が無い)。
+  // 作るのは音の作りごとに1回だけ。押した瞬間に作ると一瞬かたまるので、曲えらび・演奏画面を開いたとき(prepare)に作っておく。
   // 押さえているノーツ1本につき「繰り返し再生1つ → 大きさ1つ」だけ。押さえ始めの0.35秒でふわっと大きくなる。
-  // 音の高さは上げない(上がっていく音はイメージと違った)。SLIDE は同じ音を少しだけ高く(1.06倍)鳴らして区別する。
+  // 音の高さは上げない。SLIDE は同じ音を少しだけ高く(1.06倍)鳴らして区別する。
   // 本体は毎フレーム holdSync(いま押さえているノーツの並び) を呼ぶ。並びから消えた音は、そこで短く消して止める。
   // ★呼ばれなくなったとき(ポーズ・曲の終わり・画面を出た・タブを隠した)のために、最後の呼び出しから0.25秒で全部止める見張りを持つ。
   //   鳴りっぱなしにはならない。見張りは音が鳴っているあいだだけ動く
   // 大きさはタップ音量 × 「押さえている間の音の大きさ」。タップ音OFF・全体ミュート・0%では組まない。
-  // 鳴り続ける音なので、実効値をタップ音のいちばん大きい瞬間の約3分の1にそろえる(書き出して測った。高い音は耳に大きく聞こえるので、ウィーンのときの半分より控えめ)
-  const HOLD_VOICE_MAX=4,HOLD_WATCH_MS=250,HOLD_LOOP_SECONDS=1.6;
+  const HOLD_VOICE_MAX=4,HOLD_WATCH_MS=250,HOLD_LOOP_SIZE=1<<16;
   const holdVoices=new Map();let holdWatch=0,holdLastSync=0,holdLoopCtx=null,holdLoopBuffer=null;
   const holdNow=()=>typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
-  // 繰り返し用の音を作る(音の作りごとに1回だけ)。つなぎ目で途切れないよう、粒は最後まではみ出したら頭へ回して書く
+  // 逆FFT(長さは2のべき乗)。結果は re に入る
+  const holdIfft=(re,im)=>{
+    const n=re.length;
+    for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}}
+    for(let len=2;len<=n;len<<=1){const ang=2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang),half=len>>1;
+      for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<half;k++){const a=i+k,b=a+half,vr=re[b]*cr-im[b]*ci,vi=re[b]*ci+im[b]*cr;re[b]=re[a]-vr;im[b]=im[a]-vi;re[a]+=vr;im[a]+=vi;const nr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=nr;}}}
+  };
+  // 周波数ごとの強さ(振幅)。録画の「押さえ中 − 押さえ無し」の形に合わせた2つの山
+  const holdShape=f=>{
+    const ramp=(x,a,b)=>x<=a?0:x>=b?1:(x-a)/(b-a);
+    const low=ramp(f,2800,3300)*(1-ramp(f,5400,6200));          // 3.4〜5.4kHz の山
+    const high=ramp(f,7600,8600)*(1-.45*ramp(f,11000,13000))*(1-ramp(f,13600,15200)); // 8.5〜13.6kHz の山(12kHz から上は少し弱く)
+    return Math.max(low*.9,high*.75,(f>5400&&f<8600)?.22:0);      // あいだの谷は約 -12dB
+  };
+  // 繰り返し用の音を作る(音の作りごとに1回だけ)
   const holdLoop=audio=>{
     if(holdLoopCtx===audio&&holdLoopBuffer)return holdLoopBuffer;
-    const rate=audio.sampleRate||48000,length=Math.max(1,Math.floor(rate*HOLD_LOOP_SECONDS)),buffer=audio.createBuffer(2,length,rate);
-    const left=buffer.getChannelData(0),right=buffer.getChannelData(1);
+    const rate=audio.sampleRate||48000,n=HOLD_LOOP_SIZE,buffer=audio.createBuffer(2,n,rate),binHz=rate/n;
     let seed=0x51f15e;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
-    // 鈴の粒。高いほうの明るい音(C7〜E8 あたりの五音)から選ぶ。1.6秒に44粒(1秒に約28粒)
-    const bells=[2093,2349,2637,3136,3520,4186,4699,5274,6272];
-    for(let g=0;g<44;g++){
-      const at=Math.floor(rand()*length),f=bells[Math.floor(rand()*bells.length)]*(1+(rand()-.5)*.01),amp=.35+.65*rand(),tau=.035+.05*rand(),pan=rand();
-      const n=Math.floor(rate*tau*5),w=2*Math.PI*f/rate;
+    let peak=0;const channels=[buffer.getChannelData(0),buffer.getChannelData(1)];
+    // ゆっくりした細かなきらめき(強さの揺れ15%ほど)。回数を整数にして、繰り返しのつなぎ目でもずれない
+    const c1=Math.max(1,Math.round(6.4*n/rate)),c2=Math.max(1,Math.round(2.3*n/rate)),c3=Math.max(1,Math.round(11.7*n/rate));
+    for(const data of channels){
+      const re=new Float64Array(n),im=new Float64Array(n);
+      for(let k=1;k<n/2;k++){
+        const f=k*binHz,shape=holdShape(f);if(!(shape>0))continue;
+        // 高いほうは細い成分をまばらに(きらめき)、低いほうはやや密に(やわらかいシャー)
+        const keep=f>7000?.16:.45;if(rand()>keep)continue;
+        const a=shape*(.35+.65*rand())/Math.sqrt(keep),ph=rand()*Math.PI*2;
+        re[k]=a*Math.cos(ph);im[k]=a*Math.sin(ph);re[n-k]=re[k];im[n-k]=-im[k];
+      }
+      holdIfft(re,im);
+      const p1=rand()*Math.PI*2,p2=rand()*Math.PI*2,p3=rand()*Math.PI*2;
       for(let i=0;i<n;i++){
-        const env=Math.min(1,i/(rate*.002))*Math.exp(-i/(rate*tau)),v=amp*env*(Math.sin(w*i)+.28*Math.sin(w*2.01*i));
-        const k=(at+i)%length;left[k]+=v*(1-pan*.7);right[k]+=v*(.3+pan*.7);
+        const e=1+.09*Math.sin(2*Math.PI*c1*i/n+p1)+.07*Math.sin(2*Math.PI*c2*i/n+p2)+.05*Math.sin(2*Math.PI*c3*i/n+p3);
+        const v=re[i]*e;data[i]=v;if(Math.abs(v)>peak)peak=Math.abs(v);
       }
     }
-    // うすい「シャー」。高いところだけを残した雑音を、細かくふるわせて敷く(ふるえは1.6秒でちょうど回りきる速さ)
-    let hl=0,hr=0,pl=0,pr=0;
-    for(let i=0;i<length;i++){
-      const nl=rand()*2-1,nr=rand()*2-1;hl=.82*(hl+nl-pl);hr=.82*(hr+nr-pr);pl=nl;pr=nr;
-      const flutter=.55+.45*Math.sin(2*Math.PI*i*(30/length));
-      left[i]+=hl*.1*flutter;right[i]+=hr*.1*flutter;
-    }
-    let peak=0;for(let i=0;i<length;i++)peak=Math.max(peak,Math.abs(left[i]),Math.abs(right[i]));
-    if(peak>0){const k=1/peak;for(let i=0;i<length;i++){left[i]*=k;right[i]*=k;}}
+    if(peak>0){const k=1/peak;for(const data of channels)for(let i=0;i<n;i++)data[i]*=k;}
     holdLoopCtx=audio;holdLoopBuffer=buffer;
     return buffer;
   };
@@ -2043,7 +2065,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     const cleanup=()=>{try{try{source.stop();}catch{}source.disconnect();gain.disconnect();}catch{}};
     source.onended=cleanup;
     // 毎回同じ所から始めると同じ粒の並びが聞こえるので、始める位置をずらす
-    source.start(now,(holdVoices.size*.53+(Number(id)||0)*.37)%HOLD_LOOP_SECONDS);
+    source.start(now,(holdVoices.size*.53+(Number(id)||0)*.37)%(source.buffer.duration||1));
     holdVoices.set(id,{audio,gain,sources,cleanup});
   };
   // held … いま押さえている HOLD/SLIDE のノーツの並び(index で見分ける)。空なら全部止める
