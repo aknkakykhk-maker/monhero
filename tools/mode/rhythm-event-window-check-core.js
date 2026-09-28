@@ -624,9 +624,17 @@ check('曲えらびの案内は週ごとに1度だけ',
   &&app.includes('rhythmEventNoticeSeen !== rhythmSongSelectEvent.id'));
 
 // --- ビートP STEP2（獲得式・保存・二重付与防止） ---
+// 2026-09-28: 80万〜100万点を「上ほど伸びる曲線」へ(ユーザー指示「80万から100万までの増え幅を上げたい / 100万での200P最大のまま」)
 check('ビートPの基本式は確定仕様どおり',
-  [[800000,80],[850000,85],[900000,90],[950000,95],[960000,116],[970000,137],[980000,158],[990000,179],[1000000,200]]
+  [[700000,70],[800000,80],[810000,81],[850000,88],[900000,110],[930000,131],[950000,148],[970000,167],[980000,177],[990000,188],[1000000,200]]
     .every(([score,want])=>O.rhythmEventPointBaseForScore(score)===want));
+{
+  const old=s=>Math.floor(s/10000+Math.max(0,s-950000)/500);
+  let worse=0,drop=0;for(let s=0;s<=1000000;s+=10){if(O.rhythmEventPointBaseForScore(s)<old(s))worse++;if(s&&O.rhythmEventPointBaseForScore(s)<O.rhythmEventPointBaseForScore(s-10))drop++;}
+  check('曲線にしても、どの点数でも以前の式より減らない',worse===0,`${worse}か所`);
+  check('点数が上がってビートPが減るところが無い',drop===0,`${drop}か所`);
+  check('100万点で200Pが最大のまま',O.rhythmEventPointBaseForScore(1000000)===200&&O.rhythmEventPointBaseForScore(1200000)===200);
+}
 check('壊れたスコアは0Pへ倒す',
   O.rhythmEventPointBaseForScore(null)===0&&O.rhythmEventPointBaseForScore('x')===0&&O.rhythmEventPointBaseForScore(-100)===0);
 if(limited.length){
@@ -642,7 +650,7 @@ if(limited.length){
     const off=O.rhythmEventPointAwardAt(Date.parse(e.endAt),target,1000000);
     const off95=O.rhythmEventPointAwardAt(Date.parse(e.endAt),target,950000);
     check('イベント期間外は開催中(通常曲)の1/5のビートPを出す',!!off&&off.amount===40&&off.offEvent===true&&off.target===false
-      &&off.eventId===null&&!!off95&&off95.amount===19,off?`100万点→${off.amount}P / 95万点→${off95&&off95.amount}P`:'null');
+      &&off.eventId===null&&!!off95&&off95.amount===29,off?`100万点→${off.amount}P / 95万点→${off95&&off95.amount}P`:'null');
     check('開催中の付与は期間外の印を持たない',!!targetAward&&targetAward.offEvent===false);
     check('期間外の倍率は0.2',O.RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER===0.2);
   }
