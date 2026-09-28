@@ -167,6 +167,18 @@ const VIEW={width:390,height:844};
           // 回転のぶん当たり判定がずれていないか(押した場所にその要素が居るか)
           ok(`  ${angle}度: 「戻る」の真ん中を押すとその要素に当たる`,measured.reachable);
         }
+        // 器がもう四方の余白を取っているので、中のヘッダーが端末の上端の余白(59px)をもう一度足さない
+        // (2026-09-28・ユーザー指摘「横画面ボタンで切り替えたときの表示だけど上部が空いてて」)。
+        // 回した器の上は端末の右端で、そこに余白は要らない
+        const headPad=await page.evaluate(()=>{const h=document.querySelector('[data-rhythm-back]')?.closest('header');return h?parseFloat(getComputedStyle(h).paddingTop):null;});
+        ok(`  ${angle}度: 曲えらびのヘッダーの上に端末の上端の余白を二重に足さない`,headPad!==null&&headPad<=8,`padding-top=${headPad}px`);
+      }
+      {
+        // 回していないときは、これまでどおりヘッダーが端末の上端の余白を取る
+        await page.evaluate(()=>RHYTHM_VIEW_ROTATION.set(0));
+        await page.waitForTimeout(300);
+        const headPad=await page.evaluate(()=>{const h=document.querySelector('[data-rhythm-back]')?.closest('header');return h?parseFloat(getComputedStyle(h).paddingTop):null;});
+        ok('  回していないときは曲えらびのヘッダーが端末の上端の余白を取る',headPad!==null&&headPad>=INSET.top,`padding-top=${headPad}px`);
       }
       await page.evaluate(()=>{
         const root=document.documentElement.style;
