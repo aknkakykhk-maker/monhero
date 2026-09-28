@@ -28,6 +28,7 @@ const {simulateNotes}=require('./rhythm-hand-simulate.js');
 const {assignSideFlickDirs}=require('./rhythm-side-flick.js');
 const {trackFocus,focusBoost}=require('./rhythm-chart-focus.js');
 const {lowLagOf,isLowHit}=require('./rhythm-chart-low-lag.js');
+const {detectRepeats}=require('./rhythm-chart-repeats.js');
 const {DEFAULT_PLAY_TUNING,playTuningForRevision}=require('./rhythm-chart-play-tuning.js');
 const {setLaneCount:setPatternLaneCount,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
 const {soundTraitsFor,flickScoreOf,chordScoreOf}=require('./rhythm-sound-traits.js');
@@ -666,15 +667,43 @@ const intensityPosition=bar=>{
   const sectionValue=section?section.intensity:own;
   return Math.max(0,Math.min(1,own*.5+sectionValue*.5));
 };
+// Rev.18: 繰り返しの見分け(rhythm-chart-repeats.js)。解析の区切りの繰り返し(repeatOf)が無い小節にだけ、
+//   4つの手がかり(メロディ・リズム・低音・音の層)のうち3つが「前にほぼ同じ4小節があった」と言う所の元の小節を足す。
+//   解析の繰り返しがある小節はそのまま(今まで効いていた所は変えない)。解析ファイルは作り直さない
+const rev18=chartRevision>=18;
+const extraRepeat=(()=>{
+  if(!rev18)return {sourceByBar:new Map(),falsePositiveRate:0};
+  let layers=null;
+  try{
+    const layersFile=authoring(`${dashed}-v3-layers.json`);
+    const absolute=path.isAbsolute(layersFile)?layersFile:path.join(ROOT,layersFile);
+    if(fs.existsSync(absolute)){
+      const data=readJson(layersFile);
+      const audioFile=authoring(`${dashed}-v3-audio.json`);
+      const sha=require('crypto').createHash('sha256').update(fs.readFileSync(path.isAbsolute(audioFile)?audioFile:path.join(ROOT,audioFile))).digest('hex');
+      if(data.basedOn&&data.basedOn.sha256===sha)layers=data;
+    }
+  }catch{layers=null;}
+  const found=detectRepeats(audio,layers);
+  const sourceByBar=new Map([...found.sourceByBar].filter(([bar])=>{const section=sectionForBar(bar);return !section||section.repeatOf==null;}));
+  return {sourceByBar,falsePositiveRate:found.falsePositiveRate};
+})();
+// 同じ元を持つ足した小節の中で何番目か(1から)。フレーズの写しの反転・発展の回を数えるのに使う
+const extraRepeatOrder=(()=>{
+  const order=new Map(),seen=new Map();
+  for(const bar of [...extraRepeat.sourceByBar.keys()].sort((a,b)=>a-b)){const source=extraRepeat.sourceByBar.get(bar);const n=(seen.get(source)||0)+1;seen.set(source,n);order.set(bar,n);}
+  return order;
+})();
 // 繰り返しの区切り（形を使い回すのに使う）
 const repeatSourceBar=bar=>{
   const section=sectionForBar(bar);
-  if(!section||section.repeatOf==null)return null;
+  if(!section||section.repeatOf==null)return extraRepeat.sourceByBar.has(bar)?extraRepeat.sourceByBar.get(bar):null;
   return section.repeatOf+(bar-section.startBar);
 };
 // その小節が「同じフレーズの何回目の繰り返しか」(Rev.2のフレーズの写し)。元の小節は0。
 // 同じ元を持つ区切りは出てくる順に1,2,…と数え、元がさらに繰り返し(4小節の輪が続く曲など)なら、その分も足す。
 const phraseOccurrence=bar=>{
+  if(extraRepeatOrder.has(bar))return extraRepeatOrder.get(bar);
   let count=0,current=bar;
   for(let guard=0;guard<64;guard++){
     const section=sectionForBar(current);
@@ -3775,6 +3804,7 @@ if(rev11){
   const developBars=[];for(let bar=0;bar<=Math.ceil((allOnsets[allOnsets.length-1]?.grid||0)/BAR);bar++)if(developBar(bar))developBars.push(bar);
   console.log(`発展の回: ${developBars.length}小節${lastChorus?`（ラスサビ ${lastChorus.startBar}〜${lastChorus.endBarExclusive-1}小節・名札 ${lastChorus.label}）`:'（ラスサビは見つからない）'}`);
 }
+if(rev18)console.log(`繰り返しの見分け: 解析の繰り返しに ${extraRepeat.sourceByBar.size}小節を足した（間違いの見積もり ${(extraRepeat.falsePositiveRate*100).toFixed(2)}%）`);
 if(rev17)console.log(`遊んだ記録から学ぶ調整値: 低音の遅れ ${playTuning.lowLagFactor}倍${lowLagMs?`(${lowLagMs.toFixed(1)}ms を差し引いた)`:''}・1本の線 +${playTuning.lineBoost} / -${playTuning.lineDemote}`);
 if(focusData)console.log(focusOn?`主役の追跡: ドラム${focusData.counts.drums}小節・歌や主旋律${focusData.counts.melody}小節・混ざり${focusData.counts.mix}小節`:`主役の追跡: 効かない（${focusData.missing}）`);
 console.log(`譜面の作り方: ${chartRevisionLabel(chartRevision)}${phraseCopy?'（フレーズの写しあり）':'（2026-09-24までの作り方）'}${slideEase?'（スライドの曲線あり）':''}${sideFlick?'（MASTERに横フリックあり）':''}`);
