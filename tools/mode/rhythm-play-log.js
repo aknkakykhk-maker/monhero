@@ -20,7 +20,8 @@
 //   lowLagFactor … 低音だけが鳴っている所のノーツで「プレイヤーが聞いている低音の時刻」を逆算し、解析が測った遅れの何倍が本当かを出す
 //   lineBoost / lineDemote … 小節ごとの「つまみ食い」(歌とドラムをかわるがわる拾う度合い)と、押した時刻のばらつきの関係。
 //                            つまみ食いの多い小節ほど合わせにくいなら強め、関係が無い・逆なら弱める
-//   どちらも証拠が足りないときは動かさない。動かすときも1回あたりの幅を決めて少しずつ(行き過ぎたら次の週に戻る)。
+//   virtualSigmaScale / virtualMissScale … 仮想プレイヤー(rhythm-virtual-player.js)のばらつき・ミスを、実際の記録に合わせる倍率
+//   どれも証拠が足りないときは動かさない。動かすときも1回あたりの幅を決めて少しずつ(行き過ぎたら次の週に戻る)。
 'use strict';
 const fs=require('fs');
 const path=require('path');
@@ -28,6 +29,7 @@ const {spawnSync}=require('child_process');
 const {loadRuntime,RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
 const {lowLagOf,isLowHit}=require('./rhythm-chart-low-lag.js');
 const {TUNING_FILE,readPlayTuning,playTuningForRevision,clampTuning,DEFAULT_PLAY_TUNING}=require('./rhythm-chart-play-tuning.js');
+const {playChart}=require('./rhythm-virtual-player.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -43,6 +45,7 @@ const NEAR_MS=45;                  // 「低音だけが鳴っている所」: �
 // 学ぶための証拠の量と、1回あたりに動かす幅
 const LOW_LAG_MIN_SAMPLES=150,LOW_LAG_MIN_SONGS=2,LOW_LAG_RATE=.5,LOW_LAG_STEP=.05;
 const LINE_MIN_BARS=200,LINE_SLOPE_MS=4,LINE_STEP=.15;
+const VIRTUAL_MIN_CHARTS=3,VIRTUAL_MIN_PLAYS_PER_CHART=5,VIRTUAL_CALIBRATION_RUNS=100;
 
 // ── 記録の文字列をほどく(ゲーム側 rhythmPlayLogEncode の逆) ──
 const decodeDeltas=text=>{
@@ -74,6 +77,16 @@ const audioFor=songId=>{
   if(!track)return null;
   const file=path.join(ROOT,'tools/mode/authoring',`${track.replace(/_/g,'-')}-v3-audio.json`);
   return fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):null;
+};
+
+// 作者用の譜面(-v3-fixed-)。仮想プレイヤーは格子の形の譜面で遊ぶので、公開中の譜面とノーツ数が同じときだけ使う
+const authorChartFor=(songId,difficulty)=>{
+  const track=RELEASED_TRACKS[songId],chart=chartFor(songId,difficulty);
+  if(!track||!chart)return null;
+  const file=path.join(ROOT,'tools/mode/authoring',`${track.replace(/_/g,'-')}-v3-fixed-${String(difficulty).toLowerCase()}.json`);
+  if(!fs.existsSync(file))return null;
+  const author=JSON.parse(fs.readFileSync(file,'utf8'));
+  return author.notes&&author.notes.length===chart.notes.length?author:null;
 };
 
 // ── まとめ ──
@@ -170,6 +183,7 @@ const measureChart=entry=>{
     current:!!chart&&fingerprintOf(chart.notes)===entry.fingerprint,spreadMs:entry.madN?entry.madSum/entry.madN:null,missRate:entry.judged?entry.misses/entry.judged:null};
   if(!out.current||!audio)return out;
   const notes=chart.notes;
+  {const n=entry.notes.reduce((a,s)=>a+s[0],0),sq=entry.notes.reduce((a,s)=>a+s[2],0);out.rmsMs=n?Math.sqrt(sq/n):null;out.samples=n;}
   // 区間ごと
   const segments=new Map();
   notes.forEach((note,index)=>{
@@ -236,6 +250,26 @@ const learn=measures=>{
     next.lineBoost=Math.round((now.lineBoost+step)*100)/100;next.lineDemote=Math.round(next.lineBoost/2*100)/100;
     reasons.push(`1本の線: ${bars.length}小節で、つまみ食いの多い小節はばらつきが ${slope.toFixed(1)}ms ${slope>=0?'大きい':'小さい'} → ${step>0?'強める':step<0?'弱める':'動かさない'}`);
   }else reasons.push(`1本の線: 証拠が足りない(${bars.length}小節。${LINE_MIN_BARS}小節から)。動かさない`);
+  // 仮想プレイヤー: 実際の記録のばらつき・ミス率と、同じ譜面で仮想プレイヤーが出した値の比(件数の重みで平均)へ、倍率を半分ずつ寄せる
+  {
+    let w=0,sigmaRatio=0,missObserved=0,missPredicted=0,charts=0;
+    for(const m of measures){
+      if(m.rmsMs==null||!m.samples||m.plays<VIRTUAL_MIN_PLAYS_PER_CHART)continue;
+      const chart=authorChartFor(m.songId,m.difficulty),audio=audioFor(m.songId);
+      if(!chart||!audio)continue;
+      const played=playChart(chart,audio,{runs:VIRTUAL_CALIBRATION_RUNS,params:{sigmaScale:now.virtualSigmaScale,missScale:now.virtualMissScale}});
+      if(!(played.spreadMs>0))continue;
+      charts++;w+=m.samples;sigmaRatio+=m.rmsMs/played.spreadMs*m.samples;
+      missObserved+=(m.missRate||0)*m.samples;missPredicted+=played.missRate*m.samples;
+    }
+    if(charts>=VIRTUAL_MIN_CHARTS&&w>0){
+      const sigmaTarget=now.virtualSigmaScale*(sigmaRatio/w);
+      const missTarget=missPredicted>0?now.virtualMissScale*(missObserved/missPredicted):now.virtualMissScale;
+      next.virtualSigmaScale=Math.round((now.virtualSigmaScale+(sigmaTarget-now.virtualSigmaScale)*.5)*20)/20;
+      next.virtualMissScale=Math.round((now.virtualMissScale+(missTarget-now.virtualMissScale)*.5)*20)/20;
+      reasons.push(`仮想プレイヤー: ${charts}譜面で、実際のばらつきは見込みの ${(sigmaRatio/w).toFixed(2)}倍・ミスは ${missPredicted>0?(missObserved/missPredicted).toFixed(2):'-'}倍 → ばらつきの倍率 ${now.virtualSigmaScale}→${clampTuning(next).virtualSigmaScale}・ミスの倍率 ${now.virtualMissScale}→${clampTuning(next).virtualMissScale}`);
+    }else reasons.push(`仮想プレイヤー: 証拠が足りない(${charts}譜面。${VIRTUAL_MIN_CHARTS}譜面・1譜面${VIRTUAL_MIN_PLAYS_PER_CHART}回から)。動かさない`);
+  }
   const clamped=clampTuning(next);
   const changed=Object.keys(DEFAULT_PLAY_TUNING).some(key=>Math.abs(clamped[key]-now[key])>1e-9);
   return {now,next:clamped,changed,reasons};

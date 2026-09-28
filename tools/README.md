@@ -227,6 +227,8 @@ node tools/build.js --check
 
 `node mode/rhythm-play-log.js --fetch --report --learn --write` は、モンヒロビートの遊んだ記録(サーバーの rhythm_play_logs)を読み、譜面ごとの押す時刻のばらつき・ミス・低音の聞こえ方を測って、生成器の調整値(`authoring/chart-play-tuning.json`)を学ぶ(2026-09-28・MHB CHART ENGINE Rev.17)。`--import <file>` で JSON / JSONL からも取り込める。仕組みは `docs/spec/RHYTHM_PLAY_LOG.md`。`mode/rhythm-chart-low-lag.js` は低音の打点の遅れを測り、`mode/rhythm-chart-play-tuning.js` はリビジョンごとの調整値を読む。`node mode/rhythm-play-log-check.js` が、ゲームの送り方・SQL・学び方(作り物の記録で)・調整値0の Rev.17 が Rev.16 と同じ譜面になることを見張る。
 
+`node mode/rhythm-virtual-player.js --track <曲id> [--difficulty MASTER] [--runs 200]` は、仮想プレイヤーに作者用の譜面を遊ばせ、ミスの見込み・押す時刻のばらつき・いちばんつまずく区間を出す(2026-09-28・Rev.18 の区間の差し替えも使う)。`node mode/rhythm-virtual-player-check.js` が見張る。`mode/rhythm-chart-repeats.js` は4つの手がかりの多数決で繰り返しを見つけ(Rev.18)、`node mode/rhythm-chart-rev18-check.js` が見張る。
+
 `node mode/rhythm-audio-meter-opinion.js` は、テンポ・拍子の二つ目の意見(2026-09-26)。自動判定が3拍子の曲で、強い打点(低音と大きな一発)が小節の4等分と3等分のどちらに多いかを比べ、4拍子の読み違い(正しいテンポの 3/4 で3拍子と読む)を疑う。解析の警告 `meter-doubt` にもなる(1.8以上で止める・1.5以上で注意、4/3倍の BPM・4拍子を代わりの候補として示す)。自動では書き換えない。引数なしで一覧の曲を全部見る。`node mode/rhythm-audio-meter-opinion-check.js` が見張る。
 
 `node mode/rhythm-chart-v3-splice.js --track <曲id> [--count 4] [--chart-revision <版>] [--output-dir <dir>]` は、区間ごとに良い候補を継ぎ合わせる(2026-09-26・段5)。生成器の `--variant` で候補を作り、曲の区切りごとに気になり点(気持ちよさの物差しと同じ数え方)を数えて、同じ名札の区切りはまとめて同じ候補を採る。継ぎ目で押せない所が出た区切りは候補0へ戻す。Rev.14 以降の曲では、差し替えたあとも気になり点の高い区切りが残れば候補を4本足して選び直す(二段目)。authoring/ も公開データも書き換えない(書き出すのは `--output-dir` を渡したときの自動修正前の譜面だけ)。`--apply` はパイプラインが Rev.12 以降の曲で生成の直後に呼び、関門(押せない配置が無い・品質の6軸の合計が下がらない・気になり点が減る)を通った難易度だけ authoring/ の生成結果を差し替える(`--chart-dir` で書き出し先、`--chart-revision` で試すリビジョンを変えられる)。`node mode/rhythm-chart-v3-splice-check.js` が見張る。
