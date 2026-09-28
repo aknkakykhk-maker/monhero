@@ -87,6 +87,7 @@ const CHANGELOG = [
 | `group` | 任意 | `monster`（新モンスター・新血統） / `rhythm` / `masu` / `battle` / `items` / `ranking` / `assistant` / `ui` / `other`。**書かなければタイトルと本文から自動で見当が付く**ので、見当が外れるときだけ書く |
 | `assistantNotice` | 大きい追加のみ | ③を見る |
 | `image` | 新曲のとき必須 | `'images/song-art/◯◯.jpg'`。`?v=` は手で書かない |
+| `gallery` | 任意 | `[{ caption, image }]`。本文の下に「■見出し」と絵を順に並べる（染色イメージなど）。一覧の詳細にだけ出て、助手の告知には出ない。`?v=` は手で書かない |
 | `link` | 任意 | `{url,label}`。**https だけ通る**（`changelogSafeLink`） |
 | `releaseFlag` | 任意 | 公開フラグ名。本番へ出るまで更新履歴にも告知にも出ない |
 | `dev` | 任意 | `true` にすると**どちらのタブにも出ない**。プレイヤーがまだ触っていない機能の作業メモ用 |

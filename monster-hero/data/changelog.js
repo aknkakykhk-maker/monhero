@@ -58,6 +58,13 @@ const CHANGELOG = [
       'ユグドラシルの血を引くレアモンスター「メルホイップ」も一緒に登場します。甘い香りをまとった、ケーキに乗った女の子です。',
       'ふたりはダイヤショップより先に、ビートP交換所で先行公開します。9/28(月) 18:00からのビートPアップキャンペーンで、いまのうちにビートPを貯めておきましょう。',
       '能力や技は、公開のときにお知らせします。',
+      '「染色もどき」を使えば、ふたりも部位ごとに好きな色へ染められます。下に染色イメージを載せました。',
+    ],
+    // 染色イメージ(2026-09-28・ユーザー提案)。ゲームと同じ染め方で作った見本
+    // (tools/image/make-yggdrasil-dye-preview.js)。一覧の詳細にだけ出る(助手の告知は image の1枚)
+    gallery: [
+      { caption:'ユグドラシル 染色イメージ「紅葉カラー」', image:'images/events/yggdrasil-dye-preview.jpg?v=0f0c7839138c' },
+      { caption:'メルホイップ 染色イメージ「いちごチョコ」', image:'images/events/mel-whip-dye-preview.jpg?v=1660163d906e' },
     ],
     assistantNotice: { id:'update_notice_yggdrasil_lineage_preview_v1', type:'content' },
   },
