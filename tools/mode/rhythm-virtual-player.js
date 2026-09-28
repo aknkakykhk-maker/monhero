@@ -16,6 +16,7 @@
 //   ・判定はゲームと同じ窓(RHYTHM_JUDGMENTS: MARVELOUS ±55 / EXCELLENT ±100 / GREAT ±150 / GOOD ±170 / BAD ±185 / それより外は MISS)
 // 乱数は曲と難易度から決めた種で作る。同じ譜面なら毎回同じ結果。
 'use strict';
+const {tempoWarpForChart}=require('./rhythm-chart-tempo-warp.js');
 const fs=require('fs');
 const path=require('path');
 const {simulateNotes}=require('./rhythm-hand-simulate.js');
@@ -47,7 +48,9 @@ const noteModel=(chart,audio,params={})=>{
   const p={...DEFAULT_VIRTUAL_PLAYER,...params};
   const timing=audio.timing;
   const gridMs=Number(timing.gridMs)||timing.beatMs/timing.subdivisionsPerBeat;
-  const timeOf=grid=>timing.beatZeroMs+grid*gridMs;
+  // Rev.21 の譜面は、テンポの揺れを足した時刻で書き出される(rhythm-chart-tempo-warp.js)。遊ぶ時刻もそれにそろえる
+  const warp=tempoWarpForChart(chart,audio);
+  const timeOf=grid=>timing.beatZeroMs+grid*gridMs+warp.at(grid);
   const notes=chart.notes;
   const times=notes.map(note=>timeOf(note.grid));
   const onsets=(audio.onsets||[]).filter(o=>Number.isFinite(o.timeMs)).sort((a,b)=>a.timeMs-b.timeMs);

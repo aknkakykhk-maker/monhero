@@ -35,6 +35,8 @@ const {playChart,segmentCost}=require('./rhythm-virtual-player.js');
 const {playTuningForRevision}=require('./rhythm-chart-play-tuning.js');
 // 仮想プレイヤーを差し替えの費用に使うのは Rev.18 から。1候補あたり遊ばせる回数
 const VIRTUAL_SPLICE_REVISION=18,VIRTUAL_SPLICE_RUNS=60;
+// 継ぎ目をまたいだ同じ枠のモンスターノーツを1つにする(下の build)
+const MONSTER_DEDUPE_REVISION=21;
 // 表示だけ小数1桁に丸める(Rev.18 から仮想プレイヤーの費用が小数になる。Rev.17 までは .5 刻みなので表示も変わらない)
 const round1=value=>value==null?value:Math.round(value*10)/10;
 const {measure:measureQuality,AXES}=require('./rhythm-chart-quality-report.js');
@@ -88,7 +90,17 @@ const spliceCharts=(charts,audio)=>{
   const build=chosen=>{
     const notes=[];
     charts.forEach((chart,k)=>{for(const note of chart.notes){if(chosen[sectionOfGrid(note.grid)]===k)notes.push(JSON.parse(JSON.stringify(note)));}});
-    return notes.sort((a,b)=>a.grid-b.grid||(Number(a.subLane)||0)-(Number(b.subLane)||0));
+    notes.sort((a,b)=>a.grid-b.grid||(Number(a.subLane)||0)-(Number(b.subLane)||0));
+    // Rev.21 から: モンスターノーツ(monsterSlot)は1体1回。候補ごとに置き場所が少しずつ違うので、区切りの継ぎ目をまたいで
+    // 同じ枠が2つ残ることがある(2026-09-29、SIX ÉTERNEL ドパガキリミックスの EXPERT で枠4が 2.2秒あけて2回出た)。先に来たほうだけ残す
+    if(revision>=MONSTER_DEDUPE_REVISION){
+      const seen=new Set();
+      for(const note of notes){
+        if(!note.monsterSlot)continue;
+        if(seen.has(note.monsterSlot))delete note.monsterSlot;else seen.add(note.monsterSlot);
+      }
+    }
+    return notes;
   };
   const chosen=sections.map((_,i)=>choice.get(labelOf(i)));
   // 押せない所が出た区切り(継ぎ目なので、その前の区切りも)を候補0へ戻す。戻すたびに全体を測り直す
