@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dd14ae062d14a37c
+// source-sha256: 3de028218c819ad8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-29 05:23";
+const BUILD_DATE = "2026-09-29 05:25";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -14592,7 +14592,7 @@ const AssistantBubble = ({
   }, x))), React.createElement("div", {
     className: "shrink-0 p-4 pt-2",
     style: {
-      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      paddingBottom: 'calc(1rem + var(--mh-sa-bottom))'
     }
   }, React.createElement("button", {
     onClick: () => setOpen(false),
@@ -21598,7 +21598,7 @@ const RhythmOptions = ({
     "data-rhythm-options": true,
     className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
     style: {
-      paddingTop: 'env(safe-area-inset-top)'
+      paddingTop: 'var(--mh-sa-top)'
     }
   }, React.createElement("div", {
     "data-rhythm-options-bar": true,
@@ -21914,7 +21914,7 @@ const RhythmOptions = ({
     "data-rhythm-options-actions": true,
     className: `z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 shadow-[0_-8px_24px_rgba(2,6,23,.72)] ${wide ? 'pt-1.5' : 'pt-2'}`,
     style: {
-      paddingBottom: 'calc(.5rem + env(safe-area-inset-bottom))'
+      paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
     }
   }, message && React.createElement("p", {
     role: "status",
@@ -22549,7 +22549,7 @@ const RhythmSongSelect = ({
     "data-rhythm-song-detail": true,
     className: "shrink-0 border-t border-sky-300/20 bg-gradient-to-b from-blue-950/95 to-slate-950/95 px-3 py-2 landscape:w-[44%] landscape:max-w-[440px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-2",
     style: {
-      paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
+      paddingBottom: 'calc(0.5rem + var(--mh-sa-bottom))'
     }
   }, !song || !difficulty ? React.createElement("p", {
     className: "text-xs font-bold text-slate-400"
@@ -22750,7 +22750,7 @@ const RhythmSongSelect = ({
     "aria-label": "ジャンル",
     className: "max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-cyan-300/60 bg-slate-900 p-4",
     style: {
-      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      paddingBottom: 'calc(1rem + var(--mh-sa-bottom))'
     }
   }, React.createElement("h3", {
     className: "text-sm font-black text-white"
@@ -22806,7 +22806,7 @@ const RhythmSongSelect = ({
     onClick: e => e.stopPropagation(),
     className: "max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-fuchsia-400/60 bg-slate-900 p-4",
     style: {
-      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      paddingBottom: 'calc(1rem + var(--mh-sa-bottom))'
     }
   }, React.createElement("h3", {
     className: "text-sm font-black text-white"
@@ -26498,8 +26498,8 @@ const RhythmTapTest = ({
       "data-rhythm-celebrate": true,
       className: "flex flex-1 items-center justify-center bg-slate-950 text-white",
       style: {
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)'
+        paddingTop: 'var(--mh-sa-top)',
+        paddingBottom: 'var(--mh-sa-bottom)'
       },
       onClick: skipCelebrate
     }, React.createElement("div", {
@@ -26518,8 +26518,8 @@ const RhythmTapTest = ({
       "data-rhythm-calibration-result": true,
       className: "flex-1 overflow-y-auto bg-slate-950 p-4 text-white",
       style: {
-        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        paddingTop: 'calc(1rem + var(--mh-sa-top))',
+        paddingBottom: 'calc(1rem + var(--mh-sa-bottom))'
       }
     }, React.createElement("p", {
       className: "text-center text-xs text-cyan-300"
@@ -26588,9 +26588,9 @@ const RhythmTapTest = ({
       "data-rank-tier": String(rankTier),
       "data-rhythm-effect": settings.effectAmount,
       "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
-      className: "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]",
+      className: "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white [container-type:inline-size] landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)]",
       style: {
-        paddingTop: 'env(safe-area-inset-top)'
+        paddingTop: 'var(--mh-sa-top)'
       }
     }, hudArtSrc && React.createElement("div", {
       "data-rhythm-result-backdrop": true,
@@ -27058,7 +27058,7 @@ const RhythmTapTest = ({
       "data-rhythm-result-actions": true,
       className: "relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2",
       style: {
-        paddingBottom: 'calc(.5rem + env(safe-area-inset-bottom))'
+        paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
       }
     }, React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
@@ -27073,7 +27073,7 @@ const RhythmTapTest = ({
   }
   return React.createElement("main", {
     "data-rhythm-tap-test": true,
-    className: "relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)] [container-type:inline-size]",
+    className: "relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[var(--mh-sa-left)] landscape:pr-[var(--mh-sa-right)] [container-type:inline-size]",
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
     "data-rhythm-effect": settings.effectAmount,
     style: {
@@ -31329,7 +31329,7 @@ function RhythmInfoScreen({
   }, React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1",
     style: {
-      paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+      paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
     }
   }, React.createElement("button", {
     "aria-label": "HOMEへ戻る",
@@ -31346,7 +31346,7 @@ function RhythmInfoScreen({
   }, "モンヒロビート"))), React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll px-4 pb-6 pt-3",
     style: {
-      paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
+      paddingBottom: 'calc(1.5rem + var(--mh-sa-bottom))'
     }
   }, React.createElement("div", {
     className: "my-6 text-center text-6xl"
@@ -31509,7 +31509,7 @@ function RhythmSongSelectScreen({
   }, "周回を終えています…")), React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
     style: {
-      paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+      paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
     }
   }, React.createElement("button", {
     "data-rhythm-back": true,
@@ -31865,7 +31865,7 @@ function RhythmHelpScreen({
   }, React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1",
     style: {
-      paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+      paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
     }
   }, React.createElement("button", {
     "aria-label": "戻る",
@@ -31886,7 +31886,7 @@ function RhythmHelpScreen({
     "data-rhythm-demo-help-scroll": true,
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
     style: {
-      paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
+      paddingBottom: 'calc(1.5rem + var(--mh-sa-bottom))'
     }
   }, React.createElement(RhythmLandscapeHint, {
     className: "mb-3"
@@ -31969,7 +31969,7 @@ function RhythmMonstersScreen({
   }, React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-2 border-b border-fuchsia-400/15 bg-slate-950/95 px-3 py-1",
     style: {
-      paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+      paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
     }
   }, React.createElement("button", {
     "aria-label": "戻る",
@@ -31985,7 +31985,7 @@ function RhythmMonstersScreen({
   }, "👾 マスモン設定")), React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3 space-y-3",
     style: {
-      paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
+      paddingBottom: 'calc(1.5rem + var(--mh-sa-bottom))'
     }
   }, React.createElement(RhythmLandscapeHint, null), React.createElement(AssistantBubble, {
     scene: "rhythmMonsters",
@@ -32263,7 +32263,7 @@ function RhythmRankingScreen({
   }, React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1",
     style: {
-      paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+      paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
     }
   }, React.createElement("button", {
     "aria-label": "戻る",
@@ -32289,7 +32289,7 @@ function RhythmRankingScreen({
   }, tab.label))), React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
     style: {
-      paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
+      paddingBottom: 'calc(1.5rem + var(--mh-sa-bottom))'
     }
   }, totalTabOpen && React.createElement(React.Fragment, null, total.status === 'loading' && React.createElement("p", {
     "data-rhythm-total-loading": true,
@@ -32548,13 +32548,13 @@ function RhythmRankingScreen({
     "aria-label": "イベント詳細",
     className: "fixed inset-0 z-[80000] flex items-center justify-center bg-slate-950/95 p-4",
     style: {
-      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      paddingTop: 'calc(1rem + var(--mh-sa-top))',
+      paddingBottom: 'calc(1rem + var(--mh-sa-bottom))'
     }
   }, React.createElement("div", {
     className: "w-full max-w-md overflow-y-auto mh-scroll rounded-3xl border-2 border-amber-300/60 bg-slate-950 p-4",
     style: {
-      maxHeight: 'calc(var(--mh-vh) - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))'
+      maxHeight: 'calc(var(--mh-vh) - 2rem - var(--mh-sa-top) - var(--mh-sa-bottom))'
     }
   }, React.createElement("p", {
     className: "mb-2 text-center text-[10px] font-black tracking-widest text-amber-300"
@@ -43812,7 +43812,7 @@ function RhythmHistoryScreen({
   }, React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1",
     style: {
-      paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+      paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
     }
   }, React.createElement("button", {
     "aria-label": "戻る",
@@ -64923,7 +64923,7 @@ function MonsterHeroGame() {
       "data-rhythm-debug-screen": true,
       className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
       style: {
-        paddingTop: 'env(safe-area-inset-top)'
+        paddingTop: 'var(--mh-sa-top)'
       }
     }, React.createElement("header", {
       className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1"
