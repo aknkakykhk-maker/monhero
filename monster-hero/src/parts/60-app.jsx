@@ -153,8 +153,6 @@ function MonsterHeroGame() {
   // ビートPは交換所を開くたび保存値から読み直し、交換成功時だけstateも更新する。
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
   // 虹の超越の実だけは、価格タップ後に数量と購入後残高を確認してから一括購入する。
-  const [marketQuantityItem, setMarketQuantityItem] = useState(null);
-  const [marketPurchaseQuantity, setMarketPurchaseQuantity] = useState(1);
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
@@ -6444,17 +6442,18 @@ function MonsterHeroGame() {
 
   // ブリーダーマーケットでアイテムを購入。アイコンはpt、円盤石/ブリーダー/消耗品はゴールドを消費し、
   // 種別ごとの解放リストに追加(端末保存)。円盤石/ブリーダーは解放と同時に編成へも自動追加する
+  // 画面(BreederMarketScreen)の確認の窓から呼ばれる。買えたら true を返し、窓はそれを見て閉じる
   const buyMarketItem = async (item, quantity=1) => {
-    if (marketPurchaseProcessingRef.current) return;
-    if (item.available === false) return; // 実装準備中のアイテムは購入不可
-    if (isMarketItemOwned(item)) return;
+    if (marketPurchaseProcessingRef.current) return false;
+    if (item.available === false) return false; // 実装準備中のアイテムは購入不可
+    if (isMarketItemOwned(item)) return false;
     const purchase = buildMarketItemPurchase({ item, gold, breederPoints, ownedItems:ownedItemsRef.current, quantity });
-    if (!purchase.ok) return;
+    if (!purchase.ok) return false;
     marketPurchaseProcessingRef.current = true;
     try {
       if (item.type === 'item') {
         const saved = await saveMarketBalances(gold, ownedItemsRef.current, purchase.gold, purchase.ownedItems, storeGet, storeSet);
-        if (!saved) return;
+        if (!saved) return false;
         ownedItemsRef.current = purchase.ownedItems;
         setOwnedItems(purchase.ownedItems);
       }
@@ -6475,16 +6474,16 @@ function MonsterHeroGame() {
       setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
     }
     saveMissionProgress('market');
-    if (item.type === 'item') setMarketQuantityItem(null);
+    return true;
     } finally { marketPurchaseProcessingRef.current = false; }
   };
   // 魂格再編の書は、通常の100万ダイヤ商品とは別カードで
   // 勇者の証1個→1冊へ交換できる。同じ所持品IDだけを検証付き保存し、失敗時は元へ戻す。
   const exchangeSoulRankRespecByProof = async () => {
-    if (marketPurchaseProcessingRef.current) return;
+    if (marketPurchaseProcessingRef.current) return false;
     const before = ownedItemsRef.current;
     const exchange = buildSoulRankRespecProofExchange(before, 1);
-    if (!exchange.ok) { setMarketExchangeError('勇者の証が1個必要です。'); return; }
+    if (!exchange.ok) { setMarketExchangeError('勇者の証が1個必要です。'); return false; }
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
@@ -6495,17 +6494,19 @@ function MonsterHeroGame() {
       ownedItemsRef.current = exchange.ownedItems;
       setOwnedItems(exchange.ownedItems);
       saveMissionProgress('market');
+      return true;
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証は消費していません。');
+      return false;
     } finally { marketPurchaseProcessingRef.current = false; }
   };
   // 勇者の証片20個 → 勇者の証1個。魂格再編の書と同じ作りで、失敗したら元へ戻す
   // (2026-09-13・週間ランキングの報酬で証片がたまるようにしたのに合わせて追加)
   const exchangeHeroProofByShard = async () => {
-    if (marketPurchaseProcessingRef.current) return;
+    if (marketPurchaseProcessingRef.current) return false;
     const before = ownedItemsRef.current;
     const exchange = buildHeroProofShardExchange(before, 1);
-    if (!exchange.ok) { setMarketExchangeError(`勇者の証片が${HERO_PROOF_SHARD_PER_PROOF}個必要です（いま${exchange.shardHave}個）。`); return; }
+    if (!exchange.ok) { setMarketExchangeError(`勇者の証片が${HERO_PROOF_SHARD_PER_PROOF}個必要です（いま${exchange.shardHave}個）。`); return false; }
     marketPurchaseProcessingRef.current = true;
     setMarketExchangeError('');
     try {
@@ -6516,8 +6517,10 @@ function MonsterHeroGame() {
       ownedItemsRef.current = exchange.ownedItems;
       setOwnedItems(exchange.ownedItems);
       saveMissionProgress('market');
+      return true;
     } catch {
       setMarketExchangeError('交換を保存できませんでした。勇者の証片は消費していません。');
+      return false;
     } finally { marketPurchaseProcessingRef.current = false; }
   };
 
@@ -15822,7 +15825,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onBack={returnToHome}
             onSelectTab={(key)=>{setMarketTab(key);setMarketExchangeError('');}}
             onZoomIcon={setMarketIconZoom}
-            onBuy={(item)=>{if(item.type==='item'){setMarketPurchaseQuantity(1);setMarketQuantityItem(item);}else buyMarketItem(item);}}
+            onBuy={buyMarketItem}
             onOpenDetail={(item,detailMon,detailTeaching)=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
             onOpenItemDetail={setMarketItemDetail}
             onExchangeSoulRankRespec={exchangeSoulRankRespecByProof}
@@ -17035,57 +17038,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* マーケットの商品アイコンを大きく見る。カードの中では小さいので、絵を確かめたいとき用。
           アイコンはプロフィール画像になるので、実際に使われるのと同じ丸い形で出す */}
       {marketIconZoom&&(()=>{const item=marketIconZoom;const round=item.type==='icon'||item.type==='assist';return(
-        <div onClick={()=>setMarketIconZoom(null)} className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:41500}} role="dialog" aria-modal="true" aria-label={`${item.name}の拡大表示`}>
-          <div onClick={e=>e.stopPropagation()} className="w-full max-w-[280px] rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col items-center gap-3">
+        <MarketModal narrow label={`${item.name}の拡大表示`} onClose={()=>setMarketIconZoom(null)}>
+          <div className="flex flex-col items-center gap-3">
             <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`}>
               {item.icon
                 ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
                 : <span style={{fontSize:'96px'}}>{item.emoji}</span>}
             </div>
             <div className="text-center text-sm font-black text-white leading-tight">{item.name}</div>
-            <button onClick={()=>setMarketIconZoom(null)} className="w-full min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98]">とじる</button>
+            <MarketModalClose onClick={()=>setMarketIconZoom(null)}/>
           </div>
-        </div>
+        </MarketModal>
       );})()}
-      {marketItemDetail&&(
-        <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:41000}} role="dialog" aria-modal="true" aria-label={`${marketItemDetail.name}の効果`}>
-          <div className="bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl">
-            <div className="flex items-center gap-2 mb-3">
-              {marketItemDetail.icon
-                ? <img src={marketItemDetail.icon} alt={marketItemDetail.name} className="w-10 h-10 rounded-full object-cover border border-white/10"/>
-                : <span className="text-3xl">{marketItemDetail.emoji}</span>}
-              <h3 className="text-base font-black text-teal-300">{marketItemDetail.name}</h3>
-            </div>
-            <p className="text-[12px] text-slate-200 leading-relaxed">{marketItemDetail.desc}</p>
-            <div className="mt-3 flex items-center justify-between text-[11px] font-black">
-              <span className="text-slate-400">所持数</span>
-              <span className="text-cyan-300 font-mono">{ownedItems[marketItemDetail.id]||0}</span>
-            </div>
-            <div className="mt-1 flex items-center justify-between text-[11px] font-black">
-              <span className="text-slate-400">ねだん</span>
-              <span className="text-amber-300 font-mono">{Number(marketItemDetail.cost||0).toLocaleString()} {marketItemDetail.currency==='psyche'?'プシュケー':marketItemDetail.type==='icon'?'pt':'ダイヤ'}</span>
-            </div>
-            <button onClick={()=>setMarketItemDetail(null)} className="w-full mt-4 min-h-[48px] rounded-2xl bg-teal-600 text-white font-black active:scale-[.98]">とじる</button>
-          </div>
-        </div>
-      )}
-
-      {marketQuantityItem&&(()=>{const usesPsyche=marketQuantityItem.currency==='psyche';const balance=usesPsyche?ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID):gold;const unit=usesPsyche?'プシュケー':'ダイヤ';const unitCost=Math.max(0,Math.floor(Number(marketQuantityItem.cost)||0));const maxQuantity=unitCost>0?Math.floor(balance/unitCost):0;const quantity=Math.min(Math.max(1,marketPurchaseQuantity),Math.max(1,maxQuantity));const total=unitCost*quantity;const canPurchase=maxQuantity>0&&!marketPurchaseProcessingRef.current;const changeQuantity=(delta)=>setMarketPurchaseQuantity(current=>Math.min(Math.max(1,current+delta),Math.max(1,maxQuantity)));const accentText=usesPsyche?'text-fuchsia-200':'text-amber-200';return(
-        <div className="fixed inset-0 flex items-center justify-center overflow-y-auto px-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(0,0,0,0.92)',zIndex:42000}} role="dialog" aria-modal="true" aria-label={`${marketQuantityItem.name}の購入個数選択`}>
-          <div onClick={e=>e.stopPropagation()} className={`w-full max-w-sm rounded-3xl border-2 ${usesPsyche?'border-fuchsia-400/70':'border-amber-400/70'} bg-slate-950 p-4 shadow-2xl`}>
-            <h3 className={`text-center text-lg font-black ${accentText}`}>{marketQuantityItem.name}</h3>
-            <div className="mt-3 rounded-2xl bg-slate-900 p-3 text-center"><span className="block text-[10px] font-bold text-slate-400">所持数</span><strong className={`mt-1 block text-xl font-black ${accentText}`}>{balance.toLocaleString()} {unit}</strong></div>
-            <div className="mt-3 text-center text-[11px] font-black text-slate-300">購入個数</div>
-            <div className="mt-2 grid grid-cols-5 items-center gap-1.5">
-              <button disabled={quantity<=1} onClick={()=>changeQuantity(-10)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">-10</button><button disabled={quantity<=1} onClick={()=>changeQuantity(-1)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">-1</button><strong className="text-center text-xl font-black font-mono">{quantity}</strong><button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(1)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">+1</button><button disabled={quantity>=maxQuantity} onClick={()=>changeQuantity(10)} className="min-h-[44px] rounded-xl bg-slate-800 font-black disabled:opacity-30">+10</button>
-            </div>
-            <button disabled={maxQuantity<=0} onClick={()=>setMarketPurchaseQuantity(maxQuantity)} className={`mt-2 min-h-[44px] w-full rounded-xl font-black disabled:opacity-30 ${usesPsyche?'bg-fuchsia-800':'bg-amber-700'}`}>MAX（{maxQuantity.toLocaleString()}個）</button>
-            <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"><div className="flex justify-between"><span className="text-slate-400">単価</span><span>1個 = {unitCost.toLocaleString()}{unit}</span></div><div className="flex justify-between text-base"><span className="text-slate-300">合計</span><span className="text-amber-300">{total.toLocaleString()}{unit}</span></div><div className="flex justify-between"><span className="text-slate-400">購入後</span><span className={accentText}>残り{Math.max(0,balance-total).toLocaleString()}{unit}</span></div></div>
-            {maxQuantity<=0&&<p className="mt-2 text-center text-[12px] font-black text-red-300">{unit}が足りません</p>}
-            <div className="mt-3 grid grid-cols-1 gap-2"><button disabled={!canPurchase} onClick={()=>buyMarketItem(marketQuantityItem,quantity)} className="min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500">購入する</button><button onClick={()=>setMarketQuantityItem(null)} className="min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98]">キャンセル</button></div>
-          </div>
-        </div>
-      );})()}
+      {/* アイテムの効果。どの売り場の品も同じ詳細(MarketItemDetail)で出す。
+          ビートP交換所の品は grantText(1回で受け取る数)が付いてくる */}
+      {marketItemDetail&&<MarketItemDetail item={marketItemDetail} owned={ownedItemCount(ownedItems, marketItemDetail.id)} grantText={marketItemDetail.grantText||''} onClose={()=>setMarketItemDetail(null)}/>}
 
       {skipInfoItemId&&(()=>{const item=BREEDER_MARKET_ITEMS.find(i=>i.id===skipInfoItemId); if(!item) return null; const label=DIFFICULTY_SETTINGS[item.skipDifficulty]?.label||item.skipDifficulty; return(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:41000}} role="dialog" aria-modal="true" aria-label="スキップの説明">

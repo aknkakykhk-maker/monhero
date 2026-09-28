@@ -210,13 +210,17 @@ const marketNameForWrap = (name) => MARKET_NAME_WRAP_WORDS.reduce(
 //   <wbr> は「ここで折り返してよい」だけを表し、innerText には現れない。
 const marketNameNodes = (name) => marketNameForWrap(name).split('​')
   .map((seg, index) => <React.Fragment key={index}>{index>0&&<wbr/>}{seg}</React.Fragment>);
-const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false }) => {
+// comingSoonLabel: 買えない予告の札。ふつうは「近日追加」。ビートP交換所の円盤石だけ、
+// ダイヤショップより先に出す予定なので「先行公開予定」と書く(札の形は同じ)。
+// dataAttrs: 検査や画面の文字拾いが商品を見分けるための data-* をそのままカードへ付ける。
+const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabel='近日追加', detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false, dataAttrs=null }) => {
   const usesGold=item.type==='disc'||item.type==='assist'||item.type==='item';
   const usesPsyche=item.currency==='psyche';
   const usesHeroProof=item.currency==='heroProof';
   const usesHeroProofShard=item.currency==='heroProofShard';
-  const priceLabel=usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
-  return <div className={`rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
+  const usesBeatPoint=item.currency==='beatPoint';
+  const priceLabel=usesBeatPoint?`${item.cost}ビートP`:usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
+  return <div {...(dataAttrs||{})} className={`rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
     <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled}/>
     {/* 商品名(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
         ★縦は**上寄せ**にする。中央寄せだと、1行で収まる品(魂格再編の書・染色もどき)だけが
@@ -228,9 +232,130 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, m
           text-wrap:balance も試したが、行の長さをならす方を優先して「トレーニン/グチケット」に
           なるため使わない。印が無く1行に入りきらない名前だけ overflow-wrap:anywhere で折る。 */}
     <div className={`w-full flex items-start justify-center text-center text-[11px] font-black leading-tight ${comingSoon?'text-slate-400':'text-white'}`} style={{minHeight:'36px',wordBreak:'keep-all',overflowWrap:'anywhere'}}>{marketNameNodes(item.name)}</div>
-    <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail&&!comingSoon?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
-    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
+    {/* 予告の品は買うボタンの代わりに札が出るので、値段はこの段に出す(どの売り場でも同じ) */}
+    <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{comingSoon&&!middle?<span data-market-coming-soon-price className="text-[10px] font-black text-slate-400 whitespace-nowrap">{marketPriceText(item)}</span>:middle||detail&&!comingSoon?<>{middle}{!middle&&<MarketDetailChip label={`${item.name}の詳細を見る`} onClick={onDetail}/>}</>:null}</div>
+    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[10px] font-black text-slate-400 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">{comingSoonLabel}</div>:owned?<div className="text-[10px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof||usesHeroProofShard||usesBeatPoint?'交換':'購入'}`}`} className={`mh-button mh-button-primary text-[11px] font-black px-2 min-h-[44px] w-full max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesBeatPoint?'bg-violet-500 text-white active:scale-95':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesBeatPoint?<><span aria-hidden="true">🎟️</span><span>{item.cost.toLocaleString()}</span></>:usesHeroProofShard?<><span aria-hidden="true">🎖️</span><span className="text-[10px]">証片 ×{item.cost.toLocaleString()}</span></>:usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[10px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={11} className="shrink-0"/>:<Coins size={11} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;
+};
+
+// ==== マーケットの共通部品(2026-09-28 ユーザー指示「ショップの作りを全部統一して / レイアウトやUI / 詳細とかそのへんのつくり」) ====
+// 以前は売り場ごとに作りが違っていた。
+//   ・ビートP交換所だけ2列・横長の独自カードで、絵も所持数も詳細も無かった
+//   ・数を選ぶ窓が2つ(消耗品用とビートP用)あり、枠・ボタン・文言がそれぞれ違った
+//   ・円盤石・アシスト・アイコン・勇者の証の交換は、押した瞬間に確認なしで買えていた
+//   ・所持している通貨の帯が売り場ごとに手書きで、形が1行型と3列型の2種類あった
+//   ・「とじる」「閉じる」が混ざっていた
+// いまはどの売り場も、商品カード(MarketProductCard)・残高帯(MarketBalanceBar)・
+// 窓の枠(MarketModal)・詳細(MarketItemDetail)・購入/交換の確認(MarketPurchaseSheet)の同じ部品で描く。
+// 通貨ごとの呼び名・色は MARKET_CURRENCY_META の1か所で決める(have は残高の帯と確認の窓に出す持ち高の呼び名)。
+// ★Tailwind は静的に書き出しているので、クラス名は必ず文字列のまま書く(組み立てない)。
+const MARKET_CURRENCY_META = Object.freeze({
+  diamond:        Object.freeze({ have:'所持ダイヤ', label:'ダイヤ',       emoji:'💎', verb:'購入', format:n=>`${n}ダイヤ`,         text:'text-cyan-200',    bar:'text-cyan-100 border-cyan-500/30 bg-cyan-950/30',          border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
+  breederPoint:   Object.freeze({ have:'所持ブリーダーP', label:'ブリーダーP', emoji:'🪙', verb:'購入', format:n=>`${n}ブリーダーP`,     text:'text-amber-200',   bar:'text-amber-100 border-amber-500/30 bg-amber-950/30',       border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
+  psyche:         Object.freeze({ have:'虹のプシュケー', label:'虹のプシュケー', emoji:'🌈', verb:'購入', format:n=>`${n}プシュケー`,   text:'text-fuchsia-200', bar:'text-fuchsia-200 border-fuchsia-500/30 bg-fuchsia-950/30', border:'border-fuchsia-400/70', button:'bg-fuchsia-600 text-white', max:'bg-fuchsia-800' }),
+  heroProofShard: Object.freeze({ have:'勇者の証片', label:'勇者の証片',   emoji:'🎖️', verb:'交換', format:n=>`勇者の証片${n}個`,   text:'text-amber-100',   bar:'text-amber-100 border-amber-400/30 bg-amber-950/30',       border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
+  heroProof:      Object.freeze({ have:'勇者の証', label:'勇者の証',     emoji:'🏅', verb:'交換', format:n=>`勇者の証${n}個`,     text:'text-amber-200',   bar:'text-amber-200 border-amber-400/30 bg-amber-950/30',       border:'border-amber-400/70',   button:'bg-amber-500 text-black',   max:'bg-amber-700' }),
+  beatPoint:      Object.freeze({ have:'所持ビートP', label:'ビートP',      emoji:'🎟️', verb:'交換', format:n=>`${n}ビートP`,        text:'text-violet-200',  bar:'text-violet-100 border-violet-500/30 bg-violet-950/30',    border:'border-violet-400/70',  button:'bg-violet-500 text-white',  max:'bg-violet-800' }),
+});
+// 商品が何で買うものか。currency を書いた商品はそれ、無ければ種類で決める(アイコンはブリーダーP、ほかはダイヤ)
+const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.currency
+  : (item?.type==='disc'||item?.type==='assist'||item?.type==='item') ? 'diamond' : 'breederPoint';
+const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
+
+// 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
+const MarketBalanceBar = ({ balances }) => (
+  <div data-market-balances className={`mb-2 shrink-0 grid gap-2 ${balances.length>=3?'grid-cols-3':balances.length===2?'grid-cols-2':'grid-cols-1'}`}>
+    {balances.map(({ currency, value })=>{const meta=MARKET_CURRENCY_META[currency];return(
+      <div key={currency} data-market-balance={currency} className={`flex flex-col items-center justify-center rounded-2xl border py-2 ${meta.bar}`}>
+        <div className="flex items-baseline gap-1">
+          <span aria-hidden="true" className="text-[11px]">{meta.emoji}</span>
+          <span className="font-mono text-base font-black">{Math.max(0, Math.floor(Number(value)||0)).toLocaleString()}</span>
+        </div>
+        <span className="text-[10px] font-bold leading-tight text-slate-400">{meta.have}</span>
+      </div>
+    );})}
+  </div>
+);
+// 売り場の中に出す知らせ(失敗したとき・キャンペーン中など)。どの売り場も同じ場所・同じ形
+const MarketNotice = ({ tone='error', children, ...rest }) => (
+  <div {...rest} className={`mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[11px] font-black ${tone==='error'?'border-red-500/40 bg-red-950/30 text-red-300':'border-amber-300/30 bg-amber-500/10 text-amber-100'}`}>{children}</div>
+);
+
+// マーケットで開く窓の枠。拡大・詳細・購入/交換の確認はすべてこれに入れる。
+// 外側を押すと閉じる(閉じてよくないとき=保存中は onClose を渡さない)
+const MarketModal = ({ label, border='border-amber-400/70', onClose, children, narrow=false }) => (
+  <div onClick={onClose||undefined} className="fixed inset-0 flex items-center justify-center overflow-y-auto px-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(2,6,23,0.94)',zIndex:42000}} role="dialog" aria-modal="true" aria-label={label}>
+    <div onClick={e=>e.stopPropagation()} className={`w-full ${narrow?'max-w-[280px]':'max-w-sm'} rounded-3xl border-2 ${border} bg-slate-950 p-4 shadow-2xl`}>{children}</div>
+  </div>
+);
+const MarketModalClose = ({ onClick, label='閉じる', disabled=false }) => (
+  <button type="button" disabled={disabled} onClick={onClick} className="mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">{label}</button>
+);
+// 窓の頭。商品の絵と名前を真ん中にそろえて出す
+const MarketModalHead = ({ item, accent='text-white' }) => (
+  <div className="flex flex-col items-center gap-2">
+    <MarketProductIcon item={item}/>
+    <h3 className={`text-center text-lg font-black leading-tight ${accent}`}>{item.name}</h3>
+  </div>
+);
+
+// アイテムの詳細。効果の説明・所持数・ねだん(何で買うかに合わせる)を出す。
+// ビートP交換所の品は1回で受け取る数(grantText)も出す
+const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
+  const meta=MARKET_CURRENCY_META[marketCurrencyOf(item)];
+  return <MarketModal label={`${item.name}の効果`} border={meta.border} onClose={onClose}>
+    <MarketModalHead item={item} accent={meta.text}/>
+    {item.desc&&<p className="mt-3 text-[12px] text-slate-200 leading-relaxed">{item.desc}</p>}
+    <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
+      <div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>
+      {grantText&&<div className="flex justify-between"><span className="text-slate-400">1回で受け取る数</span><span>{grantText}</span></div>}
+      <div className="flex justify-between"><span className="text-slate-400">ねだん</span><span className={`font-mono ${meta.text}`}>{marketPriceText(item)}</span></div>
+    </div>
+    <div className="mt-3"><MarketModalClose onClick={onClose}/></div>
+  </MarketModal>;
+};
+
+// 購入・交換の確認。どの通貨で買う品も、この1枚を通してから買う。
+// stackable(消耗品・ビートPの品)だけ数を選べる。円盤石・アシスト・アイコン・証の交換は1つずつ。
+// grantAmount/grantUnit は「1回で何を受け取るか」(ビートP交換所)。無い品は出さない
+const MarketPurchaseSheet = ({ item, balance, stackable=false, countUnit='個', grantAmount=0, grantUnit='', quantity=1, onQuantity, pending=false, error='', onConfirm, onCancel }) => {
+  const meta=MARKET_CURRENCY_META[marketCurrencyOf(item)];
+  const unitCost=Math.max(0, Math.floor(Number(item.cost)||0));
+  const safeBalance=Math.max(0, Math.floor(Number(balance)||0));
+  const affordable=unitCost>0?Math.floor(safeBalance/unitCost):0;
+  const maxQuantity=stackable?affordable:Math.min(1, affordable);
+  const count=stackable?Math.min(Math.max(1, Math.floor(Number(quantity)||1)), Math.max(1, maxQuantity)):1;
+  const total=unitCost*count;
+  const canConfirm=maxQuantity>0&&!pending;
+  const setCount=(next)=>onQuantity&&onQuantity(Math.min(Math.max(1, next), Math.max(1, maxQuantity)));
+  const stepClass='mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30';
+  return <MarketModal label={`${item.name}の${meta.verb}`} border={meta.border} onClose={pending?null:onCancel}>
+    <MarketModalHead item={item} accent={meta.text}/>
+    <div className="mt-3 rounded-2xl bg-slate-900 p-3 text-center"><span className="block text-[10px] font-bold text-slate-400">{meta.have}</span><strong className={`mt-1 block text-xl font-black font-mono ${meta.text}`}>{meta.emoji} {safeBalance.toLocaleString()}</strong></div>
+    {stackable&&<>
+      <div className="mt-3 text-center text-[11px] font-black text-slate-300">{meta.verb}する数</div>
+      <div className="mt-2 grid grid-cols-5 items-center gap-1.5">
+        <button type="button" disabled={count<=1} onClick={()=>setCount(count-10)} className={stepClass}>-10</button>
+        <button type="button" disabled={count<=1} onClick={()=>setCount(count-1)} className={stepClass}>-1</button>
+        <strong className="text-center text-xl font-black font-mono">{count}</strong>
+        <button type="button" disabled={count>=maxQuantity} onClick={()=>setCount(count+1)} className={stepClass}>+1</button>
+        <button type="button" disabled={count>=maxQuantity} onClick={()=>setCount(count+10)} className={stepClass}>+10</button>
+      </div>
+      <button type="button" disabled={maxQuantity<=0} onClick={()=>setCount(maxQuantity)} className={`mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${meta.max}`}>MAX（{Math.max(0, maxQuantity).toLocaleString()}{countUnit}）</button>
+    </>}
+    <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
+      {stackable&&<div className="flex justify-between"><span className="text-slate-400">単価</span><span>1{countUnit} = {meta.format(unitCost.toLocaleString())}</span></div>}
+      {grantAmount>0&&<div className="flex justify-between"><span className="text-slate-400">受け取り</span><span>{(grantAmount*count).toLocaleString()}{grantUnit}</span></div>}
+      <div className="flex justify-between text-base"><span className="text-slate-300">合計</span><span className={meta.text}>{meta.format(total.toLocaleString())}</span></div>
+      <div className="flex justify-between"><span className="text-slate-400">{meta.verb}後</span><span className={meta.text}>残り{meta.format(Math.max(0, safeBalance-total).toLocaleString())}</span></div>
+    </div>
+    {maxQuantity<=0&&<p className="mt-2 text-center text-[12px] font-black text-red-300">{meta.label}が足りません</p>}
+    {error&&<p className="mt-2 text-center text-[11px] font-black text-red-300">{error}</p>}
+    <div className="mt-3 grid grid-cols-1 gap-2">
+      <button type="button" disabled={!canConfirm} onClick={()=>onConfirm&&onConfirm(count)} className={`mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500 ${meta.button}`}>{meta.verb}する</button>
+      <MarketModalClose onClick={onCancel} label="キャンセル" disabled={pending}/>
+    </div>
+  </MarketModal>;
 };
 
 // 表示を待たせず、ブラウザキャッシュとデコードだけを少しずつ先へ進める画像キュー。
