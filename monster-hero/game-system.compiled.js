@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7611c990a60ad8e0
+// source-sha256: 3eed667566edd325
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-28 19:06";
+const BUILD_DATE = "2026-09-28 19:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -24983,7 +24983,7 @@ const RhythmTapTest = ({
       achievements.allMarvelous = false;
     }
     const failed = !tutorial && !calibrating && run.lifeDepleted === true;
-    const eventPointAward = !debugPlay && !tutorial && !calibrating && !assistOn && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof rhythmEventPointAwardAt === 'function' ? rhythmEventPointAwardAt(Date.now(), song.songId, score) : null;
+    const eventPointAward = !debugPlay && !tutorial && !calibrating && !assistOn && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof rhythmEventPointAwardAt === 'function' ? rhythmEventPointAwardAt(Date.now(), song.songId, score, Number(song.playDurationMs) || Number(rawChart && rawChart.durationMs) || 0) : null;
     const calibration = calibrating ? rhythmCalibrationOffsetFromTaps((Array.isArray(run.deltas) ? run.deltas : []).slice(RHYTHM_CALIBRATION_WARMUP_COUNT)) : null;
     const result = {
       score,
@@ -26257,7 +26257,10 @@ const RhythmTapTest = ({
         className: "flex items-baseline justify-between gap-1 rounded-xl border border-violet-400/50 bg-violet-950/60 px-2 py-1.5"
       }, React.createElement("span", {
         className: "whitespace-nowrap text-[9px] font-black text-violet-200"
-      }, "🎟️ ビートP", beat.target ? ' ×1.5' : ''), React.createElement("b", {
+      }, "🎟️ ビートP", beat.target ? ' ×1.5' : '', beat.lengthBonusPercent > 0 && React.createElement("span", {
+        "data-rhythm-result-hero-gains-beat-length": true,
+        className: "block text-sky-200"
+      }, "長さ+", beat.lengthBonusPercent, "%")), React.createElement("b", {
         className: "text-[15px] font-black leading-none text-white"
       }, "+", beat.amount.toLocaleString(), "P")), luck && React.createElement("div", {
         "data-rhythm-result-hero-gains-luck": true,
@@ -26579,7 +26582,10 @@ const RhythmTapTest = ({
       className: "mt-0.5 block text-2xl font-black text-white"
     }, "+", result.eventPointAward.amount.toLocaleString(), "P"), result.eventPointAward.target && React.createElement("span", {
       className: "mt-1 block text-[9px] font-black text-amber-200"
-    }, "イベント対象曲 1.5倍"), result.eventPointAward.campaign && React.createElement("span", {
+    }, "イベント対象曲 1.5倍"), result.eventPointAward.lengthBonusPercent > 0 && React.createElement("span", {
+      "data-rhythm-result-beat-points-length": true,
+      className: "mt-1 block text-[10px] font-black text-sky-200"
+    }, "曲の長さ +", result.eventPointAward.lengthBonusPercent, "%"), result.eventPointAward.campaign && React.createElement("span", {
       "data-rhythm-result-beat-points-campaign": true,
       className: "mt-1 block text-[9px] font-black text-amber-200"
     }, "ビートPアップキャンペーン いつもの", result.eventPointAward.boost, "倍"), result.eventPointAward.offEvent && React.createElement("span", {
