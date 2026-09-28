@@ -159,14 +159,25 @@ const RHYTHM_EVENTS = Object.freeze([
 // ===== イベントP（docs/spec/RHYTHM_EVENT_POINTS.md） =====
 // 初期実装の正式式。ランキング用スコアや回数ボーナスとは完全に分離する。
 const RHYTHM_EVENT_POINT_TARGET_MULTIPLIER = 1.5;
+// ===== 80万〜100万点は「上ほど伸びる曲線」(2026-09-28・ユーザー指示「80万から100万までの増え幅を上げたい / 100万での200P最大のまま」) =====
+// 以前の式(スコア÷1万 ＋ 95万点を超えたぶん÷500)は、80万〜95万のあいだが1万点で1Pしか増えず、差がほとんど付かなかった。
+//   80万〜100万点: 80 ＋ 120 ×((スコア − 80万) ÷ 20万)² を四捨五入(80万で80P・90万で110P・95万で148P・100万で200P)
+//   80万点より下: これまでどおり スコア÷1万 の切り捨て
+// ★どの点数でも以前の式より減らない(80万〜100万は同じか多い)。100万点=200Pは変えない。
+// ★2乗は整数のまま計算する(x² は最大 4×10¹⁰ で、小数の誤差が出ない範囲)
+const RHYTHM_EVENT_POINT_CURVE_FROM = 800000;
+const RHYTHM_EVENT_POINT_CURVE_SPAN = 200000;
 const rhythmEventPointBaseForScore = (score) => {
   const n = Number(score);
   const safe = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
-  return Math.floor(safe / 10000 + Math.max(0, safe - 950000) / 500);
+  if (safe < RHYTHM_EVENT_POINT_CURVE_FROM) return Math.floor(safe / 10000);
+  const x = Math.min(RHYTHM_EVENT_POINT_CURVE_SPAN, safe - RHYTHM_EVENT_POINT_CURVE_FROM);
+  // 曲線の出だし(81万〜82万点台)は スコア÷1万 より1P低くなるので、そこを下限にする
+  return Math.max(Math.floor(safe / 10000), 80 + Math.round(120 * x * x / (RHYTHM_EVENT_POINT_CURVE_SPAN * RHYTHM_EVENT_POINT_CURVE_SPAN)));
 };
 // ★イベントが開いていない期間も、イベント中の1/5だけ貯まる(2026-09-24・ユーザー指示
 //   「イベント限定でもらえるポイントをいつでももらえるように。ただしイベント時の1/5」)。
-//   基本ビートPへ 0.2 を掛けて切り捨てる(100万点で40P・95万点で19P)。
+//   基本ビートPへ 0.2 を掛けて切り捨てる(100万点で40P・95万点で29P。2026-09-28 の曲線から)。
 //   イベント中の計算(通常曲1.0倍・対象曲1.5倍)は変えない。
 //   ★開催中かどうかは呼ばれるたびに数え直す(読み込み時に決めない・CLAUDE.md ⑥-4)。
 const RHYTHM_EVENT_POINT_OFF_EVENT_MULTIPLIER = 0.2;
