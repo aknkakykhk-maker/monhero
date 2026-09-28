@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1f53c879ea4a465c
+// generated-sha256: c0415102da25bd71
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 19:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-28 20:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5481,12 +5481,16 @@ const MASU_COLOR_REGION_HUES = {
     { hue: 120, noAAGuard: true, noEdgeGuard: true },
     { hue: 240, noAAGuard: true, noEdgeGuard: true },
   ],
-  // メルホイップ: ①=緑系(髪・葉っぱ・緑の果実・ドレスと傘の緑) / ②=赤系(イチゴ・赤い果実・リボン) /
-  // ③=白・クリーム系(ケーキ・クリーム・ドレスと傘の白)。顔・肌・蹄・ケーキの目と口・傘の軸は対象外
+  // メルホイップ(5部位。2026-09-28 ユーザーが用意した部位の指示図から作った。剣士モッチーと同じ5色マスク):
+  // ①=イチゴ(頭)・腰の赤い実 / ②=服・スカート・首元の花と葉・耳の上側・頭の緑の玉・傘の本体 /
+  // ③=傘のフリルと白い線・袖口のフリル・服の装飾の葉 / ④=ケーキのクリーム・座っている台座・ホイップ /
+  // ⑤=髪・目。顔・肌・脚・蹄・傘の柄・ケーキの上の果物と葉・スポンジ・ケーキの目と口は対象外
   MelWhip: [
     { hue: 0, noAAGuard: true, noEdgeGuard: true },
     { hue: 120, noAAGuard: true, noEdgeGuard: true },
     { hue: 240, noAAGuard: true, noEdgeGuard: true },
+    { hue: 60, noAAGuard: true, noEdgeGuard: true },
+    { hue: 300, noAAGuard: true, noEdgeGuard: true },
   ],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
@@ -6226,9 +6230,10 @@ const MASU_COLOR_REGION_DYE = {
   // gloss の値は、その部位の元の絵の彩度の中央値〜上のほう(濃い所)に合わせた。濃い所は選んだ色になり、
   // 髪のハイライト・カエルのツヤ・淡い緑のドレスのように元が淡い所は淡いまま残るので、立体感が消えない
   // (gloss なしだと、青や紫に染めたとき髪がべったり1色になっていた)。
-  // メルホイップの③(白・クリーム)は元の彩度がほぼ0(中央値0.13)なので、比例させると色が乗らない。gloss を付けない
+  // メルホイップ(5部位): ①イチゴと②服・傘は元が濃い(中央値0.90/0.88)。⑤髪は白いつやが多い(中央値0.38)ので
+  // 0.7 にして、つやを残す。③フリル・白い線と④ケーキは元がほぼ白で、比例させると色が乗らないので gloss を付けない
   Yggdrasil: [{ gloss: 0.9 }, { gloss: 0.93 }, { gloss: 0.72 }],
-  MelWhip: [{ gloss: 0.8 }, { gloss: 0.9 }, {}],
+  MelWhip: [{ gloss: 0.9 }, { gloss: 0.9 }, {}, {}, { gloss: 0.7 }],
 };
 const _NO_REGION_DYE = { gloss: false, sat: 1 };
 // 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
