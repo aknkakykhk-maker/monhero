@@ -273,7 +273,7 @@ const BREEDER_MARKET_ITEMS = [
   // 能力値・技はまだ決まっていないので ALL_PLAYER_MONSTERS にはいない。3件とも available:false で
   // 「近日追加」と出るだけで買えない(buyMarketItem と marketPurchasePreview が available:false をはじく)。
   // 正式実装のときに available:false を外す。円盤石の値段は既存の円盤石と同じ150,000ダイヤ。
-  // ビートP交換所にも同じ円盤石を10,000P(仮)で先行公開予定として並べている(data/rhythm-event.js)。
+  // ビートP交換所にも同じ円盤石を1,500Pで先行公開予定として並べている(data/rhythm-event.js)。
   { id:'yggdrasil_icon', name:"ユグドラシルのアイコン", type:'icon', icon:YGGDRASIL_FACE_ICON, cost:1, available:false },
   { id:'yggdrasil_disc_icon', name:"ユグドラシルの円盤石アイコン", type:'icon', icon:YGGDRASIL_DISC_ICON, cost:1, available:false },
   { id:'Yggdrasil', name:"ユグドラシルの円盤石", type:'disc', icon:YGGDRASIL_DISC_ICON, cost:150000, available:false },
