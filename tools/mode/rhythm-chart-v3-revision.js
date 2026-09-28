@@ -78,7 +78,13 @@
 //   18 … 繰り返しの見分け(2026-09-28・rhythm-chart-repeats.js)。解析の区切りの繰り返しが無い小節にだけ、4つの手がかり(メロディ・
 //        リズム・低音・音の層)のうち3つが「前にほぼ同じ4小節があった」と言う所の元を足す。フレーズの写し・発展がその小節でも効く。
 //        区間の差し替えは、仮想プレイヤー(rhythm-virtual-player.js)の見込みのミス・ばらつきも費用に足す(つまずく区切りを別の候補に替える)
-//   19〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   19 … 写した小節のリズムもそろえる(2026-09-28)。繰り返しの小節では、元の小節で拾った位置の音を、候補の絞り込み
+//        (格子からのずれ30ms・拍の裏の弱い音)から外して加える。Rev.18 で形はそろったが、リズムがそろうのは約6割だった
+//   20 … 歯ごたえの測り方をテンポの数字から切り離す(2026-09-29)。量は「1拍あたりの目標 × 1秒あたりの拍の数」で既にテンポに比例するのに、
+//        歯ごたえでもテンポを0.7乗で数えていた(二重に数える)。人が歯ごたえを決めた6曲は、どれも遅い曲・拍の立ちが弱い曲を重く、
+//        速い曲・拍の立ちが強い曲を軽く直していた。テンポの効きを0.35乗、拍のはっきりさを0.15乗へ弱める(CHALLENGE_EXPONENT_REV20)。
+//        決めた歯ごたえ(challengeFactor)を書いた曲は変わらない
+//   21〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)・重みの最新・調整値の最新のいちばん大きいもの＋1」を次の番号にする
@@ -89,7 +95,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=18;
+const CHART_REVISION_CODE_LATEST=20;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');

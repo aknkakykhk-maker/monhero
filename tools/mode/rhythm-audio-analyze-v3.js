@@ -27,6 +27,7 @@ const fs=require('fs');
 const path=require('path');
 const vm=require('vm');
 const crypto=require('crypto');
+const {spawnSync}=require('child_process');
 const {audioFeatures,BANDS,SAMPLE_RATE,FFT_SIZE,HOP_SIZE,CONTRAST_RADIUS_MS}=require('./rhythm-audio-features-v3.js');
 const {detectTiming}=require('./rhythm-audio-tempo-v3.js');
 const {detectStructure}=require('./rhythm-audio-structure-v3.js');
@@ -110,6 +111,9 @@ const outputDir=arg('--output-dir',null);
 const bpmArg=Number(arg('--bpm',NaN));
 const beatZeroArg=Number(arg('--beat-zero',NaN));
 const beatsPerBarArg=Number(arg('--beats-per-bar',NaN));
+// 拍子の読み違いを自動で直したときの、もとの自動判定(下の 7b。親の解析が子の解析へ渡す)
+const autoMeterFrom=(()=>{try{return JSON.parse(arg('--auto-meter-from','null'));}catch(e){return null;}})();
+const noAutoMeter=process.argv.includes('--no-auto-meter');
 const entry=registry.songs[trackId]||null;
 const audioRelative=audioArg||entry?.audio||null;
 if(!audioRelative){
@@ -118,6 +122,8 @@ if(!audioRelative){
   process.exit(1);
 }
 const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
+// 子の解析(7b)が「直すと格子への乗りが悪くなる」と返す終了コード
+const AUTO_METER_WORSE=3;
 
 (async()=>{
   const audioPath=path.join(ROOT,audioRelative);
@@ -159,9 +165,10 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
     if(Number.isFinite(bpmArg)||Number.isFinite(beatZeroArg)||Number.isFinite(beatsPerBarArg)){
       apply({bpm:Number.isFinite(bpmArg)?bpmArg:undefined,
         beatZeroMs:Number.isFinite(beatZeroArg)?beatZeroArg:undefined,
-        beatsPerBar:Number.isFinite(beatsPerBarArg)?beatsPerBarArg:undefined},'command');
+        beatsPerBar:Number.isFinite(beatsPerBarArg)?beatsPerBarArg:undefined},autoMeterFrom?'auto-corrected':'command');
     }
     merged.source=source;
+    if(autoMeterFrom&&source==='auto-corrected')merged.autoCorrectedFrom=autoMeterFrom;
     return merged;
   })();
   const gridMs=timing.beatMs/timing.subdivisionsPerBeat;
@@ -375,6 +382,32 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
   const warnings=collectWarnings({timing,detected,durationMs:features.durationMs,
     onsetCount:onsets.length,sectionCount:structure.sections.length,onsets});
 
+  // --- 7b. 拍子の読み違いを自動で直す(2026-09-29・MHB CHART ENGINE 強化「テンポ・拍子の読み違いを自動で直す」) ---
+  // 自動判定が3拍子で、強い打点が小節の4等分の位置に強く偏っている(meter-doubt の止める警告)ときは、
+  // 二つ目の意見の候補(4/3倍のテンポ・4拍子)で解析し直す。人が直した曲のうち、この形で外していた2曲(crossing field 2.06・
+  // SIX ÉTERNEL 2.20)はどちらも止める警告の線(1.8)を越え、本当の3拍子の2曲(TORIKO 1.37・SIX ÉTERNEL Remix 1.21)は越えない。
+  // 直した解析の格子への乗り(±15ms)が、もとより悪くなるときは直さない(警告のまま人に任せる)。
+  // 人が決めた値(登録値・確認済み・コマンド指定)を使っているときと、--no-auto-meter のときは何もしない。
+  const meterDoubt=timing.source==='detected'&&!noAutoMeter
+    ?warnings.find(warning=>warning.code==='meter-doubt'&&warning.severity==='critical'):null;
+  if(meterDoubt){
+    const suggestion=meterDoubt.detail.suggestion;
+    const from={bpm:round(timing.bpm,4),beatsPerBar:timing.beatsPerBar,ratio:meterDoubt.detail.ratio,within15ms:gridFit.within15ms};
+    const child=spawnSync(process.execPath,[__filename,...process.argv.slice(2),'--bpm',String(suggestion.bpm),
+      '--beats-per-bar',String(suggestion.beatsPerBar),'--beat-zero',String(round(timing.beatZeroMs,1)),'--auto-meter-from',JSON.stringify(from)],
+      {cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
+    if(child.status!==AUTO_METER_WORSE){
+      console.log(`拍子の読み違いを疑うので（4等分÷3等分 ${meterDoubt.detail.ratio}）、${suggestion.bpm} BPM・${suggestion.beatsPerBar}拍子で解析し直しました（直さないときは --no-auto-meter）`);
+      process.stdout.write(child.stdout||'');process.stderr.write(child.stderr||'');
+      process.exit(child.status??1);
+    }
+    console.log(`（${suggestion.bpm} BPM・${suggestion.beatsPerBar}拍子で解析し直すと格子への乗りが悪くなるので、自動判定のままにします）`);
+  }
+  if(autoMeterFrom&&gridFit.within15ms<autoMeterFrom.within15ms){
+    console.log(`格子への乗り ±15ms ${(gridFit.within15ms*100).toFixed(0)}% が、もとの ${(autoMeterFrom.within15ms*100).toFixed(0)}% より悪い`);
+    process.exit(AUTO_METER_WORSE);
+  }
+
   const report={
     schemaVersion:2,
     analysisType:'rhythm-audio-v3',
@@ -392,7 +425,8 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
     timing:{bpm:round(timing.bpm,4),beatMs:round(timing.beatMs,4),beatZeroMs:round(timing.beatZeroMs,1),
       beatsPerBar:timing.beatsPerBar,subdivisionsPerBeat:timing.subdivisionsPerBeat,
       gridMs:round(gridMs,4),triplet:!!timing.triplet,swing:timing.swing,
-      source:timing.source,confidence:timing.confidence,detected:timing.detected,
+      source:timing.source,...(timing.autoCorrectedFrom?{autoCorrectedFrom:timing.autoCorrectedFrom}:{}),
+      confidence:timing.confidence,detected:timing.detected,
       stability:detected?detected.stability:null},
     warnings,
     structure:{sections:structure.sections,bars:structure.bars,repeats:structure.repeats,
@@ -420,7 +454,7 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
   console.log(`V3音源解析: ${trackId}  (${features.decodedVia}でデコード / ${SAMPLE_RATE}Hz / ${(features.durationMs/1000).toFixed(1)}秒)`);
   console.log(`  テンポ ${timing.bpm.toFixed(2)} BPM / ${timing.beatsPerBar}拍子 / 拍の頭 ${Math.round(timing.beatZeroMs)}ms / `
     +`${timing.subdivisionsPerBeat}分割${timing.triplet?'(3連)':''} / 跳ね ${timing.swing.ratio<=.53?'なし':timing.swing.ratio.toFixed(2)}`
-    +`  [${timing.source==='detected'?'自動判定':timing.source==='registered'?'登録値':timing.source==='confirmed'?'確認済み':'コマンド指定'}]`);
+    +`  [${timing.source==='detected'?'自動判定':timing.source==='registered'?'登録値':timing.source==='confirmed'?'確認済み':timing.source==='auto-corrected'?'自動判定を拍子の二つ目の意見で直した':'コマンド指定'}]`);
   if(timing.detected&&timing.source!=='detected'){
     console.log(`    （自動判定は ${timing.detected.bpm.toFixed(2)} BPM / 拍の頭 ${Math.round(timing.detected.beatZeroMs)}ms）`);
   }

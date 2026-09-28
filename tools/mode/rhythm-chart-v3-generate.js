@@ -309,6 +309,17 @@ const songIntensityCommon=audio=>INTENSITY_STYLES[String(audio&&audio.chartInten
 // 昔作った譜面が新しい曲のせいで変わることもない。
 const CHALLENGE_REFERENCE=Object.freeze({bpm:170,onsetsPerSecond:7.0,beatClarity:1.30});
 const CHALLENGE_EXPONENT=Object.freeze({bpm:.7,onsets:1,beatClarity:.55});
+// --- テンポの数字から切り離す(2026-09-29・MHB CHART ENGINE Rev.20)---
+// 量(下の notesPerSecond)は「1拍あたりの目標 × 1秒あたりの拍の数」なので、もうテンポに比例している。
+// そこへ歯ごたえでもテンポを0.7乗で掛けると、テンポを二重に数える(速い曲ほど二乗近くで重くなり、
+// 解析が倍・3/4 のテンポで読んだだけでも量が大きく動く)。
+// 人が歯ごたえを決めた6曲(一覧の challengeFactor)は、どれも自動の値と逆向きに直していた。
+//   遅い曲・拍の立ちが弱い曲 … 戦場の疾風 0.72→1.3 / 魔窟の旋律 0.73→1.6 / only my railgun 0.77→1.3
+//   速い曲・拍の立ちが強い曲 … SIX ÉTERNEL 1.89→1.15 / crossing field 1.86→1.16 / NOTHING WITHOUT YOU 1.90→0.9
+// 効きを振って確かめると、テンポ0.35乗・拍のはっきりさ0.15乗で、この6曲とのずれ(対数の平均)が 0.60→0.26 に縮み、
+// 決めていない21曲の値はほとんど動かない(全27曲で 0.134→0.126)。Rev.20 から使う(それより前の曲は1音も変わらない)
+const CHALLENGE_DECOUPLE_REVISION=20;
+const CHALLENGE_EXPONENT_REV20=Object.freeze({bpm:.35,onsets:1,beatClarity:.15});
 // --- 差の出し方（2026-09-06・ユーザー指摘「どの曲も難易度が似たりよったり。もっと振れ幅がほしい」）---
 // 上の3つ（テンポ・音の詰まり具合・拍のはっきりさ）は、同じジャンルの曲だと**似た値になる**。
 // 実測すると11曲の生の値は 0.793〜1.656 に固まっていて、しかも 0.78〜1.26 で
@@ -367,9 +378,10 @@ const songChallengeFactor=(audio)=>{
     const factor=Math.max(CHALLENGE_RANGE.min,Math.min(CHALLENGE_RANGE.max,pinned));
     return {factor,raw:factor,gained:factor,pinned:true,bpm,onsetsPerSecond,beatClarity:clarity};
   }
-  const raw=ratio(bpm,CHALLENGE_REFERENCE.bpm,CHALLENGE_EXPONENT.bpm)
-    *ratio(onsetsPerSecond,CHALLENGE_REFERENCE.onsetsPerSecond,CHALLENGE_EXPONENT.onsets)
-    *ratio(clarity,CHALLENGE_REFERENCE.beatClarity,CHALLENGE_EXPONENT.beatClarity);
+  const exponent=chartRevision>=CHALLENGE_DECOUPLE_REVISION?CHALLENGE_EXPONENT_REV20:CHALLENGE_EXPONENT;
+  const raw=ratio(bpm,CHALLENGE_REFERENCE.bpm,exponent.bpm)
+    *ratio(onsetsPerSecond,CHALLENGE_REFERENCE.onsetsPerSecond,exponent.onsets)
+    *ratio(clarity,CHALLENGE_REFERENCE.beatClarity,exponent.beatClarity);
   // 測れた差を強めてから挟む。
   const gained=Math.pow(raw,CHALLENGE_GAIN);
   const factor=Math.max(CHALLENGE_RANGE.min,Math.min(CHALLENGE_RANGE.max,gained));
@@ -671,6 +683,8 @@ const intensityPosition=bar=>{
 //   4つの手がかり(メロディ・リズム・低音・音の層)のうち3つが「前にほぼ同じ4小節があった」と言う所の元の小節を足す。
 //   解析の繰り返しがある小節はそのまま(今まで効いていた所は変えない)。解析ファイルは作り直さない
 const rev18=chartRevision>=18;
+// Rev.19: 写す小節のリズムもそろえる(下の拾う音の選び方)
+const rev19=chartRevision>=19;
 const extraRepeat=(()=>{
   if(!rev18)return {sourceByBar:new Map(),falsePositiveRate:0};
   let layers=null;
@@ -1085,6 +1099,7 @@ const buildChart=(difficulty,options={})=>{
   const pool=allOnsets.filter(onset=>
     onset.grid%P.lattice===0&&Math.abs(onset.gridOffsetMs)<=peakOffsetAllowance(onset)
     &&(offBeatFloor<=0||onBeatOrEighth(onset)||onset.strength>=offBeatFloor));
+  const poolGrids=new Set(pool.map(onset=>onset.grid));
   // 全体で何個置くかを先に決める（1拍あたりの目標を、毎秒の下限・上限で挟む）。
   // これで曲が変わっても、遊んだ感じの忙しさがそろう。
   const [liftMin,liftMax]=MUSICAL_LIFT;
@@ -1165,7 +1180,14 @@ const buildChart=(difficulty,options={})=>{
       :share;
     if(limit<=0){takenOffsetsByBar.set(bar,new Set());continue;}
     const tier=onset=>sourceOffsets&&!(sourceOffsets.has(onset.grid-bar*BAR)||onset.character==='FULL')?1:0;
-    const inBar=pool.filter(onset=>onset.grid>=bar*BAR&&onset.grid<(bar+1)*BAR)
+    // Rev.19: 写す小節では、元の小節で拾った位置の音を、候補の絞り込み(格子からのずれ30ms・拍の裏の弱い音)から外して加える。
+    //   写す小節の同じ位置には9割がた音があるのに、絞り込みで外れてリズムがそろわなかった(Rev.18 の足した小節でリズムがそろうのは約6割)。
+    //   格子の刻み(P.lattice)と、耳で確かめるときの許容(43ms)は守る
+    const barPool=rev19&&sourceOffsets
+      ?pool.concat(allOnsets.filter(onset=>onset.grid>=bar*BAR&&onset.grid<(bar+1)*BAR&&onset.grid%P.lattice===0
+        &&sourceOffsets.has(onset.grid-bar*BAR)&&!poolGrids.has(onset.grid)))
+      :pool;
+    const inBar=barPool.filter(onset=>onset.grid>=bar*BAR&&onset.grid<(bar+1)*BAR)
       .sort((a,b)=>tier(a)-tier(b)||pickPriority(b)-pickPriority(a)||a.grid-b.grid);
     const taken=[];
     for(const onset of inBar){
