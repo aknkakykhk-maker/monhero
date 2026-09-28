@@ -69,6 +69,11 @@ const collectWarnings=({timing,detected,durationMs,onsetCount,sectionCount,onset
       add('triplet-mixed','notice',`3連符の小節が混ざっています（${mix.tripletBars.length}小節）。譜面は16分へ丸めるので、その小節は聞いて確かめてください`,
         {ratio:mix.ratio,barShare:mix.barShare,bars:mix.tripletBars.slice(0,40)});
     }
+    // 5拍子・7拍子(2026-09-29)。まれな拍子で、自動判定を人が直した only my railgun は5拍子と読んでいた(本当は4拍子)。
+    // 正解の例が1曲だけなので書き換えず、注意だけ出す
+    if(Number(detected.beatsPerBar)===5||Number(detected.beatsPerBar)===7){
+      add('meter-rare','notice',`${detected.beatsPerBar}拍子と判定しました。まれな拍子なので、4拍子ではないか聞いて確かめてください`,{beatsPerBar:detected.beatsPerBar});
+    }
     if((detected.beatPresence??1)<THRESHOLD.beatPresence){
       add('beat-weak','notice','拍のところに音が無い拍が多いです',{beatPresence:detected.beatPresence});
     }

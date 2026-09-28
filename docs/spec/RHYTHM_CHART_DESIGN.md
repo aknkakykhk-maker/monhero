@@ -1960,6 +1960,7 @@ maimai の無理配置の分類など。動画そのものは見ていない）�
 | 仮想プレイヤー（Rev.18 の差し替え） | `rhythm-virtual-player.js` の `playChart` / `segmentCost` ＋ `rhythm-chart-v3-splice.js` の `virtualParams` | `rhythm-virtual-player-check.js` |
 | 写した小節のリズム（Rev.19） | 生成器の `rev19`（`barPool`・元の小節で拾った位置の音を候補へ加える） | `rhythm-chart-rev19-check.js` |
 | 歯ごたえをテンポの数字から切り離す（Rev.20） | 生成器の `CHALLENGE_EXPONENT_REV20`（テンポ0.35乗・拍のはっきりさ0.15乗） | `rhythm-chart-rev20-check.js` |
+| テンポの揺れ（Rev.21） | `rhythm-chart-tempo-warp.js` の `tempoWarp` ＋ 生成器の `warpCorrected`・パイプラインの `gridTimeMs`・仮想プレイヤーの `timeOf` | `rhythm-chart-rev21-check.js` |
 | 3連符が混ざる曲の注意（解析） | `rhythm-audio-triplet-mix.js` ＋ 警告 `triplet-mixed` | `rhythm-audio-triplet-mix-check.js` |
 | 拍子の読み違いの自動修正（解析） | `rhythm-audio-analyze-v3.js` の 7b（`meter-doubt` が止める強さなら 4/3倍・4拍子で解析し直す） | `rhythm-audio-meter-autofix-check.js` |
 | 3.1.6 譜面文法 / 3.1.7 指紋 | `rhythm-chart-v3-patterns.js` の `rankShapes` / 生成器の `motifKeyOf` | `rhythm-chart-quality-report.js`（語彙・偏り・フレーズ一致） |

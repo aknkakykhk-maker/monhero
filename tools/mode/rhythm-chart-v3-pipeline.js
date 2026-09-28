@@ -22,6 +22,7 @@
 // V1（正式候補v1）・V2（候補v2）の譜面には1バイトも触れない。書き換えるのは
 // <monster-hero-v3-*-notes> マーカーの内側だけで、書き込む前後で他が変わっていないことを確かめる。
 'use strict';
+const {tempoWarpForChart}=require('./rhythm-chart-tempo-warp.js');
 const fs=require('fs');
 const path=require('path');
 const {spawnSync}=require('child_process');
@@ -108,7 +109,10 @@ const onsetGrids=new Set(audio.onsets.map(onset=>onset.grid));
 // ここで rhythm-timing.js を直接読むと、登録の無い新しい曲では動かせなくなる。
 const timing=audio.timing;
 const gridMs=timing.gridMs||timing.beatMs/timing.subdivisionsPerBeat;
-const gridTimeMs=grid=>Math.round(timing.beatZeroMs+grid*gridMs);
+// Rev.21: テンポの揺れ(rhythm-chart-tempo-warp.js)。揺れに合わせる曲だけ、書き出す時刻に揺れを足す(それ以外は0)
+const warp=tempoWarpForChart(charts[DIFFICULTIES[0]],audio);
+const gridTimeMs=grid=>Math.round(timing.beatZeroMs+grid*gridMs+warp.at(grid));
+if(warp.active)console.log(`テンポの揺れに合わせて時刻を書く(Rev.21): ${warp.reason}`);
 
 // --- 音源解析の警告 ---
 // テンポを取り違えたまま出来た譜面は、遊ぶ人には「ゲームが壊れている」ようにしか見えない。

@@ -36,6 +36,12 @@ const warnings=collectWarnings({timing:{source:'detected'},detected:{bpm:135,bea
   durationMs:60000,onsetCount:200,sectionCount:3,onsets:fourFour});
 const doubt=warnings.find(w=>w.code==='meter-doubt');
 ok('自動判定のまま使うときは meter-doubt で止める',doubt&&doubt.severity==='critical',doubt?doubt.message:'');
+// 5拍子と読んだら注意(only my railgun は自動判定が5拍子・本当は4拍子)
+const rare=collectWarnings({timing:{source:'detected'},detected:{bpm:142.7,beatZeroMs:0,beatsPerBar:5,confidence:{tempo:1},gridFit:1,beatPresence:1},
+  durationMs:60000,onsetCount:200,sectionCount:3,onsets:fourFour}).find(w=>w.code==='meter-rare');
+ok('5拍子と読んだら、4拍子ではないか確かめる注意(meter-rare)を出す',rare&&rare.severity==='notice');
+ok('4拍子・3拍子では meter-rare を出さない',!collectWarnings({timing:{source:'detected'},detected:{bpm:180,beatZeroMs:0,beatsPerBar:4,confidence:{tempo:1},gridFit:1,beatPresence:1},
+  durationMs:60000,onsetCount:200,sectionCount:3,onsets:fourFour}).some(w=>w.code==='meter-rare'));
 const trusted=collectWarnings({timing:{source:'command'},detected:{bpm:135,beatZeroMs:0,beatsPerBar:3,confidence:{tempo:1},gridFit:1,beatPresence:1},
   durationMs:60000,onsetCount:200,sectionCount:3,onsets:fourFour}).find(w=>w.code==='meter-doubt');
 ok('人が決めた値を使うときは軽い注意に下げる',trusted&&trusted.severity==='notice');
