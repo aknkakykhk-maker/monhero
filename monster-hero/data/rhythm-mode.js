@@ -1978,53 +1978,73 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   // FLICK が成立したとき(終点フリックを含む)。フリックは触れた瞬間には鳴らさず、払えたときに「シュッ」と鳴らす
   // (プロセカ・バンドリ！と同じ。実機で「フリックが成功したのか分かりづらい」という報告があった)
   const playFlick=(judgment=null)=>{const settings=readSettings();return voice(settings,'flick',judgment,settings.flickVolume/100);};
-  // ===== ホールド・スライドを押さえているあいだの「ウィーン」(溜める音) =====
-  // 2026-09-28・ユーザー「押してる間にウィーンみたいな溜めてるような音があるとさらにそれっぽくなりそう」。
-  // 押さえているノーツ1本につき「のこぎり波2つ(少しずらして厚みを出す)→ くせのある低域通過 → 大きさ」を1組だけ組む。
-  // 高さ・明るさ・ゆれは鳴らし始めに「目標へ近づいていく」予約を入れるだけで、毎フレームは何も書き換えない
-  // (押さえ始めの約1秒でぐっと上がり、そのあとは高いところで細かくゆれ続ける)。
+  // ===== ホールド・スライドを押さえているあいだの「シャラララ」(きらめく音) =====
+  // 2026-09-28・ユーザー「押してる間にウィーンみたいな溜めてるような音があるとさらにそれっぽくなりそう」で「ウィーン」(のこぎり波が上がる音)を
+  // 入れたが、同じ日に「音がイメージと違う」「音ゲーってなんかしゃらららみたいなそんなかんじ」と言われ、きらめく音に作り替えた。
+  // 小さな鈴の粒(高い正弦波がすぐ消える)を細かく散らし、うすい「シャー」を敷いた1.6秒の音を**1回だけ作って**、押さえているあいだ繰り返す。
+  // 押さえているノーツ1本につき「繰り返し再生1つ → 大きさ1つ」だけ。押さえ始めの0.35秒でふわっと大きくなる。
+  // 音の高さは上げない(上がっていく音はイメージと違った)。SLIDE は同じ音を少しだけ高く(1.06倍)鳴らして区別する。
   // 本体は毎フレーム holdSync(いま押さえているノーツの並び) を呼ぶ。並びから消えた音は、そこで短く消して止める。
   // ★呼ばれなくなったとき(ポーズ・曲の終わり・画面を出た・タブを隠した)のために、最後の呼び出しから0.25秒で全部止める見張りを持つ。
   //   鳴りっぱなしにはならない。見張りは音が鳴っているあいだだけ動く
   // 大きさはタップ音量 × 「押さえている間の音の大きさ」。タップ音OFF・全体ミュート・0%では組まない。
-  // 鳴り続ける音なので、タップ音のいちばん大きい瞬間の半分ほど(書き出して測った実効値。0.013 ではタップの2倍あった)
-  const HOLD_VOICE_MAX=4,HOLD_WATCH_MS=250;
-  const holdVoices=new Map();let holdWatch=0,holdLastSync=0;
+  // 鳴り続ける音なので、実効値をタップ音のいちばん大きい瞬間の約3分の1にそろえる(書き出して測った。高い音は耳に大きく聞こえるので、ウィーンのときの半分より控えめ)
+  const HOLD_VOICE_MAX=4,HOLD_WATCH_MS=250,HOLD_LOOP_SECONDS=1.6;
+  const holdVoices=new Map();let holdWatch=0,holdLastSync=0,holdLoopCtx=null,holdLoopBuffer=null;
   const holdNow=()=>typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
-  const holdStopVoice=(id,release=.09)=>{
+  // 繰り返し用の音を作る(音の作りごとに1回だけ)。つなぎ目で途切れないよう、粒は最後まではみ出したら頭へ回して書く
+  const holdLoop=audio=>{
+    if(holdLoopCtx===audio&&holdLoopBuffer)return holdLoopBuffer;
+    const rate=audio.sampleRate||48000,length=Math.max(1,Math.floor(rate*HOLD_LOOP_SECONDS)),buffer=audio.createBuffer(2,length,rate);
+    const left=buffer.getChannelData(0),right=buffer.getChannelData(1);
+    let seed=0x51f15e;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+    // 鈴の粒。高いほうの明るい音(C7〜E8 あたりの五音)から選ぶ。1.6秒に44粒(1秒に約28粒)
+    const bells=[2093,2349,2637,3136,3520,4186,4699,5274,6272];
+    for(let g=0;g<44;g++){
+      const at=Math.floor(rand()*length),f=bells[Math.floor(rand()*bells.length)]*(1+(rand()-.5)*.01),amp=.35+.65*rand(),tau=.035+.05*rand(),pan=rand();
+      const n=Math.floor(rate*tau*5),w=2*Math.PI*f/rate;
+      for(let i=0;i<n;i++){
+        const env=Math.min(1,i/(rate*.002))*Math.exp(-i/(rate*tau)),v=amp*env*(Math.sin(w*i)+.28*Math.sin(w*2.01*i));
+        const k=(at+i)%length;left[k]+=v*(1-pan*.7);right[k]+=v*(.3+pan*.7);
+      }
+    }
+    // うすい「シャー」。高いところだけを残した雑音を、細かくふるわせて敷く(ふるえは1.6秒でちょうど回りきる速さ)
+    let hl=0,hr=0,pl=0,pr=0;
+    for(let i=0;i<length;i++){
+      const nl=rand()*2-1,nr=rand()*2-1;hl=.82*(hl+nl-pl);hr=.82*(hr+nr-pr);pl=nl;pr=nr;
+      const flutter=.55+.45*Math.sin(2*Math.PI*i*(30/length));
+      left[i]+=hl*.1*flutter;right[i]+=hr*.1*flutter;
+    }
+    let peak=0;for(let i=0;i<length;i++)peak=Math.max(peak,Math.abs(left[i]),Math.abs(right[i]));
+    if(peak>0){const k=1/peak;for(let i=0;i<length;i++){left[i]*=k;right[i]*=k;}}
+    holdLoopCtx=audio;holdLoopBuffer=buffer;
+    return buffer;
+  };
+  const holdStopVoice=(id,release=.12)=>{
     const voice=holdVoices.get(id);if(!voice)return;
     holdVoices.delete(id);
     try{
       const t=voice.audio.currentTime,g=voice.gain.gain;
       g.cancelScheduledValues(t);g.setValueAtTime(Math.max(.0001,g.value),t);g.exponentialRampToValueAtTime(.0001,t+release);
-      voice.oscillators.forEach(o=>o.stop(t+release+.02));
+      voice.sources.forEach(o=>o.stop(t+release+.02));
     }catch{voice.cleanup();}
   };
-  const holdStopAll=(release=.09)=>{
+  const holdStopAll=(release=.12)=>{
     for(const id of [...holdVoices.keys()])holdStopVoice(id,release);
     if(holdWatch){clearInterval(holdWatch);holdWatch=0;}
   };
   const holdStartVoice=(audio,id,kind,level)=>{
-    const now=audio.currentTime,slide=kind==='SLIDE';
-    // HOLD は G3 → D5、SLIDE は少し高く C4 → G5 へ上がる
-    const f0=slide?261.63:196,f1=slide?783.99:587.33;
-    const a=audio.createOscillator(),b=audio.createOscillator(),lfo=audio.createOscillator();
-    const lfoDepth=audio.createGain(),filter=audio.createBiquadFilter(),gain=audio.createGain();
-    a.type='sawtooth';b.type='sawtooth';b.detune.setValueAtTime(14,now);
-    for(const o of [a,b]){o.frequency.setValueAtTime(f0,now);o.frequency.setTargetAtTime(f1,now,.42);}
-    // 細かいゆれ(ビブラート)。押さえ始めは無く、溜まるにつれて深く・速くなる
-    lfo.type='sine';lfo.frequency.setValueAtTime(6,now);lfo.frequency.setTargetAtTime(11,now+.2,.5);
-    lfoDepth.gain.setValueAtTime(0,now);lfoDepth.gain.setTargetAtTime(f1*.018,now+.25,.4);
-    lfo.connect(lfoDepth);lfoDepth.connect(a.frequency);lfoDepth.connect(b.frequency);
-    // くせのある低域通過で「ウィー」の母音っぽさを出す。明るさも高さと一緒に上がる
-    filter.type='lowpass';filter.Q.setValueAtTime(7,now);filter.frequency.setValueAtTime(520,now);filter.frequency.setTargetAtTime(slide?4400:3600,now,.45);
-    gain.gain.setValueAtTime(.0001,now);gain.gain.setTargetAtTime(level,now,.035);
-    a.connect(filter);b.connect(filter);filter.connect(gain);gain.connect(output(audio));
-    const oscillators=[a,b,lfo];
-    const cleanup=()=>{try{oscillators.forEach(o=>{try{o.stop();}catch{}o.disconnect();});lfoDepth.disconnect();filter.disconnect();gain.disconnect();}catch{}};
-    a.onended=cleanup;
-    oscillators.forEach(o=>o.start(now));
-    holdVoices.set(id,{audio,gain,oscillators,cleanup});
+    const now=audio.currentTime,source=audio.createBufferSource(),gain=audio.createGain();
+    source.buffer=holdLoop(audio);source.loop=true;
+    source.playbackRate.setValueAtTime(kind==='SLIDE'?1.06:1,now);
+    gain.gain.setValueAtTime(.0001,now);gain.gain.setTargetAtTime(level,now,.12);
+    source.connect(gain);gain.connect(output(audio));
+    const sources=[source];
+    const cleanup=()=>{try{try{source.stop();}catch{}source.disconnect();gain.disconnect();}catch{}};
+    source.onended=cleanup;
+    // 毎回同じ所から始めると同じ粒の並びが聞こえるので、始める位置をずらす
+    source.start(now,(holdVoices.size*.53+(Number(id)||0)*.37)%HOLD_LOOP_SECONDS);
+    holdVoices.set(id,{audio,gain,sources,cleanup});
   };
   // held … いま押さえている HOLD/SLIDE のノーツの並び(index で見分ける)。空なら全部止める
   const holdSync=held=>{
@@ -2038,7 +2058,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     if(!audio||audio.state==='closed')return holdVoices.size;
     for(const note of list){
       if(!note||holdVoices.has(note.index)||holdVoices.size>=HOLD_VOICE_MAX)continue;
-      try{holdStartVoice(audio,note.index,rhythmNoteIsSlide(note)?'SLIDE':'HOLD',rhythmNoteSeLevel(.0032,settings.volume/100*settings.holdVolume/100));}catch{}
+      try{holdStartVoice(audio,note.index,rhythmNoteIsSlide(note)?'SLIDE':'HOLD',rhythmNoteSeLevel(.008,settings.volume/100*settings.holdVolume/100));}catch{}
     }
     if(holdVoices.size&&!holdWatch&&typeof setInterval==='function'){
       holdWatch=setInterval(()=>{if(holdNow()-holdLastSync>HOLD_WATCH_MS)holdStopAll();},HOLD_WATCH_MS/2);
@@ -2052,7 +2072,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
     holdStopVoice('preview',.03);
-    try{holdStartVoice(audio,'preview','HOLD',rhythmNoteSeLevel(.0032,settings.volume/100*settings.holdVolume/100));}catch{return false;}
+    try{holdStartVoice(audio,'preview','HOLD',rhythmNoteSeLevel(.008,settings.volume/100*settings.holdVolume/100));}catch{return false;}
     if(typeof setTimeout==='function')setTimeout(()=>holdStopVoice('preview',.12),1200);
     return true;
   };
