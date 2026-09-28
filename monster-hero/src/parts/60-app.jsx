@@ -94,6 +94,8 @@ function MonsterHeroGame() {
   // 性能計測(デバッグ限定)。既定OFF。ONの記憶は専用キー mh_rhythm_perf_v1 に分ける
   const [rhythmPerfOn,setRhythmPerfOn]=useState(()=>RHYTHM_PERF.enabled);
   const [rhythmPerfStats,setRhythmPerfStats]=useState(null);
+  // バトルの性能計測(デバッグ限定・既定OFF)。ONの記憶は専用キー mh_battle_perf_v1(BATTLE_PERF が持つ)
+  const [battlePerfOn,setBattlePerfOn]=useState(()=>BATTLE_PERF.enabled);
   // 演奏画面の装飾を個別に切って、実機で何が重いかを切り分ける(デバッグ限定・新しい保存キー)
   const [rhythmStrip,setRhythmStrip]=useState(()=>RHYTHM_STRIP.value);
   // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
@@ -657,7 +659,16 @@ function MonsterHeroGame() {
   };
   const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
   // バトル設定の「画面の軽さ」。最軽量は、省エネの「軽量」と同じ表示をバトルで使う
-  const battleFxLoad = normalizeBattleFxSettings(battleFxSettings).load;
+  // 「重いときは自動で軽く」で下げた軽さ(null=下げていない)。保存しない。アプリを開き直すか、
+  // 設定で画面の軽さ・自動の有無を選び直すと元に戻る(BattleScreen の onBattleFxAutoStep が一段ずつ下げる)
+  const [battleFxAutoLoad, setBattleFxAutoLoad] = useState(null);
+  // バトル画面へ渡す設定。自動で下げているときは、保存した軽さより軽いほうを使う(保存値はそのまま)
+  const battleFxEffective = useMemo(() => {
+    const base = normalizeBattleFxSettings(battleFxSettings);
+    if (!battleFxAutoLoad || base.autoLoad === 'OFF') return base;
+    return BATTLE_FX_LOADS.indexOf(battleFxAutoLoad) > BATTLE_FX_LOADS.indexOf(base.load) ? { ...base, load: battleFxAutoLoad } : base;
+  }, [battleFxSettings, battleFxAutoLoad]);
+  const battleFxLoad = battleFxEffective.load;
   const liteBattleView = gameState==='BATTLE'&&(ecoMode==='lite'||battleFxLoad==='MINIMAL');
   // 表示・音声だけに使う超省エネ∞セッション。BATTLEを離れる中間画面や最終リザルトでも維持する。
   const ultraEcoSession = ecoMode==='ultra'&&autoRepeat===true;
@@ -1702,6 +1713,8 @@ function MonsterHeroGame() {
   // バトル設定(待機中の動き・画面の揺れ・画面の軽さ)。1項目ずつ変えても、ほかの項目はそのまま残す。
   // ★宣言は上(liteBattleView の手前)にある。「画面の軽さ：最軽量」で軽量表示を使うため
   const setBattleFxSetting = (key, value) => {
+    // 軽さを自分で選び直したら、自動で下げた分は捨てる(選んだ軽さから見張り直す)
+    if (key === 'load' || key === 'autoLoad') setBattleFxAutoLoad(null);
     setBattleFxSettingsState(prev => {
       const next = normalizeBattleFxSettings({ ...prev, [key]: value });
       storeSet(BATTLE_FX_SETTINGS_KEY, next, false);
@@ -14615,6 +14628,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onChangeBattleScreenStyle={setBattleScreenStyle}
             battleFxSettings={battleFxSettings}
             onChangeBattleFxSetting={setBattleFxSetting}
+            battleFxAutoLoad={battleFxAutoLoad}
           />
         )}
 
@@ -15419,6 +15433,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <summary className="cursor-pointer select-none px-3 py-3 text-[11px] font-black text-fuchsia-200">⚔️ バトル<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">モード選択・デバッグ戦・種族チャレンジ・ダンジョンRPG・チュートリアル</small></summary>
                 <div className="space-y-2 border-t border-fuchsia-500/30 p-3">
                   <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;debugMonsterPreviewRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setBattleSystem(BATTLE_SYSTEM_CLASSIC);setModeSelectTab('mode');setGameState('BATTLE_SYSTEM_SELECT');}} className="w-full min-h-[58px] rounded-2xl border-2 border-cyan-400/50 bg-cyan-950/40 text-cyan-50 px-3 py-2 text-left text-[12px] font-black active:scale-95">⚔️ バトルモード<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
+                  {/* バトルの性能計測(2026-09-28)。ONにするとタクティクス新画面の左上に、コマの速さ・遅いコマの割合・
+                      長い処理・動き続けているアニメーションの数・自動で軽さを下げた記録を出す。OFFのあいだは数えない。
+                      プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
+                  <button type="button" data-battle-perf-toggle aria-pressed={battlePerfOn} onClick={()=>setBattlePerfOn(BATTLE_PERF.setEnabled(!battlePerfOn))} className={`w-full min-h-[52px] rounded-2xl px-3 py-2 text-left text-[12px] font-black active:scale-95 ${battlePerfOn?'border-2 border-amber-300 bg-amber-500 text-slate-900':'border-2 border-amber-400/40 bg-amber-950/30 text-amber-100'}`}>📈 バトルの性能計測：{battlePerfOn?'ON':'OFF'}<small className="mt-0.5 block text-[9px] font-bold leading-relaxed opacity-75">タクティクス新画面の左上に、コマの速さ・かくつき・自動で軽くした記録を出します（次のバトルから）</small></button>
                   {/* デバッグ戦の「難易度9個 → 敵10個 → 勇者モン → 開始」は、以前このメニューの中へ
                       そのまま埋まっていた。1500pxほど縦に伸びていて、次の欄へ行くのにそこを全部
                       スクロールする必要があった(2026-09-17・ユーザー指摘)。専用の画面へ移した。
@@ -16940,7 +16958,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <BattleScreen
             applyTurnDamageReduction={applyTurnDamageReduction} attackAnim={attackAnim} autoBattle={autoBattle}
             autoBattleRef={autoBattleRef} autoRepeat={autoRepeat} battleIntimidate={battleIntimidate}
-            battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'} battleScreenStyle={battleScreenStyle} battleFxSettings={battleFxSettings}
+            battleScenarioRef={battleScenarioRef} battleScreenActive={gameState==='BATTLE'} battleScreenStyle={battleScreenStyle} battleFxSettings={battleFxEffective} onBattleFxAutoStep={setBattleFxAutoLoad}
             battleSoulMasus={battleSoulMasus} battleSpeed={battleSpeed} battleTutorial={battleTutorial}
             battleTutorialAllowsEmergency={battleTutorialAllowsEmergency}
             battleTutorialCardAllowed={battleTutorialCardAllowed} battleTutorialCardKind={battleTutorialCardKind}
