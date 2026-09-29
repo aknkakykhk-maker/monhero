@@ -2518,6 +2518,8 @@ function MonsterHeroGame() {
     const requestId = ++rhythmTotalRankingRequestRef.current;
     setRhythmTotalRanking(prev => ({ ...prev, status:'loading', error:null }));
     try {
+      await settleRhythmRankingSubmit();
+      if (rhythmTotalRankingRequestRef.current !== requestId) return;
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
       const rows = await sbFetchRhythmTotalRankings({ requestId:`rhythm-total-${Date.now()}` });
@@ -2610,6 +2612,8 @@ function MonsterHeroGame() {
       };
     });
     try {
+      await settleRhythmRankingSubmit();
+      if (stale()) return;
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
       // 週間は期間の正本がサーバーにある。期間限定は定義の日時をそのまま使うので聞きに行かない
@@ -2705,6 +2709,51 @@ function MonsterHeroGame() {
     loadRhythmHistoryBoard(entry, RHYTHM_EVENT_TOTAL_DIVISION);
   };
   const rhythmRankingRequestRef = useRef(0);
+  // 送れていない記録(モンヒロビートの全国ランキング)の件数と、直前に送れなかった理由(2026-09-29)。
+  // 送信に失敗した記録は端末に取っておいて送り直すが、これまでは画面のどこにも出ず、
+  // 「スコアがランキングに反映されない」と見えるだけだった。ランキング画面で件数と理由を見せる
+  const [rhythmRankingPending, setRhythmRankingPending] = useState({ count:0, status:null, message:'' });
+  const refreshRhythmRankingPending = useCallback(async () => {
+    try {
+      const pending = await storeGet(RHYTHM_RANKING_PENDING_KEY, [], false);
+      const list = Array.isArray(pending) ? pending.filter(row => row && row.clear_id) : [];
+      const last = list.length ? list[list.length - 1] : null;
+      const status = Number.isFinite(Number(last?.error?.status)) && last.error.status !== null ? Number(last.error.status) : null;
+      const message = typeof last?.error?.message === 'string' ? last.error.message.slice(0, 160) : '';
+      setRhythmRankingPending(prev => (prev.count === list.length && prev.status === status && prev.message === message) ? prev : { count:list.length, status, message });
+      return list.length;
+    } catch (_) { return 0; }
+  }, []);
+  // 直前の送信(曲を終えたときの1件)。ランキングを開くときに、これが終わるのを待つ
+  const rhythmRankingSubmitRef = useRef(Promise.resolve());
+  const resendPendingRankingScoresRef = useRef(null);
+  const rhythmRankingRetryTimersRef = useRef([]);
+  const withRhythmRankingTimeout = (promise, ms) => new Promise(resolve => {
+    const timer = setTimeout(resolve, ms);
+    Promise.resolve(promise).then(() => { clearTimeout(timer); resolve(); }, () => { clearTimeout(timer); resolve(); });
+  });
+  // ランキングを取りに行く前に、自分の直前の記録をサーバーへ入れておく。
+  // 遊んですぐランキングを開くと、送信がまだ終わっておらず、いま遊んだ点が載らないことがあった
+  const settleRhythmRankingSubmit = useCallback(async () => {
+    await withRhythmRankingTimeout(rhythmRankingSubmitRef.current, RHYTHM_RANKING_SUBMIT_WAIT_MS);
+    const count = await refreshRhythmRankingPending();
+    if (count > 0 && typeof resendPendingRankingScoresRef.current === 'function') {
+      await withRhythmRankingTimeout(resendPendingRankingScoresRef.current(), RHYTHM_RANKING_RESEND_WAIT_MS);
+      await refreshRhythmRankingPending();
+    }
+  }, [refreshRhythmRankingPending]);
+  // 送れなかったあと、アプリを開いたまま何度か送り直す。送れたら（未送信が0件になったら）何もしない
+  const scheduleRhythmRankingRetry = useCallback(() => {
+    rhythmRankingRetryTimersRef.current.forEach(id => clearTimeout(id));
+    rhythmRankingRetryTimersRef.current = RHYTHM_RANKING_RETRY_DELAYS_MS.map(ms => setTimeout(async () => {
+      try {
+        if ((await refreshRhythmRankingPending()) > 0 && typeof resendPendingRankingScoresRef.current === 'function') {
+          await resendPendingRankingScoresRef.current();
+          await refreshRhythmRankingPending();
+        }
+      } catch (_) {}
+    }, ms));
+  }, [refreshRhythmRankingPending]);
   // 難易度合算(体験版で遊べる難易度をまとめて取得)のランキングを読み込む。
   // 同じユーザーの複数行は読み込み側で最高得点の1件だけへ畳む(rhythmRankingDedupeByUser)。
   // 古い取得が後から返ってきて新しい取得を上書きしないよう、リクエストIDで最新だけ反映する。
@@ -2720,6 +2769,8 @@ function MonsterHeroGame() {
     const requestId = ++rhythmRankingRequestRef.current;
     setRhythmRanking({ status:'loading', entries:[], error:null, songId:song.songId });
     try {
+      await settleRhythmRankingSubmit();
+      if (rhythmRankingRequestRef.current !== requestId) return;
       const keys = rhythmRankingCombinedMembers(song.songId);
       let rows = [];
       for (let page = 0; page < RHYTHM_RANKING_MAX_PAGES; page++) {
@@ -2736,12 +2787,12 @@ function MonsterHeroGame() {
       console.error('[rhythm-ranking] fetch failed:', e && e.message ? e.message : e);
       setRhythmRanking({ status:'error', entries:[], error:e?.message || String(e), songId:song.songId });
     }
-  }, []);
+  }, [settleRhythmRankingSubmit]);
   // 曲を終えたときに全国ランキングへ1件送信する。呼び出し側(onComplete)で
   // 体験版からのプレイ(rhythmPlay.from==='demo')のときだけ呼び、デバッグプレイは送らない
   // (通常バトルのdebugBattleRefガードと同じ考え方)。失敗してもBEST記録(mh_rhythm_best_v1)
   // には影響しない、副作用だけの追加送信として扱う
-  const submitRhythmRankingScore = useCallback(async (song, difficulty, result) => {
+  const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {
     const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id);
     if (!difficultyKey) return;
     const detail = {
@@ -2783,7 +2834,15 @@ function MonsterHeroGame() {
     });
     if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);
     else if (outcome.nationalSaved) console.info('[rhythm-ranking] submitted', { difficulty: difficultyKey, score: row.score });
-  }, [breederName, breederLevel, breederIcon, profileFrameId]);
+    // 送れなかったときは、未送信の件数を画面へ出し、アプリを開いたまま何度か送り直す
+    await refreshRhythmRankingPending();
+    if (!outcome.nationalSaved) scheduleRhythmRankingRetry();
+  }, [breederName, breederLevel, breederIcon, profileFrameId, refreshRhythmRankingPending, scheduleRhythmRankingRetry]);
+  const submitRhythmRankingScore = useCallback((song, difficulty, result) => {
+    const task = submitRhythmRankingScoreBody(song, difficulty, result);
+    rhythmRankingSubmitRef.current = task.catch(() => {});
+    return task;
+  }, [submitRhythmRankingScoreBody]);
 
   // 送れなかった記録を、あとで送り直す(2026-09-13)。
   //
@@ -2857,12 +2916,18 @@ function MonsterHeroGame() {
     }
     return { sent, failed };
   };
+  resendPendingRankingScoresRef.current = resendPendingRankingScores;
+  // ランキング画面の「いま送る」
+  const resendRhythmRankingPendingNow = async () => {
+    try { await resendPendingRankingScores(); } catch (_) {}
+    await refreshRhythmRankingPending();
+  };
   // HOMEに落ち着いてから1回だけ走らせる。起動直後の読み込みと重ならないよう少し待つ
   const resendCheckedRef = useRef(false);
   useEffect(() => {
     if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || resendCheckedRef.current) return;
     resendCheckedRef.current = true;
-    const id = setTimeout(() => { resendPendingRankingScores(); }, RANKING_RESEND_DELAY_MS);
+    const id = setTimeout(async () => { await resendPendingRankingScores(); refreshRhythmRankingPending(); }, RANKING_RESEND_DELAY_MS);
     return () => clearTimeout(id);
   }, [bootPhase, gameState, dataLoaded, onboarded]);
 
@@ -15449,6 +15514,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             rhythmEventDivision={rhythmEventDivision}
             rhythmEventRanking={rhythmEventRanking}
             rhythmRanking={rhythmRanking}
+            rhythmRankingPending={rhythmRankingPending}
+            onResendRhythmRankingPending={resendRhythmRankingPendingNow}
             rhythmRankingDetail={rhythmRankingDetail}
             rhythmRankingTab={rhythmRankingTab}
             rhythmTotalRanking={rhythmTotalRanking}
