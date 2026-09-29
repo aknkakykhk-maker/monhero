@@ -22,7 +22,12 @@ const checks = [
     /Mia:[^\n]*baseHp:300, baseGuts:180, baseAtk:175, baseDef:60/.test(ally)
     && /Mia:[^\n]*plusStats:\{hp:120,atk:30,def:10,guts:65\}/.test(ally)
     && /Mia:[^\n]*distAptitude:\['G','C','A','B'\]/.test(ally)
-    && /Mia:[^\n]*name:"バン",icon:MIA_ICON,monId:"Mia",baseMult:2\.1,baseGuts:42/.test(ally)],
+    && /Mia:[^\n]*name:"ボイスバン",icon:MIA_ICON,monId:"Mia",baseMult:2\.1,baseGuts:42/.test(ally)],
+  // 技名は歌う動きに合わせて変えた(2026-09-29 ユーザー指示「技アクションにあわせて少し変更したい」→ 案B)。数字は上で変えていないことを見る
+  ['ミーアの技名は歌う動きに合わせた名前(通常技9つ・固有技9つ)',
+    ally.includes('Mia:    ["ハミング","メロディレイ","サンダービート","ハイキック","ヒールソング","ライトニング","メガメロディ","なげキッス","アンコールキッス"],')
+    && ally.includes('names:["ボイスバン","ギガメロディ","ギガサンダー","ビッグバンライブ","ギガライトニング","コズミックライブ","テラメロディ","テラボイスバン","ノヴァ・フィナーレ"]')
+    && ally.includes('Pixie:  ["はり手","レイ","サンダー","ハイキック","ヒールレイド","ライトニング","メガレイ","なげキッス","ディープキッス"],')],
 
   // --- 固有技の順番(specialCharge → 650ms → 専用モーション) ---
   ['固有技の共通タメに専用モーションを混ぜていない',

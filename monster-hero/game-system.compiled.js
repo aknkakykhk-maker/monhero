@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6133931e0dd43dee
+// source-sha256: 0b80fb61a8446e0d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-29 16:04";
+const BUILD_DATE = "2026-09-29 16:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -60655,7 +60655,7 @@ function MonsterHeroGame() {
     }, "継承した固有技"), masu.inheritedUniques.map((u, i) => React.createElement("div", {
       key: u?.inheritedUniqueId || i,
       className: "text-[10px] text-white font-bold"
-    }, u?.name || '固有技', " ", React.createElement("span", {
+    }, resolveInheritedUniqueDefinition(u)?.name || u?.name || '固有技', " ", React.createElement("span", {
       className: "text-slate-400"
     }, "Lv.", resolveInheritedUniqueLevel(masu, u, i))))), masu && renderFusionSection(masu, {
       mon,
@@ -68523,7 +68523,7 @@ function MonsterHeroGame() {
         }, masu.inheritedUniques.map((u, idx) => React.createElement("div", {
           key: idx,
           className: "text-[10px] text-amber-200 font-bold bg-black/30 rounded-lg px-2 py-1"
-        }, u.name, React.createElement("span", {
+        }, resolveInheritedUniqueDefinition(u)?.name || u.name, React.createElement("span", {
           className: "text-slate-500 font-normal"
         }, "(元", u.sourceMasuName, ")"))))), masuNorm.transcended ? React.createElement("div", {
           "data-transcend-detail-note": true,
