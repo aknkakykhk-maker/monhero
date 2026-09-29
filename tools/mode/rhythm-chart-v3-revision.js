@@ -71,9 +71,29 @@
 //   16 … 出だしの歯止めを、格子から少しずれた音・拍の間の音にも効かせる(2026-09-27)。頭の音がそろって格子から
 //        ずれている曲では、最初の3秒に置ける音が候補に残らず、最初のノーツが3秒を超えていた(戦場の疾風 4.0秒・もう一つの世界へ 3.6秒)。
 //        見つからないときだけ、43ms までずれた音と拍の間の音から1つ置く。ノーツ数は、出だしが3秒を超える曲だけ1つ増える
-//   17〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   17 … 遊んだ記録から学ぶ調整値を読む(2026-09-28・ユーザー指示「人間が関与しないで完璧なツールに仕上がる仕組みを」)。
+//        低音の打点の遅れを差し引く量(lowLagFactor)と、フレーズごとに1本の線を追う強さ(lineBoost / lineDemote)を
+//        rhythm-chart-play-tuning.js から読む。調整値がすべて0なら Rev.16 と同じ譜面(書き足されるまでは0)。
+//        調整値は rhythm-play-log.js --learn --write が週1回、プレイヤーの遊んだ記録から動かし、新しいリビジョンとして書き足す
+//   18 … 繰り返しの見分け(2026-09-28・rhythm-chart-repeats.js)。解析の区切りの繰り返しが無い小節にだけ、4つの手がかり(メロディ・
+//        リズム・低音・音の層)のうち3つが「前にほぼ同じ4小節があった」と言う所の元を足す。フレーズの写し・発展がその小節でも効く。
+//        区間の差し替えは、仮想プレイヤー(rhythm-virtual-player.js)の見込みのミス・ばらつきも費用に足す(つまずく区切りを別の候補に替える)
+//   19 … 写した小節のリズムもそろえる(2026-09-28)。繰り返しの小節では、元の小節で拾った位置の音を、候補の絞り込み
+//        (格子からのずれ30ms・拍の裏の弱い音)から外して加える。Rev.18 で形はそろったが、リズムがそろうのは約6割だった
+//   20 … 歯ごたえの測り方をテンポの数字から切り離す(2026-09-29)。量は「1拍あたりの目標 × 1秒あたりの拍の数」で既にテンポに比例するのに、
+//        歯ごたえでもテンポを0.7乗で数えていた(二重に数える)。人が歯ごたえを決めた6曲は、どれも遅い曲・拍の立ちが弱い曲を重く、
+//        速い曲・拍の立ちが強い曲を軽く直していた。テンポの効きを0.35乗、拍のはっきりさを0.15乗へ弱める(CHALLENGE_EXPONENT_REV20)。
+//        決めた歯ごたえ(challengeFactor)を書いた曲は変わらない
+//   21 … テンポの揺れに合わせる(2026-09-29・rhythm-chart-tempo-warp.js)。4小節ごとの強い打点の格子からのずれがなめらかに動き、
+//        半分の区間から測った揺れが残りの半分にも当てはまる曲だけ、打点から揺れを引いて格子に乗せ、書き出す時刻に揺れを足す。
+//        当たるのは SIX ÉTERNEL Remix(ビート版)と The City Beneath the Comets。ほかの曲は Rev.20 と同じ譜面
+//   22 … 曲の終わりの余韻(2026-09-29・rhythm-chart-ending.js・ユーザー指摘「音がなくなろうとしてる終盤でノーツが続いてるのが違和感」)。
+//        最後の一発のあと鳴り残る音が消えていく曲では、最後の一発より後にノーツを置かず、最後の一発を太い長押しにして締める。
+//        当たるのは ビッグブリッヂの死闘・crossing field・もう一つの世界へ・綺季一閃 battle remix。ほかの曲は Rev.21 と同じ譜面
+//   23〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
-//        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)と重みの最新の大きいほう＋1」を次の番号にする
+//        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
+//        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)・重みの最新・調整値の最新のいちばん大きいもの＋1」を次の番号にする
 //        (同じ番号が「作り方の改良」と「重みの学び直し」の2つの意味を持たないように)
 'use strict';
 
@@ -81,10 +101,11 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=16;
+const CHART_REVISION_CODE_LATEST=22;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
-const CHART_REVISION_LATEST=Math.max(CHART_REVISION_CODE_LATEST,latestKnowledgeRevision());
+const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');
+const CHART_REVISION_LATEST=Math.max(CHART_REVISION_CODE_LATEST,latestKnowledgeRevision(),latestPlayTuningRevision());
 // リビジョンごとの道のレーン数。Rev.5から6レーン
 const CHART_LANE_COUNT_LEGACY=5;
 const CHART_SIX_LANE_REVISION=5;

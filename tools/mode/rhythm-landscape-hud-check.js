@@ -44,8 +44,8 @@ check('向き判定はmatchMediaの購読で、判定処理(applyJudgment)とrun
   &&!/isLandscape/.test(applyJudgmentBody)
   &&!/isLandscape/.test(beginRunBody));
 check('横画面ではプレイ画面自身が左右のSafe Area(ノッチ)を確保する(bodyは上下しか確保していない)',
-  /data-rhythm-tap-test[\s\S]{0,400}landscape:pl-\[env\(safe-area-inset-left\)\]/.test(game)
-  &&/data-rhythm-tap-test[\s\S]{0,400}landscape:pr-\[env\(safe-area-inset-right\)\]/.test(game));
+  /data-rhythm-tap-test[\s\S]{0,400}landscape:pl-\[(?:env\(safe-area-inset-left\)|var\(--mh-sa-left\))\]/.test(game)
+  &&/data-rhythm-tap-test[\s\S]{0,400}landscape:pr-\[(?:env\(safe-area-inset-right\)|var\(--mh-sa-right\))\]/.test(game));
 
 // ── レーンの台形(遠近)は実装から取り出してそのまま使う ──────────────────────────
 // 道の遠近の計算は丸ごと切り出す(rhythm-projection-source.js。名前ごとに切り出すと、計算を分けるたびに壊れた)

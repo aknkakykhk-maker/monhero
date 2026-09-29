@@ -238,10 +238,11 @@ check('マーケットに交換カードがある',
 check('交換は保存に失敗したら元へ戻す',
   /hero proof shard exchange save failed/.test(app)
   &&/勇者の証片は消費していません/.test(app));
+// 2026-09-28「ショップの作りを全部統一して」から、持ち高の帯は共通部品 MarketBalanceBar(parts/20)が描く
 check('マーケットの上に持ち高を出す（プシュケー・証片・証）',
-  market.includes('data-market-balances')
-  &&market.includes("data-market-balance")
-  &&/psycheHave|shardHave|proofHave/.test(market));
+  read('monster-hero/src/parts/20-market-notices-help.jsx').includes('data-market-balances')
+  &&read('monster-hero/src/parts/20-market-notices-help.jsx').includes('data-market-balance={currency}')
+  &&market.includes("[{currency:'psyche',value:psycheHave},{currency:'heroProofShard',value:shardHave},{currency:'heroProof',value:proofHave}]"));
 // ★2026-09-14にユーザー指摘「イベント報酬が直接アイテム欄に入ってた / ギフト経由して」。
 //   アイテム欄へ直接入れるのをやめ、ギフト1件へまとめて届ける形にした
 check('報酬から証片が配られる',

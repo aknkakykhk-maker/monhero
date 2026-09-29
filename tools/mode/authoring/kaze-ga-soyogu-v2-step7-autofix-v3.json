@@ -27,7 +27,7 @@
  },
  "difficulties": {
   "EASY": {
-   "noteCount": 80,
+   "noteCount": 81,
    "fixCount": 0,
    "passes": 0,
    "before": {
@@ -36,8 +36,8 @@
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 19,
-    "cost": 19
+    "spread": 21,
+    "cost": 21
    },
    "after": {
     "impossible": 0,
@@ -45,13 +45,13 @@
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 19,
-    "cost": 19
+    "spread": 21,
+    "cost": 21
    },
    "fixes": []
   },
   "NORMAL": {
-   "noteCount": 90,
+   "noteCount": 94,
    "fixCount": 0,
    "passes": 0,
    "before": {
@@ -60,8 +60,8 @@
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 18,
-    "cost": 18
+    "spread": 20,
+    "cost": 20
    },
    "after": {
     "impossible": 0,
@@ -69,13 +69,13 @@
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 18,
-    "cost": 18
+    "spread": 20,
+    "cost": 20
    },
    "fixes": []
   },
   "HARD": {
-   "noteCount": 128,
+   "noteCount": 126,
    "fixCount": 0,
    "passes": 0,
    "before": {
@@ -84,8 +84,8 @@
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 44,
-    "cost": 44
+    "spread": 31,
+    "cost": 31
    },
    "after": {
     "impossible": 0,
@@ -93,8 +93,8 @@
     "reach": 0,
     "hardJumps": 0,
     "overSteps": 0,
-    "spread": 44,
-    "cost": 44
+    "spread": 31,
+    "cost": 31
    },
    "fixes": []
   },
@@ -123,41 +123,28 @@
    "fixes": []
   },
   "MASTER": {
-   "noteCount": 189,
-   "fixCount": 1,
-   "passes": 1,
+   "noteCount": 193,
+   "fixCount": 0,
+   "passes": 0,
    "before": {
     "impossible": 0,
-    "strained": 0,
-    "reach": 1,
-    "hardJumps": 0,
+    "strained": 1,
+    "reach": 0,
+    "hardJumps": 2,
     "overSteps": 0,
-    "spread": 40,
-    "cost": 10040
+    "spread": 45,
+    "cost": 385
    },
    "after": {
     "impossible": 0,
-    "strained": 0,
+    "strained": 1,
     "reach": 0,
-    "hardJumps": 0,
+    "hardJumps": 2,
     "overSteps": 0,
-    "spread": 40,
-    "cost": 40
+    "spread": 45,
+    "cost": 385
    },
-   "fixes": [
-    {
-     "grid": 604,
-     "bar": 37,
-     "timeMs": 76420,
-     "type": "SLIDE",
-     "move": "レーン0.5→1.0",
-     "pass": 1,
-     "costBefore": 10040,
-     "costAfter": 40,
-     "impossibleAfter": 0,
-     "strainedAfter": 0
-    }
-   ]
+   "fixes": []
   }
  }
 }

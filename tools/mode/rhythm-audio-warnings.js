@@ -12,6 +12,7 @@
 //   'notice'   … 気に留めておく程度。止めない
 'use strict';
 const {meterOpinion}=require('./rhythm-audio-meter-opinion.js');
+const {tripletMix}=require('./rhythm-audio-triplet-mix.js');
 
 const THRESHOLD=Object.freeze({
   // 2位のテンポ候補と点が拮抗しているか。実曲30曲で測ると、正しく当たっている曲でも
@@ -28,7 +29,8 @@ const THRESHOLD=Object.freeze({
 
 const collectWarnings=({timing,detected,durationMs,onsetCount,sectionCount,onsets=null})=>{
   const warnings=[];
-  const trusted=timing&&timing.source&&timing.source!=='detected';
+  // 自動判定を拍子の二つ目の意見で直したもの(auto-corrected)は、人が決めた値ではないので止める警告を下げない
+  const trusted=timing&&timing.source&&timing.source!=='detected'&&timing.source!=='auto-corrected';
   const add=(code,severity,message,detail)=>{
     // 人が耳で確かめた値（登録値・確認済み・コマンド指定）を使っているときは、
     // 自動判定のあやしさで止めない。止めるべきなのは「自動判定だけで押し切る」場合。
@@ -55,8 +57,22 @@ const collectWarnings=({timing,detected,durationMs,onsetCount,sectionCount,onset
     }
     // 拍子の二つ目の意見(rhythm-audio-meter-opinion.js): 3拍子と判定したのに、強い打点が小節の4等分の位置に偏っている
     const opinion=onsets?meterOpinion(detected,onsets):null;
-    if(opinion&&opinion.level){
+    if(timing&&timing.source==='auto-corrected'&&timing.autoCorrectedFrom){
+      const from=timing.autoCorrectedFrom;
+      add('meter-corrected','notice',`自動判定は ${from.bpm} BPM・${from.beatsPerBar}拍子でしたが、強い打点が4拍子の位置に多いので ${Math.round(timing.bpm*100)/100} BPM・${timing.beatsPerBar}拍子に直しました（聞いて確かめてください）`,from);
+    }else if(opinion&&opinion.level){
       add('meter-doubt',opinion.level,`3拍子と判定しましたが、強い打点が4拍子の位置に多いです（代わりの候補 ${opinion.suggestion.bpm} BPM・4拍子）`,opinion);
+    }
+    // 16分の曲に3連符が混ざっている(rhythm-audio-triplet-mix.js)。譜面は16分へ丸めるので、その小節は音とずれて聞こえうる
+    const mix=onsets&&timing&&timing.beatMs?tripletMix(timing,onsets):null;
+    if(mix&&mix.mixed){
+      add('triplet-mixed','notice',`3連符の小節が混ざっています（${mix.tripletBars.length}小節）。譜面は16分へ丸めるので、その小節は聞いて確かめてください`,
+        {ratio:mix.ratio,barShare:mix.barShare,bars:mix.tripletBars.slice(0,40)});
+    }
+    // 5拍子・7拍子(2026-09-29)。まれな拍子で、自動判定を人が直した only my railgun は5拍子と読んでいた(本当は4拍子)。
+    // 正解の例が1曲だけなので書き換えず、注意だけ出す
+    if(Number(detected.beatsPerBar)===5||Number(detected.beatsPerBar)===7){
+      add('meter-rare','notice',`${detected.beatsPerBar}拍子と判定しました。まれな拍子なので、4拍子ではないか聞いて確かめてください`,{beatsPerBar:detected.beatsPerBar});
     }
     if((detected.beatPresence??1)<THRESHOLD.beatPresence){
       add('beat-weak','notice','拍のところに音が無い拍が多いです',{beatPresence:detected.beatPresence});

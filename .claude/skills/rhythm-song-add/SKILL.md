@@ -122,7 +122,7 @@ node -e "require('./tools/node_modules/sharp')('<元絵>')
 node tools/mode/rhythm-audio-analyze-v3.js --track <track_id> --write
 ```
 
-初めて解析すると、一覧のその曲へ `"chartRevision": <最新>`（譜面の作り方のリビジョン。2026-09-26 時点で 15）が自動で入る。
+初めて解析すると、一覧のその曲へ `"chartRevision": <最新>`（譜面の作り方のリビジョン。2026-09-29 時点で 22。遊んだ記録から学んだ調整値が書き足されると、それより大きい番号になる。`docs/spec/RHYTHM_PLAY_LOG.md`）が自動で入る。
 Rev.9 からは、パイプライン（`--write`）が生成の前に音の層の解析 `authoring/<曲>-v3-layers.json` を作る（主役の追跡の材料。**コミットに含める**）。
 生成のときに `主役の追跡: ドラム◯小節・歌や主旋律◯小節…` と出ていれば効いている（`効かない` と出たら層の解析を作り直す）。
 Rev.12 からは、パイプラインが生成の直後に区間の差し替え（`rhythm-chart-v3-splice.js --apply`）を通す。難易度ごとに `差し替えた` / `差し替えない（理由）` と出る。
@@ -139,6 +139,10 @@ Rev.12 からは、パイプラインが生成の直後に区間の差し替え�
 
 `meter-doubt`（3拍子と判定したが、強い打点が4拍子の位置に多い）が出たら、**示された代わりの候補（4/3倍の BPM・4拍子）を最初に試す**
 （2026-09-26。人が直した crossing_field・freedom_dive は、どちらもこの代わりの候補が正解だった。`node tools/mode/rhythm-audio-meter-opinion.js` で全曲を見られる）。
+2026-09-29 からは、止める警告の強さ(1.8以上)なら**解析が自動でその候補に直す**（`meter-corrected` の注意が出る・`timing.source` は `auto-corrected`）。
+直った値のまま進めてよいが、聞いてずれていれば `--no-auto-meter` か `--bpm` で決め直す。やや疑わしい(1.5〜1.8)ときは今までどおり `meter-doubt` の注意だけ。
+`meter-rare`（5拍子・7拍子と判定した）が出たら、まず4拍子（`--beats-per-bar 4`）を試す（only my railgun は5拍子と読んでいた）。
+テンポが途中で揺れる曲は、Rev.21 から生成器が自動で合わせる（なめらかに揺れ、半分の区間で確かめられたときだけ。`node tools/mode/rhythm-chart-tempo-warp.js` で見られる）。
 `tempo-ambiguous`（ほかの候補と拮抗）が出たら、**必ず候補を比べる**。
 このスキルで足した3曲は**全部これが出た**。
 
@@ -225,6 +229,10 @@ console.log('最密4秒',best+'打  最短',g[0]+'ms');"
 
 決まったら `challengeFactor` に書く。**測り方（`CHALLENGE_*`）は触らない**（ほかの曲まで変わる）。
 決めた理由は `docs/spec/RHYTHM_MODE.md` に残す（`rhythm-song-challenge-check.js` が見張る）。
+
+Rev.20 から、自動の歯ごたえはテンポを0.35乗・拍のはっきりさを0.15乗でしか数えない（それまでは0.7乗・0.55乗。
+量がすでにテンポに比例しているのに二重に数えていた。`rhythm-chart-rev20-check.js`）。遅い曲・拍の立ちが弱い曲を
+人が重く直す必要は、前より少ないはず。まず自動のまま出して、帯の中の位置を見てから決める。
 
 ---
 
