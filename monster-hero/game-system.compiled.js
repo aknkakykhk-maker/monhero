@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 61fff8c0745ca880
+// source-sha256: d0839c29ddf6ee7c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-29 15:36";
+const BUILD_DATE = "2026-09-29 15:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -45270,13 +45270,14 @@ function MonsterCheckDebugScreen({
       className: "mx-auto flex w-full max-w-md gap-2"
     }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技')), skillMotionLists && React.createElement("div", {
       "data-monster-check-skill-motions": true,
-      className: "mx-auto mt-2 w-full max-w-md max-h-[30vh] overflow-y-auto mh-scroll space-y-1.5"
+      className: "mx-auto mt-2 w-full max-w-md space-y-1.5"
     }, skillMotionLists.map(([kind, label, names]) => React.createElement("div", {
-      key: kind
+      key: kind,
+      className: "flex items-center gap-1.5 min-w-0"
     }, React.createElement("div", {
-      className: "mb-1 text-[9px] font-black tracking-widest text-cyan-300/80"
+      className: "shrink-0 w-9 text-[9px] font-black leading-tight text-cyan-300/80"
     }, label), React.createElement("div", {
-      className: "grid grid-cols-3 gap-1.5"
+      className: "flex-1 min-w-0 flex gap-1.5 overflow-x-auto mh-scroll pb-0.5"
     }, names.map((name, lvl) => React.createElement("button", {
       key: name,
       type: "button",
@@ -45286,9 +45287,9 @@ function MonsterCheckDebugScreen({
         Audio_.se.tap();
         if (!playing) onPlayPreview(mon, kind, atkMotion, name);
       },
-      className: `min-h-[40px] min-w-0 rounded-xl border px-1 text-[10px] font-black leading-tight active:scale-95 disabled:opacity-45 ${playing?.skillName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`
+      className: `shrink-0 min-h-[44px] rounded-xl border px-2.5 text-[10px] font-black leading-tight whitespace-nowrap active:scale-95 disabled:opacity-45 ${playing?.skillName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`
     }, React.createElement("span", {
-      className: "block truncate"
+      className: "block"
     }, name), React.createElement("span", {
       className: "block text-[8px] font-mono text-slate-400"
     }, "Lv.", lvl)))))))));
