@@ -42,7 +42,8 @@ const ultra=between('data-ultra-battle-view','):(<>');
 for(const token of ['hand.map((c,i)=>','enemyAttackFx?.kind','attackAnim &&','animate-pulse','transition-all','drop-shadow'])if(ultra.includes(token))fail(`ultra軽量表示へ通常の重い描画 ${token} が混入しています`);
 if(!battle.includes('):(<>' ))fail('ultraと通常/liteのBATTLE描画ツリーが分離されていません');
 for(const token of [
-  '!ecoBattleView&&guardFx','!ecoBattleView&&teachingFx',
+  // 2026-09-29: ガードは枠のバリア、アシストカードはカットインへ置き換えた(どちらも省エネでは出さない)
+  's&&!ecoBattleView&&(()=>{',
   "!ecoBattleView&&enemyAttackFx?.kind==='move'",
   "!ecoBattleView&&enemyAttackFx?.kind==='normal'",
   "!ecoBattleView&&enemyAttackFx?.kind==='special'",

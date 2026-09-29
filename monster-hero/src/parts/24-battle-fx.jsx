@@ -693,27 +693,37 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   allIn:        { c1:'#fed7aa', c2:'#dc2626', motif:'flame' },  // 捨て身: 赤い炎
   statBoost:    { c1:'#fef08a', c2:'#f59e0b', motif:'rise' },   // ガッツ全開っちー: 金の光が立ちのぼる
   weaponChange: { c1:'#cffafe', c2:'#0891b2', motif:'blade' },  // ソード・コンバージョン: 青い斬撃
+  heal:         { c1:'#bbf7d0', c2:'#10b981', motif:'rise' },   // 緊急回復(2026-09-29): 緑の光が立ちのぼる
   partyGuard:   { c1:'#bbf7d0', c2:'#15803d', motif:'shield' }, // 世界樹の守り: 緑の盾
   comboBurst:   { c1:'#fbcfe8', c2:'#db2777', motif:'rise' },   // スイーツパラダイス: 桃色の光
   default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },
 });
 const tacticsExCutinTheme = (effect) => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;
+// カットインの色。アシストカードはカードごとの色(cutin.theme)を持つ
+const battleCutinThemeOf = (cutin) => (cutin && cutin.theme) || tacticsExCutinTheme(cutin && cutin.effect);
+// ★2026-09-29 ユーザー選択で、アシストカード(「助手のカットイン」)と緊急回復(「EX風のカットイン」)も同じ部品で出す。
+//   variant … 'ex'(EXスキル・1600ms) / 'assist'(細い帯を画面の上のほうに・短い) / 'emergency'(EXと同じ帯・緑)
+//   icon があれば立ち絵の代わりにその絵(アシストカードの顔アイコン・💊)を出す。ms は尺(CSSの --cut-ms)
 const TacticsExCutin = ({ cutin }) => {
   if (!cutin) return null;
-  const t = tacticsExCutinTheme(cutin.effect);
+  const t = battleCutinThemeOf(cutin);
+  const variant = cutin.variant || 'ex';
   // 盤面の入れ物(transform を持つことがある)の中だと fixed が画面いっぱいにならないので、body へ出す
   return ReactDOM.createPortal(
-    <div key={cutin.key} data-tactics-ex-cutin={cutin.effect || 'default'} className="ex-cutin" style={{ '--ex-c1':t.c1, '--ex-c2':t.c2 }} aria-hidden="true">
+    <div key={cutin.key} data-tactics-ex-cutin={cutin.effect || 'default'} data-battle-cutin={variant} className={`ex-cutin ex-cutin--${variant}`}
+      style={{ '--ex-c1':t.c1, '--ex-c2':t.c2, ...(cutin.ms ? { '--cut-ms':`${cutin.ms}ms` } : {}) }} aria-hidden="true">
       <div className="ex-cutin__shade"/>
       <div className="ex-cutin__rays"/>
       <div className={`ex-cutin__motif ex-cutin__motif--${t.motif}`}>{[0,1,2,3,4,5].map(i => <i key={i} style={{ '--i':i }}/>)}</div>
       <div className="ex-cutin__band">
         <div className="ex-cutin__lines"/>
         <div className="ex-cutin__art">
-          <DyedMonsterImage baseId={cutin.monId} src={cutin.imgUrl} alt="" masuColors={cutin.colors} draggable={false} className="w-full h-full object-contain"/>
+          {cutin.icon
+            ? <span className="ex-cutin__icon">{isImageIconValue(cutin.icon) ? cardIconNode(cutin.icon, variant === 'assist' ? 96 : 120, cutin.cardId) : <span className="ex-cutin__emoji">{cutin.icon}</span>}</span>
+            : <DyedMonsterImage baseId={cutin.monId} src={cutin.imgUrl} alt="" masuColors={cutin.colors} draggable={false} className="w-full h-full object-contain"/>}
         </div>
         <div className="ex-cutin__text">
-          <div className="ex-cutin__tag">EX SKILL</div>
+          <div className="ex-cutin__tag">{cutin.tag || 'EX SKILL'}</div>
           {/* 名前は1行に収める(「みんなをか/ばう」のように途中で折り返さない)。長い名前ほど字を小さくする */}
           <div className="ex-cutin__name" style={{ fontSize:`${Math.max(15, Math.min(30, Math.floor(165 / Math.max(1, String(cutin.exName || '').length))))}px` }}>{cutin.exName}</div>
           <div className="ex-cutin__sub">{cutin.monName}{cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}</div>
@@ -724,6 +734,24 @@ const TacticsExCutin = ({ cutin }) => {
     document.body
   );
 };
+// ==== ガードのバリア(2026-09-29 ユーザー選択「案A バリア」) ====
+// ガードを置いた子の枠に六角形の光の壁を重ねる。ガードの段階(GUARD_EVOLUTION)が上がるほど、
+// 色(銅→銀→金→水晶→虹)と飾り(内側の輪・六角の網目・回る紋)が豪華になる。
+// state … 'idle' 構えている / 'block' 受け止めきった(光って火花が跳ね返る) / 'break' 受けきれなかった(割れて破片が飛ぶ)
+// 見た目だけ。押せる場所は塞がない(pointer-events:none)
+const GUARD_BARRIER_TIERS = Object.freeze(['bronze', 'bronze', 'silver', 'silver', 'gold', 'gold', 'crystal', 'crystal', 'rainbow']);
+const guardBarrierTierOf = (level) => GUARD_BARRIER_TIERS[Math.max(0, Math.min(GUARD_BARRIER_TIERS.length - 1, Math.floor(Number(level) || 0)))];
+const GuardBarrier = ({ tier = 'bronze', state = 'idle' }) => (
+  <span data-guard-barrier={state} data-guard-tier={tier} className={`guard-barrier guard-barrier--${tier} guard-barrier--${state}`} aria-hidden="true">
+    <svg className="guard-barrier__svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <polygon className="guard-barrier__hex" points="25,3 75,3 98,50 75,97 25,97 2,50"/>
+      <polygon className="guard-barrier__hex2" points="31,13 69,13 88,50 69,87 31,87 12,50"/>
+    </svg>
+    <i className="guard-barrier__ring"/>
+    {state === 'block' && [0,1,2,3,4,5].map(k => <i key={k} className="guard-barrier__spark" style={{ '--k':k }}/>)}
+    {state === 'break' && [0,1,2,3,4,5,6,7].map(k => <i key={k} className="guard-barrier__shard" style={{ '--k':k }}/>)}
+  </span>
+);
 const AttackTargetFx = ({anim, attackerId}) => {
   if (!anim || anim.charge === true || anim.twinBlade) return null;
   // 種族ごとの攻撃(ThemedAttackMotion)は、自分で敵の位置へ着弾を描く

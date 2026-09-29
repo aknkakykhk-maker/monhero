@@ -625,6 +625,7 @@ function MonsterHeroGame() {
     setSlotSettle(null);
     setEnemySkillName(null);
     setGuardFx(false);
+    setGuardImpact(null);
     setEnemyAttackAnim(false);
     setEnemyAttackFx(null);
   };
@@ -993,6 +994,9 @@ function MonsterHeroGame() {
   useEffect(() => () => { if (tacticsSlotFxTimerRef.current) clearTimeout(tacticsSlotFxTimerRef.current); }, []);
   const [enemySkillName, setEnemySkillName] = useState(null); // 敵アクションの技名インライン表示
   const [guardFx, setGuardFx] = useState(false); // ガード成功のキーン演出
+  // ガードのバリアが敵の攻撃を受けた結果(2026-09-29 ユーザー選択「案A バリア」)。{ key, bySlot:{ 枠: 'block' 受け止めきった / 'break' 割れた } }
+  // 見た目だけ。消えるのは時間(showGuardImpact)で、進行は待たない
+  const [guardImpact, setGuardImpact] = useState(null);
   const [teachingFx, setTeachingFx] = useState(null); // {id} ブリーダー教えカード使用時の専用演出
   const [enemyAttackAnim, setEnemyAttackAnim] = useState(false);
   const [enemyAttackFx, setEnemyAttackFx] = useState(null); // null | {kind:'normal'|'special'}
@@ -9351,11 +9355,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
 
   // ブリーダー教えカード使用時の専用演出を発火
-  const fireTeachingFx = (id) => {
-    if (!TEACHING_FX_STYLE[id]) return;
-    const fxId = Date.now()+Math.random();
-    setTeachingFx({id, fxId});
-    setTimeout(()=>setTeachingFx(p=>(p&&p.fxId===fxId?null:p)), battleMs(900));
+  // ★2026-09-29 ユーザー選択「助手のカットイン」: EXと同じカットインの部品を、細い帯・カードの顔アイコン・短い尺で出す。
+  //   効き目は味方全体に乗るので、立っている子の枠をまとめて光らせる。画面を軽くする設定(ecoBattleView)では出さない
+  const fireTeachingFx = (id, name = null) => {
+    const fx = TEACHING_FX_STYLE[id];
+    if (!fx || ecoBattleView) return;
+    const card = TEACHING_CARDS.find(t => t.id === id);
+    showTacticsExCutin({ variant:'assist', effect:id, theme:{ c1:fx.c1, c2:fx.c2, motif:fx.motif || 'rise' },
+      icon:card?.icon || fx.icon, cardId:id, exName:name || card?.baseName || fx.label, monName:fx.label, tag:'ASSIST',
+      slotIndexes:slots.map((s, i) => (s ? i : null)).filter(i => i != null) }, battleMs(1100));
   };
 
   // Whether a card needs to be assigned to a monster (attack-type cards)
@@ -10369,7 +10377,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               addPopup(`連撃 ${rushHits}ヒット！${coverText}`,'enemy','text-orange-300 font-black text-lg drop-shadow-md');
               await battleWait(700);
             }
-            if(guardedCount>0){ setGuardFx(true); Audio_.se.guard(); triggerShake(); await battleWait(450); setGuardFx(false); }
+            if(guardedCount>0){
+              // 枠ごとに、受け止めきったか(block)・受けきれず通ったか(break)をバリアに出す
+              const impact={};
+              Object.entries(slotFx).forEach(([key,fx])=>{ if(fx?.guard) impact[key]=(Number(fx.dmg)||0)>0?'break':'block'; });
+              showGuardImpact(impact);
+              setGuardFx(true); Audio_.se.guard(); triggerShake(); await battleWait(450); setGuardFx(false);
+            }
             currentHp=commitTacticsUnits(units);
             // ★減ったぶん・受け止めたぶん・戻ったぶんは、**枠ごとに出している**ので
             //   まんなかへ合計を重ねて出さない(2026-09-21 ユーザー指示「個別をみんなに
@@ -10397,7 +10411,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ガードは最終ダメージが0でも(余剰でライフ・ガッツが増えても)「受け止めた」扱いにする
           tookEnemyAttack=true;
           const diff=guardValue-incomingBeforeTurnReduction;
-          // キーンと弾くガード演出
+          // キーンと弾くガード演出。既存5モードのガードはパーティ全体なので、全員の枠のバリアに結果を出す
+          showGuardImpact(Object.fromEntries(slots.map((s, i) => [i, s]).filter(([, s]) => s).map(([i]) => [i, diff<0?'break':'block'])));
           setGuardFx(true); Audio_.se.guard(); triggerShake();
           await battleWait(550); setGuardFx(false);
           if (diff<0) { const fd=applyImmediateTakenReduction(Math.abs(diff)); const remainingHp=calculateRemainingHp(currentHp,fd); currentHp=remainingHp; addPopup(`貫通! -${fd}`,'hero','text-pink-600 text-3xl font-black drop-shadow-lg'); setHp(remainingHp); await battleWait(1000); }
@@ -10523,13 +10538,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★新しい盤面のタクティクスでは、画面全体を覆う演出を出さない(2026-09-24 ユーザー指摘
     //   「緊急回復のアクションだけ画面表示が変わるのが気になる」)。バトル中の行動で全画面を暗くするのは
     //   緊急回復だけだった。盤面の上の札で知らせ、回復した子の枠が光る(枠の光は tacticsSlotFx の heal から)
-    if(isTacticsMode(runMode)&&normalizeBattleScreenStyle(battleScreenStyle)==='TACTICS_NEW'){
+    // ★2026-09-29 ユーザー選択「EX風のカットイン」: どのモードも、EXと同じ帯を緑で出す(絵は 💊)。
+    //   全画面の暗転(setEffect)はやめ、進行は待たない。回復が入る子の枠(立っている子と、10%ずつ戻る倒れた子)を光らせる
+    if(ecoBattleView){
       addPopup('💊 緊急回復','hero','text-emerald-300 font-black',false);
-      await battleWait(500);
     } else {
-      setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl,baseId:mainHero?.id,colors:mainHero?.colors});
-      await battleWait(500); setEffect(null);
+      showTacticsExCutin({ variant:'emergency', effect:'heal', icon:'💊', tag:'EMERGENCY', exName:'緊急回復',
+        monName:'味方のライフとガッツを30%ずつ回復', slotIndexes:slots.map((s, i) => (s ? i : null)).filter(i => i != null) }, battleMs(1300));
     }
+    await battleWait(500);
     // ★新モードは1体ずつ「その子の上限の30%」(2026-09-20 ユーザー指示)。
     //   合計から出すと、1体だけ傷ついているときパーティ全員ぶんがその子へ入る。
     //   倒れた子にも入る(ターンを1回捨てる重い選択なので、復活までの貯めには乗る)
@@ -10605,10 +10622,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // EXを使った瞬間のカットイン(TacticsExCutin)。見た目だけなので、進行は待たずに時間で片付ける
   const [tacticsExCutin, setTacticsExCutin] = useState(null);
   const tacticsExCutinTimerRef = useRef(null);
-  const showTacticsExCutin = (cutin) => {
+  const showGuardImpact = (bySlot) => {
+    if (ecoBattleView || !bySlot || !Object.keys(bySlot).length) return;
+    const key = Date.now() + Math.random();
+    setGuardImpact({ key, bySlot });
+    setTimeout(() => setGuardImpact(p => (p && p.key === key ? null : p)), battleMs(820));
+  };
+  // ms … 尺。EXは1600ms(バトルの速さで縮めない)。アシストカード・緊急回復は呼ぶ側で battleMs を通して渡す
+  const showTacticsExCutin = (cutin, ms = TACTICS_EX_CUTIN_MS) => {
     if (tacticsExCutinTimerRef.current) clearTimeout(tacticsExCutinTimerRef.current);
-    setTacticsExCutin({ ...cutin, key: Date.now() });
-    tacticsExCutinTimerRef.current = setTimeout(() => { tacticsExCutinTimerRef.current = null; setTacticsExCutin(null); }, TACTICS_EX_CUTIN_MS);
+    setTacticsExCutin({ ...cutin, key: Date.now(), ...(ms !== TACTICS_EX_CUTIN_MS ? { ms } : {}) });
+    tacticsExCutinTimerRef.current = setTimeout(() => { tacticsExCutinTimerRef.current = null; setTacticsExCutin(null); }, ms);
   };
   // choice … スタイル式のEX(ソード・コンバージョン)で選んだスタイルの id
   const activateTacticsEx = (slotIdx, choice = null) => {
@@ -10777,7 +10801,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       await battleWait(250);
       if (card.type==='draw') continue;
       if (card.type==='buff'||card.type==='debuff') {
-        fireTeachingFx(card.id);
+        fireTeachingFx(card.id, card.name||card.baseName);
         if (card.subType==='atk_buff') { addPopup(`攻撃UP!`,'hero','text-red-400 font-black text-2xl drop-shadow-md'); const boost=localBoostFromCard(card).oryo*effMul; addPermaBuff('atkPct',boost); localOryoAdd+=boost; }
         else if (card.subType==='dmg_cut_buff') { addPopup(`丈夫さUP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=(level===0?0.03:(level===1?0.06:0.10))*effMul; writePermaBuffs(p=>({...p, dmgCutPct:Math.min(0.9,(p.dmgCutPct||0)+cutValue)})); }
         // かどみうむ: 効果量はdata/breeder.jsのCADMIUM_TIERSに集約している(説明文の生成も同じ値を見る)
@@ -10829,7 +10853,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
       else if (card.type==='heal') {
         Audio_.se.heal();
-        fireTeachingFx(card.id);
+        fireTeachingFx(card.id, card.name||card.baseName);
         const owned=ownedTeachings.find(t=>t.id===card.id); const level=owned?owned.evoLevel:0;
         if (card.id==='meloso') {
           totalHeal+=Math.floor(liveEffectiveMaxHp()*0.3*effMul); totalHealRate+=0.3*effMul;
@@ -17089,7 +17113,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getAvailableUniquesForSlot={getAvailableUniquesForSlot} getCardGuts={getCardGuts} getDmg={getDmg}
             getIncomingDamageBeforeTurnReduction={getIncomingDamageBeforeTurnReduction} getMasuMon={getMasuMon}
             getNextTurnBuff={getNextTurnBuff} getPermaBuff={getPermaBuff} getTurnBuff={getTurnBuff}
-            getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardLevel={guardLevel}
+            getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro}

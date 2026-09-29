@@ -44,6 +44,7 @@ const TURN_FX=[
   {state:'slotSettle',     clear:'setSlotSettle(null)',      what:'カードをはめ込んだ演出'},
   {state:'enemySkillName', clear:'setEnemySkillName(null)',  what:'敵の技名の表示'},
   {state:'guardFx',        clear:'setGuardFx(false)',        what:'ガード成功の演出'},
+  {state:'guardImpact',    clear:'setGuardImpact(null)',     what:'ガードのバリアが受けた演出'},
   {state:'enemyAttackAnim',clear:'setEnemyAttackAnim(false)',what:'敵の攻撃モーション'},
   {state:'enemyAttackFx',  clear:'setEnemyAttackFx(null)',   what:'敵の攻撃の演出'},
 ];
