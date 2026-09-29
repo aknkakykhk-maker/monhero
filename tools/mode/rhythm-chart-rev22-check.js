@@ -20,7 +20,7 @@ const registry=JSON.parse(fs.readFileSync(path.join(dir,'rhythm-song-registry.js
 const active=[];
 for(const [trackId,entry] of Object.entries(registry)){
   const file=path.join(dir,`${trackId.replace(/_/g,'-')}-v3-audio.json`);
-  if(fs.existsSync(file)&&fadingEnding(JSON.parse(fs.readFileSync(file,'utf8')),{chartEndMs:Number(entry.playEndMs)||Infinity}).active)active.push(trackId);
+  if(fs.existsSync(file)&&fadingEnding(JSON.parse(fs.readFileSync(file,'utf8')),{chartEndMs:Number(entry.playEndMs)||Infinity,shortFade:entry.shortFadeEnding===true}).active)active.push(trackId);
 }
 ok('余韻で締めるのは4曲',active.sort().join(',')==='big_bridge_no_shitou,crossing_field,eiki_boss_remix,mou_hitotsu_no_sekai_e',active.join(' / '));
 
@@ -44,7 +44,7 @@ try{
   const a=generate('dullahan',21),b=generate('dullahan',22);
   ok('余韻で締めない曲は Rev.21 と同じノーツ',['easy','master'].every(d=>JSON.stringify(a(d).notes)===JSON.stringify(b(d).notes)));
   const audio=JSON.parse(fs.readFileSync(path.join(dir,'big-bridge-no-shitou-v3-audio.json'),'utf8'));
-  const ending=fadingEnding(audio);
+  const ending=fadingEnding(audio,{shortFade:registry.big_bridge_no_shitou.shortFadeEnding===true});
   const chart=generate('big_bridge_no_shitou',22);
   for(const difficulty of ['easy','normal','hard','expert','master']){
     const c=chart(difficulty),t=audio.timing,gridMs=t.gridMs||t.beatMs/t.subdivisionsPerBeat;

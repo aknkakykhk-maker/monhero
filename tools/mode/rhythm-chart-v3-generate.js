@@ -3827,7 +3827,7 @@ for(const difficulty of targets){
 // Rev.22: 曲の終わりの余韻(rhythm-chart-ending.js)。最後の一発のあと鳴り残る音が消えていく曲では、
 // 最後の一発より後にノーツを置かず、最後の一発を太い長押しにして締める(ユーザー指摘「音がなくなろうとしてる終盤でノーツが続いてるのが違和感」)。
 // 当たらない曲では何もしない
-const ending=chartRevision>=ENDING_REVISION?fadingEnding(audio,{chartEndMs}):null;
+const ending=chartRevision>=ENDING_REVISION?fadingEnding(audio,{chartEndMs,shortFade:!!(registryEntry&&registryEntry.shortFadeEnding===true)}):null;
 if(ending&&ending.active){
   const gridOfMs=ms=>{const raw=Math.round((ms-timing.beatZeroMs)/gridMs);return tempoWarpInfo&&tempoWarpInfo.active?Math.round((ms-tempoWarpInfo.at(raw)-timing.beatZeroMs)/gridMs):raw;};
   const lastGrid=gridOfMs(ending.lastHitMs);
