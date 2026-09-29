@@ -82,7 +82,8 @@ const monsterCheckImplRows = (mon) => {
   const id = mon.id;
   const bare = (url) => String(url || '').split('?')[0];
   const atkNames = (typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[id]) || [];
-  const uniqueNames = mon.unique?.names || [];
+  // 案の段階の子は固有技の中身(倍率・消費)がまだ無く、9段階名だけ draftUniqueNames に持っている
+  const uniqueNames = mon.unique?.names || mon.draftUniqueNames || [];
   const lineage = monsterLineageOf(id);
   const dexText = (typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS?.[id]) || '';
   const { disc, faceIcon } = monsterCheckMarketItems(mon);
@@ -295,6 +296,11 @@ function MonsterCheckDebugScreen({
   // 詳細の立ち絵の枠では、上へ飛ぶ音符や光が枠の外へ出て見えない。ここは縦を大きく取り、
   // 立ち絵を下寄りに置いて、上の余白へ演出が収まるようにする
   if (view === 'motion') {
+    // 技ごとに動きが違う種族なら、[種類, 見出し, 技の名前9つ] を2組
+    const skillMotionLists = (typeof SKILL_ATTACK_THEME_MONSTERS !== 'undefined' && SKILL_ATTACK_THEME_MONSTERS.includes(mon.id))
+      ? [['normal', '通常技', (typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id]) || []],
+         ['unique', '固有技', mon.unique?.names || mon.draftUniqueNames || []]].filter(([, , names]) => names.length)
+      : null;
     const kindButton = (kind, label) => (
       <button key={kind} type="button" data-monster-check-motion={kind} onClick={() => { Audio_.se.tap(); if (!playing) onPlayPreview(mon, kind, atkMotion); }} disabled={!!playing}
         className={`flex-1 min-w-0 min-h-[48px] rounded-2xl border-2 px-2 text-[12px] font-black active:scale-95 disabled:opacity-45 ${playing?.kind === kind ? 'border-cyan-200 bg-cyan-700 text-white' : 'border-cyan-400/50 bg-slate-900 text-cyan-100'}`}>
@@ -324,6 +330,24 @@ function MonsterCheckDebugScreen({
             {kindButton('normal', '通常攻撃')}
             {kindButton('unique', '固有技')}
           </div>
+          {/* 技ごとに動きが違う種族(ユグドラシル種)は、技を1つずつ選んで再生できる */}
+          {skillMotionLists&&<div data-monster-check-skill-motions className="mx-auto mt-2 w-full max-w-md max-h-[30vh] overflow-y-auto mh-scroll space-y-1.5">
+            {skillMotionLists.map(([kind, label, names]) => (
+              <div key={kind}>
+                <div className="mb-1 text-[9px] font-black tracking-widest text-cyan-300/80">{label}</div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {names.map((name, lvl) => (
+                    <button key={name} type="button" data-monster-check-skill-motion={name} disabled={!!playing}
+                      onClick={() => { Audio_.se.tap(); if (!playing) onPlayPreview(mon, kind, atkMotion, name); }}
+                      className={`min-h-[40px] min-w-0 rounded-xl border px-1 text-[10px] font-black leading-tight active:scale-95 disabled:opacity-45 ${playing?.skillName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`}>
+                      <span className="block truncate">{name}</span>
+                      <span className="block text-[8px] font-mono text-slate-400">Lv.{lvl}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>}
         </div>
       </main>
     );
@@ -346,6 +370,20 @@ function MonsterCheckDebugScreen({
           <span className="min-w-0 break-words text-[11px] font-bold text-white">{value}</span>
         </div>
       )
+  );
+  // 案の段階の子の技名だけの一覧(威力・消費はまだ決まっていないので出さない)
+  const draftNamePills = (names, accent) => (
+    <div data-monster-check-draft-skills className="grid grid-cols-2 gap-1.5">
+      {names.map((name, lvl) => (
+        <div key={lvl} className={`min-w-0 rounded-xl border px-2 py-1.5 ${accent}`}>
+          <div className="flex min-w-0 items-center justify-between gap-1.5">
+            <span className="min-w-0 truncate text-[10px] font-black text-white">{name}</span>
+            <span className="shrink-0 text-[8px] font-mono font-black text-amber-300">Lv.{lvl}</span>
+          </div>
+          <div className="mt-0.5 text-[8px] font-black text-slate-500">威力・消費は未設定</div>
+        </div>
+      ))}
+    </div>
   );
   const skillPills = (list, accent) => (
     <div className="grid grid-cols-2 gap-1.5">
@@ -539,13 +577,14 @@ function MonsterCheckDebugScreen({
               <div>
                 <div className="mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90">通常技</div>
                 {/* 技名が無いと getAtkSkillLevels はモッチーの技名を静かに出すので、無いときは「未設定」と出す */}
-                {(typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id]) ? skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')
+                {(typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id]) ? (mon.draft ? draftNamePills(HERO_ATK_NAMES[mon.id], 'border-red-500/30 bg-red-950/25') : skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25'))
                   : <div className="text-center text-[11px] font-bold text-rose-300">未設定</div>}
               </div>
               <div>
                 <div className="mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90">固有技（進化段階）</div>
                 {/* 案の段階のモンスターは固有技がまだ無い(getUniqueSkillLevels は unique が無いと落ちる) */}
                 {mon.unique ? skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30')
+                  : mon.draftUniqueNames ? draftNamePills(mon.draftUniqueNames, 'border-amber-500/40 bg-amber-950/30')
                   : <div className="text-center text-[11px] font-bold text-rose-300">未設定</div>}
                 <div className="mt-1.5 break-words text-[10px] font-bold italic leading-relaxed text-slate-300">"{mon.unique?.effectDesc || ''}"</div>
               </div>

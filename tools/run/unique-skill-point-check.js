@@ -46,7 +46,8 @@ check('リセット券は所持済み扱いにならず連続購入できる',
   && has("const nextItems = item.type === 'item' ? { ...ownedItems, [item.id]:ownedItemCount(ownedItems, item.id) + purchaseQuantity } : ownedItems;"));
 check('足りないときは購入しない',
   has('if (!item || item.available === false || balances[currency] < cost) return { ok:false')
-  && has('if (!purchase.ok) return;'));
+  // 2026-09-28(PR #1908)から、確認の窓が閉じてよいかを知るため、買えなかったときは false を返す
+  && has('if (!purchase.ok) return false;'));
 check('ダイヤと所持数は既存キーへまとめて保存し、失敗したら巻き戻す',
   has("{ key:'mh_gold', before:beforeGold, next:nextGold },")
   && has("{ key:'mh_owned_items', before:beforeItems, next:nextItems },")

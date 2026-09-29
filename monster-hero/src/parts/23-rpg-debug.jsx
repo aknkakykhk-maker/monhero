@@ -442,9 +442,34 @@ const DEFAULT_ATTACK_THEMES = Object.freeze({
 });
 // 型ごとの尺(ms)。体当たりと同じ 450ms(固有技 500ms)に収まらない型だけ書く。
 // 本番バトルの待ち時間・図鑑のプレビュー・CSSの長さ(--thm-ms)の3つがここを見る。
-const THEMED_ATTACK_MS = Object.freeze({ stomp:900, rocks:520, claw:900, punch:580, fire:560 });
-const themedAttackMotionMs = (monId, motion) => {
+// ==== 技ごとに動きを変える種族(2026-09-29 ユーザー指示「これにあった技モーション作って」) ====
+// ユグドラシル種は、参考の技画像(docs/spec/YGGDRASIL_SKILLS.md)の技ごとに別の動きを持つ。
+// 技の名前 → 型。見た目は 24-battle-fx.jsx の SKILL_FX_SPECS、動きは 70-bootstrap.jsx の .skfx--◯◯。
+// 通常技(ちから)は体ごとぶつかる・飛びかかる動き、固有技(かしこさ)はその場から魔法を放つ動き。
+const SKILL_ATTACK_THEME_MONSTERS = Object.freeze(['Yggdrasil', 'MelWhip']);
+const SKILL_ATTACK_THEMES = Object.freeze({
+  '頭突き':'ygHeadbutt', '空中脳天撃':'ygAirDive', 'グリーンライト':'ygGreenLight', 'ぴろぴろ舌':'ygTongue',
+  '大玉転がし':'ygRoll', '月面水爆':'ygMoonDrop', 'キャンディボム':'ygCandy', '苺大噴':'ygStrawberry',
+  'ケーキ入刀':'ygCakeCut', 'シャドウレギオン':'ygShadow',
+  'スターボム':'ygStarBomb', 'ワンダーブレイズ':'ygWonderBlaze', 'メニーウィング':'ygManyWing', 'ライスシャワー':'ygRiceShower',
+  'メテオストーム':'ygMeteor', 'パピヨンバースト':'ygPapillon', 'ヘビーレイン':'ygHeavyRain', 'エターナルアーク':'ygEternalArc',
+  'オーロラハック':'ygAurora', 'コスモフルーツ':'ygCosmo',
+});
+// 技名が分からないとき(図鑑の攻撃アクションなど)は、通常技・固有技それぞれの最初の段階の動き
+const SKILL_ATTACK_FALLBACK = Object.freeze({ normal:'ygHeadbutt', unique:'ygStarBomb' });
+const skillAttackThemeOf = (monId, skillName, isUnique) => {
+  if (!SKILL_ATTACK_THEME_MONSTERS.includes(monId)) return null;
+  return SKILL_ATTACK_THEMES[skillName] || SKILL_ATTACK_FALLBACK[isUnique ? 'unique' : 'normal'];
+};
+const THEMED_ATTACK_MS = Object.freeze({ stomp:900, rocks:520, claw:900, punch:580, fire:560,
+  ygHeadbutt:520, ygAirDive:760, ygGreenLight:560, ygTongue:640, ygRoll:780, ygMoonDrop:840, ygCandy:760, ygStrawberry:820,
+  ygCakeCut:720, ygShadow:860,
+  ygStarBomb:660, ygWonderBlaze:660, ygManyWing:780, ygRiceShower:780, ygMeteor:900, ygPapillon:880, ygHeavyRain:880,
+  ygEternalArc:800, ygAurora:920, ygCosmo:980 });
+const themedAttackMotionMs = (monId, motion, skillName = null, isUnique = false) => {
   if (motion && motion !== 'default') return null;
+  const skillKind = skillAttackThemeOf(monId, skillName, isUnique);
+  if (skillKind) return THEMED_ATTACK_MS[skillKind] || null;
   return THEMED_ATTACK_MS[DEFAULT_ATTACK_THEMES[monId]] || null;
 };
 // DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
@@ -475,7 +500,7 @@ const attackMotionAnimation = (anim) => {
 // 図鑑・画像デバッグで、本番の atkMotion を「1回の攻撃アクション」として見せるための共通手順。
 // 動かし方そのものは attackMotionAnimation / PandoraDualThunder 等の本番演出を使い、
 // ここでは「どの状態を何ms見せるか」だけを返す。保存や戦闘計算には触れない。
-const attackMotionPreviewSequence = (atkMotion='default', baseId=null) => {
+const attackMotionPreviewSequence = (atkMotion='default', baseId=null, skillName=null) => {
   const motion=atkMotion||'default';
   const isTwin=motion==='kenshiTwinBlade';
   const isComboDash=motion==='zanCombo'||motion==='eikiSakuraCombo'||isTwin;
@@ -483,15 +508,15 @@ const attackMotionPreviewSequence = (atkMotion='default', baseId=null) => {
     {anim:{zanCombo:!isTwin,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},ms:motion==='eikiSakuraCombo'?500:(isTwin?560:320)},
   ];
   return [{
-    anim:{motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
-    ms:themedAttackMotionMs(baseId, motion) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))),
+    anim:{motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo',...(skillName?{skillName}:{})},
+    ms:themedAttackMotionMs(baseId, motion, skillName, false) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))),
   }];
 };
 // 固有技のほうの見せ方。本番の固有技とまったく同じ順で、
 // 「共通のタメ(下に沈む specialCharge・650ms)→ 専用モーション」を返す。
 // 通常攻撃用の attackMotionPreviewSequence とは分けてあるので、
 // 図鑑の一覧側や既存のプレビューへタメが混ざることはない。
-const attackMotionUniquePreviewSequence = (atkMotion='default', baseId=null) => {
+const attackMotionUniquePreviewSequence = (atkMotion='default', baseId=null, skillName=null) => {
   const motion=atkMotion||'default';
   const isTwin=motion==='kenshiTwinBlade';
   // ザン・エイキ・剣士モッチーは固有技でも、本番と同じく通常攻撃と同じ残像ダッシュへ移る
@@ -504,8 +529,8 @@ const attackMotionUniquePreviewSequence = (atkMotion='default', baseId=null) => 
   return [
     {anim:{charge:true},ms:650},
     {
-      anim:{charge:false,motion,twinBlade:false,sakura:false},
-      ms:themedAttackMotionMs(baseId, motion) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))),
+      anim:{charge:false,motion,twinBlade:false,sakura:false,...(skillName?{skillName}:{})},
+      ms:themedAttackMotionMs(baseId, motion, skillName, true) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))),
     },
   ];
 };

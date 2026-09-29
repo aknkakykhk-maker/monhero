@@ -1400,12 +1400,13 @@ function MonsterHeroGame() {
   // 画面(MonsterAttackPreviewScreen)からは呼ぶだけにしてある(STEP 6-8)。
   // 進行中の setTimeout を画面のライフサイクルで止めると演出が途中で固まるため
   const stopDexAttackPreview = () => { dexAttackPreviewRunRef.current+=1; setDexAttackPreview(null); };
-  const playDexAttackPreview = async (mon, kind, atkMotion) => {
+  // skillName: 技ごとに動きが違う種族(ユグドラシル種)で、どの技の動きを見せるか。無ければ最初の段階の技
+  const playDexAttackPreview = async (mon, kind, atkMotion, skillName = null) => {
     const run=++dexAttackPreviewRunRef.current;
-    const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id):attackMotionPreviewSequence(atkMotion, mon?.id);
+    const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id, skillName):attackMotionPreviewSequence(atkMotion, mon?.id, skillName);
     for(const step of steps){
       if(run!==dexAttackPreviewRunRef.current)return;
-      setDexAttackPreview({monsterId:mon.id,kind,anim:step.anim});
+      setDexAttackPreview({monsterId:mon.id,kind,anim:step.anim,skillName});
       await new Promise(resolve=>setTimeout(resolve,step.ms));
     }
     if(run===dexAttackPreviewRunRef.current)setDexAttackPreview(null);
@@ -11012,18 +11013,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               Audio_.se.special();
               await battleWait(650);
               const isKenshiTwin=motion==='kenshiTwinBlade';
-              setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo'});
+              setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});
               if(isKenshiTwin){
                 await battleWait(135); Audio_.se.zanSlash();
                 await battleWait(180); Audio_.se.zanSlash();
                 await battleWait(115); triggerShake();
                 await battleWait(130);
               }else{
-                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))));
+                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion, hit.skillName, true) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))));
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
-              setAttackAnim({slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo'});
+              setAttackAnim({slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});
               if(isKenshiTwin){
                 await battleWait(135); Audio_.se.zanSlash();
                 await battleWait(180); Audio_.se.zanSlash();
@@ -11031,7 +11032,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(130);
               }else{
                 if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))));
+                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion, hit.skillName, false) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))));
               }
             }
             setAttackAnim(null);
