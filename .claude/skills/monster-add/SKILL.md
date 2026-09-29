@@ -239,6 +239,12 @@ node tools/where.js --text "Eiki"                 # 専用演出を持つ子が�
 | `71-screen-battle.jsx` | 画面へ差し込む必要がある演出のとき(パンドラ・永輝はここにもある) |
 
 専用モーションを作らないなら `atkMotion:'default'` と書くだけでよい。
+**技ごとに動きを変えることもできる**(ユグドラシル種が最初。2026-09-29)。`23-rpg-debug.jsx` の
+`SKILL_ATTACK_THEME_MONSTERS` へ id を、`SKILL_ATTACK_THEMES` へ「技の名前 → 型」を足し、型ごとの見た目を
+`24-battle-fx.jsx` の `SKILL_FX_SPECS`(本体の動き・帯・飛ぶもの・敵に重ねる絵の組み合わせ)で決める。
+部品の動きは `70-bootstrap.jsx` の `.skfx-◯◯` にそろっているので、組み合わせだけで新しい技を作れる。
+`node tools/battle/skill-motion-check.js` がつながりを見る。例は `docs/spec/YGGDRASIL_SKILLS.md`。
+
 `'default'` のままでも、`src/parts/23-rpg-debug.jsx` の `DEFAULT_ATTACK_THEMES` へ1行足せば
 用意済みの型(`stomp` 押しつぶし＋ビーム / `beam` ビーム / `rocks` 殴って岩が飛び散る / `claw` カクカク高速ひっかき＋角から雷撃 /
 `punch` ワンツーパンチ / `magic` 魔法の玉 / `crush` 押しつぶし / `petals` 花びら / `vine` つる / `fire` 炎のビーム)

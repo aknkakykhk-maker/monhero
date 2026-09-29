@@ -32,12 +32,12 @@ const ctx = { WATER_BURST_MOTION_MS:680, ARK_HOLY_RAIN_MOTION_MS:900, MIA_SONG_N
 vm.createContext(ctx);
 // 体当たりだった初期モンスターの型と尺(DEFAULT_ATTACK_THEMES / themedAttackMotionMs)も同じ区間に置いてある
 vm.runInContext(src.slice(src.indexOf('const DEFAULT_ATTACK_THEMES ='), src.indexOf('const rpgMotionName ='))
-  + '\nglobalThis.DEFAULT_ATTACK_THEMES=DEFAULT_ATTACK_THEMES;globalThis.__p={attackMotionAnimation,attackMotionPreviewSequence,attackMotionUniquePreviewSequence,themedAttackMotionMs};', ctx);
+  + '\nglobalThis.DEFAULT_ATTACK_THEMES=DEFAULT_ATTACK_THEMES;globalThis.SKILL_ATTACK_THEMES=SKILL_ATTACK_THEMES;globalThis.SKILL_ATTACK_THEME_MONSTERS=SKILL_ATTACK_THEME_MONSTERS;globalThis.__p={attackMotionAnimation,attackMotionPreviewSequence,attackMotionUniquePreviewSequence,themedAttackMotionMs};', ctx);
 const { attackMotionAnimation:animOf, attackMotionPreviewSequence:normalSeq, attackMotionUniquePreviewSequence:uniqueSeq, themedAttackMotionMs } = ctx.__p;
 
 // 本番のループを1体ぶんだけ流し、setAttackAnim へ渡った anim を順に集める。
 // 表示・音・待ち時間はスタブにする(戦闘の計算には触らない)
-const battleAnims = (atkMotion, isUnique, monId = 'TestMon') => {
+const battleAnims = (atkMotion, isUnique, monId = 'TestMon', skillName = null) => {
   const anims = [];
   const waits = [];
   anims.waits = waits;
@@ -46,7 +46,7 @@ const battleAnims = (atkMotion, isUnique, monId = 'TestMon') => {
     slots: [{ id:monId, atkMotion, name:'テスト', imgUrl:'x' }, null, null, null],
     fallbackSlot: 0,
     hitIdx: 0,
-    attackHits: [{ slotIdx:0, monId, isUnique, isSpecial:false, isCrit:false, skillName:isUnique?'固有技':'こうげき', dmg:100 }],
+    attackHits: [{ slotIdx:0, monId, isUnique, isSpecial:false, isCrit:false, skillName:skillName || (isUnique?'固有技':'こうげき'), dmg:100 }],
     totalDmg: 100, multiHit: false,
     setAttackAnim: (a) => { if(a) { anims.push({...a}); anims.motionWaitAt = waits.length; } },
     setSlotSkill: ()=>{}, setEnemy: ()=>{}, setEnemyDist: ()=>{}, syncAtkTierForDist: ()=>{},
@@ -100,6 +100,23 @@ const shape = (anim) => animOf(anim) || `専用演出(${anim.motion||'-'})`;
       const prevMs = seq[seq.length - 1].ms;
       check(`${monId}: ${label}の尺がバトルとプレビューで同じ`, last === prevMs, `本番 ${last}ms / プレビュー ${prevMs}ms`);
     }
+  }
+  // 技ごとに動きが違う種族(ユグドラシル種・2026-09-29)。技の名前ごとに尺が違うので、
+  // 本番の待ち時間とプレビューの長さが技ごとに同じか、技名がバトルの演出まで届くかを見る
+  const skillNames = Object.keys(ctx.SKILL_ATTACK_THEMES || {});
+  check('技ごとの動きの表が読める', skillNames.length >= 20 && (ctx.SKILL_ATTACK_THEME_MONSTERS || []).length >= 1, `${skillNames.length}技`);
+  for (const monId of ctx.SKILL_ATTACK_THEME_MONSTERS || []) {
+    for (const name of skillNames) {
+      for (const isUnique of [false, true]) {
+        const real = await battleAnims('default', isUnique, monId, name);
+        const last = real.waits[real.motionWaitAt];
+        const seq = isUnique ? uniqueSeq('default', monId, name) : normalSeq('default', monId, name);
+        const lastStep = seq[seq.length - 1];
+        const ok = last === lastStep.ms && real[real.length - 1]?.skillName === name && lastStep.anim.skillName === name;
+        if (!ok) check(`${monId} ${name}(${isUnique ? '固有技' : '通常技'}): 尺と技名がバトルとプレビューで同じ`, false, `本番 ${last}ms / プレビュー ${lastStep.ms}ms`);
+      }
+    }
+    check(`${monId}: 全${skillNames.length}技の尺と技名がバトルとプレビューで同じ`, true);
   }
   check('通常攻撃のプレビューにはタメを入れない',
     kinds.every(kind => normalSeq(kind).every(step => step.anim?.charge !== true)));
