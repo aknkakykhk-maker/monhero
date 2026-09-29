@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7ac630837aafd4f8
+// generated-sha256: afe90b167251e26f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-29 17:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-29 18:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11019,15 +11019,19 @@ const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
 };
 
 
+// アシストカードを使ったときのカットイン(2026-09-29 ユーザー選択「助手のカットイン」)の色。c1 明 / c2 濃 / motif 模様
+// (motif は 24-battle-fx.jsx の TACTICS_EX_CUTIN_THEME と同じ shield / flame / rise / blade)
 const TEACHING_FX_STYLE = {
-  oryo:    { icon:"🌸", label:"闘気上昇!",   text:"text-red-300",     ring:"border-red-300",     rgb:"239,68,68" },
-  dra:     { icon:"🐉", label:"鉄壁化!",     text:"text-emerald-300", ring:"border-emerald-300", rgb:"16,185,129" },
-  cadmium: { icon:"🧪", label:"計算完了!",   text:"text-cyan-300",    ring:"border-cyan-300",    rgb:"6,182,212" },
-  mua:     { icon:"💖", label:"祝福!",       text:"text-pink-300",    ring:"border-pink-300",    rgb:"236,72,153" },
-  atsu:    { icon:"🔥", label:"挑発!",       text:"text-orange-300",  ring:"border-orange-300",  rgb:"234,88,12" },
-  myaru:   { icon:"🐈", label:"怪薬投与!",   text:"text-purple-300",  ring:"border-purple-300",  rgb:"168,85,247" },
-  kiki:    { icon:"📣", label:"全力応援!",   text:"text-sky-300",     ring:"border-sky-300",     rgb:"56,189,248" },
-  poltz:   { icon:"🍱", label:"弁当を構える!", text:"text-lime-300",    ring:"border-lime-300",    rgb:"163,230,53" },
+  oryo:    { icon:"🌸", label:"闘気上昇!",   text:"text-red-300",     ring:"border-red-300",     rgb:"239,68,68",  c1:'#fecaca', c2:'#ef4444', motif:'flame' },
+  dra:     { icon:"🐉", label:"鉄壁化!",     text:"text-emerald-300", ring:"border-emerald-300", rgb:"16,185,129", c1:'#a7f3d0', c2:'#10b981', motif:'shield' },
+  cadmium: { icon:"🧪", label:"計算完了!",   text:"text-cyan-300",    ring:"border-cyan-300",    rgb:"6,182,212",  c1:'#a5f3fc', c2:'#06b6d4', motif:'rise' },
+  mua:     { icon:"💖", label:"祝福!",       text:"text-pink-300",    ring:"border-pink-300",    rgb:"236,72,153", c1:'#fbcfe8', c2:'#ec4899', motif:'rise' },
+  atsu:    { icon:"🔥", label:"挑発!",       text:"text-orange-300",  ring:"border-orange-300",  rgb:"234,88,12",  c1:'#fed7aa', c2:'#ea580c', motif:'flame' },
+  myaru:   { icon:"🐈", label:"怪薬投与!",   text:"text-purple-300",  ring:"border-purple-300",  rgb:"168,85,247", c1:'#e9d5ff', c2:'#a855f7', motif:'rise' },
+  kiki:    { icon:"📣", label:"全力応援!",   text:"text-sky-300",     ring:"border-sky-300",     rgb:"56,189,248", c1:'#bae6fd', c2:'#38bdf8', motif:'blade' },
+  poltz:   { icon:"🍱", label:"弁当を構える!", text:"text-lime-300",    ring:"border-lime-300",    rgb:"163,230,53", c1:'#d9f99d', c2:'#84cc16', motif:'rise' },
+  // メロソ(回復＋ガード)。2026-09-29 まで演出が無かった
+  meloso:  { icon:"🔍", label:"解析完了!",   text:"text-teal-300",    ring:"border-teal-300",    rgb:"20,184,166", c1:'#99f6e4', c2:'#14b8a6', motif:'shield' },
 };
 
 // ---- part: 23-rpg-debug.jsx ----
@@ -12330,27 +12334,37 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   allIn:        { c1:'#fed7aa', c2:'#dc2626', motif:'flame' },  // 捨て身: 赤い炎
   statBoost:    { c1:'#fef08a', c2:'#f59e0b', motif:'rise' },   // ガッツ全開っちー: 金の光が立ちのぼる
   weaponChange: { c1:'#cffafe', c2:'#0891b2', motif:'blade' },  // ソード・コンバージョン: 青い斬撃
+  heal:         { c1:'#bbf7d0', c2:'#10b981', motif:'rise' },   // 緊急回復(2026-09-29): 緑の光が立ちのぼる
   partyGuard:   { c1:'#bbf7d0', c2:'#15803d', motif:'shield' }, // 世界樹の守り: 緑の盾
   comboBurst:   { c1:'#fbcfe8', c2:'#db2777', motif:'rise' },   // スイーツパラダイス: 桃色の光
   default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },
 });
 const tacticsExCutinTheme = (effect) => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;
+// カットインの色。アシストカードはカードごとの色(cutin.theme)を持つ
+const battleCutinThemeOf = (cutin) => (cutin && cutin.theme) || tacticsExCutinTheme(cutin && cutin.effect);
+// ★2026-09-29 ユーザー選択で、アシストカード(「助手のカットイン」)と緊急回復(「EX風のカットイン」)も同じ部品で出す。
+//   variant … 'ex'(EXスキル・1600ms) / 'assist'(細い帯を画面の上のほうに・短い) / 'emergency'(EXと同じ帯・緑)
+//   icon があれば立ち絵の代わりにその絵(アシストカードの顔アイコン・💊)を出す。ms は尺(CSSの --cut-ms)
 const TacticsExCutin = ({ cutin }) => {
   if (!cutin) return null;
-  const t = tacticsExCutinTheme(cutin.effect);
+  const t = battleCutinThemeOf(cutin);
+  const variant = cutin.variant || 'ex';
   // 盤面の入れ物(transform を持つことがある)の中だと fixed が画面いっぱいにならないので、body へ出す
   return ReactDOM.createPortal(
-    <div key={cutin.key} data-tactics-ex-cutin={cutin.effect || 'default'} className="ex-cutin" style={{ '--ex-c1':t.c1, '--ex-c2':t.c2 }} aria-hidden="true">
+    <div key={cutin.key} data-tactics-ex-cutin={cutin.effect || 'default'} data-battle-cutin={variant} className={`ex-cutin ex-cutin--${variant}`}
+      style={{ '--ex-c1':t.c1, '--ex-c2':t.c2, ...(cutin.ms ? { '--cut-ms':`${cutin.ms}ms` } : {}) }} aria-hidden="true">
       <div className="ex-cutin__shade"/>
       <div className="ex-cutin__rays"/>
       <div className={`ex-cutin__motif ex-cutin__motif--${t.motif}`}>{[0,1,2,3,4,5].map(i => <i key={i} style={{ '--i':i }}/>)}</div>
       <div className="ex-cutin__band">
         <div className="ex-cutin__lines"/>
         <div className="ex-cutin__art">
-          <DyedMonsterImage baseId={cutin.monId} src={cutin.imgUrl} alt="" masuColors={cutin.colors} draggable={false} className="w-full h-full object-contain"/>
+          {cutin.icon
+            ? <span className="ex-cutin__icon">{isImageIconValue(cutin.icon) ? cardIconNode(cutin.icon, variant === 'assist' ? 96 : 120, cutin.cardId) : <span className="ex-cutin__emoji">{cutin.icon}</span>}</span>
+            : <DyedMonsterImage baseId={cutin.monId} src={cutin.imgUrl} alt="" masuColors={cutin.colors} draggable={false} className="w-full h-full object-contain"/>}
         </div>
         <div className="ex-cutin__text">
-          <div className="ex-cutin__tag">EX SKILL</div>
+          <div className="ex-cutin__tag">{cutin.tag || 'EX SKILL'}</div>
           {/* 名前は1行に収める(「みんなをか/ばう」のように途中で折り返さない)。長い名前ほど字を小さくする */}
           <div className="ex-cutin__name" style={{ fontSize:`${Math.max(15, Math.min(30, Math.floor(165 / Math.max(1, String(cutin.exName || '').length))))}px` }}>{cutin.exName}</div>
           <div className="ex-cutin__sub">{cutin.monName}{cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}</div>
@@ -12361,6 +12375,24 @@ const TacticsExCutin = ({ cutin }) => {
     document.body
   );
 };
+// ==== ガードのバリア(2026-09-29 ユーザー選択「案A バリア」) ====
+// ガードを置いた子の枠に六角形の光の壁を重ねる。ガードの段階(GUARD_EVOLUTION)が上がるほど、
+// 色(銅→銀→金→水晶→虹)と飾り(内側の輪・六角の網目・回る紋)が豪華になる。
+// state … 'idle' 構えている / 'block' 受け止めきった(光って火花が跳ね返る) / 'break' 受けきれなかった(割れて破片が飛ぶ)
+// 見た目だけ。押せる場所は塞がない(pointer-events:none)
+const GUARD_BARRIER_TIERS = Object.freeze(['bronze', 'bronze', 'silver', 'silver', 'gold', 'gold', 'crystal', 'crystal', 'rainbow']);
+const guardBarrierTierOf = (level) => GUARD_BARRIER_TIERS[Math.max(0, Math.min(GUARD_BARRIER_TIERS.length - 1, Math.floor(Number(level) || 0)))];
+const GuardBarrier = ({ tier = 'bronze', state = 'idle' }) => (
+  <span data-guard-barrier={state} data-guard-tier={tier} className={`guard-barrier guard-barrier--${tier} guard-barrier--${state}`} aria-hidden="true">
+    <svg className="guard-barrier__svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <polygon className="guard-barrier__hex" points="25,3 75,3 98,50 75,97 25,97 2,50"/>
+      <polygon className="guard-barrier__hex2" points="31,13 69,13 88,50 69,87 31,87 12,50"/>
+    </svg>
+    <i className="guard-barrier__ring"/>
+    {state === 'block' && [0,1,2,3,4,5].map(k => <i key={k} className="guard-barrier__spark" style={{ '--k':k }}/>)}
+    {state === 'break' && [0,1,2,3,4,5,6,7].map(k => <i key={k} className="guard-barrier__shard" style={{ '--k':k }}/>)}
+  </span>
+);
 const AttackTargetFx = ({anim, attackerId}) => {
   if (!anim || anim.charge === true || anim.twinBlade) return null;
   // 種族ごとの攻撃(ThemedAttackMotion)は、自分で敵の位置へ着弾を描く
@@ -26737,7 +26769,7 @@ function BattleScreen({
   enemyAttackFx, enemyDist, enemyIntent, enemyNextIntent, enemyRevivalUsed, enemySkillName,
   extremeDifficulty, extremeRun, extremeRunRef, focusedCard, getAttackPredictedDmg,
   getAvailableUniquesForSlot, getCardGuts, getDmg, getIncomingDamageBeforeTurnReduction,
-  getMasuMon, getNextTurnBuff, getPermaBuff, getTurnBuff, getWaveBuff, guardCardWeight, guardFx,
+  getMasuMon, getNextTurnBuff, getPermaBuff, getTurnBuff, getWaveBuff, guardCardWeight, guardFx, guardImpact,
   guardLevel, guardValueOf, tacticsSlotGuardValue, guts, hand, heroCardBonus, heroDist, hp, iceLockActive,
   iceLockPreparing, iceLockTurns, isAssistCard, isAttackCard, isBusy, isHeroSlotMon,
   kikiCardBonus, liteBattleView, mainHero, openHelp, ownedUniques, pendingCard, pendingCardGuts,
@@ -26941,6 +26973,15 @@ function BattleScreen({
   };
   // 上の2つ(ガードのまとめ・先に選んだカードの補正)は、1回の描画のなかでは入力が同じで
   // 返り値も読むだけなので、枠ごと・発ごとに作り直さず最初の1回を使い回す
+  // ガードのバリアを構えているか。タクティクスは枠ごと(全体ガードで丈夫さぶんが付く子も含む・倒れた子は除く)、
+  // 既存5モードはガードがパーティ全体なので、ガードのカードを選んでいれば全員の枠
+  const partyGuardSelected = !Array.isArray(tacticsUnits) && selectedCards.some(idx => guardCardWeight(hand[idx]) > 0);
+  const guardBarrierOnAt = (slotIdx) => {
+    if (!Array.isArray(tacticsUnits)) return partyGuardSelected;
+    const unit = tacticsUnits[slotIdx];
+    if (!unit || !(Number(unit.hp) > 0)) return false;
+    return tacticsSlotGuardValue(guardPlanOnce(), slotIdx) > 0;
+  };
   let guardPlanOnceCache;
   const guardPlanOnce = () => (guardPlanOnceCache === undefined ? (guardPlanOnceCache = plannedGuardBySlot()) : guardPlanOnceCache);
   const previewBoostsOnceCache = new Map();
@@ -27370,37 +27411,8 @@ function BattleScreen({
               </div>,document.body
             )}
             </>)}
-            {!ecoBattleView&&guardFx&&(
-              <div className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:64000}}>
-                <div className="absolute" style={{animation:'guardShine 550ms ease-out forwards'}}>
-                  <div className="text-[120px] drop-shadow-[0_0_30px_rgba(56,189,248,1)]">🛡️</div>
-                </div>
-                {[0,1,2,3,4,5].map(k=>(
-                  <div key={k} className="absolute" style={{transform:`rotate(${k*60}deg)`}}>
-                    <div className="rounded-full border-4 border-cyan-200" style={{width:'36px',height:'36px',animation:`guardSpark 500ms ease-out ${k*25}ms forwards`}}></div>
-                  </div>
-                ))}
-                <div className="absolute font-black text-cyan-100 text-4xl tracking-widest drop-shadow-[0_0_16px_rgba(56,189,248,1)]" style={{top:'34%',animation:'guardShine 550ms ease-out forwards'}}>キーン!</div>
-                <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5) 0%, rgba(56,189,248,0.3) 20%, rgba(0,0,0,0) 45%)',animation:'guardFlash 350ms ease-out forwards'}}></div>
-              </div>
-            )}
-            {!ecoBattleView&&teachingFx&&TEACHING_FX_STYLE[teachingFx.id]&&(()=>{
-              const fx=TEACHING_FX_STYLE[teachingFx.id];
-              return (
-                <div key={teachingFx.fxId} className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:63000}}>
-                  <div className="absolute" style={{animation:'guardShine 550ms ease-out forwards'}}>
-                    <div className="text-[110px] drop-shadow-[0_0_30px_rgba(255,255,255,0.9)]">{cardIconNode(fx.icon,110)}</div>
-                  </div>
-                  {[0,1,2,3,4,5,6,7].map(k=>(
-                    <div key={k} className="absolute" style={{transform:`rotate(${k*45}deg)`}}>
-                      <div className={`rounded-full border-4 ${fx.ring}`} style={{width:'30px',height:'30px',animation:`guardSpark 550ms ease-out ${k*20}ms forwards`}}></div>
-                    </div>
-                  ))}
-                  <div className={`absolute font-black text-3xl tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${fx.text}`} style={{top:'32%',animation:'guardShine 550ms ease-out forwards'}}>{fx.label}</div>
-                  <div className="absolute inset-0" style={{background:`radial-gradient(circle at 50% 45%, rgba(${fx.rgb},0.5) 0%, rgba(${fx.rgb},0.25) 22%, rgba(0,0,0,0) 48%)`,animation:'guardFlash 400ms ease-out forwards'}}></div>
-                </div>
-              );
-            })()}
+            {/* ★ガードの「🛡 キーン!」とアシストカードの全画面演出は、2026-09-29 のユーザー選択で置き換えた。
+                ガードは枠のバリア(GuardBarrier・guardImpact)、アシストカードはカットイン(TacticsExCutin の assist)で出す */}
             {isMooBoss(enemy?.id)&&enemy?.imgUrl&&(
               <div data-enemy-motion={enemyMotion||undefined} data-moo-stage={enemyMotion?'true':undefined} data-enemy-skill={enemySkillNow||undefined} data-em-body={emSpec?.[0]||undefined} data-em-fx={emSpec?.[1]||undefined} data-em-emo={emSpec?.[3]||undefined} data-enemy-hurt={enemyHurtNow?'true':undefined} className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{...emDurStyle,top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
                 {/* ★技の動き・やられの動き・待機の威圧(data-em-body / data-enemy-hurt / data-moo-stage)は CSS が掛けるので、そのあいだは style の animation を外す(style が勝ってしまう) */}
@@ -28104,8 +28116,9 @@ function BattleScreen({
                     「食らったモンスターにエフェクトなどがつくようにしたい」)。
                     数字(z-[70])より下へ重ねて、数字が読めなくならないようにする */}
                 {/* EXスキルを使った子の枠の光(カットインと同じ色。TacticsExCutin と同じ時間で消える) */}
-                {tacticsExCutin&&tacticsExCutin.slotIndex===i&&<span key={tacticsExCutin.key} data-tactics-ex-aura={tacticsExCutin.effect||'default'} className="ex-aura" aria-hidden="true"
-                  style={{'--ex-c1':tacticsExCutinTheme(tacticsExCutin.effect).c1,'--ex-c2':tacticsExCutinTheme(tacticsExCutin.effect).c2}}><i/><i/></span>}
+                {/* アシストカード・緊急回復のカットインは、効き目が乗る枠をまとめて光らせる(slotIndexes) */}
+                {tacticsExCutin&&(tacticsExCutin.slotIndex===i||(tacticsExCutin.slotIndexes||[]).includes(i))&&<span key={tacticsExCutin.key} data-tactics-ex-aura={tacticsExCutin.effect||'default'} className="ex-aura" aria-hidden="true"
+                  style={{'--ex-c1':battleCutinThemeOf(tacticsExCutin).c1,'--ex-c2':battleCutinThemeOf(tacticsExCutin).c2,...(tacticsExCutin.ms?{animationDuration:`${tacticsExCutin.ms}ms`}:{})}}><i/><i/></span>}
                 {slotHitKind&&(()=>{
                   const hitFx=TACTICS_SLOT_FX_STYLE[slotHitKind];
                   return(<div data-tactics-hit-fx={slotHitKind} className="absolute inset-0 z-[58] pointer-events-none overflow-visible">
@@ -28329,6 +28342,14 @@ function BattleScreen({
                       :slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                   {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる。
                       ★動く絵の中に置く。新しい盤面は絵だけが敵へ飛ぶので、枠の側に置くと斬撃が枠に残って敵に届かない */}
+                  {/* ガードのバリア(2026-09-29 ユーザー選択「案A バリア」)。構えているあいだは idle、敵の攻撃を受けたら
+                      受け止めきった(block)・割れた(break)。画面を軽くする設定では出さない */}
+                  {s&&!ecoBattleView&&(()=>{
+                    const tier=guardBarrierTierOf(guardLevel);
+                    const impact=guardImpact?.bySlot?.[i];
+                    if(impact) return <GuardBarrier key={`gi-${guardImpact.key}`} tier={tier} state={impact}/>;
+                    return !isBusy&&guardBarrierOnAt(i)?<GuardBarrier tier={tier} state="idle"/>:null;
+                  })()}
                   {isAnimating&&attackAnim.twinBlade&&<KenshiTwinSlash/>}
                   {/* エイキの桜。攻撃モーションが出ているあいだだけ重ねる(常時アニメーションにしない) */}
                   {isAnimating&&attackAnim.sakura&&<EikiSakuraPetals/>}</div>
@@ -30459,6 +30480,7 @@ function MonsterHeroGame() {
     setSlotSettle(null);
     setEnemySkillName(null);
     setGuardFx(false);
+    setGuardImpact(null);
     setEnemyAttackAnim(false);
     setEnemyAttackFx(null);
   };
@@ -30827,6 +30849,9 @@ function MonsterHeroGame() {
   useEffect(() => () => { if (tacticsSlotFxTimerRef.current) clearTimeout(tacticsSlotFxTimerRef.current); }, []);
   const [enemySkillName, setEnemySkillName] = useState(null); // 敵アクションの技名インライン表示
   const [guardFx, setGuardFx] = useState(false); // ガード成功のキーン演出
+  // ガードのバリアが敵の攻撃を受けた結果(2026-09-29 ユーザー選択「案A バリア」)。{ key, bySlot:{ 枠: 'block' 受け止めきった / 'break' 割れた } }
+  // 見た目だけ。消えるのは時間(showGuardImpact)で、進行は待たない
+  const [guardImpact, setGuardImpact] = useState(null);
   const [teachingFx, setTeachingFx] = useState(null); // {id} ブリーダー教えカード使用時の専用演出
   const [enemyAttackAnim, setEnemyAttackAnim] = useState(false);
   const [enemyAttackFx, setEnemyAttackFx] = useState(null); // null | {kind:'normal'|'special'}
@@ -39185,11 +39210,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
 
   // ブリーダー教えカード使用時の専用演出を発火
-  const fireTeachingFx = (id) => {
-    if (!TEACHING_FX_STYLE[id]) return;
-    const fxId = Date.now()+Math.random();
-    setTeachingFx({id, fxId});
-    setTimeout(()=>setTeachingFx(p=>(p&&p.fxId===fxId?null:p)), battleMs(900));
+  // ★2026-09-29 ユーザー選択「助手のカットイン」: EXと同じカットインの部品を、細い帯・カードの顔アイコン・短い尺で出す。
+  //   効き目は味方全体に乗るので、立っている子の枠をまとめて光らせる。画面を軽くする設定(ecoBattleView)では出さない
+  const fireTeachingFx = (id, name = null) => {
+    const fx = TEACHING_FX_STYLE[id];
+    if (!fx || ecoBattleView) return;
+    const card = TEACHING_CARDS.find(t => t.id === id);
+    showTacticsExCutin({ variant:'assist', effect:id, theme:{ c1:fx.c1, c2:fx.c2, motif:fx.motif || 'rise' },
+      icon:card?.icon || fx.icon, cardId:id, exName:name || card?.baseName || fx.label, monName:fx.label, tag:'ASSIST',
+      slotIndexes:slots.map((s, i) => (s ? i : null)).filter(i => i != null) }, battleMs(1100));
   };
 
   // Whether a card needs to be assigned to a monster (attack-type cards)
@@ -40203,7 +40232,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               addPopup(`連撃 ${rushHits}ヒット！${coverText}`,'enemy','text-orange-300 font-black text-lg drop-shadow-md');
               await battleWait(700);
             }
-            if(guardedCount>0){ setGuardFx(true); Audio_.se.guard(); triggerShake(); await battleWait(450); setGuardFx(false); }
+            if(guardedCount>0){
+              // 枠ごとに、受け止めきったか(block)・受けきれず通ったか(break)をバリアに出す
+              const impact={};
+              Object.entries(slotFx).forEach(([key,fx])=>{ if(fx?.guard) impact[key]=(Number(fx.dmg)||0)>0?'break':'block'; });
+              showGuardImpact(impact);
+              setGuardFx(true); Audio_.se.guard(); triggerShake(); await battleWait(450); setGuardFx(false);
+            }
             currentHp=commitTacticsUnits(units);
             // ★減ったぶん・受け止めたぶん・戻ったぶんは、**枠ごとに出している**ので
             //   まんなかへ合計を重ねて出さない(2026-09-21 ユーザー指示「個別をみんなに
@@ -40231,7 +40266,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // ガードは最終ダメージが0でも(余剰でライフ・ガッツが増えても)「受け止めた」扱いにする
           tookEnemyAttack=true;
           const diff=guardValue-incomingBeforeTurnReduction;
-          // キーンと弾くガード演出
+          // キーンと弾くガード演出。既存5モードのガードはパーティ全体なので、全員の枠のバリアに結果を出す
+          showGuardImpact(Object.fromEntries(slots.map((s, i) => [i, s]).filter(([, s]) => s).map(([i]) => [i, diff<0?'break':'block'])));
           setGuardFx(true); Audio_.se.guard(); triggerShake();
           await battleWait(550); setGuardFx(false);
           if (diff<0) { const fd=applyImmediateTakenReduction(Math.abs(diff)); const remainingHp=calculateRemainingHp(currentHp,fd); currentHp=remainingHp; addPopup(`貫通! -${fd}`,'hero','text-pink-600 text-3xl font-black drop-shadow-lg'); setHp(remainingHp); await battleWait(1000); }
@@ -40357,13 +40393,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★新しい盤面のタクティクスでは、画面全体を覆う演出を出さない(2026-09-24 ユーザー指摘
     //   「緊急回復のアクションだけ画面表示が変わるのが気になる」)。バトル中の行動で全画面を暗くするのは
     //   緊急回復だけだった。盤面の上の札で知らせ、回復した子の枠が光る(枠の光は tacticsSlotFx の heal から)
-    if(isTacticsMode(runMode)&&normalizeBattleScreenStyle(battleScreenStyle)==='TACTICS_NEW'){
+    // ★2026-09-29 ユーザー選択「EX風のカットイン」: どのモードも、EXと同じ帯を緑で出す(絵は 💊)。
+    //   全画面の暗転(setEffect)はやめ、進行は待たない。回復が入る子の枠(立っている子と、10%ずつ戻る倒れた子)を光らせる
+    if(ecoBattleView){
       addPopup('💊 緊急回復','hero','text-emerald-300 font-black',false);
-      await battleWait(500);
     } else {
-      setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl,baseId:mainHero?.id,colors:mainHero?.colors});
-      await battleWait(500); setEffect(null);
+      showTacticsExCutin({ variant:'emergency', effect:'heal', icon:'💊', tag:'EMERGENCY', exName:'緊急回復',
+        monName:'味方のライフとガッツを30%ずつ回復', slotIndexes:slots.map((s, i) => (s ? i : null)).filter(i => i != null) }, battleMs(1300));
     }
+    await battleWait(500);
     // ★新モードは1体ずつ「その子の上限の30%」(2026-09-20 ユーザー指示)。
     //   合計から出すと、1体だけ傷ついているときパーティ全員ぶんがその子へ入る。
     //   倒れた子にも入る(ターンを1回捨てる重い選択なので、復活までの貯めには乗る)
@@ -40439,10 +40477,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // EXを使った瞬間のカットイン(TacticsExCutin)。見た目だけなので、進行は待たずに時間で片付ける
   const [tacticsExCutin, setTacticsExCutin] = useState(null);
   const tacticsExCutinTimerRef = useRef(null);
-  const showTacticsExCutin = (cutin) => {
+  const showGuardImpact = (bySlot) => {
+    if (ecoBattleView || !bySlot || !Object.keys(bySlot).length) return;
+    const key = Date.now() + Math.random();
+    setGuardImpact({ key, bySlot });
+    setTimeout(() => setGuardImpact(p => (p && p.key === key ? null : p)), battleMs(820));
+  };
+  // ms … 尺。EXは1600ms(バトルの速さで縮めない)。アシストカード・緊急回復は呼ぶ側で battleMs を通して渡す
+  const showTacticsExCutin = (cutin, ms = TACTICS_EX_CUTIN_MS) => {
     if (tacticsExCutinTimerRef.current) clearTimeout(tacticsExCutinTimerRef.current);
-    setTacticsExCutin({ ...cutin, key: Date.now() });
-    tacticsExCutinTimerRef.current = setTimeout(() => { tacticsExCutinTimerRef.current = null; setTacticsExCutin(null); }, TACTICS_EX_CUTIN_MS);
+    setTacticsExCutin({ ...cutin, key: Date.now(), ...(ms !== TACTICS_EX_CUTIN_MS ? { ms } : {}) });
+    tacticsExCutinTimerRef.current = setTimeout(() => { tacticsExCutinTimerRef.current = null; setTacticsExCutin(null); }, ms);
   };
   // choice … スタイル式のEX(ソード・コンバージョン)で選んだスタイルの id
   const activateTacticsEx = (slotIdx, choice = null) => {
@@ -40611,7 +40656,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       await battleWait(250);
       if (card.type==='draw') continue;
       if (card.type==='buff'||card.type==='debuff') {
-        fireTeachingFx(card.id);
+        fireTeachingFx(card.id, card.name||card.baseName);
         if (card.subType==='atk_buff') { addPopup(`攻撃UP!`,'hero','text-red-400 font-black text-2xl drop-shadow-md'); const boost=localBoostFromCard(card).oryo*effMul; addPermaBuff('atkPct',boost); localOryoAdd+=boost; }
         else if (card.subType==='dmg_cut_buff') { addPopup(`丈夫さUP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=(level===0?0.03:(level===1?0.06:0.10))*effMul; writePermaBuffs(p=>({...p, dmgCutPct:Math.min(0.9,(p.dmgCutPct||0)+cutValue)})); }
         // かどみうむ: 効果量はdata/breeder.jsのCADMIUM_TIERSに集約している(説明文の生成も同じ値を見る)
@@ -40663,7 +40708,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
       else if (card.type==='heal') {
         Audio_.se.heal();
-        fireTeachingFx(card.id);
+        fireTeachingFx(card.id, card.name||card.baseName);
         const owned=ownedTeachings.find(t=>t.id===card.id); const level=owned?owned.evoLevel:0;
         if (card.id==='meloso') {
           totalHeal+=Math.floor(liveEffectiveMaxHp()*0.3*effMul); totalHealRate+=0.3*effMul;
@@ -46923,7 +46968,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             getAvailableUniquesForSlot={getAvailableUniquesForSlot} getCardGuts={getCardGuts} getDmg={getDmg}
             getIncomingDamageBeforeTurnReduction={getIncomingDamageBeforeTurnReduction} getMasuMon={getMasuMon}
             getNextTurnBuff={getNextTurnBuff} getPermaBuff={getPermaBuff} getTurnBuff={getTurnBuff}
-            getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardLevel={guardLevel}
+            getWaveBuff={getWaveBuff} guardCardWeight={guardCardWeight} guardFx={guardFx} guardImpact={guardImpact} guardLevel={guardLevel}
             guardValueOf={guardValueOf} tacticsSlotGuardValue={tacticsSlotGuardValue}
             tacticsExInfo={tacticsExInfo} activateTacticsEx={activateTacticsEx} tacticsExCutin={tacticsExCutin}
             tacticsExIntroVisible={tacticsExIntroVisible} dismissTacticsExIntro={dismissTacticsExIntro}
@@ -50392,6 +50437,60 @@ const createAnimationStyle = () => {
       border:3px solid var(--ex-c1); box-shadow:0 0 12px var(--ex-c2); animation:exAuraRing 800ms ease-out forwards; }
     .ex-aura i + i { animation-delay:260ms; }
     @keyframes exAuraRing { 0% { opacity:0; transform:scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:scale(2.6); } }
+    /* ==== アシストカード・緊急回復のカットイン(2026-09-29 ユーザー選択。24-battle-fx.jsx の TacticsExCutin の variant) ====
+       assist … 細い帯を画面の上のほうに。暗くしすぎない・光の筋と白い光は出さない。尺は --cut-ms(バトルの速さで縮む)
+       emergency … EXと同じ帯を緑で。絵は 💊 */
+    .ex-cutin--assist .ex-cutin__shade, .ex-cutin--assist .ex-cutin__band, .ex-cutin--assist .ex-cutin__art, .ex-cutin--assist .ex-cutin__tag,
+    .ex-cutin--assist .ex-cutin__name, .ex-cutin--assist .ex-cutin__sub, .ex-cutin--assist .ex-cutin__flash, .ex-cutin--assist .ex-cutin__rays,
+    .ex-cutin--emergency .ex-cutin__shade, .ex-cutin--emergency .ex-cutin__band, .ex-cutin--emergency .ex-cutin__art, .ex-cutin--emergency .ex-cutin__tag,
+    .ex-cutin--emergency .ex-cutin__name, .ex-cutin--emergency .ex-cutin__sub, .ex-cutin--emergency .ex-cutin__flash, .ex-cutin--emergency .ex-cutin__rays
+      { animation-duration:var(--cut-ms,1300ms); }
+    .ex-cutin--assist .ex-cutin__shade { background:radial-gradient(ellipse at 50% 30%, rgba(8,6,20,.15), rgba(2,2,8,.4)); }
+    .ex-cutin--assist .ex-cutin__rays, .ex-cutin--assist .ex-cutin__flash { display:none; }
+    .ex-cutin--assist .ex-cutin__band { top:27%; height:100px; margin-top:-50px; }
+    .ex-cutin--assist .ex-cutin__art { width:104px; height:104px; bottom:-2px; left:calc(12% + 10px); }
+    .ex-cutin--assist .ex-cutin__text { left:calc(12% + 124px); }
+    .ex-cutin--emergency .ex-cutin__shade { background:radial-gradient(ellipse at 50% 50%, rgba(2,20,12,.35), rgba(2,8,6,.66)); }
+    .ex-cutin__icon { display:flex; width:100%; height:100%; align-items:center; justify-content:center; }
+    .ex-cutin__icon > img, .ex-cutin__icon > span:not(.ex-cutin__emoji) { border-radius:50%; box-shadow:0 0 0 4px var(--ex-c1), 0 0 20px var(--ex-c2); background:rgba(8,10,24,.9); }
+    .ex-cutin__emoji { font-size:92px; line-height:1; filter:drop-shadow(0 0 14px var(--ex-c2)); }
+    /* ==== ガードのバリア(2026-09-29 ユーザー選択「案A バリア」。24-battle-fx.jsx の GuardBarrier) ====
+       色は段階ごと(--gb1 明 / --gb2 濃)。金から内側の六角、水晶から回る輪、虹は色が巡る */
+    .guard-barrier { position:absolute; inset:-8%; z-index:56; pointer-events:none; display:block; --gb1:#fde68a; --gb2:#b45309; }
+    .guard-barrier--silver { --gb1:#f1f5f9; --gb2:#64748b; }
+    .guard-barrier--gold { --gb1:#fef3c7; --gb2:#f59e0b; }
+    .guard-barrier--crystal { --gb1:#cffafe; --gb2:#06b6d4; }
+    .guard-barrier--rainbow { --gb1:#fce7f3; --gb2:#d946ef; animation:gbRainbow 2400ms linear infinite; }
+    @keyframes gbRainbow { to { filter:hue-rotate(360deg); } }
+    .guard-barrier__svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; transform-origin:50% 50%; }
+    .guard-barrier__hex { fill:color-mix(in srgb, var(--gb1) 16%, transparent); stroke:var(--gb1); stroke-width:2.4; vector-effect:non-scaling-stroke;
+      filter:drop-shadow(0 0 3px var(--gb2)) drop-shadow(0 0 7px var(--gb2)); }
+    .guard-barrier__hex2 { display:none; fill:none; stroke:color-mix(in srgb, var(--gb1) 70%, transparent); stroke-width:1.2; stroke-dasharray:5 3; vector-effect:non-scaling-stroke; }
+    .guard-barrier--gold .guard-barrier__hex2, .guard-barrier--crystal .guard-barrier__hex2, .guard-barrier--rainbow .guard-barrier__hex2 { display:inline; }
+    .guard-barrier__ring { display:none; position:absolute; inset:18%; border-radius:50%; border:2px dashed color-mix(in srgb, var(--gb1) 75%, transparent);
+      box-shadow:0 0 8px var(--gb2); animation:gbSpin 3200ms linear infinite; }
+    .guard-barrier--crystal.guard-barrier--idle .guard-barrier__ring, .guard-barrier--rainbow.guard-barrier--idle .guard-barrier__ring { display:block; }
+    @keyframes gbSpin { to { transform:rotate(360deg); } }
+    .guard-barrier--idle .guard-barrier__svg { animation:gbAppear 320ms ease-out both, gbIdle 1800ms ease-in-out 320ms infinite; }
+    @keyframes gbAppear { 0% { opacity:0; transform:scale(.55); } 70% { opacity:1; transform:scale(1.07); } 100% { opacity:1; transform:scale(1); } }
+    @keyframes gbIdle { 0%,100% { opacity:.8; } 50% { opacity:1; filter:brightness(1.3); } }
+    /* 受け止めきった: 白く光って少しふくらみ、火花が外へ跳ね返る */
+    .guard-barrier--block .guard-barrier__svg { animation:gbBlock 560ms ease-out forwards; }
+    @keyframes gbBlock { 0% { opacity:1; transform:scale(1); } 18% { transform:scale(1.14); filter:brightness(2.4); } 55% { opacity:1; transform:scale(1.02); filter:brightness(1.4); } 100% { opacity:0; transform:scale(1.12); } }
+    .guard-barrier__spark { position:absolute; left:50%; top:50%; width:7px; height:7px; margin:-3.5px 0 0 -3.5px; border-radius:50%; background:#fff;
+      box-shadow:0 0 6px #fff, 0 0 12px var(--gb2); opacity:0; animation:gbSpark 460ms ease-out 60ms forwards; }
+    @keyframes gbSpark { 0% { opacity:1; transform:rotate(calc(var(--k) * 60deg + 30deg)) translateX(20px) scale(1); } 100% { opacity:0; transform:rotate(calc(var(--k) * 60deg + 30deg)) translateX(58px) scale(.4); } }
+    /* 受けきれなかった: ひびが入ったように瞬いて消え、破片が飛び散って落ちる */
+    .guard-barrier--break .guard-barrier__svg { animation:gbBreak 420ms ease-in forwards; }
+    @keyframes gbBreak { 0% { opacity:1; transform:scale(1); } 20% { opacity:1; transform:scale(1.06) rotate(-2deg); filter:brightness(2); } 35% { opacity:.4; } 50% { opacity:1; transform:scale(1.02) rotate(2deg); } 100% { opacity:0; transform:scale(.8); } }
+    .guard-barrier__shard { position:absolute; left:50%; top:50%; width:14px; height:12px; margin:-6px 0 0 -7px; opacity:0;
+      background:linear-gradient(135deg,#fff,var(--gb1) 40%,var(--gb2)); clip-path:polygon(0 0,100% 30%,40% 100%); filter:drop-shadow(0 0 4px var(--gb2));
+      animation:gbShard 640ms cubic-bezier(.2,.7,.4,1) 120ms forwards; }
+    @keyframes gbShard { 0% { opacity:1; transform:rotate(calc(var(--k) * 45deg)) translateX(18px) rotate(0deg); } 100% { opacity:0; transform:rotate(calc(var(--k) * 45deg)) translateX(64px) translateY(26px) rotate(220deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .guard-barrier, .guard-barrier__svg, .guard-barrier__ring { animation:none !important; }
+      .guard-barrier__spark, .guard-barrier__shard { display:none; }
+    }
     @media (prefers-reduced-motion: reduce) {
       .ex-cutin__rays, .ex-cutin__motif, .ex-cutin__lines, .ex-aura i { display:none; }
       .ex-cutin__band { animation:exShade 1600ms ease-out forwards; transform:skewY(-7deg); }

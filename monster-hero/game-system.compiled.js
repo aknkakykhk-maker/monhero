@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1e23133268954dfc
+// source-sha256: a38d3ea496a837a7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-29 17:28";
+const BUILD_DATE = "2026-09-29 18:16";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15374,56 +15374,90 @@ const TEACHING_FX_STYLE = {
     label: "闘気上昇!",
     text: "text-red-300",
     ring: "border-red-300",
-    rgb: "239,68,68"
+    rgb: "239,68,68",
+    c1: '#fecaca',
+    c2: '#ef4444',
+    motif: 'flame'
   },
   dra: {
     icon: "🐉",
     label: "鉄壁化!",
     text: "text-emerald-300",
     ring: "border-emerald-300",
-    rgb: "16,185,129"
+    rgb: "16,185,129",
+    c1: '#a7f3d0',
+    c2: '#10b981',
+    motif: 'shield'
   },
   cadmium: {
     icon: "🧪",
     label: "計算完了!",
     text: "text-cyan-300",
     ring: "border-cyan-300",
-    rgb: "6,182,212"
+    rgb: "6,182,212",
+    c1: '#a5f3fc',
+    c2: '#06b6d4',
+    motif: 'rise'
   },
   mua: {
     icon: "💖",
     label: "祝福!",
     text: "text-pink-300",
     ring: "border-pink-300",
-    rgb: "236,72,153"
+    rgb: "236,72,153",
+    c1: '#fbcfe8',
+    c2: '#ec4899',
+    motif: 'rise'
   },
   atsu: {
     icon: "🔥",
     label: "挑発!",
     text: "text-orange-300",
     ring: "border-orange-300",
-    rgb: "234,88,12"
+    rgb: "234,88,12",
+    c1: '#fed7aa',
+    c2: '#ea580c',
+    motif: 'flame'
   },
   myaru: {
     icon: "🐈",
     label: "怪薬投与!",
     text: "text-purple-300",
     ring: "border-purple-300",
-    rgb: "168,85,247"
+    rgb: "168,85,247",
+    c1: '#e9d5ff',
+    c2: '#a855f7',
+    motif: 'rise'
   },
   kiki: {
     icon: "📣",
     label: "全力応援!",
     text: "text-sky-300",
     ring: "border-sky-300",
-    rgb: "56,189,248"
+    rgb: "56,189,248",
+    c1: '#bae6fd',
+    c2: '#38bdf8',
+    motif: 'blade'
   },
   poltz: {
     icon: "🍱",
     label: "弁当を構える!",
     text: "text-lime-300",
     ring: "border-lime-300",
-    rgb: "163,230,53"
+    rgb: "163,230,53",
+    c1: '#d9f99d',
+    c2: '#84cc16',
+    motif: 'rise'
+  },
+  meloso: {
+    icon: "🔍",
+    label: "解析完了!",
+    text: "text-teal-300",
+    ring: "border-teal-300",
+    rgb: "20,184,166",
+    c1: '#99f6e4',
+    c2: '#14b8a6',
+    motif: 'shield'
   }
 };
 const RPG_MAX_LEVEL = 50;
@@ -18672,6 +18706,11 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
     c2: '#0891b2',
     motif: 'blade'
   },
+  heal: {
+    c1: '#bbf7d0',
+    c2: '#10b981',
+    motif: 'rise'
+  },
   partyGuard: {
     c1: '#bbf7d0',
     c2: '#15803d',
@@ -18689,18 +18728,24 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   }
 });
 const tacticsExCutinTheme = effect => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;
+const battleCutinThemeOf = cutin => cutin && cutin.theme || tacticsExCutinTheme(cutin && cutin.effect);
 const TacticsExCutin = ({
   cutin
 }) => {
   if (!cutin) return null;
-  const t = tacticsExCutinTheme(cutin.effect);
+  const t = battleCutinThemeOf(cutin);
+  const variant = cutin.variant || 'ex';
   return ReactDOM.createPortal(React.createElement("div", {
     key: cutin.key,
     "data-tactics-ex-cutin": cutin.effect || 'default',
-    className: "ex-cutin",
+    "data-battle-cutin": variant,
+    className: `ex-cutin ex-cutin--${variant}`,
     style: {
       '--ex-c1': t.c1,
-      '--ex-c2': t.c2
+      '--ex-c2': t.c2,
+      ...(cutin.ms ? {
+        '--cut-ms': `${cutin.ms}ms`
+      } : {})
     },
     "aria-hidden": "true"
   }, React.createElement("div", {
@@ -18720,7 +18765,11 @@ const TacticsExCutin = ({
     className: "ex-cutin__lines"
   }), React.createElement("div", {
     className: "ex-cutin__art"
-  }, React.createElement(DyedMonsterImage, {
+  }, cutin.icon ? React.createElement("span", {
+    className: "ex-cutin__icon"
+  }, isImageIconValue(cutin.icon) ? cardIconNode(cutin.icon, variant === 'assist' ? 96 : 120, cutin.cardId) : React.createElement("span", {
+    className: "ex-cutin__emoji"
+  }, cutin.icon)) : React.createElement(DyedMonsterImage, {
     baseId: cutin.monId,
     src: cutin.imgUrl,
     alt: "",
@@ -18731,7 +18780,7 @@ const TacticsExCutin = ({
     className: "ex-cutin__text"
   }, React.createElement("div", {
     className: "ex-cutin__tag"
-  }, "EX SKILL"), React.createElement("div", {
+  }, cutin.tag || 'EX SKILL'), React.createElement("div", {
     className: "ex-cutin__name",
     style: {
       fontSize: `${Math.max(15, Math.min(30, Math.floor(165 / Math.max(1, String(cutin.exName || '').length))))}px`
@@ -18742,6 +18791,41 @@ const TacticsExCutin = ({
     className: "ex-cutin__flash"
   })), document.body);
 };
+const GUARD_BARRIER_TIERS = Object.freeze(['bronze', 'bronze', 'silver', 'silver', 'gold', 'gold', 'crystal', 'crystal', 'rainbow']);
+const guardBarrierTierOf = level => GUARD_BARRIER_TIERS[Math.max(0, Math.min(GUARD_BARRIER_TIERS.length - 1, Math.floor(Number(level) || 0)))];
+const GuardBarrier = ({
+  tier = 'bronze',
+  state = 'idle'
+}) => React.createElement("span", {
+  "data-guard-barrier": state,
+  "data-guard-tier": tier,
+  className: `guard-barrier guard-barrier--${tier} guard-barrier--${state}`,
+  "aria-hidden": "true"
+}, React.createElement("svg", {
+  className: "guard-barrier__svg",
+  viewBox: "0 0 100 100",
+  preserveAspectRatio: "none"
+}, React.createElement("polygon", {
+  className: "guard-barrier__hex",
+  points: "25,3 75,3 98,50 75,97 25,97 2,50"
+}), React.createElement("polygon", {
+  className: "guard-barrier__hex2",
+  points: "31,13 69,13 88,50 69,87 31,87 12,50"
+})), React.createElement("i", {
+  className: "guard-barrier__ring"
+}), state === 'block' && [0, 1, 2, 3, 4, 5].map(k => React.createElement("i", {
+  key: k,
+  className: "guard-barrier__spark",
+  style: {
+    '--k': k
+  }
+})), state === 'break' && [0, 1, 2, 3, 4, 5, 6, 7].map(k => React.createElement("i", {
+  key: k,
+  className: "guard-barrier__shard",
+  style: {
+    '--k': k
+  }
+})));
 const AttackTargetFx = ({
   anim,
   attackerId
@@ -42500,6 +42584,7 @@ function BattleScreen({
   getWaveBuff,
   guardCardWeight,
   guardFx,
+  guardImpact,
   guardLevel,
   guardValueOf,
   tacticsSlotGuardValue,
@@ -42743,6 +42828,13 @@ function BattleScreen({
       entry.cards += 1;
     });
     return bySlot;
+  };
+  const partyGuardSelected = !Array.isArray(tacticsUnits) && selectedCards.some(idx => guardCardWeight(hand[idx]) > 0);
+  const guardBarrierOnAt = slotIdx => {
+    if (!Array.isArray(tacticsUnits)) return partyGuardSelected;
+    const unit = tacticsUnits[slotIdx];
+    if (!unit || !(Number(unit.hp) > 0)) return false;
+    return tacticsSlotGuardValue(guardPlanOnce(), slotIdx) > 0;
   };
   let guardPlanOnceCache;
   const guardPlanOnce = () => guardPlanOnceCache === undefined ? guardPlanOnceCache = plannedGuardBySlot() : guardPlanOnceCache;
@@ -43348,85 +43440,7 @@ function BattleScreen({
     }
   }, React.createElement("div", {
     className: `px-3 py-1 rounded-xl font-black text-[12px] border-2 shadow-[0_2px_16px_rgba(0,0,0,0.9)] ${slotSkill.type === 'unique' ? 'bg-purple-700 border-purple-200 text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]' : slotSkill.type === 'special' ? 'bg-amber-600 border-amber-200 text-white' : 'bg-red-700 border-red-200 text-white'}`
-  }, slotSkill.name)), document.body)), !ecoBattleView && guardFx && React.createElement("div", {
-    className: "fixed inset-0 pointer-events-none flex items-center justify-center",
-    style: {
-      zIndex: 64000
-    }
-  }, React.createElement("div", {
-    className: "absolute",
-    style: {
-      animation: 'guardShine 550ms ease-out forwards'
-    }
-  }, React.createElement("div", {
-    className: "text-[120px] drop-shadow-[0_0_30px_rgba(56,189,248,1)]"
-  }, "🛡️")), [0, 1, 2, 3, 4, 5].map(k => React.createElement("div", {
-    key: k,
-    className: "absolute",
-    style: {
-      transform: `rotate(${k * 60}deg)`
-    }
-  }, React.createElement("div", {
-    className: "rounded-full border-4 border-cyan-200",
-    style: {
-      width: '36px',
-      height: '36px',
-      animation: `guardSpark 500ms ease-out ${k * 25}ms forwards`
-    }
-  }))), React.createElement("div", {
-    className: "absolute font-black text-cyan-100 text-4xl tracking-widest drop-shadow-[0_0_16px_rgba(56,189,248,1)]",
-    style: {
-      top: '34%',
-      animation: 'guardShine 550ms ease-out forwards'
-    }
-  }, "キーン!"), React.createElement("div", {
-    className: "absolute inset-0",
-    style: {
-      background: 'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5) 0%, rgba(56,189,248,0.3) 20%, rgba(0,0,0,0) 45%)',
-      animation: 'guardFlash 350ms ease-out forwards'
-    }
-  })), !ecoBattleView && teachingFx && TEACHING_FX_STYLE[teachingFx.id] && (() => {
-    const fx = TEACHING_FX_STYLE[teachingFx.id];
-    return React.createElement("div", {
-      key: teachingFx.fxId,
-      className: "fixed inset-0 pointer-events-none flex items-center justify-center",
-      style: {
-        zIndex: 63000
-      }
-    }, React.createElement("div", {
-      className: "absolute",
-      style: {
-        animation: 'guardShine 550ms ease-out forwards'
-      }
-    }, React.createElement("div", {
-      className: "text-[110px] drop-shadow-[0_0_30px_rgba(255,255,255,0.9)]"
-    }, cardIconNode(fx.icon, 110))), [0, 1, 2, 3, 4, 5, 6, 7].map(k => React.createElement("div", {
-      key: k,
-      className: "absolute",
-      style: {
-        transform: `rotate(${k * 45}deg)`
-      }
-    }, React.createElement("div", {
-      className: `rounded-full border-4 ${fx.ring}`,
-      style: {
-        width: '30px',
-        height: '30px',
-        animation: `guardSpark 550ms ease-out ${k * 20}ms forwards`
-      }
-    }))), React.createElement("div", {
-      className: `absolute font-black text-3xl tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${fx.text}`,
-      style: {
-        top: '32%',
-        animation: 'guardShine 550ms ease-out forwards'
-      }
-    }, fx.label), React.createElement("div", {
-      className: "absolute inset-0",
-      style: {
-        background: `radial-gradient(circle at 50% 45%, rgba(${fx.rgb},0.5) 0%, rgba(${fx.rgb},0.25) 22%, rgba(0,0,0,0) 48%)`,
-        animation: 'guardFlash 400ms ease-out forwards'
-      }
-    }));
-  })(), isMooBoss(enemy?.id) && enemy?.imgUrl && React.createElement("div", {
+  }, slotSkill.name)), document.body)), isMooBoss(enemy?.id) && enemy?.imgUrl && React.createElement("div", {
     "data-enemy-motion": enemyMotion || undefined,
     "data-moo-stage": enemyMotion ? 'true' : undefined,
     "data-enemy-skill": enemySkillNow || undefined,
@@ -44525,14 +44539,17 @@ function BattleScreen({
           zIndex: 30
         } : {})
       }
-    }, tacticsExCutin && tacticsExCutin.slotIndex === i && React.createElement("span", {
+    }, tacticsExCutin && (tacticsExCutin.slotIndex === i || (tacticsExCutin.slotIndexes || []).includes(i)) && React.createElement("span", {
       key: tacticsExCutin.key,
       "data-tactics-ex-aura": tacticsExCutin.effect || 'default',
       className: "ex-aura",
       "aria-hidden": "true",
       style: {
-        '--ex-c1': tacticsExCutinTheme(tacticsExCutin.effect).c1,
-        '--ex-c2': tacticsExCutinTheme(tacticsExCutin.effect).c2
+        '--ex-c1': battleCutinThemeOf(tacticsExCutin).c1,
+        '--ex-c2': battleCutinThemeOf(tacticsExCutin).c2,
+        ...(tacticsExCutin.ms ? {
+          animationDuration: `${tacticsExCutin.ms}ms`
+        } : {})
       }
     }, React.createElement("i", null), React.createElement("i", null)), slotHitKind && (() => {
       const hitFx = TACTICS_SLOT_FX_STYLE[slotHitKind];
@@ -44961,7 +44978,19 @@ function BattleScreen({
         fontSize: '40px'
       },
       className: "z-10 drop-shadow-md"
-    }, s?.emoji || ''), isAnimating && attackAnim.twinBlade && React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && React.createElement(EikiSakuraPetals, null)), tacticsUnit && tacticsUnit.downed && (() => {
+    }, s?.emoji || ''), s && !ecoBattleView && (() => {
+      const tier = guardBarrierTierOf(guardLevel);
+      const impact = guardImpact?.bySlot?.[i];
+      if (impact) return React.createElement(GuardBarrier, {
+        key: `gi-${guardImpact.key}`,
+        tier: tier,
+        state: impact
+      });
+      return !isBusy && guardBarrierOnAt(i) ? React.createElement(GuardBarrier, {
+        tier: tier,
+        state: "idle"
+      }) : null;
+    })(), isAnimating && attackAnim.twinBlade && React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && React.createElement(EikiSakuraPetals, null)), tacticsUnit && tacticsUnit.downed && (() => {
       const revivePct = tacticsUnit.maxHp > 0 ? Math.floor(tacticsUnit.hp / tacticsUnit.maxHp * 100) : 0;
       return React.createElement("div", {
         "data-tactics-down-mark": i,
@@ -47729,6 +47758,7 @@ function MonsterHeroGame() {
     setSlotSettle(null);
     setEnemySkillName(null);
     setGuardFx(false);
+    setGuardImpact(null);
     setEnemyAttackAnim(false);
     setEnemyAttackFx(null);
   };
@@ -47991,6 +48021,7 @@ function MonsterHeroGame() {
   }, []);
   const [enemySkillName, setEnemySkillName] = useState(null);
   const [guardFx, setGuardFx] = useState(false);
+  const [guardImpact, setGuardImpact] = useState(null);
   const [teachingFx, setTeachingFx] = useState(null);
   const [enemyAttackAnim, setEnemyAttackAnim] = useState(false);
   const [enemyAttackFx, setEnemyAttackFx] = useState(null);
@@ -57326,14 +57357,25 @@ function MonsterHeroGame() {
     setTimeout(() => setPopups(p => p.filter(x => x.id !== id)), battleMs(2500));
     if (log !== false) pushBattleLog(typeof log === 'string' ? log : battleLogLineFromPopup(text, side));
   };
-  const fireTeachingFx = id => {
-    if (!TEACHING_FX_STYLE[id]) return;
-    const fxId = Date.now() + Math.random();
-    setTeachingFx({
-      id,
-      fxId
-    });
-    setTimeout(() => setTeachingFx(p => p && p.fxId === fxId ? null : p), battleMs(900));
+  const fireTeachingFx = (id, name = null) => {
+    const fx = TEACHING_FX_STYLE[id];
+    if (!fx || ecoBattleView) return;
+    const card = TEACHING_CARDS.find(t => t.id === id);
+    showTacticsExCutin({
+      variant: 'assist',
+      effect: id,
+      theme: {
+        c1: fx.c1,
+        c2: fx.c2,
+        motif: fx.motif || 'rise'
+      },
+      icon: card?.icon || fx.icon,
+      cardId: id,
+      exName: name || card?.baseName || fx.label,
+      monName: fx.label,
+      tag: 'ASSIST',
+      slotIndexes: slots.map((s, i) => s ? i : null).filter(i => i != null)
+    }, battleMs(1100));
   };
   const cardNeedsMonster = card => {
     if (!card) return false;
@@ -58341,6 +58383,11 @@ function MonsterHeroGame() {
               await battleWait(700);
             }
             if (guardedCount > 0) {
+              const impact = {};
+              Object.entries(slotFx).forEach(([key, fx]) => {
+                if (fx?.guard) impact[key] = (Number(fx.dmg) || 0) > 0 ? 'break' : 'block';
+              });
+              showGuardImpact(impact);
               setGuardFx(true);
               Audio_.se.guard();
               triggerShake();
@@ -58374,6 +58421,7 @@ function MonsterHeroGame() {
         } else if (guardValue > 0) {
           tookEnemyAttack = true;
           const diff = guardValue - incomingBeforeTurnReduction;
+          showGuardImpact(Object.fromEntries(slots.map((s, i) => [i, s]).filter(([, s]) => s).map(([i]) => [i, diff < 0 ? 'break' : 'block'])));
           setGuardFx(true);
           Audio_.se.guard();
           triggerShake();
@@ -58523,22 +58571,20 @@ function MonsterHeroGame() {
     if (isBusy || hp <= 0) return;
     setIsBusy(true);
     Audio_.se.heal();
-    if (isTacticsMode(runMode) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW') {
+    if (ecoBattleView) {
       addPopup('💊 緊急回復', 'hero', 'text-emerald-300 font-black', false);
-      await battleWait(500);
     } else {
-      setEffect({
-        type: 'heal',
-        label: "緊急回復",
-        icon: "💊",
-        monEmoji: mainHero?.emoji || "🏥",
-        imgUrl: mainHero?.imgUrl,
-        baseId: mainHero?.id,
-        colors: mainHero?.colors
-      });
-      await battleWait(500);
-      setEffect(null);
+      showTacticsExCutin({
+        variant: 'emergency',
+        effect: 'heal',
+        icon: '💊',
+        tag: 'EMERGENCY',
+        exName: '緊急回復',
+        monName: '味方のライフとガッツを30%ずつ回復',
+        slotIndexes: slots.map((s, i) => s ? i : null).filter(i => i != null)
+      }, battleMs(1300));
     }
+    await battleWait(500);
     const emergency = tacticsRateHeal(0.3, 0.3);
     let recoverHp = 0,
       recoverGuts = 0,
@@ -58634,16 +58680,28 @@ function MonsterHeroGame() {
   const TACTICS_EX_ON_USE = {};
   const [tacticsExCutin, setTacticsExCutin] = useState(null);
   const tacticsExCutinTimerRef = useRef(null);
-  const showTacticsExCutin = cutin => {
+  const showGuardImpact = bySlot => {
+    if (ecoBattleView || !bySlot || !Object.keys(bySlot).length) return;
+    const key = Date.now() + Math.random();
+    setGuardImpact({
+      key,
+      bySlot
+    });
+    setTimeout(() => setGuardImpact(p => p && p.key === key ? null : p), battleMs(820));
+  };
+  const showTacticsExCutin = (cutin, ms = TACTICS_EX_CUTIN_MS) => {
     if (tacticsExCutinTimerRef.current) clearTimeout(tacticsExCutinTimerRef.current);
     setTacticsExCutin({
       ...cutin,
-      key: Date.now()
+      key: Date.now(),
+      ...(ms !== TACTICS_EX_CUTIN_MS ? {
+        ms
+      } : {})
     });
     tacticsExCutinTimerRef.current = setTimeout(() => {
       tacticsExCutinTimerRef.current = null;
       setTacticsExCutin(null);
-    }, TACTICS_EX_CUTIN_MS);
+    }, ms);
   };
   const activateTacticsEx = (slotIdx, choice = null) => {
     if (!tacticsExEnabled || isBusy || autoBattleRef.current) return false;
@@ -58843,7 +58901,7 @@ function MonsterHeroGame() {
       await battleWait(250);
       if (card.type === 'draw') continue;
       if (card.type === 'buff' || card.type === 'debuff') {
-        fireTeachingFx(card.id);
+        fireTeachingFx(card.id, card.name || card.baseName);
         if (card.subType === 'atk_buff') {
           addPopup(`攻撃UP!`, 'hero', 'text-red-400 font-black text-2xl drop-shadow-md');
           const boost = localBoostFromCard(card).oryo * effMul;
@@ -58949,7 +59007,7 @@ function MonsterHeroGame() {
         }
       } else if (card.type === 'heal') {
         Audio_.se.heal();
-        fireTeachingFx(card.id);
+        fireTeachingFx(card.id, card.name || card.baseName);
         const owned = ownedTeachings.find(t => t.id === card.id);
         const level = owned ? owned.evoLevel : 0;
         if (card.id === 'meloso') {
@@ -70966,6 +71024,7 @@ function MonsterHeroGame() {
       getWaveBuff: getWaveBuff,
       guardCardWeight: guardCardWeight,
       guardFx: guardFx,
+      guardImpact: guardImpact,
       guardLevel: guardLevel,
       guardValueOf: guardValueOf,
       tacticsSlotGuardValue: tacticsSlotGuardValue,
@@ -75738,6 +75797,60 @@ const createAnimationStyle = () => {
       border:3px solid var(--ex-c1); box-shadow:0 0 12px var(--ex-c2); animation:exAuraRing 800ms ease-out forwards; }
     .ex-aura i + i { animation-delay:260ms; }
     @keyframes exAuraRing { 0% { opacity:0; transform:scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:scale(2.6); } }
+    /* ==== アシストカード・緊急回復のカットイン(2026-09-29 ユーザー選択。24-battle-fx.jsx の TacticsExCutin の variant) ====
+       assist … 細い帯を画面の上のほうに。暗くしすぎない・光の筋と白い光は出さない。尺は --cut-ms(バトルの速さで縮む)
+       emergency … EXと同じ帯を緑で。絵は 💊 */
+    .ex-cutin--assist .ex-cutin__shade, .ex-cutin--assist .ex-cutin__band, .ex-cutin--assist .ex-cutin__art, .ex-cutin--assist .ex-cutin__tag,
+    .ex-cutin--assist .ex-cutin__name, .ex-cutin--assist .ex-cutin__sub, .ex-cutin--assist .ex-cutin__flash, .ex-cutin--assist .ex-cutin__rays,
+    .ex-cutin--emergency .ex-cutin__shade, .ex-cutin--emergency .ex-cutin__band, .ex-cutin--emergency .ex-cutin__art, .ex-cutin--emergency .ex-cutin__tag,
+    .ex-cutin--emergency .ex-cutin__name, .ex-cutin--emergency .ex-cutin__sub, .ex-cutin--emergency .ex-cutin__flash, .ex-cutin--emergency .ex-cutin__rays
+      { animation-duration:var(--cut-ms,1300ms); }
+    .ex-cutin--assist .ex-cutin__shade { background:radial-gradient(ellipse at 50% 30%, rgba(8,6,20,.15), rgba(2,2,8,.4)); }
+    .ex-cutin--assist .ex-cutin__rays, .ex-cutin--assist .ex-cutin__flash { display:none; }
+    .ex-cutin--assist .ex-cutin__band { top:27%; height:100px; margin-top:-50px; }
+    .ex-cutin--assist .ex-cutin__art { width:104px; height:104px; bottom:-2px; left:calc(12% + 10px); }
+    .ex-cutin--assist .ex-cutin__text { left:calc(12% + 124px); }
+    .ex-cutin--emergency .ex-cutin__shade { background:radial-gradient(ellipse at 50% 50%, rgba(2,20,12,.35), rgba(2,8,6,.66)); }
+    .ex-cutin__icon { display:flex; width:100%; height:100%; align-items:center; justify-content:center; }
+    .ex-cutin__icon > img, .ex-cutin__icon > span:not(.ex-cutin__emoji) { border-radius:50%; box-shadow:0 0 0 4px var(--ex-c1), 0 0 20px var(--ex-c2); background:rgba(8,10,24,.9); }
+    .ex-cutin__emoji { font-size:92px; line-height:1; filter:drop-shadow(0 0 14px var(--ex-c2)); }
+    /* ==== ガードのバリア(2026-09-29 ユーザー選択「案A バリア」。24-battle-fx.jsx の GuardBarrier) ====
+       色は段階ごと(--gb1 明 / --gb2 濃)。金から内側の六角、水晶から回る輪、虹は色が巡る */
+    .guard-barrier { position:absolute; inset:-8%; z-index:56; pointer-events:none; display:block; --gb1:#fde68a; --gb2:#b45309; }
+    .guard-barrier--silver { --gb1:#f1f5f9; --gb2:#64748b; }
+    .guard-barrier--gold { --gb1:#fef3c7; --gb2:#f59e0b; }
+    .guard-barrier--crystal { --gb1:#cffafe; --gb2:#06b6d4; }
+    .guard-barrier--rainbow { --gb1:#fce7f3; --gb2:#d946ef; animation:gbRainbow 2400ms linear infinite; }
+    @keyframes gbRainbow { to { filter:hue-rotate(360deg); } }
+    .guard-barrier__svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; transform-origin:50% 50%; }
+    .guard-barrier__hex { fill:color-mix(in srgb, var(--gb1) 16%, transparent); stroke:var(--gb1); stroke-width:2.4; vector-effect:non-scaling-stroke;
+      filter:drop-shadow(0 0 3px var(--gb2)) drop-shadow(0 0 7px var(--gb2)); }
+    .guard-barrier__hex2 { display:none; fill:none; stroke:color-mix(in srgb, var(--gb1) 70%, transparent); stroke-width:1.2; stroke-dasharray:5 3; vector-effect:non-scaling-stroke; }
+    .guard-barrier--gold .guard-barrier__hex2, .guard-barrier--crystal .guard-barrier__hex2, .guard-barrier--rainbow .guard-barrier__hex2 { display:inline; }
+    .guard-barrier__ring { display:none; position:absolute; inset:18%; border-radius:50%; border:2px dashed color-mix(in srgb, var(--gb1) 75%, transparent);
+      box-shadow:0 0 8px var(--gb2); animation:gbSpin 3200ms linear infinite; }
+    .guard-barrier--crystal.guard-barrier--idle .guard-barrier__ring, .guard-barrier--rainbow.guard-barrier--idle .guard-barrier__ring { display:block; }
+    @keyframes gbSpin { to { transform:rotate(360deg); } }
+    .guard-barrier--idle .guard-barrier__svg { animation:gbAppear 320ms ease-out both, gbIdle 1800ms ease-in-out 320ms infinite; }
+    @keyframes gbAppear { 0% { opacity:0; transform:scale(.55); } 70% { opacity:1; transform:scale(1.07); } 100% { opacity:1; transform:scale(1); } }
+    @keyframes gbIdle { 0%,100% { opacity:.8; } 50% { opacity:1; filter:brightness(1.3); } }
+    /* 受け止めきった: 白く光って少しふくらみ、火花が外へ跳ね返る */
+    .guard-barrier--block .guard-barrier__svg { animation:gbBlock 560ms ease-out forwards; }
+    @keyframes gbBlock { 0% { opacity:1; transform:scale(1); } 18% { transform:scale(1.14); filter:brightness(2.4); } 55% { opacity:1; transform:scale(1.02); filter:brightness(1.4); } 100% { opacity:0; transform:scale(1.12); } }
+    .guard-barrier__spark { position:absolute; left:50%; top:50%; width:7px; height:7px; margin:-3.5px 0 0 -3.5px; border-radius:50%; background:#fff;
+      box-shadow:0 0 6px #fff, 0 0 12px var(--gb2); opacity:0; animation:gbSpark 460ms ease-out 60ms forwards; }
+    @keyframes gbSpark { 0% { opacity:1; transform:rotate(calc(var(--k) * 60deg + 30deg)) translateX(20px) scale(1); } 100% { opacity:0; transform:rotate(calc(var(--k) * 60deg + 30deg)) translateX(58px) scale(.4); } }
+    /* 受けきれなかった: ひびが入ったように瞬いて消え、破片が飛び散って落ちる */
+    .guard-barrier--break .guard-barrier__svg { animation:gbBreak 420ms ease-in forwards; }
+    @keyframes gbBreak { 0% { opacity:1; transform:scale(1); } 20% { opacity:1; transform:scale(1.06) rotate(-2deg); filter:brightness(2); } 35% { opacity:.4; } 50% { opacity:1; transform:scale(1.02) rotate(2deg); } 100% { opacity:0; transform:scale(.8); } }
+    .guard-barrier__shard { position:absolute; left:50%; top:50%; width:14px; height:12px; margin:-6px 0 0 -7px; opacity:0;
+      background:linear-gradient(135deg,#fff,var(--gb1) 40%,var(--gb2)); clip-path:polygon(0 0,100% 30%,40% 100%); filter:drop-shadow(0 0 4px var(--gb2));
+      animation:gbShard 640ms cubic-bezier(.2,.7,.4,1) 120ms forwards; }
+    @keyframes gbShard { 0% { opacity:1; transform:rotate(calc(var(--k) * 45deg)) translateX(18px) rotate(0deg); } 100% { opacity:0; transform:rotate(calc(var(--k) * 45deg)) translateX(64px) translateY(26px) rotate(220deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .guard-barrier, .guard-barrier__svg, .guard-barrier__ring { animation:none !important; }
+      .guard-barrier__spark, .guard-barrier__shard { display:none; }
+    }
     @media (prefers-reduced-motion: reduce) {
       .ex-cutin__rays, .ex-cutin__motif, .ex-cutin__lines, .ex-aura i { display:none; }
       .ex-cutin__band { animation:exShade 1600ms ease-out forwards; transform:skewY(-7deg); }

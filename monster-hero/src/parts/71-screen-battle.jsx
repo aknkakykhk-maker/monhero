@@ -558,7 +558,7 @@ function BattleScreen({
   enemyAttackFx, enemyDist, enemyIntent, enemyNextIntent, enemyRevivalUsed, enemySkillName,
   extremeDifficulty, extremeRun, extremeRunRef, focusedCard, getAttackPredictedDmg,
   getAvailableUniquesForSlot, getCardGuts, getDmg, getIncomingDamageBeforeTurnReduction,
-  getMasuMon, getNextTurnBuff, getPermaBuff, getTurnBuff, getWaveBuff, guardCardWeight, guardFx,
+  getMasuMon, getNextTurnBuff, getPermaBuff, getTurnBuff, getWaveBuff, guardCardWeight, guardFx, guardImpact,
   guardLevel, guardValueOf, tacticsSlotGuardValue, guts, hand, heroCardBonus, heroDist, hp, iceLockActive,
   iceLockPreparing, iceLockTurns, isAssistCard, isAttackCard, isBusy, isHeroSlotMon,
   kikiCardBonus, liteBattleView, mainHero, openHelp, ownedUniques, pendingCard, pendingCardGuts,
@@ -762,6 +762,15 @@ function BattleScreen({
   };
   // 上の2つ(ガードのまとめ・先に選んだカードの補正)は、1回の描画のなかでは入力が同じで
   // 返り値も読むだけなので、枠ごと・発ごとに作り直さず最初の1回を使い回す
+  // ガードのバリアを構えているか。タクティクスは枠ごと(全体ガードで丈夫さぶんが付く子も含む・倒れた子は除く)、
+  // 既存5モードはガードがパーティ全体なので、ガードのカードを選んでいれば全員の枠
+  const partyGuardSelected = !Array.isArray(tacticsUnits) && selectedCards.some(idx => guardCardWeight(hand[idx]) > 0);
+  const guardBarrierOnAt = (slotIdx) => {
+    if (!Array.isArray(tacticsUnits)) return partyGuardSelected;
+    const unit = tacticsUnits[slotIdx];
+    if (!unit || !(Number(unit.hp) > 0)) return false;
+    return tacticsSlotGuardValue(guardPlanOnce(), slotIdx) > 0;
+  };
   let guardPlanOnceCache;
   const guardPlanOnce = () => (guardPlanOnceCache === undefined ? (guardPlanOnceCache = plannedGuardBySlot()) : guardPlanOnceCache);
   const previewBoostsOnceCache = new Map();
@@ -1191,37 +1200,8 @@ function BattleScreen({
               </div>,document.body
             )}
             </>)}
-            {!ecoBattleView&&guardFx&&(
-              <div className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:64000}}>
-                <div className="absolute" style={{animation:'guardShine 550ms ease-out forwards'}}>
-                  <div className="text-[120px] drop-shadow-[0_0_30px_rgba(56,189,248,1)]">🛡️</div>
-                </div>
-                {[0,1,2,3,4,5].map(k=>(
-                  <div key={k} className="absolute" style={{transform:`rotate(${k*60}deg)`}}>
-                    <div className="rounded-full border-4 border-cyan-200" style={{width:'36px',height:'36px',animation:`guardSpark 500ms ease-out ${k*25}ms forwards`}}></div>
-                  </div>
-                ))}
-                <div className="absolute font-black text-cyan-100 text-4xl tracking-widest drop-shadow-[0_0_16px_rgba(56,189,248,1)]" style={{top:'34%',animation:'guardShine 550ms ease-out forwards'}}>キーン!</div>
-                <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5) 0%, rgba(56,189,248,0.3) 20%, rgba(0,0,0,0) 45%)',animation:'guardFlash 350ms ease-out forwards'}}></div>
-              </div>
-            )}
-            {!ecoBattleView&&teachingFx&&TEACHING_FX_STYLE[teachingFx.id]&&(()=>{
-              const fx=TEACHING_FX_STYLE[teachingFx.id];
-              return (
-                <div key={teachingFx.fxId} className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:63000}}>
-                  <div className="absolute" style={{animation:'guardShine 550ms ease-out forwards'}}>
-                    <div className="text-[110px] drop-shadow-[0_0_30px_rgba(255,255,255,0.9)]">{cardIconNode(fx.icon,110)}</div>
-                  </div>
-                  {[0,1,2,3,4,5,6,7].map(k=>(
-                    <div key={k} className="absolute" style={{transform:`rotate(${k*45}deg)`}}>
-                      <div className={`rounded-full border-4 ${fx.ring}`} style={{width:'30px',height:'30px',animation:`guardSpark 550ms ease-out ${k*20}ms forwards`}}></div>
-                    </div>
-                  ))}
-                  <div className={`absolute font-black text-3xl tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${fx.text}`} style={{top:'32%',animation:'guardShine 550ms ease-out forwards'}}>{fx.label}</div>
-                  <div className="absolute inset-0" style={{background:`radial-gradient(circle at 50% 45%, rgba(${fx.rgb},0.5) 0%, rgba(${fx.rgb},0.25) 22%, rgba(0,0,0,0) 48%)`,animation:'guardFlash 400ms ease-out forwards'}}></div>
-                </div>
-              );
-            })()}
+            {/* ★ガードの「🛡 キーン!」とアシストカードの全画面演出は、2026-09-29 のユーザー選択で置き換えた。
+                ガードは枠のバリア(GuardBarrier・guardImpact)、アシストカードはカットイン(TacticsExCutin の assist)で出す */}
             {isMooBoss(enemy?.id)&&enemy?.imgUrl&&(
               <div data-enemy-motion={enemyMotion||undefined} data-moo-stage={enemyMotion?'true':undefined} data-enemy-skill={enemySkillNow||undefined} data-em-body={emSpec?.[0]||undefined} data-em-fx={emSpec?.[1]||undefined} data-em-emo={emSpec?.[3]||undefined} data-enemy-hurt={enemyHurtNow?'true':undefined} className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{...emDurStyle,top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
                 {/* ★技の動き・やられの動き・待機の威圧(data-em-body / data-enemy-hurt / data-moo-stage)は CSS が掛けるので、そのあいだは style の animation を外す(style が勝ってしまう) */}
@@ -1925,8 +1905,9 @@ function BattleScreen({
                     「食らったモンスターにエフェクトなどがつくようにしたい」)。
                     数字(z-[70])より下へ重ねて、数字が読めなくならないようにする */}
                 {/* EXスキルを使った子の枠の光(カットインと同じ色。TacticsExCutin と同じ時間で消える) */}
-                {tacticsExCutin&&tacticsExCutin.slotIndex===i&&<span key={tacticsExCutin.key} data-tactics-ex-aura={tacticsExCutin.effect||'default'} className="ex-aura" aria-hidden="true"
-                  style={{'--ex-c1':tacticsExCutinTheme(tacticsExCutin.effect).c1,'--ex-c2':tacticsExCutinTheme(tacticsExCutin.effect).c2}}><i/><i/></span>}
+                {/* アシストカード・緊急回復のカットインは、効き目が乗る枠をまとめて光らせる(slotIndexes) */}
+                {tacticsExCutin&&(tacticsExCutin.slotIndex===i||(tacticsExCutin.slotIndexes||[]).includes(i))&&<span key={tacticsExCutin.key} data-tactics-ex-aura={tacticsExCutin.effect||'default'} className="ex-aura" aria-hidden="true"
+                  style={{'--ex-c1':battleCutinThemeOf(tacticsExCutin).c1,'--ex-c2':battleCutinThemeOf(tacticsExCutin).c2,...(tacticsExCutin.ms?{animationDuration:`${tacticsExCutin.ms}ms`}:{})}}><i/><i/></span>}
                 {slotHitKind&&(()=>{
                   const hitFx=TACTICS_SLOT_FX_STYLE[slotHitKind];
                   return(<div data-tactics-hit-fx={slotHitKind} className="absolute inset-0 z-[58] pointer-events-none overflow-visible">
@@ -2150,6 +2131,14 @@ function BattleScreen({
                       :slotArt(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:tacticsNewLayout?'58px':'64px',height:tacticsNewLayout?'58px':'64px'}} className="z-10 object-contain drop-shadow-md"/>)):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                   {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる。
                       ★動く絵の中に置く。新しい盤面は絵だけが敵へ飛ぶので、枠の側に置くと斬撃が枠に残って敵に届かない */}
+                  {/* ガードのバリア(2026-09-29 ユーザー選択「案A バリア」)。構えているあいだは idle、敵の攻撃を受けたら
+                      受け止めきった(block)・割れた(break)。画面を軽くする設定では出さない */}
+                  {s&&!ecoBattleView&&(()=>{
+                    const tier=guardBarrierTierOf(guardLevel);
+                    const impact=guardImpact?.bySlot?.[i];
+                    if(impact) return <GuardBarrier key={`gi-${guardImpact.key}`} tier={tier} state={impact}/>;
+                    return !isBusy&&guardBarrierOnAt(i)?<GuardBarrier tier={tier} state="idle"/>:null;
+                  })()}
                   {isAnimating&&attackAnim.twinBlade&&<KenshiTwinSlash/>}
                   {/* エイキの桜。攻撃モーションが出ているあいだだけ重ねる(常時アニメーションにしない) */}
                   {isAnimating&&attackAnim.sakura&&<EikiSakuraPetals/>}</div>
