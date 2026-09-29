@@ -376,6 +376,19 @@
     "source": "command"
    },
    "shortFadeEnding": true
+  },
+  "rising_hope": {
+   "audio": "monster-hero/audio/bgm-rising-hope.mp3",
+   "chartRevision": 24,
+   "audioSha256": "5b56b8f9d099c52114a1907c116ed9739f776191e8012eeb947327ecea4a911a",
+   "durationMs": 90252,
+   "analyzedTiming": {
+    "bpm": 190,
+    "beatZeroMs": 551.7,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }
