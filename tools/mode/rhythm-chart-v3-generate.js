@@ -30,6 +30,8 @@ const {trackFocus,focusBoost}=require('./rhythm-chart-focus.js');
 const {lowLagOf,isLowHit}=require('./rhythm-chart-low-lag.js');
 const {detectRepeats}=require('./rhythm-chart-repeats.js');
 const {DEFAULT_PLAY_TUNING,playTuningForRevision}=require('./rhythm-chart-play-tuning.js');
+const {tempoWarpForRevision}=require('./rhythm-chart-tempo-warp.js');
+const {ENDING_REVISION,fadingEnding}=require('./rhythm-chart-ending.js');
 const {setLaneCount:setPatternLaneCount,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
 const {soundTraitsFor,flickScoreOf,chordScoreOf}=require('./rhythm-sound-traits.js');
 const {weightsForRevision,knowledgeBoost,knowledgeShapePrefer}=require('./rhythm-chart-knowledge.js');
@@ -309,6 +311,17 @@ const songIntensityCommon=audio=>INTENSITY_STYLES[String(audio&&audio.chartInten
 // 昔作った譜面が新しい曲のせいで変わることもない。
 const CHALLENGE_REFERENCE=Object.freeze({bpm:170,onsetsPerSecond:7.0,beatClarity:1.30});
 const CHALLENGE_EXPONENT=Object.freeze({bpm:.7,onsets:1,beatClarity:.55});
+// --- テンポの数字から切り離す(2026-09-29・MHB CHART ENGINE Rev.20)---
+// 量(下の notesPerSecond)は「1拍あたりの目標 × 1秒あたりの拍の数」なので、もうテンポに比例している。
+// そこへ歯ごたえでもテンポを0.7乗で掛けると、テンポを二重に数える(速い曲ほど二乗近くで重くなり、
+// 解析が倍・3/4 のテンポで読んだだけでも量が大きく動く)。
+// 人が歯ごたえを決めた6曲(一覧の challengeFactor)は、どれも自動の値と逆向きに直していた。
+//   遅い曲・拍の立ちが弱い曲 … 戦場の疾風 0.72→1.3 / 魔窟の旋律 0.73→1.6 / only my railgun 0.77→1.3
+//   速い曲・拍の立ちが強い曲 … SIX ÉTERNEL 1.89→1.15 / crossing field 1.86→1.16 / NOTHING WITHOUT YOU 1.90→0.9
+// 効きを振って確かめると、テンポ0.35乗・拍のはっきりさ0.15乗で、この6曲とのずれ(対数の平均)が 0.60→0.26 に縮み、
+// 決めていない21曲の値はほとんど動かない(全27曲で 0.134→0.126)。Rev.20 から使う(それより前の曲は1音も変わらない)
+const CHALLENGE_DECOUPLE_REVISION=20;
+const CHALLENGE_EXPONENT_REV20=Object.freeze({bpm:.35,onsets:1,beatClarity:.15});
 // --- 差の出し方（2026-09-06・ユーザー指摘「どの曲も難易度が似たりよったり。もっと振れ幅がほしい」）---
 // 上の3つ（テンポ・音の詰まり具合・拍のはっきりさ）は、同じジャンルの曲だと**似た値になる**。
 // 実測すると11曲の生の値は 0.793〜1.656 に固まっていて、しかも 0.78〜1.26 で
@@ -367,9 +380,10 @@ const songChallengeFactor=(audio)=>{
     const factor=Math.max(CHALLENGE_RANGE.min,Math.min(CHALLENGE_RANGE.max,pinned));
     return {factor,raw:factor,gained:factor,pinned:true,bpm,onsetsPerSecond,beatClarity:clarity};
   }
-  const raw=ratio(bpm,CHALLENGE_REFERENCE.bpm,CHALLENGE_EXPONENT.bpm)
-    *ratio(onsetsPerSecond,CHALLENGE_REFERENCE.onsetsPerSecond,CHALLENGE_EXPONENT.onsets)
-    *ratio(clarity,CHALLENGE_REFERENCE.beatClarity,CHALLENGE_EXPONENT.beatClarity);
+  const exponent=chartRevision>=CHALLENGE_DECOUPLE_REVISION?CHALLENGE_EXPONENT_REV20:CHALLENGE_EXPONENT;
+  const raw=ratio(bpm,CHALLENGE_REFERENCE.bpm,exponent.bpm)
+    *ratio(onsetsPerSecond,CHALLENGE_REFERENCE.onsetsPerSecond,exponent.onsets)
+    *ratio(clarity,CHALLENGE_REFERENCE.beatClarity,exponent.beatClarity);
   // 測れた差を強めてから挟む。
   const gained=Math.pow(raw,CHALLENGE_GAIN);
   const factor=Math.max(CHALLENGE_RANGE.min,Math.min(CHALLENGE_RANGE.max,gained));
@@ -556,10 +570,22 @@ const lagCorrected=onset=>{
   const grid=Math.round((timeMs-timing.beatZeroMs)/gridMs);
   return {...onset,grid,gridOffsetMs:Math.round((timeMs-(timing.beatZeroMs+grid*gridMs))*100)/100};
 };
+// Rev.21: テンポの揺れ(rhythm-chart-tempo-warp.js)。なめらかに揺れていて、半分の区間で確かめた曲だけ、
+// 打点の時刻から揺れを引いてから格子に乗せる(候補の絞り込みが揺れで外れないように)。書き出す時刻にはパイプラインが揺れを足す。
+// 揺れていない曲では0なので、1音も変わらない
+const tempoWarpInfo=tempoWarpForRevision(chartRevision,audio);
+const warpCorrected=onset=>{
+  const shift=tempoWarpInfo&&tempoWarpInfo.active?tempoWarpInfo.at(onset.grid):0;
+  if(!shift)return onset;
+  const timeMs=onset.timeMs-shift;
+  const grid=Math.round((timeMs-timing.beatZeroMs)/gridMs);
+  return {...onset,grid,gridOffsetMs:Math.round((timeMs-(timing.beatZeroMs+grid*gridMs))*100)/100};
+};
+if(tempoWarpInfo&&tempoWarpInfo.active)console.log(`テンポの揺れに合わせる(${tempoWarpInfo.version===2?'Rev.23 の読み方':'Rev.21'}): ${tempoWarpInfo.reason}`);
 // 打点をグリッドごとに1つへまとめる（同じ位置に2つ以上あれば強いほうを残す）
 const onsetByGrid=new Map();
 for(const rawOnset of audio.onsets){
-  const onset=lagCorrected(rawOnset);
+  const onset=warpCorrected(lagCorrected(rawOnset));
   if(onset.grid<minGrid||onset.grid>maxGrid)continue;
   if(Math.abs(onset.gridOffsetMs)>COMMON.earReviewMaxOffsetMs)continue;
   const prev=onsetByGrid.get(onset.grid);
@@ -671,6 +697,8 @@ const intensityPosition=bar=>{
 //   4つの手がかり(メロディ・リズム・低音・音の層)のうち3つが「前にほぼ同じ4小節があった」と言う所の元の小節を足す。
 //   解析の繰り返しがある小節はそのまま(今まで効いていた所は変えない)。解析ファイルは作り直さない
 const rev18=chartRevision>=18;
+// Rev.19: 写す小節のリズムもそろえる(下の拾う音の選び方)
+const rev19=chartRevision>=19;
 const extraRepeat=(()=>{
   if(!rev18)return {sourceByBar:new Map(),falsePositiveRate:0};
   let layers=null;
@@ -1085,6 +1113,7 @@ const buildChart=(difficulty,options={})=>{
   const pool=allOnsets.filter(onset=>
     onset.grid%P.lattice===0&&Math.abs(onset.gridOffsetMs)<=peakOffsetAllowance(onset)
     &&(offBeatFloor<=0||onBeatOrEighth(onset)||onset.strength>=offBeatFloor));
+  const poolGrids=new Set(pool.map(onset=>onset.grid));
   // 全体で何個置くかを先に決める（1拍あたりの目標を、毎秒の下限・上限で挟む）。
   // これで曲が変わっても、遊んだ感じの忙しさがそろう。
   const [liftMin,liftMax]=MUSICAL_LIFT;
@@ -1165,7 +1194,14 @@ const buildChart=(difficulty,options={})=>{
       :share;
     if(limit<=0){takenOffsetsByBar.set(bar,new Set());continue;}
     const tier=onset=>sourceOffsets&&!(sourceOffsets.has(onset.grid-bar*BAR)||onset.character==='FULL')?1:0;
-    const inBar=pool.filter(onset=>onset.grid>=bar*BAR&&onset.grid<(bar+1)*BAR)
+    // Rev.19: 写す小節では、元の小節で拾った位置の音を、候補の絞り込み(格子からのずれ30ms・拍の裏の弱い音)から外して加える。
+    //   写す小節の同じ位置には9割がた音があるのに、絞り込みで外れてリズムがそろわなかった(Rev.18 の足した小節でリズムがそろうのは約6割)。
+    //   格子の刻み(P.lattice)と、耳で確かめるときの許容(43ms)は守る
+    const barPool=rev19&&sourceOffsets
+      ?pool.concat(allOnsets.filter(onset=>onset.grid>=bar*BAR&&onset.grid<(bar+1)*BAR&&onset.grid%P.lattice===0
+        &&sourceOffsets.has(onset.grid-bar*BAR)&&!poolGrids.has(onset.grid)))
+      :pool;
+    const inBar=barPool.filter(onset=>onset.grid>=bar*BAR&&onset.grid<(bar+1)*BAR)
       .sort((a,b)=>tier(a)-tier(b)||pickPriority(b)-pickPriority(a)||a.grid-b.grid);
     const taken=[];
     for(const onset of inBar){
@@ -3787,6 +3823,70 @@ for(const difficulty of targets){
     result=retry;
   }
   results[difficulty]=result;
+}
+// Rev.22: 曲の終わりの余韻(rhythm-chart-ending.js)。最後の一発のあと鳴り残る音が消えていく曲では、
+// 最後の一発より後にノーツを置かず、最後の一発を太い長押しにして締める(ユーザー指摘「音がなくなろうとしてる終盤でノーツが続いてるのが違和感」)。
+// 当たらない曲では何もしない
+const ending=chartRevision>=ENDING_REVISION?fadingEnding(audio,{chartEndMs,shortFade:!!(registryEntry&&registryEntry.shortFadeEnding===true)}):null;
+if(ending&&ending.active){
+  const gridOfMs=ms=>{const raw=Math.round((ms-timing.beatZeroMs)/gridMs);return tempoWarpInfo&&tempoWarpInfo.active?Math.round((ms-tempoWarpInfo.at(raw)-timing.beatZeroMs)/gridMs):raw;};
+  const lastGrid=gridOfMs(ending.lastHitMs);
+  const holdGrids=Math.max(BEAT,Math.round((gridOfMs(ending.holdEndMs)-lastGrid)/BEAT)*BEAT);
+  const endOf=note=>note.grid+(Number(note.durationGrids)||0);
+  for(const difficulty of targets){
+    const r=results[difficulty],P=r.profile;
+    let removed=0,trimmed=0;
+    const notes=[];
+    for(const note of r.notes){
+      if(note.grid>lastGrid){removed++;continue;}
+      // 最後の一発をまたいで伸びる押さえは、最後の一発の手前で終える(短くなりすぎたら TAP にする)
+      if(note.grid<lastGrid&&endOf(note)>=lastGrid&&(note.type==='HOLD'||note.type==='SLIDE')){
+        const end=lastGrid-2;
+        trimmed++;
+        if(note.type==='SLIDE')note.slidePoints=(note.slidePoints||[]).filter(point=>point.grid<=end);
+        if(Array.isArray(note.holdPoints))note.holdPoints=note.holdPoints.filter(point=>point.grid<=end);
+        const lastPoint=note.type==='SLIDE'&&note.slidePoints.length?note.slidePoints[note.slidePoints.length-1].grid:end;
+        const duration=(note.type==='SLIDE'?lastPoint:end)-note.grid;
+        if(duration<COMMON.holdMinGrids||(note.type==='SLIDE'&&note.slidePoints.length<2)){
+          note.type='TAP';
+          if(!Number.isFinite(note.subLane))note.subLane=Math.max(0,Math.min(SUB_LANES-2,Math.round(Number(note.lane)*2)));
+          if(!Number.isFinite(note.subLaneWidth))note.subLaneWidth=2;
+          delete note.durationGrids;delete note.slidePoints;delete note.holdPoints;delete note.endLane;
+        }else{
+          note.durationGrids=duration;
+          if(Array.isArray(note.holdPoints)&&note.holdPoints.length<2)delete note.holdPoints;
+        }
+        delete note.endFlick;
+      }
+      notes.push(note);
+    }
+    // 最後の一発のノーツを太い長押しにする(無ければ真ん中に足す)
+    const width=Math.max(2,Math.min(SUB_LANES,P.accentWidth>=10?SUB_LANES:P.accentWidth||4));
+    let final=notes.find(note=>note.grid===lastGrid&&!note.chord)||notes.find(note=>note.grid===lastGrid);
+    if(!final){
+      const onset=onsetByGrid.get(lastGrid);
+      final={type:'TAP',grid:lastGrid,subLane:Math.round((SUB_LANES-width)/2),subLaneWidth:width,
+        sourceStrength:onset?onset.strength:0,sourcePeakOffsetMs:onset?onset.gridOffsetMs:0,sourceCharacter:onset?onset.character:'NONE'};
+      notes.push(final);
+    }
+    const center=(Number(final.subLane)||0)+(Number(final.subLaneWidth)||2)/2;
+    final.type='HOLD';
+    final.subLane=Math.max(0,Math.min(SUB_LANES-width,Math.round(center-width/2)));
+    final.subLaneWidth=width;
+    final.lane=Math.floor(final.subLane/2);
+    final.durationGrids=holdGrids;
+    final.endingHold=true;
+    for(const key of ['flickDir','endFlick','slidePoints','holdPoints','endLane','monsterSlot','chord','chordRun'])delete final[key];
+    // 同じ時刻のほかのノーツは、長押しと重なるなら外す
+    const kept=notes.filter(note=>note===final||note.grid!==lastGrid
+      ||(Number(note.subLane)+Number(note.subLaneWidth)<=final.subLane||Number(note.subLane)>=final.subLane+width));
+    removed+=notes.length-kept.length;
+    for(const note of kept)if(note!==final&&note.grid===lastGrid)delete note.chord;
+    kept.sort((a,b)=>a.grid-b.grid||(Number(a.subLane)||0)-(Number(b.subLane)||0));
+    r.notes=kept;
+    (r.notice||(r.notice=[])).push(`終わりの余韻: 最後の一発(${(ending.lastHitMs/1000).toFixed(2)}秒)を長押し${holdGrids}グリッドで締め、その後の${removed}個を置かない`+(trimmed?`・またいで伸びる押さえを${trimmed}本縮めた`:''));
+  }
+  console.log(`終わりの余韻(Rev.22): ${ending.reason}`);
 }
 if(slideEase){
   for(const difficulty of targets){

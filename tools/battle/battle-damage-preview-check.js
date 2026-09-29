@@ -33,7 +33,9 @@ assert(source.includes("if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandora
 assert(source.includes('if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);') && source.includes('kenshiSplitNormal: 0.5,'), '剣士モッチー通常攻撃の連撃を分割前ダメージ基準で積む');
 // ★swordSkill はタクティクスのEX「ソード・コンバージョン」(片手盾)だけが false、hitRepeat は二刀流だけが 2 にする。既存5モードは渡さないので常に true / 1
 assert(source.includes("if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);")
-  && source.includes('kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1 }) => {'), 'ソードスキルの連撃');
+  && source.includes('kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1, exCombos = null }) => {'), 'ソードスキルの連撃');
+// ★exCombos はタクティクスのEX「スイーツパラダイス」だけが渡す。予測と実処理(3か所)の両方へ同じ値を渡す
+assert((source.match(/exCombos:tacticsExCombosAt\(slotIdx\)/g) || []).length === 3, 'スイーツパラダイスの連撃を予測と実処理の両方へ渡す');
 // 永久追加連撃の本数は永続バフから読む。予測(getAttackPredictedDmg)にも同じ本数を渡していないと
 // 「予測より実際が多い」になるので、buildAttackHits を呼ぶ3か所すべてで渡していることを見る
 assert((source.match(/kenshiExtraCombos:getPermaBuff\('kenshiExtraCombo'\)/g) || []).length === 3,

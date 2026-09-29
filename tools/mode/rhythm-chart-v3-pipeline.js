@@ -22,6 +22,7 @@
 // V1（正式候補v1）・V2（候補v2）の譜面には1バイトも触れない。書き換えるのは
 // <monster-hero-v3-*-notes> マーカーの内側だけで、書き込む前後で他が変わっていないことを確かめる。
 'use strict';
+const {tempoWarpForChart}=require('./rhythm-chart-tempo-warp.js');
 const fs=require('fs');
 const path=require('path');
 const {spawnSync}=require('child_process');
@@ -102,13 +103,21 @@ for(const difficulty of DIFFICULTIES){
   charts[difficulty]=JSON.parse(fs.readFileSync(file,'utf8'));
 }
 const audio=JSON.parse(fs.readFileSync(audioFile,'utf8'));
-const onsetGrids=new Set(audio.onsets.map(onset=>onset.grid));
 // 拍の基準は解析結果のものをそのまま使う。人が monster-hero/data/rhythm-timing.js へ
 // 登録した値があれば、解析の段で既にそちらが採用されている（source が registered になる）。
 // ここで rhythm-timing.js を直接読むと、登録の無い新しい曲では動かせなくなる。
 const timing=audio.timing;
 const gridMs=timing.gridMs||timing.beatMs/timing.subdivisionsPerBeat;
-const gridTimeMs=grid=>Math.round(timing.beatZeroMs+grid*gridMs);
+// Rev.21: テンポの揺れ(rhythm-chart-tempo-warp.js)。揺れに合わせる曲だけ、書き出す時刻に揺れを足す(それ以外は0)
+const warp=tempoWarpForChart(charts[DIFFICULTIES[0]],audio);
+const gridTimeMs=grid=>Math.round(timing.beatZeroMs+grid*gridMs+warp.at(grid));
+if(warp.active)console.log(`テンポの揺れに合わせて時刻を書く(Rev.21): ${warp.reason}`);
+// 鳴っている場所の格子。Rev.21 の揺れに合わせる曲では、生成器と同じく打点から揺れを引いて格子に乗せ直した所も数える
+// (揺れの分だけ隣の格子へ移る打点がある。2026-09-29、これを数えずに SIX ÉTERNEL Remix(ビート版)を止めていた)
+const onsetGrids=new Set(audio.onsets.flatMap(onset=>{
+  if(!warp.active)return [onset.grid];
+  return [onset.grid,Math.round((onset.timeMs-warp.at(onset.grid)-timing.beatZeroMs)/gridMs)];
+}));
 
 // --- 音源解析の警告 ---
 // テンポを取り違えたまま出来た譜面は、遊ぶ人には「ゲームが壊れている」ようにしか見えない。

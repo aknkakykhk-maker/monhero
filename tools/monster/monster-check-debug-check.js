@@ -68,7 +68,15 @@ check('待機アニメの枠があり、図鑑・バトルと同じ withMonsterI
   const ally = fs.readFileSync(path.join(root, 'monster-hero/data/ally-monsters.js'), 'utf8');
   const draftIds = [...(ally.match(/const UPCOMING_MONSTER_DRAFTS = Object\.freeze\(\{[\s\S]*?\n\}\);/) || [''])[0].matchAll(/^  (\w+): Object\.freeze/gm)].map(m => m[1]);
   const noRig = draftIds.filter(id => !new RegExp(`^  ${id}: \\{ body:`, 'm').test(fx));
-  check('案の段階の子にも待機アニメのリグがある', draftIds.length > 0 && noRig.length === 0, noRig.join('・') || draftIds.join('・'));
+  // 技名(2026-09-29 ユーザーが送った参考の技画像から当てはめた。元の値は docs/spec/YGGDRASIL_SKILLS.md)
+  for (const id of draftIds) {
+    const atk = (ally.match(new RegExp(`^  ${id}:\\s*\\[([^\\]]*)\\]`, 'm')) || [, ''])[1].split(',').filter(Boolean);
+    const uni = (ally.match(new RegExp(`${id}: Object\\.freeze\\(\\{[\\s\\S]*?draftUniqueNames:Object\\.freeze\\(\\[([^\\]]*)\\]`)) || [, ''])[1].split(',').filter(Boolean);
+    check(`${id}: 通常技と固有技の名前が9つずつある`, atk.length === 9 && uni.length === 9, `通常${atk.length} / 固有${uni.length}`);
+  }
+  check('案の段階の子の技は、名前だけの一覧で出す(威力の計算に通さない)', part.includes('draftNamePills(HERO_ATK_NAMES[mon.id]') && part.includes('draftNamePills(mon.draftUniqueNames'));
+  // 案の段階の子がいないとき(正式実装して空になったとき)は見るものが無いので通す
+  check('案の段階の子にも待機アニメのリグがある', noRig.length === 0, noRig.join('・') || (draftIds.join('・') || '案の段階の子はいない'));
 }
 
 // 模様テストも同じ理由で全種を並べる

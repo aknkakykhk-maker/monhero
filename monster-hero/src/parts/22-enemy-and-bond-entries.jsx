@@ -309,6 +309,26 @@ const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroD
   && heroDist===enemyDist
   ? Math.min(1, currentRate + 0.5)
   : currentRate;
+// ==== 勇者特性「生命の源」(ユグドラシル・メルホイップ。2026-09-29 ユーザーと決めた値) ====
+// 1〜5ターンの間は被ダメージ30%軽減。6ターン目以降、3ターンごと(6・9・12…ターン目)にガッツを最大の30%回復。
+// ターンは WAVE ごとに1から数え直す(turnCount。spawnEnemy で1へ戻る)。
+// 被ダメージの軽減はほかの軽減と掛け算で重なる(もち肌・中二病と同じ場所で掛ける)
+const LIFE_SOURCE_MONSTER_IDS = Object.freeze(['Yggdrasil', 'MelWhip']);
+const LIFE_SOURCE_GUARD_TURNS = 5;
+const LIFE_SOURCE_GUARD_MULT = 0.7;
+const LIFE_SOURCE_GUTS_FROM_TURN = 6;
+const LIFE_SOURCE_GUTS_EVERY = 3;
+const LIFE_SOURCE_GUTS_RATE = 0.3;
+const hasLifeSourceTrait = (id) => LIFE_SOURCE_MONSTER_IDS.includes(id);
+const lifeSourceDamageMult = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= 1 && Number(turn) <= LIFE_SOURCE_GUARD_TURNS
+  ? LIFE_SOURCE_GUARD_MULT : 1;
+const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= LIFE_SOURCE_GUTS_FROM_TURN
+  && (Number(turn) - LIFE_SOURCE_GUTS_FROM_TURN) % LIFE_SOURCE_GUTS_EVERY === 0;
+// 固有技「大樹の加護」: 使ったターンから2ターン、被ダメージ30%軽減。
+//   使ったターンのぶんは予告(71-screen-battle)と実際(handleEnemyTurn)の両方がこの値を掛ける
+const LIFE_TREE_GUARD_REDUCTION = 0.3;
+const isLifeTreeGuardCard = (card) => !!card && card.type === 'unique' && hasLifeSourceTrait(card.monId);
+const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
 // ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。
 //   options.mode にそのランのモードを渡すと、そちらの10体が出る。
 //   クラシック・クイックの並び(ENEMY_SEQUENCE)は1つも変えない——あちらを差し替えると、
@@ -473,7 +493,7 @@ const KENSHI_COMBO_POWER_MAX = 3;
 //   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
 //     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
 //     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
-const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1 }) => {
+const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1, exCombos = null }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
@@ -520,6 +540,12 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   if (attackerId === 'KenshiMocchi') {
     for (let i = 0; i < kenshiExtraCombos; i++) combo(ATTACK_COMBO_RULES.kenshiExtraCombo + comboDmgBonus);
   }
+  // ★exCombos … タクティクスのEX「スイーツパラダイス」(2026-09-29 ユーザー指示「連撃30%×4」)。
+  //   使ったターンのその子の攻撃へ { rate } の連撃を count 回足す。連撃ダメージ補正も乗る。
+  //   4本ぶん専用モーションを繰り返すと長くなるので、数字だけを続けて出す(noAnim)。ほかのモードは渡さないので常に null
+  if (exCombos && exCombos.count > 0 && exCombos.rate > 0) {
+    for (let i = 0; i < exCombos.count; i++) combo(exCombos.rate + comboDmgBonus, 'スイーツパラダイス', true);
+  }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
   // ★hitRepeat … タクティクスのEX「ソード・コンバージョン」の二刀流(2026-09-25 ユーザー指示)。
   //   **連撃ぶんだけ**がもう1回ぶん入る。メインヒットは1回のまま(2026-09-25 ユーザー指示
@@ -542,13 +568,17 @@ const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
 };
 
 
+// アシストカードを使ったときのカットイン(2026-09-29 ユーザー選択「助手のカットイン」)の色。c1 明 / c2 濃 / motif 模様
+// (motif は 24-battle-fx.jsx の TACTICS_EX_CUTIN_THEME と同じ shield / flame / rise / blade)
 const TEACHING_FX_STYLE = {
-  oryo:    { icon:"🌸", label:"闘気上昇!",   text:"text-red-300",     ring:"border-red-300",     rgb:"239,68,68" },
-  dra:     { icon:"🐉", label:"鉄壁化!",     text:"text-emerald-300", ring:"border-emerald-300", rgb:"16,185,129" },
-  cadmium: { icon:"🧪", label:"計算完了!",   text:"text-cyan-300",    ring:"border-cyan-300",    rgb:"6,182,212" },
-  mua:     { icon:"💖", label:"祝福!",       text:"text-pink-300",    ring:"border-pink-300",    rgb:"236,72,153" },
-  atsu:    { icon:"🔥", label:"挑発!",       text:"text-orange-300",  ring:"border-orange-300",  rgb:"234,88,12" },
-  myaru:   { icon:"🐈", label:"怪薬投与!",   text:"text-purple-300",  ring:"border-purple-300",  rgb:"168,85,247" },
-  kiki:    { icon:"📣", label:"全力応援!",   text:"text-sky-300",     ring:"border-sky-300",     rgb:"56,189,248" },
-  poltz:   { icon:"🍱", label:"弁当を構える!", text:"text-lime-300",    ring:"border-lime-300",    rgb:"163,230,53" },
+  oryo:    { icon:"🌸", label:"闘気上昇!",   text:"text-red-300",     ring:"border-red-300",     rgb:"239,68,68",  c1:'#fecaca', c2:'#ef4444', motif:'flame' },
+  dra:     { icon:"🐉", label:"鉄壁化!",     text:"text-emerald-300", ring:"border-emerald-300", rgb:"16,185,129", c1:'#a7f3d0', c2:'#10b981', motif:'shield' },
+  cadmium: { icon:"🧪", label:"計算完了!",   text:"text-cyan-300",    ring:"border-cyan-300",    rgb:"6,182,212",  c1:'#a5f3fc', c2:'#06b6d4', motif:'rise' },
+  mua:     { icon:"💖", label:"祝福!",       text:"text-pink-300",    ring:"border-pink-300",    rgb:"236,72,153", c1:'#fbcfe8', c2:'#ec4899', motif:'rise' },
+  atsu:    { icon:"🔥", label:"挑発!",       text:"text-orange-300",  ring:"border-orange-300",  rgb:"234,88,12",  c1:'#fed7aa', c2:'#ea580c', motif:'flame' },
+  myaru:   { icon:"🐈", label:"怪薬投与!",   text:"text-purple-300",  ring:"border-purple-300",  rgb:"168,85,247", c1:'#e9d5ff', c2:'#a855f7', motif:'rise' },
+  kiki:    { icon:"📣", label:"全力応援!",   text:"text-sky-300",     ring:"border-sky-300",     rgb:"56,189,248", c1:'#bae6fd', c2:'#38bdf8', motif:'blade' },
+  poltz:   { icon:"🍱", label:"弁当を構える!", text:"text-lime-300",    ring:"border-lime-300",    rgb:"163,230,53", c1:'#d9f99d', c2:'#84cc16', motif:'rise' },
+  // メロソ(回復＋ガード)。2026-09-29 まで演出が無かった
+  meloso:  { icon:"🔍", label:"解析完了!",   text:"text-teal-300",    ring:"border-teal-300",    rgb:"20,184,166", c1:'#99f6e4', c2:'#14b8a6', motif:'shield' },
 };

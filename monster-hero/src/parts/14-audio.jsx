@@ -78,7 +78,7 @@ const Audio_ = (() => {
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
     "audio/bgm-battle.mp3": "a1e6f8499e9e",
-    "audio/bgm-big-bridge-no-shitou.mp3": "466468405f44",
+    "audio/bgm-big-bridge-no-shitou.mp3": "a36d408f3389",
     "audio/bgm-boss-ichika.mp3": "9c8bda857de7",
     "audio/bgm-boss.mp3": "a11bc8056d79",
     "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",

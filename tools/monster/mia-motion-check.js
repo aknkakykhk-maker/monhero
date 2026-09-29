@@ -22,7 +22,17 @@ const checks = [
     /Mia:[^\n]*baseHp:300, baseGuts:180, baseAtk:175, baseDef:60/.test(ally)
     && /Mia:[^\n]*plusStats:\{hp:120,atk:30,def:10,guts:65\}/.test(ally)
     && /Mia:[^\n]*distAptitude:\['G','C','A','B'\]/.test(ally)
-    && /Mia:[^\n]*name:"バン",icon:MIA_ICON,monId:"Mia",baseMult:2\.1,baseGuts:42/.test(ally)],
+    && /Mia:[^\n]*name:"ボイスバン",icon:MIA_ICON,monId:"Mia",baseMult:2\.1,baseGuts:42/.test(ally)],
+  // 技名は歌う動きに合わせて変えた(2026-09-29 ユーザー指示「技アクションにあわせて少し変更したい」→ 案B)。数字は上で変えていないことを見る
+  ['ミーアの技名は歌う動きに合わせた名前(通常技9つ・固有技9つ)',
+    ally.includes('Mia:    ["ハミング","メロディレイ","サンダービート","ハイキック","ヒールソング","ライトニング","メガメロディ","なげキッス","アンコールキッス"],')
+    && ally.includes('names:["ボイスバン","ギガメロディ","ギガサンダー","ビッグバンライブ","ギガライトニング","コズミックライブ","テラメロディ","テラボイスバン","ノヴァ・フィナーレ"]')
+    && ally.includes('Pixie:  ["はり手","レイ","サンダー","ハイキック","ヒールレイド","ライトニング","メガレイ","なげキッス","ディープキッス"],')],
+  // ミタラシは「ほぼモッチーで、ちょっと火炎要素」(2026-09-29 ユーザー指示)。モッチーは元のまま
+  ['ミタラシの技名はモッチーの名前に少しだけ炎を入れたもの(モッチーは元のまま)',
+    ally.includes('Mitarashi: ["もんた","もちき","ガッチョ","もっちゃん","ガッチャー","火の粉吹雪","もっさん","枝垂れ炎","もっさま"],')
+    && ally.includes('names:["モッチ砲","大モッチ砲","超モッチ砲","超モッチ砲2","超モッチ砲3","超炎モッチ砲ゴッド","超蒼炎モッチ砲","身勝手のモッチ砲 兆","身勝手のモッチ砲 極"]')
+    && ally.includes('Mocchi: ["もんた","もちき","ガッチョ","もっちゃん","ガッチャー","桜吹雪","もっさん","枝垂れ桜","もっさま"],')],
 
   // --- 固有技の順番(specialCharge → 650ms → 専用モーション) ---
   ['固有技の共通タメに専用モーションを混ぜていない',
@@ -80,7 +90,8 @@ const checks = [
     (game.includes("monsterImageDebugMotionPlaying?.motion==='miaSongNotes'")
       && game.includes("atkMotion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS")
       && game.includes("atkMotion==='miaSongNotes')?'overflow-visible'"))
-    || (game.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id):attackMotionPreviewSequence(atkMotion, mon?.id);")
+    // 2026-09-29 から技の名前(skillName)も渡す(技ごとに動きが違う種族のため)。ミーアは技名を使わない
+    || (game.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id, skillName):attackMotionPreviewSequence(atkMotion, mon?.id, skillName);")
       && (game.match(/\(motion==='miaSongNotes'\?MIA_SONG_NOTES_MOTION_MS:/g) || []).length >= 2)],
   ['演出のコンポーネントは1つだけ(図鑑用の別物を作っていない)',
     (game.match(/const MiaSongNotesMotion = /g) || []).length === 1],
