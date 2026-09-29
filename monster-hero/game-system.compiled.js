@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 20642629ac84887e
+// source-sha256: c50e0a9b1de88547
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-29 11:22";
+const BUILD_DATE = "2026-09-29 12:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -43925,7 +43925,7 @@ const monsterCheckImplRows = mon => {
   const id = mon.id;
   const bare = url => String(url || '').split('?')[0];
   const atkNames = typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[id] || [];
-  const uniqueNames = mon.unique?.names || [];
+  const uniqueNames = mon.unique?.names || mon.draftUniqueNames || [];
   const lineage = monsterLineageOf(id);
   const dexText = typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS?.[id] || '';
   const {
@@ -44356,6 +44356,21 @@ function MonsterCheckDebugScreen({
   }, label), React.createElement("span", {
     className: "min-w-0 break-words text-[11px] font-bold text-white"
   }, value));
+  const draftNamePills = (names, accent) => React.createElement("div", {
+    "data-monster-check-draft-skills": true,
+    className: "grid grid-cols-2 gap-1.5"
+  }, names.map((name, lvl) => React.createElement("div", {
+    key: lvl,
+    className: `min-w-0 rounded-xl border px-2 py-1.5 ${accent}`
+  }, React.createElement("div", {
+    className: "flex min-w-0 items-center justify-between gap-1.5"
+  }, React.createElement("span", {
+    className: "min-w-0 truncate text-[10px] font-black text-white"
+  }, name), React.createElement("span", {
+    className: "shrink-0 text-[8px] font-mono font-black text-amber-300"
+  }, "Lv.", lvl)), React.createElement("div", {
+    className: "mt-0.5 text-[8px] font-black text-slate-500"
+  }, "威力・消費は未設定"))));
   const skillPills = (list, accent) => React.createElement("div", {
     className: "grid grid-cols-2 gap-1.5"
   }, list.map(skill => React.createElement("div", {
@@ -44658,11 +44673,11 @@ function MonsterCheckDebugScreen({
     block: true
   }), React.createElement("div", null, React.createElement("div", {
     className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
-  }, "通常技"), typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] ? skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25') : React.createElement("div", {
+  }, "通常技"), typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] ? mon.draft ? draftNamePills(HERO_ATK_NAMES[mon.id], 'border-red-500/30 bg-red-950/25') : skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25') : React.createElement("div", {
     className: "text-center text-[11px] font-bold text-rose-300"
   }, "未設定")), React.createElement("div", null, React.createElement("div", {
     className: "mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90"
-  }, "固有技（進化段階）"), mon.unique ? skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30') : React.createElement("div", {
+  }, "固有技（進化段階）"), mon.unique ? skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30') : mon.draftUniqueNames ? draftNamePills(mon.draftUniqueNames, 'border-amber-500/40 bg-amber-950/30') : React.createElement("div", {
     className: "text-center text-[11px] font-bold text-rose-300"
   }, "未設定"), React.createElement("div", {
     className: "mt-1.5 break-words text-[10px] font-bold italic leading-relaxed text-slate-300"

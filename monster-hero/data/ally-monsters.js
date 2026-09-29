@@ -18,7 +18,14 @@ const HERO_ATK_NAMES = {
   Iblis:  ["我が瞳の真理を見よ","闇を裂く刃となれ","神剣よ断罪を下せ","星屑の記憶よ甦れ","世界を揺らせ","終わりなき祈りよ響け","白き誓い切なる願い","神光よ汚れを祓え","蒼き荊よ咎を穿て"],
   Snegurochka: ["アイスブレード","アクアウィップ","アクアウェイブ","スプラッシュ","超アイスブレード","超アクアウィップ","ドルフィンブロー","ブラッドミスト","ジングルベル"],
   Undine: ["アイスブレード","アクアウィップ","アクアウェイブ","スプラッシュ","超アイスブレード","超アクアウィップ","ドルフィンブロー","ブラッドミスト","アクアゲイザー"],
-  Yaobikuni: ["アイスブレード","アクアウィップ","アクアウェイブ","スプラッシュ","超アイスブレード","超アクアウィップ","ドルフィンブロー","ブラッドミスト","アクアゲイザー"]
+  Yaobikuni: ["アイスブレード","アクアウィップ","アクアウェイブ","スプラッシュ","超アイスブレード","超アクアウィップ","ドルフィンブロー","ブラッドミスト","アクアゲイザー"],
+  // ユグドラシル種(2026-09-29 ユーザーが送った参考の技画像から当てはめた)。通常技は「ちから」の技を
+  // 進化段階(技の★1〜5)と消費ガッツの順に並べ、9つ目は★1のかしこさ技「グリーンライト」で埋めた。
+  // メルホイップはユグドラシルと同じ並びで、★4の「苺大噴」の代わりにオリジナル技「ケーキ入刀」を持つ。
+  // 固有技の9段階名は UPCOMING_MONSTER_DRAFTS の draftUniqueNames(正式実装のとき unique.names へ移す)。
+  // 技ごとの元の値(技種・消費ガッツ・ダメージなど)は docs/spec/YGGDRASIL_SKILLS.md
+  Yggdrasil: ["頭突き","空中脳天撃","グリーンライト","ぴろぴろ舌","大玉転がし","月面水爆","キャンディボム","苺大噴","シャドウレギオン"],
+  MelWhip:   ["頭突き","空中脳天撃","グリーンライト","ぴろぴろ舌","大玉転がし","月面水爆","キャンディボム","ケーキ入刀","シャドウレギオン"],
 };
 
 // atkMotion: 通常技・固有技のモーション種別。全モンスターに必須(新規追加時も必ず明示すること)。
@@ -90,8 +97,12 @@ const STARTER_MONSTER_IDS = ['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Mon
 const UPCOMING_MONSTER_DRAFTS = Object.freeze({
   // ユグドラシル(新しい血統・純血)。絵・顔アイコン・円盤石・染色マスク・図鑑の文までそろっている
   Yggdrasil: Object.freeze({ id:'Yggdrasil', name:"ユグドラシル", emoji:"🌳", imgUrl:YGGDRASIL_IMG, iconUrl:YGGDRASIL_IMG,
-    faceIconUrl:YGGDRASIL_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'yggdrasil' }) }),
+    faceIconUrl:YGGDRASIL_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'yggdrasil' }),
+    // 固有技の9段階名(かしこさ技を★と消費ガッツの順に。最後は★5で消費がいちばん重い「コスモフルーツ」)
+    draftUniqueNames:Object.freeze(["スターボム","ワンダーブレイズ","メニーウィング","メテオストーム","パピヨンバースト","ヘビーレイン","エターナルアーク","オーロラハック","コスモフルーツ"]) }),
   // メルホイップ(ユグドラシル×？？？のレア)
   MelWhip: Object.freeze({ id:'MelWhip', name:"メルホイップ", emoji:"🍰", imgUrl:MEL_WHIP_IMG, iconUrl:MEL_WHIP_IMG,
-    faceIconUrl:MEL_WHIP_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'unknown' }) }),
+    faceIconUrl:MEL_WHIP_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'unknown' }),
+    // ユグドラシルと同じ並びで、★2の「メニーウィング」の代わりにオリジナル技「ライスシャワー」を持つ
+    draftUniqueNames:Object.freeze(["スターボム","ワンダーブレイズ","ライスシャワー","メテオストーム","パピヨンバースト","ヘビーレイン","エターナルアーク","オーロラハック","コスモフルーツ"]) }),
 });
