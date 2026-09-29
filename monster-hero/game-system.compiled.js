@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c50e0a9b1de88547
+// source-sha256: 2e50732a3ad5be5b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-29 12:14";
+const BUILD_DATE = "2026-09-29 12:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15899,15 +15899,68 @@ const DEFAULT_ATTACK_THEMES = Object.freeze({
   Plant: 'vine',
   Mitarashi: 'fire'
 });
+const SKILL_ATTACK_THEME_MONSTERS = Object.freeze(['Yggdrasil', 'MelWhip']);
+const SKILL_ATTACK_THEMES = Object.freeze({
+  '頭突き': 'ygHeadbutt',
+  '空中脳天撃': 'ygAirDive',
+  'グリーンライト': 'ygGreenLight',
+  'ぴろぴろ舌': 'ygTongue',
+  '大玉転がし': 'ygRoll',
+  '月面水爆': 'ygMoonDrop',
+  'キャンディボム': 'ygCandy',
+  '苺大噴': 'ygStrawberry',
+  'ケーキ入刀': 'ygCakeCut',
+  'シャドウレギオン': 'ygShadow',
+  'スターボム': 'ygStarBomb',
+  'ワンダーブレイズ': 'ygWonderBlaze',
+  'メニーウィング': 'ygManyWing',
+  'ライスシャワー': 'ygRiceShower',
+  'メテオストーム': 'ygMeteor',
+  'パピヨンバースト': 'ygPapillon',
+  'ヘビーレイン': 'ygHeavyRain',
+  'エターナルアーク': 'ygEternalArc',
+  'オーロラハック': 'ygAurora',
+  'コスモフルーツ': 'ygCosmo'
+});
+const SKILL_ATTACK_FALLBACK = Object.freeze({
+  normal: 'ygHeadbutt',
+  unique: 'ygStarBomb'
+});
+const skillAttackThemeOf = (monId, skillName, isUnique) => {
+  if (!SKILL_ATTACK_THEME_MONSTERS.includes(monId)) return null;
+  return SKILL_ATTACK_THEMES[skillName] || SKILL_ATTACK_FALLBACK[isUnique ? 'unique' : 'normal'];
+};
 const THEMED_ATTACK_MS = Object.freeze({
   stomp: 900,
   rocks: 520,
   claw: 900,
   punch: 580,
-  fire: 560
+  fire: 560,
+  ygHeadbutt: 520,
+  ygAirDive: 760,
+  ygGreenLight: 560,
+  ygTongue: 640,
+  ygRoll: 780,
+  ygMoonDrop: 840,
+  ygCandy: 760,
+  ygStrawberry: 820,
+  ygCakeCut: 720,
+  ygShadow: 860,
+  ygStarBomb: 660,
+  ygWonderBlaze: 660,
+  ygManyWing: 780,
+  ygRiceShower: 780,
+  ygMeteor: 900,
+  ygPapillon: 880,
+  ygHeavyRain: 880,
+  ygEternalArc: 800,
+  ygAurora: 920,
+  ygCosmo: 980
 });
-const themedAttackMotionMs = (monId, motion) => {
+const themedAttackMotionMs = (monId, motion, skillName = null, isUnique = false) => {
   if (motion && motion !== 'default') return null;
+  const skillKind = skillAttackThemeOf(monId, skillName, isUnique);
+  if (skillKind) return THEMED_ATTACK_MS[skillKind] || null;
   return THEMED_ATTACK_MS[DEFAULT_ATTACK_THEMES[monId]] || null;
 };
 const attackMotionAnimation = anim => {
@@ -15923,7 +15976,7 @@ const attackMotionAnimation = anim => {
   if (anim.charge === false) return anim.motion === 'floatStab' ? 'floatStabLunge 700ms ease-in forwards' : 'specialLunge 500ms ease-in forwards';
   return anim.motion === 'floatStab' ? 'floatStabAttack 650ms ease-in forwards' : 'attackFly 450ms ease-in forwards';
 };
-const attackMotionPreviewSequence = (atkMotion = 'default', baseId = null) => {
+const attackMotionPreviewSequence = (atkMotion = 'default', baseId = null, skillName = null) => {
   const motion = atkMotion || 'default';
   const isTwin = motion === 'kenshiTwinBlade';
   const isComboDash = motion === 'zanCombo' || motion === 'eikiSakuraCombo' || isTwin;
@@ -15939,12 +15992,15 @@ const attackMotionPreviewSequence = (atkMotion = 'default', baseId = null) => {
     anim: {
       motion,
       twinBlade: isTwin,
-      sakura: motion === 'eikiSakuraCombo'
+      sakura: motion === 'eikiSakuraCombo',
+      ...(skillName ? {
+        skillName
+      } : {})
     },
-    ms: themedAttackMotionMs(baseId, motion) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450)
+    ms: themedAttackMotionMs(baseId, motion, skillName, false) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450)
   }];
 };
-const attackMotionUniquePreviewSequence = (atkMotion = 'default', baseId = null) => {
+const attackMotionUniquePreviewSequence = (atkMotion = 'default', baseId = null, skillName = null) => {
   const motion = atkMotion || 'default';
   const isTwin = motion === 'kenshiTwinBlade';
   const isComboDash = motion === 'zanCombo' || motion === 'eikiSakuraCombo' || isTwin;
@@ -15971,9 +16027,12 @@ const attackMotionUniquePreviewSequence = (atkMotion = 'default', baseId = null)
       charge: false,
       motion,
       twinBlade: false,
-      sakura: false
+      sakura: false,
+      ...(skillName ? {
+        skillName
+      } : {})
     },
-    ms: themedAttackMotionMs(baseId, motion) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 500)
+    ms: themedAttackMotionMs(baseId, motion, skillName, true) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 500)
   }];
 };
 const rpgMotionName = (side, monId, isSkill) => {
@@ -16097,7 +16156,7 @@ const ATTACK_TARGET_SLASHES = Object.freeze({
     delay: '254ms'
   }]
 });
-const themedAttackKindOf = (anim, baseId) => anim && anim.charge !== true && !anim.zanCombo && !anim.twinBlade && (!anim.motion || anim.motion === 'default') ? DEFAULT_ATTACK_THEMES[baseId] || null : null;
+const themedAttackKindOf = (anim, baseId) => anim && anim.charge !== true && !anim.zanCombo && !anim.twinBlade && (!anim.motion || anim.motion === 'default') ? skillAttackThemeOf(baseId, anim.skillName, anim.charge === false) || DEFAULT_ATTACK_THEMES[baseId] || null : null;
 const THEMED_ATTACK_BITS = Object.freeze({
   stomp: {
     hit: [{
@@ -16419,11 +16478,733 @@ const ThemedAttackBits = ({
     } : {})
   }
 }));
+const SKFX_RING = (n, r, d0, dStep, extra = {}) => Array.from({
+  length: n
+}, (_, i) => {
+  const a = Math.PI * 2 * i / n;
+  return {
+    x: Math.round(Math.cos(a) * r),
+    y: Math.round(Math.sin(a) * r),
+    d: d0 + i * dStep,
+    ...extra
+  };
+});
+const SKFX_SPREAD = (n, w, d0, dStep, extra = {}) => Array.from({
+  length: n
+}, (_, i) => ({
+  x: Math.round(((i + .5) / n - .5) * w + i * 37 % 11 - 5),
+  y: i * 23 % 17 - 8,
+  d: d0 + i * 7 % n * dStep,
+  ...extra
+}));
+const SKILL_FX_SPECS = Object.freeze({
+  ygHeadbutt: {
+    body: 'bash',
+    hit: 250,
+    c1: '#fef9c3',
+    c2: '#facc15',
+    bits: [{
+      x: -26,
+      y: -18
+    }, {
+      x: 24,
+      y: -22
+    }, {
+      x: -30,
+      y: 12
+    }, {
+      x: 30,
+      y: 10
+    }, {
+      x: 0,
+      y: -32
+    }],
+    burst: 'star'
+  },
+  ygAirDive: {
+    body: 'dive',
+    hit: 470,
+    c1: '#ffedd5',
+    c2: '#fb923c',
+    bits: [{
+      x: -40,
+      y: 6
+    }, {
+      x: -26,
+      y: -24
+    }, {
+      x: 0,
+      y: -34
+    }, {
+      x: 26,
+      y: -24
+    }, {
+      x: 40,
+      y: 6
+    }, {
+      x: -18,
+      y: 20
+    }, {
+      x: 18,
+      y: 20
+    }],
+    burst: 'star'
+  },
+  ygGreenLight: {
+    body: 'cast',
+    line: 'beam',
+    hit: 210,
+    c1: '#dcfce7',
+    c2: '#4ade80',
+    bits: [{
+      x: -24,
+      y: -16
+    }, {
+      x: 22,
+      y: -20
+    }, {
+      x: -18,
+      y: 18
+    }, {
+      x: 22,
+      y: 14
+    }]
+  },
+  ygTongue: {
+    body: 'lick',
+    line: 'tongue',
+    hit: 270,
+    c1: '#fce7f3',
+    c2: '#f472b6',
+    bits: [{
+      x: -20,
+      y: -14,
+      s: 1.2
+    }, {
+      x: 18,
+      y: -18
+    }, {
+      x: 0,
+      y: 16
+    }],
+    burst: 'heart'
+  },
+  ygRoll: {
+    body: 'roll',
+    hit: 400,
+    c1: '#fef3c7',
+    c2: '#d97706',
+    bits: [{
+      x: -44,
+      y: 10,
+      s: 1.3
+    }, {
+      x: -30,
+      y: -20
+    }, {
+      x: 0,
+      y: -30,
+      s: 1.2
+    }, {
+      x: 30,
+      y: -20
+    }, {
+      x: 44,
+      y: 10,
+      s: 1.3
+    }, {
+      x: 0,
+      y: 22
+    }],
+    burst: 'dust'
+  },
+  ygMoonDrop: {
+    body: 'flip',
+    hit: 540,
+    c1: '#e0f2fe',
+    c2: '#38bdf8',
+    fx: {
+      path: 'rise',
+      shape: 'water',
+      dur: 270,
+      items: SKFX_SPREAD(10, 120, 520, 5)
+    },
+    bits: [{
+      x: -36,
+      y: -10
+    }, {
+      x: 36,
+      y: -10
+    }, {
+      x: -20,
+      y: -30
+    }, {
+      x: 20,
+      y: -30
+    }]
+  },
+  ygCandy: {
+    body: 'toss',
+    hit: 460,
+    c1: '#fdf4ff',
+    c2: '#e879f9',
+    fx: {
+      path: 'lob',
+      shape: 'candy',
+      dur: 300,
+      items: [{
+        x: -10,
+        y: 0,
+        d: 160,
+        h: 330
+      }, {
+        x: 8,
+        y: -6,
+        d: 200,
+        h: 190
+      }, {
+        x: -4,
+        y: 8,
+        d: 240,
+        h: 50
+      }, {
+        x: 12,
+        y: 4,
+        d: 280,
+        h: 120
+      }]
+    },
+    bits: [{
+      x: -34,
+      y: -20,
+      h: 330
+    }, {
+      x: 30,
+      y: -26,
+      h: 190
+    }, {
+      x: -26,
+      y: 22,
+      h: 50
+    }, {
+      x: 30,
+      y: 18,
+      h: 120
+    }, {
+      x: 0,
+      y: -36,
+      h: 270
+    }],
+    burst: 'candy'
+  },
+  ygStrawberry: {
+    body: 'cast',
+    hit: 330,
+    c1: '#ffe4e6',
+    c2: '#f43f5e',
+    fx: {
+      path: 'rise',
+      shape: 'berry',
+      dur: 400,
+      items: SKFX_SPREAD(9, 110, 290, 15)
+    },
+    bits: [{
+      x: -30,
+      y: -24
+    }, {
+      x: 28,
+      y: -28
+    }, {
+      x: -36,
+      y: 10
+    }, {
+      x: 36,
+      y: 8
+    }]
+  },
+  ygCakeCut: {
+    body: 'slash',
+    over: 'slash',
+    hit: 330,
+    c1: '#fff7ed',
+    c2: '#fda4af',
+    bits: [{
+      x: -8,
+      y: -40
+    }, {
+      x: 8,
+      y: -20
+    }, {
+      x: -8,
+      y: 0
+    }, {
+      x: 8,
+      y: 20
+    }, {
+      x: -8,
+      y: 40
+    }],
+    burst: 'cream'
+  },
+  ygShadow: {
+    body: 'cast',
+    over: 'shadow',
+    hit: 520,
+    c1: '#ede9fe',
+    c2: '#6d28d9',
+    fx: {
+      path: 'shot',
+      shape: 'ghost',
+      dur: 360,
+      items: [{
+        x: -30,
+        y: -20,
+        d: 150
+      }, {
+        x: 24,
+        y: -34,
+        d: 200
+      }, {
+        x: -12,
+        y: 22,
+        d: 250
+      }, {
+        x: 30,
+        y: 10,
+        d: 300
+      }, {
+        x: 0,
+        y: -8,
+        d: 350
+      }]
+    },
+    bits: [{
+      x: -30,
+      y: -24
+    }, {
+      x: 30,
+      y: -24
+    }, {
+      x: -30,
+      y: 20
+    }, {
+      x: 30,
+      y: 20
+    }]
+  },
+  ygStarBomb: {
+    body: 'cast',
+    hit: 420,
+    c1: '#fef9c3',
+    c2: '#fde047',
+    fx: {
+      path: 'shot',
+      shape: 'star',
+      dur: 300,
+      items: [{
+        x: -14,
+        y: -10,
+        d: 120
+      }, {
+        x: 12,
+        y: -18,
+        d: 170
+      }, {
+        x: 0,
+        y: 8,
+        d: 220
+      }]
+    },
+    bits: [{
+      x: -30,
+      y: -22
+    }, {
+      x: 28,
+      y: -26
+    }, {
+      x: -34,
+      y: 12
+    }, {
+      x: 32,
+      y: 14
+    }, {
+      x: 0,
+      y: -36
+    }, {
+      x: 0,
+      y: 28
+    }],
+    burst: 'star'
+  },
+  ygWonderBlaze: {
+    body: 'cast',
+    hit: 430,
+    c1: '#ecfccb',
+    c2: '#84cc16',
+    fx: {
+      path: 'shot',
+      shape: 'flame',
+      dur: 280,
+      items: [{
+        x: -8,
+        y: -12,
+        d: 140
+      }, {
+        x: 10,
+        y: 0,
+        d: 180
+      }, {
+        x: -4,
+        y: 12,
+        d: 220
+      }, {
+        x: 6,
+        y: -6,
+        d: 260
+      }]
+    },
+    bits: [{
+      x: -24,
+      y: -24
+    }, {
+      x: 24,
+      y: -24
+    }, {
+      x: -26,
+      y: 16
+    }, {
+      x: 26,
+      y: 16
+    }]
+  },
+  ygManyWing: {
+    body: 'cast',
+    hit: 560,
+    c1: '#f0fdf4',
+    c2: '#22c55e',
+    fx: {
+      path: 'orbit',
+      shape: 'leaf',
+      dur: 460,
+      items: SKFX_RING(8, 34, 80, 18)
+    },
+    bits: [{
+      x: -26,
+      y: -18
+    }, {
+      x: 26,
+      y: -18
+    }, {
+      x: -20,
+      y: 20
+    }, {
+      x: 20,
+      y: 20
+    }, {
+      x: 0,
+      y: -30
+    }],
+    burst: 'leaf'
+  },
+  ygRiceShower: {
+    body: 'cast',
+    hit: 520,
+    c1: '#fffbeb',
+    c2: '#fde68a',
+    fx: {
+      path: 'fall',
+      shape: 'rice',
+      dur: 340,
+      items: SKFX_SPREAD(26, 140, 200, 10)
+    },
+    bits: [{
+      x: -22,
+      y: -14
+    }, {
+      x: 22,
+      y: -14
+    }, {
+      x: 0,
+      y: 18
+    }],
+    burst: 'petal'
+  },
+  ygMeteor: {
+    body: 'cast',
+    hit: 470,
+    hit2: 640,
+    c1: '#ffedd5',
+    c2: '#f97316',
+    fx: {
+      path: 'fall',
+      shape: 'meteor',
+      dur: 280,
+      items: [{
+        x: -34,
+        y: -6,
+        d: 190,
+        s: 1.1
+      }, {
+        x: 20,
+        y: 4,
+        d: 280,
+        s: 1.4
+      }, {
+        x: -6,
+        y: 10,
+        d: 360,
+        s: 1.8
+      }]
+    },
+    bits: [{
+      x: -40,
+      y: -20,
+      s: 1.2
+    }, {
+      x: 36,
+      y: -26
+    }, {
+      x: -30,
+      y: 18
+    }, {
+      x: 38,
+      y: 16,
+      s: 1.2
+    }, {
+      x: 0,
+      y: -40
+    }]
+  },
+  ygPapillon: {
+    body: 'cast',
+    hit: 620,
+    c1: '#e0e7ff',
+    c2: '#818cf8',
+    fx: {
+      path: 'orbit',
+      shape: 'butterfly',
+      dur: 520,
+      items: SKFX_RING(6, 40, 60, 30, {}).map((b, i) => ({
+        ...b,
+        h: 220 + i * 22
+      }))
+    },
+    bits: [{
+      x: -30,
+      y: -20,
+      h: 230
+    }, {
+      x: 30,
+      y: -20,
+      h: 270
+    }, {
+      x: -28,
+      y: 18,
+      h: 300
+    }, {
+      x: 28,
+      y: 18,
+      h: 250
+    }],
+    burst: 'butterfly'
+  },
+  ygHeavyRain: {
+    body: 'cast',
+    hit: 440,
+    c1: '#dbeafe',
+    c2: '#3b82f6',
+    fx: {
+      path: 'fall',
+      shape: 'drop',
+      dur: 220,
+      items: SKFX_SPREAD(30, 150, 160, 16)
+    },
+    bits: [{
+      x: -30,
+      y: 14
+    }, {
+      x: -10,
+      y: 20
+    }, {
+      x: 10,
+      y: 20
+    }, {
+      x: 30,
+      y: 14
+    }],
+    burst: 'water'
+  },
+  ygEternalArc: {
+    body: 'cast',
+    line: 'arc',
+    hit: 330,
+    hit2: 520,
+    c1: '#fef3c7',
+    c2: '#f59e0b',
+    bits: [{
+      x: -36,
+      y: -10
+    }, {
+      x: 36,
+      y: -10
+    }, {
+      x: -24,
+      y: -30
+    }, {
+      x: 24,
+      y: -30
+    }, {
+      x: 0,
+      y: 30
+    }]
+  },
+  ygAurora: {
+    body: 'cast',
+    over: 'aurora',
+    hit: 600,
+    c1: '#ccfbf1',
+    c2: '#2dd4bf',
+    bits: [{
+      x: -30,
+      y: -24,
+      h: 160
+    }, {
+      x: 30,
+      y: -24,
+      h: 200
+    }, {
+      x: -30,
+      y: 20,
+      h: 280
+    }, {
+      x: 30,
+      y: 20,
+      h: 120
+    }],
+    burst: 'fruit'
+  },
+  ygCosmo: {
+    body: 'cast',
+    hit: 700,
+    c1: '#fae8ff',
+    c2: '#c084fc',
+    fx: {
+      path: 'orbit',
+      shape: 'fruit',
+      dur: 560,
+      items: SKFX_RING(7, 38, 60, 26, {}).map((b, i) => ({
+        ...b,
+        h: [0, 40, 90, 140, 200, 270, 320][i],
+        s: 1.1
+      }))
+    },
+    bits: [{
+      x: -44,
+      y: -20,
+      h: 0
+    }, {
+      x: 42,
+      y: -24,
+      h: 90
+    }, {
+      x: -38,
+      y: 22,
+      h: 200
+    }, {
+      x: 40,
+      y: 18,
+      h: 270
+    }, {
+      x: 0,
+      y: -44,
+      h: 40
+    }, {
+      x: 0,
+      y: 36,
+      h: 140
+    }],
+    burst: 'fruit'
+  }
+});
+const SkillFxMotion = ({
+  kind,
+  image,
+  lunge = false
+}) => {
+  const spec = SKILL_FX_SPECS[kind];
+  const ms = THEMED_ATTACK_MS[kind] || 600;
+  const hex = String(spec.c2).replace('#', '');
+  const c3 = hex.length === 6 ? `rgba(${parseInt(hex.slice(0, 2), 16)},${parseInt(hex.slice(2, 4), 16)},${parseInt(hex.slice(4, 6), 16)},0)` : 'rgba(255,255,255,0)';
+  const vars = {
+    '--thm-ms': `${ms}ms`,
+    '--hit-at': `${spec.hit}ms`,
+    '--c1': spec.c1,
+    '--c2': spec.c2,
+    '--c3': c3
+  };
+  if (spec.hit2) vars['--hit-at2'] = `${spec.hit2}ms`;
+  const fx = spec.fx;
+  return React.createElement("span", {
+    className: `thm-atk skfx skfx--${kind} skfx-body--${spec.body}${lunge ? ' thm-atk--lunge' : ''}`,
+    style: vars,
+    "data-skill-fx": kind
+  }, React.createElement("span", {
+    className: "thm-atk__monster"
+  }, image), spec.line && React.createElement("span", {
+    className: `thm-atk__line skfx-line skfx-line--${spec.line}`,
+    "aria-hidden": "true"
+  }, React.createElement("i", null)), fx && React.createElement("span", {
+    className: "thm-atk__flys skfx-layer",
+    "aria-hidden": "true"
+  }, fx.items.map((b, i) => React.createElement("i", {
+    key: i,
+    className: `skfx-p skfx-p--${fx.shape} skfx-path--${fx.path}`,
+    style: {
+      '--px': `${b.x || 0}px`,
+      '--py': `${b.y || 0}px`,
+      '--ps': b.s || 1,
+      '--ph': b.h ?? 0,
+      animationDelay: `${b.d || 0}ms`,
+      animationDuration: `${fx.dur}ms`
+    }
+  }))), spec.over && React.createElement("span", {
+    className: `thm-atk__hit skfx-over skfx-over--${spec.over}`,
+    "aria-hidden": "true"
+  }, React.createElement("i", null), React.createElement("i", null), React.createElement("i", null)), React.createElement("span", {
+    className: "thm-atk__hit",
+    "aria-hidden": "true"
+  }, React.createElement("i", {
+    className: "thm-atk__core"
+  }), React.createElement("i", {
+    className: "thm-atk__ring"
+  }), (spec.bits || []).map((b, i) => React.createElement("i", {
+    key: i,
+    className: `thm-atk__bit${spec.burst ? ` skfx-bit skfx-p--${spec.burst}` : ''}`,
+    style: {
+      '--bx': `${b.x || 0}px`,
+      '--by': `${b.y || 0}px`,
+      '--bs': b.s || 1,
+      '--ph': b.h ?? 0
+    }
+  }))), spec.hit2 && React.createElement("span", {
+    className: "thm-atk__hit thm-atk__hit--2",
+    "aria-hidden": "true"
+  }, React.createElement("i", {
+    className: "thm-atk__core"
+  }), React.createElement("i", {
+    className: "thm-atk__ring"
+  })));
+};
 const ThemedAttackMotion = ({
   kind,
   image,
   lunge = false
 }) => {
+  if (SKILL_FX_SPECS[kind]) return React.createElement(SkillFxMotion, {
+    kind: kind,
+    image: image,
+    lunge: lunge
+  });
   const bits = THEMED_ATTACK_BITS[kind] || {};
   const ms = THEMED_ATTACK_MS[kind];
   const px = v => `${v || 0}px`;
@@ -44274,6 +45055,7 @@ function MonsterCheckDebugScreen({
     }, "一致するモンスターはいません。")));
   }
   if (view === 'motion') {
+    const skillMotionLists = typeof SKILL_ATTACK_THEME_MONSTERS !== 'undefined' && SKILL_ATTACK_THEME_MONSTERS.includes(mon.id) ? [['normal', '通常技', typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] || []], ['unique', '固有技', mon.unique?.names || mon.draftUniqueNames || []]].filter(([,, names]) => names.length) : null;
     const kindButton = (kind, label) => React.createElement("button", {
       key: kind,
       type: "button",
@@ -44336,7 +45118,30 @@ function MonsterCheckDebugScreen({
       className: "shrink-0 px-3 pt-2"
     }, React.createElement("div", {
       className: "mx-auto flex w-full max-w-md gap-2"
-    }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技'))));
+    }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技')), skillMotionLists && React.createElement("div", {
+      "data-monster-check-skill-motions": true,
+      className: "mx-auto mt-2 w-full max-w-md max-h-[30vh] overflow-y-auto mh-scroll space-y-1.5"
+    }, skillMotionLists.map(([kind, label, names]) => React.createElement("div", {
+      key: kind
+    }, React.createElement("div", {
+      className: "mb-1 text-[9px] font-black tracking-widest text-cyan-300/80"
+    }, label), React.createElement("div", {
+      className: "grid grid-cols-3 gap-1.5"
+    }, names.map((name, lvl) => React.createElement("button", {
+      key: name,
+      type: "button",
+      "data-monster-check-skill-motion": name,
+      disabled: !!playing,
+      onClick: () => {
+        Audio_.se.tap();
+        if (!playing) onPlayPreview(mon, kind, atkMotion, name);
+      },
+      className: `min-h-[40px] min-w-0 rounded-xl border px-1 text-[10px] font-black leading-tight active:scale-95 disabled:opacity-45 ${playing?.skillName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`
+    }, React.createElement("span", {
+      className: "block truncate"
+    }, name), React.createElement("span", {
+      className: "block text-[8px] font-mono text-slate-400"
+    }, "Lv.", lvl)))))))));
   }
   const tabs = [['check', 'チェック'], ['art', '画像'], ['stats', '能力'], ['skills', '技'], ['data', 'データ']];
   const row = (label, value, {
@@ -45984,15 +46789,16 @@ function MonsterHeroGame() {
     dexAttackPreviewRunRef.current += 1;
     setDexAttackPreview(null);
   };
-  const playDexAttackPreview = async (mon, kind, atkMotion) => {
+  const playDexAttackPreview = async (mon, kind, atkMotion, skillName = null) => {
     const run = ++dexAttackPreviewRunRef.current;
-    const steps = kind === 'unique' ? attackMotionUniquePreviewSequence(atkMotion, mon?.id) : attackMotionPreviewSequence(atkMotion, mon?.id);
+    const steps = kind === 'unique' ? attackMotionUniquePreviewSequence(atkMotion, mon?.id, skillName) : attackMotionPreviewSequence(atkMotion, mon?.id, skillName);
     for (const step of steps) {
       if (run !== dexAttackPreviewRunRef.current) return;
       setDexAttackPreview({
         monsterId: mon.id,
         kind,
-        anim: step.anim
+        anim: step.anim,
+        skillName
       });
       await new Promise(resolve => setTimeout(resolve, step.ms));
     }
@@ -56848,7 +57654,8 @@ function MonsterHeroGame() {
                 charge: false,
                 motion,
                 twinBlade: isKenshiTwin,
-                sakura: motion === 'eikiSakuraCombo'
+                sakura: motion === 'eikiSakuraCombo',
+                skillName: hit.skillName
               });
               if (isKenshiTwin) {
                 await battleWait(135);
@@ -56859,7 +57666,7 @@ function MonsterHeroGame() {
                 triggerShake();
                 await battleWait(130);
               } else {
-                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 500));
+                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion, hit.skillName, true) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 500));
               }
             } else {
               const isKenshiTwin = motion === 'kenshiTwinBlade';
@@ -56867,7 +57674,8 @@ function MonsterHeroGame() {
                 slotIndex: animSlot,
                 motion,
                 twinBlade: isKenshiTwin,
-                sakura: motion === 'eikiSakuraCombo'
+                sakura: motion === 'eikiSakuraCombo',
+                skillName: hit.skillName
               });
               if (isKenshiTwin) {
                 await battleWait(135);
@@ -56879,7 +57687,7 @@ function MonsterHeroGame() {
                 await battleWait(130);
               } else {
                 if (hit.isSpecial) Audio_.se.special();else if (hit.isCrit) Audio_.se.crit();else Audio_.se.attack();
-                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450));
+                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion, hit.skillName, false) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450));
               }
             }
             setAttackAnim(null);
@@ -72721,10 +73529,246 @@ const createAnimationStyle = () => {
       100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--fx)),calc(var(--atk-dy) + var(--fy)),0) scale(2); }
     }
 
+    /* ==== ユグドラシル種の技ごとの動き(24-battle-fx.jsx の SkillFxMotion / SKILL_FX_SPECS) ====
+       型の組み合わせ(本体の動き・帯・飛ぶもの・敵に重ねる絵)は SKILL_FX_SPECS。ここは部品ごとの動き。
+       尺は --thm-ms(23-rpg-debug.jsx の THEMED_ATTACK_MS)、着弾は --hit-at。敵の位置は --atk-dx/dy */
+    .skfx .thm-atk__monster { animation-duration:var(--thm-ms); }
+    .skfx-body--bash .thm-atk__monster { animation-name:skfxBash; }
+    @keyframes skfxBash {
+      0% { transform:translate3d(0,0,0) scale(1); }
+      18% { transform:translate3d(calc(var(--atk-dx) * -.08),calc(var(--atk-dy) * -.08 + 4px),0) scale(1.1,.9) rotate(8deg); }
+      44% { transform:translate3d(calc(var(--atk-dx) * .86),calc(var(--atk-dy) * .86),0) scale(1.05) rotate(-18deg); }
+      52% { transform:translate3d(calc(var(--atk-dx) * .78),calc(var(--atk-dy) * .78),0) scale(1.18,.86) rotate(-6deg); }
+      72% { transform:translate3d(calc(var(--atk-dx) * .25),calc(var(--atk-dy) * .25 - 16px),0) scale(.96,1.04); }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .skfx-body--dive .thm-atk__monster { animation-name:skfxDive; }
+    @keyframes skfxDive {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      12% { transform:translate3d(0,6px,0) scale(1.15,.82) rotate(0deg); }
+      34% { transform:translate3d(calc(var(--atk-dx) * .6),calc(var(--atk-dy) * .6 - 150px),0) scale(.9) rotate(-120deg); }
+      50% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 140px),0) scale(1) rotate(-180deg); }
+      60% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 6px),0) scale(1.05,.9) rotate(-180deg); }
+      64% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.3,.72) rotate(-180deg); }
+      76% { transform:translate3d(calc(var(--atk-dx) * .8),calc(var(--atk-dy) * .8 - 70px),0) scale(1) rotate(-270deg); }
+      90% { transform:translate3d(calc(var(--atk-dx) * .1),calc(var(--atk-dy) * .1 - 10px),0) scale(1) rotate(-350deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(-360deg); }
+    }
+    .skfx-body--roll .thm-atk__monster { animation-name:skfxRoll; transform-origin:50% 50%; }
+    @keyframes skfxRoll {
+      0% { transform:translate3d(0,0,0) rotate(0deg); }
+      10% { transform:translate3d(calc(var(--atk-dx) * -.06),calc(var(--atk-dy) * -.06 + 4px),0) scale(1.1,.9) rotate(-30deg); }
+      50% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1) rotate(720deg); }
+      56% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92 - 18px),0) scale(1.1,.9) rotate(760deg); }
+      80% { transform:translate3d(calc(var(--atk-dx) * .3),calc(var(--atk-dy) * .3 - 8px),0) scale(1) rotate(900deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(1080deg); }
+    }
+    .skfx-body--flip .thm-atk__monster { animation-name:skfxFlip; transform-origin:50% 50%; }
+    @keyframes skfxFlip {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      10% { transform:translate3d(0,6px,0) scale(1.16,.82) rotate(0deg); }
+      30% { transform:translate3d(calc(var(--atk-dx) * .4),calc(var(--atk-dy) * .4 - 120px),0) scale(.92) rotate(-180deg); }
+      48% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9 - 90px),0) scale(1) rotate(-360deg); }
+      62% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.4,.66) rotate(-360deg); }
+      70% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 10px),0) scale(1.1,.92) rotate(-360deg); }
+      86% { transform:translate3d(calc(var(--atk-dx) * .2),calc(var(--atk-dy) * .2 - 20px),0) scale(1) rotate(-360deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(-360deg); }
+    }
+    .skfx-body--toss .thm-atk__monster { animation-name:skfxToss; }
+    @keyframes skfxToss {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      15% { transform:translate3d(calc(var(--atk-dx) * -.05),calc(var(--atk-dy) * -.05 + 3px),0) scale(1.05,.95) rotate(10deg); }
+      26% { transform:translate3d(calc(var(--atk-dx) * .08),calc(var(--atk-dy) * .08),0) scale(1.08) rotate(-12deg); }
+      40% { transform:translate3d(calc(var(--atk-dx) * .03),calc(var(--atk-dy) * .03),0) scale(1.02) rotate(4deg); }
+      60%, 100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+    }
+    .skfx-body--lick .thm-atk__monster { animation-name:skfxLick; }
+    @keyframes skfxLick {
+      0% { transform:translate3d(0,0,0) scale(1); }
+      20% { transform:translate3d(calc(var(--atk-dx) * .04),calc(var(--atk-dy) * .04),0) scale(1.06,.96); }
+      35% { transform:translate3d(calc(var(--atk-dx) * .08),calc(var(--atk-dy) * .08),0) scale(1.1); }
+      60% { transform:translate3d(calc(var(--atk-dx) * .05),calc(var(--atk-dy) * .05),0) scale(1.04); }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .skfx-body--slash .thm-atk__monster { animation-name:skfxSlashBody; }
+    @keyframes skfxSlashBody {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      14% { transform:translate3d(calc(var(--atk-dx) * -.08),calc(var(--atk-dy) * -.08 - 8px),0) scale(1.08) rotate(10deg); }
+      38% { transform:translate3d(calc(var(--atk-dx) * .8),calc(var(--atk-dy) * .8 - 30px),0) scale(1.1) rotate(-8deg); }
+      46% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9 + 10px),0) scale(1.15,.9) rotate(-16deg); }
+      62% { transform:translate3d(calc(var(--atk-dx) * .7),calc(var(--atk-dy) * .7),0) scale(1.02) rotate(-6deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+    }
+    .skfx-body--cast .thm-atk__monster { animation-name:skfxCast; }
+    @keyframes skfxCast {
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      15% { transform:translate3d(0,5px,0) scale(1.1,.9); filter:drop-shadow(0 0 10px var(--c2)); }
+      30% { transform:translate3d(calc(var(--atk-dx) * -.04),calc(var(--atk-dy) * -.04),0) scale(1.08); filter:drop-shadow(0 0 22px var(--c2)) drop-shadow(0 0 6px #fff); }
+      40% { transform:translate3d(calc(var(--atk-dx) * -.04 + 2px),calc(var(--atk-dy) * -.04),0) scale(1.08); }
+      50% { transform:translate3d(calc(var(--atk-dx) * -.04 - 2px),calc(var(--atk-dy) * -.04),0) scale(1.08); filter:drop-shadow(0 0 18px var(--c2)); }
+      70% { transform:translate3d(0,0,0) scale(1.03); filter:drop-shadow(0 0 10px var(--c2)); }
+      100% { transform:translate3d(0,0,0) scale(1); filter:none; }
+    }
+    /* 帯(本体から敵へ) */
+    .skfx-line--beam i { width:14px; left:-7px; border-radius:999px;
+      background:linear-gradient(90deg,rgba(74,222,128,0),#86efac 22%,#fff 50%,#86efac 78%,rgba(74,222,128,0));
+      box-shadow:0 0 12px #4ade80,0 0 26px rgba(74,222,128,.85); animation-name:skfxBeam; }
+    @keyframes skfxBeam {
+      0%,28% { opacity:0; transform:scaleY(0) scaleX(.4); }
+      36% { opacity:1; transform:scaleY(1) scaleX(1.5); }
+      46% { opacity:1; transform:scaleY(1) scaleX(.8); }
+      58% { opacity:1; transform:scaleY(1) scaleX(1.2); }
+      70% { opacity:1; transform:scaleY(1) scaleX(1); }
+      82%,100% { opacity:0; transform:scaleY(1) scaleX(.1); }
+    }
+    .skfx-line--tongue i { width:18px; left:-9px; border-radius:999px;
+      background:linear-gradient(90deg,#be185d,#f472b6 30%,#fbcfe8 50%,#f472b6 70%,#be185d);
+      box-shadow:0 0 8px rgba(244,114,182,.8); animation-name:skfxTongue; animation-timing-function:ease-in-out; }
+    @keyframes skfxTongue {
+      0%,16% { opacity:0; transform:scaleY(0); }
+      22% { opacity:1; transform:scaleY(.2); }
+      42% { opacity:1; transform:scaleY(1); }
+      50% { opacity:1; transform:scaleY(.94) scaleX(1.15); }
+      72% { opacity:1; transform:scaleY(.15); }
+      80%,100% { opacity:0; transform:scaleY(0); }
+    }
+    .skfx-line--arc i { width:44px; left:-22px; border-radius:999px;
+      background:linear-gradient(90deg,rgba(245,158,11,0),#fcd34d 18%,#fff7d6 42%,#fff 50%,#fff7d6 58%,#fcd34d 82%,rgba(245,158,11,0));
+      box-shadow:0 0 18px #fbbf24,0 0 40px rgba(245,158,11,.8); animation-name:skfxArc; }
+    @keyframes skfxArc {
+      0%,26% { opacity:0; transform:scaleY(0) scaleX(.3); }
+      34% { opacity:1; transform:scaleY(1) scaleX(1.8); }
+      44% { opacity:1; transform:scaleY(1) scaleX(1); }
+      60% { opacity:1; transform:scaleY(1) scaleX(1.5); }
+      72% { opacity:1; transform:scaleY(1) scaleX(1); }
+      90%,100% { opacity:0; transform:scaleY(1) scaleX(.1); }
+    }
+    /* 飛ぶもの。道すじ(path)と形(shape)を組み合わせる */
+    .skfx-p { position:absolute; left:50%; top:40%; width:16px; height:16px; margin:-8px 0 0 -8px; opacity:0;
+      scale:calc(var(--ps,1) * 1.35); animation-fill-mode:forwards; animation-timing-function:linear; }
+    .skfx-path--shot { animation-name:skfxShot; animation-timing-function:ease-in; }
+    @keyframes skfxShot {
+      0% { opacity:0; transform:translate3d(calc(var(--px) * .6),calc(var(--py) * .6 - 10px),0) scale(.4); }
+      15% { opacity:1; transform:translate3d(var(--px),calc(var(--py) - 14px),0) scale(1); }
+      90% { opacity:1; }
+      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--px) * .3),calc(var(--atk-dy) + var(--py) * .3),0) scale(1.4); }
+    }
+    .skfx-path--lob { animation-name:skfxLob; }
+    @keyframes skfxLob {
+      0% { opacity:0; transform:translate3d(var(--px),var(--py),0) scale(.6) rotate(0deg); }
+      10% { opacity:1; }
+      50% { transform:translate3d(calc(var(--atk-dx) * .5 + var(--px)),calc(var(--atk-dy) * .5 - 100px),0) scale(1.1) rotate(180deg); }
+      96% { opacity:1; }
+      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--px)),calc(var(--atk-dy) + var(--py)),0) scale(1.2) rotate(360deg); }
+    }
+    .skfx-path--fall { animation-name:skfxFall; animation-timing-function:ease-in; }
+    @keyframes skfxFall {
+      0% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--px) - 44px),calc(var(--atk-dy) + var(--py) - 120px),0); }
+      12% { opacity:1; }
+      90% { opacity:1; }
+      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--px)),calc(var(--atk-dy) + var(--py)),0); }
+    }
+    .skfx-path--rise { animation-name:skfxRise; animation-timing-function:ease-out; }
+    @keyframes skfxRise {
+      0% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--px) * .2),calc(var(--atk-dy) + 20px),0) scale(.5) rotate(0deg); }
+      15% { opacity:1; }
+      55% { opacity:1; transform:translate3d(calc(var(--atk-dx) + var(--px)),calc(var(--atk-dy) + var(--py) - 120px),0) scale(1.1) rotate(90deg); }
+      100% { opacity:0; transform:translate3d(calc(var(--atk-dx) + var(--px) * 1.3),calc(var(--atk-dy) + var(--py) - 60px),0) scale(.9) rotate(200deg); }
+    }
+    .skfx-path--orbit { animation-name:skfxOrbit; animation-timing-function:ease-in-out; }
+    @keyframes skfxOrbit {
+      0% { opacity:0; transform:translate3d(0,-10px,0) scale(.3); }
+      15% { opacity:1; transform:translate3d(var(--px),calc(var(--py) - 10px),0) scale(1); }
+      35% { transform:translate3d(calc(var(--py) * -1),calc(var(--px) - 10px),0) scale(1); }
+      55% { transform:translate3d(calc(var(--px) * -1),calc(var(--py) * -1 - 10px),0) scale(1); }
+      92% { opacity:1; transform:translate3d(calc(var(--atk-dx) + var(--px) * .2),calc(var(--atk-dy) + var(--py) * .2),0) scale(1.2); }
+      100% { opacity:0; transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(.6); }
+    }
+    /* 形。着弾で飛び散る小片(.skfx-bit)にも同じ形を使う */
+    .skfx-bit { left:0; top:0; }
+    .skfx-p--star { width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:0; box-shadow:none;
+      background:radial-gradient(circle,#fff 0 20%,#fde047 45%,#f59e0b);
+      clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+    .skfx-p--flame { width:14px; height:20px; margin:-10px 0 0 -7px; border-radius:50% 50% 50% 50% / 65% 65% 35% 35%;
+      background:radial-gradient(circle at 50% 70%,#fff 0 15%,#bef264 35%,#65a30d 70%,rgba(101,163,13,0)); box-shadow:0 0 10px #84cc16; }
+    .skfx-p--leaf { width:16px; height:9px; margin:-4px 0 0 -8px; border-radius:0 100% 0 100%;
+      background:linear-gradient(135deg,#bbf7d0,#22c55e 60%,#15803d); box-shadow:0 0 6px rgba(34,197,94,.8); }
+    .skfx-p--rice { width:6px; height:10px; margin:-5px 0 0 -3px; border-radius:50%; background:#fffdf5; box-shadow:0 0 4px #fde68a; }
+    .skfx-p--petal { width:10px; height:7px; margin:-3px 0 0 -5px; border-radius:0 100% 0 100%; background:#fbcfe8; box-shadow:0 0 4px #f9a8d4; }
+    .skfx-p--meteor { width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%;
+      background:radial-gradient(circle at 60% 60%,#fff 0 18%,#fdba74 40%,#ea580c 70%,rgba(234,88,12,0)); box-shadow:0 0 14px #f97316; }
+    .skfx-p--meteor::before { content:''; position:absolute; left:5px; bottom:9px; width:8px; height:46px; border-radius:999px;
+      background:linear-gradient(to top,rgba(253,186,116,.9),rgba(234,88,12,0)); transform-origin:50% 100%; transform:rotate(-20deg); }
+    .skfx-p--drop { width:4px; height:28px; margin:-14px 0 0 -2px; border-radius:999px; rotate:-20deg;
+      background:linear-gradient(to bottom,rgba(191,219,254,0),#93c5fd 50%,#eff6ff); box-shadow:0 0 4px rgba(147,197,253,.8); }
+    .skfx-p--water { width:9px; height:11px; margin:-5px 0 0 -4px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+      background:radial-gradient(circle at 40% 35%,#fff 0 15%,#bae6fd 40%,#38bdf8 80%); box-shadow:0 0 6px #7dd3fc; }
+    .skfx-p--berry { width:16px; height:18px; margin:-9px 0 0 -8px; border-radius:50% 50% 45% 45% / 40% 40% 60% 60%;
+      background:radial-gradient(circle at 35% 35%,#fff 0 8%,rgba(255,255,255,0) 9%),radial-gradient(circle at 60% 60%,#fb7185,#e11d48 60%,#9f1239);
+      box-shadow:0 0 8px rgba(244,63,94,.8); }
+    .skfx-p--berry::before { content:''; position:absolute; top:-4px; left:3px; width:10px; height:6px; border-radius:50%; background:#22c55e; }
+    .skfx-p--candy { width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%;
+      background:conic-gradient(hsl(var(--ph) 90% 70%) 0 25%,#fff 0 50%,hsl(var(--ph) 90% 70%) 0 75%,#fff 0);
+      box-shadow:0 0 8px hsl(var(--ph) 90% 65%); }
+    .skfx-p--ghost { width:22px; height:26px; margin:-13px 0 0 -11px; border-radius:50% 50% 35% 35% / 60% 60% 40% 40%;
+      background:radial-gradient(circle at 50% 35%,#a78bfa 0 12%,#4c1d95 45%,rgba(30,10,60,.85) 75%); box-shadow:0 0 12px #7c3aed; }
+    .skfx-p--ghost::before { content:''; position:absolute; left:6px; top:9px; width:3px; height:4px; border-radius:50%;
+      background:#f5f3ff; box-shadow:7px 0 #f5f3ff; }
+    .skfx-p--butterfly { width:22px; height:16px; margin:-8px 0 0 -11px; background:none; border-radius:0; box-shadow:none; }
+    .skfx-p--butterfly::before, .skfx-p--butterfly::after { content:''; position:absolute; top:0; width:11px; height:16px;
+      background:radial-gradient(circle at 50% 40%,#fff 0 12%,hsl(var(--ph) 85% 70%) 40%,hsl(var(--ph) 80% 45%) 80%);
+      box-shadow:0 0 8px hsl(var(--ph) 90% 70%); animation:skfxFlap 110ms ease-in-out infinite alternate; }
+    .skfx-p--butterfly::before { left:0; border-radius:80% 20% 70% 30%; transform-origin:100% 50%; }
+    .skfx-p--butterfly::after { right:0; border-radius:20% 80% 30% 70%; transform-origin:0 50%; }
+    @keyframes skfxFlap { 0% { transform:scaleX(1); } 100% { transform:scaleX(.35); } }
+    .skfx-p--fruit { width:15px; height:15px; margin:-7px 0 0 -7px; border-radius:50%;
+      background:radial-gradient(circle at 35% 35%,#fff 0 12%,hsl(var(--ph) 85% 65%) 40%,hsl(var(--ph) 75% 40%) 85%);
+      box-shadow:0 0 10px hsl(var(--ph) 90% 65%); }
+    .skfx-p--heart { width:12px; height:12px; margin:-6px 0 0 -6px; border-radius:0; box-shadow:none; background:#f472b6;
+      clip-path:polygon(50% 90%,10% 50%,0 25%,15% 5%,35% 5%,50% 20%,65% 5%,85% 5%,100% 25%,90% 50%); }
+    .skfx-p--dust { width:12px; height:12px; margin:-6px 0 0 -6px; background:radial-gradient(circle,#fde68a,#a16207 60%,rgba(161,98,7,0)); box-shadow:none; }
+    .skfx-p--cream { width:12px; height:12px; margin:-6px 0 0 -6px; background:radial-gradient(circle,#fff 30%,#fecdd3 70%,rgba(254,205,211,0)); box-shadow:0 0 6px #fff; }
+    /* 敵に重ねる大きな絵 */
+    .skfx-over i { position:absolute; opacity:0; pointer-events:none; }
+    .skfx-over--slash i:first-child { left:-5px; top:-80px; width:10px; height:160px; border-radius:999px;
+      background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 30%,#fda4af 50%,#fff 70%,rgba(255,255,255,0));
+      box-shadow:0 0 16px #fda4af,0 0 30px #fff; animation:skfxSlash 280ms ease-out forwards; animation-delay:calc(var(--hit-at) - 60ms); }
+    .skfx-over--slash i:not(:first-child) { display:none; }
+    @keyframes skfxSlash {
+      0% { opacity:0; transform:rotate(-18deg) scaleY(0); }
+      30% { opacity:1; transform:rotate(-18deg) scaleY(1.05); }
+      70% { opacity:1; transform:rotate(-18deg) scaleY(1) scaleX(.6); }
+      100% { opacity:0; transform:rotate(-18deg) scaleY(1) scaleX(.1); }
+    }
+    .skfx-over--aurora i { left:-70px; top:-95px; width:140px; height:150px; border-radius:50% / 30%; filter:blur(6px); mix-blend-mode:screen;
+      background:linear-gradient(to bottom,rgba(0,0,0,0),hsl(var(--ah,160) 90% 60% / .75) 40%,hsl(calc(var(--ah,160) + 40) 90% 60% / .5) 70%,rgba(0,0,0,0));
+      animation:skfxAurora var(--thm-ms) ease-in-out forwards; }
+    .skfx-over--aurora i:nth-child(2) { --ah:270; left:-95px; animation-delay:60ms; }
+    .skfx-over--aurora i:nth-child(3) { --ah:110; left:-45px; animation-delay:120ms; }
+    @keyframes skfxAurora {
+      0%,20% { opacity:0; transform:translateY(-30px) skewX(0deg) scaleY(.4); }
+      45% { opacity:.9; transform:translateY(0) skewX(-14deg) scaleY(1); }
+      62% { opacity:.9; transform:translateY(0) skewX(12deg) scaleY(1.05); }
+      80% { opacity:.75; transform:translateY(4px) skewX(-8deg) scaleY(1); }
+      100% { opacity:0; transform:translateY(10px) skewX(0deg) scaleY(1.1); }
+    }
+    .skfx-over--shadow i { left:-10px; top:-50px; width:20px; height:70px; border-radius:50% 50% 20% 20%; transform-origin:50% 100%;
+      background:linear-gradient(to top,rgba(46,16,101,0),#4c1d95 40%,#1e1b4b); box-shadow:0 0 12px #6d28d9;
+      animation:skfxShadowHand 380ms ease-out forwards; animation-delay:calc(var(--hit-at) - 180ms); }
+    .skfx-over--shadow i:nth-child(1) { translate:-26px 10px; rotate:-18deg; }
+    .skfx-over--shadow i:nth-child(2) { translate:0 20px; animation-delay:calc(var(--hit-at) - 140ms); }
+    .skfx-over--shadow i:nth-child(3) { translate:26px 10px; rotate:18deg; animation-delay:calc(var(--hit-at) - 100ms); }
+    @keyframes skfxShadowHand {
+      0% { opacity:0; transform:scaleY(0); }
+      40% { opacity:.95; transform:scaleY(1.1); }
+      70% { opacity:.9; transform:scaleY(1); }
+      100% { opacity:0; transform:scaleY(.3); }
+    }
+
     /* 動きを減らす設定: 本体は光るだけ、飛ぶもの・線は出さず、着弾の光だけ */
     @media (prefers-reduced-motion: reduce) {
       .thm-atk__monster { animation:thmReduced var(--thm-ms,450ms) ease-out forwards !important; }
-      .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit { display:none; }
+      .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit, .skfx-over { display:none; }
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
     }
     /* ==== タクティクスのEXスキルを使った瞬間のカットイン(24-battle-fx.jsx の TacticsExCutin・1600ms) ====

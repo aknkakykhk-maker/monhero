@@ -80,7 +80,8 @@ const checks = [
     (game.includes("monsterImageDebugMotionPlaying?.motion==='miaSongNotes'")
       && game.includes("atkMotion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS")
       && game.includes("atkMotion==='miaSongNotes')?'overflow-visible'"))
-    || (game.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id):attackMotionPreviewSequence(atkMotion, mon?.id);")
+    // 2026-09-29 から技の名前(skillName)も渡す(技ごとに動きが違う種族のため)。ミーアは技名を使わない
+    || (game.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id, skillName):attackMotionPreviewSequence(atkMotion, mon?.id, skillName);")
       && (game.match(/\(motion==='miaSongNotes'\?MIA_SONG_NOTES_MOTION_MS:/g) || []).length >= 2)],
   ['演出のコンポーネントは1つだけ(図鑑用の別物を作っていない)',
     (game.match(/const MiaSongNotesMotion = /g) || []).length === 1],

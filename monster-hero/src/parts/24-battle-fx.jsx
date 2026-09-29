@@ -88,9 +88,10 @@ const ATTACK_TARGET_SLASHES = Object.freeze({
 // 見た目だけを、攻撃する子の種族で選ぶ。種族→型の表(DEFAULT_ATTACK_THEMES)と型ごとの尺(THEMED_ATTACK_MS)は、
 // 本番バトルの待ち時間と図鑑のプレビューも使うので 23-rpg-debug.jsx に置いてある。
 // 新しいモンスターを 'default' で足すときは、そこへ1行足せば型を選べる(足さなければ今までどおり体当たり)。
+// 技ごとに動きを変える種族(ユグドラシル種)は、anim.skillName から型を選ぶ(23-rpg-debug.jsx の SKILL_ATTACK_THEMES)
 const themedAttackKindOf = (anim, baseId) => (
   anim && anim.charge !== true && !anim.zanCombo && !anim.twinBlade && (!anim.motion || anim.motion === 'default')
-    ? (DEFAULT_ATTACK_THEMES[baseId] || null) : null
+    ? (skillAttackThemeOf(baseId, anim.skillName, anim.charge === false) || DEFAULT_ATTACK_THEMES[baseId] || null) : null
 );
 // 飛ぶもの・着弾の小片。x/y は敵の位置からのずれ、d はずらす時間(ms)、a は向き(deg)、s は大きさの倍率。
 // hit2 は2回目の着弾(モッチーのモッチ砲)。型ごとの尺は 23-rpg-debug.jsx の THEMED_ATTACK_MS
@@ -119,7 +120,114 @@ const THEMED_ATTACK_LINE_KINDS = Object.freeze(['beam','vine','stomp','fire','cl
 const ThemedAttackBits = ({list}) => (list||[]).map((b,i)=>(
   <i key={i} className="thm-atk__bit" style={{'--bx':`${b.x||0}px`,'--by':`${b.y||0}px`,'--ba':`${b.a||0}deg`,'--bs':b.s||1,...(b.d!=null?{animationDelay:`${b.d}ms`}:{})}}/>
 ));
+// ==== ユグドラシル種の技ごとの動き(2026-09-29 ユーザー指示「これにあった技モーション作って」) ====
+// 技の名前 → 型は 23-rpg-debug.jsx の SKILL_ATTACK_THEMES、尺は THEMED_ATTACK_MS。ここは見た目の組み合わせ表。
+//   body  : 本体の動き(.skfx-body--◯◯)。bash 突進 / dive 跳んで頭から落ちる / roll 転がる / flip 宙返りして落ちる /
+//           toss 投げる / cast その場で力をためて放つ / slash 突進して斬る
+//   line  : 本体から敵へのびる帯(beam 光線 / tongue 舌 / arc 光の弧)
+//   fx    : 飛ぶもの。path は shot まっすぐ / lob 山なり / fall 敵の上から降る / rise 敵の足元から噴き上がる /
+//           orbit 本体のまわりを回ってから敵へ。shape は形(.skfx-p--◯◯)。items の x,y はずれ(px)、d は遅れ(ms)、
+//           s は大きさ、h は色相(果物・蝶・飴の色)
+//   over  : 敵に重ねる大きな絵(slash 縦の斬撃 / aurora オーロラの幕 / shadow 影の手)
+//   hit   : 着弾の時刻(ms)。hit2 は2回目。c1/c2 は光の色
+const SKFX_RING = (n, r, d0, dStep, extra={}) => Array.from({length:n}, (_, i) => {
+  const a = (Math.PI * 2 * i) / n;
+  return { x:Math.round(Math.cos(a) * r), y:Math.round(Math.sin(a) * r), d:d0 + i * dStep, ...extra };
+});
+const SKFX_SPREAD = (n, w, d0, dStep, extra={}) => Array.from({length:n}, (_, i) => ({
+  x:Math.round(((i + .5) / n - .5) * w + ((i * 37) % 11) - 5), y:((i * 23) % 17) - 8, d:d0 + ((i * 7) % n) * dStep, ...extra,
+}));
+const SKILL_FX_SPECS = Object.freeze({
+  // --- 通常技(ちから) ---
+  ygHeadbutt:  { body:'bash', hit:250, c1:'#fef9c3', c2:'#facc15',
+                 bits:[{x:-26,y:-18},{x:24,y:-22},{x:-30,y:12},{x:30,y:10},{x:0,y:-32}], burst:'star' },
+  ygAirDive:   { body:'dive', hit:470, c1:'#ffedd5', c2:'#fb923c',
+                 bits:[{x:-40,y:6},{x:-26,y:-24},{x:0,y:-34},{x:26,y:-24},{x:40,y:6},{x:-18,y:20},{x:18,y:20}], burst:'star' },
+  ygGreenLight:{ body:'cast', line:'beam', hit:210, c1:'#dcfce7', c2:'#4ade80',
+                 bits:[{x:-24,y:-16},{x:22,y:-20},{x:-18,y:18},{x:22,y:14}] },
+  ygTongue:    { body:'lick', line:'tongue', hit:270, c1:'#fce7f3', c2:'#f472b6',
+                 bits:[{x:-20,y:-14,s:1.2},{x:18,y:-18},{x:0,y:16}], burst:'heart' },
+  ygRoll:      { body:'roll', hit:400, c1:'#fef3c7', c2:'#d97706',
+                 bits:[{x:-44,y:10,s:1.3},{x:-30,y:-20},{x:0,y:-30,s:1.2},{x:30,y:-20},{x:44,y:10,s:1.3},{x:0,y:22}], burst:'dust' },
+  ygMoonDrop:  { body:'flip', hit:540, c1:'#e0f2fe', c2:'#38bdf8',
+                 fx:{ path:'rise', shape:'water', dur:270, items:SKFX_SPREAD(10, 120, 520, 5) },
+                 bits:[{x:-36,y:-10},{x:36,y:-10},{x:-20,y:-30},{x:20,y:-30}] },
+  ygCandy:     { body:'toss', hit:460, c1:'#fdf4ff', c2:'#e879f9',
+                 fx:{ path:'lob', shape:'candy', dur:300, items:[{x:-10,y:0,d:160,h:330},{x:8,y:-6,d:200,h:190},{x:-4,y:8,d:240,h:50},{x:12,y:4,d:280,h:120}] },
+                 bits:[{x:-34,y:-20,h:330},{x:30,y:-26,h:190},{x:-26,y:22,h:50},{x:30,y:18,h:120},{x:0,y:-36,h:270}], burst:'candy' },
+  ygStrawberry:{ body:'cast', hit:330, c1:'#ffe4e6', c2:'#f43f5e',
+                 fx:{ path:'rise', shape:'berry', dur:400, items:SKFX_SPREAD(9, 110, 290, 15) },
+                 bits:[{x:-30,y:-24},{x:28,y:-28},{x:-36,y:10},{x:36,y:8}] },
+  ygCakeCut:   { body:'slash', over:'slash', hit:330, c1:'#fff7ed', c2:'#fda4af',
+                 bits:[{x:-8,y:-40},{x:8,y:-20},{x:-8,y:0},{x:8,y:20},{x:-8,y:40}], burst:'cream' },
+  ygShadow:    { body:'cast', over:'shadow', hit:520, c1:'#ede9fe', c2:'#6d28d9',
+                 fx:{ path:'shot', shape:'ghost', dur:360, items:[{x:-30,y:-20,d:150},{x:24,y:-34,d:200},{x:-12,y:22,d:250},{x:30,y:10,d:300},{x:0,y:-8,d:350}] },
+                 bits:[{x:-30,y:-24},{x:30,y:-24},{x:-30,y:20},{x:30,y:20}] },
+  // --- 固有技(かしこさ) ---
+  ygStarBomb:  { body:'cast', hit:420, c1:'#fef9c3', c2:'#fde047',
+                 fx:{ path:'shot', shape:'star', dur:300, items:[{x:-14,y:-10,d:120},{x:12,y:-18,d:170},{x:0,y:8,d:220}] },
+                 bits:[{x:-30,y:-22},{x:28,y:-26},{x:-34,y:12},{x:32,y:14},{x:0,y:-36},{x:0,y:28}], burst:'star' },
+  ygWonderBlaze:{ body:'cast', hit:430, c1:'#ecfccb', c2:'#84cc16',
+                 fx:{ path:'shot', shape:'flame', dur:280, items:[{x:-8,y:-12,d:140},{x:10,y:0,d:180},{x:-4,y:12,d:220},{x:6,y:-6,d:260}] },
+                 bits:[{x:-24,y:-24},{x:24,y:-24},{x:-26,y:16},{x:26,y:16}] },
+  ygManyWing:  { body:'cast', hit:560, c1:'#f0fdf4', c2:'#22c55e',
+                 fx:{ path:'orbit', shape:'leaf', dur:460, items:SKFX_RING(8, 34, 80, 18) },
+                 bits:[{x:-26,y:-18},{x:26,y:-18},{x:-20,y:20},{x:20,y:20},{x:0,y:-30}], burst:'leaf' },
+  ygRiceShower:{ body:'cast', hit:520, c1:'#fffbeb', c2:'#fde68a',
+                 fx:{ path:'fall', shape:'rice', dur:340, items:SKFX_SPREAD(26, 140, 200, 10) },
+                 bits:[{x:-22,y:-14},{x:22,y:-14},{x:0,y:18}], burst:'petal' },
+  ygMeteor:    { body:'cast', hit:470, hit2:640, c1:'#ffedd5', c2:'#f97316',
+                 fx:{ path:'fall', shape:'meteor', dur:280, items:[{x:-34,y:-6,d:190,s:1.1},{x:20,y:4,d:280,s:1.4},{x:-6,y:10,d:360,s:1.8}] },
+                 bits:[{x:-40,y:-20,s:1.2},{x:36,y:-26},{x:-30,y:18},{x:38,y:16,s:1.2},{x:0,y:-40}] },
+  ygPapillon:  { body:'cast', hit:620, c1:'#e0e7ff', c2:'#818cf8',
+                 fx:{ path:'orbit', shape:'butterfly', dur:520, items:SKFX_RING(6, 40, 60, 30, {}).map((b, i) => ({...b, h:220 + i * 22})) },
+                 bits:[{x:-30,y:-20,h:230},{x:30,y:-20,h:270},{x:-28,y:18,h:300},{x:28,y:18,h:250}], burst:'butterfly' },
+  ygHeavyRain: { body:'cast', hit:440, c1:'#dbeafe', c2:'#3b82f6',
+                 fx:{ path:'fall', shape:'drop', dur:220, items:SKFX_SPREAD(30, 150, 160, 16) },
+                 bits:[{x:-30,y:14},{x:-10,y:20},{x:10,y:20},{x:30,y:14}], burst:'water' },
+  ygEternalArc:{ body:'cast', line:'arc', hit:330, hit2:520, c1:'#fef3c7', c2:'#f59e0b',
+                 bits:[{x:-36,y:-10},{x:36,y:-10},{x:-24,y:-30},{x:24,y:-30},{x:0,y:30}] },
+  ygAurora:    { body:'cast', over:'aurora', hit:600, c1:'#ccfbf1', c2:'#2dd4bf',
+                 bits:[{x:-30,y:-24,h:160},{x:30,y:-24,h:200},{x:-30,y:20,h:280},{x:30,y:20,h:120}], burst:'fruit' },
+  ygCosmo:     { body:'cast', hit:700, c1:'#fae8ff', c2:'#c084fc',
+                 fx:{ path:'orbit', shape:'fruit', dur:560, items:SKFX_RING(7, 38, 60, 26, {}).map((b, i) => ({...b, h:[0,40,90,140,200,270,320][i], s:1.1})) },
+                 bits:[{x:-44,y:-20,h:0},{x:42,y:-24,h:90},{x:-38,y:22,h:200},{x:40,y:18,h:270},{x:0,y:-44,h:40},{x:0,y:36,h:140}], burst:'fruit' },
+});
+const SkillFxMotion = ({kind, image, lunge=false}) => {
+  const spec = SKILL_FX_SPECS[kind];
+  const ms = THEMED_ATTACK_MS[kind] || 600;
+  // 光のふちは c2 を透明にした色へ消す(透明な黒へ消すと、ふちが灰色に濁った)
+  const hex = String(spec.c2).replace('#', '');
+  const c3 = hex.length === 6 ? `rgba(${parseInt(hex.slice(0, 2), 16)},${parseInt(hex.slice(2, 4), 16)},${parseInt(hex.slice(4, 6), 16)},0)` : 'rgba(255,255,255,0)';
+  const vars = { '--thm-ms':`${ms}ms`, '--hit-at':`${spec.hit}ms`, '--c1':spec.c1, '--c2':spec.c2, '--c3':c3 };
+  if (spec.hit2) vars['--hit-at2'] = `${spec.hit2}ms`;
+  const fx = spec.fx;
+  return (
+    <span className={`thm-atk skfx skfx--${kind} skfx-body--${spec.body}${lunge?' thm-atk--lunge':''}`} style={vars} data-skill-fx={kind}>
+      <span className="thm-atk__monster">{image}</span>
+      {spec.line&&<span className={`thm-atk__line skfx-line skfx-line--${spec.line}`} aria-hidden="true"><i/></span>}
+      {fx&&<span className="thm-atk__flys skfx-layer" aria-hidden="true">{fx.items.map((b, i) => (
+        <i key={i} className={`skfx-p skfx-p--${fx.shape} skfx-path--${fx.path}`}
+          style={{'--px':`${b.x||0}px`,'--py':`${b.y||0}px`,'--ps':b.s||1,'--ph':b.h??0,animationDelay:`${b.d||0}ms`,animationDuration:`${fx.dur}ms`}}/>
+      ))}</span>}
+      {spec.over&&<span className={`thm-atk__hit skfx-over skfx-over--${spec.over}`} aria-hidden="true"><i/><i/><i/></span>}
+      <span className="thm-atk__hit" aria-hidden="true">
+        <i className="thm-atk__core"/>
+        <i className="thm-atk__ring"/>
+        {(spec.bits||[]).map((b, i) => (
+          <i key={i} className={`thm-atk__bit${spec.burst?` skfx-bit skfx-p--${spec.burst}`:''}`}
+            style={{'--bx':`${b.x||0}px`,'--by':`${b.y||0}px`,'--bs':b.s||1,'--ph':b.h??0}}/>
+        ))}
+      </span>
+      {spec.hit2&&<span className="thm-atk__hit thm-atk__hit--2" aria-hidden="true">
+        <i className="thm-atk__core"/>
+        <i className="thm-atk__ring"/>
+      </span>}
+    </span>
+  );
+};
 const ThemedAttackMotion = ({kind, image, lunge=false}) => {
+  if (SKILL_FX_SPECS[kind]) return <SkillFxMotion kind={kind} image={image} lunge={lunge}/>;
   const bits = THEMED_ATTACK_BITS[kind] || {};
   const ms = THEMED_ATTACK_MS[kind];
   const px = (v) => `${v || 0}px`;
