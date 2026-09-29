@@ -4,7 +4,7 @@
  "trackId": "crossing_field",
  "difficulty": "NORMAL",
  "candidateVersion": 3,
- "chartRevision": 21,
+ "chartRevision": 22,
  "laneCount": 6,
  "develop": {
   "bars": [],
@@ -121,13 +121,13 @@
   }
  },
  "level": 3,
- "noteCount": 190,
+ "noteCount": 186,
  "typeCounts": {
-  "TAP": 172,
-  "HOLD": 9,
+  "TAP": 167,
+  "HOLD": 10,
   "FLICK": 9
  },
- "densityPerSecond": 2.27,
+ "densityPerSecond": 2.3,
  "shapes": [
   {
    "fromGrid": 24,
@@ -3090,54 +3090,16 @@
    "sourceCharacter": "BODY"
   },
   {
-   "type": "TAP",
+   "type": "HOLD",
    "grid": 990,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 4,
+   "lane": 0,
+   "subLane": 0,
+   "subLaneWidth": 12,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -7.5,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 992,
-   "lane": 4,
-   "subLane": 8,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.25,
-   "sourcePeakOffsetMs": -7.13,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 1006,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.19,
-   "sourcePeakOffsetMs": -20.51,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 1020,
-   "lane": 4,
-   "subLane": 8,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.16,
-   "sourcePeakOffsetMs": -1.89,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 1024,
-   "lane": 4,
-   "subLane": 8,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.09,
-   "sourcePeakOffsetMs": 14.86,
-   "sourceCharacter": "PUNCH"
+   "sourceCharacter": "PUNCH",
+   "durationGrids": 32,
+   "endingHold": true
   }
  ],
  "splice": {
@@ -3163,8 +3125,8 @@
    "reach": 0,
    "hardJumps": 0,
    "overSteps": 0,
-   "spread": 41,
-   "cost": 41
+   "spread": 39,
+   "cost": 39
   },
   "after": {
    "impossible": 0,
@@ -3172,8 +3134,8 @@
    "reach": 0,
    "hardJumps": 0,
    "overSteps": 0,
-   "spread": 41,
-   "cost": 41
+   "spread": 39,
+   "cost": 39
   },
   "weights": {
    "impossible": 10000,

@@ -4,7 +4,7 @@
  "trackId": "eiki_boss_remix",
  "difficulty": "NORMAL",
  "candidateVersion": 3,
- "chartRevision": 21,
+ "chartRevision": 22,
  "laneCount": 6,
  "develop": {
   "bars": [
@@ -143,11 +143,11 @@
  "level": 3,
  "noteCount": 373,
  "typeCounts": {
-  "TAP": 327,
+  "TAP": 326,
   "FLICK": 23,
-  "HOLD": 23
+  "HOLD": 24
  },
- "densityPerSecond": 1.75,
+ "densityPerSecond": 1.76,
  "shapes": [
   {
    "fromGrid": 20,
@@ -6468,14 +6468,16 @@
    "sourceCharacter": "FULL"
   },
   {
-   "type": "TAP",
-   "grid": 2210,
-   "lane": 1,
-   "subLane": 3,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.19,
-   "sourcePeakOffsetMs": -23.29,
-   "sourceCharacter": "PUNCH"
+   "type": "HOLD",
+   "grid": 2198,
+   "subLane": 0,
+   "subLaneWidth": 12,
+   "sourceStrength": 1,
+   "sourcePeakOffsetMs": -7.7,
+   "sourceCharacter": "FULL",
+   "lane": 0,
+   "durationGrids": 16,
+   "endingHold": true
   }
  ],
  "splice": {

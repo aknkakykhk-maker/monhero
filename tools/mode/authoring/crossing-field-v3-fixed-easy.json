@@ -4,7 +4,7 @@
  "trackId": "crossing_field",
  "difficulty": "EASY",
  "candidateVersion": "v3",
- "chartRevision": 21,
+ "chartRevision": 22,
  "laneCount": 6,
  "develop": {
   "bars": [],
@@ -119,12 +119,12 @@
   }
  },
  "level": 1,
- "noteCount": 164,
+ "noteCount": 160,
  "typeCounts": {
-  "TAP": 156,
-  "HOLD": 8
+  "TAP": 151,
+  "HOLD": 9
  },
- "densityPerSecond": 1.96,
+ "densityPerSecond": 1.98,
  "shapes": [
   {
    "fromGrid": 24,
@@ -2773,54 +2773,16 @@
    "sourceCharacter": "PUNCH"
   },
   {
-   "type": "TAP",
+   "type": "HOLD",
    "grid": 990,
-   "lane": 2,
-   "subLane": 5,
-   "subLaneWidth": 4,
+   "lane": 0,
+   "subLane": 0,
+   "subLaneWidth": 12,
    "sourceStrength": 1,
    "sourcePeakOffsetMs": -7.5,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 992,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.25,
-   "sourcePeakOffsetMs": -7.13,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 1006,
-   "lane": 4,
-   "subLane": 8,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.19,
-   "sourcePeakOffsetMs": -20.51,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 1020,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.16,
-   "sourcePeakOffsetMs": -1.89,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 1024,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.09,
-   "sourcePeakOffsetMs": 14.86,
-   "sourceCharacter": "PUNCH"
+   "sourceCharacter": "PUNCH",
+   "durationGrids": 32,
+   "endingHold": true
   }
  ],
  "splice": {

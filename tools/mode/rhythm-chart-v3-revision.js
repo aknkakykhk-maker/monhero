@@ -87,7 +87,10 @@
 //   21 … テンポの揺れに合わせる(2026-09-29・rhythm-chart-tempo-warp.js)。4小節ごとの強い打点の格子からのずれがなめらかに動き、
 //        半分の区間から測った揺れが残りの半分にも当てはまる曲だけ、打点から揺れを引いて格子に乗せ、書き出す時刻に揺れを足す。
 //        当たるのは SIX ÉTERNEL Remix(ビート版)と The City Beneath the Comets。ほかの曲は Rev.20 と同じ譜面
-//   22〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   22 … 曲の終わりの余韻(2026-09-29・rhythm-chart-ending.js・ユーザー指摘「音がなくなろうとしてる終盤でノーツが続いてるのが違和感」)。
+//        最後の一発のあと鳴り残る音が消えていく曲では、最後の一発より後にノーツを置かず、最後の一発を太い長押しにして締める。
+//        当たるのは ビッグブリッヂの死闘・crossing field・もう一つの世界へ・綺季一閃 battle remix。ほかの曲は Rev.21 と同じ譜面
+//   23〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)・重みの最新・調整値の最新のいちばん大きいもの＋1」を次の番号にする
@@ -98,7 +101,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=21;
+const CHART_REVISION_CODE_LATEST=22;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');
