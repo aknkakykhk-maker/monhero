@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b708fb88bc02c119
+// source-sha256: 4d5b823976fba6fb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-29 05:09";
+const BUILD_DATE = "2026-09-29 21:11";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -26252,6 +26252,7 @@ const RhythmTapTest = ({
         return;
       }
       if (!target) {
+        if (!input.rejudge) RHYTHM_PERF.emptyTap();
         RHYTHM_NOTE_SE_RUNTIME.playEmpty();
         if (input.captureTarget && input.pointerId !== undefined) {
           try {
@@ -26293,6 +26294,7 @@ const RhythmTapTest = ({
     const run = runRef.current,
       state = run?.inputFeedbackState?.get(inputKey);
     if (!state || !Number.isFinite(subLaneCoordinate)) return;
+    if (Math.abs(subLaneCoordinate - state.subLaneCoordinate) >= 3) RHYTHM_PERF.touchJump();
     if (Math.abs(subLaneCoordinate - state.subLaneCoordinate) < RHYTHM_TAP_REJUDGE_MOVE_SUBLANES) return;
     const subLane = Math.max(0, Math.min(RHYTHM_SUB_LANE_COUNT - 1, Math.floor(subLaneCoordinate)));
     if (subLane === state.subLane) return;
@@ -26372,6 +26374,43 @@ const RhythmTapTest = ({
       el.style.opacity = pressed ? glowOpacity : '0';
     });
   };
+  useEffect(() => {
+    if (typeof document === 'undefined' || view.status === 'result' || view.status === 'celebrate') return undefined;
+    const playing = () => {
+      const run = runRef.current;
+      return !!run && !run.finished && !run.paused;
+    };
+    const blockTouch = e => {
+      if (!playing()) return;
+      const area = playAreaRef.current,
+        target = e.target;
+      if (area && target && typeof area.contains === 'function' && area.contains(target)) return;
+      if (e.type === 'touchstart') RHYTHM_PERF.touchOutside();
+      if (target && typeof target.closest === 'function' && target.closest('button,a,input,select,textarea,label,[role="button"]')) return;
+      if (e.cancelable) e.preventDefault();
+    };
+    const blockGesture = e => {
+      if (!playing()) return;
+      RHYTHM_PERF.touchGesture();
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+    };
+    const touchTypes = ['touchstart', 'touchmove'],
+      gestureTypes = ['gesturestart', 'gesturechange'];
+    touchTypes.forEach(type => document.addEventListener(type, blockTouch, {
+      passive: false
+    }));
+    gestureTypes.forEach(type => document.addEventListener(type, blockGesture, {
+      passive: false
+    }));
+    return () => {
+      touchTypes.forEach(type => document.removeEventListener(type, blockTouch, {
+        passive: false
+      }));
+      gestureTypes.forEach(type => document.removeEventListener(type, blockGesture, {
+        passive: false
+      }));
+    };
+  }, [view.status]);
   const pointerDown = e => {
     if (e.pointerType === 'touch') return;
     e.preventDefault();
@@ -26430,6 +26469,7 @@ const RhythmTapTest = ({
       if (e.cancelable) e.preventDefault();
       const current = runRef.current;
       if (!current || current.finished || current.paused) return;
+      if (e.type === 'touchcancel') RHYTHM_PERF.touchCancel(e.changedTouches?.length || 0);else if (e.type === 'touchstart') RHYTHM_PERF.touchStart(e.touches?.length || 0);
       current.activeTouchInputs = current.activeTouchInputs || new Set();
       const rect = inputAreaRect(area),
         live = new Set(),
@@ -65003,7 +65043,7 @@ function MonsterHeroGame() {
     }, "記録をクリア")), rhythmPerfStats && React.createElement("dl", {
       "data-rhythm-perf-stats": true,
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
-    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ...[['GPU(ノーツ)', rhythmPerfStats.gpuNotes], ['GPU(背景)', rhythmPerfStats.gpuStage]].map(([label, g]) => [label, !g || g.supported === null ? '—' : g.supported === false ? 'この端末は測れない' : g.count ? `平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms` : 'まだ届いていない']), ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['50ms以上（自動調整が重いと数える）', rhythmPerfStats.over50 ?? 0], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`], ['曲の時刻の進み/frame', `${(rhythmPerfStats.songStepMsPerFrame ?? 0).toFixed(2)}ms`], ['曲の時刻が進まないframe', `${((rhythmPerfStats.songStallRate ?? 0) * 100).toFixed(1)}%`], ['曲の時刻の最大の飛び', `${(rhythmPerfStats.songStepMaxMs ?? 0).toFixed(1)}ms`], ['ノーツを取る処理/回', `${(rhythmPerfStats.judgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.judgeCount ?? 0}回）`], ['取る処理の最大', `${(rhythmPerfStats.judgeMsMax ?? 0).toFixed(1)}ms`], ['モンスターノーツ/回', `${(rhythmPerfStats.monsterJudgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount ?? 0}回）`], ['モンスターノーツの最大', `${(rhythmPerfStats.monsterJudgeMsMax ?? 0).toFixed(1)}ms`]].map(([label, value]) => React.createElement(React.Fragment, {
+    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ...[['GPU(ノーツ)', rhythmPerfStats.gpuNotes], ['GPU(背景)', rhythmPerfStats.gpuStage]].map(([label, g]) => [label, !g || g.supported === null ? '—' : g.supported === false ? 'この端末は測れない' : g.count ? `平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms` : 'まだ届いていない']), ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['50ms以上（自動調整が重いと数える）', rhythmPerfStats.over50 ?? 0], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`], ['曲の時刻の進み/frame', `${(rhythmPerfStats.songStepMsPerFrame ?? 0).toFixed(2)}ms`], ['曲の時刻が進まないframe', `${((rhythmPerfStats.songStallRate ?? 0) * 100).toFixed(1)}%`], ['曲の時刻の最大の飛び', `${(rhythmPerfStats.songStepMaxMs ?? 0).toFixed(1)}ms`], ['ノーツを取る処理/回', `${(rhythmPerfStats.judgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.judgeCount ?? 0}回）`], ['取る処理の最大', `${(rhythmPerfStats.judgeMsMax ?? 0).toFixed(1)}ms`], ['モンスターノーツ/回', `${(rhythmPerfStats.monsterJudgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount ?? 0}回）`], ['モンスターノーツの最大', `${(rhythmPerfStats.monsterJudgeMsMax ?? 0).toFixed(1)}ms`], ['指が触れた数（同時の最大）', `${rhythmPerfStats.touch?.starts ?? 0}回（${rhythmPerfStats.touch?.maxTouches ?? 0}本）`], ['端末に指を取り消された', `${rhythmPerfStats.touch?.cancels ?? 0}回（${rhythmPerfStats.touch?.cancelledTouches ?? 0}本）`], ['演奏エリアの外に触れた', `${rhythmPerfStats.touch?.outside ?? 0}回`], ['二本指ジェスチャー', `${rhythmPerfStats.touch?.gestures ?? 0}回`], ['空打ち', `${rhythmPerfStats.touch?.emptyTaps ?? 0}回`], ['指の飛び（3サブレーン以上）', `${rhythmPerfStats.touch?.jumps ?? 0}回`]].map(([label, value]) => React.createElement(React.Fragment, {
       key: label
     }, React.createElement("dt", {
       className: "text-slate-400"
