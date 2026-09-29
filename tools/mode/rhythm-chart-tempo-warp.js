@@ -24,17 +24,26 @@
 // パイプラインは書き出すノーツの時刻に揺れを足す。仮想プレイヤーも同じ時刻で遊ぶ。
 'use strict';
 const fs=require('fs'),path=require('path');
+const {lowLagOf}=require('./rhythm-chart-low-lag.js');
 
 const WARP_REVISION=21;
+// Rev.23: 読み方の v2(細かい区間・低音の遅れが小さい曲は低音も使う・動かす所だけで確かめる・残りのずれを格子で折り返す・揺れの上限)。
+// v2 で当たらない曲は Rev.21 の読み方のまま(Rev.21 で揺れに合わせていた曲が外れないように)
+const WARP_V2_REVISION=23;
 const WARP_BARS=4,WARP_MIN_ONSETS=8,WARP_MIN_R=.6,WARP_MIN_WINDOWS=6,WARP_MAX_STEP_MS=8,WARP_MAX_JUMP_MS=20,WARP_MIN_RANGE_MS=20;
 // 半分の区間から測った揺れで、残りの半分の打点のずれのばらつき(中央値からの差の中央値)がこの割合以下に減ること
 const WARP_HOLDOUT_RATIO=.9;
+// Rev.21 の設定(公開中の曲はこれで作ったので変えない)
+const WARP_V1=Object.freeze({bars:WARP_BARS,minOnsets:WARP_MIN_ONSETS,minWindows:WARP_MIN_WINDOWS,maxStep:WARP_MAX_STEP_MS,maxJump:WARP_MAX_JUMP_MS,wrapResidual:false});
+// Rev.23 の設定(下の WARP_V2_REVISION)。2小節ずつの細かい区間で見て、確かめの残りのずれを格子の間隔で折り返す
+let WARP_V2=Object.freeze({bars:2,minOnsets:5,minWindows:8,maxStep:8,maxJump:30,wrapResidual:true,moveMs:8,minHoldout:30,lowLagMaxMs:15,maxAbsRatio:.45});
 
 const round=(value,digits=1)=>Math.round(value*10**digits)/10**digits;
 const median=list=>{const sorted=[...list].sort((a,b)=>a-b);return sorted.length?sorted[sorted.length>>1]:0;};
 
 // options.force: なめらかさ・幅の条件を見ずに揺れを返す(検査で、半分の区間から測った揺れを残りの半分に当てて確かめるため)
 const tempoWarp=(audio,options={})=>{
+  const V=options.v2?WARP_V2:WARP_V1;
   const none=reason=>({active:false,reason,points:[],rangeMs:0,at:()=>0});
   const timing=audio&&audio.timing;
   if(!timing||!Array.isArray(audio.onsets))return none('解析が無い');
@@ -42,20 +51,24 @@ const tempoWarp=(audio,options={})=>{
   const bar=Number(timing.subdivisionsPerBeat)*Number(timing.beatsPerBar);
   if(!(gridMs>0)||!(bar>0))return none('格子が無い');
   const floor=median(audio.onsets.map(onset=>Number(onset.strength)||0));
+  // v2: 低音の遅れ(rhythm-chart-low-lag.js・低音と他の音の位相の差)が小さい曲は、低音の打点も揺れの材料にする。
+  //     ビッグブリッヂの死闘のイントロは強い打点のほとんどが低音で、低音を除くと小節に1〜2個しか残らなかった(遅れは -8.7ms)
+  const useLow=!!(options.v2&&V.lowLagMaxMs&&Math.abs(Number(lowLagOf(audio,{beatZeroMs:Number(timing.beatZeroMs)||0,gridMs}).detectedMs)||0)<=V.lowLagMaxMs);
+  const skipLow=onset=>!useLow&&onset.share&&onset.share.low>=.5;
   const windows=new Map();
   for(const onset of audio.onsets){
     const strength=Number(onset.strength)||0;
-    if(strength<floor||(onset.share&&onset.share.low>=.5))continue;
-    const index=Math.floor(onset.grid/bar/WARP_BARS);
+    if(strength<floor||skipLow(onset))continue;
+    const index=Math.floor(onset.grid/bar/V.bars);
     const phase=2*Math.PI*Number(onset.gridOffsetMs)/gridMs;
     const entry=windows.get(index)||{c:0,s:0,weight:0,count:0};
     entry.c+=strength*Math.cos(phase);entry.s+=strength*Math.sin(phase);entry.weight+=strength;entry.count++;
     windows.set(index,entry);
   }
   let rows=[...windows].sort((a,b)=>a[0]-b[0])
-    .filter(([,e])=>e.count>=WARP_MIN_ONSETS&&Math.hypot(e.c,e.s)/e.weight>=WARP_MIN_R)
-    .map(([index,e])=>({grid:(index+.5)*WARP_BARS*bar,ms:Math.atan2(e.s,e.c)*gridMs/2/Math.PI}));
-  if(rows.length<WARP_MIN_WINDOWS)return none(`ずれを測れる区間が${rows.length}個しか無い`);
+    .filter(([,e])=>e.count>=V.minOnsets&&Math.hypot(e.c,e.s)/e.weight>=WARP_MIN_R)
+    .map(([index,e])=>({grid:(index+.5)*V.bars*bar,ms:Math.atan2(e.s,e.c)*gridMs/2/Math.PI}));
+  if(rows.length<V.minWindows)return none(`ずれを測れる区間が${rows.length}個しか無い`);
   // 位相をほどく(格子の間隔の半分より大きく跳ねたら、1周ぶん戻す)
   for(let i=1;i<rows.length;i++){
     while(rows[i].ms-rows[i-1].ms>gridMs/2)rows[i].ms-=gridMs;
@@ -76,37 +89,52 @@ const tempoWarp=(audio,options={})=>{
     return a.ms+(b.ms-a.ms)*(grid-a.grid)/(b.grid-a.grid);
   };
   if(options.force)return {active:true,reason:'条件を見ない(検査用)',points,rangeMs,stepMs:round(step),at};
-  if(step>WARP_MAX_STEP_MS)return {...none(`区間ごとのずれが隣と関係なく跳ねる(隣との差の中央値 ${round(step)}ms)`),rangeMs};
+  if(step>V.maxStep)return {...none(`区間ごとのずれが隣と関係なく跳ねる(隣との差の中央値 ${round(step)}ms)`),rangeMs};
   const jump=Math.max(...steps);
-  if(jump>WARP_MAX_JUMP_MS)return {...none(`途中で段差のように跳ぶ(隣との差の最大 ${round(jump)}ms)`),rangeMs};
+  if(jump>V.maxJump)return {...none(`途中で段差のように跳ぶ(隣との差の最大 ${round(jump)}ms)`),rangeMs};
   if(rangeMs<WARP_MIN_RANGE_MS)return {...none(`揺れが小さい(幅 ${rangeMs}ms)`),rangeMs};
-  const holdout=holdoutSpread(audio,floor,bar);
-  if(!(holdout.after<=holdout.before*WARP_HOLDOUT_RATIO))
+  // v2: 揺れは格子の間隔の V.maxAbsRatio 倍まで。それより大きいのは、格子の乗り換えを重ねて作った間違った坂か、
+  //     曲全体のテンポの読み違い(揺れではない)。格子1つぶんずれても確かめの計算では同じに見えるので、ここで止める
+  //     (Monster Hero -Another- で -153ms まで下がる坂を作った。打点のずれは8小節ごとに ±16ms しかない)
+  const maxAbs=Math.max(...points.map(p=>Math.abs(p.ms)));
+  if(V.maxAbsRatio&&maxAbs>gridMs*V.maxAbsRatio)return {...none(`揺れが格子の間隔に比べて大きすぎる(最大 ${round(maxAbs)}ms・格子 ${round(gridMs)}ms)`),rangeMs};
+  const holdout=holdoutSpread(audio,floor,bar,V,gridMs,skipLow);
+  if(!(holdout.after<=holdout.before*WARP_HOLDOUT_RATIO)||(V.minHoldout&&holdout.count<V.minHoldout))
     return {...none(`半分の区間から測った揺れが、残りの半分に当てはまらない(ばらつき ${holdout.before}→${holdout.after}ms)`),rangeMs};
   return {active:true,reason:`なめらかに揺れている(幅 ${rangeMs}ms・隣との差の中央値 ${round(step)}ms・残りの半分のばらつき ${holdout.before}→${holdout.after}ms)`,
     points,rangeMs,stepMs:round(step),holdout,at};
 };
 
 // 8小節ずつ交互に半分へ分け、片方から測った揺れを残りの打点に当てたときのばらつき(当てる前・後)
-const holdoutSpread=(audio,floor,bar)=>{
+const holdoutSpread=(audio,floor,bar,V=WARP_V1,gridMs=0,skipLow=onset=>onset.share&&onset.share.low>=.5)=>{
   const spread=list=>{if(!list.length)return Infinity;const m=median(list);return round(median(list.map(x=>Math.abs(x-m))));};
-  const block=onset=>Math.floor(onset.grid/bar/(WARP_BARS*2))%2;
+  const block=onset=>Math.floor(onset.grid/bar/(V.bars*2))%2;
+  // v2: 残りのずれを格子の間隔で折り返す(揺れが格子の半分を越えて隣の格子へ乗り換えた打点を、正しく数える)
+  const wrap=value=>V.wrapResidual&&gridMs>0?((value%gridMs)+gridMs*1.5)%gridMs-gridMs/2:value;
   const before=[],after=[];
   for(const side of [0,1]){
-    const learned=tempoWarp({...audio,onsets:audio.onsets.filter(onset=>block(onset)===side)},{force:true});
+    const learned=tempoWarp({...audio,onsets:audio.onsets.filter(onset=>block(onset)===side)},{force:true,v2:V===WARP_V2});
     for(const onset of audio.onsets){
-      if(block(onset)===side||(Number(onset.strength)||0)<floor||(onset.share&&onset.share.low>=.5))continue;
-      before.push(Number(onset.gridOffsetMs));
-      after.push(Number(onset.gridOffsetMs)-(learned.active?learned.at(onset.grid):0));
+      if(block(onset)===side||(Number(onset.strength)||0)<floor||skipLow(onset))continue;
+      // v2: 揺れでノーツを動かす所(学んだ揺れが V.moveMs 以上)の打点だけで確かめる。揺れが曲の一部だけのとき、曲全体で平均すると効き目が薄まる
+      if(V.moveMs&&!(learned.active&&Math.abs(learned.at(onset.grid))>=V.moveMs))continue;
+      before.push(wrap(Number(onset.gridOffsetMs)));
+      after.push(wrap(Number(onset.gridOffsetMs)-(learned.active?learned.at(onset.grid):0)));
     }
   }
-  return {before:spread(before),after:spread(after)};
+  return {before:spread(before),after:spread(after),count:before.length};
 };
 
 // 譜面のリビジョンが Rev.21 以上のときだけ揺れを使う(それより前の譜面は0)
-const tempoWarpForChart=(chart,audio)=>Number(chart&&chart.chartRevision)>=WARP_REVISION?tempoWarp(audio):{active:false,at:()=>0,points:[]};
+const tempoWarpForRevision=(revision,audio)=>{
+  const rev=Number(revision)||0;
+  if(rev<WARP_REVISION)return {active:false,at:()=>0,points:[],reason:'Rev.21 より前'};
+  if(rev>=WARP_V2_REVISION){const v2=tempoWarp(audio,{v2:true});if(v2.active)return {...v2,version:2};}
+  return tempoWarp(audio);
+};
+const tempoWarpForChart=(chart,audio)=>tempoWarpForRevision(chart&&chart.chartRevision,audio);
 
-module.exports={WARP_REVISION,tempoWarp,tempoWarpForChart,WARP_MAX_STEP_MS,WARP_MIN_RANGE_MS};
+module.exports={WARP_REVISION,WARP_V2_REVISION,tempoWarp,tempoWarpForChart,tempoWarpForRevision,WARP_MAX_STEP_MS,WARP_MIN_RANGE_MS};
 
 if(require.main===module){
   const dir=path.join(__dirname,'authoring');
