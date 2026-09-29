@@ -33,10 +33,10 @@ vm.createContext(ctx);
 vm.runInContext(read('monster-hero/data/images/images-ally.js'), ctx);
 vm.runInContext(read('monster-hero/data/ally-monsters.js'), ctx);
 vm.runInContext(slice(rpg, 'const DEFAULT_ATTACK_THEMES =', 'const rpgMotionName =')
-  + '\nthis.__r = { SKILL_ATTACK_THEMES, SKILL_ATTACK_THEME_MONSTERS, SKILL_ATTACK_FALLBACK, THEMED_ATTACK_MS, skillAttackThemeOf };', ctx);
-vm.runInContext(slice(fx, 'const SKFX_RING =', 'const SkillFxMotion =') + '\nthis.__f = { SKILL_FX_SPECS };', ctx);
-const { SKILL_ATTACK_THEMES, SKILL_ATTACK_THEME_MONSTERS, SKILL_ATTACK_FALLBACK, THEMED_ATTACK_MS, skillAttackThemeOf } = ctx.__r;
-const { SKILL_FX_SPECS } = ctx.__f;
+  + '\nthis.__r = { SKILL_ATTACK_THEMES, SKILL_ATTACK_THEME_MONSTERS, SKILL_ATTACK_FALLBACK, THEMED_ATTACK_MS, skillAttackThemeOf, skillAttackMotionOf, themedAttackMotionMs };', ctx);
+vm.runInContext(slice(fx, 'const SKFX_RING =', 'const SkillFxMotion =') + '\nthis.__f = { SKILL_FX_SPECS, SKILL_MOTION_SETS, SKM_SIG, skillFxSpecOf };', ctx);
+const { SKILL_ATTACK_THEMES, SKILL_ATTACK_THEME_MONSTERS, SKILL_ATTACK_FALLBACK, THEMED_ATTACK_MS, skillAttackThemeOf, skillAttackMotionOf, themedAttackMotionMs } = ctx.__r;
+const { SKILL_FX_SPECS, SKILL_MOTION_SETS, SKM_SIG, skillFxSpecOf } = ctx.__f;
 const HERO_ATK_NAMES = vm.runInContext('HERO_ATK_NAMES', ctx);
 const ALL = vm.runInContext('ALL_PLAYER_MONSTERS', ctx);
 const DRAFTS = vm.runInContext('UPCOMING_MONSTER_DRAFTS', ctx);
@@ -52,24 +52,51 @@ for (const id of SKILL_ATTACK_THEME_MONSTERS) {
   check(`${id}: 技名が分からないときも動きがある(図鑑の攻撃アクション)`,
     skillAttackThemeOf(id, null, false) === SKILL_ATTACK_FALLBACK.normal && skillAttackThemeOf(id, null, true) === SKILL_ATTACK_FALLBACK.unique);
 }
-check('ほかの種族は技名で動きが変わらない(今までどおり種族の型)', skillAttackThemeOf('Mocchi', '頭突き', false) === null && skillAttackThemeOf('Plant', 'スターボム', true) === null);
+// ==== 全モンスター(2026-09-29 ユーザー指示「全モンスターも技別の攻撃アクション作って」「技ごとに全部別の動きにする」) ====
+// ユグドラシル種以外は、段階の順に通常技9つ・固有技9つの動きを持つ(SKILL_MOTION_SETS)。
+// 'sig' はその子の見せ場の動き(atkMotion・型)をそのまま使う段階。1体につき通常・固有それぞれ1つまで
+const others = Object.keys(ALL).filter(id => !SKILL_ATTACK_THEME_MONSTERS.includes(id));
+const noSet = others.filter(id => !SKILL_MOTION_SETS[id] || SKILL_MOTION_SETS[id].normal?.length !== 9 || SKILL_MOTION_SETS[id].unique?.length !== 9);
+check('ほかの全モンスターも通常技9つ・固有技9つの動きを持つ', noSet.length === 0, noSet.join('・') || `${others.length}体`);
+const tooManySig = others.filter(id => ['normal', 'unique'].some(k => (SKILL_MOTION_SETS[id]?.[k] || []).filter(sp => sp === SKM_SIG).length > 1));
+check('見せ場の動き(sig)は、通常・固有それぞれ1つまで', tooManySig.length === 0, tooManySig.join('・'));
+const specialIds = others.filter(id => ALL[id].atkMotion && ALL[id].atkMotion !== 'default');
+const noSig = specialIds.filter(id => !['normal', 'unique'].some(k => (SKILL_MOTION_SETS[id]?.[k] || []).includes(SKM_SIG)));
+check('専用の動きを持つ子は、見せ場の動きをどれか1つの技に残している', noSig.length === 0, noSig.join('・') || `${specialIds.length}体`);
+const wrongKind = [];
+for (const id of others) {
+  const normal = HERO_ATK_NAMES[id] || [], unique = ALL[id].unique?.names || [];
+  normal.forEach((n, i) => { const want = SKILL_MOTION_SETS[id].normal[i] === SKM_SIG ? null : `${id}-n${i}`; if (skillAttackThemeOf(id, n, false) !== want) wrongKind.push(`${id}:${n}`); });
+  unique.forEach((n, i) => { const want = SKILL_MOTION_SETS[id].unique[i] === SKM_SIG ? null : `${id}-u${i}`; if (skillAttackThemeOf(id, n, true) !== want) wrongKind.push(`${id}:${n}`); });
+}
+check('技の名前から、その段階の動きが選ばれる(見せ場の段階は元の動き)', wrongKind.length === 0, wrongKind.slice(0, 6).join('・'));
+check('継承した固有技は、覚えた子ではなく出自の子の動きで出る', skillAttackThemeOf('Golem', ALL.Pixie.unique.names[1], true) === 'Pixie-u1');
+check('技に動きがあれば見せ場の動きの代わりに型の動きで出す(ミーアのメロディレイ)', skillAttackMotionOf('Mia', 'miaSongNotes', HERO_ATK_NAMES.Mia[1], false) === 'default'
+  && skillAttackMotionOf('Mia', 'miaSongNotes', HERO_ATK_NAMES.Mia[0], false) === 'miaSongNotes');
+check('技名が無い攻撃(連撃・追撃など)は今までどおり', skillAttackThemeOf('Zan', '連撃', false) === null && skillAttackThemeOf('Mocchi', null, false) === null);
 
-const kinds = [...new Set(Object.values(SKILL_ATTACK_THEMES))];
-const noMs = kinds.filter(k => !(THEMED_ATTACK_MS[k] > 0));
-const noSpec = kinds.filter(k => !SKILL_FX_SPECS[k]);
-check('どの型も尺を持つ(THEMED_ATTACK_MS)', noMs.length === 0, noMs.join('・') || `${kinds.length}型`);
-check('どの型も見た目の組み合わせを持つ(SKILL_FX_SPECS)', noSpec.length === 0, noSpec.join('・') || `${kinds.length}型`);
-const late = kinds.filter(k => SKILL_FX_SPECS[k] && !(SKILL_FX_SPECS[k].hit < THEMED_ATTACK_MS[k] && (!SKILL_FX_SPECS[k].hit2 || SKILL_FX_SPECS[k].hit2 < THEMED_ATTACK_MS[k])));
+const generated = others.flatMap(id => ['normal', 'unique'].flatMap(k => SKILL_MOTION_SETS[id][k].map((sp, i) => (sp === SKM_SIG ? null : `${id}-${k === 'unique' ? 'u' : 'n'}${i}`)).filter(Boolean)));
+const kinds = [...new Set([...Object.values(SKILL_ATTACK_THEMES), ...generated])];
+const msOf = (k) => THEMED_ATTACK_MS[k] || skillFxSpecOf(k)?.ms;
+const noMs = kinds.filter(k => !(msOf(k) > 0));
+const noSpec = kinds.filter(k => !skillFxSpecOf(k));
+check('どの型も尺を持つ(THEMED_ATTACK_MS か組み合わせの ms)', noMs.length === 0, noMs.join('・') || `${kinds.length}型`);
+check('どの型も見た目の組み合わせを持つ(SKILL_FX_SPECS / SKILL_MOTION_SETS)', noSpec.length === 0, noSpec.join('・') || `${kinds.length}型`);
+check('本番の待ち時間は、組み合わせの尺と同じ(themedAttackMotionMs)', generated.every(k => { const [id, rest] = k.split('-'); const i = Number(rest.slice(1)); const unique = rest[0] === 'u';
+  const name = unique ? ALL[id].unique.names[i] : HERO_ATK_NAMES[id][i]; return themedAttackMotionMs(id, 'default', name, unique) === skillFxSpecOf(k).ms; }));
+const late = kinds.filter(k => { const sp = skillFxSpecOf(k); return sp && !(sp.hit < msOf(k) && (!sp.hit2 || sp.hit2 < msOf(k))); });
 check('着弾はどれも尺の中に収まる', late.length === 0, late.join('・'));
+const longOnes = generated.filter(k => skillFxSpecOf(k).ms > 1200);
+check('どの動きも1.2秒以内(ターンが長くなりすぎない)', longOnes.length === 0, longOnes.join('・'));
 // 飛ぶものが尺のうちに届き終わる(はみ出すと、次の動きに入ってから小片が飛ぶ)
 const overrun = kinds.filter(k => {
-  const f = SKILL_FX_SPECS[k]?.fx; if (!f) return false;
-  return f.items.some(b => (b.d || 0) + f.dur > THEMED_ATTACK_MS[k] + 20);
+  const f = skillFxSpecOf(k)?.fx; if (!f) return false;
+  return f.items.some(b => (b.d || 0) + f.dur > msOf(k) + 20);
 });
 check('飛ぶものは尺のうちに届き終わる', overrun.length === 0, overrun.join('・'));
 
 const has = (sel) => css.includes(sel);
-const specs = kinds.map(k => SKILL_FX_SPECS[k]).filter(Boolean);
+const specs = kinds.map(k => skillFxSpecOf(k)).filter(Boolean);
 const need = new Set();
 for (const s of specs) {
   need.add(`.skfx-body--${s.body} .thm-atk__monster`);
@@ -88,7 +115,7 @@ const fxPart = read('monster-hero/src/parts/24-battle-fx.jsx');
 const dexPart = read('monster-hero/src/parts/57-screen-monster-dex.jsx');
 check('技を選ぶ行は共通の部品で、技ごとに動きが違う子だけに出る',
   fxPart.includes('const skillMotionListsOf =') && fxPart.includes('const SkillMotionPicker =')
-  && fxPart.includes("!SKILL_ATTACK_THEME_MONSTERS.includes(mon.id)) return null;") && fxPart.includes('data-monster-check-skill-motion={name}'));
+  && fxPart.includes("(!SKILL_ATTACK_THEME_MONSTERS.includes(mon.id) && !hasSet)) return null;") && fxPart.includes('data-monster-check-skill-motion={name}'));
 check('デバッグの攻撃アクションで、技を1つずつ選んで再生できる',
   debugScreen.includes('skillMotionListsOf(mon, { draft: true })') && debugScreen.includes('onPlay={(kind, name) => onPlayPreview(mon, kind, atkMotion, name)}'));
 check('図鑑の攻撃アクションでも、技を1つずつ選んで再生できる',
@@ -136,7 +163,8 @@ check('図鑑の攻撃アクションでも、技を1つずつ選んで再生で
     await clickText('^ヘルプ$'); await page.waitForTimeout(900);
     await clickText('💊'); await page.waitForTimeout(1200);
     await clickSel('[data-debug-monster-check]'); await page.waitForTimeout(1500);
-    for (const id of SKILL_ATTACK_THEME_MONSTERS) {
+    // 実ブラウザは、ユグドラシル種と、見せ場の出し方が違う代表(型の子・歌・連撃・水)だけ見る(全22体だと数分かかる)
+    for (const id of [...SKILL_ATTACK_THEME_MONSTERS, 'Mocchi', 'Mia', 'Zan', 'Undine']) {
       await clickSel(`[data-monster-check-option="${id}"]`); await page.waitForTimeout(1200);
       for (let i = 0; i < 4; i++) { const c = await clickText('^確認$|^閉じる$'); await page.waitForTimeout(300); if (!c) break; }
       await clickSel('[data-monster-check-open-motion]'); await page.waitForTimeout(800);
@@ -145,8 +173,10 @@ check('図鑑の攻撃アクションでも、技を1つずつ選んで再生で
       const wrong = [];
       for (const name of names) {
         await page.evaluate((n) => { const b = document.querySelector(`[data-monster-check-skill-motion="${n}"]`); if (b) b.click(); }, name);
-        const shown = await page.waitForSelector('[data-skill-fx]', { timeout: 4000 }).then(h => h.getAttribute('data-skill-fx')).catch(() => null);
-        if (shown !== SKILL_ATTACK_THEMES[name]) wrong.push(`${name}→${shown}`);
+        const unique = !(HERO_ATK_NAMES[id] || []).includes(name);
+        const want = skillAttackThemeOf(id, name, unique);
+        const shown = await page.waitForSelector('[data-skill-fx]', { timeout: want ? 4000 : 1800 }).then(h => h.getAttribute('data-skill-fx')).catch(() => null);
+        if (shown !== want) wrong.push(`${name}→${shown}`);
         await page.waitForFunction(() => !document.querySelector('[data-skill-fx]') && !document.querySelector('[data-monster-check-skill-motion]:disabled'), { timeout: 8000 }).catch(() => {});
         await page.waitForTimeout(150);
       }
