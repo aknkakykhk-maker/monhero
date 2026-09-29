@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 00cf9827d2d715a8
+// generated-sha256: ad1e2e3a3f7e9b73
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-28 21:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-29 12:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -28236,7 +28236,8 @@ const monsterCheckImplRows = (mon) => {
   const id = mon.id;
   const bare = (url) => String(url || '').split('?')[0];
   const atkNames = (typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[id]) || [];
-  const uniqueNames = mon.unique?.names || [];
+  // 案の段階の子は固有技の中身(倍率・消費)がまだ無く、9段階名だけ draftUniqueNames に持っている
+  const uniqueNames = mon.unique?.names || mon.draftUniqueNames || [];
   const lineage = monsterLineageOf(id);
   const dexText = (typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS?.[id]) || '';
   const { disc, faceIcon } = monsterCheckMarketItems(mon);
@@ -28501,6 +28502,20 @@ function MonsterCheckDebugScreen({
         </div>
       )
   );
+  // 案の段階の子の技名だけの一覧(威力・消費はまだ決まっていないので出さない)
+  const draftNamePills = (names, accent) => (
+    <div data-monster-check-draft-skills className="grid grid-cols-2 gap-1.5">
+      {names.map((name, lvl) => (
+        <div key={lvl} className={`min-w-0 rounded-xl border px-2 py-1.5 ${accent}`}>
+          <div className="flex min-w-0 items-center justify-between gap-1.5">
+            <span className="min-w-0 truncate text-[10px] font-black text-white">{name}</span>
+            <span className="shrink-0 text-[8px] font-mono font-black text-amber-300">Lv.{lvl}</span>
+          </div>
+          <div className="mt-0.5 text-[8px] font-black text-slate-500">威力・消費は未設定</div>
+        </div>
+      ))}
+    </div>
+  );
   const skillPills = (list, accent) => (
     <div className="grid grid-cols-2 gap-1.5">
       {list.map(skill => (
@@ -28693,13 +28708,14 @@ function MonsterCheckDebugScreen({
               <div>
                 <div className="mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90">通常技</div>
                 {/* 技名が無いと getAtkSkillLevels はモッチーの技名を静かに出すので、無いときは「未設定」と出す */}
-                {(typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id]) ? skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')
+                {(typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id]) ? (mon.draft ? draftNamePills(HERO_ATK_NAMES[mon.id], 'border-red-500/30 bg-red-950/25') : skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25'))
                   : <div className="text-center text-[11px] font-bold text-rose-300">未設定</div>}
               </div>
               <div>
                 <div className="mb-1 text-center text-[9px] font-black tracking-widest text-emerald-300/90">固有技（進化段階）</div>
                 {/* 案の段階のモンスターは固有技がまだ無い(getUniqueSkillLevels は unique が無いと落ちる) */}
                 {mon.unique ? skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30')
+                  : mon.draftUniqueNames ? draftNamePills(mon.draftUniqueNames, 'border-amber-500/40 bg-amber-950/30')
                   : <div className="text-center text-[11px] font-bold text-rose-300">未設定</div>}
                 <div className="mt-1.5 break-words text-[10px] font-bold italic leading-relaxed text-slate-300">"{mon.unique?.effectDesc || ''}"</div>
               </div>
