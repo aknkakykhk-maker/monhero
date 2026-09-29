@@ -16626,7 +16626,7 @@ const onlyMyRailgunCharts=Object.freeze({
   EXPERT:mhChart(7,onlyMyRailgunExpertNotes,ONLY_MY_RAILGUN_DURATION_MS,6),
   MASTER:mhChart(9,onlyMyRailgunMasterNotes,ONLY_MY_RAILGUN_DURATION_MS,6),
 });
-const BIG_BRIDGE_NO_SHITOU_DURATION_MS=148320;
+const BIG_BRIDGE_NO_SHITOU_DURATION_MS=144612;
 const bigBridgeNoShitouEasyNotes=((t,h,f,s)=>[
 // <big-bridge-no-shitou-v3-easy-notes>
   h(2206,2,6,3557),t(5245,0,6,0),h(5414,2,6,5920),h(6595,5,4,7439),
