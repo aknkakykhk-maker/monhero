@@ -411,7 +411,17 @@ const RHYTHM_PERF=(()=>{
     gpu:{notes:{n:0,sum:0,max:0,supported:null},stage:{n:0,sum:0,max:0,supported:null}},
     // 画質「自動」・演出の自動調整が「重い」と数える線(50ms以上)を超えたフレームの数と、実際に自動で下げた記録(2026-09-27)。
     // 実機でどのくらいの重さのときに下がったかを読み、線(8%・50ms)を合わせるために使う
-    over50:0,autoSteps:[]});
+    over50:0,autoSteps:[],
+    // タッチの記録(2026-09-29・ユーザー報告「iPhoneだけだと思うんだけど両手操作で連続押しとかしてるときにたまにタップがきかなくなる」)。
+    // 実機でどれが起きているかを切り分けるために数える。
+    //   starts … 演奏エリアで指が触れた数 / maxTouches … 同時に触れていた指の最大数
+    //   cancels / cancelledTouches … 端末(OS・ブラウザ)に指を取り消された回数と、そのとき取り消された指の数。
+    //     ここが増えるなら「ブラウザがジェスチャーと見て指を取り上げた」
+    //   outside … 演奏中、演奏エリアの外(横持ちのノッチ・ホームバーの余白など)で指が触れた数
+    //   gestures … Safari が二本指のジェスチャー(gesturestart)を始めようとした回数
+    //   emptyTaps … 触れたが、取れるノーツが無かった(空打ち)数
+    //   jumps … 触れたままの指が1回で3サブレーン以上飛んだ数。離した指と置いた指を端末が1本とみなした疑い
+    touch:{starts:0,maxTouches:0,cancels:0,cancelledTouches:0,outside:0,gestures:0,emptyTaps:0,jumps:0}});
   let on=false,last=null,acc=zero();
   const api={
     get enabled(){return on;},
@@ -512,6 +522,12 @@ const RHYTHM_PERF=(()=>{
       acc.autoSteps.push({at:Math.round(Number(acc.lastSongMs)||0),kind:String(kind),label:String(label||''),slow:k,frames:n,
         fps:Math.round(n/3*10)/10});
     },
+    touchStart(liveCount){if(!on)return;acc.touch.starts++;const n=Number(liveCount)||0;if(n>acc.touch.maxTouches)acc.touch.maxTouches=n;},
+    touchCancel(count){if(!on)return;acc.touch.cancels++;acc.touch.cancelledTouches+=Number(count)||0;},
+    touchOutside(){if(on)acc.touch.outside++;},
+    touchGesture(){if(on)acc.touch.gestures++;},
+    emptyTap(){if(on)acc.touch.emptyTaps++;},
+    touchJump(){if(on)acc.touch.jumps++;},
     gestureFrame(){if(on)acc.gestureFrames++;},
     noteRescan(){if(on)acc.noteRescans++;},
     layoutRead(){if(on)acc.layoutReads++;},
@@ -558,6 +574,7 @@ const RHYTHM_PERF=(()=>{
         monsterJudgeCount:acc.monsterCount,
         spikes:acc.spikes.slice(),
         narrowed:acc.narrowed,
+        touch:{...acc.touch},
       };
     },
   };
