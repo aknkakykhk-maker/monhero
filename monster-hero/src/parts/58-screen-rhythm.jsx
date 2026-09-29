@@ -546,6 +546,7 @@ function RhythmRankingScreen({
   loadRhythmEventRanking, loadRhythmRanking, loadRhythmTotalRanking, onBackToSongSelect, onGoToSongSelect,
   rankingBreederIcon, rhythmEventDivision, rhythmEventRanking, rhythmRanking, rhythmRankingDetail,
   rhythmRankingTab, rhythmTotalRanking,
+  rhythmRankingPending=null, onResendRhythmRankingPending=null,
   setRhythmEventDivision, setRhythmRankingDetail, setRhythmRankingTab,
 }) {
       // イベント詳細(告知画像と報酬の表)を開いているか。
@@ -780,6 +781,17 @@ function RhythmRankingScreen({
               {tab.label}
             </button>
           ))}
+        </div>}
+        {/* 送れていない記録があるときだけ出す(2026-09-29・ユーザー報告「スコアがランキングに反映されない」)。
+            電波が弱くて送れなかった記録は端末に取ってあり、つながれば自動で送る。それが画面のどこにも出ていなかった。
+            ふだんは出ない。件数と、送れなかった理由（番号）を短く見せ、その場で送り直せるようにする */}
+        {rhythmRankingPending&&rhythmRankingPending.count>0&&<div data-rhythm-ranking-pending className="flex shrink-0 items-center gap-2 border-b border-amber-300/25 bg-amber-500/10 px-3 py-1.5">
+          <p className="min-w-0 flex-1 text-[10px] font-black leading-tight text-amber-100">
+            まだ届いていない記録が{rhythmRankingPending.count}件あります
+            <span className="block text-[9px] font-bold text-amber-200/70">つながると自動で送ります{rhythmRankingPending.status?`（エラー ${rhythmRankingPending.status}）`:'（通信がつながらなかったようです）'}</span>
+          </p>
+          <button type="button" data-rhythm-ranking-pending-send onClick={async()=>{if(onResendRhythmRankingPending)await onResendRhythmRankingPending();refresh();}}
+            className="min-h-[44px] shrink-0 rounded-lg border border-amber-300/50 bg-amber-500/20 px-3 text-[10px] font-black text-amber-50 active:scale-[.98]">いま送る</button>
         </div>}
         <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + var(--mh-sa-bottom))'}}>
           {/* ★ここには説明を置かない(2026-09-11・ユーザー指摘
