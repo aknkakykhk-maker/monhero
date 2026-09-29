@@ -227,6 +227,29 @@ node tools/where.js --text "monId==='Pixie'"      # 似た効果の子を探し�
 node tools/where.js --text "Eiki"                 # 専用演出を持つ子が、どこに何行あるか
 ```
 
+### 技ごとの動き(全モンスター必須・2026-09-29〜)
+
+**どの子も、通常技9つ・固有技9つのそれぞれに攻撃の動きを持つ**(ユーザー指示「全モンスターも技別の攻撃アクション作って」)。
+`24-battle-fx.jsx` の `SKILL_MOTION_SETS` へ、技の**段階の順**に9つずつ書く(技の名前ではなく段階で持つので、あとで名前を変えても動きはついてくる)。
+
+```js
+Mia: {
+  normal:[SKM_SIG,                                   // 'sig' = その子の見せ場の動き(atkMotion・型)をそのまま使う段階
+    skm('hop', { c:'pink', fx:skmFx('shot', 'note', 4), line:'ray' }),   // 本体の動き・飛ぶもの・帯・色
+    …],
+  unique:[SKM_SIG, skm('float', { c:'holy', fx:skmFx('fall', 'meteor', 3), over:'boom' }), …],
+},
+```
+
+- 部品は `body`(bash 突進 / kick 跳び蹴り / spin 回転 / jump 跳び乗り / float 浮いて落下 / dash 高速ダッシュ / warp 瞬間移動 / jab 連続パンチ / cast その場で放つ / hop 跳ねて歌う / shake 揺れる / toss 投げる / lick 舌 / dive / roll / flip / slash)、
+  `line`(ray 光線 / bolt 稲妻 / whip むち / beam / tongue / arc)、`fx`(`skmFx(道すじ, 形, 数)`)、`over`(thunder / xslash / claw / pillar / tornado / ice / bite / boom / wave / bloom / gas / cross / sword / eye / fist / slash / aurora / shadow)、`burst`、色 `c`(`SKM_COLOR` の名前)
+- **着弾の時刻と尺は書かない**(`skillFxSpecOf` が本体の動きと飛ぶものから決める。1.2秒を超えない)
+- 専用の動き(`atkMotion` が `default` 以外)を持つ子は、見せ場の動きを**どれか1つの技**に `SKM_SIG` で残す(ユーザー選択「技ごとに全部別の動きにする」)
+- 同じ名前の技を持つ子は `skmRecolor`(色だけ変える)・`skmWithSig`(見せ場の段階だけ変える)で写してよい
+- `node tools/battle/skill-motion-check.js`(全モンスターが9つずつ持つか・CSSがあるか)と
+  `node tools/battle/attack-preview-parity-check.js`(バトルと図鑑のプレビューで動きと尺が同じか)が見張る
+- ユグドラシル種だけは技の名前で持つ古い形(`23-rpg-debug.jsx` の `SKILL_ATTACK_THEMES`)。新しい子はこちらを使わない
+
 ### 専用モーションを作るとき
 
 **最低4か所。子によってもっと増える。** ミーアの `miaSongNotes` が手本。

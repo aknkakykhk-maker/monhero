@@ -11007,6 +11007,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 固有技(hit.isUnique)の場合は技の出自(hit.monId)側のatkMotionを優先する。合体で引き継いだ
           // 固有技を別のモンスターが使う場合でも、元モンスターの専用モーションを再現するため
           const hitMotion = (hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[hit.slotIdx]?.atkMotion;
+          // 技ごとの動き(2026-09-29 全モンスター)。技に専用の動きがあれば、見せ場の動きの代わりにそちらを出す。
+          // 探すのは技の出自(固有技は hit.monId)から。ザン・エイキ・剣士モッチーの連撃のまとめ方(数字をまとめて出す)は変えない
+          const hitSkillOwner = (hit.isUnique && hit.monId) ? hit.monId : slots[hit.slotIdx]?.id;
+          const hitSkillKind = skillAttackThemeOf(hitSkillOwner, hit.skillName, !!hit.isUnique);
           // 高速斬撃＋連撃をまとめて見せるモーション。ザン・エイキ・剣士モッチーが同じ見せ方を共有する。
           // モーションは1回だけ流し、ダメージ数値だけを立て続けに出すので、
           // 剣士モッチーの永久追加連撃が何本に増えてもターンの長さは変わらない
@@ -11028,6 +11032,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // 花びらはエイキのときだけ。ザン本体の見た目は一切変えない。
               // 剣士モッチーはX字に振り抜く別のモーション(twinBlade)を使う
               const isTwinBlade = hitMotion==='kenshiTwinBlade';
+              if(hitSkillKind){
+                // 技ごとの動き。固有技は型の動きでも「タメのあとの本番」の扱い(charge:false)で出す
+                setAttackAnim({slotIndex: animSlot, motion:'default', skillName: hit.skillName, ...(hit.isUnique?{charge:false}:{})});
+                if(hit.isUnique) Audio_.se.special(); else Audio_.se.zanSlash();
+                await battleWait(themedAttackMotionMs(hitSkillOwner, 'default', hit.skillName, !!hit.isUnique) ?? 500);
+              }else{
               setAttackAnim({slotIndex: animSlot, zanCombo: !isTwinBlade, twinBlade: isTwinBlade, sakura: hitMotion==='eikiSakuraCombo'});
               if(isTwinBlade){
                 // 1撃目＼→2撃目／へSEを合わせ、X字完成時だけ短い画面シェイクを入れる。
@@ -11042,6 +11052,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               }else{
                 Audio_.se.zanSlash(); // ザン/エイキの既存SEと尺は変えない
                 await battleWait(hitMotion==='eikiSakuraCombo'?500:320);
+              }
               }
               setAttackAnim(null);
               setSlotSkill(null);
@@ -11076,7 +11087,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(!hit.noAnim && animSlot >= 0 && slots[animSlot]) {
             // スロット上に技名をインライン表示
             setSlotSkill({slotIndex: animSlot, name: hit.skillName, type: hit.isUnique?'unique':(hit.isSpecial?'special':'normal')});
-            const motion = (hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[animSlot]?.atkMotion; // モンスターごとの専用モーション種別('default'/'zanCombo'/'floatStab'等)。全モンスターがdata側で必ず指定する。固有技は技の出自(継承元)のモーションを優先する
+            // モンスターごとの専用モーション種別('default'/'zanCombo'/'floatStab'等)。全モンスターがdata側で必ず指定する。固有技は技の出自(継承元)のモーションを優先する。
+            // 技に専用の動きがあれば 'default' にして、技ごとの動きで出す(skillAttackMotionOf)
+            const motion = hitSkillKind ? 'default' : ((hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[animSlot]?.atkMotion);
             if(hit.isUnique){
               // 固有技: タメ(下に沈む)は全モンスター共通→その後は専用モーションがあればそちらへ、なければ敵に向かって突進
               setAttackAnim({slotIndex: animSlot, charge:true});
@@ -11090,7 +11103,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(115); triggerShake();
                 await battleWait(130);
               }else{
-                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion, hit.skillName, true) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))));
+                await battleWait(themedAttackMotionMs(hitSkillKind ? hitSkillOwner : slots[animSlot]?.id, motion, hit.skillName, true) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))));
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
@@ -11102,7 +11115,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(130);
               }else{
                 if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion, hit.skillName, false) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))));
+                await battleWait(themedAttackMotionMs(hitSkillKind ? hitSkillOwner : slots[animSlot]?.id, motion, hit.skillName, false) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))));
               }
             }
             setAttackAnim(null);

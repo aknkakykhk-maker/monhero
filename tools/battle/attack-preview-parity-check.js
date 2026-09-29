@@ -30,10 +30,14 @@ const battleLoop = src.slice(start, end) + LOOP_TAIL;
 // --- プレビュー側の手順 ---
 const ctx = { WATER_BURST_MOTION_MS:680, ARK_HOLY_RAIN_MOTION_MS:900, MIA_SONG_NOTES_MOTION_MS:760 };
 vm.createContext(ctx);
+// 全モンスターの技ごとの動き(2026-09-29)は、技の名前と段階(HERO_ATK_NAMES・ALL_PLAYER_MONSTERS)と
+// 組み合わせの表(24-battle-fx.jsx の SKILL_MOTION_SETS / skillFxSpecOf)を使うので、先に持ち込む
+vm.runInContext(fs.readFileSync('monster-hero/data/images/images-ally.js', 'utf8') + '\n' + ally, ctx);
+vm.runInContext(src.slice(src.indexOf('const SKFX_RING ='), src.indexOf('const SkillFxMotion =')), ctx);
 // 体当たりだった初期モンスターの型と尺(DEFAULT_ATTACK_THEMES / themedAttackMotionMs)も同じ区間に置いてある
 vm.runInContext(src.slice(src.indexOf('const DEFAULT_ATTACK_THEMES ='), src.indexOf('const rpgMotionName ='))
-  + '\nglobalThis.DEFAULT_ATTACK_THEMES=DEFAULT_ATTACK_THEMES;globalThis.SKILL_ATTACK_THEMES=SKILL_ATTACK_THEMES;globalThis.SKILL_ATTACK_THEME_MONSTERS=SKILL_ATTACK_THEME_MONSTERS;globalThis.__p={attackMotionAnimation,attackMotionPreviewSequence,attackMotionUniquePreviewSequence,themedAttackMotionMs};', ctx);
-const { attackMotionAnimation:animOf, attackMotionPreviewSequence:normalSeq, attackMotionUniquePreviewSequence:uniqueSeq, themedAttackMotionMs } = ctx.__p;
+  + '\nglobalThis.DEFAULT_ATTACK_THEMES=DEFAULT_ATTACK_THEMES;globalThis.SKILL_ATTACK_THEMES=SKILL_ATTACK_THEMES;globalThis.SKILL_ATTACK_THEME_MONSTERS=SKILL_ATTACK_THEME_MONSTERS;globalThis.__p={skillAttackThemeOf,attackMotionAnimation,attackMotionPreviewSequence,attackMotionUniquePreviewSequence,themedAttackMotionMs};', ctx);
+const { attackMotionAnimation:animOf, attackMotionPreviewSequence:normalSeq, attackMotionUniquePreviewSequence:uniqueSeq, themedAttackMotionMs, skillAttackThemeOf } = ctx.__p;
 
 // 本番のループを1体ぶんだけ流し、setAttackAnim へ渡った anim を順に集める。
 // 表示・音・待ち時間はスタブにする(戦闘の計算には触らない)
@@ -42,7 +46,7 @@ const battleAnims = (atkMotion, isUnique, monId = 'TestMon', skillName = null) =
   const waits = [];
   anims.waits = waits;
   const env = {
-    ALL_PLAYER_MONSTERS: { [monId]: { id:monId, atkMotion } },
+    ALL_PLAYER_MONSTERS: { [monId]: { ...(vm.runInContext('ALL_PLAYER_MONSTERS', ctx)[monId] || {}), id:monId, atkMotion } },
     slots: [{ id:monId, atkMotion, name:'テスト', imgUrl:'x' }, null, null, null],
     fallbackSlot: 0,
     hitIdx: 0,
@@ -56,7 +60,7 @@ const battleAnims = (atkMotion, isUnique, monId = 'TestMon', skillName = null) =
     Audio_: { se: new Proxy({}, { get: () => () => {} }) },
     RANGE_LABELS: ['零','近','中','遠'],
     WATER_BURST_MOTION_MS:680, ARK_HOLY_RAIN_MOTION_MS:900, MIA_SONG_NOTES_MOTION_MS:760,
-    themedAttackMotionMs,
+    themedAttackMotionMs, skillAttackThemeOf,
   };
   vm.createContext(env);
   vm.runInContext(babel.transformSync(`(async()=>{\n${battleLoop}\n})().then(()=>{globalThis.__done=true;},e=>{globalThis.__err=e;});`).code, env);
@@ -118,6 +122,32 @@ const shape = (anim) => animOf(anim) || `専用演出(${anim.motion||'-'})`;
     }
     check(`${monId}: 全${skillNames.length}技の尺と技名がバトルとプレビューで同じ`, true);
   }
+  // 全モンスター(2026-09-29 ユーザー指示「全モンスターも技別の攻撃アクション作って」)。
+  // 専用の動きの子(ミーア・ザン・人魚など)も、技に動きがあれば型の動きで出る。見せ場の段階は元の動きのまま
+  const ALLMON = vm.runInContext('ALL_PLAYER_MONSTERS', ctx);
+  const NAMES = vm.runInContext('HERO_ATK_NAMES', ctx);
+  let checkedSkills = 0; const mismatched = [];
+  for (const monId of Object.keys(ALLMON).filter(id => !(ctx.SKILL_ATTACK_THEME_MONSTERS || []).includes(id))) {
+    const atkMotion = ALLMON[monId].atkMotion || 'default';
+    for (const [isUnique, names] of [[false, NAMES[monId] || []], [true, ALLMON[monId].unique?.names || []]]) {
+      for (const name of names) {
+        const kind = skillAttackThemeOf(monId, name, isUnique);
+        const real = await battleAnims(atkMotion, isUnique, monId, name);
+        const seq = isUnique ? uniqueSeq(atkMotion, monId, name) : normalSeq(atkMotion, monId, name);
+        const lastStep = seq[seq.length - 1];
+        checkedSkills += 1;
+        if (kind) {
+          const last = real.waits[real.motionWaitAt];
+          const ok = last === lastStep.ms && real[real.length - 1]?.skillName === name && real[real.length - 1]?.motion === 'default' && lastStep.anim.motion === 'default';
+          if (!ok) mismatched.push(`${monId} ${name}: 本番 ${last}ms / プレビュー ${lastStep.ms}ms`);
+        } else {
+          const same = JSON.stringify(real.map(shape)) === JSON.stringify(seq.map(step => shape(step.anim)));
+          if (!same) mismatched.push(`${monId} ${name}(見せ場): 動きが違う`);
+        }
+      }
+    }
+  }
+  check(`全モンスターの技(${checkedSkills}技)で、動き・尺・技名がバトルとプレビューで同じ`, mismatched.length === 0 && checkedSkills >= 360, mismatched.slice(0, 4).join(' / '));
   check('通常攻撃のプレビューにはタメを入れない',
     kinds.every(kind => normalSeq(kind).every(step => step.anim?.charge !== true)));
   check('どの手順も1コマずつ時間が入っている',
