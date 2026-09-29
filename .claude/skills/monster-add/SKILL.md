@@ -244,6 +244,8 @@ node tools/where.js --text "Eiki"                 # 専用演出を持つ子が�
 `24-battle-fx.jsx` の `SKILL_FX_SPECS`(本体の動き・帯・飛ぶもの・敵に重ねる絵の組み合わせ)で決める。
 部品の動きは `70-bootstrap.jsx` の `.skfx-◯◯` にそろっているので、組み合わせだけで新しい技を作れる。
 `node tools/battle/skill-motion-check.js` がつながりを見る。例は `docs/spec/YGGDRASIL_SKILLS.md`。
+`SKILL_ATTACK_THEME_MONSTERS` へ足した子は、図鑑とデバッグ画面の「攻撃アクション」に技を1つずつ選ぶ行
+(`SkillMotionPicker`)が自動で出る。画面の側は触らない。
 
 `'default'` のままでも、`src/parts/23-rpg-debug.jsx` の `DEFAULT_ATTACK_THEMES` へ1行足せば
 用意済みの型(`stomp` 押しつぶし＋ビーム / `beam` ビーム / `rocks` 殴って岩が飛び散る / `claw` カクカク高速ひっかき＋角から雷撃 /

@@ -82,8 +82,18 @@ const noCss = [...need].filter(sel => !has(sel));
 check('使っている動き・帯・形・道すじのCSSがそろっている', noCss.length === 0, noCss.join(' / ') || `${need.size}か所`);
 check('端末の「動きを減らす」では、敵に重ねる大きな絵も出さない', /prefers-reduced-motion[\s\S]{0,400}\.skfx-over \{ display:none; \}|\.thm-atk__bit, \.skfx-over \{ display:none; \}/.test(css));
 check('バトルは技名を演出へ渡す', read('monster-hero/src/parts/60-app.jsx').includes("sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});"));
+// 技を選ぶ行は図鑑とデバッグで共通の部品(SkillMotionPicker)。対象の子を SKILL_ATTACK_THEME_MONSTERS へ
+// 足せば両方に出る(2026-09-29 ユーザー指示「図鑑で技ごとのモーションが見れない」「いずれは全モンスター実装予定」)
+const fxPart = read('monster-hero/src/parts/24-battle-fx.jsx');
+const dexPart = read('monster-hero/src/parts/57-screen-monster-dex.jsx');
+check('技を選ぶ行は共通の部品で、技ごとに動きが違う子だけに出る',
+  fxPart.includes('const skillMotionListsOf =') && fxPart.includes('const SkillMotionPicker =')
+  && fxPart.includes("!SKILL_ATTACK_THEME_MONSTERS.includes(mon.id)) return null;") && fxPart.includes('data-monster-check-skill-motion={name}'));
 check('デバッグの攻撃アクションで、技を1つずつ選んで再生できる',
-  debugScreen.includes('data-monster-check-skill-motion={name}') && debugScreen.includes('onPlayPreview(mon, kind, atkMotion, name)'));
+  debugScreen.includes('skillMotionListsOf(mon, { draft: true })') && debugScreen.includes('onPlay={(kind, name) => onPlayPreview(mon, kind, atkMotion, name)}'));
+check('図鑑の攻撃アクションでも、技を1つずつ選んで再生できる',
+  dexPart.includes('const skillMotionLists=skillMotionListsOf(mon);') && dexPart.includes('<SkillMotionPicker lists={skillMotionLists}')
+  && dexPart.includes('await onPlayPreview(mon,kind,atkMotion,skillName);'));
 
 // --- ③ 実ブラウザ ---
 (async () => {

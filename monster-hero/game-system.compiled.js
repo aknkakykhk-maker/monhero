@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2bd5e7e5f1e1e484
+// source-sha256: fa397c9c5a872ce7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-29 15:49";
+const BUILD_DATE = "2026-09-29 15:57";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -18563,6 +18563,49 @@ const PandoraDualThunder = ({
 }), React.createElement("i", {
   className: "pandora-dual-strike__ring"
 })));
+const skillMotionListsOf = (mon, {
+  draft = false
+} = {}) => {
+  if (!mon || typeof SKILL_ATTACK_THEME_MONSTERS === 'undefined' || !SKILL_ATTACK_THEME_MONSTERS.includes(mon.id)) return null;
+  const normal = typeof HERO_ATK_NAMES !== 'undefined' && Array.isArray(HERO_ATK_NAMES[mon.id]) ? HERO_ATK_NAMES[mon.id] : [];
+  const unique = Array.isArray(mon.unique?.names) ? mon.unique.names : draft && Array.isArray(mon.draftUniqueNames) ? mon.draftUniqueNames : [];
+  const lists = [['normal', '通常技', normal], ['unique', '固有技', unique]].filter(([,, names]) => names.length);
+  return lists.length ? lists : null;
+};
+const SkillMotionPicker = ({
+  lists,
+  playingName = null,
+  disabled = false,
+  onPlay
+}) => {
+  if (!lists) return null;
+  return React.createElement("div", {
+    "data-skill-motion-picker": true,
+    className: "mx-auto mt-2 w-full max-w-md space-y-1.5"
+  }, lists.map(([kind, label, names]) => React.createElement("div", {
+    key: kind,
+    className: "flex items-center gap-1.5 min-w-0"
+  }, React.createElement("div", {
+    className: "shrink-0 w-9 text-[9px] font-black leading-tight text-cyan-300/80"
+  }, label), React.createElement("div", {
+    className: "flex-1 min-w-0 flex gap-1.5 overflow-x-auto mh-scroll pb-0.5"
+  }, names.map((name, lvl) => React.createElement("button", {
+    key: name,
+    type: "button",
+    "data-skill-motion": name,
+    "data-monster-check-skill-motion": name,
+    disabled: disabled,
+    onClick: () => {
+      Audio_.se.tap();
+      if (!disabled) onPlay(kind, name);
+    },
+    className: `shrink-0 min-h-[44px] rounded-xl border px-2.5 text-[10px] font-black leading-tight whitespace-nowrap active:scale-95 disabled:opacity-45 ${playingName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`
+  }, React.createElement("span", {
+    className: "block"
+  }, name), React.createElement("span", {
+    className: "block text-[8px] font-mono text-slate-400"
+  }, "Lv.", lvl)))))));
+};
 const BattleAttackMotionPreview = ({
   image,
   anim,
@@ -31765,10 +31808,11 @@ function MonsterAttackPreviewScreen({
     onStopPreview();
     onBackToDetail();
   };
-  const playAttackPreview = async kind => {
+  const playAttackPreview = async (kind, skillName = null) => {
     if (playingKind) return;
-    await onPlayPreview(mon, kind, atkMotion);
+    await onPlayPreview(mon, kind, atkMotion, skillName);
   };
+  const skillMotionLists = skillMotionListsOf(mon);
   const kindButton = (kind, label) => React.createElement("button", {
     key: kind,
     type: "button",
@@ -31819,7 +31863,12 @@ function MonsterAttackPreviewScreen({
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("div", {
     className: "w-full max-w-md mx-auto flex gap-2"
-  }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技'))));
+  }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技')), React.createElement(SkillMotionPicker, {
+    lists: skillMotionLists,
+    playingName: playing?.skillName || null,
+    disabled: !!playingKind,
+    onPlay: (kind, name) => playAttackPreview(kind, name)
+  })));
 }
 function MonsterDexScreen({
   dexLineageFilter,
@@ -45205,7 +45254,9 @@ function MonsterCheckDebugScreen({
     }, "一致するモンスターはいません。")));
   }
   if (view === 'motion') {
-    const skillMotionLists = typeof SKILL_ATTACK_THEME_MONSTERS !== 'undefined' && SKILL_ATTACK_THEME_MONSTERS.includes(mon.id) ? [['normal', '通常技', typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] || []], ['unique', '固有技', mon.unique?.names || mon.draftUniqueNames || []]].filter(([,, names]) => names.length) : null;
+    const skillMotionLists = skillMotionListsOf(mon, {
+      draft: true
+    });
     const kindButton = (kind, label) => React.createElement("button", {
       key: kind,
       type: "button",
@@ -45269,30 +45320,13 @@ function MonsterCheckDebugScreen({
     }, React.createElement("div", {
       className: "mx-auto flex w-full max-w-md gap-2"
     }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技')), skillMotionLists && React.createElement("div", {
-      "data-monster-check-skill-motions": true,
-      className: "mx-auto mt-2 w-full max-w-md space-y-1.5"
-    }, skillMotionLists.map(([kind, label, names]) => React.createElement("div", {
-      key: kind,
-      className: "flex items-center gap-1.5 min-w-0"
-    }, React.createElement("div", {
-      className: "shrink-0 w-9 text-[9px] font-black leading-tight text-cyan-300/80"
-    }, label), React.createElement("div", {
-      className: "flex-1 min-w-0 flex gap-1.5 overflow-x-auto mh-scroll pb-0.5"
-    }, names.map((name, lvl) => React.createElement("button", {
-      key: name,
-      type: "button",
-      "data-monster-check-skill-motion": name,
+      "data-monster-check-skill-motions": true
+    }, React.createElement(SkillMotionPicker, {
+      lists: skillMotionLists,
+      playingName: playing?.skillName || null,
       disabled: !!playing,
-      onClick: () => {
-        Audio_.se.tap();
-        if (!playing) onPlayPreview(mon, kind, atkMotion, name);
-      },
-      className: `shrink-0 min-h-[44px] rounded-xl border px-2.5 text-[10px] font-black leading-tight whitespace-nowrap active:scale-95 disabled:opacity-45 ${playing?.skillName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`
-    }, React.createElement("span", {
-      className: "block"
-    }, name), React.createElement("span", {
-      className: "block text-[8px] font-mono text-slate-400"
-    }, "Lv.", lvl)))))))));
+      onPlay: (kind, name) => onPlayPreview(mon, kind, atkMotion, name)
+    }))));
   }
   const tabs = [['check', 'チェック'], ['art', '画像'], ['stats', '能力'], ['skills', '技'], ['data', 'データ']];
   const row = (label, value, {

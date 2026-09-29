@@ -258,8 +258,8 @@ check('未解放モンスターには攻撃アクションなどのボタンを�
   && source.includes("onMissing={()=>setGameState('MONSTER_DEX')}"));
 // 専用画面。上へ飛ぶ演出が枠外へ出ないよう縦を大きく取り、通常攻撃と固有技を選んで見比べられる
 check('攻撃アクションの専用画面で通常攻撃と固有技を再生できる',
-  attackPreview.includes('await onPlayPreview(mon,kind,atkMotion);')
-  // 2026-09-29 から技の名前(skillName)も渡す(技ごとに動きが違う種族のため。図鑑からは渡さない)
+  attackPreview.includes('await onPlayPreview(mon,kind,atkMotion,skillName);')
+  // 2026-09-29 から技の名前(skillName)も渡す(技ごとに動きが違う種族のため。図鑑でも技を1つずつ選べる)
   && source.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id, skillName):attackMotionPreviewSequence(atkMotion, mon?.id, skillName);")
   && attackPreview.includes('data-attack-preview-play={kind}')
   && attackPreview.includes("kindButton('normal','通常攻撃'")
