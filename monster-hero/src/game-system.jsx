@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a48bbb9dd39ba8dd
+// generated-sha256: 14f86d007e5a9b69
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-29 15:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-29 15:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -28933,17 +28933,19 @@ function MonsterCheckDebugScreen({
             {kindButton('normal', '通常攻撃')}
             {kindButton('unique', '固有技')}
           </div>
-          {/* 技ごとに動きが違う種族(ユグドラシル種)は、技を1つずつ選んで再生できる */}
-          {skillMotionLists&&<div data-monster-check-skill-motions className="mx-auto mt-2 w-full max-w-md max-h-[30vh] overflow-y-auto mh-scroll space-y-1.5">
+          {/* 技ごとに動きが違う種族(ユグドラシル種)は、技を1つずつ選んで再生できる。
+              ★縦に9つずつ並べると舞台の高さを削り、上へ飛ぶ演出が見えなかった(2026-09-29 ユーザー指摘
+              「デバッグ画面でモンスター範囲が狭くて技演出がちゃんと見えない」)。種類ごとに横1行で流す */}
+          {skillMotionLists&&<div data-monster-check-skill-motions className="mx-auto mt-2 w-full max-w-md space-y-1.5">
             {skillMotionLists.map(([kind, label, names]) => (
-              <div key={kind}>
-                <div className="mb-1 text-[9px] font-black tracking-widest text-cyan-300/80">{label}</div>
-                <div className="grid grid-cols-3 gap-1.5">
+              <div key={kind} className="flex items-center gap-1.5 min-w-0">
+                <div className="shrink-0 w-9 text-[9px] font-black leading-tight text-cyan-300/80">{label}</div>
+                <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto mh-scroll pb-0.5">
                   {names.map((name, lvl) => (
                     <button key={name} type="button" data-monster-check-skill-motion={name} disabled={!!playing}
                       onClick={() => { Audio_.se.tap(); if (!playing) onPlayPreview(mon, kind, atkMotion, name); }}
-                      className={`min-h-[40px] min-w-0 rounded-xl border px-1 text-[10px] font-black leading-tight active:scale-95 disabled:opacity-45 ${playing?.skillName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`}>
-                      <span className="block truncate">{name}</span>
+                      className={`shrink-0 min-h-[44px] rounded-xl border px-2.5 text-[10px] font-black leading-tight whitespace-nowrap active:scale-95 disabled:opacity-45 ${playing?.skillName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`}>
+                      <span className="block">{name}</span>
                       <span className="block text-[8px] font-mono text-slate-400">Lv.{lvl}</span>
                     </button>
                   ))}
