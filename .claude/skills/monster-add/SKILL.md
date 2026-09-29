@@ -351,6 +351,17 @@ node tools/run-checks.js --area monster,image 2>&1 | tail -25
 - マーケットに円盤石を並べたので、更新履歴へ
   `assistantNotice:{id:'update_notice_◯◯_v1', type:'market'}` を**必ず**付ける
   (`node tools/boot/market-notice-check.js` が見張る)
+- **公開のお知らせには、絵を3種類付ける**(2026-09-29 ユーザー指示「更新情報に画像付きのモンスター説明」
+  「新モンスター実装時にまた染色イメージも一緒につけて」)。
+  1. `image` … キー画像1枚(助手の告知にも出る)
+  2. `gallery` … その子の紹介カード(能力値の棒・間合い適性・勇者特性・固有技・EX・モンヒロビートの能力)
+  3. `gallery` … **染色イメージ**(いつもの姿 → 染めた姿)。caption に「染色イメージ」と入れる
+
+  手本はユグドラシル種: `tools/image/make-yggdrasil-release-notice.js`(1と2)と
+  `tools/image/make-yggdrasil-dye-preview.js`(3。ゲームと同じ染め方で作る。手で塗らない)。
+  新しい子の分は、この2本を写して id・色・文言を差し替える。数字はデータから読ませる(手で書かない)。
+  フォントは M PLUS Rounded 1c を Google Fonts から一時的に取る(リポジトリには入れない)。
+  `node tools/changelog/new-monster-gallery-check.js` が、新モンスターのお知らせに紹介と染色イメージがあるかを見張る
 
 ## 9. 登録漏れを機械的に見つける
 
