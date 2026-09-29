@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// プレイヤーモンスター全20種と、初期解放8種・図鑑説明がそろっているか。
+// プレイヤーモンスター全22種(2026-09-29 ユグドラシル・メルホイップを足した)と、初期解放8種・図鑑説明がそろっているか。
 'use strict';
 
 const fs = require('fs');
@@ -22,9 +22,9 @@ const plant = monsters.Plant;
 const oboro = monsters.Oboro;
 const checks = [
   ['Plantがプレイヤーモンスターに存在', plant?.id === 'Plant' && plant.name === 'プラント'],
-  ['プレイヤーモンスターは全20種', Object.keys(monsters).length === 20],
+  ['プレイヤーモンスターは全22種', Object.keys(monsters).length === 22],
   ['初期解放は8種を維持', starters.length === 8],
-  ['全20種に図鑑説明が存在', Object.keys(monsters).every(id => typeof dexDescriptions[id] === 'string' && dexDescriptions[id].trim())],
+  ['全種に図鑑説明が存在', Object.keys(monsters).every(id => typeof dexDescriptions[id] === 'string' && dexDescriptions[id].trim())],
   ['Plant図鑑説明は指定文どおり', dexDescriptions.Plant === '非力だが多彩な攻撃手段を持っている\nほかの地域と比べると、IMa地方のプラントは弱いと言われているようだ'],
   ['基礎能力', plant?.baseHp === 930 && plant.baseAtk === 100 && plant.baseDef === 65 && plant.baseGuts === 120],
   ['合流ボーナス', JSON.stringify(plant?.plusStats) === JSON.stringify({ hp:620, atk:10, def:0, guts:15 })],
@@ -49,9 +49,10 @@ const checks = [
   ['プラントの円盤石アイコンは1pt', /id:'plant_disc_icon', name:"プラントの円盤石アイコン", type:'icon', icon:PLANT_DISC_ICON, cost:1/.test(breeder)],
   ['プラントの円盤石は購入可能・150000ダイヤ', /id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:150000/.test(breeder) && !/id:'Plant'[^\n]*available:false/.test(breeder)],
   ['円盤石購入は既存キーへ解放IDを保存', game.includes("if (item.type === 'disc')") && game.includes("storeSet('mh_unlocked_monsters', next, false)")],
-  ['購入済み円盤石の二重購入を防止', game.includes("if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);") && game.includes('if (isMarketItemOwned(item)) return;')],
+  ['購入済み円盤石の二重購入を防止', game.includes("if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);") && game.includes('if (isMarketItemOwned(item)) return false;')],
   ['既存円盤石商品の価格を維持', [
-    ['Zan',1500], ['Mitarashi',500], ['Ark',1500], ['Iblis',1500], ['Snegurochka',1500], ['Undine',1500], ['Yaobikuni',1500],
+    // 2026-09-28 円盤石はどれも150,000ダイヤへそろえた(ユーザー指示で100倍)
+    ['Zan',150000], ['Mitarashi',150000], ['Ark',150000], ['Iblis',150000], ['Snegurochka',150000], ['Undine',150000], ['Yaobikuni',150000],
   ].every(([id,cost]) => new RegExp(`id:'${id}'[^\\n]*type:'disc'[^\\n]*cost:${cost}`).test(breeder))],
   ['Plant更新履歴は1件だけ', (changelog.match(/title: '新モンスター「プラント」を追加しました'/g) || []).length === 1],
   ['Plant助手告知IDは1件だけ', (changelog.match(/update_notice_plant_market_v1/g) || []).length === 1],

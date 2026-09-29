@@ -436,11 +436,12 @@ const rhythmClockLabel=ms=>{const total=Math.max(0,Math.floor((Number(ms)||0)/10
 // 判定ライン付近では1サブレーン約32〜38pxなので、.20は約6〜8px。
 // 接触幅側の中心揺れdeadzone(6〜10px)と同程度だけを無視し、明確な横移動は残す。
 const RHYTHM_TAP_REJUDGE_MOVE_SUBLANES=.20;
-const rhythmAbilityEmoji=abilityId=>abilityId==='GENKI'?'💚':abilityId==='MUTEKI'?'🛡️':abilityId==='GAMAN'?'🧱':abilityId==='KONJO'?'🔥':'✨';
+const rhythmAbilityEmoji=abilityId=>abilityId==='GENKI'?'💚':abilityId==='MUTEKI'?'🛡️':abilityId==='GAMAN'?'🧱':abilityId==='KONJO'?'🔥':abilityId==='HISSHI'?'🎯':'✨';
 const rhythmAbilityTone=abilityId=>abilityId==='GENKI'?'border-emerald-300/50 bg-emerald-950/40 text-emerald-100'
   :abilityId==='MUTEKI'?'border-cyan-300/50 bg-cyan-950/40 text-cyan-100'
   :abilityId==='GAMAN'?'border-amber-300/50 bg-amber-950/40 text-amber-100'
   :abilityId==='KONJO'?'border-rose-300/50 bg-rose-950/40 text-rose-100'
+  :abilityId==='HISSHI'?'border-lime-300/50 bg-lime-950/40 text-lime-100'
   :'border-white/20 bg-slate-900/60 text-slate-300';
 // 能力ごとに「その能力になる血統」をまとめる。並びは RHYTHM_MONSTER_ABILITIES の順。
 const rhythmAbilityRows=()=>Object.values(RHYTHM_MONSTER_ABILITIES).map(ability=>({
@@ -495,6 +496,7 @@ const RhythmMonsterNoteGuide=()=>{
       <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">
         無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。
         両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。
+        必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。
         残り時間と根性を持っているかは、演奏中の画面の右上に出ます。
       </p>
     </article>
@@ -1338,7 +1340,10 @@ useEffect(()=>{
   window.addEventListener('orientationchange',invalidate);
   return ()=>{window.removeEventListener('resize',invalidate);window.removeEventListener('orientationchange',invalidate);};
 },[settings.noteStartPosition,settings.noteSize,settings.judgmentLineHeight,view.status]);
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;note._rhythmDeltaMs=typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;
+// 必死(ユグドラシル血統の能力)のあいだは、GREAT以上をジャストマーベラスとして数える(判定もズレもここで置き換える)
+if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0)){judgment='MARVELOUS';deltaMs=0;}
+if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;note._rhythmDeltaMs=typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // MARVELOUSの中でも、とくにぴったり(±20ms)だったか。**見た目にしか使わない**(2026-09-12)。
 // 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れないので、
 // run にも result にも残さない。judgmentTimingOffsetMs を通したあとのズレを見ている
@@ -1477,7 +1482,7 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     // 判定・スコア・ライフには一切関係しない、見た目だけの控え。
     const slot=rhythmNoteMonsterSlot(note);
     run.abilityOwners=run.abilityOwners||{};
-    if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN')run.abilityOwners[monster.ability.id]=slot;
+    if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN'||monster.ability.id==='HISSHI')run.abilityOwners[monster.ability.id]=slot;
     if(monster.ability.id==='KONJO'&&Number(activated.state?.konjoStock)>0)run.abilityOwners.KONJO=slot;
     // 元気のように一瞬で終わる能力は、少しのあいだだけ光らせる
     run.abilityFlashSlot=slot;
@@ -1778,14 +1783,15 @@ const badge=abilityBadgeRef.current;
 // 曲の大半は何も出ていないので、毎フレームの文字列生成と小数計算をまるごと省ける。
 const hasAbilityBadge=badge&&(rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs)>0
   ||rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs)>0
+  ||rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs)>0
   ||Number(run.abilities?.konjoStock)>0);
 if(badge&&!hasAbilityBadge){
   if(badge._rhythmBadgeText!==''){badge.textContent='';badge._rhythmBadgeText='';}
   if(!badge.hidden)badge.hidden=true;
 }
 if(hasAbilityBadge){
-  const mutekiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs),gamanMs=rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs);
-  const text=[mutekiMs>0?`無敵 ${(mutekiMs/1000).toFixed(1)}s`:'',gamanMs>0?`我慢 ${(gamanMs/1000).toFixed(1)}s`:'',Number(run.abilities?.konjoStock)>0?'根性 ストック':''].filter(Boolean).join(' / ');
+  const mutekiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs),gamanMs=rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs),hisshiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs);
+  const text=[mutekiMs>0?`無敵 ${(mutekiMs/1000).toFixed(1)}s`:'',gamanMs>0?`我慢 ${(gamanMs/1000).toFixed(1)}s`:'',hisshiMs>0?`必死 ${(hisshiMs/1000).toFixed(1)}s`:'',Number(run.abilities?.konjoStock)>0?'根性 ストック':''].filter(Boolean).join(' / ');
   if(badge._rhythmBadgeText!==text){badge.textContent=text;badge._rhythmBadgeText=text;}
   if(badge.hidden!==(text===''))badge.hidden=text==='';
 }
@@ -1796,6 +1802,7 @@ if(settings.sideMonsterAbilityHighlight&&sideMonsterRefs.current.length){
   const active=new Set();
   if(rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs)>0&&owners.MUTEKI)active.add(owners.MUTEKI);
   if(rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs)>0&&owners.GAMAN)active.add(owners.GAMAN);
+  if(rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs)>0&&owners.HISSHI)active.add(owners.HISSHI);
   if(Number(run.abilities?.konjoStock)>0&&owners.KONJO)active.add(owners.KONJO);
   if(run.abilityFlashSlot&&songTimeMs<Number(run.abilityFlashUntilMs))active.add(run.abilityFlashSlot);
   const signature=[...active].sort().join(',');

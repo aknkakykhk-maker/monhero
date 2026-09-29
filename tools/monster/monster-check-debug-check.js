@@ -75,7 +75,8 @@ check('待機アニメの枠があり、図鑑・バトルと同じ withMonsterI
     check(`${id}: 通常技と固有技の名前が9つずつある`, atk.length === 9 && uni.length === 9, `通常${atk.length} / 固有${uni.length}`);
   }
   check('案の段階の子の技は、名前だけの一覧で出す(威力の計算に通さない)', part.includes('draftNamePills(HERO_ATK_NAMES[mon.id]') && part.includes('draftNamePills(mon.draftUniqueNames'));
-  check('案の段階の子にも待機アニメのリグがある', draftIds.length > 0 && noRig.length === 0, noRig.join('・') || draftIds.join('・'));
+  // 案の段階の子がいないとき(正式実装して空になったとき)は見るものが無いので通す
+  check('案の段階の子にも待機アニメのリグがある', noRig.length === 0, noRig.join('・') || (draftIds.join('・') || '案の段階の子はいない'));
 }
 
 // 模様テストも同じ理由で全種を並べる

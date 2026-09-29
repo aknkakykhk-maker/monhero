@@ -138,11 +138,12 @@ check('能力が1つも効いていないときは文字列も作らない',
 // --- 能力が効いているあいだ、どのマスモンかが分かる ---
 check('能力の持ち主を枠ごとに覚える',
   game.includes('run.abilityOwners=run.abilityOwners||{};')
-  &&game.includes("if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN')run.abilityOwners[monster.ability.id]=slot;")
+  &&game.includes("if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN'||monster.ability.id==='HISSHI')run.abilityOwners[monster.ability.id]=slot;")
   &&game.includes('run.abilityOwners.KONJO=slot;'));
-check('無敵・我慢は残り時間があるあいだだけ光る',
+check('無敵・我慢・必死は残り時間があるあいだだけ光る',
   game.includes("rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs)>0&&owners.MUTEKI")
-  &&game.includes("rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs)>0&&owners.GAMAN"));
+  &&game.includes("rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs)>0&&owners.GAMAN")
+  &&game.includes("rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs)>0&&owners.HISSHI"));
 check('根性はストックを持っているあいだ光る',game.includes("Number(run.abilities?.konjoStock)>0&&owners.KONJO"));
 check('元気のように一瞬で終わる能力も少しのあいだ光る',
   Number.isFinite(RHYTHM_SIDE_MONSTER_FLASH_MS)&&RHYTHM_SIDE_MONSTER_FLASH_MS>=600

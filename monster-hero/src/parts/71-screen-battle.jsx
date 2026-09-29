@@ -786,6 +786,21 @@ function BattleScreen({
   //   分かりにくい ガード入れても合算計算だし うまくバラバラでわかるようにしたい」)。
   //   受けたあとの表示と同じ splitTacticsHitAmounts を通すので、予告と実際で割り方がそろう。
   //   ガードで止めた発は通らないので、**通る発の数だけ**に割る(数字の数＝これから食らう回数)
+  // 大樹の加護(ユグドラシル・メルホイップの固有技)は使ったターンから効くので、選んだ時点で予告にも掛ける。
+  //   既存5モードはパーティ全体、タクティクスはその固有技を使う子の枠だけ(実際の計算と同じ分け方)
+  const plannedLifeTreeMult = (slotIdx) => {
+    const counter = makeCardHalveCounter();
+    let mult = 1;
+    selectedCards.forEach(idx => {
+      const card = hand[idx];
+      const owner = cardAssignments[idx] != null ? cardAssignments[idx] : null;
+      const halved = counter.take(card, owner);
+      if (!isLifeTreeGuardCard(card)) return;
+      if (Array.isArray(tacticsUnits) && owner !== slotIdx) return;
+      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved));
+    });
+    return mult;
+  };
   const plannedHitFor = (slotIdx) => {
     const none = { taken: 0, parts: [], raw: 0 };
     if (!enemyIntent) return none;
@@ -819,7 +834,7 @@ function BattleScreen({
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
-    const taken = applyTurnDamageReduction(hit.taken, slotIdx);
+    const taken = applyTurnDamageReduction(hit.taken > 0 ? hit.taken * plannedLifeTreeMult(slotIdx) : hit.taken, slotIdx);
     if (!(taken > 0)) return { taken: 0, parts: [], raw };
     // ★発ごとの通る量をそのまま出す。ガードが効いた発は小さく、効いていない発は大きい。
     //   止まった発(0)は数字を出さないので、数字の数＝これから食らう回数

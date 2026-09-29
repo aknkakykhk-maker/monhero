@@ -489,6 +489,7 @@ const rhythmAbilityEffectText=ability=>{
   if(ability.id==='GENKI')return `取るとライフが +${ability.lifeGain}`;
   if(ability.id==='MUTEKI')return `${Math.round(ability.durationMs/1000)}秒のあいだライフが減らない`;
   if(ability.id==='GAMAN')return `${Math.round(ability.durationMs/1000)}秒のあいだライフの減りが${Math.round((1-ability.reduceRate)*100)}%小さくなる`;
+  if(ability.id==='HISSHI')return `${Math.round(ability.durationMs/1000)}秒のあいだ、GREAT以上の判定がすべてJUST MARVELOUSになる`;
   if(ability.id==='KONJO')return `倒れたときに一度だけライフ${ability.reviveLife}で復活（持っているときにもう一度取るとライフ +${ability.stockLifeGain}）`;
   return '';
 };

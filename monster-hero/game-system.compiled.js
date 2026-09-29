@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e50732a3ad5be5b
+// source-sha256: ed12155947e00a6e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-29 12:46";
+const BUILD_DATE = "2026-09-29 15:02";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -14065,6 +14065,7 @@ const rhythmAbilityEffectText = ability => {
   if (ability.id === 'GENKI') return `取るとライフが +${ability.lifeGain}`;
   if (ability.id === 'MUTEKI') return `${Math.round(ability.durationMs / 1000)}秒のあいだライフが減らない`;
   if (ability.id === 'GAMAN') return `${Math.round(ability.durationMs / 1000)}秒のあいだライフの減りが${Math.round((1 - ability.reduceRate) * 100)}%小さくなる`;
+  if (ability.id === 'HISSHI') return `${Math.round(ability.durationMs / 1000)}秒のあいだ、GREAT以上の判定がすべてJUST MARVELOUSになる`;
   if (ability.id === 'KONJO') return `倒れたときに一度だけライフ${ability.reviveLife}で復活（持っているときにもう一度取るとライフ +${ability.stockLifeGain}）`;
   return '';
 };
@@ -15124,6 +15125,18 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
 const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni']);
 const isIceLockMonster = id => ICE_LOCK_MONSTER_IDS.includes(id);
 const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroDist, enemyDist) => isIceLockMonster(heroId) && iceLockActive && heroDist === enemyDist ? Math.min(1, currentRate + 0.5) : currentRate;
+const LIFE_SOURCE_MONSTER_IDS = Object.freeze(['Yggdrasil', 'MelWhip']);
+const LIFE_SOURCE_GUARD_TURNS = 5;
+const LIFE_SOURCE_GUARD_MULT = 0.7;
+const LIFE_SOURCE_GUTS_FROM_TURN = 6;
+const LIFE_SOURCE_GUTS_EVERY = 3;
+const LIFE_SOURCE_GUTS_RATE = 0.3;
+const hasLifeSourceTrait = id => LIFE_SOURCE_MONSTER_IDS.includes(id);
+const lifeSourceDamageMult = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= 1 && Number(turn) <= LIFE_SOURCE_GUARD_TURNS ? LIFE_SOURCE_GUARD_MULT : 1;
+const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= LIFE_SOURCE_GUTS_FROM_TURN && (Number(turn) - LIFE_SOURCE_GUTS_FROM_TURN) % LIFE_SOURCE_GUTS_EVERY === 0;
+const LIFE_TREE_GUARD_REDUCTION = 0.3;
+const isLifeTreeGuardCard = card => !!card && card.type === 'unique' && hasLifeSourceTrait(card.monId);
+const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
 const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null, powerOverride = null, enemyTurnMultiplier = 1, options = {}) => {
   const tacticsEnemies = typeof isTacticsMode === 'function' && isTacticsMode(options && options.mode) && typeof TACTICS_ENEMY_SEQUENCE !== 'undefined';
   const sequence = tacticsEnemies ? TACTICS_ENEMY_SEQUENCE : ENEMY_SEQUENCE;
@@ -15274,7 +15287,8 @@ const buildAttackHits = ({
   kenshiExtraCombos = 0,
   comboFinalMultiplier = 1,
   swordSkill = true,
-  hitRepeat = 1
+  hitRepeat = 1,
+  exCombos = null
 }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
@@ -15319,6 +15333,9 @@ const buildAttackHits = ({
   if (swordSkill && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
   if (attackerId === 'KenshiMocchi') {
     for (let i = 0; i < kenshiExtraCombos; i++) combo(ATTACK_COMBO_RULES.kenshiExtraCombo + comboDmgBonus);
+  }
+  if (exCombos && exCombos.count > 0 && exCombos.rate > 0) {
+    for (let i = 0; i < exCombos.count; i++) combo(exCombos.rate + comboDmgBonus, 'スイーツパラダイス', true);
   }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true);
   const repeat = Math.max(1, Math.floor(Number(hitRepeat) || 1));
@@ -17277,6 +17294,16 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
     c1: '#cffafe',
     c2: '#0891b2',
     motif: 'blade'
+  },
+  partyGuard: {
+    c1: '#bbf7d0',
+    c2: '#15803d',
+    motif: 'shield'
+  },
+  comboBurst: {
+    c1: '#fbcfe8',
+    c2: '#db2777',
+    motif: 'rise'
   },
   default: {
     c1: '#f5d0fe',
@@ -24287,8 +24314,8 @@ const rhythmClockLabel = ms => {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 };
 const RHYTHM_TAP_REJUDGE_MOVE_SUBLANES = .20;
-const rhythmAbilityEmoji = abilityId => abilityId === 'GENKI' ? '💚' : abilityId === 'MUTEKI' ? '🛡️' : abilityId === 'GAMAN' ? '🧱' : abilityId === 'KONJO' ? '🔥' : '✨';
-const rhythmAbilityTone = abilityId => abilityId === 'GENKI' ? 'border-emerald-300/50 bg-emerald-950/40 text-emerald-100' : abilityId === 'MUTEKI' ? 'border-cyan-300/50 bg-cyan-950/40 text-cyan-100' : abilityId === 'GAMAN' ? 'border-amber-300/50 bg-amber-950/40 text-amber-100' : abilityId === 'KONJO' ? 'border-rose-300/50 bg-rose-950/40 text-rose-100' : 'border-white/20 bg-slate-900/60 text-slate-300';
+const rhythmAbilityEmoji = abilityId => abilityId === 'GENKI' ? '💚' : abilityId === 'MUTEKI' ? '🛡️' : abilityId === 'GAMAN' ? '🧱' : abilityId === 'KONJO' ? '🔥' : abilityId === 'HISSHI' ? '🎯' : '✨';
+const rhythmAbilityTone = abilityId => abilityId === 'GENKI' ? 'border-emerald-300/50 bg-emerald-950/40 text-emerald-100' : abilityId === 'MUTEKI' ? 'border-cyan-300/50 bg-cyan-950/40 text-cyan-100' : abilityId === 'GAMAN' ? 'border-amber-300/50 bg-amber-950/40 text-amber-100' : abilityId === 'KONJO' ? 'border-rose-300/50 bg-rose-950/40 text-rose-100' : abilityId === 'HISSHI' ? 'border-lime-300/50 bg-lime-950/40 text-lime-100' : 'border-white/20 bg-slate-900/60 text-slate-300';
 const rhythmAbilityRows = () => Object.values(RHYTHM_MONSTER_ABILITIES).map(ability => ({
   ability,
   lineages: Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE).filter(([, id]) => id === ability.id).map(([lineageId]) => lineageById(lineageId).name)
@@ -24338,7 +24365,7 @@ const RhythmMonsterNoteGuide = () => {
     className: "mt-1 text-[10px] font-bold leading-relaxed opacity-80"
   }, "主血統: ", lineages.join(' / '))))), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。 両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。 残り時間と根性を持っているかは、演奏中の画面の右上に出ます。")));
+  }, "無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。 両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。 必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。 残り時間と根性を持っているかは、演奏中の画面の右上に出ます。")));
 };
 const RhythmMonsterSlotsPanel = ({
   rhythmMonsterSlots,
@@ -25854,6 +25881,10 @@ const RhythmTapTest = ({
     const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
+    if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) {
+      judgment = 'MARVELOUS';
+      deltaMs = 0;
+    }
     if (note.activePointerId !== null) {
       if (note.activePointerId !== -1) run.activePointers.delete(note.activePointerId);
       note.activePointerId = null;
@@ -26035,7 +26066,7 @@ const RhythmTapTest = ({
         };
         const slot = rhythmNoteMonsterSlot(note);
         run.abilityOwners = run.abilityOwners || {};
-        if (monster.ability.id === 'MUTEKI' || monster.ability.id === 'GAMAN') run.abilityOwners[monster.ability.id] = slot;
+        if (monster.ability.id === 'MUTEKI' || monster.ability.id === 'GAMAN' || monster.ability.id === 'HISSHI') run.abilityOwners[monster.ability.id] = slot;
         if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.abilityOwners.KONJO = slot;
         run.abilityFlashSlot = slot;
         run.abilityFlashUntilMs = songTimeMs + RHYTHM_SIDE_MONSTER_FLASH_MS;
@@ -26682,7 +26713,7 @@ const RhythmTapTest = ({
       if (canvasNotes) RHYTHM_CANVAS_RENDERER.end();
       RHYTHM_PERF.notes(perfScanned, perfDrawn, scanFrom, run.notesAscending);
       const badge = abilityBadgeRef.current;
-      const hasAbilityBadge = badge && (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 || Number(run.abilities?.konjoStock) > 0);
+      const hasAbilityBadge = badge && (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs) > 0 || Number(run.abilities?.konjoStock) > 0);
       if (badge && !hasAbilityBadge) {
         if (badge._rhythmBadgeText !== '') {
           badge.textContent = '';
@@ -26692,8 +26723,9 @@ const RhythmTapTest = ({
       }
       if (hasAbilityBadge) {
         const mutekiMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs),
-          gamanMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs);
-        const text = [mutekiMs > 0 ? `無敵 ${(mutekiMs / 1000).toFixed(1)}s` : '', gamanMs > 0 ? `我慢 ${(gamanMs / 1000).toFixed(1)}s` : '', Number(run.abilities?.konjoStock) > 0 ? '根性 ストック' : ''].filter(Boolean).join(' / ');
+          gamanMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs),
+          hisshiMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs);
+        const text = [mutekiMs > 0 ? `無敵 ${(mutekiMs / 1000).toFixed(1)}s` : '', gamanMs > 0 ? `我慢 ${(gamanMs / 1000).toFixed(1)}s` : '', hisshiMs > 0 ? `必死 ${(hisshiMs / 1000).toFixed(1)}s` : '', Number(run.abilities?.konjoStock) > 0 ? '根性 ストック' : ''].filter(Boolean).join(' / ');
         if (badge._rhythmBadgeText !== text) {
           badge.textContent = text;
           badge._rhythmBadgeText = text;
@@ -26705,6 +26737,7 @@ const RhythmTapTest = ({
         const active = new Set();
         if (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 && owners.MUTEKI) active.add(owners.MUTEKI);
         if (rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 && owners.GAMAN) active.add(owners.GAMAN);
+        if (rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs) > 0 && owners.HISSHI) active.add(owners.HISSHI);
         if (Number(run.abilities?.konjoStock) > 0 && owners.KONJO) active.add(owners.KONJO);
         if (run.abilityFlashSlot && songTimeMs < Number(run.abilityFlashUntilMs)) active.add(run.abilityFlashSlot);
         const signature = [...active].sort().join(',');
@@ -29200,12 +29233,39 @@ const TACTICS_EX_SKILLS = Object.freeze({
     defaultStyle: 'sword',
     heroInitialStyle: true,
     effect: 'weaponChange'
+  }),
+  Yggdrasil: Object.freeze({
+    id: 'yggdrasil_world_tree',
+    name: '世界樹の守り',
+    desc: '使ったターンから3ターンのあいだ、味方全員の被ダメージを30%減らし、ターンの終わりに味方全員のライフを上限の20%ずつ回復する。',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    partyTakenRate: 0.3,
+    partyRegenRate: 0.2,
+    effect: 'partyGuard'
+  }),
+  MelWhip: Object.freeze({
+    id: 'melwhip_sweets_paradise',
+    name: 'スイーツパラダイス',
+    desc: '使ったターンのメルホイップの攻撃に、与ダメージ30%の連撃を4回追加する。',
+    maxUses: 3,
+    unlimited: false,
+    withCards: true,
+    duration: 'turn',
+    extraCombos: Object.freeze({
+      count: 4,
+      rate: 0.3
+    }),
+    effect: 'comboBurst'
   })
 });
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'partyGuard', 'comboBurst']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -29247,6 +29307,12 @@ const normalizeTacticsExDef = raw => {
       return acc;
     }, {}),
     fullRecover: raw.fullRecover === true,
+    partyTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.partyTakenRate)) ? Number(raw.partyTakenRate) : 0)),
+    partyRegenRate: Math.max(0, Number.isFinite(Number(raw.partyRegenRate)) ? Number(raw.partyRegenRate) : 0),
+    extraCombos: raw.extraCombos && typeof raw.extraCombos === 'object' && tacticsSafeInt(raw.extraCombos.count, 0) > 0 && Number(raw.extraCombos.rate) > 0 ? {
+      count: tacticsSafeInt(raw.extraCombos.count, 0),
+      rate: Number(raw.extraCombos.rate)
+    } : null,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null
@@ -29419,6 +29485,11 @@ const applyTacticsExUse = (state, {
         regenRates: def.regenRates ? {
           ...def.regenRates
         } : null,
+        partyTakenRate: def.partyTakenRate || 0,
+        partyRegenRate: def.partyRegenRate || 0,
+        extraCombos: def.extraCombos ? {
+          ...def.extraCombos
+        } : null,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -29490,6 +29561,37 @@ const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
   const own = Number(effect.regenRates && effect.regenRates[kind]);
   const rate = Number.isFinite(own) ? own : Number(effect.regenRate);
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
+};
+const tacticsExPartyTakenMult = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((mult, key) => {
+    const slot = Number(key);
+    const unit = Array.isArray(units) ? units[slot] : null;
+    if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'partyGuard') return mult;
+    const rate = Number(effects[key].partyTakenRate);
+    return Number.isFinite(rate) && rate > 0 ? mult * (1 - Math.min(0.9, rate)) : mult;
+  }, 1);
+};
+const tacticsExPartyRegenRate = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const slot = Number(key);
+    const unit = Array.isArray(units) ? units[slot] : null;
+    if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'partyGuard') return sum;
+    const rate = Number(effects[key].partyRegenRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+const tacticsExExtraCombosAt = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'comboBurst') return null;
+  const own = normalizeTacticsExState(state).effects[slot].extraCombos;
+  const count = tacticsSafeInt(own && own.count, 0),
+    rate = Number(own && own.rate);
+  return count > 0 && Number.isFinite(rate) && rate > 0 ? {
+    count,
+    rate
+  } : null;
 };
 const applyTacticsExStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
@@ -30813,6 +30915,40 @@ function BreederMarketScreen({
         confirm: count => onExchangeEventPoints ? onExchangeEventPoints(offer, count) : false
       }),
       middle: middle
+    });
+  }), RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer => {
+    const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
+    const mon = ALL_PLAYER_MONSTERS[offer.monsterId] || null;
+    const item = {
+      id: offer.id,
+      name: offer.name,
+      emoji: '💿',
+      icon: disc?.icon,
+      type: 'disc',
+      currency: 'beatPoint',
+      cost: offer.cost
+    };
+    const owned = isItemOwned({
+      id: offer.monsterId,
+      type: 'disc'
+    });
+    return React.createElement(MarketProductCard, {
+      key: offer.id,
+      dataAttrs: {
+        'data-event-point-disc': offer.id
+      },
+      item: item,
+      owned: owned,
+      comingSoon: false,
+      canBuy: !owned && safeEventPoints >= offer.cost && !busy,
+      disabled: purchaseProcessing,
+      onZoom: () => onZoomIcon(disc || item),
+      onBuy: () => openSheet({
+        item,
+        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
+      }),
+      detail: mon,
+      onDetail: () => mon && onOpenDetail(disc || item, mon, null)
     });
   }), RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer => {
     const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
@@ -41202,6 +41338,19 @@ function BattleScreen({
     });
     return answer;
   };
+  const plannedLifeTreeMult = slotIdx => {
+    const counter = makeCardHalveCounter();
+    let mult = 1;
+    selectedCards.forEach(idx => {
+      const card = hand[idx];
+      const owner = cardAssignments[idx] != null ? cardAssignments[idx] : null;
+      const halved = counter.take(card, owner);
+      if (!isLifeTreeGuardCard(card)) return;
+      if (Array.isArray(tacticsUnits) && owner !== slotIdx) return;
+      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved));
+    });
+    return mult;
+  };
   const plannedHitFor = slotIdx => {
     const none = {
       taken: 0,
@@ -41238,7 +41387,7 @@ function BattleScreen({
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
-    const taken = applyTurnDamageReduction(hit.taken, slotIdx);
+    const taken = applyTurnDamageReduction(hit.taken > 0 ? hit.taken * plannedLifeTreeMult(slotIdx) : hit.taken, slotIdx);
     if (!(taken > 0)) return {
       taken: 0,
       parts: [],
@@ -46579,11 +46728,12 @@ function MonsterHeroGame() {
       hp = alive.hp,
       guts = alive.guts;
     const live = tacticsExLiveRef.current;
+    const partyHpBoost = live.enabled ? tacticsExPartyRegenRate(tacticsExStateRef.current, units, live.now) : 0;
     if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
       const hpBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'hp');
       const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts');
-      if (hpBoost <= 0 && gutsBoost <= 0) return;
-      const extra = rateHealTacticsAt(units, slotIdx, hpBoost, gutsBoost);
+      if (hpBoost + partyHpBoost <= 0 && gutsBoost <= 0) return;
+      const extra = rateHealTacticsAt(units, slotIdx, hpBoost + partyHpBoost, gutsBoost);
       units = extra.units;
       hp += extra.hp;
       guts += extra.guts;
@@ -51940,15 +52090,19 @@ function MonsterHeroGame() {
       const beforeGold = Math.max(0, Math.floor(Number(gold) || 0));
       const beforeItems = ownedItemsRef.current;
       setRhythmEventPoints(beforePoints);
+      const isDisc = offer?.kind === 'disc';
+      const storedUnlocked = isDisc ? await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false) : null;
+      const beforeUnlocked = Array.isArray(storedUnlocked) ? storedUnlocked : unlockedMonsterIds;
       const exchange = rhythmEventPointExchangePreview({
         offer,
         eventPoints: beforePoints,
         gold: beforeGold,
         ownedItems: beforeItems,
-        quantity
+        quantity,
+        unlockedMonsterIds: beforeUnlocked
       });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : 'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? 'このモンスターはもう持っています。' : 'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([{
@@ -51963,7 +52117,11 @@ function MonsterHeroGame() {
         key: 'mh_owned_items',
         before: beforeItems,
         next: exchange.ownedItems
-      }], storeGet, storeSet);
+      }, ...(isDisc ? [{
+        key: 'mh_unlocked_monsters',
+        before: storedUnlocked,
+        next: exchange.unlockedMonsterIds
+      }] : [])], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
         return {
@@ -51975,6 +52133,16 @@ function MonsterHeroGame() {
       setGold(exchange.gold);
       ownedItemsRef.current = exchange.ownedItems;
       setOwnedItems(exchange.ownedItems);
+      if (isDisc) {
+        setUnlockedMonsterIds(exchange.unlockedMonsterIds);
+        if (monsterRosterIds.length < STARTER_MONSTER_IDS.length) {
+          const rosters = monsterPartySets.rosters.map((roster, index) => index === monsterPartySets.activeIndex ? [...roster, exchange.monsterId] : roster);
+          saveMonsterPartySets({
+            ...monsterPartySets,
+            rosters
+          });
+        }
+      }
       saveMissionProgress('market');
       return exchange;
     } catch {
@@ -55697,12 +55865,12 @@ function MonsterHeroGame() {
     const targetUnit = isTacticsMode(runMode) && Number.isInteger(targetSlot) ? tacticsBattleUnit(targetSlot) : null;
     const defVal = targetUnit ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
     const defenseRate = Math.min(0.5, defVal * 0.00015);
-    const dmgBase = Math.max(30, (atkVal - defVal * 0.5) * (1 - defenseRate)) * (traitHeroId === 'Mocchi' || traitHeroId === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
+    const dmgBase = Math.max(30, (atkVal - defVal * 0.5) * (1 - defenseRate)) * (traitHeroId === 'Mocchi' || traitHeroId === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0) * lifeSourceDamageMult(traitHeroId, turnCount);
     const soulDamageRemaining = Math.max(0, 1 - soulBattleParty.damageReduction / 100);
     return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult * soulDamageRemaining));
-  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode]);
+  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, turnCount]);
   const traitOwnerOf = mon => isTacticsMode(runMode) ? mon?.id || null : mainHero?.id || null;
-  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0))) : 0, [turnBuffs, runMode]);
+  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() : 1))) : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback(intent => applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent)), [getIncomingDamageBeforeTurnReduction, applyTurnDamageReduction]);
   const BATTLE_LOG_LIMIT = 60;
   const battleActorName = slotIdx => slots[slotIdx]?.masuName || slots[slotIdx]?.name || '味方';
@@ -55823,6 +55991,15 @@ function MonsterHeroGame() {
     if (!live.enabled || !Number.isInteger(slotIdx)) return null;
     const unit = tacticsUnitsRef.current?.[slotIdx];
     return unit ? tacticsExActiveStyle(tacticsExStateRef.current, slotIdx, unit.id, live.now) : null;
+  };
+  const tacticsExCombosAt = slotIdx => {
+    const live = tacticsExLiveRef.current;
+    if (!live.enabled || !Number.isInteger(slotIdx)) return null;
+    return tacticsExExtraCombosAt(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now);
+  };
+  const tacticsExPartyTakenMultNow = () => {
+    const live = tacticsExLiveRef.current;
+    return live.enabled ? tacticsExPartyTakenMult(tacticsExStateRef.current, tacticsUnitsRef.current, live.now) : 1;
   };
   const tacticsBattleUnit = slotIdx => {
     const unit = tacticsUnitsRef.current?.[slotIdx];
@@ -56261,7 +56438,8 @@ function MonsterHeroGame() {
       mainCanCrit: card.subType !== 'stun_atsu',
       comboFinalMultiplier: soulAttack.comboFinalMultiplier,
       swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
-      hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1
+      hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
+      exCombos: tacticsExCombosAt(slotIdx)
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
@@ -56399,6 +56577,13 @@ function MonsterHeroGame() {
   };
   const handleEnemyTurn = async (lastActionType, immediateEffects = {}, overrideIntent = null, hpAtAttackStart = hp, enemyHpAtAttackStart = enemy?.hp ?? 0) => {
     if (!enemy) return;
+    const immediateTakenMultAt = (slotIdx = null) => {
+      const bySlot = immediateEffects.takenMultBySlot;
+      const raw = Number.isInteger(slotIdx) && bySlot ? bySlot[slotIdx] : immediateEffects.takenMult;
+      const v = Number(raw);
+      return Number.isFinite(v) && v > 0 ? v : 1;
+    };
+    const applyImmediateTakenReduction = (damage, slotIdx = null) => applyTurnDamageReduction(damage > 0 ? damage * immediateTakenMultAt(slotIdx) : damage, slotIdx);
     const intent = overrideIntent || enemyIntent;
     setEnemySkillName({
       label: intent.label,
@@ -56520,7 +56705,7 @@ function MonsterHeroGame() {
           await battleWait(600);
         }
         const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
-        const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
+        const incomingDmg = applyImmediateTakenReduction(incomingBeforeTurnReduction);
         const aimedSlots = isTacticsMode(runMode) ? tacticsTargetsNow(intent, actingEnemyDist) : null;
         const defenseSlot = aimedSlots && aimedSlots.length ? aimedSlots[Math.floor(Math.random() * aimedSlots.length)] : null;
         const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id : defenseSlot != null ? tacticsUnitsRef.current[defenseSlot]?.id || null : null;
@@ -56576,7 +56761,7 @@ function MonsterHeroGame() {
         setEnemyAttackFx(null);
         if (isReflect && (forcedReflect || !isTacticsMode(runMode))) {
           const reflectSlots = isTacticsMode(runMode) ? tacticsTargetsNow(intent, actingEnemyDist) : null;
-          const reflectDmg = reflectSlots ? reflectSlots.reduce((sum, slotIdx) => sum + applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent, slotIdx), slotIdx), 0) : incomingDmg;
+          const reflectDmg = reflectSlots ? reflectSlots.reduce((sum, slotIdx) => sum + applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent, slotIdx), slotIdx), 0) : incomingDmg;
           addPopup("反射！", 'hero', 'text-purple-400 font-black text-2xl drop-shadow-lg');
           await battleWait(600);
           if (reflectDmg <= 0) {
@@ -56605,7 +56790,7 @@ function MonsterHeroGame() {
               hpGain = 0,
               gutsGain = 0;
             if (absorbSlot != null) {
-              const gain = applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent, absorbSlot), absorbSlot);
+              const gain = applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent, absorbSlot), absorbSlot);
               const guts = Math.floor(gain * 0.1);
               hpGain = gain;
               gutsGain = guts;
@@ -56669,7 +56854,7 @@ function MonsterHeroGame() {
               }
               if (slotIdx === reflectedSlot) {
                 reflectedName = tacticsTargetName(units, slotIdx);
-                reflectBack += applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent, slotIdx), slotIdx);
+                reflectBack += applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent, slotIdx), slotIdx);
                 slotFx[slotIdx] = {
                   reflect: true
                 };
@@ -56691,7 +56876,7 @@ function MonsterHeroGame() {
               const fx = slotFx[slotIdx] || (slotFx[slotIdx] = {});
               if (slotGuard > 0) fx.guard = true;
               if (hit.taken > 0) {
-                const fd = applyTurnDamageReduction(hit.taken, slotIdx);
+                const fd = applyImmediateTakenReduction(hit.taken, slotIdx);
                 units = damageTacticsTargets(units, [slotIdx], fd);
                 dealt += fd;
                 fx.dmg = (fx.dmg || 0) + fd;
@@ -56781,7 +56966,7 @@ function MonsterHeroGame() {
           await battleWait(550);
           setGuardFx(false);
           if (diff < 0) {
-            const fd = applyTurnDamageReduction(Math.abs(diff));
+            const fd = applyImmediateTakenReduction(Math.abs(diff));
             const remainingHp = calculateRemainingHp(currentHp, fd);
             currentHp = remainingHp;
             addPopup(`貫通! -${fd}`, 'hero', 'text-pink-600 text-3xl font-black drop-shadow-lg');
@@ -56871,6 +57056,22 @@ function MonsterHeroGame() {
     if (gutsRegen > 0) {
       if (showRegenTotal) addPopup(`🌿 自動ガッツ +${gutsRegen}`, 'guts', 'text-cyan-300 font-black text-lg italic drop-shadow-md');
       didRegen = true;
+    }
+    {
+      const lifeSourceTurn = turnCount + 1;
+      let lifeSourceGain = 0;
+      if (isTacticsMode(runMode)) {
+        tacticsAliveSlots(tacticsUnitsRef.current).forEach(slotIdx => {
+          if (lifeSourceGutsTurn(tacticsUnitsRef.current[slotIdx]?.id, lifeSourceTurn)) lifeSourceGain += gainGutsByRate(slotIdx, LIFE_SOURCE_GUTS_RATE);
+        });
+      } else if (lifeSourceGutsTurn(mainHero?.id, lifeSourceTurn)) {
+        lifeSourceGain = Math.floor(liveEffectiveMaxGuts() * LIFE_SOURCE_GUTS_RATE);
+        if (lifeSourceGain > 0) gainGuts(lifeSourceGain);
+      }
+      if (lifeSourceGain > 0) {
+        addPopup(`🌳 生命の源 ガッツ +${lifeSourceGain}`, 'guts', 'text-lime-300 font-black text-lg italic drop-shadow-md');
+        didRegen = true;
+      }
     }
     if (didRegen) {
       await battleWait(500);
@@ -57169,6 +57370,8 @@ function MonsterHeroGame() {
       immediateStun = false,
       currentTurnGuardFlat = 0,
       currentTurnGuardMult = 0;
+    let immediateTakenMult = 1;
+    const immediateTakenMultBySlot = {};
     const guardBySlot = {};
     const addGuardForSlot = (idx, flat, mult, weight) => {
       if (!Number.isInteger(idx)) return;
@@ -57271,7 +57474,8 @@ function MonsterHeroGame() {
             rollCrit: () => Math.random() < Math.min(1, (card.crit || 0.1) + getPermaBuff('critRatePct') + soulAttack.critRateBonus),
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
-            comboFinalMultiplier: soulAttack.comboFinalMultiplier
+            comboFinalMultiplier: soulAttack.comboFinalMultiplier,
+            exCombos: tacticsExCombosAt(slotIdx)
           });
           totalDmg += d;
           attackCount++;
@@ -57435,7 +57639,8 @@ function MonsterHeroGame() {
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
-          hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1
+          hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
+          exCombos: tacticsExCombosAt(slotIdx)
         });
         const isCrit = hits[0].crit;
         const finalD = hits[0].dmg;
@@ -57527,6 +57732,27 @@ function MonsterHeroGame() {
               setNextTurnBuff('gutsCostMult', 1.15);
             }
             addPopup('次ターン被ダメ50%減!', 'hero', 'text-pink-400 text-lg font-bold');
+          } else if (card.monId === 'Yggdrasil' || card.monId === 'MelWhip') {
+            const gRec = gainGutsByRate(slotIdx, 0.2 * effMul);
+            const guardMult = lifeTreeGuardMult(effMul);
+            if (isTacticsMode(runMode)) {
+              immediateTakenMultBySlot[slotIdx] = guardMult;
+              writeNextTurnBuffs(p => ({
+                ...p,
+                bySlot: withTacticsSlotBuff(p.bySlot, slotIdx, 'takenDamageMult', tacticsSlotRate(p.bySlot, slotIdx, 'takenDamageMult', 1.0) * guardMult)
+              }));
+            } else {
+              immediateTakenMult = guardMult;
+              writeNextTurnBuffs(p => {
+                const cur = Number(p.takenDamageMult);
+                return {
+                  ...p,
+                  takenDamageMult: (Number.isFinite(cur) && cur > 0 ? cur : 1) * guardMult
+                };
+              });
+            }
+            addPopup(`大樹の加護！ 2ターン被ダメ${Math.round(LIFE_TREE_GUARD_REDUCTION * effMul * 100)}%減`, 'hero', 'text-emerald-300 text-lg font-bold');
+            if (gRec > 0) addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-base font-bold drop-shadow-md');
           } else if (card.monId === 'Pandora') {
             if (isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx, 'pandoraResonanceTurns', 2);else setNextTurnBuff('pandoraResonanceTurns', 2);
             addPopup('双極共振！ 次の2ターン消費半減', 'hero', 'text-fuchsia-300 text-lg font-bold');
@@ -57789,7 +58015,9 @@ function MonsterHeroGame() {
       guardBySlot,
       distLocked: forcedMoveTarget != null,
       forcedMoveTarget,
-      iceLockRefreshed: activatedIceLockThisTurn
+      iceLockRefreshed: activatedIceLockThisTurn,
+      takenMult: immediateTakenMult,
+      takenMultBySlot: immediateTakenMultBySlot
     }, executedIntent, hpBeforeEnemyAttack, enemyHpAfterOurAttacks);
     if (forcedMoveTarget != null) {
       setEnemyDist(forcedMoveTarget);

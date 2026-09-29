@@ -22,7 +22,7 @@ const HERO_ATK_NAMES = {
   // ユグドラシル種(2026-09-29 ユーザーが送った参考の技画像から当てはめた)。通常技は「ちから」の技を
   // 進化段階(技の★1〜5)と消費ガッツの順に並べ、9つ目は★1のかしこさ技「グリーンライト」で埋めた。
   // メルホイップはユグドラシルと同じ並びで、★4の「苺大噴」の代わりにオリジナル技「ケーキ入刀」を持つ。
-  // 固有技の9段階名は UPCOMING_MONSTER_DRAFTS の draftUniqueNames(正式実装のとき unique.names へ移す)。
+  // 固有技の9段階名は ALL_PLAYER_MONSTERS の unique.names(2026-09-29 正式実装)。
   // 技ごとの元の値(技種・消費ガッツ・ダメージなど)は docs/spec/YGGDRASIL_SKILLS.md
   Yggdrasil: ["頭突き","空中脳天撃","グリーンライト","ぴろぴろ舌","大玉転がし","月面水爆","キャンディボム","苺大噴","シャドウレギオン"],
   MelWhip:   ["頭突き","空中脳天撃","グリーンライト","ぴろぴろ舌","大玉転がし","月面水爆","キャンディボム","ケーキ入刀","シャドウレギオン"],
@@ -78,7 +78,13 @@ const ALL_PLAYER_MONSTERS = {
   Snegurochka: { id:'Snegurochka', name:"スネグーラチカ", emoji:"❄️", imgUrl:SNEGUROCHKA_IMG, iconUrl:SNEGUROCHKA_ICON, faceIconUrl:SNEGUROCHKA_FACE_ICON, atkMotion:'waterBurst', trait:"氷海の支配者", traitDesc:"勇者モン選択時：絶氷の楔発動中かつ敵と同じ距離の場合、自動ガッツ回復率+50%（上限100%）", baseHp:400, baseGuts:150, baseAtk:135, baseDef:80, plusStats:{hp:150,atk:40,def:10,guts:40}, distAptitude:['D','E','B','A'], unique:{name:"アイスアロー",icon:SNEGUROCHKA_ICON,monId:"Snegurochka",baseMult:2.2,baseGuts:44,evoLevel:0,names:["アイスアロー","ダブルバレッド","アイスコフィン","プレゼントキッス","クリスタルアロー","アクアブラスト","ホワイトエレジー","アクアドーム","メリークリスマス"],effectDesc:"絶氷の楔：次のターンから5ターン、敵の距離移動を封じ、敵の与ダメージを30%減少。距離撃による強制移動は有効。使用するたび消費ガッツ3%減（永続・重複可・次のターンから）。"}},
   // スネグーラチカと同系統の人魚。専用モーション・勇者特性・固有効果はすべて同じ実装を共有する
   Undine: { id:'Undine', name:"ウンディーネ", emoji:"💧", imgUrl:UNDINE_IMG, iconUrl:UNDINE_ICON, faceIconUrl:UNDINE_FACE_ICON, atkMotion:'waterBurst', trait:"氷海の支配者", traitDesc:"勇者モン選択時：絶氷の楔発動中かつ敵と同じ距離の場合、自動ガッツ回復率+50%（上限100%）", baseHp:350, baseGuts:170, baseAtk:160, baseDef:50, plusStats:{hp:100,atk:45,def:0,guts:60}, distAptitude:['G','D','C','C'], unique:{name:"アイスアロー",icon:UNDINE_ICON,monId:"Undine",baseMult:2.2,baseGuts:44,evoLevel:0,names:["アイスアロー","ダブルバレッド","アイスコフィン","アクアキッス","クリスタルアロー","アクアブラスト","ホワイトエレジー","アクアドーム","オーシャンノヴァ"],effectDesc:"絶氷の楔：次のターンから5ターン、敵の距離移動を封じ、敵の与ダメージを30%減少。距離撃による強制移動は有効。使用するたび消費ガッツ3%減（永続・重複可・次のターンから）。"}},
-  Yaobikuni: { id:'Yaobikuni', name:"ヤオビクニ", emoji:"🍃", imgUrl:YAOBIKUNI_IMG, iconUrl:YAOBIKUNI_ICON, faceIconUrl:YAOBIKUNI_FACE_ICON, atkMotion:'waterBurst', trait:"氷海の支配者", traitDesc:"勇者モン選択時：絶氷の楔発動中かつ敵と同じ距離の場合、自動ガッツ回復率+50%（上限100%）", baseHp:450, baseGuts:125, baseAtk:125, baseDef:105, plusStats:{hp:150,atk:30,def:30,guts:30}, distAptitude:['D','B','E','C'], unique:{name:"アイスアロー",icon:YAOBIKUNI_ICON,monId:"Yaobikuni",baseMult:2.2,baseGuts:44,evoLevel:0,names:["アイスアロー","ダブルバレッド","アイスコフィン","アクアキッス","クリスタルアロー","アクアブラスト","ホワイトエレジー","アクアドーム","オーシャンノヴァ"],effectDesc:"絶氷の楔：次のターンから5ターン、敵の距離移動を封じ、敵の与ダメージを30%減少。距離撃による強制移動は有効。使用するたび消費ガッツ3%減（永続・重複可・次のターンから）。"}}
+  Yaobikuni: { id:'Yaobikuni', name:"ヤオビクニ", emoji:"🍃", imgUrl:YAOBIKUNI_IMG, iconUrl:YAOBIKUNI_ICON, faceIconUrl:YAOBIKUNI_FACE_ICON, atkMotion:'waterBurst', trait:"氷海の支配者", traitDesc:"勇者モン選択時：絶氷の楔発動中かつ敵と同じ距離の場合、自動ガッツ回復率+50%（上限100%）", baseHp:450, baseGuts:125, baseAtk:125, baseDef:105, plusStats:{hp:150,atk:30,def:30,guts:30}, distAptitude:['D','B','E','C'], unique:{name:"アイスアロー",icon:YAOBIKUNI_ICON,monId:"Yaobikuni",baseMult:2.2,baseGuts:44,evoLevel:0,names:["アイスアロー","ダブルバレッド","アイスコフィン","アクアキッス","クリスタルアロー","アクアブラスト","ホワイトエレジー","アクアドーム","オーシャンノヴァ"],effectDesc:"絶氷の楔：次のターンから5ターン、敵の距離移動を封じ、敵の与ダメージを30%減少。距離撃による強制移動は有効。使用するたび消費ガッツ3%減（永続・重複可・次のターンから）。"}},
+  // ユグドラシル種(2026-09-29 正式実装)。数値・特性・固有技・EXはユーザーと決めた値(docs/spec/YGGDRASIL_SKILLS.md)。
+  // どちらもライフ・丈夫さ型で、ユグドラシルのほうが丈夫さ寄り、メルホイップのほうが少し攻撃寄り。
+  // 固有技は消費64(×3.2)の重い一撃。勇者特性「生命の源」と固有技の効果「大樹の加護」は2体で同じ。
+  // 技は技の名前ごとに別の動き(23-rpg-debug.jsx の SKILL_ATTACK_THEMES)なので atkMotion は 'default'
+  Yggdrasil: { id:'Yggdrasil', name:"ユグドラシル", emoji:"🌳", imgUrl:YGGDRASIL_IMG, iconUrl:YGGDRASIL_ICON, faceIconUrl:YGGDRASIL_FACE_ICON, atkMotion:'default', trait:"生命の源", traitDesc:"勇者モン選択時：1〜5ターン目は被ダメージ30%軽減。6ターン目以降、3ターン毎にガッツ30%回復(ターン数はWAVE毎にリセット)", baseHp:800, baseGuts:115, baseAtk:100, baseDef:180, plusStats:{hp:380,atk:10,def:80,guts:5}, distAptitude:['B','D','E','A'], unique:{name:"スターボム",icon:YGGDRASIL_ICON,monId:"Yggdrasil",baseMult:3.2,baseGuts:64,evoLevel:0,names:["スターボム","ワンダーブレイズ","メニーウィング","メテオストーム","パピヨンバースト","ヘビーレイン","エターナルアーク","オーロラハック","コスモフルーツ"],effectDesc:"大樹の加護：最大ガッツの20%回復＆被ダメージ30%軽減(このターンから2ターン)"}},
+  MelWhip:   { id:'MelWhip', name:"メルホイップ", emoji:"🍰", imgUrl:MEL_WHIP_IMG, iconUrl:MEL_WHIP_ICON, faceIconUrl:MEL_WHIP_FACE_ICON, atkMotion:'default', trait:"生命の源", traitDesc:"勇者モン選択時：1〜5ターン目は被ダメージ30%軽減。6ターン目以降、3ターン毎にガッツ30%回復(ターン数はWAVE毎にリセット)", baseHp:780, baseGuts:120, baseAtk:130, baseDef:150, plusStats:{hp:350,atk:30,def:50,guts:10}, distAptitude:['E','C','A','B'], unique:{name:"スターボム",icon:MEL_WHIP_ICON,monId:"MelWhip",baseMult:3.2,baseGuts:64,evoLevel:0,names:["スターボム","ワンダーブレイズ","ライスシャワー","メテオストーム","パピヨンバースト","ヘビーレイン","エターナルアーク","オーロラハック","コスモフルーツ"],effectDesc:"大樹の加護：最大ガッツの20%回復＆被ダメージ30%軽減(このターンから2ターン)"}},
 };
 
 // 初期から無料で使えるモンスターのid一覧(固定)。
@@ -94,15 +100,7 @@ const STARTER_MONSTER_IDS = ['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Mon
 // 決まっていない項目(能力値・技・勇者特性・攻撃モーション)は書かない。画面で「未設定」と赤く出るので、
 // 何が足りないかがそのまま一覧になる。正式に実装したら ALL_PLAYER_MONSTERS へ移し、ここからは消す。
 //   draftLineage … 血統の案。本体の MONSTER_LINEAGE_MAP へ足すのは正式実装のとき(lineage-dex-check.js の決まり)
+// ユグドラシルとメルホイップは 2026-09-29 に正式実装したので ALL_PLAYER_MONSTERS へ移した(ここは空)。
+//   draftUniqueNames … 固有技の9段階名(正式実装のとき unique.names へ移す)
 const UPCOMING_MONSTER_DRAFTS = Object.freeze({
-  // ユグドラシル(新しい血統・純血)。絵・顔アイコン・円盤石・染色マスク・図鑑の文までそろっている
-  Yggdrasil: Object.freeze({ id:'Yggdrasil', name:"ユグドラシル", emoji:"🌳", imgUrl:YGGDRASIL_IMG, iconUrl:YGGDRASIL_IMG,
-    faceIconUrl:YGGDRASIL_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'yggdrasil' }),
-    // 固有技の9段階名(かしこさ技を★と消費ガッツの順に。最後は★5で消費がいちばん重い「コスモフルーツ」)
-    draftUniqueNames:Object.freeze(["スターボム","ワンダーブレイズ","メニーウィング","メテオストーム","パピヨンバースト","ヘビーレイン","エターナルアーク","オーロラハック","コスモフルーツ"]) }),
-  // メルホイップ(ユグドラシル×？？？のレア)
-  MelWhip: Object.freeze({ id:'MelWhip', name:"メルホイップ", emoji:"🍰", imgUrl:MEL_WHIP_IMG, iconUrl:MEL_WHIP_IMG,
-    faceIconUrl:MEL_WHIP_FACE_ICON, draft:true, draftLineage:Object.freeze({ main:'yggdrasil', sub:'unknown' }),
-    // ユグドラシルと同じ並びで、★2の「メニーウィング」の代わりにオリジナル技「ライスシャワー」を持つ
-    draftUniqueNames:Object.freeze(["スターボム","ワンダーブレイズ","ライスシャワー","メテオストーム","パピヨンバースト","ヘビーレイン","エターナルアーク","オーロラハック","コスモフルーツ"]) }),
 });

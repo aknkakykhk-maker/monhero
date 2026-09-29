@@ -115,12 +115,17 @@ assert(game.includes(`Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaB
   '永続軽減の適用が変わっている。モデル側も新しい式へ直すこと');
 // タクティクスでは「狙われた子だけ」のぶん(tacticsSlotRate)も掛ける形になった。ふだんのバトルは bySlot を渡さないので 1.0 で今までと同じ
 assert(game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)))`)
-  || game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)\n      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)))`),
+  || game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)\n      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)))`)
+  // 2026-09-29: タクティクスのEX「世界樹の守り」のぶんが最後に掛かる形になった。ふだんのバトルは1で今までと同じ
+  || game.includes(`? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)\n      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)\n      *(isTacticsMode(runMode)?tacticsExPartyTakenMultNow():1)))`),
   '次ターン被ダメージ軽減の適用が変わっている。モデル側も新しい式へ直すこと');
 // 予測表示は1発ずつ数えるため、ガードを引いた値(hit.taken)を resolveTacticsGuardedHit で出してから軽減を掛ける形になった(順番は同じ)
 assert(game.includes(`applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult)))`)
-  || (game.includes('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);') && game.includes('const taken = applyTurnDamageReduction(hit.taken, slotIdx);')));
-assert(game.includes(`const fd=applyTurnDamageReduction(Math.abs(diff))`));
+  || (game.includes('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);') && game.includes('const taken = applyTurnDamageReduction(hit.taken, slotIdx);'))
+  // 2026-09-29: 固有技「大樹の加護」を選んでいれば使ったターンぶんを先に掛ける(選んでいなければ1で同じ)
+  || (game.includes('const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);') && game.includes('const taken = applyTurnDamageReduction(hit.taken > 0 ? hit.taken * plannedLifeTreeMult(slotIdx) : hit.taken, slotIdx);')));
+// 2026-09-29: 敵の番の被ダメは applyImmediateTakenReduction(大樹の加護の「使ったターンぶん」を掛けてから applyTurnDamageReduction)を通す
+assert(game.includes(`const fd=applyTurnDamageReduction(Math.abs(diff))`) || game.includes(`const fd=applyImmediateTakenReduction(Math.abs(diff))`));
 
 // getIncomingDamageBeforeTurnReduction と同じ計算(丈夫さ→固定軽減→割合軽減→永続軽減)
 const enemyDamageBeforeTurnReduction = ({ attack, defense, permanentReduction=0 }) => {

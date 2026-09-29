@@ -1,13 +1,13 @@
-// 近日公開予定の新モンスターの円盤石を、ほかのショップと同じように見られるかを実ブラウザで確かめる(2026-09-28)。
+// ビートP交換所の円盤石(ユグドラシル・メルホイップ)を、実ブラウザで交換まで確かめる(2026-09-29)。
 //
-//   node tools/market/upcoming-disc-detail-check.js
+//   node tools/market/beat-point-disc-check.js
 //
-// 2026-09-28 ユーザー指摘「ビートポイントでモンスターの円盤石を押してもアップにならない」「詳細ボタンがない」
-// 「他のショップとあわせて」。ビートP交換所の予告カードだけ手作りで、絵を押しても大きくならず、詳細も無かった。
-// ダイヤショップの近日追加の円盤石も、詳細は「近日追加」では出さない作りだった。
-//   ① ビートP交換所: 予告カードの絵を押すと大きく見られる / 「詳細」で中身が開く
-//   ② ダイヤショップ: 近日追加の円盤石にも「詳細」があり、同じ中身が開く
-//   ③ 詳細の中身: 名前・「近日公開予定」・血統・図鑑の説明・予定の値段(ダイヤとビートP)
+// 2026-09-28 に予告カードとして並べ(ユーザー指摘「押してもアップにならない」「詳細ボタンがない」「他のショップとあわせて」)、
+// 2026-09-29 ユーザー指示「進めて」で本体が入ったので、交換できる円盤石へ移した。
+//   ① ビートP交換所: 円盤石が2枚ある / 絵を押すと大きく見られる / 「詳細」でモンスターの詳細(能力・技)が開く
+//   ② 交換: ビートPを1,500払うとモンスターが解放され(mh_unlocked_monsters)、カードが「所持済み」になる。
+//      ビートPが足りない円盤石は交換できない。すでに持っている子は交換できない
+//   ③ ダイヤショップ: 近日追加の円盤石も「詳細」でモンスターの詳細が開く
 const http = require('http'), path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..', '..'), PORT = 8961;
 let failed = 0;
@@ -31,7 +31,7 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
       put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', '🐣'); put('mh_intro_done', true); put('mh_onboarded', true);
       put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
       put('mh_assistant_selected_v1', 'mua'); put('mh_assistant_unlock_seen_v1', true); put('mh_update_notice_seen_v1', true);
-      put('mh_rhythm_tutorial_seen_v1', true); put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true); });
+      put('mh_rhythm_tutorial_seen_v1', true); put('mh_rhythm_event_points_v1', 2000); put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true); });
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
@@ -47,36 +47,44 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     ok('HOMEからマーケットへ入れる', intoMarket);
     await page.waitForTimeout(600); await dismiss();
 
-    const detailText = () => page.evaluate(() => { const d = document.querySelector('[data-upcoming-monster-detail]'); return d ? { id: d.getAttribute('data-upcoming-monster-detail'), text: d.innerText } : null; });
-    const closeDetail = () => page.evaluate(() => { const d = document.querySelector('[data-upcoming-monster-detail]'); const b = d && [...d.querySelectorAll('button')].find(b => /^(閉じる|とじる)$/.test(b.innerText.trim())); if (b) b.click(); });
+    const monsterDetail = () => page.evaluate(() => { const d = [...document.querySelectorAll('[role="dialog"]')].find(d => /の詳細$/.test(d.getAttribute('aria-label') || '') && /ちから|ライフ/.test(d.innerText)); return d ? d.getAttribute('aria-label') : null; });
+    const closeDialog = () => page.evaluate(() => { const ds = [...document.querySelectorAll('[role="dialog"]')]; const d = ds[ds.length - 1]; const b = d && [...d.querySelectorAll('button')].reverse().find(b => /^(閉じる|とじる|✕|×)$/.test(b.innerText.trim()) || /閉じる/.test(b.getAttribute('aria-label') || '')); if (b) b.click(); });
 
     // ① ビートP交換所
     const intoEvent = await page.evaluate(() => { const b = document.querySelector('[data-market-section="event"]'); if (!b) return false; b.click(); return true; });
     await page.waitForTimeout(500);
-    const cards = await page.$$eval('[data-event-point-coming-soon]', els => els.map(e => e.getAttribute('data-event-point-coming-soon')));
-    ok('ビートP交換所に予告カードが2枚ある', intoEvent && cards.length === 2, cards.join('・'));
+    const cards = await page.$$eval('[data-event-point-disc]', els => els.map(e => e.getAttribute('data-event-point-disc')));
+    ok('ビートP交換所に円盤石が2枚ある(予告カードは残っていない)', intoEvent && cards.join() === 'disc_yggdrasil,disc_mel_whip'
+      && (await page.$$('[data-event-point-coming-soon]')).length === 0, cards.join('・'));
     for (const id of cards) {
-      const zoomed = await page.evaluate(id => { const c = document.querySelector(`[data-event-point-coming-soon="${id}"]`); const b = c && c.querySelector('button[aria-label$="を大きく見る"]'); if (!b) return null; b.click(); return b.getAttribute('aria-label'); }, id);
+      const zoomed = await page.evaluate(id => { const c = document.querySelector(`[data-event-point-disc="${id}"]`); const b = c && c.querySelector('button[aria-label$="を大きく見る"]'); if (!b) return null; b.click(); return b.getAttribute('aria-label'); }, id);
       await page.waitForTimeout(250);
-      const zoomOpen = await page.evaluate(() => [...document.querySelectorAll('[role="dialog"]')].some(d => /の拡大|を大きく/.test(d.getAttribute('aria-label') || '') || /閉じる|とじる/.test(d.innerText)));
+      const zoomOpen = await page.evaluate(() => [...document.querySelectorAll('[role="dialog"]')].some(d => /の拡大|を大きく/.test(d.getAttribute('aria-label') || '')));
       ok(`${id}: 絵を押すと大きく見られる`, !!zoomed && zoomOpen, zoomed || '絵のボタンが無い');
-      await page.evaluate(() => { const b = [...document.querySelectorAll('[role="dialog"] button')].find(b => /^(閉じる|とじる)$/.test(b.innerText.trim())); if (b) b.click(); });
-      await page.waitForTimeout(200);
-      const hasChip = await page.evaluate(id => { const c = document.querySelector(`[data-event-point-coming-soon="${id}"]`); const b = c && c.querySelector('button[aria-label$="の詳細を見る"]'); if (!b) return false; b.click(); return true; }, id);
-      await page.waitForTimeout(250);
-      const d = await detailText();
-      ok(`${id}: 「詳細」があり、中身が開く`, hasChip && !!d, d ? d.id : '開かない');
-      if (d) {
-        ok(`${id}: 詳細に「近日公開予定」・血統・図鑑の説明・予定の値段が出る`,
-          d.text.includes('近日公開予定') && d.text.includes('血統') && d.text.includes('ユグドラシル') && /ダイヤショップ：150,000ダイヤ/.test(d.text) && /ビートP交換所：[\d,]+ビートP/.test(d.text) && d.text.includes('公開のときにお知らせ'),
-          d.text.replace(/\s+/g, ' ').slice(0, 90));
-      }
-      await closeDetail(); await page.waitForTimeout(200);
-      // 2026-09-28「ショップの作りを全部統一して」から、マーケットの窓はどれも「閉じる」(共通部品 MarketModalClose)
-      ok(`${id}: 詳細を「閉じる」で閉じられる`, !(await detailText()));
+      await closeDialog(); await page.waitForTimeout(200);
+      const hasChip = await page.evaluate(id => { const c = document.querySelector(`[data-event-point-disc="${id}"]`); const b = c && c.querySelector('button[aria-label$="の詳細を見る"]'); if (!b) return false; b.click(); return true; }, id);
+      await page.waitForTimeout(300);
+      const d = await monsterDetail();
+      ok(`${id}: 「詳細」でモンスターの詳細(能力)が開く`, hasChip && !!d, d || '開かない');
+      await closeDialog(); await page.waitForTimeout(250);
     }
-    // ② ダイヤショップ(円盤石のタブ)
-    // 見出しの「戻る」で入口へ戻る
+    // ② 交換(2,000Pあるので1枚だけ交換でき、2枚目は足りない)
+    const buy = async (id) => {
+      const pressed = await page.evaluate(id => { const c = document.querySelector(`[data-event-point-disc="${id}"]`); const b = c && [...c.querySelectorAll('button')].find(b => /交換/.test(b.getAttribute('aria-label') || '')); if (!b || b.disabled) return false; b.click(); return true; }, id);
+      if (!pressed) return false;
+      await page.waitForTimeout(300);
+      const confirmed = await page.evaluate(() => { const b = [...document.querySelectorAll('[role="dialog"] button')].find(b => /交換する$/.test(b.innerText.trim())); if (!b || b.disabled) return false; b.click(); return true; });
+      await page.waitForTimeout(800);
+      return confirmed;
+    };
+    const bought = await buy('disc_yggdrasil');
+    const store = await page.evaluate(() => ({ unlocked: JSON.parse(localStorage.getItem('mh_unlocked_monsters') || 'null'), points: JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || 'null') }));
+    ok('ユグドラシルの円盤石を1,500Pで交換すると解放され、ビートPが500になる', bought && Array.isArray(store.unlocked) && store.unlocked.includes('Yggdrasil') && store.points === 500, JSON.stringify(store));
+    const ownedLabel = await page.evaluate(() => (document.querySelector('[data-event-point-disc="disc_yggdrasil"]')?.innerText || '').includes('所持済み'));
+    ok('交換したカードは「所持済み」になる(もう交換できない)', ownedLabel);
+    ok('ビートPが足りない円盤石(メルホイップ)は交換ボタンが押せない', !(await buy('disc_mel_whip')));
+
+    // ③ ダイヤショップ(円盤石のタブ)
     const intoDiamond = await page.evaluate(() => { const b = document.querySelector('button[aria-label="戻る"]'); if (!b) return false; b.click(); return true; });
     await page.waitForTimeout(500);
     const diamondOk = await page.evaluate(() => { const b = document.querySelector('[data-market-section="diamond"]'); if (!b) return false; b.click(); return true; });
@@ -84,10 +92,10 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     ok('ダイヤショップへ入れる', intoDiamond && diamondOk);
     for (const name of ['ユグドラシルの円盤石', 'メルホイップの円盤石']) {
       const clicked = await page.evaluate(n => { const b = document.querySelector(`button[aria-label="${n}の詳細を見る"]`); if (!b) return false; b.scrollIntoView(); b.click(); return true; }, name);
-      await page.waitForTimeout(250);
-      const d = await detailText();
-      ok(`ダイヤショップ: ${name}(近日追加)に「詳細」があり、同じ中身が開く`, clicked && !!d, d ? d.id : clicked ? '開かない' : 'ボタンが無い');
-      await closeDetail(); await page.waitForTimeout(200);
+      await page.waitForTimeout(300);
+      const d = await monsterDetail();
+      ok(`ダイヤショップ: ${name}(近日追加)に「詳細」があり、モンスターの詳細が開く`, clicked && !!d, d || (clicked ? '開かない' : 'ボタンが無い'));
+      await closeDialog(); await page.waitForTimeout(250);
     }
     ok('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } finally { await browser.close(); server.close(); }

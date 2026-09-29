@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8a20338e229810c2
+// generated-sha256: 10da30c077bf78d2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-29 12:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-29 15:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9950,6 +9950,7 @@ const rhythmAbilityEffectText=ability=>{
   if(ability.id==='GENKI')return `取るとライフが +${ability.lifeGain}`;
   if(ability.id==='MUTEKI')return `${Math.round(ability.durationMs/1000)}秒のあいだライフが減らない`;
   if(ability.id==='GAMAN')return `${Math.round(ability.durationMs/1000)}秒のあいだライフの減りが${Math.round((1-ability.reduceRate)*100)}%小さくなる`;
+  if(ability.id==='HISSHI')return `${Math.round(ability.durationMs/1000)}秒のあいだ、GREAT以上の判定がすべてJUST MARVELOUSになる`;
   if(ability.id==='KONJO')return `倒れたときに一度だけライフ${ability.reviveLife}で復活（持っているときにもう一度取るとライフ +${ability.stockLifeGain}）`;
   return '';
 };
@@ -10753,6 +10754,26 @@ const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroD
   && heroDist===enemyDist
   ? Math.min(1, currentRate + 0.5)
   : currentRate;
+// ==== 勇者特性「生命の源」(ユグドラシル・メルホイップ。2026-09-29 ユーザーと決めた値) ====
+// 1〜5ターンの間は被ダメージ30%軽減。6ターン目以降、3ターンごと(6・9・12…ターン目)にガッツを最大の30%回復。
+// ターンは WAVE ごとに1から数え直す(turnCount。spawnEnemy で1へ戻る)。
+// 被ダメージの軽減はほかの軽減と掛け算で重なる(もち肌・中二病と同じ場所で掛ける)
+const LIFE_SOURCE_MONSTER_IDS = Object.freeze(['Yggdrasil', 'MelWhip']);
+const LIFE_SOURCE_GUARD_TURNS = 5;
+const LIFE_SOURCE_GUARD_MULT = 0.7;
+const LIFE_SOURCE_GUTS_FROM_TURN = 6;
+const LIFE_SOURCE_GUTS_EVERY = 3;
+const LIFE_SOURCE_GUTS_RATE = 0.3;
+const hasLifeSourceTrait = (id) => LIFE_SOURCE_MONSTER_IDS.includes(id);
+const lifeSourceDamageMult = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= 1 && Number(turn) <= LIFE_SOURCE_GUARD_TURNS
+  ? LIFE_SOURCE_GUARD_MULT : 1;
+const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= LIFE_SOURCE_GUTS_FROM_TURN
+  && (Number(turn) - LIFE_SOURCE_GUTS_FROM_TURN) % LIFE_SOURCE_GUTS_EVERY === 0;
+// 固有技「大樹の加護」: 使ったターンから2ターン、被ダメージ30%軽減。
+//   使ったターンのぶんは予告(71-screen-battle)と実際(handleEnemyTurn)の両方がこの値を掛ける
+const LIFE_TREE_GUARD_REDUCTION = 0.3;
+const isLifeTreeGuardCard = (card) => !!card && card.type === 'unique' && hasLifeSourceTrait(card.monId);
+const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
 // ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。
 //   options.mode にそのランのモードを渡すと、そちらの10体が出る。
 //   クラシック・クイックの並び(ENEMY_SEQUENCE)は1つも変えない——あちらを差し替えると、
@@ -10917,7 +10938,7 @@ const KENSHI_COMBO_POWER_MAX = 3;
 //   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
 //     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
 //     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
-const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1 }) => {
+const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1, exCombos = null }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
@@ -10963,6 +10984,12 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   // 本数に上限は設けない。率にも連撃ダメージ補正(comboDmgBonus)が乗る
   if (attackerId === 'KenshiMocchi') {
     for (let i = 0; i < kenshiExtraCombos; i++) combo(ATTACK_COMBO_RULES.kenshiExtraCombo + comboDmgBonus);
+  }
+  // ★exCombos … タクティクスのEX「スイーツパラダイス」(2026-09-29 ユーザー指示「連撃30%×4」)。
+  //   使ったターンのその子の攻撃へ { rate } の連撃を count 回足す。連撃ダメージ補正も乗る。
+  //   4本ぶん専用モーションを繰り返すと長くなるので、数字だけを続けて出す(noAnim)。ほかのモードは渡さないので常に null
+  if (exCombos && exCombos.count > 0 && exCombos.rate > 0) {
+    for (let i = 0; i < exCombos.count; i++) combo(exCombos.rate + comboDmgBonus, 'スイーツパラダイス', true);
   }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
   // ★hitRepeat … タクティクスのEX「ソード・コンバージョン」の二刀流(2026-09-25 ユーザー指示)。
@@ -11843,6 +11870,8 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   allIn:        { c1:'#fed7aa', c2:'#dc2626', motif:'flame' },  // 捨て身: 赤い炎
   statBoost:    { c1:'#fef08a', c2:'#f59e0b', motif:'rise' },   // ガッツ全開っちー: 金の光が立ちのぼる
   weaponChange: { c1:'#cffafe', c2:'#0891b2', motif:'blade' },  // ソード・コンバージョン: 青い斬撃
+  partyGuard:   { c1:'#bbf7d0', c2:'#15803d', motif:'shield' }, // 世界樹の守り: 緑の盾
+  comboBurst:   { c1:'#fbcfe8', c2:'#db2777', motif:'rise' },   // スイーツパラダイス: 桃色の光
   default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },
 });
 const tacticsExCutinTheme = (effect) => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;
@@ -16675,11 +16704,12 @@ const rhythmClockLabel=ms=>{const total=Math.max(0,Math.floor((Number(ms)||0)/10
 // 判定ライン付近では1サブレーン約32〜38pxなので、.20は約6〜8px。
 // 接触幅側の中心揺れdeadzone(6〜10px)と同程度だけを無視し、明確な横移動は残す。
 const RHYTHM_TAP_REJUDGE_MOVE_SUBLANES=.20;
-const rhythmAbilityEmoji=abilityId=>abilityId==='GENKI'?'💚':abilityId==='MUTEKI'?'🛡️':abilityId==='GAMAN'?'🧱':abilityId==='KONJO'?'🔥':'✨';
+const rhythmAbilityEmoji=abilityId=>abilityId==='GENKI'?'💚':abilityId==='MUTEKI'?'🛡️':abilityId==='GAMAN'?'🧱':abilityId==='KONJO'?'🔥':abilityId==='HISSHI'?'🎯':'✨';
 const rhythmAbilityTone=abilityId=>abilityId==='GENKI'?'border-emerald-300/50 bg-emerald-950/40 text-emerald-100'
   :abilityId==='MUTEKI'?'border-cyan-300/50 bg-cyan-950/40 text-cyan-100'
   :abilityId==='GAMAN'?'border-amber-300/50 bg-amber-950/40 text-amber-100'
   :abilityId==='KONJO'?'border-rose-300/50 bg-rose-950/40 text-rose-100'
+  :abilityId==='HISSHI'?'border-lime-300/50 bg-lime-950/40 text-lime-100'
   :'border-white/20 bg-slate-900/60 text-slate-300';
 // 能力ごとに「その能力になる血統」をまとめる。並びは RHYTHM_MONSTER_ABILITIES の順。
 const rhythmAbilityRows=()=>Object.values(RHYTHM_MONSTER_ABILITIES).map(ability=>({
@@ -16734,6 +16764,7 @@ const RhythmMonsterNoteGuide=()=>{
       <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">
         無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。
         両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。
+        必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。
         残り時間と根性を持っているかは、演奏中の画面の右上に出ます。
       </p>
     </article>
@@ -17577,7 +17608,10 @@ useEffect(()=>{
   window.addEventListener('orientationchange',invalidate);
   return ()=>{window.removeEventListener('resize',invalidate);window.removeEventListener('orientationchange',invalidate);};
 },[settings.noteStartPosition,settings.noteSize,settings.judgmentLineHeight,view.status]);
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;note._rhythmDeltaMs=typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;
+// 必死(ユグドラシル血統の能力)のあいだは、GREAT以上をジャストマーベラスとして数える(判定もズレもここで置き換える)
+if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0)){judgment='MARVELOUS';deltaMs=0;}
+if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;note._rhythmDeltaMs=typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // MARVELOUSの中でも、とくにぴったり(±20ms)だったか。**見た目にしか使わない**(2026-09-12)。
 // 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れないので、
 // run にも result にも残さない。judgmentTimingOffsetMs を通したあとのズレを見ている
@@ -17716,7 +17750,7 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     // 判定・スコア・ライフには一切関係しない、見た目だけの控え。
     const slot=rhythmNoteMonsterSlot(note);
     run.abilityOwners=run.abilityOwners||{};
-    if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN')run.abilityOwners[monster.ability.id]=slot;
+    if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN'||monster.ability.id==='HISSHI')run.abilityOwners[monster.ability.id]=slot;
     if(monster.ability.id==='KONJO'&&Number(activated.state?.konjoStock)>0)run.abilityOwners.KONJO=slot;
     // 元気のように一瞬で終わる能力は、少しのあいだだけ光らせる
     run.abilityFlashSlot=slot;
@@ -18017,14 +18051,15 @@ const badge=abilityBadgeRef.current;
 // 曲の大半は何も出ていないので、毎フレームの文字列生成と小数計算をまるごと省ける。
 const hasAbilityBadge=badge&&(rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs)>0
   ||rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs)>0
+  ||rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs)>0
   ||Number(run.abilities?.konjoStock)>0);
 if(badge&&!hasAbilityBadge){
   if(badge._rhythmBadgeText!==''){badge.textContent='';badge._rhythmBadgeText='';}
   if(!badge.hidden)badge.hidden=true;
 }
 if(hasAbilityBadge){
-  const mutekiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs),gamanMs=rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs);
-  const text=[mutekiMs>0?`無敵 ${(mutekiMs/1000).toFixed(1)}s`:'',gamanMs>0?`我慢 ${(gamanMs/1000).toFixed(1)}s`:'',Number(run.abilities?.konjoStock)>0?'根性 ストック':''].filter(Boolean).join(' / ');
+  const mutekiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs),gamanMs=rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs),hisshiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs);
+  const text=[mutekiMs>0?`無敵 ${(mutekiMs/1000).toFixed(1)}s`:'',gamanMs>0?`我慢 ${(gamanMs/1000).toFixed(1)}s`:'',hisshiMs>0?`必死 ${(hisshiMs/1000).toFixed(1)}s`:'',Number(run.abilities?.konjoStock)>0?'根性 ストック':''].filter(Boolean).join(' / ');
   if(badge._rhythmBadgeText!==text){badge.textContent=text;badge._rhythmBadgeText=text;}
   if(badge.hidden!==(text===''))badge.hidden=text==='';
 }
@@ -18035,6 +18070,7 @@ if(settings.sideMonsterAbilityHighlight&&sideMonsterRefs.current.length){
   const active=new Set();
   if(rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs)>0&&owners.MUTEKI)active.add(owners.MUTEKI);
   if(rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs)>0&&owners.GAMAN)active.add(owners.GAMAN);
+  if(rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs)>0&&owners.HISSHI)active.add(owners.HISSHI);
   if(Number(run.abilities?.konjoStock)>0&&owners.KONJO)active.add(owners.KONJO);
   if(run.abilityFlashSlot&&songTimeMs<Number(run.abilityFlashUntilMs))active.add(run.abilityFlashSlot);
   const signature=[...active].sort().join(',');
@@ -19555,6 +19591,9 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   heroInitialStyle … true なら、勇者モンに選んだときだけ配置の画面で初期スタイルを選べる
 //   conditions … 使うための追加の条件(TACTICS_EX_CONDITIONS のキー)。無ければ空
 //   conditionText … 条件を画面に出すときの文(任意)
+//   partyTakenRate … 効いているあいだ、味方全員の被ダメージを何割減らすか(0.3 なら30%軽減。ほかの軽減と掛け算で重なる)
+//   partyRegenRate … 効いているあいだ、ターンの終わりに味方全員(立っている子)のライフを上限の何割ぶん多く回復するか
+//   extraCombos … { count, rate } 効いているあいだ、その子の攻撃へ与ダメージ rate の連撃を count 回足す
 //   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
 const TACTICS_EX_DURATION_TEXT = Object.freeze({
   turn: '発動したターンだけ',
@@ -19630,6 +19669,26 @@ const TACTICS_EX_SKILLS = Object.freeze({
     heroInitialStyle: true,
     effect: 'weaponChange',
   }),
+  // ★2026-09-29 ユーザー指示「世界樹の守り。回復は20%、回数は5回」。
+  //   3ターンのあいだ味方全員の被ダメージ30%軽減＋ターン終わりに味方全員のライフを上限の20%回復。
+  //   カードとの併用はモッチー・ミタラシと同じく「できる」
+  Yggdrasil: Object.freeze({
+    id: 'yggdrasil_world_tree',
+    name: '世界樹の守り',
+    desc: '使ったターンから3ターンのあいだ、味方全員の被ダメージを30%減らし、ターンの終わりに味方全員のライフを上限の20%ずつ回復する。',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    partyTakenRate: 0.3, partyRegenRate: 0.2,
+    effect: 'partyGuard',
+  }),
+  // ★2026-09-29 ユーザー指示「スイーツパラダイス。連撃30%×4にして」。効くのは発動したターンだけ、1ラン3回
+  MelWhip: Object.freeze({
+    id: 'melwhip_sweets_paradise',
+    name: 'スイーツパラダイス',
+    desc: '使ったターンのメルホイップの攻撃に、与ダメージ30%の連撃を4回追加する。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
+    extraCombos: Object.freeze({ count: 4, rate: 0.3 }),
+    effect: 'comboBurst',
+  }),
 });
 // 追加の条件。ctx を受け取り、使えないときだけ理由の文を返す(使えるなら null)。
 // ctx: { active(その子のEXがいま効いているか) }
@@ -19640,7 +19699,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'partyGuard', 'comboBurst']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -19688,6 +19747,11 @@ const normalizeTacticsExDef = (raw) => {
       return acc;
     }, {}),
     fullRecover: raw.fullRecover === true,
+    partyTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.partyTakenRate)) ? Number(raw.partyTakenRate) : 0)),
+    partyRegenRate: Math.max(0, Number.isFinite(Number(raw.partyRegenRate)) ? Number(raw.partyRegenRate) : 0),
+    extraCombos: raw.extraCombos && typeof raw.extraCombos === 'object'
+      && tacticsSafeInt(raw.extraCombos.count, 0) > 0 && Number(raw.extraCombos.rate) > 0
+      ? { count: tacticsSafeInt(raw.extraCombos.count, 0), rate: Number(raw.extraCombos.rate) } : null,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null,
@@ -19802,6 +19866,8 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       style,
       turns: def.duration === 'turns' ? def.turns : 0, statRate: def.statRate || 0, regenRate: def.regenRate || 0,
       rates: def.rates ? { ...def.rates } : null, regenRates: def.regenRates ? { ...def.regenRates } : null,
+      partyTakenRate: def.partyTakenRate || 0, partyRegenRate: def.partyRegenRate || 0,
+      extraCombos: def.extraCombos ? { ...def.extraCombos } : null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -19861,6 +19927,37 @@ const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
   const own = Number(effect.regenRates && effect.regenRates[kind]);
   const rate = Number.isFinite(own) ? own : Number(effect.regenRate);
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
+};
+// 世界樹の守り(partyGuard)。味方全員の被ダメージへ掛ける倍率。効いている子が複数いれば掛け算で重なる。
+// ★使った子が倒れても効果は残る(守りは場に張られたもの)。WAVEが変わると切れる
+const tacticsExPartyTakenMult = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((mult, key) => {
+    const slot = Number(key);
+    const unit = Array.isArray(units) ? units[slot] : null;
+    if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'partyGuard') return mult;
+    const rate = Number(effects[key].partyTakenRate);
+    return Number.isFinite(rate) && rate > 0 ? mult * (1 - Math.min(0.9, rate)) : mult;
+  }, 1);
+};
+// 世界樹の守りの、ターン終わりのライフ回復(味方全員へ足す率)
+const tacticsExPartyRegenRate = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const slot = Number(key);
+    const unit = Array.isArray(units) ? units[slot] : null;
+    if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'partyGuard') return sum;
+    const rate = Number(effects[key].partyRegenRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+// スイーツパラダイス(comboBurst)。その子の攻撃へ足す連撃 { count, rate }。効いていなければ null
+const tacticsExExtraCombosAt = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'comboBurst') return null;
+  const own = normalizeTacticsExState(state).effects[slot].extraCombos;
+  const count = tacticsSafeInt(own && own.count, 0), rate = Number(own && own.rate);
+  return count > 0 && Number.isFinite(rate) && rate > 0 ? { count, rate } : null;
 };
 const applyTacticsExStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
@@ -20863,6 +20960,24 @@ function BreederMarketScreen({
               onBuy={()=>openSheet({ item, stackable:true, countUnit:'回', grantAmount:offer.grantAmount, grantUnit:offer.unit,
                 confirm:(count)=>onExchangeEventPoints?onExchangeEventPoints(offer,count):false })}
               middle={middle}
+            />;
+          })}
+          {/* 交換できる円盤石(2026-09-29 ユーザー指示「進めて」で予告から交換へ)。1体につき1回。
+              持っていれば「所持済み」になる(ダイヤショップの円盤石と同じ見え方)。
+              絵と詳細はマーケットの円盤石(monsterId と同じid)とモンスター本体から引く */}
+          {RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer=>{
+            const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
+            const mon=ALL_PLAYER_MONSTERS[offer.monsterId]||null;
+            const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'beatPoint', cost:offer.cost };
+            const owned=isItemOwned({ id:offer.monsterId, type:'disc' });
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-disc':offer.id}}
+              item={item} owned={owned} comingSoon={false}
+              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(disc||item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              detail={mon}
+              onDetail={()=>mon&&onOpenDetail(disc||item,mon,null)}
             />;
           })}
           {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。
@@ -26349,6 +26464,21 @@ function BattleScreen({
   //   分かりにくい ガード入れても合算計算だし うまくバラバラでわかるようにしたい」)。
   //   受けたあとの表示と同じ splitTacticsHitAmounts を通すので、予告と実際で割り方がそろう。
   //   ガードで止めた発は通らないので、**通る発の数だけ**に割る(数字の数＝これから食らう回数)
+  // 大樹の加護(ユグドラシル・メルホイップの固有技)は使ったターンから効くので、選んだ時点で予告にも掛ける。
+  //   既存5モードはパーティ全体、タクティクスはその固有技を使う子の枠だけ(実際の計算と同じ分け方)
+  const plannedLifeTreeMult = (slotIdx) => {
+    const counter = makeCardHalveCounter();
+    let mult = 1;
+    selectedCards.forEach(idx => {
+      const card = hand[idx];
+      const owner = cardAssignments[idx] != null ? cardAssignments[idx] : null;
+      const halved = counter.take(card, owner);
+      if (!isLifeTreeGuardCard(card)) return;
+      if (Array.isArray(tacticsUnits) && owner !== slotIdx) return;
+      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved));
+    });
+    return mult;
+  };
   const plannedHitFor = (slotIdx) => {
     const none = { taken: 0, parts: [], raw: 0 };
     if (!enemyIntent) return none;
@@ -26382,7 +26512,7 @@ function BattleScreen({
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
-    const taken = applyTurnDamageReduction(hit.taken, slotIdx);
+    const taken = applyTurnDamageReduction(hit.taken > 0 ? hit.taken * plannedLifeTreeMult(slotIdx) : hit.taken, slotIdx);
     if (!(taken > 0)) return { taken: 0, parts: [], raw };
     // ★発ごとの通る量をそのまま出す。ガードが効いた発は小さく、効いていない発は大きい。
     //   止まった発(0)は数字を出さないので、数字の数＝これから食らう回数
@@ -30412,11 +30542,13 @@ function MonsterHeroGame() {
     //   (2026-09-25 ユーザー指示「効果中ライフとガッツの自動回復を30%上昇」「1.3倍じゃなくて30%固定値でプラス」)
     let units = alive.units, hp = alive.hp, guts = alive.guts;
     const live = tacticsExLiveRef.current;
+    // ★世界樹の守りは味方全員のライフを上限の20%ぶん多く回復する(効いている子の分を足し合わせる)
+    const partyHpBoost = live.enabled ? tacticsExPartyRegenRate(tacticsExStateRef.current, units, live.now) : 0;
     if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
       const hpBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'hp');
       const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts');
-      if (hpBoost <= 0 && gutsBoost <= 0) return;
-      const extra = rateHealTacticsAt(units, slotIdx, hpBoost, gutsBoost);
+      if (hpBoost + partyHpBoost <= 0 && gutsBoost <= 0) return;
+      const extra = rateHealTacticsAt(units, slotIdx, hpBoost + partyHpBoost, gutsBoost);
       units = extra.units; hp += extra.hp; guts += extra.guts;
     });
     const downed = regenDownedTacticsBoard(units);
@@ -35755,15 +35887,21 @@ function MonsterHeroGame() {
       const beforeGold = Math.max(0, Math.floor(Number(gold) || 0));
       const beforeItems = ownedItemsRef.current;
       setRhythmEventPoints(beforePoints);
-      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity });
+      // 円盤石の交換は、解放済みモンスターの保存(mh_unlocked_monsters)も同じ取引に入れる。
+      // ★保存されている値を読んでから足す(画面の state だけを見て書くと、ほかの画面で増えたぶんを消しうる)
+      const isDisc = offer?.kind==='disc';
+      const storedUnlocked = isDisc ? await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false) : null;
+      const beforeUnlocked = Array.isArray(storedUnlocked) ? storedUnlocked : unlockedMonsterIds;
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?'このモンスターはもう持っています。':'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([
         { key:RHYTHM_EVENT_POINTS_KEY, before:beforePoints, next:exchange.eventPoints },
         { key:'mh_gold', before:beforeGold, next:exchange.gold },
         { key:'mh_owned_items', before:beforeItems, next:exchange.ownedItems },
+        ...(isDisc ? [{ key:'mh_unlocked_monsters', before:storedUnlocked, next:exchange.unlockedMonsterIds }] : []),
       ], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -35773,6 +35911,14 @@ function MonsterHeroGame() {
       setGold(exchange.gold);
       ownedItemsRef.current = exchange.ownedItems;
       setOwnedItems(exchange.ownedItems);
+      if (isDisc) {
+        setUnlockedMonsterIds(exchange.unlockedMonsterIds);
+        // ダイヤショップで買ったときと同じく、編成に空きがあれば自動で入れる(8体埋まっていれば入れない)
+        if (monsterRosterIds.length < STARTER_MONSTER_IDS.length) {
+          const rosters = monsterPartySets.rosters.map((roster,index)=>index===monsterPartySets.activeIndex?[...roster,exchange.monsterId]:roster);
+          saveMonsterPartySets({ ...monsterPartySets, rosters });
+        }
+      }
       saveMissionProgress('market');
       return exchange;
     } catch {
@@ -38471,10 +38617,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
     const defenseRate = Math.min(0.5,defVal*0.00015);
-    const dmgBase = Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))*((traitHeroId==='Mocchi'||traitHeroId==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
+    // 生命の源(ユグドラシル・メルホイップ): WAVEの1〜5ターン目は被ダメ30%軽減
+    const dmgBase = Math.max(30,(atkVal-defVal*0.5)*(1-defenseRate))*((traitHeroId==='Mocchi'||traitHeroId==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0)*lifeSourceDamageMult(traitHeroId,turnCount);
     const soulDamageRemaining=Math.max(0,1-(soulBattleParty.damageReduction/100));
     return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining));
-  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode]);
+  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, turnCount]);
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
   // 適用したあとの実ダメージへ最後に掛ける。敵攻撃力へ途中適用すると丈夫さやガードとの
   // 順序で50%にならないため、実処理と予測表示の双方がこの入口を使う。
@@ -38490,7 +38637,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const traitOwnerOf = (mon) => (isTacticsMode(runMode) ? (mon?.id || null) : (mainHero?.id || null));
   const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage>0
     ? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)
-      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)))
+      *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)
+      *(isTacticsMode(runMode)?tacticsExPartyTakenMultNow():1)))
     : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback((intent) => applyTurnDamageReduction(
     getIncomingDamageBeforeTurnReduction(intent)
@@ -38648,6 +38796,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(!live.enabled||!Number.isInteger(slotIdx)) return null;
     const unit=tacticsUnitsRef.current?.[slotIdx];
     return unit ? tacticsExActiveStyle(tacticsExStateRef.current,slotIdx,unit.id,live.now) : null;
+  };
+  // スイーツパラダイスで足す連撃({count, rate})。効いていなければ null(ほかのモードも null)
+  const tacticsExCombosAt = (slotIdx) => {
+    const live=tacticsExLiveRef.current;
+    if(!live.enabled||!Number.isInteger(slotIdx)) return null;
+    return tacticsExExtraCombosAt(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now);
+  };
+  // 世界樹の守りの、味方全員の被ダメージ倍率(効いていなければ1。ほかのモードも1)
+  const tacticsExPartyTakenMultNow = () => {
+    const live=tacticsExLiveRef.current;
+    return live.enabled ? tacticsExPartyTakenMult(tacticsExStateRef.current,tacticsUnitsRef.current,live.now) : 1;
   };
   // 戦闘で使う1体ぶん(捨て身・片手盾・二刀流の力と丈夫さを乗せる)。盤面の値そのものは書き換えない
   const tacticsBattleUnit = (slotIdx) => {
@@ -39042,7 +39201,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1 });
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx) });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
@@ -39164,6 +39323,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 味方のライフ(hpAtAttackStart)と同じく、呼び出し側から最新の値をもらう。
   const handleEnemyTurn = async (lastActionType, immediateEffects={}, overrideIntent=null, hpAtAttackStart=hp, enemyHpAtAttackStart=enemy?.hp??0) => {
     if (!enemy) return;
+    // 大樹の加護(ユグドラシル・メルホイップの固有技)は「使ったターンから」効く。
+    //   turnBuffs の書き換えはこのターンの計算に間に合わないので、呼び出し元から倍率を受け取って掛ける
+    const immediateTakenMultAt = (slotIdx=null) => {
+      const bySlot = immediateEffects.takenMultBySlot;
+      const raw = Number.isInteger(slotIdx) && bySlot ? bySlot[slotIdx] : immediateEffects.takenMult;
+      const v = Number(raw); return Number.isFinite(v) && v>0 ? v : 1;
+    };
+    const applyImmediateTakenReduction = (damage, slotIdx=null) => applyTurnDamageReduction(damage>0 ? damage*immediateTakenMultAt(slotIdx) : damage, slotIdx);
     const intent = overrideIntent||enemyIntent;
     setEnemySkillName({label:intent.label, icon:intent.icon});
     // 敵の番の見出し。このあとの吹き出し(ダメージ・回避・ガード)が、どの技の結果なのかを結ぶ
@@ -39292,7 +39459,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (sweptAway) { addPopup('間合いが外れた！ 威力ダウン','hero','text-cyan-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         else if (intent.variant==='pierce' && baseGuardValue>0) { addPopup('貫通！ ガードが効かない','enemy','text-rose-300 font-black text-xl drop-shadow-md'); await battleWait(600); }
         const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
-        const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
+        const incomingDmg = applyImmediateTakenReduction(incomingBeforeTurnReduction);
         // ★タクティクスバトルは**狙われた子自身の特性**で決まる(2026-09-20 ユーザー提案)。
         //   先に「誰が受けるか」を1体決めて、その子の特性で回避／反射／吸収を引く。
         //   こうすると「表を引いた子」と「避けた子」が必ず同じになる。
@@ -39379,7 +39546,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const reflectSlots=isTacticsMode(runMode)
             ? tacticsTargetsNow(intent,actingEnemyDist) : null;
           const reflectDmg=reflectSlots
-            ? reflectSlots.reduce((sum,slotIdx)=>sum+applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx),0)
+            ? reflectSlots.reduce((sum,slotIdx)=>sum+applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx),0)
             : incomingDmg;
           addPopup("反射！",'hero','text-purple-400 font-black text-2xl drop-shadow-lg'); await battleWait(600);
           if(reflectDmg<=0){
@@ -39407,7 +39574,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             let units=tacticsUnitsRef.current, hpGain=0, gutsGain=0;
             if(absorbSlot!=null){
               // 受けるはずだったダメージも「その子の丈夫さ」で決まる
-              const gain=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,absorbSlot),absorbSlot);
+              const gain=applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent,absorbSlot),absorbSlot);
               const guts=Math.floor(gain*0.1);
               hpGain=gain; gutsGain=guts;
               units=recoverTacticsGutsAt(healTacticsAt(units,absorbSlot,gain),absorbSlot,guts);
@@ -39470,7 +39637,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }
               if(slotIdx===reflectedSlot){
                 reflectedName=tacticsTargetName(units,slotIdx);
-                reflectBack+=applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx);
+                reflectBack+=applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx);
                 slotFx[slotIdx]={reflect:true};
                 return;
               }
@@ -39493,7 +39660,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const fx=slotFx[slotIdx]||(slotFx[slotIdx]={});
               if(slotGuard>0) fx.guard=true;
               if(hit.taken>0){
-                const fd=applyTurnDamageReduction(hit.taken,slotIdx);
+                const fd=applyImmediateTakenReduction(hit.taken,slotIdx);
                 units=damageTacticsTargets(units,[slotIdx],fd); dealt+=fd;
                 fx.dmg=(fx.dmg||0)+fd;
                 // ★連撃は**発ごとの通る量**をそのまま出す(2026-09-22 ユーザー指摘
@@ -39581,7 +39748,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // キーンと弾くガード演出
           setGuardFx(true); Audio_.se.guard(); triggerShake();
           await battleWait(550); setGuardFx(false);
-          if (diff<0) { const fd=applyTurnDamageReduction(Math.abs(diff)); const remainingHp=calculateRemainingHp(currentHp,fd); currentHp=remainingHp; addPopup(`貫通! -${fd}`,'hero','text-pink-600 text-3xl font-black drop-shadow-lg'); setHp(remainingHp); await battleWait(1000); }
+          if (diff<0) { const fd=applyImmediateTakenReduction(Math.abs(diff)); const remainingHp=calculateRemainingHp(currentHp,fd); currentHp=remainingHp; addPopup(`貫通! -${fd}`,'hero','text-pink-600 text-3xl font-black drop-shadow-lg'); setHp(remainingHp); await battleWait(1000); }
           else { const gGain=Math.floor(diff*0.1); currentHp=Math.min(liveEffectiveMaxHp(),currentHp+diff); setHp(currentHp);
             addPopup(`🛡 ガード成功`,'hero','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`💚 ライフ +${diff}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gGain}`,'guts','text-amber-400 text-xl font-bold drop-shadow-md'); gainGuts(gGain); await battleWait(1000); }
         } else {
@@ -39648,6 +39815,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const showRegenTotal=!isTacticsMode(runMode);
     if (autoHealVal>0) { if(showRegenTotal) addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     if (gutsRegen>0) { if(showRegenTotal) addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
+    // 生命の源(ユグドラシル・メルホイップ): 次のターンが6・9・12…ターン目なら、ガッツを最大の30%回復。
+    // タクティクスは特性を持つ子それぞれ(その子の上限×30%)、既存モードは勇者モンが持っているとき(合計上限×30%)
+    {
+      const lifeSourceTurn=turnCount+1;
+      let lifeSourceGain=0;
+      if (isTacticsMode(runMode)) {
+        tacticsAliveSlots(tacticsUnitsRef.current).forEach(slotIdx=>{
+          if (lifeSourceGutsTurn(tacticsUnitsRef.current[slotIdx]?.id,lifeSourceTurn)) lifeSourceGain+=gainGutsByRate(slotIdx,LIFE_SOURCE_GUTS_RATE);
+        });
+      } else if (lifeSourceGutsTurn(mainHero?.id,lifeSourceTurn)) {
+        lifeSourceGain=Math.floor(liveEffectiveMaxGuts()*LIFE_SOURCE_GUTS_RATE);
+        if (lifeSourceGain>0) gainGuts(lifeSourceGain);
+      }
+      if (lifeSourceGain>0) { addPopup(`🌳 生命の源 ガッツ +${lifeSourceGain}`,'guts','text-lime-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
+    }
     if (didRegen) { await battleWait(500); }
     // 次ターン予約分(nextTurnBuffs)をそのまま今ターンの一時バフ(turnBuffs)へ入れ替える(新しい一時効果を追加してもここは変更不要)
     // refから読むことで、このターン中に予約された最新の値を確実に反映する(古いクロージャ値を使わない)。
@@ -39881,6 +40063,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★自分が動いたら、前に出ていたぶんはその場で消す(時間切れを待たない)
     clearTacticsSlotFx();
     let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, totalHealRate=0, localOryoAdd=0, localDmgModAdd=0, localGlobalComboAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardFlat=0, currentTurnGuardMult=0;
+    // 大樹の加護の「このターンぶん」。既存5モードは全体、タクティクスは使った子の枠だけ
+    let immediateTakenMult=1; const immediateTakenMultBySlot={};
     // 新モードは「ガードはカードを使った子自身を守る」。誰が構えたかをスロットごとに持つ。
     // 既存モードは今までどおり currentTurnGuardFlat / Mult の合計だけを見る
     const guardBySlot={};
@@ -39956,7 +40140,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
           const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(stunMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
-            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier });
+            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:tacticsExCombosAt(slotIdx) });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         }
@@ -40071,7 +40255,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+critRateBonus),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1 });
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx) });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
@@ -40103,6 +40287,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(isTacticsMode(runMode)){ setTacticsNextSlotBuff(slotIdx,'takenDamageMult',0.5); setTacticsNextSlotBuff(slotIdx,'gutsCostMult',1.15); }
             else { setNextTurnBuff('takenDamageMult',0.5); setNextTurnBuff('gutsCostMult',1.15); }
             addPopup('次ターン被ダメ50%減!','hero','text-pink-400 text-lg font-bold');
+          }
+          else if(card.monId==='Yggdrasil'||card.monId==='MelWhip'){
+            // 大樹の加護: 使ったターンから2ターン被ダメージ30%軽減＋最大ガッツの20%回復。
+            //   このターンぶんは handleEnemyTurn へ倍率で渡し、次ターンぶんは予約する。
+            //   ほかの軽減(メロソ・贖罪)を消さないよう、次ターンの倍率は掛け合わせる
+            const gRec=gainGutsByRate(slotIdx,0.2*effMul);
+            const guardMult=lifeTreeGuardMult(effMul);
+            if(isTacticsMode(runMode)){
+              immediateTakenMultBySlot[slotIdx]=guardMult;
+              writeNextTurnBuffs(p=>({...p, bySlot:withTacticsSlotBuff(p.bySlot,slotIdx,'takenDamageMult',tacticsSlotRate(p.bySlot,slotIdx,'takenDamageMult',1.0)*guardMult)}));
+            } else {
+              immediateTakenMult=guardMult;
+              writeNextTurnBuffs(p=>{ const cur=Number(p.takenDamageMult); return {...p, takenDamageMult:(Number.isFinite(cur)&&cur>0?cur:1)*guardMult}; });
+            }
+            addPopup(`大樹の加護！ 2ターン被ダメ${Math.round(LIFE_TREE_GUARD_REDUCTION*effMul*100)}%減`,'hero','text-emerald-300 text-lg font-bold');
+            if(gRec>0) addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');
           }
           else if(card.monId==='Pandora'){
             // 双極共振は次ターンから2ターン。再使用時は加算せず2へ更新する。
@@ -40310,7 +40510,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
     // distLocked: このターン距離撃を撃ったか。敵の移動は距離撃で上書きされるため、行動しなかった扱いにする
-    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,guardBySlot,distLocked:forcedMoveTarget!=null,forcedMoveTarget,iceLockRefreshed:activatedIceLockThisTurn},executedIntent,hpBeforeEnemyAttack,enemyHpAfterOurAttacks);
+    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,guardBySlot,distLocked:forcedMoveTarget!=null,forcedMoveTarget,iceLockRefreshed:activatedIceLockThisTurn,takenMult:immediateTakenMult,takenMultBySlot:immediateTakenMultBySlot},executedIntent,hpBeforeEnemyAttack,enemyHpAfterOurAttacks);
     // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
     if (forcedMoveTarget!=null) {
       setEnemyDist(forcedMoveTarget);
