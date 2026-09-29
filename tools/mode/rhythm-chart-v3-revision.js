@@ -90,7 +90,10 @@
 //   22 … 曲の終わりの余韻(2026-09-29・rhythm-chart-ending.js・ユーザー指摘「音がなくなろうとしてる終盤でノーツが続いてるのが違和感」)。
 //        最後の一発のあと鳴り残る音が消えていく曲では、最後の一発より後にノーツを置かず、最後の一発を太い長押しにして締める。
 //        当たるのは ビッグブリッヂの死闘・crossing field・もう一つの世界へ・綺季一閃 battle remix。ほかの曲は Rev.21 と同じ譜面
-//   23〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   23 … テンポの揺れの読み方の v2(2026-09-29・rhythm-chart-tempo-warp.js の WARP_V2)。2小節ずつの細かい区間で見て、
+//        低音の遅れが小さい曲は低音の打点も材料にし、揺れで動かす所の打点だけで「半分で確かめる」(残りのずれは格子の間隔で折り返す)。
+//        揺れは格子の間隔の0.45倍まで。v2 で当たらない曲は Rev.21 の読み方のまま。ビッグブリッヂの死闘のイントロ(はじめの約25秒だけテンポが速い)を拾う
+//   24〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)・重みの最新・調整値の最新のいちばん大きいもの＋1」を次の番号にする
@@ -101,7 +104,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=22;
+const CHART_REVISION_CODE_LATEST=23;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');
