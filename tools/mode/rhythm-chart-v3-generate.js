@@ -850,6 +850,17 @@ const rev15=chartRevision>=15;
 //   置くのは格子の上。落ちてくるのを見る間が要るので 1.8秒より前には置かない(公開中の曲でいちばん早い出だしが約1.9秒)。
 //   ノーツが1つ増えるので、既存曲の作り方(Rev.15 まで)には入れない
 const rev16=chartRevision>=16;
+// Rev.24: 大きな一発を左右対称の同時フリックにする(2026-09-29・参考動画から。ユーザー判断「ひとまずこれから足す曲」)。
+//   EXPERT・MASTER だけ。区切りの一発(幅広のノーツ)のうち、前後1拍に何も無い強いものを、道の真ん中をはさんで
+//   左右対称に置いた2本の FLICK に分ける(MASTER は外向きに払う)。ノーツが1つ増えるので、既存曲の作り方(Rev.23 まで)には入れない
+const MIRROR_FLICK_REVISION=24;
+const rev24=chartRevision>=MIRROR_FLICK_REVISION;
+// perMinute … 1分あたりの上限 / max … 1曲の上限 / spacingBars … 次の組までの小節 / minIntensity … その区切りの盛り上がりの位置の下限
+// width・gapSub … 1本の幅と2本のあいだ(サブレーン)。12サブレーンで [2,5) と [7,10)
+const MIRROR_FLICK=Object.freeze({
+  EXPERT:Object.freeze({perMinute:.8,max:3,spacingBars:8,minIntensity:.5,clearBeats:.75,width:3,gapSub:2,directions:false}),
+  MASTER:Object.freeze({perMinute:1.2,max:5,spacingBars:6,minIntensity:.4,clearBeats:.5,width:3,gapSub:2,directions:true}),
+});
 const HEAD_EARLIEST_MS=1800,HEAD_BEAT_BONUS=.1;
 const MELODY_TURN_MIN=.08,MELODY_DIRECTION_COST=4;
 const melodyHeightAt=(()=>{
@@ -1928,6 +1939,43 @@ const buildChart=(difficulty,options={})=>{
       note.lane=Math.floor(note.subLane/2);
       note.sectionAccent=true;
     }
+  }
+
+  // --- 6-2. 左右対称の同時フリック(Rev.24・EXPERT / MASTER) ---
+  // いちばん強い区切りの一発を、両手で外へ払う決めの形にする(チュウニズムなどの見せ場の作法)。
+  // 両手を使うので、前後1拍は何も無い所(押さえの終わりも含む)だけ。盛り上がっている区切りを強い順に選び、間を空ける。
+  // 2本は道の真ん中をはさんで左右対称。どちらも mirrorFlick を持ち、向きの付け直し(rhythm-side-flick.js)はこの向きを変えない
+  let mirrorFlickCount=0;
+  const MF=rev24?MIRROR_FLICK[difficulty]:null;
+  if(MF&&P.types.includes('FLICK')){
+    const endOf=note=>note.type==='HOLD'||note.type==='SLIDE'?note.grid+(Number(note.durationGrids)||0):note.grid;
+    const clear=Math.round(BEAT*MF.clearBeats);
+    const free=note=>notes.every(other=>other===note||(other.grid>note.grid?other.grid-note.grid>=clear:note.grid-endOf(other)>=clear));
+    const candidates=notes
+      .map((note,index)=>({note,index}))
+      .filter(({note})=>note.type==='TAP'&&(note.sectionAccent||note.sourceCharacter==='FULL')&&!note.chord&&!note.monsterSlot
+        &&notes.every(other=>other===note||other.grid!==note.grid)
+        &&intensityPosition(Math.floor(note.grid/BAR))>=MF.minIntensity&&free(note))
+      .sort((a,b)=>(Number(b.note.sourceStrength)||0)-(Number(a.note.sourceStrength)||0)||a.note.grid-b.note.grid);
+    const limit=Math.min(MF.max,Math.max(1,Math.round(MF.perMinute*playableMinutes)));
+    const picked=[];
+    for(const {note,index} of candidates){
+      if(picked.length>=limit)break;
+      if(picked.some(other=>Math.abs(notes[other].grid-note.grid)<MF.spacingBars*BAR))continue;
+      picked.push(index);
+    }
+    const left=SUB_LANES/2-MF.gapSub/2-MF.width,right=SUB_LANES/2+MF.gapSub/2;
+    for(const index of picked){
+      const note=notes[index];
+      note.type='FLICK';note.subLane=left;note.subLaneWidth=MF.width;note.lane=Math.floor(left/2);note.mirrorFlick=true;
+      const partner={type:'FLICK',grid:note.grid,lane:Math.floor(right/2),subLane:right,subLaneWidth:MF.width,
+        sourceStrength:note.sourceStrength,sourcePeakOffsetMs:note.sourcePeakOffsetMs,sourceCharacter:note.sourceCharacter,
+        chord:true,sectionAccent:true,mirrorFlick:true};
+      if(MF.directions){note.flickDir='left';partner.flickDir='right';}
+      notes.push(partner);
+      mirrorFlickCount++;
+    }
+    if(mirrorFlickCount){notes.sort((a,b)=>a.grid-b.grid);notice.push(`左右対称の同時フリック ${mirrorFlickCount}組（置ける所${candidates.length}箇所）`);}
   }
 
   // --- 7. FLICK（切れる音・フレーズの終わり） ---
@@ -3325,7 +3373,7 @@ const buildChart=(difficulty,options={})=>{
     }
     notice.push(`音ゲーの作法: ${Object.entries(knowledgeCounts).map(([id,count])=>`${id} ${count}`).join(' / ')||'効いた所なし'}`);
   }
-  return {notes,log,notice,profile:P,runs:runs.length,knowledgeCounts,chordCount,chordRunCount,sweepCount,crossCount,monsterSlotGrids,
+  return {notes,log,notice,profile:P,runs:runs.length,knowledgeCounts,chordCount,chordRunCount,sweepCount,crossCount,monsterSlotGrids,mirrorFlickCount,
     targetCount,notesPerSecondTarget:round3(notesPerSecond),
     counts:{holdMax,slideMax,flickMax,endFlickMax,chordMax,accentMax,
       playableMinutes:round3(playableMinutes)}};

@@ -20073,6 +20073,38 @@ const RHYTHM_SONG_BEATS=Object.freeze({
   big_bridge_no_shitou:[337.61,349.6,4],
 });
 const rhythmSongBeatGrid=songId=>{const row=RHYTHM_SONG_BEATS[songId];if(!Array.isArray(row))return null;const [beatMs,zeroMs,bar]=row.map(Number);return beatMs>50&&Number.isFinite(zeroMs)&&bar>=1?{beatMs,zeroMs,bar:Math.round(bar)}:null;};
+// 曲ごとの盛り上がる区間(2026-09-29・オプション「盛り上がりの光」)。[開始ms, 終了ms, 強さ0.6〜1]。
+// 譜面を作ったときの音源の解析(structure.sections の intensity)から tools/mode/rhythm-song-climax.js --write が書く。見た目にだけ使う
+const RHYTHM_SONG_CLIMAX=Object.freeze({
+// <rhythm-song-climax>
+  mf_ichika_mix:[[5720,11401,0.69],[107969,133531,1]],
+  monster_hero:[[57034,62579,0.63],[109705,149900,1]],
+  monster_hero_another:[[109277,154164,1]],
+  six_eternel_remix:[[79662,101796,0.62],[113601,149017,1]],
+  six_eternel_beat:[[93609,110132,0.85],[122306,125784,0.97],[132741,152742,1]],
+  stay_with_me:[[73856,86563,0.79],[131742,171274,1],[191039,220688,1]],
+  kiki_issen:[[124051,153468,0.74],[172047,213851,1]],
+  kaze_ga_soyogu:[[36548,72887,1]],
+  close_to_your_heart:[[61509,118754,1]],
+  eiki_boss_remix:[[159784,212715,1]],
+  pandora_boss_remix:[[108790,135503,0.65],[147375,175573,1]],
+  dullahan:[[32603,39003,1],[63003,77403,0.94]],
+  dullahan_clockwork:[[100,12731,0.76],[34836,50625,1],[69573,121675,0.97]],
+  toriko:[[46702,74703,1]],
+  '4u_hitasura':[[65997,107379,1]],
+  kindan_no_resistance:[[48077,93411,1],[130745,154745,0.96]],
+  crossing_field:[[46387,77230,1]],
+  nothing_without_you:[[74308,102761,0.94],[160904,186883,1]],
+  freedom_dive:[[76798,81118,0.86],[95158,99478,1],[134038,138358,0.7]],
+  the_city_beneath_the_comets:[[91160,119318,0.66],[130581,154516,1]],
+  mou_hitotsu_no_sekai_e:[[155264,169344,0.71],[178304,211584,1]],
+  senjou_no_shippuu:[[82627,89486,0.62],[171792,192368,1]],
+  makutsu_no_senritsu:[[93434,106777,0.64],[138465,145136,1]],
+  only_my_railgun:[[52181,89104,1]],
+  big_bridge_no_shitou:[[8452,57068,1],[84077,108385,0.76]],
+// </rhythm-song-climax>
+});
+const rhythmSongClimaxAt=(songId,ms)=>{const spans=RHYTHM_SONG_CLIMAX[songId];if(!Array.isArray(spans)||!Number.isFinite(ms))return 0;for(const span of spans){if(!Array.isArray(span))continue;const [a,b,s]=span.map(Number);if(ms>=a&&ms<b)return s>0?Math.min(1,s):0;}return 0;};
 const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>{
   const pair=RHYTHM_SWITCHING_CHARTS[song.songId];
   if(!pair)return Object.freeze({...song,
@@ -20563,6 +20595,16 @@ const installRhythmGeometryStyles=()=>{
       10%{opacity:1;transform:scale(1.16,1.5)}
       48%{opacity:.72;transform:scale(1,2.1)}
       100%{opacity:0;transform:scale(.6,2.9)}}
+    /* 叩いた場所の判定(オプション「叩いた場所に判定」・2026-09-29)。判定ラインのそのレーンの少し上に小さく出す。
+       既定は見えない(opacity:0)。出すときは演奏画面の処理が Web Animations で transform と opacity だけを動かす */
+    [data-rhythm-tap-judgments]{position:absolute;inset:0;pointer-events:none;z-index:7;overflow:hidden}
+    [data-rhythm-tap-judgment]{position:absolute;bottom:calc(var(--mh-judgment-line-bottom,12%) + 9px);left:50%;opacity:0;
+      transform:translate(-50%,0);display:flex;flex-direction:column;align-items:center;line-height:1;white-space:nowrap;
+      font-weight:900;letter-spacing:.02em;text-shadow:0 1px 2px rgba(0,0,0,.85),0 0 6px rgba(0,0,0,.6)}
+    [data-rhythm-tap-judgment]>b{font-size:clamp(8px,2.3vw,12px)}
+    [data-rhythm-tap-judgment]>small{font-size:clamp(7px,1.8vw,9px);margin-top:1px;color:#e2e8f0}
+    [data-rhythm-tap-judgment][data-side="FAST"]>small{color:#7dd3fc}
+    [data-rhythm-tap-judgment][data-side="SLOW"]>small{color:#fda4af}
     /* 画面全体を一瞬だけ染める(モンスターノーツだけ)。あらかじめ置いた1枚の
        グラデーションの opacity だけを動かすので、塗り直しは起きない。 */
     [data-rhythm-screen-flash]{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;
@@ -21054,6 +21096,33 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false,
   void item.offsetWidth;
   item.dataset.rhythmHitKind=kind;
   return item;
+};
+// 叩いた場所の判定(オプション「叩いた場所に判定」・2026-09-29・参考動画から)。判定ラインのそのレーンの少し上に、
+// 小さく判定の文字を出す(MARVELOUS 以外はその下に FAST / SLOW も)。真ん中の大きな判定はそのまま。
+// 要素は RHYTHM_TAP_JUDGMENT_POOL 個を使い回すので DOM は増えない。動かすのは transform と opacity だけ(Web Animations)。
+// 見た目だけで、判定・スコアには触らない
+const RHYTHM_TAP_JUDGMENT_POOL=8,RHYTHM_TAP_JUDGMENT_MS=420;
+const rhythmSpawnTapJudgment=(area,{centerRatio,judgment,side=null})=>{
+  if(!area||typeof document==='undefined'||!judgment||judgment==='MISS')return false;
+  let layer=area.querySelector('[data-rhythm-tap-judgments]');
+  if(!layer||!layer._rhythmPool){
+    if(!layer){layer=document.createElement('div');layer.setAttribute('data-rhythm-tap-judgments','');layer.setAttribute('aria-hidden','true');area.appendChild(layer);}
+    layer.innerHTML='';layer._rhythmPool=[];layer._rhythmNext=0;
+    for(let index=0;index<RHYTHM_TAP_JUDGMENT_POOL;index++){const item=document.createElement('span');item.setAttribute('data-rhythm-tap-judgment','');item.appendChild(document.createElement('b'));item.appendChild(document.createElement('small'));layer.appendChild(item);layer._rhythmPool.push(item);}
+  }
+  const item=layer._rhythmPool[layer._rhythmNext%layer._rhythmPool.length];
+  layer._rhythmNext=(layer._rhythmNext+1)%layer._rhythmPool.length;
+  item.style.left=`${(Math.max(.03,Math.min(.97,Number(centerRatio)||.5))*100).toFixed(2)}%`;
+  item.style.color=rhythmHitEffectColor(judgment);
+  item.firstChild.textContent=String(judgment);
+  item.lastChild.textContent=judgment==='MARVELOUS'?'':(side==='FAST'||side==='SLOW'?side:'');
+  item.setAttribute('data-side',judgment==='MARVELOUS'?'':String(side||''));
+  if(typeof item.animate==='function'){
+    try{if(item._rhythmAnim)item._rhythmAnim.cancel();
+      item._rhythmAnim=item.animate([{opacity:0,transform:'translate(-50%,6px) scale(.8)'},{opacity:1,transform:'translate(-50%,0) scale(1.05)',offset:.18},{opacity:1,transform:'translate(-50%,-4px) scale(1)',offset:.6},{opacity:0,transform:'translate(-50%,-14px) scale(1)'}],{duration:RHYTHM_TAP_JUDGMENT_MS,easing:'ease-out'});
+    }catch(_){return false;}
+  }
+  return true;
 };
 
 // --- プレイ画面の両サイドへ出すマスモン ---

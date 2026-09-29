@@ -16,10 +16,10 @@ const check=(label,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${label}${detai
 
 // 「おまかせ」の値は本体(RHYTHM_LOOK_PRESETS)をそのまま使う。expect … その設定で演奏画面に出ているはずのもの
 const EXPECT={
-  LIGHT:{effect:'MINIMAL',stage:null,road:false,judgmentFx:false},
-  STANDARD:{effect:'LIGHT',stage:null,road:false,judgmentFx:false},
-  VIVID:{effect:'LOW',stage:'VIVID',road:true,judgmentFx:true},
-  FULL:{effect:'NORMAL',stage:'LIVE',stageGl:true,road:true,judgmentFx:true},
+  LIGHT:{effect:'MINIMAL',stage:null,road:false,judgmentFx:false,climax:false},
+  STANDARD:{effect:'LIGHT',stage:null,road:false,judgmentFx:false,climax:false},
+  VIVID:{effect:'LOW',stage:'VIVID',road:true,judgmentFx:true,climax:true},
+  FULL:{effect:'NORMAL',stage:'LIVE',stageGl:true,road:true,judgmentFx:true,climax:true},
 };
 
 (async()=>{
@@ -70,7 +70,7 @@ const EXPECT={
       }catch(e){errors.push(`開けない: ${String(e.message).split('\n')[0]}`);}
       const seen=opened?await page.evaluate(()=>{const q=s=>document.querySelector(s),area=q('[data-rhythm-play-area]');
         return {effect:area?.dataset.rhythmEffect||'',judgmentFx:area?.dataset.rhythmJudgmentFx==='1',stage:q('[data-rhythm-stage]')?.dataset.rhythmStage||null,stageGl:!!q('[data-rhythm-stage-gl]'),
-          road:!!q('[data-rhythm-road-haze]'),canvas:!!q('[data-rhythm-note-canvas]'),score:!!q('[data-rhythm-score]'),life:!!q('[data-rhythm-life-value]'),
+          road:!!q('[data-rhythm-road-haze]'),roadCss:q('[data-rhythm-road-haze]')?getComputedStyle(q('[data-rhythm-road-haze]')).position:'',climax:!!q('[data-rhythm-climax]'),canvas:!!q('[data-rhythm-note-canvas]'),score:!!q('[data-rhythm-score]'),life:!!q('[data-rhythm-life-value]'),
           judgmentText:!!q('[data-rhythm-judgment-text]'),songDim:q('[data-rhythm-hud-songline]')?.dataset.hudSongDim==='1',clock:q('[data-rhythm-song-clock]')?.textContent||''};}):null;
       const tag=`「${preset.label}」`;
       check(`${tag} 演奏画面が開いて曲が進む`,!!seen&&/0:0[5-9]|0:1\d/.test(seen.clock),seen?seen.clock.slice(0,9):'開けない');
@@ -81,6 +81,9 @@ const EXPECT={
       check(`${tag} ライブ背景が設定どおり(${expect.stage||'なし'})`,seen.stage===expect.stage,String(seen.stage));
       if(expect.stageGl)check(`${tag} ライブ背景を WebGL で描いている`,seen.stageGl);
       check(`${tag} 道の演出が設定どおり(${expect.road?'あり':'なし'})`,seen.road===expect.road);
+      // 2026-09-26 の main の取り込みで CSS が消え、部品はあるのに何も見えていなかった(2026-09-29 に見つけた)
+      if(expect.road)check(`${tag} 道のもやの CSS が効いている`,seen.roadCss==='absolute',seen.roadCss);
+      check(`${tag} 盛り上がりの光が設定どおり(${expect.climax?'あり':'なし'})`,seen.climax===expect.climax);
       check(`${tag} 判定の演出の印が演奏エリアに設定どおり付いている(${expect.judgmentFx?'あり':'なし'})`,seen.judgmentFx===expect.judgmentFx);
       check(`${tag} 演奏が始まって少したつと曲名が薄くなる`,seen.songDim);
       await page.close();

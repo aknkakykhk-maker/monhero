@@ -93,7 +93,11 @@
 //   23 … テンポの揺れの読み方の v2(2026-09-29・rhythm-chart-tempo-warp.js の WARP_V2)。2小節ずつの細かい区間で見て、
 //        低音の遅れが小さい曲は低音の打点も材料にし、揺れで動かす所の打点だけで「半分で確かめる」(残りのずれは格子の間隔で折り返す)。
 //        揺れは格子の間隔の0.45倍まで。v2 で当たらない曲は Rev.21 の読み方のまま。ビッグブリッヂの死闘のイントロ(はじめの約25秒だけテンポが速い)を拾う
-//   24〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   24 … 大きな一発を左右対称の同時フリックに(2026-09-29・参考動画から。ユーザー判断「ひとまずこれから足す曲」)。
+//        EXPERT・MASTER だけ。区切りの一発のうち、盛り上がっている区切りにあって前後1拍に何も無い強いものを、
+//        道の真ん中をはさんで左右対称に置いた2本の FLICK に分ける(MASTER は外向きに払う・mirrorFlick)。
+//        1曲に EXPERT 3組・MASTER 5組まで。ノーツ数は組の数だけ増える。当たらない曲・EASY〜HARD は Rev.23 と同じ譜面
+//   25〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)・重みの最新・調整値の最新のいちばん大きいもの＋1」を次の番号にする
@@ -104,7 +108,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=23;
+const CHART_REVISION_CODE_LATEST=24;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');

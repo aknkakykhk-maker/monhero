@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9d439a46406a1bea
+// source-sha256: 9659825bbcaefb37
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-30 00:23";
+const BUILD_DATE = "2026-09-30 08:04";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4847,7 +4847,8 @@ const RHYTHM_LOOK_PRESETS = Object.freeze([{
     judgmentFx: false,
     noteMotionFx: false,
     comboMilestoneFx: false,
-    noteBloom: false
+    noteBloom: false,
+    climaxFx: false
   }
 }, {
   id: 'STANDARD',
@@ -4860,7 +4861,8 @@ const RHYTHM_LOOK_PRESETS = Object.freeze([{
     judgmentFx: false,
     noteMotionFx: false,
     comboMilestoneFx: false,
-    noteBloom: false
+    noteBloom: false,
+    climaxFx: false
   }
 }, {
   id: 'VIVID',
@@ -4873,7 +4875,8 @@ const RHYTHM_LOOK_PRESETS = Object.freeze([{
     judgmentFx: true,
     noteMotionFx: true,
     comboMilestoneFx: true,
-    noteBloom: false
+    noteBloom: false,
+    climaxFx: true
   }
 }, {
   id: 'FULL',
@@ -4886,16 +4889,18 @@ const RHYTHM_LOOK_PRESETS = Object.freeze([{
     judgmentFx: true,
     noteMotionFx: true,
     comboMilestoneFx: true,
-    noteBloom: true
+    noteBloom: true,
+    climaxFx: true
   }
 }]);
 const RHYTHM_AUTO_EFFECT_STEPS = Object.freeze([s => s.noteBloom ? {
   noteBloom: false
 } : null, s => s.stageEffect === 'LIVE' ? {
   stageEffect: 'VIVID'
-} : null, s => s.roadFx || s.noteMotionFx ? {
+} : null, s => s.roadFx || s.noteMotionFx || s.climaxFx ? {
   roadFx: false,
-  noteMotionFx: false
+  noteMotionFx: false,
+  climaxFx: false
 } : null, s => s.judgmentFx || s.comboMilestoneFx ? {
   judgmentFx: false,
   comboMilestoneFx: false
@@ -4915,7 +4920,7 @@ const rhythmCapEffects = (settings, level) => {
   }
   return out;
 };
-const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光', 'ライブ→派手', '道の演出・ノーツの動き', '判定の演出・コンボの節目', '派手→控えめ', '控えめ→シンプル']);
+const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光', 'ライブ→派手', '道の演出・ノーツの動き・盛り上がりの光', '判定の演出・コンボの節目', '派手→控えめ', '控えめ→シンプル']);
 const rhythmNextEffectCap = (settings, level) => {
   const now = rhythmCapEffects(settings, level);
   for (let i = Math.max(0, Number(level) || 0); i < RHYTHM_AUTO_EFFECT_STEPS.length; i++) {
@@ -5121,6 +5126,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   judgmentFx: false,
   noteMotionFx: false,
   comboMilestoneFx: false,
+  climaxFx: false,
+  judgmentAtTap: false,
   hudSongFade: true,
   autoEffectDown: true,
   stageEffect: 'SIMPLE',
@@ -5190,6 +5197,8 @@ const normalizeRhythmSettings = value => {
     judgmentFx: typeof source.judgmentFx === 'boolean' ? source.judgmentFx : DEFAULT_RHYTHM_SETTINGS.judgmentFx,
     noteMotionFx: typeof source.noteMotionFx === 'boolean' ? source.noteMotionFx : DEFAULT_RHYTHM_SETTINGS.noteMotionFx,
     comboMilestoneFx: typeof source.comboMilestoneFx === 'boolean' ? source.comboMilestoneFx : DEFAULT_RHYTHM_SETTINGS.comboMilestoneFx,
+    climaxFx: typeof source.climaxFx === 'boolean' ? source.climaxFx : DEFAULT_RHYTHM_SETTINGS.climaxFx,
+    judgmentAtTap: typeof source.judgmentAtTap === 'boolean' ? source.judgmentAtTap : DEFAULT_RHYTHM_SETTINGS.judgmentAtTap,
     hudSongFade: typeof source.hudSongFade === 'boolean' ? source.hudSongFade : DEFAULT_RHYTHM_SETTINGS.hudSongFade,
     autoEffectDown: typeof source.autoEffectDown === 'boolean' ? source.autoEffectDown : DEFAULT_RHYTHM_SETTINGS.autoEffectDown,
     stageEffect: RHYTHM_STAGE_EFFECTS.includes(source.stageEffect) ? source.stageEffect : DEFAULT_RHYTHM_SETTINGS.stageEffect,
@@ -24019,7 +24028,7 @@ const RhythmOptions = ({
     suffix: '%'
   }), 'レーンの奥を幕で隠して、ノーツが見えはじめる位置を手前へ寄せます（beatmania IIDX・SOUND VOLTEX の SUDDEN と同じものです）。0%で出しません（既定）。ノーツを速くすると、奥から出てくる細かいノーツまで見えて目が追いつかないときに使います。隠すだけなので、ノーツの速さと判定のタイミングは変わりません。', {
     full: true
-  }), field('アシストモード', toggle('assistMode'), 'リズムゲームが苦手でも気軽に遊べるモードです（バンドリ！アワーノーツのアシストモードを見習いました）。既定はOFFです。ONにすると、フリックはタップするだけで取れ、ホールド・スライドの終わりのフリックも離すだけでよくなります。BAD・MISSでコンボが切れそうなときは「コンボガード」が代わりに受け止めます（最大3回ぶん。コンボをつなぐと少しずつたまり、崩れているときほど早くたまります）。そのかわりスコアは8割になり、FULL COMBO などの称号は付かず、自己ベスト・全国ランキング・ビートPには残りません。曲えらびの「🛟 アシスト」でも切り替えられます。'), field('ミラー譜面', toggle('mirrorChart'), '譜面を左右反対にして遊びます（バンドリ！アワーノーツなどにある設定です）。既定はOFFです。同じ曲でも手の動きが変わるので、苦手な配置の練習や気分転換に使えます。判定・スコア・記録はふだんどおりです。曲えらびの「↔ ミラー譜面」でも切り替えられます。'), field('ラッキーラッシュ', toggle('luckyRush'), 'うまく叩くと、経過時間の下の🍀ゲージがたまり、満タンで抽選します（バンドリ！アワーノーツの「LUCK撃奏」を見習いました）。当たると「LUCKY RUSH!!」になり、しばらくのあいだ画面のふちが金色に光って、ゲージが2倍の速さでたまり、次の抽選も当たりやすくなります。抽選のたびにラッキーptが入り、曲の終わりにおまけのビートPになります（1曲で最大10P。イベントを開いていない期間は1/5。アシストモードでは入りません）。スコア・判定・ランキングには関わりません。既定はONです。'), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだはコンボ数のすぐ上に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、レーンの左のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
+  }), field('アシストモード', toggle('assistMode'), 'リズムゲームが苦手でも気軽に遊べるモードです（バンドリ！アワーノーツのアシストモードを見習いました）。既定はOFFです。ONにすると、フリックはタップするだけで取れ、ホールド・スライドの終わりのフリックも離すだけでよくなります。BAD・MISSでコンボが切れそうなときは「コンボガード」が代わりに受け止めます（最大3回ぶん。コンボをつなぐと少しずつたまり、崩れているときほど早くたまります）。そのかわりスコアは8割になり、FULL COMBO などの称号は付かず、自己ベスト・全国ランキング・ビートPには残りません。曲えらびの「🛟 アシスト」でも切り替えられます。'), field('ミラー譜面', toggle('mirrorChart'), '譜面を左右反対にして遊びます（バンドリ！アワーノーツなどにある設定です）。既定はOFFです。同じ曲でも手の動きが変わるので、苦手な配置の練習や気分転換に使えます。判定・スコア・記録はふだんどおりです。曲えらびの「↔ ミラー譜面」でも切り替えられます。'), field('ラッキーラッシュ', toggle('luckyRush'), 'うまく叩くと、経過時間の下の🍀ゲージがたまり、満タンで抽選します（バンドリ！アワーノーツの「LUCK撃奏」を見習いました）。当たると「LUCKY RUSH!!」になり、しばらくのあいだ画面のふちが金色に光って、ゲージが2倍の速さでたまり、次の抽選も当たりやすくなります。抽選のたびにラッキーptが入り、曲の終わりにおまけのビートPになります（1曲で最大10P。イベントを開いていない期間は1/5。アシストモードでは入りません）。スコア・判定・ランキングには関わりません。既定はONです。'), field('フルコンボ表示', toggle('comboStatusDisplay'), 'フルコンボ（BAD・MISSなし）が続いているあいだはコンボ数のすぐ上に「FULL COMBO」、ぜんぶMARVELOUSのあいだは「ALL MARVELOUS」を小さく出します（プロセカ・CHUNITHM などにある表示です）。途切れたら消えます。'), field('叩いた場所に判定', toggle('judgmentAtTap'), 'ノーツを叩いたとき、判定ラインのその場所にも小さく判定の文字（MARVELOUS・GREAT など）を出します。既定は「OFF」です。\nいつもの真ん中の大きな判定はそのまま出ます。左右どちらの手がずれているかを見分けたいときに使います。判定・スコアは変わりません。'), field('自己ベスト比', toggle('paceDisplay'), 'いまのペースが自己ベストより上か下かを、レーンの左のふちの経過時間の下に「ベスト比 +1,234」のように出します（beatmania IIDX のペースメーカーです）。自己ベストを「曲のここまでの割合」で割り戻した点との差で、上回っていれば緑、下回っていれば赤です。まだ記録が無い曲では出ません。'), field('レーン発光', segments('laneGlow', RHYTHM_LANE_GLOW_LABELS), null, {
     full: true
   }), field('道の幅（横向き）', segments('roadWidth', RHYTHM_ROAD_WIDTH_LABELS), '横向きで遊ぶときの道の広さです。細くすると、スライドで指を動かす距離が短くなります（そのぶん1レーンは細くなります）。「広い」はこれまでの幅、「細い」は判定ラインのところで画面の約7割です。縦向きでは変わりません。', {
     full: true
@@ -24199,7 +24208,7 @@ const RhythmOptions = ({
     full: true
   }), field('ライブ背景', segments('stageEffect', RHYTHM_STAGE_EFFECT_LABELS), '演奏中のレーンの後ろの演出です。既定は「シンプル」（これまでの見た目）です。判定・スコアはどれでも変わりません。\n「ライブ」＝「派手」に加えて、ライブ会場のようにします。サーチライトが曲の拍に合わせて明るくなり、レーザーが小節ごとに向きと色を変えて走り、道の両側には観客のペンライトが奥までずらりと並び、拍に合わせて揺れます。ペンライトの色もコンボが伸びるほど変わります。いちばん重い段なので、端末が熱くなるときは下げてください。絵を描くのが得意な専用の部分（GPU）が無い端末では「派手」と同じになります。\n「派手」＝曲のジャケットをぼかして背景に敷き、ノーツが判定ラインへ来るタイミングで背景が光ります。コンボが伸びるほど光の色が熱くなり（水色→桃→金→白金）、モンスターノーツでは金色に大きく光ります。左右からサーチライトが揺れ、光の粒が舞います。\n「控えめ」＝ジャケットの背景とタイミングの光だけにします（動き続けるサーチライトと光の粒は出しません）。\n「シンプル」＝これまでの見た目のままです。\n軽量モードのときは「シンプル」になります。演出量「最小」では、サーチライト・光の粒・レーザー・ペンライトは出しません。', {
     full: true
-  }), field('道の演出', toggle('roadFx'), '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。'), field('判定の演出', toggle('judgmentFx'), 'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('コンボの節目', toggle('comboMilestoneFx'), 'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。'), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
+  }), field('道の演出', toggle('roadFx'), '演奏中の道(レーン)を、曲に合わせて動かします。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n曲の拍ごとに細い線が奥から流れてきて、小節の頭では明るい線になります。道の左右のふちが拍に合わせて光り、道の奥はもやに溶けて、その先の光が小節ごとに脈打ちます。\n少し重くなるので、端末が熱くなるときは OFF のままにしてください。演出量が「最小」のときと軽量モードでは出ません。\n変えた設定は、次に遊ぶ曲から使われます。'), field('判定の演出', toggle('judgmentFx'), 'GREAT 以上の判定のとき、判定の文字の後ろで光がはじけ、文字が大きく弾みます。既定は「OFF」です。判定・スコアは変わりません。\n光の色は判定の色（GREAT は赤、EXCELLENT は桃紫、MARVELOUS は金）で、ぴったりの MARVELOUS では虹色の光が走ります。\n判定のたびに動くので少し重くなります。演出量が「最小」のときと軽量モードでは出ません。'), field('ノーツの動き', toggle('noteMotionFx'), 'フリックの矢印と、SLIDE の帯に動きを付けます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n上へ払うフリックは矢印が3段に重なり、光が下から上へ流れます。横へ払うフリックは、払う向きへ山形の残像が流れます。SLIDE は、帯の上を判定ラインへ向かって光の波が流れます。\n演出量が「最小」のときと軽量モードでは出ません。'), field('コンボの節目', toggle('comboMilestoneFx'), 'コンボが100のくぎりに届くたび（100・200・300…）、コンボ数のまわりに金の光の輪が広がります。既定は「OFF」です。判定・スコアは変わりません。\n「100 COMBO」の大きな数字は、この設定に関係なくこれまでどおり出ます。コンボ数を出さない設定のときは、光の輪も出ません。演出量が「最小」のときと軽量モードでは出ません。'), field('盛り上がりの光', toggle('climaxFx'), 'サビなど曲がいちばん盛り上がるところに入ると、道の両側に光の筋が奥から流れてきます。既定は「OFF」です。判定・スコア・叩く位置は変わりません。\n盛り上がるところは曲ごとに決まっていて、そこを抜けると光はゆっくり消えます。曲の中でもとくに盛り上がるところほど光が濃くなります。\n演出量が「最小」のときと軽量モードでは出ません。'), field('描く回数', segments('frameRateMode', RHYTHM_FRAME_RATE_LABELS), '演奏中に1秒あたり何回画面を描くかです。既定は「端末に合わせる」（これまでの動き）です。端末が熱くなるときは「省電力」を試してください。\n「省電力」＝120Hz以上のなめらかな画面の端末で、描く回数を毎秒60回ほどに抑えます。端末が熱くなりにくく、電池も長持ちします。ノーツの流れは60Hzの端末と同じなめらかさになります。\n「端末に合わせる」＝画面の速さのまま描きます（毎秒120回など）。いちばんなめらかですが、そのぶん熱くなりやすくなります。\n判定の正確さはどちらでも変わりません。60Hz・90Hzの画面の端末では、どちらを選んでも同じです。', {
     full: true
   }), field('画質', segments('renderQuality', RHYTHM_RENDER_QUALITY_LABELS), '演奏中に描くノーツ・光・背景を、どこまで細かく描くかです。既定は「高」（これまでの見た目）です。端末が熱くなるときは下げてみてください。判定・スコア・叩く位置はどれでも変わりません。\n「自動」＝「高」で始め、演奏中に動きが詰まるようなら「標準」→「省電力」と自動で下げます。下げた画質は、アプリを開き直すまで次の曲にも引き継ぎます。\n「高」＝いちばん細かく描きます。\n「標準」＝少しだけ粗く描きます。スマホの画面ではほとんど見分けがつかず、端末の負担が減ります。\n「省電力」＝さらに粗く描きます。ノーツのふちが少しやわらかく見えますが、端末がいちばん熱くなりにくくなります。'), field('描画方式', React.createElement(React.Fragment, null, segments('noteDrawMode', RHYTHM_NOTE_DRAW_LABELS), React.createElement("p", {
     "data-rhythm-draw-mode-now": true,
@@ -26204,17 +26213,78 @@ const useRhythmHud = hud => React.useSyncExternalStore(hud.subscribe, hud.get);
 const RhythmHudScore = ({
   hud,
   maxScore,
-  bestScore
+  bestScore,
+  rankFx = true
 }) => {
   const {
     score
   } = useRhythmHud(hud);
   const rankNextId = rhythmNextRankId(score, maxScore);
   const rankNextLabel = rankNextId ? `→${rankNextId}` : '★MAX';
+  const rank = rhythmRankForScore(score);
+  const rankBadgeRef = useRef(null),
+    rankRingRef = useRef(null),
+    rankPopRef = useRef(null),
+    rankSeenRef = useRef(rank);
+  useEffect(() => {
+    const prev = rankSeenRef.current;
+    rankSeenRef.current = rank;
+    if (!rankFx || prev === rank) return;
+    const order = id => RHYTHM_RANKS.findIndex(item => item.id === id);
+    if (!(order(rank) >= 0 && order(rank) < order(prev) && order(rank) <= order('S'))) return;
+    try {
+      const badge = rankBadgeRef.current,
+        ring = rankRingRef.current,
+        pop = rankPopRef.current;
+      if (badge && typeof badge.animate === 'function') badge.animate([{
+        transform: 'scale(1)'
+      }, {
+        transform: 'scale(1.4)',
+        offset: .28
+      }, {
+        transform: 'scale(1)'
+      }], {
+        duration: 620,
+        easing: 'cubic-bezier(.2,.9,.3,1.2)'
+      });
+      if (ring && typeof ring.animate === 'function') ring.animate([{
+        opacity: 1,
+        transform: 'scale(.8)'
+      }, {
+        opacity: 0,
+        transform: 'scale(2.4)'
+      }], {
+        duration: 760,
+        easing: 'ease-out'
+      });
+      if (pop && typeof pop.animate === 'function') {
+        pop.textContent = `${rank} RANK!`;
+        pop.animate([{
+          opacity: 0,
+          transform: 'translateY(4px) scale(.7)'
+        }, {
+          opacity: 1,
+          transform: 'translateY(0) scale(1.1)',
+          offset: .18
+        }, {
+          opacity: 1,
+          transform: 'translateY(0) scale(1)',
+          offset: .75
+        }, {
+          opacity: 0,
+          transform: 'translateY(-6px) scale(1)'
+        }], {
+          duration: 1500,
+          easing: 'ease-out'
+        });
+      }
+    } catch (_) {}
+  }, [rank, rankFx]);
   return React.createElement("div", {
     className: "flex items-center gap-1.5"
   }, React.createElement("div", {
-    className: `relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(score)]}`,
+    ref: rankBadgeRef,
+    className: `relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rank]}`,
     style: {
       boxShadow: '0 0 8px rgba(103,232,249,.35)'
     }
@@ -26224,7 +26294,43 @@ const RhythmHudScore = ({
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, rhythmRankForScore(score))), React.createElement("div", {
+  }, rank), rankFx && React.createElement(React.Fragment, null, React.createElement("i", {
+    ref: rankRingRef,
+    "data-rhythm-rank-ring": true,
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      inset: -3,
+      borderRadius: '9999px',
+      border: '2px solid currentColor',
+      boxShadow: '0 0 12px currentColor',
+      opacity: 0,
+      pointerEvents: 'none'
+    }
+  }), React.createElement("b", {
+    ref: rankPopRef,
+    "data-rhythm-rank-pop": true,
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: -2,
+      top: '100%',
+      marginTop: 2,
+      zIndex: 2,
+      whiteSpace: 'nowrap',
+      fontSize: 11,
+      fontWeight: 900,
+      fontStyle: 'italic',
+      lineHeight: 1,
+      padding: '2px 6px',
+      borderRadius: 9999,
+      background: 'rgba(2,6,23,.88)',
+      boxShadow: '0 0 10px currentColor',
+      textShadow: '0 0 6px currentColor',
+      opacity: 0,
+      pointerEvents: 'none'
+    }
+  }))), React.createElement("div", {
     className: "min-w-0 landscape:min-w-0"
   }, React.createElement("div", {
     className: "flex items-center gap-0.5 landscape:hidden"
@@ -26720,6 +26826,12 @@ const RhythmTapTest = ({
   const roadLinesRef = useRef(null);
   if (!roadLinesRef.current) roadLinesRef.current = new Float32Array(6 * 64);
   const roadGlowRef = useRef(null);
+  const climaxFxOn = settings.climaxFx === true && settings.effectAmount !== 'MINIMAL' && !settings.lightweightMode && !tutorial && typeof rhythmSongClimaxAt === 'function';
+  const climaxRef = useRef(null);
+  const climaxCycleMs = (() => {
+    const grid = climaxFxOn ? rhythmSongBeatGrid(song.songId) : null;
+    return grid ? Math.round(Math.min(1400, Math.max(500, grid.beatMs * 2))) : 900;
+  })();
   const stageArtSrc = stageLevel !== 'SIMPLE' && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
   const hudArtSrc = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
   useEffect(() => {
@@ -27672,6 +27784,16 @@ const RhythmTapTest = ({
       paceEl.dataset.pace = diff >= 0 ? 'up' : 'down';
       paceEl.textContent = `ベスト比 ${diff >= 0 ? '+' : '−'}${Math.abs(diff).toLocaleString()}`;
     }
+    if (settings.judgmentAtTap === true && judgment !== 'MISS' && !calibrating) {
+      const lineY = RHYTHM_JUDGMENT_LINE_Y.ratio,
+        nowMs = run.audio?.songTimeMs?.() ?? note.timeMs;
+      const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, lineY, nowMs) : rhythmNoteVisualSpan(note, note.lane, lineY, nowMs);
+      rhythmSpawnTapJudgment(playAreaRef.current, {
+        centerRatio: span && span.center,
+        judgment,
+        side: rhythmFastSlow(deltaMs)
+      });
+    }
     if (settings.timingDisplay === 'METER' && judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs)) {
       const ticks = meterTicksRef.current;
       if (ticks.length) {
@@ -27994,6 +28116,17 @@ const RhythmTapTest = ({
               easing: 'cubic-bezier(.2,.7,.3,1)'
             });
           } catch (_) {}
+        }
+      }
+      {
+        const climaxEl = climaxRef.current;
+        if (climaxEl) {
+          const level = settingsLiveRef.current.climaxFx === true ? rhythmSongClimaxAt(song.songId, visualTime) : 0;
+          if (run._climaxLevel !== level) {
+            run._climaxLevel = level;
+            climaxEl.setAttribute('data-on', level > 0 ? '1' : '0');
+            climaxEl.style.opacity = level > 0 ? String(level) : '0';
+          }
         }
       }
       if (canvasReady) RHYTHM_CANVAS_RENDERER.drawHits(travel.hitY);
@@ -29453,7 +29586,8 @@ const RhythmTapTest = ({
   }, React.createElement(RhythmHudScore, {
     hud: hudRef.current,
     maxScore: difficulty.maxScore,
-    bestScore: bestRecord?.bestScore
+    bestScore: bestRecord?.bestScore,
+    rankFx: !settings.lightweightMode && settings.effectAmount !== 'MINIMAL'
   }), React.createElement("div", {
     className: "mt-1.5 flex max-w-[34cqw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"
   }, React.createElement("span", {
@@ -29669,6 +29803,18 @@ const RhythmTapTest = ({
     ref: roadGlowRef,
     "data-rhythm-road-glow": true,
     "aria-hidden": "true"
+  })), climaxFxOn && React.createElement("i", {
+    ref: climaxRef,
+    "data-rhythm-climax": true,
+    "data-on": "0",
+    style: {
+      '--climax-cycle': `${climaxCycleMs}ms`
+    },
+    "aria-hidden": "true"
+  }, React.createElement("b", {
+    "data-side": "l"
+  }), React.createElement("b", {
+    "data-side": "r"
   })), stageLevel !== 'SIMPLE' && React.createElement("i", {
     ref: stagePulseRef,
     "data-rhythm-stage-pulse": true,
