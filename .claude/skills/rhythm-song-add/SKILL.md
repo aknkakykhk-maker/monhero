@@ -112,6 +112,8 @@ node -e "require('./tools/node_modules/sharp')('<元絵>')
 
 `monster-hero/data/rhythm-mode.js` の `RHYTHM_SONG_BEATS` にも1行足す（道の演出の拍の線が使う）。
 値は解析ファイルの `timing` の `[beatMs, beatZeroMs, beatsPerBar]`。`node tools/mode/rhythm-song-beats-check.js` が抜けと写し間違いを見つける。
+続けて `node tools/mode/rhythm-song-climax.js --write` を打つ（盛り上がる区間の表 `RHYTHM_SONG_CLIMAX`。オプション「盛り上がりの光」が使う）。
+抜けると `node tools/mode/rhythm-climax-fx-check.js` が落ちる。
 
 ---
 
@@ -122,7 +124,7 @@ node -e "require('./tools/node_modules/sharp')('<元絵>')
 node tools/mode/rhythm-audio-analyze-v3.js --track <track_id> --write
 ```
 
-初めて解析すると、一覧のその曲へ `"chartRevision": <最新>`（譜面の作り方のリビジョン。2026-09-29 時点で 23。遊んだ記録から学んだ調整値が書き足されると、それより大きい番号になる。`docs/spec/RHYTHM_PLAY_LOG.md`）が自動で入る。
+初めて解析すると、一覧のその曲へ `"chartRevision": <最新>`（譜面の作り方のリビジョン。2026-09-29 時点で 24。遊んだ記録から学んだ調整値が書き足されると、それより大きい番号になる。`docs/spec/RHYTHM_PLAY_LOG.md`）が自動で入る。
 Rev.9 からは、パイプライン（`--write`）が生成の前に音の層の解析 `authoring/<曲>-v3-layers.json` を作る（主役の追跡の材料。**コミットに含める**）。
 生成のときに `主役の追跡: ドラム◯小節・歌や主旋律◯小節…` と出ていれば効いている（`効かない` と出たら層の解析を作り直す）。
 Rev.12 からは、パイプラインが生成の直後に区間の差し替え（`rhythm-chart-v3-splice.js --apply`）を通す。難易度ごとに `差し替えた` / `差し替えない（理由）` と出る。

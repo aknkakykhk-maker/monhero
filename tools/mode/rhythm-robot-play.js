@@ -4,6 +4,11 @@
 //   python3 tools/serve.py を起動した状態で
 //   node tools/mode/rhythm-robot-play.js --song big_bridge_no_shitou --difficulty MASTER
 //   node tools/mode/rhythm-robot-play.js --all [--difficulties EXPERT,MASTER] [--parallel 3] [--out <json>]
+//   node tools/mode/rhythm-robot-play.js --song only_my_railgun --difficulty EASY \
+//       --settings '{"climaxFx":true,"judgmentAtTap":true}' --shots 20000,60000 --shot-dir <dir>
+//     --settings … 演奏の設定(mh_rhythm_settings_v1)をこの値で始める(演出を確かめるとき。重いときの自動調整は切る)
+//     --shots    … 曲のその時刻(ms)を過ぎたところで画面を撮る(--shot-dir へ <曲>-<難易度>-<時刻>.png)
+//   どちらのときも、演出が出たか(盛り上がりの光が点いた時刻・叩いた場所の判定の数・ランクが上がったときの文字)を最後に出す
 //
 // 【なぜ要るか】
 // 譜面を作る道具の中の「押せる」(手のシミュレート)は、ゲームの判定そのものではない。
@@ -24,8 +29,9 @@ const PAGE_URL=process.env.SMOKE_URL||'http://localhost:8899/monster-hero/index.
 const DIFFICULTIES=['EASY','NORMAL','HARD','EXPERT','MASTER'];
 
 // ロボット用のブラウザの初期値(はじめての案内を閉じた状態・全曲の全難易度を開けた状態)
-const seed=songIds=>{
+const seed=({songIds,settings})=>{
   const put=(k,v)=>{localStorage.setItem(k,JSON.stringify(v));};
+  if(settings)put('mh_rhythm_settings_v1',{...settings,autoEffectDown:false});
   put('mh_breeder_name','ロボット');put('mh_breeder_icon','Mocchi');put('mh_onboarded',true);
   put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
   put('mh_rhythm_tutorial_seen_v1',true);
@@ -54,6 +60,13 @@ const installRobot=()=>{
   };
   const makeTouch=(id,p)=>new Touch({identifier:id,target:p.el,clientX:p.x,clientY:p.y,radiusX:8,radiusY:8,force:1});
   const perfSong=RHYTHM_PERF.songTime.bind(RHYTHM_PERF);
+  // 演出の記録(盛り上がりの光が点いた・消えた時刻、叩いた場所の判定を出した数、ランクが上がったときの文字)
+  const fx=bot.fx={climax:[],tapJudgments:0,rankPops:[]};
+  new MutationObserver(records=>{for(const r of records){const el=r.target.nodeType===1?r.target:r.target.parentElement;if(!el)continue;
+    if(r.type==='attributes'&&el.hasAttribute('data-rhythm-climax'))fx.climax.push([Math.round(bot.song||0),el.getAttribute('data-on')]);
+    else if(r.type==='childList'&&el.tagName==='B'&&el.parentElement&&el.parentElement.hasAttribute('data-rhythm-tap-judgment'))fx.tapJudgments++;
+    else if(el.closest&&el.closest('[data-rhythm-rank-pop]'))fx.rankPops.push([Math.round(bot.song||0),el.closest('[data-rhythm-rank-pop]').textContent]);}})
+    .observe(document.body,{subtree:true,attributes:true,attributeFilter:['data-on'],childList:true,characterData:true});
   RHYTHM_PERF.songTime=song=>{
     const result=perfSong(song);
     bot.song=song;
@@ -105,13 +118,15 @@ const collect=()=>{
   const bot=window.__mhRobot;
   const rows=[...bot.seen].map(([note,info])=>({timeMs:note.timeMs,type:note._rhythmOriginalType||note.type,subLane:note.subLane,width:note.subLaneWidth,
     lane:note.lane,flickDir:note.flickDir||'',endFlick:!!note.endFlick,judgment:note._rhythmFinalJudgment||null,delta:note._rhythmDeltaMs,pressed:info.pressed,error:info.error||null}));
-  return {rows,log:bot.log.slice(0,5)};
+  return {rows,log:bot.log.slice(0,5),fx:bot.fx};
 };
 
+const SETTINGS=arg('--settings',null)?JSON.parse(arg('--settings')):null;
+const SHOTS=(arg('--shots','')||'').split(',').map(Number).filter(n=>n>0).sort((a,b)=>a-b),SHOT_DIR=arg('--shot-dir',null);
 const playOne=async(browser,songIds,songId,difficulty)=>{
   const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1,hasTouch:true,isMobile:true});
   try{
-    await page.addInitScript(seed,songIds);
+    await page.addInitScript(seed,{songIds,settings:SETTINGS});
     const clickText=pattern=>page.evaluate(s=>{const rx=new RegExp(s);const b=[...document.querySelectorAll('button')].find(x=>rx.test((x.innerText||'').replace(/\s+/g,' ').trim()));if(!b)return false;b.click();return true;},pattern);
     await page.goto(PAGE_URL,{waitUntil:'load',timeout:90000});
     await page.waitForFunction(()=>document.body&&document.body.innerText.includes('TAP TO START'),undefined,{timeout:90000});
@@ -131,6 +146,10 @@ const playOne=async(browser,songIds,songId,difficulty)=>{
     await page.evaluate(installRobot);
     await page.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());
     await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000});
+    // 画面を撮る(曲のその時刻を過ぎたところで)
+    if(SHOTS.length&&SHOT_DIR){fs.mkdirSync(SHOT_DIR,{recursive:true});
+      for(const at of SHOTS){try{await page.waitForFunction(ms=>(window.__mhRobot&&window.__mhRobot.song||0)>=ms,at,{timeout:8*60*1000,polling:100});
+        await page.screenshot({path:path.join(SHOT_DIR,`${songId}-${difficulty}-${at}.png`)});}catch(_){break;}}}
     // 曲が終わるまで待つ(結果の画面が出る・プレイエリアが消える)
     await page.waitForFunction(()=>!document.querySelector('[data-rhythm-play-area]')||/RESULT|リザルト|もう一度/.test(document.body.innerText),undefined,{timeout:8*60*1000,polling:1000});
     await page.waitForTimeout(500);
@@ -147,7 +166,8 @@ const summarize=result=>{
   const counts={};for(const r of rows)counts[r.judgment||'判定なし']=(counts[r.judgment||'判定なし']||0)+1;
   return `${result.songId} ${result.difficulty}: ${rows.length}ノーツ ${Object.entries(counts).map(([k,v])=>`${k}${v}`).join(' / ')}`
     +(bad.length?`\n    ${bad.slice(0,8).map(r=>`${(r.timeMs/1000).toFixed(2)}s ${r.type}${r.flickDir?`(${r.flickDir})`:''}${r.endFlick?'(終点フリック)':''} 幅${r.width??'-'} → ${r.judgment||'判定なし'}${Number.isFinite(r.delta)?` ${Math.round(r.delta)}ms`:''}`).join('\n    ')}${bad.length>8?`\n    ほか${bad.length-8}個`:''}`:'')
-    +(result.log&&result.log.length?`\n    ロボットの失敗: ${result.log[0].split('\n')[0]}`:'');
+    +(result.log&&result.log.length?`\n    ロボットの失敗: ${result.log[0].split('\n')[0]}`:'')
+    +(result.fx&&(result.fx.climax.length||result.fx.tapJudgments||result.fx.rankPops.length)?`\n    演出: 盛り上がりの光 ${result.fx.climax.map(([t,on])=>`${(t/1000).toFixed(1)}s${on==='1'?'点':'消'}`).join(' ')||'なし'} / 叩いた場所の判定 ${result.fx.tapJudgments}回 / ランク ${result.fx.rankPops.map(([t,x])=>`${(t/1000).toFixed(1)}s ${x}`).join(' ')||'なし'}`:'');
 };
 
 (async()=>{
