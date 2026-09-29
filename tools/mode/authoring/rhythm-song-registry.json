@@ -143,7 +143,7 @@
    }
   },
   "eiki_boss_remix": {
-   "chartRevision": 21,
+   "chartRevision": 22,
    "audio": "monster-hero/audio/bgm-eiki-boss-remix.mp3",
    "audioSha256": "83093750c9ec8fb66195d6bb1ed290bdf72ba3ce5b289faa032f9b211fd9fde6",
    "durationMs": 218014,
@@ -254,7 +254,7 @@
    }
   },
   "crossing_field": {
-   "chartRevision": 21,
+   "chartRevision": 22,
    "audio": "monster-hero/audio/bgm-crossing-field.mp3",
    "audioSha256": "1e2e7cc1d3d53d1ac999bc5c03e1534e635de515b297daf65c00bcab21ce294f",
    "durationMs": 89208,
@@ -309,7 +309,7 @@
    }
   },
   "mou_hitotsu_no_sekai_e": {
-   "chartRevision": 21,
+   "chartRevision": 22,
    "audio": "monster-hero/audio/bgm-mou-hitotsu-no-sekai-e.mp3",
    "audioSha256": "633ed0ee2501b3b6bcf36daf4328c95dbd01fe1e5a4d06b489cc4de51afd054f",
    "durationMs": 226980,
@@ -365,7 +365,7 @@
   },
   "big_bridge_no_shitou": {
    "audio": "monster-hero/audio/bgm-big-bridge-no-shitou.mp3",
-   "chartRevision": 21,
+   "chartRevision": 22,
    "audioSha256": "466468405f445845dd896375e3e0af91b9b2977b9710d60f9bec8ae2466f2840",
    "durationMs": 148320,
    "analyzedTiming": {

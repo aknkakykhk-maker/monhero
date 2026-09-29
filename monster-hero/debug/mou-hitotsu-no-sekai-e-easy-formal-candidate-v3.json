@@ -4,7 +4,7 @@
  "trackId": "mou_hitotsu_no_sekai_e",
  "difficulty": "EASY",
  "candidateVersion": 3,
- "chartRevision": 21,
+ "chartRevision": 22,
  "laneCount": 6,
  "develop": {
   "bars": [
@@ -161,10 +161,10 @@
   }
  },
  "level": 1,
- "noteCount": 339,
+ "noteCount": 334,
  "typeCounts": {
-  "TAP": 319,
-  "HOLD": 20
+  "TAP": 313,
+  "HOLD": 21
  },
  "densityPerSecond": 1.52,
  "shapes": [
@@ -6098,64 +6098,16 @@
    "sourceCharacter": "PUNCH"
   },
   {
-   "type": "TAP",
-   "grid": 2772,
-   "lane": 0,
+   "type": "HOLD",
+   "grid": 2768,
    "subLane": 0,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.28,
-   "sourcePeakOffsetMs": -8.1,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 2784,
-   "lane": 2,
-   "subLane": 5,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.18,
-   "sourcePeakOffsetMs": -0.1,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 2790,
-   "lane": 1,
-   "subLane": 3,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.15,
-   "sourcePeakOffsetMs": -24.1,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 2796,
+   "subLaneWidth": 12,
+   "sourceStrength": 0.781,
+   "sourcePeakOffsetMs": 39.9,
+   "sourceCharacter": "FULL",
    "lane": 0,
-   "subLane": 1,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.16,
-   "sourcePeakOffsetMs": 7.9,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 2802,
-   "lane": 0,
-   "subLane": 0,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.15,
-   "sourcePeakOffsetMs": -16.1,
-   "sourceCharacter": "PUNCH"
-  },
-  {
-   "type": "TAP",
-   "grid": 2812,
-   "lane": 0,
-   "subLane": 1,
-   "subLaneWidth": 4,
-   "sourceStrength": 0.07,
-   "sourcePeakOffsetMs": 23.9,
-   "sourceCharacter": "PUNCH"
+   "durationGrids": 28,
+   "endingHold": true
   }
  ],
  "step7": {
@@ -6168,8 +6120,8 @@
    "reach": 0,
    "hardJumps": 0,
    "overSteps": 0,
-   "spread": 107,
-   "cost": 107
+   "spread": 103,
+   "cost": 103
   },
   "after": {
    "impossible": 0,
@@ -6177,8 +6129,8 @@
    "reach": 0,
    "hardJumps": 0,
    "overSteps": 0,
-   "spread": 107,
-   "cost": 107
+   "spread": 103,
+   "cost": 103
   },
   "weights": {
    "impossible": 10000,

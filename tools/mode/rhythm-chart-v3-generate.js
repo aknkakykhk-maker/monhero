@@ -31,6 +31,7 @@ const {lowLagOf,isLowHit}=require('./rhythm-chart-low-lag.js');
 const {detectRepeats}=require('./rhythm-chart-repeats.js');
 const {DEFAULT_PLAY_TUNING,playTuningForRevision}=require('./rhythm-chart-play-tuning.js');
 const {WARP_REVISION,tempoWarp}=require('./rhythm-chart-tempo-warp.js');
+const {ENDING_REVISION,fadingEnding}=require('./rhythm-chart-ending.js');
 const {setLaneCount:setPatternLaneCount,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
 const {soundTraitsFor,flickScoreOf,chordScoreOf}=require('./rhythm-sound-traits.js');
 const {weightsForRevision,knowledgeBoost,knowledgeShapePrefer}=require('./rhythm-chart-knowledge.js');
@@ -3822,6 +3823,70 @@ for(const difficulty of targets){
     result=retry;
   }
   results[difficulty]=result;
+}
+// Rev.22: 曲の終わりの余韻(rhythm-chart-ending.js)。最後の一発のあと鳴り残る音が消えていく曲では、
+// 最後の一発より後にノーツを置かず、最後の一発を太い長押しにして締める(ユーザー指摘「音がなくなろうとしてる終盤でノーツが続いてるのが違和感」)。
+// 当たらない曲では何もしない
+const ending=chartRevision>=ENDING_REVISION?fadingEnding(audio,{chartEndMs}):null;
+if(ending&&ending.active){
+  const gridOfMs=ms=>{const raw=Math.round((ms-timing.beatZeroMs)/gridMs);return tempoWarpInfo&&tempoWarpInfo.active?Math.round((ms-tempoWarpInfo.at(raw)-timing.beatZeroMs)/gridMs):raw;};
+  const lastGrid=gridOfMs(ending.lastHitMs);
+  const holdGrids=Math.max(BEAT,Math.round((gridOfMs(ending.holdEndMs)-lastGrid)/BEAT)*BEAT);
+  const endOf=note=>note.grid+(Number(note.durationGrids)||0);
+  for(const difficulty of targets){
+    const r=results[difficulty],P=r.profile;
+    let removed=0,trimmed=0;
+    const notes=[];
+    for(const note of r.notes){
+      if(note.grid>lastGrid){removed++;continue;}
+      // 最後の一発をまたいで伸びる押さえは、最後の一発の手前で終える(短くなりすぎたら TAP にする)
+      if(note.grid<lastGrid&&endOf(note)>=lastGrid&&(note.type==='HOLD'||note.type==='SLIDE')){
+        const end=lastGrid-2;
+        trimmed++;
+        if(note.type==='SLIDE')note.slidePoints=(note.slidePoints||[]).filter(point=>point.grid<=end);
+        if(Array.isArray(note.holdPoints))note.holdPoints=note.holdPoints.filter(point=>point.grid<=end);
+        const lastPoint=note.type==='SLIDE'&&note.slidePoints.length?note.slidePoints[note.slidePoints.length-1].grid:end;
+        const duration=(note.type==='SLIDE'?lastPoint:end)-note.grid;
+        if(duration<COMMON.holdMinGrids||(note.type==='SLIDE'&&note.slidePoints.length<2)){
+          note.type='TAP';
+          if(!Number.isFinite(note.subLane))note.subLane=Math.max(0,Math.min(SUB_LANES-2,Math.round(Number(note.lane)*2)));
+          if(!Number.isFinite(note.subLaneWidth))note.subLaneWidth=2;
+          delete note.durationGrids;delete note.slidePoints;delete note.holdPoints;delete note.endLane;
+        }else{
+          note.durationGrids=duration;
+          if(Array.isArray(note.holdPoints)&&note.holdPoints.length<2)delete note.holdPoints;
+        }
+        delete note.endFlick;
+      }
+      notes.push(note);
+    }
+    // 最後の一発のノーツを太い長押しにする(無ければ真ん中に足す)
+    const width=Math.max(2,Math.min(SUB_LANES,P.accentWidth>=10?SUB_LANES:P.accentWidth||4));
+    let final=notes.find(note=>note.grid===lastGrid&&!note.chord)||notes.find(note=>note.grid===lastGrid);
+    if(!final){
+      const onset=onsetByGrid.get(lastGrid);
+      final={type:'TAP',grid:lastGrid,subLane:Math.round((SUB_LANES-width)/2),subLaneWidth:width,
+        sourceStrength:onset?onset.strength:0,sourcePeakOffsetMs:onset?onset.gridOffsetMs:0,sourceCharacter:onset?onset.character:'NONE'};
+      notes.push(final);
+    }
+    const center=(Number(final.subLane)||0)+(Number(final.subLaneWidth)||2)/2;
+    final.type='HOLD';
+    final.subLane=Math.max(0,Math.min(SUB_LANES-width,Math.round(center-width/2)));
+    final.subLaneWidth=width;
+    final.lane=Math.floor(final.subLane/2);
+    final.durationGrids=holdGrids;
+    final.endingHold=true;
+    for(const key of ['flickDir','endFlick','slidePoints','holdPoints','endLane','monsterSlot','chord','chordRun'])delete final[key];
+    // 同じ時刻のほかのノーツは、長押しと重なるなら外す
+    const kept=notes.filter(note=>note===final||note.grid!==lastGrid
+      ||(Number(note.subLane)+Number(note.subLaneWidth)<=final.subLane||Number(note.subLane)>=final.subLane+width));
+    removed+=notes.length-kept.length;
+    for(const note of kept)if(note!==final&&note.grid===lastGrid)delete note.chord;
+    kept.sort((a,b)=>a.grid-b.grid||(Number(a.subLane)||0)-(Number(b.subLane)||0));
+    r.notes=kept;
+    (r.notice||(r.notice=[])).push(`終わりの余韻: 最後の一発(${(ending.lastHitMs/1000).toFixed(2)}秒)を長押し${holdGrids}グリッドで締め、その後の${removed}個を置かない`+(trimmed?`・またいで伸びる押さえを${trimmed}本縮めた`:''));
+  }
+  console.log(`終わりの余韻(Rev.22): ${ending.reason}`);
 }
 if(slideEase){
   for(const difficulty of targets){
