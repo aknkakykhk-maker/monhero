@@ -269,16 +269,15 @@ const BREEDER_MARKET_ITEMS = [
   { id:'kenshi_mocchi_disc_icon', name:"剣士モッチーの円盤石アイコン", type:'icon', icon:KENSHI_MOCCHI_DISC_ICON, cost:1 },
   { id:'KenshiMocchi', name:"剣士モッチーの円盤石", type:'disc', icon:KENSHI_MOCCHI_DISC_ICON, cost:300000 },
   // ユグドラシル(新しい血統・ユグドラシル×ユグドラシル)とメルホイップ(ユグドラシル×？？？のレア)。
-  // 2026-09-28 ユーザー指示「近日公開予定でマーケットにおいて」。絵・顔アイコン・円盤石・染色マスクだけ先に入れ、
-  // 能力値・技はまだ決まっていないので ALL_PLAYER_MONSTERS にはいない。3件とも available:false で
-  // 「近日追加」と出るだけで買えない(buyMarketItem と marketPurchasePreview が available:false をはじく)。
-  // 正式実装のときに available:false を外す。円盤石の値段は既存の円盤石と同じ150,000ダイヤ。
-  // ビートP交換所にも同じ円盤石を1,500Pで先行公開予定として並べている(data/rhythm-event.js)。
-  { id:'yggdrasil_icon', name:"ユグドラシルのアイコン", type:'icon', icon:YGGDRASIL_FACE_ICON, cost:1, available:false },
-  { id:'yggdrasil_disc_icon', name:"ユグドラシルの円盤石アイコン", type:'icon', icon:YGGDRASIL_DISC_ICON, cost:1, available:false },
+  // 2026-09-28 ユーザー指示「近日公開予定でマーケットにおいて」で、3件とも available:false(「近日追加」)で並べた。
+  // 2026-09-29 に本体を入れ、円盤石はビートP交換所で先に交換できるようにした(data/rhythm-event.js・各1,500P)。
+  // 同じ日のユーザー指示「アイコンはもう販売開始してok」で、アイコン2種(本人・円盤石)の available:false を外した。
+  // ダイヤショップの円盤石(150,000ダイヤ)は、まだ available:false のまま(「近日追加」)。
+  { id:'yggdrasil_icon', name:"ユグドラシルのアイコン", type:'icon', icon:YGGDRASIL_FACE_ICON, cost:1 },
+  { id:'yggdrasil_disc_icon', name:"ユグドラシルの円盤石アイコン", type:'icon', icon:YGGDRASIL_DISC_ICON, cost:1 },
   { id:'Yggdrasil', name:"ユグドラシルの円盤石", type:'disc', icon:YGGDRASIL_DISC_ICON, cost:150000, available:false },
-  { id:'mel_whip_icon', name:"メルホイップのアイコン", type:'icon', icon:MEL_WHIP_FACE_ICON, cost:1, available:false },
-  { id:'mel_whip_disc_icon', name:"メルホイップの円盤石アイコン", type:'icon', icon:MEL_WHIP_DISC_ICON, cost:1, available:false },
+  { id:'mel_whip_icon', name:"メルホイップのアイコン", type:'icon', icon:MEL_WHIP_FACE_ICON, cost:1 },
+  { id:'mel_whip_disc_icon', name:"メルホイップの円盤石アイコン", type:'icon', icon:MEL_WHIP_DISC_ICON, cost:1 },
   { id:'MelWhip', name:"メルホイップの円盤石", type:'disc', icon:MEL_WHIP_DISC_ICON, cost:150000, available:false },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
