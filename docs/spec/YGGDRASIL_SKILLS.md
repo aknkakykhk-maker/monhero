@@ -1,8 +1,20 @@
 # ユグドラシル種の技(参考資料)
 
 2026-09-29 にユーザーが送ってくれた参考の技画像(ユグドラシル・メルホイップの「モンスター詳細 → 技」)を書き写したもの。
-正式実装のとき、技の倍率・消費ガッツ・効果を決める元にする。いまゲームに入っているのは**技の名前だけ**
-(`HERO_ATK_NAMES` と `UPCOMING_MONSTER_DRAFTS.*.draftUniqueNames`。デバッグの「新モンスター確認」→ 技で見られる)。
+技の倍率・消費ガッツ・効果を決める元にした。**2026-09-29 に正式実装した**(ユーザー指示「進めて」)。
+
+| 入っている場所 | 中身 |
+| --- | --- |
+| `data/ally-monsters.js` | `ALL_PLAYER_MONSTERS.Yggdrasil` / `.MelWhip`(能力値・特性・固有技)と `HERO_ATK_NAMES` |
+| `data/lineages.js` | 血統 `yggdrasil`(ユグドラシルは純血、メルホイップは ユグドラシル × ？？？) |
+| `22-enemy-and-bond-entries.jsx` | 生命の源・大樹の加護の決めごと(`LIFE_SOURCE_*` / `LIFE_TREE_GUARD_*`) |
+| `60-app.jsx` / `71-screen-battle.jsx` | 被ダメの式・敵の番のガッツ回復・固有技の分岐・予告の数字 |
+| `32-tactics-units.jsx` | EX `partyGuard`(世界樹の守り)・`comboBurst`(スイーツパラダイス) |
+| `data/rhythm-mode.js` / `30-rhythm-play.jsx` | 能力「必死」(`HISSHI`) |
+| `data/rhythm-event.js` | ビートP交換所の円盤石(`RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS`、各1,500P)。ダイヤショップはまだ「近日追加」 |
+
+検査: `tools/monster/yggdrasil-effects-check.js`(特性・固有技・必死) / `tools/mode/tactics-ex-skills-check.js`(EX) /
+`tools/market/beat-point-disc-check.js`(交換) / `tools/battle/skill-motion-check.js`(技ごとの動き)。
 
 - ★ … 技の段階(画像の丸数字 1〜5)
 - ランク … ダメージ / 命中 / ガッツダウン / クリティカル率(F〜S、`+` は画像の「+」付き)
@@ -129,7 +141,7 @@ baseHp:780, baseGuts:120, baseAtk:130, baseDef:150, plusStats:{hp:350,atk:30,def
 - 倍率 **×3.2**・消費ガッツ **64**(消費=倍率×20 の決まりどおり。ゴーレム×3.2・消費68と並ぶ重い一撃)
 - 効果: **使ったターンから2ターン、被ダメージ30%軽減。さらに最大ガッツの20%を回復**
   (ユーザー指示「使ったターンから2ターン被ダメ30減、最大ガッツの20%回復」)
-- `effectDesc` の案: `"大樹の加護：使ったターンから2ターン、被ダメージ30%軽減＋最大ガッツの20%回復"`(名前は仮)
+- `effectDesc` の案: `"大樹の加護：最大ガッツの20%回復＆被ダメージ30%軽減(このターンから2ターン)"`(名前は仮)
 - 撃てる早さ: 開始ガッツは最大の半分なので、ユグドラシル(最大115・開始57)は3ターン目ごろ、
   メルホイップ(最大120・開始60)は2ターン目ごろに初めて撃てる
 - 被ダメージの軽減はほかの軽減と**掛け算で重なる**(`applyTurnDamageReduction` がターンのバフを掛け合わせる作り)。
@@ -137,13 +149,13 @@ baseHp:780, baseGuts:120, baseAtk:130, baseDef:150, plusStats:{hp:350,atk:30,def
 
 ```js
 unique:{ name:"スターボム", icon:YGGDRASIL_ICON, monId:"Yggdrasil", baseMult:3.2, baseGuts:64, evoLevel:0,
-  names:[...draftUniqueNames], effectDesc:"大樹の加護：使ったターンから2ターン、被ダメージ30%軽減＋最大ガッツの20%回復" }
+  names:[...draftUniqueNames], effectDesc:"大樹の加護：最大ガッツの20%回復＆被ダメージ30%軽減(このターンから2ターン)" }
 ```
 
 ### タクティクスのEXスキル(2026-09-29 決めた値)
 
-`32-tactics-units.jsx` の `TACTICS_EX_SKILLS` へ入れる。どちらも**新しい効果の種類**が要る
-(`TACTICS_EX_IMPLEMENTED_EFFECTS` にまだ無い。入れるまでは画面に「開発中」と出る)。
+`32-tactics-units.jsx` の `TACTICS_EX_SKILLS` へ入れた。どちらも新しい効果の種類
+(`partyGuard` / `comboBurst`)で、`TACTICS_EX_IMPLEMENTED_EFFECTS` に入っている。
 
 | 持つ子 | EXスキル | 効果 | 回数 |
 |---|---|---|---|
@@ -160,7 +172,9 @@ unique:{ name:"スターボム", icon:YGGDRASIL_ICON, monId:"Yggdrasil", baseMul
 主血統「ユグドラシル」の能力(`data/rhythm-mode.js` の `RHYTHM_MONSTER_ABILITY_BY_LINEAGE` へ `yggdrasil:'HISSHI'`)。
 新しい能力なので、`RHYTHM_MONSTER_ABILITIES` へ足し、判定の処理に差し込む必要がある。
 
-> **必死**:7秒のあいだ、GREAT・EXCELLENT・MARVELOUS がすべてジャストマーベラスになる
+> **必死**:7秒のあいだ、GREAT・EXCELLENT・MARVELOUS がすべて JUST MARVELOUS になる
+>
+> ★画面・ヘルプ・更新履歴では判定名を**英語のまま**「JUST MARVELOUS」と書く(2026-09-29 ユーザー指摘「ジャストマーベラスは英語ね」)。カタカナで書かない
 
 - ユーザー指示「必死 10秒の間、グレート以上がジャストマーベラスになる」→「やっぱり7秒で。これなら影響力としては
   そこまで大きくない」

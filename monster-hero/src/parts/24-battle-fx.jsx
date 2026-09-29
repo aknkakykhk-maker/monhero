@@ -267,6 +267,8 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   allIn:        { c1:'#fed7aa', c2:'#dc2626', motif:'flame' },  // 捨て身: 赤い炎
   statBoost:    { c1:'#fef08a', c2:'#f59e0b', motif:'rise' },   // ガッツ全開っちー: 金の光が立ちのぼる
   weaponChange: { c1:'#cffafe', c2:'#0891b2', motif:'blade' },  // ソード・コンバージョン: 青い斬撃
+  partyGuard:   { c1:'#bbf7d0', c2:'#15803d', motif:'shield' }, // 世界樹の守り: 緑の盾
+  comboBurst:   { c1:'#fbcfe8', c2:'#db2777', motif:'rise' },   // スイーツパラダイス: 桃色の光
   default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },
 });
 const tacticsExCutinTheme = (effect) => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;

@@ -286,17 +286,22 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
 // 近日公開予定の商品(2026-09-28 ユーザー指示「ビートポイントの方にも追加で、どっちも1500P」)。
 // ★同じ日に「円盤石交換のビートポイントは仮に10000に変更しといて」と指示があり、10,000Pにした(仮の値)。
 // ★さらに同じ日に「新モンスターの予定販売ビートポイントはやっぱり1500に変更しといて」と指示があり、1,500Pへ戻した。
-// ユグドラシル・メルホイップの円盤石。モンスター本体(能力値・技)がまだ無いので、
-// **交換の一覧(RHYTHM_EVENT_POINT_SHOP_OFFERS)には入れず**、ここで予告として並べるだけにする。
-// 交換ボタンは出さず「近日追加」と出る。rhythmEventPointExchangePreview も kind:'disc' をはじく。
-// 正式実装のときは、円盤石を渡す交換(解放済みモンスターへの追加)を作ってから交換の一覧へ移す。
+// ★2026-09-29 ユーザー指示「進めて」で本体(能力値・技・特性)が入ったので、予告から**交換できる円盤石**へ移した。
+//   ダイヤショップより先にここで公開する(ユーザー指示「新モンスター先行実装はビートポイントから」)。
+// 円盤石は1体につき1回だけ交換できる(持っていれば交換できない)。交換するとモンスターが解放される
+// (保存先はダイヤショップで買ったときと同じ mh_unlocked_monsters。保存の形は変えない)。
+// ★消耗品の一覧(RHYTHM_EVENT_POINT_SHOP_OFFERS)とは分けて持つ。個数を選べず、渡すものが「解放」なので
 // 絵はここに書かない。画面が monsterId と同じidの円盤石(data/breeder.js の BREEDER_MARKET_ITEMS)から引く
 // (このファイルは検査で単独で読まれることがあり、breeder.js の定数を参照すると落ちるため)。
-const RHYTHM_EVENT_POINT_SHOP_COMING_SOON = Object.freeze([
-  Object.freeze({ id:'disc_yggdrasil', name:'ユグドラシルの円盤石', kind:'disc', monsterId:'Yggdrasil', grantAmount:1, unit:'個', cost:1500, available:false }),
-  Object.freeze({ id:'disc_mel_whip', name:'メルホイップの円盤石', kind:'disc', monsterId:'MelWhip', grantAmount:1, unit:'個', cost:1500, available:false }),
+const RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS = Object.freeze([
+  Object.freeze({ id:'disc_yggdrasil', name:'ユグドラシルの円盤石', kind:'disc', monsterId:'Yggdrasil', grantAmount:1, unit:'個', cost:1500 }),
+  Object.freeze({ id:'disc_mel_whip', name:'メルホイップの円盤石', kind:'disc', monsterId:'MelWhip', grantAmount:1, unit:'個', cost:1500 }),
 ]);
-const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1 } = {}) => {
+// 近日公開予定の商品(交換ボタンは出さず「先行公開予定」と出す)。いまは無い。
+// 次に新しいモンスターを先に予告するときは、ここへ available:false で並べ、本体が入ったら上の一覧へ移す
+const RHYTHM_EVENT_POINT_SHOP_COMING_SOON = Object.freeze([]);
+// unlockedMonsterIds … 解放済みのモンスターid(円盤石の交換のときだけ使う)
+const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedItems={}, quantity=1, unlockedMonsterIds=[] } = {}) => {
   const max = Number.MAX_SAFE_INTEGER;
   const safeInt = (value) => {
     const n = Number(value);
@@ -308,8 +313,18 @@ const rhythmEventPointExchangePreview = ({ offer, eventPoints=0, gold=0, ownedIt
   const sourceItems = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
   const unitCost = safeInt(offer?.cost);
   const grantAmount = safeInt(offer?.grantAmount);
-  if (!offer || !unitCost || !grantAmount || !['diamond','item'].includes(offer.kind)) {
+  if (!offer || !unitCost || !grantAmount || !['diamond','item','disc'].includes(offer.kind)) {
     return { ok:false, reason:'invalidOffer', quantity:q, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+  }
+  // 円盤石: 1回に1つ。持っているモンスターは交換できない。ダイヤ・所持品は変えない
+  if (offer.kind === 'disc') {
+    const monsterId = typeof offer.monsterId === 'string' ? offer.monsterId : '';
+    const unlocked = Array.isArray(unlockedMonsterIds) ? unlockedMonsterIds.filter(id => typeof id === 'string') : [];
+    if (!monsterId || offer.available === false) return { ok:false, reason:'invalidOffer', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (unlocked.includes(monsterId)) return { ok:false, reason:'owned', quantity:1, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    if (points < unitCost) return { ok:false, reason:'points', quantity:1, cost:unitCost, eventPoints:points, gold:beforeGold, ownedItems:sourceItems };
+    return { ok:true, reason:null, quantity:1, cost:unitCost, eventPoints:points-unitCost, gold:beforeGold, ownedItems:sourceItems,
+      monsterId, unlockedMonsterIds:[...unlocked, monsterId] };
   }
   const totalCost = Math.min(max, unitCost * q);
   if (points < totalCost) {

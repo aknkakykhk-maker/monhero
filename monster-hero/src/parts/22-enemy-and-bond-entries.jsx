@@ -309,6 +309,26 @@ const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroD
   && heroDist===enemyDist
   ? Math.min(1, currentRate + 0.5)
   : currentRate;
+// ==== 勇者特性「生命の源」(ユグドラシル・メルホイップ。2026-09-29 ユーザーと決めた値) ====
+// 1〜5ターンの間は被ダメージ30%軽減。6ターン目以降、3ターンごと(6・9・12…ターン目)にガッツを最大の30%回復。
+// ターンは WAVE ごとに1から数え直す(turnCount。spawnEnemy で1へ戻る)。
+// 被ダメージの軽減はほかの軽減と掛け算で重なる(もち肌・中二病と同じ場所で掛ける)
+const LIFE_SOURCE_MONSTER_IDS = Object.freeze(['Yggdrasil', 'MelWhip']);
+const LIFE_SOURCE_GUARD_TURNS = 5;
+const LIFE_SOURCE_GUARD_MULT = 0.7;
+const LIFE_SOURCE_GUTS_FROM_TURN = 6;
+const LIFE_SOURCE_GUTS_EVERY = 3;
+const LIFE_SOURCE_GUTS_RATE = 0.3;
+const hasLifeSourceTrait = (id) => LIFE_SOURCE_MONSTER_IDS.includes(id);
+const lifeSourceDamageMult = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= 1 && Number(turn) <= LIFE_SOURCE_GUARD_TURNS
+  ? LIFE_SOURCE_GUARD_MULT : 1;
+const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= LIFE_SOURCE_GUTS_FROM_TURN
+  && (Number(turn) - LIFE_SOURCE_GUTS_FROM_TURN) % LIFE_SOURCE_GUTS_EVERY === 0;
+// 固有技「大樹の加護」: 使ったターンから2ターン、被ダメージ30%軽減。
+//   使ったターンのぶんは予告(71-screen-battle)と実際(handleEnemyTurn)の両方がこの値を掛ける
+const LIFE_TREE_GUARD_REDUCTION = 0.3;
+const isLifeTreeGuardCard = (card) => !!card && card.type === 'unique' && hasLifeSourceTrait(card.monId);
+const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
 // ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。
 //   options.mode にそのランのモードを渡すと、そちらの10体が出る。
 //   クラシック・クイックの並び(ENEMY_SEQUENCE)は1つも変えない——あちらを差し替えると、
@@ -473,7 +493,7 @@ const KENSHI_COMBO_POWER_MAX = 3;
 //   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
 //     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
 //     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
-const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1 }) => {
+const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1, exCombos = null }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
@@ -519,6 +539,12 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
   // 本数に上限は設けない。率にも連撃ダメージ補正(comboDmgBonus)が乗る
   if (attackerId === 'KenshiMocchi') {
     for (let i = 0; i < kenshiExtraCombos; i++) combo(ATTACK_COMBO_RULES.kenshiExtraCombo + comboDmgBonus);
+  }
+  // ★exCombos … タクティクスのEX「スイーツパラダイス」(2026-09-29 ユーザー指示「連撃30%×4」)。
+  //   使ったターンのその子の攻撃へ { rate } の連撃を count 回足す。連撃ダメージ補正も乗る。
+  //   4本ぶん専用モーションを繰り返すと長くなるので、数字だけを続けて出す(noAnim)。ほかのモードは渡さないので常に null
+  if (exCombos && exCombos.count > 0 && exCombos.rate > 0) {
+    for (let i = 0; i < exCombos.count; i++) combo(exCombos.rate + comboDmgBonus, 'スイーツパラダイス', true);
   }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
   // ★hitRepeat … タクティクスのEX「ソード・コンバージョン」の二刀流(2026-09-25 ユーザー指示)。

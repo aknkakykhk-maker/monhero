@@ -65,7 +65,7 @@ vm.runInContext([
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
-    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets};',
+    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt};',
 ].join('\n'), sandbox);
 // ヒット列(二刀流で2回ぶん入るか)は本体の buildAttackHits をそのまま動かす
 vm.runInContext(slice('const HERO_CARD_BONUS_MONSTER_IDS', 'const attackAtonementDmg') + ';globalThis.hitsApi={buildAttackHits};', sandbox);
@@ -345,7 +345,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && ex.tacticsExRegenRateAt(late, [unit], 0, A(3, 1)) === 0);
   check('ほかの子に入れ替わっていたら上乗せしない', ex.tacticsExRegenRateAt(g, [{ ...unit, id: 'Golem' }], 0, A(2, 3)) === 0);
   check('自動回復は1体ずつ「上限の30%」を固定値で足す(率への倍率ではない・ライフとガッツは別々の率・倒れている子の戻りには乗せない)',
-    /const hpBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'hp'\);[\s\S]{0,160}const gutsBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'guts'\);[\s\S]{0,160}rateHealTacticsAt\(units, slotIdx, hpBoost, gutsBoost\)[\s\S]{0,120}const downed = regenDownedTacticsBoard\(units\)/.test(app));
+    /const hpBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'hp'\);[\s\S]{0,160}const gutsBoost = tacticsExRegenRateAt\(tacticsExStateRef\.current, units, slotIdx, live\.now, 'guts'\);[\s\S]{0,160}rateHealTacticsAt\(units, slotIdx, hpBoost \+ partyHpBoost, gutsBoost\)[\s\S]{0,120}const downed = regenDownedTacticsBoard\(units\)/.test(app));
 }
 
 // ---------- ⑪-2 ミタラシ「ドラゴンだっちー」(2026-09-27 ユーザー指示) ----------
@@ -388,6 +388,53 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && ex.tacticsExRegenRateAt(g, [mUnit], 0, A(1, 2), 'guts') === 0.3);
   const legacyUnit = { id: 'Mocchi', hp: 1, maxHp: 600, baseMaxHp: 600, atk: 1, def: 1, guts: 1, maxGuts: 100, baseMaxGuts: 100, exMaxRate: 0.3, downed: false };
   check('ガッツの率を持っていない子は、ライフと同じ率でガッツの上限を上げる', ex.scaleTacticsUnits([legacyUnit], 0, 0)[0].maxGuts === 130);
+}
+
+// ---------- ⑪-3 ユグドラシル「世界樹の守り」・メルホイップ「スイーツパラダイス」(2026-09-29 ユーザー指示) ----------
+// 世界樹の守り: 3ターンのあいだ味方全員の被ダメ30%軽減＋ターン終わりに味方全員のライフを上限の20%回復、1ラン5回。
+// スイーツパラダイス: 発動したターンだけ、その子の攻撃へ与ダメ30%の連撃×4、1ラン3回。どちらもカードと併用できる
+{
+  const A = (wave, turn) => ({ wave, turn });
+  const yg = ex.tacticsExDefOf('Yggdrasil');
+  check('ユグドラシル「世界樹の守り」: ラン5回・併用できる・3ターン・効果は partyGuard(実装済み)', !!yg && yg.name === '世界樹の守り'
+    && yg.maxUses === 5 && !yg.unlimited && yg.withCards && yg.duration === 'turns' && yg.turns === 3
+    && yg.partyTakenRate === 0.3 && yg.partyRegenRate === 0.2 && yg.effect === 'partyGuard' && ex.isTacticsExEffectImplemented(yg), JSON.stringify(yg));
+  const ygUnit = { id: 'Yggdrasil', hp: 500, maxHp: 1000 }, other = { id: 'Mocchi', hp: 300, maxHp: 600 };
+  const g = ex.applyTacticsExUse(ex.createTacticsExState(), { def: yg, slot: 0, monId: 'Yggdrasil', now: A(2, 3) });
+  const units = [ygUnit, other];
+  check('世界樹の守り: 使ったターンから3ターン(3〜5ターン目)、味方全員の被ダメ倍率0.7。6ターン目・次のWAVEでは1',
+    ex.tacticsExPartyTakenMult(g, units, A(2, 3)) === 0.7 && ex.tacticsExPartyTakenMult(g, units, A(2, 5)) === 0.7
+    && ex.tacticsExPartyTakenMult(g, units, A(2, 6)) === 1 && ex.tacticsExPartyTakenMult(g, units, A(3, 1)) === 1
+    && ex.tacticsExPartyTakenMult(g, units, A(2, 2)) === 1);
+  check('世界樹の守り: 効いているあいだ、ターン終わりのライフ回復へ味方全員0.2を足す(ガッツには足さない)',
+    ex.tacticsExPartyRegenRate(g, units, A(2, 4)) === 0.2 && ex.tacticsExPartyRegenRate(g, units, A(2, 6)) === 0
+    && ex.tacticsExRegenRateAt(g, units, 0, A(2, 4), 'guts') === 0);
+  check('世界樹の守り: 2体が同時に効いていれば掛け算で重なる(0.7×0.7)',
+    Math.abs(ex.tacticsExPartyTakenMult(ex.applyTacticsExUse(g, { def: yg, slot: 1, monId: 'Yggdrasil', now: A(2, 3) }), [ygUnit, ygUnit], A(2, 3)) - 0.49) < 1e-9);
+  check('世界樹の守り: 枠の子が入れ替わっていたら効かない', ex.tacticsExPartyTakenMult(g, [other, other], A(2, 3)) === 1);
+  check('世界樹の守り: 使ったターンもその子を含め全員がカードを使える', !ex.isTacticsExCardLocked(g, 0, A(2, 3)));
+
+  const mw = ex.tacticsExDefOf('MelWhip');
+  check('メルホイップ「スイーツパラダイス」: ラン3回・併用できる・発動ターンだけ・効果は comboBurst(実装済み)', !!mw && mw.name === 'スイーツパラダイス'
+    && mw.maxUses === 3 && !mw.unlimited && mw.withCards && mw.duration === 'turn'
+    && JSON.stringify(mw.extraCombos) === JSON.stringify({ count: 4, rate: 0.3 }) && mw.effect === 'comboBurst' && ex.isTacticsExEffectImplemented(mw), JSON.stringify(mw));
+  const melUnit = { id: 'MelWhip', hp: 500, maxHp: 1000 };
+  const m = ex.applyTacticsExUse(ex.createTacticsExState(), { def: mw, slot: 1, monId: 'MelWhip', now: A(1, 2) });
+  check('スイーツパラダイス: 発動したターンだけ、使った子の枠に{4回, 30%}。次のターン・ほかの枠は null',
+    JSON.stringify(ex.tacticsExExtraCombosAt(m, [other, melUnit], 1, A(1, 2))) === JSON.stringify({ count: 4, rate: 0.3 })
+    && ex.tacticsExExtraCombosAt(m, [other, melUnit], 1, A(1, 3)) === null
+    && ex.tacticsExExtraCombosAt(m, [other, melUnit], 0, A(1, 2)) === null);
+  const card = { type: 'atk', monId: 'MelWhip' };
+  const plain = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'MelWhip', heroId: 'Mocchi' });
+  const burst = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'MelWhip', heroId: 'Mocchi', exCombos: { count: 4, rate: 0.3 } });
+  const extra = burst.slice(plain.length);
+  check('スイーツパラダイス: ヒット列に与ダメ30%(300)の連撃が4本だけ足される(メインは変わらない)',
+    extra.length === 4 && extra.every(h => h.kind === 'combo' && h.dmg === 300 && h.skillName === 'スイーツパラダイス') && burst[0].dmg === plain[0].dmg,
+    JSON.stringify(extra));
+  check('本体: 被ダメ軽減・自動回復・ヒット列(3か所)へ結線してある',
+    /\*\(isTacticsMode\(runMode\)\?tacticsExPartyTakenMultNow\(\):1\)/.test(app)
+    && /const partyHpBoost = live\.enabled \? tacticsExPartyRegenRate\(tacticsExStateRef\.current, units, live\.now\) : 0;/.test(app)
+    && (app.match(/exCombos:tacticsExCombosAt\(slotIdx\)/g) || []).length === 3);
 }
 
 // ---------- ⑧ 壊れた値 ----------
