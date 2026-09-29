@@ -670,6 +670,42 @@ const PandoraDualThunder = ({image, compact=false}) => (
 // 図鑑などから本番と同じ攻撃モーション描画を使うための共通ステージ。
 // image は用途ごとの実画像要素を受け取り、モーション専用の画像コピーは作らない。
 // 敵が居ないので、真上の少し先を「敵の位置」として変数を渡す(本番と同じ keyframes がそのまま動く)。
+// ==== 技ごとの動きを1つずつ選んで再生する行(図鑑の攻撃アクションと新モンスター確認で共用) ====
+// 2026-09-29 ユーザー指示「せっかく技の種類があるのに図鑑で技ごとのモーションが見れない」
+// 「いずれは全モンスター実装予定」。技ごとに動きが違う種族(SKILL_ATTACK_THEME_MONSTERS)へ足した子は、
+// 呼び出し側を触らずに図鑑とデバッグ画面の両方でこの行が出る。
+// 返すのは [種類, 見出し, 技の名前(段階の順)] の組。動きの無い子・技の名前が無い子は null
+const skillMotionListsOf = (mon, { draft = false } = {}) => {
+  if (!mon || typeof SKILL_ATTACK_THEME_MONSTERS === 'undefined' || !SKILL_ATTACK_THEME_MONSTERS.includes(mon.id)) return null;
+  const normal = (typeof HERO_ATK_NAMES !== 'undefined' && Array.isArray(HERO_ATK_NAMES[mon.id])) ? HERO_ATK_NAMES[mon.id] : [];
+  const unique = Array.isArray(mon.unique?.names) ? mon.unique.names : (draft && Array.isArray(mon.draftUniqueNames) ? mon.draftUniqueNames : []);
+  const lists = [['normal', '通常技', normal], ['unique', '固有技', unique]].filter(([, , names]) => names.length);
+  return lists.length ? lists : null;
+};
+// 種類ごとに横1行で流す(縦に並べると演出の舞台の高さを削り、上へ飛ぶ演出が見えなくなる)。
+// playingName: いま再生中の技名 / disabled: 再生中は押せない / onPlay(kind, name)
+const SkillMotionPicker = ({ lists, playingName = null, disabled = false, onPlay }) => {
+  if (!lists) return null;
+  return (
+    <div data-skill-motion-picker className="mx-auto mt-2 w-full max-w-md space-y-1.5">
+      {lists.map(([kind, label, names]) => (
+        <div key={kind} className="flex items-center gap-1.5 min-w-0">
+          <div className="shrink-0 w-9 text-[9px] font-black leading-tight text-cyan-300/80">{label}</div>
+          <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto mh-scroll pb-0.5">
+            {names.map((name, lvl) => (
+              <button key={name} type="button" data-skill-motion={name} data-monster-check-skill-motion={name} disabled={disabled}
+                onClick={() => { Audio_.se.tap(); if (!disabled) onPlay(kind, name); }}
+                className={`shrink-0 min-h-[44px] rounded-xl border px-2.5 text-[10px] font-black leading-tight whitespace-nowrap active:scale-95 disabled:opacity-45 ${playingName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`}>
+                <span className="block">{name}</span>
+                <span className="block text-[8px] font-mono text-slate-400">Lv.{lvl}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 const BattleAttackMotionPreview = ({image, anim, compact=false, baseId=null}) => {
   const aimVars = compact ? attackAimVars(0, -70, {spread:30}) : attackAimVars(0, -120);
   // 体当たりだった初期モンスターは、種族ごとの攻撃を同じ部品で再生する(baseId が要る)

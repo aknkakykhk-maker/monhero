@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b5790328670ce674
+// generated-sha256: 0548513cf03ed5dd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-29 15:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-29 16:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12279,6 +12279,42 @@ const PandoraDualThunder = ({image, compact=false}) => (
 // 図鑑などから本番と同じ攻撃モーション描画を使うための共通ステージ。
 // image は用途ごとの実画像要素を受け取り、モーション専用の画像コピーは作らない。
 // 敵が居ないので、真上の少し先を「敵の位置」として変数を渡す(本番と同じ keyframes がそのまま動く)。
+// ==== 技ごとの動きを1つずつ選んで再生する行(図鑑の攻撃アクションと新モンスター確認で共用) ====
+// 2026-09-29 ユーザー指示「せっかく技の種類があるのに図鑑で技ごとのモーションが見れない」
+// 「いずれは全モンスター実装予定」。技ごとに動きが違う種族(SKILL_ATTACK_THEME_MONSTERS)へ足した子は、
+// 呼び出し側を触らずに図鑑とデバッグ画面の両方でこの行が出る。
+// 返すのは [種類, 見出し, 技の名前(段階の順)] の組。動きの無い子・技の名前が無い子は null
+const skillMotionListsOf = (mon, { draft = false } = {}) => {
+  if (!mon || typeof SKILL_ATTACK_THEME_MONSTERS === 'undefined' || !SKILL_ATTACK_THEME_MONSTERS.includes(mon.id)) return null;
+  const normal = (typeof HERO_ATK_NAMES !== 'undefined' && Array.isArray(HERO_ATK_NAMES[mon.id])) ? HERO_ATK_NAMES[mon.id] : [];
+  const unique = Array.isArray(mon.unique?.names) ? mon.unique.names : (draft && Array.isArray(mon.draftUniqueNames) ? mon.draftUniqueNames : []);
+  const lists = [['normal', '通常技', normal], ['unique', '固有技', unique]].filter(([, , names]) => names.length);
+  return lists.length ? lists : null;
+};
+// 種類ごとに横1行で流す(縦に並べると演出の舞台の高さを削り、上へ飛ぶ演出が見えなくなる)。
+// playingName: いま再生中の技名 / disabled: 再生中は押せない / onPlay(kind, name)
+const SkillMotionPicker = ({ lists, playingName = null, disabled = false, onPlay }) => {
+  if (!lists) return null;
+  return (
+    <div data-skill-motion-picker className="mx-auto mt-2 w-full max-w-md space-y-1.5">
+      {lists.map(([kind, label, names]) => (
+        <div key={kind} className="flex items-center gap-1.5 min-w-0">
+          <div className="shrink-0 w-9 text-[9px] font-black leading-tight text-cyan-300/80">{label}</div>
+          <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto mh-scroll pb-0.5">
+            {names.map((name, lvl) => (
+              <button key={name} type="button" data-skill-motion={name} data-monster-check-skill-motion={name} disabled={disabled}
+                onClick={() => { Audio_.se.tap(); if (!disabled) onPlay(kind, name); }}
+                className={`shrink-0 min-h-[44px] rounded-xl border px-2.5 text-[10px] font-black leading-tight whitespace-nowrap active:scale-95 disabled:opacity-45 ${playingName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`}>
+                <span className="block">{name}</span>
+                <span className="block text-[8px] font-mono text-slate-400">Lv.{lvl}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 const BattleAttackMotionPreview = ({image, anim, compact=false, baseId=null}) => {
   const aimVars = compact ? attackAimVars(0, -70, {spread:30}) : attackAimVars(0, -120);
   // 体当たりだった初期モンスターは、種族ごとの攻撃を同じ部品で再生する(baseId が要る)
@@ -21457,10 +21493,12 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
       const backToDetail=()=>{onStopPreview();onBackToDetail();};
       // 再生そのもの(コマ送りのタイマーと世代管理)は MonsterHeroGame 側に残してある。
       // 進行中の setTimeout を画面のライフサイクルで止めると、演出が途中で固まるため
-      const playAttackPreview=async(kind)=>{
+      const playAttackPreview=async(kind,skillName=null)=>{
         if(playingKind)return;
-        await onPlayPreview(mon,kind,atkMotion);
+        await onPlayPreview(mon,kind,atkMotion,skillName);
       };
+      // 技ごとに動きが違う子は、技を1つずつ選んで見られる(デバッグ画面と同じ部品。対象の子が増えれば自動で出る)
+      const skillMotionLists=skillMotionListsOf(mon);
       const kindButton=(kind,label)=>(
         <button key={kind} type="button" data-attack-preview-play={kind} onClick={()=>{Audio_.se.tap();playAttackPreview(kind);}} disabled={!!playingKind}
           className={`flex-1 min-w-0 min-h-[52px] rounded-xl border px-2 text-[12px] font-black active:scale-95 disabled:opacity-40 ${playingKind===kind?'border-cyan-200 bg-cyan-700 text-white':'border-cyan-400/60 bg-slate-900 text-cyan-100'}`}>
@@ -21486,6 +21524,7 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
             {kindButton('normal','通常攻撃')}
             {kindButton('unique','固有技')}
           </div>
+          <SkillMotionPicker lists={skillMotionLists} playingName={playing?.skillName||null} disabled={!!playingKind} onPlay={(kind,name)=>playAttackPreview(kind,name)}/>
         </div>
       </div>;}
 
@@ -28905,11 +28944,8 @@ function MonsterCheckDebugScreen({
   // 詳細の立ち絵の枠では、上へ飛ぶ音符や光が枠の外へ出て見えない。ここは縦を大きく取り、
   // 立ち絵を下寄りに置いて、上の余白へ演出が収まるようにする
   if (view === 'motion') {
-    // 技ごとに動きが違う種族なら、[種類, 見出し, 技の名前9つ] を2組
-    const skillMotionLists = (typeof SKILL_ATTACK_THEME_MONSTERS !== 'undefined' && SKILL_ATTACK_THEME_MONSTERS.includes(mon.id))
-      ? [['normal', '通常技', (typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id]) || []],
-         ['unique', '固有技', mon.unique?.names || mon.draftUniqueNames || []]].filter(([, , names]) => names.length)
-      : null;
+    // 技ごとに動きが違う種族なら、[種類, 見出し, 技の名前9つ] を2組(図鑑と共通の skillMotionListsOf)
+    const skillMotionLists = skillMotionListsOf(mon, { draft: true });
     const kindButton = (kind, label) => (
       <button key={kind} type="button" data-monster-check-motion={kind} onClick={() => { Audio_.se.tap(); if (!playing) onPlayPreview(mon, kind, atkMotion); }} disabled={!!playing}
         className={`flex-1 min-w-0 min-h-[48px] rounded-2xl border-2 px-2 text-[12px] font-black active:scale-95 disabled:opacity-45 ${playing?.kind === kind ? 'border-cyan-200 bg-cyan-700 text-white' : 'border-cyan-400/50 bg-slate-900 text-cyan-100'}`}>
@@ -28939,26 +28975,9 @@ function MonsterCheckDebugScreen({
             {kindButton('normal', '通常攻撃')}
             {kindButton('unique', '固有技')}
           </div>
-          {/* 技ごとに動きが違う種族(ユグドラシル種)は、技を1つずつ選んで再生できる。
-              ★縦に9つずつ並べると舞台の高さを削り、上へ飛ぶ演出が見えなかった(2026-09-29 ユーザー指摘
-              「デバッグ画面でモンスター範囲が狭くて技演出がちゃんと見えない」)。種類ごとに横1行で流す */}
-          {skillMotionLists&&<div data-monster-check-skill-motions className="mx-auto mt-2 w-full max-w-md space-y-1.5">
-            {skillMotionLists.map(([kind, label, names]) => (
-              <div key={kind} className="flex items-center gap-1.5 min-w-0">
-                <div className="shrink-0 w-9 text-[9px] font-black leading-tight text-cyan-300/80">{label}</div>
-                <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto mh-scroll pb-0.5">
-                  {names.map((name, lvl) => (
-                    <button key={name} type="button" data-monster-check-skill-motion={name} disabled={!!playing}
-                      onClick={() => { Audio_.se.tap(); if (!playing) onPlayPreview(mon, kind, atkMotion, name); }}
-                      className={`shrink-0 min-h-[44px] rounded-xl border px-2.5 text-[10px] font-black leading-tight whitespace-nowrap active:scale-95 disabled:opacity-45 ${playing?.skillName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`}>
-                      <span className="block">{name}</span>
-                      <span className="block text-[8px] font-mono text-slate-400">Lv.{lvl}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>}
+          {/* 技ごとに動きが違う種族(ユグドラシル種)は、技を1つずつ選んで再生できる(図鑑と共通の部品)。
+              縦に並べると舞台の高さを削るので、種類ごとに横1行で流す(2026-09-29 ユーザー指摘) */}
+          {skillMotionLists&&<div data-monster-check-skill-motions><SkillMotionPicker lists={skillMotionLists} playingName={playing?.skillName||null} disabled={!!playing} onPlay={(kind, name) => onPlayPreview(mon, kind, atkMotion, name)}/></div>}
         </div>
       </main>
     );
