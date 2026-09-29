@@ -49,8 +49,8 @@ const CHANGELOG = [
       '技は1つずつ専用の動きがあります。下にふたりの紹介カードを載せました。',
     ],
     gallery: [
-      { caption:'ユグドラシルの紹介', image:'images/events/yggdrasil-profile.jpg?v=0a424d199959' },
-      { caption:'メルホイップの紹介', image:'images/events/mel-whip-profile.jpg?v=62690ecdc1b8' },
+      { caption:'ユグドラシルの紹介', image:'images/events/yggdrasil-profile.jpg?v=2cc3de304293' },
+      { caption:'メルホイップの紹介', image:'images/events/mel-whip-profile.jpg?v=6ee9adf810fb' },
     ],
     assistantNotice: { id:'update_notice_yggdrasil_release_v1', type:'market' },
   },
