@@ -168,6 +168,19 @@ const summarize=result=>{
     const worker=async()=>{while(next<jobs.length){const [s,d]=jobs[next++];const r=await playOne(browser,songIds,s,d);results.push(r);console.log(summarize(r));
       if(out)fs.writeFileSync(out,JSON.stringify(results,null,1));}};
     await Promise.all(Array.from({length:parallel},worker));
+    // 並べて遊ばせると、コマが止まってロボットの押すのが遅れることがある(2026-09-29 の初回: 3本並べて 125譜面中8譜面・
+    // 長押しの押し始めが 67〜264ms 遅れた。1本ずつ遊ばせ直すと8譜面とも全部 MARVELOUS)。
+    // MARVELOUS でなかった譜面は、最後に1本ずつ遊ばせ直し、その結果で置き換える
+    if(parallel>1){
+      for(let i=0;i<results.length;i++){
+        const r=results[i];
+        if(!(r.error||(r.rows||[]).some(x=>x.judgment!=='MARVELOUS')))continue;
+        const again=await playOne(browser,songIds,r.songId,r.difficulty);
+        console.log(`1本で遊ばせ直し: ${summarize(again)}`);
+        results[i]={...again,retried:true};
+        if(out)fs.writeFileSync(out,JSON.stringify(results,null,1));
+      }
+    }
   }finally{await browser.close();}
   const bad=results.filter(r=>r.error||(r.rows||[]).some(x=>x.judgment!=='MARVELOUS'));
   console.log(`\n${results.length}譜面・MARVELOUS でないノーツのある譜面 ${bad.length}`);
