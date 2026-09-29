@@ -463,12 +463,13 @@ check('ガッツの回復は1か所(gainGuts)へまとめる',
 //   効くのは盤面ぜんぶ(2026-09-19 ユーザーの整理)。ライフはそうなっていたのに
 //   ガッツだけ「使った子」へ入れていた
 //   (2026-09-21 ユーザー指摘「みゅあの回復は全体なのに1体にしかきいてなかった」)。
-// ★「その子だけ」へ入るのは2つ。固有技(スエゾー＝そのモンスターの技)と、
-//   氷海の支配者(持っている子だけ・仕様 4.9)
+// ★「その子だけ」へ入るのは4つ。固有技(スエゾー＝そのモンスターの技)と、
+//   氷海の支配者(持っている子だけ・仕様 4.9)、固有技「大樹の加護」(ユグドラシル・メルホイップ＝使った子)、
+//   特性「生命の源」(持っている子だけ。2026-09-29)
 check('ガッツを増やすものは、行き先を名指しで渡す', has('const gainGutsAt = (slotIdx, amount) => {')
   && has('const gainGutsByRate = (slotIdx, rate) => {')
   && has('const gainGutsByRateAll = (rate) => {')
-  && (source.match(/gainGutsByRate\(slotIdx,/g) || []).length === 2
+  && (source.match(/gainGutsByRate\(slotIdx,/g) || []).length === 4
   && (source.match(/gainGutsByRateAll\(/g) || []).length === 3
   && (source.match(/gainGutsAt\(slotIdx,/g) || []).length === 2,
   `その子だけ ${(source.match(/gainGutsByRate\(slotIdx,/g) || []).length}か所 / 全体 ${(source.match(/gainGutsByRateAll\(/g) || []).length}か所 / 固定量 ${(source.match(/gainGutsAt\(slotIdx,/g) || []).length}か所`);

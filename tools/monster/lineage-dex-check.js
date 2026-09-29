@@ -52,7 +52,8 @@ check('アーク種はアーク・イブリースとも聖光専用モーショ�
 
 // ---------- ① 血統がすべて揃っている ----------
 check('図鑑にモンスターが並ぶ', monsters.length > 0, `${monsters.length}体`);
-check('図鑑全体の対象は20体', monsters.length === 20, `${monsters.length}体`);
+// 2026-09-29 ユグドラシル・メルホイップを正式実装して22体
+check('図鑑全体の対象は22体', monsters.length === 22, `${monsters.length}体`);
 // ---------- ①-2 図鑑は種族(主血統)順に並ぶ ----------
 // 以前は ALL_PLAYER_MONSTERS の定義順そのままで、モンスターを足した順に並んでいたため
 // 同じ種族が離れて出ていた(2026-09-08・ユーザー指摘「図鑑の全てが種族順になってない」)。
@@ -257,8 +258,9 @@ check('未解放モンスターには攻撃アクションなどのボタンを�
   && source.includes("onMissing={()=>setGameState('MONSTER_DEX')}"));
 // 専用画面。上へ飛ぶ演出が枠外へ出ないよう縦を大きく取り、通常攻撃と固有技を選んで見比べられる
 check('攻撃アクションの専用画面で通常攻撃と固有技を再生できる',
-  attackPreview.includes('await onPlayPreview(mon,kind,atkMotion);')
-  && source.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id):attackMotionPreviewSequence(atkMotion, mon?.id);")
+  attackPreview.includes('await onPlayPreview(mon,kind,atkMotion,skillName);')
+  // 2026-09-29 から技の名前(skillName)も渡す(技ごとに動きが違う種族のため。図鑑でも技を1つずつ選べる)
+  && source.includes("const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion, mon?.id, skillName):attackMotionPreviewSequence(atkMotion, mon?.id, skillName);")
   && attackPreview.includes('data-attack-preview-play={kind}')
   && attackPreview.includes("kindButton('normal','通常攻撃'")
   && attackPreview.includes("kindButton('unique','固有技'"));
@@ -275,7 +277,7 @@ check('専用画面から図鑑の詳細へ戻れ、戻るときに再生を止�
 // tools/battle/attack-preview-parity-check.js が実際に関数を動かして見ている
 check('固有技のプレビューは共通のタメから始まる手順を使う',
   source.includes('const attackMotionUniquePreviewSequence =')
-  && /attackMotionUniquePreviewSequence = \(atkMotion='default', baseId=null\) => \{[\s\S]{0,900}\{anim:\{charge:true\},ms:650\}/.test(source));
+  && /attackMotionUniquePreviewSequence = \(atkMotion='default', baseId=null, skillName=null\) => \{[\s\S]{0,900}\{anim:\{charge:true\},ms:650\}/.test(source));
 check('左右移動と一覧へ戻る操作で途中の再生を止める',
   detail.includes('const stopDexAttackPreview=')
   && detail.includes('const go=(delta)=>{ stopDexAttackPreview();')

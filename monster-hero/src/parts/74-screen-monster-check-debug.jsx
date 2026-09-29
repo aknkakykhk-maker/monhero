@@ -296,11 +296,8 @@ function MonsterCheckDebugScreen({
   // 詳細の立ち絵の枠では、上へ飛ぶ音符や光が枠の外へ出て見えない。ここは縦を大きく取り、
   // 立ち絵を下寄りに置いて、上の余白へ演出が収まるようにする
   if (view === 'motion') {
-    // 技ごとに動きが違う種族なら、[種類, 見出し, 技の名前9つ] を2組
-    const skillMotionLists = (typeof SKILL_ATTACK_THEME_MONSTERS !== 'undefined' && SKILL_ATTACK_THEME_MONSTERS.includes(mon.id))
-      ? [['normal', '通常技', (typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id]) || []],
-         ['unique', '固有技', mon.unique?.names || mon.draftUniqueNames || []]].filter(([, , names]) => names.length)
-      : null;
+    // 技ごとに動きが違う種族なら、[種類, 見出し, 技の名前9つ] を2組(図鑑と共通の skillMotionListsOf)
+    const skillMotionLists = skillMotionListsOf(mon, { draft: true });
     const kindButton = (kind, label) => (
       <button key={kind} type="button" data-monster-check-motion={kind} onClick={() => { Audio_.se.tap(); if (!playing) onPlayPreview(mon, kind, atkMotion); }} disabled={!!playing}
         className={`flex-1 min-w-0 min-h-[48px] rounded-2xl border-2 px-2 text-[12px] font-black active:scale-95 disabled:opacity-45 ${playing?.kind === kind ? 'border-cyan-200 bg-cyan-700 text-white' : 'border-cyan-400/50 bg-slate-900 text-cyan-100'}`}>
@@ -330,24 +327,9 @@ function MonsterCheckDebugScreen({
             {kindButton('normal', '通常攻撃')}
             {kindButton('unique', '固有技')}
           </div>
-          {/* 技ごとに動きが違う種族(ユグドラシル種)は、技を1つずつ選んで再生できる */}
-          {skillMotionLists&&<div data-monster-check-skill-motions className="mx-auto mt-2 w-full max-w-md max-h-[30vh] overflow-y-auto mh-scroll space-y-1.5">
-            {skillMotionLists.map(([kind, label, names]) => (
-              <div key={kind}>
-                <div className="mb-1 text-[9px] font-black tracking-widest text-cyan-300/80">{label}</div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {names.map((name, lvl) => (
-                    <button key={name} type="button" data-monster-check-skill-motion={name} disabled={!!playing}
-                      onClick={() => { Audio_.se.tap(); if (!playing) onPlayPreview(mon, kind, atkMotion, name); }}
-                      className={`min-h-[40px] min-w-0 rounded-xl border px-1 text-[10px] font-black leading-tight active:scale-95 disabled:opacity-45 ${playing?.skillName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`}>
-                      <span className="block truncate">{name}</span>
-                      <span className="block text-[8px] font-mono text-slate-400">Lv.{lvl}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>}
+          {/* 技ごとに動きが違う種族(ユグドラシル種)は、技を1つずつ選んで再生できる(図鑑と共通の部品)。
+              縦に並べると舞台の高さを削るので、種類ごとに横1行で流す(2026-09-29 ユーザー指摘) */}
+          {skillMotionLists&&<div data-monster-check-skill-motions><SkillMotionPicker lists={skillMotionLists} playingName={playing?.skillName||null} disabled={!!playing} onPlay={(kind, name) => onPlayPreview(mon, kind, atkMotion, name)}/></div>}
         </div>
       </main>
     );

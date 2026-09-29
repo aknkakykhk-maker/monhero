@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 110c710bca5ca76e
+// source-sha256: 9659825bbcaefb37
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-30 07:50";
+const BUILD_DATE = "2026-09-30 08:04";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -13238,6 +13238,16 @@ const MARKET_PROFILE_ICON_STYLES = {
     x: 0,
     y: -3
   },
+  yggdrasil_icon: {
+    scale: 1.2,
+    x: 0,
+    y: -8.9
+  },
+  mel_whip_icon: {
+    scale: 1.35,
+    x: -1.6,
+    y: -10.5
+  },
   mua: {
     scale: 1.06,
     x: 2,
@@ -14074,6 +14084,7 @@ const rhythmAbilityEffectText = ability => {
   if (ability.id === 'GENKI') return `取るとライフが +${ability.lifeGain}`;
   if (ability.id === 'MUTEKI') return `${Math.round(ability.durationMs / 1000)}秒のあいだライフが減らない`;
   if (ability.id === 'GAMAN') return `${Math.round(ability.durationMs / 1000)}秒のあいだライフの減りが${Math.round((1 - ability.reduceRate) * 100)}%小さくなる`;
+  if (ability.id === 'HISSHI') return `${Math.round(ability.durationMs / 1000)}秒のあいだ、GREAT以上の判定がすべてJUST MARVELOUSになる`;
   if (ability.id === 'KONJO') return `倒れたときに一度だけライフ${ability.reviveLife}で復活（持っているときにもう一度取るとライフ +${ability.stockLifeGain}）`;
   return '';
 };
@@ -15133,6 +15144,18 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
 const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni']);
 const isIceLockMonster = id => ICE_LOCK_MONSTER_IDS.includes(id);
 const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroDist, enemyDist) => isIceLockMonster(heroId) && iceLockActive && heroDist === enemyDist ? Math.min(1, currentRate + 0.5) : currentRate;
+const LIFE_SOURCE_MONSTER_IDS = Object.freeze(['Yggdrasil', 'MelWhip']);
+const LIFE_SOURCE_GUARD_TURNS = 5;
+const LIFE_SOURCE_GUARD_MULT = 0.7;
+const LIFE_SOURCE_GUTS_FROM_TURN = 6;
+const LIFE_SOURCE_GUTS_EVERY = 3;
+const LIFE_SOURCE_GUTS_RATE = 0.3;
+const hasLifeSourceTrait = id => LIFE_SOURCE_MONSTER_IDS.includes(id);
+const lifeSourceDamageMult = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= 1 && Number(turn) <= LIFE_SOURCE_GUARD_TURNS ? LIFE_SOURCE_GUARD_MULT : 1;
+const lifeSourceGutsTurn = (heroId, turn) => hasLifeSourceTrait(heroId) && Number(turn) >= LIFE_SOURCE_GUTS_FROM_TURN && (Number(turn) - LIFE_SOURCE_GUTS_FROM_TURN) % LIFE_SOURCE_GUTS_EVERY === 0;
+const LIFE_TREE_GUARD_REDUCTION = 0.3;
+const isLifeTreeGuardCard = card => !!card && card.type === 'unique' && hasLifeSourceTrait(card.monId);
+const lifeTreeGuardMult = (effMul = 1) => 1 - LIFE_TREE_GUARD_REDUCTION * (Number.isFinite(Number(effMul)) ? Number(effMul) : 1);
 const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null, powerOverride = null, enemyTurnMultiplier = 1, options = {}) => {
   const tacticsEnemies = typeof isTacticsMode === 'function' && isTacticsMode(options && options.mode) && typeof TACTICS_ENEMY_SEQUENCE !== 'undefined';
   const sequence = tacticsEnemies ? TACTICS_ENEMY_SEQUENCE : ENEMY_SEQUENCE;
@@ -15283,7 +15306,8 @@ const buildAttackHits = ({
   kenshiExtraCombos = 0,
   comboFinalMultiplier = 1,
   swordSkill = true,
-  hitRepeat = 1
+  hitRepeat = 1,
+  exCombos = null
 }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
@@ -15329,6 +15353,9 @@ const buildAttackHits = ({
   if (attackerId === 'KenshiMocchi') {
     for (let i = 0; i < kenshiExtraCombos; i++) combo(ATTACK_COMBO_RULES.kenshiExtraCombo + comboDmgBonus);
   }
+  if (exCombos && exCombos.count > 0 && exCombos.rate > 0) {
+    for (let i = 0; i < exCombos.count; i++) combo(exCombos.rate + comboDmgBonus, 'スイーツパラダイス', true);
+  }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true);
   const repeat = Math.max(1, Math.floor(Number(hitRepeat) || 1));
   if (repeat > 1) {
@@ -15356,56 +15383,90 @@ const TEACHING_FX_STYLE = {
     label: "闘気上昇!",
     text: "text-red-300",
     ring: "border-red-300",
-    rgb: "239,68,68"
+    rgb: "239,68,68",
+    c1: '#fecaca',
+    c2: '#ef4444',
+    motif: 'flame'
   },
   dra: {
     icon: "🐉",
     label: "鉄壁化!",
     text: "text-emerald-300",
     ring: "border-emerald-300",
-    rgb: "16,185,129"
+    rgb: "16,185,129",
+    c1: '#a7f3d0',
+    c2: '#10b981',
+    motif: 'shield'
   },
   cadmium: {
     icon: "🧪",
     label: "計算完了!",
     text: "text-cyan-300",
     ring: "border-cyan-300",
-    rgb: "6,182,212"
+    rgb: "6,182,212",
+    c1: '#a5f3fc',
+    c2: '#06b6d4',
+    motif: 'rise'
   },
   mua: {
     icon: "💖",
     label: "祝福!",
     text: "text-pink-300",
     ring: "border-pink-300",
-    rgb: "236,72,153"
+    rgb: "236,72,153",
+    c1: '#fbcfe8',
+    c2: '#ec4899',
+    motif: 'rise'
   },
   atsu: {
     icon: "🔥",
     label: "挑発!",
     text: "text-orange-300",
     ring: "border-orange-300",
-    rgb: "234,88,12"
+    rgb: "234,88,12",
+    c1: '#fed7aa',
+    c2: '#ea580c',
+    motif: 'flame'
   },
   myaru: {
     icon: "🐈",
     label: "怪薬投与!",
     text: "text-purple-300",
     ring: "border-purple-300",
-    rgb: "168,85,247"
+    rgb: "168,85,247",
+    c1: '#e9d5ff',
+    c2: '#a855f7',
+    motif: 'rise'
   },
   kiki: {
     icon: "📣",
     label: "全力応援!",
     text: "text-sky-300",
     ring: "border-sky-300",
-    rgb: "56,189,248"
+    rgb: "56,189,248",
+    c1: '#bae6fd',
+    c2: '#38bdf8',
+    motif: 'blade'
   },
   poltz: {
     icon: "🍱",
     label: "弁当を構える!",
     text: "text-lime-300",
     ring: "border-lime-300",
-    rgb: "163,230,53"
+    rgb: "163,230,53",
+    c1: '#d9f99d',
+    c2: '#84cc16',
+    motif: 'rise'
+  },
+  meloso: {
+    icon: "🔍",
+    label: "解析完了!",
+    text: "text-teal-300",
+    ring: "border-teal-300",
+    rgb: "20,184,166",
+    c1: '#99f6e4',
+    c2: '#14b8a6',
+    motif: 'shield'
   }
 };
 const RPG_MAX_LEVEL = 50;
@@ -15935,10 +15996,34 @@ const SKILL_ATTACK_FALLBACK = Object.freeze({
   normal: 'ygHeadbutt',
   unique: 'ygStarBomb'
 });
-const skillAttackThemeOf = (monId, skillName, isUnique) => {
-  if (!SKILL_ATTACK_THEME_MONSTERS.includes(monId)) return null;
-  return SKILL_ATTACK_THEMES[skillName] || SKILL_ATTACK_FALLBACK[isUnique ? 'unique' : 'normal'];
+const skillMotionSlotOf = (monId, skillName, isUnique) => {
+  if (!skillName || typeof SKILL_MOTION_SETS === 'undefined') return null;
+  const lookup = id => {
+    const set = SKILL_MOTION_SETS[id];
+    const mon = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[id] : null;
+    if (!set || !mon) return null;
+    const lists = isUnique === true ? [['unique', mon.unique?.names]] : isUnique === false ? [['normal', HERO_ATK_NAMES[id]]] : [['normal', HERO_ATK_NAMES[id]], ['unique', mon.unique?.names]];
+    for (const [kind, names] of lists) {
+      const i = Array.isArray(names) ? names.indexOf(skillName) : -1;
+      if (i >= 0 && set[kind] && set[kind][i] != null) return {
+        monId: id,
+        kind,
+        index: i,
+        spec: set[kind][i]
+      };
+    }
+    return null;
+  };
+  return lookup(monId) || Object.keys(SKILL_MOTION_SETS).reduce((hit, id) => hit || (id !== monId ? lookup(id) : null), null);
 };
+const skillAttackThemeOf = (monId, skillName, isUnique) => {
+  if (SKILL_ATTACK_THEMES[skillName] && (SKILL_ATTACK_THEME_MONSTERS.includes(monId) || !skillMotionSlotOf(monId, skillName, isUnique))) return SKILL_ATTACK_THEMES[skillName];
+  const slot = skillMotionSlotOf(monId, skillName, isUnique);
+  if (slot) return slot.spec === 'sig' ? null : `${slot.monId}-${slot.kind === 'unique' ? 'u' : 'n'}${slot.index}`;
+  if (!SKILL_ATTACK_THEME_MONSTERS.includes(monId)) return null;
+  return SKILL_ATTACK_FALLBACK[isUnique ? 'unique' : 'normal'];
+};
+const skillAttackMotionOf = (monId, atkMotion, skillName, isUnique) => skillAttackThemeOf(monId, skillName, isUnique) ? 'default' : atkMotion || 'default';
 const THEMED_ATTACK_MS = Object.freeze({
   stomp: 900,
   rocks: 520,
@@ -15969,7 +16054,7 @@ const THEMED_ATTACK_MS = Object.freeze({
 const themedAttackMotionMs = (monId, motion, skillName = null, isUnique = false) => {
   if (motion && motion !== 'default') return null;
   const skillKind = skillAttackThemeOf(monId, skillName, isUnique);
-  if (skillKind) return THEMED_ATTACK_MS[skillKind] || null;
+  if (skillKind) return THEMED_ATTACK_MS[skillKind] || (typeof skillFxSpecOf === 'function' ? skillFxSpecOf(skillKind)?.ms : null) || null;
   return THEMED_ATTACK_MS[DEFAULT_ATTACK_THEMES[monId]] || null;
 };
 const attackMotionAnimation = anim => {
@@ -15986,7 +16071,7 @@ const attackMotionAnimation = anim => {
   return anim.motion === 'floatStab' ? 'floatStabAttack 650ms ease-in forwards' : 'attackFly 450ms ease-in forwards';
 };
 const attackMotionPreviewSequence = (atkMotion = 'default', baseId = null, skillName = null) => {
-  const motion = atkMotion || 'default';
+  const motion = skillAttackMotionOf(baseId, atkMotion, skillName, false);
   const isTwin = motion === 'kenshiTwinBlade';
   const isComboDash = motion === 'zanCombo' || motion === 'eikiSakuraCombo' || isTwin;
   if (isComboDash) return [{
@@ -16010,7 +16095,7 @@ const attackMotionPreviewSequence = (atkMotion = 'default', baseId = null, skill
   }];
 };
 const attackMotionUniquePreviewSequence = (atkMotion = 'default', baseId = null, skillName = null) => {
-  const motion = atkMotion || 'default';
+  const motion = skillAttackMotionOf(baseId, atkMotion, skillName, true);
   const isTwin = motion === 'kenshiTwinBlade';
   const isComboDash = motion === 'zanCombo' || motion === 'eikiSakuraCombo' || isTwin;
   if (isComboDash) return [{
@@ -17135,13 +17220,1356 @@ const SKILL_FX_SPECS = Object.freeze({
     burst: 'fruit'
   }
 });
+const SKM_COLOR = Object.freeze({
+  fire: ['#ffedd5', '#f97316'],
+  blue: ['#e0f2fe', '#38bdf8'],
+  ice: ['#f0f9ff', '#7dd3fc'],
+  thunder: ['#fef9c3', '#facc15'],
+  holy: ['#fffbeb', '#fbbf24'],
+  dark: ['#ede9fe', '#6d28d9'],
+  plant: ['#dcfce7', '#22c55e'],
+  pink: ['#fce7f3', '#ec4899'],
+  rock: ['#f5f5f4', '#a8a29e'],
+  wind: ['#f0fdfa', '#2dd4bf'],
+  psy: ['#fae8ff', '#c026d3'],
+  blood: ['#fee2e2', '#dc2626'],
+  sakura: ['#fdf2f8', '#f9a8d4'],
+  white: ['#ffffff', '#94a3b8'],
+  mocchi: ['#ffe4ef', '#f472b6'],
+  gold: ['#fef3c7', '#f59e0b'],
+  gas: ['#ecfccb', '#84cc16'],
+  cosmic: ['#e0e7ff', '#8b5cf6'],
+  sky: ['#e0f2fe', '#0ea5e9'],
+  red: ['#ffe4e6', '#e11d48']
+});
+const skmFx = (path, shape, n = 3, o = {}) => {
+  const dur = o.dur ?? (path === 'orbit' ? 480 : path === 'lob' ? 320 : 300);
+  const start = o.start ?? (path === 'orbit' ? 60 : path === 'fall' || path === 'rise' ? 220 : 140);
+  const step = o.step ?? (path === 'fall' || path === 'rise' ? 14 : path === 'orbit' ? 22 : 50);
+  const hueOf = i => Array.isArray(o.h) ? o.h[i % o.h.length] : o.h ?? 0;
+  const items = path === 'orbit' ? SKFX_RING(n, o.r ?? 36, start, step) : path === 'fall' || path === 'rise' ? SKFX_SPREAD(n, o.w ?? 110, start, step) : Array.from({
+    length: n
+  }, (_, i) => ({
+    x: (i % 3 - 1) * 12 + i * 5 % 7 - 3,
+    y: (i * 7 % 5 - 2) * 7,
+    d: start + i * step
+  }));
+  return {
+    path,
+    shape,
+    dur,
+    items: items.map((b, i) => ({
+      ...b,
+      h: hueOf(i),
+      ...(o.s ? {
+        s: o.s
+      } : {})
+    }))
+  };
+};
+const skm = (body, o = {}) => ({
+  body,
+  ...o
+});
+const SKM_SIG = 'sig';
+const SKILL_MOTION_SETS_BASE = {
+  Mocchi: {
+    normal: [SKM_SIG, skm('bash', {
+      c: 'mocchi',
+      burst: 'star'
+    }), skm('jump', {
+      c: 'mocchi',
+      burst: 'dust'
+    }), skm('roll', {
+      c: 'mocchi',
+      burst: 'dust'
+    }), skm('jab', {
+      c: 'mocchi',
+      over: 'fist'
+    }), skm('cast', {
+      c: 'sakura',
+      fx: skmFx('orbit', 'sakura', 8, {
+        h: 330
+      }),
+      burst: 'petal'
+    }), skm('kick', {
+      c: 'mocchi',
+      burst: 'star'
+    }), skm('cast', {
+      c: 'sakura',
+      fx: skmFx('fall', 'sakura', 16, {
+        h: 330
+      }),
+      over: 'bloom',
+      burst: 'petal'
+    }), skm('flip', {
+      c: 'mocchi',
+      over: 'boom',
+      burst: 'star'
+    })],
+    unique: [SKM_SIG, skm('cast', {
+      c: 'mocchi',
+      line: 'ray',
+      over: 'boom'
+    }), skm('cast', {
+      c: 'mocchi',
+      line: 'ray',
+      over: 'wave'
+    }), skm('hop', {
+      c: 'mocchi',
+      line: 'ray',
+      over: 'boom',
+      burst: 'star'
+    }), skm('cast', {
+      c: 'mocchi',
+      line: 'ray',
+      over: 'pillar'
+    }), skm('float', {
+      c: 'gold',
+      line: 'ray',
+      over: 'pillar',
+      burst: 'star'
+    }), skm('cast', {
+      c: 'sky',
+      line: 'ray',
+      over: 'boom'
+    }), skm('warp', {
+      c: 'white',
+      line: 'ray',
+      over: 'xslash'
+    }), skm('dash', {
+      c: 'white',
+      line: 'ray',
+      over: 'boom',
+      fx: skmFx('orbit', 'spark', 8, {
+        h: 200
+      })
+    })]
+  },
+  Suezo: {
+    normal: [skm('spin', {
+      c: 'gold',
+      burst: 'dust'
+    }), skm('toss', {
+      c: 'blue',
+      fx: skmFx('lob', 'water', 2)
+    }), skm('warp', {
+      c: 'psy',
+      burst: 'spark'
+    }), skm('lick', {
+      c: 'pink',
+      line: 'tongue',
+      burst: 'heart'
+    }), skm('cast', {
+      c: 'pink',
+      fx: skmFx('shot', 'heart', 3),
+      burst: 'heart'
+    }), skm('bash', {
+      c: 'white',
+      over: 'bite'
+    }), skm('lick', {
+      c: 'pink',
+      line: 'tongue',
+      fx: skmFx('shot', 'heart', 2, {
+        start: 260
+      }),
+      burst: 'heart'
+    }), skm('toss', {
+      c: 'gas',
+      fx: skmFx('lob', 'gas', 3, {
+        h: 90
+      }),
+      over: 'gas'
+    }), skm('lick', {
+      c: 'red',
+      line: 'whip',
+      over: 'fist'
+    })],
+    unique: [skm('cast', {
+      c: 'psy',
+      over: 'eye',
+      fx: skmFx('orbit', 'orb', 6, {
+        h: 290
+      })
+    }), SKM_SIG, skm('jump', {
+      c: 'white',
+      over: 'bite',
+      burst: 'dust'
+    }), skm('cast', {
+      c: 'cosmic',
+      fx: skmFx('shot', 'ring', 3, {
+        h: 250
+      }),
+      over: 'wave'
+    }), skm('hop', {
+      c: 'pink',
+      fx: skmFx('shot', 'note', 5, {
+        h: [330, 280, 200, 50, 160]
+      }),
+      over: 'wave'
+    }), skm('cast', {
+      c: 'red',
+      line: 'ray',
+      over: 'boom'
+    }), skm('jump', {
+      c: 'red',
+      over: 'bite',
+      burst: 'star'
+    }), skm('hop', {
+      c: 'pink',
+      fx: skmFx('orbit', 'note', 8, {
+        h: [330, 280, 200, 50, 160]
+      }),
+      over: 'wave'
+    }), skm('warp', {
+      c: 'red',
+      line: 'ray',
+      over: 'boom'
+    })]
+  },
+  Golem: {
+    normal: [skm('jab', {
+      c: 'rock',
+      burst: 'star'
+    }), SKM_SIG, skm('kick', {
+      c: 'rock',
+      burst: 'rock'
+    }), skm('bash', {
+      c: 'rock',
+      over: 'slash'
+    }), skm('jump', {
+      c: 'rock',
+      burst: 'dust'
+    }), skm('jab', {
+      c: 'gold',
+      over: 'boom'
+    }), skm('bash', {
+      c: 'rock',
+      over: 'fist',
+      burst: 'rock'
+    }), skm('kick', {
+      c: 'rock',
+      over: 'boom',
+      burst: 'rock'
+    }), skm('float', {
+      c: 'rock',
+      fx: skmFx('rise', 'rock', 10),
+      burst: 'rock'
+    })],
+    unique: [skm('jab', {
+      c: 'gold',
+      over: 'wave'
+    }), skm('jump', {
+      c: 'rock',
+      over: 'boom',
+      burst: 'dust'
+    }), skm('spin', {
+      c: 'wind',
+      over: 'tornado'
+    }), skm('spin', {
+      c: 'rock',
+      burst: 'dust',
+      over: 'wave'
+    }), skm('cast', {
+      c: 'rock',
+      fx: skmFx('fall', 'rock', 8, {
+        s: 1.6
+      }),
+      burst: 'rock'
+    }), skm('cast', {
+      c: 'fire',
+      fx: skmFx('fall', 'meteor', 3, {
+        s: 1.4
+      }),
+      over: 'boom'
+    }), skm('spin', {
+      c: 'wind',
+      over: 'tornado',
+      fx: skmFx('rise', 'rock', 10)
+    }), skm('spin', {
+      c: 'rock',
+      over: 'boom',
+      burst: 'rock'
+    }), skm('float', {
+      c: 'cosmic',
+      fx: skmFx('orbit', 'star', 10, {
+        h: 260
+      }),
+      over: 'boom',
+      burst: 'star'
+    })]
+  },
+  Tiger: {
+    normal: [skm('bash', {
+      c: 'blue',
+      burst: 'star'
+    }), SKM_SIG, skm('dash', {
+      c: 'blue'
+    }), skm('jab', {
+      c: 'blue',
+      over: 'claw'
+    }), skm('warp', {
+      c: 'dark',
+      over: 'shadow'
+    }), skm('flip', {
+      c: 'blue',
+      burst: 'star'
+    }), skm('dash', {
+      c: 'thunder',
+      over: 'boom'
+    }), skm('bash', {
+      c: 'fire',
+      fx: skmFx('shot', 'fire', 3, {
+        h: 20
+      }),
+      over: 'boom'
+    }), skm('jab', {
+      c: 'blue',
+      over: 'claw',
+      burst: 'spark'
+    })],
+    unique: [skm('cast', {
+      c: 'thunder',
+      over: 'thunder'
+    }), skm('cast', {
+      c: 'ice',
+      fx: skmFx('shot', 'ice', 3),
+      burst: 'snow'
+    }), skm('cast', {
+      c: 'thunder',
+      line: 'bolt',
+      over: 'thunder'
+    }), skm('cast', {
+      c: 'ice',
+      fx: skmFx('fall', 'snow', 18),
+      over: 'ice'
+    }), skm('dash', {
+      c: 'white',
+      over: 'slash'
+    }), skm('cast', {
+      c: 'thunder',
+      over: 'thunder',
+      fx: skmFx('orbit', 'bolt', 6)
+    }), skm('cast', {
+      c: 'white',
+      line: 'ray',
+      fx: skmFx('orbit', 'spark', 8, {
+        h: 190
+      })
+    }), skm('jump', {
+      c: 'thunder',
+      over: 'pillar',
+      burst: 'spark'
+    }), skm('dash', {
+      c: 'ice',
+      over: 'thunder',
+      fx: skmFx('rise', 'ice', 8)
+    })]
+  },
+  Ham: {
+    normal: [SKM_SIG, skm('kick', {
+      c: 'gold',
+      burst: 'star'
+    }), skm('spin', {
+      c: 'gold',
+      over: 'fist'
+    }), skm('jab', {
+      c: 'gold',
+      over: 'fist'
+    }), skm('kick', {
+      c: 'gold',
+      over: 'boom'
+    }), skm('spin', {
+      c: 'gold',
+      over: 'slash',
+      burst: 'star'
+    }), skm('jump', {
+      c: 'fire',
+      over: 'fist',
+      fx: skmFx('rise', 'fire', 8, {
+        h: 20
+      })
+    }), skm('kick', {
+      c: 'gold',
+      over: 'boom',
+      burst: 'star'
+    }), skm('kick', {
+      c: 'fire',
+      over: 'pillar',
+      fx: skmFx('rise', 'fire', 10, {
+        h: 20
+      })
+    })],
+    unique: [skm('shake', {
+      c: 'gas',
+      over: 'gas'
+    }), skm('dash', {
+      c: 'white',
+      over: 'xslash'
+    }), skm('shake', {
+      c: 'gas',
+      over: 'gas',
+      fx: skmFx('shot', 'gas', 4, {
+        h: 90
+      })
+    }), skm('jab', {
+      c: 'dark',
+      over: 'wave'
+    }), skm('shake', {
+      c: 'pink',
+      fx: skmFx('orbit', 'note', 6, {
+        h: [330, 50, 200]
+      }),
+      burst: 'star'
+    }), skm('shake', {
+      c: 'gas',
+      over: 'tornado',
+      fx: skmFx('shot', 'gas', 5, {
+        h: 90
+      })
+    }), skm('warp', {
+      c: 'dark',
+      over: 'boom'
+    }), skm('jab', {
+      c: 'gold',
+      over: 'fist',
+      burst: 'star',
+      fx: skmFx('shot', 'star', 4)
+    }), skm('jab', {
+      c: 'holy',
+      over: 'boom',
+      burst: 'star'
+    })]
+  },
+  Pixie: {
+    normal: [skm('bash', {
+      c: 'pink',
+      burst: 'star'
+    }), skm('cast', {
+      c: 'white',
+      line: 'ray'
+    }), skm('cast', {
+      c: 'thunder',
+      over: 'thunder'
+    }), skm('kick', {
+      c: 'pink',
+      burst: 'star'
+    }), skm('cast', {
+      c: 'plant',
+      fx: skmFx('orbit', 'orb', 6, {
+        h: 140
+      }),
+      over: 'pillar'
+    }), skm('cast', {
+      c: 'thunder',
+      line: 'bolt'
+    }), skm('cast', {
+      c: 'white',
+      line: 'ray',
+      over: 'boom'
+    }), skm('cast', {
+      c: 'pink',
+      fx: skmFx('shot', 'heart', 3)
+    }), skm('warp', {
+      c: 'pink',
+      over: 'boom',
+      burst: 'heart'
+    })],
+    unique: [SKM_SIG, skm('cast', {
+      c: 'white',
+      line: 'ray',
+      over: 'pillar'
+    }), skm('cast', {
+      c: 'thunder',
+      over: 'thunder',
+      burst: 'spark'
+    }), skm('float', {
+      c: 'fire',
+      over: 'boom',
+      burst: 'star'
+    }), skm('cast', {
+      c: 'thunder',
+      line: 'bolt',
+      over: 'thunder'
+    }), skm('cast', {
+      c: 'cosmic',
+      fx: skmFx('orbit', 'star', 8, {
+        h: 260
+      }),
+      over: 'boom'
+    }), skm('cast', {
+      c: 'white',
+      line: 'ray',
+      over: 'boom',
+      burst: 'star'
+    }), skm('hop', {
+      c: 'fire',
+      over: 'boom',
+      fx: skmFx('orbit', 'orb', 8, {
+        h: 30
+      })
+    }), skm('float', {
+      c: 'fire',
+      fx: skmFx('fall', 'meteor', 3, {
+        s: 1.3
+      }),
+      over: 'boom'
+    })]
+  },
+  Mia: {
+    normal: [SKM_SIG, skm('hop', {
+      c: 'pink',
+      fx: skmFx('shot', 'note', 4, {
+        h: [330, 280, 200, 50]
+      }),
+      line: 'ray'
+    }), skm('hop', {
+      c: 'thunder',
+      line: 'bolt',
+      over: 'thunder'
+    }), skm('kick', {
+      c: 'pink',
+      fx: skmFx('orbit', 'note', 5, {
+        h: [330, 280, 200, 50, 160]
+      })
+    }), skm('hop', {
+      c: 'plant',
+      fx: skmFx('orbit', 'note', 6, {
+        h: 140
+      }),
+      over: 'pillar'
+    }), skm('hop', {
+      c: 'thunder',
+      over: 'thunder',
+      burst: 'spark'
+    }), skm('hop', {
+      c: 'pink',
+      fx: skmFx('shot', 'note', 7, {
+        h: [330, 280, 200, 50, 160, 20, 300]
+      }),
+      over: 'wave'
+    }), skm('hop', {
+      c: 'pink',
+      fx: skmFx('shot', 'heart', 3)
+    }), skm('hop', {
+      c: 'pink',
+      fx: skmFx('orbit', 'heart', 6),
+      over: 'boom',
+      burst: 'heart'
+    })],
+    unique: [SKM_SIG, skm('hop', {
+      c: 'pink',
+      fx: skmFx('fall', 'note', 14, {
+        h: [330, 280, 200, 50]
+      }),
+      over: 'wave'
+    }), skm('hop', {
+      c: 'thunder',
+      over: 'thunder',
+      burst: 'spark'
+    }), skm('jump', {
+      c: 'fire',
+      over: 'boom',
+      fx: skmFx('orbit', 'note', 6, {
+        h: [330, 50, 200]
+      })
+    }), skm('hop', {
+      c: 'thunder',
+      line: 'bolt',
+      over: 'thunder'
+    }), skm('hop', {
+      c: 'cosmic',
+      fx: skmFx('orbit', 'star', 8, {
+        h: 260
+      }),
+      over: 'wave'
+    }), skm('hop', {
+      c: 'pink',
+      fx: skmFx('orbit', 'note', 10, {
+        h: [330, 280, 200, 50, 160]
+      }),
+      over: 'pillar'
+    }), skm('hop', {
+      c: 'pink',
+      over: 'wave',
+      fx: skmFx('shot', 'ring', 3, {
+        h: 320
+      })
+    }), skm('float', {
+      c: 'holy',
+      fx: skmFx('fall', 'meteor', 3),
+      over: 'boom',
+      burst: 'star'
+    })]
+  },
+  Pandora: {
+    normal: [skm('bash', {
+      c: 'psy',
+      burst: 'star'
+    }), skm('cast', {
+      c: 'holy',
+      line: 'ray'
+    }), SKM_SIG, skm('kick', {
+      c: 'white',
+      fx: skmFx('orbit', 'feather', 6),
+      burst: 'star'
+    }), skm('warp', {
+      c: 'dark',
+      over: 'shadow'
+    }), skm('cast', {
+      c: 'holy',
+      line: 'bolt',
+      over: 'cross'
+    }), skm('cast', {
+      c: 'dark',
+      line: 'ray',
+      over: 'boom'
+    }), skm('cast', {
+      c: 'dark',
+      fx: skmFx('shot', 'heart', 3),
+      burst: 'heart'
+    }), skm('warp', {
+      c: 'psy',
+      fx: skmFx('orbit', 'heart', 6),
+      over: 'boom'
+    })],
+    unique: [SKM_SIG, skm('cast', {
+      c: 'holy',
+      line: 'ray',
+      over: 'pillar'
+    }), skm('cast', {
+      c: 'dark',
+      over: 'thunder',
+      burst: 'spark'
+    }), skm('float', {
+      c: 'psy',
+      over: 'boom',
+      hit2: true
+    }), skm('cast', {
+      c: 'dark',
+      line: 'bolt',
+      over: 'thunder'
+    }), skm('cast', {
+      c: 'cosmic',
+      fx: skmFx('orbit', 'star', 10, {
+        h: 270
+      }),
+      over: 'boom'
+    }), skm('cast', {
+      c: 'holy',
+      line: 'ray',
+      over: 'cross'
+    }), skm('float', {
+      c: 'dark',
+      fx: skmFx('fall', 'meteor', 3),
+      over: 'boom'
+    }), skm('hop', {
+      c: 'pink',
+      fx: skmFx('orbit', 'heart', 8),
+      over: 'thunder'
+    })]
+  },
+  Monol: {
+    normal: [SKM_SIG, skm('toss', {
+      c: 'white',
+      fx: skmFx('shot', 'needle', 3)
+    }), skm('float', {
+      c: 'rock',
+      over: 'boom',
+      burst: 'dust'
+    }), skm('shake', {
+      c: 'rock',
+      fx: skmFx('shot', 'rock', 5)
+    }), skm('bash', {
+      c: 'white',
+      over: 'bite'
+    }), skm('jab', {
+      c: 'rock',
+      burst: 'star'
+    }), skm('float', {
+      c: 'rock',
+      over: 'boom',
+      fx: skmFx('rise', 'dust', 10)
+    }), skm('cast', {
+      c: 'white',
+      fx: skmFx('shot', 'needle', 7, {
+        step: 30
+      })
+    }), skm('jab', {
+      c: 'rock',
+      over: 'boom',
+      burst: 'star'
+    })],
+    unique: [skm('cast', {
+      c: 'red',
+      line: 'ray'
+    }), skm('shake', {
+      c: 'white',
+      over: 'wave'
+    }), skm('cast', {
+      c: 'plant',
+      line: 'ray'
+    }), skm('cast', {
+      c: 'psy',
+      line: 'ray',
+      over: 'eye'
+    }), skm('shake', {
+      c: 'sky',
+      over: 'wave',
+      burst: 'spark'
+    }), skm('cast', {
+      c: 'gold',
+      fx: skmFx('shot', 'ring', 3, {
+        h: 45
+      })
+    }), skm('cast', {
+      c: 'blue',
+      line: 'ray',
+      over: 'boom'
+    }), skm('cast', {
+      c: 'cosmic',
+      fx: skmFx('orbit', 'orb', 8, {
+        h: [0, 60, 120, 180, 240, 300]
+      }),
+      over: 'pillar'
+    }), skm('float', {
+      c: 'cosmic',
+      line: 'ray',
+      over: 'boom',
+      fx: skmFx('orbit', 'spark', 8, {
+        h: [0, 60, 120, 180, 240, 300]
+      })
+    })]
+  },
+  Oboro: {
+    normal: [skm('bash', {
+      c: 'plant',
+      burst: 'leaf'
+    }), skm('jab', {
+      c: 'plant',
+      burst: 'leaf'
+    }), skm('cast', {
+      c: 'plant',
+      line: 'whip',
+      fx: skmFx('rise', 'leaf', 8)
+    }), skm('jab', {
+      c: 'plant',
+      over: 'slash'
+    }), skm('jump', {
+      c: 'plant',
+      over: 'bite'
+    }), skm('shake', {
+      c: 'plant',
+      fx: skmFx('orbit', 'leaf', 8),
+      over: 'pillar'
+    }), skm('spin', {
+      c: 'plant',
+      burst: 'leaf'
+    }), skm('jump', {
+      c: 'plant',
+      over: 'bite',
+      burst: 'star'
+    }), skm('spin', {
+      c: 'plant',
+      over: 'xslash',
+      burst: 'leaf'
+    })],
+    unique: [skm('cast', {
+      c: 'plant',
+      fx: skmFx('shot', 'seed', 3)
+    }), skm('cast', {
+      c: 'plant',
+      fx: skmFx('shot', 'leaf', 4),
+      over: 'slash'
+    }), SKM_SIG, skm('cast', {
+      c: 'gold',
+      fx: skmFx('fall', 'spark', 18, {
+        h: 45
+      })
+    }), skm('cast', {
+      c: 'plant',
+      fx: skmFx('shot', 'seed', 9, {
+        step: 25
+      })
+    }), skm('cast', {
+      c: 'pink',
+      line: 'ray',
+      over: 'bloom'
+    }), skm('cast', {
+      c: 'sakura',
+      fx: skmFx('orbit', 'sakura', 10, {
+        h: 330
+      }),
+      over: 'bloom'
+    }), skm('cast', {
+      c: 'sky',
+      fx: skmFx('orbit', 'sakura', 10, {
+        h: 210
+      }),
+      over: 'boom'
+    }), skm('cast', {
+      c: 'plant',
+      fx: skmFx('fall', 'star', 12, {
+        h: 50
+      }),
+      over: 'pillar'
+    })]
+  },
+  Zan: {
+    normal: [SKM_SIG, skm('warp', {
+      c: 'blue',
+      over: 'slash'
+    }), skm('flip', {
+      c: 'blue',
+      burst: 'star'
+    }), skm('kick', {
+      c: 'blue',
+      over: 'slash'
+    }), skm('dash', {
+      c: 'white',
+      fx: skmFx('shot', 'blade', 3)
+    }), skm('flip', {
+      c: 'blue',
+      over: 'boom'
+    }), skm('dash', {
+      c: 'blue',
+      over: 'xslash'
+    }), skm('flip', {
+      c: 'blue',
+      over: 'claw'
+    }), skm('spin', {
+      c: 'blue',
+      over: 'xslash',
+      burst: 'spark'
+    })],
+    unique: [skm('dash', {
+      c: 'dark',
+      over: 'slash'
+    }), skm('dash', {
+      c: 'blue',
+      fx: skmFx('shot', 'blade', 5, {
+        step: 35
+      })
+    }), skm('jump', {
+      c: 'fire',
+      fx: skmFx('fall', 'meteor', 2),
+      over: 'boom'
+    }), SKM_SIG, skm('jump', {
+      c: 'blue',
+      over: 'pillar'
+    }), skm('cast', {
+      c: 'sky',
+      fx: skmFx('shot', 'orb', 6, {
+        h: 200,
+        step: 35
+      })
+    }), skm('warp', {
+      c: 'dark',
+      over: 'shadow'
+    }), skm('dash', {
+      c: 'blue',
+      over: 'pillar',
+      fx: skmFx('orbit', 'blade', 6)
+    }), skm('dash', {
+      c: 'blood',
+      over: 'xslash',
+      burst: 'spark'
+    })]
+  },
+  Eiki: {
+    normal: [SKM_SIG, skm('dash', {
+      c: 'sakura',
+      over: 'slash',
+      burst: 'sakura'
+    }), skm('cast', {
+      c: 'sakura',
+      fx: skmFx('shot', 'sakura', 6, {
+        h: 330,
+        step: 30
+      }),
+      over: 'slash'
+    }), skm('warp', {
+      c: 'sakura',
+      over: 'xslash',
+      burst: 'sakura'
+    }), skm('flip', {
+      c: 'sakura',
+      fx: skmFx('orbit', 'sakura', 8, {
+        h: 330
+      }),
+      over: 'slash'
+    }), skm('spin', {
+      c: 'sakura',
+      over: 'tornado',
+      fx: skmFx('orbit', 'sakura', 8, {
+        h: 330
+      })
+    }), skm('dash', {
+      c: 'sakura',
+      over: 'claw',
+      fx: skmFx('fall', 'sakura', 14, {
+        h: 330
+      })
+    }), skm('dash', {
+      c: 'sakura',
+      over: 'claw',
+      burst: 'sakura'
+    }), skm('dash', {
+      c: 'blood',
+      over: 'claw',
+      fx: skmFx('orbit', 'sakura', 10, {
+        h: 350
+      }),
+      burst: 'sakura'
+    })],
+    unique: [skm('warp', {
+      c: 'blood',
+      over: 'slash',
+      burst: 'sakura'
+    }), skm('dash', {
+      c: 'ice',
+      over: 'ice',
+      burst: 'snow'
+    }), skm('flip', {
+      c: 'sakura',
+      over: 'xslash',
+      fx: skmFx('fall', 'sakura', 12, {
+        h: 330
+      })
+    }), skm('spin', {
+      c: 'blood',
+      over: 'claw',
+      fx: skmFx('fall', 'snow', 16)
+    }), skm('dash', {
+      c: 'ice',
+      over: 'xslash',
+      burst: 'snow'
+    }), skm('spin', {
+      c: 'ice',
+      over: 'tornado',
+      fx: skmFx('orbit', 'snow', 10)
+    }), skm('dash', {
+      c: 'blood',
+      over: 'claw',
+      fx: skmFx('orbit', 'sakura', 12, {
+        h: [350, 330]
+      })
+    }), skm('warp', {
+      c: 'sakura',
+      over: 'xslash',
+      fx: skmFx('orbit', 'sakura', 12, {
+        h: [330, 200]
+      }),
+      burst: 'sakura'
+    }), SKM_SIG]
+  },
+  KenshiMocchi: {
+    normal: [skm('dash', {
+      c: 'white',
+      over: 'slash'
+    }), skm('jump', {
+      c: 'white',
+      over: 'slash'
+    }), skm('dash', {
+      c: 'sky',
+      over: 'slash',
+      burst: 'spark'
+    }), skm('flip', {
+      c: 'white',
+      over: 'slash'
+    }), SKM_SIG, skm('spin', {
+      c: 'dark',
+      fx: skmFx('orbit', 'sakura', 10, {
+        h: 280
+      }),
+      over: 'xslash'
+    }), skm('spin', {
+      c: 'white',
+      over: 'claw'
+    }), skm('jump', {
+      c: 'sakura',
+      over: 'xslash',
+      fx: skmFx('fall', 'sakura', 12, {
+        h: 330
+      })
+    }), skm('dash', {
+      c: 'fire',
+      over: 'boom',
+      burst: 'spark'
+    })],
+    unique: [skm('dash', {
+      c: 'plant',
+      over: 'slash',
+      burst: 'spark'
+    }), skm('dash', {
+      c: 'sky',
+      over: 'claw'
+    }), skm('dash', {
+      c: 'red',
+      line: 'ray',
+      over: 'boom'
+    }), skm('spin', {
+      c: 'white',
+      over: 'xslash'
+    }), skm('spin', {
+      c: 'dark',
+      over: 'tornado',
+      burst: 'spark'
+    }), skm('dash', {
+      c: 'dark',
+      over: 'claw',
+      burst: 'spark'
+    }), skm('warp', {
+      c: 'dark',
+      over: 'xslash',
+      fx: skmFx('orbit', 'blade', 6)
+    }), skm('dash', {
+      c: 'cosmic',
+      over: 'xslash',
+      fx: skmFx('orbit', 'spark', 8, {
+        h: 270
+      }),
+      burst: 'star'
+    }), SKM_SIG]
+  },
+  Ark: {
+    normal: [skm('cast', {
+      c: 'holy',
+      over: 'eye'
+    }), skm('dash', {
+      c: 'holy',
+      over: 'slash'
+    }), skm('cast', {
+      c: 'holy',
+      over: 'sword'
+    }), skm('cast', {
+      c: 'holy',
+      fx: skmFx('fall', 'star', 14, {
+        h: 50
+      })
+    }), skm('float', {
+      c: 'holy',
+      over: 'boom',
+      burst: 'star'
+    }), skm('cast', {
+      c: 'holy',
+      over: 'wave'
+    }), skm('cast', {
+      c: 'white',
+      fx: skmFx('fall', 'feather', 12),
+      over: 'pillar'
+    }), SKM_SIG, skm('cast', {
+      c: 'sky',
+      fx: skmFx('shot', 'needle', 6, {
+        step: 30
+      }),
+      line: 'whip'
+    })],
+    unique: [skm('cast', {
+      c: 'holy',
+      fx: skmFx('orbit', 'ring', 5, {
+        h: 45
+      })
+    }), skm('cast', {
+      c: 'holy',
+      over: 'pillar'
+    }), skm('cast', {
+      c: 'holy',
+      over: 'eye',
+      burst: 'star'
+    }), skm('hop', {
+      c: 'holy',
+      over: 'wave',
+      fx: skmFx('fall', 'star', 12, {
+        h: 50
+      })
+    }), skm('cast', {
+      c: 'holy',
+      over: 'sword',
+      fx: skmFx('fall', 'feather', 10)
+    }), SKM_SIG, skm('float', {
+      c: 'holy',
+      over: 'cross',
+      burst: 'star'
+    }), skm('cast', {
+      c: 'white',
+      fx: skmFx('orbit', 'feather', 10),
+      over: 'pillar'
+    }), skm('cast', {
+      c: 'holy',
+      over: 'cross',
+      fx: skmFx('fall', 'sword', 5)
+    })]
+  },
+  Snegurochka: {
+    normal: [skm('dash', {
+      c: 'ice',
+      over: 'slash',
+      burst: 'snow'
+    }), skm('cast', {
+      c: 'blue',
+      line: 'whip'
+    }), skm('cast', {
+      c: 'blue',
+      over: 'wave',
+      fx: skmFx('shot', 'water', 5)
+    }), SKM_SIG, skm('dash', {
+      c: 'ice',
+      over: 'xslash',
+      burst: 'snow'
+    }), skm('cast', {
+      c: 'blue',
+      line: 'whip',
+      over: 'boom'
+    }), skm('jump', {
+      c: 'blue',
+      over: 'boom',
+      fx: skmFx('rise', 'water', 12)
+    }), skm('cast', {
+      c: 'blood',
+      over: 'gas'
+    }), skm('hop', {
+      c: 'holy',
+      over: 'wave',
+      fx: skmFx('fall', 'star', 10, {
+        h: 50
+      })
+    })],
+    unique: [skm('cast', {
+      c: 'ice',
+      fx: skmFx('shot', 'ice', 3)
+    }), skm('cast', {
+      c: 'blue',
+      fx: skmFx('shot', 'water', 2, {
+        step: 150
+      }),
+      hit2: true
+    }), skm('cast', {
+      c: 'ice',
+      over: 'ice'
+    }), skm('cast', {
+      c: 'pink',
+      fx: skmFx('shot', 'heart', 3),
+      burst: 'star'
+    }), skm('cast', {
+      c: 'ice',
+      fx: skmFx('shot', 'ice', 7, {
+        step: 30
+      }),
+      over: 'boom'
+    }), SKM_SIG, skm('cast', {
+      c: 'ice',
+      fx: skmFx('fall', 'snow', 18),
+      over: 'wave'
+    }), skm('cast', {
+      c: 'blue',
+      fx: skmFx('orbit', 'bubble', 8),
+      over: 'wave'
+    }), skm('cast', {
+      c: 'holy',
+      fx: skmFx('fall', 'snow', 14),
+      over: 'pillar',
+      burst: 'star'
+    })]
+  }
+};
+const skmRecolor = (set, color) => ({
+  normal: set.normal.map(sp => sp === SKM_SIG ? sp : {
+    ...sp,
+    c: color
+  }),
+  unique: set.unique.map(sp => sp === SKM_SIG ? sp : {
+    ...sp,
+    c: color
+  })
+});
+const skmWithSig = (set, kind, index, replacement) => ({
+  normal: set.normal.map((sp, i) => kind === 'normal' && i === index ? SKM_SIG : sp === SKM_SIG ? replacement : sp),
+  unique: set.unique.map((sp, i) => kind === 'unique' && i === index ? SKM_SIG : sp === SKM_SIG ? replacement : sp)
+});
+const SKILL_MOTION_SETS_MAIN = Object.freeze({
+  ...SKILL_MOTION_SETS_BASE,
+  Mitarashi: {
+    normal: SKILL_MOTION_SETS_BASE.Mocchi.normal.map((sp, i) => i === 5 ? skm('cast', {
+      c: 'fire',
+      fx: skmFx('orbit', 'fire', 8, {
+        h: 20
+      }),
+      burst: 'spark'
+    }) : i === 7 ? skm('cast', {
+      c: 'fire',
+      fx: skmFx('fall', 'fire', 14, {
+        h: 20
+      }),
+      over: 'bloom'
+    }) : sp),
+    unique: SKILL_MOTION_SETS_BASE.Mocchi.unique.map((sp, i) => sp === SKM_SIG ? sp : i === 5 ? skm('float', {
+      c: 'fire',
+      line: 'ray',
+      over: 'pillar',
+      fx: skmFx('rise', 'fire', 10, {
+        h: 20
+      })
+    }) : i === 6 ? skm('cast', {
+      c: 'sky',
+      line: 'ray',
+      over: 'boom',
+      fx: skmFx('orbit', 'fire', 8, {
+        h: 205
+      })
+    }) : {
+      ...sp,
+      c: sp.c === 'mocchi' ? 'fire' : sp.c
+    })
+  },
+  Plant: skmWithSig(SKILL_MOTION_SETS_BASE.Oboro, 'normal', 2, skm('cast', {
+    c: 'plant',
+    fx: skmFx('orbit', 'petal', 8)
+  })),
+  Iblis: skmRecolor(SKILL_MOTION_SETS_BASE.Ark, 'dark'),
+  Undine: {
+    normal: SKILL_MOTION_SETS_BASE.Snegurochka.normal.map((sp, i) => i === 8 ? skm('cast', {
+      c: 'blue',
+      fx: skmFx('rise', 'water', 14),
+      over: 'pillar'
+    }) : sp),
+    unique: SKILL_MOTION_SETS_BASE.Snegurochka.unique.map((sp, i) => i === 3 ? skm('cast', {
+      c: 'blue',
+      fx: skmFx('shot', 'heart', 3),
+      burst: 'bubble'
+    }) : i === 8 ? skm('float', {
+      c: 'blue',
+      fx: skmFx('fall', 'water', 16),
+      over: 'boom'
+    }) : sp)
+  }
+});
+const SKILL_MOTION_SETS = Object.freeze({
+  ...SKILL_MOTION_SETS_MAIN,
+  Yaobikuni: skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red')
+});
+const SKM_BODY_TIMING = Object.freeze({
+  bash: [.48, 560],
+  dive: [.62, 760],
+  roll: [.5, 780],
+  flip: [.62, 840],
+  toss: [.6, 720],
+  cast: [.55, 700],
+  slash: [.46, 720],
+  lick: [.42, 640],
+  kick: [.44, 620],
+  spin: [.54, 780],
+  jump: [.58, 760],
+  float: [.58, 820],
+  dash: [.26, 620],
+  shake: [.5, 720],
+  hop: [.5, 720],
+  warp: [.5, 760],
+  jab: [.4, 620]
+});
+const SKM_PROJECTILE_BODIES = Object.freeze(['cast', 'toss', 'shake', 'hop']);
+const SKM_OVER_TAIL = Object.freeze({
+  thunder: 220,
+  xslash: 300,
+  claw: 220,
+  pillar: 300,
+  tornado: 320,
+  ice: 440,
+  bite: 180,
+  boom: 460,
+  wave: 560,
+  bloom: 360,
+  gas: 480,
+  cross: 360,
+  sword: 180,
+  eye: 260,
+  fist: 160,
+  slash: 220,
+  aurora: 320,
+  shadow: 200
+});
+const SKM_MAX_MS = 1200;
+const skmArrival = fx => {
+  if (!fx || !fx.items.length) return null;
+  const at = b => (b.d || 0) + (fx.path === 'rise' ? fx.dur * .25 : fx.path === 'orbit' ? fx.dur * .92 : fx.dur);
+  const times = fx.items.map(at);
+  return {
+    first: Math.round(Math.min(...times)),
+    last: Math.round(Math.max(...times))
+  };
+};
+const skmNormalize = sp => {
+  const [ratio, bodyMs] = SKM_BODY_TIMING[sp.body] || [.5, 700];
+  const [c1, c2] = Array.isArray(sp.c) ? sp.c : SKM_COLOR[sp.c] || SKM_COLOR.white;
+  const tail = Math.max(sp.over ? SKM_OVER_TAIL[sp.over] || 260 : 200, sp.hit2 ? 380 : 0);
+  const arrival = skmArrival(sp.fx);
+  let hit;
+  let ms;
+  if (sp.hit != null) {
+    hit = sp.hit;
+    ms = sp.ms ?? Math.max(bodyMs, hit + tail + 80);
+  } else if (SKM_PROJECTILE_BODIES.includes(sp.body) && arrival) {
+    hit = arrival.first;
+    ms = sp.ms ?? Math.max(bodyMs, hit + tail + 80, arrival.last + 160);
+  } else {
+    ms = sp.ms ?? Math.max(bodyMs, Math.round((tail + 80) / (1 - ratio)), arrival ? arrival.last + 160 : 0);
+    hit = Math.round(ratio * ms);
+  }
+  ms = Math.min(SKM_MAX_MS, Math.round(ms));
+  const bits = sp.bits || [{
+    x: -28,
+    y: -20
+  }, {
+    x: 26,
+    y: -24
+  }, {
+    x: -30,
+    y: 16
+  }, {
+    x: 30,
+    y: 14
+  }, {
+    x: 0,
+    y: -34
+  }];
+  return {
+    body: sp.body,
+    line: sp.line,
+    fx: sp.fx,
+    over: sp.over,
+    burst: sp.burst,
+    bits,
+    c1,
+    c2,
+    hit: Math.round(hit),
+    ...(sp.hit2 ? {
+      hit2: Math.round(hit + 180)
+    } : {}),
+    ms
+  };
+};
+const SKILL_FX_SPEC_CACHE = {};
+const skillFxSpecOf = kind => {
+  if (!kind) return null;
+  if (SKILL_FX_SPECS[kind]) return {
+    ...SKILL_FX_SPECS[kind],
+    ms: THEMED_ATTACK_MS[kind] || 600
+  };
+  if (SKILL_FX_SPEC_CACHE[kind]) return SKILL_FX_SPEC_CACHE[kind];
+  const m = /^([A-Za-z]+)-([nu])(\d)$/.exec(String(kind));
+  const sp = m && SKILL_MOTION_SETS[m[1]] && SKILL_MOTION_SETS[m[1]][m[2] === 'u' ? 'unique' : 'normal'][Number(m[3])];
+  if (!sp || sp === SKM_SIG) return null;
+  SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp);
+  return SKILL_FX_SPEC_CACHE[kind];
+};
 const SkillFxMotion = ({
   kind,
   image,
   lunge = false
 }) => {
-  const spec = SKILL_FX_SPECS[kind];
-  const ms = THEMED_ATTACK_MS[kind] || 600;
+  const spec = skillFxSpecOf(kind);
+  if (!spec) return null;
+  const ms = spec.ms || 600;
   const hex = String(spec.c2).replace('#', '');
   const c3 = hex.length === 6 ? `rgba(${parseInt(hex.slice(0, 2), 16)},${parseInt(hex.slice(2, 4), 16)},${parseInt(hex.slice(4, 6), 16)},0)` : 'rgba(255,255,255,0)';
   const vars = {
@@ -17209,7 +18637,7 @@ const ThemedAttackMotion = ({
   image,
   lunge = false
 }) => {
-  if (SKILL_FX_SPECS[kind]) return React.createElement(SkillFxMotion, {
+  if (skillFxSpecOf(kind)) return React.createElement(SkillFxMotion, {
     kind: kind,
     image: image,
     lunge: lunge
@@ -17287,6 +18715,21 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
     c2: '#0891b2',
     motif: 'blade'
   },
+  heal: {
+    c1: '#bbf7d0',
+    c2: '#10b981',
+    motif: 'rise'
+  },
+  partyGuard: {
+    c1: '#bbf7d0',
+    c2: '#15803d',
+    motif: 'shield'
+  },
+  comboBurst: {
+    c1: '#fbcfe8',
+    c2: '#db2777',
+    motif: 'rise'
+  },
   default: {
     c1: '#f5d0fe',
     c2: '#c026d3',
@@ -17294,18 +18737,24 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   }
 });
 const tacticsExCutinTheme = effect => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;
+const battleCutinThemeOf = cutin => cutin && cutin.theme || tacticsExCutinTheme(cutin && cutin.effect);
 const TacticsExCutin = ({
   cutin
 }) => {
   if (!cutin) return null;
-  const t = tacticsExCutinTheme(cutin.effect);
+  const t = battleCutinThemeOf(cutin);
+  const variant = cutin.variant || 'ex';
   return ReactDOM.createPortal(React.createElement("div", {
     key: cutin.key,
     "data-tactics-ex-cutin": cutin.effect || 'default',
-    className: "ex-cutin",
+    "data-battle-cutin": variant,
+    className: `ex-cutin ex-cutin--${variant}`,
     style: {
       '--ex-c1': t.c1,
-      '--ex-c2': t.c2
+      '--ex-c2': t.c2,
+      ...(cutin.ms ? {
+        '--cut-ms': `${cutin.ms}ms`
+      } : {})
     },
     "aria-hidden": "true"
   }, React.createElement("div", {
@@ -17325,7 +18774,11 @@ const TacticsExCutin = ({
     className: "ex-cutin__lines"
   }), React.createElement("div", {
     className: "ex-cutin__art"
-  }, React.createElement(DyedMonsterImage, {
+  }, cutin.icon ? React.createElement("span", {
+    className: "ex-cutin__icon"
+  }, isImageIconValue(cutin.icon) ? cardIconNode(cutin.icon, variant === 'assist' ? 96 : 120, cutin.cardId) : React.createElement("span", {
+    className: "ex-cutin__emoji"
+  }, cutin.icon)) : React.createElement(DyedMonsterImage, {
     baseId: cutin.monId,
     src: cutin.imgUrl,
     alt: "",
@@ -17336,7 +18789,7 @@ const TacticsExCutin = ({
     className: "ex-cutin__text"
   }, React.createElement("div", {
     className: "ex-cutin__tag"
-  }, "EX SKILL"), React.createElement("div", {
+  }, cutin.tag || 'EX SKILL'), React.createElement("div", {
     className: "ex-cutin__name",
     style: {
       fontSize: `${Math.max(15, Math.min(30, Math.floor(165 / Math.max(1, String(cutin.exName || '').length))))}px`
@@ -17347,6 +18800,41 @@ const TacticsExCutin = ({
     className: "ex-cutin__flash"
   })), document.body);
 };
+const GUARD_BARRIER_TIERS = Object.freeze(['bronze', 'bronze', 'silver', 'silver', 'gold', 'gold', 'crystal', 'crystal', 'rainbow']);
+const guardBarrierTierOf = level => GUARD_BARRIER_TIERS[Math.max(0, Math.min(GUARD_BARRIER_TIERS.length - 1, Math.floor(Number(level) || 0)))];
+const GuardBarrier = ({
+  tier = 'bronze',
+  state = 'idle'
+}) => React.createElement("span", {
+  "data-guard-barrier": state,
+  "data-guard-tier": tier,
+  className: `guard-barrier guard-barrier--${tier} guard-barrier--${state}`,
+  "aria-hidden": "true"
+}, React.createElement("svg", {
+  className: "guard-barrier__svg",
+  viewBox: "0 0 100 100",
+  preserveAspectRatio: "none"
+}, React.createElement("polygon", {
+  className: "guard-barrier__hex",
+  points: "25,3 75,3 98,50 75,97 25,97 2,50"
+}), React.createElement("polygon", {
+  className: "guard-barrier__hex2",
+  points: "31,13 69,13 88,50 69,87 31,87 12,50"
+})), React.createElement("i", {
+  className: "guard-barrier__ring"
+}), state === 'block' && [0, 1, 2, 3, 4, 5].map(k => React.createElement("i", {
+  key: k,
+  className: "guard-barrier__spark",
+  style: {
+    '--k': k
+  }
+})), state === 'break' && [0, 1, 2, 3, 4, 5, 6, 7].map(k => React.createElement("i", {
+  key: k,
+  className: "guard-barrier__shard",
+  style: {
+    '--k': k
+  }
+})));
 const AttackTargetFx = ({
   anim,
   attackerId
@@ -18545,6 +20033,50 @@ const PandoraDualThunder = ({
 }), React.createElement("i", {
   className: "pandora-dual-strike__ring"
 })));
+const skillMotionListsOf = (mon, {
+  draft = false
+} = {}) => {
+  const hasSet = typeof SKILL_MOTION_SETS !== 'undefined' && !!SKILL_MOTION_SETS[mon?.id];
+  if (!mon || typeof SKILL_ATTACK_THEME_MONSTERS === 'undefined' || !SKILL_ATTACK_THEME_MONSTERS.includes(mon.id) && !hasSet) return null;
+  const normal = typeof HERO_ATK_NAMES !== 'undefined' && Array.isArray(HERO_ATK_NAMES[mon.id]) ? HERO_ATK_NAMES[mon.id] : [];
+  const unique = Array.isArray(mon.unique?.names) ? mon.unique.names : draft && Array.isArray(mon.draftUniqueNames) ? mon.draftUniqueNames : [];
+  const lists = [['normal', '通常技', normal], ['unique', '固有技', unique]].filter(([,, names]) => names.length);
+  return lists.length ? lists : null;
+};
+const SkillMotionPicker = ({
+  lists,
+  playingName = null,
+  disabled = false,
+  onPlay
+}) => {
+  if (!lists) return null;
+  return React.createElement("div", {
+    "data-skill-motion-picker": true,
+    className: "mx-auto mt-2 w-full max-w-md space-y-1.5"
+  }, lists.map(([kind, label, names]) => React.createElement("div", {
+    key: kind,
+    className: "flex items-center gap-1.5 min-w-0"
+  }, React.createElement("div", {
+    className: "shrink-0 w-9 text-[9px] font-black leading-tight text-cyan-300/80"
+  }, label), React.createElement("div", {
+    className: "flex-1 min-w-0 flex gap-1.5 overflow-x-auto mh-scroll pb-0.5"
+  }, names.map((name, lvl) => React.createElement("button", {
+    key: name,
+    type: "button",
+    "data-skill-motion": name,
+    "data-monster-check-skill-motion": name,
+    disabled: disabled,
+    onClick: () => {
+      Audio_.se.tap();
+      if (!disabled) onPlay(kind, name);
+    },
+    className: `shrink-0 min-h-[44px] rounded-xl border px-2.5 text-[10px] font-black leading-tight whitespace-nowrap active:scale-95 disabled:opacity-45 ${playingName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`
+  }, React.createElement("span", {
+    className: "block"
+  }, name), React.createElement("span", {
+    className: "block text-[8px] font-mono text-slate-400"
+  }, "Lv.", lvl)))))));
+};
 const BattleAttackMotionPreview = ({
   image,
   anim,
@@ -19574,6 +21106,9 @@ const persistRankingScore = async ({
 };
 const RANKING_RESEND_LIMIT = 10;
 const RANKING_RESEND_DELAY_MS = 4000;
+const RHYTHM_RANKING_RETRY_DELAYS_MS = [12000, 45000, 150000];
+const RHYTHM_RANKING_SUBMIT_WAIT_MS = 9000;
+const RHYTHM_RANKING_RESEND_WAIT_MS = 10000;
 const pendingLocalRankingEntries = list => (Array.isArray(list) ? list : []).filter(entry => entry && typeof entry === 'object' && entry.nationalSaved === false && typeof entry.clearId === 'string' && entry.clearId.length > 0 && Number.isFinite(Number(entry.score)));
 const RANKING_CREATED_AT_MIN_MS = Date.UTC(2024, 0, 1);
 const rankingCreatedAtFromLocal = atMs => {
@@ -24296,8 +25831,8 @@ const rhythmClockLabel = ms => {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 };
 const RHYTHM_TAP_REJUDGE_MOVE_SUBLANES = .20;
-const rhythmAbilityEmoji = abilityId => abilityId === 'GENKI' ? '💚' : abilityId === 'MUTEKI' ? '🛡️' : abilityId === 'GAMAN' ? '🧱' : abilityId === 'KONJO' ? '🔥' : '✨';
-const rhythmAbilityTone = abilityId => abilityId === 'GENKI' ? 'border-emerald-300/50 bg-emerald-950/40 text-emerald-100' : abilityId === 'MUTEKI' ? 'border-cyan-300/50 bg-cyan-950/40 text-cyan-100' : abilityId === 'GAMAN' ? 'border-amber-300/50 bg-amber-950/40 text-amber-100' : abilityId === 'KONJO' ? 'border-rose-300/50 bg-rose-950/40 text-rose-100' : 'border-white/20 bg-slate-900/60 text-slate-300';
+const rhythmAbilityEmoji = abilityId => abilityId === 'GENKI' ? '💚' : abilityId === 'MUTEKI' ? '🛡️' : abilityId === 'GAMAN' ? '🧱' : abilityId === 'KONJO' ? '🔥' : abilityId === 'HISSHI' ? '🎯' : '✨';
+const rhythmAbilityTone = abilityId => abilityId === 'GENKI' ? 'border-emerald-300/50 bg-emerald-950/40 text-emerald-100' : abilityId === 'MUTEKI' ? 'border-cyan-300/50 bg-cyan-950/40 text-cyan-100' : abilityId === 'GAMAN' ? 'border-amber-300/50 bg-amber-950/40 text-amber-100' : abilityId === 'KONJO' ? 'border-rose-300/50 bg-rose-950/40 text-rose-100' : abilityId === 'HISSHI' ? 'border-lime-300/50 bg-lime-950/40 text-lime-100' : 'border-white/20 bg-slate-900/60 text-slate-300';
 const rhythmAbilityRows = () => Object.values(RHYTHM_MONSTER_ABILITIES).map(ability => ({
   ability,
   lineages: Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE).filter(([, id]) => id === ability.id).map(([lineageId]) => lineageById(lineageId).name)
@@ -24347,7 +25882,7 @@ const RhythmMonsterNoteGuide = () => {
     className: "mt-1 text-[10px] font-bold leading-relaxed opacity-80"
   }, "主血統: ", lineages.join(' / '))))), React.createElement("p", {
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
-  }, "無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。 両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。 残り時間と根性を持っているかは、演奏中の画面の右上に出ます。")));
+  }, "無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。 両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。 必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。 残り時間と根性を持っているかは、演奏中の画面の右上に出ます。")));
 };
 const RhythmMonsterSlotsPanel = ({
   rhythmMonsterSlots,
@@ -25966,6 +27501,10 @@ const RhythmTapTest = ({
     const _judgeT0 = RHYTHM_PERF.enabled && typeof performance !== 'undefined' ? performance.now() : 0;
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
+    if (rhythmHisshiUpgrades(run.abilities, judgment, run.audio?.songTimeMs?.() ?? 0)) {
+      judgment = 'MARVELOUS';
+      deltaMs = 0;
+    }
     if (note.activePointerId !== null) {
       if (note.activePointerId !== -1) run.activePointers.delete(note.activePointerId);
       note.activePointerId = null;
@@ -26147,7 +27686,7 @@ const RhythmTapTest = ({
         };
         const slot = rhythmNoteMonsterSlot(note);
         run.abilityOwners = run.abilityOwners || {};
-        if (monster.ability.id === 'MUTEKI' || monster.ability.id === 'GAMAN') run.abilityOwners[monster.ability.id] = slot;
+        if (monster.ability.id === 'MUTEKI' || monster.ability.id === 'GAMAN' || monster.ability.id === 'HISSHI') run.abilityOwners[monster.ability.id] = slot;
         if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.abilityOwners.KONJO = slot;
         run.abilityFlashSlot = slot;
         run.abilityFlashUntilMs = songTimeMs + RHYTHM_SIDE_MONSTER_FLASH_MS;
@@ -26815,7 +28354,7 @@ const RhythmTapTest = ({
       if (canvasNotes) RHYTHM_CANVAS_RENDERER.end();
       RHYTHM_PERF.notes(perfScanned, perfDrawn, scanFrom, run.notesAscending);
       const badge = abilityBadgeRef.current;
-      const hasAbilityBadge = badge && (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 || Number(run.abilities?.konjoStock) > 0);
+      const hasAbilityBadge = badge && (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs) > 0 || Number(run.abilities?.konjoStock) > 0);
       if (badge && !hasAbilityBadge) {
         if (badge._rhythmBadgeText !== '') {
           badge.textContent = '';
@@ -26825,8 +28364,9 @@ const RhythmTapTest = ({
       }
       if (hasAbilityBadge) {
         const mutekiMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs),
-          gamanMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs);
-        const text = [mutekiMs > 0 ? `無敵 ${(mutekiMs / 1000).toFixed(1)}s` : '', gamanMs > 0 ? `我慢 ${(gamanMs / 1000).toFixed(1)}s` : '', Number(run.abilities?.konjoStock) > 0 ? '根性 ストック' : ''].filter(Boolean).join(' / ');
+          gamanMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs),
+          hisshiMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs);
+        const text = [mutekiMs > 0 ? `無敵 ${(mutekiMs / 1000).toFixed(1)}s` : '', gamanMs > 0 ? `我慢 ${(gamanMs / 1000).toFixed(1)}s` : '', hisshiMs > 0 ? `必死 ${(hisshiMs / 1000).toFixed(1)}s` : '', Number(run.abilities?.konjoStock) > 0 ? '根性 ストック' : ''].filter(Boolean).join(' / ');
         if (badge._rhythmBadgeText !== text) {
           badge.textContent = text;
           badge._rhythmBadgeText = text;
@@ -26838,6 +28378,7 @@ const RhythmTapTest = ({
         const active = new Set();
         if (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 && owners.MUTEKI) active.add(owners.MUTEKI);
         if (rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 && owners.GAMAN) active.add(owners.GAMAN);
+        if (rhythmMonsterAbilityRemainingMs(run.abilities, 'HISSHI', songTimeMs) > 0 && owners.HISSHI) active.add(owners.HISSHI);
         if (Number(run.abilities?.konjoStock) > 0 && owners.KONJO) active.add(owners.KONJO);
         if (run.abilityFlashSlot && songTimeMs < Number(run.abilityFlashUntilMs)) active.add(run.abilityFlashSlot);
         const signature = [...active].sort().join(',');
@@ -27166,6 +28707,7 @@ const RhythmTapTest = ({
         return;
       }
       if (!target) {
+        if (!input.rejudge) RHYTHM_PERF.emptyTap();
         RHYTHM_NOTE_SE_RUNTIME.playEmpty();
         if (input.captureTarget && input.pointerId !== undefined) {
           try {
@@ -27207,6 +28749,7 @@ const RhythmTapTest = ({
     const run = runRef.current,
       state = run?.inputFeedbackState?.get(inputKey);
     if (!state || !Number.isFinite(subLaneCoordinate)) return;
+    if (Math.abs(subLaneCoordinate - state.subLaneCoordinate) >= 3) RHYTHM_PERF.touchJump();
     if (Math.abs(subLaneCoordinate - state.subLaneCoordinate) < RHYTHM_TAP_REJUDGE_MOVE_SUBLANES) return;
     const subLane = Math.max(0, Math.min(RHYTHM_SUB_LANE_COUNT - 1, Math.floor(subLaneCoordinate)));
     if (subLane === state.subLane) return;
@@ -27286,6 +28829,43 @@ const RhythmTapTest = ({
       el.style.opacity = pressed ? glowOpacity : '0';
     });
   };
+  useEffect(() => {
+    if (typeof document === 'undefined' || view.status === 'result' || view.status === 'celebrate') return undefined;
+    const playing = () => {
+      const run = runRef.current;
+      return !!run && !run.finished && !run.paused;
+    };
+    const blockTouch = e => {
+      if (!playing()) return;
+      const area = playAreaRef.current,
+        target = e.target;
+      if (area && target && typeof area.contains === 'function' && area.contains(target)) return;
+      if (e.type === 'touchstart') RHYTHM_PERF.touchOutside();
+      if (target && typeof target.closest === 'function' && target.closest('button,a,input,select,textarea,label,[role="button"]')) return;
+      if (e.cancelable) e.preventDefault();
+    };
+    const blockGesture = e => {
+      if (!playing()) return;
+      RHYTHM_PERF.touchGesture();
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+    };
+    const touchTypes = ['touchstart', 'touchmove'],
+      gestureTypes = ['gesturestart', 'gesturechange'];
+    touchTypes.forEach(type => document.addEventListener(type, blockTouch, {
+      passive: false
+    }));
+    gestureTypes.forEach(type => document.addEventListener(type, blockGesture, {
+      passive: false
+    }));
+    return () => {
+      touchTypes.forEach(type => document.removeEventListener(type, blockTouch, {
+        passive: false
+      }));
+      gestureTypes.forEach(type => document.removeEventListener(type, blockGesture, {
+        passive: false
+      }));
+    };
+  }, [view.status]);
   const pointerDown = e => {
     if (e.pointerType === 'touch') return;
     e.preventDefault();
@@ -27344,6 +28924,7 @@ const RhythmTapTest = ({
       if (e.cancelable) e.preventDefault();
       const current = runRef.current;
       if (!current || current.finished || current.paused) return;
+      if (e.type === 'touchcancel') RHYTHM_PERF.touchCancel(e.changedTouches?.length || 0);else if (e.type === 'touchstart') RHYTHM_PERF.touchStart(e.touches?.length || 0);
       current.activeTouchInputs = current.activeTouchInputs || new Set();
       const rect = inputAreaRect(area),
         live = new Set(),
@@ -29346,12 +30927,39 @@ const TACTICS_EX_SKILLS = Object.freeze({
     defaultStyle: 'sword',
     heroInitialStyle: true,
     effect: 'weaponChange'
+  }),
+  Yggdrasil: Object.freeze({
+    id: 'yggdrasil_world_tree',
+    name: '世界樹の守り',
+    desc: '使ったターンから3ターンのあいだ、味方全員の被ダメージを30%減らし、ターンの終わりに味方全員のライフを上限の20%ずつ回復する。',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    partyTakenRate: 0.3,
+    partyRegenRate: 0.2,
+    effect: 'partyGuard'
+  }),
+  MelWhip: Object.freeze({
+    id: 'melwhip_sweets_paradise',
+    name: 'スイーツパラダイス',
+    desc: '使ったターンのメルホイップの攻撃に、与ダメージ30%の連撃を4回追加する。',
+    maxUses: 3,
+    unlimited: false,
+    withCards: true,
+    duration: 'turn',
+    extraCombos: Object.freeze({
+      count: 4,
+      rate: 0.3
+    }),
+    effect: 'comboBurst'
   })
 });
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'partyGuard', 'comboBurst']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -29393,6 +31001,12 @@ const normalizeTacticsExDef = raw => {
       return acc;
     }, {}),
     fullRecover: raw.fullRecover === true,
+    partyTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.partyTakenRate)) ? Number(raw.partyTakenRate) : 0)),
+    partyRegenRate: Math.max(0, Number.isFinite(Number(raw.partyRegenRate)) ? Number(raw.partyRegenRate) : 0),
+    extraCombos: raw.extraCombos && typeof raw.extraCombos === 'object' && tacticsSafeInt(raw.extraCombos.count, 0) > 0 && Number(raw.extraCombos.rate) > 0 ? {
+      count: tacticsSafeInt(raw.extraCombos.count, 0),
+      rate: Number(raw.extraCombos.rate)
+    } : null,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null
@@ -29565,6 +31179,11 @@ const applyTacticsExUse = (state, {
         regenRates: def.regenRates ? {
           ...def.regenRates
         } : null,
+        partyTakenRate: def.partyTakenRate || 0,
+        partyRegenRate: def.partyRegenRate || 0,
+        extraCombos: def.extraCombos ? {
+          ...def.extraCombos
+        } : null,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -29636,6 +31255,37 @@ const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
   const own = Number(effect.regenRates && effect.regenRates[kind]);
   const rate = Number.isFinite(own) ? own : Number(effect.regenRate);
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
+};
+const tacticsExPartyTakenMult = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((mult, key) => {
+    const slot = Number(key);
+    const unit = Array.isArray(units) ? units[slot] : null;
+    if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'partyGuard') return mult;
+    const rate = Number(effects[key].partyTakenRate);
+    return Number.isFinite(rate) && rate > 0 ? mult * (1 - Math.min(0.9, rate)) : mult;
+  }, 1);
+};
+const tacticsExPartyRegenRate = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const slot = Number(key);
+    const unit = Array.isArray(units) ? units[slot] : null;
+    if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'partyGuard') return sum;
+    const rate = Number(effects[key].partyRegenRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+const tacticsExExtraCombosAt = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'comboBurst') return null;
+  const own = normalizeTacticsExState(state).effects[slot].extraCombos;
+  const count = tacticsSafeInt(own && own.count, 0),
+    rate = Number(own && own.rate);
+  return count > 0 && Number.isFinite(rate) && rate > 0 ? {
+    count,
+    rate
+  } : null;
 };
 const applyTacticsExStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
@@ -30960,6 +32610,40 @@ function BreederMarketScreen({
       }),
       middle: middle
     });
+  }), RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer => {
+    const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
+    const mon = ALL_PLAYER_MONSTERS[offer.monsterId] || null;
+    const item = {
+      id: offer.id,
+      name: offer.name,
+      emoji: '💿',
+      icon: disc?.icon,
+      type: 'disc',
+      currency: 'beatPoint',
+      cost: offer.cost
+    };
+    const owned = isItemOwned({
+      id: offer.monsterId,
+      type: 'disc'
+    });
+    return React.createElement(MarketProductCard, {
+      key: offer.id,
+      dataAttrs: {
+        'data-event-point-disc': offer.id
+      },
+      item: item,
+      owned: owned,
+      comingSoon: false,
+      canBuy: !owned && safeEventPoints >= offer.cost && !busy,
+      disabled: purchaseProcessing,
+      onZoom: () => onZoomIcon(disc || item),
+      onBuy: () => openSheet({
+        item,
+        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
+      }),
+      detail: mon,
+      onDetail: () => mon && onOpenDetail(disc || item, mon, null)
+    });
   }), RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer => {
     const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
     const item = {
@@ -31775,10 +33459,11 @@ function MonsterAttackPreviewScreen({
     onStopPreview();
     onBackToDetail();
   };
-  const playAttackPreview = async kind => {
+  const playAttackPreview = async (kind, skillName = null) => {
     if (playingKind) return;
-    await onPlayPreview(mon, kind, atkMotion);
+    await onPlayPreview(mon, kind, atkMotion, skillName);
   };
+  const skillMotionLists = skillMotionListsOf(mon);
   const kindButton = (kind, label) => React.createElement("button", {
     key: kind,
     type: "button",
@@ -31829,7 +33514,12 @@ function MonsterAttackPreviewScreen({
     className: SCREEN_FOOTER_CLASS
   }, React.createElement("div", {
     className: "w-full max-w-md mx-auto flex gap-2"
-  }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技'))));
+  }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技')), React.createElement(SkillMotionPicker, {
+    lists: skillMotionLists,
+    playingName: playing?.skillName || null,
+    disabled: !!playingKind,
+    onPlay: (kind, name) => playAttackPreview(kind, name)
+  })));
 }
 function MonsterDexScreen({
   dexLineageFilter,
@@ -32996,6 +34686,8 @@ function RhythmRankingScreen({
   rhythmRankingDetail,
   rhythmRankingTab,
   rhythmTotalRanking,
+  rhythmRankingPending = null,
+  onResendRhythmRankingPending = null,
   setRhythmEventDivision,
   setRhythmRankingDetail,
   setRhythmRankingTab
@@ -33213,7 +34905,22 @@ function RhythmRankingScreen({
     "data-rhythm-ranking-tab": tab.id,
     onClick: () => openTab(tab.id),
     className: `min-h-[44px] flex-1 rounded-xl border px-2 text-[11px] font-black ${rhythmRankingTab === tab.id ? 'border-amber-300/60 bg-amber-500/15 text-amber-100' : 'border-white/10 bg-slate-900/60 text-slate-400'}`
-  }, tab.label))), React.createElement("div", {
+  }, tab.label))), rhythmRankingPending && rhythmRankingPending.count > 0 && React.createElement("div", {
+    "data-rhythm-ranking-pending": true,
+    className: "flex shrink-0 items-center gap-2 border-b border-amber-300/25 bg-amber-500/10 px-3 py-1.5"
+  }, React.createElement("p", {
+    className: "min-w-0 flex-1 text-[10px] font-black leading-tight text-amber-100"
+  }, "まだ届いていない記録が", rhythmRankingPending.count, "件あります", React.createElement("span", {
+    className: "block text-[9px] font-bold text-amber-200/70"
+  }, "つながると自動で送ります", rhythmRankingPending.status ? `（エラー ${rhythmRankingPending.status}）` : '（通信がつながらなかったようです）')), React.createElement("button", {
+    type: "button",
+    "data-rhythm-ranking-pending-send": true,
+    onClick: async () => {
+      if (onResendRhythmRankingPending) await onResendRhythmRankingPending();
+      refresh();
+    },
+    className: "min-h-[44px] shrink-0 rounded-lg border border-amber-300/50 bg-amber-500/20 px-3 text-[10px] font-black text-amber-50 active:scale-[.98]"
+  }, "いま送る")), React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
     style: {
       paddingBottom: 'calc(1.5rem + var(--mh-sa-bottom))'
@@ -41083,6 +42790,7 @@ function BattleScreen({
   getWaveBuff,
   guardCardWeight,
   guardFx,
+  guardImpact,
   guardLevel,
   guardValueOf,
   tacticsSlotGuardValue,
@@ -41327,6 +43035,13 @@ function BattleScreen({
     });
     return bySlot;
   };
+  const partyGuardSelected = !Array.isArray(tacticsUnits) && selectedCards.some(idx => guardCardWeight(hand[idx]) > 0);
+  const guardBarrierOnAt = slotIdx => {
+    if (!Array.isArray(tacticsUnits)) return partyGuardSelected;
+    const unit = tacticsUnits[slotIdx];
+    if (!unit || !(Number(unit.hp) > 0)) return false;
+    return tacticsSlotGuardValue(guardPlanOnce(), slotIdx) > 0;
+  };
   let guardPlanOnceCache;
   const guardPlanOnce = () => guardPlanOnceCache === undefined ? guardPlanOnceCache = plannedGuardBySlot() : guardPlanOnceCache;
   const previewBoostsOnceCache = new Map();
@@ -41347,6 +43062,19 @@ function BattleScreen({
       answer
     });
     return answer;
+  };
+  const plannedLifeTreeMult = slotIdx => {
+    const counter = makeCardHalveCounter();
+    let mult = 1;
+    selectedCards.forEach(idx => {
+      const card = hand[idx];
+      const owner = cardAssignments[idx] != null ? cardAssignments[idx] : null;
+      const halved = counter.take(card, owner);
+      if (!isLifeTreeGuardCard(card)) return;
+      if (Array.isArray(tacticsUnits) && owner !== slotIdx) return;
+      mult = lifeTreeGuardMult(cardEffectMultiplier(card, halved));
+    });
+    return mult;
   };
   const plannedHitFor = slotIdx => {
     const none = {
@@ -41384,6 +43112,7 @@ function BattleScreen({
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
+    if (hit.taken > 0) hit.taken *= plannedLifeTreeMult(slotIdx);
     const taken = applyTurnDamageReduction(hit.taken, slotIdx);
     if (!(taken > 0)) return {
       taken: 0,
@@ -41917,85 +43646,7 @@ function BattleScreen({
     }
   }, React.createElement("div", {
     className: `px-3 py-1 rounded-xl font-black text-[12px] border-2 shadow-[0_2px_16px_rgba(0,0,0,0.9)] ${slotSkill.type === 'unique' ? 'bg-purple-700 border-purple-200 text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]' : slotSkill.type === 'special' ? 'bg-amber-600 border-amber-200 text-white' : 'bg-red-700 border-red-200 text-white'}`
-  }, slotSkill.name)), document.body)), !ecoBattleView && guardFx && React.createElement("div", {
-    className: "fixed inset-0 pointer-events-none flex items-center justify-center",
-    style: {
-      zIndex: 64000
-    }
-  }, React.createElement("div", {
-    className: "absolute",
-    style: {
-      animation: 'guardShine 550ms ease-out forwards'
-    }
-  }, React.createElement("div", {
-    className: "text-[120px] drop-shadow-[0_0_30px_rgba(56,189,248,1)]"
-  }, "🛡️")), [0, 1, 2, 3, 4, 5].map(k => React.createElement("div", {
-    key: k,
-    className: "absolute",
-    style: {
-      transform: `rotate(${k * 60}deg)`
-    }
-  }, React.createElement("div", {
-    className: "rounded-full border-4 border-cyan-200",
-    style: {
-      width: '36px',
-      height: '36px',
-      animation: `guardSpark 500ms ease-out ${k * 25}ms forwards`
-    }
-  }))), React.createElement("div", {
-    className: "absolute font-black text-cyan-100 text-4xl tracking-widest drop-shadow-[0_0_16px_rgba(56,189,248,1)]",
-    style: {
-      top: '34%',
-      animation: 'guardShine 550ms ease-out forwards'
-    }
-  }, "キーン!"), React.createElement("div", {
-    className: "absolute inset-0",
-    style: {
-      background: 'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5) 0%, rgba(56,189,248,0.3) 20%, rgba(0,0,0,0) 45%)',
-      animation: 'guardFlash 350ms ease-out forwards'
-    }
-  })), !ecoBattleView && teachingFx && TEACHING_FX_STYLE[teachingFx.id] && (() => {
-    const fx = TEACHING_FX_STYLE[teachingFx.id];
-    return React.createElement("div", {
-      key: teachingFx.fxId,
-      className: "fixed inset-0 pointer-events-none flex items-center justify-center",
-      style: {
-        zIndex: 63000
-      }
-    }, React.createElement("div", {
-      className: "absolute",
-      style: {
-        animation: 'guardShine 550ms ease-out forwards'
-      }
-    }, React.createElement("div", {
-      className: "text-[110px] drop-shadow-[0_0_30px_rgba(255,255,255,0.9)]"
-    }, cardIconNode(fx.icon, 110))), [0, 1, 2, 3, 4, 5, 6, 7].map(k => React.createElement("div", {
-      key: k,
-      className: "absolute",
-      style: {
-        transform: `rotate(${k * 45}deg)`
-      }
-    }, React.createElement("div", {
-      className: `rounded-full border-4 ${fx.ring}`,
-      style: {
-        width: '30px',
-        height: '30px',
-        animation: `guardSpark 550ms ease-out ${k * 20}ms forwards`
-      }
-    }))), React.createElement("div", {
-      className: `absolute font-black text-3xl tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${fx.text}`,
-      style: {
-        top: '32%',
-        animation: 'guardShine 550ms ease-out forwards'
-      }
-    }, fx.label), React.createElement("div", {
-      className: "absolute inset-0",
-      style: {
-        background: `radial-gradient(circle at 50% 45%, rgba(${fx.rgb},0.5) 0%, rgba(${fx.rgb},0.25) 22%, rgba(0,0,0,0) 48%)`,
-        animation: 'guardFlash 400ms ease-out forwards'
-      }
-    }));
-  })(), isMooBoss(enemy?.id) && enemy?.imgUrl && React.createElement("div", {
+  }, slotSkill.name)), document.body)), isMooBoss(enemy?.id) && enemy?.imgUrl && React.createElement("div", {
     "data-enemy-motion": enemyMotion || undefined,
     "data-moo-stage": enemyMotion ? 'true' : undefined,
     "data-enemy-skill": enemySkillNow || undefined,
@@ -43094,14 +44745,17 @@ function BattleScreen({
           zIndex: 30
         } : {})
       }
-    }, tacticsExCutin && tacticsExCutin.slotIndex === i && React.createElement("span", {
+    }, tacticsExCutin && (tacticsExCutin.slotIndex === i || (tacticsExCutin.slotIndexes || []).includes(i)) && React.createElement("span", {
       key: tacticsExCutin.key,
       "data-tactics-ex-aura": tacticsExCutin.effect || 'default',
       className: "ex-aura",
       "aria-hidden": "true",
       style: {
-        '--ex-c1': tacticsExCutinTheme(tacticsExCutin.effect).c1,
-        '--ex-c2': tacticsExCutinTheme(tacticsExCutin.effect).c2
+        '--ex-c1': battleCutinThemeOf(tacticsExCutin).c1,
+        '--ex-c2': battleCutinThemeOf(tacticsExCutin).c2,
+        ...(tacticsExCutin.ms ? {
+          animationDuration: `${tacticsExCutin.ms}ms`
+        } : {})
       }
     }, React.createElement("i", null), React.createElement("i", null)), slotHitKind && (() => {
       const hitFx = TACTICS_SLOT_FX_STYLE[slotHitKind];
@@ -43530,7 +45184,19 @@ function BattleScreen({
         fontSize: '40px'
       },
       className: "z-10 drop-shadow-md"
-    }, s?.emoji || ''), isAnimating && attackAnim.twinBlade && React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && React.createElement(EikiSakuraPetals, null)), tacticsUnit && tacticsUnit.downed && (() => {
+    }, s?.emoji || ''), s && !ecoBattleView && (() => {
+      const tier = guardBarrierTierOf(guardLevel);
+      const impact = guardImpact?.bySlot?.[i];
+      if (impact) return React.createElement(GuardBarrier, {
+        key: `gi-${guardImpact.key}`,
+        tier: tier,
+        state: impact
+      });
+      return !isBusy && guardBarrierOnAt(i) ? React.createElement(GuardBarrier, {
+        tier: tier,
+        state: "idle"
+      }) : null;
+    })(), isAnimating && attackAnim.twinBlade && React.createElement(KenshiTwinSlash, null), isAnimating && attackAnim.sakura && React.createElement(EikiSakuraPetals, null)), tacticsUnit && tacticsUnit.downed && (() => {
       const revivePct = tacticsUnit.maxHp > 0 ? Math.floor(tacticsUnit.hp / tacticsUnit.maxHp * 100) : 0;
       return React.createElement("div", {
         "data-tactics-down-mark": i,
@@ -45201,7 +46867,9 @@ function MonsterCheckDebugScreen({
     }, "一致するモンスターはいません。")));
   }
   if (view === 'motion') {
-    const skillMotionLists = typeof SKILL_ATTACK_THEME_MONSTERS !== 'undefined' && SKILL_ATTACK_THEME_MONSTERS.includes(mon.id) ? [['normal', '通常技', typeof HERO_ATK_NAMES !== 'undefined' && HERO_ATK_NAMES[mon.id] || []], ['unique', '固有技', mon.unique?.names || mon.draftUniqueNames || []]].filter(([,, names]) => names.length) : null;
+    const skillMotionLists = skillMotionListsOf(mon, {
+      draft: true
+    });
     const kindButton = (kind, label) => React.createElement("button", {
       key: kind,
       type: "button",
@@ -45265,29 +46933,13 @@ function MonsterCheckDebugScreen({
     }, React.createElement("div", {
       className: "mx-auto flex w-full max-w-md gap-2"
     }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技')), skillMotionLists && React.createElement("div", {
-      "data-monster-check-skill-motions": true,
-      className: "mx-auto mt-2 w-full max-w-md max-h-[30vh] overflow-y-auto mh-scroll space-y-1.5"
-    }, skillMotionLists.map(([kind, label, names]) => React.createElement("div", {
-      key: kind
-    }, React.createElement("div", {
-      className: "mb-1 text-[9px] font-black tracking-widest text-cyan-300/80"
-    }, label), React.createElement("div", {
-      className: "grid grid-cols-3 gap-1.5"
-    }, names.map((name, lvl) => React.createElement("button", {
-      key: name,
-      type: "button",
-      "data-monster-check-skill-motion": name,
+      "data-monster-check-skill-motions": true
+    }, React.createElement(SkillMotionPicker, {
+      lists: skillMotionLists,
+      playingName: playing?.skillName || null,
       disabled: !!playing,
-      onClick: () => {
-        Audio_.se.tap();
-        if (!playing) onPlayPreview(mon, kind, atkMotion, name);
-      },
-      className: `min-h-[40px] min-w-0 rounded-xl border px-1 text-[10px] font-black leading-tight active:scale-95 disabled:opacity-45 ${playing?.skillName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`
-    }, React.createElement("span", {
-      className: "block truncate"
-    }, name), React.createElement("span", {
-      className: "block text-[8px] font-mono text-slate-400"
-    }, "Lv.", lvl)))))))));
+      onPlay: (kind, name) => onPlayPreview(mon, kind, atkMotion, name)
+    }))));
   }
   const tabs = [['check', 'チェック'], ['art', '画像'], ['stats', '能力'], ['skills', '技'], ['data', 'データ']];
   const row = (label, value, {
@@ -46312,6 +47964,7 @@ function MonsterHeroGame() {
     setSlotSettle(null);
     setEnemySkillName(null);
     setGuardFx(false);
+    setGuardImpact(null);
     setEnemyAttackAnim(false);
     setEnemyAttackFx(null);
   };
@@ -46574,6 +48227,7 @@ function MonsterHeroGame() {
   }, []);
   const [enemySkillName, setEnemySkillName] = useState(null);
   const [guardFx, setGuardFx] = useState(false);
+  const [guardImpact, setGuardImpact] = useState(null);
   const [teachingFx, setTeachingFx] = useState(null);
   const [enemyAttackAnim, setEnemyAttackAnim] = useState(false);
   const [enemyAttackFx, setEnemyAttackFx] = useState(null);
@@ -46725,11 +48379,12 @@ function MonsterHeroGame() {
       hp = alive.hp,
       guts = alive.guts;
     const live = tacticsExLiveRef.current;
+    const partyHpBoost = live.enabled ? tacticsExPartyRegenRate(tacticsExStateRef.current, units, live.now) : 0;
     if (live.enabled) tacticsAliveSlots(units).forEach(slotIdx => {
       const hpBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'hp');
       const gutsBoost = tacticsExRegenRateAt(tacticsExStateRef.current, units, slotIdx, live.now, 'guts');
-      if (hpBoost <= 0 && gutsBoost <= 0) return;
-      const extra = rateHealTacticsAt(units, slotIdx, hpBoost, gutsBoost);
+      if (hpBoost + partyHpBoost <= 0 && gutsBoost <= 0) return;
+      const extra = rateHealTacticsAt(units, slotIdx, hpBoost + partyHpBoost, gutsBoost);
       units = extra.units;
       hp += extra.hp;
       guts += extra.guts;
@@ -48150,6 +49805,8 @@ function MonsterHeroGame() {
       error: null
     }));
     try {
+      await settleRhythmRankingSubmit();
+      if (rhythmTotalRankingRequestRef.current !== requestId) return;
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
       const rows = await sbFetchRhythmTotalRankings({
@@ -48273,6 +49930,8 @@ function MonsterHeroGame() {
       };
     });
     try {
+      await settleRhythmRankingSubmit();
+      if (stale()) return;
       const breederId = await ensureBreederId();
       const selfKeys = rhythmTotalRankingSelfKeys(breederId, breederName);
       const weekWindow = kind === 'weekly' ? await sbFetchRhythmWeekWindow({
@@ -48409,6 +50068,60 @@ function MonsterHeroGame() {
     loadRhythmHistoryBoard(entry, RHYTHM_EVENT_TOTAL_DIVISION);
   };
   const rhythmRankingRequestRef = useRef(0);
+  const [rhythmRankingPending, setRhythmRankingPending] = useState({
+    count: 0,
+    status: null,
+    message: ''
+  });
+  const refreshRhythmRankingPending = useCallback(async () => {
+    try {
+      const pending = await storeGet(RHYTHM_RANKING_PENDING_KEY, [], false);
+      const list = Array.isArray(pending) ? pending.filter(row => row && row.clear_id) : [];
+      const last = list.length ? list[list.length - 1] : null;
+      const status = Number.isFinite(Number(last?.error?.status)) && last.error.status !== null ? Number(last.error.status) : null;
+      const message = typeof last?.error?.message === 'string' ? last.error.message.slice(0, 160) : '';
+      setRhythmRankingPending(prev => prev.count === list.length && prev.status === status && prev.message === message ? prev : {
+        count: list.length,
+        status,
+        message
+      });
+      return list.length;
+    } catch (_) {
+      return 0;
+    }
+  }, []);
+  const rhythmRankingSubmitRef = useRef(Promise.resolve());
+  const resendPendingRankingScoresRef = useRef(null);
+  const rhythmRankingRetryTimersRef = useRef([]);
+  const withRhythmRankingTimeout = (promise, ms) => new Promise(resolve => {
+    const timer = setTimeout(resolve, ms);
+    Promise.resolve(promise).then(() => {
+      clearTimeout(timer);
+      resolve();
+    }, () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+  const settleRhythmRankingSubmit = useCallback(async () => {
+    await withRhythmRankingTimeout(rhythmRankingSubmitRef.current, RHYTHM_RANKING_SUBMIT_WAIT_MS);
+    const count = await refreshRhythmRankingPending();
+    if (count > 0 && typeof resendPendingRankingScoresRef.current === 'function') {
+      await withRhythmRankingTimeout(resendPendingRankingScoresRef.current(), RHYTHM_RANKING_RESEND_WAIT_MS);
+      await refreshRhythmRankingPending();
+    }
+  }, [refreshRhythmRankingPending]);
+  const scheduleRhythmRankingRetry = useCallback(() => {
+    rhythmRankingRetryTimersRef.current.forEach(id => clearTimeout(id));
+    rhythmRankingRetryTimersRef.current = RHYTHM_RANKING_RETRY_DELAYS_MS.map(ms => setTimeout(async () => {
+      try {
+        if ((await refreshRhythmRankingPending()) > 0 && typeof resendPendingRankingScoresRef.current === 'function') {
+          await resendPendingRankingScoresRef.current();
+          await refreshRhythmRankingPending();
+        }
+      } catch (_) {}
+    }, ms));
+  }, [refreshRhythmRankingPending]);
   const loadRhythmRanking = useCallback(async song => {
     if (!song) return;
     const requestId = ++rhythmRankingRequestRef.current;
@@ -48419,6 +50132,8 @@ function MonsterHeroGame() {
       songId: song.songId
     });
     try {
+      await settleRhythmRankingSubmit();
+      if (rhythmRankingRequestRef.current !== requestId) return;
       const keys = rhythmRankingCombinedMembers(song.songId);
       let rows = [];
       for (let page = 0; page < RHYTHM_RANKING_MAX_PAGES; page++) {
@@ -48445,8 +50160,8 @@ function MonsterHeroGame() {
         songId: song.songId
       });
     }
-  }, []);
-  const submitRhythmRankingScore = useCallback(async (song, difficulty, result) => {
+  }, [settleRhythmRankingSubmit]);
+  const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {
     const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id);
     if (!difficultyKey) return;
     const detail = {
@@ -48500,7 +50215,14 @@ function MonsterHeroGame() {
       difficulty: difficultyKey,
       score: row.score
     });
-  }, [breederName, breederLevel, breederIcon, profileFrameId]);
+    await refreshRhythmRankingPending();
+    if (!outcome.nationalSaved) scheduleRhythmRankingRetry();
+  }, [breederName, breederLevel, breederIcon, profileFrameId, refreshRhythmRankingPending, scheduleRhythmRankingRetry]);
+  const submitRhythmRankingScore = useCallback((song, difficulty, result) => {
+    const task = submitRhythmRankingScoreBody(song, difficulty, result);
+    rhythmRankingSubmitRef.current = task.catch(() => {});
+    return task;
+  }, [submitRhythmRankingScoreBody]);
   const resendPendingRankingRef = useRef(false);
   const resendPendingRankingScores = async (limit = RANKING_RESEND_LIMIT) => {
     if (resendPendingRankingRef.current) return {
@@ -48589,12 +50311,20 @@ function MonsterHeroGame() {
       failed
     };
   };
+  resendPendingRankingScoresRef.current = resendPendingRankingScores;
+  const resendRhythmRankingPendingNow = async () => {
+    try {
+      await resendPendingRankingScores();
+    } catch (_) {}
+    await refreshRhythmRankingPending();
+  };
   const resendCheckedRef = useRef(false);
   useEffect(() => {
     if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || resendCheckedRef.current) return;
     resendCheckedRef.current = true;
-    const id = setTimeout(() => {
-      resendPendingRankingScores();
+    const id = setTimeout(async () => {
+      await resendPendingRankingScores();
+      refreshRhythmRankingPending();
     }, RANKING_RESEND_DELAY_MS);
     return () => clearTimeout(id);
   }, [bootPhase, gameState, dataLoaded, onboarded]);
@@ -52086,15 +53816,19 @@ function MonsterHeroGame() {
       const beforeGold = Math.max(0, Math.floor(Number(gold) || 0));
       const beforeItems = ownedItemsRef.current;
       setRhythmEventPoints(beforePoints);
+      const isDisc = offer?.kind === 'disc';
+      const storedUnlocked = isDisc ? await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false) : null;
+      const beforeUnlocked = Array.isArray(storedUnlocked) ? storedUnlocked : unlockedMonsterIds;
       const exchange = rhythmEventPointExchangePreview({
         offer,
         eventPoints: beforePoints,
         gold: beforeGold,
         ownedItems: beforeItems,
-        quantity
+        quantity,
+        unlockedMonsterIds: beforeUnlocked
       });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : 'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? 'このモンスターはもう持っています。' : 'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([{
@@ -52109,7 +53843,11 @@ function MonsterHeroGame() {
         key: 'mh_owned_items',
         before: beforeItems,
         next: exchange.ownedItems
-      }], storeGet, storeSet);
+      }, ...(isDisc ? [{
+        key: 'mh_unlocked_monsters',
+        before: storedUnlocked,
+        next: exchange.unlockedMonsterIds
+      }] : [])], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
         return {
@@ -52121,6 +53859,16 @@ function MonsterHeroGame() {
       setGold(exchange.gold);
       ownedItemsRef.current = exchange.ownedItems;
       setOwnedItems(exchange.ownedItems);
+      if (isDisc) {
+        setUnlockedMonsterIds(exchange.unlockedMonsterIds);
+        if (monsterRosterIds.length < STARTER_MONSTER_IDS.length) {
+          const rosters = monsterPartySets.rosters.map((roster, index) => index === monsterPartySets.activeIndex ? [...roster, exchange.monsterId] : roster);
+          saveMonsterPartySets({
+            ...monsterPartySets,
+            rosters
+          });
+        }
+      }
       saveMissionProgress('market');
       return exchange;
     } catch {
@@ -55843,12 +57591,12 @@ function MonsterHeroGame() {
     const targetUnit = isTacticsMode(runMode) && Number.isInteger(targetSlot) ? tacticsBattleUnit(targetSlot) : null;
     const defVal = targetUnit ? resolveEffectiveMaxStat(normalizeTacticsUnit(targetUnit).def, getPermaBuff('defPct')) : effectiveDef;
     const defenseRate = Math.min(0.5, defVal * 0.00015);
-    const dmgBase = Math.max(30, (atkVal - defVal * 0.5) * (1 - defenseRate)) * (traitHeroId === 'Mocchi' || traitHeroId === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
+    const dmgBase = Math.max(30, (atkVal - defVal * 0.5) * (1 - defenseRate)) * (traitHeroId === 'Mocchi' || traitHeroId === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0) * lifeSourceDamageMult(traitHeroId, turnCount);
     const soulDamageRemaining = Math.max(0, 1 - soulBattleParty.damageReduction / 100);
     return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult * soulDamageRemaining));
-  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode]);
+  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction, runMode, turnCount]);
   const traitOwnerOf = mon => isTacticsMode(runMode) ? mon?.id || null : mainHero?.id || null;
-  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0))) : 0, [turnBuffs, runMode]);
+  const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage > 0 ? Math.max(1, Math.floor(damage * getTurnBuff('takenDamageMult', 1.0) * tacticsSlotRate(isTacticsMode(runMode) ? turnBuffs.bySlot : null, slotIdx, 'takenDamageMult', 1.0) * (isTacticsMode(runMode) ? tacticsExPartyTakenMultNow() : 1))) : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback(intent => applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(intent)), [getIncomingDamageBeforeTurnReduction, applyTurnDamageReduction]);
   const BATTLE_LOG_LIMIT = 60;
   const battleActorName = slotIdx => slots[slotIdx]?.masuName || slots[slotIdx]?.name || '味方';
@@ -55890,14 +57638,25 @@ function MonsterHeroGame() {
     setTimeout(() => setPopups(p => p.filter(x => x.id !== id)), battleMs(2500));
     if (log !== false) pushBattleLog(typeof log === 'string' ? log : battleLogLineFromPopup(text, side));
   };
-  const fireTeachingFx = id => {
-    if (!TEACHING_FX_STYLE[id]) return;
-    const fxId = Date.now() + Math.random();
-    setTeachingFx({
-      id,
-      fxId
-    });
-    setTimeout(() => setTeachingFx(p => p && p.fxId === fxId ? null : p), battleMs(900));
+  const fireTeachingFx = (id, name = null) => {
+    const fx = TEACHING_FX_STYLE[id];
+    if (!fx || ecoBattleView) return;
+    const card = TEACHING_CARDS.find(t => t.id === id);
+    showTacticsExCutin({
+      variant: 'assist',
+      effect: id,
+      theme: {
+        c1: fx.c1,
+        c2: fx.c2,
+        motif: fx.motif || 'rise'
+      },
+      icon: card?.icon || fx.icon,
+      cardId: id,
+      exName: name || card?.baseName || fx.label,
+      monName: fx.label,
+      tag: 'ASSIST',
+      slotIndexes: slots.map((s, i) => s ? i : null).filter(i => i != null)
+    }, battleMs(1100));
   };
   const cardNeedsMonster = card => {
     if (!card) return false;
@@ -55969,6 +57728,15 @@ function MonsterHeroGame() {
     if (!live.enabled || !Number.isInteger(slotIdx)) return null;
     const unit = tacticsUnitsRef.current?.[slotIdx];
     return unit ? tacticsExActiveStyle(tacticsExStateRef.current, slotIdx, unit.id, live.now) : null;
+  };
+  const tacticsExCombosAt = slotIdx => {
+    const live = tacticsExLiveRef.current;
+    if (!live.enabled || !Number.isInteger(slotIdx)) return null;
+    return tacticsExExtraCombosAt(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, live.now);
+  };
+  const tacticsExPartyTakenMultNow = () => {
+    const live = tacticsExLiveRef.current;
+    return live.enabled ? tacticsExPartyTakenMult(tacticsExStateRef.current, tacticsUnitsRef.current, live.now) : 1;
   };
   const tacticsBattleUnit = slotIdx => {
     const unit = tacticsUnitsRef.current?.[slotIdx];
@@ -56407,7 +58175,8 @@ function MonsterHeroGame() {
       mainCanCrit: card.subType !== 'stun_atsu',
       comboFinalMultiplier: soulAttack.comboFinalMultiplier,
       swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
-      hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1
+      hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
+      exCombos: tacticsExCombosAt(slotIdx)
     });
     return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
@@ -56545,6 +58314,13 @@ function MonsterHeroGame() {
   };
   const handleEnemyTurn = async (lastActionType, immediateEffects = {}, overrideIntent = null, hpAtAttackStart = hp, enemyHpAtAttackStart = enemy?.hp ?? 0) => {
     if (!enemy) return;
+    const immediateTakenMultAt = (slotIdx = null) => {
+      const bySlot = immediateEffects.takenMultBySlot;
+      const raw = Number.isInteger(slotIdx) && bySlot ? bySlot[slotIdx] : immediateEffects.takenMult;
+      const v = Number(raw);
+      return Number.isFinite(v) && v > 0 ? v : 1;
+    };
+    const applyImmediateTakenReduction = (damage, slotIdx = null) => applyTurnDamageReduction(damage > 0 ? damage * immediateTakenMultAt(slotIdx) : damage, slotIdx);
     const intent = overrideIntent || enemyIntent;
     setEnemySkillName({
       label: intent.label,
@@ -56666,7 +58442,7 @@ function MonsterHeroGame() {
           await battleWait(600);
         }
         const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(actingIntent);
-        const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
+        const incomingDmg = applyImmediateTakenReduction(incomingBeforeTurnReduction);
         const aimedSlots = isTacticsMode(runMode) ? tacticsTargetsNow(intent, actingEnemyDist) : null;
         const defenseSlot = aimedSlots && aimedSlots.length ? aimedSlots[Math.floor(Math.random() * aimedSlots.length)] : null;
         const defenseHeroId = !isTacticsMode(runMode) ? mainHero?.id : defenseSlot != null ? tacticsUnitsRef.current[defenseSlot]?.id || null : null;
@@ -56722,7 +58498,7 @@ function MonsterHeroGame() {
         setEnemyAttackFx(null);
         if (isReflect && (forcedReflect || !isTacticsMode(runMode))) {
           const reflectSlots = isTacticsMode(runMode) ? tacticsTargetsNow(intent, actingEnemyDist) : null;
-          const reflectDmg = reflectSlots ? reflectSlots.reduce((sum, slotIdx) => sum + applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent, slotIdx), slotIdx), 0) : incomingDmg;
+          const reflectDmg = reflectSlots ? reflectSlots.reduce((sum, slotIdx) => sum + applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent, slotIdx), slotIdx), 0) : incomingDmg;
           addPopup("反射！", 'hero', 'text-purple-400 font-black text-2xl drop-shadow-lg');
           await battleWait(600);
           if (reflectDmg <= 0) {
@@ -56751,7 +58527,7 @@ function MonsterHeroGame() {
               hpGain = 0,
               gutsGain = 0;
             if (absorbSlot != null) {
-              const gain = applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent, absorbSlot), absorbSlot);
+              const gain = applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent, absorbSlot), absorbSlot);
               const guts = Math.floor(gain * 0.1);
               hpGain = gain;
               gutsGain = guts;
@@ -56815,7 +58591,7 @@ function MonsterHeroGame() {
               }
               if (slotIdx === reflectedSlot) {
                 reflectedName = tacticsTargetName(units, slotIdx);
-                reflectBack += applyTurnDamageReduction(getIncomingDamageBeforeTurnReduction(actingIntent, slotIdx), slotIdx);
+                reflectBack += applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent, slotIdx), slotIdx);
                 slotFx[slotIdx] = {
                   reflect: true
                 };
@@ -56837,7 +58613,7 @@ function MonsterHeroGame() {
               const fx = slotFx[slotIdx] || (slotFx[slotIdx] = {});
               if (slotGuard > 0) fx.guard = true;
               if (hit.taken > 0) {
-                const fd = applyTurnDamageReduction(hit.taken, slotIdx);
+                const fd = applyImmediateTakenReduction(hit.taken, slotIdx);
                 units = damageTacticsTargets(units, [slotIdx], fd);
                 dealt += fd;
                 fx.dmg = (fx.dmg || 0) + fd;
@@ -56888,6 +58664,11 @@ function MonsterHeroGame() {
               await battleWait(700);
             }
             if (guardedCount > 0) {
+              const impact = {};
+              Object.entries(slotFx).forEach(([key, fx]) => {
+                if (fx?.guard) impact[key] = (Number(fx.dmg) || 0) > 0 ? 'break' : 'block';
+              });
+              showGuardImpact(impact);
               setGuardFx(true);
               Audio_.se.guard();
               triggerShake();
@@ -56921,13 +58702,14 @@ function MonsterHeroGame() {
         } else if (guardValue > 0) {
           tookEnemyAttack = true;
           const diff = guardValue - incomingBeforeTurnReduction;
+          showGuardImpact(Object.fromEntries(slots.map((s, i) => [i, s]).filter(([, s]) => s).map(([i]) => [i, diff < 0 ? 'break' : 'block'])));
           setGuardFx(true);
           Audio_.se.guard();
           triggerShake();
           await battleWait(550);
           setGuardFx(false);
           if (diff < 0) {
-            const fd = applyTurnDamageReduction(Math.abs(diff));
+            const fd = applyImmediateTakenReduction(Math.abs(diff));
             const remainingHp = calculateRemainingHp(currentHp, fd);
             currentHp = remainingHp;
             addPopup(`貫通! -${fd}`, 'hero', 'text-pink-600 text-3xl font-black drop-shadow-lg');
@@ -57018,6 +58800,22 @@ function MonsterHeroGame() {
       if (showRegenTotal) addPopup(`🌿 自動ガッツ +${gutsRegen}`, 'guts', 'text-cyan-300 font-black text-lg italic drop-shadow-md');
       didRegen = true;
     }
+    {
+      const lifeSourceTurn = turnCount + 1;
+      let lifeSourceGain = 0;
+      if (isTacticsMode(runMode)) {
+        tacticsAliveSlots(tacticsUnitsRef.current).forEach(slotIdx => {
+          if (lifeSourceGutsTurn(tacticsUnitsRef.current[slotIdx]?.id, lifeSourceTurn)) lifeSourceGain += gainGutsByRate(slotIdx, LIFE_SOURCE_GUTS_RATE);
+        });
+      } else if (lifeSourceGutsTurn(mainHero?.id, lifeSourceTurn)) {
+        lifeSourceGain = Math.floor(liveEffectiveMaxGuts() * LIFE_SOURCE_GUTS_RATE);
+        if (lifeSourceGain > 0) gainGuts(lifeSourceGain);
+      }
+      if (lifeSourceGain > 0) {
+        addPopup(`🌳 生命の源 ガッツ +${lifeSourceGain}`, 'guts', 'text-lime-300 font-black text-lg italic drop-shadow-md');
+        didRegen = true;
+      }
+    }
     if (didRegen) {
       await battleWait(500);
     }
@@ -57054,22 +58852,20 @@ function MonsterHeroGame() {
     if (isBusy || hp <= 0) return;
     setIsBusy(true);
     Audio_.se.heal();
-    if (isTacticsMode(runMode) && normalizeBattleScreenStyle(battleScreenStyle) === 'TACTICS_NEW') {
+    if (ecoBattleView) {
       addPopup('💊 緊急回復', 'hero', 'text-emerald-300 font-black', false);
-      await battleWait(500);
     } else {
-      setEffect({
-        type: 'heal',
-        label: "緊急回復",
-        icon: "💊",
-        monEmoji: mainHero?.emoji || "🏥",
-        imgUrl: mainHero?.imgUrl,
-        baseId: mainHero?.id,
-        colors: mainHero?.colors
-      });
-      await battleWait(500);
-      setEffect(null);
+      showTacticsExCutin({
+        variant: 'emergency',
+        effect: 'heal',
+        icon: '💊',
+        tag: 'EMERGENCY',
+        exName: '緊急回復',
+        monName: '味方のライフとガッツを30%ずつ回復',
+        slotIndexes: slots.map((s, i) => s ? i : null).filter(i => i != null)
+      }, battleMs(1300));
     }
+    await battleWait(500);
     const emergency = tacticsRateHeal(0.3, 0.3);
     let recoverHp = 0,
       recoverGuts = 0,
@@ -57165,16 +58961,28 @@ function MonsterHeroGame() {
   const TACTICS_EX_ON_USE = {};
   const [tacticsExCutin, setTacticsExCutin] = useState(null);
   const tacticsExCutinTimerRef = useRef(null);
-  const showTacticsExCutin = cutin => {
+  const showGuardImpact = bySlot => {
+    if (ecoBattleView || !bySlot || !Object.keys(bySlot).length) return;
+    const key = Date.now() + Math.random();
+    setGuardImpact({
+      key,
+      bySlot
+    });
+    setTimeout(() => setGuardImpact(p => p && p.key === key ? null : p), battleMs(820));
+  };
+  const showTacticsExCutin = (cutin, ms = TACTICS_EX_CUTIN_MS) => {
     if (tacticsExCutinTimerRef.current) clearTimeout(tacticsExCutinTimerRef.current);
     setTacticsExCutin({
       ...cutin,
-      key: Date.now()
+      key: Date.now(),
+      ...(ms !== TACTICS_EX_CUTIN_MS ? {
+        ms
+      } : {})
     });
     tacticsExCutinTimerRef.current = setTimeout(() => {
       tacticsExCutinTimerRef.current = null;
       setTacticsExCutin(null);
-    }, TACTICS_EX_CUTIN_MS);
+    }, ms);
   };
   const activateTacticsEx = (slotIdx, choice = null) => {
     if (!tacticsExEnabled || isBusy || autoBattleRef.current) return false;
@@ -57315,6 +59123,8 @@ function MonsterHeroGame() {
       immediateStun = false,
       currentTurnGuardFlat = 0,
       currentTurnGuardMult = 0;
+    let immediateTakenMult = 1;
+    const immediateTakenMultBySlot = {};
     const guardBySlot = {};
     const addGuardForSlot = (idx, flat, mult, weight) => {
       if (!Number.isInteger(idx)) return;
@@ -57372,7 +59182,7 @@ function MonsterHeroGame() {
       await battleWait(250);
       if (card.type === 'draw') continue;
       if (card.type === 'buff' || card.type === 'debuff') {
-        fireTeachingFx(card.id);
+        fireTeachingFx(card.id, card.name || card.baseName);
         if (card.subType === 'atk_buff') {
           addPopup(`攻撃UP!`, 'hero', 'text-red-400 font-black text-2xl drop-shadow-md');
           const boost = localBoostFromCard(card).oryo * effMul;
@@ -57417,7 +59227,8 @@ function MonsterHeroGame() {
             rollCrit: () => Math.random() < Math.min(1, (card.crit || 0.1) + getPermaBuff('critRatePct') + soulAttack.critRateBonus),
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
             mainCanCrit: false,
-            comboFinalMultiplier: soulAttack.comboFinalMultiplier
+            comboFinalMultiplier: soulAttack.comboFinalMultiplier,
+            exCombos: tacticsExCombosAt(slotIdx)
           });
           totalDmg += d;
           attackCount++;
@@ -57477,7 +59288,7 @@ function MonsterHeroGame() {
         }
       } else if (card.type === 'heal') {
         Audio_.se.heal();
-        fireTeachingFx(card.id);
+        fireTeachingFx(card.id, card.name || card.baseName);
         const owned = ownedTeachings.find(t => t.id === card.id);
         const level = owned ? owned.evoLevel : 0;
         if (card.id === 'meloso') {
@@ -57581,7 +59392,8 @@ function MonsterHeroGame() {
           globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
           comboFinalMultiplier: soulAttack.comboFinalMultiplier,
           swordSkill: tacticsExStyleAt(slotIdx) !== 'shield',
-          hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1
+          hitRepeat: tacticsExStyleAt(slotIdx) === 'dual' ? TACTICS_EX_DUAL_HIT_REPEAT : 1,
+          exCombos: tacticsExCombosAt(slotIdx)
         });
         const isCrit = hits[0].crit;
         const finalD = hits[0].dmg;
@@ -57673,6 +59485,27 @@ function MonsterHeroGame() {
               setNextTurnBuff('gutsCostMult', 1.15);
             }
             addPopup('次ターン被ダメ50%減!', 'hero', 'text-pink-400 text-lg font-bold');
+          } else if (card.monId === 'Yggdrasil' || card.monId === 'MelWhip') {
+            const gRec = gainGutsByRate(slotIdx, 0.2 * effMul);
+            const guardMult = lifeTreeGuardMult(effMul);
+            if (isTacticsMode(runMode)) {
+              immediateTakenMultBySlot[slotIdx] = guardMult;
+              writeNextTurnBuffs(p => ({
+                ...p,
+                bySlot: withTacticsSlotBuff(p.bySlot, slotIdx, 'takenDamageMult', tacticsSlotRate(p.bySlot, slotIdx, 'takenDamageMult', 1.0) * guardMult)
+              }));
+            } else {
+              immediateTakenMult = guardMult;
+              writeNextTurnBuffs(p => {
+                const cur = Number(p.takenDamageMult);
+                return {
+                  ...p,
+                  takenDamageMult: (Number.isFinite(cur) && cur > 0 ? cur : 1) * guardMult
+                };
+              });
+            }
+            addPopup(`大樹の加護！ 2ターン被ダメ${Math.round(LIFE_TREE_GUARD_REDUCTION * effMul * 100)}%減`, 'hero', 'text-emerald-300 text-lg font-bold');
+            if (gRec > 0) addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-base font-bold drop-shadow-md');
           } else if (card.monId === 'Pandora') {
             if (isTacticsMode(runMode)) setTacticsNextSlotBuff(slotIdx, 'pandoraResonanceTurns', 2);else setNextTurnBuff('pandoraResonanceTurns', 2);
             addPopup('双極共振！ 次の2ターン消費半減', 'hero', 'text-fuchsia-300 text-lg font-bold');
@@ -57712,6 +59545,8 @@ function MonsterHeroGame() {
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
           const hitMotion = hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion || slots[hit.slotIdx]?.atkMotion;
+          const hitSkillOwner = hit.isUnique && hit.monId ? hit.monId : slots[hit.slotIdx]?.id;
+          const hitSkillKind = skillAttackThemeOf(hitSkillOwner, hit.skillName, !!hit.isUnique);
           const isComboDashMotion = hitMotion === 'zanCombo' || hitMotion === 'eikiSakuraCombo' || hitMotion === 'kenshiTwinBlade';
           const isZanGroupStart = hit.skillName !== '連撃' && isComboDashMotion;
           if (isZanGroupStart) {
@@ -57737,23 +59572,36 @@ function MonsterHeroGame() {
                 await battleWait(650);
               }
               const isTwinBlade = hitMotion === 'kenshiTwinBlade';
-              setAttackAnim({
-                slotIndex: animSlot,
-                zanCombo: !isTwinBlade,
-                twinBlade: isTwinBlade,
-                sakura: hitMotion === 'eikiSakuraCombo'
-              });
-              if (isTwinBlade) {
-                await battleWait(135);
-                Audio_.se.zanSlash();
-                await battleWait(180);
-                Audio_.se.zanSlash();
-                await battleWait(115);
-                triggerShake();
-                await battleWait(130);
+              if (hitSkillKind) {
+                setAttackAnim({
+                  slotIndex: animSlot,
+                  motion: 'default',
+                  skillName: hit.skillName,
+                  ...(hit.isUnique ? {
+                    charge: false
+                  } : {})
+                });
+                if (hit.isUnique) Audio_.se.special();else Audio_.se.zanSlash();
+                await battleWait(themedAttackMotionMs(hitSkillOwner, 'default', hit.skillName, !!hit.isUnique) ?? 500);
               } else {
-                Audio_.se.zanSlash();
-                await battleWait(hitMotion === 'eikiSakuraCombo' ? 500 : 320);
+                setAttackAnim({
+                  slotIndex: animSlot,
+                  zanCombo: !isTwinBlade,
+                  twinBlade: isTwinBlade,
+                  sakura: hitMotion === 'eikiSakuraCombo'
+                });
+                if (isTwinBlade) {
+                  await battleWait(135);
+                  Audio_.se.zanSlash();
+                  await battleWait(180);
+                  Audio_.se.zanSlash();
+                  await battleWait(115);
+                  triggerShake();
+                  await battleWait(130);
+                } else {
+                  Audio_.se.zanSlash();
+                  await battleWait(hitMotion === 'eikiSakuraCombo' ? 500 : 320);
+                }
               }
               setAttackAnim(null);
               setSlotSkill(null);
@@ -57786,7 +59634,7 @@ function MonsterHeroGame() {
               name: hit.skillName,
               type: hit.isUnique ? 'unique' : hit.isSpecial ? 'special' : 'normal'
             });
-            const motion = hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion || slots[animSlot]?.atkMotion;
+            const motion = hitSkillKind ? 'default' : hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion || slots[animSlot]?.atkMotion;
             if (hit.isUnique) {
               setAttackAnim({
                 slotIndex: animSlot,
@@ -57812,7 +59660,7 @@ function MonsterHeroGame() {
                 triggerShake();
                 await battleWait(130);
               } else {
-                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion, hit.skillName, true) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 500));
+                await battleWait(themedAttackMotionMs(hitSkillKind ? hitSkillOwner : slots[animSlot]?.id, motion, hit.skillName, true) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 500));
               }
             } else {
               const isKenshiTwin = motion === 'kenshiTwinBlade';
@@ -57833,7 +59681,7 @@ function MonsterHeroGame() {
                 await battleWait(130);
               } else {
                 if (hit.isSpecial) Audio_.se.special();else if (hit.isCrit) Audio_.se.crit();else Audio_.se.attack();
-                await battleWait(themedAttackMotionMs(slots[animSlot]?.id, motion, hit.skillName, false) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450));
+                await battleWait(themedAttackMotionMs(hitSkillKind ? hitSkillOwner : slots[animSlot]?.id, motion, hit.skillName, false) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450));
               }
             }
             setAttackAnim(null);
@@ -57935,7 +59783,9 @@ function MonsterHeroGame() {
       guardBySlot,
       distLocked: forcedMoveTarget != null,
       forcedMoveTarget,
-      iceLockRefreshed: activatedIceLockThisTurn
+      iceLockRefreshed: activatedIceLockThisTurn,
+      takenMult: immediateTakenMult,
+      takenMultBySlot: immediateTakenMultBySlot
     }, executedIntent, hpBeforeEnemyAttack, enemyHpAfterOurAttacks);
     if (forcedMoveTarget != null) {
       setEnemyDist(forcedMoveTarget);
@@ -60527,7 +62377,7 @@ function MonsterHeroGame() {
     }, "継承した固有技"), masu.inheritedUniques.map((u, i) => React.createElement("div", {
       key: u?.inheritedUniqueId || i,
       className: "text-[10px] text-white font-bold"
-    }, u?.name || '固有技', " ", React.createElement("span", {
+    }, resolveInheritedUniqueDefinition(u)?.name || u?.name || '固有技', " ", React.createElement("span", {
       className: "text-slate-400"
     }, "Lv.", resolveInheritedUniqueLevel(masu, u, i))))), masu && renderFusionSection(masu, {
       mon,
@@ -65882,6 +67732,8 @@ function MonsterHeroGame() {
       rhythmEventDivision: rhythmEventDivision,
       rhythmEventRanking: rhythmEventRanking,
       rhythmRanking: rhythmRanking,
+      rhythmRankingPending: rhythmRankingPending,
+      onResendRhythmRankingPending: resendRhythmRankingPendingNow,
       rhythmRankingDetail: rhythmRankingDetail,
       rhythmRankingTab: rhythmRankingTab,
       rhythmTotalRanking: rhythmTotalRanking,
@@ -65972,7 +67824,7 @@ function MonsterHeroGame() {
     }, "記録をクリア")), rhythmPerfStats && React.createElement("dl", {
       "data-rhythm-perf-stats": true,
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
-    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ...[['GPU(ノーツ)', rhythmPerfStats.gpuNotes], ['GPU(背景)', rhythmPerfStats.gpuStage]].map(([label, g]) => [label, !g || g.supported === null ? '—' : g.supported === false ? 'この端末は測れない' : g.count ? `平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms` : 'まだ届いていない']), ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['50ms以上（自動調整が重いと数える）', rhythmPerfStats.over50 ?? 0], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`], ['曲の時刻の進み/frame', `${(rhythmPerfStats.songStepMsPerFrame ?? 0).toFixed(2)}ms`], ['曲の時刻が進まないframe', `${((rhythmPerfStats.songStallRate ?? 0) * 100).toFixed(1)}%`], ['曲の時刻の最大の飛び', `${(rhythmPerfStats.songStepMaxMs ?? 0).toFixed(1)}ms`], ['ノーツを取る処理/回', `${(rhythmPerfStats.judgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.judgeCount ?? 0}回）`], ['取る処理の最大', `${(rhythmPerfStats.judgeMsMax ?? 0).toFixed(1)}ms`], ['モンスターノーツ/回', `${(rhythmPerfStats.monsterJudgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount ?? 0}回）`], ['モンスターノーツの最大', `${(rhythmPerfStats.monsterJudgeMsMax ?? 0).toFixed(1)}ms`]].map(([label, value]) => React.createElement(React.Fragment, {
+    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ...[['GPU(ノーツ)', rhythmPerfStats.gpuNotes], ['GPU(背景)', rhythmPerfStats.gpuStage]].map(([label, g]) => [label, !g || g.supported === null ? '—' : g.supported === false ? 'この端末は測れない' : g.count ? `平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms` : 'まだ届いていない']), ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['50ms以上（自動調整が重いと数える）', rhythmPerfStats.over50 ?? 0], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`], ['曲の時刻の進み/frame', `${(rhythmPerfStats.songStepMsPerFrame ?? 0).toFixed(2)}ms`], ['曲の時刻が進まないframe', `${((rhythmPerfStats.songStallRate ?? 0) * 100).toFixed(1)}%`], ['曲の時刻の最大の飛び', `${(rhythmPerfStats.songStepMaxMs ?? 0).toFixed(1)}ms`], ['ノーツを取る処理/回', `${(rhythmPerfStats.judgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.judgeCount ?? 0}回）`], ['取る処理の最大', `${(rhythmPerfStats.judgeMsMax ?? 0).toFixed(1)}ms`], ['モンスターノーツ/回', `${(rhythmPerfStats.monsterJudgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount ?? 0}回）`], ['モンスターノーツの最大', `${(rhythmPerfStats.monsterJudgeMsMax ?? 0).toFixed(1)}ms`], ['指が触れた数（同時の最大）', `${rhythmPerfStats.touch?.starts ?? 0}回（${rhythmPerfStats.touch?.maxTouches ?? 0}本）`], ['端末に指を取り消された', `${rhythmPerfStats.touch?.cancels ?? 0}回（${rhythmPerfStats.touch?.cancelledTouches ?? 0}本）`], ['演奏エリアの外に触れた', `${rhythmPerfStats.touch?.outside ?? 0}回`], ['二本指ジェスチャー', `${rhythmPerfStats.touch?.gestures ?? 0}回`], ['空打ち', `${rhythmPerfStats.touch?.emptyTaps ?? 0}回`], ['指の飛び（3サブレーン以上）', `${rhythmPerfStats.touch?.jumps ?? 0}回`]].map(([label, value]) => React.createElement(React.Fragment, {
       key: label
     }, React.createElement("dt", {
       className: "text-slate-400"
@@ -68395,7 +70247,7 @@ function MonsterHeroGame() {
         }, masu.inheritedUniques.map((u, idx) => React.createElement("div", {
           key: idx,
           className: "text-[10px] text-amber-200 font-bold bg-black/30 rounded-lg px-2 py-1"
-        }, u.name, React.createElement("span", {
+        }, resolveInheritedUniqueDefinition(u)?.name || u.name, React.createElement("span", {
           className: "text-slate-500 font-normal"
         }, "(元", u.sourceMasuName, ")"))))), masuNorm.transcended ? React.createElement("div", {
           "data-transcend-detail-note": true,
@@ -69455,6 +71307,7 @@ function MonsterHeroGame() {
       getWaveBuff: getWaveBuff,
       guardCardWeight: guardCardWeight,
       guardFx: guardFx,
+      guardImpact: guardImpact,
       guardLevel: guardLevel,
       guardValueOf: guardValueOf,
       tacticsSlotGuardValue: tacticsSlotGuardValue,
@@ -73911,6 +75764,241 @@ const createAnimationStyle = () => {
       100% { opacity:0; transform:scaleY(.3); }
     }
 
+    /* ==== 全モンスターの技ごとの動き(2026-09-29 ユーザー指示「全モンスターも技別の攻撃アクション作って」) ====
+       24-battle-fx.jsx の SKILL_MOTION_SETS が、下の部品を組み合わせて使う。色は --c1(明)/--c2(濃)、
+       飛ぶものの色相は --ph。着弾は --hit-at、尺は --thm-ms */
+    /* 本体の動き(追加) */
+    .skfx-body--kick .thm-atk__monster { animation-name:skfxKick; }
+    @keyframes skfxKick {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      14% { transform:translate3d(0,6px,0) scale(1.14,.86) rotate(0deg); }
+      30% { transform:translate3d(calc(var(--atk-dx) * .5),calc(var(--atk-dy) * .5 - 50px),0) scale(1) rotate(-25deg); }
+      44% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.08) rotate(28deg); }
+      52% { transform:translate3d(calc(var(--atk-dx) * .84),calc(var(--atk-dy) * .84 - 8px),0) scale(1) rotate(10deg); }
+      76% { transform:translate3d(calc(var(--atk-dx) * .25),calc(var(--atk-dy) * .25 - 30px),0) scale(1) rotate(-200deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(-360deg); }
+    }
+    .skfx-body--spin .thm-atk__monster { animation-name:skfxSpin; transform-origin:50% 50%; }
+    @keyframes skfxSpin {
+      0% { transform:translate3d(0,0,0) scale(1,1); }
+      8% { transform:translate3d(0,0,0) scale(-1,1); }
+      16% { transform:translate3d(0,0,0) scale(1,1); }
+      24% { transform:translate3d(0,0,0) scale(-1,1); }
+      32% { transform:translate3d(0,-6px,0) scale(1,1); }
+      40% { transform:translate3d(calc(var(--atk-dx) * .5),calc(var(--atk-dy) * .5),0) scale(-1.05,1.05); }
+      /* 当たる前後(着弾は尺の54%)は正面を向いたまま。裏返りの途中で当てると絵が細く見える */
+      48% { transform:translate3d(calc(var(--atk-dx) * .88),calc(var(--atk-dy) * .88),0) scale(1.1,1.1); }
+      60% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.08,1.08); }
+      70% { transform:translate3d(calc(var(--atk-dx) * .7),calc(var(--atk-dy) * .7),0) scale(-1,1); }
+      82% { transform:translate3d(calc(var(--atk-dx) * .2),calc(var(--atk-dy) * .2),0) scale(1,1); }
+      100% { transform:translate3d(0,0,0) scale(1,1); }
+    }
+    .skfx-body--jump .thm-atk__monster { animation-name:skfxJump; }
+    @keyframes skfxJump {
+      0% { transform:translate3d(0,0,0) scale(1); }
+      12% { transform:translate3d(0,8px,0) scale(1.18,.8); }
+      36% { transform:translate3d(calc(var(--atk-dx) * .55),calc(var(--atk-dy) * .55 - 130px),0) scale(.94,1.08); }
+      52% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 6px),0) scale(1); }
+      58% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.35,.68); }
+      74% { transform:translate3d(calc(var(--atk-dx) * .6),calc(var(--atk-dy) * .6 - 60px),0) scale(1); }
+      92% { transform:translate3d(0,6px,0) scale(1.1,.9); }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .skfx-body--float .thm-atk__monster { animation-name:skfxFloat; }
+    @keyframes skfxFloat {
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      30% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 110px),0) scale(1.05); filter:drop-shadow(0 0 12px var(--c2)); }
+      50% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 124px),0) scale(1.1); filter:drop-shadow(0 0 20px var(--c2)); }
+      58% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.3,.72); filter:drop-shadow(0 0 20px var(--c2)); }
+      72% { transform:translate3d(calc(var(--atk-dx) * .7),calc(var(--atk-dy) * .7 - 50px),0) scale(1); filter:none; }
+      100% { transform:translate3d(0,0,0) scale(1); }
+    }
+    .skfx-body--dash .thm-atk__monster { animation-name:skfxDash; }
+    @keyframes skfxDash {
+      0% { transform:translate3d(0,0,0) scale(1) skewX(0deg); filter:none; opacity:1; }
+      12% { transform:translate3d(calc(var(--atk-dx) * -.08),calc(var(--atk-dy) * -.08 + 4px),0) scale(1.1,.9) skewX(12deg); }
+      26% { transform:translate3d(calc(var(--atk-dx) * 1.02),calc(var(--atk-dy) * 1.02),0) scale(1.05,.95) skewX(-18deg); filter:drop-shadow(-18px 0 6px var(--c2)); }
+      34% { transform:translate3d(calc(var(--atk-dx) * 1.2),calc(var(--atk-dy) * 1.2),0) scale(1) skewX(-6deg); opacity:.85; }
+      48% { transform:translate3d(calc(var(--atk-dx) * 1.2),calc(var(--atk-dy) * 1.2),0) scale(1) skewX(0deg); opacity:0; }
+      60% { transform:translate3d(0,-10px,0) scale(.9); opacity:0; filter:none; }
+      80%,100% { transform:translate3d(0,0,0) scale(1); opacity:1; }
+    }
+    .skfx-body--shake .thm-atk__monster { animation-name:skfxShake; }
+    @keyframes skfxShake {
+      0%,100% { transform:translate3d(0,0,0) rotate(0deg); filter:none; }
+      10% { transform:translate3d(-6px,0,0) rotate(-12deg); }
+      20% { transform:translate3d(6px,-4px,0) rotate(12deg); filter:drop-shadow(0 0 10px var(--c2)); }
+      30% { transform:translate3d(-6px,0,0) rotate(-14deg); }
+      40% { transform:translate3d(6px,-6px,0) rotate(14deg); }
+      50% { transform:translate3d(0,4px,0) rotate(0deg) scale(1.1,.9); filter:drop-shadow(0 0 16px var(--c2)); }
+      62% { transform:translate3d(-4px,0,0) rotate(-8deg); }
+      74% { transform:translate3d(4px,0,0) rotate(8deg); }
+    }
+    .skfx-body--hop .thm-atk__monster { animation-name:skfxHop; }
+    @keyframes skfxHop {
+      0%,100% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      12% { transform:translate3d(0,4px,0) scale(1.1,.9); }
+      24% { transform:translate3d(0,-26px,0) scale(.95,1.06); filter:drop-shadow(0 0 12px var(--c2)); }
+      36% { transform:translate3d(0,2px,0) scale(1.08,.92); }
+      50% { transform:translate3d(0,-20px,0) scale(.96,1.05) rotate(-6deg); filter:drop-shadow(0 0 16px var(--c2)); }
+      62% { transform:translate3d(0,2px,0) scale(1.06,.94) rotate(0deg); }
+      76% { transform:translate3d(0,-12px,0) scale(1) rotate(6deg); }
+      88% { transform:translate3d(0,0,0) scale(1.04,.96); }
+    }
+    .skfx-body--warp .thm-atk__monster { animation-name:skfxWarp; }
+    @keyframes skfxWarp {
+      0% { transform:translate3d(0,0,0) scale(1); opacity:1; filter:none; }
+      16% { transform:translate3d(0,0,0) scale(.3,1.6); opacity:0; filter:drop-shadow(0 0 16px var(--c2)); }
+      30% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9 - 30px),0) scale(.3,1.6); opacity:0; }
+      42% { transform:translate3d(calc(var(--atk-dx) * .9),calc(var(--atk-dy) * .9 - 20px),0) scale(1.1); opacity:1; filter:drop-shadow(0 0 18px var(--c2)); }
+      50% { transform:translate3d(var(--atk-dx),var(--atk-dy),0) scale(1.2,.85); opacity:1; }
+      64% { transform:translate3d(var(--atk-dx),calc(var(--atk-dy) - 10px),0) scale(.3,1.6); opacity:0; }
+      80% { transform:translate3d(0,0,0) scale(.3,1.6); opacity:0; }
+      100% { transform:translate3d(0,0,0) scale(1); opacity:1; filter:none; }
+    }
+    .skfx-body--jab .thm-atk__monster { animation-name:skfxJab; }
+    @keyframes skfxJab {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+      14% { transform:translate3d(calc(var(--atk-dx) * .7),calc(var(--atk-dy) * .7),0) scale(1.05) rotate(-6deg); }
+      22% { transform:translate3d(calc(var(--atk-dx) * .88),calc(var(--atk-dy) * .88),0) scale(1.12,.92) rotate(8deg); }
+      30% { transform:translate3d(calc(var(--atk-dx) * .74),calc(var(--atk-dy) * .74),0) scale(1) rotate(-4deg); }
+      40% { transform:translate3d(calc(var(--atk-dx) * .92),calc(var(--atk-dy) * .92),0) scale(1.14,.9) rotate(-10deg); }
+      50% { transform:translate3d(calc(var(--atk-dx) * .78),calc(var(--atk-dy) * .78),0) scale(1) rotate(4deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+    }
+    /* 本体から敵へのびる帯(追加)。色は --c1/--c2 */
+    .skfx-line--ray i { width:16px; left:-8px; border-radius:999px;
+      background:linear-gradient(90deg,var(--c3),var(--c2) 22%,var(--c1) 40%,#fff 50%,var(--c1) 60%,var(--c2) 78%,var(--c3));
+      box-shadow:0 0 12px var(--c2),0 0 26px var(--c2); animation-name:skfxBeam; }
+    .skfx-line--bolt i { width:26px; left:-13px; border-radius:0; background:linear-gradient(90deg,var(--c2),#fff 50%,var(--c2));
+      clip-path:polygon(40% 0,70% 0,52% 22%,78% 22%,40% 50%,62% 50%,24% 100%,38% 58%,14% 58%,44% 28%,20% 28%);
+      filter:drop-shadow(0 0 6px var(--c2)); animation-name:skfxBeam; }
+    .skfx-line--whip i { width:10px; left:-5px; border-radius:999px; background:linear-gradient(90deg,var(--c2),var(--c1) 50%,var(--c2));
+      box-shadow:0 0 8px var(--c2); animation-name:skfxTongue; animation-timing-function:ease-in-out; }
+    /* 飛ぶもの(追加)。色相は --ph */
+    .skfx-p--note { width:18px; height:22px; margin:-11px 0 0 -9px; background:none; box-shadow:none; }
+    .skfx-p--note::before { content:'♪'; position:absolute; inset:0; font:900 20px/22px sans-serif; text-align:center;
+      color:hsl(var(--ph) 90% 72%); text-shadow:0 0 6px hsl(var(--ph) 90% 60%),0 0 2px #fff; }
+    .skfx-p--bolt { width:12px; height:22px; margin:-11px 0 0 -6px; background:linear-gradient(#fff,#fde047 40%,#facc15);
+      clip-path:polygon(55% 0,100% 0,62% 42%,90% 42%,20% 100%,40% 55%,8% 55%); filter:drop-shadow(0 0 5px #facc15); }
+    .skfx-p--ice { width:12px; height:20px; margin:-10px 0 0 -6px; background:linear-gradient(135deg,#fff,#bae6fd 45%,#38bdf8);
+      clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); filter:drop-shadow(0 0 5px #7dd3fc); }
+    .skfx-p--rock { width:16px; height:14px; margin:-7px 0 0 -8px; background:radial-gradient(circle at 35% 30%,#d6d3d1,#78716c 60%,#44403c);
+      clip-path:polygon(20% 0,75% 8%,100% 45%,82% 100%,25% 92%,0 50%); }
+    .skfx-p--seed { width:9px; height:13px; margin:-6px 0 0 -4px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+      background:radial-gradient(circle at 40% 35%,#fef3c7,#a16207 55%,#713f12); box-shadow:0 0 4px rgba(161,98,7,.7); }
+    .skfx-p--needle { width:3px; height:24px; margin:-12px 0 0 -1px; border-radius:999px; background:linear-gradient(#fff,#cbd5e1 50%,#64748b);
+      box-shadow:0 0 4px #e2e8f0; rotate:var(--atk-rot); }
+    .skfx-p--orb { width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
+      background:radial-gradient(circle,#fff 0 18%,hsl(var(--ph) 90% 70%) 45%,hsl(var(--ph) 85% 50% / 0) 72%); box-shadow:0 0 12px hsl(var(--ph) 90% 60%); }
+    .skfx-p--feather { width:8px; height:22px; margin:-11px 0 0 -4px; border-radius:50% 50% 50% 50% / 80% 80% 20% 20%;
+      background:linear-gradient(90deg,#e2e8f0,#fff 50%,#cbd5e1); box-shadow:0 0 4px #fff; rotate:25deg; }
+    .skfx-p--gas { width:24px; height:20px; margin:-10px 0 0 -12px; border-radius:50%; filter:blur(2px);
+      background:radial-gradient(circle,hsl(var(--ph) 70% 60% / .9),hsl(var(--ph) 60% 45% / .5) 55%,hsl(var(--ph) 60% 45% / 0) 75%); }
+    .skfx-p--blade { width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%; background:none;
+      border-top:4px solid var(--c1); border-right:2px solid var(--c2); box-shadow:none; filter:drop-shadow(0 0 5px var(--c2)); rotate:-30deg; }
+    .skfx-p--snow { width:14px; height:14px; margin:-7px 0 0 -7px; background:#f8fafc;
+      clip-path:polygon(50% 0,58% 36%,93% 25%,64% 50%,93% 75%,58% 64%,50% 100%,42% 64%,7% 75%,36% 50%,7% 25%,42% 36%); filter:drop-shadow(0 0 4px #bae6fd); }
+    .skfx-p--bubble { width:14px; height:14px; margin:-7px 0 0 -7px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff 0 12%,rgba(186,230,253,.25) 30%,rgba(125,211,252,.5) 90%);
+      border:1.5px solid rgba(224,242,254,.9); box-shadow:0 0 6px rgba(125,211,252,.7); }
+    .skfx-p--cross { width:14px; height:18px; margin:-9px 0 0 -7px; background:linear-gradient(#fff,#fde68a 40%,#f59e0b);
+      clip-path:polygon(38% 0,62% 0,62% 28%,100% 28%,100% 48%,62% 48%,62% 100%,38% 100%,38% 48%,0 48%,0 28%,38% 28%); filter:drop-shadow(0 0 6px #fbbf24); }
+    .skfx-p--ring { width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%; background:none;
+      border:3px solid hsl(var(--ph) 90% 72%); box-shadow:0 0 8px hsl(var(--ph) 90% 60%),inset 0 0 6px hsl(var(--ph) 90% 60%); }
+    .skfx-p--spark { width:10px; height:10px; margin:-5px 0 0 -5px; background:hsl(var(--ph) 95% 75%);
+      clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%); filter:drop-shadow(0 0 5px hsl(var(--ph) 90% 60%)); }
+    .skfx-p--sakura { width:12px; height:9px; margin:-4px 0 0 -6px; border-radius:0 100% 0 100%;
+      background:linear-gradient(135deg,#fff,hsl(var(--ph) 85% 82%) 50%,hsl(var(--ph) 75% 66%)); box-shadow:0 0 4px hsl(var(--ph) 80% 75%); }
+    .skfx-p--fire { width:14px; height:20px; margin:-10px 0 0 -7px; border-radius:50% 50% 50% 50% / 65% 65% 35% 35%;
+      background:radial-gradient(circle at 50% 70%,#fff 0 15%,hsl(calc(var(--ph) + 20) 100% 65%) 35%,hsl(var(--ph) 95% 50%) 70%,hsl(var(--ph) 95% 50% / 0));
+      box-shadow:0 0 10px hsl(var(--ph) 95% 55%); }
+    .skfx-p--sword { width:6px; height:30px; margin:-15px 0 0 -3px; border-radius:40% 40% 2px 2px / 20% 20% 2px 2px;
+      background:linear-gradient(90deg,#94a3b8,#fff 50%,#cbd5e1); box-shadow:0 0 6px var(--c2); rotate:var(--atk-rot); }
+    .skfx-p--sword::after { content:''; position:absolute; left:-4px; bottom:6px; width:14px; height:3px; background:#b45309; border-radius:2px; }
+    /* 敵に重ねる大きな絵(追加)。色は --c1/--c2 */
+    .skfx-over--thunder i:first-child { left:-16px; top:-170px; width:32px; height:180px; background:linear-gradient(to bottom,var(--c3),var(--c1) 30%,#fff 60%,var(--c1));
+      clip-path:polygon(45% 0,75% 0,55% 30%,85% 30%,35% 64%,58% 64%,20% 100%,38% 66%,12% 66%,44% 32%,22% 32%);
+      filter:drop-shadow(0 0 10px var(--c2)); animation:skfxThunder 300ms ease-out forwards; animation-delay:calc(var(--hit-at) - 80ms); }
+    .skfx-over--thunder i:not(:first-child) { display:none; }
+    @keyframes skfxThunder { 0% { opacity:0; transform:scaleY(.2); transform-origin:50% 0; } 25% { opacity:1; transform:scaleY(1); } 45% { opacity:.4; } 60% { opacity:1; } 100% { opacity:0; transform:scaleY(1); } }
+    .skfx-over--xslash i { left:-5px; top:-70px; width:10px; height:140px; border-radius:999px;
+      background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 30%,var(--c1) 50%,#fff 70%,rgba(255,255,255,0));
+      box-shadow:0 0 14px var(--c2),0 0 26px #fff; animation:skfxXslashA 260ms ease-out forwards; animation-delay:calc(var(--hit-at) - 60ms); }
+    .skfx-over--xslash i:nth-child(2) { animation-name:skfxXslashB; animation-delay:calc(var(--hit-at) + 40ms); }
+    .skfx-over--xslash i:nth-child(3) { display:none; }
+    @keyframes skfxXslashA { 0% { opacity:0; transform:rotate(-40deg) scaleY(0); } 35% { opacity:1; transform:rotate(-40deg) scaleY(1.05); } 100% { opacity:0; transform:rotate(-40deg) scaleY(1) scaleX(.1); } }
+    @keyframes skfxXslashB { 0% { opacity:0; transform:rotate(40deg) scaleY(0); } 35% { opacity:1; transform:rotate(40deg) scaleY(1.05); } 100% { opacity:0; transform:rotate(40deg) scaleY(1) scaleX(.1); } }
+    .skfx-over--claw i { left:-4px; top:-50px; width:7px; height:100px; border-radius:999px; background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 35%,var(--c1) 55%,rgba(255,255,255,0));
+      box-shadow:0 0 10px var(--c2); animation:skfxClawMark 260ms ease-out forwards; animation-delay:calc(var(--hit-at) - 50ms); }
+    .skfx-over--claw i:nth-child(1) { translate:-18px 0; } .skfx-over--claw i:nth-child(3) { translate:18px 0; }
+    @keyframes skfxClawMark { 0% { opacity:0; transform:rotate(28deg) scaleY(0); } 35% { opacity:1; transform:rotate(28deg) scaleY(1); } 100% { opacity:0; transform:rotate(28deg) scaleY(1) scaleX(.2); } }
+    .skfx-over--pillar i:first-child { left:-26px; top:-190px; width:52px; height:230px; border-radius:40% 40% 20% 20%;
+      background:linear-gradient(90deg,var(--c3),var(--c2) 20%,var(--c1) 40%,#fff 50%,var(--c1) 60%,var(--c2) 80%,var(--c3));
+      filter:blur(1px); mix-blend-mode:screen; animation:skfxPillar 420ms ease-out forwards; animation-delay:calc(var(--hit-at) - 120ms); }
+    .skfx-over--pillar i:not(:first-child) { display:none; }
+    @keyframes skfxPillar { 0% { opacity:0; transform:scaleX(.1); } 30% { opacity:1; transform:scaleX(1.1); } 70% { opacity:.9; transform:scaleX(.8); } 100% { opacity:0; transform:scaleX(.1); } }
+    .skfx-over--tornado i { left:-40px; top:-110px; width:80px; height:130px; border-radius:50% 50% 45% 45% / 30% 30% 70% 70%;
+      background:repeating-linear-gradient(170deg,rgba(255,255,255,0) 0 8px,var(--c1) 9px 12px,rgba(255,255,255,0) 13px 22px);
+      -webkit-mask-image:linear-gradient(to bottom,#000,#000 60%,transparent); mask-image:linear-gradient(to bottom,#000,#000 60%,transparent);
+      clip-path:polygon(0 0,100% 0,62% 100%,38% 100%); filter:drop-shadow(0 0 8px var(--c2)); animation:skfxTornado 520ms ease-out forwards; animation-delay:calc(var(--hit-at) - 200ms); }
+    .skfx-over--tornado i:nth-child(2) { animation-delay:calc(var(--hit-at) - 140ms); scale:.8 1; }
+    .skfx-over--tornado i:nth-child(3) { display:none; }
+    @keyframes skfxTornado { 0% { opacity:0; transform:scaleY(.3) rotateY(0deg); } 30% { opacity:1; } 70% { opacity:1; transform:scaleY(1) rotateY(540deg); } 100% { opacity:0; transform:scaleY(1.1) rotateY(720deg); } }
+    .skfx-over--ice i:first-child { left:-36px; top:-60px; width:72px; height:84px; background:linear-gradient(135deg,rgba(255,255,255,.85),rgba(186,230,253,.55) 40%,rgba(56,189,248,.45));
+      clip-path:polygon(20% 0,80% 6%,100% 40%,88% 100%,12% 94%,0 38%); border:2px solid #e0f2fe; filter:drop-shadow(0 0 10px #7dd3fc);
+      animation:skfxIce 480ms ease-out forwards; animation-delay:calc(var(--hit-at) - 40ms); }
+    .skfx-over--ice i:not(:first-child) { display:none; }
+    @keyframes skfxIce { 0% { opacity:0; transform:scale(.2); } 25% { opacity:1; transform:scale(1.05); } 75% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.25); } }
+    .skfx-over--bite i { left:-36px; width:72px; height:30px; background:#f8fafc; box-shadow:0 0 8px var(--c2);
+      animation-duration:300ms; animation-fill-mode:forwards; animation-timing-function:ease-in; animation-delay:calc(var(--hit-at) - 120ms); }
+    .skfx-over--bite i:nth-child(1) { top:-46px; clip-path:polygon(0 0,100% 0,100% 40%,92% 100%,84% 40%,75% 100%,67% 40%,58% 100%,50% 40%,42% 100%,33% 40%,25% 100%,17% 40%,8% 100%,0 40%); animation-name:skfxBiteTop; }
+    .skfx-over--bite i:nth-child(2) { top:16px; clip-path:polygon(0 60%,8% 0,17% 60%,25% 0,33% 60%,42% 0,50% 60%,58% 0,67% 60%,75% 0,84% 60%,92% 0,100% 60%,100% 100%,0 100%); animation-name:skfxBiteBottom; }
+    .skfx-over--bite i:nth-child(3) { display:none; }
+    @keyframes skfxBiteTop { 0% { opacity:0; transform:translateY(-24px); } 30% { opacity:1; } 70% { opacity:1; transform:translateY(16px); } 100% { opacity:0; transform:translateY(14px); } }
+    @keyframes skfxBiteBottom { 0% { opacity:0; transform:translateY(24px); } 30% { opacity:1; } 70% { opacity:1; transform:translateY(-16px); } 100% { opacity:0; transform:translateY(-14px); } }
+    .skfx-over--boom i { left:-60px; top:-60px; width:120px; height:120px; border-radius:50%;
+      background:radial-gradient(circle,#fff 0 12%,var(--c1) 26%,var(--c2) 48%,var(--c3) 70%); animation:skfxBoom 420ms ease-out forwards; animation-delay:var(--hit-at); }
+    .skfx-over--boom i:nth-child(2) { background:none; border:5px solid var(--c1); box-shadow:0 0 16px var(--c2); animation-name:skfxBoomRing; animation-delay:calc(var(--hit-at) + 40ms); }
+    .skfx-over--boom i:nth-child(3) { display:none; }
+    @keyframes skfxBoom { 0% { opacity:0; transform:scale(.2); } 25% { opacity:1; transform:scale(1.1); } 100% { opacity:0; transform:scale(1.6); } }
+    @keyframes skfxBoomRing { 0% { opacity:0; transform:scale(.2); } 30% { opacity:1; } 100% { opacity:0; transform:scale(2); } }
+    .skfx-over--wave i { left:-30px; top:-30px; width:60px; height:60px; border-radius:50%; border:4px solid var(--c1); box-shadow:0 0 10px var(--c2),inset 0 0 8px var(--c2);
+      animation:skfxWaveRing 420ms ease-out forwards; animation-delay:calc(var(--hit-at) - 60ms); }
+    .skfx-over--wave i:nth-child(2) { animation-delay:calc(var(--hit-at) + 40ms); }
+    .skfx-over--wave i:nth-child(3) { animation-delay:calc(var(--hit-at) + 140ms); }
+    @keyframes skfxWaveRing { 0% { opacity:0; transform:scale(.2); } 25% { opacity:1; } 100% { opacity:0; transform:scale(2.4); } }
+    .skfx-over--bloom i { left:-14px; top:-56px; width:28px; height:56px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; transform-origin:50% 100%;
+      background:linear-gradient(to top,var(--c2),var(--c1) 60%,#fff); box-shadow:0 0 10px var(--c2); animation:skfxBloom 460ms ease-out forwards; animation-delay:calc(var(--hit-at) - 100ms); }
+    .skfx-over--bloom i:nth-child(1) { --br:-60deg; } .skfx-over--bloom i:nth-child(2) { --br:0deg; } .skfx-over--bloom i:nth-child(3) { --br:60deg; }
+    @keyframes skfxBloom { 0% { opacity:0; transform:rotate(0deg) scale(.2); } 35% { opacity:1; transform:rotate(var(--br)) scale(1.1); } 80% { opacity:1; transform:rotate(calc(var(--br) * 1.3)) scale(1); } 100% { opacity:0; transform:rotate(calc(var(--br) * 1.5)) scale(1.2); } }
+    .skfx-over--gas i { left:-44px; top:-36px; width:88px; height:64px; border-radius:50%; filter:blur(5px);
+      background:radial-gradient(circle,var(--c1),var(--c2) 55%,var(--c3) 75%); animation:skfxGas 600ms ease-out forwards; animation-delay:calc(var(--hit-at) - 120ms); }
+    .skfx-over--gas i:nth-child(2) { translate:-26px 14px; scale:.7; animation-delay:calc(var(--hit-at) - 60ms); }
+    .skfx-over--gas i:nth-child(3) { translate:28px 10px; scale:.75; animation-delay:var(--hit-at); }
+    @keyframes skfxGas { 0% { opacity:0; transform:scale(.3); } 30% { opacity:.95; transform:scale(1); } 100% { opacity:0; transform:scale(1.5) translateY(-20px); } }
+    .skfx-over--cross i:first-child { left:-40px; top:-80px; width:80px; height:120px; background:linear-gradient(#fff,var(--c1) 45%,var(--c2));
+      clip-path:polygon(40% 0,60% 0,60% 28%,100% 28%,100% 44%,60% 44%,60% 100%,40% 100%,40% 44%,0 44%,0 28%,40% 28%);
+      filter:drop-shadow(0 0 14px var(--c2)); animation:skfxCrossBig 460ms ease-out forwards; animation-delay:calc(var(--hit-at) - 100ms); }
+    .skfx-over--cross i:not(:first-child) { display:none; }
+    @keyframes skfxCrossBig { 0% { opacity:0; transform:translateY(-40px) scale(.6); } 35% { opacity:1; transform:translateY(0) scale(1); } 80% { opacity:1; } 100% { opacity:0; transform:scale(1.3); } }
+    .skfx-over--sword i:first-child { left:-9px; top:-160px; width:18px; height:150px; border-radius:40% 40% 4px 4px / 12% 12% 4px 4px;
+      background:linear-gradient(90deg,#94a3b8,#fff 50%,#cbd5e1); box-shadow:0 0 16px var(--c2),0 0 30px var(--c1); animation:skfxBigSword 380ms ease-in forwards; animation-delay:calc(var(--hit-at) - 200ms); }
+    .skfx-over--sword i:nth-child(2) { left:-24px; top:-22px; width:48px; height:8px; border-radius:4px; background:#d97706; box-shadow:0 0 8px var(--c2);
+      animation:skfxBigSword 380ms ease-in forwards; animation-delay:calc(var(--hit-at) - 200ms); }
+    .skfx-over--sword i:nth-child(3) { display:none; }
+    @keyframes skfxBigSword { 0% { opacity:0; transform:translateY(-120px); } 50% { opacity:1; transform:translateY(0); } 80% { opacity:1; transform:translateY(8px); } 100% { opacity:0; transform:translateY(8px); } }
+    .skfx-over--eye i:first-child { left:-46px; top:-60px; width:92px; height:44px; border-radius:50%; background:radial-gradient(circle,#111 0 16%,var(--c2) 18% 34%,#fff 36%);
+      box-shadow:0 0 16px var(--c2); animation:skfxEye 520ms ease-out forwards; animation-delay:calc(var(--hit-at) - 260ms); }
+    .skfx-over--eye i:not(:first-child) { display:none; }
+    @keyframes skfxEye { 0% { opacity:0; transform:scaleY(0); } 30% { opacity:1; transform:scaleY(1); } 70% { opacity:1; transform:scaleY(1) scale(1.1); } 100% { opacity:0; transform:scaleY(0); } }
+    /* 拳が当たった衝撃(漫画の「ドン!」のようなギザギザ) */
+    .skfx-over--fist i:first-child { left:-46px; top:-46px; width:92px; height:92px;
+      background:radial-gradient(circle,#fff 0 18%,var(--c1) 36%,var(--c2) 70%);
+      clip-path:polygon(50% 0,58% 30%,82% 8%,72% 36%,100% 30%,78% 50%,100% 70%,72% 64%,82% 92%,58% 70%,50% 100%,42% 70%,18% 92%,28% 64%,0 70%,22% 50%,0 30%,28% 36%,18% 8%,42% 30%);
+      filter:drop-shadow(0 0 10px var(--c2));
+      animation:skfxFist 300ms ease-in forwards; animation-delay:calc(var(--hit-at) - 140ms); }
+    .skfx-over--fist i:not(:first-child) { display:none; }
+    @keyframes skfxFist { 0% { opacity:0; transform:scale(2.2); } 45% { opacity:1; transform:scale(1); } 60% { transform:scale(1.15,.9); } 100% { opacity:0; transform:scale(1.1); } }
     /* 動きを減らす設定: 本体は光るだけ、飛ぶもの・線は出さず、着弾の光だけ */
     @media (prefers-reduced-motion: reduce) {
       .thm-atk__monster { animation:thmReduced var(--thm-ms,450ms) ease-out forwards !important; }
@@ -73992,6 +76080,60 @@ const createAnimationStyle = () => {
       border:3px solid var(--ex-c1); box-shadow:0 0 12px var(--ex-c2); animation:exAuraRing 800ms ease-out forwards; }
     .ex-aura i + i { animation-delay:260ms; }
     @keyframes exAuraRing { 0% { opacity:0; transform:scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:scale(2.6); } }
+    /* ==== アシストカード・緊急回復のカットイン(2026-09-29 ユーザー選択。24-battle-fx.jsx の TacticsExCutin の variant) ====
+       assist … 細い帯を画面の上のほうに。暗くしすぎない・光の筋と白い光は出さない。尺は --cut-ms(バトルの速さで縮む)
+       emergency … EXと同じ帯を緑で。絵は 💊 */
+    .ex-cutin--assist .ex-cutin__shade, .ex-cutin--assist .ex-cutin__band, .ex-cutin--assist .ex-cutin__art, .ex-cutin--assist .ex-cutin__tag,
+    .ex-cutin--assist .ex-cutin__name, .ex-cutin--assist .ex-cutin__sub, .ex-cutin--assist .ex-cutin__flash, .ex-cutin--assist .ex-cutin__rays,
+    .ex-cutin--emergency .ex-cutin__shade, .ex-cutin--emergency .ex-cutin__band, .ex-cutin--emergency .ex-cutin__art, .ex-cutin--emergency .ex-cutin__tag,
+    .ex-cutin--emergency .ex-cutin__name, .ex-cutin--emergency .ex-cutin__sub, .ex-cutin--emergency .ex-cutin__flash, .ex-cutin--emergency .ex-cutin__rays
+      { animation-duration:var(--cut-ms,1300ms); }
+    .ex-cutin--assist .ex-cutin__shade { background:radial-gradient(ellipse at 50% 30%, rgba(8,6,20,.15), rgba(2,2,8,.4)); }
+    .ex-cutin--assist .ex-cutin__rays, .ex-cutin--assist .ex-cutin__flash { display:none; }
+    .ex-cutin--assist .ex-cutin__band { top:27%; height:100px; margin-top:-50px; }
+    .ex-cutin--assist .ex-cutin__art { width:104px; height:104px; bottom:-2px; left:calc(12% + 10px); }
+    .ex-cutin--assist .ex-cutin__text { left:calc(12% + 124px); }
+    .ex-cutin--emergency .ex-cutin__shade { background:radial-gradient(ellipse at 50% 50%, rgba(2,20,12,.35), rgba(2,8,6,.66)); }
+    .ex-cutin__icon { display:flex; width:100%; height:100%; align-items:center; justify-content:center; }
+    .ex-cutin__icon > img, .ex-cutin__icon > span:not(.ex-cutin__emoji) { border-radius:50%; box-shadow:0 0 0 4px var(--ex-c1), 0 0 20px var(--ex-c2); background:rgba(8,10,24,.9); }
+    .ex-cutin__emoji { font-size:92px; line-height:1; filter:drop-shadow(0 0 14px var(--ex-c2)); }
+    /* ==== ガードのバリア(2026-09-29 ユーザー選択「案A バリア」。24-battle-fx.jsx の GuardBarrier) ====
+       色は段階ごと(--gb1 明 / --gb2 濃)。金から内側の六角、水晶から回る輪、虹は色が巡る */
+    .guard-barrier { position:absolute; inset:-8%; z-index:56; pointer-events:none; display:block; --gb1:#fde68a; --gb2:#b45309; }
+    .guard-barrier--silver { --gb1:#f1f5f9; --gb2:#64748b; }
+    .guard-barrier--gold { --gb1:#fef3c7; --gb2:#f59e0b; }
+    .guard-barrier--crystal { --gb1:#cffafe; --gb2:#06b6d4; }
+    .guard-barrier--rainbow { --gb1:#fce7f3; --gb2:#d946ef; animation:gbRainbow 2400ms linear infinite; }
+    @keyframes gbRainbow { to { filter:hue-rotate(360deg); } }
+    .guard-barrier__svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; transform-origin:50% 50%; }
+    .guard-barrier__hex { fill:color-mix(in srgb, var(--gb1) 16%, transparent); stroke:var(--gb1); stroke-width:2.4; vector-effect:non-scaling-stroke;
+      filter:drop-shadow(0 0 3px var(--gb2)) drop-shadow(0 0 7px var(--gb2)); }
+    .guard-barrier__hex2 { display:none; fill:none; stroke:color-mix(in srgb, var(--gb1) 70%, transparent); stroke-width:1.2; stroke-dasharray:5 3; vector-effect:non-scaling-stroke; }
+    .guard-barrier--gold .guard-barrier__hex2, .guard-barrier--crystal .guard-barrier__hex2, .guard-barrier--rainbow .guard-barrier__hex2 { display:inline; }
+    .guard-barrier__ring { display:none; position:absolute; inset:18%; border-radius:50%; border:2px dashed color-mix(in srgb, var(--gb1) 75%, transparent);
+      box-shadow:0 0 8px var(--gb2); animation:gbSpin 3200ms linear infinite; }
+    .guard-barrier--crystal.guard-barrier--idle .guard-barrier__ring, .guard-barrier--rainbow.guard-barrier--idle .guard-barrier__ring { display:block; }
+    @keyframes gbSpin { to { transform:rotate(360deg); } }
+    .guard-barrier--idle .guard-barrier__svg { animation:gbAppear 320ms ease-out both, gbIdle 1800ms ease-in-out 320ms infinite; }
+    @keyframes gbAppear { 0% { opacity:0; transform:scale(.55); } 70% { opacity:1; transform:scale(1.07); } 100% { opacity:1; transform:scale(1); } }
+    @keyframes gbIdle { 0%,100% { opacity:.8; } 50% { opacity:1; filter:brightness(1.3); } }
+    /* 受け止めきった: 白く光って少しふくらみ、火花が外へ跳ね返る */
+    .guard-barrier--block .guard-barrier__svg { animation:gbBlock 560ms ease-out forwards; }
+    @keyframes gbBlock { 0% { opacity:1; transform:scale(1); } 18% { transform:scale(1.14); filter:brightness(2.4); } 55% { opacity:1; transform:scale(1.02); filter:brightness(1.4); } 100% { opacity:0; transform:scale(1.12); } }
+    .guard-barrier__spark { position:absolute; left:50%; top:50%; width:7px; height:7px; margin:-3.5px 0 0 -3.5px; border-radius:50%; background:#fff;
+      box-shadow:0 0 6px #fff, 0 0 12px var(--gb2); opacity:0; animation:gbSpark 460ms ease-out 60ms forwards; }
+    @keyframes gbSpark { 0% { opacity:1; transform:rotate(calc(var(--k) * 60deg + 30deg)) translateX(20px) scale(1); } 100% { opacity:0; transform:rotate(calc(var(--k) * 60deg + 30deg)) translateX(58px) scale(.4); } }
+    /* 受けきれなかった: ひびが入ったように瞬いて消え、破片が飛び散って落ちる */
+    .guard-barrier--break .guard-barrier__svg { animation:gbBreak 420ms ease-in forwards; }
+    @keyframes gbBreak { 0% { opacity:1; transform:scale(1); } 20% { opacity:1; transform:scale(1.06) rotate(-2deg); filter:brightness(2); } 35% { opacity:.4; } 50% { opacity:1; transform:scale(1.02) rotate(2deg); } 100% { opacity:0; transform:scale(.8); } }
+    .guard-barrier__shard { position:absolute; left:50%; top:50%; width:14px; height:12px; margin:-6px 0 0 -7px; opacity:0;
+      background:linear-gradient(135deg,#fff,var(--gb1) 40%,var(--gb2)); clip-path:polygon(0 0,100% 30%,40% 100%); filter:drop-shadow(0 0 4px var(--gb2));
+      animation:gbShard 640ms cubic-bezier(.2,.7,.4,1) 120ms forwards; }
+    @keyframes gbShard { 0% { opacity:1; transform:rotate(calc(var(--k) * 45deg)) translateX(18px) rotate(0deg); } 100% { opacity:0; transform:rotate(calc(var(--k) * 45deg)) translateX(64px) translateY(26px) rotate(220deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .guard-barrier, .guard-barrier__svg, .guard-barrier__ring { animation:none !important; }
+      .guard-barrier__spark, .guard-barrier__shard { display:none; }
+    }
     @media (prefers-reduced-motion: reduce) {
       .ex-cutin__rays, .ex-cutin__motif, .ex-cutin__lines, .ex-aura i { display:none; }
       .ex-cutin__band { animation:exShade 1600ms ease-out forwards; transform:skewY(-7deg); }

@@ -157,7 +157,11 @@ check('sbInsertRhythmScore/sbFetchRhythmRankingsは、既存モードが必ず�
 check('既存モードのランキングキー一覧(RANKING_DIFFICULTY_KEYS)にRhythmを混ぜていない(検証を緩めていない)',
   !/RANKING_DIFFICULTY_KEYS = Object\.freeze\(\[[\s\S]{0,400}Rhythm/.test(game));
 
-check('送信の呼び出し(submitRhythmRankingScore)を持つ',game.includes('const submitRhythmRankingScore = useCallback(async (song, difficulty, result) => {'));
+// 2026-09-29: 本体は submitRhythmRankingScoreBody。submitRhythmRankingScore は、直前の送信を覚える薄い包み
+// (ランキングを開くとき、その送信が終わるのを待つため)。呼び出し側の名前は変えていない
+check('送信の呼び出し(submitRhythmRankingScore)を持つ',
+  game.includes('const submitRhythmRankingScoreBody = useCallback(async (song, difficulty, result) => {')
+  &&/const submitRhythmRankingScore = useCallback\(\(song, difficulty, result\) => \{\s*const task = submitRhythmRankingScoreBody\(song, difficulty, result\);/.test(game));
 check('送信はpersistRankingScoreを再利用し、insertScoreだけモンビー専用に差し替える(送受信の共通の失敗処理は増やさない)',
   /persistRankingScore\(\{\s*row, insertScore: sbInsertRhythmScore,/.test(game));
 check('送信に失敗したときだけ専用キー(mh_rhythm_rank_pending_v1)へ退避する。BEST記録のキーとは別',

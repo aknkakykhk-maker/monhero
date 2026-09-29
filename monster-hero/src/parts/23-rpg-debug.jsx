@@ -457,10 +457,38 @@ const SKILL_ATTACK_THEMES = Object.freeze({
 });
 // 技名が分からないとき(図鑑の攻撃アクションなど)は、通常技・固有技それぞれの最初の段階の動き
 const SKILL_ATTACK_FALLBACK = Object.freeze({ normal:'ygHeadbutt', unique:'ygStarBomb' });
-const skillAttackThemeOf = (monId, skillName, isUnique) => {
-  if (!SKILL_ATTACK_THEME_MONSTERS.includes(monId)) return null;
-  return SKILL_ATTACK_THEMES[skillName] || SKILL_ATTACK_FALLBACK[isUnique ? 'unique' : 'normal'];
+// ==== 全モンスターの技ごとの動き(2026-09-29 ユーザー指示「全モンスターも技別の攻撃アクション作って」) ====
+// ユグドラシル種以外は、技の名前ではなく**段階の順**で動きを持つ(24-battle-fx.jsx の SKILL_MOTION_SETS)。
+// 技の名前をあとで変えても(ミーア・ミタラシのように)、動きは段階についてくる。
+// 'sig' と書いた段階は、その子の見せ場の動き(atkMotion・体当たりの子は DEFAULT_ATTACK_THEMES の型)をそのまま使う。
+// 技の出自を探す順: 渡された子 → ほかの全モンスター(継承した固有技は、覚えた子ではなく出自の子の動きで出る)
+const skillMotionSlotOf = (monId, skillName, isUnique) => {
+  if (!skillName || typeof SKILL_MOTION_SETS === 'undefined') return null;
+  const lookup = (id) => {
+    const set = SKILL_MOTION_SETS[id];
+    const mon = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[id] : null;
+    if (!set || !mon) return null;
+    const lists = isUnique === true ? [['unique', mon.unique?.names]] : isUnique === false ? [['normal', HERO_ATK_NAMES[id]]]
+      : [['normal', HERO_ATK_NAMES[id]], ['unique', mon.unique?.names]];
+    for (const [kind, names] of lists) {
+      const i = Array.isArray(names) ? names.indexOf(skillName) : -1;
+      if (i >= 0 && set[kind] && set[kind][i] != null) return { monId:id, kind, index:i, spec:set[kind][i] };
+    }
+    return null;
+  };
+  return lookup(monId) || Object.keys(SKILL_MOTION_SETS).reduce((hit, id) => hit || (id !== monId ? lookup(id) : null), null);
 };
+const skillAttackThemeOf = (monId, skillName, isUnique) => {
+  if (SKILL_ATTACK_THEMES[skillName] && (SKILL_ATTACK_THEME_MONSTERS.includes(monId) || !skillMotionSlotOf(monId, skillName, isUnique))) return SKILL_ATTACK_THEMES[skillName];
+  const slot = skillMotionSlotOf(monId, skillName, isUnique);
+  if (slot) return slot.spec === 'sig' ? null : `${slot.monId}-${slot.kind === 'unique' ? 'u' : 'n'}${slot.index}`;
+  if (!SKILL_ATTACK_THEME_MONSTERS.includes(monId)) return null;
+  return SKILL_ATTACK_FALLBACK[isUnique ? 'unique' : 'normal'];
+};
+// 技に専用の動きがあるなら、見せ場の動き(atkMotion)の代わりに型の動き('default')で出す。
+// バトル・図鑑のプレビュー・待ち時間の3か所がここを通る(1か所だけ直すと、動きと待ち時間がずれる)
+const skillAttackMotionOf = (monId, atkMotion, skillName, isUnique) =>
+  (skillAttackThemeOf(monId, skillName, isUnique) ? 'default' : (atkMotion || 'default'));
 const THEMED_ATTACK_MS = Object.freeze({ stomp:900, rocks:520, claw:900, punch:580, fire:560,
   ygHeadbutt:520, ygAirDive:760, ygGreenLight:560, ygTongue:640, ygRoll:780, ygMoonDrop:840, ygCandy:760, ygStrawberry:820,
   ygCakeCut:720, ygShadow:860,
@@ -469,7 +497,7 @@ const THEMED_ATTACK_MS = Object.freeze({ stomp:900, rocks:520, claw:900, punch:5
 const themedAttackMotionMs = (monId, motion, skillName = null, isUnique = false) => {
   if (motion && motion !== 'default') return null;
   const skillKind = skillAttackThemeOf(monId, skillName, isUnique);
-  if (skillKind) return THEMED_ATTACK_MS[skillKind] || null;
+  if (skillKind) return THEMED_ATTACK_MS[skillKind] || (typeof skillFxSpecOf === 'function' ? skillFxSpecOf(skillKind)?.ms : null) || null;
   return THEMED_ATTACK_MS[DEFAULT_ATTACK_THEMES[monId]] || null;
 };
 // DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
@@ -501,7 +529,7 @@ const attackMotionAnimation = (anim) => {
 // 動かし方そのものは attackMotionAnimation / PandoraDualThunder 等の本番演出を使い、
 // ここでは「どの状態を何ms見せるか」だけを返す。保存や戦闘計算には触れない。
 const attackMotionPreviewSequence = (atkMotion='default', baseId=null, skillName=null) => {
-  const motion=atkMotion||'default';
+  const motion=skillAttackMotionOf(baseId, atkMotion, skillName, false);
   const isTwin=motion==='kenshiTwinBlade';
   const isComboDash=motion==='zanCombo'||motion==='eikiSakuraCombo'||isTwin;
   if(isComboDash) return [
@@ -517,7 +545,7 @@ const attackMotionPreviewSequence = (atkMotion='default', baseId=null, skillName
 // 通常攻撃用の attackMotionPreviewSequence とは分けてあるので、
 // 図鑑の一覧側や既存のプレビューへタメが混ざることはない。
 const attackMotionUniquePreviewSequence = (atkMotion='default', baseId=null, skillName=null) => {
-  const motion=atkMotion||'default';
+  const motion=skillAttackMotionOf(baseId, atkMotion, skillName, true);
   const isTwin=motion==='kenshiTwinBlade';
   // ザン・エイキ・剣士モッチーは固有技でも、本番と同じく通常攻撃と同じ残像ダッシュへ移る
   // (motion を渡す側の分岐へ入れてしまうと specialLunge になり、本番と違う動きになる)

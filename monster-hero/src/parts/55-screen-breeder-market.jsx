@@ -213,6 +213,24 @@ function BreederMarketScreen({
               middle={middle}
             />;
           })}
+          {/* 交換できる円盤石(2026-09-29 ユーザー指示「進めて」で予告から交換へ)。1体につき1回。
+              持っていれば「所持済み」になる(ダイヤショップの円盤石と同じ見え方)。
+              絵と詳細はマーケットの円盤石(monsterId と同じid)とモンスター本体から引く */}
+          {RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer=>{
+            const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
+            const mon=ALL_PLAYER_MONSTERS[offer.monsterId]||null;
+            const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'beatPoint', cost:offer.cost };
+            const owned=isItemOwned({ id:offer.monsterId, type:'disc' });
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-disc':offer.id}}
+              item={item} owned={owned} comingSoon={false}
+              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(disc||item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              detail={mon}
+              onDetail={()=>mon&&onOpenDetail(disc||item,mon,null)}
+            />;
+          })}
           {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。
               ダイヤショップより先にここで公開する(ユーザー指示「新モンスター先行実装はビートポイントから」)ので「先行公開予定」と出す。
               絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする。

@@ -169,6 +169,8 @@ const GOLEM_FACE_ICON = "images/monster-icons/face/golem.png?v=8ef71840d1d5";
 const MONOL_FACE_ICON = MONOL_ICON;
 const OBORO_FACE_ICON = OBORO_ICON;
 const PLANT_FACE_ICON = PLANT_IMG;
+const YGGDRASIL_ICON = YGGDRASIL_IMG;
+const MEL_WHIP_ICON = MEL_WHIP_IMG;
 const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=a1486779c37f";
 const MITARASHI_FACE_ICON = "images/monster-icons/face/mitarashi.png?v=36f1cf509e8e";
 const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=1ddd19baef6b";

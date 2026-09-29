@@ -436,11 +436,12 @@ const rhythmClockLabel=ms=>{const total=Math.max(0,Math.floor((Number(ms)||0)/10
 // 判定ライン付近では1サブレーン約32〜38pxなので、.20は約6〜8px。
 // 接触幅側の中心揺れdeadzone(6〜10px)と同程度だけを無視し、明確な横移動は残す。
 const RHYTHM_TAP_REJUDGE_MOVE_SUBLANES=.20;
-const rhythmAbilityEmoji=abilityId=>abilityId==='GENKI'?'💚':abilityId==='MUTEKI'?'🛡️':abilityId==='GAMAN'?'🧱':abilityId==='KONJO'?'🔥':'✨';
+const rhythmAbilityEmoji=abilityId=>abilityId==='GENKI'?'💚':abilityId==='MUTEKI'?'🛡️':abilityId==='GAMAN'?'🧱':abilityId==='KONJO'?'🔥':abilityId==='HISSHI'?'🎯':'✨';
 const rhythmAbilityTone=abilityId=>abilityId==='GENKI'?'border-emerald-300/50 bg-emerald-950/40 text-emerald-100'
   :abilityId==='MUTEKI'?'border-cyan-300/50 bg-cyan-950/40 text-cyan-100'
   :abilityId==='GAMAN'?'border-amber-300/50 bg-amber-950/40 text-amber-100'
   :abilityId==='KONJO'?'border-rose-300/50 bg-rose-950/40 text-rose-100'
+  :abilityId==='HISSHI'?'border-lime-300/50 bg-lime-950/40 text-lime-100'
   :'border-white/20 bg-slate-900/60 text-slate-300';
 // 能力ごとに「その能力になる血統」をまとめる。並びは RHYTHM_MONSTER_ABILITIES の順。
 const rhythmAbilityRows=()=>Object.values(RHYTHM_MONSTER_ABILITIES).map(ability=>({
@@ -495,6 +496,7 @@ const RhythmMonsterNoteGuide=()=>{
       <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">
         無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。
         両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。
+        必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。
         残り時間と根性を持っているかは、演奏中の画面の右上に出ます。
       </p>
     </article>
@@ -1356,7 +1358,10 @@ useEffect(()=>{
   window.addEventListener('orientationchange',invalidate);
   return ()=>{window.removeEventListener('resize',invalidate);window.removeEventListener('orientationchange',invalidate);};
 },[settings.noteStartPosition,settings.noteSize,settings.judgmentLineHeight,view.status]);
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;note._rhythmDeltaMs=typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const _judgeT0=RHYTHM_PERF.enabled&&typeof performance!=='undefined'?performance.now():0;const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;
+// 必死(ユグドラシル血統の能力)のあいだは、GREAT以上をジャストマーベラスとして数える(判定もズレもここで置き換える)
+if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0)){judgment='MARVELOUS';deltaMs=0;}
+if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;note._rhythmDeltaMs=typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // MARVELOUSの中でも、とくにぴったり(±20ms)だったか。**見た目にしか使わない**(2026-09-12)。
 // 判定の名前・スコア・コンボ・ライフ・判定数・FAST/SLOWの数え方には一切入れないので、
 // run にも result にも残さない。judgmentTimingOffsetMs を通したあとのズレを見ている
@@ -1495,7 +1500,7 @@ if(monster&&monster.ability&&rhythmMonsterAbilityTriggers(judgment)){
     // 判定・スコア・ライフには一切関係しない、見た目だけの控え。
     const slot=rhythmNoteMonsterSlot(note);
     run.abilityOwners=run.abilityOwners||{};
-    if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN')run.abilityOwners[monster.ability.id]=slot;
+    if(monster.ability.id==='MUTEKI'||monster.ability.id==='GAMAN'||monster.ability.id==='HISSHI')run.abilityOwners[monster.ability.id]=slot;
     if(monster.ability.id==='KONJO'&&Number(activated.state?.konjoStock)>0)run.abilityOwners.KONJO=slot;
     // 元気のように一瞬で終わる能力は、少しのあいだだけ光らせる
     run.abilityFlashSlot=slot;
@@ -1804,14 +1809,15 @@ const badge=abilityBadgeRef.current;
 // 曲の大半は何も出ていないので、毎フレームの文字列生成と小数計算をまるごと省ける。
 const hasAbilityBadge=badge&&(rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs)>0
   ||rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs)>0
+  ||rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs)>0
   ||Number(run.abilities?.konjoStock)>0);
 if(badge&&!hasAbilityBadge){
   if(badge._rhythmBadgeText!==''){badge.textContent='';badge._rhythmBadgeText='';}
   if(!badge.hidden)badge.hidden=true;
 }
 if(hasAbilityBadge){
-  const mutekiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs),gamanMs=rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs);
-  const text=[mutekiMs>0?`無敵 ${(mutekiMs/1000).toFixed(1)}s`:'',gamanMs>0?`我慢 ${(gamanMs/1000).toFixed(1)}s`:'',Number(run.abilities?.konjoStock)>0?'根性 ストック':''].filter(Boolean).join(' / ');
+  const mutekiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs),gamanMs=rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs),hisshiMs=rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs);
+  const text=[mutekiMs>0?`無敵 ${(mutekiMs/1000).toFixed(1)}s`:'',gamanMs>0?`我慢 ${(gamanMs/1000).toFixed(1)}s`:'',hisshiMs>0?`必死 ${(hisshiMs/1000).toFixed(1)}s`:'',Number(run.abilities?.konjoStock)>0?'根性 ストック':''].filter(Boolean).join(' / ');
   if(badge._rhythmBadgeText!==text){badge.textContent=text;badge._rhythmBadgeText=text;}
   if(badge.hidden!==(text===''))badge.hidden=text==='';
 }
@@ -1822,6 +1828,7 @@ if(settings.sideMonsterAbilityHighlight&&sideMonsterRefs.current.length){
   const active=new Set();
   if(rhythmMonsterAbilityRemainingMs(run.abilities,'MUTEKI',songTimeMs)>0&&owners.MUTEKI)active.add(owners.MUTEKI);
   if(rhythmMonsterAbilityRemainingMs(run.abilities,'GAMAN',songTimeMs)>0&&owners.GAMAN)active.add(owners.GAMAN);
+  if(rhythmMonsterAbilityRemainingMs(run.abilities,'HISSHI',songTimeMs)>0&&owners.HISSHI)active.add(owners.HISSHI);
   if(Number(run.abilities?.konjoStock)>0&&owners.KONJO)active.add(owners.KONJO);
   if(run.abilityFlashSlot&&songTimeMs<Number(run.abilityFlashUntilMs))active.add(run.abilityFlashSlot);
   const signature=[...active].sort().join(',');
@@ -1946,7 +1953,7 @@ scheduleTick();};
         if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}
         return;
       }
-      if(!target){RHYTHM_NOTE_SE_RUNTIME.playEmpty();if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
+      if(!target){if(!input.rejudge)RHYTHM_PERF.emptyTap();RHYTHM_NOTE_SE_RUNTIME.playEmpty();if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
       // 持ち替えの途中(離したばかりで浮いている)なら、続きとして引き継ぐ。
       // 始点の判定は最初に押さえたときのものを保つ(持ち替えで良くも悪くもならない)
       const handover=target.releasedAtMs!=null;
@@ -1954,7 +1961,7 @@ scheduleTick();};
       if(handover){target.releasedAtMs=null;rhythmFloatingNoteRemove(target);}
       else{target.holdJudgment=judgment;target.holdDeltaMs=deltaMs;}
       run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);hudRef.current.set({last:'HOLD',lastPrecise:false,fastSlow:side||''});scheduleJudgmentClear();return;}applyJudgment(target,judgment,deltaMs);});};
-  const inputMoves=(inputKey,subLaneCoordinate)=>{const run=runRef.current,state=run?.inputFeedbackState?.get(inputKey);if(!state||!Number.isFinite(subLaneCoordinate))return;if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)<RHYTHM_TAP_REJUDGE_MOVE_SUBLANES)return;const subLane=Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(subLaneCoordinate)));if(subLane===state.subLane)return;state.subLane=subLane;state.subLaneCoordinate=subLaneCoordinate;if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey,rejudge:true}]);};
+  const inputMoves=(inputKey,subLaneCoordinate)=>{const run=runRef.current,state=run?.inputFeedbackState?.get(inputKey);if(!state||!Number.isFinite(subLaneCoordinate))return;if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)>=3)RHYTHM_PERF.touchJump();if(Math.abs(subLaneCoordinate-state.subLaneCoordinate)<RHYTHM_TAP_REJUDGE_MOVE_SUBLANES)return;const subLane=Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(subLaneCoordinate)));if(subLane===state.subLane)return;state.subLane=subLane;state.subLaneCoordinate=subLaneCoordinate;if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey,rejudge:true}]);};
   // 押さえている帯へ先に置いてあった「控えの指」を探す。
   // 親指で遊ぶ人は「2本目を置いてから1本目を離す」ので、離した瞬間に渡せないと必ずMISSになる
   const standbyFingerFor=(run,noteIndex,exceptKey)=>{
@@ -2001,10 +2008,37 @@ scheduleTick();};
   // 「押しているのに反応していないように見える」の一因。両方を足した集合を必ず渡す。
   const pressedLanesNow=()=>[...(liveTouchSubLanesRef.current||[]),...(runRef.current?.activePointerFeedback?.values()||[])];
   const setPressedLanes=coordinates=>{const area=playAreaRef.current;if(!area)return;const active=new Set(Array.from(coordinates||[]).map(value=>Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))))).filter(Number.isFinite)),glowOpacity=settings.laneGlow==='NONE'?'0':settings.laneGlow==='LOW'?'.35':'1';let nodes=glowNodesRef.current;if(!nodes||!nodes.length||!nodes[0].isConnected)nodes=glowNodesRef.current=Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));nodes.forEach((el,index)=>{const pressed=active.has(index);const want=pressed?'true':'false';if(el.dataset.pressed===want&&(!pressed||el.style.opacity===glowOpacity))return;el.dataset.pressed=want;el.style.opacity=pressed?glowOpacity:'0';});};
+  // 演奏中は、演奏エリアの外に触れた指でもブラウザの既定の動き(ピンチ・ダブルタップ拡大)を止める
+  // (2026-09-29・ユーザー報告「iPhoneだけだと思うんだけど両手操作で連続押しとかしてるときにたまにタップがきかなくなる」)。
+  // 演奏エリアは自分で touch を preventDefault しているが、横持ちのiPhoneではノッチとホームバーの余白
+  // (左右それぞれ約50px・下約20px)が演奏エリアの**外**にあり、そこへ触れた指は何も止められていなかった。
+  // その指ともう1本がそろうと、Safari は二本指のジェスチャー(ピンチ)と見て**全部の指を取り消す**(touchcancel)ことがある。
+  // Safari だけにある gesturestart / gesturechange も止める。
+  // ボタンの上(ポーズなど)は止めない(iPhone は touchstart を止めると click が来なくなる)。ポーズ中・結果画面では何もしない
+  useEffect(()=>{
+    if(typeof document==='undefined'||view.status==='result'||view.status==='celebrate')return undefined;
+    const playing=()=>{const run=runRef.current;return !!run&&!run.finished&&!run.paused;};
+    const blockTouch=e=>{
+      if(!playing())return;
+      const area=playAreaRef.current,target=e.target;
+      if(area&&target&&typeof area.contains==='function'&&area.contains(target))return;   // 演奏エリアは自分で止めている
+      if(e.type==='touchstart')RHYTHM_PERF.touchOutside();
+      if(target&&typeof target.closest==='function'&&target.closest('button,a,input,select,textarea,label,[role="button"]'))return;
+      if(e.cancelable)e.preventDefault();
+    };
+    const blockGesture=e=>{if(!playing())return;RHYTHM_PERF.touchGesture();if(typeof e.preventDefault==='function')e.preventDefault();};
+    const touchTypes=['touchstart','touchmove'],gestureTypes=['gesturestart','gesturechange'];
+    touchTypes.forEach(type=>document.addEventListener(type,blockTouch,{passive:false}));
+    gestureTypes.forEach(type=>document.addEventListener(type,blockGesture,{passive:false}));
+    return ()=>{
+      touchTypes.forEach(type=>document.removeEventListener(type,blockTouch,{passive:false}));
+      gestureTypes.forEach(type=>document.removeEventListener(type,blockGesture,{passive:false}));
+    };
+  },[view.status]);
   const pointerDown=e=>{if(e.pointerType==='touch')return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const rect=inputAreaRect(area),p=inputPoint(e.clientX,e.clientY),lane=rhythmLaneAtPoint(p.x,p.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(p.x,p.y,rect);if(lane===null||subLaneCoordinate===null)return;const run=runRef.current;if(run){run.activePointerFeedback=run.activePointerFeedback||new Map();run.activePointerFeedback.set(e.pointerId,subLaneCoordinate);setPressedLanes(pressedLanesNow());}inputStarts([{lane,subLaneCoordinate,inputKey:rhythmInputKey('pointer',e.pointerId),captureTarget:e.currentTarget,pointerId:e.pointerId}],rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN));};
   const pointerMove=e=>{if(e.pointerType==='touch')return;const run=runRef.current;if(!run?.activePointerFeedback?.has(e.pointerId))return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const mp=inputPoint(e.clientX,e.clientY),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(mp.x,mp.y,inputAreaRect(area));if(subLaneCoordinate===null)return;run.activePointerFeedback.set(e.pointerId,subLaneCoordinate);setPressedLanes(pressedLanesNow());inputMoves(rhythmInputKey('pointer',e.pointerId),subLaneCoordinate);};
   const pointerEnd=e=>{if(e.pointerType==='touch')return;const run=runRef.current;if(run?.activePointerFeedback){run.activePointerFeedback.delete(e.pointerId);setPressedLanes(pressedLanesNow());}else setPressedLanes(pressedLanesNow());inputEnds([{inputKey:rhythmInputKey('pointer',e.pointerId),releaseTarget:e.currentTarget,pointerId:e.pointerId}]);};
-  useEffect(()=>{const area=playAreaRef.current;if(!area||view.status==='result'||view.status==='celebrate')return;const syncTouches=e=>{if(e.cancelable)e.preventDefault();const current=runRef.current;if(!current||current.finished||current.paused)return;current.activeTouchInputs=current.activeTouchInputs||new Set();const rect=inputAreaRect(area),live=new Set(),liveSubLanes=[],starts=[],movedTouchInputs=e.type==='touchmove'?new Set(Array.from(e.changedTouches||[]).map(touch=>rhythmInputKey('touch',touch.identifier))):null;Array.from(e.touches||[]).forEach(touch=>{const inputKey=rhythmInputKey('touch',touch.identifier);live.add(inputKey);const tp=inputPoint(touch.clientX,touch.clientY),lane=rhythmLaneAtPoint(tp.x,tp.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(tp.x,tp.y,rect);if(subLaneCoordinate!==null)liveSubLanes.push(subLaneCoordinate);if(current.activeTouchInputs.has(inputKey)){if(movedTouchInputs?.has(inputKey)&&subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate);return;}current.activeTouchInputs.add(inputKey);if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey});});liveTouchSubLanesRef.current=liveSubLanes;setPressedLanes(pressedLanesNow());const ageMs=rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN);if(starts.length)inputStarts(starts,ageMs);const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(!live.has(inputKey)){current.activeTouchInputs.delete(inputKey);ended.push({inputKey});}});if(ended.length)inputEnds(ended);};RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();area.addEventListener('touchstart',syncTouches,{passive:false});area.addEventListener('touchmove',syncTouches,{passive:false});area.addEventListener('touchend',syncTouches,{passive:false});area.addEventListener('touchcancel',syncTouches,{passive:false});return()=>{area.removeEventListener('touchstart',syncTouches);area.removeEventListener('touchmove',syncTouches);area.removeEventListener('touchend',syncTouches);area.removeEventListener('touchcancel',syncTouches);liveTouchSubLanesRef.current=[];setPressedLanes([]);};},[view.status]);
+  useEffect(()=>{const area=playAreaRef.current;if(!area||view.status==='result'||view.status==='celebrate')return;const syncTouches=e=>{if(e.cancelable)e.preventDefault();const current=runRef.current;if(!current||current.finished||current.paused)return;if(e.type==='touchcancel')RHYTHM_PERF.touchCancel(e.changedTouches?.length||0);else if(e.type==='touchstart')RHYTHM_PERF.touchStart(e.touches?.length||0);current.activeTouchInputs=current.activeTouchInputs||new Set();const rect=inputAreaRect(area),live=new Set(),liveSubLanes=[],starts=[],movedTouchInputs=e.type==='touchmove'?new Set(Array.from(e.changedTouches||[]).map(touch=>rhythmInputKey('touch',touch.identifier))):null;Array.from(e.touches||[]).forEach(touch=>{const inputKey=rhythmInputKey('touch',touch.identifier);live.add(inputKey);const tp=inputPoint(touch.clientX,touch.clientY),lane=rhythmLaneAtPoint(tp.x,tp.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(tp.x,tp.y,rect);if(subLaneCoordinate!==null)liveSubLanes.push(subLaneCoordinate);if(current.activeTouchInputs.has(inputKey)){if(movedTouchInputs?.has(inputKey)&&subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate);return;}current.activeTouchInputs.add(inputKey);if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey});});liveTouchSubLanesRef.current=liveSubLanes;setPressedLanes(pressedLanesNow());const ageMs=rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN);if(starts.length)inputStarts(starts,ageMs);const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(!live.has(inputKey)){current.activeTouchInputs.delete(inputKey);ended.push({inputKey});}});if(ended.length)inputEnds(ended);};RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();area.addEventListener('touchstart',syncTouches,{passive:false});area.addEventListener('touchmove',syncTouches,{passive:false});area.addEventListener('touchend',syncTouches,{passive:false});area.addEventListener('touchcancel',syncTouches,{passive:false});return()=>{area.removeEventListener('touchstart',syncTouches);area.removeEventListener('touchmove',syncTouches);area.removeEventListener('touchend',syncTouches);area.removeEventListener('touchcancel',syncTouches);liveTouchSubLanesRef.current=[];setPressedLanes([]);};},[view.status]);
   if(view.status==='celebrate'){const celebrateResult=view.result,celebrateTitle=celebrateResult?.allMarvelous?'ALL MARVELOUS!!':celebrateResult?.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!';return <main data-rhythm-celebrate className="flex flex-1 items-center justify-center bg-slate-950 text-white" style={{paddingTop:'var(--mh-sa-top)',paddingBottom:'var(--mh-sa-bottom)'}} onClick={skipCelebrate}><div className="px-6 text-center"><b data-rhythm-celebrate-slam className="block text-6xl font-black leading-tight">{celebrateTitle}</b><small className="mt-3 block text-sm font-black tracking-[0.3em] text-slate-300">MAX COMBO {view.maxCombo}</small></div></main>;}
   // ===== タイミング合わせのリザルト(2026-09-13・ユーザー指摘「設定にもなってない」) =====
   // スコアやランクは意味を持たないので出さない。測った値をその場で設定へ入れられるようにする。

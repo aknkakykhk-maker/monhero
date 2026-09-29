@@ -915,6 +915,9 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   heroInitialStyle … true なら、勇者モンに選んだときだけ配置の画面で初期スタイルを選べる
 //   conditions … 使うための追加の条件(TACTICS_EX_CONDITIONS のキー)。無ければ空
 //   conditionText … 条件を画面に出すときの文(任意)
+//   partyTakenRate … 効いているあいだ、味方全員の被ダメージを何割減らすか(0.3 なら30%軽減。ほかの軽減と掛け算で重なる)
+//   partyRegenRate … 効いているあいだ、ターンの終わりに味方全員(立っている子)のライフを上限の何割ぶん多く回復するか
+//   extraCombos … { count, rate } 効いているあいだ、その子の攻撃へ与ダメージ rate の連撃を count 回足す
 //   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
 const TACTICS_EX_DURATION_TEXT = Object.freeze({
   turn: '発動したターンだけ',
@@ -990,6 +993,26 @@ const TACTICS_EX_SKILLS = Object.freeze({
     heroInitialStyle: true,
     effect: 'weaponChange',
   }),
+  // ★2026-09-29 ユーザー指示「世界樹の守り。回復は20%、回数は5回」。
+  //   3ターンのあいだ味方全員の被ダメージ30%軽減＋ターン終わりに味方全員のライフを上限の20%回復。
+  //   カードとの併用はモッチー・ミタラシと同じく「できる」
+  Yggdrasil: Object.freeze({
+    id: 'yggdrasil_world_tree',
+    name: '世界樹の守り',
+    desc: '使ったターンから3ターンのあいだ、味方全員の被ダメージを30%減らし、ターンの終わりに味方全員のライフを上限の20%ずつ回復する。',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    partyTakenRate: 0.3, partyRegenRate: 0.2,
+    effect: 'partyGuard',
+  }),
+  // ★2026-09-29 ユーザー指示「スイーツパラダイス。連撃30%×4にして」。効くのは発動したターンだけ、1ラン3回
+  MelWhip: Object.freeze({
+    id: 'melwhip_sweets_paradise',
+    name: 'スイーツパラダイス',
+    desc: '使ったターンのメルホイップの攻撃に、与ダメージ30%の連撃を4回追加する。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turn',
+    extraCombos: Object.freeze({ count: 4, rate: 0.3 }),
+    effect: 'comboBurst',
+  }),
 });
 // 追加の条件。ctx を受け取り、使えないときだけ理由の文を返す(使えるなら null)。
 // ctx: { active(その子のEXがいま効いているか) }
@@ -1000,7 +1023,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'partyGuard', 'comboBurst']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1048,6 +1071,11 @@ const normalizeTacticsExDef = (raw) => {
       return acc;
     }, {}),
     fullRecover: raw.fullRecover === true,
+    partyTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.partyTakenRate)) ? Number(raw.partyTakenRate) : 0)),
+    partyRegenRate: Math.max(0, Number.isFinite(Number(raw.partyRegenRate)) ? Number(raw.partyRegenRate) : 0),
+    extraCombos: raw.extraCombos && typeof raw.extraCombos === 'object'
+      && tacticsSafeInt(raw.extraCombos.count, 0) > 0 && Number(raw.extraCombos.rate) > 0
+      ? { count: tacticsSafeInt(raw.extraCombos.count, 0), rate: Number(raw.extraCombos.rate) } : null,
     conditions: Array.isArray(raw.conditions) ? raw.conditions.filter(k => typeof TACTICS_EX_CONDITIONS[k] === 'function') : [],
     conditionText: raw.conditionText ? String(raw.conditionText) : null,
     effect: typeof raw.effect === 'string' ? raw.effect : null,
@@ -1162,6 +1190,8 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       style,
       turns: def.duration === 'turns' ? def.turns : 0, statRate: def.statRate || 0, regenRate: def.regenRate || 0,
       rates: def.rates ? { ...def.rates } : null, regenRates: def.regenRates ? { ...def.regenRates } : null,
+      partyTakenRate: def.partyTakenRate || 0, partyRegenRate: def.partyRegenRate || 0,
+      extraCombos: def.extraCombos ? { ...def.extraCombos } : null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -1221,6 +1251,37 @@ const tacticsExRegenRateAt = (state, units, slot, now, kind = 'hp') => {
   const own = Number(effect.regenRates && effect.regenRates[kind]);
   const rate = Number.isFinite(own) ? own : Number(effect.regenRate);
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
+};
+// 世界樹の守り(partyGuard)。味方全員の被ダメージへ掛ける倍率。効いている子が複数いれば掛け算で重なる。
+// ★使った子が倒れても効果は残る(守りは場に張られたもの)。WAVEが変わると切れる
+const tacticsExPartyTakenMult = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((mult, key) => {
+    const slot = Number(key);
+    const unit = Array.isArray(units) ? units[slot] : null;
+    if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'partyGuard') return mult;
+    const rate = Number(effects[key].partyTakenRate);
+    return Number.isFinite(rate) && rate > 0 ? mult * (1 - Math.min(0.9, rate)) : mult;
+  }, 1);
+};
+// 世界樹の守りの、ターン終わりのライフ回復(味方全員へ足す率)
+const tacticsExPartyRegenRate = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  return Object.keys(effects).reduce((sum, key) => {
+    const slot = Number(key);
+    const unit = Array.isArray(units) ? units[slot] : null;
+    if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'partyGuard') return sum;
+    const rate = Number(effects[key].partyRegenRate);
+    return Number.isFinite(rate) && rate > 0 ? sum + rate : sum;
+  }, 0);
+};
+// スイーツパラダイス(comboBurst)。その子の攻撃へ足す連撃 { count, rate }。効いていなければ null
+const tacticsExExtraCombosAt = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'comboBurst') return null;
+  const own = normalizeTacticsExState(state).effects[slot].extraCombos;
+  const count = tacticsSafeInt(own && own.count, 0), rate = Number(own && own.rate);
+  return count > 0 && Number.isFinite(rate) && rate > 0 ? { count, rate } : null;
 };
 const applyTacticsExStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;

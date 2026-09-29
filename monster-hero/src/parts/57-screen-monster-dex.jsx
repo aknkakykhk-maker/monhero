@@ -148,10 +148,12 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
       const backToDetail=()=>{onStopPreview();onBackToDetail();};
       // 再生そのもの(コマ送りのタイマーと世代管理)は MonsterHeroGame 側に残してある。
       // 進行中の setTimeout を画面のライフサイクルで止めると、演出が途中で固まるため
-      const playAttackPreview=async(kind)=>{
+      const playAttackPreview=async(kind,skillName=null)=>{
         if(playingKind)return;
-        await onPlayPreview(mon,kind,atkMotion);
+        await onPlayPreview(mon,kind,atkMotion,skillName);
       };
+      // 技ごとに動きが違う子は、技を1つずつ選んで見られる(デバッグ画面と同じ部品。対象の子が増えれば自動で出る)
+      const skillMotionLists=skillMotionListsOf(mon);
       const kindButton=(kind,label)=>(
         <button key={kind} type="button" data-attack-preview-play={kind} onClick={()=>{Audio_.se.tap();playAttackPreview(kind);}} disabled={!!playingKind}
           className={`flex-1 min-w-0 min-h-[52px] rounded-xl border px-2 text-[12px] font-black active:scale-95 disabled:opacity-40 ${playingKind===kind?'border-cyan-200 bg-cyan-700 text-white':'border-cyan-400/60 bg-slate-900 text-cyan-100'}`}>
@@ -177,6 +179,7 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
             {kindButton('normal','通常攻撃')}
             {kindButton('unique','固有技')}
           </div>
+          <SkillMotionPicker lists={skillMotionLists} playingName={playing?.skillName||null} disabled={!!playingKind} onPlay={(kind,name)=>playAttackPreview(kind,name)}/>
         </div>
       </div>;}
 

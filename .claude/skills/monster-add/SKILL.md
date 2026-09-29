@@ -117,8 +117,8 @@ Mia: { id:'Mia', name:"ミーア", emoji:"🧚", imgUrl:MIA_IMG, iconUrl:MIA_ICO
   baseHp:300, baseGuts:180, baseAtk:175, baseDef:60,
   plusStats:{hp:120,atk:30,def:10,guts:65},
   distAptitude:['G','C','A','B'],
-  unique:{ name:"バン", icon:MIA_ICON, monId:"Mia", baseMult:2.1, baseGuts:42, evoLevel:0,
-    names:["バン","ギガレイ","ギガサンダー","ビッグバン","ギガライトニング","コズミッグバン","テラレイ","テラバン","ドラゴ・ノヴァ"],
+  unique:{ name:"ボイスバン", icon:MIA_ICON, monId:"Mia", baseMult:2.1, baseGuts:42, evoLevel:0,
+    names:["ボイスバン","ギガメロディ","ギガサンダー","ビッグバンライブ","ギガライトニング","コズミックライブ","テラメロディ","テラボイスバン","ノヴァ・フィナーレ"],
     effectDesc:"魔法空間：次ターン、カード消費ガッツ0" } },
 ```
 
@@ -162,7 +162,8 @@ node tools/image/monster-image-quality-check.js
 ## 3. 通常技・固有技の名前
 
 `HERO_ATK_NAMES[id]` に**9つ**。同じ系統の子とそろえてよい
-(ミーアはピクシーと同じ並び。パンドラは同じ系統だが独自の名前を持っている)。
+(ミーアは最初ピクシーと同じ並びだったが、2026-09-29 に歌う動きへ合わせた名前へ変えた。
+名前を動きに合わせたいときは、同じ系統と分かる言葉を残して足す形がユーザーの好み。パンドラは同じ系統だが独自の名前を持っている)。
 
 ## 4. 染色(いちばん手が要る)
 
@@ -226,6 +227,29 @@ node tools/where.js --text "monId==='Pixie'"      # 似た効果の子を探し�
 node tools/where.js --text "Eiki"                 # 専用演出を持つ子が、どこに何行あるか
 ```
 
+### 技ごとの動き(全モンスター必須・2026-09-29〜)
+
+**どの子も、通常技9つ・固有技9つのそれぞれに攻撃の動きを持つ**(ユーザー指示「全モンスターも技別の攻撃アクション作って」)。
+`24-battle-fx.jsx` の `SKILL_MOTION_SETS` へ、技の**段階の順**に9つずつ書く(技の名前ではなく段階で持つので、あとで名前を変えても動きはついてくる)。
+
+```js
+Mia: {
+  normal:[SKM_SIG,                                   // 'sig' = その子の見せ場の動き(atkMotion・型)をそのまま使う段階
+    skm('hop', { c:'pink', fx:skmFx('shot', 'note', 4), line:'ray' }),   // 本体の動き・飛ぶもの・帯・色
+    …],
+  unique:[SKM_SIG, skm('float', { c:'holy', fx:skmFx('fall', 'meteor', 3), over:'boom' }), …],
+},
+```
+
+- 部品は `body`(bash 突進 / kick 跳び蹴り / spin 回転 / jump 跳び乗り / float 浮いて落下 / dash 高速ダッシュ / warp 瞬間移動 / jab 連続パンチ / cast その場で放つ / hop 跳ねて歌う / shake 揺れる / toss 投げる / lick 舌 / dive / roll / flip / slash)、
+  `line`(ray 光線 / bolt 稲妻 / whip むち / beam / tongue / arc)、`fx`(`skmFx(道すじ, 形, 数)`)、`over`(thunder / xslash / claw / pillar / tornado / ice / bite / boom / wave / bloom / gas / cross / sword / eye / fist / slash / aurora / shadow)、`burst`、色 `c`(`SKM_COLOR` の名前)
+- **着弾の時刻と尺は書かない**(`skillFxSpecOf` が本体の動きと飛ぶものから決める。1.2秒を超えない)
+- 専用の動き(`atkMotion` が `default` 以外)を持つ子は、見せ場の動きを**どれか1つの技**に `SKM_SIG` で残す(ユーザー選択「技ごとに全部別の動きにする」)
+- 同じ名前の技を持つ子は `skmRecolor`(色だけ変える)・`skmWithSig`(見せ場の段階だけ変える)で写してよい
+- `node tools/battle/skill-motion-check.js`(全モンスターが9つずつ持つか・CSSがあるか)と
+  `node tools/battle/attack-preview-parity-check.js`(バトルと図鑑のプレビューで動きと尺が同じか)が見張る
+- ユグドラシル種だけは技の名前で持つ古い形(`23-rpg-debug.jsx` の `SKILL_ATTACK_THEMES`)。新しい子はこちらを使わない
+
 ### 専用モーションを作るとき
 
 **最低4か所。子によってもっと増える。** ミーアの `miaSongNotes` が手本。
@@ -244,6 +268,8 @@ node tools/where.js --text "Eiki"                 # 専用演出を持つ子が�
 `24-battle-fx.jsx` の `SKILL_FX_SPECS`(本体の動き・帯・飛ぶもの・敵に重ねる絵の組み合わせ)で決める。
 部品の動きは `70-bootstrap.jsx` の `.skfx-◯◯` にそろっているので、組み合わせだけで新しい技を作れる。
 `node tools/battle/skill-motion-check.js` がつながりを見る。例は `docs/spec/YGGDRASIL_SKILLS.md`。
+`SKILL_ATTACK_THEME_MONSTERS` へ足した子は、図鑑とデバッグ画面の「攻撃アクション」に技を1つずつ選ぶ行
+(`SkillMotionPicker`)が自動で出る。画面の側は触らない。
 
 `'default'` のままでも、`src/parts/23-rpg-debug.jsx` の `DEFAULT_ATTACK_THEMES` へ1行足せば
 用意済みの型(`stomp` 押しつぶし＋ビーム / `beam` ビーム / `rocks` 殴って岩が飛び散る / `claw` カクカク高速ひっかき＋角から雷撃 /
@@ -351,6 +377,18 @@ node tools/run-checks.js --area monster,image 2>&1 | tail -25
 - マーケットに円盤石を並べたので、更新履歴へ
   `assistantNotice:{id:'update_notice_◯◯_v1', type:'market'}` を**必ず**付ける
   (`node tools/boot/market-notice-check.js` が見張る)
+- **公開のお知らせには、絵を3種類付ける**(2026-09-29 ユーザー指示「更新情報に画像付きのモンスター説明」
+  「新モンスター実装時にまた染色イメージも一緒につけて」)。
+  1. `image` … キー画像1枚(助手の告知にも出る)
+  2. `gallery` … その子の紹介カード(能力値の棒・間合い適性・勇者特性・固有技・EX・モンヒロビートの能力)
+  3. `gallery` … **染色イメージ**(いつもの姿 → 染めた姿)。caption に「染色イメージ」と入れる
+
+  手本はユグドラシル種: `tools/image/make-yggdrasil-release-notice.js`(1と2)と
+  `tools/image/make-yggdrasil-dye-preview.js`(3。ゲームと同じ染め方で作る。手で塗らない)。
+  新しい子の分は、この2本を写して id・色・文言を差し替える。数字はデータから読ませる(手で書かない)。
+  フォントは M PLUS Rounded 1c を Google Fonts から一時的に取る(リポジトリには入れない)。
+  `node tools/changelog/new-monster-gallery-check.js` が、新モンスターのお知らせに紹介と染色イメージがあるかを見張る
+  (タイトルに「新モンスター」と入れる。アイコンだけのお知らせは対象外)
 
 ## 9. 登録漏れを機械的に見つける
 

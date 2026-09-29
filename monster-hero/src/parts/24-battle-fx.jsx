@@ -193,9 +193,435 @@ const SKILL_FX_SPECS = Object.freeze({
                  fx:{ path:'orbit', shape:'fruit', dur:560, items:SKFX_RING(7, 38, 60, 26, {}).map((b, i) => ({...b, h:[0,40,90,140,200,270,320][i], s:1.1})) },
                  bits:[{x:-44,y:-20,h:0},{x:42,y:-24,h:90},{x:-38,y:22,h:200},{x:40,y:18,h:270},{x:0,y:-44,h:40},{x:0,y:36,h:140}], burst:'fruit' },
 });
+// ==== 全モンスターの技ごとの動き(2026-09-29 ユーザー指示「全モンスターも技別の攻撃アクション作って」) ====
+// ユーザー選択「技ごとに全部別の動きにする」(専用の動きを持つ子も同じ)。見せ場の動きは 'sig' と書いた1つの技に残す。
+// 並びは技の**段階の順**(HERO_ATK_NAMES / unique.names と同じ順)。技の名前を変えても動きは段階についてくる。
+// 組み合わせる部品は上の SKILL_FX_SPECS と同じ(本体の動き body・帯 line・飛ぶもの fx・敵に重ねる絵 over・着弾の小片 burst)。
+// 着弾の時刻と尺は、書かなければ本体の動きと飛ぶものから決まる(skillFxSpecOf)。色は SKM_COLOR の名前か [明,濃]
+const SKM_COLOR = Object.freeze({
+  fire:['#ffedd5','#f97316'], blue:['#e0f2fe','#38bdf8'], ice:['#f0f9ff','#7dd3fc'], thunder:['#fef9c3','#facc15'],
+  holy:['#fffbeb','#fbbf24'], dark:['#ede9fe','#6d28d9'], plant:['#dcfce7','#22c55e'], pink:['#fce7f3','#ec4899'],
+  rock:['#f5f5f4','#a8a29e'], wind:['#f0fdfa','#2dd4bf'], psy:['#fae8ff','#c026d3'], blood:['#fee2e2','#dc2626'],
+  sakura:['#fdf2f8','#f9a8d4'], white:['#ffffff','#94a3b8'], mocchi:['#ffe4ef','#f472b6'], gold:['#fef3c7','#f59e0b'],
+  gas:['#ecfccb','#84cc16'], cosmic:['#e0e7ff','#8b5cf6'], sky:['#e0f2fe','#0ea5e9'], red:['#ffe4e6','#e11d48'],
+});
+// 飛ぶものの並べ方。path は shot まっすぐ / lob 山なり / fall 上から降る / rise 足元から噴き上がる / orbit 本体のまわりを回ってから敵へ
+const skmFx = (path, shape, n = 3, o = {}) => {
+  const dur = o.dur ?? (path === 'orbit' ? 480 : path === 'lob' ? 320 : 300);
+  const start = o.start ?? (path === 'orbit' ? 60 : path === 'fall' || path === 'rise' ? 220 : 140);
+  const step = o.step ?? (path === 'fall' || path === 'rise' ? 14 : path === 'orbit' ? 22 : 50);
+  const hueOf = (i) => (Array.isArray(o.h) ? o.h[i % o.h.length] : (o.h ?? 0));
+  const items = path === 'orbit' ? SKFX_RING(n, o.r ?? 36, start, step)
+    : path === 'fall' || path === 'rise' ? SKFX_SPREAD(n, o.w ?? 110, start, step)
+    : Array.from({ length:n }, (_, i) => ({ x:((i % 3) - 1) * 12 + ((i * 5) % 7) - 3, y:(((i * 7) % 5) - 2) * 7, d:start + i * step }));
+  return { path, shape, dur, items:items.map((b, i) => ({ ...b, h:hueOf(i), ...(o.s ? { s:o.s } : {}) })) };
+};
+const skm = (body, o = {}) => ({ body, ...o });
+// 型の子・専用の子の見せ場の動き
+const SKM_SIG = 'sig';
+const SKILL_MOTION_SETS_BASE = {
+  // モッチー: 押しつぶしてモッチ砲(見せ場)。通常技は跳ねる・転がる・桜、固有技はモッチ砲(光線)の強化版
+  Mocchi: {
+    normal:[SKM_SIG,
+      skm('bash', { c:'mocchi', burst:'star' }),
+      skm('jump', { c:'mocchi', burst:'dust' }),
+      skm('roll', { c:'mocchi', burst:'dust' }),
+      skm('jab', { c:'mocchi', over:'fist' }),
+      skm('cast', { c:'sakura', fx:skmFx('orbit', 'sakura', 8, { h:330 }), burst:'petal' }),
+      skm('kick', { c:'mocchi', burst:'star' }),
+      skm('cast', { c:'sakura', fx:skmFx('fall', 'sakura', 16, { h:330 }), over:'bloom', burst:'petal' }),
+      skm('flip', { c:'mocchi', over:'boom', burst:'star' })],
+    unique:[SKM_SIG,
+      skm('cast', { c:'mocchi', line:'ray', over:'boom' }),
+      skm('cast', { c:'mocchi', line:'ray', over:'wave' }),
+      skm('hop', { c:'mocchi', line:'ray', over:'boom', burst:'star' }),
+      skm('cast', { c:'mocchi', line:'ray', over:'pillar' }),
+      skm('float', { c:'gold', line:'ray', over:'pillar', burst:'star' }),
+      skm('cast', { c:'sky', line:'ray', over:'boom' }),
+      skm('warp', { c:'white', line:'ray', over:'xslash' }),
+      skm('dash', { c:'white', line:'ray', over:'boom', fx:skmFx('orbit', 'spark', 8, { h:200 }) })],
+  },
+  // スエゾー: 大きな目の光線(見せ場は固有技の熱視線)。舌・キッス・歌・瞬間移動
+  Suezo: {
+    normal:[skm('spin', { c:'gold', burst:'dust' }),
+      skm('toss', { c:'blue', fx:skmFx('lob', 'water', 2) }),
+      skm('warp', { c:'psy', burst:'spark' }),
+      skm('lick', { c:'pink', line:'tongue', burst:'heart' }),
+      skm('cast', { c:'pink', fx:skmFx('shot', 'heart', 3), burst:'heart' }),
+      skm('bash', { c:'white', over:'bite' }),
+      skm('lick', { c:'pink', line:'tongue', fx:skmFx('shot', 'heart', 2, { start:260 }), burst:'heart' }),
+      skm('toss', { c:'gas', fx:skmFx('lob', 'gas', 3, { h:90 }), over:'gas' }),
+      skm('lick', { c:'red', line:'whip', over:'fist' })],
+    unique:[skm('cast', { c:'psy', over:'eye', fx:skmFx('orbit', 'orb', 6, { h:290 }) }),
+      SKM_SIG,
+      skm('jump', { c:'white', over:'bite', burst:'dust' }),
+      skm('cast', { c:'cosmic', fx:skmFx('shot', 'ring', 3, { h:250 }), over:'wave' }),
+      skm('hop', { c:'pink', fx:skmFx('shot', 'note', 5, { h:[330,280,200,50,160] }), over:'wave' }),
+      skm('cast', { c:'red', line:'ray', over:'boom' }),
+      skm('jump', { c:'red', over:'bite', burst:'star' }),
+      skm('hop', { c:'pink', fx:skmFx('orbit', 'note', 8, { h:[330,280,200,50,160] }), over:'wave' }),
+      skm('warp', { c:'red', line:'ray', over:'boom' })],
+  },
+  // ゴーレム: 殴って岩が飛び散る(見せ場は「パンチ」)。大きい技ほど地面が揺れる
+  Golem: {
+    normal:[skm('jab', { c:'rock', burst:'star' }),
+      SKM_SIG,
+      skm('kick', { c:'rock', burst:'rock' }),
+      skm('bash', { c:'rock', over:'slash' }),
+      skm('jump', { c:'rock', burst:'dust' }),
+      skm('jab', { c:'gold', over:'boom' }),
+      skm('bash', { c:'rock', over:'fist', burst:'rock' }),
+      skm('kick', { c:'rock', over:'boom', burst:'rock' }),
+      skm('float', { c:'rock', fx:skmFx('rise', 'rock', 10), burst:'rock' })],
+    unique:[skm('jab', { c:'gold', over:'wave' }),
+      skm('jump', { c:'rock', over:'boom', burst:'dust' }),
+      skm('spin', { c:'wind', over:'tornado' }),
+      skm('spin', { c:'rock', burst:'dust', over:'wave' }),
+      skm('cast', { c:'rock', fx:skmFx('fall', 'rock', 8, { s:1.6 }), burst:'rock' }),
+      skm('cast', { c:'fire', fx:skmFx('fall', 'meteor', 3, { s:1.4 }), over:'boom' }),
+      skm('spin', { c:'wind', over:'tornado', fx:skmFx('rise', 'rock', 10) }),
+      skm('spin', { c:'rock', over:'boom', burst:'rock' }),
+      skm('float', { c:'cosmic', fx:skmFx('orbit', 'star', 10, { h:260 }), over:'boom', burst:'star' })],
+  },
+  // ライガー: 爪と角からの雷(見せ場は「ひっかき」)。固有技は雷と氷
+  Tiger: {
+    normal:[skm('bash', { c:'blue', burst:'star' }),
+      SKM_SIG,
+      skm('dash', { c:'blue' }),
+      skm('jab', { c:'blue', over:'claw' }),
+      skm('warp', { c:'dark', over:'shadow' }),
+      skm('flip', { c:'blue', burst:'star' }),
+      skm('dash', { c:'thunder', over:'boom' }),
+      skm('bash', { c:'fire', fx:skmFx('shot', 'fire', 3, { h:20 }), over:'boom' }),
+      skm('jab', { c:'blue', over:'claw', burst:'spark' })],
+    unique:[skm('cast', { c:'thunder', over:'thunder' }),
+      skm('cast', { c:'ice', fx:skmFx('shot', 'ice', 3), burst:'snow' }),
+      skm('cast', { c:'thunder', line:'bolt', over:'thunder' }),
+      skm('cast', { c:'ice', fx:skmFx('fall', 'snow', 18), over:'ice' }),
+      skm('dash', { c:'white', over:'slash' }),
+      skm('cast', { c:'thunder', over:'thunder', fx:skmFx('orbit', 'bolt', 6) }),
+      skm('cast', { c:'white', line:'ray', fx:skmFx('orbit', 'spark', 8, { h:190 }) }),
+      skm('jump', { c:'thunder', over:'pillar', burst:'spark' }),
+      skm('dash', { c:'ice', over:'thunder', fx:skmFx('rise', 'ice', 8) })],
+  },
+  // ハム: 拳法(見せ場は「ワンツー」)。固有技はおならと暗勁、デンプシーロール
+  Ham: {
+    normal:[SKM_SIG,
+      skm('kick', { c:'gold', burst:'star' }),
+      skm('spin', { c:'gold', over:'fist' }),
+      skm('jab', { c:'gold', over:'fist' }),
+      skm('kick', { c:'gold', over:'boom' }),
+      skm('spin', { c:'gold', over:'slash', burst:'star' }),
+      skm('jump', { c:'fire', over:'fist', fx:skmFx('rise', 'fire', 8, { h:20 }) }),
+      skm('kick', { c:'gold', over:'boom', burst:'star' }),
+      skm('kick', { c:'fire', over:'pillar', fx:skmFx('rise', 'fire', 10, { h:20 }) })],
+    unique:[skm('shake', { c:'gas', over:'gas' }),
+      skm('dash', { c:'white', over:'xslash' }),
+      skm('shake', { c:'gas', over:'gas', fx:skmFx('shot', 'gas', 4, { h:90 }) }),
+      skm('jab', { c:'dark', over:'wave' }),
+      skm('shake', { c:'pink', fx:skmFx('orbit', 'note', 6, { h:[330,50,200] }), burst:'star' }),
+      skm('shake', { c:'gas', over:'tornado', fx:skmFx('shot', 'gas', 5, { h:90 }) }),
+      skm('warp', { c:'dark', over:'boom' }),
+      skm('jab', { c:'gold', over:'fist', burst:'star', fx:skmFx('shot', 'star', 4) }),
+      skm('jab', { c:'holy', over:'boom', burst:'star' })],
+  },
+  // ピクシー: 魔法の弾(見せ場は固有技の「バン」)。光線・雷・キッス
+  Pixie: {
+    normal:[skm('bash', { c:'pink', burst:'star' }),
+      skm('cast', { c:'white', line:'ray' }),
+      skm('cast', { c:'thunder', over:'thunder' }),
+      skm('kick', { c:'pink', burst:'star' }),
+      skm('cast', { c:'plant', fx:skmFx('orbit', 'orb', 6, { h:140 }), over:'pillar' }),
+      skm('cast', { c:'thunder', line:'bolt' }),
+      skm('cast', { c:'white', line:'ray', over:'boom' }),
+      skm('cast', { c:'pink', fx:skmFx('shot', 'heart', 3) }),
+      skm('warp', { c:'pink', over:'boom', burst:'heart' })],
+    unique:[SKM_SIG,
+      skm('cast', { c:'white', line:'ray', over:'pillar' }),
+      skm('cast', { c:'thunder', over:'thunder', burst:'spark' }),
+      skm('float', { c:'fire', over:'boom', burst:'star' }),
+      skm('cast', { c:'thunder', line:'bolt', over:'thunder' }),
+      skm('cast', { c:'cosmic', fx:skmFx('orbit', 'star', 8, { h:260 }), over:'boom' }),
+      skm('cast', { c:'white', line:'ray', over:'boom', burst:'star' }),
+      skm('hop', { c:'fire', over:'boom', fx:skmFx('orbit', 'orb', 8, { h:30 }) }),
+      skm('float', { c:'fire', fx:skmFx('fall', 'meteor', 3, { s:1.3 }), over:'boom' })],
+  },
+  // ミーア: 歌(見せ場は「ハミング」と固有技の「ボイスバン」)。どの技も歌って跳ねる
+  Mia: {
+    normal:[SKM_SIG,
+      skm('hop', { c:'pink', fx:skmFx('shot', 'note', 4, { h:[330,280,200,50] }), line:'ray' }),
+      skm('hop', { c:'thunder', line:'bolt', over:'thunder' }),
+      skm('kick', { c:'pink', fx:skmFx('orbit', 'note', 5, { h:[330,280,200,50,160] }) }),
+      skm('hop', { c:'plant', fx:skmFx('orbit', 'note', 6, { h:140 }), over:'pillar' }),
+      skm('hop', { c:'thunder', over:'thunder', burst:'spark' }),
+      skm('hop', { c:'pink', fx:skmFx('shot', 'note', 7, { h:[330,280,200,50,160,20,300] }), over:'wave' }),
+      skm('hop', { c:'pink', fx:skmFx('shot', 'heart', 3) }),
+      skm('hop', { c:'pink', fx:skmFx('orbit', 'heart', 6), over:'boom', burst:'heart' })],
+    unique:[SKM_SIG,
+      skm('hop', { c:'pink', fx:skmFx('fall', 'note', 14, { h:[330,280,200,50] }), over:'wave' }),
+      skm('hop', { c:'thunder', over:'thunder', burst:'spark' }),
+      skm('jump', { c:'fire', over:'boom', fx:skmFx('orbit', 'note', 6, { h:[330,50,200] }) }),
+      skm('hop', { c:'thunder', line:'bolt', over:'thunder' }),
+      skm('hop', { c:'cosmic', fx:skmFx('orbit', 'star', 8, { h:260 }), over:'wave' }),
+      skm('hop', { c:'pink', fx:skmFx('orbit', 'note', 10, { h:[330,280,200,50,160] }), over:'pillar' }),
+      skm('hop', { c:'pink', over:'wave', fx:skmFx('shot', 'ring', 3, { h:320 }) }),
+      skm('float', { c:'holy', fx:skmFx('fall', 'meteor', 3), over:'boom', burst:'star' })],
+  },
+  // パンドラ: 光と闇(見せ場は「ナイトサンダー」と固有技の「デュアルバン」)
+  Pandora: {
+    normal:[skm('bash', { c:'psy', burst:'star' }),
+      skm('cast', { c:'holy', line:'ray' }),
+      SKM_SIG,
+      skm('kick', { c:'white', fx:skmFx('orbit', 'feather', 6), burst:'star' }),
+      skm('warp', { c:'dark', over:'shadow' }),
+      skm('cast', { c:'holy', line:'bolt', over:'cross' }),
+      skm('cast', { c:'dark', line:'ray', over:'boom' }),
+      skm('cast', { c:'dark', fx:skmFx('shot', 'heart', 3), burst:'heart' }),
+      skm('warp', { c:'psy', fx:skmFx('orbit', 'heart', 6), over:'boom' })],
+    unique:[SKM_SIG,
+      skm('cast', { c:'holy', line:'ray', over:'pillar' }),
+      skm('cast', { c:'dark', over:'thunder', burst:'spark' }),
+      skm('float', { c:'psy', over:'boom', hit2:true }),
+      skm('cast', { c:'dark', line:'bolt', over:'thunder' }),
+      skm('cast', { c:'cosmic', fx:skmFx('orbit', 'star', 10, { h:270 }), over:'boom' }),
+      skm('cast', { c:'holy', line:'ray', over:'cross' }),
+      skm('float', { c:'dark', fx:skmFx('fall', 'meteor', 3), over:'boom' }),
+      skm('hop', { c:'pink', fx:skmFx('orbit', 'heart', 8), over:'thunder' })],
+  },
+  // モノリス: 押しつぶし(見せ場は「たおれこみ」)と針、トリオビーム
+  Monol: {
+    normal:[SKM_SIG,
+      skm('toss', { c:'white', fx:skmFx('shot', 'needle', 3) }),
+      skm('float', { c:'rock', over:'boom', burst:'dust' }),
+      skm('shake', { c:'rock', fx:skmFx('shot', 'rock', 5) }),
+      skm('bash', { c:'white', over:'bite' }),
+      skm('jab', { c:'rock', burst:'star' }),
+      skm('float', { c:'rock', over:'boom', fx:skmFx('rise', 'dust', 10) }),
+      skm('cast', { c:'white', fx:skmFx('shot', 'needle', 7, { step:30 }) }),
+      skm('jab', { c:'rock', over:'boom', burst:'star' })],
+    unique:[skm('cast', { c:'red', line:'ray' }),
+      skm('shake', { c:'white', over:'wave' }),
+      skm('cast', { c:'plant', line:'ray' }),
+      skm('cast', { c:'psy', line:'ray', over:'eye' }),
+      skm('shake', { c:'sky', over:'wave', burst:'spark' }),
+      skm('cast', { c:'gold', fx:skmFx('shot', 'ring', 3, { h:45 }) }),
+      skm('cast', { c:'blue', line:'ray', over:'boom' }),
+      skm('cast', { c:'cosmic', fx:skmFx('orbit', 'orb', 8, { h:[0,60,120,180,240,300] }), over:'pillar' }),
+      skm('float', { c:'cosmic', line:'ray', over:'boom', fx:skmFx('orbit', 'spark', 8, { h:[0,60,120,180,240,300] }) })],
+  },
+  // オボロゲソウ: 花びら(見せ場は固有技の「花粉」)。つる・種・花
+  Oboro: {
+    normal:[skm('bash', { c:'plant', burst:'leaf' }),
+      skm('jab', { c:'plant', burst:'leaf' }),
+      skm('cast', { c:'plant', line:'whip', fx:skmFx('rise', 'leaf', 8) }),
+      skm('jab', { c:'plant', over:'slash' }),
+      skm('jump', { c:'plant', over:'bite' }),
+      skm('shake', { c:'plant', fx:skmFx('orbit', 'leaf', 8), over:'pillar' }),
+      skm('spin', { c:'plant', burst:'leaf' }),
+      skm('jump', { c:'plant', over:'bite', burst:'star' }),
+      skm('spin', { c:'plant', over:'xslash', burst:'leaf' })],
+    unique:[skm('cast', { c:'plant', fx:skmFx('shot', 'seed', 3) }),
+      skm('cast', { c:'plant', fx:skmFx('shot', 'leaf', 4), over:'slash' }),
+      SKM_SIG,
+      skm('cast', { c:'gold', fx:skmFx('fall', 'spark', 18, { h:45 }) }),
+      skm('cast', { c:'plant', fx:skmFx('shot', 'seed', 9, { step:25 }) }),
+      skm('cast', { c:'pink', line:'ray', over:'bloom' }),
+      skm('cast', { c:'sakura', fx:skmFx('orbit', 'sakura', 10, { h:330 }), over:'bloom' }),
+      skm('cast', { c:'sky', fx:skmFx('orbit', 'sakura', 10, { h:210 }), over:'boom' }),
+      skm('cast', { c:'plant', fx:skmFx('fall', 'star', 12, { h:50 }), over:'pillar' })],
+  },
+  // ザン: 残像の連撃(見せ場は「シングルショット」と固有技の「アサルトレイド」)
+  Zan: {
+    normal:[SKM_SIG,
+      skm('warp', { c:'blue', over:'slash' }),
+      skm('flip', { c:'blue', burst:'star' }),
+      skm('kick', { c:'blue', over:'slash' }),
+      skm('dash', { c:'white', fx:skmFx('shot', 'blade', 3) }),
+      skm('flip', { c:'blue', over:'boom' }),
+      skm('dash', { c:'blue', over:'xslash' }),
+      skm('flip', { c:'blue', over:'claw' }),
+      skm('spin', { c:'blue', over:'xslash', burst:'spark' })],
+    unique:[skm('dash', { c:'dark', over:'slash' }),
+      skm('dash', { c:'blue', fx:skmFx('shot', 'blade', 5, { step:35 }) }),
+      skm('jump', { c:'fire', fx:skmFx('fall', 'meteor', 2), over:'boom' }),
+      SKM_SIG,
+      skm('jump', { c:'blue', over:'pillar' }),
+      skm('cast', { c:'sky', fx:skmFx('shot', 'orb', 6, { h:200, step:35 }) }),
+      skm('warp', { c:'dark', over:'shadow' }),
+      skm('dash', { c:'blue', over:'pillar', fx:skmFx('orbit', 'blade', 6) }),
+      skm('dash', { c:'blood', over:'xslash', burst:'spark' })],
+  },
+  // エイキ: 桜と氷の斬撃(見せ場は「桜牙」と固有技の「絶華緋閃・零桜」)
+  Eiki: {
+    normal:[SKM_SIG,
+      skm('dash', { c:'sakura', over:'slash', burst:'sakura' }),
+      skm('cast', { c:'sakura', fx:skmFx('shot', 'sakura', 6, { h:330, step:30 }), over:'slash' }),
+      skm('warp', { c:'sakura', over:'xslash', burst:'sakura' }),
+      skm('flip', { c:'sakura', fx:skmFx('orbit', 'sakura', 8, { h:330 }), over:'slash' }),
+      skm('spin', { c:'sakura', over:'tornado', fx:skmFx('orbit', 'sakura', 8, { h:330 }) }),
+      skm('dash', { c:'sakura', over:'claw', fx:skmFx('fall', 'sakura', 14, { h:330 }) }),
+      skm('dash', { c:'sakura', over:'claw', burst:'sakura' }),
+      skm('dash', { c:'blood', over:'claw', fx:skmFx('orbit', 'sakura', 10, { h:350 }), burst:'sakura' })],
+    unique:[skm('warp', { c:'blood', over:'slash', burst:'sakura' }),
+      skm('dash', { c:'ice', over:'ice', burst:'snow' }),
+      skm('flip', { c:'sakura', over:'xslash', fx:skmFx('fall', 'sakura', 12, { h:330 }) }),
+      skm('spin', { c:'blood', over:'claw', fx:skmFx('fall', 'snow', 16) }),
+      skm('dash', { c:'ice', over:'xslash', burst:'snow' }),
+      skm('spin', { c:'ice', over:'tornado', fx:skmFx('orbit', 'snow', 10) }),
+      skm('dash', { c:'blood', over:'claw', fx:skmFx('orbit', 'sakura', 12, { h:[350,330] }) }),
+      skm('warp', { c:'sakura', over:'xslash', fx:skmFx('orbit', 'sakura', 12, { h:[330,200] }), burst:'sakura' }),
+      SKM_SIG],
+  },
+  // 剣士モッチー: 二刀流(見せ場は「ガッチャー・クロス」と固有技の「スターバースト・ストリーム」)
+  KenshiMocchi: {
+    normal:[skm('dash', { c:'white', over:'slash' }),
+      skm('jump', { c:'white', over:'slash' }),
+      skm('dash', { c:'sky', over:'slash', burst:'spark' }),
+      skm('flip', { c:'white', over:'slash' }),
+      SKM_SIG,
+      skm('spin', { c:'dark', fx:skmFx('orbit', 'sakura', 10, { h:280 }), over:'xslash' }),
+      skm('spin', { c:'white', over:'claw' }),
+      skm('jump', { c:'sakura', over:'xslash', fx:skmFx('fall', 'sakura', 12, { h:330 }) }),
+      skm('dash', { c:'fire', over:'boom', burst:'spark' })],
+    unique:[skm('dash', { c:'plant', over:'slash', burst:'spark' }),
+      skm('dash', { c:'sky', over:'claw' }),
+      skm('dash', { c:'red', line:'ray', over:'boom' }),
+      skm('spin', { c:'white', over:'xslash' }),
+      skm('spin', { c:'dark', over:'tornado', burst:'spark' }),
+      skm('dash', { c:'dark', over:'claw', burst:'spark' }),
+      skm('warp', { c:'dark', over:'xslash', fx:skmFx('orbit', 'blade', 6) }),
+      skm('dash', { c:'cosmic', over:'xslash', fx:skmFx('orbit', 'spark', 8, { h:270 }), burst:'star' }),
+      SKM_SIG],
+  },
+  // アーク: 詠唱と聖なる光(見せ場は「神光よ汚れを祓え」と固有技の「聖光よ奇跡を灯せ」)
+  Ark: {
+    normal:[skm('cast', { c:'holy', over:'eye' }),
+      skm('dash', { c:'holy', over:'slash' }),
+      skm('cast', { c:'holy', over:'sword' }),
+      skm('cast', { c:'holy', fx:skmFx('fall', 'star', 14, { h:50 }) }),
+      skm('float', { c:'holy', over:'boom', burst:'star' }),
+      skm('cast', { c:'holy', over:'wave' }),
+      skm('cast', { c:'white', fx:skmFx('fall', 'feather', 12), over:'pillar' }),
+      SKM_SIG,
+      skm('cast', { c:'sky', fx:skmFx('shot', 'needle', 6, { step:30 }), line:'whip' })],
+    unique:[skm('cast', { c:'holy', fx:skmFx('orbit', 'ring', 5, { h:45 }) }),
+      skm('cast', { c:'holy', over:'pillar' }),
+      skm('cast', { c:'holy', over:'eye', burst:'star' }),
+      skm('hop', { c:'holy', over:'wave', fx:skmFx('fall', 'star', 12, { h:50 }) }),
+      skm('cast', { c:'holy', over:'sword', fx:skmFx('fall', 'feather', 10) }),
+      SKM_SIG,
+      skm('float', { c:'holy', over:'cross', burst:'star' }),
+      skm('cast', { c:'white', fx:skmFx('orbit', 'feather', 10), over:'pillar' }),
+      skm('cast', { c:'holy', over:'cross', fx:skmFx('fall', 'sword', 5) })],
+  },
+  // 人魚(スネグーラチカ): 氷と水(見せ場は「スプラッシュ」と固有技の「アクアブラスト」)
+  Snegurochka: {
+    normal:[skm('dash', { c:'ice', over:'slash', burst:'snow' }),
+      skm('cast', { c:'blue', line:'whip' }),
+      skm('cast', { c:'blue', over:'wave', fx:skmFx('shot', 'water', 5) }),
+      SKM_SIG,
+      skm('dash', { c:'ice', over:'xslash', burst:'snow' }),
+      skm('cast', { c:'blue', line:'whip', over:'boom' }),
+      skm('jump', { c:'blue', over:'boom', fx:skmFx('rise', 'water', 12) }),
+      skm('cast', { c:'blood', over:'gas' }),
+      skm('hop', { c:'holy', over:'wave', fx:skmFx('fall', 'star', 10, { h:50 }) })],
+    unique:[skm('cast', { c:'ice', fx:skmFx('shot', 'ice', 3) }),
+      skm('cast', { c:'blue', fx:skmFx('shot', 'water', 2, { step:150 }), hit2:true }),
+      skm('cast', { c:'ice', over:'ice' }),
+      skm('cast', { c:'pink', fx:skmFx('shot', 'heart', 3), burst:'star' }),
+      skm('cast', { c:'ice', fx:skmFx('shot', 'ice', 7, { step:30 }), over:'boom' }),
+      SKM_SIG,
+      skm('cast', { c:'ice', fx:skmFx('fall', 'snow', 18), over:'wave' }),
+      skm('cast', { c:'blue', fx:skmFx('orbit', 'bubble', 8), over:'wave' }),
+      skm('cast', { c:'holy', fx:skmFx('fall', 'snow', 14), over:'pillar', burst:'star' })],
+  },
+};
+// 同じ名前の技を持つ子は、表を写して見せ場と色だけ変える
+const skmRecolor = (set, color) => ({
+  normal:set.normal.map(sp => (sp === SKM_SIG ? sp : { ...sp, c:color })),
+  unique:set.unique.map(sp => (sp === SKM_SIG ? sp : { ...sp, c:color })),
+});
+// 見せ場の段階を付け替える。もとの子の見せ場だった段階(通常・固有とも)は replacement にする
+const skmWithSig = (set, kind, index, replacement) => ({
+  normal:set.normal.map((sp, i) => (kind === 'normal' && i === index ? SKM_SIG : (sp === SKM_SIG ? replacement : sp))),
+  unique:set.unique.map((sp, i) => (kind === 'unique' && i === index ? SKM_SIG : (sp === SKM_SIG ? replacement : sp))),
+});
+const SKILL_MOTION_SETS_MAIN = Object.freeze({
+  ...SKILL_MOTION_SETS_BASE,
+  // ミタラシ: モッチーの技に炎を入れた(ユーザー指示「ほぼモッチーでちょっと火炎要素」)。見せ場は炎のビーム
+  Mitarashi: {
+    normal:SKILL_MOTION_SETS_BASE.Mocchi.normal.map((sp, i) => (i === 5 ? skm('cast', { c:'fire', fx:skmFx('orbit', 'fire', 8, { h:20 }), burst:'spark' })
+      : i === 7 ? skm('cast', { c:'fire', fx:skmFx('fall', 'fire', 14, { h:20 }), over:'bloom' }) : sp)),
+    unique:SKILL_MOTION_SETS_BASE.Mocchi.unique.map((sp, i) => (sp === SKM_SIG ? sp
+      : i === 5 ? skm('float', { c:'fire', line:'ray', over:'pillar', fx:skmFx('rise', 'fire', 10, { h:20 }) })
+      : i === 6 ? skm('cast', { c:'sky', line:'ray', over:'boom', fx:skmFx('orbit', 'fire', 8, { h:205 }) })
+      : { ...sp, c:sp.c === 'mocchi' ? 'fire' : sp.c })),
+  },
+  // プラント: オボロゲソウと同じ技。見せ場はつる(「根っこ」)
+  Plant: skmWithSig(SKILL_MOTION_SETS_BASE.Oboro, 'normal', 2, skm('cast', { c:'plant', fx:skmFx('orbit', 'petal', 8) })),
+  // イブリース: アークと同じ詠唱を、闇の色で
+  Iblis: skmRecolor(SKILL_MOTION_SETS_BASE.Ark, 'dark'),
+  // ウンディーネ・ヤオビクニ: スネグーラチカと同じ並び。最後の技(アクアゲイザー・オーシャンノヴァ)と
+  // 固有技4(アクアキッス)だけ名前が違うので、そこを水の動きにする
+  Undine: {
+    normal:SKILL_MOTION_SETS_BASE.Snegurochka.normal.map((sp, i) => (i === 8 ? skm('cast', { c:'blue', fx:skmFx('rise', 'water', 14), over:'pillar' }) : sp)),
+    unique:SKILL_MOTION_SETS_BASE.Snegurochka.unique.map((sp, i) => (i === 3 ? skm('cast', { c:'blue', fx:skmFx('shot', 'heart', 3), burst:'bubble' })
+      : i === 8 ? skm('float', { c:'blue', fx:skmFx('fall', 'water', 16), over:'boom' }) : sp)),
+  },
+});
+// ヤオビクニはウンディーネと同じ技の並び(色は深い赤へ)
+const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:skmRecolor(SKILL_MOTION_SETS_MAIN.Undine, 'red') });
+
+// 本体の動きごとの [当たる時刻の割合, 既定の尺ms]。70-bootstrap.jsx の .skfx-body--◯◯ の keyframes で、敵に届く位置に合わせてある
+const SKM_BODY_TIMING = Object.freeze({ bash:[.48,560], dive:[.62,760], roll:[.5,780], flip:[.62,840], toss:[.6,720], cast:[.55,700],
+  slash:[.46,720], lick:[.42,640], kick:[.44,620], spin:[.54,780], jump:[.58,760], float:[.58,820], dash:[.26,620], shake:[.5,720],
+  hop:[.5,720], warp:[.5,760], jab:[.4,620] });
+// その場から撃つ動き。当たる時刻は飛ぶものが届く時刻で決まる
+const SKM_PROJECTILE_BODIES = Object.freeze(['cast', 'toss', 'shake', 'hop']);
+// 敵に重ねる絵が、当たってから消えるまでの長さ(ms)。尺がこれより短いと途中で切れる
+const SKM_OVER_TAIL = Object.freeze({ thunder:220, xslash:300, claw:220, pillar:300, tornado:320, ice:440, bite:180, boom:460, wave:560,
+  bloom:360, gas:480, cross:360, sword:180, eye:260, fist:160, slash:220, aurora:320, shadow:200 });
+const SKM_MAX_MS = 1200;
+const skmArrival = (fx) => {
+  if (!fx || !fx.items.length) return null;
+  const at = (b) => (b.d || 0) + (fx.path === 'rise' ? fx.dur * .25 : fx.path === 'orbit' ? fx.dur * .92 : fx.dur);
+  const times = fx.items.map(at);
+  return { first:Math.round(Math.min(...times)), last:Math.round(Math.max(...times)) };
+};
+const skmNormalize = (sp) => {
+  const [ratio, bodyMs] = SKM_BODY_TIMING[sp.body] || [.5, 700];
+  const [c1, c2] = Array.isArray(sp.c) ? sp.c : (SKM_COLOR[sp.c] || SKM_COLOR.white);
+  const tail = Math.max(sp.over ? (SKM_OVER_TAIL[sp.over] || 260) : 200, sp.hit2 ? 380 : 0);
+  const arrival = skmArrival(sp.fx);
+  let hit; let ms;
+  if (sp.hit != null) { hit = sp.hit; ms = sp.ms ?? Math.max(bodyMs, hit + tail + 80); }
+  else if (SKM_PROJECTILE_BODIES.includes(sp.body) && arrival) {
+    hit = arrival.first; ms = sp.ms ?? Math.max(bodyMs, hit + tail + 80, arrival.last + 160);
+  } else {
+    ms = sp.ms ?? Math.max(bodyMs, Math.round((tail + 80) / (1 - ratio)), arrival ? arrival.last + 160 : 0);
+    hit = Math.round(ratio * ms);
+  }
+  ms = Math.min(SKM_MAX_MS, Math.round(ms));
+  const bits = sp.bits || [{x:-28,y:-20},{x:26,y:-24},{x:-30,y:16},{x:30,y:14},{x:0,y:-34}];
+  return { body:sp.body, line:sp.line, fx:sp.fx, over:sp.over, burst:sp.burst, bits, c1, c2, hit:Math.round(hit),
+    ...(sp.hit2 ? { hit2:Math.round(hit + 180) } : {}), ms };
+};
+// 型の名前(ユグドラシル種は 'ygHeadbutt' など、ほかの子は '<モンスターid>-n<段階>' / '-u<段階>')から、見た目の組み合わせを返す
+const SKILL_FX_SPEC_CACHE = {};
+const skillFxSpecOf = (kind) => {
+  if (!kind) return null;
+  if (SKILL_FX_SPECS[kind]) return { ...SKILL_FX_SPECS[kind], ms:THEMED_ATTACK_MS[kind] || 600 };
+  if (SKILL_FX_SPEC_CACHE[kind]) return SKILL_FX_SPEC_CACHE[kind];
+  const m = /^([A-Za-z]+)-([nu])(\d)$/.exec(String(kind));
+  const sp = m && SKILL_MOTION_SETS[m[1]] && SKILL_MOTION_SETS[m[1]][m[2] === 'u' ? 'unique' : 'normal'][Number(m[3])];
+  if (!sp || sp === SKM_SIG) return null;
+  SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp);
+  return SKILL_FX_SPEC_CACHE[kind];
+};
 const SkillFxMotion = ({kind, image, lunge=false}) => {
-  const spec = SKILL_FX_SPECS[kind];
-  const ms = THEMED_ATTACK_MS[kind] || 600;
+  const spec = skillFxSpecOf(kind);
+  if (!spec) return null;
+  const ms = spec.ms || 600;
   // 光のふちは c2 を透明にした色へ消す(透明な黒へ消すと、ふちが灰色に濁った)
   const hex = String(spec.c2).replace('#', '');
   const c3 = hex.length === 6 ? `rgba(${parseInt(hex.slice(0, 2), 16)},${parseInt(hex.slice(2, 4), 16)},${parseInt(hex.slice(4, 6), 16)},0)` : 'rgba(255,255,255,0)';
@@ -227,7 +653,7 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
   );
 };
 const ThemedAttackMotion = ({kind, image, lunge=false}) => {
-  if (SKILL_FX_SPECS[kind]) return <SkillFxMotion kind={kind} image={image} lunge={lunge}/>;
+  if (skillFxSpecOf(kind)) return <SkillFxMotion kind={kind} image={image} lunge={lunge}/>;
   const bits = THEMED_ATTACK_BITS[kind] || {};
   const ms = THEMED_ATTACK_MS[kind];
   const px = (v) => `${v || 0}px`;
@@ -267,25 +693,37 @@ const TACTICS_EX_CUTIN_THEME = Object.freeze({
   allIn:        { c1:'#fed7aa', c2:'#dc2626', motif:'flame' },  // 捨て身: 赤い炎
   statBoost:    { c1:'#fef08a', c2:'#f59e0b', motif:'rise' },   // ガッツ全開っちー: 金の光が立ちのぼる
   weaponChange: { c1:'#cffafe', c2:'#0891b2', motif:'blade' },  // ソード・コンバージョン: 青い斬撃
+  heal:         { c1:'#bbf7d0', c2:'#10b981', motif:'rise' },   // 緊急回復(2026-09-29): 緑の光が立ちのぼる
+  partyGuard:   { c1:'#bbf7d0', c2:'#15803d', motif:'shield' }, // 世界樹の守り: 緑の盾
+  comboBurst:   { c1:'#fbcfe8', c2:'#db2777', motif:'rise' },   // スイーツパラダイス: 桃色の光
   default:      { c1:'#f5d0fe', c2:'#c026d3', motif:'rise' },
 });
 const tacticsExCutinTheme = (effect) => TACTICS_EX_CUTIN_THEME[effect] || TACTICS_EX_CUTIN_THEME.default;
+// カットインの色。アシストカードはカードごとの色(cutin.theme)を持つ
+const battleCutinThemeOf = (cutin) => (cutin && cutin.theme) || tacticsExCutinTheme(cutin && cutin.effect);
+// ★2026-09-29 ユーザー選択で、アシストカード(「助手のカットイン」)と緊急回復(「EX風のカットイン」)も同じ部品で出す。
+//   variant … 'ex'(EXスキル・1600ms) / 'assist'(細い帯を画面の上のほうに・短い) / 'emergency'(EXと同じ帯・緑)
+//   icon があれば立ち絵の代わりにその絵(アシストカードの顔アイコン・💊)を出す。ms は尺(CSSの --cut-ms)
 const TacticsExCutin = ({ cutin }) => {
   if (!cutin) return null;
-  const t = tacticsExCutinTheme(cutin.effect);
+  const t = battleCutinThemeOf(cutin);
+  const variant = cutin.variant || 'ex';
   // 盤面の入れ物(transform を持つことがある)の中だと fixed が画面いっぱいにならないので、body へ出す
   return ReactDOM.createPortal(
-    <div key={cutin.key} data-tactics-ex-cutin={cutin.effect || 'default'} className="ex-cutin" style={{ '--ex-c1':t.c1, '--ex-c2':t.c2 }} aria-hidden="true">
+    <div key={cutin.key} data-tactics-ex-cutin={cutin.effect || 'default'} data-battle-cutin={variant} className={`ex-cutin ex-cutin--${variant}`}
+      style={{ '--ex-c1':t.c1, '--ex-c2':t.c2, ...(cutin.ms ? { '--cut-ms':`${cutin.ms}ms` } : {}) }} aria-hidden="true">
       <div className="ex-cutin__shade"/>
       <div className="ex-cutin__rays"/>
       <div className={`ex-cutin__motif ex-cutin__motif--${t.motif}`}>{[0,1,2,3,4,5].map(i => <i key={i} style={{ '--i':i }}/>)}</div>
       <div className="ex-cutin__band">
         <div className="ex-cutin__lines"/>
         <div className="ex-cutin__art">
-          <DyedMonsterImage baseId={cutin.monId} src={cutin.imgUrl} alt="" masuColors={cutin.colors} draggable={false} className="w-full h-full object-contain"/>
+          {cutin.icon
+            ? <span className="ex-cutin__icon">{isImageIconValue(cutin.icon) ? cardIconNode(cutin.icon, variant === 'assist' ? 96 : 120, cutin.cardId) : <span className="ex-cutin__emoji">{cutin.icon}</span>}</span>
+            : <DyedMonsterImage baseId={cutin.monId} src={cutin.imgUrl} alt="" masuColors={cutin.colors} draggable={false} className="w-full h-full object-contain"/>}
         </div>
         <div className="ex-cutin__text">
-          <div className="ex-cutin__tag">EX SKILL</div>
+          <div className="ex-cutin__tag">{cutin.tag || 'EX SKILL'}</div>
           {/* 名前は1行に収める(「みんなをか/ばう」のように途中で折り返さない)。長い名前ほど字を小さくする */}
           <div className="ex-cutin__name" style={{ fontSize:`${Math.max(15, Math.min(30, Math.floor(165 / Math.max(1, String(cutin.exName || '').length))))}px` }}>{cutin.exName}</div>
           <div className="ex-cutin__sub">{cutin.monName}{cutin.styleLabel ? ` ／ ${cutin.styleLabel}` : ''}</div>
@@ -296,6 +734,24 @@ const TacticsExCutin = ({ cutin }) => {
     document.body
   );
 };
+// ==== ガードのバリア(2026-09-29 ユーザー選択「案A バリア」) ====
+// ガードを置いた子の枠に六角形の光の壁を重ねる。ガードの段階(GUARD_EVOLUTION)が上がるほど、
+// 色(銅→銀→金→水晶→虹)と飾り(内側の輪・六角の網目・回る紋)が豪華になる。
+// state … 'idle' 構えている / 'block' 受け止めきった(光って火花が跳ね返る) / 'break' 受けきれなかった(割れて破片が飛ぶ)
+// 見た目だけ。押せる場所は塞がない(pointer-events:none)
+const GUARD_BARRIER_TIERS = Object.freeze(['bronze', 'bronze', 'silver', 'silver', 'gold', 'gold', 'crystal', 'crystal', 'rainbow']);
+const guardBarrierTierOf = (level) => GUARD_BARRIER_TIERS[Math.max(0, Math.min(GUARD_BARRIER_TIERS.length - 1, Math.floor(Number(level) || 0)))];
+const GuardBarrier = ({ tier = 'bronze', state = 'idle' }) => (
+  <span data-guard-barrier={state} data-guard-tier={tier} className={`guard-barrier guard-barrier--${tier} guard-barrier--${state}`} aria-hidden="true">
+    <svg className="guard-barrier__svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <polygon className="guard-barrier__hex" points="25,3 75,3 98,50 75,97 25,97 2,50"/>
+      <polygon className="guard-barrier__hex2" points="31,13 69,13 88,50 69,87 31,87 12,50"/>
+    </svg>
+    <i className="guard-barrier__ring"/>
+    {state === 'block' && [0,1,2,3,4,5].map(k => <i key={k} className="guard-barrier__spark" style={{ '--k':k }}/>)}
+    {state === 'break' && [0,1,2,3,4,5,6,7].map(k => <i key={k} className="guard-barrier__shard" style={{ '--k':k }}/>)}
+  </span>
+);
 const AttackTargetFx = ({anim, attackerId}) => {
   if (!anim || anim.charge === true || anim.twinBlade) return null;
   // 種族ごとの攻撃(ThemedAttackMotion)は、自分で敵の位置へ着弾を描く
@@ -668,6 +1124,44 @@ const PandoraDualThunder = ({image, compact=false}) => (
 // 図鑑などから本番と同じ攻撃モーション描画を使うための共通ステージ。
 // image は用途ごとの実画像要素を受け取り、モーション専用の画像コピーは作らない。
 // 敵が居ないので、真上の少し先を「敵の位置」として変数を渡す(本番と同じ keyframes がそのまま動く)。
+// ==== 技ごとの動きを1つずつ選んで再生する行(図鑑の攻撃アクションと新モンスター確認で共用) ====
+// 2026-09-29 ユーザー指示「せっかく技の種類があるのに図鑑で技ごとのモーションが見れない」
+// 「いずれは全モンスター実装予定」。技ごとに動きが違う種族(SKILL_ATTACK_THEME_MONSTERS)へ足した子は、
+// 呼び出し側を触らずに図鑑とデバッグ画面の両方でこの行が出る。
+// 返すのは [種類, 見出し, 技の名前(段階の順)] の組。動きの無い子・技の名前が無い子は null
+const skillMotionListsOf = (mon, { draft = false } = {}) => {
+  // 2026-09-29 から全モンスター(SKILL_MOTION_SETS)にも出す
+  const hasSet = typeof SKILL_MOTION_SETS !== 'undefined' && !!SKILL_MOTION_SETS[mon?.id];
+  if (!mon || typeof SKILL_ATTACK_THEME_MONSTERS === 'undefined' || (!SKILL_ATTACK_THEME_MONSTERS.includes(mon.id) && !hasSet)) return null;
+  const normal = (typeof HERO_ATK_NAMES !== 'undefined' && Array.isArray(HERO_ATK_NAMES[mon.id])) ? HERO_ATK_NAMES[mon.id] : [];
+  const unique = Array.isArray(mon.unique?.names) ? mon.unique.names : (draft && Array.isArray(mon.draftUniqueNames) ? mon.draftUniqueNames : []);
+  const lists = [['normal', '通常技', normal], ['unique', '固有技', unique]].filter(([, , names]) => names.length);
+  return lists.length ? lists : null;
+};
+// 種類ごとに横1行で流す(縦に並べると演出の舞台の高さを削り、上へ飛ぶ演出が見えなくなる)。
+// playingName: いま再生中の技名 / disabled: 再生中は押せない / onPlay(kind, name)
+const SkillMotionPicker = ({ lists, playingName = null, disabled = false, onPlay }) => {
+  if (!lists) return null;
+  return (
+    <div data-skill-motion-picker className="mx-auto mt-2 w-full max-w-md space-y-1.5">
+      {lists.map(([kind, label, names]) => (
+        <div key={kind} className="flex items-center gap-1.5 min-w-0">
+          <div className="shrink-0 w-9 text-[9px] font-black leading-tight text-cyan-300/80">{label}</div>
+          <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto mh-scroll pb-0.5">
+            {names.map((name, lvl) => (
+              <button key={name} type="button" data-skill-motion={name} data-monster-check-skill-motion={name} disabled={disabled}
+                onClick={() => { Audio_.se.tap(); if (!disabled) onPlay(kind, name); }}
+                className={`shrink-0 min-h-[44px] rounded-xl border px-2.5 text-[10px] font-black leading-tight whitespace-nowrap active:scale-95 disabled:opacity-45 ${playingName === name ? 'border-cyan-200 bg-cyan-700 text-white' : kind === 'unique' ? 'border-amber-400/40 bg-amber-950/40 text-amber-100' : 'border-red-400/40 bg-red-950/40 text-red-100'}`}>
+                <span className="block">{name}</span>
+                <span className="block text-[8px] font-mono text-slate-400">Lv.{lvl}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 const BattleAttackMotionPreview = ({image, anim, compact=false, baseId=null}) => {
   const aimVars = compact ? attackAimVars(0, -70, {spread:30}) : attackAimVars(0, -120);
   // 体当たりだった初期モンスターは、種族ごとの攻撃を同じ部品で再生する(baseId が要る)

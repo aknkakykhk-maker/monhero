@@ -794,6 +794,14 @@ const persistRankingScore = async ({ row, insertScore=sbInsertScore, saveLocal }
 // 起動直後はランキングの取得や絵の読み込みが重なるので、少し待ってから始める。
 const RANKING_RESEND_LIMIT = 10;
 const RANKING_RESEND_DELAY_MS = 4000;
+// 曲を終えた直後の送信が通らなかったとき、アプリを開いたまま送り直す間隔(2026-09-29)。
+// これまで送り直しは「アプリを開いたとき1回」だけで、電波の弱い場所で遊んだ記録は、アプリを閉じて開き直すまで
+// 全国ランキングに出なかった(ユーザー報告「スコアがランキングに反映されない」)
+const RHYTHM_RANKING_RETRY_DELAYS_MS = [12000, 45000, 150000];
+// ランキングを開くとき、直前の送信がまだ終わっていなければ待つ長さ(送信の待ち時間の上限8秒より少し長く)
+const RHYTHM_RANKING_SUBMIT_WAIT_MS = 9000;
+// ランキングを開くときの送り直しを待つ長さ。待ちきれなければ、いま入っているぶんだけ見せる
+const RHYTHM_RANKING_RESEND_WAIT_MS = 10000;
 
 // 退避した一覧から、まだ送れていないものだけを拾う。
 //   ・nationalSaved が false のものだけ(true や、フラグの無い古い記録は触らない)
