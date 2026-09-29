@@ -117,8 +117,8 @@ Mia: { id:'Mia', name:"ミーア", emoji:"🧚", imgUrl:MIA_IMG, iconUrl:MIA_ICO
   baseHp:300, baseGuts:180, baseAtk:175, baseDef:60,
   plusStats:{hp:120,atk:30,def:10,guts:65},
   distAptitude:['G','C','A','B'],
-  unique:{ name:"バン", icon:MIA_ICON, monId:"Mia", baseMult:2.1, baseGuts:42, evoLevel:0,
-    names:["バン","ギガレイ","ギガサンダー","ビッグバン","ギガライトニング","コズミッグバン","テラレイ","テラバン","ドラゴ・ノヴァ"],
+  unique:{ name:"ボイスバン", icon:MIA_ICON, monId:"Mia", baseMult:2.1, baseGuts:42, evoLevel:0,
+    names:["ボイスバン","ギガメロディ","ギガサンダー","ビッグバンライブ","ギガライトニング","コズミックライブ","テラメロディ","テラボイスバン","ノヴァ・フィナーレ"],
     effectDesc:"魔法空間：次ターン、カード消費ガッツ0" } },
 ```
 
@@ -162,7 +162,8 @@ node tools/image/monster-image-quality-check.js
 ## 3. 通常技・固有技の名前
 
 `HERO_ATK_NAMES[id]` に**9つ**。同じ系統の子とそろえてよい
-(ミーアはピクシーと同じ並び。パンドラは同じ系統だが独自の名前を持っている)。
+(ミーアは最初ピクシーと同じ並びだったが、2026-09-29 に歌う動きへ合わせた名前へ変えた。
+名前を動きに合わせたいときは、同じ系統と分かる言葉を残して足す形がユーザーの好み。パンドラは同じ系統だが独自の名前を持っている)。
 
 ## 4. 染色(いちばん手が要る)
 
