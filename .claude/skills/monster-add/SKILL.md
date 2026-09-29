@@ -364,6 +364,7 @@ node tools/run-checks.js --area monster,image 2>&1 | tail -25
   新しい子の分は、この2本を写して id・色・文言を差し替える。数字はデータから読ませる(手で書かない)。
   フォントは M PLUS Rounded 1c を Google Fonts から一時的に取る(リポジトリには入れない)。
   `node tools/changelog/new-monster-gallery-check.js` が、新モンスターのお知らせに紹介と染色イメージがあるかを見張る
+  (タイトルに「新モンスター」と入れる。アイコンだけのお知らせは対象外)
 
 ## 9. 登録漏れを機械的に見つける
 

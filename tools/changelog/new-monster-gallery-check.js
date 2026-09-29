@@ -4,7 +4,7 @@
 //   node tools/changelog/new-monster-gallery-check.js
 //
 // ユーザー指示「更新情報に画像付きのモンスター説明みたいのもいれといて」「新モンスター実装時にまた染色イメージも一緒につけて」。
-// 対象は 2026-09-29 以降の、group:'monster' で円盤石を並べたお知らせ(assistantNotice の type が market)。
+// 対象は 2026-09-29 以降の、group:'monster' でタイトルに「新モンスター」とある公開のお知らせ(assistantNotice の type が market)。
 // それより前のお知らせは絵の決まりが無かったころのものなので見ない。
 // 手順: .claude/skills/monster-add/SKILL.md §8
 const fs = require('fs');
@@ -19,7 +19,8 @@ const ctx = {};
 vm.createContext(ctx);
 vm.runInContext(`${fs.readFileSync(path.join(ROOT, 'monster-hero/data/changelog.js'), 'utf8')}\nglobalThis.L=CHANGELOG;`, ctx);
 const FROM = '2026-09-29 00:00';
-const targets = ctx.L.filter(e => e && e.group === 'monster' && String(e.date || '') >= FROM
+// ★アイコンだけが並んだお知らせ(同じ group:'monster' の market)は対象外。タイトルに「新モンスター」とあるものだけを見る
+const targets = ctx.L.filter(e => e && e.group === 'monster' && String(e.date || '') >= FROM && /新モンスター/.test(e.title || '')
   && e.assistantNotice && e.assistantNotice.type === 'market' && !e.dev);
 check('対象のお知らせがある(新モンスターを公開したお知らせ)', targets.length > 0, `${targets.length}件`);
 const exists = (img) => fs.existsSync(path.join(ROOT, 'monster-hero', String(img).split('?')[0]));
