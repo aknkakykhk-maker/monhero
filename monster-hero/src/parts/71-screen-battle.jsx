@@ -834,7 +834,10 @@ function BattleScreen({
       guard = enemyIntent.variant === 'pierce' ? 0 : guardValueOf(flat, mult, slotIdx);
     }
     const hit = resolveTacticsGuardedHit(raw, hits, guard, guardHits);
-    const taken = applyTurnDamageReduction(hit.taken > 0 ? hit.taken * plannedLifeTreeMult(slotIdx) : hit.taken, slotIdx);
+    // 大樹の加護を選んでいれば、ガードのあとの通る量へ使ったターンぶんを掛ける(実処理の applyImmediateTakenReduction と同じ順)。
+    //   hit は毎回作り直される入れ物なので、ここで書き換えてよい
+    if (hit.taken > 0) hit.taken *= plannedLifeTreeMult(slotIdx);
+    const taken = applyTurnDamageReduction(hit.taken, slotIdx);
     if (!(taken > 0)) return { taken: 0, parts: [], raw };
     // ★発ごとの通る量をそのまま出す。ガードが効いた発は小さく、効いていない発は大きい。
     //   止まった発(0)は数字を出さないので、数字の数＝これから食らう回数

@@ -66,7 +66,7 @@ check('このターンの倍率を敵の番へ渡し、敵の番の被ダメ6か
   /takenMult:immediateTakenMult,takenMultBySlot:immediateTakenMultBySlot\}/.test(app)
   && (app.match(/applyImmediateTakenReduction\(/g) || []).length === 6);
 check('予告の数字にも使ったターンぶんが入る',
-  /applyTurnDamageReduction\(hit\.taken > 0 \? hit\.taken \* plannedLifeTreeMult\(slotIdx\) : hit\.taken, slotIdx\)/.test(screen)
+  /if \(hit\.taken > 0\) hit\.taken \*= plannedLifeTreeMult\(slotIdx\);\n    const taken = applyTurnDamageReduction\(hit\.taken, slotIdx\);/.test(screen)
   && /if \(!isLifeTreeGuardCard\(card\)\) return;/.test(screen));
 check('説明文(effectDesc)と数値が合っている',
   (allies.match(/effectDesc:"大樹の加護：最大ガッツの20%回復＆被ダメージ30%軽減\(このターンから2ターン\)"/g) || []).length === 2
