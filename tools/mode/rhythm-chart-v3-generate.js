@@ -30,7 +30,7 @@ const {trackFocus,focusBoost}=require('./rhythm-chart-focus.js');
 const {lowLagOf,isLowHit}=require('./rhythm-chart-low-lag.js');
 const {detectRepeats}=require('./rhythm-chart-repeats.js');
 const {DEFAULT_PLAY_TUNING,playTuningForRevision}=require('./rhythm-chart-play-tuning.js');
-const {WARP_REVISION,tempoWarp}=require('./rhythm-chart-tempo-warp.js');
+const {tempoWarpForRevision}=require('./rhythm-chart-tempo-warp.js');
 const {ENDING_REVISION,fadingEnding}=require('./rhythm-chart-ending.js');
 const {setLaneCount:setPatternLaneCount,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32,heldPairShapeCandidates,heldPairMoveScale}=require('./rhythm-chart-v3-patterns.js');
 const {soundTraitsFor,flickScoreOf,chordScoreOf}=require('./rhythm-sound-traits.js');
@@ -573,7 +573,7 @@ const lagCorrected=onset=>{
 // Rev.21: テンポの揺れ(rhythm-chart-tempo-warp.js)。なめらかに揺れていて、半分の区間で確かめた曲だけ、
 // 打点の時刻から揺れを引いてから格子に乗せる(候補の絞り込みが揺れで外れないように)。書き出す時刻にはパイプラインが揺れを足す。
 // 揺れていない曲では0なので、1音も変わらない
-const tempoWarpInfo=chartRevision>=WARP_REVISION?tempoWarp(audio):null;
+const tempoWarpInfo=tempoWarpForRevision(chartRevision,audio);
 const warpCorrected=onset=>{
   const shift=tempoWarpInfo&&tempoWarpInfo.active?tempoWarpInfo.at(onset.grid):0;
   if(!shift)return onset;
@@ -581,7 +581,7 @@ const warpCorrected=onset=>{
   const grid=Math.round((timeMs-timing.beatZeroMs)/gridMs);
   return {...onset,grid,gridOffsetMs:Math.round((timeMs-(timing.beatZeroMs+grid*gridMs))*100)/100};
 };
-if(tempoWarpInfo&&tempoWarpInfo.active)console.log(`テンポの揺れに合わせる(Rev.21): ${tempoWarpInfo.reason}`);
+if(tempoWarpInfo&&tempoWarpInfo.active)console.log(`テンポの揺れに合わせる(${tempoWarpInfo.version===2?'Rev.23 の読み方':'Rev.21'}): ${tempoWarpInfo.reason}`);
 // 打点をグリッドごとに1つへまとめる（同じ位置に2つ以上あれば強いほうを残す）
 const onsetByGrid=new Map();
 for(const rawOnset of audio.onsets){
