@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f3de413702351fa3
+// generated-sha256: 5925c7d33d49c5ff
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-30 10:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-30 12:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4570,6 +4570,18 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
   const legacySaved = value?.[BGM_ARRANGEMENT_LEGACY_FALLBACK[scene]];
   return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
 }));
+
+// タイトル画像アレンジ。設定の「タイトル画像アレンジ」から選ぶ(2026-09-30・ユーザー要望)。
+// 保存は新しいキー mh_title_art に id だけを持つ。無い・知らない id のときは既定(いちばん新しい絵)。
+// 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない
+const TITLE_ART_STORAGE_KEY = 'mh_title_art';
+const TITLE_ART_OPTIONS = [
+  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg' },
+  { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
+];
+const DEFAULT_TITLE_ART = 'halloween';
+const normalizeTitleArt = value => TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
+const titleArtSrc = value => TITLE_ART_OPTIONS.find(option => option.id === normalizeTitleArt(value)).src;
 
 // ---- part: 14-audio.jsx ----
 const Audio_ = (() => {
@@ -21083,7 +21095,7 @@ const DebugThrowScreenError = () => { throw new Error('画面エラーの受け�
 //   (横画面で「左＝見出し・助手 / 右＝メニュー」に組み替わるのも、この形が条件)
 // ・メニューの1行は menuClass ひとつに寄せた。高さ(64px)・角丸・枠線・押した手応えを
 //   ここでだけ決める。「ゲームを更新」だけ余白と枠色がずれていたのも同じ型に入れた
-function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
+function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenTitleArt, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
   const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
@@ -21150,6 +21162,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         <button type="button" data-open-battle-settings onClick={() => setBattleSettingsOpen(true)} className={menuClass}>バトル設定</button>
         <button type="button" onClick={onOpenAudioSettings} className={menuClass}>音量設定</button>
         <button type="button" onClick={onOpenBgmArrangement} className={menuClass}>BGMアレンジ</button>
+        <button type="button" data-open-title-art onClick={onOpenTitleArt} className={menuClass}>タイトル画像アレンジ</button>
         <button type="button" onClick={onOpenBackup} className={menuClass}>データ引き継ぎ</button>
         <button type="button" onClick={onOpenHelp} className={menuClass}>ヘルプ</button>
         <button type="button" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} className={`${menuClass} flex-col disabled:opacity-40`}><span className="block text-cyan-200">ゲームを更新</span><span className="mt-1 block text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button>
@@ -30337,6 +30350,13 @@ function MonsterHeroGame() {
   const entryAnimatingRef = useRef(false);
   const titleStartingRef = useRef(false);
   const [showTitleSettings, setShowTitleSettings] = useState(false);
+  // タイトル画像アレンジ。タイトルは保存データの読み込みより先に出るので、
+  // 最初の値は端末の保存をその場で読む(index.html の先読みと同じ絵にそろえるため)
+  const [showTitleArt, setShowTitleArt] = useState(false);
+  const [titleArt, setTitleArtState] = useState(() => {
+    try { const raw = window.localStorage.getItem(TITLE_ART_STORAGE_KEY); return normalizeTitleArt(raw !== null ? JSON.parse(raw) : null); } catch { return DEFAULT_TITLE_ART; }
+  });
+  const changeTitleArt = id => { const next = normalizeTitleArt(id); setTitleArtState(next); storeSet(TITLE_ART_STORAGE_KEY, next, false); };
   const [titlePlayerId] = useState(() => {
     try {
       const saved = window.localStorage.getItem('mh_player_id');
@@ -34433,7 +34453,7 @@ function MonsterHeroGame() {
         const image = new Image(); let settled = false;
         const finish = () => { if (!settled) { settled = true; resolve(); } };
         image.onload = async () => { try { if (image.decode) await image.decode(); finish(); } catch (error) { if (!settled) { settled = true; reject(error); } } };
-        image.onerror = () => { if (!settled) { settled = true; reject(new Error('title image unavailable')); } }; image.src = 'data/images/title-screen-clean.jpg';
+        image.onerror = () => { if (!settled) { settled = true; reject(new Error('title image unavailable')); } }; image.src = titleArtSrc(titleArt);
         if (image.complete) image.onload();
       });
       say('タイトルBGMを準備中');
@@ -34529,7 +34549,7 @@ function MonsterHeroGame() {
   };
 
   const startGame = async () => {
-    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showAudioSettings || showBackup) return;
+    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showTitleArt || showAudioSettings || showBackup) return;
     titleStartingRef.current = true;
     setTitleStarting(true);
     // はじめて遊ぶ人は「助手をえらぶ」→ 選んだ助手のあいさつ → プロフィール(名前とアイコン)の順。
@@ -34758,6 +34778,8 @@ function MonsterHeroGame() {
       const savedAudioMuted = !!await storeGet('mh_audio_muted', false, false);
       setQuickMuted(savedAudioMuted);
       if (savedAudioMuted) Audio_.setEnabled(false);
+      // 端末の保存をその場で読めない環境(window.storage)でも、選んだタイトル画像を戻す
+      { const savedTitleArt = await storeGet(TITLE_ART_STORAGE_KEY, null, false); if (savedTitleArt !== null) setTitleArtState(normalizeTitleArt(savedTitleArt)); }
       let savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
       // プロモードの既定曲だけは、以前の既定のまま遊んでいる人へ新しい曲を一度だけ届ける
       if (await storeGet(BGM_PRO_DEFAULT_MIGRATION_KEY, false, false) !== true) {
@@ -43406,7 +43428,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       </div>
     </div>
   ) : showTitleSettings ? (
-    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
+    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowTitleArt(true)}}>🖼️ タイトル画像アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
+  ) : showTitleArt ? (
+    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog" data-title-art-picker style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>タイトル画像アレンジ</h3><button onClick={()=>setShowTitleArt(false)} aria-label="閉じる"><X size={18}/></button></div><p className="text-[11px] font-bold leading-relaxed text-slate-300">タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。</p><div className="grid grid-cols-2 gap-3">{TITLE_ART_OPTIONS.map(option=>{const selected=titleArt===option.id;return <button key={option.id} type="button" aria-pressed={selected} onClick={()=>changeTitleArt(option.id)} className={`relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected?'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]':'border-white/15 bg-white/5'}`}><img src={option.src} alt={option.label} loading="lazy" className="block w-full aspect-[9/16] object-cover"/>{selected&&<span className="absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black text-slate-900">選択中</span>}<span className="block px-2 pt-1.5 text-[13px] font-black text-white">{option.label}</span><small className="block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400">{option.desc}</small></button>;})}</div><button className="mh-dialog-choice justify-center" onClick={()=>setShowTitleArt(false)}>決定</button></div></div>
   ) : showAudioSettings ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/>}</div></div>
   ) : showBgmArrangement ? (
@@ -43696,12 +43720,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   );
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
-      <img className="mh-title-visual" src="data/images/title-screen-clean.jpg" alt="モンスターヒーロー グランドチャンピオンクエスト"/>
+      <img className="mh-title-visual" src={titleArtSrc(titleArt)} alt="モンスターヒーロー タイトル画面"/>
       <header className="mh-title-header"><div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div><div className="mh-title-actions"><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openChangelog()}}><Sparkles size={19}/><span>お知らせ</span>{hasUnreadChangelog&&<em>NEW</em>}</button><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setShowTitleSettings(true)}}><Settings size={19}/><span>設定</span></button></div></header>
       <button type="button" className="mh-title-start" disabled={!!titleModal || titleStarting} onPointerDown={startGame} aria-label="トップ画面へ進む"></button>{titleModal}
     </main>{updateNotice}{storageTroubleNotice}</>
   );
-  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src="data/images/title-screen-clean.jpg" alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}{storageTroubleNotice}</>;
+  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src={titleArtSrc(titleArt)} alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}{storageTroubleNotice}</>;
 
   return (
     // みゅあとの仲良し度をここから配る。各画面は <AssistantBubble scene="…"/> を置くだけでよい
@@ -44758,6 +44782,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onBack={returnToHome}
             onOpenAudioSettings={()=>setShowAudioSettings(true)}
             onOpenBgmArrangement={()=>setShowBgmArrangement(true)}
+            onOpenTitleArt={()=>setShowTitleArt(true)}
             onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}
             onOpenHelp={()=>openHelp()}
             onOpenGameUpdate={()=>setShowGameUpdateConfirm(true)}

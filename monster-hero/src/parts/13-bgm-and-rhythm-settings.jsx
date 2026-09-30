@@ -772,3 +772,15 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
   const legacySaved = value?.[BGM_ARRANGEMENT_LEGACY_FALLBACK[scene]];
   return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
 }));
+
+// タイトル画像アレンジ。設定の「タイトル画像アレンジ」から選ぶ(2026-09-30・ユーザー要望)。
+// 保存は新しいキー mh_title_art に id だけを持つ。無い・知らない id のときは既定(いちばん新しい絵)。
+// 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない
+const TITLE_ART_STORAGE_KEY = 'mh_title_art';
+const TITLE_ART_OPTIONS = [
+  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg' },
+  { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
+];
+const DEFAULT_TITLE_ART = 'halloween';
+const normalizeTitleArt = value => TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
+const titleArtSrc = value => TITLE_ART_OPTIONS.find(option => option.id === normalizeTitleArt(value)).src;

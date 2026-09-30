@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 43ed281f40568537
+// source-sha256: b44b789e67b1934f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-30 10:09";
+const BUILD_DATE = "2026-09-30 12:06";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5425,6 +5425,21 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
   const legacySaved = value?.[BGM_ARRANGEMENT_LEGACY_FALLBACK[scene]];
   return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
 }));
+const TITLE_ART_STORAGE_KEY = 'mh_title_art';
+const TITLE_ART_OPTIONS = [{
+  id: 'halloween',
+  label: 'ハロウィン',
+  desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え',
+  src: 'data/images/title-screen-halloween.jpg'
+}, {
+  id: 'classic',
+  label: 'クラシック',
+  desc: 'これまでのタイトル画面',
+  src: 'data/images/title-screen-clean.jpg'
+}];
+const DEFAULT_TITLE_ART = 'halloween';
+const normalizeTitleArt = value => TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
+const titleArtSrc = value => TITLE_ART_OPTIONS.find(option => option.id === normalizeTitleArt(value)).src;
 const Audio_ = (() => {
   let Tone = null,
     ready = false,
@@ -31832,6 +31847,7 @@ function SettingsScreen({
   onBack,
   onOpenAudioSettings,
   onOpenBgmArrangement,
+  onOpenTitleArt,
   onOpenBackup,
   onOpenHelp,
   onOpenGameUpdate,
@@ -31938,6 +31954,11 @@ function SettingsScreen({
     onClick: onOpenBgmArrangement,
     className: menuClass
   }, "BGMアレンジ"), React.createElement("button", {
+    type: "button",
+    "data-open-title-art": true,
+    onClick: onOpenTitleArt,
+    className: menuClass
+  }, "タイトル画像アレンジ"), React.createElement("button", {
     type: "button",
     onClick: onOpenBackup,
     className: menuClass
@@ -47799,6 +47820,20 @@ function MonsterHeroGame() {
   const entryAnimatingRef = useRef(false);
   const titleStartingRef = useRef(false);
   const [showTitleSettings, setShowTitleSettings] = useState(false);
+  const [showTitleArt, setShowTitleArt] = useState(false);
+  const [titleArt, setTitleArtState] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem(TITLE_ART_STORAGE_KEY);
+      return normalizeTitleArt(raw !== null ? JSON.parse(raw) : null);
+    } catch {
+      return DEFAULT_TITLE_ART;
+    }
+  });
+  const changeTitleArt = id => {
+    const next = normalizeTitleArt(id);
+    setTitleArtState(next);
+    storeSet(TITLE_ART_STORAGE_KEY, next, false);
+  };
   const [titlePlayerId] = useState(() => {
     try {
       const saved = window.localStorage.getItem('mh_player_id');
@@ -51669,7 +51704,7 @@ function MonsterHeroGame() {
             reject(new Error('title image unavailable'));
           }
         };
-        image.src = 'data/images/title-screen-clean.jpg';
+        image.src = titleArtSrc(titleArt);
         if (image.complete) image.onload();
       });
       say('タイトルBGMを準備中');
@@ -51780,7 +51815,7 @@ function MonsterHeroGame() {
     } catch {}
   };
   const startGame = async () => {
-    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showAudioSettings || showBackup) return;
+    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showTitleArt || showAudioSettings || showBackup) return;
     titleStartingRef.current = true;
     setTitleStarting(true);
     const needsAssistantChoice = !onboarded && !assistantChosen;
@@ -51976,6 +52011,10 @@ function MonsterHeroGame() {
       const savedAudioMuted = !!(await storeGet('mh_audio_muted', false, false));
       setQuickMuted(savedAudioMuted);
       if (savedAudioMuted) Audio_.setEnabled(false);
+      {
+        const savedTitleArt = await storeGet(TITLE_ART_STORAGE_KEY, null, false);
+        if (savedTitleArt !== null) setTitleArtState(normalizeTitleArt(savedTitleArt));
+      }
       let savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
       if ((await storeGet(BGM_PRO_DEFAULT_MIGRATION_KEY, false, false)) !== true) {
         const proMigration = migrateProBgmDefaults(savedBgmArrangement);
@@ -62674,11 +62713,63 @@ function MonsterHeroGame() {
     className: "mh-dialog-choice",
     onClick: () => {
       setShowTitleSettings(false);
+      setShowTitleArt(true);
+    }
+  }, "🖼️ タイトル画像アレンジ ", React.createElement(ChevronRight, {
+    size: 18
+  })), React.createElement("button", {
+    className: "mh-dialog-choice",
+    onClick: () => {
+      setShowTitleSettings(false);
       setShowBackup(true);
     }
   }, "🛡️ データ引き継ぎ ", React.createElement(ChevronRight, {
     size: 18
-  })))) : showAudioSettings ? React.createElement("div", {
+  })))) : showTitleArt ? React.createElement("div", {
+    className: "mh-title-modal",
+    onPointerDown: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "mh-title-dialog",
+    "data-title-art-picker": true,
+    style: {
+      maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
+      overflowY: 'auto'
+    }
+  }, React.createElement("div", {
+    className: "mh-dialog-head"
+  }, React.createElement("h3", null, "タイトル画像アレンジ"), React.createElement("button", {
+    onClick: () => setShowTitleArt(false),
+    "aria-label": "閉じる"
+  }, React.createElement(X, {
+    size: 18
+  }))), React.createElement("p", {
+    className: "text-[11px] font-bold leading-relaxed text-slate-300"
+  }, "タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。"), React.createElement("div", {
+    className: "grid grid-cols-2 gap-3"
+  }, TITLE_ART_OPTIONS.map(option => {
+    const selected = titleArt === option.id;
+    return React.createElement("button", {
+      key: option.id,
+      type: "button",
+      "aria-pressed": selected,
+      onClick: () => changeTitleArt(option.id),
+      className: `relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected ? 'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]' : 'border-white/15 bg-white/5'}`
+    }, React.createElement("img", {
+      src: option.src,
+      alt: option.label,
+      loading: "lazy",
+      className: "block w-full aspect-[9/16] object-cover"
+    }), selected && React.createElement("span", {
+      className: "absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black text-slate-900"
+    }, "選択中"), React.createElement("span", {
+      className: "block px-2 pt-1.5 text-[13px] font-black text-white"
+    }, option.label), React.createElement("small", {
+      className: "block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400"
+    }, option.desc));
+  })), React.createElement("button", {
+    className: "mh-dialog-choice justify-center",
+    onClick: () => setShowTitleArt(false)
+  }, "決定"))) : showAudioSettings ? React.createElement("div", {
     className: "mh-title-modal"
   }, React.createElement("div", {
     className: "mh-title-dialog",
@@ -63373,8 +63464,8 @@ function MonsterHeroGame() {
     "aria-label": "Monster Hero タイトル画面"
   }, React.createElement("img", {
     className: "mh-title-visual",
-    src: "data/images/title-screen-clean.jpg",
-    alt: "モンスターヒーロー グランドチャンピオンクエスト"
+    src: titleArtSrc(titleArt),
+    alt: "モンスターヒーロー タイトル画面"
   }), React.createElement("header", {
     className: "mh-title-header"
   }, React.createElement("div", {
@@ -63407,7 +63498,7 @@ function MonsterHeroGame() {
   if (bootPhase === 'ENTERING_GAME') return React.createElement(React.Fragment, null, React.createElement("main", {
     className: "mh-entering"
   }, React.createElement("img", {
-    src: "data/images/title-screen-clean.jpg",
+    src: titleArtSrc(titleArt),
     alt: ""
   }), React.createElement("div", {
     className: "mh-gate-core"
@@ -66098,6 +66189,7 @@ function MonsterHeroGame() {
       onBack: returnToHome,
       onOpenAudioSettings: () => setShowAudioSettings(true),
       onOpenBgmArrangement: () => setShowBgmArrangement(true),
+      onOpenTitleArt: () => setShowTitleArt(true),
       onOpenBackup: () => {
         setShowBackup(true);
         setBackupTab('export');
