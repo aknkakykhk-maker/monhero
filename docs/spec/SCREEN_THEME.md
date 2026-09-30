@@ -29,3 +29,9 @@
 
 モンヒロビートは `SCREEN_THEME_CATEGORIES` で `ready:false`。外すまでは設定に並ばず、クラシックのまま。
 外すときは、演奏中の見やすさ(ノーツ・判定表示)を実際に撮って確かめる。
+
+## オレンジの強め方(2026-09-30)
+
+- 明るい indigo(200〜700)を、ハロウィンのときだけかぼちゃ色のオレンジへ置き換える(`tools/theme/halloween-theme-css.js` の `PUMPKIN`)。白い文字を載せる500〜700は深いオレンジ。モードごとの色(`style` の色)は意味を持つので置き換えない
+- `.mh-app` 自身にも夜空・コウモリ・かぼちゃを敷き、`.mh-screen-shell` を使わないバトル系の画面にも透けて見えるようにした
+- `build-tailwind.js` の指紋に `halloween-theme-css.js` を入れた(これが無いと、色の規則を直しても tailwind.css が作り直されない)
