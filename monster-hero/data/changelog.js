@@ -34,6 +34,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-09-29 ユーザー指示(mp4とジャケット)。歯ごたえは自動のままとユーザーが決めた
+    date: "2026-09-30 09:03", type:'update', title:'モンヒロビート：新曲「Rising Hope」を追加しました', status:'new',
+    image: 'images/song-art/rising-hope.jpg?v=4c1e106d0e39',
+    items:[
+      'モンヒロビートに「Rising Hope」（1分30秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.16 ／ EXPERT Lv.24 ／ MASTER Lv.31 です。',
+      'ノーツ数は 180 ／ 205 ／ 279 ／ 339 ／ 397 です。',
+    ],
+    assistantNotice: { id:'update_notice_rising_hope_v1', type:'content' },
+  },
+  {
     // 2026-09-29 ユーザー判断(参考動画から「1 盛り上がりで光の筋」「2 叩いた場所に判定」「3 目標を越えた瞬間が光る」。光の筋は「最初は OFF・オプションで出せる」)
     date: "2026-09-30 07:50", type:'update', group:'rhythm', title:'モンヒロビート: サビで道の両側に光が流れる「盛り上がりの光」と、叩いた場所に判定を出す設定を追加しました', status:'new',
     items:[
