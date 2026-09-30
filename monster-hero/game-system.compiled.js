@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ffff1819bbe428bc
+// source-sha256: 238c74505511aa5a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-30 17:29";
+const BUILD_DATE = "2026-09-30 18:14";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -39924,12 +39924,12 @@ function ProMonsterGridPicker({
   const apt = (m, i) => m.distAptitude && m.distAptitude[i] || 'C';
   return React.createElement("div", {
     "data-pro-pick-grid": true,
-    className: "w-full"
+    className: "w-full flex-1 min-h-0 flex flex-col"
   }, lineageTabs.length > 1 && React.createElement("div", {
     "data-pro-pick-tabs": true,
     role: "tablist",
     "aria-label": "血統",
-    className: "sticky top-0 z-20 -mx-1 px-1 pb-1.5 bg-[#020617] flex gap-1.5 overflow-x-auto mh-scroll"
+    className: "shrink-0 pb-1.5 flex gap-1.5 overflow-x-auto mh-scroll"
   }, [{
     id: 'all',
     name: 'すべて',
@@ -39949,7 +39949,10 @@ function ProMonsterGridPicker({
     className: `shrink-0 min-h-[34px] px-2.5 rounded-full border text-[11px] font-black active:scale-95 ${activeTab === t.id ? ac.tab : 'border-slate-700 bg-slate-900 text-slate-400'}`
   }, t.name, React.createElement("span", {
     className: "ml-1 text-[9px] font-mono opacity-70"
-  }, t.count)))), pinnedIds.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, t.count)))), React.createElement("div", {
+    "data-pro-pick-scroll": true,
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, pinnedIds.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
     className: `px-1 mb-1 text-[9px] font-black ${ac.head}`
   }, "★お気に入り・前回使った子"), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5 mb-3"
@@ -39957,11 +39960,12 @@ function ProMonsterGridPicker({
     className: "px-1 mb-1 text-[9px] font-black text-slate-400"
   }, activeTab === 'all' ? 'すべて' : `${(lineageTabs.find(t => t.id === activeTab) || {}).name}血統`, "（", shownList.length, "体）"), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5 pb-3"
-  }, shownList.map(m => tile(m, 'all-'))), React.createElement("div", {
-    className: "sticky bottom-0 z-20 -mx-1 px-1 pt-1"
+  }, shownList.map(m => tile(m, 'all-')))), React.createElement("div", {
+    className: "shrink-0 pt-1.5"
   }, React.createElement("div", {
+    key: focus ? focus.id : 'none',
     "data-pro-pick-detail": true,
-    className: "rounded-2xl border border-white/15 bg-slate-950/95 p-2 shadow-[0_-6px_18px_rgba(0,0,0,0.6)]"
+    className: "rounded-2xl border border-white/15 bg-slate-950 p-2"
   }, !focus ? React.createElement("div", {
     className: "py-3 text-center text-[10px] font-black text-slate-400"
   }, "モンスターをタップすると、ここに詳しい情報が出ます") : React.createElement(React.Fragment, null, React.createElement("div", {
@@ -40241,9 +40245,9 @@ function PickHeroAllyScreen({
     }, label))), React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
     }, isProMode(runMode) ? 'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col"
+      className: `flex-1 ${pickMode === 'hero' && isProMode(runMode) ? 'overflow-hidden' : 'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`
     }, React.createElement("div", {
-      className: `w-full${pickMode === 'ally' ? ' m-auto' : ''}`
+      className: `w-full${pickMode === 'ally' ? ' m-auto' : ''}${pickMode === 'hero' && isProMode(runMode) ? ' flex-1 min-h-0 flex flex-col' : ''}`
     }, pickMode === 'ally' && !isProMode(runMode) && React.createElement("div", {
       className: "mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-[#c9ae6a]"
     }, React.createElement("span", null, "合流できる候補 ", (monSelection || []).filter(m => m && !slots.some(x => x && x.id === m.id)).length, "体"), React.createElement("span", null, "カードを押すと詳細")), (() => {
@@ -40659,7 +40663,7 @@ function PickProAlliesScreen({
   }, ready ? 'この編成で開始' : `あと${need - proAllyPool.length}体えらんでください`))) : React.createElement(React.Fragment, null, React.createElement("p", {
     className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
   }, "この枠に入れるベースモンを1体選んでください。"), React.createElement("div", {
-    className: "flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"
+    className: "flex-1 min-h-0 pb-2 flex flex-col"
   }, React.createElement(ProMonsterGridPicker, {
     list: candidates.filter(m => !proAllyPool.some((chosen, i) => i !== proEditingAllyIndex && chosen.id === m.id)),
     selectedId: proAllyPool[proEditingAllyIndex]?.id || null,
