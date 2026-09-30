@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8096a54484b186d1
+// source-sha256: ffff1819bbe428bc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-30 17:24";
+const BUILD_DATE = "2026-09-30 17:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -39817,13 +39817,15 @@ const PRO_PICK_ACCENT = {
     ring: 'border-indigo-300 bg-indigo-900/40 ring-2 ring-indigo-400/60',
     check: 'bg-indigo-500',
     button: 'bg-indigo-600 text-white',
-    head: 'text-indigo-300'
+    head: 'text-indigo-300',
+    tab: 'border-indigo-300 bg-indigo-600 text-white'
   },
   pink: {
     ring: 'border-pink-300 bg-pink-900/40 ring-2 ring-pink-400/60',
     check: 'bg-pink-500',
     button: 'bg-pink-600 text-white',
-    head: 'text-pink-300'
+    head: 'text-pink-300',
+    tab: 'border-pink-300 bg-pink-600 text-white'
   }
 };
 function ProMonsterGridPicker({
@@ -39857,7 +39859,30 @@ function ProMonsterGridPicker({
     return next;
   });
   const byId = new Map(list.map(m => [m.id, m]));
-  const pinnedIds = [...new Set([...prefs.fav, ...prefs.recent])].filter(id => byId.has(id));
+  const [lineageTab, setLineageTab] = React.useState('all');
+  const lineageOfMon = m => monsterLineageOf(m.id).main;
+  const lineageTabs = [];
+  {
+    const seen = new Map();
+    list.forEach(m => {
+      const l = lineageOfMon(m);
+      if (!seen.has(l.id)) seen.set(l.id, {
+        id: l.id,
+        name: l.name,
+        count: 0
+      });
+      seen.get(l.id).count += 1;
+    });
+    const order = Object.keys(typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES || {});
+    [...seen.values()].sort((a, b) => {
+      const ia = order.indexOf(a.id),
+        ib = order.indexOf(b.id);
+      return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
+    }).forEach(t => lineageTabs.push(t));
+  }
+  const activeTab = lineageTabs.some(t => t.id === lineageTab) ? lineageTab : 'all';
+  const shownList = activeTab === 'all' ? list : list.filter(m => lineageOfMon(m).id === activeTab);
+  const pinnedIds = activeTab === 'all' ? [...new Set([...prefs.fav, ...prefs.recent])].filter(id => byId.has(id)) : [];
   const tile = (m, keyPrefix) => {
     const on = focusId === m.id;
     const chosen = selectedId === m.id;
@@ -39900,15 +39925,39 @@ function ProMonsterGridPicker({
   return React.createElement("div", {
     "data-pro-pick-grid": true,
     className: "w-full"
-  }, pinnedIds.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, lineageTabs.length > 1 && React.createElement("div", {
+    "data-pro-pick-tabs": true,
+    role: "tablist",
+    "aria-label": "血統",
+    className: "sticky top-0 z-20 -mx-1 px-1 pb-1.5 bg-[#020617] flex gap-1.5 overflow-x-auto mh-scroll"
+  }, [{
+    id: 'all',
+    name: 'すべて',
+    count: list.length
+  }, ...lineageTabs].map(t => React.createElement("button", {
+    key: t.id,
+    role: "tab",
+    "aria-selected": activeTab === t.id,
+    onClick: () => {
+      setLineageTab(t.id);
+      const inTab = t.id === 'all' ? list : list.filter(m => lineageOfMon(m).id === t.id);
+      if (!inTab.some(m => m.id === focusId)) {
+        const first = inTab.find(m => !disabled(m));
+        if (first) setFocusId(first.id);
+      }
+    },
+    className: `shrink-0 min-h-[34px] px-2.5 rounded-full border text-[11px] font-black active:scale-95 ${activeTab === t.id ? ac.tab : 'border-slate-700 bg-slate-900 text-slate-400'}`
+  }, t.name, React.createElement("span", {
+    className: "ml-1 text-[9px] font-mono opacity-70"
+  }, t.count)))), pinnedIds.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
     className: `px-1 mb-1 text-[9px] font-black ${ac.head}`
   }, "★お気に入り・前回使った子"), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5 mb-3"
   }, pinnedIds.map(id => tile(byId.get(id), 'pin-')))), React.createElement("div", {
     className: "px-1 mb-1 text-[9px] font-black text-slate-400"
-  }, "すべて（", list.length, "体）"), React.createElement("div", {
+  }, activeTab === 'all' ? 'すべて' : `${(lineageTabs.find(t => t.id === activeTab) || {}).name}血統`, "（", shownList.length, "体）"), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5 pb-3"
-  }, list.map(m => tile(m, 'all-'))), React.createElement("div", {
+  }, shownList.map(m => tile(m, 'all-'))), React.createElement("div", {
     className: "sticky bottom-0 z-20 -mx-1 px-1 pt-1"
   }, React.createElement("div", {
     "data-pro-pick-detail": true,
@@ -39938,6 +39987,11 @@ function ProMonsterGridPicker({
   }, "総合力 ", React.createElement("b", {
     className: "text-[12px] text-amber-300 font-mono"
   }, formatMonsterPower(monsterPowerOf(focus))))), React.createElement("div", {
+    className: "truncate text-[9px] font-black text-slate-400 leading-tight"
+  }, (() => {
+    const l = monsterLineageOf(focus.id);
+    return l.main.id === l.sub.id ? `${l.main.name}の純血` : `${l.main.name} × ${l.sub.name}`;
+  })()), React.createElement("div", {
     className: "truncate text-[10px] font-black text-amber-300 leading-tight"
   }, React.createElement(Zap, {
     size: 10,

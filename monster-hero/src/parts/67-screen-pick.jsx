@@ -167,8 +167,8 @@ function recordProRecentParty(ids){
   writeProPickPrefs({...prefs,recent:[...list,...prefs.recent.filter(x=>!list.includes(x))].slice(0,PRO_PICK_RECENT_MAX)});
 }
 const PRO_PICK_ACCENT={
-  indigo:{ring:'border-indigo-300 bg-indigo-900/40 ring-2 ring-indigo-400/60',check:'bg-indigo-500',button:'bg-indigo-600 text-white',head:'text-indigo-300'},
-  pink:{ring:'border-pink-300 bg-pink-900/40 ring-2 ring-pink-400/60',check:'bg-pink-500',button:'bg-pink-600 text-white',head:'text-pink-300'},
+  indigo:{ring:'border-indigo-300 bg-indigo-900/40 ring-2 ring-indigo-400/60',check:'bg-indigo-500',button:'bg-indigo-600 text-white',head:'text-indigo-300',tab:'border-indigo-300 bg-indigo-600 text-white'},
+  pink:{ring:'border-pink-300 bg-pink-900/40 ring-2 ring-pink-400/60',check:'bg-pink-500',button:'bg-pink-600 text-white',head:'text-pink-300',tab:'border-pink-300 bg-pink-600 text-white'},
 };
 function ProMonsterGridPicker({ list, selectedId=null, isDisabled, onSelect, onDetail, confirmLabel='決定', confirmAria, accent='indigo', instant=false, spotClassFor }){
   const ac=PRO_PICK_ACCENT[accent]||PRO_PICK_ACCENT.indigo;
@@ -188,7 +188,19 @@ function ProMonsterGridPicker({ list, selectedId=null, isDisabled, onSelect, onD
     return next;
   });
   const byId=new Map(list.map(m=>[m.id,m]));
-  const pinnedIds=[...new Set([...prefs.fav,...prefs.recent])].filter(id=>byId.has(id));
+  // 血統タブ(主血統)。血統の並びは血統カタログの順。いる子がいない血統は出さない
+  const [lineageTab,setLineageTab]=React.useState('all');
+  const lineageOfMon=(m)=>monsterLineageOf(m.id).main;
+  const lineageTabs=[];
+  {
+    const seen=new Map();
+    list.forEach(m=>{const l=lineageOfMon(m);if(!seen.has(l.id))seen.set(l.id,{id:l.id,name:l.name,count:0});seen.get(l.id).count+=1;});
+    const order=Object.keys((typeof MONSTER_LINEAGES!=='undefined'&&MONSTER_LINEAGES)||{});
+    [...seen.values()].sort((a,b)=>{const ia=order.indexOf(a.id),ib=order.indexOf(b.id);return (ia<0?999:ia)-(ib<0?999:ib);}).forEach(t=>lineageTabs.push(t));
+  }
+  const activeTab=lineageTabs.some(t=>t.id===lineageTab)?lineageTab:'all';
+  const shownList=activeTab==='all'?list:list.filter(m=>lineageOfMon(m).id===activeTab);
+  const pinnedIds=activeTab==='all'?[...new Set([...prefs.fav,...prefs.recent])].filter(id=>byId.has(id)):[];
   const tile=(m,keyPrefix)=>{
     const on=focusId===m.id;
     const chosen=selectedId===m.id;
@@ -209,12 +221,20 @@ function ProMonsterGridPicker({ list, selectedId=null, isDisabled, onSelect, onD
   const apt=(m,i)=>(m.distAptitude&&m.distAptitude[i])||'C';
   return(
     <div data-pro-pick-grid className="w-full">
+      {lineageTabs.length>1&&(
+        <div data-pro-pick-tabs role="tablist" aria-label="血統" className="sticky top-0 z-20 -mx-1 px-1 pb-1.5 bg-[#020617] flex gap-1.5 overflow-x-auto mh-scroll">
+          {[{id:'all',name:'すべて',count:list.length},...lineageTabs].map(t=>(
+            <button key={t.id} role="tab" aria-selected={activeTab===t.id} onClick={()=>{setLineageTab(t.id);const inTab=t.id==='all'?list:list.filter(m=>lineageOfMon(m).id===t.id);if(!inTab.some(m=>m.id===focusId)){const first=inTab.find(m=>!disabled(m));if(first)setFocusId(first.id);}}}
+              className={`shrink-0 min-h-[34px] px-2.5 rounded-full border text-[11px] font-black active:scale-95 ${activeTab===t.id?ac.tab:'border-slate-700 bg-slate-900 text-slate-400'}`}>{t.name}<span className="ml-1 text-[9px] font-mono opacity-70">{t.count}</span></button>
+          ))}
+        </div>
+      )}
       {pinnedIds.length>0&&(<>
         <div className={`px-1 mb-1 text-[9px] font-black ${ac.head}`}>★お気に入り・前回使った子</div>
         <div className="grid grid-cols-4 gap-1.5 mb-3">{pinnedIds.map(id=>tile(byId.get(id),'pin-'))}</div>
       </>)}
-      <div className="px-1 mb-1 text-[9px] font-black text-slate-400">すべて（{list.length}体）</div>
-      <div className="grid grid-cols-4 gap-1.5 pb-3">{list.map(m=>tile(m,'all-'))}</div>
+      <div className="px-1 mb-1 text-[9px] font-black text-slate-400">{activeTab==='all'?'すべて':`${(lineageTabs.find(t=>t.id===activeTab)||{}).name}血統`}（{shownList.length}体）</div>
+      <div className="grid grid-cols-4 gap-1.5 pb-3">{shownList.map(m=>tile(m,'all-'))}</div>
       <div className="sticky bottom-0 z-20 -mx-1 px-1 pt-1">
         <div data-pro-pick-detail className="rounded-2xl border border-white/15 bg-slate-950/95 p-2 shadow-[0_-6px_18px_rgba(0,0,0,0.6)]">
           {!focus?(
@@ -226,6 +246,7 @@ function ProMonsterGridPicker({ list, selectedId=null, isDisabled, onSelect, onD
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2"><b className="truncate text-[14px] text-white leading-tight">{focus.name}</b><span className="shrink-0 text-[9px] text-slate-500 font-black">総合力 <b className="text-[12px] text-amber-300 font-mono">{formatMonsterPower(monsterPowerOf(focus))}</b></span></div>
+                <div className="truncate text-[9px] font-black text-slate-400 leading-tight">{(()=>{const l=monsterLineageOf(focus.id);return l.main.id===l.sub.id?`${l.main.name}の純血`:`${l.main.name} × ${l.sub.name}`;})()}</div>
                 <div className="truncate text-[10px] font-black text-amber-300 leading-tight"><Zap size={10} className="inline mr-0.5"/>{focus.unique.name}</div>
                 <div className="text-[9px] text-indigo-200 font-black leading-tight line-clamp-2"><span className="text-indigo-400">勇者特性 </span>{focus.trait||'特性なし'}</div>
               </div>
