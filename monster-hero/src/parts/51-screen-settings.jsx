@@ -19,7 +19,7 @@
 //   (横画面で「左＝見出し・助手 / 右＝メニュー」に組み替わるのも、この形が条件)
 // ・メニューの1行は menuClass ひとつに寄せた。高さ(64px)・角丸・枠線・押した手応えを
 //   ここでだけ決める。「ゲームを更新」だけ余白と枠色がずれていたのも同じ型に入れた
-function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
+function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenTitleArt, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
   const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
@@ -86,6 +86,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         <button type="button" data-open-battle-settings onClick={() => setBattleSettingsOpen(true)} className={menuClass}>バトル設定</button>
         <button type="button" onClick={onOpenAudioSettings} className={menuClass}>音量設定</button>
         <button type="button" onClick={onOpenBgmArrangement} className={menuClass}>BGMアレンジ</button>
+        <button type="button" data-open-title-art onClick={onOpenTitleArt} className={menuClass}>タイトル画像アレンジ</button>
         <button type="button" onClick={onOpenBackup} className={menuClass}>データ引き継ぎ</button>
         <button type="button" onClick={onOpenHelp} className={menuClass}>ヘルプ</button>
         <button type="button" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} className={`${menuClass} flex-col disabled:opacity-40`}><span className="block text-cyan-200">ゲームを更新</span><span className="mt-1 block text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button>

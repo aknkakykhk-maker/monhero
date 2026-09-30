@@ -63,7 +63,7 @@ for (const [rel, size] of Object.entries(sizes)) {
 check('書かれた大きさが実ファイルと一致する', stale.length === 0, stale.slice(0, 3).join(' / '));
 
 // タイトル画像とBGMは、ゲージの重みとして必ず数に入れておきたい(いちばん大きいので)
-for (const must of ['game-system.compiled.js', 'data/images/title-screen-clean.jpg', 'audio/bgm-title-theme.mp3']) {
+for (const must of ['game-system.compiled.js', 'data/images/title-screen-halloween.jpg', 'audio/bgm-title-theme.mp3']) {
   check(`${must} が分母に入っている`, !!sizes[must]);
 }
 
