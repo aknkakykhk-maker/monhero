@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0f19bfb3ce20d364
+// source-sha256: 8096a54484b186d1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-30 16:34";
+const BUILD_DATE = "2026-09-30 17:24";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -39781,6 +39781,206 @@ function SkipResultScreen({
     className: "w-full max-w-sm mx-auto shrink-0 mt-2 min-h-[52px] rounded-2xl bg-teal-600 text-white font-black text-sm uppercase shadow-lg active:scale-[.98]"
   }, "バトルメニューへ戻る"));
 }
+const PRO_PICK_PREFS_KEY = 'mh_pro_pick_prefs_v1';
+const PRO_PICK_RECENT_MAX = 8;
+function readProPickPrefs() {
+  try {
+    const raw = JSON.parse(window.localStorage.getItem(PRO_PICK_PREFS_KEY) || 'null');
+    const ids = v => Array.isArray(v) ? v.filter(x => typeof x === 'string') : [];
+    return {
+      recent: ids(raw && raw.recent).slice(0, PRO_PICK_RECENT_MAX),
+      fav: ids(raw && raw.fav)
+    };
+  } catch (e) {
+    return {
+      recent: [],
+      fav: []
+    };
+  }
+}
+function writeProPickPrefs(prefs) {
+  try {
+    window.localStorage.setItem(PRO_PICK_PREFS_KEY, JSON.stringify(prefs));
+  } catch (e) {}
+}
+function recordProRecentParty(ids) {
+  const list = (ids || []).filter(x => typeof x === 'string');
+  if (!list.length) return;
+  const prefs = readProPickPrefs();
+  writeProPickPrefs({
+    ...prefs,
+    recent: [...list, ...prefs.recent.filter(x => !list.includes(x))].slice(0, PRO_PICK_RECENT_MAX)
+  });
+}
+const PRO_PICK_ACCENT = {
+  indigo: {
+    ring: 'border-indigo-300 bg-indigo-900/40 ring-2 ring-indigo-400/60',
+    check: 'bg-indigo-500',
+    button: 'bg-indigo-600 text-white',
+    head: 'text-indigo-300'
+  },
+  pink: {
+    ring: 'border-pink-300 bg-pink-900/40 ring-2 ring-pink-400/60',
+    check: 'bg-pink-500',
+    button: 'bg-pink-600 text-white',
+    head: 'text-pink-300'
+  }
+};
+function ProMonsterGridPicker({
+  list,
+  selectedId = null,
+  isDisabled,
+  onSelect,
+  onDetail,
+  confirmLabel = '決定',
+  confirmAria,
+  accent = 'indigo',
+  instant = false,
+  spotClassFor
+}) {
+  const ac = PRO_PICK_ACCENT[accent] || PRO_PICK_ACCENT.indigo;
+  const [prefs, setPrefs] = React.useState(readProPickPrefs);
+  const disabled = m => !!(isDisabled && isDisabled(m));
+  const [focusId, setFocusId] = React.useState(() => {
+    if (selectedId && list.some(m => m.id === selectedId)) return selectedId;
+    const p = readProPickPrefs();
+    const first = [...p.fav, ...p.recent].map(id => list.find(m => m.id === id)).find(m => m && !disabled(m)) || list.find(m => !disabled(m));
+    return first ? first.id : null;
+  });
+  const focus = list.find(m => m.id === focusId) || null;
+  const toggleFav = id => setPrefs(prev => {
+    const next = {
+      ...prev,
+      fav: prev.fav.includes(id) ? prev.fav.filter(x => x !== id) : [...prev.fav, id]
+    };
+    writeProPickPrefs(next);
+    return next;
+  });
+  const byId = new Map(list.map(m => [m.id, m]));
+  const pinnedIds = [...new Set([...prefs.fav, ...prefs.recent])].filter(id => byId.has(id));
+  const tile = (m, keyPrefix) => {
+    const on = focusId === m.id;
+    const chosen = selectedId === m.id;
+    const tag = prefs.fav.includes(m.id) ? '★' : prefs.recent.includes(m.id) ? '前回' : null;
+    return React.createElement("button", {
+      key: keyPrefix + m.id,
+      disabled: disabled(m),
+      "aria-pressed": on,
+      "aria-label": `${m.name}を見る`,
+      onClick: () => {
+        if (instant) {
+          onSelect(m);
+        } else {
+          setFocusId(m.id);
+        }
+      },
+      className: `relative rounded-2xl border p-1.5 flex flex-col items-center gap-1 active:scale-95 transition-all disabled:opacity-25 ${on ? ac.ring : 'border-slate-700 bg-slate-900'}${disabled(m) ? '' : spotClassFor ? spotClassFor(m) : ''}`
+    }, tag && React.createElement("span", {
+      className: `absolute top-0.5 left-0.5 z-10 rounded-full bg-black/70 px-1 text-[7px] font-black leading-tight ${tag === '★' ? 'text-amber-300' : 'text-cyan-300'}`
+    }, tag), chosen && React.createElement("span", {
+      className: `absolute top-0.5 right-0.5 z-10 rounded-full p-0.5 ${ac.check}`
+    }, React.createElement(Check, {
+      size: 9,
+      className: "text-white"
+    })), React.createElement("div", {
+      className: "w-14 h-14 rounded-full overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center"
+    }, m.imgUrl ? React.createElement(DyedMonsterImage, {
+      baseId: m.id,
+      src: m.imgUrl,
+      alt: "",
+      masuColors: m.colors,
+      className: "w-full h-full object-contain"
+    }) : React.createElement("span", {
+      className: "text-3xl"
+    }, m.emoji)), React.createElement("div", {
+      className: "w-full truncate text-center text-[9px] font-black text-white leading-tight"
+    }, m.name));
+  };
+  const apt = (m, i) => m.distAptitude && m.distAptitude[i] || 'C';
+  return React.createElement("div", {
+    "data-pro-pick-grid": true,
+    className: "w-full"
+  }, pinnedIds.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: `px-1 mb-1 text-[9px] font-black ${ac.head}`
+  }, "★お気に入り・前回使った子"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5 mb-3"
+  }, pinnedIds.map(id => tile(byId.get(id), 'pin-')))), React.createElement("div", {
+    className: "px-1 mb-1 text-[9px] font-black text-slate-400"
+  }, "すべて（", list.length, "体）"), React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5 pb-3"
+  }, list.map(m => tile(m, 'all-'))), React.createElement("div", {
+    className: "sticky bottom-0 z-20 -mx-1 px-1 pt-1"
+  }, React.createElement("div", {
+    "data-pro-pick-detail": true,
+    className: "rounded-2xl border border-white/15 bg-slate-950/95 p-2 shadow-[0_-6px_18px_rgba(0,0,0,0.6)]"
+  }, !focus ? React.createElement("div", {
+    className: "py-3 text-center text-[10px] font-black text-slate-400"
+  }, "モンスターをタップすると、ここに詳しい情報が出ます") : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, React.createElement("div", {
+    className: "w-16 h-16 shrink-0 rounded-2xl overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center"
+  }, focus.imgUrl ? React.createElement(DyedMonsterImage, {
+    baseId: focus.id,
+    src: focus.imgUrl,
+    alt: focus.name,
+    masuColors: focus.colors,
+    className: "w-full h-full object-contain"
+  }) : React.createElement("span", {
+    className: "text-4xl"
+  }, focus.emoji)), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "flex items-baseline justify-between gap-2"
+  }, React.createElement("b", {
+    className: "truncate text-[14px] text-white leading-tight"
+  }, focus.name), React.createElement("span", {
+    className: "shrink-0 text-[9px] text-slate-500 font-black"
+  }, "総合力 ", React.createElement("b", {
+    className: "text-[12px] text-amber-300 font-mono"
+  }, formatMonsterPower(monsterPowerOf(focus))))), React.createElement("div", {
+    className: "truncate text-[10px] font-black text-amber-300 leading-tight"
+  }, React.createElement(Zap, {
+    size: 10,
+    className: "inline mr-0.5"
+  }), focus.unique.name), React.createElement("div", {
+    className: "text-[9px] text-indigo-200 font-black leading-tight line-clamp-2"
+  }, React.createElement("span", {
+    className: "text-indigo-400"
+  }, "勇者特性 "), focus.trait || '特性なし'))), React.createElement("div", {
+    className: "mt-1.5 grid grid-cols-4 gap-1 text-center font-mono"
+  }, [['ライフ', focus.baseHp, 'text-pink-300'], ['ちから', focus.baseAtk, 'text-red-300'], ['丈夫さ', focus.baseDef, 'text-emerald-300'], ['ガッツ', focus.baseGuts, 'text-amber-300']].map(([label, value, tint]) => React.createElement("div", {
+    key: label,
+    className: "rounded-lg bg-white/5 py-0.5"
+  }, React.createElement("div", {
+    className: "text-[8px] text-slate-500 font-black leading-tight"
+  }, label), React.createElement("div", {
+    className: `text-[12px] font-black leading-tight ${tint}`
+  }, value)))), React.createElement("div", {
+    className: "mt-1 grid grid-cols-4 gap-1 text-center"
+  }, RANGE_LABELS.map((label, i) => React.createElement("div", {
+    key: label,
+    className: "rounded-lg bg-white/5 py-0.5"
+  }, React.createElement("div", {
+    className: "text-[8px] text-slate-500 font-black leading-tight"
+  }, label), React.createElement("div", {
+    className: `text-[11px] font-black rounded ${DIST_APTITUDE_COLOR[apt(focus, i)]}`
+  }, apt(focus, i))))), React.createElement("div", {
+    className: "mt-1.5 flex gap-1.5"
+  }, React.createElement("button", {
+    onClick: () => toggleFav(focus.id),
+    "aria-pressed": prefs.fav.includes(focus.id),
+    "aria-label": prefs.fav.includes(focus.id) ? 'お気に入りを外す' : 'お気に入りに入れる',
+    className: `shrink-0 w-11 min-h-[44px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id) ? 'border-amber-400/60 bg-amber-900/40 text-amber-300' : 'border-slate-700 bg-slate-900 text-slate-500'}`
+  }, "★"), React.createElement("button", {
+    onClick: () => onDetail && onDetail(focus),
+    className: "shrink-0 px-3 min-h-[44px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95"
+  }, "くわしく"), React.createElement("button", {
+    disabled: disabled(focus),
+    onClick: () => onSelect(focus),
+    "aria-label": confirmAria ? confirmAria(focus) : undefined,
+    className: `flex-1 min-h-[44px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`
+  }, confirmLabel))))));
+}
 function PickHeroAllyScreen({
   MONSTER_CARD_CLASS,
   MONSTER_CARD_STYLE,
@@ -40005,6 +40205,22 @@ function PickHeroAllyScreen({
         setAllyCardIndex(next);
         centerCarouselChild(root, next, 'smooth');
       };
+      if (pickMode === 'hero' && isProMode(runMode)) return React.createElement(ProMonsterGridPicker, {
+        list: list,
+        selectedId: proHeroPreset?.heroBaseId || null,
+        accent: "indigo",
+        instant: !!battleTutorial,
+        isDisabled: m => !scenarioPicksHero(m.id),
+        spotClassFor: m => battleTutorialSpotClass('monCards'),
+        confirmLabel: "この子で挑む",
+        confirmAria: m => `${m.name}を勇者モンに選ぶ`,
+        onSelect: m => {
+          setProHeroPreset(null);
+          setCurrentPickingMon(m);
+          advanceRunStage('PICK_SLOT');
+        },
+        onDetail: m => setCurrentPickingMon(m)
+      });
       return React.createElement(React.Fragment, null, allyCarousel && React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1"
       }, "左右にスワイプして供モンを選択"), allyCarousel && React.createElement("div", {
@@ -40049,22 +40265,6 @@ function PickHeroAllyScreen({
         const focused = allyCarousel && cardIndex === allyCardIndex;
         const pickMasu = m.masuId ? getMasuMon(m.masuId) : null;
         const pickBase = m.debugOnly ? m : ALL_PLAYER_MONSTERS[m.id] || m;
-        if (pickMode === 'hero' && isProMode(runMode)) return React.createElement(React.Fragment, {
-          key: m.id
-        }, renderProMonsterRow({
-          mon: m,
-          selected: proHeroPreset?.heroBaseId === m.id,
-          disabled: !scenarioPicksHero(m.id),
-          onSelect: () => {
-            setProHeroPreset(null);
-            setCurrentPickingMon(m);
-            advanceRunStage('PICK_SLOT');
-          },
-          onDetail: () => setCurrentPickingMon(m),
-          selectLabel: `${m.name}を勇者モンに選ぶ`,
-          activeClass: 'active:bg-indigo-900/30',
-          extraButtonClass: scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''
-        }));
         const enterStyle = pickMode === 'ally' ? {
           '--i': cardIndex
         } : null;
@@ -40393,7 +40593,10 @@ function PickProAlliesScreen({
     }
   }, React.createElement("button", {
     disabled: !ready,
-    onClick: confirmProParty,
+    onClick: () => {
+      recordProRecentParty([mainHero?.id, ...proAllyPool.map(m => m && m.id)]);
+      confirmProParty();
+    },
     className: "w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30",
     style: {
       backgroundColor: mode.color,
@@ -40403,18 +40606,15 @@ function PickProAlliesScreen({
     className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
   }, "この枠に入れるベースモンを1体選んでください。"), React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"
-  }, React.createElement("div", {
-    className: "flex flex-col gap-2.5"
-  }, candidates.filter(m => !proAllyPool.some((chosen, i) => i !== proEditingAllyIndex && chosen.id === m.id)).map(m => React.createElement(React.Fragment, {
-    key: m.id
-  }, renderProMonsterRow({
-    mon: m,
-    selected: proAllyPool[proEditingAllyIndex]?.id === m.id,
-    onSelect: () => changeAlly(m),
-    onDetail: () => setProAllyDetail(m),
-    selectLabel: `${m.name}を供モン${proEditingAllyIndex + 1}に選ぶ`,
-    activeClass: 'active:bg-pink-900/30'
-  }))))), React.createElement("button", {
+  }, React.createElement(ProMonsterGridPicker, {
+    list: candidates.filter(m => !proAllyPool.some((chosen, i) => i !== proEditingAllyIndex && chosen.id === m.id)),
+    selectedId: proAllyPool[proEditingAllyIndex]?.id || null,
+    accent: "pink",
+    confirmLabel: `供モン${proEditingAllyIndex + 1}にする`,
+    confirmAria: m => `${m.name}を供モン${proEditingAllyIndex + 1}に選ぶ`,
+    onSelect: changeAlly,
+    onDetail: setProAllyDetail
+  })), React.createElement("button", {
     onClick: () => setProEditingAllyIndex(null),
     className: "shrink-0 w-full min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm mb-1"
   }, "変更せず戻る")), proAllyDetail && renderMonsterDetailModal({
