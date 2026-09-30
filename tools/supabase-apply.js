@@ -5,7 +5,8 @@
 //   node tools/supabase-apply.js RHYTHM_PLAY_LOG --dry        # 流さずに、何を流すかだけ出す
 //   node tools/supabase-apply.js --query "select count(*) from public.rhythm_touch_diagnostics"   # 読み取りだけの問い合わせ
 //
-// 鍵: 環境変数 SUPABASE_ACCESS_TOKEN(Supabase の Account → Access Tokens で作るもの)。チャットには貼らない。
+// 鍵: Supabase の Account → Access Tokens で作るもの。環境の「API認証情報」へ登録する(「環境変数」には入れない。全員に見える)。
+//      環境変数 SUPABASE_ACCESS_TOKEN として見えればそれを付けて送り、見えなければ付けずに送る。チャットには貼らない。
 // 通信先: https://api.supabase.com(Management API の /v1/projects/{ref}/database/query)。環境のネットワーク設定で許可が要る。
 //
 // ★安全装置(CLAUDE.md ⑦「既存のデータは絶対に壊さない」)
@@ -38,14 +39,17 @@ const findTrio=name=>{
 };
 
 const runQuery=sql=>{
+  // 鍵は環境の「API認証情報」へ入れる。環境変数として見えるときはそれを付け、見えないときは付けずに送る
+  // (「API認証情報」は、通信の途中で api.supabase.com への要求に鍵を付けてくれる形のこともあるため)
   const token=process.env.SUPABASE_ACCESS_TOKEN;
-  if(!token)throw new Error('環境変数 SUPABASE_ACCESS_TOKEN がありません(環境の設定の「環境変数」に登録し、新しい会話で使う)');
-  const result=spawnSync('curl',['-sS','-m','60','-X','POST',API,'-H',`Authorization: Bearer ${token}`,'-H','Content-Type: application/json',
+  const auth=token?['-H',`Authorization: Bearer ${token}`]:[];
+  const result=spawnSync('curl',['-sS','-m','60','-X','POST',API,...auth,'-H','Content-Type: application/json',
     '--data-binary','@-','-w','\n%{http_code}'],{input:JSON.stringify({query:sql}),encoding:'utf8',maxBuffer:64*1024*1024});
   const lines=(result.stdout||'').trimEnd().split('\n');
   const status=Number(lines.pop());
   const body=lines.join('\n');
   if(result.status!==0)throw new Error(`つながりませんでした: ${(result.stderr||'').trim()}(ネットワーク設定で api.supabase.com の許可が要る)`);
+  if((status===401||status===403)&&!token)throw new Error(`HTTP ${status}: 鍵が届いていません(環境の「API認証情報」に api.supabase.com 用の Supabase のアクセストークンを登録し、新しい会話で使う)`);
   if(status<200||status>=300)throw new Error(`HTTP ${status}: ${body.slice(0,400)}`);
   try{return JSON.parse(body||'[]');}catch{return body;}
 };
