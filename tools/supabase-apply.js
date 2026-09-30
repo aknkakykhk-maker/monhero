@@ -49,7 +49,9 @@ const runQuery=sql=>{
   const status=Number(lines.pop());
   const body=lines.join('\n');
   if(result.status!==0)throw new Error(`つながりませんでした: ${(result.stderr||'').trim()}(ネットワーク設定で api.supabase.com の許可が要る)`);
-  if((status===401||status===403)&&!token)throw new Error(`HTTP ${status}: 鍵が届いていません(環境の「API認証情報」に api.supabase.com 用の Supabase のアクセストークンを登録し、新しい会話で使う)`);
+  // 401 は鍵が届いていない、403 は届いているが権限が足りない(Missing required permission(s): … が本文に出る)
+  if(status===403&&/permission/i.test(body))throw new Error(`HTTP 403: 鍵は届いていますが、権限が足りません(${body.slice(0,300)})。Supabase の Access Tokens で、このプロジェクトのデータベースを読み書きできる権限のトークンを作り直す`);
+  if(status===401&&!token)throw new Error(`HTTP 401: 鍵が届いていません(環境の「API認証情報」に api.supabase.com 用の Supabase のアクセストークンを登録し、新しい会話で使う)。${body.slice(0,200)}`);
   if(status<200||status>=300)throw new Error(`HTTP ${status}: ${body.slice(0,400)}`);
   try{return JSON.parse(body||'[]');}catch{return body;}
 };
