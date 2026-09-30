@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2bdf3c8012d5ab2d
+// generated-sha256: 9266b5ecd275a35f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-30 22:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-30 22:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -41264,7 +41264,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
         // 連撃・全体連撃。専用モーションを続けて再生しないもの(禁忌解錠・全体連撃)は noAnim で数値だけを表示する
-        for (const hit of hits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
+        // ★連撃の2発目以降は技名が「連撃」になるので、技ごとの動きを引くときは元の技(themeOf)を使う。持たせないと、
+        //   2発目以降だけ技ごとの動きが見つからず、更新前の通常モーションに戻る(2026-09-30 ユーザー報告「連撃時に違う技のモーションになる」)
+        const themeOf={skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined};
+        for (const hit of hits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, themeOf, ...(hit.noAnim?{noAnim:true}:{})}); }
         if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=rangeMoveTarget; }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
@@ -41361,8 +41364,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const hitMotion = (hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[hit.slotIdx]?.atkMotion;
           // 技ごとの動き(2026-09-29 全モンスター)。技に専用の動きがあれば、見せ場の動きの代わりにそちらを出す。
           // 探すのは技の出自(固有技は hit.monId)から。ザン・エイキ・剣士モッチーの連撃のまとめ方(数字をまとめて出す)は変えない
-          const hitSkillOwner = (hit.isUnique && hit.monId) ? hit.monId : slots[hit.slotIdx]?.id;
-          const hitSkillKind = skillAttackThemeOf(hitSkillOwner, hit.skillName, !!hit.isUnique);
+          // 連撃の2発目以降は元の技(hit.themeOf)の動きで出す。技の名前(hit.skillName)は「連撃」のままログ・技名表示に使う
+          const themeHit = hit.themeOf || hit;
+          const hitSkillOwner = (themeHit.isUnique && themeHit.monId) ? themeHit.monId : slots[hit.slotIdx]?.id;
+          const hitSkillKind = skillAttackThemeOf(hitSkillOwner, themeHit.skillName, !!themeHit.isUnique);
           // 高速斬撃＋連撃をまとめて見せるモーション。ザン・エイキ・剣士モッチーが同じ見せ方を共有する。
           // モーションは1回だけ流し、ダメージ数値だけを立て続けに出すので、
           // 剣士モッチーの永久追加連撃が何本に増えてもターンの長さは変わらない
@@ -41441,7 +41446,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setSlotSkill({slotIndex: animSlot, name: hit.skillName, type: hit.isUnique?'unique':(hit.isSpecial?'special':'normal')});
             // モンスターごとの専用モーション種別('default'/'zanCombo'/'floatStab'等)。全モンスターがdata側で必ず指定する。固有技は技の出自(継承元)のモーションを優先する。
             // 技に専用の動きがあれば 'default' にして、技ごとの動きで出す(skillAttackMotionOf)
-            const motion = hitSkillKind ? 'default' : ((hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[animSlot]?.atkMotion);
+            const motion = hitSkillKind ? 'default' : ((themeHit.isUnique && themeHit.monId && ALL_PLAYER_MONSTERS[themeHit.monId]?.atkMotion) || slots[animSlot]?.atkMotion);
             if(hit.isUnique){
               // 固有技: タメ(下に沈む)は全モンスター共通→その後は専用モーションがあればそちらへ、なければ敵に向かって突進
               setAttackAnim({slotIndex: animSlot, charge:true});
@@ -41459,7 +41464,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
-              setAttackAnim({slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});
+              setAttackAnim({slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: themeHit.skillName, ...(themeHit.isUnique?{charge:false}:{})});
               if(isKenshiTwin){
                 await battleWait(135); Audio_.se.zanSlash();
                 await battleWait(180); Audio_.se.zanSlash();
@@ -41467,7 +41472,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(130);
               }else{
                 if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-                await battleWait(themedAttackMotionMs(hitSkillKind ? hitSkillOwner : slots[animSlot]?.id, motion, hit.skillName, false) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))));
+                await battleWait(themedAttackMotionMs(hitSkillKind ? hitSkillOwner : slots[animSlot]?.id, motion, themeHit.skillName, !!themeHit.isUnique) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))));
               }
             }
             setAttackAnim(null);

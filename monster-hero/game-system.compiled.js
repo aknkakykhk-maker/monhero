@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5cab4349825075b8
+// source-sha256: b6633823203286c9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-30 22:02";
+const BUILD_DATE = "2026-09-30 22:17";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -60043,6 +60043,11 @@ function MonsterHeroGame() {
           monId: card.type === 'unique' ? card.monId : undefined,
           rangeMoveTarget
         });
+        const themeOf = {
+          skillName: card.name || card.baseName,
+          isUnique: card.type === 'unique',
+          monId: card.type === 'unique' ? card.monId : undefined
+        };
         for (const hit of hits.slice(1)) {
           if (hit.crit) hasCrit = true;
           totalDmg += hit.dmg;
@@ -60053,6 +60058,7 @@ function MonsterHeroGame() {
             isSpecial: true,
             skillName: hit.skillName,
             isUnique: false,
+            themeOf,
             ...(hit.noAnim ? {
               noAnim: true
             } : {})
@@ -60178,8 +60184,9 @@ function MonsterHeroGame() {
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
           const hitMotion = hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion || slots[hit.slotIdx]?.atkMotion;
-          const hitSkillOwner = hit.isUnique && hit.monId ? hit.monId : slots[hit.slotIdx]?.id;
-          const hitSkillKind = skillAttackThemeOf(hitSkillOwner, hit.skillName, !!hit.isUnique);
+          const themeHit = hit.themeOf || hit;
+          const hitSkillOwner = themeHit.isUnique && themeHit.monId ? themeHit.monId : slots[hit.slotIdx]?.id;
+          const hitSkillKind = skillAttackThemeOf(hitSkillOwner, themeHit.skillName, !!themeHit.isUnique);
           const isComboDashMotion = hitMotion === 'zanCombo' || hitMotion === 'eikiSakuraCombo' || hitMotion === 'kenshiTwinBlade';
           const isZanGroupStart = hit.skillName !== '連撃' && isComboDashMotion;
           if (isZanGroupStart) {
@@ -60267,7 +60274,7 @@ function MonsterHeroGame() {
               name: hit.skillName,
               type: hit.isUnique ? 'unique' : hit.isSpecial ? 'special' : 'normal'
             });
-            const motion = hitSkillKind ? 'default' : hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion || slots[animSlot]?.atkMotion;
+            const motion = hitSkillKind ? 'default' : themeHit.isUnique && themeHit.monId && ALL_PLAYER_MONSTERS[themeHit.monId]?.atkMotion || slots[animSlot]?.atkMotion;
             if (hit.isUnique) {
               setAttackAnim({
                 slotIndex: animSlot,
@@ -60302,7 +60309,10 @@ function MonsterHeroGame() {
                 motion,
                 twinBlade: isKenshiTwin,
                 sakura: motion === 'eikiSakuraCombo',
-                skillName: hit.skillName
+                skillName: themeHit.skillName,
+                ...(themeHit.isUnique ? {
+                  charge: false
+                } : {})
               });
               if (isKenshiTwin) {
                 await battleWait(135);
@@ -60314,7 +60324,7 @@ function MonsterHeroGame() {
                 await battleWait(130);
               } else {
                 if (hit.isSpecial) Audio_.se.special();else if (hit.isCrit) Audio_.se.crit();else Audio_.se.attack();
-                await battleWait(themedAttackMotionMs(hitSkillKind ? hitSkillOwner : slots[animSlot]?.id, motion, hit.skillName, false) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450));
+                await battleWait(themedAttackMotionMs(hitSkillKind ? hitSkillOwner : slots[animSlot]?.id, motion, themeHit.skillName, !!themeHit.isUnique) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450));
               }
             }
             setAttackAnim(null);
