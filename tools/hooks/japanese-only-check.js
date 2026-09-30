@@ -54,9 +54,11 @@ const main = () => {
   const entries = [];
   for (const line of lines) { try { entries.push(JSON.parse(line)); } catch { /* 壊れた行は読み飛ばす */ } }
   // 最後の「ユーザーが書いた」メッセージ(ツールの結果ではないもの)の位置
+  // 写真だけのメッセージ(content が image だけ)もユーザーのメッセージとして数える(2026-09-30)。
+  // 数えないと、写真を送ってもらうたびに、その前の返答まで見直して同じ英語を指摘し続けた
   const isUserText = (e) => e.type === 'user' && e.message && (
     typeof e.message.content === 'string'
-    || (Array.isArray(e.message.content) && e.message.content.some(c => c && c.type === 'text')));
+    || (Array.isArray(e.message.content) && e.message.content.some(c => c && (c.type === 'text' || c.type === 'image'))));
   let start = 0;
   for (let i = entries.length - 1; i >= 0; i--) { if (isUserText(entries[i]) && !entries[i].isMeta) { start = i + 1; break; } }
   const texts = [];
