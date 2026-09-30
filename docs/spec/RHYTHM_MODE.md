@@ -8153,4 +8153,4 @@ songId `rising_hope` / bgmTrackId `melo_rising_hope` / 譜面は MHB CHART ENGIN
   はじめの10秒を1とした流れの相関は **0.81**。どちらも30〜40秒で最初の山が来る
 - 違い①: 50〜60秒（サビに入る前後）と70〜80秒で、CHUNITHM は密度を保つが、こちらは 1.87 → 1.37 / 1.53 と下がる
 - 違い②: CHUNITHM は横に長いスライド・長押し・空中ノーツが中心。こちらの MASTER は397ノーツのうちタップが358（9割）
-- ユーザーは①②を譜面生成ツールの強化として次に取り組むと決めた（この曲は Rev.24 のまま出す）
+- ユーザーは①②を譜面生成ツールの強化として次に取り組むと決めた（この曲は Rev.24 のまま出す）。→ MHB CHART ENGINE Rev.25（`docs/spec/RHYTHM_CHART_ENGINE_ROADMAP.md` 18章）

@@ -861,6 +861,43 @@ const MIRROR_FLICK=Object.freeze({
   EXPERT:Object.freeze({perMinute:.8,max:3,spacingBars:8,minIntensity:.5,clearBeats:.75,width:3,gapSub:2,directions:false}),
   MASTER:Object.freeze({perMinute:1.2,max:5,spacingBars:6,minIntensity:.4,clearBeats:.5,width:3,gapSub:2,directions:true}),
 });
+// Rev.25: サビ前後の密度を保つ・長いノーツを増やす(2026-09-30・CHUNITHM の譜面との比べ合わせから。ユーザー判断)。
+//   Rising Hope の MASTER を人の譜面(CHUNITHM AIR MASTER)と10秒ごとに比べると、密度の流れは相関0.81で似ていたが、
+//   サビに入る前後(静かな区切りとして薄く配っていた)と終盤(長い盛り上がりの区切りの中の小節の値が下がる)だけこちらが薄く、
+//   長いノーツは MASTER 397ノーツのうち1割(HOLD 14・SLIDE 6)。HOLD は上限に当たり、SLIDE は材料(旋律の伸び)が足りなかった。
+//   配り方と種類だけを変え、曲全体のノーツ数の決め方は変えない。既存曲の作り方(Rev.24 まで)には入れない
+const BUILD_AND_HOLD_REVISION=25;
+const rev25=chartRevision>=BUILD_AND_HOLD_REVISION;
+// 盛り上がる区切りの直前で持ち上げる小節の数 / 拾えなかった取り分を次の小節へ回す上限 / 盛り上がる区切りの繰り返しの小節の上乗せ(元の何分の1まで)
+const BUILD_UP=Object.freeze({rampBars:4,carryMax:2,climaxRepeatExtra:.5});
+// 難易度ごとの HOLD・SLIDE の上限の倍率と、ベースの伸びを材料にするか
+const LONG_NOTES=Object.freeze({
+  HARD:Object.freeze({hold:1.25,slide:1.25,bass:false}),
+  EXPERT:Object.freeze({hold:1.4,slide:1.5,bass:true}),
+  MASTER:Object.freeze({hold:1.6,slide:1.8,bass:true}),
+});
+// 小節の取り分に使う盛り上がりの位置(Rev.25)。盛り上がる区切りの直前 rampBars 小節は、その区切りの値へ段々に近づけ、
+// 盛り上がる区切りの中では区切りの値より下げない(長い区切りの中で小節の値が下がると、サビの後半が薄くなっていた)
+const budgetPosition=(()=>{
+  if(!rev25)return intensityPosition;
+  const list=Array.isArray(structure.sections)?structure.sections:[];
+  const lifted=new Map();
+  list.forEach((section,index)=>{
+    if(sectionRoles.get(section)!=='climax')return;
+    for(let bar=section.startBar;bar<section.endBarExclusive;bar++)
+      lifted.set(bar,Math.max(lifted.get(bar)??0,Math.min(1,section.intensity)));
+    const prev=list[index-1];
+    if(!prev||sectionRoles.get(prev)==='climax')return;
+    const ramp=Math.min(BUILD_UP.rampBars,prev.endBarExclusive-prev.startBar);
+    for(let k=0;k<ramp;k++){
+      const bar=prev.endBarExclusive-ramp+k;
+      const own=intensityPosition(bar);
+      const toward=own+(Math.min(1,section.intensity)-own)*((k+1)/(ramp+1));
+      lifted.set(bar,Math.max(lifted.get(bar)??0,toward));
+    }
+  });
+  return bar=>Math.max(intensityPosition(bar),lifted.get(bar)??0);
+})();
 const HEAD_EARLIEST_MS=1800,HEAD_BEAT_BONUS=.1;
 const MELODY_TURN_MIN=.08,MELODY_DIRECTION_COST=4;
 const melodyHeightAt=(()=>{
@@ -1044,8 +1081,9 @@ const buildChart=(difficulty,options={})=>{
   const P=(()=>{
     const base=PROFILES[difficulty];
     return Object.freeze({...base,
-      holdPerMinute:boost(scaleRate(base.holdPerMinute),I.hold),
-      slidePerMinute:scaleRate(base.slidePerMinute),
+      // Rev.25: HARD 以上は HOLD・SLIDE の上限を上げる(書いていない難易度・既存の作り方は1倍)
+      holdPerMinute:boost(boost(scaleRate(base.holdPerMinute),I.hold),rev25&&LONG_NOTES[difficulty]?LONG_NOTES[difficulty].hold:1),
+      slidePerMinute:boost(scaleRate(base.slidePerMinute),rev25&&LONG_NOTES[difficulty]?LONG_NOTES[difficulty].slide:1),
       flickPerMinute:boost(scaleRate(base.flickPerMinute),I.flick),
       endFlickPerMinute:scaleRate(base.endFlickPerMinute),
       accentPerMinute:scaleRate(base.accentPerMinute),
@@ -1159,7 +1197,7 @@ const buildChart=(difficulty,options={})=>{
   const weights=new Map();
   let weightSum=0;
   for(let bar=minBar;bar<=maxBar;bar++){
-    const position=intensityPosition(bar);
+    const position=budgetPosition(bar);
     const weight=musicalOnsetsInBar(bar)*(liftMin+(liftMax-liftMin)*position);
     weights.set(bar,weight);
     weightSum+=weight;
@@ -1200,8 +1238,10 @@ const buildChart=(difficulty,options={})=>{
     // 繰り返しの小節は、**元の小節で取った数までは取り**、上乗せは元の1/4(最低1個)までにする
     // (2番の盛り上がりのぶんは足してよいが、元4個に対して9個では別のフレーズに見える)。
     // 引き上げ・切り下げたぶんは後ろの小節へ回さない(回すと、繰り返しの区切りの直後が丸ごと空く／詰まる)。
+    // Rev.25: 盛り上がる区切りの中の繰り返しは、上乗せを元の1/2まで広げる(2番のサビで薄くならないように)
+    const repeatExtra=rev25&&sectionRoleForBar(bar)==='climax'?BUILD_UP.climaxRepeatExtra:1/4;
     const limit=sourceOffsets
-      ?Math.min(Math.max(share,sourceOffsets.size),sourceOffsets.size+Math.max(1,Math.ceil(sourceOffsets.size/4)))
+      ?Math.min(Math.max(share,sourceOffsets.size),sourceOffsets.size+Math.max(1,Math.ceil(sourceOffsets.size*repeatExtra)))
       :share;
     if(limit<=0){takenOffsetsByBar.set(bar,new Set());continue;}
     const tier=onset=>sourceOffsets&&!(sourceOffsets.has(onset.grid-bar*BAR)||onset.character==='FULL')?1:0;
@@ -1222,6 +1262,9 @@ const buildChart=(difficulty,options={})=>{
       taken.push(onset);
     }
     takenOffsetsByBar.set(bar,new Set(taken.map(onset=>onset.grid-bar*BAR)));
+    // Rev.25: 拾える音が足りずに取れなかった取り分は、同じ区切りの次の小節へ回す(繰り返しの小節は数を元にそろえるので回さない)
+    if(rev25&&!sourceOffsets&&taken.length<limit&&sectionForBar(bar+1)===sectionForBar(bar))
+      carry+=Math.min(BUILD_UP.carryMax,limit-taken.length);
     if(knowledgeOn)for(const onset of taken){const boost=pickBoostCache.get(onset.grid);if(boost)markKnowledge(onset.grid,boost.fired);}
     if(sourceOffsets){
       phraseRhythmCount.bars++;
@@ -1301,7 +1344,9 @@ const buildChart=(difficulty,options={})=>{
     // ベースの伸びも足す（書いていない曲では audio.sustains そのままなので譜面は変わらない）。
     const sustainSource=(()=>{
       const base=Array.isArray(audio.sustains)?audio.sustains:[];
-      if(!songIntensityCommon(audio)?.useBassSustains)return base;
+      // Rev.25: EXPERT・MASTER はベースの伸びも材料にする(旋律の伸びだけでは SLIDE の材料が足りない)
+      const bassForLongNotes=rev25&&LONG_NOTES[difficulty]&&LONG_NOTES[difficulty].bass;
+      if(!songIntensityCommon(audio)?.useBassSustains&&!bassForLongNotes)return base;
       const bass=Array.isArray(audio.bassSustains)?audio.bassSustains:[];
       if(!bass.length)return base;
       // 旋律の伸びを先に見るため、同じ長さなら旋律が勝つ並びにしておく（下で長い順に並べ直す）。
