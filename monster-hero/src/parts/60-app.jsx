@@ -400,6 +400,16 @@ function MonsterHeroGame() {
   const [titleArt, setTitleArtState] = useState(() => {
     try { const raw = window.localStorage.getItem(TITLE_ART_STORAGE_KEY); return normalizeTitleArt(raw !== null ? JSON.parse(raw) : null); } catch { return DEFAULT_TITLE_ART; }
   });
+  // 横画面なら横長の絵を出す。向きを変えたらその場で差し替える
+  const [titleLandscape, setTitleLandscape] = useState(() => { try { return window.matchMedia('(orientation: landscape)').matches; } catch { return false; } });
+  useEffect(() => {
+    let query = null;
+    try { query = window.matchMedia('(orientation: landscape)'); } catch { return undefined; }
+    const onChange = () => setTitleLandscape(query.matches);
+    onChange();
+    if (query.addEventListener) query.addEventListener('change', onChange); else if (query.addListener) query.addListener(onChange);
+    return () => { if (query.removeEventListener) query.removeEventListener('change', onChange); else if (query.removeListener) query.removeListener(onChange); };
+  }, []);
   const changeTitleArt = id => { const next = normalizeTitleArt(id); setTitleArtState(next); storeSet(TITLE_ART_STORAGE_KEY, next, false); };
   const [titlePlayerId] = useState(() => {
     try {
@@ -4497,7 +4507,7 @@ function MonsterHeroGame() {
         const image = new Image(); let settled = false;
         const finish = () => { if (!settled) { settled = true; resolve(); } };
         image.onload = async () => { try { if (image.decode) await image.decode(); finish(); } catch (error) { if (!settled) { settled = true; reject(error); } } };
-        image.onerror = () => { if (!settled) { settled = true; reject(new Error('title image unavailable')); } }; image.src = titleArtSrc(titleArt);
+        image.onerror = () => { if (!settled) { settled = true; reject(new Error('title image unavailable')); } }; image.src = titleArtSrc(titleArt, titleLandscape);
         if (image.complete) image.onload();
       });
       say('タイトルBGMを準備中');
@@ -13474,7 +13484,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showTitleSettings ? (
     <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowTitleArt(true)}}>🖼️ タイトル画像アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
   ) : showTitleArt ? (
-    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog" data-title-art-picker style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>タイトル画像アレンジ</h3><button onClick={()=>setShowTitleArt(false)} aria-label="閉じる"><X size={18}/></button></div><p className="text-[11px] font-bold leading-relaxed text-slate-300">タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。</p><div className="grid grid-cols-2 gap-3">{TITLE_ART_OPTIONS.map(option=>{const selected=titleArt===option.id;return <button key={option.id} type="button" aria-pressed={selected} onClick={()=>changeTitleArt(option.id)} className={`relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected?'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]':'border-white/15 bg-white/5'}`}><img src={option.src} alt={option.label} loading="lazy" className="block w-full aspect-[9/16] object-cover"/>{selected&&<span className="absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black text-slate-900">選択中</span>}<span className="block px-2 pt-1.5 text-[13px] font-black text-white">{option.label}</span><small className="block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400">{option.desc}</small></button>;})}</div><button className="mh-dialog-choice justify-center" onClick={()=>setShowTitleArt(false)}>決定</button></div></div>
+    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog" data-title-art-picker style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>タイトル画像アレンジ</h3><button onClick={()=>setShowTitleArt(false)} aria-label="閉じる"><X size={18}/></button></div><p className="text-[11px] font-bold leading-relaxed text-slate-300">タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。</p><div className="grid grid-cols-2 gap-3">{TITLE_ART_OPTIONS.map(option=>{const selected=titleArt===option.id;return <button key={option.id} type="button" aria-pressed={selected} onClick={()=>changeTitleArt(option.id)} className={`relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected?'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]':'border-white/15 bg-white/5'}`}><img src={option.src} alt={option.label} loading="lazy" className="block w-full aspect-[9/16] object-cover"/>{selected&&<span className="absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black text-slate-900">選択中</span>}<span className="block px-2 pt-1.5 text-[13px] font-black text-white">{option.label}</span><small className="block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400">{option.desc}</small></button>;})}</div><button className="mh-dialog-choice justify-center" onClick={()=>setShowTitleArt(false)}>決定</button></div></div>
   ) : showAudioSettings ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/>}</div></div>
   ) : showBgmArrangement ? (
@@ -13764,12 +13774,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   );
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
-      <img className="mh-title-visual" src={titleArtSrc(titleArt)} alt="モンスターヒーロー タイトル画面"/>
+      <img className="mh-title-visual" src={titleArtSrc(titleArt, titleLandscape)} alt="モンスターヒーロー タイトル画面"/>
       <header className="mh-title-header"><div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div><div className="mh-title-actions"><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openChangelog()}}><Sparkles size={19}/><span>お知らせ</span>{hasUnreadChangelog&&<em>NEW</em>}</button><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setShowTitleSettings(true)}}><Settings size={19}/><span>設定</span></button></div></header>
       <button type="button" className="mh-title-start" disabled={!!titleModal || titleStarting} onPointerDown={startGame} aria-label="トップ画面へ進む"></button>{titleModal}
     </main>{updateNotice}{storageTroubleNotice}</>
   );
-  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src={titleArtSrc(titleArt)} alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}{storageTroubleNotice}</>;
+  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src={titleArtSrc(titleArt, titleLandscape)} alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}{storageTroubleNotice}</>;
 
   return (
     // みゅあとの仲良し度をここから配る。各画面は <AssistantBubble scene="…"/> を置くだけでよい

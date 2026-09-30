@@ -775,12 +775,16 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
 
 // タイトル画像アレンジ。設定の「タイトル画像アレンジ」から選ぶ(2026-09-30・ユーザー要望)。
 // 保存は新しいキー mh_title_art に id だけを持つ。無い・知らない id のときは既定(いちばん新しい絵)。
-// 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない
+// 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない。
+// wideSrc は横画面(画面の横幅が高さより広いとき)に出す絵。無い絵は縦の絵を切り抜いて出す
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
 const TITLE_ART_OPTIONS = [
-  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg' },
+  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg', wideSrc: 'data/images/title-screen-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
 ];
 const DEFAULT_TITLE_ART = 'halloween';
 const normalizeTitleArt = value => TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
-const titleArtSrc = value => TITLE_ART_OPTIONS.find(option => option.id === normalizeTitleArt(value)).src;
+const titleArtSrc = (value, landscape = false) => {
+  const option = TITLE_ART_OPTIONS.find(item => item.id === normalizeTitleArt(value));
+  return landscape && option.wideSrc ? option.wideSrc : option.src;
+};
