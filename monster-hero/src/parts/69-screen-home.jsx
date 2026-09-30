@@ -49,7 +49,7 @@ const HOME_EVENT_BADGE_CSS = `
 `;
 function HomeScreen({
   assistantBondUp, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
-  hasUnreadChangelog, homeBackgroundReady, homePastureMasumons, masuMons, missions,
+  hasUnreadChangelog, homeBackgroundReady, homeBackgroundSrc, homeBackgroundWide, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
 }) {
@@ -73,7 +73,8 @@ function HomeScreen({
   return (
 
       <main className="mh-home-scene" aria-label="村の広場">
-        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''}`} aria-hidden="true"><img src="data/images/home-background.jpg" alt=""/></picture>
+        {/* 背景は設定の「ホーム画面アレンジ」で選んだ絵。横画面では横長の絵を画面いっぱいに出す(is-wide) */}
+        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''}`} aria-hidden="true"><img src={homeBackgroundSrc||'data/images/home-background.jpg'} alt=""/></picture>
         <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
         <header className={`mh-home-status${spotClass('settings')}`}>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 918fc2ed48e97c98
+// source-sha256: 425bd726c30c29aa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-30 12:24";
+const BUILD_DATE = "2026-09-30 12:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5444,6 +5444,26 @@ const titleArtSrc = (value, landscape = false) => {
   const option = TITLE_ART_OPTIONS.find(item => item.id === normalizeTitleArt(value));
   return landscape && option.wideSrc ? option.wideSrc : option.src;
 };
+const HOME_ART_STORAGE_KEY = 'mh_home_art';
+const HOME_ART_OPTIONS = [{
+  id: 'halloween',
+  label: 'ハロウィン',
+  desc: 'かぼちゃの灯りがともる、月夜の村の広場',
+  src: 'data/images/home-background-halloween.jpg',
+  wideSrc: 'data/images/home-background-halloween-wide.jpg'
+}, {
+  id: 'classic',
+  label: 'クラシック',
+  desc: 'これまでの村の広場',
+  src: 'data/images/home-background.jpg'
+}];
+const DEFAULT_HOME_ART = 'halloween';
+const normalizeHomeArt = value => HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
+const homeArtSrc = (value, landscape = false) => {
+  const option = HOME_ART_OPTIONS.find(item => item.id === normalizeHomeArt(value));
+  return landscape && option.wideSrc ? option.wideSrc : option.src;
+};
+const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === normalizeHomeArt(value)).wideSrc);
 const Audio_ = (() => {
   let Tone = null,
     ready = false,
@@ -31852,6 +31872,7 @@ function SettingsScreen({
   onOpenAudioSettings,
   onOpenBgmArrangement,
   onOpenTitleArt,
+  onOpenHomeArt,
   onOpenBackup,
   onOpenHelp,
   onOpenGameUpdate,
@@ -31964,6 +31985,11 @@ function SettingsScreen({
     className: menuClass
   }, "タイトル画像アレンジ"), React.createElement("button", {
     type: "button",
+    "data-open-home-art": true,
+    onClick: onOpenHomeArt,
+    className: menuClass
+  }, "ホーム画面アレンジ"), React.createElement("button", {
+    type: "button",
     onClick: onOpenBackup,
     className: menuClass
   }, "データ引き継ぎ"), React.createElement("button", {
@@ -32010,6 +32036,61 @@ function SettingsScreen({
     onClick: onReturnToTitle,
     className: "mh-button mh-button-danger w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-red-500/40 bg-red-950/50 px-4 py-3 font-black text-red-200 active:scale-[.98]"
   }, "タイトルへ戻る"))));
+}
+function ArtPickerModal({
+  pickerId,
+  heading,
+  note,
+  options,
+  value,
+  onChange,
+  onClose
+}) {
+  return React.createElement("div", {
+    className: "mh-title-modal",
+    onPointerDown: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "mh-title-dialog",
+    "data-art-picker": pickerId,
+    style: {
+      maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
+      overflowY: 'auto'
+    }
+  }, React.createElement("div", {
+    className: "mh-dialog-head"
+  }, React.createElement("h3", null, heading), React.createElement("button", {
+    onClick: onClose,
+    "aria-label": "閉じる"
+  }, React.createElement(X, {
+    size: 18
+  }))), React.createElement("p", {
+    className: "text-[11px] font-bold leading-relaxed text-slate-300"
+  }, note), React.createElement("div", {
+    className: "grid grid-cols-2 gap-3"
+  }, options.map(option => {
+    const selected = value === option.id;
+    return React.createElement("button", {
+      key: option.id,
+      type: "button",
+      "aria-pressed": selected,
+      onClick: () => onChange(option.id),
+      className: `relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected ? 'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]' : 'border-white/15 bg-white/5'}`
+    }, React.createElement("img", {
+      src: option.src,
+      alt: option.label,
+      loading: "lazy",
+      className: "block w-full aspect-[9/16] object-cover"
+    }), selected && React.createElement("span", {
+      className: "absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black text-slate-900"
+    }, "選択中"), React.createElement("span", {
+      className: "block px-2 pt-1.5 text-[13px] font-black text-white"
+    }, option.label), React.createElement("small", {
+      className: "block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400"
+    }, option.desc));
+  })), React.createElement("button", {
+    className: "mh-dialog-choice justify-center",
+    onClick: onClose
+  }, "決定")));
 }
 function MissionsScreen({
   missions,
@@ -41546,6 +41627,8 @@ function HomeScreen({
   gold,
   hasUnreadChangelog,
   homeBackgroundReady,
+  homeBackgroundSrc,
+  homeBackgroundWide,
   homePastureMasumons,
   masuMons,
   missions,
@@ -41580,10 +41663,10 @@ function HomeScreen({
     className: "mh-home-scene",
     "aria-label": "村の広場"
   }, React.createElement("picture", {
-    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''}`,
+    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''} ${homeBackgroundWide ? 'is-wide' : ''}`,
     "aria-hidden": "true"
   }, React.createElement("img", {
-    src: "data/images/home-background.jpg",
+    src: homeBackgroundSrc || 'data/images/home-background.jpg',
     alt: ""
   })), React.createElement("div", {
     className: "mh-home-masumon-layer",
@@ -47485,6 +47568,41 @@ function MonsterHeroGame() {
   const quickRewardPolicyRunRef = useRef(QUICK_REWARD_POLICY_GROWTH);
   const [managementTab, setManagementTab] = useState('monster');
   const [homeBackgroundReady, setHomeBackgroundReady] = useState(false);
+  const [titleLandscape, setTitleLandscape] = useState(() => {
+    try {
+      return window.matchMedia('(orientation: landscape)').matches;
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    let query = null;
+    try {
+      query = window.matchMedia('(orientation: landscape)');
+    } catch {
+      return undefined;
+    }
+    const onChange = () => setTitleLandscape(query.matches);
+    onChange();
+    if (query.addEventListener) query.addEventListener('change', onChange);else if (query.addListener) query.addListener(onChange);
+    return () => {
+      if (query.removeEventListener) query.removeEventListener('change', onChange);else if (query.removeListener) query.removeListener(onChange);
+    };
+  }, []);
+  const [showHomeArt, setShowHomeArt] = useState(false);
+  const [homeArt, setHomeArtState] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem(HOME_ART_STORAGE_KEY);
+      return normalizeHomeArt(raw !== null ? JSON.parse(raw) : null);
+    } catch {
+      return DEFAULT_HOME_ART;
+    }
+  });
+  const changeHomeArt = id => {
+    const next = normalizeHomeArt(id);
+    setHomeArtState(next);
+    storeSet(HOME_ART_STORAGE_KEY, next, false);
+  };
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
   const [difficulty, setDifficulty] = useState('Normal');
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
@@ -47806,7 +47924,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     let active = true;
     const image = new Image();
-    image.src = 'data/images/home-background.jpg';
+    image.src = homeArtSrc(homeArt, titleLandscape);
     const reveal = () => {
       if (active) setHomeBackgroundReady(true);
     };
@@ -47820,7 +47938,7 @@ function MonsterHeroGame() {
       image.onload = null;
       image.onerror = null;
     };
-  }, []);
+  }, [homeArt, titleLandscape]);
   const entryAnimatingRef = useRef(false);
   const titleStartingRef = useRef(false);
   const [showTitleSettings, setShowTitleSettings] = useState(false);
@@ -47833,27 +47951,6 @@ function MonsterHeroGame() {
       return DEFAULT_TITLE_ART;
     }
   });
-  const [titleLandscape, setTitleLandscape] = useState(() => {
-    try {
-      return window.matchMedia('(orientation: landscape)').matches;
-    } catch {
-      return false;
-    }
-  });
-  useEffect(() => {
-    let query = null;
-    try {
-      query = window.matchMedia('(orientation: landscape)');
-    } catch {
-      return undefined;
-    }
-    const onChange = () => setTitleLandscape(query.matches);
-    onChange();
-    if (query.addEventListener) query.addEventListener('change', onChange);else if (query.addListener) query.addListener(onChange);
-    return () => {
-      if (query.removeEventListener) query.removeEventListener('change', onChange);else if (query.removeListener) query.removeListener(onChange);
-    };
-  }, []);
   const changeTitleArt = id => {
     const next = normalizeTitleArt(id);
     setTitleArtState(next);
@@ -51840,7 +51937,7 @@ function MonsterHeroGame() {
     } catch {}
   };
   const startGame = async () => {
-    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showTitleArt || showAudioSettings || showBackup) return;
+    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showTitleArt || showHomeArt || showAudioSettings || showBackup) return;
     titleStartingRef.current = true;
     setTitleStarting(true);
     const needsAssistantChoice = !onboarded && !assistantChosen;
@@ -52039,6 +52136,10 @@ function MonsterHeroGame() {
       {
         const savedTitleArt = await storeGet(TITLE_ART_STORAGE_KEY, null, false);
         if (savedTitleArt !== null) setTitleArtState(normalizeTitleArt(savedTitleArt));
+      }
+      {
+        const savedHomeArt = await storeGet(HOME_ART_STORAGE_KEY, null, false);
+        if (savedHomeArt !== null) setHomeArtState(normalizeHomeArt(savedHomeArt));
       }
       let savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
       if ((await storeGet(BGM_PRO_DEFAULT_MIGRATION_KEY, false, false)) !== true) {
@@ -62746,55 +62847,35 @@ function MonsterHeroGame() {
     className: "mh-dialog-choice",
     onClick: () => {
       setShowTitleSettings(false);
+      setShowHomeArt(true);
+    }
+  }, "🏡 ホーム画面アレンジ ", React.createElement(ChevronRight, {
+    size: 18
+  })), React.createElement("button", {
+    className: "mh-dialog-choice",
+    onClick: () => {
+      setShowTitleSettings(false);
       setShowBackup(true);
     }
   }, "🛡️ データ引き継ぎ ", React.createElement(ChevronRight, {
     size: 18
-  })))) : showTitleArt ? React.createElement("div", {
-    className: "mh-title-modal",
-    onPointerDown: e => e.stopPropagation()
-  }, React.createElement("div", {
-    className: "mh-title-dialog",
-    "data-title-art-picker": true,
-    style: {
-      maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
-      overflowY: 'auto'
-    }
-  }, React.createElement("div", {
-    className: "mh-dialog-head"
-  }, React.createElement("h3", null, "タイトル画像アレンジ"), React.createElement("button", {
-    onClick: () => setShowTitleArt(false),
-    "aria-label": "閉じる"
-  }, React.createElement(X, {
-    size: 18
-  }))), React.createElement("p", {
-    className: "text-[11px] font-bold leading-relaxed text-slate-300"
-  }, "タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。"), React.createElement("div", {
-    className: "grid grid-cols-2 gap-3"
-  }, TITLE_ART_OPTIONS.map(option => {
-    const selected = titleArt === option.id;
-    return React.createElement("button", {
-      key: option.id,
-      type: "button",
-      "aria-pressed": selected,
-      onClick: () => changeTitleArt(option.id),
-      className: `relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected ? 'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]' : 'border-white/15 bg-white/5'}`
-    }, React.createElement("img", {
-      src: option.src,
-      alt: option.label,
-      loading: "lazy",
-      className: "block w-full aspect-[9/16] object-cover"
-    }), selected && React.createElement("span", {
-      className: "absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black text-slate-900"
-    }, "選択中"), React.createElement("span", {
-      className: "block px-2 pt-1.5 text-[13px] font-black text-white"
-    }, option.label), React.createElement("small", {
-      className: "block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400"
-    }, option.desc));
-  })), React.createElement("button", {
-    className: "mh-dialog-choice justify-center",
-    onClick: () => setShowTitleArt(false)
-  }, "決定"))) : showAudioSettings ? React.createElement("div", {
+  })))) : showTitleArt ? React.createElement(ArtPickerModal, {
+    pickerId: "title",
+    heading: "タイトル画像アレンジ",
+    note: "タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。",
+    options: TITLE_ART_OPTIONS,
+    value: titleArt,
+    onChange: changeTitleArt,
+    onClose: () => setShowTitleArt(false)
+  }) : showHomeArt ? React.createElement(ArtPickerModal, {
+    pickerId: "home",
+    heading: "ホーム画面アレンジ",
+    note: "ホーム画面の背景を選べます。「ハロウィン」は、横画面では横長の絵になります。",
+    options: HOME_ART_OPTIONS,
+    value: homeArt,
+    onChange: changeHomeArt,
+    onClose: () => setShowHomeArt(false)
+  }) : showAudioSettings ? React.createElement("div", {
     className: "mh-title-modal"
   }, React.createElement("div", {
     className: "mh-title-dialog",
@@ -63637,6 +63718,8 @@ function MonsterHeroGame() {
       gold: gold,
       hasUnreadChangelog: hasUnreadChangelog,
       homeBackgroundReady: homeBackgroundReady,
+      homeBackgroundSrc: homeArtSrc(homeArt, titleLandscape || !!forcedRotationStyle),
+      homeBackgroundWide: homeArtIsWide(homeArt, titleLandscape || !!forcedRotationStyle),
       homePastureMasumons: homePastureMasumons,
       masuMons: masuMons,
       missions: missions,
@@ -66215,6 +66298,7 @@ function MonsterHeroGame() {
       onOpenAudioSettings: () => setShowAudioSettings(true),
       onOpenBgmArrangement: () => setShowBgmArrangement(true),
       onOpenTitleArt: () => setShowTitleArt(true),
+      onOpenHomeArt: () => setShowHomeArt(true),
       onOpenBackup: () => {
         setShowBackup(true);
         setBackupTab('export');
@@ -78069,7 +78153,7 @@ const createAnimationStyle = () => {
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
     .mh-regeneration-animation{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle,#4c1d95,#020617 65%)}.mh-regeneration-disc{position:absolute;width:170px;height:170px;object-fit:contain;animation:mhRegenerationDisc 1.5s ease-in forwards}.mh-regeneration-born{position:relative;width:min(330px,100%);padding:20px;border:2px solid #fbbf24;border-radius:24px;background:#0f172a;text-align:center;opacity:0;animation:mhRegenerationBorn .6s 1.4s ease-out forwards}.mh-regeneration-born h3{font-size:20px;font-weight:1000;color:#fde68a}.mh-regeneration-born b{float:right;color:#f9a8d4}@keyframes mhRegenerationDisc{0%{transform:rotate(0) scale(.7);opacity:1}85%{transform:rotate(1080deg) scale(1.15);opacity:1}100%{transform:rotate(1260deg) scale(.1);opacity:0}}@keyframes mhRegenerationBorn{to{opacity:1;transform:none}}
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
        ★太さを px で書かない。inset と mask を割合で書いてあるので、ランキングの 32px でも
