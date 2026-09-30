@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4f97497cc8541011
+// generated-sha256: e09a6231598e597a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -158,7 +158,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-09-30 13:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-30 14:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4571,6 +4571,43 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
   return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
 }));
 
+
+// 画面テーマ(2026-09-30・ユーザー要望「他画面もハロウィン仕様に」「画面の種類ごとに細かく」「11月になったら自動でクラシックへ」)。
+// 画面の種類ごとに 'auto'(おまかせ) / 'halloween' / 'classic' を選ぶ。保存は新しいキー mh_screen_theme_v1 に
+// { menu, market, temple, battle, rhythm } の形で持つ。タイトルとホームの絵は既存の mh_title_art / mh_home_art のまま。
+// ★'auto' は見るたびに今の時刻で決める(読み込み時に1回だけ決めると、開きっぱなしの端末で11月になっても戻らない)
+const SCREEN_THEME_STORAGE_KEY = 'mh_screen_theme_v1';
+const SCREEN_THEME_HALLOWEEN_UNTIL = Date.parse('2026-11-01T00:00:00+09:00');
+const SCREEN_THEME_CHOICES = [
+  { id: 'auto', label: 'おまかせ' },
+  { id: 'halloween', label: 'ハロウィン' },
+  { id: 'classic', label: 'クラシック' },
+];
+const SCREEN_THEME_CATEGORIES = [
+  { id: 'menu', label: 'メニュー画面', desc: '設定・ミッション・ギフト・図鑑・M/B管理など' },
+  { id: 'market', label: 'マーケット', desc: 'マーケット' },
+  { id: 'temple', label: '神殿', desc: '神殿と、マスモンの再生・合体・転生など' },
+  // バトルとモンヒロビートは、見やすさを1画面ずつ確かめてから出す(ready:false のあいだは設定に並べず、クラシックのまま)
+  { id: 'battle', label: 'モンヒロバトル', desc: 'バトルえらび・バトル中・リザルト', ready: false },
+  { id: 'rhythm', label: 'モンヒロビート', desc: '曲えらび・演奏画面', ready: false },
+];
+const SCREEN_THEME_READY_CATEGORIES = SCREEN_THEME_CATEGORIES.filter(category => category.ready !== false);
+// いまの画面に出すテーマ('halloween' / 'classic')。まだ仕上げていない種類はクラシック
+const screenThemeFor = (screenTheme, category, now = Date.now()) => SCREEN_THEME_READY_CATEGORIES.some(c => c.id === category) ? resolveScreenTheme(screenTheme && screenTheme[category], now) : 'classic';
+const resolveScreenTheme = (value, now = Date.now()) => value === 'halloween' || value === 'classic' ? value : (now < SCREEN_THEME_HALLOWEEN_UNTIL ? 'halloween' : 'classic');
+const normalizeScreenThemeChoice = value => SCREEN_THEME_CHOICES.some(choice => choice.id === value) ? value : 'auto';
+const normalizeScreenTheme = value => Object.fromEntries(SCREEN_THEME_CATEGORIES.map(category => [category.id, normalizeScreenThemeChoice(value && typeof value === 'object' ? value[category.id] : null)]));
+// いま描いている画面(gameState)がどの種類か
+const SCREEN_THEME_BATTLE_STATES = new Set(['BATTLE','BATTLE_TUTORIAL','BATTLE_MENU','BATTLE_MODE_SELECT','BATTLE_SYSTEM_SELECT','BATTLE_DIFFICULTY_SELECT','EXTREME_DIFFICULTY_SELECT','SPECIES_CHALLENGE_SELECT','BATTLE_SCORE_RANKING','PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','PICK_PRO_ALLIES','REWARD_PICK','UPGRADE_SKILL','WAVE_RESULT','CHAMPION','QUICK_GROWTH','QUICK_JOIN','SKIP_PICK','SKIP_RESULT','AUTO_SETTINGS']);
+const SCREEN_THEME_TEMPLE_STATES = new Set(['TEMPLE','MASU_REGENERATION','MASU_REGENERATION_DETAIL','MASU_DONATION','MASU_FUSION','MASU_REBIRTH','MASU_REINCARNATE','MASU_TRANSCENDENCE','MASU_SOUL_RANK','MASU_SOUL_TRAITS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE']);
+const screenThemeCategory = (gameState, rhythmOpen = false) => {
+  if (rhythmOpen || String(gameState || '').startsWith('RHYTHM_')) return 'rhythm';
+  if (SCREEN_THEME_BATTLE_STATES.has(gameState)) return 'battle';
+  if (gameState === 'BREEDER_MARKET') return 'market';
+  if (SCREEN_THEME_TEMPLE_STATES.has(gameState)) return 'temple';
+  return 'menu';
+};
+
 // タイトル画像アレンジ。設定の「タイトル画像アレンジ」から選ぶ(2026-09-30・ユーザー要望)。
 // 保存は新しいキー mh_title_art に id だけを持つ。無い・知らない id のときは既定(いちばん新しい絵)。
 // 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない。
@@ -4580,10 +4617,12 @@ const TITLE_ART_OPTIONS = [
   { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg', wideSrc: 'data/images/title-screen-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
 ];
-const DEFAULT_TITLE_ART = 'halloween';
-const normalizeTitleArt = value => TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
+// 'auto'(おまかせ)は季節に合わせる(SCREEN_THEME_HALLOWEEN_UNTIL まではハロウィン、そのあとはクラシック)
+const DEFAULT_TITLE_ART = 'auto';
+const normalizeTitleArt = value => value === 'auto' || TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
+const resolveTitleArt = (value, now = Date.now()) => { const v = normalizeTitleArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
 const titleArtSrc = (value, landscape = false) => {
-  const option = TITLE_ART_OPTIONS.find(item => item.id === normalizeTitleArt(value));
+  const option = TITLE_ART_OPTIONS.find(item => item.id === resolveTitleArt(value));
   return landscape && option.wideSrc ? option.wideSrc : option.src;
 };
 
@@ -4594,13 +4633,14 @@ const HOME_ART_OPTIONS = [
   { id: 'halloween', label: 'ハロウィン', desc: 'かぼちゃの灯りがともる、月夜の村の広場', src: 'data/images/home-background-halloween.jpg', wideSrc: 'data/images/home-background-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでの村の広場', src: 'data/images/home-background.jpg' },
 ];
-const DEFAULT_HOME_ART = 'halloween';
-const normalizeHomeArt = value => HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
+const DEFAULT_HOME_ART = 'auto';
+const normalizeHomeArt = value => value === 'auto' || HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
+const resolveHomeArt = (value, now = Date.now()) => { const v = normalizeHomeArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
 const homeArtSrc = (value, landscape = false) => {
-  const option = HOME_ART_OPTIONS.find(item => item.id === normalizeHomeArt(value));
+  const option = HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value));
   return landscape && option.wideSrc ? option.wideSrc : option.src;
 };
-const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === normalizeHomeArt(value)).wideSrc);
+const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).wideSrc);
 
 // ---- part: 14-audio.jsx ----
 const Audio_ = (() => {
@@ -10429,7 +10469,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
         <Wrapper
           {...(hasDetail ? { onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く` } : {})}
           className={`relative flex-1 min-w-0 text-left rounded-2xl border-2 ${compact?'px-2.5 py-1.5':'px-3 py-2'} ${hasDetail?'active:scale-[.99]':''}`}
-          style={{ borderColor:color, backgroundColor:'rgba(15,23,42,0.92)' }}>
+          style={{ borderColor:color, backgroundColor:'var(--mh-bubble-bg, rgba(15,23,42,0.92))' }}>
           {/* 吹き出しのしっぽ(左向き) */}
           <span className="absolute" style={{ left:'-9px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:`9px solid ${color}` }}/>
           <span className="absolute" style={{ left:'-6px', bottom:'14px', width:0, height:0, borderTop:'7px solid transparent', borderBottom:'7px solid transparent', borderRight:'9px solid rgba(15,23,42,0.92)' }}/>
@@ -21114,7 +21154,7 @@ const DebugThrowScreenError = () => { throw new Error('画面エラーの受け�
 //   (横画面で「左＝見出し・助手 / 右＝メニュー」に組み替わるのも、この形が条件)
 // ・メニューの1行は menuClass ひとつに寄せた。高さ(64px)・角丸・枠線・押した手応えを
 //   ここでだけ決める。「ゲームを更新」だけ余白と枠色がずれていたのも同じ型に入れた
-function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenTitleArt, onOpenHomeArt, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
+function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenTitleArt, onOpenHomeArt, onOpenScreenTheme, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle, updateNoticeStyle, onChangeUpdateNoticeStyle, battleScreenStyle, onChangeBattleScreenStyle, battleFxSettings, onChangeBattleFxSetting, battleFxAutoLoad }) {
   const menuClass = 'mh-button mh-button-secondary w-full min-h-[64px] flex items-center justify-center rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-black active:scale-[.98]';
   // バトル設定は設定画面の中の1ページ(2026-09-24 ユーザー指示「バトルの設定をバラにしないで、
   // 音量設定の上に作ってその中に細かい設定欄を作って」)。画面(gameState)は増やさず、ここで切り替える
@@ -21183,6 +21223,7 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
         <button type="button" onClick={onOpenBgmArrangement} className={menuClass}>BGMアレンジ</button>
         <button type="button" data-open-title-art onClick={onOpenTitleArt} className={menuClass}>タイトル画像アレンジ</button>
         <button type="button" data-open-home-art onClick={onOpenHomeArt} className={menuClass}>ホーム画面アレンジ</button>
+        <button type="button" data-open-screen-theme onClick={onOpenScreenTheme} className={menuClass}>画面テーマ</button>
         <button type="button" onClick={onOpenBackup} className={menuClass}>データ引き継ぎ</button>
         <button type="button" onClick={onOpenHelp} className={menuClass}>ヘルプ</button>
         <button type="button" onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} className={`${menuClass} flex-col disabled:opacity-40`}><span className="block text-cyan-200">ゲームを更新</span><span className="mt-1 block text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button>
@@ -21220,21 +21261,57 @@ function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onO
 
 // タイトル画像アレンジ・ホーム画面アレンジで使う「絵を選ぶ」窓。
 // options は { id, label, desc, src } の並び(TITLE_ART_OPTIONS / HOME_ART_OPTIONS)
-function ArtPickerModal({ pickerId, heading, note, options, value, onChange, onClose }) {
+function ArtPickerModal({ pickerId, heading, note, options, value, resolved, onChange, onClose }) {
+  const auto=value==='auto';
   return (
     <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}>
       <div className="mh-title-dialog" data-art-picker={pickerId} style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
         <div className="mh-dialog-head"><h3>{heading}</h3><button onClick={onClose} aria-label="閉じる"><X size={18}/></button></div>
         <p className="text-[11px] font-bold leading-relaxed text-slate-300">{note}</p>
+        {/* おまかせは季節に合わせて切り替わる(10月中はハロウィン、11月からクラシック) */}
+        <button type="button" aria-pressed={auto} onClick={()=>onChange('auto')} className={`w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto?'border-amber-300 bg-amber-500/15 text-amber-100':'border-white/15 bg-white/5 text-slate-200'}`}>おまかせ(季節に合わせて切り替え){auto&&<small className="block text-[10px] font-bold text-amber-200/80">いまは「{(options.find(o=>o.id===resolved)||options[0]).label}」を出しています</small>}</button>
         <div className="grid grid-cols-2 gap-3">{options.map(option=>{
           const selected=value===option.id;
           return <button key={option.id} type="button" aria-pressed={selected} onClick={()=>onChange(option.id)} className={`relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected?'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]':'border-white/15 bg-white/5'}`}>
             <img src={option.src} alt={option.label} loading="lazy" className="block w-full aspect-[9/16] object-cover"/>
             {selected&&<span className="absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black text-slate-900">選択中</span>}
+            {auto&&resolved===option.id&&<span className="absolute right-1.5 top-1.5 rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-black text-slate-900">おまかせ中</span>}
             <span className="block px-2 pt-1.5 text-[13px] font-black text-white">{option.label}</span>
             <small className="block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400">{option.desc}</small>
           </button>;
         })}</div>
+        <button className="mh-dialog-choice justify-center" onClick={onClose}>決定</button>
+      </div>
+    </div>
+  );
+}
+
+// 画面テーマ。画面の種類ごとに おまかせ/ハロウィン/クラシック を選ぶ。
+// タイトルとホームの絵も同じ3択でここから変えられる(絵を見て選びたいときは各アレンジ画面から)
+function ScreenThemeModal({ screenTheme, onChange, titleArt, onChangeTitleArt, homeArt, onChangeHomeArt, onClose }) {
+  const rows = [
+    { id: 'title', label: 'タイトル画面', desc: 'タイトル画面の絵', value: titleArt, set: onChangeTitleArt },
+    { id: 'home', label: 'ホーム画面', desc: 'ホーム画面の背景', value: homeArt, set: onChangeHomeArt },
+    ...SCREEN_THEME_READY_CATEGORIES.map(category => ({ ...category, value: screenTheme[category.id], set: choice => onChange(category.id, choice) })),
+  ];
+  const setAll = choice => { onChangeTitleArt(choice); onChangeHomeArt(choice); onChange('*', choice); };
+  const chip = (selected) => `min-h-[36px] flex-1 rounded-lg border px-1 text-[11px] font-black ${selected ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-white/5 text-slate-300'}`;
+  return (
+    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}>
+      <div className="mh-title-dialog" data-screen-theme-picker style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}>
+        <div className="mh-dialog-head"><h3>画面テーマ</h3><button onClick={onClose} aria-label="閉じる"><X size={18}/></button></div>
+        <p className="text-[11px] font-bold leading-relaxed text-slate-300">画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。</p>
+        <div className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2">
+          <b className="block text-[12px] font-black text-amber-100">まとめて変える</b>
+          <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" onClick={() => setAll(choice.id)} className={chip(false)}>{choice.label}</button>)}</div>
+        </div>
+        {rows.map(row => (
+          <div key={row.id} data-screen-theme-row={row.id} className="rounded-xl border border-white/10 bg-white/5 p-2">
+            <b className="block text-[12px] font-black text-white">{row.label}</b>
+            <small className="block text-[10px] font-bold text-slate-400">{row.desc}</small>
+            <div className="mt-1.5 flex gap-1.5">{SCREEN_THEME_CHOICES.map(choice => <button key={choice.id} type="button" aria-pressed={row.value === choice.id} onClick={() => row.set(choice.id)} className={chip(row.value === choice.id)}>{choice.label}</button>)}</div>
+          </div>
+        ))}
         <button className="mh-dialog-choice justify-center" onClick={onClose}>決定</button>
       </div>
     </div>
@@ -30068,6 +30145,16 @@ function MonsterHeroGame() {
     try { const raw = window.localStorage.getItem(HOME_ART_STORAGE_KEY); return normalizeHomeArt(raw !== null ? JSON.parse(raw) : null); } catch { return DEFAULT_HOME_ART; }
   });
   const changeHomeArt = id => { const next = normalizeHomeArt(id); setHomeArtState(next); storeSet(HOME_ART_STORAGE_KEY, next, false); };
+  // 画面テーマ(画面の種類ごとの おまかせ/ハロウィン/クラシック)。保存が無い人は全部おまかせ
+  const [showScreenTheme, setShowScreenTheme] = useState(false);
+  const [screenTheme, setScreenThemeState] = useState(() => {
+    try { const raw = window.localStorage.getItem(SCREEN_THEME_STORAGE_KEY); return normalizeScreenTheme(raw !== null ? JSON.parse(raw) : null); } catch { return normalizeScreenTheme(null); }
+  });
+  const changeScreenTheme = (categoryId, choice) => setScreenThemeState(prev => {
+    const next = normalizeScreenTheme(categoryId === '*' ? Object.fromEntries(SCREEN_THEME_CATEGORIES.map(c => [c.id, choice])) : { ...prev, [categoryId]: choice });
+    storeSet(SCREEN_THEME_STORAGE_KEY, next, false);
+    return next;
+  });
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
   const [difficulty, setDifficulty] = useState('Normal');
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
@@ -34625,7 +34712,7 @@ function MonsterHeroGame() {
   };
 
   const startGame = async () => {
-    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showTitleArt || showHomeArt || showAudioSettings || showBackup) return;
+    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showTitleArt || showHomeArt || showScreenTheme || showAudioSettings || showBackup) return;
     titleStartingRef.current = true;
     setTitleStarting(true);
     // はじめて遊ぶ人は「助手をえらぶ」→ 選んだ助手のあいさつ → プロフィール(名前とアイコン)の順。
@@ -34857,6 +34944,7 @@ function MonsterHeroGame() {
       // 端末の保存をその場で読めない環境(window.storage)でも、選んだタイトル画像を戻す
       { const savedTitleArt = await storeGet(TITLE_ART_STORAGE_KEY, null, false); if (savedTitleArt !== null) setTitleArtState(normalizeTitleArt(savedTitleArt)); }
       { const savedHomeArt = await storeGet(HOME_ART_STORAGE_KEY, null, false); if (savedHomeArt !== null) setHomeArtState(normalizeHomeArt(savedHomeArt)); }
+      { const savedScreenTheme = await storeGet(SCREEN_THEME_STORAGE_KEY, null, false); if (savedScreenTheme !== null) setScreenThemeState(normalizeScreenTheme(savedScreenTheme)); }
       let savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
       // プロモードの既定曲だけは、以前の既定のまま遊んでいる人へ新しい曲を一度だけ届ける
       if (await storeGet(BGM_PRO_DEFAULT_MIGRATION_KEY, false, false) !== true) {
@@ -43505,11 +43593,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       </div>
     </div>
   ) : showTitleSettings ? (
-    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowTitleArt(true)}}>🖼️ タイトル画像アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowHomeArt(true)}}>🏡 ホーム画面アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
+    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowTitleArt(true)}}>🖼️ タイトル画像アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowHomeArt(true)}}>🏡 ホーム画面アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowScreenTheme(true)}}>🎃 画面テーマ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
   ) : showTitleArt ? (
-    <ArtPickerModal pickerId="title" heading="タイトル画像アレンジ" note="タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。" options={TITLE_ART_OPTIONS} value={titleArt} onChange={changeTitleArt} onClose={()=>setShowTitleArt(false)}/>
+    <ArtPickerModal pickerId="title" heading="タイトル画像アレンジ" note="タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。" options={TITLE_ART_OPTIONS} value={titleArt} resolved={resolveTitleArt(titleArt)} onChange={changeTitleArt} onClose={()=>setShowTitleArt(false)}/>
+  ) : showScreenTheme ? (
+    <ScreenThemeModal screenTheme={screenTheme} onChange={changeScreenTheme} titleArt={titleArt} onChangeTitleArt={changeTitleArt} homeArt={homeArt} onChangeHomeArt={changeHomeArt} onClose={()=>setShowScreenTheme(false)}/>
   ) : showHomeArt ? (
-    <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。「ハロウィン」は、横画面では横長の絵になります。" options={HOME_ART_OPTIONS} value={homeArt} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
+    <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。「ハロウィン」は、横画面では横長の絵になります。" options={HOME_ART_OPTIONS} value={homeArt} resolved={resolveHomeArt(homeArt)} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
   ) : showAudioSettings ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/>}</div></div>
   ) : showBgmArrangement ? (
@@ -43815,7 +43905,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         器を増やさず**同じ要素のstyleを差し替えるだけ**にしてあるのは、
         切り替えた瞬間に中身が作り直されると演奏中の状態(音の時計・スコア・押している指)が
         飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
-    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF'||battleFxLoad==='LIGHT'||battleFxLoad==='MINIMAL')?'calm':'rich'} data-fx-level={battleFxLoad} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
+    <div data-mh-theme={screenThemeFor(screenTheme, screenThemeCategory(gameState, rhythmScreenOpen))} data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF'||battleFxLoad==='LIGHT'||battleFxLoad==='MINIMAL')?'calm':'rich'} data-fx-level={battleFxLoad} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
       <TapRippleLayer spawnRef={rippleSpawnRef}/>
       {updateNotice}{storageTroubleNotice}
@@ -44864,6 +44954,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenBgmArrangement={()=>setShowBgmArrangement(true)}
             onOpenTitleArt={()=>setShowTitleArt(true)}
             onOpenHomeArt={()=>setShowHomeArt(true)}
+            onOpenScreenTheme={()=>setShowScreenTheme(true)}
             onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}
             onOpenHelp={()=>openHelp()}
             onOpenGameUpdate={()=>setShowGameUpdateConfirm(true)}

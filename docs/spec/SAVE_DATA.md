@@ -33,6 +33,10 @@
 | `mh_se_volume` | number / `1` | SE音量0～100 |
 | `mh_bgm_volume` | number / `1` | BGM音量0～100 |
 | `mh_bgm_arrangement` | object / 既定の組み合わせ | 場面ごとに選んだBGMのtrack ID。読み込み時に正規化し、知らない項目・不正なIDは既定値で補う |
+| `mh_title_art` | string / `'auto'` | タイトル画像アレンジ。`'auto'`(おまかせ)・`'halloween'`・`'classic'`。無い・知らない値は `'auto'`。起動時の先読み(index.html)もこのキーを読む |
+| `mh_home_art` | string / `'auto'` | ホーム画面アレンジ。値は `mh_title_art` と同じ |
+| `mh_screen_theme_v1` | object / 全部 `'auto'` | 画面テーマ。`{ menu, market, temple, battle, rhythm }` に `'auto'`/`'halloween'`/`'classic'`。`normalizeScreenTheme` で知らない項目・不正な値は `'auto'` に補う(docs/spec/SCREEN_THEME.md) |
+| `mh_battle_perf_v1` | boolean / false | バトルの性能計測のON/OFF(デバッグ限定)。`BATTLE_PERF` が持つ |
 | `mh_breeder_name` | string / `名無しのブリーダー` | 表示名（保存時最大10文字） |
 | `mh_breeder_icon` | string or null | 種IDまたは購入アイコンID |
 | `mh_breeder_xp` | number / `0` | 累計ブリーダーXP |
