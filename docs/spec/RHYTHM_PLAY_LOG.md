@@ -86,3 +86,6 @@
    `node tools/mode/rhythm-play-log-check.js` と `node tools/mode/rhythm-chart-v3-check.js` を通す
 4. コミット → プッシュ → PR → マージ（CLAUDE.md ②③）。ゲームも公開中の譜面も変わらないので、更新履歴・ヘルプは書かない
 5. 何を学んだか（`--learn` が出した理由の行）を報告に残す
+6. タッチの診断も読む: `node tools/mode/rhythm-touch-diag.js --fetch --report --days 14`（2026-09-30・`RHYTHM_TOUCH_DIAG.md`）。
+   手元の `tools/mode/authoring/touchdiag/rows.jsonl` が増えたらコミットする。判定（`●` の行）が出たら、その行の「次にやること」を
+   `RHYTHM_TOUCH_DIAG.md` の対応表で引いて報告する。ゲームを直すのはユーザーに確認してから

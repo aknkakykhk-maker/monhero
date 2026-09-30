@@ -607,6 +607,35 @@ const rhythmPlayLogSend=async({song,difficulty,rawChart,notes,settings,mirror,cl
       mirror:!!mirror,cleared:!!cleared,deltas,schema_version:RHYTHM_PLAY_LOG_VERSION});
   }catch{return false;}
 };
+// ===== タッチの診断(2026-09-30・data/rhythm-mode.js の RHYTHM_TOUCH_BRIDGE) =====
+// 1曲ごとに、ポインタとタッチの突き合わせ・遅れ・取り消し・入力の無いMISSをまとめ、
+// 端末に直近20曲ぶん残し(新しいキー mh_rhythm_touch_diag_v1。デバッグ画面で見る)、サーバーへ送る(26-supabase.jsx の sbSendRhythmTouchDiag)。
+// 送るのは数だけ。名前・ブリーダーID・セーブデータは送らない。判定・スコア・保存には一切関わらない
+const RHYTHM_TOUCH_DIAG_KEY='mh_rhythm_touch_diag_v1';
+const RHYTHM_TOUCH_DIAG_KEEP=20;
+const RHYTHM_TOUCH_DIAG_VERSION=1;
+const rhythmTouchDiagOf=({song,difficulty,notes,inputTimes,assist,mirror,cleared})=>{
+  const bridge=RHYTHM_TOUCH_BRIDGE.snapshot(),miss=rhythmTouchNoInputMisses(notes,inputTimes);
+  let perfTouch=null;try{perfTouch=RHYTHM_PERF.snapshot().touch||null;}catch{perfTouch=null;}
+  return {song_id:String(song?.songId||''),difficulty:String(difficulty?.id||''),note_count:Array.isArray(notes)?notes.length:0,
+    platform:rhythmTouchPlatform(),standalone:!!rhythmTouchStandalone(),
+    stats:{...bridge,inputs:Array.isArray(inputTimes)?inputTimes.length:0,misses:miss.misses,noInputMisses:miss.noInput,
+      outside:perfTouch?.outside||0,ignored:perfTouch?.ignored||0,gestures:perfTouch?.gestures||0,assist:!!assist,mirror:!!mirror,cleared:!!cleared}};
+};
+const rhythmTouchDiagRecord=async(diag)=>{
+  try{
+    const saved=await storeGet(RHYTHM_TOUCH_DIAG_KEY,[]);
+    const list=Array.isArray(saved)?saved.filter(item=>item&&typeof item==='object'):[];
+    list.push({...diag,at:Date.now()});
+    await storeSet(RHYTHM_TOUCH_DIAG_KEY,list.slice(-RHYTHM_TOUCH_DIAG_KEEP));
+  }catch{}
+  try{
+    if(typeof sbSendRhythmTouchDiag!=='function'||!RHYTHM_DEMO_SONG_IDS.includes(diag.song_id))return false;
+    const deviceKey=await rhythmPlayLogDeviceKey();
+    return await sbSendRhythmTouchDiag({device_key:deviceKey,app_build:typeof BUILD_DATE==='string'?BUILD_DATE:'',platform:diag.platform,standalone:diag.standalone,
+      song_id:diag.song_id,difficulty:diag.difficulty,note_count:Math.max(1,diag.note_count),stats:diag.stats,schema_version:RHYTHM_TOUCH_DIAG_VERSION});
+  }catch{return false;}
+};
 const RHYTHM_CHART_NOTES_KEY='mh_rhythm_chart_notes_v1';
 const RHYTHM_CHART_NOTE_SEGMENT_MS=8000;
 const RHYTHM_CHART_NOTE_MARKS=['', 'good', 'bad'];
@@ -835,7 +864,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
-  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
+  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
   // 判定ごとに変わる表示の入れ物(rhythmCreateHud の説明を参照)
   const hudRef=useRef(null);if(!hudRef.current)hudRef.current=rhythmCreateHud();
   // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
@@ -1580,6 +1609,8 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const isNewRecord=!assistOn&&score>run.startBestScore;const merged=assistOn?normalizeRhythmBestRecord(run.startBest):mergeRhythmBestRecord(run.startBest,result);
     // 遊んだ記録を送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせ・アシストモードは送らない
     if(!debugPlay&&!tutorial&&!calibrating&&!assistOn)rhythmPlayLogSend({song,difficulty,rawChart,notes:run.notes,settings,mirror:mirrorOn,cleared:!failed});
+    // タッチの診断を残して送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせは除く。アシストは印を付けて含める
+    if(!debugPlay&&!tutorial&&!calibrating)void rhythmTouchDiagRecord(rhythmTouchDiagOf({song,difficulty,notes:run.notes,inputTimes:run.inputTimes,assist:assistOn,mirror:mirrorOn,cleared:!failed}));
     const liveLogEndMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;
     const liveLog=rhythmLiveLogSections(run.liveLog,liveLogEndMs);
     // フルコンボ等を達成していれば、リザルトの数字を出す前に一度「FULL COMBO!」等を
@@ -1621,7 +1652,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
    ★飛ばすのは描くことだけ。判定は指の入力のたびに曲の時刻で決めているので変わらない。
      取り逃しのMISSや長押しの終わりも、次に描くフレーム(8ms後)でいつもどおり数える */
 const powerSave=settings.frameRateMode!=='DEVICE';const stagePulseOn=rhythmStageLevel(settings)!=='SIMPLE';let prevFrameMs=0,avgFrameMs=1000/60,lastDrawnMs=0;
-const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();const run=runRef.current;if(!run||run.finished||run.paused)return;
+const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();if(RHYTHM_TOUCH_BRIDGE.hasPending()&&touchSweepRef.current)touchSweepRef.current();const run=runRef.current;if(!run||run.finished||run.paused)return;
 /* ★ここでプレイエリアの箱を先に測っておく形は、2026-09-25に入れて26日にやめた。毎フレームの最初の時点で
    配置の計算がたまっていることが多く、測るたびにその場で計算させていた(8秒で560ms。タップのときだけ測る
    以前の形は10秒で66ms)。箱はタップが来たときに初めて測る(同じフレームのタップは使い回す) */
@@ -1894,7 +1925,7 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
     };
     if(typeof requestAnimationFrame==='function')requestAnimationFrame(step);else setTimeout(step,16);
   });
-  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
+  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
 rhythmEnsureHitEffects(playAreaRef.current);
 /* 光のスプライトも先に焼いておく。曲の中で「その種類のノーツが初めて出た瞬間」に作ると
@@ -1944,7 +1975,7 @@ scheduleTick();};
   const abort=()=>{++generationRef.current;startLockRef.current=false;disposeRun();onExit();};
   // ageMs … 入力イベントが起きてから処理されるまでの遅れ(rhythmInputAgeMs)。判定に使う曲の時刻から差し引く。
   //          指が触れた瞬間の曲の時刻で判定するためのもので、判定窓そのものは変えない
-  const inputStarts=(inputs,ageMs=0)=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs()-(Number(ageMs)>0?Number(ageMs):0);run.inputFeedbackState=run.inputFeedbackState||new Map();rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs).forEach(({input,target,deltaMs,standby})=>{run.inputFeedbackState.set(input.inputKey,{subLane:Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(input.subLaneCoordinate))),subLaneCoordinate:Number(input.subLaneCoordinate),empty:!target||target.type==='TAP'});RHYTHM_TOUCH_SPAN_RUNTIME.recordPhysicalTarget(input.inputKey,target);
+  const inputStarts=(inputs,ageMs=0)=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs()-(Number(ageMs)>0?Number(ageMs):0);if(Array.isArray(run.inputTimes)&&run.inputTimes.length<20000&&inputs.some(input=>!input?.rejudge))run.inputTimes.push(now);run.inputFeedbackState=run.inputFeedbackState||new Map();rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs).forEach(({input,target,deltaMs,standby})=>{run.inputFeedbackState.set(input.inputKey,{subLane:Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(input.subLaneCoordinate))),subLaneCoordinate:Number(input.subLaneCoordinate),empty:!target||target.type==='TAP'});RHYTHM_TOUCH_SPAN_RUNTIME.recordPhysicalTarget(input.inputKey,target);
       // いま押さえている帯へ、持ち替えのために置いた2本目の指。
       // まだ何も取らないが、1本目が離れたらこの指へそのまま渡す(inputEndsを参照)。
       // 空打ちの音は鳴らさない(押し損ねたわけではないので)
@@ -2027,18 +2058,76 @@ scheduleTick();};
       if(e.cancelable)e.preventDefault();
     };
     const blockGesture=e=>{if(!playing())return;RHYTHM_PERF.touchGesture();if(typeof e.preventDefault==='function')e.preventDefault();};
+    // ===== ポインタとタッチの突き合わせ(2026-09-30・data/rhythm-mode.js の RHYTHM_TOUCH_BRIDGE) =====
+    // ポインタだけ届いてタッチが来なかった指(ブラウザがタッチを落とした)は、ポインタの経路で入力として通す。
+    // 押した時刻はポインタのイベントの時刻なので、判定は遅れない。ふつうの端末では一度も動かない
+    const nowMs=()=>typeof performance!=='undefined'?performance.now():Date.now();
+    const inArea=target=>{const area=playAreaRef.current;return !!(area&&target&&typeof area.contains==='function'&&area.contains(target));};
+    const endRecovered=entry=>{
+      const run=runRef.current;if(!run)return;
+      if(run.activePointerFeedback)run.activePointerFeedback.delete(entry.id);
+      setPressedLanes(pressedLanesNow());
+      inputEnds([{inputKey:rhythmInputKey('pointer',entry.id),releaseTarget:playAreaRef.current,pointerId:entry.id}]);
+    };
+    const startRecovered=entry=>{
+      const run=runRef.current,area=playAreaRef.current;if(!run||!area)return;
+      const rect=inputAreaRect(area),p=inputPoint(entry.x,entry.y),lane=rhythmLaneAtPoint(p.x,p.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(p.x,p.y,rect);
+      if(lane===null||subLaneCoordinate===null){RHYTHM_PERF.touchIgnored();return;}
+      run.activePointerFeedback=run.activePointerFeedback||new Map();run.activePointerFeedback.set(entry.id,subLaneCoordinate);setPressedLanes(pressedLanesNow());
+      // 判定には指が触れた時刻を使う。取り戻しは描画の重さで数十ms遅れることがあるので、ふつうの上限(80ms)で切らない。
+      // ただし時計の基準が食い違う端末(差が大きすぎる)では、ふつうの計り方に任せる
+      const rawAge=nowMs()-Number(entry.stamp);
+      inputStarts([{lane,subLaneCoordinate,inputKey:rhythmInputKey('pointer',entry.id),pointerId:entry.id}],rawAge>0&&rawAge<300?rawAge:rhythmInputAgeMs(entry.stamp,nowMs()));
+      // 取り戻すまでに指がもう離れていたら、すぐ離したことにする(TAP はこれで足りる)
+      if(entry.upAt!=null)endRecovered(entry);
+    };
+    const sweepTimers=new Set();
+    const sweep=()=>{if(!playing())return;RHYTHM_TOUCH_BRIDGE.sweep(nowMs()).forEach(startRecovered);};
+    // 毎フレームの処理(tick)からも見る。タイマーは描画が重いと遅れるので、遅くても1コマで取り戻せるように
+    touchSweepRef.current=sweep;
+    const onPointerDown=e=>{
+      if(e.pointerType!=='touch'||!playing()||!inArea(e.target))return;
+      RHYTHM_TOUCH_BRIDGE.pointerDown(e.pointerId,e.clientX,e.clientY,e.timeStamp,nowMs());
+      const id=setTimeout(()=>{sweepTimers.delete(id);sweep();},RHYTHM_TOUCH_BRIDGE_WAIT_MS+5);sweepTimers.add(id);
+    };
+    const onPointerUp=e=>{
+      if(e.pointerType!=='touch')return;
+      const entry=RHYTHM_TOUCH_BRIDGE.pointerUp(e.pointerId,nowMs(),e.timeStamp);
+      if(entry)endRecovered(entry);
+    };
+    const onTouchStart=e=>{
+      if(!playing())return;
+      const now=nowMs();
+      RHYTHM_TOUCH_BRIDGE.liveTouches(e.touches?.length||0);
+      Array.from(e.changedTouches||[]).forEach(t=>{if(inArea(t.target))RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier,t.clientX,t.clientY,e.timeStamp,now,now-e.timeStamp);});
+      sweep();
+    };
+    const onTouchCancel=e=>{if(playing())RHYTHM_TOUCH_BRIDGE.touchCancel(e.changedTouches?.length||0);};
     const touchTypes=['touchstart','touchmove'],gestureTypes=['gesturestart','gesturechange'];
     touchTypes.forEach(type=>document.addEventListener(type,blockTouch,{passive:false}));
     gestureTypes.forEach(type=>document.addEventListener(type,blockGesture,{passive:false}));
+    // 突き合わせは capture で、演奏エリアの入力処理(bubble)より先に見る
+    document.addEventListener('pointerdown',onPointerDown,{capture:true,passive:true});
+    document.addEventListener('pointerup',onPointerUp,{capture:true,passive:true});
+    document.addEventListener('pointercancel',onPointerUp,{capture:true,passive:true});
+    document.addEventListener('touchstart',onTouchStart,{capture:true,passive:true});
+    document.addEventListener('touchcancel',onTouchCancel,{capture:true,passive:true});
     return ()=>{
       touchTypes.forEach(type=>document.removeEventListener(type,blockTouch,{passive:false}));
       gestureTypes.forEach(type=>document.removeEventListener(type,blockGesture,{passive:false}));
+      document.removeEventListener('pointerdown',onPointerDown,{capture:true,passive:true});
+      document.removeEventListener('pointerup',onPointerUp,{capture:true,passive:true});
+      document.removeEventListener('pointercancel',onPointerUp,{capture:true,passive:true});
+      document.removeEventListener('touchstart',onTouchStart,{capture:true,passive:true});
+      document.removeEventListener('touchcancel',onTouchCancel,{capture:true,passive:true});
+      sweepTimers.forEach(clearTimeout);sweepTimers.clear();
+      if(touchSweepRef.current===sweep)touchSweepRef.current=null;
     };
   },[view.status]);
   const pointerDown=e=>{if(e.pointerType==='touch')return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const rect=inputAreaRect(area),p=inputPoint(e.clientX,e.clientY),lane=rhythmLaneAtPoint(p.x,p.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(p.x,p.y,rect);if(lane===null||subLaneCoordinate===null)return;const run=runRef.current;if(run){run.activePointerFeedback=run.activePointerFeedback||new Map();run.activePointerFeedback.set(e.pointerId,subLaneCoordinate);setPressedLanes(pressedLanesNow());}inputStarts([{lane,subLaneCoordinate,inputKey:rhythmInputKey('pointer',e.pointerId),captureTarget:e.currentTarget,pointerId:e.pointerId}],rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN));};
-  const pointerMove=e=>{if(e.pointerType==='touch')return;const run=runRef.current;if(!run?.activePointerFeedback?.has(e.pointerId))return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const mp=inputPoint(e.clientX,e.clientY),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(mp.x,mp.y,inputAreaRect(area));if(subLaneCoordinate===null)return;run.activePointerFeedback.set(e.pointerId,subLaneCoordinate);setPressedLanes(pressedLanesNow());inputMoves(rhythmInputKey('pointer',e.pointerId),subLaneCoordinate);};
+  const pointerMove=e=>{if(e.pointerType==='touch'&&!RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(e.pointerId))return;const run=runRef.current;if(!run?.activePointerFeedback?.has(e.pointerId))return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const mp=inputPoint(e.clientX,e.clientY),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(mp.x,mp.y,inputAreaRect(area));if(subLaneCoordinate===null)return;run.activePointerFeedback.set(e.pointerId,subLaneCoordinate);setPressedLanes(pressedLanesNow());inputMoves(rhythmInputKey('pointer',e.pointerId),subLaneCoordinate);};
   const pointerEnd=e=>{if(e.pointerType==='touch')return;const run=runRef.current;if(run?.activePointerFeedback){run.activePointerFeedback.delete(e.pointerId);setPressedLanes(pressedLanesNow());}else setPressedLanes(pressedLanesNow());inputEnds([{inputKey:rhythmInputKey('pointer',e.pointerId),releaseTarget:e.currentTarget,pointerId:e.pointerId}]);};
-  useEffect(()=>{const area=playAreaRef.current;if(!area||view.status==='result'||view.status==='celebrate')return;const syncTouches=e=>{if(e.cancelable)e.preventDefault();const current=runRef.current;if(!current||current.finished||current.paused)return;if(e.type==='touchcancel')RHYTHM_PERF.touchCancel(e.changedTouches?.length||0);else if(e.type==='touchstart')RHYTHM_PERF.touchStart(e.touches?.length||0);current.activeTouchInputs=current.activeTouchInputs||new Set();const rect=inputAreaRect(area),live=new Set(),liveSubLanes=[],starts=[],movedTouchInputs=e.type==='touchmove'?new Set(Array.from(e.changedTouches||[]).map(touch=>rhythmInputKey('touch',touch.identifier))):null;Array.from(e.touches||[]).forEach(touch=>{const inputKey=rhythmInputKey('touch',touch.identifier);live.add(inputKey);const tp=inputPoint(touch.clientX,touch.clientY),lane=rhythmLaneAtPoint(tp.x,tp.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(tp.x,tp.y,rect);if(subLaneCoordinate!==null)liveSubLanes.push(subLaneCoordinate);if(current.activeTouchInputs.has(inputKey)){if(movedTouchInputs?.has(inputKey)&&subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate);return;}current.activeTouchInputs.add(inputKey);if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey});else RHYTHM_PERF.touchIgnored();});liveTouchSubLanesRef.current=liveSubLanes;setPressedLanes(pressedLanesNow());const ageMs=rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN);if(starts.length)inputStarts(starts,ageMs);const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(!live.has(inputKey)){current.activeTouchInputs.delete(inputKey);ended.push({inputKey});}});if(ended.length)inputEnds(ended);};RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();area.addEventListener('touchstart',syncTouches,{passive:false});area.addEventListener('touchmove',syncTouches,{passive:false});area.addEventListener('touchend',syncTouches,{passive:false});area.addEventListener('touchcancel',syncTouches,{passive:false});return()=>{area.removeEventListener('touchstart',syncTouches);area.removeEventListener('touchmove',syncTouches);area.removeEventListener('touchend',syncTouches);area.removeEventListener('touchcancel',syncTouches);liveTouchSubLanesRef.current=[];setPressedLanes([]);};},[view.status]);
+  useEffect(()=>{const area=playAreaRef.current;if(!area||view.status==='result'||view.status==='celebrate')return;const syncTouches=e=>{if(e.cancelable)e.preventDefault();const current=runRef.current;if(!current||current.finished||current.paused)return;if(e.type==='touchcancel')RHYTHM_PERF.touchCancel(e.changedTouches?.length||0);else if(e.type==='touchstart')RHYTHM_PERF.touchStart(e.touches?.length||0);current.activeTouchInputs=current.activeTouchInputs||new Set();const rect=inputAreaRect(area),live=new Set(),liveSubLanes=[],starts=[],movedTouchInputs=e.type==='touchmove'?new Set(Array.from(e.changedTouches||[]).map(touch=>rhythmInputKey('touch',touch.identifier))):null;Array.from(e.touches||[]).forEach(touch=>{const inputKey=rhythmInputKey('touch',touch.identifier);live.add(inputKey);const tp=inputPoint(touch.clientX,touch.clientY),lane=rhythmLaneAtPoint(tp.x,tp.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(tp.x,tp.y,rect);if(subLaneCoordinate!==null)liveSubLanes.push(subLaneCoordinate);if(current.activeTouchInputs.has(inputKey)){if(movedTouchInputs?.has(inputKey)&&subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate);return;}current.activeTouchInputs.add(inputKey);if(e.type!=='touchstart'){RHYTHM_TOUCH_BRIDGE.lateStart();const nowPerf=typeof performance!=='undefined'?performance.now():Date.now();RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier,touch.clientX,touch.clientY,e.timeStamp,nowPerf,null);}if(RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier))return;if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey});else RHYTHM_PERF.touchIgnored();});liveTouchSubLanesRef.current=liveSubLanes;setPressedLanes(pressedLanesNow());const ageMs=rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN);if(starts.length)inputStarts(starts,ageMs);const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(!live.has(inputKey)){current.activeTouchInputs.delete(inputKey);ended.push({inputKey});}});if(ended.length)inputEnds(ended);};RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();area.addEventListener('touchstart',syncTouches,{passive:false});area.addEventListener('touchmove',syncTouches,{passive:false});area.addEventListener('touchend',syncTouches,{passive:false});area.addEventListener('touchcancel',syncTouches,{passive:false});return()=>{area.removeEventListener('touchstart',syncTouches);area.removeEventListener('touchmove',syncTouches);area.removeEventListener('touchend',syncTouches);area.removeEventListener('touchcancel',syncTouches);liveTouchSubLanesRef.current=[];setPressedLanes([]);};},[view.status]);
   if(view.status==='celebrate'){const celebrateResult=view.result,celebrateTitle=celebrateResult?.allMarvelous?'ALL MARVELOUS!!':celebrateResult?.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!';return <main data-rhythm-celebrate className="flex flex-1 items-center justify-center bg-slate-950 text-white" style={{paddingTop:'var(--mh-sa-top)',paddingBottom:'var(--mh-sa-bottom)'}} onClick={skipCelebrate}><div className="px-6 text-center"><b data-rhythm-celebrate-slam className="block text-6xl font-black leading-tight">{celebrateTitle}</b><small className="mt-3 block text-sm font-black tracking-[0.3em] text-slate-300">MAX COMBO {view.maxCombo}</small></div></main>;}
   // ===== タイミング合わせのリザルト(2026-09-13・ユーザー指摘「設定にもなってない」) =====
   // スコアやランクは意味を持たないので出さない。測った値をその場で設定へ入れられるようにする。
