@@ -27,7 +27,17 @@ const SOURCE = {
 };
 const INDIGO_SRC = { indigo: { 800: [55, 48, 163], 900: [49, 46, 129], 950: [30, 27, 75] }, blue: { 900: [30, 58, 138], 950: [23, 37, 84] } };
 
+// 明るい indigo(ボタン・見出し・選択中の印)は、ハロウィンではかぼちゃ色のオレンジへ寄せる(2026-09-30・ユーザー要望「オレンジを押したほうが雰囲気が出そう」)。
+// 白い文字を載せるボタン(500〜700)は、文字が読めるよう少し深いオレンジにしてある
+const PUMPKIN = {
+  indigo: {
+    200: [[199, 210, 254], [254, 226, 190]], 300: [[165, 180, 252], [255, 200, 140]], 400: [[129, 140, 248], [255, 166, 77]],
+    500: [[99, 102, 241], [232, 110, 22]], 600: [[79, 70, 229], [204, 84, 12]], 700: [[67, 56, 202], [156, 60, 10]],
+  },
+};
+
 const MAP = new Map();
+for (const shades of Object.values(PUMPKIN)) for (const [from, to] of Object.values(shades)) MAP.set(from.join(','), to);
 for (const [family, shades] of Object.entries(SOURCE)) {
   for (const [shade, rgb] of Object.entries(shades)) {
     const from = (INDIGO_SRC[family] && INDIGO_SRC[family][shade]) || rgb;

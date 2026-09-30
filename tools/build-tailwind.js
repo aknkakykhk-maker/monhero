@@ -87,6 +87,8 @@ function contentFiles() {
 function fingerprint() {
   const h = crypto.createHash('sha256');
   h.update(CONFIG_SOURCE);
+  // ハロウィンの色の置き換え規則も tailwind.css の一部。ここを直したら作り直す（指紋に入れないと古いまま残る）
+  h.update(fs.readFileSync(path.join(__dirname, 'theme', 'halloween-theme-css.js'), 'utf8'));
   for (const file of contentFiles()) {
     h.update(path.basename(file));
     h.update(normalize(fs.readFileSync(file, 'utf8')));
