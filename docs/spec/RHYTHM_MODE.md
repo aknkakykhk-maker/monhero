@@ -8134,7 +8134,7 @@ HARD のノーツが音から15ms以内にある割合はイントロ 28%→77%�
 ## 「Rising Hope」をモンヒロビートへ足した（2026-09-30）
 
 ユーザー指示（mp4とジャケット、それに同じ曲のほかの音ゲーの譜面動画）。mp4（1分30秒）とジャケット1枚で受け取った。
-songId `rising_hope` / bgmTrackId `melo_rising_hope` / 譜面は MHB CHART ENGINE Rev.24。
+songId `rising_hope` / bgmTrackId `melo_rising_hope` / 譜面は MHB CHART ENGINE Rev.25（はじめ Rev.24 で公開し、同じ日に Rev.25 へ作り直した。下の節の終わり）。
 
 - **音量**: -23.40 LUFS / -11.70 dBTP → +9.40dB で **-14.01 LUFS / -3.24 dBTP**
 - **テンポ**: 自動判定は 95.00 BPM でちょうど半分だった。偶然の分を差し引いた ±12ms の乗りで **190.00 BPM** がはっきり抜け、
@@ -8154,3 +8154,15 @@ songId `rising_hope` / bgmTrackId `melo_rising_hope` / 譜面は MHB CHART ENGIN
 - 違い①: 50〜60秒（サビに入る前後）と70〜80秒で、CHUNITHM は密度を保つが、こちらは 1.87 → 1.37 / 1.53 と下がる
 - 違い②: CHUNITHM は横に長いスライド・長押し・空中ノーツが中心。こちらの MASTER は397ノーツのうちタップが358（9割）
 - ユーザーは①②を譜面生成ツールの強化として次に取り組むと決めた（この曲は Rev.24 のまま出す）。→ MHB CHART ENGINE Rev.25（`docs/spec/RHYTHM_CHART_ENGINE_ROADMAP.md` 18章）
+
+### Rev.25 へ作り直した（2026-09-30）
+
+Rev.25（サビ前後の密度・長いノーツ）を入れたあと、ユーザー判断「まだ24はそんなに誰も触ってないから25にしよう」で、
+公開から約1時間の Rising Hope を Rev.25 で作り直した（⑩-2 の「配信中の曲の譜面は作り直さない」の、ユーザーの明示の指示による例外）。
+一覧の `chartRevision` を 24 → 25 にしてパイプラインを `--release` で通した。歯ごたえは自動のまま。
+
+- レベル: EASY 9 / NORMAL 11 / HARD 16 → **17** / EXPERT 24 → **25** / MASTER 31 → **32**
+- ノーツ: 180 / 205 / 279 / 339 / 397 → **176 / 208 / 281 / 343 / 393**（MASTER は HOLD 21・SLIDE 17）
+- 両手の指のシミュレートは全難易度で「押せない」0件・「忙しい」0件。仮想プレイヤーのミスの見込みは MASTER 1.0%
+- 更新履歴の Rising Hope の項目の数字も直した（`items` はそのまま助手の告知の本文になる）
+- ランキングと自己ベストのキー（`Rhythm-rising_hope-<難易度>`）はそのまま。公開から約1時間ぶんの記録は Rev.24 の譜面のもの
