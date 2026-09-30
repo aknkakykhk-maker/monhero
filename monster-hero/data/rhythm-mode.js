@@ -2279,6 +2279,115 @@ const rhythmHandoverSpanAt=(note,chartTimeMs)=>{
   const span=rhythmHoldSpanAt(note,chartTimeMs);
   return {start:span.subLane,end:span.subLane+span.subLaneWidth,width:span.subLaneWidth};
 };
+// ===== タッチの診断と、消えたタッチの取り戻し(2026-09-30) =====
+// ユーザー報告「iPhoneで両手の高速連打のとき、押しても音も光も出ないことがある」(前からずっとある・Androidでは聞かない・
+// 同じiPhoneでもほかの音ゲーでは起きない)。ユーザー指示「こっち側に委ねないで、調べる仕組みと直せる仕組みを作って」。
+//
+// 【何を見るか】
+// ブラウザは1回のタッチを「ポインタ」(pointerdown)と「タッチ」(touchstart)の2通りで、同じ時刻・同じ位置に届ける
+// (ポインタが先。Chrome でも iPhone の Safari でも同じ)。ゲームの入力はタッチの側だけを使っている。
+// そこで2つを突き合わせる。
+//   ・ポインタだけ届いてタッチが来ない(pointerOnly) … ブラウザがタッチを落とした。**ここは取り戻せる**
+//   ・タッチだけ届いてポインタが来ない(touchOnly)   … ポインタを出さない端末・古い端末。入力は届いているので害は無い
+//   ・どちらも来ない                                  … 指がゲームへ届く前に消えている。数えられないので、下の「入力の無いMISS」で見る
+// ほかに、遅れて届いたタッチ(lateDelivery)・自分の touchstart ではなく別の指のイベントで初めて見えた指(lateStart)・
+// 端末に取り消された指(cancels)・同時に触れていた指の最大(maxTouches)を数える。
+//
+// 【取り戻し方】
+// ポインタが来てから RHYTHM_TOUCH_BRIDGE_WAIT_MS たってもタッチが来なければ、そのポインタを入力として通す
+// (演奏画面の pointer の経路。押した時刻はポインタのイベントの時刻なので、判定は遅れない)。
+// ★二重に数えないこと: 取り戻したあとで同じ指のタッチが遅れて来たら、それは無視する(ignoreTouch)。
+//   逆にポインタが遅れて来たとき(タッチが先に通っている)は、取り戻さない。どちらも位置と時刻で同じ指かを見る。
+// ★ふつうの端末では pointerOnly は起きないので、この取り戻しは一度も動かない(何も変わらない)。
+//
+// 判定の窓・スコア・譜面には触らない。数えたものは演奏ごとにまとめ(snapshot)、端末に残してサーバーへ送る(30-rhythm-play.jsx)。
+const RHYTHM_TOUCH_BRIDGE_WAIT_MS=45;     // ポインタのあと、タッチをこれだけ待つ
+const RHYTHM_TOUCH_BRIDGE_MATCH_PX=28;    // 同じ指とみなす位置の差
+const RHYTHM_TOUCH_BRIDGE_KEEP_MS=600;    // 突き合わせのために覚えておく長さ(遅れて届くほうを待つ)
+const RHYTHM_TOUCH_BRIDGE_LATE_MS=50;     // これより遅れて届いたタッチを「遅れた」と数える
+const RHYTHM_TOUCH_BRIDGE=(()=>{
+  const zero=()=>({pointerDowns:0,touchStarts:0,matched:0,pointerOnly:0,touchOnly:0,recovered:0,ignoredLateTouches:0,
+    lateStart:0,lateDelivery:0,maxDelayMs:0,cancels:0,cancelledTouches:0,maxTouches:0});
+  let stats=zero();
+  // pointers: 突き合わせ待ちのポインタ。touches: 最近のタッチ(突き合わせ済みかを持つ)。recovered: 取り戻したポインタ
+  const pointers=new Map(),touches=[],recovered=new Map();
+  const near=(a,b)=>Math.abs(Number(a.x)-Number(b.x))<=RHYTHM_TOUCH_BRIDGE_MATCH_PX&&Math.abs(Number(a.y)-Number(b.y))<=RHYTHM_TOUCH_BRIDGE_MATCH_PX;
+  const within=(a,b,ms)=>Math.abs(Number(a)-Number(b))<=ms;
+  const prune=now=>{
+    for(let i=touches.length-1;i>=0;i--)if(now-touches[i].at>RHYTHM_TOUCH_BRIDGE_KEEP_MS){if(!touches[i].matched)stats.touchOnly++;touches.splice(i,1);}
+    for(const [id,entry] of recovered)if(entry.upAt!=null&&now-entry.upAt>RHYTHM_TOUCH_BRIDGE_KEEP_MS)recovered.delete(id);
+  };
+  const api={
+    reset(){stats=zero();pointers.clear();touches.length=0;recovered.clear();},
+    // ポインタ(pointerType==='touch')が演奏エリアで下りた
+    pointerDown(id,x,y,stamp,now){
+      prune(now);stats.pointerDowns++;
+      // タッチのほうが先に届いていたら、それと組にする(取り戻さない)
+      const touch=touches.find(t=>!t.matched&&near(t,{x,y})&&within(t.stamp,stamp,RHYTHM_TOUCH_BRIDGE_KEEP_MS));
+      if(touch){touch.matched=true;stats.matched++;return;}
+      pointers.set(id,{id,x,y,stamp,at:now,upAt:null,upStamp:null});
+    },
+    pointerUp(id,now,stamp){
+      const pending=pointers.get(id);if(pending){pending.upAt=now;pending.upStamp=stamp;return null;}
+      const entry=recovered.get(id);if(entry&&entry.upAt==null){entry.upAt=now;return entry;}
+      return null;
+    },
+    // タッチ(touchstart の changedTouches の1本)。'ignore' を返したら、その指は入力にしない(取り戻したポインタで既に通っている)
+    touchStart(identifier,x,y,stamp,now,delayMs){
+      prune(now);stats.touchStarts++;
+      const delay=Number(delayMs);
+      if(Number.isFinite(delay)&&delay>=0&&delay<2000){if(delay>RHYTHM_TOUCH_BRIDGE_LATE_MS)stats.lateDelivery++;if(delay>stats.maxDelayMs)stats.maxDelayMs=delay;}
+      for(const [id,p] of pointers)if(near(p,{x,y})&&within(p.stamp,stamp,RHYTHM_TOUCH_BRIDGE_KEEP_MS)){pointers.delete(id);stats.matched++;touches.push({id:identifier,x,y,stamp,at:now,matched:true});return 'normal';}
+      for(const [,entry] of recovered)if(!entry.touchId&&near(entry,{x,y})&&within(entry.stamp,stamp,RHYTHM_TOUCH_BRIDGE_KEEP_MS)){entry.touchId=identifier;stats.ignoredLateTouches++;return 'ignore';}
+      touches.push({id:identifier,x,y,stamp,at:now,matched:false});
+      return 'normal';
+    },
+    // 待ちきれなかったポインタ(=タッチが落ちた)を返す。返したものは取り戻し済みとして覚える
+    sweep(now){
+      prune(now);
+      const lost=[];
+      for(const [id,p] of pointers)if(now-p.at>=RHYTHM_TOUCH_BRIDGE_WAIT_MS){pointers.delete(id);stats.pointerOnly++;stats.recovered++;recovered.set(id,{...p,touchId:null});lost.push(recovered.get(id));}
+      return lost;
+    },
+    hasPending(){return pointers.size>0;},
+    isRecoveredPointer(id){return recovered.has(id)&&recovered.get(id).upAt==null;},
+    isIgnoredTouch(identifier){for(const [,entry] of recovered)if(entry.touchId===identifier)return true;return false;},
+    touchCancel(count){stats.cancels++;stats.cancelledTouches+=Number(count)||0;},
+    lateStart(){stats.lateStart++;},
+    liveTouches(count){const n=Number(count)||0;if(n>stats.maxTouches)stats.maxTouches=n;},
+    snapshot(){return {...stats};},
+    _state:{pointers,touches,recovered},
+  };
+  return api;
+})();
+// この端末がどの系統か(診断を iPhone と Android で比べるため)。iPad の「Mac のふり」も iOS に数える
+const rhythmTouchPlatform=()=>{
+  if(typeof navigator==='undefined')return 'other';
+  const ua=String(navigator.userAgent||'');
+  if(/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&Number(navigator.maxTouchPoints)>1))return 'ios';
+  if(/Android/.test(ua))return 'android';
+  return 'other';
+};
+const rhythmTouchStandalone=()=>{
+  try{return (typeof navigator!=='undefined'&&navigator.standalone===true)||(typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(display-mode: standalone)').matches);}catch{return false;}
+};
+// 「入力の無いMISS」: MISS になったノーツのうち、その前後 RHYTHM_TOUCH_NO_INPUT_MS に入力が1つも無いのに、
+// もう少し広い前後 RHYTHM_TOUCH_ACTIVE_MS には入力が2つ以上ある(=叩いている最中だった)もの。
+// 指がゲームへ届く前に消えたときは、ここに出る(ふつうに見逃したMISSも混ざるので、iPhone と Android の差で見る)
+const RHYTHM_TOUCH_NO_INPUT_MS=200;
+const RHYTHM_TOUCH_ACTIVE_MS=700;
+const rhythmTouchNoInputMisses=(notes,inputTimes)=>{
+  const times=(Array.isArray(inputTimes)?inputTimes:[]).filter(Number.isFinite).slice().sort((a,b)=>a-b);
+  let misses=0,noInput=0;
+  const countIn=(from,to)=>{let lo=0,hi=times.length;while(lo<hi){const m=(lo+hi)>>1;if(times[m]<from)lo=m+1;else hi=m;}let n=0;for(let i=lo;i<times.length&&times[i]<=to;i++)n++;return n;};
+  (Array.isArray(notes)?notes:[]).forEach(note=>{
+    if(!note||note._rhythmFinalJudgment!=='MISS')return;
+    misses++;
+    const t=Number(note.timeMs);if(!Number.isFinite(t))return;
+    if(countIn(t-RHYTHM_TOUCH_NO_INPUT_MS,t+RHYTHM_TOUCH_NO_INPUT_MS)===0&&countIn(t-RHYTHM_TOUCH_ACTIVE_MS,t+RHYTHM_TOUCH_ACTIVE_MS)>=2)noInput++;
+  });
+  return {misses,noInput};
+};
 const RHYTHM_GESTURE_RUNTIME=(()=>{
   const positions=new Map(),sessions=new Map();
   let raf=0;
@@ -2664,9 +2773,9 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     document.addEventListener('touchend',releaseTouches,{capture:true,passive:true});
     document.addEventListener('touchcancel',cancelTouches,{capture:true,passive:true});
     document.addEventListener('pointerdown',event=>{if(event.pointerType!=='touch'){if(event.target?.closest?.('[data-rhythm-play-area]'))RHYTHM_NOTE_SE_RUNTIME.warm();record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);}},true);
-    document.addEventListener('pointermove',event=>{if(event.pointerType!=='touch')record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);},true);
-    document.addEventListener('pointerup',event=>{if(event.pointerType!=='touch')release(inputKey('pointer',event.pointerId),false);},true);
-    document.addEventListener('pointercancel',event=>{if(event.pointerType!=='touch')release(inputKey('pointer',event.pointerId),true);},true);
+    document.addEventListener('pointermove',event=>{if(event.pointerType!=='touch'||RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(event.pointerId))record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);},true);
+    document.addEventListener('pointerup',event=>{if(event.pointerType!=='touch'||RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(event.pointerId))release(inputKey('pointer',event.pointerId),false);},true);
+    document.addEventListener('pointercancel',event=>{if(event.pointerType!=='touch'||RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(event.pointerId))release(inputKey('pointer',event.pointerId),true);},true);
     document.addEventListener('click',event=>{const button=event.target?.closest?.('[data-rhythm-pause-menu] button');if(button&&/リスタート|中断/.test(button.textContent||''))clear();},true);
   }
 

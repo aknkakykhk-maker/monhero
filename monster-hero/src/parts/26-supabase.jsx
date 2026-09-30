@@ -1747,6 +1747,26 @@ const beginNewRankingRun = ({ runIdRef, scoreSubmittedRef, runFinalizingRef, rew
 //   ・表の作り方は docs/sql/rankings/RHYTHM_PLAY_LOG_APPLY.sql(先にアプリを公開しても壊れない)
 const RHYTHM_PLAY_LOG_TABLE = 'rhythm_play_logs';
 let rhythmPlayLogDisabled = false;
+// タッチの診断(2026-09-30・docs/spec/RHYTHM_TOUCH_DIAG.md)。遊んだ記録と同じく、表が無い・権限が無いと分かったら、ページを閉じるまで送らない
+const RHYTHM_TOUCH_DIAG_TABLE = 'rhythm_touch_diagnostics';
+let rhythmTouchDiagDisabled = false;
+const sbSendRhythmTouchDiag = async (row) => {
+  if (rhythmTouchDiagDisabled || !row || typeof fetch !== 'function') return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
 const sbSendRhythmPlayLog = async (row) => {
   if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function') return false;
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
