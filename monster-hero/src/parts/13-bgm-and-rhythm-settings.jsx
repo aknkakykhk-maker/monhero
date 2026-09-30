@@ -773,6 +773,43 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
   return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
 }));
 
+
+// 画面テーマ(2026-09-30・ユーザー要望「他画面もハロウィン仕様に」「画面の種類ごとに細かく」「11月になったら自動でクラシックへ」)。
+// 画面の種類ごとに 'auto'(おまかせ) / 'halloween' / 'classic' を選ぶ。保存は新しいキー mh_screen_theme_v1 に
+// { menu, market, temple, battle, rhythm } の形で持つ。タイトルとホームの絵は既存の mh_title_art / mh_home_art のまま。
+// ★'auto' は見るたびに今の時刻で決める(読み込み時に1回だけ決めると、開きっぱなしの端末で11月になっても戻らない)
+const SCREEN_THEME_STORAGE_KEY = 'mh_screen_theme_v1';
+const SCREEN_THEME_HALLOWEEN_UNTIL = Date.parse('2026-11-01T00:00:00+09:00');
+const SCREEN_THEME_CHOICES = [
+  { id: 'auto', label: 'おまかせ' },
+  { id: 'halloween', label: 'ハロウィン' },
+  { id: 'classic', label: 'クラシック' },
+];
+const SCREEN_THEME_CATEGORIES = [
+  { id: 'menu', label: 'メニュー画面', desc: '設定・ミッション・ギフト・図鑑・M/B管理など' },
+  { id: 'market', label: 'マーケット', desc: 'マーケット' },
+  { id: 'temple', label: '神殿', desc: '神殿と、マスモンの再生・合体・転生など' },
+  // バトルとモンヒロビートは、見やすさを1画面ずつ確かめてから出す(ready:false のあいだは設定に並べず、クラシックのまま)
+  { id: 'battle', label: 'モンヒロバトル', desc: 'バトルえらび・バトル中・リザルト', ready: false },
+  { id: 'rhythm', label: 'モンヒロビート', desc: '曲えらび・演奏画面', ready: false },
+];
+const SCREEN_THEME_READY_CATEGORIES = SCREEN_THEME_CATEGORIES.filter(category => category.ready !== false);
+// いまの画面に出すテーマ('halloween' / 'classic')。まだ仕上げていない種類はクラシック
+const screenThemeFor = (screenTheme, category, now = Date.now()) => SCREEN_THEME_READY_CATEGORIES.some(c => c.id === category) ? resolveScreenTheme(screenTheme && screenTheme[category], now) : 'classic';
+const resolveScreenTheme = (value, now = Date.now()) => value === 'halloween' || value === 'classic' ? value : (now < SCREEN_THEME_HALLOWEEN_UNTIL ? 'halloween' : 'classic');
+const normalizeScreenThemeChoice = value => SCREEN_THEME_CHOICES.some(choice => choice.id === value) ? value : 'auto';
+const normalizeScreenTheme = value => Object.fromEntries(SCREEN_THEME_CATEGORIES.map(category => [category.id, normalizeScreenThemeChoice(value && typeof value === 'object' ? value[category.id] : null)]));
+// いま描いている画面(gameState)がどの種類か
+const SCREEN_THEME_BATTLE_STATES = new Set(['BATTLE','BATTLE_TUTORIAL','BATTLE_MENU','BATTLE_MODE_SELECT','BATTLE_SYSTEM_SELECT','BATTLE_DIFFICULTY_SELECT','EXTREME_DIFFICULTY_SELECT','SPECIES_CHALLENGE_SELECT','BATTLE_SCORE_RANKING','PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','PICK_PRO_ALLIES','REWARD_PICK','UPGRADE_SKILL','WAVE_RESULT','CHAMPION','QUICK_GROWTH','QUICK_JOIN','SKIP_PICK','SKIP_RESULT','AUTO_SETTINGS']);
+const SCREEN_THEME_TEMPLE_STATES = new Set(['TEMPLE','MASU_REGENERATION','MASU_REGENERATION_DETAIL','MASU_DONATION','MASU_FUSION','MASU_REBIRTH','MASU_REINCARNATE','MASU_TRANSCENDENCE','MASU_SOUL_RANK','MASU_SOUL_TRAITS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_AUTO_ENHANCE']);
+const screenThemeCategory = (gameState, rhythmOpen = false) => {
+  if (rhythmOpen || String(gameState || '').startsWith('RHYTHM_')) return 'rhythm';
+  if (SCREEN_THEME_BATTLE_STATES.has(gameState)) return 'battle';
+  if (gameState === 'BREEDER_MARKET') return 'market';
+  if (SCREEN_THEME_TEMPLE_STATES.has(gameState)) return 'temple';
+  return 'menu';
+};
+
 // タイトル画像アレンジ。設定の「タイトル画像アレンジ」から選ぶ(2026-09-30・ユーザー要望)。
 // 保存は新しいキー mh_title_art に id だけを持つ。無い・知らない id のときは既定(いちばん新しい絵)。
 // 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない。
@@ -782,10 +819,12 @@ const TITLE_ART_OPTIONS = [
   { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg', wideSrc: 'data/images/title-screen-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
 ];
-const DEFAULT_TITLE_ART = 'halloween';
-const normalizeTitleArt = value => TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
+// 'auto'(おまかせ)は季節に合わせる(SCREEN_THEME_HALLOWEEN_UNTIL まではハロウィン、そのあとはクラシック)
+const DEFAULT_TITLE_ART = 'auto';
+const normalizeTitleArt = value => value === 'auto' || TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
+const resolveTitleArt = (value, now = Date.now()) => { const v = normalizeTitleArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
 const titleArtSrc = (value, landscape = false) => {
-  const option = TITLE_ART_OPTIONS.find(item => item.id === normalizeTitleArt(value));
+  const option = TITLE_ART_OPTIONS.find(item => item.id === resolveTitleArt(value));
   return landscape && option.wideSrc ? option.wideSrc : option.src;
 };
 
@@ -796,10 +835,11 @@ const HOME_ART_OPTIONS = [
   { id: 'halloween', label: 'ハロウィン', desc: 'かぼちゃの灯りがともる、月夜の村の広場', src: 'data/images/home-background-halloween.jpg', wideSrc: 'data/images/home-background-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでの村の広場', src: 'data/images/home-background.jpg' },
 ];
-const DEFAULT_HOME_ART = 'halloween';
-const normalizeHomeArt = value => HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
+const DEFAULT_HOME_ART = 'auto';
+const normalizeHomeArt = value => value === 'auto' || HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
+const resolveHomeArt = (value, now = Date.now()) => { const v = normalizeHomeArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
 const homeArtSrc = (value, landscape = false) => {
-  const option = HOME_ART_OPTIONS.find(item => item.id === normalizeHomeArt(value));
+  const option = HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value));
   return landscape && option.wideSrc ? option.wideSrc : option.src;
 };
-const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === normalizeHomeArt(value)).wideSrc);
+const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).wideSrc);

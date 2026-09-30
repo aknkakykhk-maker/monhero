@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8ce55c6b54ebda0c
+// source-sha256: caddf7280391fd2f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-30 13:27";
+const BUILD_DATE = "2026-09-30 14:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5425,6 +5425,55 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
   const legacySaved = value?.[BGM_ARRANGEMENT_LEGACY_FALLBACK[scene]];
   return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
 }));
+const SCREEN_THEME_STORAGE_KEY = 'mh_screen_theme_v1';
+const SCREEN_THEME_HALLOWEEN_UNTIL = Date.parse('2026-11-01T00:00:00+09:00');
+const SCREEN_THEME_CHOICES = [{
+  id: 'auto',
+  label: 'おまかせ'
+}, {
+  id: 'halloween',
+  label: 'ハロウィン'
+}, {
+  id: 'classic',
+  label: 'クラシック'
+}];
+const SCREEN_THEME_CATEGORIES = [{
+  id: 'menu',
+  label: 'メニュー画面',
+  desc: '設定・ミッション・ギフト・図鑑・M/B管理など'
+}, {
+  id: 'market',
+  label: 'マーケット',
+  desc: 'マーケット'
+}, {
+  id: 'temple',
+  label: '神殿',
+  desc: '神殿と、マスモンの再生・合体・転生など'
+}, {
+  id: 'battle',
+  label: 'モンヒロバトル',
+  desc: 'バトルえらび・バトル中・リザルト',
+  ready: false
+}, {
+  id: 'rhythm',
+  label: 'モンヒロビート',
+  desc: '曲えらび・演奏画面',
+  ready: false
+}];
+const SCREEN_THEME_READY_CATEGORIES = SCREEN_THEME_CATEGORIES.filter(category => category.ready !== false);
+const screenThemeFor = (screenTheme, category, now = Date.now()) => SCREEN_THEME_READY_CATEGORIES.some(c => c.id === category) ? resolveScreenTheme(screenTheme && screenTheme[category], now) : 'classic';
+const resolveScreenTheme = (value, now = Date.now()) => value === 'halloween' || value === 'classic' ? value : now < SCREEN_THEME_HALLOWEEN_UNTIL ? 'halloween' : 'classic';
+const normalizeScreenThemeChoice = value => SCREEN_THEME_CHOICES.some(choice => choice.id === value) ? value : 'auto';
+const normalizeScreenTheme = value => Object.fromEntries(SCREEN_THEME_CATEGORIES.map(category => [category.id, normalizeScreenThemeChoice(value && typeof value === 'object' ? value[category.id] : null)]));
+const SCREEN_THEME_BATTLE_STATES = new Set(['BATTLE', 'BATTLE_TUTORIAL', 'BATTLE_MENU', 'BATTLE_MODE_SELECT', 'BATTLE_SYSTEM_SELECT', 'BATTLE_DIFFICULTY_SELECT', 'EXTREME_DIFFICULTY_SELECT', 'SPECIES_CHALLENGE_SELECT', 'BATTLE_SCORE_RANKING', 'PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'PICK_PRO_ALLIES', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT', 'CHAMPION', 'QUICK_GROWTH', 'QUICK_JOIN', 'SKIP_PICK', 'SKIP_RESULT', 'AUTO_SETTINGS']);
+const SCREEN_THEME_TEMPLE_STATES = new Set(['TEMPLE', 'MASU_REGENERATION', 'MASU_REGENERATION_DETAIL', 'MASU_DONATION', 'MASU_FUSION', 'MASU_REBIRTH', 'MASU_REINCARNATE', 'MASU_TRANSCENDENCE', 'MASU_SOUL_RANK', 'MASU_SOUL_TRAITS', 'MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_AUTO_ENHANCE']);
+const screenThemeCategory = (gameState, rhythmOpen = false) => {
+  if (rhythmOpen || String(gameState || '').startsWith('RHYTHM_')) return 'rhythm';
+  if (SCREEN_THEME_BATTLE_STATES.has(gameState)) return 'battle';
+  if (gameState === 'BREEDER_MARKET') return 'market';
+  if (SCREEN_THEME_TEMPLE_STATES.has(gameState)) return 'temple';
+  return 'menu';
+};
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
 const TITLE_ART_OPTIONS = [{
   id: 'halloween',
@@ -5438,10 +5487,14 @@ const TITLE_ART_OPTIONS = [{
   desc: 'これまでのタイトル画面',
   src: 'data/images/title-screen-clean.jpg'
 }];
-const DEFAULT_TITLE_ART = 'halloween';
-const normalizeTitleArt = value => TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
+const DEFAULT_TITLE_ART = 'auto';
+const normalizeTitleArt = value => value === 'auto' || TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
+const resolveTitleArt = (value, now = Date.now()) => {
+  const v = normalizeTitleArt(value);
+  return v === 'auto' ? resolveScreenTheme('auto', now) : v;
+};
 const titleArtSrc = (value, landscape = false) => {
-  const option = TITLE_ART_OPTIONS.find(item => item.id === normalizeTitleArt(value));
+  const option = TITLE_ART_OPTIONS.find(item => item.id === resolveTitleArt(value));
   return landscape && option.wideSrc ? option.wideSrc : option.src;
 };
 const HOME_ART_STORAGE_KEY = 'mh_home_art';
@@ -5457,13 +5510,17 @@ const HOME_ART_OPTIONS = [{
   desc: 'これまでの村の広場',
   src: 'data/images/home-background.jpg'
 }];
-const DEFAULT_HOME_ART = 'halloween';
-const normalizeHomeArt = value => HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
+const DEFAULT_HOME_ART = 'auto';
+const normalizeHomeArt = value => value === 'auto' || HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
+const resolveHomeArt = (value, now = Date.now()) => {
+  const v = normalizeHomeArt(value);
+  return v === 'auto' ? resolveScreenTheme('auto', now) : v;
+};
 const homeArtSrc = (value, landscape = false) => {
-  const option = HOME_ART_OPTIONS.find(item => item.id === normalizeHomeArt(value));
+  const option = HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value));
   return landscape && option.wideSrc ? option.wideSrc : option.src;
 };
-const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === normalizeHomeArt(value)).wideSrc);
+const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === resolveHomeArt(value)).wideSrc);
 const Audio_ = (() => {
   let Tone = null,
     ready = false,
@@ -14574,7 +14631,7 @@ const AssistantBubble = ({
     className: `relative flex-1 min-w-0 text-left rounded-2xl border-2 ${compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} ${hasDetail ? 'active:scale-[.99]' : ''}`,
     style: {
       borderColor: color,
-      backgroundColor: 'rgba(15,23,42,0.92)'
+      backgroundColor: 'var(--mh-bubble-bg, rgba(15,23,42,0.92))'
     }
   }), React.createElement("span", {
     className: "absolute",
@@ -31873,6 +31930,7 @@ function SettingsScreen({
   onOpenBgmArrangement,
   onOpenTitleArt,
   onOpenHomeArt,
+  onOpenScreenTheme,
   onOpenBackup,
   onOpenHelp,
   onOpenGameUpdate,
@@ -31990,6 +32048,11 @@ function SettingsScreen({
     className: menuClass
   }, "ホーム画面アレンジ"), React.createElement("button", {
     type: "button",
+    "data-open-screen-theme": true,
+    onClick: onOpenScreenTheme,
+    className: menuClass
+  }, "画面テーマ"), React.createElement("button", {
+    type: "button",
     onClick: onOpenBackup,
     className: menuClass
   }, "データ引き継ぎ"), React.createElement("button", {
@@ -32043,9 +32106,11 @@ function ArtPickerModal({
   note,
   options,
   value,
+  resolved,
   onChange,
   onClose
 }) {
+  const auto = value === 'auto';
   return React.createElement("div", {
     className: "mh-title-modal",
     onPointerDown: e => e.stopPropagation()
@@ -32065,7 +32130,14 @@ function ArtPickerModal({
     size: 18
   }))), React.createElement("p", {
     className: "text-[11px] font-bold leading-relaxed text-slate-300"
-  }, note), React.createElement("div", {
+  }, note), React.createElement("button", {
+    type: "button",
+    "aria-pressed": auto,
+    onClick: () => onChange('auto'),
+    className: `w-full min-h-[44px] rounded-xl border-2 px-3 py-2 text-left text-[12px] font-black ${auto ? 'border-amber-300 bg-amber-500/15 text-amber-100' : 'border-white/15 bg-white/5 text-slate-200'}`
+  }, "おまかせ(季節に合わせて切り替え)", auto && React.createElement("small", {
+    className: "block text-[10px] font-bold text-amber-200/80"
+  }, "いまは「", (options.find(o => o.id === resolved) || options[0]).label, "」を出しています")), React.createElement("div", {
     className: "grid grid-cols-2 gap-3"
   }, options.map(option => {
     const selected = value === option.id;
@@ -32082,12 +32154,97 @@ function ArtPickerModal({
       className: "block w-full aspect-[9/16] object-cover"
     }), selected && React.createElement("span", {
       className: "absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black text-slate-900"
-    }, "選択中"), React.createElement("span", {
+    }, "選択中"), auto && resolved === option.id && React.createElement("span", {
+      className: "absolute right-1.5 top-1.5 rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-black text-slate-900"
+    }, "おまかせ中"), React.createElement("span", {
       className: "block px-2 pt-1.5 text-[13px] font-black text-white"
     }, option.label), React.createElement("small", {
       className: "block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400"
     }, option.desc));
   })), React.createElement("button", {
+    className: "mh-dialog-choice justify-center",
+    onClick: onClose
+  }, "決定")));
+}
+function ScreenThemeModal({
+  screenTheme,
+  onChange,
+  titleArt,
+  onChangeTitleArt,
+  homeArt,
+  onChangeHomeArt,
+  onClose
+}) {
+  const rows = [{
+    id: 'title',
+    label: 'タイトル画面',
+    desc: 'タイトル画面の絵',
+    value: titleArt,
+    set: onChangeTitleArt
+  }, {
+    id: 'home',
+    label: 'ホーム画面',
+    desc: 'ホーム画面の背景',
+    value: homeArt,
+    set: onChangeHomeArt
+  }, ...SCREEN_THEME_READY_CATEGORIES.map(category => ({
+    ...category,
+    value: screenTheme[category.id],
+    set: choice => onChange(category.id, choice)
+  }))];
+  const setAll = choice => {
+    onChangeTitleArt(choice);
+    onChangeHomeArt(choice);
+    onChange('*', choice);
+  };
+  const chip = selected => `min-h-[36px] flex-1 rounded-lg border px-1 text-[11px] font-black ${selected ? 'border-amber-300 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-white/5 text-slate-300'}`;
+  return React.createElement("div", {
+    className: "mh-title-modal",
+    onPointerDown: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "mh-title-dialog",
+    "data-screen-theme-picker": true,
+    style: {
+      maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
+      overflowY: 'auto'
+    }
+  }, React.createElement("div", {
+    className: "mh-dialog-head"
+  }, React.createElement("h3", null, "画面テーマ"), React.createElement("button", {
+    onClick: onClose,
+    "aria-label": "閉じる"
+  }, React.createElement(X, {
+    size: 18
+  }))), React.createElement("p", {
+    className: "text-[11px] font-bold leading-relaxed text-slate-300"
+  }, "画面の種類ごとに見た目を選べます。「おまかせ」は季節に合わせて切り替わり、10月31日まではハロウィン、11月1日からはクラシックになります。"), React.createElement("div", {
+    className: "rounded-xl border border-amber-300/40 bg-amber-500/10 p-2"
+  }, React.createElement("b", {
+    className: "block text-[12px] font-black text-amber-100"
+  }, "まとめて変える"), React.createElement("div", {
+    className: "mt-1.5 flex gap-1.5"
+  }, SCREEN_THEME_CHOICES.map(choice => React.createElement("button", {
+    key: choice.id,
+    type: "button",
+    onClick: () => setAll(choice.id),
+    className: chip(false)
+  }, choice.label)))), rows.map(row => React.createElement("div", {
+    key: row.id,
+    "data-screen-theme-row": row.id,
+    className: "rounded-xl border border-white/10 bg-white/5 p-2"
+  }, React.createElement("b", {
+    className: "block text-[12px] font-black text-white"
+  }, row.label), React.createElement("small", {
+    className: "block text-[10px] font-bold text-slate-400"
+  }, row.desc), React.createElement("div", {
+    className: "mt-1.5 flex gap-1.5"
+  }, SCREEN_THEME_CHOICES.map(choice => React.createElement("button", {
+    key: choice.id,
+    type: "button",
+    "aria-pressed": row.value === choice.id,
+    onClick: () => row.set(choice.id),
+    className: chip(row.value === choice.id)
+  }, choice.label))))), React.createElement("button", {
     className: "mh-dialog-choice justify-center",
     onClick: onClose
   }, "決定")));
@@ -47629,6 +47786,23 @@ function MonsterHeroGame() {
     setHomeArtState(next);
     storeSet(HOME_ART_STORAGE_KEY, next, false);
   };
+  const [showScreenTheme, setShowScreenTheme] = useState(false);
+  const [screenTheme, setScreenThemeState] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem(SCREEN_THEME_STORAGE_KEY);
+      return normalizeScreenTheme(raw !== null ? JSON.parse(raw) : null);
+    } catch {
+      return normalizeScreenTheme(null);
+    }
+  });
+  const changeScreenTheme = (categoryId, choice) => setScreenThemeState(prev => {
+    const next = normalizeScreenTheme(categoryId === '*' ? Object.fromEntries(SCREEN_THEME_CATEGORIES.map(c => [c.id, choice])) : {
+      ...prev,
+      [categoryId]: choice
+    });
+    storeSet(SCREEN_THEME_STORAGE_KEY, next, false);
+    return next;
+  });
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
   const [difficulty, setDifficulty] = useState('Normal');
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
@@ -51963,7 +52137,7 @@ function MonsterHeroGame() {
     } catch {}
   };
   const startGame = async () => {
-    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showTitleArt || showHomeArt || showAudioSettings || showBackup) return;
+    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showTitleArt || showHomeArt || showScreenTheme || showAudioSettings || showBackup) return;
     titleStartingRef.current = true;
     setTitleStarting(true);
     const needsAssistantChoice = !onboarded && !assistantChosen;
@@ -52166,6 +52340,10 @@ function MonsterHeroGame() {
       {
         const savedHomeArt = await storeGet(HOME_ART_STORAGE_KEY, null, false);
         if (savedHomeArt !== null) setHomeArtState(normalizeHomeArt(savedHomeArt));
+      }
+      {
+        const savedScreenTheme = await storeGet(SCREEN_THEME_STORAGE_KEY, null, false);
+        if (savedScreenTheme !== null) setScreenThemeState(normalizeScreenTheme(savedScreenTheme));
       }
       let savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
       if ((await storeGet(BGM_PRO_DEFAULT_MIGRATION_KEY, false, false)) !== true) {
@@ -62881,6 +63059,14 @@ function MonsterHeroGame() {
     className: "mh-dialog-choice",
     onClick: () => {
       setShowTitleSettings(false);
+      setShowScreenTheme(true);
+    }
+  }, "🎃 画面テーマ ", React.createElement(ChevronRight, {
+    size: 18
+  })), React.createElement("button", {
+    className: "mh-dialog-choice",
+    onClick: () => {
+      setShowTitleSettings(false);
       setShowBackup(true);
     }
   }, "🛡️ データ引き継ぎ ", React.createElement(ChevronRight, {
@@ -62891,14 +63077,24 @@ function MonsterHeroGame() {
     note: "タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。",
     options: TITLE_ART_OPTIONS,
     value: titleArt,
+    resolved: resolveTitleArt(titleArt),
     onChange: changeTitleArt,
     onClose: () => setShowTitleArt(false)
+  }) : showScreenTheme ? React.createElement(ScreenThemeModal, {
+    screenTheme: screenTheme,
+    onChange: changeScreenTheme,
+    titleArt: titleArt,
+    onChangeTitleArt: changeTitleArt,
+    homeArt: homeArt,
+    onChangeHomeArt: changeHomeArt,
+    onClose: () => setShowScreenTheme(false)
   }) : showHomeArt ? React.createElement(ArtPickerModal, {
     pickerId: "home",
     heading: "ホーム画面アレンジ",
     note: "ホーム画面の背景を選べます。「ハロウィン」は、横画面では横長の絵になります。",
     options: HOME_ART_OPTIONS,
     value: homeArt,
+    resolved: resolveHomeArt(homeArt),
     onChange: changeHomeArt,
     onClose: () => setShowHomeArt(false)
   }) : showAudioSettings ? React.createElement("div", {
@@ -63657,6 +63853,7 @@ function MonsterHeroGame() {
         }
       }
     }, React.createElement("div", {
+      "data-mh-theme": screenThemeFor(screenTheme, screenThemeCategory(gameState, rhythmScreenOpen)),
       "data-mh-view-rotation": forcedRotationStyle ? 'true' : 'false',
       "data-mh-portrait-layout": portraitOnlyScreen ? 'true' : 'false',
       "data-phase-look": ecoMode === 'lite' || ultraEcoSession || normalizeBattleFxSettings(battleFxSettings).idleMotion === 'OFF' || battleFxLoad === 'LIGHT' || battleFxLoad === 'MINIMAL' ? 'calm' : 'rich',
@@ -66329,6 +66526,7 @@ function MonsterHeroGame() {
       onOpenBgmArrangement: () => setShowBgmArrangement(true),
       onOpenTitleArt: () => setShowTitleArt(true),
       onOpenHomeArt: () => setShowHomeArt(true),
+      onOpenScreenTheme: () => setShowScreenTheme(true),
       onOpenBackup: () => {
         setShowBackup(true);
         setBackupTab('export');
