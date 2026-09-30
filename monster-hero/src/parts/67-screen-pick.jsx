@@ -220,23 +220,28 @@ function ProMonsterGridPicker({ list, selectedId=null, isDisabled, onSelect, onD
   };
   const apt=(m,i)=>(m.distAptitude&&m.distAptitude[i])||'C';
   return(
-    <div data-pro-pick-grid className="w-full">
+    <div data-pro-pick-grid className="w-full flex-1 min-h-0 flex flex-col">
       {lineageTabs.length>1&&(
-        <div data-pro-pick-tabs role="tablist" aria-label="血統" className="sticky top-0 z-20 -mx-1 px-1 pb-1.5 bg-[#020617] flex gap-1.5 overflow-x-auto mh-scroll">
+        <div data-pro-pick-tabs role="tablist" aria-label="血統" className="shrink-0 pb-1.5 flex gap-1.5 overflow-x-auto mh-scroll">
           {[{id:'all',name:'すべて',count:list.length},...lineageTabs].map(t=>(
             <button key={t.id} role="tab" aria-selected={activeTab===t.id} onClick={()=>{setLineageTab(t.id);const inTab=t.id==='all'?list:list.filter(m=>lineageOfMon(m).id===t.id);if(!inTab.some(m=>m.id===focusId)){const first=inTab.find(m=>!disabled(m));if(first)setFocusId(first.id);}}}
               className={`shrink-0 min-h-[34px] px-2.5 rounded-full border text-[11px] font-black active:scale-95 ${activeTab===t.id?ac.tab:'border-slate-700 bg-slate-900 text-slate-400'}`}>{t.name}<span className="ml-1 text-[9px] font-mono opacity-70">{t.count}</span></button>
           ))}
         </div>
       )}
+      <div data-pro-pick-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll">
       {pinnedIds.length>0&&(<>
         <div className={`px-1 mb-1 text-[9px] font-black ${ac.head}`}>★お気に入り・前回使った子</div>
         <div className="grid grid-cols-4 gap-1.5 mb-3">{pinnedIds.map(id=>tile(byId.get(id),'pin-'))}</div>
       </>)}
       <div className="px-1 mb-1 text-[9px] font-black text-slate-400">{activeTab==='all'?'すべて':`${(lineageTabs.find(t=>t.id===activeTab)||{}).name}血統`}（{shownList.length}体）</div>
       <div className="grid grid-cols-4 gap-1.5 pb-3">{shownList.map(m=>tile(m,'all-'))}</div>
-      <div className="sticky bottom-0 z-20 -mx-1 px-1 pt-1">
-        <div data-pro-pick-detail className="rounded-2xl border border-white/15 bg-slate-950/95 p-2 shadow-[0_-6px_18px_rgba(0,0,0,0.6)]">
+      </div>
+      {/* 詳細パネルはスクロールの外に固定する。スクロール領域の中へ sticky で置くと、iPhoneのSafariで
+          中身の一部だけ描き直されず、選んだ子と違う名前・数字が混ざって見えることがあった。
+          key を子ごとに変えて、選び直すたびに作り直す */}
+      <div className="shrink-0 pt-1.5">
+        <div key={focus?focus.id:'none'} data-pro-pick-detail className="rounded-2xl border border-white/15 bg-slate-950 p-2">
           {!focus?(
             <div className="py-3 text-center text-[10px] font-black text-slate-400">モンスターをタップすると、ここに詳しい情報が出ます</div>
           ):(<>
@@ -384,8 +389,8 @@ function PickHeroAllyScreen({
       {/* あふれる可能性のあるスクロール領域へ justify-center を付けると、あふれたぶんが
           上下へはみ出し、スクロールで追える下側と違って上側は永久に届かなくなる。
           内側を m-auto で寄せておけば、余っているときだけ中央、あふれたら先頭からたどれる */}
-      <div className="flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col">
-       <div className={`w-full${pickMode==='ally'?' m-auto':''}`}>
+      <div className={`flex-1 ${pickMode==='hero'&&isProMode(runMode)?'overflow-hidden':'overflow-y-auto mh-scroll'} w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col`}>
+       <div className={`w-full${pickMode==='ally'?' m-auto':''}${pickMode==='hero'&&isProMode(runMode)?' flex-1 min-h-0 flex flex-col':''}`}>
         {pickMode==='ally'&&!isProMode(runMode)&&<div className="mb-1.5 flex items-center justify-between px-1 text-[9px] font-black text-[#c9ae6a]">
           <span>合流できる候補 {(monSelection||[]).filter(m=>m&&!slots.some(x=>x&&x.id===m.id)).length}体</span><span>カードを押すと詳細</span>
         </div>}
@@ -604,7 +609,7 @@ function PickProAlliesScreen({
           <div className="shrink-0 pt-1" style={{paddingBottom:'calc(.25rem + env(safe-area-inset-bottom))'}}><button disabled={!ready} onClick={()=>{recordProRecentParty([mainHero?.id,...proAllyPool.map(m=>m&&m.id)]);confirmProParty();}} className="w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30" style={{backgroundColor:mode.color,color:'#0f172a'}}>{ready?'この編成で開始':`あと${need-proAllyPool.length}体えらんでください`}</button></div>
         </>:<>
           <p className="shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2">この枠に入れるベースモンを1体選んでください。</p>
-          <div className="flex-1 overflow-y-auto mh-scroll pb-2 min-h-0">
+          <div className="flex-1 min-h-0 pb-2 flex flex-col">
             <ProMonsterGridPicker list={candidates.filter(m=>!proAllyPool.some((chosen,i)=>i!==proEditingAllyIndex&&chosen.id===m.id))}
               selectedId={proAllyPool[proEditingAllyIndex]?.id||null} accent="pink" confirmLabel={`供モン${proEditingAllyIndex+1}にする`} confirmAria={m=>`${m.name}を供モン${proEditingAllyIndex+1}に選ぶ`}
               onSelect={changeAlly} onDetail={setProAllyDetail}/>
