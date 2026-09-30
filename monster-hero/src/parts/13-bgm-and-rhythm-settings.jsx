@@ -788,3 +788,18 @@ const titleArtSrc = (value, landscape = false) => {
   const option = TITLE_ART_OPTIONS.find(item => item.id === normalizeTitleArt(value));
   return landscape && option.wideSrc ? option.wideSrc : option.src;
 };
+
+// ホーム画面の背景アレンジ(2026-09-30・ユーザー要望)。タイトル画像アレンジと同じ作り。
+// 保存は新しいキー mh_home_art に id だけ。横画面では wideSrc を画面いっぱいに出す
+const HOME_ART_STORAGE_KEY = 'mh_home_art';
+const HOME_ART_OPTIONS = [
+  { id: 'halloween', label: 'ハロウィン', desc: 'かぼちゃの灯りがともる、月夜の村の広場', src: 'data/images/home-background-halloween.jpg', wideSrc: 'data/images/home-background-halloween-wide.jpg' },
+  { id: 'classic', label: 'クラシック', desc: 'これまでの村の広場', src: 'data/images/home-background.jpg' },
+];
+const DEFAULT_HOME_ART = 'halloween';
+const normalizeHomeArt = value => HOME_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_HOME_ART;
+const homeArtSrc = (value, landscape = false) => {
+  const option = HOME_ART_OPTIONS.find(item => item.id === normalizeHomeArt(value));
+  return landscape && option.wideSrc ? option.wideSrc : option.src;
+};
+const homeArtIsWide = (value, landscape = false) => !!(landscape && HOME_ART_OPTIONS.find(item => item.id === normalizeHomeArt(value)).wideSrc);

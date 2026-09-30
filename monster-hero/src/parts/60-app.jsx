@@ -37,6 +37,22 @@ function MonsterHeroGame() {
   const quickRewardPolicyRunRef = useRef(QUICK_REWARD_POLICY_GROWTH);
   const [managementTab, setManagementTab] = useState('monster');
   const [homeBackgroundReady, setHomeBackgroundReady] = useState(false);
+  // 横画面なら横長の絵を出す。向きを変えたらその場で差し替える
+  const [titleLandscape, setTitleLandscape] = useState(() => { try { return window.matchMedia('(orientation: landscape)').matches; } catch { return false; } });
+  useEffect(() => {
+    let query = null;
+    try { query = window.matchMedia('(orientation: landscape)'); } catch { return undefined; }
+    const onChange = () => setTitleLandscape(query.matches);
+    onChange();
+    if (query.addEventListener) query.addEventListener('change', onChange); else if (query.addListener) query.addListener(onChange);
+    return () => { if (query.removeEventListener) query.removeEventListener('change', onChange); else if (query.removeListener) query.removeListener(onChange); };
+  }, []);
+  // ホーム画面の背景アレンジ。タイトル画像アレンジと同じく、最初の値は端末の保存をその場で読む
+  const [showHomeArt, setShowHomeArt] = useState(false);
+  const [homeArt, setHomeArtState] = useState(() => {
+    try { const raw = window.localStorage.getItem(HOME_ART_STORAGE_KEY); return normalizeHomeArt(raw !== null ? JSON.parse(raw) : null); } catch { return DEFAULT_HOME_ART; }
+  });
+  const changeHomeArt = id => { const next = normalizeHomeArt(id); setHomeArtState(next); storeSet(HOME_ART_STORAGE_KEY, next, false); };
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
   const [difficulty, setDifficulty] = useState('Normal');
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
@@ -381,7 +397,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     let active = true;
     const image = new Image();
-    image.src = 'data/images/home-background.jpg';
+    image.src = homeArtSrc(homeArt, titleLandscape);
     const reveal = () => { if (active) setHomeBackgroundReady(true); };
     image.onload = () => {
       if (image.decode) image.decode().catch(()=>{}).then(reveal);
@@ -390,7 +406,7 @@ function MonsterHeroGame() {
     image.onerror = reveal;
     if (image.complete) image.onload();
     return () => { active = false; image.onload = null; image.onerror = null; };
-  }, []);
+  }, [homeArt, titleLandscape]);
   const entryAnimatingRef = useRef(false);
   const titleStartingRef = useRef(false);
   const [showTitleSettings, setShowTitleSettings] = useState(false);
@@ -400,16 +416,6 @@ function MonsterHeroGame() {
   const [titleArt, setTitleArtState] = useState(() => {
     try { const raw = window.localStorage.getItem(TITLE_ART_STORAGE_KEY); return normalizeTitleArt(raw !== null ? JSON.parse(raw) : null); } catch { return DEFAULT_TITLE_ART; }
   });
-  // 横画面なら横長の絵を出す。向きを変えたらその場で差し替える
-  const [titleLandscape, setTitleLandscape] = useState(() => { try { return window.matchMedia('(orientation: landscape)').matches; } catch { return false; } });
-  useEffect(() => {
-    let query = null;
-    try { query = window.matchMedia('(orientation: landscape)'); } catch { return undefined; }
-    const onChange = () => setTitleLandscape(query.matches);
-    onChange();
-    if (query.addEventListener) query.addEventListener('change', onChange); else if (query.addListener) query.addListener(onChange);
-    return () => { if (query.removeEventListener) query.removeEventListener('change', onChange); else if (query.removeListener) query.removeListener(onChange); };
-  }, []);
   const changeTitleArt = id => { const next = normalizeTitleArt(id); setTitleArtState(next); storeSet(TITLE_ART_STORAGE_KEY, next, false); };
   const [titlePlayerId] = useState(() => {
     try {
@@ -4603,7 +4609,7 @@ function MonsterHeroGame() {
   };
 
   const startGame = async () => {
-    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showTitleArt || showAudioSettings || showBackup) return;
+    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showTitleArt || showHomeArt || showAudioSettings || showBackup) return;
     titleStartingRef.current = true;
     setTitleStarting(true);
     // はじめて遊ぶ人は「助手をえらぶ」→ 選んだ助手のあいさつ → プロフィール(名前とアイコン)の順。
@@ -4834,6 +4840,7 @@ function MonsterHeroGame() {
       if (savedAudioMuted) Audio_.setEnabled(false);
       // 端末の保存をその場で読めない環境(window.storage)でも、選んだタイトル画像を戻す
       { const savedTitleArt = await storeGet(TITLE_ART_STORAGE_KEY, null, false); if (savedTitleArt !== null) setTitleArtState(normalizeTitleArt(savedTitleArt)); }
+      { const savedHomeArt = await storeGet(HOME_ART_STORAGE_KEY, null, false); if (savedHomeArt !== null) setHomeArtState(normalizeHomeArt(savedHomeArt)); }
       let savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
       // プロモードの既定曲だけは、以前の既定のまま遊んでいる人へ新しい曲を一度だけ届ける
       if (await storeGet(BGM_PRO_DEFAULT_MIGRATION_KEY, false, false) !== true) {
@@ -13482,9 +13489,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       </div>
     </div>
   ) : showTitleSettings ? (
-    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowTitleArt(true)}}>🖼️ タイトル画像アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
+    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowTitleArt(true)}}>🖼️ タイトル画像アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowHomeArt(true)}}>🏡 ホーム画面アレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
   ) : showTitleArt ? (
-    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog" data-title-art-picker style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>タイトル画像アレンジ</h3><button onClick={()=>setShowTitleArt(false)} aria-label="閉じる"><X size={18}/></button></div><p className="text-[11px] font-bold leading-relaxed text-slate-300">タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。</p><div className="grid grid-cols-2 gap-3">{TITLE_ART_OPTIONS.map(option=>{const selected=titleArt===option.id;return <button key={option.id} type="button" aria-pressed={selected} onClick={()=>changeTitleArt(option.id)} className={`relative flex flex-col overflow-hidden rounded-2xl border-2 text-left ${selected?'border-amber-300 bg-amber-500/15 shadow-[0_0_16px_rgba(252,211,77,.45)]':'border-white/15 bg-white/5'}`}><img src={option.src} alt={option.label} loading="lazy" className="block w-full aspect-[9/16] object-cover"/>{selected&&<span className="absolute right-1.5 top-1.5 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black text-slate-900">選択中</span>}<span className="block px-2 pt-1.5 text-[13px] font-black text-white">{option.label}</span><small className="block px-2 pb-2 text-[10px] font-bold leading-snug text-slate-400">{option.desc}</small></button>;})}</div><button className="mh-dialog-choice justify-center" onClick={()=>setShowTitleArt(false)}>決定</button></div></div>
+    <ArtPickerModal pickerId="title" heading="タイトル画像アレンジ" note="タイトル画面に出す絵を選べます。次に開いたときもこの絵で始まります。「ハロウィン」は、横画面では横長の絵になります。" options={TITLE_ART_OPTIONS} value={titleArt} onChange={changeTitleArt} onClose={()=>setShowTitleArt(false)}/>
+  ) : showHomeArt ? (
+    <ArtPickerModal pickerId="home" heading="ホーム画面アレンジ" note="ホーム画面の背景を選べます。「ハロウィン」は、横画面では横長の絵になります。" options={HOME_ART_OPTIONS} value={homeArt} onChange={changeHomeArt} onClose={()=>setShowHomeArt(false)}/>
   ) : showAudioSettings ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/><button className="mh-dialog-choice mt-3" aria-expanded={showAudioDiag} onClick={()=>setShowAudioDiag(v=>!v)}>🔧 音が出ないとき {showAudioDiag?'▲':'▼'}</button>{showAudioDiag&&<AudioTroubleshootPanel info={audioDiag} peak={audioDiagPeak} muted={audioMuted} onTest={testAudioOutput} onRepair={repairAudioOutput} repairing={audioRepairing}/>}</div></div>
   ) : showBgmArrangement ? (
@@ -13812,6 +13821,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             assistantBondUp={assistantBondUp} breederIcon={breederIcon} breederLevel={breederLevel}
             breederName={breederName} breederPoints={breederPoints} gifts={gifts} gold={gold}
             hasUnreadChangelog={hasUnreadChangelog} homeBackgroundReady={homeBackgroundReady}
+            homeBackgroundSrc={homeArtSrc(homeArt, titleLandscape || !!forcedRotationStyle)} homeBackgroundWide={homeArtIsWide(homeArt, titleLandscape || !!forcedRotationStyle)}
             homePastureMasumons={homePastureMasumons} masuMons={masuMons} missions={missions}
             onOpenBattle={openBattleSystemSelect}
             onOpenManagement={()=>{addAssistantBond('management');setManagementTab('monster');setGameState('MB_MANAGEMENT');}}
@@ -14837,6 +14847,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenAudioSettings={()=>setShowAudioSettings(true)}
             onOpenBgmArrangement={()=>setShowBgmArrangement(true)}
             onOpenTitleArt={()=>setShowTitleArt(true)}
+            onOpenHomeArt={()=>setShowHomeArt(true)}
             onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}
             onOpenHelp={()=>openHelp()}
             onOpenGameUpdate={()=>setShowGameUpdateConfirm(true)}
