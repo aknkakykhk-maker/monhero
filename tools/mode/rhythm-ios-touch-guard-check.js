@@ -75,7 +75,7 @@ const fire = (page, kind, selector) => page.evaluate(([kind, selector]) => {
     // 曲えらび(演奏前)では止めない
     check('演奏前(曲えらび)は、画面の外側のタッチを止めない', (await fire(page, 'touchstart', 'document')) === false);
 
-    await page.evaluate(() => { RHYTHM_PERF.setEnabled(true); document.querySelector('[data-rhythm-demo-start]').click(); });
+    await page.evaluate(() => { RHYTHM_PERF.setEnabled(false); document.querySelector('[data-rhythm-demo-start]').click(); });   // 計測OFFのままでも指の記録は数える
     await page.waitForSelector('[data-rhythm-play-area]', { timeout: 30000 });
     await page.waitForTimeout(6000);   // カウントダウンが終わって演奏が始まるまで
     await page.evaluate(() => RHYTHM_PERF.reset());
@@ -92,6 +92,8 @@ const fire = (page, kind, selector) => page.evaluate(([kind, selector]) => {
     check('性能計測が、演奏エリアの外に触れた回数を数える', stats && stats.outside === 2, JSON.stringify(stats));
     check('性能計測が、二本指ジェスチャーの回数を数える', stats && stats.gestures === 2, JSON.stringify(stats));
     check('性能計測が、演奏エリアで指が触れた数を数える', stats && stats.starts === 1 && stats.maxTouches === 1, JSON.stringify(stats));
+    check('道の外（演奏エリアのすみ）に触れた指を「無視した」と数える', stats && stats.ignored === 1, JSON.stringify(stats));
+    check('指の記録は、性能計測をOFFにしていても数える', stats && stats.starts >= 1);
 
     await page.evaluate(() => document.querySelector('[data-rhythm-pause]').click());
     await page.waitForTimeout(400);

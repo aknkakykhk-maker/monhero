@@ -411,17 +411,20 @@ const RHYTHM_PERF=(()=>{
     gpu:{notes:{n:0,sum:0,max:0,supported:null},stage:{n:0,sum:0,max:0,supported:null}},
     // 画質「自動」・演出の自動調整が「重い」と数える線(50ms以上)を超えたフレームの数と、実際に自動で下げた記録(2026-09-27)。
     // 実機でどのくらいの重さのときに下がったかを読み、線(8%・50ms)を合わせるために使う
-    over50:0,autoSteps:[],
-    // タッチの記録(2026-09-29・ユーザー報告「iPhoneだけだと思うんだけど両手操作で連続押しとかしてるときにたまにタップがきかなくなる」)。
-    // 実機でどれが起きているかを切り分けるために数える。
-    //   starts … 演奏エリアで指が触れた数 / maxTouches … 同時に触れていた指の最大数
-    //   cancels / cancelledTouches … 端末(OS・ブラウザ)に指を取り消された回数と、そのとき取り消された指の数。
-    //     ここが増えるなら「ブラウザがジェスチャーと見て指を取り上げた」
-    //   outside … 演奏中、演奏エリアの外(横持ちのノッチ・ホームバーの余白など)で指が触れた数
-    //   gestures … Safari が二本指のジェスチャー(gesturestart)を始めようとした回数
-    //   emptyTaps … 触れたが、取れるノーツが無かった(空打ち)数
-    //   jumps … 触れたままの指が1回で3サブレーン以上飛んだ数。離した指と置いた指を端末が1本とみなした疑い
-    touch:{starts:0,maxTouches:0,cancels:0,cancelledTouches:0,outside:0,gestures:0,emptyTaps:0,jumps:0}});
+    over50:0,autoSteps:[]});
+  // タッチの記録(2026-09-29・ユーザー報告「iPhoneだけだと思うんだけど両手操作で連続押しとかしてるときにたまにタップがきかなくなる」
+  // 「音も光も出ない」「前からずっとある」)。実機でどれが起きているかを切り分けるために数える。
+  // ★計測ON/OFFに関係なく**いつも数える**(整数を1つ足すだけ。症状が出てから「計測ON」にしても、もう遅いため)。
+  //   starts … 演奏エリアで指が触れた数 / maxTouches … 同時に触れていた指の最大数(iPhoneは同時に5本まで。手のひらのふれも数に入る)
+  //   cancels / cancelledTouches … 端末(OS・ブラウザ)に指を取り消された回数と、そのとき取り消された指の数。
+  //     ここが増えるなら「ブラウザがジェスチャーと見て指を取り上げた」
+  //   outside … 演奏中、演奏エリアの外(横持ちのノッチ・ホームバーの余白など)で指が触れた数
+  //   ignored … 触れたが、道の外（レーンの座標が出ない所）で入力にならなかった指の数。押しても音も光も出ない
+  //   gestures … Safari が二本指のジェスチャー(gesturestart)を始めようとした回数
+  //   emptyTaps … 触れたが、取れるノーツが無かった(空打ち)数
+  //   jumps … 触れたままの指が1回で3サブレーン以上飛んだ数。離した指と置いた指を端末が1本とみなした疑い
+  const touchZero=()=>({starts:0,maxTouches:0,cancels:0,cancelledTouches:0,outside:0,ignored:0,gestures:0,emptyTaps:0,jumps:0});
+  let touchAcc=touchZero();
   let on=false,last=null,acc=zero();
   const api={
     get enabled(){return on;},
@@ -431,7 +434,7 @@ const RHYTHM_PERF=(()=>{
       return on;
     },
     restore(){try{if(typeof localStorage!=='undefined')on=localStorage.getItem(RHYTHM_PERF_KEY)==='1';}catch{}return on;},
-    reset(){last=null;acc=zero();},
+    reset(){last=null;acc=zero();touchAcc=touchZero();},
     // 本体のrAFから毎フレーム1回だけ呼ぶ(計測用のrAFは増やさない)
     frame(nowMs){
       if(!on)return;
@@ -522,12 +525,13 @@ const RHYTHM_PERF=(()=>{
       acc.autoSteps.push({at:Math.round(Number(acc.lastSongMs)||0),kind:String(kind),label:String(label||''),slow:k,frames:n,
         fps:Math.round(n/3*10)/10});
     },
-    touchStart(liveCount){if(!on)return;acc.touch.starts++;const n=Number(liveCount)||0;if(n>acc.touch.maxTouches)acc.touch.maxTouches=n;},
-    touchCancel(count){if(!on)return;acc.touch.cancels++;acc.touch.cancelledTouches+=Number(count)||0;},
-    touchOutside(){if(on)acc.touch.outside++;},
-    touchGesture(){if(on)acc.touch.gestures++;},
-    emptyTap(){if(on)acc.touch.emptyTaps++;},
-    touchJump(){if(on)acc.touch.jumps++;},
+    touchStart(liveCount){touchAcc.starts++;const n=Number(liveCount)||0;if(n>touchAcc.maxTouches)touchAcc.maxTouches=n;},
+    touchCancel(count){touchAcc.cancels++;touchAcc.cancelledTouches+=Number(count)||0;},
+    touchOutside(){touchAcc.outside++;},
+    touchIgnored(){touchAcc.ignored++;},
+    touchGesture(){touchAcc.gestures++;},
+    emptyTap(){touchAcc.emptyTaps++;},
+    touchJump(){touchAcc.jumps++;},
     gestureFrame(){if(on)acc.gestureFrames++;},
     noteRescan(){if(on)acc.noteRescans++;},
     layoutRead(){if(on)acc.layoutReads++;},
@@ -574,7 +578,7 @@ const RHYTHM_PERF=(()=>{
         monsterJudgeCount:acc.monsterCount,
         spikes:acc.spikes.slice(),
         narrowed:acc.narrowed,
-        touch:{...acc.touch},
+        touch:{...touchAcc},
       };
     },
   };
