@@ -106,11 +106,13 @@ const check = (name, ok, detail = '') => {
       await page.getByText('プロモードはベースモンだけで挑みます').count() === 1);
     check('育てたマスモンは勇者モンの一覧に出ない',
       await page.getByText('プロ検査マスモン').count() === 0);
-    // 勇者モン・供モンのカードは共通の横長カード(renderProMonsterRow)で、
-    // 押すところに「◯◯を勇者モンに選ぶ」「◯◯を供モンNに選ぶ」というラベルが付いている
+    // 勇者モン・供モンの一覧は共通のグリッド(ProMonsterGridPicker)で、
+    // 下の決定ボタンに「◯◯を勇者モンに選ぶ」「◯◯を供モンNに選ぶ」というラベルが付いている
     const heroCards = page.getByRole('button', { name: /を勇者モンに選ぶ$/ });
-    const heroCount = await heroCards.count();
+    // 一覧は顔アイコンのグリッド(押すと下の詳細パネルに出る)。決定ボタンは選んでいる1体ぶんだけ
+    const heroCount = await page.getByRole('button', { name: /を見る$/ }).count();
     check('解放済みのベースモンが並ぶ', heroCount >= 6, `${heroCount}体`);
+    check('開いた直後から1体ぶんの詳細と決定ボタンが出ている', await heroCards.count() === 1);
 
     // --- ② 勇者モンを決めてプロモード編成の画面へ ---
     const heroName = await heroCards.first().getAttribute('aria-label');
@@ -139,13 +141,14 @@ const check = (name, ok, detail = '') => {
       await page.getByRole('button', { name: '変更' }).nth(i + 1).dispatchEvent('click');
       await page.getByRole('heading', { name: `供モン${i + 1}を変更` }).waitFor({ timeout: 15000 });
       const poolCards = page.getByRole('button', { name: new RegExp(`を供モン${i + 1}に選ぶ$`) });
+      const poolTiles = page.getByRole('button', { name: /を見る$/ });
       if (i === 0) {
-        poolCount = await poolCards.count();
+        poolCount = await poolTiles.count();
         check('候補にもマスモンは出ない', await page.getByText('プロ検査マスモン').count() === 0);
         check('勇者モンにした種は候補から外れる', poolCount === heroCount - 1, `${heroCount} → ${poolCount}体`);
       } else {
         // すでに他の枠へ入れた子は候補から消える
-        check(`供モン${i + 1}の候補は選んだぶんだけ減る`, await poolCards.count() === poolCount - i, `${await poolCards.count()}体`);
+        check(`供モン${i + 1}の候補は選んだぶんだけ減る`, await poolTiles.count() === poolCount - i, `${await poolTiles.count()}体`);
       }
       const label = await poolCards.first().getAttribute('aria-label');
       picked.push(String(label).replace(/を供モン\d+に選ぶ$/, '').slice(0, 12));
