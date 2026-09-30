@@ -231,6 +231,8 @@ node tools/build.js --check
 
 `node mode/rhythm-chart-rev24-check.js` は、MHB CHART ENGINE Rev.24(大きな一発を左右対称の同時フリックに・2026-09-29)を見張る。Dullahan を Rev.23 と Rev.24 で作り、EASY〜HARD が同じノーツであること、EXPERT・MASTER に同じ時刻・道の真ん中をはさんで左右対称の FLICK 2本の組があること(MASTER は外向きに払う)、組の前後が空いていること、向きの付け直しと自動修正(step7)のあとも位置と向きが変わらないことを確かめる。
 
+`node mode/rhythm-chart-rev25-check.js` は、MHB CHART ENGINE Rev.25(サビ前後の密度を保つ・長いノーツを増やす・2026-09-30・CHUNITHM の譜面との比べ合わせから)を見張る。Rising Hope を Rev.24 と Rev.25 で作り、曲全体のノーツ数が ±3% 以内のまま、MASTER のサビに入る前後(50〜60秒)と終盤(70〜80秒)の密度が上がること、EXPERT・MASTER の HOLD・SLIDE が増えること(ベースの伸びも材料にする)、自動修正(step7)のあとも同じ時刻・同じ場所に重なるノーツが無いことを確かめる。
+
 `node mode/rhythm-song-climax.js [--write|--check]` は、曲ごとの盛り上がる区間の表(`RHYTHM_SONG_CLIMAX`・data/rhythm-mode.js の `<rhythm-song-climax>` の間)を、解析ファイルの区切りの強さ(structure.sections の intensity)から作る(2026-09-29・オプション「盛り上がりの光」)。曲を足したら `--write` を打つ。`node mode/rhythm-climax-fx-check.js` が表の古さ・設定の既定値・CSS・叩いた場所の判定の部品の使い回し・ランクの演出の条件を見張る。
 
 `node mode/rhythm-robot-play.js --song <曲id> --difficulty <難易度> --settings '{"climaxFx":true}' --shots 20000,60000 --shot-dir <dir>` は、ロボットに演奏の設定を渡して遊ばせ、曲のその時刻で画面を撮る(2026-09-29)。盛り上がりの光が点いた・消えた時刻、叩いた場所の判定の数、ランクが上がったときの文字も最後に出す。
