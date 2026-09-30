@@ -46,23 +46,32 @@ for (const [family, shades] of Object.entries(SOURCE)) {
   }
 }
 const hex = (rgb) => '#' + rgb.map((n) => n.toString(16).padStart(2, '0')).join('');
-const HEX = new Map([...MAP].map(([k, to]) => [hex(k.split(',').map(Number)), hex(to)]));
+const hexMap = (map) => new Map([...map].map(([k, to]) => [hex(k.split(',').map(Number)), hex(to)]));
+const HEX = hexMap(MAP);
+
+// モンヒロビートの画面だけ、シアン(青緑)もオレンジへ寄せる。シアンは他の画面では意味のある色(オートの印など)なので、
+// 画面の種類が rhythm のときだけ(.mh-app の data-mh-theme-category)。演奏中のノーツ・判定は class ではなく個別の色なので変わらない
+const RHYTHM_SCOPE = '[data-mh-theme=halloween][data-mh-theme-category=rhythm]';
+const RHYTHM_MAP = new Map([
+  [[165, 243, 252], [254, 215, 170]], [[103, 232, 249], [255, 190, 120]], [[34, 211, 238], [255, 150, 50]],
+  [[6, 182, 212], [240, 110, 20]], [[8, 145, 178], [204, 84, 12]], [[14, 116, 144], [156, 60, 10]],
+].map(([from, to]) => [from.join(','), to]));
 
 // 1つの宣言の並びの中の色を置き換える。置き換えたものが無ければ null
-function recolor(decls) {
+function recolor(decls, map = MAP, hexes = HEX) {
   let changed = false;
   let out = decls.replace(/rgb\((\d+) (\d+) (\d+)\//g, (m, r, g, b) => {
-    const to = MAP.get(`${r},${g},${b}`); if (!to) return m; changed = true; return `rgb(${to.join(' ')}/`;
+    const to = map.get(`${r},${g},${b}`); if (!to) return m; changed = true; return `rgb(${to.join(' ')}/`;
   });
   out = out.replace(/rgba\((\d+),(\d+),(\d+),/g, (m, r, g, b) => {
-    const to = MAP.get(`${r},${g},${b}`); if (!to) return m; changed = true; return `rgba(${to.join(',')},`;
+    const to = map.get(`${r},${g},${b}`); if (!to) return m; changed = true; return `rgba(${to.join(',')},`;
   });
-  out = out.replace(/#[0-9a-f]{6}\b/g, (m) => { const to = HEX.get(m); if (!to) return m; changed = true; return to; });
+  out = out.replace(/#[0-9a-f]{6}\b/g, (m) => { const to = hexes.get(m); if (!to) return m; changed = true; return to; });
   return changed ? out : null;
 }
 
 // いちばん外側の「セレクタ{宣言}」だけを見る(@media の中は写さない)
-function halloweenThemeRules(css) {
+function halloweenThemeRules(css, scope = SCOPE, map = MAP, hexes = HEX) {
   const rules = [];
   let i = 0, depth = 0, start = 0;
   while (i < css.length) {
@@ -74,8 +83,8 @@ function halloweenThemeRules(css) {
         if (!selector.startsWith('@') && close > 0 && css.lastIndexOf('{', close - 1) === i) {
           const parts = selector.split(',').map((s) => s.trim());
           const decls = css.slice(i + 1, close);
-          const colored = parts.every((p) => p.startsWith('.')) ? recolor(decls) : null;
-          if (colored) rules.push(`${parts.map((p) => `${SCOPE} ${p}`).join(',')}{${colored}}`);
+          const colored = parts.every((p) => p.startsWith('.')) ? recolor(decls, map, hexes) : null;
+          if (colored) rules.push(`${parts.map((p) => `${scope} ${p}`).join(',')}{${colored}}`);
           i = close + 1; start = i; continue;
         }
       }
@@ -90,7 +99,7 @@ function halloweenThemeRules(css) {
 }
 
 function withHalloweenTheme(css) {
-  const rules = halloweenThemeRules(css);
+  const rules = halloweenThemeRules(css).concat(halloweenThemeRules(css, RHYTHM_SCOPE, RHYTHM_MAP, hexMap(RHYTHM_MAP)));
   if (!rules.length) throw new Error('ハロウィンの色の置き換えが1つも作れませんでした');
   return `${css}\n/* halloween-theme: tools/theme/halloween-theme-css.js が作った色の置き換え(${rules.length}件) */\n${rules.join('')}`;
 }
