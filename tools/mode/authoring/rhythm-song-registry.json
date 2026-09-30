@@ -379,7 +379,7 @@
   },
   "rising_hope": {
    "audio": "monster-hero/audio/bgm-rising-hope.mp3",
-   "chartRevision": 24,
+   "chartRevision": 25,
    "audioSha256": "5b56b8f9d099c52114a1907c116ed9739f776191e8012eeb947327ecea4a911a",
    "durationMs": 90252,
    "analyzedTiming": {

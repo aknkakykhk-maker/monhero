@@ -39,8 +39,8 @@ const CHANGELOG = [
     image: 'images/song-art/rising-hope.jpg?v=4c1e106d0e39',
     items:[
       'モンヒロビートに「Rising Hope」（1分30秒）を追加しました。曲えらびからすぐ遊べます。',
-      'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.16 ／ EXPERT Lv.24 ／ MASTER Lv.31 です。',
-      'ノーツ数は 180 ／ 205 ／ 279 ／ 339 ／ 397 です。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.17 ／ EXPERT Lv.25 ／ MASTER Lv.32 です。',
+      'ノーツ数は 176 ／ 208 ／ 281 ／ 343 ／ 393 です。',
     ],
     assistantNotice: { id:'update_notice_rising_hope_v1', type:'content' },
   },
