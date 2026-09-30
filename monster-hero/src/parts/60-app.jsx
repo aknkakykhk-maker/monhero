@@ -397,7 +397,8 @@ function MonsterHeroGame() {
   useEffect(() => {
     let active = true;
     const image = new Image();
-    image.src = homeArtSrc(homeArt, titleLandscape);
+    // 横長の絵になるのは、HOMEの枠が横長になる横持ちのスマホ(高さ600以下)だけ
+    image.src = homeArtSrc(homeArt, titleLandscape && window.innerHeight <= 600);
     const reveal = () => { if (active) setHomeBackgroundReady(true); };
     image.onload = () => {
       if (image.decode) image.decode().catch(()=>{}).then(reveal);
@@ -13783,7 +13784,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   );
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
-      <img className="mh-title-visual" src={titleArtSrc(titleArt, titleLandscape)} alt="モンスターヒーロー タイトル画面"/>
+      <img className="mh-title-backdrop" src={titleArtSrc(titleArt, titleLandscape)} alt="" aria-hidden="true"/><img className="mh-title-visual" src={titleArtSrc(titleArt, titleLandscape)} alt="モンスターヒーロー タイトル画面"/>
       <header className="mh-title-header"><div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div><div className="mh-title-actions"><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openChangelog()}}><Sparkles size={19}/><span>お知らせ</span>{hasUnreadChangelog&&<em>NEW</em>}</button><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setShowTitleSettings(true)}}><Settings size={19}/><span>設定</span></button></div></header>
       <button type="button" className="mh-title-start" disabled={!!titleModal || titleStarting} onPointerDown={startGame} aria-label="トップ画面へ進む"></button>{titleModal}
     </main>{updateNotice}{storageTroubleNotice}</>
@@ -13821,7 +13822,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             assistantBondUp={assistantBondUp} breederIcon={breederIcon} breederLevel={breederLevel}
             breederName={breederName} breederPoints={breederPoints} gifts={gifts} gold={gold}
             hasUnreadChangelog={hasUnreadChangelog} homeBackgroundReady={homeBackgroundReady}
-            homeBackgroundSrc={homeArtSrc(homeArt, titleLandscape || !!forcedRotationStyle)} homeBackgroundWide={homeArtIsWide(homeArt, titleLandscape || !!forcedRotationStyle)}
+            homeArt={homeArt}
             homePastureMasumons={homePastureMasumons} masuMons={masuMons} missions={missions}
             onOpenBattle={openBattleSystemSelect}
             onOpenManagement={()=>{addAssistantBond('management');setManagementTab('monster');setGameState('MB_MANAGEMENT');}}

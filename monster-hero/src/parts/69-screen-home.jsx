@@ -49,10 +49,25 @@ const HOME_EVENT_BADGE_CSS = `
 `;
 function HomeScreen({
   assistantBondUp, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
-  hasUnreadChangelog, homeBackgroundReady, homeBackgroundSrc, homeBackgroundWide, homePastureMasumons, masuMons, missions,
+  hasUnreadChangelog, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
 }) {
+  // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
+  // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
+  // 施設ボタンが建物と合わなくなる。枠の大きさは自前で回しているとき(横持ちの描き方)も回す前の値なので、そのまま使える
+  const homeSceneRef=React.useRef(null);
+  const [homeSceneWide,setHomeSceneWide]=React.useState(false);
+  React.useEffect(()=>{
+    const el=homeSceneRef.current;
+    if(!el)return undefined;
+    const measure=()=>{const w=el.clientWidth,h=el.clientHeight;if(w>0&&h>0)setHomeSceneWide(w/h>1.2);};
+    measure();
+    if(typeof ResizeObserver==='undefined'){window.addEventListener('resize',measure);return()=>window.removeEventListener('resize',measure);}
+    const ro=new ResizeObserver(measure);ro.observe(el);return()=>ro.disconnect();
+  },[]);
+  const homeBackgroundSrc=homeArtSrc(homeArt,homeSceneWide);
+  const homeBackgroundWide=homeArtIsWide(homeArt,homeSceneWide);
   // ★バッジのCSSは <head> へ1回だけ入れる。HOMEのDOMへ <style> を混ぜると、
   //   配置の検査(home-layout-check.js)が施設の位置を測るときに数がずれる。
   //   head なら画面の中身に影響しない。
@@ -72,9 +87,9 @@ function HomeScreen({
   })();
   return (
 
-      <main className="mh-home-scene" aria-label="村の広場">
-        {/* 背景は設定の「ホーム画面アレンジ」で選んだ絵。横画面では横長の絵を画面いっぱいに出す(is-wide) */}
-        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''}`} aria-hidden="true"><img src={homeBackgroundSrc||'data/images/home-background.jpg'} alt=""/></picture>
+      <main ref={homeSceneRef} className="mh-home-scene" aria-label="村の広場">
+        {/* 背景は設定の「ホーム画面アレンジ」で選んだ絵。HOMEの枠が横長なら横長の絵を画面いっぱいに出す(is-wide) */}
+        <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''} ${homeBackgroundWide?'is-wide':''}`} aria-hidden="true"><img className="mh-home-backdrop" src={homeBackgroundSrc} alt=""/><img className="mh-home-main" src={homeBackgroundSrc} alt=""/></picture>
         <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
         <header className={`mh-home-status${spotClass('settings')}`}>
