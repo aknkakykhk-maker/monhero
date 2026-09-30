@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33b1543d245b653f
+// source-sha256: 0f19bfb3ce20d364
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-09-30 16:05";
+const BUILD_DATE = "2026-09-30 16:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5456,8 +5456,7 @@ const SCREEN_THEME_CATEGORIES = [{
 }, {
   id: 'rhythm',
   label: 'モンヒロビート',
-  desc: '曲えらび・演奏画面',
-  ready: false
+  desc: '曲えらび・演奏画面'
 }];
 const SCREEN_THEME_READY_CATEGORIES = SCREEN_THEME_CATEGORIES.filter(category => category.ready !== false);
 const screenThemeFor = (screenTheme, category, now = Date.now()) => SCREEN_THEME_READY_CATEGORIES.some(c => c.id === category) ? resolveScreenTheme(screenTheme && screenTheme[category], now) : 'classic';
@@ -63853,6 +63852,7 @@ function MonsterHeroGame() {
       }
     }, React.createElement("div", {
       "data-mh-theme": screenThemeFor(screenTheme, screenThemeCategory(gameState, rhythmScreenOpen)),
+      "data-mh-theme-category": screenThemeCategory(gameState, rhythmScreenOpen),
       "data-mh-view-rotation": forcedRotationStyle ? 'true' : 'false',
       "data-mh-portrait-layout": portraitOnlyScreen ? 'true' : 'false',
       "data-phase-look": ecoMode === 'lite' || ultraEcoSession || normalizeBattleFxSettings(battleFxSettings).idleMotion === 'OFF' || battleFxLoad === 'LIGHT' || battleFxLoad === 'MINIMAL' ? 'calm' : 'rich',
