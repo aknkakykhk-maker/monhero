@@ -100,7 +100,7 @@ const fullScreenLayers = () => [...document.querySelectorAll('body *')].filter((
         }).pop();
         if (!overlay) return false;
         const buttons = [...overlay.querySelectorAll('button')];
-        const b = buttons.find(x => /閉じる|とじる|つぎへ|次へ|確認|わかった|OK|はい|あとで|スキップ/.test(x.textContent))
+        const b = buttons.find(x => /閉じる|次へ|確認|わかった|OK|はい|あとで|スキップ/.test(x.textContent))
           || buttons.find(x => x.querySelector('svg')) || buttons[buttons.length - 1];
         if (b) b.click();
         return !!b;

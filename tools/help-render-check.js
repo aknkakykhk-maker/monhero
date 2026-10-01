@@ -209,7 +209,7 @@ check('カテゴリでは中身の案内を詳細に出せる', catBubble.includ
 const openedTopic = text(ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.AssistantBubble, { helpRef:'battle/distance', line:'テスト', defaultOpen:true })));
 const distance = helpTopicById('battle','distance');
 check('吹き出しをタップするとヘルプ本文が詳細として開く',
-  distance.blocks.every(b => b.t !== 'p' || openedTopic.includes(b.text)) && openedTopic.includes('とじる'));
+  distance.blocks.every(b => b.t !== 'p' || openedTopic.includes(b.text)) && openedTopic.includes('閉じる'));
 const openedDetail = text(ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.AssistantBubble, { line:'テスト', detail:['詳しい説明1','詳しい説明2'], defaultOpen:true })));
 check('自前の文章も詳細として開ける', openedDetail.includes('詳しい説明1') && openedDetail.includes('詳しい説明2'));
 const openedScene = text(ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.AssistantBubble, { scene:'helpTop', defaultOpen:true })));

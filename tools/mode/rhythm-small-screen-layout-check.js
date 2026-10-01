@@ -49,7 +49,7 @@ const seed = (lookIntroSeen) => {
     await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true, timeout: 60000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
     await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
-    for (let i = 0; i < 6; i++) { if (!(await clickText('受け取る|閉じる|OK|とじる'))) break; await page.waitForTimeout(250); }
+    for (let i = 0; i < 6; i++) { if (!(await clickText('受け取る|閉じる|OK|閉じる'))) break; await page.waitForTimeout(250); }
     await clickText('モンヒロビート');
     await page.waitForSelector('[data-rhythm-demo-start]', { timeout: 30000 });
     await page.waitForTimeout(1200);
@@ -74,7 +74,7 @@ const seed = (lookIntroSeen) => {
     // --- 演奏中: コンボの節目の輪とポーズボタン ---
     for (const [w, h] of [[390, 844], [360, 640], [320, 568], [844, 390], [640, 360]]) {
       const { page } = await openSelect(w, h, true);
-      for (let i = 0; i < 5; i++) { if (!(await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find((b) => /^確認$|受け取る|閉じる|OK|とじる/.test((b.innerText || '').trim())); if (!x) return false; x.click(); return true; }))) break; await page.waitForTimeout(300); }
+      for (let i = 0; i < 5; i++) { if (!(await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find((b) => /^確認$|受け取る|閉じる|OK|閉じる/.test((b.innerText || '').trim())); if (!x) return false; x.click(); return true; }))) break; await page.waitForTimeout(300); }
       await page.evaluate(() => document.querySelector('[data-rhythm-demo-start]').click());
       await page.waitForSelector('[data-rhythm-play-area]', { timeout: 30000 });
       await page.waitForTimeout(2000);

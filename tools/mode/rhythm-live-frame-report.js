@@ -105,7 +105,7 @@ const run=async(chromium,{css,label})=>{
     await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
     await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
     await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
-    for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|とじる')))break;await page.waitForTimeout(250);}
+    for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(250);}
     await clickText('モンヒロビート');
     await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
     // 演奏画面のクラスを集めるのは、始める直前のこの時点ではなく演奏中に行う(下)

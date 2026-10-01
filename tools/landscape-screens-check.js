@@ -68,7 +68,7 @@ const TEMPLE_LINKS=(()=>{const app=fs.readFileSync(path.join(ROOT,'monster-hero/
   // 画面を覆っているもの(fixed / z-index の高い overlay)の中のボタンだけを押して閉じる
   const dismiss=async page=>{for(let i=0;i<14;i++){
     const did=await page.evaluate(()=>{const inOverlay=el=>{for(let e=el;e&&e!==document.body;e=e.parentElement){const s=getComputedStyle(e);if(s.position==='fixed'||(s.position==='absolute'&&Number(s.zIndex)>=40))return true;}return false;};
-      const l=[...document.querySelectorAll('button')].filter(b=>inOverlay(b)&&/^(確認|閉じる|とじる|OK|受け取る|つぎへ|次へ|わかった|はい|スキップ)$/.test((b.innerText||'').replace(/\s+/g,' ').trim()));
+      const l=[...document.querySelectorAll('button')].filter(b=>inOverlay(b)&&/^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ)$/.test((b.innerText||'').replace(/\s+/g,' ').trim()));
       if(!l.length)return false;l[0].click();return true;});
     if(!did)return;await page.waitForTimeout(300);}};
   const clickHome=(page,label)=>page.evaluate(l=>{const b=[...document.querySelectorAll('.mh-home-facility,.mh-home-mission,.mh-home-gift,.mh-home-settings')]

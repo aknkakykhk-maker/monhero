@@ -106,7 +106,7 @@ const NEWS_IDS = /^(tactics_intro|kiki_intro|momosuke_intro|beat_point_always_.*
     while (Date.now() < deadline) {
       (await shownNews()).forEach((id) => seen.add(id));
       if (await page.evaluate(() => document.body.innerText.includes('継承固有技Lv不具合修正のお詫び'))) apologyShown = true;
-      const moved = await clickText('^(つぎへ|次へ|とじる|閉じる|OK|スキップ|はじめる|さっそく|わかった|うん)');
+      const moved = await clickText('^(次へ|閉じる|OK|スキップ|はじめる|さっそく|わかった|うん)');
       if (!moved) atHome = atHome || await page.evaluate(() => document.body.innerText.includes('モンヒロバトル'));
       await page.waitForTimeout(moved ? 400 : 2000);
     }

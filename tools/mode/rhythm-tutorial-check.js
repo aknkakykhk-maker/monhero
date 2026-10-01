@@ -76,7 +76,7 @@ const serve=()=>new Promise(resolve=>{
     await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
     // ログインボーナスなどが重なっていたら閉じる
     for(let i=0;i<6;i++){
-      if(!(await clickText('受け取る|閉じる|OK|とじる')))break;
+      if(!(await clickText('受け取る|閉じる|OK|閉じる')))break;
       await page.waitForTimeout(300);
     }
     ok('HOMEにモンヒロビートの入口がある',(await bodyText()).includes('モンヒロビート'));
@@ -99,7 +99,7 @@ const serve=()=>new Promise(resolve=>{
       ok('案内が複数ページある',total>=5,`${total}ページ`);
       // --- 本題② 最後まで読むと「あそびかた練習」が始まるか ---
       for(let i=0;i<total+2;i++){
-        const moved=await clickText('^つぎへ$')||await clickText('^はじめる！$');
+        const moved=await clickText('^次へ$')||await clickText('^はじめる！$');
         if(!moved)break;
         await page.waitForTimeout(220);
       }

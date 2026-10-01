@@ -146,17 +146,17 @@ const serve=()=>new Promise(resolve=>{
       `${opened.width}×${opened.height}px / 画面 ${opened.viewport}×${opened.viewportH}px`);
     ok('読み上げに対応している（dialog / aria-modal / 代替テキスト）',
       opened.role==='dialog'&&opened.modalAttr==='true'&&/ジャケット/.test(opened.alt||''));
-    ok('とじるボタンがある',opened.hasClose===true);
+    ok('閉じるボタンがある',opened.hasClose===true);
 
     const during=await page.evaluate(()=>({song:window.__songId,difficulty:window.__difficultyId}));
     ok('大きい絵を出しても、選んでいる曲と難易度は変わらない',
       during.song===before.song&&during.difficulty===before.difficulty,
       `${before.song||'(既定)'}/${before.difficulty||'(既定)'} → ${during.song||'(既定)'}/${during.difficulty||'(既定)'}`);
 
-    // --- とじるボタンで閉じる ---
+    // --- 閉じるボタンで閉じる ---
     await tap(`${sel} [data-rhythm-song-art-close]`);
     await page.waitForTimeout(300);
-    ok('「とじる」で閉じられる',
+    ok('「閉じる」で閉じられる',
       await page.evaluate(root=>!document.querySelector(root).querySelector('[data-rhythm-song-art-modal]'),sel));
 
     // --- 背景を押しても閉じる ---

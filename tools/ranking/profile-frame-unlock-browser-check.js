@@ -53,7 +53,7 @@ const openProfile = async (page) => {
   await page.waitForTimeout(3000);
   for (let i = 0; i < 8; i++) {
     const clicked = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|あとで|スキップ|次へ|つぎへ|OK)$/.test(x.textContent.trim()));
+      const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|あとで|スキップ|次へ|OK)$/.test(x.textContent.trim()));
       if (b) b.click();
       return !!b;
     });
@@ -109,7 +109,7 @@ async function run() {
   const closeAll = async (page) => {
     for (let i = 0; i < 12; i++) {
       const clicked = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|あとで|スキップ|次へ|つぎへ|OK)$/.test(x.textContent.trim()));
+        const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|あとで|スキップ|次へ|OK)$/.test(x.textContent.trim()));
         if (b) b.click();
         return !!b;
       });
@@ -125,7 +125,7 @@ async function run() {
     noticeText = await high.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
     if (/新しい飾り枠をもらったよ/.test(noticeText)) { sawFrameNotice = true; break; }
     const clicked = await high.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find(x => /^(次へ|つぎへ|閉じる)$/.test(x.textContent.trim()));
+      const b = [...document.querySelectorAll('button')].find(x => /^(次へ|閉じる)$/.test(x.textContent.trim()));
       if (b) b.click();
       return !!b;
     });
@@ -161,7 +161,7 @@ async function run() {
     }));
   for (let i = 0; i < 8; i++) {
     const more = await high.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find(x => /^(次へ|つぎへ|閉じる)$/.test(x.textContent.trim()));
+      const b = [...document.querySelectorAll('button')].find(x => /^(次へ|閉じる)$/.test(x.textContent.trim()));
       if (b) b.click();
       return !!b;
     });

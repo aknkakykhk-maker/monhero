@@ -111,7 +111,7 @@ const check = (name, ok, detail = '') => {
       return box ? box.textContent.replace(/\s+/g, ' ').trim() : null;
     });
     const tapNext = async () => {
-      const next = page.locator('button').filter({ hasText: /^つぎへ$/ });
+      const next = page.locator('button').filter({ hasText: /^次へ$/ });
       if (await next.count() === 0) return false;
       await next.first().dispatchEvent('click');
       await page.waitForTimeout(220);
@@ -231,7 +231,7 @@ const check = (name, ok, detail = '') => {
       const el = document.querySelector('[data-enemy-intent]') || document.body;
       return (el.textContent || '').replace(/\s+/g, ' ').trim();
     });
-    // ガードを使う番(操作待ち)まで進める。吹き出しが消えて「つぎへ」も無くなる
+    // ガードを使う番(操作待ち)まで進める。吹き出しが消えて「次へ」も無くなる
     for (let i = 0; i < 12; i++) if (!(await tapNext())) break;
     const doSpots = await spots();
     check('ガードを使う番はカードとACTIONが光る',

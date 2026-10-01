@@ -116,7 +116,7 @@ function SkipResultScreen({
           <div className="bg-black/40 rounded-2xl border border-indigo-500/30 p-3">
             <div className="flex items-center justify-between mb-1"><span className="text-[11px] font-black text-indigo-300">ブリーダー経験値</span><span className="font-mono font-black text-white text-sm">+{skipResult.breederXpGain.toLocaleString()}</span></div>
             <LevelGrowthBar levelBefore={skipResult.breederLevelBefore} levelAfter={skipResult.breederLevelAfter}/>
-            {skipResult.breederLevelAfter.level>skipResult.breederLevelBefore.level&&(<div className="text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"><Sparkles size={9}/>ブリーダーポイント +{skipResult.breederLevelAfter.level-skipResult.breederLevelBefore.level}</div>)}
+            {skipResult.breederLevelAfter.level>skipResult.breederLevelBefore.level&&(<div className="text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"><Sparkles size={9}/>ブリーダーP +{skipResult.breederLevelAfter.level-skipResult.breederLevelBefore.level}</div>)}
           </div>
           {skipResult.heroBondGain?(
             <div className="bg-black/40 rounded-2xl border border-pink-500/30 p-3">

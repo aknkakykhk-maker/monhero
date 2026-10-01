@@ -17378,7 +17378,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="text-teal-300 font-black mb-1">受け取れるもの</div>
                 <div>・勇者モンの絆経験値（マスモンのみ）</div>
                 <div>・選んだ供モンは1/2、編成内で選ばなかったマスモンは1/4</div>
-                <div>・ブリーダー経験値とブリーダーポイント</div>
+                <div>・ブリーダー経験値とブリーダーP</div>
                 <div>・ダイヤ</div>
               </div>
               <div className="bg-black/40 rounded-xl border border-white/10 p-3 text-[10px] leading-relaxed text-slate-400">
@@ -17668,7 +17668,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </p>
             <div className={`relative mt-3 grid ${last?'grid-cols-1':'grid-cols-[1fr_2fr]'} gap-2`} style={{pointerEvents:'auto',zIndex:2}}>
               {!last&&<button type="button" onClick={(e)=>{e.stopPropagation();skip();}} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">スキップ</button>}
-              <button type="button" onClick={(e)=>{e.stopPropagation();next();}} className="min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]">{last?'とじる':'つぎへ'}</button>
+              <button type="button" onClick={(e)=>{e.stopPropagation();next();}} className="min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]">{last?'閉じる':'次へ'}</button>
             </div>
           </div>
         </div>);
@@ -17863,7 +17863,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span className="block text-[12px] text-white leading-relaxed mt-0.5">{assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)}</span>
                   </div>
                 </div>
-                <button onClick={()=>{ if(last) endBattleTutorial(true); else setBattleTutorialStep(v=>Math.min(total-1,(v||0)+1)); }} className="w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'おわる':'つぎへ'}</button>
+                <button onClick={()=>{ if(last) endBattleTutorial(true); else setBattleTutorialStep(v=>Math.min(total-1,(v||0)+1)); }} className="w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'おわる':'次へ'}</button>
               </div>
             )}
           </div>
@@ -17951,9 +17951,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             )}
             {!battleGuide&&<div className="w-full grid grid-cols-2 gap-2 mt-3">
               <button disabled={tutorialStep<=0} onClick={()=>setTutorialStep(v=>Math.max(0,v-1))} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]">もどる</button>
-              <button onClick={()=>{ if(last) finishTutorial(true); else setTutorialStep(v=>v+1); }} className={`min-h-[48px] rounded-2xl font-black text-sm active:scale-[.98] ${page.offer==='battle'?'bg-slate-800 text-slate-300':'text-black'}`} style={page.offer==='battle'?undefined:{backgroundColor:who.accent}}>{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'つぎへ'}</button>
+              <button onClick={()=>{ if(last) finishTutorial(true); else setTutorialStep(v=>v+1); }} className={`min-h-[48px] rounded-2xl font-black text-sm active:scale-[.98] ${page.offer==='battle'?'bg-slate-800 text-slate-300':'text-black'}`} style={page.offer==='battle'?undefined:{backgroundColor:who.accent}}>{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'次へ'}</button>
             </div>}
-            {battleGuide&&!page.offer&&!page.declined&&<button onClick={()=>setTutorialStep(v=>v+1)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>つぎへ</button>}
+            {battleGuide&&!page.offer&&!page.declined&&<button onClick={()=>setTutorialStep(v=>v+1)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>次へ</button>}
           </div>
         </div>);
       })()}

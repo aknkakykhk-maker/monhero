@@ -99,7 +99,7 @@ function HomeScreen({
             <ChevronRight className="mh-home-profile-arrow" size={15}/>
           </button>
           <section className="mh-home-wallet">
-            <div><Gem size={14}/><b>{gold.toLocaleString()}</b><small>ダイヤ</small></div><div><Coins size={14}/><b>{breederPoints}</b><small>pt</small></div>
+            <div><Gem size={14}/><b>{gold.toLocaleString()}</b><small>ダイヤ</small></div><div><Coins size={14}/><b>{breederPoints.toLocaleString()}</b><small>ブリーダーP</small></div>
             <button onClick={onOpenSettings} className={`mh-home-settings${spotClass('settings')}`} aria-label="設定"><Settings size={20}/><span>設定</span></button>
           </section>
         </header>
@@ -177,7 +177,7 @@ function KikiIntroOverlay({
         <p className="mt-2 text-center text-[8px] text-slate-500">
           {step+1} / {script.length}　／　みゅあは「{calls.mua||''}」、ききは「{calls.kiki||''}」と呼び合います
         </p>
-        <button onClick={next} className="mt-3 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]" style={{pointerEvents:'auto'}}>{last?'とじる':'つぎへ'}</button>
+        <button onClick={next} className="mt-3 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]" style={{pointerEvents:'auto'}}>{last?'閉じる':'次へ'}</button>
       </div>
     </div>);
   
@@ -217,7 +217,7 @@ function MomosukeIntroOverlay({
           <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
         </div>
         <p className="mt-2 text-center text-[8px] text-slate-500">{step+1} / {script.length}</p>
-        <button onClick={next} className="mt-3 min-h-[50px] w-full rounded-2xl bg-pink-400 text-sm font-black text-slate-950 active:scale-[.98]" style={{pointerEvents:'auto'}}>{last?'とじる':'つぎへ'}</button>
+        <button onClick={next} className="mt-3 min-h-[50px] w-full rounded-2xl bg-pink-400 text-sm font-black text-slate-950 active:scale-[.98]" style={{pointerEvents:'auto'}}>{last?'閉じる':'次へ'}</button>
       </div>
     </div>);
   

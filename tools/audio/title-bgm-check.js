@@ -203,7 +203,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
         const inOverlay = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) {
           const st = getComputedStyle(e); if (st.position === 'fixed' || Number(st.zIndex) > 1000) return true; } return false; };
         const b = [...document.querySelectorAll('button')]
-          .find((x) => inOverlay(x) && /^(確認|閉じる|とじる|OK|受け取る|つぎへ|次へ|わかった|はい|スキップ|あとで)$/.test((x.innerText || '').trim()));
+          .find((x) => inOverlay(x) && /^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ|あとで)$/.test((x.innerText || '').trim()));
         if (b) b.click();
         return !!b;
       });
