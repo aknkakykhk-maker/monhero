@@ -15523,6 +15523,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ・左の「ジャンルタブ」は曲が増えてから足す(2026-09-05・ユーザー指示で今回は置かない) */}
         {gameState==='RHYTHM_DEMO_HOME'&&(
           <RhythmSongSelectScreen
+            monsterSlots={rhythmMonsterSlots}
             rhythmSettings={rhythmSettings}
             onToggleRhythmSetting={async key=>{const saved=await saveRhythmSettings({...rhythmSettings,[key]:!rhythmSettings[key]});setRhythmSettings(saved);}}
             catchingUp={catchingUp}

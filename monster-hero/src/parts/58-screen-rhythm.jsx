@@ -52,7 +52,7 @@ function RhythmSongSelectScreen({
   rhythmBackgroundRun, rhythmBestRecords, rhythmSettings, rhythmEventNotice, rhythmSelectView, rhythmSelectedDifficultyId, rhythmSelectedSongId,
   rhythmSongListScrollRef, runStage, runStageRef, saveRhythmSelectView, setQuickRunDetailOpen,
   setQuickRunStartError, setQuickRunStopConfirm, setRhythmSelectedDifficultyId, setRhythmSelectedSongId, spotClass,
-  startQuickRunFromRhythm, wave,
+  startQuickRunFromRhythm, wave, monsterSlots=[],
 }) {
       const songs=rhythmDemoSongs(RHYTHM_SONGS);
       const difficulties=rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
@@ -169,8 +169,10 @@ function RhythmSongSelectScreen({
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
               折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
           <div className="min-w-0 flex-1">
-            <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
-            <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 楽曲選択</h2>
+            {/* 「体験版」の札は、右のボタンの幅を空けるためこの小さな行へ入れた(2026-10-01)。
+                題名はヘルプや案内と同じ呼び名「曲えらび」にそろえた(以前は「楽曲選択」) */}
+            <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT<span data-rhythm-demo-badge className="rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200">体験版</span></small>
+            <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 曲えらび</h2>
             {beatPointReleased&&Number.isFinite(beatPointBalance)&&<small data-rhythm-beat-point-balance aria-label={`所持ビートP ${beatPointBalance.toLocaleString()}`}
               className="block truncate text-[9px] font-black leading-tight text-violet-200/90">🎟️ {beatPointBalance.toLocaleString()} <span className="text-violet-300/80">ビートP</span></small>}
           </div>
@@ -178,19 +180,26 @@ function RhythmSongSelectScreen({
           {quickRunProgress&&<div data-quick-run-progress-header className="min-w-0 max-w-[260px] flex-1 rounded-lg border border-fuchsia-400/30 bg-slate-900/70">{quickRunBandButton}</div>}
           {/* 周回していないときの入口も、横持ちではここへ入れる(縦持ちでは出さない) */}
           {quickRunStartNode&&<div data-quick-run-start-header className="min-w-0 max-w-[260px] flex-1">{quickRunStartNode}</div>}
-          <span data-rhythm-demo-badge className="shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200">体験版</span>
           {/* 縦⇄横の切り替え。端末の回転ロックを解除しに行かなくても横画面で遊べるようにする
               (2026-09-05・ユーザー指示「縦なら横に横なら縦に変わるボタン」) */}
           <RhythmOrientationButton/>
+          {/* 右上の4つのボタンは「絵＋下に小さく名前」の同じ形(2026-10-01・ユーザー指摘「マスモン設定ボタン自体も
+              分かりづらいから画面幅を無駄にせず分かりやすいように」)。絵文字だけだと何のボタンか分からなかった。
+              マスモンのボタンは、設定中の子の顔を重ねて並べる(何体入っているかもひと目で分かる)。幅は前と同じくらい */}
           <button data-rhythm-demo-help aria-label="遊びかた" title="遊びかた"
             onClick={onOpenHelp}
-            className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`}>📖</button>
-          <button data-rhythm-demo-monsters aria-label="マスモン設定" title="マスモン設定"
+            className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none text-amber-100${spotClass('help')}`}><span aria-hidden="true" className="text-base leading-none">📖</span><span className="text-[9px] font-black leading-none">遊びかた</span></button>
+          <button data-rhythm-demo-monsters aria-label={`マスモン設定（${monsterSlots.length}/${RHYTHM_MONSTER_SLOT_MAX}体）`} title="マスモン設定"
             onClick={onOpenMonsterSlots}
-            className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-base text-fuchsia-100${spotClass('monsters')}`}>👾</button>
+            className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 px-1 leading-none text-fuchsia-100${spotClass('monsters')}`}>
+            <span data-rhythm-demo-monsters-faces aria-hidden="true" className="flex h-4 items-center">{monsterSlots.length
+              ?monsterSlots.slice(0,RHYTHM_MONSTER_SLOT_MAX).map((masu,i)=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];return <span key={masu.id} className="h-4 w-4 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950" style={i?{marginLeft:'-5px'}:undefined}>{base&&<img src={base.faceIconUrl||base.iconUrl} alt="" className="h-full w-full object-cover" draggable={false}/>}</span>;})
+              :<span className="text-base leading-none">👾</span>}</span>
+            <span className="text-[9px] font-black leading-none">マスモン</span>
+          </button>
           <button data-rhythm-demo-options aria-label="オプション" title="オプション"
             onClick={onOpenOptions}
-            className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100${spotClass('options')}`}>⚙️</button>
+            className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100${spotClass('options')}`}><span aria-hidden="true" className="text-base leading-none">⚙️</span><span className="text-[9px] font-black leading-none">設定</span></button>
         </header>
         {/* ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
             常に出すのは1行だけ。曲の一覧を押し下げないよう、詳細はタップで開く。

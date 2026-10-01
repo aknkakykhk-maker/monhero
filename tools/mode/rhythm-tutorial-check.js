@@ -85,7 +85,7 @@ const serve=()=>new Promise(resolve=>{
     await clickText('モンヒロビート');
     await page.waitForTimeout(2500);
     const afterEnter=await bodyText();
-    ok('モンビーの曲えらびへ入れる',afterEnter.includes('楽曲選択')||afterEnter.includes('モンビーへようこそ'));
+    ok('モンビーの曲えらびへ入れる',afterEnter.includes('曲えらび')||afterEnter.includes('楽曲選択')||afterEnter.includes('モンビーへようこそ'));
     const tutorialShown=await page.evaluate(()=>!!document.querySelector('[aria-label="はじめての案内"]'));
     ok('初めて開いたら助手の案内が出る',tutorialShown,
       tutorialShown?'':'出ていない（保存値・重なる案内・画面遷移のどれかで止まっている）');

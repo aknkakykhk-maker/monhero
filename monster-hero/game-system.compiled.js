@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 29bee95b85fe2732
+// source-sha256: 1f517565e3159d84
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 18:15";
+const BUILD_DATE = "2026-10-01 18:34";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -23820,7 +23820,7 @@ const RhythmOrientationButton = ({
     "aria-hidden": "true",
     className: "text-base leading-none"
   }, "🔄"), React.createElement("span", {
-    className: "text-[7px] font-black leading-none"
+    className: "text-[9px] font-black leading-none"
   }, landscape ? '縦' : '横')), note !== '' && React.createElement("p", {
     "data-rhythm-orientation-note": true,
     onClick: () => setNote(''),
@@ -35462,7 +35462,8 @@ function RhythmSongSelectScreen({
   setRhythmSelectedSongId,
   spotClass,
   startQuickRunFromRhythm,
-  wave
+  wave,
+  monsterSlots = []
 }) {
   const songs = rhythmDemoSongs(RHYTHM_SONGS);
   const difficulties = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
@@ -35569,10 +35570,13 @@ function RhythmSongSelectScreen({
   })), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("small", {
-    className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
-  }, "MONBEAT"), React.createElement("h2", {
+    className: "flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
+  }, "MONBEAT", React.createElement("span", {
+    "data-rhythm-demo-badge": true,
+    className: "rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200"
+  }, "体験版")), React.createElement("h2", {
     className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200"
-  }, "🎵 楽曲選択"), beatPointReleased && Number.isFinite(beatPointBalance) && React.createElement("small", {
+  }, "🎵 曲えらび"), beatPointReleased && Number.isFinite(beatPointBalance) && React.createElement("small", {
     "data-rhythm-beat-point-balance": true,
     "aria-label": `所持ビートP ${beatPointBalance.toLocaleString()}`,
     className: "block truncate text-[9px] font-black leading-tight text-violet-200/90"
@@ -35584,28 +35588,57 @@ function RhythmSongSelectScreen({
   }, quickRunBandButton), quickRunStartNode && React.createElement("div", {
     "data-quick-run-start-header": true,
     className: "min-w-0 max-w-[260px] flex-1"
-  }, quickRunStartNode), React.createElement("span", {
-    "data-rhythm-demo-badge": true,
-    className: "shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200"
-  }, "体験版"), React.createElement(RhythmOrientationButton, null), React.createElement("button", {
+  }, quickRunStartNode), React.createElement(RhythmOrientationButton, null), React.createElement("button", {
     "data-rhythm-demo-help": true,
     "aria-label": "遊びかた",
     title: "遊びかた",
     onClick: onOpenHelp,
-    className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`
-  }, "📖"), React.createElement("button", {
+    className: `flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none text-amber-100${spotClass('help')}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-base leading-none"
+  }, "📖"), React.createElement("span", {
+    className: "text-[9px] font-black leading-none"
+  }, "遊びかた")), React.createElement("button", {
     "data-rhythm-demo-monsters": true,
-    "aria-label": "マスモン設定",
+    "aria-label": `マスモン設定（${monsterSlots.length}/${RHYTHM_MONSTER_SLOT_MAX}体）`,
     title: "マスモン設定",
     onClick: onOpenMonsterSlots,
-    className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-base text-fuchsia-100${spotClass('monsters')}`
-  }, "👾"), React.createElement("button", {
+    className: `flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 px-1 leading-none text-fuchsia-100${spotClass('monsters')}`
+  }, React.createElement("span", {
+    "data-rhythm-demo-monsters-faces": true,
+    "aria-hidden": "true",
+    className: "flex h-4 items-center"
+  }, monsterSlots.length ? monsterSlots.slice(0, RHYTHM_MONSTER_SLOT_MAX).map((masu, i) => {
+    const base = ALL_PLAYER_MONSTERS[masu.baseId];
+    return React.createElement("span", {
+      key: masu.id,
+      className: "h-4 w-4 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950",
+      style: i ? {
+        marginLeft: '-5px'
+      } : undefined
+    }, base && React.createElement("img", {
+      src: base.faceIconUrl || base.iconUrl,
+      alt: "",
+      className: "h-full w-full object-cover",
+      draggable: false
+    }));
+  }) : React.createElement("span", {
+    className: "text-base leading-none"
+  }, "👾")), React.createElement("span", {
+    className: "text-[9px] font-black leading-none"
+  }, "マスモン")), React.createElement("button", {
     "data-rhythm-demo-options": true,
     "aria-label": "オプション",
     title: "オプション",
     onClick: onOpenOptions,
-    className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100${spotClass('options')}`
-  }, "⚙️")), quickRunProgress && React.createElement("div", {
+    className: `flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100${spotClass('options')}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-base leading-none"
+  }, "⚙️"), React.createElement("span", {
+    className: "text-[9px] font-black leading-none"
+  }, "設定"))), quickRunProgress && React.createElement("div", {
     "data-quick-run-progress": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-900/80"
   }, React.createElement("div", {
@@ -69644,6 +69677,7 @@ function MonsterHeroGame() {
         return saved;
       }
     }), gameState === 'RHYTHM_DEMO_HOME' && React.createElement(RhythmSongSelectScreen, {
+      monsterSlots: rhythmMonsterSlots,
       rhythmSettings: rhythmSettings,
       onToggleRhythmSetting: async key => {
         const saved = await saveRhythmSettings({
