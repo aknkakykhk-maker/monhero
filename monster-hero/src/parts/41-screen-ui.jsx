@@ -218,9 +218,12 @@ const TRAINING_FX_STATS = {
 };
 const TrainingCountUp = ({ from, to, delay = 0, duration = 900, format = null }) => {
   const [value, setValue] = React.useState(from);
+  const holderRef = React.useRef(null);
   React.useEffect(() => {
     let reduce = false;
     try { reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+    // バトル設定の「数字が増える動き」がオフのときは、最初から最後の値を出す
+    try { if (holderRef.current && holderRef.current.closest('[data-mh-count-up="OFF"]')) reduce = true; } catch (e) {}
     if (reduce || from === to) { setValue(to); return undefined; }
     setValue(from);
     let raf = 0;
@@ -237,7 +240,7 @@ const TrainingCountUp = ({ from, to, delay = 0, duration = 900, format = null })
     }, Math.max(0, delay));
     return () => { clearTimeout(timer); if (raf) cancelAnimationFrame(raf); };
   }, [from, to, delay, duration]);
-  return <>{format ? format(value) : value}</>;
+  return <span ref={holderRef}>{format ? format(value) : value}</span>;
 };
 // 「いくつから いくつへ」の1項目。元の値を小さく、新しい値を大きく(増えたぶんは駆け上がる)、増えた量を「+○○」で出す。
 const PhaseGrowthCell = ({ row, d = 0, countMs = 900, compact = false }) => {
