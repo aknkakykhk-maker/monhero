@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6115f8d72dca6e66
+// generated-sha256: 83473b975808b1fa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -160,7 +160,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-01 15:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-01 16:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21229,10 +21229,10 @@ const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onCo
 // 分からなかったので、各画面の上に同じ形の並びを出す(並びは postWavePhasePlan が組む)。
 // 画面ごとの識別色もここで決める(背景の光・並びの「いまここ」の色)。
 const PHASE_STEP_LABELS = Object.freeze({
-  training:'トレーニング', growth:'自動成長', ally:'供モン', slot:'配置', skill:'固有技', teaching:'アシストカード',
+  training:'トレーニング', growth:'自動成長', ally:'供モン', slot:'配置', skill:'固有技', teaching:'アシストカード', hero:'えらぶ',
 });
 const PHASE_ACCENT_RGB = Object.freeze({
-  training:'251,191,36', growth:'45,212,191', ally:'129,140,248', slot:'129,140,248', skill:'245,158,11', teaching:'192,132,252',
+  training:'251,191,36', growth:'45,212,191', ally:'129,140,248', slot:'129,140,248', skill:'245,158,11', teaching:'192,132,252', hero:'129,140,248',
 });
 const phaseAccentRgb = (id) => PHASE_ACCENT_RGB[id] || '148,163,184';
 // 手順の並び。plan に current が無いとき(ラン開始時の配置・アシストカードなど)は何も出さない。
@@ -21397,7 +21397,7 @@ const TeachingResultFx = ({ effect }) => {
 // 次の画面へ移るたびに、画面の真ん中を金の帯が横切って「いまから何の画面か」を一瞬だけ見せる。
 // 操作は止めない(pointer-events: none)。見せるのは約0.9秒で、動き続けるものは無い。
 const PHASE_BANNER_TITLES = Object.freeze({
-  training:'TRAINING', growth:'AUTO GROWTH', ally:'NEW ALLY', slot:'FORMATION', skill:'UNIQUE SKILL', teaching:'ASSIST CARD',
+  training:'TRAINING', growth:'AUTO GROWTH', ally:'NEW ALLY', slot:'FORMATION', skill:'UNIQUE SKILL', teaching:'ASSIST CARD', hero:'SELECT HERO',
 });
 const PhaseBanner = ({ phase, enabled }) => {
   const [shown, setShown] = React.useState(null);
@@ -21417,6 +21417,63 @@ const PhaseBanner = ({ phase, enabled }) => {
         <span className="mh-banner-sub">{PHASE_STEP_LABELS[shown.phase] || ''}</span>
         <b className="mh-banner-title">{PHASE_BANNER_TITLES[shown.phase] || ''}</b>
       </div>
+    </div>
+  );
+};
+
+// ==== WAVEのはじまりの演出 ====
+// 敵が出てバトルが始まるたびに、画面の真ん中へ「WAVE ○」を一瞬だけ出す。最後のWAVE(10)はボス戦として赤く出す。
+// 操作は止めない(pointer-events: none)。約1.5秒で、動き続けるものは無い。
+const WaveIntro = ({ enabled, wave, enemyName }) => {
+  const [shown, setShown] = React.useState(null);
+  const lastRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!enabled || !(wave > 0)) { lastRef.current = null; return undefined; }
+    const key = `${wave}:${enemyName || ''}`;
+    if (lastRef.current === key) return undefined;
+    lastRef.current = key;
+    setShown({ wave, name: enemyName || '', key: Date.now() });
+    const timer = setTimeout(() => setShown(null), 1500);
+    return () => clearTimeout(timer);
+  }, [enabled, wave, enemyName]);
+  if (!shown) return null;
+  const boss = shown.wave >= 10;
+  return (
+    <div key={shown.key} data-wave-intro={shown.wave} aria-hidden="true" className={`mh-waveintro${boss ? ' mh-waveintro-boss' : ''}`}>
+      <div className="mh-waveintro-line"/>
+      <div className="mh-waveintro-body">
+        <span className="mh-waveintro-sub">{boss ? 'FINAL BOSS' : 'BATTLE START'}</span>
+        <b className="mh-waveintro-title">WAVE {shown.wave}</b>
+        {shown.name && <span className="mh-waveintro-name">VS {shown.name}</span>}
+      </div>
+      <div className="mh-waveintro-line"/>
+    </div>
+  );
+};
+
+// ==== ラン終了(CHAMPION)の紙ふぶき ====
+// 位置・色・遅れは番号から決める(描くたびに変わらないように)。1回だけ降って、あとは何も動かない。
+const EndConfetti = ({ count = 22 }) => (
+  <div aria-hidden="true" className="mh-confetti">
+    {Array.from({ length: count }).map((_, i) => (
+      <i key={i} style={{'--x': `${(i * 37) % 100}%`, '--d': `${(i % 7) * 140}ms`, '--r': `${(i % 5) * 140 - 280}deg`, '--c': ['#fde68a', '#f9a8d4', '#a5f3fc', '#fff', '#fdba74'][i % 5]}}/>
+    ))}
+  </div>
+);
+
+// ==== クイックの成長・合流の1行(元の値 → 新しい値が駆け上がり、増えた量を出す) ====
+const QuickGrowthRow = ({ st, index }) => {
+  const diff = st.after - st.before;
+  const d = 250 + index * 130;
+  return (
+    <div className={`flex items-center gap-2 px-4 py-2 ${index > 0 ? 'border-t border-white/5' : ''}`}>
+      <span className="w-14 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
+      <span className="flex-1 text-right font-mono text-[13px] text-slate-300">{st.before.toLocaleString()}</span>
+      <span className="shrink-0 text-[11px]" style={{color:'#2dd4bf'}}>→</span>
+      <span className={`${diff > 0 ? 'mh-train-num ' : ''}flex-1 text-left font-mono text-[15px] font-black text-white`} style={diff > 0 ? {'--d': `${d + 800}ms`, '--glow': '45,212,191'} : undefined}>
+        {diff > 0 ? <TrainingCountUp from={st.before} to={st.after} delay={d} duration={800} format={v => v.toLocaleString()}/> : st.after.toLocaleString()}
+      </span>
+      <span className={`${diff > 0 ? 'mh-train-gain ' : ''}w-16 shrink-0 text-right font-mono text-[11px] font-black`} style={{color: diff > 0 ? '#5eead4' : '#64748b', ...(diff > 0 ? {'--d': `${d}ms`} : {})}}>{diff > 0 ? `+${diff.toLocaleString()}` : '±0'}</span>
     </div>
   );
 };
@@ -26681,7 +26738,7 @@ function ChampionScreen({
   speciesChallengeFromDebugRef, speciesChallengeSaveRunRef, speciesChallengeBattleRunRef,
 }) {
   return (
-<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
+<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><EndConfetti/><div className="relative z-10 shrink-0 flex flex-col items-center"><Crown size={64} className="mh-end-crown text-white animate-bounce mb-3"/><h1 className="mh-end-title text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1400} format={v=>v.toLocaleString()}/></div></div>}</div><div className="relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
 {speciesChallengeBattleRun&&<button data-species-champion-back onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;const keepMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});});}} disabled={resultActionPending} className="w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50">種族チャレンジ選択へ戻る</button>}<button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>
   );
 }
@@ -26691,7 +26748,7 @@ function GameOverScreen({
   runHighlights, runMode, runResultActionOnce, score,
 }) {
   return (
-<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" condition={runHighlights.firstLose?'firstLose':null} compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
+<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><span aria-hidden="true" className="mh-end-vignette"/><div className="mh-game-over-head relative z-10 shrink-0 flex flex-col items-center"><Skull size={48} className="mh-end-skull text-red-700 mb-3"/><h2 className="mh-end-title text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1000} format={v=>v.toLocaleString()}/></div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" condition={runHighlights.firstLose?'firstLose':null} compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
   );
 }
 
@@ -48125,15 +48182,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="mh-ph-heading"><h2 className="mh-ph-title text-2xl font-black italic">ステータスアップ！</h2></div>
           <p className="text-[10px] font-black text-slate-400 mt-1">WAVE {quickGrowth.nextWave-1} クリア／全ステータス +10%</p>
           <div className="mh-ph-panel mt-4 w-full overflow-hidden">
-            {quickGrowth.stats.map((st,i)=>(
-              <div key={st.label} className={`flex items-center gap-2 px-4 py-2 ${i>0?'border-t border-white/5':''}`}>
-                <span className="w-14 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
-                <span className="flex-1 text-right font-mono text-[13px] text-slate-300">{st.before.toLocaleString()}</span>
-                <span className="shrink-0 text-[11px]" style={{color:'#2dd4bf'}}>→</span>
-                <span className="flex-1 text-left font-mono text-[13px] font-black text-white">{st.after.toLocaleString()}</span>
-                <span className="w-16 shrink-0 text-right font-mono text-[11px] font-black" style={{color:st.after>st.before?'#5eead4':'#64748b'}}>{st.after>st.before?`+${(st.after-st.before).toLocaleString()}`:'±0'}</span>
-              </div>
-            ))}
+            {quickGrowth.stats.map((st,i)=><QuickGrowthRow key={st.label} st={st} index={i}/>)}
           </div>
           <div className="mh-ph-plate mt-3 !tracking-normal text-[11px]" style={{color:'#99f6e4'}}>ライフ・ガッツ全回復！</div>
         </QuickStepScreen>
@@ -48155,16 +48204,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
           {quickJoin.stats.length>0&&(
             <div className="mh-ph-panel mt-3 w-full overflow-hidden">
-              {quickJoin.stats.map((st,i)=>(
-                <div key={st.label} className={`flex items-center gap-2 px-4 py-2 ${i>0?'border-t border-white/5':''}`}>
-                  <span className="w-14 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
-                  <span className="flex-1 text-right font-mono text-[13px] text-slate-300">{st.before.toLocaleString()}</span>
-                  <span className="shrink-0 text-[11px]" style={{color:'#2dd4bf'}}>→</span>
-                  <span className="flex-1 text-left font-mono text-[13px] font-black text-white">{st.after.toLocaleString()}</span>
-                  {/* 増えた量。前後の数字だけだと、どれだけ伸びたのかを引き算しないと分からなかった */}
-                  <span className="w-16 shrink-0 text-right font-mono text-[11px] font-black" style={{color:st.after>st.before?'#5eead4':'#64748b'}}>{st.after>st.before?`+${(st.after-st.before).toLocaleString()}`:'±0'}</span>
-                </div>
-              ))}
+              {quickJoin.stats.map((st,i)=><QuickGrowthRow key={st.label} st={st} index={i}/>)}
             </div>
           )}
           {quickJoin.aptLabel&&<div className="mt-2 rounded-full border border-cyan-400/40 bg-cyan-950/40 px-3 py-1 text-[10px] font-black text-cyan-200">間合い適性 {quickJoin.aptLabel}</div>}
@@ -49297,8 +49337,12 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {/* 合流・トレーニング完了などの全画面演出も、モンビーを開いている間は出さない。
           裏で進んでいるだけのものが曲えらびの上へ全面表示され、操作を奪ってしまう。
           止めるのは見た目だけで、ランの進行そのものは今までどおり進む */}
-      {(()=>{const phaseId={REWARD_PICK:'training',QUICK_GROWTH:'growth',PICK_ALLY:'ally',PICK_SLOT:'slot',UPGRADE_SKILL:'skill',PICK_TEACHING:'teaching'}[gameState]||null;
-        return <PhaseBanner phase={phaseId} enabled={!!phasePlan&&Array.isArray(phasePlan)&&phasePlan.includes(phaseId)&&!!enemy}/>;})()}
+      {(()=>{const phaseId={PICK_HERO:'hero',REWARD_PICK:'training',QUICK_GROWTH:'growth',QUICK_JOIN:'ally',PICK_ALLY:'ally',PICK_SLOT:'slot',UPGRADE_SKILL:'skill',PICK_TEACHING:'teaching'}[gameState]||null;
+        // WAVEのあとは強化フェーズの並びにある画面だけ。ラン開始時は、勇者モン選び・配置・最初のアシストカードに出す
+        const inPlan=!!enemy&&Array.isArray(phasePlan)&&phasePlan.includes(phaseId==='ally'?'ally':phaseId);
+        const atRunStart=!enemy&&(phaseId==='hero'||phaseId==='slot'||phaseId==='teaching');
+        return <PhaseBanner phase={phaseId} enabled={inPlan||atRunStart||(gameState==='QUICK_JOIN'&&!!enemy)}/>;})()}
+      <WaveIntro enabled={gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name}/>
       {effect&&!rhythmScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
           <>
@@ -52977,6 +53021,43 @@ const createAnimationStyle = () => {
       background: linear-gradient(105deg, transparent 35%, rgba(255,244,214,.38) 50%, transparent 65%);
       animation: mhTrainSweep .9s ease-out backwards; animation-delay: var(--d, 0ms); }
     @keyframes mhTrainSweep { 0% { opacity: 1; transform: translateX(-110%); } 100% { opacity: 1; transform: translateX(110%); } }
+    /* ==== WAVEのはじまり(WaveIntro)。中央へ大きく出て、止まって、上へ抜ける。1回きり・操作は止めない ==== */
+    .mh-waveintro { position: fixed; left: 0; right: 0; top: 34%; z-index: 69000; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 8px;
+      animation: mhWaveIntro 1.5s cubic-bezier(.2,.8,.3,1) both; }
+    .mh-waveintro-line { height: 2px; width: 78%; background: linear-gradient(90deg, transparent, #f3d27a, transparent); box-shadow: 0 0 12px rgba(243,210,122,.8); }
+    .mh-waveintro-body { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .mh-waveintro-sub { font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #f3d27a; }
+    .mh-waveintro-title { font-size: 46px; font-weight: 900; font-style: italic; letter-spacing: .06em; line-height: 1;
+      background: linear-gradient(180deg, #fff6d8, #f3d27a 55%, #c58a28); -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 3px 0 rgba(0,0,0,.75)) drop-shadow(0 0 14px rgba(243,210,122,.6)); }
+    .mh-waveintro-name { font-size: 13px; font-weight: 900; color: #e2e8f0; text-shadow: 0 2px 4px rgba(0,0,0,.9); }
+    .mh-waveintro-boss .mh-waveintro-line { background: linear-gradient(90deg, transparent, #f87171, transparent); box-shadow: 0 0 14px rgba(248,113,113,.9); }
+    .mh-waveintro-boss .mh-waveintro-sub { color: #fca5a5; }
+    .mh-waveintro-boss .mh-waveintro-title { font-size: 52px; background: linear-gradient(180deg, #fff1f1, #fca5a5 50%, #dc2626); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 3px 0 rgba(0,0,0,.8)) drop-shadow(0 0 18px rgba(248,113,113,.8)); }
+    @keyframes mhWaveIntro {
+      0% { opacity: 0; transform: scale(1.7); filter: blur(6px); }
+      18% { opacity: 1; transform: scale(1); filter: none; }
+      72% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: translateY(-24px) scale(.96); }
+    }
+    /* ==== ラン終了の演出。紙ふぶきは1回だけ降る。王冠・どくろ・題字・赤い縁も1回きり ==== */
+    .mh-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
+    .mh-confetti > i { position: absolute; top: -4%; left: var(--x); width: 8px; height: 14px; border-radius: 2px; background: var(--c); opacity: 0;
+      animation: mhConfetti 2.6s ease-in var(--d) 1 both; }
+    @keyframes mhConfetti { 0% { opacity: 1; transform: translateY(0) rotate(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(110vh) rotate(var(--r, 360deg)) translateX(24px); } }
+    .mh-end-crown { animation: mhEndCrown .9s cubic-bezier(.2,1.6,.4,1) backwards; filter: drop-shadow(0 0 16px rgba(255,255,255,.85)); }
+    @keyframes mhEndCrown { 0% { opacity: 0; transform: translateY(-40px) scale(.3) rotate(-18deg); } 100% { opacity: 1; transform: none; } }
+    .mh-end-title { animation: mhEndTitle .8s cubic-bezier(.2,.9,.3,1) .25s backwards; }
+    @keyframes mhEndTitle { 0% { opacity: 0; letter-spacing: .6em; transform: scale(1.3); } 100% { opacity: 1; letter-spacing: normal; transform: none; } }
+    .mh-end-score { animation: mhPhasePop .5s cubic-bezier(.2,1.6,.4,1) .45s backwards; }
+    .mh-end-skull { animation: mhEndSkull 1s cubic-bezier(.3,.9,.3,1) backwards; }
+    @keyframes mhEndSkull { 0% { opacity: 0; transform: translateY(-50px) scale(1.8); } 55% { opacity: 1; transform: translateY(0) scale(1); } 65% { transform: translateX(-6px); } 75% { transform: translateX(6px); } 85% { transform: translateX(-3px); } 100% { transform: none; } }
+    .mh-end-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(circle at 50% 30%, rgba(220,38,38,0) 30%, rgba(127,29,29,.55) 100%); animation: mhEndVignette 1.8s ease-out both; }
+    @keyframes mhEndVignette { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .35; } }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette { animation: none !important; }
+      .mh-confetti { display: none; }
+    }
     /* ==== 強化フェーズの切り替わりの帯(PhaseBanner)。左から入って、真ん中で止まり、右へ抜ける。1回きり ==== */
     .mh-banner { position: fixed; left: 0; right: 0; top: 40%; z-index: 69000; pointer-events: none; overflow: hidden; height: 84px; }
     .mh-banner-band { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;

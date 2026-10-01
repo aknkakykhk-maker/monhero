@@ -193,10 +193,10 @@ const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onCo
 // 分からなかったので、各画面の上に同じ形の並びを出す(並びは postWavePhasePlan が組む)。
 // 画面ごとの識別色もここで決める(背景の光・並びの「いまここ」の色)。
 const PHASE_STEP_LABELS = Object.freeze({
-  training:'トレーニング', growth:'自動成長', ally:'供モン', slot:'配置', skill:'固有技', teaching:'アシストカード',
+  training:'トレーニング', growth:'自動成長', ally:'供モン', slot:'配置', skill:'固有技', teaching:'アシストカード', hero:'えらぶ',
 });
 const PHASE_ACCENT_RGB = Object.freeze({
-  training:'251,191,36', growth:'45,212,191', ally:'129,140,248', slot:'129,140,248', skill:'245,158,11', teaching:'192,132,252',
+  training:'251,191,36', growth:'45,212,191', ally:'129,140,248', slot:'129,140,248', skill:'245,158,11', teaching:'192,132,252', hero:'129,140,248',
 });
 const phaseAccentRgb = (id) => PHASE_ACCENT_RGB[id] || '148,163,184';
 // 手順の並び。plan に current が無いとき(ラン開始時の配置・アシストカードなど)は何も出さない。
@@ -361,7 +361,7 @@ const TeachingResultFx = ({ effect }) => {
 // 次の画面へ移るたびに、画面の真ん中を金の帯が横切って「いまから何の画面か」を一瞬だけ見せる。
 // 操作は止めない(pointer-events: none)。見せるのは約0.9秒で、動き続けるものは無い。
 const PHASE_BANNER_TITLES = Object.freeze({
-  training:'TRAINING', growth:'AUTO GROWTH', ally:'NEW ALLY', slot:'FORMATION', skill:'UNIQUE SKILL', teaching:'ASSIST CARD',
+  training:'TRAINING', growth:'AUTO GROWTH', ally:'NEW ALLY', slot:'FORMATION', skill:'UNIQUE SKILL', teaching:'ASSIST CARD', hero:'SELECT HERO',
 });
 const PhaseBanner = ({ phase, enabled }) => {
   const [shown, setShown] = React.useState(null);
@@ -381,6 +381,63 @@ const PhaseBanner = ({ phase, enabled }) => {
         <span className="mh-banner-sub">{PHASE_STEP_LABELS[shown.phase] || ''}</span>
         <b className="mh-banner-title">{PHASE_BANNER_TITLES[shown.phase] || ''}</b>
       </div>
+    </div>
+  );
+};
+
+// ==== WAVEのはじまりの演出 ====
+// 敵が出てバトルが始まるたびに、画面の真ん中へ「WAVE ○」を一瞬だけ出す。最後のWAVE(10)はボス戦として赤く出す。
+// 操作は止めない(pointer-events: none)。約1.5秒で、動き続けるものは無い。
+const WaveIntro = ({ enabled, wave, enemyName }) => {
+  const [shown, setShown] = React.useState(null);
+  const lastRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!enabled || !(wave > 0)) { lastRef.current = null; return undefined; }
+    const key = `${wave}:${enemyName || ''}`;
+    if (lastRef.current === key) return undefined;
+    lastRef.current = key;
+    setShown({ wave, name: enemyName || '', key: Date.now() });
+    const timer = setTimeout(() => setShown(null), 1500);
+    return () => clearTimeout(timer);
+  }, [enabled, wave, enemyName]);
+  if (!shown) return null;
+  const boss = shown.wave >= 10;
+  return (
+    <div key={shown.key} data-wave-intro={shown.wave} aria-hidden="true" className={`mh-waveintro${boss ? ' mh-waveintro-boss' : ''}`}>
+      <div className="mh-waveintro-line"/>
+      <div className="mh-waveintro-body">
+        <span className="mh-waveintro-sub">{boss ? 'FINAL BOSS' : 'BATTLE START'}</span>
+        <b className="mh-waveintro-title">WAVE {shown.wave}</b>
+        {shown.name && <span className="mh-waveintro-name">VS {shown.name}</span>}
+      </div>
+      <div className="mh-waveintro-line"/>
+    </div>
+  );
+};
+
+// ==== ラン終了(CHAMPION)の紙ふぶき ====
+// 位置・色・遅れは番号から決める(描くたびに変わらないように)。1回だけ降って、あとは何も動かない。
+const EndConfetti = ({ count = 22 }) => (
+  <div aria-hidden="true" className="mh-confetti">
+    {Array.from({ length: count }).map((_, i) => (
+      <i key={i} style={{'--x': `${(i * 37) % 100}%`, '--d': `${(i % 7) * 140}ms`, '--r': `${(i % 5) * 140 - 280}deg`, '--c': ['#fde68a', '#f9a8d4', '#a5f3fc', '#fff', '#fdba74'][i % 5]}}/>
+    ))}
+  </div>
+);
+
+// ==== クイックの成長・合流の1行(元の値 → 新しい値が駆け上がり、増えた量を出す) ====
+const QuickGrowthRow = ({ st, index }) => {
+  const diff = st.after - st.before;
+  const d = 250 + index * 130;
+  return (
+    <div className={`flex items-center gap-2 px-4 py-2 ${index > 0 ? 'border-t border-white/5' : ''}`}>
+      <span className="w-14 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
+      <span className="flex-1 text-right font-mono text-[13px] text-slate-300">{st.before.toLocaleString()}</span>
+      <span className="shrink-0 text-[11px]" style={{color:'#2dd4bf'}}>→</span>
+      <span className={`${diff > 0 ? 'mh-train-num ' : ''}flex-1 text-left font-mono text-[15px] font-black text-white`} style={diff > 0 ? {'--d': `${d + 800}ms`, '--glow': '45,212,191'} : undefined}>
+        {diff > 0 ? <TrainingCountUp from={st.before} to={st.after} delay={d} duration={800} format={v => v.toLocaleString()}/> : st.after.toLocaleString()}
+      </span>
+      <span className={`${diff > 0 ? 'mh-train-gain ' : ''}w-16 shrink-0 text-right font-mono text-[11px] font-black`} style={{color: diff > 0 ? '#5eead4' : '#64748b', ...(diff > 0 ? {'--d': `${d}ms`} : {})}}>{diff > 0 ? `+${diff.toLocaleString()}` : '±0'}</span>
     </div>
   );
 };

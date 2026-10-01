@@ -3598,6 +3598,43 @@ const createAnimationStyle = () => {
       background: linear-gradient(105deg, transparent 35%, rgba(255,244,214,.38) 50%, transparent 65%);
       animation: mhTrainSweep .9s ease-out backwards; animation-delay: var(--d, 0ms); }
     @keyframes mhTrainSweep { 0% { opacity: 1; transform: translateX(-110%); } 100% { opacity: 1; transform: translateX(110%); } }
+    /* ==== WAVEのはじまり(WaveIntro)。中央へ大きく出て、止まって、上へ抜ける。1回きり・操作は止めない ==== */
+    .mh-waveintro { position: fixed; left: 0; right: 0; top: 34%; z-index: 69000; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 8px;
+      animation: mhWaveIntro 1.5s cubic-bezier(.2,.8,.3,1) both; }
+    .mh-waveintro-line { height: 2px; width: 78%; background: linear-gradient(90deg, transparent, #f3d27a, transparent); box-shadow: 0 0 12px rgba(243,210,122,.8); }
+    .mh-waveintro-body { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .mh-waveintro-sub { font-size: 11px; font-weight: 900; letter-spacing: .4em; color: #f3d27a; }
+    .mh-waveintro-title { font-size: 46px; font-weight: 900; font-style: italic; letter-spacing: .06em; line-height: 1;
+      background: linear-gradient(180deg, #fff6d8, #f3d27a 55%, #c58a28); -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 3px 0 rgba(0,0,0,.75)) drop-shadow(0 0 14px rgba(243,210,122,.6)); }
+    .mh-waveintro-name { font-size: 13px; font-weight: 900; color: #e2e8f0; text-shadow: 0 2px 4px rgba(0,0,0,.9); }
+    .mh-waveintro-boss .mh-waveintro-line { background: linear-gradient(90deg, transparent, #f87171, transparent); box-shadow: 0 0 14px rgba(248,113,113,.9); }
+    .mh-waveintro-boss .mh-waveintro-sub { color: #fca5a5; }
+    .mh-waveintro-boss .mh-waveintro-title { font-size: 52px; background: linear-gradient(180deg, #fff1f1, #fca5a5 50%, #dc2626); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 3px 0 rgba(0,0,0,.8)) drop-shadow(0 0 18px rgba(248,113,113,.8)); }
+    @keyframes mhWaveIntro {
+      0% { opacity: 0; transform: scale(1.7); filter: blur(6px); }
+      18% { opacity: 1; transform: scale(1); filter: none; }
+      72% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: translateY(-24px) scale(.96); }
+    }
+    /* ==== ラン終了の演出。紙ふぶきは1回だけ降る。王冠・どくろ・題字・赤い縁も1回きり ==== */
+    .mh-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
+    .mh-confetti > i { position: absolute; top: -4%; left: var(--x); width: 8px; height: 14px; border-radius: 2px; background: var(--c); opacity: 0;
+      animation: mhConfetti 2.6s ease-in var(--d) 1 both; }
+    @keyframes mhConfetti { 0% { opacity: 1; transform: translateY(0) rotate(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(110vh) rotate(var(--r, 360deg)) translateX(24px); } }
+    .mh-end-crown { animation: mhEndCrown .9s cubic-bezier(.2,1.6,.4,1) backwards; filter: drop-shadow(0 0 16px rgba(255,255,255,.85)); }
+    @keyframes mhEndCrown { 0% { opacity: 0; transform: translateY(-40px) scale(.3) rotate(-18deg); } 100% { opacity: 1; transform: none; } }
+    .mh-end-title { animation: mhEndTitle .8s cubic-bezier(.2,.9,.3,1) .25s backwards; }
+    @keyframes mhEndTitle { 0% { opacity: 0; letter-spacing: .6em; transform: scale(1.3); } 100% { opacity: 1; letter-spacing: normal; transform: none; } }
+    .mh-end-score { animation: mhPhasePop .5s cubic-bezier(.2,1.6,.4,1) .45s backwards; }
+    .mh-end-skull { animation: mhEndSkull 1s cubic-bezier(.3,.9,.3,1) backwards; }
+    @keyframes mhEndSkull { 0% { opacity: 0; transform: translateY(-50px) scale(1.8); } 55% { opacity: 1; transform: translateY(0) scale(1); } 65% { transform: translateX(-6px); } 75% { transform: translateX(6px); } 85% { transform: translateX(-3px); } 100% { transform: none; } }
+    .mh-end-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(circle at 50% 30%, rgba(220,38,38,0) 30%, rgba(127,29,29,.55) 100%); animation: mhEndVignette 1.8s ease-out both; }
+    @keyframes mhEndVignette { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .35; } }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette { animation: none !important; }
+      .mh-confetti { display: none; }
+    }
     /* ==== 強化フェーズの切り替わりの帯(PhaseBanner)。左から入って、真ん中で止まり、右へ抜ける。1回きり ==== */
     .mh-banner { position: fixed; left: 0; right: 0; top: 40%; z-index: 69000; pointer-events: none; overflow: hidden; height: 84px; }
     .mh-banner-band { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;

@@ -17492,15 +17492,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="mh-ph-heading"><h2 className="mh-ph-title text-2xl font-black italic">ステータスアップ！</h2></div>
           <p className="text-[10px] font-black text-slate-400 mt-1">WAVE {quickGrowth.nextWave-1} クリア／全ステータス +10%</p>
           <div className="mh-ph-panel mt-4 w-full overflow-hidden">
-            {quickGrowth.stats.map((st,i)=>(
-              <div key={st.label} className={`flex items-center gap-2 px-4 py-2 ${i>0?'border-t border-white/5':''}`}>
-                <span className="w-14 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
-                <span className="flex-1 text-right font-mono text-[13px] text-slate-300">{st.before.toLocaleString()}</span>
-                <span className="shrink-0 text-[11px]" style={{color:'#2dd4bf'}}>→</span>
-                <span className="flex-1 text-left font-mono text-[13px] font-black text-white">{st.after.toLocaleString()}</span>
-                <span className="w-16 shrink-0 text-right font-mono text-[11px] font-black" style={{color:st.after>st.before?'#5eead4':'#64748b'}}>{st.after>st.before?`+${(st.after-st.before).toLocaleString()}`:'±0'}</span>
-              </div>
-            ))}
+            {quickGrowth.stats.map((st,i)=><QuickGrowthRow key={st.label} st={st} index={i}/>)}
           </div>
           <div className="mh-ph-plate mt-3 !tracking-normal text-[11px]" style={{color:'#99f6e4'}}>ライフ・ガッツ全回復！</div>
         </QuickStepScreen>
@@ -17522,16 +17514,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
           {quickJoin.stats.length>0&&(
             <div className="mh-ph-panel mt-3 w-full overflow-hidden">
-              {quickJoin.stats.map((st,i)=>(
-                <div key={st.label} className={`flex items-center gap-2 px-4 py-2 ${i>0?'border-t border-white/5':''}`}>
-                  <span className="w-14 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
-                  <span className="flex-1 text-right font-mono text-[13px] text-slate-300">{st.before.toLocaleString()}</span>
-                  <span className="shrink-0 text-[11px]" style={{color:'#2dd4bf'}}>→</span>
-                  <span className="flex-1 text-left font-mono text-[13px] font-black text-white">{st.after.toLocaleString()}</span>
-                  {/* 増えた量。前後の数字だけだと、どれだけ伸びたのかを引き算しないと分からなかった */}
-                  <span className="w-16 shrink-0 text-right font-mono text-[11px] font-black" style={{color:st.after>st.before?'#5eead4':'#64748b'}}>{st.after>st.before?`+${(st.after-st.before).toLocaleString()}`:'±0'}</span>
-                </div>
-              ))}
+              {quickJoin.stats.map((st,i)=><QuickGrowthRow key={st.label} st={st} index={i}/>)}
             </div>
           )}
           {quickJoin.aptLabel&&<div className="mt-2 rounded-full border border-cyan-400/40 bg-cyan-950/40 px-3 py-1 text-[10px] font-black text-cyan-200">間合い適性 {quickJoin.aptLabel}</div>}
@@ -18664,8 +18647,12 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {/* 合流・トレーニング完了などの全画面演出も、モンビーを開いている間は出さない。
           裏で進んでいるだけのものが曲えらびの上へ全面表示され、操作を奪ってしまう。
           止めるのは見た目だけで、ランの進行そのものは今までどおり進む */}
-      {(()=>{const phaseId={REWARD_PICK:'training',QUICK_GROWTH:'growth',PICK_ALLY:'ally',PICK_SLOT:'slot',UPGRADE_SKILL:'skill',PICK_TEACHING:'teaching'}[gameState]||null;
-        return <PhaseBanner phase={phaseId} enabled={!!phasePlan&&Array.isArray(phasePlan)&&phasePlan.includes(phaseId)&&!!enemy}/>;})()}
+      {(()=>{const phaseId={PICK_HERO:'hero',REWARD_PICK:'training',QUICK_GROWTH:'growth',QUICK_JOIN:'ally',PICK_ALLY:'ally',PICK_SLOT:'slot',UPGRADE_SKILL:'skill',PICK_TEACHING:'teaching'}[gameState]||null;
+        // WAVEのあとは強化フェーズの並びにある画面だけ。ラン開始時は、勇者モン選び・配置・最初のアシストカードに出す
+        const inPlan=!!enemy&&Array.isArray(phasePlan)&&phasePlan.includes(phaseId==='ally'?'ally':phaseId);
+        const atRunStart=!enemy&&(phaseId==='hero'||phaseId==='slot'||phaseId==='teaching');
+        return <PhaseBanner phase={phaseId} enabled={inPlan||atRunStart||(gameState==='QUICK_JOIN'&&!!enemy)}/>;})()}
+      <WaveIntro enabled={gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name}/>
       {effect&&!rhythmScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
           <>
