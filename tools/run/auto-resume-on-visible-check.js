@@ -125,7 +125,7 @@ const setHidden = (page, hidden) => page.evaluate((h) => {
     await page.evaluate(() => { [...document.querySelectorAll('button')].find((x) => /新規習得/.test(x.textContent))?.click(); });
     await page.waitForTimeout(900);
     await clickExact('習得する');
-    await page.waitForTimeout(1800);
+    await page.waitForTimeout(3500);
     await page.waitForFunction(() => !!document.querySelector('button[aria-label^="AUTO"]'), { timeout: 25000 }).catch(() => {});
     for (let i = 0; i < 3 && (await autoLabel()) !== 'AUTO ∞'; i++) {
       await page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.click());

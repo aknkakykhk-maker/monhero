@@ -203,7 +203,7 @@ const check = (name, ok, detail = '') => {
     await page.locator('button').filter({ hasText: /^ニコラオの力/ }).first().dispatchEvent('click');
     await page.waitForTimeout(400);
     await page.locator('button').filter({ hasText: /^習得する$/ }).first().dispatchEvent('click');
-    await page.waitForTimeout(1200);
+    await page.waitForTimeout(3000);
     check('練習のままバトル画面まで進む', await page.locator('[data-battle-action]').count() >= 1);
     // ★このモードの盤面。1体ずつのライフとガッツを持つ枠が出ていること
     //   (2026-09-22 に上の段をやめ、枠そのものの中へ入れた)

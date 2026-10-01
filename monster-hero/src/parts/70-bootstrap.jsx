@@ -3586,15 +3586,39 @@ const createAnimationStyle = () => {
       100% { transform: scale(1); text-shadow: 0 0 6px rgba(var(--glow, 251,191,36), .45); }
     }
     .mh-train-gain { animation: mhTrainGain .5s cubic-bezier(.2,1.6,.4,1) backwards; animation-delay: var(--d, 0ms); }
+    /* WAVEリザルトの内訳が上から順に出てくる */
+    .mh-wave-rows > * { animation: mhPhaseEnter .42s cubic-bezier(.2,.8,.3,1) backwards; }
+    .mh-wave-rows > *:nth-child(1) { animation-delay: .1s; } .mh-wave-rows > *:nth-child(2) { animation-delay: .2s; } .mh-wave-rows > *:nth-child(3) { animation-delay: .3s; }
+    .mh-wave-rows > *:nth-child(4) { animation-delay: .4s; } .mh-wave-rows > *:nth-child(5) { animation-delay: .5s; } .mh-wave-rows > *:nth-child(6) { animation-delay: .6s; }
+    .mh-wave-rows > *:nth-child(n+7) { animation-delay: .7s; }
+    @media (prefers-reduced-motion: reduce) { .mh-wave-rows > * { animation: none !important; } }
     @keyframes mhTrainGain { 0% { opacity: 0; transform: translateY(10px) scale(.4); } 100% { opacity: 1; transform: none; } }
     /* カードを一度だけ横切る光の筋 */
     .mh-train-sweep { position: absolute; inset: 0; pointer-events: none; opacity: 0;
       background: linear-gradient(105deg, transparent 35%, rgba(255,244,214,.38) 50%, transparent 65%);
       animation: mhTrainSweep .9s ease-out backwards; animation-delay: var(--d, 0ms); }
     @keyframes mhTrainSweep { 0% { opacity: 1; transform: translateX(-110%); } 100% { opacity: 1; transform: translateX(110%); } }
+    /* ==== 強化フェーズの切り替わりの帯(PhaseBanner)。左から入って、真ん中で止まり、右へ抜ける。1回きり ==== */
+    .mh-banner { position: fixed; left: 0; right: 0; top: 40%; z-index: 69000; pointer-events: none; overflow: hidden; height: 84px; }
+    .mh-banner-band { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+      background: linear-gradient(90deg, rgba(2,6,23,0) 0%, rgba(6,8,22,.94) 18%, rgba(6,8,22,.94) 82%, rgba(2,6,23,0) 100%);
+      border-top: 1px solid rgba(243,210,122,.75); border-bottom: 1px solid rgba(243,210,122,.75);
+      box-shadow: 0 0 22px rgba(var(--ph, 251,191,36), .45);
+      animation: mhBanner .95s cubic-bezier(.2,.8,.3,1) both; }
+    .mh-banner-title { font-size: 28px; font-weight: 900; font-style: italic; letter-spacing: .08em; line-height: 1;
+      background: linear-gradient(180deg, #fff6d8, #f3d27a 55%, #c58a28); -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 2px 0 rgba(0,0,0,.7)); }
+    .mh-banner-sub { font-size: 10px; font-weight: 900; letter-spacing: .3em; color: rgb(var(--ph, 251,191,36)); }
+    @keyframes mhBanner {
+      0% { transform: translateX(-100%); opacity: 0; }
+      22% { transform: translateX(0); opacity: 1; }
+      78% { transform: translateX(0); opacity: 1; }
+      100% { transform: translateX(100%); opacity: 0; }
+    }
     .mh-train-guard { animation: mhTrainCard .5s cubic-bezier(.2,.9,.3,1) backwards; animation-delay: var(--d, 0ms); }
     @media (prefers-reduced-motion: reduce) {
       .mh-train-title, .mh-train-sub, .mh-train-card, .mh-train-num, .mh-train-gain, .mh-train-sweep, .mh-train-guard { animation: none !important; }
+      .mh-banner-band { animation: none !important; }
       .mh-train-sweep { display: none; }
     }
     /* 決定できるようになったボタンの呼吸 */

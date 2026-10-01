@@ -165,7 +165,7 @@ const TRAINING_FX_STATS = {
   def:  { tint:'text-emerald-300', bar:'bg-emerald-400', glow:'52,211,153',  Icon:'ShieldCheck' },
   guts: { tint:'text-amber-300',   bar:'bg-amber-400',   glow:'251,191,36',  Icon:'Sparkles' },
 };
-const TrainingCountUp = ({ from, to, delay = 0, duration = 900 }) => {
+const TrainingCountUp = ({ from, to, delay = 0, duration = 900, format = null }) => {
   const [value, setValue] = React.useState(from);
   React.useEffect(() => {
     let reduce = false;
@@ -186,14 +186,31 @@ const TrainingCountUp = ({ from, to, delay = 0, duration = 900 }) => {
     }, Math.max(0, delay));
     return () => { clearTimeout(timer); if (raf) cancelAnimationFrame(raf); };
   }, [from, to, delay, duration]);
-  return <>{value}</>;
+  return <>{format ? format(value) : value}</>;
+};
+// 「いくつから いくつへ」の1項目。元の値を小さく、新しい値を大きく(増えたぶんは駆け上がる)、増えた量を「+○○」で出す。
+const PhaseGrowthCell = ({ row, d = 0, countMs = 900, compact = false }) => {
+  const st = TRAINING_FX_STATS[row.key] || TRAINING_FX_STATS.hp;
+  const Icon = { Heart, Sword, ShieldCheck, Sparkles }[st.Icon];
+  const diff = row.after - row.before;
+  return (
+    <div className="mh-ph-cell rounded-lg px-1 py-1 text-center font-mono">
+      <span className="flex items-center justify-center gap-0.5 text-[8px] font-black text-slate-400 leading-none"><span className={st.tint}><Icon size={9}/></span>{row.label}</span>
+      <span className="block text-[9px] font-black text-slate-500 leading-tight mt-0.5">{row.before}<span className="text-slate-600"> →</span></span>
+      <span className={`${diff > 0 ? 'mh-train-num ' : ''}block font-black leading-tight ${compact ? 'text-[15px]' : 'text-[22px]'} ${diff > 0 ? st.tint : 'text-slate-300'}`} style={diff > 0 ? {'--d': `${d + countMs}ms`, '--glow': st.glow} : undefined}>
+        {diff > 0 ? <TrainingCountUp from={row.before} to={row.after} delay={d} duration={countMs}/> : row.after}
+      </span>
+      {diff > 0
+        ? <span className={`mh-train-gain mt-0.5 mx-auto block w-fit rounded-full border border-white/20 bg-black/50 px-2 py-px text-[11px] font-black leading-tight ${st.tint}`} style={{'--d': `${d}ms`}}>+{diff}</span>
+        : <span className="block text-[9px] font-black text-slate-600 leading-none mt-0.5">±0</span>}
+    </div>
+  );
 };
 const TrainingResultFx = ({ effect }) => {
   const entries = Array.isArray(effect?.entries) ? effect.entries : [];
   const total = Math.max(600, Number(effect?.ms) || 2600);
   const countMs = Math.max(250, Math.min(1100, Math.round(total * 0.4)));
   const compact = entries.length >= 3;
-  const icons = { Heart, Sword, ShieldCheck, Sparkles };
   const gained = entries.reduce((sum, entry) => sum + entry.rows.filter(row => row.after > row.before).length, 0);
   return (
     <div data-training-result-fx className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 overflow-hidden" style={{'--ph':'251,191,36'}}>
@@ -217,24 +234,9 @@ const TrainingResultFx = ({ effect }) => {
                 <b className={`min-w-0 truncate font-black text-white ${compact ? 'text-[12px]' : 'text-[16px]'}`}>{entry.name}</b>
               </div>
               <div className="relative grid grid-cols-4 gap-1.5">
-                {entry.rows.map((row, ri) => {
-                  const st = TRAINING_FX_STATS[row.key] || TRAINING_FX_STATS.hp;
-                  const Icon = icons[st.Icon];
-                  const diff = row.after - row.before;
-                  const d = base + ri * 110;
-                  return (
-                    <div key={row.key} className="mh-ph-cell rounded-lg px-1 py-1 text-center font-mono">
-                      <span className="flex items-center justify-center gap-0.5 text-[8px] font-black text-slate-400 leading-none"><span className={st.tint}><Icon size={9}/></span>{row.label}</span>
-                      <span className="block text-[9px] font-black text-slate-500 leading-tight mt-0.5">{row.before}<span className="text-slate-600"> →</span></span>
-                      <span className={`${diff > 0 ? 'mh-train-num ' : ''}block font-black leading-tight ${compact ? 'text-[15px]' : 'text-[22px]'} ${diff > 0 ? st.tint : 'text-slate-300'}`} style={diff > 0 ? {'--d': `${d + countMs}ms`, '--glow': st.glow} : undefined}>
-                        {diff > 0 ? <TrainingCountUp from={row.before} to={row.after} delay={d} duration={countMs}/> : row.after}
-                      </span>
-                      {diff > 0
-                        ? <span className={`mh-train-gain mt-0.5 mx-auto block w-fit rounded-full border border-white/20 bg-black/50 px-2 py-px text-[11px] font-black leading-tight ${st.tint}`} style={{'--d': `${d}ms`}}>+{diff}</span>
-                        : <span className="block text-[9px] font-black text-slate-600 leading-none mt-0.5">±0</span>}
-                    </div>
-                  );
-                })}
+                {entry.rows.map((row, ri) => (
+                  <PhaseGrowthCell key={row.key} row={row} d={base + ri * 110} countMs={countMs} compact={compact}/>
+                ))}
               </div>
             </div>
           );
@@ -244,6 +246,90 @@ const TrainingResultFx = ({ effect }) => {
         <div className="text-[13px] font-black text-sky-200">🛡️ {effect.guard.title}</div>
         <div className="text-[9px] font-bold text-sky-100/80 leading-snug whitespace-pre-line">{effect.guard.text}</div>
       </div>}
+    </div>
+  );
+};
+
+// ==== 供モン合流の演出 ====
+//   effect … { name, imgUrl, baseId, colors, emoji, rows:[{key,label,before,after}], apt, wave, ms }
+const AllyJoinFx = ({ effect }) => {
+  const total = Math.max(600, Number(effect?.ms) || 2600);
+  const countMs = Math.max(250, Math.min(1100, Math.round(total * 0.4)));
+  const rows = Array.isArray(effect?.rows) ? effect.rows : [];
+  return (
+    <div data-ally-join-fx className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 overflow-hidden" style={{'--ph':'129,140,248'}}>
+      <div className="shrink-0 flex flex-col items-center gap-1">
+        <span className="mh-ph-plate">{effect.wave > 0 ? `WAVE ${effect.wave} CLEAR ・ ` : ''}新しい仲間が合流</span>
+        <div className="mh-ph-heading"><h2 className="mh-ph-title mh-train-title text-3xl font-black italic uppercase tracking-tighter leading-none">JOIN!</h2></div>
+      </div>
+      <div className="relative shrink-0 flex items-center justify-center" style={{'--ph':'243,210,122'}}>
+        <span aria-hidden="true" className="mh-ph-rune"/>
+        <span aria-hidden="true" className="mh-ph-floor"/>
+        <div className="mh-phase-pop relative z-10 h-32 w-32 flex items-center justify-center" style={{animationDelay:'.15s'}}>
+          {effect.imgUrl ? <DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="" masuColors={effect.colors} className="h-full w-full object-contain drop-shadow-[0_0_24px_rgba(129,140,248,0.75)]"/> : <span className="text-7xl">{effect.emoji}</span>}
+        </div>
+      </div>
+      <div className="mh-train-sub shrink-0 text-xl font-black text-white">{effect.name}<span className="text-slate-300 text-sm">が仲間になった！</span></div>
+      <div className="mh-train-card mh-ph-panel relative w-full max-w-sm overflow-hidden rounded-2xl px-2.5 py-2" style={{'--d': '350ms'}}>
+        <span aria-hidden="true" className="mh-train-sweep" style={{'--d': '500ms'}}/>
+        <div className="relative mb-1 text-left text-[9px] font-black text-[#f3d27a]">パーティのステータス</div>
+        <div className="relative grid grid-cols-4 gap-1.5">
+          {rows.map((row, ri) => <PhaseGrowthCell key={row.key} row={row} d={450 + ri * 110} countMs={countMs}/>)}
+        </div>
+        {effect.apt && <div className="mh-train-gain relative mt-1.5 text-center text-[10px] font-black text-cyan-300" style={{'--d': '1000ms'}}>間合い適性 {effect.apt}</div>}
+      </div>
+    </div>
+  );
+};
+
+// ==== アシストカードを覚えた・強化したときの演出 ====
+//   effect … { name, icon, id, fromLevel(-1=新規), toLevel, maxLevel, desc, ms }
+const TeachingResultFx = ({ effect }) => {
+  const isUpgrade = effect.fromLevel >= 0;
+  return (
+    <div data-teaching-result-fx className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 overflow-hidden" style={{'--ph':'192,132,252'}}>
+      <span className="mh-ph-plate">ASSIST CARD</span>
+      <div className="mh-ph-heading"><h2 className="mh-ph-title mh-train-title text-3xl font-black italic uppercase tracking-tighter leading-none">{isUpgrade ? 'POWER UP!' : 'NEW CARD!'}</h2></div>
+      <div className="relative shrink-0 flex items-center justify-center" style={{'--ph':'243,210,122'}}>
+        <span aria-hidden="true" className="mh-ph-rune"/>
+        <span className="mh-phase-pop mh-ph-medal relative z-10 rounded-3xl p-2 leading-none" style={{animationDelay:'.15s'}}>{cardIconNode(effect.icon, 84, effect.id)}</span>
+      </div>
+      <div className="mh-train-sub text-lg font-black text-white">{effect.name}</div>
+      <div className="flex items-center gap-2" aria-hidden="true">
+        {Array.from({ length: (effect.maxLevel || 2) + 1 }).map((_, i) => (
+          <i key={i} className={`mh-ph-pip${i === effect.toLevel ? ' mh-train-gain' : ''}`} data-on={i <= effect.toLevel ? '' : undefined} style={i === effect.toLevel ? {'--d': '450ms'} : undefined}/>
+        ))}
+      </div>
+      <div className="mh-train-gain text-[12px] font-black text-purple-200" style={{'--d': '450ms'}}>{isUpgrade ? `Lv.${effect.fromLevel} → Lv.${effect.toLevel} に強化！` : '新しく習得しました！'}</div>
+      {effect.desc && <div className="mh-train-card mh-ph-panel w-full max-w-sm rounded-2xl px-3 py-2 text-[11px] font-bold leading-snug text-slate-100" style={{'--d': '300ms'}}>{effect.desc}</div>}
+    </div>
+  );
+};
+
+// ==== 強化フェーズの切り替わりの帯 ====
+// 次の画面へ移るたびに、画面の真ん中を金の帯が横切って「いまから何の画面か」を一瞬だけ見せる。
+// 操作は止めない(pointer-events: none)。見せるのは約0.9秒で、動き続けるものは無い。
+const PHASE_BANNER_TITLES = Object.freeze({
+  training:'TRAINING', growth:'AUTO GROWTH', ally:'NEW ALLY', slot:'FORMATION', skill:'UNIQUE SKILL', teaching:'ASSIST CARD',
+});
+const PhaseBanner = ({ phase, enabled }) => {
+  const [shown, setShown] = React.useState(null);
+  const lastRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!phase || !enabled) { lastRef.current = phase || null; return undefined; }
+    if (lastRef.current === phase) return undefined;
+    lastRef.current = phase;
+    setShown({ phase, key: Date.now() });
+    const timer = setTimeout(() => setShown(null), 950);
+    return () => clearTimeout(timer);
+  }, [phase, enabled]);
+  if (!shown) return null;
+  return (
+    <div key={shown.key} data-phase-banner={shown.phase} aria-hidden="true" className="mh-banner" style={{'--ph': phaseAccentRgb(shown.phase)}}>
+      <div className="mh-banner-band">
+        <span className="mh-banner-sub">{PHASE_STEP_LABELS[shown.phase] || ''}</span>
+        <b className="mh-banner-title">{PHASE_BANNER_TITLES[shown.phase] || ''}</b>
+      </div>
     </div>
   );
 };
