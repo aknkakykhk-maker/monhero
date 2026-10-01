@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c8202ebff3756be2
+// generated-sha256: fc291ed4e3d3a02e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -120,8 +120,10 @@ const normalizeBattleFxSettings = (value) => {
     restPause: v.restPause === 'ON' ? 'ON' : 'OFF',
     // 重いときに画面の軽さを自動で下げる(2026-09-28 ユーザー指示「モンビーみたいに重さチェックやその他点検ツールを取り入れて
     // 軽くて見た目が良く出来る仕組みを作って」)。モンヒロビートの「重いときは演出を自動で控えめに」と同じ考え方。
-    // ★足す前に保存した人(autoLoad が無い)は ON。下げたぶんは保存せず、アプリを開き直すと元の軽さに戻る
-    autoLoad: v.autoLoad === 'OFF' ? 'OFF' : 'ON',
+    // ★既定は OFF(下げない)(2026-10-01 ユーザー指示「デフォルトはオフにして」)。自動で下げると敵の待機の動きなどが止まり、
+    //   「動いていない」ように見えていたため、使いたい人だけ ON にする。すでに ON で保存していた人は、60-app.jsx の一度きりの移行で OFF にする
+    //   下げたぶんは保存せず、アプリを開き直すと元の軽さに戻る
+    autoLoad: v.autoLoad === 'ON' ? 'ON' : 'OFF',
     // ボスの必殺技ムービー(2026-09-25 ユーザー指示「設定でオンオフもつけて」)。
     // ★足す前に保存した人(specialMovie が無い)は ON(流す)で始まる
     specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON',
@@ -158,7 +160,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-01 14:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-01 14:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4614,7 +4616,7 @@ const screenThemeCategory = (gameState, rhythmOpen = false) => {
 // wideSrc は横画面(画面の横幅が高さより広いとき)に出す絵。無い絵は縦の絵を切り抜いて出す
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
 const TITLE_ART_OPTIONS = [
-  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg', wideSrc: 'data/images/title-screen-halloween-wide.jpg' },
+  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
 ];
 // 'auto'(おまかせ)は季節に合わせる(SCREEN_THEME_HALLOWEEN_UNTIL まではハロウィン、そのあとはクラシック)
@@ -14907,8 +14909,37 @@ const beginNewRankingRun = ({ runIdRef, scoreSubmittedRef, runFinalizingRef, rew
 //   ・表の作り方は docs/sql/rankings/RHYTHM_PLAY_LOG_APPLY.sql(先にアプリを公開しても壊れない)
 const RHYTHM_PLAY_LOG_TABLE = 'rhythm_play_logs';
 let rhythmPlayLogDisabled = false;
+// タッチの診断(2026-09-30・docs/spec/RHYTHM_TOUCH_DIAG.md)。遊んだ記録と同じく、表が無い・権限が無いと分かったら、ページを閉じるまで送らない
+const RHYTHM_TOUCH_DIAG_TABLE = 'rhythm_touch_diagnostics';
+let rhythmTouchDiagDisabled = false;
+// 手元のサーバー(検査・ローカル確認)で開いたゲームからは、タッチの診断・遊んだ記録を送らない(2026-10-01)。
+// 検査は本物の曲を最後まで流すので、送ると本番の表へ検査の行が混ざり、iPhone と Android の比べが狂う
+const sbTelemetryLocal = () => {
+  try {
+    if (typeof location === 'undefined') return false;
+    if (location.protocol === 'file:') return true;
+    return ['localhost', '127.0.0.1', '[::1]', '::1', ''].includes(String(location.hostname || ''));
+  } catch { return false; }
+};
+const sbSendRhythmTouchDiag = async (row) => {
+  if (rhythmTouchDiagDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
 const sbSendRhythmPlayLog = async (row) => {
-  if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function') return false;
+  if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
   try {
@@ -17499,6 +17530,55 @@ const rhythmPlayLogSend=async({song,difficulty,rawChart,notes,settings,mirror,cl
       mirror:!!mirror,cleared:!!cleared,deltas,schema_version:RHYTHM_PLAY_LOG_VERSION});
   }catch{return false;}
 };
+// ===== タッチの診断(2026-09-30・data/rhythm-mode.js の RHYTHM_TOUCH_BRIDGE) =====
+// 1曲ごとに、ポインタとタッチの突き合わせ・遅れ・取り消し・入力の無いMISSをまとめ、
+// 端末に直近20曲ぶん残し(新しいキー mh_rhythm_touch_diag_v1。デバッグ画面で見る)、サーバーへ送る(26-supabase.jsx の sbSendRhythmTouchDiag)。
+// 送るのは数だけ。名前・ブリーダーID・セーブデータは送らない。判定・スコア・保存には一切関わらない
+const RHYTHM_TOUCH_DIAG_KEY='mh_rhythm_touch_diag_v1';
+const RHYTHM_TOUCH_DIAG_KEEP=20;
+const RHYTHM_TOUCH_DIAG_VERSION=1;
+// 1曲ごとのでたらめな番号。リザルトの「押したのに反応しないことがあった」の報告の行を、この曲の診断の行と結ぶ(2026-10-01)
+const rhythmTouchDiagPlayId=()=>{let id='';for(let i=0;i<12;i++)id+='0123456789abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random()*36)];return id;};
+const rhythmTouchDiagOf=({song,difficulty,notes,inputTimes,assist,mirror,cleared})=>{
+  const bridge=RHYTHM_TOUCH_BRIDGE.snapshot(),miss=rhythmTouchNoInputMisses(notes,inputTimes);
+  let perfTouch=null;try{perfTouch=RHYTHM_PERF.snapshot().touch||null;}catch{perfTouch=null;}
+  return {song_id:String(song?.songId||''),difficulty:String(difficulty?.id||''),note_count:Array.isArray(notes)?notes.length:0,
+    platform:rhythmTouchPlatform(),standalone:!!rhythmTouchStandalone(),
+    stats:{...bridge,inputs:Array.isArray(inputTimes)?inputTimes.length:0,misses:miss.misses,noInputMisses:miss.noInput,
+      outside:perfTouch?.outside||0,ignored:perfTouch?.ignored||0,gestures:perfTouch?.gestures||0,assist:!!assist,mirror:!!mirror,cleared:!!cleared,
+      playId:rhythmTouchDiagPlayId(),fixes:rhythmTouchFixesActive()}};
+};
+const rhythmTouchDiagRecord=async(diag)=>{
+  try{
+    const saved=await storeGet(RHYTHM_TOUCH_DIAG_KEY,[]);
+    const list=Array.isArray(saved)?saved.filter(item=>item&&typeof item==='object'):[];
+    list.push({...diag,at:Date.now()});
+    await storeSet(RHYTHM_TOUCH_DIAG_KEY,list.slice(-RHYTHM_TOUCH_DIAG_KEEP));
+  }catch{}
+  try{
+    if(typeof sbSendRhythmTouchDiag!=='function'||!RHYTHM_DEMO_SONG_IDS.includes(diag.song_id))return false;
+    const deviceKey=await rhythmPlayLogDeviceKey();
+    return await sbSendRhythmTouchDiag({device_key:deviceKey,app_build:typeof BUILD_DATE==='string'?BUILD_DATE:'',platform:diag.platform,standalone:diag.standalone,
+      song_id:diag.song_id,difficulty:diag.difficulty,note_count:Math.max(1,diag.note_count),stats:diag.stats,schema_version:RHYTHM_TOUCH_DIAG_VERSION});
+  }catch{return false;}
+};
+/* リザルトの「押したのに反応しないことがあった」(2026-10-01・ユーザー指示)。
+   表は追加しかできない(書き換え・削除のポリシーが無い)ので、診断の行を直さずに「報告の行」を1行足す。
+   報告の行は stats が {kind:'report',playId} だけで、道具(rhythm-touch-diag.js)は数に入れずに playId で診断の行と結ぶ。
+   端末の記録(mh_rhythm_touch_diag_v1)の同じ曲にも reported を足す(既存の項目は変えない) */
+const rhythmTouchDiagReport=async(report)=>{
+  if(!report||!report.playId)return false;
+  try{
+    const saved=await storeGet(RHYTHM_TOUCH_DIAG_KEY,[]);
+    if(Array.isArray(saved)){const list=saved.filter(item=>item&&typeof item==='object');const hit=list.find(item=>item.stats&&item.stats.playId===report.playId);if(hit){hit.reported=true;await storeSet(RHYTHM_TOUCH_DIAG_KEY,list.slice(-RHYTHM_TOUCH_DIAG_KEEP));}}
+  }catch{}
+  try{
+    if(typeof sbSendRhythmTouchDiag!=='function'||!RHYTHM_DEMO_SONG_IDS.includes(report.song_id))return false;
+    const deviceKey=await rhythmPlayLogDeviceKey();
+    return await sbSendRhythmTouchDiag({device_key:deviceKey,app_build:typeof BUILD_DATE==='string'?BUILD_DATE:'',platform:report.platform,standalone:!!report.standalone,
+      song_id:report.song_id,difficulty:report.difficulty,note_count:Math.max(1,report.note_count),stats:{kind:'report',playId:report.playId},schema_version:RHYTHM_TOUCH_DIAG_VERSION});
+  }catch{return false;}
+};
 const RHYTHM_CHART_NOTES_KEY='mh_rhythm_chart_notes_v1';
 const RHYTHM_CHART_NOTE_SEGMENT_MS=8000;
 const RHYTHM_CHART_NOTE_MARKS=['', 'good', 'bad'];
@@ -17727,7 +17807,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
-  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
+  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
   // 判定ごとに変わる表示の入れ物(rhythmCreateHud の説明を参照)
   const hudRef=useRef(null);if(!hudRef.current)hudRef.current=rhythmCreateHud();
   // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
@@ -18472,6 +18552,11 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     const isNewRecord=!assistOn&&score>run.startBestScore;const merged=assistOn?normalizeRhythmBestRecord(run.startBest):mergeRhythmBestRecord(run.startBest,result);
     // 遊んだ記録を送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせ・アシストモードは送らない
     if(!debugPlay&&!tutorial&&!calibrating&&!assistOn)rhythmPlayLogSend({song,difficulty,rawChart,notes:run.notes,settings,mirror:mirrorOn,cleared:!failed});
+    // タッチの診断を残して送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせは除く。アシストは印を付けて含める
+    const touchDiag=!debugPlay&&!tutorial&&!calibrating?rhythmTouchDiagOf({song,difficulty,notes:run.notes,inputTimes:run.inputTimes,assist:assistOn,mirror:mirrorOn,cleared:!failed}):null;
+    if(touchDiag)void rhythmTouchDiagRecord(touchDiag);
+    // リザルトの「押したのに反応しないことがあった」に渡す。タッチで遊ぶ端末(iPhone・Android)だけ
+    const touchReport=touchDiag&&touchDiag.platform!=='other'?{playId:touchDiag.stats.playId,song_id:touchDiag.song_id,difficulty:touchDiag.difficulty,note_count:touchDiag.note_count,platform:touchDiag.platform,standalone:touchDiag.standalone}:null;
     const liveLogEndMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;
     const liveLog=rhythmLiveLogSections(run.liveLog,liveLogEndMs);
     // フルコンボ等を達成していれば、リザルトの数字を出す前に一度「FULL COMBO!」等を
@@ -18479,7 +18564,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     // 従来どおりそのままリザルトへ進む(演出だけの分岐で、判定・保存には関わらない)。
     const celebrateTitle=achievements.allMarvelous?'ALL MARVELOUS!!':achievements.allExcellent?'ALL EXCELLENT!!':achievements.fullCombo?'FULL COMBO!':null;
     const showCelebrate=!!celebrateTitle&&!failed&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL';
-    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn}}));
+    setView(v=>({...v,status:showCelebrate?'celebrate':'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,precise:run.precise,result:{...result,isNewRecord,bestScore:merged.bestScore,eventPointAward,liveLog,liveLogEndMs,assistGuarded:assistOn?run.assistGuarded||0:0,mirror:mirrorOn,touchReport}}));
     if(eventPointAward&&eventPointAward.amount>0&&typeof addRhythmEventPoints==='function')void addRhythmEventPoints(eventPointAward.amount);
     /* ラッキーラッシュのおまけ。公開の曲を最後まで遊んだときだけ(アシスト・練習・デバッグは除く)。上限10P、イベント・キャンペーンの期間外は1/5 */
     setLuckyRush(false);
@@ -18497,6 +18582,8 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
   // (かつてコンボ演出で実際に踏んだ通り)途中でeffectが再実行されるたびcleanupが走り、
   // 「あと少しで消す」という予約タイマーが節目と無関係に解除されてしまう。
   const celebrateTimerRef=useRef(null);
+  // リザルトの「押したのに反応しないことがあった」を送った曲(playId)。同じ曲では1回だけ
+  const [touchReportSent,setTouchReportSent]=useState(null);
   useEffect(()=>{
     if(view.status!=='celebrate')return;
     RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
@@ -18513,7 +18600,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
    ★飛ばすのは描くことだけ。判定は指の入力のたびに曲の時刻で決めているので変わらない。
      取り逃しのMISSや長押しの終わりも、次に描くフレーム(8ms後)でいつもどおり数える */
 const powerSave=settings.frameRateMode!=='DEVICE';const stagePulseOn=rhythmStageLevel(settings)!=='SIMPLE';let prevFrameMs=0,avgFrameMs=1000/60,lastDrawnMs=0;
-const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();const run=runRef.current;if(!run||run.finished||run.paused)return;
+const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();if(RHYTHM_TOUCH_BRIDGE.hasPending()&&touchSweepRef.current)touchSweepRef.current();const run=runRef.current;if(!run||run.finished||run.paused)return;
 /* ★ここでプレイエリアの箱を先に測っておく形は、2026-09-25に入れて26日にやめた。毎フレームの最初の時点で
    配置の計算がたまっていることが多く、測るたびにその場で計算させていた(8秒で560ms。タップのときだけ測る
    以前の形は10秒で66ms)。箱はタップが来たときに初めて測る(同じフレームのタップは使い回す) */
@@ -18538,7 +18625,10 @@ if(settingsLiveRef.current.autoEffectDown!==false&&stepEffectCapRef.current){con
   // ★ずっと一様に遅い端末(1秒に20フレームを割る)は「いちばん短い間隔の1.8倍」では拾えないので、50ms 以上のフレームは常に遅いと数える
   if(gap>0&&gap<1000){ae.frames++;if(gap>=5&&gap<ae.minGap)ae.minGap=gap;if((gap>Math.max(5,ae.minGap)*1.8&&gap>20)||gap>=50)ae.slow++;}
   if(frameNowMs-ae.start>=RHYTHM_AUTO_QUALITY_WINDOW_MS){const qualityFirst=settings.renderQuality==='AUTO'&&autoQualityLevelRef.current!==RHYTHM_RENDER_QUALITY_STEPS[RHYTHM_RENDER_QUALITY_STEPS.length-1];
-    if(ae.settle>0)ae.settle--;else if(!qualityFirst&&ae.frames>=RHYTHM_AUTO_QUALITY_MIN_FRAMES&&ae.slow/ae.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO&&stepEffectCapRef.current()){ae.settle=1;RHYTHM_PERF.autoStep('演出',RHYTHM_AUTO_EFFECT_STEP_LABELS[rhythmAutoEffectMemory.level-1]||'',ae.slow,ae.frames);}ae.start=frameNowMs;ae.frames=0;ae.slow=0;}}
+    // ★タッチの直し方「lateInputEffectDown」(既定は切ってある・iPhoneだけ)。コマが遅れていなくても、
+    //   この枠でタッチが RHYTHM_TOUCH_FIX_LATE_BURST 回以上 50ms 以上遅れて届いていたら、同じ道で演出を一段下げる
+    const lateNow=RHYTHM_TOUCH_BRIDGE.lateCount(),lateBurst=rhythmTouchFixOn('lateInputEffectDown')&&lateNow-(ae.late||0)>=RHYTHM_TOUCH_FIX_LATE_BURST;ae.late=lateNow;
+    if(ae.settle>0)ae.settle--;else if(!qualityFirst&&((ae.frames>=RHYTHM_AUTO_QUALITY_MIN_FRAMES&&ae.slow/ae.frames>RHYTHM_AUTO_QUALITY_SLOW_RATIO)||lateBurst)&&stepEffectCapRef.current()){ae.settle=1;RHYTHM_PERF.autoStep(lateBurst?'演出(タッチの遅れ)':'演出',RHYTHM_AUTO_EFFECT_STEP_LABELS[rhythmAutoEffectMemory.level-1]||'',ae.slow,ae.frames);}ae.start=frameNowMs;ae.frames=0;ae.slow=0;}}
 if(powerSave){const gap=prevFrameMs?frameNowMs-prevFrameMs:0;prevFrameMs=frameNowMs;if(gap>0&&gap<50)avgFrameMs=avgFrameMs*.9+gap*.1;if(avgFrameMs<10&&lastDrawnMs&&frameNowMs-lastDrawnMs<12.5){frameRef.current=requestAnimationFrame(tick);return;}lastDrawnMs=frameNowMs;}const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs();RHYTHM_PERF.songTime(songTimeMs);const travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;updateJudgmentBand(travel,travelMs);
 /* ライブ背景の光。ノーツが判定ラインへ来る時刻(=曲のリズム)ごとに背景を光らせる。
    取れたかどうかでは変えない(下手でも曲に合わせて光る)。同時押しとモンスターノーツは強く光る。
@@ -18786,7 +18876,7 @@ if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTick
     };
     if(typeof requestAnimationFrame==='function')requestAnimationFrame(step);else setTimeout(step,16);
   });
-  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
+  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setLifeDownCount(0);setView({...initialView(),status:'loading'});hudRef.current.set(rhythmHudInitial());const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={audio,heroSeed:Math.random(),notes:makeRuntimeNotes(),activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set(),inputTimes:[],combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,precise:0,deltas:[],life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});if(canvasNotes)RHYTHM_CANVAS_RENDERER.clear();rhythmLayoutPlayArea(playAreaRef.current);updateJudgmentBand(measureTravel(),rhythmTravelMsForSpeed(settings.noteSpeed));
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
 rhythmEnsureHitEffects(playAreaRef.current);
 /* 光のスプライトも先に焼いておく。曲の中で「その種類のノーツが初めて出た瞬間」に作ると
@@ -18836,7 +18926,7 @@ scheduleTick();};
   const abort=()=>{++generationRef.current;startLockRef.current=false;disposeRun();onExit();};
   // ageMs … 入力イベントが起きてから処理されるまでの遅れ(rhythmInputAgeMs)。判定に使う曲の時刻から差し引く。
   //          指が触れた瞬間の曲の時刻で判定するためのもので、判定窓そのものは変えない
-  const inputStarts=(inputs,ageMs=0)=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs()-(Number(ageMs)>0?Number(ageMs):0);run.inputFeedbackState=run.inputFeedbackState||new Map();rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs).forEach(({input,target,deltaMs,standby})=>{run.inputFeedbackState.set(input.inputKey,{subLane:Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(input.subLaneCoordinate))),subLaneCoordinate:Number(input.subLaneCoordinate),empty:!target||target.type==='TAP'});RHYTHM_TOUCH_SPAN_RUNTIME.recordPhysicalTarget(input.inputKey,target);
+  const inputStarts=(inputs,ageMs=0)=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs()-(Number(ageMs)>0?Number(ageMs):0);if(Array.isArray(run.inputTimes)&&run.inputTimes.length<20000&&inputs.some(input=>!input?.rejudge))run.inputTimes.push(now);run.inputFeedbackState=run.inputFeedbackState||new Map();rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs).forEach(({input,target,deltaMs,standby})=>{run.inputFeedbackState.set(input.inputKey,{subLane:Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(input.subLaneCoordinate))),subLaneCoordinate:Number(input.subLaneCoordinate),empty:!target||target.type==='TAP'});RHYTHM_TOUCH_SPAN_RUNTIME.recordPhysicalTarget(input.inputKey,target);
       // いま押さえている帯へ、持ち替えのために置いた2本目の指。
       // まだ何も取らないが、1本目が離れたらこの指へそのまま渡す(inputEndsを参照)。
       // 空打ちの音は鳴らさない(押し損ねたわけではないので)
@@ -18919,18 +19009,76 @@ scheduleTick();};
       if(e.cancelable)e.preventDefault();
     };
     const blockGesture=e=>{if(!playing())return;RHYTHM_PERF.touchGesture();if(typeof e.preventDefault==='function')e.preventDefault();};
+    // ===== ポインタとタッチの突き合わせ(2026-09-30・data/rhythm-mode.js の RHYTHM_TOUCH_BRIDGE) =====
+    // ポインタだけ届いてタッチが来なかった指(ブラウザがタッチを落とした)は、ポインタの経路で入力として通す。
+    // 押した時刻はポインタのイベントの時刻なので、判定は遅れない。ふつうの端末では一度も動かない
+    const nowMs=()=>typeof performance!=='undefined'?performance.now():Date.now();
+    const inArea=target=>{const area=playAreaRef.current;return !!(area&&target&&typeof area.contains==='function'&&area.contains(target));};
+    const endRecovered=entry=>{
+      const run=runRef.current;if(!run)return;
+      if(run.activePointerFeedback)run.activePointerFeedback.delete(entry.id);
+      setPressedLanes(pressedLanesNow());
+      inputEnds([{inputKey:rhythmInputKey('pointer',entry.id),releaseTarget:playAreaRef.current,pointerId:entry.id}]);
+    };
+    const startRecovered=entry=>{
+      const run=runRef.current,area=playAreaRef.current;if(!run||!area)return;
+      const rect=inputAreaRect(area),p=inputPoint(entry.x,entry.y),lane=rhythmLaneAtPoint(p.x,p.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(p.x,p.y,rect);
+      if(lane===null||subLaneCoordinate===null){RHYTHM_PERF.touchIgnored();return;}
+      run.activePointerFeedback=run.activePointerFeedback||new Map();run.activePointerFeedback.set(entry.id,subLaneCoordinate);setPressedLanes(pressedLanesNow());
+      // 判定には指が触れた時刻を使う。取り戻しは描画の重さで数十ms遅れることがあるので、ふつうの上限(80ms)で切らない。
+      // ただし時計の基準が食い違う端末(差が大きすぎる)では、ふつうの計り方に任せる
+      const rawAge=nowMs()-Number(entry.stamp);
+      inputStarts([{lane,subLaneCoordinate,inputKey:rhythmInputKey('pointer',entry.id),pointerId:entry.id}],rawAge>0&&rawAge<300?rawAge:rhythmInputAgeMs(entry.stamp,nowMs()));
+      // 取り戻すまでに指がもう離れていたら、すぐ離したことにする(TAP はこれで足りる)
+      if(entry.upAt!=null)endRecovered(entry);
+    };
+    const sweepTimers=new Set();
+    const sweep=()=>{if(!playing())return;RHYTHM_TOUCH_BRIDGE.sweep(nowMs()).forEach(startRecovered);};
+    // 毎フレームの処理(tick)からも見る。タイマーは描画が重いと遅れるので、遅くても1コマで取り戻せるように
+    touchSweepRef.current=sweep;
+    const onPointerDown=e=>{
+      if(e.pointerType!=='touch'||!playing()||!inArea(e.target))return;
+      RHYTHM_TOUCH_BRIDGE.pointerDown(e.pointerId,e.clientX,e.clientY,e.timeStamp,nowMs());
+      const id=setTimeout(()=>{sweepTimers.delete(id);sweep();},RHYTHM_TOUCH_BRIDGE_WAIT_MS+5);sweepTimers.add(id);
+    };
+    const onPointerUp=e=>{
+      if(e.pointerType!=='touch')return;
+      const entry=RHYTHM_TOUCH_BRIDGE.pointerUp(e.pointerId,nowMs(),e.timeStamp);
+      if(entry)endRecovered(entry);
+    };
+    const onTouchStart=e=>{
+      if(!playing())return;
+      const now=nowMs();
+      RHYTHM_TOUCH_BRIDGE.liveTouches(e.touches?.length||0);
+      Array.from(e.changedTouches||[]).forEach(t=>{if(inArea(t.target))RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier,t.clientX,t.clientY,e.timeStamp,now,now-e.timeStamp);});
+      sweep();
+    };
+    const onTouchCancel=e=>{if(playing())RHYTHM_TOUCH_BRIDGE.touchCancel(e.changedTouches?.length||0);};
     const touchTypes=['touchstart','touchmove'],gestureTypes=['gesturestart','gesturechange'];
     touchTypes.forEach(type=>document.addEventListener(type,blockTouch,{passive:false}));
     gestureTypes.forEach(type=>document.addEventListener(type,blockGesture,{passive:false}));
+    // 突き合わせは capture で、演奏エリアの入力処理(bubble)より先に見る
+    document.addEventListener('pointerdown',onPointerDown,{capture:true,passive:true});
+    document.addEventListener('pointerup',onPointerUp,{capture:true,passive:true});
+    document.addEventListener('pointercancel',onPointerUp,{capture:true,passive:true});
+    document.addEventListener('touchstart',onTouchStart,{capture:true,passive:true});
+    document.addEventListener('touchcancel',onTouchCancel,{capture:true,passive:true});
     return ()=>{
       touchTypes.forEach(type=>document.removeEventListener(type,blockTouch,{passive:false}));
       gestureTypes.forEach(type=>document.removeEventListener(type,blockGesture,{passive:false}));
+      document.removeEventListener('pointerdown',onPointerDown,{capture:true,passive:true});
+      document.removeEventListener('pointerup',onPointerUp,{capture:true,passive:true});
+      document.removeEventListener('pointercancel',onPointerUp,{capture:true,passive:true});
+      document.removeEventListener('touchstart',onTouchStart,{capture:true,passive:true});
+      document.removeEventListener('touchcancel',onTouchCancel,{capture:true,passive:true});
+      sweepTimers.forEach(clearTimeout);sweepTimers.clear();
+      if(touchSweepRef.current===sweep)touchSweepRef.current=null;
     };
   },[view.status]);
   const pointerDown=e=>{if(e.pointerType==='touch')return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const rect=inputAreaRect(area),p=inputPoint(e.clientX,e.clientY),lane=rhythmLaneAtPoint(p.x,p.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(p.x,p.y,rect);if(lane===null||subLaneCoordinate===null)return;const run=runRef.current;if(run){run.activePointerFeedback=run.activePointerFeedback||new Map();run.activePointerFeedback.set(e.pointerId,subLaneCoordinate);setPressedLanes(pressedLanesNow());}inputStarts([{lane,subLaneCoordinate,inputKey:rhythmInputKey('pointer',e.pointerId),captureTarget:e.currentTarget,pointerId:e.pointerId}],rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN));};
-  const pointerMove=e=>{if(e.pointerType==='touch')return;const run=runRef.current;if(!run?.activePointerFeedback?.has(e.pointerId))return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const mp=inputPoint(e.clientX,e.clientY),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(mp.x,mp.y,inputAreaRect(area));if(subLaneCoordinate===null)return;run.activePointerFeedback.set(e.pointerId,subLaneCoordinate);setPressedLanes(pressedLanesNow());inputMoves(rhythmInputKey('pointer',e.pointerId),subLaneCoordinate);};
+  const pointerMove=e=>{if(e.pointerType==='touch'&&!RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(e.pointerId))return;const run=runRef.current;if(!run?.activePointerFeedback?.has(e.pointerId))return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const mp=inputPoint(e.clientX,e.clientY),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(mp.x,mp.y,inputAreaRect(area));if(subLaneCoordinate===null)return;run.activePointerFeedback.set(e.pointerId,subLaneCoordinate);setPressedLanes(pressedLanesNow());inputMoves(rhythmInputKey('pointer',e.pointerId),subLaneCoordinate);};
   const pointerEnd=e=>{if(e.pointerType==='touch')return;const run=runRef.current;if(run?.activePointerFeedback){run.activePointerFeedback.delete(e.pointerId);setPressedLanes(pressedLanesNow());}else setPressedLanes(pressedLanesNow());inputEnds([{inputKey:rhythmInputKey('pointer',e.pointerId),releaseTarget:e.currentTarget,pointerId:e.pointerId}]);};
-  useEffect(()=>{const area=playAreaRef.current;if(!area||view.status==='result'||view.status==='celebrate')return;const syncTouches=e=>{if(e.cancelable)e.preventDefault();const current=runRef.current;if(!current||current.finished||current.paused)return;if(e.type==='touchcancel')RHYTHM_PERF.touchCancel(e.changedTouches?.length||0);else if(e.type==='touchstart')RHYTHM_PERF.touchStart(e.touches?.length||0);current.activeTouchInputs=current.activeTouchInputs||new Set();const rect=inputAreaRect(area),live=new Set(),liveSubLanes=[],starts=[],movedTouchInputs=e.type==='touchmove'?new Set(Array.from(e.changedTouches||[]).map(touch=>rhythmInputKey('touch',touch.identifier))):null;Array.from(e.touches||[]).forEach(touch=>{const inputKey=rhythmInputKey('touch',touch.identifier);live.add(inputKey);const tp=inputPoint(touch.clientX,touch.clientY),lane=rhythmLaneAtPoint(tp.x,tp.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(tp.x,tp.y,rect);if(subLaneCoordinate!==null)liveSubLanes.push(subLaneCoordinate);if(current.activeTouchInputs.has(inputKey)){if(movedTouchInputs?.has(inputKey)&&subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate);return;}current.activeTouchInputs.add(inputKey);if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey});});liveTouchSubLanesRef.current=liveSubLanes;setPressedLanes(pressedLanesNow());const ageMs=rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN);if(starts.length)inputStarts(starts,ageMs);const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(!live.has(inputKey)){current.activeTouchInputs.delete(inputKey);ended.push({inputKey});}});if(ended.length)inputEnds(ended);};RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();area.addEventListener('touchstart',syncTouches,{passive:false});area.addEventListener('touchmove',syncTouches,{passive:false});area.addEventListener('touchend',syncTouches,{passive:false});area.addEventListener('touchcancel',syncTouches,{passive:false});return()=>{area.removeEventListener('touchstart',syncTouches);area.removeEventListener('touchmove',syncTouches);area.removeEventListener('touchend',syncTouches);area.removeEventListener('touchcancel',syncTouches);liveTouchSubLanesRef.current=[];setPressedLanes([]);};},[view.status]);
+  useEffect(()=>{const area=playAreaRef.current;if(!area||view.status==='result'||view.status==='celebrate')return;const syncTouches=e=>{if(e.cancelable)e.preventDefault();const current=runRef.current;if(!current||current.finished||current.paused)return;if(e.type==='touchcancel')RHYTHM_PERF.touchCancel(e.changedTouches?.length||0);else if(e.type==='touchstart')RHYTHM_PERF.touchStart(e.touches?.length||0);current.activeTouchInputs=current.activeTouchInputs||new Set();const rect=inputAreaRect(area),live=new Set(),liveSubLanes=[],starts=[],movedTouchInputs=e.type==='touchmove'?new Set(Array.from(e.changedTouches||[]).map(touch=>rhythmInputKey('touch',touch.identifier))):null;Array.from(e.touches||[]).forEach(touch=>{const inputKey=rhythmInputKey('touch',touch.identifier);live.add(inputKey);const tp=inputPoint(touch.clientX,touch.clientY),lane=rhythmLaneAtPoint(tp.x,tp.y,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(tp.x,tp.y,rect);if(subLaneCoordinate!==null)liveSubLanes.push(subLaneCoordinate);if(current.activeTouchInputs.has(inputKey)){if(movedTouchInputs?.has(inputKey)&&subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate);return;}current.activeTouchInputs.add(inputKey);if(e.type!=='touchstart'){RHYTHM_TOUCH_BRIDGE.lateStart();const nowPerf=typeof performance!=='undefined'?performance.now():Date.now();RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier,touch.clientX,touch.clientY,e.timeStamp,nowPerf,null);}if(RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier))return;if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey});else RHYTHM_PERF.touchIgnored();});liveTouchSubLanesRef.current=liveSubLanes;setPressedLanes(pressedLanesNow());const ageMs=rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN);if(starts.length)inputStarts(starts,ageMs);const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(!live.has(inputKey)){current.activeTouchInputs.delete(inputKey);ended.push({inputKey});}});if(ended.length)inputEnds(ended);};RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();area.addEventListener('touchstart',syncTouches,{passive:false});area.addEventListener('touchmove',syncTouches,{passive:false});area.addEventListener('touchend',syncTouches,{passive:false});area.addEventListener('touchcancel',syncTouches,{passive:false});return()=>{area.removeEventListener('touchstart',syncTouches);area.removeEventListener('touchmove',syncTouches);area.removeEventListener('touchend',syncTouches);area.removeEventListener('touchcancel',syncTouches);liveTouchSubLanesRef.current=[];setPressedLanes([]);};},[view.status]);
   if(view.status==='celebrate'){const celebrateResult=view.result,celebrateTitle=celebrateResult?.allMarvelous?'ALL MARVELOUS!!':celebrateResult?.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!';return <main data-rhythm-celebrate className="flex flex-1 items-center justify-center bg-slate-950 text-white" style={{paddingTop:'var(--mh-sa-top)',paddingBottom:'var(--mh-sa-bottom)'}} onClick={skipCelebrate}><div className="px-6 text-center"><b data-rhythm-celebrate-slam className="block text-6xl font-black leading-tight">{celebrateTitle}</b><small className="mt-3 block text-sm font-black tracking-[0.3em] text-slate-300">MAX COMBO {view.maxCombo}</small></div></main>;}
   // ===== タイミング合わせのリザルト(2026-09-13・ユーザー指摘「設定にもなってない」) =====
   // スコアやランクは意味を持たないので出さない。測った値をその場で設定へ入れられるようにする。
@@ -19157,6 +19305,13 @@ scheduleTick();};
   <div className="mt-0.5 flex justify-between text-[8px] font-bold tabular-nums text-slate-500"><span>0:00</span><span>{rhythmClockLabel(result.liveLogEndMs)}</span></div>
   <p data-rhythm-live-log-worst className="mt-1 text-[10px] font-bold leading-relaxed text-slate-300">{worst?`いちばん崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad+worst.miss}回）。`:'どの区間も BAD・MISS なしで通せました。'}</p>
 </div>;})()}
+{/* 押したのに反応しないことがあった(2026-10-01・ユーザー指示)。押すと、この曲の指の記録に印を付けて送る。
+    印の付いた曲と付いていない曲の数字を比べて、指がどこで消えているかを絞る(docs/spec/RHYTHM_TOUCH_DIAG.md)。
+    タッチで遊ぶ端末(iPhone・Android)の公開プレイだけ。練習・タイミング合わせ・デバッグには出さない */}
+{result.touchReport&&<div data-rhythm-touch-report className="mb-2 text-center">{touchReportSent===result.touchReport.playId
+  ?<p data-rhythm-touch-report-done className="text-[11px] font-bold leading-relaxed text-emerald-200">送りました。ありがとうございます！反応しなかった原因を調べるのに使います</p>
+  :<><button data-rhythm-touch-report-button className="min-h-[44px] rounded-xl border border-white/20 bg-slate-800/80 px-4 text-[12px] font-black text-slate-100" onClick={()=>{const report=result.touchReport;setTouchReportSent(report.playId);void rhythmTouchDiagReport(report);}}>👆 押したのに反応しないことがあった</button>
+  <small className="mt-1 block text-[9px] font-bold text-slate-500">押すと、この曲の指の記録に印を付けて送ります（名前は送りません）</small></>}</div>}
 {/* 譜面メモ(DEBUG ONLY)。デバッグ画面から始めた演奏にだけ出す */}
 {debugPlay&&!tutorial&&!calibrating&&<RhythmChartNotePanel song={song} difficulty={difficulty} chart={chart}/>}
 </div>
@@ -35160,7 +35315,18 @@ function MonsterHeroGame() {
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
-      setBattleFxSettingsState(normalizeBattleFxSettings(await storeGet(BATTLE_FX_SETTINGS_KEY, null, false)));
+      const rawBattleFx = await storeGet(BATTLE_FX_SETTINGS_KEY, null, false);
+      let savedBattleFx = normalizeBattleFxSettings(rawBattleFx);
+      // 「重いときは自動で軽く」の既定を OFF にした(2026-10-01)。以前の既定(ON)のまま保存されていた人を、一度だけ OFF にする。
+      // 専用フラグで二重に適用しない。ほかの項目はそのまま。あとから自分で ON にした選択は、このフラグがあるので消さない
+      if (!(await storeGet('mh_battle_fx_autoload_default_off_v1', false, false))) {
+        if (rawBattleFx && typeof rawBattleFx === 'object' && rawBattleFx.autoLoad === 'ON') {
+          savedBattleFx = { ...savedBattleFx, autoLoad: 'OFF' };
+          await storeSet(BATTLE_FX_SETTINGS_KEY, savedBattleFx, false);
+        }
+        await storeSet('mh_battle_fx_autoload_default_off_v1', true, false);
+      }
+      setBattleFxSettingsState(savedBattleFx);
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -41358,7 +41524,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
         // 連撃・全体連撃。専用モーションを続けて再生しないもの(禁忌解錠・全体連撃)は noAnim で数値だけを表示する
-        for (const hit of hits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
+        // ★連撃の2発目以降は技名が「連撃」になるので、技ごとの動きを引くときは元の技(themeOf)を使う。持たせないと、
+        //   2発目以降だけ技ごとの動きが見つからず、更新前の通常モーションに戻る(2026-09-30 ユーザー報告「連撃時に違う技のモーションになる」)
+        const themeOf={skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined};
+        for (const hit of hits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, themeOf, ...(hit.noAnim?{noAnim:true}:{})}); }
         if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=rangeMoveTarget; }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
@@ -41455,8 +41624,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const hitMotion = (hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[hit.slotIdx]?.atkMotion;
           // 技ごとの動き(2026-09-29 全モンスター)。技に専用の動きがあれば、見せ場の動きの代わりにそちらを出す。
           // 探すのは技の出自(固有技は hit.monId)から。ザン・エイキ・剣士モッチーの連撃のまとめ方(数字をまとめて出す)は変えない
-          const hitSkillOwner = (hit.isUnique && hit.monId) ? hit.monId : slots[hit.slotIdx]?.id;
-          const hitSkillKind = skillAttackThemeOf(hitSkillOwner, hit.skillName, !!hit.isUnique);
+          // 連撃の2発目以降は元の技(hit.themeOf)の動きで出す。技の名前(hit.skillName)は「連撃」のままログ・技名表示に使う
+          const themeHit = hit.themeOf || hit;
+          const hitSkillOwner = (themeHit.isUnique && themeHit.monId) ? themeHit.monId : slots[hit.slotIdx]?.id;
+          const hitSkillKind = skillAttackThemeOf(hitSkillOwner, themeHit.skillName, !!themeHit.isUnique);
           // 高速斬撃＋連撃をまとめて見せるモーション。ザン・エイキ・剣士モッチーが同じ見せ方を共有する。
           // モーションは1回だけ流し、ダメージ数値だけを立て続けに出すので、
           // 剣士モッチーの永久追加連撃が何本に増えてもターンの長さは変わらない
@@ -41535,7 +41706,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setSlotSkill({slotIndex: animSlot, name: hit.skillName, type: hit.isUnique?'unique':(hit.isSpecial?'special':'normal')});
             // モンスターごとの専用モーション種別('default'/'zanCombo'/'floatStab'等)。全モンスターがdata側で必ず指定する。固有技は技の出自(継承元)のモーションを優先する。
             // 技に専用の動きがあれば 'default' にして、技ごとの動きで出す(skillAttackMotionOf)
-            const motion = hitSkillKind ? 'default' : ((hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[animSlot]?.atkMotion);
+            const motion = hitSkillKind ? 'default' : ((themeHit.isUnique && themeHit.monId && ALL_PLAYER_MONSTERS[themeHit.monId]?.atkMotion) || slots[animSlot]?.atkMotion);
             if(hit.isUnique){
               // 固有技: タメ(下に沈む)は全モンスター共通→その後は専用モーションがあればそちらへ、なければ敵に向かって突進
               setAttackAnim({slotIndex: animSlot, charge:true});
@@ -41553,7 +41724,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
-              setAttackAnim({slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});
+              setAttackAnim({slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: themeHit.skillName, ...(themeHit.isUnique?{charge:false}:{})});
               if(isKenshiTwin){
                 await battleWait(135); Audio_.se.zanSlash();
                 await battleWait(180); Audio_.se.zanSlash();
@@ -41561,7 +41732,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(130);
               }else{
                 if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-                await battleWait(themedAttackMotionMs(hitSkillKind ? hitSkillOwner : slots[animSlot]?.id, motion, hit.skillName, false) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))));
+                await battleWait(themedAttackMotionMs(hitSkillKind ? hitSkillOwner : slots[animSlot]?.id, motion, themeHit.skillName, !!themeHit.isUnique) ?? (motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))))));
               }
             }
             setAttackAnim(null);
@@ -45920,7 +46091,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-rhythm-debug-calibration className="mb-3"/>
             {/* 性能計測(デバッグ限定)。既定OFF・OFFのあいだは計測処理が一切動かない。
                 プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
-            <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],...[['GPU(ノーツ)',rhythmPerfStats.gpuNotes],['GPU(背景)',rhythmPerfStats.gpuStage]].map(([label,g])=>[label,!g||g.supported===null?'—':g.supported===false?'この端末は測れない':g.count?`平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms`:'まだ届いていない']),['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['50ms以上（自動調整が重いと数える）',rhythmPerfStats.over50??0],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`],['曲の時刻の進み/frame',`${(rhythmPerfStats.songStepMsPerFrame??0).toFixed(2)}ms`],['曲の時刻が進まないframe',`${((rhythmPerfStats.songStallRate??0)*100).toFixed(1)}%`],['曲の時刻の最大の飛び',`${(rhythmPerfStats.songStepMaxMs??0).toFixed(1)}ms`],['ノーツを取る処理/回',`${(rhythmPerfStats.judgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.judgeCount??0}回）`],['取る処理の最大',`${(rhythmPerfStats.judgeMsMax??0).toFixed(1)}ms`],['モンスターノーツ/回',`${(rhythmPerfStats.monsterJudgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount??0}回）`],['モンスターノーツの最大',`${(rhythmPerfStats.monsterJudgeMsMax??0).toFixed(1)}ms`],['指が触れた数（同時の最大）',`${rhythmPerfStats.touch?.starts??0}回（${rhythmPerfStats.touch?.maxTouches??0}本）`],['端末に指を取り消された',`${rhythmPerfStats.touch?.cancels??0}回（${rhythmPerfStats.touch?.cancelledTouches??0}本）`],['演奏エリアの外に触れた',`${rhythmPerfStats.touch?.outside??0}回`],['二本指ジェスチャー',`${rhythmPerfStats.touch?.gestures??0}回`],['空打ち',`${rhythmPerfStats.touch?.emptyTaps??0}回`],['指の飛び（3サブレーン以上）',`${rhythmPerfStats.touch?.jumps??0}回`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.spikes)&&rhythmPerfStats.spikes.length>0&&<div data-rhythm-perf-spikes className="mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-amber-200">飛んだフレーム（33ms超）を起きた順に{rhythmPerfStats.spikes.length}件</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70">「モンスター後」が小さい行が並ぶなら、踏んだあとの演出が原因です。「tick」が0msなら、その飛びはJSではなく描画側です。</p><ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.spikes.map((sp,i)=><li key={i}>{`${(sp.at/1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon<0?'—':`${sp.mon}ms`}`}</li>)}</ol></div>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.autoSteps)&&<div data-rhythm-perf-auto-steps className="mt-2 rounded-xl border border-cyan-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-cyan-200">自動で下げた記録（{rhythmPerfStats.autoSteps.length}件）</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/70">画質「自動」と「重いときは演出を自動で控えめに」が働いた時刻です。3秒のうち重いフレームが8%を超えると一段下げます。「重い」は、いちばん短い間隔の1.8倍か50ms以上のフレームです。下がりすぎる・下がらないと感じたら、この数字を教えてください。</p>{rhythmPerfStats.autoSteps.length?<ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.autoSteps.map((st,i)=><li key={i}>{`${(st.at/1000).toFixed(1)}s  ${st.kind}→${st.label}  重い ${st.slow}/${st.frames}フレーム（約${st.fps}fps）`}</li>)}</ol>:<p className="mt-1 text-[9px] font-bold text-slate-400">まだ一度も下げていません。</p>}</div>}</section><section data-rhythm-strip-panel className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"><h3 className="text-xs font-black text-rose-200">装飾を切って切り分ける（デバッグ）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80">演奏画面の重そうな装飾を個別に消します。<b>次の演奏から効きます。</b>ONにして1曲プレイし、性能計測の「33ms超」が減るかを見てください。減ったものが原因です。判定・スコア・譜面には一切関わりません。</p><div className="mt-2 grid grid-cols-2 gap-2">{RHYTHM_STRIP_ITEMS.map(item=><button key={item.id} type="button" data-rhythm-strip-toggle={item.id} aria-pressed={rhythmStrip.split(/\s+/).includes(item.id)} onClick={()=>setRhythmStrip(RHYTHM_STRIP.toggle(item.id))} className={`min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id)?'bg-rose-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{item.label}</button>)}</div><button type="button" className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmStrip(RHYTHM_STRIP.set(''))}>ぜんぶ元に戻す</button></section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
+            <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません（指の記録の行だけは、OFFでもいつも数えています）。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],...[['GPU(ノーツ)',rhythmPerfStats.gpuNotes],['GPU(背景)',rhythmPerfStats.gpuStage]].map(([label,g])=>[label,!g||g.supported===null?'—':g.supported===false?'この端末は測れない':g.count?`平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms`:'まだ届いていない']),['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['50ms以上（自動調整が重いと数える）',rhythmPerfStats.over50??0],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`],['曲の時刻の進み/frame',`${(rhythmPerfStats.songStepMsPerFrame??0).toFixed(2)}ms`],['曲の時刻が進まないframe',`${((rhythmPerfStats.songStallRate??0)*100).toFixed(1)}%`],['曲の時刻の最大の飛び',`${(rhythmPerfStats.songStepMaxMs??0).toFixed(1)}ms`],['ノーツを取る処理/回',`${(rhythmPerfStats.judgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.judgeCount??0}回）`],['取る処理の最大',`${(rhythmPerfStats.judgeMsMax??0).toFixed(1)}ms`],['モンスターノーツ/回',`${(rhythmPerfStats.monsterJudgeMsAvg??0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount??0}回）`],['モンスターノーツの最大',`${(rhythmPerfStats.monsterJudgeMsMax??0).toFixed(1)}ms`],['指が触れた数（同時の最大）',`${rhythmPerfStats.touch?.starts??0}回（${rhythmPerfStats.touch?.maxTouches??0}本）`],['端末に指を取り消された',`${rhythmPerfStats.touch?.cancels??0}回（${rhythmPerfStats.touch?.cancelledTouches??0}本）`],['演奏エリアの外に触れた',`${rhythmPerfStats.touch?.outside??0}回`],['道の外で無視した指（押しても音も光も出ない）',`${rhythmPerfStats.touch?.ignored??0}回`],...(()=>{const b=typeof RHYTHM_TOUCH_BRIDGE!=='undefined'?RHYTHM_TOUCH_BRIDGE.snapshot():null;return b?[['ポインタだけ届いた指（取り戻した）',`${b.pointerOnly}回（${b.recovered}回）`],['ポインタとタッチが組になった',`${b.matched}回`],['50ms以上遅れて届いたタッチ',`${b.lateDelivery}回（最大${Math.round(b.maxDelayMs)}ms）`],['別の指のイベントで初めて見えた指',`${b.lateStart}回`]]:[];})(),['二本指ジェスチャー',`${rhythmPerfStats.touch?.gestures??0}回`],['空打ち',`${rhythmPerfStats.touch?.emptyTaps??0}回`],['指の飛び（3サブレーン以上）',`${rhythmPerfStats.touch?.jumps??0}回`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.spikes)&&rhythmPerfStats.spikes.length>0&&<div data-rhythm-perf-spikes className="mt-2 rounded-xl border border-amber-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-amber-200">飛んだフレーム（33ms超）を起きた順に{rhythmPerfStats.spikes.length}件</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/70">「モンスター後」が小さい行が並ぶなら、踏んだあとの演出が原因です。「tick」が0msなら、その飛びはJSではなく描画側です。</p><ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.spikes.map((sp,i)=><li key={i}>{`${(sp.at/1000).toFixed(1)}s  ${sp.dt}ms  tick ${sp.tick}ms  遅れ ${sp.delay}ms  走査${sp.scan}/描画${sp.draw}  モンスター後 ${sp.mon<0?'—':`${sp.mon}ms`}`}</li>)}</ol></div>}{rhythmPerfStats&&Array.isArray(rhythmPerfStats.autoSteps)&&<div data-rhythm-perf-auto-steps className="mt-2 rounded-xl border border-cyan-400/30 bg-slate-950/60 p-2"><h4 className="text-[10px] font-black text-cyan-200">自動で下げた記録（{rhythmPerfStats.autoSteps.length}件）</h4><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/70">画質「自動」と「重いときは演出を自動で控えめに」が働いた時刻です。3秒のうち重いフレームが8%を超えると一段下げます。「重い」は、いちばん短い間隔の1.8倍か50ms以上のフレームです。下がりすぎる・下がらないと感じたら、この数字を教えてください。</p>{rhythmPerfStats.autoSteps.length?<ol className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-300">{rhythmPerfStats.autoSteps.map((st,i)=><li key={i}>{`${(st.at/1000).toFixed(1)}s  ${st.kind}→${st.label}  重い ${st.slow}/${st.frames}フレーム（約${st.fps}fps）`}</li>)}</ol>:<p className="mt-1 text-[9px] font-bold text-slate-400">まだ一度も下げていません。</p>}</div>}</section><section data-rhythm-strip-panel className="mb-3 rounded-2xl border border-rose-400/40 bg-rose-950/20 p-3"><h3 className="text-xs font-black text-rose-200">装飾を切って切り分ける（デバッグ）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-rose-100/80">演奏画面の重そうな装飾を個別に消します。<b>次の演奏から効きます。</b>ONにして1曲プレイし、性能計測の「33ms超」が減るかを見てください。減ったものが原因です。判定・スコア・譜面には一切関わりません。</p><div className="mt-2 grid grid-cols-2 gap-2">{RHYTHM_STRIP_ITEMS.map(item=><button key={item.id} type="button" data-rhythm-strip-toggle={item.id} aria-pressed={rhythmStrip.split(/\s+/).includes(item.id)} onClick={()=>setRhythmStrip(RHYTHM_STRIP.toggle(item.id))} className={`min-h-[44px] rounded-xl px-2 text-[10px] font-black ${rhythmStrip.split(/\s+/).includes(item.id)?'bg-rose-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{item.label}</button>)}</div><button type="button" className="mt-2 min-h-[40px] w-full rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmStrip(RHYTHM_STRIP.set(''))}>ぜんぶ元に戻す</button></section>{/* ノーツの描き方(検証用・デバッグ限定)。canvas 1枚に描く方式(発熱対策)と要素で描く方式を、次の演奏から切り替える。
                 プレイヤーの通常プレイには出ないので更新履歴・ヘルプには載せない */}
             <section data-rhythm-canvas-panel className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"><h3 className="text-xs font-black text-cyan-200">ノーツの描き方（検証用）</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80">canvas 1枚に描く方式（発熱対策）と、これまでの要素ごとに描く方式を切り替えます。次の演奏から効きます。「自動」は公開設定（いまは{RELEASE_FLAGS.rhythmCanvasNotes?'canvas':'要素'}）に従います。「WebGL」は canvas と同じ描き方を GPU で描く試作です（重さ・発熱を「性能計測」で canvas と比べるためのもの）。</p><div className="mt-2 flex gap-2">{[['','自動'],['dom','要素'],['canvas','canvas'],['webgl','WebGL']].map(([value,label])=><button key={value||'auto'} type="button" data-rhythm-canvas-pref={value||'auto'} aria-pressed={rhythmCanvasPref===value} onClick={()=>setRhythmCanvasPref(rhythmCanvasNotesSetPreference(value))} className={`min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasPref===value?'bg-cyan-400 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{label}</button>)}</div></section>
             {/* ライブ背景を WebGL で描くかの切り替え(2026-09-26)。実機で重さ・発熱を CSS 版と比べるためのもの。
@@ -53147,6 +53318,9 @@ const createAnimationStyle = () => {
        ・HOME: 枠が絵より縦長なら画面いっぱい(cover)にして下の帯を消す。枠が絵より横に広いときは絵全体を出し、余りはぼかした絵で埋める */
     .mh-title-backdrop{position:absolute;z-index:0;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(16px) brightness(.5);transform:scale(1.08);pointer-events:none}.mh-title-visual{z-index:1}
     @media(min-aspect-ratio:3/4) and (max-aspect-ratio:7/5){.mh-title-visual,.mh-entering>img{object-fit:contain;object-position:50% 50%}}
+    /* ハロウィンのタイトルの絵は縦長の1枚だけ(横長の絵は持たない・2026-10-01)。横長の画面(縦横比 7:5 より横)では、
+       上下が大きく切れてロゴが見えなくなるので、絵全体を出し、左右はぼかした同じ絵で埋める。クラシックの絵の見え方は変えない */
+    @media(min-aspect-ratio:7/5){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:contain;object-position:50% 50%}}
     @container (max-aspect-ratio:941/1672){.mh-home-background img.mh-home-main{object-fit:cover}}
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}

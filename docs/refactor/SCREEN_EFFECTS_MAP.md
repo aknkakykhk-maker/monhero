@@ -1,4 +1,4 @@
-# 画面ライフサイクルの分類表 — setTimeout 68 箇所を「画面専用 / 進行 / 対象外」に仕分ける
+# 画面ライフサイクルの分類表 — setTimeout 71 箇所を「画面専用 / 進行 / 対象外」に仕分ける
 
 2026-09-10 作成(STEP 6-1)。対象は `monster-hero/src/parts/60-app.jsx`(`MonsterHeroGame`)。
 `tools/ui/screen-effects-check.js` がこの表を読み、目印が本体にちょうど1つあることと、
@@ -83,7 +83,6 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(()=>{ setRein` | progress | 投げっぱなし | 転生の演出終了と `reincarnateProcessingRef=false`。止めると二度と転生できない |
 | `setResultActionPending(false)` | progress | 投げっぱなし | リザルトの連打防止を戻す。止めると次の周回を始められない |
 | `setTimeout(()=>setPopups` | progress | 投げっぱなし | バトルのダメージ表示を1件消す。止めると溜まり続ける |
-| `setTimeout(()=>setTeachi` | progress | 投げっぱなし | 教えカードの演出を消す。止めると出たまま |
 | `setTimeout(()=>advanceRu` | progress | 投げっぱなし | WAVE リザルトへ進む。止めるとバトルが終わらない |
 | `setTimeout(()=>{setUltim` | progress | 投げっぱなし | 極限の距離開放の表示を消し `setIsBusy(false)`。止めると操作を受け付けない |
 | `setTimeout(()=>{setEffec` | progress | 投げっぱなし | 合流演出のあと固有技強化へ進む。止めると進行が止まる |
@@ -93,7 +92,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(()=>setEffect(null),1200)` | progress | 投げっぱなし(65-screen-masu-enhance.jsx へ移動済み) | まとめて強化の演出を消す。止めると出たまま |
 | `setSlotSettle(i);` | progress | 投げっぱなし | タップで入れた枠の光を戻す。止めると光ったまま |
 | `}, TACTICS_SLOT_FX_MS);` | progress | 止める(次を出すとき) | タクティクスの枠の出来事の札を消す。止めると出たまま |
-| `setTacticsExCutin(null); }, TACTICS_EX_CUTIN_MS` | progress | 止める(次を出すとき) | EXのカットインを消す。止めると出たまま |
+| `setTacticsExCutin(null); }, ms` | progress | 止める(次を出すとき) | EXのカットイン(教えカードの演出もここへまとまった)を消す。止めると出たまま |
 | `setEffect(null), TRANSCEND_ENHANCE_FX_MS` | progress | 投げっぱなし | 超越強化の演出を消す。止めると出たまま |
 
 ## 対象外 — 16 箇所
@@ -118,7 +117,11 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(() => preload('score'` | 対象外 | 投げっぱなし | ランキングの裏での先読み(スコア) |
 | `setTimeout(() => preload('breeder'` | 対象外 | 投げっぱなし | ランキングの裏での先読み(ブリーダー Lv) |
 | `setTimeout(() => preload('bond',` | 対象外 | 投げっぱなし | ランキングの裏での先読み(絆 Lv) |
-| `resendPendingRankingScores(); }, RANKING_RESEND_DELAY_MS` | 対象外 | 止める | 送れなかったランキングの記録を、HOMEに落ち着いてから1回だけ送り直す(アプリ全体で1回) |
+| `refreshRhythmRankingPending(); }, RANKING_RESEND_DELAY_MS` | 対象外 | 止める | 送れなかったランキングの記録を、HOMEに落ち着いてから1回だけ送り直す(アプリ全体で1回) |
+| `const timer = setTimeout(resolve, ms)` | 対象外 | await | ランキング送信を待つ時間切れ(`withRhythmRankingTimeout`)。送信が終われば `clearTimeout` で消す |
+| `RHYTHM_RANKING_RETRY_DELAYS_MS.map(ms => setTimeout(` | 対象外 | 止める | 送れなかった音ゲーのランキング記録を、開いたまま何度か送り直す。次の予約のたびに前の分を `clearTimeout` |
+| `void syncBondLevelsLive(); }, wait` | 対象外 | 止める | 絆Lv・総合力ランキングへの送信。effect の後始末で `clearTimeout` |
+| `setGuardImpact(p => (p && p.key === key ? null : p)), battleMs(820)` | progress | 投げっぱなし | ガードの衝撃演出を消す。止めると出たまま |
 
 ## 次の本でやること
 

@@ -111,11 +111,11 @@ check('CHAOSは4ステータスの加入ボーナスだけ通常値と実値を�
   has('data-chaos-join-status') && has("[ULTIMATE_SETTING.id,CHAOS_SETTING.id,INFINITY_SETTING.id].includes") && !aptitudeCards.includes('CHAOS_SETTING.id'));
 
 // ---- ④ スクロールで全部たどれること ----
-const listArea = slice('flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0', 'バトルチュートリアル中は');
+const listArea = slice('w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col', 'バトルチュートリアル中は');
 check('候補一覧のスクロール領域で justify-center を使っていない',
   listArea.length > 0 && !listArea.includes('justify-center'), listArea.slice(0, 100));
 check('内側の入れ物を m-auto で寄せている(あふれても先頭からたどれる)',
-  has("<div className={`w-full${pickMode==='ally'?' m-auto':''}`}>"));
+  has("<div className={`w-full${pickMode==='ally'?' m-auto':''}"));
 
 // ---- ③ 本体の計算をそのまま動かす ----
 const calcSrc = `

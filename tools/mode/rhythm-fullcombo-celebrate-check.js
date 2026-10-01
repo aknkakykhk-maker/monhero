@@ -97,7 +97,7 @@ check('タップ音とは別のAudioContextを新規に作らない(既存のcon
 check('鳴らしたオシレーターは鳴らし終えたら片付ける(繋ぎっぱなしにしない)',
   seBlock.includes("oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};"));
 check('外部からrhythmPlayFullComboとして呼べる',
-  rhythm.includes('playFullCombo,_readSettings:readSettings};')
+  /playFullCombo,[^}]*_readSettings:readSettings\};/.test(rhythm) // holdSync などが間に増えても落ちない
   &&game.includes('RHYTHM_NOTE_SE_RUNTIME.playFullCombo()'));
 
 // --- CSS ---

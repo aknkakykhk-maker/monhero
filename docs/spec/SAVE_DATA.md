@@ -109,13 +109,14 @@
 | `mh_battle_speed_v1` | string | バトル速度(`normalizeBattleSpeed` で既定へ) |
 | `mh_battle_screen_style_v1` | string / `'TACTICS_NEW'` | タクティクス画面の表示設定（`TACTICS_OLD` / `TACTICS_NEW`）。未保存・旧`CLASSIC`値・不正値は新タクティクスUIへ正規化。通常のクラシックバトルには影響しない |
 | `mh_dex_idle_motion_v1` | boolean / `true` | モンスター図鑑の立ち絵を動かすか(図鑑のページの「動きを止める／動かす」)。無い・`false` 以外は動かす。見た目だけ |
-| `mh_battle_fx_v1` | object / `{idleMotion:'ON', shake:'ON'}` | バトル設定の「待機中の動き」「画面の揺れ」(`normalizeBattleFxSettings` で既定へ。項目が無い・不正値は `'ON'`)。見た目だけで戦闘には影響しない |
+| `mh_battle_fx_v1` | object / `{idleMotion:'ON', shake:'ON', autoLoad:'OFF'}`(`autoLoad` の既定は 2026-10-01 に ON→OFF。以前 ON で保存していた人は一度きりの移行で OFF にし、済みの印は `mh_battle_fx_autoload_default_off_v1`) | バトル設定の「待機中の動き」「画面の揺れ」(`normalizeBattleFxSettings` で既定へ。項目が無い・不正値は `'ON'`)。見た目だけで戦闘には影響しない |
 | `mh_login_bonus` | object / `LOGIN_BONUS_DEFAULT` | ログインボーナスの受取状況(期間キーと日数) |
 | `mh_playtime_v1` | object | プレイ時間の累計と日別(`normalizePlaytime`) |
 | `mh_player_id` | string | ランキング送信に使う端末ID。`localStorage` 直接アクセス(`storeGet` を通さない) |
 | `mh_ranking_cache` | object | 全国ランキングの取得結果の控え(表示用。無くても取り直す)。**保存する形は軽くする**(下記) |
 | `mh_bond_live_sync_v1` | object / `{version:1,sent:{}}` | 絆Lv・総合力ランキング(`bond_levels`)へリアルタイムで送った行の指紋。見出しは「ブリーダー名＋個体ID」、値は行の内容から作った短い文字列。前と同じ行は送らないために使うだけで、壊れていたら空から数え直す(全員を1回送り直すだけで記録は壊れない)。送れた行だけ覚える(2026-09-27) |
 | `mh_pro_last_party` | object / `EMPTY_PRO_LAST_PARTY` | プロモードで最後に使った編成(`normalizeProLastParty`) |
+| `mh_pro_pick_prefs_v1` | object / `{recent:[],fav:[]}` | プロモードの勇者モン・供モンえらびの「前回使った子」(`recent`・最大8)と「お気に入り」(`fav`)。モンスターIDの配列。壊れている・無いときは空で読む(`readProPickPrefs`) |
 | `mh_home_pasture_ids` | string[] / `[]` | HOME の牧場に出すマスモンの個体ID(`normalizeHomePastureIds`) |
 | `mh_monster_roster_sets_v1` | object | 編成セット(`normalizeMonsterPartySets`)。`mh_monster_roster` は現在のセットの写し |
 | `mh_monster_list_settings` | object / `DEFAULT_MONSTER_LIST_SETTINGS` | マスモン一覧の並び・絞り込み |
@@ -143,6 +144,7 @@
 | `mh_rhythm_perf_v1` | boolean / `false` | 性能計測(デバッグ限定)の ON/OFF |
 | `mh_rhythm_chart_notes_v1` | object / `{}` | 譜面メモ(デバッグ限定・2026-09-26)。`曲id|難易度` → 区間ごとの 👍/👎 とひとことメモ。譜面の作り直しを見分ける `fingerprint` 付き(`normalizeRhythmChartNotes`) |
 | `mh_rhythm_play_log_device_v1` | string / 無し | 遊んだ記録(2026-09-28)の端末ごとのでたらめなID(英小文字と数字20文字)。記録の送信(`rhythmPlayLogSend`)だけが使い、無い・形が違うときは作り直す。名前・ブリーダーIDとは結び付かない(`docs/spec/RHYTHM_PLAY_LOG.md`) |
+| `mh_rhythm_touch_diag_v1` | array / `[]` | タッチの診断(2026-09-30・`docs/spec/RHYTHM_TOUCH_DIAG.md`)。演奏1曲ごとに、ポインタとタッチの突き合わせ・遅れ・取り消し・入力の無いMISSの数をまとめたもの。直近20曲だけ持つ。配列でない・要素がオブジェクトでないものは読まずに捨てる。判定・スコア・ランキングには使わない。2026-10-01から、要素の `stats` に `playId`(1曲ごとの番号)と `fixes`(効いていた直し方)が入り、リザルトの「押したのに反応しないことがあった」を押した曲には `reported:true` が付く(どれも項目を足しただけ。無い古い要素はそのまま読む) |
 | `mh_rhythm_event_notice_v1` | string / `''` | 曲えらびで「今週の対象曲」の案内を見たイベントのID(週が変わると新しいIDになり、その週の初回にもう一度だけ出る。`docs/spec/RHYTHM_RANKING.md` §10.2) |
 | `mh_changelog_timed_seen_fix_v1` | boolean / `false` | `visibleFrom` 付きの更新履歴（時刻が来てから出る項目）を、一度きりで未読へ戻したか。開始前に一覧を開いた端末で既読になり、公開時刻にNEWが付かなかったための補正フラグ（二重適用を防ぐ） |
 | `mh_rhythm_event_story_v1` | string[] / `[]` | イベントの会話ストーリーを最後まで見たイベントのID(開催中に1度だけ流すためのフラグ。回想からはいつでも見られる) |

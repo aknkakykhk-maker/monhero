@@ -10,6 +10,10 @@ const fs=require('fs'),os=require('os'),path=require('path'),crypto=require('cry
 const {spawnSync}=require('child_process');
 
 const ROOT=path.resolve(__dirname,'..','..');
+// 解析はブラウザ(Chromium)でデコードして確かめる。ffmpeg でデコードすると打点の検出がずれ、
+// six_eternel_beat は 138 BPM・4拍子と読まれて「3拍子の読み違い」にならず、自動修正まで届かない。
+// 人が決めた値と解析済みファイルはブラウザ経路で作られているので、こちらに合わせる。Playwright が無い環境では飛ばす
+try{require('playwright');}catch(e){console.log('SKIP: Playwright が無いので、ブラウザ経路でデコードするこの検査は飛ばします');process.exit(0);}
 let failed=0;
 const ok=(label,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${label}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
 const sha=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
@@ -27,7 +31,7 @@ try{
   const analyze=(trackId,extra=[])=>{
     const dir=path.join(tmp,`${trackId}${extra.length?'-x':''}`);fs.mkdirSync(dir);
     const run=spawnSync(process.execPath,[path.join(__dirname,'rhythm-audio-analyze-v3.js'),'--track',trackId,'--write','--output-dir',dir,...extra],
-      {cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
+      {cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024,env:{...process.env,MHB_AUDIO_DECODE:'chromium'}});
     const file=path.join(dir,`${trackId.replace(/_/g,'-')}-v3-audio.json`);
     return fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):{error:run.stderr||run.stdout};
   };

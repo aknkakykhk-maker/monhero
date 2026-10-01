@@ -96,7 +96,7 @@ const rankColorBlock=(game.match(/const RHYTHM_RANK_COLORS = Object\.freeze\(\{(
 check('ランク色マップを持つ',
   ['G','F','E','D','C','B','A','S','SS','M'].every(rank=>new RegExp(`(^|[\\s,])${rank}:'text-[a-z]+-\\d{3}'`).test(rankColorBlock)));
 check('HUDのSCORE横にライブランクを表示',
-  game.includes('data-rhythm-rank')&&game.includes('RHYTHM_RANK_COLORS[rhythmRankForScore(score)]'));  // スコアの札の部品(RhythmHudScore)が hud のスコアから出す(2026-09-27)
+  game.includes('data-rhythm-rank')&&game.includes('RHYTHM_RANK_COLORS[rank]')&&game.includes('const rank=rhythmRankForScore(score);'));  // スコアの札の部品(RhythmHudScore)が hud のスコアから出す(2026-09-27)
 check('リザルト画面にも大きくランクを表示',
   game.includes('data-rhythm-result-rank')&&game.includes('rank=rhythmRankForScore(view.score)'));
 check('ランクはスコアから毎回計算するだけで、保存形式(BEST)を増やしていない',

@@ -8,6 +8,7 @@
 //   node tools/run-checks.js --changed              … いま変更しているファイルから、要る検査だけを選んで回す
 //   node tools/run-checks.js --changed --plan       … 選んだ検査を出すだけ(実行しない)
 //   オプション: --limit N(選ぶ上限。既定40) --wide(当たった領域を丸ごと) --base <ref>(そのrefとの差も見る)
+//   オプション: --skip-file <ファイル>(1行1検査。# で始まる行は無視。その検査を回さない)
 //   オプション: --no-server(実ブラウザ検査用の配信を起動しない) --timeout <秒> --json <出力先>
 //
 // 【なぜ要るか】
@@ -253,6 +254,7 @@ function parseArgs(argv) {
     else if (a === '--area') opts.areas.push(...String(argv[++i] || '').split(',').filter(Boolean));
     else if (a === '--timeout') opts.timeoutSec = Number(argv[++i]) || opts.timeoutSec;
     else if (a === '--json') opts.json = argv[++i];
+    else if (a === '--skip-file') opts.skipFile = String(argv[++i] || '');
     else if (a === '--script') opts.scripts = (opts.scripts || []).concat(String(argv[++i] || '').split(',').filter(Boolean));
     else if (a.startsWith('--area=')) opts.areas.push(...a.slice(7).split(',').filter(Boolean));
     else if (!a.startsWith('--')) opts.areas.push(a);
@@ -378,6 +380,10 @@ async function main() {
   const commands = [];
   for (const a of wanted) for (const c of areas.get(a)) if (!commands.includes(c)) commands.push(c);
   for (const c of opts.scripts || []) if (!commands.includes(c)) commands.push(c);
+  if (opts.skipFile) {
+    const skip = new Set(fs.readFileSync(opts.skipFile, 'utf8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')));
+    for (let i = commands.length - 1; i >= 0; i--) if (skip.has(commands[i])) commands.splice(i, 1);
+  }
 
   const hasPlaywright = canResolve('playwright');
   const hasCanvas = canResolve('canvas');

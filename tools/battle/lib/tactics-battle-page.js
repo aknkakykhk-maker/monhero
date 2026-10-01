@@ -85,7 +85,7 @@ async function openTacticsBattle({ root, port, storage = {}, mobile = true } = {
       const step = await page.evaluate(() => {
         const live = [...document.querySelectorAll('button')].filter((x) => x.offsetParent && !x.disabled);
         const pick = (re) => live.find((x) => re.test(x.textContent.trim()));
-        const go = pick(/出撃|バトル開始|この編成で|はじめる|^決定$|^確定$/); if (go) { go.click(); return 'go'; }
+        const go = pick(/出撃|バトル開始|この編成で|この子で挑む|供モン\d*にする|はじめる|^決定$|^確定$/); if (go) { go.click(); return 'go'; }
         const confirm = pick(/^(習得する|強化する)$/); if (confirm) { confirm.click(); return 'confirm'; }
         const teaching = pick(/新規習得|強化後/); if (teaching) { teaching.click(); return 'teach'; }
         const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }

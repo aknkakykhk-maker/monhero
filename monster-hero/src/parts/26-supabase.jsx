@@ -1747,8 +1747,37 @@ const beginNewRankingRun = ({ runIdRef, scoreSubmittedRef, runFinalizingRef, rew
 //   ・表の作り方は docs/sql/rankings/RHYTHM_PLAY_LOG_APPLY.sql(先にアプリを公開しても壊れない)
 const RHYTHM_PLAY_LOG_TABLE = 'rhythm_play_logs';
 let rhythmPlayLogDisabled = false;
+// タッチの診断(2026-09-30・docs/spec/RHYTHM_TOUCH_DIAG.md)。遊んだ記録と同じく、表が無い・権限が無いと分かったら、ページを閉じるまで送らない
+const RHYTHM_TOUCH_DIAG_TABLE = 'rhythm_touch_diagnostics';
+let rhythmTouchDiagDisabled = false;
+// 手元のサーバー(検査・ローカル確認)で開いたゲームからは、タッチの診断・遊んだ記録を送らない(2026-10-01)。
+// 検査は本物の曲を最後まで流すので、送ると本番の表へ検査の行が混ざり、iPhone と Android の比べが狂う
+const sbTelemetryLocal = () => {
+  try {
+    if (typeof location === 'undefined') return false;
+    if (location.protocol === 'file:') return true;
+    return ['localhost', '127.0.0.1', '[::1]', '::1', ''].includes(String(location.hostname || ''));
+  } catch { return false; }
+};
+const sbSendRhythmTouchDiag = async (row) => {
+  if (rhythmTouchDiagDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
+      method: 'POST', headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(row),
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
 const sbSendRhythmPlayLog = async (row) => {
-  if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function') return false;
+  if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
   try {

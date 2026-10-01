@@ -68,7 +68,10 @@ console.log(`   (画像 ${entries.length - emojiEntries.length}件 / 絵文字 $
 const source = read('src/game-system.jsx');
 // src={...} のような属性の中は<img>なので対象外。JSXの本文に素で置いてある箇所だけを見る
 // 文字列の中へ値を埋め込む `${…}`(例: 寸法の calc の中の HAND_CARD_FIT.icon)は画面に描く所ではないので数えない(2026-09-27)
-const raw = [...source.matchAll(/(?<![=$])\{\s*([A-Za-z_$][\w$]*(?:\?\.|\.)icon)\s*\}/g)].map(m => m[1]);
+// 同じ行で isImageIconValue(その値) の分岐の「絵文字側」に置いているもの(技カットインなど)は、画像を先に振り分けているので数えない
+const raw = [...source.matchAll(/(?<![=$])\{\s*([A-Za-z_$][\w$]*(?:\?\.|\.)icon)\s*\}/g)]
+  .filter(m => { const ls = source.lastIndexOf('\n', m.index) + 1; const line = source.slice(ls, source.indexOf('\n', m.index)); return !line.includes(`isImageIconValue(${m[1]})`); })
+  .map(m => m[1]);
 check('iconをそのまま描いている箇所が残っていない', raw.length === 0,
   `${[...new Set(raw)].join(', ')} — cardIconNode() を通すこと`);
 

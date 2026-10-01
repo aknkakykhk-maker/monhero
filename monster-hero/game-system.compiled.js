@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 71dbf1815c2734cc
+// source-sha256: 3fdd03f0b0c55903
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -152,7 +152,7 @@ const normalizeBattleFxSettings = value => {
     shake: v.shake === 'OFF' ? 'OFF' : 'ON',
     load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH',
     restPause: v.restPause === 'ON' ? 'ON' : 'OFF',
-    autoLoad: v.autoLoad === 'OFF' ? 'OFF' : 'ON',
+    autoLoad: v.autoLoad === 'ON' ? 'ON' : 'OFF',
     specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON'
   };
 };
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 14:21";
+const BUILD_DATE = "2026-10-01 14:27";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5477,8 +5477,7 @@ const TITLE_ART_OPTIONS = [{
   id: 'halloween',
   label: 'ハロウィン',
   desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え',
-  src: 'data/images/title-screen-halloween.jpg',
-  wideSrc: 'data/images/title-screen-halloween-wide.jpg'
+  src: 'data/images/title-screen-halloween.jpg'
 }, {
   id: 'classic',
   label: 'クラシック',
@@ -22110,8 +22109,43 @@ const beginNewRankingRun = ({
 };
 const RHYTHM_PLAY_LOG_TABLE = 'rhythm_play_logs';
 let rhythmPlayLogDisabled = false;
+const RHYTHM_TOUCH_DIAG_TABLE = 'rhythm_touch_diagnostics';
+let rhythmTouchDiagDisabled = false;
+const sbTelemetryLocal = () => {
+  try {
+    if (typeof location === 'undefined') return false;
+    if (location.protocol === 'file:') return true;
+    return ['localhost', '127.0.0.1', '[::1]', '::1', ''].includes(String(location.hostname || ''));
+  } catch {
+    return false;
+  }
+};
+const sbSendRhythmTouchDiag = async row => {
+  if (rhythmTouchDiagDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RHYTHM_TOUCH_DIAG_TABLE}`, {
+      method: 'POST',
+      headers: {
+        ...SB_HEADERS,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(row),
+      ...(controller ? {
+        signal: controller.signal
+      } : {})
+    });
+    if (res.status === 404 || res.status === 401 || res.status === 403) rhythmTouchDiagDisabled = true;
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
 const sbSendRhythmPlayLog = async row => {
-  if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function') return false;
+  if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
   try {
@@ -26165,6 +26199,115 @@ const rhythmPlayLogSend = async ({
     return false;
   }
 };
+const RHYTHM_TOUCH_DIAG_KEY = 'mh_rhythm_touch_diag_v1';
+const RHYTHM_TOUCH_DIAG_KEEP = 20;
+const RHYTHM_TOUCH_DIAG_VERSION = 1;
+const rhythmTouchDiagPlayId = () => {
+  let id = '';
+  for (let i = 0; i < 12; i++) id += '0123456789abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 36)];
+  return id;
+};
+const rhythmTouchDiagOf = ({
+  song,
+  difficulty,
+  notes,
+  inputTimes,
+  assist,
+  mirror,
+  cleared
+}) => {
+  const bridge = RHYTHM_TOUCH_BRIDGE.snapshot(),
+    miss = rhythmTouchNoInputMisses(notes, inputTimes);
+  let perfTouch = null;
+  try {
+    perfTouch = RHYTHM_PERF.snapshot().touch || null;
+  } catch {
+    perfTouch = null;
+  }
+  return {
+    song_id: String(song?.songId || ''),
+    difficulty: String(difficulty?.id || ''),
+    note_count: Array.isArray(notes) ? notes.length : 0,
+    platform: rhythmTouchPlatform(),
+    standalone: !!rhythmTouchStandalone(),
+    stats: {
+      ...bridge,
+      inputs: Array.isArray(inputTimes) ? inputTimes.length : 0,
+      misses: miss.misses,
+      noInputMisses: miss.noInput,
+      outside: perfTouch?.outside || 0,
+      ignored: perfTouch?.ignored || 0,
+      gestures: perfTouch?.gestures || 0,
+      assist: !!assist,
+      mirror: !!mirror,
+      cleared: !!cleared,
+      playId: rhythmTouchDiagPlayId(),
+      fixes: rhythmTouchFixesActive()
+    }
+  };
+};
+const rhythmTouchDiagRecord = async diag => {
+  try {
+    const saved = await storeGet(RHYTHM_TOUCH_DIAG_KEY, []);
+    const list = Array.isArray(saved) ? saved.filter(item => item && typeof item === 'object') : [];
+    list.push({
+      ...diag,
+      at: Date.now()
+    });
+    await storeSet(RHYTHM_TOUCH_DIAG_KEY, list.slice(-RHYTHM_TOUCH_DIAG_KEEP));
+  } catch {}
+  try {
+    if (typeof sbSendRhythmTouchDiag !== 'function' || !RHYTHM_DEMO_SONG_IDS.includes(diag.song_id)) return false;
+    const deviceKey = await rhythmPlayLogDeviceKey();
+    return await sbSendRhythmTouchDiag({
+      device_key: deviceKey,
+      app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE : '',
+      platform: diag.platform,
+      standalone: diag.standalone,
+      song_id: diag.song_id,
+      difficulty: diag.difficulty,
+      note_count: Math.max(1, diag.note_count),
+      stats: diag.stats,
+      schema_version: RHYTHM_TOUCH_DIAG_VERSION
+    });
+  } catch {
+    return false;
+  }
+};
+const rhythmTouchDiagReport = async report => {
+  if (!report || !report.playId) return false;
+  try {
+    const saved = await storeGet(RHYTHM_TOUCH_DIAG_KEY, []);
+    if (Array.isArray(saved)) {
+      const list = saved.filter(item => item && typeof item === 'object');
+      const hit = list.find(item => item.stats && item.stats.playId === report.playId);
+      if (hit) {
+        hit.reported = true;
+        await storeSet(RHYTHM_TOUCH_DIAG_KEY, list.slice(-RHYTHM_TOUCH_DIAG_KEEP));
+      }
+    }
+  } catch {}
+  try {
+    if (typeof sbSendRhythmTouchDiag !== 'function' || !RHYTHM_DEMO_SONG_IDS.includes(report.song_id)) return false;
+    const deviceKey = await rhythmPlayLogDeviceKey();
+    return await sbSendRhythmTouchDiag({
+      device_key: deviceKey,
+      app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE : '',
+      platform: report.platform,
+      standalone: !!report.standalone,
+      song_id: report.song_id,
+      difficulty: report.difficulty,
+      note_count: Math.max(1, report.note_count),
+      stats: {
+        kind: 'report',
+        playId: report.playId
+      },
+      schema_version: RHYTHM_TOUCH_DIAG_VERSION
+    });
+  } catch {
+    return false;
+  }
+};
 const RHYTHM_CHART_NOTES_KEY = 'mh_rhythm_chart_notes_v1';
 const RHYTHM_CHART_NOTE_SEGMENT_MS = 8000;
 const RHYTHM_CHART_NOTE_MARKS = ['', 'good', 'bad'];
@@ -26877,6 +27020,7 @@ const RhythmTapTest = ({
   };
   const sideMonsterRefs = useRef([]),
     screenFlashRef = useRef(null),
+    touchSweepRef = useRef(null),
     judgmentTextRef = useRef(null),
     comboRef = useRef(null),
     judgmentBurstRef = useRef(null),
@@ -27965,6 +28109,24 @@ const RhythmTapTest = ({
       mirror: mirrorOn,
       cleared: !failed
     });
+    const touchDiag = !debugPlay && !tutorial && !calibrating ? rhythmTouchDiagOf({
+      song,
+      difficulty,
+      notes: run.notes,
+      inputTimes: run.inputTimes,
+      assist: assistOn,
+      mirror: mirrorOn,
+      cleared: !failed
+    }) : null;
+    if (touchDiag) void rhythmTouchDiagRecord(touchDiag);
+    const touchReport = touchDiag && touchDiag.platform !== 'other' ? {
+      playId: touchDiag.stats.playId,
+      song_id: touchDiag.song_id,
+      difficulty: touchDiag.difficulty,
+      note_count: touchDiag.note_count,
+      platform: touchDiag.platform,
+      standalone: touchDiag.standalone
+    } : null;
     const liveLogEndMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;
     const liveLog = rhythmLiveLogSections(run.liveLog, liveLogEndMs);
     const celebrateTitle = achievements.allMarvelous ? 'ALL MARVELOUS!!' : achievements.allExcellent ? 'ALL EXCELLENT!!' : achievements.fullCombo ? 'FULL COMBO!' : null;
@@ -27989,7 +28151,8 @@ const RhythmTapTest = ({
         liveLog,
         liveLogEndMs,
         assistGuarded: assistOn ? run.assistGuarded || 0 : 0,
-        mirror: mirrorOn
+        mirror: mirrorOn,
+        touchReport
       }
     }));
     if (eventPointAward && eventPointAward.amount > 0 && typeof addRhythmEventPoints === 'function') void addRhythmEventPoints(eventPointAward.amount);
@@ -28017,6 +28180,7 @@ const RhythmTapTest = ({
     onComplete(result, merged);
   }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn]);
   const celebrateTimerRef = useRef(null);
+  const [touchReportSent, setTouchReportSent] = useState(null);
   useEffect(() => {
     if (view.status !== 'celebrate') return;
     RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
@@ -28053,6 +28217,7 @@ const RhythmTapTest = ({
     const tick = frameNowMs => {
       RHYTHM_PERF.frame(frameNowMs);
       RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();
+      if (RHYTHM_TOUCH_BRIDGE.hasPending() && touchSweepRef.current) touchSweepRef.current();
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
       if (settings.renderQuality === 'AUTO') {
@@ -28100,9 +28265,12 @@ const RhythmTapTest = ({
         }
         if (frameNowMs - ae.start >= RHYTHM_AUTO_QUALITY_WINDOW_MS) {
           const qualityFirst = settings.renderQuality === 'AUTO' && autoQualityLevelRef.current !== RHYTHM_RENDER_QUALITY_STEPS[RHYTHM_RENDER_QUALITY_STEPS.length - 1];
-          if (ae.settle > 0) ae.settle--;else if (!qualityFirst && ae.frames >= RHYTHM_AUTO_QUALITY_MIN_FRAMES && ae.slow / ae.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepEffectCapRef.current()) {
+          const lateNow = RHYTHM_TOUCH_BRIDGE.lateCount(),
+            lateBurst = rhythmTouchFixOn('lateInputEffectDown') && lateNow - (ae.late || 0) >= RHYTHM_TOUCH_FIX_LATE_BURST;
+          ae.late = lateNow;
+          if (ae.settle > 0) ae.settle--;else if (!qualityFirst && (ae.frames >= RHYTHM_AUTO_QUALITY_MIN_FRAMES && ae.slow / ae.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO || lateBurst) && stepEffectCapRef.current()) {
             ae.settle = 1;
-            RHYTHM_PERF.autoStep('演出', RHYTHM_AUTO_EFFECT_STEP_LABELS[rhythmAutoEffectMemory.level - 1] || '', ae.slow, ae.frames);
+            RHYTHM_PERF.autoStep(lateBurst ? '演出(タッチの遅れ)' : '演出', RHYTHM_AUTO_EFFECT_STEP_LABELS[rhythmAutoEffectMemory.level - 1] || '', ae.slow, ae.frames);
           }
           ae.start = frameNowMs;
           ae.frames = 0;
@@ -28622,6 +28790,7 @@ const RhythmTapTest = ({
       return;
     }
     const startBest = normalizeRhythmBestRecord(startBestValue);
+    RHYTHM_TOUCH_BRIDGE.reset();
     rhythmFloatingNotesClear();
     runRef.current = {
       audio,
@@ -28630,6 +28799,7 @@ const RhythmTapTest = ({
       activePointers: new Map(),
       standbyPointers: new Map(),
       activeTouchInputs: new Set(),
+      inputTimes: [],
       combo: 0,
       maxCombo: 0,
       counts: emptyCounts(),
@@ -28786,6 +28956,7 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
     const now = run.audio.songTimeMs() - (Number(ageMs) > 0 ? Number(ageMs) : 0);
+    if (Array.isArray(run.inputTimes) && run.inputTimes.length < 20000 && inputs.some(input => !input?.rejudge)) run.inputTimes.push(now);
     run.inputFeedbackState = run.inputFeedbackState || new Map();
     rhythmMatchInputBatch(run.notes, inputs, now, settings.judgmentTimingOffsetMs).forEach(({
       input,
@@ -28951,6 +29122,78 @@ const RhythmTapTest = ({
       RHYTHM_PERF.touchGesture();
       if (typeof e.preventDefault === 'function') e.preventDefault();
     };
+    const nowMs = () => typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const inArea = target => {
+      const area = playAreaRef.current;
+      return !!(area && target && typeof area.contains === 'function' && area.contains(target));
+    };
+    const endRecovered = entry => {
+      const run = runRef.current;
+      if (!run) return;
+      if (run.activePointerFeedback) run.activePointerFeedback.delete(entry.id);
+      setPressedLanes(pressedLanesNow());
+      inputEnds([{
+        inputKey: rhythmInputKey('pointer', entry.id),
+        releaseTarget: playAreaRef.current,
+        pointerId: entry.id
+      }]);
+    };
+    const startRecovered = entry => {
+      const run = runRef.current,
+        area = playAreaRef.current;
+      if (!run || !area) return;
+      const rect = inputAreaRect(area),
+        p = inputPoint(entry.x, entry.y),
+        lane = rhythmLaneAtPoint(p.x, p.y, rect),
+        subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(p.x, p.y, rect);
+      if (lane === null || subLaneCoordinate === null) {
+        RHYTHM_PERF.touchIgnored();
+        return;
+      }
+      run.activePointerFeedback = run.activePointerFeedback || new Map();
+      run.activePointerFeedback.set(entry.id, subLaneCoordinate);
+      setPressedLanes(pressedLanesNow());
+      const rawAge = nowMs() - Number(entry.stamp);
+      inputStarts([{
+        lane,
+        subLaneCoordinate,
+        inputKey: rhythmInputKey('pointer', entry.id),
+        pointerId: entry.id
+      }], rawAge > 0 && rawAge < 300 ? rawAge : rhythmInputAgeMs(entry.stamp, nowMs()));
+      if (entry.upAt != null) endRecovered(entry);
+    };
+    const sweepTimers = new Set();
+    const sweep = () => {
+      if (!playing()) return;
+      RHYTHM_TOUCH_BRIDGE.sweep(nowMs()).forEach(startRecovered);
+    };
+    touchSweepRef.current = sweep;
+    const onPointerDown = e => {
+      if (e.pointerType !== 'touch' || !playing() || !inArea(e.target)) return;
+      RHYTHM_TOUCH_BRIDGE.pointerDown(e.pointerId, e.clientX, e.clientY, e.timeStamp, nowMs());
+      const id = setTimeout(() => {
+        sweepTimers.delete(id);
+        sweep();
+      }, RHYTHM_TOUCH_BRIDGE_WAIT_MS + 5);
+      sweepTimers.add(id);
+    };
+    const onPointerUp = e => {
+      if (e.pointerType !== 'touch') return;
+      const entry = RHYTHM_TOUCH_BRIDGE.pointerUp(e.pointerId, nowMs(), e.timeStamp);
+      if (entry) endRecovered(entry);
+    };
+    const onTouchStart = e => {
+      if (!playing()) return;
+      const now = nowMs();
+      RHYTHM_TOUCH_BRIDGE.liveTouches(e.touches?.length || 0);
+      Array.from(e.changedTouches || []).forEach(t => {
+        if (inArea(t.target)) RHYTHM_TOUCH_BRIDGE.touchStart(t.identifier, t.clientX, t.clientY, e.timeStamp, now, now - e.timeStamp);
+      });
+      sweep();
+    };
+    const onTouchCancel = e => {
+      if (playing()) RHYTHM_TOUCH_BRIDGE.touchCancel(e.changedTouches?.length || 0);
+    };
     const touchTypes = ['touchstart', 'touchmove'],
       gestureTypes = ['gesturestart', 'gesturechange'];
     touchTypes.forEach(type => document.addEventListener(type, blockTouch, {
@@ -28959,6 +29202,26 @@ const RhythmTapTest = ({
     gestureTypes.forEach(type => document.addEventListener(type, blockGesture, {
       passive: false
     }));
+    document.addEventListener('pointerdown', onPointerDown, {
+      capture: true,
+      passive: true
+    });
+    document.addEventListener('pointerup', onPointerUp, {
+      capture: true,
+      passive: true
+    });
+    document.addEventListener('pointercancel', onPointerUp, {
+      capture: true,
+      passive: true
+    });
+    document.addEventListener('touchstart', onTouchStart, {
+      capture: true,
+      passive: true
+    });
+    document.addEventListener('touchcancel', onTouchCancel, {
+      capture: true,
+      passive: true
+    });
     return () => {
       touchTypes.forEach(type => document.removeEventListener(type, blockTouch, {
         passive: false
@@ -28966,6 +29229,29 @@ const RhythmTapTest = ({
       gestureTypes.forEach(type => document.removeEventListener(type, blockGesture, {
         passive: false
       }));
+      document.removeEventListener('pointerdown', onPointerDown, {
+        capture: true,
+        passive: true
+      });
+      document.removeEventListener('pointerup', onPointerUp, {
+        capture: true,
+        passive: true
+      });
+      document.removeEventListener('pointercancel', onPointerUp, {
+        capture: true,
+        passive: true
+      });
+      document.removeEventListener('touchstart', onTouchStart, {
+        capture: true,
+        passive: true
+      });
+      document.removeEventListener('touchcancel', onTouchCancel, {
+        capture: true,
+        passive: true
+      });
+      sweepTimers.forEach(clearTimeout);
+      sweepTimers.clear();
+      if (touchSweepRef.current === sweep) touchSweepRef.current = null;
     };
   }, [view.status]);
   const pointerDown = e => {
@@ -28993,7 +29279,7 @@ const RhythmTapTest = ({
     }], rhythmInputAgeMs(e.timeStamp, typeof performance !== 'undefined' ? performance.now() : NaN));
   };
   const pointerMove = e => {
-    if (e.pointerType === 'touch') return;
+    if (e.pointerType === 'touch' && !RHYTHM_TOUCH_BRIDGE.isRecoveredPointer(e.pointerId)) return;
     const run = runRef.current;
     if (!run?.activePointerFeedback?.has(e.pointerId)) return;
     e.preventDefault();
@@ -29045,11 +29331,17 @@ const RhythmTapTest = ({
           return;
         }
         current.activeTouchInputs.add(inputKey);
+        if (e.type !== 'touchstart') {
+          RHYTHM_TOUCH_BRIDGE.lateStart();
+          const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now();
+          RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier, touch.clientX, touch.clientY, e.timeStamp, nowPerf, null);
+        }
+        if (RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier)) return;
         if (lane !== null && subLaneCoordinate !== null) starts.push({
           lane,
           subLaneCoordinate,
           inputKey
-        });
+        });else RHYTHM_PERF.touchIgnored();
       });
       liveTouchSubLanesRef.current = liveSubLanes;
       setPressedLanes(pressedLanesNow());
@@ -29647,7 +29939,23 @@ const RhythmTapTest = ({
         "data-rhythm-live-log-worst": true,
         className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-300"
       }, worst ? `いちばん崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad + worst.miss}回）。` : 'どの区間も BAD・MISS なしで通せました。'));
-    })(), debugPlay && !tutorial && !calibrating && React.createElement(RhythmChartNotePanel, {
+    })(), result.touchReport && React.createElement("div", {
+      "data-rhythm-touch-report": true,
+      className: "mb-2 text-center"
+    }, touchReportSent === result.touchReport.playId ? React.createElement("p", {
+      "data-rhythm-touch-report-done": true,
+      className: "text-[11px] font-bold leading-relaxed text-emerald-200"
+    }, "送りました。ありがとうございます！反応しなかった原因を調べるのに使います") : React.createElement(React.Fragment, null, React.createElement("button", {
+      "data-rhythm-touch-report-button": true,
+      className: "min-h-[44px] rounded-xl border border-white/20 bg-slate-800/80 px-4 text-[12px] font-black text-slate-100",
+      onClick: () => {
+        const report = result.touchReport;
+        setTouchReportSent(report.playId);
+        void rhythmTouchDiagReport(report);
+      }
+    }, "👆 押したのに反応しないことがあった"), React.createElement("small", {
+      className: "mt-1 block text-[9px] font-bold text-slate-500"
+    }, "押すと、この曲の指の記録に印を付けて送ります（名前は送りません）"))), debugPlay && !tutorial && !calibrating && React.createElement(RhythmChartNotePanel, {
       song: song,
       difficulty: difficulty,
       chart: chart
@@ -52754,7 +53062,19 @@ function MonsterHeroGame() {
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
-      setBattleFxSettingsState(normalizeBattleFxSettings(await storeGet(BATTLE_FX_SETTINGS_KEY, null, false)));
+      const rawBattleFx = await storeGet(BATTLE_FX_SETTINGS_KEY, null, false);
+      let savedBattleFx = normalizeBattleFxSettings(rawBattleFx);
+      if (!(await storeGet('mh_battle_fx_autoload_default_off_v1', false, false))) {
+        if (rawBattleFx && typeof rawBattleFx === 'object' && rawBattleFx.autoLoad === 'ON') {
+          savedBattleFx = {
+            ...savedBattleFx,
+            autoLoad: 'OFF'
+          };
+          await storeSet(BATTLE_FX_SETTINGS_KEY, savedBattleFx, false);
+        }
+        await storeSet('mh_battle_fx_autoload_default_off_v1', true, false);
+      }
+      setBattleFxSettingsState(savedBattleFx);
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -60216,6 +60536,11 @@ function MonsterHeroGame() {
           monId: card.type === 'unique' ? card.monId : undefined,
           rangeMoveTarget
         });
+        const themeOf = {
+          skillName: card.name || card.baseName,
+          isUnique: card.type === 'unique',
+          monId: card.type === 'unique' ? card.monId : undefined
+        };
         for (const hit of hits.slice(1)) {
           if (hit.crit) hasCrit = true;
           totalDmg += hit.dmg;
@@ -60226,6 +60551,7 @@ function MonsterHeroGame() {
             isSpecial: true,
             skillName: hit.skillName,
             isUnique: false,
+            themeOf,
             ...(hit.noAnim ? {
               noAnim: true
             } : {})
@@ -60351,8 +60677,9 @@ function MonsterHeroGame() {
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
           const hitMotion = hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion || slots[hit.slotIdx]?.atkMotion;
-          const hitSkillOwner = hit.isUnique && hit.monId ? hit.monId : slots[hit.slotIdx]?.id;
-          const hitSkillKind = skillAttackThemeOf(hitSkillOwner, hit.skillName, !!hit.isUnique);
+          const themeHit = hit.themeOf || hit;
+          const hitSkillOwner = themeHit.isUnique && themeHit.monId ? themeHit.monId : slots[hit.slotIdx]?.id;
+          const hitSkillKind = skillAttackThemeOf(hitSkillOwner, themeHit.skillName, !!themeHit.isUnique);
           const isComboDashMotion = hitMotion === 'zanCombo' || hitMotion === 'eikiSakuraCombo' || hitMotion === 'kenshiTwinBlade';
           const isZanGroupStart = hit.skillName !== '連撃' && isComboDashMotion;
           if (isZanGroupStart) {
@@ -60440,7 +60767,7 @@ function MonsterHeroGame() {
               name: hit.skillName,
               type: hit.isUnique ? 'unique' : hit.isSpecial ? 'special' : 'normal'
             });
-            const motion = hitSkillKind ? 'default' : hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion || slots[animSlot]?.atkMotion;
+            const motion = hitSkillKind ? 'default' : themeHit.isUnique && themeHit.monId && ALL_PLAYER_MONSTERS[themeHit.monId]?.atkMotion || slots[animSlot]?.atkMotion;
             if (hit.isUnique) {
               setAttackAnim({
                 slotIndex: animSlot,
@@ -60475,7 +60802,10 @@ function MonsterHeroGame() {
                 motion,
                 twinBlade: isKenshiTwin,
                 sakura: motion === 'eikiSakuraCombo',
-                skillName: hit.skillName
+                skillName: themeHit.skillName,
+                ...(themeHit.isUnique ? {
+                  charge: false
+                } : {})
               });
               if (isKenshiTwin) {
                 await battleWait(135);
@@ -60487,7 +60817,7 @@ function MonsterHeroGame() {
                 await battleWait(130);
               } else {
                 if (hit.isSpecial) Audio_.se.special();else if (hit.isCrit) Audio_.se.crit();else Audio_.se.attack();
-                await battleWait(themedAttackMotionMs(hitSkillKind ? hitSkillOwner : slots[animSlot]?.id, motion, hit.skillName, false) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450));
+                await battleWait(themedAttackMotionMs(hitSkillKind ? hitSkillOwner : slots[animSlot]?.id, motion, themeHit.skillName, !!themeHit.isUnique) ?? (motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450));
               }
             }
             setAttackAnim(null);
@@ -68730,7 +69060,7 @@ function MonsterHeroGame() {
       className: `min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn ? 'bg-amber-500 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
     }, rhythmPerfOn ? '計測ON' : '計測OFF')), React.createElement("p", {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80"
-    }, "ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。"), React.createElement("div", {
+    }, "ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません（指の記録の行だけは、OFFでもいつも数えています）。「モンスターノーツ」の行が「ノーツを取る処理」よりはっきり大きければ、踏んだときに固まる原因はそこです。ノーツの動きが滑らかかどうかは「曲の時刻」の3つを見ます。ノーツの位置は曲の再生位置だけで決まるので、これが進まないフレームが多いと、フレームレートが60のままでもノーツは止まって飛ぶ動きになります。"), React.createElement("div", {
       className: "mt-2 flex gap-2"
     }, React.createElement("button", {
       type: "button",
@@ -68746,7 +69076,10 @@ function MonsterHeroGame() {
     }, "記録をクリア")), rhythmPerfStats && React.createElement("dl", {
       "data-rhythm-perf-stats": true,
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
-    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ...[['GPU(ノーツ)', rhythmPerfStats.gpuNotes], ['GPU(背景)', rhythmPerfStats.gpuStage]].map(([label, g]) => [label, !g || g.supported === null ? '—' : g.supported === false ? 'この端末は測れない' : g.count ? `平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms` : 'まだ届いていない']), ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['50ms以上（自動調整が重いと数える）', rhythmPerfStats.over50 ?? 0], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`], ['曲の時刻の進み/frame', `${(rhythmPerfStats.songStepMsPerFrame ?? 0).toFixed(2)}ms`], ['曲の時刻が進まないframe', `${((rhythmPerfStats.songStallRate ?? 0) * 100).toFixed(1)}%`], ['曲の時刻の最大の飛び', `${(rhythmPerfStats.songStepMaxMs ?? 0).toFixed(1)}ms`], ['ノーツを取る処理/回', `${(rhythmPerfStats.judgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.judgeCount ?? 0}回）`], ['取る処理の最大', `${(rhythmPerfStats.judgeMsMax ?? 0).toFixed(1)}ms`], ['モンスターノーツ/回', `${(rhythmPerfStats.monsterJudgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount ?? 0}回）`], ['モンスターノーツの最大', `${(rhythmPerfStats.monsterJudgeMsMax ?? 0).toFixed(1)}ms`], ['指が触れた数（同時の最大）', `${rhythmPerfStats.touch?.starts ?? 0}回（${rhythmPerfStats.touch?.maxTouches ?? 0}本）`], ['端末に指を取り消された', `${rhythmPerfStats.touch?.cancels ?? 0}回（${rhythmPerfStats.touch?.cancelledTouches ?? 0}本）`], ['演奏エリアの外に触れた', `${rhythmPerfStats.touch?.outside ?? 0}回`], ['二本指ジェスチャー', `${rhythmPerfStats.touch?.gestures ?? 0}回`], ['空打ち', `${rhythmPerfStats.touch?.emptyTaps ?? 0}回`], ['指の飛び（3サブレーン以上）', `${rhythmPerfStats.touch?.jumps ?? 0}回`]].map(([label, value]) => React.createElement(React.Fragment, {
+    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ...[['GPU(ノーツ)', rhythmPerfStats.gpuNotes], ['GPU(背景)', rhythmPerfStats.gpuStage]].map(([label, g]) => [label, !g || g.supported === null ? '—' : g.supported === false ? 'この端末は測れない' : g.count ? `平均${g.avgMs.toFixed(2)}ms 最大${g.maxMs.toFixed(1)}ms` : 'まだ届いていない']), ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['50ms以上（自動調整が重いと数える）', rhythmPerfStats.over50 ?? 0], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`], ['frame開始→tick開始の遅れ', `${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`], ['最悪frameの遅れ', `${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`], ['遅れの最大', `${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`], ['曲の時刻の進み/frame', `${(rhythmPerfStats.songStepMsPerFrame ?? 0).toFixed(2)}ms`], ['曲の時刻が進まないframe', `${((rhythmPerfStats.songStallRate ?? 0) * 100).toFixed(1)}%`], ['曲の時刻の最大の飛び', `${(rhythmPerfStats.songStepMaxMs ?? 0).toFixed(1)}ms`], ['ノーツを取る処理/回', `${(rhythmPerfStats.judgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.judgeCount ?? 0}回）`], ['取る処理の最大', `${(rhythmPerfStats.judgeMsMax ?? 0).toFixed(1)}ms`], ['モンスターノーツ/回', `${(rhythmPerfStats.monsterJudgeMsAvg ?? 0).toFixed(2)}ms（${rhythmPerfStats.monsterJudgeCount ?? 0}回）`], ['モンスターノーツの最大', `${(rhythmPerfStats.monsterJudgeMsMax ?? 0).toFixed(1)}ms`], ['指が触れた数（同時の最大）', `${rhythmPerfStats.touch?.starts ?? 0}回（${rhythmPerfStats.touch?.maxTouches ?? 0}本）`], ['端末に指を取り消された', `${rhythmPerfStats.touch?.cancels ?? 0}回（${rhythmPerfStats.touch?.cancelledTouches ?? 0}本）`], ['演奏エリアの外に触れた', `${rhythmPerfStats.touch?.outside ?? 0}回`], ['道の外で無視した指（押しても音も光も出ない）', `${rhythmPerfStats.touch?.ignored ?? 0}回`], ...(() => {
+      const b = typeof RHYTHM_TOUCH_BRIDGE !== 'undefined' ? RHYTHM_TOUCH_BRIDGE.snapshot() : null;
+      return b ? [['ポインタだけ届いた指（取り戻した）', `${b.pointerOnly}回（${b.recovered}回）`], ['ポインタとタッチが組になった', `${b.matched}回`], ['50ms以上遅れて届いたタッチ', `${b.lateDelivery}回（最大${Math.round(b.maxDelayMs)}ms）`], ['別の指のイベントで初めて見えた指', `${b.lateStart}回`]] : [];
+    })(), ['二本指ジェスチャー', `${rhythmPerfStats.touch?.gestures ?? 0}回`], ['空打ち', `${rhythmPerfStats.touch?.emptyTaps ?? 0}回`], ['指の飛び（3サブレーン以上）', `${rhythmPerfStats.touch?.jumps ?? 0}回`]].map(([label, value]) => React.createElement(React.Fragment, {
       key: label
     }, React.createElement("dt", {
       className: "text-slate-400"
@@ -79113,6 +79446,9 @@ const createAnimationStyle = () => {
        ・HOME: 枠が絵より縦長なら画面いっぱい(cover)にして下の帯を消す。枠が絵より横に広いときは絵全体を出し、余りはぼかした絵で埋める */
     .mh-title-backdrop{position:absolute;z-index:0;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(16px) brightness(.5);transform:scale(1.08);pointer-events:none}.mh-title-visual{z-index:1}
     @media(min-aspect-ratio:3/4) and (max-aspect-ratio:7/5){.mh-title-visual,.mh-entering>img{object-fit:contain;object-position:50% 50%}}
+    /* ハロウィンのタイトルの絵は縦長の1枚だけ(横長の絵は持たない・2026-10-01)。横長の画面(縦横比 7:5 より横)では、
+       上下が大きく切れてロゴが見えなくなるので、絵全体を出し、左右はぼかした同じ絵で埋める。クラシックの絵の見え方は変えない */
+    @media(min-aspect-ratio:7/5){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:contain;object-position:50% 50%}}
     @container (max-aspect-ratio:941/1672){.mh-home-background img.mh-home-main{object-fit:cover}}
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}

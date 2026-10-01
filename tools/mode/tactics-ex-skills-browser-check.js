@@ -110,10 +110,16 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       await page.waitForTimeout(1500);
       const hero = await page.evaluate((name) => {
         const b = [...document.querySelectorAll('button')].find(x => !x.disabled && x.offsetParent
-          && /ライフ\s*\d+/.test(x.textContent) && x.textContent.trim().startsWith(name) && !/DEBUG/.test(x.textContent));
+          && x.textContent.trim().replace(/^前回/, '') === name && !/DEBUG/.test(x.textContent)); // 勇者えらびは顔アイコンのグリッド。タイルの文字は名前だけ(上の絞り込みタブは名前+数、前回使った子には「前回」が付く)
         if (b) b.click(); return !!b;
       }, heroName);
       if (!hero) return `勇者モンに ${heroName} が並んでいない: ` + await page.evaluate(() => [...document.querySelectorAll('button')].filter(x=>x.offsetParent).map(x=>x.textContent.trim().slice(0,30)).join(' | ').slice(0,1500));
+      // 顔アイコンのグリッドは、タイルを押すと下の詳細パネルが開き、「この子で挑む」で確定する
+      await page.waitForTimeout(500);
+      await page.evaluate(() => {
+        const b = [...document.querySelectorAll('button')].find(x => !x.disabled && x.offsetParent && /^この子で挑む$/.test(x.textContent.trim()));
+        if (b) b.click();
+      });
       await page.waitForTimeout(1200);
       if (heroStyle) {
         const b = page.locator(`[data-hero-style="${heroStyle}"]`);
@@ -129,7 +135,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
         const step = await page.evaluate((heroName) => {
           const live = [...document.querySelectorAll('button')].filter(x => !x.disabled && x.offsetParent);
           const pick = (re) => live.find(x => re.test(x.textContent.trim()));
-          const go = pick(/出撃|バトル開始|この編成で|^決定$|^確定$/); if (go) { go.click(); return 'go'; }
+          const go = pick(/出撃|バトル開始|この編成で|この子で挑む|供モン\d*にする|^決定$|^確定$/); if (go) { go.click(); return 'go'; }
           const confirm = pick(/^(習得する|強化する)$/); if (confirm) { confirm.click(); return 'confirm'; }
           const teaching = pick(/新規習得|強化後/); if (teaching) { teaching.click(); return 'teach'; }
           const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }

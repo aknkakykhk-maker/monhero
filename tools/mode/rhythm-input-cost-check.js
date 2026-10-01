@@ -61,6 +61,7 @@ context.window={
   visualViewport:null,
 };
 let nowMs=0;
+context.rhythmInputEdgeMarginSubLanes=()=>1; // 切り出し範囲の外の関数の代役(既定の余白1)
 vm.createContext(context);
 vm.runInContext(`${laneConsts}\n${judgments}\n${perf}\n${projection}\n${flickConsts}\n${slideHelpers}\n${midTracking}\n${runtime}\nthis.out={RHYTHM_GESTURE_RUNTIME,RHYTHM_PERF};`,context);
 const {RHYTHM_GESTURE_RUNTIME:RUNTIME,RHYTHM_PERF:PERF}=context.out;

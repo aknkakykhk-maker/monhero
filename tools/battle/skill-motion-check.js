@@ -38,6 +38,16 @@ vm.runInContext(slice(fx, 'const SKFX_RING =', 'const SkillFxMotion =') + '\nthi
 const { SKILL_ATTACK_THEMES, SKILL_ATTACK_THEME_MONSTERS, SKILL_ATTACK_FALLBACK, THEMED_ATTACK_MS, skillAttackThemeOf, skillAttackMotionOf, themedAttackMotionMs } = ctx.__r;
 const { SKILL_FX_SPECS, SKILL_MOTION_SETS, SKM_SIG, skillFxSpecOf } = ctx.__f;
 const HERO_ATK_NAMES = vm.runInContext('HERO_ATK_NAMES', ctx);
+
+// --- ④ 連撃の2発目以降も、元の技の動きで出す(2026-09-30 ユーザー報告「連撃時に違う技のモーションになる。更新前の通常モーションになっている」) ---
+// 連撃の2発目以降は技名が「連撃」になる。そのまま技ごとの動きを引くと見つからず、更新前の通常モーションに戻る。
+// 元の技(themeOf)を持たせ、動きと待ち時間の両方をそちらで引いているかを見る
+{
+  const app = read('monster-hero/src/parts/60-app.jsx');
+  check('連撃の2発目以降に元の技(themeOf)を持たせている', /attackHits\.push\(\{[^}]*skillName:hit\.skillName[^}]*themeOf/.test(app));
+  check('技ごとの動きは元の技(themeHit)で引く', app.includes('skillAttackThemeOf(hitSkillOwner, themeHit.skillName, !!themeHit.isUnique)'));
+  check('動きの名前と待ち時間も元の技で渡す', app.includes("skillName: themeHit.skillName, ...(themeHit.isUnique?{charge:false}:{})") && app.includes('motion, themeHit.skillName, !!themeHit.isUnique)'));
+}
 const ALL = vm.runInContext('ALL_PLAYER_MONSTERS', ctx);
 const DRAFTS = vm.runInContext('UPCOMING_MONSTER_DRAFTS', ctx);
 

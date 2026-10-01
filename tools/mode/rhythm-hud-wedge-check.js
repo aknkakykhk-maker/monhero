@@ -104,6 +104,9 @@ const headerHtml=headerJsx
   .replace(/\{lifeState==='down'\?'DOWN':view\.life\}/g,'DOWN')
   .replace(/\{view\.life\}/g,SAMPLE.life)
   .replace(/\{rhythmRankForScore\(view\.score\)\}/g,SAMPLE.rank)
+  // ランクの札は部品(RhythmHudScore)へ移り、本文は {rank}、S以上の演出は {rankFx&&<>…</>}(絶対配置の飾りで、測る箱には入らない)になった(2026-09-29)
+  .replace(/\{rank\}/g,SAMPLE.rank)
+  .replace(/\{rankFx&&<>[\s\S]*?<\/>\}/g,'')
   // プレイヤーの画面は譜面のLv.、デバッグから始めたときだけ HOLD TEST / TAP TEST
   // (2026-09-05・実機の指摘でデバッグ表記を出し分けた)
   .replace(/\{calibrating\?'タイミング合わせ':tutorial\?'れんしゅう':debugPlay\?debugChartLabel:`Lv\.\$\{chart\.level\}`\}/g,'Lv.12')

@@ -717,23 +717,24 @@ check('チャレンジ・クイックの供モン一覧はこれまでどおり2
 check('プロだけ供モン候補の画面をはさむ',
   has("if (isProMode(runMode)) {") && has("advanceRunStage('PICK_PRO_ALLIES');")
     && has("{gameState==='PICK_PRO_ALLIES'&&(") && has('<PickProAlliesScreen'));
+// 勇者えらびは顔アイコンのグリッド(ProMonsterGridPicker・67-screen-pick.jsx)へ、確定ボタンは「前回使った子」を記録してから confirmProParty を呼ぶ形へ作り替わった
 check('プロ開始時は有効な前回編成を初期表示に使うが、勇者の配置距離は毎回選び直す',
   has('setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);')
     && has('lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id)')
-    && has('selected: proHeroPreset?.heroBaseId===m.id')
-    && has("onSelect: ()=>{setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');},")
+    && has('selectedId={proHeroPreset?.heroBaseId||null}')
+    && has("onSelect={m=>{setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');}}")
     && !has('setupMon(m,proHeroPreset.heroDistance)'));
 check('勇者を変更しても有効な前回供モンを残し、同じ種だけ外す',
   has('setProAllyPool(prev=>prev.filter(mon=>mon.id!==m.id));'));
 check('候補が5体そろうまで始められない',
   has('const ready=!!mainHero&&proAllyPool.length===need;') && has('<button disabled={!ready}')
-    && has('onClick={confirmProParty}') && has("advanceRunStage('PICK_TEACHING');"));
+    && has('confirmProParty();}}') && has("advanceRunStage('PICK_TEACHING');"));
 check('現在の6枠を一覧にして1枠ずつ変更できる',
   has('[["勇者モン",mainHero],...Array.from({length:need}') && has('setProEditingAllyIndex(i-1)')
     && has('変えたい枠だけ「変更」を押してください'));
 check('この編成で開始した時点で前回編成を更新する',
   has('const confirmProParty = () => {') && has('storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);')
-    && has('onClick={confirmProParty}') && has("ready?'この編成で開始'"));
+    && has('confirmProParty();}}') && has("ready?'この編成で開始'"));
 check('勇者モンにした種は候補から外す',
   has('const candidates=getUnlockedBaseMonsterList().filter(m=>m.id!==mainHero?.id);'));
 // ラン中の画面は「全画面のかぶせ方」で出す。これが抜けるとふだんの画面の下敷きになり、

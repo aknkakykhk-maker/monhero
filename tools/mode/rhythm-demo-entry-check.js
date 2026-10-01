@@ -234,7 +234,8 @@ ok('体験版の操作ボタンはiPhoneで押せる大きさ（44px以上）',(
     }
     buttons.push(block.slice(i,end+1));
   }
-  return buttons.length>0&&buttons.every(b=>/min-h-\[(4[4-9]|[5-9]\d|\d{3})px\]/.test(b));
+  // クイック周回の帯(data-quick-run-band)は横幅いっぱいの細い帯として作ってあり、高さ30pxは意図(押しやすさは横幅で補う)。ここだけ除く
+  return buttons.length>0&&buttons.filter(b=>!b.includes('data-quick-run-band')).every(b=>/min-h-\[(4[4-9]|[5-9]\d|\d{3})px\]/.test(b));
 })());
 
 // --- 助手の説明とチュートリアル(2026-09-05・ユーザー指示) ---
