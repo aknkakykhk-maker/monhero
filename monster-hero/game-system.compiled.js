@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ad336e612c1afb26
+// source-sha256: 47c33419cca6c0b9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 23:28";
+const BUILD_DATE = "2026-10-02 06:58";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33005,6 +33005,7 @@ const PhaseBanner = ({
   React.useEffect(() => {
     if (!phase || !enabled) {
       lastRef.current = phase || null;
+      setShown(null);
       return undefined;
     }
     if (lastRef.current === phase) return undefined;
@@ -33043,6 +33044,7 @@ const WaveIntro = ({
   React.useEffect(() => {
     if (!enabled || !(wave > 0)) {
       lastRef.current = null;
+      setShown(null);
       return undefined;
     }
     const key = `${wave}:${enemyName || ''}`;
@@ -45421,17 +45423,6 @@ function BattleScreen({
   })), React.createElement("div", {
     className: "mt-1 flex items-center justify-center gap-3"
   }, React.createElement("div", {
-    className: "h-[clamp(82px,16dvh,132px)] w-[clamp(82px,16dvh,132px)] flex items-center justify-center"
-  }, enemy.imgUrl ? React.createElement("img", {
-    src: enemy.imgUrl,
-    alt: enemy.name,
-    className: "w-full h-full object-contain"
-  }) : React.createElement("span", {
-    style: {
-      fontSize: 'clamp(58px,11dvh,104px)',
-      lineHeight: 1
-    }
-  }, enemy.emoji)), React.createElement("div", {
     className: "text-center"
   }, React.createElement("div", {
     className: "text-[10px] font-black text-slate-400"
@@ -50210,13 +50201,25 @@ function MonsterHeroGame() {
   const [battleFxSettings, setBattleFxSettingsState] = useState(() => normalizeBattleFxSettings(null));
   const [battleFxAutoLoad, setBattleFxAutoLoad] = useState(null);
   const battleFxEffective = useMemo(() => {
-    const base = normalizeBattleFxSettings(battleFxSettings);
+    const normalized = normalizeBattleFxSettings(battleFxSettings);
+    const base = ecoMode === 'ultra' && autoRepeat === true ? {
+      ...normalized,
+      idleMotion: 'OFF',
+      shake: 'OFF',
+      specialMovie: 'OFF',
+      phaseBanner: 'OFF',
+      waveIntro: 'OFF',
+      defeatFx: 'OFF',
+      resultFx: 'OFF',
+      countUp: 'OFF',
+      endFx: 'OFF'
+    } : normalized;
     if (!battleFxAutoLoad || base.autoLoad === 'OFF') return base;
     return BATTLE_FX_LOADS.indexOf(battleFxAutoLoad) > BATTLE_FX_LOADS.indexOf(base.load) ? {
       ...base,
       load: battleFxAutoLoad
     } : base;
-  }, [battleFxSettings, battleFxAutoLoad]);
+  }, [battleFxSettings, battleFxAutoLoad, ecoMode, autoRepeat]);
   const battleFxLoad = battleFxEffective.load;
   const battleFxEffectiveRef = useRef(battleFxEffective);
   battleFxEffectiveRef.current = battleFxEffective;

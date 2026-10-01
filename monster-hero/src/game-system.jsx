@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8860ff0affe2f18d
+// generated-sha256: 0e76024483829a0f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-01 23:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 06:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21671,7 +21671,8 @@ const PhaseBanner = ({ phase, enabled }) => {
   const [shown, setShown] = React.useState(null);
   const lastRef = React.useRef(null);
   React.useEffect(() => {
-    if (!phase || !enabled) { lastRef.current = phase || null; return undefined; }
+    // 出している途中で設定が切れたとき(超省エネに入ったときなど)は、表示を消すタイマーも一緒に止まるので、ここで消す
+    if (!phase || !enabled) { lastRef.current = phase || null; setShown(null); return undefined; }
     if (lastRef.current === phase) return undefined;
     lastRef.current = phase;
     setShown({ phase, key: Date.now() });
@@ -21696,7 +21697,8 @@ const WaveIntro = ({ enabled, wave, enemyName }) => {
   const [shown, setShown] = React.useState(null);
   const lastRef = React.useRef(null);
   React.useEffect(() => {
-    if (!enabled || !(wave > 0)) { lastRef.current = null; return undefined; }
+    // 出している途中で設定が切れたとき(超省エネに入ったときなど)は、表示を消すタイマーも一緒に止まるので、ここで消す
+    if (!enabled || !(wave > 0)) { lastRef.current = null; setShown(null); return undefined; }
     const key = `${wave}:${enemyName || ''}`;
     if (lastRef.current === key) return undefined;
     lastRef.current = key;
@@ -28336,7 +28338,7 @@ function BattleScreen({
                   <div className="flex items-center justify-between gap-2 text-[10px] font-black"><span className="min-w-0 truncate text-red-200">{enemy.name}</span><span className="shrink-0 font-mono text-red-300">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span></div>
                   <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-red-600" style={{width:`${(Math.max(0,enemy.hp)/enemy.maxHp)*100}%`}}/></div>
                   <div className="mt-1 flex items-center justify-center gap-3">
-                    <div className="h-[clamp(82px,16dvh,132px)] w-[clamp(82px,16dvh,132px)] flex items-center justify-center">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} className="w-full h-full object-contain"/>:<span style={{fontSize:'clamp(58px,11dvh,104px)',lineHeight:1}}>{enemy.emoji}</span>}</div>
+                    {/* 超省エネは敵の絵を出さない(2026-10-01・ユーザー指示「もっと画面情報減らしてエコに」)。名前・ライフ・距離・技名の文字だけ */}
                     <div className="text-center"><div className="text-[10px] font-black text-slate-400">現在距離</div><div className={`mt-1 rounded-full border px-3 py-1 text-[11px] font-black ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}距離</div></div>
                   </div>
                   <div data-ultra-enemy-log className="mt-1 h-[42px] overflow-hidden rounded-lg border border-red-800/60 bg-black/50 px-2 py-1 text-center leading-tight">{enemySkillName&&<div className="truncate text-[11px] font-black text-red-200">{enemySkillName.label}</div>}{popups.filter(p=>p.side==='enemy').map(p=><div key={p.id} className={`${p.color} truncate text-sm font-black`}>{p.text}</div>)}</div>
@@ -31733,10 +31735,16 @@ function MonsterHeroGame() {
   const [battleFxAutoLoad, setBattleFxAutoLoad] = useState(null);
   // バトル画面へ渡す設定。自動で下げているときは、保存した軽さより軽いほうを使う(保存値はそのまま)
   const battleFxEffective = useMemo(() => {
-    const base = normalizeBattleFxSettings(battleFxSettings);
+    const normalized = normalizeBattleFxSettings(battleFxSettings);
+    // 超省エネの∞周回(ecoMode==='ultra'&&autoRepeat。下の ultraEcoSession と同じ条件)のあいだは、演出をすべて切る
+    // (2026-10-01・ユーザー指示「超省エネをもっと画面情報減らしてエコに。VICTORY!とかの表示はなしでいい」)。
+    // 保存した設定は書き換えない。この値を読む側(WaveIntro・EnemyDefeatFx・PhaseBanner・resultFxMs など)がそのまま効く
+    const base = (ecoMode === 'ultra' && autoRepeat === true)
+      ? { ...normalized, idleMotion: 'OFF', shake: 'OFF', specialMovie: 'OFF', phaseBanner: 'OFF', waveIntro: 'OFF', defeatFx: 'OFF', resultFx: 'OFF', countUp: 'OFF', endFx: 'OFF' }
+      : normalized;
     if (!battleFxAutoLoad || base.autoLoad === 'OFF') return base;
     return BATTLE_FX_LOADS.indexOf(battleFxAutoLoad) > BATTLE_FX_LOADS.indexOf(base.load) ? { ...base, load: battleFxAutoLoad } : base;
-  }, [battleFxSettings, battleFxAutoLoad]);
+  }, [battleFxSettings, battleFxAutoLoad, ecoMode, autoRepeat]);
   const battleFxLoad = battleFxEffective.load;
   // 非同期の処理(敵を倒した直後など)から、いまの演出設定を読むための控え
   const battleFxEffectiveRef = useRef(battleFxEffective);
