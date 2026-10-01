@@ -4841,7 +4841,18 @@ function MonsterHeroGame() {
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
-      setBattleFxSettingsState(normalizeBattleFxSettings(await storeGet(BATTLE_FX_SETTINGS_KEY, null, false)));
+      const rawBattleFx = await storeGet(BATTLE_FX_SETTINGS_KEY, null, false);
+      let savedBattleFx = normalizeBattleFxSettings(rawBattleFx);
+      // 「重いときは自動で軽く」の既定を OFF にした(2026-10-01)。以前の既定(ON)のまま保存されていた人を、一度だけ OFF にする。
+      // 専用フラグで二重に適用しない。ほかの項目はそのまま。あとから自分で ON にした選択は、このフラグがあるので消さない
+      if (!(await storeGet('mh_battle_fx_autoload_default_off_v1', false, false))) {
+        if (rawBattleFx && typeof rawBattleFx === 'object' && rawBattleFx.autoLoad === 'ON') {
+          savedBattleFx = { ...savedBattleFx, autoLoad: 'OFF' };
+          await storeSet(BATTLE_FX_SETTINGS_KEY, savedBattleFx, false);
+        }
+        await storeSet('mh_battle_fx_autoload_default_off_v1', true, false);
+      }
+      setBattleFxSettingsState(savedBattleFx);
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
