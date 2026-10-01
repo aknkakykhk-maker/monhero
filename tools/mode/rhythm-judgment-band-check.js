@@ -77,7 +77,7 @@ const GOOD_MS=judgmentWindow('GOOD'),MARVELOUS_MS=judgmentWindow('MARVELOUS');
     await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
     // 配布のお知らせ(「確認」)を閉じずに測ると、画面ぜんぶを覆う 96% の暗い幕ごしに
     // 撮ることになり、色の差が20分の1以下に潰れる(2026-09-06にここで実際に外した)。
-    for(let i=0;i<8;i++){if(!(await clickText('受け取る|閉じる|OK|とじる|^確認$')))break;await page.waitForTimeout(250);}
+    for(let i=0;i<8;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる|^確認$')))break;await page.waitForTimeout(250);}
     await clickText('モンヒロビート');
     // 曲えらびの「決定」は data-rhythm-demo-start が目印。
     // 文字で探すと、みゅあの吹き出し（「…決定！ それだけで始まるよ♪」）まで拾ってしまい、

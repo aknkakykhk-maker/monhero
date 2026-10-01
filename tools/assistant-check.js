@@ -264,7 +264,7 @@ check('助手を選んだあとにあいさつが始まる',
   has("if (!onboarded && !needsAssistantChoice) { setTutorialKind('intro'); setTutorialStep(0); }"));
 check('あいさつを読み終えるとプロフィールへ進む',
   has("if (kind === 'intro') { setGameState('PROFILE'); return; }")
-    && has("{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'つぎへ'}"));
+    && has("{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'次へ'}"));
 // 独立した初回案内から同じバトル練習へ入れる(断ってもヘルプから始められる)
 check('案内の最後からバトルの練習へ入れる',
   has("{page.offer==='battleGuide'&&(") && has("startBattleTutorial('HOME')")

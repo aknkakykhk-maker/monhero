@@ -276,8 +276,8 @@ check('みゅあの顔と吹き出しは共通のものを使う',
   has('<AssistantFace who={who} size={64} accent={who.accent} expression={battleTutorial.e}/>')
     // 呼び方(さん付け・呼び捨て)と選んでいる助手も渡すようになった
     && has('assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)'));
-check('つぎへとスキップ(やめる)がある',
-  has("{last?'おわる':'つぎへ'}") && has('<button onClick={()=>endBattleTutorial(false)}') && has('やめる</button>'));
+check('次へとスキップ(やめる)がある',
+  has("{last?'おわる':'次へ'}") && has('<button onClick={()=>endBattleTutorial(false)}') && has('やめる</button>'));
 // 押してほしいものだけを押せるようにする。枠全体を光らせると
 // 「どれを押すのか」が分からず、他が押せると台本から外れてしまう
 // (2026-09-24 配置画面を作り直し、押せない枠の薄さは disabled: ではなく枠ごとの条件で付けるようにした)

@@ -193,7 +193,7 @@ const serve = () => new Promise(resolve => {
     await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), { timeout: 40000 });
     // 割り込む案内(助手の紹介など)を閉じてから進む
     for (let i = 0; i < 14; i++) {
-      if (!(await clickText('^(受け取る|閉じる|OK|とじる|確認|あとで|つぎへ|はじめる|決定)$'))) break;
+      if (!(await clickText('^(受け取る|閉じる|OK|閉じる|確認|あとで|次へ|はじめる|決定)$'))) break;
       await page.waitForTimeout(250);
     }
     // プロフィールへ(HOMEの左上のブリーダー表示から入る)

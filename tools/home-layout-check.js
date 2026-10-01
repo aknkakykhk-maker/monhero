@@ -39,7 +39,7 @@ ${css}
 <main class="mh-home-scene">
   <header class="mh-home-status">
     <button class="mh-home-player"><div class="mh-home-avatar"></div><div class="mh-home-player-copy"><strong>あつ</strong><span>ブリーダー Lv.38</span><div class="mh-home-xp"><i style="width:60%"></i></div><small>414 / 651 XP</small></div></button>
-    <section class="mh-home-wallet"><div><b>19003</b><small>ダイヤ</small></div><div><b>138</b><small>pt</small></div><button class="mh-home-settings"><span>設定</span></button></section>
+    <section class="mh-home-wallet"><div><b>19,003</b><small>ダイヤ</small></div><div><b>138</b><small>ブリーダーP</small></div><button class="mh-home-settings"><span>設定</span></button></section>
   </header>
   <nav class="mh-home-facilities">
     <button class="mh-home-facility management"><span>M/B管理</span></button>

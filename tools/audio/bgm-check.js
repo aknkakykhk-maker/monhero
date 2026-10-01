@@ -282,7 +282,7 @@ const clickByText = (page, text) => page.evaluate((t) => {
       const all = [...document.querySelectorAll('button')];
       if (all.some((x) => /バトル/.test(x.textContent) && !/れんしゅう/.test(x.textContent))) return 'home';
       const b = all.find((x) => x.textContent.includes('この子にする'))
-        || all.find((x) => ['確認', '閉じる', 'とじる', 'OK'].includes(x.textContent.trim()));
+        || all.find((x) => ['確認', '閉じる', 'OK'].includes(x.textContent.trim()));
       if (b) { b.click(); return 'clicked'; }
       return 'none';
     });

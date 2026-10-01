@@ -85,7 +85,7 @@ const VIEW={width:390,height:844};
     // 「お詫びの配布」などのモーダルは、押す場所を奪うので先に全部閉じる。
     // 「確認」を入れ忘れていて、これが開いたまま測っていたことがある(2026-09-06)
     // 「確認」は前後に何も付かないものだけを狙う。緩めると別のボタンまで押してしまう
-    for(let i=0;i<8;i++){if(!(await clickText('受け取る|閉じる|OK|とじる|^確認$')))break;await page.waitForTimeout(250);}
+    for(let i=0;i<8;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる|^確認$')))break;await page.waitForTimeout(250);}
     await clickText('モンヒロビート');
     // 「決定」は目印で押す。文字で探すと、みゅあの吹き出しのセリフを拾うことがある
     await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});

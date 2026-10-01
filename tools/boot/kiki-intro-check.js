@@ -147,7 +147,7 @@ if (jsx.length > 0) {
     ['mua', 'kiki'].every(id => first.includes(`data-face="${id}"`)));
   check('この会話に出てこない助手は並ばない',
     ASSISTANTS.filter(w => !['mua', 'kiki'].includes(w.id)).every(w => !first.includes(`data-face="${w.id}"`)));
-  check('タップで次へ進める', /aria-label="次へ"/.test(first) && /つぎへ/.test(text(first)));
+  check('タップで次へ進める', /aria-label="次へ"/.test(first) && /次へ/.test(text(first)));
   // 全ステップで、発言者の顔と本文が食い違わないこと
   check('どのセリフでも発言者と顔が一致する', script.every((l, i) => {
     const html = render(i);
@@ -155,7 +155,7 @@ if (jsx.length > 0) {
       && text(html).includes(l.t.replace(/\s+/g, ' '));
   }));
   const lastHtml = render(script.length - 1);
-  check('最後は「とじる」で終わる', /とじる/.test(text(lastHtml)));
+  check('最後は「閉じる」で終わる', /閉じる/.test(text(lastHtml)));
   check('進み具合が分かる', /1 \/ /.test(text(first)));
   // iPhone縦画面で見切れないための作り
   check('縦画面で見切れない作りになっている',

@@ -133,10 +133,10 @@ const playOne=async(browser,songIds,songId,difficulty)=>{
     await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
     await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
     await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),undefined,{timeout:40000});
-    for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|とじる')))break;await page.waitForTimeout(250);}
+    for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(250);}
     await clickText('モンヒロビート');
     await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
-    for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|とじる')))break;await page.waitForTimeout(300);}
+    for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(300);}
     const picked=await page.evaluate(id=>{const row=document.querySelector(`[data-rhythm-song-row="${id}"]`);if(!row)return false;row.scrollIntoView();row.click();return true;},songId);
     if(!picked)return {songId,difficulty,error:'曲の行が無い'};
     await page.waitForTimeout(400);

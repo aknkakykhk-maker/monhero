@@ -51,7 +51,7 @@ const seed = () => {
   }, w);
   const dismiss = async () => { for (let i=0;i<12;i++) {
     const c = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|とじる|OK)$/.test((x.innerText||'').trim()));
+      const b = [...document.querySelectorAll('button')].find(x => /^(確認|受け取る|閉じる|OK)$/.test((x.innerText||'').trim()));
       if (b) { b.click(); return true; }
       const d = document.querySelector('[role="dialog"]'); if (d) { (d.querySelector('button')||d).click(); return true; }
       return false; });

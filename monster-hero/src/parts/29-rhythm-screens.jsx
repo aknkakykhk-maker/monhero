@@ -163,7 +163,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,calibrationResult=nul
               {calibrationResult&&<div data-rhythm-calibrator-result className="mt-2 rounded-xl border border-amber-300/50 bg-amber-950/30 p-2 text-[11px] leading-relaxed text-amber-100">
                 <p><b className="tabular-nums">{calibrationResult.offsetMs>0?'+':''}{calibrationResult.offsetMs}ms</b> にしました。叩いた{calibrationResult.usedCount}回の平均は {calibrationResult.rawMeanMs>0?'+':''}{calibrationResult.rawMeanMs}ms（ばらつき±{calibrationResult.spreadMs}ms{calibrationResult.droppedCount>0?`／${calibrationResult.droppedCount}回は外れ値として除外`:''}）でした。</p>
                 {!calibrationResult.stable&&<p className="mt-1 font-black text-rose-300">ばらつきが大きめです。もう一度合わせると、より合った値になります。</p>}
-                <button type="button" data-rhythm-calibrator-dismiss onClick={()=>onClearCalibration&&onClearCalibration()} className="mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">とじる</button>
+                <button type="button" data-rhythm-calibrator-dismiss onClick={()=>onClearCalibration&&onClearCalibration()} className="mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black">閉じる</button>
               </div>}
             </>,'判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST／SLOWを見ながら2拍ごとのノーツを叩きます。はじめの4回は数えず、そのあとの16回のずれから合う値を出して、その場で「この値にする」を選べます。ライフは減らず、記録にも残りません。',{full:true})}
             {field('ノーツサイズ',stepper('noteSize',80,120,5,{fine:5,coarse:10,suffix:'%'}),
@@ -1012,7 +1012,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       </a>}
       <button type="button" data-rhythm-song-art-close onClick={()=>setArtZoom(false)}
         className="mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white"
-        style={{minHeight:'52px'}}>とじる</button>
+        style={{minHeight:'52px'}}>閉じる</button>
       </div>
     </div>;})()}
     {/* ジャンルのシート。並び替えと同じ形で下から出す。選んだらすぐ閉じる */}
@@ -1040,7 +1040,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           })}
         </div>
         <button type="button" data-rhythm-genre-close onClick={()=>setGenreOpen(false)}
-          className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">とじる</button>
+          className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">閉じる</button>
       </section>
     </div>}
     {sortOpen&&<div data-rhythm-sort-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
@@ -1068,7 +1068,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           <span>逆から並べる</span><span>{state.desc?'ON':'OFF'}</span>
         </button>
         <button type="button" data-rhythm-sort-close onClick={()=>setSortOpen(false)}
-          className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">とじる</button>
+          className="mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white">閉じる</button>
       </section>
     </div>}
   </div>;

@@ -74,7 +74,7 @@ const MARKET_ITEMS = [
           const inner = [...dialog.querySelectorAll('button')];
           if (inner.length) { inner[inner.length - 1].click(); return true; }
         }
-        const b = [...document.querySelectorAll('button')].find(x => /^(受け取る|閉じる|とじる|あとで|スキップ|次へ|つぎへ|確認|OK|今は見ない)$/.test((x.innerText || '').replace(/\s+/g, ' ').trim()));
+        const b = [...document.querySelectorAll('button')].find(x => /^(受け取る|閉じる|あとで|スキップ|次へ|確認|OK|今は見ない)$/.test((x.innerText || '').replace(/\s+/g, ' ').trim()));
         if (b) b.click();
         return !!b;
       });

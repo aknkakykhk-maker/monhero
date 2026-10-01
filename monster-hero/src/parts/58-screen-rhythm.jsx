@@ -1084,7 +1084,7 @@ function RhythmRankingScreen({
               </p>
             </div>}
             <button type="button" data-rhythm-event-detail-close onClick={()=>setEventDetailOpen(false)}
-              className="mt-3 w-full min-h-[50px] rounded-2xl bg-white text-sm font-black text-black active:scale-95">とじる</button>
+              className="mt-3 w-full min-h-[50px] rounded-2xl bg-white text-sm font-black text-black active:scale-95">閉じる</button>
           </div>
         </div>
       )}

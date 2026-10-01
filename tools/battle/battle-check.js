@@ -100,7 +100,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
           if (inner.length) { inner[inner.length - 1].click(); return true; }
           dialog.click(); return true;
         }
-        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|とじる|OK|つぎへ|次へ|はじめる|今は見ない|あとで|スキップ|やめる)$/.test((x.innerText || '').trim()));
+        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|OK|次へ|はじめる|今は見ない|あとで|スキップ|やめる)$/.test((x.innerText || '').trim()));
         if (b) { b.click(); return true; }
         return false;
       });

@@ -57,7 +57,7 @@ const openRhythmFromHome = async (page) => {
   // ログインボーナスなどの重なりを閉じる
   for (let i = 0; i < 12; i++) {
     const closed = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|とじる|OK)$/.test((x.innerText || '').trim()));
+      const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|OK)$/.test((x.innerText || '').trim()));
       if (b) { b.click(); return true; }
       const dialog = document.querySelector('[role="dialog"]');
       if (dialog) { (dialog.querySelector('button') || dialog).click(); return true; }

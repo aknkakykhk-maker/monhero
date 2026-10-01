@@ -1567,7 +1567,7 @@ function BattleScreen({
                   <button type="button" data-battle-buff-toggle={buffDetail?'close':'open'} onClick={()=>setBuffDetail(v=>!v)}
                     aria-label={buffDetail?'強化の詳細を閉じる':`強化の詳細を見る（${chips.length}件）`}
                     className="shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center">
-                    {buffDetail?'とじる':`詳細 ${chips.length}`}
+                    {buffDetail?'閉じる':`詳細 ${chips.length}`}
                   </button>
                 </div>
           {(()=>{
@@ -2411,7 +2411,7 @@ function BattleScreen({
               <button data-auto-bgm-button type="button" onClick={()=>{setShowBattleMenu(false);setShowAutoBgmPicker(true);}} className="flex min-h-[40px] items-center gap-2 rounded-lg border border-indigo-400/50 bg-indigo-950/60 px-2 text-[12px] font-black text-indigo-100 active:scale-95"><span className="text-[14px] leading-none">🎵</span>BGM・音量</button>
               <button type="button" onClick={()=>{setShowBattleMenu(false);openHelp();}} className="flex min-h-[40px] items-center gap-2 rounded-lg border border-emerald-400/50 bg-emerald-950/60 px-2 text-[12px] font-black text-emerald-100 active:scale-95"><HelpCircle size={14}/>ヘルプ</button>
               <button data-battle-quit type="button" disabled={!!battleTutorial} onClick={()=>{setShowBattleMenu(false);setShowQuitConfirm(true);}} className="flex min-h-[40px] items-center gap-2 rounded-lg border border-red-400/50 bg-red-950/60 px-2 text-[12px] font-black text-red-100 active:scale-95 disabled:opacity-30"><Flag size={14}/>あきらめる</button>
-              <button type="button" onClick={()=>setShowBattleMenu(false)} className="min-h-[36px] rounded-lg border border-white/15 bg-slate-800 text-[11px] font-black text-slate-300 active:scale-95">とじる</button>
+              <button type="button" onClick={()=>setShowBattleMenu(false)} className="min-h-[36px] rounded-lg border border-white/15 bg-slate-800 text-[11px] font-black text-slate-300 active:scale-95">閉じる</button>
             </div>
           </div>
         ), document.body)}

@@ -105,7 +105,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); c
       const inOverlay = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) {
         const st = getComputedStyle(e); if (st.position === 'fixed' || Number(st.zIndex) > 1000) return true; } return false; };
       const list = [...document.querySelectorAll('button')]
-        .filter(b => inOverlay(b) && /^(確認|閉じる|とじる|OK|受け取る|つぎへ|次へ|わかった|はい|スキップ)$/.test((b.innerText || '').trim()));
+        .filter(b => inOverlay(b) && /^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ)$/.test((b.innerText || '').trim()));
       if (!list.length) return false; list[0].click(); return true;
     });
     if (!did) break;

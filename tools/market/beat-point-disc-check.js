@@ -39,7 +39,7 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), { timeout: 40000 });
     const dismiss = async () => { for (let i = 0; i < 14; i++) {
       const did = await page.evaluate(() => { const inOverlay = el => { for (let e = el; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e); if (s.position === 'fixed' || (s.position === 'absolute' && Number(s.zIndex) >= 40)) return true; } return false; };
-        const l = [...document.querySelectorAll('button')].filter(b => inOverlay(b) && /^(確認|閉じる|とじる|OK|受け取る|つぎへ|次へ|わかった|はい|スキップ)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim()));
+        const l = [...document.querySelectorAll('button')].filter(b => inOverlay(b) && /^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim()));
         if (!l.length) return false; l[0].click(); return true; });
       if (!did) return; await page.waitForTimeout(300); } };
     await dismiss();
@@ -48,7 +48,7 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     await page.waitForTimeout(600); await dismiss();
 
     const monsterDetail = () => page.evaluate(() => { const d = [...document.querySelectorAll('[role="dialog"]')].find(d => /の詳細$/.test(d.getAttribute('aria-label') || '') && /ちから|ライフ/.test(d.innerText)); return d ? d.getAttribute('aria-label') : null; });
-    const closeDialog = () => page.evaluate(() => { const ds = [...document.querySelectorAll('[role="dialog"]')]; const d = ds[ds.length - 1]; const b = d && [...d.querySelectorAll('button')].reverse().find(b => /^(閉じる|とじる|✕|×)$/.test(b.innerText.trim()) || /閉じる/.test(b.getAttribute('aria-label') || '')); if (b) b.click(); });
+    const closeDialog = () => page.evaluate(() => { const ds = [...document.querySelectorAll('[role="dialog"]')]; const d = ds[ds.length - 1]; const b = d && [...d.querySelectorAll('button')].reverse().find(b => /^(閉じる|✕|×)$/.test(b.innerText.trim()) || /閉じる/.test(b.getAttribute('aria-label') || '')); if (b) b.click(); });
 
     // ① ビートP交換所
     const intoEvent = await page.evaluate(() => { const b = document.querySelector('[data-market-section="event"]'); if (!b) return false; b.click(); return true; });

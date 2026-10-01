@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 11dce4ce10828f36
+// source-sha256: af4d71df60b19785
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 16:36";
+const BUILD_DATE = "2026-10-01 16:57";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -10617,7 +10617,7 @@ const LOGIN_BONUS_REWARDS = [[{
 }]];
 const GIFT_REWARD_LABELS = {
   diamond: 'ダイヤ',
-  breederPoint: 'ブリーダーポイント',
+  breederPoint: 'ブリーダーP',
   breederXp: 'ブリーダー経験値',
   dyeMock: '染色もどき',
   bondPointReset: '絆ポイントリセットの書',
@@ -14664,7 +14664,7 @@ const AssistantBubble = ({
     style: {
       backgroundColor: color
     }
-  }, "とじる")))));
+  }, "閉じる")))));
 };
 const QuickStepScreen = ({
   onDone,
@@ -24074,7 +24074,7 @@ const RhythmOptions = ({
     "data-rhythm-calibrator-dismiss": true,
     onClick: () => onClearCalibration && onClearCalibration(),
     className: "mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black"
-  }, "とじる"))), '判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST／SLOWを見ながら2拍ごとのノーツを叩きます。はじめの4回は数えず、そのあとの16回のずれから合う値を出して、その場で「この値にする」を選べます。ライフは減らず、記録にも残りません。', {
+  }, "閉じる"))), '判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。1ms刻みで動かせます。数字で決めにくいときは「実際の画面で合わせる」を押してください。いつもの演奏画面が開き、判定とFAST／SLOWを見ながら2拍ごとのノーツを叩きます。はじめの4回は数えず、そのあとの16回のずれから合う値を出して、その場で「この値にする」を選べます。ライフは減らず、記録にも残りません。', {
     full: true
   }), field('ノーツサイズ', stepper('noteSize', 80, 120, 5, {
     fine: 5,
@@ -25137,7 +25137,7 @@ const RhythmSongSelect = ({
       style: {
         minHeight: '52px'
       }
-    }, "とじる")));
+    }, "閉じる")));
   })(), genreOpen && React.createElement("div", {
     "data-rhythm-genre-sheet": true,
     className: "fixed inset-0 z-[9000] flex items-end justify-center",
@@ -25196,7 +25196,7 @@ const RhythmSongSelect = ({
     "data-rhythm-genre-close": true,
     onClick: () => setGenreOpen(false),
     className: "mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white"
-  }, "とじる"))), sortOpen && React.createElement("div", {
+  }, "閉じる"))), sortOpen && React.createElement("div", {
     "data-rhythm-sort-sheet": true,
     className: "fixed inset-0 z-[9000] flex items-end justify-center",
     style: {
@@ -25252,7 +25252,7 @@ const RhythmSongSelect = ({
     "data-rhythm-sort-close": true,
     onClick: () => setSortOpen(false),
     className: "mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white"
-  }, "とじる"))));
+  }, "閉じる"))));
 };
 const RHYTHM_HAPTICS = (() => {
   let holder = null,
@@ -34030,8 +34030,10 @@ function ProfileScreen({
     size: 12,
     className: "shrink-0 text-amber-400"
   }), React.createElement("span", {
-    className: "text-[12px] font-black text-amber-200"
-  }, breederPoints, " pt"))), React.createElement("button", {
+    className: "text-[12px] font-black text-amber-200 font-mono"
+  }, breederPoints.toLocaleString()), React.createElement("span", {
+    className: "text-[10px] font-bold text-amber-400"
+  }, "ブリーダーP"))), React.createElement("button", {
     onClick: onOpenItems,
     className: "flex w-full min-h-[52px] items-center justify-center gap-2 rounded-xl border border-teal-500/40 bg-teal-950/40 px-4 py-2.5 active:scale-[.98]"
   }, React.createElement(Package, {
@@ -36446,7 +36448,7 @@ function RhythmRankingScreen({
     "data-rhythm-event-detail-close": true,
     onClick: () => setEventDetailOpen(false),
     className: "mt-3 w-full min-h-[50px] rounded-2xl bg-white text-sm font-black text-black active:scale-95"
-  }, "とじる"))));
+  }, "閉じる"))));
 }
 function MasuMonsScreen({
   masuMons,
@@ -40372,7 +40374,7 @@ function MasuFusionScreen({
   }, "ダイヤを", d.cost.toLocaleString(), "消費しました"), React.createElement("button", {
     onClick: continueFusionFlow,
     className: "mh-button mh-button-primary w-full max-w-xs min-h-[52px] bg-violet-600 text-white py-3.5 rounded-xl font-black text-sm shadow-lg active:scale-95"
-  }, "とじる"));
+  }, "閉じる"));
 }
 function SkipPickScreen({
   changeSkipCount,
@@ -40649,7 +40651,7 @@ function SkipResultScreen({
     className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
   }, React.createElement(Sparkles, {
     size: 9
-  }), "ブリーダーポイント +", skipResult.breederLevelAfter.level - skipResult.breederLevelBefore.level)), skipResult.heroBondGain ? React.createElement("div", {
+  }), "ブリーダーP +", skipResult.breederLevelAfter.level - skipResult.breederLevelBefore.level)), skipResult.heroBondGain ? React.createElement("div", {
     className: "bg-black/40 rounded-2xl border border-pink-500/30 p-3"
   }, React.createElement("div", {
     className: "flex items-center justify-between mb-1"
@@ -43094,7 +43096,7 @@ function HomeScreen({
     size: 14
   }), React.createElement("b", null, gold.toLocaleString()), React.createElement("small", null, "ダイヤ")), React.createElement("div", null, React.createElement(Coins, {
     size: 14
-  }), React.createElement("b", null, breederPoints), React.createElement("small", null, "pt")), React.createElement("button", {
+  }), React.createElement("b", null, breederPoints.toLocaleString()), React.createElement("small", null, "ブリーダーP")), React.createElement("button", {
     onClick: onOpenSettings,
     className: `mh-home-settings${spotClass('settings')}`,
     "aria-label": "設定"
@@ -43246,7 +43248,7 @@ function KikiIntroOverlay({
     style: {
       pointerEvents: 'auto'
     }
-  }, last ? 'とじる' : 'つぎへ')));
+  }, last ? '閉じる' : '次へ')));
 }
 function MomosukeIntroOverlay({
   markMomosukeIntroSeen,
@@ -43332,7 +43334,7 @@ function MomosukeIntroOverlay({
     style: {
       pointerEvents: 'auto'
     }
-  }, last ? 'とじる' : 'つぎへ')));
+  }, last ? '閉じる' : '次へ')));
 }
 function HomeUpdateGuideOverlay({
   activeAssistant,
@@ -45799,7 +45801,7 @@ function BattleScreen({
       onClick: () => setBuffDetail(v => !v),
       "aria-label": buffDetail ? '強化の詳細を閉じる' : `強化の詳細を見る（${chips.length}件）`,
       className: "shrink-0 min-h-[20px] px-1.5 rounded-full border border-white/25 bg-black/60 text-[9px] font-black leading-none text-slate-200 active:scale-90 flex items-center"
-    }, buffDetail ? 'とじる' : `詳細 ${chips.length}`)), (() => {
+    }, buffDetail ? '閉じる' : `詳細 ${chips.length}`)), (() => {
       const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
       const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
       const boosts = previewBoostsOnce(pendingIdx);
@@ -47249,7 +47251,7 @@ function BattleScreen({
     type: "button",
     onClick: () => setShowBattleMenu(false),
     className: "min-h-[36px] rounded-lg border border-white/15 bg-slate-800 text-[11px] font-black text-slate-300 active:scale-95"
-  }, "とじる"))), document.body));
+  }, "閉じる"))), document.body));
 }
 function UltimateDistanceBreakReveal({
   difficulty,
@@ -73251,7 +73253,7 @@ function MonsterHeroGame() {
         className: "bg-black/40 rounded-xl border border-teal-500/30 p-3 text-[10px] leading-relaxed"
       }, React.createElement("div", {
         className: "text-teal-300 font-black mb-1"
-      }, "受け取れるもの"), React.createElement("div", null, "・勇者モンの絆経験値（マスモンのみ）"), React.createElement("div", null, "・選んだ供モンは1/2、編成内で選ばなかったマスモンは1/4"), React.createElement("div", null, "・ブリーダー経験値とブリーダーポイント"), React.createElement("div", null, "・ダイヤ")), React.createElement("div", {
+      }, "受け取れるもの"), React.createElement("div", null, "・勇者モンの絆経験値（マスモンのみ）"), React.createElement("div", null, "・選んだ供モンは1/2、編成内で選ばなかったマスモンは1/4"), React.createElement("div", null, "・ブリーダー経験値とブリーダーP"), React.createElement("div", null, "・ダイヤ")), React.createElement("div", {
         className: "bg-black/40 rounded-xl border border-white/10 p-3 text-[10px] leading-relaxed text-slate-400"
       }, React.createElement("div", {
         className: "text-slate-300 font-black mb-1"
@@ -73616,7 +73618,7 @@ function MonsterHeroGame() {
           next();
         },
         className: "min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]"
-      }, last ? 'とじる' : 'つぎへ'))));
+      }, last ? '閉じる' : '次へ'))));
     })(), dailyMasuAdvice && (() => {
       const who = activeAssistant;
       const lines = assistantSceneLinesFor('dailyMasuAdvice');
@@ -73994,7 +73996,7 @@ function MonsterHeroGame() {
         style: {
           backgroundColor: who.accent
         }
-      }, last ? 'おわる' : 'つぎへ'))));
+      }, last ? 'おわる' : '次へ'))));
     })(), gameState === 'BATTLE' && ultimateDistanceBreakReveal != null && React.createElement(UltimateDistanceBreakReveal, {
       difficulty: difficulty,
       extremeDifficulty: extremeDifficulty,
@@ -74142,13 +74144,13 @@ function MonsterHeroGame() {
         style: page.offer === 'battle' ? undefined : {
           backgroundColor: who.accent
         }
-      }, last ? intro ? '名前を決める！' : page.offer === 'battle' ? 'あとでやる' : 'はじめる！' : 'つぎへ')), battleGuide && !page.offer && !page.declined && React.createElement("button", {
+      }, last ? intro ? '名前を決める！' : page.offer === 'battle' ? 'あとでやる' : 'はじめる！' : '次へ')), battleGuide && !page.offer && !page.declined && React.createElement("button", {
         onClick: () => setTutorialStep(v => v + 1),
         className: "w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
         style: {
           backgroundColor: who.accent
         }
-      }, "つぎへ")));
+      }, "次へ")));
     })(), modeInfoId && (() => {
       const mode = battleInfoById(modeInfoId);
       return React.createElement("div", {
