@@ -6,7 +6,7 @@
 //   ③ 読む道具が、作り物の記録から原因を言い当てる(ブラウザが落とした / 手前で消えた / 5本 / 差が無い / 記録が足りない)
 'use strict';
 const fs=require('fs'),path=require('path'),os=require('os'),{spawnSync}=require('child_process');
-const {aggregate,diagnose,MIN_PLAYS}=require('./rhythm-touch-diag.js');
+const {aggregate,diagnose,MIN_PLAYS,compareReported,fixesFor,MIN_REPORTED}=require('./rhythm-touch-diag.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 let failed=0;
@@ -120,6 +120,42 @@ const verdictOf=rows=>diagnose(aggregate(rows)).filter(line=>line.level==='found
 {
   const rows=[...make('ios',30,{pointerOnly:3}),...make('ios',10,{pointerOnly:3}).map(r=>({...r,stats:{...r.stats,assist:true}}))];
   ok('道具: アシストモードの記録は比べる数に入れない',aggregate(rows).find(g=>g.key==='ios').plays===30);
+}
+
+// ── ④ 「押したのに反応しないことがあった」の報告(2026-10-01) ──
+{
+  const reportBlock=(play.match(/const rhythmTouchDiagReport=[\s\S]*?\n\};/)||[''])[0];
+  ok('報告: 診断の行を直さず、報告の行を1行足す(stats は kind と playId だけ)',/stats:\{kind:'report',playId:report\.playId\}/.test(reportBlock));
+  ok('報告: 名前・ブリーダーIDは送らない・公開中の曲だけ',reportBlock.length>0&&!/user_name|breeder|userName|breederId/i.test(reportBlock)&&/RHYTHM_DEMO_SONG_IDS\.includes\(report\.song_id\)/.test(reportBlock));
+  ok('報告: 診断の行に、結ぶための playId と、効いていた直し方を入れる',/playId:rhythmTouchDiagPlayId\(\),fixes:rhythmTouchFixesActive\(\)/.test(diagBlock));
+  ok('報告: ボタンはタッチで遊ぶ端末の公開プレイだけ(練習・タイミング合わせ・デバッグは診断そのものを作らない)',
+    /const touchDiag=!debugPlay&&!tutorial&&!calibrating\?rhythmTouchDiagOf\(/.test(play)&&/touchDiag&&touchDiag\.platform!=='other'\?/.test(play)&&/\{result\.touchReport&&<div data-rhythm-touch-report/.test(play));
+  ok('報告: 同じ曲では1回だけ送る',/touchReportSent===result\.touchReport\.playId/.test(play));
+  // 報告の行は数に入れず、playId で結ぶ
+  const ios=make('ios',30),android=make('android',30);
+  ios.forEach((row,i)=>{row.stats.playId=`p${i}`;if(i<8)row.stats.lateStart=6;});
+  const reports=ios.slice(0,8).map((row,i)=>({id:`r${i}`,created_at:row.created_at,platform:'ios',standalone:true,device_key:row.device_key,note_count:500,stats:{kind:'report',playId:row.stats.playId}}));
+  const all=[...ios,...android,...reports];
+  ok('報告: 報告の行は曲の数に入れない',aggregate(all).find(g=>g.key==='ios').plays===30);
+  const compared=compareReported(all);
+  const found=compared.lines.filter(line=>line.level==='found');
+  ok('報告: 報告のあった曲だけ多い数字を言い当てる(touchstart が来ずにあとで見えた指)',compared.reports===8&&found.length===1&&found[0].metric==='lateStartPer1k',compared.lines.map(l=>l.text).join(' / '));
+  const few=compareReported([...ios,...android,...reports.slice(0,MIN_REPORTED-1)]);
+  ok('報告: 報告が少ないうちは比べない',few.lines.length===1&&few.lines[0].level==='wait',few.lines[0]&&few.lines[0].text);
+}
+// ── ⑤ 用意してある直し方(既定はすべて切ってある) ──
+{
+  const mode=read('monster-hero/data/rhythm-mode.js');
+  const fixes=(mode.match(/const RHYTHM_TOUCH_FIXES=\{[\s\S]*?\n\};/)||[''])[0];
+  ok('直し方: 公開では、すべて切ってある',/lateInputEffectDown:false/.test(fixes)&&/wideEdge:false/.test(fixes)&&/allPlatforms:false/.test(fixes)&&!/:true/.test(fixes),fixes.replace(/\s+/g,' ').slice(0,200));
+  ok('直し方: 効くのは iPhone だけ',/return rhythmTouchPlatformCache==='ios';/.test(mode));
+  ok('直し方: 道の外の受け付けは、切り替えを通して決める',/const margin=laneWidth\/2\*rhythmInputEdgeMarginSubLanes\(\);/.test(mode));
+  ok('直し方: タッチの遅れで演出を下げるのは「重いときは演出を自動で控えめに」の中だけ(設定を切った人には効かない)',
+    /if\(settingsLiveRef\.current\.autoEffectDown!==false&&stepEffectCapRef\.current\)\{[\s\S]{0,1800}lateBurst=rhythmTouchFixOn\('lateInputEffectDown'\)/.test(play));
+  const late=diagnose(aggregate([...make('ios',40,{late:40}),...make('android',40,{late:2})]));
+  const picks=fixesFor(late,null).map(item=>item.fix);
+  ok('直し方: 「遅れて届いた」の判定には lateInputEffectDown を示す',picks.length===1&&picks[0]==='lateInputEffectDown',picks.join(','));
+  ok('直し方: 差が無いときは何も示さない',fixesFor(diagnose(aggregate([...make('ios',40),...make('android',40)])),null).length===0);
 }
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

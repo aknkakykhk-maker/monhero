@@ -1067,7 +1067,7 @@ const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   const left=rhythmProjectBoundary(0,yRatio),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yRatio),laneWidth=(right-left)/RHYTHM_LANE_COUNT;
   if(!Number.isFinite(nx)||!(laneWidth>0))return null;
   // サブレーンはレーンの半分なので、1サブレーン = laneWidth/2
-  const margin=laneWidth/2*RHYTHM_INPUT_EDGE_MARGIN_SUB_LANES;
+  const margin=laneWidth/2*rhythmInputEdgeMarginSubLanes();
   if(nx<left-margin||nx>right+margin)return null;
   // 台形の外は端のレーンの延長として、そのまま外側の座標を返す。
   // 受け取る側は subLane を 0〜(サブレーン数-1) へ丸める(setPressedLanes / inputStarts)ので、
@@ -2350,6 +2350,7 @@ const RHYTHM_TOUCH_BRIDGE=(()=>{
       return lost;
     },
     hasPending(){return pointers.size>0;},
+    lateCount(){return stats.lateDelivery;},
     isRecoveredPointer(id){return recovered.has(id)&&recovered.get(id).upAt==null;},
     isIgnoredTouch(identifier){for(const [,entry] of recovered)if(entry.touchId===identifier)return true;return false;},
     touchCancel(count){stats.cancels++;stats.cancelledTouches+=Number(count)||0;},
@@ -2368,6 +2369,28 @@ const rhythmTouchPlatform=()=>{
   if(/Android/.test(ua))return 'android';
   return 'other';
 };
+// ===== タッチの直し方の切り替え(2026-10-01) =====
+// ユーザー指示「原因が分かったときの直し方を、先に用意しておく」。タッチの診断(rhythm-touch-diag.js --report)の判定ごとに、
+// 効く直し方を用意してある。**既定はすべて切ってある**。週の報告で原因が決まり、ユーザーが「入れる」と言ったものだけ true にする
+// (外れた直し方を入れると、別の不具合を生むおそれがあるため。docs/spec/RHYTHM_TOUCH_DIAG.md「用意してある直し方」)。
+// 効くのは iPhone だけ。allPlatforms は検査のためのもの(パソコンの Chrome で試す)で、公開では切ったまま。
+const RHYTHM_TOUCH_FIXES={
+  lateInputEffectDown:false,   // 判定⑤「50ms以上遅れて届いたタッチ」→ 遅れが続いたら演出を一段下げる(「重いときは演出を自動で控えめに」と同じ道)
+  wideEdge:false,              // 判定⑥「道の外で無視した指」→ 道の外の受け付けを、サブレーン1本ぶんから2本ぶんへ広げる
+  allPlatforms:false,
+};
+const RHYTHM_TOUCH_FIX_LATE_BURST=3;       // 3秒の枠のなかで、これだけ遅れて届いたら演出を一段下げる
+const RHYTHM_TOUCH_FIX_WIDE_EDGE_SUB_LANES=2;
+let rhythmTouchPlatformCache=null;
+const rhythmTouchFixOn=name=>{
+  if(name==='allPlatforms'||RHYTHM_TOUCH_FIXES[name]!==true)return false;
+  if(RHYTHM_TOUCH_FIXES.allPlatforms===true)return true;
+  if(rhythmTouchPlatformCache===null)rhythmTouchPlatformCache=rhythmTouchPlatform();
+  return rhythmTouchPlatformCache==='ios';
+};
+// 診断の行に「どの直し方が効いていたか」を残す(入れる前と後を比べるため)
+const rhythmTouchFixesActive=()=>Object.keys(RHYTHM_TOUCH_FIXES).filter(name=>rhythmTouchFixOn(name));
+const rhythmInputEdgeMarginSubLanes=()=>rhythmTouchFixOn('wideEdge')?RHYTHM_TOUCH_FIX_WIDE_EDGE_SUB_LANES:RHYTHM_INPUT_EDGE_MARGIN_SUB_LANES;
 const rhythmTouchStandalone=()=>{
   try{return (typeof navigator!=='undefined'&&navigator.standalone===true)||(typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(display-mode: standalone)').matches);}catch{return false;}
 };
