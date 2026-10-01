@@ -438,7 +438,8 @@ const PhaseBanner = ({ phase, enabled }) => {
   const [shown, setShown] = React.useState(null);
   const lastRef = React.useRef(null);
   React.useEffect(() => {
-    if (!phase || !enabled) { lastRef.current = phase || null; return undefined; }
+    // 出している途中で設定が切れたとき(超省エネに入ったときなど)は、表示を消すタイマーも一緒に止まるので、ここで消す
+    if (!phase || !enabled) { lastRef.current = phase || null; setShown(null); return undefined; }
     if (lastRef.current === phase) return undefined;
     lastRef.current = phase;
     setShown({ phase, key: Date.now() });
@@ -463,7 +464,8 @@ const WaveIntro = ({ enabled, wave, enemyName }) => {
   const [shown, setShown] = React.useState(null);
   const lastRef = React.useRef(null);
   React.useEffect(() => {
-    if (!enabled || !(wave > 0)) { lastRef.current = null; return undefined; }
+    // 出している途中で設定が切れたとき(超省エネに入ったときなど)は、表示を消すタイマーも一緒に止まるので、ここで消す
+    if (!enabled || !(wave > 0)) { lastRef.current = null; setShown(null); return undefined; }
     const key = `${wave}:${enemyName || ''}`;
     if (lastRef.current === key) return undefined;
     lastRef.current = key;

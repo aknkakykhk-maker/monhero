@@ -705,10 +705,16 @@ function MonsterHeroGame() {
   const [battleFxAutoLoad, setBattleFxAutoLoad] = useState(null);
   // バトル画面へ渡す設定。自動で下げているときは、保存した軽さより軽いほうを使う(保存値はそのまま)
   const battleFxEffective = useMemo(() => {
-    const base = normalizeBattleFxSettings(battleFxSettings);
+    const normalized = normalizeBattleFxSettings(battleFxSettings);
+    // 超省エネの∞周回(ecoMode==='ultra'&&autoRepeat。下の ultraEcoSession と同じ条件)のあいだは、演出をすべて切る
+    // (2026-10-01・ユーザー指示「超省エネをもっと画面情報減らしてエコに。VICTORY!とかの表示はなしでいい」)。
+    // 保存した設定は書き換えない。この値を読む側(WaveIntro・EnemyDefeatFx・PhaseBanner・resultFxMs など)がそのまま効く
+    const base = (ecoMode === 'ultra' && autoRepeat === true)
+      ? { ...normalized, idleMotion: 'OFF', shake: 'OFF', specialMovie: 'OFF', phaseBanner: 'OFF', waveIntro: 'OFF', defeatFx: 'OFF', resultFx: 'OFF', countUp: 'OFF', endFx: 'OFF' }
+      : normalized;
     if (!battleFxAutoLoad || base.autoLoad === 'OFF') return base;
     return BATTLE_FX_LOADS.indexOf(battleFxAutoLoad) > BATTLE_FX_LOADS.indexOf(base.load) ? { ...base, load: battleFxAutoLoad } : base;
-  }, [battleFxSettings, battleFxAutoLoad]);
+  }, [battleFxSettings, battleFxAutoLoad, ecoMode, autoRepeat]);
   const battleFxLoad = battleFxEffective.load;
   // 非同期の処理(敵を倒した直後など)から、いまの演出設定を読むための控え
   const battleFxEffectiveRef = useRef(battleFxEffective);
