@@ -115,7 +115,9 @@ const decodeAudio=async(file,options={})=>{
   const sampleRate=Number(options.sampleRate)||DEFAULT_SAMPLE_RATE;
   const fileAbs=path.isAbsolute(file)?file:path.join(ROOT,file);
   if(!fs.existsSync(fileAbs))throw new Error(`音源が見つかりません: ${file}`);
-  const prefer=options.prefer||'auto';
+  // MHB_AUDIO_DECODE=chromium で、ffmpegがあってもブラウザ経路で読む(検査の再現性用)。
+  // 同じ音源でも ffmpeg とブラウザでは打点の検出がずれ、拍子の読みが変わる曲がある(six_eternel_beat)。指定が無ければ従来どおり
+  const prefer=options.prefer||process.env.MHB_AUDIO_DECODE||'auto';
   if(prefer!=='chromium'&&ffmpegAvailable()){
     const result=decodeWithFfmpeg(fileAbs,sampleRate);
     return {...result,durationMs:result.samples.length/sampleRate*1000};
