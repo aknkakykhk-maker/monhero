@@ -26,7 +26,7 @@ const block=data.match(/const RHYTHM_MONSTER_SLOT_KEY=[\s\S]*?const rhythmMonste
 check('マスモン設定の実装を抽出できる',!!block);
 if(!block)process.exit(1);
 const context={};vm.createContext(context);
-vm.runInContext(`${block}\nthis.out={RHYTHM_MONSTER_SLOT_KEY,RHYTHM_MONSTER_SLOT_MAX,RHYTHM_MONSTER_SLOT_ISSUE_TEXT,RHYTHM_MONSTER_NOTE_BASE_RATIOS,sanitizeRhythmMonsterSlotIds,resolveRhythmMonsterSlots,rhythmMonsterSlotAddIssue,addRhythmMonsterSlot,removeRhythmMonsterSlot,moveRhythmMonsterSlot,rhythmMonsterNoteBaseRatios};`,context);
+vm.runInContext(`${block}\nthis.out={RHYTHM_MONSTER_SLOT_KEY,RHYTHM_MONSTER_SLOT_MAX,RHYTHM_MONSTER_SLOT_ISSUE_TEXT,RHYTHM_MONSTER_NOTE_BASE_RATIOS,sanitizeRhythmMonsterSlotIds,resolveRhythmMonsterSlots,rhythmMonsterSlotAddIssue,addRhythmMonsterSlot,removeRhythmMonsterSlot,moveRhythmMonsterSlot,rhythmMonsterNoteBaseRatios,rhythmMonsterSlotReplaceIssue,replaceRhythmMonsterSlot};`,context);
 const M=context.out;
 
 check('保存キーは新しく分けてある',M.RHYTHM_MONSTER_SLOT_KEY==='mh_rhythm_monsters_v1',M.RHYTHM_MONSTER_SLOT_KEY);
@@ -101,6 +101,18 @@ check('登場順を入れ替えられる',
 check('端を越える入れ替えは何もしない',
   JSON.stringify(M.moveRhythmMonsterSlot(['a','b'],0,-1))==='["a","b"]'
   &&JSON.stringify(M.moveRhythmMonsterSlot(['a','b'],1,1))==='["a","b"]');
+// 押した枠へ入れる・入れ替える(2026-10-01・マスモン設定を分かりやすくしたときに足した)
+check('設定済みの枠を、その枠だけ別の子に差し替えられる(順番はそのまま)',
+  JSON.stringify(M.replaceRhythmMonsterSlot(['u-ham','u-pandora','u-mia-1'],1,'u-pixie',OWNED))==='["u-ham","u-pixie","u-mia-1"]');
+check('空き枠を押したときは最後へ足す',
+  JSON.stringify(M.replaceRhythmMonsterSlot(['u-ham'],1,'u-pixie',OWNED))==='["u-ham","u-pixie"]');
+check('差し替えでも同じモンスターは重ねない(ほかの枠にいる種族は入れられない)',
+  M.rhythmMonsterSlotReplaceIssue(['u-mia-1','u-ham'],1,'u-mia-2',OWNED)==='duplicate-base'
+  &&JSON.stringify(M.replaceRhythmMonsterSlot(['u-mia-1','u-ham'],1,'u-mia-2',OWNED))==='["u-mia-1","u-ham"]');
+check('同じ枠の子を同じ種族の別個体に差し替えるのはよい',
+  JSON.stringify(M.replaceRhythmMonsterSlot(['u-mia-1','u-ham'],0,'u-mia-2',OWNED))==='["u-mia-2","u-ham"]');
+check('4枠埋まっていても、差し替えはできる',
+  JSON.stringify(M.replaceRhythmMonsterSlot(['u-mia-1','u-ham','u-pandora','u-pixie'],3,'u-zan',OWNED))==='["u-mia-1","u-ham","u-pandora","u-zan"]');
 check('1〜3体でも成立する(4体を必須にしない)',
   M.resolveRhythmMonsterSlots(['u-ham'],OWNED).length===1
   &&M.rhythmMonsterSlotAddIssue(['u-ham'],'u-pandora',OWNED)===null);
@@ -135,11 +147,12 @@ check('設定UIは体験版ホームからも開ける',
 check('4枠を常に並べて、空き枠が分かる',
   /Array\.from\(\{length:RHYTHM_MONSTER_SLOT_MAX\}/.test(game)&&game.includes('未設定'));
 check('設定できない相手は押せないようにして、理由を出す',
-  /disabled=\{!!issue\}/.test(game)&&game.includes('RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue]'));
+  /disabled=\{!!issue(\|\|current)?\}/.test(game)&&game.includes('RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue]'));
 check('マスモンの見た目は既存の染色表示を使い回す(base64で複製しない)',
   /data-rhythm-monster-slots[\s\S]*?<DyedMonsterImage baseId=\{masu\.baseId\} src=\{masuDisplayImageUrl\(base\)\}[\s\S]*?masuColors=\{getMasuColors\(masu\)\}/.test(game));
 check('一覧は開いたときだけ組み立てる',
-  /\{rhythmMonsterPickerOpen&&<ul data-rhythm-monster-picker/.test(game));
+  // 2026-10-01 から一覧は窓(ModalFrame)の中。開いたときだけ窓ごと組み立てる
+  /\{rhythmMonsterPickerOpen&&<ModalFrame [\s\S]{0,600}<ul data-rhythm-monster-picker/.test(game));
 
 // ── 既存を壊していない ──────────────────────────────────────────────────────
 check('既存の音ゲー保存キーはそのまま',

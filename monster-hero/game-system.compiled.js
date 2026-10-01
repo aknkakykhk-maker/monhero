@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c9c6918b799ba43e
+// source-sha256: 29bee95b85fe2732
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 17:53";
+const BUILD_DATE = "2026-10-01 18:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -26076,19 +26076,25 @@ const RhythmMonsterNoteGuide = () => {
   return React.createElement("section", {
     "data-rhythm-monster-guide": true,
     className: "space-y-3"
-  }, React.createElement("article", {
+  }, React.createElement("details", {
     className: "rounded-2xl border border-amber-300/40 bg-amber-500/10 p-4"
-  }, React.createElement("h3", {
-    className: "text-sm font-black text-amber-100"
-  }, "モンスターノーツとは"), React.createElement("p", {
+  }, React.createElement("summary", {
+    className: "flex min-h-[44px] cursor-pointer list-none items-center justify-between text-sm font-black text-amber-100"
+  }, "モンスターノーツとは", React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-[11px] text-amber-200/80"
+  }, "詳しく ▼")), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold leading-relaxed text-amber-50/90"
   }, "ここで設定したマスモンは、曲の途中で金色の「モンスターノーツ」になって流れてきます。 ノーツの真ん中には、そのマスモンの染色を反映した絵が出ます。"), React.createElement("ul", {
     className: "mt-2 space-y-1 text-[11px] font-bold leading-relaxed text-amber-50/90"
-  }, React.createElement("li", null, "・設定した順に、", React.createElement("b", null, "1体につき1回・最大", RHYTHM_MONSTER_SLOT_MAX, "回"), "出てきます。"), React.createElement("li", null, "・出てくるのは曲のだいたい ", ratios.join(' / '), " あたりです（曲の切れ目に合わせるので前後します）。"), React.createElement("li", null, "・", React.createElement("b", null, RHYTHM_MONSTER_ABILITY_JUDGMENTS.join('・')), " で取ると、そのマスモンの能力が出ます。GOOD・BAD・MISSでは出ません。"), React.createElement("li", null, "・判定の幅・スコアの計算・コンボの数え方は、ふつうのノーツとまったく同じです。"), React.createElement("li", null, "・いまはTAPのノーツだけがモンスターノーツになります。"))), React.createElement("article", {
+  }, React.createElement("li", null, "・設定した順に、", React.createElement("b", null, "1体につき1回・最大", RHYTHM_MONSTER_SLOT_MAX, "回"), "出てきます。"), React.createElement("li", null, "・出てくるのは曲のだいたい ", ratios.join(' / '), " あたりです（曲の切れ目に合わせるので前後します）。"), React.createElement("li", null, "・", React.createElement("b", null, RHYTHM_MONSTER_ABILITY_JUDGMENTS.join('・')), " で取ると、そのマスモンの能力が出ます。GOOD・BAD・MISSでは出ません。"), React.createElement("li", null, "・判定の幅・スコアの計算・コンボの数え方は、ふつうのノーツとまったく同じです。"), React.createElement("li", null, "・いまはTAPのノーツだけがモンスターノーツになります。"))), React.createElement("details", {
     className: "rounded-2xl border border-white/15 bg-slate-900/70 p-4"
-  }, React.createElement("h3", {
-    className: "text-sm font-black text-white"
-  }, "どの能力が付くか"), React.createElement("p", {
+  }, React.createElement("summary", {
+    className: "flex min-h-[44px] cursor-pointer list-none items-center justify-between text-sm font-black text-white"
+  }, "どの能力が付くか（能力の一覧）", React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-[11px] text-slate-400"
+  }, "詳しく ▼")), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
   }, "能力は", React.createElement("b", {
     className: "text-slate-200"
@@ -26126,124 +26132,190 @@ const RhythmMonsterSlotsPanel = ({
   setRhythmMonsterMessage,
   applyRhythmMonsterSlots,
   masuMons
-}) => React.createElement("section", {
-  "data-rhythm-monster-slots": true,
-  className: "rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-4"
-}, React.createElement("div", {
-  className: "flex items-center justify-between gap-2"
-}, React.createElement("h3", {
-  className: "text-sm font-black text-fuchsia-200"
-}, "モンスターノーツ用マスモン"), React.createElement("span", {
-  "data-rhythm-monster-count": true,
-  className: "shrink-0 rounded-full border border-fuchsia-300/50 px-2 py-0.5 text-[10px] font-black text-fuchsia-200"
-}, rhythmMonsterSlots.length, " / ", RHYTHM_MONSTER_SLOT_MAX, "体")), React.createElement("p", {
-  className: "mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80"
-}, "上から順に登場します。同じモンスターは別の個体でも重ねて設定できません。", RHYTHM_MONSTER_SLOT_MAX, "体そろえる必要はなく、1〜3体でも遊べます。"), React.createElement("ol", {
-  className: "mt-3 space-y-2"
-}, Array.from({
-  length: RHYTHM_MONSTER_SLOT_MAX
-}, (_, index) => {
-  const masu = rhythmMonsterSlots[index] || null,
-    base = masu ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
-  const lineage = masu ? monsterLineageOf(masu.baseId).main : null;
-  const ability = rhythmSlotAbility(masu);
-  return React.createElement("li", {
-    key: index,
-    "data-rhythm-monster-slot": index + 1,
-    className: "rounded-xl border border-white/10 bg-slate-900/80 p-2.5"
-  }, React.createElement("div", {
-    className: "flex items-center gap-2.5"
-  }, React.createElement("span", {
-    className: "w-9 shrink-0 rounded-lg border border-fuchsia-300/40 py-0.5 text-center text-[9px] font-black leading-tight text-fuchsia-200"
-  }, index + 1, React.createElement("br", null), "番目"), React.createElement("div", {
-    className: "h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-950"
-  }, masu && base && React.createElement(DyedMonsterImage, {
-    baseId: masu.baseId,
-    src: masuDisplayImageUrl(base),
-    alt: masu.name,
-    masuColors: getMasuColors(masu),
-    draggable: false,
-    className: "h-full w-full object-contain"
-  })), React.createElement("div", {
-    className: "min-w-0 flex-1"
-  }, masu ? React.createElement(React.Fragment, null, React.createElement("b", {
-    className: "block truncate text-[12px] font-black"
-  }, masu.name), React.createElement("small", {
-    className: "block truncate text-[10px] text-slate-400"
-  }, base?.name || masu.baseId, lineage ? ` / ${lineage.name}血統` : '')) : React.createElement("small", {
-    className: "text-[11px] font-bold text-slate-500"
-  }, "未設定")), masu && React.createElement("div", {
-    className: "flex shrink-0 gap-1"
-  }, React.createElement("button", {
-    type: "button",
-    "aria-label": `${index + 1}枠目を前へ`,
-    disabled: index === 0,
-    onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, -1), '登場順を入れ替えました'),
-    className: "min-h-[40px] min-w-[40px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30"
-  }, "↑"), React.createElement("button", {
-    type: "button",
-    "aria-label": `${index + 1}枠目を後ろへ`,
-    disabled: index >= rhythmMonsterSlots.length - 1,
-    onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, 1), '登場順を入れ替えました'),
-    className: "min-h-[40px] min-w-[40px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30"
-  }, "↓"), React.createElement("button", {
-    type: "button",
-    "data-rhythm-monster-remove": true,
-    "aria-label": `${masu.name}を外す`,
-    onClick: () => applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id), `${masu.name}を外しました`),
-    className: "min-h-[40px] rounded-lg border border-rose-300/50 px-2 text-[11px] font-black text-rose-200"
-  }, "外す"))), masu && React.createElement("p", {
-    "data-rhythm-monster-slot-ability": ability ? ability.id : 'none',
-    className: `mt-2 rounded-lg border px-2 py-1.5 text-[10px] font-bold leading-relaxed ${rhythmAbilityTone(ability ? ability.id : '')}`
-  }, ability ? React.createElement(React.Fragment, null, rhythmAbilityEmoji(ability.id), " ", ability.name, " — ", rhythmAbilityEffectText(ability)) : React.createElement(React.Fragment, null, "この血統の能力はまだ決まっていません。モンスターノーツにはなりますが、能力は出ません。")));
-})), React.createElement("button", {
-  type: "button",
-  "data-rhythm-monster-picker-toggle": true,
-  "aria-expanded": rhythmMonsterPickerOpen,
-  onClick: () => {
-    setRhythmMonsterPickerOpen(!rhythmMonsterPickerOpen);
+}) => {
+  const [pickerTarget, setPickerTarget] = React.useState(0);
+  const ratios = RHYTHM_MONSTER_NOTE_BASE_RATIOS;
+  const openPicker = index => {
+    setPickerTarget(Math.min(index, rhythmMonsterSlots.length));
     setRhythmMonsterMessage('');
-  },
-  className: "mt-3 min-h-[48px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[12px] font-black text-fuchsia-100"
-}, rhythmMonsterPickerOpen ? 'マスモン一覧を閉じる' : 'マスモンから設定する'), rhythmMonsterMessage && React.createElement("p", {
-  "data-rhythm-monster-message": true,
-  role: "status",
-  className: "mt-2 text-[11px] font-bold text-amber-200"
-}, rhythmMonsterMessage), rhythmMonsterPickerOpen && React.createElement("ul", {
-  "data-rhythm-monster-picker": true,
-  className: "mh-scroll mt-2 max-h-72 space-y-1.5 overflow-y-auto"
-}, masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).map(masu => {
-  const base = ALL_PLAYER_MONSTERS[masu.baseId],
-    issue = rhythmMonsterSlotAddIssue(rhythmMonsterSlotIdsInUse, masu.id, masuMons);
-  const ability = rhythmSlotAbility(masu);
-  return React.createElement("li", {
-    key: masu.id
-  }, React.createElement("button", {
-    type: "button",
-    disabled: !!issue,
-    onClick: () => applyRhythmMonsterSlots(addRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id, masuMons), `${masu.name}を${rhythmMonsterSlots.length + 1}枠目に設定しました`),
-    className: `flex min-h-[48px] w-full items-center gap-2.5 rounded-xl border p-2 text-left ${issue ? 'border-white/10 bg-slate-900/40 opacity-50' : 'border-white/20 bg-slate-900/80'}`
+    setRhythmMonsterPickerOpen(true);
+  };
+  const target = Math.min(pickerTarget, rhythmMonsterSlots.length);
+  const targetMasu = rhythmMonsterSlots[target] || null;
+  const candidates = masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]);
+  const slotOf = masu => rhythmMonsterSlotIdsInUse.indexOf(String(masu.id));
+  return React.createElement("section", {
+    "data-rhythm-monster-slots": true,
+    className: "rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-4"
   }, React.createElement("div", {
-    className: "h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-slate-950"
-  }, React.createElement(DyedMonsterImage, {
-    baseId: masu.baseId,
-    src: masuDisplayImageUrl(base),
-    alt: "",
-    masuColors: getMasuColors(masu),
-    draggable: false,
-    className: "h-full w-full object-contain"
-  })), React.createElement("div", {
-    className: "min-w-0 flex-1"
-  }, React.createElement("b", {
-    className: "block truncate text-[12px] font-black"
-  }, masu.name), React.createElement("small", {
-    className: "block truncate text-[10px] text-slate-400"
-  }, base.name, ability ? ` / ${rhythmAbilityEmoji(ability.id)}${ability.name}` : '')), issue && React.createElement("small", {
-    className: "shrink-0 text-[10px] font-bold text-rose-300"
-  }, RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue])));
-}), masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).length === 0 && React.createElement("li", {
-  className: "rounded-xl border border-white/10 p-4 text-center text-[11px] font-bold text-slate-500"
-}, "設定できるマスモンがいません")));
+    className: "flex items-center justify-between gap-2"
+  }, React.createElement("h3", {
+    className: "text-sm font-black text-fuchsia-200"
+  }, "モンスターノーツ用マスモン"), React.createElement("span", {
+    "data-rhythm-monster-count": true,
+    className: "shrink-0 rounded-full border border-fuchsia-300/50 px-2 py-0.5 text-[10px] font-black text-fuchsia-200"
+  }, rhythmMonsterSlots.length, " / ", RHYTHM_MONSTER_SLOT_MAX, "体")), React.createElement("ol", {
+    "data-rhythm-monster-steps": true,
+    className: "mt-2 grid grid-cols-3 gap-1.5 text-center text-[10px] font-black leading-snug text-fuchsia-50/90"
+  }, React.createElement("li", {
+    className: "rounded-lg border border-fuchsia-300/25 bg-slate-950/50 px-1.5 py-2"
+  }, React.createElement("span", {
+    className: "block text-base leading-none"
+  }, "👾"), "マスモンを", React.createElement("br", null), "枠に選ぶ"), React.createElement("li", {
+    className: "rounded-lg border border-amber-300/30 bg-slate-950/50 px-1.5 py-2"
+  }, React.createElement("span", {
+    className: "block text-base leading-none"
+  }, "🌟"), "曲の途中で", React.createElement("br", null), "金色のノーツに"), React.createElement("li", {
+    className: "rounded-lg border border-emerald-300/30 bg-slate-950/50 px-1.5 py-2"
+  }, React.createElement("span", {
+    className: "block text-base leading-none"
+  }, "✨"), RHYTHM_MONSTER_ABILITY_JUDGMENTS[RHYTHM_MONSTER_ABILITY_JUDGMENTS.length - 1], "以上で", React.createElement("br", null), "取ると能力")), React.createElement("p", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80"
+  }, "上の枠から順に登場します。同じモンスターは別の個体でも重ねて設定できません。", RHYTHM_MONSTER_SLOT_MAX, "体そろえる必要はなく、1〜3体でも遊べます。"), React.createElement("ol", {
+    className: "mt-3 space-y-2"
+  }, Array.from({
+    length: RHYTHM_MONSTER_SLOT_MAX
+  }, (_, index) => {
+    const masu = rhythmMonsterSlots[index] || null,
+      base = masu ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
+    const lineage = masu ? monsterLineageOf(masu.baseId).main : null;
+    const ability = rhythmSlotAbility(masu);
+    const timing = React.createElement("span", {
+      className: "block text-[10px] font-bold text-fuchsia-200/70"
+    }, "曲の約", Math.round((ratios[index] || 0) * 100), "%");
+    if (!masu) {
+      const next = index === rhythmMonsterSlots.length;
+      return React.createElement("li", {
+        key: index,
+        "data-rhythm-monster-slot": index + 1
+      }, React.createElement("button", {
+        type: "button",
+        "data-rhythm-monster-slot-add": index + 1,
+        disabled: !next,
+        onClick: () => openPicker(index),
+        className: `flex min-h-[64px] w-full items-center gap-2.5 rounded-xl border-2 border-dashed p-2.5 text-left ${next ? 'border-fuchsia-300/60 bg-fuchsia-900/20 active:scale-[.98]' : 'border-white/10 bg-slate-900/40 opacity-50'}`
+      }, React.createElement("span", {
+        className: "w-12 shrink-0 rounded-lg border border-fuchsia-300/40 py-1 text-center text-[11px] font-black leading-tight text-fuchsia-200"
+      }, index + 1, "番目", timing), React.createElement("span", {
+        className: "min-w-0 flex-1 text-[12px] font-black text-fuchsia-100"
+      }, next ? '＋ マスモンを選ぶ' : '未設定')));
+    }
+    return React.createElement("li", {
+      key: index,
+      "data-rhythm-monster-slot": index + 1,
+      className: "rounded-xl border border-white/10 bg-slate-900/80 p-2.5"
+    }, React.createElement("div", {
+      className: "flex items-center gap-2.5"
+    }, React.createElement("span", {
+      className: "w-12 shrink-0 rounded-lg border border-fuchsia-300/40 py-1 text-center text-[11px] font-black leading-tight text-fuchsia-200"
+    }, index + 1, "番目", timing), React.createElement("div", {
+      className: "h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-950"
+    }, base && React.createElement(DyedMonsterImage, {
+      baseId: masu.baseId,
+      src: masuDisplayImageUrl(base),
+      alt: masu.name,
+      masuColors: getMasuColors(masu),
+      draggable: false,
+      className: "h-full w-full object-contain"
+    })), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block truncate text-[13px] font-black"
+    }, masu.name), React.createElement("small", {
+      className: "block truncate text-[10px] text-slate-400"
+    }, base?.name || masu.baseId, lineage ? ` / ${lineage.name}血統` : ''))), React.createElement("p", {
+      "data-rhythm-monster-slot-ability": ability ? ability.id : 'none',
+      className: `mt-2 rounded-lg border px-2 py-1.5 text-[11px] font-bold leading-relaxed ${rhythmAbilityTone(ability ? ability.id : '')}`
+    }, ability ? React.createElement(React.Fragment, null, React.createElement("b", {
+      className: "font-black"
+    }, rhythmAbilityEmoji(ability.id), " ", ability.name), " — ", rhythmAbilityEffectText(ability)) : React.createElement(React.Fragment, null, "この血統の能力はまだ決まっていません。モンスターノーツにはなりますが、能力は出ません。")), React.createElement("div", {
+      className: "mt-2 grid grid-cols-4 gap-1.5"
+    }, React.createElement("button", {
+      type: "button",
+      "aria-label": `${index + 1}枠目を前へ`,
+      disabled: index === 0,
+      onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, -1), '登場順を入れ替えました'),
+      className: "min-h-[44px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30"
+    }, "↑ 前へ"), React.createElement("button", {
+      type: "button",
+      "aria-label": `${index + 1}枠目を後ろへ`,
+      disabled: index >= rhythmMonsterSlots.length - 1,
+      onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, 1), '登場順を入れ替えました'),
+      className: "min-h-[44px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30"
+    }, "↓ 後へ"), React.createElement("button", {
+      type: "button",
+      "data-rhythm-monster-replace": index + 1,
+      "aria-label": `${index + 1}枠目の${masu.name}を入れ替える`,
+      onClick: () => openPicker(index),
+      className: "min-h-[44px] rounded-lg border border-fuchsia-300/50 text-[11px] font-black text-fuchsia-100"
+    }, "入れ替え"), React.createElement("button", {
+      type: "button",
+      "data-rhythm-monster-remove": true,
+      "aria-label": `${masu.name}を外す`,
+      onClick: () => applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id), `${masu.name}を外しました`),
+      className: "min-h-[44px] rounded-lg border border-rose-300/50 text-[11px] font-black text-rose-200"
+    }, "外す")));
+  })), rhythmMonsterMessage && React.createElement("p", {
+    "data-rhythm-monster-message": true,
+    role: "status",
+    className: "mt-2 text-[11px] font-bold text-amber-200"
+  }, rhythmMonsterMessage), rhythmMonsterPickerOpen && React.createElement(ModalFrame, {
+    label: "モンスターノーツにするマスモンを選ぶ",
+    border: "border-fuchsia-400/70",
+    onClose: () => setRhythmMonsterPickerOpen(false)
+  }, React.createElement("h3", {
+    className: "text-center text-base font-black text-fuchsia-100"
+  }, target + 1, "番目に出すマスモン"), React.createElement("p", {
+    className: "mt-1 text-center text-[10px] font-bold text-slate-400"
+  }, "曲の約", Math.round((ratios[target] || 0) * 100), "%あたりで出ます", targetMasu ? `（いまは ${targetMasu.name}）` : ''), React.createElement("ul", {
+    "data-rhythm-monster-picker": true,
+    className: "mh-scroll mt-3 max-h-[55vh] space-y-1.5 overflow-y-auto"
+  }, candidates.map(masu => {
+    const base = ALL_PLAYER_MONSTERS[masu.baseId],
+      issue = rhythmMonsterSlotReplaceIssue(rhythmMonsterSlotIdsInUse, target, masu.id, masuMons);
+    const ability = rhythmSlotAbility(masu),
+      at = slotOf(masu);
+    const current = at === target;
+    const label = at >= 0 && !current ? `${at + 1}番目に設定中` : issue ? RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue] : '';
+    return React.createElement("li", {
+      key: masu.id
+    }, React.createElement("button", {
+      type: "button",
+      disabled: !!issue || current,
+      onClick: () => {
+        const next = replaceRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, target, masu.id, masuMons);
+        applyRhythmMonsterSlots(next, targetMasu ? `${target + 1}番目を ${masu.name} に入れ替えました` : `${masu.name}を${target + 1}番目に設定しました`);
+        setRhythmMonsterPickerOpen(false);
+      },
+      className: `flex min-h-[56px] w-full items-center gap-2.5 rounded-xl border p-2 text-left ${issue || current ? 'border-white/10 bg-slate-900/40 opacity-50' : 'border-white/20 bg-slate-900/80 active:scale-[.98]'}`
+    }, React.createElement("div", {
+      className: "h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-950"
+    }, React.createElement(DyedMonsterImage, {
+      baseId: masu.baseId,
+      src: masuDisplayImageUrl(base),
+      alt: "",
+      masuColors: getMasuColors(masu),
+      draggable: false,
+      className: "h-full w-full object-contain"
+    })), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block truncate text-[12px] font-black"
+    }, masu.name, React.createElement("small", {
+      className: "ml-1 text-[10px] font-bold text-slate-400"
+    }, base.name)), React.createElement("span", {
+      className: `mt-0.5 inline-block max-w-full truncate rounded-md border px-1.5 py-0.5 text-[10px] font-black ${rhythmAbilityTone(ability ? ability.id : '')}`
+    }, ability ? `${rhythmAbilityEmoji(ability.id)}${ability.name}` : '能力なし')), (label || current) && React.createElement("small", {
+      className: "shrink-0 text-right text-[10px] font-bold text-rose-300"
+    }, current ? 'この枠の子' : label)));
+  }), candidates.length === 0 && React.createElement("li", {
+    className: "rounded-xl border border-white/10 p-4 text-center text-[11px] font-bold text-slate-500"
+  }, "設定できるマスモンがいません")), React.createElement("div", {
+    className: "mt-3"
+  }, React.createElement(ModalCloseButton, {
+    onClick: () => setRhythmMonsterPickerOpen(false)
+  }))));
+};
 const RHYTHM_PLAY_LOG_DEVICE_KEY = 'mh_rhythm_play_log_device_v1';
 const RHYTHM_PLAY_LOG_VERSION = 1;
 const rhythmPlayLogEncode = notes => (Array.isArray(notes) ? notes : []).map(note => {
@@ -69614,7 +69686,8 @@ function MonsterHeroGame() {
         setGameState('RHYTHM_DEMO_HELP');
       },
       onOpenMonsterSlots: () => {
-        setRhythmMonsterPickerOpen(true);
+        setRhythmMonsterPickerOpen(false);
+        setRhythmMonsterMessage('');
         setGameState('RHYTHM_DEMO_MONSTERS');
       },
       onOpenOptions: () => {
