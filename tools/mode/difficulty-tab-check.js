@@ -9,7 +9,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ② 実ブラウザ: クイックにタブが出て、押すと極限の並びへ切り替わる
 //   ③ 実ブラウザ: 極限を持たないモードにはタブが出ない
 //   ④ 開くたびに「通常」から始まる(極限タブのままノーマルを選んでいる状態を作らない)
-//   ⑤ スコアランキングのタブは、チャレンジで16段階(通常9＋極限7)がひと続きに並ぶ
+//   ⑤ スコアランキングのタブは、チャレンジで17段階(通常9＋極限8)がひと続きに並ぶ
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -78,7 +78,7 @@ check('チャレンジ判定は pro を先に参照しない',
 check('タブを切り替えたらその並びの先頭を選ぶ', has('if(group[0])chooseDifficulty(group[0][0]);'),
   '見えていない難易度のまま開始できてしまうのを防ぐ');
 
-// --- ⑤ ランキングのタブ(16段階をまとめる / 2026-09-19 ユーザー指示) ---
+// --- ⑤ ランキングのタブ(17段階をまとめる / 2026-09-19 ユーザー指示) ---
 // 並べ方だけを変える。記録の保存先(mh_hs_* / mh_extreme_hs_*)も Supabase へ送る difficulty も
 // これまでどおりなので、過去の記録はそのまま並ぶ
 check('チャレンジのランキングは通常9段階に極限を続けて並べる',
@@ -247,7 +247,7 @@ const serve = () => new Promise((resolve) => {
     }
     await back();
 
-    // --- ⑤ チャレンジのランキングに16段階のタブが並ぶ ---
+    // --- ⑤ チャレンジのランキングに17段階のタブが並ぶ ---
     await page.evaluate(() => {
       const cards = [...document.querySelectorAll('article')].filter(a => a.textContent.includes('チャレンジモード'));
       const card = cards[Math.floor(cards.length / 2)] || cards[0];
@@ -260,9 +260,9 @@ const serve = () => new Promise((resolve) => {
       ['Beginner', 'Normal', 'Grand Master'].every(label => rankTabs.includes(label)),
       rankTabs.slice(0, 4).join(','));
     check('同じ並びに極限の段階も続く',
-      ['EXTREME', 'GOD', 'RAGNAROK'].every(label => rankTabs.includes(label)),
+      ['EXTREME', 'GOD', 'RAGNAROK', 'HELHEIM'].every(label => rankTabs.includes(label)),
       rankTabs.slice(-4).join(','));
-    check('タブは16段階', rankTabs.length === 16, `${rankTabs.length}枚`);
+    check('タブは17段階', rankTabs.length === 17, `${rankTabs.length}枚`);
     // 極限のタブを押しても画面が落ちない(押した先で引くキーが ExtremeGOD などになる)
     await page.evaluate(() => {
       [...document.querySelectorAll('[data-score-ranking-tabs] button')].find(b => b.textContent.trim() === 'GOD')?.click();

@@ -832,6 +832,10 @@ const ASSISTANT_SCENES = {
     help: 'basics/extreme-challenge',
     lines: [],
   },
+  helheimDifficulty: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
   // 種族チャレンジの選択画面。種族→勇者→供モン→確認の各段で言うことが変わるので、
   // 画面から condition(いまの段)を渡す。セリフ本体は speciesChallengeGuide の束から合流する
   speciesChallenge: {
@@ -1793,6 +1797,13 @@ addAssistantLinePack({
       { e:'surprise', t:'WAVE5とWAVE10のボスは、倒しても起き上がるからね。油断しないで！' },
       { e:'wink', t:'長引くほど苦しくなるから、短く決めるのがコツ。がんばって(●゚ｪ゚))ｺｸｺｸ' },
     ],
+    helheimDifficulty: [
+      { e:'surprise', t:'HELHEIMは敵強度300倍で、しかも敵のライフはさらに10倍だよ…！' },
+      { e:'normal', t:'冥府が深まるたびに、味方の最大ライフも削られていくの。' },
+      { e:'troubled', t:'距離強化もWAVEごとに薄れて、後半はほとんど伸びなくなるよ。' },
+      { e:'surprise', t:'WAVE3・5・7・9・10のボスは起き上がるし、W10は4回も蘇るんだって…！' },
+      { e:'wink', t:'いちばん奥の難易度。ルール詳細を読んで、覚悟ができたら行こ♪' },
+    ],
   },
 });
 
@@ -2429,6 +2440,13 @@ addAssistantLinePack({
       { e:'surprise', t:'WAVE5とWAVE10のボスは、倒しても起き上がりまつ…！' },
       { e:'wink',     t:'報酬は虹のプシュケー130個。短期決着を狙お♪' },
     ],
+    helheimDifficulty: [
+      { e:'surprise', t:'HELHEIMは敵強度×300、敵のライフはさらに10倍でつ…！' },
+      { e:'normal', t:'冥府Lvが上がるたび、味方の最大ライフが削れまつ。' },
+      { e:'troubled', t:'距離強化はWAVEごとに薄れて、後半はほぼ伸びませんでつ。' },
+      { e:'surprise', t:'WAVE3・5・7・9・10のボスが起き上がりまつ…！ W10は4回でつ。' },
+      { e:'wink', t:'報酬は虹のプシュケー160個。短期決着を狙お♪' },
+    ],
     // ---- はじめて ----
     onboarding: [
       { e:'happy',   t:'はじめまして。私はきき、このゲームの助手でつ (´ω`)' },
@@ -3041,6 +3059,14 @@ addAssistantLinePack({
       { e:'surprise', t:'まって、WAVE5と10のボス、倒しても起き上がってくるんだってwww' },
       { e:'excited',  t:'報酬は虹のプシュケー130個。……行くんでしょ？♡' },
       { e:'happy',    t:'ここまで来たキミなら、ももは止めないよ！' },
+    ],
+    helheimDifficulty: [
+      { e:'surprise', t:'HELHEIM……RAGNAROKの上があったんだ。敵の強さ300倍、ライフ10倍！？' },
+      { e:'normal', t:'冥府Lvが上がるたびに、こっちの最大ライフも減っていくんだって。' },
+      { e:'troubled', t:'距離強化もWAVEごとに薄れていくから、後半は殴っても伸びないよ。' },
+      { e:'surprise', t:'まって、WAVE9のデュラハンまで起き上がってくるんだってwww' },
+      { e:'excited', t:'報酬は虹のプシュケー160個。……行くんでしょ？♡' },
+      { e:'happy', t:'ここまで来たキミなら、ももは止めないよ！' },
     ],
     // ---- はじめての設定 ----
     onboarding: [
@@ -3839,6 +3865,12 @@ addAssistantLinePack({
       { e:'normal',   t:'届かなくても、そこまで積んだもんは消えんからな' },
       { e:'excited',  t:'通ったら教えてくれ。おで本気で祝うわ' },
     ],
+    helheimDifficulty: [
+      { e:'normal', t:'ヘルヘイムか。ラグナロクの上なんて、おでも聞いたことなかったわ' },
+      { e:'troubled', t:'敵のライフが10倍で、こっちの最大ライフは削られる。数字だけで帰りたくなるな' },
+      { e:'wink', t:'距離強化もだんだん効かなくなる。伸ばす前提の組み方は通らんぞ' },
+      { e:'excited', t:'ここを通ったら、おで本気で拝むわ' },
+    ],
     speciesChallenge: [
       { e:'normal',   t:'ひとつの種族だけで10WAVEな。しばりプレイだよ' },
       { e:'happy',    t:'{name}、育ててる種族から挑むと入りやすいわ' },
@@ -4237,6 +4269,11 @@ addAssistantLinePack({
       { e:'troubled', t:'起き上がるボスは、倒し方より削る順番だな' },
       { e:'happy',    t:'無理だと思ったら引いていい。恥ずかしいことちゃうよ' },
     ],
+    helheimDifficulty: [
+      { e:'normal', t:'ラグナロクのさらに先や。ここまで来る人、ほぼおらんと思うわ' },
+      { e:'troubled', t:'ライフは10倍で、こっちの最大ライフも削れる。長引かせたら負けや' },
+      { e:'happy', t:'無理だと思ったら引いていい。恥ずかしいことちゃうよ' },
+    ],
     speciesChallenge: [
       { e:'normal',   t:'同じ種族だけで組むと、弱いとこがはっきり出るな' },
       { e:'happy',    t:'初クリアで超越の実。その種族のやつがもらえるよ' },
@@ -4522,6 +4559,11 @@ addAssistantLinePack({
       { e:'troubled', t:'起き上がるボスは、倒し方より削る順番が大事。' },
       { e:'happy',    t:'無理だと思ったら引いていいからね(●゚ｪ゚))ｺｸｺｸ' },
     ],
+    helheimDifficulty: [
+      { e:'normal', t:'ラグナロクのさらに先。ここに立てる人は、本当にごくわずかだよ。' },
+      { e:'troubled', t:'ライフ10倍に、最大ライフ減少。距離強化もしぼむから、長期戦は厳しいよ。' },
+      { e:'happy', t:'無理だと思ったら引いていいからね(●゚ｪ゚))ｺｸｺｸ' },
+    ],
     speciesChallenge: [
       { e:'normal',  t:'同じ種族だけで組むと、弱点がはっきり出るよ。' },
       { e:'happy',   t:'超越の実は、その種族のぶんがもらえるよ(●゚ｪ゚))ｺｸｺｸ' },
@@ -4630,6 +4672,11 @@ addAssistantLinePack({
       { e:'excited', t:'200倍。作った人、正気じゃないよねw' },
       { e:'troubled', t:'ボスが起き上がるからね。1回で終わると思わないで。' },
       { e:'happy',   t:'ここまで来る人、ほんとに一握りだよ。すごいじゃん♡' },
+    ],
+    helheimDifficulty: [
+      { e:'excited', t:'300倍で、さらにライフ10倍。もう笑うしかないねw' },
+      { e:'troubled', t:'ボスは何回も起き上がるし、こっちの最大ライフは削られるしで容赦ないよ。' },
+      { e:'happy', t:'ここに立てるだけで、もう十分すごいじゃん♡' },
     ],
     speciesChallenge: [
       { e:'wink',    t:'1種族しばり。縛るの好きだねえw' },
@@ -4942,6 +4989,11 @@ addAssistantLinePack({
       { e:'normal',   t:'最後の難易度でつ。ここを越える人は、ほんの一握り。' },
       { e:'troubled', t:'起き上がるボスは、倒し方より削る順番が大事でつ。' },
       { e:'happy',    t:'無理だと思ったら引いていいんでつよ。逃げではありません。' },
+    ],
+    helheimDifficulty: [
+      { e:'normal', t:'ラグナロクのさらに先でつ。ここに立てる人は、ごくわずかでつ。' },
+      { e:'troubled', t:'ライフ10倍に、最大ライフ減少。距離強化も薄れるので、長期戦は厳しいでつ。' },
+      { e:'happy', t:'無理だと思ったら引いていいんでつよ。逃げではありません。' },
     ],
     speciesChallenge: [
       { e:'normal',   t:'同じ種族だけで組むと、弱点がはっきり出まつね。' },
