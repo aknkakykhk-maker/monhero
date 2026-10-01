@@ -71,7 +71,7 @@ node tools/build.js --check
 
 | コマンド | 何をするか |
 | --- | --- |
-| `node maintenance.js` | **定期メンテナンスの点検**。必須+CI+文書の検査と、ワークフロー数・肥大・孤立画像・溜まったブランチの衛生チェックを回して報告する(直さない)。`--full` で月次(全検査)、`--write` で `docs/ops/maintenance/latest.md` へ書く。運用は [`docs/ops/MAINTENANCE.md`](../docs/ops/MAINTENANCE.md)。 |
+| `node maintenance.js` | **定期メンテナンスの点検**。全領域の検査(週次は重い4本を除く約53分)と、ワークフロー数・肥大・孤立画像・溜まったブランチの衛生チェックを回して報告する(直さない)。`--full` で月次(全検査)、`--quick` で1〜2分の手早い版、`--write` で `docs/ops/maintenance/latest.md` へ書く。運用は [`docs/ops/MAINTENANCE.md`](../docs/ops/MAINTENANCE.md)。 |
 | `node ctx.js brief` | いまの状態(ブランチ・未コミットの変更・次に打つもの)を数行で出す。作業の入口。 |
 | `node ctx.js find <語>` / `text <語>` | 定義／本文を探す(`where.js` へ委譲。生成物は対象外)。 |
 | `node ctx.js read <ファイル> <名前>` | **その定義の本体だけ**を切り出す。終わりの行は、文字列・コメント・テンプレート文字列・正規表現を飛ばしながら括弧を数えて決める(JSXの `…}/>` を正規表現と取り違えないようにしてある)。`parts/*.jsx` のトップレベル定義1437件すべてで終端が取れることを確認済み。長すぎる定義は上限で切ったうえで**中にある定義の地図**を出すので、`sed` の範囲を当て推量しなくてよい。 |
