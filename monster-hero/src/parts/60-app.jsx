@@ -12497,8 +12497,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(boost>1) addPopup(`敵も強くなった！ ×${boost.toFixed(2)}`,'enemy','text-orange-300 font-black text-xl drop-shadow-md');
       }
       setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
-      setEffect({type:'mega',label:`${m.name}合流！`,icon:"🤝",monEmoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,subLabel:`HP:${bHp}→${nMaxHp}  ちから:${bAtk}→${nAtk}\n丈夫さ:${bDef}→${nDef}  ガッツ:${bGuts}→${nMaxGuts}${aptLabel?`\n間合い適性:${aptLabel}`:''}`});
-      setTimeout(()=>{setEffect(null); advanceRunStage('UPGRADE_SKILL');},battleMs(1400));
+      setEffect({type:'allyJoin',label:`${m.name}合流！`,name:m.masuName||m.name,emoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,wave:waveResult?.wave||0,ms:battleMs(2600),apt:aptLabel,
+        rows:[{key:'hp',label:'ライフ',before:bHp,after:nMaxHp},{key:'atk',label:'ちから',before:bAtk,after:nAtk},{key:'def',label:'丈夫さ',before:bDef,after:nDef},{key:'guts',label:'ガッツ',before:bGuts,after:nMaxGuts}]});
+      setTimeout(()=>{setEffect(null); advanceRunStage('UPGRADE_SKILL');},battleMs(2600));
     }
     setCurrentPickingMon(null);
   };
@@ -12550,7 +12551,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       else if ((runMode===BATTLE_MODE_CHALLENGE||runMode===BATTLE_MODE_TACTICS)&&!extremeRunRef.current&&!speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');
       else void saveMissionProgress('modeRun');
     }
-    setTimeout(()=>{setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},battleMs(150));
+    // 覚えた・強化した結果を見せてから次のバトルへ(TeachingResultFx)
+    const teachingToLevel=alreadyOwned?Math.min(2,alreadyOwned.evoLevel+1):0;
+    const teachingFxMs=battleMs(1900);
+    setEffect({type:'teachingResult',label:alreadyOwned?'POWER UP!':'NEW CARD!',icon:teaching.icon,id:teaching.id,
+      name:BREEDER_EVO_NAMES[teaching.id]?.[teachingToLevel]||teaching.name,fromLevel:alreadyOwned?alreadyOwned.evoLevel:-1,toLevel:teachingToLevel,maxLevel:2,
+      desc:getFullEvolutionDetails(teaching)[teachingToLevel]?.desc||'',ms:teachingFxMs});
+    setTimeout(()=>{setEffect(null); setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},teachingFxMs);
   };
 
   // トレーニング(旧「能力覚醒」)を確定する。picksは選んだ順のオプションid配列で、
@@ -12860,13 +12867,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 見た目は強化フェーズ共通の mh-ph-*(70-bootstrap.jsx)。自分の技は金、引き継いだ技は水色の縁
       <div key={rowKey} data-ph-kind={inherited?'inherit':'own'} className="mh-phase-enter mh-ph-frame relative overflow-hidden p-2.5 rounded-2xl border shrink-0">
         <span aria-hidden="true" className="mh-ph-sparkle"/>
+        {/* レベルが変わるたびに光の筋が1回走る(key が変わると付け直される) */}
+        {lvl>0&&<span key={`sweep-${lvl}`} aria-hidden="true" className="mh-train-sweep" style={{'--d':'0ms'}}/>}
         <div className="relative flex items-center gap-2.5">
           {ownerMon?.iconUrl?(<img src={ownerMon.iconUrl} alt={ownerMon.name} style={monsterArtFitStyle(ownerMon.id)} className="mh-ph-medal w-11 h-11 rounded-full object-cover shrink-0"/>):(<span style={{fontSize:'30px'}}>{cardIconNode(u.icon,40)}</span>)}
           <div className="text-left flex-1 min-w-0">
             <div className={`text-[9px] font-black tracking-wider flex items-center gap-1 truncate ${inherited?'text-cyan-300':'text-indigo-300'}`}>
               {inherited&&<span className="bg-cyan-600 text-white px-1 rounded-sm not-italic shrink-0">引き継ぎ</span>}<span className="truncate">{heading}</span>
             </div>
-            <div className="font-black text-white leading-tight truncate" style={{fontSize:'13px'}}>{u.names[Math.min(lvl,u.names.length-1)]} <span className="text-slate-400">Lv.{lvl}</span>{maxed?<span className="text-amber-400"> MAX</span>:<span className="text-amber-400"> → {lvl+1}</span>}</div>
+            <div className="font-black text-white leading-tight truncate" style={{fontSize:'13px'}}>{u.names[Math.min(lvl,u.names.length-1)]} <span key={`lv-${lvl}`} className="mh-phase-pop inline-block text-slate-400">Lv.{lvl}</span>{maxed?<span className="text-amber-400"> MAX</span>:<span className="text-amber-400"> → {lvl+1}</span>}</div>
             {/* レベルの目盛り(0〜8)。菱形の宝石で、次に上がる1段を光らせる */}
             <div className="mt-1.5 mb-0.5 flex items-center gap-[5px] pl-0.5" aria-hidden="true">
               {Array.from({length:8}).map((_,i)=>(
@@ -18665,6 +18674,8 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
       {/* 合流・トレーニング完了などの全画面演出も、モンビーを開いている間は出さない。
           裏で進んでいるだけのものが曲えらびの上へ全面表示され、操作を奪ってしまう。
           止めるのは見た目だけで、ランの進行そのものは今までどおり進む */}
+      {(()=>{const phaseId={REWARD_PICK:'training',QUICK_GROWTH:'growth',PICK_ALLY:'ally',PICK_SLOT:'slot',UPGRADE_SKILL:'skill',PICK_TEACHING:'teaching'}[gameState]||null;
+        return <PhaseBanner phase={phaseId} enabled={!!phasePlan&&Array.isArray(phasePlan)&&phasePlan.includes(phaseId)&&!!enemy}/>;})()}
       {effect&&!rhythmScreenOpen&&(<div className="fixed inset-0 z-[70000] flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
           <>
@@ -18715,7 +18726,9 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           </>
         )}
         {effect.type==='trainingResult'&&<TrainingResultFx effect={effect}/>}
-        {effect.type!=='trainingResult'&&(<>
+        {effect.type==='allyJoin'&&<AllyJoinFx effect={effect}/>}
+        {effect.type==='teachingResult'&&<TeachingResultFx effect={effect}/>}
+        {!['trainingResult','allyJoin','teachingResult'].includes(effect.type)&&(<>
         {/* 大きさ・光り方・色は effectVisual(種類) が正本。画面側へ三項演算子を書き並べない */}
         {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>):(<div style={{fontSize:effectVisual(effect.type).emoji,animation:effectVisual(effect.type).throb}} className="mb-6 relative">{effect.monEmoji}</div>)}
         <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effectVisual(effect.type).label}`}>{effect.label}</h2>

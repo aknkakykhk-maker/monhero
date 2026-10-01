@@ -106,7 +106,8 @@ const seed = () => {
     await page.evaluate(() => { [...document.querySelectorAll('button')].find((x) => /新規習得/.test(x.textContent))?.click(); });
     await page.waitForTimeout(900);
     await clickExact('習得する');
-    await page.waitForTimeout(1800);
+    // 覚えたカードの演出(約1.9秒)のあとでバトルへ進む
+    await page.waitForTimeout(3500);
 
     const inBattle = await page.evaluate(() => !!document.querySelector('button[aria-label^="AUTO"]'));
     check('バトル画面へ入れる', inBattle);

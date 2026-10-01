@@ -140,7 +140,7 @@ const seed = () => {
     await page.evaluate(() => { [...document.querySelectorAll('button')].find((x) => /新規習得/.test(x.textContent))?.click(); });
     await page.waitForTimeout(1000);
     await clickExact('習得する');
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3500);
     await page.waitForFunction(() => !!document.querySelector('button[aria-label^="AUTO"]'), { timeout: 30000 }).catch(() => {});
 
     const reached = await page.evaluate(() => !!document.querySelector('button[aria-label^="AUTO"]'));
