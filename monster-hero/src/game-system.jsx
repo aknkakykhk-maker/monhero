@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0bef916c71f712be
+// generated-sha256: eb2174eef61f7d74
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -160,7 +160,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-01 11:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-01 12:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4616,7 +4616,7 @@ const screenThemeCategory = (gameState, rhythmOpen = false) => {
 // wideSrc は横画面(画面の横幅が高さより広いとき)に出す絵。無い絵は縦の絵を切り抜いて出す
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
 const TITLE_ART_OPTIONS = [
-  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg', wideSrc: 'data/images/title-screen-halloween-wide.jpg' },
+  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
 ];
 // 'auto'(おまかせ)は季節に合わせる(SCREEN_THEME_HALLOWEEN_UNTIL まではハロウィン、そのあとはクラシック)
@@ -53176,6 +53176,9 @@ const createAnimationStyle = () => {
        ・HOME: 枠が絵より縦長なら画面いっぱい(cover)にして下の帯を消す。枠が絵より横に広いときは絵全体を出し、余りはぼかした絵で埋める */
     .mh-title-backdrop{position:absolute;z-index:0;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(16px) brightness(.5);transform:scale(1.08);pointer-events:none}.mh-title-visual{z-index:1}
     @media(min-aspect-ratio:3/4) and (max-aspect-ratio:7/5){.mh-title-visual,.mh-entering>img{object-fit:contain;object-position:50% 50%}}
+    /* ハロウィンのタイトルの絵は縦長の1枚だけ(横長の絵は持たない・2026-10-01)。横長の画面(縦横比 7:5 より横)では、
+       上下が大きく切れてロゴが見えなくなるので、絵全体を出し、左右はぼかした同じ絵で埋める。クラシックの絵の見え方は変えない */
+    @media(min-aspect-ratio:7/5){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:contain;object-position:50% 50%}}
     @container (max-aspect-ratio:941/1672){.mh-home-background img.mh-home-main{object-fit:cover}}
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
