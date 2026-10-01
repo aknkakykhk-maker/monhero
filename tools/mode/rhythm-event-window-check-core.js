@@ -758,7 +758,7 @@ check('ビートP交換所は数量選択とMAX・交換後残高を出す',
   marketScreen.includes('data-event-point-shop')
   &&marketScreen.includes("openSheet({ item, stackable:true, countUnit:'回', grantAmount:offer.grantAmount, grantUnit:offer.unit,")
   &&marketScreen.includes('onExchangeEventPoints(offer,count)')
-  &&game.includes('MAX（{Math.max(0, maxQuantity).toLocaleString()}{countUnit}）')
+  &&game.includes('MAX（{safeMax.toLocaleString()}{unit}）')
   &&game.includes("beatPoint:      Object.freeze({ have:'所持ビートP', label:'ビートP',      emoji:'🎟️', verb:'交換'")
   &&game.includes('<span className="text-slate-400">{meta.verb}後</span>'));
 check('STEP3の更新履歴も開発メモとして隠す',(()=>{
