@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e4b6a8fb4ec4edc8
+// source-sha256: beb2c9e653861244
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 14:56";
+const BUILD_DATE = "2026-10-01 15:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33024,6 +33024,7 @@ function BreederMarketScreen({
   const [sheet, setSheet] = useState(null);
   const [sheetQuantity, setSheetQuantity] = useState(1);
   const [sheetPending, setSheetPending] = useState(false);
+  const [sectionTabs, setSectionTabs] = useState({});
   const safeEventPoints = normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
@@ -33043,6 +33044,64 @@ function BreederMarketScreen({
   const diamondItems = marketItems.filter(item => item.type === activeDiamondTab && item.type !== 'icon' && item.currency !== 'psyche');
   const breederPointItems = marketItems.filter(item => item.type === 'icon');
   const itemExchangeItems = marketItems.filter(item => item.currency === 'psyche');
+  const SECTION_TABS = {
+    breeder: {
+      color: '#d97706',
+      tabs: [{
+        key: 'face',
+        label: 'アイコン'
+      }, {
+        key: 'disc',
+        label: '円盤石アイコン'
+      }]
+    },
+    exchange: {
+      color: '#059669',
+      tabs: [{
+        key: 'psyche',
+        label: 'プシュケー'
+      }, {
+        key: 'proof',
+        label: '勇者の証'
+      }]
+    },
+    event: {
+      color: '#7c3aed',
+      tabs: [{
+        key: 'disc',
+        label: '円盤石'
+      }, {
+        key: 'item',
+        label: 'アイテム'
+      }, {
+        key: 'material',
+        label: '強化素材'
+      }]
+    }
+  };
+  const activeSectionTab = section => {
+    const tabs = SECTION_TABS[section]?.tabs || [];
+    return tabs.some(tab => tab.key === sectionTabs[section]) ? sectionTabs[section] : tabs[0]?.key || null;
+  };
+  const selectSectionTab = (section, key) => setSectionTabs(prev => ({
+    ...prev,
+    [section]: key
+  }));
+  const breederTab = activeSectionTab('breeder');
+  const breederTabItems = breederPointItems.filter(item => breederTab === 'disc' === /_disc_icon$/.test(item.id));
+  const exchangeTab = activeSectionTab('exchange');
+  const eventTab = activeSectionTab('event');
+  const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche', 'hero_proof_shard', 'transcend_fruit_rainbow', 'hero_proof'];
+  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer => eventTab === 'material' === BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
+  const renderSectionTabs = section => React.createElement(ScreenTabs, {
+    value: activeSectionTab(section),
+    onChange: key => selectSectionTab(section, key),
+    items: SECTION_TABS[section].tabs.map(tab => ({
+      id: tab.key,
+      label: tab.label,
+      color: SECTION_TABS[section].color
+    }))
+  });
   const soulRankRespecItem = marketItems.find(item => item.id === SOUL_RANK_RESPEC_ITEM_ID) || null;
   const sectionMeta = {
     diamond: {
@@ -33290,21 +33349,21 @@ function BreederMarketScreen({
     lines: ['まだ商品がありません']
   }) : React.createElement("div", {
     className: MARKET_GRID_CLASS
-  }, diamondItems.map(item => renderMarketItem(item))))), marketSection === 'breeder' && React.createElement("div", {
+  }, diamondItems.map(item => renderMarketItem(item))))), marketSection === 'breeder' && React.createElement(React.Fragment, null, renderSectionTabs('breeder'), React.createElement("div", {
     className: SCREEN_LIST_CLASS
-  }, breederPointItems.length === 0 ? React.createElement(ScreenEmpty, {
+  }, breederTabItems.length === 0 ? React.createElement(ScreenEmpty, {
     emoji: "🛒",
     lines: ['まだ商品がありません']
   }) : React.createElement("div", {
     className: MARKET_GRID_CLASS
-  }, breederPointItems.map(item => renderMarketItem(item)))), marketSection === 'exchange' && React.createElement("div", {
+  }, breederTabItems.map(item => renderMarketItem(item))))), marketSection === 'exchange' && React.createElement(React.Fragment, null, renderSectionTabs('exchange'), React.createElement("div", {
     className: SCREEN_LIST_CLASS
   }, React.createElement("div", {
     className: MARKET_GRID_CLASS
-  }, itemExchangeItems.map(item => renderMarketItem(item)), soulRankRespecItem && renderMarketItem(soulRankRespecItem, {
+  }, exchangeTab === 'psyche' && itemExchangeItems.map(item => renderMarketItem(item)), exchangeTab === 'proof' && soulRankRespecItem && renderMarketItem(soulRankRespecItem, {
     showBase: false,
     showHeroProofExchange: true
-  }), (() => {
+  }), exchangeTab === 'proof' && (() => {
     const shardExchange = {
       ...HERO_PROOF_ITEM,
       type: 'item',
@@ -33324,12 +33383,13 @@ function BreederMarketScreen({
       }),
       middle: ownedMiddle(proofHave, HERO_PROOF_ITEM)
     });
-  })())), marketSection === 'event' && React.createElement(React.Fragment, null, React.createElement("div", {
+  })()))), marketSection === 'event' && React.createElement(React.Fragment, null, renderSectionTabs('event'), React.createElement("div", {
     className: SCREEN_LIST_CLASS
   }, React.createElement("div", {
     "data-event-point-shop": true,
+    "data-event-point-tab": eventTab,
     className: MARKET_GRID_CLASS
-  }, RHYTHM_EVENT_POINT_SHOP_OFFERS.map(offer => {
+  }, eventTab !== 'disc' && eventItemOffers.map(offer => {
     const item = beatPointItemOf(offer);
     const grantText = `${offer.grantAmount.toLocaleString()}${offer.unit}`;
     const middle = offer.kind === 'diamond' ? null : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base ? {
@@ -33360,7 +33420,7 @@ function BreederMarketScreen({
       }),
       middle: middle
     });
-  }), RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer => {
+  }), eventTab === 'disc' && RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer => {
     const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
     const mon = ALL_PLAYER_MONSTERS[offer.monsterId] || null;
     const item = {
@@ -33394,7 +33454,7 @@ function BreederMarketScreen({
       detail: mon,
       onDetail: () => mon && onOpenDetail(disc || item, mon, null)
     });
-  }), RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer => {
+  }), eventTab === 'disc' && RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer => {
     const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
     const item = {
       id: offer.id,

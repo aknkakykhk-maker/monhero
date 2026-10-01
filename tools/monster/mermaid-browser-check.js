@@ -33,10 +33,10 @@ const seed = () => {
 // [商品名, マーケットのタブ, 購入ボタンのaria-label]
 const MARKET_ITEMS = [
   ['ウンディーネのアイコン', 'アイコン', 'ウンディーネのアイコンを1ptで購入'],
-  ['ウンディーネの円盤石アイコン', 'アイコン', 'ウンディーネの円盤石アイコンを1ptで購入'],
+  ['ウンディーネの円盤石アイコン', '円盤石アイコン', 'ウンディーネの円盤石アイコンを1ptで購入'],
   ['ウンディーネの円盤石', '円盤石', 'ウンディーネの円盤石を150000ダイヤで購入'],
   ['ヤオビクニのアイコン', 'アイコン', 'ヤオビクニのアイコンを1ptで購入'],
-  ['ヤオビクニの円盤石アイコン', 'アイコン', 'ヤオビクニの円盤石アイコンを1ptで購入'],
+  ['ヤオビクニの円盤石アイコン', '円盤石アイコン', 'ヤオビクニの円盤石アイコンを1ptで購入'],
   ['ヤオビクニの円盤石', '円盤石', 'ヤオビクニの円盤石を150000ダイヤで購入'],
 ];
 
@@ -106,13 +106,15 @@ const MARKET_ITEMS = [
   const openSection = async (tab) => {
     await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.body.innerText.includes('ダイヤで購入')) b.click(); });
     await page.waitForTimeout(600);
-    const entry = tab === 'アイコン' ? 'ブリーダーP' : 'ダイヤショップ';
+    const entry = tab === 'アイコン' || tab === '円盤石アイコン' ? 'ブリーダーP' : 'ダイヤショップ';
     await page.evaluate((e) => { const b = [...document.querySelectorAll('button')].find(x => (x.innerText || '').includes(e)); if (b) b.click(); }, entry);
     await page.waitForTimeout(1000);
-    if (tab === '円盤石') await clickText('円盤石');
+    // ブリーダーP交換所は「アイコン」「円盤石アイコン」のタブに分かれた(2026-10-01・マーケット全体をタブでそろえた)
+    // 売り場を出入りしてもタブは覚えているので、毎回目的のタブを押す
+    await clickText(tab);
   };
   const marketByTab = {};
-  for (const tab of ['アイコン', '円盤石']) { await openSection(tab); marketByTab[tab] = await text(); }
+  for (const tab of ['アイコン', '円盤石アイコン', '円盤石']) { await openSection(tab); marketByTab[tab] = await text(); }
   for (const [name, tab] of MARKET_ITEMS) check(`マーケットの「${tab}」に「${name}」がある`, marketByTab[tab].includes(name));
 
   for (const [name, tab, buyLabel] of MARKET_ITEMS) {
