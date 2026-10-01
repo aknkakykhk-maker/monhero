@@ -154,6 +154,100 @@ const phaseAccentRgb = (id) => PHASE_ACCENT_RGB[id] || '148,163,184';
 //   nextWave … 並びの最後に「⚔ WAVE n」と出す(省略可。段が4つ以上のときは幅が足りないので出さない)
 // ★iPhone SE の幅(375px)でも1行に収める。済んだ段は名前を出さず ✓ の丸だけにする
 //   (名前は読み上げ用の aria-label と title に残す)。5段+WAVE を全部名前で並べると2行に折れていた
+// ==== トレーニング完了の演出(強化フェーズ) ====
+// 決定を押したあとに出る。1体ずつ「いくつから いくつになったか」を、数字が駆け上がる動きで見せる。
+//   entries … [{ key, name, imgUrl, baseId, colors, emoji, rows:[{ key, label, before, after }] }]
+//   ms      … この画面を出している時間(バトル速度で縮む)。数字の駆け上がる時間もこれに合わせる
+// 動きはすべて1回きり(動き続けるものは置かない)。prefers-reduced-motion のときは最後の値をそのまま出す。
+const TRAINING_FX_STATS = {
+  hp:   { tint:'text-pink-300',    bar:'bg-pink-400',    glow:'244,114,182', Icon:'Heart' },
+  atk:  { tint:'text-red-300',     bar:'bg-red-400',     glow:'248,113,113', Icon:'Sword' },
+  def:  { tint:'text-emerald-300', bar:'bg-emerald-400', glow:'52,211,153',  Icon:'ShieldCheck' },
+  guts: { tint:'text-amber-300',   bar:'bg-amber-400',   glow:'251,191,36',  Icon:'Sparkles' },
+};
+const TrainingCountUp = ({ from, to, delay = 0, duration = 900 }) => {
+  const [value, setValue] = React.useState(from);
+  React.useEffect(() => {
+    let reduce = false;
+    try { reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+    if (reduce || from === to) { setValue(to); return undefined; }
+    setValue(from);
+    let raf = 0;
+    let startAt = 0;
+    const timer = setTimeout(() => {
+      const tick = (now) => {
+        if (!startAt) startAt = now;
+        const t = Math.min(1, (now - startAt) / Math.max(1, duration));
+        const eased = 1 - Math.pow(1 - t, 3);
+        setValue(Math.round(from + (to - from) * eased));
+        if (t < 1) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }, Math.max(0, delay));
+    return () => { clearTimeout(timer); if (raf) cancelAnimationFrame(raf); };
+  }, [from, to, delay, duration]);
+  return <>{value}</>;
+};
+const TrainingResultFx = ({ effect }) => {
+  const entries = Array.isArray(effect?.entries) ? effect.entries : [];
+  const total = Math.max(600, Number(effect?.ms) || 2600);
+  const countMs = Math.max(250, Math.min(1100, Math.round(total * 0.4)));
+  const compact = entries.length >= 3;
+  const icons = { Heart, Sword, ShieldCheck, Sparkles };
+  const gained = entries.reduce((sum, entry) => sum + entry.rows.filter(row => row.after > row.before).length, 0);
+  return (
+    <div data-training-result-fx className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 overflow-hidden" style={{'--ph':'251,191,36'}}>
+      <div className="shrink-0 flex flex-col items-center gap-1">
+        {effect.wave > 0 && <span className="mh-ph-plate">WAVE {effect.wave} CLEAR</span>}
+        <div className="mh-ph-heading">
+          <h2 className="mh-ph-title mh-train-title text-2xl font-black italic uppercase tracking-tighter leading-none">TRAINING COMPLETE</h2>
+        </div>
+        <div className="mh-train-sub text-[10px] font-black text-[#f3d27a]">{gained > 0 ? 'ステータスが成長しました！' : 'トレーニング完了'}</div>
+      </div>
+      <div className={`w-full max-w-sm min-h-0 flex flex-col ${compact ? 'gap-1.5' : 'gap-2.5'}`}>
+        {entries.map((entry, ei) => {
+          const base = 350 + ei * 260;
+          return (
+            <div key={entry.key} className="mh-train-card mh-ph-panel relative overflow-hidden rounded-2xl px-2.5 py-2" style={{'--d': `${ei * 260}ms`}}>
+              <span aria-hidden="true" className="mh-train-sweep" style={{'--d': `${base + 150}ms`}}/>
+              <div className="relative flex items-center gap-2 mb-1.5">
+                <span className={`${compact ? 'h-8 w-8' : 'h-14 w-14'} shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/40 flex items-center justify-center`}>
+                  {entry.imgUrl ? <DyedMonsterImage baseId={entry.baseId} src={entry.imgUrl} alt="" masuColors={entry.colors} className="h-full w-full object-contain"/> : <span className="text-xl">{entry.emoji}</span>}
+                </span>
+                <b className={`min-w-0 truncate font-black text-white ${compact ? 'text-[12px]' : 'text-[16px]'}`}>{entry.name}</b>
+              </div>
+              <div className="relative grid grid-cols-4 gap-1.5">
+                {entry.rows.map((row, ri) => {
+                  const st = TRAINING_FX_STATS[row.key] || TRAINING_FX_STATS.hp;
+                  const Icon = icons[st.Icon];
+                  const diff = row.after - row.before;
+                  const d = base + ri * 110;
+                  return (
+                    <div key={row.key} className="mh-ph-cell rounded-lg px-1 py-1 text-center font-mono">
+                      <span className="flex items-center justify-center gap-0.5 text-[8px] font-black text-slate-400 leading-none"><span className={st.tint}><Icon size={9}/></span>{row.label}</span>
+                      <span className="block text-[9px] font-black text-slate-500 leading-tight mt-0.5">{row.before}<span className="text-slate-600"> →</span></span>
+                      <span className={`${diff > 0 ? 'mh-train-num ' : ''}block font-black leading-tight ${compact ? 'text-[15px]' : 'text-[22px]'} ${diff > 0 ? st.tint : 'text-slate-300'}`} style={diff > 0 ? {'--d': `${d + countMs}ms`, '--glow': st.glow} : undefined}>
+                        {diff > 0 ? <TrainingCountUp from={row.before} to={row.after} delay={d} duration={countMs}/> : row.after}
+                      </span>
+                      {diff > 0
+                        ? <span className={`mh-train-gain mt-0.5 mx-auto block w-fit rounded-full border border-white/20 bg-black/50 px-2 py-px text-[11px] font-black leading-tight ${st.tint}`} style={{'--d': `${d}ms`}}>+{diff}</span>
+                        : <span className="block text-[9px] font-black text-slate-600 leading-none mt-0.5">±0</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {effect.guard && <div className="mh-train-guard shrink-0 w-full max-w-sm rounded-2xl border border-sky-300/50 bg-sky-950/70 px-3 py-1.5 text-center" style={{'--d': `${350 + entries.length * 260 + 300}ms`}}>
+        <div className="text-[13px] font-black text-sky-200">🛡️ {effect.guard.title}</div>
+        <div className="text-[9px] font-bold text-sky-100/80 leading-snug whitespace-pre-line">{effect.guard.text}</div>
+      </div>}
+    </div>
+  );
+};
+
 const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
   if (!Array.isArray(plan) || !plan.includes(current)) return null;
   const at = plan.indexOf(current);

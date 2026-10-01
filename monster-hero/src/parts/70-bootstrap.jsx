@@ -3571,6 +3571,32 @@ const createAnimationStyle = () => {
     /* 選んだ瞬間の弾み(×1 の札・伸びる量など)。key を変えて付け直すと毎回鳴る */
     .mh-phase-pop { animation: mhPhasePop .34s cubic-bezier(.2,1.6,.4,1) backwards; }
     @keyframes mhPhasePop { 0% { transform: scale(.55); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    /* ==== トレーニング完了の演出(TrainingResultFx / 41-screen-ui.jsx)。すべて1回きりで、動き続けるものは無い。
+       --d に「いつ始めるか」を入れる。fill-mode は backwards(始まる前は隠し、終わったら素の状態へ戻す) */
+    .mh-train-title { animation: mhTrainTitle .6s cubic-bezier(.2,1.5,.4,1) backwards; }
+    @keyframes mhTrainTitle { 0% { transform: scale(.6); opacity: 0; filter: brightness(2.4); } 100% { transform: none; opacity: 1; filter: none; } }
+    .mh-train-sub { animation: mhPhaseEnter .5s ease-out .25s backwards; }
+    .mh-train-card { animation: mhTrainCard .5s cubic-bezier(.2,.9,.3,1) backwards; animation-delay: var(--d, 0ms); }
+    @keyframes mhTrainCard { from { opacity: 0; transform: translateY(18px) scale(.95); } to { opacity: 1; transform: none; } }
+    /* 数字が最後の値へ着いた瞬間の光 */
+    .mh-train-num { animation: mhTrainNum .8s ease-out backwards; animation-delay: var(--d, 0ms); }
+    @keyframes mhTrainNum {
+      0% { transform: scale(1); text-shadow: none; }
+      35% { transform: scale(1.35); text-shadow: 0 0 14px rgba(var(--glow, 251,191,36), .95), 0 0 4px #fff; }
+      100% { transform: scale(1); text-shadow: 0 0 6px rgba(var(--glow, 251,191,36), .45); }
+    }
+    .mh-train-gain { animation: mhTrainGain .5s cubic-bezier(.2,1.6,.4,1) backwards; animation-delay: var(--d, 0ms); }
+    @keyframes mhTrainGain { 0% { opacity: 0; transform: translateY(10px) scale(.4); } 100% { opacity: 1; transform: none; } }
+    /* カードを一度だけ横切る光の筋 */
+    .mh-train-sweep { position: absolute; inset: 0; pointer-events: none; opacity: 0;
+      background: linear-gradient(105deg, transparent 35%, rgba(255,244,214,.38) 50%, transparent 65%);
+      animation: mhTrainSweep .9s ease-out backwards; animation-delay: var(--d, 0ms); }
+    @keyframes mhTrainSweep { 0% { opacity: 1; transform: translateX(-110%); } 100% { opacity: 1; transform: translateX(110%); } }
+    .mh-train-guard { animation: mhTrainCard .5s cubic-bezier(.2,.9,.3,1) backwards; animation-delay: var(--d, 0ms); }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-train-title, .mh-train-sub, .mh-train-card, .mh-train-num, .mh-train-gain, .mh-train-sweep, .mh-train-guard { animation: none !important; }
+      .mh-train-sweep { display: none; }
+    }
     /* 決定できるようになったボタンの呼吸 */
     .mh-phase-ready { animation: mhPhaseReady 1.6s ease-in-out infinite; }
     @keyframes mhPhaseReady { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }

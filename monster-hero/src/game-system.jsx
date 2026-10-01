@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eb2174eef61f7d74
+// generated-sha256: fc291ed4e3d3a02e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -160,7 +160,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-01 12:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-01 14:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21204,6 +21204,100 @@ const phaseAccentRgb = (id) => PHASE_ACCENT_RGB[id] || '148,163,184';
 //   nextWave … 並びの最後に「⚔ WAVE n」と出す(省略可。段が4つ以上のときは幅が足りないので出さない)
 // ★iPhone SE の幅(375px)でも1行に収める。済んだ段は名前を出さず ✓ の丸だけにする
 //   (名前は読み上げ用の aria-label と title に残す)。5段+WAVE を全部名前で並べると2行に折れていた
+// ==== トレーニング完了の演出(強化フェーズ) ====
+// 決定を押したあとに出る。1体ずつ「いくつから いくつになったか」を、数字が駆け上がる動きで見せる。
+//   entries … [{ key, name, imgUrl, baseId, colors, emoji, rows:[{ key, label, before, after }] }]
+//   ms      … この画面を出している時間(バトル速度で縮む)。数字の駆け上がる時間もこれに合わせる
+// 動きはすべて1回きり(動き続けるものは置かない)。prefers-reduced-motion のときは最後の値をそのまま出す。
+const TRAINING_FX_STATS = {
+  hp:   { tint:'text-pink-300',    bar:'bg-pink-400',    glow:'244,114,182', Icon:'Heart' },
+  atk:  { tint:'text-red-300',     bar:'bg-red-400',     glow:'248,113,113', Icon:'Sword' },
+  def:  { tint:'text-emerald-300', bar:'bg-emerald-400', glow:'52,211,153',  Icon:'ShieldCheck' },
+  guts: { tint:'text-amber-300',   bar:'bg-amber-400',   glow:'251,191,36',  Icon:'Sparkles' },
+};
+const TrainingCountUp = ({ from, to, delay = 0, duration = 900 }) => {
+  const [value, setValue] = React.useState(from);
+  React.useEffect(() => {
+    let reduce = false;
+    try { reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+    if (reduce || from === to) { setValue(to); return undefined; }
+    setValue(from);
+    let raf = 0;
+    let startAt = 0;
+    const timer = setTimeout(() => {
+      const tick = (now) => {
+        if (!startAt) startAt = now;
+        const t = Math.min(1, (now - startAt) / Math.max(1, duration));
+        const eased = 1 - Math.pow(1 - t, 3);
+        setValue(Math.round(from + (to - from) * eased));
+        if (t < 1) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }, Math.max(0, delay));
+    return () => { clearTimeout(timer); if (raf) cancelAnimationFrame(raf); };
+  }, [from, to, delay, duration]);
+  return <>{value}</>;
+};
+const TrainingResultFx = ({ effect }) => {
+  const entries = Array.isArray(effect?.entries) ? effect.entries : [];
+  const total = Math.max(600, Number(effect?.ms) || 2600);
+  const countMs = Math.max(250, Math.min(1100, Math.round(total * 0.4)));
+  const compact = entries.length >= 3;
+  const icons = { Heart, Sword, ShieldCheck, Sparkles };
+  const gained = entries.reduce((sum, entry) => sum + entry.rows.filter(row => row.after > row.before).length, 0);
+  return (
+    <div data-training-result-fx className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 overflow-hidden" style={{'--ph':'251,191,36'}}>
+      <div className="shrink-0 flex flex-col items-center gap-1">
+        {effect.wave > 0 && <span className="mh-ph-plate">WAVE {effect.wave} CLEAR</span>}
+        <div className="mh-ph-heading">
+          <h2 className="mh-ph-title mh-train-title text-2xl font-black italic uppercase tracking-tighter leading-none">TRAINING COMPLETE</h2>
+        </div>
+        <div className="mh-train-sub text-[10px] font-black text-[#f3d27a]">{gained > 0 ? 'ステータスが成長しました！' : 'トレーニング完了'}</div>
+      </div>
+      <div className={`w-full max-w-sm min-h-0 flex flex-col ${compact ? 'gap-1.5' : 'gap-2.5'}`}>
+        {entries.map((entry, ei) => {
+          const base = 350 + ei * 260;
+          return (
+            <div key={entry.key} className="mh-train-card mh-ph-panel relative overflow-hidden rounded-2xl px-2.5 py-2" style={{'--d': `${ei * 260}ms`}}>
+              <span aria-hidden="true" className="mh-train-sweep" style={{'--d': `${base + 150}ms`}}/>
+              <div className="relative flex items-center gap-2 mb-1.5">
+                <span className={`${compact ? 'h-8 w-8' : 'h-14 w-14'} shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/40 flex items-center justify-center`}>
+                  {entry.imgUrl ? <DyedMonsterImage baseId={entry.baseId} src={entry.imgUrl} alt="" masuColors={entry.colors} className="h-full w-full object-contain"/> : <span className="text-xl">{entry.emoji}</span>}
+                </span>
+                <b className={`min-w-0 truncate font-black text-white ${compact ? 'text-[12px]' : 'text-[16px]'}`}>{entry.name}</b>
+              </div>
+              <div className="relative grid grid-cols-4 gap-1.5">
+                {entry.rows.map((row, ri) => {
+                  const st = TRAINING_FX_STATS[row.key] || TRAINING_FX_STATS.hp;
+                  const Icon = icons[st.Icon];
+                  const diff = row.after - row.before;
+                  const d = base + ri * 110;
+                  return (
+                    <div key={row.key} className="mh-ph-cell rounded-lg px-1 py-1 text-center font-mono">
+                      <span className="flex items-center justify-center gap-0.5 text-[8px] font-black text-slate-400 leading-none"><span className={st.tint}><Icon size={9}/></span>{row.label}</span>
+                      <span className="block text-[9px] font-black text-slate-500 leading-tight mt-0.5">{row.before}<span className="text-slate-600"> →</span></span>
+                      <span className={`${diff > 0 ? 'mh-train-num ' : ''}block font-black leading-tight ${compact ? 'text-[15px]' : 'text-[22px]'} ${diff > 0 ? st.tint : 'text-slate-300'}`} style={diff > 0 ? {'--d': `${d + countMs}ms`, '--glow': st.glow} : undefined}>
+                        {diff > 0 ? <TrainingCountUp from={row.before} to={row.after} delay={d} duration={countMs}/> : row.after}
+                      </span>
+                      {diff > 0
+                        ? <span className={`mh-train-gain mt-0.5 mx-auto block w-fit rounded-full border border-white/20 bg-black/50 px-2 py-px text-[11px] font-black leading-tight ${st.tint}`} style={{'--d': `${d}ms`}}>+{diff}</span>
+                        : <span className="block text-[9px] font-black text-slate-600 leading-none mt-0.5">±0</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {effect.guard && <div className="mh-train-guard shrink-0 w-full max-w-sm rounded-2xl border border-sky-300/50 bg-sky-950/70 px-3 py-1.5 text-center" style={{'--d': `${350 + entries.length * 260 + 300}ms`}}>
+        <div className="text-[13px] font-black text-sky-200">🛡️ {effect.guard.title}</div>
+        <div className="text-[9px] font-bold text-sky-100/80 leading-snug whitespace-pre-line">{effect.guard.text}</div>
+      </div>}
+    </div>
+  );
+};
+
 const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
   if (!Array.isArray(plan) || !plan.includes(current)) return null;
   const at = plan.indexOf(current);
@@ -42948,6 +43042,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   盤面を書き換える前の値を控えておかないと、段階が上がったかどうかを比べられない
     const prevGuardDef=tacticsMode?guardLevelDef():def;
     let nGuardDef=prevGuardDef;
+    const fxEntries=[];
+    // 完了の演出の1体ぶん。数字は「いくつから いくつになったか」
+    const trainingFxEntry=(key,mon,before,after)=>({
+      key,name:mon?.masuName||mon?.name||'？',imgUrl:mon?.imgUrl,baseId:mon?.id,colors:mon?.colors,emoji:mon?.emoji,
+      rows:[['hp','ライフ'],['atk','ちから'],['def','丈夫さ'],['guts','ガッツ']].map(([k,label])=>({key:k,label,before:before[k],after:after[k]})),
+    });
     if(revivePick!==null){
       commitTacticsUnits(reviveTacticsAt(tacticsUnitsRef.current,revivePick));
       nDef=tacticsPartyDef(tacticsUnitsRef.current);
@@ -42963,6 +43063,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const after=resolveTrainingStats({atk:unit.atk,def:unit.def,hp:unit.baseMaxHp,guts:unit.baseMaxGuts},
           ids,waveResult?.turn,specialRuleDifficulty,runMode);
         units=applyTacticsTraining(units,slotIdx,after,getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+        // 完了の演出に出す「いくつからいくつになったか」(1体ずつ)
+        const grown=normalizeTacticsUnit(units[slotIdx]);
+        const mon=slots?.[slotIdx];
+        fxEntries.push(trainingFxEntry(`slot-${slotIdx}`,mon,{hp:unit.baseMaxHp,atk:unit.atk,def:unit.def,guts:unit.baseMaxGuts},{hp:grown.baseMaxHp,atk:grown.atk,def:grown.def,guts:grown.baseMaxGuts}));
       });
       commitTacticsUnits(units);
       nDef=tacticsPartyDef(units); nAtk=tacticsPartyAtk(units);
@@ -42971,6 +43075,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } else {
       const nextStats=resolveTrainingStats({atk,def,hp:maxHp,guts:maxGuts},picks,waveResult?.turn,specialRuleDifficulty,runMode);
       nMaxHp=nextStats.hp; nAtk=nextStats.atk; nDef=nextStats.def; nMaxGuts=nextStats.guts;
+      fxEntries.push(trainingFxEntry('hero',mainHero,{hp:maxHp,atk,def,guts:maxGuts},{hp:nMaxHp,atk:nAtk,def:nDef,guts:nMaxGuts}));
       setMaxHp(nMaxHp); setMaxGuts(nMaxGuts); setAtk(nAtk); setDef(nDef);
       nGuardDef=nDef;
     }
@@ -42979,7 +43084,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const guardLevelUp=nGrdL>currentGuardLevel;
     const guardCountUp=guardLevelUp&&guardCardCount(nGrdL)>guardCardCount(currentGuardLevel);
     const guardName=GUARD_EVOLUTION[nGrdL].name;
-    setEffect({type:'heal',label:guardLevelUp?`${guardName}解放！${guardCountUp?' 枚数UP':''}`:"トレーニング完了",icon:guardLevelUp?"🛡️":"⚡",monEmoji:"🆙",subLabel:guardLevelUp?`丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数はガードが2段階進化するごとに1枚増え、最大${MAX_GUARD_CARD_COUNT}枚です。`:''});
+    const guardText=`丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数はガードが2段階進化するごとに1枚増え、最大${MAX_GUARD_CARD_COUNT}枚です。`;
+    const trainingFxMs=fxEntries.length?battleMs(2800+Math.max(0,fxEntries.length-1)*300):battleMs(900);
+    if(fxEntries.length){
+      // 1体ずつ「いくつからいくつになったか」を見せる(TrainingResultFx)
+      setEffect({type:'trainingResult',label:guardLevelUp?`${guardName}解放！${guardCountUp?' 枚数UP':''}`:"トレーニング完了",entries:fxEntries,ms:trainingFxMs,wave:waveResult?.wave||0,
+        guard:guardLevelUp?{title:`${guardName}解放！${guardCountUp?' 枚数UP':''}`,text:guardText}:null});
+    } else {
+      setEffect({type:'heal',label:guardLevelUp?`${guardName}解放！${guardCountUp?' 枚数UP':''}`:"トレーニング完了",icon:guardLevelUp?"🛡️":"⚡",monEmoji:"🆙",subLabel:guardLevelUp?guardText:''});
+    }
     setTimeout(()=>{
       setEffect(null);
       const joinWaves=[2,4,6];
@@ -43006,7 +43119,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         while(pool.length<4&&activeCards.length>=4){const random=activeCards[Math.floor(Math.random()*activeCards.length)]; if(!pool.find(p=>p.id===random.id)) pool.push(random);}
         setTeachingPool(pool); advanceRunStage('PICK_TEACHING');
       } else { initBattle(wave+1,slots,ownedUniques,ownedTeachings,nDef); }
-    },battleMs(900));
+    },trainingFxMs);
   };
 
   // UPGRADE_SKILL画面の手動ボタンとAUTOが共有する既存の次画面処理。
@@ -49075,11 +49188,14 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 58%)', animation:'mhTranscendFxFlash 1600ms ease-out forwards'}}></div>
           </>
         )}
+        {effect.type==='trainingResult'&&<TrainingResultFx effect={effect}/>}
+        {effect.type!=='trainingResult'&&(<>
         {/* 大きさ・光り方・色は effectVisual(種類) が正本。画面側へ三項演算子を書き並べない */}
         {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>):(<div style={{fontSize:effectVisual(effect.type).emoji,animation:effectVisual(effect.type).throb}} className="mb-6 relative">{effect.monEmoji}</div>)}
         <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effectVisual(effect.type).label}`}>{effect.label}</h2>
         {effect.subLabel&&<p className={`font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effectVisual(effect.type).sub}`}>{effect.subLabel}</p>}
         <div style={{fontSize:`${effectVisual(effect.type).icon}px`}} className="mt-8 animate-bounce relative">{cardIconNode(effect.icon,effectVisual(effect.type).icon,effect.id)}</div>
+        </>)}
       </div>)}
         {rosterSkillDetail&&(()=>{const mon=rosterSkillDetail.mon; const isUnique=rosterSkillDetail.kind==='unique'; const levels=isUnique?getUniqueSkillLevels(mon):getAtkSkillLevels(mon); const currentLevel=isUnique?Math.max(0,Number(mon.unique?.evoLevel)||0):0; const title=isUnique?`固有技 Lv.${currentLevel}: ${mon.unique.names?.[currentLevel]||mon.unique.name}`:`通常技: ${(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}`; return(
           <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:32000}}>
@@ -52672,6 +52788,32 @@ const createAnimationStyle = () => {
     /* 選んだ瞬間の弾み(×1 の札・伸びる量など)。key を変えて付け直すと毎回鳴る */
     .mh-phase-pop { animation: mhPhasePop .34s cubic-bezier(.2,1.6,.4,1) backwards; }
     @keyframes mhPhasePop { 0% { transform: scale(.55); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    /* ==== トレーニング完了の演出(TrainingResultFx / 41-screen-ui.jsx)。すべて1回きりで、動き続けるものは無い。
+       --d に「いつ始めるか」を入れる。fill-mode は backwards(始まる前は隠し、終わったら素の状態へ戻す) */
+    .mh-train-title { animation: mhTrainTitle .6s cubic-bezier(.2,1.5,.4,1) backwards; }
+    @keyframes mhTrainTitle { 0% { transform: scale(.6); opacity: 0; filter: brightness(2.4); } 100% { transform: none; opacity: 1; filter: none; } }
+    .mh-train-sub { animation: mhPhaseEnter .5s ease-out .25s backwards; }
+    .mh-train-card { animation: mhTrainCard .5s cubic-bezier(.2,.9,.3,1) backwards; animation-delay: var(--d, 0ms); }
+    @keyframes mhTrainCard { from { opacity: 0; transform: translateY(18px) scale(.95); } to { opacity: 1; transform: none; } }
+    /* 数字が最後の値へ着いた瞬間の光 */
+    .mh-train-num { animation: mhTrainNum .8s ease-out backwards; animation-delay: var(--d, 0ms); }
+    @keyframes mhTrainNum {
+      0% { transform: scale(1); text-shadow: none; }
+      35% { transform: scale(1.35); text-shadow: 0 0 14px rgba(var(--glow, 251,191,36), .95), 0 0 4px #fff; }
+      100% { transform: scale(1); text-shadow: 0 0 6px rgba(var(--glow, 251,191,36), .45); }
+    }
+    .mh-train-gain { animation: mhTrainGain .5s cubic-bezier(.2,1.6,.4,1) backwards; animation-delay: var(--d, 0ms); }
+    @keyframes mhTrainGain { 0% { opacity: 0; transform: translateY(10px) scale(.4); } 100% { opacity: 1; transform: none; } }
+    /* カードを一度だけ横切る光の筋 */
+    .mh-train-sweep { position: absolute; inset: 0; pointer-events: none; opacity: 0;
+      background: linear-gradient(105deg, transparent 35%, rgba(255,244,214,.38) 50%, transparent 65%);
+      animation: mhTrainSweep .9s ease-out backwards; animation-delay: var(--d, 0ms); }
+    @keyframes mhTrainSweep { 0% { opacity: 1; transform: translateX(-110%); } 100% { opacity: 1; transform: translateX(110%); } }
+    .mh-train-guard { animation: mhTrainCard .5s cubic-bezier(.2,.9,.3,1) backwards; animation-delay: var(--d, 0ms); }
+    @media (prefers-reduced-motion: reduce) {
+      .mh-train-title, .mh-train-sub, .mh-train-card, .mh-train-num, .mh-train-gain, .mh-train-sweep, .mh-train-guard { animation: none !important; }
+      .mh-train-sweep { display: none; }
+    }
     /* 決定できるようになったボタンの呼吸 */
     .mh-phase-ready { animation: mhPhaseReady 1.6s ease-in-out infinite; }
     @keyframes mhPhaseReady { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }

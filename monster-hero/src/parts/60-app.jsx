@@ -12568,6 +12568,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     //   盤面を書き換える前の値を控えておかないと、段階が上がったかどうかを比べられない
     const prevGuardDef=tacticsMode?guardLevelDef():def;
     let nGuardDef=prevGuardDef;
+    const fxEntries=[];
+    // 完了の演出の1体ぶん。数字は「いくつから いくつになったか」
+    const trainingFxEntry=(key,mon,before,after)=>({
+      key,name:mon?.masuName||mon?.name||'？',imgUrl:mon?.imgUrl,baseId:mon?.id,colors:mon?.colors,emoji:mon?.emoji,
+      rows:[['hp','ライフ'],['atk','ちから'],['def','丈夫さ'],['guts','ガッツ']].map(([k,label])=>({key:k,label,before:before[k],after:after[k]})),
+    });
     if(revivePick!==null){
       commitTacticsUnits(reviveTacticsAt(tacticsUnitsRef.current,revivePick));
       nDef=tacticsPartyDef(tacticsUnitsRef.current);
@@ -12583,6 +12589,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const after=resolveTrainingStats({atk:unit.atk,def:unit.def,hp:unit.baseMaxHp,guts:unit.baseMaxGuts},
           ids,waveResult?.turn,specialRuleDifficulty,runMode);
         units=applyTacticsTraining(units,slotIdx,after,getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+        // 完了の演出に出す「いくつからいくつになったか」(1体ずつ)
+        const grown=normalizeTacticsUnit(units[slotIdx]);
+        const mon=slots?.[slotIdx];
+        fxEntries.push(trainingFxEntry(`slot-${slotIdx}`,mon,{hp:unit.baseMaxHp,atk:unit.atk,def:unit.def,guts:unit.baseMaxGuts},{hp:grown.baseMaxHp,atk:grown.atk,def:grown.def,guts:grown.baseMaxGuts}));
       });
       commitTacticsUnits(units);
       nDef=tacticsPartyDef(units); nAtk=tacticsPartyAtk(units);
@@ -12591,6 +12601,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } else {
       const nextStats=resolveTrainingStats({atk,def,hp:maxHp,guts:maxGuts},picks,waveResult?.turn,specialRuleDifficulty,runMode);
       nMaxHp=nextStats.hp; nAtk=nextStats.atk; nDef=nextStats.def; nMaxGuts=nextStats.guts;
+      fxEntries.push(trainingFxEntry('hero',mainHero,{hp:maxHp,atk,def,guts:maxGuts},{hp:nMaxHp,atk:nAtk,def:nDef,guts:nMaxGuts}));
       setMaxHp(nMaxHp); setMaxGuts(nMaxGuts); setAtk(nAtk); setDef(nDef);
       nGuardDef=nDef;
     }
@@ -12599,7 +12610,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const guardLevelUp=nGrdL>currentGuardLevel;
     const guardCountUp=guardLevelUp&&guardCardCount(nGrdL)>guardCardCount(currentGuardLevel);
     const guardName=GUARD_EVOLUTION[nGrdL].name;
-    setEffect({type:'heal',label:guardLevelUp?`${guardName}解放！${guardCountUp?' 枚数UP':''}`:"トレーニング完了",icon:guardLevelUp?"🛡️":"⚡",monEmoji:"🆙",subLabel:guardLevelUp?`丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数はガードが2段階進化するごとに1枚増え、最大${MAX_GUARD_CARD_COUNT}枚です。`:''});
+    const guardText=`丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数はガードが2段階進化するごとに1枚増え、最大${MAX_GUARD_CARD_COUNT}枚です。`;
+    const trainingFxMs=fxEntries.length?battleMs(2800+Math.max(0,fxEntries.length-1)*300):battleMs(900);
+    if(fxEntries.length){
+      // 1体ずつ「いくつからいくつになったか」を見せる(TrainingResultFx)
+      setEffect({type:'trainingResult',label:guardLevelUp?`${guardName}解放！${guardCountUp?' 枚数UP':''}`:"トレーニング完了",entries:fxEntries,ms:trainingFxMs,wave:waveResult?.wave||0,
+        guard:guardLevelUp?{title:`${guardName}解放！${guardCountUp?' 枚数UP':''}`,text:guardText}:null});
+    } else {
+      setEffect({type:'heal',label:guardLevelUp?`${guardName}解放！${guardCountUp?' 枚数UP':''}`:"トレーニング完了",icon:guardLevelUp?"🛡️":"⚡",monEmoji:"🆙",subLabel:guardLevelUp?guardText:''});
+    }
     setTimeout(()=>{
       setEffect(null);
       const joinWaves=[2,4,6];
@@ -12626,7 +12645,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         while(pool.length<4&&activeCards.length>=4){const random=activeCards[Math.floor(Math.random()*activeCards.length)]; if(!pool.find(p=>p.id===random.id)) pool.push(random);}
         setTeachingPool(pool); advanceRunStage('PICK_TEACHING');
       } else { initBattle(wave+1,slots,ownedUniques,ownedTeachings,nDef); }
-    },battleMs(900));
+    },trainingFxMs);
   };
 
   // UPGRADE_SKILL画面の手動ボタンとAUTOが共有する既存の次画面処理。
@@ -18695,11 +18714,14 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
             <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 58%)', animation:'mhTranscendFxFlash 1600ms ease-out forwards'}}></div>
           </>
         )}
+        {effect.type==='trainingResult'&&<TrainingResultFx effect={effect}/>}
+        {effect.type!=='trainingResult'&&(<>
         {/* 大きさ・光り方・色は effectVisual(種類) が正本。画面側へ三項演算子を書き並べない */}
         {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>):(<div style={{fontSize:effectVisual(effect.type).emoji,animation:effectVisual(effect.type).throb}} className="mb-6 relative">{effect.monEmoji}</div>)}
         <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effectVisual(effect.type).label}`}>{effect.label}</h2>
         {effect.subLabel&&<p className={`font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effectVisual(effect.type).sub}`}>{effect.subLabel}</p>}
         <div style={{fontSize:`${effectVisual(effect.type).icon}px`}} className="mt-8 animate-bounce relative">{cardIconNode(effect.icon,effectVisual(effect.type).icon,effect.id)}</div>
+        </>)}
       </div>)}
         {rosterSkillDetail&&(()=>{const mon=rosterSkillDetail.mon; const isUnique=rosterSkillDetail.kind==='unique'; const levels=isUnique?getUniqueSkillLevels(mon):getAtkSkillLevels(mon); const currentLevel=isUnique?Math.max(0,Number(mon.unique?.evoLevel)||0):0; const title=isUnique?`固有技 Lv.${currentLevel}: ${mon.unique.names?.[currentLevel]||mon.unique.name}`:`通常技: ${(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}`; return(
           <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:32000}}>
