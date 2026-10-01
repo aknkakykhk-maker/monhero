@@ -6,7 +6,7 @@ let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if
 const game=read('monster-hero/src/game-system.jsx'),data=read('monster-hero/data/rhythm-mode.js');
 const inputKeyHelper=game.match(/const rhythmInputKey=.*?;/)?.[0],projectionHelper=data.match(/const RHYTHM_PROJECTION_TOP_SCALE=[\s\S]*?const rhythmLaneAtPoint=[\s\S]*?\n\};/)?.[0],helper=inputKeyHelper&&projectionHelper?`${inputKeyHelper}\n${projectionHelper}`:null;
 check('タッチ入力ヘルパーを抽出できる',!!helper);
-if(helper){const c={RHYTHM_LANE_COUNT:5};vm.runInNewContext(`${helper}\nthis.out={rhythmInputKey,rhythmLaneAtPoint,rhythmProjectLane};`,c);const L=c.out,rect={left:0,top:0,width:500,height:800};
+if(helper){const c={RHYTHM_LANE_COUNT:5,rhythmInputEdgeMarginSubLanes:()=>1};vm.runInNewContext(`${helper}\nthis.out={rhythmInputKey,rhythmLaneAtPoint,rhythmProjectLane};`,c);const L=c.out,rect={left:0,top:0,width:500,height:800};
   check('入力IDはtouch/pointerで衝突しない',L.rhythmInputKey('touch',7)==='touch:7'&&L.rhythmInputKey('pointer',7)==='pointer:7');
   check('上部・中央・判定線で見た目の5レーン中央を判定', [.05,.5,.88].every(y=>[0,1,2,3,4].every(lane=>L.rhythmLaneAtPoint(L.rhythmProjectLane(lane,y).center*500,y*800,rect)===lane)));
   check('台形レーン外と不正rectを入力対象にしない',L.rhythmLaneAtPoint(0,0,rect)===null&&L.rhythmLaneAtPoint(250,400,{...rect,width:0})===null);
