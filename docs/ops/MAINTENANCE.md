@@ -6,8 +6,8 @@
 ## 使い方
 
 ```
-node tools/maintenance.js                  週次: 全領域の検査(重い4本だけ除く)+衛生チェック。約53分
-node tools/maintenance.js --full           月次: 全検査(548本)を1本も除かない+深い衛生チェック。約1時間10分
+node tools/maintenance.js                  週次: 全領域の検査(重い4本だけ除く)+衛生チェック。約65分
+node tools/maintenance.js --full           月次: 全検査(548本)を1本も除かない+深い衛生チェック。約1時間15分
 node tools/maintenance.js --quick          手早い点検: 必須+CI+文書の検査+衛生チェック。1〜2分
 node tools/maintenance.js --hygiene-only   衛生チェックだけ(数秒)
 node tools/maintenance.js --write          結果を docs/ops/maintenance/latest.md へ書く

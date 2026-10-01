@@ -1,7 +1,7 @@
 // 定期メンテナンス(点検)の入口。「積み重なる不具合・ごみ・肥大」を早めに見つけるための1コマンド。
 //
 //   node tools/maintenance.js                 … 週次の点検(全領域の検査。重い数本だけ除く)+衛生チェック。約1時間
-//   node tools/maintenance.js --full          … 月次の点検(全検査を1本も除かない)+深い衛生チェック。約1時間10分
+//   node tools/maintenance.js --full          … 月次の点検(全検査を1本も除かない)+深い衛生チェック。約1時間15分
 //   node tools/maintenance.js --quick         … 手早い点検(必須+CI+文書の検査)+衛生チェック。1〜2分
 //   node tools/maintenance.js --write         … 結果を docs/ops/maintenance/latest.md へ書く
 //   node tools/maintenance.js --update-baseline … 衛生チェックの基準値(大きさ)を今の値で取り直す
