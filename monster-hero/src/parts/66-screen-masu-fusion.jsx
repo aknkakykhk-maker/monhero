@@ -18,7 +18,7 @@ function MasuFusionScreen({
   fusionSubIds, getMasuMon, gold, masuMons, onClose, ownedItems, renderMonsterCardBody,
   renderScreenNote, resetFusionFlow, setFusionInheritSoulRank, setFusionInheritUniqueIds,
   setFusionMainId, setFusionResultData, setFusionSortDir, setFusionSortKey, setFusionStep,
-  setFusionSubId, setFusionSubIds, setMasuMonDetail,
+  setFusionSubId, setFusionSubIds, setMasuMonDetail, lockedMasuIds=[],
 }) {
 
       // 戻り先(TEMPLE)の指定は本体に残す。この画面は「閉じる」とだけ言う
@@ -112,11 +112,12 @@ function MasuFusionScreen({
         if (!main) { resetFusionFlow(); return null; }
         const candidates = sortMasuList(masuMons.filter(m=>m.id!==fusionMainId));
         const candidateIds = new Set(candidates.map(m=>m.id));
-        const selectedSubs = fusionSubIds.map(id=>getMasuMon(id)).filter(m=>m && candidateIds.has(m.id));
+        // お気に入り(🔒)の子は副にできない(合体すると副はいなくなるため)。前に選んでいた場合も外して数える
+        const selectedSubs = fusionSubIds.map(id=>getMasuMon(id)).filter(m=>m && candidateIds.has(m.id) && !isMasuLocked(lockedMasuIds, m.id));
         const totalSubXp = selectedSubs.reduce((sum, sub)=>sum+cappedBondXp(sub), 0);
         const plannedXp = cappedBondXp(main, totalSubXp);
         const plannedLevel = bondLevelInfo(plannedXp).level;
-        const toggleFusionSub = (id) => setFusionSubIds(prev => prev.includes(id) ? prev.filter(selectedId=>selectedId!==id) : [...prev, id]);
+        const toggleFusionSub = (id) => { if (isMasuLocked(lockedMasuIds, id)) return; setFusionSubIds(prev => prev.includes(id) ? prev.filter(selectedId=>selectedId!==id) : [...prev, id]); };
         const continueWithFusionSubs = () => {
           if (selectedSubs.length === 0) return;
           setFusionSubId(selectedSubs[0].id);
@@ -150,11 +151,12 @@ function MasuFusionScreen({
                   {candidates.map(masu=>{
                     const base = ALL_PLAYER_MONSTERS[masu.baseId];
                     if (!base) return null;
-                    const selected = fusionSubIds.includes(masu.id);
+                    const locked = isMasuLocked(lockedMasuIds, masu.id);
+                    const selected = !locked && fusionSubIds.includes(masu.id);
                     return (
                       <div key={masu.id} className="relative">
-                        <button aria-pressed={selected} onClick={()=>toggleFusionSub(masu.id)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} relative ${selected?'border-violet-300 bg-violet-900/70 ring-2 ring-violet-400/70':'border-violet-900/50 bg-slate-900'}`}>
-                          {renderMonsterCardBody({masu,base,mon:null,sub:null})}
+                        <button aria-pressed={selected} disabled={locked} data-fusion-sub-locked={locked?'1':undefined} onClick={()=>toggleFusionSub(masu.id)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} relative ${locked?'border-white/10 bg-slate-900/50 opacity-60':selected?'border-violet-300 bg-violet-900/70 ring-2 ring-violet-400/70':'border-violet-900/50 bg-slate-900'}`}>
+                          {renderMonsterCardBody({masu,base,mon:null,sub:null,status:locked?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/25 border border-amber-300/50 text-amber-100">🔒 お気に入り</span>:null})}
                           {selected&&<div className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-violet-500 border-2 border-white flex items-center justify-center shadow-lg"><Check size={13} className="text-white" strokeWidth={4}/></div>}
                         </button>
                         <button aria-label="詳しく見る" onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-0 right-0 z-10 w-11 h-11 p-1 flex items-start justify-end active:scale-90"><span className="w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center"><Info size={12} className="text-white"/></span></button>
