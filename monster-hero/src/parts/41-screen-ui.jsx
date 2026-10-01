@@ -61,10 +61,12 @@ const SCREEN_FOOTER_CLASS = 'mh-screen-footer shrink-0 mt-2 border-t border-whit
 //   onBack   … 戻るときにすること(画面は自分の戻り先を知らない)
 //   backLabel… 読み上げ用のラベル。どこへ戻るのかを書く
 //   right    … 右端へ置くもの(件数・所持数など。省略可)
+//   accentStyle … 名前の色を style で渡すとき(モードごとの色など、クラスで書けない色)
+//   compact  … 中身が詰まっている画面(バトルの入口など)用。下の余白を詰める
 // ★戻るは 44×44px(p-3 + 20px)を確保し、押した手応え(active:scale-90)を必ず付ける。
 //   「反応する戻る」と「反応しない戻る」が混ざっていると、押せていないように見える。
-const ScreenHead = ({ title, icon = null, accent = 'text-white', note = '', onBack = null, backLabel = '戻る', right = null, disabled = false }) => (
-  <header className="mh-screen-head mb-3 flex shrink-0 items-center gap-1.5 border-b border-white/10 pb-2">
+const ScreenHead = ({ title, icon = null, accent = 'text-white', accentStyle = null, note = '', onBack = null, backLabel = '戻る', right = null, disabled = false, compact = false }) => (
+  <header className={`mh-screen-head ${compact ? 'mb-1 pb-1' : 'mb-3 pb-2'} flex shrink-0 items-center gap-1.5 border-b border-white/10`}>
     {onBack && (
       <button type="button" aria-label={backLabel} onClick={onBack} disabled={disabled}
         className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-30">
@@ -72,7 +74,7 @@ const ScreenHead = ({ title, icon = null, accent = 'text-white', note = '', onBa
       </button>
     )}
     <div className="min-w-0 flex-1">
-      <h2 className={`flex items-center gap-1.5 truncate text-xl font-black italic leading-tight ${accent}`}>{icon}{title}</h2>
+      <h2 className={`flex items-center gap-1.5 truncate text-xl font-black italic leading-tight ${accent}`} style={accentStyle || undefined}>{icon}{title}</h2>
       {note && <p className="mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400">{note}</p>}
     </div>
     {right && <div className="shrink-0">{right}</div>}
@@ -134,6 +136,55 @@ const ScreenSectionLabel = ({ children, note = '' }) => (
     <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">{children}</span>
     {note && <span className="truncate text-[9px] font-bold text-slate-500">{note}</span>}
   </div>
+);
+
+// ==================== 窓(モーダル)の共通部品 ====================
+// 2026-10-01 ユーザー指示「各画面で同じような作りだけどそうじゃないとか統一性とか管理上の問題とかないか調べて改良して」。
+// 窓は画面ごとに手書きされていて、閉じるボタンが「閉じる/とじる/やめる/戻る」、数の選び方が6通り、
+// 確認はブラウザ標準の確認ダイアログ(window.confirm)と専用の窓が混ざっていた。
+// マーケットで作った形(2026-09-28)をここへ移し、どの画面からも同じ部品で出す。
+//   ModalFrame       … 窓の枠。safe-area を取り、外側を押すと閉じる(保存中など閉じてよくないときは onClose を渡さない)
+//   ModalCloseButton … 閉じる/キャンセルのボタン。文言は「閉じる」「キャンセル」の2つだけにそろえる
+//   QuantityStepper  … 数を選ぶ -10/-1/数/+1/+10 と MAX
+//   ConfirmSheet     … 「本当に〜しますか」の確認。本体の askConfirm から出す
+// ★窓の重なり順(z-index)は MODAL_Z の段から選ぶ。値をその場で書かない
+const MODAL_Z = Object.freeze({ dialog:42000, confirm:43000 });
+const ModalFrame = ({ label, border='border-amber-400/70', onClose, children, narrow=false, zIndex=MODAL_Z.dialog }) => (
+  <div onClick={onClose||undefined} className="fixed inset-0 flex items-center justify-center overflow-y-auto px-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(2,6,23,0.94)',zIndex}} role="dialog" aria-modal="true" aria-label={label}>
+    <div onClick={e=>e.stopPropagation()} className={`w-full ${narrow?'max-w-[280px]':'max-w-sm'} rounded-3xl border-2 ${border} bg-slate-950 p-4 shadow-2xl`}>{children}</div>
+  </div>
+);
+const ModalCloseButton = ({ onClick, label='閉じる', disabled=false }) => (
+  <button type="button" disabled={disabled} onClick={onClick} className="mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">{label}</button>
+);
+// value は 1〜max に収めてから onChange へ渡す。max が 0 のときは何も増やせない(MAX も押せない)
+const QuantityStepper = ({ value, max, onChange, unit='個', maxClass='' }) => {
+  const safeMax=Math.max(0, Math.floor(Number(max)||0));
+  const count=Math.min(Math.max(1, Math.floor(Number(value)||1)), Math.max(1, safeMax));
+  const setCount=(next)=>onChange&&onChange(Math.min(Math.max(1, next), Math.max(1, safeMax)));
+  const stepClass='mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30';
+  return <>
+    <div className="mt-2 grid grid-cols-5 items-center gap-1.5">
+      <button type="button" disabled={count<=1} onClick={()=>setCount(count-10)} className={stepClass}>-10</button>
+      <button type="button" disabled={count<=1} onClick={()=>setCount(count-1)} className={stepClass}>-1</button>
+      <strong className="text-center text-xl font-black font-mono">{count}</strong>
+      <button type="button" disabled={count>=safeMax} onClick={()=>setCount(count+1)} className={stepClass}>+1</button>
+      <button type="button" disabled={count>=safeMax} onClick={()=>setCount(count+10)} className={stepClass}>+10</button>
+    </div>
+    <button type="button" disabled={safeMax<=0} onClick={()=>setCount(safeMax)} className={`mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${maxClass}`}>MAX（{safeMax.toLocaleString()}{unit}）</button>
+  </>;
+};
+// 確認の窓。title は問いかけ、message は何が起きるか(取り消せるかどうかも書く)。
+// danger のときは決定ボタンを危険な操作の型(mh-button-danger)にする(削除など、元に戻せない操作)
+const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onConfirm, onCancel }) => (
+  <ModalFrame label={title} border={danger?'border-red-400/70':'border-amber-400/70'} onClose={onCancel} zIndex={MODAL_Z.confirm}>
+    <h3 data-confirm-sheet className={`text-center text-base font-black leading-snug ${danger?'text-red-200':'text-amber-200'}`}>{title}</h3>
+    {message&&<p className="mt-3 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200">{message}</p>}
+    <div className="mt-4 grid grid-cols-1 gap-2">
+      <button type="button" onClick={onConfirm} className={`mh-button ${danger?'mh-button-danger':'mh-button-primary'} min-h-[52px] rounded-2xl font-black active:scale-[.98]`}>{confirmLabel}</button>
+      <ModalCloseButton onClick={onCancel} label="キャンセル"/>
+    </div>
+  </ModalFrame>
 );
 
 // ==================== 強化フェーズ(WAVEクリア後の画面)の共通部品 ====================

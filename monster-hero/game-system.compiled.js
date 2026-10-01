@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b2da427efcb5e5b1
+// source-sha256: 848599db491bd86f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 15:56";
+const BUILD_DATE = "2026-10-01 16:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -13891,40 +13891,8 @@ const MarketNotice = ({
 }) => React.createElement("div", _extends({}, rest, {
   className: `mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[11px] font-black ${tone === 'error' ? 'border-red-500/40 bg-red-950/30 text-red-300' : 'border-amber-300/30 bg-amber-500/10 text-amber-100'}`
 }), children);
-const MarketModal = ({
-  label,
-  border = 'border-amber-400/70',
-  onClose,
-  children,
-  narrow = false
-}) => React.createElement("div", {
-  onClick: onClose || undefined,
-  className: "fixed inset-0 flex items-center justify-center overflow-y-auto px-4",
-  style: {
-    position: 'fixed',
-    inset: 0,
-    paddingTop: 'max(16px, env(safe-area-inset-top))',
-    paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
-    backgroundColor: 'rgba(2,6,23,0.94)',
-    zIndex: 42000
-  },
-  role: "dialog",
-  "aria-modal": "true",
-  "aria-label": label
-}, React.createElement("div", {
-  onClick: e => e.stopPropagation(),
-  className: `w-full ${narrow ? 'max-w-[280px]' : 'max-w-sm'} rounded-3xl border-2 ${border} bg-slate-950 p-4 shadow-2xl`
-}, children));
-const MarketModalClose = ({
-  onClick,
-  label = '閉じる',
-  disabled = false
-}) => React.createElement("button", {
-  type: "button",
-  disabled: disabled,
-  onClick: onClick,
-  className: "mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
-}, label);
+const MarketModal = props => React.createElement(ModalFrame, props);
+const MarketModalClose = props => React.createElement(ModalCloseButton, props);
 const MarketModalHead = ({
   item,
   accent = 'text-white'
@@ -13997,8 +13965,6 @@ const MarketPurchaseSheet = ({
   const count = stackable ? Math.min(Math.max(1, Math.floor(Number(quantity) || 1)), Math.max(1, maxQuantity)) : 1;
   const total = unitCost * count;
   const canConfirm = maxQuantity > 0 && !pending;
-  const setCount = next => onQuantity && onQuantity(Math.min(Math.max(1, next), Math.max(1, maxQuantity)));
-  const stepClass = 'mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30';
   return React.createElement(MarketModal, {
     label: `${item.name}の${meta.verb}`,
     border: meta.border,
@@ -14014,36 +13980,13 @@ const MarketPurchaseSheet = ({
     className: `mt-1 block text-xl font-black font-mono ${meta.text}`
   }, meta.emoji, " ", safeBalance.toLocaleString())), stackable && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mt-3 text-center text-[11px] font-black text-slate-300"
-  }, meta.verb, "する数"), React.createElement("div", {
-    className: "mt-2 grid grid-cols-5 items-center gap-1.5"
-  }, React.createElement("button", {
-    type: "button",
-    disabled: count <= 1,
-    onClick: () => setCount(count - 10),
-    className: stepClass
-  }, "-10"), React.createElement("button", {
-    type: "button",
-    disabled: count <= 1,
-    onClick: () => setCount(count - 1),
-    className: stepClass
-  }, "-1"), React.createElement("strong", {
-    className: "text-center text-xl font-black font-mono"
-  }, count), React.createElement("button", {
-    type: "button",
-    disabled: count >= maxQuantity,
-    onClick: () => setCount(count + 1),
-    className: stepClass
-  }, "+1"), React.createElement("button", {
-    type: "button",
-    disabled: count >= maxQuantity,
-    onClick: () => setCount(count + 10),
-    className: stepClass
-  }, "+10")), React.createElement("button", {
-    type: "button",
-    disabled: maxQuantity <= 0,
-    onClick: () => setCount(maxQuantity),
-    className: `mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${meta.max}`
-  }, "MAX（", Math.max(0, maxQuantity).toLocaleString(), countUnit, "）")), React.createElement("div", {
+  }, meta.verb, "する数"), React.createElement(QuantityStepper, {
+    value: count,
+    max: maxQuantity,
+    unit: countUnit,
+    maxClass: meta.max,
+    onChange: next => onQuantity && onQuantity(next)
+  })), React.createElement("div", {
     className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
   }, stackable && React.createElement("div", {
     className: "flex justify-between"
@@ -31998,13 +31941,15 @@ const ScreenHead = ({
   title,
   icon = null,
   accent = 'text-white',
+  accentStyle = null,
   note = '',
   onBack = null,
   backLabel = '戻る',
   right = null,
-  disabled = false
+  disabled = false,
+  compact = false
 }) => React.createElement("header", {
-  className: "mh-screen-head mb-3 flex shrink-0 items-center gap-1.5 border-b border-white/10 pb-2"
+  className: `mh-screen-head ${compact ? 'mb-1 pb-1' : 'mb-3 pb-2'} flex shrink-0 items-center gap-1.5 border-b border-white/10`
 }, onBack && React.createElement("button", {
   type: "button",
   "aria-label": backLabel,
@@ -32016,7 +31961,8 @@ const ScreenHead = ({
 })), React.createElement("div", {
   className: "min-w-0 flex-1"
 }, React.createElement("h2", {
-  className: `flex items-center gap-1.5 truncate text-xl font-black italic leading-tight ${accent}`
+  className: `flex items-center gap-1.5 truncate text-xl font-black italic leading-tight ${accent}`,
+  style: accentStyle || undefined
 }, icon, title), note && React.createElement("p", {
   className: "mh-screen-note mt-0.5 text-[10px] font-bold leading-snug text-slate-400"
 }, note)), right && React.createElement("div", {
@@ -32082,6 +32028,114 @@ const ScreenSectionLabel = ({
 }, children), note && React.createElement("span", {
   className: "truncate text-[9px] font-bold text-slate-500"
 }, note));
+const MODAL_Z = Object.freeze({
+  dialog: 42000,
+  confirm: 43000
+});
+const ModalFrame = ({
+  label,
+  border = 'border-amber-400/70',
+  onClose,
+  children,
+  narrow = false,
+  zIndex = MODAL_Z.dialog
+}) => React.createElement("div", {
+  onClick: onClose || undefined,
+  className: "fixed inset-0 flex items-center justify-center overflow-y-auto px-4",
+  style: {
+    position: 'fixed',
+    inset: 0,
+    paddingTop: 'max(16px, env(safe-area-inset-top))',
+    paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+    backgroundColor: 'rgba(2,6,23,0.94)',
+    zIndex
+  },
+  role: "dialog",
+  "aria-modal": "true",
+  "aria-label": label
+}, React.createElement("div", {
+  onClick: e => e.stopPropagation(),
+  className: `w-full ${narrow ? 'max-w-[280px]' : 'max-w-sm'} rounded-3xl border-2 ${border} bg-slate-950 p-4 shadow-2xl`
+}, children));
+const ModalCloseButton = ({
+  onClick,
+  label = '閉じる',
+  disabled = false
+}) => React.createElement("button", {
+  type: "button",
+  disabled: disabled,
+  onClick: onClick,
+  className: "mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40"
+}, label);
+const QuantityStepper = ({
+  value,
+  max,
+  onChange,
+  unit = '個',
+  maxClass = ''
+}) => {
+  const safeMax = Math.max(0, Math.floor(Number(max) || 0));
+  const count = Math.min(Math.max(1, Math.floor(Number(value) || 1)), Math.max(1, safeMax));
+  const setCount = next => onChange && onChange(Math.min(Math.max(1, next), Math.max(1, safeMax)));
+  const stepClass = 'mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30';
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mt-2 grid grid-cols-5 items-center gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    disabled: count <= 1,
+    onClick: () => setCount(count - 10),
+    className: stepClass
+  }, "-10"), React.createElement("button", {
+    type: "button",
+    disabled: count <= 1,
+    onClick: () => setCount(count - 1),
+    className: stepClass
+  }, "-1"), React.createElement("strong", {
+    className: "text-center text-xl font-black font-mono"
+  }, count), React.createElement("button", {
+    type: "button",
+    disabled: count >= safeMax,
+    onClick: () => setCount(count + 1),
+    className: stepClass
+  }, "+1"), React.createElement("button", {
+    type: "button",
+    disabled: count >= safeMax,
+    onClick: () => setCount(count + 10),
+    className: stepClass
+  }, "+10")), React.createElement("button", {
+    type: "button",
+    disabled: safeMax <= 0,
+    onClick: () => setCount(safeMax),
+    className: `mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${maxClass}`
+  }, "MAX（", safeMax.toLocaleString(), unit, "）"));
+};
+const ConfirmSheet = ({
+  title,
+  message = '',
+  confirmLabel = 'OK',
+  danger = false,
+  onConfirm,
+  onCancel
+}) => React.createElement(ModalFrame, {
+  label: title,
+  border: danger ? 'border-red-400/70' : 'border-amber-400/70',
+  onClose: onCancel,
+  zIndex: MODAL_Z.confirm
+}, React.createElement("h3", {
+  "data-confirm-sheet": true,
+  className: `text-center text-base font-black leading-snug ${danger ? 'text-red-200' : 'text-amber-200'}`
+}, title), message && React.createElement("p", {
+  className: "mt-3 whitespace-pre-line text-[12px] font-bold leading-relaxed text-slate-200"
+}, message), React.createElement("div", {
+  className: "mt-4 grid grid-cols-1 gap-2"
+}, React.createElement("button", {
+  type: "button",
+  onClick: onConfirm,
+  className: `mh-button ${danger ? 'mh-button-danger' : 'mh-button-primary'} min-h-[52px] rounded-2xl font-black active:scale-[.98]`
+}, confirmLabel), React.createElement(ModalCloseButton, {
+  onClick: onCancel,
+  label: "キャンセル"
+})));
 const PHASE_STEP_LABELS = Object.freeze({
   training: 'トレーニング',
   growth: '自動成長',
@@ -40938,7 +40992,7 @@ function PickHeroAllyScreen({
         backgroundColor: "#020617",
         zIndex: 30000
       },
-      className: `absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode === 'ally' ? ' mh-phase mh-ph-bg' : ''}`
+      className: `absolute inset-0 p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode === 'ally' ? ' mh-phase mh-ph-bg' : ''}`
     }, React.createElement("div", {
       className: "mb-2 text-center flex items-center justify-between px-2 shrink-0"
     }, React.createElement("button", {
@@ -41409,7 +41463,7 @@ function PickProAlliesScreen({
       backgroundColor: "#020617",
       zIndex: 30000
     },
-    className: "absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden",
+    className: "absolute inset-0 flex flex-col h-full min-h-0 px-4 overflow-hidden",
     "data-screen": "pick-pro-allies"
   }, React.createElement("div", {
     className: "mb-2 text-center flex items-center justify-between px-2 shrink-0",
@@ -41541,7 +41595,7 @@ function PickSlotScreen({
         zIndex: 30000,
         '--ph': '129,140,248'
       },
-      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-4 text-center overflow-hidden"
+      className: "mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center p-4 text-center overflow-hidden"
     }, phasePlan && React.createElement(PhaseSteps, {
       plan: phasePlan,
       current: "slot",
@@ -41703,7 +41757,7 @@ function PickTeachingScreen({
         zIndex: 30000,
         '--ph': '192,132,252'
       },
-      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] px-4 py-3 flex flex-col items-center overflow-hidden"
+      className: "mh-phase mh-ph-bg absolute inset-0 px-4 py-3 flex flex-col items-center overflow-hidden"
     }, React.createElement("div", {
       className: "mb-2 text-center shrink-0 flex flex-col items-center gap-1"
     }, phasePlan ? React.createElement(PhaseSteps, {
@@ -41800,7 +41854,7 @@ function PickTeachingScreen({
         }
       }, owned ? isMax ? "MAXレベル" : `強化 Lv.${level}→${level + 1}` : "新規習得"));
     }))), selectedTeachingCard && React.createElement("div", {
-      className: "fixed inset-0 z-[3100] flex items-center justify-center p-6",
+      className: "fixed inset-0 flex items-center justify-center p-6",
       style: {
         position: 'fixed',
         inset: 0,
@@ -41898,7 +41952,7 @@ function UpgradeSkillScreen({
         zIndex: 30000,
         '--ph': '245,158,11'
       },
-      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden"
+      className: "mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden"
     }, React.createElement("div", {
       className: "mb-2 shrink-0 w-full max-w-sm flex flex-col items-center gap-1.5"
     }, React.createElement("div", {
@@ -42039,7 +42093,7 @@ function WaveResultScreen({
         zIndex: 30000,
         '--ph': '251,191,36'
       },
-      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center justify-center p-3 text-center overflow-hidden"
+      className: "mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center p-3 text-center overflow-hidden"
     }, React.createElement("div", {
       className: "w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll"
     }, React.createElement("div", {
@@ -42337,7 +42391,7 @@ function RewardPickScreen({
         zIndex: 30000,
         '--ph': '251,191,36'
       },
-      className: "mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden",
+      className: "mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center p-3 overflow-hidden",
       "data-screen": "training"
     }, React.createElement("div", {
       className: "shrink-0 w-full max-w-sm",
@@ -49023,6 +49077,15 @@ function MonsterHeroGame() {
   const [rhythmEventPoints, setRhythmEventPoints] = useState(0);
   const [marketIconZoom, setMarketIconZoom] = useState(null);
   const [upcomingMonsterDetail, setUpcomingMonsterDetail] = useState(null);
+  const [confirmRequest, setConfirmRequest] = useState(null);
+  const askConfirm = opts => new Promise(resolve => setConfirmRequest({
+    ...opts,
+    resolve
+  }));
+  const answerConfirm = ok => setConfirmRequest(current => {
+    if (current) current.resolve(!!ok);
+    return null;
+  });
   const debugIconItems = useMemo(() => breederIconOptions({
     includeUnowned: true
   }), []);
@@ -54624,7 +54687,11 @@ function MonsterHeroGame() {
     const mode = value === 'follow' ? 'follow' : value === 'off' ? 'off' : 'fixed';
     if (mode === 'fixed' && !availableLevels.includes(fixedLevel)) return false;
     const label = mode === 'follow' ? 'ブリーダーLvに自動追従' : mode === 'off' ? 'OFF' : `Lv${fixedLevel}まで固定`;
-    if (!window.confirm(`所有マスモン${currentMons.length}体のAUTO∞ 自動限界突破を「${label}」へ一括変更しますか？\n\nこの操作はすぐ保存され、個別設定も上書きされます。`)) return false;
+    if (!(await askConfirm({
+      title: `AUTO∞ 自動限界突破を「${label}」へ一括変更しますか？`,
+      message: `所有マスモン${currentMons.length}体のAUTO∞ 自動限界突破を「${label}」へ一括変更しますか？\n\nこの操作はすぐ保存され、個別設定も上書きされます。`,
+      confirmLabel: '一括変更する'
+    }))) return false;
     const next = currentMons.map(masu => buildAutoRepeatBreakthroughSettingUpdate(masu, mode, fixedLevel));
     const saved = await saveStoredValuesOrRollback([{
       key: 'mh_masu_mons',
@@ -63602,8 +63669,12 @@ function MonsterHeroGame() {
       className: resetTicketCount > 0 ? 'text-cyan-300' : 'text-slate-500'
     }, "所持 ", resetTicketCount, "枚")), React.createElement("button", {
       disabled: resetTicketCount <= 0 || resetPointCount <= 0,
-      onClick: () => {
-        if (!window.confirm(`このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`)) return;
+      onClick: async () => {
+        if (!(await askConfirm({
+          title: '配分済み固有技Pをリセットしますか？',
+          message: `このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`,
+          confirmLabel: 'リセットする'
+        }))) return;
         const result = useUniqueSkillResetTicket(masu.id);
         if (result) {
           clearDraft();
@@ -66441,23 +66512,19 @@ function MonsterHeroGame() {
         paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
         paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
       }
-    }, React.createElement("div", {
-      className: "flex items-center gap-1 mb-1 shrink-0"
-    }, React.createElement("button", {
+    }, React.createElement(ScreenHead, {
+      compact: true,
+      title: "バトル",
+      accent: "text-indigo-400",
       disabled: !!battleTutorial,
-      onClick: () => {
+      onBack: () => {
         if (battleMenuTab !== 'difficulty') {
           setBattleMenuTab('difficulty');
           return;
         }
         returnToHome();
-      },
-      className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
-    }, React.createElement(ArrowLeft, {
-      size: 20
-    })), React.createElement("h2", {
-      className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
-    }, "バトル")), React.createElement("div", {
+      }
+    }), React.createElement("div", {
       className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
     }, battleMenuTab === 'difficulty' && React.createElement("div", {
       className: `grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeTabs')}`
@@ -66769,8 +66836,10 @@ function MonsterHeroGame() {
         "aria-label": "戻る",
         disabled: !!battleTutorial,
         onClick: returnToHome,
-        className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
-      }, React.createElement(ArrowLeft, null))), React.createElement("div", {
+        className: "mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-30"
+      }, React.createElement(ArrowLeft, {
+        size: 20
+      }))), React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, React.createElement("h2", {
         className: "text-center text-lg font-black leading-tight shrink-0 mt-0.5"
@@ -66893,24 +66962,19 @@ function MonsterHeroGame() {
           paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
           paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
         }
-      }, React.createElement("div", {
-        className: "flex items-center gap-1 mb-1 shrink-0"
-      }, React.createElement("button", {
-        "aria-label": "戻る",
+      }, React.createElement(ScreenHead, {
+        compact: true,
+        title: "バトル",
+        accent: "text-indigo-400",
         disabled: !!battleTutorial,
-        onClick: () => {
+        onBack: () => {
           if (modeSelectTab !== 'mode') {
             setModeSelectTab('mode');
             return;
           }
           setGameState('BATTLE_SYSTEM_SELECT');
-        },
-        className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
-      }, React.createElement(ArrowLeft, {
-        size: 20
-      })), React.createElement("h2", {
-        className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
-      }, "バトル")), React.createElement("div", {
+        }
+      }), React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, React.createElement("div", {
         className: `grid grid-cols-4 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`
@@ -67126,22 +67190,18 @@ function MonsterHeroGame() {
           paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
           paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
         }
-      }, React.createElement("div", {
-        className: "flex items-center gap-1 mb-1 shrink-0"
-      }, React.createElement("button", {
-        "aria-label": "戻る",
-        onClick: () => setGameState('BATTLE_MODE_SELECT'),
-        className: "p-3 text-slate-400 active:scale-90"
-      }, React.createElement(ArrowLeft, {
-        size: 20
-      })), React.createElement("h2", {
-        className: "flex-1 min-w-0 text-xl font-black italic text-fuchsia-300 uppercase tracking-widest truncate"
-      }, "極限チャレンジ"), React.createElement("button", {
-        "data-extreme-mode-info": true,
-        "aria-label": "極限チャレンジの説明を開く",
-        onClick: () => setModeInfoId(EXTREME_MODE.id),
-        className: "shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95"
-      }, "このモードの説明")), React.createElement("div", {
+      }, React.createElement(ScreenHead, {
+        compact: true,
+        title: "極限チャレンジ",
+        accent: "text-fuchsia-300",
+        onBack: () => setGameState('BATTLE_MODE_SELECT'),
+        right: React.createElement("button", {
+          "data-extreme-mode-info": true,
+          "aria-label": "極限チャレンジの説明を開く",
+          onClick: () => setModeInfoId(EXTREME_MODE.id),
+          className: "shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-95"
+        }, "このモードの説明")
+      }), React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
@@ -67382,21 +67442,15 @@ function MonsterHeroGame() {
           paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
           paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
         }
-      }, React.createElement("div", {
-        className: "flex items-center gap-1 mb-1 shrink-0"
-      }, React.createElement("button", {
-        "aria-label": "戻る",
-        disabled: !!battleTutorial,
-        onClick: () => setGameState(species ? 'SPECIES_CHALLENGE_SELECT' : battleSystemOf(battleMode).direct ? 'BATTLE_SYSTEM_SELECT' : 'BATTLE_MODE_SELECT'),
-        className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
-      }, React.createElement(ArrowLeft, {
-        size: 20
-      })), React.createElement("h2", {
-        className: "text-xl font-black italic uppercase tracking-widest truncate",
-        style: {
+      }, React.createElement(ScreenHead, {
+        compact: true,
+        title: mode.label,
+        accentStyle: {
           color: mode.color
-        }
-      }, mode.label)), React.createElement("div", {
+        },
+        disabled: !!battleTutorial,
+        onBack: () => setGameState(species ? 'SPECIES_CHALLENGE_SELECT' : battleSystemOf(battleMode).direct ? 'BATTLE_SYSTEM_SELECT' : 'BATTLE_MODE_SELECT')
+      }), React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
@@ -67721,24 +67775,15 @@ function MonsterHeroGame() {
           paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
           paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
         }
-      }, React.createElement("div", {
-        className: "flex items-center gap-1 mb-1 shrink-0"
-      }, React.createElement("button", {
-        "aria-label": "戻る",
-        onClick: () => setGameState(scoreRankingBack),
-        className: "p-3 text-slate-400 active:scale-90"
-      }, React.createElement(ArrowLeft, {
-        size: 20
-      })), React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, React.createElement("h2", {
-        className: "text-xl font-black italic uppercase tracking-widest truncate leading-tight",
-        style: {
+      }, React.createElement(ScreenHead, {
+        compact: true,
+        title: mode.label,
+        accentStyle: {
           color: mode.color
-        }
-      }, mode.label), React.createElement("div", {
-        className: "text-[9px] font-black tracking-[.2em] text-slate-400 leading-none"
-      }, "ランキング"))), React.createElement("div", {
+        },
+        note: "ランキング",
+        onBack: () => setGameState(scoreRankingBack)
+      }), React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, React.createElement("div", {
         className: "shrink-0 w-full mb-2.5"
@@ -67747,21 +67792,13 @@ function MonsterHeroGame() {
         compact: true
       })), species ? renderSpeciesChallengeRecordBody(scoreRankingMode) : renderScoreRankingBody(scoreRankingMode)));
     })(), gameState === 'MONSTER_LIST_MENU' && React.createElement("div", {
-      className: "flex-1 flex flex-col h-full p-4",
-      style: {
-        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-      }
-    }, React.createElement("div", {
-      className: "flex items-center gap-2"
-    }, React.createElement("button", {
-      onClick: returnToHome,
-      className: "p-3 text-slate-400"
-    }, React.createElement(ArrowLeft, {
-      size: 20
-    })), React.createElement("h2", {
-      className: "text-xl font-black italic text-cyan-400"
-    }, "モンスター一覧")), React.createElement("div", {
+      "data-mh-screen": true,
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: "モンスター一覧",
+      accent: "text-cyan-400",
+      onBack: returnToHome
+    }), React.createElement("div", {
       className: "w-full max-w-md mx-auto space-y-4 mt-[clamp(3.5rem,14vh,8rem)]"
     }, React.createElement("button", {
       onClick: () => setGameState('OWNED_MONSTERS'),
@@ -70911,23 +70948,15 @@ function MonsterHeroGame() {
     }), gameState === 'ROSTER' && React.createElement("div", {
       "data-mh-screen": true,
       className: SCREEN_SHELL_CLASS
-    }, React.createElement("header", {
-      className: "mb-3 flex shrink-0 items-center gap-1.5 border-b border-white/10 pb-2"
-    }, React.createElement("button", {
-      type: "button",
-      "aria-label": "M/B管理へ戻る",
-      onClick: () => {
+    }, React.createElement(ScreenHead, {
+      title: rosterTab === 'monster' ? 'モンスター編成' : 'アシストカード編成',
+      accent: "text-indigo-400",
+      backLabel: "M/B管理へ戻る",
+      onBack: () => {
         setManagementTab(rosterTab === 'monster' ? 'monster' : 'assist');
         setGameState('MB_MANAGEMENT');
-      },
-      className: "-ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
-    }, React.createElement(ArrowLeft, {
-      size: 20
-    })), React.createElement("div", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("h2", {
-      className: "truncate text-xl font-black italic leading-tight text-indigo-400"
-    }, rosterTab === 'monster' ? 'モンスター編成' : 'アシストカード編成'))), React.createElement("div", {
+      }
+    }), React.createElement("div", {
       className: "shrink-0 w-full mb-2"
     }, React.createElement(AssistantBubble, {
       scene: "roster",
@@ -71445,20 +71474,12 @@ function MonsterHeroGame() {
           zIndex: 31000,
           paddingTop: 'calc(1rem + env(safe-area-inset-top))'
         }
-      }, React.createElement("header", {
-        className: "mb-3 flex shrink-0 items-center gap-1.5 border-b border-white/10 pb-2"
-      }, React.createElement("button", {
-        type: "button",
-        "aria-label": "アイテムへ戻る",
-        onClick: () => setPendingItemUse(null),
-        className: "-ml-1 shrink-0 p-3 text-slate-400 active:scale-90"
-      }, React.createElement(ArrowLeft, {
-        size: 20
-      })), React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, React.createElement("h2", {
-        className: "truncate text-xl font-black italic leading-tight text-teal-400"
-      }, item?.name, "を使う対象を選択"))), React.createElement(ScreenLead, null, "対象のマスモンをタップしてください"), React.createElement("div", {
+      }, React.createElement(ScreenHead, {
+        title: `${item?.name || ''}を使う対象を選択`,
+        accent: "text-teal-400",
+        onBack: () => setPendingItemUse(null),
+        backLabel: "アイテムへ戻る"
+      }), React.createElement(ScreenLead, null, "対象のマスモンをタップしてください"), React.createElement("div", {
         className: SCREEN_LIST_CLASS
       }, masuMons.length === 0 ? React.createElement(ScreenEmpty, {
         emoji: "🐾",
@@ -71488,10 +71509,16 @@ function MonsterHeroGame() {
               });
               setPendingItemUse(null);
             } else if (pendingItemUse === 'bond_reset_scroll') {
-              if (window.confirm(`「${masu.name}」の強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻しますか？絆Lvはそのままです。`)) {
-                useBondResetScroll(masu.id);
-                setPendingItemUse(null);
-              }
+              void askConfirm({
+                title: `「${masu.name}」の強化ポイントを戻しますか？`,
+                message: '間合い適性・ステータス強化に使った強化ポイントを、すべて未使用に戻します。絆Lvはそのままです。絆ポイントリセットの書を1冊使います。',
+                confirmLabel: '戻す'
+              }).then(ok => {
+                if (ok) {
+                  useBondResetScroll(masu.id);
+                  setPendingItemUse(null);
+                }
+              });
             }
           },
           className: "rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-1.5 flex flex-col items-center gap-0.5 active:scale-95 min-h-[44px]"
@@ -71539,16 +71566,12 @@ function MonsterHeroGame() {
           zIndex: 31500,
           paddingTop: 'calc(1rem + env(safe-area-inset-top))'
         }
-      }, React.createElement("div", {
-        className: "flex items-center gap-2 mb-2 shrink-0"
-      }, React.createElement("button", {
-        onClick: () => setXpTicketUse(null),
-        className: "p-3 text-slate-400 active:scale-90"
-      }, React.createElement(ArrowLeft, {
-        size: 20
-      })), React.createElement("h2", {
-        className: "text-lg font-black italic text-teal-400 uppercase tracking-widest truncate"
-      }, item.name, "を使う")), React.createElement("div", {
+      }, React.createElement(ScreenHead, {
+        title: `${item.name}を使う`,
+        accent: "text-teal-400",
+        onBack: () => setXpTicketUse(null),
+        backLabel: "アイテムへ戻る"
+      }), React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, React.createElement("div", {
         className: "bg-slate-900 border border-teal-500/40 rounded-2xl p-4"
@@ -71577,54 +71600,19 @@ function MonsterHeroGame() {
       }, " → ", after.level)))), React.createElement("div", {
         className: "bg-black/30 rounded-xl p-3 border border-white/5"
       }, !usedResult && React.createElement("div", {
-        className: "flex items-center justify-between mb-2"
+        className: "flex items-center justify-between"
       }, React.createElement("span", {
-        className: "text-[10px] font-black text-slate-400 uppercase tracking-wider"
+        className: "text-[11px] font-black text-slate-300"
       }, "使う枚数"), React.createElement("span", {
         className: "text-[10px] font-mono font-black text-teal-300"
-      }, "所持 ", have, "枚")), usedResult ? React.createElement("div", {
+      }, "所持 ", have.toLocaleString(), "枚")), usedResult ? React.createElement("div", {
         className: "text-center text-sm font-black text-teal-300"
-      }, xpTicketUse.usedCount, "枚 使用しました") : React.createElement("div", {
-        className: "flex items-center gap-3"
-      }, React.createElement("button", {
-        onClick: () => setCount(count - 1),
-        disabled: count <= 1,
-        className: "w-10 h-10 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90 shrink-0"
-      }, React.createElement(MinusCircle, {
-        size: 20
-      })), React.createElement("div", {
-        className: "flex-1 min-w-0"
-      }, React.createElement("input", {
-        type: "range",
-        min: "1",
-        max: Math.max(1, have),
+      }, xpTicketUse.usedCount, "枚 使用しました") : React.createElement(QuantityStepper, {
         value: count,
-        onChange: e => setCount(Number(e.target.value)),
-        className: "w-full accent-teal-400",
-        style: {
-          accentColor: '#2dd4bf'
-        }
-      }), React.createElement("div", {
-        className: "text-center text-2xl font-mono font-black text-white leading-none mt-1"
-      }, count, React.createElement("span", {
-        className: "text-[10px] text-slate-500 font-black"
-      }, " 枚"))), React.createElement("button", {
-        onClick: () => setCount(count + 1),
-        disabled: count >= have,
-        className: "w-10 h-10 flex items-center justify-center bg-teal-600 rounded-lg text-white disabled:opacity-20 active:scale-90 shrink-0"
-      }, React.createElement(PlusCircle, {
-        size: 20
-      }))), !usedResult && React.createElement("div", {
-        className: "grid grid-cols-4 gap-1.5 mt-3"
-      }, [1, 10, 50].map(n => React.createElement("button", {
-        key: n,
-        onClick: () => setCount(n),
-        disabled: have < n,
-        className: "py-1.5 rounded-lg bg-slate-800 border border-white/10 text-[10px] font-black text-slate-300 disabled:opacity-25 active:scale-95"
-      }, n, "枚")), React.createElement("button", {
-        onClick: () => setCount(have),
-        className: "py-1.5 rounded-lg bg-slate-800 border border-teal-500/40 text-[10px] font-black text-teal-300 active:scale-95"
-      }, "最大"))), React.createElement("div", {
+        max: have,
+        unit: "枚",
+        onChange: setCount
+      })), React.createElement("div", {
         className: "mt-3 bg-black/30 rounded-xl p-3 border border-white/5"
       }, React.createElement("div", {
         className: "flex justify-between items-center text-[11px] font-black mb-2"
@@ -71655,11 +71643,8 @@ function MonsterHeroGame() {
       })), React.createElement("div", {
         className: "text-[8px] text-slate-500 font-mono mt-1 text-right"
       }, "次のLvまで あと ", Math.max(0, after.xpForNext - after.xpIntoLevel).toLocaleString())))), React.createElement("div", {
-        className: "flex gap-2 shrink-0 mt-3"
-      }, React.createElement("button", {
-        onClick: () => setXpTicketUse(null),
-        className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95"
-      }, usedResult ? '閉じる' : 'やめる'), !usedResult && React.createElement("button", {
+        className: `${SCREEN_FOOTER_CLASS} grid grid-cols-1 gap-2`
+      }, !usedResult && React.createElement("button", {
         onClick: () => {
           const result = useBondXpTickets(item.id, masu.id, count);
           if (result) {
@@ -71674,8 +71659,11 @@ function MonsterHeroGame() {
           }
         },
         disabled: have <= 0,
-        className: "flex-[2] bg-teal-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95 disabled:opacity-30"
-      }, count, "枚 使う")));
+        className: "mh-button mh-button-primary min-h-[52px] rounded-2xl font-black active:scale-[.98] disabled:opacity-30"
+      }, count, "枚 使う"), React.createElement(ModalCloseButton, {
+        onClick: () => setXpTicketUse(null),
+        label: usedResult ? '閉じる' : 'キャンセル'
+      })));
     })(), detailTrainingMasuId && (() => {
       const masu = getMasuMon(detailTrainingMasuId);
       const tickets = BREEDER_MARKET_ITEMS.filter(item => ['training_ticket', 'training_ticket_l'].includes(item.id));
@@ -71835,10 +71823,11 @@ function MonsterHeroGame() {
         }, on && React.createElement(Check, {
           size: 15
         }), opt.label);
-      }))), React.createElement("button", {
-        onClick: () => setShowSortFilterModal(false),
-        className: "mx-4 mb-4 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95 shrink-0"
-      }, "とじる"));
+      }))), React.createElement("div", {
+        className: "mx-4 mb-4 shrink-0"
+      }, React.createElement(ModalCloseButton, {
+        onClick: () => setShowSortFilterModal(false)
+      })));
     })(), masuMonDetail && !MASU_ENHANCE_STATES.includes(gameState) && (() => {
       const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
@@ -71953,8 +71942,13 @@ function MonsterHeroGame() {
         }, inRoster ? '現在、編成に入っています' : '編成画面で選ぶと、次の周回でこのマスモンを使えます'), React.createElement("div", {
           className: "text-[10px] text-teal-400/80 font-bold text-center px-2"
         }, "絆ポイントリセットの書は「アイテム」から使用できます"), React.createElement("button", {
-          onClick: () => {
-            if (window.confirm(`「${masu.name}」を削除しますか？この操作は取り消せません。`)) {
+          onClick: async () => {
+            if (await askConfirm({
+              title: `「${masu.name}」を削除しますか？`,
+              message: 'この操作は取り消せません。',
+              confirmLabel: '削除する',
+              danger: true
+            })) {
               deleteMasuMon(masu.id);
               setMasuMonDetail(null);
             }
@@ -72154,8 +72148,12 @@ function MonsterHeroGame() {
         type: "button",
         "data-unique-setting-reset": true,
         disabled: isDefault,
-        onClick: () => {
-          if (!window.confirm('固有技の並び順と初期技を、はじめの状態（自前の固有技が先頭・初期技）へ戻しますか？固有技Lvと固有技ポイントは変わりません。')) return;
+        onClick: async () => {
+          if (!(await askConfirm({
+            title: '固有技の設定をはじめの状態へ戻しますか？',
+            message: '固有技の並び順と初期技を、はじめの状態（自前の固有技が先頭・初期技）へ戻します。固有技Lvと固有技ポイントは変わりません。',
+            confirmLabel: '戻す'
+          }))) return;
           resetMasuUniqueSetting(masu.id);
         },
         className: "w-full min-h-[44px] rounded-xl bg-slate-700 text-[10px] font-black active:scale-95 disabled:opacity-30"
@@ -72419,7 +72417,7 @@ function MonsterHeroGame() {
         className: "flex-1 py-3 rounded-xl font-black text-xs uppercase bg-fuchsia-600 text-white active:scale-95"
       }, "この色に決定"))));
     })(), showMasuRenameModal && masuMonDetail && React.createElement("div", {
-      className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
+      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
         inset: 0,
@@ -72452,7 +72450,7 @@ function MonsterHeroGame() {
       },
       className: "flex-1 bg-pink-600 text-white py-3 rounded-xl font-black text-xs"
     }, "保存")))), showNameEdit && React.createElement("div", {
-      className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
+      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
         inset: 0,
@@ -72478,7 +72476,7 @@ function MonsterHeroGame() {
       onClick: handleSaveName,
       className: "flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs"
     }, "保存")))), showCallStylePicker && React.createElement("div", {
-      className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
+      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
         inset: 0,
@@ -72537,7 +72535,7 @@ function MonsterHeroGame() {
       },
       className: "w-full text-[10px] text-slate-500 font-bold py-1 active:scale-95"
     }, "絆Lvの呼び方に戻す"))), showAssistantPicker && React.createElement("div", {
-      className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-5",
+      className: "fixed inset-0 flex flex-col items-center justify-center p-5",
       style: {
         position: 'fixed',
         inset: 0,
@@ -72609,7 +72607,7 @@ function MonsterHeroGame() {
       onClick: () => setShowAssistantPicker(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
     }, "閉じる"))), showEventReplayList && React.createElement("div", {
-      className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-5",
+      className: "fixed inset-0 flex flex-col items-center justify-center p-5",
       style: {
         position: 'fixed',
         inset: 0,
@@ -72672,7 +72670,7 @@ function MonsterHeroGame() {
       onClick: () => setShowEventReplayList(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
     }, "閉じる"))), showIconPicker && React.createElement("div", {
-      className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
+      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
         inset: 0,
@@ -72741,7 +72739,7 @@ function MonsterHeroGame() {
       onClick: () => setShowIconPicker(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
     }, "閉じる"))), showFramePicker && React.createElement("div", {
-      className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
+      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
         inset: 0,
@@ -72830,7 +72828,7 @@ function MonsterHeroGame() {
       onClick: () => setShowFramePicker(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
     }, "閉じる"))), showBackup && React.createElement("div", {
-      className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
+      className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
         inset: 0,
@@ -73166,7 +73164,14 @@ function MonsterHeroGame() {
       }, "能力値や技は、公開のときにお知らせします。"), React.createElement(MarketModalClose, {
         onClick: close
       })));
-    })(), marketItemDetail && React.createElement(MarketItemDetail, {
+    })(), confirmRequest && React.createElement(ConfirmSheet, {
+      title: confirmRequest.title,
+      message: confirmRequest.message || '',
+      confirmLabel: confirmRequest.confirmLabel || 'OK',
+      danger: !!confirmRequest.danger,
+      onConfirm: () => answerConfirm(true),
+      onCancel: () => answerConfirm(false)
+    }), marketItemDetail && React.createElement(MarketItemDetail, {
       item: marketItemDetail,
       owned: ownedItemCount(ownedItems, marketItemDetail.id),
       grantText: marketItemDetail.grantText || '',
@@ -74238,7 +74243,7 @@ function MonsterHeroGame() {
       const topicIndex = topic ? cat.topics.findIndex(t => t.id === topic.id) : -1;
       const nextTopic = topicIndex >= 0 ? cat.topics[topicIndex + 1] : null;
       return React.createElement("div", {
-        className: "fixed inset-0 z-[99999] flex flex-col",
+        className: "fixed inset-0 flex flex-col",
         style: {
           position: 'fixed',
           inset: 0,
@@ -74595,10 +74600,11 @@ function MonsterHeroGame() {
           disabled: !m?.detail,
           className: `shrink-0 self-stretch px-2 rounded-xl border text-[9px] font-black leading-tight ${m?.detail ? 'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95' : 'border-white/10 bg-black/20 text-slate-600'}`
         }, m?.detail ? React.createElement(React.Fragment, null, "詳細", React.createElement("br", null), "›") : React.createElement(React.Fragment, null, "情報", React.createElement("br", null), "なし")));
-      })), React.createElement("button", {
-        onClick: () => setRankingPartyDetail(null),
-        className: "w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0"
-      }, "とじる"))));
+      })), React.createElement("div", {
+        className: "shrink-0"
+      }, React.createElement(ModalCloseButton, {
+        onClick: () => setRankingPartyDetail(null)
+      })))));
     })(), rankingMonsterDetail && (() => {
       const member = rankingMonsterDetail;
       const baseId = rankingMonsterIdOf(member);
@@ -74623,10 +74629,11 @@ function MonsterHeroGame() {
           className: "w-full max-w-sm rounded-3xl border-2 border-indigo-500 bg-slate-900 p-5 text-center"
         }, React.createElement("div", {
           className: "text-[11px] text-slate-400"
-        }, "このモンスターの詳細は表示できません"), React.createElement("button", {
-          onClick: close,
-          className: "mt-4 w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98]"
-        }, "とじる")));
+        }, "このモンスターの詳細は表示できません"), React.createElement("div", {
+          className: "mt-4"
+        }, React.createElement(ModalCloseButton, {
+          onClick: close
+        }))));
       }
       const lvl = masuBondLevelInfo(masu);
       const pct = Math.max(0, Math.min(100, lvl.xpIntoLevel / Math.max(1, lvl.xpForNext) * 100));
@@ -74697,10 +74704,11 @@ function MonsterHeroGame() {
             className: "text-amber-300 shrink-0"
           }, "Lv.", skill.level));
         }))),
-        footer: React.createElement("button", {
-          onClick: close,
-          className: "w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0"
-        }, "とじる")
+        footer: React.createElement("div", {
+          className: "shrink-0"
+        }, React.createElement(ModalCloseButton, {
+          onClick: close
+        }))
       });
     })(), renderFusionDetailModal(), showBattleLog && React.createElement("div", {
       className: "fixed inset-0 flex flex-col",
@@ -74738,7 +74746,7 @@ function MonsterHeroGame() {
       key: line.id,
       className: `rounded-lg border px-3 py-1.5 text-[11px] font-black leading-snug ${BATTLE_LOG_TONE_STYLE[line.tone] || BATTLE_LOG_TONE_STYLE.default}`
     }, line.text))))), showDeckInfo && React.createElement("div", {
-      className: "fixed inset-0 z-[40000] p-4 flex flex-col",
+      className: "fixed inset-0 p-4 flex flex-col",
       style: {
         position: 'fixed',
         inset: 0,
@@ -75531,7 +75539,7 @@ function MonsterHeroGame() {
       wave: wave,
       enemyName: enemy?.name
     }), effect && !rhythmScreenOpen && React.createElement("div", {
-      className: "fixed inset-0 z-[70000] flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
+      className: "fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
       style: {
         position: 'fixed',
         inset: 0,

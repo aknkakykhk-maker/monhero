@@ -20,7 +20,7 @@ function UpgradeSkillScreen({
 
     // mh-phase … 背の低い器(横持ち)で説明を畳む目印(70-bootstrap.jsx の @container)
     // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・宝石)。--ph は画面の識別色
-    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'245,158,11'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden">
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'245,158,11'}} className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-start p-4 pt-3 text-center overflow-hidden">
       <div className="mb-2 shrink-0 w-full max-w-sm flex flex-col items-center gap-1.5">
         <div className="mh-ph-heading"><h2 className="mh-ph-title text-2xl font-black italic uppercase">固有技の強化</h2></div>
         {/* このあと何枚の画面を通ってバトルへ戻るのか */}
@@ -102,7 +102,7 @@ function WaveResultScreen({
        内側をスクロールさせる。ボタンは shrink-0 なので必ず画面内に残り、
        収まっているときは今までどおり全体が中央に寄る */
     // mh-phase / mh-ph-* … 強化フェーズの画面と同じ飾り(濃紺の地・金の縁)。--ph はこの画面の識別色
-    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center justify-center p-3 text-center overflow-hidden">
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center p-3 text-center overflow-hidden">
       <div className="w-full min-h-0 flex flex-col items-center overflow-y-auto mh-scroll">
       <div className="mb-2 shrink-0 flex flex-col items-center gap-1">
         <span className="mh-ph-plate mh-train-sub">WAVE {waveResult.wave} CLEAR</span>
@@ -218,7 +218,7 @@ function RewardPickScreen({
     return (
     // mh-phase … 器の高さで中身を畳む目印(70-bootstrap.jsx の @container)
     // mh-ph-* … タクティクス新盤面と同じ飾りの言葉(濃紺の地・金の縁・回る光の縁・宝石)。--ph は画面の識別色
-    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden" data-screen="training">
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'251,191,36'}} className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center p-3 overflow-hidden" data-screen="training">
       <div className="shrink-0 w-full max-w-sm" style={{paddingTop:'calc(.25rem + env(safe-area-inset-top))'}}>
         {/* どのWAVEを抜けたごほうびなのかを見出しの上に出す */}
         {waveResult?.wave>0&&<div className="mb-1 flex justify-center">

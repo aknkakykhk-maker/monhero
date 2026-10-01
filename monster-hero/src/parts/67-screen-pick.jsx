@@ -296,7 +296,7 @@ function PickHeroAllyScreen({
   return (
 
     // 供モン合流は強化フェーズの1枚なので、タクティクス新盤面と同じ飾り(mh-ph-*)を着せる。勇者モン選びは今までどおり
-    <div style={pickMode==='ally'?{position:"absolute",inset:0,zIndex:30000,'--ph':'129,140,248'}:{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className={`absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode==='ally'?' mh-phase mh-ph-bg':''}`}>
+    <div style={pickMode==='ally'?{position:"absolute",inset:0,zIndex:30000,'--ph':'129,140,248'}:{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className={`absolute inset-0 p-4 pt-6 flex flex-col justify-start overflow-hidden${pickMode==='ally'?' mh-phase mh-ph-bg':''}`}>
       {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
           供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
       <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button disabled={!!battleTutorial} onClick={onBack} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
@@ -586,7 +586,7 @@ function PickProAlliesScreen({
       setMainHero(null);setSlots([null,null,null,null]);setCurrentPickingMon(null);clearSlotUniqueSelection();advanceRunStage('PICK_HERO');
     };
     return (
-    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">
+    <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">
       <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))'}}>
         <button aria-label="戻る" onClick={returnToHero} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
         <h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{proEditingAllyIndex===null?'プロモード編成':`供モン${proEditingAllyIndex+1}を変更`}</h2>
@@ -636,7 +636,7 @@ function PickSlotScreen({
 
     // mh-phase … 背の低い器(横持ち)で、吹き出しと説明を畳んで4つの枠を残す(70-bootstrap.jsx)
     // mh-ph-* … タクティクス新盤面と同じ飾り。4つの枠は盤面と同じ距離の色(零=赤・近=黄・中=緑・遠=青)と模様
-    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'129,140,248'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] flex flex-col items-center p-4 text-center overflow-hidden">
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'129,140,248'}} className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center p-4 text-center overflow-hidden">
       {/* 供モンの合流では、強化フェーズのどこにいるかを出す(ラン開始時の配置では出さない) */}
       {phasePlan&&<PhaseSteps plan={phasePlan} current="slot" nextWave={wave>0?wave+1:null} className="shrink-0 mb-2"/>}
       <div className="shrink-0 flex flex-col items-center">
@@ -731,7 +731,7 @@ function PickTeachingScreen({
     // mh-phase … 背の低い器(横持ち)で吹き出しと説明を畳む目印(70-bootstrap.jsx の @container)。
     // safe-area は body が持っているので、ここでは足さない(41-screen-ui.jsx の注意書き)
     // mh-ph-* … タクティクス新盤面と同じ飾り(濃紺の地・金の縁・回る光の縁・宝石)。--ph は画面の識別色
-    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'192,132,252'}} className="mh-phase mh-ph-bg absolute inset-0 z-[3000] px-4 py-3 flex flex-col items-center overflow-hidden">
+    <div style={{position:"absolute",inset:0,zIndex:30000,'--ph':'192,132,252'}} className="mh-phase mh-ph-bg absolute inset-0 px-4 py-3 flex flex-col items-center overflow-hidden">
       <div className="mb-2 text-center shrink-0 flex flex-col items-center gap-1">
         {/* WAVEのあとは強化フェーズの並び、ラン開始時は札だけ */}
         {phasePlan
@@ -782,7 +782,7 @@ function PickTeachingScreen({
       </div>
       </div>
       {selectedTeachingCard&&(
-        <div className="fixed inset-0 z-[3100] flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.85)',zIndex:31000}}>
+        <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.85)',zIndex:31000}}>
           <div data-ph-kind={(()=>{const o=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); return kindOf(o,!!o&&o.evoLevel>=TEACHING_MAX_LEVEL);})()} data-ph-on=""
             className="mh-phase-pop mh-ph-frame relative rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-3 h-auto max-h-full"><i aria-hidden="true" className="mh-ph-ring"/>
             <span aria-hidden="true" className="mh-ph-sparkle"/>
