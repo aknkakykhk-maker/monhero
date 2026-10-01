@@ -3640,6 +3640,9 @@ const createAnimationStyle = () => {
     @keyframes mhEndSkull { 0% { opacity: 0; transform: translateY(-50px) scale(1.8); } 55% { opacity: 1; transform: translateY(0) scale(1); } 65% { transform: translateX(-6px); } 75% { transform: translateX(6px); } 85% { transform: translateX(-3px); } 100% { transform: none; } }
     .mh-end-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(circle at 50% 30%, rgba(220,38,38,0) 30%, rgba(127,29,29,.55) 100%); animation: mhEndVignette 1.8s ease-out both; }
     @keyframes mhEndVignette { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .35; } }
+    /* バトル設定の「ラン終了の飾り」がオフのとき。紙ふぶき・王冠や題字の登場・赤い縁などを出さない(スコアなどの内容はそのまま) */
+    [data-mh-end-fx="OFF"] .mh-confetti, [data-mh-end-fx="OFF"] .mh-end-vignette { display: none; }
+    [data-mh-end-fx="OFF"] :is(.mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-flag) { animation: none !important; }
     @media (prefers-reduced-motion: reduce) {
       .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette, .mh-end-flag, .mh-defeat-flash { animation: none !important; }
       .mh-defeat-flash { display: none; }
