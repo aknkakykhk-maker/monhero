@@ -88,7 +88,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await closePopups();
     const text = () => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
 
-    // 難易度えらび → 勇者モン(名前で名指し) → 配置 → アシストカード → バトル
+    // 難易度選択 → 勇者モン(名前で名指し) → 配置 → アシストカード → バトル
     // ★見つからなければその場で止める(押せるものを押して進めない。設計 11.2)
     // heroStyle … 配置の画面で選ぶ初期スタイル(剣士モッチーのとき)
     const startTacticsPro = async (heroName, heroStyle = null) => {

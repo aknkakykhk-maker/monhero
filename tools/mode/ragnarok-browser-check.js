@@ -131,6 +131,49 @@ const cardsInfo = () => [...document.querySelectorAll('[data-extreme-difficulty-
       check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
       await page.close();
     }
+
+    // ---- ③ RAGNAROK未クリア: HELHEIMは並ぶが選べない ----
+    {
+      const page = await browser.newPage({ viewport: { width: 393, height: 852 } });
+      const fatal = [];
+      page.on('pageerror', (e) => fatal.push(e.message));
+      await openDifficultySelect(page, { EXTREME: 3, NIGHTMARE: 3, CHAOS: 3, ULTIMATE: 3, INFINITY: 3, GOD: 1 });
+      const cards = await page.evaluate(cardsInfo);
+      const helheim = cards.find(c => c.id === 'HELHEIM');
+      check('HELHEIMのカードが並ぶ', !!helheim, cards.map(c => c.id).join(', '));
+      check('RAGNAROK未クリアではHELHEIMを選べない', helheim?.detailDisabled !== false && helheim?.text.includes('RAGNAROKクリアで解放'), helheim?.text.slice(0, 80));
+      check('RAGNAROKはGODクリアで解放されたまま', cards.find(c => c.id === 'RAGNAROK')?.detailDisabled === false);
+      check('HELHEIM未解放でも致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
+      await page.close();
+    }
+
+    // ---- ④ RAGNAROKクリア済み: HELHEIMが解放され、ルール詳細に冥府と不死が出る ----
+    {
+      const page = await browser.newPage({ viewport: { width: 393, height: 852 } });
+      const fatal = [];
+      page.on('pageerror', (e) => fatal.push(e.message));
+      await openDifficultySelect(page, { EXTREME: 3, NIGHTMARE: 3, CHAOS: 3, ULTIMATE: 3, INFINITY: 3, GOD: 1, RAGNAROK: 1 });
+      const cards = await page.evaluate(cardsInfo);
+      const helheim = cards.find(c => c.id === 'HELHEIM');
+      check('RAGNAROKを1回クリアするとHELHEIMが解放される', helheim?.detailDisabled === false, helheim?.text.slice(0, 80));
+      check('HELHEIMのカードに勇者の証3個を表示する', helheim?.text.replace(/\s+/g,'').includes('🏅勇者の証：3個'), helheim?.text.slice(0, 100));
+      check('HELHEIMのカードは特殊ルールがあることだけを出す', /複合特殊ルールあり/.test(helheim?.ruleSummary || ''), helheim?.ruleSummary);
+      await page.evaluate(() => {
+        document.querySelector('[data-extreme-difficulty-card="HELHEIM"] [data-extreme-rule-detail-open]')?.click();
+      });
+      await page.waitForTimeout(700);
+      const sheet = await page.evaluate(() => {
+        const el = document.querySelector('[data-extreme-rule-detail]') || document.querySelector('[role="dialog"]');
+        return el ? el.innerText.replace(/\s+/g, ' ').trim() : '';
+      });
+      check('HELHEIMのルール詳細が開く', sheet.includes('HELHEIM'), sheet.slice(0, 60));
+      check('冥府の説明が出る', sheet.includes('冥府') && sheet.includes('+30% / +60% / +90% / +120% / +150%') && sheet.includes('味方の最大ライフ'));
+      check('敵のライフ10倍とデュラハンが出る', sheet.includes('すべての敵が10倍') && sheet.includes('デュラハン'));
+      check('距離強化の減衰が出る', sheet.includes('WAVE1で10%') && sheet.includes('WAVE10で1%'));
+      check('不死の説明が出る', sheet.includes('WAVE3（1回） / WAVE5（2回） / WAVE7（2回） / WAVE9（1回） / WAVE10（4回）'));
+      check('HELHEIM操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
+      await page.close();
+    }
   } finally {
     await browser.close();
   }

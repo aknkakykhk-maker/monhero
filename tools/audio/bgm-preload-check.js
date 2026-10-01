@@ -45,15 +45,15 @@ for (const file of files) {
   const missing = runPhase.filter(s => s !== 'CHAMPION' && !preloadStates.includes(s));
   check(`${label}: 編成・強化の画面がすべて入っている`, missing.length === 0, missing.join(',') || `${runPhase.length}画面ぶん`);
 
-  // ★難易度えらびから始める。ここを外すと、編成の短いモード(クイック)で読む時間が足りない。
-  //   難易度をえらぶ画面は難易度ごとに増えるので、名前を並べずに「そういう画面が入っているか」で見る
+  // ★難易度選択から始める。ここを外すと、編成の短いモード(クイック)で読む時間が足りない。
+  //   難易度を選ぶ画面は難易度ごとに増えるので、名前を並べずに「そういう画面が入っているか」で見る
   const selects = preloadStates.filter(s => /_SELECT$/.test(s));
-  check(`${label}: 難易度・モードをえらぶ画面が入っている`,
+  check(`${label}: 難易度・モードを選ぶ画面が入っている`,
     selects.filter(s => /DIFFICULTY_SELECT$/.test(s)).length >= 2 && selects.some(s => /MODE_SELECT$/.test(s)),
     selects.join(','));
 
   // ★「どのバトルで遊ぶか」を選ぶ前は、まだモードが決まっていない。そこで読むと違う曲を取りに行く
-  check(`${label}: 仕組みをえらぶ前の画面では読まない`, !preloadStates.includes('BATTLE_SYSTEM_SELECT'));
+  check(`${label}: 仕組みを選ぶ前の画面では読まない`, !preloadStates.includes('BATTLE_SYSTEM_SELECT'));
 
   // ★読む曲を決める式。鳴らす曲を決める bgmKeyForState を使い回す(二重に書かない)
   check(`${label}: 読む曲は、鳴らす曲を決める式から取る`,

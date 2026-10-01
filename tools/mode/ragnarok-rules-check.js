@@ -105,7 +105,7 @@ check('WAVEごとに不死の回数を数え直す',source.includes('enemyReviva
 // 末尾の「;」まで含めると、停止条件を1つ足すたびにここが落ちる
 // (実際に showAutoBgmPicker を足したときに落ちた)。並びだけを見る
 check('再起の演出中はAUTOを動かさない',source.includes('!!ultimateDistanceBreakReveal||!!enemyRevivalReveal||!!extremeRuleOpen||!!effect'));
-check('通常UIへ公開しGODクリアで解放',source.includes("setting.id==='RAGNAROK'?ragnarokUnlocked:false")&&source.includes("'GODクリアで解放'")
+check('通常UIへ公開しGODクリアで解放',source.includes("setting.id==='RAGNAROK'?ragnarokUnlocked:")&&source.includes("'GODクリアで解放'")
   &&source.includes('const ragnarokUnlocked = useMemo(() => isRagnarokUnlocked(godClearCount), [godClearCount]);'));
 check('バトル中の帯に黄昏Lvと不死の残りを出す',source.includes('const stageLabel=extremeWaveStageLabel(statusRule);')
   &&source.includes('const revivalTotal=extremeRevivalCount(statusRule,wave);')

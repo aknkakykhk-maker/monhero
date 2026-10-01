@@ -227,6 +227,21 @@ const addRhythmMonsterSlot=(value,masuId,masuMons)=>{
   return rhythmMonsterSlotAddIssue(ids,masuId,masuMons)?ids:[...ids,String(masuId)];
 };
 const removeRhythmMonsterSlot=(value,masuId)=>sanitizeRhythmMonsterSlotIds(value).filter(id=>id!==String(masuId));
+// index の枠を masuId に差し替える(2026-10-01・マスモン設定で「押した枠に入れる/入れ替える」ため)。
+// 空き枠(index が設定済みの数と同じ)なら最後へ足す。差し替える枠を除いた残りに対して
+// 足すときと同じ決まり(同じモンスターは重ねない・最大数)で確かめ、だめなら元のまま返す。
+const rhythmMonsterSlotReplaceIssue=(value,index,masuId,masuMons)=>{
+  const ids=sanitizeRhythmMonsterSlotIds(value);
+  return rhythmMonsterSlotAddIssue(ids.filter((_,i)=>i!==Number(index)),masuId,masuMons);
+};
+const replaceRhythmMonsterSlot=(value,index,masuId,masuMons)=>{
+  const ids=sanitizeRhythmMonsterSlotIds(value);
+  const at=Math.max(0,Math.min(ids.length,Math.floor(Number(index)||0)));
+  if(rhythmMonsterSlotReplaceIssue(ids,at,masuId,masuMons))return ids;
+  const rest=ids.filter((_,i)=>i!==at);
+  rest.splice(at,0,String(masuId));
+  return rest;
+};
 // 並び順は登場順そのものなので、入れ替えられるようにしておく。
 const moveRhythmMonsterSlot=(value,index,delta)=>{
   const ids=sanitizeRhythmMonsterSlotIds(value),next=Number(index)+Number(delta);

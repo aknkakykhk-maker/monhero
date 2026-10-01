@@ -34,6 +34,8 @@ function BreederMarketScreen({
   const [sheet,setSheet]=useState(null);
   const [sheetQuantity,setSheetQuantity]=useState(1);
   const [sheetPending,setSheetPending]=useState(false);
+  // 円盤石を買えたときの「円盤石から再生」の演出(DiscRebirthFx)。{ monsterId, discIcon }
+  const [rebirth,setRebirth]=useState(null);
   // ダイヤショップ以外の売り場のタブ(2026-10-01 ユーザー指示「ビートPの商品をタブわけして / マーケット全体的に統一させて」)。
   // ダイヤショップのタブは本体の marketTab のまま。ほかはこの画面の中だけで持つ(マーケットを出たら最初のタブへ戻る)
   const [sectionTabs,setSectionTabs]=useState({});
@@ -89,7 +91,11 @@ function BreederMarketScreen({
     setSheetPending(true);
     try {
       const result = await sheet.confirm(count);
-      if(result===true||result?.ok) setSheet(null);
+      if(result===true||result?.ok){
+        // 円盤石なら、買えたあとに「円盤石から再生」を出す(円盤石は1体1回なので、その子を初めて手に入れたときだけ)
+        if(sheet.rebirth&&ALL_PLAYER_MONSTERS[sheet.rebirth.monsterId]) setRebirth(sheet.rebirth);
+        setSheet(null);
+      }
     } finally { setSheetPending(false); }
   };
   // 所持数と詳細ボタン。消耗品のカードはどの売り場でもこの形
@@ -113,7 +119,8 @@ function BreederMarketScreen({
         {showBase&&<MarketProductCard
           item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
-          onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count) })}
+          onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
+            rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
           middle={item.type==='item'?<><span className={`text-[11px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-400'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<MarketDetailChip label={`${item.name}の効果を見る`} onClick={()=>onOpenItemDetail(item)}/>}</>:null}
@@ -257,7 +264,8 @@ function BreederMarketScreen({
               canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(disc||item)}
-              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false,
+                rebirth:{monsterId:offer.monsterId,discIcon:disc?.icon||item.icon} })}
               detail={mon}
               onDetail={()=>mon&&onOpenDetail(disc||item,mon,null)}
             />;
@@ -294,6 +302,7 @@ function BreederMarketScreen({
         onConfirm={confirmSheet}
         onCancel={closeSheet}
       />}
+      {rebirth&&<DiscRebirthFx mon={ALL_PLAYER_MONSTERS[rebirth.monsterId]} discIcon={rebirth.discIcon} onClose={()=>setRebirth(null)}/>}
     </div>
   );
 }

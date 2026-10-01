@@ -239,7 +239,7 @@ const seed = () => {
     check('固有技の演出が再生される', await page.evaluate(() => /再生中/.test(document.body.innerText)));
     await page.waitForTimeout(2000);
 
-    // --- 画像タブ → 染色をくわしく見る ---
+    // --- 画像タブ → 染色を詳しく見る ---
     await clickSel('[aria-label="詳細へ戻る"]');
     await page.waitForTimeout(800);
     await clickSel('[data-monster-check-tab="art"]');

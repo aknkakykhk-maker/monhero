@@ -461,8 +461,9 @@ const rhythmSlotAbility=masu=>(masu&&masu.baseId)
 const RhythmMonsterNoteGuide=()=>{
   const ratios=rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio=>`${Math.round(ratio*100)}%`);
   return <section data-rhythm-monster-guide className="space-y-3">
-    <article className="rounded-2xl border border-amber-300/40 bg-amber-500/10 p-4">
-      <h3 className="text-sm font-black text-amber-100">モンスターノーツとは</h3>
+    {/* 2026-10-01: 説明は長いので、押すと開く形にたたむ(マスモン設定の枠を先に見せるため) */}
+    <details className="rounded-2xl border border-amber-300/40 bg-amber-500/10 p-4">
+      <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between text-sm font-black text-amber-100">モンスターノーツとは<span aria-hidden="true" className="text-[11px] text-amber-200/80">詳しく ▼</span></summary>
       <p className="mt-2 text-[11px] font-bold leading-relaxed text-amber-50/90">
         ここで設定したマスモンは、曲の途中で金色の「モンスターノーツ」になって流れてきます。
         ノーツの真ん中には、そのマスモンの染色を反映した絵が出ます。
@@ -474,9 +475,9 @@ const RhythmMonsterNoteGuide=()=>{
         <li>・判定の幅・スコアの計算・コンボの数え方は、ふつうのノーツとまったく同じです。</li>
         <li>・いまはTAPのノーツだけがモンスターノーツになります。</li>
       </ul>
-    </article>
-    <article className="rounded-2xl border border-white/15 bg-slate-900/70 p-4">
-      <h3 className="text-sm font-black text-white">どの能力が付くか</h3>
+    </details>
+    <details className="rounded-2xl border border-white/15 bg-slate-900/70 p-4">
+      <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between text-sm font-black text-white">どの能力が付くか（能力の一覧）<span aria-hidden="true" className="text-[11px] text-slate-400">詳しく ▼</span></summary>
       <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">
         能力は<b className="text-slate-200">主血統</b>で決まります。副血統では変わりません。育成・染色でも変わりません。
       </p>
@@ -499,56 +500,101 @@ const RhythmMonsterNoteGuide=()=>{
         必死のあいだは、GREAT・EXCELLENTもJUST MARVELOUSとして数えます（GOOD・BAD・MISSは変わりません）。
         残り時間と根性を持っているかは、演奏中の画面の右上に出ます。
       </p>
-    </article>
+    </details>
   </section>;
 };
 
 // マスモン設定の本体。枠の並び順がそのままモンスターノーツの登場順(§3.3)。
 // 枠には「何番目に出るか」と「その子で何の能力が出るか」まで出す。
 // 名前だけを並べていたころは、設定してもプレイ中に何が起きるのか画面から分からなかった。
-const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhythmMonsterPickerOpen,setRhythmMonsterPickerOpen,rhythmMonsterMessage,setRhythmMonsterMessage,applyRhythmMonsterSlots,masuMons})=>(
+// 【2026-10-01・ユーザー指示「モンビーのマスモン編成をもっと分かりやすくして」】
+//   ・いちばん上に「選ぶ → 曲の途中で金色のノーツになる → GREAT以上で取ると能力」の3行
+//   ・枠ごとに「曲のだいたい何%あたりで出るか」と能力の札を出す
+//   ・空き枠は大きな「＋ マスモンを選ぶ」。押した枠に入る(以前は一覧から押すと次の空き枠へ入るだけ)
+//   ・設定済みの枠も「入れ替え」でその枠だけ差し替えられる(replaceRhythmMonsterSlot)
+//   ・選ぶ一覧は窓(ModalFrame)にして、能力の札で比べられるようにした。画面を開いた瞬間には出さない
+const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhythmMonsterPickerOpen,setRhythmMonsterPickerOpen,rhythmMonsterMessage,setRhythmMonsterMessage,applyRhythmMonsterSlots,masuMons})=>{
+  // どの枠へ入れるか。空き枠なら設定済みの数(=次の空き)、設定済みの枠ならその枠
+  const [pickerTarget,setPickerTarget]=React.useState(0);
+  const ratios=RHYTHM_MONSTER_NOTE_BASE_RATIOS;
+  const openPicker=index=>{setPickerTarget(Math.min(index,rhythmMonsterSlots.length));setRhythmMonsterMessage('');setRhythmMonsterPickerOpen(true);};
+  const target=Math.min(pickerTarget,rhythmMonsterSlots.length);
+  const targetMasu=rhythmMonsterSlots[target]||null;
+  const candidates=masuMons.filter(masu=>masu&&ALL_PLAYER_MONSTERS[masu.baseId]);
+  const slotOf=masu=>rhythmMonsterSlotIdsInUse.indexOf(String(masu.id));
+  return (
   <section data-rhythm-monster-slots className="rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-4">
               <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-black text-fuchsia-200">モンスターノーツ用マスモン</h3><span data-rhythm-monster-count className="shrink-0 rounded-full border border-fuchsia-300/50 px-2 py-0.5 text-[10px] font-black text-fuchsia-200">{rhythmMonsterSlots.length} / {RHYTHM_MONSTER_SLOT_MAX}体</span></div>
-              <p className="mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80">上から順に登場します。同じモンスターは別の個体でも重ねて設定できません。{RHYTHM_MONSTER_SLOT_MAX}体そろえる必要はなく、1〜3体でも遊べます。</p>
+              <ol data-rhythm-monster-steps className="mt-2 grid grid-cols-3 gap-1.5 text-center text-[10px] font-black leading-snug text-fuchsia-50/90">
+                <li className="rounded-lg border border-fuchsia-300/25 bg-slate-950/50 px-1.5 py-2"><span className="block text-base leading-none">👾</span>マスモンを<br/>枠に選ぶ</li>
+                <li className="rounded-lg border border-amber-300/30 bg-slate-950/50 px-1.5 py-2"><span className="block text-base leading-none">🌟</span>曲の途中で<br/>金色のノーツに</li>
+                <li className="rounded-lg border border-emerald-300/30 bg-slate-950/50 px-1.5 py-2"><span className="block text-base leading-none">✨</span>{RHYTHM_MONSTER_ABILITY_JUDGMENTS[RHYTHM_MONSTER_ABILITY_JUDGMENTS.length-1]}以上で<br/>取ると能力</li>
+              </ol>
+              <p className="mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80">上の枠から順に登場します。同じモンスターは別の個体でも重ねて設定できません。{RHYTHM_MONSTER_SLOT_MAX}体そろえる必要はなく、1〜3体でも遊べます。</p>
               <ol className="mt-3 space-y-2">{Array.from({length:RHYTHM_MONSTER_SLOT_MAX},(_,index)=>{
                 const masu=rhythmMonsterSlots[index]||null,base=masu?ALL_PLAYER_MONSTERS[masu.baseId]:null;
                 const lineage=masu?monsterLineageOf(masu.baseId).main:null;
                 const ability=rhythmSlotAbility(masu);
+                const timing=<span className="block text-[10px] font-bold text-fuchsia-200/70">曲の約{Math.round((ratios[index]||0)*100)}%</span>;
+                // 空き枠。押せるのは「次に入る枠」だけ(枠は上から詰めて使うため)。その先の枠は薄く出す
+                if(!masu){
+                  const next=index===rhythmMonsterSlots.length;
+                  return <li key={index} data-rhythm-monster-slot={index+1}>
+                    <button type="button" data-rhythm-monster-slot-add={index+1} disabled={!next} onClick={()=>openPicker(index)}
+                      className={`flex min-h-[64px] w-full items-center gap-2.5 rounded-xl border-2 border-dashed p-2.5 text-left ${next?'border-fuchsia-300/60 bg-fuchsia-900/20 active:scale-[.98]':'border-white/10 bg-slate-900/40 opacity-50'}`}>
+                      <span className="w-12 shrink-0 rounded-lg border border-fuchsia-300/40 py-1 text-center text-[11px] font-black leading-tight text-fuchsia-200">{index+1}番目{timing}</span>
+                      <span className="min-w-0 flex-1 text-[12px] font-black text-fuchsia-100">{next?'＋ マスモンを選ぶ':'未設定'}</span>
+                    </button>
+                  </li>;
+                }
                 return <li key={index} data-rhythm-monster-slot={index+1} className="rounded-xl border border-white/10 bg-slate-900/80 p-2.5">
                   <div className="flex items-center gap-2.5">
-                    <span className="w-9 shrink-0 rounded-lg border border-fuchsia-300/40 py-0.5 text-center text-[9px] font-black leading-tight text-fuchsia-200">{index+1}<br/>番目</span>
-                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-950">{masu&&base&&<DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/>}</div>
-                    <div className="min-w-0 flex-1">{masu?<React.Fragment><b className="block truncate text-[12px] font-black">{masu.name}</b><small className="block truncate text-[10px] text-slate-400">{base?.name||masu.baseId}{lineage?` / ${lineage.name}血統`:''}</small></React.Fragment>:<small className="text-[11px] font-bold text-slate-500">未設定</small>}</div>
-                    {masu&&<div className="flex shrink-0 gap-1">
-                      <button type="button" aria-label={`${index+1}枠目を前へ`} disabled={index===0} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,-1),'登場順を入れ替えました')} className="min-h-[40px] min-w-[40px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30">↑</button>
-                      <button type="button" aria-label={`${index+1}枠目を後ろへ`} disabled={index>=rhythmMonsterSlots.length-1} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,1),'登場順を入れ替えました')} className="min-h-[40px] min-w-[40px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30">↓</button>
-                      <button type="button" data-rhythm-monster-remove aria-label={`${masu.name}を外す`} onClick={()=>applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id),`${masu.name}を外しました`)} className="min-h-[40px] rounded-lg border border-rose-300/50 px-2 text-[11px] font-black text-rose-200">外す</button>
-                    </div>}
+                    <span className="w-12 shrink-0 rounded-lg border border-fuchsia-300/40 py-1 text-center text-[11px] font-black leading-tight text-fuchsia-200">{index+1}番目{timing}</span>
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-950">{base&&<DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/>}</div>
+                    <div className="min-w-0 flex-1"><b className="block truncate text-[13px] font-black">{masu.name}</b><small className="block truncate text-[10px] text-slate-400">{base?.name||masu.baseId}{lineage?` / ${lineage.name}血統`:''}</small></div>
                   </div>
                   {/* 設定した子で「何が起きるか」まで枠の中に出す。
                       名前だけでは、プレイ中に何が起きるのかここから分からなかった */}
-                  {masu&&<p data-rhythm-monster-slot-ability={ability?ability.id:'none'}
-                    className={`mt-2 rounded-lg border px-2 py-1.5 text-[10px] font-bold leading-relaxed ${rhythmAbilityTone(ability?ability.id:'')}`}>
+                  <p data-rhythm-monster-slot-ability={ability?ability.id:'none'}
+                    className={`mt-2 rounded-lg border px-2 py-1.5 text-[11px] font-bold leading-relaxed ${rhythmAbilityTone(ability?ability.id:'')}`}>
                     {ability
-                      ?<>{rhythmAbilityEmoji(ability.id)} {ability.name} — {rhythmAbilityEffectText(ability)}</>
+                      ?<><b className="font-black">{rhythmAbilityEmoji(ability.id)} {ability.name}</b> — {rhythmAbilityEffectText(ability)}</>
                       :<>この血統の能力はまだ決まっていません。モンスターノーツにはなりますが、能力は出ません。</>}
-                  </p>}
+                  </p>
+                  <div className="mt-2 grid grid-cols-4 gap-1.5">
+                    <button type="button" aria-label={`${index+1}枠目を前へ`} disabled={index===0} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,-1),'登場順を入れ替えました')} className="min-h-[44px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30">↑ 前へ</button>
+                    <button type="button" aria-label={`${index+1}枠目を後ろへ`} disabled={index>=rhythmMonsterSlots.length-1} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,1),'登場順を入れ替えました')} className="min-h-[44px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30">↓ 後へ</button>
+                    <button type="button" data-rhythm-monster-replace={index+1} aria-label={`${index+1}枠目の${masu.name}を入れ替える`} onClick={()=>openPicker(index)} className="min-h-[44px] rounded-lg border border-fuchsia-300/50 text-[11px] font-black text-fuchsia-100">入れ替え</button>
+                    <button type="button" data-rhythm-monster-remove aria-label={`${masu.name}を外す`} onClick={()=>applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id),`${masu.name}を外しました`)} className="min-h-[44px] rounded-lg border border-rose-300/50 text-[11px] font-black text-rose-200">外す</button>
+                  </div>
                 </li>;})}</ol>
-              <button type="button" data-rhythm-monster-picker-toggle aria-expanded={rhythmMonsterPickerOpen} onClick={()=>{setRhythmMonsterPickerOpen(!rhythmMonsterPickerOpen);setRhythmMonsterMessage('');}} className="mt-3 min-h-[48px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[12px] font-black text-fuchsia-100">{rhythmMonsterPickerOpen?'マスモン一覧を閉じる':'マスモンから設定する'}</button>
               {rhythmMonsterMessage&&<p data-rhythm-monster-message role="status" className="mt-2 text-[11px] font-bold text-amber-200">{rhythmMonsterMessage}</p>}
-              {rhythmMonsterPickerOpen&&<ul data-rhythm-monster-picker className="mh-scroll mt-2 max-h-72 space-y-1.5 overflow-y-auto">
-                {masuMons.filter(masu=>masu&&ALL_PLAYER_MONSTERS[masu.baseId]).map(masu=>{
-                  const base=ALL_PLAYER_MONSTERS[masu.baseId],issue=rhythmMonsterSlotAddIssue(rhythmMonsterSlotIdsInUse,masu.id,masuMons);
-                  const ability=rhythmSlotAbility(masu);
-                  return <li key={masu.id}><button type="button" disabled={!!issue} onClick={()=>applyRhythmMonsterSlots(addRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id,masuMons),`${masu.name}を${rhythmMonsterSlots.length+1}枠目に設定しました`)} className={`flex min-h-[48px] w-full items-center gap-2.5 rounded-xl border p-2 text-left ${issue?'border-white/10 bg-slate-900/40 opacity-50':'border-white/20 bg-slate-900/80'}`}>
-                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-slate-950"><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/></div>
-                    <div className="min-w-0 flex-1"><b className="block truncate text-[12px] font-black">{masu.name}</b><small className="block truncate text-[10px] text-slate-400">{base.name}{ability?` / ${rhythmAbilityEmoji(ability.id)}${ability.name}`:''}</small></div>
-                    {issue&&<small className="shrink-0 text-[10px] font-bold text-rose-300">{RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue]}</small>}
+              {/* 選ぶ一覧。押した枠(target)へ入れる。設定済みの枠から開いたときは、その枠の子と差し替える */}
+              {rhythmMonsterPickerOpen&&<ModalFrame label="モンスターノーツにするマスモンを選ぶ" border="border-fuchsia-400/70" onClose={()=>setRhythmMonsterPickerOpen(false)}>
+                <h3 className="text-center text-base font-black text-fuchsia-100">{target+1}番目に出すマスモン</h3>
+                <p className="mt-1 text-center text-[10px] font-bold text-slate-400">曲の約{Math.round((ratios[target]||0)*100)}%あたりで出ます{targetMasu?`（いまは ${targetMasu.name}）`:''}</p>
+                <ul data-rhythm-monster-picker className="mh-scroll mt-3 max-h-[55vh] space-y-1.5 overflow-y-auto">
+                {candidates.map(masu=>{
+                  const base=ALL_PLAYER_MONSTERS[masu.baseId],issue=rhythmMonsterSlotReplaceIssue(rhythmMonsterSlotIdsInUse,target,masu.id,masuMons);
+                  const ability=rhythmSlotAbility(masu),at=slotOf(masu);
+                  const current=at===target;
+                  const label=at>=0&&!current?`${at+1}番目に設定中`:issue?RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue]:'';
+                  return <li key={masu.id}><button type="button" disabled={!!issue||current} onClick={()=>{const next=replaceRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,target,masu.id,masuMons);applyRhythmMonsterSlots(next,targetMasu?`${target+1}番目を ${masu.name} に入れ替えました`:`${masu.name}を${target+1}番目に設定しました`);setRhythmMonsterPickerOpen(false);}}
+                    className={`flex min-h-[56px] w-full items-center gap-2.5 rounded-xl border p-2 text-left ${issue||current?'border-white/10 bg-slate-900/40 opacity-50':'border-white/20 bg-slate-900/80 active:scale-[.98]'}`}>
+                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-950"><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/></div>
+                    <div className="min-w-0 flex-1">
+                      <b className="block truncate text-[12px] font-black">{masu.name}<small className="ml-1 text-[10px] font-bold text-slate-400">{base.name}</small></b>
+                      <span className={`mt-0.5 inline-block max-w-full truncate rounded-md border px-1.5 py-0.5 text-[10px] font-black ${rhythmAbilityTone(ability?ability.id:'')}`}>{ability?`${rhythmAbilityEmoji(ability.id)}${ability.name}`:'能力なし'}</span>
+                    </div>
+                    {(label||current)&&<small className="shrink-0 text-right text-[10px] font-bold text-rose-300">{current?'この枠の子':label}</small>}
                   </button></li>;})}
-                {masuMons.filter(masu=>masu&&ALL_PLAYER_MONSTERS[masu.baseId]).length===0&&<li className="rounded-xl border border-white/10 p-4 text-center text-[11px] font-bold text-slate-500">設定できるマスモンがいません</li>}
-              </ul>}
+                {candidates.length===0&&<li className="rounded-xl border border-white/10 p-4 text-center text-[11px] font-bold text-slate-500">設定できるマスモンがいません</li>}
+                </ul>
+                <div className="mt-3"><ModalCloseButton onClick={()=>setRhythmMonsterPickerOpen(false)}/></div>
+              </ModalFrame>}
             </section>
-);
+  );
+};
 
 // debugPlay … 音ゲーデバッグ画面から始めたプレイかどうか。
 // デバッグ専用の表示(HOLD TEST / 中断して音ゲーデバッグへ戻る / 座標校正)は、

@@ -1722,7 +1722,7 @@ function MonsterHeroGame() {
   // 種族(主血統)のしぼりこみ。'all' か MONSTER_LINEAGES のid。並べかえとは独立していて同時に効く
   const [monsterLineageFilter, setMonsterLineageFilter] = useState('all');
   const [monsterDisplayFlags, setMonsterDisplayFlags] = useState({ ...DEFAULT_MONSTER_LIST_SETTINGS.display }); // 各カードに出す情報(複数選択可、オフで非表示)
-  const [showSortFilterModal, setShowSortFilterModal] = useState(false); // ならべかえ・表示設定モーダルの開閉
+  const [showSortFilterModal, setShowSortFilterModal] = useState(false); // 並べ替え・表示設定モーダルの開閉
   const [sortFilterModalTab, setSortFilterModalTab] = useState('sort'); // モーダル内タブ: 'sort'|'display'
   const [sortFilterModalSingleType, setSortFilterModalSingleType] = useState(false); // ベースモン一覧/マスモン一覧から開いた場合true(種別チップを出さない)
   const [draftTeachingRoster, setDraftTeachingRoster] = useState([]); // 編成画面での仮選択(決定を押すまでteachingRosterIdsには反映しない)
@@ -2331,12 +2331,14 @@ function MonsterHeroGame() {
   const ultimateClearCount = extremeClearCounts[ULTIMATE_SETTING.id] || 0;
   const infinityClearCount = extremeClearCounts[INFINITY_SETTING.id] || 0;
   const godClearCount = extremeClearCounts[GOD_SETTING.id] || 0;
+  const ragnarokClearCount = extremeClearCounts[RAGNAROK_SETTING.id] || 0;
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
   const chaosUnlocked = useMemo(() => isChaosUnlocked(nightmareClearCount), [nightmareClearCount]);
   const ultimateUnlocked = useMemo(() => isUltimateUnlocked(chaosClearCount), [chaosClearCount]);
   const infinityUnlocked = useMemo(() => isInfinityUnlocked(ultimateClearCount), [ultimateClearCount]);
   const godUnlocked = useMemo(() => isGodUnlocked(infinityClearCount), [infinityClearCount]);
   const ragnarokUnlocked = useMemo(() => isRagnarokUnlocked(godClearCount), [godClearCount]);
+  const helheimUnlocked = useMemo(() => isHelheimUnlocked(ragnarokClearCount), [ragnarokClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
@@ -2347,7 +2349,12 @@ function MonsterHeroGame() {
   const scoreMultiplier = extremeRun ? (activeExtremeBattleSetting.score||1) : (isQuickMode(runMode) ? (activeDifficultySetting.xp ?? activeDifficultySetting.score) : activeDifficultySetting.score);
   const xpMultiplier = extremeRun ? (activeExtremeBattleSetting.xp||1) : scoreMultiplier;
   const goldMultiplier = extremeRun ? (activeExtremeBattleSetting.gold||1) : activeDifficultySetting.gold;
-  const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);
+  // 冥府(HELHEIM)は段階ごとに味方の最大ライフを削る。保存される maxHp には触れず、実効最大値にだけ掛ける。
+  // 段階を持たない難易度では1倍(いまの最大ライフのまま)
+  const allyMaxHpRate = extremeAllyMaxHpRate(specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty), wave);
+  const allyMaxHpRateRef = useRef(1);
+  useEffect(() => { allyMaxHpRateRef.current = allyMaxHpRate; }, [allyMaxHpRate]);
+  const effectiveMaxHp = useMemo(() => applyAllyMaxHpRate(resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), allyMaxHpRate), [maxHp, permaBuffs, allyMaxHpRate]);
   const effectiveMaxGuts = useMemo(() => resolveEffectiveMaxStat(maxGuts, getPermaBuff('muaGutsPct')), [maxGuts, permaBuffs]);
   // 丈夫さのバフ(defPct)を乗せた「実際に計算へ使う丈夫さ」。ライフ・ガッツと同じ考え方で、
   // 基礎ステータス(def)そのものは書き換えずバフ層で持つ。
@@ -2367,7 +2374,7 @@ function MonsterHeroGame() {
   const maxGutsRef = useRef(100);
   useEffect(() => { maxHpRef.current = maxHp; }, [maxHp]);
   useEffect(() => { maxGutsRef.current = maxGuts; }, [maxGuts]);
-  const liveEffectiveMaxHp = () => resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct'));
+  const liveEffectiveMaxHp = () => applyAllyMaxHpRate(resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct')), allyMaxHpRateRef.current);
   // みゅあ・かどみうむ・回復カードでライフ上限の倍率が上がったら、1体ずつの上限にも効かせる。
   // ★パーティの maxHp は「素の上限の合計」なので、既存モードと同じく effectiveMaxHp が倍率を掛ける。
   //   1体ずつの上限へ同じ倍率を入れておかないと、盤面の合計がゲージの満タンまで届かない
@@ -6220,7 +6227,7 @@ function MonsterHeroGame() {
     return (
       <div className="mb-2 shrink-0 flex gap-2">
         <button onClick={() => openModal('sort')} className="flex-1 min-w-0 min-h-[44px] flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 active:scale-95">
-          <span className="text-[11px] font-black text-white truncate">並べかえ: {currentSortOpt?.label}{monsterSortKey === currentSortOpt?.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}</span>
+          <span className="text-[11px] font-black text-white truncate">並べ替え: {currentSortOpt?.label}{monsterSortKey === currentSortOpt?.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}</span>
           <ChevronRight size={14} className="text-slate-400 shrink-0"/>
         </button>
         {/* 種族のしぼりこみ。並べかえと掛け合わせて使えるので、別のボタンとして常に出す。
@@ -11988,6 +11995,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // ★タクティクスバトルは敵の並びが別(TACTICS_ENEMY_SEQUENCE)。モードを渡して選ばせる
     const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier*tacticsEnemyBoost,{mode:runMode});
     if (!newEnemy) return null;
+    // 敵の基礎ライフ・攻撃力への上乗せ(HELHEIMのライフ10倍・デュラハンの専用倍率)。
+    // 難易度名ではなく「上乗せを持っているか」で見るので、持たない難易度では何も変わらない
+    const enemyAdjust=extremeEnemyStatAdjust(specialRuleDifficulty,newEnemy.id);
+    if (enemyAdjust.lifeRate!==1||enemyAdjust.atkRate!==1) {
+      newEnemy.maxHp=Math.floor(newEnemy.maxHp*enemyAdjust.lifeRate);
+      newEnemy.hp=newEnemy.maxHp;
+      newEnemy.atk=Math.floor(newEnemy.atk*enemyAdjust.atkRate);
+    }
     // 最高到達WAVEもモードごとに別々に記録する。
     // 極限チャレンジは難易度が別表(内部の difficulty は Normal のまま)なので、ここへ入れると
     // チャレンジのNormalの記録を書き換えてしまう。デバッグ戦・練習と同じく記録しない
@@ -13608,7 +13623,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           リンクは更新履歴のエントリに link:{url,label} と書いたときだけ出る */}
                       {changelogSafeLink(c.link)&&<a data-changelog-link
                         href={changelogSafeLink(c.link)} target="_blank" rel="noopener noreferrer">
-                        {(c.link&&c.link.label)||'くわしく見る'} ↗
+                        {(c.link&&c.link.label)||'詳しく見る'} ↗
                       </a>}
                     </section>))}
                   </div>}
@@ -14757,14 +14772,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:setting.id==='HELHEIM'?helheimUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
                       <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[400px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?theme.accent:`rgba(${theme.rgb},.28)`,background:previewable?theme.background:`linear-gradient(180deg,rgba(${theme.rgb},.10),#0d142b)`,boxShadow:active?`0 0 ${theme.shadowBlur}px rgba(${theme.rgb},${theme.glow})`:'none'}}>
                         <div className="text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
                         <h3 className="text-center text-lg font-black leading-tight" style={{color:theme.accent,textShadow:active?`0 0 10px rgba(${theme.rgb},${theme.titleGlow})`:'none'}}>{setting.label}</h3>
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/45 px-2.5 py-1">
                           <small className="block text-[8px] text-slate-400 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
                           <b className="block text-right text-base leading-tight" style={{color:theme.accent}}>{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':'選択できません'}</span>
+                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':setting.id==='HELHEIM'&&!helheimUnlocked?'RAGNAROKクリアで解放':'選択できません'}</span>
                         </div>
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
@@ -15008,7 +15023,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return <main className="flex-1 min-h-0 flex flex-col bg-slate-950" style={{paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}}>
             <div className="mh-debug-banner">DEBUG・模様は保存されません</div>
             <header className="flex items-center gap-2 px-2 py-1 shrink-0 border-b border-white/10"><button aria-label="戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-300"><ArrowLeft size={20}/></button><div className="min-w-0"><small className="block text-[8px] font-black text-fuchsia-400">PATTERN CUSTOM TEST</small><h2 className="truncate text-xs font-black">{selected?selected.name:'マスモン模様カスタム'}</h2></div>{selected&&<button onClick={()=>setPatternMasuId(null)} className="ml-auto min-h-[40px] px-3 rounded-xl bg-slate-800 text-[9px] font-black">変更</button>}</header>
-            {eligible.length===0?<section className="flex-1 flex items-center justify-center p-6 text-center font-black text-slate-300">カスタマイズできる所持マスモンがいません</section>:!selected?<section className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4"><p className="mb-3 text-[11px] font-bold text-slate-400">模様を試すモンスターを1体えらんでください（所持していない種もそのまま試せます）。</p><div className="grid grid-cols-3 gap-2">{eligible.map(m=>{const base=ALL_PLAYER_MONSTERS[m.baseId];return <button key={m.id} onClick={()=>{setPatternMasuId(m.id);resetPattern();}} className="min-h-[116px] rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-2"><DyedMonsterImage baseId={m.baseId} src={masuDisplayImageUrl(base)} alt={m.name} masuColors={getMasuColors(m)} className="w-16 h-16 mx-auto object-contain"/><b className="block truncate text-[10px]">{m.name}</b></button>})}</div></section>:(()=>{
+            {eligible.length===0?<section className="flex-1 flex items-center justify-center p-6 text-center font-black text-slate-300">カスタマイズできる所持マスモンがいません</section>:!selected?<section className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4"><p className="mb-3 text-[11px] font-bold text-slate-400">模様を試すモンスターを1体選んでください（所持していない種もそのまま試せます）。</p><div className="grid grid-cols-3 gap-2">{eligible.map(m=>{const base=ALL_PLAYER_MONSTERS[m.baseId];return <button key={m.id} onClick={()=>{setPatternMasuId(m.id);resetPattern();}} className="min-h-[116px] rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-2"><DyedMonsterImage baseId={m.baseId} src={masuDisplayImageUrl(base)} alt={m.name} masuColors={getMasuColors(m)} className="w-16 h-16 mx-auto object-contain"/><b className="block truncate text-[10px]">{m.name}</b></button>})}</div></section>:(()=>{
               const base=ALL_PLAYER_MONSTERS[selected.baseId],regions=dyeRegionCount(selected.baseId),colors=getMasuColors(selected);
               const mode=patternSettings.mode,selectedKey=patternSettings.selectedLayer;
               const selectedDecal=patternSettings.decals.find(d=>`decal:${d.id}`===selectedKey)||null;
@@ -15569,6 +15584,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ・左の「ジャンルタブ」は曲が増えてから足す(2026-09-05・ユーザー指示で今回は置かない) */}
         {gameState==='RHYTHM_DEMO_HOME'&&(
           <RhythmSongSelectScreen
+            monsterSlots={rhythmMonsterSlots}
             rhythmSettings={rhythmSettings}
             onToggleRhythmSetting={async key=>{const saved=await saveRhythmSettings({...rhythmSettings,[key]:!rhythmSettings[key]});setRhythmSettings(saved);}}
             catchingUp={catchingUp}
@@ -15592,7 +15608,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               setGameState('RHYTHM_RANKING');
             }}
             onOpenHelp={()=>{setRhythmHelpTopicId(null);setGameState('RHYTHM_DEMO_HELP');}}
-            onOpenMonsterSlots={()=>{setRhythmMonsterPickerOpen(true);setGameState('RHYTHM_DEMO_MONSTERS');}}
+            onOpenMonsterSlots={()=>{setRhythmMonsterPickerOpen(false);setRhythmMonsterMessage('');setGameState('RHYTHM_DEMO_MONSTERS');}}
             onOpenOptions={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
             onOpenRanking={(song)=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}
             onPlaySong={(song,difficulty)=>{/* 全画面へ入れるのは「指で押した直後」だけなので、決定を押したこの場で頼む。\n              画面が変わってから頼むと、ブラウザに断られる */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
@@ -16078,7 +16094,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
             {/* プレビュー中は上に帯が出るので、見出しが隠れないぶんだけ下げる */}
             <div className="shrink-0 text-center mb-3" style={{paddingTop:onboardingPreview?'calc(2.75rem + env(safe-area-inset-top))':'env(safe-area-inset-top)'}}>
-              <h2 className="text-lg font-black italic text-indigo-300 uppercase tracking-widest">助手をえらぶ</h2>
+              <h2 className="text-lg font-black italic text-indigo-300 uppercase tracking-widest">助手を選ぶ</h2>
               <p className="text-[10px] text-slate-400 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。<br/>あとからプロフィールでいつでも変えられます。</p>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
@@ -16086,7 +16102,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* はじめの助手えらび。イベントで加入する助手(ドラ)は、その会話を見るまで並べない */}
                 {assistantsUnlockedFrom(rhythmEventStorySeen).map(who=>(
                   <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
-                    aria-label={`${who.name}をえらぶ`}
+                    aria-label={`${who.name}を選ぶ`}
                     className={`rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id===selectedAssistantId?'':'opacity-95'}`}
                     style={{border:`2px solid ${who.id===selectedAssistantId?who.accent:'rgba(255,255,255,.14)'}`,backgroundColor:who.id===selectedAssistantId?`${who.accent}1f`:'rgba(15,23,42,.75)'}}>
                     <AssistantFace who={who} size={88} accent={who.accent} expression="happy"/>
@@ -16245,7 +16261,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     操作の説明は助手の吹き出し(scene="roster")が受け持つ。 */}
                 {renderMonsterSortFilterBar()}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-                  {unifiedMonsterEntriesDraft.length===0&&<ScreenEmpty emoji="🔍" lines={['表示するモンスターがいません。','上の「表示」「種族」でしぼりこみを見直してください。']}/>}
+                  {unifiedMonsterEntriesDraft.length===0&&<ScreenEmpty emoji="🔍" lines={['表示するモンスターがいません。','上の「表示」「種族」で絞り込みを見直してください。']}/>}
                   <div className="grid grid-cols-3 gap-2.5 pb-4">
                     {unifiedMonsterEntriesDraft.map(e=>{
                       if (e.type==='base') {
@@ -16362,7 +16378,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <ScreenLead>解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</ScreenLead>
             {renderMonsterSortFilterBar({ singleType: true })}
             <div className={SCREEN_LIST_CLASS}>
-              {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').length===0&&<ScreenEmpty emoji="🔍" lines={['表示するベースモンがいません。','上の「表示」「種族」でしぼりこみを見直してください。']}/>}
+              {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').length===0&&<ScreenEmpty emoji="🔍" lines={['表示するベースモンがいません。','上の「表示」「種族」で絞り込みを見直してください。']}/>}
               <div className="grid grid-cols-3 gap-2.5 pb-4">
                 {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').map(e=>{
                   const m = e.base;
@@ -16617,11 +16633,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return (
             <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.98)',zIndex:32500,paddingTop:'env(safe-area-inset-top)'}}>
               <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10">
-                <h3 className="text-base font-black text-white flex-1">ならべかえ・表示設定</h3>
+                <h3 className="text-base font-black text-white flex-1">並べ替え・表示設定</h3>
                 <button onClick={()=>setShowSortFilterModal(false)} className="p-2.5 bg-white/5 rounded-full active:scale-90"><X size={18}/></button>
               </div>
               <div className="flex gap-2 px-4 pt-3 shrink-0">
-                {[{key:'sort',label:'ならべかえ'},{key:'lineage',label:'種族'},{key:'display',label:'表示設定'}].map(tab=>(
+                {[{key:'sort',label:'並べ替え'},{key:'lineage',label:'種族'},{key:'display',label:'表示設定'}].map(tab=>(
                   <button key={tab.key} onClick={()=>setSortFilterModalTab(tab.key)} style={{minHeight:'44px'}} className={`flex-1 rounded-xl text-xs font-black uppercase active:scale-95 ${sortFilterModalTab===tab.key?'bg-indigo-500 text-white':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
                 ))}
               </div>
@@ -16641,7 +16657,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   /* 種族(主血統)のしぼりこみ。ならべかえとは別軸なので、選んだまま並べかえも変えられる。
                      種族の顔ぶれは data/lineages.js が正本(dexMainLineages)で、ここへ書き写さない */
                   <div>
-                    <p className="mb-2.5 text-[10px] leading-relaxed text-slate-400">選んだ種族だけを表示します。ならべかえ・表示設定はそのまま効きます。</p>
+                    <p className="mb-2.5 text-[10px] leading-relaxed text-slate-400">選んだ種族だけを表示します。並べ替え・表示設定はそのまま効きます。</p>
                     <div className="grid grid-cols-2 gap-2.5">
                       {[{id:'all',label:'すべて'},...dexMainLineages().map(l=>({id:l.id,label:`${l.name}種`}))].map(opt=>{
                         const active = monsterLineageFilter===opt.id;
@@ -16846,7 +16862,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       </div>
                     );
                   })}
-                  {rows.length<=1&&<div className="text-[9px] text-slate-500 font-bold text-center px-2 py-1 leading-relaxed">固有技が1つだけのため、並び替えと初期技の変更はできません。合体で固有技を継承すると設定できるようになります。</div>}
+                  {rows.length<=1&&<div className="text-[9px] text-slate-500 font-bold text-center px-2 py-1 leading-relaxed">固有技が1つだけのため、並べ替えと初期技の変更はできません。合体で固有技を継承すると設定できるようになります。</div>}
                 </div>
                 <div className="shrink-0 flex flex-col gap-1.5 pt-1 border-t border-white/10">
                   <div className="text-[8px] text-slate-500 font-bold text-center leading-tight">固有技Lvと固有技Pは変わりません</div>
@@ -17909,7 +17925,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span className="block text-[12px] text-white leading-relaxed mt-0.5">{assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)}</span>
                   </div>
                 </div>
-                <button onClick={()=>{ if(last) endBattleTutorial(true); else setBattleTutorialStep(v=>Math.min(total-1,(v||0)+1)); }} className="w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'おわる':'次へ'}</button>
+                <button onClick={()=>{ if(last) endBattleTutorial(true); else setBattleTutorialStep(v=>Math.min(total-1,(v||0)+1)); }} className="w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'終わる':'次へ'}</button>
               </div>
             )}
           </div>
@@ -17996,7 +18012,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <button onClick={()=>finishTutorial(false)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>わかった！</button>
             )}
             {!battleGuide&&<div className="w-full grid grid-cols-2 gap-2 mt-3">
-              <button disabled={tutorialStep<=0} onClick={()=>setTutorialStep(v=>Math.max(0,v-1))} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]">もどる</button>
+              <button disabled={tutorialStep<=0} onClick={()=>setTutorialStep(v=>Math.max(0,v-1))} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]">戻る</button>
               <button onClick={()=>{ if(last) finishTutorial(true); else setTutorialStep(v=>v+1); }} className={`min-h-[48px] rounded-2xl font-black text-sm active:scale-[.98] ${page.offer==='battle'?'bg-slate-800 text-slate-300':'text-black'}`} style={page.offer==='battle'?undefined:{backgroundColor:who.accent}}>{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'次へ'}</button>
             </div>}
             {battleGuide&&!page.offer&&!page.declined&&<button onClick={()=>setTutorialStep(v=>v+1)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>次へ</button>}

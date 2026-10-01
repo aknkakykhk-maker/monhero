@@ -194,7 +194,7 @@ check('図鑑のための保存キーを増やしていない(立ち絵の動き
 check('未解放はシルエットと ？？？ で出す',
   list.includes("'？？？'") && sharedDex.includes('brightness(0)') && list.includes('hidden={!unlocked}')
   && detail.includes('<DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>'));
-check('主血統でしぼりこめる', list.includes('dexLineageFilter') && list.includes('主血統でしぼりこむ'));
+check('主血統で絞り込める', list.includes('dexLineageFilter') && list.includes('主血統で絞り込む'));
 check('詳細に前後移動のボタンとスワイプがある',
   detail.includes('data-dex-prev') && detail.includes('data-dex-next')
   && detail.includes('onTouchStart') && detail.includes('onTouchEnd'));

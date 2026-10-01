@@ -218,7 +218,7 @@ const noDetail = ReactDOMServer.renderToStaticMarkup(React.createElement(moduleS
 // 顔は常にタップできる(次のセリフへ送るため)ので、見るのは吹き出し側だけ
 check('詳細が無いときは吹き出しをタップできる見た目にしない',
   !text(noDetail).includes('タップで詳しく') && !noDetail.includes('の説明を開く'));
-check('顔はいつでもタップして話しかけられる', noDetail.includes('にはなしかける'));
+check('顔はいつでもタップして話しかけられる', noDetail.includes('に話しかける'));
 
 // --- 助手の開閉と、最後の項目 ---
 const closed = text(render({ helpCatId: 'battle', helpAssistantOpen: false }));

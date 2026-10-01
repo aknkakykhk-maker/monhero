@@ -131,7 +131,7 @@ const check = (name, ok, detail = '') => {
       `変更ボタン ${await page.getByRole('button', { name: '変更' }).count()}個`);
 
     // --- ③④ 5体そろうまで始められない ---
-    const startButton = page.getByRole('button', { name: /この編成で開始|あと\d体えらんでください/ });
+    const startButton = page.getByRole('button', { name: /この編成で開始|あと\d体選んでください/ });
     check('そろうまでは始められない', await startButton.isDisabled());
 
     // 供モンの枠を1つずつ開いて選ぶ。枠ごとに開くのが現在の作り
@@ -155,7 +155,7 @@ const check = (name, ok, detail = '') => {
       await poolCards.first().dispatchEvent('click');
       await page.getByRole('heading', { name: 'プロモード編成' }).waitFor({ timeout: 15000 });
     }
-    check('5体えらぶと始められる', await page.getByRole('button', { name: 'この編成で開始' }).isEnabled());
+    check('5体選ぶと始められる', await page.getByRole('button', { name: 'この編成で開始' }).isEnabled());
     // 「押しても反応しない」を拾うための確認。
     // dispatchEvent はDOMへ直接イベントを送るので、他の層の下敷きになっていても通ってしまう。
     // 実際の指タップは重なりの判定を通るので、画面のかぶせ方(position/z-index)が抜けていると押せない。
@@ -197,7 +197,7 @@ const check = (name, ok, detail = '') => {
 
     // --- ⑥ 実行時エラー ---
     check('実行時エラーが出ていない', errors.length === 0, errors[0] || '');
-    console.log(`  えらんだ供モン候補: ${picked.join(' / ')}`);
+    console.log(`  選んだ供モン候補: ${picked.join(' / ')}`);
     console.log(`  勇者モン: ${String(heroName).replace(/を勇者モンに選ぶ$/, '').slice(0, 12)}`);
 
     console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

@@ -790,7 +790,7 @@ const SCREEN_THEME_CATEGORIES = [
   { id: 'market', label: 'マーケット', desc: 'マーケット' },
   { id: 'temple', label: '神殿', desc: '神殿と、マスモンの再生・合体・転生など' },
   // バトルとモンヒロビートは、見やすさを1画面ずつ確かめてから出す(ready:false のあいだは設定に並べず、クラシックのまま)
-  { id: 'battle', label: 'モンヒロバトル', desc: 'バトルえらび・バトル中・リザルト' },
+  { id: 'battle', label: 'モンヒロバトル', desc: 'バトル選択・バトル中・リザルト' },
   { id: 'rhythm', label: 'モンヒロビート', desc: '曲えらび・演奏画面' },
 ];
 const SCREEN_THEME_READY_CATEGORIES = SCREEN_THEME_CATEGORIES.filter(category => category.ready !== false);

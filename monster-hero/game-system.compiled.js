@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 35c6ac7c01bfc78c
+// source-sha256: 31a0065b2e2c48d1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 20:20";
+const BUILD_DATE = "2026-10-01 20:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -1931,11 +1931,13 @@ const HERO_PROOF_SHARD_ITEM = Object.freeze({
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme: Object.freeze({
     GOD: 1,
-    RAGNAROK: 2
+    RAGNAROK: 2,
+    HELHEIM: 3
   }),
   speciesChallenge: Object.freeze({
     GOD: 1,
-    RAGNAROK: 2
+    RAGNAROK: 2,
+    HELHEIM: 3
   }),
   pro: Object.freeze({
     Master: 1,
@@ -5540,7 +5542,7 @@ const SCREEN_THEME_CATEGORIES = [{
 }, {
   id: 'battle',
   label: 'モンヒロバトル',
-  desc: 'バトルえらび・バトル中・リザルト'
+  desc: 'バトル選択・バトル中・リザルト'
 }, {
   id: 'rhythm',
   label: 'モンヒロビート',
@@ -12836,7 +12838,66 @@ const RAGNAROK_SETTING = Object.freeze({
     })
   })
 });
-const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES, GOD_SETTING, RAGNAROK_SETTING]);
+const HELHEIM_SETTING = Object.freeze({
+  id: 'HELHEIM',
+  label: 'HELHEIM',
+  japanese: 'ヘルヘイム',
+  available: true,
+  debugAvailable: true,
+  power: 300,
+  score: 20,
+  xp: 100,
+  gold: 80,
+  psyche: 160,
+  waveCount: 10,
+  unlockRequirement: 'RAGNAROK',
+  rankingId: 'ExtremeHELHEIM',
+  recordId: 'HELHEIM',
+  description: '冥府が2WAVEごとに深まり、味方の最大ライフが削れていく。ボスは何度でも起き上がり、距離強化もWAVEごとに薄れていく、極限チャレンジの最奥の難易度。',
+  cardDescription: '2WAVEごとに冥府が深まる。敵のライフは10倍で、距離強化はWAVEごとに薄れ、ボスは何度も蘇る。',
+  specialRules: Object.freeze({
+    assistCardEffect: 0.30,
+    positiveModifier: 0.30,
+    negativeModifier: 3.0,
+    distanceEnhancement: 0.10,
+    gutsCost: 2.0,
+    enemyTurnRate: 0.0125,
+    allyJoinPenaltyRate: 0.0125,
+    minimumAllyJoinBonus: 0.03,
+    damageTurnRate: 0.0175,
+    minimumDamageDealt: 0.15,
+    awakeningPenaltyRate: 0.01,
+    awakeningZeroTurns: 12,
+    awakeningPenaltyExcludes: Object.freeze(['distance']),
+    distanceBreak: Object.freeze({
+      interval: 12,
+      damageDealtPerLevel: 0.5,
+      safeDistanceCount: 0,
+      persistsForRun: true
+    }),
+    revival: Object.freeze({
+      waves: Object.freeze({
+        3: 1,
+        5: 2,
+        7: 2,
+        9: 1,
+        10: 4
+      }),
+      hpRate: 0.5,
+      atkBoostPerRevival: 0.6
+    }),
+    enemyAdjust: Object.freeze({
+      lifeRate: 10,
+      byEnemy: Object.freeze({
+        Durahan: Object.freeze({
+          lifeRate: 1.3,
+          atkRate: 1.3
+        })
+      })
+    })
+  })
+});
+const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES, GOD_SETTING, RAGNAROK_SETTING, HELHEIM_SETTING]);
 const EXTREME_DIFFICULTY_THEMES = Object.freeze({
   EXTREME: Object.freeze({
     accent: '#f0abfc',
@@ -12914,6 +12975,17 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
     titleGlow: 0.84,
     actionGlow: 0.60,
     shadowBlur: 48
+  }),
+  HELHEIM: Object.freeze({
+    accent: '#bef264',
+    rgb: '132,204,22',
+    background: 'linear-gradient(180deg,#1c3a0a,#07140a)',
+    action: 'linear-gradient(135deg,#65a30d,#bef264)',
+    actionText: '#1a2e05',
+    glow: 0.66,
+    titleGlow: 0.90,
+    actionGlow: 0.66,
+    shadowBlur: 52
   })
 });
 const extremeDifficultyTheme = difficultyId => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
@@ -12949,6 +13021,23 @@ const ragnarokTwilightRules = waveNumber => {
     safeDistanceCount: 0
   });
 };
+const helheimUnderworldLevel = waveNumber => extremeWaveStageLevel(waveNumber);
+const helheimUnderworldRules = waveNumber => {
+  const level = helheimUnderworldLevel(waveNumber);
+  const wave = Math.max(1, Math.min(10, Math.floor(Number(waveNumber) || 1)));
+  return Object.freeze({
+    level,
+    enemyMultiplier: 1 + level * 0.30,
+    gutsCost: level >= 3 ? 2.25 : 2.0,
+    distanceEnhancement: Number((0.10 - (wave - 1) * 0.01).toFixed(2)),
+    positiveModifier: level >= 4 ? 0.20 : 0.30,
+    negativeModifier: level >= 4 ? 3.5 : 3.0,
+    damageTurnRate: level >= 5 ? 0.02 : 0.0175,
+    minimumDamageDealt: level >= 5 ? 0.10 : 0.15,
+    safeDistanceCount: 0,
+    allyMaxHpRate: 1 - level * 0.05
+  });
+};
 const EXTREME_WAVE_STAGES = Object.freeze({
   GOD: Object.freeze({
     label: '神威',
@@ -12957,6 +13046,10 @@ const EXTREME_WAVE_STAGES = Object.freeze({
   RAGNAROK: Object.freeze({
     label: '黄昏',
     rules: ragnarokTwilightRules
+  }),
+  HELHEIM: Object.freeze({
+    label: '冥府',
+    rules: helheimUnderworldRules
   })
 });
 const extremeWaveStage = difficultyId => EXTREME_WAVE_STAGES[difficultyId] || null;
@@ -13064,6 +13157,24 @@ const effectiveExtremeDistanceBreakRule = (difficultyId, waveNumber = 1) => {
     safeDistanceCount: staged.safeDistanceCount
   } : rule;
 };
+const extremeAllyMaxHpRate = (difficultyId, waveNumber = 1) => {
+  const rate = Number(extremeWaveStageRules(difficultyId, waveNumber)?.allyMaxHpRate);
+  return Number.isFinite(rate) && rate > 0 ? Math.min(1, rate) : 1;
+};
+const applyAllyMaxHpRate = (maxHp, rate) => rate < 1 ? Math.max(1, Math.floor(maxHp * rate)) : maxHp;
+const extremeEnemyStatAdjust = (difficultyId, enemyKey = null) => {
+  const rule = extremeDifficultySetting(difficultyId)?.specialRules?.enemyAdjust;
+  const num = value => Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : 1;
+  if (!rule) return {
+    lifeRate: 1,
+    atkRate: 1
+  };
+  const own = enemyKey && rule.byEnemy ? rule.byEnemy[enemyKey] : null;
+  return {
+    lifeRate: num(rule.lifeRate) * num(own?.lifeRate),
+    atkRate: num(rule.atkRate) * num(own?.atkRate)
+  };
+};
 const extremeRevivalRule = difficultyId => {
   const rule = extremeDifficultySetting(difficultyId)?.specialRules?.revival;
   return rule && rule.waves && typeof rule.waves === 'object' ? rule : null;
@@ -13135,6 +13246,13 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
   };
   if (difficultyId === GOD_SETTING.id) push('神威', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵ライフ/攻撃力', '神威Lvごと +15% / +30% / +45% / +60% / +75%'], ['Lv5', '与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし']]);
   if (difficultyId === RAGNAROK_SETTING.id) push('黄昏', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵ライフ/攻撃力', '黄昏Lvごと +20% / +40% / +60% / +80% / +100%'], ['Lv2', '距離強化 35%→25%'], ['Lv3', '消費ガッツ 175%→200%'], ['Lv4', '＋補正 35%→25%・−補正 250%→300%'], ['Lv5', '与ダメ低下 -1.75pt/T・最低15%']]);
+  if (difficultyId === HELHEIM_SETTING.id) {
+    const adjust = rules.enemyAdjust || {};
+    const durahan = adjust.byEnemy?.Durahan;
+    push('冥府', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵ライフ/攻撃力', '冥府Lvごと +30% / +60% / +90% / +120% / +150%'], ['味方の最大ライフ', '冥府Lvごと -5%（Lv5で-25%）'], ['Lv3', '消費ガッツ 200%→225%'], ['Lv4', '＋補正 30%→20%・−補正 300%→350%'], ['Lv5', '与ダメ低下 -2.0pt/T・最低10%']]);
+    push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `すべての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
+    push('距離強化', [['WAVEごとに薄れる', 'WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%']]);
+  }
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
   push('補正', [rules.waveEnhancement != null && ['WAVE後強化', specialRulePercent(rules.waveEnhancement)], rules.positiveModifier != null && ['＋補正', specialRulePercent(rules.positiveModifier)], rules.negativeModifier != null && ['－補正', specialRulePercent(rules.negativeModifier)], rules.distanceEnhancement != null && ['距離強化', specialRulePercent(rules.distanceEnhancement)]]);
   push('ダメージ・ガッツ', [rules.damageDealt != null && ['与ダメージ', specialRulePercent(rules.damageDealt)], rules.allyJoinBonus != null && ['供モン加入ボーナス', specialRulePercent(rules.allyJoinBonus)], rules.gutsCost != null && ['消費ガッツ', specialRulePercent(rules.gutsCost)]]);
@@ -13357,6 +13475,7 @@ const isUltimateUnlocked = chaosClearCount => (Number(chaosClearCount) || 0) > 0
 const isInfinityUnlocked = ultimateClearCount => (Number(ultimateClearCount) || 0) > 0;
 const isGodUnlocked = infinityClearCount => (Number(infinityClearCount) || 0) > 0;
 const isRagnarokUnlocked = godClearCount => (Number(godClearCount) || 0) > 0;
+const isHelheimUnlocked = ragnarokClearCount => (Number(ragnarokClearCount) || 0) > 0;
 const normalizeBattleDifficulty = value => quickDifficultySetting(value) ? value : 'Normal';
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
 const CLEAR_PSYCHE_REWARD = Object.freeze({
@@ -14023,13 +14142,79 @@ const MarketItemDetail = ({
     className: "flex justify-between"
   }, React.createElement("span", {
     className: "text-slate-400"
-  }, "ねだん"), React.createElement("span", {
+  }, "値段"), React.createElement("span", {
     className: `font-mono ${meta.text}`
   }, marketPriceText(item)))), React.createElement("div", {
     className: "mt-3"
   }, React.createElement(MarketModalClose, {
     onClick: onClose
   })));
+};
+const DISC_REBIRTH_MS = 2600;
+const DISC_REBIRTH_SPARKS = 12;
+const DiscRebirthFx = ({
+  mon,
+  discIcon,
+  onClose
+}) => {
+  const [done, setDone] = React.useState(false);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDone(true), DISC_REBIRTH_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  if (!mon) return null;
+  return React.createElement("div", {
+    "data-disc-rebirth": mon.id,
+    className: `mh-disc-rebirth${done ? ' is-done' : ''}`,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${mon.name}が円盤石から生まれました`,
+    onClick: () => {
+      if (!done) setDone(true);
+    }
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mh-disc-rebirth-rays"
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mh-disc-rebirth-flash"
+  }), discIcon && React.createElement("img", {
+    "aria-hidden": "true",
+    src: discIcon,
+    alt: "",
+    className: "mh-disc-rebirth-disc"
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mh-disc-rebirth-sparks"
+  }, Array.from({
+    length: DISC_REBIRTH_SPARKS
+  }).map((_, i) => React.createElement("i", {
+    key: i,
+    style: {
+      '--a': `${360 / DISC_REBIRTH_SPARKS * i}deg`,
+      '--d': `${i % 3 * 60}ms`
+    }
+  }))), React.createElement("div", {
+    className: "mh-disc-rebirth-body"
+  }, React.createElement("span", {
+    className: "mh-disc-rebirth-plate"
+  }, "円盤石から再生"), React.createElement("div", {
+    className: "mh-disc-rebirth-art"
+  }, mon.imgUrl ? React.createElement("img", {
+    src: mon.imgUrl,
+    alt: mon.name
+  }) : React.createElement("span", {
+    className: "text-7xl"
+  }, mon.emoji)), React.createElement("h3", {
+    className: "mh-disc-rebirth-name"
+  }, mon.name, React.createElement("span", null, "が生まれた！")), React.createElement("p", {
+    className: "mh-disc-rebirth-note"
+  }, "新しいモンスターが仲間になりました。M/B管理の編成に入れると、バトルで使えます。"), React.createElement("div", {
+    className: "mh-disc-rebirth-close",
+    onClick: e => e.stopPropagation()
+  }, React.createElement(ModalCloseButton, {
+    onClick: onClose
+  }))));
 };
 const MarketPurchaseSheet = ({
   item,
@@ -14645,7 +14830,7 @@ const AssistantBubble = ({
   }, React.createElement("button", {
     type: "button",
     onClick: onFaceTap,
-    "aria-label": `${who.name}にはなしかける`,
+    "aria-label": `${who.name}に話しかける`,
     className: "shrink-0 active:scale-90 transition-transform"
   }, React.createElement(AssistantFace, {
     who: who,
@@ -23754,7 +23939,7 @@ const RhythmOrientationButton = ({
     "aria-hidden": "true",
     className: "text-base leading-none"
   }, "🔄"), React.createElement("span", {
-    className: "text-[7px] font-black leading-none"
+    className: "text-[9px] font-black leading-none"
   }, landscape ? '縦' : '横')), note !== '' && React.createElement("p", {
     "data-rhythm-orientation-note": true,
     onClick: () => setNote(''),
@@ -24046,7 +24231,7 @@ const RhythmOptions = ({
     className: "mt-2"
   }, React.createElement("summary", {
     className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
-  }, "▸ くわしく"), React.createElement("p", {
+  }, "▸ 詳しく"), React.createElement("p", {
     className: `mt-1 ${note}`
   }, description)));
   const grid = `grid gap-2.5 ${wide ? 'grid-cols-3 gap-2' : 'grid-cols-2'}`;
@@ -24321,7 +24506,7 @@ const RhythmOptions = ({
     className: "mt-3"
   }, React.createElement("summary", {
     className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
-  }, "▸ 音量についてくわしく"), React.createElement("p", {
+  }, "▸ 音量について詳しく"), React.createElement("p", {
     className: `mt-1 ${note}`
   }, "この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。"), React.createElement("p", {
     className: `mt-2 ${note}`
@@ -24910,7 +25095,7 @@ const RhythmSongSelect = ({
     className: "min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight"
   }, React.createElement("small", {
     className: "text-[11px] font-black landscape:text-[9px] landscape:text-slate-400"
-  }, "並び替え", React.createElement("span", {
+  }, "並べ替え", React.createElement("span", {
     className: "landscape:hidden"
   }, "：")), React.createElement("b", {
     className: "max-w-full truncate font-black landscape:text-[12px]"
@@ -25217,7 +25402,7 @@ const RhythmSongSelect = ({
       style: {
         minHeight: '44px'
       }
-    }, song.credit.link && song.credit.link.label || 'くわしく見る', " ↗"), React.createElement("button", {
+    }, song.credit.link && song.credit.link.label || '詳しく見る', " ↗"), React.createElement("button", {
       type: "button",
       "data-rhythm-song-art-close": true,
       onClick: () => setArtZoom(false),
@@ -25302,7 +25487,7 @@ const RhythmSongSelect = ({
     }
   }, React.createElement("h3", {
     className: "text-sm font-black text-white"
-  }, "曲の並び替え"), React.createElement("p", {
+  }, "曲の並べ替え"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-slate-400"
   }, "並びを変えても、遊べる曲・自己ベスト・全国ランキングは変わりません。"), React.createElement("div", {
     className: "mt-3 space-y-1.5"
@@ -26010,19 +26195,25 @@ const RhythmMonsterNoteGuide = () => {
   return React.createElement("section", {
     "data-rhythm-monster-guide": true,
     className: "space-y-3"
-  }, React.createElement("article", {
+  }, React.createElement("details", {
     className: "rounded-2xl border border-amber-300/40 bg-amber-500/10 p-4"
-  }, React.createElement("h3", {
-    className: "text-sm font-black text-amber-100"
-  }, "モンスターノーツとは"), React.createElement("p", {
+  }, React.createElement("summary", {
+    className: "flex min-h-[44px] cursor-pointer list-none items-center justify-between text-sm font-black text-amber-100"
+  }, "モンスターノーツとは", React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-[11px] text-amber-200/80"
+  }, "詳しく ▼")), React.createElement("p", {
     className: "mt-2 text-[11px] font-bold leading-relaxed text-amber-50/90"
   }, "ここで設定したマスモンは、曲の途中で金色の「モンスターノーツ」になって流れてきます。 ノーツの真ん中には、そのマスモンの染色を反映した絵が出ます。"), React.createElement("ul", {
     className: "mt-2 space-y-1 text-[11px] font-bold leading-relaxed text-amber-50/90"
-  }, React.createElement("li", null, "・設定した順に、", React.createElement("b", null, "1体につき1回・最大", RHYTHM_MONSTER_SLOT_MAX, "回"), "出てきます。"), React.createElement("li", null, "・出てくるのは曲のだいたい ", ratios.join(' / '), " あたりです（曲の切れ目に合わせるので前後します）。"), React.createElement("li", null, "・", React.createElement("b", null, RHYTHM_MONSTER_ABILITY_JUDGMENTS.join('・')), " で取ると、そのマスモンの能力が出ます。GOOD・BAD・MISSでは出ません。"), React.createElement("li", null, "・判定の幅・スコアの計算・コンボの数え方は、ふつうのノーツとまったく同じです。"), React.createElement("li", null, "・いまはTAPのノーツだけがモンスターノーツになります。"))), React.createElement("article", {
+  }, React.createElement("li", null, "・設定した順に、", React.createElement("b", null, "1体につき1回・最大", RHYTHM_MONSTER_SLOT_MAX, "回"), "出てきます。"), React.createElement("li", null, "・出てくるのは曲のだいたい ", ratios.join(' / '), " あたりです（曲の切れ目に合わせるので前後します）。"), React.createElement("li", null, "・", React.createElement("b", null, RHYTHM_MONSTER_ABILITY_JUDGMENTS.join('・')), " で取ると、そのマスモンの能力が出ます。GOOD・BAD・MISSでは出ません。"), React.createElement("li", null, "・判定の幅・スコアの計算・コンボの数え方は、ふつうのノーツとまったく同じです。"), React.createElement("li", null, "・いまはTAPのノーツだけがモンスターノーツになります。"))), React.createElement("details", {
     className: "rounded-2xl border border-white/15 bg-slate-900/70 p-4"
-  }, React.createElement("h3", {
-    className: "text-sm font-black text-white"
-  }, "どの能力が付くか"), React.createElement("p", {
+  }, React.createElement("summary", {
+    className: "flex min-h-[44px] cursor-pointer list-none items-center justify-between text-sm font-black text-white"
+  }, "どの能力が付くか（能力の一覧）", React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-[11px] text-slate-400"
+  }, "詳しく ▼")), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
   }, "能力は", React.createElement("b", {
     className: "text-slate-200"
@@ -26060,124 +26251,190 @@ const RhythmMonsterSlotsPanel = ({
   setRhythmMonsterMessage,
   applyRhythmMonsterSlots,
   masuMons
-}) => React.createElement("section", {
-  "data-rhythm-monster-slots": true,
-  className: "rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-4"
-}, React.createElement("div", {
-  className: "flex items-center justify-between gap-2"
-}, React.createElement("h3", {
-  className: "text-sm font-black text-fuchsia-200"
-}, "モンスターノーツ用マスモン"), React.createElement("span", {
-  "data-rhythm-monster-count": true,
-  className: "shrink-0 rounded-full border border-fuchsia-300/50 px-2 py-0.5 text-[10px] font-black text-fuchsia-200"
-}, rhythmMonsterSlots.length, " / ", RHYTHM_MONSTER_SLOT_MAX, "体")), React.createElement("p", {
-  className: "mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80"
-}, "上から順に登場します。同じモンスターは別の個体でも重ねて設定できません。", RHYTHM_MONSTER_SLOT_MAX, "体そろえる必要はなく、1〜3体でも遊べます。"), React.createElement("ol", {
-  className: "mt-3 space-y-2"
-}, Array.from({
-  length: RHYTHM_MONSTER_SLOT_MAX
-}, (_, index) => {
-  const masu = rhythmMonsterSlots[index] || null,
-    base = masu ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
-  const lineage = masu ? monsterLineageOf(masu.baseId).main : null;
-  const ability = rhythmSlotAbility(masu);
-  return React.createElement("li", {
-    key: index,
-    "data-rhythm-monster-slot": index + 1,
-    className: "rounded-xl border border-white/10 bg-slate-900/80 p-2.5"
-  }, React.createElement("div", {
-    className: "flex items-center gap-2.5"
-  }, React.createElement("span", {
-    className: "w-9 shrink-0 rounded-lg border border-fuchsia-300/40 py-0.5 text-center text-[9px] font-black leading-tight text-fuchsia-200"
-  }, index + 1, React.createElement("br", null), "番目"), React.createElement("div", {
-    className: "h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-950"
-  }, masu && base && React.createElement(DyedMonsterImage, {
-    baseId: masu.baseId,
-    src: masuDisplayImageUrl(base),
-    alt: masu.name,
-    masuColors: getMasuColors(masu),
-    draggable: false,
-    className: "h-full w-full object-contain"
-  })), React.createElement("div", {
-    className: "min-w-0 flex-1"
-  }, masu ? React.createElement(React.Fragment, null, React.createElement("b", {
-    className: "block truncate text-[12px] font-black"
-  }, masu.name), React.createElement("small", {
-    className: "block truncate text-[10px] text-slate-400"
-  }, base?.name || masu.baseId, lineage ? ` / ${lineage.name}血統` : '')) : React.createElement("small", {
-    className: "text-[11px] font-bold text-slate-500"
-  }, "未設定")), masu && React.createElement("div", {
-    className: "flex shrink-0 gap-1"
-  }, React.createElement("button", {
-    type: "button",
-    "aria-label": `${index + 1}枠目を前へ`,
-    disabled: index === 0,
-    onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, -1), '登場順を入れ替えました'),
-    className: "min-h-[40px] min-w-[40px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30"
-  }, "↑"), React.createElement("button", {
-    type: "button",
-    "aria-label": `${index + 1}枠目を後ろへ`,
-    disabled: index >= rhythmMonsterSlots.length - 1,
-    onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, 1), '登場順を入れ替えました'),
-    className: "min-h-[40px] min-w-[40px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30"
-  }, "↓"), React.createElement("button", {
-    type: "button",
-    "data-rhythm-monster-remove": true,
-    "aria-label": `${masu.name}を外す`,
-    onClick: () => applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id), `${masu.name}を外しました`),
-    className: "min-h-[40px] rounded-lg border border-rose-300/50 px-2 text-[11px] font-black text-rose-200"
-  }, "外す"))), masu && React.createElement("p", {
-    "data-rhythm-monster-slot-ability": ability ? ability.id : 'none',
-    className: `mt-2 rounded-lg border px-2 py-1.5 text-[10px] font-bold leading-relaxed ${rhythmAbilityTone(ability ? ability.id : '')}`
-  }, ability ? React.createElement(React.Fragment, null, rhythmAbilityEmoji(ability.id), " ", ability.name, " — ", rhythmAbilityEffectText(ability)) : React.createElement(React.Fragment, null, "この血統の能力はまだ決まっていません。モンスターノーツにはなりますが、能力は出ません。")));
-})), React.createElement("button", {
-  type: "button",
-  "data-rhythm-monster-picker-toggle": true,
-  "aria-expanded": rhythmMonsterPickerOpen,
-  onClick: () => {
-    setRhythmMonsterPickerOpen(!rhythmMonsterPickerOpen);
+}) => {
+  const [pickerTarget, setPickerTarget] = React.useState(0);
+  const ratios = RHYTHM_MONSTER_NOTE_BASE_RATIOS;
+  const openPicker = index => {
+    setPickerTarget(Math.min(index, rhythmMonsterSlots.length));
     setRhythmMonsterMessage('');
-  },
-  className: "mt-3 min-h-[48px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[12px] font-black text-fuchsia-100"
-}, rhythmMonsterPickerOpen ? 'マスモン一覧を閉じる' : 'マスモンから設定する'), rhythmMonsterMessage && React.createElement("p", {
-  "data-rhythm-monster-message": true,
-  role: "status",
-  className: "mt-2 text-[11px] font-bold text-amber-200"
-}, rhythmMonsterMessage), rhythmMonsterPickerOpen && React.createElement("ul", {
-  "data-rhythm-monster-picker": true,
-  className: "mh-scroll mt-2 max-h-72 space-y-1.5 overflow-y-auto"
-}, masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).map(masu => {
-  const base = ALL_PLAYER_MONSTERS[masu.baseId],
-    issue = rhythmMonsterSlotAddIssue(rhythmMonsterSlotIdsInUse, masu.id, masuMons);
-  const ability = rhythmSlotAbility(masu);
-  return React.createElement("li", {
-    key: masu.id
-  }, React.createElement("button", {
-    type: "button",
-    disabled: !!issue,
-    onClick: () => applyRhythmMonsterSlots(addRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id, masuMons), `${masu.name}を${rhythmMonsterSlots.length + 1}枠目に設定しました`),
-    className: `flex min-h-[48px] w-full items-center gap-2.5 rounded-xl border p-2 text-left ${issue ? 'border-white/10 bg-slate-900/40 opacity-50' : 'border-white/20 bg-slate-900/80'}`
+    setRhythmMonsterPickerOpen(true);
+  };
+  const target = Math.min(pickerTarget, rhythmMonsterSlots.length);
+  const targetMasu = rhythmMonsterSlots[target] || null;
+  const candidates = masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]);
+  const slotOf = masu => rhythmMonsterSlotIdsInUse.indexOf(String(masu.id));
+  return React.createElement("section", {
+    "data-rhythm-monster-slots": true,
+    className: "rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-4"
   }, React.createElement("div", {
-    className: "h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-slate-950"
-  }, React.createElement(DyedMonsterImage, {
-    baseId: masu.baseId,
-    src: masuDisplayImageUrl(base),
-    alt: "",
-    masuColors: getMasuColors(masu),
-    draggable: false,
-    className: "h-full w-full object-contain"
-  })), React.createElement("div", {
-    className: "min-w-0 flex-1"
-  }, React.createElement("b", {
-    className: "block truncate text-[12px] font-black"
-  }, masu.name), React.createElement("small", {
-    className: "block truncate text-[10px] text-slate-400"
-  }, base.name, ability ? ` / ${rhythmAbilityEmoji(ability.id)}${ability.name}` : '')), issue && React.createElement("small", {
-    className: "shrink-0 text-[10px] font-bold text-rose-300"
-  }, RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue])));
-}), masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).length === 0 && React.createElement("li", {
-  className: "rounded-xl border border-white/10 p-4 text-center text-[11px] font-bold text-slate-500"
-}, "設定できるマスモンがいません")));
+    className: "flex items-center justify-between gap-2"
+  }, React.createElement("h3", {
+    className: "text-sm font-black text-fuchsia-200"
+  }, "モンスターノーツ用マスモン"), React.createElement("span", {
+    "data-rhythm-monster-count": true,
+    className: "shrink-0 rounded-full border border-fuchsia-300/50 px-2 py-0.5 text-[10px] font-black text-fuchsia-200"
+  }, rhythmMonsterSlots.length, " / ", RHYTHM_MONSTER_SLOT_MAX, "体")), React.createElement("ol", {
+    "data-rhythm-monster-steps": true,
+    className: "mt-2 grid grid-cols-3 gap-1.5 text-center text-[10px] font-black leading-snug text-fuchsia-50/90"
+  }, React.createElement("li", {
+    className: "rounded-lg border border-fuchsia-300/25 bg-slate-950/50 px-1.5 py-2"
+  }, React.createElement("span", {
+    className: "block text-base leading-none"
+  }, "👾"), "マスモンを", React.createElement("br", null), "枠に選ぶ"), React.createElement("li", {
+    className: "rounded-lg border border-amber-300/30 bg-slate-950/50 px-1.5 py-2"
+  }, React.createElement("span", {
+    className: "block text-base leading-none"
+  }, "🌟"), "曲の途中で", React.createElement("br", null), "金色のノーツに"), React.createElement("li", {
+    className: "rounded-lg border border-emerald-300/30 bg-slate-950/50 px-1.5 py-2"
+  }, React.createElement("span", {
+    className: "block text-base leading-none"
+  }, "✨"), RHYTHM_MONSTER_ABILITY_JUDGMENTS[RHYTHM_MONSTER_ABILITY_JUDGMENTS.length - 1], "以上で", React.createElement("br", null), "取ると能力")), React.createElement("p", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80"
+  }, "上の枠から順に登場します。同じモンスターは別の個体でも重ねて設定できません。", RHYTHM_MONSTER_SLOT_MAX, "体そろえる必要はなく、1〜3体でも遊べます。"), React.createElement("ol", {
+    className: "mt-3 space-y-2"
+  }, Array.from({
+    length: RHYTHM_MONSTER_SLOT_MAX
+  }, (_, index) => {
+    const masu = rhythmMonsterSlots[index] || null,
+      base = masu ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
+    const lineage = masu ? monsterLineageOf(masu.baseId).main : null;
+    const ability = rhythmSlotAbility(masu);
+    const timing = React.createElement("span", {
+      className: "block text-[10px] font-bold text-fuchsia-200/70"
+    }, "曲の約", Math.round((ratios[index] || 0) * 100), "%");
+    if (!masu) {
+      const next = index === rhythmMonsterSlots.length;
+      return React.createElement("li", {
+        key: index,
+        "data-rhythm-monster-slot": index + 1
+      }, React.createElement("button", {
+        type: "button",
+        "data-rhythm-monster-slot-add": index + 1,
+        disabled: !next,
+        onClick: () => openPicker(index),
+        className: `flex min-h-[64px] w-full items-center gap-2.5 rounded-xl border-2 border-dashed p-2.5 text-left ${next ? 'border-fuchsia-300/60 bg-fuchsia-900/20 active:scale-[.98]' : 'border-white/10 bg-slate-900/40 opacity-50'}`
+      }, React.createElement("span", {
+        className: "w-12 shrink-0 rounded-lg border border-fuchsia-300/40 py-1 text-center text-[11px] font-black leading-tight text-fuchsia-200"
+      }, index + 1, "番目", timing), React.createElement("span", {
+        className: "min-w-0 flex-1 text-[12px] font-black text-fuchsia-100"
+      }, next ? '＋ マスモンを選ぶ' : '未設定')));
+    }
+    return React.createElement("li", {
+      key: index,
+      "data-rhythm-monster-slot": index + 1,
+      className: "rounded-xl border border-white/10 bg-slate-900/80 p-2.5"
+    }, React.createElement("div", {
+      className: "flex items-center gap-2.5"
+    }, React.createElement("span", {
+      className: "w-12 shrink-0 rounded-lg border border-fuchsia-300/40 py-1 text-center text-[11px] font-black leading-tight text-fuchsia-200"
+    }, index + 1, "番目", timing), React.createElement("div", {
+      className: "h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-950"
+    }, base && React.createElement(DyedMonsterImage, {
+      baseId: masu.baseId,
+      src: masuDisplayImageUrl(base),
+      alt: masu.name,
+      masuColors: getMasuColors(masu),
+      draggable: false,
+      className: "h-full w-full object-contain"
+    })), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block truncate text-[13px] font-black"
+    }, masu.name), React.createElement("small", {
+      className: "block truncate text-[10px] text-slate-400"
+    }, base?.name || masu.baseId, lineage ? ` / ${lineage.name}血統` : ''))), React.createElement("p", {
+      "data-rhythm-monster-slot-ability": ability ? ability.id : 'none',
+      className: `mt-2 rounded-lg border px-2 py-1.5 text-[11px] font-bold leading-relaxed ${rhythmAbilityTone(ability ? ability.id : '')}`
+    }, ability ? React.createElement(React.Fragment, null, React.createElement("b", {
+      className: "font-black"
+    }, rhythmAbilityEmoji(ability.id), " ", ability.name), " — ", rhythmAbilityEffectText(ability)) : React.createElement(React.Fragment, null, "この血統の能力はまだ決まっていません。モンスターノーツにはなりますが、能力は出ません。")), React.createElement("div", {
+      className: "mt-2 grid grid-cols-4 gap-1.5"
+    }, React.createElement("button", {
+      type: "button",
+      "aria-label": `${index + 1}枠目を前へ`,
+      disabled: index === 0,
+      onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, -1), '登場順を入れ替えました'),
+      className: "min-h-[44px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30"
+    }, "↑ 前へ"), React.createElement("button", {
+      type: "button",
+      "aria-label": `${index + 1}枠目を後ろへ`,
+      disabled: index >= rhythmMonsterSlots.length - 1,
+      onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, 1), '登場順を入れ替えました'),
+      className: "min-h-[44px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30"
+    }, "↓ 後へ"), React.createElement("button", {
+      type: "button",
+      "data-rhythm-monster-replace": index + 1,
+      "aria-label": `${index + 1}枠目の${masu.name}を入れ替える`,
+      onClick: () => openPicker(index),
+      className: "min-h-[44px] rounded-lg border border-fuchsia-300/50 text-[11px] font-black text-fuchsia-100"
+    }, "入れ替え"), React.createElement("button", {
+      type: "button",
+      "data-rhythm-monster-remove": true,
+      "aria-label": `${masu.name}を外す`,
+      onClick: () => applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id), `${masu.name}を外しました`),
+      className: "min-h-[44px] rounded-lg border border-rose-300/50 text-[11px] font-black text-rose-200"
+    }, "外す")));
+  })), rhythmMonsterMessage && React.createElement("p", {
+    "data-rhythm-monster-message": true,
+    role: "status",
+    className: "mt-2 text-[11px] font-bold text-amber-200"
+  }, rhythmMonsterMessage), rhythmMonsterPickerOpen && React.createElement(ModalFrame, {
+    label: "モンスターノーツにするマスモンを選ぶ",
+    border: "border-fuchsia-400/70",
+    onClose: () => setRhythmMonsterPickerOpen(false)
+  }, React.createElement("h3", {
+    className: "text-center text-base font-black text-fuchsia-100"
+  }, target + 1, "番目に出すマスモン"), React.createElement("p", {
+    className: "mt-1 text-center text-[10px] font-bold text-slate-400"
+  }, "曲の約", Math.round((ratios[target] || 0) * 100), "%あたりで出ます", targetMasu ? `（いまは ${targetMasu.name}）` : ''), React.createElement("ul", {
+    "data-rhythm-monster-picker": true,
+    className: "mh-scroll mt-3 max-h-[55vh] space-y-1.5 overflow-y-auto"
+  }, candidates.map(masu => {
+    const base = ALL_PLAYER_MONSTERS[masu.baseId],
+      issue = rhythmMonsterSlotReplaceIssue(rhythmMonsterSlotIdsInUse, target, masu.id, masuMons);
+    const ability = rhythmSlotAbility(masu),
+      at = slotOf(masu);
+    const current = at === target;
+    const label = at >= 0 && !current ? `${at + 1}番目に設定中` : issue ? RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue] : '';
+    return React.createElement("li", {
+      key: masu.id
+    }, React.createElement("button", {
+      type: "button",
+      disabled: !!issue || current,
+      onClick: () => {
+        const next = replaceRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, target, masu.id, masuMons);
+        applyRhythmMonsterSlots(next, targetMasu ? `${target + 1}番目を ${masu.name} に入れ替えました` : `${masu.name}を${target + 1}番目に設定しました`);
+        setRhythmMonsterPickerOpen(false);
+      },
+      className: `flex min-h-[56px] w-full items-center gap-2.5 rounded-xl border p-2 text-left ${issue || current ? 'border-white/10 bg-slate-900/40 opacity-50' : 'border-white/20 bg-slate-900/80 active:scale-[.98]'}`
+    }, React.createElement("div", {
+      className: "h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-950"
+    }, React.createElement(DyedMonsterImage, {
+      baseId: masu.baseId,
+      src: masuDisplayImageUrl(base),
+      alt: "",
+      masuColors: getMasuColors(masu),
+      draggable: false,
+      className: "h-full w-full object-contain"
+    })), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block truncate text-[12px] font-black"
+    }, masu.name, React.createElement("small", {
+      className: "ml-1 text-[10px] font-bold text-slate-400"
+    }, base.name)), React.createElement("span", {
+      className: `mt-0.5 inline-block max-w-full truncate rounded-md border px-1.5 py-0.5 text-[10px] font-black ${rhythmAbilityTone(ability ? ability.id : '')}`
+    }, ability ? `${rhythmAbilityEmoji(ability.id)}${ability.name}` : '能力なし')), (label || current) && React.createElement("small", {
+      className: "shrink-0 text-right text-[10px] font-bold text-rose-300"
+    }, current ? 'この枠の子' : label)));
+  }), candidates.length === 0 && React.createElement("li", {
+    className: "rounded-xl border border-white/10 p-4 text-center text-[11px] font-bold text-slate-500"
+  }, "設定できるマスモンがいません")), React.createElement("div", {
+    className: "mt-3"
+  }, React.createElement(ModalCloseButton, {
+    onClick: () => setRhythmMonsterPickerOpen(false)
+  }))));
+};
 const RHYTHM_PLAY_LOG_DEVICE_KEY = 'mh_rhythm_play_log_device_v1';
 const RHYTHM_PLAY_LOG_VERSION = 1;
 const rhythmPlayLogEncode = notes => (Array.isArray(notes) ? notes : []).map(note => {
@@ -32231,7 +32488,7 @@ const PHASE_STEP_LABELS = Object.freeze({
   slot: '配置',
   skill: '固有技',
   teaching: 'アシストカード',
-  hero: 'えらぶ'
+  hero: '勇者モン'
 });
 const PHASE_ACCENT_RGB = Object.freeze({
   training: '251,191,36',
@@ -33618,6 +33875,7 @@ function BreederMarketScreen({
   const [sheet, setSheet] = useState(null);
   const [sheetQuantity, setSheetQuantity] = useState(1);
   const [sheetPending, setSheetPending] = useState(false);
+  const [rebirth, setRebirth] = useState(null);
   const [sectionTabs, setSectionTabs] = useState({});
   const safeEventPoints = normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
@@ -33729,7 +33987,10 @@ function BreederMarketScreen({
     setSheetPending(true);
     try {
       const result = await sheet.confirm(count);
-      if (result === true || result?.ok) setSheet(null);
+      if (result === true || result?.ok) {
+        if (sheet.rebirth && ALL_PLAYER_MONSTERS[sheet.rebirth.monsterId]) setRebirth(sheet.rebirth);
+        setSheet(null);
+      }
     } finally {
       setSheetPending(false);
     }
@@ -33770,7 +34031,11 @@ function BreederMarketScreen({
       onBuy: () => openSheet({
         item,
         stackable: item.type === 'item',
-        confirm: count => onBuy(item, count)
+        confirm: count => onBuy(item, count),
+        rebirth: item.type === 'disc' ? {
+          monsterId: item.id,
+          discIcon: item.icon
+        } : null
       }),
       detail: detailMon || detailTeaching,
       onDetail: () => detailMon?.draft && onOpenUpcomingDetail ? onOpenUpcomingDetail(item) : onOpenDetail(item, detailMon, detailTeaching),
@@ -34043,7 +34308,11 @@ function BreederMarketScreen({
       onZoom: () => onZoomIcon(disc || item),
       onBuy: () => openSheet({
         item,
-        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
+        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false,
+        rebirth: {
+          monsterId: offer.monsterId,
+          discIcon: disc?.icon || item.icon
+        }
       }),
       detail: mon,
       onDetail: () => mon && onOpenDetail(disc || item, mon, null)
@@ -34084,6 +34353,10 @@ function BreederMarketScreen({
     error: marketExchangeError,
     onConfirm: confirmSheet,
     onCancel: closeSheet
+  }), rebirth && React.createElement(DiscRebirthFx, {
+    mon: ALL_PLAYER_MONSTERS[rebirth.monsterId],
+    discIcon: rebirth.discIcon,
+    onClose: () => setRebirth(null)
   }));
 }
 function ProfileScreen({
@@ -34173,14 +34446,14 @@ function ProfileScreen({
     }, React.createElement("button", {
       onClick: () => onOpenNameEdit(hasName ? breederName : ''),
       className: `min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${hasName ? 'bg-emerald-950/60 border-emerald-400/60 text-emerald-200' : 'bg-slate-900 border-indigo-400/60 text-white'}`
-    }, hasName ? '✓ なまえ' : 'なまえを決める'), React.createElement("button", {
+    }, hasName ? '✓ 名前' : '名前を決める'), React.createElement("button", {
       onClick: onOpenIconPicker,
       className: `min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${hasIcon ? 'bg-emerald-950/60 border-emerald-400/60 text-emerald-200' : 'bg-slate-900 border-indigo-400/60 text-white'}`
     }, hasIcon ? '✓ アイコン' : 'アイコンを選ぶ')), React.createElement("button", {
       disabled: !ready,
       onClick: finishOnboarding,
       className: "w-full mt-2 min-h-[52px] rounded-xl bg-pink-400 font-black text-sm text-black disabled:opacity-40 active:scale-[.98]"
-    }, "けってい！"), React.createElement("div", {
+    }, "決定！"), React.createElement("div", {
       className: "text-[10px] text-slate-400 text-center mt-1.5"
     }, "名前もアイコンも、あとからこの画面でいつでも変えられます"));
   })(), React.createElement("div", {
@@ -34963,7 +35236,7 @@ function MonsterDexScreen({
   }, " / ", monsters.length))), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto pb-1",
     role: "group",
-    "aria-label": "主血統でしぼりこむ"
+    "aria-label": "主血統で絞り込む"
   }, React.createElement("button", {
     type: "button",
     "aria-pressed": dexLineageFilter === 'all',
@@ -35443,7 +35716,8 @@ function RhythmSongSelectScreen({
   setRhythmSelectedSongId,
   spotClass,
   startQuickRunFromRhythm,
-  wave
+  wave,
+  monsterSlots = []
 }) {
   const songs = rhythmDemoSongs(RHYTHM_SONGS);
   const difficulties = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
@@ -35550,10 +35824,13 @@ function RhythmSongSelectScreen({
   })), React.createElement("div", {
     className: "min-w-0 flex-1"
   }, React.createElement("small", {
-    className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
-  }, "MONBEAT"), React.createElement("h2", {
+    className: "flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
+  }, "MONBEAT", React.createElement("span", {
+    "data-rhythm-demo-badge": true,
+    className: "rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200"
+  }, "体験版")), React.createElement("h2", {
     className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200"
-  }, "🎵 楽曲選択"), beatPointReleased && Number.isFinite(beatPointBalance) && React.createElement("small", {
+  }, "🎵 曲えらび"), beatPointReleased && Number.isFinite(beatPointBalance) && React.createElement("small", {
     "data-rhythm-beat-point-balance": true,
     "aria-label": `所持ビートP ${beatPointBalance.toLocaleString()}`,
     className: "block truncate text-[9px] font-black leading-tight text-violet-200/90"
@@ -35565,28 +35842,57 @@ function RhythmSongSelectScreen({
   }, quickRunBandButton), quickRunStartNode && React.createElement("div", {
     "data-quick-run-start-header": true,
     className: "min-w-0 max-w-[260px] flex-1"
-  }, quickRunStartNode), React.createElement("span", {
-    "data-rhythm-demo-badge": true,
-    className: "shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200"
-  }, "体験版"), React.createElement(RhythmOrientationButton, null), React.createElement("button", {
+  }, quickRunStartNode), React.createElement(RhythmOrientationButton, null), React.createElement("button", {
     "data-rhythm-demo-help": true,
     "aria-label": "遊びかた",
     title: "遊びかた",
     onClick: onOpenHelp,
-    className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`
-  }, "📖"), React.createElement("button", {
+    className: `flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none text-amber-100${spotClass('help')}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-base leading-none"
+  }, "📖"), React.createElement("span", {
+    className: "text-[9px] font-black leading-none"
+  }, "遊びかた")), React.createElement("button", {
     "data-rhythm-demo-monsters": true,
-    "aria-label": "マスモン設定",
+    "aria-label": `マスモン設定（${monsterSlots.length}/${RHYTHM_MONSTER_SLOT_MAX}体）`,
     title: "マスモン設定",
     onClick: onOpenMonsterSlots,
-    className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-base text-fuchsia-100${spotClass('monsters')}`
-  }, "👾"), React.createElement("button", {
+    className: `flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 px-1 leading-none text-fuchsia-100${spotClass('monsters')}`
+  }, React.createElement("span", {
+    "data-rhythm-demo-monsters-faces": true,
+    "aria-hidden": "true",
+    className: "flex h-4 items-center"
+  }, monsterSlots.length ? monsterSlots.slice(0, RHYTHM_MONSTER_SLOT_MAX).map((masu, i) => {
+    const base = ALL_PLAYER_MONSTERS[masu.baseId];
+    return React.createElement("span", {
+      key: masu.id,
+      className: "h-4 w-4 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950",
+      style: i ? {
+        marginLeft: '-5px'
+      } : undefined
+    }, base && React.createElement("img", {
+      src: base.faceIconUrl || base.iconUrl,
+      alt: "",
+      className: "h-full w-full object-cover",
+      draggable: false
+    }));
+  }) : React.createElement("span", {
+    className: "text-base leading-none"
+  }, "👾")), React.createElement("span", {
+    className: "text-[9px] font-black leading-none"
+  }, "マスモン")), React.createElement("button", {
     "data-rhythm-demo-options": true,
     "aria-label": "オプション",
     title: "オプション",
     onClick: onOpenOptions,
-    className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100${spotClass('options')}`
-  }, "⚙️")), quickRunProgress && React.createElement("div", {
+    className: `flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100${spotClass('options')}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-base leading-none"
+  }, "⚙️"), React.createElement("span", {
+    className: "text-[9px] font-black leading-none"
+  }, "設定"))), quickRunProgress && React.createElement("div", {
     "data-quick-run-progress": true,
     className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-900/80"
   }, React.createElement("div", {
@@ -36344,7 +36650,7 @@ function RhythmRankingScreen({
     "data-rhythm-total-remaining": true,
     onClick: onGoToSongSelect,
     className: "mb-3 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100"
-  }, "まだ記録のない曲が ", totalSongCount - total.self.songCount, " 曲あります ▶ 曲をえらぶ"), !total.self && React.createElement("p", {
+  }, "まだ記録のない曲が ", totalSongCount - total.self.songCount, " 曲あります ▶ 曲を選ぶ"), !total.self && React.createElement("p", {
     "data-rhythm-total-self-empty": true,
     className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
   }, "まだあなたの記録がありません。1曲でも遊ぶとここに載ります。"), total.entries.length === 0 && React.createElement("p", {
@@ -37162,7 +37468,7 @@ function MasuRebirthScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "🌈",
-      lines: ['表示できるマスモンがいません。', '並べかえ・しぼりこみの設定を見直してください。']
+      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -37347,7 +37653,7 @@ function MasuReincarnateScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "🔄",
-      lines: ['表示できるマスモンがいません。', '並べかえ・しぼりこみの設定を見直してください。']
+      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -37517,7 +37823,7 @@ function MasuTranscendenceScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "✨",
-      lines: ['表示できるマスモンがいません。', '並べかえ・しぼりこみの設定を見直してください。']
+      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -37704,7 +38010,7 @@ function MasuSoulRankScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "🏅",
-      lines: ['表示できるマスモンがいません。', '並べかえ・しぼりこみの設定を見直してください。']
+      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -39963,7 +40269,7 @@ function MasuFusionScreen({
         mon: null,
         sub: null
       })), React.createElement("button", {
-        "aria-label": "くわしく見る",
+        "aria-label": "詳しく見る",
         onClick: ev => {
           ev.stopPropagation();
           setMasuMonDetail(masu);
@@ -40080,7 +40386,7 @@ function MasuFusionScreen({
         className: "text-white",
         strokeWidth: 4
       }))), React.createElement("button", {
-        "aria-label": "くわしく見る",
+        "aria-label": "詳しく見る",
         onClick: ev => {
           ev.stopPropagation();
           setMasuMonDetail(masu);
@@ -41169,7 +41475,7 @@ function ProMonsterGridPicker({
   }, "★"), React.createElement("button", {
     onClick: () => onDetail && onDetail(focus),
     className: "shrink-0 px-3 min-h-[44px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95"
-  }, "くわしく"), React.createElement("button", {
+  }, "詳しく"), React.createElement("button", {
     disabled: disabled(focus),
     onClick: () => onSelect(focus),
     "aria-label": confirmAria ? confirmAria(focus) : undefined,
@@ -41797,7 +42103,7 @@ function PickProAlliesScreen({
       backgroundColor: mode.color,
       color: '#0f172a'
     }
-  }, ready ? 'この編成で開始' : `あと${need - proAllyPool.length}体えらんでください`))) : React.createElement(React.Fragment, null, React.createElement("p", {
+  }, ready ? 'この編成で開始' : `あと${need - proAllyPool.length}体選んでください`))) : React.createElement(React.Fragment, null, React.createElement("p", {
     className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
   }, "この枠に入れるベースモンを1体選んでください。"), React.createElement("div", {
     className: "flex-1 min-h-0 pb-2 flex flex-col"
@@ -42027,7 +42333,7 @@ function PickTeachingScreen({
       className: "mh-ph-title text-xl font-black italic"
     }, "アシストカードの継承・強化")), React.createElement("p", {
       className: "mh-phase-tall text-[10px] font-bold text-slate-400"
-    }, "1枚えらんで、新しく覚えるか、持っているカードを強化します")), React.createElement("div", {
+    }, "1枚選んで、新しく覚えるか、持っているカードを強化します")), React.createElement("div", {
       className: "mh-phase-tall shrink-0 w-full max-w-sm mb-2"
     }, React.createElement(AssistantBubble, {
       scene: "pickTeaching",
@@ -51374,12 +51680,14 @@ function MonsterHeroGame() {
   const ultimateClearCount = extremeClearCounts[ULTIMATE_SETTING.id] || 0;
   const infinityClearCount = extremeClearCounts[INFINITY_SETTING.id] || 0;
   const godClearCount = extremeClearCounts[GOD_SETTING.id] || 0;
+  const ragnarokClearCount = extremeClearCounts[RAGNAROK_SETTING.id] || 0;
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
   const chaosUnlocked = useMemo(() => isChaosUnlocked(nightmareClearCount), [nightmareClearCount]);
   const ultimateUnlocked = useMemo(() => isUltimateUnlocked(chaosClearCount), [chaosClearCount]);
   const infinityUnlocked = useMemo(() => isInfinityUnlocked(ultimateClearCount), [ultimateClearCount]);
   const godUnlocked = useMemo(() => isGodUnlocked(infinityClearCount), [infinityClearCount]);
   const ragnarokUnlocked = useMemo(() => isRagnarokUnlocked(godClearCount), [godClearCount]);
+  const helheimUnlocked = useMemo(() => isHelheimUnlocked(ragnarokClearCount), [ragnarokClearCount]);
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
   const activeExtremeBattleSetting = activeExtremeSetting;
@@ -51387,7 +51695,12 @@ function MonsterHeroGame() {
   const scoreMultiplier = extremeRun ? activeExtremeBattleSetting.score || 1 : isQuickMode(runMode) ? activeDifficultySetting.xp ?? activeDifficultySetting.score : activeDifficultySetting.score;
   const xpMultiplier = extremeRun ? activeExtremeBattleSetting.xp || 1 : scoreMultiplier;
   const goldMultiplier = extremeRun ? activeExtremeBattleSetting.gold || 1 : activeDifficultySetting.gold;
-  const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);
+  const allyMaxHpRate = extremeAllyMaxHpRate(specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty), wave);
+  const allyMaxHpRateRef = useRef(1);
+  useEffect(() => {
+    allyMaxHpRateRef.current = allyMaxHpRate;
+  }, [allyMaxHpRate]);
+  const effectiveMaxHp = useMemo(() => applyAllyMaxHpRate(resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), allyMaxHpRate), [maxHp, permaBuffs, allyMaxHpRate]);
   const effectiveMaxGuts = useMemo(() => resolveEffectiveMaxStat(maxGuts, getPermaBuff('muaGutsPct')), [maxGuts, permaBuffs]);
   const effectiveDef = useMemo(() => resolveEffectiveMaxStat(def, getPermaBuff('defPct')), [def, permaBuffs]);
   useEffect(() => {
@@ -51404,7 +51717,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     maxGutsRef.current = maxGuts;
   }, [maxGuts]);
-  const liveEffectiveMaxHp = () => resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct'));
+  const liveEffectiveMaxHp = () => applyAllyMaxHpRate(resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct')), allyMaxHpRateRef.current);
   useEffect(() => {
     if (!isTacticsMode(runMode)) return;
     commitTacticsUnits(scaleTacticsUnits(tacticsUnitsRef.current, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
@@ -55174,7 +55487,7 @@ function MonsterHeroGame() {
       className: "flex-1 min-w-0 min-h-[44px] flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 active:scale-95"
     }, React.createElement("span", {
       className: "text-[11px] font-black text-white truncate"
-    }, "並べかえ: ", currentSortOpt?.label, monsterSortKey === currentSortOpt?.key && React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼')), React.createElement(ChevronRight, {
+    }, "並べ替え: ", currentSortOpt?.label, monsterSortKey === currentSortOpt?.key && React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼')), React.createElement(ChevronRight, {
       size: 14,
       className: "text-slate-400 shrink-0"
     })), React.createElement("button", {
@@ -62299,6 +62612,12 @@ function MonsterHeroGame() {
       mode: runMode
     });
     if (!newEnemy) return null;
+    const enemyAdjust = extremeEnemyStatAdjust(specialRuleDifficulty, newEnemy.id);
+    if (enemyAdjust.lifeRate !== 1 || enemyAdjust.atkRate !== 1) {
+      newEnemy.maxHp = Math.floor(newEnemy.maxHp * enemyAdjust.lifeRate);
+      newEnemy.hp = newEnemy.maxHp;
+      newEnemy.atk = Math.floor(newEnemy.atk * enemyAdjust.atkRate);
+    }
     if (!forcedEnemyKey && !debugBattleRef.current && !speciesChallengeBattleRunRef.current && (!extremeRunRef.current || isTacticsMode(runMode))) {
       if (isTacticsMode(runMode)) {
         const tacticsDiff = tacticsRecordDifficulty();
@@ -64707,7 +65026,7 @@ function MonsterHeroGame() {
         href: changelogSafeLink(c.link),
         target: "_blank",
         rel: "noopener noreferrer"
-      }, c.link && c.link.label || 'くわしく見る', " ↗"))))));
+      }, c.link && c.link.label || '詳しく見る', " ↗"))))));
     });
   })()))) : showTitleSettings ? React.createElement("div", {
     className: "mh-title-modal",
@@ -67636,7 +67955,7 @@ function MonsterHeroGame() {
         }
       }, difficulties.map(setting => {
         const active = setting.id === extremeDifficulty;
-        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : setting.id === 'RAGNAROK' ? ragnarokUnlocked : false);
+        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : setting.id === 'RAGNAROK' ? ragnarokUnlocked : setting.id === 'HELHEIM' ? helheimUnlocked : false);
         const previewable = (setting.available || debugBattle && setting.debugAvailable) && unlocked;
         const theme = extremeDifficultyTheme(setting.id);
         const heroProofReward = heroProofClearReward({
@@ -67671,7 +67990,7 @@ function MonsterHeroGame() {
           }
         }, setting.available && unlocked ? `${(extremeBestScores[setting.id] || 0).toLocaleString()} pt` : '？？？'), React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : setting.id === 'RAGNAROK' && !ragnarokUnlocked ? 'GODクリアで解放' : '選択できません')), previewable ? React.createElement(React.Fragment, null, React.createElement("div", {
+        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : setting.id === 'RAGNAROK' && !ragnarokUnlocked ? 'GODクリアで解放' : setting.id === 'HELHEIM' && !helheimUnlocked ? 'RAGNAROKクリアで解放' : '選択できません')), previewable ? React.createElement(React.Fragment, null, React.createElement("div", {
           className: "grid grid-cols-3 gap-1 mt-1"
         }, [['敵強度', `×${setting.power}`], ['スコア', setting.score ? `×${setting.score}` : '対象外'], ['ダイヤ', setting.gold ? `×${setting.gold}` : '対象外']].map(([label, value]) => React.createElement("div", {
           key: label,
@@ -68264,7 +68583,7 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4"
       }, React.createElement("p", {
         className: "mb-3 text-[11px] font-bold text-slate-400"
-      }, "模様を試すモンスターを1体えらんでください（所持していない種もそのまま試せます）。"), React.createElement("div", {
+      }, "模様を試すモンスターを1体選んでください（所持していない種もそのまま試せます）。"), React.createElement("div", {
         className: "grid grid-cols-3 gap-2"
       }, eligible.map(m => {
         const base = ALL_PLAYER_MONSTERS[m.baseId];
@@ -69714,6 +70033,7 @@ function MonsterHeroGame() {
         return saved;
       }
     }), gameState === 'RHYTHM_DEMO_HOME' && React.createElement(RhythmSongSelectScreen, {
+      monsterSlots: rhythmMonsterSlots,
       rhythmSettings: rhythmSettings,
       onToggleRhythmSetting: async key => {
         const saved = await saveRhythmSettings({
@@ -69756,7 +70076,8 @@ function MonsterHeroGame() {
         setGameState('RHYTHM_DEMO_HELP');
       },
       onOpenMonsterSlots: () => {
-        setRhythmMonsterPickerOpen(true);
+        setRhythmMonsterPickerOpen(false);
+        setRhythmMonsterMessage('');
         setGameState('RHYTHM_DEMO_MONSTERS');
       },
       onOpenOptions: () => {
@@ -71198,7 +71519,7 @@ function MonsterHeroGame() {
       }
     }, React.createElement("h2", {
       className: "text-lg font-black italic text-indigo-300 uppercase tracking-widest"
-    }, "助手をえらぶ"), React.createElement("p", {
+    }, "助手を選ぶ"), React.createElement("p", {
       className: "text-[10px] text-slate-400 mt-1 leading-tight"
     }, "冒険に付き添ってくれる助手を選んでください。", React.createElement("br", null), "あとからプロフィールでいつでも変えられます。")), React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
@@ -71215,7 +71536,7 @@ function MonsterHeroGame() {
         setTutorialKind('intro');
         setTutorialStep(0);
       },
-      "aria-label": `${who.name}をえらぶ`,
+      "aria-label": `${who.name}を選ぶ`,
       className: `rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id === selectedAssistantId ? '' : 'opacity-95'}`,
       style: {
         border: `2px solid ${who.id === selectedAssistantId ? who.accent : 'rgba(255,255,255,.14)'}`,
@@ -71442,7 +71763,7 @@ function MonsterHeroGame() {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, unifiedMonsterEntriesDraft.length === 0 && React.createElement(ScreenEmpty, {
       emoji: "🔍",
-      lines: ['表示するモンスターがいません。', '上の「表示」「種族」でしぼりこみを見直してください。']
+      lines: ['表示するモンスターがいません。', '上の「表示」「種族」で絞り込みを見直してください。']
     }), React.createElement("div", {
       className: "grid grid-cols-3 gap-2.5 pb-4"
     }, unifiedMonsterEntriesDraft.map(e => {
@@ -71649,7 +71970,7 @@ function MonsterHeroGame() {
       className: SCREEN_LIST_CLASS
     }, unifiedMonsterEntriesSingleType.filter(e => e.type === 'base').length === 0 && React.createElement(ScreenEmpty, {
       emoji: "🔍",
-      lines: ['表示するベースモンがいません。', '上の「表示」「種族」でしぼりこみを見直してください。']
+      lines: ['表示するベースモンがいません。', '上の「表示」「種族」で絞り込みを見直してください。']
     }), React.createElement("div", {
       className: "grid grid-cols-3 gap-2.5 pb-4"
     }, unifiedMonsterEntriesSingleType.filter(e => e.type === 'base').map(e => {
@@ -72122,7 +72443,7 @@ function MonsterHeroGame() {
         className: "flex items-center gap-2 p-4 shrink-0 border-b border-white/10"
       }, React.createElement("h3", {
         className: "text-base font-black text-white flex-1"
-      }, "ならべかえ・表示設定"), React.createElement("button", {
+      }, "並べ替え・表示設定"), React.createElement("button", {
         onClick: () => setShowSortFilterModal(false),
         className: "p-2.5 bg-white/5 rounded-full active:scale-90"
       }, React.createElement(X, {
@@ -72131,7 +72452,7 @@ function MonsterHeroGame() {
         className: "flex gap-2 px-4 pt-3 shrink-0"
       }, [{
         key: 'sort',
-        label: 'ならべかえ'
+        label: '並べ替え'
       }, {
         key: 'lineage',
         label: '種族'
@@ -72166,7 +72487,7 @@ function MonsterHeroGame() {
         }, opt.label, active && React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼'));
       })) : sortFilterModalTab === 'lineage' ? React.createElement("div", null, React.createElement("p", {
         className: "mb-2.5 text-[10px] leading-relaxed text-slate-400"
-      }, "選んだ種族だけを表示します。ならべかえ・表示設定はそのまま効きます。"), React.createElement("div", {
+      }, "選んだ種族だけを表示します。並べ替え・表示設定はそのまま効きます。"), React.createElement("div", {
         className: "grid grid-cols-2 gap-2.5"
       }, [{
         id: 'all',
@@ -72520,7 +72841,7 @@ function MonsterHeroGame() {
         }, "↓")));
       }), rows.length <= 1 && React.createElement("div", {
         className: "text-[9px] text-slate-500 font-bold text-center px-2 py-1 leading-relaxed"
-      }, "固有技が1つだけのため、並び替えと初期技の変更はできません。合体で固有技を継承すると設定できるようになります。")), React.createElement("div", {
+      }, "固有技が1つだけのため、並べ替えと初期技の変更はできません。合体で固有技を継承すると設定できるようになります。")), React.createElement("div", {
         className: "shrink-0 flex flex-col gap-1.5 pt-1 border-t border-white/10"
       }, React.createElement("div", {
         className: "text-[8px] text-slate-500 font-bold text-center leading-tight"
@@ -74334,7 +74655,7 @@ function MonsterHeroGame() {
         style: {
           backgroundColor: who.accent
         }
-      }, last ? 'おわる' : '次へ'))));
+      }, last ? '終わる' : '次へ'))));
     })(), gameState === 'BATTLE' && ultimateDistanceBreakReveal != null && React.createElement(UltimateDistanceBreakReveal, {
       difficulty: difficulty,
       extremeDifficulty: extremeDifficulty,
@@ -74474,7 +74795,7 @@ function MonsterHeroGame() {
         disabled: tutorialStep <= 0,
         onClick: () => setTutorialStep(v => Math.max(0, v - 1)),
         className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]"
-      }, "もどる"), React.createElement("button", {
+      }, "戻る"), React.createElement("button", {
         onClick: () => {
           if (last) finishTutorial(true);else setTutorialStep(v => v + 1);
         },
@@ -80122,6 +80443,36 @@ const createAnimationStyle = () => {
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
     .mh-regeneration-animation{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle,#4c1d95,#020617 65%)}.mh-regeneration-disc{position:absolute;width:170px;height:170px;object-fit:contain;animation:mhRegenerationDisc 1.5s ease-in forwards}.mh-regeneration-born{position:relative;width:min(330px,100%);padding:20px;border:2px solid #fbbf24;border-radius:24px;background:#0f172a;text-align:center;opacity:0;animation:mhRegenerationBorn .6s 1.4s ease-out forwards}.mh-regeneration-born h3{font-size:20px;font-weight:1000;color:#fde68a}.mh-regeneration-born b{float:right;color:#f9a8d4}@keyframes mhRegenerationDisc{0%{transform:rotate(0) scale(.7);opacity:1}85%{transform:rotate(1080deg) scale(1.15);opacity:1}100%{transform:rotate(1260deg) scale(.1);opacity:0}}@keyframes mhRegenerationBorn{to{opacity:1;transform:none}}
+    /* 円盤石を買ったときの「円盤石から再生」(2026-10-01)。DiscRebirthFx(20-market-notices-help.jsx)が使う。
+       0〜1.5秒 円盤石が光りながら回る → 1.5〜1.8秒 割れて光があふれる・火の粉が散る → 1.8〜2.6秒 立ち絵と名前が出る。
+       .is-done(押したとき・2.6秒たったとき)はどの段も最後の形で止める。動きを減らす設定の端末も同じ。 */
+    .mh-disc-rebirth{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle at 50% 45%,#3b1d6e,#0b0820 62%,#020617)}
+    .mh-disc-rebirth-rays{position:absolute;left:50%;top:42%;width:150vmax;height:150vmax;margin:-75vmax 0 0 -75vmax;background:repeating-conic-gradient(from 0deg,rgba(253,230,138,.16) 0 7deg,transparent 7deg 22deg);opacity:0;-webkit-mask:radial-gradient(circle,#000 8%,transparent 46%);mask:radial-gradient(circle,#000 8%,transparent 46%);animation:mhDiscRays 1s 1.55s ease-out forwards,mhDiscRaysSpin 24s 1.55s linear infinite}
+    .mh-disc-rebirth-flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,#fff 0,#fde68a 18%,rgba(253,230,138,0) 58%);opacity:0;pointer-events:none;animation:mhDiscFlash .75s 1.45s ease-out forwards}
+    .mh-disc-rebirth-disc{position:absolute;left:50%;top:42%;width:min(46vw,190px);height:min(46vw,190px);margin:calc(min(46vw,190px) / -2) 0 0 calc(min(46vw,190px) / -2);object-fit:contain;filter:drop-shadow(0 0 10px rgba(253,230,138,.55));animation:mhDiscSpin 1.8s cubic-bezier(.45,0,.75,.4) forwards}
+    .mh-disc-rebirth-sparks{position:absolute;left:50%;top:42%;width:0;height:0}
+    .mh-disc-rebirth-sparks i{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:#fde68a;box-shadow:0 0 10px #fbbf24,0 0 18px #f472b6;opacity:0;transform:rotate(var(--a)) translateX(0);animation:mhDiscSpark .8s calc(1.55s + var(--d)) ease-out forwards}
+    .mh-disc-rebirth-body{position:relative;z-index:1;width:min(340px,100%);display:flex;flex-direction:column;align-items:center;text-align:center}
+    .mh-disc-rebirth-plate{opacity:0;border:1px solid rgba(253,230,138,.6);border-radius:999px;background:rgba(15,23,42,.75);padding:3px 12px;font-size:11px;font-weight:900;color:#fde68a;letter-spacing:.08em;animation:mhDiscUp .45s 1.85s ease-out forwards}
+    .mh-disc-rebirth-art{width:min(62vw,240px);aspect-ratio:1;margin-top:8px;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.35);filter:drop-shadow(0 0 24px rgba(253,230,138,.75)) brightness(2.2);animation:mhDiscBorn .8s 1.6s cubic-bezier(.2,1.4,.4,1) forwards}
+    .mh-disc-rebirth-art img{width:100%;height:100%;object-fit:contain}
+    .mh-disc-rebirth-name{opacity:0;margin-top:6px;font-size:24px;font-weight:1000;line-height:1.2;color:#fff;text-shadow:0 2px 0 #7c3aed,0 0 18px rgba(244,114,182,.7);animation:mhDiscUp .45s 2.05s ease-out forwards}
+    .mh-disc-rebirth-name span{font-size:15px;color:#fbcfe8;margin-left:2px}
+    .mh-disc-rebirth-note{opacity:0;margin-top:6px;font-size:11px;font-weight:700;line-height:1.6;color:#cbd5e1;animation:mhDiscUp .45s 2.25s ease-out forwards}
+    .mh-disc-rebirth-close{width:100%;margin-top:14px;opacity:0;pointer-events:none;animation:mhDiscUp .4s 2.45s ease-out forwards}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-close{pointer-events:auto}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-disc,.mh-disc-rebirth.is-done .mh-disc-rebirth-flash,.mh-disc-rebirth.is-done .mh-disc-rebirth-sparks i{animation:none;opacity:0}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-rays{animation:mhDiscRaysSpin 24s linear infinite;opacity:1}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-plate,.mh-disc-rebirth.is-done .mh-disc-rebirth-name,.mh-disc-rebirth.is-done .mh-disc-rebirth-note,.mh-disc-rebirth.is-done .mh-disc-rebirth-close{animation:none;opacity:1;transform:none}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-art{animation:none;opacity:1;transform:none;filter:drop-shadow(0 0 18px rgba(253,230,138,.55))}
+    @keyframes mhDiscSpin{0%{transform:rotate(0) scale(.6);opacity:0;filter:drop-shadow(0 0 6px rgba(253,230,138,.4)) brightness(1)}12%{opacity:1}80%{transform:rotate(1080deg) scale(1.08);filter:drop-shadow(0 0 30px #fde68a) brightness(1.7)}100%{transform:rotate(1260deg) scale(1.5);opacity:0;filter:drop-shadow(0 0 40px #fff) brightness(3)}}
+    @keyframes mhDiscFlash{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
+    @keyframes mhDiscRays{to{opacity:1}}
+    @keyframes mhDiscRaysSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+    @keyframes mhDiscSpark{0%{opacity:0;transform:rotate(var(--a)) translateX(0) scale(1)}15%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateX(min(42vw,170px)) scale(.3)}}
+    @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
+    @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
     .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
