@@ -12587,8 +12587,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       nGuardDef=tacticsMaxDef(tacticsUnitsRef.current);
     } else if(tacticsMode){
       // 1体ずつのトレーニング。選んだぶんをその子だけへ入れる
-      const entries=Array.isArray(picks)?picks.filter(entry=>entry&&Number.isInteger(entry.slot)):[];
+      // AUTO は種類のid(['atk','guts'] など)だけを渡してくる。1体ずつ選ぶこのモードでは、
+      // 立っている子の全員へ同じ2つを入れる(以前はここで全部捨てられ、AUTOだとだれも強くならなかった)
+      const pickList=Array.isArray(picks)?picks:[];
       let units=tacticsUnitsRef.current;
+      const entries=pickList.some(entry=>typeof entry==='string')
+        ? tacticsFilledSlots(units).filter(slotIdx=>!units[slotIdx]?.downed)
+            .flatMap(slotIdx=>pickList.filter(entry=>typeof entry==='string').map(id=>({slot:slotIdx,id})))
+        : pickList.filter(entry=>entry&&Number.isInteger(entry.slot));
       tacticsFilledSlots(units).forEach(slotIdx=>{
         const ids=entries.filter(entry=>entry.slot===slotIdx).map(entry=>entry.id);
         if(!ids.length) return;
