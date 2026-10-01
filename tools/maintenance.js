@@ -1,7 +1,8 @@
 // 定期メンテナンス(点検)の入口。「積み重なる不具合・ごみ・肥大」を早めに見つけるための1コマンド。
 //
-//   node tools/maintenance.js                 … 週次の点検(必須検査+CI検査+文書検査+衛生チェック)。数分
-//   node tools/maintenance.js --full          … 月次の点検(全領域の検査+衛生チェック)。30分以上
+//   node tools/maintenance.js                 … 週次の点検(全領域の検査。重い数本だけ除く)+衛生チェック。約1時間
+//   node tools/maintenance.js --full          … 月次の点検(全検査を1本も除かない)+深い衛生チェック。約1時間10分
+//   node tools/maintenance.js --quick         … 手早い点検(必須+CI+文書の検査)+衛生チェック。1〜2分
 //   node tools/maintenance.js --write         … 結果を docs/ops/maintenance/latest.md へ書く
 //   node tools/maintenance.js --update-baseline … 衛生チェックの基準値(大きさ)を今の値で取り直す
 //   node tools/maintenance.js --hygiene-only  … 検査は回さず、衛生チェックだけ(数秒)
@@ -18,6 +19,7 @@ const { spawnSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..');
 const OUT_DIR = path.join(ROOT, 'docs/ops/maintenance');
 const BASELINE = path.join(OUT_DIR, 'baseline.json');
+const SKIP_FILE = path.join(OUT_DIR, 'monthly-only.txt'); // 週次が飛ばす重い検査(月次は回す)
 const args = process.argv.slice(2);
 const has = f => args.includes(f);
 
@@ -91,7 +93,11 @@ function hygiene() {
     walkSrc(path.join(ROOT, 'monster-hero'));
     const corpus = corpusFiles.map(f => fs.readFileSync(f, 'utf8')).join('\n');
     const orphans = imgs.filter(p => !corpus.includes(path.basename(p)));
-    if (orphans.length) {
+    if (has('--full') && orphans.length) {
+      fs.mkdirSync(OUT_DIR, { recursive: true });
+      fs.writeFileSync(path.join(OUT_DIR, 'orphan-images.txt'), orphans.map(p => path.relative(path.join(ROOT, 'monster-hero/images'), p)).sort().join('\n') + '\n');
+      info.push(`孤立画像の候補 ${orphans.length} 枚の全件を docs/ops/maintenance/orphan-images.txt へ書きました(月次)`);
+    } else if (orphans.length) {
       info.push(`どこからも名前が出てこない画像の候補 ${orphans.length} 枚(動的なパスは拾えないため、消す前に確認): ` + orphans.slice(0, 8).map(p => path.relative(path.join(ROOT, 'monster-hero/images'), p)).join(', ') + (orphans.length > 8 ? ' …' : ''));
     }
   } catch (e) { warn.push('孤立画像の調査に失敗: ' + e.message); }
@@ -108,8 +114,9 @@ function hygiene() {
 
 function runChecks() {
   const out = path.join(OUT_DIR, '.last-run.json');
-  const areas = has('--full') ? 'all' : 'required,ci,docs';
-  const r = spawnSync('node', [path.join(__dirname, 'run-checks.js'), '--area', areas, '--json', out], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 });
+  const areas = has('--quick') ? 'required,ci,docs' : 'all';
+  const extra = has('--full') || has('--quick') ? [] : ['--skip-file', SKIP_FILE];
+  const r = spawnSync('node', [path.join(__dirname, 'run-checks.js'), '--area', areas, ...extra, '--json', out], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 });
   let json = null;
   try { json = JSON.parse(fs.readFileSync(out, 'utf8')); } catch (e) { /* 書けなかった=検査自体が落ちた */ }
   try { fs.unlinkSync(out); } catch (e) { /* 無くてよい */ }
@@ -133,7 +140,7 @@ function main() {
   const say = s => lines.push(s);
   say(`# 定期メンテナンス点検 ${jstNow()}`);
   say('');
-  say(`点検の種類: ${has('--hygiene-only') ? '衛生チェックのみ' : has('--full') ? '月次(全検査)' : '週次(必須+CI+文書)'}`);
+  say(`点検の種類: ${has('--hygiene-only') ? '衛生チェックのみ' : has('--full') ? '月次(全検査+深い衛生チェック)' : has('--quick') ? '手早い点検(必須+CI+文書)' : '週次(全領域・重い数本を除く)'}`);
 
   let failed = false;
   if (!has('--hygiene-only')) {
