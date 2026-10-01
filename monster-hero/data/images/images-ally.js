@@ -93,7 +93,7 @@ const MONOL_IMG = "images/monsters/monol.png?v=b5fb70799e42";
 const OBORO_IMG = "images/monsters/oboro.png?v=fb0ab6eb992f";
 const PLANT_IMG = "images/monsters/plant.PNG?v=398cacbadab3";
 const PLANT_DYE_MASK = "images/monsters/plant-dye-mask.PNG?v=cad1fda53cf2";
-const ZAN_IMG = "images/monsters/zan.png?v=2293b346833c";
+const ZAN_IMG = "images/monsters/zan.png?v=4a2cee9000f3";
 const MITARASHI_IMG = "images/monsters/mitarashi.png?v=192d9cc253d8";
 const ARK_IMG = "images/monsters/ark.png?v=a9dce68b24d4";
 const IBLIS_IMG = "images/monsters/iblis.png?v=c3ce989b339d";
