@@ -431,7 +431,7 @@ const RhythmOrientationButton=({className=''})=>{
       aria-label={label} title={label} onClick={toggle} disabled={busy} aria-busy={busy?'true':undefined}
       className="flex min-h-[44px] min-w-[40px] flex-col items-center justify-center gap-0.5 rounded-xl border border-emerald-400/50 bg-emerald-950/40 leading-none text-emerald-100 disabled:opacity-60">
       <span aria-hidden="true" className="text-base leading-none">🔄</span>
-      <span className="text-[7px] font-black leading-none">{landscape?'縦':'横'}</span>
+      <span className="text-[9px] font-black leading-none">{landscape?'縦':'横'}</span>
     </button>
     {note!==''&&<p data-rhythm-orientation-note onClick={()=>setNote('')}
       style={{whiteSpace:'pre-line'}}
