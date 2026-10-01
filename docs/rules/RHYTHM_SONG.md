@@ -82,3 +82,9 @@
   書いた曲にしか効かないので、ほかの曲の譜面は1音も変わらない。
   中身と数字は [`docs/spec/RHYTHM_MODE.md`](../spec/RHYTHM_MODE.md)「19曲目 FREEDOM DiVE↓」
 
+- **解析は、音源をどう読み込むかで結果が変わる**(2026-10-01・定期点検で発見)。
+  `rhythm-audio-decode.js` は、ffmpeg があれば ffmpeg、無ければ Chromium でデコードする。
+  同じ音源でも打点の検出がずれ、`six_eternel_beat` は ffmpeg だと 138 BPM・4拍子、
+  Chromium だと3拍子と読んだうえで 275.99 BPM・4拍子へ自動で直る。解析済みファイルと
+  人が決めた値は Chromium 経路で作られている。**新曲の解析で結果を比べるときは経路をそろえる**
+  (`MHB_AUDIO_DECODE=chromium` を付ける)。無指定の挙動は従来どおりで、変えていない
