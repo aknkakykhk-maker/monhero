@@ -12529,8 +12529,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
       setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
       const joinBaseMs=resultFxMs(2600);
-      if(joinBaseMs!==null) setEffect({type:'allyJoin',label:`${m.name}合流！`,name:m.masuName||m.name,emoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,wave:waveResult?.wave||0,ms:battleMs(joinBaseMs),apt:aptLabel,
-        rows:[{key:'hp',label:'ライフ',before:bHp,after:nMaxHp},{key:'atk',label:'ちから',before:bAtk,after:nAtk},{key:'def',label:'丈夫さ',before:bDef,after:nDef},{key:'guts',label:'ガッツ',before:bGuts,after:nMaxGuts}]});
+      // タクティクスは合流しても「パーティの値」は増えない(その子が1体ぶんの値を持って盤面へ立つだけ)。
+      // クラシックの「いくつからいくつへ」ではなく、その子自身のステータスを見せる
+      const joinedUnit=tacticsJoin?normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]):null;
+      const joinRows=joinedUnit
+        ? [{key:'hp',label:'ライフ',before:0,after:joinedUnit.baseMaxHp},{key:'atk',label:'ちから',before:0,after:joinedUnit.atk},{key:'def',label:'丈夫さ',before:0,after:joinedUnit.def},{key:'guts',label:'ガッツ',before:0,after:joinedUnit.baseMaxGuts}]
+        : [{key:'hp',label:'ライフ',before:bHp,after:nMaxHp},{key:'atk',label:'ちから',before:bAtk,after:nAtk},{key:'def',label:'丈夫さ',before:bDef,after:nDef},{key:'guts',label:'ガッツ',before:bGuts,after:nMaxGuts}];
+      if(joinBaseMs!==null) setEffect({type:'allyJoin',label:`${m.name}合流！`,name:m.masuName||m.name,emoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,wave:waveResult?.wave||0,ms:battleMs(joinBaseMs),apt:aptLabel,single:!!joinedUnit,rows:joinRows});
       setTimeout(()=>{setEffect(null); advanceRunStage('UPGRADE_SKILL');},battleMs(joinBaseMs===null?150:joinBaseMs));
     }
     setCurrentPickingMon(null);
@@ -12699,7 +12704,40 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
 
   // UPGRADE_SKILL画面の手動ボタンとAUTOが共有する既存の次画面処理。
+  // 固有技の強化の画面へ入った時点のレベル(強化のあとに「Lv.いくつからいくつへ」を見せるための控え)
+  const uniqueSnapshotRef = useRef(null);
   const continueAfterUniqueUpgrade = () => {
+    if (effect) return;
+    // 上げた技があるときは、結果の演出を見せてから次の画面へ進む(SkillResultFx)
+    const snap = uniqueSnapshotRef.current;
+    const changes = [];
+    if (snap) {
+      uniqueUpgradeEntries().forEach(({ rowKey, u, holderMon, inherited }) => {
+        const before = snap[rowKey];
+        const to = u.evoLevel || 0;
+        if (!Number.isFinite(before) || to <= before) return;
+        const ownerMon = ALL_PLAYER_MONSTERS[u.monId];
+        const power = (lv) => Math.floor((u.baseMult + lv * 0.5) * 100);
+        const cost = (lv) => Math.floor(u.baseGuts * ((u.baseMult + lv * 0.5) / u.baseMult));
+        changes.push({
+          key: rowKey,
+          monName: inherited ? `${holderMon?.name || '？'} ← ${ownerMon?.name || '？'}の技` : (holderMon?.masuName || holderMon?.name || ownerMon?.name || ''),
+          skillName: u.names[Math.min(to, u.names.length - 1)], iconUrl: ownerMon?.iconUrl, emoji: ownerMon?.emoji,
+          from: before, to, powerBefore: power(before), powerAfter: power(to), gutsBefore: cost(before), gutsAfter: cost(to),
+        });
+      });
+    }
+    uniqueSnapshotRef.current = null;
+    const skillFxBase = changes.length ? resultFxMs(1800 + changes.length * 400) : null;
+    if (skillFxBase !== null) {
+      const ms = battleMs(skillFxBase);
+      setEffect({ type:'skillResult', label:'SKILL UP!', changes, ms });
+      setTimeout(() => { setEffect(null); proceedAfterUniqueUpgrade(); }, ms);
+      return;
+    }
+    proceedAfterUniqueUpgrade();
+  };
+  const proceedAfterUniqueUpgrade = () => {
     const availableTeachings=getActiveTeachingCards().filter(tc=>{const owned=ownedTeachings.find(ot=>ot.id===tc.id); return!owned||owned.evoLevel<2;});
     setTeachingPool(availableTeachings.sort(()=>Math.random()-0.5).slice(0,4));
     advanceRunStage('PICK_TEACHING');
@@ -12950,6 +12988,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     });
     return rows;
   };
+  // 強化の画面へ入ったときのレベルを控える(画面にいるあいだは上書きしない)
+  useEffect(() => {
+    if (gameState !== 'UPGRADE_SKILL') { uniqueSnapshotRef.current = null; return; }
+    if (uniqueSnapshotRef.current) return;
+    const snap = {};
+    uniqueUpgradeEntries().forEach(({ rowKey, u }) => { snap[rowKey] = u.evoLevel || 0; });
+    uniqueSnapshotRef.current = snap;
+  }, [gameState]);
 
   // アシストカードの効果説明。表記は全カードで次のルールに統一している。
   //  ・区切りは中黒「・」だけを使う(以前は「＆」「＋」「/」「()」が混在していた)
@@ -18738,7 +18784,8 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         {effect.type==='trainingResult'&&<TrainingResultFx effect={effect}/>}
         {effect.type==='allyJoin'&&<AllyJoinFx effect={effect}/>}
         {effect.type==='teachingResult'&&<TeachingResultFx effect={effect}/>}
-        {!['trainingResult','allyJoin','teachingResult'].includes(effect.type)&&(<>
+        {effect.type==='skillResult'&&<SkillResultFx effect={effect}/>}
+        {!['trainingResult','allyJoin','teachingResult','skillResult'].includes(effect.type)&&(<>
         {/* 大きさ・光り方・色は effectVisual(種類) が正本。画面側へ三項演算子を書き並べない */}
         {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>):(<div style={{fontSize:effectVisual(effect.type).emoji,animation:effectVisual(effect.type).throb}} className="mb-6 relative">{effect.monEmoji}</div>)}
         <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effectVisual(effect.type).label}`}>{effect.label}</h2>

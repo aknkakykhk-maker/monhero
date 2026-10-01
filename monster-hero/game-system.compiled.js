@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d6bc03348f8ed81b
+// source-sha256: 31a0065b2e2c48d1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 20:01";
+const BUILD_DATE = "2026-10-01 20:29";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -32573,7 +32573,8 @@ const PhaseGrowthCell = ({
   row,
   d = 0,
   countMs = 900,
-  compact = false
+  compact = false,
+  single = false
 }) => {
   const st = TRAINING_FX_STATS[row.key] || TRAINING_FX_STATS.hp;
   const Icon = {
@@ -32583,6 +32584,26 @@ const PhaseGrowthCell = ({
     Sparkles
   }[st.Icon];
   const diff = row.after - row.before;
+  if (single) return React.createElement("div", {
+    className: "mh-ph-cell rounded-lg px-1 py-1.5 text-center font-mono"
+  }, React.createElement("span", {
+    className: "flex items-center justify-center gap-0.5 text-[8px] font-black text-slate-400 leading-none"
+  }, React.createElement("span", {
+    className: st.tint
+  }, React.createElement(Icon, {
+    size: 9
+  })), row.label), React.createElement("span", {
+    className: `mh-train-num block mt-1 font-black leading-tight ${compact ? 'text-[15px]' : 'text-[22px]'} ${st.tint}`,
+    style: {
+      '--d': `${d + countMs}ms`,
+      '--glow': st.glow
+    }
+  }, React.createElement(TrainingCountUp, {
+    from: 0,
+    to: row.after,
+    delay: d,
+    duration: countMs
+  })));
   return React.createElement("div", {
     className: "mh-ph-cell rounded-lg px-1 py-1 text-center font-mono"
   }, React.createElement("span", {
@@ -32750,19 +32771,20 @@ const AllyJoinFx = ({
     }
   }), React.createElement("div", {
     className: "relative mb-1 text-left text-[9px] font-black text-[#f3d27a]"
-  }, "パーティのステータス"), React.createElement("div", {
+  }, effect.single ? `${effect.name}のステータス` : 'パーティのステータス'), React.createElement("div", {
     className: "relative grid grid-cols-4 gap-1.5"
   }, rows.map((row, ri) => React.createElement(PhaseGrowthCell, {
     key: row.key,
     row: row,
     d: 450 + ri * 110,
-    countMs: countMs
+    countMs: countMs,
+    single: !!effect.single
   }))), effect.apt && React.createElement("div", {
     className: "mh-train-gain relative mt-1.5 text-center text-[10px] font-black text-cyan-300",
     style: {
       '--d': '1000ms'
     }
-  }, "間合い適性 ", effect.apt)));
+  }, effect.single ? 'この子の間合い適性' : '間合い適性', " ", effect.apt)));
 };
 const TeachingResultFx = ({
   effect
@@ -32797,7 +32819,11 @@ const TeachingResultFx = ({
     className: "mh-train-sub text-lg font-black text-white"
   }, effect.name), React.createElement("div", {
     className: "flex items-center gap-2",
-    "aria-hidden": "true"
+    "aria-hidden": "true",
+    style: {
+      '--mh-rc': '192,132,252',
+      '--mh-rc2': '233,213,255'
+    }
   }, Array.from({
     length: (effect.maxLevel || 2) + 1
   }).map((_, i) => React.createElement("i", {
@@ -32818,6 +32844,115 @@ const TeachingResultFx = ({
       '--d': '300ms'
     }
   }, effect.desc));
+};
+const SkillResultFx = ({
+  effect
+}) => {
+  const changes = Array.isArray(effect?.changes) ? effect.changes : [];
+  const total = Math.max(600, Number(effect?.ms) || 2200);
+  const countMs = Math.max(250, Math.min(900, Math.round(total * 0.35)));
+  const compact = changes.length >= 3;
+  return React.createElement("div", {
+    "data-skill-result-fx": true,
+    className: "mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center gap-3 p-3 overflow-hidden",
+    style: {
+      '--ph': '245,158,11'
+    }
+  }, React.createElement("div", {
+    className: "shrink-0 flex flex-col items-center gap-1"
+  }, React.createElement("span", {
+    className: "mh-ph-plate"
+  }, "UNIQUE SKILL"), React.createElement("div", {
+    className: "mh-ph-heading"
+  }, React.createElement("h2", {
+    className: "mh-ph-title mh-train-title text-3xl font-black italic uppercase tracking-tighter leading-none"
+  }, "SKILL UP!"))), React.createElement("div", {
+    className: `w-full max-w-sm min-h-0 flex flex-col ${compact ? 'gap-1.5' : 'gap-2.5'}`
+  }, changes.map((c, ci) => {
+    const base = 300 + ci * 260;
+    return React.createElement("div", {
+      key: c.key,
+      className: "mh-train-card mh-ph-panel relative overflow-hidden rounded-2xl px-3 py-2",
+      style: {
+        '--d': `${ci * 260}ms`
+      }
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "mh-train-sweep",
+      style: {
+        '--d': `${base + 150}ms`
+      }
+    }), React.createElement("div", {
+      className: "relative flex items-center gap-2.5"
+    }, React.createElement("span", {
+      className: `${compact ? 'h-9 w-9' : 'h-12 w-12'} shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/40 flex items-center justify-center`
+    }, c.iconUrl ? React.createElement("img", {
+      src: c.iconUrl,
+      alt: "",
+      className: "h-full w-full object-cover"
+    }) : React.createElement("span", {
+      className: "text-xl"
+    }, c.emoji || '⚡')), React.createElement("div", {
+      className: "min-w-0 flex-1 text-left"
+    }, React.createElement("div", {
+      className: "truncate text-[9px] font-black text-amber-300 leading-tight"
+    }, c.monName), React.createElement("div", {
+      className: `truncate font-black text-white leading-tight ${compact ? 'text-[12px]' : 'text-[14px]'}`
+    }, c.skillName)), React.createElement("div", {
+      className: "shrink-0 text-right font-mono"
+    }, React.createElement("div", {
+      className: "text-[9px] font-black text-slate-500 leading-tight"
+    }, "Lv.", c.from, " →"), React.createElement("div", {
+      className: "mh-train-num text-[20px] font-black text-amber-300 leading-tight",
+      style: {
+        '--d': `${base + 500}ms`,
+        '--glow': '251,191,36'
+      }
+    }, "Lv.", c.to))), React.createElement("div", {
+      className: "relative mt-1.5 flex items-center gap-[6px] pl-0.5",
+      "aria-hidden": "true",
+      style: {
+        '--mh-rc': '245,158,11',
+        '--mh-rc2': '255,240,160'
+      }
+    }, Array.from({
+      length: 8
+    }).map((_, i) => React.createElement("i", {
+      key: i,
+      className: `mh-ph-pip${i >= c.from && i < c.to ? ' mh-train-gain' : ''}`,
+      "data-on": i < c.to ? '' : undefined,
+      style: i >= c.from && i < c.to ? {
+        '--d': `${base + 200 + (i - c.from) * 150}ms`
+      } : undefined
+    }))), React.createElement("div", {
+      className: "relative mt-1.5 grid grid-cols-2 gap-1.5 font-mono"
+    }, React.createElement("div", {
+      className: "mh-ph-cell rounded-lg px-1.5 py-1 text-center"
+    }, React.createElement("span", {
+      className: "block text-[8px] font-black text-slate-400 leading-none"
+    }, "技威力"), React.createElement("span", {
+      className: "block text-[9px] font-black text-slate-500 leading-tight mt-0.5"
+    }, c.powerBefore, " →"), React.createElement("span", {
+      className: "mh-train-num block text-[17px] font-black text-red-300 leading-tight",
+      style: {
+        '--d': `${base + 300 + countMs}ms`,
+        '--glow': '248,113,113'
+      }
+    }, React.createElement(TrainingCountUp, {
+      from: c.powerBefore,
+      to: c.powerAfter,
+      delay: base + 300,
+      duration: countMs
+    }))), React.createElement("div", {
+      className: "mh-ph-cell rounded-lg px-1.5 py-1 text-center"
+    }, React.createElement("span", {
+      className: "block text-[8px] font-black text-slate-400 leading-none"
+    }, "消費ガッツ"), React.createElement("span", {
+      className: "block text-[9px] font-black text-slate-500 leading-tight mt-0.5"
+    }, c.gutsBefore, " →"), React.createElement("span", {
+      className: "block text-[17px] font-black text-amber-300 leading-tight"
+    }, c.gutsAfter))));
+  })));
 };
 const PHASE_BANNER_TITLES = Object.freeze({
   training: 'TRAINING',
@@ -63104,6 +63239,48 @@ function MonsterHeroGame() {
       }
       setUpgradePoints(prev => prev + (Math.floor(Math.random() * 4) + 1));
       const joinBaseMs = resultFxMs(2600);
+      const joinedUnit = tacticsJoin ? normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]) : null;
+      const joinRows = joinedUnit ? [{
+        key: 'hp',
+        label: 'ライフ',
+        before: 0,
+        after: joinedUnit.baseMaxHp
+      }, {
+        key: 'atk',
+        label: 'ちから',
+        before: 0,
+        after: joinedUnit.atk
+      }, {
+        key: 'def',
+        label: '丈夫さ',
+        before: 0,
+        after: joinedUnit.def
+      }, {
+        key: 'guts',
+        label: 'ガッツ',
+        before: 0,
+        after: joinedUnit.baseMaxGuts
+      }] : [{
+        key: 'hp',
+        label: 'ライフ',
+        before: bHp,
+        after: nMaxHp
+      }, {
+        key: 'atk',
+        label: 'ちから',
+        before: bAtk,
+        after: nAtk
+      }, {
+        key: 'def',
+        label: '丈夫さ',
+        before: bDef,
+        after: nDef
+      }, {
+        key: 'guts',
+        label: 'ガッツ',
+        before: bGuts,
+        after: nMaxGuts
+      }];
       if (joinBaseMs !== null) setEffect({
         type: 'allyJoin',
         label: `${m.name}合流！`,
@@ -63115,27 +63292,8 @@ function MonsterHeroGame() {
         wave: waveResult?.wave || 0,
         ms: battleMs(joinBaseMs),
         apt: aptLabel,
-        rows: [{
-          key: 'hp',
-          label: 'ライフ',
-          before: bHp,
-          after: nMaxHp
-        }, {
-          key: 'atk',
-          label: 'ちから',
-          before: bAtk,
-          after: nAtk
-        }, {
-          key: 'def',
-          label: '丈夫さ',
-          before: bDef,
-          after: nDef
-        }, {
-          key: 'guts',
-          label: 'ガッツ',
-          before: bGuts,
-          after: nMaxGuts
-        }]
+        single: !!joinedUnit,
+        rows: joinRows
       });
       setTimeout(() => {
         setEffect(null);
@@ -63391,7 +63549,58 @@ function MonsterHeroGame() {
       }
     }, trainingFxMs);
   };
+  const uniqueSnapshotRef = useRef(null);
   const continueAfterUniqueUpgrade = () => {
+    if (effect) return;
+    const snap = uniqueSnapshotRef.current;
+    const changes = [];
+    if (snap) {
+      uniqueUpgradeEntries().forEach(({
+        rowKey,
+        u,
+        holderMon,
+        inherited
+      }) => {
+        const before = snap[rowKey];
+        const to = u.evoLevel || 0;
+        if (!Number.isFinite(before) || to <= before) return;
+        const ownerMon = ALL_PLAYER_MONSTERS[u.monId];
+        const power = lv => Math.floor((u.baseMult + lv * 0.5) * 100);
+        const cost = lv => Math.floor(u.baseGuts * ((u.baseMult + lv * 0.5) / u.baseMult));
+        changes.push({
+          key: rowKey,
+          monName: inherited ? `${holderMon?.name || '？'} ← ${ownerMon?.name || '？'}の技` : holderMon?.masuName || holderMon?.name || ownerMon?.name || '',
+          skillName: u.names[Math.min(to, u.names.length - 1)],
+          iconUrl: ownerMon?.iconUrl,
+          emoji: ownerMon?.emoji,
+          from: before,
+          to,
+          powerBefore: power(before),
+          powerAfter: power(to),
+          gutsBefore: cost(before),
+          gutsAfter: cost(to)
+        });
+      });
+    }
+    uniqueSnapshotRef.current = null;
+    const skillFxBase = changes.length ? resultFxMs(1800 + changes.length * 400) : null;
+    if (skillFxBase !== null) {
+      const ms = battleMs(skillFxBase);
+      setEffect({
+        type: 'skillResult',
+        label: 'SKILL UP!',
+        changes,
+        ms
+      });
+      setTimeout(() => {
+        setEffect(null);
+        proceedAfterUniqueUpgrade();
+      }, ms);
+      return;
+    }
+    proceedAfterUniqueUpgrade();
+  };
+  const proceedAfterUniqueUpgrade = () => {
     const availableTeachings = getActiveTeachingCards().filter(tc => {
       const owned = ownedTeachings.find(ot => ot.id === tc.id);
       return !owned || owned.evoLevel < 2;
@@ -63701,6 +63910,21 @@ function MonsterHeroGame() {
     });
     return rows;
   };
+  useEffect(() => {
+    if (gameState !== 'UPGRADE_SKILL') {
+      uniqueSnapshotRef.current = null;
+      return;
+    }
+    if (uniqueSnapshotRef.current) return;
+    const snap = {};
+    uniqueUpgradeEntries().forEach(({
+      rowKey,
+      u
+    }) => {
+      snap[rowKey] = u.evoLevel || 0;
+    });
+    uniqueSnapshotRef.current = snap;
+  }, [gameState]);
   const getDynamicDesc = (t, isOwned, level) => {
     const pct = v => String(Math.round(v * 1000) / 10);
     if (t.id === 'oryo') return `攻撃 ${pct(0.1 + level * 0.1)}%アップ`;
@@ -76167,7 +76391,9 @@ function MonsterHeroGame() {
       effect: effect
     }), effect.type === 'teachingResult' && React.createElement(TeachingResultFx, {
       effect: effect
-    }), !['trainingResult', 'allyJoin', 'teachingResult'].includes(effect.type) && React.createElement(React.Fragment, null, effect.imgUrl ? effect.baseId ? React.createElement(DyedMonsterImage, {
+    }), effect.type === 'skillResult' && React.createElement(SkillResultFx, {
+      effect: effect
+    }), !['trainingResult', 'allyJoin', 'teachingResult', 'skillResult'].includes(effect.type) && React.createElement(React.Fragment, null, effect.imgUrl ? effect.baseId ? React.createElement(DyedMonsterImage, {
       baseId: effect.baseId,
       src: effect.imgUrl,
       alt: "effect",

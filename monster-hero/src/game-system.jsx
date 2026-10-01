@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 40219f4f0d53522f
+// generated-sha256: 9aec8480dcff2501
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-01 20:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-01 20:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21450,10 +21450,19 @@ const TrainingCountUp = ({ from, to, delay = 0, duration = 900, format = null })
   return <span ref={holderRef}>{format ? format(value) : value}</span>;
 };
 // 「いくつから いくつへ」の1項目。元の値を小さく、新しい値を大きく(増えたぶんは駆け上がる)、増えた量を「+○○」で出す。
-const PhaseGrowthCell = ({ row, d = 0, countMs = 900, compact = false }) => {
+const PhaseGrowthCell = ({ row, d = 0, countMs = 900, compact = false, single = false }) => {
   const st = TRAINING_FX_STATS[row.key] || TRAINING_FX_STATS.hp;
   const Icon = { Heart, Sword, ShieldCheck, Sparkles }[st.Icon];
   const diff = row.after - row.before;
+  // 1体ぶんの値だけを見せる形(タクティクスの合流など「元の値から増える」ものが無いとき)。0から値までを数える
+  if (single) return (
+    <div className="mh-ph-cell rounded-lg px-1 py-1.5 text-center font-mono">
+      <span className="flex items-center justify-center gap-0.5 text-[8px] font-black text-slate-400 leading-none"><span className={st.tint}><Icon size={9}/></span>{row.label}</span>
+      <span className={`mh-train-num block mt-1 font-black leading-tight ${compact ? 'text-[15px]' : 'text-[22px]'} ${st.tint}`} style={{'--d': `${d + countMs}ms`, '--glow': st.glow}}>
+        <TrainingCountUp from={0} to={row.after} delay={d} duration={countMs}/>
+      </span>
+    </div>
+  );
   return (
     <div className="mh-ph-cell rounded-lg px-1 py-1 text-center font-mono">
       <span className="flex items-center justify-center gap-0.5 text-[8px] font-black text-slate-400 leading-none"><span className={st.tint}><Icon size={9}/></span>{row.label}</span>
@@ -21533,11 +21542,11 @@ const AllyJoinFx = ({ effect }) => {
       <div className="mh-train-sub shrink-0 text-xl font-black text-white">{effect.name}<span className="text-slate-300 text-sm">が仲間になった！</span></div>
       <div className="mh-train-card mh-ph-panel relative w-full max-w-sm overflow-hidden rounded-2xl px-2.5 py-2" style={{'--d': '350ms'}}>
         <span aria-hidden="true" className="mh-train-sweep" style={{'--d': '500ms'}}/>
-        <div className="relative mb-1 text-left text-[9px] font-black text-[#f3d27a]">パーティのステータス</div>
+        <div className="relative mb-1 text-left text-[9px] font-black text-[#f3d27a]">{effect.single ? `${effect.name}のステータス` : 'パーティのステータス'}</div>
         <div className="relative grid grid-cols-4 gap-1.5">
-          {rows.map((row, ri) => <PhaseGrowthCell key={row.key} row={row} d={450 + ri * 110} countMs={countMs}/>)}
+          {rows.map((row, ri) => <PhaseGrowthCell key={row.key} row={row} d={450 + ri * 110} countMs={countMs} single={!!effect.single}/>)}
         </div>
-        {effect.apt && <div className="mh-train-gain relative mt-1.5 text-center text-[10px] font-black text-cyan-300" style={{'--d': '1000ms'}}>間合い適性 {effect.apt}</div>}
+        {effect.apt && <div className="mh-train-gain relative mt-1.5 text-center text-[10px] font-black text-cyan-300" style={{'--d': '1000ms'}}>{effect.single ? 'この子の間合い適性' : '間合い適性'} {effect.apt}</div>}
       </div>
     </div>
   );
@@ -21556,13 +21565,72 @@ const TeachingResultFx = ({ effect }) => {
         <span className="mh-phase-pop mh-ph-medal relative z-10 rounded-3xl p-2 leading-none" style={{animationDelay:'.15s'}}>{cardIconNode(effect.icon, 84, effect.id)}</span>
       </div>
       <div className="mh-train-sub text-lg font-black text-white">{effect.name}</div>
-      <div className="flex items-center gap-2" aria-hidden="true">
+      <div className="flex items-center gap-2" aria-hidden="true" style={{'--mh-rc': '192,132,252', '--mh-rc2': '233,213,255'}}>
         {Array.from({ length: (effect.maxLevel || 2) + 1 }).map((_, i) => (
           <i key={i} className={`mh-ph-pip${i === effect.toLevel ? ' mh-train-gain' : ''}`} data-on={i <= effect.toLevel ? '' : undefined} style={i === effect.toLevel ? {'--d': '450ms'} : undefined}/>
         ))}
       </div>
       <div className="mh-train-gain text-[12px] font-black text-purple-200" style={{'--d': '450ms'}}>{isUpgrade ? `Lv.${effect.fromLevel} → Lv.${effect.toLevel} に強化！` : '新しく習得しました！'}</div>
       {effect.desc && <div className="mh-train-card mh-ph-panel w-full max-w-sm rounded-2xl px-3 py-2 text-[11px] font-bold leading-snug text-slate-100" style={{'--d': '300ms'}}>{effect.desc}</div>}
+    </div>
+  );
+};
+
+// ==== 固有技を強化したあとの演出 ====
+// 強化の画面から「アシストカードへ」進むときに、レベルが上がった技ごとに「Lv.いくつからいくつへ」と
+// 技威力・消費ガッツの変化を見せる。段の目盛りは、上がった段が1つずつ光る。
+//   effect … { changes:[{ key, monName, skillName, iconUrl, emoji, from, to, powerBefore, powerAfter, gutsBefore, gutsAfter }], ms }
+const SkillResultFx = ({ effect }) => {
+  const changes = Array.isArray(effect?.changes) ? effect.changes : [];
+  const total = Math.max(600, Number(effect?.ms) || 2200);
+  const countMs = Math.max(250, Math.min(900, Math.round(total * 0.35)));
+  const compact = changes.length >= 3;
+  return (
+    <div data-skill-result-fx className="mh-phase mh-ph-bg absolute inset-0 flex flex-col items-center justify-center gap-3 p-3 overflow-hidden" style={{'--ph':'245,158,11'}}>
+      <div className="shrink-0 flex flex-col items-center gap-1">
+        <span className="mh-ph-plate">UNIQUE SKILL</span>
+        <div className="mh-ph-heading"><h2 className="mh-ph-title mh-train-title text-3xl font-black italic uppercase tracking-tighter leading-none">SKILL UP!</h2></div>
+      </div>
+      <div className={`w-full max-w-sm min-h-0 flex flex-col ${compact ? 'gap-1.5' : 'gap-2.5'}`}>
+        {changes.map((c, ci) => {
+          const base = 300 + ci * 260;
+          return (
+            <div key={c.key} className="mh-train-card mh-ph-panel relative overflow-hidden rounded-2xl px-3 py-2" style={{'--d': `${ci * 260}ms`}}>
+              <span aria-hidden="true" className="mh-train-sweep" style={{'--d': `${base + 150}ms`}}/>
+              <div className="relative flex items-center gap-2.5">
+                <span className={`${compact ? 'h-9 w-9' : 'h-12 w-12'} shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/40 flex items-center justify-center`}>
+                  {c.iconUrl ? <img src={c.iconUrl} alt="" className="h-full w-full object-cover"/> : <span className="text-xl">{c.emoji || '⚡'}</span>}
+                </span>
+                <div className="min-w-0 flex-1 text-left">
+                  <div className="truncate text-[9px] font-black text-amber-300 leading-tight">{c.monName}</div>
+                  <div className={`truncate font-black text-white leading-tight ${compact ? 'text-[12px]' : 'text-[14px]'}`}>{c.skillName}</div>
+                </div>
+                <div className="shrink-0 text-right font-mono">
+                  <div className="text-[9px] font-black text-slate-500 leading-tight">Lv.{c.from} →</div>
+                  <div className="mh-train-num text-[20px] font-black text-amber-300 leading-tight" style={{'--d': `${base + 500}ms`, '--glow': '251,191,36'}}>Lv.{c.to}</div>
+                </div>
+              </div>
+              <div className="relative mt-1.5 flex items-center gap-[6px] pl-0.5" aria-hidden="true" style={{'--mh-rc': '245,158,11', '--mh-rc2': '255,240,160'}}>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <i key={i} className={`mh-ph-pip${i >= c.from && i < c.to ? ' mh-train-gain' : ''}`} data-on={i < c.to ? '' : undefined} style={i >= c.from && i < c.to ? {'--d': `${base + 200 + (i - c.from) * 150}ms`} : undefined}/>
+                ))}
+              </div>
+              <div className="relative mt-1.5 grid grid-cols-2 gap-1.5 font-mono">
+                <div className="mh-ph-cell rounded-lg px-1.5 py-1 text-center">
+                  <span className="block text-[8px] font-black text-slate-400 leading-none">技威力</span>
+                  <span className="block text-[9px] font-black text-slate-500 leading-tight mt-0.5">{c.powerBefore} →</span>
+                  <span className="mh-train-num block text-[17px] font-black text-red-300 leading-tight" style={{'--d': `${base + 300 + countMs}ms`, '--glow': '248,113,113'}}><TrainingCountUp from={c.powerBefore} to={c.powerAfter} delay={base + 300} duration={countMs}/></span>
+                </div>
+                <div className="mh-ph-cell rounded-lg px-1.5 py-1 text-center">
+                  <span className="block text-[8px] font-black text-slate-400 leading-none">消費ガッツ</span>
+                  <span className="block text-[9px] font-black text-slate-500 leading-tight mt-0.5">{c.gutsBefore} →</span>
+                  <span className="block text-[17px] font-black text-amber-300 leading-tight">{c.gutsAfter}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -43432,8 +43500,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
       setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
       const joinBaseMs=resultFxMs(2600);
-      if(joinBaseMs!==null) setEffect({type:'allyJoin',label:`${m.name}合流！`,name:m.masuName||m.name,emoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,wave:waveResult?.wave||0,ms:battleMs(joinBaseMs),apt:aptLabel,
-        rows:[{key:'hp',label:'ライフ',before:bHp,after:nMaxHp},{key:'atk',label:'ちから',before:bAtk,after:nAtk},{key:'def',label:'丈夫さ',before:bDef,after:nDef},{key:'guts',label:'ガッツ',before:bGuts,after:nMaxGuts}]});
+      // タクティクスは合流しても「パーティの値」は増えない(その子が1体ぶんの値を持って盤面へ立つだけ)。
+      // クラシックの「いくつからいくつへ」ではなく、その子自身のステータスを見せる
+      const joinedUnit=tacticsJoin?normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]):null;
+      const joinRows=joinedUnit
+        ? [{key:'hp',label:'ライフ',before:0,after:joinedUnit.baseMaxHp},{key:'atk',label:'ちから',before:0,after:joinedUnit.atk},{key:'def',label:'丈夫さ',before:0,after:joinedUnit.def},{key:'guts',label:'ガッツ',before:0,after:joinedUnit.baseMaxGuts}]
+        : [{key:'hp',label:'ライフ',before:bHp,after:nMaxHp},{key:'atk',label:'ちから',before:bAtk,after:nAtk},{key:'def',label:'丈夫さ',before:bDef,after:nDef},{key:'guts',label:'ガッツ',before:bGuts,after:nMaxGuts}];
+      if(joinBaseMs!==null) setEffect({type:'allyJoin',label:`${m.name}合流！`,name:m.masuName||m.name,emoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,wave:waveResult?.wave||0,ms:battleMs(joinBaseMs),apt:aptLabel,single:!!joinedUnit,rows:joinRows});
       setTimeout(()=>{setEffect(null); advanceRunStage('UPGRADE_SKILL');},battleMs(joinBaseMs===null?150:joinBaseMs));
     }
     setCurrentPickingMon(null);
@@ -43602,7 +43675,40 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
 
   // UPGRADE_SKILL画面の手動ボタンとAUTOが共有する既存の次画面処理。
+  // 固有技の強化の画面へ入った時点のレベル(強化のあとに「Lv.いくつからいくつへ」を見せるための控え)
+  const uniqueSnapshotRef = useRef(null);
   const continueAfterUniqueUpgrade = () => {
+    if (effect) return;
+    // 上げた技があるときは、結果の演出を見せてから次の画面へ進む(SkillResultFx)
+    const snap = uniqueSnapshotRef.current;
+    const changes = [];
+    if (snap) {
+      uniqueUpgradeEntries().forEach(({ rowKey, u, holderMon, inherited }) => {
+        const before = snap[rowKey];
+        const to = u.evoLevel || 0;
+        if (!Number.isFinite(before) || to <= before) return;
+        const ownerMon = ALL_PLAYER_MONSTERS[u.monId];
+        const power = (lv) => Math.floor((u.baseMult + lv * 0.5) * 100);
+        const cost = (lv) => Math.floor(u.baseGuts * ((u.baseMult + lv * 0.5) / u.baseMult));
+        changes.push({
+          key: rowKey,
+          monName: inherited ? `${holderMon?.name || '？'} ← ${ownerMon?.name || '？'}の技` : (holderMon?.masuName || holderMon?.name || ownerMon?.name || ''),
+          skillName: u.names[Math.min(to, u.names.length - 1)], iconUrl: ownerMon?.iconUrl, emoji: ownerMon?.emoji,
+          from: before, to, powerBefore: power(before), powerAfter: power(to), gutsBefore: cost(before), gutsAfter: cost(to),
+        });
+      });
+    }
+    uniqueSnapshotRef.current = null;
+    const skillFxBase = changes.length ? resultFxMs(1800 + changes.length * 400) : null;
+    if (skillFxBase !== null) {
+      const ms = battleMs(skillFxBase);
+      setEffect({ type:'skillResult', label:'SKILL UP!', changes, ms });
+      setTimeout(() => { setEffect(null); proceedAfterUniqueUpgrade(); }, ms);
+      return;
+    }
+    proceedAfterUniqueUpgrade();
+  };
+  const proceedAfterUniqueUpgrade = () => {
     const availableTeachings=getActiveTeachingCards().filter(tc=>{const owned=ownedTeachings.find(ot=>ot.id===tc.id); return!owned||owned.evoLevel<2;});
     setTeachingPool(availableTeachings.sort(()=>Math.random()-0.5).slice(0,4));
     advanceRunStage('PICK_TEACHING');
@@ -43853,6 +43959,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     });
     return rows;
   };
+  // 強化の画面へ入ったときのレベルを控える(画面にいるあいだは上書きしない)
+  useEffect(() => {
+    if (gameState !== 'UPGRADE_SKILL') { uniqueSnapshotRef.current = null; return; }
+    if (uniqueSnapshotRef.current) return;
+    const snap = {};
+    uniqueUpgradeEntries().forEach(({ rowKey, u }) => { snap[rowKey] = u.evoLevel || 0; });
+    uniqueSnapshotRef.current = snap;
+  }, [gameState]);
 
   // アシストカードの効果説明。表記は全カードで次のルールに統一している。
   //  ・区切りは中黒「・」だけを使う(以前は「＆」「＋」「/」「()」が混在していた)
@@ -49641,7 +49755,8 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         {effect.type==='trainingResult'&&<TrainingResultFx effect={effect}/>}
         {effect.type==='allyJoin'&&<AllyJoinFx effect={effect}/>}
         {effect.type==='teachingResult'&&<TeachingResultFx effect={effect}/>}
-        {!['trainingResult','allyJoin','teachingResult'].includes(effect.type)&&(<>
+        {effect.type==='skillResult'&&<SkillResultFx effect={effect}/>}
+        {!['trainingResult','allyJoin','teachingResult','skillResult'].includes(effect.type)&&(<>
         {/* 大きさ・光り方・色は effectVisual(種類) が正本。画面側へ三項演算子を書き並べない */}
         {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effectVisual(effect.type).size,height:effectVisual(effect.type).size,animation:effectVisual(effect.type).throb}} className={`mb-6 object-contain relative ${effectVisual(effect.type).glow}`}/>):(<div style={{fontSize:effectVisual(effect.type).emoji,animation:effectVisual(effect.type).throb}} className="mb-6 relative">{effect.monEmoji}</div>)}
         <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effectVisual(effect.type).label}`}>{effect.label}</h2>
