@@ -1347,11 +1347,17 @@ function MonsterHeroGame() {
   const [masuMons, setMasuMons] = useState([]);
   // マスモンのお気に入り(ロック)。IDの並び(mh_masu_locked_v1)。お気に入りの子は削除・合体の副・寄付ができない
   const [lockedMasuIds, setLockedMasuIds] = useState([]);
-  const toggleMasuLock = (masuId) => setLockedMasuIds(prev => {
-    const next = toggleMasuLockIds(prev, masuId);
-    storeSet(MASU_LOCK_KEY, next, false);
-    return next;
-  });
+  // 転生ロック(mh_masu_lock_rebirth_v1)。お気に入りとは別に付け外しできる(MASU_LOCK_KINDS)。転生ロックの子は転生できない
+  const [rebirthLockedMasuIds, setRebirthLockedMasuIds] = useState([]);
+  const toggleMasuLock = (masuId, kind = 'keep') => {
+    const setIds = kind === 'rebirth' ? setRebirthLockedMasuIds : setLockedMasuIds;
+    const storeKey = (MASU_LOCK_KINDS[kind] || MASU_LOCK_KINDS.keep).key;
+    setIds(prev => {
+      const next = toggleMasuLockIds(prev, masuId);
+      storeSet(storeKey, next, false);
+      return next;
+    });
+  };
   // モンスターノーツ用に設定したマスモンを、保存してあるIDの並びから解決する(§3.2)。
   // 手放したマスモンと、同じベースモンスターの重複はここで落とす。保存値は書き換えない。
   const rhythmMonsterSlots = resolveRhythmMonsterSlots(rhythmMonsterSlotIds, masuMons);
@@ -1987,10 +1993,13 @@ function MonsterHeroGame() {
               ? <img src={iconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>
               : <div className="w-full h-full flex items-center justify-center text-2xl">{base.emoji}</div>)}
         </div>
-        {/* お気に入り(ロック)の印。左上だけ空いている(左下=強化P・右下=超越P・右上=マスモンの札・下の中央=転生★) */}
-        {masu&&isMasuLocked(lockedMasuIds, masu.id)&&(
-          <span data-masu-locked aria-label="お気に入り(削除・合体・寄付できません)" title="お気に入り"
-            className="absolute -left-1.5 -top-1 z-10 flex h-[17px] w-[17px] items-center justify-center rounded-full border border-amber-200/70 bg-slate-950 text-[10px] leading-none shadow">🔒</span>
+        {/* ロックの印。左上だけ空いている(左下=強化P・右下=超越P・右上=マスモンの札・下の中央=転生★)。
+            お気に入り=🔒、転生ロック=🔁。両方なら2つ並べる */}
+        {masu&&(isMasuLocked(lockedMasuIds, masu.id)||isMasuLocked(rebirthLockedMasuIds, masu.id))&&(
+          <span data-masu-locked={`${isMasuLocked(lockedMasuIds, masu.id)?'keep':''}${isMasuLocked(rebirthLockedMasuIds, masu.id)?' rebirth':''}`.trim()}
+            aria-label={[isMasuLocked(lockedMasuIds, masu.id)?'お気に入り(削除・合体・寄付できません)':'',isMasuLocked(rebirthLockedMasuIds, masu.id)?'転生ロック(転生できません)':''].filter(Boolean).join('・')}
+            title="ロック中"
+            className="absolute -left-1.5 -top-1 z-10 flex h-[17px] items-center justify-center gap-px rounded-full border border-amber-200/70 bg-slate-950 px-1 text-[10px] leading-none shadow">{isMasuLocked(lockedMasuIds, masu.id)&&'🔒'}{isMasuLocked(rebirthLockedMasuIds, masu.id)&&'🔁'}</span>
         )}
         {/* ふり分けできる強化ポイント。絆Lvと同じ行に並べると、3桁になった個体で
             行が2段になり、一覧に並ぶカードが1枚ぶん背高くなっていた。
@@ -5074,6 +5083,7 @@ function MonsterHeroGame() {
       }
       setMasuMons(savedMasuMons);
       setLockedMasuIds(normalizeMasuLockIds(await storeGet(MASU_LOCK_KEY, [], false)));
+      setRebirthLockedMasuIds(normalizeMasuLockIds(await storeGet(MASU_REBIRTH_LOCK_KEY, [], false)));
       // 放牧設定導入前のセーブは、従来どおり所持マスモン1体を初期表示にして互換性を保つ。
       // 保存済みIDは重複・削除済み個体・表示不能な個体を取り除き、最大5体に制限する。
       const savedPastureIds = await storeGet('mh_home_pasture_ids', null, false);
@@ -7640,7 +7650,7 @@ function MonsterHeroGame() {
   const executeMasuReincarnation = async () => {
     if (reincarnateProcessingRef.current || !reincarnateSelectedId) return;
     const masu = masuMonsRef.current.find(m=>String(m.id)===String(reincarnateSelectedId));
-    const result = buildMasuReincarnation({ masu, skillKey:reincarnateSkillKey, gold });
+    const result = buildMasuReincarnation({ masu, skillKey:reincarnateSkillKey, gold, lockedIds:rebirthLockedMasuIds });
     if (!result.ok) { setReincarnateError(result.reason); return; }
     reincarnateProcessingRef.current = true;
     setReincarnateError('');
@@ -13327,10 +13337,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               )}
               <div className={`text-[10px] font-bold ${masu ? 'text-pink-400' : 'text-indigo-400'} truncate`}>{masu ? `元：${base.name}` : 'ベースモン'}</div>
             </div>
-            {/* お気に入り(ロック)の切り替え。名前を変えられる画面(=自分のマスモン)でだけ出す。詳細の下の大きなボタンと同じ */}
-            {masu && onRename && (()=>{const locked=isMasuLocked(lockedMasuIds, masu.id);return <button type="button" data-masu-lock-quick={locked?'on':'off'} aria-pressed={locked} onClick={()=>toggleMasuLock(masu.id)}
-              aria-label={locked?'お気に入りを外す':'お気に入りにする(削除・合体・寄付を防ぐ)'} title={locked?'お気に入り中':'お気に入りにする'}
-              className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full border text-[15px] leading-none active:scale-90 shrink-0 ${locked?'border-amber-300/70 bg-amber-500/20':'border-white/15 bg-white/5 opacity-70'}`}>{locked?'🔒':'🔓'}</button>;})()}
             {onClose && <button onClick={onClose} aria-label="閉じる" className="p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"><X size={16}/></button>}
           </div>
           {renderPowerBadge(power, { note: powerNote })}
@@ -13346,6 +13352,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${xpPct}%`}}></div></div>
             <div className="text-[10px] text-pink-400/70 font-mono tabular-nums">{lvl.xpIntoLevel.toLocaleString()} / {lvl.xpForNext.toLocaleString()} XP</div>
           </>)}
+          {/* ロックの切り替え(2026-10-01)。右上の✕から離し、見出しの下に幅いっぱいの2つのボタンで置く。
+              お気に入り=削除・合体の副・寄付を防ぐ / 転生ロック=転生を防ぐ。自分のマスモン(名前を変えられる画面)でだけ出す */}
+          {masu && onRename && !compact && (
+            <div data-masu-lock-row className="grid grid-cols-2 gap-1.5 pt-1">
+              {['keep','rebirth'].map(kind=>{const meta=MASU_LOCK_KINDS[kind];const on=isMasuLocked(kind==='keep'?lockedMasuIds:rebirthLockedMasuIds, masu.id);
+                return <button key={kind} type="button" data-masu-lock-quick={kind} data-state={on?'on':'off'} aria-pressed={on} onClick={()=>toggleMasuLock(masu.id, kind)}
+                  aria-label={`${meta.label}${on?'を外す':'にする'}(${meta.blocks}を防ぐ)`}
+                  className={`min-h-[44px] rounded-xl border px-1 text-[11px] font-black leading-tight active:scale-95 ${on?'border-amber-300/70 bg-amber-500/25 text-amber-100':'border-white/15 bg-slate-900 text-slate-300'}`}>{meta.emoji} {meta.label}<span className="block text-[9px] font-bold opacity-80">{on?'ON':'OFF'}</span></button>;})}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -14279,6 +14295,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* 転生: Lv100以上で使える。レベルを99ぶん返す代わりに、振った強化をすべて振り直せる */}
         {gameState==='MASU_REINCARNATE'&&(
           <MasuReincarnateScreen
+            rebirthLockedMasuIds={rebirthLockedMasuIds}
             MONSTER_CARD_CLASS={MONSTER_CARD_CLASS}
             MONSTER_CARD_STYLE={MONSTER_CARD_STYLE}
             buildUnifiedMonsterEntries={buildUnifiedMonsterEntries}
@@ -16787,10 +16804,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   : null)}
               <div className="text-[10px] text-slate-500 font-bold text-center px-2">{inRoster?'現在、編成に入っています':'編成画面で選ぶと、次の周回でこのマスモンを使えます'}</div>
               <div className="text-[10px] text-teal-400/80 font-bold text-center px-2">絆ポイントリセットの書は「アイテム」から使用できます</div>
-              {/* お気に入り(ロック)(2026-10-01)。お気に入りの子は削除・合体の副・寄付ができない */}
-              {(()=>{const locked=isMasuLocked(lockedMasuIds, masu.id);return <button type="button" data-masu-lock-toggle={locked?'on':'off'} aria-pressed={locked} onClick={()=>toggleMasuLock(masu.id)}
-                className={`w-full min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${locked?'border-amber-300/70 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900 text-slate-300'}`}>
-                {locked?'🔒 お気に入り中（削除・合体・寄付できません）':'🔓 お気に入りにする（削除・合体・寄付を防ぐ）'}</button>;})()}
+              {/* ロック(2026-10-01)。上の見出しにも同じ切り替えがある。ここは何を防ぐかの説明つき。
+                  お気に入り=削除・合体の副・寄付 / 転生ロック=転生。2つは独立 */}
+              <div data-masu-lock-panel className="space-y-1.5">
+                {['keep','rebirth'].map(kind=>{const meta=MASU_LOCK_KINDS[kind];const on=isMasuLocked(kind==='keep'?lockedMasuIds:rebirthLockedMasuIds, masu.id);
+                  return <button key={kind} type="button" data-masu-lock-toggle={kind} data-state={on?'on':'off'} aria-pressed={on} onClick={()=>toggleMasuLock(masu.id, kind)}
+                    className={`w-full min-h-[44px] rounded-xl border px-3 py-1.5 text-left active:scale-[.98] ${on?'border-amber-300/70 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900 text-slate-300'}`}>
+                    <span className="flex items-center justify-between gap-2 text-[12px] font-black"><span>{meta.emoji} {meta.label}</span><span className="text-[10px]">{on?'ON':'OFF'}</span></span>
+                    <span className="block text-[10px] font-bold opacity-80">{on?`${meta.blocks}ができません`:`${meta.blocks}を防ぐ`}</span></button>;})}
+              </div>
               <button disabled={isMasuLocked(lockedMasuIds, masu.id)} onClick={async()=>{ if(isMasuLocked(lockedMasuIds, masu.id)) return; if(await askConfirm({ title:`「${masu.name}」を削除しますか？`, message:'この操作は取り消せません。', confirmLabel:'削除する', danger:true })){ deleteMasuMon(masu.id); setMasuMonDetail(null); } }} className="w-full min-h-[40px] text-[10px] font-black text-red-300 bg-red-950/40 border border-red-500/30 rounded-xl active:scale-95 disabled:opacity-30">{isMasuLocked(lockedMasuIds, masu.id)?'お気に入りのため削除できません':'このマスモンを削除する'}</button>
             </>),
             footer: (

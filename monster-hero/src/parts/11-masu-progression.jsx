@@ -2714,8 +2714,9 @@ const buildAutoRepeatBreakthroughs = ({
 // 転生: 絆Lv100以上の個体を、レベル99ぶん引き換えに白紙から育て直す。
 // 振った強化はすべて戻り、強化ポイントは「新しいレベルぶん + これまでの限界突破ぶん + 10」で
 // 配り直す(限界突破で得たポイントも振り直しの対象に含める、というユーザー指定に合わせる)。
-const buildMasuReincarnation = ({ masu, skillKey, gold }) => {
+const buildMasuReincarnation = ({ masu, skillKey, gold, lockedIds = [] }) => {
   if (!masu) return { ok:false, reason:'対象のマスモンが見つかりません。' };
+  if (isMasuLocked(lockedIds, masu.id)) return { ok:false, reason:`「${masu.name}」は転生ロック(🔁)中なので転生できません。マスモン詳細でロックを外してから転生してください。` };
   const normalized = normalizeMasuProgression(masu);
   const level = masuBondLevelInfo(normalized).level;
   if (level < REINCARNATE_MIN_LEVEL) return { ok:false, reason:`Lv.${REINCARNATE_MIN_LEVEL}到達後に転生できます。` };
@@ -2836,6 +2837,15 @@ const normalizeHomePastureIds = (savedIds, masuMons, validBaseIds) => {
 // 保存値が無い・壊れているときは「お気に入りなし」。いなくなる操作(削除・合体の副・寄付)は、
 // 画面でボタンを押せなくするだけでなく、処理そのもの(buildMasuDonation / executeMasuFusion / deleteMasuMon)でも止める。
 const MASU_LOCK_KEY = 'mh_masu_locked_v1';
+// ロックの種類(2026-10-01 ユーザー指示「転生もしたくない場合もあるからロックにも種類を分けたい」)。
+//   keep    … お気に入り: 削除・合体の副・寄付を防ぐ(いなくなる操作)。保存は上の MASU_LOCK_KEY(公開済みなので意味を変えない)
+//   rebirth … 転生ロック: 転生を防ぐ(レベルが下がり、強化を振り直す操作)。保存は新しい MASU_REBIRTH_LOCK_KEY
+// 2つは独立。片方だけ・両方・どちらもなし、を選べる。
+const MASU_REBIRTH_LOCK_KEY = 'mh_masu_lock_rebirth_v1';
+const MASU_LOCK_KINDS = Object.freeze({
+  keep:    Object.freeze({ key:MASU_LOCK_KEY,         label:'お気に入り', emoji:'🔒', blocks:'削除・合体の副・寄付' }),
+  rebirth: Object.freeze({ key:MASU_REBIRTH_LOCK_KEY, label:'転生ロック', emoji:'🔁', blocks:'転生' }),
+});
 const normalizeMasuLockIds = (saved) => Array.isArray(saved)
   ? [...new Set(saved.filter(v => (typeof v === 'string' && v) || Number.isFinite(v)).map(String))]
   : [];

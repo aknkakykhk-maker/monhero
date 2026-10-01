@@ -30,6 +30,8 @@ vm.runInContext([
   // 絆Lvの計算から寄付ダイヤの換算までを、本番の定義のまま持ってくる
   grab('const XP_CURVE_EXPONENT', 'const BOND_XP_DISCOUNT'),
   grab('const BOND_XP_DISCOUNT', 'const rosterBaseId = (entryId, masuMons)'),
+  // 転生の計算が転生ロックの判定(isMasuLocked)を呼ぶので、ロックの定義も一緒に持ってくる(2026-10-01)
+  grab('const MASU_LOCK_KEY', 'const buildMasuDonation'),
   'globalThis.__m={normalizeMasuProgression,buildMasuBreakthrough,buildMasuReincarnation,resetMasuForRebirth,'
   + 'applyUniqueSkillPointPlan,buildUniqueSkillPointReset,uniqueSkillAtLevel,MAX_UNIQUE_SKILL_LEVEL,INITIAL_MASU_LEVEL_CAP,MAX_MASU_LEVEL_CAP,BREAKTHROUGH_LEVEL_CAP_GAIN,'
   + 'totalBondXpForLevel,masuBondLevelInfo,breakthroughItemCost,masuRebirthCost,REINCARNATE_MIN_LEVEL};',
