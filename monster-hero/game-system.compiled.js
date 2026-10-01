@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 31a0065b2e2c48d1
+// source-sha256: 6b813b1792516e94
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 20:29";
+const BUILD_DATE = "2026-10-01 20:36";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -42936,6 +42936,21 @@ function RewardPickScreen({
   const trainingOptions = trainingOptionsFor(runMode);
   const optionById = id => trainingOptions.find(option => option.id === id);
   const unitName = slotIdx => slots?.[slotIdx]?.masuName || slots?.[slotIdx]?.name || `${slotIdx + 1}番目の子`;
+  const trainingFace = slotIdx => {
+    const mon = slots?.[slotIdx];
+    if (!mon) return React.createElement("span", {
+      className: "text-lg"
+    }, "？");
+    return mon.imgUrl ? React.createElement(DyedMonsterImage, {
+      baseId: mon.id,
+      src: mon.imgUrl,
+      alt: "",
+      masuColors: mon.colors,
+      className: "h-full w-full object-contain"
+    }) : React.createElement("span", {
+      className: "text-xl"
+    }, mon.emoji);
+  };
   const removePick = index => setTrainingPicks(prev => {
     if (!tacticsMode) return prev.filter((_, i) => i !== index);
     let seen = -1;
@@ -42975,9 +42990,37 @@ function RewardPickScreen({
       current: "training",
       nextWave: waveResult?.wave > 0 ? waveResult.wave + 1 : null,
       className: "mt-1.5"
-    }), React.createElement("div", {
+    }), tacticsMode ? React.createElement("div", {
+      "data-tactics-training-target": true,
+      className: "mt-2 w-full"
+    }, pickable && currentSlot != null ? React.createElement("div", {
+      key: currentSlot,
+      className: "mh-phase-pop mh-ph-panel flex items-center gap-3 px-3 py-2 text-left"
+    }, React.createElement("span", {
+      className: "mh-ph-medal relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/40"
+    }, trainingFace(currentSlot)), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("div", {
+      className: "flex items-center gap-1.5"
+    }, React.createElement("span", {
+      className: "rounded-full bg-amber-400 px-2 py-px text-[9px] font-black text-slate-900"
+    }, "いま強化する子"), React.createElement("span", {
+      className: "text-[9px] font-black text-slate-400"
+    }, RANGE_LABELS[currentSlot], "距離")), React.createElement("div", {
+      className: "mt-0.5 truncate text-[17px] font-black leading-tight text-white"
+    }, `${currentName || '全員'}のトレーニング`)), React.createElement("div", {
+      className: "shrink-0 text-center font-mono leading-none"
+    }, React.createElement("span", {
+      className: "block text-[8px] font-black text-slate-400"
+    }, "選んだ数"), React.createElement("b", {
+      className: "text-[20px] text-amber-300"
+    }, activePicks.length), React.createElement("span", {
+      className: "text-[11px] text-slate-500"
+    }, "/", TRAINING_PICK_COUNT))) : React.createElement("div", {
+      className: "mh-ph-panel px-3 py-2 text-center text-[12px] font-black text-emerald-300"
+    }, "全員ぶん決まりました。「決定する」を押してください")) : React.createElement("div", {
       className: "mh-phase-tall mt-1.5 text-center text-[10px] font-black text-slate-300"
-    }, tacticsMode ? pickable ? `${currentName || '全員'}のトレーニング` : '全員ぶん決まりました' : '4種類から2つ選ぶ'), React.createElement("div", {
+    }, "4種類から2つ選ぶ"), React.createElement("div", {
       className: "mt-1 flex items-center justify-center gap-1.5"
     }, Array.from({
       length: TRAINING_PICK_COUNT
@@ -43022,21 +43065,28 @@ function RewardPickScreen({
       className: "shrink-0 text-[11px] font-black font-mono text-[#f3d27a]"
     }, activePicks.length, " / ", TRAINING_PICK_COUNT)), tacticsMode && React.createElement("div", {
       "data-tactics-training-progress": `${doneSlots}/${trainableSlots.length}`,
-      className: "mt-1.5 flex flex-wrap items-center justify-center gap-1 text-center text-[10px] font-black text-indigo-300"
+      className: "mt-2 flex flex-col items-center gap-1 text-center"
     }, React.createElement("span", {
-      className: "shrink-0"
-    }, doneSlots, " / ", trainableSlots.length, " 体ぶん決定ずみ"), trainableSlots.length > 1 && React.createElement(React.Fragment, null, trainableSlots.map(slotIdx => {
+      className: "text-[10px] font-black text-indigo-300"
+    }, doneSlots, " / ", trainableSlots.length, " 体ぶん決定ずみ"), trainableSlots.length > 1 && React.createElement("div", {
+      className: "flex flex-wrap items-stretch justify-center gap-1.5"
+    }, trainableSlots.map(slotIdx => {
       const count = picksOf(slotIdx).length;
       const done = count >= TRAINING_PICK_COUNT;
       const active = slotIdx === currentSlot && pickable;
       return React.createElement("span", {
         key: slotIdx,
-        className: `flex max-w-[32%] items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] ${active ? 'mh-ph-step-now' : done ? 'border-emerald-400/60 bg-emerald-950/60 text-emerald-200' : 'mh-ph-step-todo'}`
-      }, React.createElement("span", {
-        className: "truncate"
+        className: `relative flex w-[62px] flex-col items-center rounded-xl border px-1 py-1 ${active ? 'mh-ph-step-now' : done ? 'border-emerald-400/60 bg-emerald-950/60 text-emerald-200' : 'mh-ph-step-todo'}`
+      }, active && React.createElement("span", {
+        "aria-hidden": "true",
+        className: "absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] leading-none text-amber-300"
+      }, "▼"), React.createElement("span", {
+        className: "flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-black/40"
+      }, trainingFace(slotIdx)), React.createElement("span", {
+        className: "mt-0.5 w-full truncate text-[9px] font-black leading-tight text-white"
       }, unitName(slotIdx)), React.createElement("span", {
-        className: "shrink-0 font-mono"
-      }, done ? '✓' : `${count}/${TRAINING_PICK_COUNT}`));
+        className: "shrink-0 font-mono text-[9px] font-black leading-tight"
+      }, done ? '✓ 済' : `${count}/${TRAINING_PICK_COUNT}`));
     }))), extremeRuleNumber(specialRule, 'awakeningZeroTurns') != null && (() => {
       const turns = waveResult?.turn || 0;
       const gainRate = trainingGainRate(turns, specialRule);
@@ -43061,7 +43111,7 @@ function RewardPickScreen({
       "data-training-status": true
     }, React.createElement("div", {
       className: "mh-ph-panel-label text-[8px] font-black text-left mb-1"
-    }, "現在のステータス", trainingPicks.length > 0 && React.createElement("span", {
+    }, tacticsMode && currentName ? `${currentName}の` : '', "現在のステータス", activePicks.length > 0 && React.createElement("span", {
       className: "text-amber-300"
     }, "（選択中の変化）")), React.createElement("div", {
       className: "grid grid-cols-4 gap-1"

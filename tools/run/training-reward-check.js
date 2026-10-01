@@ -192,7 +192,7 @@ if (REWARD_PICK_HEAD.test(component)) {
     jsx.replace(REWARD_PICK_HEAD, 'const Screen = ({ gameState, trainingPicks, setTrainingPicks, atk, def, maxHp, maxGuts, waveResult, effect,\n'
     + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep, ULTIMATE_SETTING, extremeRuleNumber, trainingGainRate, compactPercent, specialRulePercent, extremeSpecialRule, quickGrowthRateForRun, isQuickMode,\n'
     + '  TRAINING_PICK_COUNT, TRAINING_OPTIONS, trainingOptionsFor, handleTraining, AssistantBubble, battleTutorialSpotClass, cardIconNode,\n'
-    + '  slots, tacticsUnits, phasePlan, PhaseSteps,\n'
+    + '  slots, tacticsUnits, phasePlan, PhaseSteps, DyedMonsterImage, RANGE_LABELS,\n'
     + '  Trophy, Heart, Sword, ShieldCheck, Sparkles }) => {')
     + '\nmodule.exports = { Screen };',
     { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'training-reward-check.jsx' });
@@ -213,6 +213,7 @@ if (REWARD_PICK_HEAD.test(component)) {
     handleTraining: () => {}, AssistantBubble: () => null, battleTutorialSpotClass: () => '',
     // アイコンは共通部品(cardIconNode)を通すようになった。見た目は見ないので置き換えて描く
     cardIconNode: (icon) => React.createElement('i', { 'data-card-icon': String(icon) }),
+    DyedMonsterImage: () => null, RANGE_LABELS: ['零', '近', '中', '遠'],
     Trophy: Icon('trophy'), Heart: Icon('heart'), Sword: Icon('sword'), ShieldCheck: Icon('shield'), Sparkles: Icon('sparkles'),
   }));
   const text = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
