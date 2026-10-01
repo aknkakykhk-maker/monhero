@@ -113,8 +113,10 @@ const normalizeBattleFxSettings = (value) => {
     restPause: v.restPause === 'ON' ? 'ON' : 'OFF',
     // 重いときに画面の軽さを自動で下げる(2026-09-28 ユーザー指示「モンビーみたいに重さチェックやその他点検ツールを取り入れて
     // 軽くて見た目が良く出来る仕組みを作って」)。モンヒロビートの「重いときは演出を自動で控えめに」と同じ考え方。
-    // ★足す前に保存した人(autoLoad が無い)は ON。下げたぶんは保存せず、アプリを開き直すと元の軽さに戻る
-    autoLoad: v.autoLoad === 'OFF' ? 'OFF' : 'ON',
+    // ★既定は OFF(下げない)(2026-10-01 ユーザー指示「デフォルトはオフにして」)。自動で下げると敵の待機の動きなどが止まり、
+    //   「動いていない」ように見えていたため、使いたい人だけ ON にする。すでに ON で保存していた人は、60-app.jsx の一度きりの移行で OFF にする
+    //   下げたぶんは保存せず、アプリを開き直すと元の軽さに戻る
+    autoLoad: v.autoLoad === 'ON' ? 'ON' : 'OFF',
     // ボスの必殺技ムービー(2026-09-25 ユーザー指示「設定でオンオフもつけて」)。
     // ★足す前に保存した人(specialMovie が無い)は ON(流す)で始まる
     specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON',
@@ -151,7 +153,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-01 10:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-01 11:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない

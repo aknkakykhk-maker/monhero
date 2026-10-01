@@ -7,7 +7,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   SECONDS=60   … 何秒流すか
 //   THROTTLE=4   … CPU を何分の1にするか(スマホ相当にする)
 //   LOAD=RICH    … 画面の軽さ(RICH / STANDARD / LIGHT / MINIMAL)
-//   AUTO_LOAD=OFF … 「重いときは自動で軽く」を切って測る(軽さを固定して比べるとき)
+//   AUTO_LOAD=ON  … 「重いときは自動で軽く」を入れて測る(既定は OFF = 軽さを固定して測る)
 //   ROOT_DIR=<別のツリー> … 変更前のツリーを同じ条件で測って比べるとき
 //
 // 出すもの:
@@ -27,7 +27,7 @@ const THROTTLE = Number(process.env.THROTTLE || 4);
 const LOAD = process.env.LOAD || 'RICH';
 
 (async () => {
-  const fx = { load: LOAD, autoLoad: process.env.AUTO_LOAD === 'OFF' ? 'OFF' : 'ON' };
+  const fx = { load: LOAD, autoLoad: process.env.AUTO_LOAD === 'ON' ? 'ON' : 'OFF' };
   const run = await openTacticsBattle({ root: ROOT, port: PORT, storage: { mh_battle_fx_v1: fx } });
   if (run.skip) { console.log(`SKIP: ${run.skip}`); process.exit(0); }
   const { page, ctx, errors } = run;
