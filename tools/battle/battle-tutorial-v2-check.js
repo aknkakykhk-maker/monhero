@@ -242,7 +242,8 @@ const check = (name, ok, detail = '') => {
     await page.locator('button').filter({ hasText: /^ニコラオの力/ }).first().dispatchEvent('click');
     await page.waitForTimeout(400);
     await page.locator('button').filter({ hasText: /^習得する$/ }).first().dispatchEvent('click');
-    await page.waitForTimeout(1200);
+    // 覚えたカードの演出(TeachingResultFx)を約1.9秒見せてからバトルへ進む
+    await page.waitForTimeout(3000);
     check('練習のままバトル画面まで進む',
       await page.locator('[data-battle-action]').count() >= 1);
     // 画面の見かたの説明を順に進め、ACTIONボタンの説明まで来たら光っているものを見る

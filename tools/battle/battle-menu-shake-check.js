@@ -96,7 +96,7 @@ const seed = () => {
     await page.evaluate(() => { [...document.querySelectorAll('button')].find(x => /新規習得/.test(x.textContent))?.click(); });
     await page.waitForTimeout(900);
     await clickExact('習得する');
-    await page.waitForTimeout(1800);
+    await page.waitForTimeout(3500);
     await dismiss();
     check('②-1 バトル画面へ入れる', await page.evaluate(() => !!document.querySelector('button[aria-label^="設定"]')));
 

@@ -134,7 +134,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   // アシストカードを1枚習得してバトルへ
   // アシストカードは2026-09-18に「おりょうの力」から「ニコラオの力」へ名前が変わった
   await clickText('ニコラオの力'); await page.waitForTimeout(700);
-  await clickText('習得する'); await page.waitForTimeout(1800);
+  // 覚えたカードの演出(約1.9秒)のあとでバトルへ進む
+  await clickText('習得する'); await page.waitForTimeout(3500);
 
   const inBattle = (await bodyText()).includes('WAVE 1/');
   check('バトルが始まる', inBattle);
