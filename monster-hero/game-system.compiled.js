@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8039455eff9b2697
+// source-sha256: 123aad0280c6d0f8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 00:25";
+const BUILD_DATE = "2026-10-01 10:00";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -22112,8 +22112,17 @@ const RHYTHM_PLAY_LOG_TABLE = 'rhythm_play_logs';
 let rhythmPlayLogDisabled = false;
 const RHYTHM_TOUCH_DIAG_TABLE = 'rhythm_touch_diagnostics';
 let rhythmTouchDiagDisabled = false;
+const sbTelemetryLocal = () => {
+  try {
+    if (typeof location === 'undefined') return false;
+    if (location.protocol === 'file:') return true;
+    return ['localhost', '127.0.0.1', '[::1]', '::1', ''].includes(String(location.hostname || ''));
+  } catch {
+    return false;
+  }
+};
 const sbSendRhythmTouchDiag = async row => {
-  if (rhythmTouchDiagDisabled || !row || typeof fetch !== 'function') return false;
+  if (rhythmTouchDiagDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
   try {
@@ -22137,7 +22146,7 @@ const sbSendRhythmTouchDiag = async row => {
   }
 };
 const sbSendRhythmPlayLog = async row => {
-  if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function') return false;
+  if (rhythmPlayLogDisabled || !row || typeof fetch !== 'function' || sbTelemetryLocal()) return false;
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), 8000) : null;
   try {
@@ -26194,6 +26203,11 @@ const rhythmPlayLogSend = async ({
 const RHYTHM_TOUCH_DIAG_KEY = 'mh_rhythm_touch_diag_v1';
 const RHYTHM_TOUCH_DIAG_KEEP = 20;
 const RHYTHM_TOUCH_DIAG_VERSION = 1;
+const rhythmTouchDiagPlayId = () => {
+  let id = '';
+  for (let i = 0; i < 12; i++) id += '0123456789abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 36)];
+  return id;
+};
 const rhythmTouchDiagOf = ({
   song,
   difficulty,
@@ -26227,7 +26241,9 @@ const rhythmTouchDiagOf = ({
       gestures: perfTouch?.gestures || 0,
       assist: !!assist,
       mirror: !!mirror,
-      cleared: !!cleared
+      cleared: !!cleared,
+      playId: rhythmTouchDiagPlayId(),
+      fixes: rhythmTouchFixesActive()
     }
   };
 };
@@ -26253,6 +26269,40 @@ const rhythmTouchDiagRecord = async diag => {
       difficulty: diag.difficulty,
       note_count: Math.max(1, diag.note_count),
       stats: diag.stats,
+      schema_version: RHYTHM_TOUCH_DIAG_VERSION
+    });
+  } catch {
+    return false;
+  }
+};
+const rhythmTouchDiagReport = async report => {
+  if (!report || !report.playId) return false;
+  try {
+    const saved = await storeGet(RHYTHM_TOUCH_DIAG_KEY, []);
+    if (Array.isArray(saved)) {
+      const list = saved.filter(item => item && typeof item === 'object');
+      const hit = list.find(item => item.stats && item.stats.playId === report.playId);
+      if (hit) {
+        hit.reported = true;
+        await storeSet(RHYTHM_TOUCH_DIAG_KEY, list.slice(-RHYTHM_TOUCH_DIAG_KEEP));
+      }
+    }
+  } catch {}
+  try {
+    if (typeof sbSendRhythmTouchDiag !== 'function' || !RHYTHM_DEMO_SONG_IDS.includes(report.song_id)) return false;
+    const deviceKey = await rhythmPlayLogDeviceKey();
+    return await sbSendRhythmTouchDiag({
+      device_key: deviceKey,
+      app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE : '',
+      platform: report.platform,
+      standalone: !!report.standalone,
+      song_id: report.song_id,
+      difficulty: report.difficulty,
+      note_count: Math.max(1, report.note_count),
+      stats: {
+        kind: 'report',
+        playId: report.playId
+      },
       schema_version: RHYTHM_TOUCH_DIAG_VERSION
     });
   } catch {
@@ -28060,7 +28110,7 @@ const RhythmTapTest = ({
       mirror: mirrorOn,
       cleared: !failed
     });
-    if (!debugPlay && !tutorial && !calibrating) void rhythmTouchDiagRecord(rhythmTouchDiagOf({
+    const touchDiag = !debugPlay && !tutorial && !calibrating ? rhythmTouchDiagOf({
       song,
       difficulty,
       notes: run.notes,
@@ -28068,7 +28118,16 @@ const RhythmTapTest = ({
       assist: assistOn,
       mirror: mirrorOn,
       cleared: !failed
-    }));
+    }) : null;
+    if (touchDiag) void rhythmTouchDiagRecord(touchDiag);
+    const touchReport = touchDiag && touchDiag.platform !== 'other' ? {
+      playId: touchDiag.stats.playId,
+      song_id: touchDiag.song_id,
+      difficulty: touchDiag.difficulty,
+      note_count: touchDiag.note_count,
+      platform: touchDiag.platform,
+      standalone: touchDiag.standalone
+    } : null;
     const liveLogEndMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;
     const liveLog = rhythmLiveLogSections(run.liveLog, liveLogEndMs);
     const celebrateTitle = achievements.allMarvelous ? 'ALL MARVELOUS!!' : achievements.allExcellent ? 'ALL EXCELLENT!!' : achievements.fullCombo ? 'FULL COMBO!' : null;
@@ -28093,7 +28152,8 @@ const RhythmTapTest = ({
         liveLog,
         liveLogEndMs,
         assistGuarded: assistOn ? run.assistGuarded || 0 : 0,
-        mirror: mirrorOn
+        mirror: mirrorOn,
+        touchReport
       }
     }));
     if (eventPointAward && eventPointAward.amount > 0 && typeof addRhythmEventPoints === 'function') void addRhythmEventPoints(eventPointAward.amount);
@@ -28121,6 +28181,7 @@ const RhythmTapTest = ({
     onComplete(result, merged);
   }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn]);
   const celebrateTimerRef = useRef(null);
+  const [touchReportSent, setTouchReportSent] = useState(null);
   useEffect(() => {
     if (view.status !== 'celebrate') return;
     RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
@@ -28205,9 +28266,12 @@ const RhythmTapTest = ({
         }
         if (frameNowMs - ae.start >= RHYTHM_AUTO_QUALITY_WINDOW_MS) {
           const qualityFirst = settings.renderQuality === 'AUTO' && autoQualityLevelRef.current !== RHYTHM_RENDER_QUALITY_STEPS[RHYTHM_RENDER_QUALITY_STEPS.length - 1];
-          if (ae.settle > 0) ae.settle--;else if (!qualityFirst && ae.frames >= RHYTHM_AUTO_QUALITY_MIN_FRAMES && ae.slow / ae.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO && stepEffectCapRef.current()) {
+          const lateNow = RHYTHM_TOUCH_BRIDGE.lateCount(),
+            lateBurst = rhythmTouchFixOn('lateInputEffectDown') && lateNow - (ae.late || 0) >= RHYTHM_TOUCH_FIX_LATE_BURST;
+          ae.late = lateNow;
+          if (ae.settle > 0) ae.settle--;else if (!qualityFirst && (ae.frames >= RHYTHM_AUTO_QUALITY_MIN_FRAMES && ae.slow / ae.frames > RHYTHM_AUTO_QUALITY_SLOW_RATIO || lateBurst) && stepEffectCapRef.current()) {
             ae.settle = 1;
-            RHYTHM_PERF.autoStep('演出', RHYTHM_AUTO_EFFECT_STEP_LABELS[rhythmAutoEffectMemory.level - 1] || '', ae.slow, ae.frames);
+            RHYTHM_PERF.autoStep(lateBurst ? '演出(タッチの遅れ)' : '演出', RHYTHM_AUTO_EFFECT_STEP_LABELS[rhythmAutoEffectMemory.level - 1] || '', ae.slow, ae.frames);
           }
           ae.start = frameNowMs;
           ae.frames = 0;
@@ -29876,7 +29940,23 @@ const RhythmTapTest = ({
         "data-rhythm-live-log-worst": true,
         className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-300"
       }, worst ? `いちばん崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad + worst.miss}回）。` : 'どの区間も BAD・MISS なしで通せました。'));
-    })(), debugPlay && !tutorial && !calibrating && React.createElement(RhythmChartNotePanel, {
+    })(), result.touchReport && React.createElement("div", {
+      "data-rhythm-touch-report": true,
+      className: "mb-2 text-center"
+    }, touchReportSent === result.touchReport.playId ? React.createElement("p", {
+      "data-rhythm-touch-report-done": true,
+      className: "text-[11px] font-bold leading-relaxed text-emerald-200"
+    }, "送りました。ありがとうございます！反応しなかった原因を調べるのに使います") : React.createElement(React.Fragment, null, React.createElement("button", {
+      "data-rhythm-touch-report-button": true,
+      className: "min-h-[44px] rounded-xl border border-white/20 bg-slate-800/80 px-4 text-[12px] font-black text-slate-100",
+      onClick: () => {
+        const report = result.touchReport;
+        setTouchReportSent(report.playId);
+        void rhythmTouchDiagReport(report);
+      }
+    }, "👆 押したのに反応しないことがあった"), React.createElement("small", {
+      className: "mt-1 block text-[9px] font-bold text-slate-500"
+    }, "押すと、この曲の指の記録に印を付けて送ります（名前は送りません）"))), debugPlay && !tutorial && !calibrating && React.createElement(RhythmChartNotePanel, {
       song: song,
       difficulty: difficulty,
       chart: chart

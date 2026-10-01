@@ -32,6 +32,16 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   const ctx = { navigator: { userAgent: 'x' }, console };
   vm.runInNewContext(`${src.slice(start, end)}\nthis.B=RHYTHM_TOUCH_BRIDGE;this.W=RHYTHM_TOUCH_BRIDGE_WAIT_MS;this.miss=rhythmTouchNoInputMisses;`, ctx);
   const B = ctx.B, W = ctx.W;
+  // 直し方の切り替え(既定は切ってある・iPhoneだけ)
+  {
+    const fixCtx = (ua) => { const c = { navigator: { userAgent: ua, maxTouchPoints: 5 }, console }; vm.runInNewContext(`${src.slice(start, end)}\nthis.F=RHYTHM_TOUCH_FIXES;this.on=rhythmTouchFixOn;this.active=rhythmTouchFixesActive;`, c); return c; };
+    const pc = fixCtx('Mozilla/5.0 (X11; Linux x86_64)'), ip = fixCtx('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)');
+    check('部品: 直し方は既定ですべて切ってある', !ip.on('lateInputEffectDown') && !ip.on('wideEdge') && ip.active().length === 0);
+    pc.F.wideEdge = true; ip.F.wideEdge = true;
+    check('部品: 入れた直し方は iPhone だけに効く', ip.on('wideEdge') && !pc.on('wideEdge') && ip.active().join() === 'wideEdge');
+    pc.F.allPlatforms = true;
+    check('部品: 検査用の allPlatforms で、パソコンでも試せる(名前としては返さない)', pc.on('wideEdge') && !pc.on('allPlatforms') && pc.active().join() === 'wideEdge');
+  }
   B.reset();
   B.pointerDown(1, 100, 300, 1000, 1000); B.touchStart(11, 100, 300, 1000, 1001, 1);
   check('部品: 同じ位置・時刻のポインタとタッチは組になる', B.snapshot().matched === 1 && B.sweep(1100).length === 0);
@@ -197,7 +207,95 @@ const seed = () => {
     });
     check('⑥ 1曲ぶんのまとめに、系統・突き合わせ・入力の数が入る', saved.d && ['ios', 'android', 'other'].includes(saved.d.platform) && typeof saved.d.stats.pointerOnly === 'number' && saved.d.stats.inputs === 2, JSON.stringify(saved.d || saved));
     check('⑥ まとめが端末に残る(新しいキー mh_rhythm_touch_diag_v1)', Array.isArray(saved.list) && saved.list.length >= 1 && saved.list[saved.list.length - 1].song_id === 'mf_ichika_mix');
+
+    // ⑨ 直し方「wideEdge」: 道の外の受け付けを広げる(既定は切ってある)
+    const edge = await page.evaluate(() => {
+      const rect = { left: 0, top: 0, width: 1000, height: 1000 };
+      const left = rhythmProjectBoundary(0, 1), right = rhythmProjectBoundary(RHYTHM_LANE_COUNT, 1), lw = (right - left) / RHYTHM_LANE_COUNT;
+      const x = (left - lw / 2 * 1.5) * 1000;   // サブレーン1.5本ぶん外
+      const off = rhythmLaneCoordinateAtPoint(x, 1000, rect);
+      RHYTHM_TOUCH_FIXES.wideEdge = true; RHYTHM_TOUCH_FIXES.allPlatforms = true;
+      const on = rhythmLaneCoordinateAtPoint(x, 1000, rect);
+      const far = rhythmLaneCoordinateAtPoint((left - lw / 2 * 2.5) * 1000, 1000, rect);
+      RHYTHM_TOUCH_FIXES.wideEdge = false; RHYTHM_TOUCH_FIXES.allPlatforms = false;
+      return { off, on, far, back: rhythmLaneCoordinateAtPoint(x, 1000, rect) };
+    });
+    check('⑨ 切ってあるときは、サブレーン1.5本ぶん外の指を受け付けない(いまのまま)', edge.off === null && edge.back === null, JSON.stringify(edge));
+    check('⑨ 入れると、サブレーン2本ぶんまで受け付ける(それより外は受け付けない)', typeof edge.on === 'number' && edge.far === null, JSON.stringify(edge));
+
+    // ⑩ リザルトの「押したのに反応しないことがあった」: 端末の記録に印を付け、報告の行を作る
+    const rep = await page.evaluate(async () => {
+      window.__sent = [];
+      const origFetch = window.fetch;
+      const d = rhythmTouchDiagOf({ song: { songId: 'mf_ichika_mix' }, difficulty: { id: 'EASY' }, notes: [], inputTimes: [], assist: false, mirror: false, cleared: true });
+      await rhythmTouchDiagRecord(d);
+      const sent = await rhythmTouchDiagReport({ playId: d.stats.playId, song_id: 'mf_ichika_mix', difficulty: 'EASY', note_count: 1, platform: 'android', standalone: false });
+      const list = JSON.parse(localStorage.getItem('mh_rhythm_touch_diag_v1') || '[]');
+      const hit = list.find((x) => x.stats && x.stats.playId === d.stats.playId);
+      return { playId: d.stats.playId, fixes: d.stats.fixes, reported: !!(hit && hit.reported), others: list.filter((x) => x !== hit).every((x) => !x.reported), sent, origFetch: typeof origFetch };
+    });
+    check('⑩ 1曲ごとに、結ぶための番号(12文字)と、効いていた直し方(いまは空)が入る', /^[0-9a-z]{12}$/.test(rep.playId) && Array.isArray(rep.fixes) && rep.fixes.length === 0, JSON.stringify(rep));
+    check('⑩ 報告すると、端末の記録のその曲にだけ印が付く', rep.reported && rep.others, JSON.stringify(rep));
+    check('⑩ 手元のサーバーで開いたゲームからは送らない', rep.sent === false, JSON.stringify(rep));
     await page.close();
+
+    // ⑧ 直し方「lateInputEffectDown」: 3秒の枠でタッチが3回以上遅れて届いたら、演出を一段下げる(既定は切ってある)。
+    //   「重いときは演出を自動で控えめに」を入れ、画質を固定した端末で見る(画質「自動」は画質から先に下げるため)
+    const page2 = await browser.newPage({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
+    const errors2 = [];
+    page2.on('pageerror', (e) => errors2.push(String(e)));
+    await page2.route('**/rest/v1/**', (route) => route.fulfill({ status: 201, contentType: 'application/json', body: '[]' }));
+    await page2.addInitScript(seed);
+    // リザルトのボタンはタッチで遊ぶ端末(iPhone・Android)だけに出るので、Android として開く(中身は同じ Chromium)
+    await page2.addInitScript(() => { Object.defineProperty(navigator, 'userAgent', { get: () => 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36' }); });
+    await page2.addInitScript(() => localStorage.setItem('mh_rhythm_settings_v1', JSON.stringify({ autoEffectDown: true, renderQuality: 'HIGH', stageEffect: 'VIVID', roadFx: true, judgmentFx: true, comboMilestoneFx: true })));
+    const clickText2 = (p) => page2.evaluate((s) => { const rx = new RegExp(s); const x = [...document.querySelectorAll('button')].find((b) => rx.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!x) return false; x.click(); return true; }, p);
+    await page2.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
+    await page2.getByRole('button', { name: 'TAP TO START' }).click({ force: true, timeout: 60000 });
+    await page2.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+    await page2.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
+    for (let i = 0; i < 6; i++) { if (!(await clickText2('受け取る|閉じる|OK|とじる'))) break; await page2.waitForTimeout(250); }
+    await clickText2('モンヒロビート');
+    await page2.waitForSelector('[data-rhythm-demo-start]', { timeout: 30000 });
+    for (let i = 0; i < 5; i++) { if (!(await clickText2('^確認$|受け取る|閉じる|OK|とじる'))) break; await page2.waitForTimeout(300); }
+    await page2.evaluate(() => document.querySelector('[data-rhythm-demo-start]').click());
+    await page2.waitForSelector('[data-rhythm-play-area]', { timeout: 30000 });
+    await page2.waitForTimeout(6500);
+    // ⑧ 直し方「lateInputEffectDown」: 3秒の枠でタッチが3回以上遅れて届いたら、演出を一段下げる(既定は切ってある)
+    const lateStep = async (fixOn) => page2.evaluate(async (fixOn) => {
+      RHYTHM_TOUCH_FIXES.lateInputEffectDown = fixOn; RHYTHM_TOUCH_FIXES.allPlatforms = fixOn;
+      const level = () => (typeof rhythmAutoEffectMemory !== 'undefined' ? rhythmAutoEffectMemory.level : null);
+      const before = level();
+      for (let i = 0; i < 4; i++) RHYTHM_TOUCH_BRIDGE.touchStart(800 + i, 5, 5, performance.now(), performance.now(), 120);
+      await new Promise((r) => setTimeout(r, 3600));
+      const after = level();
+      RHYTHM_TOUCH_FIXES.lateInputEffectDown = false; RHYTHM_TOUCH_FIXES.allPlatforms = false;
+      return { before, after, stepped: before !== null && after > before };
+    }, fixOn);
+    const offSteps = await lateStep(false), onSteps = await lateStep(true);
+    check('⑧ 切ってあるときは、タッチが遅れても演出を下げない', offSteps.before !== null && !offSteps.stepped, JSON.stringify(offSteps));
+    check('⑧ 入れると、タッチの遅れが続いた枠で演出を一段下げる', onSteps.stepped, JSON.stringify(onSteps));
+
+
+    // ⑪ リザルトの「押したのに反応しないことがあった」(曲を最後まで流してリザルトを開く)
+    await page2.waitForSelector('[data-rhythm-result]', { timeout: 300000 });
+    const btn = await page2.$('[data-rhythm-touch-report-button]');
+    check('⑪ タッチで遊ぶ端末のリザルトに「押したのに反応しないことがあった」が出る', !!btn && /押したのに反応しないことがあった/.test(await btn.innerText()));
+    if (btn) {
+      const box = await btn.boundingBox();
+      check('⑪ ボタンは押しやすい大きさ(高さ44px以上)', !!box && box.height >= 44, JSON.stringify(box));
+      await btn.click();
+      await page2.waitForSelector('[data-rhythm-touch-report-done]', { timeout: 5000 }).catch(() => null);
+      const after = await page2.evaluate(() => {
+        const list = JSON.parse(localStorage.getItem('mh_rhythm_touch_diag_v1') || '[]');
+        return { done: !!document.querySelector('[data-rhythm-touch-report-done]'), button: !!document.querySelector('[data-rhythm-touch-report-button]'), last: list[list.length - 1] || null };
+      });
+      check('⑪ 押すとお礼に変わり、もう押せない(同じ曲で1回だけ)', after.done && !after.button, JSON.stringify({ done: after.done, button: after.button }));
+      check('⑪ その曲の端末の記録に印が付く', !!after.last && after.last.reported === true && after.last.platform === 'android', JSON.stringify(after.last && { platform: after.last.platform, reported: after.last.reported }));
+      if (process.env.SHOT) await page2.screenshot({ path: process.env.SHOT });
+    }
+    check('⑪ 実行時エラーが出ていない', errors2.length === 0, errors2[0] || '');
+    await page2.close();
   } finally {
     await browser.close();
     server.close();
@@ -206,7 +304,10 @@ const seed = () => {
   const play = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/30-rhythm-play.jsx'), 'utf8');
   check('演奏の始まりで突き合わせを空にする', play.includes('RHYTHM_TOUCH_BRIDGE.reset();rhythmFloatingNotesClear();runRef.current={'));
   check('取り戻し済みの指のタッチは、演奏エリアの入力にしない', play.includes('if(RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier))return;'));
-  check('デバッグ・練習・タイミング合わせでは診断を送らない', /if\(!debugPlay&&!tutorial&&!calibrating\)void rhythmTouchDiagRecord\(/.test(play));
+  check('デバッグ・練習・タイミング合わせでは診断を送らない', /const touchDiag=!debugPlay&&!tutorial&&!calibrating\?rhythmTouchDiagOf\(/.test(play) && play.includes('if(touchDiag)void rhythmTouchDiagRecord(touchDiag);'));
+  const supa = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/26-supabase.jsx'), 'utf8');
+  check('手元のサーバーで開いたゲームからは、診断・遊んだ記録を送らない(検査の行を本番へ混ぜない)',
+    (supa.match(/typeof fetch !== 'function' \|\| sbTelemetryLocal\(\)\) return false;/g) || []).length === 2);
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

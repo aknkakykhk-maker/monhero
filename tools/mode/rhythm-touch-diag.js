@@ -54,15 +54,19 @@ const fetchRows=afterId=>{
 // ── 集計 ──
 const num=value=>Number.isFinite(Number(value))?Number(value):0;
 const groupKey=row=>`${row.platform||'other'}${row.standalone?'・ホーム画面':''}`;
-const aggregate=(rows,{days=null,now=Date.now()}={})=>{
+// リザルトの「押したのに反応しないことがあった」で足された報告の行(2026-10-01)。数には入れず、playId で診断の行と結ぶ
+const isReportRow=row=>!!(row&&row.stats&&typeof row.stats==='object'&&row.stats.kind==='report');
+const reportedPlayIds=rows=>new Set(rows.filter(isReportRow).map(row=>String(row.stats.playId||'')).filter(Boolean));
+const aggregate=(rows,{days=null,now=Date.now(),keysOf=row=>[row.platform||'other',groupKey(row)]}={})=>{
   const since=days?now-days*86400000:-Infinity;
   const groups=new Map();
   for(const row of rows){
+    if(isReportRow(row))continue;
     const at=Date.parse(row.created_at||'');
     if(Number.isFinite(at)&&at<since)continue;
     const s=row.stats&&typeof row.stats==='object'?row.stats:{};
     if(s.assist)continue;   // アシストモードは叩き方が違うので比べない
-    for(const key of [row.platform||'other',groupKey(row)]){
+    for(const key of keysOf(row)){
       if(!groups.has(key))groups.set(key,{key,plays:0,devices:new Set(),notes:0,taps:0,pointerDowns:0,touchStarts:0,matched:0,pointerOnly:0,touchOnly:0,recovered:0,
         lateStart:0,lateDelivery:0,cancels:0,cancelledTouches:0,misses:0,noInputMisses:0,ignored:0,outside:0,gestures:0,max4:0,max5:0,maxDelayMs:0});
       const g=groups.get(key);
@@ -116,19 +120,62 @@ const diagnose=summary=>{
     lines.push({level:'found',text:`端末に指を取り消された回数が 1000タッチに ${fmt(ios.cancelsPer1k)} 回${base?`(Android ${fmt(base.cancelsPer1k)})`:''}。システムのジェスチャーに取られています`});
   // ⑤ 処理が詰まって、タッチが遅れて届いている
   if(ios.lateDeliveryPer1k>=20&&(!base||ratio(ios.lateDeliveryPer1k,base.lateDeliveryPer1k)>=2))
-    lines.push({level:'found',text:`50ms以上遅れて届いたタッチが 1000タッチに ${fmt(ios.lateDeliveryPer1k)} 回(最大 ${Math.round(ios.maxDelayMs)}ms)。叩いた瞬間の処理が重い疑い`});
+    lines.push({level:'found',metric:'lateDeliveryPer1k',text:`50ms以上遅れて届いたタッチが 1000タッチに ${fmt(ios.lateDeliveryPer1k)} 回(最大 ${Math.round(ios.maxDelayMs)}ms)。叩いた瞬間の処理が重い疑い`});
   // ⑥ 道の外で無視している
   if(ios.ignoredPer1k>=10)
-    lines.push({level:'found',text:`道の外に触れて無視した指が 1000タッチに ${fmt(ios.ignoredPer1k)} 回。端の受け付け範囲が狭い疑い`});
+    lines.push({level:'found',metric:'ignoredPer1k',text:`道の外に触れて無視した指が 1000タッチに ${fmt(ios.ignoredPer1k)} 回。端の受け付け範囲が狭い疑い`});
   if(!lines.some(line=>line.level==='found'))
     lines.push({level:'none',text:base?'iPhone と Android のあいだに、はっきりした差はありません':'Android の記録が足りないので比べられません(iPhone だけの数字では差が出たものはありません)'});
   return lines;
 };
 
+// ── 報告のあった曲と無い曲を比べる(2026-10-01) ──
+// 同じ iPhone の記録のなかで、「押したのに反応しないことがあった」と報告された曲だけ多い数字が、指の消えている段階を指す
+const MIN_REPORTED=5;
+const COMPARE_METRICS=[
+  ['pointerOnlyPer1k','ポインタだけ届いた(ブラウザがタッチを落とした)',1,'1000タッチ'],
+  ['lateStartPer1k','touchstart が来ずに、あとで見えた指',1,'1000タッチ'],
+  ['lateDeliveryPer1k','50ms以上遅れて届いたタッチ',5,'1000タッチ'],
+  ['cancelsPer1k','端末に指を取り消された',1,'1000タッチ'],
+  ['ignoredPer1k','道の外で無視した指',5,'1000タッチ'],
+  ['noInputMissPer1k','入力が1つも来ないMISS',3,'1000ノーツ'],
+];
+const compareReported=(rows,{days=null}={})=>{
+  const ids=reportedPlayIds(rows);
+  const reports=rows.filter(isReportRow).length;
+  const summary=aggregate(rows,{days,keysOf:row=>{const reported=ids.has(String(row.stats&&row.stats.playId||''));return [`${row.platform||'other'}:${reported?'報告あり':'報告なし'}`];}});
+  const lines=[];
+  const yes=summary.find(g=>g.key==='ios:報告あり'),no=summary.find(g=>g.key==='ios:報告なし');
+  if(!yes||yes.plays<MIN_REPORTED){lines.push({level:'wait',text:`「押したのに反応しないことがあった」の報告がついた iPhone の曲がまだ足りません(${yes?yes.plays:0}曲。${MIN_REPORTED}曲そろったら比べます)`});return {reports,summary,lines};}
+  if(!no||no.plays<MIN_REPORTED){lines.push({level:'wait',text:'報告の無い iPhone の曲が足りないので比べられません'});return {reports,summary,lines};}
+  for(const [name,label,floor,unit] of COMPARE_METRICS){
+    const a=yes[name],b=no[name];
+    if(a>=floor&&(b<=0||a/b>=2))lines.push({level:'found',metric:name,text:`報告のあった曲では「${label}」が ${unit}に ${a.toFixed(2)} 回。報告の無い曲(${b.toFixed(2)} 回)の ${b>0?(a/b).toFixed(1)+' 倍':'0 回から増えた'}`});
+  }
+  if(yes.max5Share>=.2&&yes.max5Share>=no.max5Share*2)lines.push({level:'found',metric:'max5Share',text:`報告のあった曲の ${Math.round(yes.max5Share*100)}% で指が同時に5本触れていました(報告の無い曲は ${Math.round(no.max5Share*100)}%)`});
+  if(!lines.length)lines.push({level:'none',text:'報告のあった曲と無い曲のあいだに、はっきりした差はありません(指はブラウザに届く前に消えているか、数えていない段階)'});
+  return {reports,summary,lines};
+};
+
+// ── 判定ごとの、用意してある直し方(data/rhythm-mode.js の RHYTHM_TOUCH_FIXES。既定はすべて切ってある) ──
+// 入れるのはユーザーが了承してから。週の定期実行は報告するだけで、勝手に true にしない
+const FIX_FOR={
+  lateDeliveryPer1k:{fix:'lateInputEffectDown',text:'タッチの遅れが続いたら演出を一段下げる'},
+  ignoredPer1k:{fix:'wideEdge',text:'道の外の受け付けを、サブレーン1本ぶんから2本ぶんへ広げる'},
+};
+const fixesFor=(verdict,compared)=>{
+  const metrics=new Set();
+  verdict.forEach(line=>{if(line.level==='found'&&line.metric)metrics.add(line.metric);});
+  (compared?compared.lines:[]).forEach(line=>{if(line.level==='found'&&line.metric)metrics.add(line.metric);});
+  return [...metrics].filter(metric=>FIX_FOR[metric]).map(metric=>({metric,...FIX_FOR[metric]}));
+};
+
 const report=(rows,{json=false,days=null}={})=>{
   const summary=aggregate(rows,{days});
   const verdict=diagnose(summary);
-  if(json){console.log(JSON.stringify({summary,verdict},null,1));return {summary,verdict};}
+  const compared=compareReported(rows,{days});
+  const fixes=fixesFor(verdict,compared);
+  if(json){console.log(JSON.stringify({summary,verdict,compared,fixes},null,1));return {summary,verdict,compared,fixes};}
   console.log(`タッチの診断: ${rows.length}行${days?`(直近${days}日)`:''}`);
   for(const g of summary){
     console.log(`\n[${g.key}] ${g.plays}曲・${g.devices}端末・${g.taps}タッチ・${g.notes}ノーツ`);
@@ -138,10 +185,17 @@ const report=(rows,{json=false,days=null}={})=>{
   }
   console.log('\n判定:');
   verdict.forEach(line=>console.log(`  ${line.level==='found'?'●':line.level==='wait'?'…':'・'} ${line.text}`));
-  return {summary,verdict};
+  console.log(`\n「押したのに反応しないことがあった」の報告: ${compared.reports}件`);
+  for(const g of compared.summary.filter(g=>g.key.startsWith('ios:')))
+    console.log(`  [${g.key}] ${g.plays}曲  ポインタだけ ${g.pointerOnlyPer1k.toFixed(2)} / 遅れて見えた ${g.lateStartPer1k.toFixed(2)} / 50ms以上遅れた ${g.lateDeliveryPer1k.toFixed(2)} / 取り消し ${g.cancelsPer1k.toFixed(2)} / 道の外 ${g.ignoredPer1k.toFixed(2)} / 入力の無いMISS ${g.noInputMissPer1k.toFixed(2)}`);
+  compared.lines.forEach(line=>console.log(`  ${line.level==='found'?'●':line.level==='wait'?'…':'・'} ${line.text}`));
+  console.log('\n用意してある直し方(入れるのはユーザーが了承してから。data/rhythm-mode.js の RHYTHM_TOUCH_FIXES を true にする):');
+  if(fixes.length)fixes.forEach(item=>console.log(`  → ${item.fix}: ${item.text}`));
+  else console.log('  いまの判定に合う直し方はありません');
+  return {summary,verdict,compared,fixes};
 };
 
-module.exports={aggregate,diagnose,parseRows,mergeRows,MIN_PLAYS};
+module.exports={aggregate,diagnose,parseRows,mergeRows,MIN_PLAYS,isReportRow,compareReported,fixesFor,FIX_FOR,MIN_REPORTED};
 
 if(require.main===module){
   let rows=readRows();
