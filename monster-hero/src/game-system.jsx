@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 575b3a791632fec1
+// generated-sha256: e7d60099d88ae3f1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -127,6 +127,15 @@ const normalizeBattleFxSettings = (value) => {
     // ボスの必殺技ムービー(2026-09-25 ユーザー指示「設定でオンオフもつけて」)。
     // ★足す前に保存した人(specialMovie が無い)は ON(流す)で始まる
     specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON',
+    // バトルの合間・始まり・終わりの演出(2026-10-01 ユーザー指示「設定で色々変えられるようにして」)。
+    // ★足す前に保存した人(項目が無い)は、すべて既定(出す)で始まる。見た目だけに効き、戦闘の計算・進行・ランキングには触れない
+    phaseBanner: v.phaseBanner === 'OFF' ? 'OFF' : 'ON',
+    waveIntro: v.waveIntro === 'OFF' ? 'OFF' : 'ON',
+    defeatFx: v.defeatFx === 'OFF' ? 'OFF' : 'ON',
+    // 成長・合流・アシストカードの結果の演出。FULL=ふつう / SHORT=短め(半分の長さ) / OFF=出さない
+    resultFx: ['FULL', 'SHORT', 'OFF'].includes(v.resultFx) ? v.resultFx : 'FULL',
+    countUp: v.countUp === 'OFF' ? 'OFF' : 'ON',
+    endFx: v.endFx === 'OFF' ? 'OFF' : 'ON',
   };
 };
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
@@ -154,13 +163,31 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'specialMovie', title:'必殺技ムービー',
     desc:'タクティクスバトルの覚醒ムーが必殺技「アポカリプス」を使うとき、画面を切り替えてムービーを流します。流さないときは、いつもの演出で短く進みます。ダメージや進行は変わりません。',
     options:[{ id:'ON', label:'流す', note:'画面いっぱいで見せる' }, { id:'OFF', label:'流さない', note:'いつもの演出で短く' }] },
+  { key:'phaseBanner', title:'場面切り替えの帯',
+    desc:'WAVEのあとの強化の画面や、ラン開始時の勇者モン選び・配置・アシストカードへ切り替わるとき、画面の真ん中を横切る帯を出します。操作は止まりません。',
+    options:[{ id:'ON', label:'出す', note:'何の画面か知らせる' }, { id:'OFF', label:'出さない', note:'すぐ画面だけ出す' }] },
+  { key:'waveIntro', title:'WAVEのはじまりの演出',
+    desc:'バトルが始まるたびに、画面の真ん中へ「WAVE ○」と相手の名前を出します。最後のWAVEは「FINAL BOSS」です。操作は止まりません。',
+    options:[{ id:'ON', label:'出す', note:'WAVEと相手を見せる' }, { id:'OFF', label:'出さない', note:'すぐバトルへ' }] },
+  { key:'defeatFx', title:'敵を倒したときの演出',
+    desc:'敵を倒した瞬間に、白い閃光と「VICTORY!」を出してからWAVEリザルトへ進みます。出さないときは、すぐリザルトへ進みます。',
+    options:[{ id:'ON', label:'出す', note:'VICTORY!を見せる' }, { id:'OFF', label:'出さない', note:'すぐリザルトへ' }] },
+  { key:'resultFx', title:'成長・合流・アシストカードの結果',
+    desc:'トレーニング・供モンの合流・アシストカードのあとに出る、結果の画面の長さです。「短め」は半分の長さ、「出さない」は結果の画面を飛ばして先へ進みます。結果は強化の画面やステータスで確認できます。',
+    options:[{ id:'FULL', label:'ふつう', note:'じっくり見せる' }, { id:'SHORT', label:'短め', note:'半分の長さ' }, { id:'OFF', label:'出さない', note:'すぐ先へ進む' }] },
+  { key:'countUp', title:'数字が増える動き',
+    desc:'トレーニングの結果・WAVEリザルト・勝敗の画面などで、数字が元の値から新しい値へ増えていく動きです。オフにすると、最初から新しい値を出します。',
+    options:[{ id:'ON', label:'増える', note:'駆け上がる' }, { id:'OFF', label:'すぐ出す', note:'最初から最後の値' }] },
+  { key:'endFx', title:'ラン終了の飾り',
+    desc:'CHAMPIONの紙ふぶきや王冠、敗北・リタイアの演出などの飾りです。スコアなどの内容はそのまま出ます。',
+    options:[{ id:'ON', label:'出す', note:'紙ふぶきなど' }, { id:'OFF', label:'出さない', note:'内容だけ出す' }] },
 ]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'FULL', label: 'ふつう', note: '横いっぱいに出す' },
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-01 17:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-01 17:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -738,7 +765,7 @@ const BATTLE_SYSTEMS = Object.freeze([
       Object.freeze(['🔮', '敵の予告', '敵が次のターンに何をするかは、そのターンのうちに予告されます。「解析」を押すと、それぞれの行動が選ばれる確率と威力まで確かめられます。受けるか、攻めるか、間合いを変えるかをここで決めます。']),
       Object.freeze(['✨', '勇者特性', '勇者モンにした子の特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']),
       Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']),
-      Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度選択の「極限」タブから挑め、段ごとに特殊ルールが付きます。']),
+      Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度えらびの「極限」タブから挑め、段ごとに特殊ルールが付きます。']),
       Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']),
       Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']),
       Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。']),
@@ -776,13 +803,13 @@ const BATTLE_SYSTEMS = Object.freeze([
       Object.freeze(['⚡', '強化を選ばないから1周が速い']),
       Object.freeze(['🔁', 'AUTO∞で放置したまま何周でも']),
     ]),
-    note: '中のモードは1つだけなので、選ぶとそのまま難易度選択へ進みます',
+    note: '中のモードは1つだけなので、選ぶとそのまま難易度えらびへ進みます',
     points: Object.freeze([
       Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。']),
       Object.freeze(['📈', '強化のかわり', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員のライフ・ちから・丈夫さ・ガッツがそのときの値から10%上がり、ライフとガッツが満タンまで回復します。']),
       Object.freeze(['🔁', '放置で周回する', 'AUTO∞を使うと、10WAVEをクリアしたあとそのまま次の周へ入ります。置いておくだけで育つので、育成の周回と相性がいい遊び方です。']),
       Object.freeze(['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。']),
-      Object.freeze(['🎁', '報酬の方針を選べる', '難易度選択で「育成／プシュケー優先／ダイヤ優先」を選べます。いま欲しいものに合わせて、もらえるものの内訳を変えられます。']),
+      Object.freeze(['🎁', '報酬の方針を選べる', '難易度えらびで「育成／プシュケー優先／ダイヤ優先」を選べます。いま欲しいものに合わせて、もらえるものの内訳を変えられます。']),
       Object.freeze(['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、ほかのモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。']),
       Object.freeze(['🎯', 'こんな人におすすめ', '新しい子を早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。']),
     ]),
@@ -21254,9 +21281,12 @@ const TRAINING_FX_STATS = {
 };
 const TrainingCountUp = ({ from, to, delay = 0, duration = 900, format = null }) => {
   const [value, setValue] = React.useState(from);
+  const holderRef = React.useRef(null);
   React.useEffect(() => {
     let reduce = false;
     try { reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+    // バトル設定の「数字が増える動き」がオフのときは、最初から最後の値を出す
+    try { if (holderRef.current && holderRef.current.closest('[data-mh-count-up="OFF"]')) reduce = true; } catch (e) {}
     if (reduce || from === to) { setValue(to); return undefined; }
     setValue(from);
     let raf = 0;
@@ -21273,7 +21303,7 @@ const TrainingCountUp = ({ from, to, delay = 0, duration = 900, format = null })
     }, Math.max(0, delay));
     return () => { clearTimeout(timer); if (raf) cancelAnimationFrame(raf); };
   }, [from, to, delay, duration]);
-  return <>{format ? format(value) : value}</>;
+  return <span ref={holderRef}>{format ? format(value) : value}</span>;
 };
 // 「いくつから いくつへ」の1項目。元の値を小さく、新しい値を大きく(増えたぶんは駆け上がる)、増えた量を「+○○」で出す。
 const PhaseGrowthCell = ({ row, d = 0, countMs = 900, compact = false }) => {
@@ -31421,6 +31451,11 @@ function MonsterHeroGame() {
     return BATTLE_FX_LOADS.indexOf(battleFxAutoLoad) > BATTLE_FX_LOADS.indexOf(base.load) ? { ...base, load: battleFxAutoLoad } : base;
   }, [battleFxSettings, battleFxAutoLoad]);
   const battleFxLoad = battleFxEffective.load;
+  // 非同期の処理(敵を倒した直後など)から、いまの演出設定を読むための控え
+  const battleFxEffectiveRef = useRef(battleFxEffective);
+  battleFxEffectiveRef.current = battleFxEffective;
+  // 結果の演出の長さ。FULL=そのまま / SHORT=半分 / OFF=出さない(null)
+  const resultFxMs = (baseMs) => { const m = battleFxEffectiveRef.current.resultFx; return m === 'OFF' ? null : (m === 'SHORT' ? Math.round(baseMs / 2) : baseMs); };
   const liteBattleView = gameState==='BATTLE'&&(ecoMode==='lite'||battleFxLoad==='MINIMAL');
   // 表示・音声だけに使う超省エネ∞セッション。BATTLEを離れる中間画面や最終リザルトでも維持する。
   const ultraEcoSession = ecoMode==='ultra'&&autoRepeat===true;
@@ -40726,7 +40761,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     enemyDefeatResolvedRef.current = true;
     pushBattleLog(`${enemy?.name || '敵'}を倒した！`, 'down');
     setEnemySkillName(null);
-    setDefeatFx({name:enemy?.name||'敵',boss:wave>=10,key:Date.now()});
+    const defeatFxOn=battleFxEffectiveRef.current.defeatFx!=='OFF';
+    if(defeatFxOn) setDefeatFx({name:enemy?.name||'敵',boss:wave>=10,key:Date.now()});
     if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
     const totalWaveDamage=currentWaveDamage+damage;
     const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);
@@ -40777,7 +40813,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
-    setTimeout(()=>{setDefeatFx(null); advanceRunStage('WAVE_RESULT');},battleMs(1100));
+    setTimeout(()=>{setDefeatFx(null); advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1100:500));
     return true;
   };
 
@@ -43218,9 +43254,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(boost>1) addPopup(`敵も強くなった！ ×${boost.toFixed(2)}`,'enemy','text-orange-300 font-black text-xl drop-shadow-md');
       }
       setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
-      setEffect({type:'allyJoin',label:`${m.name}合流！`,name:m.masuName||m.name,emoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,wave:waveResult?.wave||0,ms:battleMs(2600),apt:aptLabel,
+      const joinBaseMs=resultFxMs(2600);
+      if(joinBaseMs!==null) setEffect({type:'allyJoin',label:`${m.name}合流！`,name:m.masuName||m.name,emoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,wave:waveResult?.wave||0,ms:battleMs(joinBaseMs),apt:aptLabel,
         rows:[{key:'hp',label:'ライフ',before:bHp,after:nMaxHp},{key:'atk',label:'ちから',before:bAtk,after:nAtk},{key:'def',label:'丈夫さ',before:bDef,after:nDef},{key:'guts',label:'ガッツ',before:bGuts,after:nMaxGuts}]});
-      setTimeout(()=>{setEffect(null); advanceRunStage('UPGRADE_SKILL');},battleMs(2600));
+      setTimeout(()=>{setEffect(null); advanceRunStage('UPGRADE_SKILL');},battleMs(joinBaseMs===null?150:joinBaseMs));
     }
     setCurrentPickingMon(null);
   };
@@ -43274,8 +43311,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     // 覚えた・強化した結果を見せてから次のバトルへ(TeachingResultFx)
     const teachingToLevel=alreadyOwned?Math.min(2,alreadyOwned.evoLevel+1):0;
-    const teachingFxMs=battleMs(1900);
-    setEffect({type:'teachingResult',label:alreadyOwned?'POWER UP!':'NEW CARD!',icon:teaching.icon,id:teaching.id,
+    const teachingBaseMs=resultFxMs(1900);
+    const teachingFxMs=battleMs(teachingBaseMs===null?150:teachingBaseMs);
+    if(teachingBaseMs!==null) setEffect({type:'teachingResult',label:alreadyOwned?'POWER UP!':'NEW CARD!',icon:teaching.icon,id:teaching.id,
       name:BREEDER_EVO_NAMES[teaching.id]?.[teachingToLevel]||teaching.name,fromLevel:alreadyOwned?alreadyOwned.evoLevel:-1,toLevel:teachingToLevel,maxLevel:2,
       desc:getFullEvolutionDetails(teaching)[teachingToLevel]?.desc||'',ms:teachingFxMs});
     setTimeout(()=>{setEffect(null); setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},teachingFxMs);
@@ -43345,8 +43383,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const guardCountUp=guardLevelUp&&guardCardCount(nGrdL)>guardCardCount(currentGuardLevel);
     const guardName=GUARD_EVOLUTION[nGrdL].name;
     const guardText=`丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数はガードが2段階進化するごとに1枚増え、最大${MAX_GUARD_CARD_COUNT}枚です。`;
-    const trainingFxMs=fxEntries.length?battleMs(2800+Math.max(0,fxEntries.length-1)*300):battleMs(900);
-    if(fxEntries.length){
+    const trainingBaseMs=fxEntries.length?resultFxMs(2800+Math.max(0,fxEntries.length-1)*300):900;
+    // 設定で結果の演出を「出さない」にしているときも、ガードが進化した知らせだけは短く出す
+    const trainingFxMs=battleMs(trainingBaseMs===null?(guardLevelUp?900:150):trainingBaseMs);
+    if(trainingBaseMs===null){
+      if(guardLevelUp) setEffect({type:'heal',label:`${guardName}解放！${guardCountUp?' 枚数UP':''}`,icon:"🛡️",monEmoji:"🆙",subLabel:guardText});
+    } else if(fxEntries.length){
       // 1体ずつ「いくつからいくつになったか」を見せる(TrainingResultFx)
       setEffect({type:'trainingResult',label:guardLevelUp?`${guardName}解放！${guardCountUp?' 枚数UP':''}`:"トレーニング完了",entries:fxEntries,ms:trainingFxMs,wave:waveResult?.wave||0,
         guard:guardLevelUp?{title:`${guardName}解放！${guardCountUp?' 枚数UP':''}`,text:guardText}:null});
@@ -44584,7 +44626,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         器を増やさず**同じ要素のstyleを差し替えるだけ**にしてあるのは、
         切り替えた瞬間に中身が作り直されると演奏中の状態(音の時計・スコア・押している指)が
         飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
-    <div data-mh-theme={screenThemeFor(screenTheme, screenThemeCategory(gameState, rhythmScreenOpen))} data-mh-theme-category={screenThemeCategory(gameState, rhythmScreenOpen)} data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF'||battleFxLoad==='LIGHT'||battleFxLoad==='MINIMAL')?'calm':'rich'} data-fx-level={battleFxLoad} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
+    <div data-mh-theme={screenThemeFor(screenTheme, screenThemeCategory(gameState, rhythmScreenOpen))} data-mh-theme-category={screenThemeCategory(gameState, rhythmScreenOpen)} data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} data-phase-look={(ecoMode==='lite'||ultraEcoSession||normalizeBattleFxSettings(battleFxSettings).idleMotion==='OFF'||battleFxLoad==='LIGHT'||battleFxLoad==='MINIMAL')?'calm':'rich'} data-fx-level={battleFxLoad} data-mh-count-up={battleFxEffective.countUp} data-mh-end-fx={battleFxEffective.endFx} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="mh-app h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
       <TapRippleLayer spawnRef={rippleSpawnRef}/>
       {updateNotice}{storageTroubleNotice}
@@ -49366,8 +49408,8 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         // WAVEのあとは強化フェーズの並びにある画面だけ。ラン開始時は、勇者モン選び・配置・最初のアシストカードに出す
         const inPlan=!!enemy&&Array.isArray(phasePlan)&&phasePlan.includes(phaseId==='ally'?'ally':phaseId);
         const atRunStart=!enemy&&(phaseId==='hero'||phaseId==='slot'||phaseId==='teaching');
-        return <PhaseBanner phase={phaseId} enabled={inPlan||atRunStart||(gameState==='QUICK_JOIN'&&!!enemy)}/>;})()}
-      <WaveIntro enabled={gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name}/>
+        return <PhaseBanner phase={phaseId} enabled={battleFxEffective.phaseBanner!=='OFF'&&(inPlan||atRunStart||(gameState==='QUICK_JOIN'&&!!enemy))}/>;})()}
+      <WaveIntro enabled={battleFxEffective.waveIntro!=='OFF'&&gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name}/>
       <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
       {effect&&!rhythmScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
@@ -53089,6 +53131,9 @@ const createAnimationStyle = () => {
     @keyframes mhEndSkull { 0% { opacity: 0; transform: translateY(-50px) scale(1.8); } 55% { opacity: 1; transform: translateY(0) scale(1); } 65% { transform: translateX(-6px); } 75% { transform: translateX(6px); } 85% { transform: translateX(-3px); } 100% { transform: none; } }
     .mh-end-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(circle at 50% 30%, rgba(220,38,38,0) 30%, rgba(127,29,29,.55) 100%); animation: mhEndVignette 1.8s ease-out both; }
     @keyframes mhEndVignette { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .35; } }
+    /* バトル設定の「ラン終了の飾り」がオフのとき。紙ふぶき・王冠や題字の登場・赤い縁などを出さない(スコアなどの内容はそのまま) */
+    [data-mh-end-fx="OFF"] .mh-confetti, [data-mh-end-fx="OFF"] .mh-end-vignette { display: none; }
+    [data-mh-end-fx="OFF"] :is(.mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-flag) { animation: none !important; }
     @media (prefers-reduced-motion: reduce) {
       .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette, .mh-end-flag, .mh-defeat-flash { animation: none !important; }
       .mh-defeat-flash { display: none; }

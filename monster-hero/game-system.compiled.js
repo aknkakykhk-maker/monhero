@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 714fd7ce0b27a698
+// source-sha256: f2e036ae7eee9f82
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153,7 +153,13 @@ const normalizeBattleFxSettings = value => {
     load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH',
     restPause: v.restPause === 'ON' ? 'ON' : 'OFF',
     autoLoad: v.autoLoad === 'ON' ? 'ON' : 'OFF',
-    specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON'
+    specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON',
+    phaseBanner: v.phaseBanner === 'OFF' ? 'OFF' : 'ON',
+    waveIntro: v.waveIntro === 'OFF' ? 'OFF' : 'ON',
+    defeatFx: v.defeatFx === 'OFF' ? 'OFF' : 'ON',
+    resultFx: ['FULL', 'SHORT', 'OFF'].includes(v.resultFx) ? v.resultFx : 'FULL',
+    countUp: v.countUp === 'OFF' ? 'OFF' : 'ON',
+    endFx: v.endFx === 'OFF' ? 'OFF' : 'ON'
   };
 };
 const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
@@ -242,6 +248,88 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
     label: '流さない',
     note: 'いつもの演出で短く'
   }]
+}, {
+  key: 'phaseBanner',
+  title: '場面切り替えの帯',
+  desc: 'WAVEのあとの強化の画面や、ラン開始時の勇者モン選び・配置・アシストカードへ切り替わるとき、画面の真ん中を横切る帯を出します。操作は止まりません。',
+  options: [{
+    id: 'ON',
+    label: '出す',
+    note: '何の画面か知らせる'
+  }, {
+    id: 'OFF',
+    label: '出さない',
+    note: 'すぐ画面だけ出す'
+  }]
+}, {
+  key: 'waveIntro',
+  title: 'WAVEのはじまりの演出',
+  desc: 'バトルが始まるたびに、画面の真ん中へ「WAVE ○」と相手の名前を出します。最後のWAVEは「FINAL BOSS」です。操作は止まりません。',
+  options: [{
+    id: 'ON',
+    label: '出す',
+    note: 'WAVEと相手を見せる'
+  }, {
+    id: 'OFF',
+    label: '出さない',
+    note: 'すぐバトルへ'
+  }]
+}, {
+  key: 'defeatFx',
+  title: '敵を倒したときの演出',
+  desc: '敵を倒した瞬間に、白い閃光と「VICTORY!」を出してからWAVEリザルトへ進みます。出さないときは、すぐリザルトへ進みます。',
+  options: [{
+    id: 'ON',
+    label: '出す',
+    note: 'VICTORY!を見せる'
+  }, {
+    id: 'OFF',
+    label: '出さない',
+    note: 'すぐリザルトへ'
+  }]
+}, {
+  key: 'resultFx',
+  title: '成長・合流・アシストカードの結果',
+  desc: 'トレーニング・供モンの合流・アシストカードのあとに出る、結果の画面の長さです。「短め」は半分の長さ、「出さない」は結果の画面を飛ばして先へ進みます。結果は強化の画面やステータスで確認できます。',
+  options: [{
+    id: 'FULL',
+    label: 'ふつう',
+    note: 'じっくり見せる'
+  }, {
+    id: 'SHORT',
+    label: '短め',
+    note: '半分の長さ'
+  }, {
+    id: 'OFF',
+    label: '出さない',
+    note: 'すぐ先へ進む'
+  }]
+}, {
+  key: 'countUp',
+  title: '数字が増える動き',
+  desc: 'トレーニングの結果・WAVEリザルト・勝敗の画面などで、数字が元の値から新しい値へ増えていく動きです。オフにすると、最初から新しい値を出します。',
+  options: [{
+    id: 'ON',
+    label: '増える',
+    note: '駆け上がる'
+  }, {
+    id: 'OFF',
+    label: 'すぐ出す',
+    note: '最初から最後の値'
+  }]
+}, {
+  key: 'endFx',
+  title: 'ラン終了の飾り',
+  desc: 'CHAMPIONの紙ふぶきや王冠、敗北・リタイアの演出などの飾りです。スコアなどの内容はそのまま出ます。',
+  options: [{
+    id: 'ON',
+    label: '出す',
+    note: '紙ふぶきなど'
+  }, {
+    id: 'OFF',
+    label: '出さない',
+    note: '内容だけ出す'
+  }]
 }]);
 const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   id: 'FULL',
@@ -256,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 17:03";
+const BUILD_DATE = "2026-10-01 17:20";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -521,7 +609,7 @@ const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   tagline: 'モンヒロバトルの基本。育てたモンスターで10WAVEに挑む',
   highlights: Object.freeze([Object.freeze(['🛡️', 'ステータスは全員ぶんの合計']), Object.freeze(['🃏', 'カードと間合いを選んで戦う']), Object.freeze(['📈', 'WAVEごとに強化を選んで積み上げる'])]),
   note: 'チャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
-  points: Object.freeze([Object.freeze(['🛡️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツは、パーティ全員ぶんを合わせた1組です。供モンが加わるとその子のぶんが足されて、パーティがまとめて強くなります。ライフも1本なので、誰が狙われても同じライフが減り、0になったら負けです。']), Object.freeze(['🃏', 'カードと間合い', '手札のカードをガッツで払って使います。攻撃・ガード・回復・間合いの移動などがあり、モンスターには間合いごとの得意・不得意（間合い適性）があります。']), Object.freeze(['🔮', '敵の予告', '敵が次のターンに何をするかは、そのターンのうちに予告されます。「解析」を押すと、それぞれの行動が選ばれる確率と威力まで確かめられます。受けるか、攻めるか、間合いを変えるかをここで決めます。']), Object.freeze(['✨', '勇者特性', '勇者モンにした子の特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']), Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']), Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度選択の「極限」タブから挑め、段ごとに特殊ルールが付きます。']), Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。'])]),
+  points: Object.freeze([Object.freeze(['🛡️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツは、パーティ全員ぶんを合わせた1組です。供モンが加わるとその子のぶんが足されて、パーティがまとめて強くなります。ライフも1本なので、誰が狙われても同じライフが減り、0になったら負けです。']), Object.freeze(['🃏', 'カードと間合い', '手札のカードをガッツで払って使います。攻撃・ガード・回復・間合いの移動などがあり、モンスターには間合いごとの得意・不得意（間合い適性）があります。']), Object.freeze(['🔮', '敵の予告', '敵が次のターンに何をするかは、そのターンのうちに予告されます。「解析」を押すと、それぞれの行動が選ばれる確率と威力まで確かめられます。受けるか、攻めるか、間合いを変えるかをここで決めます。']), Object.freeze(['✨', '勇者特性', '勇者モンにした子の特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']), Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']), Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度えらびの「極限」タブから挑め、段ごとに特殊ルールが付きます。']), Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。'])]),
   modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO])
 }), Object.freeze({
   id: BATTLE_SYSTEM_TACTICS,
@@ -542,8 +630,8 @@ const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   color: '#fbbf24',
   tagline: '短い時間でモンスターを育てる、周回向けのバトル',
   highlights: Object.freeze([Object.freeze(['💎', '経験値・ダイヤが1.5倍もらえる']), Object.freeze(['⚡', '強化を選ばないから1周が速い']), Object.freeze(['🔁', 'AUTO∞で放置したまま何周でも'])]),
-  note: '中のモードは1つだけなので、選ぶとそのまま難易度選択へ進みます',
-  points: Object.freeze([Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。']), Object.freeze(['📈', '強化のかわり', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員のライフ・ちから・丈夫さ・ガッツがそのときの値から10%上がり、ライフとガッツが満タンまで回復します。']), Object.freeze(['🔁', '放置で周回する', 'AUTO∞を使うと、10WAVEをクリアしたあとそのまま次の周へ入ります。置いておくだけで育つので、育成の周回と相性がいい遊び方です。']), Object.freeze(['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。']), Object.freeze(['🎁', '報酬の方針を選べる', '難易度選択で「育成／プシュケー優先／ダイヤ優先」を選べます。いま欲しいものに合わせて、もらえるものの内訳を変えられます。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、ほかのモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', '新しい子を早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。'])]),
+  note: '中のモードは1つだけなので、選ぶとそのまま難易度えらびへ進みます',
+  points: Object.freeze([Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。']), Object.freeze(['📈', '強化のかわり', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員のライフ・ちから・丈夫さ・ガッツがそのときの値から10%上がり、ライフとガッツが満タンまで回復します。']), Object.freeze(['🔁', '放置で周回する', 'AUTO∞を使うと、10WAVEをクリアしたあとそのまま次の周へ入ります。置いておくだけで育つので、育成の周回と相性がいい遊び方です。']), Object.freeze(['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。']), Object.freeze(['🎁', '報酬の方針を選べる', '難易度えらびで「育成／プシュケー優先／ダイヤ優先」を選べます。いま欲しいものに合わせて、もらえるものの内訳を変えられます。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、ほかのモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', '新しい子を早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。'])]),
   modes: Object.freeze([BATTLE_MODE_QUICK]),
   direct: true
 })]);
@@ -32189,10 +32277,14 @@ const TrainingCountUp = ({
   format = null
 }) => {
   const [value, setValue] = React.useState(from);
+  const holderRef = React.useRef(null);
   React.useEffect(() => {
     let reduce = false;
     try {
       reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e) {}
+    try {
+      if (holderRef.current && holderRef.current.closest('[data-mh-count-up="OFF"]')) reduce = true;
     } catch (e) {}
     if (reduce || from === to) {
       setValue(to);
@@ -32216,7 +32308,9 @@ const TrainingCountUp = ({
       if (raf) cancelAnimationFrame(raf);
     };
   }, [from, to, delay, duration]);
-  return React.createElement(React.Fragment, null, format ? format(value) : value);
+  return React.createElement("span", {
+    ref: holderRef
+  }, format ? format(value) : value);
 };
 const PhaseGrowthCell = ({
   row,
@@ -49581,6 +49675,12 @@ function MonsterHeroGame() {
     } : base;
   }, [battleFxSettings, battleFxAutoLoad]);
   const battleFxLoad = battleFxEffective.load;
+  const battleFxEffectiveRef = useRef(battleFxEffective);
+  battleFxEffectiveRef.current = battleFxEffective;
+  const resultFxMs = baseMs => {
+    const m = battleFxEffectiveRef.current.resultFx;
+    return m === 'OFF' ? null : m === 'SHORT' ? Math.round(baseMs / 2) : baseMs;
+  };
   const liteBattleView = gameState === 'BATTLE' && (ecoMode === 'lite' || battleFxLoad === 'MINIMAL');
   const ultraEcoSession = ecoMode === 'ultra' && autoRepeat === true;
   const ultraBattleView = gameState === 'BATTLE' && ultraEcoSession;
@@ -59822,7 +59922,8 @@ function MonsterHeroGame() {
     enemyDefeatResolvedRef.current = true;
     pushBattleLog(`${enemy?.name || '敵'}を倒した！`, 'down');
     setEnemySkillName(null);
-    setDefeatFx({
+    const defeatFxOn = battleFxEffectiveRef.current.defeatFx !== 'OFF';
+    if (defeatFxOn) setDefeatFx({
       name: enemy?.name || '敵',
       boss: wave >= 10,
       key: Date.now()
@@ -59903,7 +60004,7 @@ function MonsterHeroGame() {
     setTimeout(() => {
       setDefeatFx(null);
       advanceRunStage('WAVE_RESULT');
-    }, battleMs(1100));
+    }, battleMs(defeatFxOn ? 1100 : 500));
     return true;
   };
   const consumePoltzCharge = async () => {
@@ -62683,7 +62784,8 @@ function MonsterHeroGame() {
         if (boost > 1) addPopup(`敵も強くなった！ ×${boost.toFixed(2)}`, 'enemy', 'text-orange-300 font-black text-xl drop-shadow-md');
       }
       setUpgradePoints(prev => prev + (Math.floor(Math.random() * 4) + 1));
-      setEffect({
+      const joinBaseMs = resultFxMs(2600);
+      if (joinBaseMs !== null) setEffect({
         type: 'allyJoin',
         label: `${m.name}合流！`,
         name: m.masuName || m.name,
@@ -62692,7 +62794,7 @@ function MonsterHeroGame() {
         baseId: m.id,
         colors: m.colors,
         wave: waveResult?.wave || 0,
-        ms: battleMs(2600),
+        ms: battleMs(joinBaseMs),
         apt: aptLabel,
         rows: [{
           key: 'hp',
@@ -62719,7 +62821,7 @@ function MonsterHeroGame() {
       setTimeout(() => {
         setEffect(null);
         advanceRunStage('UPGRADE_SKILL');
-      }, battleMs(2600));
+      }, battleMs(joinBaseMs === null ? 150 : joinBaseMs));
     }
     setCurrentPickingMon(null);
   };
@@ -62785,8 +62887,9 @@ function MonsterHeroGame() {
       if (isQuickMode(runMode)) void saveMissionProgress('quickRun');else if ((runMode === BATTLE_MODE_CHALLENGE || runMode === BATTLE_MODE_TACTICS) && !extremeRunRef.current && !speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');else void saveMissionProgress('modeRun');
     }
     const teachingToLevel = alreadyOwned ? Math.min(2, alreadyOwned.evoLevel + 1) : 0;
-    const teachingFxMs = battleMs(1900);
-    setEffect({
+    const teachingBaseMs = resultFxMs(1900);
+    const teachingFxMs = battleMs(teachingBaseMs === null ? 150 : teachingBaseMs);
+    if (teachingBaseMs !== null) setEffect({
       type: 'teachingResult',
       label: alreadyOwned ? 'POWER UP!' : 'NEW CARD!',
       icon: teaching.icon,
@@ -62907,8 +63010,17 @@ function MonsterHeroGame() {
     const guardCountUp = guardLevelUp && guardCardCount(nGrdL) > guardCardCount(currentGuardLevel);
     const guardName = GUARD_EVOLUTION[nGrdL].name;
     const guardText = `丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数はガードが2段階進化するごとに1枚増え、最大${MAX_GUARD_CARD_COUNT}枚です。`;
-    const trainingFxMs = fxEntries.length ? battleMs(2800 + Math.max(0, fxEntries.length - 1) * 300) : battleMs(900);
-    if (fxEntries.length) {
+    const trainingBaseMs = fxEntries.length ? resultFxMs(2800 + Math.max(0, fxEntries.length - 1) * 300) : 900;
+    const trainingFxMs = battleMs(trainingBaseMs === null ? guardLevelUp ? 900 : 150 : trainingBaseMs);
+    if (trainingBaseMs === null) {
+      if (guardLevelUp) setEffect({
+        type: 'heal',
+        label: `${guardName}解放！${guardCountUp ? ' 枚数UP' : ''}`,
+        icon: "🛡️",
+        monEmoji: "🆙",
+        subLabel: guardText
+      });
+    } else if (fxEntries.length) {
       setEffect({
         type: 'trainingResult',
         label: guardLevelUp ? `${guardName}解放！${guardCountUp ? ' 枚数UP' : ''}` : "トレーニング完了",
@@ -65220,6 +65332,8 @@ function MonsterHeroGame() {
       "data-mh-portrait-layout": portraitOnlyScreen ? 'true' : 'false',
       "data-phase-look": ecoMode === 'lite' || ultraEcoSession || normalizeBattleFxSettings(battleFxSettings).idleMotion === 'OFF' || battleFxLoad === 'LIGHT' || battleFxLoad === 'MINIMAL' ? 'calm' : 'rich',
       "data-fx-level": battleFxLoad,
+      "data-mh-count-up": battleFxEffective.countUp,
+      "data-mh-end-fx": battleFxEffective.endFx,
       onPointerDown: rippleOnPointerDown,
       onPointerMove: rippleOnPointerMove,
       onPointerUp: rippleOnPointerEnd,
@@ -75574,10 +75688,10 @@ function MonsterHeroGame() {
       const atRunStart = !enemy && (phaseId === 'hero' || phaseId === 'slot' || phaseId === 'teaching');
       return React.createElement(PhaseBanner, {
         phase: phaseId,
-        enabled: inPlan || atRunStart || gameState === 'QUICK_JOIN' && !!enemy
+        enabled: battleFxEffective.phaseBanner !== 'OFF' && (inPlan || atRunStart || gameState === 'QUICK_JOIN' && !!enemy)
       });
     })(), React.createElement(WaveIntro, {
-      enabled: gameState === 'BATTLE' && !!enemy,
+      enabled: battleFxEffective.waveIntro !== 'OFF' && gameState === 'BATTLE' && !!enemy,
       wave: wave,
       enemyName: enemy?.name
     }), React.createElement(EnemyDefeatFx, {
@@ -79466,6 +79580,9 @@ const createAnimationStyle = () => {
     @keyframes mhEndSkull { 0% { opacity: 0; transform: translateY(-50px) scale(1.8); } 55% { opacity: 1; transform: translateY(0) scale(1); } 65% { transform: translateX(-6px); } 75% { transform: translateX(6px); } 85% { transform: translateX(-3px); } 100% { transform: none; } }
     .mh-end-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(circle at 50% 30%, rgba(220,38,38,0) 30%, rgba(127,29,29,.55) 100%); animation: mhEndVignette 1.8s ease-out both; }
     @keyframes mhEndVignette { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .35; } }
+    /* バトル設定の「ラン終了の飾り」がオフのとき。紙ふぶき・王冠や題字の登場・赤い縁などを出さない(スコアなどの内容はそのまま) */
+    [data-mh-end-fx="OFF"] .mh-confetti, [data-mh-end-fx="OFF"] .mh-end-vignette { display: none; }
+    [data-mh-end-fx="OFF"] :is(.mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-flag) { animation: none !important; }
     @media (prefers-reduced-motion: reduce) {
       .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette, .mh-end-flag, .mh-defeat-flash { animation: none !important; }
       .mh-defeat-flash { display: none; }
