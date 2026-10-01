@@ -288,16 +288,11 @@ const MarketNotice = ({ tone='error', children, ...rest }) => (
   <div {...rest} className={`mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[11px] font-black ${tone==='error'?'border-red-500/40 bg-red-950/30 text-red-300':'border-amber-300/30 bg-amber-500/10 text-amber-100'}`}>{children}</div>
 );
 
-// マーケットで開く窓の枠。拡大・詳細・購入/交換の確認はすべてこれに入れる。
-// 外側を押すと閉じる(閉じてよくないとき=保存中は onClose を渡さない)
-const MarketModal = ({ label, border='border-amber-400/70', onClose, children, narrow=false }) => (
-  <div onClick={onClose||undefined} className="fixed inset-0 flex items-center justify-center overflow-y-auto px-4" style={{position:'fixed',inset:0,paddingTop:'max(16px, env(safe-area-inset-top))',paddingBottom:'max(16px, env(safe-area-inset-bottom))',backgroundColor:'rgba(2,6,23,0.94)',zIndex:42000}} role="dialog" aria-modal="true" aria-label={label}>
-    <div onClick={e=>e.stopPropagation()} className={`w-full ${narrow?'max-w-[280px]':'max-w-sm'} rounded-3xl border-2 ${border} bg-slate-950 p-4 shadow-2xl`}>{children}</div>
-  </div>
-);
-const MarketModalClose = ({ onClick, label='閉じる', disabled=false }) => (
-  <button type="button" disabled={disabled} onClick={onClick} className="mh-button mh-button-secondary w-full min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98] disabled:opacity-40">{label}</button>
-);
+// マーケットで開く窓の枠と閉じるボタン。中身は画面共通の ModalFrame / ModalCloseButton(41-screen-ui.jsx)。
+// (2026-10-01 にマーケット以外の窓でも使えるよう共通部品へ移した。ここは呼び名を残すだけ)
+// ★41 はこのファイルより後に読み込まれるので、定数の代入ではなく関数で包む(描くときに見つかればよい)
+const MarketModal = (props) => <ModalFrame {...props}/>;
+const MarketModalClose = (props) => <ModalCloseButton {...props}/>;
 // 窓の頭。商品の絵と名前を真ん中にそろえて出す
 const MarketModalHead = ({ item, accent='text-white' }) => (
   <div className="flex flex-col items-center gap-2">
@@ -334,21 +329,12 @@ const MarketPurchaseSheet = ({ item, balance, stackable=false, countUnit='個', 
   const count=stackable?Math.min(Math.max(1, Math.floor(Number(quantity)||1)), Math.max(1, maxQuantity)):1;
   const total=unitCost*count;
   const canConfirm=maxQuantity>0&&!pending;
-  const setCount=(next)=>onQuantity&&onQuantity(Math.min(Math.max(1, next), Math.max(1, maxQuantity)));
-  const stepClass='mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30';
   return <MarketModal label={`${item.name}の${meta.verb}`} border={meta.border} onClose={pending?null:onCancel}>
     <MarketModalHead item={item} accent={meta.text}/>
     <div className="mt-3 rounded-2xl bg-slate-900 p-3 text-center"><span className="block text-[10px] font-bold text-slate-400">{meta.have}</span><strong className={`mt-1 block text-xl font-black font-mono ${meta.text}`}>{meta.emoji} {safeBalance.toLocaleString()}</strong></div>
     {stackable&&<>
       <div className="mt-3 text-center text-[11px] font-black text-slate-300">{meta.verb}する数</div>
-      <div className="mt-2 grid grid-cols-5 items-center gap-1.5">
-        <button type="button" disabled={count<=1} onClick={()=>setCount(count-10)} className={stepClass}>-10</button>
-        <button type="button" disabled={count<=1} onClick={()=>setCount(count-1)} className={stepClass}>-1</button>
-        <strong className="text-center text-xl font-black font-mono">{count}</strong>
-        <button type="button" disabled={count>=maxQuantity} onClick={()=>setCount(count+1)} className={stepClass}>+1</button>
-        <button type="button" disabled={count>=maxQuantity} onClick={()=>setCount(count+10)} className={stepClass}>+10</button>
-      </div>
-      <button type="button" disabled={maxQuantity<=0} onClick={()=>setCount(maxQuantity)} className={`mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl font-black active:scale-95 disabled:opacity-30 ${meta.max}`}>MAX（{Math.max(0, maxQuantity).toLocaleString()}{countUnit}）</button>
+      <QuantityStepper value={count} max={maxQuantity} unit={countUnit} maxClass={meta.max} onChange={(next)=>onQuantity&&onQuantity(next)}/>
     </>}
     <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
       {stackable&&<div className="flex justify-between"><span className="text-slate-400">単価</span><span>1{countUnit} = {meta.format(unitCost.toLocaleString())}</span></div>}
