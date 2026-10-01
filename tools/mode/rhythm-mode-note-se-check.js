@@ -11,7 +11,8 @@ let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
 
 check('空押しSEは既存の音ゲーSE runtimeと設定を共用',source.includes('const playEmpty=()=>')&&source.includes('beginInputGroup')&&source.includes('endInputGroup')&&source.includes('_readSettings:readSettings'));
-check('空押しSEはノーツ未取得の新規入力と境界越え再判定の対象なし時に呼ぶ',gameSource.includes('if(!target){RHYTHM_NOTE_SE_RUNTIME.playEmpty()')&&// ★引数の並びを丸ごと固定で書かない。あとから項目が増えるだけで落ちてしまう
+check('空押しSEはノーツ未取得の新規入力と境界越え再判定の対象なし時に呼ぶ',// 対象なしの分岐の先頭に計測(RHYTHM_PERF.emptyTap)が足されても落ちないよう、playEmpty との間は固定しない
+  /if\(!target\)\{[^}]{0,200}RHYTHM_NOTE_SE_RUNTIME\.playEmpty\(\)/.test(gameSource)&&// ★引数の並びを丸ごと固定で書かない。あとから項目が増えるだけで落ちてしまう
 //   (2026-09-13、rejudge:true が足されたときに実際に落ちた)。見たいのは
 //   「対象なしのときに、同じ指・同じ場所でもう一度判定へ回している」こと。
   /if\(state\.empty\)inputStarts\(\[\{lane:Math\.floor\(subLane\/2\),subLaneCoordinate,inputKey[^\]]*\}\]/.test(gameSource));

@@ -7,7 +7,8 @@ let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if
 const helper=source.match(/const RHYTHM_PROJECTION_TOP_SCALE=[\s\S]*?const rhythmLaneAtPoint=[\s\S]*?\n\};/)?.[0];
 check('共通projection helperを抽出できる',!!helper);
 if(helper){
-  const context={RHYTHM_LANE_COUNT:5};vm.runInNewContext(`${helper}\nthis.out={rhythmProjectBoundary,rhythmProjectLane,rhythmLanePolygon,rhythmProjectTravelProgress,rhythmLaneCoordinateAtPoint,rhythmLaneAtPoint};`,context);
+  // rhythmInputEdgeMarginSubLanes は切り出し範囲の外(タッチ補正の切り替えに依存)なので、既定の余白1を返す代役を置く
+  const context={RHYTHM_LANE_COUNT:5,rhythmInputEdgeMarginSubLanes:()=>1};vm.runInNewContext(`${helper}\nthis.out={rhythmProjectBoundary,rhythmProjectLane,rhythmLanePolygon,rhythmProjectTravelProgress,rhythmLaneCoordinateAtPoint,rhythmLaneAtPoint};`,context);
   const {rhythmProjectBoundary,rhythmProjectLane,rhythmProjectTravelProgress,rhythmLaneCoordinateAtPoint,rhythmLaneAtPoint}=context.out,rect={left:20,top:40,width:500,height:800};
   for(const y of [0,.25,.5,.75,.88]){
     for(let lane=0;lane<5;lane++){
