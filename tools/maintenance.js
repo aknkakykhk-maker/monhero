@@ -89,10 +89,23 @@ function hygiene() {
     const walk = d => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.(png|jpe?g|webp|gif)$/i.test(e.name)) imgs.push(p); } };
     walk(imgDir);
     const corpusFiles = [];
-    const walkSrc = d => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) { if (!['images', 'audio', 'movies', 'vendor'].includes(e.name)) walkSrc(p); } else if (/\.(js|jsx|json|html|css)$/.test(e.name) && !/compiled|tailwind/.test(e.name)) corpusFiles.push(p); } };
+    // 素材そのものの置き場(monster-hero直下)だけ除く。data/images には画像のパスが書いてある
+    const walkSrc = d => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) { if (!['images', 'audio', 'movies', 'vendor'].some(n => p === path.join(ROOT, 'monster-hero', n))) walkSrc(p); } else if (/\.(js|jsx|json|html|css)$/.test(e.name) && !/compiled|tailwind/.test(e.name)) corpusFiles.push(p); } };
     walkSrc(path.join(ROOT, 'monster-hero'));
     const corpus = corpusFiles.map(f => fs.readFileSync(f, 'utf8')).join('\n');
-    const orphans = imgs.filter(p => !corpus.includes(path.basename(p)));
+    // 意図して残している画像(元絵・将来用など)は docs/ops/maintenance/orphan-allow.txt に「パス(*可) # 理由」で登録する
+    const allowFile = path.join(OUT_DIR, 'orphan-allow.txt');
+    const allow = fs.existsSync(allowFile) ? fs.readFileSync(allowFile, 'utf8').split('\n').map(l => l.split('#')[0].trim()).filter(Boolean)
+      .map(g => new RegExp('^' + g.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*') + '$')) : [];
+    const imgRoot = path.join(ROOT, 'monster-hero/images');
+    // `images/<フォルダ>/<接頭辞>_${…}` のようにテンプレートで組み立てて読んでいる画像は、使っているとみなす
+    const viaTemplate = p => {
+      const rel = path.relative(imgRoot, p).split(path.sep).join('/');
+      const dir = path.posix.dirname(rel), m = path.posix.basename(rel).match(/^([A-Za-z0-9]+)[_-]/);
+      return !!m && corpus.includes(`images/${dir}/${m[1]}_\${`);
+    };
+    const orphans = imgs.filter(p => !corpus.includes(path.basename(p)) && !viaTemplate(p)
+      && !allow.some(re => re.test(path.relative(imgRoot, p).split(path.sep).join('/'))));
     if (has('--full') && orphans.length) {
       fs.mkdirSync(OUT_DIR, { recursive: true });
       fs.writeFileSync(path.join(OUT_DIR, 'orphan-images.txt'), orphans.map(p => path.relative(path.join(ROOT, 'monster-hero/images'), p)).sort().join('\n') + '\n');
