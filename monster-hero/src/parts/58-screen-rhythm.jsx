@@ -815,7 +815,7 @@ function RhythmRankingScreen({
               {total.self&&total.self.songCount<totalSongCount&&(
                 <button data-rhythm-total-remaining onClick={onGoToSongSelect}
                   className="mb-3 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100">
-                  まだ記録のない曲が {totalSongCount-total.self.songCount} 曲あります ▶ 曲をえらぶ
+                  まだ記録のない曲が {totalSongCount-total.self.songCount} 曲あります ▶ 曲を選ぶ
                 </button>
               )}
               {!total.self&&<p data-rhythm-total-self-empty className="mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300">まだあなたの記録がありません。1曲でも遊ぶとここに載ります。</p>}

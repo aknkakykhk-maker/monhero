@@ -5,10 +5,10 @@
 //   node tools/masu/unique-setting-check.js
 //
 // 【なぜ道具にするか】
-// この機能は「保存した順番が、あとから増えた技や消えた技で壊れないか」「並び替えても
+// この機能は「保存した順番が、あとから増えた技や消えた技で壊れないか」「並べ替えても
 // 固有技Lvが入れ替わらないか」が要で、どれも画面を見ただけでは分からない。
 // しかも壊れ方が「気づいたら別の技がLv8になっている」という取り返しのつかない形になる。
-// 本体から正規化・並び替え・バトル側のキー解決をそのまま切り出して、1つずつ確かめる。
+// 本体から正規化・並べ替え・バトル側のキー解決をそのまま切り出して、1つずつ確かめる。
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -67,7 +67,7 @@ check('保存値が壊れていても従来順へ落とす',
   JSON.stringify(A.normalizeUniqueOrder(makeMasu({ uniqueOrder:'こわれた' }))) === JSON.stringify(['own', keyA, keyB])
   && JSON.stringify(A.normalizeUniqueOrder(makeMasu({ uniqueOrder:[null, 7, {}] }))) === JSON.stringify(['own', keyA, keyB]));
 
-// ---------- ② 並び替え ----------
+// ---------- ② 並べ替え ----------
 const moved = A.buildUniqueSettingUpdate(legacy, { order:A.moveUniqueOrderKey(A.normalizeUniqueOrder(legacy), keyB, -1), initialKey:'own' });
 check('「↑」で1つ上へ動く', JSON.stringify(moved.uniqueOrder) === JSON.stringify(['own', keyB, keyA]));
 check('先頭より上・末尾より下へは動かない',
@@ -75,10 +75,10 @@ check('先頭より上・末尾より下へは動かない',
   && JSON.stringify(A.moveUniqueOrderKey(['own', keyA, keyB], keyB, 1)) === JSON.stringify(['own', keyA, keyB]));
 check('保存し直しても並びが残る（再読み込み相当）',
   JSON.stringify(A.normalizeUniqueOrder(JSON.parse(JSON.stringify(moved)))) === JSON.stringify(['own', keyB, keyA]));
-// 並び替えで固有技Lvが動かないこと。Lvの正本は inhId:<id> なので、順番を変えても対応は変わらない
-check('並び替えても各技の固有技Lvが入れ替わらない',
+// 並べ替えで固有技Lvが動かないこと。Lvの正本は inhId:<id> なので、順番を変えても対応は変わらない
+check('並べ替えても各技の固有技Lvが入れ替わらない',
   moved.uniqueSkillLevels.own === 3 && moved.uniqueSkillLevels[keyA] === 5 && moved.uniqueSkillLevels[keyB] === 8);
-check('並び替えで固有技P・継承技の中身を変えない',
+check('並べ替えで固有技P・継承技の中身を変えない',
   moved.uniqueSkillPoints === 2 && JSON.stringify(moved.inheritedUniques) === JSON.stringify([inhA, inhB]));
 check('保存するのは安定キーだけ（配列位置の仮キーを残さない）',
   moved.uniqueOrder.every(A.isStableUniqueSettingKey)
@@ -117,7 +117,7 @@ check('「初期状態に戻す」で固有技Lv・固有技Pをリセットし�
   && reset.uniqueSkillLevels[keyB] === 8 && reset.uniqueSkillPoints === 2);
 
 // ---------- ⑥ バトルへの反映 ----------
-// バトル側のキー(inh0/inh1)は inheritedUniques の配列位置のまま。並び替えても位置は動かさない
+// バトル側のキー(inh0/inh1)は inheritedUniques の配列位置のまま。並べ替えても位置は動かさない
 const mon = { inheritedUniques:[inhA, inhB], uniqueOrder:['own', keyB, keyA], initialUniqueKey:keyB };
 check('初期技の安定キーがバトルの選択キーへ変換される', A.battleUniqueKeyFromSettingKey(mon, keyB) === 'inh1');
 check('自前・未設定は従来どおり own',
@@ -169,11 +169,11 @@ check('固有技Lv・固有技Pの計算には触っていない',
 // --- 画面 ---
 const sheet = slice('{uniqueSettingMasuId!=null&&(()=>{', '{/* マスモン強化: 専用ページ');
 check('マスモン詳細に固有技設定の導線がある', source.includes('data-unique-setting-open'));
-check('技ごとに 現在名・Lv・初期技表示・初期技に設定・並び替え がある',
+check('技ごとに 現在名・Lv・初期技表示・初期技に設定・並べ替え がある',
   sheet.includes('data-unique-setting-row') && sheet.includes('uniqueSkillAtLevel(choice.unique, choice.level)')
   && sheet.includes('Lv.{choice.level}') && sheet.includes('data-unique-setting-initial-badge')
   && sheet.includes('data-unique-setting-initial') && sheet.includes('data-unique-setting-up') && sheet.includes('data-unique-setting-down'));
-check('並び替えはドラッグに頼らずタップできる（↑↓ボタン）',
+check('並べ替えはドラッグに頼らずタップできる（↑↓ボタン）',
   sheet.includes('>↑</button>') && sheet.includes('>↓</button>') && !/onDragStart|draggable/.test(sheet));
 check('スマホで押せる大きさ（44px以上）を確保している',
   (sheet.match(/min-h-\[4[4-9]px\]|min-h-\[[5-9]\dpx\]/g) || []).length >= 4);

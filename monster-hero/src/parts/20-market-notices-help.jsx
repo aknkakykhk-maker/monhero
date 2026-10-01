@@ -311,7 +311,7 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
     <div className="mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black">
       <div className="flex justify-between"><span className="text-slate-400">所持数</span><span className="font-mono text-cyan-300">{Math.max(0, Math.floor(Number(owned)||0)).toLocaleString()}</span></div>
       {grantText&&<div className="flex justify-between"><span className="text-slate-400">1回で受け取る数</span><span>{grantText}</span></div>}
-      <div className="flex justify-between"><span className="text-slate-400">ねだん</span><span className={`font-mono ${meta.text}`}>{marketPriceText(item)}</span></div>
+      <div className="flex justify-between"><span className="text-slate-400">値段</span><span className={`font-mono ${meta.text}`}>{marketPriceText(item)}</span></div>
     </div>
     <div className="mt-3"><MarketModalClose onClick={onClose}/></div>
   </MarketModal>;

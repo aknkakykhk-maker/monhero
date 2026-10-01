@@ -82,7 +82,7 @@ const check = (name, ok, detail = '') => {
 
     // --- ① 助手えらびから始まり、そこから抜け出す導線が出ていない ---
     const first = await textOf();
-    check('はじめての人は助手えらびから始まる', first.includes('助手をえらぶ'), first.slice(0, 30));
+    check('はじめての人は助手えらびから始まる', first.includes('助手を選ぶ'), first.slice(0, 30));
     check('はじめての設定が終わるまでログインボーナスは出さない',
       !first.includes('ログインボーナス')
         && await page.locator('button').filter({ hasText: /ギフトを確認/ }).count() === 0);
@@ -94,9 +94,9 @@ const check = (name, ok, detail = '') => {
     await tap(/みゅあ/);
     const profile = await textOf();
     check('助手を選ぶとはじめての設定へ進む',
-      profile.includes('はじめての設定') && profile.includes('なまえを決める') && profile.includes('アイコンを選ぶ'));
-    check('名前もアイコンも決めていないうちは「けってい！」を押せない',
-      await page.locator('button').filter({ hasText: /^けってい！$/ }).first().isDisabled());
+      profile.includes('はじめての設定') && profile.includes('名前を決める') && profile.includes('アイコンを選ぶ'));
+    check('名前もアイコンも決めていないうちは「決定！」を押せない',
+      await page.locator('button').filter({ hasText: /^決定！$/ }).first().isDisabled());
 
     // --- ③ 寄り道してもHOMEへは出られない ---
     // プロフィールからはアイテムや記録を見られる。その戻り先がHOMEになっていると、
@@ -112,7 +112,7 @@ const check = (name, ok, detail = '') => {
       (await saved()).name === null && (await saved()).onboarded === 'false');
 
     // --- ④ 名前とアイコンを決めれば、これまでどおりHOMEへ入れる ---
-    await tap(/^なまえを決める$/);
+    await tap(/^名前を決める$/);
     await page.locator('input').first().fill('けんさ');
     await tap(/保存/);
     check('名前を決めると保存される', (await saved()).name === JSON.stringify('けんさ'), String((await saved()).name));
@@ -124,9 +124,9 @@ const check = (name, ok, detail = '') => {
     });
     await page.waitForTimeout(700);
     check('アイコンを選ぶと保存される', !!(await saved()).icon, String((await saved()).icon));
-    check('両方そろうと「けってい！」を押せる',
-      await page.locator('button').filter({ hasText: /^けってい！$/ }).first().isEnabled());
-    await tap(/^けってい！$/);
+    check('両方そろうと「決定！」を押せる',
+      await page.locator('button').filter({ hasText: /^決定！$/ }).first().isEnabled());
+    await tap(/^決定！$/);
     await page.waitForTimeout(1200);
     const home = await textOf();
     check('はじめての設定を終えるとHOMEへ入れる',

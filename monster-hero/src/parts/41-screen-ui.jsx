@@ -193,7 +193,7 @@ const ConfirmSheet = ({ title, message='', confirmLabel='OK', danger=false, onCo
 // 分からなかったので、各画面の上に同じ形の並びを出す(並びは postWavePhasePlan が組む)。
 // 画面ごとの識別色もここで決める(背景の光・並びの「いまここ」の色)。
 const PHASE_STEP_LABELS = Object.freeze({
-  training:'トレーニング', growth:'自動成長', ally:'供モン', slot:'配置', skill:'固有技', teaching:'アシストカード', hero:'えらぶ',
+  training:'トレーニング', growth:'自動成長', ally:'供モン', slot:'配置', skill:'固有技', teaching:'アシストカード', hero:'勇者モン',
 });
 const PHASE_ACCENT_RGB = Object.freeze({
   training:'251,191,36', growth:'45,212,191', ally:'129,140,248', slot:'129,140,248', skill:'245,158,11', teaching:'192,132,252', hero:'129,140,248',

@@ -96,7 +96,7 @@ function MasuFusionScreen({
                         {renderMonsterCardBody({masu,base,mon:null,sub:null})}
                       </button>
                       {/* 24pxの丸のままでは押しにくいので、当たり判定だけ44pxへ広げる(見た目の丸は同じ位置・同じ大きさ) */}
-                      <button aria-label="くわしく見る" onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-0 right-0 z-10 w-11 h-11 p-1 flex items-start justify-end active:scale-90"><span className="w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center"><Info size={12} className="text-white"/></span></button>
+                      <button aria-label="詳しく見る" onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-0 right-0 z-10 w-11 h-11 p-1 flex items-start justify-end active:scale-90"><span className="w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center"><Info size={12} className="text-white"/></span></button>
                     </div>
                   );
                 })}
@@ -157,7 +157,7 @@ function MasuFusionScreen({
                           {renderMonsterCardBody({masu,base,mon:null,sub:null})}
                           {selected&&<div className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-violet-500 border-2 border-white flex items-center justify-center shadow-lg"><Check size={13} className="text-white" strokeWidth={4}/></div>}
                         </button>
-                        <button aria-label="くわしく見る" onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-0 right-0 z-10 w-11 h-11 p-1 flex items-start justify-end active:scale-90"><span className="w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center"><Info size={12} className="text-white"/></span></button>
+                        <button aria-label="詳しく見る" onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-0 right-0 z-10 w-11 h-11 p-1 flex items-start justify-end active:scale-90"><span className="w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center"><Info size={12} className="text-white"/></span></button>
                       </div>
                     );
                   })}
