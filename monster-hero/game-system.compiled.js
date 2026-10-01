@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1f517565e3159d84
+// source-sha256: d6bc03348f8ed81b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 18:34";
+const BUILD_DATE = "2026-10-01 20:01";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -1931,11 +1931,13 @@ const HERO_PROOF_SHARD_ITEM = Object.freeze({
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
   extreme: Object.freeze({
     GOD: 1,
-    RAGNAROK: 2
+    RAGNAROK: 2,
+    HELHEIM: 3
   }),
   speciesChallenge: Object.freeze({
     GOD: 1,
-    RAGNAROK: 2
+    RAGNAROK: 2,
+    HELHEIM: 3
   }),
   pro: Object.freeze({
     Master: 1,
@@ -12836,7 +12838,66 @@ const RAGNAROK_SETTING = Object.freeze({
     })
   })
 });
-const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES, GOD_SETTING, RAGNAROK_SETTING]);
+const HELHEIM_SETTING = Object.freeze({
+  id: 'HELHEIM',
+  label: 'HELHEIM',
+  japanese: 'ヘルヘイム',
+  available: true,
+  debugAvailable: true,
+  power: 300,
+  score: 20,
+  xp: 100,
+  gold: 80,
+  psyche: 160,
+  waveCount: 10,
+  unlockRequirement: 'RAGNAROK',
+  rankingId: 'ExtremeHELHEIM',
+  recordId: 'HELHEIM',
+  description: '冥府が2WAVEごとに深まり、味方の最大ライフが削れていく。ボスは何度でも起き上がり、距離強化もWAVEごとに薄れていく、極限チャレンジの最奥の難易度。',
+  cardDescription: '2WAVEごとに冥府が深まる。敵のライフは10倍で、距離強化はWAVEごとに薄れ、ボスは何度も蘇る。',
+  specialRules: Object.freeze({
+    assistCardEffect: 0.30,
+    positiveModifier: 0.30,
+    negativeModifier: 3.0,
+    distanceEnhancement: 0.10,
+    gutsCost: 2.0,
+    enemyTurnRate: 0.0125,
+    allyJoinPenaltyRate: 0.0125,
+    minimumAllyJoinBonus: 0.03,
+    damageTurnRate: 0.0175,
+    minimumDamageDealt: 0.15,
+    awakeningPenaltyRate: 0.01,
+    awakeningZeroTurns: 12,
+    awakeningPenaltyExcludes: Object.freeze(['distance']),
+    distanceBreak: Object.freeze({
+      interval: 12,
+      damageDealtPerLevel: 0.5,
+      safeDistanceCount: 0,
+      persistsForRun: true
+    }),
+    revival: Object.freeze({
+      waves: Object.freeze({
+        3: 1,
+        5: 2,
+        7: 2,
+        9: 1,
+        10: 4
+      }),
+      hpRate: 0.5,
+      atkBoostPerRevival: 0.6
+    }),
+    enemyAdjust: Object.freeze({
+      lifeRate: 10,
+      byEnemy: Object.freeze({
+        Durahan: Object.freeze({
+          lifeRate: 1.3,
+          atkRate: 1.3
+        })
+      })
+    })
+  })
+});
+const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES, GOD_SETTING, RAGNAROK_SETTING, HELHEIM_SETTING]);
 const EXTREME_DIFFICULTY_THEMES = Object.freeze({
   EXTREME: Object.freeze({
     accent: '#f0abfc',
@@ -12914,6 +12975,17 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
     titleGlow: 0.84,
     actionGlow: 0.60,
     shadowBlur: 48
+  }),
+  HELHEIM: Object.freeze({
+    accent: '#bef264',
+    rgb: '132,204,22',
+    background: 'linear-gradient(180deg,#1c3a0a,#07140a)',
+    action: 'linear-gradient(135deg,#65a30d,#bef264)',
+    actionText: '#1a2e05',
+    glow: 0.66,
+    titleGlow: 0.90,
+    actionGlow: 0.66,
+    shadowBlur: 52
   })
 });
 const extremeDifficultyTheme = difficultyId => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
@@ -12949,6 +13021,23 @@ const ragnarokTwilightRules = waveNumber => {
     safeDistanceCount: 0
   });
 };
+const helheimUnderworldLevel = waveNumber => extremeWaveStageLevel(waveNumber);
+const helheimUnderworldRules = waveNumber => {
+  const level = helheimUnderworldLevel(waveNumber);
+  const wave = Math.max(1, Math.min(10, Math.floor(Number(waveNumber) || 1)));
+  return Object.freeze({
+    level,
+    enemyMultiplier: 1 + level * 0.30,
+    gutsCost: level >= 3 ? 2.25 : 2.0,
+    distanceEnhancement: Number((0.10 - (wave - 1) * 0.01).toFixed(2)),
+    positiveModifier: level >= 4 ? 0.20 : 0.30,
+    negativeModifier: level >= 4 ? 3.5 : 3.0,
+    damageTurnRate: level >= 5 ? 0.02 : 0.0175,
+    minimumDamageDealt: level >= 5 ? 0.10 : 0.15,
+    safeDistanceCount: 0,
+    allyMaxHpRate: 1 - level * 0.05
+  });
+};
 const EXTREME_WAVE_STAGES = Object.freeze({
   GOD: Object.freeze({
     label: '神威',
@@ -12957,6 +13046,10 @@ const EXTREME_WAVE_STAGES = Object.freeze({
   RAGNAROK: Object.freeze({
     label: '黄昏',
     rules: ragnarokTwilightRules
+  }),
+  HELHEIM: Object.freeze({
+    label: '冥府',
+    rules: helheimUnderworldRules
   })
 });
 const extremeWaveStage = difficultyId => EXTREME_WAVE_STAGES[difficultyId] || null;
@@ -13064,6 +13157,24 @@ const effectiveExtremeDistanceBreakRule = (difficultyId, waveNumber = 1) => {
     safeDistanceCount: staged.safeDistanceCount
   } : rule;
 };
+const extremeAllyMaxHpRate = (difficultyId, waveNumber = 1) => {
+  const rate = Number(extremeWaveStageRules(difficultyId, waveNumber)?.allyMaxHpRate);
+  return Number.isFinite(rate) && rate > 0 ? Math.min(1, rate) : 1;
+};
+const applyAllyMaxHpRate = (maxHp, rate) => rate < 1 ? Math.max(1, Math.floor(maxHp * rate)) : maxHp;
+const extremeEnemyStatAdjust = (difficultyId, enemyKey = null) => {
+  const rule = extremeDifficultySetting(difficultyId)?.specialRules?.enemyAdjust;
+  const num = value => Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : 1;
+  if (!rule) return {
+    lifeRate: 1,
+    atkRate: 1
+  };
+  const own = enemyKey && rule.byEnemy ? rule.byEnemy[enemyKey] : null;
+  return {
+    lifeRate: num(rule.lifeRate) * num(own?.lifeRate),
+    atkRate: num(rule.atkRate) * num(own?.atkRate)
+  };
+};
 const extremeRevivalRule = difficultyId => {
   const rule = extremeDifficultySetting(difficultyId)?.specialRules?.revival;
   return rule && rule.waves && typeof rule.waves === 'object' ? rule : null;
@@ -13135,6 +13246,13 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
   };
   if (difficultyId === GOD_SETTING.id) push('神威', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵ライフ/攻撃力', '神威Lvごと +15% / +30% / +45% / +60% / +75%'], ['Lv5', '与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし']]);
   if (difficultyId === RAGNAROK_SETTING.id) push('黄昏', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵ライフ/攻撃力', '黄昏Lvごと +20% / +40% / +60% / +80% / +100%'], ['Lv2', '距離強化 35%→25%'], ['Lv3', '消費ガッツ 175%→200%'], ['Lv4', '＋補正 35%→25%・−補正 250%→300%'], ['Lv5', '与ダメ低下 -1.75pt/T・最低15%']]);
+  if (difficultyId === HELHEIM_SETTING.id) {
+    const adjust = rules.enemyAdjust || {};
+    const durahan = adjust.byEnemy?.Durahan;
+    push('冥府', [['進行', '2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'], ['敵ライフ/攻撃力', '冥府Lvごと +30% / +60% / +90% / +120% / +150%'], ['味方の最大ライフ', '冥府Lvごと -5%（Lv5で-25%）'], ['Lv3', '消費ガッツ 200%→225%'], ['Lv4', '＋補正 30%→20%・−補正 300%→350%'], ['Lv5', '与ダメ低下 -2.0pt/T・最低10%']]);
+    push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `すべての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
+    push('距離強化', [['WAVEごとに薄れる', 'WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%']]);
+  }
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
   push('補正', [rules.waveEnhancement != null && ['WAVE後強化', specialRulePercent(rules.waveEnhancement)], rules.positiveModifier != null && ['＋補正', specialRulePercent(rules.positiveModifier)], rules.negativeModifier != null && ['－補正', specialRulePercent(rules.negativeModifier)], rules.distanceEnhancement != null && ['距離強化', specialRulePercent(rules.distanceEnhancement)]]);
   push('ダメージ・ガッツ', [rules.damageDealt != null && ['与ダメージ', specialRulePercent(rules.damageDealt)], rules.allyJoinBonus != null && ['供モン加入ボーナス', specialRulePercent(rules.allyJoinBonus)], rules.gutsCost != null && ['消費ガッツ', specialRulePercent(rules.gutsCost)]]);
@@ -13357,6 +13475,7 @@ const isUltimateUnlocked = chaosClearCount => (Number(chaosClearCount) || 0) > 0
 const isInfinityUnlocked = ultimateClearCount => (Number(ultimateClearCount) || 0) > 0;
 const isGodUnlocked = infinityClearCount => (Number(infinityClearCount) || 0) > 0;
 const isRagnarokUnlocked = godClearCount => (Number(godClearCount) || 0) > 0;
+const isHelheimUnlocked = ragnarokClearCount => (Number(ragnarokClearCount) || 0) > 0;
 const normalizeBattleDifficulty = value => quickDifficultySetting(value) ? value : 'Normal';
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
 const CLEAR_PSYCHE_REWARD = Object.freeze({
@@ -51426,12 +51545,14 @@ function MonsterHeroGame() {
   const ultimateClearCount = extremeClearCounts[ULTIMATE_SETTING.id] || 0;
   const infinityClearCount = extremeClearCounts[INFINITY_SETTING.id] || 0;
   const godClearCount = extremeClearCounts[GOD_SETTING.id] || 0;
+  const ragnarokClearCount = extremeClearCounts[RAGNAROK_SETTING.id] || 0;
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
   const chaosUnlocked = useMemo(() => isChaosUnlocked(nightmareClearCount), [nightmareClearCount]);
   const ultimateUnlocked = useMemo(() => isUltimateUnlocked(chaosClearCount), [chaosClearCount]);
   const infinityUnlocked = useMemo(() => isInfinityUnlocked(ultimateClearCount), [ultimateClearCount]);
   const godUnlocked = useMemo(() => isGodUnlocked(infinityClearCount), [infinityClearCount]);
   const ragnarokUnlocked = useMemo(() => isRagnarokUnlocked(godClearCount), [godClearCount]);
+  const helheimUnlocked = useMemo(() => isHelheimUnlocked(ragnarokClearCount), [ragnarokClearCount]);
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
   const activeExtremeBattleSetting = activeExtremeSetting;
@@ -51439,7 +51560,12 @@ function MonsterHeroGame() {
   const scoreMultiplier = extremeRun ? activeExtremeBattleSetting.score || 1 : isQuickMode(runMode) ? activeDifficultySetting.xp ?? activeDifficultySetting.score : activeDifficultySetting.score;
   const xpMultiplier = extremeRun ? activeExtremeBattleSetting.xp || 1 : scoreMultiplier;
   const goldMultiplier = extremeRun ? activeExtremeBattleSetting.gold || 1 : activeDifficultySetting.gold;
-  const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);
+  const allyMaxHpRate = extremeAllyMaxHpRate(specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty), wave);
+  const allyMaxHpRateRef = useRef(1);
+  useEffect(() => {
+    allyMaxHpRateRef.current = allyMaxHpRate;
+  }, [allyMaxHpRate]);
+  const effectiveMaxHp = useMemo(() => applyAllyMaxHpRate(resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), allyMaxHpRate), [maxHp, permaBuffs, allyMaxHpRate]);
   const effectiveMaxGuts = useMemo(() => resolveEffectiveMaxStat(maxGuts, getPermaBuff('muaGutsPct')), [maxGuts, permaBuffs]);
   const effectiveDef = useMemo(() => resolveEffectiveMaxStat(def, getPermaBuff('defPct')), [def, permaBuffs]);
   useEffect(() => {
@@ -51456,7 +51582,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     maxGutsRef.current = maxGuts;
   }, [maxGuts]);
-  const liveEffectiveMaxHp = () => resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct'));
+  const liveEffectiveMaxHp = () => applyAllyMaxHpRate(resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct')), allyMaxHpRateRef.current);
   useEffect(() => {
     if (!isTacticsMode(runMode)) return;
     commitTacticsUnits(scaleTacticsUnits(tacticsUnitsRef.current, getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct')));
@@ -62351,6 +62477,12 @@ function MonsterHeroGame() {
       mode: runMode
     });
     if (!newEnemy) return null;
+    const enemyAdjust = extremeEnemyStatAdjust(specialRuleDifficulty, newEnemy.id);
+    if (enemyAdjust.lifeRate !== 1 || enemyAdjust.atkRate !== 1) {
+      newEnemy.maxHp = Math.floor(newEnemy.maxHp * enemyAdjust.lifeRate);
+      newEnemy.hp = newEnemy.maxHp;
+      newEnemy.atk = Math.floor(newEnemy.atk * enemyAdjust.atkRate);
+    }
     if (!forcedEnemyKey && !debugBattleRef.current && !speciesChallengeBattleRunRef.current && (!extremeRunRef.current || isTacticsMode(runMode))) {
       if (isTacticsMode(runMode)) {
         const tacticsDiff = tacticsRecordDifficulty();
@@ -67599,7 +67731,7 @@ function MonsterHeroGame() {
         }
       }, difficulties.map(setting => {
         const active = setting.id === extremeDifficulty;
-        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : setting.id === 'RAGNAROK' ? ragnarokUnlocked : false);
+        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : setting.id === 'RAGNAROK' ? ragnarokUnlocked : setting.id === 'HELHEIM' ? helheimUnlocked : false);
         const previewable = (setting.available || debugBattle && setting.debugAvailable) && unlocked;
         const theme = extremeDifficultyTheme(setting.id);
         const heroProofReward = heroProofClearReward({
@@ -67634,7 +67766,7 @@ function MonsterHeroGame() {
           }
         }, setting.available && unlocked ? `${(extremeBestScores[setting.id] || 0).toLocaleString()} pt` : '？？？'), React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : setting.id === 'RAGNAROK' && !ragnarokUnlocked ? 'GODクリアで解放' : '選択できません')), previewable ? React.createElement(React.Fragment, null, React.createElement("div", {
+        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : setting.id === 'RAGNAROK' && !ragnarokUnlocked ? 'GODクリアで解放' : setting.id === 'HELHEIM' && !helheimUnlocked ? 'RAGNAROKクリアで解放' : '選択できません')), previewable ? React.createElement(React.Fragment, null, React.createElement("div", {
           className: "grid grid-cols-3 gap-1 mt-1"
         }, [['敵強度', `×${setting.power}`], ['スコア', setting.score ? `×${setting.score}` : '対象外'], ['ダイヤ', setting.gold ? `×${setting.gold}` : '対象外']].map(([label, value]) => React.createElement("div", {
           key: label,

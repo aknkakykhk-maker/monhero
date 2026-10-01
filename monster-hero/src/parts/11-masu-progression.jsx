@@ -1054,8 +1054,8 @@ const HERO_PROOF_SHARD_ITEM = Object.freeze({
   desc:`モンヒロビートの週間ランキングと、クイックモードGODのクリアでもらえるかけら。マーケットで${HERO_PROOF_SHARD_PER_PROOF}個ごとに「勇者の証」1個と交換できる。`,
 });
 const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
-  extreme:Object.freeze({ GOD:1, RAGNAROK:2 }),
-  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2 }),
+  extreme:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
+  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2, HELHEIM:3 }),
   pro:Object.freeze({ Master:1, GrandMaster:2, Hell:3, Legend:4 }),
 });
 const heroProofClearReward = ({
