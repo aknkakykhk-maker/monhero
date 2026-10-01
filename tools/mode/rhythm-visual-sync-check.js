@@ -90,10 +90,10 @@ const analyse=rows=>{
       await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
       await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
       await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
-      for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|とじる')))break;await page.waitForTimeout(250);}
+      for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(250);}
       await clickText('モンヒロビート');
       await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
-      for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|とじる')))break;await page.waitForTimeout(300);}
+      for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(300);}
       if(mode.rotate)await page.evaluate(angle=>RHYTHM_VIEW_ROTATION.set(angle),mode.rotate);
       await page.evaluate(installProbe);
       await page.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());

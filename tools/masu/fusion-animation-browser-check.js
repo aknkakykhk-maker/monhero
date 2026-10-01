@@ -116,7 +116,7 @@ const run = async (browser, scenario) => {
   await page.screenshot({ path: path.join(outDir, `fusion-${scenario.name}-flash.png`) });
   await page.waitForFunction(() => document.body.innerText.includes('合体完了！'), { timeout: 5000 });
   const result = await page.evaluate(() => document.body.innerText.includes('合体完了！'));
-  await clickButton(/^とじる$/);
+  await clickButton(/^閉じる$/);
   await page.waitForFunction(() => document.body.innerText.includes('合体・副を選ぶ'));
   const continued = await page.evaluate(() => ({
     onSubSelection: document.body.innerText.includes('合体・副を選ぶ'),

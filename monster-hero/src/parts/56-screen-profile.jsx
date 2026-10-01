@@ -92,7 +92,8 @@ function ProfileScreen({
               <span className="text-[10px] font-bold text-amber-400">ダイヤ</span>
             </div>
             <div className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-950/40 px-3 py-2">
-              <Coins size={12} className="shrink-0 text-amber-400"/><span className="text-[12px] font-black text-amber-200">{breederPoints} pt</span>
+              <Coins size={12} className="shrink-0 text-amber-400"/><span className="text-[12px] font-black text-amber-200 font-mono">{breederPoints.toLocaleString()}</span>
+              <span className="text-[10px] font-bold text-amber-400">ブリーダーP</span>
             </div>
           </div>
           <button onClick={onOpenItems} className="flex w-full min-h-[52px] items-center justify-center gap-2 rounded-xl border border-teal-500/40 bg-teal-950/40 px-4 py-2.5 active:scale-[.98]">

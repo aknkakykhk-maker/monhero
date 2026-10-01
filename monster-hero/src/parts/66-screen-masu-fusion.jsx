@@ -402,7 +402,7 @@ function MasuFusionScreen({
           {d.inherited&&(<div className="text-[11px] leading-relaxed text-amber-300 font-black bg-amber-950/50 border border-amber-500/60 rounded-xl px-3 py-2 mb-2">「{d.subName}」の固有技を継承データとして記録しました</div>)}
           {d.inheritedReincarnateCount>0&&(<div className="text-[11px] leading-relaxed text-amber-200 font-black bg-amber-950/50 border border-amber-500/60 rounded-xl px-3 py-2 mb-2">転生育成ボーナス {d.inheritedReincarnateCount}回分（強化ポイント +{d.inheritedReincarnatePoints}）を継承しました</div>)}
           <div className="text-[11px] text-slate-400 font-bold mb-4">ダイヤを{d.cost.toLocaleString()}消費しました</div>
-          <button onClick={continueFusionFlow} className="mh-button mh-button-primary w-full max-w-xs min-h-[52px] bg-violet-600 text-white py-3.5 rounded-xl font-black text-sm shadow-lg active:scale-95">とじる</button>
+          <button onClick={continueFusionFlow} className="mh-button mh-button-primary w-full max-w-xs min-h-[52px] bg-violet-600 text-white py-3.5 rounded-xl font-black text-sm shadow-lg active:scale-95">閉じる</button>
         </div>
       );
     

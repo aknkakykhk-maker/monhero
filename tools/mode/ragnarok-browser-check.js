@@ -47,7 +47,7 @@ const openDifficultySelect = async (page, extremeClears) => {
       const dialog = document.querySelector('[role="dialog"]');
       if (!dialog) return false;
       const button = [...dialog.querySelectorAll('button')]
-        .find(x => /受け取|閉じる|とじる|あとで|つぎへ|次へ|OK/.test(x.textContent)) || dialog.querySelector('button');
+        .find(x => /受け取|閉じる|あとで|次へ|OK/.test(x.textContent)) || dialog.querySelector('button');
       if (button) button.click(); else dialog.click();
       return true;
     });
