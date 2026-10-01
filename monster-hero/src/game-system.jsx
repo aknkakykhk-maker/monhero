@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ed258d6c68744433
+// generated-sha256: ec3c1c5f0285411d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -160,7 +160,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-01 15:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-01 15:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21857,6 +21857,9 @@ function BreederMarketScreen({
   const [sheet,setSheet]=useState(null);
   const [sheetQuantity,setSheetQuantity]=useState(1);
   const [sheetPending,setSheetPending]=useState(false);
+  // ダイヤショップ以外の売り場のタブ(2026-10-01 ユーザー指示「ビートPの商品をタブわけして / マーケット全体的に統一させて」)。
+  // ダイヤショップのタブは本体の marketTab のまま。ほかはこの画面の中だけで持つ(マーケットを出たら最初のタブへ戻る)
+  const [sectionTabs,setSectionTabs]=useState({});
   const safeEventPoints=normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
@@ -21871,6 +21874,26 @@ function BreederMarketScreen({
   const diamondItems = marketItems.filter(item=>item.type===activeDiamondTab&&item.type!=='icon'&&item.currency!=='psyche');
   const breederPointItems = marketItems.filter(item=>item.type==='icon');
   const itemExchangeItems = marketItems.filter(item=>item.currency==='psyche');
+  // どの売り場も「残高 → タブ → 商品」の同じ並びにする。タブの色は売り場の色
+  const SECTION_TABS = {
+    breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},{key:'disc',label:'円盤石アイコン'}] },
+    exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
+  };
+  const activeSectionTab = (section) => {
+    const tabs=SECTION_TABS[section]?.tabs||[];
+    return tabs.some(tab=>tab.key===sectionTabs[section])?sectionTabs[section]:(tabs[0]?.key||null);
+  };
+  const selectSectionTab = (section,key) => setSectionTabs(prev=>({...prev,[section]:key}));
+  const breederTab = activeSectionTab('breeder');
+  const breederTabItems = breederPointItems.filter(item=>(breederTab==='disc')===/_disc_icon$/.test(item.id));
+  const exchangeTab = activeSectionTab('exchange');
+  const eventTab = activeSectionTab('event');
+  // ビートP交換所のアイテムと強化素材の分け方。育成に使う素材(プシュケー・証片・虹の超越の実・勇者の証)を「強化素材」へ
+  const BEAT_POINT_MATERIAL_ITEM_IDS = ['rainbow_psyche','hero_proof_shard','transcend_fruit_rainbow','hero_proof'];
+  const eventItemOffers = RHYTHM_EVENT_POINT_SHOP_OFFERS.filter(offer=>(eventTab==='material')===BEAT_POINT_MATERIAL_ITEM_IDS.includes(offer.itemId));
+  const renderSectionTabs = (section) => <ScreenTabs value={activeSectionTab(section)} onChange={(key)=>selectSectionTab(section,key)}
+    items={SECTION_TABS[section].tabs.map(tab=>({id:tab.key,label:tab.label,color:SECTION_TABS[section].color}))}/>;
   const soulRankRespecItem = marketItems.find(item=>item.id===SOUL_RANK_RESPEC_ITEM_ID) || null;
   const sectionMeta = {
     diamond:{label:'ダイヤショップ',emoji:'💎'},
@@ -21997,15 +22020,20 @@ function BreederMarketScreen({
         </div>
       </>}
 
-      {marketSection==='breeder'&&<div className={SCREEN_LIST_CLASS}>
-        {breederPointItems.length===0?<ScreenEmpty emoji="🛒" lines={['まだ商品がありません']}/>:<div className={MARKET_GRID_CLASS}>{breederPointItems.map(item=>renderMarketItem(item))}</div>}
-      </div>}
+      {marketSection==='breeder'&&<>
+        {renderSectionTabs('breeder')}
+        <div className={SCREEN_LIST_CLASS}>
+          {breederTabItems.length===0?<ScreenEmpty emoji="🛒" lines={['まだ商品がありません']}/>:<div className={MARKET_GRID_CLASS}>{breederTabItems.map(item=>renderMarketItem(item))}</div>}
+        </div>
+      </>}
 
-      {marketSection==='exchange'&&<div className={SCREEN_LIST_CLASS}>
+      {marketSection==='exchange'&&<>
+        {renderSectionTabs('exchange')}
+        <div className={SCREEN_LIST_CLASS}>
         <div className={MARKET_GRID_CLASS}>
-          {itemExchangeItems.map(item=>renderMarketItem(item))}
-          {soulRankRespecItem&&renderMarketItem(soulRankRespecItem,{showBase:false,showHeroProofExchange:true})}
-          {(()=>{const shardExchange={...HERO_PROOF_ITEM, type:'item', currency:'heroProofShard', cost:HERO_PROOF_SHARD_PER_PROOF};return <MarketProductCard
+          {exchangeTab==='psyche'&&itemExchangeItems.map(item=>renderMarketItem(item))}
+          {exchangeTab==='proof'&&soulRankRespecItem&&renderMarketItem(soulRankRespecItem,{showBase:false,showHeroProofExchange:true})}
+          {exchangeTab==='proof'&&(()=>{const shardExchange={...HERO_PROOF_ITEM, type:'item', currency:'heroProofShard', cost:HERO_PROOF_SHARD_PER_PROOF};return <MarketProductCard
             item={shardExchange}
             owned={false} comingSoon={false}
             canBuy={shardHave>=HERO_PROOF_SHARD_PER_PROOF&&!busy}
@@ -22015,11 +22043,14 @@ function BreederMarketScreen({
             middle={ownedMiddle(proofHave, HERO_PROOF_ITEM)}
           />;})()}
         </div>
-      </div>}
+        </div>
+      </>}
 
-      {marketSection==='event'&&<><div className={SCREEN_LIST_CLASS}>
-        <div data-event-point-shop className={MARKET_GRID_CLASS}>
-          {RHYTHM_EVENT_POINT_SHOP_OFFERS.map(offer=>{
+      {marketSection==='event'&&<>
+        {renderSectionTabs('event')}
+        <div className={SCREEN_LIST_CLASS}>
+        <div data-event-point-shop data-event-point-tab={eventTab} className={MARKET_GRID_CLASS}>
+          {eventTab!=='disc'&&eventItemOffers.map(offer=>{
             const item=beatPointItemOf(offer);
             const grantText=`${offer.grantAmount.toLocaleString()}${offer.unit}`;
             // ダイヤの品は受け取る数が名前(ダイヤ ×300)に入っていて、持ち数は所持ダイヤと同じなので中段は空ける
@@ -22039,7 +22070,7 @@ function BreederMarketScreen({
           {/* 交換できる円盤石(2026-09-29 ユーザー指示「進めて」で予告から交換へ)。1体につき1回。
               持っていれば「所持済み」になる(ダイヤショップの円盤石と同じ見え方)。
               絵と詳細はマーケットの円盤石(monsterId と同じid)とモンスター本体から引く */}
-          {RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer=>{
+          {eventTab==='disc'&&RHYTHM_EVENT_POINT_SHOP_DISC_OFFERS.map(offer=>{
             const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
             const mon=ALL_PLAYER_MONSTERS[offer.monsterId]||null;
             const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'beatPoint', cost:offer.cost };
@@ -22059,7 +22090,7 @@ function BreederMarketScreen({
               絵はマーケットの円盤石(monsterId と同じid)から引き、ダイヤショップと同じ見え方にする。
               ほかのショップと同じく、絵を押すと大きく見られ、「詳細」で中身を開ける
               (2026-09-28 ユーザー指摘「押してもアップにならない」「詳細ボタンがない」「他のショップとあわせて」) */}
-          {RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer=>{
+          {eventTab==='disc'&&RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer=>{
             const disc=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.monsterId&&item.type==='disc');
             const item={ id:offer.id, name:offer.name, emoji:'💿', icon:disc?.icon, type:'disc', currency:'beatPoint', cost:offer.cost };
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-coming-soon':offer.id}}
