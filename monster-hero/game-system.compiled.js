@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 64d967243bdcbddf
+// source-sha256: ad336e612c1afb26
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 21:28";
+const BUILD_DATE = "2026-10-01 23:28";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -3928,11 +3928,16 @@ const buildAutoRepeatBreakthroughs = ({
 const buildMasuReincarnation = ({
   masu,
   skillKey,
-  gold
+  gold,
+  lockedIds = []
 }) => {
   if (!masu) return {
     ok: false,
     reason: '対象のマスモンが見つかりません。'
+  };
+  if (isMasuLocked(lockedIds, masu.id)) return {
+    ok: false,
+    reason: `「${masu.name}」は転生ロック(🔁)中なので転生できません。マスモン詳細でロックを外してから転生してください。`
   };
   const normalized = normalizeMasuProgression(masu);
   const level = masuBondLevelInfo(normalized).level;
@@ -4087,6 +4092,21 @@ const normalizeHomePastureIds = (savedIds, masuMons, validBaseIds) => {
   return [...new Set(savedIds.map(String))].filter(id => owned.has(id)).slice(0, 5);
 };
 const MASU_LOCK_KEY = 'mh_masu_locked_v1';
+const MASU_REBIRTH_LOCK_KEY = 'mh_masu_lock_rebirth_v1';
+const MASU_LOCK_KINDS = Object.freeze({
+  keep: Object.freeze({
+    key: MASU_LOCK_KEY,
+    label: 'お気に入り',
+    emoji: '🔒',
+    blocks: '削除・合体の副・寄付'
+  }),
+  rebirth: Object.freeze({
+    key: MASU_REBIRTH_LOCK_KEY,
+    label: '転生ロック',
+    emoji: '🔁',
+    blocks: '転生'
+  })
+});
 const normalizeMasuLockIds = saved => Array.isArray(saved) ? [...new Set(saved.filter(v => typeof v === 'string' && v || Number.isFinite(v)).map(String))] : [];
 const isMasuLocked = (lockedIds, masuId) => Array.isArray(lockedIds) && masuId != null && lockedIds.includes(String(masuId));
 const toggleMasuLockIds = (lockedIds, masuId) => {
@@ -37646,7 +37666,8 @@ function MasuReincarnateScreen({
   setReincarnateError,
   setReincarnateSelectedId,
   setReincarnateSkillKey,
-  sortMonsterEntries
+  sortMonsterEntries,
+  rebirthLockedMasuIds = []
 }) {
   const selected = masuMons.find(m => String(m.id) === String(reincarnateSelectedId));
   if (!selected) {
@@ -37679,10 +37700,12 @@ function MasuReincarnateScreen({
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       if (!base) return null;
       const lvl = masuBondLevelInfo(masu);
-      const can = lvl.level >= REINCARNATE_MIN_LEVEL;
+      const locked = isMasuLocked(rebirthLockedMasuIds, masu.id);
+      const can = lvl.level >= REINCARNATE_MIN_LEVEL && !locked;
       return React.createElement("button", {
         key: masu.id,
         disabled: !can,
+        "data-reincarnate-locked": locked ? '1' : undefined,
         onClick: () => {
           setReincarnateSelectedId(masu.id);
           setReincarnateSkillKey(null);
@@ -37693,7 +37716,9 @@ function MasuReincarnateScreen({
       }, renderMonsterCardBody({
         masu,
         base,
-        status: React.createElement(ReincarnateBadge, {
+        status: locked ? React.createElement("span", {
+          className: "text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/25 border border-amber-300/50 text-amber-100"
+        }, "🔁 転生ロック") : React.createElement(ReincarnateBadge, {
           count: masu.reincarnateCount,
           className: "is-inline"
         })
@@ -50662,11 +50687,16 @@ function MonsterHeroGame() {
   goldRef.current = gold;
   const [masuMons, setMasuMons] = useState([]);
   const [lockedMasuIds, setLockedMasuIds] = useState([]);
-  const toggleMasuLock = masuId => setLockedMasuIds(prev => {
-    const next = toggleMasuLockIds(prev, masuId);
-    storeSet(MASU_LOCK_KEY, next, false);
-    return next;
-  });
+  const [rebirthLockedMasuIds, setRebirthLockedMasuIds] = useState([]);
+  const toggleMasuLock = (masuId, kind = 'keep') => {
+    const setIds = kind === 'rebirth' ? setRebirthLockedMasuIds : setLockedMasuIds;
+    const storeKey = (MASU_LOCK_KINDS[kind] || MASU_LOCK_KINDS.keep).key;
+    setIds(prev => {
+      const next = toggleMasuLockIds(prev, masuId);
+      storeSet(storeKey, next, false);
+      return next;
+    });
+  };
   const rhythmMonsterSlots = resolveRhythmMonsterSlots(rhythmMonsterSlotIds, masuMons);
   const rhythmMonsterSlotIdsInUse = rhythmMonsterSlots.map(masu => String(masu.id));
   const rhythmMonsterNoteEntries = rhythmMonsterSlots.map(masu => {
@@ -51291,12 +51321,12 @@ function MonsterHeroGame() {
       className: "w-full h-full object-cover"
     }) : React.createElement("div", {
       className: "w-full h-full flex items-center justify-center text-2xl"
-    }, base.emoji)), masu && isMasuLocked(lockedMasuIds, masu.id) && React.createElement("span", {
-      "data-masu-locked": true,
-      "aria-label": "お気に入り(削除・合体・寄付できません)",
-      title: "お気に入り",
-      className: "absolute -left-1.5 -top-1 z-10 flex h-[17px] w-[17px] items-center justify-center rounded-full border border-amber-200/70 bg-slate-950 text-[10px] leading-none shadow"
-    }, "🔒"), masu && (masu.distAptPoints || 0) > 0 && React.createElement("span", {
+    }, base.emoji)), masu && (isMasuLocked(lockedMasuIds, masu.id) || isMasuLocked(rebirthLockedMasuIds, masu.id)) && React.createElement("span", {
+      "data-masu-locked": `${isMasuLocked(lockedMasuIds, masu.id) ? 'keep' : ''}${isMasuLocked(rebirthLockedMasuIds, masu.id) ? ' rebirth' : ''}`.trim(),
+      "aria-label": [isMasuLocked(lockedMasuIds, masu.id) ? 'お気に入り(削除・合体・寄付できません)' : '', isMasuLocked(rebirthLockedMasuIds, masu.id) ? '転生ロック(転生できません)' : ''].filter(Boolean).join('・'),
+      title: "ロック中",
+      className: "absolute -left-1.5 -top-1 z-10 flex h-[17px] items-center justify-center gap-px rounded-full border border-amber-200/70 bg-slate-950 px-1 text-[10px] leading-none shadow"
+    }, isMasuLocked(lockedMasuIds, masu.id) && '🔒', isMasuLocked(rebirthLockedMasuIds, masu.id) && '🔁'), masu && (masu.distAptPoints || 0) > 0 && React.createElement("span", {
       "aria-label": `ふり分けできる強化ポイント ${masu.distAptPoints}`,
       className: "absolute -left-1.5 -bottom-1 z-10 rounded-full border border-amber-200/60 bg-amber-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow",
       style: {
@@ -54362,6 +54392,7 @@ function MonsterHeroGame() {
       }
       setMasuMons(savedMasuMons);
       setLockedMasuIds(normalizeMasuLockIds(await storeGet(MASU_LOCK_KEY, [], false)));
+      setRebirthLockedMasuIds(normalizeMasuLockIds(await storeGet(MASU_REBIRTH_LOCK_KEY, [], false)));
       const savedPastureIds = await storeGet('mh_home_pasture_ids', null, false);
       const normalizedPastureIds = normalizeHomePastureIds(savedPastureIds, savedMasuMons, new Set(Object.keys(ALL_PLAYER_MONSTERS)));
       setHomePastureIds(normalizedPastureIds);
@@ -57703,7 +57734,8 @@ function MonsterHeroGame() {
     const result = buildMasuReincarnation({
       masu,
       skillKey: reincarnateSkillKey,
-      gold
+      gold,
+      lockedIds: rebirthLockedMasuIds
     });
     if (!result.ok) {
       setReincarnateError(result.reason);
@@ -64617,18 +64649,7 @@ function MonsterHeroGame() {
       className: "text-[17px] font-black text-white truncate leading-tight"
     }, mon.name), React.createElement("div", {
       className: `text-[10px] font-bold ${masu ? 'text-pink-400' : 'text-indigo-400'} truncate`
-    }, masu ? `元：${base.name}` : 'ベースモン')), masu && onRename && (() => {
-      const locked = isMasuLocked(lockedMasuIds, masu.id);
-      return React.createElement("button", {
-        type: "button",
-        "data-masu-lock-quick": locked ? 'on' : 'off',
-        "aria-pressed": locked,
-        onClick: () => toggleMasuLock(masu.id),
-        "aria-label": locked ? 'お気に入りを外す' : 'お気に入りにする(削除・合体・寄付を防ぐ)',
-        title: locked ? 'お気に入り中' : 'お気に入りにする',
-        className: `min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full border text-[15px] leading-none active:scale-90 shrink-0 ${locked ? 'border-amber-300/70 bg-amber-500/20' : 'border-white/15 bg-white/5 opacity-70'}`
-      }, locked ? '🔒' : '🔓');
-    })(), onClose && React.createElement("button", {
+    }, masu ? `元：${base.name}` : 'ベースモン')), onClose && React.createElement("button", {
       onClick: onClose,
       "aria-label": "閉じる",
       className: "p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"
@@ -64663,7 +64684,25 @@ function MonsterHeroGame() {
       }
     })), React.createElement("div", {
       className: "text-[10px] text-pink-400/70 font-mono tabular-nums"
-    }, lvl.xpIntoLevel.toLocaleString(), " / ", lvl.xpForNext.toLocaleString(), " XP"))));
+    }, lvl.xpIntoLevel.toLocaleString(), " / ", lvl.xpForNext.toLocaleString(), " XP")), masu && onRename && !compact && React.createElement("div", {
+      "data-masu-lock-row": true,
+      className: "grid grid-cols-2 gap-1.5 pt-1"
+    }, ['keep', 'rebirth'].map(kind => {
+      const meta = MASU_LOCK_KINDS[kind];
+      const on = isMasuLocked(kind === 'keep' ? lockedMasuIds : rebirthLockedMasuIds, masu.id);
+      return React.createElement("button", {
+        key: kind,
+        type: "button",
+        "data-masu-lock-quick": kind,
+        "data-state": on ? 'on' : 'off',
+        "aria-pressed": on,
+        onClick: () => toggleMasuLock(masu.id, kind),
+        "aria-label": `${meta.label}${on ? 'を外す' : 'にする'}(${meta.blocks}を防ぐ)`,
+        className: `min-h-[44px] rounded-xl border px-1 text-[11px] font-black leading-tight active:scale-95 ${on ? 'border-amber-300/70 bg-amber-500/25 text-amber-100' : 'border-white/15 bg-slate-900 text-slate-300'}`
+      }, meta.emoji, " ", meta.label, React.createElement("span", {
+        className: "block text-[9px] font-bold opacity-80"
+      }, on ? 'ON' : 'OFF'));
+    }))));
   };
   const renderDetailSectionLabel = (text, note) => React.createElement("div", {
     className: "flex items-baseline gap-2 pt-1 px-0.5"
@@ -67020,6 +67059,7 @@ function MonsterHeroGame() {
       setRebirthSkillKey: setRebirthSkillKey,
       sortMonsterEntries: sortMonsterEntries
     }), gameState === 'MASU_REINCARNATE' && React.createElement(MasuReincarnateScreen, {
+      rebirthLockedMasuIds: rebirthLockedMasuIds,
       MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
       MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
       buildUnifiedMonsterEntries: buildUnifiedMonsterEntries,
@@ -72747,16 +72787,28 @@ function MonsterHeroGame() {
           className: "text-[10px] text-slate-500 font-bold text-center px-2"
         }, inRoster ? '現在、編成に入っています' : '編成画面で選ぶと、次の周回でこのマスモンを使えます'), React.createElement("div", {
           className: "text-[10px] text-teal-400/80 font-bold text-center px-2"
-        }, "絆ポイントリセットの書は「アイテム」から使用できます"), (() => {
-          const locked = isMasuLocked(lockedMasuIds, masu.id);
+        }, "絆ポイントリセットの書は「アイテム」から使用できます"), React.createElement("div", {
+          "data-masu-lock-panel": true,
+          className: "space-y-1.5"
+        }, ['keep', 'rebirth'].map(kind => {
+          const meta = MASU_LOCK_KINDS[kind];
+          const on = isMasuLocked(kind === 'keep' ? lockedMasuIds : rebirthLockedMasuIds, masu.id);
           return React.createElement("button", {
+            key: kind,
             type: "button",
-            "data-masu-lock-toggle": locked ? 'on' : 'off',
-            "aria-pressed": locked,
-            onClick: () => toggleMasuLock(masu.id),
-            className: `w-full min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${locked ? 'border-amber-300/70 bg-amber-500/20 text-amber-100' : 'border-white/15 bg-slate-900 text-slate-300'}`
-          }, locked ? '🔒 お気に入り中（削除・合体・寄付できません）' : '🔓 お気に入りにする（削除・合体・寄付を防ぐ）');
-        })(), React.createElement("button", {
+            "data-masu-lock-toggle": kind,
+            "data-state": on ? 'on' : 'off',
+            "aria-pressed": on,
+            onClick: () => toggleMasuLock(masu.id, kind),
+            className: `w-full min-h-[44px] rounded-xl border px-3 py-1.5 text-left active:scale-[.98] ${on ? 'border-amber-300/70 bg-amber-500/20 text-amber-100' : 'border-white/15 bg-slate-900 text-slate-300'}`
+          }, React.createElement("span", {
+            className: "flex items-center justify-between gap-2 text-[12px] font-black"
+          }, React.createElement("span", null, meta.emoji, " ", meta.label), React.createElement("span", {
+            className: "text-[10px]"
+          }, on ? 'ON' : 'OFF')), React.createElement("span", {
+            className: "block text-[10px] font-bold opacity-80"
+          }, on ? `${meta.blocks}ができません` : `${meta.blocks}を防ぐ`));
+        })), React.createElement("button", {
           disabled: isMasuLocked(lockedMasuIds, masu.id),
           onClick: async () => {
             if (isMasuLocked(lockedMasuIds, masu.id)) return;

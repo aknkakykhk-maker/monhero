@@ -54,6 +54,7 @@
 | `mh_teaching_roster` | string[] / 解放済み一覧 | 教え候補編成 |
 | `mh_masu_mons` | object[] / `[]` | マスモン個体一覧。AUTO∞自動限界突破は個体ごとに `autoRepeatBreakthroughMode`（`off` / `fixed` / `follow`）と既存の `autoRepeatBreakthroughLevel` を持つ。旧データで数値Lvがあれば `fixed` として保持する。旧仕様で保存できたLv405以上の5刻み値は、通常限界突破の実上限と同じLv400へ丸めて意味を保つ。旧boolean・欠損・不正値はOFFへ落とす。`uniqueSkillPoints`（未使用の固有技ポイント）など後から足した項目も既定値へ正規化する |
 | `mh_masu_locked_v1` | string[] / `[]` | マスモンのお気に入り(ロック)のIDの並び(2026-10-01)。お気に入りの子は削除・合体の副・寄付ができない。壊れた値は「お気に入りなし」(`normalizeMasuLockIds`)。`mh_masu_mons` には書かない |
+| `mh_masu_lock_rebirth_v1` | string[] / `[]` | マスモンの転生ロックのIDの並び(2026-10-01)。転生ロックの子は転生できない。お気に入り(`mh_masu_locked_v1`)とは別々に付け外しできる。壊れた値は「ロックなし」。`mh_masu_mons` には書かない |
 | `mh_changelog_seen` | string / `''` | 最後に既読にした更新日時 |
 | `mh_onboarded` | boolean or null | 初回プロフィール誘導完了 |
 | `mh_kiki_intro_seen_v1` | boolean / `false` | きき加入の会話を見たか。既存プレイヤーへ1回だけ流すための判定に使う |
