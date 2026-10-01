@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f2e036ae7eee9f82
+// source-sha256: c9c6918b799ba43e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 17:20";
+const BUILD_DATE = "2026-10-01 17:53";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -14030,6 +14030,72 @@ const MarketItemDetail = ({
   }, React.createElement(MarketModalClose, {
     onClick: onClose
   })));
+};
+const DISC_REBIRTH_MS = 2600;
+const DISC_REBIRTH_SPARKS = 12;
+const DiscRebirthFx = ({
+  mon,
+  discIcon,
+  onClose
+}) => {
+  const [done, setDone] = React.useState(false);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDone(true), DISC_REBIRTH_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  if (!mon) return null;
+  return React.createElement("div", {
+    "data-disc-rebirth": mon.id,
+    className: `mh-disc-rebirth${done ? ' is-done' : ''}`,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${mon.name}が円盤石から生まれました`,
+    onClick: () => {
+      if (!done) setDone(true);
+    }
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mh-disc-rebirth-rays"
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mh-disc-rebirth-flash"
+  }), discIcon && React.createElement("img", {
+    "aria-hidden": "true",
+    src: discIcon,
+    alt: "",
+    className: "mh-disc-rebirth-disc"
+  }), React.createElement("span", {
+    "aria-hidden": "true",
+    className: "mh-disc-rebirth-sparks"
+  }, Array.from({
+    length: DISC_REBIRTH_SPARKS
+  }).map((_, i) => React.createElement("i", {
+    key: i,
+    style: {
+      '--a': `${360 / DISC_REBIRTH_SPARKS * i}deg`,
+      '--d': `${i % 3 * 60}ms`
+    }
+  }))), React.createElement("div", {
+    className: "mh-disc-rebirth-body"
+  }, React.createElement("span", {
+    className: "mh-disc-rebirth-plate"
+  }, "円盤石から再生"), React.createElement("div", {
+    className: "mh-disc-rebirth-art"
+  }, mon.imgUrl ? React.createElement("img", {
+    src: mon.imgUrl,
+    alt: mon.name
+  }) : React.createElement("span", {
+    className: "text-7xl"
+  }, mon.emoji)), React.createElement("h3", {
+    className: "mh-disc-rebirth-name"
+  }, mon.name, React.createElement("span", null, "が生まれた！")), React.createElement("p", {
+    className: "mh-disc-rebirth-note"
+  }, "新しいモンスターが仲間になりました。M/B管理の編成に入れると、バトルで使えます。"), React.createElement("div", {
+    className: "mh-disc-rebirth-close",
+    onClick: e => e.stopPropagation()
+  }, React.createElement(ModalCloseButton, {
+    onClick: onClose
+  }))));
 };
 const MarketPurchaseSheet = ({
   item,
@@ -33483,6 +33549,7 @@ function BreederMarketScreen({
   const [sheet, setSheet] = useState(null);
   const [sheetQuantity, setSheetQuantity] = useState(1);
   const [sheetPending, setSheetPending] = useState(false);
+  const [rebirth, setRebirth] = useState(null);
   const [sectionTabs, setSectionTabs] = useState({});
   const safeEventPoints = normalizeRhythmEventPoints(eventPoints);
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
@@ -33594,7 +33661,10 @@ function BreederMarketScreen({
     setSheetPending(true);
     try {
       const result = await sheet.confirm(count);
-      if (result === true || result?.ok) setSheet(null);
+      if (result === true || result?.ok) {
+        if (sheet.rebirth && ALL_PLAYER_MONSTERS[sheet.rebirth.monsterId]) setRebirth(sheet.rebirth);
+        setSheet(null);
+      }
     } finally {
       setSheetPending(false);
     }
@@ -33635,7 +33705,11 @@ function BreederMarketScreen({
       onBuy: () => openSheet({
         item,
         stackable: item.type === 'item',
-        confirm: count => onBuy(item, count)
+        confirm: count => onBuy(item, count),
+        rebirth: item.type === 'disc' ? {
+          monsterId: item.id,
+          discIcon: item.icon
+        } : null
       }),
       detail: detailMon || detailTeaching,
       onDetail: () => detailMon?.draft && onOpenUpcomingDetail ? onOpenUpcomingDetail(item) : onOpenDetail(item, detailMon, detailTeaching),
@@ -33908,7 +33982,11 @@ function BreederMarketScreen({
       onZoom: () => onZoomIcon(disc || item),
       onBuy: () => openSheet({
         item,
-        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
+        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false,
+        rebirth: {
+          monsterId: offer.monsterId,
+          discIcon: disc?.icon || item.icon
+        }
       }),
       detail: mon,
       onDetail: () => mon && onOpenDetail(disc || item, mon, null)
@@ -33949,6 +34027,10 @@ function BreederMarketScreen({
     error: marketExchangeError,
     onConfirm: confirmSheet,
     onCancel: closeSheet
+  }), rebirth && React.createElement(DiscRebirthFx, {
+    mon: ALL_PLAYER_MONSTERS[rebirth.monsterId],
+    discIcon: rebirth.discIcon,
+    onClose: () => setRebirth(null)
   }));
 }
 function ProfileScreen({
@@ -79896,6 +79978,36 @@ const createAnimationStyle = () => {
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
     .mh-regeneration-animation{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle,#4c1d95,#020617 65%)}.mh-regeneration-disc{position:absolute;width:170px;height:170px;object-fit:contain;animation:mhRegenerationDisc 1.5s ease-in forwards}.mh-regeneration-born{position:relative;width:min(330px,100%);padding:20px;border:2px solid #fbbf24;border-radius:24px;background:#0f172a;text-align:center;opacity:0;animation:mhRegenerationBorn .6s 1.4s ease-out forwards}.mh-regeneration-born h3{font-size:20px;font-weight:1000;color:#fde68a}.mh-regeneration-born b{float:right;color:#f9a8d4}@keyframes mhRegenerationDisc{0%{transform:rotate(0) scale(.7);opacity:1}85%{transform:rotate(1080deg) scale(1.15);opacity:1}100%{transform:rotate(1260deg) scale(.1);opacity:0}}@keyframes mhRegenerationBorn{to{opacity:1;transform:none}}
+    /* 円盤石を買ったときの「円盤石から再生」(2026-10-01)。DiscRebirthFx(20-market-notices-help.jsx)が使う。
+       0〜1.5秒 円盤石が光りながら回る → 1.5〜1.8秒 割れて光があふれる・火の粉が散る → 1.8〜2.6秒 立ち絵と名前が出る。
+       .is-done(押したとき・2.6秒たったとき)はどの段も最後の形で止める。動きを減らす設定の端末も同じ。 */
+    .mh-disc-rebirth{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle at 50% 45%,#3b1d6e,#0b0820 62%,#020617)}
+    .mh-disc-rebirth-rays{position:absolute;left:50%;top:42%;width:150vmax;height:150vmax;margin:-75vmax 0 0 -75vmax;background:repeating-conic-gradient(from 0deg,rgba(253,230,138,.16) 0 7deg,transparent 7deg 22deg);opacity:0;-webkit-mask:radial-gradient(circle,#000 8%,transparent 46%);mask:radial-gradient(circle,#000 8%,transparent 46%);animation:mhDiscRays 1s 1.55s ease-out forwards,mhDiscRaysSpin 24s 1.55s linear infinite}
+    .mh-disc-rebirth-flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,#fff 0,#fde68a 18%,rgba(253,230,138,0) 58%);opacity:0;pointer-events:none;animation:mhDiscFlash .75s 1.45s ease-out forwards}
+    .mh-disc-rebirth-disc{position:absolute;left:50%;top:42%;width:min(46vw,190px);height:min(46vw,190px);margin:calc(min(46vw,190px) / -2) 0 0 calc(min(46vw,190px) / -2);object-fit:contain;filter:drop-shadow(0 0 10px rgba(253,230,138,.55));animation:mhDiscSpin 1.8s cubic-bezier(.45,0,.75,.4) forwards}
+    .mh-disc-rebirth-sparks{position:absolute;left:50%;top:42%;width:0;height:0}
+    .mh-disc-rebirth-sparks i{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:#fde68a;box-shadow:0 0 10px #fbbf24,0 0 18px #f472b6;opacity:0;transform:rotate(var(--a)) translateX(0);animation:mhDiscSpark .8s calc(1.55s + var(--d)) ease-out forwards}
+    .mh-disc-rebirth-body{position:relative;z-index:1;width:min(340px,100%);display:flex;flex-direction:column;align-items:center;text-align:center}
+    .mh-disc-rebirth-plate{opacity:0;border:1px solid rgba(253,230,138,.6);border-radius:999px;background:rgba(15,23,42,.75);padding:3px 12px;font-size:11px;font-weight:900;color:#fde68a;letter-spacing:.08em;animation:mhDiscUp .45s 1.85s ease-out forwards}
+    .mh-disc-rebirth-art{width:min(62vw,240px);aspect-ratio:1;margin-top:8px;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.35);filter:drop-shadow(0 0 24px rgba(253,230,138,.75)) brightness(2.2);animation:mhDiscBorn .8s 1.6s cubic-bezier(.2,1.4,.4,1) forwards}
+    .mh-disc-rebirth-art img{width:100%;height:100%;object-fit:contain}
+    .mh-disc-rebirth-name{opacity:0;margin-top:6px;font-size:24px;font-weight:1000;line-height:1.2;color:#fff;text-shadow:0 2px 0 #7c3aed,0 0 18px rgba(244,114,182,.7);animation:mhDiscUp .45s 2.05s ease-out forwards}
+    .mh-disc-rebirth-name span{font-size:15px;color:#fbcfe8;margin-left:2px}
+    .mh-disc-rebirth-note{opacity:0;margin-top:6px;font-size:11px;font-weight:700;line-height:1.6;color:#cbd5e1;animation:mhDiscUp .45s 2.25s ease-out forwards}
+    .mh-disc-rebirth-close{width:100%;margin-top:14px;opacity:0;pointer-events:none;animation:mhDiscUp .4s 2.45s ease-out forwards}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-close{pointer-events:auto}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-disc,.mh-disc-rebirth.is-done .mh-disc-rebirth-flash,.mh-disc-rebirth.is-done .mh-disc-rebirth-sparks i{animation:none;opacity:0}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-rays{animation:mhDiscRaysSpin 24s linear infinite;opacity:1}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-plate,.mh-disc-rebirth.is-done .mh-disc-rebirth-name,.mh-disc-rebirth.is-done .mh-disc-rebirth-note,.mh-disc-rebirth.is-done .mh-disc-rebirth-close{animation:none;opacity:1;transform:none}
+    .mh-disc-rebirth.is-done .mh-disc-rebirth-art{animation:none;opacity:1;transform:none;filter:drop-shadow(0 0 18px rgba(253,230,138,.55))}
+    @keyframes mhDiscSpin{0%{transform:rotate(0) scale(.6);opacity:0;filter:drop-shadow(0 0 6px rgba(253,230,138,.4)) brightness(1)}12%{opacity:1}80%{transform:rotate(1080deg) scale(1.08);filter:drop-shadow(0 0 30px #fde68a) brightness(1.7)}100%{transform:rotate(1260deg) scale(1.5);opacity:0;filter:drop-shadow(0 0 40px #fff) brightness(3)}}
+    @keyframes mhDiscFlash{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
+    @keyframes mhDiscRays{to{opacity:1}}
+    @keyframes mhDiscRaysSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+    @keyframes mhDiscSpark{0%{opacity:0;transform:rotate(var(--a)) translateX(0) scale(1)}15%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateX(min(42vw,170px)) scale(.3)}}
+    @keyframes mhDiscBorn{0%{opacity:0;transform:scale(.35)}60%{opacity:1;filter:drop-shadow(0 0 30px #fde68a) brightness(1.6)}100%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 18px rgba(253,230,138,.55)) brightness(1)}}
+    @keyframes mhDiscUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    @media (prefers-reduced-motion: reduce){.mh-disc-rebirth-disc,.mh-disc-rebirth-flash,.mh-disc-rebirth-sparks i{animation:none;opacity:0}.mh-disc-rebirth-rays{animation:none;opacity:1}.mh-disc-rebirth-plate,.mh-disc-rebirth-art,.mh-disc-rebirth-name,.mh-disc-rebirth-note,.mh-disc-rebirth-close{animation:none;opacity:1;transform:none;pointer-events:auto}}
     .mh-home-scene{position:relative;isolation:isolate;container-type:size;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-background img.mh-home-backdrop{position:absolute;z-index:0;inset:0;object-fit:cover;filter:blur(14px) brightness(.55);transform:scale(1.08)}.mh-home-background.is-wide img{object-fit:cover}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:visible;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar.is-framed{border-color:transparent}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-temple-menu-card{position:relative;border:1px solid #a78bfa80;background:linear-gradient(135deg,#2e1065d9 0%,#1e1b4bcc 58%,#312e81b3 100%);box-shadow:inset 0 1px 0 #ddd6fe18,0 5px 16px #0006,0 0 18px #7c3aed12}.mh-temple-menu-card:active{filter:brightness(1.16);transform:scale(.98)}.mh-temple-menu-icon{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid #c4b5fd38;border-radius:10px;background:#4c1d9566;box-shadow:inset 0 1px 0 #ede9fe18}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* ==================== プロフィールフレーム(2026-09-15) ====================
        ブリーダーアイコンの外側へ重ねる飾り枠。アイコン画像そのものには触らない。
