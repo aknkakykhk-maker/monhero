@@ -58,13 +58,17 @@ const serveOnce=fileAbs=>new Promise((resolve,reject)=>{
   server.listen(0,'127.0.0.1',()=>resolve(server));
 });
 
+// Playwright の置き場: tools/ の中 → ふつうの探し方 → Node 本体と同じ場所の全体用(npm install -g の置き場)
+const findPlaywright=()=>{
+  const places=[path.join(ROOT,'tools/node_modules/playwright'),'playwright',
+    path.join(path.dirname(process.execPath),'..','lib','node_modules','playwright')];
+  for(const place of places){try{return require(place);}catch{}}
+  return null;
+};
 const decodeWithChromium=async(fileAbs,sampleRate)=>{
   // Playwright の置き場: tools/ の中 → ふつうの探し方 → Node 本体と同じ場所の全体用(npm install -g の置き場)。
   //   全体用だけに入っている環境(クラウドの作業環境)で、読めずに解析の検査が落ちていた(2026-09-26)
-  let playwright=null;
-  const places=[path.join(ROOT,'tools/node_modules/playwright'),'playwright',
-    path.join(path.dirname(process.execPath),'..','lib','node_modules','playwright')];
-  for(const place of places){try{playwright=require(place);break;}catch{}}
+  const playwright=findPlaywright();
   if(!playwright)throw new Error('ffmpeg も Playwright も無いのでデコードできません');
   const server=await serveOnce(fileAbs);
   const port=server.address().port;
@@ -115,9 +119,10 @@ const decodeAudio=async(file,options={})=>{
   const sampleRate=Number(options.sampleRate)||DEFAULT_SAMPLE_RATE;
   const fileAbs=path.isAbsolute(file)?file:path.join(ROOT,file);
   if(!fs.existsSync(fileAbs))throw new Error(`音源が見つかりません: ${file}`);
-  // MHB_AUDIO_DECODE=chromium で、ffmpegがあってもブラウザ経路で読む(検査の再現性用)。
-  // 同じ音源でも ffmpeg とブラウザでは打点の検出がずれ、拍子の読みが変わる曲がある(six_eternel_beat)。指定が無ければ従来どおり
-  const prefer=options.prefer||process.env.MHB_AUDIO_DECODE||'auto';
+  // 既定はブラウザ(Chromium)経路。ffmpeg でデコードすると打点の検出がずれ、拍子の読みが変わる曲がある(2026-10-01の決定)。
+  // 解析済みファイルと人が決めた値はブラウザ経路で作られている。Playwright が無いときだけ ffmpeg へ落とす。
+  // MHB_AUDIO_DECODE=ffmpeg|chromium|auto で明示もできる
+  const prefer=options.prefer||process.env.MHB_AUDIO_DECODE||(findPlaywright()?'chromium':'auto');
   if(prefer!=='chromium'&&ffmpegAvailable()){
     const result=decodeWithFfmpeg(fileAbs,sampleRate);
     return {...result,durationMs:result.samples.length/sampleRate*1000};
