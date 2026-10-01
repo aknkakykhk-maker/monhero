@@ -116,6 +116,7 @@
 | `mh_ranking_cache` | object | 全国ランキングの取得結果の控え(表示用。無くても取り直す)。**保存する形は軽くする**(下記) |
 | `mh_bond_live_sync_v1` | object / `{version:1,sent:{}}` | 絆Lv・総合力ランキング(`bond_levels`)へリアルタイムで送った行の指紋。見出しは「ブリーダー名＋個体ID」、値は行の内容から作った短い文字列。前と同じ行は送らないために使うだけで、壊れていたら空から数え直す(全員を1回送り直すだけで記録は壊れない)。送れた行だけ覚える(2026-09-27) |
 | `mh_pro_last_party` | object / `EMPTY_PRO_LAST_PARTY` | プロモードで最後に使った編成(`normalizeProLastParty`) |
+| `mh_pro_pick_prefs_v1` | object / `{recent:[],fav:[]}` | プロモードの勇者モン・供モンえらびの「前回使った子」(`recent`・最大8)と「お気に入り」(`fav`)。モンスターIDの配列。壊れている・無いときは空で読む(`readProPickPrefs`) |
 | `mh_home_pasture_ids` | string[] / `[]` | HOME の牧場に出すマスモンの個体ID(`normalizeHomePastureIds`) |
 | `mh_monster_roster_sets_v1` | object | 編成セット(`normalizeMonsterPartySets`)。`mh_monster_roster` は現在のセットの写し |
 | `mh_monster_list_settings` | object / `DEFAULT_MONSTER_LIST_SETTINGS` | マスモン一覧の並び・絞り込み |

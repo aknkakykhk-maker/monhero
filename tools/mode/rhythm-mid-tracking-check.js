@@ -58,6 +58,7 @@ const context={
   requestAnimationFrame:fn=>{pendingFrames.push(fn);return pendingFrames.length;},
   cancelAnimationFrame:()=>{pendingFrames.length=0;},
   RHYTHM_LANE_COUNT:5,
+  rhythmInputEdgeMarginSubLanes:()=>1, // 切り出し範囲の外の関数の代役(既定の余白1)
 };
 vm.createContext(context);
 vm.runInContext(`${judgments}\n${perf}\n${projection}\n${flickConsts}\n${slideHelpers}\n${slideCheckpoints}\n${releaseHelpers}\n${floatingHelpers}\n${midTrackingConsts}\n${runtimeBody}\nthis.out=RHYTHM_GESTURE_RUNTIME;this.tracked=rhythmHoldTrackedLane;`,context);

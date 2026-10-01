@@ -338,7 +338,7 @@ check('カードを使う操作の番はACTIONも光らせる',
 // 勇者モン選択はカード1枚ずつを光らせる
 // カードが共通実装になり、光らせるクラスは extraButtonClass で1枚ずつ渡す形になった
 check('勇者モンはカード1枚ずつを光らせる',
-  has("extraButtonClass: scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''")
+  has("isDisabled={m=>!scenarioPicksHero(m.id)}") && has("spotClassFor={m=>battleTutorialSpotClass('monCards')}")
     && !has("battleTutorialSpotClass('monList')"));
 // 詳細を開くと画面いっぱいのモーダルが出るので、上のみゅあの帯と名前が重ならないようにする
 check('詳細と吹き出しが重ならない',
