@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 498b9c30e4c23a66
+// generated-sha256: 28dd7ebf60e3391d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -160,7 +160,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-01 16:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-01 16:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21478,6 +21478,26 @@ const QuickGrowthRow = ({ st, index }) => {
   );
 };
 
+// ==== 敵を倒した瞬間の演出 ====
+// 敵のライフが尽きたら、白い閃光と「VICTORY!」を出してから WAVE リザルトへ進む。最後のWAVEは金色の「BOSS DOWN!」。
+// 操作は止めない(pointer-events: none)。約1.1秒で、動き続けるものは無い。
+const EnemyDefeatFx = ({ fx }) => {
+  if (!fx) return null;
+  return (
+    <div key={fx.key} data-enemy-defeat-fx aria-hidden="true">
+      <div className="mh-defeat-flash"/>
+      <div className={`mh-waveintro mh-defeat${fx.boss ? ' mh-defeat-boss' : ''}`}>
+        <div className="mh-waveintro-line"/>
+        <div className="mh-waveintro-body">
+          <span className="mh-waveintro-sub">{fx.name}を倒した！</span>
+          <b className="mh-waveintro-title">{fx.boss ? 'BOSS DOWN!' : 'VICTORY!'}</b>
+        </div>
+        <div className="mh-waveintro-line"/>
+      </div>
+    </div>
+  );
+};
+
 const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
   if (!Array.isArray(plan) || !plan.includes(current)) return null;
   const at = plan.indexOf(current);
@@ -26758,7 +26778,7 @@ function GaveUpScreen({
   runMode, runResultActionOnce, score,
 }) {
   return (
-<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Flag size={48} className="text-slate-400 mb-3"/><h2 className="text-2xl font-black italic text-white uppercase">リタイア</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultRetire" compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
+<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Flag size={48} className="mh-end-flag text-slate-400 mb-3"/><h2 className="mh-end-title text-2xl font-black italic text-white uppercase">リタイア</h2>{!isQuickMode(runMode)&&<div className="mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1000} format={v=>v.toLocaleString()}/></div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultRetire" compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
   );
 }
 
@@ -32078,6 +32098,8 @@ function MonsterHeroGame() {
   const trainingGestureRef=useRef({distance:0,scale:1,last:null,moved:false});
   const trainingSuppressTapRef=useRef(0);
   const [trainingEffect,setTrainingEffect]=useState(null);
+  // 敵を倒した瞬間の演出(EnemyDefeatFx)。WAVEリザルトへ進むまでの間だけ出す
+  const [defeatFx,setDefeatFx]=useState(null);
   const trainingEffectTimerRef=useRef(null);
   useEffect(()=>()=>{if(trainingRollTimerRef.current)clearInterval(trainingRollTimerRef.current);},[]);
   useEffect(()=>()=>{if(trainingEffectTimerRef.current)clearTimeout(trainingEffectTimerRef.current);},[]);
@@ -40704,6 +40726,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     enemyDefeatResolvedRef.current = true;
     pushBattleLog(`${enemy?.name || '敵'}を倒した！`, 'down');
     setEnemySkillName(null);
+    setDefeatFx({name:enemy?.name||'敵',boss:wave>=10,key:Date.now()});
     if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
     const totalWaveDamage=currentWaveDamage+damage;
     const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);
@@ -40754,7 +40777,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
-    setTimeout(()=>advanceRunStage('WAVE_RESULT'),battleMs(500));
+    setTimeout(()=>{setDefeatFx(null); advanceRunStage('WAVE_RESULT');},battleMs(1100));
     return true;
   };
 
@@ -42737,6 +42760,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey=null, heroForDeck=null, aptPctOverride=null, restoredStats=null) => {
     // 強化フェーズの並びは次のバトルが始まったら用済み。残すと次のランの配置画面などに古い並びが出る
     setPhasePlan(null);
+    setDefeatFx(null);
     // 通常・クイック・プロ・極限・練習/デバッグの共通開始点で、新しいランだけ累計を初期化する。
     if (w === 1) {
       setTotalTurnCount(0);
@@ -49344,6 +49368,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
         const atRunStart=!enemy&&(phaseId==='hero'||phaseId==='slot'||phaseId==='teaching');
         return <PhaseBanner phase={phaseId} enabled={inPlan||atRunStart||(gameState==='QUICK_JOIN'&&!!enemy)}/>;})()}
       <WaveIntro enabled={gameState==='BATTLE'&&!!enemy} wave={wave} enemyName={enemy?.name}/>
+      <EnemyDefeatFx fx={gameState==='BATTLE'?defeatFx:null}/>
       {effect&&!rhythmScreenOpen&&(<div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
           <>
@@ -53041,6 +53066,15 @@ const createAnimationStyle = () => {
       72% { opacity: 1; transform: scale(1); }
       100% { opacity: 0; transform: translateY(-24px) scale(.96); }
     }
+    /* ==== 敵を倒した瞬間(EnemyDefeatFx)。白い閃光と大きな文字。1回きり・操作は止めない ==== */
+    .mh-defeat { top: 38%; animation-duration: 1.15s; }
+    .mh-defeat .mh-waveintro-title { font-size: 50px; }
+    .mh-defeat-boss .mh-waveintro-line { background: linear-gradient(90deg, transparent, #fde68a, transparent); }
+    .mh-defeat-boss .mh-waveintro-title { font-size: 54px; background: linear-gradient(180deg, #ffffff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 3px 0 rgba(0,0,0,.8)) drop-shadow(0 0 22px rgba(253,230,138,.95)); }
+    .mh-defeat-flash { position: fixed; inset: 0; z-index: 68000; pointer-events: none; background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.85), rgba(255,255,255,0) 65%); animation: mhDefeatFlash .5s ease-out both; }
+    @keyframes mhDefeatFlash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+    .mh-end-flag { animation: mhEndFlag 1s cubic-bezier(.3,.9,.3,1) backwards; transform-origin: 20% 100%; }
+    @keyframes mhEndFlag { 0% { opacity: 0; transform: translateY(-30px) rotate(-70deg) scale(1.4); } 60% { opacity: 1; transform: rotate(10deg); } 80% { transform: rotate(-5deg); } 100% { transform: none; } }
     /* ==== ラン終了の演出。紙ふぶきは1回だけ降る。王冠・どくろ・題字・赤い縁も1回きり ==== */
     .mh-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
     .mh-confetti > i { position: absolute; top: -4%; left: var(--x); width: 8px; height: 14px; border-radius: 2px; background: var(--c); opacity: 0;
@@ -53056,7 +53090,8 @@ const createAnimationStyle = () => {
     .mh-end-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(circle at 50% 30%, rgba(220,38,38,0) 30%, rgba(127,29,29,.55) 100%); animation: mhEndVignette 1.8s ease-out both; }
     @keyframes mhEndVignette { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .35; } }
     @media (prefers-reduced-motion: reduce) {
-      .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette { animation: none !important; }
+      .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette, .mh-end-flag, .mh-defeat-flash { animation: none !important; }
+      .mh-defeat-flash { display: none; }
       .mh-confetti { display: none; }
     }
     /* ==== 強化フェーズの切り替わりの帯(PhaseBanner)。左から入って、真ん中で止まり、右へ抜ける。1回きり ==== */

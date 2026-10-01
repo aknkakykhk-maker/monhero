@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d6833729b417d732
+// source-sha256: af4d71df60b19785
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 16:35";
+const BUILD_DATE = "2026-10-01 16:57";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -32613,6 +32613,30 @@ const QuickGrowthRow = ({
     }
   }, diff > 0 ? `+${diff.toLocaleString()}` : '±0'));
 };
+const EnemyDefeatFx = ({
+  fx
+}) => {
+  if (!fx) return null;
+  return React.createElement("div", {
+    key: fx.key,
+    "data-enemy-defeat-fx": true,
+    "aria-hidden": "true"
+  }, React.createElement("div", {
+    className: "mh-defeat-flash"
+  }), React.createElement("div", {
+    className: `mh-waveintro mh-defeat${fx.boss ? ' mh-defeat-boss' : ''}`
+  }, React.createElement("div", {
+    className: "mh-waveintro-line"
+  }), React.createElement("div", {
+    className: "mh-waveintro-body"
+  }, React.createElement("span", {
+    className: "mh-waveintro-sub"
+  }, fx.name, "を倒した！"), React.createElement("b", {
+    className: "mh-waveintro-title"
+  }, fx.boss ? 'BOSS DOWN!' : 'VICTORY!')), React.createElement("div", {
+    className: "mh-waveintro-line"
+  })));
+};
 const PhaseSteps = ({
   plan,
   current,
@@ -42840,14 +42864,20 @@ function GaveUpScreen({
     className: "mh-game-over-head shrink-0 flex flex-col items-center"
   }, React.createElement(Flag, {
     size: 48,
-    className: "text-slate-400 mb-3"
+    className: "mh-end-flag text-slate-400 mb-3"
   }), React.createElement("h2", {
-    className: "text-2xl font-black italic text-white uppercase"
+    className: "mh-end-title text-2xl font-black italic text-white uppercase"
   }, "リタイア"), !isQuickMode(runMode) && React.createElement("div", {
-    className: "bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
+    className: "mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
   }, React.createElement("div", {
     className: "text-3xl font-mono font-black text-white"
-  }, score.toLocaleString()))), React.createElement("div", {
+  }, React.createElement(TrainingCountUp, {
+    from: 0,
+    to: score,
+    delay: 500,
+    duration: 1000,
+    format: v => v.toLocaleString()
+  })))), React.createElement("div", {
     className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
   }, React.createElement("div", {
     className: "m-auto w-full flex flex-col items-center"
@@ -50071,6 +50101,7 @@ function MonsterHeroGame() {
   });
   const trainingSuppressTapRef = useRef(0);
   const [trainingEffect, setTrainingEffect] = useState(null);
+  const [defeatFx, setDefeatFx] = useState(null);
   const trainingEffectTimerRef = useRef(null);
   useEffect(() => () => {
     if (trainingRollTimerRef.current) clearInterval(trainingRollTimerRef.current);
@@ -59791,6 +59822,11 @@ function MonsterHeroGame() {
     enemyDefeatResolvedRef.current = true;
     pushBattleLog(`${enemy?.name || '敵'}を倒した！`, 'down');
     setEnemySkillName(null);
+    setDefeatFx({
+      name: enemy?.name || '敵',
+      boss: wave >= 10,
+      key: Date.now()
+    });
     if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
     const totalWaveDamage = currentWaveDamage + damage;
     const waveMult = 1.0 + wave * 0.1;
@@ -59864,7 +59900,10 @@ function MonsterHeroGame() {
       }),
       goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode)
     }]);
-    setTimeout(() => advanceRunStage('WAVE_RESULT'), battleMs(500));
+    setTimeout(() => {
+      setDefeatFx(null);
+      advanceRunStage('WAVE_RESULT');
+    }, battleMs(1100));
     return true;
   };
   const consumePoltzCharge = async () => {
@@ -62104,6 +62143,7 @@ function MonsterHeroGame() {
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, tacticsRecords, runMode]);
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey = null, heroForDeck = null, aptPctOverride = null, restoredStats = null) => {
     setPhasePlan(null);
+    setDefeatFx(null);
     if (w === 1) {
       setTotalTurnCount(0);
       totalTurnCountRef.current = 0;
@@ -75540,6 +75580,8 @@ function MonsterHeroGame() {
       enabled: gameState === 'BATTLE' && !!enemy,
       wave: wave,
       enemyName: enemy?.name
+    }), React.createElement(EnemyDefeatFx, {
+      fx: gameState === 'BATTLE' ? defeatFx : null
     }), effect && !rhythmScreenOpen && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
       style: {
@@ -79401,6 +79443,15 @@ const createAnimationStyle = () => {
       72% { opacity: 1; transform: scale(1); }
       100% { opacity: 0; transform: translateY(-24px) scale(.96); }
     }
+    /* ==== 敵を倒した瞬間(EnemyDefeatFx)。白い閃光と大きな文字。1回きり・操作は止めない ==== */
+    .mh-defeat { top: 38%; animation-duration: 1.15s; }
+    .mh-defeat .mh-waveintro-title { font-size: 50px; }
+    .mh-defeat-boss .mh-waveintro-line { background: linear-gradient(90deg, transparent, #fde68a, transparent); }
+    .mh-defeat-boss .mh-waveintro-title { font-size: 54px; background: linear-gradient(180deg, #ffffff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 3px 0 rgba(0,0,0,.8)) drop-shadow(0 0 22px rgba(253,230,138,.95)); }
+    .mh-defeat-flash { position: fixed; inset: 0; z-index: 68000; pointer-events: none; background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.85), rgba(255,255,255,0) 65%); animation: mhDefeatFlash .5s ease-out both; }
+    @keyframes mhDefeatFlash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+    .mh-end-flag { animation: mhEndFlag 1s cubic-bezier(.3,.9,.3,1) backwards; transform-origin: 20% 100%; }
+    @keyframes mhEndFlag { 0% { opacity: 0; transform: translateY(-30px) rotate(-70deg) scale(1.4); } 60% { opacity: 1; transform: rotate(10deg); } 80% { transform: rotate(-5deg); } 100% { transform: none; } }
     /* ==== ラン終了の演出。紙ふぶきは1回だけ降る。王冠・どくろ・題字・赤い縁も1回きり ==== */
     .mh-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
     .mh-confetti > i { position: absolute; top: -4%; left: var(--x); width: 8px; height: 14px; border-radius: 2px; background: var(--c); opacity: 0;
@@ -79416,7 +79467,8 @@ const createAnimationStyle = () => {
     .mh-end-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(circle at 50% 30%, rgba(220,38,38,0) 30%, rgba(127,29,29,.55) 100%); animation: mhEndVignette 1.8s ease-out both; }
     @keyframes mhEndVignette { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .35; } }
     @media (prefers-reduced-motion: reduce) {
-      .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette { animation: none !important; }
+      .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette, .mh-end-flag, .mh-defeat-flash { animation: none !important; }
+      .mh-defeat-flash { display: none; }
       .mh-confetti { display: none; }
     }
     /* ==== 強化フェーズの切り替わりの帯(PhaseBanner)。左から入って、真ん中で止まり、右へ抜ける。1回きり ==== */

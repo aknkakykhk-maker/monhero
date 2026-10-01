@@ -442,6 +442,26 @@ const QuickGrowthRow = ({ st, index }) => {
   );
 };
 
+// ==== 敵を倒した瞬間の演出 ====
+// 敵のライフが尽きたら、白い閃光と「VICTORY!」を出してから WAVE リザルトへ進む。最後のWAVEは金色の「BOSS DOWN!」。
+// 操作は止めない(pointer-events: none)。約1.1秒で、動き続けるものは無い。
+const EnemyDefeatFx = ({ fx }) => {
+  if (!fx) return null;
+  return (
+    <div key={fx.key} data-enemy-defeat-fx aria-hidden="true">
+      <div className="mh-defeat-flash"/>
+      <div className={`mh-waveintro mh-defeat${fx.boss ? ' mh-defeat-boss' : ''}`}>
+        <div className="mh-waveintro-line"/>
+        <div className="mh-waveintro-body">
+          <span className="mh-waveintro-sub">{fx.name}を倒した！</span>
+          <b className="mh-waveintro-title">{fx.boss ? 'BOSS DOWN!' : 'VICTORY!'}</b>
+        </div>
+        <div className="mh-waveintro-line"/>
+      </div>
+    </div>
+  );
+};
+
 const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
   if (!Array.isArray(plan) || !plan.includes(current)) return null;
   const at = plan.indexOf(current);
