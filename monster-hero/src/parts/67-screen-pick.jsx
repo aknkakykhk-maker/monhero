@@ -268,7 +268,7 @@ function ProMonsterGridPicker({ list, selectedId=null, isDisabled, onSelect, onD
             </div>
             <div className="mt-1.5 flex gap-1.5">
               <button onClick={()=>toggleFav(focus.id)} aria-pressed={prefs.fav.includes(focus.id)} aria-label={prefs.fav.includes(focus.id)?'お気に入りを外す':'お気に入りに入れる'} className={`shrink-0 w-11 min-h-[44px] rounded-xl border text-lg font-black active:scale-95 ${prefs.fav.includes(focus.id)?'border-amber-400/60 bg-amber-900/40 text-amber-300':'border-slate-700 bg-slate-900 text-slate-500'}`}>★</button>
-              <button onClick={()=>onDetail&&onDetail(focus)} className="shrink-0 px-3 min-h-[44px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95">くわしく</button>
+              <button onClick={()=>onDetail&&onDetail(focus)} className="shrink-0 px-3 min-h-[44px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95">詳しく</button>
               <button disabled={disabled(focus)} onClick={()=>onSelect(focus)} aria-label={confirmAria?confirmAria(focus):undefined} className={`flex-1 min-h-[44px] rounded-xl text-[13px] font-black active:scale-[.98] disabled:opacity-30 ${ac.button}`}>{confirmLabel}</button>
             </div>
           </>)}
@@ -606,7 +606,7 @@ function PickProAlliesScreen({
               <button onClick={()=>i===0?returnToHero():setProEditingAllyIndex(i-1)} className="min-w-[58px] min-h-[42px] rounded-xl border border-pink-400/50 bg-pink-950/60 text-pink-200 text-[11px] font-black active:scale-95">変更</button>
             </div>)}
           </div>
-          <div className="shrink-0 pt-1" style={{paddingBottom:'calc(.25rem + env(safe-area-inset-bottom))'}}><button disabled={!ready} onClick={()=>{recordProRecentParty([mainHero?.id,...proAllyPool.map(m=>m&&m.id)]);confirmProParty();}} className="w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30" style={{backgroundColor:mode.color,color:'#0f172a'}}>{ready?'この編成で開始':`あと${need-proAllyPool.length}体えらんでください`}</button></div>
+          <div className="shrink-0 pt-1" style={{paddingBottom:'calc(.25rem + env(safe-area-inset-bottom))'}}><button disabled={!ready} onClick={()=>{recordProRecentParty([mainHero?.id,...proAllyPool.map(m=>m&&m.id)]);confirmProParty();}} className="w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30" style={{backgroundColor:mode.color,color:'#0f172a'}}>{ready?'この編成で開始':`あと${need-proAllyPool.length}体選んでください`}</button></div>
         </>:<>
           <p className="shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2">この枠に入れるベースモンを1体選んでください。</p>
           <div className="flex-1 min-h-0 pb-2 flex flex-col">
@@ -738,7 +738,7 @@ function PickTeachingScreen({
           ? <PhaseSteps plan={phasePlan} current="teaching" nextWave={wave>0?wave+1:null}/>
           : <span className="mh-ph-plate">ASSIST CARD</span>}
         <div className="mh-ph-heading"><h2 className="mh-ph-title text-xl font-black italic">アシストカードの継承・強化</h2></div>
-        <p className="mh-phase-tall text-[10px] font-bold text-slate-400">1枚えらんで、新しく覚えるか、持っているカードを強化します</p>
+        <p className="mh-phase-tall text-[10px] font-bold text-slate-400">1枚選んで、新しく覚えるか、持っているカードを強化します</p>
       </div>
       <div className="mh-phase-tall shrink-0 w-full max-w-sm mb-2"><AssistantBubble scene="pickTeaching" compact/></div>
       {/* 持っているカードとそのレベル。どれを伸ばすか決めるときに、今の手持ちを見比べられるようにする */}

@@ -1,5 +1,5 @@
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
-// 「助手をえらぶ」画面が、実際に描画できて2人とも選べる形になっているかを見る。
+// 「助手を選ぶ」画面が、実際に描画できて2人とも選べる形になっているかを見る。
 //
 // このサンドボックスはBGMの事前ロードを最後まで終えられないため、実ブラウザで
 // タイトルから先へ進めない。そこで画面のJSXだけを取り出してReactで描き、
@@ -83,7 +83,7 @@ const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 const textUnlocked = htmlUnlocked.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
 check('助手選択の画面が落ちずに描ける', html.length > 0);
-check('見出しが出る', /助手をえらぶ/.test(text));
+check('見出しが出る', /助手を選ぶ/.test(text));
 check('はじめから選べる助手が並ぶ', BASE_ASSISTANTS.every(w => text.includes(w.name)),
   BASE_ASSISTANTS.map(w => w.name).join(', '));
 // ★イベントで加入する助手は、会話を見終えるまでここへ並べない。
@@ -98,7 +98,7 @@ check('助手ごとの紹介文が出る',
 check('助手ごとの顔アイコンが出る',
   ASSISTANTS.every(w => htmlUnlocked.includes(`data-face="${w.id}"`)));
 check('全員ぶんの選ぶボタンがある',
-  ASSISTANTS.every(w => htmlUnlocked.includes(`aria-label="${w.name}をえらぶ"`)));
+  ASSISTANTS.every(w => htmlUnlocked.includes(`aria-label="${w.name}を選ぶ"`)));
 check('あとから変えられることが書いてある', /あとからプロフィールでいつでも変えられます/.test(text));
 check('仲良し度が別々なことが書いてある', /助手ごとに別々/.test(text));
 // 縦画面で見切れないよう、カードは2列に並べてスクロールできること

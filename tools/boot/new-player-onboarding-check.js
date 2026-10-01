@@ -2,7 +2,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // はじめて遊ぶ人向けの流れ(助手を選び、名前とアイコンを決めるところ)を確認する。
 //
 // 正式な流れ:
-//   助手をえらぶ → 選んだ助手のあいさつ → プロフィール(名前・アイコン) → 村の案内
+//   助手を選ぶ → 選んだ助手のあいさつ → プロフィール(名前・アイコン) → 村の案内
 //
 // 助手を選ぶ前に、みゅあ固定のあいさつを出してはいけない
 // (まだ選んでいない助手が勝手に話しかけることになるため)。
@@ -42,7 +42,7 @@ check('助手選択を通ったら、きき加入の会話は見たことにす�
 check('中断して開き直しても助手選択から再開する',
   has("setGameState(savedAssistant ? 'PROFILE' : 'ASSISTANT_SELECT');"));
 check('助手選択の画面がある',
-  has("{gameState==='ASSISTANT_SELECT'&&(") && has('助手をえらぶ'));
+  has("{gameState==='ASSISTANT_SELECT'&&(") && has('助手を選ぶ'));
 check('助手選択でも顔・名前・紹介を見て選べる',
   has('<AssistantFace who={who} size={88} accent={who.accent} expression="happy"/>')
     && has('{who.tagline||\'\'}') && has('{who.intro||\'\'}'));
@@ -60,7 +60,7 @@ check('決め終わるまで戻るボタンを出さない',
   has('{/* はじめての設定が終わるまでは、まだ帰る場所(HOME)が無いので戻るボタンを出さない */}'));
 
 // --- 名前とアイコン ---
-check('名前とアイコンの両方を決められる', has('なまえを決める') && has('アイコンを選ぶ'));
+check('名前とアイコンの両方を決められる', has('名前を決める') && has('アイコンを選ぶ'));
 check('決まったかどうかを覚えている',
   has('setOnboardingName(n); // はじめての設定で「名前が決まった」判定に使う')
     && has('setBreederIcon(m.id); setOnboardingIcon(m.id);'));

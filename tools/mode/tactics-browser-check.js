@@ -164,7 +164,7 @@ const check = (name, ok, detail = '') => {
     check('種族チャレンジとプロもタクティクス側にある',
       innerModes.some(t => t.includes('種族')) && innerModes.some(t => t.includes('プロ')),
       [...new Set(innerModes)].join(' / '));
-    // ★中のモードの入口を実際に踏む。種族チャレンジは専用の選択画面、プロは難易度えらびへ。
+    // ★中のモードの入口を実際に踏む。種族チャレンジは専用の選択画面、プロは難易度選択へ。
     //   ここが白くなる壊れ方は、静的な検査では拾えない
     // ★カードはモードidで名指しする。見出しの字面(cardLabel)は読みやすさのために変わる
     const openInner = async (modeId, buttonText) => {
@@ -201,9 +201,9 @@ const check = (name, ok, detail = '') => {
       species.result === 'ok' && /種 限定|種族/.test(species.text), `${species.result} / ${species.text.slice(0, 50)}`);
     check('種族えらびからモード選択へ戻れる', await backToModes());
     const proMode = await openInner('tacticsPro', '難易度を選ぶ');
-    check('タクティクスプロは難易度えらびへ進む',
+    check('タクティクスプロは難易度選択へ進む',
       proMode.result === 'ok' && /Beginner|Normal/.test(proMode.text), `${proMode.result} / ${proMode.text.slice(0, 50)}`);
-    check('タクティクスプロの難易度えらびからモード選択へ戻れる', await backToModes());
+    check('タクティクスプロの難易度選択からモード選択へ戻れる', await backToModes());
 
     // --- ③ 難易度を選んでバトルを始める ---
     const opened = await page.evaluate((label) => {
@@ -228,7 +228,7 @@ const check = (name, ok, detail = '') => {
     });
     await page.waitForTimeout(800);
     const extremeText = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-    check('難易度えらびに「極限」タブがある', extremeTab.there === true);
+    check('難易度選択に「極限」タブがある', extremeTab.there === true);
     check('極限タブはその場で極限の段を並べる(専用画面へ移らない)',
       extremeTab.there && /EXTREME/.test(extremeText) && !/極限チャレンジ/.test(extremeText),
       extremeText.slice(0, 70));
@@ -278,7 +278,7 @@ const check = (name, ok, detail = '') => {
         if (confirm) { confirm.click(); return '確定'; }
         const teaching = pick(/新規習得|強化後/);
         if (teaching) { teaching.click(); return 'アシストカード'; }
-        const decide = pick(/この子を|この子で|決定|えらぶ|選ぶ|はじめる/);
+        const decide = pick(/この子を|この子で|決定|選ぶ|選ぶ|はじめる/);
         if (decide) { decide.click(); return decide.textContent.trim().slice(0, 10); }
         return null;
       });

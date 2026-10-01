@@ -77,8 +77,8 @@ assert.strictEqual(new Set(notices.map(n => n.id)).size, notices.length, '通知
 assert(annotatedEntries.every(entry => ['market', 'mode', 'content'].includes(entry.assistantNotice.type)), '通知種別は market / mode / content だけです');
 assert(!annotatedEntries.some(entry => entry.assistantNotice.type === 'feature'), "廃止した 'feature' の告知が残っています");
 assert(changelog.filter(entry => entry.type === 'fix').every(entry => !entry.assistantNotice), '不具合修正(fix)を助手の告知にしてはいけません');
-// 「小さな変更に付けない」の代表例。絵の追加・並び替え・横画面対応は更新履歴にだけ書く
-for (const title of ['「綺季一閃」「Stay With Me」に曲の絵が付きました', '曲えらびに並び替えを足し', 'スマホを横にしても遊べるようになりました']) {
+// 「小さな変更に付けない」の代表例。絵の追加・並べ替え・横画面対応は更新履歴にだけ書く
+for (const title of ['「綺季一閃」「Stay With Me」に曲の絵が付きました', '曲えらびに並べ替えを足し', 'スマホを横にしても遊べるようになりました']) {
   const entry = changelog.find(e => (e.title || '').includes(title));
   assert(entry && !entry.assistantNotice, `「${title}」は告知にしない(見た目・小さな変更)`);
 }

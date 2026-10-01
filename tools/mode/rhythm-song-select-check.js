@@ -4,7 +4,7 @@
 //   node tools/mode/rhythm-song-select-check.js
 //
 // 【なぜ要るか】
-// この画面は「一覧で曲をえらぶ → 難易度をえらぶ → 決定」の3手でできている。
+// この画面は「一覧で曲を選ぶ → 難易度を選ぶ → 決定」の3手でできている。
 // ソースを文字で見るだけでは「選んだつもりが変わっていない」類の不具合を拾えない。
 // 実際に本物のReactで組み立てて、押したときに中身が変わることまで見る。
 //
@@ -329,7 +329,7 @@ const serve=()=>new Promise(resolve=>{
     ok('自己ベストの数字は置ける幅から字の大きさを決める',
       /data-rhythm-demo-best[\s\S]{0,300}fontSize:`min\(22px, calc\(100cqw/.test(gameSource));
 
-    // ---- 並び替え(2026-09-05・ユーザー指示「曲選択のソートがほしい 入手順 難易度順 名前順」) ----
+    // ---- 並べ替え(2026-09-05・ユーザー指示「曲選択のソートがほしい 入手順 難易度順 名前順」) ----
     const rowIdsNow=()=>page.evaluate(()=>[...document.getElementById('song-select-probe')
       .querySelectorAll('[data-rhythm-song-row]')].map(el=>el.getAttribute('data-rhythm-song-row')));
     const pickSort=async id=>{
@@ -338,7 +338,7 @@ const serve=()=>new Promise(resolve=>{
       await page.click(`[data-rhythm-sort-option="${id}"]`);
       await page.waitForTimeout(200);
     };
-    ok('並び替えのボタンがある',await page.evaluate(()=>!!document.querySelector('#song-select-probe [data-rhythm-song-sort]')));
+    ok('並べ替えのボタンがある',await page.evaluate(()=>!!document.querySelector('#song-select-probe [data-rhythm-song-sort]')));
     const addedOrder=await rowIdsNow();
     // 並び順の種類は data 側(RHYTHM_SORT_ORDERS)が決める。ここで数を書くと増やすたびに落ちる
     const sortIds=await page.evaluate(()=>RHYTHM_SORT_ORDERS.map(item=>item.id));
@@ -347,13 +347,13 @@ const serve=()=>new Promise(resolve=>{
     await page.click('#song-select-probe [data-rhythm-song-sort]');
     await page.waitForTimeout(200);
     const optionCount=await page.evaluate(()=>document.querySelectorAll('[data-rhythm-sort-option]').length);
-    ok('並び替えの選択肢が全部シートに出る',optionCount===sortIds.length,`${optionCount}件 / ${sortIds.length}件`);
+    ok('並べ替えの選択肢が全部シートに出る',optionCount===sortIds.length,`${optionCount}件 / ${sortIds.length}件`);
     await page.click('[data-rhythm-sort-close]');
     await page.waitForTimeout(200);
 
     const orders={};
     for(const id of sortIds){await pickSort(id);orders[id]=await rowIdsNow();}
-    ok('並び替えで実際に並びが変わる',
+    ok('並べ替えで実際に並びが変わる',
       Object.entries(orders).filter(([id,list])=>list.join()!==addedOrder.join()).length>=2,
       Object.entries(orders).map(([id,list])=>`${id}=${list.join(',')}`).join(' / '));
     // 名前順・難易度順・長さ順は、それぞれ「そう並んでいるか」を中身で確かめる。
@@ -393,7 +393,7 @@ const serve=()=>new Promise(resolve=>{
     const descLevels=await shownLevels();
     ok('「逆から並べる」でひっくり返る',descLevels.every((v,i)=>i===0||descLevels[i-1]>=v),descLevels.join(' ≥ '));
 
-    // 並び替えは見え方だけ。選んでいる曲は動かさない
+    // 並べ替えは見え方だけ。選んでいる曲は動かさない
     await page.click('#song-select-probe [data-rhythm-song-sort]');
     await page.waitForTimeout(150);
     await page.click('[data-rhythm-sort-desc]');
@@ -407,7 +407,7 @@ const serve=()=>new Promise(resolve=>{
     const titleBefore=await page.evaluate(()=>(document.querySelector('#song-select-probe [data-rhythm-song-title]')||{}).textContent||'');
     await pickSort('name');
     const titleAfter=await page.evaluate(()=>(document.querySelector('#song-select-probe [data-rhythm-song-title]')||{}).textContent||'');
-    ok('並び替えても選んでいる曲は変わらない',!!titleBefore&&titleBefore===titleAfter,`${titleBefore} → ${titleAfter}`);
+    ok('並べ替えても選んでいる曲は変わらない',!!titleBefore&&titleBefore===titleAfter,`${titleBefore} → ${titleAfter}`);
     await pickSort('added');
 
     // ---- 助手のひとことを畳める(曲の一覧へ回す高さを増やすため) ----

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: af4d71df60b19785
+// source-sha256: 714fd7ce0b27a698
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 16:57";
+const BUILD_DATE = "2026-10-01 17:03";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -521,7 +521,7 @@ const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   tagline: 'モンヒロバトルの基本。育てたモンスターで10WAVEに挑む',
   highlights: Object.freeze([Object.freeze(['🛡️', 'ステータスは全員ぶんの合計']), Object.freeze(['🃏', 'カードと間合いを選んで戦う']), Object.freeze(['📈', 'WAVEごとに強化を選んで積み上げる'])]),
   note: 'チャレンジ／種族チャレンジ／プロ。難易度は通常と極限から選べます',
-  points: Object.freeze([Object.freeze(['🛡️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツは、パーティ全員ぶんを合わせた1組です。供モンが加わるとその子のぶんが足されて、パーティがまとめて強くなります。ライフも1本なので、誰が狙われても同じライフが減り、0になったら負けです。']), Object.freeze(['🃏', 'カードと間合い', '手札のカードをガッツで払って使います。攻撃・ガード・回復・間合いの移動などがあり、モンスターには間合いごとの得意・不得意（間合い適性）があります。']), Object.freeze(['🔮', '敵の予告', '敵が次のターンに何をするかは、そのターンのうちに予告されます。「解析」を押すと、それぞれの行動が選ばれる確率と威力まで確かめられます。受けるか、攻めるか、間合いを変えるかをここで決めます。']), Object.freeze(['✨', '勇者特性', '勇者モンにした子の特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']), Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']), Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度えらびの「極限」タブから挑め、段ごとに特殊ルールが付きます。']), Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。'])]),
+  points: Object.freeze([Object.freeze(['🛡️', 'ステータスの持ち方', 'ライフ・ちから・丈夫さ・ガッツは、パーティ全員ぶんを合わせた1組です。供モンが加わるとその子のぶんが足されて、パーティがまとめて強くなります。ライフも1本なので、誰が狙われても同じライフが減り、0になったら負けです。']), Object.freeze(['🃏', 'カードと間合い', '手札のカードをガッツで払って使います。攻撃・ガード・回復・間合いの移動などがあり、モンスターには間合いごとの得意・不得意（間合い適性）があります。']), Object.freeze(['🔮', '敵の予告', '敵が次のターンに何をするかは、そのターンのうちに予告されます。「解析」を押すと、それぞれの行動が選ばれる確率と威力まで確かめられます。受けるか、攻めるか、間合いを変えるかをここで決めます。']), Object.freeze(['✨', '勇者特性', '勇者モンにした子の特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']), Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']), Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度選択の「極限」タブから挑め、段ごとに特殊ルールが付きます。']), Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。'])]),
   modes: Object.freeze([BATTLE_MODE_CHALLENGE, BATTLE_MODE_SPECIES_CHALLENGE, BATTLE_MODE_PRO])
 }), Object.freeze({
   id: BATTLE_SYSTEM_TACTICS,
@@ -542,8 +542,8 @@ const BATTLE_SYSTEMS = Object.freeze([Object.freeze({
   color: '#fbbf24',
   tagline: '短い時間でモンスターを育てる、周回向けのバトル',
   highlights: Object.freeze([Object.freeze(['💎', '経験値・ダイヤが1.5倍もらえる']), Object.freeze(['⚡', '強化を選ばないから1周が速い']), Object.freeze(['🔁', 'AUTO∞で放置したまま何周でも'])]),
-  note: '中のモードは1つだけなので、選ぶとそのまま難易度えらびへ進みます',
-  points: Object.freeze([Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。']), Object.freeze(['📈', '強化のかわり', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員のライフ・ちから・丈夫さ・ガッツがそのときの値から10%上がり、ライフとガッツが満タンまで回復します。']), Object.freeze(['🔁', '放置で周回する', 'AUTO∞を使うと、10WAVEをクリアしたあとそのまま次の周へ入ります。置いておくだけで育つので、育成の周回と相性がいい遊び方です。']), Object.freeze(['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。']), Object.freeze(['🎁', '報酬の方針を選べる', '難易度えらびで「育成／プシュケー優先／ダイヤ優先」を選べます。いま欲しいものに合わせて、もらえるものの内訳を変えられます。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、ほかのモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', '新しい子を早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。'])]),
+  note: '中のモードは1つだけなので、選ぶとそのまま難易度選択へ進みます',
+  points: Object.freeze([Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。']), Object.freeze(['📈', '強化のかわり', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員のライフ・ちから・丈夫さ・ガッツがそのときの値から10%上がり、ライフとガッツが満タンまで回復します。']), Object.freeze(['🔁', '放置で周回する', 'AUTO∞を使うと、10WAVEをクリアしたあとそのまま次の周へ入ります。置いておくだけで育つので、育成の周回と相性がいい遊び方です。']), Object.freeze(['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。']), Object.freeze(['🎁', '報酬の方針を選べる', '難易度選択で「育成／プシュケー優先／ダイヤ優先」を選べます。いま欲しいものに合わせて、もらえるものの内訳を変えられます。']), Object.freeze(['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、ほかのモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。']), Object.freeze(['🎯', 'こんな人におすすめ', '新しい子を早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。'])]),
   modes: Object.freeze([BATTLE_MODE_QUICK]),
   direct: true
 })]);
@@ -5452,7 +5452,7 @@ const SCREEN_THEME_CATEGORIES = [{
 }, {
   id: 'battle',
   label: 'モンヒロバトル',
-  desc: 'バトルえらび・バトル中・リザルト'
+  desc: 'バトル選択・バトル中・リザルト'
 }, {
   id: 'rhythm',
   label: 'モンヒロビート',
@@ -13935,7 +13935,7 @@ const MarketItemDetail = ({
     className: "flex justify-between"
   }, React.createElement("span", {
     className: "text-slate-400"
-  }, "ねだん"), React.createElement("span", {
+  }, "値段"), React.createElement("span", {
     className: `font-mono ${meta.text}`
   }, marketPriceText(item)))), React.createElement("div", {
     className: "mt-3"
@@ -14557,7 +14557,7 @@ const AssistantBubble = ({
   }, React.createElement("button", {
     type: "button",
     onClick: onFaceTap,
-    "aria-label": `${who.name}にはなしかける`,
+    "aria-label": `${who.name}に話しかける`,
     className: "shrink-0 active:scale-90 transition-transform"
   }, React.createElement(AssistantFace, {
     who: who,
@@ -23958,7 +23958,7 @@ const RhythmOptions = ({
     className: "mt-2"
   }, React.createElement("summary", {
     className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
-  }, "▸ くわしく"), React.createElement("p", {
+  }, "▸ 詳しく"), React.createElement("p", {
     className: `mt-1 ${note}`
   }, description)));
   const grid = `grid gap-2.5 ${wide ? 'grid-cols-3 gap-2' : 'grid-cols-2'}`;
@@ -24233,7 +24233,7 @@ const RhythmOptions = ({
     className: "mt-3"
   }, React.createElement("summary", {
     className: "min-h-[24px] cursor-pointer list-none text-[10px] font-black leading-[24px] text-cyan-300/90"
-  }, "▸ 音量についてくわしく"), React.createElement("p", {
+  }, "▸ 音量について詳しく"), React.createElement("p", {
     className: `mt-1 ${note}`
   }, "この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。"), React.createElement("p", {
     className: `mt-2 ${note}`
@@ -24822,7 +24822,7 @@ const RhythmSongSelect = ({
     className: "min-w-0 truncate landscape:flex landscape:flex-col landscape:items-start landscape:leading-tight"
   }, React.createElement("small", {
     className: "text-[11px] font-black landscape:text-[9px] landscape:text-slate-400"
-  }, "並び替え", React.createElement("span", {
+  }, "並べ替え", React.createElement("span", {
     className: "landscape:hidden"
   }, "：")), React.createElement("b", {
     className: "max-w-full truncate font-black landscape:text-[12px]"
@@ -25129,7 +25129,7 @@ const RhythmSongSelect = ({
       style: {
         minHeight: '44px'
       }
-    }, song.credit.link && song.credit.link.label || 'くわしく見る', " ↗"), React.createElement("button", {
+    }, song.credit.link && song.credit.link.label || '詳しく見る', " ↗"), React.createElement("button", {
       type: "button",
       "data-rhythm-song-art-close": true,
       onClick: () => setArtZoom(false),
@@ -25214,7 +25214,7 @@ const RhythmSongSelect = ({
     }
   }, React.createElement("h3", {
     className: "text-sm font-black text-white"
-  }, "曲の並び替え"), React.createElement("p", {
+  }, "曲の並べ替え"), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-slate-400"
   }, "並びを変えても、遊べる曲・自己ベスト・全国ランキングは変わりません。"), React.createElement("div", {
     className: "mt-3 space-y-1.5"
@@ -32143,7 +32143,7 @@ const PHASE_STEP_LABELS = Object.freeze({
   slot: '配置',
   skill: '固有技',
   teaching: 'アシストカード',
-  hero: 'えらぶ'
+  hero: '勇者モン'
 });
 const PHASE_ACCENT_RGB = Object.freeze({
   training: '251,191,36',
@@ -33944,14 +33944,14 @@ function ProfileScreen({
     }, React.createElement("button", {
       onClick: () => onOpenNameEdit(hasName ? breederName : ''),
       className: `min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${hasName ? 'bg-emerald-950/60 border-emerald-400/60 text-emerald-200' : 'bg-slate-900 border-indigo-400/60 text-white'}`
-    }, hasName ? '✓ なまえ' : 'なまえを決める'), React.createElement("button", {
+    }, hasName ? '✓ 名前' : '名前を決める'), React.createElement("button", {
       onClick: onOpenIconPicker,
       className: `min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${hasIcon ? 'bg-emerald-950/60 border-emerald-400/60 text-emerald-200' : 'bg-slate-900 border-indigo-400/60 text-white'}`
     }, hasIcon ? '✓ アイコン' : 'アイコンを選ぶ')), React.createElement("button", {
       disabled: !ready,
       onClick: finishOnboarding,
       className: "w-full mt-2 min-h-[52px] rounded-xl bg-pink-400 font-black text-sm text-black disabled:opacity-40 active:scale-[.98]"
-    }, "けってい！"), React.createElement("div", {
+    }, "決定！"), React.createElement("div", {
       className: "text-[10px] text-slate-400 text-center mt-1.5"
     }, "名前もアイコンも、あとからこの画面でいつでも変えられます"));
   })(), React.createElement("div", {
@@ -34734,7 +34734,7 @@ function MonsterDexScreen({
   }, " / ", monsters.length))), React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto pb-1",
     role: "group",
-    "aria-label": "主血統でしぼりこむ"
+    "aria-label": "主血統で絞り込む"
   }, React.createElement("button", {
     type: "button",
     "aria-pressed": dexLineageFilter === 'all',
@@ -36115,7 +36115,7 @@ function RhythmRankingScreen({
     "data-rhythm-total-remaining": true,
     onClick: onGoToSongSelect,
     className: "mb-3 w-full min-h-[44px] rounded-xl border border-amber-300/40 bg-slate-900/70 px-3 text-[10px] font-black text-amber-100"
-  }, "まだ記録のない曲が ", totalSongCount - total.self.songCount, " 曲あります ▶ 曲をえらぶ"), !total.self && React.createElement("p", {
+  }, "まだ記録のない曲が ", totalSongCount - total.self.songCount, " 曲あります ▶ 曲を選ぶ"), !total.self && React.createElement("p", {
     "data-rhythm-total-self-empty": true,
     className: "mb-3 rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-center text-[10px] text-slate-300"
   }, "まだあなたの記録がありません。1曲でも遊ぶとここに載ります。"), total.entries.length === 0 && React.createElement("p", {
@@ -36933,7 +36933,7 @@ function MasuRebirthScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "🌈",
-      lines: ['表示できるマスモンがいません。', '並べかえ・しぼりこみの設定を見直してください。']
+      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -37118,7 +37118,7 @@ function MasuReincarnateScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "🔄",
-      lines: ['表示できるマスモンがいません。', '並べかえ・しぼりこみの設定を見直してください。']
+      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -37288,7 +37288,7 @@ function MasuTranscendenceScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "✨",
-      lines: ['表示できるマスモンがいません。', '並べかえ・しぼりこみの設定を見直してください。']
+      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -37475,7 +37475,7 @@ function MasuSoulRankScreen({
       className: SCREEN_LIST_CLASS
     }, entries.length === 0 ? React.createElement(ScreenEmpty, {
       emoji: "🏅",
-      lines: ['表示できるマスモンがいません。', '並べかえ・しぼりこみの設定を見直してください。']
+      lines: ['表示できるマスモンがいません。', '並べ替え・絞り込みの設定を見直してください。']
     }) : React.createElement("div", {
       className: "grid grid-cols-3 gap-2 pb-3"
     }, entries.map(({
@@ -39734,7 +39734,7 @@ function MasuFusionScreen({
         mon: null,
         sub: null
       })), React.createElement("button", {
-        "aria-label": "くわしく見る",
+        "aria-label": "詳しく見る",
         onClick: ev => {
           ev.stopPropagation();
           setMasuMonDetail(masu);
@@ -39851,7 +39851,7 @@ function MasuFusionScreen({
         className: "text-white",
         strokeWidth: 4
       }))), React.createElement("button", {
-        "aria-label": "くわしく見る",
+        "aria-label": "詳しく見る",
         onClick: ev => {
           ev.stopPropagation();
           setMasuMonDetail(masu);
@@ -40940,7 +40940,7 @@ function ProMonsterGridPicker({
   }, "★"), React.createElement("button", {
     onClick: () => onDetail && onDetail(focus),
     className: "shrink-0 px-3 min-h-[44px] rounded-xl border border-indigo-400/30 bg-indigo-950/60 text-[11px] font-black text-indigo-200 active:scale-95"
-  }, "くわしく"), React.createElement("button", {
+  }, "詳しく"), React.createElement("button", {
     disabled: disabled(focus),
     onClick: () => onSelect(focus),
     "aria-label": confirmAria ? confirmAria(focus) : undefined,
@@ -41568,7 +41568,7 @@ function PickProAlliesScreen({
       backgroundColor: mode.color,
       color: '#0f172a'
     }
-  }, ready ? 'この編成で開始' : `あと${need - proAllyPool.length}体えらんでください`))) : React.createElement(React.Fragment, null, React.createElement("p", {
+  }, ready ? 'この編成で開始' : `あと${need - proAllyPool.length}体選んでください`))) : React.createElement(React.Fragment, null, React.createElement("p", {
     className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
   }, "この枠に入れるベースモンを1体選んでください。"), React.createElement("div", {
     className: "flex-1 min-h-0 pb-2 flex flex-col"
@@ -41798,7 +41798,7 @@ function PickTeachingScreen({
       className: "mh-ph-title text-xl font-black italic"
     }, "アシストカードの継承・強化")), React.createElement("p", {
       className: "mh-phase-tall text-[10px] font-bold text-slate-400"
-    }, "1枚えらんで、新しく覚えるか、持っているカードを強化します")), React.createElement("div", {
+    }, "1枚選んで、新しく覚えるか、持っているカードを強化します")), React.createElement("div", {
       className: "mh-phase-tall shrink-0 w-full max-w-sm mb-2"
     }, React.createElement(AssistantBubble, {
       scene: "pickTeaching",
@@ -54939,7 +54939,7 @@ function MonsterHeroGame() {
       className: "flex-1 min-w-0 min-h-[44px] flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 active:scale-95"
     }, React.createElement("span", {
       className: "text-[11px] font-black text-white truncate"
-    }, "並べかえ: ", currentSortOpt?.label, monsterSortKey === currentSortOpt?.key && React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼')), React.createElement(ChevronRight, {
+    }, "並べ替え: ", currentSortOpt?.label, monsterSortKey === currentSortOpt?.key && React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼')), React.createElement(ChevronRight, {
       size: 14,
       className: "text-slate-400 shrink-0"
     })), React.createElement("button", {
@@ -64371,7 +64371,7 @@ function MonsterHeroGame() {
         href: changelogSafeLink(c.link),
         target: "_blank",
         rel: "noopener noreferrer"
-      }, c.link && c.link.label || 'くわしく見る', " ↗"))))));
+      }, c.link && c.link.label || '詳しく見る', " ↗"))))));
     });
   })()))) : showTitleSettings ? React.createElement("div", {
     className: "mh-title-modal",
@@ -67926,7 +67926,7 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4"
       }, React.createElement("p", {
         className: "mb-3 text-[11px] font-bold text-slate-400"
-      }, "模様を試すモンスターを1体えらんでください（所持していない種もそのまま試せます）。"), React.createElement("div", {
+      }, "模様を試すモンスターを1体選んでください（所持していない種もそのまま試せます）。"), React.createElement("div", {
         className: "grid grid-cols-3 gap-2"
       }, eligible.map(m => {
         const base = ALL_PLAYER_MONSTERS[m.baseId];
@@ -70860,7 +70860,7 @@ function MonsterHeroGame() {
       }
     }, React.createElement("h2", {
       className: "text-lg font-black italic text-indigo-300 uppercase tracking-widest"
-    }, "助手をえらぶ"), React.createElement("p", {
+    }, "助手を選ぶ"), React.createElement("p", {
       className: "text-[10px] text-slate-400 mt-1 leading-tight"
     }, "冒険に付き添ってくれる助手を選んでください。", React.createElement("br", null), "あとからプロフィールでいつでも変えられます。")), React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
@@ -70877,7 +70877,7 @@ function MonsterHeroGame() {
         setTutorialKind('intro');
         setTutorialStep(0);
       },
-      "aria-label": `${who.name}をえらぶ`,
+      "aria-label": `${who.name}を選ぶ`,
       className: `rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id === selectedAssistantId ? '' : 'opacity-95'}`,
       style: {
         border: `2px solid ${who.id === selectedAssistantId ? who.accent : 'rgba(255,255,255,.14)'}`,
@@ -71104,7 +71104,7 @@ function MonsterHeroGame() {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, unifiedMonsterEntriesDraft.length === 0 && React.createElement(ScreenEmpty, {
       emoji: "🔍",
-      lines: ['表示するモンスターがいません。', '上の「表示」「種族」でしぼりこみを見直してください。']
+      lines: ['表示するモンスターがいません。', '上の「表示」「種族」で絞り込みを見直してください。']
     }), React.createElement("div", {
       className: "grid grid-cols-3 gap-2.5 pb-4"
     }, unifiedMonsterEntriesDraft.map(e => {
@@ -71311,7 +71311,7 @@ function MonsterHeroGame() {
       className: SCREEN_LIST_CLASS
     }, unifiedMonsterEntriesSingleType.filter(e => e.type === 'base').length === 0 && React.createElement(ScreenEmpty, {
       emoji: "🔍",
-      lines: ['表示するベースモンがいません。', '上の「表示」「種族」でしぼりこみを見直してください。']
+      lines: ['表示するベースモンがいません。', '上の「表示」「種族」で絞り込みを見直してください。']
     }), React.createElement("div", {
       className: "grid grid-cols-3 gap-2.5 pb-4"
     }, unifiedMonsterEntriesSingleType.filter(e => e.type === 'base').map(e => {
@@ -71784,7 +71784,7 @@ function MonsterHeroGame() {
         className: "flex items-center gap-2 p-4 shrink-0 border-b border-white/10"
       }, React.createElement("h3", {
         className: "text-base font-black text-white flex-1"
-      }, "ならべかえ・表示設定"), React.createElement("button", {
+      }, "並べ替え・表示設定"), React.createElement("button", {
         onClick: () => setShowSortFilterModal(false),
         className: "p-2.5 bg-white/5 rounded-full active:scale-90"
       }, React.createElement(X, {
@@ -71793,7 +71793,7 @@ function MonsterHeroGame() {
         className: "flex gap-2 px-4 pt-3 shrink-0"
       }, [{
         key: 'sort',
-        label: 'ならべかえ'
+        label: '並べ替え'
       }, {
         key: 'lineage',
         label: '種族'
@@ -71828,7 +71828,7 @@ function MonsterHeroGame() {
         }, opt.label, active && React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼'));
       })) : sortFilterModalTab === 'lineage' ? React.createElement("div", null, React.createElement("p", {
         className: "mb-2.5 text-[10px] leading-relaxed text-slate-400"
-      }, "選んだ種族だけを表示します。ならべかえ・表示設定はそのまま効きます。"), React.createElement("div", {
+      }, "選んだ種族だけを表示します。並べ替え・表示設定はそのまま効きます。"), React.createElement("div", {
         className: "grid grid-cols-2 gap-2.5"
       }, [{
         id: 'all',
@@ -72182,7 +72182,7 @@ function MonsterHeroGame() {
         }, "↓")));
       }), rows.length <= 1 && React.createElement("div", {
         className: "text-[9px] text-slate-500 font-bold text-center px-2 py-1 leading-relaxed"
-      }, "固有技が1つだけのため、並び替えと初期技の変更はできません。合体で固有技を継承すると設定できるようになります。")), React.createElement("div", {
+      }, "固有技が1つだけのため、並べ替えと初期技の変更はできません。合体で固有技を継承すると設定できるようになります。")), React.createElement("div", {
         className: "shrink-0 flex flex-col gap-1.5 pt-1 border-t border-white/10"
       }, React.createElement("div", {
         className: "text-[8px] text-slate-500 font-bold text-center leading-tight"
@@ -73996,7 +73996,7 @@ function MonsterHeroGame() {
         style: {
           backgroundColor: who.accent
         }
-      }, last ? 'おわる' : '次へ'))));
+      }, last ? '終わる' : '次へ'))));
     })(), gameState === 'BATTLE' && ultimateDistanceBreakReveal != null && React.createElement(UltimateDistanceBreakReveal, {
       difficulty: difficulty,
       extremeDifficulty: extremeDifficulty,
@@ -74136,7 +74136,7 @@ function MonsterHeroGame() {
         disabled: tutorialStep <= 0,
         onClick: () => setTutorialStep(v => Math.max(0, v - 1)),
         className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]"
-      }, "もどる"), React.createElement("button", {
+      }, "戻る"), React.createElement("button", {
         onClick: () => {
           if (last) finishTutorial(true);else setTutorialStep(v => v + 1);
         },

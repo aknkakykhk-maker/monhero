@@ -53,10 +53,10 @@ function ProfileScreen({
             <div className="mb-2"><ScreenSectionLabel>はじめての設定</ScreenSectionLabel></div>
             <AssistantBubble line={step?.t||null} expression={step?.e||null} helpRef="basics/onboarding" compact/>
             <div className="grid grid-cols-2 gap-2 mt-3">
-              <button onClick={()=>onOpenNameEdit(hasName?breederName:'')} className={`min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${hasName?'bg-emerald-950/60 border-emerald-400/60 text-emerald-200':'bg-slate-900 border-indigo-400/60 text-white'}`}>{hasName?'✓ なまえ':'なまえを決める'}</button>
+              <button onClick={()=>onOpenNameEdit(hasName?breederName:'')} className={`min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${hasName?'bg-emerald-950/60 border-emerald-400/60 text-emerald-200':'bg-slate-900 border-indigo-400/60 text-white'}`}>{hasName?'✓ 名前':'名前を決める'}</button>
               <button onClick={onOpenIconPicker} className={`min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${hasIcon?'bg-emerald-950/60 border-emerald-400/60 text-emerald-200':'bg-slate-900 border-indigo-400/60 text-white'}`}>{hasIcon?'✓ アイコン':'アイコンを選ぶ'}</button>
             </div>
-            <button disabled={!ready} onClick={finishOnboarding} className="w-full mt-2 min-h-[52px] rounded-xl bg-pink-400 font-black text-sm text-black disabled:opacity-40 active:scale-[.98]">けってい！</button>
+            <button disabled={!ready} onClick={finishOnboarding} className="w-full mt-2 min-h-[52px] rounded-xl bg-pink-400 font-black text-sm text-black disabled:opacity-40 active:scale-[.98]">決定！</button>
             <div className="text-[10px] text-slate-400 text-center mt-1.5">名前もアイコンも、あとからこの画面でいつでも変えられます</div>
           </div>);
         })()}

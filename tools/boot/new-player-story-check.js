@@ -74,13 +74,13 @@ const NEWS_IDS = /^(tactics_intro|kiki_intro|momosuke_intro|beat_point_always_.*
       return list.filter((n) => n.marks.some((m) => m && text.includes(m))).map((n) => n.id);
     }, news);
 
-    // --- 助手えらび → 名前とアイコン → けってい ---
+    // --- 助手えらび → 名前とアイコン → 決定 ---
     await clickText('^確認$');
     await page.waitForTimeout(400);
     const chose = await clickText('この子にする');
     check('助手をえらべる', chose);
     await page.waitForTimeout(1200);
-    await clickText('なまえを決める');
+    await clickText('名前を決める');
     await page.waitForTimeout(600);
     await page.fill('input[type=text], input:not([type])', 'テスト');
     await clickText('^保存$');
@@ -94,7 +94,7 @@ const NEWS_IDS = /^(tactics_intro|kiki_intro|momosuke_intro|beat_point_always_.*
       if (b) b.click();
     });
     await page.waitForTimeout(800);
-    const decided = await clickText('^けってい');
+    const decided = await clickText('^決定！');
     check('名前とアイコンを決められる', decided);
     await page.waitForTimeout(1500);
 

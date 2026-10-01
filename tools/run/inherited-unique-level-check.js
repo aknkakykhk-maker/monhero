@@ -1,4 +1,4 @@
-// 継承固有技Lvの安定ID移行・並び替え・削除・重複と、総合力の回帰。
+// 継承固有技Lvの安定ID移行・並べ替え・削除・重複と、総合力の回帰。
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 const assert = require('assert');
 const fs = require('fs');
@@ -61,7 +61,7 @@ assert.strictEqual(migratedMasu.inheritedUniques.length, legacy.inheritedUniques
 assert.strictEqual(monsterPowerOf(mergeMasuIntoMon(migratedMasu)), beforePower, '移行前後で総合力を維持');
 
 const reordered = { ...migratedMasu, inheritedUniques:[migratedB, migratedA] };
-assert.deepStrictEqual(reordered.inheritedUniques.map((u, i) => resolveInheritedUniqueLevel(reordered, u, i)), [2, 5], '並び替えてもLvが移らない');
+assert.deepStrictEqual(reordered.inheritedUniques.map((u, i) => resolveInheritedUniqueLevel(reordered, u, i)), [2, 5], '並べ替えてもLvが移らない');
 const afterDelete = { ...reordered, inheritedUniques:[migratedB] };
 assert.strictEqual(resolveInheritedUniqueLevel(afterDelete, migratedB, 0), 2, '技Aの削除シミュレーション後も技BはLv2');
 
@@ -103,4 +103,4 @@ const latestResolved = api.resolveInheritedUniqueDefinition({ ...skillA, inherit
 assert.strictEqual(latestResolved.name, ALL_PLAYER_MONSTERS.Suezo.unique.name, '最新元種の技定義へ追従');
 assert.strictEqual(latestResolved.inheritedUniqueId, 'keep-id', '最新定義追従でも個体IDを維持');
 
-console.log('OK: 継承固有技Lvの安定ID移行・並び替え・削除シミュレーション・重複・総合力回帰を確認しました');
+console.log('OK: 継承固有技Lvの安定ID移行・並べ替え・削除シミュレーション・重複・総合力回帰を確認しました');
