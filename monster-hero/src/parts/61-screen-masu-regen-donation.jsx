@@ -31,11 +31,11 @@ function MasuDonationScreen({
   MONSTER_CARD_CLASS, MONSTER_CARD_STYLE, donationError, donationProcessing, donationSelectedIds,
   donationSortDir, donationSortKey, draftMonsterRoster, gold, masuMons,
   monsterRosterIds, onLeaveDonation, renderMonsterCardBody, setDonationConfirmOpen, setDonationError,
-  setDonationSelectedIds, setDonationSortDir, setDonationSortKey, unlockedMonsterIds,
+  setDonationSelectedIds, setDonationSortDir, setDonationSortKey, unlockedMonsterIds, lockedMasuIds=[],
 }) {
 
       const options=[{key:'bondXp',label:'絆経験値'},{key:'bond',label:'絆レベル'},{key:'power',label:'総合力'},{key:'name',label:'名前'},{key:'lineage',label:'血統'},{key:'newest',label:'新しい順'},{key:'active',label:'編成中'}];
-      const donationArgs={masuMons, gold, monsterRosterIds, draftMonsterRoster, unlockedMonsterIds, validBaseIds:Object.keys(ALL_PLAYER_MONSTERS), requiredCount:STARTER_MONSTER_IDS.length};
+      const donationArgs={masuMons, gold, monsterRosterIds, draftMonsterRoster, unlockedMonsterIds, validBaseIds:Object.keys(ALL_PLAYER_MONSTERS), requiredCount:STARTER_MONSTER_IDS.length, lockedIds:lockedMasuIds};
       const selectedSet=new Set(donationSelectedIds.map(String));
       const selectedResult=donationSelectedIds.length?buildMasuDonations({...donationArgs,targetIds:donationSelectedIds}):null;
       const selectedDiamonds=selectedResult?.ok?selectedResult.diamonds:donationSelectedIds.reduce((sum,id)=>sum+donationDiamondValue(masuMons.find(m=>String(m.id)===String(id))?.bondXp),0);
@@ -51,7 +51,7 @@ function MasuDonationScreen({
             {renderMonsterCardBody({masu,base,
               badge:<>{active&&<span className="absolute -top-1 -left-1 z-10 rounded-full bg-pink-600/95 px-1 text-[10px] font-black leading-4 text-white">編成中</span>}{selected&&<span className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-amber-300 font-black text-slate-950">✓</span>}</>,
               sub:<span className="flex items-center gap-0.5 text-[10px] font-black text-amber-300"><Gem size={8}/>{diamonds.toLocaleString()}</span>,
-              status:!canSelect&&!selected?<span className="text-[10px] font-black leading-tight text-red-300">編成を維持できません</span>:null})}
+              status:!canSelect&&!selected?(isMasuLocked(lockedMasuIds,masu.id)?<span className="text-[10px] font-black leading-tight text-amber-200">🔒 お気に入り</span>:<span className="text-[10px] font-black leading-tight text-red-300">編成を維持できません</span>):null})}
           </button>})}</div>}
         </div>
         <div className="shrink-0 mt-2 rounded-2xl border border-violet-400/60 bg-slate-950 px-3 py-2 shadow-xl"><div className="flex items-center justify-between mb-2 text-[10px] font-black"><span className="text-violet-200">選択数：<b className="text-white text-sm">{donationSelectedIds.length}体</b></span><span className="text-amber-300">合計 <Gem size={11} className="inline"/> {selectedDiamonds.toLocaleString()} / 虹のプシュケー ×{selectedPsyche}</span></div><button disabled={!donationSelectedIds.length||donationProcessing||!selectedResult?.ok} onClick={()=>setDonationConfirmOpen(true)} className="w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-violet-600 to-amber-600 text-sm font-black text-white active:scale-[.98] disabled:opacity-30">選んだマスモンを寄付する</button></div>

@@ -2830,9 +2830,25 @@ const normalizeHomePastureIds = (savedIds, masuMons, validBaseIds) => {
   return [...new Set(savedIds.map(String))].filter(id=>owned.has(id)).slice(0,5);
 };
 
-const buildMasuDonation = ({ masuMons, targetId, gold, monsterRosterIds, draftMonsterRoster, unlockedMonsterIds, validBaseIds, requiredCount }) => {
+// ==== マスモンのお気に入り(ロック)(2026-10-01 ユーザー指示「マスモンのロック機能がほしい。
+// お気に入りにすると売却や合体等いなくなるやつができなくなる」) ====
+// 印は新しい保存キー mh_masu_locked_v1 にマスモンIDの並びだけを持つ(mh_masu_mons には触らない。CLAUDE.md ⑦)。
+// 保存値が無い・壊れているときは「お気に入りなし」。いなくなる操作(削除・合体の副・寄付)は、
+// 画面でボタンを押せなくするだけでなく、処理そのもの(buildMasuDonation / executeMasuFusion / deleteMasuMon)でも止める。
+const MASU_LOCK_KEY = 'mh_masu_locked_v1';
+const normalizeMasuLockIds = (saved) => Array.isArray(saved)
+  ? [...new Set(saved.filter(v => (typeof v === 'string' && v) || Number.isFinite(v)).map(String))]
+  : [];
+const isMasuLocked = (lockedIds, masuId) => Array.isArray(lockedIds) && masuId != null && lockedIds.includes(String(masuId));
+const toggleMasuLockIds = (lockedIds, masuId) => {
+  const ids = normalizeMasuLockIds(lockedIds), id = String(masuId);
+  return ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id];
+};
+
+const buildMasuDonation = ({ masuMons, targetId, gold, monsterRosterIds, draftMonsterRoster, unlockedMonsterIds, validBaseIds, requiredCount, lockedIds = [] }) => {
   const donated = masuMons.find(m => String(m.id) === String(targetId));
   if (!donated) return { ok: false, reason: '対象のマスモンはすでに所持していません。' };
+  if (isMasuLocked(lockedIds, targetId)) return { ok: false, reason: `「${donated.name}」はお気に入り(🔒)なので寄付できません。お気に入りを外してから寄付してください。` };
   const nextMasuMons = masuMons.filter(m => String(m.id) !== String(targetId));
   const active = repairRosterAfterDonation(monsterRosterIds, donated, nextMasuMons, unlockedMonsterIds, validBaseIds, requiredCount);
   if (!active.ok) return active;

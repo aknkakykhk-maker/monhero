@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6b813b1792516e94
+// source-sha256: 64d967243bdcbddf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 20:36";
+const BUILD_DATE = "2026-10-01 21:28";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -4086,6 +4086,14 @@ const normalizeHomePastureIds = (savedIds, masuMons, validBaseIds) => {
   const owned = new Set(ownedIds);
   return [...new Set(savedIds.map(String))].filter(id => owned.has(id)).slice(0, 5);
 };
+const MASU_LOCK_KEY = 'mh_masu_locked_v1';
+const normalizeMasuLockIds = saved => Array.isArray(saved) ? [...new Set(saved.filter(v => typeof v === 'string' && v || Number.isFinite(v)).map(String))] : [];
+const isMasuLocked = (lockedIds, masuId) => Array.isArray(lockedIds) && masuId != null && lockedIds.includes(String(masuId));
+const toggleMasuLockIds = (lockedIds, masuId) => {
+  const ids = normalizeMasuLockIds(lockedIds),
+    id = String(masuId);
+  return ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id];
+};
 const buildMasuDonation = ({
   masuMons,
   targetId,
@@ -4094,12 +4102,17 @@ const buildMasuDonation = ({
   draftMonsterRoster,
   unlockedMonsterIds,
   validBaseIds,
-  requiredCount
+  requiredCount,
+  lockedIds = []
 }) => {
   const donated = masuMons.find(m => String(m.id) === String(targetId));
   if (!donated) return {
     ok: false,
     reason: '対象のマスモンはすでに所持していません。'
+  };
+  if (isMasuLocked(lockedIds, targetId)) return {
+    ok: false,
+    reason: `「${donated.name}」はお気に入り(🔒)なので寄付できません。お気に入りを外してから寄付してください。`
   };
   const nextMasuMons = masuMons.filter(m => String(m.id) !== String(targetId));
   const active = repairRosterAfterDonation(monsterRosterIds, donated, nextMasuMons, unlockedMonsterIds, validBaseIds, requiredCount);
@@ -37155,7 +37168,8 @@ function MasuDonationScreen({
   setDonationSelectedIds,
   setDonationSortDir,
   setDonationSortKey,
-  unlockedMonsterIds
+  unlockedMonsterIds,
+  lockedMasuIds = []
 }) {
   const options = [{
     key: 'bondXp',
@@ -37186,7 +37200,8 @@ function MasuDonationScreen({
     draftMonsterRoster,
     unlockedMonsterIds,
     validBaseIds: Object.keys(ALL_PLAYER_MONSTERS),
-    requiredCount: STARTER_MONSTER_IDS.length
+    requiredCount: STARTER_MONSTER_IDS.length,
+    lockedIds: lockedMasuIds
   };
   const selectedSet = new Set(donationSelectedIds.map(String));
   const selectedResult = donationSelectedIds.length ? buildMasuDonations({
@@ -37278,7 +37293,9 @@ function MasuDonationScreen({
       }, React.createElement(Gem, {
         size: 8
       }), diamonds.toLocaleString()),
-      status: !canSelect && !selected ? React.createElement("span", {
+      status: !canSelect && !selected ? isMasuLocked(lockedMasuIds, masu.id) ? React.createElement("span", {
+        className: "text-[10px] font-black leading-tight text-amber-200"
+      }, "🔒 お気に入り") : React.createElement("span", {
         className: "text-[10px] font-black leading-tight text-red-300"
       }, "編成を維持できません") : null
     }));
@@ -40176,7 +40193,8 @@ function MasuFusionScreen({
   setFusionStep,
   setFusionSubId,
   setFusionSubIds,
-  setMasuMonDetail
+  setMasuMonDetail,
+  lockedMasuIds = []
 }) {
   const closeFusion = onClose;
   const fusedBorder = masu => (masu.fusionHistory || []).length > 0 ? 'border-amber-400 ring-1 ring-amber-400' : 'border-violet-400/40';
@@ -40291,11 +40309,14 @@ function MasuFusionScreen({
     }
     const candidates = sortMasuList(masuMons.filter(m => m.id !== fusionMainId));
     const candidateIds = new Set(candidates.map(m => m.id));
-    const selectedSubs = fusionSubIds.map(id => getMasuMon(id)).filter(m => m && candidateIds.has(m.id));
+    const selectedSubs = fusionSubIds.map(id => getMasuMon(id)).filter(m => m && candidateIds.has(m.id) && !isMasuLocked(lockedMasuIds, m.id));
     const totalSubXp = selectedSubs.reduce((sum, sub) => sum + cappedBondXp(sub), 0);
     const plannedXp = cappedBondXp(main, totalSubXp);
     const plannedLevel = bondLevelInfo(plannedXp).level;
-    const toggleFusionSub = id => setFusionSubIds(prev => prev.includes(id) ? prev.filter(selectedId => selectedId !== id) : [...prev, id]);
+    const toggleFusionSub = id => {
+      if (isMasuLocked(lockedMasuIds, id)) return;
+      setFusionSubIds(prev => prev.includes(id) ? prev.filter(selectedId => selectedId !== id) : [...prev, id]);
+    };
     const continueWithFusionSubs = () => {
       if (selectedSubs.length === 0) return;
       setFusionSubId(selectedSubs[0].id);
@@ -40365,20 +40386,26 @@ function MasuFusionScreen({
     }, candidates.map(masu => {
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       if (!base) return null;
-      const selected = fusionSubIds.includes(masu.id);
+      const locked = isMasuLocked(lockedMasuIds, masu.id);
+      const selected = !locked && fusionSubIds.includes(masu.id);
       return React.createElement("div", {
         key: masu.id,
         className: "relative"
       }, React.createElement("button", {
         "aria-pressed": selected,
+        disabled: locked,
+        "data-fusion-sub-locked": locked ? '1' : undefined,
         onClick: () => toggleFusionSub(masu.id),
         style: MONSTER_CARD_STYLE,
-        className: `${MONSTER_CARD_CLASS} relative ${selected ? 'border-violet-300 bg-violet-900/70 ring-2 ring-violet-400/70' : 'border-violet-900/50 bg-slate-900'}`
+        className: `${MONSTER_CARD_CLASS} relative ${locked ? 'border-white/10 bg-slate-900/50 opacity-60' : selected ? 'border-violet-300 bg-violet-900/70 ring-2 ring-violet-400/70' : 'border-violet-900/50 bg-slate-900'}`
       }, renderMonsterCardBody({
         masu,
         base,
         mon: null,
-        sub: null
+        sub: null,
+        status: locked ? React.createElement("span", {
+          className: "text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/25 border border-amber-300/50 text-amber-100"
+        }, "🔒 お気に入り") : null
       }), selected && React.createElement("div", {
         className: "absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-violet-500 border-2 border-white flex items-center justify-center shadow-lg"
       }, React.createElement(Check, {
@@ -50634,6 +50661,12 @@ function MonsterHeroGame() {
   const goldRef = useRef(gold);
   goldRef.current = gold;
   const [masuMons, setMasuMons] = useState([]);
+  const [lockedMasuIds, setLockedMasuIds] = useState([]);
+  const toggleMasuLock = masuId => setLockedMasuIds(prev => {
+    const next = toggleMasuLockIds(prev, masuId);
+    storeSet(MASU_LOCK_KEY, next, false);
+    return next;
+  });
   const rhythmMonsterSlots = resolveRhythmMonsterSlots(rhythmMonsterSlotIds, masuMons);
   const rhythmMonsterSlotIdsInUse = rhythmMonsterSlots.map(masu => String(masu.id));
   const rhythmMonsterNoteEntries = rhythmMonsterSlots.map(masu => {
@@ -51258,7 +51291,12 @@ function MonsterHeroGame() {
       className: "w-full h-full object-cover"
     }) : React.createElement("div", {
       className: "w-full h-full flex items-center justify-center text-2xl"
-    }, base.emoji)), masu && (masu.distAptPoints || 0) > 0 && React.createElement("span", {
+    }, base.emoji)), masu && isMasuLocked(lockedMasuIds, masu.id) && React.createElement("span", {
+      "data-masu-locked": true,
+      "aria-label": "お気に入り(削除・合体・寄付できません)",
+      title: "お気に入り",
+      className: "absolute -left-1.5 -top-1 z-10 flex h-[17px] w-[17px] items-center justify-center rounded-full border border-amber-200/70 bg-slate-950 text-[10px] leading-none shadow"
+    }, "🔒"), masu && (masu.distAptPoints || 0) > 0 && React.createElement("span", {
       "aria-label": `ふり分けできる強化ポイント ${masu.distAptPoints}`,
       className: "absolute -left-1.5 -bottom-1 z-10 rounded-full border border-amber-200/60 bg-amber-400 px-1 text-[10px] font-black leading-[15px] text-slate-950 shadow",
       style: {
@@ -54323,6 +54361,7 @@ function MonsterHeroGame() {
         await storeSet('mh_masu_baseline_relative_migrated_v1', true, false);
       }
       setMasuMons(savedMasuMons);
+      setLockedMasuIds(normalizeMasuLockIds(await storeGet(MASU_LOCK_KEY, [], false)));
       const savedPastureIds = await storeGet('mh_home_pasture_ids', null, false);
       const normalizedPastureIds = normalizeHomePastureIds(savedPastureIds, savedMasuMons, new Set(Object.keys(ALL_PLAYER_MONSTERS)));
       setHomePastureIds(normalizedPastureIds);
@@ -56920,6 +56959,7 @@ function MonsterHeroGame() {
     });
   };
   const deleteMasuMon = masuId => {
+    if (isMasuLocked(lockedMasuIds, masuId)) return;
     setMasuMons(prev => {
       const next = prev.filter(m => m.id !== masuId);
       storeSet('mh_masu_mons', next, false);
@@ -56935,6 +56975,7 @@ function MonsterHeroGame() {
     const main = snapshot.find(m => m.id === fusionMainId);
     const subs = requestedSubIds.map(id => snapshot.find(m => m.id === id));
     if (!main || requestedSubIds.length === 0 || uniqueSubIds.size !== requestedSubIds.length || uniqueSubIds.has(fusionMainId) || subs.some(sub => !sub)) return null;
+    if (requestedSubIds.some(id => isMasuLocked(lockedMasuIds, id))) return null;
     fusionProcessingRef.current = true;
     const mainLvl = masuBondLevelInfo(main);
     const totalGainedXp = subs.reduce((sum, sub) => sum + cappedBondXp(sub), 0);
@@ -57763,7 +57804,8 @@ function MonsterHeroGame() {
         draftMonsterRoster,
         unlockedMonsterIds,
         validBaseIds: Object.keys(ALL_PLAYER_MONSTERS),
-        requiredCount: STARTER_MONSTER_IDS.length
+        requiredCount: STARTER_MONSTER_IDS.length,
+        lockedIds: lockedMasuIds
       });
       if (!result.ok) {
         setDonationError(result.reason);
@@ -64575,7 +64617,18 @@ function MonsterHeroGame() {
       className: "text-[17px] font-black text-white truncate leading-tight"
     }, mon.name), React.createElement("div", {
       className: `text-[10px] font-bold ${masu ? 'text-pink-400' : 'text-indigo-400'} truncate`
-    }, masu ? `元：${base.name}` : 'ベースモン')), onClose && React.createElement("button", {
+    }, masu ? `元：${base.name}` : 'ベースモン')), masu && onRename && (() => {
+      const locked = isMasuLocked(lockedMasuIds, masu.id);
+      return React.createElement("button", {
+        type: "button",
+        "data-masu-lock-quick": locked ? 'on' : 'off',
+        "aria-pressed": locked,
+        onClick: () => toggleMasuLock(masu.id),
+        "aria-label": locked ? 'お気に入りを外す' : 'お気に入りにする(削除・合体・寄付を防ぐ)',
+        title: locked ? 'お気に入り中' : 'お気に入りにする',
+        className: `min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full border text-[15px] leading-none active:scale-90 shrink-0 ${locked ? 'border-amber-300/70 bg-amber-500/20' : 'border-white/15 bg-white/5 opacity-70'}`
+      }, locked ? '🔒' : '🔓');
+    })(), onClose && React.createElement("button", {
       onClick: onClose,
       "aria-label": "閉じる",
       className: "p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"
@@ -66991,6 +67044,7 @@ function MonsterHeroGame() {
       setReincarnateSkillKey: setReincarnateSkillKey,
       sortMonsterEntries: sortMonsterEntries
     }), gameState === 'MASU_DONATION' && React.createElement(MasuDonationScreen, {
+      lockedMasuIds: lockedMasuIds,
       MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
       MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
       donationError: donationError,
@@ -72163,6 +72217,7 @@ function MonsterHeroGame() {
       onBack: () => setGameState('MB_MANAGEMENT'),
       onOpenDetail: setMasuMonDetail
     }), gameState === 'MASU_FUSION' && React.createElement(MasuFusionScreen, {
+      lockedMasuIds: lockedMasuIds,
       MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
       MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
       continueFusionFlow: continueFusionFlow,
@@ -72692,8 +72747,19 @@ function MonsterHeroGame() {
           className: "text-[10px] text-slate-500 font-bold text-center px-2"
         }, inRoster ? '現在、編成に入っています' : '編成画面で選ぶと、次の周回でこのマスモンを使えます'), React.createElement("div", {
           className: "text-[10px] text-teal-400/80 font-bold text-center px-2"
-        }, "絆ポイントリセットの書は「アイテム」から使用できます"), React.createElement("button", {
+        }, "絆ポイントリセットの書は「アイテム」から使用できます"), (() => {
+          const locked = isMasuLocked(lockedMasuIds, masu.id);
+          return React.createElement("button", {
+            type: "button",
+            "data-masu-lock-toggle": locked ? 'on' : 'off',
+            "aria-pressed": locked,
+            onClick: () => toggleMasuLock(masu.id),
+            className: `w-full min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${locked ? 'border-amber-300/70 bg-amber-500/20 text-amber-100' : 'border-white/15 bg-slate-900 text-slate-300'}`
+          }, locked ? '🔒 お気に入り中（削除・合体・寄付できません）' : '🔓 お気に入りにする（削除・合体・寄付を防ぐ）');
+        })(), React.createElement("button", {
+          disabled: isMasuLocked(lockedMasuIds, masu.id),
           onClick: async () => {
+            if (isMasuLocked(lockedMasuIds, masu.id)) return;
             if (await askConfirm({
               title: `「${masu.name}」を削除しますか？`,
               message: 'この操作は取り消せません。',
@@ -72704,8 +72770,8 @@ function MonsterHeroGame() {
               setMasuMonDetail(null);
             }
           },
-          className: "w-full min-h-[40px] text-[10px] font-black text-red-300 bg-red-950/40 border border-red-500/30 rounded-xl active:scale-95"
-        }, "このマスモンを削除する")),
+          className: "w-full min-h-[40px] text-[10px] font-black text-red-300 bg-red-950/40 border border-red-500/30 rounded-xl active:scale-95 disabled:opacity-30"
+        }, isMasuLocked(lockedMasuIds, masu.id) ? 'お気に入りのため削除できません' : 'このマスモンを削除する')),
         footer: React.createElement("div", {
           className: "w-full rounded-2xl border border-white/10 bg-black/30 p-2 shrink-0"
         }, React.createElement("div", {

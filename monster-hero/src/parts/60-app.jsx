@@ -1345,6 +1345,13 @@ function MonsterHeroGame() {
   // { id, baseId(元のモンスター種id), name, bondXp, distAptPoints(未使用の強化ポイント),
   //   distApt:[g0,g1,g2,g3](このマスモン専用の間合い適性), statPoints:{hp,atk,def,guts}, color(染色もどきで変えた色id、無ければnull), createdAt }
   const [masuMons, setMasuMons] = useState([]);
+  // マスモンのお気に入り(ロック)。IDの並び(mh_masu_locked_v1)。お気に入りの子は削除・合体の副・寄付ができない
+  const [lockedMasuIds, setLockedMasuIds] = useState([]);
+  const toggleMasuLock = (masuId) => setLockedMasuIds(prev => {
+    const next = toggleMasuLockIds(prev, masuId);
+    storeSet(MASU_LOCK_KEY, next, false);
+    return next;
+  });
   // モンスターノーツ用に設定したマスモンを、保存してあるIDの並びから解決する(§3.2)。
   // 手放したマスモンと、同じベースモンスターの重複はここで落とす。保存値は書き換えない。
   const rhythmMonsterSlots = resolveRhythmMonsterSlots(rhythmMonsterSlotIds, masuMons);
@@ -1980,6 +1987,11 @@ function MonsterHeroGame() {
               ? <img src={iconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>
               : <div className="w-full h-full flex items-center justify-center text-2xl">{base.emoji}</div>)}
         </div>
+        {/* お気に入り(ロック)の印。左上だけ空いている(左下=強化P・右下=超越P・右上=マスモンの札・下の中央=転生★) */}
+        {masu&&isMasuLocked(lockedMasuIds, masu.id)&&(
+          <span data-masu-locked aria-label="お気に入り(削除・合体・寄付できません)" title="お気に入り"
+            className="absolute -left-1.5 -top-1 z-10 flex h-[17px] w-[17px] items-center justify-center rounded-full border border-amber-200/70 bg-slate-950 text-[10px] leading-none shadow">🔒</span>
+        )}
         {/* ふり分けできる強化ポイント。絆Lvと同じ行に並べると、3桁になった個体で
             行が2段になり、一覧に並ぶカードが1枚ぶん背高くなっていた。
             置き場所は**左下**。右上は「マスモン」の札(13312)と超越バッジ、
@@ -5061,6 +5073,7 @@ function MonsterHeroGame() {
         await storeSet('mh_masu_baseline_relative_migrated_v1', true, false);
       }
       setMasuMons(savedMasuMons);
+      setLockedMasuIds(normalizeMasuLockIds(await storeGet(MASU_LOCK_KEY, [], false)));
       // 放牧設定導入前のセーブは、従来どおり所持マスモン1体を初期表示にして互換性を保つ。
       // 保存済みIDは重複・削除済み個体・表示不能な個体を取り除き、最大5体に制限する。
       const savedPastureIds = await storeGet('mh_home_pasture_ids', null, false);
@@ -7124,6 +7137,7 @@ function MonsterHeroGame() {
   };
   // マスモンを削除する。編成に入っていた場合はその枠も取り除く
   const deleteMasuMon = (masuId) => {
+    if (isMasuLocked(lockedMasuIds, masuId)) return; // お気に入りは消さない(ボタンも押せないが、念のため処理でも止める)
     setMasuMons(prev => {
       const next = prev.filter(m => m.id !== masuId);
       storeSet('mh_masu_mons', next, false);
@@ -7146,6 +7160,8 @@ function MonsterHeroGame() {
     const subs = requestedSubIds.map(id=>snapshot.find(m=>m.id===id));
     if (!main || requestedSubIds.length===0 || uniqueSubIds.size!==requestedSubIds.length
       || uniqueSubIds.has(fusionMainId) || subs.some(sub=>!sub)) return null;
+    // お気に入り(🔒)の子は副にできない(合体すると副はいなくなるため)。画面でも選べないが、処理でも止める
+    if (requestedSubIds.some(id=>isMasuLocked(lockedMasuIds, id))) return null;
     fusionProcessingRef.current = true;
     const mainLvl = masuBondLevelInfo(main);
     const totalGainedXp = subs.reduce((sum, sub)=>sum+cappedBondXp(sub), 0);
@@ -7678,6 +7694,7 @@ function MonsterHeroGame() {
         masuMons: masuMonsRef.current, targetIds: donationSelectedIds, gold,
         monsterRosterIds, draftMonsterRoster, unlockedMonsterIds,
         validBaseIds: Object.keys(ALL_PLAYER_MONSTERS), requiredCount: STARTER_MONSTER_IDS.length,
+        lockedIds: lockedMasuIds,
       });
       if (!result.ok) { setDonationError(result.reason); setDonationSelectedIds([]); setDonationConfirmOpen(false); return; }
       masuMonsRef.current = result.nextMasuMons;
@@ -13310,6 +13327,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               )}
               <div className={`text-[10px] font-bold ${masu ? 'text-pink-400' : 'text-indigo-400'} truncate`}>{masu ? `元：${base.name}` : 'ベースモン'}</div>
             </div>
+            {/* お気に入り(ロック)の切り替え。名前を変えられる画面(=自分のマスモン)でだけ出す。詳細の下の大きなボタンと同じ */}
+            {masu && onRename && (()=>{const locked=isMasuLocked(lockedMasuIds, masu.id);return <button type="button" data-masu-lock-quick={locked?'on':'off'} aria-pressed={locked} onClick={()=>toggleMasuLock(masu.id)}
+              aria-label={locked?'お気に入りを外す':'お気に入りにする(削除・合体・寄付を防ぐ)'} title={locked?'お気に入り中':'お気に入りにする'}
+              className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full border text-[15px] leading-none active:scale-90 shrink-0 ${locked?'border-amber-300/70 bg-amber-500/20':'border-white/15 bg-white/5 opacity-70'}`}>{locked?'🔒':'🔓'}</button>;})()}
             {onClose && <button onClick={onClose} aria-label="閉じる" className="p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"><X size={16}/></button>}
           </div>
           {renderPowerBadge(power, { note: powerNote })}
@@ -14286,6 +14307,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='MASU_DONATION'&&(
           <MasuDonationScreen
+            lockedMasuIds={lockedMasuIds}
             MONSTER_CARD_CLASS={MONSTER_CARD_CLASS}
             MONSTER_CARD_STYLE={MONSTER_CARD_STYLE}
             donationError={donationError}
@@ -16456,6 +16478,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* 合体: マスモン同士を合体させ、副の絆経験値を主に受け継ぐ。主選択→副選択→確認→演出→結果の5段階 */}
         {gameState==='MASU_FUSION'&&(
           <MasuFusionScreen
+            lockedMasuIds={lockedMasuIds}
             MONSTER_CARD_CLASS={MONSTER_CARD_CLASS} MONSTER_CARD_STYLE={MONSTER_CARD_STYLE}
             continueFusionFlow={continueFusionFlow} executeMasuFusion={executeMasuFusion}
             fusionAnimPhase={fusionAnimPhase} fusionInheritSoulRank={fusionInheritSoulRank}
@@ -16764,7 +16787,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   : null)}
               <div className="text-[10px] text-slate-500 font-bold text-center px-2">{inRoster?'現在、編成に入っています':'編成画面で選ぶと、次の周回でこのマスモンを使えます'}</div>
               <div className="text-[10px] text-teal-400/80 font-bold text-center px-2">絆ポイントリセットの書は「アイテム」から使用できます</div>
-              <button onClick={async()=>{ if(await askConfirm({ title:`「${masu.name}」を削除しますか？`, message:'この操作は取り消せません。', confirmLabel:'削除する', danger:true })){ deleteMasuMon(masu.id); setMasuMonDetail(null); } }} className="w-full min-h-[40px] text-[10px] font-black text-red-300 bg-red-950/40 border border-red-500/30 rounded-xl active:scale-95">このマスモンを削除する</button>
+              {/* お気に入り(ロック)(2026-10-01)。お気に入りの子は削除・合体の副・寄付ができない */}
+              {(()=>{const locked=isMasuLocked(lockedMasuIds, masu.id);return <button type="button" data-masu-lock-toggle={locked?'on':'off'} aria-pressed={locked} onClick={()=>toggleMasuLock(masu.id)}
+                className={`w-full min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${locked?'border-amber-300/70 bg-amber-500/20 text-amber-100':'border-white/15 bg-slate-900 text-slate-300'}`}>
+                {locked?'🔒 お気に入り中（削除・合体・寄付できません）':'🔓 お気に入りにする（削除・合体・寄付を防ぐ）'}</button>;})()}
+              <button disabled={isMasuLocked(lockedMasuIds, masu.id)} onClick={async()=>{ if(isMasuLocked(lockedMasuIds, masu.id)) return; if(await askConfirm({ title:`「${masu.name}」を削除しますか？`, message:'この操作は取り消せません。', confirmLabel:'削除する', danger:true })){ deleteMasuMon(masu.id); setMasuMonDetail(null); } }} className="w-full min-h-[40px] text-[10px] font-black text-red-300 bg-red-950/40 border border-red-500/30 rounded-xl active:scale-95 disabled:opacity-30">{isMasuLocked(lockedMasuIds, masu.id)?'お気に入りのため削除できません':'このマスモンを削除する'}</button>
             </>),
             footer: (
               <div className="w-full rounded-2xl border border-white/10 bg-black/30 p-2 shrink-0">
