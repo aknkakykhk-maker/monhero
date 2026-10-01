@@ -28,10 +28,10 @@ const check = (name, ok, detail = '') => {
 // 数を選べるのは type:'item' 全体(円盤石・アシスト・アイコンは1つずつ)。窓は画面(BreederMarketScreen)が持ち、
 // 本体の buyMarketItem は買えたら true を返す。窓はそれを見て閉じる
 check('価格タップで個数選択シートを開く対象が type:\'item\' 全体になっている',
-  source.includes("onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count) })}")
+  source.includes("onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),")
   && source.includes("onBuy={buyMarketItem}"));
 check('購入できたら窓を閉じる(どの品でも)',
-  source.includes("if(result===true||result?.ok) setSheet(null);")
+  /if\(result===true\|\|result\?\.ok\)\{[\s\S]{0,300}?setSheet\(null\);/.test(source)
   && /const buyMarketItem = async[\s\S]*?saveMissionProgress\('market'\);\n    return true;/.test(source));
 
 // --- ② 個数選択シートの通貨切り替え ---

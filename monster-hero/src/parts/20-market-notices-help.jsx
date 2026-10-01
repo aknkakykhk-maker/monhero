@@ -320,6 +320,38 @@ const MarketItemDetail = ({ item, owned=0, grantText='', onClose }) => {
 // 購入・交換の確認。どの通貨で買う品も、この1枚を通してから買う。
 // stackable(消耗品・ビートPの品)だけ数を選べる。円盤石・アシスト・アイコン・証の交換は1つずつ。
 // grantAmount/grantUnit は「1回で何を受け取るか」(ビートP交換所)。無い品は出さない
+// 円盤石を買って新しいモンスターを手に入れたときの「円盤石から再生」の演出(2026-10-01 ユーザー指示
+// 「円盤石（モンスター）を買ったときに初回だけ円盤石から再生する演出がほしい」)。
+// 円盤石は1体につき1回しか買えないので、そのモンスターを初めて手に入れたときにだけ出る。
+//   買った円盤石の絵(キャラクター入り)が光りながら回る → 割れて光があふれる → 立ち絵が浮かぶ → 名前
+// 見た目と動きは 70-bootstrap.jsx の .mh-disc-rebirth-*。動きはすべて CSS で、動き続けるものは後ろの光だけ。
+// 途中で押すと最後の画面へ飛ぶ(done)。動きを減らす設定の端末は最初から最後の画面を出す(CSS 側)。
+const DISC_REBIRTH_MS = 2600;
+const DISC_REBIRTH_SPARKS = 12;
+const DiscRebirthFx = ({ mon, discIcon, onClose }) => {
+  const [done, setDone] = React.useState(false);
+  React.useEffect(() => { const timer = setTimeout(() => setDone(true), DISC_REBIRTH_MS); return () => clearTimeout(timer); }, []);
+  if (!mon) return null;
+  return (
+    <div data-disc-rebirth={mon.id} className={`mh-disc-rebirth${done ? ' is-done' : ''}`} role="dialog" aria-modal="true" aria-label={`${mon.name}が円盤石から生まれました`}
+      onClick={() => { if (!done) setDone(true); }}>
+      <span aria-hidden="true" className="mh-disc-rebirth-rays"/>
+      <span aria-hidden="true" className="mh-disc-rebirth-flash"/>
+      {discIcon && <img aria-hidden="true" src={discIcon} alt="" className="mh-disc-rebirth-disc"/>}
+      <span aria-hidden="true" className="mh-disc-rebirth-sparks">
+        {Array.from({ length: DISC_REBIRTH_SPARKS }).map((_, i) => <i key={i} style={{'--a': `${(360 / DISC_REBIRTH_SPARKS) * i}deg`, '--d': `${(i % 3) * 60}ms`}}/>)}
+      </span>
+      <div className="mh-disc-rebirth-body">
+        <span className="mh-disc-rebirth-plate">円盤石から再生</span>
+        <div className="mh-disc-rebirth-art">{mon.imgUrl ? <img src={mon.imgUrl} alt={mon.name}/> : <span className="text-7xl">{mon.emoji}</span>}</div>
+        <h3 className="mh-disc-rebirth-name">{mon.name}<span>が生まれた！</span></h3>
+        <p className="mh-disc-rebirth-note">新しいモンスターが仲間になりました。M/B管理の編成に入れると、バトルで使えます。</p>
+        <div className="mh-disc-rebirth-close" onClick={e => e.stopPropagation()}><ModalCloseButton onClick={onClose}/></div>
+      </div>
+    </div>
+  );
+};
+
 const MarketPurchaseSheet = ({ item, balance, stackable=false, countUnit='個', grantAmount=0, grantUnit='', quantity=1, onQuantity, pending=false, error='', onConfirm, onCancel }) => {
   const meta=MARKET_CURRENCY_META[marketCurrencyOf(item)];
   const unitCost=Math.max(0, Math.floor(Number(item.cost)||0));

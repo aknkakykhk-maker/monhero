@@ -31,7 +31,7 @@ const source = require('fs').readFileSync(require('path').join(__dirname, '../..
 // 2026-09-28「ショップの作りを全部統一して」で、詳細と個数選択はマーケット共通の部品
 // (MarketItemDetail / MarketPurchaseSheet)になった。通貨の呼び名は MARKET_CURRENCY_META が1か所で決める
 assert(api.marketPriceText(fruit) === '1,000プシュケー' && api.marketPriceText(diamondItem) === '1,000ダイヤ', '詳細は商品通貨に応じてプシュケー・ダイヤを表示する');
-assert(source.includes("onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count) })}") && source.includes('const [sheetQuantity,setSheetQuantity]=useState(1);') && source.includes("psyche:         Object.freeze({ have:'虹のプシュケー', label:'虹のプシュケー'") && source.includes('{meta.label}が足りません'), '価格タップは購入せず個数選択を初期値1で開き、不足を表示する');
+assert(source.includes("onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),") && source.includes('const [sheetQuantity,setSheetQuantity]=useState(1);') && source.includes("psyche:         Object.freeze({ have:'虹のプシュケー', label:'虹のプシュケー'") && source.includes('{meta.label}が足りません'), '価格タップは購入せず個数選択を初期値1で開き、不足を表示する');
 assert(source.includes('MAX（{safeMax.toLocaleString()}{unit}）') && source.includes('onClick={()=>setCount(count-10)}') && source.includes('onClick={()=>setCount(count+10)}'), '個数選択に±1・±10・MAXを用意する');
 // 「🌈 プシュケー」「×1,000」の2行表示は、カード内で折り返されて窮屈だったため1行表示へ改めた。
 // ダイヤ購入(amber)と紛れないよう、プシュケー購入だけボタン色を変えて区別する。
