@@ -59,7 +59,7 @@ const waitLevel = async (page, want, ms) => {
   // ---------- 1回目: ふだんの設定(自動で下げる)・性能計測ON ----------
   let run;
   try {
-    run = await openTacticsBattle({ root: ROOT, port: PORT, storage: { mh_battle_perf_v1: '1' } });
+    run = await openTacticsBattle({ root: ROOT, port: PORT, storage: { mh_battle_perf_v1: '1', mh_battle_fx_v1: { autoLoad: 'ON' }, mh_battle_fx_autoload_default_off_v1: true } });
   } catch (e) {
     check('タクティクスのバトルを開けた', false, String(e).slice(0, 160));
     console.log(`\n${failed}件のNGがあります`); process.exit(1);

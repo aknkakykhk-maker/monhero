@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a8748e064336c4f8
+// generated-sha256: b6d421a6da93126a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -120,8 +120,10 @@ const normalizeBattleFxSettings = (value) => {
     restPause: v.restPause === 'ON' ? 'ON' : 'OFF',
     // 重いときに画面の軽さを自動で下げる(2026-09-28 ユーザー指示「モンビーみたいに重さチェックやその他点検ツールを取り入れて
     // 軽くて見た目が良く出来る仕組みを作って」)。モンヒロビートの「重いときは演出を自動で控えめに」と同じ考え方。
-    // ★足す前に保存した人(autoLoad が無い)は ON。下げたぶんは保存せず、アプリを開き直すと元の軽さに戻る
-    autoLoad: v.autoLoad === 'OFF' ? 'OFF' : 'ON',
+    // ★既定は OFF(下げない)(2026-10-01 ユーザー指示「デフォルトはオフにして」)。自動で下げると敵の待機の動きなどが止まり、
+    //   「動いていない」ように見えていたため、使いたい人だけ ON にする。すでに ON で保存していた人は、60-app.jsx の一度きりの移行で OFF にする
+    //   下げたぶんは保存せず、アプリを開き直すと元の軽さに戻る
+    autoLoad: v.autoLoad === 'ON' ? 'ON' : 'OFF',
     // ボスの必殺技ムービー(2026-09-25 ユーザー指示「設定でオンオフもつけて」)。
     // ★足す前に保存した人(specialMovie が無い)は ON(流す)で始まる
     specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON',
@@ -158,7 +160,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-01 10:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-01 11:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -35219,7 +35221,18 @@ function MonsterHeroGame() {
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
-      setBattleFxSettingsState(normalizeBattleFxSettings(await storeGet(BATTLE_FX_SETTINGS_KEY, null, false)));
+      const rawBattleFx = await storeGet(BATTLE_FX_SETTINGS_KEY, null, false);
+      let savedBattleFx = normalizeBattleFxSettings(rawBattleFx);
+      // 「重いときは自動で軽く」の既定を OFF にした(2026-10-01)。以前の既定(ON)のまま保存されていた人を、一度だけ OFF にする。
+      // 専用フラグで二重に適用しない。ほかの項目はそのまま。あとから自分で ON にした選択は、このフラグがあるので消さない
+      if (!(await storeGet('mh_battle_fx_autoload_default_off_v1', false, false))) {
+        if (rawBattleFx && typeof rawBattleFx === 'object' && rawBattleFx.autoLoad === 'ON') {
+          savedBattleFx = { ...savedBattleFx, autoLoad: 'OFF' };
+          await storeSet(BATTLE_FX_SETTINGS_KEY, savedBattleFx, false);
+        }
+        await storeSet('mh_battle_fx_autoload_default_off_v1', true, false);
+      }
+      setBattleFxSettingsState(savedBattleFx);
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);

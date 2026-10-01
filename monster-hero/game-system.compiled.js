@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 123aad0280c6d0f8
+// source-sha256: 2da3efe006302262
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -152,7 +152,7 @@ const normalizeBattleFxSettings = value => {
     shake: v.shake === 'OFF' ? 'OFF' : 'ON',
     load: BATTLE_FX_LOADS.includes(v.load) ? v.load : 'RICH',
     restPause: v.restPause === 'ON' ? 'ON' : 'OFF',
-    autoLoad: v.autoLoad === 'OFF' ? 'OFF' : 'ON',
+    autoLoad: v.autoLoad === 'ON' ? 'ON' : 'OFF',
     specialMovie: v.specialMovie === 'OFF' ? 'OFF' : 'ON'
   };
 };
@@ -256,7 +256,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-01 10:00";
+const BUILD_DATE = "2026-10-01 11:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -52890,7 +52890,19 @@ function MonsterHeroGame() {
       setBattleSpeed(savedBattleSpeed);
       setUpdateNoticeStyleState(normalizeUpdateNoticeStyle(await storeGet(UPDATE_NOTICE_STYLE_KEY, 'FULL', false)));
       setBattleScreenStyleState(normalizeBattleScreenStyle(await storeGet(BATTLE_SCREEN_STYLE_KEY, 'TACTICS_NEW', false)));
-      setBattleFxSettingsState(normalizeBattleFxSettings(await storeGet(BATTLE_FX_SETTINGS_KEY, null, false)));
+      const rawBattleFx = await storeGet(BATTLE_FX_SETTINGS_KEY, null, false);
+      let savedBattleFx = normalizeBattleFxSettings(rawBattleFx);
+      if (!(await storeGet('mh_battle_fx_autoload_default_off_v1', false, false))) {
+        if (rawBattleFx && typeof rawBattleFx === 'object' && rawBattleFx.autoLoad === 'ON') {
+          savedBattleFx = {
+            ...savedBattleFx,
+            autoLoad: 'OFF'
+          };
+          await storeSet(BATTLE_FX_SETTINGS_KEY, savedBattleFx, false);
+        }
+        await storeSet('mh_battle_fx_autoload_default_off_v1', true, false);
+      }
+      setBattleFxSettingsState(savedBattleFx);
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
