@@ -1,15 +1,9 @@
-# 定期メンテナンス点検 2026-10-01 10:21 JST
+# 定期メンテナンス点検 2026-10-01 12:36 JST
 
-点検の種類: 週次(必須+CI+文書)
+点検の種類: 週次(全領域・重い数本を除く)
 
 ## 検査
-- 合計 55 本 / OK 53 / NG 1 / TIMEOUT 0 / SKIP 1 / MISSING 0 / 67秒
-- SKIP は 1 本(playwright / canvas が無い環境では実ブラウザ検査を飛ばします)
-- ❌ NG: `help-render-check.js`
-  -   requireStack: [ '/home/user/monhero/tools/help-render-check.js' ]
-  - }
-  - 
-  - Node.js v22.22.0
+- 合計 544 本 / OK 544 / NG 0 / TIMEOUT 0 / SKIP 0 / MISSING 0 / 3904秒
 
 ## 衛生チェック
 - ℹ️ どこからも名前が出てこない画像の候補 179 枚(動的なパスは拾えないため、消す前に確認): assistant/dra_angry.PNG, assistant/dra_crying.PNG, assistant/dra_excited.PNG, assistant/dra_happy.PNG, assistant/dra_normal.PNG, assistant/dra_surprise.PNG, assistant/dra_troubled.PNG, assistant/dra_wink.PNG …
@@ -28,4 +22,4 @@
 
 ## 総合
 
-❌ 対応が要るものがあります(上の ❌)
+✅ 異常なし
