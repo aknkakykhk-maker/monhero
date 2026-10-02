@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4cf5a10c2274ba77
+// generated-sha256: 90da6a00c7b75423
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 03:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 03:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21510,6 +21510,18 @@ const friendsIdOfRankingEntry = (entry) => {
   const key = typeof entry?.identityKey === 'string' ? entry.identityKey : '';
   return key.startsWith('name:') ? '' : friendsSafeId(key);
 };
+// モンスターの「顔アイコン」(マーケットで買えるプロフィールアイコンと同じ絵)を、本番のプロフィールと同じ見え方で出すための材料。
+// 顔の専用絵が無い子は立ち絵がそのまま入っているので、マーケットの商品ごとの拡大・位置の調整(BreederIcon が id で引く)を通さないと
+// 全身に見えてしまう。マーケットの商品(type:'icon')のうち同じ絵のものを探して、その id を返す。無ければモンスターidのまま
+const friendsFaceIconOf = (baseId) => {
+  const mon = ALL_PLAYER_MONSTERS[baseId];
+  const src = mon ? (mon.faceIconUrl || mon.iconUrl) : null;
+  if (!src) return null;
+  const bare = (url) => String(url || '').split('?')[0];
+  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
+  const item = items.find((entry) => entry && entry.type === 'icon' && bare(entry.icon) === bare(src));
+  return { src, id: item ? item.id : baseId };
+};
 const friendsStatusOf = (value) => (Object.values(FRIEND_STATUS).includes(value) ? value : FRIEND_STATUS.REMOVED);
 
 // 行(サーバーの形)を、自分から見た形へ。otherId が相手
@@ -23587,10 +23599,10 @@ function ProfileScreen({
         </div>
         {onboarded&&!onboardingPreview&&friendsEnabled&&(()=>{
           const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
-          const iconUrl=base&&resolveIconUrl?resolveIconUrl(favoriteMasu.baseId):null;
+          const face=base?friendsFaceIconOf(favoriteMasu.baseId):null;
           return (
           <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]">
-            {iconUrl?<img src={iconUrl} alt="" className="h-10 w-10 shrink-0 object-contain"/>:<span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl" aria-hidden="true">💗</span>}
+            {face?<ProfileAvatar src={face.src} id={face.id} className="h-10 w-10 shrink-0"/>:<span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl" aria-hidden="true">💗</span>}
             <span className="min-w-0 flex-1 text-left">
               <small className="block text-[10px] font-black text-pink-300">好きなモンスター（フレンドに見えます）</small>
               <b className="block truncate text-[13px] font-black text-white">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b>
@@ -32175,7 +32187,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
             const monName = (id) => (id && ALL_PLAYER_MONSTERS[id] ? ALL_PLAYER_MONSTERS[id].name : '');
             const fav = sum && sum.favorite ? sum.favorite : null;
             const favBase = fav ? ALL_PLAYER_MONSTERS[fav.monsterId] : null;
-            const favIcon = favBase && resolveIconUrl ? resolveIconUrl(fav.monsterId) : null;
+            const favFace = favBase ? friendsFaceIconOf(fav.monsterId) : null;
             const stat = (label, value, sub, color) => (
               <div className="min-w-0"><dt className="text-[9px] font-bold text-slate-400">{label}</dt>
                 <dd className={`truncate text-sm font-black ${color}`}>{value}</dd>
@@ -32214,7 +32226,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               <div data-friend-favorite className={`${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`}>
                 {!favBase && <p className="text-[11px] font-bold text-slate-400">まだ選んでいません</p>}
                 {favBase && (<>
-                  {favIcon ? <img src={favIcon} alt="" className="h-14 w-14 shrink-0 object-contain"/> : <span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl">❓</span>}
+                  {favFace ? <ProfileAvatar src={favFace.src} id={favFace.id} className="h-14 w-14 shrink-0"/> : <span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl">❓</span>}
                   <div className="min-w-0 flex-1">
                     <b className="block truncate text-sm font-black text-white">{fav.name || favBase.name}</b>
                     <small className="block text-[10px] font-bold text-pink-300">絆Lv.{Number(fav.bondLevel) || '—'}{fav.power ? `　総合力 ${Number(fav.power).toLocaleString()}` : ''}</small>
@@ -47694,15 +47706,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // フレームを持たない記録・列がまだ無い環境では 'none' になり、これまでと同じ見た目になる
   // フレンド機能が公開されていて相手のIDが分かる行は、アイコンをタップするとフレンド申請の確認が出る
   // (ボタンの入れ子を避けるため span の role="button")
-  const rankingBreederIconPlain = entry => resolveIconUrl(entry?.icon)
-    ? <ProfileAvatar src={resolveIconUrl(entry.icon)} id={entry.icon} frameId={entry?.profileFrame} className="w-8 h-8 shrink-0"/>
-    : <ProfileAvatar frameId={entry?.profileFrame} className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>}/>;
-  const rankingBreederIcon = entry => (RELEASE_FLAGS.friends === true && friendsIdOfRankingEntry(entry))
-    ? <span role="button" tabIndex={0} data-friend-candidate aria-label={`${entry?.userName||'名無しのブリーダー'}さんにフレンド申請`}
+  const rankingBreederIcon = entry => {
+    const avatar = resolveIconUrl(entry?.icon)
+      ? <ProfileAvatar src={resolveIconUrl(entry.icon)} id={entry.icon} frameId={entry?.profileFrame} className="w-8 h-8 shrink-0"/>
+      : <ProfileAvatar frameId={entry?.profileFrame} className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>}/>;
+    if (!(RELEASE_FLAGS.friends === true && friendsIdOfRankingEntry(entry))) return avatar;
+    return (
+      <span role="button" tabIndex={0} data-friend-candidate aria-label={`${entry?.userName||'名無しのブリーダー'}さんにフレンド申請`}
         onClick={(event)=>{ event.stopPropagation(); openFriendCandidate(entry); }}
         onKeyDown={(event)=>{ if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); openFriendCandidate(entry); } }}
-        className="inline-flex shrink-0 cursor-pointer active:scale-90">{rankingBreederIconPlain(entry)}</span>
-    : rankingBreederIconPlain(entry);
+        className="inline-flex shrink-0 cursor-pointer active:scale-90">{avatar}</span>
+    );
+  };
   const rankingCardClass = index => `rounded-xl border ${index===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`;
   // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
   // showSpecies … 種族チャレンジの「全種族」タブから呼ばれたときだけtrue。
@@ -51282,7 +51297,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   return (
                     <button key={m.id} type="button" data-favorite-option={String(m.id)} onClick={()=>selectFavoriteMasu(m.id)} aria-pressed={chosen}
                       className={`flex items-center gap-2 min-h-[48px] rounded-xl border px-2 text-left active:scale-95 ${chosen?'border-pink-400 bg-pink-950/60':'border-slate-700 bg-slate-950/40'}`}>
-                      {resolveIconUrl(m.baseId)?<img src={resolveIconUrl(m.baseId)} alt="" className="h-9 w-9 shrink-0 object-contain"/>:<span className="h-9 w-9 shrink-0 text-center text-xl">❓</span>}
+                      {(()=>{ const face=friendsFaceIconOf(m.baseId); return face?<ProfileAvatar src={face.src} id={face.id} className="h-9 w-9 shrink-0"/>:<span className="h-9 w-9 shrink-0 text-center text-xl">❓</span>; })()}
                       <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">{base.name}</span>
                       <span className="shrink-0 text-[10px] font-black text-pink-300">絆Lv.{masuBondLevelInfo(m).level}</span>
                     </button>
