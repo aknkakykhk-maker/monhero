@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c2ca5f46a26dbb26
+// generated-sha256: da262713d9311edd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 23:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 23:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7448,6 +7448,11 @@ const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
 // モンヒロビートのマルチ(同じ曲でスコア対決)。曲えらびの「対戦」ボタンの出し入れ
 const RHYTHM_MULTI_PUBLIC_RELEASE = true;
+// フレンド機能(フレンドコード・申請・プロフィール閲覧)。docs/spec/FRIENDS.md
+// ★Supabase の friend_codes / friend_links を使うので、docs/sql/friends/FRIENDS_APPLY.sql を
+//   適用するまでは中身が出せない。適用して画面を確かめてから true にする。
+//   false のあいだは入口もヘルプ・更新履歴・助手の告知もまとめて隠す(画面そのものも開けない)。
+const FRIENDS_PUBLIC_RELEASE = false;
 // モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
 // ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
 //   docs/sql/rankings/RHYTHM_TOTAL_APPLY.sql を適用するまで中身が出せない。
@@ -7480,7 +7485,7 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, friends:FRIENDS_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -22038,6 +22043,59 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const canStart = isHost && everyoneReady && !countdown;
   const songIds = songs.map((song) => song.songId);
 
+  // ---- フレンド(公開前はすべて動かない) ----
+  // 招待は Supabase の friend_invites へ書く。受ける側は、部屋に入っていないあいだだけ数秒ごとに読む。
+  // 出すのは「承認済みのフレンド」からの3分以内の招待だけ。保存データ・ランキングには触れない
+  const friendsOn = RELEASE_FLAGS.friends === true;
+  const [friendSelfId, setFriendSelfId] = React.useState('');
+  const [roster, setRoster] = React.useState(null);        // フレンド名簿(承認済みのみ)。null=まだ読んでいない
+  const [friendInvites, setFriendInvites] = React.useState([]);
+  const [invitePanel, setInvitePanel] = React.useState(false);
+  const [invitedIds, setInvitedIds] = React.useState({});
+  const [inviteMessage, setInviteMessage] = React.useState('');
+  const loadRoster = React.useCallback(async (id) => {
+    try { setRoster(await sbFetchFriendRoster(id)); } catch (_) { setRoster([]); }
+  }, []);
+  React.useEffect(() => {
+    if (!friendsOn) return undefined;
+    let cancelled = false;
+    (async () => {
+      const id = await ensureBreederId();
+      if (cancelled || !id) return;
+      setFriendSelfId(id);
+      await loadRoster(id);
+    })();
+    return () => { cancelled = true; };
+  }, [friendsOn]);
+  const hasRoster = !!(roster && roster.length);
+  React.useEffect(() => {
+    if (!friendsOn || view || !friendSelfId || !hasRoster) { setFriendInvites([]); return undefined; }
+    let cancelled = false;
+    const ids = new Set(roster.map((friend) => friend.otherId));
+    const poll = async () => {
+      try {
+        const list = await sbFetchRoomInvites(friendSelfId, Date.now());
+        if (!cancelled) setFriendInvites(list.filter((invite) => ids.has(invite.senderId)));
+      } catch (_) { /* 通信できないときは、次の確認まで何も出さない */ }
+    };
+    poll();
+    const timer = setInterval(poll, FRIEND_INVITE_POLL_MS);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [friendsOn, !!view, friendSelfId, roster]);
+  const friendNameOf = (id) => ((roster || []).find((friend) => friend.otherId === id) || {}).userName || 'フレンド';
+  const openInvitePanel = () => {
+    const next = !invitePanel;
+    setInvitePanel(next);
+    setInviteMessage('');
+    if (next && friendSelfId) loadRoster(friendSelfId);   // 直前に承認したフレンドも出せるよう、開くたびに読み直す
+  };
+  const inviteFriend = async (friendId) => {
+    if (!view || !friendSelfId) return;
+    const result = await sbSendRoomInvite(friendSelfId, friendId, view.code);
+    if (result === 'invited') { setInvitedIds((prev) => ({ ...prev, [friendId]: true })); setInviteMessage(''); }
+    else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう一度ためしてください');
+  };
+
   // 合図が来たら 3・2・1 を数えて演奏へ入る。数えるのは受け取った時刻から(端末の時計のずれに左右されない)
   React.useEffect(() => RHYTHM_MULTI.onStart((info) => {
     setCountdown({ info, left: RHYTHM_MULTI_START_COUNTDOWN_SEC, shuffling: true });
@@ -22077,6 +22135,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
 
   const myProfile = () => ({ name: profile.name, level: profile.level, icon: profile.icon, frame: profile.frame, diff: defaultDiff });
   const createPrivate = () => { setMessage(''); RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private'); };
+  const joinFromInvite = (invite) => {
+    setMessage('');
+    RHYTHM_MULTI.join(invite.roomCode, myProfile(), 'private');
+  };
   const joinPrivate = () => {
     const code = rhythmMultiNormalizeCode(codeInput);
     if (!code) { setMessage(`部屋コードは${RHYTHM_MULTI_CODE_LENGTH}文字です`); return; }
@@ -22141,6 +22203,17 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             <p className="text-sm font-black text-cyan-100">みんなで同じ曲を演奏して、チームのランクを目指します</p>
             <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-300">最大{RHYTHM_MULTI_ROOM_MAX}人。曲は全員の希望から抽選で決まり、結果は全員の平均スコアでチームのランクが決まります。個人スコア1位はMVPです。対戦の記録は、自己ベストにも全国ランキングにも残りません。</p>
           </section>
+          {friendsOn && friendInvites.length > 0 && (
+            <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>
+              <h3 className="text-xs font-black text-pink-200">フレンドからの招待</h3>
+              {friendInvites.map((invite) => (
+                <div key={invite.senderId} className="flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5">
+                  <span className="min-w-0 flex-1 break-words text-[13px] font-black leading-snug">{friendNameOf(invite.senderId)}さんが部屋に誘っています</span>
+                  <button data-rhythm-multi-friend-join type="button" className={`${btn} shrink-0 bg-pink-700 text-xs`} onClick={() => joinFromInvite(invite)}>参加する</button>
+                </div>
+              ))}
+            </section>
+          )}
           <section className={`${card} space-y-2`}>
             <h3 className="text-xs font-black text-slate-300">知らない人と遊ぶ</h3>
             <button data-rhythm-multi-free type="button" className={`${btn} w-full bg-fuchsia-700`} onClick={() => searchRoom('free')}>フリールーム<small className="block text-[10px] font-bold text-fuchsia-100/80">だれでも入れます</small></button>
@@ -22206,6 +22279,31 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                   {me.open ? 'ルーム解放中(タップでやめる)' : 'ルーム解放(知らない人も呼ぶ)'}
                 </button>
               )}
+            {friendsOn && view && view.mode === 'private' && (
+              <section data-rhythm-multi-friend-invite className={card}>
+                <button data-rhythm-multi-friend-invite-toggle type="button" className={`${btn} w-full bg-pink-700`} onClick={openInvitePanel}>{invitePanel ? 'フレンドの招待をとじる' : 'フレンドを招待する'}</button>
+                {invitePanel && (
+                  <div className="mt-2 space-y-1">
+                    {roster === null && <p className="text-[11px] font-bold text-slate-400">フレンドを読み込んでいます…</p>}
+                    {roster !== null && roster.length === 0 && (
+                      <p className="text-[11px] font-bold leading-relaxed text-slate-400">まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。</p>
+                    )}
+                    {(roster || []).map((friend) => (
+                      <div key={friend.otherId} data-rhythm-multi-friend-row className="flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5">
+                        <span className="min-w-0 flex-1">
+                          <b className="block truncate text-sm font-black">{friend.userName}</b>
+                          <small className="block truncate text-[10px] font-bold text-slate-400">{friendsLastSeenText(friend.lastSeenAt, Date.now())}</small>
+                        </span>
+                        <button data-rhythm-multi-friend-send type="button" disabled={!!invitedIds[friend.otherId]} onClick={() => inviteFriend(friend.otherId)}
+                          className={`${btn} shrink-0 text-xs ${invitedIds[friend.otherId] ? 'bg-slate-700' : 'bg-pink-700'}`}>{invitedIds[friend.otherId] ? '招待ずみ' : '招待する'}</button>
+                      </div>
+                    ))}
+                    {inviteMessage && <p data-rhythm-multi-friend-message className="text-[11px] font-black text-rose-300">{inviteMessage}</p>}
+                    <p className="text-[10px] font-bold leading-relaxed text-slate-400">招待は3分のあいだ届きます。相手がマルチの入口をひらくと「参加する」が出ます。</p>
+                  </div>
+                )}
+              </section>
+            )}
               {view && <RhythmMultiChatPanel view={view} />}
               <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoom}>{view ? '部屋を出る' : 'やめる'}</button>
             </>}
@@ -22307,6 +22405,412 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     </main>
   );
 }
+
+// ---- part: 34-friends-api.jsx ----
+// ===== フレンド機能の通信層(Supabase の friend_codes / friend_links) =====
+// 設計の正本: docs/spec/FRIENDS.md / SQL: docs/sql/friends/
+//
+// 決めごと:
+//  ・保存データ(mh_*)・ランキング(rankings 等)・breeder_profiles には**一度も書き込まない**。
+//    書くのは新設の friend_codes(自分のコードを1回だけ)と friend_links(関係)の2つだけ。
+//  ・端末には何も保存しない。フレンドの正本はサーバー。新しい保存キーも作らない。
+//  ・ログインが無いので、人は端末ごとのブリーダーID(ensureBreederId)で見分ける。
+//  ・行は消さない。解除・断り・ブロックは status を変えるだけ(DELETE の権限が無い)。
+//  ・1組(2人)は1行まで(SQLの一意索引)。逆向きに申請されていたら、その行を「承認」に変える。
+//  ・表がまだ無い環境(SQL未適用)は「準備中」として扱う。エラー扱いにして画面を壊さない。
+const FRIEND_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const FRIEND_CODE_LENGTH = 8;
+const FRIENDS_MAX = 50;            // フレンドになれる人数の上限(承認済みの数)
+const FRIENDS_PENDING_MAX = 30;    // 申請中(送った・届いた、それぞれ)の上限
+const FRIEND_STATUS = Object.freeze({
+  PENDING: 'pending', ACCEPTED: 'accepted', DECLINED: 'declined', BLOCKED: 'blocked', REMOVED: 'removed',
+});
+const FRIENDS_TABLE_CODES = 'friend_codes';
+const FRIENDS_TABLE_LINKS = 'friend_links';
+const FRIENDS_TIMEOUT_MS = 8000;
+const FRIENDS_ONLINE_MS = 5 * 60 * 1000;           // 最後に開いてから5分以内は「いま」
+let _friendsUnavailable = false;                   // 表が無いと分かったら、ページを閉じるまで使わない
+let _friendCodeCache = null;                       // { breederId, code }
+const friendsUnavailable = () => _friendsUnavailable;
+
+// 申請の結果。画面はこの語だけを見て文言を決める(通信の細部を画面へ持ち込まない)
+//   sent / accepted(逆向きの申請があったので成立) / already(すでにフレンド) / pending(申請済み)
+//   self / notfound / blocked-by-me / unavailable(断られている・ブロックされている等。理由は言わない)
+//   full(自分の上限) / their-full(相手の上限) / limit(申請の上限) / notready(準備中) / error
+const friendsMakeCode = () => {
+  let code = '';
+  for (let i = 0; i < FRIEND_CODE_LENGTH; i += 1) {
+    code += FRIEND_CODE_CHARS[Math.floor(Math.random() * FRIEND_CODE_CHARS.length)];
+  }
+  return code;
+};
+// 入力されたコードを整える(空白・ハイフン・小文字を許す)。8文字にそろわなければ空文字
+const friendsNormalizeCode = (text) => {
+  const code = String(text == null ? '' : text).toUpperCase().split('')
+    .filter((ch) => FRIEND_CODE_CHARS.includes(ch)).join('');
+  return code.length === FRIEND_CODE_LENGTH ? code : '';
+};
+// 表示用に4文字ずつ区切る(ABCD-2345)
+const friendsFormatCode = (code) => {
+  const text = typeof code === 'string' ? code : '';
+  return text.length === FRIEND_CODE_LENGTH ? `${text.slice(0, 4)}-${text.slice(4)}` : text;
+};
+// ブリーダーIDとして安全な形か。URLの絞り込み(or=(...))へ入れるので、区切り文字を含むものは通さない
+const friendsSafeId = (value) => (typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value)) ? value : '';
+// ランキングの1行から、フレンド申請の相手になれるブリーダーIDを取り出す(取れなければ空文字)。
+// IDが付く前の古い記録(identityKey が name: で始まるもの)は、人を特定できないので申請できない
+const friendsIdOfRankingEntry = (entry) => {
+  const direct = friendsSafeId(entry?.breederId);
+  if (direct) return direct;
+  const key = typeof entry?.identityKey === 'string' ? entry.identityKey : '';
+  return key.startsWith('name:') ? '' : friendsSafeId(key);
+};
+const friendsStatusOf = (value) => (Object.values(FRIEND_STATUS).includes(value) ? value : FRIEND_STATUS.REMOVED);
+
+// 行(サーバーの形)を、自分から見た形へ。otherId が相手
+const friendLinkView = (selfId, row) => {
+  const requester = typeof row?.requester_id === 'string' ? row.requester_id : '';
+  const target = typeof row?.target_id === 'string' ? row.target_id : '';
+  if (!selfId || (requester !== selfId && target !== selfId)) return null;
+  const outgoing = requester === selfId;
+  const otherId = outgoing ? target : requester;
+  if (!otherId) return null;
+  const status = friendsStatusOf(row?.status);
+  const updatedMs = Date.parse(row?.updated_at);
+  return {
+    otherId, status, outgoing,
+    blockedByMe: status === FRIEND_STATUS.BLOCKED && row?.blocked_by === selfId,
+    updatedAt: Number.isFinite(updatedMs) ? updatedMs : 0,
+  };
+};
+// 関係の一覧を、画面のタブごとに仕分ける。ブロックされた側(相手が自分をブロック)には何も見せない
+const friendsGroup = (selfId, rows) => {
+  const groups = { friends: [], incoming: [], outgoing: [], blocked: [] };
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const view = friendLinkView(selfId, row);
+    if (!view) return;
+    if (view.status === FRIEND_STATUS.ACCEPTED) groups.friends.push(view);
+    else if (view.status === FRIEND_STATUS.PENDING) (view.outgoing ? groups.outgoing : groups.incoming).push(view);
+    else if (view.blockedByMe) groups.blocked.push(view);
+  });
+  Object.values(groups).forEach((list) => list.sort((a, b) => b.updatedAt - a.updatedAt));
+  return groups;
+};
+// 最後に開いた時刻から「いま」「◯分前」「◯時間前」「◯日前」の文を作る(表示用の純粋な計算)
+const friendsLastSeenText = (updatedAtMs, nowMs) => {
+  if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) return 'さいごに開いた時間は不明';
+  const diff = Math.max(0, nowMs - updatedAtMs);
+  if (diff < FRIENDS_ONLINE_MS) return 'いま遊んでいるかも';
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 60) return `${minutes}分前に開きました`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}時間前に開きました`;
+  return `${Math.floor(hours / 24)}日前に開きました`;
+};
+
+// ---- 通信の下回り ----
+// 失敗は throw、表が無いときだけ notReady を付けた Error を投げる。画面側はそれを「準備中」に変える
+const friendsRequest = async (path, { method = 'GET', body = null, prefer = null } = {}) => {
+  if (_friendsUnavailable) { const e = new Error('friends tables are not ready'); e.notReady = true; throw e; }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FRIENDS_TIMEOUT_MS);
+  try {
+    const headers = prefer ? { ...SB_HEADERS, 'Prefer': prefer } : SB_HEADERS;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method, headers, cache: 'no-store', signal: controller.signal,
+      body: body === null ? undefined : JSON.stringify(body),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, text)) {
+        _friendsUnavailable = true;
+        const e = new Error('friends tables are not ready'); e.notReady = true; throw e;
+      }
+      const e = new Error(`friends ${method} ${path.split('?')[0]} ${res.status}: ${text || res.statusText}`);
+      e.status = res.status;
+      throw e;
+    }
+    return text ? JSON.parse(text) : [];
+  } catch (error) {
+    if (error && error.name === 'AbortError') throw new Error(`friends request timed out after ${FRIENDS_TIMEOUT_MS}ms`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const friendsPairFilter = (a, b) =>
+  `or=(and(requester_id.eq.${a},target_id.eq.${b}),and(requester_id.eq.${b},target_id.eq.${a}))`;
+const friendsFetchPair = async (a, b) => {
+  const rows = await friendsRequest(`${FRIENDS_TABLE_LINKS}?select=*&${friendsPairFilter(a, b)}&limit=1`);
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
+};
+// 行の書き換え(PATCH)。主キーの2列で1行だけを指す。向きを入れ替える場合も、いまの向きで指す
+const friendsPatchLink = (row, changes) => friendsRequest(
+  `${FRIENDS_TABLE_LINKS}?requester_id=eq.${row.requester_id}&target_id=eq.${row.target_id}`,
+  { method: 'PATCH', body: changes, prefer: 'return=minimal' });
+
+// ---- 自分のフレンドコード ----
+// 初回だけ作って登録する。同じコードが取られていたら(409)作り直す。登録済みなら同じものを返す
+const sbEnsureFriendCode = async (breederId) => {
+  const id = friendsSafeId(breederId);
+  if (!id) return null;
+  if (_friendCodeCache && _friendCodeCache.breederId === id) return _friendCodeCache.code;
+  const found = async () => {
+    const rows = await friendsRequest(`${FRIENDS_TABLE_CODES}?select=friend_code&breeder_id=eq.${id}&limit=1`);
+    const code = Array.isArray(rows) && rows.length ? friendsNormalizeCode(rows[0].friend_code) : '';
+    if (code) _friendCodeCache = { breederId: id, code };
+    return code || null;
+  };
+  const existing = await found();
+  if (existing) return existing;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await friendsRequest(FRIENDS_TABLE_CODES, {
+        method: 'POST', body: [{ breeder_id: id, friend_code: friendsMakeCode() }], prefer: 'return=minimal' });
+      const created = await found();
+      if (created) return created;
+    } catch (error) {
+      if (error && error.notReady) throw error;
+      if (error && error.status === 409) {
+        // 自分の行がもうある(別の画面から同時に作った)なら、それを使う。無ければコードの重なりなので作り直す
+        const again = await found();
+        if (again) return again;
+        continue;
+      }
+      throw error;
+    }
+  }
+  return null;
+};
+// コードから相手のブリーダーIDを引く
+const sbFindBreederIdByCode = async (rawCode) => {
+  const code = friendsNormalizeCode(rawCode);
+  if (!code) return null;
+  const rows = await friendsRequest(`${FRIENDS_TABLE_CODES}?select=breeder_id&friend_code=eq.${code}&limit=1`);
+  return Array.isArray(rows) && rows.length ? friendsSafeId(rows[0].breeder_id) || null : null;
+};
+
+// ---- 関係の読み込み ----
+const sbFetchFriendLinks = async (breederId) => {
+  const id = friendsSafeId(breederId);
+  if (!id) return [];
+  const rows = await friendsRequest(
+    `${FRIENDS_TABLE_LINKS}?select=*&or=(requester_id.eq.${id},target_id.eq.${id})&order=updated_at.desc&limit=300`);
+  return Array.isArray(rows) ? rows : [];
+};
+// 相手たちの名前・アイコン・フレーム・最後に開いた時刻(breeder_profiles から。読むだけ)
+const sbFetchFriendProfiles = async (ids) => {
+  const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
+  const byId = {};
+  if (!safe.length) return byId;
+  const rows = await friendsRequest(
+    `breeder_profiles?select=breeder_id,user_name,icon,profile_frame,updated_at&breeder_id=in.(${safe.join(',')})`);
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    if (!row || typeof row.breeder_id !== 'string') return;
+    const at = Date.parse(row.updated_at);
+    byId[row.breeder_id] = {
+      userName: row.user_name || '名無しのブリーダー',
+      icon: row.icon ?? null,
+      profileFrame: normalizeProfileFrameId(row.profile_frame),
+      lastSeenAt: Number.isFinite(at) ? at : 0,
+    };
+  });
+  return byId;
+};
+// プロフィールの中身(モンヒロビートの合計スコア・曲数・ブリーダーLv)。既存の総合ランキングの表から読むだけ
+const sbFetchFriendRhythmSummary = async (breederId) => {
+  const id = friendsSafeId(breederId);
+  if (!id) return null;
+  try {
+    const rows = await sbFetchRhythmTotalRankings({ limit: 1, identityKeys: [id], requestId: 'friend-profile' });
+    const row = Array.isArray(rows) && rows.length ? rows[0] : null;
+    return row ? rhythmTotalRankingEntryFromRow(row) : null;
+  } catch (error) {
+    return null;   // 総合ランキングが準備中・通信失敗でも、プロフィールそのものは出す
+  }
+};
+
+// ---- 申請・承認・解除・ブロック ----
+const friendsCountAccepted = (selfId, rows) =>
+  (Array.isArray(rows) ? rows : []).filter((row) => friendLinkView(selfId, row)?.status === FRIEND_STATUS.ACCEPTED).length;
+const friendsCountOutgoing = (selfId, rows) =>
+  (Array.isArray(rows) ? rows : []).filter((row) => {
+    const view = friendLinkView(selfId, row);
+    return view && view.status === FRIEND_STATUS.PENDING && view.outgoing;
+  }).length;
+const friendsGuard = async (fn) => {
+  try { return await fn(); } catch (error) {
+    if (error && error.notReady) return 'notready';
+    console.error('[friends]', error && error.message ? error.message : error);
+    return 'error';
+  }
+};
+// 相手の承認済みの数(上限の判定用)。取れなければ判定しない(通す)
+const friendsAcceptedCountOf = async (id) => {
+  try {
+    const rows = await sbFetchFriendLinks(id);
+    return friendsCountAccepted(id, rows);
+  } catch (error) { return 0; }
+};
+
+const sbSendFriendRequest = (selfIdRaw, targetIdRaw) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const targetId = friendsSafeId(targetIdRaw);
+  if (!selfId || !targetId) return 'error';
+  if (selfId === targetId) return 'self';
+  const mine = await sbFetchFriendLinks(selfId);
+  if (friendsCountOutgoing(selfId, mine) >= FRIENDS_PENDING_MAX) return 'limit';
+  const existing = mine.find((row) => friendLinkView(selfId, row)?.otherId === targetId) || null;
+  if (!existing) {
+    // 1組1行で、どちらの向きの行も自分の一覧に入る。ここに無ければ、この2人の行はまだ無い
+    if (friendsCountAccepted(selfId, mine) >= FRIENDS_MAX) return 'full';
+    try {
+      await friendsRequest(FRIENDS_TABLE_LINKS, {
+        method: 'POST', body: [{ requester_id: selfId, target_id: targetId, status: FRIEND_STATUS.PENDING }],
+        prefer: 'return=minimal' });
+      return 'sent';
+    } catch (error) {
+      if (error && error.status === 409) return 'pending';   // 同時に申請された。もう行がある
+      throw error;
+    }
+  }
+  const view = friendLinkView(selfId, existing);
+  switch (view.status) {
+    case FRIEND_STATUS.ACCEPTED: return 'already';
+    case FRIEND_STATUS.PENDING:
+      if (view.outgoing) return 'pending';
+      // 相手からも申請が来ていた → そのまま成立させる
+      if (friendsCountAccepted(selfId, mine) >= FRIENDS_MAX) return 'full';
+      if (await friendsAcceptedCountOf(targetId) >= FRIENDS_MAX) return 'their-full';
+      await friendsPatchLink(existing, { status: FRIEND_STATUS.ACCEPTED });
+      return 'accepted';
+    case FRIEND_STATUS.BLOCKED:
+      return view.blockedByMe ? 'blocked-by-me' : 'unavailable';
+    case FRIEND_STATUS.DECLINED:
+      // 自分が断った相手へは申請できる。自分の申請を断られた場合は、理由を言わず申請できないことにする
+      if (view.outgoing) return 'unavailable';
+      // fallthrough
+    default:   // removed / declined(自分が断った)
+      if (friendsCountAccepted(selfId, mine) >= FRIENDS_MAX) return 'full';
+      await friendsPatchLink(existing, {
+        requester_id: selfId, target_id: targetId, status: FRIEND_STATUS.PENDING, blocked_by: null });
+      return 'sent';
+  }
+});
+
+// 届いた申請への返事。action: 'accept' | 'decline' | 'block'
+const sbRespondFriendRequest = (selfIdRaw, otherIdRaw, action) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const otherId = friendsSafeId(otherIdRaw);
+  if (!selfId || !otherId) return 'error';
+  const row = await friendsFetchPair(selfId, otherId);
+  const view = row ? friendLinkView(selfId, row) : null;
+  if (!view || view.status !== FRIEND_STATUS.PENDING || view.outgoing) return 'gone';   // もう取り下げられた等
+  if (action === 'accept') {
+    const mine = await sbFetchFriendLinks(selfId);
+    if (friendsCountAccepted(selfId, mine) >= FRIENDS_MAX) return 'full';
+    if (await friendsAcceptedCountOf(otherId) >= FRIENDS_MAX) return 'their-full';
+    await friendsPatchLink(row, { status: FRIEND_STATUS.ACCEPTED });
+    return 'accepted';
+  }
+  if (action === 'block') {
+    await friendsPatchLink(row, { status: FRIEND_STATUS.BLOCKED, blocked_by: selfId });
+    return 'blocked';
+  }
+  await friendsPatchLink(row, { status: FRIEND_STATUS.DECLINED });
+  return 'declined';
+});
+// 自分が送った申請の取り下げ(行は消さず、解除済みにする)
+const sbCancelFriendRequest = (selfIdRaw, otherIdRaw) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const otherId = friendsSafeId(otherIdRaw);
+  if (!selfId || !otherId) return 'error';
+  const row = await friendsFetchPair(selfId, otherId);
+  const view = row ? friendLinkView(selfId, row) : null;
+  if (!view || view.status !== FRIEND_STATUS.PENDING || !view.outgoing) return 'gone';
+  await friendsPatchLink(row, { status: FRIEND_STATUS.REMOVED });
+  return 'cancelled';
+});
+const sbRemoveFriend = (selfIdRaw, otherIdRaw) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const otherId = friendsSafeId(otherIdRaw);
+  if (!selfId || !otherId) return 'error';
+  const row = await friendsFetchPair(selfId, otherId);
+  const view = row ? friendLinkView(selfId, row) : null;
+  if (!view || view.status !== FRIEND_STATUS.ACCEPTED) return 'gone';
+  await friendsPatchLink(row, { status: FRIEND_STATUS.REMOVED });
+  return 'removed';
+});
+const sbBlockFriendUser = (selfIdRaw, otherIdRaw) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const otherId = friendsSafeId(otherIdRaw);
+  if (!selfId || !otherId || selfId === otherId) return 'error';
+  const row = await friendsFetchPair(selfId, otherId);
+  if (!row) {
+    await friendsRequest(FRIENDS_TABLE_LINKS, {
+      method: 'POST', body: [{ requester_id: selfId, target_id: otherId, status: FRIEND_STATUS.BLOCKED, blocked_by: selfId }],
+      prefer: 'return=minimal' });
+    return 'blocked';
+  }
+  await friendsPatchLink(row, { status: FRIEND_STATUS.BLOCKED, blocked_by: selfId });
+  return 'blocked';
+});
+const sbUnblockFriendUser = (selfIdRaw, otherIdRaw) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const otherId = friendsSafeId(otherIdRaw);
+  if (!selfId || !otherId) return 'error';
+  const row = await friendsFetchPair(selfId, otherId);
+  const view = row ? friendLinkView(selfId, row) : null;
+  if (!view || !view.blockedByMe) return 'gone';
+  await friendsPatchLink(row, { status: FRIEND_STATUS.REMOVED, blocked_by: null });
+  return 'unblocked';
+});
+
+// ---- マルチへの招待(friend_invites) ----
+// モンヒロビートのマルチ(プライベートルーム)の部屋コードを、フレンドへ渡す。
+// 送る人→受ける人ごとに1行へ上書きされる(古い招待が残り続けない)。
+// 受ける側は、マルチの入口画面で数秒ごとに読み、承認済みのフレンドからの3分以内の招待だけを出す。
+const FRIEND_INVITE_TTL_MS = 3 * 60 * 1000;
+const FRIEND_INVITE_POLL_MS = 8000;
+const FRIEND_INVITE_CODE_RE = /^[A-HJ-NP-Z2-9]{4}$/;
+// 招待を送る(送る相手が承認済みのフレンドかどうかは、画面が名簿から選ばせることで守る)
+const sbSendRoomInvite = (selfIdRaw, targetIdRaw, roomCode) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const targetId = friendsSafeId(targetIdRaw);
+  const code = typeof roomCode === 'string' ? roomCode.toUpperCase() : '';
+  if (!selfId || !targetId || selfId === targetId || !FRIEND_INVITE_CODE_RE.test(code)) return 'error';
+  await friendsRequest(`friend_invites?on_conflict=sender_id,target_id`, {
+    method: 'POST', body: [{ sender_id: selfId, target_id: targetId, room_code: code }],
+    prefer: 'resolution=merge-duplicates,return=minimal' });
+  return 'invited';
+});
+// 自分に届いている、有効な招待を返す。[{ senderId, roomCode, createdAt }] (新しい順)
+const sbFetchRoomInvites = async (selfIdRaw, nowMs) => {
+  const selfId = friendsSafeId(selfIdRaw);
+  if (!selfId) return [];
+  const since = new Date(nowMs - FRIEND_INVITE_TTL_MS).toISOString();
+  const rows = await friendsRequest(
+    `friend_invites?select=sender_id,room_code,created_at&target_id=eq.${selfId}`
+    + `&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=20`);
+  return (Array.isArray(rows) ? rows : []).map((row) => {
+    const at = Date.parse(row?.created_at);
+    const code = typeof row?.room_code === 'string' ? row.room_code.toUpperCase() : '';
+    return { senderId: friendsSafeId(row?.sender_id), roomCode: code, createdAt: Number.isFinite(at) ? at : 0 };
+  }).filter((invite) => invite.senderId && FRIEND_INVITE_CODE_RE.test(invite.roomCode)
+    && nowMs - invite.createdAt <= FRIEND_INVITE_TTL_MS);
+};
+// 招待の相手を選ぶための名簿(承認済みのフレンドだけ)。最近開いた人を上に並べる
+const sbFetchFriendRoster = async (selfIdRaw) => {
+  const selfId = friendsSafeId(selfIdRaw);
+  if (!selfId) return [];
+  const groups = friendsGroup(selfId, await sbFetchFriendLinks(selfId));
+  const looks = await sbFetchFriendProfiles(groups.friends.map((view) => view.otherId));
+  return groups.friends.map((view) => ({
+    otherId: view.otherId,
+    userName: (looks[view.otherId] || {}).userName || '名無しのブリーダー',
+    lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0,
+  })).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+};
 
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
@@ -23796,6 +24300,8 @@ function ProfileScreen({
   onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
+  // フレンド画面への入口。公開前(friendsEnabled=false)は出さない
+  friendsEnabled = false, onOpenFriends,
   // 選べる助手だけ(イベントで加入する助手は、その会話を見るまで並べない)。
   // 渡されなければ今までどおり全員を並べる
   unlockedAssistants,
@@ -24022,6 +24528,16 @@ function ProfileScreen({
             ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。
             ★見るだけ。報酬の受け取りには一切関わらない。
             ★まだ終わった回が1つも無いあいだは出さない(押しても空の一覧しか出ないため) */}
+        {onboarded&&!onboardingPreview&&friendsEnabled&&(
+          <button type="button" data-profile-friends onClick={onOpenFriends} className="mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-pink-400/40 bg-pink-950/40 px-3 py-2.5 active:scale-[.98]">
+            <Users size={16} className="text-pink-300 shrink-0"/>
+            <span className="flex-1 min-w-0 text-left">
+              <b className="block text-[13px] font-black text-pink-100">フレンド</b>
+              <small className="block text-[10px] text-pink-300">フレンドコードで申請して、プロフィールを見せ合えます</small>
+            </span>
+            <ChevronRight size={16} className="shrink-0 text-pink-400"/>
+          </button>
+        )}
         {onboarded&&!onboardingPreview&&Number(rhythmHistoryCount)>0&&(
           <button type="button" data-profile-rhythm-history onClick={onOpenRhythmHistory} className="mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-950/40 px-3 py-2.5 active:scale-[.98]">
             <Trophy size={16} className="text-amber-300 shrink-0"/>
@@ -32216,6 +32732,323 @@ function MonsterCheckDebugScreen({
   );
 }
 
+// ---- part: 75-screen-friends.jsx ----
+// ==== 画面: フレンド(gameState === 'FRIENDS') ====
+//
+// フレンド一覧・申請・追加(フレンドコード)・ブロック・フレンドのプロフィール閲覧を1画面に収める。
+// 設計の正本: docs/spec/FRIENDS.md / 通信: 34-friends-api.jsx(Supabase の friend_codes / friend_links)。
+//
+// 【この画面の決めごと】
+// ・保存データ(mh_*)には一切触れない。新しい保存キーも作らない。フレンドの正本はサーバー
+// ・自分のブリーダーIDは ensureBreederId() で取る。IDが作れない端末(保存できない環境)は、
+//   「この端末ではフレンドを使えません」と出す
+// ・表がまだ無い環境(SQL未適用)は「準備中」。エラー扱いにしない
+// ・タイマーは持たない(結果の文は次の操作まで出したままにする)
+// ・フレンドを増やす入口は2つ。①フレンドコードの入力(この画面) ②ランキングの名前から(60-app 側のシート)
+//   どちらも sbSendFriendRequest を通る。申請の状態の判断はそこだけが持つ
+const FRIENDS_RESULT_TEXT = Object.freeze({
+  sent: ['フレンド申請を送りました。承認されるとフレンドになります', 'ok'],
+  accepted: ['フレンドになりました!', 'ok'],
+  already: ['この人とはもうフレンドです', 'info'],
+  pending: ['すでに申請しています。返事を待ちましょう', 'info'],
+  self: ['自分自身にはフレンド申請できません', 'warn'],
+  notfound: ['そのフレンドコードの人が見つかりません。コードを確かめてください', 'warn'],
+  'blocked-by-me': ['この人はブロック中です。申請するには、先にブロックを解除してください', 'warn'],
+  unavailable: ['この人には申請できませんでした', 'warn'],
+  full: [`フレンドがいっぱいです(${FRIENDS_MAX}人まで)。だれかを解除すると申請できます`, 'warn'],
+  'their-full': ['相手のフレンドがいっぱいで、いまは成立できませんでした', 'warn'],
+  limit: [`申請中の人が多すぎます(${FRIENDS_PENDING_MAX}人まで)。返事を待つか、取り消してください`, 'warn'],
+  gone: ['この申請はもう変わっていました。一覧を更新しました', 'info'],
+  declined: ['申請を断りました', 'info'],
+  blocked: ['ブロックしました', 'info'],
+  unblocked: ['ブロックを解除しました', 'info'],
+  cancelled: ['申請を取り消しました', 'info'],
+  removed: ['フレンドを解除しました', 'info'],
+  notready: ['フレンド機能はただいま準備中です', 'warn'],
+  error: ['通信がうまくいきませんでした。少し待ってからもう一度ためしてください', 'warn'],
+});
+const FRIENDS_TONE_CLASS = Object.freeze({
+  ok: 'border-emerald-400/60 bg-emerald-950/50 text-emerald-100',
+  info: 'border-sky-400/50 bg-sky-950/40 text-sky-100',
+  warn: 'border-amber-400/60 bg-amber-950/40 text-amber-100',
+});
+
+function FriendsScreen({ resolveIconUrl, target = null, onBack, onTargetHandled }) {
+  const [tab, setTab] = React.useState('friends');
+  const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
+  const [selfId, setSelfId] = React.useState('');
+  const [myCode, setMyCode] = React.useState('');
+  const [groups, setGroups] = React.useState({ friends: [], incoming: [], outgoing: [], blocked: [] });
+  const [profiles, setProfiles] = React.useState({});
+  const [codeInput, setCodeInput] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [notice, setNotice] = React.useState(null);      // { text, tone }
+  const [selected, setSelected] = React.useState(null);  // フレンドのプロフィールを開いているとき { otherId, ... }
+  const [summary, setSummary] = React.useState({ status: 'idle', entry: null });
+  const [confirm, setConfirm] = React.useState(null);    // { kind: 'remove'|'block', otherId }
+  const [targetAsk, setTargetAsk] = React.useState(target);
+  const aliveRef = React.useRef(true);
+  React.useEffect(() => () => { aliveRef.current = false; }, []);
+
+  const say = (key) => {
+    const pair = FRIENDS_RESULT_TEXT[key] || FRIENDS_RESULT_TEXT.error;
+    setNotice({ text: pair[0], tone: pair[1] });
+  };
+  // 一覧と相手の見た目を読み直す。送った・返した直後にも呼ぶ
+  const reload = React.useCallback(async (idOverride) => {
+    const id = idOverride || selfId;
+    if (!id) return;
+    try {
+      const rows = await sbFetchFriendLinks(id);
+      const next = friendsGroup(id, rows);
+      const ids = [...next.friends, ...next.incoming, ...next.outgoing, ...next.blocked].map((view) => view.otherId);
+      const found = await sbFetchFriendProfiles(ids);
+      if (!aliveRef.current) return;
+      setGroups(next);
+      setProfiles((prev) => ({ ...prev, ...found }));
+      setPhase('ready');
+    } catch (error) {
+      if (!aliveRef.current) return;
+      if (error && error.notReady) setPhase('notready');
+      else { console.error('[friends]', error && error.message ? error.message : error); setPhase('error'); }
+    }
+  }, [selfId]);
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const id = await ensureBreederId();
+      if (cancelled || !aliveRef.current) return;
+      if (!id) { setPhase('noid'); return; }
+      setSelfId(id);
+      try {
+        const code = await sbEnsureFriendCode(id);
+        if (!cancelled && aliveRef.current && code) setMyCode(code);
+      } catch (error) {
+        if (error && error.notReady) { if (!cancelled && aliveRef.current) setPhase('notready'); return; }
+        console.error('[friends]', error && error.message ? error.message : error);
+      }
+      if (!cancelled) await reload(id);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const lookOf = (id) => profiles[id] || { userName: '名無しのブリーダー', icon: null, profileFrame: PROFILE_FRAME_NONE_ID, lastSeenAt: 0 };
+  const avatar = (id, sizeClass, emojiClass = 'text-base') => {
+    const look = lookOf(id);
+    const url = resolveIconUrl ? resolveIconUrl(look.icon) : null;
+    return url
+      ? <ProfileAvatar src={url} id={look.icon} frameId={look.profileFrame} className={`${sizeClass} shrink-0`}/>
+      : <ProfileAvatar frameId={look.profileFrame} className={`${sizeClass} shrink-0`}
+          fallback={<span className={`flex h-full w-full items-center justify-center rounded-full bg-slate-800 ${emojiClass}`}>👤</span>}/>;
+  };
+  const run = async (task, { thenReload = true } = {}) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const result = await task();
+      if (!aliveRef.current) return;
+      say(result);
+      if (thenReload) await reload();
+    } finally {
+      if (aliveRef.current) setBusy(false);
+    }
+  };
+  const sendByCode = () => run(async () => {
+    const code = friendsNormalizeCode(codeInput);
+    if (!code) return 'notfound';
+    if (code === myCode) return 'self';
+    let found = null;
+    try { found = await sbFindBreederIdByCode(code); } catch (error) {
+      return error && error.notReady ? 'notready' : 'error';
+    }
+    if (!found) return 'notfound';
+    const result = await sbSendFriendRequest(selfId, found);
+    if (result === 'sent' || result === 'accepted') setCodeInput('');
+    return result;
+  });
+  const sendToTarget = () => run(async () => {
+    const id = targetAsk && targetAsk.breederId;
+    setTargetAsk(null);
+    if (typeof onTargetHandled === 'function') onTargetHandled();
+    return sbSendFriendRequest(selfId, id);
+  });
+  const respond = (otherId, action) => run(() => sbRespondFriendRequest(selfId, otherId, action));
+  const cancelRequest = (otherId) => run(() => sbCancelFriendRequest(selfId, otherId));
+  const unblock = (otherId) => run(() => sbUnblockFriendUser(selfId, otherId));
+  const doConfirmed = () => {
+    const ask = confirm;
+    setConfirm(null);
+    if (!ask) return;
+    setSelected(null);
+    run(() => (ask.kind === 'remove' ? sbRemoveFriend(selfId, ask.otherId) : sbBlockFriendUser(selfId, ask.otherId)));
+  };
+  const openProfile = async (view) => {
+    setSelected(view);
+    setSummary({ status: 'loading', entry: null });
+    const entry = await sbFetchFriendRhythmSummary(view.otherId);
+    if (aliveRef.current) setSummary({ status: 'done', entry });
+  };
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(myCode);
+      setNotice({ text: 'フレンドコードをコピーしました', tone: 'ok' });
+    } catch (error) {
+      setNotice({ text: 'コピーできませんでした。コードを見ながら伝えてください', tone: 'warn' });
+    }
+  };
+
+  const now = Date.now();
+  const tabs = [
+    { id: 'friends', label: `フレンド ${groups.friends.length}/${FRIENDS_MAX}` },
+    { id: 'requests', label: '申請', badge: groups.incoming.length },
+    { id: 'add', label: '追加' },
+  ];
+  const btn = 'min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 disabled:opacity-40';
+  const noticeBox = notice && (
+    <div role="status" className={`mb-2 shrink-0 rounded-xl border px-3 py-2 text-[11px] font-bold leading-relaxed ${FRIENDS_TONE_CLASS[notice.tone] || FRIENDS_TONE_CLASS.info}`}>{notice.text}</div>
+  );
+
+  // ---- 状態が整っていないとき ----
+  if (phase !== 'ready') {
+    const lines = phase === 'loading' ? ['フレンドを読み込んでいます…']
+      : phase === 'notready' ? ['フレンド機能はただいま準備中です', 'しばらくしてからもう一度ひらいてください']
+      : phase === 'noid' ? ['この端末ではフレンドを使えません', 'セーブデータを保存できる状態でひらいてください']
+      : ['フレンドを読み込めませんでした', '通信を確かめて、もう一度ひらいてください'];
+    return (
+      <div data-mh-screen data-friends-phase={phase} className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="フレンド" accent="text-pink-300" onBack={onBack} backLabel="プロフィールへ戻る"/>
+        <ScreenEmpty emoji={phase === 'loading' ? '⏳' : '🤝'} lines={lines}
+          action={phase === 'error' ? <button type="button" onClick={() => { setPhase('loading'); reload(); }} className={`${btn} w-full border-white/20 bg-slate-800 text-slate-200`}>もう一度読み込む</button> : null}/>
+      </div>
+    );
+  }
+
+  // ---- フレンドのプロフィール ----
+  if (selected) {
+    const look = lookOf(selected.otherId);
+    const entry = summary.entry;
+    return (
+      <div data-mh-screen data-friends-profile className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="フレンドのプロフィール" accent="text-pink-300" onBack={() => setSelected(null)} backLabel="フレンド一覧へ戻る"/>
+        <div className={`${SCREEN_LIST_CLASS} pb-4`}>
+          {noticeBox}
+          <div className={`${SCREEN_PANEL_CLASS} flex flex-col items-center gap-2 py-5 text-center`}>
+            {avatar(selected.otherId, 'h-20 w-20', 'text-4xl')}
+            <b className="max-w-full truncate text-lg font-black text-white">{look.userName}</b>
+            <span className="text-[10px] font-bold text-slate-400">{friendsLastSeenText(look.lastSeenAt, now)}</span>
+          </div>
+          <div className="mt-3"><ScreenSectionLabel>モンヒロビートの記録</ScreenSectionLabel></div>
+          <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-1`}>
+            {summary.status === 'loading' && <p className="text-[11px] font-bold text-slate-400">読み込んでいます…</p>}
+            {summary.status === 'done' && !entry && <p className="text-[11px] font-bold text-slate-400">まだ記録がありません</p>}
+            {entry && (
+              <dl className="grid grid-cols-3 gap-2 text-center">
+                <div><dt className="text-[9px] font-bold text-slate-400">ブリーダーLv.</dt><dd className="text-sm font-black text-indigo-200">{entry.level > 0 ? entry.level : '—'}</dd></div>
+                <div><dt className="text-[9px] font-bold text-slate-400">合計スコア</dt><dd className="text-sm font-black text-amber-200">{Number(entry.totalScore).toLocaleString()}</dd></div>
+                <div><dt className="text-[9px] font-bold text-slate-400">遊んだ曲数</dt><dd className="text-sm font-black text-pink-200">{entry.songCount}曲</dd></div>
+              </dl>
+            )}
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button type="button" disabled={busy} onClick={() => setConfirm({ kind: 'remove', otherId: selected.otherId })} className={`${btn} border-white/20 bg-slate-800 text-slate-200`}>フレンドを解除</button>
+            <button type="button" disabled={busy} onClick={() => setConfirm({ kind: 'block', otherId: selected.otherId })} className={`${btn} border-rose-400/50 bg-rose-950/40 text-rose-200`}>ブロックする</button>
+          </div>
+        </div>
+        {confirm && (
+          <ConfirmSheet
+            title={confirm.kind === 'remove' ? `${look.userName}さんとのフレンドを解除しますか?` : `${look.userName}さんをブロックしますか?`}
+            message={confirm.kind === 'remove' ? '解除しても、あとからもう一度申請できます。' : 'ブロックすると、フレンドが解除され、相手からの申請も届かなくなります。申請の画面からいつでも解除できます。'}
+            confirmLabel={confirm.kind === 'remove' ? '解除する' : 'ブロックする'} danger
+            onConfirm={doConfirmed} onCancel={() => setConfirm(null)}/>
+        )}
+      </div>
+    );
+  }
+
+  // ---- 一覧(3つのタブ) ----
+  const person = (view, right) => {
+    const look = lookOf(view.otherId);
+    return (
+      <div key={view.otherId} className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`}>
+        {avatar(view.otherId, 'h-10 w-10')}
+        <div className="min-w-0 flex-1">
+          <b className="block truncate text-[12px] font-black text-white">{look.userName}</b>
+          <span className="block truncate text-[9px] font-bold text-slate-400">{friendsLastSeenText(look.lastSeenAt, now)}</span>
+        </div>
+        {right}
+      </div>
+    );
+  };
+  return (
+    <div data-mh-screen data-friends-phase="ready" className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="フレンド" accent="text-pink-300" onBack={onBack} backLabel="プロフィールへ戻る"/>
+      <div className="mb-2 shrink-0"><AssistantBubble scene="friends" compact/></div>
+      <ScreenTabs items={tabs} value={tab} onChange={(id) => { setTab(id); setNotice(null); }}/>
+      <div className={`${SCREEN_LIST_CLASS} pb-4`}>
+        {noticeBox}
+        {tab === 'friends' && (groups.friends.length === 0
+          ? <ScreenEmpty emoji="🤝" lines={['まだフレンドがいません', '「追加」から、フレンドコードで申請してみましょう']}
+              action={<button type="button" onClick={() => setTab('add')} className={`${btn} w-full border-pink-400/60 bg-pink-500/20 text-pink-100`}>フレンドを追加する</button>}/>
+          : <div className="flex flex-col gap-2">{groups.friends.map((view) => person(view,
+              <button type="button" onClick={() => openProfile(view)} className={`${btn} shrink-0 px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`}>プロフィール ›</button>))}</div>)}
+        {tab === 'requests' && (
+          <div className="flex flex-col gap-3">
+            <div>
+              <ScreenSectionLabel>届いている申請</ScreenSectionLabel>
+              {groups.incoming.length === 0
+                ? <p className="px-1 py-2 text-[11px] font-bold text-slate-500">届いている申請はありません</p>
+                : <div className="mt-1 flex flex-col gap-2">{groups.incoming.map((view) => person(view,
+                    <div className="flex shrink-0 gap-1">
+                      <button type="button" disabled={busy} onClick={() => respond(view.otherId, 'accept')} className={`${btn} px-3 border-emerald-400/60 bg-emerald-500/20 text-emerald-100`}>承認</button>
+                      <button type="button" disabled={busy} onClick={() => respond(view.otherId, 'decline')} className={`${btn} px-3 border-white/20 bg-slate-800 text-slate-200`}>断る</button>
+                      <button type="button" disabled={busy} onClick={() => respond(view.otherId, 'block')} className={`${btn} px-2 border-rose-400/50 bg-rose-950/40 text-rose-200`}>ブロック</button>
+                    </div>))}</div>}
+            </div>
+            <div>
+              <ScreenSectionLabel>送った申請</ScreenSectionLabel>
+              {groups.outgoing.length === 0
+                ? <p className="px-1 py-2 text-[11px] font-bold text-slate-500">返事を待っている申請はありません</p>
+                : <div className="mt-1 flex flex-col gap-2">{groups.outgoing.map((view) => person(view,
+                    <button type="button" disabled={busy} onClick={() => cancelRequest(view.otherId)} className={`${btn} shrink-0 px-3 border-white/20 bg-slate-800 text-slate-200`}>取り消す</button>))}</div>}
+            </div>
+            {groups.blocked.length > 0 && (
+              <div>
+                <ScreenSectionLabel>ブロック中</ScreenSectionLabel>
+                <div className="mt-1 flex flex-col gap-2">{groups.blocked.map((view) => person(view,
+                  <button type="button" disabled={busy} onClick={() => unblock(view.otherId)} className={`${btn} shrink-0 px-3 border-white/20 bg-slate-800 text-slate-200`}>解除する</button>))}</div>
+              </div>
+            )}
+          </div>
+        )}
+        {tab === 'add' && (
+          <div className="flex flex-col gap-3">
+            <div className={SCREEN_PANEL_CLASS}>
+              <ScreenSectionLabel>あなたのフレンドコード</ScreenSectionLabel>
+              <p data-friend-code className="my-2 text-center text-3xl font-black tracking-widest text-pink-200">{myCode ? friendsFormatCode(myCode) : '— — — —'}</p>
+              <button type="button" disabled={!myCode} onClick={copyCode} className={`${btn} w-full border-pink-400/60 bg-pink-500/20 text-pink-100`}>コードをコピー</button>
+              <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">このコードを友だちに伝えると、友だちから申請してもらえます。コードは変わりません。</p>
+            </div>
+            <div className={SCREEN_PANEL_CLASS}>
+              <ScreenSectionLabel>コードで申請する</ScreenSectionLabel>
+              <input type="text" value={codeInput} onChange={(event) => setCodeInput(event.target.value.slice(0, 16))}
+                inputMode="text" autoCapitalize="characters" autoComplete="off" autoCorrect="off" spellCheck={false}
+                placeholder="友だちのフレンドコード" aria-label="友だちのフレンドコード"
+                className="mt-2 w-full min-h-[44px] rounded-xl border border-white/15 bg-black/40 px-3 text-center text-base font-black tracking-widest text-white placeholder:text-slate-600"/>
+              <button type="button" disabled={busy || !friendsNormalizeCode(codeInput)} onClick={sendByCode} className={`${btn} mt-2 w-full border-emerald-400/60 bg-emerald-500/20 text-emerald-100`}>フレンド申請を送る</button>
+              <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">ランキングの名前をタップしても、その人に申請できます。</p>
+            </div>
+          </div>
+        )}
+      </div>
+      {targetAsk && (
+        <ConfirmSheet title={`${targetAsk.userName || '名無しのブリーダー'}さんにフレンド申請しますか?`}
+          message="相手が承認すると、フレンドになります。" confirmLabel="申請する"
+          onConfirm={sendToTarget} onCancel={() => { setTargetAsk(null); if (typeof onTargetHandled === 'function') onTargetHandled(); }}/>
+      )}
+    </div>
+  );
+}
+
 // ---- part: 76-screen-debug-data.jsx ----
 // ==================== データを用意する(デバッグ専用) ====================
 // 「実装したらデバッグで確認できるようになってる？」への答えが半分だったので足した画面
@@ -35124,6 +35957,9 @@ function MonsterHeroGame() {
   // ★**表示専用**。報酬の受け取り・受取フラグ・保存には一切触らない(CLAUDE.md ⑦)。
   const [rhythmHistoryList, setRhythmHistoryList] = useState([]);
   const [rhythmHistorySelected, setRhythmHistorySelected] = useState(null);
+  // フレンド: 画面へ渡す申請相手(ランキングから来たとき)と、ランキングの名前から申請するシートの状態
+  const [friendsTarget, setFriendsTarget] = useState(null);
+  const [friendCandidate, setFriendCandidate] = useState(null);   // { id, userName, phase:'ask'|'busy'|'done', text }
   // 公開前は入口ごと出さない(週間ランキングと同じフラグで出し入れする)
   const rhythmHistoryReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
   // 入口に出す件数。開くまでは一覧を組み立てない(プロフィールを開くたびに数えるのは無駄)
@@ -35132,6 +35968,28 @@ function MonsterHeroGame() {
     if (!entry) return;
     setRhythmEventDivision(prev => ({ ...prev, history: divisionId }));
     loadRhythmEventRanking('history', divisionId, entry);
+  };
+  // フレンド画面を開く。ランキングの名前から申請するときは、相手(target)を渡す
+  const openFriends = (target) => {
+    if (RELEASE_FLAGS.friends !== true) return;
+    setFriendsTarget(target || null);
+    setGameState('FRIENDS');
+  };
+  // ランキングの名前(アイコン)をタップしたとき。相手のIDが分かる行だけ申請の確認を出す
+  const openFriendCandidate = (entry) => {
+    if (RELEASE_FLAGS.friends !== true) return;
+    const id = friendsIdOfRankingEntry(entry);
+    if (!id) return;
+    setFriendCandidate({ id, userName: entry?.userName || '名無しのブリーダー', phase: 'ask', text: '' });
+  };
+  const sendFriendCandidate = async () => {
+    const cand = friendCandidate;
+    if (!cand || cand.phase !== 'ask') return;
+    setFriendCandidate({ ...cand, phase: 'busy' });
+    const selfId = await ensureBreederId();
+    const key = selfId ? await sbSendFriendRequest(selfId, cand.id) : 'error';
+    const pair = FRIENDS_RESULT_TEXT[key] || FRIENDS_RESULT_TEXT.error;
+    setFriendCandidate({ ...cand, phase: 'done', text: pair[0] });
   };
   const openRhythmHistory = () => {
     setRhythmHistorySelected(null);
@@ -35754,6 +36612,7 @@ function MonsterHeroGame() {
     GIFT_BOX: 'home',           // ギフトボックスはHOMEの曲を止めずに続ける
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
+    FRIENDS: 'home',            // フレンド画面もHOMEの曲を続ける
                                 // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
     BATTLE_SYSTEM_SELECT: 'enhance',     // どのバトルで遊ぶかを選ぶ画面(この先と同じ曲を続ける)
@@ -46115,9 +46974,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // モンビー曲別・全曲合算・週間・イベント・履歴)がこの1つを使う。
   // 他の人が選んでいるプロフィールフレーム(entry.profileFrame)もここで一緒に描く。
   // フレームを持たない記録・列がまだ無い環境では 'none' になり、これまでと同じ見た目になる
-  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon)
+  // フレンド機能が公開されていて相手のIDが分かる行は、アイコンをタップするとフレンド申請の確認が出る
+  // (ボタンの入れ子を避けるため span の role="button")
+  const rankingBreederIconPlain = entry => resolveIconUrl(entry?.icon)
     ? <ProfileAvatar src={resolveIconUrl(entry.icon)} id={entry.icon} frameId={entry?.profileFrame} className="w-8 h-8 shrink-0"/>
     : <ProfileAvatar frameId={entry?.profileFrame} className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>}/>;
+  const rankingBreederIcon = entry => (RELEASE_FLAGS.friends === true && friendsIdOfRankingEntry(entry))
+    ? <span role="button" tabIndex={0} data-friend-candidate aria-label={`${entry?.userName||'名無しのブリーダー'}さんにフレンド申請`}
+        onClick={(event)=>{ event.stopPropagation(); openFriendCandidate(entry); }}
+        onKeyDown={(event)=>{ if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); openFriendCandidate(entry); } }}
+        className="inline-flex shrink-0 cursor-pointer active:scale-90">{rankingBreederIconPlain(entry)}</span>
+    : rankingBreederIconPlain(entry);
   const rankingCardClass = index => `rounded-xl border ${index===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`;
   // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
   // showSpecies … 種族チャレンジの「全種族」タブから呼ばれたときだけtrue。
@@ -48620,6 +49487,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             rhythmHistoryCount={rhythmHistoryCount}
             unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen)}
             onOpenRhythmHistory={openRhythmHistory}
+            friendsEnabled={RELEASE_FLAGS.friends===true}
+            onOpenFriends={()=>openFriends(null)}
+          />
+        )}
+
+        {/* フレンド: 一覧・申請・コードでの追加・プロフィール閲覧。状態はサーバーが持ち、保存データには触れない */}
+        {gameState==='FRIENDS'&&RELEASE_FLAGS.friends===true&&(
+          <FriendsScreen
+            resolveIconUrl={resolveIconUrl}
+            target={friendsTarget}
+            onTargetHandled={()=>setFriendsTarget(null)}
+            onBack={()=>setGameState('PROFILE')}
           />
         )}
 
@@ -49887,6 +50766,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       );})()}
       {/* アイテムの効果。どの売り場の品も同じ詳細(MarketItemDetail)で出す。
           ビートP交換所の品は grantText(1回で受け取る数)が付いてくる */}
+      {friendCandidate&&friendCandidate.phase!=='done'&&(
+        <ConfirmSheet title={`${friendCandidate.userName}さんにフレンド申請しますか?`}
+          message={friendCandidate.phase==='busy'?'送っています…':'相手が承認すると、フレンドになります。'}
+          confirmLabel="申請する" onConfirm={sendFriendCandidate}
+          onCancel={()=>{ if (friendCandidate.phase==='ask') setFriendCandidate(null); }}/>
+      )}
+      {friendCandidate&&friendCandidate.phase==='done'&&(
+        <ModalFrame label="フレンド申請の結果" border="border-pink-400/70" onClose={()=>setFriendCandidate(null)} zIndex={MODAL_Z.confirm}>
+          <p data-friend-result className="text-center text-[13px] font-black leading-relaxed text-pink-100">{friendCandidate.text}</p>
+          <div className="mt-4 grid grid-cols-1 gap-2">
+            <button type="button" onClick={()=>{ setFriendCandidate(null); openFriends(null); }} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">フレンド画面をひらく</button>
+            <ModalCloseButton onClick={()=>setFriendCandidate(null)}/>
+          </div>
+        </ModalFrame>
+      )}
       {confirmRequest&&<ConfirmSheet title={confirmRequest.title} message={confirmRequest.message||''} confirmLabel={confirmRequest.confirmLabel||'OK'} danger={!!confirmRequest.danger} onConfirm={()=>answerConfirm(true)} onCancel={()=>answerConfirm(false)}/>}
       {marketItemDetail&&<MarketItemDetail item={marketItemDetail} owned={ownedItemCount(ownedItems, marketItemDetail.id)} grantText={marketItemDetail.grantText||''} onClose={()=>setMarketItemDetail(null)}/>}
 

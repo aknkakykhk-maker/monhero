@@ -24,6 +24,8 @@ function ProfileScreen({
   onBack, onOpenNameEdit, onOpenIconPicker, onOpenFramePicker, onOpenItems, onOpenCallStylePicker, onOpenAssistantPicker,
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
+  // フレンド画面への入口。公開前(friendsEnabled=false)は出さない
+  friendsEnabled = false, onOpenFriends,
   // 選べる助手だけ(イベントで加入する助手は、その会話を見るまで並べない)。
   // 渡されなければ今までどおり全員を並べる
   unlockedAssistants,
@@ -250,6 +252,16 @@ function ProfileScreen({
             ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。
             ★見るだけ。報酬の受け取りには一切関わらない。
             ★まだ終わった回が1つも無いあいだは出さない(押しても空の一覧しか出ないため) */}
+        {onboarded&&!onboardingPreview&&friendsEnabled&&(
+          <button type="button" data-profile-friends onClick={onOpenFriends} className="mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-pink-400/40 bg-pink-950/40 px-3 py-2.5 active:scale-[.98]">
+            <Users size={16} className="text-pink-300 shrink-0"/>
+            <span className="flex-1 min-w-0 text-left">
+              <b className="block text-[13px] font-black text-pink-100">フレンド</b>
+              <small className="block text-[10px] text-pink-300">フレンドコードで申請して、プロフィールを見せ合えます</small>
+            </span>
+            <ChevronRight size={16} className="shrink-0 text-pink-400"/>
+          </button>
+        )}
         {onboarded&&!onboardingPreview&&Number(rhythmHistoryCount)>0&&(
           <button type="button" data-profile-rhythm-history onClick={onOpenRhythmHistory} className="mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-950/40 px-3 py-2.5 active:scale-[.98]">
             <Trophy size={16} className="text-amber-300 shrink-0"/>

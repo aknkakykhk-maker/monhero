@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c88eab5a978a92bc
+// source-sha256: d7996e33ec101c67
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-02 23:25";
+const BUILD_DATE = "2026-10-02 23:28";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -10450,6 +10450,7 @@ const RHYTHM_MODE_PUBLIC_RELEASE = true;
 const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
 const RHYTHM_MULTI_PUBLIC_RELEASE = true;
+const FRIENDS_PUBLIC_RELEASE = false;
 const RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE = true;
 const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
@@ -10460,6 +10461,7 @@ const RELEASE_FLAGS = {
   tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
   rhythmMulti: RHYTHM_MULTI_PUBLIC_RELEASE,
+  friends: FRIENDS_PUBLIC_RELEASE,
   quickRhythmLink: QUICK_RHYTHM_LINK_PUBLIC_RELEASE,
   rhythmCanvasNotes: RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE,
   rhythmTotalRanking: RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE,
@@ -34624,6 +34626,72 @@ function RhythmMultiScreen({
   const everyoneReady = !!view && view.members.length >= 2 && view.members.every(m => m.id === view.selfId || m.ready);
   const canStart = isHost && everyoneReady && !countdown;
   const songIds = songs.map(song => song.songId);
+  const friendsOn = RELEASE_FLAGS.friends === true;
+  const [friendSelfId, setFriendSelfId] = React.useState('');
+  const [roster, setRoster] = React.useState(null);
+  const [friendInvites, setFriendInvites] = React.useState([]);
+  const [invitePanel, setInvitePanel] = React.useState(false);
+  const [invitedIds, setInvitedIds] = React.useState({});
+  const [inviteMessage, setInviteMessage] = React.useState('');
+  const loadRoster = React.useCallback(async id => {
+    try {
+      setRoster(await sbFetchFriendRoster(id));
+    } catch (_) {
+      setRoster([]);
+    }
+  }, []);
+  React.useEffect(() => {
+    if (!friendsOn) return undefined;
+    let cancelled = false;
+    (async () => {
+      const id = await ensureBreederId();
+      if (cancelled || !id) return;
+      setFriendSelfId(id);
+      await loadRoster(id);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [friendsOn]);
+  const hasRoster = !!(roster && roster.length);
+  React.useEffect(() => {
+    if (!friendsOn || view || !friendSelfId || !hasRoster) {
+      setFriendInvites([]);
+      return undefined;
+    }
+    let cancelled = false;
+    const ids = new Set(roster.map(friend => friend.otherId));
+    const poll = async () => {
+      try {
+        const list = await sbFetchRoomInvites(friendSelfId, Date.now());
+        if (!cancelled) setFriendInvites(list.filter(invite => ids.has(invite.senderId)));
+      } catch (_) {}
+    };
+    poll();
+    const timer = setInterval(poll, FRIEND_INVITE_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [friendsOn, !!view, friendSelfId, roster]);
+  const friendNameOf = id => ((roster || []).find(friend => friend.otherId === id) || {}).userName || 'フレンド';
+  const openInvitePanel = () => {
+    const next = !invitePanel;
+    setInvitePanel(next);
+    setInviteMessage('');
+    if (next && friendSelfId) loadRoster(friendSelfId);
+  };
+  const inviteFriend = async friendId => {
+    if (!view || !friendSelfId) return;
+    const result = await sbSendRoomInvite(friendSelfId, friendId, view.code);
+    if (result === 'invited') {
+      setInvitedIds(prev => ({
+        ...prev,
+        [friendId]: true
+      }));
+      setInviteMessage('');
+    } else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう一度ためしてください');
+  };
   React.useEffect(() => RHYTHM_MULTI.onStart(info => {
     setCountdown({
       info,
@@ -34682,6 +34750,10 @@ function RhythmMultiScreen({
   const createPrivate = () => {
     setMessage('');
     RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private');
+  };
+  const joinFromInvite = invite => {
+    setMessage('');
+    RHYTHM_MULTI.join(invite.roomCode, myProfile(), 'private');
   };
   const joinPrivate = () => {
     const code = rhythmMultiNormalizeCode(codeInput);
@@ -34778,7 +34850,22 @@ function RhythmMultiScreen({
       className: "text-sm font-black text-cyan-100"
     }, "みんなで同じ曲を演奏して、チームのランクを目指します"), React.createElement("p", {
       className: "mt-1 text-[11px] font-bold leading-relaxed text-slate-300"
-    }, "最大", RHYTHM_MULTI_ROOM_MAX, "人。曲は全員の希望から抽選で決まり、結果は全員の平均スコアでチームのランクが決まります。個人スコア1位はMVPです。対戦の記録は、自己ベストにも全国ランキングにも残りません。")), React.createElement("section", {
+    }, "最大", RHYTHM_MULTI_ROOM_MAX, "人。曲は全員の希望から抽選で決まり、結果は全員の平均スコアでチームのランクが決まります。個人スコア1位はMVPです。対戦の記録は、自己ベストにも全国ランキングにも残りません。")), friendsOn && friendInvites.length > 0 && React.createElement("section", {
+      "data-rhythm-multi-friend-invites": true,
+      className: `${card} space-y-2 border-pink-400/60`
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-pink-200"
+    }, "フレンドからの招待"), friendInvites.map(invite => React.createElement("div", {
+      key: invite.senderId,
+      className: "flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5"
+    }, React.createElement("span", {
+      className: "min-w-0 flex-1 break-words text-[13px] font-black leading-snug"
+    }, friendNameOf(invite.senderId), "さんが部屋に誘っています"), React.createElement("button", {
+      "data-rhythm-multi-friend-join": true,
+      type: "button",
+      className: `${btn} shrink-0 bg-pink-700 text-xs`,
+      onClick: () => joinFromInvite(invite)
+    }, "参加する")))), React.createElement("section", {
       className: `${card} space-y-2`
     }, React.createElement("h3", {
       className: "text-xs font-black text-slate-300"
@@ -34900,7 +34987,42 @@ function RhythmMultiScreen({
       type: "button",
       onClick: () => RHYTHM_MULTI.setOpen(!me.open),
       className: `min-h-[48px] w-full rounded-xl px-3 text-sm font-black ${me.open ? 'bg-amber-600' : 'bg-slate-700'}`
-    }, me.open ? 'ルーム解放中(タップでやめる)' : 'ルーム解放(知らない人も呼ぶ)'), view && React.createElement(RhythmMultiChatPanel, {
+    }, me.open ? 'ルーム解放中(タップでやめる)' : 'ルーム解放(知らない人も呼ぶ)'), friendsOn && view && view.mode === 'private' && React.createElement("section", {
+      "data-rhythm-multi-friend-invite": true,
+      className: card
+    }, React.createElement("button", {
+      "data-rhythm-multi-friend-invite-toggle": true,
+      type: "button",
+      className: `${btn} w-full bg-pink-700`,
+      onClick: openInvitePanel
+    }, invitePanel ? 'フレンドの招待をとじる' : 'フレンドを招待する'), invitePanel && React.createElement("div", {
+      className: "mt-2 space-y-1"
+    }, roster === null && React.createElement("p", {
+      className: "text-[11px] font-bold text-slate-400"
+    }, "フレンドを読み込んでいます…"), roster !== null && roster.length === 0 && React.createElement("p", {
+      className: "text-[11px] font-bold leading-relaxed text-slate-400"
+    }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (roster || []).map(friend => React.createElement("div", {
+      key: friend.otherId,
+      "data-rhythm-multi-friend-row": true,
+      className: "flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5"
+    }, React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block truncate text-sm font-black"
+    }, friend.userName), React.createElement("small", {
+      className: "block truncate text-[10px] font-bold text-slate-400"
+    }, friendsLastSeenText(friend.lastSeenAt, Date.now()))), React.createElement("button", {
+      "data-rhythm-multi-friend-send": true,
+      type: "button",
+      disabled: !!invitedIds[friend.otherId],
+      onClick: () => inviteFriend(friend.otherId),
+      className: `${btn} shrink-0 text-xs ${invitedIds[friend.otherId] ? 'bg-slate-700' : 'bg-pink-700'}`
+    }, invitedIds[friend.otherId] ? '招待ずみ' : '招待する'))), inviteMessage && React.createElement("p", {
+      "data-rhythm-multi-friend-message": true,
+      className: "text-[11px] font-black text-rose-300"
+    }, inviteMessage), React.createElement("p", {
+      className: "text-[10px] font-bold leading-relaxed text-slate-400"
+    }, "招待は3分のあいだ届きます。相手がマルチの入口をひらくと「参加する」が出ます。"))), view && React.createElement(RhythmMultiChatPanel, {
       view: view
     }), React.createElement("button", {
       "data-rhythm-multi-leave": true,
@@ -35062,6 +35184,435 @@ function RhythmMultiScreen({
     onClick: () => setDismissedResult(start.startId)
   }, "曲えらびへ戻る")), countdownLayer);
 }
+const FRIEND_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const FRIEND_CODE_LENGTH = 8;
+const FRIENDS_MAX = 50;
+const FRIENDS_PENDING_MAX = 30;
+const FRIEND_STATUS = Object.freeze({
+  PENDING: 'pending',
+  ACCEPTED: 'accepted',
+  DECLINED: 'declined',
+  BLOCKED: 'blocked',
+  REMOVED: 'removed'
+});
+const FRIENDS_TABLE_CODES = 'friend_codes';
+const FRIENDS_TABLE_LINKS = 'friend_links';
+const FRIENDS_TIMEOUT_MS = 8000;
+const FRIENDS_ONLINE_MS = 5 * 60 * 1000;
+let _friendsUnavailable = false;
+let _friendCodeCache = null;
+const friendsUnavailable = () => _friendsUnavailable;
+const friendsMakeCode = () => {
+  let code = '';
+  for (let i = 0; i < FRIEND_CODE_LENGTH; i += 1) {
+    code += FRIEND_CODE_CHARS[Math.floor(Math.random() * FRIEND_CODE_CHARS.length)];
+  }
+  return code;
+};
+const friendsNormalizeCode = text => {
+  const code = String(text == null ? '' : text).toUpperCase().split('').filter(ch => FRIEND_CODE_CHARS.includes(ch)).join('');
+  return code.length === FRIEND_CODE_LENGTH ? code : '';
+};
+const friendsFormatCode = code => {
+  const text = typeof code === 'string' ? code : '';
+  return text.length === FRIEND_CODE_LENGTH ? `${text.slice(0, 4)}-${text.slice(4)}` : text;
+};
+const friendsSafeId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value) ? value : '';
+const friendsIdOfRankingEntry = entry => {
+  const direct = friendsSafeId(entry?.breederId);
+  if (direct) return direct;
+  const key = typeof entry?.identityKey === 'string' ? entry.identityKey : '';
+  return key.startsWith('name:') ? '' : friendsSafeId(key);
+};
+const friendsStatusOf = value => Object.values(FRIEND_STATUS).includes(value) ? value : FRIEND_STATUS.REMOVED;
+const friendLinkView = (selfId, row) => {
+  const requester = typeof row?.requester_id === 'string' ? row.requester_id : '';
+  const target = typeof row?.target_id === 'string' ? row.target_id : '';
+  if (!selfId || requester !== selfId && target !== selfId) return null;
+  const outgoing = requester === selfId;
+  const otherId = outgoing ? target : requester;
+  if (!otherId) return null;
+  const status = friendsStatusOf(row?.status);
+  const updatedMs = Date.parse(row?.updated_at);
+  return {
+    otherId,
+    status,
+    outgoing,
+    blockedByMe: status === FRIEND_STATUS.BLOCKED && row?.blocked_by === selfId,
+    updatedAt: Number.isFinite(updatedMs) ? updatedMs : 0
+  };
+};
+const friendsGroup = (selfId, rows) => {
+  const groups = {
+    friends: [],
+    incoming: [],
+    outgoing: [],
+    blocked: []
+  };
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    const view = friendLinkView(selfId, row);
+    if (!view) return;
+    if (view.status === FRIEND_STATUS.ACCEPTED) groups.friends.push(view);else if (view.status === FRIEND_STATUS.PENDING) (view.outgoing ? groups.outgoing : groups.incoming).push(view);else if (view.blockedByMe) groups.blocked.push(view);
+  });
+  Object.values(groups).forEach(list => list.sort((a, b) => b.updatedAt - a.updatedAt));
+  return groups;
+};
+const friendsLastSeenText = (updatedAtMs, nowMs) => {
+  if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) return 'さいごに開いた時間は不明';
+  const diff = Math.max(0, nowMs - updatedAtMs);
+  if (diff < FRIENDS_ONLINE_MS) return 'いま遊んでいるかも';
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 60) return `${minutes}分前に開きました`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}時間前に開きました`;
+  return `${Math.floor(hours / 24)}日前に開きました`;
+};
+const friendsRequest = async (path, {
+  method = 'GET',
+  body = null,
+  prefer = null
+} = {}) => {
+  if (_friendsUnavailable) {
+    const e = new Error('friends tables are not ready');
+    e.notReady = true;
+    throw e;
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FRIENDS_TIMEOUT_MS);
+  try {
+    const headers = prefer ? {
+      ...SB_HEADERS,
+      'Prefer': prefer
+    } : SB_HEADERS;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method,
+      headers,
+      cache: 'no-store',
+      signal: controller.signal,
+      body: body === null ? undefined : JSON.stringify(body)
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, text)) {
+        _friendsUnavailable = true;
+        const e = new Error('friends tables are not ready');
+        e.notReady = true;
+        throw e;
+      }
+      const e = new Error(`friends ${method} ${path.split('?')[0]} ${res.status}: ${text || res.statusText}`);
+      e.status = res.status;
+      throw e;
+    }
+    return text ? JSON.parse(text) : [];
+  } catch (error) {
+    if (error && error.name === 'AbortError') throw new Error(`friends request timed out after ${FRIENDS_TIMEOUT_MS}ms`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+const friendsPairFilter = (a, b) => `or=(and(requester_id.eq.${a},target_id.eq.${b}),and(requester_id.eq.${b},target_id.eq.${a}))`;
+const friendsFetchPair = async (a, b) => {
+  const rows = await friendsRequest(`${FRIENDS_TABLE_LINKS}?select=*&${friendsPairFilter(a, b)}&limit=1`);
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
+};
+const friendsPatchLink = (row, changes) => friendsRequest(`${FRIENDS_TABLE_LINKS}?requester_id=eq.${row.requester_id}&target_id=eq.${row.target_id}`, {
+  method: 'PATCH',
+  body: changes,
+  prefer: 'return=minimal'
+});
+const sbEnsureFriendCode = async breederId => {
+  const id = friendsSafeId(breederId);
+  if (!id) return null;
+  if (_friendCodeCache && _friendCodeCache.breederId === id) return _friendCodeCache.code;
+  const found = async () => {
+    const rows = await friendsRequest(`${FRIENDS_TABLE_CODES}?select=friend_code&breeder_id=eq.${id}&limit=1`);
+    const code = Array.isArray(rows) && rows.length ? friendsNormalizeCode(rows[0].friend_code) : '';
+    if (code) _friendCodeCache = {
+      breederId: id,
+      code
+    };
+    return code || null;
+  };
+  const existing = await found();
+  if (existing) return existing;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await friendsRequest(FRIENDS_TABLE_CODES, {
+        method: 'POST',
+        body: [{
+          breeder_id: id,
+          friend_code: friendsMakeCode()
+        }],
+        prefer: 'return=minimal'
+      });
+      const created = await found();
+      if (created) return created;
+    } catch (error) {
+      if (error && error.notReady) throw error;
+      if (error && error.status === 409) {
+        const again = await found();
+        if (again) return again;
+        continue;
+      }
+      throw error;
+    }
+  }
+  return null;
+};
+const sbFindBreederIdByCode = async rawCode => {
+  const code = friendsNormalizeCode(rawCode);
+  if (!code) return null;
+  const rows = await friendsRequest(`${FRIENDS_TABLE_CODES}?select=breeder_id&friend_code=eq.${code}&limit=1`);
+  return Array.isArray(rows) && rows.length ? friendsSafeId(rows[0].breeder_id) || null : null;
+};
+const sbFetchFriendLinks = async breederId => {
+  const id = friendsSafeId(breederId);
+  if (!id) return [];
+  const rows = await friendsRequest(`${FRIENDS_TABLE_LINKS}?select=*&or=(requester_id.eq.${id},target_id.eq.${id})&order=updated_at.desc&limit=300`);
+  return Array.isArray(rows) ? rows : [];
+};
+const sbFetchFriendProfiles = async ids => {
+  const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
+  const byId = {};
+  if (!safe.length) return byId;
+  const rows = await friendsRequest(`breeder_profiles?select=breeder_id,user_name,icon,profile_frame,updated_at&breeder_id=in.(${safe.join(',')})`);
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    if (!row || typeof row.breeder_id !== 'string') return;
+    const at = Date.parse(row.updated_at);
+    byId[row.breeder_id] = {
+      userName: row.user_name || '名無しのブリーダー',
+      icon: row.icon ?? null,
+      profileFrame: normalizeProfileFrameId(row.profile_frame),
+      lastSeenAt: Number.isFinite(at) ? at : 0
+    };
+  });
+  return byId;
+};
+const sbFetchFriendRhythmSummary = async breederId => {
+  const id = friendsSafeId(breederId);
+  if (!id) return null;
+  try {
+    const rows = await sbFetchRhythmTotalRankings({
+      limit: 1,
+      identityKeys: [id],
+      requestId: 'friend-profile'
+    });
+    const row = Array.isArray(rows) && rows.length ? rows[0] : null;
+    return row ? rhythmTotalRankingEntryFromRow(row) : null;
+  } catch (error) {
+    return null;
+  }
+};
+const friendsCountAccepted = (selfId, rows) => (Array.isArray(rows) ? rows : []).filter(row => friendLinkView(selfId, row)?.status === FRIEND_STATUS.ACCEPTED).length;
+const friendsCountOutgoing = (selfId, rows) => (Array.isArray(rows) ? rows : []).filter(row => {
+  const view = friendLinkView(selfId, row);
+  return view && view.status === FRIEND_STATUS.PENDING && view.outgoing;
+}).length;
+const friendsGuard = async fn => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error && error.notReady) return 'notready';
+    console.error('[friends]', error && error.message ? error.message : error);
+    return 'error';
+  }
+};
+const friendsAcceptedCountOf = async id => {
+  try {
+    const rows = await sbFetchFriendLinks(id);
+    return friendsCountAccepted(id, rows);
+  } catch (error) {
+    return 0;
+  }
+};
+const sbSendFriendRequest = (selfIdRaw, targetIdRaw) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const targetId = friendsSafeId(targetIdRaw);
+  if (!selfId || !targetId) return 'error';
+  if (selfId === targetId) return 'self';
+  const mine = await sbFetchFriendLinks(selfId);
+  if (friendsCountOutgoing(selfId, mine) >= FRIENDS_PENDING_MAX) return 'limit';
+  const existing = mine.find(row => friendLinkView(selfId, row)?.otherId === targetId) || null;
+  if (!existing) {
+    if (friendsCountAccepted(selfId, mine) >= FRIENDS_MAX) return 'full';
+    try {
+      await friendsRequest(FRIENDS_TABLE_LINKS, {
+        method: 'POST',
+        body: [{
+          requester_id: selfId,
+          target_id: targetId,
+          status: FRIEND_STATUS.PENDING
+        }],
+        prefer: 'return=minimal'
+      });
+      return 'sent';
+    } catch (error) {
+      if (error && error.status === 409) return 'pending';
+      throw error;
+    }
+  }
+  const view = friendLinkView(selfId, existing);
+  switch (view.status) {
+    case FRIEND_STATUS.ACCEPTED:
+      return 'already';
+    case FRIEND_STATUS.PENDING:
+      if (view.outgoing) return 'pending';
+      if (friendsCountAccepted(selfId, mine) >= FRIENDS_MAX) return 'full';
+      if ((await friendsAcceptedCountOf(targetId)) >= FRIENDS_MAX) return 'their-full';
+      await friendsPatchLink(existing, {
+        status: FRIEND_STATUS.ACCEPTED
+      });
+      return 'accepted';
+    case FRIEND_STATUS.BLOCKED:
+      return view.blockedByMe ? 'blocked-by-me' : 'unavailable';
+    case FRIEND_STATUS.DECLINED:
+      if (view.outgoing) return 'unavailable';
+    default:
+      if (friendsCountAccepted(selfId, mine) >= FRIENDS_MAX) return 'full';
+      await friendsPatchLink(existing, {
+        requester_id: selfId,
+        target_id: targetId,
+        status: FRIEND_STATUS.PENDING,
+        blocked_by: null
+      });
+      return 'sent';
+  }
+});
+const sbRespondFriendRequest = (selfIdRaw, otherIdRaw, action) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const otherId = friendsSafeId(otherIdRaw);
+  if (!selfId || !otherId) return 'error';
+  const row = await friendsFetchPair(selfId, otherId);
+  const view = row ? friendLinkView(selfId, row) : null;
+  if (!view || view.status !== FRIEND_STATUS.PENDING || view.outgoing) return 'gone';
+  if (action === 'accept') {
+    const mine = await sbFetchFriendLinks(selfId);
+    if (friendsCountAccepted(selfId, mine) >= FRIENDS_MAX) return 'full';
+    if ((await friendsAcceptedCountOf(otherId)) >= FRIENDS_MAX) return 'their-full';
+    await friendsPatchLink(row, {
+      status: FRIEND_STATUS.ACCEPTED
+    });
+    return 'accepted';
+  }
+  if (action === 'block') {
+    await friendsPatchLink(row, {
+      status: FRIEND_STATUS.BLOCKED,
+      blocked_by: selfId
+    });
+    return 'blocked';
+  }
+  await friendsPatchLink(row, {
+    status: FRIEND_STATUS.DECLINED
+  });
+  return 'declined';
+});
+const sbCancelFriendRequest = (selfIdRaw, otherIdRaw) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const otherId = friendsSafeId(otherIdRaw);
+  if (!selfId || !otherId) return 'error';
+  const row = await friendsFetchPair(selfId, otherId);
+  const view = row ? friendLinkView(selfId, row) : null;
+  if (!view || view.status !== FRIEND_STATUS.PENDING || !view.outgoing) return 'gone';
+  await friendsPatchLink(row, {
+    status: FRIEND_STATUS.REMOVED
+  });
+  return 'cancelled';
+});
+const sbRemoveFriend = (selfIdRaw, otherIdRaw) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const otherId = friendsSafeId(otherIdRaw);
+  if (!selfId || !otherId) return 'error';
+  const row = await friendsFetchPair(selfId, otherId);
+  const view = row ? friendLinkView(selfId, row) : null;
+  if (!view || view.status !== FRIEND_STATUS.ACCEPTED) return 'gone';
+  await friendsPatchLink(row, {
+    status: FRIEND_STATUS.REMOVED
+  });
+  return 'removed';
+});
+const sbBlockFriendUser = (selfIdRaw, otherIdRaw) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const otherId = friendsSafeId(otherIdRaw);
+  if (!selfId || !otherId || selfId === otherId) return 'error';
+  const row = await friendsFetchPair(selfId, otherId);
+  if (!row) {
+    await friendsRequest(FRIENDS_TABLE_LINKS, {
+      method: 'POST',
+      body: [{
+        requester_id: selfId,
+        target_id: otherId,
+        status: FRIEND_STATUS.BLOCKED,
+        blocked_by: selfId
+      }],
+      prefer: 'return=minimal'
+    });
+    return 'blocked';
+  }
+  await friendsPatchLink(row, {
+    status: FRIEND_STATUS.BLOCKED,
+    blocked_by: selfId
+  });
+  return 'blocked';
+});
+const sbUnblockFriendUser = (selfIdRaw, otherIdRaw) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const otherId = friendsSafeId(otherIdRaw);
+  if (!selfId || !otherId) return 'error';
+  const row = await friendsFetchPair(selfId, otherId);
+  const view = row ? friendLinkView(selfId, row) : null;
+  if (!view || !view.blockedByMe) return 'gone';
+  await friendsPatchLink(row, {
+    status: FRIEND_STATUS.REMOVED,
+    blocked_by: null
+  });
+  return 'unblocked';
+});
+const FRIEND_INVITE_TTL_MS = 3 * 60 * 1000;
+const FRIEND_INVITE_POLL_MS = 8000;
+const FRIEND_INVITE_CODE_RE = /^[A-HJ-NP-Z2-9]{4}$/;
+const sbSendRoomInvite = (selfIdRaw, targetIdRaw, roomCode) => friendsGuard(async () => {
+  const selfId = friendsSafeId(selfIdRaw);
+  const targetId = friendsSafeId(targetIdRaw);
+  const code = typeof roomCode === 'string' ? roomCode.toUpperCase() : '';
+  if (!selfId || !targetId || selfId === targetId || !FRIEND_INVITE_CODE_RE.test(code)) return 'error';
+  await friendsRequest(`friend_invites?on_conflict=sender_id,target_id`, {
+    method: 'POST',
+    body: [{
+      sender_id: selfId,
+      target_id: targetId,
+      room_code: code
+    }],
+    prefer: 'resolution=merge-duplicates,return=minimal'
+  });
+  return 'invited';
+});
+const sbFetchRoomInvites = async (selfIdRaw, nowMs) => {
+  const selfId = friendsSafeId(selfIdRaw);
+  if (!selfId) return [];
+  const since = new Date(nowMs - FRIEND_INVITE_TTL_MS).toISOString();
+  const rows = await friendsRequest(`friend_invites?select=sender_id,room_code,created_at&target_id=eq.${selfId}` + `&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=20`);
+  return (Array.isArray(rows) ? rows : []).map(row => {
+    const at = Date.parse(row?.created_at);
+    const code = typeof row?.room_code === 'string' ? row.room_code.toUpperCase() : '';
+    return {
+      senderId: friendsSafeId(row?.sender_id),
+      roomCode: code,
+      createdAt: Number.isFinite(at) ? at : 0
+    };
+  }).filter(invite => invite.senderId && FRIEND_INVITE_CODE_RE.test(invite.roomCode) && nowMs - invite.createdAt <= FRIEND_INVITE_TTL_MS);
+};
+const sbFetchFriendRoster = async selfIdRaw => {
+  const selfId = friendsSafeId(selfIdRaw);
+  if (!selfId) return [];
+  const groups = friendsGroup(selfId, await sbFetchFriendLinks(selfId));
+  const looks = await sbFetchFriendProfiles(groups.friends.map(view => view.otherId));
+  return groups.friends.map(view => ({
+    otherId: view.otherId,
+    userName: (looks[view.otherId] || {}).userName || '名無しのブリーダー',
+    lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0
+  })).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+};
 const SCREEN_EFFECT_SCOPES = {
   SCREEN: 'screen',
   PROGRESS: 'progress'
@@ -37401,6 +37952,8 @@ function ProfileScreen({
   onOpenSpeciesRecords,
   rhythmHistoryCount,
   onOpenRhythmHistory,
+  friendsEnabled = false,
+  onOpenFriends,
   unlockedAssistants
 }) {
   const assistantChoices = Array.isArray(unlockedAssistants) && unlockedAssistants.length ? unlockedAssistants : ASSISTANT_LIST;
@@ -37821,7 +38374,24 @@ function ProfileScreen({
         className: "mt-2 text-center text-[11px] font-black text-slate-400"
       }, "未記録"));
     }))));
-  })(), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
+  })(), onboarded && !onboardingPreview && friendsEnabled && React.createElement("button", {
+    type: "button",
+    "data-profile-friends": true,
+    onClick: onOpenFriends,
+    className: "mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-pink-400/40 bg-pink-950/40 px-3 py-2.5 active:scale-[.98]"
+  }, React.createElement(Users, {
+    size: 16,
+    className: "text-pink-300 shrink-0"
+  }), React.createElement("span", {
+    className: "flex-1 min-w-0 text-left"
+  }, React.createElement("b", {
+    className: "block text-[13px] font-black text-pink-100"
+  }, "フレンド"), React.createElement("small", {
+    className: "block text-[10px] text-pink-300"
+  }, "フレンドコードで申請して、プロフィールを見せ合えます")), React.createElement(ChevronRight, {
+    size: 16,
+    className: "shrink-0 text-pink-400"
+  })), onboarded && !onboardingPreview && Number(rhythmHistoryCount) > 0 && React.createElement("button", {
     type: "button",
     "data-profile-rhythm-history": true,
     onClick: onOpenRhythmHistory,
@@ -52876,6 +53446,457 @@ function MonsterCheckDebugScreen({
     className: "max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-black/50 p-3 text-[9px] leading-relaxed text-cyan-200"
   }, JSON.stringify(mon, null, 2)))))));
 }
+const FRIENDS_RESULT_TEXT = Object.freeze({
+  sent: ['フレンド申請を送りました。承認されるとフレンドになります', 'ok'],
+  accepted: ['フレンドになりました!', 'ok'],
+  already: ['この人とはもうフレンドです', 'info'],
+  pending: ['すでに申請しています。返事を待ちましょう', 'info'],
+  self: ['自分自身にはフレンド申請できません', 'warn'],
+  notfound: ['そのフレンドコードの人が見つかりません。コードを確かめてください', 'warn'],
+  'blocked-by-me': ['この人はブロック中です。申請するには、先にブロックを解除してください', 'warn'],
+  unavailable: ['この人には申請できませんでした', 'warn'],
+  full: [`フレンドがいっぱいです(${FRIENDS_MAX}人まで)。だれかを解除すると申請できます`, 'warn'],
+  'their-full': ['相手のフレンドがいっぱいで、いまは成立できませんでした', 'warn'],
+  limit: [`申請中の人が多すぎます(${FRIENDS_PENDING_MAX}人まで)。返事を待つか、取り消してください`, 'warn'],
+  gone: ['この申請はもう変わっていました。一覧を更新しました', 'info'],
+  declined: ['申請を断りました', 'info'],
+  blocked: ['ブロックしました', 'info'],
+  unblocked: ['ブロックを解除しました', 'info'],
+  cancelled: ['申請を取り消しました', 'info'],
+  removed: ['フレンドを解除しました', 'info'],
+  notready: ['フレンド機能はただいま準備中です', 'warn'],
+  error: ['通信がうまくいきませんでした。少し待ってからもう一度ためしてください', 'warn']
+});
+const FRIENDS_TONE_CLASS = Object.freeze({
+  ok: 'border-emerald-400/60 bg-emerald-950/50 text-emerald-100',
+  info: 'border-sky-400/50 bg-sky-950/40 text-sky-100',
+  warn: 'border-amber-400/60 bg-amber-950/40 text-amber-100'
+});
+function FriendsScreen({
+  resolveIconUrl,
+  target = null,
+  onBack,
+  onTargetHandled
+}) {
+  const [tab, setTab] = React.useState('friends');
+  const [phase, setPhase] = React.useState('loading');
+  const [selfId, setSelfId] = React.useState('');
+  const [myCode, setMyCode] = React.useState('');
+  const [groups, setGroups] = React.useState({
+    friends: [],
+    incoming: [],
+    outgoing: [],
+    blocked: []
+  });
+  const [profiles, setProfiles] = React.useState({});
+  const [codeInput, setCodeInput] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [notice, setNotice] = React.useState(null);
+  const [selected, setSelected] = React.useState(null);
+  const [summary, setSummary] = React.useState({
+    status: 'idle',
+    entry: null
+  });
+  const [confirm, setConfirm] = React.useState(null);
+  const [targetAsk, setTargetAsk] = React.useState(target);
+  const aliveRef = React.useRef(true);
+  React.useEffect(() => () => {
+    aliveRef.current = false;
+  }, []);
+  const say = key => {
+    const pair = FRIENDS_RESULT_TEXT[key] || FRIENDS_RESULT_TEXT.error;
+    setNotice({
+      text: pair[0],
+      tone: pair[1]
+    });
+  };
+  const reload = React.useCallback(async idOverride => {
+    const id = idOverride || selfId;
+    if (!id) return;
+    try {
+      const rows = await sbFetchFriendLinks(id);
+      const next = friendsGroup(id, rows);
+      const ids = [...next.friends, ...next.incoming, ...next.outgoing, ...next.blocked].map(view => view.otherId);
+      const found = await sbFetchFriendProfiles(ids);
+      if (!aliveRef.current) return;
+      setGroups(next);
+      setProfiles(prev => ({
+        ...prev,
+        ...found
+      }));
+      setPhase('ready');
+    } catch (error) {
+      if (!aliveRef.current) return;
+      if (error && error.notReady) setPhase('notready');else {
+        console.error('[friends]', error && error.message ? error.message : error);
+        setPhase('error');
+      }
+    }
+  }, [selfId]);
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const id = await ensureBreederId();
+      if (cancelled || !aliveRef.current) return;
+      if (!id) {
+        setPhase('noid');
+        return;
+      }
+      setSelfId(id);
+      try {
+        const code = await sbEnsureFriendCode(id);
+        if (!cancelled && aliveRef.current && code) setMyCode(code);
+      } catch (error) {
+        if (error && error.notReady) {
+          if (!cancelled && aliveRef.current) setPhase('notready');
+          return;
+        }
+        console.error('[friends]', error && error.message ? error.message : error);
+      }
+      if (!cancelled) await reload(id);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const lookOf = id => profiles[id] || {
+    userName: '名無しのブリーダー',
+    icon: null,
+    profileFrame: PROFILE_FRAME_NONE_ID,
+    lastSeenAt: 0
+  };
+  const avatar = (id, sizeClass, emojiClass = 'text-base') => {
+    const look = lookOf(id);
+    const url = resolveIconUrl ? resolveIconUrl(look.icon) : null;
+    return url ? React.createElement(ProfileAvatar, {
+      src: url,
+      id: look.icon,
+      frameId: look.profileFrame,
+      className: `${sizeClass} shrink-0`
+    }) : React.createElement(ProfileAvatar, {
+      frameId: look.profileFrame,
+      className: `${sizeClass} shrink-0`,
+      fallback: React.createElement("span", {
+        className: `flex h-full w-full items-center justify-center rounded-full bg-slate-800 ${emojiClass}`
+      }, "👤")
+    });
+  };
+  const run = async (task, {
+    thenReload = true
+  } = {}) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const result = await task();
+      if (!aliveRef.current) return;
+      say(result);
+      if (thenReload) await reload();
+    } finally {
+      if (aliveRef.current) setBusy(false);
+    }
+  };
+  const sendByCode = () => run(async () => {
+    const code = friendsNormalizeCode(codeInput);
+    if (!code) return 'notfound';
+    if (code === myCode) return 'self';
+    let found = null;
+    try {
+      found = await sbFindBreederIdByCode(code);
+    } catch (error) {
+      return error && error.notReady ? 'notready' : 'error';
+    }
+    if (!found) return 'notfound';
+    const result = await sbSendFriendRequest(selfId, found);
+    if (result === 'sent' || result === 'accepted') setCodeInput('');
+    return result;
+  });
+  const sendToTarget = () => run(async () => {
+    const id = targetAsk && targetAsk.breederId;
+    setTargetAsk(null);
+    if (typeof onTargetHandled === 'function') onTargetHandled();
+    return sbSendFriendRequest(selfId, id);
+  });
+  const respond = (otherId, action) => run(() => sbRespondFriendRequest(selfId, otherId, action));
+  const cancelRequest = otherId => run(() => sbCancelFriendRequest(selfId, otherId));
+  const unblock = otherId => run(() => sbUnblockFriendUser(selfId, otherId));
+  const doConfirmed = () => {
+    const ask = confirm;
+    setConfirm(null);
+    if (!ask) return;
+    setSelected(null);
+    run(() => ask.kind === 'remove' ? sbRemoveFriend(selfId, ask.otherId) : sbBlockFriendUser(selfId, ask.otherId));
+  };
+  const openProfile = async view => {
+    setSelected(view);
+    setSummary({
+      status: 'loading',
+      entry: null
+    });
+    const entry = await sbFetchFriendRhythmSummary(view.otherId);
+    if (aliveRef.current) setSummary({
+      status: 'done',
+      entry
+    });
+  };
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(myCode);
+      setNotice({
+        text: 'フレンドコードをコピーしました',
+        tone: 'ok'
+      });
+    } catch (error) {
+      setNotice({
+        text: 'コピーできませんでした。コードを見ながら伝えてください',
+        tone: 'warn'
+      });
+    }
+  };
+  const now = Date.now();
+  const tabs = [{
+    id: 'friends',
+    label: `フレンド ${groups.friends.length}/${FRIENDS_MAX}`
+  }, {
+    id: 'requests',
+    label: '申請',
+    badge: groups.incoming.length
+  }, {
+    id: 'add',
+    label: '追加'
+  }];
+  const btn = 'min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 disabled:opacity-40';
+  const noticeBox = notice && React.createElement("div", {
+    role: "status",
+    className: `mb-2 shrink-0 rounded-xl border px-3 py-2 text-[11px] font-bold leading-relaxed ${FRIENDS_TONE_CLASS[notice.tone] || FRIENDS_TONE_CLASS.info}`
+  }, notice.text);
+  if (phase !== 'ready') {
+    const lines = phase === 'loading' ? ['フレンドを読み込んでいます…'] : phase === 'notready' ? ['フレンド機能はただいま準備中です', 'しばらくしてからもう一度ひらいてください'] : phase === 'noid' ? ['この端末ではフレンドを使えません', 'セーブデータを保存できる状態でひらいてください'] : ['フレンドを読み込めませんでした', '通信を確かめて、もう一度ひらいてください'];
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-friends-phase": phase,
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: "フレンド",
+      accent: "text-pink-300",
+      onBack: onBack,
+      backLabel: "プロフィールへ戻る"
+    }), React.createElement(ScreenEmpty, {
+      emoji: phase === 'loading' ? '⏳' : '🤝',
+      lines: lines,
+      action: phase === 'error' ? React.createElement("button", {
+        type: "button",
+        onClick: () => {
+          setPhase('loading');
+          reload();
+        },
+        className: `${btn} w-full border-white/20 bg-slate-800 text-slate-200`
+      }, "もう一度読み込む") : null
+    }));
+  }
+  if (selected) {
+    const look = lookOf(selected.otherId);
+    const entry = summary.entry;
+    return React.createElement("div", {
+      "data-mh-screen": true,
+      "data-friends-profile": true,
+      className: SCREEN_SHELL_CLASS
+    }, React.createElement(ScreenHead, {
+      title: "フレンドのプロフィール",
+      accent: "text-pink-300",
+      onBack: () => setSelected(null),
+      backLabel: "フレンド一覧へ戻る"
+    }), React.createElement("div", {
+      className: `${SCREEN_LIST_CLASS} pb-4`
+    }, noticeBox, React.createElement("div", {
+      className: `${SCREEN_PANEL_CLASS} flex flex-col items-center gap-2 py-5 text-center`
+    }, avatar(selected.otherId, 'h-20 w-20', 'text-4xl'), React.createElement("b", {
+      className: "max-w-full truncate text-lg font-black text-white"
+    }, look.userName), React.createElement("span", {
+      className: "text-[10px] font-bold text-slate-400"
+    }, friendsLastSeenText(look.lastSeenAt, now))), React.createElement("div", {
+      className: "mt-3"
+    }, React.createElement(ScreenSectionLabel, null, "モンヒロビートの記録")), React.createElement("div", {
+      className: `${SCREEN_PANEL_FLAT_CLASS} mt-1`
+    }, summary.status === 'loading' && React.createElement("p", {
+      className: "text-[11px] font-bold text-slate-400"
+    }, "読み込んでいます…"), summary.status === 'done' && !entry && React.createElement("p", {
+      className: "text-[11px] font-bold text-slate-400"
+    }, "まだ記録がありません"), entry && React.createElement("dl", {
+      className: "grid grid-cols-3 gap-2 text-center"
+    }, React.createElement("div", null, React.createElement("dt", {
+      className: "text-[9px] font-bold text-slate-400"
+    }, "ブリーダーLv."), React.createElement("dd", {
+      className: "text-sm font-black text-indigo-200"
+    }, entry.level > 0 ? entry.level : '—')), React.createElement("div", null, React.createElement("dt", {
+      className: "text-[9px] font-bold text-slate-400"
+    }, "合計スコア"), React.createElement("dd", {
+      className: "text-sm font-black text-amber-200"
+    }, Number(entry.totalScore).toLocaleString())), React.createElement("div", null, React.createElement("dt", {
+      className: "text-[9px] font-bold text-slate-400"
+    }, "遊んだ曲数"), React.createElement("dd", {
+      className: "text-sm font-black text-pink-200"
+    }, entry.songCount, "曲")))), React.createElement("div", {
+      className: "mt-4 grid grid-cols-2 gap-2"
+    }, React.createElement("button", {
+      type: "button",
+      disabled: busy,
+      onClick: () => setConfirm({
+        kind: 'remove',
+        otherId: selected.otherId
+      }),
+      className: `${btn} border-white/20 bg-slate-800 text-slate-200`
+    }, "フレンドを解除"), React.createElement("button", {
+      type: "button",
+      disabled: busy,
+      onClick: () => setConfirm({
+        kind: 'block',
+        otherId: selected.otherId
+      }),
+      className: `${btn} border-rose-400/50 bg-rose-950/40 text-rose-200`
+    }, "ブロックする"))), confirm && React.createElement(ConfirmSheet, {
+      title: confirm.kind === 'remove' ? `${look.userName}さんとのフレンドを解除しますか?` : `${look.userName}さんをブロックしますか?`,
+      message: confirm.kind === 'remove' ? '解除しても、あとからもう一度申請できます。' : 'ブロックすると、フレンドが解除され、相手からの申請も届かなくなります。申請の画面からいつでも解除できます。',
+      confirmLabel: confirm.kind === 'remove' ? '解除する' : 'ブロックする',
+      danger: true,
+      onConfirm: doConfirmed,
+      onCancel: () => setConfirm(null)
+    }));
+  }
+  const person = (view, right) => {
+    const look = lookOf(view.otherId);
+    return React.createElement("div", {
+      key: view.otherId,
+      className: `${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`
+    }, avatar(view.otherId, 'h-10 w-10'), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block truncate text-[12px] font-black text-white"
+    }, look.userName), React.createElement("span", {
+      className: "block truncate text-[9px] font-bold text-slate-400"
+    }, friendsLastSeenText(look.lastSeenAt, now))), right);
+  };
+  return React.createElement("div", {
+    "data-mh-screen": true,
+    "data-friends-phase": "ready",
+    className: SCREEN_SHELL_CLASS
+  }, React.createElement(ScreenHead, {
+    title: "フレンド",
+    accent: "text-pink-300",
+    onBack: onBack,
+    backLabel: "プロフィールへ戻る"
+  }), React.createElement("div", {
+    className: "mb-2 shrink-0"
+  }, React.createElement(AssistantBubble, {
+    scene: "friends",
+    compact: true
+  })), React.createElement(ScreenTabs, {
+    items: tabs,
+    value: tab,
+    onChange: id => {
+      setTab(id);
+      setNotice(null);
+    }
+  }), React.createElement("div", {
+    className: `${SCREEN_LIST_CLASS} pb-4`
+  }, noticeBox, tab === 'friends' && (groups.friends.length === 0 ? React.createElement(ScreenEmpty, {
+    emoji: "🤝",
+    lines: ['まだフレンドがいません', '「追加」から、フレンドコードで申請してみましょう'],
+    action: React.createElement("button", {
+      type: "button",
+      onClick: () => setTab('add'),
+      className: `${btn} w-full border-pink-400/60 bg-pink-500/20 text-pink-100`
+    }, "フレンドを追加する")
+  }) : React.createElement("div", {
+    className: "flex flex-col gap-2"
+  }, groups.friends.map(view => person(view, React.createElement("button", {
+    type: "button",
+    onClick: () => openProfile(view),
+    className: `${btn} shrink-0 px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`
+  }, "プロフィール ›"))))), tab === 'requests' && React.createElement("div", {
+    className: "flex flex-col gap-3"
+  }, React.createElement("div", null, React.createElement(ScreenSectionLabel, null, "届いている申請"), groups.incoming.length === 0 ? React.createElement("p", {
+    className: "px-1 py-2 text-[11px] font-bold text-slate-500"
+  }, "届いている申請はありません") : React.createElement("div", {
+    className: "mt-1 flex flex-col gap-2"
+  }, groups.incoming.map(view => person(view, React.createElement("div", {
+    className: "flex shrink-0 gap-1"
+  }, React.createElement("button", {
+    type: "button",
+    disabled: busy,
+    onClick: () => respond(view.otherId, 'accept'),
+    className: `${btn} px-3 border-emerald-400/60 bg-emerald-500/20 text-emerald-100`
+  }, "承認"), React.createElement("button", {
+    type: "button",
+    disabled: busy,
+    onClick: () => respond(view.otherId, 'decline'),
+    className: `${btn} px-3 border-white/20 bg-slate-800 text-slate-200`
+  }, "断る"), React.createElement("button", {
+    type: "button",
+    disabled: busy,
+    onClick: () => respond(view.otherId, 'block'),
+    className: `${btn} px-2 border-rose-400/50 bg-rose-950/40 text-rose-200`
+  }, "ブロック")))))), React.createElement("div", null, React.createElement(ScreenSectionLabel, null, "送った申請"), groups.outgoing.length === 0 ? React.createElement("p", {
+    className: "px-1 py-2 text-[11px] font-bold text-slate-500"
+  }, "返事を待っている申請はありません") : React.createElement("div", {
+    className: "mt-1 flex flex-col gap-2"
+  }, groups.outgoing.map(view => person(view, React.createElement("button", {
+    type: "button",
+    disabled: busy,
+    onClick: () => cancelRequest(view.otherId),
+    className: `${btn} shrink-0 px-3 border-white/20 bg-slate-800 text-slate-200`
+  }, "取り消す"))))), groups.blocked.length > 0 && React.createElement("div", null, React.createElement(ScreenSectionLabel, null, "ブロック中"), React.createElement("div", {
+    className: "mt-1 flex flex-col gap-2"
+  }, groups.blocked.map(view => person(view, React.createElement("button", {
+    type: "button",
+    disabled: busy,
+    onClick: () => unblock(view.otherId),
+    className: `${btn} shrink-0 px-3 border-white/20 bg-slate-800 text-slate-200`
+  }, "解除する")))))), tab === 'add' && React.createElement("div", {
+    className: "flex flex-col gap-3"
+  }, React.createElement("div", {
+    className: SCREEN_PANEL_CLASS
+  }, React.createElement(ScreenSectionLabel, null, "あなたのフレンドコード"), React.createElement("p", {
+    "data-friend-code": true,
+    className: "my-2 text-center text-3xl font-black tracking-widest text-pink-200"
+  }, myCode ? friendsFormatCode(myCode) : '— — — —'), React.createElement("button", {
+    type: "button",
+    disabled: !myCode,
+    onClick: copyCode,
+    className: `${btn} w-full border-pink-400/60 bg-pink-500/20 text-pink-100`
+  }, "コードをコピー"), React.createElement("p", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "このコードを友だちに伝えると、友だちから申請してもらえます。コードは変わりません。")), React.createElement("div", {
+    className: SCREEN_PANEL_CLASS
+  }, React.createElement(ScreenSectionLabel, null, "コードで申請する"), React.createElement("input", {
+    type: "text",
+    value: codeInput,
+    onChange: event => setCodeInput(event.target.value.slice(0, 16)),
+    inputMode: "text",
+    autoCapitalize: "characters",
+    autoComplete: "off",
+    autoCorrect: "off",
+    spellCheck: false,
+    placeholder: "友だちのフレンドコード",
+    "aria-label": "友だちのフレンドコード",
+    className: "mt-2 w-full min-h-[44px] rounded-xl border border-white/15 bg-black/40 px-3 text-center text-base font-black tracking-widest text-white placeholder:text-slate-600"
+  }), React.createElement("button", {
+    type: "button",
+    disabled: busy || !friendsNormalizeCode(codeInput),
+    onClick: sendByCode,
+    className: `${btn} mt-2 w-full border-emerald-400/60 bg-emerald-500/20 text-emerald-100`
+  }, "フレンド申請を送る"), React.createElement("p", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "ランキングの名前をタップしても、その人に申請できます。")))), targetAsk && React.createElement(ConfirmSheet, {
+    title: `${targetAsk.userName || '名無しのブリーダー'}さんにフレンド申請しますか?`,
+    message: "相手が承認すると、フレンドになります。",
+    confirmLabel: "申請する",
+    onConfirm: sendToTarget,
+    onCancel: () => {
+      setTargetAsk(null);
+      if (typeof onTargetHandled === 'function') onTargetHandled();
+    }
+  }));
+}
 const DEBUG_MASU_STAGES = Object.freeze([{
   id: 'fresh',
   label: '登録したて',
@@ -55746,6 +56767,8 @@ function MonsterHeroGame() {
   }, [breederName]);
   const [rhythmHistoryList, setRhythmHistoryList] = useState([]);
   const [rhythmHistorySelected, setRhythmHistorySelected] = useState(null);
+  const [friendsTarget, setFriendsTarget] = useState(null);
+  const [friendCandidate, setFriendCandidate] = useState(null);
   const rhythmHistoryReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
   const rhythmHistoryCount = rhythmHistoryReleased ? rhythmHistoryEntries(Date.now()).length : 0;
   const loadRhythmHistoryBoard = (entry, divisionId) => {
@@ -55755,6 +56778,38 @@ function MonsterHeroGame() {
       history: divisionId
     }));
     loadRhythmEventRanking('history', divisionId, entry);
+  };
+  const openFriends = target => {
+    if (RELEASE_FLAGS.friends !== true) return;
+    setFriendsTarget(target || null);
+    setGameState('FRIENDS');
+  };
+  const openFriendCandidate = entry => {
+    if (RELEASE_FLAGS.friends !== true) return;
+    const id = friendsIdOfRankingEntry(entry);
+    if (!id) return;
+    setFriendCandidate({
+      id,
+      userName: entry?.userName || '名無しのブリーダー',
+      phase: 'ask',
+      text: ''
+    });
+  };
+  const sendFriendCandidate = async () => {
+    const cand = friendCandidate;
+    if (!cand || cand.phase !== 'ask') return;
+    setFriendCandidate({
+      ...cand,
+      phase: 'busy'
+    });
+    const selfId = await ensureBreederId();
+    const key = selfId ? await sbSendFriendRequest(selfId, cand.id) : 'error';
+    const pair = FRIENDS_RESULT_TEXT[key] || FRIENDS_RESULT_TEXT.error;
+    setFriendCandidate({
+      ...cand,
+      phase: 'done',
+      text: pair[0]
+    });
   };
   const openRhythmHistory = () => {
     setRhythmHistorySelected(null);
@@ -56422,6 +57477,7 @@ function MonsterHeroGame() {
     GIFT_BOX: 'home',
     MISSIONS: 'home',
     RHYTHM_HISTORY: 'home',
+    FRIENDS: 'home',
     BATTLE_MENU: 'enhance',
     BATTLE_SYSTEM_SELECT: 'enhance',
     BATTLE_MODE_SELECT: 'enhance',
@@ -69043,7 +70099,7 @@ function MonsterHeroGame() {
   const rankingPlace = index => React.createElement("div", {
     className: `w-7 h-7 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-slate-300 text-black' : index === 2 ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400'}`
   }, index + 1);
-  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon) ? React.createElement(ProfileAvatar, {
+  const rankingBreederIconPlain = entry => resolveIconUrl(entry?.icon) ? React.createElement(ProfileAvatar, {
     src: resolveIconUrl(entry.icon),
     id: entry.icon,
     frameId: entry?.profileFrame,
@@ -69055,6 +70111,24 @@ function MonsterHeroGame() {
       className: "flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs"
     }, "👤")
   });
+  const rankingBreederIcon = entry => RELEASE_FLAGS.friends === true && friendsIdOfRankingEntry(entry) ? React.createElement("span", {
+    role: "button",
+    tabIndex: 0,
+    "data-friend-candidate": true,
+    "aria-label": `${entry?.userName || '名無しのブリーダー'}さんにフレンド申請`,
+    onClick: event => {
+      event.stopPropagation();
+      openFriendCandidate(entry);
+    },
+    onKeyDown: event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        event.stopPropagation();
+        openFriendCandidate(entry);
+      }
+    },
+    className: "inline-flex shrink-0 cursor-pointer active:scale-90"
+  }, rankingBreederIconPlain(entry)) : rankingBreederIconPlain(entry);
   const rankingCardClass = index => `rounded-xl border ${index === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`;
   const renderScoreRankingEntry = (entry, index, showSpecies = false) => {
     const finiteNumber = value => value == null || value === '' ? null : Number.isFinite(Number(value)) ? Number(value) : null;
@@ -75310,7 +76384,14 @@ function MonsterHeroGame() {
       }),
       rhythmHistoryCount: rhythmHistoryCount,
       unlockedAssistants: assistantsUnlockedFrom(rhythmEventStorySeen),
-      onOpenRhythmHistory: openRhythmHistory
+      onOpenRhythmHistory: openRhythmHistory,
+      friendsEnabled: RELEASE_FLAGS.friends === true,
+      onOpenFriends: () => openFriends(null)
+    }), gameState === 'FRIENDS' && RELEASE_FLAGS.friends === true && React.createElement(FriendsScreen, {
+      resolveIconUrl: resolveIconUrl,
+      target: friendsTarget,
+      onTargetHandled: () => setFriendsTarget(null),
+      onBack: () => setGameState('PROFILE')
     }), gameState === 'BREEDER_MARKET' && React.createElement(BreederMarketScreen, {
       gold: gold,
       breederPoints: breederPoints,
@@ -77583,7 +78664,34 @@ function MonsterHeroGame() {
       }, "能力値や技は、公開のときにお知らせします。"), React.createElement(MarketModalClose, {
         onClick: close
       })));
-    })(), confirmRequest && React.createElement(ConfirmSheet, {
+    })(), friendCandidate && friendCandidate.phase !== 'done' && React.createElement(ConfirmSheet, {
+      title: `${friendCandidate.userName}さんにフレンド申請しますか?`,
+      message: friendCandidate.phase === 'busy' ? '送っています…' : '相手が承認すると、フレンドになります。',
+      confirmLabel: "申請する",
+      onConfirm: sendFriendCandidate,
+      onCancel: () => {
+        if (friendCandidate.phase === 'ask') setFriendCandidate(null);
+      }
+    }), friendCandidate && friendCandidate.phase === 'done' && React.createElement(ModalFrame, {
+      label: "フレンド申請の結果",
+      border: "border-pink-400/70",
+      onClose: () => setFriendCandidate(null),
+      zIndex: MODAL_Z.confirm
+    }, React.createElement("p", {
+      "data-friend-result": true,
+      className: "text-center text-[13px] font-black leading-relaxed text-pink-100"
+    }, friendCandidate.text), React.createElement("div", {
+      className: "mt-4 grid grid-cols-1 gap-2"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: () => {
+        setFriendCandidate(null);
+        openFriends(null);
+      },
+      className: "mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]"
+    }, "フレンド画面をひらく"), React.createElement(ModalCloseButton, {
+      onClick: () => setFriendCandidate(null)
+    }))), confirmRequest && React.createElement(ConfirmSheet, {
       title: confirmRequest.title,
       message: confirmRequest.message || '',
       confirmLabel: confirmRequest.confirmLabel || 'OK',

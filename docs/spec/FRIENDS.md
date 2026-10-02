@@ -1,0 +1,67 @@
+# フレンド機能 設計書
+
+2026-10-02 にユーザーの依頼で実装した（「フレンド機能を実装したい」。目的は「プロフィール観覧・交流」と
+「モンヒロビートのマルチをフレンドで選べるように」。追加方法は「フレンドコード」と「ランキングから申請」）。
+
+## 1. できること
+
+| 機能 | 入口 |
+| --- | --- |
+| 自分のフレンドコード（8文字）を見る・コピー | プロフィール →「フレンド」→「追加」 |
+| コードを入れて申請 | 同上 |
+| ランキングの名前（アイコン）から申請 | 全ランキングのアイコンをタップ → 確認シート |
+| 申請の承認・断る・ブロック・取り消し | 「申請」タブ |
+| フレンド一覧・プロフィール閲覧・解除・ブロック | 「フレンド」タブ |
+| マルチ（プライベートルーム）へ招待・招待から参加 | みんなで対戦（部屋の中／入口） |
+
+公開フラグは `FRIENDS_PUBLIC_RELEASE`（`RELEASE_FLAGS.friends`）。**SQL を適用して画面を確かめるまで false。**
+false のあいだは入口・ヘルプ・更新履歴・助手の告知・ランキングのタップがすべて出ない。
+
+## 2. Supabase のテーブル（`docs/sql/friends/`）
+
+- `friend_codes(breeder_id PK, friend_code UNIQUE, created_at)` … 1人1行。コードは変えない（UPDATE 権限なし）
+- `friend_links(requester_id, target_id, status, blocked_by, …)` … **1組は1行まで**（`least/greatest` の一意索引）。
+  status は `pending / accepted / declined / blocked / removed`
+- `friend_invites(sender_id, target_id, room_code, created_at)` … 同じ2人は1行に上書き。アプリは3分より古い招待を無視
+
+**DELETE の権限は与えない。** 解除・断り・ブロックも行は消さず status を変える。
+既存のテーブル（`rankings` `bond_levels` `breeder_profiles`）は読むだけで、書き換えない。
+適用手順は `FRIENDS_IPHONE_STEPS.md`（TEST → APPLY → ゲームを開き直す → VERIFY）。
+
+## 3. 人の見分け方と限界
+
+アカウントは無く、端末ごとの `breeder_id`（`mh_breeder_id_v1`）で見分ける。
+- 端末のデータを消す・別端末へ移ると別IDになり、**フレンドは引き継がれない**（ランキングの記録と同じ）
+- 公開キーで読み書きできる作りなので、**なりすましで関係を書き換えること自体は防げない**。
+  防いでいるのは「消せない」「1組1行」「ありえない値を弾く」の3点
+- フレンドの名前・アイコン・フレーム・最後に開いた時刻は `breeder_profiles`（起動時に更新される）から引く
+
+## 4. 状態の動き（`34-friends-api.jsx`）
+
+- 申請: 行が無ければ `pending` を作る。**逆向きの申請が来ていれば、その行を `accepted` にする**
+- 断られた側は再申請できない（理由は言わず `unavailable`）。断った側からは申請できる（向きを入れ替えて `pending`）
+- ブロックされた側には、その人が一覧にも出ず、申請も `unavailable`。ブロックした本人だけが解除できる
+- 上限: フレンド50人（自分・相手とも）、送った申請30件
+- ID は `friendsSafeId` を通ったものだけ絞り込み（`or=(...)`）へ入れる（区切り文字の注入を防ぐ）
+- 表が無い環境は `notReady` →「準備中」。一度分かったらページを閉じるまで通信しない
+- 端末には**何も保存しない**。新しい保存キーも作らない
+
+## 5. マルチへの招待
+
+招待は REST（`friend_invites`）で運ぶ。マルチの部屋そのもの（Broadcast）には手を入れていない。
+- 送る: プライベートルームの中の「フレンドを招待する」→ 名簿（承認済みのみ、最近開いた順）から選ぶ
+- 受ける: 部屋に入っていないあいだ、入口画面が8秒ごとに読む。出るのは**承認済みのフレンドからの3分以内**だけ
+- 「参加する」でその部屋コードの `private` 部屋へ入る
+
+## 6. 検査
+
+- `node tools/friends/friends-api-check.js` … 偽サーバーで申請・承認・解除・ブロック・上限・招待の状態遷移（DELETE 不使用・1組1行）
+- `node tools/friends/friends-screen-check.js` … 実ブラウザ。公開前は入口なし／コードで申請→承認→プロフィール→解除／
+  表が無い環境は準備中／マルチ招待の送受信。`FRIENDS_SHOT_DIR=<dir>` で画面写真を出せる
+- SQL は PostgreSQL 16 で TEST（rollback）→ APPLY → 再実行（べき等）→ anon 権限（DELETE 不可）まで確認済み
+
+## 7. 公開の手順
+
+1. `FRIENDS_APPLY_TEST.sql` → `FRIENDS_APPLY.sql` を Supabase で実行（`FRIENDS_IPHONE_STEPS.md`）
+2. `FRIENDS_PUBLIC_RELEASE` を `true` にして公開（更新履歴・ヘルプ・助手の告知は同じフラグで出る）
+3. ゲームを開き直して、フレンド画面に自分のコードが出ることを確認
