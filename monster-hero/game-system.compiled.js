@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e1f2469376bcda3c
+// source-sha256: f7a2c80500fc8bd3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 00:08";
+const BUILD_DATE = "2026-10-03 00:40";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28575,7 +28575,8 @@ const RhythmTapTest = ({
   tutorial = false,
   calibrating = false,
   onApplyCalibration = null,
-  multi = false
+  multi = false,
+  multiRewardScale = 1
 }) => {
   const [effectCap, setEffectCap] = useState(() => rhythmAutoEffectMemory.level);
   const settings = useMemo(() => settingsIn && settingsIn.autoEffectDown !== false ? rhythmCapEffects(settingsIn, effectCap) : settingsIn, [settingsIn, effectCap]);
@@ -29899,7 +29900,13 @@ const RhythmTapTest = ({
       achievements.allMarvelous = false;
     }
     const failed = !tutorial && !calibrating && run.lifeDepleted === true;
-    const eventPointAward = !debugPlay && !tutorial && !calibrating && !assistOn && !multi && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof rhythmEventPointAwardAt === 'function' ? rhythmEventPointAwardAt(Date.now(), song.songId, score, Number(song.playDurationMs) || Number(rawChart && rawChart.durationMs) || 0) : null;
+    const multiScale = multi && Number.isFinite(Number(multiRewardScale)) && Number(multiRewardScale) > 1 ? Number(multiRewardScale) : 1;
+    const scaleForMulti = award => award && multiScale > 1 ? {
+      ...award,
+      multiScale,
+      amount: Math.floor(award.amount * multiScale + 1e-9)
+    } : award;
+    const eventPointAward = !debugPlay && !tutorial && !calibrating && !assistOn && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof rhythmEventPointAwardAt === 'function' ? scaleForMulti(rhythmEventPointAwardAt(Date.now(), song.songId, score, Number(song.playDurationMs) || Number(rawChart && rawChart.durationMs) || 0)) : null;
     const calibration = calibrating ? rhythmCalibrationOffsetFromTaps((Array.isArray(run.deltas) ? run.deltas : []).slice(RHYTHM_CALIBRATION_WARMUP_COUNT)) : null;
     const result = {
       score,
@@ -29999,7 +30006,7 @@ const RhythmTapTest = ({
       }
     } : v);
     onComplete(result, merged);
-  }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn, multi]);
+  }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn, multi, multiRewardScale]);
   const celebrateTimerRef = useRef(null);
   const [touchReportSent, setTouchReportSent] = useState(null);
   useEffect(() => {
@@ -31353,7 +31360,9 @@ const RhythmTapTest = ({
         className: "text-[15px] font-black leading-none text-white"
       }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-amber-200"
-      }, "🏆 イベント対象曲 ×", quickRunAward.scale), React.createElement("div", {
+      }, "🏆 イベント対象曲 ×", quickRunAward.scale), quickRunAward.multiScale > 1 && React.createElement("div", {
+        className: "mt-0.5 text-[9px] font-black text-cyan-200"
+      }, "👥 人数ボーナス ×", quickRunAward.multiScale), React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-slate-300"
       }, quickRunAward.fromLoop, "周目 → ", quickRunAward.toLoop, "周目"), React.createElement("div", {
         className: "mt-0.5 flex flex-wrap gap-x-2 text-[9px] font-bold text-slate-300"
@@ -31386,7 +31395,9 @@ const RhythmTapTest = ({
       }, "🎟️ ビートP", beat.target ? ' ×1.5' : '', beat.lengthBonusPercent > 0 && React.createElement("span", {
         "data-rhythm-result-hero-gains-beat-length": true,
         className: "block text-sky-200"
-      }, "長さ+", beat.lengthBonusPercent, "%")), React.createElement("b", {
+      }, "長さ+", beat.lengthBonusPercent, "%"), beat.multiScale > 1 && React.createElement("span", {
+        className: "block text-cyan-200"
+      }, "👥 人数 ×", beat.multiScale)), React.createElement("b", {
         className: "text-[15px] font-black leading-none text-white"
       }, "+", beat.amount.toLocaleString(), "P")), luck && React.createElement("div", {
         "data-rhythm-result-hero-gains-luck": true,
@@ -31660,7 +31671,10 @@ const RhythmTapTest = ({
     }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
       "data-rhythm-result-quick-run-event": true,
       className: "mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200"
-    }, "🏆 イベント対象曲 ×", quickRunAward.scale, "（ふだんの曲は ×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）"), React.createElement("div", {
+    }, "🏆 イベント対象曲 ×", quickRunAward.scale, "（ふだんの曲は ×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）"), quickRunAward.multiScale > 1 && React.createElement("div", {
+      "data-rhythm-result-quick-run-multi": true,
+      className: "mt-1.5 rounded-xl border border-cyan-300/50 bg-cyan-950/40 px-2 py-1 text-[10px] font-black text-cyan-200"
+    }, "👥 みんなで対戦の人数ボーナス ×", quickRunAward.multiScale), React.createElement("div", {
       className: "mt-1 text-[11px] font-black text-slate-200"
     }, quickRunAward.fromLoop, "周目 ", React.createElement("span", {
       className: "text-slate-500"
@@ -31706,7 +31720,10 @@ const RhythmTapTest = ({
       className: "block text-[10px] font-black tracking-wider text-violet-200"
     }, "🎟️ ビートP獲得"), React.createElement("b", {
       className: "mt-0.5 block text-2xl font-black text-white"
-    }, "+", result.eventPointAward.amount.toLocaleString(), "P"), result.eventPointAward.target && React.createElement("span", {
+    }, "+", result.eventPointAward.amount.toLocaleString(), "P"), result.eventPointAward.multiScale > 1 && React.createElement("span", {
+      "data-rhythm-result-beat-points-multi": true,
+      className: "mt-1 block text-[9px] font-black text-cyan-200"
+    }, "👥 みんなで対戦の人数ボーナス ×", result.eventPointAward.multiScale), result.eventPointAward.target && React.createElement("span", {
       className: "mt-1 block text-[9px] font-black text-amber-200"
     }, "イベント対象曲 1.5倍"), result.eventPointAward.lengthBonusPercent > 0 && React.createElement("span", {
       "data-rhythm-result-beat-points-length": true,
@@ -33764,6 +33781,11 @@ const RHYTHM_MULTI_MODE_LABELS = Object.freeze({
 });
 const RHYTHM_MULTI_PHASES = Object.freeze(['matching', 'select', 'ready', 'playing', 'result']);
 const RHYTHM_MULTI_OMAKASE = '*';
+const RHYTHM_MULTI_REWARD_STEP = 0.5;
+const rhythmMultiRewardScale = count => {
+  const n = Math.max(1, Math.min(RHYTHM_MULTI_ROOM_MAX, Math.floor(Number(count) || 1)));
+  return 1 + RHYTHM_MULTI_REWARD_STEP * (n - 1);
+};
 const RHYTHM_MULTI_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 const rhythmMultiMakeCode = () => {
   let code = '';
@@ -34368,7 +34390,8 @@ const RHYTHM_MULTI = (() => {
             try {
               fn({
                 round: msg.round,
-                songId: msg.songId
+                songId: msg.songId,
+                count: msg.participants.length
               });
             } catch (_) {}
           });
@@ -34784,6 +34807,7 @@ function RhythmMultiScreen({
   difficultyList,
   bestRecords,
   resolveIconUrl,
+  quickRunInfo = null,
   onBack,
   onStartPlay
 }) {
@@ -34894,7 +34918,7 @@ function RhythmMultiScreen({
       const open = song ? diffs.filter(d => rhythmDifficultyUnlocked(song.songId, d.id, bestRecords)) : [];
       const diff = song ? rhythmMultiPickDifficulty(open.length ? open : diffs, RHYTHM_MULTI.myDiff() || defaultDiff, difficultyIds) : null;
       setCountdown(null);
-      if (song && diff) onStartPlay(song, diff, countdown.info.round);else RHYTHM_MULTI.reportResult(countdown.info.round, null, true, {
+      if (song && diff) onStartPlay(song, diff, countdown.info.round, countdown.info.count);else RHYTHM_MULTI.reportResult(countdown.info.round, null, true, {
         noPenalty: true
       });
       return undefined;
@@ -35009,7 +35033,10 @@ function RhythmMultiScreen({
     className: "block truncate text-base font-black italic tracking-wider text-cyan-200"
   }, "MULTI LIVE"), React.createElement("small", {
     className: "mt-0.5 block truncate text-[10px] font-black text-fuchsia-200"
-  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), opts.timer != null && React.createElement("b", {
+  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement("small", {
+    "data-rhythm-multi-quick-run": true,
+    className: `max-w-[38%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`
+  }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), opts.timer != null && React.createElement("b", {
     "data-rhythm-multi-timer": true,
     className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
   }, "⏱ ", opts.timer), view && React.createElement("button", {
@@ -35051,7 +35078,7 @@ function RhythmMultiScreen({
       className: "min-h-0 flex-1 overflow-y-auto p-3"
     }, React.createElement("p", {
       className: "mb-2 text-[11px] font-bold leading-relaxed text-slate-300"
-    }, "最大", RHYTHM_MULTI_ROOM_MAX, "人の協力ライブです。曲は全員の選曲からシャッフルで決まり、全員の平均スコアでチームのランクが決まります。いちばん活躍した人はMVP。記録は自己ベストにも全国ランキングにも残りません。"), friendsOn && friendInvites.length > 0 && React.createElement("section", {
+    }, "最大", RHYTHM_MULTI_ROOM_MAX, "人の協力ライブです。曲は全員の選曲からシャッフルで決まり、全員の平均スコアでチームのランクが決まります。いちばん活躍した人はMVP。記録は自己ベストと全国ランキングにも入り、周回の報酬とビートPは人数が多いほど増えます(1人ふえるごとに+50%)。"), friendsOn && friendInvites.length > 0 && React.createElement("section", {
       "data-rhythm-multi-friend-invites": true,
       className: `${card} space-y-2 border-pink-400/60`
     }, React.createElement("h3", {
@@ -75155,20 +75182,20 @@ function MonsterHeroGame() {
       settings: rhythmSettings,
       monsterEntries: rhythmPlay.from === 'multi' ? [] : rhythmMonsterNoteEntries,
       multi: rhythmPlay.from === 'multi',
+      multiRewardScale: rhythmPlay.from === 'multi' ? rhythmMultiRewardScale(rhythmPlay.multiCount) : 1,
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       quickRunAward: rhythmPlayRunAward,
       onComplete: async (result, merged) => {
-        if (rhythmPlay.from === 'multi') {
-          RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
-            diffId: rhythmPlay.difficulty.id
-          });
-          return;
-        }
+        const multiScale = rhythmPlay.from === 'multi' ? rhythmMultiRewardScale(rhythmPlay.multiCount) : 1;
+        if (rhythmPlay.from === 'multi') RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
+          diffId: rhythmPlay.difficulty.id
+        });
         if (rhythmPlay.from !== 'tutorial') {
           const baseLoops = rhythmPlayLoopsFor(rhythmPlay.song, rhythmPlay.difficulty);
           const loopScale = rhythmPlayRunLoopScaleFor(rhythmPlay.song);
           const cleared = result?.cleared !== false;
           const loops = rhythmPlayRunLoopsForResult(baseLoops, cleared);
+          const awardLoops = Math.floor(loops * multiScale + 1e-9);
           if (!cleared && baseLoops > 0) setRhythmPlayRunAward({
             loops: 0,
             baseLoops,
@@ -75183,12 +75210,15 @@ function MonsterHeroGame() {
             fromLoop: 0,
             toLoop: 0
           });
-          const awarded = loops > 0 ? await awardRhythmPlayRunLoops(loops, loopScale, {
+          const awarded = awardLoops > 0 ? await awardRhythmPlayRunLoops(awardLoops, loopScale, {
             cleared,
             baseLoops
           }) : null;
           if (awarded) {
-            setRhythmPlayRunAward(awarded);
+            setRhythmPlayRunAward(multiScale > 1 ? {
+              ...awarded,
+              multiScale
+            } : awarded);
             try {
               await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);
             } catch (_) {}
@@ -75209,7 +75239,7 @@ function MonsterHeroGame() {
         if (result?.assist === true) return;
         const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, merged);
         setRhythmBestRecords(records);
-        if (rhythmPlay.from === 'demo') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
+        if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
       },
       onExit: () => {
         if (rhythmPlay.from === 'multi' && !RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId)) RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, null, true, {
@@ -75251,14 +75281,22 @@ function MonsterHeroGame() {
       difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES),
       difficultyList: rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES),
       bestRecords: rhythmBestRecords,
+      quickRunInfo: quickRunProgress ? {
+        wave,
+        loops: quickRunProgress.loops,
+        finished: !!quickRunProgress.finished,
+        catchingUp,
+        reason: quickRunProgress.finished ? quickRunFinishReasonText(quickRunProgress.reason) : ''
+      } : null,
       onBack: () => setGameState('RHYTHM_DEMO_HOME'),
-      onStartPlay: (song, difficulty, startId) => {
+      onStartPlay: (song, difficulty, startId, count) => {
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
         setRhythmPlay({
           song,
           difficulty,
           from: 'multi',
-          multiStartId: startId
+          multiStartId: startId,
+          multiCount: count
         });
         setGameState('RHYTHM_PLAY');
       }

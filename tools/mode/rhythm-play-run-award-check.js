@@ -89,7 +89,8 @@ for (const [rel, src] of sources) {
     /rhythmPlay\.from!=='tutorial'[\s\S]{0,400}?rhythmPlayLoopsFor\(rhythmPlay\.song,rhythmPlay\.difficulty\)/.test(compact.replace(/\s+/g, ''))
     || /rhythmPlay\.from!=='tutorial'\)\{[\s\S]{0,400}?rhythmPlayLoopsFor/.test(src));
   check(`${rel}: その周は締めて次の周から始める`,
-    /awardRhythmPlayRunLoops\(loops\s*,\s*loopScale[^)]*\)[\s\S]{0,900}?startRunFromRepeatTemplate\(repeat\)/.test(src));
+    // みんなで対戦は人数ボーナスを掛けた周回数(awardLoops)を配る。ひとりのときは loops と同じ値(2026-10-02)
+    /awardRhythmPlayRunLoops\((?:awardLoops|loops)\s*,\s*loopScale[^)]*\)[\s\S]{0,900}?startRunFromRepeatTemplate\(repeat\)/.test(src));
   // ---- クリアか失敗かで入る周回数が変わる(2026-09-12・ユーザー指示
   //      「終了後にクリアか失敗かもわかるようにして / それによって経験値も変わるから」) ----
   // 失敗(ライフ0のまま完走)は半分。判定そのものは演奏側(result.cleared)が決める。
