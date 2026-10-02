@@ -752,6 +752,65 @@ const GuardBarrier = ({ tier = 'bronze', state = 'idle' }) => (
     {state === 'break' && [0,1,2,3,4,5,6,7].map(k => <i key={k} className="guard-barrier__shard" style={{ '--k':k }}/>)}
   </span>
 );
+// ==== 固有技(必殺技)に必ず乗る共通の演出(2026-10-02 ユーザー指示「全てのモンスターの固有技のモーションを強化してほしい。固有技(必殺技)なのに通常技とそこまで差別化できてない」) ====
+// 技ごとの動き(SKILL_MOTION_SETS・専用モーション)はそのままに、その上へ「特別な技が出る」格をそろえて足す。
+//   タメのあいだ … 画面が暗くなる / 使う子へ光が集まる / 斜めの帯に「必殺技 ／ 技名」が流れ込む
+//   放った瞬間   … 閃光 / 敵の上で広がる衝撃の輪と放射線 / (60-app.jsx 側で)画面の揺れ・効果音・大きな金色のダメージ数字
+// 見た目だけ。押せる場所は塞がず(pointer-events:none)、進行も待たない。時間は固有技の流れ(タメ650ms→動き)にそのまま乗る。
+// 色は技ごとの色(SKILL_MOTION_SETS の c)があればそれ、無ければ(見せ場の動き 'sig' など)その子の色。
+const SPECIAL_MOVE_MON_COLOR = Object.freeze({
+  Mocchi:'mocchi', Suezo:'psy', Golem:'gold', Tiger:'thunder', Ham:'gold', Pixie:'psy', Mia:'pink', Pandora:'thunder',
+  Monol:'dark', Oboro:'sky', Plant:'plant', Zan:'blood', Eiki:'sakura', KenshiMocchi:'cosmic', Mitarashi:'fire',
+  Ark:'holy', Iblis:'dark', Snegurochka:'ice', Undine:'blue', Yaobikuni:'sky', Yggdrasil:'plant', MelWhip:'pink',
+});
+const specialMoveColorOf = (monId, skillName) => {
+  const pick = (c) => (Array.isArray(c) ? c : SKM_COLOR[c] || null);
+  let hit = null;
+  try { hit = typeof skillMotionSlotOf === 'function' ? skillMotionSlotOf(monId, skillName, true) : null; } catch (e) { hit = null; }
+  const own = hit && hit.spec && hit.spec !== 'sig' ? pick(hit.spec.c) : null;
+  return own || pick(SPECIAL_MOVE_MON_COLOR[monId]) || SKM_COLOR.gold;
+};
+const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, compact = false }) => {
+  const [pos, setPos] = React.useState(null);
+  const slotIndex = slotSkill ? slotSkill.slotIndex : null;
+  React.useLayoutEffect(() => {
+    if (compact || typeof document === 'undefined' || slotIndex == null) { setPos(null); return; }
+    const slotEl = document.querySelector(`[data-slot-index="${slotIndex}"]`);
+    const enemyEl = document.querySelector('[data-attack-target]');
+    const mid = (el) => { if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+    setPos({ from: mid(slotEl), to: mid(enemyEl) });
+  }, [slotIndex, compact]);
+  if (!slotSkill || slotSkill.type !== 'unique') return null;
+  const [c1, c2] = specialMoveColorOf(ownerId || (mon && mon.id), slotSkill.name);
+  const phase = attackAnim && attackAnim.charge === true ? 'charge' : 'release';
+  const name = String(slotSkill.name || '');
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 390;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+  const from = (pos && pos.from) || { x: vw / 2, y: vh * 0.72 };
+  const to = (pos && pos.to) || { x: vw / 2, y: vh * 0.3 };
+  const style = { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':`${Math.round(from.x)}px`, '--spm-fy':`${Math.round(from.y)}px`, '--spm-tx':`${Math.round(to.x)}px`, '--spm-ty':`${Math.round(to.y)}px` };
+  const body = (
+    <div data-special-move-fx={phase} className={`spm spm--${phase}${compact ? ' spm--compact' : ''}`} style={style} aria-hidden="true">
+      <div className="spm__shade"/>
+      {phase === 'charge' && <div className="spm__gather">
+        {[0,1,2].map(i => <i key={`r${i}`} className="spm__ring" style={{ '--i':i }}/>)}
+        {Array.from({ length:12 }, (_, i) => <i key={`p${i}`} className="spm__spark" style={{ '--a':`${i * 30}deg`, '--i':i % 4 }}/>)}
+      </div>}
+      <div className="spm__band">
+        {mon && mon.imgUrl && <span className="spm__face"><DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt="" masuColors={mon.colors} draggable={false} className="w-full h-full object-contain"/></span>}
+        <span className="spm__text">
+          <span className="spm__tag">必殺技</span>
+          <span className="spm__name" style={{ fontSize:`${Math.max(14, Math.min(26, Math.floor(200 / Math.max(1, name.length))))}px` }}>{name}</span>
+        </span>
+      </div>
+      {phase === 'release' && <>
+        <div className="spm__flash"/>
+        <div className="spm__shock"><i/><i/><b/></div>
+      </>}
+    </div>
+  );
+  return compact ? body : ReactDOM.createPortal(body, document.body);
+};
 const AttackTargetFx = ({anim, attackerId}) => {
   if (!anim || anim.charge === true || anim.twinBlade) return null;
   // 種族ごとの攻撃(ThemedAttackMotion)は、自分で敵の位置へ着弾を描く

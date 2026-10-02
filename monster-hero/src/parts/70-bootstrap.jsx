@@ -1917,6 +1917,59 @@ const createAnimationStyle = () => {
       .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit, .skfx-over { display:none; }
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
     }
+    /* ==== 固有技(必殺技)に必ず乗る共通の演出(24-battle-fx.jsx の SpecialMoveFx)====
+       タメ(650ms)=暗転+光が集まる+帯に「必殺技/技名」。放った瞬間=閃光+敵の上の衝撃の輪。色は --spm-c1(明)/--spm-c2(濃)。
+       EXスキルのカットイン(.ex-cutin・z-index:9600)より下、押せる場所は塞がない */
+    .spm { position:fixed; inset:0; z-index:9550; pointer-events:none; overflow:hidden; }
+    .spm > * { position:absolute; pointer-events:none; }
+    .spm--compact { position:absolute; z-index:60; }
+    .spm__shade { inset:0; background:radial-gradient(ellipse at var(--spm-fx) var(--spm-fy), rgba(0,0,0,.2), rgba(2,2,10,.78) 70%); opacity:0; }
+    .spm--charge .spm__shade { animation:spmShadeIn 260ms ease-out forwards; }
+    .spm--release .spm__shade { opacity:1; animation:spmShadeOut 520ms ease-in 180ms forwards; }
+    @keyframes spmShadeIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes spmShadeOut { from { opacity:1; } to { opacity:0; } }
+    /* 使う子へ集まる光 */
+    .spm__gather { left:var(--spm-fx); top:var(--spm-fy); width:0; height:0; }
+    .spm__ring { position:absolute; left:-70px; top:-70px; width:140px; height:140px; border-radius:50%; opacity:0;
+      border:3px solid var(--spm-c1); box-shadow:0 0 14px var(--spm-c2), inset 0 0 14px var(--spm-c2);
+      animation:spmRing 650ms ease-in forwards; animation-delay:calc(var(--i) * 130ms); }
+    @keyframes spmRing { 0% { opacity:0; transform:scale(2.4); } 30% { opacity:1; } 100% { opacity:0; transform:scale(.25); } }
+    .spm__spark { position:absolute; left:-4px; top:-4px; width:8px; height:8px; border-radius:50%; opacity:0;
+      background:radial-gradient(circle, #fff, var(--spm-c1) 55%, var(--spm-c2)); box-shadow:0 0 8px var(--spm-c2);
+      rotate:var(--a); animation:spmSpark 600ms ease-in forwards; animation-delay:calc(var(--i) * 45ms); }
+    @keyframes spmSpark { 0% { opacity:0; transform:translateX(130px) scale(.6); } 25% { opacity:1; } 100% { opacity:0; transform:translateX(0) scale(1.3); } }
+    /* 斜めの帯 */
+    .spm__band { left:-10%; right:-10%; top:42%; height:64px; display:flex; align-items:center; gap:10px; padding:0 calc(10% + 14px);
+      background:linear-gradient(90deg, rgba(6,8,18,.2), rgba(8,10,24,.92) 16%, rgba(8,10,24,.92) 84%, rgba(6,8,18,.2));
+      border-top:2px solid var(--spm-c1); border-bottom:2px solid var(--spm-c1);
+      box-shadow:0 0 16px var(--spm-c2), inset 0 0 22px color-mix(in srgb, var(--spm-c2) 45%, transparent);
+      transform:translateX(-115%) skewY(-5deg); }
+    .spm--charge .spm__band { animation:spmBandIn 280ms cubic-bezier(.2,.8,.2,1) forwards; }
+    .spm--release .spm__band { transform:translateX(0) skewY(-5deg); animation:spmBandOut 260ms ease-in 320ms forwards; }
+    @keyframes spmBandIn { from { transform:translateX(-115%) skewY(-5deg); } to { transform:translateX(0) skewY(-5deg); } }
+    @keyframes spmBandOut { from { transform:translateX(0) skewY(-5deg); opacity:1; } to { transform:translateX(115%) skewY(-5deg); opacity:0; } }
+    .spm__face { flex:0 0 auto; width:52px; height:52px; margin-top:-6px; transform:skewY(5deg); filter:drop-shadow(0 0 8px var(--spm-c2)); }
+    .spm__text { display:flex; flex-direction:column; min-width:0; transform:skewY(5deg); }
+    .spm__tag { font:900 10px/1 system-ui, sans-serif; letter-spacing:.4em; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
+    .spm__name { margin-top:3px; font:italic 900 22px/1.1 system-ui, sans-serif; color:#fff; white-space:nowrap;
+      text-shadow:0 0 2px var(--spm-c2), 2px 2px 0 var(--spm-c2), 0 0 14px var(--spm-c2); }
+    /* 放った瞬間 */
+    .spm__flash { inset:0; background:radial-gradient(circle at var(--spm-tx) var(--spm-ty), #fff 0 6%, color-mix(in srgb, var(--spm-c1) 70%, transparent) 30%, transparent 75%); opacity:0;
+      animation:spmFlash 360ms ease-out 140ms forwards; }
+    @keyframes spmFlash { 0% { opacity:0; } 20% { opacity:.95; } 100% { opacity:0; } }
+    .spm__shock { left:var(--spm-tx); top:var(--spm-ty); width:0; height:0; }
+    .spm__shock i { position:absolute; left:-40px; top:-40px; width:80px; height:80px; border-radius:50%; opacity:0;
+      border:5px solid var(--spm-c1); box-shadow:0 0 18px var(--spm-c2), 0 0 36px var(--spm-c2); animation:spmShock 520ms ease-out 200ms forwards; }
+    .spm__shock i + i { animation-delay:300ms; border-width:3px; }
+    @keyframes spmShock { 0% { opacity:0; transform:scale(.3); } 20% { opacity:1; } 100% { opacity:0; transform:scale(4.6); } }
+    .spm__shock b { position:absolute; left:-110px; top:-110px; width:220px; height:220px; opacity:0;
+      background:repeating-conic-gradient(from 0deg, var(--spm-c1) 0 4deg, transparent 4deg 20deg);
+      -webkit-mask-image:radial-gradient(circle, #000 0 20%, transparent 62%); mask-image:radial-gradient(circle, #000 0 20%, transparent 62%);
+      animation:spmRays 460ms ease-out 200ms forwards; }
+    @keyframes spmRays { 0% { opacity:0; transform:scale(.4) rotate(0deg); } 25% { opacity:.95; } 100% { opacity:0; transform:scale(1.6) rotate(24deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .spm__gather, .spm__shock, .spm__flash { display:none; }
+    }
     /* ==== タクティクスのEXスキルを使った瞬間のカットイン(24-battle-fx.jsx の TacticsExCutin・1600ms) ====
        暗転 → 斜めの帯が左から入る(立ち絵・EX SKILL・名前)→ 効果ごとの模様 → 帯が右へ抜ける。色は --ex-c1(明)/--ex-c2(濃)。
        押せる場所は塞がない(pointer-events:none)。 */
