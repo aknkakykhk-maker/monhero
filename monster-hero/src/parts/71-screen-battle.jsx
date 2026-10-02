@@ -428,6 +428,44 @@ const BossMovieLayer = ({ shake = true }) => {
 // 覚醒ムーは技名のカットイン・技ごとの全画面の演出・ひび割れも出す。
 // ★位置は出す瞬間に1回だけ測る(敵の丸枠と味方の枠)。動きの途中で測り直すと、跳ねている絵の位置を拾ってしまう
 // lite: 画面の軽さ「軽め」。飛ばすもの・画面を暗くする・覚醒ムーの全画面の演出を省き、当たりの光と技名だけにする
+// ==== 敵の技の格上げ(2026-10-02 ユーザー指示「敵モンスターの攻撃を演出も強化して。これはタクティクスのみ」) ====
+// 覚醒ムーは技ごとの全画面の演出を持っているので、それ以外の敵(9体)の大技へ足す。
+//   技名の帯(連撃・貫通・必殺技・全体攻撃) / 当たる瞬間の閃光 / 全体攻撃の暗転 / 画面の揺れ(60-app) /
+//   フィニッシュ(味方の枠の上に重なる絵。必殺技・全体攻撃は敵ごと、貫通は共通)
+// フィニッシュの部品は固有技と同じ(24-battle-fx.jsx の SpecialFinish)。色は敵の色(--em-c)。
+// d は当たる瞬間からの遅れ(ms。固有技の表と同じ作り方なので、呼び出し側が「当たる瞬間 - 250ms」を足す)
+const TACTICS_ENEMY_BANNER_SKILLS = Object.freeze(['rush', 'pierce', 'special', 'allout']);
+const TACTICS_ENEMY_FLASH_SKILLS = Object.freeze(['pierce', 'special', 'allout']);
+const TACTICS_ENEMY_PIERCE_FINISH = Object.freeze([{t:'blade',a:0,len:360,w:8,d:240},{t:'col',w:30,h:420,d:260,sky:true},{t:'ring',d:300,r:3}]);
+const TACTICS_ENEMY_FINISH = Object.freeze({
+  // カワズモー(力士のカエル): 大回転落とし=地面を砕く衝撃 / 大投げたまや=花火
+  kawazumo:     { special:[{t:'ring',d:300,r:4.2,flat:.38},{t:'bits',n:14,shape:'dust',dist:130,d:300},{t:'bits',n:8,shape:'star',dist:100,d:340}],
+                  allout:[{t:'bits',n:18,shape:'star',dist:170,d:260},{t:'bits',n:12,shape:'spark',dist:110,d:340},{t:'col',w:120,h:420,d:240,sky:true,soft:true},{t:'ring',d:300,r:3.4}] },
+  // メタルナー(拳法ロボ): 宙ポン拳=交差する掌打 / メタビーム=極太のビーム
+  metalner:     { special:[{t:'blade',a:-42,len:340,w:10,d:240},{t:'blade',a:42,len:340,w:10,d:310},{t:'ring',d:340,r:3.6},{t:'bits',n:10,shape:'spark',dist:110,d:340}],
+                  allout:[{t:'blade',a:0,len:420,w:18,d:240},{t:'col',w:60,h:440,d:260,sky:true},{t:'ring',d:300,r:3.8}] },
+  // イナリ(子ぎつね): にゃんぷうき=葉の旋風 / ハワイにゃん=花
+  inari:        { special:[{t:'bits',n:16,shape:'leaf',dist:140,d:280,spin:1},{t:'bits',n:10,shape:'leaf',dist:80,d:340,spin:-1},{t:'ring',d:300,r:3.2}],
+                  allout:[{t:'bits',n:18,shape:'petal',dist:150,d:260,spin:1},{t:'bits',n:12,shape:'petal',dist:90,d:320,spin:-1},{t:'ring',d:300,r:3.4,flat:.45}] },
+  // コイノボリ(鯉のぼり): キングウェーブ=大波 / 大津波=二重の大波
+  koinobori:    { special:[{t:'wave',d:240},{t:'bits',n:12,shape:'drop',dist:140,d:340},{t:'ring',d:340,r:3.2,flat:.45}],
+                  allout:[{t:'wave',d:220},{t:'wave',d:380},{t:'bits',n:16,shape:'drop',dist:130,d:300,fall:true},{t:'ring',d:420,r:4,flat:.45}] },
+  // デルピエロ(鎌の騎士): ブラッディクロス=大きな十字の斬撃 / フォトンドライブ=光の星
+  delpiero:     { special:[{t:'blade',a:-40,len:380,w:12,d:240},{t:'blade',a:40,len:380,w:12,d:320},{t:'col',w:40,h:440,d:380,sky:true},{t:'ring',d:380,r:3.8}],
+                  allout:[{t:'bits',n:16,shape:'star',dist:150,d:280},{t:'blade',a:0,len:320,w:9,d:300},{t:'blade',a:90,len:320,w:9,d:300},{t:'ring',d:300,r:4}] },
+  // ドクドク(ハートの手): めいどのみやげ=ハートと雫 / ようかい液=降りそそぐ液
+  dokudoku:     { special:[{t:'bits',n:12,shape:'heart',dist:130,d:280},{t:'bits',n:10,shape:'drop',dist:100,d:330},{t:'ring',d:300,r:3.4}],
+                  allout:[{t:'bits',n:18,shape:'drop',dist:130,d:260,fall:true},{t:'wave',d:300},{t:'ring',d:340,r:3.6,flat:.45}] },
+  // ラミア(阿修羅): 帝釈崩天=三本の雷柱 / 大焦熱=炎の柱
+  lamia:        { special:[{t:'col',w:44,h:440,d:240,sky:true,x:-54},{t:'col',w:56,h:480,d:280,sky:true},{t:'col',w:44,h:440,d:320,sky:true,x:54},{t:'ring',d:340,r:3.8},{t:'blade',a:0,len:300,w:7,d:340}],
+                  allout:[{t:'col',w:56,h:380,d:260,flame:true,x:-52},{t:'col',w:66,h:440,d:240,flame:true},{t:'col',w:56,h:380,d:280,flame:true,x:52},{t:'bits',n:12,shape:'flame',dist:110,d:320,rise:true}] },
+  // ニャルラトホテプ(邪神): 無貌の讃歌=回る魔法陣と光 / 真空魔空弾=魔法陣と十字
+  nyarlathotep: { special:[{t:'ring',d:240,r:3.4,flat:.45,rune:true},{t:'bits',n:14,shape:'star',dist:140,d:300},{t:'col',w:120,h:440,d:300,sky:true,soft:true}],
+                  allout:[{t:'ring',d:240,r:3.2,flat:.45,rune:true},{t:'blade',a:90,len:340,w:9,d:300},{t:'bits',n:12,shape:'spark',dist:120,d:300},{t:'bits',n:8,shape:'spark',dist:80,d:360}] },
+  // スプラッター(斧の処刑人): エクスキューション=巨大な斧の一閃と血しぶき / デスエナジー=赤い炎
+  splatter:     { special:[{t:'blade',a:-58,len:440,w:16,d:240},{t:'col',w:44,h:440,d:320,sky:true},{t:'bits',n:12,shape:'drop',dist:130,d:340},{t:'ring',d:340,r:3.6}],
+                  allout:[{t:'col',w:60,h:400,d:260,flame:true},{t:'bits',n:14,shape:'spark',dist:120,d:300},{t:'ring',d:300,r:3.8,flat:.45}] },
+});
 const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = false }) => {
   const [geo, setGeo] = useState(null);
   React.useLayoutEffect(() => {
@@ -464,7 +502,7 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
   return ReactDOM.createPortal(
     <div data-enemy-stage-fx data-enemy-motion={motion} data-stage-skill={skill} data-stage-moo={isMoo ? 'true' : undefined}
       className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 64000, '--em-dur': `${ms}ms`, '--sx': `${sx}px`, '--sy': `${sy}px` }}>
-      {!lite && !afterMovie && (skill === 'special' || (isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill))) && (
+      {!lite && !afterMovie && (skill === 'special' || (isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill)) || (!isMoo && skill === 'allout')) && (
         <div data-stage-dim style={{ background: `radial-gradient(circle at ${sx}px ${sy}px, transparent ${Math.round(sr * 1.15)}px, rgba(0,0,0,.74) ${Math.round(sr * 1.15 + 110)}px)` }}/>
       )}
       {strikes && geo.slots.map((t) => hits.map((h, k) => {
@@ -480,6 +518,23 @@ const TacticsEnemyStageFx = ({ fx, motion, isMoo, enemyId, skillLabel, lite = fa
           </React.Fragment>
         );
       }))}
+      {!isMoo && !lite && !afterMovie && TACTICS_ENEMY_BANNER_SKILLS.includes(skill) && skillLabel && (
+        <div data-enemy-banner={skill}><div data-enemy-banner-band><span data-enemy-banner-tag>{skill === 'special' ? '必殺技' : skill === 'allout' ? '全体攻撃' : skill === 'pierce' ? '貫通' : '連撃'}</span><span data-enemy-banner-name style={{ fontSize:`${Math.max(18, Math.min(34, Math.floor(260 / Math.max(1, String(skillLabel).length))))}px` }}>{skillLabel}</span></div></div>
+      )}
+      {!isMoo && !lite && TACTICS_ENEMY_FLASH_SKILLS.includes(skill) && (
+        <div data-enemy-flash style={{ animationDelay: at(hit) }}/>
+      )}
+      {!isMoo && !lite && strikes && (() => {
+        const parts = skill === 'pierce' ? TACTICS_ENEMY_PIERCE_FINISH : ((TACTICS_ENEMY_FINISH[motion] || {})[skill] || null);
+        if (!parts) return null;
+        const hitMs = Math.round(ms * hit);
+        return geo.slots.map((t) => (
+          <div key={`fin-${t.i}`} className="spm spm--enemy" data-enemy-finish={`${motion}-${skill}`}
+            style={{ '--spm-c1':'color-mix(in srgb, rgb(var(--em-c)) 38%, #fff)', '--spm-c2':'rgb(var(--em-c))', '--spm-tx':`${Math.round(t.x)}px`, '--spm-ty':`${Math.round(t.y)}px` }}>
+            <SpecialFinish parts={parts} offset={Math.max(0, hitMs - 240)}/>
+          </div>
+        ));
+      })()}
       {isMoo && !afterMovie && TACTICS_MOO_CUTIN_SKILLS.includes(skill) && skillLabel && (
         <div data-moo-cutin><div data-moo-cutin-band><span>{skillLabel}</span></div></div>
       )}

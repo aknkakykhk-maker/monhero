@@ -10376,6 +10376,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           else if (motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId]) setTimeout(()=>triggerShake(true), battleMs(Math.round(fxMs*tacticsEnemyHitFrac(motionEnemyId, fxSkill))));
           else triggerShake(true);
         }
+        // ★ムー以外の敵の大技(連撃・貫通・必殺技・全体攻撃)も、当たる瞬間に画面を揺らして音を重ねる
+        //   (2026-10-02 ユーザー指示「敵モンスターの攻撃を演出も強化して。これはタクティクスのみ」)。
+        //   連撃は小さく、貫通・必殺技・全体攻撃は大きく。見た目だけで待ち時間は足さない
+        if(fxKind!=='moo' && motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId] && ['rush','pierce','special','allout'].includes(fxSkill)){
+          const hitAt = battleMs(Math.round(fxMs*tacticsEnemyHitFrac(motionEnemyId, fxSkill)));
+          const big = fxSkill!=='rush';
+          setTimeout(()=>{ triggerShake(big); if(big) Audio_.se.crit(); }, hitAt);
+        }
         await battleWait(fxMs);
         setEnemyAttackAnim(false);
         await battleWait(fxKind==='moo' ? 250 : (intent.type==='SPECIAL' ? 300 : 100));
