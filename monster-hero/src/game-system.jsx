@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ccf2213f9a40dd8a
+// generated-sha256: 82eb105e6d2a9b90
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 20:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 21:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9063,7 +9063,7 @@ const RAGNAROK_SETTING = Object.freeze({ id:'RAGNAROK', label:'RAGNAROK', japane
 // 距離強化はWAVEごとに薄れ(W1=10%→W10=1%)、敵のライフは全員10倍。W9のデュラハンは専用の上乗せを受ける。
 // 敵ごとの上乗せは「ライフ倍率(lifeRate)」と「敵ごとの補正(byEnemy)」を specialRules に持たせ、
 // 敵生成側は難易度名ではなく extremeEnemyStatAdjust だけを見る。
-const HELHEIM_SETTING = Object.freeze({ id:'HELHEIM', label:'HELHEIM', japanese:'ヘルヘイム', available:true, debugAvailable:true, power:300, score:20, xp:100, gold:80, psyche:160, waveCount:10, unlockRequirement:'RAGNAROK', rankingId:'ExtremeHELHEIM', recordId:'HELHEIM', description:'冥府が2WAVEごとに深まり、味方の最大ライフが削れていく。ボスは何度でも起き上がり、距離強化もWAVEごとに薄れていく、極限チャレンジの最奥の難易度。', cardDescription:'2WAVEごとに冥府が深まる。敵のライフは10倍で、距離強化はWAVEごとに薄れ、ボスは何度も蘇る。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
+const HELHEIM_SETTING = Object.freeze({ id:'HELHEIM', label:'HELHEIM', japanese:'ヘルヘイム', available:true, debugAvailable:true, power:230, score:20, xp:100, gold:80, psyche:160, waveCount:10, unlockRequirement:'RAGNAROK', rankingId:'ExtremeHELHEIM', recordId:'HELHEIM', description:'冥府が2WAVEごとに深まり、味方の最大ライフが削れていく。ボスは何度でも起き上がり、距離強化もWAVEごとに薄れていく、極限チャレンジの最奥の難易度。', cardDescription:'2WAVEごとに冥府が深まる。敵のライフは10倍で、距離強化はWAVEごとに薄れ、ボスは何度も蘇る。', specialRules:Object.freeze({ assistCardEffect:0.30, positiveModifier:0.30, negativeModifier:3.0, distanceEnhancement:0.10, gutsCost:2.0, enemyTurnRate:0.0125, allyJoinPenaltyRate:0.0125, minimumAllyJoinBonus:0.03, damageTurnRate:0.0175, minimumDamageDealt:0.15, awakeningPenaltyRate:0.01, awakeningZeroTurns:12, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:12, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 3:1, 5:2, 7:2, 9:1, 10:4 }), hpRate:0.5, atkBoostPerRevival:0.6 }), enemyAdjust:Object.freeze({ lifeRate:10, byEnemy:Object.freeze({ Durahan:Object.freeze({ lifeRate:1.3, atkRate:1.3 }) }) }) }) });
 const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING,HELHEIM_SETTING]);
 // 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
 // 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。

@@ -30,7 +30,7 @@ const revivalCount=G('extremeRevivalCount'),revive=G('extremeRevivedEnemyStats')
 const adjust=G('extremeEnemyStatAdjust'),allyRate=G('extremeAllyMaxHpRate'),applyRate=G('applyAllyMaxHpRate');
 const waveEnemy=G('extremeWaveEnemyMultiplier'),damage=G('extremeDamageTurnMultiplier');
 
-check('基本設定',h.id==='HELHEIM'&&h.available&&h.debugAvailable&&h.power===300&&h.score===20&&h.xp===100&&h.gold===80&&h.psyche===160
+check('基本設定',h.id==='HELHEIM'&&h.available&&h.debugAvailable&&h.power===230&&h.score===20&&h.xp===100&&h.gold===80&&h.psyche===160
   &&h.waveCount===10&&h.unlockRequirement==='RAGNAROK');
 check('IDと動的キー',h.recordId==='HELHEIM'&&h.rankingId==='ExtremeHELHEIM'
   &&G('extremeBestScoreKey')('HELHEIM')==='mh_extreme_hs_HELHEIM'&&G('extremeClearCountKey')('HELHEIM')==='mh_extreme_clears_HELHEIM'
