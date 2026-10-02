@@ -205,10 +205,10 @@ const serve = (flagOn) => new Promise(resolve => {
   ok('フレンドが2人並ぶ', r.twoFriends === 2, `${r.twoFriends}人`);
   ok('プロフィールに相手の名前が出る', /ともだちの子|とどいた子/.test(r.profileText || '') && (r.profileText || '').includes('モンヒロビートの記録'));
   ok('プロフィールの一番上(バトル記録より前)にフレンドの入口がある', r.friendsFirst === true);
-  ok('プロフィールに「好きなマスモン」の行がある', /好きなマスモン/.test(r.favoriteRow || '') && /まだ選んでいません/.test(r.favoriteRow || ''), `${r.favoriteRow}`);
+  ok('プロフィールに「好きなモンスター」の行がある', /好きなモンスター/.test(r.favoriteRow || '') && /まだ選んでいません/.test(r.favoriteRow || ''), `${r.favoriteRow}`);
   ok('フレンド一覧に、いまの場所(モンヒロビートで遊び中)が出る', /モンヒロビートで遊び中/.test(r.presenceOnline || ''), `${r.presenceOnline}`);
   ok('プロフィールにプレイ時間・遊びはじめ・最高絆Lv・最高総合力が出る', /5時間00分/.test(r.profileText || '') && /2026年9月1日/.test(r.profileText || '') && /Lv\.20/.test(r.profileText || '') && /12,345/.test(r.profileText || '') && /ピクシー/.test(r.profileText || ''));
-  ok('プロフィールに好きなマスモンと「詳細」が出る', /好きなマスモン/.test(r.profileText || '') && /モッチー/.test(r.profileText || '') && r.favoriteDetailButton === true);
+  ok('プロフィールに好きなモンスターと「詳細」が出る', /好きなモンスター/.test(r.profileText || '') && /モッチー/.test(r.profileText || '') && r.favoriteDetailButton === true);
   ok('自分の見せる情報が、起動後に friend_profiles へ送られる', !!r.selfRow && ['home','battle','rhythm','multi','masu','market','other'].includes(r.selfRow.place), JSON.stringify(r.selfRow && r.selfRow.place));
   ok('解除すると removed になり、行は消えない', r.removedCount >= 1, `${r.removedCount}件`);
   ok('解除後は一覧に戻る', (r.afterRemoveText || '').includes('プロフィール ›') || (r.afterRemoveText || '').includes('まだフレンドがいません'));

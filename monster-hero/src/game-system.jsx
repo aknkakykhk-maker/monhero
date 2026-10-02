@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e21eb8e88b058f83
+// generated-sha256: 6871035455451f08
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 00:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 02:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23123,7 +23123,7 @@ const friendsPlaytimeText = (seconds) => {
 };
 const FRIEND_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 // 端末の持ち物から、フレンドに見せる情報を作る(書く内容はここで決まる)
-//  masuMons … 手持ちのマスモン / favoriteMasuId … 「好きなマスモン」に選んだ個体のid / playtime … normalizePlaytime の形
+//  masuMons … 手持ちのマスモン / favoriteMasuId … 「好きなモンスター」に選んだ個体のid / playtime … normalizePlaytime の形
 const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime }) => {
   let bestBond = 0, bestBondMon = '', bestPower = 0, bestPowerMon = '', favorite = null;
   (Array.isArray(masuMons) ? masuMons : []).forEach((masu) => {
@@ -24705,7 +24705,7 @@ function ProfileScreen({
   rhythmHistoryCount, onOpenRhythmHistory,
   // フレンド画面への入口。公開前(friendsEnabled=false)は出さない
   friendsEnabled = false, onOpenFriends, friendRequestCount = 0,
-  // フレンドに見せる「好きなマスモン」(選んでいなければ null)と、選ぶ画面を開く操作
+  // フレンドに見せる「好きなモンスター」(選んでいなければ null)と、選ぶ画面を開く操作
   favoriteMasu = null, onOpenFavoritePicker,
   // 選べる助手だけ(イベントで加入する助手は、その会話を見るまで並べない)。
   // 渡されなければ今までどおり全員を並べる
@@ -24819,7 +24819,7 @@ function ProfileScreen({
           <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]">
             {iconUrl?<img src={iconUrl} alt="" className="h-10 w-10 shrink-0 object-contain"/>:<span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl" aria-hidden="true">💗</span>}
             <span className="min-w-0 flex-1 text-left">
-              <small className="block text-[10px] font-black text-pink-300">好きなマスモン（フレンドに見えます）</small>
+              <small className="block text-[10px] font-black text-pink-300">好きなモンスター（フレンドに見えます）</small>
               <b className="block truncate text-[13px] font-black text-white">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b>
             </span>
             <ChevronRight size={16} className="shrink-0 text-pink-400"/>
@@ -33230,7 +33230,7 @@ const friendsDayText = (day) => {
 };
 // requestCount … 届いている申請の件数(あれば最初に「申請」のタブを開く)
 // onIncomingCount … 読み込み直したあと、届いている申請の数を知らせる(HOME・プロフィールのバッジを合わせるため)
-// onOpenMonsterDetail … 好きなマスモンの詳細を開く(ランキングの詳細と同じ画面)
+// onOpenMonsterDetail … 好きなモンスターの詳細を開く(ランキングの詳細と同じ画面)
 function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack, onTargetHandled, onIncomingCount, onOpenMonsterDetail }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
   const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
@@ -33437,7 +33437,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                   </dl>
                 )}
               </div>
-              <div className="mt-3"><ScreenSectionLabel>好きなマスモン</ScreenSectionLabel></div>
+              <div className="mt-3"><ScreenSectionLabel>好きなモンスター</ScreenSectionLabel></div>
               <div data-friend-favorite className={`${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`}>
                 {!favBase && <p className="text-[11px] font-bold text-slate-400">まだ選んでいません</p>}
                 {favBase && (<>
@@ -35391,7 +35391,7 @@ function MonsterHeroGame() {
   }, [dataLoaded, onboarded, onboardingPreview, breederName, breederIcon, profileFrameId, publishBreederProfile]);
 
   // ===== フレンド機能(公開フラグ friends が開いているときだけ動く。docs/spec/FRIENDS.md) =====
-  // 好きなマスモン(プロフィールで選ぶ。フレンドにだけ見える)。新しい保存キーへ個体のidだけを覚える
+  // 好きなモンスター(プロフィールで選ぶ。フレンドにだけ見える)。新しい保存キーへ個体のidだけを覚える
   const FAVORITE_MASU_KEY = 'mh_favorite_masu_v1';
   const [favoriteMasuId, setFavoriteMasuId] = useState(null);
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
@@ -38719,7 +38719,7 @@ function MonsterHeroGame() {
       setBreederIcon(savedIcon);
       // プロフィールフレーム。既存のセーブデータには無いキーなので、既定値は必ず「フレームなし」
       setProfileFrameId(normalizeProfileFrameId(await storeGet(PROFILE_FRAME_KEY, PROFILE_FRAME_NONE_ID, false)));
-      // 好きなマスモン(フレンド用)。既存のセーブデータには無いキーなので、既定は必ず「未設定」
+      // 好きなモンスター(フレンド用)。既存のセーブデータには無いキーなので、既定は必ず「未設定」
       { const savedFavorite = await storeGet(FAVORITE_MASU_KEY, null, false); setFavoriteMasuId(typeof savedFavorite === 'string' && savedFavorite ? savedFavorite : null); }
       // 呼び方の上書きは助手ごとに別のキーへ。みゅあのぶんは今までのキーをそのまま読む
       const loadedCallStyles = {};
@@ -51117,7 +51117,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {showFavoritePicker&&(
           <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
-              <h3 className="text-lg font-black text-white mb-1 text-center">好きなマスモン</h3>
+              <h3 className="text-lg font-black text-white mb-1 text-center">好きなモンスター</h3>
               <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">フレンドがあなたのプロフィールを開いたとき、この子が見えます。</p>
               <div className="min-h-0 flex-1 overflow-y-auto mh-scroll flex flex-col gap-1.5" data-favorite-picker>
                 <button type="button" data-favorite-option="none" onClick={()=>selectFavoriteMasu(null)} aria-pressed={favoriteMasuId==null}

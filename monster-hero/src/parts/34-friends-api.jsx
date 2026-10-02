@@ -443,7 +443,7 @@ const friendsPlaytimeText = (seconds) => {
 };
 const FRIEND_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 // 端末の持ち物から、フレンドに見せる情報を作る(書く内容はここで決まる)
-//  masuMons … 手持ちのマスモン / favoriteMasuId … 「好きなマスモン」に選んだ個体のid / playtime … normalizePlaytime の形
+//  masuMons … 手持ちのマスモン / favoriteMasuId … 「好きなモンスター」に選んだ個体のid / playtime … normalizePlaytime の形
 const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime }) => {
   let bestBond = 0, bestBondMon = '', bestPower = 0, bestPowerMon = '', favorite = null;
   (Array.isArray(masuMons) ? masuMons : []).forEach((masu) => {
