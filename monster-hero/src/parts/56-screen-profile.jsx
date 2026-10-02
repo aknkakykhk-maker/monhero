@@ -25,7 +25,9 @@ function ProfileScreen({
   onSelectBattleMode, onOpenEventReplayList, onOpenSpeciesRecords,
   rhythmHistoryCount, onOpenRhythmHistory,
   // フレンド画面への入口。公開前(friendsEnabled=false)は出さない
-  friendsEnabled = false, onOpenFriends,
+  friendsEnabled = false, onOpenFriends, friendRequestCount = 0,
+  // フレンドに見せる「好きなマスモン」(選んでいなければ null)と、選ぶ画面を開く操作
+  favoriteMasu = null, onOpenFavoritePicker,
   // 選べる助手だけ(イベントで加入する助手は、その会話を見るまで並べない)。
   // 渡されなければ今までどおり全員を並べる
   unlockedAssistants,
@@ -62,6 +64,17 @@ function ProfileScreen({
             <div className="text-[10px] text-slate-400 text-center mt-1.5">名前もアイコンも、あとからこの画面でいつでも変えられます</div>
           </div>);
         })()}
+        {onboarded&&!onboardingPreview&&friendsEnabled&&(
+          <button type="button" data-profile-friends data-friend-requests={Number(friendRequestCount)||0} onClick={onOpenFriends} className={`relative mb-3 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border px-3 py-2.5 active:scale-[.98] ${Number(friendRequestCount)>0?'border-rose-400/80 bg-rose-950/50':'border-pink-400/40 bg-pink-950/40'}`}>
+            <Users size={16} className="text-pink-300 shrink-0"/>
+            <span className="flex-1 min-w-0 text-left">
+              <b className="block text-[13px] font-black text-pink-100">フレンド</b>
+              <small className={`block text-[10px] ${Number(friendRequestCount)>0?'font-black text-rose-200':'text-pink-300'}`}>{Number(friendRequestCount)>0?`フレンド申請が${Number(friendRequestCount)}件届いています`:'フレンドコードで申請して、プロフィールを見せ合えます'}</small>
+            </span>
+            {Number(friendRequestCount)>0&&<span data-friend-badge aria-hidden="true" className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99,Number(friendRequestCount))}</span>}
+            <ChevronRight size={16} className="shrink-0 text-pink-400"/>
+          </button>
+        )}
         <div className={`${SCREEN_PANEL_CLASS} mb-4 flex flex-col items-center gap-3`}>
           {/* アイコン(下層)とプロフィールフレーム(上層)。フレームは円の外へ出るので、
               ここでは overflow-hidden を掛けない(内側のクリップは ProfileAvatar が持つ)。
@@ -120,6 +133,19 @@ function ProfileScreen({
             <div className="text-[10px] text-slate-400 font-bold">{playtimeView.since?`${playtimeView.since} から数えています`:'いま数え始めたところです'}</div>
           </div>
         </div>
+        {onboarded&&!onboardingPreview&&friendsEnabled&&(()=>{
+          const base=favoriteMasu?ALL_PLAYER_MONSTERS[favoriteMasu.baseId]:null;
+          const iconUrl=base&&resolveIconUrl?resolveIconUrl(favoriteMasu.baseId):null;
+          return (
+          <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]">
+            {iconUrl?<img src={iconUrl} alt="" className="h-10 w-10 shrink-0 object-contain"/>:<span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl" aria-hidden="true">💗</span>}
+            <span className="min-w-0 flex-1 text-left">
+              <small className="block text-[10px] font-black text-pink-300">好きなマスモン（フレンドに見えます）</small>
+              <b className="block truncate text-[13px] font-black text-white">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b>
+            </span>
+            <ChevronRight size={16} className="shrink-0 text-pink-400"/>
+          </button>);
+        })()}
         {/* 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
             助手ごとに別々に貯まるので、切り替えても片方が消えることはない */}
         {onboarded&&!onboardingPreview&&(()=>{
@@ -252,16 +278,6 @@ function ProfileScreen({
             ヒストリー的に見れる機能」。置き場所もユーザーが決めた(プロフィール)。
             ★見るだけ。報酬の受け取りには一切関わらない。
             ★まだ終わった回が1つも無いあいだは出さない(押しても空の一覧しか出ないため) */}
-        {onboarded&&!onboardingPreview&&friendsEnabled&&(
-          <button type="button" data-profile-friends onClick={onOpenFriends} className="mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-pink-400/40 bg-pink-950/40 px-3 py-2.5 active:scale-[.98]">
-            <Users size={16} className="text-pink-300 shrink-0"/>
-            <span className="flex-1 min-w-0 text-left">
-              <b className="block text-[13px] font-black text-pink-100">フレンド</b>
-              <small className="block text-[10px] text-pink-300">フレンドコードで申請して、プロフィールを見せ合えます</small>
-            </span>
-            <ChevronRight size={16} className="shrink-0 text-pink-400"/>
-          </button>
-        )}
         {onboarded&&!onboardingPreview&&Number(rhythmHistoryCount)>0&&(
           <button type="button" data-profile-rhythm-history onClick={onOpenRhythmHistory} className="mb-4 flex w-full min-h-[64px] items-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-950/40 px-3 py-2.5 active:scale-[.98]">
             <Trophy size={16} className="text-amber-300 shrink-0"/>

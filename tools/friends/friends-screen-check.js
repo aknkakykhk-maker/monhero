@@ -54,6 +54,8 @@ const serve = (flagOn) => new Promise(resolve => {
       fake.db.friend_codes.push({ breeder_id: 'other-friend', friend_code: 'AAAA2222', created_at: fake.tick() });
       fake.db.friend_codes.push({ breeder_id: 'other-incoming', friend_code: 'BBBB3333', created_at: fake.tick() });
     }
+    fake.db.friend_profiles.push({ breeder_id: 'other-friend', place: 'rhythm', started_on: '2026-09-01', play_seconds: 5 * 3600, best_bond: 20, best_bond_mon: 'Mocchi', best_power: 12345, best_power_mon: 'Pixie',
+      favorite: { monsterId: 'Mocchi', name: 'モッチー', bondLevel: 20, power: 9876, detail: { v: 6, n: 'Mocchi' } }, updated_at: fake.tick() });
     fake.db.breeder_profiles.push({ breeder_id: 'other-friend', user_name: 'ともだちの子', icon: null, profile_frame: null, updated_at: new Date().toISOString() });
     fake.db.breeder_profiles.push({ breeder_id: 'other-incoming', user_name: 'とどいた子', icon: null, profile_frame: null, updated_at: new Date().toISOString() });
 
@@ -68,7 +70,7 @@ const serve = (flagOn) => new Promise(resolve => {
       await page.route('https://zrzevudkbgtxlbvmuziy.supabase.co/**', async (route) => {
         const request = route.request();
         const url = request.url();
-        if (/\/rest\/v1\/(friend_codes|friend_links)/.test(url) || (/\/rest\/v1\/breeder_profiles/.test(url) && request.method() === 'GET' && /breeder_id=in\./.test(url))) {
+        if (/\/rest\/v1\/(friend_codes|friend_links|friend_profiles)/.test(url) || (/\/rest\/v1\/breeder_profiles/.test(url) && request.method() === 'GET' && /breeder_id=in\./.test(url))) {
           const out = fake.handle(url, request.method(), request.postData());
           await route.fulfill({ status: out.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
             body: out.body === undefined ? '' : JSON.stringify(out.body) });
@@ -108,6 +110,8 @@ const serve = (flagOn) => new Promise(resolve => {
       await page.waitForSelector('[data-profile-battle-records]', { timeout: 15000 });
       await page.waitForTimeout(400);
       result.hasEntry = await page.evaluate(() => !!document.querySelector('[data-profile-friends]'));
+      result.favoriteRow = await page.evaluate(() => (document.querySelector('[data-profile-favorite-masu]') || {}).innerText || '');
+      result.friendsFirst = await page.evaluate(() => { const f = document.querySelector('[data-profile-friends]'); const b = document.querySelector('[data-profile-battle-records]'); return !!(f && b && (f.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)); });
       if (!result.hasEntry) { result.errors = errors; return { result, fake }; }
       await page.evaluate(() => document.querySelector('[data-profile-friends]').click());
       await page.waitForSelector('[data-friends-phase]', { timeout: 15000 });
@@ -150,11 +154,20 @@ const serve = (flagOn) => new Promise(resolve => {
       await clickText('^フレンド');
       await page.waitForTimeout(300);
       await shot('3-friends');
+      result.presenceOnline = await page.evaluate(() => [...document.querySelectorAll('[data-friend-presence=online]')].map(e => e.innerText).join('|'));
       result.twoFriends = ((await bodyText()).match(/プロフィール ›/g) || []).length;
-      await clickText('プロフィール ›');
+      // 見せる情報を仕込んだ「ともだちの子」の行のボタンを押す(先頭の人とは限らない)
+      await page.evaluate(() => {
+        const row = [...document.querySelectorAll('div')].filter(d => /ともだちの子/.test(d.innerText || '') && d.querySelector('button')).pop();
+        [...row.querySelectorAll('button')].find(b => /プロフィール/.test(b.innerText))?.click();
+      });
       await page.waitForSelector('[data-friends-profile]', { timeout: 5000 });
       await shot('4-profile');
       result.profileText = await bodyText();
+      result.favoriteDetailButton = await page.evaluate(() => !!document.querySelector('[data-friend-favorite-detail]'));
+      // 自分の「見せる情報」が、起動してしばらくすると送られている(最初の送信は3秒以上あと)
+      for (let i = 0; i < 48 && !fake.db.friend_profiles.find(r => r.breeder_id === 'self-user'); i++) await page.waitForTimeout(250);
+      result.selfRow = fake.db.friend_profiles.find(r => r.breeder_id === 'self-user') || null;
       await clickText('フレンドを解除');
       await page.waitForSelector('[data-confirm-sheet]', { timeout: 5000 });
       await clickText('^解除する$');
@@ -191,6 +204,12 @@ const serve = (flagOn) => new Promise(resolve => {
   ok('承認すると accepted になる', r.acceptedRow === 'accepted', `${r.acceptedRow}`);
   ok('フレンドが2人並ぶ', r.twoFriends === 2, `${r.twoFriends}人`);
   ok('プロフィールに相手の名前が出る', /ともだちの子|とどいた子/.test(r.profileText || '') && (r.profileText || '').includes('モンヒロビートの記録'));
+  ok('プロフィールの一番上(バトル記録より前)にフレンドの入口がある', r.friendsFirst === true);
+  ok('プロフィールに「好きなマスモン」の行がある', /好きなマスモン/.test(r.favoriteRow || '') && /まだ選んでいません/.test(r.favoriteRow || ''), `${r.favoriteRow}`);
+  ok('フレンド一覧に、いまの場所(モンヒロビートで遊び中)が出る', /モンヒロビートで遊び中/.test(r.presenceOnline || ''), `${r.presenceOnline}`);
+  ok('プロフィールにプレイ時間・遊びはじめ・最高絆Lv・最高総合力が出る', /5時間00分/.test(r.profileText || '') && /2026年9月1日/.test(r.profileText || '') && /Lv\.20/.test(r.profileText || '') && /12,345/.test(r.profileText || '') && /ピクシー/.test(r.profileText || ''));
+  ok('プロフィールに好きなマスモンと「詳細」が出る', /好きなマスモン/.test(r.profileText || '') && /モッチー/.test(r.profileText || '') && r.favoriteDetailButton === true);
+  ok('自分の見せる情報が、起動後に friend_profiles へ送られる', !!r.selfRow && ['home','battle','rhythm','multi','masu','market','other'].includes(r.selfRow.place), JSON.stringify(r.selfRow && r.selfRow.place));
   ok('解除すると removed になり、行は消えない', r.removedCount >= 1, `${r.removedCount}件`);
   ok('解除後は一覧に戻る', (r.afterRemoveText || '').includes('プロフィール ›') || (r.afterRemoveText || '').includes('まだフレンドがいません'));
   ok('DELETE を一度も使っていない', r.deletes === 0);
@@ -216,7 +235,7 @@ const serve = (flagOn) => new Promise(resolve => {
       page.on('pageerror', e => errors.push(String(e && e.message ? e.message : e)));
       await page.route('https://zrzevudkbgtxlbvmuziy.supabase.co/**', async (route) => {
         const request = route.request(); const url = request.url();
-        if (/\/rest\/v1\/(friend_codes|friend_links|friend_invites)/.test(url) || (/\/rest\/v1\/breeder_profiles/.test(url) && request.method() === 'GET' && /breeder_id=in\./.test(url))) {
+        if (/\/rest\/v1\/(friend_codes|friend_links|friend_invites|friend_profiles)/.test(url) || (/\/rest\/v1\/breeder_profiles/.test(url) && request.method() === 'GET' && /breeder_id=in\./.test(url))) {
           const res = fake.handle(url, request.method(), request.postData());
           await route.fulfill({ status: res.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: res.body === undefined ? '' : JSON.stringify(res.body) });
           return;
@@ -290,6 +309,96 @@ const serve = (flagOn) => new Promise(resolve => {
   ok('招待したあとはボタンが「招待ずみ」になる', inv.sentLabel === '招待ずみ', `${inv.sentLabel}`);
   ok('マルチの画面が落ちていない', inv.crashed === false);
   ok('マルチの招待で実行時エラーが出ていない', inv.errors.length === 0, inv.errors.slice(0, 2).join(' / ') || 'なし');
+
+  // ⑧ 届いた申請の目立たせ方(HOME・プロフィールのバッジ / 起動時の助手の知らせ / 「申請」タブを先に開く)
+  const runBadgeScenario = async () => {
+    const fake = createFakeFriendsServer();
+    fake.db.breeder_profiles.push({ breeder_id: 'other-incoming', user_name: 'とどいた子', icon: null, profile_frame: null, updated_at: new Date().toISOString() });
+    fake.db.friend_links.push({ requester_id: 'other-incoming', target_id: 'self-user', status: 'pending', blocked_by: null, created_at: fake.tick(), updated_at: fake.tick() });
+    const server = await serve(true);
+    let browser; const out = {};
+    try {
+      browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--autoplay-policy=no-user-gesture-required'] });
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const errors = [];
+      page.on('pageerror', e => errors.push(String(e && e.message ? e.message : e)));
+      await page.route('https://zrzevudkbgtxlbvmuziy.supabase.co/**', async (route) => {
+        const request = route.request(); const url = request.url();
+        if (/\/rest\/v1\/(friend_codes|friend_links|friend_profiles|friend_invites)/.test(url) || (/\/rest\/v1\/breeder_profiles/.test(url) && request.method() === 'GET' && /breeder_id=in\./.test(url))) {
+          const res = fake.handle(url, request.method(), request.postData());
+          await route.fulfill({ status: res.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: res.body === undefined ? '' : JSON.stringify(res.body) });
+          return;
+        }
+        if (request.method() === 'OPTIONS') { await route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } }); return; }
+        await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '[]' });
+      });
+      await page.addInitScript(() => {
+        const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+        put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', '🐣'); put('mh_intro_done', true); put('mh_onboarded', true);
+        put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
+        put('mh_assistant_selected_v1', 'mua'); put('mh_assistant_unlock_seen_v1', true); put('mh_update_notice_seen_v1', true);
+        put('mh_rhythm_tutorial_seen_v1', true); put('mh_breeder_id_v1', 'self-user');
+      });
+      const clickText = async (pattern, nth = 0) => page.evaluate(([source, index]) => {
+        const rx = new RegExp(source);
+        const list = [...document.querySelectorAll('button')].filter(b => rx.test((b.innerText || '').replace(/\s+/g, ' ').trim()));
+        if (!list[index]) return false;
+        list[index].click();
+        return true;
+      }, [pattern, nth]);
+      await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
+      await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
+      await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
+      await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+      await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), { timeout: 40000 });
+      // 割り込む別の案内だけを閉じる(フレンドの知らせの「あとで」は押さない)
+      for (let round = 0; round < 40; round++) {
+        if (await page.evaluate(() => !!document.querySelector('[data-friend-request-notice]'))) break;
+        await clickText('^(受け取る|閉じる|OK|確認|次へ|はじめる|決定|スキップ)$');
+        await page.waitForTimeout(400);
+      }
+      out.noticeShown = await page.evaluate(() => !!document.querySelector('[data-friend-request-notice]'));
+      out.noticeText = await page.evaluate(() => (document.querySelector('[data-friend-request-notice]') || {}).innerText || '');
+      if (process.env.FRIENDS_SHOT_DIR) await page.screenshot({ path: path.join(process.env.FRIENDS_SHOT_DIR, '7-request-notice.png') });
+      // 「あとで」で閉じても申請は残り、HOMEの赤いバッジに件数が出る
+      await page.evaluate(() => document.querySelector('[data-friend-notice-later]')?.click());
+      await page.waitForTimeout(400);
+      out.noticeClosed = await page.evaluate(() => !document.querySelector('[data-friend-request-notice]'));
+      out.homeBadge = await page.evaluate(() => (document.querySelector('[data-home-friend-badge]') || {}).innerText || '');
+      if (process.env.FRIENDS_SHOT_DIR) await page.screenshot({ path: path.join(process.env.FRIENDS_SHOT_DIR, '8-home-badge.png') });
+      await page.evaluate(() => document.querySelector('.mh-home-player')?.click());
+      await page.waitForSelector('[data-profile-battle-records]', { timeout: 15000 });
+      out.profileBadge = await page.evaluate(() => (document.querySelector('[data-friend-badge]') || {}).innerText || '');
+      out.profileText = await page.evaluate(() => (document.querySelector('[data-profile-friends]') || {}).innerText || '');
+      if (process.env.FRIENDS_SHOT_DIR) await page.screenshot({ path: path.join(process.env.FRIENDS_SHOT_DIR, '9-profile-badge.png') });
+      await page.evaluate(() => document.querySelector('[data-profile-friends]').click());
+      await page.waitForFunction(() => document.querySelector('[data-friends-phase]')?.getAttribute('data-friends-phase') === 'ready', { timeout: 15000 });
+      await page.waitForTimeout(300);
+      // 申請が届いているので、最初から「申請」のタブが開いていて、承認ボタンが見える
+      out.requestsFirst = await page.evaluate(() => [...document.querySelectorAll('button')].some(b => /^承認$/.test((b.innerText || '').trim())));
+      // 承認すると、バッジが消える
+      await clickText('^承認$');
+      await page.waitForTimeout(800);
+      await page.evaluate(() => document.querySelector('button[aria-label="プロフィールへ戻る"]')?.click());
+      await page.waitForSelector('[data-profile-friends]', { timeout: 8000 });
+      out.badgeAfter = await page.evaluate(() => !!document.querySelector('[data-friend-badge]'));
+      out.crashed = await page.evaluate(() => document.body.innerText.includes('問題が発生しました'));
+      out.errors = errors;
+    } finally {
+      if (browser) await browser.close();
+      server.close();
+    }
+    return out;
+  };
+  const badge = await runBadgeScenario();
+  ok('申請が届いていると、起動後のHOMEで助手が知らせる', badge.noticeShown === true && /とどいた子さんからフレンド申請/.test(badge.noticeText), `${badge.noticeText}`);
+  ok('「あとで」で知らせを閉じられる', badge.noticeClosed === true);
+  ok('HOME左上のプロフィールに、申請の件数の赤いバッジが出る', badge.homeBadge === '1', `${badge.homeBadge}`);
+  ok('プロフィールのフレンドのボタンにも赤いバッジと文言が出る', badge.profileBadge === '1' && /フレンド申請が1件届いています/.test(badge.profileText), `${badge.profileBadge} / ${badge.profileText}`);
+  ok('申請が届いているときは、最初から「申請」のタブが開く', badge.requestsFirst === true);
+  ok('承認すると、プロフィールのバッジが消える', badge.badgeAfter === false);
+  ok('バッジの画面が落ちていない', badge.crashed === false);
+  ok('バッジの画面で実行時エラーが出ていない', badge.errors.length === 0, badge.errors.slice(0, 2).join(' / ') || 'なし');
 
   // ⑤ 表が無い環境
   const missing = await runScenario(true, { tablesMissing: true });
