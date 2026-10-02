@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0e76024483829a0f
+// generated-sha256: ed7b0293baf4ea98
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 06:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 17:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20654,6 +20654,17 @@ const TACTICS_EX_SKILLS = Object.freeze({
     regenRates: Object.freeze({ hp: 0.2, guts: 0.4 }),
     effect: 'statBoost',
   }),
+  // ★2026-10-02 ユーザー指示(エイキのEX)。「EX中は敵と距離があってる分のダメージになる」。
+  //   getDmg の距離補正(敵との距離の差 0/1/2/3 で ×1.5/1.3/1.1/0.9)を、効いているあいだは
+  //   差0(×1.5)で数える。どの距離枠にいても、敵と同じ距離から殴ったことになる。
+  //   間合い適性(その枠に立っている子の適性)は変えない。カードと併用できる(殴らないと意味が無いので)
+  Eiki: Object.freeze({
+    id: 'eiki_dist_match',
+    name: '緋桜瞬歩',
+    desc: '3ターンのあいだ、どの距離にいても、敵と同じ距離から攻撃したときのダメージ(いちばん高い距離補正×1.5)になる。',
+    maxUses: 2, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    effect: 'distMatch',
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -20714,7 +20725,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'partyGuard', 'comboBurst']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -41002,7 +41013,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
-    const distDiff = Math.abs(slotIdx-attackStartDist);
+    // ★エイキの「緋桜瞬歩」が効いているあいだは、敵との距離の差を0(いちばん高い×1.5)で数える
+    const distDiff = tacticsExEffectAt(slotIdx)==='distMatch' ? 0 : Math.abs(slotIdx-attackStartDist);
     const distMult = [1.5,1.3,1.1,0.9][distDiff]||1.0;
     let baseDmgMult = 1.0;
     if (card.subType==='stun_atsu') { baseDmgMult = card.baseValue||1.5; }
