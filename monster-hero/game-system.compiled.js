@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5b305dac08d5dc97
+// source-sha256: e21e2ef599c4b0eb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 02:50";
+const BUILD_DATE = "2026-10-03 03:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33801,6 +33801,18 @@ const friendsIdOfRankingEntry = entry => {
   const key = typeof entry?.identityKey === 'string' ? entry.identityKey : '';
   return key.startsWith('name:') ? '' : friendsSafeId(key);
 };
+const friendsFaceIconOf = baseId => {
+  const mon = ALL_PLAYER_MONSTERS[baseId];
+  const src = mon ? mon.faceIconUrl || mon.iconUrl : null;
+  if (!src) return null;
+  const bare = url => String(url || '').split('?')[0];
+  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
+  const item = items.find(entry => entry && entry.type === 'icon' && bare(entry.icon) === bare(src));
+  return {
+    src,
+    id: item ? item.id : baseId
+  };
+};
 const friendsStatusOf = value => Object.values(FRIEND_STATUS).includes(value) ? value : FRIEND_STATUS.REMOVED;
 const friendLinkView = (selfId, row) => {
   const requester = typeof row?.requester_id === 'string' ? row.requester_id : '';
@@ -36905,16 +36917,16 @@ function ProfileScreen({
     className: "text-[10px] text-slate-400 font-bold"
   }, playtimeView.since ? `${playtimeView.since} から数えています` : 'いま数え始めたところです'))), onboarded && !onboardingPreview && friendsEnabled && (() => {
     const base = favoriteMasu ? ALL_PLAYER_MONSTERS[favoriteMasu.baseId] : null;
-    const iconUrl = base && resolveIconUrl ? resolveIconUrl(favoriteMasu.baseId) : null;
+    const face = base ? friendsFaceIconOf(favoriteMasu.baseId) : null;
     return React.createElement("button", {
       type: "button",
       "data-profile-favorite-masu": true,
       onClick: onOpenFavoritePicker,
       className: "mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]"
-    }, iconUrl ? React.createElement("img", {
-      src: iconUrl,
-      alt: "",
-      className: "h-10 w-10 shrink-0 object-contain"
+    }, face ? React.createElement(ProfileAvatar, {
+      src: face.src,
+      id: face.id,
+      className: "h-10 w-10 shrink-0"
     }) : React.createElement("span", {
       className: "flex h-10 w-10 shrink-0 items-center justify-center text-2xl",
       "aria-hidden": "true"
@@ -52586,7 +52598,7 @@ function FriendsScreen({
       const monName = id => id && ALL_PLAYER_MONSTERS[id] ? ALL_PLAYER_MONSTERS[id].name : '';
       const fav = sum && sum.favorite ? sum.favorite : null;
       const favBase = fav ? ALL_PLAYER_MONSTERS[fav.monsterId] : null;
-      const favIcon = favBase && resolveIconUrl ? resolveIconUrl(fav.monsterId) : null;
+      const favFace = favBase ? friendsFaceIconOf(fav.monsterId) : null;
       const stat = (label, value, sub, color) => React.createElement("div", {
         className: "min-w-0"
       }, React.createElement("dt", {
@@ -52640,10 +52652,10 @@ function FriendsScreen({
         className: `${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`
       }, !favBase && React.createElement("p", {
         className: "text-[11px] font-bold text-slate-400"
-      }, "まだ選んでいません"), favBase && React.createElement(React.Fragment, null, favIcon ? React.createElement("img", {
-        src: favIcon,
-        alt: "",
-        className: "h-14 w-14 shrink-0 object-contain"
+      }, "まだ選んでいません"), favBase && React.createElement(React.Fragment, null, favFace ? React.createElement(ProfileAvatar, {
+        src: favFace.src,
+        id: favFace.id,
+        className: "h-14 w-14 shrink-0"
       }) : React.createElement("span", {
         className: "flex h-14 w-14 shrink-0 items-center justify-center text-3xl"
       }, "❓"), React.createElement("div", {
@@ -71160,36 +71172,39 @@ function MonsterHeroGame() {
   const rankingPlace = index => React.createElement("div", {
     className: `w-7 h-7 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-slate-300 text-black' : index === 2 ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400'}`
   }, index + 1);
-  const rankingBreederIconPlain = entry => resolveIconUrl(entry?.icon) ? React.createElement(ProfileAvatar, {
-    src: resolveIconUrl(entry.icon),
-    id: entry.icon,
-    frameId: entry?.profileFrame,
-    className: "w-8 h-8 shrink-0"
-  }) : React.createElement(ProfileAvatar, {
-    frameId: entry?.profileFrame,
-    className: "w-8 h-8 shrink-0",
-    fallback: React.createElement("span", {
-      className: "flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs"
-    }, "👤")
-  });
-  const rankingBreederIcon = entry => RELEASE_FLAGS.friends === true && friendsIdOfRankingEntry(entry) ? React.createElement("span", {
-    role: "button",
-    tabIndex: 0,
-    "data-friend-candidate": true,
-    "aria-label": `${entry?.userName || '名無しのブリーダー'}さんにフレンド申請`,
-    onClick: event => {
-      event.stopPropagation();
-      openFriendCandidate(entry);
-    },
-    onKeyDown: event => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
+  const rankingBreederIcon = entry => {
+    const avatar = resolveIconUrl(entry?.icon) ? React.createElement(ProfileAvatar, {
+      src: resolveIconUrl(entry.icon),
+      id: entry.icon,
+      frameId: entry?.profileFrame,
+      className: "w-8 h-8 shrink-0"
+    }) : React.createElement(ProfileAvatar, {
+      frameId: entry?.profileFrame,
+      className: "w-8 h-8 shrink-0",
+      fallback: React.createElement("span", {
+        className: "flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs"
+      }, "👤")
+    });
+    if (!(RELEASE_FLAGS.friends === true && friendsIdOfRankingEntry(entry))) return avatar;
+    return React.createElement("span", {
+      role: "button",
+      tabIndex: 0,
+      "data-friend-candidate": true,
+      "aria-label": `${entry?.userName || '名無しのブリーダー'}さんにフレンド申請`,
+      onClick: event => {
         event.stopPropagation();
         openFriendCandidate(entry);
-      }
-    },
-    className: "inline-flex shrink-0 cursor-pointer active:scale-90"
-  }, rankingBreederIconPlain(entry)) : rankingBreederIconPlain(entry);
+      },
+      onKeyDown: event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          event.stopPropagation();
+          openFriendCandidate(entry);
+        }
+      },
+      className: "inline-flex shrink-0 cursor-pointer active:scale-90"
+    }, avatar);
+  };
   const rankingCardClass = index => `rounded-xl border ${index === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`;
   const renderScoreRankingEntry = (entry, index, showSpecies = false) => {
     const finiteNumber = value => value == null || value === '' ? null : Number.isFinite(Number(value)) ? Number(value) : null;
@@ -79363,13 +79378,16 @@ function MonsterHeroGame() {
         onClick: () => selectFavoriteMasu(m.id),
         "aria-pressed": chosen,
         className: `flex items-center gap-2 min-h-[48px] rounded-xl border px-2 text-left active:scale-95 ${chosen ? 'border-pink-400 bg-pink-950/60' : 'border-slate-700 bg-slate-950/40'}`
-      }, resolveIconUrl(m.baseId) ? React.createElement("img", {
-        src: resolveIconUrl(m.baseId),
-        alt: "",
-        className: "h-9 w-9 shrink-0 object-contain"
-      }) : React.createElement("span", {
-        className: "h-9 w-9 shrink-0 text-center text-xl"
-      }, "❓"), React.createElement("span", {
+      }, (() => {
+        const face = friendsFaceIconOf(m.baseId);
+        return face ? React.createElement(ProfileAvatar, {
+          src: face.src,
+          id: face.id,
+          className: "h-9 w-9 shrink-0"
+        }) : React.createElement("span", {
+          className: "h-9 w-9 shrink-0 text-center text-xl"
+        }, "❓");
+      })(), React.createElement("span", {
         className: "min-w-0 flex-1 truncate text-[11px] font-black text-white"
       }, base.name), React.createElement("span", {
         className: "shrink-0 text-[10px] font-black text-pink-300"

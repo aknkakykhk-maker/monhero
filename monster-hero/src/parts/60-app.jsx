@@ -13873,15 +13873,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // フレームを持たない記録・列がまだ無い環境では 'none' になり、これまでと同じ見た目になる
   // フレンド機能が公開されていて相手のIDが分かる行は、アイコンをタップするとフレンド申請の確認が出る
   // (ボタンの入れ子を避けるため span の role="button")
-  const rankingBreederIconPlain = entry => resolveIconUrl(entry?.icon)
-    ? <ProfileAvatar src={resolveIconUrl(entry.icon)} id={entry.icon} frameId={entry?.profileFrame} className="w-8 h-8 shrink-0"/>
-    : <ProfileAvatar frameId={entry?.profileFrame} className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>}/>;
-  const rankingBreederIcon = entry => (RELEASE_FLAGS.friends === true && friendsIdOfRankingEntry(entry))
-    ? <span role="button" tabIndex={0} data-friend-candidate aria-label={`${entry?.userName||'名無しのブリーダー'}さんにフレンド申請`}
+  const rankingBreederIcon = entry => {
+    const avatar = resolveIconUrl(entry?.icon)
+      ? <ProfileAvatar src={resolveIconUrl(entry.icon)} id={entry.icon} frameId={entry?.profileFrame} className="w-8 h-8 shrink-0"/>
+      : <ProfileAvatar frameId={entry?.profileFrame} className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>}/>;
+    if (!(RELEASE_FLAGS.friends === true && friendsIdOfRankingEntry(entry))) return avatar;
+    return (
+      <span role="button" tabIndex={0} data-friend-candidate aria-label={`${entry?.userName||'名無しのブリーダー'}さんにフレンド申請`}
         onClick={(event)=>{ event.stopPropagation(); openFriendCandidate(entry); }}
         onKeyDown={(event)=>{ if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); openFriendCandidate(entry); } }}
-        className="inline-flex shrink-0 cursor-pointer active:scale-90">{rankingBreederIconPlain(entry)}</span>
-    : rankingBreederIconPlain(entry);
+        className="inline-flex shrink-0 cursor-pointer active:scale-90">{avatar}</span>
+    );
+  };
   const rankingCardClass = index => `rounded-xl border ${index===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`;
   // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
   // showSpecies … 種族チャレンジの「全種族」タブから呼ばれたときだけtrue。
@@ -17461,7 +17464,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   return (
                     <button key={m.id} type="button" data-favorite-option={String(m.id)} onClick={()=>selectFavoriteMasu(m.id)} aria-pressed={chosen}
                       className={`flex items-center gap-2 min-h-[48px] rounded-xl border px-2 text-left active:scale-95 ${chosen?'border-pink-400 bg-pink-950/60':'border-slate-700 bg-slate-950/40'}`}>
-                      {resolveIconUrl(m.baseId)?<img src={resolveIconUrl(m.baseId)} alt="" className="h-9 w-9 shrink-0 object-contain"/>:<span className="h-9 w-9 shrink-0 text-center text-xl">❓</span>}
+                      {(()=>{ const face=friendsFaceIconOf(m.baseId); return face?<ProfileAvatar src={face.src} id={face.id} className="h-9 w-9 shrink-0"/>:<span className="h-9 w-9 shrink-0 text-center text-xl">❓</span>; })()}
                       <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">{base.name}</span>
                       <span className="shrink-0 text-[10px] font-black text-pink-300">絆Lv.{masuBondLevelInfo(m).level}</span>
                     </button>

@@ -57,6 +57,18 @@ const friendsIdOfRankingEntry = (entry) => {
   const key = typeof entry?.identityKey === 'string' ? entry.identityKey : '';
   return key.startsWith('name:') ? '' : friendsSafeId(key);
 };
+// モンスターの「顔アイコン」(マーケットで買えるプロフィールアイコンと同じ絵)を、本番のプロフィールと同じ見え方で出すための材料。
+// 顔の専用絵が無い子は立ち絵がそのまま入っているので、マーケットの商品ごとの拡大・位置の調整(BreederIcon が id で引く)を通さないと
+// 全身に見えてしまう。マーケットの商品(type:'icon')のうち同じ絵のものを探して、その id を返す。無ければモンスターidのまま
+const friendsFaceIconOf = (baseId) => {
+  const mon = ALL_PLAYER_MONSTERS[baseId];
+  const src = mon ? (mon.faceIconUrl || mon.iconUrl) : null;
+  if (!src) return null;
+  const bare = (url) => String(url || '').split('?')[0];
+  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
+  const item = items.find((entry) => entry && entry.type === 'icon' && bare(entry.icon) === bare(src));
+  return { src, id: item ? item.id : baseId };
+};
 const friendsStatusOf = (value) => (Object.values(FRIEND_STATUS).includes(value) ? value : FRIEND_STATUS.REMOVED);
 
 // 行(サーバーの形)を、自分から見た形へ。otherId が相手
