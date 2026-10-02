@@ -918,6 +918,11 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   partyTakenRate … 効いているあいだ、味方全員の被ダメージを何割減らすか(0.3 なら30%軽減。ほかの軽減と掛け算で重なる)
 //   partyRegenRate … 効いているあいだ、ターンの終わりに味方全員(立っている子)のライフを上限の何割ぶん多く回復するか
 //   extraCombos … { count, rate } 効いているあいだ、その子の攻撃へ与ダメージ rate の連撃を count 回足す
+//   dmgRate   … (multiBuff) 効いているあいだ、その子の与ダメージを何割上げるか(0.3 なら×1.3。最終ダメージへの乗算)
+//   selfTakenRate … (multiBuff) 効いているあいだ、その子が受けるダメージを何割減らすか(0.2 なら×0.8。ほかの軽減と掛け算で重なる)
+//   critRateRate … (multiBuff) 会心率を何割増やすか(0.5 なら×1.5。足し算ではなく、いまの会心率にかける)
+//   critDmgRate  … (multiBuff) 会心ダメージを何割増やすか(0.3 なら×1.3。足し算ではなく、いまの会心ダメージ倍率にかける)
+//   lifeCostRate … 使うとき、その子の最大ライフのこの割合(0.3 なら30%)を払う。ライフがそれより多いときだけ使える(払って倒れることはない)
 //   dodgeComboRate … 回避するたびに増える連撃の rate(0.1 なら、回避1回ごとに与ダメージ10%の連撃が1回増える)
 //   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
 const TACTICS_EX_DURATION_TEXT = Object.freeze({
@@ -996,6 +1001,28 @@ const TACTICS_EX_SKILLS = Object.freeze({
     dodgeComboRate: 0.1,
     effect: 'dodgeCombo',
   }),
+  // ★2026-10-02 ユーザー指示(アークのEX)。「抗えぬ宿命を追え、5ターン、5回、与ダメ30%アップ、連撃10%、被ダメ20%低下」。
+  //   カードとの併用は指定が無かったので「併用できる」(自己強化なので、使ったターンも殴れないと意味が薄い)
+  Ark: Object.freeze({
+    id: 'ark_chase_fate',
+    name: '抗えぬ宿命を追え',
+    desc: '5ターンのあいだ、アークの与ダメージが30%上がり、攻撃に与ダメージ10%の連撃が1回付き、受けるダメージが20%減る。',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    dmgRate: 0.3, selfTakenRate: 0.2, extraCombos: Object.freeze({ count: 1, rate: 0.1 }),
+    effect: 'multiBuff',
+  }),
+  // ★2026-10-02 ユーザー指示(イブリースのEX)。「堕天の烙印、5ターン、5回、5%連撃×5、クリ率50%アップ(乗算)、
+  //   クリダメ30%アップ(乗算)、丈夫さ30%アップ」。併用は指定が無かったので「併用できる」
+  Iblis: Object.freeze({
+    id: 'iblis_fallen_brand',
+    name: '堕天の烙印',
+    desc: '最大ライフの30%を払う。5ターンのあいだ、イブリースの攻撃に与ダメージ5%の連撃が5回付き、会心率が1.5倍、会心ダメージが1.3倍、丈夫さが30%上がる。',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    // ★2026-10-02 ユーザー指示「堕天は最大ライフの30%を消費して」を追加。払って倒れないよう、ライフが30%より多いときだけ使える
+    lifeCostRate: 0.3, conditionText: 'ライフが最大の30%より多いときだけ使える',
+    rates: Object.freeze({ def: 0.3 }), critRateRate: 0.5, critDmgRate: 0.3, extraCombos: Object.freeze({ count: 5, rate: 0.05 }),
+    effect: 'multiBuff',
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -1056,7 +1083,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1107,6 +1134,11 @@ const normalizeTacticsExDef = (raw) => {
     partyTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.partyTakenRate)) ? Number(raw.partyTakenRate) : 0)),
     partyRegenRate: Math.max(0, Number.isFinite(Number(raw.partyRegenRate)) ? Number(raw.partyRegenRate) : 0),
     dodgeComboRate: Math.max(0, Number.isFinite(Number(raw.dodgeComboRate)) ? Number(raw.dodgeComboRate) : 0),
+    lifeCostRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.lifeCostRate)) ? Number(raw.lifeCostRate) : 0)),
+    dmgRate: Math.max(0, Number.isFinite(Number(raw.dmgRate)) ? Number(raw.dmgRate) : 0),
+    selfTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.selfTakenRate)) ? Number(raw.selfTakenRate) : 0)),
+    critRateRate: Math.max(0, Number.isFinite(Number(raw.critRateRate)) ? Number(raw.critRateRate) : 0),
+    critDmgRate: Math.max(0, Number.isFinite(Number(raw.critDmgRate)) ? Number(raw.critDmgRate) : 0),
     extraCombos: raw.extraCombos && typeof raw.extraCombos === 'object'
       && tacticsSafeInt(raw.extraCombos.count, 0) > 0 && Number(raw.extraCombos.rate) > 0
       ? { count: tacticsSafeInt(raw.extraCombos.count, 0), rate: Number(raw.extraCombos.rate) } : null,
@@ -1187,7 +1219,10 @@ const isTacticsExTurnUsed = (state, now) => sameTacticsExTurn(normalizeTacticsEx
 //   alive         … その子が立っているか(倒れた子はカードと同じくEXも使えない)
 //   selectedCount … このターンに**その子へ**置いたカードの枚数(ほかの子へ置いたカードは数えない)
 //   busy          … 行動中・AUTO中
-const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, now, busy = false } = {}) => {
+// 使うときに払うライフ(最大ライフの lifeCostRate。切り捨て)。払わないEXは0
+const tacticsExLifeCost = (def, maxHp) => (def && def.lifeCostRate > 0 ? Math.floor(Math.max(0, Number(maxHp) || 0) * def.lifeCostRate) : 0);
+// hp / maxHp … 使う子のいまのライフと最大ライフ(ライフを払うEXの判定に使う。渡さなければ見ない)
+const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, now, busy = false, hp = null, maxHp = null } = {}) => {
   if (!def) return { ok: false, reason: 'EXスキルを持っていない' };
   if (busy) return { ok: false, reason: '行動中は使えない' };
   if (!alive) return { ok: false, reason: '倒れているあいだは使えない' };
@@ -1197,6 +1232,9 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
   if (sameTacticsExTurn(safe.lastUse[slot], now)) return { ok: false, reason: 'このターンはもう使った' };
   if (!def.withCards && Math.max(0, tacticsSafeInt(selectedCount, 0)) > 0) {
     return { ok: false, reason: 'この子にカードを置いていると使えないEX。先にこの子のカードを外す' };
+  }
+  if (def.lifeCostRate > 0 && hp != null && maxHp != null && Number.isFinite(Number(hp)) && Number.isFinite(Number(maxHp)) && Number(hp) <= tacticsExLifeCost(def, maxHp)) {
+    return { ok: false, reason: `ライフが足りない（最大ライフの${Math.round(def.lifeCostRate * 100)}%を払うので、それより多く残っているときだけ使える）` };
   }
   const active = isTacticsExEffectActive(safe, slot, monId, now);
   for (const key of def.conditions || []) {
@@ -1227,6 +1265,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       partyTakenRate: def.partyTakenRate || 0, partyRegenRate: def.partyRegenRate || 0,
       extraCombos: def.extraCombos ? { ...def.extraCombos } : null,
       dodgeComboRate: def.dodgeComboRate || 0, dodges: 0,
+      dmgRate: def.dmgRate || 0, selfTakenRate: def.selfTakenRate || 0, critRateRate: def.critRateRate || 0, critDmgRate: def.critDmgRate || 0,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -1321,10 +1360,20 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
     const dodges = tacticsSafeInt(mine && mine.dodges, 0), rate = Number(mine && mine.dodgeComboRate);
     return dodges > 0 && Number.isFinite(rate) && rate > 0 ? { count: dodges, rate, label: '血踊' } : null;
   }
-  if (kind !== 'comboBurst') return null;
+  if (kind !== 'comboBurst' && kind !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot].extraCombos;
   const count = tacticsSafeInt(own && own.count, 0), rate = Number(own && own.rate);
-  return count > 0 && Number.isFinite(rate) && rate > 0 ? { count, rate } : null;
+  if (!(count > 0 && Number.isFinite(rate) && rate > 0)) return null;
+  // 連撃の名前は、アーク・イブリース(multiBuff)ではそのEXの名前(スイーツパラダイスは、これまでどおり名前を渡さない)
+  return kind === 'multiBuff' ? { count, rate, label: (tacticsExDefOf(unit.id) || {}).name || '' } : { count, rate };
+};
+// アーク・イブリース(multiBuff)が効いている子の、与ダメージ・被ダメージ・会心の倍率(効いていなければ全部1)
+const tacticsExMultiBuffOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'multiBuff') return null;
+  const own = normalizeTacticsExState(state).effects[slot];
+  const num = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
+  return { dmg: 1 + num(own.dmgRate), taken: 1 - Math.min(0.9, num(own.selfTakenRate)), critRate: 1 + num(own.critRateRate), critDmg: 1 + num(own.critDmgRate) };
 };
 // 血踊が効いている子が敵の攻撃を回避したことを数える(効いていなければ状態をそのまま返す)
 const recordTacticsExDodge = (state, units, slot, now) => {
@@ -1344,7 +1393,7 @@ const applyTacticsExStats = (unit, state, slot, now) => {
   }
   // ステータスアップ(ガッツ全開っちー・ドラゴンだっちー): 力と丈夫さを上げる(切り捨て)。
   // 上げ幅は rates の項目、無ければ statRate(力・丈夫さ共通)
-  if (kind === 'statBoost') {
+  if (kind === 'statBoost' || kind === 'multiBuff') {
     const effect = normalizeTacticsExState(state).effects[slot];
     const rateOf = (key) => {
       const own = Number(effect.rates && effect.rates[key]);
