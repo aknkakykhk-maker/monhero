@@ -34,6 +34,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-02 23:25", type:'update', title:'みんなで対戦の結果画面と、メンバー・選曲の表示がプロセカ風になりました', status:'new', releaseFlag:'rhythmMulti',
+    items:[
+      'メンバーの帯に、ブリーダーのアイコン(プロフィールフレーム付き)が出るようになりました。マッチング画面と結果画面にも出ます。',
+      '右上の🎼で、全員が希望している曲と難易度の一覧を見られます。スタートすると、曲名が回ってから1曲に決まります。',
+      '結果画面は、チームのランクのゲージと、1人ずつのカードが並ぶ形になりました。MVPの人は枠で目立ち、フルコンボなども出ます。',
+    ],
+  },
+  {
     date: "2026-10-02 23:15", type:'content', title:'フレンド機能が追加されました', status:'new', releaseFlag:'friends',
     assistantNotice:{ id:'update_notice_friends_v1', type:'content' },
     items:[
