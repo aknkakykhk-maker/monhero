@@ -299,10 +299,11 @@ check('味方全体の反射は確定バフか既存モードのときだけ',
 check('新モードは回避を「回避！」の枝へ落とさない',
   has('} else if (isEvasion && !isTacticsMode(runMode)) {'));
 // ★避けた子・反射した子は、受ける計算へ進まずそこで抜ける(枠へ出す印だけ控える)
-//   エイキの緋桜瞬歩(敵と同じ距離なら完全回避)で避けた子も同じ枝を通る。そのとき evadedSlot は空なので、
+//   エイキの緋桜瞬歩・ザンの血踊(敵と同じ距離なら完全回避)で避けた子も同じ枝を通る(exDodge)。そのとき evadedSlot は空なので、
 //   「無傷！」は evadedName でも止める
 check('避けた子・反射した子はダメージ処理を飛ばす',
-  has('if(slotIdx===evadedSlot||tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx),slotIdx,actingEnemyDist)){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }')
+  has('const exDodge=tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx),slotIdx,actingEnemyDist);')
+    && has('if(slotIdx===evadedSlot||exDodge){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }')
     && has('if(slotIdx===reflectedSlot){') && has('slotFx[slotIdx]={reflect:true};'));
 check('確率で出た反射は、その子が受けるはずだった量を返す',
   has('reflectBack+=applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx);'));
