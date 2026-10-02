@@ -578,6 +578,7 @@ const TEACHING_FX_STYLE = {
   atsu:    { icon:"🔥", label:"挑発!",       text:"text-orange-300",  ring:"border-orange-300",  rgb:"234,88,12",  c1:'#fed7aa', c2:'#ea580c', motif:'flame' },
   myaru:   { icon:"🐈", label:"怪薬投与!",   text:"text-purple-300",  ring:"border-purple-300",  rgb:"168,85,247", c1:'#e9d5ff', c2:'#a855f7', motif:'rise' },
   kiki:    { icon:"📣", label:"全力応援!",   text:"text-sky-300",     ring:"border-sky-300",     rgb:"56,189,248", c1:'#bae6fd', c2:'#38bdf8', motif:'blade' },
+  momosuke:{ icon:"🍑", label:"ひとりじめ!", text:"text-pink-300",    ring:"border-pink-300",    rgb:"244,114,182", c1:'#fbcfe8', c2:'#f472b6', motif:'rise' },
   poltz:   { icon:"🍱", label:"弁当を構える!", text:"text-lime-300",    ring:"border-lime-300",    rgb:"163,230,53", c1:'#d9f99d', c2:'#84cc16', motif:'rise' },
   // メロソ(回復＋ガード)。2026-09-29 まで演出が無かった
   meloso:  { icon:"🔍", label:"解析完了!",   text:"text-teal-300",    ring:"border-teal-300",    rgb:"20,184,166", c1:'#99f6e4', c2:'#14b8a6', motif:'shield' },

@@ -10,7 +10,7 @@ assert(breederSource.includes(`subType:'buff_kiki'`));
 assert(breederSource.includes(`evoLevel:0, guts:20`));
 const starter=breederSource.match(/const STARTER_TEACHING_IDS = \[([^\n]+)\]/)[1];
 assert(!starter.includes('kiki') && starter.split(',').length===6, '初期6人を維持し、ききを含めない');
-assert(breederSource.includes(`id:'kiki', name:"アシストカード「きき」", type:'assist', icon:KIKI_FACE_ICON, cost:1500`));
+assert(breederSource.includes(`id:'kiki', name:"アシストカード「きき」", type:'assist', icon:KIKI_FACE_ICON, cost:150000`));
 assert(breederSource.includes(`images/breeder-icons/kiki.PNG?v=35362d7b6e3e`));
 // ききのカード上限+1は、その+1ぶんをどのモンスターへ重ねて使ってもよい
 // (以前はハムの連続攻撃だけが同じスロットへの複数割当を許していて、

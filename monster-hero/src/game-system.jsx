@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dd9d4889ed6d77be
+// generated-sha256: c976daa46f0ec26a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 18:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 18:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11248,6 +11248,7 @@ const TEACHING_FX_STYLE = {
   atsu:    { icon:"🔥", label:"挑発!",       text:"text-orange-300",  ring:"border-orange-300",  rgb:"234,88,12",  c1:'#fed7aa', c2:'#ea580c', motif:'flame' },
   myaru:   { icon:"🐈", label:"怪薬投与!",   text:"text-purple-300",  ring:"border-purple-300",  rgb:"168,85,247", c1:'#e9d5ff', c2:'#a855f7', motif:'rise' },
   kiki:    { icon:"📣", label:"全力応援!",   text:"text-sky-300",     ring:"border-sky-300",     rgb:"56,189,248", c1:'#bae6fd', c2:'#38bdf8', motif:'blade' },
+  momosuke:{ icon:"🍑", label:"ひとりじめ!", text:"text-pink-300",    ring:"border-pink-300",    rgb:"244,114,182", c1:'#fbcfe8', c2:'#f472b6', motif:'rise' },
   poltz:   { icon:"🍱", label:"弁当を構える!", text:"text-lime-300",    ring:"border-lime-300",    rgb:"163,230,53", c1:'#d9f99d', c2:'#84cc16', motif:'rise' },
   // メロソ(回復＋ガード)。2026-09-29 まで演出が無かった
   meloso:  { icon:"🔍", label:"解析完了!",   text:"text-teal-300",    ring:"border-teal-300",    rgb:"20,184,166", c1:'#99f6e4', c2:'#14b8a6', motif:'shield' },
@@ -42167,6 +42168,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           totalHeal+=Math.floor(liveEffectiveMaxHp()*hpRecRate*effMul); totalHealRate+=hpRecRate*effMul;
           addPermaBuff('muaHpPct',hpB*effMul); addPermaBuff('muaAtkPct',atkB*effMul); addPermaBuff('muaGutsPct',gutsB*effMul);
           if(gutsRecRate>0) gainGutsByRateAll(gutsRecRate*effMul);   // 入った子の枠に出るので、まんなかへは出さない
+        } else if (card.id==='momosuke') {
+          // みゅあのガッツ回復版。ライフ回復はLv1から、攻撃アップの代わりに丈夫さ(defPct)を上げる
+          const gutsRecRate=level===1?0.7:(level>=2?0.9:0.5), hpRecRate=level===1?0.7:(level>=2?0.9:0);
+          const hpB=level>=2?0.05:0.03, gutsB=level===1?0.05:(level>=2?0.08:0.03), defB=level>=2?0.05:0.03;
+          if(hpRecRate>0){ totalHeal+=Math.floor(liveEffectiveMaxHp()*hpRecRate*effMul); totalHealRate+=hpRecRate*effMul; }
+          addPermaBuff('muaHpPct',hpB*effMul); addPermaBuff('muaGutsPct',gutsB*effMul); addPermaBuff('defPct',defB*effMul);
+          gainGutsByRateAll(gutsRecRate*effMul);   // 入った子の枠に出るので、まんなかへは出さない
         } else {
           totalHeal+=Math.floor(liveEffectiveMaxHp()*(0.5+level*0.2)*effMul); totalHealRate+=(0.5+level*0.2)*effMul;
           addPermaBuff('muaHpPct',0.10*effMul); addPermaBuff('muaAtkPct',0.05*effMul); addPermaBuff('muaGutsPct',0.10*effMul);
@@ -44173,6 +44181,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       return parts.join('・');
     }
     if(t.id==='mua') return level===0?"ライフ 50%回復・ライフ/ガッツ上限 3%アップ・攻撃 3%アップ（次のターンから）":(level===1?"ライフ・ガッツ 70%回復・ライフ上限 5%アップ・ガッツ上限 3%アップ・攻撃 3%アップ（次のターンから）":"ライフ・ガッツ 90%回復・ライフ上限 8%アップ・ガッツ上限 5%アップ・攻撃 5%アップ（次のターンから）");
+    if(t.id==='momosuke') return level===0?"ガッツ 50%回復・ライフ/ガッツ上限 3%アップ・丈夫さ 3%アップ（次のターンから）":(level===1?"ライフ・ガッツ 70%回復・ライフ上限 3%アップ・ガッツ上限 5%アップ・丈夫さ 3%アップ（次のターンから）":"ライフ・ガッツ 90%回復・ライフ上限 5%アップ・ガッツ上限 8%アップ・丈夫さ 5%アップ（次のターンから）");
     if(t.id==='atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue+level*t.step).toFixed(1)}倍`;
     if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=pct(myaruSelfDamageRate(t,level)); return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;}
     if(t.id==='kiki') return `次の${level+2}ターン 使用可能カード枚数 +1・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;
