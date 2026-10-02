@@ -437,6 +437,23 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && (app.match(/exCombos:tacticsExCombosAt\(slotIdx\)/g) || []).length === 3);
 }
 
+// ---------- ⑫ エイキ「緋桜瞬歩」(2026-10-02 ユーザー指示) ----------
+{
+  const ek = ex.tacticsExDefOf('Eiki');
+  check('エイキ「緋桜瞬歩」: ラン2回・カードと併用できる・3ターン・距離一致', !!ek && ek.name === '緋桜瞬歩'
+    && ek.maxUses === 2 && !ek.unlimited && ek.withCards && ek.duration === 'turns' && ek.turns === 3
+    && ek.effect === 'distMatch' && ex.isTacticsExEffectImplemented(ek), JSON.stringify(ek));
+  const A = (wave, turn) => ({ wave, turn });
+  const e = ex.applyTacticsExUse(ex.createTacticsExState(), { def: ek, slot: 2, monId: 'Eiki', now: A(1, 4) });
+  check('使ったターンから3ターン(4〜6ターン目)だけ distMatch が効き、7ターン目には切れる',
+    ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 4)) === 'distMatch' && ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 6)) === 'distMatch'
+    && ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 7)) === null);
+  check('WAVEが変わったら切れる・ほかの子には効かない', ex.tacticsExActiveEffect(e, 2, 'Eiki', A(2, 4)) === null
+    && ex.tacticsExActiveEffect(e, 2, 'Golem', A(1, 4)) === null && ex.tacticsExActiveEffect(e, 1, 'Eiki', A(1, 4)) === null);
+  check('getDmg の距離の差は、distMatch が効いているあいだだけ 0(×1.5)で数える',
+    /const distDiff = tacticsExEffectAt\(slotIdx\)==='distMatch' \? 0 : Math\.abs\(slotIdx-attackStartDist\);/.test(app));
+}
+
 // ---------- ⑧ 壊れた値 ----------
 {
   let fine = true;

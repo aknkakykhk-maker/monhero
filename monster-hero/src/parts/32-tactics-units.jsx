@@ -963,6 +963,17 @@ const TACTICS_EX_SKILLS = Object.freeze({
     regenRates: Object.freeze({ hp: 0.2, guts: 0.4 }),
     effect: 'statBoost',
   }),
+  // ★2026-10-02 ユーザー指示(エイキのEX)。「EX中は敵と距離があってる分のダメージになる」。
+  //   getDmg の距離補正(敵との距離の差 0/1/2/3 で ×1.5/1.3/1.1/0.9)を、効いているあいだは
+  //   差0(×1.5)で数える。どの距離枠にいても、敵と同じ距離から殴ったことになる。
+  //   間合い適性(その枠に立っている子の適性)は変えない。カードと併用できる(殴らないと意味が無いので)
+  Eiki: Object.freeze({
+    id: 'eiki_dist_match',
+    name: '緋桜瞬歩',
+    desc: '3ターンのあいだ、どの距離にいても、敵と同じ距離から攻撃したときのダメージ(いちばん高い距離補正×1.5)になる。',
+    maxUses: 2, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    effect: 'distMatch',
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -1023,7 +1034,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'partyGuard', 'comboBurst']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 47c33419cca6c0b9
+// source-sha256: 75158b992e783737
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-02 06:58";
+const BUILD_DATE = "2026-10-02 17:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31623,6 +31623,17 @@ const TACTICS_EX_SKILLS = Object.freeze({
     }),
     effect: 'statBoost'
   }),
+  Eiki: Object.freeze({
+    id: 'eiki_dist_match',
+    name: '緋桜瞬歩',
+    desc: '3ターンのあいだ、どの距離にいても、敵と同じ距離から攻撃したときのダメージ(いちばん高い距離補正×1.5)になる。',
+    maxUses: 2,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    effect: 'distMatch'
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -31690,7 +31701,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'partyGuard', 'comboBurst']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -60407,7 +60418,7 @@ function MonsterHeroGame() {
   };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
-    const distDiff = Math.abs(slotIdx - attackStartDist);
+    const distDiff = tacticsExEffectAt(slotIdx) === 'distMatch' ? 0 : Math.abs(slotIdx - attackStartDist);
     const distMult = [1.5, 1.3, 1.1, 0.9][distDiff] || 1.0;
     let baseDmgMult = 1.0;
     if (card.subType === 'stun_atsu') {

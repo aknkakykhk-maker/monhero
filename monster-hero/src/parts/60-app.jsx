@@ -9972,7 +9972,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
-    const distDiff = Math.abs(slotIdx-attackStartDist);
+    // ★エイキの「緋桜瞬歩」が効いているあいだは、敵との距離の差を0(いちばん高い×1.5)で数える
+    const distDiff = tacticsExEffectAt(slotIdx)==='distMatch' ? 0 : Math.abs(slotIdx-attackStartDist);
     const distMult = [1.5,1.3,1.1,0.9][distDiff]||1.0;
     let baseDmgMult = 1.0;
     if (card.subType==='stun_atsu') { baseDmgMult = card.baseValue||1.5; }
