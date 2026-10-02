@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e583be7671e5152
+// source-sha256: e6f2781070922671
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-02 18:31";
+const BUILD_DATE = "2026-10-02 18:38";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -19216,6 +19216,143 @@ const GuardBarrier = ({
     '--k': k
   }
 })));
+const SPECIAL_MOVE_MON_COLOR = Object.freeze({
+  Mocchi: 'mocchi',
+  Suezo: 'psy',
+  Golem: 'gold',
+  Tiger: 'thunder',
+  Ham: 'gold',
+  Pixie: 'psy',
+  Mia: 'pink',
+  Pandora: 'thunder',
+  Monol: 'dark',
+  Oboro: 'sky',
+  Plant: 'plant',
+  Zan: 'blood',
+  Eiki: 'sakura',
+  KenshiMocchi: 'cosmic',
+  Mitarashi: 'fire',
+  Ark: 'holy',
+  Iblis: 'dark',
+  Snegurochka: 'ice',
+  Undine: 'blue',
+  Yaobikuni: 'sky',
+  Yggdrasil: 'plant',
+  MelWhip: 'pink'
+});
+const specialMoveColorOf = (monId, skillName) => {
+  const pick = c => Array.isArray(c) ? c : SKM_COLOR[c] || null;
+  let hit = null;
+  try {
+    hit = typeof skillMotionSlotOf === 'function' ? skillMotionSlotOf(monId, skillName, true) : null;
+  } catch (e) {
+    hit = null;
+  }
+  const own = hit && hit.spec && hit.spec !== 'sig' ? pick(hit.spec.c) : null;
+  return own || pick(SPECIAL_MOVE_MON_COLOR[monId]) || SKM_COLOR.gold;
+};
+const SpecialMoveFx = ({
+  slotSkill,
+  attackAnim,
+  mon = null,
+  ownerId = null,
+  compact = false
+}) => {
+  const [pos, setPos] = React.useState(null);
+  const slotIndex = slotSkill ? slotSkill.slotIndex : null;
+  React.useLayoutEffect(() => {
+    if (compact || typeof document === 'undefined' || slotIndex == null) {
+      setPos(null);
+      return;
+    }
+    const slotEl = document.querySelector(`[data-slot-index="${slotIndex}"]`);
+    const enemyEl = document.querySelector('[data-attack-target]');
+    const mid = el => {
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return {
+        x: r.left + r.width / 2,
+        y: r.top + r.height / 2
+      };
+    };
+    setPos({
+      from: mid(slotEl),
+      to: mid(enemyEl)
+    });
+  }, [slotIndex, compact]);
+  if (!slotSkill || slotSkill.type !== 'unique') return null;
+  const [c1, c2] = specialMoveColorOf(ownerId || mon && mon.id, slotSkill.name);
+  const phase = attackAnim && attackAnim.charge === true ? 'charge' : 'release';
+  const name = String(slotSkill.name || '');
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 390;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+  const from = pos && pos.from || {
+    x: vw / 2,
+    y: vh * 0.72
+  };
+  const to = pos && pos.to || {
+    x: vw / 2,
+    y: vh * 0.3
+  };
+  const style = {
+    '--spm-c1': c1,
+    '--spm-c2': c2,
+    '--spm-fx': `${Math.round(from.x)}px`,
+    '--spm-fy': `${Math.round(from.y)}px`,
+    '--spm-tx': `${Math.round(to.x)}px`,
+    '--spm-ty': `${Math.round(to.y)}px`
+  };
+  const body = React.createElement("div", {
+    "data-special-move-fx": phase,
+    className: `spm spm--${phase}${compact ? ' spm--compact' : ''}`,
+    style: style,
+    "aria-hidden": "true"
+  }, React.createElement("div", {
+    className: "spm__shade"
+  }), phase === 'charge' && React.createElement("div", {
+    className: "spm__gather"
+  }, [0, 1, 2].map(i => React.createElement("i", {
+    key: `r${i}`,
+    className: "spm__ring",
+    style: {
+      '--i': i
+    }
+  })), Array.from({
+    length: 12
+  }, (_, i) => React.createElement("i", {
+    key: `p${i}`,
+    className: "spm__spark",
+    style: {
+      '--a': `${i * 30}deg`,
+      '--i': i % 4
+    }
+  }))), React.createElement("div", {
+    className: "spm__band"
+  }, mon && mon.imgUrl && React.createElement("span", {
+    className: "spm__face"
+  }, React.createElement(DyedMonsterImage, {
+    baseId: mon.id,
+    src: mon.imgUrl,
+    alt: "",
+    masuColors: mon.colors,
+    draggable: false,
+    className: "w-full h-full object-contain"
+  })), React.createElement("span", {
+    className: "spm__text"
+  }, React.createElement("span", {
+    className: "spm__tag"
+  }, "必殺技"), React.createElement("span", {
+    className: "spm__name",
+    style: {
+      fontSize: `${Math.max(14, Math.min(26, Math.floor(200 / Math.max(1, name.length))))}px`
+    }
+  }, name))), phase === 'release' && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "spm__flash"
+  }), React.createElement("div", {
+    className: "spm__shock"
+  }, React.createElement("i", null), React.createElement("i", null), React.createElement("b", null))));
+  return compact ? body : ReactDOM.createPortal(body, document.body);
+};
 const AttackTargetFx = ({
   anim,
   attackerId
@@ -46001,6 +46138,11 @@ function BattleScreen({
     attackerId: slots[attackAnim.slotIndex]?.id
   }), React.createElement(TacticsExCutin, {
     cutin: tacticsExCutin
+  }), !ecoBattleView && !liteBattleView && slotSkill && slotSkill.type === 'unique' && attackAnim && React.createElement(SpecialMoveFx, {
+    slotSkill: slotSkill,
+    attackAnim: attackAnim,
+    mon: slots[slotSkill.slotIndex],
+    ownerId: slotSkill.ownerId
   }), !ecoBattleView && isMooBoss(enemy?.id) && React.createElement("div", {
     className: "absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible",
     style: {
@@ -50381,6 +50523,10 @@ function MonsterHeroGame() {
     if (!(catchUpUntilRef.current > Date.now())) return base;
     return Math.max(0, Math.round(base / CATCH_UP_SPEED));
   }, []);
+  const specialMoveImpact = useCallback(() => {
+    Audio_.se.crit();
+    setTimeout(() => triggerShake(true), battleMs(240));
+  }, [battleMs, triggerShake]);
   const battleWait = useCallback(baseMs => {
     const generation = runGenerationRef.current;
     return new Promise(resolve => setTimeout(() => {
@@ -61920,7 +62066,8 @@ function MonsterHeroGame() {
               setSlotSkill({
                 slotIndex: animSlot,
                 name: hit.skillName,
-                type: hit.isUnique ? 'unique' : hit.isSpecial ? 'special' : 'normal'
+                type: hit.isUnique ? 'unique' : hit.isSpecial ? 'special' : 'normal',
+                ownerId: hitSkillOwner
               });
               if (hit.isUnique) {
                 Audio_.se.special();
@@ -61940,7 +62087,10 @@ function MonsterHeroGame() {
                     charge: false
                   } : {})
                 });
-                if (hit.isUnique) Audio_.se.special();else Audio_.se.zanSlash();
+                if (hit.isUnique) {
+                  Audio_.se.special();
+                  specialMoveImpact();
+                } else Audio_.se.zanSlash();
                 await battleWait(themedAttackMotionMs(hitSkillOwner, 'default', hit.skillName, !!hit.isUnique) ?? 500);
               } else {
                 setAttackAnim({
@@ -61949,6 +62099,7 @@ function MonsterHeroGame() {
                   twinBlade: isTwinBlade,
                   sakura: hitMotion === 'eikiSakuraCombo'
                 });
+                if (hit.isUnique) specialMoveImpact();
                 if (isTwinBlade) {
                   await battleWait(135);
                   Audio_.se.zanSlash();
@@ -61991,7 +62142,8 @@ function MonsterHeroGame() {
             setSlotSkill({
               slotIndex: animSlot,
               name: hit.skillName,
-              type: hit.isUnique ? 'unique' : hit.isSpecial ? 'special' : 'normal'
+              type: hit.isUnique ? 'unique' : hit.isSpecial ? 'special' : 'normal',
+              ownerId: hitSkillOwner
             });
             const motion = hitSkillKind ? 'default' : themeHit.isUnique && themeHit.monId && ALL_PLAYER_MONSTERS[themeHit.monId]?.atkMotion || slots[animSlot]?.atkMotion;
             if (hit.isUnique) {
@@ -62010,6 +62162,7 @@ function MonsterHeroGame() {
                 sakura: motion === 'eikiSakuraCombo',
                 skillName: hit.skillName
               });
+              specialMoveImpact();
               if (isKenshiTwin) {
                 await battleWait(135);
                 Audio_.se.zanSlash();
@@ -62049,7 +62202,7 @@ function MonsterHeroGame() {
             setAttackAnim(null);
             setSlotSkill(null);
           }
-          const hitColor = hit.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
+          const hitColor = hit.isCrit ? `text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] ${hit.isUnique ? 'scale-125' : 'scale-110'}` : hit.isUnique ? 'text-orange-300 drop-shadow-[0_0_28px_rgba(251,146,60,0.95)] scale-125' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if (hit.isCrit) triggerShake();
           addPopup(hit.isCrit ? `${hit.dmg}!!` : `${hit.dmg}`, 'enemy', `${hitColor} text-5xl font-black animate-bounce`, `${battleActorName(hit.slotIdx)}${hit.skillName ? `の ${hit.skillName}` : 'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit ? '（会心）' : ''}`);
           setEnemy(prev => prev ? {
@@ -78704,6 +78857,59 @@ const createAnimationStyle = () => {
       .thm-atk__monster { animation:thmReduced var(--thm-ms,450ms) ease-out forwards !important; }
       .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit, .skfx-over, .skfx-twin { display:none; }
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
+    }
+    /* ==== 固有技(必殺技)に必ず乗る共通の演出(24-battle-fx.jsx の SpecialMoveFx)====
+       タメ(650ms)=暗転+光が集まる+帯に「必殺技/技名」。放った瞬間=閃光+敵の上の衝撃の輪。色は --spm-c1(明)/--spm-c2(濃)。
+       EXスキルのカットイン(.ex-cutin・z-index:9600)より下、押せる場所は塞がない */
+    .spm { position:fixed; inset:0; z-index:9550; pointer-events:none; overflow:hidden; }
+    .spm > * { position:absolute; pointer-events:none; }
+    .spm--compact { position:absolute; z-index:60; }
+    .spm__shade { inset:0; background:radial-gradient(ellipse at var(--spm-fx) var(--spm-fy), rgba(0,0,0,.2), rgba(2,2,10,.78) 70%); opacity:0; }
+    .spm--charge .spm__shade { animation:spmShadeIn 260ms ease-out forwards; }
+    .spm--release .spm__shade { opacity:1; animation:spmShadeOut 520ms ease-in 180ms forwards; }
+    @keyframes spmShadeIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes spmShadeOut { from { opacity:1; } to { opacity:0; } }
+    /* 使う子へ集まる光 */
+    .spm__gather { left:var(--spm-fx); top:var(--spm-fy); width:0; height:0; }
+    .spm__ring { position:absolute; left:-70px; top:-70px; width:140px; height:140px; border-radius:50%; opacity:0;
+      border:3px solid var(--spm-c1); box-shadow:0 0 14px var(--spm-c2), inset 0 0 14px var(--spm-c2);
+      animation:spmRing 650ms ease-in forwards; animation-delay:calc(var(--i) * 130ms); }
+    @keyframes spmRing { 0% { opacity:0; transform:scale(2.4); } 30% { opacity:1; } 100% { opacity:0; transform:scale(.25); } }
+    .spm__spark { position:absolute; left:-4px; top:-4px; width:8px; height:8px; border-radius:50%; opacity:0;
+      background:radial-gradient(circle, #fff, var(--spm-c1) 55%, var(--spm-c2)); box-shadow:0 0 8px var(--spm-c2);
+      rotate:var(--a); animation:spmSpark 600ms ease-in forwards; animation-delay:calc(var(--i) * 45ms); }
+    @keyframes spmSpark { 0% { opacity:0; transform:translateX(130px) scale(.6); } 25% { opacity:1; } 100% { opacity:0; transform:translateX(0) scale(1.3); } }
+    /* 斜めの帯 */
+    .spm__band { left:-10%; right:-10%; top:42%; height:64px; display:flex; align-items:center; gap:10px; padding:0 calc(10% + 14px);
+      background:linear-gradient(90deg, rgba(6,8,18,.2), rgba(8,10,24,.92) 16%, rgba(8,10,24,.92) 84%, rgba(6,8,18,.2));
+      border-top:2px solid var(--spm-c1); border-bottom:2px solid var(--spm-c1);
+      box-shadow:0 0 16px var(--spm-c2), inset 0 0 22px color-mix(in srgb, var(--spm-c2) 45%, transparent);
+      transform:translateX(-115%) skewY(-5deg); }
+    .spm--charge .spm__band { animation:spmBandIn 280ms cubic-bezier(.2,.8,.2,1) forwards; }
+    .spm--release .spm__band { transform:translateX(0) skewY(-5deg); animation:spmBandOut 260ms ease-in 320ms forwards; }
+    @keyframes spmBandIn { from { transform:translateX(-115%) skewY(-5deg); } to { transform:translateX(0) skewY(-5deg); } }
+    @keyframes spmBandOut { from { transform:translateX(0) skewY(-5deg); opacity:1; } to { transform:translateX(115%) skewY(-5deg); opacity:0; } }
+    .spm__face { flex:0 0 auto; width:52px; height:52px; margin-top:-6px; transform:skewY(5deg); filter:drop-shadow(0 0 8px var(--spm-c2)); }
+    .spm__text { display:flex; flex-direction:column; min-width:0; transform:skewY(5deg); }
+    .spm__tag { font:900 10px/1 system-ui, sans-serif; letter-spacing:.4em; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
+    .spm__name { margin-top:3px; font:italic 900 22px/1.1 system-ui, sans-serif; color:#fff; white-space:nowrap;
+      text-shadow:0 0 2px var(--spm-c2), 2px 2px 0 var(--spm-c2), 0 0 14px var(--spm-c2); }
+    /* 放った瞬間 */
+    .spm__flash { inset:0; background:radial-gradient(circle at var(--spm-tx) var(--spm-ty), #fff 0 6%, color-mix(in srgb, var(--spm-c1) 70%, transparent) 30%, transparent 75%); opacity:0;
+      animation:spmFlash 360ms ease-out 140ms forwards; }
+    @keyframes spmFlash { 0% { opacity:0; } 20% { opacity:.95; } 100% { opacity:0; } }
+    .spm__shock { left:var(--spm-tx); top:var(--spm-ty); width:0; height:0; }
+    .spm__shock i { position:absolute; left:-40px; top:-40px; width:80px; height:80px; border-radius:50%; opacity:0;
+      border:5px solid var(--spm-c1); box-shadow:0 0 18px var(--spm-c2), 0 0 36px var(--spm-c2); animation:spmShock 520ms ease-out 200ms forwards; }
+    .spm__shock i + i { animation-delay:300ms; border-width:3px; }
+    @keyframes spmShock { 0% { opacity:0; transform:scale(.3); } 20% { opacity:1; } 100% { opacity:0; transform:scale(4.6); } }
+    .spm__shock b { position:absolute; left:-110px; top:-110px; width:220px; height:220px; opacity:0;
+      background:repeating-conic-gradient(from 0deg, var(--spm-c1) 0 4deg, transparent 4deg 20deg);
+      -webkit-mask-image:radial-gradient(circle, #000 0 20%, transparent 62%); mask-image:radial-gradient(circle, #000 0 20%, transparent 62%);
+      animation:spmRays 460ms ease-out 200ms forwards; }
+    @keyframes spmRays { 0% { opacity:0; transform:scale(.4) rotate(0deg); } 25% { opacity:.95; } 100% { opacity:0; transform:scale(1.6) rotate(24deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .spm__gather, .spm__shock, .spm__flash { display:none; }
     }
     /* ==== タクティクスのEXスキルを使った瞬間のカットイン(24-battle-fx.jsx の TacticsExCutin・1600ms) ====
        暗転 → 斜めの帯が左から入る(立ち絵・EX SKILL・名前)→ 効果ごとの模様 → 帯が右へ抜ける。色は --ex-c1(明)/--ex-c2(濃)。

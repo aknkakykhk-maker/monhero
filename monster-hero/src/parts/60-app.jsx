@@ -897,6 +897,13 @@ function MonsterHeroGame() {
     if (!(catchUpUntilRef.current > Date.now())) return base;
     return Math.max(0, Math.round(base / CATCH_UP_SPEED));
   }, []);
+  // 固有技(必殺技)を放った瞬間の衝撃(2026-10-02 ユーザー指示「全てのモンスターの固有技のモーションを強化してほしい」)。
+  // 効果音と、少し遅れて(動きが敵に届くころ)画面を大きく揺らす。見た目だけで待ち時間は足さない。
+  // 閃光・衝撃の輪・暗転・技名の帯は 24-battle-fx.jsx の SpecialMoveFx が出す
+  const specialMoveImpact = useCallback(() => {
+    Audio_.se.crit();
+    setTimeout(() => triggerShake(true), battleMs(240));
+  }, [battleMs, triggerShake]);
   // ★待ちは「そのランのもの」。片付けられたあとに目を覚ました待ちは、そこで止まる。
   //   resolve しないだけにする(reject にすると await している55か所すべてで受ける必要があり、
   //   1つでも漏れると unhandled rejection になる)。
@@ -11229,7 +11236,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             while (attackHits[j] && attackHits[j].skillName==='連撃') { group.push(attackHits[j]); j++; }
             const animSlot = (hit.slotIdx!=null && slots[hit.slotIdx]) ? hit.slotIdx : fallbackSlot;
             if(animSlot >= 0 && slots[animSlot]) {
-              setSlotSkill({slotIndex: animSlot, name: hit.skillName, type: hit.isUnique?'unique':(hit.isSpecial?'special':'normal')});
+              setSlotSkill({slotIndex: animSlot, name: hit.skillName, type: hit.isUnique?'unique':(hit.isSpecial?'special':'normal'), ownerId: hitSkillOwner});
               if (hit.isUnique) {
                 // 固有技は他のモンスターと同じタメ(charge)を先に見せてから、連撃らしい残像ダッシュへ移る
                 Audio_.se.special();
@@ -11242,10 +11249,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               if(hitSkillKind){
                 // 技ごとの動き。固有技は型の動きでも「タメのあとの本番」の扱い(charge:false)で出す
                 setAttackAnim({slotIndex: animSlot, motion:'default', skillName: hit.skillName, ...(hit.isUnique?{charge:false}:{})});
-                if(hit.isUnique) Audio_.se.special(); else Audio_.se.zanSlash();
+                if(hit.isUnique) { Audio_.se.special(); specialMoveImpact(); } else Audio_.se.zanSlash();
                 await battleWait(themedAttackMotionMs(hitSkillOwner, 'default', hit.skillName, !!hit.isUnique) ?? 500);
               }else{
               setAttackAnim({slotIndex: animSlot, zanCombo: !isTwinBlade, twinBlade: isTwinBlade, sakura: hitMotion==='eikiSakuraCombo'});
+              if(hit.isUnique) specialMoveImpact();
               if(isTwinBlade){
                 // 1撃目＼→2撃目／へSEを合わせ、X字完成時だけ短い画面シェイクを入れる。
                 // 追加連撃の本数に関係なく、この560msを1攻撃につき1回だけ流す。
@@ -11293,7 +11301,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // noAnim: 直前のヒットの専用モーションに続く追撃分。モーションを2回連続再生させず、ダメージ数値だけ続けて表示する
           if(!hit.noAnim && animSlot >= 0 && slots[animSlot]) {
             // スロット上に技名をインライン表示
-            setSlotSkill({slotIndex: animSlot, name: hit.skillName, type: hit.isUnique?'unique':(hit.isSpecial?'special':'normal')});
+            setSlotSkill({slotIndex: animSlot, name: hit.skillName, type: hit.isUnique?'unique':(hit.isSpecial?'special':'normal'), ownerId: hitSkillOwner});
             // モンスターごとの専用モーション種別('default'/'zanCombo'/'floatStab'等)。全モンスターがdata側で必ず指定する。固有技は技の出自(継承元)のモーションを優先する。
             // 技に専用の動きがあれば 'default' にして、技ごとの動きで出す(skillAttackMotionOf)
             const motion = hitSkillKind ? 'default' : ((themeHit.isUnique && themeHit.monId && ALL_PLAYER_MONSTERS[themeHit.monId]?.atkMotion) || slots[animSlot]?.atkMotion);
@@ -11304,6 +11312,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               await battleWait(650);
               const isKenshiTwin=motion==='kenshiTwinBlade';
               setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});
+              specialMoveImpact();
               if(isKenshiTwin){
                 await battleWait(135); Audio_.se.zanSlash();
                 await battleWait(180); Audio_.se.zanSlash();
@@ -11328,7 +11337,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             setAttackAnim(null);
             setSlotSkill(null);
           }
-          const hitColor=hit.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
+          // 固有技(必殺技)の数字は、会心でなくても大きな橙の字にする(会心なら今までどおり黄色。大きさだけ上げる)
+          const hitColor=hit.isCrit?`text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] ${hit.isUnique?'scale-125':'scale-110'}`:hit.isUnique?'text-orange-300 drop-shadow-[0_0_28px_rgba(251,146,60,0.95)] scale-125':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if(hit.isCrit) triggerShake();
           addPopup(hit.isCrit?`${hit.dmg}!!`:`${hit.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`,
             `${battleActorName(hit.slotIdx)}${hit.skillName?`の ${hit.skillName}`:'の攻撃'} → 敵に ${hit.dmg.toLocaleString()} ダメージ${hit.isCrit?'（会心）':''}`);
