@@ -44,6 +44,26 @@ check('specialFinishKindOf が上の割り当てをそのまま返す',
   Object.entries(finishOfMotion).every(([m, k]) => fn.includes(`'${k}'`) && (m === 'zanCombo' || m === 'eikiSakuraCombo' || m === 'kenshiTwinBlade' || fn.includes(`'${m}'`))), '');
 check('イブリースはアークと別のフィニッシュ(炎の柱)', fn.includes("ownerId === 'Iblis' ? 'iblis' : 'ark'") && SPECIAL_FINISH.iblis && SPECIAL_FINISH.ark);
 
+// --- ユグドラシル種・メルホイップの固有技(技名ごとの固定の定義) ---
+{
+  const c2 = { Object, Array, Math, String };
+  vm.createContext(c2);
+  vm.runInContext(read('monster-hero/data/images/images-ally.js'), c2);
+  vm.runInContext(read('monster-hero/data/ally-monsters.js'), c2);
+  vm.runInContext(slice(rpg, 'const SKILL_ATTACK_THEME_MONSTERS =', 'const SKILL_ATTACK_FALLBACK =') + '\nthis.__s = { SKILL_ATTACK_THEMES };', c2);
+  vm.runInContext(slice(fx, 'const YG_UNIQUE_KINDS =', 'const skillFxStaticOf =') + '\nthis.__y = { YG_UNIQUE_KINDS };', c2);
+  const { SKILL_ATTACK_THEMES } = c2.__s;
+  const { YG_UNIQUE_KINDS } = c2.__y;
+  const names = [...new Set(['Yggdrasil', 'MelWhip'].flatMap(id => vm.runInContext(`ALL_PLAYER_MONSTERS.${id}.unique.names`, c2)))];
+  const kinds = names.map(n => SKILL_ATTACK_THEMES[n]);
+  check('ユグドラシル種・メルホイップの固有技の全部が、固有技の格上げの対象(YG_UNIQUE_KINDS)に入っている',
+    kinds.every(k => YG_UNIQUE_KINDS.includes(k)), names.filter(n => !YG_UNIQUE_KINDS.includes(SKILL_ATTACK_THEMES[n])).join(','));
+  check('その全部にフィニッシュがある(キーは技の型の名前)', YG_UNIQUE_KINDS.every(k => SPECIAL_FINISH[k]), YG_UNIQUE_KINDS.filter(k => !SPECIAL_FINISH[k]).join(','));
+  check('尺は格上げのぶん、バトルとプレビューの共通の表(THEMED_ATTACK_MS)に書いてある(750ms 以上)',
+    YG_UNIQUE_KINDS.every(k => new RegExp(`${k}:(\\d+)`).test(rpg) && Number(rpg.match(new RegExp(`${k}:(\\d+)`))[1]) >= 750));
+  check('色は技名ごとの固定の定義(SKILL_FX_SPECS)から引く', fx.includes('SKILL_ATTACK_THEMES[skillName]') && fx.includes('SKILL_FX_SPECS[staticKind].c1'));
+}
+
 // --- 部品と形(CSS) ---
 const partTypes = [...new Set(Object.values(SPECIAL_FINISH).flat().map(p => p.t))];
 check('部品の種類(blade/ring/col/wave/fall/bits)ごとに CSS の形がある',

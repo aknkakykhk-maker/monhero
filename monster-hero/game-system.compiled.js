@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3bc3527f1daabccb
+// source-sha256: 96105fad5f35d0a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-02 19:52";
+const BUILD_DATE = "2026-10-02 19:59";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -16402,16 +16402,16 @@ const THEMED_ATTACK_MS = Object.freeze({
   ygStrawberry: 820,
   ygCakeCut: 720,
   ygShadow: 860,
-  ygStarBomb: 660,
-  ygWonderBlaze: 660,
-  ygManyWing: 780,
-  ygRiceShower: 780,
-  ygMeteor: 900,
-  ygPapillon: 880,
-  ygHeavyRain: 880,
-  ygEternalArc: 800,
-  ygAurora: 920,
-  ygCosmo: 980
+  ygStarBomb: 760,
+  ygWonderBlaze: 760,
+  ygManyWing: 880,
+  ygRiceShower: 880,
+  ygMeteor: 1000,
+  ygPapillon: 980,
+  ygHeavyRain: 980,
+  ygEternalArc: 900,
+  ygAurora: 1020,
+  ygCosmo: 1080
 });
 const themedAttackMotionMs = (monId, motion, skillName = null, isUnique = false) => {
   if (motion && motion !== 'default') return null;
@@ -17249,7 +17249,8 @@ const SKILL_FX_SPECS = Object.freeze({
     }]
   },
   ygStarBomb: {
-    body: 'cast',
+    body: 'gather',
+    over: 'boom',
     hit: 420,
     c1: '#fef9c3',
     c2: '#fde047',
@@ -17294,6 +17295,7 @@ const SKILL_FX_SPECS = Object.freeze({
   },
   ygWonderBlaze: {
     body: 'cast',
+    over: 'tornado',
     hit: 430,
     c1: '#ecfccb',
     c2: '#84cc16',
@@ -17334,7 +17336,8 @@ const SKILL_FX_SPECS = Object.freeze({
     }]
   },
   ygManyWing: {
-    body: 'cast',
+    body: 'spin',
+    over: 'bloom',
     hit: 560,
     c1: '#f0fdf4',
     c2: '#22c55e',
@@ -17363,7 +17366,8 @@ const SKILL_FX_SPECS = Object.freeze({
     burst: 'leaf'
   },
   ygRiceShower: {
-    body: 'cast',
+    body: 'float',
+    over: 'bloom',
     hit: 520,
     c1: '#fffbeb',
     c2: '#fde68a',
@@ -17387,6 +17391,7 @@ const SKILL_FX_SPECS = Object.freeze({
   },
   ygMeteor: {
     body: 'cast',
+    over: 'boom',
     hit: 470,
     hit2: 640,
     c1: '#ffedd5',
@@ -17432,7 +17437,8 @@ const SKILL_FX_SPECS = Object.freeze({
     }]
   },
   ygPapillon: {
-    body: 'cast',
+    body: 'float',
+    over: 'aurora',
     hit: 620,
     c1: '#e0e7ff',
     c2: '#818cf8',
@@ -17466,6 +17472,7 @@ const SKILL_FX_SPECS = Object.freeze({
   },
   ygHeavyRain: {
     body: 'cast',
+    over: 'wave',
     hit: 440,
     c1: '#dbeafe',
     c2: '#3b82f6',
@@ -17491,8 +17498,9 @@ const SKILL_FX_SPECS = Object.freeze({
     burst: 'water'
   },
   ygEternalArc: {
-    body: 'cast',
+    body: 'gather',
     line: 'arc',
+    over: 'xslash',
     hit: 330,
     hit2: 520,
     c1: '#fef3c7',
@@ -17515,7 +17523,8 @@ const SKILL_FX_SPECS = Object.freeze({
     }]
   },
   ygAurora: {
-    body: 'cast',
+    body: 'float',
+    line: 'ray',
     over: 'aurora',
     hit: 600,
     c1: '#ccfbf1',
@@ -17540,7 +17549,8 @@ const SKILL_FX_SPECS = Object.freeze({
     burst: 'fruit'
   },
   ygCosmo: {
-    body: 'cast',
+    body: 'gather',
+    over: 'boom',
     hit: 700,
     c1: '#fae8ff',
     c2: '#c084fc',
@@ -19032,12 +19042,29 @@ const skmNormalize = (sp0, isUnique = false) => {
   };
 };
 const SKILL_FX_SPEC_CACHE = {};
-const skillFxSpecOf = kind => {
-  if (!kind) return null;
-  if (SKILL_FX_SPECS[kind]) return {
-    ...SKILL_FX_SPECS[kind],
+const YG_UNIQUE_KINDS = Object.freeze(['ygStarBomb', 'ygWonderBlaze', 'ygManyWing', 'ygRiceShower', 'ygMeteor', 'ygPapillon', 'ygHeavyRain', 'ygEternalArc', 'ygAurora', 'ygCosmo']);
+const skillFxStaticOf = kind => {
+  const base = SKILL_FX_SPECS[kind];
+  const spec = {
+    ...base,
     ms: THEMED_ATTACK_MS[kind] || 600
   };
+  if (!YG_UNIQUE_KINDS.includes(kind)) return spec;
+  const extraBits = SKM_UNIQUE_BITS.slice(0, 5).map((b, i) => ({
+    ...b,
+    h: base.bits && base.bits[i] && base.bits[i].h || 0
+  }));
+  return {
+    ...spec,
+    fx: skmBoostFx(base.fx),
+    hit2: base.hit2 ?? Math.round(base.hit + 180),
+    bits: (base.bits || []).concat(extraBits),
+    burst: base.burst || 'star'
+  };
+};
+const skillFxSpecOf = kind => {
+  if (!kind) return null;
+  if (SKILL_FX_SPECS[kind]) return skillFxStaticOf(kind);
   if (SKILL_FX_SPEC_CACHE[kind]) return SKILL_FX_SPEC_CACHE[kind];
   const m = /^([A-Za-z]+)-([nu])(\d)$/.exec(String(kind));
   const sp = m && SKILL_MOTION_SETS[m[1]] && SKILL_MOTION_SETS[m[1]][m[2] === 'u' ? 'unique' : 'normal'][Number(m[3])];
@@ -19380,6 +19407,8 @@ const SPECIAL_MOVE_MON_COLOR = Object.freeze({
 });
 const specialMoveColorOf = (monId, skillName) => {
   const pick = c => Array.isArray(c) ? c : SKM_COLOR[c] || null;
+  const staticKind = typeof SKILL_ATTACK_THEMES !== 'undefined' ? SKILL_ATTACK_THEMES[skillName] : null;
+  if (staticKind && SKILL_FX_SPECS[staticKind] && SKILL_FX_SPECS[staticKind].c1) return [SKILL_FX_SPECS[staticKind].c1, SKILL_FX_SPECS[staticKind].c2];
   let hit = null;
   try {
     hit = typeof skillMotionSlotOf === 'function' ? skillMotionSlotOf(monId, skillName, true) : null;
@@ -19772,6 +19801,226 @@ const SPECIAL_FINISH = Object.freeze({
     d: 260,
     r: 3.2,
     flat: .45
+  }],
+  ygStarBomb: [{
+    t: 'bits',
+    n: 14,
+    shape: 'star',
+    dist: 140,
+    d: 300
+  }, {
+    t: 'blade',
+    a: 0,
+    len: 300,
+    w: 8,
+    d: 300
+  }, {
+    t: 'blade',
+    a: 90,
+    len: 300,
+    w: 8,
+    d: 300
+  }, {
+    t: 'ring',
+    d: 300,
+    r: 4
+  }],
+  ygWonderBlaze: [{
+    t: 'col',
+    w: 56,
+    h: 380,
+    d: 260,
+    flame: true,
+    x: -52
+  }, {
+    t: 'col',
+    w: 66,
+    h: 440,
+    d: 240,
+    flame: true
+  }, {
+    t: 'col',
+    w: 56,
+    h: 380,
+    d: 280,
+    flame: true,
+    x: 52
+  }, {
+    t: 'bits',
+    n: 12,
+    shape: 'flame',
+    dist: 110,
+    d: 320,
+    rise: true
+  }],
+  ygManyWing: [{
+    t: 'bits',
+    n: 18,
+    shape: 'leaf',
+    dist: 140,
+    d: 280,
+    spin: 1
+  }, {
+    t: 'bits',
+    n: 10,
+    shape: 'leaf',
+    dist: 80,
+    d: 340,
+    spin: -1
+  }, {
+    t: 'ring',
+    d: 300,
+    r: 3.2
+  }],
+  ygRiceShower: [{
+    t: 'bits',
+    n: 14,
+    shape: 'spark',
+    dist: 110,
+    d: 260,
+    fall: true
+  }, {
+    t: 'col',
+    w: 130,
+    h: 420,
+    d: 240,
+    sky: true,
+    soft: true
+  }, {
+    t: 'ring',
+    d: 320,
+    r: 3
+  }],
+  ygMeteor: [{
+    t: 'fall',
+    n: 5,
+    shape: 'rock',
+    d: 200
+  }, {
+    t: 'ring',
+    d: 420,
+    r: 4,
+    flat: .4
+  }, {
+    t: 'bits',
+    n: 12,
+    shape: 'flame',
+    dist: 120,
+    d: 420
+  }, {
+    t: 'bits',
+    n: 8,
+    shape: 'dust',
+    dist: 110,
+    d: 430
+  }],
+  ygPapillon: [{
+    t: 'bits',
+    n: 18,
+    shape: 'petal',
+    dist: 140,
+    d: 260,
+    spin: 1
+  }, {
+    t: 'bits',
+    n: 12,
+    shape: 'petal',
+    dist: 90,
+    d: 320,
+    spin: -1
+  }, {
+    t: 'ring',
+    d: 280,
+    r: 3.4
+  }],
+  ygHeavyRain: [{
+    t: 'wave',
+    d: 240
+  }, {
+    t: 'bits',
+    n: 16,
+    shape: 'drop',
+    dist: 130,
+    d: 260,
+    fall: true
+  }, {
+    t: 'ring',
+    d: 340,
+    r: 3.6,
+    flat: .45
+  }],
+  ygEternalArc: [{
+    t: 'blade',
+    a: -28,
+    len: 400,
+    w: 9,
+    d: 240
+  }, {
+    t: 'blade',
+    a: 28,
+    len: 400,
+    w: 9,
+    d: 320
+  }, {
+    t: 'ring',
+    d: 360,
+    r: 4,
+    flat: .5
+  }, {
+    t: 'bits',
+    n: 10,
+    shape: 'spark',
+    dist: 120,
+    d: 360
+  }],
+  ygAurora: [{
+    t: 'col',
+    w: 110,
+    h: 440,
+    d: 240,
+    sky: true,
+    soft: true
+  }, {
+    t: 'col',
+    w: 60,
+    h: 380,
+    d: 300,
+    sky: true,
+    x: -70
+  }, {
+    t: 'col',
+    w: 60,
+    h: 380,
+    d: 340,
+    sky: true,
+    x: 70
+  }, {
+    t: 'bits',
+    n: 10,
+    shape: 'spark',
+    dist: 90,
+    d: 380,
+    rise: true
+  }],
+  ygCosmo: [{
+    t: 'ring',
+    d: 240,
+    r: 3.4,
+    flat: .45,
+    rune: true
+  }, {
+    t: 'bits',
+    n: 14,
+    shape: 'star',
+    dist: 140,
+    d: 300
+  }, {
+    t: 'col',
+    w: 120,
+    h: 440,
+    d: 300,
+    sky: true,
+    soft: true
   }]
 });
 const specialFinishKindOf = (ownerId, skillName, anim) => {
@@ -19796,7 +20045,7 @@ const specialFinishKindOf = (ownerId, skillName, anim) => {
   } catch (e) {
     own = null;
   }
-  if (own) return null;
+  if (own) return SPECIAL_FINISH[own] ? own : null;
   const k = typeof DEFAULT_ATTACK_THEMES !== 'undefined' ? DEFAULT_ATTACK_THEMES[ownerId] : null;
   return k && SPECIAL_FINISH[k] ? k : null;
 };
