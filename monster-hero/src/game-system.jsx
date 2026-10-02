@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e00ea1dd461a150b
+// generated-sha256: 9ea8616538e362f3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 19:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 19:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11163,9 +11163,11 @@ const KENSHI_COMBO_POWER_MAX = 3;
 //   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
 //     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
 //     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
-const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1, exCombos = null }) => {
+const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1, exCombos = null, critDmgMult = 1 }) => {
   const hits = [];
+  // ★critDmgMult … タクティクスのEX「堕天の烙印」の会心ダメージ(2026-10-02 ユーザー指示「乗算」)。足し算の補正のあとにかける
   const critMult = 1.5 + critDmgBonus;
+  const critMultFinal = critMult * (critDmgMult > 0 ? critDmgMult : 1);
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
   const pandoraSplitNormal = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type);
   // 二刀流も禁忌解錠と同じ「通常攻撃を50%+50%へ分ける」形。固有技は分割しない(メイン100%のまま)
@@ -11179,13 +11181,13 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
     : kenshiSplitNormal ? d - Math.floor(d * 0.5)
     : d;
   const mainCrit = mainCanCrit && (guaranteedCrit || rollCrit());
-  hits.push({ kind: 'main', crit: mainCrit, dmg: mainCrit ? Math.floor(mainBase * critMult) : mainBase, skillName: null, noAnim: false });
+  hits.push({ kind: 'main', crit: mainCrit, dmg: mainCrit ? Math.floor(mainBase * critMultFinal) : mainBase, skillName: null, noAnim: false });
   // 連撃は元ダメージ d を基準にし、会心はメインとは独立に判定する(メインの会心を二重に乗せない)
   const combo = (rate, skillName = '連撃', noAnim = false) => {
     const base = Math.floor(d * rate);
     if (base <= 0) return;
     const crit = guaranteedCrit || rollCrit();
-    const beforeSoulFinal = crit ? Math.floor(base * critMult) : base;
+    const beforeSoulFinal = crit ? Math.floor(base * critMultFinal) : base;
     const safeComboFinalMultiplier = Math.max(0, Number(comboFinalMultiplier) || 0);
     hits.push({ kind: 'combo', crit, dmg: Math.floor(beforeSoulFinal * safeComboFinalMultiplier), skillName, noAnim });
   };
@@ -20782,6 +20784,11 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   partyTakenRate … 効いているあいだ、味方全員の被ダメージを何割減らすか(0.3 なら30%軽減。ほかの軽減と掛け算で重なる)
 //   partyRegenRate … 効いているあいだ、ターンの終わりに味方全員(立っている子)のライフを上限の何割ぶん多く回復するか
 //   extraCombos … { count, rate } 効いているあいだ、その子の攻撃へ与ダメージ rate の連撃を count 回足す
+//   dmgRate   … (multiBuff) 効いているあいだ、その子の与ダメージを何割上げるか(0.3 なら×1.3。最終ダメージへの乗算)
+//   selfTakenRate … (multiBuff) 効いているあいだ、その子が受けるダメージを何割減らすか(0.2 なら×0.8。ほかの軽減と掛け算で重なる)
+//   critRateRate … (multiBuff) 会心率を何割増やすか(0.5 なら×1.5。足し算ではなく、いまの会心率にかける)
+//   critDmgRate  … (multiBuff) 会心ダメージを何割増やすか(0.3 なら×1.3。足し算ではなく、いまの会心ダメージ倍率にかける)
+//   lifeCostRate … 使うとき、その子の最大ライフのこの割合(0.3 なら30%)を払う。ライフがそれより多いときだけ使える(払って倒れることはない)
 //   dodgeComboRate … 回避するたびに増える連撃の rate(0.1 なら、回避1回ごとに与ダメージ10%の連撃が1回増える)
 //   effect    … 効果の種類。中身は TACTICS_EX_IMPLEMENTED_EFFECTS に入ったものだけが動く
 const TACTICS_EX_DURATION_TEXT = Object.freeze({
@@ -20860,6 +20867,28 @@ const TACTICS_EX_SKILLS = Object.freeze({
     dodgeComboRate: 0.1,
     effect: 'dodgeCombo',
   }),
+  // ★2026-10-02 ユーザー指示(アークのEX)。「抗えぬ宿命を追え、5ターン、5回、与ダメ30%アップ、連撃10%、被ダメ20%低下」。
+  //   カードとの併用は指定が無かったので「併用できる」(自己強化なので、使ったターンも殴れないと意味が薄い)
+  Ark: Object.freeze({
+    id: 'ark_chase_fate',
+    name: '抗えぬ宿命を追え',
+    desc: '5ターンのあいだ、アークの与ダメージが30%上がり、攻撃に与ダメージ10%の連撃が1回付き、受けるダメージが20%減る。',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    dmgRate: 0.3, selfTakenRate: 0.2, extraCombos: Object.freeze({ count: 1, rate: 0.1 }),
+    effect: 'multiBuff',
+  }),
+  // ★2026-10-02 ユーザー指示(イブリースのEX)。「堕天の烙印、5ターン、5回、5%連撃×5、クリ率50%アップ(乗算)、
+  //   クリダメ30%アップ(乗算)、丈夫さ30%アップ」。併用は指定が無かったので「併用できる」
+  Iblis: Object.freeze({
+    id: 'iblis_fallen_brand',
+    name: '堕天の烙印',
+    desc: '最大ライフの30%を払う。5ターンのあいだ、イブリースの攻撃に与ダメージ5%の連撃が5回付き、会心率が1.5倍、会心ダメージが1.3倍、丈夫さが30%上がる。',
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 5,
+    // ★2026-10-02 ユーザー指示「堕天は最大ライフの30%を消費して」を追加。払って倒れないよう、ライフが30%より多いときだけ使える
+    lifeCostRate: 0.3, conditionText: 'ライフが最大の30%より多いときだけ使える',
+    rates: Object.freeze({ def: 0.3 }), critRateRate: 0.5, critDmgRate: 0.3, extraCombos: Object.freeze({ count: 5, rate: 0.05 }),
+    effect: 'multiBuff',
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -20920,7 +20949,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -20971,6 +21000,11 @@ const normalizeTacticsExDef = (raw) => {
     partyTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.partyTakenRate)) ? Number(raw.partyTakenRate) : 0)),
     partyRegenRate: Math.max(0, Number.isFinite(Number(raw.partyRegenRate)) ? Number(raw.partyRegenRate) : 0),
     dodgeComboRate: Math.max(0, Number.isFinite(Number(raw.dodgeComboRate)) ? Number(raw.dodgeComboRate) : 0),
+    lifeCostRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.lifeCostRate)) ? Number(raw.lifeCostRate) : 0)),
+    dmgRate: Math.max(0, Number.isFinite(Number(raw.dmgRate)) ? Number(raw.dmgRate) : 0),
+    selfTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.selfTakenRate)) ? Number(raw.selfTakenRate) : 0)),
+    critRateRate: Math.max(0, Number.isFinite(Number(raw.critRateRate)) ? Number(raw.critRateRate) : 0),
+    critDmgRate: Math.max(0, Number.isFinite(Number(raw.critDmgRate)) ? Number(raw.critDmgRate) : 0),
     extraCombos: raw.extraCombos && typeof raw.extraCombos === 'object'
       && tacticsSafeInt(raw.extraCombos.count, 0) > 0 && Number(raw.extraCombos.rate) > 0
       ? { count: tacticsSafeInt(raw.extraCombos.count, 0), rate: Number(raw.extraCombos.rate) } : null,
@@ -21051,7 +21085,10 @@ const isTacticsExTurnUsed = (state, now) => sameTacticsExTurn(normalizeTacticsEx
 //   alive         … その子が立っているか(倒れた子はカードと同じくEXも使えない)
 //   selectedCount … このターンに**その子へ**置いたカードの枚数(ほかの子へ置いたカードは数えない)
 //   busy          … 行動中・AUTO中
-const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, now, busy = false } = {}) => {
+// 使うときに払うライフ(最大ライフの lifeCostRate。切り捨て)。払わないEXは0
+const tacticsExLifeCost = (def, maxHp) => (def && def.lifeCostRate > 0 ? Math.floor(Math.max(0, Number(maxHp) || 0) * def.lifeCostRate) : 0);
+// hp / maxHp … 使う子のいまのライフと最大ライフ(ライフを払うEXの判定に使う。渡さなければ見ない)
+const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, now, busy = false, hp = null, maxHp = null } = {}) => {
   if (!def) return { ok: false, reason: 'EXスキルを持っていない' };
   if (busy) return { ok: false, reason: '行動中は使えない' };
   if (!alive) return { ok: false, reason: '倒れているあいだは使えない' };
@@ -21061,6 +21098,9 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
   if (sameTacticsExTurn(safe.lastUse[slot], now)) return { ok: false, reason: 'このターンはもう使った' };
   if (!def.withCards && Math.max(0, tacticsSafeInt(selectedCount, 0)) > 0) {
     return { ok: false, reason: 'この子にカードを置いていると使えないEX。先にこの子のカードを外す' };
+  }
+  if (def.lifeCostRate > 0 && hp != null && maxHp != null && Number.isFinite(Number(hp)) && Number.isFinite(Number(maxHp)) && Number(hp) <= tacticsExLifeCost(def, maxHp)) {
+    return { ok: false, reason: `ライフが足りない（最大ライフの${Math.round(def.lifeCostRate * 100)}%を払うので、それより多く残っているときだけ使える）` };
   }
   const active = isTacticsExEffectActive(safe, slot, monId, now);
   for (const key of def.conditions || []) {
@@ -21091,6 +21131,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       partyTakenRate: def.partyTakenRate || 0, partyRegenRate: def.partyRegenRate || 0,
       extraCombos: def.extraCombos ? { ...def.extraCombos } : null,
       dodgeComboRate: def.dodgeComboRate || 0, dodges: 0,
+      dmgRate: def.dmgRate || 0, selfTakenRate: def.selfTakenRate || 0, critRateRate: def.critRateRate || 0, critDmgRate: def.critDmgRate || 0,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -21185,10 +21226,20 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
     const dodges = tacticsSafeInt(mine && mine.dodges, 0), rate = Number(mine && mine.dodgeComboRate);
     return dodges > 0 && Number.isFinite(rate) && rate > 0 ? { count: dodges, rate, label: '血踊' } : null;
   }
-  if (kind !== 'comboBurst') return null;
+  if (kind !== 'comboBurst' && kind !== 'multiBuff') return null;
   const own = normalizeTacticsExState(state).effects[slot].extraCombos;
   const count = tacticsSafeInt(own && own.count, 0), rate = Number(own && own.rate);
-  return count > 0 && Number.isFinite(rate) && rate > 0 ? { count, rate } : null;
+  if (!(count > 0 && Number.isFinite(rate) && rate > 0)) return null;
+  // 連撃の名前は、アーク・イブリース(multiBuff)ではそのEXの名前(スイーツパラダイスは、これまでどおり名前を渡さない)
+  return kind === 'multiBuff' ? { count, rate, label: (tacticsExDefOf(unit.id) || {}).name || '' } : { count, rate };
+};
+// アーク・イブリース(multiBuff)が効いている子の、与ダメージ・被ダメージ・会心の倍率(効いていなければ全部1)
+const tacticsExMultiBuffOf = (state, units, slot, now) => {
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'multiBuff') return null;
+  const own = normalizeTacticsExState(state).effects[slot];
+  const num = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
+  return { dmg: 1 + num(own.dmgRate), taken: 1 - Math.min(0.9, num(own.selfTakenRate)), critRate: 1 + num(own.critRateRate), critDmg: 1 + num(own.critDmgRate) };
 };
 // 血踊が効いている子が敵の攻撃を回避したことを数える(効いていなければ状態をそのまま返す)
 const recordTacticsExDodge = (state, units, slot, now) => {
@@ -21208,7 +21259,7 @@ const applyTacticsExStats = (unit, state, slot, now) => {
   }
   // ステータスアップ(ガッツ全開っちー・ドラゴンだっちー): 力と丈夫さを上げる(切り捨て)。
   // 上げ幅は rates の項目、無ければ statRate(力・丈夫さ共通)
-  if (kind === 'statBoost') {
+  if (kind === 'statBoost' || kind === 'multiBuff') {
     const effect = normalizeTacticsExState(state).effects[slot];
     const rateOf = (key) => {
       const own = Number(effect.rates && effect.rates[key]);
@@ -40725,7 +40776,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const applyTurnDamageReduction = useCallback((damage, slotIdx = null) => damage>0
     ? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)
       *tacticsSlotRate(isTacticsMode(runMode)?turnBuffs.bySlot:null,slotIdx,'takenDamageMult',1.0)
-      *(isTacticsMode(runMode)?tacticsExPartyTakenMultNow():1)))
+      *(isTacticsMode(runMode)?tacticsExPartyTakenMultNow()*tacticsExMultiBuffNow(slotIdx).taken:1)))
     : 0, [turnBuffs, runMode]);
   const getPredictedDamage = useCallback((intent) => applyTurnDamageReduction(
     getIncomingDamageBeforeTurnReduction(intent)
@@ -40895,6 +40946,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return tacticsExExtraCombosAt(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now);
   };
   // 世界樹の守りの、味方全員の被ダメージ倍率(効いていなければ1。ほかのモードも1)
+  // アーク・イブリースの与ダメ・被ダメ・会心の倍率(効いていなければ全部1。ほかのモードも1)
+  const tacticsExMultiBuffNow = (slotIdx) => {
+    const live=tacticsExLiveRef.current;
+    const mine=live.enabled&&Number.isInteger(slotIdx) ? tacticsExMultiBuffOf(tacticsExStateRef.current,tacticsUnitsRef.current,slotIdx,live.now) : null;
+    return mine||{dmg:1,taken:1,critRate:1,critDmg:1};
+  };
   const tacticsExPartyTakenMultNow = () => {
     const live=tacticsExLiveRef.current;
     return live.enabled ? tacticsExPartyTakenMult(tacticsExStateRef.current,tacticsUnitsRef.current,live.now) : 1;
@@ -41261,7 +41318,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,slotIdx);
     // ★みゃるの薬の攻撃バフは、タクティクスでは「飲んだ子だけ」に乗る(設計 4.4)。
     //   既存5モードは今までどおりパーティ全体(atkMult)。どちらか一方しか 1.0 以外にならない
-    const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
+    const totalBuffMult=traitMult*tacticsExMultiBuffNow(slotIdx).dmg*getTurnBuff('atkMult',1.0)*tacticsSlotAtkMult(slotIdx)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     // 新モードは「攻撃したその子のちから」で殴る(設計 §4.1)。ほかのモードはパーティ共通のまま
     const attackerAtk=isTacticsMode(runMode)&&tacticsUnitsRef.current[slotIdx]
       ? Math.max(0,normalizeTacticsUnit(tacticsBattleUnit(slotIdx)).atk) : atk;
@@ -41293,7 +41350,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
       comboFinalMultiplier:soulAttack.comboFinalMultiplier, swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx) });
+      hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
     // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
@@ -42025,9 +42082,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const def=tacticsExDefOf(mon.id); if(!def) return null;
     const state=tacticsExState;
     const remaining=tacticsExRemaining(def,tacticsExUsesOf(state,slotIdx,mon.id));
+    const lifeUnit=normalizeTacticsUnit(tacticsUnits[slotIdx]);
     const check=checkTacticsExUse({ def, state, slot:slotIdx, monId:mon.id,
       alive:canTacticsSlotAct(tacticsUnits,slotIdx), selectedCount:tacticsSlotCardCount(slotIdx),
-      now:tacticsExNow, busy:isBusy||autoBattle });
+      now:tacticsExNow, busy:isBusy||autoBattle, hp:lifeUnit?lifeUnit.hp:null, maxHp:lifeUnit?lifeUnit.maxHp:null });
     return {
       slot:slotIdx, monName:mon.masuName||mon.name, def, remaining, check,
       active:isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow),
@@ -42079,9 +42137,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const def=tacticsExDefOf(mon.id); if(!def) return false;
     const state=tacticsExStateRef.current;
     // ★判定は ref の最新値でもう一度通す。連打で同じターンに2回使えないように
+    const lifeNow=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
     const check=checkTacticsExUse({ def, state, slot:slotIdx, monId:mon.id,
       alive:canTacticsSlotAct(tacticsUnitsRef.current,slotIdx), selectedCount:tacticsSlotCardCount(slotIdx),
-      now:tacticsExNow, busy:false });
+      now:tacticsExNow, busy:false, hp:lifeNow?lifeNow.hp:null, maxHp:lifeNow?lifeNow.maxHp:null });
     if(!check.ok) return false;
     if(def.duration==='style'&&checkTacticsExChoice(def,state,slotIdx,mon.id,choice)) return false;
     // 使った瞬間の値を控える(捨て身は「使ったときの丈夫さ」から力へ移す量を決める)
@@ -42092,6 +42151,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     Audio_.se.card();
     const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
+    // 最大ライフの一部を払う(堕天の烙印)。ライフが払う量より多いときだけ使えるので、ここで倒れることはない。枠へ減った量を出す
+    if(def.lifeCostRate>0&&lifeNow){
+      const cost=tacticsExLifeCost(def,lifeNow.maxHp);
+      if(cost>0){
+        commitTacticsUnits(damageTacticsTargets(tacticsUnitsRef.current,[slotIdx],cost));
+        showTacticsSlotFx(prev=>({...(prev||{}),[slotIdx]:{...((prev||{})[slotIdx]||{}),dmg:cost}}));
+        pushBattleLog(`${mon.masuName||mon.name}は最大ライフの${Math.round(def.lifeCostRate*100)}%（${cost.toLocaleString()}）を払った`, 'ally');
+      }
+    }
     // 使った瞬間にライフとガッツを満タンにする(ガッツ全開っちー)。その子だけ。枠に入った量を出す
     // ★ライフ・ガッツの上限も上げてから、その上がった上限まで満タンにする(2026-09-25 ユーザー指示)
     if(def.fullRecover){
@@ -42254,7 +42322,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
           const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(stunMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
-            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:tacticsExCombosAt(slotIdx) });
+            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier, exCombos:tacticsExCombosAt(slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         }
@@ -42373,10 +42441,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, traitOwnerId:traitOwnerOf(activeMon), comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+critRateBonus),
+          guaranteedCrit:getTurnBuff('guaranteedCrit',false)||tacticsSlotFlag(getTurnBuff('bySlot',null),slotIdx,'guaranteedCrit'), rollCrit:()=>Math.random()<Math.min(1,((card.crit||0.1)+critRateBonus)*tacticsExMultiBuffNow(slotIdx).critRate),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier,
           swordSkill:tacticsExStyleAt(slotIdx)!=='shield',
-          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx) });
+          hitRepeat:tacticsExStyleAt(slotIdx)==='dual'?TACTICS_EX_DUAL_HIT_REPEAT:1, exCombos:tacticsExCombosAt(slotIdx), critDmgMult:tacticsExMultiBuffNow(slotIdx).critDmg });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});

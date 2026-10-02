@@ -65,7 +65,7 @@ vm.runInContext([
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
-    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
+    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
 // ヒット列(二刀流で2回ぶん入るか)は本体の buildAttackHits をそのまま動かす
 vm.runInContext(slice('const HERO_CARD_BONUS_MONSTER_IDS', 'const attackAtonementDmg') + ';globalThis.hitsApi={buildAttackHits};', sandbox);
@@ -432,7 +432,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     extra.length === 4 && extra.every(h => h.kind === 'combo' && h.dmg === 300 && h.skillName === 'スイーツパラダイス') && burst[0].dmg === plain[0].dmg,
     JSON.stringify(extra));
   check('本体: 被ダメ軽減・自動回復・ヒット列(3か所)へ結線してある',
-    /\*\(isTacticsMode\(runMode\)\?tacticsExPartyTakenMultNow\(\):1\)/.test(app)
+    /\*\(isTacticsMode\(runMode\)\?tacticsExPartyTakenMultNow\(\)\*tacticsExMultiBuffNow\(slotIdx\)\.taken:1\)/.test(app)
     && /const partyHpBoost = live\.enabled \? tacticsExPartyRegenRate\(tacticsExStateRef\.current, units, live\.now\) : 0;/.test(app)
     && (app.match(/exCombos:tacticsExCombosAt\(slotIdx\)/g) || []).length === 3);
 }
@@ -493,6 +493,60 @@ const use = (state, def, slot, monId, now, extra = {}) => {
   check('ヒット列に与ダメ10%(100)の連撃が回避した数だけ足される', hits.length - base.length === 3 && hits.slice(base.length).every(h => h.dmg === 100) , `${base.length}→${hits.length}`);
   check('本体: 回避したら数える(結線)・連撃の名前を渡す', /const exDodge=tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,260}recordTacticsExDodge\(tacticsExStateRef\.current,tacticsUnitsRef\.current,slotIdx,tacticsExLiveRef\.current\.now\)[\s\S]{0,40}if\(slotIdx===evadedSlot\|\|exDodge\)/.test(app)
     && readPart('22-enemy-and-bond-entries.jsx').includes("exCombos.label || 'スイーツパラダイス'"));
+}
+
+// ---------- ⑭ アーク「抗えぬ宿命を追え」・イブリース「堕天の烙印」(2026-10-02 ユーザー指示) ----------
+{
+  const ak = ex.tacticsExDefOf('Ark'), ib = ex.tacticsExDefOf('Iblis');
+  check('アーク「抗えぬ宿命を追え」: ラン5回・5ターン・併用できる・与ダメ+30%・被ダメ-20%・連撃10%×1', !!ak && ak.name === '抗えぬ宿命を追え'
+    && ak.maxUses === 5 && !ak.unlimited && ak.withCards && ak.duration === 'turns' && ak.turns === 5 && ak.effect === 'multiBuff'
+    && ak.dmgRate === 0.3 && ak.selfTakenRate === 0.2 && ak.extraCombos && ak.extraCombos.count === 1 && ak.extraCombos.rate === 0.1
+    && ex.isTacticsExEffectImplemented(ak), JSON.stringify(ak));
+  check('イブリース「堕天の烙印」: ラン5回・5ターン・併用できる・5%連撃×5・会心率×1.5・会心ダメ×1.3・丈夫さ+30%', !!ib && ib.name === '堕天の烙印'
+    && ib.maxUses === 5 && !ib.unlimited && ib.withCards && ib.duration === 'turns' && ib.turns === 5 && ib.effect === 'multiBuff'
+    && ib.extraCombos && ib.extraCombos.count === 5 && ib.extraCombos.rate === 0.05 && ib.critRateRate === 0.5 && ib.critDmgRate === 0.3
+    && ib.rates && ib.rates.def === 0.3 && ex.isTacticsExEffectImplemented(ib), JSON.stringify(ib));
+  check('イブリースは使うとき最大ライフの30%を払う(ほかのEXは払わない)', ib.lifeCostRate === 0.3 && ex.tacticsExLifeCost(ib, 360) === 108 && ex.tacticsExLifeCost(ak, 440) === 0
+    && ex.tacticsExLifeCost(ib, 0) === 0 && /最大ライフの30%/.test(ib.desc) && /30%より多い/.test(ib.conditionText || ''));
+  {
+    const base = { def: ib, state: ex.createTacticsExState(), slot: 1, monId: 'Iblis', alive: true, now: { wave: 1, turn: 1 } };
+    const full = ex.checkTacticsExUse({ ...base, hp: 360, maxHp: 360 });
+    const just = ex.checkTacticsExUse({ ...base, hp: 109, maxHp: 360 });
+    const edge = ex.checkTacticsExUse({ ...base, hp: 108, maxHp: 360 });
+    const low = ex.checkTacticsExUse({ ...base, hp: 50, maxHp: 360 });
+    check('ライフが払う量(108)より多いときだけ使える(払って倒れない)', full.ok && just.ok && !edge.ok && !low.ok && /ライフが足りない/.test(edge.reason || ''), JSON.stringify([full.ok, just.ok, edge.ok, low.ok]));
+    check('ライフを渡さなければ見ない・払わないEXはライフが少なくても使える', ex.checkTacticsExUse(base).ok
+      && ex.checkTacticsExUse({ def: ak, state: ex.createTacticsExState(), slot: 0, monId: 'Ark', alive: true, now: { wave: 1, turn: 1 }, hp: 1, maxHp: 440 }).ok);
+    check('本体: 判定にライフを渡し、使うときに払って枠へ出す', (app.match(/hp:lifeUnit\?lifeUnit\.hp:null, maxHp:lifeUnit\?lifeUnit\.maxHp:null/g) || []).length === 1
+      && /hp:lifeNow\?lifeNow\.hp:null, maxHp:lifeNow\?lifeNow\.maxHp:null/.test(app)
+      && /commitTacticsUnits\(damageTacticsTargets\(tacticsUnitsRef\.current,\[slotIdx\],cost\)\);/.test(app));
+  }
+  const A = (wave, turn) => ({ wave, turn });
+  const units = [{ id: 'Ark', atk: 130, def: 90 }, { id: 'Iblis', atk: 145, def: 100 }];
+  const s = ex.applyTacticsExUse(ex.applyTacticsExUse(ex.createTacticsExState(), { def: ak, slot: 0, monId: 'Ark', now: A(1, 2) }), { def: ib, slot: 1, monId: 'Iblis', now: A(1, 2) });
+  const mA = ex.tacticsExMultiBuffOf(s, units, 0, A(1, 2)), mI = ex.tacticsExMultiBuffOf(s, units, 1, A(1, 2));
+  check('アーク: 与ダメ×1.3・被ダメ×0.8(会心は変わらない)', !!mA && Math.abs(mA.dmg - 1.3) < 1e-9 && Math.abs(mA.taken - 0.8) < 1e-9 && mA.critRate === 1 && mA.critDmg === 1, JSON.stringify(mA));
+  check('イブリース: 会心率×1.5・会心ダメ×1.3(与ダメ・被ダメは変わらない)', !!mI && mI.dmg === 1 && mI.taken === 1 && Math.abs(mI.critRate - 1.5) < 1e-9 && Math.abs(mI.critDmg - 1.3) < 1e-9, JSON.stringify(mI));
+  check('5ターン(2〜6ターン目)だけ効き、7ターン目には切れる・WAVEが変わったら切れる・ほかの子には効かない',
+    !!ex.tacticsExMultiBuffOf(s, units, 0, A(1, 6)) && ex.tacticsExMultiBuffOf(s, units, 0, A(1, 7)) === null
+    && ex.tacticsExMultiBuffOf(s, units, 0, A(2, 2)) === null && ex.tacticsExMultiBuffOf(s, [{ id: 'Golem' }, units[1]], 0, A(1, 2)) === null
+    && ex.tacticsExMultiBuffOf(ex.createTacticsExState(), units, 0, A(1, 2)) === null);
+  check('イブリースの丈夫さ+30%(アークは力も丈夫さも変わらない)', ex.applyTacticsExStats(units[1], s, 1, A(1, 2)).def === 130 && ex.applyTacticsExStats(units[1], s, 1, A(1, 2)).atk === 145
+    && ex.applyTacticsExStats(units[0], s, 0, A(1, 2)).atk === 130 && ex.applyTacticsExStats(units[0], s, 0, A(1, 2)).def === 90);
+  const cA = ex.tacticsExExtraCombosAt(s, units, 0, A(1, 2)), cI = ex.tacticsExExtraCombosAt(s, units, 1, A(1, 2));
+  check('連撃: アークは10%を1回、イブリースは5%を5回(名前はそのEXの名前)', !!cA && cA.count === 1 && cA.rate === 0.1 && cA.label === '抗えぬ宿命を追え'
+    && !!cI && cI.count === 5 && cI.rate === 0.05 && cI.label === '堕天の烙印', JSON.stringify([cA, cI]));
+  const card = { type: 'unique', monId: 'Iblis' };
+  const plain = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Iblis', heroId: 'Mocchi', guaranteedCrit: true });
+  const crit = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Iblis', heroId: 'Mocchi', guaranteedCrit: true, critDmgMult: 1.3 });
+  check('会心ダメージは(1.5+補正)にかける乗算(1.5 → 1.95)', plain[0].crit && crit[0].crit && crit[0].dmg === Math.floor(plain[0].dmg * 1.3), `${plain[0].dmg}→${crit[0].dmg}`);
+  const withCombos = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Iblis', heroId: 'Mocchi', exCombos: cI });
+  const noCombos = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Iblis', heroId: 'Mocchi' });
+  check('ヒット列に与ダメ5%(50)の連撃が5本だけ足される', withCombos.length - noCombos.length === 5 && withCombos.slice(noCombos.length).every(h => h.dmg === 50 && h.skillName === '堕天の烙印'), `${noCombos.length}→${withCombos.length}`);
+  check('本体: 与ダメ(getDmg)・会心率・会心ダメ(3か所)・被ダメ(applyTurnDamageReduction)へ結線してある',
+    /const totalBuffMult=traitMult\*tacticsExMultiBuffNow\(slotIdx\)\.dmg\*/.test(app)
+    && /Math\.random\(\)<Math\.min\(1,\(\(card\.crit\|\|0\.1\)\+critRateBonus\)\*tacticsExMultiBuffNow\(slotIdx\)\.critRate\)/.test(app)
+    && (app.match(/critDmgMult:tacticsExMultiBuffNow\(slotIdx\)\.critDmg/g) || []).length === 3);
 }
 
 // ---------- ⑧ 壊れた値 ----------
