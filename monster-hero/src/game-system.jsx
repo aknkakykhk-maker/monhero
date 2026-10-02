@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e00ea1dd461a150b
+// generated-sha256: ce589a4d29ebff6c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 19:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 19:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11749,8 +11749,9 @@ const skillAttackMotionOf = (monId, atkMotion, skillName, isUnique) =>
 const THEMED_ATTACK_MS = Object.freeze({ stomp:900, rocks:520, claw:900, punch:580, fire:560,
   ygHeadbutt:520, ygAirDive:760, ygGreenLight:560, ygTongue:640, ygRoll:780, ygMoonDrop:840, ygCandy:760, ygStrawberry:820,
   ygCakeCut:720, ygShadow:860,
-  ygStarBomb:660, ygWonderBlaze:660, ygManyWing:780, ygRiceShower:780, ygMeteor:900, ygPapillon:880, ygHeavyRain:880,
-  ygEternalArc:800, ygAurora:920, ygCosmo:980 });
+  // 固有技(かしこさ)の10個は、格上げ(skillFxStaticOf)の余韻のぶん +100ms
+  ygStarBomb:760, ygWonderBlaze:760, ygManyWing:880, ygRiceShower:880, ygMeteor:1000, ygPapillon:980, ygHeavyRain:980,
+  ygEternalArc:900, ygAurora:1020, ygCosmo:1080 });
 const themedAttackMotionMs = (monId, motion, skillName = null, isUnique = false) => {
   if (motion && motion !== 'default') return null;
   const skillKind = skillAttackThemeOf(monId, skillName, isUnique);
@@ -12028,32 +12029,32 @@ const SKILL_FX_SPECS = Object.freeze({
                  fx:{ path:'shot', shape:'ghost', dur:360, items:[{x:-30,y:-20,d:150},{x:24,y:-34,d:200},{x:-12,y:22,d:250},{x:30,y:10,d:300},{x:0,y:-8,d:350}] },
                  bits:[{x:-30,y:-24},{x:30,y:-24},{x:-30,y:20},{x:30,y:20}] },
   // --- 固有技(かしこさ) ---
-  ygStarBomb:  { body:'cast', hit:420, c1:'#fef9c3', c2:'#fde047',
+  ygStarBomb:  { body:'gather', over:'boom', hit:420, c1:'#fef9c3', c2:'#fde047',
                  fx:{ path:'shot', shape:'star', dur:300, items:[{x:-14,y:-10,d:120},{x:12,y:-18,d:170},{x:0,y:8,d:220}] },
                  bits:[{x:-30,y:-22},{x:28,y:-26},{x:-34,y:12},{x:32,y:14},{x:0,y:-36},{x:0,y:28}], burst:'star' },
-  ygWonderBlaze:{ body:'cast', hit:430, c1:'#ecfccb', c2:'#84cc16',
+  ygWonderBlaze:{ body:'cast', over:'tornado', hit:430, c1:'#ecfccb', c2:'#84cc16',
                  fx:{ path:'shot', shape:'flame', dur:280, items:[{x:-8,y:-12,d:140},{x:10,y:0,d:180},{x:-4,y:12,d:220},{x:6,y:-6,d:260}] },
                  bits:[{x:-24,y:-24},{x:24,y:-24},{x:-26,y:16},{x:26,y:16}] },
-  ygManyWing:  { body:'cast', hit:560, c1:'#f0fdf4', c2:'#22c55e',
+  ygManyWing:  { body:'spin', over:'bloom', hit:560, c1:'#f0fdf4', c2:'#22c55e',
                  fx:{ path:'orbit', shape:'leaf', dur:460, items:SKFX_RING(8, 34, 80, 18) },
                  bits:[{x:-26,y:-18},{x:26,y:-18},{x:-20,y:20},{x:20,y:20},{x:0,y:-30}], burst:'leaf' },
-  ygRiceShower:{ body:'cast', hit:520, c1:'#fffbeb', c2:'#fde68a',
+  ygRiceShower:{ body:'float', over:'bloom', hit:520, c1:'#fffbeb', c2:'#fde68a',
                  fx:{ path:'fall', shape:'rice', dur:340, items:SKFX_SPREAD(26, 140, 200, 10) },
                  bits:[{x:-22,y:-14},{x:22,y:-14},{x:0,y:18}], burst:'petal' },
-  ygMeteor:    { body:'cast', hit:470, hit2:640, c1:'#ffedd5', c2:'#f97316',
+  ygMeteor:    { body:'cast', over:'boom', hit:470, hit2:640, c1:'#ffedd5', c2:'#f97316',
                  fx:{ path:'fall', shape:'meteor', dur:280, items:[{x:-34,y:-6,d:190,s:1.1},{x:20,y:4,d:280,s:1.4},{x:-6,y:10,d:360,s:1.8}] },
                  bits:[{x:-40,y:-20,s:1.2},{x:36,y:-26},{x:-30,y:18},{x:38,y:16,s:1.2},{x:0,y:-40}] },
-  ygPapillon:  { body:'cast', hit:620, c1:'#e0e7ff', c2:'#818cf8',
+  ygPapillon:  { body:'float', over:'aurora', hit:620, c1:'#e0e7ff', c2:'#818cf8',
                  fx:{ path:'orbit', shape:'butterfly', dur:520, items:SKFX_RING(6, 40, 60, 30, {}).map((b, i) => ({...b, h:220 + i * 22})) },
                  bits:[{x:-30,y:-20,h:230},{x:30,y:-20,h:270},{x:-28,y:18,h:300},{x:28,y:18,h:250}], burst:'butterfly' },
-  ygHeavyRain: { body:'cast', hit:440, c1:'#dbeafe', c2:'#3b82f6',
+  ygHeavyRain: { body:'cast', over:'wave', hit:440, c1:'#dbeafe', c2:'#3b82f6',
                  fx:{ path:'fall', shape:'drop', dur:220, items:SKFX_SPREAD(30, 150, 160, 16) },
                  bits:[{x:-30,y:14},{x:-10,y:20},{x:10,y:20},{x:30,y:14}], burst:'water' },
-  ygEternalArc:{ body:'cast', line:'arc', hit:330, hit2:520, c1:'#fef3c7', c2:'#f59e0b',
+  ygEternalArc:{ body:'gather', line:'arc', over:'xslash', hit:330, hit2:520, c1:'#fef3c7', c2:'#f59e0b',
                  bits:[{x:-36,y:-10},{x:36,y:-10},{x:-24,y:-30},{x:24,y:-30},{x:0,y:30}] },
-  ygAurora:    { body:'cast', over:'aurora', hit:600, c1:'#ccfbf1', c2:'#2dd4bf',
+  ygAurora:    { body:'float', line:'ray', over:'aurora', hit:600, c1:'#ccfbf1', c2:'#2dd4bf',
                  bits:[{x:-30,y:-24,h:160},{x:30,y:-24,h:200},{x:-30,y:20,h:280},{x:30,y:20,h:120}], burst:'fruit' },
-  ygCosmo:     { body:'cast', hit:700, c1:'#fae8ff', c2:'#c084fc',
+  ygCosmo:     { body:'gather', over:'boom', hit:700, c1:'#fae8ff', c2:'#c084fc',
                  fx:{ path:'orbit', shape:'fruit', dur:560, items:SKFX_RING(7, 38, 60, 26, {}).map((b, i) => ({...b, h:[0,40,90,140,200,270,320][i], s:1.1})) },
                  bits:[{x:-44,y:-20,h:0},{x:42,y:-24,h:90},{x:-38,y:22,h:200},{x:40,y:18,h:270},{x:0,y:-44,h:40},{x:0,y:36,h:140}], burst:'fruit' },
 });
@@ -12494,9 +12495,18 @@ const skmNormalize = (sp0, isUnique = false) => {
 };
 // 型の名前(ユグドラシル種は 'ygHeadbutt' など、ほかの子は '<モンスターid>-n<段階>' / '-u<段階>')から、見た目の組み合わせを返す
 const SKILL_FX_SPEC_CACHE = {};
+// ユグドラシル種・メルホイップの固有技(かしこさの10個)も、skmNormalize の固有技の格上げと同じ考え方で派手にする
+const YG_UNIQUE_KINDS = Object.freeze(['ygStarBomb', 'ygWonderBlaze', 'ygManyWing', 'ygRiceShower', 'ygMeteor', 'ygPapillon', 'ygHeavyRain', 'ygEternalArc', 'ygAurora', 'ygCosmo']);
+const skillFxStaticOf = (kind) => {
+  const base = SKILL_FX_SPECS[kind];
+  const spec = { ...base, ms:THEMED_ATTACK_MS[kind] || 600 };
+  if (!YG_UNIQUE_KINDS.includes(kind)) return spec;
+  const extraBits = SKM_UNIQUE_BITS.slice(0, 5).map((b, i) => ({ ...b, h:(base.bits && base.bits[i] && base.bits[i].h) || 0 }));
+  return { ...spec, fx:skmBoostFx(base.fx), hit2:base.hit2 ?? Math.round(base.hit + 180), bits:(base.bits || []).concat(extraBits), burst:base.burst || 'star' };
+};
 const skillFxSpecOf = (kind) => {
   if (!kind) return null;
-  if (SKILL_FX_SPECS[kind]) return { ...SKILL_FX_SPECS[kind], ms:THEMED_ATTACK_MS[kind] || 600 };
+  if (SKILL_FX_SPECS[kind]) return skillFxStaticOf(kind);
   if (SKILL_FX_SPEC_CACHE[kind]) return SKILL_FX_SPEC_CACHE[kind];
   const m = /^([A-Za-z]+)-([nu])(\d)$/.exec(String(kind));
   const sp = m && SKILL_MOTION_SETS[m[1]] && SKILL_MOTION_SETS[m[1]][m[2] === 'u' ? 'unique' : 'normal'][Number(m[3])];
@@ -12668,6 +12678,9 @@ const SPECIAL_MOVE_MON_COLOR = Object.freeze({
 });
 const specialMoveColorOf = (monId, skillName) => {
   const pick = (c) => (Array.isArray(c) ? c : SKM_COLOR[c] || null);
+  // ユグドラシル種・メルホイップは、技名ごとの固定の定義(SKILL_FX_SPECS)の色
+  const staticKind = typeof SKILL_ATTACK_THEMES !== 'undefined' ? SKILL_ATTACK_THEMES[skillName] : null;
+  if (staticKind && SKILL_FX_SPECS[staticKind] && SKILL_FX_SPECS[staticKind].c1) return [SKILL_FX_SPECS[staticKind].c1, SKILL_FX_SPECS[staticKind].c2];
   let hit = null;
   try { hit = typeof skillMotionSlotOf === 'function' ? skillMotionSlotOf(monId, skillName, true) : null; } catch (e) { hit = null; }
   const own = hit && hit.spec && hit.spec !== 'sig' ? pick(hit.spec.c) : null;
@@ -12697,6 +12710,17 @@ const SPECIAL_FINISH = Object.freeze({
   petals: [{t:'bits',n:18,shape:'petal',dist:140,d:260,spin:1},{t:'bits',n:12,shape:'petal',dist:90,d:320,spin:-1}],
   vine:   [{t:'blade',a:-20,len:300,w:12,d:220,vine:true},{t:'blade',a:200,len:300,w:12,d:260,vine:true},{t:'blade',a:75,len:300,w:12,d:300,vine:true},{t:'bits',n:10,shape:'leaf',dist:120,d:380}],
   fire:   [{t:'col',w:70,h:440,d:240,flame:true},{t:'bits',n:12,shape:'flame',dist:110,d:300,rise:true},{t:'ring',d:260,r:3.2,flat:.45}],
+  // ユグドラシル種・メルホイップの固有技(技の型の名前 = SKILL_ATTACK_THEMES の値)。2026-10-02 ユーザー指示「ユグドラシル、メルホイップも進めて」
+  ygStarBomb:   [{t:'bits',n:14,shape:'star',dist:140,d:300},{t:'blade',a:0,len:300,w:8,d:300},{t:'blade',a:90,len:300,w:8,d:300},{t:'ring',d:300,r:4}],
+  ygWonderBlaze:[{t:'col',w:56,h:380,d:260,flame:true,x:-52},{t:'col',w:66,h:440,d:240,flame:true},{t:'col',w:56,h:380,d:280,flame:true,x:52},{t:'bits',n:12,shape:'flame',dist:110,d:320,rise:true}],
+  ygManyWing:   [{t:'bits',n:18,shape:'leaf',dist:140,d:280,spin:1},{t:'bits',n:10,shape:'leaf',dist:80,d:340,spin:-1},{t:'ring',d:300,r:3.2}],
+  ygRiceShower: [{t:'bits',n:14,shape:'spark',dist:110,d:260,fall:true},{t:'col',w:130,h:420,d:240,sky:true,soft:true},{t:'ring',d:320,r:3}],
+  ygMeteor:     [{t:'fall',n:5,shape:'rock',d:200},{t:'ring',d:420,r:4,flat:.4},{t:'bits',n:12,shape:'flame',dist:120,d:420},{t:'bits',n:8,shape:'dust',dist:110,d:430}],
+  ygPapillon:   [{t:'bits',n:18,shape:'petal',dist:140,d:260,spin:1},{t:'bits',n:12,shape:'petal',dist:90,d:320,spin:-1},{t:'ring',d:280,r:3.4}],
+  ygHeavyRain:  [{t:'wave',d:240},{t:'bits',n:16,shape:'drop',dist:130,d:260,fall:true},{t:'ring',d:340,r:3.6,flat:.45}],
+  ygEternalArc: [{t:'blade',a:-28,len:400,w:9,d:240},{t:'blade',a:28,len:400,w:9,d:320},{t:'ring',d:360,r:4,flat:.5},{t:'bits',n:10,shape:'spark',dist:120,d:360}],
+  ygAurora:     [{t:'col',w:110,h:440,d:240,sky:true,soft:true},{t:'col',w:60,h:380,d:300,sky:true,x:-70},{t:'col',w:60,h:380,d:340,sky:true,x:70},{t:'bits',n:10,shape:'spark',dist:90,d:380,rise:true}],
+  ygCosmo:      [{t:'ring',d:240,r:3.4,flat:.45,rune:true},{t:'bits',n:14,shape:'star',dist:140,d:300},{t:'col',w:120,h:440,d:300,sky:true,soft:true}],
 });
 // どのフィニッシュを重ねるか。技ごとの動き(SKILL_MOTION_SETS)を持つ段階は重ねず、見せ場の動き('sig')の段階だけ
 const specialFinishKindOf = (ownerId, skillName, anim) => {
@@ -12712,7 +12736,7 @@ const specialFinishKindOf = (ownerId, skillName, anim) => {
   }
   let own = null;
   try { own = typeof skillAttackThemeOf === 'function' ? skillAttackThemeOf(ownerId, skillName, true) : null; } catch (e) { own = null; }
-  if (own) return null;
+  if (own) return SPECIAL_FINISH[own] ? own : null;
   const k = typeof DEFAULT_ATTACK_THEMES !== 'undefined' ? DEFAULT_ATTACK_THEMES[ownerId] : null;
   return k && SPECIAL_FINISH[k] ? k : null;
 };

@@ -492,8 +492,9 @@ const skillAttackMotionOf = (monId, atkMotion, skillName, isUnique) =>
 const THEMED_ATTACK_MS = Object.freeze({ stomp:900, rocks:520, claw:900, punch:580, fire:560,
   ygHeadbutt:520, ygAirDive:760, ygGreenLight:560, ygTongue:640, ygRoll:780, ygMoonDrop:840, ygCandy:760, ygStrawberry:820,
   ygCakeCut:720, ygShadow:860,
-  ygStarBomb:660, ygWonderBlaze:660, ygManyWing:780, ygRiceShower:780, ygMeteor:900, ygPapillon:880, ygHeavyRain:880,
-  ygEternalArc:800, ygAurora:920, ygCosmo:980 });
+  // 固有技(かしこさ)の10個は、格上げ(skillFxStaticOf)の余韻のぶん +100ms
+  ygStarBomb:760, ygWonderBlaze:760, ygManyWing:880, ygRiceShower:880, ygMeteor:1000, ygPapillon:980, ygHeavyRain:980,
+  ygEternalArc:900, ygAurora:1020, ygCosmo:1080 });
 const themedAttackMotionMs = (monId, motion, skillName = null, isUnique = false) => {
   if (motion && motion !== 'default') return null;
   const skillKind = skillAttackThemeOf(monId, skillName, isUnique);
