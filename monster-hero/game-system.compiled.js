@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e21e2ef599c4b0eb
+// source-sha256: 58938b4ad4cb0a6c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 03:18";
+const BUILD_DATE = "2026-10-03 03:37";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5506,7 +5506,8 @@ const EVENT_BGM_SCENES = Object.freeze({
   tactics_intro: 'tacticsIntroEvent',
   beat_point_always_2026_09_24: 'monbeatCupEvent',
   rhythm_six_lane_2026_09_26: 'monbeatCupEvent',
-  beat_point_up_2026_09_28: 'monbeatCupEvent'
+  beat_point_up_2026_09_28: 'monbeatCupEvent',
+  rhythm_multi_friends_2026_10_03: 'monbeatCupEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -53001,6 +53002,7 @@ const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
 const RHYTHM_MULTI_LOBBY_LISTEN_MS = 3500;
 const RHYTHM_MULTI_LOBBY_FRESH_MS = 6000;
+const RHYTHM_MULTI_MERGE_QUIET_MS = 5 * 60 * 1000;
 const RHYTHM_MULTI_PENALTY_KEY = 'mh_rhythm_multi_penalty_v1';
 const RHYTHM_MULTI_PENALTY_MS = 3 * 60 * 1000;
 const RHYTHM_MULTI_MODES = Object.freeze(['private', 'free', 'veteran']);
@@ -53501,7 +53503,8 @@ const RHYTHM_MULTI = (() => {
         n: order.length
       });
     }
-    if (order.length === 1 && s.mode !== 'private' && Date.now() - s.createdAt > RHYTHM_MULTI_LOBBY_LISTEN_MS) {
+    const recentlySawOthers = Object.values(s.members).some(m => m.id !== s.selfId && Date.now() - m.seen < RHYTHM_MULTI_MERGE_QUIET_MS);
+    if (order.length === 1 && s.mode !== 'private' && !recentlySawOthers && Date.now() - s.createdAt > RHYTHM_MULTI_LOBBY_LISTEN_MS) {
       const other = rhythmMultiBestRoom(lobby.rooms, s.code);
       if (other && other < s.code) {
         api.join(other, {
@@ -58937,7 +58940,8 @@ function MonsterHeroGame() {
   const BEAT_POINT_ALWAYS_STORY_ID = 'beat_point_always_2026_09_24';
   const RHYTHM_SIX_LANE_STORY_ID = 'rhythm_six_lane_2026_09_26';
   const BEAT_POINT_UP_STORY_ID = 'beat_point_up_2026_09_28';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID];
+  const RHYTHM_MULTI_FRIENDS_STORY_ID = 'rhythm_multi_friends_2026_10_03';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID
@@ -58997,16 +59001,17 @@ function MonsterHeroGame() {
       const liveEvent = rhythmLimitedEventAt(Date.now());
       const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
       const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
+      const multiFriendsStoryReady = RELEASE_FLAGS.rhythmMulti === true && notPlayedYet(RHYTHM_MULTI_FRIENDS_STORY_ID);
       const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
       const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
       if (!liveEvent) {
-        if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+        if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
       }
       const liveStoryId = rhythmEventStoryIdFor(liveEvent);
       if (liveStoryId && notPlayedYet(liveStoryId)) {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
-      } else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
+      } else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       if (rhythmEventLiveCatchUpRef.current) return;
       rhythmEventLiveCatchUpRef.current = true;
       try {
@@ -60275,7 +60280,7 @@ function MonsterHeroGame() {
       }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
           const next = [...seenNow, ...add];
@@ -60288,6 +60293,9 @@ function MonsterHeroGame() {
       }
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && RELEASE_FLAGS.rhythmEventPoints === true && wasOnboarded && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(BEAT_POINT_ALWAYS_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+      }
+      if (RELEASE_FLAGS.rhythmMulti === true && wasOnboarded && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RHYTHM_MULTI_FRIENDS_STORY_ID)) {
+        setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
       }
       if (RELEASE_FLAGS.rhythmMode === true && wasOnboarded && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RHYTHM_SIX_LANE_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
@@ -61409,6 +61417,7 @@ function MonsterHeroGame() {
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
+    rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];

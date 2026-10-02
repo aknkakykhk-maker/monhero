@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eb7aed0eef3cfc37
+// generated-sha256: 90da6a00c7b75423
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 03:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 03:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4585,7 +4585,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 // 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'monbeatCupEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -32472,6 +32472,7 @@ function DebugDataScreen({
 
 // ---- part: 77-screen-rhythm-multi.jsx ----
 // ===== モンヒロビート マルチ(みんなで対戦: 協力ライブ) =====
+// 仕様の正本: docs/spec/RHYTHM_MULTI.md / 検査: node tools/mode/rhythm-multi-check.js
 // プロセカの「みんなでライブ」を本家どおりの流れで真似した、最大5人の協力プレイ。
 //
 //   ルームえらび(フリー / ベテラン / プライベート)
@@ -32527,6 +32528,8 @@ const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
 const RHYTHM_MULTI_LOBBY_LISTEN_MS = 3500;
 const RHYTHM_MULTI_LOBBY_FRESH_MS = 6000;
+// 1人きりの部屋をほかの部屋へまとめるのは、最近この時間だれも見ていないときだけ(ライブ中の仲間とはぐれないため)
+const RHYTHM_MULTI_MERGE_QUIET_MS = 5 * 60 * 1000;
 // 途中でやめた人が公開ルームへ入れない時間。新しい保存キー(既存のキーは触らない)
 const RHYTHM_MULTI_PENALTY_KEY = 'mh_rhythm_multi_penalty_v1';
 const RHYTHM_MULTI_PENALTY_MS = 3 * 60 * 1000;
@@ -32866,7 +32869,10 @@ const RHYTHM_MULTI = (() => {
       lobby.lastAnnounce = Date.now();
       lobby.socket.send({ t: 'room', code: s.code, n: order.length });
     }
-    if (order.length === 1 && s.mode !== 'private' && Date.now() - s.createdAt > RHYTHM_MULTI_LOBBY_LISTEN_MS) {
+    // ★最近ほかの人を見ていた部屋はまとめない。ライブ中の人は何も送ってこないので、自分1人に見えても
+    //   実はほかの人が演奏しているだけかもしれない(そこで引っ越すと、戻ってきた仲間とはぐれる)
+    const recentlySawOthers = Object.values(s.members).some((m) => m.id !== s.selfId && Date.now() - m.seen < RHYTHM_MULTI_MERGE_QUIET_MS);
+    if (order.length === 1 && s.mode !== 'private' && !recentlySawOthers && Date.now() - s.createdAt > RHYTHM_MULTI_LOBBY_LISTEN_MS) {
       const other = rhythmMultiBestRoom(lobby.rooms, s.code);
       if (other && other < s.code) {
         api.join(other, { name: me.name, level: me.level, icon: me.icon, frame: me.frame, diff: me.diff }, s.mode);
@@ -37886,7 +37892,11 @@ function MonsterHeroGame() {
   // 見たかどうかは同じ保存キーの配列へ入れる(新しいキーは作らない)。
   // キャンペーンの id と会話の id は同じにしてある(RHYTHM_EVENT_POINT_CAMPAIGNS)
   const BEAT_POINT_UP_STORY_ID = 'beat_point_up_2026_09_28';
-  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID];
+  // みんなで対戦・フレンド・ももすけのアシストカード・EXスキルの知らせ(2026-10-03・ユーザー指示「この辺の内容のストーリーを作って」)。
+  // 6レーンの知らせと同じく、イベントとは関係なくHOMEで1度だけ流す。見たかどうかも同じ保存キーの配列へ入れる
+  // (新しいキーは作らない)。みんなで対戦の公開フラグが立っているときだけ並べる
+  const RHYTHM_MULTI_FRIENDS_STORY_ID = 'rhythm_multi_friends_2026_10_03';
+  const RHYTHM_EVENT_STORY_IDS = [MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -37976,12 +37986,15 @@ function MonsterHeroGame() {
       const beatPointStoryReady = RELEASE_FLAGS.rhythmEventPoints === true && notPlayedYet(BEAT_POINT_ALWAYS_STORY_ID);
       // 6レーンの知らせ。ほかの会話が並んでいれば、そちらが終わったあとの見回りで並ぶ
       const sixLaneStoryReady = RELEASE_FLAGS.rhythmMode === true && notPlayedYet(RHYTHM_SIX_LANE_STORY_ID);
+      // みんなで対戦・フレンドの知らせ。いちばん新しいお知らせなので、ビートP・6レーンより先に流す
+      const multiFriendsStoryReady = RELEASE_FLAGS.rhythmMulti === true && notPlayedYet(RHYTHM_MULTI_FRIENDS_STORY_ID);
       // ビートPアップキャンペーンの知らせ。期間中かどうかは見回りのたびに数え直す(CLAUDE.md ⑥-4)。
       // 期間の決まった「いまの話」なので、ほかのお知らせの会話より先に流す(開催中のイベントの会話よりは後)
       const beatPointCampaign = RELEASE_FLAGS.rhythmEventPoints === true ? rhythmEventPointCampaignAt(Date.now()) : null;
       const beatPointUpStoryReady = !!beatPointCampaign && beatPointCampaign.id === BEAT_POINT_UP_STORY_ID && notPlayedYet(BEAT_POINT_UP_STORY_ID);
       if (!liveEvent) {
         if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
+        else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
         else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
         else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
         return;
@@ -37992,6 +38005,7 @@ function MonsterHeroGame() {
         setRhythmEventStoryPending(prev => prev || liveStoryId);
       }
       else if (beatPointUpStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_UP_STORY_ID);
+      else if (multiFriendsStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
       else if (beatPointStoryReady) setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
       else if (sixLaneStoryReady) setRhythmEventStoryPending(prev => prev || RHYTHM_SIX_LANE_STORY_ID);
       // ② 助手の告知。起動したときに作った行列には入っていないので、1度だけ組み直す。
@@ -39359,7 +39373,7 @@ function MonsterHeroGame() {
       if (!wasOnboarded) { setRhythmLookIntroSeen(true); try { await storeSet(RHYTHM_LOOK_INTRO_KEY, true, false); } catch {} }
       if (!wasOnboarded) {
         const seenNow = normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current);
-        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID,
+        const pastNews = [BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID,
           ...rhythmLimitedEventsJustEnded(Date.now()).map(rhythmEventThanksStoryIdFor).filter(Boolean)];
         const add = pastNews.filter((id, i) => !seenNow.includes(id) && pastNews.indexOf(id) === i);
         if (add.length) {
@@ -39373,6 +39387,11 @@ function MonsterHeroGame() {
       if (RELEASE_FLAGS.rhythmWeeklyRanking === true && RELEASE_FLAGS.rhythmEventPoints === true && wasOnboarded
         && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(BEAT_POINT_ALWAYS_STORY_ID)) {
         setRhythmEventStoryPending(prev => prev || BEAT_POINT_ALWAYS_STORY_ID);
+      }
+      // みんなで対戦・フレンドの知らせ。ほかの会話が並んでいればそちらを先にする
+      if (RELEASE_FLAGS.rhythmMulti === true && wasOnboarded
+        && !normalizeRhythmEventRewardClaims(rhythmEventStorySeenRef.current).includes(RHYTHM_MULTI_FRIENDS_STORY_ID)) {
+        setRhythmEventStoryPending(prev => prev || RHYTHM_MULTI_FRIENDS_STORY_ID);
       }
       // 6レーンの知らせ。ほかの会話が並んでいればそちらを先にする
       if (RELEASE_FLAGS.rhythmMode === true && wasOnboarded
@@ -40430,6 +40449,7 @@ function MonsterHeroGame() {
     beatPointAlwaysSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_ALWAYS_STORY_ID),
     rhythmSixLaneSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_SIX_LANE_STORY_ID),
     beatPointUpSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(BEAT_POINT_UP_STORY_ID),
+    rhythmMultiFriendsSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_MULTI_FRIENDS_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
