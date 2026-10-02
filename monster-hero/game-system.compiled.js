@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 96105fad5f35d0a1
+// source-sha256: 8ab144950029ad2a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-02 19:59";
+const BUILD_DATE = "2026-10-02 20:08";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -20050,9 +20050,11 @@ const specialFinishKindOf = (ownerId, skillName, anim) => {
   return k && SPECIAL_FINISH[k] ? k : null;
 };
 const SpecialFinish = ({
-  kind
+  kind,
+  parts: partsProp = null,
+  offset = 0
 }) => {
-  const parts = SPECIAL_FINISH[kind];
+  const parts = partsProp || SPECIAL_FINISH[kind];
   if (!parts) return null;
   return React.createElement("div", {
     "data-special-finish": kind,
@@ -20060,7 +20062,7 @@ const SpecialFinish = ({
     "aria-hidden": "true"
   }, parts.map((p, pi) => {
     const base = {
-      '--d': `${p.d || 0}ms`,
+      '--d': `${(p.d || 0) + offset}ms`,
       '--x': `${p.x || 0}px`
     };
     if (p.t === 'blade') return React.createElement("i", {
@@ -20105,7 +20107,7 @@ const SpecialFinish = ({
       className: `fin-fall fin-shape--${p.shape || 'rock'}`,
       style: {
         ...base,
-        '--d': `${(p.d || 0) + i * 36}ms`,
+        '--d': `${(p.d || 0) + offset + i * 36}ms`,
         '--x': `${(i % 4 - 1.5) * 34}px`,
         '--s': 1 + i % 3 * .25
       }
@@ -20120,7 +20122,7 @@ const SpecialFinish = ({
         key: i,
         className: `fin-bit fin-shape--${p.shape || 'spark'}${p.rise ? ' fin-bit--rise' : ''}${p.fall ? ' fin-bit--fall' : ''}`,
         style: {
-          '--d': `${(p.d || 0) + i * 14}ms`,
+          '--d': `${(p.d || 0) + offset + i * 14}ms`,
           '--a': `${ang}deg`,
           '--dist': `${p.dist || 110}px`,
           '--spin': p.spin || 0,
@@ -45853,6 +45855,424 @@ const BossMovieLayer = ({
     }
   }, "タップでスキップ")), document.body);
 };
+const TACTICS_ENEMY_BANNER_SKILLS = Object.freeze(['rush', 'pierce', 'special', 'allout']);
+const TACTICS_ENEMY_FLASH_SKILLS = Object.freeze(['pierce', 'special', 'allout']);
+const TACTICS_ENEMY_PIERCE_FINISH = Object.freeze([{
+  t: 'blade',
+  a: 0,
+  len: 360,
+  w: 8,
+  d: 240
+}, {
+  t: 'col',
+  w: 30,
+  h: 420,
+  d: 260,
+  sky: true
+}, {
+  t: 'ring',
+  d: 300,
+  r: 3
+}]);
+const TACTICS_ENEMY_FINISH = Object.freeze({
+  kawazumo: {
+    special: [{
+      t: 'ring',
+      d: 300,
+      r: 4.2,
+      flat: .38
+    }, {
+      t: 'bits',
+      n: 14,
+      shape: 'dust',
+      dist: 130,
+      d: 300
+    }, {
+      t: 'bits',
+      n: 8,
+      shape: 'star',
+      dist: 100,
+      d: 340
+    }],
+    allout: [{
+      t: 'bits',
+      n: 18,
+      shape: 'star',
+      dist: 170,
+      d: 260
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'spark',
+      dist: 110,
+      d: 340
+    }, {
+      t: 'col',
+      w: 120,
+      h: 420,
+      d: 240,
+      sky: true,
+      soft: true
+    }, {
+      t: 'ring',
+      d: 300,
+      r: 3.4
+    }]
+  },
+  metalner: {
+    special: [{
+      t: 'blade',
+      a: -42,
+      len: 340,
+      w: 10,
+      d: 240
+    }, {
+      t: 'blade',
+      a: 42,
+      len: 340,
+      w: 10,
+      d: 310
+    }, {
+      t: 'ring',
+      d: 340,
+      r: 3.6
+    }, {
+      t: 'bits',
+      n: 10,
+      shape: 'spark',
+      dist: 110,
+      d: 340
+    }],
+    allout: [{
+      t: 'blade',
+      a: 0,
+      len: 420,
+      w: 18,
+      d: 240
+    }, {
+      t: 'col',
+      w: 60,
+      h: 440,
+      d: 260,
+      sky: true
+    }, {
+      t: 'ring',
+      d: 300,
+      r: 3.8
+    }]
+  },
+  inari: {
+    special: [{
+      t: 'bits',
+      n: 16,
+      shape: 'leaf',
+      dist: 140,
+      d: 280,
+      spin: 1
+    }, {
+      t: 'bits',
+      n: 10,
+      shape: 'leaf',
+      dist: 80,
+      d: 340,
+      spin: -1
+    }, {
+      t: 'ring',
+      d: 300,
+      r: 3.2
+    }],
+    allout: [{
+      t: 'bits',
+      n: 18,
+      shape: 'petal',
+      dist: 150,
+      d: 260,
+      spin: 1
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'petal',
+      dist: 90,
+      d: 320,
+      spin: -1
+    }, {
+      t: 'ring',
+      d: 300,
+      r: 3.4,
+      flat: .45
+    }]
+  },
+  koinobori: {
+    special: [{
+      t: 'wave',
+      d: 240
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'drop',
+      dist: 140,
+      d: 340
+    }, {
+      t: 'ring',
+      d: 340,
+      r: 3.2,
+      flat: .45
+    }],
+    allout: [{
+      t: 'wave',
+      d: 220
+    }, {
+      t: 'wave',
+      d: 380
+    }, {
+      t: 'bits',
+      n: 16,
+      shape: 'drop',
+      dist: 130,
+      d: 300,
+      fall: true
+    }, {
+      t: 'ring',
+      d: 420,
+      r: 4,
+      flat: .45
+    }]
+  },
+  delpiero: {
+    special: [{
+      t: 'blade',
+      a: -40,
+      len: 380,
+      w: 12,
+      d: 240
+    }, {
+      t: 'blade',
+      a: 40,
+      len: 380,
+      w: 12,
+      d: 320
+    }, {
+      t: 'col',
+      w: 40,
+      h: 440,
+      d: 380,
+      sky: true
+    }, {
+      t: 'ring',
+      d: 380,
+      r: 3.8
+    }],
+    allout: [{
+      t: 'bits',
+      n: 16,
+      shape: 'star',
+      dist: 150,
+      d: 280
+    }, {
+      t: 'blade',
+      a: 0,
+      len: 320,
+      w: 9,
+      d: 300
+    }, {
+      t: 'blade',
+      a: 90,
+      len: 320,
+      w: 9,
+      d: 300
+    }, {
+      t: 'ring',
+      d: 300,
+      r: 4
+    }]
+  },
+  dokudoku: {
+    special: [{
+      t: 'bits',
+      n: 12,
+      shape: 'heart',
+      dist: 130,
+      d: 280
+    }, {
+      t: 'bits',
+      n: 10,
+      shape: 'drop',
+      dist: 100,
+      d: 330
+    }, {
+      t: 'ring',
+      d: 300,
+      r: 3.4
+    }],
+    allout: [{
+      t: 'bits',
+      n: 18,
+      shape: 'drop',
+      dist: 130,
+      d: 260,
+      fall: true
+    }, {
+      t: 'wave',
+      d: 300
+    }, {
+      t: 'ring',
+      d: 340,
+      r: 3.6,
+      flat: .45
+    }]
+  },
+  lamia: {
+    special: [{
+      t: 'col',
+      w: 44,
+      h: 440,
+      d: 240,
+      sky: true,
+      x: -54
+    }, {
+      t: 'col',
+      w: 56,
+      h: 480,
+      d: 280,
+      sky: true
+    }, {
+      t: 'col',
+      w: 44,
+      h: 440,
+      d: 320,
+      sky: true,
+      x: 54
+    }, {
+      t: 'ring',
+      d: 340,
+      r: 3.8
+    }, {
+      t: 'blade',
+      a: 0,
+      len: 300,
+      w: 7,
+      d: 340
+    }],
+    allout: [{
+      t: 'col',
+      w: 56,
+      h: 380,
+      d: 260,
+      flame: true,
+      x: -52
+    }, {
+      t: 'col',
+      w: 66,
+      h: 440,
+      d: 240,
+      flame: true
+    }, {
+      t: 'col',
+      w: 56,
+      h: 380,
+      d: 280,
+      flame: true,
+      x: 52
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'flame',
+      dist: 110,
+      d: 320,
+      rise: true
+    }]
+  },
+  nyarlathotep: {
+    special: [{
+      t: 'ring',
+      d: 240,
+      r: 3.4,
+      flat: .45,
+      rune: true
+    }, {
+      t: 'bits',
+      n: 14,
+      shape: 'star',
+      dist: 140,
+      d: 300
+    }, {
+      t: 'col',
+      w: 120,
+      h: 440,
+      d: 300,
+      sky: true,
+      soft: true
+    }],
+    allout: [{
+      t: 'ring',
+      d: 240,
+      r: 3.2,
+      flat: .45,
+      rune: true
+    }, {
+      t: 'blade',
+      a: 90,
+      len: 340,
+      w: 9,
+      d: 300
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'spark',
+      dist: 120,
+      d: 300
+    }, {
+      t: 'bits',
+      n: 8,
+      shape: 'spark',
+      dist: 80,
+      d: 360
+    }]
+  },
+  splatter: {
+    special: [{
+      t: 'blade',
+      a: -58,
+      len: 440,
+      w: 16,
+      d: 240
+    }, {
+      t: 'col',
+      w: 44,
+      h: 440,
+      d: 320,
+      sky: true
+    }, {
+      t: 'bits',
+      n: 12,
+      shape: 'drop',
+      dist: 130,
+      d: 340
+    }, {
+      t: 'ring',
+      d: 340,
+      r: 3.6
+    }],
+    allout: [{
+      t: 'col',
+      w: 60,
+      h: 400,
+      d: 260,
+      flame: true
+    }, {
+      t: 'bits',
+      n: 14,
+      shape: 'spark',
+      dist: 120,
+      d: 300
+    }, {
+      t: 'ring',
+      d: 300,
+      r: 3.8,
+      flat: .45
+    }]
+  }
+});
 const TacticsEnemyStageFx = ({
   fx,
   motion,
@@ -45930,7 +46350,7 @@ const TacticsEnemyStageFx = ({
       '--sx': `${sx}px`,
       '--sy': `${sy}px`
     }
-  }, !lite && !afterMovie && (skill === 'special' || isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill)) && React.createElement("div", {
+  }, !lite && !afterMovie && (skill === 'special' || isMoo && ['allout', 'charge', 'pierceCharge'].includes(skill) || !isMoo && skill === 'allout') && React.createElement("div", {
     "data-stage-dim": true,
     style: {
       background: `radial-gradient(circle at ${sx}px ${sy}px, transparent ${Math.round(sr * 1.15)}px, rgba(0,0,0,.74) ${Math.round(sr * 1.15 + 110)}px)`
@@ -45967,7 +46387,41 @@ const TacticsEnemyStageFx = ({
         animationDuration: `${Math.max(280, Math.round(ms * 0.36))}ms`
       }
     }, look.mark || null));
-  })), isMoo && !afterMovie && TACTICS_MOO_CUTIN_SKILLS.includes(skill) && skillLabel && React.createElement("div", {
+  })), !isMoo && !lite && !afterMovie && TACTICS_ENEMY_BANNER_SKILLS.includes(skill) && skillLabel && React.createElement("div", {
+    "data-enemy-banner": skill
+  }, React.createElement("div", {
+    "data-enemy-banner-band": true
+  }, React.createElement("span", {
+    "data-enemy-banner-tag": true
+  }, skill === 'special' ? '必殺技' : skill === 'allout' ? '全体攻撃' : skill === 'pierce' ? '貫通' : '連撃'), React.createElement("span", {
+    "data-enemy-banner-name": true,
+    style: {
+      fontSize: `${Math.max(18, Math.min(34, Math.floor(260 / Math.max(1, String(skillLabel).length))))}px`
+    }
+  }, skillLabel))), !isMoo && !lite && TACTICS_ENEMY_FLASH_SKILLS.includes(skill) && React.createElement("div", {
+    "data-enemy-flash": true,
+    style: {
+      animationDelay: at(hit)
+    }
+  }), !isMoo && !lite && strikes && (() => {
+    const parts = skill === 'pierce' ? TACTICS_ENEMY_PIERCE_FINISH : (TACTICS_ENEMY_FINISH[motion] || {})[skill] || null;
+    if (!parts) return null;
+    const hitMs = Math.round(ms * hit);
+    return geo.slots.map(t => React.createElement("div", {
+      key: `fin-${t.i}`,
+      className: "spm spm--enemy",
+      "data-enemy-finish": `${motion}-${skill}`,
+      style: {
+        '--spm-c1': 'color-mix(in srgb, rgb(var(--em-c)) 38%, #fff)',
+        '--spm-c2': 'rgb(var(--em-c))',
+        '--spm-tx': `${Math.round(t.x)}px`,
+        '--spm-ty': `${Math.round(t.y)}px`
+      }
+    }, React.createElement(SpecialFinish, {
+      parts: parts,
+      offset: Math.max(0, hitMs - 240)
+    })));
+  })(), isMoo && !afterMovie && TACTICS_MOO_CUTIN_SKILLS.includes(skill) && skillLabel && React.createElement("div", {
     "data-moo-cutin": true
   }, React.createElement("div", {
     "data-moo-cutin-band": true
@@ -62007,6 +62461,14 @@ function MonsterHeroGame() {
         setEnemyAttackAnim(true);
         if (fxKind === 'moo') {
           if (movieShown) setTimeout(() => triggerShake(true), battleMs(Math.round(fxMs * 0.12)));else if (motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId]) setTimeout(() => triggerShake(true), battleMs(Math.round(fxMs * tacticsEnemyHitFrac(motionEnemyId, fxSkill))));else triggerShake(true);
+        }
+        if (fxKind !== 'moo' && motionEnemyId && TACTICS_ENEMY_MOTIONS[motionEnemyId] && ['rush', 'pierce', 'special', 'allout'].includes(fxSkill)) {
+          const hitAt = battleMs(Math.round(fxMs * tacticsEnemyHitFrac(motionEnemyId, fxSkill)));
+          const big = fxSkill !== 'rush';
+          setTimeout(() => {
+            triggerShake(big);
+            if (big) Audio_.se.crit();
+          }, hitAt);
         }
         await battleWait(fxMs);
         setEnemyAttackAnim(false);
@@ -80074,6 +80536,8 @@ const createAnimationStyle = () => {
     .fin-shape--flame { width:16px; height:22px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, #fde047 36%, #f97316 62%, rgba(220,38,38,0)); box-shadow:0 0 8px #f97316; }
     .fin-shape--note { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--note::before { content:'♪'; }
+    .fin-shape--heart { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
+    .fin-shape--heart::before { content:'♥'; }
     .fin-bit.fin-shape--note:nth-child(3n+1)::before { content:'♫'; }
     .fin-bit.fin-shape--note:nth-child(3n+2)::before { content:'♬'; }
     .fin-fall { left:-14px; top:-420px; width:28px; height:28px; opacity:0; position:absolute; margin-left:var(--x); scale:var(--s);
@@ -81312,6 +81776,29 @@ const createAnimationStyle = () => {
     /* スプラッター: 3本の爪あと */
     [data-impact="claw"]::before { border-radius: 0; transform: rotate(-30deg);
       background: linear-gradient(90deg, transparent 18%, #fff 20%, #dc2626 22.5%, transparent 25%, transparent 46%, #fff 48%, #dc2626 50.5%, transparent 53%, transparent 74%, #fff 76%, #dc2626 78.5%, transparent 81%); }
+    /* ---- 敵の技の格上げ(71-screen-battle.jsx の TacticsEnemyStageFx。覚醒ムー以外の大技)----
+       技名の帯・当たる瞬間の閃光。色は敵の色(--em-c)。フィニッシュは固有技と同じ .spm__finish / .fin-*(.spm--enemy の中) */
+    [data-enemy-banner] { left: 0; right: 0; top: 42%; height: 0; }
+    [data-enemy-banner-band] { position: absolute; left: -10%; right: -10%; top: -30px; height: 60px; transform: skewY(-5deg);
+      background: linear-gradient(90deg, rgba(8,8,16,.2), rgba(10,10,24,.94) 16%, rgba(10,10,24,.94) 84%, rgba(8,8,16,.2));
+      border-top: 2px solid rgb(var(--em-c)); border-bottom: 2px solid rgb(var(--em-c));
+      box-shadow: 0 0 18px rgba(var(--em-c),.85), inset 0 0 22px rgba(var(--em-c),.35);
+      display: flex; align-items: center; justify-content: center; gap: 12px; animation: enBanner var(--em-dur) cubic-bezier(.2,.8,.2,1) both; }
+    [data-enemy-banner="special"] [data-enemy-banner-band] { top: -38px; height: 76px; border-width: 3px; box-shadow: 0 0 28px rgba(var(--em-c),.95), 0 0 60px rgba(var(--em-c),.5), inset 0 0 30px rgba(var(--em-c),.45); }
+    [data-enemy-banner-tag] { transform: skewY(5deg); font: 900 10px/1 system-ui, sans-serif; letter-spacing: .4em; color: color-mix(in srgb, rgb(var(--em-c)) 40%, #fff);
+      text-shadow: 0 0 8px rgb(var(--em-c)); white-space: nowrap; }
+    [data-enemy-banner-name] { transform: skewY(5deg); font-family: system-ui, sans-serif; font-style: italic; font-weight: 900; line-height: 1.1; color: #fff; white-space: nowrap; letter-spacing: .06em;
+      text-shadow: 0 0 2px rgb(var(--em-c)), 2px 2px 0 rgb(var(--em-c)), 0 0 16px rgb(var(--em-c)); }
+    @keyframes enBanner {
+      0% { opacity: 0; transform: translateX(-112%) skewY(-5deg); }
+      10% { opacity: 1; transform: translateX(0) skewY(-5deg); }
+      56% { opacity: 1; transform: translateX(1.5%) skewY(-5deg); }
+      70%, 100% { opacity: 0; transform: translateX(112%) skewY(-5deg); }
+    }
+    [data-enemy-flash] { inset: 0; opacity: 0; background: radial-gradient(circle at 50% 62%, #fff 0 8%, rgba(var(--em-c),.55) 34%, transparent 72%); animation: enFlash 380ms ease-out both; }
+    @keyframes enFlash { 0% { opacity: 0; } 18% { opacity: .85; } 100% { opacity: 0; } }
+    .spm--enemy { z-index: 1; }
+    @media (prefers-reduced-motion: reduce) { [data-enemy-flash] { display: none; } }
     /* ---- 覚醒ムー ---- */
     [data-moo-cutin] { left: 0; right: 0; top: 50%; height: 0; }
     [data-moo-cutin-band] { position: absolute; left: -10%; right: -10%; top: -44px; height: 88px; transform: skewY(-7deg);

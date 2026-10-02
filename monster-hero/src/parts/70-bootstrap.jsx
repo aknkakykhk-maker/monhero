@@ -2148,6 +2148,8 @@ const createAnimationStyle = () => {
     .fin-shape--flame { width:16px; height:22px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, #fde047 36%, #f97316 62%, rgba(220,38,38,0)); box-shadow:0 0 8px #f97316; }
     .fin-shape--note { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
     .fin-shape--note::before { content:'♪'; }
+    .fin-shape--heart { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
+    .fin-shape--heart::before { content:'♥'; }
     .fin-bit.fin-shape--note:nth-child(3n+1)::before { content:'♫'; }
     .fin-bit.fin-shape--note:nth-child(3n+2)::before { content:'♬'; }
     .fin-fall { left:-14px; top:-420px; width:28px; height:28px; opacity:0; position:absolute; margin-left:var(--x); scale:var(--s);
@@ -3386,6 +3388,29 @@ const createAnimationStyle = () => {
     /* スプラッター: 3本の爪あと */
     [data-impact="claw"]::before { border-radius: 0; transform: rotate(-30deg);
       background: linear-gradient(90deg, transparent 18%, #fff 20%, #dc2626 22.5%, transparent 25%, transparent 46%, #fff 48%, #dc2626 50.5%, transparent 53%, transparent 74%, #fff 76%, #dc2626 78.5%, transparent 81%); }
+    /* ---- 敵の技の格上げ(71-screen-battle.jsx の TacticsEnemyStageFx。覚醒ムー以外の大技)----
+       技名の帯・当たる瞬間の閃光。色は敵の色(--em-c)。フィニッシュは固有技と同じ .spm__finish / .fin-*(.spm--enemy の中) */
+    [data-enemy-banner] { left: 0; right: 0; top: 42%; height: 0; }
+    [data-enemy-banner-band] { position: absolute; left: -10%; right: -10%; top: -30px; height: 60px; transform: skewY(-5deg);
+      background: linear-gradient(90deg, rgba(8,8,16,.2), rgba(10,10,24,.94) 16%, rgba(10,10,24,.94) 84%, rgba(8,8,16,.2));
+      border-top: 2px solid rgb(var(--em-c)); border-bottom: 2px solid rgb(var(--em-c));
+      box-shadow: 0 0 18px rgba(var(--em-c),.85), inset 0 0 22px rgba(var(--em-c),.35);
+      display: flex; align-items: center; justify-content: center; gap: 12px; animation: enBanner var(--em-dur) cubic-bezier(.2,.8,.2,1) both; }
+    [data-enemy-banner="special"] [data-enemy-banner-band] { top: -38px; height: 76px; border-width: 3px; box-shadow: 0 0 28px rgba(var(--em-c),.95), 0 0 60px rgba(var(--em-c),.5), inset 0 0 30px rgba(var(--em-c),.45); }
+    [data-enemy-banner-tag] { transform: skewY(5deg); font: 900 10px/1 system-ui, sans-serif; letter-spacing: .4em; color: color-mix(in srgb, rgb(var(--em-c)) 40%, #fff);
+      text-shadow: 0 0 8px rgb(var(--em-c)); white-space: nowrap; }
+    [data-enemy-banner-name] { transform: skewY(5deg); font-family: system-ui, sans-serif; font-style: italic; font-weight: 900; line-height: 1.1; color: #fff; white-space: nowrap; letter-spacing: .06em;
+      text-shadow: 0 0 2px rgb(var(--em-c)), 2px 2px 0 rgb(var(--em-c)), 0 0 16px rgb(var(--em-c)); }
+    @keyframes enBanner {
+      0% { opacity: 0; transform: translateX(-112%) skewY(-5deg); }
+      10% { opacity: 1; transform: translateX(0) skewY(-5deg); }
+      56% { opacity: 1; transform: translateX(1.5%) skewY(-5deg); }
+      70%, 100% { opacity: 0; transform: translateX(112%) skewY(-5deg); }
+    }
+    [data-enemy-flash] { inset: 0; opacity: 0; background: radial-gradient(circle at 50% 62%, #fff 0 8%, rgba(var(--em-c),.55) 34%, transparent 72%); animation: enFlash 380ms ease-out both; }
+    @keyframes enFlash { 0% { opacity: 0; } 18% { opacity: .85; } 100% { opacity: 0; } }
+    .spm--enemy { z-index: 1; }
+    @media (prefers-reduced-motion: reduce) { [data-enemy-flash] { display: none; } }
     /* ---- 覚醒ムー ---- */
     [data-moo-cutin] { left: 0; right: 0; top: 50%; height: 0; }
     [data-moo-cutin-band] { position: absolute; left: -10%; right: -10%; top: -44px; height: 88px; transform: skewY(-7deg);

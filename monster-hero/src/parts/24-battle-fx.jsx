@@ -878,22 +878,24 @@ const specialFinishKindOf = (ownerId, skillName, anim) => {
   const k = typeof DEFAULT_ATTACK_THEMES !== 'undefined' ? DEFAULT_ATTACK_THEMES[ownerId] : null;
   return k && SPECIAL_FINISH[k] ? k : null;
 };
-const SpecialFinish = ({ kind }) => {
-  const parts = SPECIAL_FINISH[kind];
+// parts … 敵の技のように、表を持たない呼び出し元が部品の並びをそのまま渡すとき(kind より優先)
+// offset … 全部の遅れ(d)へ足す時間(ms)。敵の技は「当たる瞬間」が技の長さの途中にあるので、そこに合わせる
+const SpecialFinish = ({ kind, parts: partsProp = null, offset = 0 }) => {
+  const parts = partsProp || SPECIAL_FINISH[kind];
   if (!parts) return null;
   return (
     <div data-special-finish={kind} className="spm__finish" aria-hidden="true">
       {parts.map((p, pi) => {
-        const base = { '--d':`${p.d || 0}ms`, '--x':`${p.x || 0}px` };
+        const base = { '--d':`${(p.d || 0) + offset}ms`, '--x':`${p.x || 0}px` };
         if (p.t === 'blade') return <i key={pi} className={`fin-blade${p.vine ? ' fin-blade--vine' : ''}`} style={{ ...base, '--a':`${p.a || 0}deg`, '--len':`${p.len || 260}px`, '--w':`${p.w || 8}px` }}/>;
         if (p.t === 'ring') return <i key={pi} className={`fin-ring${p.flat ? ' fin-ring--flat' : ''}${p.rune ? ' fin-ring--rune' : ''}`} style={{ ...base, '--r':p.r || 3, '--flat':p.flat || 1 }}/>;
         if (p.t === 'col') return <i key={pi} className={`fin-col${p.flame ? ' fin-col--flame' : ''}${p.sky ? ' fin-col--sky' : ''}${p.soft ? ' fin-col--soft' : ''}`} style={{ ...base, '--w':`${p.w || 40}px`, '--h':`${p.h || 360}px` }}/>;
         if (p.t === 'wave') return <i key={pi} className="fin-wave" style={base}/>;
-        if (p.t === 'fall') return <React.Fragment key={pi}>{Array.from({ length:p.n || 4 }, (_, i) => <i key={i} className={`fin-fall fin-shape--${p.shape || 'rock'}`} style={{ ...base, '--d':`${(p.d || 0) + i * 36}ms`, '--x':`${((i % 4) - 1.5) * 34}px`, '--s':1 + (i % 3) * .25 }}/>)}</React.Fragment>;
+        if (p.t === 'fall') return <React.Fragment key={pi}>{Array.from({ length:p.n || 4 }, (_, i) => <i key={i} className={`fin-fall fin-shape--${p.shape || 'rock'}`} style={{ ...base, '--d':`${(p.d || 0) + offset + i * 36}ms`, '--x':`${((i % 4) - 1.5) * 34}px`, '--s':1 + (i % 3) * .25 }}/>)}</React.Fragment>;
         return <React.Fragment key={pi}>{Array.from({ length:p.n || 8 }, (_, i) => {
           const ang = (360 / (p.n || 8)) * i + (pi % 2 ? 11 : 0);
           return <i key={i} className={`fin-bit fin-shape--${p.shape || 'spark'}${p.rise ? ' fin-bit--rise' : ''}${p.fall ? ' fin-bit--fall' : ''}`}
-            style={{ '--d':`${(p.d || 0) + i * 14}ms`, '--a':`${ang}deg`, '--dist':`${p.dist || 110}px`, '--spin':p.spin || 0, '--i':i }}/>;
+            style={{ '--d':`${(p.d || 0) + offset + i * 14}ms`, '--a':`${ang}deg`, '--dist':`${p.dist || 110}px`, '--spin':p.spin || 0, '--i':i }}/>;
         })}</React.Fragment>;
       })}
     </div>
