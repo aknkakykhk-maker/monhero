@@ -33,7 +33,7 @@ assert(game.includes(`liveEffectiveMaxHp()*0.3*effMul`) && (game.includes(`liveE
 // stateから作った effectiveMaxHp はレンダー時点の値なので、進行中のターンには反映されない。
 // そのまま使うと回復が古い上限で頭打ちになり、新しい上限で描かれるゲージが満タンにならない
 // (「みゅあ＋メロソ(3枚)で次ターン全回復にならない」不具合)。
-assert(game.includes(`const liveEffectiveMaxHp = () => resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct'));`));
+assert(game.includes(`const liveEffectiveMaxHp = () => applyAllyMaxHpRate(resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct')), allyMaxHpRateRef.current);`));
 assert(game.includes(`const liveEffectiveMaxGuts = () => resolveEffectiveMaxStat(maxGutsRef.current, livePermaBuff('muaGutsPct'));`));
 {
   // handleEnemyTurn の先頭から handleNextWave の手前まで(=ターン処理の本体)には、
