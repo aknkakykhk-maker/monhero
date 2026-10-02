@@ -34,6 +34,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-10-02 ユーザー指示(mp4とジャケットだけ)。歯ごたえは自動のままとユーザーが決めた
+    date: "2026-10-02 21:50", type:'update', title:'モンヒロビート：新曲「ハルカ」を追加しました', status:'new',
+    image: 'images/song-art/haruka.jpg?v=d3979cac1117',
+    items:[
+      'モンヒロビートに「ハルカ」（1分38秒）を追加しました。曲えらびからすぐ遊べます。',
+      'レベルは EASY Lv.9 ／ NORMAL Lv.11 ／ HARD Lv.17 ／ EXPERT Lv.28 ／ MASTER Lv.33 です。',
+      'ノーツ数は 205 ／ 233 ／ 324 ／ 386 ／ 451 です。',
+    ],
+    assistantNotice: { id:'update_notice_haruka_v1', type:'content' },
+  },
+  {
     // 2026-10-02 ユーザー指示「強すぎると意見があったので調整したい」→「パワーを230で」
     date: "2026-10-02 21:06", type:'update', title:'HELHEIMの敵の強さを少し下げました', status:'new',
     items:[
