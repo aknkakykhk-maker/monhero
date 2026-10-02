@@ -217,7 +217,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
             const monName = (id) => (id && ALL_PLAYER_MONSTERS[id] ? ALL_PLAYER_MONSTERS[id].name : '');
             const fav = sum && sum.favorite ? sum.favorite : null;
             const favBase = fav ? ALL_PLAYER_MONSTERS[fav.monsterId] : null;
-            const favIcon = favBase && resolveIconUrl ? resolveIconUrl(fav.monsterId) : null;
+            const favFace = favBase ? friendsFaceIconOf(fav.monsterId) : null;
             const stat = (label, value, sub, color) => (
               <div className="min-w-0"><dt className="text-[9px] font-bold text-slate-400">{label}</dt>
                 <dd className={`truncate text-sm font-black ${color}`}>{value}</dd>
@@ -256,7 +256,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               <div data-friend-favorite className={`${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`}>
                 {!favBase && <p className="text-[11px] font-bold text-slate-400">まだ選んでいません</p>}
                 {favBase && (<>
-                  {favIcon ? <img src={favIcon} alt="" className="h-14 w-14 shrink-0 object-contain"/> : <span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl">❓</span>}
+                  {favFace ? <ProfileAvatar src={favFace.src} id={favFace.id} className="h-14 w-14 shrink-0"/> : <span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl">❓</span>}
                   <div className="min-w-0 flex-1">
                     <b className="block truncate text-sm font-black text-white">{fav.name || favBase.name}</b>
                     <small className="block text-[10px] font-bold text-pink-300">絆Lv.{Number(fav.bondLevel) || '—'}{fav.power ? `　総合力 ${Number(fav.power).toLocaleString()}` : ''}</small>
