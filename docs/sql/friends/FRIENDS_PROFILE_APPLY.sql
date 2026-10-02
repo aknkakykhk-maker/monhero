@@ -8,7 +8,7 @@
 --   place … いまいる場所の大分類(ホーム・バトル・モンヒロビート・みんなで対戦・マスモン・マーケット・その他)
 --   started_on / play_seconds … 遊び始めた日(プレイ時間を数え始めた日)と、プレイ時間の合計
 --   best_bond / best_power(と、その子の種類) … 持っているマスモンの最高絆Lv・最高総合力
---   favorite … 「好きなマスモン」1体ぶんの詳細(ランキングの詳細画面と同じ形のJSON)
+--   favorite … 「好きなモンスター」1体ぶんの詳細(ランキングの詳細画面と同じ形のJSON)
 --   updated_at … 最後にゲームから送ってきた時刻(ログイン中かどうかの判定にも使う)
 -- ★DELETEの権限は与えない。1人1行を上書きし続けるだけなので、行は増え続けない。
 -- ★ログインの仕組みが無いので、公開キーで読み書きできる(なりすましで書き換えること自体は防げない)。
@@ -51,7 +51,7 @@ create table if not exists public.friend_profiles (
 );
 
 comment on table public.friend_profiles is
-  'フレンドに見せる情報(いまの場所・遊び始めた日・プレイ時間・最高絆Lv・最高総合力・好きなマスモン)。1人1行。端末が自分で計算して上書きする。';
+  'フレンドに見せる情報(いまの場所・遊び始めた日・プレイ時間・最高絆Lv・最高総合力・好きなモンスター)。1人1行。端末が自分で計算して上書きする。';
 
 create or replace function public.friend_profiles_touch_updated_at()
 returns trigger language plpgsql as $$

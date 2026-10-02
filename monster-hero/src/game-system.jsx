@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6a93761e5f87840e
+// generated-sha256: 5023a85f04fb153b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 02:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 02:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21896,7 +21896,7 @@ const friendsPlaytimeText = (seconds) => {
 };
 const FRIEND_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 // 端末の持ち物から、フレンドに見せる情報を作る(書く内容はここで決まる)
-//  masuMons … 手持ちのマスモン / favoriteMasuId … 「好きなマスモン」に選んだ個体のid / playtime … normalizePlaytime の形
+//  masuMons … 手持ちのマスモン / favoriteMasuId … 「好きなモンスター」に選んだ個体のid / playtime … normalizePlaytime の形
 const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime }) => {
   let bestBond = 0, bestBondMon = '', bestPower = 0, bestPowerMon = '', favorite = null;
   (Array.isArray(masuMons) ? masuMons : []).forEach((masu) => {
@@ -23478,7 +23478,7 @@ function ProfileScreen({
   rhythmHistoryCount, onOpenRhythmHistory,
   // フレンド画面への入口。公開前(friendsEnabled=false)は出さない
   friendsEnabled = false, onOpenFriends, friendRequestCount = 0,
-  // フレンドに見せる「好きなマスモン」(選んでいなければ null)と、選ぶ画面を開く操作
+  // フレンドに見せる「好きなモンスター」(選んでいなければ null)と、選ぶ画面を開く操作
   favoriteMasu = null, onOpenFavoritePicker,
   // 選べる助手だけ(イベントで加入する助手は、その会話を見るまで並べない)。
   // 渡されなければ今までどおり全員を並べる
@@ -23592,7 +23592,7 @@ function ProfileScreen({
           <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]">
             {iconUrl?<img src={iconUrl} alt="" className="h-10 w-10 shrink-0 object-contain"/>:<span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl" aria-hidden="true">💗</span>}
             <span className="min-w-0 flex-1 text-left">
-              <small className="block text-[10px] font-black text-pink-300">好きなマスモン（フレンドに見えます）</small>
+              <small className="block text-[10px] font-black text-pink-300">好きなモンスター（フレンドに見えます）</small>
               <b className="block truncate text-[13px] font-black text-white">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b>
             </span>
             <ChevronRight size={16} className="shrink-0 text-pink-400"/>
@@ -32003,7 +32003,7 @@ const friendsDayText = (day) => {
 };
 // requestCount … 届いている申請の件数(あれば最初に「申請」のタブを開く)
 // onIncomingCount … 読み込み直したあと、届いている申請の数を知らせる(HOME・プロフィールのバッジを合わせるため)
-// onOpenMonsterDetail … 好きなマスモンの詳細を開く(ランキングの詳細と同じ画面)
+// onOpenMonsterDetail … 好きなモンスターの詳細を開く(ランキングの詳細と同じ画面)
 function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack, onTargetHandled, onIncomingCount, onOpenMonsterDetail }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
   const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
@@ -32210,7 +32210,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                   </dl>
                 )}
               </div>
-              <div className="mt-3"><ScreenSectionLabel>好きなマスモン</ScreenSectionLabel></div>
+              <div className="mt-3"><ScreenSectionLabel>好きなモンスター</ScreenSectionLabel></div>
               <div data-friend-favorite className={`${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`}>
                 {!favBase && <p className="text-[11px] font-bold text-slate-400">まだ選んでいません</p>}
                 {favBase && (<>
@@ -32499,6 +32499,8 @@ const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
 // ライブが曲の長さを過ぎても終わらない人を待つ上限(カウントダウン・読み込み・結果の演出のぶん)
 const RHYTHM_MULTI_PLAY_GRACE_MS = 30000;
+// 演奏中に溜めておく知らせの上限(5人・数分のライブなら届かない量。超えたら古いものから捨てる)
+const RHYTHM_MULTI_QUEUE_MAX = 300;
 // 公開ルームは、2人以上いて、この時間だれも出入りしなければメンバー確定
 const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
@@ -32734,7 +32736,9 @@ const RHYTHM_MULTI = (() => {
   let catalog = []; // 抽選に使う曲の id(画面から渡してもらう)
   let durations = {}; // 曲の長さ(ミリ秒)。ライブが終わらない人を待ち続けないための上限に使う
   const emit = () => { listeners.forEach((fn) => { try { fn(); } catch (_) { /* 画面側の失敗で通信を止めない */ } }); };
-  const alive = () => (s ? Object.values(s.members).filter((m) => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId) : []);
+  // ライブ中の人は演奏のあいだ何も送ってこないので、ライブの上限時間(曲の長さ+ゆとり)までは抜けた扱いにしない
+  const alive = () => (s ? Object.values(s.members).filter((m) => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId
+    || (m.playing && s.room.phase === 'playing' && Date.now() < s.playUntil)) : []);
   const ordered = () => rhythmMultiSortMembers(alive()).slice(0, RHYTHM_MULTI_ROOM_MAX);
   const selfMember = () => (s ? s.members[s.selfId] : null);
   const isHostNow = () => { const o = ordered(); return !!s && o.length > 0 && o[0].id === s.selfId; };
@@ -32742,9 +32746,11 @@ const RHYTHM_MULTI = (() => {
     const r = s.room;
     return { ph: r.phase, rd: r.round, sg: r.songId, lf: r.deadline ? Math.max(0, Math.ceil((r.deadline - Date.now()) / 1000)) : 0, dl: r.deadline ? 1 : 0, pt: r.participants };
   };
-  const sendHb = () => {
+  // 演奏中は送らない(2026-10-03・ユーザー指示「演奏中の通信は止める」)。force はライブ開始の知らせだけ
+  const sendHb = (force = false) => {
     const me = selfMember();
     if (!s || !socket || !me) return;
+    if (me.playing && !force) return;
     socket.send({
       t: 'hb', id: s.selfId, name: me.name, level: me.level, joinedAt: me.joinedAt, icon: me.icon, frame: me.frame,
       pick: me.pick, pickRound: me.pickRound, readyRound: me.readyRound, diff: me.diff, playing: me.playing,
@@ -32861,6 +32867,14 @@ const RHYTHM_MULTI = (() => {
   };
   const onMessage = (raw) => {
     if (!s) return;
+    // 演奏中は、届いた知らせを処理せずに溜めておく(演奏の判定と描画に一切割り込ませない)。
+    // 演奏が終わったら reportResult がまとめて処理する。溜めすぎないよう古いものから捨てる
+    const playingNow = selfMember();
+    if (playingNow && playingNow.playing) {
+      s.queue.push(raw);
+      if (s.queue.length > RHYTHM_MULTI_QUEUE_MAX) s.queue.shift();
+      return;
+    }
     const msg = rhythmMultiCleanMessage(raw);
     if (!msg) return;
     if (msg.t === 'bye') { delete s.members[msg.id]; emit(); return; }
@@ -32897,12 +32911,17 @@ const RHYTHM_MULTI = (() => {
       if (fromHost() && s.startedRound !== msg.round) {
         s.startedRound = msg.round;
         s.room = { ...s.room, phase: 'playing', round: msg.round, songId: msg.songId, participants: msg.participants, deadline: 0 };
+        // ライブに入った人は、ここから演奏が終わるまで何も送ってこない。抜けた扱いにしない期限を、曲の長さから決めておく
+        const songMs = Number(durations[msg.songId]) > 0 ? Number(durations[msg.songId]) : 240000;
+        s.playUntil = Date.now() + songMs + RHYTHM_MULTI_PLAY_GRACE_MS;
+        msg.participants.forEach((pid) => { if (s.members[pid]) s.members[pid].playing = true; });
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true; me.res = null;
           startListeners.forEach((fn) => { try { fn({ round: msg.round, songId: msg.songId, count: msg.participants.length }); } catch (_) { /* 無視 */ } });
         }
-        sendHb();
+        // 「ライブに入った」を1回だけ知らせて、そこからは演奏が終わるまで送らない
+        sendHb(true);
       }
     }
     emit();
@@ -32956,7 +32975,7 @@ const RHYTHM_MULTI = (() => {
       s = {
         code, mode: roomMode, status: 'connecting', selfId: id, members: {}, chat: [], lastChatAt: 0, createdAt: now,
         room: { phase: 'matching', round: '', songId: '', deadline: 0, participants: [] },
-        memberSig: '', lastMemberChange: now, startedRound: '', shuffleShown: '', resultSeen: '',
+        memberSig: '', lastMemberChange: now, startedRound: '', shuffleShown: '', resultSeen: '', queue: [], playUntil: 0,
       };
       s.members[id] = {
         id, name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー', level: rhythmMultiInt(profile && profile.level, 9999),
@@ -32966,13 +32985,8 @@ const RHYTHM_MULTI = (() => {
         open: roomMode !== 'private', res: null, seen: now,
       };
       connect();
-      // 演奏中は状態の知らせを4秒ごとに減らす(抜けた扱いになるのは7秒なので足りる)
-      let playTick = 0;
-      hbTimer = setInterval(() => {
-        const me = selfMember();
-        if (me && me.playing) { playTick += 1; if (playTick % 2 === 1) return; }
-        sendHb();
-      }, RHYTHM_MULTI_HEARTBEAT_MS);
+      // 演奏中は sendHb が何も送らない(演奏中の通信は止める)
+      hbTimer = setInterval(() => sendHb(), RHYTHM_MULTI_HEARTBEAT_MS);
       sweepTimer = setInterval(sweep, 1000);
       emit();
     },
@@ -33070,6 +33084,11 @@ const RHYTHM_MULTI = (() => {
         fs: result && result.fast, sl: result && result.slow,
       });
       me.playing = false;
+      // 演奏中に溜めておいた知らせを、ここでまとめて処理する
+      const queued = s.queue;
+      s.queue = [];
+      queued.forEach((raw) => onMessage(raw));
+      if (!s) return;
       if (quit === true && !(opts && opts.noPenalty) && s.mode !== 'private') void rhythmMultiPenaltyMark();
       if (socket) socket.send({ t: 'res', id: s.selfId, res: me.res });
       sendHb(); emit();
@@ -33328,7 +33347,6 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const previewId = previewPhase === 'select' ? selectPreviewId
     : (previewPhase === 'ready' || previewPhase === 'playing') && room.songId ? room.songId : '';
   React.useEffect(() => { if (onPreviewSong) onPreviewSong(previewId); }, [previewId]);
-  React.useEffect(() => () => { if (onPreviewSong) onPreviewSong(''); }, []);
 
   const myProfile = () => ({ name: profile.name, level: profile.level, icon: profile.icon, frame: profile.frame, diff: defaultDiff });
   const createPrivate = () => { setMessage(''); RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private'); };
@@ -35486,7 +35504,7 @@ function MonsterHeroGame() {
   }, [dataLoaded, onboarded, onboardingPreview, breederName, breederIcon, profileFrameId, publishBreederProfile]);
 
   // ===== フレンド機能(公開フラグ friends が開いているときだけ動く。docs/spec/FRIENDS.md) =====
-  // 好きなマスモン(プロフィールで選ぶ。フレンドにだけ見える)。新しい保存キーへ個体のidだけを覚える
+  // 好きなモンスター(プロフィールで選ぶ。フレンドにだけ見える)。新しい保存キーへ個体のidだけを覚える
   const FAVORITE_MASU_KEY = 'mh_favorite_masu_v1';
   const [favoriteMasuId, setFavoriteMasuId] = useState(null);
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
@@ -38821,7 +38839,7 @@ function MonsterHeroGame() {
       setBreederIcon(savedIcon);
       // プロフィールフレーム。既存のセーブデータには無いキーなので、既定値は必ず「フレームなし」
       setProfileFrameId(normalizeProfileFrameId(await storeGet(PROFILE_FRAME_KEY, PROFILE_FRAME_NONE_ID, false)));
-      // 好きなマスモン(フレンド用)。既存のセーブデータには無いキーなので、既定は必ず「未設定」
+      // 好きなモンスター(フレンド用)。既存のセーブデータには無いキーなので、既定は必ず「未設定」
       { const savedFavorite = await storeGet(FAVORITE_MASU_KEY, null, false); setFavoriteMasuId(typeof savedFavorite === 'string' && savedFavorite ? savedFavorite : null); }
       // 呼び方の上書きは助手ごとに別のキーへ。みゅあのぶんは今までのキーをそのまま読む
       const loadedCallStyles = {};
@@ -51226,7 +51244,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {showFavoritePicker&&(
           <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
-              <h3 className="text-lg font-black text-white mb-1 text-center">好きなマスモン</h3>
+              <h3 className="text-lg font-black text-white mb-1 text-center">好きなモンスター</h3>
               <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">フレンドがあなたのプロフィールを開いたとき、この子が見えます。</p>
               <div className="min-h-0 flex-1 overflow-y-auto mh-scroll flex flex-col gap-1.5" data-favorite-picker>
                 <button type="button" data-favorite-option="none" onClick={()=>selectFavoriteMasu(null)} aria-pressed={favoriteMasuId==null}

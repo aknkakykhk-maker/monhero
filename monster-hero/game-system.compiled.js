@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00f0a3894f4e4881
+// source-sha256: 85bf848458d87d40
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 02:37";
+const BUILD_DATE = "2026-10-03 02:43";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36922,7 +36922,7 @@ function ProfileScreen({
       className: "min-w-0 flex-1 text-left"
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-pink-300"
-    }, "好きなマスモン（フレンドに見えます）"), React.createElement("b", {
+    }, "好きなモンスター（フレンドに見えます）"), React.createElement("b", {
       className: "block truncate text-[13px] font-black text-white"
     }, base ? `${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）` : 'まだ選んでいません')), React.createElement(ChevronRight, {
       size: 16,
@@ -52635,7 +52635,7 @@ function FriendsScreen({
         className: "text-sm font-black text-pink-200"
       }, entry.songCount, "曲")))), React.createElement("div", {
         className: "mt-3"
-      }, React.createElement(ScreenSectionLabel, null, "好きなマスモン")), React.createElement("div", {
+      }, React.createElement(ScreenSectionLabel, null, "好きなモンスター")), React.createElement("div", {
         "data-friend-favorite": true,
         className: `${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`
       }, !favBase && React.createElement("p", {
@@ -52978,6 +52978,7 @@ const RHYTHM_MULTI_READY_MS = 30000;
 const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
 const RHYTHM_MULTI_PLAY_GRACE_MS = 30000;
+const RHYTHM_MULTI_QUEUE_MAX = 300;
 const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
 const RHYTHM_MULTI_CHAT_KEEP = 50;
@@ -53283,7 +53284,7 @@ const RHYTHM_MULTI = (() => {
       } catch (_) {}
     });
   };
-  const alive = () => s ? Object.values(s.members).filter(m => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId) : [];
+  const alive = () => s ? Object.values(s.members).filter(m => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId || m.playing && s.room.phase === 'playing' && Date.now() < s.playUntil) : [];
   const ordered = () => rhythmMultiSortMembers(alive()).slice(0, RHYTHM_MULTI_ROOM_MAX);
   const selfMember = () => s ? s.members[s.selfId] : null;
   const isHostNow = () => {
@@ -53301,9 +53302,10 @@ const RHYTHM_MULTI = (() => {
       pt: r.participants
     };
   };
-  const sendHb = () => {
+  const sendHb = (force = false) => {
     const me = selfMember();
     if (!s || !socket || !me) return;
+    if (me.playing && !force) return;
     socket.send({
       t: 'hb',
       id: s.selfId,
@@ -53508,6 +53510,12 @@ const RHYTHM_MULTI = (() => {
   };
   const onMessage = raw => {
     if (!s) return;
+    const playingNow = selfMember();
+    if (playingNow && playingNow.playing) {
+      s.queue.push(raw);
+      if (s.queue.length > RHYTHM_MULTI_QUEUE_MAX) s.queue.shift();
+      return;
+    }
     const msg = rhythmMultiCleanMessage(raw);
     if (!msg) return;
     if (msg.t === 'bye') {
@@ -53604,6 +53612,11 @@ const RHYTHM_MULTI = (() => {
           participants: msg.participants,
           deadline: 0
         };
+        const songMs = Number(durations[msg.songId]) > 0 ? Number(durations[msg.songId]) : 240000;
+        s.playUntil = Date.now() + songMs + RHYTHM_MULTI_PLAY_GRACE_MS;
+        msg.participants.forEach(pid => {
+          if (s.members[pid]) s.members[pid].playing = true;
+        });
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true;
@@ -53618,7 +53631,7 @@ const RHYTHM_MULTI = (() => {
             } catch (_) {}
           });
         }
-        sendHb();
+        sendHb(true);
       }
     }
     emit();
@@ -53712,7 +53725,9 @@ const RHYTHM_MULTI = (() => {
         lastMemberChange: now,
         startedRound: '',
         shuffleShown: '',
-        resultSeen: ''
+        resultSeen: '',
+        queue: [],
+        playUntil: 0
       };
       s.members[id] = {
         id,
@@ -53731,15 +53746,7 @@ const RHYTHM_MULTI = (() => {
         seen: now
       };
       connect();
-      let playTick = 0;
-      hbTimer = setInterval(() => {
-        const me = selfMember();
-        if (me && me.playing) {
-          playTick += 1;
-          if (playTick % 2 === 1) return;
-        }
-        sendHb();
-      }, RHYTHM_MULTI_HEARTBEAT_MS);
+      hbTimer = setInterval(() => sendHb(), RHYTHM_MULTI_HEARTBEAT_MS);
       sweepTimer = setInterval(sweep, 1000);
       emit();
     },
@@ -53865,6 +53872,10 @@ const RHYTHM_MULTI = (() => {
         sl: result && result.slow
       });
       me.playing = false;
+      const queued = s.queue;
+      s.queue = [];
+      queued.forEach(raw => onMessage(raw));
+      if (!s) return;
       if (quit === true && !(opts && opts.noPenalty) && s.mode !== 'private') void rhythmMultiPenaltyMark();
       if (socket) socket.send({
         t: 'res',
@@ -54208,9 +54219,6 @@ function RhythmMultiScreen({
   React.useEffect(() => {
     if (onPreviewSong) onPreviewSong(previewId);
   }, [previewId]);
-  React.useEffect(() => () => {
-    if (onPreviewSong) onPreviewSong('');
-  }, []);
   const myProfile = () => ({
     name: profile.name,
     level: profile.level,
@@ -79326,7 +79334,7 @@ function MonsterHeroGame() {
       className: "bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col"
     }, React.createElement("h3", {
       className: "text-lg font-black text-white mb-1 text-center"
-    }, "好きなマスモン"), React.createElement("p", {
+    }, "好きなモンスター"), React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
     }, "フレンドがあなたのプロフィールを開いたとき、この子が見えます。"), React.createElement("div", {
       className: "min-h-0 flex-1 overflow-y-auto mh-scroll flex flex-col gap-1.5",
