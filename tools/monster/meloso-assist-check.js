@@ -22,7 +22,7 @@ assert(/id:'meloso',[^\n]*step:0[,\s]/.test(breeder), 'メロソに step が無�
 assert(breeder.includes(`icon:MELOPANMAN_ICON`) && breeder.includes(`subType:'heal_guard_meloso'`));
 const starter = breeder.match(/const STARTER_TEACHING_IDS = \[([^\n]+)\]/)[1];
 assert(!starter.includes('meloso') && starter.split(',').length === 6);
-assert(breeder.includes(`id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:1500`));
+assert(breeder.includes(`id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:150000`));
 
 // ---- 実処理 ----
 // ガッツは共通の gainGutsByRateAll(率) で全員へ戻す形になった(タクティクスでも1体ずつ効くように)
