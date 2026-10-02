@@ -65,7 +65,7 @@ vm.runInContext([
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
-    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
+    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
 // ヒット列(二刀流で2回ぶん入るか)は本体の buildAttackHits をそのまま動かす
 vm.runInContext(slice('const HERO_CARD_BONUS_MONSTER_IDS', 'const attackAtonementDmg') + ';globalThis.hitsApi={buildAttackHits};', sandbox);
@@ -459,7 +459,40 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && !ex.tacticsExDistMatchDodges('statBoost', 2, 2) && !ex.tacticsExDistMatchDodges(null, 2, 2)
     && !ex.tacticsExDistMatchDodges('distMatch', 2, undefined) && !ex.tacticsExDistMatchDodges('distMatch', null, 2));
   check('敵の攻撃の当たり先ごとの判定に、その子の距離と敵の距離を渡している',
-    /tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\)\)\{ evadedName=/.test(app));
+    /tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,420}if\(slotIdx===evadedSlot\|\|exDodge\)\{ evadedName=/.test(app));
+}
+
+// ---------- ⑬ ザン「血踊」(2026-10-02 ユーザー指示) ----------
+{
+  const zn = ex.tacticsExDefOf('Zan');
+  check('ザン「血踊」: ラン5回・カードと併用できる・5ターン・回避1回で連撃10%', !!zn && zn.name === '血踊'
+    && zn.maxUses === 5 && !zn.unlimited && zn.withCards && zn.duration === 'turns' && zn.turns === 5
+    && zn.effect === 'dodgeCombo' && zn.dodgeComboRate === 0.1 && ex.isTacticsExEffectImplemented(zn), JSON.stringify(zn));
+  const A = (wave, turn) => ({ wave, turn });
+  const units = [null, { id: 'Zan' }, { id: 'Eiki' }];
+  let z = ex.applyTacticsExUse(ex.createTacticsExState(), { def: zn, slot: 1, monId: 'Zan', now: A(1, 2) });
+  check('使った直後は連撃が増えていない(回避0回)', ex.tacticsExExtraCombosAt(z, units, 1, A(1, 2)) === null);
+  check('敵と同じ距離の枠にいるときだけ完全に回避する(エイキと同じ判定)', ex.tacticsExDistMatchDodges(ex.tacticsExActiveEffect(z, 1, 'Zan', A(1, 2)), 1, 1)
+    && !ex.tacticsExDistMatchDodges(ex.tacticsExActiveEffect(z, 1, 'Zan', A(1, 2)), 1, 2));
+  z = ex.recordTacticsExDodge(z, units, 1, A(1, 3));
+  const c1 = ex.tacticsExExtraCombosAt(z, units, 1, A(1, 3));
+  check('1回回避すると、与ダメ10%の連撃が1回', !!c1 && c1.count === 1 && Math.abs(c1.rate - 0.1) < 1e-9 && c1.label === '血踊', JSON.stringify(c1));
+  z = ex.recordTacticsExDodge(ex.recordTacticsExDodge(z, units, 1, A(1, 4)), units, 1, A(1, 5));
+  const c3 = ex.tacticsExExtraCombosAt(z, units, 1, A(1, 5));
+  check('回避するごとに連撃が1回ずつ増えていく(3回回避 → 10%の連撃が3回)', !!c3 && c3.count === 3 && Math.abs(c3.rate - 0.1) < 1e-9, JSON.stringify(c3));
+  check('5ターン目(6ターン目)まで続き、切れたら連撃も消える', ex.tacticsExExtraCombosAt(z, units, 1, A(1, 6)).count === 3 && ex.tacticsExExtraCombosAt(z, units, 1, A(1, 7)) === null);
+  check('WAVEが変わったら切れる', ex.tacticsExExtraCombosAt(z, units, 1, A(2, 3)) === null);
+  const same = ex.recordTacticsExDodge(ex.createTacticsExState(), units, 1, A(1, 3));
+  check('効いていない子の回避は数えない(使っていない・別の効果・別の子)', ex.tacticsExExtraCombosAt(same, units, 1, A(1, 3)) === null
+    && ex.tacticsExExtraCombosAt(ex.recordTacticsExDodge(ex.applyTacticsExUse(ex.createTacticsExState(), { def: ex.tacticsExDefOf('Eiki'), slot: 2, monId: 'Eiki', now: A(1, 2) }), units, 2, A(1, 3)), units, 2, A(1, 3)) === null);
+  const again = ex.applyTacticsExUse(z, { def: zn, slot: 1, monId: 'Zan', now: A(1, 8) });
+  check('もう一度使うと、回避の数は0からやり直し', ex.tacticsExExtraCombosAt(again, units, 1, A(1, 8)) === null);
+  const card = { type: 'unique', monId: 'Zan' };
+  const hits = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Zan', heroId: 'Mocchi', exCombos: c3 });
+  const base = hitsApi.buildAttackHits({ d: 1000, card, attackerId: 'Zan', heroId: 'Mocchi' });
+  check('ヒット列に与ダメ10%(100)の連撃が回避した数だけ足される', hits.length - base.length === 3 && hits.slice(base.length).every(h => h.dmg === 100) , `${base.length}→${hits.length}`);
+  check('本体: 回避したら数える(結線)・連撃の名前を渡す', /const exDodge=tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\);[\s\S]{0,260}recordTacticsExDodge\(tacticsExStateRef\.current,tacticsUnitsRef\.current,slotIdx,tacticsExLiveRef\.current\.now\)[\s\S]{0,40}if\(slotIdx===evadedSlot\|\|exDodge\)/.test(app)
+    && readPart('22-enemy-and-bond-entries.jsx').includes("exCombos.label || 'スイーツパラダイス'"));
 }
 
 // ---------- ⑧ 壊れた値 ----------
