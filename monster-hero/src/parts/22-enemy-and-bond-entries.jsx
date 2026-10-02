@@ -493,9 +493,11 @@ const KENSHI_COMBO_POWER_MAX = 3;
 //   連撃系はここで分かれる(2026-09-22 ユーザー判断)。
 //     ザンの連斬だけ traitOwnerId … 供モンでも本人が殴れば出る
 //     エイキ・パンドラ・剣士モッチー … heroId。**勇者モンにしたからこそ強い**設定なので出さない
-const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1, exCombos = null }) => {
+const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1, swordSkill = true, hitRepeat = 1, exCombos = null, critDmgMult = 1 }) => {
   const hits = [];
+  // ★critDmgMult … タクティクスのEX「堕天の烙印」の会心ダメージ(2026-10-02 ユーザー指示「乗算」)。足し算の補正のあとにかける
   const critMult = 1.5 + critDmgBonus;
+  const critMultFinal = critMult * (critDmgMult > 0 ? critDmgMult : 1);
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
   const pandoraSplitNormal = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type);
   // 二刀流も禁忌解錠と同じ「通常攻撃を50%+50%へ分ける」形。固有技は分割しない(メイン100%のまま)
@@ -509,13 +511,13 @@ const buildAttackHits = ({ d, card, attackerId, heroId, traitOwnerId = heroId, c
     : kenshiSplitNormal ? d - Math.floor(d * 0.5)
     : d;
   const mainCrit = mainCanCrit && (guaranteedCrit || rollCrit());
-  hits.push({ kind: 'main', crit: mainCrit, dmg: mainCrit ? Math.floor(mainBase * critMult) : mainBase, skillName: null, noAnim: false });
+  hits.push({ kind: 'main', crit: mainCrit, dmg: mainCrit ? Math.floor(mainBase * critMultFinal) : mainBase, skillName: null, noAnim: false });
   // 連撃は元ダメージ d を基準にし、会心はメインとは独立に判定する(メインの会心を二重に乗せない)
   const combo = (rate, skillName = '連撃', noAnim = false) => {
     const base = Math.floor(d * rate);
     if (base <= 0) return;
     const crit = guaranteedCrit || rollCrit();
-    const beforeSoulFinal = crit ? Math.floor(base * critMult) : base;
+    const beforeSoulFinal = crit ? Math.floor(base * critMultFinal) : base;
     const safeComboFinalMultiplier = Math.max(0, Number(comboFinalMultiplier) || 0);
     hits.push({ kind: 'combo', crit, dmg: Math.floor(beforeSoulFinal * safeComboFinalMultiplier), skillName, noAnim });
   };
