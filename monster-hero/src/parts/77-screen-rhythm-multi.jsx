@@ -36,8 +36,11 @@ const RHYTHM_MULTI_SELECT_MS = 30000;
 const RHYTHM_MULTI_READY_MS = 30000;
 const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
-// ライブが曲の長さを過ぎても終わらない人を待つ上限(カウントダウン・読み込み・結果の演出のぶん)
-const RHYTHM_MULTI_PLAY_GRACE_MS = 30000;
+// ライブが曲の長さを過ぎても終わらない人を待つ上限。
+//   対戦の 3・2・1(3秒)+ 演奏画面の READY・3・2・1(0.8秒×4)= 曲が鳴りはじめるまで + 曲が終わってから10秒。
+//   最後まで演奏した人は曲が終わった瞬間にスコアを送ってくるので、それ以上待っても届かない人は抜けた人
+//   (2026-10-03・ユーザー指摘「演奏後30秒わからないのは不便」。以前は一律30秒だった)
+const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000 + 4 * 800 + 10000;
 // 演奏中に溜めておく知らせの上限(5人・数分のライブなら届かない量。超えたら古いものから捨てる)
 const RHYTHM_MULTI_QUEUE_MAX = 300;
 // 公開ルームは、2人以上いて、この時間だれも出入りしなければメンバー確定
@@ -274,6 +277,11 @@ const RHYTHM_MULTI = (() => {
   let reconnectTimer = null;
   let catalog = []; // 抽選に使う曲の id(画面から渡してもらう)
   let durations = {}; // 曲の長さ(ミリ秒)。ライブが終わらない人を待ち続けないための上限に使う
+  // アプリを閉じる・別のページへ移るときに「抜けます」を送る(ほかの人がすぐ気づけるように)。
+  // 送れない閉じ方(強制終了など)のときは、上の上限時間で抜けた扱いになる
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('pagehide', () => { if (s && socket) socket.send({ t: 'bye', id: s.selfId }); });
+  }
   const emit = () => { listeners.forEach((fn) => { try { fn(); } catch (_) { /* 画面側の失敗で通信を止めない */ } }); };
   // ライブ中の人は演奏のあいだ何も送ってこないので、ライブの上限時間(曲の長さ+ゆとり)までは抜けた扱いにしない
   const alive = () => (s ? Object.values(s.members).filter((m) => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId
