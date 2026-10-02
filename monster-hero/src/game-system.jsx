@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 82eb105e6d2a9b90
+// generated-sha256: 062c491c0b33aba9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 21:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 21:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3911,6 +3911,7 @@ const BGM_TRACKS = [
   { id:'melo_only_my_railgun', name:'only my railgun', creator:'オリジナル', src:'audio/bgm-only-my-railgun.mp3', gain:1, loop:true },
   { id:'melo_big_bridge_no_shitou', name:'ビッグブリッヂの死闘', creator:'オリジナル', src:'audio/bgm-big-bridge-no-shitou.mp3', gain:1, loop:true },
   { id:'melo_rising_hope', name:'Rising Hope', creator:'オリジナル', src:'audio/bgm-rising-hope.mp3', gain:1, loop:true },
+  { id:'melo_haruka', name:'ハルカ', creator:'オリジナル', src:'audio/bgm-haruka.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -4798,6 +4799,7 @@ const Audio_ = (() => {
     "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
     "audio/bgm-fusion.mp3": "6f0d4675789f",
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
+    "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "9cc789151e7e",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
