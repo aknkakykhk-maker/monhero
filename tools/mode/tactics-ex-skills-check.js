@@ -65,7 +65,7 @@ vm.runInContext([
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
-    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt};',
+    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
 // ヒット列(二刀流で2回ぶん入るか)は本体の buildAttackHits をそのまま動かす
 vm.runInContext(slice('const HERO_CARD_BONUS_MONSTER_IDS', 'const attackAtonementDmg') + ';globalThis.hitsApi={buildAttackHits};', sandbox);
@@ -440,18 +440,26 @@ const use = (state, def, slot, monId, now, extra = {}) => {
 // ---------- ⑫ エイキ「緋桜瞬歩」(2026-10-02 ユーザー指示) ----------
 {
   const ek = ex.tacticsExDefOf('Eiki');
-  check('エイキ「緋桜瞬歩」: ラン2回・カードと併用できる・3ターン・距離一致', !!ek && ek.name === '緋桜瞬歩'
-    && ek.maxUses === 2 && !ek.unlimited && ek.withCards && ek.duration === 'turns' && ek.turns === 3
+  check('エイキ「緋桜瞬歩」: ラン3回・カードと併用できない・5ターン・距離一致', !!ek && ek.name === '緋桜瞬歩'
+    && ek.maxUses === 3 && !ek.unlimited && !ek.withCards && ek.duration === 'turns' && ek.turns === 5
     && ek.effect === 'distMatch' && ex.isTacticsExEffectImplemented(ek), JSON.stringify(ek));
   const A = (wave, turn) => ({ wave, turn });
   const e = ex.applyTacticsExUse(ex.createTacticsExState(), { def: ek, slot: 2, monId: 'Eiki', now: A(1, 4) });
-  check('使ったターンから3ターン(4〜6ターン目)だけ distMatch が効き、7ターン目には切れる',
-    ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 4)) === 'distMatch' && ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 6)) === 'distMatch'
-    && ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 7)) === null);
+  check('使ったターンから5ターン(4〜8ターン目)だけ distMatch が効き、9ターン目には切れる',
+    ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 4)) === 'distMatch' && ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 8)) === 'distMatch'
+    && ex.tacticsExActiveEffect(e, 2, 'Eiki', A(1, 9)) === null);
+  check('使ったターンは、エイキだけがカードを使えない(ほかの枠は使える)', ex.isTacticsExCardLocked(e, 2, A(1, 4)) && !ex.isTacticsExCardLocked(e, 1, A(1, 4)));
   check('WAVEが変わったら切れる・ほかの子には効かない', ex.tacticsExActiveEffect(e, 2, 'Eiki', A(2, 4)) === null
     && ex.tacticsExActiveEffect(e, 2, 'Golem', A(1, 4)) === null && ex.tacticsExActiveEffect(e, 1, 'Eiki', A(1, 4)) === null);
-  check('getDmg の距離の差は、distMatch が効いているあいだだけ 0(×1.5)で数える',
-    /const distDiff = tacticsExEffectAt\(slotIdx\)==='distMatch' \? 0 : Math\.abs\(slotIdx-attackStartDist\);/.test(app));
+  check('距離補正の定数は ×1.7', ex.TACTICS_EX_DIST_MATCH_MULT === 1.7);
+  check('getDmg の距離補正は、distMatch が効いているあいだだけ距離の差に関係なく ×1.7',
+    /const distMult = tacticsExEffectAt\(slotIdx\)==='distMatch' \? TACTICS_EX_DIST_MATCH_MULT : \(\[1\.5,1\.3,1\.1,0\.9\]\[distDiff\]\|\|1\.0\);/.test(app));
+  check('敵と同じ距離の枠にいるときだけ完全に回避する(ほかの距離・ほかの効果・距離が不明なら回避しない)',
+    ex.tacticsExDistMatchDodges('distMatch', 2, 2) && !ex.tacticsExDistMatchDodges('distMatch', 2, 1)
+    && !ex.tacticsExDistMatchDodges('statBoost', 2, 2) && !ex.tacticsExDistMatchDodges(null, 2, 2)
+    && !ex.tacticsExDistMatchDodges('distMatch', 2, undefined) && !ex.tacticsExDistMatchDodges('distMatch', null, 2));
+  check('敵の攻撃の当たり先ごとの判定に、その子の距離と敵の距離を渡している',
+    /tacticsExDistMatchDodges\(tacticsExEffectAt\(slotIdx\),slotIdx,actingEnemyDist\)\)\{ evadedName=/.test(app));
 }
 
 // ---------- ⑧ 壊れた値 ----------

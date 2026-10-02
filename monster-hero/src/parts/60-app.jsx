@@ -9972,9 +9972,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
-    // ★エイキの「緋桜瞬歩」が効いているあいだは、敵との距離の差を0(いちばん高い×1.5)で数える
-    const distDiff = tacticsExEffectAt(slotIdx)==='distMatch' ? 0 : Math.abs(slotIdx-attackStartDist);
-    const distMult = [1.5,1.3,1.1,0.9][distDiff]||1.0;
+    const distDiff = Math.abs(slotIdx-attackStartDist);
+    // ★エイキの「緋桜瞬歩」が効いているあいだは、距離補正が距離の差に関係なく ×1.7
+    const distMult = tacticsExEffectAt(slotIdx)==='distMatch' ? TACTICS_EX_DIST_MATCH_MULT : ([1.5,1.3,1.1,0.9][distDiff]||1.0);
     let baseDmgMult = 1.0;
     if (card.subType==='stun_atsu') { baseDmgMult = card.baseValue||1.5; }
     else if (card.type==='unique') { const level=card.evoLevel||0; const chuuniBonus=(card.monId==='Ark'||card.monId==='Iblis')?0.1*getPermaBuff('chuuniUniqueStack'):0; baseDmgMult=card.baseMult+(level*0.5)+chuuniBonus; }
@@ -10464,7 +10464,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             //   誰がどれだけ減って、誰が受け止めたのかが分からない
             const slotFx={};
             targets.forEach(slotIdx=>{
-              if(slotIdx===evadedSlot){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }
+              // ★エイキの「緋桜瞬歩」が効いていて、敵と同じ距離の枠にいるなら、抽選に関係なく完全に回避する
+              if(slotIdx===evadedSlot||tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx),slotIdx,actingEnemyDist)){ evadedName=tacticsTargetName(units,slotIdx); slotFx[slotIdx]={evade:true}; return; }
               if(slotIdx===reflectedSlot){
                 reflectedName=tacticsTargetName(units,slotIdx);
                 reflectBack+=applyImmediateTakenReduction(getIncomingDamageBeforeTurnReduction(actingIntent,slotIdx),slotIdx);
@@ -10530,7 +10531,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const taken=Number(fx?.dmg)||0;
               if(taken>0) pushBattleLog(`${battleActorName(Number(key))}が ${taken.toLocaleString()} ダメージを受けた`);
             });
-            if(evadedSlot!=null){
+            if(evadedSlot!=null||evadedName){
               addPopup(`回避！ ${evadedName}`,'hero','text-blue-400 font-black text-xl drop-shadow-lg');
               await battleWait(600);
             }
@@ -10566,7 +10567,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               addPopup(`合計 ${dealt}`,'hero','text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]',`味方は 合計 ${dealt.toLocaleString()} ダメージを受けた`);
               await battleWait(400);
             }
-            if(dealt<=0&&saved<=0&&evadedSlot==null&&reflectedSlot==null) addPopup('無傷！','hero','text-emerald-300 font-black text-xl drop-shadow-md');
+            if(dealt<=0&&saved<=0&&evadedSlot==null&&!evadedName&&reflectedSlot==null) addPopup('無傷！','hero','text-emerald-300 font-black text-xl drop-shadow-md');
             await battleWait(1000);
             // 味方の増減を確定させてから敵へ返す。撃破したらここで止める(回復・次ターンへ進ませない)
             if(reflectBack>0){
