@@ -36,6 +36,8 @@ const RHYTHM_MULTI_SELECT_MS = 30000;
 const RHYTHM_MULTI_READY_MS = 30000;
 const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
+// ライブが曲の長さを過ぎても終わらない人を待つ上限(カウントダウン・読み込み・結果の演出のぶん)
+const RHYTHM_MULTI_PLAY_GRACE_MS = 30000;
 // 公開ルームは、2人以上いて、この時間だれも出入りしなければメンバー確定
 const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
@@ -55,6 +57,14 @@ const RHYTHM_MULTI_MODE_LABELS = Object.freeze({ private: 'プライベート', 
 const RHYTHM_MULTI_PHASES = Object.freeze(['matching', 'select', 'ready', 'playing', 'result']);
 // 「おまかせ」を選んだしるし(曲の id とぶつからない文字)
 const RHYTHM_MULTI_OMAKASE = '*';
+// 対戦のライブで重ねる見た目(オプションの見た目のおまかせ「軽さ優先」と同じ中身。保存してある設定は書き換えない)
+const RHYTHM_MULTI_LIGHT_LOOK = Object.freeze({ ...((RHYTHM_LOOK_PRESETS.find((preset) => preset.id === 'LIGHT') || {}).values || {}) });
+// ライブの報酬(周回・ビートP)の人数ボーナス。参加した人が1人ふえるごとに+50%(2人1.5倍〜5人3倍。2026-10-02・ユーザー指示)
+const RHYTHM_MULTI_REWARD_STEP = 0.5;
+const rhythmMultiRewardScale = (count) => {
+  const n = Math.max(1, Math.min(RHYTHM_MULTI_ROOM_MAX, Math.floor(Number(count) || 1)));
+  return 1 + RHYTHM_MULTI_REWARD_STEP * (n - 1);
+};
 // 「メンバーの成績」に出す判定の並び(演奏側の RHYTHM_JUDGMENT_IDS と同じ順)
 const RHYTHM_MULTI_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 
@@ -96,13 +106,14 @@ const rhythmMultiPenaltyMark = async () => {
 // ---- 結果の集計(協力スコア) ----
 // 1曲ぶん。ライブに参加した人(participants)の平均スコアでチームのランクを決める。
 // やめた人・途中で抜けた人は0点として平均に入れる。MVP は、最後まで演奏した人の最高スコア(同点は先に入った人)
-const rhythmMultiTeamResult = (members, round, participants) => {
+const rhythmMultiTeamResult = (members, round, participants, closed = false) => {
   const ids = Array.isArray(participants) && participants.length ? participants : members.map((m) => m.id);
   const rows = ids.map((id) => {
     const m = members.find((x) => x.id === id) || { id, name: '(抜けた人)', icon: '', frame: '', gone: true };
     return { m, res: m.res && m.res.startId === round ? m.res : null };
   });
-  const waiting = rows.some((r) => !r.res && !r.m.gone);
+  // closed … 結果の段に入った(ホストが締めた・上限時間を過ぎた)。まだ結果の無い人は待たない
+  const waiting = !closed && rows.some((r) => !r.res && !r.m.gone);
   const scores = rows.map((r) => (r.res && !r.res.quit ? r.res.score : 0));
   const average = scores.length ? Math.floor(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
   let mvpId = null;
@@ -260,6 +271,7 @@ const RHYTHM_MULTI = (() => {
   let sweepTimer = null;
   let reconnectTimer = null;
   let catalog = []; // 抽選に使う曲の id(画面から渡してもらう)
+  let durations = {}; // 曲の長さ(ミリ秒)。ライブが終わらない人を待ち続けないための上限に使う
   const emit = () => { listeners.forEach((fn) => { try { fn(); } catch (_) { /* 画面側の失敗で通信を止めない */ } }); };
   const alive = () => (s ? Object.values(s.members).filter((m) => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId) : []);
   const ordered = () => rhythmMultiSortMembers(alive()).slice(0, RHYTHM_MULTI_ROOM_MAX);
@@ -298,12 +310,15 @@ const RHYTHM_MULTI = (() => {
     if (socket) socket.send({ t: 'draw', id: s.selfId, round: r.round, songId });
     setRoom({ phase: 'ready', songId, deadline: Date.now() + RHYTHM_MULTI_SHUFFLE_MS + RHYTHM_MULTI_READY_MS });
   };
-  const doStart = (members) => {
+  // everyone … ホストの「すぐ開始」。準備完了を押していない人も、いまえらんでいる難易度でいっしょに始める(時間切れと同じ扱い)
+  const doStart = (members, everyone = false) => {
     const r = s.room;
-    const participants = members.filter((m) => m.readyRound === r.round).map((m) => m.id);
+    const participants = members.filter((m) => everyone || m.readyRound === r.round).map((m) => m.id);
     if (!participants.length) { toSelect(); return; }
     if (socket) socket.send({ t: 'start', id: s.selfId, round: r.round, songId: r.songId, participants });
-    setRoom({ phase: 'playing', participants, deadline: 0 });
+    // ライブの上限時間: 曲の長さ+カウントダウンと読み込みのゆとり。過ぎても終わらない人はリタイア扱いで結果へ進む
+    const songMs = Number(durations[r.songId]) > 0 ? Number(durations[r.songId]) : 240000;
+    setRoom({ phase: 'playing', participants, deadline: Date.now() + songMs + RHYTHM_MULTI_PLAY_GRACE_MS });
   };
   const hostTick = () => {
     if (!s || !isHostNow() || s.status !== 'open') return;
@@ -323,7 +338,7 @@ const RHYTHM_MULTI = (() => {
     } else if (r.phase === 'playing') {
       const aliveIds = members.map((m) => m.id);
       const done = r.participants.every((id) => !aliveIds.includes(id) || (s.members[id] && s.members[id].res && s.members[id].res.startId === r.round));
-      if (done) setRoom({ phase: 'result', deadline: now + RHYTHM_MULTI_RESULT_MS });
+      if (done || (r.deadline && now >= r.deadline)) setRoom({ phase: 'result', deadline: now + RHYTHM_MULTI_RESULT_MS });
     } else if (r.phase === 'result') {
       if (now >= r.deadline) toSelect();
     }
@@ -424,7 +439,7 @@ const RHYTHM_MULTI = (() => {
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true; me.res = null;
-          startListeners.forEach((fn) => { try { fn({ round: msg.round, songId: msg.songId }); } catch (_) { /* 無視 */ } });
+          startListeners.forEach((fn) => { try { fn({ round: msg.round, songId: msg.songId, count: msg.participants.length }); } catch (_) { /* 無視 */ } });
         }
         sendHb();
       }
@@ -451,7 +466,10 @@ const RHYTHM_MULTI = (() => {
   const api = {
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     onStart(fn) { startListeners.add(fn); return () => startListeners.delete(fn); },
-    setCatalog(songIds) { catalog = Array.isArray(songIds) ? songIds.slice() : []; },
+    setCatalog(songIds, songDurations) {
+      catalog = Array.isArray(songIds) ? songIds.slice() : [];
+      durations = songDurations && typeof songDurations === 'object' ? { ...songDurations } : {};
+    },
     // 画面へ見せる形に直して返す。毎回新しい値を返すので、呼ぶ側は emit のたびに作り直してよい
     view() {
       if (!s) return null;
@@ -553,12 +571,29 @@ const RHYTHM_MULTI = (() => {
       sendHb(); syncLobby(); emit();
     },
     markShuffleShown(round) { if (s) { s.shuffleShown = round; emit(); } },
-    // 結果画面の「次へ」。部屋主が押したら、そのまま次の選曲へ進める
+    // 結果画面の「次へ」。ホストが押したら、まだライブ中の人がいても待たずに次の選曲へ進める
+    // (途中で抜けた人がいて先へ進めなくなる、を防ぐ。2026-10-03・ユーザー報告)
     nextFromResult(round) {
       if (!s) return;
       s.resultSeen = round;
-      if (isHostNow() && s.room.phase === 'result' && s.room.round === round) toSelect();
+      if (isHostNow() && (s.room.phase === 'result' || s.room.phase === 'playing') && s.room.round === round) toSelect();
       emit();
+    },
+    // ホストの「待たずに進む」。マッチング → 選曲 → シャッフル → ライブ開始 を、時間を待たずに1段進める
+    hostAdvance() {
+      if (!s || !isHostNow() || s.status !== 'open') return false;
+      const members = ordered();
+      const ph = s.room.phase;
+      if (ph === 'matching') { if (members.length < 2) return false; toSelect(); return true; }
+      if (ph === 'select') { doDraw(members); return true; }
+      if (ph === 'ready') {
+        // 自分がまだ準備完了でなければ、いまの難易度で準備完了にしてから始める
+        const me = selfMember();
+        if (me && me.readyRound !== s.room.round) me.readyRound = s.room.round;
+        doStart(members, true);
+        return true;
+      }
+      return false;
     },
     // 曲が終わった(または途中でやめた)ときに、自分のスコアを部屋へ知らせる。同じ回の2度目は無視する。
     // 途中でやめたことが公開ルームで起きたら、しばらく公開ルームへ入れなくする(opts.noPenalty で外せる)
@@ -702,11 +737,15 @@ const RHYTHM_MULTI_FC_LABELS = Object.freeze(['', 'FULL COMBO!', 'ALL EXCELLENT!
 
 // songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
 // onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, onBack, onStartPlay }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLightLook = true, onToggleLightLook = null, onBack, onStartPlay }) {
   const view = useRhythmMultiView();
   const difficultyIds = difficultyList.map((d) => d.id);
   const songIds = songs.map((song) => song.songId);
-  React.useEffect(() => { RHYTHM_MULTI.setCatalog(songIds); }, [songIds.join(',')]);
+  React.useEffect(() => {
+    const lengths = {};
+    songs.forEach((song) => { const ms = Number(song.playDurationMs); if (ms > 0) lengths[song.songId] = ms; });
+    RHYTHM_MULTI.setCatalog(songIds, lengths);
+  }, [songIds.join(',')]);
   const [codeInput, setCodeInput] = React.useState('');
   const [message, setMessage] = React.useState('');
   const [searching, setSearching] = React.useState(null);
@@ -795,7 +834,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       const open = song ? diffs.filter((d) => rhythmDifficultyUnlocked(song.songId, d.id, bestRecords)) : [];
       const diff = song ? rhythmMultiPickDifficulty(open.length ? open : diffs, RHYTHM_MULTI.myDiff() || defaultDiff, difficultyIds) : null;
       setCountdown(null);
-      if (song && diff) onStartPlay(song, diff, countdown.info.round);
+      if (song && diff) onStartPlay(song, diff, countdown.info.round, countdown.info.count);
       else RHYTHM_MULTI.reportResult(countdown.info.round, null, true, { noPenalty: true });
       return undefined;
     }
@@ -815,6 +854,20 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     const done = setTimeout(() => RHYTHM_MULTI.markShuffleShown(shuffleRound), RHYTHM_MULTI_SHUFFLE_MS);
     return () => { clearInterval(tick); clearTimeout(stop); clearTimeout(done); };
   }, [shuffleRound]);
+
+  // 曲の試聴(本体が鳴らす)へ、いま鳴らしたい曲を知らせる。
+  //   選曲中 … 曲えらびで見ている曲(まだ触っていなければ一覧の先頭)
+  //   シャッフル・難易度選択・ライブの直前 … 決まった曲
+  //   それ以外 … '' (本体はソロで選んでいた曲を鳴らし続ける)
+  const previewPhase = room ? room.phase : '';
+  // シャッフルの演出中は、まだ答えを鳴らさない(選曲中の曲のまま)
+  const selectPreviewId = selSongId || (songs[0] ? songs[0].songId : '');
+  // 曲が決まった瞬間(シャッフルの始まり)から、決まった曲を流す。ライブが始まるまで切り替えない
+  // (2026-10-03・ユーザー報告「難易度設定で音が一回なくなって最初からになる」「一瞬モンスターヒーローが流れる」)
+  const previewId = previewPhase === 'select' ? selectPreviewId
+    : (previewPhase === 'ready' || previewPhase === 'playing') && room.songId ? room.songId : '';
+  React.useEffect(() => { if (onPreviewSong) onPreviewSong(previewId); }, [previewId]);
+  React.useEffect(() => () => { if (onPreviewSong) onPreviewSong(''); }, []);
 
   const myProfile = () => ({ name: profile.name, level: profile.level, icon: profile.icon, frame: profile.frame, diff: defaultDiff });
   const createPrivate = () => { setMessage(''); RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private'); };
@@ -869,7 +922,16 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <b className="block truncate text-base font-black italic tracking-wider text-cyan-200">MULTI LIVE</b>
         <small className="mt-0.5 block truncate text-[10px] font-black text-fuchsia-200">▶ {step}{view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : ''}</small>
       </div>
+      {/* クイック∞周回を裏で回しているときの進み具合(曲えらびの帯と同じ中身)。対戦の待ち時間も周回は進む */}
+      {quickRunInfo && <small data-rhythm-multi-quick-run className={`max-w-[38%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`}>
+        {quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`}
+      </small>}
+      {/* ホストだけの「待たずに進む」(2026-10-03・ユーザー指示「時間を待たずに先に進めるボタンもほしい」) */}
+      {opts.advance && isHost && <button data-rhythm-multi-advance type="button" onClick={() => { if (opts.gesture && onUserGesture) onUserGesture(); RHYTHM_MULTI.hostAdvance(); }}
+        className="min-h-[40px] shrink-0 rounded-xl bg-fuchsia-700 px-2 text-[11px] font-black">{opts.advance}</button>}
       {opts.timer != null && <b data-rhythm-multi-timer className={`shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`}>⏱ {opts.timer}</b>}
+      {/* 縦⇄横の切り替え(曲えらびと同じボタン。2026-10-03・ユーザー報告「縦横が変えられない」) */}
+      <RhythmOrientationButton/>
       {view && <button data-rhythm-multi-chat-open type="button" aria-label="チャット" onClick={() => setChatOpen((v) => !v)} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-lg">💬</button>}
     </header>
   );
@@ -893,7 +955,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
       <main data-rhythm-multi data-rhythm-multi-step="rooms" className={shell}>
         {header('ルームえらび', onBack)}
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          <p className="mb-2 text-[11px] font-bold leading-relaxed text-slate-300">最大{RHYTHM_MULTI_ROOM_MAX}人の協力ライブです。曲は全員の選曲からシャッフルで決まり、全員の平均スコアでチームのランクが決まります。いちばん活躍した人はMVP。記録は自己ベストにも全国ランキングにも残りません。</p>
+          <p className="mb-2 text-[11px] font-bold leading-relaxed text-slate-300">最大{RHYTHM_MULTI_ROOM_MAX}人の協力ライブです。曲は全員の選曲からシャッフルで決まり、全員の平均スコアでチームのランクが決まります。いちばん活躍した人はMVP。記録は自己ベストと全国ランキングにも入り、周回の報酬とビートPは人数が多いほど増えます(1人ふえるごとに+50%)。</p>
           {friendsOn && friendInvites.length > 0 && (
             <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>
               <h3 className="text-xs font-black text-pink-200">フレンドからの招待</h3>
@@ -931,7 +993,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const members = view ? view.members : [];
   const phase = room ? room.phase : 'matching';
   const participant = !!room && room.participants.includes(view.selfId);
-  const team = room && room.round && (phase === 'playing' || phase === 'result') ? rhythmMultiTeamResult(members, room.round, room.participants) : null;
+  const team = room && room.round && (phase === 'playing' || phase === 'result') ? rhythmMultiTeamResult(members, room.round, room.participants, phase === 'result') : null;
   // 結果を見せる: 自分が参加したライブで、だれかが終わっていて、まだ「次へ」を押していないとき
   const showResult = !!team && participant && view.resultSeen !== room.round && (phase === 'result' || (me && me.res && me.res.startId === room.round));
 
@@ -965,6 +1027,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 </div>}
               </section>
               <div className="mt-2 space-y-2 landscape:mt-0">
+                {view && isHost && view.mode !== 'private' && (
+                  <button data-rhythm-multi-confirm type="button" disabled={members.length < 2} onClick={() => RHYTHM_MULTI.confirmMembers()}
+                    className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 px-2 text-sm font-black disabled:opacity-40">このメンバーで始める<small className="block text-[9px] font-bold opacity-80">待たずにメンバーを確定</small></button>
+                )}
                 {view && isHost && view.mode === 'private' && me && (
                   <div className="grid grid-cols-2 gap-2">
                     <button data-rhythm-multi-open type="button" onClick={() => RHYTHM_MULTI.setOpen(!me.open)}
@@ -1074,8 +1140,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         <div className="mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
           <button data-rhythm-multi-member-stats type="button" onClick={() => setStatsOpen(true)}
             className="min-h-[46px] flex-1 rounded-full border border-white/30 bg-slate-800 px-4 text-sm font-black landscape:w-48 landscape:flex-none">メンバーの成績</button>
-          <button data-rhythm-multi-result-next type="button" disabled={team.waiting} onClick={() => RHYTHM_MULTI.nextFromResult(room.round)}
-            className="min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 disabled:opacity-40 landscape:w-56 landscape:flex-none">{team.waiting ? 'みんなを待っています' : '次へ'}</button>
+          <button data-rhythm-multi-result-next type="button" onClick={() => RHYTHM_MULTI.nextFromResult(room.round)}
+            className="min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 landscape:w-56 landscape:flex-none">{team.waiting ? (isHost ? '待たずに次の曲へ' : '次へ(ほかの人を待たない)') : '次へ'}</button>
         </div>
         {statsOpen && (
           <div data-rhythm-multi-stats className="absolute inset-0 z-[85000] flex flex-col bg-slate-950" style={{ paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
@@ -1168,7 +1234,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     const shownDiffId = (drawnOpenDiffs.find((d) => d.id === myDiffId) || pickPlayDifficulty() || {}).id;
     return (
       <main data-rhythm-multi data-rhythm-multi-step="ready" className={shell}>
-        {header('難易度選択', leaveRoom, { timer: room.left })}
+        {header('難易度選択', leaveRoom, { timer: room.left, advance: 'すぐ開始', gesture: true })}
         <RhythmMultiMemberCards members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} size="tall"
           badgeOf={(m) => (m.readyRound === room.round ? { text: '準備完了', cls: 'bg-emerald-400 text-slate-950', sub: m.diff } : { text: '準備中', cls: 'bg-slate-600 text-white', sub: m.diff })} />
         <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/95 p-2 landscape:flex-row landscape:items-center landscape:gap-3" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
@@ -1178,6 +1244,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               <div className="min-w-0 flex-1">
                 <small className="block text-[9px] font-black text-slate-400">ライブする曲</small>
                 <b data-rhythm-multi-drawn className="block truncate text-sm font-black leading-tight">{rhythmSongFullName(drawnSong)}</b>
+                {onToggleLightLook && <button data-rhythm-multi-light-look type="button" aria-pressed={multiLightLook} onClick={onToggleLightLook}
+                  className={`mt-0.5 rounded-full border px-1.5 text-[9px] font-black ${multiLightLook ? 'border-emerald-300/60 text-emerald-200' : 'border-white/20 text-slate-400'}`}>演出を軽く(対戦) {multiLightLook ? 'ON' : 'OFF'}</button>}
               </div>
             </div>
           )}
@@ -1195,7 +1263,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               );
             })}
           </div>
-          <button data-rhythm-multi-ready type="button" disabled={iAmReady} onClick={() => { if (shownDiffId) RHYTHM_MULTI.setDiff(shownDiffId); RHYTHM_MULTI.ready(); }}
+          <button data-rhythm-multi-ready type="button" disabled={iAmReady} onClick={() => { if (onUserGesture) onUserGesture(); if (shownDiffId) RHYTHM_MULTI.setDiff(shownDiffId); RHYTHM_MULTI.ready(); }}
             className="min-h-[52px] rounded-xl bg-gradient-to-r from-teal-300 to-cyan-400 px-3 text-base font-black text-slate-950 disabled:opacity-60 landscape:w-[22%]">{iAmReady ? '準備完了!' : '準備完了'}{iAmReady && <small className="block text-[9px] font-bold">ほかのメンバーを待っています</small>}</button>
         </div>
         {chatSheet}
@@ -1213,7 +1281,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   };
   return (
     <main data-rhythm-multi data-rhythm-multi-step="select" className={shell}>
-      {header('楽曲シャッフル ・ 選曲', leaveRoom, { timer: room.left })}
+      {header('楽曲シャッフル ・ 選曲', leaveRoom, { timer: room.left, advance: '締め切る' })}
       <RhythmMultiMemberCards members={members} hostId={view.hostId} selfId={view.selfId} resolveIconUrl={resolveIconUrl} badgeOf={pickLabel} size="strip" />
       <RhythmSongSelect
         songs={songs}

@@ -31,7 +31,7 @@ try{
   const encoded=context.encode(sample);
   ok('縮めた文字列を道具がほどける(HOLD は押し始めのずれ・範囲の外は端へ)',JSON.stringify(log.decodeDeltas(encoded))===JSON.stringify([-12,'MISS',null,600,31,null]),`${encoded} → ${JSON.stringify(log.decodeDeltas(encoded))}`);
   ok('縮めた文字は SQL の制約が通す形だけ',/^([0-9a-z]{2}|--|__)*$/.test(encoded)&&encoded.length===sample.length*2);
-  ok('送るのはデバッグ・練習・タイミング合わせ・アシストモード・みんなで対戦以外',/if\(!debugPlay&&!tutorial&&!calibrating&&!assistOn&&!multi\)rhythmPlayLogSend\(/.test(play));
+  ok('送るのはデバッグ・練習・タイミング合わせ・アシストモード以外',/if\(!debugPlay&&!tutorial&&!calibrating&&!assistOn\)rhythmPlayLogSend\(/.test(play));
   ok('送るのは公開中の曲だけ',/RHYTHM_DEMO_SONG_IDS\.includes\(song\?\.songId\)/.test(play));
   ok('保存は新しいキー mh_rhythm_play_log_device_v1 だけ',/const RHYTHM_PLAY_LOG_DEVICE_KEY='mh_rhythm_play_log_device_v1';/.test(play)
     &&!/storeSet\((?!RHYTHM_PLAY_LOG_DEVICE_KEY)[^)]*\)[^;\n]*rhythmPlayLog/.test(play));
