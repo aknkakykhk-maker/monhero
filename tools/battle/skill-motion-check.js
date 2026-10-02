@@ -106,6 +106,7 @@ const overrun = kinds.filter(k => {
 check('飛ぶものは尺のうちに届き終わる', overrun.length === 0, overrun.join('・'));
 
 const has = (sel) => css.includes(sel);
+const fxPart0 = fx;
 const specs = kinds.map(k => skillFxSpecOf(k)).filter(Boolean);
 const need = new Set();
 for (const s of specs) {
@@ -117,7 +118,17 @@ for (const s of specs) {
 }
 const noCss = [...need].filter(sel => !has(sel));
 check('使っている動き・帯・形・道すじのCSSがそろっている', noCss.length === 0, noCss.join(' / ') || `${need.size}か所`);
-check('端末の「動きを減らす」では、敵に重ねる大きな絵も出さない', /prefers-reduced-motion[\s\S]{0,400}\.skfx-over \{ display:none; \}|\.thm-atk__bit, \.skfx-over \{ display:none; \}/.test(css));
+check('端末の「動きを減らす」では、敵に重ねる大きな絵も、分身も出さない', /prefers-reduced-motion[\s\S]{0,400}\.skfx-over(, \.skfx-twin)? \{ display:none; \}|\.thm-atk__bit, \.skfx-over(, \.skfx-twin)? \{ display:none; \}/.test(css)
+  && /\.skfx-over, \.skfx-twin \{ display:none; \}/.test(css));
+// パンドラ(2026-10-02 設定資料 PAGE 3): エクリプスノヴァ=魔力集束→相反爆発 / ダイスキライライ=分裂→手を取り合う→反発雷撃(docs/spec/PANDORA_SKILLS.md)
+{
+  const pu = SKILL_MOTION_SETS.Pandora.unique;
+  check('パンドラの固有技8番目(エクリプスノヴァ)は 魔力集束→相反爆発', pu[7].body === 'gather' && pu[7].over === 'eclipse' && ALL.Pandora.unique.names[7] === 'エクリプスノヴァ', JSON.stringify(pu[7]).slice(0, 80));
+  check('パンドラの固有技9番目(ダイスキライライ)は 分裂→反発雷撃(光と闇の2体を描く)', pu[8].body === 'split' && pu[8].twin === true && pu[8].over === 'twinThunder' && ALL.Pandora.unique.names[8] === 'ダイスキライライ', JSON.stringify(pu[8]).slice(0, 80));
+  check('分裂した2体(闇と光)の絵とCSSがそろっている', skillFxSpecOf('Pandora-u8').twin === true && !skillFxSpecOf('Pandora-u7').twin
+    && css.includes('.skfx-twin--dark') && css.includes('.skfx-twin--light') && css.includes('@keyframes skfxTwinDark') && css.includes('@keyframes skfxTwinLight')
+    && fxPart0.includes("{spec.twin&&['dark','light'].map(side=><span key={side} className={`skfx-twin skfx-twin--${side}`}"));
+}
 check('バトルは技名を演出へ渡す', read('monster-hero/src/parts/60-app.jsx').includes("sakura: motion==='eikiSakuraCombo', skillName: hit.skillName});"));
 // 技を選ぶ行は図鑑とデバッグで共通の部品(SkillMotionPicker)。対象の子を SKILL_ATTACK_THEME_MONSTERS へ
 // 足せば両方に出る(2026-09-29 ユーザー指示「図鑑で技ごとのモーションが見れない」「いずれは全モンスター実装予定」)

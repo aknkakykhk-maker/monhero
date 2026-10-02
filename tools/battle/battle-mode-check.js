@@ -394,9 +394,10 @@ check('モードカードの最高スコアは全難易度の自己ベスト最�
     && m.highestModeScore({}, Object.keys(m.DIFFICULTY_SETTINGS)) === 0);
 // クイックはスコアを競わないので、バトル中もリザルトもスコアを出さない
 check('バトル中もクイックはスコアを出さない', has('{!isQuickMode(runMode)&&<div data-battle-score'));
+// スコアの数字は TrainingCountUp でカウントアップする形になった。枠は mh-end-score(クリア・敗北・リタイアの3画面)
 check('最終リザルト3画面のスコア枠をクイックでは出さない',
-  (source.match(/\{!isQuickMode\(runMode\)&&<div className="[^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white">\{score\.toLocaleString\(\)\}<\/div><\/div>\}/g) || []).length === 3,
-  `${(source.match(/\{!isQuickMode\(runMode\)&&<div className="[^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white">\{score\.toLocaleString\(\)\}<\/div><\/div>\}/g) || []).length}か所`);
+  (source.match(/\{!isQuickMode\(runMode\)&&<div className="mh-end-score [^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white"><TrainingCountUp from=\{0\} to=\{score\}/g) || []).length === 3,
+  `${(source.match(/\{!isQuickMode\(runMode\)&&<div className="mh-end-score [^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white"><TrainingCountUp from=\{0\} to=\{score\}/g) || []).length}か所`);
 check('WAVEリザルトのスコア内訳をクイックでは出さない',
   has('{/* スコアの内訳。クイックモードはスコアを競わないので出さない */}') && has('{!isQuickMode(runMode)&&(<>'));
 check('WAVE別ログのスコア列もクイックでは出さない',
@@ -438,7 +439,7 @@ check('倍率の下の補足行はどちらのモードでも出す',
 check('ランキングの導線は助手コメントより前にある', source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf("scene={quick?'battleQuick':'battleChallenge'}"));
 // ランキングを見ているときの戻るは、ホームではなく難易度の画面へ戻す
 check('ランキングからの戻るはバトルの画面へ',
-  has("onClick={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}}"));
+  has("onBack={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}}"));
 // 勇者モン選択はバトルを始める前なので、戻るときは来た場所(難易度の画面)へ返す
 // 戻る先の判断は MonsterHeroGame 側に残し、画面へは onBack だけを渡している
 // (67-screen-pick.jsx への切り出し)。本体の中身と画面の結線を2段で見る

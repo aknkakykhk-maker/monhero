@@ -128,7 +128,10 @@ const ThemedAttackBits = ({list}) => (list||[]).map((b,i)=>(
 //   fx    : 飛ぶもの。path は shot まっすぐ / lob 山なり / fall 敵の上から降る / rise 敵の足元から噴き上がる /
 //           orbit 本体のまわりを回ってから敵へ。shape は形(.skfx-p--◯◯)。items の x,y はずれ(px)、d は遅れ(ms)、
 //           s は大きさ、h は色相(果物・蝶・飴の色)
-//   over  : 敵に重ねる大きな絵(slash 縦の斬撃 / aurora オーロラの幕 / shadow 影の手)
+//   over  : 敵に重ねる大きな絵(slash 縦の斬撃 / aurora オーロラの幕 / shadow 影の手 /
+//           eclipse 相反爆発=黒い核と白い閃光 / twinThunder 反発雷撃=紫と金の雷が交差)
+//   twin  : true なら、本体と同じ絵を闇(左)と光(右)の2体ぶん足して描く(.skfx-twin)。body:'split' と組み合わせる
+//           (body の gather=魔力集束 / split=分裂は、どちらも2026-10-02 のパンドラ用)
 //   hit   : 着弾の時刻(ms)。hit2 は2回目。c1/c2 は光の色
 const SKFX_RING = (n, r, d0, dStep, extra={}) => Array.from({length:n}, (_, i) => {
   const a = (Math.PI * 2 * i) / n;
@@ -385,8 +388,10 @@ const SKILL_MOTION_SETS_BASE = {
       skm('cast', { c:'dark', line:'bolt', over:'thunder' }),
       skm('cast', { c:'cosmic', fx:skmFx('orbit', 'star', 10, { h:270 }), over:'boom' }),
       skm('cast', { c:'holy', line:'ray', over:'cross' }),
-      skm('float', { c:'dark', fx:skmFx('fall', 'meteor', 3), over:'boom' }),
-      skm('hop', { c:'pink', fx:skmFx('orbit', 'heart', 8), over:'thunder' })],
+      // 2026-10-02 設定資料(PAGE 3): エクリプスノヴァ=魔力集束(光と闇をまとって溜める)→相反爆発、
+      //   ダイスキライライ=分裂(光と闇の2体)→手を取り合う→反発雷撃(docs/spec/PANDORA_SKILLS.md)
+      skm('gather', { c:'cosmic', fx:skmFx('orbit', 'orb', 12, { h:[270, 48], dur:420, start:40, step:14 }), over:'eclipse', burst:'star', hit:600 }),
+      skm('split', { c:'cosmic', twin:true, line:'bolt', over:'twinThunder', burst:'spark', hit:700 })],
   },
   // モノリス: 押しつぶし(見せ場は「たおれこみ」)と針、トリオビーム
   Monol: {
@@ -575,12 +580,16 @@ const SKILL_MOTION_SETS = Object.freeze({ ...SKILL_MOTION_SETS_MAIN, Yaobikuni:s
 // 本体の動きごとの [当たる時刻の割合, 既定の尺ms]。70-bootstrap.jsx の .skfx-body--◯◯ の keyframes で、敵に届く位置に合わせてある
 const SKM_BODY_TIMING = Object.freeze({ bash:[.48,560], dive:[.62,760], roll:[.5,780], flip:[.62,840], toss:[.6,720], cast:[.55,700],
   slash:[.46,720], lick:[.42,640], kick:[.44,620], spin:[.54,780], jump:[.58,760], float:[.58,820], dash:[.26,620], shake:[.5,720],
-  hop:[.5,720], warp:[.5,760], jab:[.4,620] });
+  hop:[.5,720], warp:[.5,760], jab:[.4,620],
+  // 2026-10-02 パンドラ: gather 魔力集束(光と闇をまとって溜める) / split 分裂(光と闇の2体に分かれて手を取り合う)
+  gather:[.55,900], split:[.6,1100] });
 // その場から撃つ動き。当たる時刻は飛ぶものが届く時刻で決まる
 const SKM_PROJECTILE_BODIES = Object.freeze(['cast', 'toss', 'shake', 'hop']);
 // 敵に重ねる絵が、当たってから消えるまでの長さ(ms)。尺がこれより短いと途中で切れる
 const SKM_OVER_TAIL = Object.freeze({ thunder:220, xslash:300, claw:220, pillar:300, tornado:320, ice:440, bite:180, boom:460, wave:560,
-  bloom:360, gas:480, cross:360, sword:180, eye:260, fist:160, slash:220, aurora:320, shadow:200 });
+  bloom:360, gas:480, cross:360, sword:180, eye:260, fist:160, slash:220, aurora:320, shadow:200,
+  // 2026-10-02 パンドラ: eclipse 相反爆発(黒い核と白い閃光) / twinThunder 反発雷撃(紫と金の雷が交差)
+  eclipse:460, twinThunder:420 });
 const SKM_MAX_MS = 1200;
 const skmArrival = (fx) => {
   if (!fx || !fx.items.length) return null;
@@ -603,7 +612,7 @@ const skmNormalize = (sp) => {
   }
   ms = Math.min(SKM_MAX_MS, Math.round(ms));
   const bits = sp.bits || [{x:-28,y:-20},{x:26,y:-24},{x:-30,y:16},{x:30,y:14},{x:0,y:-34}];
-  return { body:sp.body, line:sp.line, fx:sp.fx, over:sp.over, burst:sp.burst, bits, c1, c2, hit:Math.round(hit),
+  return { body:sp.body, line:sp.line, fx:sp.fx, over:sp.over, burst:sp.burst, twin:sp.twin === true, bits, c1, c2, hit:Math.round(hit),
     ...(sp.hit2 ? { hit2:Math.round(hit + 180) } : {}), ms };
 };
 // 型の名前(ユグドラシル種は 'ygHeadbutt' など、ほかの子は '<モンスターid>-n<段階>' / '-u<段階>')から、見た目の組み合わせを返す
@@ -630,6 +639,7 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
   const fx = spec.fx;
   return (
     <span className={`thm-atk skfx skfx--${kind} skfx-body--${spec.body}${lunge?' thm-atk--lunge':''}`} style={vars} data-skill-fx={kind}>
+      {spec.twin&&['dark','light'].map(side=><span key={side} className={`skfx-twin skfx-twin--${side}`} aria-hidden="true">{React.cloneElement(image,{alt:''})}</span>)}
       <span className="thm-atk__monster">{image}</span>
       {spec.line&&<span className={`thm-atk__line skfx-line skfx-line--${spec.line}`} aria-hidden="true"><i/></span>}
       {fx&&<span className="thm-atk__flys skfx-layer" aria-hidden="true">{fx.items.map((b, i) => (
