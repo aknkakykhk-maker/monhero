@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ba67e33f3ec2fafd
+// source-sha256: 0dedb5551c2e8908
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 01:59";
+const BUILD_DATE = "2026-10-03 02:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5242,6 +5242,7 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   vibrationEnabled: false,
   effectAmount: 'LIGHT',
   lightweightMode: false,
+  multiLightLook: true,
   noteSeType: 'STANDARD',
   noteSeJudgeVary: true,
   noteSeFlickVolume: 100,
@@ -5320,6 +5321,7 @@ const normalizeRhythmSettings = value => {
     effectAmount: RHYTHM_EFFECT_LEVELS.includes(source.effectAmount) ? source.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount,
     lightweightMode: bool('lightweightMode'),
     livePartnerVisible: bool('livePartnerVisible'),
+    multiLightLook: bool('multiLightLook'),
     sideMonsterOpacity: RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity) ? source.sideMonsterOpacity : DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion: RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion) ? source.sideMonsterMotion : DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight: bool('sideMonsterAbilityHighlight'),
@@ -52966,6 +52968,7 @@ const RHYTHM_MULTI_SELECT_MS = 30000;
 const RHYTHM_MULTI_READY_MS = 30000;
 const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
+const RHYTHM_MULTI_PLAY_GRACE_MS = 30000;
 const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
 const RHYTHM_MULTI_CHAT_KEEP = 50;
@@ -52986,6 +52989,9 @@ const RHYTHM_MULTI_MODE_LABELS = Object.freeze({
 });
 const RHYTHM_MULTI_PHASES = Object.freeze(['matching', 'select', 'ready', 'playing', 'result']);
 const RHYTHM_MULTI_OMAKASE = '*';
+const RHYTHM_MULTI_LIGHT_LOOK = Object.freeze({
+  ...((RHYTHM_LOOK_PRESETS.find(preset => preset.id === 'LIGHT') || {}).values || {})
+});
 const RHYTHM_MULTI_REWARD_STEP = 0.5;
 const rhythmMultiRewardScale = count => {
   const n = Math.max(1, Math.min(RHYTHM_MULTI_ROOM_MAX, Math.floor(Number(count) || 1)));
@@ -53026,7 +53032,7 @@ const rhythmMultiPenaltyMark = async () => {
     });
   } catch (_) {}
 };
-const rhythmMultiTeamResult = (members, round, participants) => {
+const rhythmMultiTeamResult = (members, round, participants, closed = false) => {
   const ids = Array.isArray(participants) && participants.length ? participants : members.map(m => m.id);
   const rows = ids.map(id => {
     const m = members.find(x => x.id === id) || {
@@ -53041,7 +53047,7 @@ const rhythmMultiTeamResult = (members, round, participants) => {
       res: m.res && m.res.startId === round ? m.res : null
     };
   });
-  const waiting = rows.some(r => !r.res && !r.m.gone);
+  const waiting = !closed && rows.some(r => !r.res && !r.m.gone);
   const scores = rows.map(r => r.res && !r.res.quit ? r.res.score : 0);
   const average = scores.length ? Math.floor(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
   let mvpId = null;
@@ -53260,6 +53266,7 @@ const RHYTHM_MULTI = (() => {
   let sweepTimer = null;
   let reconnectTimer = null;
   let catalog = [];
+  let durations = {};
   const emit = () => {
     listeners.forEach(fn => {
       try {
@@ -53354,9 +53361,9 @@ const RHYTHM_MULTI = (() => {
       deadline: Date.now() + RHYTHM_MULTI_SHUFFLE_MS + RHYTHM_MULTI_READY_MS
     });
   };
-  const doStart = members => {
+  const doStart = (members, everyone = false) => {
     const r = s.room;
-    const participants = members.filter(m => m.readyRound === r.round).map(m => m.id);
+    const participants = members.filter(m => everyone || m.readyRound === r.round).map(m => m.id);
     if (!participants.length) {
       toSelect();
       return;
@@ -53368,10 +53375,11 @@ const RHYTHM_MULTI = (() => {
       songId: r.songId,
       participants
     });
+    const songMs = Number(durations[r.songId]) > 0 ? Number(durations[r.songId]) : 240000;
     setRoom({
       phase: 'playing',
       participants,
-      deadline: 0
+      deadline: Date.now() + songMs + RHYTHM_MULTI_PLAY_GRACE_MS
     });
   };
   const hostTick = () => {
@@ -53397,7 +53405,7 @@ const RHYTHM_MULTI = (() => {
     } else if (r.phase === 'playing') {
       const aliveIds = members.map(m => m.id);
       const done = r.participants.every(id => !aliveIds.includes(id) || s.members[id] && s.members[id].res && s.members[id].res.startId === r.round);
-      if (done) setRoom({
+      if (done || r.deadline && now >= r.deadline) setRoom({
         phase: 'result',
         deadline: now + RHYTHM_MULTI_RESULT_MS
       });
@@ -53642,8 +53650,11 @@ const RHYTHM_MULTI = (() => {
       startListeners.add(fn);
       return () => startListeners.delete(fn);
     },
-    setCatalog(songIds) {
+    setCatalog(songIds, songDurations) {
       catalog = Array.isArray(songIds) ? songIds.slice() : [];
+      durations = songDurations && typeof songDurations === 'object' ? {
+        ...songDurations
+      } : {};
     },
     view() {
       if (!s) return null;
@@ -53804,8 +53815,29 @@ const RHYTHM_MULTI = (() => {
     nextFromResult(round) {
       if (!s) return;
       s.resultSeen = round;
-      if (isHostNow() && s.room.phase === 'result' && s.room.round === round) toSelect();
+      if (isHostNow() && (s.room.phase === 'result' || s.room.phase === 'playing') && s.room.round === round) toSelect();
       emit();
+    },
+    hostAdvance() {
+      if (!s || !isHostNow() || s.status !== 'open') return false;
+      const members = ordered();
+      const ph = s.room.phase;
+      if (ph === 'matching') {
+        if (members.length < 2) return false;
+        toSelect();
+        return true;
+      }
+      if (ph === 'select') {
+        doDraw(members);
+        return true;
+      }
+      if (ph === 'ready') {
+        const me = selfMember();
+        if (me && me.readyRound !== s.room.round) me.readyRound = s.room.round;
+        doStart(members, true);
+        return true;
+      }
+      return false;
     },
     reportResult(round, result, quit, opts) {
       const me = selfMember();
@@ -54014,6 +54046,9 @@ function RhythmMultiScreen({
   resolveIconUrl,
   quickRunInfo = null,
   onPreviewSong = null,
+  onUserGesture = null,
+  multiLightLook = true,
+  onToggleLightLook = null,
   onBack,
   onStartPlay
 }) {
@@ -54021,7 +54056,12 @@ function RhythmMultiScreen({
   const difficultyIds = difficultyList.map(d => d.id);
   const songIds = songs.map(song => song.songId);
   React.useEffect(() => {
-    RHYTHM_MULTI.setCatalog(songIds);
+    const lengths = {};
+    songs.forEach(song => {
+      const ms = Number(song.playDurationMs);
+      if (ms > 0) lengths[song.songId] = ms;
+    });
+    RHYTHM_MULTI.setCatalog(songIds, lengths);
   }, [songIds.join(',')]);
   const [codeInput, setCodeInput] = React.useState('');
   const [message, setMessage] = React.useState('');
@@ -54155,7 +54195,7 @@ function RhythmMultiScreen({
   }, [shuffleRound]);
   const previewPhase = room ? room.phase : '';
   const selectPreviewId = selSongId || (songs[0] ? songs[0].songId : '');
-  const previewId = previewPhase === 'select' || previewPhase === 'ready' && shuffleRound ? selectPreviewId : previewPhase === 'ready' ? room.songId : '';
+  const previewId = previewPhase === 'select' ? selectPreviewId : (previewPhase === 'ready' || previewPhase === 'playing') && room.songId ? room.songId : '';
   React.useEffect(() => {
     if (onPreviewSong) onPreviewSong(previewId);
   }, [previewId]);
@@ -54251,7 +54291,15 @@ function RhythmMultiScreen({
   }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement("small", {
     "data-rhythm-multi-quick-run": true,
     className: `max-w-[38%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`
-  }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), opts.timer != null && React.createElement("b", {
+  }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), opts.advance && isHost && React.createElement("button", {
+    "data-rhythm-multi-advance": true,
+    type: "button",
+    onClick: () => {
+      if (opts.gesture && onUserGesture) onUserGesture();
+      RHYTHM_MULTI.hostAdvance();
+    },
+    className: "min-h-[40px] shrink-0 rounded-xl bg-fuchsia-700 px-2 text-[11px] font-black"
+  }, opts.advance), opts.timer != null && React.createElement("b", {
     "data-rhythm-multi-timer": true,
     className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
   }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && React.createElement("button", {
@@ -54364,7 +54412,7 @@ function RhythmMultiScreen({
   const members = view ? view.members : [];
   const phase = room ? room.phase : 'matching';
   const participant = !!room && room.participants.includes(view.selfId);
-  const team = room && room.round && (phase === 'playing' || phase === 'result') ? rhythmMultiTeamResult(members, room.round, room.participants) : null;
+  const team = room && room.round && (phase === 'playing' || phase === 'result') ? rhythmMultiTeamResult(members, room.round, room.participants, phase === 'result') : null;
   const showResult = !!team && participant && view.resultSeen !== room.round && (phase === 'result' || me && me.res && me.res.startId === room.round);
   if (!view || view.full || phase === 'matching' && !countdown) {
     const publicRoom = !!view && view.mode !== 'private';
@@ -54427,7 +54475,15 @@ function RhythmMultiScreen({
       onClick: shareCode
     }, copied ? 'コピーした!' : '友だちに送る'))), React.createElement("div", {
       className: "mt-2 space-y-2 landscape:mt-0"
-    }, view && isHost && view.mode === 'private' && me && React.createElement("div", {
+    }, view && isHost && view.mode !== 'private' && React.createElement("button", {
+      "data-rhythm-multi-confirm": true,
+      type: "button",
+      disabled: members.length < 2,
+      onClick: () => RHYTHM_MULTI.confirmMembers(),
+      className: "min-h-[48px] w-full rounded-xl bg-fuchsia-700 px-2 text-sm font-black disabled:opacity-40"
+    }, "このメンバーで始める", React.createElement("small", {
+      className: "block text-[9px] font-bold opacity-80"
+    }, "待たずにメンバーを確定")), view && isHost && view.mode === 'private' && me && React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
     }, React.createElement("button", {
       "data-rhythm-multi-open": true,
@@ -54612,10 +54668,9 @@ function RhythmMultiScreen({
     }, "メンバーの成績"), React.createElement("button", {
       "data-rhythm-multi-result-next": true,
       type: "button",
-      disabled: team.waiting,
       onClick: () => RHYTHM_MULTI.nextFromResult(room.round),
-      className: "min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 disabled:opacity-40 landscape:w-56 landscape:flex-none"
-    }, team.waiting ? 'みんなを待っています' : '次へ')), statsOpen && React.createElement("div", {
+      className: "min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 landscape:w-56 landscape:flex-none"
+    }, team.waiting ? isHost ? '待たずに次の曲へ' : '次へ(ほかの人を待たない)' : '次へ')), statsOpen && React.createElement("div", {
       "data-rhythm-multi-stats": true,
       className: "absolute inset-0 z-[85000] flex flex-col bg-slate-950",
       style: {
@@ -54775,7 +54830,9 @@ function RhythmMultiScreen({
       "data-rhythm-multi-step": "ready",
       className: shell
     }, header('難易度選択', leaveRoom, {
-      timer: room.left
+      timer: room.left,
+      advance: 'すぐ開始',
+      gesture: true
     }), React.createElement(RhythmMultiMemberCards, {
       members: members,
       hostId: view.hostId,
@@ -54810,7 +54867,13 @@ function RhythmMultiScreen({
     }, "ライブする曲"), React.createElement("b", {
       "data-rhythm-multi-drawn": true,
       className: "block truncate text-sm font-black leading-tight"
-    }, rhythmSongFullName(drawnSong)))), React.createElement("div", {
+    }, rhythmSongFullName(drawnSong)), onToggleLightLook && React.createElement("button", {
+      "data-rhythm-multi-light-look": true,
+      type: "button",
+      "aria-pressed": multiLightLook,
+      onClick: onToggleLightLook,
+      className: `mt-0.5 rounded-full border px-1.5 text-[9px] font-black ${multiLightLook ? 'border-emerald-300/60 text-emerald-200' : 'border-white/20 text-slate-400'}`
+    }, "演出を軽く(対戦) ", multiLightLook ? 'ON' : 'OFF'))), React.createElement("div", {
       className: "grid grid-cols-5 gap-1.5 landscape:flex-1"
     }, drawnDiffs.map(d => {
       const open = drawnOpenDiffs.some(x => x.id === d.id);
@@ -54833,6 +54896,7 @@ function RhythmMultiScreen({
       type: "button",
       disabled: iAmReady,
       onClick: () => {
+        if (onUserGesture) onUserGesture();
         if (shownDiffId) RHYTHM_MULTI.setDiff(shownDiffId);
         RHYTHM_MULTI.ready();
       },
@@ -54859,7 +54923,8 @@ function RhythmMultiScreen({
     "data-rhythm-multi-step": "select",
     className: shell
   }, header('楽曲シャッフル ・ 選曲', leaveRoom, {
-    timer: room.left
+    timer: room.left,
+    advance: '締め切る'
   }), React.createElement(RhythmMultiMemberCards, {
     members: members,
     hostId: view.hostId,
@@ -57429,6 +57494,10 @@ function MonsterHeroGame() {
     songId: null
   });
   const [rhythmMultiPreviewSongId, setRhythmMultiPreviewSongId] = useState('');
+  const rhythmMultiPlaySettings = useMemo(() => ({
+    ...rhythmSettings,
+    ...RHYTHM_MULTI_LIGHT_LOOK
+  }), [rhythmSettings]);
   const rhythmPreviewSongId = gameState === 'RHYTHM_MULTI' && rhythmMultiPreviewSongId ? rhythmMultiPreviewSongId : rhythmSelectedSongId;
   const rhythmPreviewSong = rhythmDemoSongs(RHYTHM_SONGS).find(song => song.songId === rhythmPreviewSongId) || null;
   const rhythmPreviewTrackId = rhythmSettings.songPreviewEnabled && RHYTHM_PREVIEW_SCREENS.includes(gameState) && rhythmPreviewSong ? rhythmPreviewSong.bgmTrackId : '';
@@ -75627,7 +75696,7 @@ function MonsterHeroGame() {
     })(), gameState === 'RHYTHM_PLAY' && rhythmPlay && React.createElement(RhythmTapTest, {
       song: rhythmPlay.song,
       difficulty: rhythmPlay.difficulty,
-      settings: rhythmSettings,
+      settings: rhythmPlay.from === 'multi' && rhythmSettings.multiLightLook !== false ? rhythmMultiPlaySettings : rhythmSettings,
       monsterEntries: rhythmMonsterNoteEntries,
       multi: rhythmPlay.from === 'multi',
       multiRewardScale: rhythmPlay.from === 'multi' ? rhythmMultiRewardScale(rhythmPlay.multiCount) : 1,
@@ -75729,6 +75798,17 @@ function MonsterHeroGame() {
       difficultyList: rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES),
       bestRecords: rhythmBestRecords,
       onPreviewSong: setRhythmMultiPreviewSongId,
+      onUserGesture: () => {
+        if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+      },
+      multiLightLook: rhythmSettings.multiLightLook !== false,
+      onToggleLightLook: async () => {
+        const saved = await saveRhythmSettings({
+          ...rhythmSettings,
+          multiLightLook: rhythmSettings.multiLightLook === false
+        });
+        setRhythmSettings(saved);
+      },
       quickRunInfo: quickRunProgress ? {
         wave,
         loops: quickRunProgress.loops,
