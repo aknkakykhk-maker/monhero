@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8ab144950029ad2a
+// source-sha256: e778a7a710dcfa10
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -277,7 +277,7 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([{
 }, {
   key: 'defeatFx',
   title: '敵を倒したときの演出',
-  desc: '敵を倒した瞬間に、白い閃光と「VICTORY!」を出してからWAVEリザルトへ進みます。出さないときは、すぐリザルトへ進みます。',
+  desc: '敵を倒した瞬間に、白い閃光とともに敵が消え、そのあとに「VICTORY!」を出してからWAVEリザルトへ進みます。出さないときは、すぐリザルトへ進みます。',
   options: [{
     id: 'ON',
     label: '出す',
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-02 20:08";
+const BUILD_DATE = "2026-10-02 20:42";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -46665,6 +46665,7 @@ function BattleScreen({
   turnCount,
   ultimateDistanceBreakLevels,
   ultraBattleView,
+  enemyDefeating,
   unifiedSpecialDefense,
   useEmergency,
   wave
@@ -46962,6 +46963,7 @@ function BattleScreen({
   return React.createElement("div", {
     className: "flex-1 flex flex-col h-full relative",
     "data-battle-speed": battleSpeed,
+    "data-enemy-down": enemyDefeating ? 'true' : undefined,
     "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off',
     "data-tactics-look": tacticsNewLayout ? liteBattleView || ecoBattleView || idleMotionOff ? 'calm' : 'rich' : undefined,
     "data-fx-rest": tacticsNewLayout && fxRestEnabled && fxRest ? 'true' : undefined,
@@ -62255,7 +62257,7 @@ function MonsterHeroGame() {
     setTimeout(() => {
       setDefeatFx(null);
       advanceRunStage('WAVE_RESULT');
-    }, battleMs(defeatFxOn ? 1100 : 500));
+    }, battleMs(defeatFxOn ? 1600 : 500));
     return true;
   };
   const consumePoltzCharge = async () => {
@@ -75670,6 +75672,7 @@ function MonsterHeroGame() {
       turnCount: turnCount,
       ultimateDistanceBreakLevels: ultimateDistanceBreakLevels,
       ultraBattleView: ultraBattleView,
+      enemyDefeating: !!defeatFx,
       unifiedSpecialDefense: unifiedSpecialDefense,
       useEmergency: useEmergency,
       wave: wave
@@ -82273,7 +82276,15 @@ const createAnimationStyle = () => {
       100% { opacity: 0; transform: translateY(-24px) scale(.96); }
     }
     /* ==== 敵を倒した瞬間(EnemyDefeatFx)。白い閃光と大きな文字。1回きり・操作は止めない ==== */
-    .mh-defeat { top: 38%; animation-duration: 1.15s; }
+    /* 敵が消えてから「VICTORY!」を出す(2026-10-02・ユーザー指示「倒した演出と敵が消えてからビクトリーがあっていい」)。
+       敵は閃光のあいだに白く光って縮みながら消え(.6秒)、文字はそのあとに出る(delay .6秒)。 */
+    .mh-defeat { top: 38%; animation-duration: 1s; animation-delay: .6s; }
+    @keyframes mhEnemyDown {
+      0% { opacity: 1; transform: scale(1); }
+      28% { opacity: 1; transform: scale(1.06); }
+      100% { opacity: 0; transform: translateY(-16px) scale(.6); }
+    }
+    [data-enemy-down] :is([data-enemy-ring], [data-moo-stage]) { animation: mhEnemyDown .6s ease-in both !important; }
     .mh-defeat .mh-waveintro-title { font-size: 50px; }
     .mh-defeat-boss .mh-waveintro-line { background: linear-gradient(90deg, transparent, #fde68a, transparent); }
     .mh-defeat-boss .mh-waveintro-title { font-size: 54px; background: linear-gradient(180deg, #ffffff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 3px 0 rgba(0,0,0,.8)) drop-shadow(0 0 22px rgba(253,230,138,.95)); }
@@ -82301,6 +82312,7 @@ const createAnimationStyle = () => {
     @media (prefers-reduced-motion: reduce) {
       .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette, .mh-end-flag, .mh-defeat-flash { animation: none !important; }
       .mh-defeat-flash { display: none; }
+      [data-enemy-down] :is([data-enemy-ring], [data-moo-stage]) { animation: none !important; opacity: 0; }
       .mh-confetti { display: none; }
     }
     /* ==== 強化フェーズの切り替わりの帯(PhaseBanner)。左から入って、真ん中で止まり、右へ抜ける。1回きり ==== */

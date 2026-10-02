@@ -10075,6 +10075,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     pushBattleLog(`${enemy?.name || '敵'}を倒した！`, 'down');
     setEnemySkillName(null);
     const defeatFxOn=battleFxEffectiveRef.current.defeatFx!=='OFF';
+    // 倒した瞬間に閃光と敵が消える動き(data-enemy-down)。「VICTORY!」は敵が消えたあとに出す(70-bootstrap の .mh-defeat の delay)。
+    // 待ち時間は、消える0.6秒＋VICTORY!の1秒に合わせる
     if(defeatFxOn) setDefeatFx({name:enemy?.name||'敵',boss:wave>=10,key:Date.now()});
     if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
     const totalWaveDamage=currentWaveDamage+damage;
@@ -10126,7 +10128,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
-    setTimeout(()=>{setDefeatFx(null); advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1100:500));
+    setTimeout(()=>{setDefeatFx(null); advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1600:500));
     return true;
   };
 
@@ -17467,7 +17469,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}
-            ultraBattleView={ultraBattleView} unifiedSpecialDefense={unifiedSpecialDefense}
+            ultraBattleView={ultraBattleView} enemyDefeating={!!defeatFx} unifiedSpecialDefense={unifiedSpecialDefense}
             useEmergency={useEmergency} wave={wave}
           />
         )}

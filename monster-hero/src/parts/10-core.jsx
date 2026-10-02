@@ -163,7 +163,7 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
     desc:'バトルが始まるたびに、画面の真ん中へ「WAVE ○」と相手の名前を出します。最後のWAVEは「FINAL BOSS」です。操作は止まりません。',
     options:[{ id:'ON', label:'出す', note:'WAVEと相手を見せる' }, { id:'OFF', label:'出さない', note:'すぐバトルへ' }] },
   { key:'defeatFx', title:'敵を倒したときの演出',
-    desc:'敵を倒した瞬間に、白い閃光と「VICTORY!」を出してからWAVEリザルトへ進みます。出さないときは、すぐリザルトへ進みます。',
+    desc:'敵を倒した瞬間に、白い閃光とともに敵が消え、そのあとに「VICTORY!」を出してからWAVEリザルトへ進みます。出さないときは、すぐリザルトへ進みます。',
     options:[{ id:'ON', label:'出す', note:'VICTORY!を見せる' }, { id:'OFF', label:'出さない', note:'すぐリザルトへ' }] },
   { key:'resultFx', title:'成長・合流・アシストカードの結果',
     desc:'トレーニング・供モンの合流・アシストカードのあとに出る、結果の画面の長さです。「短め」は半分の長さ、「出さない」は結果の画面を飛ばして先へ進みます。結果は強化の画面やステータスで確認できます。',
@@ -180,7 +180,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 20:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 20:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b0684b08eadfeaf0
+// generated-sha256: 61621d4294a22894
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -170,7 +170,7 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
     desc:'バトルが始まるたびに、画面の真ん中へ「WAVE ○」と相手の名前を出します。最後のWAVEは「FINAL BOSS」です。操作は止まりません。',
     options:[{ id:'ON', label:'出す', note:'WAVEと相手を見せる' }, { id:'OFF', label:'出さない', note:'すぐバトルへ' }] },
   { key:'defeatFx', title:'敵を倒したときの演出',
-    desc:'敵を倒した瞬間に、白い閃光と「VICTORY!」を出してからWAVEリザルトへ進みます。出さないときは、すぐリザルトへ進みます。',
+    desc:'敵を倒した瞬間に、白い閃光とともに敵が消え、そのあとに「VICTORY!」を出してからWAVEリザルトへ進みます。出さないときは、すぐリザルトへ進みます。',
     options:[{ id:'ON', label:'出す', note:'VICTORY!を見せる' }, { id:'OFF', label:'出さない', note:'すぐリザルトへ' }] },
   { key:'resultFx', title:'成長・合流・アシストカードの結果',
     desc:'トレーニング・供モンの合流・アシストカードのあとに出る、結果の画面の長さです。「短め」は半分の長さ、「出さない」は結果の画面を飛ばして先へ進みます。結果は強化の画面やステータスで確認できます。',
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 20:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 20:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -28315,7 +28315,7 @@ function BattleScreen({
   tacticsCanAssign, tacticsCardBlock, tacticsCardGenre, tacticsCardScope, tacticsSlotFx, tacticsUnits,
   tacticsExInfo, activateTacticsEx, tacticsExCutin, tacticsExTurnUsed, passTacticsTurn, tacticsCoverSlot,
   tacticsExIntroVisible, dismissTacticsExIntro,
-  teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView,
+  teachingFx, totalTurnCount, turnCount, ultimateDistanceBreakLevels, ultraBattleView, enemyDefeating,
   unifiedSpecialDefense, useEmergency, wave,
 }) {
   // 強化の札を「アイコン1行」と「数値つきの一覧」で切り替える(2026-09-20 ユーザー指摘)。
@@ -28645,7 +28645,7 @@ function BattleScreen({
   };
   return (
 
-      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRestEnabled&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined} data-fx-auto={autoLoadOn?'watch':undefined}>
+      <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-enemy-down={enemyDefeating?'true':undefined} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'} data-tactics-look={tacticsNewLayout?((liteBattleView||ecoBattleView||idleMotionOff)?'calm':'rich'):undefined} data-fx-rest={tacticsNewLayout&&fxRestEnabled&&fxRest?'true':undefined} data-fx-level={tacticsNewLayout?fxLoad:undefined} data-moo-front={tacticsNewLayout&&enemyIsMoo&&!enemyAttackAnim?'true':undefined} data-fx-auto={autoLoadOn?'watch':undefined}>
         {/* 性能計測(デバッグ限定)。デバッグ設定で ON にしたときだけ出る。触っても戦闘の邪魔をしないよう、指は素通りさせる */}
         {perfOn&&tacticsNewLayout&&perfSnap&&(
           <div data-battle-perf-panel className="pointer-events-none fixed left-1 z-[65000] rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-bold leading-tight text-amber-100" style={{top:'calc(env(safe-area-inset-top) + 2px)'}}>
@@ -41464,6 +41464,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     pushBattleLog(`${enemy?.name || '敵'}を倒した！`, 'down');
     setEnemySkillName(null);
     const defeatFxOn=battleFxEffectiveRef.current.defeatFx!=='OFF';
+    // 倒した瞬間に閃光と敵が消える動き(data-enemy-down)。「VICTORY!」は敵が消えたあとに出す(70-bootstrap の .mh-defeat の delay)。
+    // 待ち時間は、消える0.6秒＋VICTORY!の1秒に合わせる
     if(defeatFxOn) setDefeatFx({name:enemy?.name||'敵',boss:wave>=10,key:Date.now()});
     if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
     const totalWaveDamage=currentWaveDamage+damage;
@@ -41515,7 +41517,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
-    setTimeout(()=>{setDefeatFx(null); advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1100:500));
+    setTimeout(()=>{setDefeatFx(null); advanceRunStage('WAVE_RESULT');},battleMs(defeatFxOn?1600:500));
     return true;
   };
 
@@ -48856,7 +48858,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             soulBattleParty={soulBattleParty} soulCoordinationCardBonus={soulCoordinationCardBonus}
             suppressCardClickRef={suppressCardClickRef} teachingFx={teachingFx} totalTurnCount={totalTurnCount}
             turnCount={turnCount} ultimateDistanceBreakLevels={ultimateDistanceBreakLevels}
-            ultraBattleView={ultraBattleView} unifiedSpecialDefense={unifiedSpecialDefense}
+            ultraBattleView={ultraBattleView} enemyDefeating={!!defeatFx} unifiedSpecialDefense={unifiedSpecialDefense}
             useEmergency={useEmergency} wave={wave}
           />
         )}
@@ -54190,7 +54192,15 @@ const createAnimationStyle = () => {
       100% { opacity: 0; transform: translateY(-24px) scale(.96); }
     }
     /* ==== 敵を倒した瞬間(EnemyDefeatFx)。白い閃光と大きな文字。1回きり・操作は止めない ==== */
-    .mh-defeat { top: 38%; animation-duration: 1.15s; }
+    /* 敵が消えてから「VICTORY!」を出す(2026-10-02・ユーザー指示「倒した演出と敵が消えてからビクトリーがあっていい」)。
+       敵は閃光のあいだに白く光って縮みながら消え(.6秒)、文字はそのあとに出る(delay .6秒)。 */
+    .mh-defeat { top: 38%; animation-duration: 1s; animation-delay: .6s; }
+    @keyframes mhEnemyDown {
+      0% { opacity: 1; transform: scale(1); }
+      28% { opacity: 1; transform: scale(1.06); }
+      100% { opacity: 0; transform: translateY(-16px) scale(.6); }
+    }
+    [data-enemy-down] :is([data-enemy-ring], [data-moo-stage]) { animation: mhEnemyDown .6s ease-in both !important; }
     .mh-defeat .mh-waveintro-title { font-size: 50px; }
     .mh-defeat-boss .mh-waveintro-line { background: linear-gradient(90deg, transparent, #fde68a, transparent); }
     .mh-defeat-boss .mh-waveintro-title { font-size: 54px; background: linear-gradient(180deg, #ffffff, #fde68a 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 3px 0 rgba(0,0,0,.8)) drop-shadow(0 0 22px rgba(253,230,138,.95)); }
@@ -54218,6 +54228,7 @@ const createAnimationStyle = () => {
     @media (prefers-reduced-motion: reduce) {
       .mh-waveintro, .mh-confetti > i, .mh-end-crown, .mh-end-title, .mh-end-score, .mh-end-skull, .mh-end-vignette, .mh-end-flag, .mh-defeat-flash { animation: none !important; }
       .mh-defeat-flash { display: none; }
+      [data-enemy-down] :is([data-enemy-ring], [data-moo-stage]) { animation: none !important; opacity: 0; }
       .mh-confetti { display: none; }
     }
     /* ==== 強化フェーズの切り替わりの帯(PhaseBanner)。左から入って、真ん中で止まり、右へ抜ける。1回きり ==== */
