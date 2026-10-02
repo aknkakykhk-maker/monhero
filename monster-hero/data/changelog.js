@@ -34,6 +34,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-02 22:22", type:'update', title:'みんなで対戦の部屋でチャットができるようになりました', status:'new', releaseFlag:'rhythmMulti',
+    items:[
+      '対戦の部屋の画面に「チャット」が増えました。部屋にいる人へ40文字までの一言と、「よろしく!」などのスタンプを送れます。',
+      '発言は部屋にいるあいだだけ表示され、保存されません。部屋を出ると消えます。',
+    ],
+  },
+  {
     date: "2026-10-02 22:08", type:'content', title:'モンヒロビートで友だちとスコア対決ができるようになりました', status:'new', releaseFlag:'rhythmMulti',
     assistantNotice:{ id:'update_notice_rhythm_multi_v1', type:'content' },
     items:[
