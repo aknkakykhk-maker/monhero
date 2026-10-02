@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 009e3b0efc337c31
+// source-sha256: 4600c3493ea33174
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-02 17:46";
+const BUILD_DATE = "2026-10-02 18:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -18209,14 +18209,24 @@ const SKILL_MOTION_SETS_BASE = {
       c: 'holy',
       line: 'ray',
       over: 'cross'
-    }), skm('float', {
-      c: 'dark',
-      fx: skmFx('fall', 'meteor', 3),
-      over: 'boom'
-    }), skm('hop', {
-      c: 'pink',
-      fx: skmFx('orbit', 'heart', 8),
-      over: 'thunder'
+    }), skm('gather', {
+      c: 'cosmic',
+      fx: skmFx('orbit', 'orb', 12, {
+        h: [270, 48],
+        dur: 420,
+        start: 40,
+        step: 14
+      }),
+      over: 'eclipse',
+      burst: 'star',
+      hit: 600
+    }), skm('split', {
+      c: 'cosmic',
+      twin: true,
+      line: 'bolt',
+      over: 'twinThunder',
+      burst: 'spark',
+      hit: 700
     })]
   },
   Monol: {
@@ -18815,7 +18825,9 @@ const SKM_BODY_TIMING = Object.freeze({
   shake: [.5, 720],
   hop: [.5, 720],
   warp: [.5, 760],
-  jab: [.4, 620]
+  jab: [.4, 620],
+  gather: [.55, 900],
+  split: [.6, 1100]
 });
 const SKM_PROJECTILE_BODIES = Object.freeze(['cast', 'toss', 'shake', 'hop']);
 const SKM_OVER_TAIL = Object.freeze({
@@ -18836,7 +18848,9 @@ const SKM_OVER_TAIL = Object.freeze({
   fist: 160,
   slash: 220,
   aurora: 320,
-  shadow: 200
+  shadow: 200,
+  eclipse: 460,
+  twinThunder: 420
 });
 const SKM_MAX_MS = 1200;
 const skmArrival = fx => {
@@ -18888,6 +18902,7 @@ const skmNormalize = sp => {
     fx: sp.fx,
     over: sp.over,
     burst: sp.burst,
+    twin: sp.twin === true,
     bits,
     c1,
     c2,
@@ -18935,7 +18950,13 @@ const SkillFxMotion = ({
     className: `thm-atk skfx skfx--${kind} skfx-body--${spec.body}${lunge ? ' thm-atk--lunge' : ''}`,
     style: vars,
     "data-skill-fx": kind
-  }, React.createElement("span", {
+  }, spec.twin && ['dark', 'light'].map(side => React.createElement("span", {
+    key: side,
+    className: `skfx-twin skfx-twin--${side}`,
+    "aria-hidden": "true"
+  }, React.cloneElement(image, {
+    alt: ''
+  }))), React.createElement("span", {
     className: "thm-atk__monster"
   }, image), spec.line && React.createElement("span", {
     className: `thm-atk__line skfx-line skfx-line--${spec.line}`,
@@ -78545,6 +78566,77 @@ const createAnimationStyle = () => {
     .skfx-over--boom i:nth-child(3) { display:none; }
     @keyframes skfxBoom { 0% { opacity:0; transform:scale(.2); } 25% { opacity:1; transform:scale(1.1); } 100% { opacity:0; transform:scale(1.6); } }
     @keyframes skfxBoomRing { 0% { opacity:0; transform:scale(.2); } 30% { opacity:1; } 100% { opacity:0; transform:scale(2); } }
+
+    /* パンドラ(2026-10-02 設定資料 PAGE 3)。エクリプスノヴァ=魔力集束→相反爆発 / ダイスキライライ=分裂→手を取り合う→反発雷撃。
+       gather: 左に闇(紫)・右に光(金)のオーラをまとって溜め、hit の時刻で反動。split: 本体が薄くなり、光と闇の2体が左右へ分かれて、
+       中央で手を取り合い、ぶつかって弾かれる。2体の絵は SkillFxMotion が本体と同じ画像をもう2枚描く(.skfx-twin)。 */
+    .skfx-body--gather .thm-atk__monster { animation-name:skfxGather; }
+    @keyframes skfxGather {
+      0% { transform:translate3d(0,0,0) scale(1); filter:none; }
+      14% { transform:translate3d(0,6px,0) scale(1.06,.94); filter:drop-shadow(-8px 0 10px #7c3aed) drop-shadow(8px 0 10px #fde68a); }
+      40% { transform:translate3d(0,-8px,0) scale(1.12); filter:drop-shadow(-14px 0 18px #7c3aed) drop-shadow(14px 0 18px #fef3c7) drop-shadow(0 0 6px #fff); }
+      48% { transform:translate3d(-2px,-8px,0) scale(1.14); }
+      52% { transform:translate3d(2px,-8px,0) scale(1.14); filter:drop-shadow(-18px 0 24px #7c3aed) drop-shadow(18px 0 24px #fef3c7) drop-shadow(0 0 10px #fff); }
+      58% { transform:translate3d(0,4px,0) scale(.94,1.04); filter:brightness(1.7) drop-shadow(0 0 14px #fff); }
+      75% { transform:translate3d(0,0,0) scale(1.02); filter:drop-shadow(0 0 8px #c4b5fd); }
+      100% { transform:translate3d(0,0,0) scale(1); filter:none; }
+    }
+    .skfx-body--split .thm-atk__monster { animation-name:skfxSplitBody; }
+    @keyframes skfxSplitBody {
+      0% { transform:translate3d(0,0,0) scale(1); opacity:1; filter:none; }
+      14% { transform:translate3d(0,0,0) scale(1.04); opacity:.9; filter:drop-shadow(0 0 12px #e9d5ff); }
+      30% { opacity:.35; filter:drop-shadow(-8px 0 10px #7c3aed) drop-shadow(8px 0 10px #fde68a); }
+      60% { opacity:.4; }
+      66% { opacity:1; transform:translate3d(0,-4px,0) scale(1.08); filter:brightness(1.6) drop-shadow(0 0 16px #fff); }
+      82% { opacity:1; transform:translate3d(0,0,0) scale(1.02); filter:drop-shadow(0 0 8px #c4b5fd); }
+      100% { opacity:1; transform:translate3d(0,0,0) scale(1); filter:none; }
+    }
+    .skfx-twin { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:3; opacity:0; pointer-events:none;
+      transform-origin:50% 80%; animation-duration:var(--thm-ms,1200ms); animation-fill-mode:forwards; animation-timing-function:ease-in-out; }
+    .skfx-twin--dark { filter:brightness(.5) contrast(1.25) saturate(1.3) drop-shadow(0 0 10px #7c3aed); animation-name:skfxTwinDark; }
+    .skfx-twin--light { filter:brightness(1.35) saturate(.7) drop-shadow(0 0 10px #fde68a); animation-name:skfxTwinLight; }
+    @keyframes skfxTwinDark {
+      0% { opacity:0; transform:translate3d(0,0,0); }
+      12% { opacity:.8; transform:translate3d(0,0,0); }
+      30% { opacity:.9; transform:translate3d(-62%,2px,0); }
+      44% { opacity:.9; transform:translate3d(-62%,-4px,0); }
+      56% { opacity:.95; transform:translate3d(-14%,0,0); }
+      60% { opacity:1; transform:translate3d(-4%,0,0) scale(1.06); }
+      72% { opacity:.85; transform:translate3d(-42%,-6px,0) scale(1.02); }
+      100% { opacity:0; transform:translate3d(-66%,0,0); }
+    }
+    @keyframes skfxTwinLight {
+      0% { opacity:0; transform:translate3d(0,0,0); }
+      12% { opacity:.8; transform:translate3d(0,0,0); }
+      30% { opacity:.9; transform:translate3d(62%,2px,0); }
+      44% { opacity:.9; transform:translate3d(62%,-4px,0); }
+      56% { opacity:.95; transform:translate3d(14%,0,0); }
+      60% { opacity:1; transform:translate3d(4%,0,0) scale(1.06); }
+      72% { opacity:.85; transform:translate3d(42%,-6px,0) scale(1.02); }
+      100% { opacity:0; transform:translate3d(66%,0,0); }
+    }
+    /* 相反爆発: 黒い核(闇)がふくらみ、白い閃光の輪とトゲが広がる。色は固定(黒・紫・白・金) */
+    .skfx-over--eclipse i:nth-child(1) { left:-52px; top:-52px; width:104px; height:104px; border-radius:50%;
+      background:radial-gradient(circle,#000 0 30%,#1e1b4b 42%,#6d28d9 58%,rgba(109,40,217,0) 74%); animation:skfxEclipseCore 520ms ease-out forwards; animation-delay:var(--hit-at); }
+    .skfx-over--eclipse i:nth-child(2) { left:-40px; top:-40px; width:80px; height:80px; border-radius:50%; border:6px solid #fff;
+      box-shadow:0 0 22px #fde68a,0 0 44px #fff,inset 0 0 16px #fde68a; animation:skfxEclipseRing 520ms ease-out forwards; animation-delay:calc(var(--hit-at) + 30ms); }
+    .skfx-over--eclipse i:nth-child(3) { left:-110px; top:-110px; width:220px; height:220px; border-radius:50%;
+      background:repeating-conic-gradient(#fff 0 5deg,rgba(255,255,255,0) 5deg 22deg);
+      -webkit-mask-image:radial-gradient(circle,transparent 18%,#000 38%,transparent 70%); mask-image:radial-gradient(circle,transparent 18%,#000 38%,transparent 70%);
+      animation:skfxEclipseRays 520ms ease-out forwards; animation-delay:calc(var(--hit-at) + 20ms); }
+    @keyframes skfxEclipseCore { 0% { opacity:0; transform:scale(.2); } 25% { opacity:1; transform:scale(1.05); } 60% { opacity:1; transform:scale(1.25); } 100% { opacity:0; transform:scale(1.7); } }
+    @keyframes skfxEclipseRing { 0% { opacity:0; transform:scale(.3); } 25% { opacity:1; } 100% { opacity:0; transform:scale(2.6); } }
+    @keyframes skfxEclipseRays { 0% { opacity:0; transform:scale(.3) rotate(0deg); } 30% { opacity:.95; } 100% { opacity:0; transform:scale(1.3) rotate(40deg); } }
+    /* 反発雷撃: 紫と金の雷が敵の真上から交差して落ち、白い閃光が出る */
+    .skfx-over--twinThunder i:nth-child(1), .skfx-over--twinThunder i:nth-child(2) { top:-170px; width:30px; height:180px;
+      clip-path:polygon(45% 0,75% 0,55% 30%,85% 30%,35% 64%,58% 64%,20% 100%,38% 66%,12% 66%,44% 32%,22% 32%); transform-origin:50% 100%; }
+    .skfx-over--twinThunder i:nth-child(1) { left:-30px; background:linear-gradient(to bottom,rgba(139,92,246,0),#c4b5fd 30%,#fff 60%,#8b5cf6); filter:drop-shadow(0 0 10px #7c3aed);
+      rotate:-9deg; animation:skfxTwinThunder 320ms ease-out forwards; animation-delay:calc(var(--hit-at) - 80ms); }
+    .skfx-over--twinThunder i:nth-child(2) { left:0; background:linear-gradient(to bottom,rgba(250,204,21,0),#fde68a 30%,#fff 60%,#f59e0b); filter:drop-shadow(0 0 10px #f59e0b);
+      rotate:9deg; animation:skfxTwinThunder 320ms ease-out forwards; animation-delay:calc(var(--hit-at) - 40ms); }
+    .skfx-over--twinThunder i:nth-child(3) { left:-46px; top:-46px; width:92px; height:92px; border-radius:50%;
+      background:radial-gradient(circle,#fff 0 14%,#e9d5ff 30%,rgba(250,204,21,.65) 52%,rgba(124,58,237,0) 74%); animation:skfxBoom 420ms ease-out forwards; animation-delay:var(--hit-at); }
+    @keyframes skfxTwinThunder { 0% { opacity:0; transform:scaleY(.2); transform-origin:50% 0; } 25% { opacity:1; transform:scaleY(1); } 45% { opacity:.4; } 60% { opacity:1; } 100% { opacity:0; transform:scaleY(1); } }
     .skfx-over--wave i { left:-30px; top:-30px; width:60px; height:60px; border-radius:50%; border:4px solid var(--c1); box-shadow:0 0 10px var(--c2),inset 0 0 8px var(--c2);
       animation:skfxWaveRing 420ms ease-out forwards; animation-delay:calc(var(--hit-at) - 60ms); }
     .skfx-over--wave i:nth-child(2) { animation-delay:calc(var(--hit-at) + 40ms); }
@@ -78585,7 +78677,7 @@ const createAnimationStyle = () => {
     /* 動きを減らす設定: 本体は光るだけ、飛ぶもの・線は出さず、着弾の光だけ */
     @media (prefers-reduced-motion: reduce) {
       .thm-atk__monster { animation:thmReduced var(--thm-ms,450ms) ease-out forwards !important; }
-      .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit, .skfx-over { display:none; }
+      .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit, .skfx-over, .skfx-twin { display:none; }
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
     }
     /* ==== タクティクスのEXスキルを使った瞬間のカットイン(24-battle-fx.jsx の TacticsExCutin・1600ms) ====

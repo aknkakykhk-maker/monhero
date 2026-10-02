@@ -242,7 +242,7 @@ Mia: {
 ```
 
 - 部品は `body`(bash 突進 / kick 跳び蹴り / spin 回転 / jump 跳び乗り / float 浮いて落下 / dash 高速ダッシュ / warp 瞬間移動 / jab 連続パンチ / cast その場で放つ / hop 跳ねて歌う / shake 揺れる / toss 投げる / lick 舌 / dive / roll / flip / slash)、
-  `line`(ray 光線 / bolt 稲妻 / whip むち / beam / tongue / arc)、`fx`(`skmFx(道すじ, 形, 数)`)、`over`(thunder / xslash / claw / pillar / tornado / ice / bite / boom / wave / bloom / gas / cross / sword / eye / fist / slash / aurora / shadow)、`burst`、色 `c`(`SKM_COLOR` の名前)
+  `line`(ray 光線 / bolt 稲妻 / whip むち / beam / tongue / arc)、`fx`(`skmFx(道すじ, 形, 数)`)、`over`(thunder / xslash / claw / pillar / tornado / ice / bite / boom / wave / bloom / gas / cross / sword / eye / fist / slash / aurora / shadow / eclipse / twinThunder)、`burst`、色 `c`(`SKM_COLOR` の名前)
 - **着弾の時刻と尺は書かない**(`skillFxSpecOf` が本体の動きと飛ぶものから決める。1.2秒を超えない)
 - 専用の動き(`atkMotion` が `default` 以外)を持つ子は、見せ場の動きを**どれか1つの技**に `SKM_SIG` で残す(ユーザー選択「技ごとに全部別の動きにする」)
 - 同じ名前の技を持つ子は `skmRecolor`(色だけ変える)・`skmWithSig`(見せ場の段階だけ変える)で写してよい
