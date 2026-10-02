@@ -26,7 +26,7 @@ function ProfileScreen({
   rhythmHistoryCount, onOpenRhythmHistory,
   // フレンド画面への入口。公開前(friendsEnabled=false)は出さない
   friendsEnabled = false, onOpenFriends, friendRequestCount = 0,
-  // フレンドに見せる「好きなマスモン」(選んでいなければ null)と、選ぶ画面を開く操作
+  // フレンドに見せる「好きなモンスター」(選んでいなければ null)と、選ぶ画面を開く操作
   favoriteMasu = null, onOpenFavoritePicker,
   // 選べる助手だけ(イベントで加入する助手は、その会話を見るまで並べない)。
   // 渡されなければ今までどおり全員を並べる
@@ -140,7 +140,7 @@ function ProfileScreen({
           <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="mb-4 flex w-full min-h-[56px] items-center gap-2 rounded-2xl border border-pink-400/30 bg-slate-900/70 px-3 py-2 active:scale-[.98]">
             {iconUrl?<img src={iconUrl} alt="" className="h-10 w-10 shrink-0 object-contain"/>:<span className="flex h-10 w-10 shrink-0 items-center justify-center text-2xl" aria-hidden="true">💗</span>}
             <span className="min-w-0 flex-1 text-left">
-              <small className="block text-[10px] font-black text-pink-300">好きなマスモン（フレンドに見えます）</small>
+              <small className="block text-[10px] font-black text-pink-300">好きなモンスター（フレンドに見えます）</small>
               <b className="block truncate text-[13px] font-black text-white">{base?`${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）`:'まだ選んでいません'}</b>
             </span>
             <ChevronRight size={16} className="shrink-0 text-pink-400"/>

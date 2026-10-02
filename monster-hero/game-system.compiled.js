@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ce26b0c438f4d34f
+// source-sha256: 61df8122e9d899c7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 02:35";
+const BUILD_DATE = "2026-10-03 02:37";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36913,7 +36913,7 @@ function ProfileScreen({
       className: "min-w-0 flex-1 text-left"
     }, React.createElement("small", {
       className: "block text-[10px] font-black text-pink-300"
-    }, "好きなマスモン（フレンドに見えます）"), React.createElement("b", {
+    }, "好きなモンスター（フレンドに見えます）"), React.createElement("b", {
       className: "block truncate text-[13px] font-black text-white"
     }, base ? `${base.name}（絆Lv.${masuBondLevelInfo(favoriteMasu).level}）` : 'まだ選んでいません')), React.createElement(ChevronRight, {
       size: 16,
@@ -52626,7 +52626,7 @@ function FriendsScreen({
         className: "text-sm font-black text-pink-200"
       }, entry.songCount, "曲")))), React.createElement("div", {
         className: "mt-3"
-      }, React.createElement(ScreenSectionLabel, null, "好きなマスモン")), React.createElement("div", {
+      }, React.createElement(ScreenSectionLabel, null, "好きなモンスター")), React.createElement("div", {
         "data-friend-favorite": true,
         className: `${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`
       }, !favBase && React.createElement("p", {
@@ -79308,7 +79308,7 @@ function MonsterHeroGame() {
       className: "bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col"
     }, React.createElement("h3", {
       className: "text-lg font-black text-white mb-1 text-center"
-    }, "好きなマスモン"), React.createElement("p", {
+    }, "好きなモンスター"), React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
     }, "フレンドがあなたのプロフィールを開いたとき、この子が見えます。"), React.createElement("div", {
       className: "min-h-0 flex-1 overflow-y-auto mh-scroll flex flex-col gap-1.5",
