@@ -1798,7 +1798,7 @@ addAssistantLinePack({
       { e:'wink', t:'長引くほど苦しくなるから、短く決めるのがコツ。がんばって(●゚ｪ゚))ｺｸｺｸ' },
     ],
     helheimDifficulty: [
-      { e:'surprise', t:'HELHEIMは敵強度300倍で、しかも敵のライフはさらに10倍だよ…！' },
+      { e:'surprise', t:'HELHEIMは敵強度230倍で、しかも敵のライフはさらに10倍だよ…！' },
       { e:'normal', t:'冥府が深まるたびに、味方の最大ライフも削られていくの。' },
       { e:'troubled', t:'距離強化もWAVEごとに薄れて、後半はほとんど伸びなくなるよ。' },
       { e:'surprise', t:'WAVE3・5・7・9・10のボスは起き上がるし、W10は4回も蘇るんだって…！' },
@@ -2441,7 +2441,7 @@ addAssistantLinePack({
       { e:'wink',     t:'報酬は虹のプシュケー130個。短期決着を狙お♪' },
     ],
     helheimDifficulty: [
-      { e:'surprise', t:'HELHEIMは敵強度×300、敵のライフはさらに10倍でつ…！' },
+      { e:'surprise', t:'HELHEIMは敵強度×230、敵のライフはさらに10倍でつ…！' },
       { e:'normal', t:'冥府Lvが上がるたび、味方の最大ライフが削れまつ。' },
       { e:'troubled', t:'距離強化はWAVEごとに薄れて、後半はほぼ伸びませんでつ。' },
       { e:'surprise', t:'WAVE3・5・7・9・10のボスが起き上がりまつ…！ W10は4回でつ。' },
@@ -3061,7 +3061,7 @@ addAssistantLinePack({
       { e:'happy',    t:'ここまで来たキミなら、ももは止めないよ！' },
     ],
     helheimDifficulty: [
-      { e:'surprise', t:'HELHEIM……RAGNAROKの上があったんだ。敵の強さ300倍、ライフ10倍！？' },
+      { e:'surprise', t:'HELHEIM……RAGNAROKの上があったんだ。敵の強さ230倍、ライフ10倍！？' },
       { e:'normal', t:'冥府Lvが上がるたびに、こっちの最大ライフも減っていくんだって。' },
       { e:'troubled', t:'距離強化もWAVEごとに薄れていくから、後半は殴っても伸びないよ。' },
       { e:'surprise', t:'まって、WAVE9のデュラハンまで起き上がってくるんだってwww' },
@@ -4674,7 +4674,7 @@ addAssistantLinePack({
       { e:'happy',   t:'ここまで来る人、ほんとに一握りだよ。すごいじゃん♡' },
     ],
     helheimDifficulty: [
-      { e:'excited', t:'300倍で、さらにライフ10倍。もう笑うしかないねw' },
+      { e:'excited', t:'230倍で、さらにライフ10倍。もう笑うしかないねw' },
       { e:'troubled', t:'ボスは何回も起き上がるし、こっちの最大ライフは削られるしで容赦ないよ。' },
       { e:'happy', t:'ここに立てるだけで、もう十分すごいじゃん♡' },
     ],
