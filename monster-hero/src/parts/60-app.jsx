@@ -11050,6 +11050,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           totalHeal+=Math.floor(liveEffectiveMaxHp()*hpRecRate*effMul); totalHealRate+=hpRecRate*effMul;
           addPermaBuff('muaHpPct',hpB*effMul); addPermaBuff('muaAtkPct',atkB*effMul); addPermaBuff('muaGutsPct',gutsB*effMul);
           if(gutsRecRate>0) gainGutsByRateAll(gutsRecRate*effMul);   // 入った子の枠に出るので、まんなかへは出さない
+        } else if (card.id==='momosuke') {
+          // みゅあのガッツ回復版。ライフ回復はLv1から、攻撃アップの代わりに丈夫さ(defPct)を上げる
+          const gutsRecRate=level===1?0.7:(level>=2?0.9:0.5), hpRecRate=level===1?0.7:(level>=2?0.9:0);
+          const hpB=level>=2?0.05:0.03, gutsB=level===1?0.05:(level>=2?0.08:0.03), defB=level>=2?0.05:0.03;
+          if(hpRecRate>0){ totalHeal+=Math.floor(liveEffectiveMaxHp()*hpRecRate*effMul); totalHealRate+=hpRecRate*effMul; }
+          addPermaBuff('muaHpPct',hpB*effMul); addPermaBuff('muaGutsPct',gutsB*effMul); addPermaBuff('defPct',defB*effMul);
+          gainGutsByRateAll(gutsRecRate*effMul);   // 入った子の枠に出るので、まんなかへは出さない
         } else {
           totalHeal+=Math.floor(liveEffectiveMaxHp()*(0.5+level*0.2)*effMul); totalHealRate+=(0.5+level*0.2)*effMul;
           addPermaBuff('muaHpPct',0.10*effMul); addPermaBuff('muaAtkPct',0.05*effMul); addPermaBuff('muaGutsPct',0.10*effMul);
@@ -13053,6 +13060,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       return parts.join('・');
     }
     if(t.id==='mua') return level===0?"ライフ 50%回復・ライフ/ガッツ上限 3%アップ・攻撃 3%アップ（次のターンから）":(level===1?"ライフ・ガッツ 70%回復・ライフ上限 5%アップ・ガッツ上限 3%アップ・攻撃 3%アップ（次のターンから）":"ライフ・ガッツ 90%回復・ライフ上限 8%アップ・ガッツ上限 5%アップ・攻撃 5%アップ（次のターンから）");
+    if(t.id==='momosuke') return level===0?"ガッツ 50%回復・ライフ/ガッツ上限 3%アップ・丈夫さ 3%アップ（次のターンから）":(level===1?"ライフ・ガッツ 70%回復・ライフ上限 3%アップ・ガッツ上限 5%アップ・丈夫さ 3%アップ（次のターンから）":"ライフ・ガッツ 90%回復・ライフ上限 5%アップ・ガッツ上限 8%アップ・丈夫さ 5%アップ（次のターンから）");
     if(t.id==='atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue+level*t.step).toFixed(1)}倍`;
     if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=pct(myaruSelfDamageRate(t,level)); return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;}
     if(t.id==='kiki') return `次の${level+2}ターン 使用可能カード枚数 +1・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;
