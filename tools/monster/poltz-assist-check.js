@@ -54,18 +54,18 @@ check('初期から無料で使えるアシストには入れない',
   !STARTER_TEACHING_IDS.includes('poltz') && STARTER_TEACHING_IDS.length === 6,
   STARTER_TEACHING_IDS.join(','));
 check('既存アシストカードの構成を変えていない',
-  TEACHING_CARDS.length === 9 && TEACHING_CARDS.slice(0, 8).map(t => t.id).join(',') === 'oryo,dra,cadmium,mua,atsu,myaru,kiki,meloso',
+  TEACHING_CARDS.length >= 9 && TEACHING_CARDS.slice(0, 9).map(t => t.id).join(',') === 'oryo,dra,cadmium,mua,atsu,myaru,kiki,meloso,poltz',
   TEACHING_CARDS.map(t => t.id).join(','));
 
 const market = BREEDER_MARKET_ITEMS.find(i => i.id === 'poltz');
 check('マーケットのアシストタブに並んでいる', !!market && market.type === 'assist');
-// 販売価格はきき・メロソと同じ1500ダイヤ(2026年8月にユーザーが指定)。
+// 販売価格はアシストカード一律150000ダイヤ(2026-10-02にユーザーが1500から変更)。
 // available:false(「近日追加」)は外してあるので、ダイヤがあれば購入して解放できる
-check('きき・メロソと同じ1500ダイヤで購入できる',
-  !!market && market.cost === 1500 && market.available !== false,
+check('150000ダイヤで購入できる',
+  !!market && market.cost === 150000 && market.available !== false,
   market && `${market.cost}ダイヤ`);
-check('アシストカードの価格がきき・メロソと揃っている',
-  BREEDER_MARKET_ITEMS.filter(i => i.type === 'assist').every(i => i.cost === 1500),
+check('アシストカードの価格が一律150000ダイヤ',
+  BREEDER_MARKET_ITEMS.filter(i => i.type === 'assist').every(i => i.cost === 150000),
   BREEDER_MARKET_ITEMS.filter(i => i.type === 'assist').map(i => `${i.id}:${i.cost}`).join(' / '));
 
 // プロフィールアイコンはカードと同じ絵を id を分けて並べる(きき/kiki_icon と同じ作り)。
