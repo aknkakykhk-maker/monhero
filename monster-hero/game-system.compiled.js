@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ea7af6864484166
+// source-sha256: ba627b3c14bbfbdd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 02:05";
+const BUILD_DATE = "2026-10-03 02:20";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5607,7 +5607,8 @@ const TITLE_ART_OPTIONS = [{
   id: 'halloween',
   label: 'ハロウィン',
   desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え',
-  src: 'data/images/title-screen-halloween.jpg'
+  src: 'data/images/title-screen-halloween.jpg',
+  wideSrc: 'data/images/title-screen-halloween-wide.jpg'
 }, {
   id: 'classic',
   label: 'クラシック',
@@ -86847,13 +86848,16 @@ const createAnimationStyle = () => {
        ・HOME: 枠が絵より縦長なら画面いっぱい(cover)にして下の帯を消す。枠が絵より横に広いときは絵全体を出し、余りはぼかした絵で埋める */
     .mh-title-backdrop{position:absolute;z-index:0;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(16px) brightness(.5);transform:scale(1.08);pointer-events:none}.mh-title-visual{z-index:1}
     @media(min-aspect-ratio:3/4) and (max-aspect-ratio:7/5){.mh-title-visual,.mh-entering>img{object-fit:contain;object-position:50% 50%}}
-    /* ハロウィンのタイトルの絵は縦長の1枚だけ(横長の絵は持たない・2026-10-01)。横長の画面(縦横比 7:5 より横)では、
-       上下が大きく切れてロゴが見えなくなるので、絵全体を出し、左右はぼかした同じ絵で埋める。クラシックの絵の見え方は変えない */
-    @media(min-aspect-ratio:7/5){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:contain;object-position:50% 50%}}
-    /* 横開きの端末(縦横比 3:4〜1:1 の、縦長に近い画面)では、ハロウィンの絵を画面いっぱいに広げる(2026-10-03・ユーザー指示
-       「横開きの端末で縦長タイトルになっているから、ちゃんと画面全体に表示して」)。上が切れるので、ロゴと仲間が残る下寄りに合わせる。
-       1:1 より横に広い画面は、切れすぎてロゴが見えなくなるので、上の「全体を出して左右をぼかす」のまま */
-    @media(min-aspect-ratio:3/4) and (max-aspect-ratio:1/1){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:cover;object-position:50% 85%}}
+    /* ハロウィンのタイトルの絵は、縦長(941x1672)と横長(1672x941)の2枚(2026-10-03)。画面が横向きなら横長、縦向きなら縦長を読む(60-app の titleArtSrc)。
+       どちらも、画面の縦横比に近いほど絵が切れず、遠いほど切れるので、縦横比で見せ方を変える。
+       ・縦向きの 3:4〜1:1(折りたたみの横開きの内側など): 縦長の絵を全体で出し、1.25倍に広げて下寄りに合わせる。
+         上の空だけが少し切れ、ロゴと仲間は残る。左右に残る細いあきはぼかした同じ絵で埋める
+       ・横向きの 3:2 より横長(スマホの横持ち・パソコン): 横長の絵を画面いっぱい(cover)。上下がわずかに切れるだけ
+       ・横向きの 1:1〜3:2(4:3 のタブレットなど): 横長の絵を全体で出し、上下のあきはぼかした同じ絵で埋める
+       クラシックの絵の見え方は変えない */
+    @media(min-aspect-ratio:3/4){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:contain;object-position:50% 50%}}
+    @media(min-aspect-ratio:3/4) and (max-aspect-ratio:1/1){.mh-title-visual[src*="halloween"]{transform:scale(1.25);transform-origin:50% 85%}}
+    @media(min-aspect-ratio:3/2){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:cover;object-position:50% 40%}}
     @container (max-aspect-ratio:941/1672){.mh-home-background img.mh-home-main{object-fit:cover}}
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
