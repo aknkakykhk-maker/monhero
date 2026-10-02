@@ -34,6 +34,15 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-02 22:08", type:'content', title:'モンヒロビートで友だちとスコア対決ができるようになりました', status:'new', releaseFlag:'rhythmMulti',
+    assistantNotice:{ id:'update_notice_rhythm_multi_v1', type:'content' },
+    items:[
+      '曲えらびの右上に「対戦」ボタンが増えました。部屋コードを友だちに伝えて集まり、同じ曲を同時に演奏してスコアを比べられます(最大4人)。',
+      '部屋をつくった人が曲と難易度をえらび、ほかの人が準備OKを押すとスタートできます。',
+      '対戦の演奏は、自己ベスト・全国ランキング・ビートPには反映されません。',
+    ],
+  },
+  {
     // 2026-10-02 ユーザー指示(mp4とジャケットだけ)。歯ごたえは自動のままとユーザーが決めた
     date: "2026-10-02 21:50", type:'update', title:'モンヒロビート：新曲「ハルカ」を追加しました', status:'new',
     image: 'images/song-art/haruka.jpg?v=d3979cac1117',

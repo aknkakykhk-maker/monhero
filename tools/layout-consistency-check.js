@@ -199,6 +199,7 @@ check('画面が数えられている', screens.length > 20, `${screens.length}�
 const COMPONENT_OWNED_SCREENS = {
   RHYTHM_PLAY: 'RhythmTapTest（演奏中。BATTLEと同じくスクロールさせない設計）',
   RHYTHM_OPTIONS: 'RhythmOptions',
+  RHYTHM_MULTI: 'RhythmMultiScreen（みんなで対戦の部屋。中身の領域が overflow-y-auto で縦スクロールする）',
   RHYTHM_DEMO_HOME: 'RhythmSongSelect（曲の一覧の中でスクロールする）',
   // 攻撃アクションを大きく見せるための専用画面。中身は1画面に収まる作りで、
   // 元からスクロール領域を持たない。2026-09-10 に画面を切り出して初めてそれが見えた

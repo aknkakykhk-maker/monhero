@@ -721,6 +721,22 @@ const HELP_CATEGORIES = [
         ],
       },
       {
+        id:'rhythm-multi', emoji:'🎮', title:'みんなで対戦', releaseFlag:'rhythmMulti', group:'マスモンとランキング',
+        assistant:'部屋コードを友だちに伝えれば、同じ曲で同時にスコア勝負ができるよ♪', expression:'excited',
+        blocks:[
+          {t:'p',text:'曲えらびの右上の「対戦」ボタンから入ります。同じ曲・同じ難易度を同時に演奏して、終わったあとにスコアを比べる遊びです。最大4人まで集まれます。'},
+          {t:'steps',items:[
+            '1人が「部屋をつくる」を押すと、4文字の部屋コードが出ます。「友だちに送る」で伝えます',
+            '友だちは「友だちの部屋コードで入る」にコードを入れて「入る」を押します',
+            '部屋をつくった人(👑)が曲と難易度をえらびます',
+            '部屋をつくった人以外が「準備OK!」を押すと、部屋をつくった人の「スタート!」が押せるようになります',
+            '3・2・1 のあと、全員が同時に演奏を始めます。終わると、みんなのスコアが順位つきで部屋の画面に並びます',
+          ]},
+          {t:'note', title:'対戦の記録は残りません', text:'対戦の演奏は、自己ベストにも全国ランキングにもビートPにも反映されません。マスモンのノーツやアシストモードも使えず、全員が同じ条件で遊びます。'},
+          {t:'note', title:'途中でやめたとき', text:'演奏を中断すると「リタイア」として部屋に伝わります。部屋を出る・アプリを閉じると、しばらくしてメンバーから外れます。部屋をつくった人が抜けたときは、次に早く入った人が引き継ぎます。'},
+        ],
+      },
+      {
         id:'rhythm-ranking', emoji:'🏆', title:'全国ランキング', releaseFlag:'rhythmMode', group:'マスモンとランキング',
         assistant:'「この曲」「総合」「イベント」の3つがあるよ。総合は全曲の合計、イベントは今週の対象曲だけの勝負なの♪', expression:'excited',
         blocks:[
@@ -1958,6 +1974,7 @@ const HELP_SCREEN_COVERAGE = {
   RHYTHM_DEMO_HELP:     'rhythm/rhythm-tutorial',
   RHYTHM_DEMO_MONSTERS: 'rhythm/rhythm-monster-note-display',
   RHYTHM_RANKING:       'rhythm/rhythm-ranking',
+  RHYTHM_MULTI:         'rhythm/rhythm-multi',
   // デバッグ戦の設定(難易度→敵→勇者モン→開始)。デバッグ設定のメニューから切り出したもの
   DEBUG_BATTLE_SETUP: 'basics/battle-modes',
   // データを用意する(デバッグ専用)。触るのは所持品と進行なので、アイテムの説明へ対応させる

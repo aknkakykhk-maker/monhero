@@ -3450,7 +3450,7 @@ function MonsterHeroGame() {
   const BGM_SILENT_STATES = Object.freeze([
     // モンヒロビートは自分で音を管理する。ここでキーを持つと、譜面の曲と二重に鳴る
     'RHYTHM_PLAY', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS',
-    'RHYTHM_INFO', 'RHYTHM_OPTIONS', 'RHYTHM_RANKING',
+    'RHYTHM_INFO', 'RHYTHM_OPTIONS', 'RHYTHM_RANKING', 'RHYTHM_MULTI',
     // オンボーディングのプレビューで開く助手えらび。タイトルからの流れの中なので鳴らさない
     'ASSISTANT_SELECT',
     // デバッグ画面。プレイヤーの通常プレイには出ない
@@ -3508,7 +3508,7 @@ function MonsterHeroGame() {
   // ★オプション(RHYTHM_OPTIONS)もここへ入れる。遊びかた・ランキングと同じで、
   //   60fpsも精密入力も要らない。2026-09-12までここだけ抜けていて、オプションを見ている
   //   あいだは周回が止まっていた(そのぶんは追いつきで取り戻していた)。
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS'];
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_MULTI'];
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
   //
   // ★**一覧で持たず、gameStateの頭で見る。**
@@ -15607,7 +15607,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmPlay.from==='multi'?[]:rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+          // みんなで対戦の演奏は、スコアを部屋へ知らせるだけ。自己ベスト・全国ランキング・周回の報酬・ビートPには一切触れない
+          // (CLAUDE.md ⑦「ランキング対象外の遊び方は送信しないだけでなく自己ベストも上書きしない」)
+          if(rhythmPlay.from==='multi'){RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,result,false);return;}
           // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====
           // 最後まで演奏したこの場でだけ行う。途中でやめたときは onComplete を通らないので何も入らない
           // (1秒だけ演奏してやめる、で稼げないようにするため)。
@@ -15658,7 +15661,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // アシストモード(2026-09-24・バンドリ！アワーノーツから取り入れた遊び方)のプレイは、
           // 自己ベストにも全国ランキングにも残さない(CLAUDE.md ⑦「ランキング対象外の遊び方は送信しないだけでなく自己ベストも上書きしない」)
           if(result?.assist===true)return;
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true);const back=rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':rhythmPlay.from==='multi'?'RHYTHM_MULTI':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);
@@ -15669,6 +15672,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
         }}/>}
+
+        {gameState==='RHYTHM_MULTI'&&<RhythmMultiScreen profile={{name:breederName,level:breederLevel.level}} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)}
+          onBack={()=>setGameState('RHYTHM_DEMO_HOME')}
+          onStartPlay={(song,difficulty,startId)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId});setGameState('RHYTHM_PLAY');}}/>}
 
         {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
 
@@ -15705,6 +15712,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               setGameState('RHYTHM_RANKING');
             }}
             onOpenHelp={()=>{setRhythmHelpTopicId(null);setGameState('RHYTHM_DEMO_HELP');}}
+            onOpenMulti={RELEASE_FLAGS.rhythmMulti===true?()=>setGameState('RHYTHM_MULTI'):null}
             onOpenMonsterSlots={()=>{setRhythmMonsterPickerOpen(false);setRhythmMonsterMessage('');setGameState('RHYTHM_DEMO_MONSTERS');}}
             onOpenOptions={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
             onOpenRanking={(song)=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}

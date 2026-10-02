@@ -45,7 +45,7 @@ function RhythmInfoScreen({
 
 function RhythmSongSelectScreen({
   catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, dismissRhythmLookIntro, rhythmLookIntroVisible, onTryRhythmLook, exitingQuickRun, handleGiveUp, mainHero,
-  onExit, onOpenEventRanking, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
+  onExit, onOpenEventRanking, onOpenHelp, onOpenMulti = null, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
   onPlaySong, onToggleRhythmSetting, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
   repeatTemplateForNewRun, resultProcessing, resumeQuickRunFromRhythm, returnToBackgroundRun, returnToHome,
@@ -186,6 +186,9 @@ function RhythmSongSelectScreen({
           {/* 右上の4つのボタンは「絵＋下に小さく名前」の同じ形(2026-10-01・ユーザー指摘「マスモン設定ボタン自体も
               分かりづらいから画面幅を無駄にせず分かりやすいように」)。絵文字だけだと何のボタンか分からなかった。
               マスモンのボタンは、設定中の子の顔を重ねて並べる(何体入っているかもひと目で分かる)。幅は前と同じくらい */}
+          {onOpenMulti&&<button data-rhythm-demo-multi aria-label="みんなで対戦" title="みんなで対戦"
+            onClick={onOpenMulti}
+            className="flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100"><span aria-hidden="true" className="text-base leading-none">🎮</span><span className="text-[9px] font-black leading-none">対戦</span></button>}
           <button data-rhythm-demo-help aria-label="遊びかた" title="遊びかた"
             onClick={onOpenHelp}
             className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none text-amber-100${spotClass('help')}`}><span aria-hidden="true" className="text-base leading-none">📖</span><span className="text-[9px] font-black leading-none">遊びかた</span></button>

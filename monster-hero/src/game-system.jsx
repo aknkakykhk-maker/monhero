@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 062c491c0b33aba9
+// generated-sha256: 59b3b9a0f44246da
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 21:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 22:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7446,6 +7446,8 @@ const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 // 2026-09-08・実機で比べてもらい、マスモンの絵が残る・失敗した HOLD/SLIDE が消える・触った FLICK の帯が残る、を直したうえで
 // ユーザー「問題なし」→ 公開。デバッグ画面の「ノーツの描き方」で「要素」を選べば従来の描き方へ戻せる。
 const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
+// モンヒロビートのマルチ(同じ曲でスコア対決)。曲えらびの「対戦」ボタンの出し入れ
+const RHYTHM_MULTI_PUBLIC_RELEASE = true;
 // モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
 // ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
 //   docs/sql/rankings/RHYTHM_TOTAL_APPLY.sql を適用するまで中身が出せない。
@@ -7478,7 +7480,7 @@ const RHYTHM_EVENT_POINTS_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tactics: TACTICS_MODE_PUBLIC_RELEASE,
   tacticsBattle: TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE,
   // タクティクスのEXスキル。遊べる入口(β版を含む)があって、EXの公開フラグも立っているときだけ
-  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
+  tacticsExSkills: (TACTICS_MODE_PUBLIC_RELEASE || TACTICS_BETA_PRO_RELEASE) && TACTICS_EX_SKILLS_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, rhythmMulti:RHYTHM_MULTI_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE, rhythmTotalRanking:RHYTHM_TOTAL_RANKING_PUBLIC_RELEASE, rhythmWeeklyRanking:RHYTHM_WEEKLY_RANKING_PUBLIC_RELEASE, rhythmEventPoints:RHYTHM_EVENT_POINTS_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
@@ -18118,7 +18120,7 @@ const RhythmHudJudgment=({hud,settings,status,haloKeys,timingDisplay,judgmentTex
 //   アプリを開き直すまで下げたまま、しかも知らせも出なかった(2026-09-27 の点検で見つけた)
 const rhythmAutoEffectMemory={level:0};
 const rhythmResetAutoEffect=()=>{rhythmAutoEffectMemory.level=0;};
-const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null})=>{
+const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,quickRunAward=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false})=>{
   // 重いときは演出を自動で控えめにする(設定 autoEffectDown・rhythmCapEffects)。この部品の中の settings は、下げた段を当てたもの
   const [effectCap,setEffectCap]=useState(()=>rhythmAutoEffectMemory.level);
   const settings=useMemo(()=>settingsIn&&settingsIn.autoEffectDown!==false?rhythmCapEffects(settingsIn,effectCap):settingsIn,[settingsIn,effectCap]);
@@ -18143,7 +18145,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   /* アシストモード・ミラー譜面(バンドリ！アワーノーツから取り入れた遊び方。2026-09-24)。
      練習・タイミング合わせでは使わない(アシストはデバッグから始めたプレイでも使わない)。
      譜面は演奏の前に一度だけ作り変える。元の譜面(song.difficulties)は書き換えない */
-  const assistOn=!!settings.assistMode&&!tutorial&&!calibrating&&!debugPlay,mirrorOn=!!settings.mirrorChart&&!tutorial&&!calibrating;
+  const assistOn=!!settings.assistMode&&!tutorial&&!calibrating&&!debugPlay&&!multi,mirrorOn=!!settings.mirrorChart&&!tutorial&&!calibrating;
   const rawChart=song.difficulties[difficulty.id];
   const transformedChart=useMemo(()=>assistOn||mirrorOn?rhythmTransformChart(song.difficulties[difficulty.id],{mirror:mirrorOn,assist:assistOn}):null,[song.songId,difficulty.id,assistOn,mirrorOn]);
   const chart=transformedChart||rawChart,laneRefs=useRef([]),runRef=useRef(null),frameRef=useRef(null),heldNotesRef=useRef([]),playAreaRef=useRef(null),judgmentLineRef=useRef(null),judgmentBandRef=useRef(null),judgmentTimerRef=useRef(null),judgmentRevisionRef=useRef(0),startLockRef=useRef(false),generationRef=useRef(0),mountedRef=useRef(false),glowNodesRef=useRef(null),liveTouchSubLanesRef=useRef([]);
@@ -18413,7 +18415,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const luckGaugeRef=useRef(null),luckPointsRef=useRef(null),luckBannerTimerRef=useRef(null);
   const [luckyRush,setLuckyRush]=useState(false);
   const [luckyBanner,setLuckyBanner]=useState(null);
-  const luckOn=settings.luckyRush!==false&&!tutorial&&!calibrating;
+  const luckOn=settings.luckyRush!==false&&!tutorial&&!calibrating&&!multi;
   const showLuckyBanner=useCallback((text,kind)=>{if(luckBannerTimerRef.current)clearTimeout(luckBannerTimerRef.current);setLuckyBanner({text,kind,id:Date.now()});luckBannerTimerRef.current=setTimeout(()=>{luckBannerTimerRef.current=null;setLuckyBanner(null);},kind==='rush'?1400:800);},[]);
   useEffect(()=>()=>{if(luckBannerTimerRef.current)clearTimeout(luckBannerTimerRef.current);},[]);
   const timingDisplay=RHYTHM_TIMING_DISPLAYS.includes(settings.timingDisplay)?settings.timingDisplay:'STANDARD';
@@ -18990,7 +18992,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     // ビートPは正常に最後まで到達した公開プレイだけ。期間判定は rhythmEventPointAwardAt 側に残す
     // (開催中は通常どおり、非開催中はその1/5。2026-09-24・ユーザー指示)。
     // finishは先頭で run.finished=true にするため、再描画・画面遷移で同じ結果を二重付与しない。
-    const eventPointAward=(!debugPlay&&!tutorial&&!calibrating&&!assistOn
+    const eventPointAward=(!debugPlay&&!tutorial&&!calibrating&&!assistOn&&!multi
       &&typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS?.rhythmEventPoints===true
       &&typeof rhythmEventPointAwardAt==='function')
       // 曲の長さ(曲えらびに出ている長さと同じもの)を渡し、2分を超えたぶんの補正を掛ける(2026-09-28)
@@ -19005,9 +19007,9 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
        ここでも自己ベストを混ぜない(NEW RECORD を出さない) */
     const isNewRecord=!assistOn&&score>run.startBestScore;const merged=assistOn?normalizeRhythmBestRecord(run.startBest):mergeRhythmBestRecord(run.startBest,result);
     // 遊んだ記録を送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせ・アシストモードは送らない
-    if(!debugPlay&&!tutorial&&!calibrating&&!assistOn)rhythmPlayLogSend({song,difficulty,rawChart,notes:run.notes,settings,mirror:mirrorOn,cleared:!failed});
+    if(!debugPlay&&!tutorial&&!calibrating&&!assistOn&&!multi)rhythmPlayLogSend({song,difficulty,rawChart,notes:run.notes,settings,mirror:mirrorOn,cleared:!failed});
     // タッチの診断を残して送る(待たない・失敗しても何もしない)。デバッグ・練習・タイミング合わせは除く。アシストは印を付けて含める
-    const touchDiag=!debugPlay&&!tutorial&&!calibrating?rhythmTouchDiagOf({song,difficulty,notes:run.notes,inputTimes:run.inputTimes,assist:assistOn,mirror:mirrorOn,cleared:!failed}):null;
+    const touchDiag=!debugPlay&&!tutorial&&!calibrating&&!multi?rhythmTouchDiagOf({song,difficulty,notes:run.notes,inputTimes:run.inputTimes,assist:assistOn,mirror:mirrorOn,cleared:!failed}):null;
     if(touchDiag)void rhythmTouchDiagRecord(touchDiag);
     // リザルトの「押したのに反応しないことがあった」に渡す。タッチで遊ぶ端末(iPhone・Android)だけ
     const touchReport=touchDiag&&touchDiag.platform!=='other'?{playId:touchDiag.stats.playId,song_id:touchDiag.song_id,difficulty:touchDiag.difficulty,note_count:touchDiag.note_count,platform:touchDiag.platform,standalone:touchDiag.standalone}:null;
@@ -19030,7 +19032,7 @@ if(settings.timingDisplay==='METER'&&judgment!=='MISS'&&typeof deltaMs==='number
     }
     if(luckOn)setView(v=>v.result?{...v,result:{...v.result,luck:{points:run.luckPoints||0,draws:run.luckDraws||0,rush:run.luckRushCount||0,bonus:run.luckBonus||0}}}:v);
     onComplete(result,merged);
-  },[chart.totalNotes,chart.durationMs,difficulty.maxScore,difficulty.id,onComplete,settings.effectAmount,settings.lightweightMode,settings.judgmentTimingOffsetMs,stopFrame,tutorial,calibrating,debugPlay,song.songId,song.playDurationMs,assistOn,mirrorOn,luckOn]);
+  },[chart.totalNotes,chart.durationMs,difficulty.maxScore,difficulty.id,onComplete,settings.effectAmount,settings.lightweightMode,settings.judgmentTimingOffsetMs,stopFrame,tutorial,calibrating,debugPlay,song.songId,song.playDurationMs,assistOn,mirrorOn,luckOn,multi]);
   // celebrate画面: 出た瞬間に合成SEを1回鳴らし、既定の時間で自動的にresultへ進む。
   // 依存はview.statusだけにしてある。もしview.comboなど毎ノーツ変わる値を依存に入れると、
   // (かつてコンボ演出で実際に踏んだ通り)途中でeffectが再実行されるたびcleanupが走り、
@@ -19748,7 +19750,7 @@ scheduleTick();};
     それまでは戻って難易度ボタンを見ないと気づけなかった。
     ★前の記録がまだクリアしていなかったときだけ(=このプレイで初めて開いたときだけ)出す。
     ★練習・タイミング合わせ・デバッグから始めたプレイは記録に残らないので出さない */}
-{(()=>{if(tutorial||calibrating||debugPlay||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;const opened=Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id=>RHYTHM_DIFFICULTY_UNLOCK_BY[id]===difficulty.id&&rhythmChartPlayable(song,id));if(!opened)return null;return <div data-rhythm-result-unlock={opened} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {opened}（Lv.{song.difficulties[opened].level}）を曲えらびで選べます</small></div>;})()}
+{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;const opened=Object.keys(RHYTHM_DIFFICULTY_UNLOCK_BY).find(id=>RHYTHM_DIFFICULTY_UNLOCK_BY[id]===difficulty.id&&rhythmChartPlayable(song,id));if(!opened)return null;return <div data-rhythm-result-unlock={opened} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {opened}（Lv.{song.difficulties[opened].level}）を曲えらびで選べます</small></div>;})()}
 {result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
 {result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
@@ -19769,7 +19771,7 @@ scheduleTick();};
 {/* 譜面メモ(DEBUG ONLY)。デバッグ画面から始めた演奏にだけ出す */}
 {debugPlay&&!tutorial&&!calibrating&&<RhythmChartNotePanel song={song} difficulty={difficulty} chart={chart}/>}
 </div>
-<div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}><div className="grid grid-cols-2 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</button></div></div></div></div></main>}
+<div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}><div className={multi?"grid grid-cols-1 gap-2":"grid grid-cols-2 gap-2"}>{!multi&&<button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{multi?'みんなの結果を見る(部屋へ戻る)':debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</button></div></div></div></div></main>}
   /* ★演奏画面そのものを器(container-type:inline-size)にして、HUDの幅や字の大きさは vw ではなく cqw で決める
      (2026-09-26・ユーザー報告「演奏中の曲名が切れてる / 時間バーが難易度に被ってる」)。
      「🔄 横」で絵を回したとき、vw は端末の縦の幅(390px)のままなので、左上の欄が109pxまで縮んで曲名が「SIX…」になり、
@@ -19897,7 +19899,7 @@ scheduleTick();};
   <div className="mt-1 flex items-center gap-1.5 text-[10px] font-black"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 leading-none">{difficulty.id}</span>{!calibrating&&!tutorial&&<span className="text-cyan-300">Lv.{chart.level}</span>}<span className="ml-auto tabular-nums text-slate-300">SCORE <b className="text-white">{hudRef.current.get().score.toLocaleString()}</b></span><span className="tabular-nums text-slate-300">COMBO <b className="text-white">{hudRef.current.get().combo}</b></span></div>
   <div className="mt-2 flex items-center gap-2"><div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><i className="absolute inset-y-0 left-0 block rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400" style={{width:`${(ratio*100).toFixed(1)}%`}}/></div><small data-rhythm-pause-time className="shrink-0 text-[10px] font-black tabular-nums text-slate-300">{rhythmClockLabel(pausedSongMs)} / {rhythmClockLabel(endMs)}</small></div>
 </div>;})()}
-<p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button><button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button><button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</button></div>}</div></main>;
+<p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button>{!multi&&<button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button>}<button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲えらびへ戻る':multi?'中断して部屋へ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</button></div>}</div></main>;
 };
 
 // ---- part: 31-debug-ui.jsx ----
@@ -21423,6 +21425,479 @@ const tacticsExCoverSlot = (state, units, now) => {
 const coverTacticsTargets = (targets, coverSlot) => (Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length
   ? targets.map(() => coverSlot) : (Array.isArray(targets) ? targets : []));
 // ==== タクティクス専用 EXスキルここまで ====
+
+// ---- part: 33-rhythm-multi.jsx ----
+// ===== モンヒロビート マルチ(同じ曲でスコア対決) =====
+// 部屋のコードを友だちに伝えて集まり、同じ曲・同じ難易度を同時に演奏して、終わったあとにスコアを比べる。
+// 通信は Supabase Realtime の「Broadcast」だけを使う。テーブルもSQLも要らず、保存データ(mh_*)・
+// ランキング(rankings)には一切触れない(マルチの演奏は自己ベストにも全国ランキングにも残さない)。
+// 演奏は各自の端末で完結するので、通信の遅れは判定に影響しない。流れるのは
+// 「いま部屋にいる」「準備できた」「始める」「スコア」の短い知らせだけ。
+//
+// 作り:
+//  ・部屋の持ち主(サーバー役)はいない。全員が2秒ごとに自分の状態を知らせ(hb)、7秒聞こえない人は抜けた扱い。
+//    「部屋主」は、いる人の中でいちばん早く入った人(同時なら id の小さい人)。全員が同じ並びを計算できる。
+//  ・画面を行き来しても部屋が切れないよう、状態は React の外(このファイルの RHYTHM_MULTI)に置く。
+const RHYTHM_MULTI_ROOM_MAX = 4;
+const RHYTHM_MULTI_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const RHYTHM_MULTI_CODE_LENGTH = 4;
+const RHYTHM_MULTI_HEARTBEAT_MS = 2000;
+const RHYTHM_MULTI_ALIVE_MS = 7000;
+const RHYTHM_MULTI_START_COUNTDOWN_SEC = 3;
+const RHYTHM_MULTI_TOPIC_PREFIX = 'realtime:mhb-room-';
+
+const rhythmMultiMakeCode = () => {
+  let code = '';
+  for (let i = 0; i < RHYTHM_MULTI_CODE_LENGTH; i += 1) {
+    code += RHYTHM_MULTI_CODE_CHARS[Math.floor(Math.random() * RHYTHM_MULTI_CODE_CHARS.length)];
+  }
+  return code;
+};
+// 入力されたコードを整える。使える文字だけを残し、4文字にそろわなければ空文字を返す
+const rhythmMultiNormalizeCode = (text) => {
+  const code = String(text == null ? '' : text).toUpperCase().split('')
+    .filter((ch) => RHYTHM_MULTI_CODE_CHARS.includes(ch)).join('');
+  return code.length === RHYTHM_MULTI_CODE_LENGTH ? code : '';
+};
+const rhythmMultiMakeId = () => `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+const rhythmMultiText = (value, max) => String(value == null ? '' : value).replace(/[\u0000-\u001f]/g, '').slice(0, max);
+const rhythmMultiInt = (value, max) => {
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) ? Math.min(max, Math.max(0, n)) : 0;
+};
+// 部屋の並び(部屋主が先頭)。全員が同じ並びを得る
+const rhythmMultiSortMembers = (members) => members.slice().sort((a, b) =>
+  (a.joinedAt - b.joinedAt) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+
+// 受け取った知らせを、安全な形へ作り直す。知らない形・壊れた値は捨てる
+const rhythmMultiCleanMessage = (raw) => {
+  if (!raw || typeof raw !== 'object') return null;
+  const id = rhythmMultiText(raw.id, 40);
+  if (!id) return null;
+  const out = { t: raw.t, id };
+  if (raw.t === 'hb') {
+    out.name = rhythmMultiText(raw.name, 12) || '名無しのブリーダー';
+    out.level = rhythmMultiInt(raw.level, 9999);
+    out.joinedAt = rhythmMultiInt(raw.joinedAt, 9e15);
+    out.ready = raw.ready === true;
+    out.playing = raw.playing === true;
+    if (raw.sel && typeof raw.sel === 'object') {
+      out.sel = { songId: rhythmMultiText(raw.sel.songId, 60), difficultyId: rhythmMultiText(raw.sel.difficultyId, 20) };
+    }
+    if (raw.res && typeof raw.res === 'object') out.res = rhythmMultiCleanResult(raw.res);
+    return out;
+  }
+  if (raw.t === 'start') {
+    out.startId = rhythmMultiText(raw.startId, 40);
+    out.songId = rhythmMultiText(raw.songId, 60);
+    out.difficultyId = rhythmMultiText(raw.difficultyId, 20);
+    return out.startId && out.songId && out.difficultyId ? out : null;
+  }
+  if (raw.t === 'res') {
+    out.res = rhythmMultiCleanResult(raw.res);
+    return out.res ? out : null;
+  }
+  if (raw.t === 'bye') return out;
+  return null;
+};
+const rhythmMultiCleanResult = (raw) => {
+  if (!raw || typeof raw !== 'object') return null;
+  const startId = rhythmMultiText(raw.startId, 40);
+  if (!startId) return null;
+  return {
+    startId,
+    score: rhythmMultiInt(raw.score, 1e12),
+    maxCombo: rhythmMultiInt(raw.maxCombo, 100000),
+    cleared: raw.cleared !== false,
+    quit: raw.quit === true,
+  };
+};
+
+// ---- 通信(Supabase Realtime を Phoenix のことばで直接話す。ライブラリは足さない) ----
+const rhythmMultiOpenSocket = ({ code, onOpen, onMessage, onClose }) => {
+  const topic = RHYTHM_MULTI_TOPIC_PREFIX + code;
+  let ws = null;
+  let beatTimer = null;
+  let ref = 0;
+  let closed = false;
+  const nextRef = () => String(++ref);
+  const send = (event, payload, topicName) => {
+    if (!ws || ws.readyState !== 1) return false;
+    try { ws.send(JSON.stringify({ topic: topicName || topic, event, payload, ref: nextRef(), join_ref: '1' })); return true; } catch (_) { return false; }
+  };
+  try {
+    ws = new WebSocket(`${SUPABASE_URL.replace(/^http/, 'ws')}/realtime/v1/websocket?apikey=${encodeURIComponent(SUPABASE_KEY)}&vsn=1.0.0`);
+  } catch (_) {
+    setTimeout(() => { if (!closed) onClose(); }, 0);
+    return { send: () => false, close: () => { closed = true; } };
+  }
+  ws.onopen = () => {
+    // join_ref は join のときの ref('1')と同じにしておく
+    try {
+      ws.send(JSON.stringify({ topic, event: 'phx_join', payload: { config: { broadcast: { self: true, ack: false }, presence: { key: '' }, private: false } }, ref: '1', join_ref: '1' }));
+    } catch (_) { /* 閉じたときに onClose が来る */ }
+    beatTimer = setInterval(() => send('heartbeat', {}, 'phoenix'), 25000);
+  };
+  ws.onmessage = (event) => {
+    let msg = null;
+    try { msg = JSON.parse(event.data); } catch (_) { return; }
+    if (!msg || msg.topic !== topic) return;
+    if (msg.event === 'phx_reply' && msg.ref === '1') {
+      if (msg.payload && msg.payload.status === 'ok') onOpen(); else onClose();
+    } else if (msg.event === 'broadcast' && msg.payload && msg.payload.event === 'msg') {
+      onMessage(msg.payload.payload);
+    } else if (msg.event === 'phx_close' || msg.event === 'phx_error') {
+      onClose();
+    }
+  };
+  ws.onclose = () => { if (beatTimer) clearInterval(beatTimer); beatTimer = null; if (!closed) onClose(); };
+  ws.onerror = () => { /* onclose がそのあとに来る */ };
+  return {
+    send: (payload) => send('broadcast', { type: 'broadcast', event: 'msg', payload }),
+    close: () => {
+      closed = true;
+      if (beatTimer) clearInterval(beatTimer);
+      beatTimer = null;
+      try { ws.close(); } catch (_) { /* すでに閉じている */ }
+    },
+  };
+};
+
+// ---- 部屋の状態(React の外に置く) ----
+const RHYTHM_MULTI = (() => {
+  const listeners = new Set();
+  const startListeners = new Set();
+  let s = null;
+  let socket = null;
+  let hbTimer = null;
+  let sweepTimer = null;
+  let reconnectTimer = null;
+  const emit = () => { listeners.forEach((fn) => { try { fn(); } catch (_) { /* 画面側の失敗で通信を止めない */ } }); };
+  const alive = () => (s ? Object.values(s.members).filter((m) => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId) : []);
+  const selfMember = () => (s ? s.members[s.selfId] : null);
+  const sendHb = () => {
+    const me = selfMember();
+    if (!s || !socket || !me) return;
+    socket.send({ t: 'hb', id: s.selfId, name: me.name, level: me.level, joinedAt: me.joinedAt, ready: me.ready, playing: me.playing, sel: me.sel || undefined, res: me.res || undefined });
+  };
+  const stopTimers = () => {
+    if (hbTimer) clearInterval(hbTimer);
+    if (sweepTimer) clearInterval(sweepTimer);
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    hbTimer = sweepTimer = reconnectTimer = null;
+  };
+  const onMessage = (raw) => {
+    if (!s) return;
+    const msg = rhythmMultiCleanMessage(raw);
+    if (!msg) return;
+    if (msg.t === 'bye') { delete s.members[msg.id]; emit(); return; }
+    const prev = s.members[msg.id] || { id: msg.id, name: '', level: 0, joinedAt: 0, ready: false, playing: false, sel: null, res: null };
+    if (msg.t === 'hb') {
+      // 自分の状態は自分が持っているものが正しいので、自分の知らせでは上書きしない
+      if (msg.id !== s.selfId) s.members[msg.id] = { ...prev, name: msg.name, level: msg.level, joinedAt: msg.joinedAt, ready: msg.ready, playing: msg.playing, sel: msg.sel || null, res: msg.res || prev.res, seen: Date.now() };
+      else prev.seen = Date.now();
+    } else if (msg.t === 'res') {
+      s.members[msg.id] = { ...prev, res: msg.res, playing: false, seen: Date.now() };
+    } else if (msg.t === 'start') {
+      // 始めの合図は、部屋主から出たものだけ受ける。同じ合図(startId)は2度受けない
+      const order = rhythmMultiSortMembers(alive());
+      if (order.length && order[0].id === msg.id && s.start?.startId !== msg.startId) {
+        s.start = { startId: msg.startId, songId: msg.songId, difficultyId: msg.difficultyId, receivedAt: Date.now() };
+        const me = selfMember();
+        // 準備のできていない人は、合図が来ても演奏へ入らない(その回は見るだけ)
+        if (me && me.ready) { me.playing = true; me.res = null; startListeners.forEach((fn) => { try { fn(s.start); } catch (_) { /* 無視 */ } }); }
+        sendHb();
+      }
+    }
+    emit();
+  };
+  const connect = () => {
+    if (!s) return;
+    s.status = 'connecting';
+    emit();
+    socket = rhythmMultiOpenSocket({
+      code: s.code,
+      onOpen: () => { if (!s) return; s.status = 'open'; sendHb(); emit(); },
+      onMessage,
+      onClose: () => {
+        if (!s) return;
+        s.status = 'reconnecting';
+        emit();
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => { if (s) { if (socket) socket.close(); connect(); } }, 2500);
+      },
+    });
+  };
+  return {
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    onStart(fn) { startListeners.add(fn); return () => startListeners.delete(fn); },
+    // 画面へ見せる形に直して返す。毎回新しい値を返すので、呼ぶ側は emit のたびに作り直してよい
+    view() {
+      if (!s) return null;
+      const order = rhythmMultiSortMembers(alive());
+      const selfIndex = order.findIndex((m) => m.id === s.selfId);
+      return {
+        code: s.code, status: s.status, selfId: s.selfId,
+        members: order.slice(0, RHYTHM_MULTI_ROOM_MAX),
+        hostId: order.length ? order[0].id : s.selfId,
+        full: selfIndex >= RHYTHM_MULTI_ROOM_MAX,
+        start: s.start,
+      };
+    },
+    join(code, profile) {
+      this.leave();
+      const now = Date.now();
+      const id = rhythmMultiMakeId();
+      s = { code, status: 'connecting', selfId: id, start: null, members: {} };
+      s.members[id] = { id, name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー', level: rhythmMultiInt(profile && profile.level, 9999), joinedAt: now, ready: false, playing: false, sel: null, res: null, seen: now };
+      connect();
+      hbTimer = setInterval(sendHb, RHYTHM_MULTI_HEARTBEAT_MS);
+      sweepTimer = setInterval(emit, 1000);
+      emit();
+    },
+    leave() {
+      if (socket) { try { socket.send({ t: 'bye', id: s && s.selfId }); } catch (_) { /* 無視 */ } socket.close(); }
+      socket = null;
+      stopTimers();
+      s = null;
+      emit();
+    },
+    isHost() { const v = this.view(); return !!v && v.hostId === v.selfId; },
+    setSelection(songId, difficultyId) {
+      const me = selfMember();
+      if (!me) return;
+      me.sel = { songId: rhythmMultiText(songId, 60), difficultyId: rhythmMultiText(difficultyId, 20) };
+      sendHb(); emit();
+    },
+    setReady(ready) {
+      const me = selfMember();
+      if (!me) return;
+      me.ready = ready === true;
+      sendHb(); emit();
+    },
+    // 部屋主だけが呼べる。曲が決まっていて、部屋主以外の全員が準備できているときだけ始まる
+    hostStart() {
+      const v = this.view();
+      if (!v || !socket || v.hostId !== v.selfId) return false;
+      const me = selfMember();
+      if (!me || !me.sel || !me.sel.songId || !me.sel.difficultyId) return false;
+      if (v.members.length < 2 || !v.members.every((m) => m.id === v.selfId || m.ready)) return false;
+      me.ready = true;
+      socket.send({ t: 'start', id: v.selfId, startId: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, songId: me.sel.songId, difficultyId: me.sel.difficultyId });
+      return true;
+    },
+    // 曲が終わった(または途中でやめた)ときに、自分のスコアを部屋へ知らせる。同じ回の2度目は無視する
+    reportResult(startId, result, quit) {
+      const me = selfMember();
+      if (!me || !startId) return;
+      if (me.res && me.res.startId === startId) return;
+      me.res = rhythmMultiCleanResult({ startId, score: result && result.score, maxCombo: result && result.maxCombo, cleared: result ? result.cleared !== false : false, quit: quit === true });
+      me.playing = false;
+      me.ready = false;
+      if (socket) socket.send({ t: 'res', id: s.selfId, res: me.res });
+      sendHb(); emit();
+    },
+    hasReported(startId) { const me = selfMember(); return !!(me && me.res && me.res.startId === startId); },
+  };
+})();
+
+const useRhythmMultiView = () => {
+  const [view, setView] = React.useState(() => RHYTHM_MULTI.view());
+  React.useEffect(() => {
+    const refresh = () => setView(RHYTHM_MULTI.view());
+    refresh();
+    return RHYTHM_MULTI.subscribe(refresh);
+  }, []);
+  return view;
+};
+
+// ---- 画面 ----
+// songs / difficulties は曲えらびと同じ一覧(rhythmDemoSongs など)。onStartPlay は演奏画面へ入る処理を親が持つ
+function RhythmMultiScreen({ profile, songs, difficultiesOf, onBack, onStartPlay }) {
+  const view = useRhythmMultiView();
+  const [codeInput, setCodeInput] = React.useState('');
+  const [codeError, setCodeError] = React.useState('');
+  const [countdown, setCountdown] = React.useState(null);
+  const [copied, setCopied] = React.useState(false);
+  const songById = (songId) => songs.find((song) => song.songId === songId) || null;
+  const me = view ? view.members.find((m) => m.id === view.selfId) : null;
+  const isHost = !!view && view.hostId === view.selfId;
+  const host = view ? view.members.find((m) => m.id === view.hostId) : null;
+  // 曲の選択は部屋主の知らせが正。部屋主自身は自分の選択
+  const sel = host && host.sel && songById(host.sel.songId) ? host.sel : null;
+  const selSong = sel ? songById(sel.songId) : null;
+  const selDiffs = selSong ? difficultiesOf(selSong) : [];
+  const selDifficulty = sel ? selDiffs.find((d) => d.id === sel.difficultyId) || null : null;
+  const start = view ? view.start : null;
+  const resultsOfRound = start && view ? view.members.map((m) => ({ m, res: m.res && m.res.startId === start.startId ? m.res : null })) : [];
+  const roundStarted = !!start && resultsOfRound.some((r) => r.m.playing || r.res);
+  const everyoneReady = !!view && view.members.length >= 2 && view.members.every((m) => m.id === view.selfId || m.ready);
+
+  // 合図が来たら 3・2・1 を数えて演奏へ入る。数えるのは受け取った時刻から(端末の時計のずれに左右されない)
+  React.useEffect(() => RHYTHM_MULTI.onStart((info) => {
+    setCountdown({ info, left: RHYTHM_MULTI_START_COUNTDOWN_SEC });
+  }), []);
+  React.useEffect(() => {
+    if (!countdown) return undefined;
+    if (countdown.left <= 0) {
+      const song = songById(countdown.info.songId);
+      const diff = song ? difficultiesOf(song).find((d) => d.id === countdown.info.difficultyId) : null;
+      setCountdown(null);
+      if (song && diff) onStartPlay(song, diff, countdown.info.startId);
+      else RHYTHM_MULTI.reportResult(countdown.info.startId, null, true);
+      return undefined;
+    }
+    const timer = setTimeout(() => setCountdown((c) => (c ? { ...c, left: c.left - 1 } : c)), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  const createRoom = () => { setCodeError(''); RHYTHM_MULTI.join(rhythmMultiMakeCode(), profile); };
+  const joinRoom = () => {
+    const code = rhythmMultiNormalizeCode(codeInput);
+    if (!code) { setCodeError(`部屋コードは${RHYTHM_MULTI_CODE_LENGTH}文字です`); return; }
+    setCodeError('');
+    RHYTHM_MULTI.join(code, profile);
+  };
+  const leaveRoom = () => { RHYTHM_MULTI.leave(); setCountdown(null); };
+  const shareCode = async () => {
+    if (!view) return;
+    const text = `モンヒロビートで対戦しよう! 部屋コード: ${view.code}`;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (_) { /* 共有をやめたときは何もしない */ }
+  };
+  const statusText = !view ? '' : view.status === 'open' ? '' : view.status === 'connecting' ? '部屋へつないでいます…' : 'つなぎ直しています…';
+  const canStart = isHost && !!selDifficulty && everyoneReady && !countdown;
+
+  const card = 'rounded-2xl border border-white/15 bg-slate-900/85 p-3';
+  const btn = 'min-h-[48px] rounded-xl px-3 font-black disabled:opacity-40';
+  const header = (
+    <header className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2" style={{ paddingTop: 'calc(.5rem + var(--mh-sa-top))' }}>
+      <button data-rhythm-multi-back type="button" className="min-h-[44px] min-w-[44px] rounded-xl border border-white/20 bg-slate-800 px-3 font-black" onClick={() => { if (view) leaveRoom(); onBack(); }}>←</button>
+      <h2 className="min-w-0 flex-1 truncate text-sm font-black tracking-widest text-cyan-200">🎮 みんなで対戦</h2>
+    </header>
+  );
+
+  if (!view) {
+    return (
+      <main data-rhythm-multi className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
+        {header}
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+          <section className={card}>
+            <p className="text-sm font-black text-cyan-100">同じ曲を同時に演奏して、スコアで勝負します</p>
+            <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-300">最大{RHYTHM_MULTI_ROOM_MAX}人。部屋コードを友だちに伝えて集まりましょう。対戦の記録は、自己ベストにも全国ランキングにも残りません。</p>
+          </section>
+          <section className={card}>
+            <button data-rhythm-multi-create type="button" className={`${btn} w-full bg-fuchsia-700`} onClick={createRoom}>部屋をつくる</button>
+          </section>
+          <section className={card}>
+            <label className="block text-[11px] font-black text-slate-300" htmlFor="rhythm-multi-code">友だちの部屋コードで入る</label>
+            <div className="mt-1 flex gap-2">
+              <input id="rhythm-multi-code" data-rhythm-multi-code-input value={codeInput} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false}
+                onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                className="min-h-[48px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-center text-xl font-black tracking-[0.4em] text-white" placeholder="ABCD" />
+              <button data-rhythm-multi-join type="button" className={`${btn} bg-indigo-700`} onClick={joinRoom}>入る</button>
+            </div>
+            {codeError && <p className="mt-1 text-[11px] font-black text-rose-300">{codeError}</p>}
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main data-rhythm-multi className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
+      {header}
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+        {view.full ? (
+          <section data-rhythm-multi-full className={card}>
+            <p className="text-sm font-black text-rose-300">この部屋はいっぱいです(最大{RHYTHM_MULTI_ROOM_MAX}人)</p>
+            <button type="button" className={`${btn} mt-2 w-full bg-slate-700`} onClick={leaveRoom}>部屋をやめる</button>
+          </section>
+        ) : (<>
+          <section className={`${card} flex items-center gap-3`}>
+            <div className="min-w-0 flex-1">
+              <small className="block text-[10px] font-black text-slate-400">部屋コード</small>
+              <b data-rhythm-multi-room-code className="block text-3xl font-black tracking-[0.35em] text-cyan-200">{view.code}</b>
+              {statusText && <small className="block text-[10px] font-black text-amber-300">{statusText}</small>}
+            </div>
+            <button data-rhythm-multi-share type="button" className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black" onClick={shareCode}>{copied ? 'コピーした!' : '友だちに送る'}</button>
+          </section>
+
+          <section className={card}>
+            <h3 className="text-xs font-black text-slate-300">メンバー({view.members.length}/{RHYTHM_MULTI_ROOM_MAX})</h3>
+            <ul className="mt-1 space-y-1">
+              {view.members.map((m) => (
+                <li key={m.id} data-rhythm-multi-member className="flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5 text-sm font-black">
+                  <span className="min-w-0 flex-1 truncate">{m.id === view.hostId ? '👑 ' : ''}{m.name}{m.id === view.selfId ? '(あなた)' : ''}</span>
+                  <small className="shrink-0 text-[10px] text-slate-400">Lv.{m.level}</small>
+                  <small className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${m.playing ? 'bg-amber-500/80 text-slate-950' : m.ready || m.id === view.hostId ? 'bg-emerald-500/80 text-slate-950' : 'bg-slate-700 text-slate-300'}`}>{m.playing ? '演奏中' : m.id === view.hostId ? '部屋主' : m.ready ? '準備OK' : '待機中'}</small>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className={card}>
+            <h3 className="text-xs font-black text-slate-300">曲</h3>
+            {isHost ? (
+              <div className="mt-1 space-y-2">
+                <select data-rhythm-multi-song aria-label="曲" className="min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-950 px-2 text-sm font-black"
+                  value={sel ? sel.songId : ''}
+                  onChange={(e) => { const song = songById(e.target.value); if (!song) return; const diffs = difficultiesOf(song); const keep = diffs.find((d) => sel && d.id === sel.difficultyId) || diffs[0]; RHYTHM_MULTI.setSelection(song.songId, keep ? keep.id : ''); }}>
+                  <option value="">曲をえらぶ</option>
+                  {songs.map((song) => <option key={song.songId} value={song.songId}>{rhythmSongFullName(song)}</option>)}
+                </select>
+                {selSong && <div className="flex flex-wrap gap-1.5">
+                  {selDiffs.map((d) => (
+                    <button key={d.id} data-rhythm-multi-difficulty={d.id} type="button" onClick={() => RHYTHM_MULTI.setSelection(selSong.songId, d.id)}
+                      className={`min-h-[40px] rounded-lg px-3 text-xs font-black ${selDifficulty && selDifficulty.id === d.id ? 'bg-fuchsia-600' : 'bg-slate-700'}`}>{d.id}</button>
+                  ))}
+                </div>}
+              </div>
+            ) : (
+              <p data-rhythm-multi-selection className="mt-1 text-sm font-black">{selSong ? `${rhythmSongFullName(selSong)} / ${sel.difficultyId}` : '部屋主が曲をえらんでいます…'}</p>
+            )}
+          </section>
+
+          {roundStarted && (
+            <section data-rhythm-multi-results className={card}>
+              <h3 className="text-xs font-black text-slate-300">結果{songById(start.songId) ? `(${rhythmSongFullName(songById(start.songId))} / ${start.difficultyId})` : ''}</h3>
+              <ol className="mt-1 space-y-1">
+                {resultsOfRound.slice().sort((a, b) => (b.res ? b.res.score : -1) - (a.res ? a.res.score : -1)).map((r, i) => (
+                  <li key={r.m.id} data-rhythm-multi-result-row className="flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5 text-sm font-black">
+                    <span className="w-6 shrink-0 text-center text-amber-300">{r.res && !r.res.quit ? i + 1 : '-'}</span>
+                    <span className="min-w-0 flex-1 truncate">{r.m.name}{r.m.id === view.selfId ? '(あなた)' : ''}</span>
+                    <span className="shrink-0 tabular-nums">{r.res ? (r.res.quit ? 'リタイア' : `${r.res.score.toLocaleString()}${r.res.cleared ? '' : '(失敗)'}`) : r.m.playing ? '演奏中…' : '—'}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          <section className="space-y-2">
+            {isHost
+              ? <button data-rhythm-multi-start type="button" disabled={!canStart} className={`${btn} w-full bg-fuchsia-700`} onClick={() => RHYTHM_MULTI.hostStart()}>
+                {canStart ? 'スタート!' : view.members.length < 2 ? '友だちが入るのを待っています' : !selDifficulty ? '曲と難易度をえらんでください' : 'みんなの準備を待っています'}
+              </button>
+              : <button data-rhythm-multi-ready type="button" disabled={!selDifficulty || !!countdown} className={`${btn} w-full ${me && me.ready ? 'bg-emerald-700' : 'bg-indigo-700'}`} onClick={() => RHYTHM_MULTI.setReady(!(me && me.ready))}>
+                {me && me.ready ? '準備OK(タップで取り消し)' : '準備OK!'}
+              </button>}
+            <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoom}>部屋を出る</button>
+          </section>
+        </>)}
+      </div>
+      {countdown && (
+        <div data-rhythm-multi-countdown className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/90">
+          <p className="text-sm font-black text-cyan-200">{songById(countdown.info.songId) ? rhythmSongFullName(songById(countdown.info.songId)) : ''}</p>
+          <b className="text-8xl font-black text-white">{Math.max(1, countdown.left)}</b>
+        </div>
+      )}
+    </main>
+  );
+}
 
 // ---- part: 40-screen-effects.jsx ----
 // ==== 画面ライフサイクル: タイマー・リスナーの登録簿(useScreenEffects) ====
@@ -23647,7 +24122,7 @@ function RhythmInfoScreen({
 
 function RhythmSongSelectScreen({
   catchingUp, difficulty, dismissQuickRhythmBackground, dismissRhythmEventNotice, dismissRhythmSixLaneIntro, rhythmSixLaneIntroVisible, dismissRhythmLookIntro, rhythmLookIntroVisible, onTryRhythmLook, exitingQuickRun, handleGiveUp, mainHero,
-  onExit, onOpenEventRanking, onOpenHelp, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
+  onExit, onOpenEventRanking, onOpenHelp, onOpenMulti = null, onOpenMonsterSlots, onOpenOptions, onOpenRanking,
   onPlaySong, onToggleRhythmSetting, quickClearCounts, quickRhythmBackgroundVisible, quickRunDetailOpen, quickRunFinishReasonText,
   quickRunPendingRewards, quickRunProgress, quickRunResumable, quickRunStartError, quickRunStopConfirm,
   repeatTemplateForNewRun, resultProcessing, resumeQuickRunFromRhythm, returnToBackgroundRun, returnToHome,
@@ -23788,6 +24263,9 @@ function RhythmSongSelectScreen({
           {/* 右上の4つのボタンは「絵＋下に小さく名前」の同じ形(2026-10-01・ユーザー指摘「マスモン設定ボタン自体も
               分かりづらいから画面幅を無駄にせず分かりやすいように」)。絵文字だけだと何のボタンか分からなかった。
               マスモンのボタンは、設定中の子の顔を重ねて並べる(何体入っているかもひと目で分かる)。幅は前と同じくらい */}
+          {onOpenMulti&&<button data-rhythm-demo-multi aria-label="みんなで対戦" title="みんなで対戦"
+            onClick={onOpenMulti}
+            className="flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-cyan-400/50 bg-cyan-950/40 px-1 leading-none text-cyan-100"><span aria-hidden="true" className="text-base leading-none">🎮</span><span className="text-[9px] font-black leading-none">対戦</span></button>}
           <button data-rhythm-demo-help aria-label="遊びかた" title="遊びかた"
             onClick={onOpenHelp}
             className={`flex min-h-[44px] min-w-[44px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 leading-none text-amber-100${spotClass('help')}`}><span aria-hidden="true" className="text-base leading-none">📖</span><span className="text-[9px] font-black leading-none">遊びかた</span></button>
@@ -34909,7 +35387,7 @@ function MonsterHeroGame() {
   const BGM_SILENT_STATES = Object.freeze([
     // モンヒロビートは自分で音を管理する。ここでキーを持つと、譜面の曲と二重に鳴る
     'RHYTHM_PLAY', 'RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS',
-    'RHYTHM_INFO', 'RHYTHM_OPTIONS', 'RHYTHM_RANKING',
+    'RHYTHM_INFO', 'RHYTHM_OPTIONS', 'RHYTHM_RANKING', 'RHYTHM_MULTI',
     // オンボーディングのプレビューで開く助手えらび。タイトルからの流れの中なので鳴らさない
     'ASSISTANT_SELECT',
     // デバッグ画面。プレイヤーの通常プレイには出ない
@@ -34967,7 +35445,7 @@ function MonsterHeroGame() {
   // ★オプション(RHYTHM_OPTIONS)もここへ入れる。遊びかた・ランキングと同じで、
   //   60fpsも精密入力も要らない。2026-09-12までここだけ抜けていて、オプションを見ている
   //   あいだは周回が止まっていた(そのぶんは追いつきで取り戻していた)。
-  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS'];
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_OPTIONS','RHYTHM_MULTI'];
   // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
   //
   // ★**一覧で持たず、gameStateの頭で見る。**
@@ -47066,7 +47544,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmPlay.from==='multi'?[]:rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+          // みんなで対戦の演奏は、スコアを部屋へ知らせるだけ。自己ベスト・全国ランキング・周回の報酬・ビートPには一切触れない
+          // (CLAUDE.md ⑦「ランキング対象外の遊び方は送信しないだけでなく自己ベストも上書きしない」)
+          if(rhythmPlay.from==='multi'){RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,result,false);return;}
           // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====
           // 最後まで演奏したこの場でだけ行う。途中でやめたときは onComplete を通らないので何も入らない
           // (1秒だけ演奏してやめる、で稼げないようにするため)。
@@ -47117,7 +47598,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // アシストモード(2026-09-24・バンドリ！アワーノーツから取り入れた遊び方)のプレイは、
           // 自己ベストにも全国ランキングにも残さない(CLAUDE.md ⑦「ランキング対象外の遊び方は送信しないだけでなく自己ベストも上書きしない」)
           if(result?.assist===true)return;
-          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
+          const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{if(rhythmPlay.from==='multi'&&!RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId))RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,null,true);const back=rhythmPlay.from==='calibration'?'RHYTHM_OPTIONS':rhythmPlay.from==='debug'?'RHYTHM_DEBUG':rhythmPlay.from==='multi'?'RHYTHM_MULTI':'RHYTHM_DEMO_HOME';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from==='debug'} tutorial={rhythmPlay.from==='tutorial'} calibrating={rhythmPlay.from==='calibration'} onApplyCalibration={async measured=>{
           // 測った値をその場で設定へ入れて保存し、オプションへ戻す。
           // 判定窓・スコア・ランキングには触れない(入れるのは judgmentTimingOffsetMs だけ)
           const offsetMs=Number(measured&&measured.offsetMs);
@@ -47128,6 +47609,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
         }}/>}
+
+        {gameState==='RHYTHM_MULTI'&&<RhythmMultiScreen profile={{name:breederName,level:breederLevel.level}} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)}
+          onBack={()=>setGameState('RHYTHM_DEMO_HOME')}
+          onStartPlay={(song,difficulty,startId)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId});setGameState('RHYTHM_PLAY');}}/>}
 
         {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onCalibrate={startRhythmCalibration} calibrationResult={rhythmCalibrationResult} onClearCalibration={()=>setRhythmCalibrationResult(null)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);rhythmResetAutoEffect();return saved;}}/>}
 
@@ -47164,6 +47649,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               setGameState('RHYTHM_RANKING');
             }}
             onOpenHelp={()=>{setRhythmHelpTopicId(null);setGameState('RHYTHM_DEMO_HELP');}}
+            onOpenMulti={RELEASE_FLAGS.rhythmMulti===true?()=>setGameState('RHYTHM_MULTI'):null}
             onOpenMonsterSlots={()=>{setRhythmMonsterPickerOpen(false);setRhythmMonsterMessage('');setGameState('RHYTHM_DEMO_MONSTERS');}}
             onOpenOptions={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
             onOpenRanking={(song)=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}
