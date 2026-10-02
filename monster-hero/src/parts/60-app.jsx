@@ -2778,6 +2778,9 @@ function MonsterHeroGame() {
   // ★**表示専用**。報酬の受け取り・受取フラグ・保存には一切触らない(CLAUDE.md ⑦)。
   const [rhythmHistoryList, setRhythmHistoryList] = useState([]);
   const [rhythmHistorySelected, setRhythmHistorySelected] = useState(null);
+  // フレンド: 画面へ渡す申請相手(ランキングから来たとき)と、ランキングの名前から申請するシートの状態
+  const [friendsTarget, setFriendsTarget] = useState(null);
+  const [friendCandidate, setFriendCandidate] = useState(null);   // { id, userName, phase:'ask'|'busy'|'done', text }
   // 公開前は入口ごと出さない(週間ランキングと同じフラグで出し入れする)
   const rhythmHistoryReleased = RELEASE_FLAGS.rhythmWeeklyRanking === true;
   // 入口に出す件数。開くまでは一覧を組み立てない(プロフィールを開くたびに数えるのは無駄)
@@ -2786,6 +2789,28 @@ function MonsterHeroGame() {
     if (!entry) return;
     setRhythmEventDivision(prev => ({ ...prev, history: divisionId }));
     loadRhythmEventRanking('history', divisionId, entry);
+  };
+  // フレンド画面を開く。ランキングの名前から申請するときは、相手(target)を渡す
+  const openFriends = (target) => {
+    if (RELEASE_FLAGS.friends !== true) return;
+    setFriendsTarget(target || null);
+    setGameState('FRIENDS');
+  };
+  // ランキングの名前(アイコン)をタップしたとき。相手のIDが分かる行だけ申請の確認を出す
+  const openFriendCandidate = (entry) => {
+    if (RELEASE_FLAGS.friends !== true) return;
+    const id = friendsIdOfRankingEntry(entry);
+    if (!id) return;
+    setFriendCandidate({ id, userName: entry?.userName || '名無しのブリーダー', phase: 'ask', text: '' });
+  };
+  const sendFriendCandidate = async () => {
+    const cand = friendCandidate;
+    if (!cand || cand.phase !== 'ask') return;
+    setFriendCandidate({ ...cand, phase: 'busy' });
+    const selfId = await ensureBreederId();
+    const key = selfId ? await sbSendFriendRequest(selfId, cand.id) : 'error';
+    const pair = FRIENDS_RESULT_TEXT[key] || FRIENDS_RESULT_TEXT.error;
+    setFriendCandidate({ ...cand, phase: 'done', text: pair[0] });
   };
   const openRhythmHistory = () => {
     setRhythmHistorySelected(null);
@@ -3408,6 +3433,7 @@ function MonsterHeroGame() {
     GIFT_BOX: 'home',           // ギフトボックスはHOMEの曲を止めずに続ける
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     RHYTHM_HISTORY: 'home',     // モンヒロビート「これまでの記録」もHOMEの曲を続ける
+    FRIENDS: 'home',            // フレンド画面もHOMEの曲を続ける
                                 // (2026-09-14・ユーザー指摘「BGMがない / 設定してるホームのBGMを流して」)
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
     BATTLE_SYSTEM_SELECT: 'enhance',     // どのバトルで遊ぶかを選ぶ画面(この先と同じ曲を続ける)
@@ -13769,9 +13795,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // モンビー曲別・全曲合算・週間・イベント・履歴)がこの1つを使う。
   // 他の人が選んでいるプロフィールフレーム(entry.profileFrame)もここで一緒に描く。
   // フレームを持たない記録・列がまだ無い環境では 'none' になり、これまでと同じ見た目になる
-  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon)
+  // フレンド機能が公開されていて相手のIDが分かる行は、アイコンをタップするとフレンド申請の確認が出る
+  // (ボタンの入れ子を避けるため span の role="button")
+  const rankingBreederIconPlain = entry => resolveIconUrl(entry?.icon)
     ? <ProfileAvatar src={resolveIconUrl(entry.icon)} id={entry.icon} frameId={entry?.profileFrame} className="w-8 h-8 shrink-0"/>
     : <ProfileAvatar frameId={entry?.profileFrame} className="w-8 h-8 shrink-0" fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>}/>;
+  const rankingBreederIcon = entry => (RELEASE_FLAGS.friends === true && friendsIdOfRankingEntry(entry))
+    ? <span role="button" tabIndex={0} data-friend-candidate aria-label={`${entry?.userName||'名無しのブリーダー'}さんにフレンド申請`}
+        onClick={(event)=>{ event.stopPropagation(); openFriendCandidate(entry); }}
+        onKeyDown={(event)=>{ if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); openFriendCandidate(entry); } }}
+        className="inline-flex shrink-0 cursor-pointer active:scale-90">{rankingBreederIconPlain(entry)}</span>
+    : rankingBreederIconPlain(entry);
   const rankingCardClass = index => `rounded-xl border ${index===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`;
   // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
   // showSpecies … 種族チャレンジの「全種族」タブから呼ばれたときだけtrue。
@@ -16274,6 +16308,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             rhythmHistoryCount={rhythmHistoryCount}
             unlockedAssistants={assistantsUnlockedFrom(rhythmEventStorySeen)}
             onOpenRhythmHistory={openRhythmHistory}
+            friendsEnabled={RELEASE_FLAGS.friends===true}
+            onOpenFriends={()=>openFriends(null)}
+          />
+        )}
+
+        {/* フレンド: 一覧・申請・コードでの追加・プロフィール閲覧。状態はサーバーが持ち、保存データには触れない */}
+        {gameState==='FRIENDS'&&RELEASE_FLAGS.friends===true&&(
+          <FriendsScreen
+            resolveIconUrl={resolveIconUrl}
+            target={friendsTarget}
+            onTargetHandled={()=>setFriendsTarget(null)}
+            onBack={()=>setGameState('PROFILE')}
           />
         )}
 
@@ -17541,6 +17587,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       );})()}
       {/* アイテムの効果。どの売り場の品も同じ詳細(MarketItemDetail)で出す。
           ビートP交換所の品は grantText(1回で受け取る数)が付いてくる */}
+      {friendCandidate&&friendCandidate.phase!=='done'&&(
+        <ConfirmSheet title={`${friendCandidate.userName}さんにフレンド申請しますか?`}
+          message={friendCandidate.phase==='busy'?'送っています…':'相手が承認すると、フレンドになります。'}
+          confirmLabel="申請する" onConfirm={sendFriendCandidate}
+          onCancel={()=>{ if (friendCandidate.phase==='ask') setFriendCandidate(null); }}/>
+      )}
+      {friendCandidate&&friendCandidate.phase==='done'&&(
+        <ModalFrame label="フレンド申請の結果" border="border-pink-400/70" onClose={()=>setFriendCandidate(null)} zIndex={MODAL_Z.confirm}>
+          <p data-friend-result className="text-center text-[13px] font-black leading-relaxed text-pink-100">{friendCandidate.text}</p>
+          <div className="mt-4 grid grid-cols-1 gap-2">
+            <button type="button" onClick={()=>{ setFriendCandidate(null); openFriends(null); }} className="mh-button mh-button-primary min-h-[48px] rounded-2xl font-black active:scale-[.98]">フレンド画面をひらく</button>
+            <ModalCloseButton onClick={()=>setFriendCandidate(null)}/>
+          </div>
+        </ModalFrame>
+      )}
       {confirmRequest&&<ConfirmSheet title={confirmRequest.title} message={confirmRequest.message||''} confirmLabel={confirmRequest.confirmLabel||'OK'} danger={!!confirmRequest.danger} onConfirm={()=>answerConfirm(true)} onCancel={()=>answerConfirm(false)}/>}
       {marketItemDetail&&<MarketItemDetail item={marketItemDetail} owned={ownedItemCount(ownedItems, marketItemDetail.id)} grantText={marketItemDetail.grantText||''} onClose={()=>setMarketItemDetail(null)}/>}
 

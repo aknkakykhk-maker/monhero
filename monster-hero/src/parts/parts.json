@@ -107,6 +107,10 @@
       "role": "モンヒロビートのマルチ(同じ曲でスコア対決)。Supabase Realtime の Broadcast で部屋の状態・開始の合図・スコアをやりとりする。保存データ・ランキングには触れない"
     },
     {
+      "file": "34-friends-api.jsx",
+      "role": "フレンド機能の通信層(Supabase の friend_codes / friend_links)。自分のコード・申請・承認・解除・ブロック。保存データ・ランキングには書き込まず、端末にも何も保存しない"
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },
@@ -205,6 +209,10 @@
     {
       "file": "74-screen-monster-check-debug.jsx",
       "role": "画面: 新モンスター確認(MONSTER_CHECK_DEBUG。デバッグ専用)。所持・解放に関係なく全種を並べ、画像・染色・モーション・能力・技・血統・マーケットと「実装チェック」を1枚で見る"
+    },
+    {
+      "file": "75-screen-friends.jsx",
+      "role": "画面: フレンド(FRIENDS)。一覧・申請・コードでの追加・ブロック・プロフィール閲覧。保存データには触れず、状態はサーバーが持つ"
     },
     {
       "file": "76-screen-debug-data.jsx",

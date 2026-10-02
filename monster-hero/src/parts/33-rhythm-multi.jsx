@@ -489,6 +489,58 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyIds, onBa
     const el = chatListRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [chatCount]);
+  // ---- フレンド(公開前はすべて動かない) ----
+  // 招待は Supabase の friend_invites へ書く。受ける側は、部屋に入っていないあいだだけ数秒ごとに読む。
+  // 出すのは「承認済みのフレンド」からの3分以内の招待だけ。保存データ・ランキングには触れない
+  const friendsOn = RELEASE_FLAGS.friends === true;
+  const [friendSelfId, setFriendSelfId] = React.useState('');
+  const [roster, setRoster] = React.useState(null);        // フレンド名簿(承認済みのみ)。null=まだ読んでいない
+  const [friendInvites, setFriendInvites] = React.useState([]);
+  const [invitePanel, setInvitePanel] = React.useState(false);
+  const [invitedIds, setInvitedIds] = React.useState({});
+  const [inviteMessage, setInviteMessage] = React.useState('');
+  const loadRoster = React.useCallback(async (id) => {
+    try { setRoster(await sbFetchFriendRoster(id)); } catch (_) { setRoster([]); }
+  }, []);
+  React.useEffect(() => {
+    if (!friendsOn) return undefined;
+    let cancelled = false;
+    (async () => {
+      const id = await ensureBreederId();
+      if (cancelled || !id) return;
+      setFriendSelfId(id);
+      await loadRoster(id);
+    })();
+    return () => { cancelled = true; };
+  }, [friendsOn]);
+  const hasRoster = !!(roster && roster.length);
+  React.useEffect(() => {
+    if (!friendsOn || view || !friendSelfId || !hasRoster) { setFriendInvites([]); return undefined; }
+    let cancelled = false;
+    const ids = new Set(roster.map((friend) => friend.otherId));
+    const poll = async () => {
+      try {
+        const list = await sbFetchRoomInvites(friendSelfId, Date.now());
+        if (!cancelled) setFriendInvites(list.filter((invite) => ids.has(invite.senderId)));
+      } catch (_) { /* 通信できないときは、次の確認まで何も出さない */ }
+    };
+    poll();
+    const timer = setInterval(poll, FRIEND_INVITE_POLL_MS);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [friendsOn, !!view, friendSelfId, roster]);
+  const friendNameOf = (id) => ((roster || []).find((friend) => friend.otherId === id) || {}).userName || 'フレンド';
+  const openInvitePanel = () => {
+    const next = !invitePanel;
+    setInvitePanel(next);
+    setInviteMessage('');
+    if (next && friendSelfId) loadRoster(friendSelfId);   // 直前に承認したフレンドも出せるよう、開くたびに読み直す
+  };
+  const inviteFriend = async (friendId) => {
+    if (!view || !friendSelfId) return;
+    const result = await sbSendRoomInvite(friendSelfId, friendId, view.code);
+    if (result === 'invited') { setInvitedIds((prev) => ({ ...prev, [friendId]: true })); setInviteMessage(''); }
+    else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう一度ためしてください');
+  };
   const submitChat = () => { if (RHYTHM_MULTI.sendChat(chatText)) setChatText(''); };
   const songById = (songId) => songs.find((song) => song.songId === songId) || null;
   const defaultDiff = difficultyIds.includes('NORMAL') ? 'NORMAL' : difficultyIds[0] || '';
@@ -518,6 +570,10 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyIds, onBa
 
   const myProfile = () => ({ name: profile.name, level: profile.level, diff: defaultDiff });
   const createPrivate = () => { setMessage(''); RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private'); };
+  const joinFromInvite = (invite) => {
+    setMessage('');
+    RHYTHM_MULTI.join(invite.roomCode, myProfile(), 'private');
+  };
   const joinPrivate = () => {
     const code = rhythmMultiNormalizeCode(codeInput);
     if (!code) { setMessage(`部屋コードは${RHYTHM_MULTI_CODE_LENGTH}文字です`); return; }
@@ -575,6 +631,17 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyIds, onBa
             <p className="text-sm font-black text-cyan-100">みんなで同じ曲を演奏して、チームのランクを目指します</p>
             <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-300">最大{RHYTHM_MULTI_ROOM_MAX}人。曲は全員の希望から抽選で決まり、結果は全員の平均スコアでチームのランクが決まります。個人スコア1位はMVPです。対戦の記録は、自己ベストにも全国ランキングにも残りません。</p>
           </section>
+          {friendsOn && friendInvites.length > 0 && (
+            <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>
+              <h3 className="text-xs font-black text-pink-200">フレンドからの招待</h3>
+              {friendInvites.map((invite) => (
+                <div key={invite.senderId} className="flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5">
+                  <span className="min-w-0 flex-1 break-words text-[13px] font-black leading-snug">{friendNameOf(invite.senderId)}さんが部屋に誘っています</span>
+                  <button data-rhythm-multi-friend-join type="button" className={`${btn} shrink-0 bg-pink-700 text-xs`} onClick={() => joinFromInvite(invite)}>参加する</button>
+                </div>
+              ))}
+            </section>
+          )}
           {searching
             ? <section data-rhythm-multi-searching className={card}>
               <p className="text-sm font-black text-amber-200">{RHYTHM_MULTI_MODE_LABELS[searching]}ルームをさがしています…</p>
@@ -624,6 +691,32 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyIds, onBa
             </div>
             <button data-rhythm-multi-share type="button" className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black" onClick={shareCode}>{copied ? 'コピーした!' : '友だちに送る'}</button>
           </section>
+
+          {friendsOn && view.mode === 'private' && (
+            <section data-rhythm-multi-friend-invite className={card}>
+              <button data-rhythm-multi-friend-invite-toggle type="button" className={`${btn} w-full bg-pink-700`} onClick={openInvitePanel}>{invitePanel ? 'フレンドの招待をとじる' : 'フレンドを招待する'}</button>
+              {invitePanel && (
+                <div className="mt-2 space-y-1">
+                  {roster === null && <p className="text-[11px] font-bold text-slate-400">フレンドを読み込んでいます…</p>}
+                  {roster !== null && roster.length === 0 && (
+                    <p className="text-[11px] font-bold leading-relaxed text-slate-400">まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。</p>
+                  )}
+                  {(roster || []).map((friend) => (
+                    <div key={friend.otherId} data-rhythm-multi-friend-row className="flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5">
+                      <span className="min-w-0 flex-1">
+                        <b className="block truncate text-sm font-black">{friend.userName}</b>
+                        <small className="block truncate text-[10px] font-bold text-slate-400">{friendsLastSeenText(friend.lastSeenAt, Date.now())}</small>
+                      </span>
+                      <button data-rhythm-multi-friend-send type="button" disabled={!!invitedIds[friend.otherId]} onClick={() => inviteFriend(friend.otherId)}
+                        className={`${btn} shrink-0 text-xs ${invitedIds[friend.otherId] ? 'bg-slate-700' : 'bg-pink-700'}`}>{invitedIds[friend.otherId] ? '招待ずみ' : '招待する'}</button>
+                    </div>
+                  ))}
+                  {inviteMessage && <p data-rhythm-multi-friend-message className="text-[11px] font-black text-rose-300">{inviteMessage}</p>}
+                  <p className="text-[10px] font-bold leading-relaxed text-slate-400">招待は3分のあいだ届きます。相手がマルチの入口をひらくと「参加する」が出ます。</p>
+                </div>
+              )}
+            </section>
+          )}
 
           <section className={card}>
             <h3 className="text-xs font-black text-slate-300">メンバー({view.members.length}/{RHYTHM_MULTI_ROOM_MAX})</h3>
