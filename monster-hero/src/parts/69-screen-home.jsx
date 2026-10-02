@@ -48,7 +48,7 @@ const HOME_EVENT_BADGE_CSS = `
   .mh-home-event-badge::after{display:none}}
 `;
 function HomeScreen({
-  assistantBondUp, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
+  assistantBondUp, friendRequestCount = 0, breederIcon, breederLevel, breederName, breederPoints, gifts, gold,
   hasUnreadChangelog, homeBackgroundReady, homeArt, homePastureMasumons, masuMons, missions,
   onOpenBattle, onOpenManagement, onOpenMarket, onOpenProfile, onOpenRhythm, onOpenSettings,
   onOpenTemple, openChangelog, openGiftBox, openMissions, profileFrameId, resolveIconUrl, spotClass,
@@ -93,10 +93,11 @@ function HomeScreen({
         <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
         {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
         <header className={`mh-home-status${spotClass('settings')}`}>
-          <button type="button" className="mh-home-player" onClick={onOpenProfile} aria-label="プロフィールを開く">
+          <button type="button" className="mh-home-player relative" onClick={onOpenProfile} aria-label="プロフィールを開く">
             <HomeProfileIcon src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId}/>
             <div className="mh-home-player-copy"><strong>{breederName}</strong><span>ブリーダー Lv.{breederLevel.level}</span><div className="mh-home-xp"><i style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></i></div><small>{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</small></div>
             <ChevronRight className="mh-home-profile-arrow" size={15}/>
+            {Number(friendRequestCount)>0&&<span data-home-friend-badge aria-label={`フレンド申請が${Number(friendRequestCount)}件届いています`} className="absolute -right-1 -top-2 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[12px] font-black text-white shadow-lg">{Math.min(99,Number(friendRequestCount))}</span>}
           </button>
           <section className="mh-home-wallet">
             <div><Gem size={14}/><b>{gold.toLocaleString()}</b><small>ダイヤ</small></div><div><Coins size={14}/><b>{breederPoints.toLocaleString()}</b><small>ブリーダーP</small></div>
@@ -221,6 +222,36 @@ function MomosukeIntroOverlay({
       </div>
     </div>);
   
+}
+
+// フレンド申請が届いているときの、助手の知らせ(HOMEに来たときだけ)。
+// 選んでいる助手の口調で一言。「見にいく」でフレンド画面へ、「あとで」で閉じる(閉じるだけで申請は消えない)
+const FRIEND_NOTICE_LINES = Object.freeze({
+  mua: (who) => `${who}からフレンド申請が届いてるよ♪ 見にいってみよう！`,
+  kiki: (who) => `${who}からフレンド申請が届いてまつよ。見にいきまつか？`,
+  momosuke: (who) => `${who}からフレンド申請が来てるよw 見にいこ？`,
+  dra: (who) => `${who}からフレンド申請が来てるわ。見にいくか`,
+});
+function HomeFriendRequestNotice({ activeAssistant, count, names, onOpen, onLater }) {
+  const who = activeAssistant;
+  const list = Array.isArray(names) ? names.filter(Boolean) : [];
+  const label = list.length === 0 ? `${count}人`
+    : count > list.length ? `${list.join('さん・')}さんたち` : `${list.join('さん・')}さん`;
+  const line = (FRIEND_NOTICE_LINES[who && who.id] || FRIEND_NOTICE_LINES.mua)(label);
+  return (
+    <div data-friend-request-notice className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.80)'}} role="dialog" aria-modal="true" aria-label="フレンド申請のお知らせ">
+      <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-rose-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+        <h2 className="mb-2 text-center text-base font-black text-rose-200">フレンド申請が届いています</h2>
+        <div className="flex items-end gap-2">
+          {who&&<AssistantFace who={who} size={76} accent={who.accent} expression="happy"/>}
+          <div className="flex-1 rounded-2xl border-2 border-rose-400 bg-slate-900 p-3 text-[13px] font-bold leading-relaxed text-white">{line}</div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button type="button" data-friend-notice-later onClick={onLater} className="min-h-[50px] rounded-2xl border border-white/20 bg-slate-800 text-sm font-black text-slate-200 active:scale-95">あとで</button>
+          <button type="button" data-friend-notice-open onClick={onOpen} className="min-h-[50px] rounded-2xl bg-rose-500 text-sm font-black text-white active:scale-95">見にいく</button>
+        </div>
+      </div>
+    </div>);
 }
 
 function HomeUpdateGuideOverlay({

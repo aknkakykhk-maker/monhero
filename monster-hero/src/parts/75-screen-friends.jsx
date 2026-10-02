@@ -38,13 +38,22 @@ const FRIENDS_TONE_CLASS = Object.freeze({
   warn: 'border-amber-400/60 bg-amber-950/40 text-amber-100',
 });
 
-function FriendsScreen({ resolveIconUrl, target = null, onBack, onTargetHandled }) {
-  const [tab, setTab] = React.useState('friends');
+// 「2026-09-01」→「2026年9月1日」
+const friendsDayText = (day) => {
+  const m = typeof day === 'string' ? day.match(/^(\d{4})-(\d{2})-(\d{2})$/) : null;
+  return m ? `${Number(m[1])}年${Number(m[2])}月${Number(m[3])}日` : '';
+};
+// requestCount … 届いている申請の件数(あれば最初に「申請」のタブを開く)
+// onIncomingCount … 読み込み直したあと、届いている申請の数を知らせる(HOME・プロフィールのバッジを合わせるため)
+// onOpenMonsterDetail … 好きなマスモンの詳細を開く(ランキングの詳細と同じ画面)
+function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack, onTargetHandled, onIncomingCount, onOpenMonsterDetail }) {
+  const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
   const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
   const [selfId, setSelfId] = React.useState('');
   const [myCode, setMyCode] = React.useState('');
   const [groups, setGroups] = React.useState({ friends: [], incoming: [], outgoing: [], blocked: [] });
   const [profiles, setProfiles] = React.useState({});
+  const [summaries, setSummaries] = React.useState({});     // フレンドに見せる情報(いまの場所・プレイ時間・最高絆Lvなど)
   const [codeInput, setCodeInput] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [notice, setNotice] = React.useState(null);      // { text, tone }
@@ -67,10 +76,15 @@ function FriendsScreen({ resolveIconUrl, target = null, onBack, onTargetHandled 
       const rows = await sbFetchFriendLinks(id);
       const next = friendsGroup(id, rows);
       const ids = [...next.friends, ...next.incoming, ...next.outgoing, ...next.blocked].map((view) => view.otherId);
-      const found = await sbFetchFriendProfiles(ids);
+      const [found, foundSummaries] = await Promise.all([
+        sbFetchFriendProfiles(ids),
+        sbFetchFriendSummaries(next.friends.map((view) => view.otherId)),
+      ]);
       if (!aliveRef.current) return;
       setGroups(next);
       setProfiles((prev) => ({ ...prev, ...found }));
+      setSummaries((prev) => ({ ...prev, ...foundSummaries }));
+      if (typeof onIncomingCount === 'function') onIncomingCount(next.incoming.length);
       setPhase('ready');
     } catch (error) {
       if (!aliveRef.current) return;
@@ -197,23 +211,64 @@ function FriendsScreen({ resolveIconUrl, target = null, onBack, onTargetHandled 
         <ScreenHead title="フレンドのプロフィール" accent="text-pink-300" onBack={() => setSelected(null)} backLabel="フレンド一覧へ戻る"/>
         <div className={`${SCREEN_LIST_CLASS} pb-4`}>
           {noticeBox}
-          <div className={`${SCREEN_PANEL_CLASS} flex flex-col items-center gap-2 py-5 text-center`}>
-            {avatar(selected.otherId, 'h-20 w-20', 'text-4xl')}
-            <b className="max-w-full truncate text-lg font-black text-white">{look.userName}</b>
-            <span className="text-[10px] font-bold text-slate-400">{friendsLastSeenText(look.lastSeenAt, now)}</span>
-          </div>
-          <div className="mt-3"><ScreenSectionLabel>モンヒロビートの記録</ScreenSectionLabel></div>
-          <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-1`}>
-            {summary.status === 'loading' && <p className="text-[11px] font-bold text-slate-400">読み込んでいます…</p>}
-            {summary.status === 'done' && !entry && <p className="text-[11px] font-bold text-slate-400">まだ記録がありません</p>}
-            {entry && (
-              <dl className="grid grid-cols-3 gap-2 text-center">
-                <div><dt className="text-[9px] font-bold text-slate-400">ブリーダーLv.</dt><dd className="text-sm font-black text-indigo-200">{entry.level > 0 ? entry.level : '—'}</dd></div>
-                <div><dt className="text-[9px] font-bold text-slate-400">合計スコア</dt><dd className="text-sm font-black text-amber-200">{Number(entry.totalScore).toLocaleString()}</dd></div>
-                <div><dt className="text-[9px] font-bold text-slate-400">遊んだ曲数</dt><dd className="text-sm font-black text-pink-200">{entry.songCount}曲</dd></div>
-              </dl>
-            )}
-          </div>
+          {(() => {
+            const sum = summaries[selected.otherId] || null;
+            const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now);
+            const monName = (id) => (id && ALL_PLAYER_MONSTERS[id] ? ALL_PLAYER_MONSTERS[id].name : '');
+            const fav = sum && sum.favorite ? sum.favorite : null;
+            const favBase = fav ? ALL_PLAYER_MONSTERS[fav.monsterId] : null;
+            const favIcon = favBase && resolveIconUrl ? resolveIconUrl(fav.monsterId) : null;
+            const stat = (label, value, sub, color) => (
+              <div className="min-w-0"><dt className="text-[9px] font-bold text-slate-400">{label}</dt>
+                <dd className={`truncate text-sm font-black ${color}`}>{value}</dd>
+                {sub ? <dd className="truncate text-[9px] font-bold text-slate-500">{sub}</dd> : null}</div>);
+            return (<>
+              <div className={`${SCREEN_PANEL_CLASS} flex flex-col items-center gap-2 py-5 text-center`}>
+                {avatar(selected.otherId, 'h-20 w-20', 'text-4xl')}
+                <b className="max-w-full truncate text-lg font-black text-white">{look.userName}</b>
+                <span data-friend-presence={seen.online ? 'online' : 'offline'} className={`text-[11px] font-black ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`}>{seen.online ? '● ' : ''}{seen.text}</span>
+              </div>
+              <div className="mt-3"><ScreenSectionLabel>遊んだ記録</ScreenSectionLabel></div>
+              <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-1`}>
+                {!sum && <p className="text-[11px] font-bold text-slate-400">この人はまだ記録を公開していません（ゲームを開き直すと出ます）</p>}
+                {sum && (
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+                    {stat('プレイ時間', sum.playSeconds != null ? friendsPlaytimeText(sum.playSeconds) : '—', null, 'text-sky-200')}
+                    {stat('遊びはじめ', friendsDayText(sum.startedOn) || '—', sum.startedOn ? 'プレイ時間の記録が始まった日' : null, 'text-sky-200')}
+                    {stat('最高絆Lv', sum.bestBond != null ? `Lv.${sum.bestBond}` : '—', monName(sum.bestBondMon), 'text-pink-200')}
+                    {stat('最高総合力', sum.bestPower != null ? Number(sum.bestPower).toLocaleString() : '—', monName(sum.bestPowerMon), 'text-amber-200')}
+                  </dl>
+                )}
+              </div>
+              <div className="mt-3"><ScreenSectionLabel>モンヒロビートの記録</ScreenSectionLabel></div>
+              <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-1`}>
+                {summary.status === 'loading' && <p className="text-[11px] font-bold text-slate-400">読み込んでいます…</p>}
+                {summary.status === 'done' && !entry && <p className="text-[11px] font-bold text-slate-400">まだ記録がありません</p>}
+                {entry && (
+                  <dl className="grid grid-cols-3 gap-2 text-center">
+                    <div><dt className="text-[9px] font-bold text-slate-400">ブリーダーLv.</dt><dd className="text-sm font-black text-indigo-200">{entry.level > 0 ? entry.level : '—'}</dd></div>
+                    <div><dt className="text-[9px] font-bold text-slate-400">合計スコア</dt><dd className="text-sm font-black text-amber-200">{Number(entry.totalScore).toLocaleString()}</dd></div>
+                    <div><dt className="text-[9px] font-bold text-slate-400">遊んだ曲数</dt><dd className="text-sm font-black text-pink-200">{entry.songCount}曲</dd></div>
+                  </dl>
+                )}
+              </div>
+              <div className="mt-3"><ScreenSectionLabel>好きなマスモン</ScreenSectionLabel></div>
+              <div data-friend-favorite className={`${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`}>
+                {!favBase && <p className="text-[11px] font-bold text-slate-400">まだ選んでいません</p>}
+                {favBase && (<>
+                  {favIcon ? <img src={favIcon} alt="" className="h-14 w-14 shrink-0 object-contain"/> : <span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl">❓</span>}
+                  <div className="min-w-0 flex-1">
+                    <b className="block truncate text-sm font-black text-white">{fav.name || favBase.name}</b>
+                    <small className="block text-[10px] font-bold text-pink-300">絆Lv.{Number(fav.bondLevel) || '—'}{fav.power ? `　総合力 ${Number(fav.power).toLocaleString()}` : ''}</small>
+                  </div>
+                  {fav.detail && typeof onOpenMonsterDetail === 'function' && (
+                    <button type="button" data-friend-favorite-detail onClick={() => onOpenMonsterDetail({ baseId: fav.monsterId, monsterId: fav.monsterId, name: fav.name || favBase.name, bondLevel: Number(fav.bondLevel) || 0, detail: fav.detail, colors: Array.isArray(fav.colors) ? fav.colors : [] })}
+                      className={`${btn} shrink-0 px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`}>詳細 ›</button>
+                  )}
+                </>)}
+              </div>
+            </>);
+          })()}
           <div className="mt-4 grid grid-cols-2 gap-2">
             <button type="button" disabled={busy} onClick={() => setConfirm({ kind: 'remove', otherId: selected.otherId })} className={`${btn} border-white/20 bg-slate-800 text-slate-200`}>フレンドを解除</button>
             <button type="button" disabled={busy} onClick={() => setConfirm({ kind: 'block', otherId: selected.otherId })} className={`${btn} border-rose-400/50 bg-rose-950/40 text-rose-200`}>ブロックする</button>
@@ -238,7 +293,11 @@ function FriendsScreen({ resolveIconUrl, target = null, onBack, onTargetHandled 
         {avatar(view.otherId, 'h-10 w-10')}
         <div className="min-w-0 flex-1">
           <b className="block truncate text-[12px] font-black text-white">{look.userName}</b>
-          <span className="block truncate text-[9px] font-bold text-slate-400">{friendsLastSeenText(look.lastSeenAt, now)}</span>
+          {(() => {
+            const sum = summaries[view.otherId];
+            const seen = friendsPresenceText(sum ? sum.place : null, Math.max(sum ? sum.updatedAt : 0, look.lastSeenAt || 0), now);
+            return <span data-friend-presence={seen.online ? 'online' : 'offline'} className={`block truncate text-[9px] font-bold ${seen.online ? 'text-emerald-300' : 'text-slate-400'}`}>{seen.online ? '● ' : ''}{seen.text}</span>;
+          })()}
         </div>
         {right}
       </div>
