@@ -12,6 +12,8 @@ const MOCCHI_PET_ICON = "images/breeder-icons/mocchi-pet.png?v=b0e61758fca4";
 const GEZUDERO_ICON = "images/breeder-icons/gezudero.png?v=d79a38ee0679";
 const MELOPANMAN_ICON = "images/breeder-icons/melopanman.png?v=1eba631f1832";
 const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
+// ももすけのカード用の顔アイコン。助手の表情画像(小さい)をそのまま使う
+const MOMOSUKE_FACE_ICON = "images/assistant/face/momosuke_happy.PNG?v=567b7baa59e9";
 const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // マーケットのアイコン商品だけで使う立ち絵。
@@ -48,7 +50,8 @@ const BREEDER_EVO_NAMES = {
   myaru: ["みゃるの薬", "みゃるの怪薬", "みゃるの禁薬"],
   kiki: ["ききの応援", "ききの本気", "ききの全力全開"],
   meloso: ["メロソの解析", "メロソの予測", "メロソの最適解"],
-  poltz: ["ポルツの弁当", "ポルツの挫折", "ポルツの目覚め"]
+  poltz: ["ポルツの弁当", "ポルツの挫折", "ポルツの目覚め"],
+  momosuke: ["ももすけのおねだり", "ももすけのだだこね", "ももすけの独り占め"]
 };
 
 // かどみうむ(guts_buff)の進化段階ごとの効果量。
@@ -90,7 +93,10 @@ const TEACHING_CARDS = [
   { id:'meloso',  baseName:"メロソの解析",      icon:MELOPANMAN_ICON,   type:'heal',   subType:'heal_guard_meloso', baseValue:0.3, step:0,  desc:"緊急回復相当・現在ガード・次ターン予約", evoLevel:0, guts:20 },
   // ポルツの効果量はレベルで変わる部分をすべて POLTZ_TIERS に置いてあるので、
   // baseValue は1回あたりの回復割合(表示・検査用)だけを持ち、step は増えない意味の 0 を明示する
-  { id:'poltz',   baseName:"ポルツの弁当",      icon:POLTZ_FACE_ICON,   type:'buff',   subType:'buff_poltz', baseValue:0.2, step:0,  desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ", evoLevel:0, guts:20 }
+  { id:'poltz',   baseName:"ポルツの弁当",      icon:POLTZ_FACE_ICON,   type:'buff',   subType:'buff_poltz', baseValue:0.2, step:0,  desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ", evoLevel:0, guts:20 },
+  // ももすけは「みゅあのガッツ回復版」。回復と上限アップの量は60-app.jsxのmomosuke分岐と
+  // getDynamicDescの2か所に同じ表がある。攻撃アップの代わりに丈夫さ(defPct)を上げる
+  { id:'momosuke', baseName:"ももすけのおねだり", icon:MOMOSUKE_FACE_ICON, type:'heal', subType:'heal_momosuke', baseValue:0.5, step:0.2, desc:"ガッツ回復・能力永続アップ", evoLevel:0, guts:20 }
 ];
 
 // 初期から無料で使えるアシストカード(教えカード)のid一覧(固定)。
@@ -207,6 +213,7 @@ const BREEDER_MARKET_ITEMS = [
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:KIKI_FACE_ICON, cost:1 },
   { id:'kiki', name:"アシストカード「きき」", type:'assist', icon:KIKI_FACE_ICON, cost:1500, desc:"次ターンから使用可能カード枚数+1・バトル中永続で全体連撃を強化" },
   { id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:1500, desc:"緊急回復相当＋現在ガード。複数枚使用で次ターンを強化" },
+  { id:'momosuke', name:"アシストカード「ももすけ」", type:'assist', icon:MOMOSUKE_FACE_ICON, cost:1500, desc:"ガッツ回復・ライフ/ガッツ上限と丈夫さが永続アップ" },
   { id:'poltz', name:"アシストカード「ポルツ」", type:'assist', icon:POLTZ_FACE_ICON, cost:1500, desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ（Lv3は攻撃アップも）" },
   { id:'oryo',    name:"ニコラオのアイコン",     type:'icon', icon:NICOLAO_FACE_ICON, cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },

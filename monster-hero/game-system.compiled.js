@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 009e3b0efc337c31
+// source-sha256: 24cda347cdd49a1e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-02 17:46";
+const BUILD_DATE = "2026-10-02 18:15";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15797,6 +15797,16 @@ const TEACHING_FX_STYLE = {
     c1: '#bae6fd',
     c2: '#38bdf8',
     motif: 'blade'
+  },
+  momosuke: {
+    icon: "🍑",
+    label: "ひとりじめ!",
+    text: "text-pink-300",
+    ring: "border-pink-300",
+    rgb: "244,114,182",
+    c1: '#fbcfe8',
+    c2: '#f472b6',
+    motif: 'rise'
   },
   poltz: {
     icon: "🍱",
@@ -61629,6 +61639,20 @@ function MonsterHeroGame() {
           addPermaBuff('muaAtkPct', atkB * effMul);
           addPermaBuff('muaGutsPct', gutsB * effMul);
           if (gutsRecRate > 0) gainGutsByRateAll(gutsRecRate * effMul);
+        } else if (card.id === 'momosuke') {
+          const gutsRecRate = level === 1 ? 0.7 : level >= 2 ? 0.9 : 0.5,
+            hpRecRate = level === 1 ? 0.7 : level >= 2 ? 0.9 : 0;
+          const hpB = level >= 2 ? 0.05 : 0.03,
+            gutsB = level === 1 ? 0.05 : level >= 2 ? 0.08 : 0.03,
+            defB = level >= 2 ? 0.05 : 0.03;
+          if (hpRecRate > 0) {
+            totalHeal += Math.floor(liveEffectiveMaxHp() * hpRecRate * effMul);
+            totalHealRate += hpRecRate * effMul;
+          }
+          addPermaBuff('muaHpPct', hpB * effMul);
+          addPermaBuff('muaGutsPct', gutsB * effMul);
+          addPermaBuff('defPct', defB * effMul);
+          gainGutsByRateAll(gutsRecRate * effMul);
         } else {
           totalHeal += Math.floor(liveEffectiveMaxHp() * (0.5 + level * 0.2) * effMul);
           totalHealRate += (0.5 + level * 0.2) * effMul;
@@ -64081,6 +64105,7 @@ function MonsterHeroGame() {
       return parts.join('・');
     }
     if (t.id === 'mua') return level === 0 ? "ライフ 50%回復・ライフ/ガッツ上限 3%アップ・攻撃 3%アップ（次のターンから）" : level === 1 ? "ライフ・ガッツ 70%回復・ライフ上限 5%アップ・ガッツ上限 3%アップ・攻撃 3%アップ（次のターンから）" : "ライフ・ガッツ 90%回復・ライフ上限 8%アップ・ガッツ上限 5%アップ・攻撃 5%アップ（次のターンから）";
+    if (t.id === 'momosuke') return level === 0 ? "ガッツ 50%回復・ライフ/ガッツ上限 3%アップ・丈夫さ 3%アップ（次のターンから）" : level === 1 ? "ライフ・ガッツ 70%回復・ライフ上限 3%アップ・ガッツ上限 5%アップ・丈夫さ 3%アップ（次のターンから）" : "ライフ・ガッツ 90%回復・ライフ上限 5%アップ・ガッツ上限 8%アップ・丈夫さ 5%アップ（次のターンから）";
     if (t.id === 'atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue + level * t.step).toFixed(1)}倍`;
     if (t.id === 'myaru') {
       const v = t.baseValue + level * t.step,
