@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e6f2781070922671
+// source-sha256: f6fc7c4d4b370143
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-02 18:38";
+const BUILD_DATE = "2026-10-02 18:55";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -15704,7 +15704,7 @@ const buildAttackHits = ({
     for (let i = 0; i < kenshiExtraCombos; i++) combo(ATTACK_COMBO_RULES.kenshiExtraCombo + comboDmgBonus);
   }
   if (exCombos && exCombos.count > 0 && exCombos.rate > 0) {
-    for (let i = 0; i < exCombos.count; i++) combo(exCombos.rate + comboDmgBonus, 'スイーツパラダイス', true);
+    for (let i = 0; i < exCombos.count; i++) combo(exCombos.rate + comboDmgBonus, exCombos.label || 'スイーツパラダイス', true);
   }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true);
   const repeat = Math.max(1, Math.floor(Number(hitRepeat) || 1));
@@ -31743,7 +31743,7 @@ const TACTICS_EX_DURATION_TEXT = Object.freeze({
   style: 'もう一度使って選び直すまで'
 });
 const TACTICS_EX_DIST_MATCH_MULT = 1.7;
-const tacticsExDistMatchDodges = (effect, slotIdx, enemyDist) => effect === 'distMatch' && Number.isInteger(slotIdx) && Number.isInteger(enemyDist) && slotIdx === enemyDist;
+const tacticsExDistMatchDodges = (effect, slotIdx, enemyDist) => (effect === 'distMatch' || effect === 'dodgeCombo') && Number.isInteger(slotIdx) && Number.isInteger(enemyDist) && slotIdx === enemyDist;
 const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
@@ -31803,6 +31803,18 @@ const TACTICS_EX_SKILLS = Object.freeze({
     duration: 'turns',
     turns: 5,
     effect: 'distMatch'
+  }),
+  Zan: Object.freeze({
+    id: 'zan_dodge_combo',
+    name: '血踊',
+    desc: '5ターンのあいだ、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。回避するたびに、ザンの攻撃へ与ダメージ10%の連撃が1回ずつ増えていく。',
+    maxUses: 5,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 5,
+    dodgeComboRate: 0.1,
+    effect: 'dodgeCombo'
   }),
   Golem: Object.freeze({
     id: 'golem_all_in',
@@ -31871,7 +31883,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -31915,6 +31927,7 @@ const normalizeTacticsExDef = raw => {
     fullRecover: raw.fullRecover === true,
     partyTakenRate: Math.min(0.9, Math.max(0, Number.isFinite(Number(raw.partyTakenRate)) ? Number(raw.partyTakenRate) : 0)),
     partyRegenRate: Math.max(0, Number.isFinite(Number(raw.partyRegenRate)) ? Number(raw.partyRegenRate) : 0),
+    dodgeComboRate: Math.max(0, Number.isFinite(Number(raw.dodgeComboRate)) ? Number(raw.dodgeComboRate) : 0),
     extraCombos: raw.extraCombos && typeof raw.extraCombos === 'object' && tacticsSafeInt(raw.extraCombos.count, 0) > 0 && Number(raw.extraCombos.rate) > 0 ? {
       count: tacticsSafeInt(raw.extraCombos.count, 0),
       rate: Number(raw.extraCombos.rate)
@@ -32096,6 +32109,8 @@ const applyTacticsExUse = (state, {
         extraCombos: def.extraCombos ? {
           ...def.extraCombos
         } : null,
+        dodgeComboRate: def.dodgeComboRate || 0,
+        dodges: 0,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -32190,7 +32205,19 @@ const tacticsExPartyRegenRate = (state, units, now) => {
 };
 const tacticsExExtraCombosAt = (state, units, slot, now) => {
   const unit = Array.isArray(units) ? units[slot] : null;
-  if (!unit || tacticsExActiveEffect(state, slot, unit.id, now) !== 'comboBurst') return null;
+  if (!unit) return null;
+  const kind = tacticsExActiveEffect(state, slot, unit.id, now);
+  if (kind === 'dodgeCombo') {
+    const mine = normalizeTacticsExState(state).effects[slot];
+    const dodges = tacticsSafeInt(mine && mine.dodges, 0),
+      rate = Number(mine && mine.dodgeComboRate);
+    return dodges > 0 && Number.isFinite(rate) && rate > 0 ? {
+      count: dodges,
+      rate,
+      label: '血踊'
+    } : null;
+  }
+  if (kind !== 'comboBurst') return null;
   const own = normalizeTacticsExState(state).effects[slot].extraCombos;
   const count = tacticsSafeInt(own && own.count, 0),
     rate = Number(own && own.rate);
@@ -32198,6 +32225,22 @@ const tacticsExExtraCombosAt = (state, units, slot, now) => {
     count,
     rate
   } : null;
+};
+const recordTacticsExDodge = (state, units, slot, now) => {
+  const safe = normalizeTacticsExState(state);
+  const unit = Array.isArray(units) ? units[slot] : null;
+  if (!unit || tacticsExActiveEffect(safe, slot, unit.id, now) !== 'dodgeCombo') return safe;
+  const mine = safe.effects[slot];
+  return {
+    ...safe,
+    effects: {
+      ...safe.effects,
+      [slot]: {
+        ...mine,
+        dodges: tacticsSafeInt(mine.dodges, 0) + 1
+      }
+    }
+  };
 };
 const applyTacticsExStats = (unit, state, slot, now) => {
   if (!unit || typeof unit !== 'object') return unit;
@@ -61066,7 +61109,9 @@ function MonsterHeroGame() {
               throughTotal = 0;
             const slotFx = {};
             targets.forEach(slotIdx => {
-              if (slotIdx === evadedSlot || tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx), slotIdx, actingEnemyDist)) {
+              const exDodge = tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx), slotIdx, actingEnemyDist);
+              if (exDodge) commitTacticsExState(recordTacticsExDodge(tacticsExStateRef.current, tacticsUnitsRef.current, slotIdx, tacticsExLiveRef.current.now));
+              if (slotIdx === evadedSlot || exDodge) {
                 evadedName = tacticsTargetName(units, slotIdx);
                 slotFx[slotIdx] = {
                   evade: true
