@@ -103,10 +103,6 @@
       "pure": true
     },
     {
-      "file": "33-rhythm-multi.jsx",
-      "role": "モンヒロビートのマルチ(同じ曲でスコア対決)。Supabase Realtime の Broadcast で部屋の状態・開始の合図・スコアをやりとりする。保存データ・ランキングには触れない"
-    },
-    {
       "file": "34-friends-api.jsx",
       "role": "フレンド機能の通信層(Supabase の friend_codes / friend_links)。自分のコード・申請・承認・解除・ブロック。保存データ・ランキングには書き込まず、端末にも何も保存しない"
     },
@@ -217,6 +213,10 @@
     {
       "file": "76-screen-debug-data.jsx",
       "role": "画面: データを用意する(DEBUG_DATA_SETUP。デバッグ専用)。条件が揃わないと始まらないもの(ログインボーナス・ミッション・購入・アイテム・育成)をすぐ試せる状態にする"
+    },
+    {
+      "file": "77-screen-rhythm-multi.jsx",
+      "role": "モンヒロビートのマルチ(同じ曲でスコア対決)。Supabase Realtime の Broadcast で部屋の状態・開始の合図・スコアをやりとりする。保存データ・ランキングには触れない"
     },
     {
       "file": "60-app.jsx",

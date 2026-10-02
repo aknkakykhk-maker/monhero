@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7d211f748f292509
+// source-sha256: 44591cb6edf7bc17
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 00:50";
+const BUILD_DATE = "2026-10-03 01:49";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -28575,7 +28575,8 @@ const RhythmTapTest = ({
   tutorial = false,
   calibrating = false,
   onApplyCalibration = null,
-  multi = false
+  multi = false,
+  multiRewardScale = 1
 }) => {
   const [effectCap, setEffectCap] = useState(() => rhythmAutoEffectMemory.level);
   const settings = useMemo(() => settingsIn && settingsIn.autoEffectDown !== false ? rhythmCapEffects(settingsIn, effectCap) : settingsIn, [settingsIn, effectCap]);
@@ -29899,7 +29900,13 @@ const RhythmTapTest = ({
       achievements.allMarvelous = false;
     }
     const failed = !tutorial && !calibrating && run.lifeDepleted === true;
-    const eventPointAward = !debugPlay && !tutorial && !calibrating && !assistOn && !multi && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof rhythmEventPointAwardAt === 'function' ? rhythmEventPointAwardAt(Date.now(), song.songId, score, Number(song.playDurationMs) || Number(rawChart && rawChart.durationMs) || 0) : null;
+    const multiScale = multi && Number.isFinite(Number(multiRewardScale)) && Number(multiRewardScale) > 1 ? Number(multiRewardScale) : 1;
+    const scaleForMulti = award => award && multiScale > 1 ? {
+      ...award,
+      multiScale,
+      amount: Math.floor(award.amount * multiScale + 1e-9)
+    } : award;
+    const eventPointAward = !debugPlay && !tutorial && !calibrating && !assistOn && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS?.rhythmEventPoints === true && typeof rhythmEventPointAwardAt === 'function' ? scaleForMulti(rhythmEventPointAwardAt(Date.now(), song.songId, score, Number(song.playDurationMs) || Number(rawChart && rawChart.durationMs) || 0)) : null;
     const calibration = calibrating ? rhythmCalibrationOffsetFromTaps((Array.isArray(run.deltas) ? run.deltas : []).slice(RHYTHM_CALIBRATION_WARMUP_COUNT)) : null;
     const result = {
       score,
@@ -29921,7 +29928,7 @@ const RhythmTapTest = ({
     };
     const isNewRecord = !assistOn && score > run.startBestScore;
     const merged = assistOn ? normalizeRhythmBestRecord(run.startBest) : mergeRhythmBestRecord(run.startBest, result);
-    if (!debugPlay && !tutorial && !calibrating && !assistOn && !multi) rhythmPlayLogSend({
+    if (!debugPlay && !tutorial && !calibrating && !assistOn) rhythmPlayLogSend({
       song,
       difficulty,
       rawChart,
@@ -29930,7 +29937,7 @@ const RhythmTapTest = ({
       mirror: mirrorOn,
       cleared: !failed
     });
-    const touchDiag = !debugPlay && !tutorial && !calibrating && !multi ? rhythmTouchDiagOf({
+    const touchDiag = !debugPlay && !tutorial && !calibrating ? rhythmTouchDiagOf({
       song,
       difficulty,
       notes: run.notes,
@@ -29999,7 +30006,7 @@ const RhythmTapTest = ({
       }
     } : v);
     onComplete(result, merged);
-  }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn, multi]);
+  }, [chart.totalNotes, chart.durationMs, difficulty.maxScore, difficulty.id, onComplete, settings.effectAmount, settings.lightweightMode, settings.judgmentTimingOffsetMs, stopFrame, tutorial, calibrating, debugPlay, song.songId, song.playDurationMs, assistOn, mirrorOn, luckOn, multi, multiRewardScale]);
   const celebrateTimerRef = useRef(null);
   const [touchReportSent, setTouchReportSent] = useState(null);
   useEffect(() => {
@@ -31353,7 +31360,9 @@ const RhythmTapTest = ({
         className: "text-[15px] font-black leading-none text-white"
       }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-amber-200"
-      }, "🏆 イベント対象曲 ×", quickRunAward.scale), React.createElement("div", {
+      }, "🏆 イベント対象曲 ×", quickRunAward.scale), quickRunAward.multiScale > 1 && React.createElement("div", {
+        className: "mt-0.5 text-[9px] font-black text-cyan-200"
+      }, "👥 人数ボーナス ×", quickRunAward.multiScale), React.createElement("div", {
         className: "mt-0.5 text-[9px] font-black text-slate-300"
       }, quickRunAward.fromLoop, "周目 → ", quickRunAward.toLoop, "周目"), React.createElement("div", {
         className: "mt-0.5 flex flex-wrap gap-x-2 text-[9px] font-bold text-slate-300"
@@ -31386,7 +31395,9 @@ const RhythmTapTest = ({
       }, "🎟️ ビートP", beat.target ? ' ×1.5' : '', beat.lengthBonusPercent > 0 && React.createElement("span", {
         "data-rhythm-result-hero-gains-beat-length": true,
         className: "block text-sky-200"
-      }, "長さ+", beat.lengthBonusPercent, "%")), React.createElement("b", {
+      }, "長さ+", beat.lengthBonusPercent, "%"), beat.multiScale > 1 && React.createElement("span", {
+        className: "block text-cyan-200"
+      }, "👥 人数 ×", beat.multiScale)), React.createElement("b", {
         className: "text-[15px] font-black leading-none text-white"
       }, "+", beat.amount.toLocaleString(), "P")), luck && React.createElement("div", {
         "data-rhythm-result-hero-gains-luck": true,
@@ -31660,7 +31671,10 @@ const RhythmTapTest = ({
     }, "+", quickRunAward.loops, "周")), quickRunAward.eventBoosted && React.createElement("div", {
       "data-rhythm-result-quick-run-event": true,
       className: "mt-1.5 rounded-xl border border-amber-300/50 bg-amber-950/40 px-2 py-1 text-[10px] font-black text-amber-200"
-    }, "🏆 イベント対象曲 ×", quickRunAward.scale, "（ふだんの曲は ×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）"), React.createElement("div", {
+    }, "🏆 イベント対象曲 ×", quickRunAward.scale, "（ふだんの曲は ×", RHYTHM_PLAY_RUN_LOOP_SCALE, "）"), quickRunAward.multiScale > 1 && React.createElement("div", {
+      "data-rhythm-result-quick-run-multi": true,
+      className: "mt-1.5 rounded-xl border border-cyan-300/50 bg-cyan-950/40 px-2 py-1 text-[10px] font-black text-cyan-200"
+    }, "👥 みんなで対戦の人数ボーナス ×", quickRunAward.multiScale), React.createElement("div", {
       className: "mt-1 text-[11px] font-black text-slate-200"
     }, quickRunAward.fromLoop, "周目 ", React.createElement("span", {
       className: "text-slate-500"
@@ -31706,7 +31720,10 @@ const RhythmTapTest = ({
       className: "block text-[10px] font-black tracking-wider text-violet-200"
     }, "🎟️ ビートP獲得"), React.createElement("b", {
       className: "mt-0.5 block text-2xl font-black text-white"
-    }, "+", result.eventPointAward.amount.toLocaleString(), "P"), result.eventPointAward.target && React.createElement("span", {
+    }, "+", result.eventPointAward.amount.toLocaleString(), "P"), result.eventPointAward.multiScale > 1 && React.createElement("span", {
+      "data-rhythm-result-beat-points-multi": true,
+      className: "mt-1 block text-[9px] font-black text-cyan-200"
+    }, "👥 みんなで対戦の人数ボーナス ×", result.eventPointAward.multiScale), result.eventPointAward.target && React.createElement("span", {
       className: "mt-1 block text-[9px] font-black text-amber-200"
     }, "イベント対象曲 1.5倍"), result.eventPointAward.lengthBonusPercent > 0 && React.createElement("span", {
       "data-rhythm-result-beat-points-length": true,
@@ -31796,7 +31813,7 @@ const RhythmTapTest = ({
       "data-rhythm-multi-result-back": multi ? "" : undefined,
       className: "min-h-[48px] rounded-xl bg-indigo-700 font-black",
       onClick: abort
-    }, multi ? 'みんなの結果を見る(部屋へ戻る)' : debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る'))))));
+    }, multi && 'みんなの結果を見る', !multi && React.createElement(React.Fragment, null, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る')))))));
   }
   return React.createElement("main", {
     "data-rhythm-tap-test": true,
@@ -32332,7 +32349,7 @@ const RhythmTapTest = ({
     "data-rhythm-pause-exit": true,
     className: "min-h-[48px] w-full rounded-xl bg-rose-800 font-black",
     onClick: abort
-  }, calibrating ? 'やめてオプションへ戻る' : tutorial ? '練習をやめて曲えらびへ戻る' : multi ? '中断して部屋へ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る'))));
+  }, multi && '中断してルームへ戻る', !multi && React.createElement(React.Fragment, null, calibrating ? 'やめてオプションへ戻る' : tutorial ? '練習をやめて曲えらびへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る')))));
 };
 const DebugScreenHead = ({
   title,
@@ -33732,1934 +33749,6 @@ const tacticsExCoverSlot = (state, units, now) => {
   return null;
 };
 const coverTacticsTargets = (targets, coverSlot) => Number.isInteger(coverSlot) && Array.isArray(targets) && targets.length ? targets.map(() => coverSlot) : Array.isArray(targets) ? targets : [];
-const RHYTHM_MULTI_ROOM_MAX = 5;
-const RHYTHM_MULTI_VETERAN_MIN_LEVEL = 30;
-const RHYTHM_MULTI_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const RHYTHM_MULTI_CODE_LENGTH = 4;
-const RHYTHM_MULTI_HEARTBEAT_MS = 2000;
-const RHYTHM_MULTI_ALIVE_MS = 7000;
-const RHYTHM_MULTI_START_COUNTDOWN_SEC = 3;
-const RHYTHM_MULTI_SHUFFLE_MS = 2400;
-const RHYTHM_MULTI_SELECT_MS = 30000;
-const RHYTHM_MULTI_READY_MS = 30000;
-const RHYTHM_MULTI_READY_GRACE_MS = 3000;
-const RHYTHM_MULTI_RESULT_MS = 45000;
-const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
-const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
-const RHYTHM_MULTI_CHAT_KEEP = 50;
-const RHYTHM_MULTI_CHAT_INTERVAL_MS = 800;
-const RHYTHM_MULTI_CHAT_STAMPS = Object.freeze(['よろしく!', 'ナイス!', '準備OK!', 'もう一回!', 'ありがとう!']);
-const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
-const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
-const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
-const RHYTHM_MULTI_LOBBY_LISTEN_MS = 3500;
-const RHYTHM_MULTI_LOBBY_FRESH_MS = 6000;
-const RHYTHM_MULTI_PENALTY_KEY = 'mh_rhythm_multi_penalty_v1';
-const RHYTHM_MULTI_PENALTY_MS = 3 * 60 * 1000;
-const RHYTHM_MULTI_MODES = Object.freeze(['private', 'free', 'veteran']);
-const RHYTHM_MULTI_MODE_LABELS = Object.freeze({
-  private: 'プライベート',
-  free: 'フリー',
-  veteran: 'ベテラン'
-});
-const RHYTHM_MULTI_PHASES = Object.freeze(['matching', 'select', 'ready', 'playing', 'result']);
-const RHYTHM_MULTI_OMAKASE = '*';
-const RHYTHM_MULTI_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
-const rhythmMultiMakeCode = () => {
-  let code = '';
-  for (let i = 0; i < RHYTHM_MULTI_CODE_LENGTH; i += 1) {
-    code += RHYTHM_MULTI_CODE_CHARS[Math.floor(Math.random() * RHYTHM_MULTI_CODE_CHARS.length)];
-  }
-  return code;
-};
-const rhythmMultiNormalizeCode = text => {
-  const code = String(text == null ? '' : text).toUpperCase().split('').filter(ch => RHYTHM_MULTI_CODE_CHARS.includes(ch)).join('');
-  return code.length === RHYTHM_MULTI_CODE_LENGTH ? code : '';
-};
-const rhythmMultiMakeId = (head = 'p') => `${head}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-const rhythmMultiText = (value, max) => String(value == null ? '' : value).replace(/[\u0000-\u001f]/g, '').slice(0, max);
-const rhythmMultiInt = (value, max) => {
-  const n = Math.floor(Number(value));
-  return Number.isFinite(n) ? Math.min(max, Math.max(0, n)) : 0;
-};
-const rhythmMultiSortMembers = members => members.slice().sort((a, b) => a.joinedAt - b.joinedAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-const rhythmMultiPenaltyLeftMs = async () => {
-  try {
-    const saved = await storeGet(RHYTHM_MULTI_PENALTY_KEY, null);
-    const until = saved && typeof saved === 'object' ? Number(saved.until) : 0;
-    return Number.isFinite(until) ? Math.max(0, Math.min(RHYTHM_MULTI_PENALTY_MS, until - Date.now())) : 0;
-  } catch (_) {
-    return 0;
-  }
-};
-const rhythmMultiPenaltyMark = async () => {
-  try {
-    await storeSet(RHYTHM_MULTI_PENALTY_KEY, {
-      until: Date.now() + RHYTHM_MULTI_PENALTY_MS
-    });
-  } catch (_) {}
-};
-const rhythmMultiTeamResult = (members, round, participants) => {
-  const ids = Array.isArray(participants) && participants.length ? participants : members.map(m => m.id);
-  const rows = ids.map(id => {
-    const m = members.find(x => x.id === id) || {
-      id,
-      name: '(抜けた人)',
-      icon: '',
-      frame: '',
-      gone: true
-    };
-    return {
-      m,
-      res: m.res && m.res.startId === round ? m.res : null
-    };
-  });
-  const waiting = rows.some(r => !r.res && !r.m.gone);
-  const scores = rows.map(r => r.res && !r.res.quit ? r.res.score : 0);
-  const average = scores.length ? Math.floor(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-  let mvpId = null;
-  let best = 0;
-  rows.forEach(r => {
-    if (r.res && !r.res.quit && r.res.score > best) {
-      best = r.res.score;
-      mvpId = r.m.id;
-    }
-  });
-  return {
-    rows,
-    waiting,
-    average,
-    mvpId,
-    rank: scores.length ? rhythmRankForScore(average) : null
-  };
-};
-const rhythmMultiCleanRoom = raw => {
-  if (!raw || typeof raw !== 'object' || !RHYTHM_MULTI_PHASES.includes(raw.ph)) return null;
-  return {
-    phase: raw.ph,
-    round: rhythmMultiText(raw.rd, 40),
-    songId: rhythmMultiText(raw.sg, 60),
-    left: rhythmMultiInt(raw.lf, 600),
-    hasDeadline: raw.dl === 1,
-    participants: Array.isArray(raw.pt) ? raw.pt.slice(0, RHYTHM_MULTI_ROOM_MAX).map(id => rhythmMultiText(id, 40)).filter(Boolean) : []
-  };
-};
-const rhythmMultiCleanMessage = raw => {
-  if (!raw || typeof raw !== 'object') return null;
-  const id = rhythmMultiText(raw.id, 40);
-  if (!id) return null;
-  const out = {
-    t: raw.t,
-    id
-  };
-  if (raw.t === 'hb') {
-    out.name = rhythmMultiText(raw.name, 12) || '名無しのブリーダー';
-    out.level = rhythmMultiInt(raw.level, 9999);
-    out.joinedAt = rhythmMultiInt(raw.joinedAt, 9e15);
-    out.icon = rhythmMultiText(raw.icon, 60);
-    out.frame = rhythmMultiText(raw.frame, 40);
-    out.pick = rhythmMultiText(raw.pick, 60);
-    out.pickRound = rhythmMultiText(raw.pickRound, 40);
-    out.readyRound = rhythmMultiText(raw.readyRound, 40);
-    out.diff = rhythmMultiText(raw.diff, 20);
-    out.playing = raw.playing === true;
-    out.open = raw.open === true;
-    out.mode = RHYTHM_MULTI_MODES.includes(raw.mode) ? raw.mode : 'private';
-    if (raw.res && typeof raw.res === 'object') out.res = rhythmMultiCleanResult(raw.res);
-    if (raw.room) out.room = rhythmMultiCleanRoom(raw.room);
-    return out;
-  }
-  if (raw.t === 'draw' || raw.t === 'start') {
-    out.round = rhythmMultiText(raw.round, 40);
-    out.songId = rhythmMultiText(raw.songId, 60);
-    out.participants = Array.isArray(raw.participants) ? raw.participants.slice(0, RHYTHM_MULTI_ROOM_MAX).map(x => rhythmMultiText(x, 40)).filter(Boolean) : [];
-    return out.round && out.songId ? out : null;
-  }
-  if (raw.t === 'res') {
-    out.res = rhythmMultiCleanResult(raw.res);
-    return out.res ? out : null;
-  }
-  if (raw.t === 'chat') {
-    out.name = rhythmMultiText(raw.name, 12) || '名無しのブリーダー';
-    out.text = rhythmMultiText(raw.text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
-    out.cid = rhythmMultiText(raw.cid, 40);
-    return out.text && out.cid ? out : null;
-  }
-  if (raw.t === 'bye') return out;
-  return null;
-};
-const rhythmMultiCleanResult = raw => {
-  if (!raw || typeof raw !== 'object') return null;
-  const startId = rhythmMultiText(raw.startId, 40);
-  if (!startId) return null;
-  return {
-    startId,
-    score: rhythmMultiInt(raw.score, 1e12),
-    maxCombo: rhythmMultiInt(raw.maxCombo, 100000),
-    cleared: raw.cleared !== false,
-    quit: raw.quit === true,
-    diffId: rhythmMultiText(raw.diffId, 20),
-    fc: rhythmMultiInt(raw.fc, 3),
-    j: Array.isArray(raw.j) ? RHYTHM_MULTI_JUDGMENT_IDS.map((_, k) => rhythmMultiInt(raw.j[k], 100000)) : null,
-    fs: rhythmMultiInt(raw.fs, 100000),
-    sl: rhythmMultiInt(raw.sl, 100000)
-  };
-};
-const rhythmMultiCleanRoomNotice = raw => {
-  if (!raw || typeof raw !== 'object' || raw.t !== 'room') return null;
-  const code = rhythmMultiNormalizeCode(raw.code);
-  const n = rhythmMultiInt(raw.n, RHYTHM_MULTI_ROOM_MAX);
-  return code && n >= 1 && n < RHYTHM_MULTI_ROOM_MAX ? {
-    code,
-    n
-  } : null;
-};
-const rhythmMultiBestRoom = (rooms, exceptCode) => {
-  const now = Date.now();
-  const list = Object.entries(rooms).filter(([code, info]) => code !== exceptCode && now - info.seen <= RHYTHM_MULTI_LOBBY_FRESH_MS).map(([code, info]) => ({
-    code,
-    n: info.n
-  }));
-  list.sort((a, b) => b.n - a.n || (a.code < b.code ? -1 : 1));
-  return list.length ? list[0].code : null;
-};
-const rhythmMultiOpenSocket = ({
-  topic,
-  onOpen,
-  onMessage,
-  onClose
-}) => {
-  let ws = null;
-  let beatTimer = null;
-  let ref = 0;
-  let closed = false;
-  const nextRef = () => String(++ref);
-  const send = (event, payload, topicName) => {
-    if (!ws || ws.readyState !== 1) return false;
-    try {
-      ws.send(JSON.stringify({
-        topic: topicName || topic,
-        event,
-        payload,
-        ref: nextRef(),
-        join_ref: '1'
-      }));
-      return true;
-    } catch (_) {
-      return false;
-    }
-  };
-  try {
-    ws = new WebSocket(`${SUPABASE_URL.replace(/^http/, 'ws')}/realtime/v1/websocket?apikey=${encodeURIComponent(SUPABASE_KEY)}&vsn=1.0.0`);
-  } catch (_) {
-    setTimeout(() => {
-      if (!closed) onClose();
-    }, 0);
-    return {
-      send: () => false,
-      close: () => {
-        closed = true;
-      }
-    };
-  }
-  ws.onopen = () => {
-    try {
-      ws.send(JSON.stringify({
-        topic,
-        event: 'phx_join',
-        payload: {
-          config: {
-            broadcast: {
-              self: true,
-              ack: false
-            },
-            presence: {
-              key: ''
-            },
-            private: false
-          }
-        },
-        ref: '1',
-        join_ref: '1'
-      }));
-    } catch (_) {}
-    beatTimer = setInterval(() => send('heartbeat', {}, 'phoenix'), 25000);
-  };
-  ws.onmessage = event => {
-    let msg = null;
-    try {
-      msg = JSON.parse(event.data);
-    } catch (_) {
-      return;
-    }
-    if (!msg || msg.topic !== topic) return;
-    if (msg.event === 'phx_reply' && msg.ref === '1') {
-      if (msg.payload && msg.payload.status === 'ok') onOpen();else onClose();
-    } else if (msg.event === 'broadcast' && msg.payload && msg.payload.event === 'msg') {
-      onMessage(msg.payload.payload);
-    } else if (msg.event === 'phx_close' || msg.event === 'phx_error') {
-      onClose();
-    }
-  };
-  ws.onclose = () => {
-    if (beatTimer) clearInterval(beatTimer);
-    beatTimer = null;
-    if (!closed) onClose();
-  };
-  ws.onerror = () => {};
-  return {
-    send: payload => send('broadcast', {
-      type: 'broadcast',
-      event: 'msg',
-      payload
-    }),
-    close: () => {
-      closed = true;
-      if (beatTimer) clearInterval(beatTimer);
-      beatTimer = null;
-      try {
-        ws.close();
-      } catch (_) {}
-    }
-  };
-};
-const RHYTHM_MULTI = (() => {
-  const listeners = new Set();
-  const startListeners = new Set();
-  let s = null;
-  let socket = null;
-  let lobby = null;
-  let hbTimer = null;
-  let sweepTimer = null;
-  let reconnectTimer = null;
-  let catalog = [];
-  const emit = () => {
-    listeners.forEach(fn => {
-      try {
-        fn();
-      } catch (_) {}
-    });
-  };
-  const alive = () => s ? Object.values(s.members).filter(m => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId) : [];
-  const ordered = () => rhythmMultiSortMembers(alive()).slice(0, RHYTHM_MULTI_ROOM_MAX);
-  const selfMember = () => s ? s.members[s.selfId] : null;
-  const isHostNow = () => {
-    const o = ordered();
-    return !!s && o.length > 0 && o[0].id === s.selfId;
-  };
-  const roomPayload = () => {
-    const r = s.room;
-    return {
-      ph: r.phase,
-      rd: r.round,
-      sg: r.songId,
-      lf: r.deadline ? Math.max(0, Math.ceil((r.deadline - Date.now()) / 1000)) : 0,
-      dl: r.deadline ? 1 : 0,
-      pt: r.participants
-    };
-  };
-  const sendHb = () => {
-    const me = selfMember();
-    if (!s || !socket || !me) return;
-    socket.send({
-      t: 'hb',
-      id: s.selfId,
-      name: me.name,
-      level: me.level,
-      joinedAt: me.joinedAt,
-      icon: me.icon,
-      frame: me.frame,
-      pick: me.pick,
-      pickRound: me.pickRound,
-      readyRound: me.readyRound,
-      diff: me.diff,
-      playing: me.playing,
-      open: me.open,
-      mode: s.mode,
-      res: me.res || undefined,
-      room: isHostNow() ? roomPayload() : undefined
-    });
-  };
-  const stopTimers = () => {
-    if (hbTimer) clearInterval(hbTimer);
-    if (sweepTimer) clearInterval(sweepTimer);
-    if (reconnectTimer) clearTimeout(reconnectTimer);
-    hbTimer = sweepTimer = reconnectTimer = null;
-  };
-  const closeLobby = () => {
-    if (lobby) {
-      try {
-        lobby.socket.close();
-      } catch (_) {}
-      lobby = null;
-    }
-  };
-  const setRoom = next => {
-    s.room = {
-      ...s.room,
-      ...next
-    };
-    sendHb();
-    emit();
-  };
-  const toSelect = () => setRoom({
-    phase: 'select',
-    round: rhythmMultiMakeId('r'),
-    songId: '',
-    deadline: Date.now() + RHYTHM_MULTI_SELECT_MS,
-    participants: []
-  });
-  const doDraw = members => {
-    const r = s.room;
-    const picks = members.filter(m => m.pickRound === r.round && m.pick && m.pick !== RHYTHM_MULTI_OMAKASE && catalog.includes(m.pick)).map(m => m.pick);
-    const pool = picks.length ? picks : catalog;
-    if (!pool.length) return;
-    const songId = pool[Math.floor(Math.random() * pool.length)];
-    if (socket) socket.send({
-      t: 'draw',
-      id: s.selfId,
-      round: r.round,
-      songId
-    });
-    setRoom({
-      phase: 'ready',
-      songId,
-      deadline: Date.now() + RHYTHM_MULTI_SHUFFLE_MS + RHYTHM_MULTI_READY_MS
-    });
-  };
-  const doStart = members => {
-    const r = s.room;
-    const participants = members.filter(m => m.readyRound === r.round).map(m => m.id);
-    if (!participants.length) {
-      toSelect();
-      return;
-    }
-    if (socket) socket.send({
-      t: 'start',
-      id: s.selfId,
-      round: r.round,
-      songId: r.songId,
-      participants
-    });
-    setRoom({
-      phase: 'playing',
-      participants,
-      deadline: 0
-    });
-  };
-  const hostTick = () => {
-    if (!s || !isHostNow() || s.status !== 'open') return;
-    const members = ordered();
-    const r = s.room;
-    const now = Date.now();
-    if (r.phase === 'matching') {
-      if (members.length >= RHYTHM_MULTI_ROOM_MAX) toSelect();else if (s.mode !== 'private' && members.length >= 2 && now - s.lastMemberChange >= RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS) toSelect();
-    } else if (r.phase === 'select') {
-      if (members.length < 2) {
-        setRoom({
-          phase: 'matching',
-          deadline: 0
-        });
-        return;
-      }
-      const allPicked = members.every(m => m.pickRound === r.round && m.pick);
-      if (allPicked || now >= r.deadline) doDraw(members);
-    } else if (r.phase === 'ready') {
-      const allReady = members.every(m => m.readyRound === r.round);
-      if (allReady || now >= r.deadline + RHYTHM_MULTI_READY_GRACE_MS) doStart(members);
-    } else if (r.phase === 'playing') {
-      const aliveIds = members.map(m => m.id);
-      const done = r.participants.every(id => !aliveIds.includes(id) || s.members[id] && s.members[id].res && s.members[id].res.startId === r.round);
-      if (done) setRoom({
-        phase: 'result',
-        deadline: now + RHYTHM_MULTI_RESULT_MS
-      });
-    } else if (r.phase === 'result') {
-      if (now >= r.deadline) toSelect();
-    }
-  };
-  const selfTick = () => {
-    const me = selfMember();
-    if (!s || !me) return;
-    const r = s.room;
-    if (!r.deadline || Date.now() < r.deadline) return;
-    if (r.phase === 'select' && me.pickRound !== r.round) {
-      me.pick = RHYTHM_MULTI_OMAKASE;
-      me.pickRound = r.round;
-      sendHb();
-    }
-    if (r.phase === 'ready' && me.readyRound !== r.round) {
-      me.readyRound = r.round;
-      sendHb();
-    }
-  };
-  const syncLobby = () => {
-    if (!s) {
-      closeLobby();
-      return;
-    }
-    const order = ordered();
-    const me = selfMember();
-    const want = isHostNow() && !!me && me.open && order.length < RHYTHM_MULTI_ROOM_MAX && (s.room.phase === 'matching' || s.room.phase === 'select') && s.status === 'open';
-    if (!want) {
-      closeLobby();
-      return;
-    }
-    const kind = s.mode === 'veteran' ? 'veteran' : 'free';
-    if (lobby && lobby.kind !== kind) closeLobby();
-    if (!lobby) {
-      const rooms = {};
-      lobby = {
-        kind,
-        rooms,
-        lastAnnounce: 0,
-        socket: rhythmMultiOpenSocket({
-          topic: RHYTHM_MULTI_LOBBY_TOPIC + kind,
-          onOpen: () => {},
-          onMessage: raw => {
-            const n = rhythmMultiCleanRoomNotice(raw);
-            if (n) rooms[n.code] = {
-              n: n.n,
-              seen: Date.now()
-            };
-          },
-          onClose: () => {}
-        })
-      };
-    }
-    if (Date.now() - lobby.lastAnnounce >= RHYTHM_MULTI_LOBBY_ANNOUNCE_MS) {
-      lobby.lastAnnounce = Date.now();
-      lobby.socket.send({
-        t: 'room',
-        code: s.code,
-        n: order.length
-      });
-    }
-    if (order.length === 1 && s.mode !== 'private' && Date.now() - s.createdAt > RHYTHM_MULTI_LOBBY_LISTEN_MS) {
-      const other = rhythmMultiBestRoom(lobby.rooms, s.code);
-      if (other && other < s.code) {
-        api.join(other, {
-          name: me.name,
-          level: me.level,
-          icon: me.icon,
-          frame: me.frame,
-          diff: me.diff
-        }, s.mode);
-      }
-    }
-  };
-  const sweep = () => {
-    if (!s) return;
-    const me = selfMember();
-    if (me && me.playing) return;
-    const sig = ordered().map(m => m.id).join(',');
-    if (sig !== s.memberSig) {
-      s.memberSig = sig;
-      s.lastMemberChange = Date.now();
-    }
-    selfTick();
-    hostTick();
-    if (s) syncLobby();
-    emit();
-  };
-  const onMessage = raw => {
-    if (!s) return;
-    const msg = rhythmMultiCleanMessage(raw);
-    if (!msg) return;
-    if (msg.t === 'bye') {
-      delete s.members[msg.id];
-      emit();
-      return;
-    }
-    if (msg.t === 'chat') {
-      if (!s.chat.some(c => c.cid === msg.cid)) {
-        s.chat.push({
-          cid: msg.cid,
-          id: msg.id,
-          name: msg.name,
-          text: msg.text
-        });
-        if (s.chat.length > RHYTHM_MULTI_CHAT_KEEP) s.chat.splice(0, s.chat.length - RHYTHM_MULTI_CHAT_KEEP);
-      }
-      emit();
-      return;
-    }
-    const fromHost = () => {
-      const o = ordered();
-      return o.length > 0 && o[0].id === msg.id;
-    };
-    const prev = s.members[msg.id] || {
-      id: msg.id,
-      name: '',
-      level: 0,
-      joinedAt: 0,
-      icon: '',
-      frame: '',
-      pick: '',
-      pickRound: '',
-      readyRound: '',
-      diff: '',
-      playing: false,
-      open: false,
-      res: null
-    };
-    if (msg.t === 'hb') {
-      if (msg.id === s.selfId) {
-        prev.seen = Date.now();
-        emit();
-        return;
-      }
-      s.members[msg.id] = {
-        ...prev,
-        name: msg.name,
-        level: msg.level,
-        joinedAt: msg.joinedAt,
-        icon: msg.icon,
-        frame: msg.frame,
-        pick: msg.pick,
-        pickRound: msg.pickRound,
-        readyRound: msg.readyRound,
-        diff: msg.diff,
-        playing: msg.playing,
-        open: msg.open,
-        res: msg.res || prev.res,
-        seen: Date.now()
-      };
-      if (msg.room && fromHost()) {
-        const r = msg.room;
-        s.room = {
-          phase: r.phase,
-          round: r.round,
-          songId: r.songId,
-          participants: r.participants,
-          deadline: r.hasDeadline ? Date.now() + r.left * 1000 : 0
-        };
-      }
-    } else if (msg.t === 'res') {
-      s.members[msg.id] = {
-        ...prev,
-        res: msg.res,
-        playing: false,
-        seen: Date.now()
-      };
-    } else if (msg.t === 'draw') {
-      if (fromHost() && s.room.round === msg.round) s.room = {
-        ...s.room,
-        phase: 'ready',
-        songId: msg.songId,
-        deadline: Date.now() + RHYTHM_MULTI_SHUFFLE_MS + RHYTHM_MULTI_READY_MS
-      };
-    } else if (msg.t === 'start') {
-      if (fromHost() && s.startedRound !== msg.round) {
-        s.startedRound = msg.round;
-        s.room = {
-          ...s.room,
-          phase: 'playing',
-          round: msg.round,
-          songId: msg.songId,
-          participants: msg.participants,
-          deadline: 0
-        };
-        const me = selfMember();
-        if (me && msg.participants.includes(s.selfId)) {
-          me.playing = true;
-          me.res = null;
-          startListeners.forEach(fn => {
-            try {
-              fn({
-                round: msg.round,
-                songId: msg.songId
-              });
-            } catch (_) {}
-          });
-        }
-        sendHb();
-      }
-    }
-    emit();
-  };
-  const connect = () => {
-    if (!s) return;
-    s.status = 'connecting';
-    emit();
-    socket = rhythmMultiOpenSocket({
-      topic: RHYTHM_MULTI_ROOM_TOPIC + s.code,
-      onOpen: () => {
-        if (!s) return;
-        s.status = 'open';
-        sendHb();
-        emit();
-      },
-      onMessage,
-      onClose: () => {
-        if (!s) return;
-        s.status = 'reconnecting';
-        emit();
-        if (reconnectTimer) clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(() => {
-          if (s) {
-            if (socket) socket.close();
-            connect();
-          }
-        }, 2500);
-      }
-    });
-  };
-  const api = {
-    subscribe(fn) {
-      listeners.add(fn);
-      return () => listeners.delete(fn);
-    },
-    onStart(fn) {
-      startListeners.add(fn);
-      return () => startListeners.delete(fn);
-    },
-    setCatalog(songIds) {
-      catalog = Array.isArray(songIds) ? songIds.slice() : [];
-    },
-    view() {
-      if (!s) return null;
-      const all = rhythmMultiSortMembers(alive());
-      const selfIndex = all.findIndex(m => m.id === s.selfId);
-      const r = s.room;
-      return {
-        code: s.code,
-        mode: s.mode,
-        status: s.status,
-        selfId: s.selfId,
-        members: all.slice(0, RHYTHM_MULTI_ROOM_MAX),
-        hostId: all.length ? all[0].id : s.selfId,
-        full: selfIndex >= RHYTHM_MULTI_ROOM_MAX,
-        room: {
-          ...r,
-          left: r.deadline ? Math.max(0, Math.ceil((r.deadline - Date.now()) / 1000)) : 0
-        },
-        shuffleShown: s.shuffleShown,
-        resultSeen: s.resultSeen,
-        chat: s.chat.slice()
-      };
-    },
-    join(code, profile, mode) {
-      this.leave();
-      const now = Date.now();
-      const id = rhythmMultiMakeId();
-      const roomMode = RHYTHM_MULTI_MODES.includes(mode) ? mode : 'private';
-      s = {
-        code,
-        mode: roomMode,
-        status: 'connecting',
-        selfId: id,
-        members: {},
-        chat: [],
-        lastChatAt: 0,
-        createdAt: now,
-        room: {
-          phase: 'matching',
-          round: '',
-          songId: '',
-          deadline: 0,
-          participants: []
-        },
-        memberSig: '',
-        lastMemberChange: now,
-        startedRound: '',
-        shuffleShown: '',
-        resultSeen: ''
-      };
-      s.members[id] = {
-        id,
-        name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー',
-        level: rhythmMultiInt(profile && profile.level, 9999),
-        icon: rhythmMultiText(profile && profile.icon, 60),
-        frame: rhythmMultiText(profile && profile.frame, 40),
-        joinedAt: now,
-        pick: '',
-        pickRound: '',
-        readyRound: '',
-        diff: rhythmMultiText(profile && profile.diff, 20),
-        playing: false,
-        open: roomMode !== 'private',
-        res: null,
-        seen: now
-      };
-      connect();
-      let playTick = 0;
-      hbTimer = setInterval(() => {
-        const me = selfMember();
-        if (me && me.playing) {
-          playTick += 1;
-          if (playTick % 2 === 1) return;
-        }
-        sendHb();
-      }, RHYTHM_MULTI_HEARTBEAT_MS);
-      sweepTimer = setInterval(sweep, 1000);
-      emit();
-    },
-    leave() {
-      if (socket) {
-        try {
-          socket.send({
-            t: 'bye',
-            id: s && s.selfId
-          });
-        } catch (_) {}
-        socket.close();
-      }
-      socket = null;
-      closeLobby();
-      stopTimers();
-      s = null;
-      emit();
-    },
-    findRoom(kind) {
-      return new Promise(resolve => {
-        const rooms = {};
-        const sock = rhythmMultiOpenSocket({
-          topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
-          onOpen: () => {},
-          onMessage: raw => {
-            const n = rhythmMultiCleanRoomNotice(raw);
-            if (n) rooms[n.code] = {
-              n: n.n,
-              seen: Date.now()
-            };
-          },
-          onClose: () => {}
-        });
-        setTimeout(() => {
-          sock.close();
-          resolve(rhythmMultiBestRoom(rooms, ''));
-        }, RHYTHM_MULTI_LOBBY_LISTEN_MS);
-      });
-    },
-    confirmMembers() {
-      if (!s || !isHostNow() || s.room.phase !== 'matching' || ordered().length < 2) return false;
-      toSelect();
-      return true;
-    },
-    pick(songId) {
-      const me = selfMember();
-      if (!me || s.room.phase !== 'select') return;
-      me.pick = songId === RHYTHM_MULTI_OMAKASE ? RHYTHM_MULTI_OMAKASE : rhythmMultiText(songId, 60);
-      me.pickRound = s.room.round;
-      sendHb();
-      emit();
-    },
-    setDiff(difficultyId) {
-      const me = selfMember();
-      if (!me) return;
-      me.diff = rhythmMultiText(difficultyId, 20);
-      sendHb();
-      emit();
-    },
-    ready() {
-      const me = selfMember();
-      if (!me || s.room.phase !== 'ready') return;
-      me.readyRound = s.room.round;
-      sendHb();
-      emit();
-    },
-    setOpen(open) {
-      const me = selfMember();
-      if (!me) return;
-      me.open = open === true;
-      sendHb();
-      syncLobby();
-      emit();
-    },
-    markShuffleShown(round) {
-      if (s) {
-        s.shuffleShown = round;
-        emit();
-      }
-    },
-    nextFromResult(round) {
-      if (!s) return;
-      s.resultSeen = round;
-      if (isHostNow() && s.room.phase === 'result' && s.room.round === round) toSelect();
-      emit();
-    },
-    reportResult(round, result, quit, opts) {
-      const me = selfMember();
-      if (!me || !round) return;
-      if (me.res && me.res.startId === round) return;
-      me.res = rhythmMultiCleanResult({
-        startId: round,
-        score: result && result.score,
-        maxCombo: result && result.maxCombo,
-        cleared: result ? result.cleared !== false : false,
-        quit: quit === true,
-        diffId: opts && opts.diffId,
-        fc: result && result.cleared !== false ? result.allMarvelous ? 3 : result.allExcellent ? 2 : result.fullCombo ? 1 : 0 : 0,
-        j: result && result.judgments ? RHYTHM_MULTI_JUDGMENT_IDS.map(id => result.judgments[id]) : null,
-        fs: result && result.fast,
-        sl: result && result.slow
-      });
-      me.playing = false;
-      if (quit === true && !(opts && opts.noPenalty) && s.mode !== 'private') void rhythmMultiPenaltyMark();
-      if (socket) socket.send({
-        t: 'res',
-        id: s.selfId,
-        res: me.res
-      });
-      sendHb();
-      emit();
-    },
-    sendChat(text) {
-      if (!s || !socket) return false;
-      const clean = rhythmMultiText(text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
-      const me = selfMember();
-      if (!clean || !me || Date.now() - s.lastChatAt < RHYTHM_MULTI_CHAT_INTERVAL_MS) return false;
-      s.lastChatAt = Date.now();
-      return socket.send({
-        t: 'chat',
-        id: s.selfId,
-        name: me.name,
-        text: clean,
-        cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`
-      });
-    },
-    hasReported(round) {
-      const me = selfMember();
-      return !!(me && me.res && me.res.startId === round);
-    },
-    myDiff() {
-      const me = selfMember();
-      return me ? me.diff : '';
-    }
-  };
-  return api;
-})();
-const useRhythmMultiView = () => {
-  const [view, setView] = React.useState(() => RHYTHM_MULTI.view());
-  React.useEffect(() => {
-    const refresh = () => setView(RHYTHM_MULTI.view());
-    refresh();
-    return RHYTHM_MULTI.subscribe(refresh);
-  }, []);
-  return view;
-};
-const rhythmMultiPickDifficulty = (available, wishId, orderIds) => {
-  if (!available.length) return null;
-  const exact = available.find(d => d.id === wishId);
-  if (exact) return exact;
-  const rank = id => orderIds.indexOf(id);
-  const want = rank(wishId);
-  const lower = available.filter(d => rank(d.id) < want).sort((a, b) => rank(b.id) - rank(a.id));
-  if (lower.length) return lower[0];
-  return available.slice().sort((a, b) => rank(a.id) - rank(b.id))[0];
-};
-function RhythmMultiChatPanel({
-  view
-}) {
-  const [chatText, setChatText] = React.useState('');
-  const listRef = React.useRef(null);
-  const count = view && view.chat ? view.chat.length : 0;
-  React.useEffect(() => {
-    const el = listRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [count]);
-  const submit = () => {
-    if (RHYTHM_MULTI.sendChat(chatText)) setChatText('');
-  };
-  return React.createElement("section", {
-    "data-rhythm-multi-chat": true,
-    className: "rounded-2xl border border-white/15 bg-slate-900/95 p-3"
-  }, React.createElement("h3", {
-    className: "text-xs font-black text-slate-300"
-  }, "チャット"), React.createElement("ul", {
-    ref: listRef,
-    "data-rhythm-multi-chat-list": true,
-    className: "mt-1 max-h-40 min-h-[3rem] space-y-1 overflow-y-auto rounded-lg bg-slate-950/60 p-2 text-sm font-bold"
-  }, count === 0 && React.createElement("li", {
-    className: "text-[11px] text-slate-500"
-  }, "まだ発言はありません"), view.chat.map(c => React.createElement("li", {
-    key: c.cid,
-    "data-rhythm-multi-chat-line": true,
-    className: "break-words leading-snug"
-  }, React.createElement("b", {
-    className: c.id === view.selfId ? 'text-cyan-300' : 'text-amber-200'
-  }, c.name), React.createElement("span", {
-    className: "text-slate-400"
-  }, ": "), c.text))), React.createElement("div", {
-    className: "mt-2 flex flex-wrap gap-1.5"
-  }, RHYTHM_MULTI_CHAT_STAMPS.map(stamp => React.createElement("button", {
-    key: stamp,
-    "data-rhythm-multi-chat-stamp": true,
-    type: "button",
-    onClick: () => RHYTHM_MULTI.sendChat(stamp),
-    className: "min-h-[36px] rounded-full bg-slate-700 px-3 text-xs font-black"
-  }, stamp))), React.createElement("form", {
-    className: "mt-2 flex gap-2",
-    onSubmit: e => {
-      e.preventDefault();
-      submit();
-    }
-  }, React.createElement("input", {
-    "data-rhythm-multi-chat-input": true,
-    value: chatText,
-    maxLength: RHYTHM_MULTI_CHAT_MAX_LENGTH,
-    autoComplete: "off",
-    enterKeyHint: "send",
-    onChange: e => setChatText(e.target.value),
-    placeholder: `ひとこと(${RHYTHM_MULTI_CHAT_MAX_LENGTH}文字まで)`,
-    className: "min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white"
-  }), React.createElement("button", {
-    "data-rhythm-multi-chat-send": true,
-    type: "submit",
-    disabled: !chatText.trim(),
-    className: "min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-4 text-sm font-black disabled:opacity-40"
-  }, "送信")));
-}
-function RhythmMultiAvatar({
-  m,
-  resolveIconUrl,
-  sizeClass = 'h-10 w-10'
-}) {
-  const src = resolveIconUrl ? resolveIconUrl(m.icon) : null;
-  return React.createElement(ProfileAvatar, {
-    src: src,
-    id: m.icon,
-    frameId: m.frame,
-    alt: "",
-    className: sizeClass,
-    fallback: React.createElement("span", {
-      "aria-hidden": "true",
-      className: "flex h-full w-full items-center justify-center bg-slate-800 text-lg"
-    }, "🎵")
-  });
-}
-function RhythmMultiMemberCards({
-  members,
-  hostId,
-  selfId,
-  resolveIconUrl,
-  badgeOf,
-  size = 'tall'
-}) {
-  const tall = size === 'tall';
-  return React.createElement("ul", {
-    "data-rhythm-multi-cards": true,
-    className: tall ? 'grid min-h-[120px] max-h-[230px] flex-1 grid-cols-5 gap-1.5 bg-slate-900/40 px-2 pb-2 pt-3 landscape:max-h-none landscape:gap-2 landscape:px-3' : 'grid shrink-0 grid-cols-5 gap-1 border-b border-white/10 bg-slate-900/70 px-1.5 pb-1 pt-2 landscape:pt-1.5'
-  }, Array.from({
-    length: RHYTHM_MULTI_ROOM_MAX
-  }).map((_, i) => {
-    const m = members[i];
-    if (!m) return React.createElement("li", {
-      key: i,
-      className: `flex items-center justify-center rounded-xl border border-dashed border-white/10 text-[10px] font-black text-slate-600 ${tall ? '' : 'h-[60px] landscape:h-[38px]'}`
-    }, "募集中");
-    const badge = badgeOf(m);
-    const self = m.id === selfId;
-    return React.createElement("li", {
-      key: m.id,
-      "data-rhythm-multi-member": true,
-      className: `relative flex min-h-0 min-w-0 rounded-xl ${self ? 'border border-cyan-300/70 bg-cyan-950/50' : 'border border-white/10 bg-slate-950/70'} ${tall ? 'flex-col items-center justify-center px-1 pb-1.5 pt-3' : 'h-[60px] flex-col items-center px-0.5 pt-1.5 landscape:h-[38px] landscape:flex-row landscape:gap-1 landscape:px-1 landscape:pt-0'}`
-    }, React.createElement("small", {
-      "data-rhythm-multi-member-badge": true,
-      className: `absolute -top-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-black leading-tight ${badge.cls}`
-    }, badge.text), React.createElement("span", {
-      className: "relative shrink-0"
-    }, React.createElement(RhythmMultiAvatar, {
-      m: m,
-      resolveIconUrl: resolveIconUrl,
-      sizeClass: tall ? 'h-12 w-12 landscape:h-16 landscape:w-16' : 'h-7 w-7'
-    }), m.id === hostId && React.createElement("span", {
-      "aria-hidden": "true",
-      className: "absolute -right-1.5 -top-1.5 text-[11px]"
-    }, "👑")), React.createElement("span", {
-      className: `min-w-0 ${tall ? 'mt-1 w-full text-center' : 'mt-0.5 w-full text-center landscape:mt-0 landscape:flex-1 landscape:text-left'}`
-    }, React.createElement("span", {
-      className: `block truncate font-black leading-tight ${tall ? 'text-[11px] landscape:text-sm' : 'text-[10px]'}`
-    }, m.name, self ? '*' : ''), badge.sub && React.createElement("small", {
-      className: `block truncate font-bold leading-tight text-slate-400 ${tall ? 'text-[9px] landscape:text-[11px]' : 'text-[8px]'}`
-    }, badge.sub)));
-  }));
-}
-const RHYTHM_MULTI_FC_LABELS = Object.freeze(['', 'FULL COMBO!', 'ALL EXCELLENT!', 'ALL MARVELOUS!']);
-function RhythmMultiScreen({
-  profile,
-  songs,
-  difficultiesOf,
-  difficultyList,
-  bestRecords,
-  resolveIconUrl,
-  onBack,
-  onStartPlay
-}) {
-  const view = useRhythmMultiView();
-  const difficultyIds = difficultyList.map(d => d.id);
-  const songIds = songs.map(song => song.songId);
-  React.useEffect(() => {
-    RHYTHM_MULTI.setCatalog(songIds);
-  }, [songIds.join(',')]);
-  const [codeInput, setCodeInput] = React.useState('');
-  const [message, setMessage] = React.useState('');
-  const [searching, setSearching] = React.useState(null);
-  const [countdown, setCountdown] = React.useState(null);
-  const [copied, setCopied] = React.useState(false);
-  const [chatOpen, setChatOpen] = React.useState(false);
-  const [statsOpen, setStatsOpen] = React.useState(false);
-  const mine = view ? view.members.find(m => m.id === view.selfId) : null;
-  const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
-  const [selectView, setSelectView] = React.useState(null);
-  const songById = songId => songs.find(song => song.songId === songId) || null;
-  const defaultDiff = difficultyIds.includes('NORMAL') ? 'NORMAL' : difficultyIds[0] || '';
-  const me = mine;
-  const isHost = !!view && view.hostId === view.selfId;
-  const room = view ? view.room : null;
-  const myDiffId = me && me.diff ? me.diff : defaultDiff;
-  const drawnSong = room && room.songId ? songById(room.songId) : null;
-  const drawnDiffs = drawnSong ? difficultiesOf(drawnSong) : [];
-  const drawnOpenDiffs = drawnSong ? drawnDiffs.filter(d => rhythmDifficultyUnlocked(drawnSong.songId, d.id, bestRecords)) : [];
-  const pickPlayDifficulty = () => rhythmMultiPickDifficulty(drawnOpenDiffs.length ? drawnOpenDiffs : drawnDiffs, RHYTHM_MULTI.myDiff() || defaultDiff, difficultyIds);
-  const friendsOn = RELEASE_FLAGS.friends === true;
-  const [friendSelfId, setFriendSelfId] = React.useState('');
-  const [roster, setRoster] = React.useState(null);
-  const [friendInvites, setFriendInvites] = React.useState([]);
-  const [invitePanel, setInvitePanel] = React.useState(false);
-  const [invitedIds, setInvitedIds] = React.useState({});
-  const [inviteMessage, setInviteMessage] = React.useState('');
-  const loadRoster = React.useCallback(async id => {
-    try {
-      setRoster(await sbFetchFriendRoster(id));
-    } catch (_) {
-      setRoster([]);
-    }
-  }, []);
-  React.useEffect(() => {
-    if (!friendsOn) return undefined;
-    let cancelled = false;
-    (async () => {
-      const id = await ensureBreederId();
-      if (cancelled || !id) return;
-      setFriendSelfId(id);
-      await loadRoster(id);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [friendsOn]);
-  const hasRoster = !!(roster && roster.length);
-  React.useEffect(() => {
-    if (!friendsOn || view || !friendSelfId || !hasRoster) {
-      setFriendInvites([]);
-      return undefined;
-    }
-    let cancelled = false;
-    const ids = new Set(roster.map(friend => friend.otherId));
-    const poll = async () => {
-      try {
-        const list = await sbFetchRoomInvites(friendSelfId, Date.now());
-        if (!cancelled) setFriendInvites(list.filter(invite => ids.has(invite.senderId)));
-      } catch (_) {}
-    };
-    poll();
-    const timer = setInterval(poll, FRIEND_INVITE_POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [friendsOn, !!view, friendSelfId, roster]);
-  const friendNameOf = id => ((roster || []).find(friend => friend.otherId === id) || {}).userName || 'フレンド';
-  const openInvitePanel = () => {
-    const next = !invitePanel;
-    setInvitePanel(next);
-    setInviteMessage('');
-    if (next && friendSelfId) loadRoster(friendSelfId);
-  };
-  const inviteFriend = async friendId => {
-    if (!view || !friendSelfId) return;
-    const result = await sbSendRoomInvite(friendSelfId, friendId, view.code);
-    if (result === 'invited') {
-      setInvitedIds(prev => ({
-        ...prev,
-        [friendId]: true
-      }));
-      setInviteMessage('');
-    } else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう一度ためしてください');
-  };
-  React.useEffect(() => RHYTHM_MULTI.onStart(info => {
-    setCountdown({
-      info,
-      left: RHYTHM_MULTI_START_COUNTDOWN_SEC
-    });
-    setChatOpen(false);
-  }), []);
-  React.useEffect(() => {
-    if (!countdown) return undefined;
-    if (countdown.left <= 0) {
-      const song = songById(countdown.info.songId);
-      const diffs = song ? difficultiesOf(song) : [];
-      const open = song ? diffs.filter(d => rhythmDifficultyUnlocked(song.songId, d.id, bestRecords)) : [];
-      const diff = song ? rhythmMultiPickDifficulty(open.length ? open : diffs, RHYTHM_MULTI.myDiff() || defaultDiff, difficultyIds) : null;
-      setCountdown(null);
-      if (song && diff) onStartPlay(song, diff, countdown.info.round);else RHYTHM_MULTI.reportResult(countdown.info.round, null, true, {
-        noPenalty: true
-      });
-      return undefined;
-    }
-    const timer = setTimeout(() => setCountdown(c => c ? {
-      ...c,
-      left: c.left - 1
-    } : c), 1000);
-    return () => clearTimeout(timer);
-  }, [countdown]);
-  const shuffleRound = room && room.phase === 'ready' && view.shuffleShown !== room.round ? room.round : '';
-  const [shuffleIndex, setShuffleIndex] = React.useState(0);
-  const [shuffleStopped, setShuffleStopped] = React.useState(false);
-  React.useEffect(() => {
-    if (!shuffleRound) return undefined;
-    setShuffleStopped(false);
-    const tick = setInterval(() => setShuffleIndex(n => n + 1), 110);
-    const stop = setTimeout(() => {
-      clearInterval(tick);
-      setShuffleStopped(true);
-    }, RHYTHM_MULTI_SHUFFLE_MS - 800);
-    const done = setTimeout(() => RHYTHM_MULTI.markShuffleShown(shuffleRound), RHYTHM_MULTI_SHUFFLE_MS);
-    return () => {
-      clearInterval(tick);
-      clearTimeout(stop);
-      clearTimeout(done);
-    };
-  }, [shuffleRound]);
-  const myProfile = () => ({
-    name: profile.name,
-    level: profile.level,
-    icon: profile.icon,
-    frame: profile.frame,
-    diff: defaultDiff
-  });
-  const createPrivate = () => {
-    setMessage('');
-    RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private');
-  };
-  const joinFromInvite = invite => {
-    setMessage('');
-    RHYTHM_MULTI.join(invite.roomCode, myProfile(), 'private');
-  };
-  const joinPrivate = () => {
-    const code = rhythmMultiNormalizeCode(codeInput);
-    if (!code) {
-      setMessage(`部屋コードは${RHYTHM_MULTI_CODE_LENGTH}文字です`);
-      return;
-    }
-    setMessage('');
-    RHYTHM_MULTI.join(code, myProfile(), 'private');
-  };
-  const searchRoom = async kind => {
-    setMessage('');
-    if (kind === 'veteran' && profile.level < RHYTHM_MULTI_VETERAN_MIN_LEVEL) {
-      setMessage(`ベテランルームはブリーダーLv.${RHYTHM_MULTI_VETERAN_MIN_LEVEL}以上で入れます`);
-      return;
-    }
-    const left = await rhythmMultiPenaltyLeftMs();
-    if (left > 0) {
-      setMessage(`途中でやめたため、あと${Math.ceil(left / 60000)}分は公開ルームに入れません`);
-      return;
-    }
-    setSearching(kind);
-  };
-  React.useEffect(() => {
-    if (!searching) return undefined;
-    let alive = true;
-    RHYTHM_MULTI.findRoom(searching).then(code => {
-      if (!alive) return;
-      RHYTHM_MULTI.join(code || rhythmMultiMakeCode(), myProfile(), searching);
-      setSearching(null);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [searching]);
-  const leaveRoom = () => {
-    RHYTHM_MULTI.leave();
-    setCountdown(null);
-    setChatOpen(false);
-    setSearching(null);
-  };
-  const shareCode = async () => {
-    if (!view) return;
-    const text = `モンヒロビートで協力ライブしよう! 部屋コード: ${view.code}`;
-    try {
-      if (navigator.share) await navigator.share({
-        text
-      });else if (navigator.clipboard) await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (_) {}
-  };
-  const card = 'rounded-2xl border border-white/15 bg-slate-900/85 p-3';
-  const btn = 'min-h-[48px] rounded-xl px-3 font-black disabled:opacity-40';
-  const shell = 'relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white';
-  const header = (step, onBackClick, opts = {}) => React.createElement("header", {
-    className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
-    style: {
-      paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
-    }
-  }, React.createElement("button", {
-    "data-rhythm-multi-back": true,
-    type: "button",
-    "aria-label": "戻る",
-    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300",
-    onClick: onBackClick
-  }, "←"), React.createElement("div", {
-    className: "min-w-0 flex-1 leading-none"
-  }, React.createElement("b", {
-    className: "block truncate text-base font-black italic tracking-wider text-cyan-200"
-  }, "MULTI LIVE"), React.createElement("small", {
-    className: "mt-0.5 block truncate text-[10px] font-black text-fuchsia-200"
-  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), opts.timer != null && React.createElement("b", {
-    "data-rhythm-multi-timer": true,
-    className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
-  }, "⏱ ", opts.timer), view && React.createElement("button", {
-    "data-rhythm-multi-chat-open": true,
-    type: "button",
-    "aria-label": "チャット",
-    onClick: () => setChatOpen(v => !v),
-    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-lg"
-  }, "💬"));
-  const chatSheet = chatOpen && view && React.createElement("div", {
-    "data-rhythm-multi-chat-sheet": true,
-    className: "absolute inset-x-0 bottom-0 z-[80000] max-h-[70%] overflow-y-auto border-t border-cyan-400/30 bg-slate-950 p-2 landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-none landscape:w-[46%] landscape:border-l landscape:border-t-0",
-    style: {
-      paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
-    }
-  }, React.createElement(RhythmMultiChatPanel, {
-    view: view
-  }), React.createElement("button", {
-    type: "button",
-    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 font-black",
-    onClick: () => setChatOpen(false)
-  }, "閉じる"));
-  const countdownLayer = countdown && React.createElement("div", {
-    "data-rhythm-multi-countdown": true,
-    className: "absolute inset-0 z-[90000] flex flex-col items-center justify-center bg-slate-950/90"
-  }, React.createElement("small", {
-    className: "text-[11px] font-black tracking-widest text-slate-400"
-  }, "LIVE START"), React.createElement("p", {
-    className: "px-4 text-center text-base font-black text-cyan-200"
-  }, songById(countdown.info.songId) ? rhythmSongFullName(songById(countdown.info.songId)) : ''), React.createElement("b", {
-    className: "text-8xl font-black text-white"
-  }, Math.max(1, countdown.left)));
-  if (!view && !searching) {
-    return React.createElement("main", {
-      "data-rhythm-multi": true,
-      "data-rhythm-multi-step": "rooms",
-      className: shell
-    }, header('ルームえらび', onBack), React.createElement("div", {
-      className: "min-h-0 flex-1 overflow-y-auto p-3"
-    }, React.createElement("p", {
-      className: "mb-2 text-[11px] font-bold leading-relaxed text-slate-300"
-    }, "最大", RHYTHM_MULTI_ROOM_MAX, "人の協力ライブです。曲は全員の選曲からシャッフルで決まり、全員の平均スコアでチームのランクが決まります。いちばん活躍した人はMVP。記録は自己ベストにも全国ランキングにも残りません。"), friendsOn && friendInvites.length > 0 && React.createElement("section", {
-      "data-rhythm-multi-friend-invites": true,
-      className: `${card} space-y-2 border-pink-400/60`
-    }, React.createElement("h3", {
-      className: "text-xs font-black text-pink-200"
-    }, "フレンドからの招待"), friendInvites.map(invite => React.createElement("div", {
-      key: invite.senderId,
-      className: "flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5"
-    }, React.createElement("span", {
-      className: "min-w-0 flex-1 break-words text-[13px] font-black leading-snug"
-    }, friendNameOf(invite.senderId), "さんが部屋に誘っています"), React.createElement("button", {
-      "data-rhythm-multi-friend-join": true,
-      type: "button",
-      className: `${btn} shrink-0 bg-pink-700 text-xs`,
-      onClick: () => joinFromInvite(invite)
-    }, "参加する")))), React.createElement("div", {
-      className: "space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0"
-    }, React.createElement("section", {
-      className: `${card} space-y-2`
-    }, React.createElement("h3", {
-      className: "text-xs font-black text-slate-300"
-    }, "知らない人と遊ぶ"), React.createElement("button", {
-      "data-rhythm-multi-free": true,
-      type: "button",
-      className: `${btn} w-full bg-fuchsia-700`,
-      onClick: () => searchRoom('free')
-    }, "フリールーム", React.createElement("small", {
-      className: "block text-[10px] font-bold text-fuchsia-100/80"
-    }, "だれでも入れます")), React.createElement("button", {
-      "data-rhythm-multi-veteran": true,
-      type: "button",
-      className: `${btn} w-full ${profile.level >= RHYTHM_MULTI_VETERAN_MIN_LEVEL ? 'bg-amber-700' : 'bg-slate-700'}`,
-      onClick: () => searchRoom('veteran')
-    }, "ベテランルーム", React.createElement("small", {
-      className: "block text-[10px] font-bold text-amber-100/80"
-    }, "ブリーダーLv.", RHYTHM_MULTI_VETERAN_MIN_LEVEL, "以上", profile.level >= RHYTHM_MULTI_VETERAN_MIN_LEVEL ? '' : '(まだ入れません)'))), React.createElement("section", {
-      className: `${card} space-y-2`
-    }, React.createElement("h3", {
-      className: "text-xs font-black text-slate-300"
-    }, "友だちと遊ぶ(プライベートルーム)"), React.createElement("button", {
-      "data-rhythm-multi-create": true,
-      type: "button",
-      className: `${btn} w-full bg-indigo-700`,
-      onClick: createPrivate
-    }, "ルームを作成"), React.createElement("div", {
-      className: "flex gap-2"
-    }, React.createElement("input", {
-      id: "rhythm-multi-code",
-      "data-rhythm-multi-code-input": true,
-      "aria-label": "ルームコード",
-      value: codeInput,
-      maxLength: 8,
-      autoCapitalize: "characters",
-      autoComplete: "off",
-      spellCheck: false,
-      onChange: e => setCodeInput(e.target.value.toUpperCase()),
-      className: "min-h-[48px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-center text-xl font-black tracking-[0.4em] text-white",
-      placeholder: "ABCD"
-    }), React.createElement("button", {
-      "data-rhythm-multi-join": true,
-      type: "button",
-      className: `${btn} bg-indigo-700`,
-      onClick: joinPrivate
-    }, "参加")))), message && React.createElement("p", {
-      "data-rhythm-multi-message": true,
-      className: "mt-2 text-[12px] font-black text-rose-300"
-    }, message)));
-  }
-  const members = view ? view.members : [];
-  const phase = room ? room.phase : 'matching';
-  const participant = !!room && room.participants.includes(view.selfId);
-  const team = room && room.round && (phase === 'playing' || phase === 'result') ? rhythmMultiTeamResult(members, room.round, room.participants) : null;
-  const showResult = !!team && participant && view.resultSeen !== room.round && (phase === 'result' || me && me.res && me.res.startId === room.round);
-  if (!view || view.full || phase === 'matching' && !countdown) {
-    const publicRoom = !!view && view.mode !== 'private';
-    return React.createElement("main", {
-      "data-rhythm-multi": true,
-      "data-rhythm-multi-step": "matching",
-      className: shell
-    }, header('マッチング', () => {
-      leaveRoom();
-      if (!view) onBack();
-    }), view && view.full ? React.createElement("div", {
-      className: "min-h-0 flex-1 overflow-y-auto p-3"
-    }, React.createElement("section", {
-      "data-rhythm-multi-full": true,
-      className: card
-    }, React.createElement("p", {
-      className: "text-sm font-black text-rose-300"
-    }, "このルームは満員です(最大", RHYTHM_MULTI_ROOM_MAX, "人)"), React.createElement("button", {
-      type: "button",
-      className: `${btn} mt-2 w-full bg-slate-700`,
-      onClick: leaveRoom
-    }, "ルームえらびへ戻る"))) : React.createElement(React.Fragment, null, React.createElement(RhythmMultiMemberCards, {
-      members: members,
-      hostId: view ? view.hostId : '',
-      selfId: view ? view.selfId : '',
-      resolveIconUrl: resolveIconUrl,
-      size: "tall",
-      badgeOf: m => ({
-        text: view && m.id === view.hostId ? 'ホスト' : '入室',
-        cls: view && m.id === view.hostId ? 'bg-amber-400 text-slate-950' : 'bg-cyan-500 text-slate-950',
-        sub: `Lv.${m.level}`
-      })
-    }), React.createElement("div", {
-      className: "mt-auto max-h-[52%] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2",
-      style: {
-        paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
-      }
-    }, React.createElement("section", {
-      "data-rhythm-multi-matching": true,
-      className: "rounded-2xl border border-white/15 bg-slate-900/85 p-2"
-    }, React.createElement("p", {
-      className: "animate-pulse text-sm font-black text-amber-200"
-    }, !view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームをさがしています…` : 'メンバーを待っています…'), React.createElement("p", {
-      className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400"
-    }, !view ? '' : publicRoom ? `${RHYTHM_MULTI_ROOM_MAX}人そろうか、2人以上でしばらく待つとメンバーが確定します` : isHost ? '2人以上そろったら「メンバー確定」を押してください' : 'ホストがメンバーを確定するのを待っています'), view && React.createElement("div", {
-      className: "mt-1 flex items-center gap-2"
-    }, React.createElement("div", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("small", {
-      className: "block text-[9px] font-black text-slate-400"
-    }, "ルームコード"), React.createElement("b", {
-      "data-rhythm-multi-room-code": true,
-      className: "block text-2xl font-black leading-none tracking-[0.3em] text-cyan-200"
-    }, view.code), view.status !== 'open' && React.createElement("small", {
-      className: "block text-[9px] font-black text-amber-300"
-    }, view.status === 'connecting' ? 'ルームへつないでいます…' : 'つなぎ直しています…')), React.createElement("button", {
-      "data-rhythm-multi-share": true,
-      type: "button",
-      className: "min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black",
-      onClick: shareCode
-    }, copied ? 'コピーした!' : '友だちに送る'))), React.createElement("div", {
-      className: "mt-2 space-y-2 landscape:mt-0"
-    }, view && isHost && view.mode === 'private' && me && React.createElement("div", {
-      className: "grid grid-cols-2 gap-2"
-    }, React.createElement("button", {
-      "data-rhythm-multi-open": true,
-      type: "button",
-      onClick: () => RHYTHM_MULTI.setOpen(!me.open),
-      className: `min-h-[48px] rounded-xl px-2 text-xs font-black ${me.open ? 'bg-amber-600' : 'bg-slate-700'}`
-    }, me.open ? 'ルーム解放中' : 'ルーム解放', React.createElement("small", {
-      className: "block text-[9px] font-bold opacity-80"
-    }, me.open ? 'タップでやめる' : '知らない人も呼ぶ')), React.createElement("button", {
-      "data-rhythm-multi-confirm": true,
-      type: "button",
-      disabled: members.length < 2,
-      onClick: () => RHYTHM_MULTI.confirmMembers(),
-      className: "min-h-[48px] rounded-xl bg-fuchsia-700 px-2 text-sm font-black disabled:opacity-40"
-    }, "メンバー確定")), friendsOn && view && view.mode === 'private' && React.createElement("section", {
-      "data-rhythm-multi-friend-invite": true,
-      className: card
-    }, React.createElement("button", {
-      "data-rhythm-multi-friend-invite-toggle": true,
-      type: "button",
-      className: `${btn} w-full bg-pink-700`,
-      onClick: openInvitePanel
-    }, invitePanel ? 'フレンドの招待をとじる' : 'フレンドを招待する'), invitePanel && React.createElement("div", {
-      className: "mt-2 space-y-1"
-    }, roster === null && React.createElement("p", {
-      className: "text-[11px] font-bold text-slate-400"
-    }, "フレンドを読み込んでいます…"), roster !== null && roster.length === 0 && React.createElement("p", {
-      className: "text-[11px] font-bold leading-relaxed text-slate-400"
-    }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (roster || []).map(friend => React.createElement("div", {
-      key: friend.otherId,
-      "data-rhythm-multi-friend-row": true,
-      className: "flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5"
-    }, React.createElement("span", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("b", {
-      className: "block truncate text-sm font-black"
-    }, friend.userName), React.createElement("small", {
-      className: "block truncate text-[10px] font-bold text-slate-400"
-    }, friendsLastSeenText(friend.lastSeenAt, Date.now()))), React.createElement("button", {
-      "data-rhythm-multi-friend-send": true,
-      type: "button",
-      disabled: !!invitedIds[friend.otherId],
-      onClick: () => inviteFriend(friend.otherId),
-      className: `${btn} shrink-0 text-xs ${invitedIds[friend.otherId] ? 'bg-slate-700' : 'bg-pink-700'}`
-    }, invitedIds[friend.otherId] ? '招待ずみ' : '招待する'))), inviteMessage && React.createElement("p", {
-      "data-rhythm-multi-friend-message": true,
-      className: "text-[11px] font-black text-rose-300"
-    }, inviteMessage), React.createElement("p", {
-      className: "text-[10px] font-bold leading-relaxed text-slate-400"
-    }, "招待は3分のあいだ届きます。相手がマルチの入口をひらくと「参加する」が出ます。"))), React.createElement("button", {
-      "data-rhythm-multi-leave": true,
-      type: "button",
-      className: `${btn} w-full bg-slate-700`,
-      onClick: leaveRoom
-    }, view ? 'ルームを出る' : 'やめる'), message && React.createElement("p", {
-      className: "text-[12px] font-black text-rose-300"
-    }, message)))), chatSheet);
-  }
-  if (showResult) {
-    const fill = Math.min(1, Math.max(0, team.average / 1000000));
-    const marks = ['C', 'B', 'A', 'S', 'SS'].map(id => ({
-      id,
-      pos: (RHYTHM_RANKS.find(r => r.id === id) || {
-        min: 0
-      }).min / 1000000
-    }));
-    const drawnLevel = diffId => drawnSong && drawnSong.difficulties && drawnSong.difficulties[diffId] ? Number(drawnSong.difficulties[diffId].level) || 0 : 0;
-    return React.createElement("main", {
-      "data-rhythm-multi": true,
-      "data-rhythm-multi-step": "result",
-      className: `${shell} bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950`
-    }, React.createElement("b", {
-      "aria-hidden": "true",
-      className: "pointer-events-none absolute left-2 top-0 text-6xl font-black italic tracking-widest text-white/[0.06]",
-      style: {
-        top: 'var(--mh-sa-top)'
-      }
-    }, "RESULT"), React.createElement("section", {
-      "data-rhythm-multi-results": true,
-      className: "relative mx-2 mt-2 flex shrink-0 items-center gap-3 rounded-2xl border border-white/15 bg-slate-900/90 p-2",
-      style: {
-        marginTop: 'calc(.5rem + var(--mh-sa-top))'
-      }
-    }, drawnSong && React.createElement("span", {
-      className: "h-12 w-12 shrink-0 landscape:h-14 landscape:w-14"
-    }, React.createElement(RhythmSongArt, {
-      song: drawnSong,
-      marked: false
-    })), React.createElement("div", {
-      className: "min-w-0 flex-1 landscape:max-w-[34%]"
-    }, React.createElement("b", {
-      className: "block truncate text-sm font-black"
-    }, drawnSong ? rhythmSongFullName(drawnSong) : ''), React.createElement("small", {
-      className: "block text-[10px] font-black text-slate-400"
-    }, team.waiting ? 'ほかの人のライブが終わるのを待っています…' : `チームの平均 ${team.average.toLocaleString()}`)), React.createElement("div", {
-      className: "hidden min-w-0 flex-1 landscape:block"
-    }, React.createElement("div", {
-      "data-rhythm-multi-gauge": true,
-      className: "relative mt-3 h-3 rounded-full bg-slate-800"
-    }, React.createElement("div", {
-      className: "h-full rounded-full bg-gradient-to-r from-rose-400 via-amber-300 via-emerald-300 to-violet-400",
-      style: {
-        width: `${Math.round(fill * 100)}%`
-      }
-    }), marks.map(mk => React.createElement("span", {
-      key: mk.id,
-      className: "absolute top-0 h-3 w-px bg-white/70",
-      style: {
-        left: `${Math.round(mk.pos * 100)}%`
-      }
-    }, React.createElement("small", {
-      className: "absolute -top-3.5 -translate-x-1/2 text-[9px] font-black text-slate-300"
-    }, mk.id))))), React.createElement("div", {
-      className: "flex w-16 shrink-0 flex-col items-center"
-    }, React.createElement("b", {
-      "data-rhythm-multi-team-rank": true,
-      className: "text-5xl font-black leading-none text-amber-300 drop-shadow"
-    }, team.waiting ? '…' : team.rank), React.createElement("small", {
-      className: "text-[8px] font-black tracking-widest text-slate-400"
-    }, "SCORE RANK"))), React.createElement("div", {
-      className: "mx-3 mt-4 shrink-0 landscape:hidden"
-    }, React.createElement("div", {
-      className: "relative h-2.5 rounded-full bg-slate-800"
-    }, React.createElement("div", {
-      className: "h-full rounded-full bg-gradient-to-r from-rose-400 via-amber-300 via-emerald-300 to-violet-400",
-      style: {
-        width: `${Math.round(fill * 100)}%`
-      }
-    }), marks.map(mk => React.createElement("span", {
-      key: mk.id,
-      className: "absolute top-0 h-2.5 w-px bg-white/70",
-      style: {
-        left: `${Math.round(mk.pos * 100)}%`
-      }
-    }, React.createElement("small", {
-      className: "absolute -top-3.5 -translate-x-1/2 text-[9px] font-black text-slate-300"
-    }, mk.id))))), React.createElement("ul", {
-      className: "grid max-h-[260px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3"
-    }, Array.from({
-      length: RHYTHM_MULTI_ROOM_MAX
-    }).map((_, i) => {
-      const r = team.rows[i];
-      if (!r) return React.createElement("li", {
-        key: `empty${i}`,
-        "aria-hidden": "true",
-        className: "rounded-xl border border-dashed border-white/5"
-      });
-      const isMvp = r.m.id === team.mvpId && !team.waiting;
-      const lv = r.res ? drawnLevel(r.res.diffId) : 0;
-      return React.createElement("li", {
-        key: r.m.id,
-        "data-rhythm-multi-result-row": true,
-        className: `relative flex min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 pt-3 text-center ${isMvp ? 'border-2 border-pink-400 bg-pink-950/40 shadow-[0_0_14px_rgba(244,114,182,.5)]' : 'border border-white/10 bg-slate-900/80'}`
-      }, isMvp && React.createElement("b", {
-        "data-rhythm-multi-mvp": true,
-        className: "absolute left-1/2 top-0.5 -translate-x-1/2 whitespace-nowrap rounded-full bg-pink-500 px-1.5 py-px text-[9px] font-black text-white"
-      }, "★MVP★"), React.createElement(RhythmMultiAvatar, {
-        m: r.m,
-        resolveIconUrl: resolveIconUrl,
-        sizeClass: "h-12 w-12 landscape:h-16 landscape:w-16"
-      }), React.createElement("span", {
-        className: "mt-1 w-full truncate text-[10px] font-black landscape:text-xs"
-      }, r.m.name, r.m.id === view.selfId ? '(あなた)' : ''), React.createElement("small", {
-        className: "block h-3 text-[7px] font-black italic leading-3 text-pink-300 landscape:text-[9px]"
-      }, r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''), React.createElement("b", {
-        className: "block w-full text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal"
-      }, r.res ? r.res.quit ? 'リタイア' : String(r.res.score).padStart(8, '0') : r.m.gone ? '—' : 'ライブ中…'), r.res && !r.res.quit && React.createElement(React.Fragment, null, React.createElement("small", {
-        className: "mt-1 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px]"
-      }, r.res.diffId || '-', lv ? ` Lv.${lv}` : ''), !r.res.cleared && React.createElement("small", {
-        className: "text-[8px] font-black text-rose-300"
-      }, "失敗")));
-    })), React.createElement("div", {
-      className: "mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent",
-      style: {
-        paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
-      }
-    }, React.createElement("button", {
-      "data-rhythm-multi-member-stats": true,
-      type: "button",
-      onClick: () => setStatsOpen(true),
-      className: "min-h-[46px] flex-1 rounded-full border border-white/30 bg-slate-800 px-4 text-sm font-black landscape:w-48 landscape:flex-none"
-    }, "メンバーの成績"), React.createElement("button", {
-      "data-rhythm-multi-result-next": true,
-      type: "button",
-      disabled: team.waiting,
-      onClick: () => RHYTHM_MULTI.nextFromResult(room.round),
-      className: "min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 disabled:opacity-40 landscape:w-56 landscape:flex-none"
-    }, team.waiting ? 'みんなを待っています' : '次へ')), statsOpen && React.createElement("div", {
-      "data-rhythm-multi-stats": true,
-      className: "absolute inset-0 z-[85000] flex flex-col bg-slate-950",
-      style: {
-        paddingTop: 'var(--mh-sa-top)',
-        paddingBottom: 'var(--mh-sa-bottom)'
-      }
-    }, React.createElement("div", {
-      className: "flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2"
-    }, React.createElement("b", {
-      className: "min-w-0 flex-1 truncate text-sm font-black"
-    }, "メンバーの成績", drawnSong ? ` ・ ${rhythmSongFullName(drawnSong)}` : ''), React.createElement("button", {
-      type: "button",
-      className: "min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-4 text-sm font-black",
-      onClick: () => setStatsOpen(false)
-    }, "閉じる")), React.createElement("div", {
-      className: "min-h-0 flex-1 overflow-auto p-2"
-    }, React.createElement("table", {
-      className: "w-full min-w-[640px] border-separate border-spacing-y-1 text-center text-[11px] font-black"
-    }, React.createElement("thead", null, React.createElement("tr", {
-      className: "text-[10px] text-slate-400"
-    }, React.createElement("th", {
-      className: "px-1 text-left"
-    }, "メンバー"), React.createElement("th", {
-      className: "px-1"
-    }, "難易度"), React.createElement("th", {
-      className: "px-1"
-    }, "スコア"), React.createElement("th", {
-      className: "px-1"
-    }, "最大コンボ"), RHYTHM_MULTI_JUDGMENT_IDS.map(id => React.createElement("th", {
-      key: id,
-      className: "px-1",
-      style: {
-        color: rhythmJudgmentColor(id)
-      }
-    }, id)), React.createElement("th", {
-      className: "px-1"
-    }, "FAST / SLOW"))), React.createElement("tbody", null, team.rows.map(r => React.createElement("tr", {
-      key: r.m.id,
-      "data-rhythm-multi-stats-row": true,
-      className: r.m.id === team.mvpId ? 'bg-pink-950/50' : 'bg-slate-900/80'
-    }, React.createElement("td", {
-      className: "rounded-l-lg px-1 py-1.5 text-left"
-    }, React.createElement("span", {
-      className: "flex items-center gap-1.5"
-    }, React.createElement(RhythmMultiAvatar, {
-      m: r.m,
-      resolveIconUrl: resolveIconUrl,
-      sizeClass: "h-7 w-7"
-    }), React.createElement("span", {
-      className: "max-w-[7rem] truncate"
-    }, r.m.name), r.m.id === team.mvpId && React.createElement("small", {
-      className: "rounded bg-pink-500 px-1 text-[8px] text-white"
-    }, "MVP"))), React.createElement("td", {
-      className: "px-1"
-    }, r.res ? r.res.diffId || '-' : '-'), React.createElement("td", {
-      className: "px-1 tabular-nums"
-    }, r.res ? r.res.quit ? 'リタイア' : r.res.score.toLocaleString() : '—'), React.createElement("td", {
-      className: "px-1 tabular-nums"
-    }, r.res && !r.res.quit ? r.res.maxCombo : '—'), RHYTHM_MULTI_JUDGMENT_IDS.map((id, k) => React.createElement("td", {
-      key: id,
-      className: "px-1 tabular-nums"
-    }, r.res && !r.res.quit && r.res.j ? r.res.j[k] : '—')), React.createElement("td", {
-      className: "rounded-r-lg px-1 tabular-nums"
-    }, r.res && !r.res.quit ? `${r.res.fs} / ${r.res.sl}` : '—'))))))));
-  }
-  if (phase === 'playing' || phase === 'result') {
-    return React.createElement("main", {
-      "data-rhythm-multi": true,
-      "data-rhythm-multi-step": "waiting",
-      className: shell
-    }, header(phase === 'playing' ? 'ライブ中' : '次の選曲を待っています', leaveRoom), React.createElement(RhythmMultiMemberCards, {
-      members: members,
-      hostId: view.hostId,
-      selfId: view.selfId,
-      resolveIconUrl: resolveIconUrl,
-      size: "tall",
-      badgeOf: m => m.playing ? {
-        text: 'ライブ中',
-        cls: 'bg-amber-400 text-slate-950'
-      } : {
-        text: '待機中',
-        cls: 'bg-slate-600 text-white'
-      }
-    }), React.createElement("div", {
-      className: "mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/90 p-2 landscape:flex-row landscape:items-center",
-      style: {
-        paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
-      }
-    }, React.createElement("p", {
-      className: "min-w-0 flex-1 text-sm font-black text-amber-200"
-    }, phase === 'playing' ? 'いまライブ中です。次の曲から参加できます' : 'ホストが次へ進むのを待っています', drawnSong ? React.createElement("small", {
-      className: "block truncate text-[11px] font-bold text-slate-300"
-    }, rhythmSongFullName(drawnSong)) : null), React.createElement("button", {
-      "data-rhythm-multi-leave": true,
-      type: "button",
-      className: `${btn} bg-slate-700 landscape:w-48`,
-      onClick: leaveRoom
-    }, "ルームを出る")), chatSheet, countdownLayer);
-  }
-  if (shuffleRound) {
-    const picked = members.map(m => ({
-      m,
-      song: m.pickRound === room.round && m.pick !== RHYTHM_MULTI_OMAKASE ? songById(m.pick) : null
-    }));
-    const pool = picked.filter(x => x.song);
-    const spinning = pool.length ? pool[shuffleIndex % pool.length] : null;
-    const shown = shuffleStopped ? drawnSong : spinning ? spinning.song : songs[shuffleIndex % Math.max(1, songs.length)];
-    return React.createElement("main", {
-      "data-rhythm-multi": true,
-      "data-rhythm-multi-step": "shuffle",
-      className: shell
-    }, header('楽曲シャッフル', leaveRoom), React.createElement("div", {
-      className: "flex min-h-0 flex-1 flex-col items-center gap-3 overflow-y-auto p-3 landscape:flex-row landscape:items-stretch landscape:justify-center"
-    }, React.createElement("div", {
-      "data-rhythm-multi-shuffle": true,
-      className: `flex w-full max-w-xs shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border p-3 landscape:w-[42%] ${shuffleStopped ? 'border-amber-300 bg-amber-950/30' : 'border-fuchsia-400/40 bg-slate-900/80'}`
-    }, React.createElement("b", {
-      className: "text-lg font-black italic tracking-widest text-fuchsia-200"
-    }, "MUSIC SHUFFLE"), shown && React.createElement("span", {
-      className: "h-32 w-32 landscape:h-36 landscape:w-36"
-    }, React.createElement(RhythmSongArt, {
-      song: shown,
-      large: true,
-      marked: false
-    })), React.createElement("b", {
-      className: "w-full truncate text-center text-base font-black"
-    }, shown ? rhythmSongFullName(shown) : ''), React.createElement("small", {
-      className: `text-xs font-black text-amber-200 ${shuffleStopped ? '' : 'invisible'}`
-    }, "この曲に決まりました!")), React.createElement("ul", {
-      className: "w-full max-w-sm space-y-1 landscape:flex landscape:max-w-md landscape:flex-col landscape:justify-center"
-    }, picked.map(({
-      m,
-      song
-    }) => React.createElement("li", {
-      key: m.id,
-      className: `flex items-center gap-2 rounded-lg px-2 py-1.5 ${shuffleStopped && song && drawnSong && song.songId === drawnSong.songId ? 'bg-amber-500/25' : 'bg-slate-900/80'}`
-    }, React.createElement(RhythmMultiAvatar, {
-      m: m,
-      resolveIconUrl: resolveIconUrl,
-      sizeClass: "h-8 w-8"
-    }), React.createElement("span", {
-      className: "w-20 shrink-0 truncate text-[11px] font-black text-slate-300"
-    }, m.name), song && React.createElement("img", {
-      src: rhythmSongArtSrc(song),
-      alt: "",
-      draggable: false,
-      className: "h-8 w-8 shrink-0 rounded-md object-cover"
-    }), React.createElement("span", {
-      className: "min-w-0 flex-1 truncate text-[12px] font-black"
-    }, song ? rhythmSongFullName(song) : 'おまかせ'))))));
-  }
-  if (phase === 'ready') {
-    const iAmReady = !!me && me.readyRound === room.round;
-    const shownDiffId = (drawnOpenDiffs.find(d => d.id === myDiffId) || pickPlayDifficulty() || {}).id;
-    return React.createElement("main", {
-      "data-rhythm-multi": true,
-      "data-rhythm-multi-step": "ready",
-      className: shell
-    }, header('難易度選択', leaveRoom, {
-      timer: room.left
-    }), React.createElement(RhythmMultiMemberCards, {
-      members: members,
-      hostId: view.hostId,
-      selfId: view.selfId,
-      resolveIconUrl: resolveIconUrl,
-      size: "tall",
-      badgeOf: m => m.readyRound === room.round ? {
-        text: '準備完了',
-        cls: 'bg-emerald-400 text-slate-950',
-        sub: m.diff
-      } : {
-        text: '準備中',
-        cls: 'bg-slate-600 text-white',
-        sub: m.diff
-      }
-    }), React.createElement("div", {
-      className: "mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/95 p-2 landscape:flex-row landscape:items-center landscape:gap-3",
-      style: {
-        paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
-      }
-    }, drawnSong && React.createElement("div", {
-      className: "flex min-w-0 items-center gap-2 rounded-xl bg-slate-900/90 p-1.5 landscape:w-[32%]"
-    }, React.createElement("span", {
-      className: "h-12 w-12 shrink-0"
-    }, React.createElement(RhythmSongArt, {
-      song: drawnSong,
-      marked: false
-    })), React.createElement("div", {
-      className: "min-w-0 flex-1"
-    }, React.createElement("small", {
-      className: "block text-[9px] font-black text-slate-400"
-    }, "ライブする曲"), React.createElement("b", {
-      "data-rhythm-multi-drawn": true,
-      className: "block truncate text-sm font-black leading-tight"
-    }, rhythmSongFullName(drawnSong)))), React.createElement("div", {
-      className: "grid grid-cols-5 gap-1.5 landscape:flex-1"
-    }, drawnDiffs.map(d => {
-      const open = drawnOpenDiffs.some(x => x.id === d.id);
-      const level = drawnSong && drawnSong.difficulties && drawnSong.difficulties[d.id] ? Number(drawnSong.difficulties[d.id].level) || 0 : 0;
-      const active = shownDiffId === d.id;
-      return React.createElement("button", {
-        key: d.id,
-        type: "button",
-        "data-rhythm-multi-difficulty": d.id,
-        disabled: !open || iAmReady,
-        onClick: () => RHYTHM_MULTI.setDiff(d.id),
-        className: `flex min-h-[52px] flex-col items-center justify-center rounded-full border-2 text-[9px] font-black disabled:opacity-40 ${active ? 'border-fuchsia-300 bg-fuchsia-600 text-white' : 'border-white/20 bg-slate-800 text-slate-200'}`
-      }, React.createElement("span", {
-        className: "text-base leading-none"
-      }, level || '-'), React.createElement("span", {
-        className: "leading-tight"
-      }, open ? d.id : '🔒'));
-    })), React.createElement("button", {
-      "data-rhythm-multi-ready": true,
-      type: "button",
-      disabled: iAmReady,
-      onClick: () => {
-        if (shownDiffId) RHYTHM_MULTI.setDiff(shownDiffId);
-        RHYTHM_MULTI.ready();
-      },
-      className: "min-h-[52px] rounded-xl bg-gradient-to-r from-teal-300 to-cyan-400 px-3 text-base font-black text-slate-950 disabled:opacity-60 landscape:w-[22%]"
-    }, iAmReady ? '準備完了!' : '準備完了', iAmReady && React.createElement("small", {
-      className: "block text-[9px] font-bold"
-    }, "ほかのメンバーを待っています"))), chatSheet, countdownLayer);
-  }
-  const myPick = me && me.pickRound === room.round ? me.pick : '';
-  const pickLabel = m => {
-    if (m.pickRound !== room.round || !m.pick) return {
-      text: '選曲中',
-      cls: 'bg-slate-600 text-white'
-    };
-    const song = m.pick === RHYTHM_MULTI_OMAKASE ? null : songById(m.pick);
-    return {
-      text: '選曲済',
-      cls: 'bg-fuchsia-400 text-slate-950',
-      sub: song ? rhythmSongFullName(song) : 'おまかせ'
-    };
-  };
-  return React.createElement("main", {
-    "data-rhythm-multi": true,
-    "data-rhythm-multi-step": "select",
-    className: shell
-  }, header('楽曲シャッフル ・ 選曲', leaveRoom, {
-    timer: room.left
-  }), React.createElement(RhythmMultiMemberCards, {
-    members: members,
-    hostId: view.hostId,
-    selfId: view.selfId,
-    resolveIconUrl: resolveIconUrl,
-    badgeOf: pickLabel,
-    size: "strip"
-  }), React.createElement(RhythmSongSelect, {
-    songs: songs,
-    difficulties: difficultyList,
-    bestRecords: bestRecords,
-    songId: selSongId,
-    difficultyId: myDiffId,
-    onSongId: id => setSelSongId(id),
-    onDifficultyId: id => RHYTHM_MULTI.setDiff(id),
-    view: selectView,
-    onView: setSelectView,
-    onPlay: (song, difficulty) => {
-      RHYTHM_MULTI.setDiff(difficulty.id);
-      RHYTHM_MULTI.pick(song.songId);
-    },
-    playLabel: myPick ? 'この曲に変更' : 'この曲で決定',
-    hideRandom: true,
-    notice: React.createElement("p", {
-      className: "rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300"
-    }, "全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。"),
-    footer: () => React.createElement("div", {
-      className: "grid grid-cols-2 gap-1.5"
-    }, React.createElement("button", {
-      "data-rhythm-multi-omakase": true,
-      type: "button",
-      "aria-pressed": myPick === RHYTHM_MULTI_OMAKASE,
-      onClick: () => RHYTHM_MULTI.pick(RHYTHM_MULTI_OMAKASE),
-      className: `flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
-    }, "🔀 おまかせ", myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''), React.createElement("button", {
-      "data-rhythm-multi-leave": true,
-      type: "button",
-      onClick: leaveRoom,
-      className: "flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300"
-    }, "ルームを出る"))
-  }), chatSheet, countdownLayer);
-}
 const FRIEND_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const FRIEND_CODE_LENGTH = 8;
 const FRIENDS_MAX = 50;
@@ -54864,6 +52953,1944 @@ function DebugDataScreen({
   }, "まだここから用意できないもの"), React.createElement("p", {
     className: "mt-1 text-[9px] font-bold leading-relaxed text-slate-400"
   }, "ギフトボックスの配布・補償／キャンペーン／ランキングの送信。どれも配布や送信の条件そのものを書き換えることになるため、 うっかり本物の記録を触らないよう入口を作っていません。"))));
+}
+const RHYTHM_MULTI_ROOM_MAX = 5;
+const RHYTHM_MULTI_VETERAN_MIN_LEVEL = 30;
+const RHYTHM_MULTI_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const RHYTHM_MULTI_CODE_LENGTH = 4;
+const RHYTHM_MULTI_HEARTBEAT_MS = 2000;
+const RHYTHM_MULTI_ALIVE_MS = 7000;
+const RHYTHM_MULTI_START_COUNTDOWN_SEC = 3;
+const RHYTHM_MULTI_SHUFFLE_MS = 2400;
+const RHYTHM_MULTI_SELECT_MS = 30000;
+const RHYTHM_MULTI_READY_MS = 30000;
+const RHYTHM_MULTI_READY_GRACE_MS = 3000;
+const RHYTHM_MULTI_RESULT_MS = 45000;
+const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
+const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
+const RHYTHM_MULTI_CHAT_KEEP = 50;
+const RHYTHM_MULTI_CHAT_INTERVAL_MS = 800;
+const RHYTHM_MULTI_CHAT_STAMPS = Object.freeze(['よろしく!', 'ナイス!', '準備OK!', 'もう一回!', 'ありがとう!']);
+const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
+const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
+const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
+const RHYTHM_MULTI_LOBBY_LISTEN_MS = 3500;
+const RHYTHM_MULTI_LOBBY_FRESH_MS = 6000;
+const RHYTHM_MULTI_PENALTY_KEY = 'mh_rhythm_multi_penalty_v1';
+const RHYTHM_MULTI_PENALTY_MS = 3 * 60 * 1000;
+const RHYTHM_MULTI_MODES = Object.freeze(['private', 'free', 'veteran']);
+const RHYTHM_MULTI_MODE_LABELS = Object.freeze({
+  private: 'プライベート',
+  free: 'フリー',
+  veteran: 'ベテラン'
+});
+const RHYTHM_MULTI_PHASES = Object.freeze(['matching', 'select', 'ready', 'playing', 'result']);
+const RHYTHM_MULTI_OMAKASE = '*';
+const RHYTHM_MULTI_REWARD_STEP = 0.5;
+const rhythmMultiRewardScale = count => {
+  const n = Math.max(1, Math.min(RHYTHM_MULTI_ROOM_MAX, Math.floor(Number(count) || 1)));
+  return 1 + RHYTHM_MULTI_REWARD_STEP * (n - 1);
+};
+const RHYTHM_MULTI_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
+const rhythmMultiMakeCode = () => {
+  let code = '';
+  for (let i = 0; i < RHYTHM_MULTI_CODE_LENGTH; i += 1) {
+    code += RHYTHM_MULTI_CODE_CHARS[Math.floor(Math.random() * RHYTHM_MULTI_CODE_CHARS.length)];
+  }
+  return code;
+};
+const rhythmMultiNormalizeCode = text => {
+  const code = String(text == null ? '' : text).toUpperCase().split('').filter(ch => RHYTHM_MULTI_CODE_CHARS.includes(ch)).join('');
+  return code.length === RHYTHM_MULTI_CODE_LENGTH ? code : '';
+};
+const rhythmMultiMakeId = (head = 'p') => `${head}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+const rhythmMultiText = (value, max) => String(value == null ? '' : value).replace(/[\u0000-\u001f]/g, '').slice(0, max);
+const rhythmMultiInt = (value, max) => {
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) ? Math.min(max, Math.max(0, n)) : 0;
+};
+const rhythmMultiSortMembers = members => members.slice().sort((a, b) => a.joinedAt - b.joinedAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+const rhythmMultiPenaltyLeftMs = async () => {
+  try {
+    const saved = await storeGet(RHYTHM_MULTI_PENALTY_KEY, null);
+    const until = saved && typeof saved === 'object' ? Number(saved.until) : 0;
+    return Number.isFinite(until) ? Math.max(0, Math.min(RHYTHM_MULTI_PENALTY_MS, until - Date.now())) : 0;
+  } catch (_) {
+    return 0;
+  }
+};
+const rhythmMultiPenaltyMark = async () => {
+  try {
+    await storeSet(RHYTHM_MULTI_PENALTY_KEY, {
+      until: Date.now() + RHYTHM_MULTI_PENALTY_MS
+    });
+  } catch (_) {}
+};
+const rhythmMultiTeamResult = (members, round, participants) => {
+  const ids = Array.isArray(participants) && participants.length ? participants : members.map(m => m.id);
+  const rows = ids.map(id => {
+    const m = members.find(x => x.id === id) || {
+      id,
+      name: '(抜けた人)',
+      icon: '',
+      frame: '',
+      gone: true
+    };
+    return {
+      m,
+      res: m.res && m.res.startId === round ? m.res : null
+    };
+  });
+  const waiting = rows.some(r => !r.res && !r.m.gone);
+  const scores = rows.map(r => r.res && !r.res.quit ? r.res.score : 0);
+  const average = scores.length ? Math.floor(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+  let mvpId = null;
+  let best = 0;
+  rows.forEach(r => {
+    if (r.res && !r.res.quit && r.res.score > best) {
+      best = r.res.score;
+      mvpId = r.m.id;
+    }
+  });
+  return {
+    rows,
+    waiting,
+    average,
+    mvpId,
+    rank: scores.length ? rhythmRankForScore(average) : null
+  };
+};
+const rhythmMultiCleanRoom = raw => {
+  if (!raw || typeof raw !== 'object' || !RHYTHM_MULTI_PHASES.includes(raw.ph)) return null;
+  return {
+    phase: raw.ph,
+    round: rhythmMultiText(raw.rd, 40),
+    songId: rhythmMultiText(raw.sg, 60),
+    left: rhythmMultiInt(raw.lf, 600),
+    hasDeadline: raw.dl === 1,
+    participants: Array.isArray(raw.pt) ? raw.pt.slice(0, RHYTHM_MULTI_ROOM_MAX).map(id => rhythmMultiText(id, 40)).filter(Boolean) : []
+  };
+};
+const rhythmMultiCleanMessage = raw => {
+  if (!raw || typeof raw !== 'object') return null;
+  const id = rhythmMultiText(raw.id, 40);
+  if (!id) return null;
+  const out = {
+    t: raw.t,
+    id
+  };
+  if (raw.t === 'hb') {
+    out.name = rhythmMultiText(raw.name, 12) || '名無しのブリーダー';
+    out.level = rhythmMultiInt(raw.level, 9999);
+    out.joinedAt = rhythmMultiInt(raw.joinedAt, 9e15);
+    out.icon = rhythmMultiText(raw.icon, 60);
+    out.frame = rhythmMultiText(raw.frame, 40);
+    out.pick = rhythmMultiText(raw.pick, 60);
+    out.pickRound = rhythmMultiText(raw.pickRound, 40);
+    out.readyRound = rhythmMultiText(raw.readyRound, 40);
+    out.diff = rhythmMultiText(raw.diff, 20);
+    out.playing = raw.playing === true;
+    out.open = raw.open === true;
+    out.mode = RHYTHM_MULTI_MODES.includes(raw.mode) ? raw.mode : 'private';
+    if (raw.res && typeof raw.res === 'object') out.res = rhythmMultiCleanResult(raw.res);
+    if (raw.room) out.room = rhythmMultiCleanRoom(raw.room);
+    return out;
+  }
+  if (raw.t === 'draw' || raw.t === 'start') {
+    out.round = rhythmMultiText(raw.round, 40);
+    out.songId = rhythmMultiText(raw.songId, 60);
+    out.participants = Array.isArray(raw.participants) ? raw.participants.slice(0, RHYTHM_MULTI_ROOM_MAX).map(x => rhythmMultiText(x, 40)).filter(Boolean) : [];
+    return out.round && out.songId ? out : null;
+  }
+  if (raw.t === 'res') {
+    out.res = rhythmMultiCleanResult(raw.res);
+    return out.res ? out : null;
+  }
+  if (raw.t === 'chat') {
+    out.name = rhythmMultiText(raw.name, 12) || '名無しのブリーダー';
+    out.text = rhythmMultiText(raw.text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
+    out.cid = rhythmMultiText(raw.cid, 40);
+    return out.text && out.cid ? out : null;
+  }
+  if (raw.t === 'bye') return out;
+  return null;
+};
+const rhythmMultiCleanResult = raw => {
+  if (!raw || typeof raw !== 'object') return null;
+  const startId = rhythmMultiText(raw.startId, 40);
+  if (!startId) return null;
+  return {
+    startId,
+    score: rhythmMultiInt(raw.score, 1e12),
+    maxCombo: rhythmMultiInt(raw.maxCombo, 100000),
+    cleared: raw.cleared !== false,
+    quit: raw.quit === true,
+    diffId: rhythmMultiText(raw.diffId, 20),
+    fc: rhythmMultiInt(raw.fc, 3),
+    j: Array.isArray(raw.j) ? RHYTHM_MULTI_JUDGMENT_IDS.map((_, k) => rhythmMultiInt(raw.j[k], 100000)) : null,
+    fs: rhythmMultiInt(raw.fs, 100000),
+    sl: rhythmMultiInt(raw.sl, 100000)
+  };
+};
+const rhythmMultiCleanRoomNotice = raw => {
+  if (!raw || typeof raw !== 'object' || raw.t !== 'room') return null;
+  const code = rhythmMultiNormalizeCode(raw.code);
+  const n = rhythmMultiInt(raw.n, RHYTHM_MULTI_ROOM_MAX);
+  return code && n >= 1 && n < RHYTHM_MULTI_ROOM_MAX ? {
+    code,
+    n
+  } : null;
+};
+const rhythmMultiBestRoom = (rooms, exceptCode) => {
+  const now = Date.now();
+  const list = Object.entries(rooms).filter(([code, info]) => code !== exceptCode && now - info.seen <= RHYTHM_MULTI_LOBBY_FRESH_MS).map(([code, info]) => ({
+    code,
+    n: info.n
+  }));
+  list.sort((a, b) => b.n - a.n || (a.code < b.code ? -1 : 1));
+  return list.length ? list[0].code : null;
+};
+const rhythmMultiOpenSocket = ({
+  topic,
+  onOpen,
+  onMessage,
+  onClose
+}) => {
+  let ws = null;
+  let beatTimer = null;
+  let ref = 0;
+  let closed = false;
+  const nextRef = () => String(++ref);
+  const send = (event, payload, topicName) => {
+    if (!ws || ws.readyState !== 1) return false;
+    try {
+      ws.send(JSON.stringify({
+        topic: topicName || topic,
+        event,
+        payload,
+        ref: nextRef(),
+        join_ref: '1'
+      }));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
+  try {
+    ws = new WebSocket(`${SUPABASE_URL.replace(/^http/, 'ws')}/realtime/v1/websocket?apikey=${encodeURIComponent(SUPABASE_KEY)}&vsn=1.0.0`);
+  } catch (_) {
+    setTimeout(() => {
+      if (!closed) onClose();
+    }, 0);
+    return {
+      send: () => false,
+      close: () => {
+        closed = true;
+      }
+    };
+  }
+  ws.onopen = () => {
+    try {
+      ws.send(JSON.stringify({
+        topic,
+        event: 'phx_join',
+        payload: {
+          config: {
+            broadcast: {
+              self: true,
+              ack: false
+            },
+            presence: {
+              key: ''
+            },
+            private: false
+          }
+        },
+        ref: '1',
+        join_ref: '1'
+      }));
+    } catch (_) {}
+    beatTimer = setInterval(() => send('heartbeat', {}, 'phoenix'), 25000);
+  };
+  ws.onmessage = event => {
+    let msg = null;
+    try {
+      msg = JSON.parse(event.data);
+    } catch (_) {
+      return;
+    }
+    if (!msg || msg.topic !== topic) return;
+    if (msg.event === 'phx_reply' && msg.ref === '1') {
+      if (msg.payload && msg.payload.status === 'ok') onOpen();else onClose();
+    } else if (msg.event === 'broadcast' && msg.payload && msg.payload.event === 'msg') {
+      onMessage(msg.payload.payload);
+    } else if (msg.event === 'phx_close' || msg.event === 'phx_error') {
+      onClose();
+    }
+  };
+  ws.onclose = () => {
+    if (beatTimer) clearInterval(beatTimer);
+    beatTimer = null;
+    if (!closed) onClose();
+  };
+  ws.onerror = () => {};
+  return {
+    send: payload => send('broadcast', {
+      type: 'broadcast',
+      event: 'msg',
+      payload
+    }),
+    close: () => {
+      closed = true;
+      if (beatTimer) clearInterval(beatTimer);
+      beatTimer = null;
+      try {
+        ws.close();
+      } catch (_) {}
+    }
+  };
+};
+const RHYTHM_MULTI = (() => {
+  const listeners = new Set();
+  const startListeners = new Set();
+  let s = null;
+  let socket = null;
+  let lobby = null;
+  let hbTimer = null;
+  let sweepTimer = null;
+  let reconnectTimer = null;
+  let catalog = [];
+  const emit = () => {
+    listeners.forEach(fn => {
+      try {
+        fn();
+      } catch (_) {}
+    });
+  };
+  const alive = () => s ? Object.values(s.members).filter(m => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId) : [];
+  const ordered = () => rhythmMultiSortMembers(alive()).slice(0, RHYTHM_MULTI_ROOM_MAX);
+  const selfMember = () => s ? s.members[s.selfId] : null;
+  const isHostNow = () => {
+    const o = ordered();
+    return !!s && o.length > 0 && o[0].id === s.selfId;
+  };
+  const roomPayload = () => {
+    const r = s.room;
+    return {
+      ph: r.phase,
+      rd: r.round,
+      sg: r.songId,
+      lf: r.deadline ? Math.max(0, Math.ceil((r.deadline - Date.now()) / 1000)) : 0,
+      dl: r.deadline ? 1 : 0,
+      pt: r.participants
+    };
+  };
+  const sendHb = () => {
+    const me = selfMember();
+    if (!s || !socket || !me) return;
+    socket.send({
+      t: 'hb',
+      id: s.selfId,
+      name: me.name,
+      level: me.level,
+      joinedAt: me.joinedAt,
+      icon: me.icon,
+      frame: me.frame,
+      pick: me.pick,
+      pickRound: me.pickRound,
+      readyRound: me.readyRound,
+      diff: me.diff,
+      playing: me.playing,
+      open: me.open,
+      mode: s.mode,
+      res: me.res || undefined,
+      room: isHostNow() ? roomPayload() : undefined
+    });
+  };
+  const stopTimers = () => {
+    if (hbTimer) clearInterval(hbTimer);
+    if (sweepTimer) clearInterval(sweepTimer);
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    hbTimer = sweepTimer = reconnectTimer = null;
+  };
+  const closeLobby = () => {
+    if (lobby) {
+      try {
+        lobby.socket.close();
+      } catch (_) {}
+      lobby = null;
+    }
+  };
+  const setRoom = next => {
+    s.room = {
+      ...s.room,
+      ...next
+    };
+    sendHb();
+    emit();
+  };
+  const toSelect = () => setRoom({
+    phase: 'select',
+    round: rhythmMultiMakeId('r'),
+    songId: '',
+    deadline: Date.now() + RHYTHM_MULTI_SELECT_MS,
+    participants: []
+  });
+  const doDraw = members => {
+    const r = s.room;
+    const picks = members.filter(m => m.pickRound === r.round && m.pick && m.pick !== RHYTHM_MULTI_OMAKASE && catalog.includes(m.pick)).map(m => m.pick);
+    const pool = picks.length ? picks : catalog;
+    if (!pool.length) return;
+    const songId = pool[Math.floor(Math.random() * pool.length)];
+    if (socket) socket.send({
+      t: 'draw',
+      id: s.selfId,
+      round: r.round,
+      songId
+    });
+    setRoom({
+      phase: 'ready',
+      songId,
+      deadline: Date.now() + RHYTHM_MULTI_SHUFFLE_MS + RHYTHM_MULTI_READY_MS
+    });
+  };
+  const doStart = members => {
+    const r = s.room;
+    const participants = members.filter(m => m.readyRound === r.round).map(m => m.id);
+    if (!participants.length) {
+      toSelect();
+      return;
+    }
+    if (socket) socket.send({
+      t: 'start',
+      id: s.selfId,
+      round: r.round,
+      songId: r.songId,
+      participants
+    });
+    setRoom({
+      phase: 'playing',
+      participants,
+      deadline: 0
+    });
+  };
+  const hostTick = () => {
+    if (!s || !isHostNow() || s.status !== 'open') return;
+    const members = ordered();
+    const r = s.room;
+    const now = Date.now();
+    if (r.phase === 'matching') {
+      if (members.length >= RHYTHM_MULTI_ROOM_MAX) toSelect();else if (s.mode !== 'private' && members.length >= 2 && now - s.lastMemberChange >= RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS) toSelect();
+    } else if (r.phase === 'select') {
+      if (members.length < 2) {
+        setRoom({
+          phase: 'matching',
+          deadline: 0
+        });
+        return;
+      }
+      const allPicked = members.every(m => m.pickRound === r.round && m.pick);
+      if (allPicked || now >= r.deadline) doDraw(members);
+    } else if (r.phase === 'ready') {
+      const allReady = members.every(m => m.readyRound === r.round);
+      if (allReady || now >= r.deadline + RHYTHM_MULTI_READY_GRACE_MS) doStart(members);
+    } else if (r.phase === 'playing') {
+      const aliveIds = members.map(m => m.id);
+      const done = r.participants.every(id => !aliveIds.includes(id) || s.members[id] && s.members[id].res && s.members[id].res.startId === r.round);
+      if (done) setRoom({
+        phase: 'result',
+        deadline: now + RHYTHM_MULTI_RESULT_MS
+      });
+    } else if (r.phase === 'result') {
+      if (now >= r.deadline) toSelect();
+    }
+  };
+  const selfTick = () => {
+    const me = selfMember();
+    if (!s || !me) return;
+    const r = s.room;
+    if (!r.deadline || Date.now() < r.deadline) return;
+    if (r.phase === 'select' && me.pickRound !== r.round) {
+      me.pick = RHYTHM_MULTI_OMAKASE;
+      me.pickRound = r.round;
+      sendHb();
+    }
+    if (r.phase === 'ready' && me.readyRound !== r.round) {
+      me.readyRound = r.round;
+      sendHb();
+    }
+  };
+  const syncLobby = () => {
+    if (!s) {
+      closeLobby();
+      return;
+    }
+    const order = ordered();
+    const me = selfMember();
+    const want = isHostNow() && !!me && me.open && order.length < RHYTHM_MULTI_ROOM_MAX && (s.room.phase === 'matching' || s.room.phase === 'select') && s.status === 'open';
+    if (!want) {
+      closeLobby();
+      return;
+    }
+    const kind = s.mode === 'veteran' ? 'veteran' : 'free';
+    if (lobby && lobby.kind !== kind) closeLobby();
+    if (!lobby) {
+      const rooms = {};
+      lobby = {
+        kind,
+        rooms,
+        lastAnnounce: 0,
+        socket: rhythmMultiOpenSocket({
+          topic: RHYTHM_MULTI_LOBBY_TOPIC + kind,
+          onOpen: () => {},
+          onMessage: raw => {
+            const n = rhythmMultiCleanRoomNotice(raw);
+            if (n) rooms[n.code] = {
+              n: n.n,
+              seen: Date.now()
+            };
+          },
+          onClose: () => {}
+        })
+      };
+    }
+    if (Date.now() - lobby.lastAnnounce >= RHYTHM_MULTI_LOBBY_ANNOUNCE_MS) {
+      lobby.lastAnnounce = Date.now();
+      lobby.socket.send({
+        t: 'room',
+        code: s.code,
+        n: order.length
+      });
+    }
+    if (order.length === 1 && s.mode !== 'private' && Date.now() - s.createdAt > RHYTHM_MULTI_LOBBY_LISTEN_MS) {
+      const other = rhythmMultiBestRoom(lobby.rooms, s.code);
+      if (other && other < s.code) {
+        api.join(other, {
+          name: me.name,
+          level: me.level,
+          icon: me.icon,
+          frame: me.frame,
+          diff: me.diff
+        }, s.mode);
+      }
+    }
+  };
+  const sweep = () => {
+    if (!s) return;
+    const me = selfMember();
+    if (me && me.playing) return;
+    const sig = ordered().map(m => m.id).join(',');
+    if (sig !== s.memberSig) {
+      s.memberSig = sig;
+      s.lastMemberChange = Date.now();
+    }
+    selfTick();
+    hostTick();
+    if (s) syncLobby();
+    emit();
+  };
+  const onMessage = raw => {
+    if (!s) return;
+    const msg = rhythmMultiCleanMessage(raw);
+    if (!msg) return;
+    if (msg.t === 'bye') {
+      delete s.members[msg.id];
+      emit();
+      return;
+    }
+    if (msg.t === 'chat') {
+      if (!s.chat.some(c => c.cid === msg.cid)) {
+        s.chat.push({
+          cid: msg.cid,
+          id: msg.id,
+          name: msg.name,
+          text: msg.text
+        });
+        if (s.chat.length > RHYTHM_MULTI_CHAT_KEEP) s.chat.splice(0, s.chat.length - RHYTHM_MULTI_CHAT_KEEP);
+      }
+      emit();
+      return;
+    }
+    const fromHost = () => {
+      const o = ordered();
+      return o.length > 0 && o[0].id === msg.id;
+    };
+    const prev = s.members[msg.id] || {
+      id: msg.id,
+      name: '',
+      level: 0,
+      joinedAt: 0,
+      icon: '',
+      frame: '',
+      pick: '',
+      pickRound: '',
+      readyRound: '',
+      diff: '',
+      playing: false,
+      open: false,
+      res: null
+    };
+    if (msg.t === 'hb') {
+      if (msg.id === s.selfId) {
+        prev.seen = Date.now();
+        emit();
+        return;
+      }
+      s.members[msg.id] = {
+        ...prev,
+        name: msg.name,
+        level: msg.level,
+        joinedAt: msg.joinedAt,
+        icon: msg.icon,
+        frame: msg.frame,
+        pick: msg.pick,
+        pickRound: msg.pickRound,
+        readyRound: msg.readyRound,
+        diff: msg.diff,
+        playing: msg.playing,
+        open: msg.open,
+        res: msg.res || prev.res,
+        seen: Date.now()
+      };
+      if (msg.room && fromHost()) {
+        const r = msg.room;
+        s.room = {
+          phase: r.phase,
+          round: r.round,
+          songId: r.songId,
+          participants: r.participants,
+          deadline: r.hasDeadline ? Date.now() + r.left * 1000 : 0
+        };
+      }
+    } else if (msg.t === 'res') {
+      s.members[msg.id] = {
+        ...prev,
+        res: msg.res,
+        playing: false,
+        seen: Date.now()
+      };
+    } else if (msg.t === 'draw') {
+      if (fromHost() && s.room.round === msg.round) s.room = {
+        ...s.room,
+        phase: 'ready',
+        songId: msg.songId,
+        deadline: Date.now() + RHYTHM_MULTI_SHUFFLE_MS + RHYTHM_MULTI_READY_MS
+      };
+    } else if (msg.t === 'start') {
+      if (fromHost() && s.startedRound !== msg.round) {
+        s.startedRound = msg.round;
+        s.room = {
+          ...s.room,
+          phase: 'playing',
+          round: msg.round,
+          songId: msg.songId,
+          participants: msg.participants,
+          deadline: 0
+        };
+        const me = selfMember();
+        if (me && msg.participants.includes(s.selfId)) {
+          me.playing = true;
+          me.res = null;
+          startListeners.forEach(fn => {
+            try {
+              fn({
+                round: msg.round,
+                songId: msg.songId,
+                count: msg.participants.length
+              });
+            } catch (_) {}
+          });
+        }
+        sendHb();
+      }
+    }
+    emit();
+  };
+  const connect = () => {
+    if (!s) return;
+    s.status = 'connecting';
+    emit();
+    socket = rhythmMultiOpenSocket({
+      topic: RHYTHM_MULTI_ROOM_TOPIC + s.code,
+      onOpen: () => {
+        if (!s) return;
+        s.status = 'open';
+        sendHb();
+        emit();
+      },
+      onMessage,
+      onClose: () => {
+        if (!s) return;
+        s.status = 'reconnecting';
+        emit();
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => {
+          if (s) {
+            if (socket) socket.close();
+            connect();
+          }
+        }, 2500);
+      }
+    });
+  };
+  const api = {
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    onStart(fn) {
+      startListeners.add(fn);
+      return () => startListeners.delete(fn);
+    },
+    setCatalog(songIds) {
+      catalog = Array.isArray(songIds) ? songIds.slice() : [];
+    },
+    view() {
+      if (!s) return null;
+      const all = rhythmMultiSortMembers(alive());
+      const selfIndex = all.findIndex(m => m.id === s.selfId);
+      const r = s.room;
+      return {
+        code: s.code,
+        mode: s.mode,
+        status: s.status,
+        selfId: s.selfId,
+        members: all.slice(0, RHYTHM_MULTI_ROOM_MAX),
+        hostId: all.length ? all[0].id : s.selfId,
+        full: selfIndex >= RHYTHM_MULTI_ROOM_MAX,
+        room: {
+          ...r,
+          left: r.deadline ? Math.max(0, Math.ceil((r.deadline - Date.now()) / 1000)) : 0
+        },
+        shuffleShown: s.shuffleShown,
+        resultSeen: s.resultSeen,
+        chat: s.chat.slice()
+      };
+    },
+    join(code, profile, mode) {
+      this.leave();
+      const now = Date.now();
+      const id = rhythmMultiMakeId();
+      const roomMode = RHYTHM_MULTI_MODES.includes(mode) ? mode : 'private';
+      s = {
+        code,
+        mode: roomMode,
+        status: 'connecting',
+        selfId: id,
+        members: {},
+        chat: [],
+        lastChatAt: 0,
+        createdAt: now,
+        room: {
+          phase: 'matching',
+          round: '',
+          songId: '',
+          deadline: 0,
+          participants: []
+        },
+        memberSig: '',
+        lastMemberChange: now,
+        startedRound: '',
+        shuffleShown: '',
+        resultSeen: ''
+      };
+      s.members[id] = {
+        id,
+        name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー',
+        level: rhythmMultiInt(profile && profile.level, 9999),
+        icon: rhythmMultiText(profile && profile.icon, 60),
+        frame: rhythmMultiText(profile && profile.frame, 40),
+        joinedAt: now,
+        pick: '',
+        pickRound: '',
+        readyRound: '',
+        diff: rhythmMultiText(profile && profile.diff, 20),
+        playing: false,
+        open: roomMode !== 'private',
+        res: null,
+        seen: now
+      };
+      connect();
+      let playTick = 0;
+      hbTimer = setInterval(() => {
+        const me = selfMember();
+        if (me && me.playing) {
+          playTick += 1;
+          if (playTick % 2 === 1) return;
+        }
+        sendHb();
+      }, RHYTHM_MULTI_HEARTBEAT_MS);
+      sweepTimer = setInterval(sweep, 1000);
+      emit();
+    },
+    leave() {
+      if (socket) {
+        try {
+          socket.send({
+            t: 'bye',
+            id: s && s.selfId
+          });
+        } catch (_) {}
+        socket.close();
+      }
+      socket = null;
+      closeLobby();
+      stopTimers();
+      s = null;
+      emit();
+    },
+    findRoom(kind) {
+      return new Promise(resolve => {
+        const rooms = {};
+        const sock = rhythmMultiOpenSocket({
+          topic: RHYTHM_MULTI_LOBBY_TOPIC + (kind === 'veteran' ? 'veteran' : 'free'),
+          onOpen: () => {},
+          onMessage: raw => {
+            const n = rhythmMultiCleanRoomNotice(raw);
+            if (n) rooms[n.code] = {
+              n: n.n,
+              seen: Date.now()
+            };
+          },
+          onClose: () => {}
+        });
+        setTimeout(() => {
+          sock.close();
+          resolve(rhythmMultiBestRoom(rooms, ''));
+        }, RHYTHM_MULTI_LOBBY_LISTEN_MS);
+      });
+    },
+    confirmMembers() {
+      if (!s || !isHostNow() || s.room.phase !== 'matching' || ordered().length < 2) return false;
+      toSelect();
+      return true;
+    },
+    pick(songId) {
+      const me = selfMember();
+      if (!me || s.room.phase !== 'select') return;
+      me.pick = songId === RHYTHM_MULTI_OMAKASE ? RHYTHM_MULTI_OMAKASE : rhythmMultiText(songId, 60);
+      me.pickRound = s.room.round;
+      sendHb();
+      emit();
+    },
+    setDiff(difficultyId) {
+      const me = selfMember();
+      if (!me) return;
+      me.diff = rhythmMultiText(difficultyId, 20);
+      sendHb();
+      emit();
+    },
+    ready() {
+      const me = selfMember();
+      if (!me || s.room.phase !== 'ready') return;
+      me.readyRound = s.room.round;
+      sendHb();
+      emit();
+    },
+    setOpen(open) {
+      const me = selfMember();
+      if (!me) return;
+      me.open = open === true;
+      sendHb();
+      syncLobby();
+      emit();
+    },
+    markShuffleShown(round) {
+      if (s) {
+        s.shuffleShown = round;
+        emit();
+      }
+    },
+    nextFromResult(round) {
+      if (!s) return;
+      s.resultSeen = round;
+      if (isHostNow() && s.room.phase === 'result' && s.room.round === round) toSelect();
+      emit();
+    },
+    reportResult(round, result, quit, opts) {
+      const me = selfMember();
+      if (!me || !round) return;
+      if (me.res && me.res.startId === round) return;
+      me.res = rhythmMultiCleanResult({
+        startId: round,
+        score: result && result.score,
+        maxCombo: result && result.maxCombo,
+        cleared: result ? result.cleared !== false : false,
+        quit: quit === true,
+        diffId: opts && opts.diffId,
+        fc: result && result.cleared !== false ? result.allMarvelous ? 3 : result.allExcellent ? 2 : result.fullCombo ? 1 : 0 : 0,
+        j: result && result.judgments ? RHYTHM_MULTI_JUDGMENT_IDS.map(id => result.judgments[id]) : null,
+        fs: result && result.fast,
+        sl: result && result.slow
+      });
+      me.playing = false;
+      if (quit === true && !(opts && opts.noPenalty) && s.mode !== 'private') void rhythmMultiPenaltyMark();
+      if (socket) socket.send({
+        t: 'res',
+        id: s.selfId,
+        res: me.res
+      });
+      sendHb();
+      emit();
+    },
+    sendChat(text) {
+      if (!s || !socket) return false;
+      const clean = rhythmMultiText(text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
+      const me = selfMember();
+      if (!clean || !me || Date.now() - s.lastChatAt < RHYTHM_MULTI_CHAT_INTERVAL_MS) return false;
+      s.lastChatAt = Date.now();
+      return socket.send({
+        t: 'chat',
+        id: s.selfId,
+        name: me.name,
+        text: clean,
+        cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`
+      });
+    },
+    hasReported(round) {
+      const me = selfMember();
+      return !!(me && me.res && me.res.startId === round);
+    },
+    myDiff() {
+      const me = selfMember();
+      return me ? me.diff : '';
+    }
+  };
+  return api;
+})();
+const useRhythmMultiView = () => {
+  const [view, setView] = React.useState(() => RHYTHM_MULTI.view());
+  React.useEffect(() => {
+    const refresh = () => setView(RHYTHM_MULTI.view());
+    refresh();
+    return RHYTHM_MULTI.subscribe(refresh);
+  }, []);
+  return view;
+};
+const rhythmMultiPickDifficulty = (available, wishId, orderIds) => {
+  if (!available.length) return null;
+  const exact = available.find(d => d.id === wishId);
+  if (exact) return exact;
+  const rank = id => orderIds.indexOf(id);
+  const want = rank(wishId);
+  const lower = available.filter(d => rank(d.id) < want).sort((a, b) => rank(b.id) - rank(a.id));
+  if (lower.length) return lower[0];
+  return available.slice().sort((a, b) => rank(a.id) - rank(b.id))[0];
+};
+function RhythmMultiChatPanel({
+  view
+}) {
+  const [chatText, setChatText] = React.useState('');
+  const listRef = React.useRef(null);
+  const count = view && view.chat ? view.chat.length : 0;
+  React.useEffect(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [count]);
+  const submit = () => {
+    if (RHYTHM_MULTI.sendChat(chatText)) setChatText('');
+  };
+  return React.createElement("section", {
+    "data-rhythm-multi-chat": true,
+    className: "rounded-2xl border border-white/15 bg-slate-900/95 p-3"
+  }, React.createElement("h3", {
+    className: "text-xs font-black text-slate-300"
+  }, "チャット"), React.createElement("ul", {
+    ref: listRef,
+    "data-rhythm-multi-chat-list": true,
+    className: "mt-1 max-h-40 min-h-[3rem] space-y-1 overflow-y-auto rounded-lg bg-slate-950/60 p-2 text-sm font-bold"
+  }, count === 0 && React.createElement("li", {
+    className: "text-[11px] text-slate-500"
+  }, "まだ発言はありません"), view.chat.map(c => React.createElement("li", {
+    key: c.cid,
+    "data-rhythm-multi-chat-line": true,
+    className: "break-words leading-snug"
+  }, React.createElement("b", {
+    className: c.id === view.selfId ? 'text-cyan-300' : 'text-amber-200'
+  }, c.name), React.createElement("span", {
+    className: "text-slate-400"
+  }, ": "), c.text))), React.createElement("div", {
+    className: "mt-2 flex flex-wrap gap-1.5"
+  }, RHYTHM_MULTI_CHAT_STAMPS.map(stamp => React.createElement("button", {
+    key: stamp,
+    "data-rhythm-multi-chat-stamp": true,
+    type: "button",
+    onClick: () => RHYTHM_MULTI.sendChat(stamp),
+    className: "min-h-[36px] rounded-full bg-slate-700 px-3 text-xs font-black"
+  }, stamp))), React.createElement("form", {
+    className: "mt-2 flex gap-2",
+    onSubmit: e => {
+      e.preventDefault();
+      submit();
+    }
+  }, React.createElement("input", {
+    "data-rhythm-multi-chat-input": true,
+    value: chatText,
+    maxLength: RHYTHM_MULTI_CHAT_MAX_LENGTH,
+    autoComplete: "off",
+    enterKeyHint: "send",
+    onChange: e => setChatText(e.target.value),
+    placeholder: `ひとこと(${RHYTHM_MULTI_CHAT_MAX_LENGTH}文字まで)`,
+    className: "min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white"
+  }), React.createElement("button", {
+    "data-rhythm-multi-chat-send": true,
+    type: "submit",
+    disabled: !chatText.trim(),
+    className: "min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-4 text-sm font-black disabled:opacity-40"
+  }, "送信")));
+}
+function RhythmMultiAvatar({
+  m,
+  resolveIconUrl,
+  sizeClass = 'h-10 w-10'
+}) {
+  const src = resolveIconUrl ? resolveIconUrl(m.icon) : null;
+  return React.createElement(ProfileAvatar, {
+    src: src,
+    id: m.icon,
+    frameId: m.frame,
+    alt: "",
+    className: sizeClass,
+    fallback: React.createElement("span", {
+      "aria-hidden": "true",
+      className: "flex h-full w-full items-center justify-center bg-slate-800 text-lg"
+    }, "🎵")
+  });
+}
+function RhythmMultiMemberCards({
+  members,
+  hostId,
+  selfId,
+  resolveIconUrl,
+  badgeOf,
+  size = 'tall'
+}) {
+  const tall = size === 'tall';
+  return React.createElement("ul", {
+    "data-rhythm-multi-cards": true,
+    className: tall ? 'grid min-h-[120px] max-h-[230px] flex-1 grid-cols-5 gap-1.5 bg-slate-900/40 px-2 pb-2 pt-3 landscape:max-h-none landscape:gap-2 landscape:px-3' : 'grid shrink-0 grid-cols-5 gap-1 border-b border-white/10 bg-slate-900/70 px-1.5 pb-1 pt-2 landscape:pt-1.5'
+  }, Array.from({
+    length: RHYTHM_MULTI_ROOM_MAX
+  }).map((_, i) => {
+    const m = members[i];
+    if (!m) return React.createElement("li", {
+      key: i,
+      className: `flex items-center justify-center rounded-xl border border-dashed border-white/10 text-[10px] font-black text-slate-600 ${tall ? '' : 'h-[60px] landscape:h-[38px]'}`
+    }, "募集中");
+    const badge = badgeOf(m);
+    const self = m.id === selfId;
+    return React.createElement("li", {
+      key: m.id,
+      "data-rhythm-multi-member": true,
+      className: `relative flex min-h-0 min-w-0 rounded-xl ${self ? 'border border-cyan-300/70 bg-cyan-950/50' : 'border border-white/10 bg-slate-950/70'} ${tall ? 'flex-col items-center justify-center px-1 pb-1.5 pt-3' : 'h-[60px] flex-col items-center px-0.5 pt-1.5 landscape:h-[38px] landscape:flex-row landscape:gap-1 landscape:px-1 landscape:pt-0'}`
+    }, React.createElement("small", {
+      "data-rhythm-multi-member-badge": true,
+      className: `absolute -top-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-black leading-tight ${badge.cls}`
+    }, badge.text), React.createElement("span", {
+      className: "relative shrink-0"
+    }, React.createElement(RhythmMultiAvatar, {
+      m: m,
+      resolveIconUrl: resolveIconUrl,
+      sizeClass: tall ? 'h-12 w-12 landscape:h-16 landscape:w-16' : 'h-7 w-7'
+    }), m.id === hostId && React.createElement("span", {
+      "aria-hidden": "true",
+      className: "absolute -right-1.5 -top-1.5 text-[11px]"
+    }, "👑")), React.createElement("span", {
+      className: `min-w-0 ${tall ? 'mt-1 w-full text-center' : 'mt-0.5 w-full text-center landscape:mt-0 landscape:flex-1 landscape:text-left'}`
+    }, React.createElement("span", {
+      className: `block truncate font-black leading-tight ${tall ? 'text-[11px] landscape:text-sm' : 'text-[10px]'}`
+    }, m.name, self ? '*' : ''), badge.sub && React.createElement("small", {
+      className: `block truncate font-bold leading-tight text-slate-400 ${tall ? 'text-[9px] landscape:text-[11px]' : 'text-[8px]'}`
+    }, badge.sub)));
+  }));
+}
+const RHYTHM_MULTI_FC_LABELS = Object.freeze(['', 'FULL COMBO!', 'ALL EXCELLENT!', 'ALL MARVELOUS!']);
+function RhythmMultiScreen({
+  profile,
+  songs,
+  difficultiesOf,
+  difficultyList,
+  bestRecords,
+  resolveIconUrl,
+  quickRunInfo = null,
+  onBack,
+  onStartPlay
+}) {
+  const view = useRhythmMultiView();
+  const difficultyIds = difficultyList.map(d => d.id);
+  const songIds = songs.map(song => song.songId);
+  React.useEffect(() => {
+    RHYTHM_MULTI.setCatalog(songIds);
+  }, [songIds.join(',')]);
+  const [codeInput, setCodeInput] = React.useState('');
+  const [message, setMessage] = React.useState('');
+  const [searching, setSearching] = React.useState(null);
+  const [countdown, setCountdown] = React.useState(null);
+  const [copied, setCopied] = React.useState(false);
+  const [chatOpen, setChatOpen] = React.useState(false);
+  const [statsOpen, setStatsOpen] = React.useState(false);
+  const mine = view ? view.members.find(m => m.id === view.selfId) : null;
+  const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
+  const [selectView, setSelectView] = React.useState(null);
+  const songById = songId => songs.find(song => song.songId === songId) || null;
+  const defaultDiff = difficultyIds.includes('NORMAL') ? 'NORMAL' : difficultyIds[0] || '';
+  const me = mine;
+  const isHost = !!view && view.hostId === view.selfId;
+  const room = view ? view.room : null;
+  const myDiffId = me && me.diff ? me.diff : defaultDiff;
+  const drawnSong = room && room.songId ? songById(room.songId) : null;
+  const drawnDiffs = drawnSong ? difficultiesOf(drawnSong) : [];
+  const drawnOpenDiffs = drawnSong ? drawnDiffs.filter(d => rhythmDifficultyUnlocked(drawnSong.songId, d.id, bestRecords)) : [];
+  const pickPlayDifficulty = () => rhythmMultiPickDifficulty(drawnOpenDiffs.length ? drawnOpenDiffs : drawnDiffs, RHYTHM_MULTI.myDiff() || defaultDiff, difficultyIds);
+  const friendsOn = RELEASE_FLAGS.friends === true;
+  const [friendSelfId, setFriendSelfId] = React.useState('');
+  const [roster, setRoster] = React.useState(null);
+  const [friendInvites, setFriendInvites] = React.useState([]);
+  const [invitePanel, setInvitePanel] = React.useState(false);
+  const [invitedIds, setInvitedIds] = React.useState({});
+  const [inviteMessage, setInviteMessage] = React.useState('');
+  const loadRoster = React.useCallback(async id => {
+    try {
+      setRoster(await sbFetchFriendRoster(id));
+    } catch (_) {
+      setRoster([]);
+    }
+  }, []);
+  React.useEffect(() => {
+    if (!friendsOn) return undefined;
+    let cancelled = false;
+    (async () => {
+      const id = await ensureBreederId();
+      if (cancelled || !id) return;
+      setFriendSelfId(id);
+      await loadRoster(id);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [friendsOn]);
+  const hasRoster = !!(roster && roster.length);
+  React.useEffect(() => {
+    if (!friendsOn || view || !friendSelfId || !hasRoster) {
+      setFriendInvites([]);
+      return undefined;
+    }
+    let cancelled = false;
+    const ids = new Set(roster.map(friend => friend.otherId));
+    const poll = async () => {
+      try {
+        const list = await sbFetchRoomInvites(friendSelfId, Date.now());
+        if (!cancelled) setFriendInvites(list.filter(invite => ids.has(invite.senderId)));
+      } catch (_) {}
+    };
+    poll();
+    const timer = setInterval(poll, FRIEND_INVITE_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [friendsOn, !!view, friendSelfId, roster]);
+  const friendNameOf = id => ((roster || []).find(friend => friend.otherId === id) || {}).userName || 'フレンド';
+  const openInvitePanel = () => {
+    const next = !invitePanel;
+    setInvitePanel(next);
+    setInviteMessage('');
+    if (next && friendSelfId) loadRoster(friendSelfId);
+  };
+  const inviteFriend = async friendId => {
+    if (!view || !friendSelfId) return;
+    const result = await sbSendRoomInvite(friendSelfId, friendId, view.code);
+    if (result === 'invited') {
+      setInvitedIds(prev => ({
+        ...prev,
+        [friendId]: true
+      }));
+      setInviteMessage('');
+    } else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう一度ためしてください');
+  };
+  React.useEffect(() => RHYTHM_MULTI.onStart(info => {
+    setCountdown({
+      info,
+      left: RHYTHM_MULTI_START_COUNTDOWN_SEC
+    });
+    setChatOpen(false);
+  }), []);
+  React.useEffect(() => {
+    if (!countdown) return undefined;
+    if (countdown.left <= 0) {
+      const song = songById(countdown.info.songId);
+      const diffs = song ? difficultiesOf(song) : [];
+      const open = song ? diffs.filter(d => rhythmDifficultyUnlocked(song.songId, d.id, bestRecords)) : [];
+      const diff = song ? rhythmMultiPickDifficulty(open.length ? open : diffs, RHYTHM_MULTI.myDiff() || defaultDiff, difficultyIds) : null;
+      setCountdown(null);
+      if (song && diff) onStartPlay(song, diff, countdown.info.round, countdown.info.count);else RHYTHM_MULTI.reportResult(countdown.info.round, null, true, {
+        noPenalty: true
+      });
+      return undefined;
+    }
+    const timer = setTimeout(() => setCountdown(c => c ? {
+      ...c,
+      left: c.left - 1
+    } : c), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
+  const shuffleRound = room && room.phase === 'ready' && view.shuffleShown !== room.round ? room.round : '';
+  const [shuffleIndex, setShuffleIndex] = React.useState(0);
+  const [shuffleStopped, setShuffleStopped] = React.useState(false);
+  React.useEffect(() => {
+    if (!shuffleRound) return undefined;
+    setShuffleStopped(false);
+    const tick = setInterval(() => setShuffleIndex(n => n + 1), 110);
+    const stop = setTimeout(() => {
+      clearInterval(tick);
+      setShuffleStopped(true);
+    }, RHYTHM_MULTI_SHUFFLE_MS - 800);
+    const done = setTimeout(() => RHYTHM_MULTI.markShuffleShown(shuffleRound), RHYTHM_MULTI_SHUFFLE_MS);
+    return () => {
+      clearInterval(tick);
+      clearTimeout(stop);
+      clearTimeout(done);
+    };
+  }, [shuffleRound]);
+  const myProfile = () => ({
+    name: profile.name,
+    level: profile.level,
+    icon: profile.icon,
+    frame: profile.frame,
+    diff: defaultDiff
+  });
+  const createPrivate = () => {
+    setMessage('');
+    RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private');
+  };
+  const joinFromInvite = invite => {
+    setMessage('');
+    RHYTHM_MULTI.join(invite.roomCode, myProfile(), 'private');
+  };
+  const joinPrivate = () => {
+    const code = rhythmMultiNormalizeCode(codeInput);
+    if (!code) {
+      setMessage(`部屋コードは${RHYTHM_MULTI_CODE_LENGTH}文字です`);
+      return;
+    }
+    setMessage('');
+    RHYTHM_MULTI.join(code, myProfile(), 'private');
+  };
+  const searchRoom = async kind => {
+    setMessage('');
+    if (kind === 'veteran' && profile.level < RHYTHM_MULTI_VETERAN_MIN_LEVEL) {
+      setMessage(`ベテランルームはブリーダーLv.${RHYTHM_MULTI_VETERAN_MIN_LEVEL}以上で入れます`);
+      return;
+    }
+    const left = await rhythmMultiPenaltyLeftMs();
+    if (left > 0) {
+      setMessage(`途中でやめたため、あと${Math.ceil(left / 60000)}分は公開ルームに入れません`);
+      return;
+    }
+    setSearching(kind);
+  };
+  React.useEffect(() => {
+    if (!searching) return undefined;
+    let alive = true;
+    RHYTHM_MULTI.findRoom(searching).then(code => {
+      if (!alive) return;
+      RHYTHM_MULTI.join(code || rhythmMultiMakeCode(), myProfile(), searching);
+      setSearching(null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [searching]);
+  const leaveRoom = () => {
+    RHYTHM_MULTI.leave();
+    setCountdown(null);
+    setChatOpen(false);
+    setSearching(null);
+  };
+  const shareCode = async () => {
+    if (!view) return;
+    const text = `モンヒロビートで協力ライブしよう! 部屋コード: ${view.code}`;
+    try {
+      if (navigator.share) await navigator.share({
+        text
+      });else if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (_) {}
+  };
+  const card = 'rounded-2xl border border-white/15 bg-slate-900/85 p-3';
+  const btn = 'min-h-[48px] rounded-xl px-3 font-black disabled:opacity-40';
+  const shell = 'relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white';
+  const header = (step, onBackClick, opts = {}) => React.createElement("header", {
+    className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
+    style: {
+      paddingTop: 'calc(0.25rem + var(--mh-sa-top))'
+    }
+  }, React.createElement("button", {
+    "data-rhythm-multi-back": true,
+    type: "button",
+    "aria-label": "戻る",
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300",
+    onClick: onBackClick
+  }, "←"), React.createElement("div", {
+    className: "min-w-0 flex-1 leading-none"
+  }, React.createElement("b", {
+    className: "block truncate text-base font-black italic tracking-wider text-cyan-200"
+  }, "MULTI LIVE"), React.createElement("small", {
+    className: "mt-0.5 block truncate text-[10px] font-black text-fuchsia-200"
+  }, "▶ ", step, view ? ` ・ ${view.mode === 'private' ? '友だち' : RHYTHM_MULTI_MODE_LABELS[view.mode]} ${view.code}` : '')), quickRunInfo && React.createElement("small", {
+    "data-rhythm-multi-quick-run": true,
+    className: `max-w-[38%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`
+  }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), opts.timer != null && React.createElement("b", {
+    "data-rhythm-multi-timer": true,
+    className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
+  }, "⏱ ", opts.timer), view && React.createElement("button", {
+    "data-rhythm-multi-chat-open": true,
+    type: "button",
+    "aria-label": "チャット",
+    onClick: () => setChatOpen(v => !v),
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-lg"
+  }, "💬"));
+  const chatSheet = chatOpen && view && React.createElement("div", {
+    "data-rhythm-multi-chat-sheet": true,
+    className: "absolute inset-x-0 bottom-0 z-[80000] max-h-[70%] overflow-y-auto border-t border-cyan-400/30 bg-slate-950 p-2 landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-none landscape:w-[46%] landscape:border-l landscape:border-t-0",
+    style: {
+      paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
+    }
+  }, React.createElement(RhythmMultiChatPanel, {
+    view: view
+  }), React.createElement("button", {
+    type: "button",
+    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 font-black",
+    onClick: () => setChatOpen(false)
+  }, "閉じる"));
+  const countdownLayer = countdown && React.createElement("div", {
+    "data-rhythm-multi-countdown": true,
+    className: "absolute inset-0 z-[90000] flex flex-col items-center justify-center bg-slate-950/90"
+  }, React.createElement("small", {
+    className: "text-[11px] font-black tracking-widest text-slate-400"
+  }, "LIVE START"), React.createElement("p", {
+    className: "px-4 text-center text-base font-black text-cyan-200"
+  }, songById(countdown.info.songId) ? rhythmSongFullName(songById(countdown.info.songId)) : ''), React.createElement("b", {
+    className: "text-8xl font-black text-white"
+  }, Math.max(1, countdown.left)));
+  if (!view && !searching) {
+    return React.createElement("main", {
+      "data-rhythm-multi": true,
+      "data-rhythm-multi-step": "rooms",
+      className: shell
+    }, header('ルームえらび', onBack), React.createElement("div", {
+      className: "min-h-0 flex-1 overflow-y-auto p-3"
+    }, React.createElement("p", {
+      className: "mb-2 text-[11px] font-bold leading-relaxed text-slate-300"
+    }, "最大", RHYTHM_MULTI_ROOM_MAX, "人の協力ライブです。曲は全員の選曲からシャッフルで決まり、全員の平均スコアでチームのランクが決まります。いちばん活躍した人はMVP。記録は自己ベストと全国ランキングにも入り、周回の報酬とビートPは人数が多いほど増えます(1人ふえるごとに+50%)。"), friendsOn && friendInvites.length > 0 && React.createElement("section", {
+      "data-rhythm-multi-friend-invites": true,
+      className: `${card} space-y-2 border-pink-400/60`
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-pink-200"
+    }, "フレンドからの招待"), friendInvites.map(invite => React.createElement("div", {
+      key: invite.senderId,
+      className: "flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5"
+    }, React.createElement("span", {
+      className: "min-w-0 flex-1 break-words text-[13px] font-black leading-snug"
+    }, friendNameOf(invite.senderId), "さんが部屋に誘っています"), React.createElement("button", {
+      "data-rhythm-multi-friend-join": true,
+      type: "button",
+      className: `${btn} shrink-0 bg-pink-700 text-xs`,
+      onClick: () => joinFromInvite(invite)
+    }, "参加する")))), React.createElement("div", {
+      className: "space-y-3 landscape:grid landscape:grid-cols-2 landscape:gap-3 landscape:space-y-0"
+    }, React.createElement("section", {
+      className: `${card} space-y-2`
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-slate-300"
+    }, "知らない人と遊ぶ"), React.createElement("button", {
+      "data-rhythm-multi-free": true,
+      type: "button",
+      className: `${btn} w-full bg-fuchsia-700`,
+      onClick: () => searchRoom('free')
+    }, "フリールーム", React.createElement("small", {
+      className: "block text-[10px] font-bold text-fuchsia-100/80"
+    }, "だれでも入れます")), React.createElement("button", {
+      "data-rhythm-multi-veteran": true,
+      type: "button",
+      className: `${btn} w-full ${profile.level >= RHYTHM_MULTI_VETERAN_MIN_LEVEL ? 'bg-amber-700' : 'bg-slate-700'}`,
+      onClick: () => searchRoom('veteran')
+    }, "ベテランルーム", React.createElement("small", {
+      className: "block text-[10px] font-bold text-amber-100/80"
+    }, "ブリーダーLv.", RHYTHM_MULTI_VETERAN_MIN_LEVEL, "以上", profile.level >= RHYTHM_MULTI_VETERAN_MIN_LEVEL ? '' : '(まだ入れません)'))), React.createElement("section", {
+      className: `${card} space-y-2`
+    }, React.createElement("h3", {
+      className: "text-xs font-black text-slate-300"
+    }, "友だちと遊ぶ(プライベートルーム)"), React.createElement("button", {
+      "data-rhythm-multi-create": true,
+      type: "button",
+      className: `${btn} w-full bg-indigo-700`,
+      onClick: createPrivate
+    }, "ルームを作成"), React.createElement("div", {
+      className: "flex gap-2"
+    }, React.createElement("input", {
+      id: "rhythm-multi-code",
+      "data-rhythm-multi-code-input": true,
+      "aria-label": "ルームコード",
+      value: codeInput,
+      maxLength: 8,
+      autoCapitalize: "characters",
+      autoComplete: "off",
+      spellCheck: false,
+      onChange: e => setCodeInput(e.target.value.toUpperCase()),
+      className: "min-h-[48px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-center text-xl font-black tracking-[0.4em] text-white",
+      placeholder: "ABCD"
+    }), React.createElement("button", {
+      "data-rhythm-multi-join": true,
+      type: "button",
+      className: `${btn} bg-indigo-700`,
+      onClick: joinPrivate
+    }, "参加")))), message && React.createElement("p", {
+      "data-rhythm-multi-message": true,
+      className: "mt-2 text-[12px] font-black text-rose-300"
+    }, message)));
+  }
+  const members = view ? view.members : [];
+  const phase = room ? room.phase : 'matching';
+  const participant = !!room && room.participants.includes(view.selfId);
+  const team = room && room.round && (phase === 'playing' || phase === 'result') ? rhythmMultiTeamResult(members, room.round, room.participants) : null;
+  const showResult = !!team && participant && view.resultSeen !== room.round && (phase === 'result' || me && me.res && me.res.startId === room.round);
+  if (!view || view.full || phase === 'matching' && !countdown) {
+    const publicRoom = !!view && view.mode !== 'private';
+    return React.createElement("main", {
+      "data-rhythm-multi": true,
+      "data-rhythm-multi-step": "matching",
+      className: shell
+    }, header('マッチング', () => {
+      leaveRoom();
+      if (!view) onBack();
+    }), view && view.full ? React.createElement("div", {
+      className: "min-h-0 flex-1 overflow-y-auto p-3"
+    }, React.createElement("section", {
+      "data-rhythm-multi-full": true,
+      className: card
+    }, React.createElement("p", {
+      className: "text-sm font-black text-rose-300"
+    }, "このルームは満員です(最大", RHYTHM_MULTI_ROOM_MAX, "人)"), React.createElement("button", {
+      type: "button",
+      className: `${btn} mt-2 w-full bg-slate-700`,
+      onClick: leaveRoom
+    }, "ルームえらびへ戻る"))) : React.createElement(React.Fragment, null, React.createElement(RhythmMultiMemberCards, {
+      members: members,
+      hostId: view ? view.hostId : '',
+      selfId: view ? view.selfId : '',
+      resolveIconUrl: resolveIconUrl,
+      size: "tall",
+      badgeOf: m => ({
+        text: view && m.id === view.hostId ? 'ホスト' : '入室',
+        cls: view && m.id === view.hostId ? 'bg-amber-400 text-slate-950' : 'bg-cyan-500 text-slate-950',
+        sub: `Lv.${m.level}`
+      })
+    }), React.createElement("div", {
+      className: "mt-auto max-h-[52%] shrink-0 overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2",
+      style: {
+        paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
+      }
+    }, React.createElement("section", {
+      "data-rhythm-multi-matching": true,
+      className: "rounded-2xl border border-white/15 bg-slate-900/85 p-2"
+    }, React.createElement("p", {
+      className: "animate-pulse text-sm font-black text-amber-200"
+    }, !view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームをさがしています…` : 'メンバーを待っています…'), React.createElement("p", {
+      className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400"
+    }, !view ? '' : publicRoom ? `${RHYTHM_MULTI_ROOM_MAX}人そろうか、2人以上でしばらく待つとメンバーが確定します` : isHost ? '2人以上そろったら「メンバー確定」を押してください' : 'ホストがメンバーを確定するのを待っています'), view && React.createElement("div", {
+      className: "mt-1 flex items-center gap-2"
+    }, React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("small", {
+      className: "block text-[9px] font-black text-slate-400"
+    }, "ルームコード"), React.createElement("b", {
+      "data-rhythm-multi-room-code": true,
+      className: "block text-2xl font-black leading-none tracking-[0.3em] text-cyan-200"
+    }, view.code), view.status !== 'open' && React.createElement("small", {
+      className: "block text-[9px] font-black text-amber-300"
+    }, view.status === 'connecting' ? 'ルームへつないでいます…' : 'つなぎ直しています…')), React.createElement("button", {
+      "data-rhythm-multi-share": true,
+      type: "button",
+      className: "min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black",
+      onClick: shareCode
+    }, copied ? 'コピーした!' : '友だちに送る'))), React.createElement("div", {
+      className: "mt-2 space-y-2 landscape:mt-0"
+    }, view && isHost && view.mode === 'private' && me && React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, React.createElement("button", {
+      "data-rhythm-multi-open": true,
+      type: "button",
+      onClick: () => RHYTHM_MULTI.setOpen(!me.open),
+      className: `min-h-[48px] rounded-xl px-2 text-xs font-black ${me.open ? 'bg-amber-600' : 'bg-slate-700'}`
+    }, me.open ? 'ルーム解放中' : 'ルーム解放', React.createElement("small", {
+      className: "block text-[9px] font-bold opacity-80"
+    }, me.open ? 'タップでやめる' : '知らない人も呼ぶ')), React.createElement("button", {
+      "data-rhythm-multi-confirm": true,
+      type: "button",
+      disabled: members.length < 2,
+      onClick: () => RHYTHM_MULTI.confirmMembers(),
+      className: "min-h-[48px] rounded-xl bg-fuchsia-700 px-2 text-sm font-black disabled:opacity-40"
+    }, "メンバー確定")), friendsOn && view && view.mode === 'private' && React.createElement("section", {
+      "data-rhythm-multi-friend-invite": true,
+      className: card
+    }, React.createElement("button", {
+      "data-rhythm-multi-friend-invite-toggle": true,
+      type: "button",
+      className: `${btn} w-full bg-pink-700`,
+      onClick: openInvitePanel
+    }, invitePanel ? 'フレンドの招待をとじる' : 'フレンドを招待する'), invitePanel && React.createElement("div", {
+      className: "mt-2 space-y-1"
+    }, roster === null && React.createElement("p", {
+      className: "text-[11px] font-bold text-slate-400"
+    }, "フレンドを読み込んでいます…"), roster !== null && roster.length === 0 && React.createElement("p", {
+      className: "text-[11px] font-bold leading-relaxed text-slate-400"
+    }, "まだフレンドがいません。プロフィールの「フレンド」から、フレンドコードで申請できます。"), (roster || []).map(friend => React.createElement("div", {
+      key: friend.otherId,
+      "data-rhythm-multi-friend-row": true,
+      className: "flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5"
+    }, React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("b", {
+      className: "block truncate text-sm font-black"
+    }, friend.userName), React.createElement("small", {
+      className: "block truncate text-[10px] font-bold text-slate-400"
+    }, friendsLastSeenText(friend.lastSeenAt, Date.now()))), React.createElement("button", {
+      "data-rhythm-multi-friend-send": true,
+      type: "button",
+      disabled: !!invitedIds[friend.otherId],
+      onClick: () => inviteFriend(friend.otherId),
+      className: `${btn} shrink-0 text-xs ${invitedIds[friend.otherId] ? 'bg-slate-700' : 'bg-pink-700'}`
+    }, invitedIds[friend.otherId] ? '招待ずみ' : '招待する'))), inviteMessage && React.createElement("p", {
+      "data-rhythm-multi-friend-message": true,
+      className: "text-[11px] font-black text-rose-300"
+    }, inviteMessage), React.createElement("p", {
+      className: "text-[10px] font-bold leading-relaxed text-slate-400"
+    }, "招待は3分のあいだ届きます。相手がマルチの入口をひらくと「参加する」が出ます。"))), React.createElement("button", {
+      "data-rhythm-multi-leave": true,
+      type: "button",
+      className: `${btn} w-full bg-slate-700`,
+      onClick: leaveRoom
+    }, view ? 'ルームを出る' : 'やめる'), message && React.createElement("p", {
+      className: "text-[12px] font-black text-rose-300"
+    }, message)))), chatSheet);
+  }
+  if (showResult) {
+    const fill = Math.min(1, Math.max(0, team.average / 1000000));
+    const marks = ['C', 'B', 'A', 'S', 'SS'].map(id => ({
+      id,
+      pos: (RHYTHM_RANKS.find(r => r.id === id) || {
+        min: 0
+      }).min / 1000000
+    }));
+    const drawnLevel = diffId => drawnSong && drawnSong.difficulties && drawnSong.difficulties[diffId] ? Number(drawnSong.difficulties[diffId].level) || 0 : 0;
+    return React.createElement("main", {
+      "data-rhythm-multi": true,
+      "data-rhythm-multi-step": "result",
+      className: `${shell} bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950`
+    }, React.createElement("b", {
+      "aria-hidden": "true",
+      className: "pointer-events-none absolute left-2 top-0 text-6xl font-black italic tracking-widest text-white/[0.06]",
+      style: {
+        top: 'var(--mh-sa-top)'
+      }
+    }, "RESULT"), React.createElement("section", {
+      "data-rhythm-multi-results": true,
+      className: "relative mx-2 mt-2 flex shrink-0 items-center gap-3 rounded-2xl border border-white/15 bg-slate-900/90 p-2",
+      style: {
+        marginTop: 'calc(.5rem + var(--mh-sa-top))'
+      }
+    }, drawnSong && React.createElement("span", {
+      className: "h-12 w-12 shrink-0 landscape:h-14 landscape:w-14"
+    }, React.createElement(RhythmSongArt, {
+      song: drawnSong,
+      marked: false
+    })), React.createElement("div", {
+      className: "min-w-0 flex-1 landscape:max-w-[34%]"
+    }, React.createElement("b", {
+      className: "block truncate text-sm font-black"
+    }, drawnSong ? rhythmSongFullName(drawnSong) : ''), React.createElement("small", {
+      className: "block text-[10px] font-black text-slate-400"
+    }, team.waiting ? 'ほかの人のライブが終わるのを待っています…' : `チームの平均 ${team.average.toLocaleString()}`)), React.createElement("div", {
+      className: "hidden min-w-0 flex-1 landscape:block"
+    }, React.createElement("div", {
+      "data-rhythm-multi-gauge": true,
+      className: "relative mt-3 h-3 rounded-full bg-slate-800"
+    }, React.createElement("div", {
+      className: "h-full rounded-full bg-gradient-to-r from-rose-400 via-amber-300 via-emerald-300 to-violet-400",
+      style: {
+        width: `${Math.round(fill * 100)}%`
+      }
+    }), marks.map(mk => React.createElement("span", {
+      key: mk.id,
+      className: "absolute top-0 h-3 w-px bg-white/70",
+      style: {
+        left: `${Math.round(mk.pos * 100)}%`
+      }
+    }, React.createElement("small", {
+      className: "absolute -top-3.5 -translate-x-1/2 text-[9px] font-black text-slate-300"
+    }, mk.id))))), React.createElement("div", {
+      className: "flex w-16 shrink-0 flex-col items-center"
+    }, React.createElement("b", {
+      "data-rhythm-multi-team-rank": true,
+      className: "text-5xl font-black leading-none text-amber-300 drop-shadow"
+    }, team.waiting ? '…' : team.rank), React.createElement("small", {
+      className: "text-[8px] font-black tracking-widest text-slate-400"
+    }, "SCORE RANK"))), React.createElement("div", {
+      className: "mx-3 mt-4 shrink-0 landscape:hidden"
+    }, React.createElement("div", {
+      className: "relative h-2.5 rounded-full bg-slate-800"
+    }, React.createElement("div", {
+      className: "h-full rounded-full bg-gradient-to-r from-rose-400 via-amber-300 via-emerald-300 to-violet-400",
+      style: {
+        width: `${Math.round(fill * 100)}%`
+      }
+    }), marks.map(mk => React.createElement("span", {
+      key: mk.id,
+      className: "absolute top-0 h-2.5 w-px bg-white/70",
+      style: {
+        left: `${Math.round(mk.pos * 100)}%`
+      }
+    }, React.createElement("small", {
+      className: "absolute -top-3.5 -translate-x-1/2 text-[9px] font-black text-slate-300"
+    }, mk.id))))), React.createElement("ul", {
+      className: "grid max-h-[260px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3"
+    }, Array.from({
+      length: RHYTHM_MULTI_ROOM_MAX
+    }).map((_, i) => {
+      const r = team.rows[i];
+      if (!r) return React.createElement("li", {
+        key: `empty${i}`,
+        "aria-hidden": "true",
+        className: "rounded-xl border border-dashed border-white/5"
+      });
+      const isMvp = r.m.id === team.mvpId && !team.waiting;
+      const lv = r.res ? drawnLevel(r.res.diffId) : 0;
+      return React.createElement("li", {
+        key: r.m.id,
+        "data-rhythm-multi-result-row": true,
+        className: `relative flex min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 pt-3 text-center ${isMvp ? 'border-2 border-pink-400 bg-pink-950/40 shadow-[0_0_14px_rgba(244,114,182,.5)]' : 'border border-white/10 bg-slate-900/80'}`
+      }, isMvp && React.createElement("b", {
+        "data-rhythm-multi-mvp": true,
+        className: "absolute left-1/2 top-0.5 -translate-x-1/2 whitespace-nowrap rounded-full bg-pink-500 px-1.5 py-px text-[9px] font-black text-white"
+      }, "★MVP★"), React.createElement(RhythmMultiAvatar, {
+        m: r.m,
+        resolveIconUrl: resolveIconUrl,
+        sizeClass: "h-12 w-12 landscape:h-16 landscape:w-16"
+      }), React.createElement("span", {
+        className: "mt-1 w-full truncate text-[10px] font-black landscape:text-xs"
+      }, r.m.name, r.m.id === view.selfId ? '(あなた)' : ''), React.createElement("small", {
+        className: "block h-3 text-[7px] font-black italic leading-3 text-pink-300 landscape:text-[9px]"
+      }, r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''), React.createElement("b", {
+        className: "block w-full text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal"
+      }, r.res ? r.res.quit ? 'リタイア' : String(r.res.score).padStart(8, '0') : r.m.gone ? '—' : 'ライブ中…'), r.res && !r.res.quit && React.createElement(React.Fragment, null, React.createElement("small", {
+        className: "mt-1 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px]"
+      }, r.res.diffId || '-', lv ? ` Lv.${lv}` : ''), !r.res.cleared && React.createElement("small", {
+        className: "text-[8px] font-black text-rose-300"
+      }, "失敗")));
+    })), React.createElement("div", {
+      className: "mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent",
+      style: {
+        paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
+      }
+    }, React.createElement("button", {
+      "data-rhythm-multi-member-stats": true,
+      type: "button",
+      onClick: () => setStatsOpen(true),
+      className: "min-h-[46px] flex-1 rounded-full border border-white/30 bg-slate-800 px-4 text-sm font-black landscape:w-48 landscape:flex-none"
+    }, "メンバーの成績"), React.createElement("button", {
+      "data-rhythm-multi-result-next": true,
+      type: "button",
+      disabled: team.waiting,
+      onClick: () => RHYTHM_MULTI.nextFromResult(room.round),
+      className: "min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 disabled:opacity-40 landscape:w-56 landscape:flex-none"
+    }, team.waiting ? 'みんなを待っています' : '次へ')), statsOpen && React.createElement("div", {
+      "data-rhythm-multi-stats": true,
+      className: "absolute inset-0 z-[85000] flex flex-col bg-slate-950",
+      style: {
+        paddingTop: 'var(--mh-sa-top)',
+        paddingBottom: 'var(--mh-sa-bottom)'
+      }
+    }, React.createElement("div", {
+      className: "flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2"
+    }, React.createElement("b", {
+      className: "min-w-0 flex-1 truncate text-sm font-black"
+    }, "メンバーの成績", drawnSong ? ` ・ ${rhythmSongFullName(drawnSong)}` : ''), React.createElement("button", {
+      type: "button",
+      className: "min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-4 text-sm font-black",
+      onClick: () => setStatsOpen(false)
+    }, "閉じる")), React.createElement("div", {
+      className: "min-h-0 flex-1 overflow-auto p-2"
+    }, React.createElement("table", {
+      className: "w-full min-w-[640px] border-separate border-spacing-y-1 text-center text-[11px] font-black"
+    }, React.createElement("thead", null, React.createElement("tr", {
+      className: "text-[10px] text-slate-400"
+    }, React.createElement("th", {
+      className: "px-1 text-left"
+    }, "メンバー"), React.createElement("th", {
+      className: "px-1"
+    }, "難易度"), React.createElement("th", {
+      className: "px-1"
+    }, "スコア"), React.createElement("th", {
+      className: "px-1"
+    }, "最大コンボ"), RHYTHM_MULTI_JUDGMENT_IDS.map(id => React.createElement("th", {
+      key: id,
+      className: "px-1",
+      style: {
+        color: rhythmJudgmentColor(id)
+      }
+    }, id)), React.createElement("th", {
+      className: "px-1"
+    }, "FAST / SLOW"))), React.createElement("tbody", null, team.rows.map(r => React.createElement("tr", {
+      key: r.m.id,
+      "data-rhythm-multi-stats-row": true,
+      className: r.m.id === team.mvpId ? 'bg-pink-950/50' : 'bg-slate-900/80'
+    }, React.createElement("td", {
+      className: "rounded-l-lg px-1 py-1.5 text-left"
+    }, React.createElement("span", {
+      className: "flex items-center gap-1.5"
+    }, React.createElement(RhythmMultiAvatar, {
+      m: r.m,
+      resolveIconUrl: resolveIconUrl,
+      sizeClass: "h-7 w-7"
+    }), React.createElement("span", {
+      className: "max-w-[7rem] truncate"
+    }, r.m.name), r.m.id === team.mvpId && React.createElement("small", {
+      className: "rounded bg-pink-500 px-1 text-[8px] text-white"
+    }, "MVP"))), React.createElement("td", {
+      className: "px-1"
+    }, r.res ? r.res.diffId || '-' : '-'), React.createElement("td", {
+      className: "px-1 tabular-nums"
+    }, r.res ? r.res.quit ? 'リタイア' : r.res.score.toLocaleString() : '—'), React.createElement("td", {
+      className: "px-1 tabular-nums"
+    }, r.res && !r.res.quit ? r.res.maxCombo : '—'), RHYTHM_MULTI_JUDGMENT_IDS.map((id, k) => React.createElement("td", {
+      key: id,
+      className: "px-1 tabular-nums"
+    }, r.res && !r.res.quit && r.res.j ? r.res.j[k] : '—')), React.createElement("td", {
+      className: "rounded-r-lg px-1 tabular-nums"
+    }, r.res && !r.res.quit ? `${r.res.fs} / ${r.res.sl}` : '—'))))))));
+  }
+  if (phase === 'playing' || phase === 'result') {
+    return React.createElement("main", {
+      "data-rhythm-multi": true,
+      "data-rhythm-multi-step": "waiting",
+      className: shell
+    }, header(phase === 'playing' ? 'ライブ中' : '次の選曲を待っています', leaveRoom), React.createElement(RhythmMultiMemberCards, {
+      members: members,
+      hostId: view.hostId,
+      selfId: view.selfId,
+      resolveIconUrl: resolveIconUrl,
+      size: "tall",
+      badgeOf: m => m.playing ? {
+        text: 'ライブ中',
+        cls: 'bg-amber-400 text-slate-950'
+      } : {
+        text: '待機中',
+        cls: 'bg-slate-600 text-white'
+      }
+    }), React.createElement("div", {
+      className: "mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/90 p-2 landscape:flex-row landscape:items-center",
+      style: {
+        paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
+      }
+    }, React.createElement("p", {
+      className: "min-w-0 flex-1 text-sm font-black text-amber-200"
+    }, phase === 'playing' ? 'いまライブ中です。次の曲から参加できます' : 'ホストが次へ進むのを待っています', drawnSong ? React.createElement("small", {
+      className: "block truncate text-[11px] font-bold text-slate-300"
+    }, rhythmSongFullName(drawnSong)) : null), React.createElement("button", {
+      "data-rhythm-multi-leave": true,
+      type: "button",
+      className: `${btn} bg-slate-700 landscape:w-48`,
+      onClick: leaveRoom
+    }, "ルームを出る")), chatSheet, countdownLayer);
+  }
+  if (shuffleRound) {
+    const picked = members.map(m => ({
+      m,
+      song: m.pickRound === room.round && m.pick !== RHYTHM_MULTI_OMAKASE ? songById(m.pick) : null
+    }));
+    const pool = picked.filter(x => x.song);
+    const spinning = pool.length ? pool[shuffleIndex % pool.length] : null;
+    const shown = shuffleStopped ? drawnSong : spinning ? spinning.song : songs[shuffleIndex % Math.max(1, songs.length)];
+    return React.createElement("main", {
+      "data-rhythm-multi": true,
+      "data-rhythm-multi-step": "shuffle",
+      className: shell
+    }, header('楽曲シャッフル', leaveRoom), React.createElement("div", {
+      className: "flex min-h-0 flex-1 flex-col items-center gap-3 overflow-y-auto p-3 landscape:flex-row landscape:items-stretch landscape:justify-center"
+    }, React.createElement("div", {
+      "data-rhythm-multi-shuffle": true,
+      className: `flex w-full max-w-xs shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border p-3 landscape:w-[42%] ${shuffleStopped ? 'border-amber-300 bg-amber-950/30' : 'border-fuchsia-400/40 bg-slate-900/80'}`
+    }, React.createElement("b", {
+      className: "text-lg font-black italic tracking-widest text-fuchsia-200"
+    }, "MUSIC SHUFFLE"), shown && React.createElement("span", {
+      className: "h-32 w-32 landscape:h-36 landscape:w-36"
+    }, React.createElement(RhythmSongArt, {
+      song: shown,
+      large: true,
+      marked: false
+    })), React.createElement("b", {
+      className: "w-full truncate text-center text-base font-black"
+    }, shown ? rhythmSongFullName(shown) : ''), React.createElement("small", {
+      className: `text-xs font-black text-amber-200 ${shuffleStopped ? '' : 'invisible'}`
+    }, "この曲に決まりました!")), React.createElement("ul", {
+      className: "w-full max-w-sm space-y-1 landscape:flex landscape:max-w-md landscape:flex-col landscape:justify-center"
+    }, picked.map(({
+      m,
+      song
+    }) => React.createElement("li", {
+      key: m.id,
+      className: `flex items-center gap-2 rounded-lg px-2 py-1.5 ${shuffleStopped && song && drawnSong && song.songId === drawnSong.songId ? 'bg-amber-500/25' : 'bg-slate-900/80'}`
+    }, React.createElement(RhythmMultiAvatar, {
+      m: m,
+      resolveIconUrl: resolveIconUrl,
+      sizeClass: "h-8 w-8"
+    }), React.createElement("span", {
+      className: "w-20 shrink-0 truncate text-[11px] font-black text-slate-300"
+    }, m.name), song && React.createElement("img", {
+      src: rhythmSongArtSrc(song),
+      alt: "",
+      draggable: false,
+      className: "h-8 w-8 shrink-0 rounded-md object-cover"
+    }), React.createElement("span", {
+      className: "min-w-0 flex-1 truncate text-[12px] font-black"
+    }, song ? rhythmSongFullName(song) : 'おまかせ'))))));
+  }
+  if (phase === 'ready') {
+    const iAmReady = !!me && me.readyRound === room.round;
+    const shownDiffId = (drawnOpenDiffs.find(d => d.id === myDiffId) || pickPlayDifficulty() || {}).id;
+    return React.createElement("main", {
+      "data-rhythm-multi": true,
+      "data-rhythm-multi-step": "ready",
+      className: shell
+    }, header('難易度選択', leaveRoom, {
+      timer: room.left
+    }), React.createElement(RhythmMultiMemberCards, {
+      members: members,
+      hostId: view.hostId,
+      selfId: view.selfId,
+      resolveIconUrl: resolveIconUrl,
+      size: "tall",
+      badgeOf: m => m.readyRound === room.round ? {
+        text: '準備完了',
+        cls: 'bg-emerald-400 text-slate-950',
+        sub: m.diff
+      } : {
+        text: '準備中',
+        cls: 'bg-slate-600 text-white',
+        sub: m.diff
+      }
+    }), React.createElement("div", {
+      className: "mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/95 p-2 landscape:flex-row landscape:items-center landscape:gap-3",
+      style: {
+        paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
+      }
+    }, drawnSong && React.createElement("div", {
+      className: "flex min-w-0 items-center gap-2 rounded-xl bg-slate-900/90 p-1.5 landscape:w-[32%]"
+    }, React.createElement("span", {
+      className: "h-12 w-12 shrink-0"
+    }, React.createElement(RhythmSongArt, {
+      song: drawnSong,
+      marked: false
+    })), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("small", {
+      className: "block text-[9px] font-black text-slate-400"
+    }, "ライブする曲"), React.createElement("b", {
+      "data-rhythm-multi-drawn": true,
+      className: "block truncate text-sm font-black leading-tight"
+    }, rhythmSongFullName(drawnSong)))), React.createElement("div", {
+      className: "grid grid-cols-5 gap-1.5 landscape:flex-1"
+    }, drawnDiffs.map(d => {
+      const open = drawnOpenDiffs.some(x => x.id === d.id);
+      const level = drawnSong && drawnSong.difficulties && drawnSong.difficulties[d.id] ? Number(drawnSong.difficulties[d.id].level) || 0 : 0;
+      const active = shownDiffId === d.id;
+      return React.createElement("button", {
+        key: d.id,
+        type: "button",
+        "data-rhythm-multi-difficulty": d.id,
+        disabled: !open || iAmReady,
+        onClick: () => RHYTHM_MULTI.setDiff(d.id),
+        className: `flex min-h-[52px] flex-col items-center justify-center rounded-full border-2 text-[9px] font-black disabled:opacity-40 ${active ? 'border-fuchsia-300 bg-fuchsia-600 text-white' : 'border-white/20 bg-slate-800 text-slate-200'}`
+      }, React.createElement("span", {
+        className: "text-base leading-none"
+      }, level || '-'), React.createElement("span", {
+        className: "leading-tight"
+      }, open ? d.id : '🔒'));
+    })), React.createElement("button", {
+      "data-rhythm-multi-ready": true,
+      type: "button",
+      disabled: iAmReady,
+      onClick: () => {
+        if (shownDiffId) RHYTHM_MULTI.setDiff(shownDiffId);
+        RHYTHM_MULTI.ready();
+      },
+      className: "min-h-[52px] rounded-xl bg-gradient-to-r from-teal-300 to-cyan-400 px-3 text-base font-black text-slate-950 disabled:opacity-60 landscape:w-[22%]"
+    }, iAmReady ? '準備完了!' : '準備完了', iAmReady && React.createElement("small", {
+      className: "block text-[9px] font-bold"
+    }, "ほかのメンバーを待っています"))), chatSheet, countdownLayer);
+  }
+  const myPick = me && me.pickRound === room.round ? me.pick : '';
+  const pickLabel = m => {
+    if (m.pickRound !== room.round || !m.pick) return {
+      text: '選曲中',
+      cls: 'bg-slate-600 text-white'
+    };
+    const song = m.pick === RHYTHM_MULTI_OMAKASE ? null : songById(m.pick);
+    return {
+      text: '選曲済',
+      cls: 'bg-fuchsia-400 text-slate-950',
+      sub: song ? rhythmSongFullName(song) : 'おまかせ'
+    };
+  };
+  return React.createElement("main", {
+    "data-rhythm-multi": true,
+    "data-rhythm-multi-step": "select",
+    className: shell
+  }, header('楽曲シャッフル ・ 選曲', leaveRoom, {
+    timer: room.left
+  }), React.createElement(RhythmMultiMemberCards, {
+    members: members,
+    hostId: view.hostId,
+    selfId: view.selfId,
+    resolveIconUrl: resolveIconUrl,
+    badgeOf: pickLabel,
+    size: "strip"
+  }), React.createElement(RhythmSongSelect, {
+    songs: songs,
+    difficulties: difficultyList,
+    bestRecords: bestRecords,
+    songId: selSongId,
+    difficultyId: myDiffId,
+    onSongId: id => setSelSongId(id),
+    onDifficultyId: id => RHYTHM_MULTI.setDiff(id),
+    view: selectView,
+    onView: setSelectView,
+    onPlay: (song, difficulty) => {
+      RHYTHM_MULTI.setDiff(difficulty.id);
+      RHYTHM_MULTI.pick(song.songId);
+    },
+    playLabel: myPick ? 'この曲に変更' : 'この曲で決定',
+    hideRandom: true,
+    notice: React.createElement("p", {
+      className: "rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300"
+    }, "全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。"),
+    footer: () => React.createElement("div", {
+      className: "grid grid-cols-2 gap-1.5"
+    }, React.createElement("button", {
+      "data-rhythm-multi-omakase": true,
+      type: "button",
+      "aria-pressed": myPick === RHYTHM_MULTI_OMAKASE,
+      onClick: () => RHYTHM_MULTI.pick(RHYTHM_MULTI_OMAKASE),
+      className: `flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+    }, "🔀 おまかせ", myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''), React.createElement("button", {
+      "data-rhythm-multi-leave": true,
+      type: "button",
+      onClick: leaveRoom,
+      className: "flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300"
+    }, "ルームを出る"))
+  }), chatSheet, countdownLayer);
 }
 function MonsterHeroGame() {
   const [gameState, setGameStateRaw] = useState('HOME');
@@ -75591,17 +75618,16 @@ function MonsterHeroGame() {
       settings: rhythmSettings,
       monsterEntries: rhythmPlay.from === 'multi' ? [] : rhythmMonsterNoteEntries,
       multi: rhythmPlay.from === 'multi',
+      multiRewardScale: rhythmPlay.from === 'multi' ? rhythmMultiRewardScale(rhythmPlay.multiCount) : 1,
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       quickRunAward: rhythmPlayRunAward,
       onComplete: async (result, merged) => {
-        if (rhythmPlay.from === 'multi') {
-          RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
-            diffId: rhythmPlay.difficulty.id
-          });
-          return;
-        }
+        const multiScale = rhythmPlay.from === 'multi' ? rhythmMultiRewardScale(rhythmPlay.multiCount) : 1;
+        if (rhythmPlay.from === 'multi') RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
+          diffId: rhythmPlay.difficulty.id
+        });
         if (rhythmPlay.from !== 'tutorial') {
-          const baseLoops = rhythmPlayLoopsFor(rhythmPlay.song, rhythmPlay.difficulty);
+          const baseLoops = Math.floor(rhythmPlayLoopsFor(rhythmPlay.song, rhythmPlay.difficulty) * multiScale + 1e-9);
           const loopScale = rhythmPlayRunLoopScaleFor(rhythmPlay.song);
           const cleared = result?.cleared !== false;
           const loops = rhythmPlayRunLoopsForResult(baseLoops, cleared);
@@ -75624,7 +75650,10 @@ function MonsterHeroGame() {
             baseLoops
           }) : null;
           if (awarded) {
-            setRhythmPlayRunAward(awarded);
+            setRhythmPlayRunAward(multiScale > 1 ? {
+              ...awarded,
+              multiScale
+            } : awarded);
             try {
               await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);
             } catch (_) {}
@@ -75645,13 +75674,13 @@ function MonsterHeroGame() {
         if (result?.assist === true) return;
         const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, merged);
         setRhythmBestRecords(records);
-        if (rhythmPlay.from === 'demo') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
+        if (rhythmPlay.from === 'demo' || rhythmPlay.from === 'multi') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
       },
       onExit: () => {
         if (rhythmPlay.from === 'multi' && !RHYTHM_MULTI.hasReported(rhythmPlay.multiStartId)) RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, null, true, {
           diffId: rhythmPlay.difficulty.id
         });
-        const back = rhythmPlay.from === 'calibration' ? 'RHYTHM_OPTIONS' : rhythmPlay.from === 'debug' ? 'RHYTHM_DEBUG' : rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : 'RHYTHM_DEMO_HOME';
+        const back = rhythmPlay.from === 'multi' ? 'RHYTHM_MULTI' : rhythmPlay.from === 'calibration' ? 'RHYTHM_OPTIONS' : rhythmPlay.from === 'debug' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
         setRhythmPlay(null);
         setGameState(back);
       },
@@ -75687,14 +75716,22 @@ function MonsterHeroGame() {
       difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES),
       difficultyList: rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES),
       bestRecords: rhythmBestRecords,
+      quickRunInfo: quickRunProgress ? {
+        wave,
+        loops: quickRunProgress.loops,
+        finished: !!quickRunProgress.finished,
+        catchingUp,
+        reason: quickRunProgress.finished ? quickRunFinishReasonText(quickRunProgress.reason) : ''
+      } : null,
       onBack: () => setGameState('RHYTHM_DEMO_HOME'),
-      onStartPlay: (song, difficulty, startId) => {
+      onStartPlay: (song, difficulty, startId, count) => {
         if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
         setRhythmPlay({
           song,
           difficulty,
           from: 'multi',
-          multiStartId: startId
+          multiStartId: startId,
+          multiCount: count
         });
         setGameState('RHYTHM_PLAY');
       }
