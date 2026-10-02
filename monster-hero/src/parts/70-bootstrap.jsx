@@ -4503,16 +4503,13 @@ const createAnimationStyle = () => {
        ・HOME: 枠が絵より縦長なら画面いっぱい(cover)にして下の帯を消す。枠が絵より横に広いときは絵全体を出し、余りはぼかした絵で埋める */
     .mh-title-backdrop{position:absolute;z-index:0;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(16px) brightness(.5);transform:scale(1.08);pointer-events:none}.mh-title-visual{z-index:1}
     @media(min-aspect-ratio:3/4) and (max-aspect-ratio:7/5){.mh-title-visual,.mh-entering>img{object-fit:contain;object-position:50% 50%}}
-    /* ハロウィンのタイトルの絵は、縦長(941x1672)と横長(1672x941)の2枚(2026-10-03)。画面が横向きなら横長、縦向きなら縦長を読む(60-app の titleArtSrc)。
-       どちらも、画面の縦横比に近いほど絵が切れず、遠いほど切れるので、縦横比で見せ方を変える。
-       ・縦向きの 3:4〜1:1(折りたたみの横開きの内側など): 縦長の絵を全体で出し、1.25倍に広げて下寄りに合わせる。
-         上の空だけが少し切れ、ロゴと仲間は残る。左右に残る細いあきはぼかした同じ絵で埋める
-       ・横向きの 3:2 より横長(スマホの横持ち・パソコン): 横長の絵を画面いっぱい(cover)。上下がわずかに切れるだけ
-       ・横向きの 1:1〜3:2(4:3 のタブレットなど): 横長の絵を全体で出し、上下のあきはぼかした同じ絵で埋める
-       クラシックの絵の見え方は変えない */
-    @media(min-aspect-ratio:3/4){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:contain;object-position:50% 50%}}
-    @media(min-aspect-ratio:3/4) and (max-aspect-ratio:1/1){.mh-title-visual[src*="halloween"]{transform:scale(1.25);transform-origin:50% 85%}}
-    @media(min-aspect-ratio:3/2){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:cover;object-position:50% 40%}}
+    /* ハロウィンのタイトルの絵は、縦長・ほぼ正方形・横長の3枚(2026-10-03)。ゲームが画面の縦横比に近い1枚を選ぶので、
+       どの画面でも画面いっぱい(cover)で出して、切れるのはわずかな端だけにする(帯も出さない)。
+       横向きの画面(1:1 以上)は、左上のロゴが切れないよう、少し上寄りに合わせる。クラシックの絵の見え方は変えない */
+    .mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:cover;object-position:50% 50%}
+    @media(min-aspect-ratio:1/1){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-position:50% 40%}}
+    /* ほぼ正方形の絵は、ロゴが下にあるので、縦に切れるとき(横向きの 4:3 など)は下寄りに合わせる */
+    @media(min-aspect-ratio:1/1){.mh-title-visual[src*="halloween-square"],.mh-entering>img[src*="halloween-square"]{object-position:50% 80%}}
     @container (max-aspect-ratio:941/1672){.mh-home-background img.mh-home-main{object-fit:cover}}
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
