@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 15ff8cd4c493389a
+// generated-sha256: e46983e93e8ccf26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 02:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 03:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -32460,6 +32460,7 @@ function DebugDataScreen({
 
 // ---- part: 77-screen-rhythm-multi.jsx ----
 // ===== モンヒロビート マルチ(みんなで対戦: 協力ライブ) =====
+// 仕様の正本: docs/spec/RHYTHM_MULTI.md / 検査: node tools/mode/rhythm-multi-check.js
 // プロセカの「みんなでライブ」を本家どおりの流れで真似した、最大5人の協力プレイ。
 //
 //   ルームえらび(フリー / ベテラン / プライベート)
@@ -32515,6 +32516,8 @@ const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
 const RHYTHM_MULTI_LOBBY_LISTEN_MS = 3500;
 const RHYTHM_MULTI_LOBBY_FRESH_MS = 6000;
+// 1人きりの部屋をほかの部屋へまとめるのは、最近この時間だれも見ていないときだけ(ライブ中の仲間とはぐれないため)
+const RHYTHM_MULTI_MERGE_QUIET_MS = 5 * 60 * 1000;
 // 途中でやめた人が公開ルームへ入れない時間。新しい保存キー(既存のキーは触らない)
 const RHYTHM_MULTI_PENALTY_KEY = 'mh_rhythm_multi_penalty_v1';
 const RHYTHM_MULTI_PENALTY_MS = 3 * 60 * 1000;
@@ -32854,7 +32857,10 @@ const RHYTHM_MULTI = (() => {
       lobby.lastAnnounce = Date.now();
       lobby.socket.send({ t: 'room', code: s.code, n: order.length });
     }
-    if (order.length === 1 && s.mode !== 'private' && Date.now() - s.createdAt > RHYTHM_MULTI_LOBBY_LISTEN_MS) {
+    // ★最近ほかの人を見ていた部屋はまとめない。ライブ中の人は何も送ってこないので、自分1人に見えても
+    //   実はほかの人が演奏しているだけかもしれない(そこで引っ越すと、戻ってきた仲間とはぐれる)
+    const recentlySawOthers = Object.values(s.members).some((m) => m.id !== s.selfId && Date.now() - m.seen < RHYTHM_MULTI_MERGE_QUIET_MS);
+    if (order.length === 1 && s.mode !== 'private' && !recentlySawOthers && Date.now() - s.createdAt > RHYTHM_MULTI_LOBBY_LISTEN_MS) {
       const other = rhythmMultiBestRoom(lobby.rooms, s.code);
       if (other && other < s.code) {
         api.join(other, { name: me.name, level: me.level, icon: me.icon, frame: me.frame, diff: me.diff }, s.mode);
