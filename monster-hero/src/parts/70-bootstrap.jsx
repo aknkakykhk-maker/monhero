@@ -2157,6 +2157,28 @@ const createAnimationStyle = () => {
     .fin-fall.fin-shape--rock { border-radius:25%; clip-path:polygon(20% 0,80% 8%,100% 55%,72% 100%,18% 92%,0 40%); background:linear-gradient(135deg,#efe2cf,#a8865f 55%,#5c4330); box-shadow:none; }
     .fin-fall.fin-shape--slab { left:-46px; width:92px; height:150px; border-radius:6px; clip-path:none; background:linear-gradient(135deg,#312e81,#0f0a2a 70%); box-shadow:0 0 20px var(--spm-c2), inset 0 0 14px var(--spm-c2); }
     @keyframes finFall { 0% { opacity:1; transform:translateY(0); } 78% { opacity:1; transform:translateY(410px); } 100% { opacity:0; transform:translateY(420px) scale(1.3); } }
+    /* ==== 固有技の着弾の型(24-battle-fx.jsx の UNIQUE_IMPACT_FORMS)の新しい部品 ==== */
+    /* 氷柱・つるのとげ: 足元から突き出す三角 */
+    .fin-spike { left:calc(var(--w) / -2 + var(--x)); bottom:-8px; width:var(--w); height:var(--h); transform-origin:50% 100%;
+      clip-path:polygon(50% 0, 100% 100%, 0 100%); background:linear-gradient(0deg, var(--spm-c2), var(--spm-c1) 55%, #fff);
+      filter:drop-shadow(0 0 8px var(--spm-c2)); animation:finSpike 540ms cubic-bezier(.2,.9,.3,1) var(--d) forwards; }
+    @keyframes finSpike { 0% { opacity:0; transform:scaleY(0); } 24% { opacity:1; transform:scaleY(1.1); } 72% { opacity:.95; transform:scaleY(1); } 100% { opacity:0; transform:scaleY(.9) translateY(8px); } }
+    .fin-spike--thorn { clip-path:polygon(38% 0, 66% 32%, 100% 100%, 0 100%, 20% 44%); background:linear-gradient(0deg, #14532d, #22c55e 55%, #bbf7d0); filter:drop-shadow(0 0 6px #22c55e); }
+    /* 稲妻: 空から落ちるギザギザ(チカチカまたたく) */
+    .fin-bolt { left:calc(var(--w) / -2 + var(--x)); bottom:-6px; width:var(--w); height:var(--h); transform-origin:50% 100%;
+      clip-path:polygon(44% 100%, 14% 86%, 74% 72%, 19% 58%, 69% 44%, 24% 30%, 64% 16%, 44% 0, 56% 0, 76% 16%, 36% 30%, 81% 44%, 31% 58%, 86% 72%, 26% 86%, 56% 100%);
+      background:linear-gradient(0deg, #fff, var(--spm-c1) 40%, var(--spm-c2)); filter:drop-shadow(0 0 10px var(--spm-c2)); animation:finBolt 460ms linear var(--d) forwards; }
+    @keyframes finBolt { 0% { opacity:0; } 8% { opacity:1; } 22% { opacity:.25; } 36% { opacity:1; } 52% { opacity:.4; } 68% { opacity:1; } 100% { opacity:0; } }
+    /* 水柱 */
+    .fin-col--water { border-radius:45% 45% 12% 12%; background:linear-gradient(0deg, #fff, var(--spm-c1) 18%, color-mix(in srgb, var(--spm-c2) 80%, transparent) 70%, transparent); }
+    /* 黒い渦: 中心へ吸い込まれる粒(.fin-bit--in)と、縮みながら回る黒い輪 */
+    .fin-bit--in { animation-name:finBitIn; }
+    @keyframes finBitIn { 0% { opacity:0; transform:translateX(var(--dist)) scale(1.2); } 30% { opacity:1; } 100% { opacity:0; transform:translateX(0) scale(.3); } }
+    .fin-ring--void { border-color:var(--spm-c2); background:radial-gradient(circle, rgba(0,0,0,.92) 0 46%, color-mix(in srgb, var(--spm-c2) 50%, transparent) 62%, transparent 72%);
+      box-shadow:0 0 18px var(--spm-c2), inset 0 0 18px #000; animation-name:finVoid; animation-duration:640ms; }
+    @keyframes finVoid { 0% { opacity:0; transform:scale(var(--r)) rotate(0deg); } 30% { opacity:1; } 80% { opacity:1; transform:scale(.7) rotate(160deg); } 100% { opacity:0; transform:scale(.2) rotate(220deg); } }
+    /* 光の技だけ、共通の衝撃の放射線を出す */
+    .spm:not(.spm--form-light) .spm__shock b { display:none; }
     @media (prefers-reduced-motion: reduce) { .spm__finish { display:none; } }
     @media (prefers-reduced-motion: reduce) {
       .spm__gather, .spm__shock, .spm__flash { display:none; }

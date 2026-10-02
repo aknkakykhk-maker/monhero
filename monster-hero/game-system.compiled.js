@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e778a7a710dcfa10
+// source-sha256: 8be7fd7874f00511
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-02 20:42";
+const BUILD_DATE = "2026-10-02 20:53";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -18264,6 +18264,7 @@ const SKILL_MOTION_SETS_BASE = {
       c: 'holy',
       line: 'ray',
       over: 'cross',
+      form: 'slash',
       fx: skmFx('orbit', 'cross', 8, {
         h: [50, 275],
         dur: 420,
@@ -18982,6 +18983,54 @@ const SKM_UNIQUE_BITS = Object.freeze([{
   y: -14,
   s: 1.5
 }]);
+const SKM_FORM_OF_COLOR = Object.freeze({
+  fire: 'fire',
+  red: 'fire',
+  ice: 'ice',
+  thunder: 'bolt',
+  blue: 'water',
+  sky: 'water',
+  holy: 'light',
+  gold: 'light',
+  white: 'light',
+  dark: 'void',
+  plant: 'thorn',
+  gas: 'thorn',
+  rock: 'rubble',
+  wind: 'slash',
+  psy: 'psy',
+  cosmic: 'psy',
+  pink: 'bloom',
+  mocchi: 'bloom',
+  sakura: 'bloom',
+  blood: 'rend'
+});
+const skmFormOf = c => typeof c === 'string' && SKM_FORM_OF_COLOR[c] || 'burst';
+const SKM_FORM_OVERRIDE = Object.freeze({
+  'Mocchi-u5': 'bloom',
+  'Mocchi-u7': 'psy',
+  'Mitarashi-u7': 'fire',
+  'Mitarashi-u8': 'rubble',
+  'Ham-u1': 'bolt',
+  'Ham-u7': 'rubble',
+  'Golem-u0': 'rubble',
+  'Tiger-u4': 'bolt',
+  'Tiger-u6': 'ice',
+  'Pixie-u1': 'psy',
+  'Pixie-u6': 'bolt',
+  'Suezo-u2': 'rend',
+  'Monol-u1': 'void',
+  'Monol-u5': 'rubble',
+  'Oboro-u3': 'bloom',
+  'Plant-u3': 'bloom',
+  'KenshiMocchi-u3': 'slash',
+  'Snegurochka-u8': 'ice',
+  'Ark-u0': 'psy',
+  'Ark-u2': 'bolt',
+  'Ark-u3': 'bloom',
+  'Ark-u4': 'slash',
+  'Ark-u6': 'psy'
+});
 const skmNormalize = (sp0, isUnique = false) => {
   const sp = isUnique ? {
     ...sp0,
@@ -19034,6 +19083,7 @@ const skmNormalize = (sp0, isUnique = false) => {
     bits,
     c1,
     c2,
+    form: sp.form || skmFormOf(sp.c),
     hit: Math.round(hit),
     ...(sp.hit2 ? {
       hit2: Math.round(hit + 180)
@@ -19043,6 +19093,18 @@ const skmNormalize = (sp0, isUnique = false) => {
 };
 const SKILL_FX_SPEC_CACHE = {};
 const YG_UNIQUE_KINDS = Object.freeze(['ygStarBomb', 'ygWonderBlaze', 'ygManyWing', 'ygRiceShower', 'ygMeteor', 'ygPapillon', 'ygHeavyRain', 'ygEternalArc', 'ygAurora', 'ygCosmo']);
+const YG_UNIQUE_FORM = Object.freeze({
+  ygStarBomb: 'psy',
+  ygWonderBlaze: 'fire',
+  ygManyWing: 'thorn',
+  ygRiceShower: 'light',
+  ygMeteor: 'rubble',
+  ygPapillon: 'bloom',
+  ygHeavyRain: 'water',
+  ygEternalArc: 'slash',
+  ygAurora: 'light',
+  ygCosmo: 'psy'
+});
 const skillFxStaticOf = kind => {
   const base = SKILL_FX_SPECS[kind];
   const spec = {
@@ -19059,7 +19121,8 @@ const skillFxStaticOf = kind => {
     fx: skmBoostFx(base.fx),
     hit2: base.hit2 ?? Math.round(base.hit + 180),
     bits: (base.bits || []).concat(extraBits),
-    burst: base.burst || 'star'
+    burst: base.burst || 'star',
+    form: YG_UNIQUE_FORM[kind] || 'burst'
   };
 };
 const skillFxSpecOf = kind => {
@@ -19069,7 +19132,11 @@ const skillFxSpecOf = kind => {
   const m = /^([A-Za-z]+)-([nu])(\d)$/.exec(String(kind));
   const sp = m && SKILL_MOTION_SETS[m[1]] && SKILL_MOTION_SETS[m[1]][m[2] === 'u' ? 'unique' : 'normal'][Number(m[3])];
   if (!sp || sp === SKM_SIG) return null;
-  SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp, m[2] === 'u' && !UNIQUE_FX_EXCLUDE.includes(kind));
+  const norm = skmNormalize(sp, m[2] === 'u' && !UNIQUE_FX_EXCLUDE.includes(kind));
+  SKILL_FX_SPEC_CACHE[kind] = SKM_FORM_OVERRIDE[kind] ? {
+    ...norm,
+    form: SKM_FORM_OVERRIDE[kind]
+  } : norm;
   return SKILL_FX_SPEC_CACHE[kind];
 };
 const SkillFxMotion = ({
@@ -19150,7 +19217,10 @@ const SkillFxMotion = ({
     className: "thm-atk__core"
   }), React.createElement("i", {
     className: "thm-atk__ring"
-  })), uex && React.createElement(UniqueFxImpact, null));
+  })), uex && React.createElement(UniqueFxImpact, {
+    form: spec.form || 'burst',
+    offset: (spec.hit || 0) - 240
+  }));
 };
 const UniqueFxExtras = ({
   image,
@@ -19165,16 +19235,337 @@ const UniqueFxExtras = ({
 }, React.cloneElement(image, {
   alt: ''
 }))));
-const UniqueFxImpact = () => React.createElement("span", {
-  className: "thm-atk__hit uex-impact",
-  "aria-hidden": "true"
-}, React.createElement("i", {
-  className: "uex-pillar"
-}), React.createElement("i", {
-  className: "uex-crack"
-}), React.createElement("i", {
-  className: "uex-flash"
-}));
+const UNIQUE_IMPACT_FORMS = Object.freeze({
+  fire: [{
+    t: 'col',
+    w: 60,
+    h: 300,
+    d: 240,
+    flame: true
+  }, {
+    t: 'col',
+    w: 44,
+    h: 240,
+    d: 290,
+    flame: true,
+    x: -46
+  }, {
+    t: 'col',
+    w: 44,
+    h: 240,
+    d: 290,
+    flame: true,
+    x: 46
+  }, {
+    t: 'bits',
+    n: 10,
+    shape: 'flame',
+    dist: 100,
+    d: 300,
+    rise: true
+  }, {
+    t: 'ring',
+    d: 260,
+    r: 3,
+    flat: .45
+  }],
+  ice: [{
+    t: 'spike',
+    w: 36,
+    h: 210,
+    d: 240
+  }, {
+    t: 'spike',
+    w: 28,
+    h: 160,
+    d: 280,
+    x: -46
+  }, {
+    t: 'spike',
+    w: 28,
+    h: 160,
+    d: 280,
+    x: 46
+  }, {
+    t: 'spike',
+    w: 20,
+    h: 110,
+    d: 320,
+    x: -80
+  }, {
+    t: 'spike',
+    w: 20,
+    h: 110,
+    d: 320,
+    x: 80
+  }, {
+    t: 'bits',
+    n: 10,
+    shape: 'spark',
+    dist: 100,
+    d: 340
+  }, {
+    t: 'ring',
+    d: 260,
+    r: 3,
+    flat: .45
+  }],
+  bolt: [{
+    t: 'bolt',
+    w: 84,
+    h: 440,
+    d: 240
+  }, {
+    t: 'bolt',
+    w: 56,
+    h: 380,
+    d: 300,
+    x: -62
+  }, {
+    t: 'bolt',
+    w: 56,
+    h: 380,
+    d: 330,
+    x: 66
+  }, {
+    t: 'ring',
+    d: 280,
+    r: 3
+  }, {
+    t: 'bits',
+    n: 8,
+    shape: 'spark',
+    dist: 100,
+    d: 300
+  }],
+  water: [{
+    t: 'col',
+    w: 56,
+    h: 300,
+    d: 240,
+    water: true
+  }, {
+    t: 'wave',
+    d: 300
+  }, {
+    t: 'bits',
+    n: 12,
+    shape: 'drop',
+    dist: 110,
+    d: 300
+  }, {
+    t: 'ring',
+    d: 260,
+    r: 3.2,
+    flat: .45
+  }],
+  void: [{
+    t: 'bits',
+    n: 14,
+    shape: 'spark',
+    dist: 130,
+    d: 160,
+    in: true
+  }, {
+    t: 'ring',
+    d: 200,
+    r: 3.4,
+    flat: .5,
+    void: true
+  }, {
+    t: 'bits',
+    n: 10,
+    shape: 'spark',
+    dist: 120,
+    d: 480
+  }],
+  thorn: [{
+    t: 'spike',
+    w: 24,
+    h: 170,
+    d: 240,
+    x: -42,
+    thorn: true
+  }, {
+    t: 'spike',
+    w: 28,
+    h: 210,
+    d: 270,
+    thorn: true
+  }, {
+    t: 'spike',
+    w: 24,
+    h: 170,
+    d: 300,
+    x: 42,
+    thorn: true
+  }, {
+    t: 'bits',
+    n: 10,
+    shape: 'leaf',
+    dist: 110,
+    d: 340
+  }, {
+    t: 'ring',
+    d: 260,
+    r: 2.8,
+    flat: .45
+  }],
+  rubble: [{
+    t: 'fall',
+    n: 6,
+    shape: 'rock',
+    d: 200
+  }, {
+    t: 'ring',
+    d: 420,
+    r: 3.8,
+    flat: .4
+  }, {
+    t: 'bits',
+    n: 10,
+    shape: 'dust',
+    dist: 110,
+    d: 420
+  }],
+  slash: [{
+    t: 'blade',
+    a: -60,
+    len: 300,
+    w: 8,
+    d: 240
+  }, {
+    t: 'blade',
+    a: -60,
+    len: 300,
+    w: 8,
+    d: 290,
+    x: -22
+  }, {
+    t: 'blade',
+    a: -60,
+    len: 300,
+    w: 8,
+    d: 340,
+    x: 22
+  }, {
+    t: 'bits',
+    n: 8,
+    shape: 'spark',
+    dist: 90,
+    d: 340
+  }],
+  psy: [{
+    t: 'ring',
+    d: 240,
+    r: 3.2,
+    flat: .45,
+    rune: true
+  }, {
+    t: 'ring',
+    d: 340,
+    r: 4
+  }, {
+    t: 'bits',
+    n: 12,
+    shape: 'star',
+    dist: 120,
+    d: 300
+  }],
+  bloom: [{
+    t: 'bits',
+    n: 14,
+    shape: 'petal',
+    dist: 130,
+    d: 260,
+    spin: 1
+  }, {
+    t: 'bits',
+    n: 8,
+    shape: 'heart',
+    dist: 90,
+    d: 320
+  }, {
+    t: 'ring',
+    d: 280,
+    r: 3
+  }],
+  rend: [{
+    t: 'blade',
+    a: -50,
+    len: 300,
+    w: 10,
+    d: 240
+  }, {
+    t: 'blade',
+    a: -50,
+    len: 300,
+    w: 10,
+    d: 300,
+    x: 30
+  }, {
+    t: 'blade',
+    a: -50,
+    len: 300,
+    w: 10,
+    d: 360,
+    x: -30
+  }, {
+    t: 'bits',
+    n: 12,
+    shape: 'drop',
+    dist: 110,
+    d: 340
+  }],
+  burst: [{
+    t: 'ring',
+    d: 260,
+    r: 3.2
+  }, {
+    t: 'bits',
+    n: 10,
+    shape: 'star',
+    dist: 110,
+    d: 300
+  }]
+});
+const UNIQUE_IMPACT_PALETTE = Object.freeze({
+  fire: ['#fef3c7', '#f97316'],
+  ice: ['#e0f2fe', '#38bdf8'],
+  bolt: ['#fef9c3', '#facc15'],
+  water: ['#e0f2fe', '#3b82f6'],
+  void: ['#ede9fe', '#6d28d9'],
+  thorn: ['#bbf7d0', '#16a34a'],
+  rubble: ['#e7d7c1', '#a8865f'],
+  bloom: ['#fce7f3', '#ec4899'],
+  rend: ['#fee2e2', '#dc2626'],
+  psy: ['#fae8ff', '#c026d3']
+});
+const UniqueFxImpact = ({
+  form = 'light',
+  offset = 0
+}) => {
+  const parts = UNIQUE_IMPACT_FORMS[form];
+  const pal = UNIQUE_IMPACT_PALETTE[form];
+  return React.createElement("span", {
+    className: "thm-atk__hit uex-impact",
+    "aria-hidden": "true",
+    "data-impact-form": form,
+    style: {
+      '--spm-c1': pal ? pal[0] : 'var(--c1, #fff)',
+      '--spm-c2': pal ? pal[1] : 'var(--c2, #c026d3)'
+    }
+  }, form === 'light' && React.createElement(React.Fragment, null, React.createElement("i", {
+    className: "uex-pillar"
+  }), React.createElement("i", {
+    className: "uex-crack"
+  })), React.createElement("i", {
+    className: "uex-flash"
+  }), parts && React.createElement(SpecialFinish, {
+    parts: parts,
+    offset: Math.max(0, offset)
+  }));
+};
 const ThemedAttackMotion = ({
   kind,
   image,
@@ -19237,7 +19628,9 @@ const ThemedAttackMotion = ({
     className: "thm-atk__ring"
   }), React.createElement(ThemedAttackBits, {
     list: bits.hit2
-  })), lunge && React.createElement(UniqueFxImpact, null));
+  })), lunge && React.createElement(UniqueFxImpact, {
+    form: "none"
+  }));
 };
 const TACTICS_EX_CUTIN_MS = 1600;
 const TACTICS_EX_CUTIN_THEME = Object.freeze({
@@ -20015,12 +20408,11 @@ const SPECIAL_FINISH = Object.freeze({
     dist: 140,
     d: 300
   }, {
-    t: 'col',
-    w: 120,
-    h: 440,
-    d: 300,
-    sky: true,
-    soft: true
+    t: 'bits',
+    n: 8,
+    shape: 'star',
+    dist: 80,
+    d: 380
   }]
 });
 const specialFinishKindOf = (ownerId, skillName, anim) => {
@@ -20077,7 +20469,7 @@ const SpecialFinish = ({
     });
     if (p.t === 'ring') return React.createElement("i", {
       key: pi,
-      className: `fin-ring${p.flat ? ' fin-ring--flat' : ''}${p.rune ? ' fin-ring--rune' : ''}`,
+      className: `fin-ring${p.flat ? ' fin-ring--flat' : ''}${p.rune ? ' fin-ring--rune' : ''}${p.void ? ' fin-ring--void' : ''}`,
       style: {
         ...base,
         '--r': p.r || 3,
@@ -20086,7 +20478,7 @@ const SpecialFinish = ({
     });
     if (p.t === 'col') return React.createElement("i", {
       key: pi,
-      className: `fin-col${p.flame ? ' fin-col--flame' : ''}${p.sky ? ' fin-col--sky' : ''}${p.soft ? ' fin-col--soft' : ''}`,
+      className: `fin-col${p.flame ? ' fin-col--flame' : ''}${p.sky ? ' fin-col--sky' : ''}${p.soft ? ' fin-col--soft' : ''}${p.water ? ' fin-col--water' : ''}`,
       style: {
         ...base,
         '--w': `${p.w || 40}px`,
@@ -20097,6 +20489,24 @@ const SpecialFinish = ({
       key: pi,
       className: "fin-wave",
       style: base
+    });
+    if (p.t === 'spike') return React.createElement("i", {
+      key: pi,
+      className: `fin-spike${p.thorn ? ' fin-spike--thorn' : ''}`,
+      style: {
+        ...base,
+        '--w': `${p.w || 30}px`,
+        '--h': `${p.h || 160}px`
+      }
+    });
+    if (p.t === 'bolt') return React.createElement("i", {
+      key: pi,
+      className: "fin-bolt",
+      style: {
+        ...base,
+        '--w': `${p.w || 40}px`,
+        '--h': `${p.h || 360}px`
+      }
     });
     if (p.t === 'fall') return React.createElement(React.Fragment, {
       key: pi
@@ -20120,7 +20530,7 @@ const SpecialFinish = ({
       const ang = 360 / (p.n || 8) * i + (pi % 2 ? 11 : 0);
       return React.createElement("i", {
         key: i,
-        className: `fin-bit fin-shape--${p.shape || 'spark'}${p.rise ? ' fin-bit--rise' : ''}${p.fall ? ' fin-bit--fall' : ''}`,
+        className: `fin-bit fin-shape--${p.shape || 'spark'}${p.rise ? ' fin-bit--rise' : ''}${p.fall ? ' fin-bit--fall' : ''}${p.in ? ' fin-bit--in' : ''}`,
         style: {
           '--d': `${(p.d || 0) + offset + i * 14}ms`,
           '--a': `${ang}deg`,
@@ -20131,6 +20541,18 @@ const SpecialFinish = ({
       });
     }));
   }));
+};
+const specialMoveFormOf = (monId, skillName) => {
+  const staticKind = typeof SKILL_ATTACK_THEMES !== 'undefined' ? SKILL_ATTACK_THEMES[skillName] : null;
+  if (staticKind && YG_UNIQUE_FORM[staticKind]) return YG_UNIQUE_FORM[staticKind];
+  let hit = null;
+  try {
+    hit = typeof skillMotionSlotOf === 'function' ? skillMotionSlotOf(monId, skillName, true) : null;
+  } catch (e) {
+    hit = null;
+  }
+  if (hit && hit.spec && hit.spec !== 'sig') return SKM_FORM_OVERRIDE[`${hit.monId}-u${hit.index}`] || hit.spec.form || skmFormOf(hit.spec.c);
+  return skmFormOf(SPECIAL_MOVE_MON_COLOR[monId]);
 };
 const SpecialMoveFx = ({
   slotSkill,
@@ -20164,6 +20586,7 @@ const SpecialMoveFx = ({
   if (!slotSkill || slotSkill.type !== 'unique') return null;
   const lookupName = slotSkill.sig ? null : slotSkill.name;
   const [c1, c2] = specialMoveColorOf(ownerId || mon && mon.id, lookupName);
+  const form = specialMoveFormOf(ownerId || mon && mon.id, lookupName);
   const phase = attackAnim && attackAnim.charge === true ? 'charge' : 'release';
   const name = String(slotSkill.name || '');
   const vw = typeof window !== 'undefined' ? window.innerWidth : 390;
@@ -20193,7 +20616,8 @@ const SpecialMoveFx = ({
   };
   const body = React.createElement("div", {
     "data-special-move-fx": phase,
-    className: `spm spm--${phase}${compact ? ' spm--compact' : ''}`,
+    "data-special-form": form,
+    className: `spm spm--${phase} spm--form-${form}${compact ? ' spm--compact' : ''}`,
     style: style,
     "aria-hidden": "true"
   }, React.createElement("div", {
@@ -20274,11 +20698,7 @@ const AttackTargetFx = ({
     className: "atk-target-fx__core"
   }), React.createElement("i", {
     className: "atk-target-fx__ring"
-  }), anim.charge === false && React.createElement(React.Fragment, null, React.createElement("i", {
-    className: "uex-pillar"
-  }), React.createElement("i", {
-    className: "uex-crack"
-  })), [0, 45, 90, 135, 180, 225, 270, 315].map(deg => React.createElement("i", {
+  }), [0, 45, 90, 135, 180, 225, 270, 315].map(deg => React.createElement("i", {
     key: deg,
     className: "atk-target-fx__ray",
     style: {
@@ -80548,6 +80968,28 @@ const createAnimationStyle = () => {
     .fin-fall.fin-shape--rock { border-radius:25%; clip-path:polygon(20% 0,80% 8%,100% 55%,72% 100%,18% 92%,0 40%); background:linear-gradient(135deg,#efe2cf,#a8865f 55%,#5c4330); box-shadow:none; }
     .fin-fall.fin-shape--slab { left:-46px; width:92px; height:150px; border-radius:6px; clip-path:none; background:linear-gradient(135deg,#312e81,#0f0a2a 70%); box-shadow:0 0 20px var(--spm-c2), inset 0 0 14px var(--spm-c2); }
     @keyframes finFall { 0% { opacity:1; transform:translateY(0); } 78% { opacity:1; transform:translateY(410px); } 100% { opacity:0; transform:translateY(420px) scale(1.3); } }
+    /* ==== 固有技の着弾の型(24-battle-fx.jsx の UNIQUE_IMPACT_FORMS)の新しい部品 ==== */
+    /* 氷柱・つるのとげ: 足元から突き出す三角 */
+    .fin-spike { left:calc(var(--w) / -2 + var(--x)); bottom:-8px; width:var(--w); height:var(--h); transform-origin:50% 100%;
+      clip-path:polygon(50% 0, 100% 100%, 0 100%); background:linear-gradient(0deg, var(--spm-c2), var(--spm-c1) 55%, #fff);
+      filter:drop-shadow(0 0 8px var(--spm-c2)); animation:finSpike 540ms cubic-bezier(.2,.9,.3,1) var(--d) forwards; }
+    @keyframes finSpike { 0% { opacity:0; transform:scaleY(0); } 24% { opacity:1; transform:scaleY(1.1); } 72% { opacity:.95; transform:scaleY(1); } 100% { opacity:0; transform:scaleY(.9) translateY(8px); } }
+    .fin-spike--thorn { clip-path:polygon(38% 0, 66% 32%, 100% 100%, 0 100%, 20% 44%); background:linear-gradient(0deg, #14532d, #22c55e 55%, #bbf7d0); filter:drop-shadow(0 0 6px #22c55e); }
+    /* 稲妻: 空から落ちるギザギザ(チカチカまたたく) */
+    .fin-bolt { left:calc(var(--w) / -2 + var(--x)); bottom:-6px; width:var(--w); height:var(--h); transform-origin:50% 100%;
+      clip-path:polygon(44% 100%, 14% 86%, 74% 72%, 19% 58%, 69% 44%, 24% 30%, 64% 16%, 44% 0, 56% 0, 76% 16%, 36% 30%, 81% 44%, 31% 58%, 86% 72%, 26% 86%, 56% 100%);
+      background:linear-gradient(0deg, #fff, var(--spm-c1) 40%, var(--spm-c2)); filter:drop-shadow(0 0 10px var(--spm-c2)); animation:finBolt 460ms linear var(--d) forwards; }
+    @keyframes finBolt { 0% { opacity:0; } 8% { opacity:1; } 22% { opacity:.25; } 36% { opacity:1; } 52% { opacity:.4; } 68% { opacity:1; } 100% { opacity:0; } }
+    /* 水柱 */
+    .fin-col--water { border-radius:45% 45% 12% 12%; background:linear-gradient(0deg, #fff, var(--spm-c1) 18%, color-mix(in srgb, var(--spm-c2) 80%, transparent) 70%, transparent); }
+    /* 黒い渦: 中心へ吸い込まれる粒(.fin-bit--in)と、縮みながら回る黒い輪 */
+    .fin-bit--in { animation-name:finBitIn; }
+    @keyframes finBitIn { 0% { opacity:0; transform:translateX(var(--dist)) scale(1.2); } 30% { opacity:1; } 100% { opacity:0; transform:translateX(0) scale(.3); } }
+    .fin-ring--void { border-color:var(--spm-c2); background:radial-gradient(circle, rgba(0,0,0,.92) 0 46%, color-mix(in srgb, var(--spm-c2) 50%, transparent) 62%, transparent 72%);
+      box-shadow:0 0 18px var(--spm-c2), inset 0 0 18px #000; animation-name:finVoid; animation-duration:640ms; }
+    @keyframes finVoid { 0% { opacity:0; transform:scale(var(--r)) rotate(0deg); } 30% { opacity:1; } 80% { opacity:1; transform:scale(.7) rotate(160deg); } 100% { opacity:0; transform:scale(.2) rotate(220deg); } }
+    /* 光の技だけ、共通の衝撃の放射線を出す */
+    .spm:not(.spm--form-light) .spm__shock b { display:none; }
     @media (prefers-reduced-motion: reduce) { .spm__finish { display:none; } }
     @media (prefers-reduced-motion: reduce) {
       .spm__gather, .spm__shock, .spm__flash { display:none; }
