@@ -103,6 +103,10 @@
       "pure": true
     },
     {
+      "file": "33-rhythm-multi.jsx",
+      "role": "モンヒロビートのマルチ(同じ曲でスコア対決)。Supabase Realtime の Broadcast で部屋の状態・開始の合図・スコアをやりとりする。保存データ・ランキングには触れない"
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },
