@@ -389,7 +389,7 @@ const SKILL_MOTION_SETS_BASE = {
       skm('float', { c:'psy', over:'boom', fx:skmFx('orbit', 'orb', 8, { h:[270, 48], dur:440, start:40, step:20 }), burst:'star', hit2:true, hit:600 }),
       skm('warp', { c:'dark', line:'bolt', over:'thunder', fx:skmFx('fall', 'bolt', 8, { h:275, w:120 }), burst:'spark', hit2:true }),
       skm('spin', { c:'cosmic', fx:skmFx('orbit', 'star', 14, { h:270, dur:460, start:40, step:14 }), over:'aurora', burst:'star', hit2:true }),
-      skm('gather', { c:'holy', line:'ray', over:'cross', fx:skmFx('orbit', 'cross', 8, { h:[50, 275], dur:420, start:40, step:18 }), burst:'star', hit2:true, hit:600 }),
+      skm('gather', { c:'holy', line:'ray', over:'cross', form:'slash', fx:skmFx('orbit', 'cross', 8, { h:[50, 275], dur:420, start:40, step:18 }), burst:'star', hit2:true, hit:600 }),
       // 2026-10-02 設定資料(PAGE 3): エクリプスノヴァ=魔力集束(光と闇をまとって溜める)→相反爆発、
       //   ダイスキライライ=分裂(光と闇の2体)→手を取り合う→反発雷撃(docs/spec/PANDORA_SKILLS.md)
       skm('gather', { c:'cosmic', fx:skmFx('orbit', 'orb', 12, { h:[270, 48], dur:420, start:40, step:14 }), over:'eclipse', burst:'star', hit:600 }),
@@ -611,6 +611,28 @@ const skmBoostFx = (fx) => {
   return { ...fx, items:fx.items.concat(extra) };
 };
 const SKM_UNIQUE_BITS = Object.freeze([{x:-34,y:-22,s:1.3},{x:32,y:-26,s:1.3},{x:-36,y:18,s:1.2},{x:34,y:16,s:1.2},{x:0,y:-40,s:1.4},{x:-16,y:26,s:1.1},{x:18,y:28,s:1.1},{x:-44,y:-2,s:1.1},{x:44,y:0,s:1.1},{x:0,y:-14,s:1.5}]);
+// ==== 固有技の「着弾の型」(2026-10-02 ユーザー指示「固有技エフェクトで最後に光の柱が出るのが目立って全部似たような技に見えがち」→ 案1「属性ごとの着弾の型」) ====
+// 共通の光の柱をやめ、技の色(属性)ごとに敵の上の締めを変える。光の柱が出るのは光(light)の技だけ。
+//   fire 噴き上がる炎 / ice 氷柱が突き出す / bolt 稲妻が落ちる / water 水柱としぶき / void 黒い渦に吸い込まれる /
+//   thorn つるのとげが伸びる / rubble 岩が降り砕ける / slash 斬撃の筋 / psy 魔法陣と星 / bloom 花びらとハート /
+//   rend 爪あとと血しぶき / light 光の柱と地割れ / burst 小さな衝撃(既定)
+// 型は技の定義(skm の form)で上書きできる。書かなければ色の名前から決まる
+const SKM_FORM_OF_COLOR = Object.freeze({
+  fire:'fire', red:'fire', ice:'ice', thunder:'bolt', blue:'water', sky:'water', holy:'light', gold:'light', white:'light', dark:'void',
+  plant:'thorn', gas:'thorn', rock:'rubble', wind:'slash', psy:'psy', cosmic:'psy', pink:'bloom', mocchi:'bloom', sakura:'bloom', blood:'rend',
+});
+const skmFormOf = (c) => (typeof c === 'string' && SKM_FORM_OF_COLOR[c]) || 'burst';
+// 色から決まる型が、技の中身と合わない・同じ子の技で重なるときの上書き(型の名前 '<モンスターid>-u<段階>' → 型)。
+// 金色(light)の技が多く、全部が光の柱になっていたので、技の名前に合わせて散らした
+const SKM_FORM_OVERRIDE = Object.freeze({
+  'Mocchi-u5':'bloom', 'Mocchi-u7':'psy',
+  'Mitarashi-u7':'fire', 'Mitarashi-u8':'rubble',
+  'Ham-u1':'bolt', 'Ham-u7':'rubble', 'Golem-u0':'rubble',
+  'Tiger-u4':'bolt', 'Tiger-u6':'ice', 'Pixie-u1':'psy', 'Pixie-u6':'bolt',
+  'Suezo-u2':'rend', 'Monol-u1':'void', 'Monol-u5':'rubble', 'Oboro-u3':'bloom', 'Plant-u3':'bloom',
+  'KenshiMocchi-u3':'slash', 'Snegurochka-u8':'ice',
+  'Ark-u0':'psy', 'Ark-u2':'bolt', 'Ark-u3':'bloom', 'Ark-u4':'slash', 'Ark-u6':'psy',
+});
 const skmNormalize = (sp0, isUnique = false) => {
   const sp = isUnique ? { ...sp0, fx:skmBoostFx(sp0.fx), hit2:sp0.hit2 ?? true, bits:sp0.bits || SKM_UNIQUE_BITS, burst:sp0.burst || 'star' } : sp0;
   const [ratio, bodyMs] = SKM_BODY_TIMING[sp.body] || [.5, 700];
@@ -628,19 +650,22 @@ const skmNormalize = (sp0, isUnique = false) => {
   if (isUnique) ms += 100;
   ms = Math.min(SKM_MAX_MS, Math.round(ms));
   const bits = sp.bits || [{x:-28,y:-20},{x:26,y:-24},{x:-30,y:16},{x:30,y:14},{x:0,y:-34}];
-  return { body:sp.body, line:sp.line, fx:sp.fx, over:sp.over, burst:sp.burst, twin:sp.twin === true, bits, c1, c2, hit:Math.round(hit),
+  return { body:sp.body, line:sp.line, fx:sp.fx, over:sp.over, burst:sp.burst, twin:sp.twin === true, bits, c1, c2, form:sp.form || skmFormOf(sp.c), hit:Math.round(hit),
     ...(sp.hit2 ? { hit2:Math.round(hit + 180) } : {}), ms };
 };
 // 型の名前(ユグドラシル種は 'ygHeadbutt' など、ほかの子は '<モンスターid>-n<段階>' / '-u<段階>')から、見た目の組み合わせを返す
 const SKILL_FX_SPEC_CACHE = {};
 // ユグドラシル種・メルホイップの固有技(かしこさの10個)も、skmNormalize の固有技の格上げと同じ考え方で派手にする
 const YG_UNIQUE_KINDS = Object.freeze(['ygStarBomb', 'ygWonderBlaze', 'ygManyWing', 'ygRiceShower', 'ygMeteor', 'ygPapillon', 'ygHeavyRain', 'ygEternalArc', 'ygAurora', 'ygCosmo']);
+// ユグドラシル種・メルホイップの固有技の着弾の型(技の名前ごとの固定の定義なので、ここに書く)
+const YG_UNIQUE_FORM = Object.freeze({ ygStarBomb:'psy', ygWonderBlaze:'fire', ygManyWing:'thorn', ygRiceShower:'light', ygMeteor:'rubble',
+  ygPapillon:'bloom', ygHeavyRain:'water', ygEternalArc:'slash', ygAurora:'light', ygCosmo:'psy' });
 const skillFxStaticOf = (kind) => {
   const base = SKILL_FX_SPECS[kind];
   const spec = { ...base, ms:THEMED_ATTACK_MS[kind] || 600 };
   if (!YG_UNIQUE_KINDS.includes(kind)) return spec;
   const extraBits = SKM_UNIQUE_BITS.slice(0, 5).map((b, i) => ({ ...b, h:(base.bits && base.bits[i] && base.bits[i].h) || 0 }));
-  return { ...spec, fx:skmBoostFx(base.fx), hit2:base.hit2 ?? Math.round(base.hit + 180), bits:(base.bits || []).concat(extraBits), burst:base.burst || 'star' };
+  return { ...spec, fx:skmBoostFx(base.fx), hit2:base.hit2 ?? Math.round(base.hit + 180), bits:(base.bits || []).concat(extraBits), burst:base.burst || 'star', form:YG_UNIQUE_FORM[kind] || 'burst' };
 };
 const skillFxSpecOf = (kind) => {
   if (!kind) return null;
@@ -649,7 +674,8 @@ const skillFxSpecOf = (kind) => {
   const m = /^([A-Za-z]+)-([nu])(\d)$/.exec(String(kind));
   const sp = m && SKILL_MOTION_SETS[m[1]] && SKILL_MOTION_SETS[m[1]][m[2] === 'u' ? 'unique' : 'normal'][Number(m[3])];
   if (!sp || sp === SKM_SIG) return null;
-  SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp, m[2] === 'u' && !UNIQUE_FX_EXCLUDE.includes(kind));
+  const norm = skmNormalize(sp, m[2] === 'u' && !UNIQUE_FX_EXCLUDE.includes(kind));
+  SKILL_FX_SPEC_CACHE[kind] = SKM_FORM_OVERRIDE[kind] ? { ...norm, form:SKM_FORM_OVERRIDE[kind] } : norm;
   return SKILL_FX_SPEC_CACHE[kind];
 };
 const SkillFxMotion = ({kind, image, lunge=false}) => {
@@ -686,7 +712,7 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
         <i className="thm-atk__core"/>
         <i className="thm-atk__ring"/>
       </span>}
-      {uex&&<UniqueFxImpact/>}
+      {uex&&<UniqueFxImpact form={spec.form || 'burst'} offset={(spec.hit || 0) - 240}/>}
     </span>
   );
 };
@@ -698,9 +724,40 @@ const UniqueFxExtras = ({ image, ghost = true }) => (
   </>
 );
 // 敵の上へ当たった瞬間の、固有技だけの重ね絵: 空から落ちる光柱・足元に走る地割れの輪・白い閃光
-const UniqueFxImpact = () => (
-  <span className="thm-atk__hit uex-impact" aria-hidden="true"><i className="uex-pillar"/><i className="uex-crack"/><i className="uex-flash"/></span>
-);
+// form … 着弾の型(skmFormOf)。'light' だけ従来の光柱と地割れ、'none' は閃光だけ(見せ場の動きは SpecialFinish が締めを持つ)、
+//        それ以外は UNIQUE_IMPACT_FORMS の部品(SpecialFinish と同じ部品)を、当たる瞬間(offset+240ms)に合わせて重ねる
+const UNIQUE_IMPACT_FORMS = Object.freeze({
+  fire:   [{t:'col',w:60,h:300,d:240,flame:true},{t:'col',w:44,h:240,d:290,flame:true,x:-46},{t:'col',w:44,h:240,d:290,flame:true,x:46},{t:'bits',n:10,shape:'flame',dist:100,d:300,rise:true},{t:'ring',d:260,r:3,flat:.45}],
+  ice:    [{t:'spike',w:36,h:210,d:240},{t:'spike',w:28,h:160,d:280,x:-46},{t:'spike',w:28,h:160,d:280,x:46},{t:'spike',w:20,h:110,d:320,x:-80},{t:'spike',w:20,h:110,d:320,x:80},{t:'bits',n:10,shape:'spark',dist:100,d:340},{t:'ring',d:260,r:3,flat:.45}],
+  bolt:   [{t:'bolt',w:84,h:440,d:240},{t:'bolt',w:56,h:380,d:300,x:-62},{t:'bolt',w:56,h:380,d:330,x:66},{t:'ring',d:280,r:3},{t:'bits',n:8,shape:'spark',dist:100,d:300}],
+  water:  [{t:'col',w:56,h:300,d:240,water:true},{t:'wave',d:300},{t:'bits',n:12,shape:'drop',dist:110,d:300},{t:'ring',d:260,r:3.2,flat:.45}],
+  void:   [{t:'bits',n:14,shape:'spark',dist:130,d:160,in:true},{t:'ring',d:200,r:3.4,flat:.5,void:true},{t:'bits',n:10,shape:'spark',dist:120,d:480}],
+  thorn:  [{t:'spike',w:24,h:170,d:240,x:-42,thorn:true},{t:'spike',w:28,h:210,d:270,thorn:true},{t:'spike',w:24,h:170,d:300,x:42,thorn:true},{t:'bits',n:10,shape:'leaf',dist:110,d:340},{t:'ring',d:260,r:2.8,flat:.45}],
+  rubble: [{t:'fall',n:6,shape:'rock',d:200},{t:'ring',d:420,r:3.8,flat:.4},{t:'bits',n:10,shape:'dust',dist:110,d:420}],
+  slash:  [{t:'blade',a:-60,len:300,w:8,d:240},{t:'blade',a:-60,len:300,w:8,d:290,x:-22},{t:'blade',a:-60,len:300,w:8,d:340,x:22},{t:'bits',n:8,shape:'spark',dist:90,d:340}],
+  psy:    [{t:'ring',d:240,r:3.2,flat:.45,rune:true},{t:'ring',d:340,r:4},{t:'bits',n:12,shape:'star',dist:120,d:300}],
+  bloom:  [{t:'bits',n:14,shape:'petal',dist:130,d:260,spin:1},{t:'bits',n:8,shape:'heart',dist:90,d:320},{t:'ring',d:280,r:3}],
+  rend:   [{t:'blade',a:-50,len:300,w:10,d:240},{t:'blade',a:-50,len:300,w:10,d:300,x:30},{t:'blade',a:-50,len:300,w:10,d:360,x:-30},{t:'bits',n:12,shape:'drop',dist:110,d:340}],
+  burst:  [{t:'ring',d:260,r:3.2},{t:'bits',n:10,shape:'star',dist:110,d:300}],
+});
+// 型ごとの決まった色(明・濃)。技の色が白や金のままだと、炎が青白く見えるなど型と合わなくなるので、型の絵はこの色で出す。
+// slash / burst / light / none は技の色のまま
+const UNIQUE_IMPACT_PALETTE = Object.freeze({
+  fire:['#fef3c7', '#f97316'], ice:['#e0f2fe', '#38bdf8'], bolt:['#fef9c3', '#facc15'], water:['#e0f2fe', '#3b82f6'], void:['#ede9fe', '#6d28d9'],
+  thorn:['#bbf7d0', '#16a34a'], rubble:['#e7d7c1', '#a8865f'], bloom:['#fce7f3', '#ec4899'], rend:['#fee2e2', '#dc2626'], psy:['#fae8ff', '#c026d3'],
+});
+const UniqueFxImpact = ({ form = 'light', offset = 0 }) => {
+  const parts = UNIQUE_IMPACT_FORMS[form];
+  const pal = UNIQUE_IMPACT_PALETTE[form];
+  return (
+    <span className="thm-atk__hit uex-impact" aria-hidden="true" data-impact-form={form}
+      style={{ '--spm-c1':pal ? pal[0] : 'var(--c1, #fff)', '--spm-c2':pal ? pal[1] : 'var(--c2, #c026d3)' }}>
+      {form === 'light' && <><i className="uex-pillar"/><i className="uex-crack"/></>}
+      <i className="uex-flash"/>
+      {parts && <SpecialFinish parts={parts} offset={Math.max(0, offset)}/>}
+    </span>
+  );
+};
 const ThemedAttackMotion = ({kind, image, lunge=false}) => {
   if (skillFxSpecOf(kind)) return <SkillFxMotion kind={kind} image={image} lunge={lunge}/>;
   const bits = THEMED_ATTACK_BITS[kind] || {};
@@ -729,7 +786,7 @@ const ThemedAttackMotion = ({kind, image, lunge=false}) => {
         <i className="thm-atk__ring"/>
         <ThemedAttackBits list={bits.hit2}/>
       </span>}
-      {lunge&&<UniqueFxImpact/>}
+      {lunge&&<UniqueFxImpact form="none"/>}
     </span>
   );
 };
@@ -858,7 +915,7 @@ const SPECIAL_FINISH = Object.freeze({
   ygHeavyRain:  [{t:'wave',d:240},{t:'bits',n:16,shape:'drop',dist:130,d:260,fall:true},{t:'ring',d:340,r:3.6,flat:.45}],
   ygEternalArc: [{t:'blade',a:-28,len:400,w:9,d:240},{t:'blade',a:28,len:400,w:9,d:320},{t:'ring',d:360,r:4,flat:.5},{t:'bits',n:10,shape:'spark',dist:120,d:360}],
   ygAurora:     [{t:'col',w:110,h:440,d:240,sky:true,soft:true},{t:'col',w:60,h:380,d:300,sky:true,x:-70},{t:'col',w:60,h:380,d:340,sky:true,x:70},{t:'bits',n:10,shape:'spark',dist:90,d:380,rise:true}],
-  ygCosmo:      [{t:'ring',d:240,r:3.4,flat:.45,rune:true},{t:'bits',n:14,shape:'star',dist:140,d:300},{t:'col',w:120,h:440,d:300,sky:true,soft:true}],
+  ygCosmo:      [{t:'ring',d:240,r:3.4,flat:.45,rune:true},{t:'bits',n:14,shape:'star',dist:140,d:300},{t:'bits',n:8,shape:'star',dist:80,d:380}],
 });
 // どのフィニッシュを重ねるか。技ごとの動き(SKILL_MOTION_SETS)を持つ段階は重ねず、見せ場の動き('sig')の段階だけ
 const specialFinishKindOf = (ownerId, skillName, anim) => {
@@ -888,18 +945,29 @@ const SpecialFinish = ({ kind, parts: partsProp = null, offset = 0 }) => {
       {parts.map((p, pi) => {
         const base = { '--d':`${(p.d || 0) + offset}ms`, '--x':`${p.x || 0}px` };
         if (p.t === 'blade') return <i key={pi} className={`fin-blade${p.vine ? ' fin-blade--vine' : ''}`} style={{ ...base, '--a':`${p.a || 0}deg`, '--len':`${p.len || 260}px`, '--w':`${p.w || 8}px` }}/>;
-        if (p.t === 'ring') return <i key={pi} className={`fin-ring${p.flat ? ' fin-ring--flat' : ''}${p.rune ? ' fin-ring--rune' : ''}`} style={{ ...base, '--r':p.r || 3, '--flat':p.flat || 1 }}/>;
-        if (p.t === 'col') return <i key={pi} className={`fin-col${p.flame ? ' fin-col--flame' : ''}${p.sky ? ' fin-col--sky' : ''}${p.soft ? ' fin-col--soft' : ''}`} style={{ ...base, '--w':`${p.w || 40}px`, '--h':`${p.h || 360}px` }}/>;
+        if (p.t === 'ring') return <i key={pi} className={`fin-ring${p.flat ? ' fin-ring--flat' : ''}${p.rune ? ' fin-ring--rune' : ''}${p.void ? ' fin-ring--void' : ''}`} style={{ ...base, '--r':p.r || 3, '--flat':p.flat || 1 }}/>;
+        if (p.t === 'col') return <i key={pi} className={`fin-col${p.flame ? ' fin-col--flame' : ''}${p.sky ? ' fin-col--sky' : ''}${p.soft ? ' fin-col--soft' : ''}${p.water ? ' fin-col--water' : ''}`} style={{ ...base, '--w':`${p.w || 40}px`, '--h':`${p.h || 360}px` }}/>;
         if (p.t === 'wave') return <i key={pi} className="fin-wave" style={base}/>;
+        if (p.t === 'spike') return <i key={pi} className={`fin-spike${p.thorn ? ' fin-spike--thorn' : ''}`} style={{ ...base, '--w':`${p.w || 30}px`, '--h':`${p.h || 160}px` }}/>;
+        if (p.t === 'bolt') return <i key={pi} className="fin-bolt" style={{ ...base, '--w':`${p.w || 40}px`, '--h':`${p.h || 360}px` }}/>;
         if (p.t === 'fall') return <React.Fragment key={pi}>{Array.from({ length:p.n || 4 }, (_, i) => <i key={i} className={`fin-fall fin-shape--${p.shape || 'rock'}`} style={{ ...base, '--d':`${(p.d || 0) + offset + i * 36}ms`, '--x':`${((i % 4) - 1.5) * 34}px`, '--s':1 + (i % 3) * .25 }}/>)}</React.Fragment>;
         return <React.Fragment key={pi}>{Array.from({ length:p.n || 8 }, (_, i) => {
           const ang = (360 / (p.n || 8)) * i + (pi % 2 ? 11 : 0);
-          return <i key={i} className={`fin-bit fin-shape--${p.shape || 'spark'}${p.rise ? ' fin-bit--rise' : ''}${p.fall ? ' fin-bit--fall' : ''}`}
+          return <i key={i} className={`fin-bit fin-shape--${p.shape || 'spark'}${p.rise ? ' fin-bit--rise' : ''}${p.fall ? ' fin-bit--fall' : ''}${p.in ? ' fin-bit--in' : ''}`}
             style={{ '--d':`${(p.d || 0) + offset + i * 14}ms`, '--a':`${ang}deg`, '--dist':`${p.dist || 110}px`, '--spin':p.spin || 0, '--i':i }}/>;
         })}</React.Fragment>;
       })}
     </div>
   );
+};
+// 固有技の着弾の型(光の技だけ、共通の衝撃の放射線を出す)。技ごとの定義 → 技名の固定の定義 → その子の色、の順で決める
+const specialMoveFormOf = (monId, skillName) => {
+  const staticKind = typeof SKILL_ATTACK_THEMES !== 'undefined' ? SKILL_ATTACK_THEMES[skillName] : null;
+  if (staticKind && YG_UNIQUE_FORM[staticKind]) return YG_UNIQUE_FORM[staticKind];
+  let hit = null;
+  try { hit = typeof skillMotionSlotOf === 'function' ? skillMotionSlotOf(monId, skillName, true) : null; } catch (e) { hit = null; }
+  if (hit && hit.spec && hit.spec !== 'sig') return SKM_FORM_OVERRIDE[`${hit.monId}-u${hit.index}`] || hit.spec.form || skmFormOf(hit.spec.c);
+  return skmFormOf(SPECIAL_MOVE_MON_COLOR[monId]);
 };
 const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, compact = false }) => {
   const [pos, setPos] = React.useState(null);
@@ -915,6 +983,7 @@ const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, comp
   // sig=true は図鑑の「固有技」(技を選ばず、その子の見せ場の動きを見せる)。技名は表示だけで、色とフィニッシュは見せ場の動きで決める
   const lookupName = slotSkill.sig ? null : slotSkill.name;
   const [c1, c2] = specialMoveColorOf(ownerId || (mon && mon.id), lookupName);
+  const form = specialMoveFormOf(ownerId || (mon && mon.id), lookupName);
   const phase = attackAnim && attackAnim.charge === true ? 'charge' : 'release';
   const name = String(slotSkill.name || '');
   const vw = typeof window !== 'undefined' ? window.innerWidth : 390;
@@ -926,7 +995,7 @@ const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, comp
     ? { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':'50%', '--spm-fy':'72%', '--spm-tx':'50%', '--spm-ty':'24%' }
     : { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':`${Math.round(from.x)}px`, '--spm-fy':`${Math.round(from.y)}px`, '--spm-tx':`${Math.round(to.x)}px`, '--spm-ty':`${Math.round(to.y)}px` };
   const body = (
-    <div data-special-move-fx={phase} className={`spm spm--${phase}${compact ? ' spm--compact' : ''}`} style={style} aria-hidden="true">
+    <div data-special-move-fx={phase} data-special-form={form} className={`spm spm--${phase} spm--form-${form}${compact ? ' spm--compact' : ''}`} style={style} aria-hidden="true">
       <div className="spm__shade"/>
       {phase === 'charge' && <div className="spm__gather">
         {[0,1,2].map(i => <i key={`r${i}`} className="spm__ring" style={{ '--i':i }}/>)}
@@ -968,7 +1037,6 @@ const AttackTargetFx = ({anim, attackerId}) => {
     <span className={`atk-target-fx atk-target-fx--hit${anim.charge === false ? ' atk-target-fx--special' : ''}`} aria-hidden="true">
       <i className="atk-target-fx__core"/>
       <i className="atk-target-fx__ring"/>
-      {anim.charge === false && <><i className="uex-pillar"/><i className="uex-crack"/></>}
       {[0, 45, 90, 135, 180, 225, 270, 315].map(deg => (
         <i key={deg} className="atk-target-fx__ray" style={{ '--atk-ray-angle':`${deg}deg` }}/>
       ))}
