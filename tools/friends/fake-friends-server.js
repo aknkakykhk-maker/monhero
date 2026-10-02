@@ -6,7 +6,7 @@
 const pairKey = (a, b) => [a, b].sort().join('|');
 
 const createFakeFriendsServer = () => {
-  const db = { friend_codes: [], friend_links: [], friend_invites: [], breeder_profiles: [] };
+  const db = { friend_codes: [], friend_links: [], friend_invites: [], friend_profiles: [], breeder_profiles: [] };
   const calls = { methods: [], deletes: 0, sqlRejects: 0 };
   // 時刻は「いま」を起点に1秒ずつ進める(招待の有効期限の判定が実際の時計で動くように)
   const base = Date.now() - 60 * 1000;
@@ -60,6 +60,14 @@ const createFakeFriendsServer = () => {
           if (rows.some((r) => r.breeder_id === row.breeder_id || r.friend_code === row.friend_code)) { calls.sqlRejects += 1; return { status: 409, body: { code: '23505' } }; }
           if (!/^[A-HJ-NP-Z2-9]{8}$/.test(row.friend_code)) { calls.sqlRejects += 1; return { status: 400, body: { code: '23514' } }; }
           row.created_at = tick();
+        } else if (table === 'friend_profiles') {
+          const PLACES = ['home', 'battle', 'rhythm', 'multi', 'masu', 'market', 'other'];
+          if (row.place != null && !PLACES.includes(row.place)) { calls.sqlRejects += 1; return { status: 400, body: { code: '23514' } }; }
+          if (row.play_seconds != null && row.play_seconds < 0) { calls.sqlRejects += 1; return { status: 400, body: { code: '23514' } }; }
+          if (row.favorite != null && JSON.stringify(row.favorite).length > 6000) { calls.sqlRejects += 1; return { status: 400, body: { code: '23514' } }; }
+          const old = rows.find((r) => r.breeder_id === row.breeder_id);
+          if (old) { Object.assign(old, row, { updated_at: tick() }); continue; }   // on_conflict の上書き(1人1行)
+          row.updated_at = tick();
         } else if (table === 'friend_invites') {
           if (row.sender_id === row.target_id || !/^[A-HJ-NP-Z2-9]{4}$/.test(row.room_code)) { calls.sqlRejects += 1; return { status: 400, body: { code: '23514' } }; }
           // on_conflict の上書き(同じ2人は1行。created_at は進む)

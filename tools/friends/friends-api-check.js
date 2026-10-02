@@ -35,11 +35,17 @@ const sandbox = {
   normalizeProfileFrameId: (value) => (typeof value === 'string' && value ? value : 'none'),
   sbFetchRhythmTotalRankings: async () => [],
   rhythmTotalRankingEntryFromRow: (row) => row,
+  // マスモンまわりの置き物(絆Lv=経験値の十の位、総合力=attack、詳細は名前だけ)
+  ALL_PLAYER_MONSTERS: { Mocchi: { name: 'モッチー' }, Pixie: { name: 'ピクシー' } },
+  masuBondLevelInfo: (masu) => ({ level: masu.lv }),
+  masuPowerOf: (masu) => masu.power,
+  rankingPartyColors: () => [], getMasuColors: () => [],
+  rankingMasuDetail: (masu) => ({ v: 6, n: masu.baseId }),
 };
 vm.createContext(sandbox);
 vm.runInContext(`${source}\n;globalThis.__api = { friendsMakeCode, friendsNormalizeCode, friendsFormatCode, friendsSafeId, friendLinkView, friendsGroup, friendsLastSeenText, friendsIdOfRankingEntry,
   sbEnsureFriendCode, sbFindBreederIdByCode, sbFetchFriendLinks, sbFetchFriendProfiles, sbSendFriendRequest, sbRespondFriendRequest, sbCancelFriendRequest,
-  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`, sandbox);
+  sbRemoveFriend, sbBlockFriendUser, sbUnblockFriendUser, sbSendRoomInvite, sbFetchRoomInvites, sbFetchFriendRoster, friendsPlaceOfScreen, friendsPresenceText, friendsPlaytimeText, friendsBuildSummary, sbUpsertFriendProfile, sbFetchFriendSummaries, sbCountIncomingFriendRequests, FRIEND_INVITE_TTL_MS, FRIENDS_MAX, FRIENDS_PENDING_MAX, friendsUnavailable };`, sandbox);
 const api = sandbox.__api;
 
 const statusOf = (a, b) => {
@@ -157,12 +163,52 @@ const statusOf = (a, b) => {
   check('同じ2人の招待は1行に上書きされ、新しい部屋コードになる', db.friend_invites.length === 1 && again.length === 1 && again[0].roomCode === 'CD45');
   check('3分より古い招待は届かない', (await api.sbFetchRoomInvites('userD', Date.now() + api.FRIEND_INVITE_TTL_MS + 10 * 60 * 1000)).length === 0);
 
+  // ---- フレンドに見せる情報 ----
+  check('画面から場所の大分類を引ける', api.friendsPlaceOfScreen('HOME') === 'home' && api.friendsPlaceOfScreen('RHYTHM_MULTI') === 'multi'
+    && api.friendsPlaceOfScreen('RHYTHM_PLAY') === 'rhythm' && api.friendsPlaceOfScreen('BATTLE') === 'battle' && api.friendsPlaceOfScreen('BATTLE_MENU') === 'battle'
+    && api.friendsPlaceOfScreen('MASU_ENHANCE') === 'masu' && api.friendsPlaceOfScreen('BREEDER_MARKET') === 'market'
+    && api.friendsPlaceOfScreen('PROFILE') === 'other' && api.friendsPlaceOfScreen(undefined) === 'other');
+  const t0 = 1700000000000;
+  check('5分以内なら「いまの場所」、それより前なら「◯分前」', api.friendsPresenceText('rhythm', t0 - 60 * 1000, t0).online === true
+    && api.friendsPresenceText('rhythm', t0 - 60 * 1000, t0).text === 'モンヒロビートで遊び中'
+    && api.friendsPresenceText(null, t0 - 60 * 1000, t0).text === 'ログイン中'
+    && api.friendsPresenceText('home', t0 - 20 * 60 * 1000, t0).online === false
+    && api.friendsPresenceText('home', t0 - 20 * 60 * 1000, t0).text === '20分前に開きました');
+  check('プレイ時間の文', api.friendsPlaytimeText(3 * 3600 + 5 * 60) === '3時間05分' && api.friendsPlaytimeText(90) === '1分' && api.friendsPlaytimeText(10) === '1分未満');
+  const summary = api.friendsBuildSummary({
+    place: 'battle', favoriteMasuId: 22, playtime: { totalMs: 7200000, since: '2026-09-01' },
+    masuMons: [{ id: 11, baseId: 'Mocchi', lv: 8, power: 1200 }, { id: 22, baseId: 'Pixie', lv: 15, power: 900 }, { id: 33, baseId: 'Unknown', lv: 99, power: 99999 }, null],
+  });
+  check('最高絆Lvと最高総合力を、別々の子から選べる(知らない種類は数えない)', summary.bestBond === 15 && summary.bestBondMon === 'Pixie' && summary.bestPower === 1200 && summary.bestPowerMon === 'Mocchi');
+  check('好きなマスモンの詳細が入る', summary.favorite && summary.favorite.monsterId === 'Pixie' && summary.favorite.bondLevel === 15 && summary.favorite.power === 900 && summary.favorite.detail.v === 6);
+  check('遊びはじめとプレイ時間(秒)が入る', summary.startedOn === '2026-09-01' && summary.playSeconds === 7200 && summary.place === 'battle');
+  const empty = api.friendsBuildSummary({ place: 'zzz', masuMons: [], favoriteMasuId: null, playtime: { totalMs: 'x', since: '昨日' } });
+  check('壊れた値・空の持ち物でも落ちず、空欄へ倒れる', empty.place === 'other' && empty.startedOn === null && empty.playSeconds === null && empty.bestBond === null && empty.favorite === null);
+  check('自分の分を送れる(1人1行のまま上書きされる)', await api.sbUpsertFriendProfile('userA', summary) === true
+    && await api.sbUpsertFriendProfile('userA', { ...summary, place: 'home' }) === true && db.friend_profiles.length === 1 && db.friend_profiles[0].place === 'home');
+  const sums = await api.sbFetchFriendSummaries(['userA', 'userB', 'a,b']);
+  check('フレンドの情報を読める(無い人は含まれない)', sums.userA && sums.userA.bestBond === 15 && sums.userA.favorite.monsterId === 'Pixie' && !sums.userB && sums.userA.updatedAt > 0
+    && sums.userA.startedOn === '2026-09-01' && sums.userA.playSeconds === 7200);
+  check('知らない場所の値は送っても弾かれ、落ちない', await api.sbUpsertFriendProfile('userA', { ...summary, place: 'nowhere' }) === false && db.friend_profiles[0].place === 'home');
+  // 届いている申請の件数
+  await api.sbSendFriendRequest('userE', 'userA');
+  const inc = await api.sbCountIncomingFriendRequests('userA');
+  check('届いている申請の件数と相手の名前が分かる', inc.count === 1 && inc.ids[0] === 'userE' && inc.names.length === 1, JSON.stringify(inc));
+  check('申請が無い人は0件', (await api.sbCountIncomingFriendRequests('userZZ')).count === 0);
+
   // ---- 全体の約束 ----
   check('どこにも DELETE を使っていない(行は消えない)', calls.deletes === 0 && !calls.methods.includes('DELETE'));
   check('1組が2行になったことは一度もない', (() => {
     const seen = new Set();
     return db.friend_links.every((r) => { const k = pairKey(r.requester_id, r.target_id); if (seen.has(k)) return false; seen.add(k); return true; });
   })());
+
+  // ---- friend_profiles だけが無い環境(第2弾のSQLが未適用) ----
+  delete db.friend_profiles;
+  check('friend_profiles だけ無くても、送信は静かに失敗し、フレンド全体は止まらない',
+    await api.sbUpsertFriendProfile('userA', summary) === false && api.friendsUnavailable() === false
+    && Object.keys(await api.sbFetchFriendSummaries(['userA'])).length === 0
+    && await api.sbSendFriendRequest('userA', 'userF') === 'sent');
 
   // ---- 表が無い環境 ----
   const saved = { ...db };

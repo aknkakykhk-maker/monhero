@@ -21,6 +21,7 @@ const FRIENDS_TABLE_LINKS = 'friend_links';
 const FRIENDS_TIMEOUT_MS = 8000;
 const FRIENDS_ONLINE_MS = 5 * 60 * 1000;           // 最後に開いてから5分以内は「いま」
 let _friendsUnavailable = false;                   // 表が無いと分かったら、ページを閉じるまで使わない
+let _friendProfilesUnavailable = false;           // friend_profiles だけ無いと分かったとき(SQL未適用)。フレンド本体は止めない
 let _friendCodeCache = null;                       // { breederId, code }
 const friendsUnavailable = () => _friendsUnavailable;
 
@@ -101,8 +102,10 @@ const friendsLastSeenText = (updatedAtMs, nowMs) => {
 
 // ---- 通信の下回り ----
 // 失敗は throw、表が無いときだけ notReady を付けた Error を投げる。画面側はそれを「準備中」に変える
-const friendsRequest = async (path, { method = 'GET', body = null, prefer = null } = {}) => {
+// soft … friend_profiles のように「無くてもフレンドは動く」表。無いと分かっても全体は止めず、softMissing だけを付けて投げる
+const friendsRequest = async (path, { method = 'GET', body = null, prefer = null, soft = false } = {}) => {
   if (_friendsUnavailable) { const e = new Error('friends tables are not ready'); e.notReady = true; throw e; }
+  if (soft && _friendProfilesUnavailable) { const e = new Error('friend_profiles is not ready'); e.softMissing = true; throw e; }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FRIENDS_TIMEOUT_MS);
   try {
@@ -114,6 +117,7 @@ const friendsRequest = async (path, { method = 'GET', body = null, prefer = null
     const text = await res.text();
     if (!res.ok) {
       if (_isMissingTableError(res.status, text)) {
+        if (soft) { _friendProfilesUnavailable = true; const e = new Error('friend_profiles is not ready'); e.softMissing = true; throw e; }
         _friendsUnavailable = true;
         const e = new Error('friends tables are not ready'); e.notReady = true; throw e;
       }
@@ -401,4 +405,132 @@ const sbFetchFriendRoster = async (selfIdRaw) => {
     userName: (looks[view.otherId] || {}).userName || '名無しのブリーダー',
     lastSeenAt: (looks[view.otherId] || {}).lastSeenAt || 0,
   })).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+};
+
+// ---- フレンドに見せる情報(friend_profiles) ----
+// 端末が自分で計算して、1人1行を上書きする。フレンドの画面で、フレンドにだけ見せる。
+// 表がまだ無い環境(SQL未適用)でもフレンド本体は動く(softMissing を握りつぶすだけ)。
+const FRIEND_PLACE_TEXT = Object.freeze({
+  home: 'ホームにいます', battle: 'バトル中', rhythm: 'モンヒロビートで遊び中', multi: 'みんなで対戦中',
+  masu: 'マスモンのお世話中', market: 'マーケットを見ています', other: 'ログイン中',
+});
+const FRIEND_HEARTBEAT_MS = 2 * 60 * 1000;   // 開いているあいだ、この間隔で「いま遊んでいる」と知らせる
+const FRIEND_PUBLISH_MIN_MS = 15 * 1000;     // 場所や中身が変わっても、これより短い間隔では送らない
+// 画面(gameState)から、見せる場所の大分類へ。細かい画面名や曲名は見せない
+const friendsPlaceOfScreen = (gameState) => {
+  const name = typeof gameState === 'string' ? gameState : '';
+  if (name === 'HOME') return 'home';
+  if (name === 'RHYTHM_MULTI') return 'multi';
+  if (name.startsWith('RHYTHM')) return 'rhythm';
+  if (name === 'BREEDER_MARKET') return 'market';
+  if (/^(MASU_|MB_MANAGEMENT|PASTURE_|MONSTER_|OWNED_MONSTERS)/.test(name)) return 'masu';
+  if (/^(BATTLE|PICK_|QUICK_|SKIP_|WAVE_|UPGRADE_|REWARD_|CHAMPION|DEFEAT|RETIRE|TRAINING|TEACHING|AUTO_)/.test(name)) return 'battle';
+  return 'other';
+};
+// 「いまの場所」または「◯分前」の文。online は5分以内に知らせが来ているか
+const friendsPresenceText = (place, updatedAtMs, nowMs) => {
+  const online = Number.isFinite(updatedAtMs) && updatedAtMs > 0 && nowMs - updatedAtMs < FRIENDS_ONLINE_MS;
+  if (online) return { online: true, text: FRIEND_PLACE_TEXT[place] || FRIEND_PLACE_TEXT.other };
+  return { online: false, text: friendsLastSeenText(updatedAtMs, nowMs) };
+};
+// プレイ時間(ミリ秒)を「◯時間◯分」の文へ(プロフィールの表示と同じ書き方)
+const friendsPlaytimeText = (seconds) => {
+  const sec = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(sec / 3600);
+  const minutes = Math.floor((sec % 3600) / 60);
+  if (hours > 0) return `${hours}時間${String(minutes).padStart(2, '0')}分`;
+  return minutes > 0 ? `${minutes}分` : '1分未満';
+};
+const FRIEND_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+// 端末の持ち物から、フレンドに見せる情報を作る(書く内容はここで決まる)
+//  masuMons … 手持ちのマスモン / favoriteMasuId … 「好きなマスモン」に選んだ個体のid / playtime … normalizePlaytime の形
+const friendsBuildSummary = ({ place, masuMons, favoriteMasuId, playtime }) => {
+  let bestBond = 0, bestBondMon = '', bestPower = 0, bestPowerMon = '', favorite = null;
+  (Array.isArray(masuMons) ? masuMons : []).forEach((masu) => {
+    try {
+      if (!masu || !ALL_PLAYER_MONSTERS[masu.baseId]) return;
+      const level = masuBondLevelInfo(masu).level;
+      const power = Math.round(Number(masuPowerOf(masu)) || 0);
+      if (Number.isFinite(level) && level > bestBond) { bestBond = level; bestBondMon = masu.baseId; }
+      if (power > bestPower) { bestPower = power; bestPowerMon = masu.baseId; }
+      if (favoriteMasuId != null && String(masu.id) === String(favoriteMasuId)) {
+        const colors = rankingPartyColors(masu.baseId, getMasuColors(masu));
+        favorite = {
+          monsterId: masu.baseId, name: ALL_PLAYER_MONSTERS[masu.baseId].name || null, bondLevel: level, power,
+          detail: rankingMasuDetail(masu), ...(colors.some(Boolean) ? { colors } : {}),
+        };
+      }
+    } catch (error) { /* 壊れた1体のために、ほかの情報まで送れなくならないようにする */ }
+  });
+  const span = playtime && typeof playtime === 'object' ? playtime : {};
+  const totalMs = Number(span.totalMs);
+  return {
+    place: Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, place) ? place : 'other',
+    startedOn: (typeof span.since === 'string' && FRIEND_DAY_RE.test(span.since)) ? span.since : null,
+    playSeconds: Number.isFinite(totalMs) && totalMs >= 0 ? Math.floor(totalMs / 1000) : null,
+    bestBond: bestBond > 0 ? bestBond : null, bestBondMon: bestBondMon || null,
+    bestPower: bestPower > 0 ? bestPower : null, bestPowerMon: bestPowerMon || null,
+    favorite,
+  };
+};
+// 自分の分を上書きする。失敗しても進行は止めない(呼ぶ側は結果を見なくてよい)
+const sbUpsertFriendProfile = async (breederIdRaw, summary) => {
+  const id = friendsSafeId(breederIdRaw);
+  if (!id || !summary) return false;
+  try {
+    await friendsRequest('friend_profiles?on_conflict=breeder_id', {
+      method: 'POST', soft: true, prefer: 'resolution=merge-duplicates,return=minimal',
+      body: [{
+        breeder_id: id, place: summary.place, started_on: summary.startedOn, play_seconds: summary.playSeconds,
+        best_bond: summary.bestBond, best_bond_mon: summary.bestBondMon, best_power: summary.bestPower,
+        best_power_mon: summary.bestPowerMon, favorite: summary.favorite,
+      }],
+    });
+    return true;
+  } catch (error) {
+    if (!(error && (error.softMissing || error.notReady))) console.error('[friends]', error && error.message ? error.message : error);
+    return false;
+  }
+};
+// フレンドたちの「見せる情報」を読む。表が無い・通信できないときは空(その場合、画面は名前と見た目だけを出す)
+const sbFetchFriendSummaries = async (ids) => {
+  const safe = Array.from(new Set((Array.isArray(ids) ? ids : []).map(friendsSafeId).filter(Boolean))).slice(0, 100);
+  const byId = {};
+  if (!safe.length) return byId;
+  try {
+    const rows = await friendsRequest(
+      `friend_profiles?select=breeder_id,place,started_on,play_seconds,best_bond,best_bond_mon,best_power,best_power_mon,favorite,updated_at&breeder_id=in.(${safe.join(',')})`,
+      { soft: true });
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      if (!row || typeof row.breeder_id !== 'string') return;
+      const at = Date.parse(row.updated_at);
+      const num = (value) => (Number.isFinite(Number(value)) && value !== null ? Number(value) : null);
+      const fav = row.favorite && typeof row.favorite === 'object' && !Array.isArray(row.favorite) && typeof row.favorite.monsterId === 'string' ? row.favorite : null;
+      byId[row.breeder_id] = {
+        place: Object.prototype.hasOwnProperty.call(FRIEND_PLACE_TEXT, row.place) ? row.place : null,
+        startedOn: (typeof row.started_on === 'string' && FRIEND_DAY_RE.test(row.started_on)) ? row.started_on : null,
+        playSeconds: num(row.play_seconds),
+        bestBond: num(row.best_bond), bestBondMon: typeof row.best_bond_mon === 'string' ? row.best_bond_mon : null,
+        bestPower: num(row.best_power), bestPowerMon: typeof row.best_power_mon === 'string' ? row.best_power_mon : null,
+        favorite: fav, updatedAt: Number.isFinite(at) ? at : 0,
+      };
+    });
+  } catch (error) {
+    if (!(error && (error.softMissing || error.notReady))) console.error('[friends]', error && error.message ? error.message : error);
+  }
+  return byId;
+};
+// 届いている申請の件数(HOME・プロフィールのバッジ用)。通信できない・準備中は 0
+const sbCountIncomingFriendRequests = async (breederIdRaw) => {
+  const id = friendsSafeId(breederIdRaw);
+  if (!id) return { count: 0, names: [] };
+  try {
+    const rows = await sbFetchFriendLinks(id);
+    const incoming = friendsGroup(id, rows).incoming;
+    if (!incoming.length) return { count: 0, names: [] };
+    const looks = await sbFetchFriendProfiles(incoming.slice(0, 3).map((view) => view.otherId));
+    return { count: incoming.length, names: incoming.slice(0, 3).map((view) => (looks[view.otherId] || {}).userName || '名無しのブリーダー'), ids: incoming.map((view) => view.otherId) };
+  } catch (error) {
+    return { count: 0, names: [] };
+  }
 };

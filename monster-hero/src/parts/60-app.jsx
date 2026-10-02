@@ -1701,6 +1701,65 @@ function MonsterHeroGame() {
     lastPublishedProfileRef.current = signature;
     publishBreederProfile();
   }, [dataLoaded, onboarded, onboardingPreview, breederName, breederIcon, profileFrameId, publishBreederProfile]);
+
+  // ===== フレンド機能(公開フラグ friends が開いているときだけ動く。docs/spec/FRIENDS.md) =====
+  // 好きなマスモン(プロフィールで選ぶ。フレンドにだけ見える)。新しい保存キーへ個体のidだけを覚える
+  const FAVORITE_MASU_KEY = 'mh_favorite_masu_v1';
+  const [favoriteMasuId, setFavoriteMasuId] = useState(null);
+  const [showFavoritePicker, setShowFavoritePicker] = useState(false);
+  const selectFavoriteMasu = (id) => {
+    const next = id == null ? null : String(id);
+    setFavoriteMasuId(next);
+    setShowFavoritePicker(false);
+    Promise.resolve(storeSet(FAVORITE_MASU_KEY, next, false)).catch(error => {
+      console.error('[friends] favorite masu save failed:', error && error.message ? error.message : error);
+    });
+  };
+  // 届いているフレンド申請(HOME・プロフィールのバッジと、起動時の助手の知らせ)
+  const [friendRequestInfo, setFriendRequestInfo] = useState({ count: 0, names: [], ids: [] });
+  const [friendNoticeDismissed, setFriendNoticeDismissed] = useState('');   // 今回の起動で閉じた申請の組み合わせ(保存しない)
+  const friendsActive = RELEASE_FLAGS.friends === true && dataLoaded && onboarded && !onboardingPreview;
+  const refreshFriendRequests = useCallback(async () => {
+    if (!friendsActive) return;
+    const id = await ensureBreederId();
+    if (!id) return;
+    setFriendRequestInfo(await sbCountIncomingFriendRequests(id));
+  }, [friendsActive]);
+  useEffect(() => {
+    if (!friendsActive) return undefined;
+    refreshFriendRequests();
+    const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) refreshFriendRequests(); }, 3 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [friendsActive, refreshFriendRequests]);
+  // 「いまの場所」「プレイ時間」「最高絆Lv」などをフレンド用の表へ送る。端末には何も保存しない。
+  // 画面が変わる・手持ちが変わるたびに送るが、送る間隔の下限(15秒)を守る。開いているあいだは2分ごとにも送る(ログイン中の印)
+  const friendLatestRef = useRef({});
+  friendLatestRef.current = { gameState, masuMons, favoriteMasuId };
+  const friendPublishRef = useRef(0);
+  const publishFriendProfile = useCallback(async () => {
+    if (!friendsActive) return;
+    const id = await ensureBreederId();
+    if (!id) return;
+    const latest = friendLatestRef.current;
+    friendPublishRef.current = Date.now();
+    await sbUpsertFriendProfile(id, friendsBuildSummary({
+      place: friendsPlaceOfScreen(latest.gameState), masuMons: latest.masuMons,
+      favoriteMasuId: latest.favoriteMasuId, playtime: playtimeRef.current,
+    }));
+  }, [friendsActive]);
+  useEffect(() => {
+    if (!friendsActive) return undefined;
+    const wait = Math.max(3000, FRIEND_PUBLISH_MIN_MS - (Date.now() - friendPublishRef.current));
+    const timer = setTimeout(publishFriendProfile, wait);
+    return () => clearTimeout(timer);
+  }, [friendsActive, gameState, masuMons, favoriteMasuId, publishFriendProfile]);
+  useEffect(() => {
+    if (!friendsActive) return undefined;
+    const timer = setInterval(() => { if (typeof document === 'undefined' || !document.hidden) publishFriendProfile(); }, FRIEND_HEARTBEAT_MS);
+    const onVisible = () => { if (!document.hidden && Date.now() - friendPublishRef.current > FRIEND_PUBLISH_MIN_MS) publishFriendProfile(); };
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(timer); if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisible); };
+  }, [friendsActive, publishFriendProfile]);
   // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
@@ -4972,6 +5031,8 @@ function MonsterHeroGame() {
       setBreederIcon(savedIcon);
       // プロフィールフレーム。既存のセーブデータには無いキーなので、既定値は必ず「フレームなし」
       setProfileFrameId(normalizeProfileFrameId(await storeGet(PROFILE_FRAME_KEY, PROFILE_FRAME_NONE_ID, false)));
+      // 好きなマスモン(フレンド用)。既存のセーブデータには無いキーなので、既定は必ず「未設定」
+      { const savedFavorite = await storeGet(FAVORITE_MASU_KEY, null, false); setFavoriteMasuId(typeof savedFavorite === 'string' && savedFavorite ? savedFavorite : null); }
       // 呼び方の上書きは助手ごとに別のキーへ。みゅあのぶんは今までのキーをそのまま読む
       const loadedCallStyles = {};
       for (const who of ASSISTANT_LIST) {
@@ -14094,6 +14155,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* HOME: 背景・将来のマスモン・施設操作・情報UIの順に重ねる */}
         {gameState==='HOME'&&(
           <HomeScreen
+            friendRequestCount={friendRequestInfo.count}
             assistantBondUp={assistantBondUp} breederIcon={breederIcon} breederLevel={breederLevel}
             breederName={breederName} breederPoints={breederPoints} gifts={gifts} gold={gold}
             hasUnreadChangelog={hasUnreadChangelog} homeBackgroundReady={homeBackgroundReady}
@@ -16314,6 +16376,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             onOpenRhythmHistory={openRhythmHistory}
             friendsEnabled={RELEASE_FLAGS.friends===true}
             onOpenFriends={()=>openFriends(null)}
+            friendRequestCount={friendRequestInfo.count}
+            favoriteMasu={(favoriteMasuId!=null&&masuMons.find(m=>String(m.id)===String(favoriteMasuId)))||null}
+            onOpenFavoritePicker={()=>setShowFavoritePicker(true)}
           />
         )}
 
@@ -16323,6 +16388,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             resolveIconUrl={resolveIconUrl}
             target={friendsTarget}
             onTargetHandled={()=>setFriendsTarget(null)}
+            requestCount={friendRequestInfo.count}
+            onIncomingCount={(count)=>setFriendRequestInfo(prev=>prev.count===count?prev:({...prev,count}))}
+            onOpenMonsterDetail={setRankingMonsterDetail}
             onBack={()=>setGameState('PROFILE')}
           />
         )}
@@ -17362,6 +17430,31 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ・候補は「いまのブリーダーアイコン＋そのフレーム」を重ねて見せる
             ・押したその場で反映して保存する(閉じるまで見比べられるよう、モーダルは開いたまま)
             ・並ぶのは公開済み(released:true)のフレームだけ。未公開の豪華フレームは出ない */}
+        {showFavoritePicker&&(
+          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
+              <h3 className="text-lg font-black text-white mb-1 text-center">好きなマスモン</h3>
+              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">フレンドがあなたのプロフィールを開いたとき、この子が見えます。</p>
+              <div className="min-h-0 flex-1 overflow-y-auto mh-scroll flex flex-col gap-1.5" data-favorite-picker>
+                <button type="button" data-favorite-option="none" onClick={()=>selectFavoriteMasu(null)} aria-pressed={favoriteMasuId==null}
+                  className={`min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${favoriteMasuId==null?'border-pink-400 bg-pink-950/60 text-pink-100':'border-slate-700 bg-slate-950/40 text-slate-300'}`}>設定しない</button>
+                {masuMons.filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]).slice().sort((a,b)=>masuBondLevelInfo(b).level-masuBondLevelInfo(a).level).slice(0,200).map(m=>{
+                  const base=ALL_PLAYER_MONSTERS[m.baseId]; const chosen=favoriteMasuId!=null&&String(m.id)===String(favoriteMasuId);
+                  return (
+                    <button key={m.id} type="button" data-favorite-option={String(m.id)} onClick={()=>selectFavoriteMasu(m.id)} aria-pressed={chosen}
+                      className={`flex items-center gap-2 min-h-[48px] rounded-xl border px-2 text-left active:scale-95 ${chosen?'border-pink-400 bg-pink-950/60':'border-slate-700 bg-slate-950/40'}`}>
+                      {resolveIconUrl(m.baseId)?<img src={resolveIconUrl(m.baseId)} alt="" className="h-9 w-9 shrink-0 object-contain"/>:<span className="h-9 w-9 shrink-0 text-center text-xl">❓</span>}
+                      <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">{base.name}</span>
+                      <span className="shrink-0 text-[10px] font-black text-pink-300">絆Lv.{masuBondLevelInfo(m).level}</span>
+                    </button>
+                  );
+                })}
+                {masuMons.length===0&&<p className="py-4 text-center text-[11px] font-bold text-slate-400">まだマスモンがいません</p>}
+              </div>
+              <div className="mt-3"><ModalCloseButton onClick={()=>setShowFavoritePicker(false)}/></div>
+            </div>
+          </div>
+        )}
         {showFramePicker&&(
           <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
@@ -17818,6 +17911,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           finishUpdateGuide={finishUpdateGuide} selectedAssistantId={selectedAssistantId}
           setUpdateGuidePage={setUpdateGuidePage} updateGuidePage={updateGuidePage}
           updateGuideQueue={updateGuideQueue}
+        />
+      )}
+
+      {/* フレンド申請が届いているとき、起動して最初にHOMEへ来たところで助手が知らせる。
+          閉じたら、同じ申請の組み合わせではこの起動のあいだ出さない(保存はしない。次の起動でまだ届いたままなら、また知らせる) */}
+      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&!eventReplay&&!rhythmEventStoryPending&&updateGuideQueue.length===0
+        &&RELEASE_FLAGS.friends===true&&friendRequestInfo.count>0&&friendNoticeDismissed!==(friendRequestInfo.ids||[]).join(',')&&(
+        <HomeFriendRequestNotice
+          activeAssistant={activeAssistant} count={friendRequestInfo.count} names={friendRequestInfo.names}
+          onOpen={()=>{ setFriendNoticeDismissed((friendRequestInfo.ids||[]).join(',')); setGameState('PROFILE'); openFriends(null); }}
+          onLater={()=>setFriendNoticeDismissed((friendRequestInfo.ids||[]).join(','))}
         />
       )}
 
