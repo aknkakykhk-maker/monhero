@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 997dea7e37800903
+// generated-sha256: 1fa5f8e54946eee0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 01:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 01:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16845,7 +16845,8 @@ const RHYTHM_PREVIEW_DELAY_MS=350;
 //   ・オプション(RHYTHM_OPTIONS) … 「♪ BGM試聴」と重なるので無音のまま(ユーザー指示)
 //   ・演奏中(RHYTHM_PLAY)         … 自分で曲を鳴らす
 //   ・モンビーの外               … HOMEなどへ戻るので止める
-const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING']);
+//   ・みんなで対戦(RHYTHM_MULTI) … 選曲中は見ている曲、シャッフル・難易度選択では決まった曲(2026-10-03・ユーザー報告「曲選択のときに音楽がなってない」)
+const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_MULTI']);
 // spotClass … チュートリアルで光らせる場所に付けるクラスを返す関数(省略時は光らせない)。
 // 画面側が知っているキー: songList / songLevel / achievement / difficulty
 // 選んでいる曲・難易度は**画面の外(App本体)**で持つ。
@@ -33155,7 +33156,7 @@ const RHYTHM_MULTI_FC_LABELS = Object.freeze(['', 'FULL COMBO!', 'ALL EXCELLENT!
 
 // songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
 // onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onBack, onStartPlay }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onBack, onStartPlay }) {
   const view = useRhythmMultiView();
   const difficultyIds = difficultyList.map((d) => d.id);
   const songIds = songs.map((song) => song.songId);
@@ -33269,6 +33270,18 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     return () => { clearInterval(tick); clearTimeout(stop); clearTimeout(done); };
   }, [shuffleRound]);
 
+  // 曲の試聴(本体が鳴らす)へ、いま鳴らしたい曲を知らせる。
+  //   選曲中 … 曲えらびで見ている曲(まだ触っていなければ一覧の先頭)
+  //   シャッフル・難易度選択・ライブの直前 … 決まった曲
+  //   それ以外 … '' (本体はソロで選んでいた曲を鳴らし続ける)
+  const previewPhase = room ? room.phase : '';
+  // シャッフルの演出中は、まだ答えを鳴らさない(選曲中の曲のまま)
+  const selectPreviewId = selSongId || (songs[0] ? songs[0].songId : '');
+  const previewId = previewPhase === 'select' || (previewPhase === 'ready' && shuffleRound) ? selectPreviewId
+    : previewPhase === 'ready' ? room.songId : '';
+  React.useEffect(() => { if (onPreviewSong) onPreviewSong(previewId); }, [previewId]);
+  React.useEffect(() => () => { if (onPreviewSong) onPreviewSong(''); }, []);
+
   const myProfile = () => ({ name: profile.name, level: profile.level, icon: profile.icon, frame: profile.frame, diff: defaultDiff });
   const createPrivate = () => { setMessage(''); RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private'); };
   const joinFromInvite = (invite) => {
@@ -33327,6 +33340,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         {quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`}
       </small>}
       {opts.timer != null && <b data-rhythm-multi-timer className={`shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`}>⏱ {opts.timer}</b>}
+      {/* 縦⇄横の切り替え(曲えらびと同じボタン。2026-10-03・ユーザー報告「縦横が変えられない」) */}
+      <RhythmOrientationButton/>
       {view && <button data-rhythm-multi-chat-open type="button" aria-label="チャット" onClick={() => setChatOpen((v) => !v)} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-lg">💬</button>}
     </header>
   );
@@ -36337,7 +36352,11 @@ function MonsterHeroGame() {
   //
   // オプションを外すのは、あちらに「♪ BGM試聴」があるため。裏で曲が鳴っていると重なって聴けない。
   // 演奏中(RHYTHM_PLAY)も外す。あちらは自分で曲を鳴らす。
-  const rhythmPreviewSong=rhythmDemoSongs(RHYTHM_SONGS).find(song=>song.songId===rhythmSelectedSongId)||null;
+  // みんなで対戦の画面では、対戦の画面が「いま鳴らしたい曲」を知らせてくる(選曲中は見ている曲、シャッフル後は決まった曲)。
+  // 知らせが無い段(マッチング・結果など)は、ソロの曲えらびで選んでいた曲をそのまま鳴らし続ける
+  const [rhythmMultiPreviewSongId,setRhythmMultiPreviewSongId]=useState('');
+  const rhythmPreviewSongId=gameState==='RHYTHM_MULTI'&&rhythmMultiPreviewSongId?rhythmMultiPreviewSongId:rhythmSelectedSongId;
+  const rhythmPreviewSong=rhythmDemoSongs(RHYTHM_SONGS).find(song=>song.songId===rhythmPreviewSongId)||null;
   const rhythmPreviewTrackId=rhythmSettings.songPreviewEnabled&&RHYTHM_PREVIEW_SCREENS.includes(gameState)&&rhythmPreviewSong
     ?rhythmPreviewSong.bgmTrackId:'';
   useEffect(()=>{
@@ -49406,7 +49425,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmPlay.from==='multi'?[]:rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiRewardScale(rhythmPlay.multiCount):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiRewardScale(rhythmPlay.multiCount):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
           // みんなで対戦の演奏は、まずスコアをルームへ知らせる。そのうえで、ひとりで遊ぶときと同じく
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
           // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)
@@ -49475,7 +49494,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
         }}/>}
 
-        {gameState==='RHYTHM_MULTI'&&<RhythmMultiScreen profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords}
+        {gameState==='RHYTHM_MULTI'&&<RhythmMultiScreen profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):''}:null}
           onBack={()=>setGameState('RHYTHM_DEMO_HOME')}
           onStartPlay={(song,difficulty,startId,count)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId,multiCount:count});setGameState('RHYTHM_PLAY');}}/>}

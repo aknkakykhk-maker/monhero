@@ -2634,7 +2634,11 @@ function MonsterHeroGame() {
   //
   // オプションを外すのは、あちらに「♪ BGM試聴」があるため。裏で曲が鳴っていると重なって聴けない。
   // 演奏中(RHYTHM_PLAY)も外す。あちらは自分で曲を鳴らす。
-  const rhythmPreviewSong=rhythmDemoSongs(RHYTHM_SONGS).find(song=>song.songId===rhythmSelectedSongId)||null;
+  // みんなで対戦の画面では、対戦の画面が「いま鳴らしたい曲」を知らせてくる(選曲中は見ている曲、シャッフル後は決まった曲)。
+  // 知らせが無い段(マッチング・結果など)は、ソロの曲えらびで選んでいた曲をそのまま鳴らし続ける
+  const [rhythmMultiPreviewSongId,setRhythmMultiPreviewSongId]=useState('');
+  const rhythmPreviewSongId=gameState==='RHYTHM_MULTI'&&rhythmMultiPreviewSongId?rhythmMultiPreviewSongId:rhythmSelectedSongId;
+  const rhythmPreviewSong=rhythmDemoSongs(RHYTHM_SONGS).find(song=>song.songId===rhythmPreviewSongId)||null;
   const rhythmPreviewTrackId=rhythmSettings.songPreviewEnabled&&RHYTHM_PREVIEW_SCREENS.includes(gameState)&&rhythmPreviewSong
     ?rhythmPreviewSong.bgmTrackId:'';
   useEffect(()=>{
@@ -15703,7 +15707,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmPlay.from==='multi'?[]:rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiRewardScale(rhythmPlay.multiCount):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiRewardScale(rhythmPlay.multiCount):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
           // みんなで対戦の演奏は、まずスコアをルームへ知らせる。そのうえで、ひとりで遊ぶときと同じく
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
           // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)
@@ -15772,7 +15776,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
         }}/>}
 
-        {gameState==='RHYTHM_MULTI'&&<RhythmMultiScreen profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords}
+        {gameState==='RHYTHM_MULTI'&&<RhythmMultiScreen profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):''}:null}
           onBack={()=>setGameState('RHYTHM_DEMO_HOME')}
           onStartPlay={(song,difficulty,startId,count)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId,multiCount:count});setGameState('RHYTHM_PLAY');}}/>}

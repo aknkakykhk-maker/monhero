@@ -584,7 +584,8 @@ const RHYTHM_PREVIEW_DELAY_MS=350;
 //   ・オプション(RHYTHM_OPTIONS) … 「♪ BGM試聴」と重なるので無音のまま(ユーザー指示)
 //   ・演奏中(RHYTHM_PLAY)         … 自分で曲を鳴らす
 //   ・モンビーの外               … HOMEなどへ戻るので止める
-const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING']);
+//   ・みんなで対戦(RHYTHM_MULTI) … 選曲中は見ている曲、シャッフル・難易度選択では決まった曲(2026-10-03・ユーザー報告「曲選択のときに音楽がなってない」)
+const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING','RHYTHM_MULTI']);
 // spotClass … チュートリアルで光らせる場所に付けるクラスを返す関数(省略時は光らせない)。
 // 画面側が知っているキー: songList / songLevel / achievement / difficulty
 // 選んでいる曲・難易度は**画面の外(App本体)**で持つ。
