@@ -36,8 +36,13 @@ const RHYTHM_MULTI_SELECT_MS = 30000;
 const RHYTHM_MULTI_READY_MS = 30000;
 const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
-// ライブが曲の長さを過ぎても終わらない人を待つ上限(カウントダウン・読み込み・結果の演出のぶん)
-const RHYTHM_MULTI_PLAY_GRACE_MS = 30000;
+// ライブが曲の長さを過ぎても終わらない人を待つ上限。
+//   対戦の 3・2・1(3秒)+ 演奏画面の READY・3・2・1(0.8秒×4)= 曲が鳴りはじめるまで + 曲が終わってから10秒。
+//   最後まで演奏した人は曲が終わった瞬間にスコアを送ってくるので、それ以上待っても届かない人は抜けた人
+//   (2026-10-03・ユーザー指摘「演奏後30秒わからないのは不便」。以前は一律30秒だった)
+const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000 + 4 * 800 + 10000;
+// 演奏中に溜めておく知らせの上限(5人・数分のライブなら届かない量。超えたら古いものから捨てる)
+const RHYTHM_MULTI_QUEUE_MAX = 300;
 // 公開ルームは、2人以上いて、この時間だれも出入りしなければメンバー確定
 const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
@@ -272,8 +277,15 @@ const RHYTHM_MULTI = (() => {
   let reconnectTimer = null;
   let catalog = []; // 抽選に使う曲の id(画面から渡してもらう)
   let durations = {}; // 曲の長さ(ミリ秒)。ライブが終わらない人を待ち続けないための上限に使う
+  // アプリを閉じる・別のページへ移るときに「抜けます」を送る(ほかの人がすぐ気づけるように)。
+  // 送れない閉じ方(強制終了など)のときは、上の上限時間で抜けた扱いになる
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('pagehide', () => { if (s && socket) socket.send({ t: 'bye', id: s.selfId }); });
+  }
   const emit = () => { listeners.forEach((fn) => { try { fn(); } catch (_) { /* 画面側の失敗で通信を止めない */ } }); };
-  const alive = () => (s ? Object.values(s.members).filter((m) => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId) : []);
+  // ライブ中の人は演奏のあいだ何も送ってこないので、ライブの上限時間(曲の長さ+ゆとり)までは抜けた扱いにしない
+  const alive = () => (s ? Object.values(s.members).filter((m) => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId
+    || (m.playing && s.room.phase === 'playing' && Date.now() < s.playUntil)) : []);
   const ordered = () => rhythmMultiSortMembers(alive()).slice(0, RHYTHM_MULTI_ROOM_MAX);
   const selfMember = () => (s ? s.members[s.selfId] : null);
   const isHostNow = () => { const o = ordered(); return !!s && o.length > 0 && o[0].id === s.selfId; };
@@ -281,9 +293,11 @@ const RHYTHM_MULTI = (() => {
     const r = s.room;
     return { ph: r.phase, rd: r.round, sg: r.songId, lf: r.deadline ? Math.max(0, Math.ceil((r.deadline - Date.now()) / 1000)) : 0, dl: r.deadline ? 1 : 0, pt: r.participants };
   };
-  const sendHb = () => {
+  // 演奏中は送らない(2026-10-03・ユーザー指示「演奏中の通信は止める」)。force はライブ開始の知らせだけ
+  const sendHb = (force = false) => {
     const me = selfMember();
     if (!s || !socket || !me) return;
+    if (me.playing && !force) return;
     socket.send({
       t: 'hb', id: s.selfId, name: me.name, level: me.level, joinedAt: me.joinedAt, icon: me.icon, frame: me.frame,
       pick: me.pick, pickRound: me.pickRound, readyRound: me.readyRound, diff: me.diff, playing: me.playing,
@@ -400,6 +414,14 @@ const RHYTHM_MULTI = (() => {
   };
   const onMessage = (raw) => {
     if (!s) return;
+    // 演奏中は、届いた知らせを処理せずに溜めておく(演奏の判定と描画に一切割り込ませない)。
+    // 演奏が終わったら reportResult がまとめて処理する。溜めすぎないよう古いものから捨てる
+    const playingNow = selfMember();
+    if (playingNow && playingNow.playing) {
+      s.queue.push(raw);
+      if (s.queue.length > RHYTHM_MULTI_QUEUE_MAX) s.queue.shift();
+      return;
+    }
     const msg = rhythmMultiCleanMessage(raw);
     if (!msg) return;
     if (msg.t === 'bye') { delete s.members[msg.id]; emit(); return; }
@@ -436,12 +458,17 @@ const RHYTHM_MULTI = (() => {
       if (fromHost() && s.startedRound !== msg.round) {
         s.startedRound = msg.round;
         s.room = { ...s.room, phase: 'playing', round: msg.round, songId: msg.songId, participants: msg.participants, deadline: 0 };
+        // ライブに入った人は、ここから演奏が終わるまで何も送ってこない。抜けた扱いにしない期限を、曲の長さから決めておく
+        const songMs = Number(durations[msg.songId]) > 0 ? Number(durations[msg.songId]) : 240000;
+        s.playUntil = Date.now() + songMs + RHYTHM_MULTI_PLAY_GRACE_MS;
+        msg.participants.forEach((pid) => { if (s.members[pid]) s.members[pid].playing = true; });
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true; me.res = null;
           startListeners.forEach((fn) => { try { fn({ round: msg.round, songId: msg.songId, count: msg.participants.length }); } catch (_) { /* 無視 */ } });
         }
-        sendHb();
+        // 「ライブに入った」を1回だけ知らせて、そこからは演奏が終わるまで送らない
+        sendHb(true);
       }
     }
     emit();
@@ -495,7 +522,7 @@ const RHYTHM_MULTI = (() => {
       s = {
         code, mode: roomMode, status: 'connecting', selfId: id, members: {}, chat: [], lastChatAt: 0, createdAt: now,
         room: { phase: 'matching', round: '', songId: '', deadline: 0, participants: [] },
-        memberSig: '', lastMemberChange: now, startedRound: '', shuffleShown: '', resultSeen: '',
+        memberSig: '', lastMemberChange: now, startedRound: '', shuffleShown: '', resultSeen: '', queue: [], playUntil: 0,
       };
       s.members[id] = {
         id, name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー', level: rhythmMultiInt(profile && profile.level, 9999),
@@ -505,13 +532,8 @@ const RHYTHM_MULTI = (() => {
         open: roomMode !== 'private', res: null, seen: now,
       };
       connect();
-      // 演奏中は状態の知らせを4秒ごとに減らす(抜けた扱いになるのは7秒なので足りる)
-      let playTick = 0;
-      hbTimer = setInterval(() => {
-        const me = selfMember();
-        if (me && me.playing) { playTick += 1; if (playTick % 2 === 1) return; }
-        sendHb();
-      }, RHYTHM_MULTI_HEARTBEAT_MS);
+      // 演奏中は sendHb が何も送らない(演奏中の通信は止める)
+      hbTimer = setInterval(() => sendHb(), RHYTHM_MULTI_HEARTBEAT_MS);
       sweepTimer = setInterval(sweep, 1000);
       emit();
     },
@@ -609,6 +631,11 @@ const RHYTHM_MULTI = (() => {
         fs: result && result.fast, sl: result && result.slow,
       });
       me.playing = false;
+      // 演奏中に溜めておいた知らせを、ここでまとめて処理する
+      const queued = s.queue;
+      s.queue = [];
+      queued.forEach((raw) => onMessage(raw));
+      if (!s) return;
       if (quit === true && !(opts && opts.noPenalty) && s.mode !== 'private') void rhythmMultiPenaltyMark();
       if (socket) socket.send({ t: 'res', id: s.selfId, res: me.res });
       sendHb(); emit();
@@ -867,7 +894,6 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
   const previewId = previewPhase === 'select' ? selectPreviewId
     : (previewPhase === 'ready' || previewPhase === 'playing') && room.songId ? room.songId : '';
   React.useEffect(() => { if (onPreviewSong) onPreviewSong(previewId); }, [previewId]);
-  React.useEffect(() => () => { if (onPreviewSong) onPreviewSong(''); }, []);
 
   const myProfile = () => ({ name: profile.name, level: profile.level, icon: profile.icon, frame: profile.frame, diff: defaultDiff });
   const createPrivate = () => { setMessage(''); RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private'); };

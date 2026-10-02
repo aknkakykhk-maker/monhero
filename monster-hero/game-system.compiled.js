@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: efbc81d5227a4b1b
+// source-sha256: e21e2ef599c4b0eb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 03:10";
+const BUILD_DATE = "2026-10-03 03:18";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5609,7 +5609,9 @@ const TITLE_ART_OPTIONS = [{
   id: 'halloween',
   label: 'ハロウィン',
   desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え',
-  src: 'data/images/title-screen-halloween.jpg'
+  src: 'data/images/title-screen-halloween.jpg',
+  squareSrc: 'data/images/title-screen-halloween-square.jpg',
+  wideSrc: 'data/images/title-screen-halloween-wide.jpg'
 }, {
   id: 'classic',
   label: 'クラシック',
@@ -5622,9 +5624,16 @@ const resolveTitleArt = (value, now = Date.now()) => {
   const v = normalizeTitleArt(value);
   return v === 'auto' ? resolveScreenTheme('auto', now) : v;
 };
-const titleArtSrc = (value, landscape = false) => {
+const titleArtShapeOf = (width, height) => {
+  const ratio = Number(width) > 0 && Number(height) > 0 ? width / height : 0.5;
+  return ratio < 0.81 ? 'portrait' : ratio < 1.44 ? 'square' : 'wide';
+};
+const titleArtSrc = (value, shape = 'portrait') => {
   const option = TITLE_ART_OPTIONS.find(item => item.id === resolveTitleArt(value));
-  return landscape && option.wideSrc ? option.wideSrc : option.src;
+  const kind = shape === true ? 'wide' : shape;
+  if (kind === 'wide' && option.wideSrc) return option.wideSrc;
+  if (kind === 'square' && option.squareSrc) return option.squareSrc;
+  return option.src;
 };
 const HOME_ART_STORAGE_KEY = 'mh_home_art';
 const HOME_ART_OPTIONS = [{
@@ -52980,7 +52989,8 @@ const RHYTHM_MULTI_SELECT_MS = 30000;
 const RHYTHM_MULTI_READY_MS = 30000;
 const RHYTHM_MULTI_READY_GRACE_MS = 3000;
 const RHYTHM_MULTI_RESULT_MS = 45000;
-const RHYTHM_MULTI_PLAY_GRACE_MS = 30000;
+const RHYTHM_MULTI_PLAY_GRACE_MS = RHYTHM_MULTI_START_COUNTDOWN_SEC * 1000 + 4 * 800 + 10000;
+const RHYTHM_MULTI_QUEUE_MAX = 300;
 const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
 const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
 const RHYTHM_MULTI_CHAT_KEEP = 50;
@@ -53279,6 +53289,14 @@ const RHYTHM_MULTI = (() => {
   let reconnectTimer = null;
   let catalog = [];
   let durations = {};
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('pagehide', () => {
+      if (s && socket) socket.send({
+        t: 'bye',
+        id: s.selfId
+      });
+    });
+  }
   const emit = () => {
     listeners.forEach(fn => {
       try {
@@ -53286,7 +53304,7 @@ const RHYTHM_MULTI = (() => {
       } catch (_) {}
     });
   };
-  const alive = () => s ? Object.values(s.members).filter(m => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId) : [];
+  const alive = () => s ? Object.values(s.members).filter(m => Date.now() - m.seen <= RHYTHM_MULTI_ALIVE_MS || m.id === s.selfId || m.playing && s.room.phase === 'playing' && Date.now() < s.playUntil) : [];
   const ordered = () => rhythmMultiSortMembers(alive()).slice(0, RHYTHM_MULTI_ROOM_MAX);
   const selfMember = () => s ? s.members[s.selfId] : null;
   const isHostNow = () => {
@@ -53304,9 +53322,10 @@ const RHYTHM_MULTI = (() => {
       pt: r.participants
     };
   };
-  const sendHb = () => {
+  const sendHb = (force = false) => {
     const me = selfMember();
     if (!s || !socket || !me) return;
+    if (me.playing && !force) return;
     socket.send({
       t: 'hb',
       id: s.selfId,
@@ -53511,6 +53530,12 @@ const RHYTHM_MULTI = (() => {
   };
   const onMessage = raw => {
     if (!s) return;
+    const playingNow = selfMember();
+    if (playingNow && playingNow.playing) {
+      s.queue.push(raw);
+      if (s.queue.length > RHYTHM_MULTI_QUEUE_MAX) s.queue.shift();
+      return;
+    }
     const msg = rhythmMultiCleanMessage(raw);
     if (!msg) return;
     if (msg.t === 'bye') {
@@ -53607,6 +53632,11 @@ const RHYTHM_MULTI = (() => {
           participants: msg.participants,
           deadline: 0
         };
+        const songMs = Number(durations[msg.songId]) > 0 ? Number(durations[msg.songId]) : 240000;
+        s.playUntil = Date.now() + songMs + RHYTHM_MULTI_PLAY_GRACE_MS;
+        msg.participants.forEach(pid => {
+          if (s.members[pid]) s.members[pid].playing = true;
+        });
         const me = selfMember();
         if (me && msg.participants.includes(s.selfId)) {
           me.playing = true;
@@ -53621,7 +53651,7 @@ const RHYTHM_MULTI = (() => {
             } catch (_) {}
           });
         }
-        sendHb();
+        sendHb(true);
       }
     }
     emit();
@@ -53715,7 +53745,9 @@ const RHYTHM_MULTI = (() => {
         lastMemberChange: now,
         startedRound: '',
         shuffleShown: '',
-        resultSeen: ''
+        resultSeen: '',
+        queue: [],
+        playUntil: 0
       };
       s.members[id] = {
         id,
@@ -53734,15 +53766,7 @@ const RHYTHM_MULTI = (() => {
         seen: now
       };
       connect();
-      let playTick = 0;
-      hbTimer = setInterval(() => {
-        const me = selfMember();
-        if (me && me.playing) {
-          playTick += 1;
-          if (playTick % 2 === 1) return;
-        }
-        sendHb();
-      }, RHYTHM_MULTI_HEARTBEAT_MS);
+      hbTimer = setInterval(() => sendHb(), RHYTHM_MULTI_HEARTBEAT_MS);
       sweepTimer = setInterval(sweep, 1000);
       emit();
     },
@@ -53868,6 +53892,10 @@ const RHYTHM_MULTI = (() => {
         sl: result && result.slow
       });
       me.playing = false;
+      const queued = s.queue;
+      s.queue = [];
+      queued.forEach(raw => onMessage(raw));
+      if (!s) return;
       if (quit === true && !(opts && opts.noPenalty) && s.mode !== 'private') void rhythmMultiPenaltyMark();
       if (socket) socket.send({
         t: 'res',
@@ -54211,9 +54239,6 @@ function RhythmMultiScreen({
   React.useEffect(() => {
     if (onPreviewSong) onPreviewSong(previewId);
   }, [previewId]);
-  React.useEffect(() => () => {
-    if (onPreviewSong) onPreviewSong('');
-  }, []);
   const myProfile = () => ({
     name: profile.name,
     level: profile.level,
@@ -55018,6 +55043,23 @@ function MonsterHeroGame() {
     if (query.addEventListener) query.addEventListener('change', onChange);else if (query.addListener) query.addListener(onChange);
     return () => {
       if (query.removeEventListener) query.removeEventListener('change', onChange);else if (query.removeListener) query.removeListener(onChange);
+    };
+  }, []);
+  const [titleShape, setTitleShape] = useState(() => {
+    try {
+      return titleArtShapeOf(window.innerWidth, window.innerHeight);
+    } catch {
+      return 'portrait';
+    }
+  });
+  useEffect(() => {
+    const onResize = () => setTitleShape(titleArtShapeOf(window.innerWidth, window.innerHeight));
+    onResize();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
     };
   }, []);
   const [showHomeArt, setShowHomeArt] = useState(false);
@@ -59442,7 +59484,7 @@ function MonsterHeroGame() {
             reject(new Error('title image unavailable'));
           }
         };
-        image.src = titleArtSrc(titleArt, titleLandscape);
+        image.src = titleArtSrc(titleArt, titleShape);
         if (image.complete) image.onload();
       });
       say('タイトルBGMを準備中');
@@ -71573,12 +71615,12 @@ function MonsterHeroGame() {
     "aria-label": "Monster Hero タイトル画面"
   }, React.createElement("img", {
     className: "mh-title-backdrop",
-    src: titleArtSrc(titleArt, titleLandscape),
+    src: titleArtSrc(titleArt, titleShape),
     alt: "",
     "aria-hidden": "true"
   }), React.createElement("img", {
     className: "mh-title-visual",
-    src: titleArtSrc(titleArt, titleLandscape),
+    src: titleArtSrc(titleArt, titleShape),
     alt: "モンスターヒーロー タイトル画面"
   }), React.createElement("header", {
     className: "mh-title-header"
@@ -71612,7 +71654,7 @@ function MonsterHeroGame() {
   if (bootPhase === 'ENTERING_GAME') return React.createElement(React.Fragment, null, React.createElement("main", {
     className: "mh-entering"
   }, React.createElement("img", {
-    src: titleArtSrc(titleArt, titleLandscape),
+    src: titleArtSrc(titleArt, titleShape),
     alt: ""
   }), React.createElement("div", {
     className: "mh-gate-core"
@@ -86945,13 +86987,13 @@ const createAnimationStyle = () => {
        ・HOME: 枠が絵より縦長なら画面いっぱい(cover)にして下の帯を消す。枠が絵より横に広いときは絵全体を出し、余りはぼかした絵で埋める */
     .mh-title-backdrop{position:absolute;z-index:0;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(16px) brightness(.5);transform:scale(1.08);pointer-events:none}.mh-title-visual{z-index:1}
     @media(min-aspect-ratio:3/4) and (max-aspect-ratio:7/5){.mh-title-visual,.mh-entering>img{object-fit:contain;object-position:50% 50%}}
-    /* ハロウィンのタイトルの絵は縦長の1枚だけ(横長の絵は持たない・2026-10-01)。横長の画面(縦横比 7:5 より横)では、
-       上下が大きく切れてロゴが見えなくなるので、絵全体を出し、左右はぼかした同じ絵で埋める。クラシックの絵の見え方は変えない */
-    @media(min-aspect-ratio:7/5){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:contain;object-position:50% 50%}}
-    /* 横開きの端末(縦横比 3:4〜1:1 の、縦長に近い画面)では、ハロウィンの絵を画面いっぱいに広げる(2026-10-03・ユーザー指示
-       「横開きの端末で縦長タイトルになっているから、ちゃんと画面全体に表示して」)。上が切れるので、ロゴと仲間が残る下寄りに合わせる。
-       1:1 より横に広い画面は、切れすぎてロゴが見えなくなるので、上の「全体を出して左右をぼかす」のまま */
-    @media(min-aspect-ratio:3/4) and (max-aspect-ratio:1/1){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:cover;object-position:50% 85%}}
+    /* ハロウィンのタイトルの絵は、縦長・ほぼ正方形・横長の3枚(2026-10-03)。ゲームが画面の縦横比に近い1枚を選ぶので、
+       どの画面でも画面いっぱい(cover)で出して、切れるのはわずかな端だけにする(帯も出さない)。
+       横向きの画面(1:1 以上)は、左上のロゴが切れないよう、少し上寄りに合わせる。クラシックの絵の見え方は変えない */
+    .mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:cover;object-position:50% 50%}
+    @media(min-aspect-ratio:1/1){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-position:50% 40%}}
+    /* ほぼ正方形の絵は、ロゴが下にあるので、縦に切れるとき(横向きの 4:3 など)は下寄りに合わせる */
+    @media(min-aspect-ratio:1/1){.mh-title-visual[src*="halloween-square"],.mh-entering>img[src*="halloween-square"]{object-position:50% 80%}}
     @container (max-aspect-ratio:941/1672){.mh-home-background img.mh-home-main{object-fit:cover}}
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}

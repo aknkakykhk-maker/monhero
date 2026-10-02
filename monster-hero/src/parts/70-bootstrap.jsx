@@ -4503,13 +4503,13 @@ const createAnimationStyle = () => {
        ・HOME: 枠が絵より縦長なら画面いっぱい(cover)にして下の帯を消す。枠が絵より横に広いときは絵全体を出し、余りはぼかした絵で埋める */
     .mh-title-backdrop{position:absolute;z-index:0;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(16px) brightness(.5);transform:scale(1.08);pointer-events:none}.mh-title-visual{z-index:1}
     @media(min-aspect-ratio:3/4) and (max-aspect-ratio:7/5){.mh-title-visual,.mh-entering>img{object-fit:contain;object-position:50% 50%}}
-    /* ハロウィンのタイトルの絵は縦長の1枚だけ(横長の絵は持たない・2026-10-01)。横長の画面(縦横比 7:5 より横)では、
-       上下が大きく切れてロゴが見えなくなるので、絵全体を出し、左右はぼかした同じ絵で埋める。クラシックの絵の見え方は変えない */
-    @media(min-aspect-ratio:7/5){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:contain;object-position:50% 50%}}
-    /* 横開きの端末(縦横比 3:4〜1:1 の、縦長に近い画面)では、ハロウィンの絵を画面いっぱいに広げる(2026-10-03・ユーザー指示
-       「横開きの端末で縦長タイトルになっているから、ちゃんと画面全体に表示して」)。上が切れるので、ロゴと仲間が残る下寄りに合わせる。
-       1:1 より横に広い画面は、切れすぎてロゴが見えなくなるので、上の「全体を出して左右をぼかす」のまま */
-    @media(min-aspect-ratio:3/4) and (max-aspect-ratio:1/1){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:cover;object-position:50% 85%}}
+    /* ハロウィンのタイトルの絵は、縦長・ほぼ正方形・横長の3枚(2026-10-03)。ゲームが画面の縦横比に近い1枚を選ぶので、
+       どの画面でも画面いっぱい(cover)で出して、切れるのはわずかな端だけにする(帯も出さない)。
+       横向きの画面(1:1 以上)は、左上のロゴが切れないよう、少し上寄りに合わせる。クラシックの絵の見え方は変えない */
+    .mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:cover;object-position:50% 50%}
+    @media(min-aspect-ratio:1/1){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-position:50% 40%}}
+    /* ほぼ正方形の絵は、ロゴが下にあるので、縦に切れるとき(横向きの 4:3 など)は下寄りに合わせる */
+    @media(min-aspect-ratio:1/1){.mh-title-visual[src*="halloween-square"],.mh-entering>img[src*="halloween-square"]{object-position:50% 80%}}
     @container (max-aspect-ratio:941/1672){.mh-home-background img.mh-home-main{object-fit:cover}}
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
