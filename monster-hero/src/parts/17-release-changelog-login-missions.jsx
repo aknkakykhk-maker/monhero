@@ -28,7 +28,7 @@ const RHYTHM_MULTI_PUBLIC_RELEASE = true;
 // ★Supabase の friend_codes / friend_links を使うので、docs/sql/friends/FRIENDS_APPLY.sql を
 //   適用するまでは中身が出せない。適用して画面を確かめてから true にする。
 //   false のあいだは入口もヘルプ・更新履歴・助手の告知もまとめて隠す(画面そのものも開けない)。
-const FRIENDS_PUBLIC_RELEASE = false;
+const FRIENDS_PUBLIC_RELEASE = true;
 // モンヒロビートの「総合」ランキング(全曲合算・docs/spec/RHYTHM_RANKING.md §3)。
 // ★集計はSupabase側のビュー(rhythm_total_rankings)が行うので、
 //   docs/sql/rankings/RHYTHM_TOTAL_APPLY.sql を適用するまで中身が出せない。

@@ -3,7 +3,7 @@
 //
 //   node tools/friends/friends-screen-check.js
 //
-// 公開フラグ(FRIENDS_PUBLIC_RELEASE)は配信時に true へ書き換えて開く(本物のファイルは変えない)。
+// 公開フラグ(FRIENDS_PUBLIC_RELEASE)は、配信時に見たい状態(true / false)へ書き換えて開く(本物のファイルは変えない)。
 // Supabase への通信はすべて偽サーバー(fake-friends-server.js)へ差し替える。本物にはつながない。
 //
 // 見張ること:
@@ -26,11 +26,13 @@ const serve = (flagOn) => new Promise(resolve => {
   const server = http.createServer((req, res) => {
     const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, ''), file = path.join(ROOT, rel);
     if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
-    if (flagOn && rel.endsWith('game-system.compiled.js')) {
+    if (rel.endsWith('game-system.compiled.js')) {
+      // 本物のファイルのフラグがどちらでも、この検査が見たい状態(flagOn)へ書き換えて配信する
       const text = fs.readFileSync(file, 'utf8');
-      if (!text.includes('const FRIENDS_PUBLIC_RELEASE = false')) { console.log('NG: 公開フラグの書き換え対象が見つかりません'); failed++; }
+      const rx = /const FRIENDS_PUBLIC_RELEASE = (true|false)/;
+      if (!rx.test(text)) { console.log('NG: 公開フラグの書き換え対象が見つかりません'); failed++; }
       res.writeHead(200, { 'Content-Type': 'text/javascript' });
-      res.end(text.replace('const FRIENDS_PUBLIC_RELEASE = false', 'const FRIENDS_PUBLIC_RELEASE = true'));
+      res.end(text.replace(rx, `const FRIENDS_PUBLIC_RELEASE = ${flagOn ? 'true' : 'false'}`));
       return;
     }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream' });
