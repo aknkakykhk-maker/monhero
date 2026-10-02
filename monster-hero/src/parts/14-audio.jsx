@@ -98,6 +98,7 @@ const Audio_ = (() => {
     "audio/bgm-freedom-dive.mp3": "34616b2fccd3",
     "audio/bgm-fusion.mp3": "6f0d4675789f",
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
+    "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "9cc789151e7e",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
