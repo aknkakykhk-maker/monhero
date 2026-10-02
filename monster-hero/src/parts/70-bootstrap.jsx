@@ -2099,6 +2099,63 @@ const createAnimationStyle = () => {
       -webkit-mask-image:radial-gradient(circle, #000 0 20%, transparent 62%); mask-image:radial-gradient(circle, #000 0 20%, transparent 62%);
       animation:spmRays 460ms ease-out 200ms forwards; }
     @keyframes spmRays { 0% { opacity:0; transform:scale(.4) rotate(0deg); } 25% { opacity:.95; } 100% { opacity:0; transform:scale(1.6) rotate(24deg); } }
+    /* ==== 固有技のフィニッシュ(24-battle-fx.jsx の SpecialFinish / SPECIAL_FINISH)====
+       敵の上(--spm-tx/ty)を原点に、斬撃・輪・粒・柱・落下物・大波を重ねる。遅れは --d。色は --spm-c1(明)/--spm-c2(濃)。 */
+    .spm__finish { left:var(--spm-tx); top:var(--spm-ty); width:0; height:0; }
+    .spm__finish > i { position:absolute; opacity:0; pointer-events:none; }
+    .fin-blade { left:calc(var(--len) / -2 + var(--x)); top:calc(var(--w) / -2); width:var(--len); height:var(--w); border-radius:999px; rotate:var(--a); transform-origin:50% 50%;
+      background:linear-gradient(90deg, transparent, var(--spm-c1) 22%, #fff 50%, var(--spm-c1) 78%, transparent); box-shadow:0 0 12px var(--spm-c2), 0 0 28px var(--spm-c2);
+      animation:finBlade 460ms cubic-bezier(.2,.8,.2,1) var(--d) forwards; }
+    @keyframes finBlade { 0% { opacity:0; transform:scaleX(0); } 22% { opacity:1; transform:scaleX(1.06); } 70% { opacity:.9; transform:scaleX(1) scaleY(.7); } 100% { opacity:0; transform:scaleX(1) scaleY(.1); } }
+    .fin-blade--vine { background:linear-gradient(90deg, transparent, #14532d 14%, #22c55e 50%, #14532d 86%, transparent); box-shadow:0 0 10px #22c55e; animation-name:finVine; }
+    @keyframes finVine { 0% { opacity:0; transform:scaleX(0) scaleY(1.6); } 30% { opacity:1; transform:scaleX(1) scaleY(1.4); } 75% { opacity:1; transform:scaleX(1) scaleY(1); } 100% { opacity:0; transform:scaleX(1) scaleY(.3); } }
+    .fin-ring { left:-40px; top:calc(-40px * var(--flat)); width:80px; height:calc(80px * var(--flat)); border-radius:50%; border:4px solid var(--spm-c1);
+      box-shadow:0 0 16px var(--spm-c2), 0 0 34px var(--spm-c2), inset 0 0 14px var(--spm-c2); animation:finRing 560ms ease-out var(--d) forwards; }
+    @keyframes finRing { 0% { opacity:0; transform:scale(.3); } 18% { opacity:1; } 100% { opacity:0; transform:scale(var(--r)); } }
+    .fin-ring--flat { top:calc(10px - 40px * var(--flat)); }
+    .fin-ring--rune { border-style:dashed; border-width:3px; animation-name:finRune; }
+    @keyframes finRune { 0% { opacity:0; transform:scale(.3) rotate(0deg); } 22% { opacity:1; } 80% { opacity:.9; } 100% { opacity:0; transform:scale(var(--r)) rotate(200deg); } }
+    .fin-col { left:calc(var(--w) / -2 + var(--x)); bottom:-10px; width:var(--w); height:var(--h); border-radius:50% 50% 30% 30%; transform-origin:50% 100%;
+      background:linear-gradient(0deg, #fff 0, var(--spm-c1) 16%, color-mix(in srgb, var(--spm-c2) 80%, transparent) 58%, transparent 100%);
+      filter:drop-shadow(0 0 10px var(--spm-c2)); animation:finCol 560ms ease-out var(--d) forwards; }
+    @keyframes finCol { 0% { opacity:0; transform:scaleY(.2) scaleX(.5); } 22% { opacity:1; transform:scaleY(1) scaleX(1.1); } 70% { opacity:.8; transform:scaleY(1.06) scaleX(.85); } 100% { opacity:0; transform:scaleY(1.1) scaleX(.2); } }
+    .fin-col--sky { animation-name:finColSky; }
+    @keyframes finColSky { 0% { opacity:0; transform:translateY(-140%) scaleX(.6); } 25% { opacity:1; transform:translateY(0) scaleX(1.1); } 75% { opacity:.85; transform:translateY(0) scaleX(.8); } 100% { opacity:0; transform:translateY(0) scaleX(.2); } }
+    .fin-col--soft { filter:blur(3px) drop-shadow(0 0 10px var(--spm-c2)); opacity:0; }
+    .fin-col--flame { border-radius:50% 50% 40% 40%; background:radial-gradient(ellipse at 50% 88%, #fff9 0 8%, var(--spm-c1) 20%, var(--spm-c2) 48%, transparent 72%); filter:blur(1.5px) drop-shadow(0 0 10px var(--spm-c2)); }
+    .fin-wave { left:-150px; top:-26px; width:300px; height:52px; border-radius:50%; transform-origin:0 50%;
+      background:linear-gradient(90deg, transparent, var(--spm-c1) 20%, var(--spm-c2) 60%, transparent); box-shadow:0 0 16px var(--spm-c2); animation:finWave 600ms ease-out var(--d) forwards; }
+    @keyframes finWave { 0% { opacity:0; transform:translateX(-160px) scaleY(.4); } 30% { opacity:1; transform:translateX(-30px) scaleY(1.3); } 100% { opacity:0; transform:translateX(220px) scaleY(.6); } }
+    .fin-bit { left:-6px; top:-6px; width:12px; height:12px; opacity:0; position:absolute; pointer-events:none; rotate:var(--a);
+      background:radial-gradient(circle, #fff, var(--spm-c1) 55%, var(--spm-c2)); box-shadow:0 0 8px var(--spm-c2); border-radius:50%;
+      animation:finBit 620ms ease-out var(--d) forwards; }
+    @keyframes finBit {
+      0% { opacity:0; transform:translateX(0) rotate(0deg) scale(.5); }
+      20% { opacity:1; }
+      100% { opacity:0; transform:translateX(var(--dist)) rotate(calc(var(--spin) * 240deg)) scale(1.3); }
+    }
+    .fin-bit--rise { animation-name:finBitRise; rotate:0deg; left:calc(-6px + (var(--i) - 5) * 14px); }
+    @keyframes finBitRise { 0% { opacity:0; transform:translateY(20px) scale(.5); } 25% { opacity:1; } 100% { opacity:0; transform:translateY(calc(var(--dist) * -1.6)) scale(1.2); } }
+    .fin-bit--fall { animation-name:finBitFall; rotate:0deg; left:calc(-6px + (var(--i) - 5) * 14px); top:-200px; }
+    @keyframes finBitFall { 0% { opacity:0; transform:translateY(0) rotate(0deg); } 20% { opacity:1; } 100% { opacity:0; transform:translateY(240px) rotate(160deg); } }
+    .fin-shape--spark { border-radius:50%; } /* 既定の丸い光(.fin-bit) */
+    .fin-shape--petal { width:16px; height:10px; border-radius:80% 10% 80% 10%; background:linear-gradient(135deg, #fff, var(--spm-c1) 55%, var(--spm-c2)); }
+    .fin-shape--feather { width:8px; height:22px; border-radius:50% 50% 50% 50% / 80% 80% 20% 20%; background:linear-gradient(180deg, #fff, var(--spm-c1)); }
+    .fin-shape--star { width:20px; height:20px; border-radius:0; clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); background:radial-gradient(circle,#fff 0 30%,var(--spm-c1) 60%,var(--spm-c2)); box-shadow:none; }
+    .fin-shape--dust { width:14px; height:14px; background:radial-gradient(circle, #e7d7c1, #a8865f 60%, transparent 72%); box-shadow:none; }
+    .fin-shape--drop { width:10px; height:16px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:linear-gradient(180deg, #fff, var(--spm-c1) 50%, var(--spm-c2)); }
+    .fin-shape--leaf { width:18px; height:10px; border-radius:90% 0 90% 0; background:linear-gradient(135deg, #bbf7d0, #16a34a); box-shadow:0 0 6px #22c55e; }
+    .fin-shape--flame { width:16px; height:22px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, #fde047 36%, #f97316 62%, rgba(220,38,38,0)); box-shadow:0 0 8px #f97316; }
+    .fin-shape--note { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
+    .fin-shape--note::before { content:'♪'; }
+    .fin-bit.fin-shape--note:nth-child(3n+1)::before { content:'♫'; }
+    .fin-bit.fin-shape--note:nth-child(3n+2)::before { content:'♬'; }
+    .fin-fall { left:-14px; top:-420px; width:28px; height:28px; opacity:0; position:absolute; margin-left:var(--x); scale:var(--s);
+      animation:finFall 420ms ease-in var(--d) forwards; }
+    .fin-fall.fin-shape--rock { border-radius:25%; clip-path:polygon(20% 0,80% 8%,100% 55%,72% 100%,18% 92%,0 40%); background:linear-gradient(135deg,#efe2cf,#a8865f 55%,#5c4330); box-shadow:none; }
+    .fin-fall.fin-shape--slab { left:-46px; width:92px; height:150px; border-radius:6px; clip-path:none; background:linear-gradient(135deg,#312e81,#0f0a2a 70%); box-shadow:0 0 20px var(--spm-c2), inset 0 0 14px var(--spm-c2); }
+    @keyframes finFall { 0% { opacity:1; transform:translateY(0); } 78% { opacity:1; transform:translateY(410px); } 100% { opacity:0; transform:translateY(420px) scale(1.3); } }
+    @media (prefers-reduced-motion: reduce) { .spm__finish { display:none; } }
     @media (prefers-reduced-motion: reduce) {
       .spm__gather, .spm__shock, .spm__flash { display:none; }
     }

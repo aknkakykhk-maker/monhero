@@ -812,6 +812,70 @@ const specialMoveColorOf = (monId, skillName) => {
   const own = hit && hit.spec && hit.spec !== 'sig' ? pick(hit.spec.c) : null;
   return own || pick(SPECIAL_MOVE_MON_COLOR[monId]) || SKM_COLOR.gold;
 };
+// ==== 固有技のフィニッシュ(2026-10-02 ユーザー指示「みんな進めて」=通常技と使い回している見せ場の動きを、固有技だけ別物にする) ====
+// 見せ場の動き(専用モーション・体当たり型)は、通常技と固有技の両方で同じ動きが出ていた。固有技が放たれる瞬間に、
+// 動きの種類ごとの「フィニッシュ」を敵の上へ重ねる(巨大なX斬り・桜の嵐・音符の爆発・炎の柱…)。
+// 部品は data 駆動(blade 斬撃 / ring 輪 / bits 粒 / col 柱 / fall 落下物 / wave 大波)。形は 70-bootstrap.jsx の .fin-*。
+// d は放った瞬間からの遅れ(ms)。技ごとの動き(SKILL_MOTION_SETS)がある段階は、そちらが専用に作り込んであるので重ねない
+const SPECIAL_FINISH = Object.freeze({
+  zan:    [{t:'blade',a:-38,len:300,w:9,d:260},{t:'blade',a:38,len:300,w:9,d:350},{t:'blade',a:90,len:240,w:6,d:450},{t:'ring',d:450,r:3.4}],
+  sakura: [{t:'bits',n:16,shape:'petal',dist:130,d:300,spin:1},{t:'bits',n:10,shape:'petal',dist:80,d:380,spin:-1},{t:'ring',d:300,r:3}],
+  kenshi: [{t:'blade',a:-40,len:340,w:8,d:240},{t:'blade',a:40,len:340,w:8,d:320},{t:'col',w:34,h:420,d:420,sky:true},{t:'ring',d:420,r:3.6}],
+  mia:    [{t:'bits',n:10,shape:'note',dist:150,d:260},{t:'col',w:120,h:420,d:240,sky:true,soft:true},{t:'ring',d:300,r:3}],
+  ark:    [{t:'blade',a:0,len:320,w:10,d:280},{t:'col',w:26,h:460,d:280,sky:true},{t:'bits',n:10,shape:'feather',dist:120,d:340,fall:true}],
+  iblis:  [{t:'col',w:40,h:300,d:260,flame:true,x:-60},{t:'col',w:46,h:360,d:300,flame:true},{t:'col',w:40,h:300,d:340,flame:true,x:60},{t:'bits',n:10,shape:'spark',dist:110,d:360},{t:'ring',d:300,r:3.2}],
+  tide:   [{t:'wave',d:240},{t:'bits',n:12,shape:'drop',dist:140,d:340},{t:'ring',d:340,r:3.2,flat:.45}],
+  pandora:[{t:'blade',a:-62,len:380,w:9,d:240},{t:'blade',a:62,len:380,w:9,d:300},{t:'ring',d:360,r:3.8},{t:'bits',n:12,shape:'spark',dist:120,d:360}],
+  stomp:  [{t:'ring',d:300,r:4.2,flat:.38},{t:'bits',n:12,shape:'dust',dist:120,d:300},{t:'bits',n:8,shape:'star',dist:100,d:340}],
+  beam:   [{t:'blade',a:0,len:360,w:8,d:200},{t:'blade',a:90,len:360,w:8,d:200},{t:'blade',a:45,len:240,w:5,d:230},{t:'blade',a:-45,len:240,w:5,d:230},{t:'ring',d:200,r:3}],
+  rocks:  [{t:'fall',n:7,shape:'rock',d:200},{t:'ring',d:420,r:3.8,flat:.4},{t:'bits',n:10,shape:'dust',dist:110,d:420}],
+  claw:   [{t:'blade',a:-58,len:330,w:8,d:240,x:-30},{t:'blade',a:-58,len:330,w:8,d:300},{t:'blade',a:-58,len:330,w:8,d:360,x:30},{t:'ring',d:300,r:3}],
+  punch:  [{t:'bits',n:8,shape:'star',dist:130,d:300},{t:'ring',d:300,r:4},{t:'blade',a:0,len:260,w:7,d:300},{t:'blade',a:90,len:260,w:7,d:300}],
+  magic:  [{t:'ring',d:240,r:2.8,flat:.4,rune:true},{t:'col',w:70,h:420,d:300,soft:true},{t:'bits',n:10,shape:'spark',dist:90,d:360,rise:true}],
+  crush:  [{t:'fall',n:1,shape:'slab',d:180},{t:'ring',d:430,r:4.2,flat:.4},{t:'bits',n:12,shape:'dust',dist:130,d:430}],
+  petals: [{t:'bits',n:18,shape:'petal',dist:140,d:260,spin:1},{t:'bits',n:12,shape:'petal',dist:90,d:320,spin:-1}],
+  vine:   [{t:'blade',a:-20,len:300,w:12,d:220,vine:true},{t:'blade',a:200,len:300,w:12,d:260,vine:true},{t:'blade',a:75,len:300,w:12,d:300,vine:true},{t:'bits',n:10,shape:'leaf',dist:120,d:380}],
+  fire:   [{t:'col',w:70,h:440,d:240,flame:true},{t:'bits',n:12,shape:'flame',dist:110,d:300,rise:true},{t:'ring',d:260,r:3.2,flat:.45}],
+});
+// どのフィニッシュを重ねるか。技ごとの動き(SKILL_MOTION_SETS)を持つ段階は重ねず、見せ場の動き('sig')の段階だけ
+const specialFinishKindOf = (ownerId, skillName, anim) => {
+  if (!anim || anim.charge === true) return null;
+  if (anim.zanCombo) return anim.sakura ? 'sakura' : 'zan';
+  if (anim.twinBlade || anim.motion === 'kenshiTwinBlade') return 'kenshi';
+  switch (anim.motion) {
+    case 'miaSongNotes': return 'mia';
+    case 'arkHolyRain': return ownerId === 'Iblis' ? 'iblis' : 'ark';
+    case 'waterBurst': return 'tide';
+    case 'pandoraDualThunder': return 'pandora';
+    default: break;
+  }
+  let own = null;
+  try { own = typeof skillAttackThemeOf === 'function' ? skillAttackThemeOf(ownerId, skillName, true) : null; } catch (e) { own = null; }
+  if (own) return null;
+  const k = typeof DEFAULT_ATTACK_THEMES !== 'undefined' ? DEFAULT_ATTACK_THEMES[ownerId] : null;
+  return k && SPECIAL_FINISH[k] ? k : null;
+};
+const SpecialFinish = ({ kind }) => {
+  const parts = SPECIAL_FINISH[kind];
+  if (!parts) return null;
+  return (
+    <div data-special-finish={kind} className="spm__finish" aria-hidden="true">
+      {parts.map((p, pi) => {
+        const base = { '--d':`${p.d || 0}ms`, '--x':`${p.x || 0}px` };
+        if (p.t === 'blade') return <i key={pi} className={`fin-blade${p.vine ? ' fin-blade--vine' : ''}`} style={{ ...base, '--a':`${p.a || 0}deg`, '--len':`${p.len || 260}px`, '--w':`${p.w || 8}px` }}/>;
+        if (p.t === 'ring') return <i key={pi} className={`fin-ring${p.flat ? ' fin-ring--flat' : ''}${p.rune ? ' fin-ring--rune' : ''}`} style={{ ...base, '--r':p.r || 3, '--flat':p.flat || 1 }}/>;
+        if (p.t === 'col') return <i key={pi} className={`fin-col${p.flame ? ' fin-col--flame' : ''}${p.sky ? ' fin-col--sky' : ''}${p.soft ? ' fin-col--soft' : ''}`} style={{ ...base, '--w':`${p.w || 40}px`, '--h':`${p.h || 360}px` }}/>;
+        if (p.t === 'wave') return <i key={pi} className="fin-wave" style={base}/>;
+        if (p.t === 'fall') return <React.Fragment key={pi}>{Array.from({ length:p.n || 4 }, (_, i) => <i key={i} className={`fin-fall fin-shape--${p.shape || 'rock'}`} style={{ ...base, '--d':`${(p.d || 0) + i * 36}ms`, '--x':`${((i % 4) - 1.5) * 34}px`, '--s':1 + (i % 3) * .25 }}/>)}</React.Fragment>;
+        return <React.Fragment key={pi}>{Array.from({ length:p.n || 8 }, (_, i) => {
+          const ang = (360 / (p.n || 8)) * i + (pi % 2 ? 11 : 0);
+          return <i key={i} className={`fin-bit fin-shape--${p.shape || 'spark'}${p.rise ? ' fin-bit--rise' : ''}${p.fall ? ' fin-bit--fall' : ''}`}
+            style={{ '--d':`${(p.d || 0) + i * 14}ms`, '--a':`${ang}deg`, '--dist':`${p.dist || 110}px`, '--spin':p.spin || 0, '--i':i }}/>;
+        })}</React.Fragment>;
+      })}
+    </div>
+  );
+};
 const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, compact = false }) => {
   const [pos, setPos] = React.useState(null);
   const slotIndex = slotSkill ? slotSkill.slotIndex : null;
@@ -823,14 +887,19 @@ const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, comp
     setPos({ from: mid(slotEl), to: mid(enemyEl) });
   }, [slotIndex, compact]);
   if (!slotSkill || slotSkill.type !== 'unique') return null;
-  const [c1, c2] = specialMoveColorOf(ownerId || (mon && mon.id), slotSkill.name);
+  // sig=true は図鑑の「固有技」(技を選ばず、その子の見せ場の動きを見せる)。技名は表示だけで、色とフィニッシュは見せ場の動きで決める
+  const lookupName = slotSkill.sig ? null : slotSkill.name;
+  const [c1, c2] = specialMoveColorOf(ownerId || (mon && mon.id), lookupName);
   const phase = attackAnim && attackAnim.charge === true ? 'charge' : 'release';
   const name = String(slotSkill.name || '');
   const vw = typeof window !== 'undefined' ? window.innerWidth : 390;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
   const from = (pos && pos.from) || { x: vw / 2, y: vh * 0.72 };
   const to = (pos && pos.to) || { x: vw / 2, y: vh * 0.3 };
-  const style = { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':`${Math.round(from.x)}px`, '--spm-fy':`${Math.round(from.y)}px`, '--spm-tx':`${Math.round(to.x)}px`, '--spm-ty':`${Math.round(to.y)}px` };
+  // compact(図鑑の舞台の中)は、舞台の中の割合で置く(使う子は下寄り・敵の位置は上)。バトルは測った位置
+  const style = compact
+    ? { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':'50%', '--spm-fy':'72%', '--spm-tx':'50%', '--spm-ty':'24%' }
+    : { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':`${Math.round(from.x)}px`, '--spm-fy':`${Math.round(from.y)}px`, '--spm-tx':`${Math.round(to.x)}px`, '--spm-ty':`${Math.round(to.y)}px` };
   const body = (
     <div data-special-move-fx={phase} className={`spm spm--${phase}${compact ? ' spm--compact' : ''}`} style={style} aria-hidden="true">
       <div className="spm__shade"/>
@@ -848,6 +917,7 @@ const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, comp
       {phase === 'release' && <>
         <div className="spm__flash"/>
         <div className="spm__shock"><i/><i/><b/></div>
+        <SpecialFinish kind={specialFinishKindOf(ownerId || (mon && mon.id), lookupName, attackAnim)}/>
       </>}
     </div>
   );
