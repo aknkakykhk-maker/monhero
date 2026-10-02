@@ -924,6 +924,12 @@ const TACTICS_EX_DURATION_TEXT = Object.freeze({
   wave: '発動したWAVEが終わるまで',
   style: 'もう一度使って選び直すまで',
 });
+// 緋桜瞬歩(distMatch)が効いているあいだの距離補正。ふだんは敵との距離の差 0/1/2/3 で ×1.5/1.3/1.1/0.9
+const TACTICS_EX_DIST_MATCH_MULT = 1.7;
+// 緋桜瞬歩が効いている子が、敵と同じ距離の枠にいるとき、敵の攻撃を完全に回避するか
+// (枠の番号がそのまま距離なので、枠の番号と敵の距離が同じかどうかで見る)
+const tacticsExDistMatchDodges = (effect, slotIdx, enemyDist) =>
+  effect === 'distMatch' && Number.isInteger(slotIdx) && Number.isInteger(enemyDist) && slotIdx === enemyDist;
 const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
@@ -966,12 +972,15 @@ const TACTICS_EX_SKILLS = Object.freeze({
   // ★2026-10-02 ユーザー指示(エイキのEX)。「EX中は敵と距離があってる分のダメージになる」。
   //   getDmg の距離補正(敵との距離の差 0/1/2/3 で ×1.5/1.3/1.1/0.9)を、効いているあいだは
   //   差0(×1.5)で数える。どの距離枠にいても、敵と同じ距離から殴ったことになる。
-  //   間合い適性(その枠に立っている子の適性)は変えない。カードと併用できる(殴らないと意味が無いので)
+  //   間合い適性(その枠に立っている子の適性)は変えない。
+  // ★2026-10-02 ユーザー指示で 3ターン・ラン2回・併用できる・距離補正×1.5 → 5ターン・ラン3回・併用できない・
+  //   距離補正×1.7、さらに敵と同じ距離の枠にいるときは敵の攻撃を完全に回避する
+  //   (使ったターンは、エイキだけほかのカードを使えない。ほかの子は使える)
   Eiki: Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
-    desc: '3ターンのあいだ、どの距離にいても、敵と同じ距離から攻撃したときのダメージ(いちばん高い距離補正×1.5)になる。',
-    maxUses: 2, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    desc: '5ターンのあいだ、どの距離にいても距離補正が×1.7になる(ふだんは敵との距離で ×1.5〜×0.9)。さらに、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。使ったターンは、エイキはほかのカードを使えない。',
+    maxUses: 3, unlimited: false, withCards: false, duration: 'turns', turns: 5,
     effect: 'distMatch',
   }),
   Golem: Object.freeze({

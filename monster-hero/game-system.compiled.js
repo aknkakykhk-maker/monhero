@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 75158b992e783737
+// source-sha256: 009e3b0efc337c31
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-02 17:08";
+const BUILD_DATE = "2026-10-02 17:46";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -31574,6 +31574,8 @@ const TACTICS_EX_DURATION_TEXT = Object.freeze({
   wave: '発動したWAVEが終わるまで',
   style: 'もう一度使って選び直すまで'
 });
+const TACTICS_EX_DIST_MATCH_MULT = 1.7;
+const tacticsExDistMatchDodges = (effect, slotIdx, enemyDist) => effect === 'distMatch' && Number.isInteger(slotIdx) && Number.isInteger(enemyDist) && slotIdx === enemyDist;
 const TACTICS_EX_SKILLS = Object.freeze({
   Monol: Object.freeze({
     id: 'monol_cover_all',
@@ -31626,12 +31628,12 @@ const TACTICS_EX_SKILLS = Object.freeze({
   Eiki: Object.freeze({
     id: 'eiki_dist_match',
     name: '緋桜瞬歩',
-    desc: '3ターンのあいだ、どの距離にいても、敵と同じ距離から攻撃したときのダメージ(いちばん高い距離補正×1.5)になる。',
-    maxUses: 2,
+    desc: '5ターンのあいだ、どの距離にいても距離補正が×1.7になる(ふだんは敵との距離で ×1.5〜×0.9)。さらに、敵と同じ距離にいるときは、敵の攻撃を完全に回避する。使ったターンは、エイキはほかのカードを使えない。',
+    maxUses: 3,
     unlimited: false,
-    withCards: true,
+    withCards: false,
     duration: 'turns',
-    turns: 3,
+    turns: 5,
     effect: 'distMatch'
   }),
   Golem: Object.freeze({
@@ -60418,8 +60420,8 @@ function MonsterHeroGame() {
   };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
-    const distDiff = tacticsExEffectAt(slotIdx) === 'distMatch' ? 0 : Math.abs(slotIdx - attackStartDist);
-    const distMult = [1.5, 1.3, 1.1, 0.9][distDiff] || 1.0;
+    const distDiff = Math.abs(slotIdx - attackStartDist);
+    const distMult = tacticsExEffectAt(slotIdx) === 'distMatch' ? TACTICS_EX_DIST_MATCH_MULT : [1.5, 1.3, 1.1, 0.9][distDiff] || 1.0;
     let baseDmgMult = 1.0;
     if (card.subType === 'stun_atsu') {
       baseDmgMult = card.baseValue || 1.5;
@@ -60887,7 +60889,7 @@ function MonsterHeroGame() {
               throughTotal = 0;
             const slotFx = {};
             targets.forEach(slotIdx => {
-              if (slotIdx === evadedSlot) {
+              if (slotIdx === evadedSlot || tacticsExDistMatchDodges(tacticsExEffectAt(slotIdx), slotIdx, actingEnemyDist)) {
                 evadedName = tacticsTargetName(units, slotIdx);
                 slotFx[slotIdx] = {
                   evade: true
@@ -60955,7 +60957,7 @@ function MonsterHeroGame() {
               const taken = Number(fx?.dmg) || 0;
               if (taken > 0) pushBattleLog(`${battleActorName(Number(key))}が ${taken.toLocaleString()} ダメージを受けた`);
             });
-            if (evadedSlot != null) {
+            if (evadedSlot != null || evadedName) {
               addPopup(`回避！ ${evadedName}`, 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
               await battleWait(600);
             }
@@ -60987,7 +60989,7 @@ function MonsterHeroGame() {
               addPopup(`合計 ${dealt}`, 'hero', 'text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]', `味方は 合計 ${dealt.toLocaleString()} ダメージを受けた`);
               await battleWait(400);
             }
-            if (dealt <= 0 && saved <= 0 && evadedSlot == null && reflectedSlot == null) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
+            if (dealt <= 0 && saved <= 0 && evadedSlot == null && !evadedName && reflectedSlot == null) addPopup('無傷！', 'hero', 'text-emerald-300 font-black text-xl drop-shadow-md');
             await battleWait(1000);
             if (reflectBack > 0) {
               addPopup(`反射 ${reflectBack}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
