@@ -15,6 +15,10 @@ const RHYTHM_MULTI_CODE_LENGTH = 4;
 const RHYTHM_MULTI_HEARTBEAT_MS = 2000;
 const RHYTHM_MULTI_ALIVE_MS = 7000;
 const RHYTHM_MULTI_START_COUNTDOWN_SEC = 3;
+const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
+const RHYTHM_MULTI_CHAT_KEEP = 50;
+const RHYTHM_MULTI_CHAT_INTERVAL_MS = 800;
+const RHYTHM_MULTI_CHAT_STAMPS = Object.freeze(['よろしく!', 'ナイス!', '準備OK!', 'もう一回!', 'ありがとう!']);
 const RHYTHM_MULTI_TOPIC_PREFIX = 'realtime:mhb-room-';
 
 const rhythmMultiMakeCode = () => {
@@ -67,6 +71,12 @@ const rhythmMultiCleanMessage = (raw) => {
   if (raw.t === 'res') {
     out.res = rhythmMultiCleanResult(raw.res);
     return out.res ? out : null;
+  }
+  if (raw.t === 'chat') {
+    out.name = rhythmMultiText(raw.name, 12) || '名無しのブリーダー';
+    out.text = rhythmMultiText(raw.text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
+    out.cid = rhythmMultiText(raw.cid, 40);
+    return out.text && out.cid ? out : null;
   }
   if (raw.t === 'bye') return out;
   return null;
@@ -162,6 +172,15 @@ const RHYTHM_MULTI = (() => {
     const msg = rhythmMultiCleanMessage(raw);
     if (!msg) return;
     if (msg.t === 'bye') { delete s.members[msg.id]; emit(); return; }
+    if (msg.t === 'chat') {
+      // 同じ発言(cid)は2度出さない。覚えておくのは直近だけ(保存はしない)
+      if (!s.chat.some((c) => c.cid === msg.cid)) {
+        s.chat.push({ cid: msg.cid, id: msg.id, name: msg.name, text: msg.text });
+        if (s.chat.length > RHYTHM_MULTI_CHAT_KEEP) s.chat.splice(0, s.chat.length - RHYTHM_MULTI_CHAT_KEEP);
+      }
+      emit();
+      return;
+    }
     const prev = s.members[msg.id] || { id: msg.id, name: '', level: 0, joinedAt: 0, ready: false, playing: false, sel: null, res: null };
     if (msg.t === 'hb') {
       // 自分の状態は自分が持っているものが正しいので、自分の知らせでは上書きしない
@@ -213,13 +232,14 @@ const RHYTHM_MULTI = (() => {
         hostId: order.length ? order[0].id : s.selfId,
         full: selfIndex >= RHYTHM_MULTI_ROOM_MAX,
         start: s.start,
+        chat: s.chat.slice(),
       };
     },
     join(code, profile) {
       this.leave();
       const now = Date.now();
       const id = rhythmMultiMakeId();
-      s = { code, status: 'connecting', selfId: id, start: null, members: {} };
+      s = { code, status: 'connecting', selfId: id, start: null, members: {}, chat: [], lastChatAt: 0 };
       s.members[id] = { id, name: rhythmMultiText(profile && profile.name, 12) || '名無しのブリーダー', level: rhythmMultiInt(profile && profile.level, 9999), joinedAt: now, ready: false, playing: false, sel: null, res: null, seen: now };
       connect();
       hbTimer = setInterval(sendHb, RHYTHM_MULTI_HEARTBEAT_MS);
@@ -268,6 +288,15 @@ const RHYTHM_MULTI = (() => {
       if (socket) socket.send({ t: 'res', id: s.selfId, res: me.res });
       sendHb(); emit();
     },
+    // 部屋へ一言送る。自分の発言も部屋からの返りで表示する(=相手にも届いたと分かる)。続けて送るのは受けない
+    sendChat(text) {
+      if (!s || !socket) return false;
+      const clean = rhythmMultiText(text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
+      const me = selfMember();
+      if (!clean || !me || Date.now() - s.lastChatAt < RHYTHM_MULTI_CHAT_INTERVAL_MS) return false;
+      s.lastChatAt = Date.now();
+      return socket.send({ t: 'chat', id: s.selfId, name: me.name, text: clean, cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}` });
+    },
     hasReported(startId) { const me = selfMember(); return !!(me && me.res && me.res.startId === startId); },
   };
 })();
@@ -290,6 +319,14 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, onBack, onStartPlay
   const [codeError, setCodeError] = React.useState('');
   const [countdown, setCountdown] = React.useState(null);
   const [copied, setCopied] = React.useState(false);
+  const [chatText, setChatText] = React.useState('');
+  const chatListRef = React.useRef(null);
+  const chatCount = view && view.chat ? view.chat.length : 0;
+  React.useEffect(() => {
+    const el = chatListRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [chatCount]);
+  const submitChat = () => { if (RHYTHM_MULTI.sendChat(chatText)) setChatText(''); };
   const songById = (songId) => songs.find((song) => song.songId === songId) || null;
   const me = view ? view.members.find((m) => m.id === view.selfId) : null;
   const isHost = !!view && view.hostId === view.selfId;
@@ -447,6 +484,31 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, onBack, onStartPlay
               </ol>
             </section>
           )}
+
+          <section data-rhythm-multi-chat className={card}>
+            <h3 className="text-xs font-black text-slate-300">チャット</h3>
+            <ul ref={chatListRef} data-rhythm-multi-chat-list className="mt-1 max-h-40 min-h-[3rem] space-y-1 overflow-y-auto rounded-lg bg-slate-950/60 p-2 text-sm font-bold">
+              {view.chat.length === 0 && <li className="text-[11px] text-slate-500">まだ発言はありません</li>}
+              {view.chat.map((c) => (
+                <li key={c.cid} data-rhythm-multi-chat-line className="break-words leading-snug">
+                  <b className={c.id === view.selfId ? 'text-cyan-300' : 'text-amber-200'}>{c.name}</b>
+                  <span className="text-slate-400">: </span>{c.text}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {RHYTHM_MULTI_CHAT_STAMPS.map((stamp) => (
+                <button key={stamp} data-rhythm-multi-chat-stamp type="button" onClick={() => RHYTHM_MULTI.sendChat(stamp)}
+                  className="min-h-[36px] rounded-full bg-slate-700 px-3 text-xs font-black">{stamp}</button>
+              ))}
+            </div>
+            <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); submitChat(); }}>
+              <input data-rhythm-multi-chat-input value={chatText} maxLength={RHYTHM_MULTI_CHAT_MAX_LENGTH} autoComplete="off" enterKeyHint="send"
+                onChange={(e) => setChatText(e.target.value)} placeholder={`ひとこと(${RHYTHM_MULTI_CHAT_MAX_LENGTH}文字まで)`}
+                className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white" />
+              <button data-rhythm-multi-chat-send type="submit" disabled={!chatText.trim()} className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-4 text-sm font-black disabled:opacity-40">送信</button>
+            </form>
+          </section>
 
           <section className="space-y-2">
             {isHost
