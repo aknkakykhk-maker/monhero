@@ -61,6 +61,8 @@ const battleAnims = (atkMotion, isUnique, monId = 'TestMon', skillName = null) =
     RANGE_LABELS: ['零','近','中','遠'],
     WATER_BURST_MOTION_MS:680, ARK_HOLY_RAIN_MOTION_MS:900, MIA_SONG_NOTES_MOTION_MS:760,
     themedAttackMotionMs, skillAttackThemeOf,
+    // 固有技を放った瞬間の衝撃(効果音と画面の揺れ)は見た目だけなので、何もしない関数にしておく
+    specialMoveImpact: ()=>{},
   };
   vm.createContext(env);
   vm.runInContext(babel.transformSync(`(async()=>{\n${battleLoop}\n})().then(()=>{globalThis.__done=true;},e=>{globalThis.__err=e;});`).code, env);
