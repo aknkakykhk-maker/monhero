@@ -1988,6 +1988,67 @@ const createAnimationStyle = () => {
       .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit, .skfx-over, .skfx-twin { display:none; }
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
     }
+    /* ==== 固有技の格上げ(24-battle-fx.jsx の UniqueFxExtras / UniqueFxImpact。2026-10-02 ユーザー指示「固有技はもっとかっこよくしてほしい」)====
+       固有技(thm-atk--lunge / .uex)だけに足す。使う子のオーラ・残像と、敵の上の光柱・地割れ・閃光。
+       色は --c1(明)/--c2(濃)。着弾の時刻は --hit-at。敵の位置は --atk-dx/dy(.thm-atk__hit が translate する) */
+    .uex-aura { position:absolute; inset:-14%; z-index:2; border-radius:50%; pointer-events:none; opacity:0;
+      background:radial-gradient(circle, color-mix(in srgb, var(--c1,#fff) 85%, transparent) 0 18%, color-mix(in srgb, var(--c2,#c026d3) 70%, transparent) 42%, transparent 70%);
+      animation:uexAura 640ms ease-out forwards; }
+    .uex-aura i { position:absolute; inset:8%; border-radius:50%; border:3px solid var(--c1,#fff); box-shadow:0 0 12px var(--c2,#c026d3); opacity:0;
+      animation:uexAuraRing 620ms ease-out forwards; animation-delay:calc(var(--n,0) * 140ms); }
+    .uex-aura i:nth-child(2) { --n:1; } .uex-aura i:nth-child(3) { --n:2; }
+    @keyframes uexAura { 0% { opacity:0; transform:scale(.5); } 25% { opacity:1; transform:scale(1.05); } 70% { opacity:.8; transform:scale(1.2); } 100% { opacity:0; transform:scale(1.5); } }
+    @keyframes uexAuraRing { 0% { opacity:0; transform:scale(.4); } 30% { opacity:1; } 100% { opacity:0; transform:scale(1.9); } }
+    .uex-ghost { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:3; opacity:.34; pointer-events:none;
+      transform-origin:50% 80%; animation-duration:var(--thm-ms,500ms); animation-fill-mode:both; animation-timing-function:ease-in-out; mix-blend-mode:screen; }
+    .uex-ghost--1 { animation-delay:45ms; }
+    .uex-ghost--2 { animation-delay:90ms; opacity:.2; }
+    .skfx-body--bash .uex-ghost { animation-name:skfxBash; }
+    .skfx-body--dive .uex-ghost { animation-name:skfxDive; }
+    .skfx-body--roll .uex-ghost { animation-name:skfxRoll; }
+    .skfx-body--flip .uex-ghost { animation-name:skfxFlip; }
+    .skfx-body--toss .uex-ghost { animation-name:skfxToss; }
+    .skfx-body--lick .uex-ghost { animation-name:skfxLick; }
+    .skfx-body--slash .uex-ghost { animation-name:skfxSlashBody; }
+    .skfx-body--cast .uex-ghost { animation-name:skfxCast; }
+    .skfx-body--kick .uex-ghost { animation-name:skfxKick; }
+    .skfx-body--spin .uex-ghost { animation-name:skfxSpin; }
+    .skfx-body--jump .uex-ghost { animation-name:skfxJump; }
+    .skfx-body--float .uex-ghost { animation-name:skfxFloat; }
+    .skfx-body--dash .uex-ghost { animation-name:skfxDash; }
+    .skfx-body--shake .uex-ghost { animation-name:skfxShake; }
+    .skfx-body--hop .uex-ghost { animation-name:skfxHop; }
+    .skfx-body--warp .uex-ghost { animation-name:skfxWarp; }
+    .skfx-body--jab .uex-ghost { animation-name:skfxJab; }
+    .skfx-body--gather .uex-ghost { animation-name:skfxGather; }
+    .skfx-body--split .uex-ghost { animation-name:skfxSplitBody; }
+    .thm-atk--stomp .uex-ghost { animation-name:thmStomp; }
+    .thm-atk--beam .uex-ghost { animation-name:thmBeamBody; }
+    .thm-atk--rocks .uex-ghost { animation-name:thmRocksBody; }
+    .thm-atk--punch .uex-ghost { animation-name:thmPunchBody; }
+    .thm-atk--magic .uex-ghost { animation-name:thmMagicBody; }
+    .thm-atk--crush .uex-ghost { animation-name:thmCrush; }
+    .thm-atk--petals .uex-ghost { animation-name:thmPetalsBody; }
+    .thm-atk--vine .uex-ghost { animation-name:thmVineBody; }
+    .thm-atk--fire .uex-ghost { animation-name:thmFireBody; }
+    .uex-impact { z-index:9; }
+    .uex-pillar { position:absolute; left:-30px; bottom:-6px; width:60px; height:78vh; opacity:0; transform-origin:50% 100%;
+      background:linear-gradient(0deg, #fff 0, var(--c1,#fff) 14%, color-mix(in srgb, var(--c2,#c026d3) 85%, transparent) 55%, transparent 100%);
+      -webkit-mask-image:linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent); mask-image:linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
+      filter:drop-shadow(0 0 10px var(--c2,#c026d3)); animation:uexPillar 420ms ease-out forwards; animation-delay:var(--hit-at,170ms); }
+    @keyframes uexPillar { 0% { opacity:0; transform:scaleX(.2) scaleY(.4); } 18% { opacity:1; transform:scaleX(1.2) scaleY(1); } 60% { opacity:.85; transform:scaleX(.8) scaleY(1); } 100% { opacity:0; transform:scaleX(.1) scaleY(1); } }
+    .uex-crack { position:absolute; left:-100px; top:-4px; width:200px; height:44px; border-radius:50%; opacity:0; z-index:-1;
+      border:4px solid var(--c1,#fff); box-shadow:0 0 14px var(--c2,#c026d3), inset 0 0 18px var(--c2,#c026d3);
+      animation:uexCrack 520ms ease-out forwards; animation-delay:var(--hit-at,170ms); }
+    @keyframes uexCrack { 0% { opacity:0; transform:scale(.2); } 20% { opacity:1; } 100% { opacity:0; transform:scale(1.9,1.5); } }
+    .uex-flash { position:absolute; left:-120px; top:-120px; width:240px; height:240px; border-radius:50%; opacity:0;
+      background:radial-gradient(circle, #fff 0 14%, color-mix(in srgb, var(--c1,#fff) 75%, transparent) 36%, transparent 70%);
+      animation:uexFlash 340ms ease-out forwards; animation-delay:var(--hit-at,170ms); }
+    @keyframes uexFlash { 0% { opacity:0; transform:scale(.3); } 22% { opacity:1; } 100% { opacity:0; transform:scale(1.5); } }
+    /* 専用モーション(ミーア・アーク・水など)の固有技は、敵の側の着弾へ光柱と地割れを足す */
+    .atk-target-fx .uex-pillar, .atk-target-fx .uex-crack { animation-delay:170ms; }
+    .atk-target-fx { --c1:#fff7d6; --c2:#c026d3; }
+    @media (prefers-reduced-motion: reduce) { .uex-ghost, .uex-crack, .uex-aura i { display:none; } }
     /* ==== 固有技(必殺技)に必ず乗る共通の演出(24-battle-fx.jsx の SpecialMoveFx)====
        タメ(650ms)=暗転+光が集まる+帯に「必殺技/技名」。放った瞬間=閃光+敵の上の衝撃の輪。色は --spm-c1(明)/--spm-c2(濃)。
        EXスキルのカットイン(.ex-cutin・z-index:9600)より下、押せる場所は塞がない */

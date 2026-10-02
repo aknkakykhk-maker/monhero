@@ -381,13 +381,15 @@ const SKILL_MOTION_SETS_BASE = {
       skm('cast', { c:'dark', line:'ray', over:'boom' }),
       skm('cast', { c:'dark', fx:skmFx('shot', 'heart', 3), burst:'heart' }),
       skm('warp', { c:'psy', fx:skmFx('orbit', 'heart', 6), over:'boom' })],
+    // 2026-10-02 ユーザー指示「パンドラも今回変えたもの(エクリプスノヴァ・ダイスキライライ)を除いて他の技も演出強化して」。
+    //   光と闇の2つの力を使い分ける子なので、光の技=聖なる羽根と光柱、闇の技=足元から湧く闇と雷、宇宙の技=星と流星
     unique:[SKM_SIG,
-      skm('cast', { c:'holy', line:'ray', over:'pillar' }),
-      skm('cast', { c:'dark', over:'thunder', burst:'spark' }),
-      skm('float', { c:'psy', over:'boom', hit2:true }),
-      skm('cast', { c:'dark', line:'bolt', over:'thunder' }),
-      skm('cast', { c:'cosmic', fx:skmFx('orbit', 'star', 10, { h:270 }), over:'boom' }),
-      skm('cast', { c:'holy', line:'ray', over:'cross' }),
+      skm('gather', { c:'holy', line:'ray', over:'pillar', fx:skmFx('orbit', 'feather', 10, { h:50, dur:420, start:40, step:16 }), burst:'star', hit:560 }),
+      skm('gather', { c:'dark', over:'thunder', fx:skmFx('rise', 'orb', 12, { h:275, w:130 }), burst:'spark', hit2:true, hit:560 }),
+      skm('float', { c:'psy', over:'boom', fx:skmFx('orbit', 'orb', 8, { h:[270, 48], dur:440, start:40, step:20 }), burst:'star', hit2:true, hit:600 }),
+      skm('warp', { c:'dark', line:'bolt', over:'thunder', fx:skmFx('fall', 'bolt', 8, { h:275, w:120 }), burst:'spark', hit2:true }),
+      skm('spin', { c:'cosmic', fx:skmFx('orbit', 'star', 14, { h:270, dur:460, start:40, step:14 }), over:'aurora', burst:'star', hit2:true }),
+      skm('gather', { c:'holy', line:'ray', over:'cross', fx:skmFx('orbit', 'cross', 8, { h:[50, 275], dur:420, start:40, step:18 }), burst:'star', hit2:true, hit:600 }),
       // 2026-10-02 設定資料(PAGE 3): エクリプスノヴァ=魔力集束(光と闇をまとって溜める)→相反爆発、
       //   ダイスキライライ=分裂(光と闇の2体)→手を取り合う→反発雷撃(docs/spec/PANDORA_SKILLS.md)
       skm('gather', { c:'cosmic', fx:skmFx('orbit', 'orb', 12, { h:[270, 48], dur:420, start:40, step:14 }), over:'eclipse', burst:'star', hit:600 }),
@@ -597,7 +599,20 @@ const skmArrival = (fx) => {
   const times = fx.items.map(at);
   return { first:Math.round(Math.min(...times)), last:Math.round(Math.max(...times)) };
 };
-const skmNormalize = (sp) => {
+// ==== 固有技の格上げ(2026-10-02 ユーザー指示「通常とモーションの使い回しも多いから固有技はもっとかっこよくしてほしい」) ====
+// 固有技(型の名前が '<id>-u<段階>')だけ、通常技と同じ部品の組み合わせでも次のように派手にする。
+//   飛ぶものを1.5倍に増やして大きく / 着弾は必ず二段(hit2) / 着弾の小片を増やして大きく(無ければ星) / 尺を100ms延ばして余韻を出す
+// さらに、使う子のオーラ・残像と敵の上の光柱・地割れを SkillFxMotion / ThemedAttackMotion が足す(UniqueFxExtras / UniqueFxImpact)。
+// 設定資料どおりに作り込んだ技(パンドラのエクリプスノヴァ・ダイスキライライ)は、そのままにする
+const UNIQUE_FX_EXCLUDE = Object.freeze(['Pandora-u7', 'Pandora-u8']);
+const skmBoostFx = (fx) => {
+  if (!fx || !fx.items || !fx.items.length) return fx;
+  const extra = fx.items.slice(0, 12).map((b, i) => ({ ...b, x:-(b.x || 0) * .7 + (i % 2 ? 9 : -9), y:-(b.y || 0) * .6 - 6, d:(b.d || 0) + 26 + (i % 3) * 8, s:(b.s || 1) * 1.2 }));
+  return { ...fx, items:fx.items.concat(extra) };
+};
+const SKM_UNIQUE_BITS = Object.freeze([{x:-34,y:-22,s:1.3},{x:32,y:-26,s:1.3},{x:-36,y:18,s:1.2},{x:34,y:16,s:1.2},{x:0,y:-40,s:1.4},{x:-16,y:26,s:1.1},{x:18,y:28,s:1.1},{x:-44,y:-2,s:1.1},{x:44,y:0,s:1.1},{x:0,y:-14,s:1.5}]);
+const skmNormalize = (sp0, isUnique = false) => {
+  const sp = isUnique ? { ...sp0, fx:skmBoostFx(sp0.fx), hit2:sp0.hit2 ?? true, bits:sp0.bits || SKM_UNIQUE_BITS, burst:sp0.burst || 'star' } : sp0;
   const [ratio, bodyMs] = SKM_BODY_TIMING[sp.body] || [.5, 700];
   const [c1, c2] = Array.isArray(sp.c) ? sp.c : (SKM_COLOR[sp.c] || SKM_COLOR.white);
   const tail = Math.max(sp.over ? (SKM_OVER_TAIL[sp.over] || 260) : 200, sp.hit2 ? 380 : 0);
@@ -610,6 +625,7 @@ const skmNormalize = (sp) => {
     ms = sp.ms ?? Math.max(bodyMs, Math.round((tail + 80) / (1 - ratio)), arrival ? arrival.last + 160 : 0);
     hit = Math.round(ratio * ms);
   }
+  if (isUnique) ms += 100;
   ms = Math.min(SKM_MAX_MS, Math.round(ms));
   const bits = sp.bits || [{x:-28,y:-20},{x:26,y:-24},{x:-30,y:16},{x:30,y:14},{x:0,y:-34}];
   return { body:sp.body, line:sp.line, fx:sp.fx, over:sp.over, burst:sp.burst, twin:sp.twin === true, bits, c1, c2, hit:Math.round(hit),
@@ -624,7 +640,7 @@ const skillFxSpecOf = (kind) => {
   const m = /^([A-Za-z]+)-([nu])(\d)$/.exec(String(kind));
   const sp = m && SKILL_MOTION_SETS[m[1]] && SKILL_MOTION_SETS[m[1]][m[2] === 'u' ? 'unique' : 'normal'][Number(m[3])];
   if (!sp || sp === SKM_SIG) return null;
-  SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp);
+  SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp, m[2] === 'u' && !UNIQUE_FX_EXCLUDE.includes(kind));
   return SKILL_FX_SPEC_CACHE[kind];
 };
 const SkillFxMotion = ({kind, image, lunge=false}) => {
@@ -637,8 +653,10 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
   const vars = { '--thm-ms':`${ms}ms`, '--hit-at':`${spec.hit}ms`, '--c1':spec.c1, '--c2':spec.c2, '--c3':c3 };
   if (spec.hit2) vars['--hit-at2'] = `${spec.hit2}ms`;
   const fx = spec.fx;
+  const uex = lunge && !UNIQUE_FX_EXCLUDE.includes(kind);
   return (
-    <span className={`thm-atk skfx skfx--${kind} skfx-body--${spec.body}${lunge?' thm-atk--lunge':''}`} style={vars} data-skill-fx={kind}>
+    <span className={`thm-atk skfx skfx--${kind} skfx-body--${spec.body}${lunge?' thm-atk--lunge':''}${uex?' uex':''}`} style={vars} data-skill-fx={kind}>
+      {uex&&<UniqueFxExtras image={image} ghost={!spec.twin}/>}
       {spec.twin&&['dark','light'].map(side=><span key={side} className={`skfx-twin skfx-twin--${side}`} aria-hidden="true">{React.cloneElement(image,{alt:''})}</span>)}
       <span className="thm-atk__monster">{image}</span>
       {spec.line&&<span className={`thm-atk__line skfx-line skfx-line--${spec.line}`} aria-hidden="true"><i/></span>}
@@ -659,16 +677,29 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
         <i className="thm-atk__core"/>
         <i className="thm-atk__ring"/>
       </span>}
+      {uex&&<UniqueFxImpact/>}
     </span>
   );
 };
+// 固有技だけに足す部品。使う子のオーラ(光の球と広がる輪)と、動きの残像2つ(同じ動きを少し遅れて追う)
+const UniqueFxExtras = ({ image, ghost = true }) => (
+  <>
+    <span className="uex-aura" aria-hidden="true"><i/><i/><i/></span>
+    {ghost && [1, 2].map(n => <span key={n} className={`uex-ghost uex-ghost--${n}`} aria-hidden="true">{React.cloneElement(image, { alt:'' })}</span>)}
+  </>
+);
+// 敵の上へ当たった瞬間の、固有技だけの重ね絵: 空から落ちる光柱・足元に走る地割れの輪・白い閃光
+const UniqueFxImpact = () => (
+  <span className="thm-atk__hit uex-impact" aria-hidden="true"><i className="uex-pillar"/><i className="uex-crack"/><i className="uex-flash"/></span>
+);
 const ThemedAttackMotion = ({kind, image, lunge=false}) => {
   if (skillFxSpecOf(kind)) return <SkillFxMotion kind={kind} image={image} lunge={lunge}/>;
   const bits = THEMED_ATTACK_BITS[kind] || {};
   const ms = THEMED_ATTACK_MS[kind];
   const px = (v) => `${v || 0}px`;
   return (
-    <span className={`thm-atk thm-atk--${kind}${lunge?' thm-atk--lunge':''}`} style={ms?{'--thm-ms':`${ms}ms`}:undefined}>
+    <span className={`thm-atk thm-atk--${kind}${lunge?' thm-atk--lunge uex':''}`} style={ms?{'--thm-ms':`${ms}ms`}:undefined}>
+      {lunge&&<UniqueFxExtras image={image} ghost={kind!=='claw'}/>}
       {kind==='magic'&&<span className="thm-atk__circle" aria-hidden="true"><i/><i/></span>}
       {/* ライガーの残像。本体と同じカクカクの動きを少し遅れて追いかける */}
       {kind==='claw'&&[1,2].map(n=>(
@@ -689,6 +720,7 @@ const ThemedAttackMotion = ({kind, image, lunge=false}) => {
         <i className="thm-atk__ring"/>
         <ThemedAttackBits list={bits.hit2}/>
       </span>}
+      {lunge&&<UniqueFxImpact/>}
     </span>
   );
 };
@@ -841,6 +873,7 @@ const AttackTargetFx = ({anim, attackerId}) => {
     <span className={`atk-target-fx atk-target-fx--hit${anim.charge === false ? ' atk-target-fx--special' : ''}`} aria-hidden="true">
       <i className="atk-target-fx__core"/>
       <i className="atk-target-fx__ring"/>
+      {anim.charge === false && <><i className="uex-pillar"/><i className="uex-crack"/></>}
       {[0, 45, 90, 135, 180, 225, 270, 315].map(deg => (
         <i key={deg} className="atk-target-fx__ray" style={{ '--atk-ray-angle':`${deg}deg` }}/>
       ))}
