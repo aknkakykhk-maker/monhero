@@ -346,8 +346,19 @@ const RHYTHM_MULTI = (() => {
         open: roomMode !== 'private', res: null, seen: now,
       };
       connect();
-      hbTimer = setInterval(sendHb, RHYTHM_MULTI_HEARTBEAT_MS);
-      sweepTimer = setInterval(() => { syncLobby(); emit(); }, 1000);
+      // 演奏中は、演奏の判定と描画に余計な仕事を割り込ませないよう、裏の通信を減らす。
+      // 状態の知らせは4秒ごと(抜けた扱いになるのは7秒なので足りる)、1秒ごとの点検と画面更新は止める
+      let playTick = 0;
+      hbTimer = setInterval(() => {
+        const me = selfMember();
+        if (me && me.playing) { playTick += 1; if (playTick % 2 === 1) return; }
+        sendHb();
+      }, RHYTHM_MULTI_HEARTBEAT_MS);
+      sweepTimer = setInterval(() => {
+        const me = selfMember();
+        if (me && me.playing) return;
+        syncLobby(); emit();
+      }, 1000);
       emit();
     },
     leave() {
