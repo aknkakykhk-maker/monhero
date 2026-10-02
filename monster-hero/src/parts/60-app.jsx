@@ -11257,7 +11257,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // モーションは1回だけ流し、ダメージ数値だけを立て続けに出すので、
           // 剣士モッチーの永久追加連撃が何本に増えてもターンの長さは変わらない
           const isComboDashMotion = hitMotion==='zanCombo' || hitMotion==='eikiSakuraCombo' || hitMotion==='kenshiTwinBlade';
-          const isZanGroupStart = hit.skillName!=='連撃' && isComboDashMotion;
+          // noAnim(全体連撃・二刀流・EXの連撃など数字だけのヒット)は、動きを出さないので連撃のまとめには入れない。
+          // 入れてしまうと、連撃の直後にもう一度ただの残像ダッシュ(技の動きを無視した通常モーション)が流れる
+          const isZanGroupStart = hit.skillName!=='連撃' && !hit.noAnim && isComboDashMotion;
           if (isZanGroupStart) {
             // ザンの連撃グループ: 残像のような一瞬の突進を1回だけ見せ、モーションが終わってからダメージをバババッと立て続けに表示する
             const group=[hit]; let j=hitIdx+1;
