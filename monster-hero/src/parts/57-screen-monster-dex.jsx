@@ -172,6 +172,8 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
             {/* 待機アニメ(翼の羽ばたきなど)もバトルと同じ場面で重ねる。持たない子は今までどおり1枚の絵 */}
             <BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name, false, dexSelectedColors(masuMons, mon.id, dexColorKey)), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim} baseId={mon.id}/>
           </div>
+          {/* 固有技の再生には、バトルと同じ「必殺技の共通演出」(暗転・帯・閃光・フィニッシュ)も舞台の中へ重ねる */}
+          {playingKind==='unique'&&previewAnim&&<SpecialMoveFx compact slotSkill={{slotIndex:-1,name:playing.skillName||mon.unique?.names?.[0]||'必殺技',type:'unique',sig:!playing.skillName}} attackAnim={previewAnim} mon={mon} ownerId={mon.id}/>}
           <span className="absolute bottom-2 left-0 right-0 text-center text-[10px] font-bold text-slate-400">バトルと同じ演出です（ダメージや性能は変わりません）</span>
         </div>
         <div className={SCREEN_FOOTER_CLASS}>
