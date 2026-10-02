@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 25c6b5eac939878b
+// generated-sha256: 01fad7c63040085a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 22:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 23:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16849,7 +16849,7 @@ const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP
 // (2026-09-05・ユーザー指示「選んでいた音楽が鳴り続けるようにして」)。
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -17222,11 +17222,11 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           })}
           </div>
           <div className="flex gap-2" style={{gridArea:'act'}}>
-            <button type="button" data-rhythm-song-random onClick={pickRandom}
-              className="min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]">ランダム</button>
-            <button type="button" data-rhythm-demo-start={difficulty.id}
+            {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom}
+              className="min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]">ランダム</button>}
+            <button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}
               onClick={()=>onPlay(song,difficulty)}
-              className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white landscape:min-h-[42px]">決定</button>
+              className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white disabled:opacity-40 landscape:min-h-[42px]">{playLabel}</button>
           </div>
           {footer&&<div data-rhythm-song-footer className="min-w-0" style={{gridArea:'foot'}}>{typeof footer==='function'?footer(song,difficulty):footer}</div>}
         </div>
@@ -21903,39 +21903,115 @@ const rhythmMultiPickDifficulty = (available, wishId, orderIds) => {
 };
 
 // ---- 画面 ----
-// songs / difficultiesOf は曲えらびと同じ一覧(rhythmDemoSongs など)。onStartPlay は演奏画面へ入る処理を親が持つ
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyIds, onBack, onStartPlay }) {
+// 流れ(プロセカの「みんなでライブ」を参考):
+//   ①ルーム選択(フリー / ベテラン / プライベート) → ②マッチング画面(メンバーが集まるのを待つ)
+//   → ③曲えらび(ソロと同じ画面に、いっしょに遊ぶ人の帯と、準備OK・スタートが付く)
+//   → 演奏(3・2・1) → チームの結果(ランクとMVP)
+// 部屋の中の状態は React の外(RHYTHM_MULTI)にあるので、画面を行き来しても部屋は切れない。
+const rhythmMultiStatusLabel = (m, hostId) => (m.playing ? '演奏中' : m.id === hostId ? '部屋主' : m.ready ? '準備OK' : '待機中');
+const rhythmMultiStatusClass = (m, hostId) => (m.playing ? 'bg-amber-500/80 text-slate-950' : m.ready || m.id === hostId ? 'bg-emerald-500/80 text-slate-950' : 'bg-slate-700 text-slate-300');
+
+function RhythmMultiChatPanel({ view }) {
+  const [chatText, setChatText] = React.useState('');
+  const listRef = React.useRef(null);
+  const count = view && view.chat ? view.chat.length : 0;
+  React.useEffect(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [count]);
+  const submit = () => { if (RHYTHM_MULTI.sendChat(chatText)) setChatText(''); };
+  return (
+    <section data-rhythm-multi-chat className="rounded-2xl border border-white/15 bg-slate-900/95 p-3">
+      <h3 className="text-xs font-black text-slate-300">チャット</h3>
+      <ul ref={listRef} data-rhythm-multi-chat-list className="mt-1 max-h-40 min-h-[3rem] space-y-1 overflow-y-auto rounded-lg bg-slate-950/60 p-2 text-sm font-bold">
+        {count === 0 && <li className="text-[11px] text-slate-500">まだ発言はありません</li>}
+        {view.chat.map((c) => (
+          <li key={c.cid} data-rhythm-multi-chat-line className="break-words leading-snug">
+            <b className={c.id === view.selfId ? 'text-cyan-300' : 'text-amber-200'}>{c.name}</b>
+            <span className="text-slate-400">: </span>{c.text}
+          </li>
+        ))}
+      </ul>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {RHYTHM_MULTI_CHAT_STAMPS.map((stamp) => (
+          <button key={stamp} data-rhythm-multi-chat-stamp type="button" onClick={() => RHYTHM_MULTI.sendChat(stamp)}
+            className="min-h-[36px] rounded-full bg-slate-700 px-3 text-xs font-black">{stamp}</button>
+        ))}
+      </div>
+      <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+        <input data-rhythm-multi-chat-input value={chatText} maxLength={RHYTHM_MULTI_CHAT_MAX_LENGTH} autoComplete="off" enterKeyHint="send"
+          onChange={(e) => setChatText(e.target.value)} placeholder={`ひとこと(${RHYTHM_MULTI_CHAT_MAX_LENGTH}文字まで)`}
+          className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white" />
+        <button data-rhythm-multi-chat-send type="submit" disabled={!chatText.trim()} className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-4 text-sm font-black disabled:opacity-40">送信</button>
+      </form>
+    </section>
+  );
+}
+
+function RhythmMultiResultCard({ view, team, song }) {
+  return (
+    <section data-rhythm-multi-results className="rounded-2xl border border-white/15 bg-slate-900/95 p-3">
+      <h3 className="text-xs font-black text-slate-300">チームの結果{song ? `(${rhythmSongFullName(song)})` : ''}</h3>
+      <div className="mt-1 flex items-center gap-3 rounded-xl bg-slate-950/60 px-3 py-2">
+        <b data-rhythm-multi-team-rank className="text-4xl font-black text-amber-300">{team.waiting ? '…' : team.rank}</b>
+        <div className="min-w-0 flex-1">
+          <small className="block text-[10px] font-black text-slate-400">{team.waiting ? '全員の演奏が終わるのを待っています' : 'チームのランク(平均スコアで決まります)'}</small>
+          <span className="block truncate text-sm font-black tabular-nums">平均 {team.average.toLocaleString()}</span>
+        </div>
+      </div>
+      <ol className="mt-2 space-y-1">
+        {team.rows.slice().sort((a, b) => (b.res && !b.res.quit ? b.res.score : -1) - (a.res && !a.res.quit ? a.res.score : -1)).map((r, i) => (
+          <li key={r.m.id} data-rhythm-multi-result-row className="flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5 text-sm font-black">
+            <span className="w-6 shrink-0 text-center text-amber-300">{r.res && !r.res.quit ? i + 1 : '-'}</span>
+            <span className="min-w-0 flex-1 truncate">{r.m.id === team.mvpId ? <b data-rhythm-multi-mvp className="mr-1 rounded bg-amber-400 px-1 text-[10px] text-slate-950">MVP</b> : null}{r.m.name}{r.m.id === view.selfId ? '(あなた)' : ''}{r.res && r.res.diffId ? <small className="ml-1 text-[10px] text-slate-400">{r.res.diffId}</small> : null}</span>
+            <span className="shrink-0 tabular-nums">{r.res ? (r.res.quit ? 'リタイア' : `${r.res.score.toLocaleString()}${r.res.cleared ? '' : '(失敗)'}`) : '演奏中…'}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+// songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
+// onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, onBack, onStartPlay }) {
   const view = useRhythmMultiView();
+  const difficultyIds = difficultyList.map((d) => d.id);
   const [codeInput, setCodeInput] = React.useState('');
   const [message, setMessage] = React.useState('');
   const [searching, setSearching] = React.useState(null);
   const [countdown, setCountdown] = React.useState(null);
   const [copied, setCopied] = React.useState(false);
-  const [chatText, setChatText] = React.useState('');
-  const chatListRef = React.useRef(null);
-  const chatCount = view && view.chat ? view.chat.length : 0;
-  React.useEffect(() => {
-    const el = chatListRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [chatCount]);
-  const submitChat = () => { if (RHYTHM_MULTI.sendChat(chatText)) setChatText(''); };
+  const [chatOpen, setChatOpen] = React.useState(false);
+  const [dismissedResult, setDismissedResult] = React.useState('');
+  // 演奏から戻ってきたとき(画面が作り直されたとき)も、部屋に出してある希望をそのまま引き継ぐ
+  const mine = view ? view.members.find((m) => m.id === view.selfId) : null;
+  const [omakase, setOmakase] = React.useState(!(mine && mine.wish));
+  const [selSongId, setSelSongId] = React.useState(mine && mine.wish ? mine.wish : '');
+  const [selDiffId, setSelDiffId] = React.useState(mine && mine.diff ? mine.diff : '');
+  const [selectView, setSelectView] = React.useState(null);
   const songById = (songId) => songs.find((song) => song.songId === songId) || null;
   const defaultDiff = difficultyIds.includes('NORMAL') ? 'NORMAL' : difficultyIds[0] || '';
   const me = view ? view.members.find((m) => m.id === view.selfId) : null;
   const isHost = !!view && view.hostId === view.selfId;
   const start = view ? view.start : null;
   const team = start && view ? rhythmMultiTeamResult(view.members, start.startId) : null;
+  // 結果の欄は、だれかが演奏を終えてから出す(始まったばかりの「演奏中…」だけの欄は出さない)
+  const resultVisible = !!team && team.rows.some((r) => r.res) && !!start && dismissedResult !== start.startId;
   const everyoneReady = !!view && view.members.length >= 2 && view.members.every((m) => m.id === view.selfId || m.ready);
+  const canStart = isHost && everyoneReady && !countdown;
+  const songIds = songs.map((song) => song.songId);
 
   // 合図が来たら 3・2・1 を数えて演奏へ入る。数えるのは受け取った時刻から(端末の時計のずれに左右されない)
   React.useEffect(() => RHYTHM_MULTI.onStart((info) => {
     setCountdown({ info, left: RHYTHM_MULTI_START_COUNTDOWN_SEC });
+    setChatOpen(false);
   }), []);
   React.useEffect(() => {
     if (!countdown) return undefined;
     if (countdown.left <= 0) {
       const song = songById(countdown.info.songId);
-      const diff = song ? rhythmMultiPickDifficulty(difficultiesOf(song), RHYTHM_MULTI.myDiff(), difficultyIds) : null;
+      const diff = song ? rhythmMultiPickDifficulty(difficultiesOf(song), RHYTHM_MULTI.myDiff() || defaultDiff, difficultyIds) : null;
       setCountdown(null);
       if (song && diff) onStartPlay(song, diff, countdown.info.startId);
       else RHYTHM_MULTI.reportResult(countdown.info.startId, null, true, { noPenalty: true });
@@ -21971,7 +22047,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyIds, onBa
     });
     return () => { alive = false; };
   }, [searching]);
-  const leaveRoom = () => { RHYTHM_MULTI.leave(); setCountdown(null); };
+  const leaveRoom = () => { RHYTHM_MULTI.leave(); setCountdown(null); setChatOpen(false); setSearching(null); };
   const shareCode = async () => {
     if (!view) return;
     const text = `モンヒロビートで協力プレイしよう! 部屋コード: ${view.code}`;
@@ -21982,185 +22058,182 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyIds, onBa
       setTimeout(() => setCopied(false), 2000);
     } catch (_) { /* 共有をやめたときは何もしない */ }
   };
-  const statusText = !view ? '' : view.status === 'open' ? '' : view.status === 'connecting' ? '部屋へつないでいます…' : 'つなぎ直しています…';
-  const canStart = isHost && everyoneReady && !countdown;
-  const songIds = songs.map((song) => song.songId);
 
   const card = 'rounded-2xl border border-white/15 bg-slate-900/85 p-3';
   const btn = 'min-h-[48px] rounded-xl px-3 font-black disabled:opacity-40';
-  const header = (
-    <header className="flex shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2" style={{ paddingTop: 'calc(.5rem + var(--mh-sa-top))' }}>
-      <button data-rhythm-multi-back type="button" className="min-h-[44px] min-w-[44px] rounded-xl border border-white/20 bg-slate-800 px-3 font-black" onClick={() => { if (view) leaveRoom(); setSearching(null); onBack(); }}>←</button>
-      <h2 className="min-w-0 flex-1 truncate text-sm font-black tracking-widest text-cyan-200">🎮 みんなで対戦</h2>
+  const header = (title, onBackClick, extra) => (
+    <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{ paddingTop: 'calc(0.25rem + var(--mh-sa-top))' }}>
+      <button data-rhythm-multi-back type="button" aria-label="戻る" className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl text-lg font-black text-slate-300" onClick={onBackClick}>←</button>
+      <h2 className="min-w-0 flex-1 truncate text-sm font-black tracking-widest text-cyan-200">{title}</h2>
+      {extra}
     </header>
   );
+  const shell = 'relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white';
+  const countdownLayer = countdown && (
+    <div data-rhythm-multi-countdown className="absolute inset-0 z-[90000] flex flex-col items-center justify-center bg-slate-950/90">
+      <small className="text-[11px] font-black text-slate-400">抽選の結果</small>
+      <p className="px-4 text-center text-base font-black text-cyan-200">{songById(countdown.info.songId) ? rhythmSongFullName(songById(countdown.info.songId)) : ''}</p>
+      <b className="text-8xl font-black text-white">{Math.max(1, countdown.left)}</b>
+    </div>
+  );
 
-  if (!view) {
+  // ①ルーム選択
+  if (!view && !searching) {
     return (
-      <main data-rhythm-multi className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
-        {header}
+      <main data-rhythm-multi data-rhythm-multi-step="rooms" className={shell}>
+        {header('🎮 みんなで対戦 / ルームえらび', onBack)}
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
           <section className={card}>
             <p className="text-sm font-black text-cyan-100">みんなで同じ曲を演奏して、チームのランクを目指します</p>
             <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-300">最大{RHYTHM_MULTI_ROOM_MAX}人。曲は全員の希望から抽選で決まり、結果は全員の平均スコアでチームのランクが決まります。個人スコア1位はMVPです。対戦の記録は、自己ベストにも全国ランキングにも残りません。</p>
           </section>
-          {searching
-            ? <section data-rhythm-multi-searching className={card}>
-              <p className="text-sm font-black text-amber-200">{RHYTHM_MULTI_MODE_LABELS[searching]}ルームをさがしています…</p>
-              <button type="button" className={`${btn} mt-2 w-full bg-slate-700`} onClick={() => setSearching(null)}>やめる</button>
-            </section>
-            : <>
-              <section className={`${card} space-y-2`}>
-                <h3 className="text-xs font-black text-slate-300">知らない人と遊ぶ</h3>
-                <button data-rhythm-multi-free type="button" className={`${btn} w-full bg-fuchsia-700`} onClick={() => searchRoom('free')}>フリールーム<small className="block text-[10px] font-bold text-fuchsia-100/80">だれでも入れます</small></button>
-                <button data-rhythm-multi-veteran type="button" className={`${btn} w-full ${profile.level >= RHYTHM_MULTI_VETERAN_MIN_LEVEL ? 'bg-amber-700' : 'bg-slate-700'}`} onClick={() => searchRoom('veteran')}>ベテランルーム<small className="block text-[10px] font-bold text-amber-100/80">ブリーダーLv.{RHYTHM_MULTI_VETERAN_MIN_LEVEL}以上{profile.level >= RHYTHM_MULTI_VETERAN_MIN_LEVEL ? '' : '(まだ入れません)'}</small></button>
-              </section>
-              <section className={`${card} space-y-2`}>
-                <h3 className="text-xs font-black text-slate-300">友だちと遊ぶ(プライベートルーム)</h3>
-                <button data-rhythm-multi-create type="button" className={`${btn} w-full bg-indigo-700`} onClick={createPrivate}>部屋をつくる</button>
-                <label className="block text-[11px] font-black text-slate-300" htmlFor="rhythm-multi-code">友だちの部屋コードで入る</label>
-                <div className="flex gap-2">
-                  <input id="rhythm-multi-code" data-rhythm-multi-code-input value={codeInput} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false}
-                    onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                    className="min-h-[48px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-center text-xl font-black tracking-[0.4em] text-white" placeholder="ABCD" />
-                  <button data-rhythm-multi-join type="button" className={`${btn} bg-indigo-700`} onClick={joinPrivate}>入る</button>
-                </div>
-              </section>
-            </>}
+          <section className={`${card} space-y-2`}>
+            <h3 className="text-xs font-black text-slate-300">知らない人と遊ぶ</h3>
+            <button data-rhythm-multi-free type="button" className={`${btn} w-full bg-fuchsia-700`} onClick={() => searchRoom('free')}>フリールーム<small className="block text-[10px] font-bold text-fuchsia-100/80">だれでも入れます</small></button>
+            <button data-rhythm-multi-veteran type="button" className={`${btn} w-full ${profile.level >= RHYTHM_MULTI_VETERAN_MIN_LEVEL ? 'bg-amber-700' : 'bg-slate-700'}`} onClick={() => searchRoom('veteran')}>ベテランルーム<small className="block text-[10px] font-bold text-amber-100/80">ブリーダーLv.{RHYTHM_MULTI_VETERAN_MIN_LEVEL}以上{profile.level >= RHYTHM_MULTI_VETERAN_MIN_LEVEL ? '' : '(まだ入れません)'}</small></button>
+          </section>
+          <section className={`${card} space-y-2`}>
+            <h3 className="text-xs font-black text-slate-300">友だちと遊ぶ(プライベートルーム)</h3>
+            <button data-rhythm-multi-create type="button" className={`${btn} w-full bg-indigo-700`} onClick={createPrivate}>部屋をつくる</button>
+            <label className="block text-[11px] font-black text-slate-300" htmlFor="rhythm-multi-code">友だちの部屋コードで入る</label>
+            <div className="flex gap-2">
+              <input id="rhythm-multi-code" data-rhythm-multi-code-input value={codeInput} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false}
+                onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                className="min-h-[48px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-center text-xl font-black tracking-[0.4em] text-white" placeholder="ABCD" />
+              <button data-rhythm-multi-join type="button" className={`${btn} bg-indigo-700`} onClick={joinPrivate}>入る</button>
+            </div>
+          </section>
           {message && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
         </div>
       </main>
     );
   }
 
+  // ②マッチング画面(部屋を探している間・部屋に入って人を待っている間)
+  const slots = view ? view.members : [];
+  const waitingForMatch = !view || (view.members.length < 2 && !resultVisible && !countdown);
+  if (!view || (view.full) || waitingForMatch) {
+    return (
+      <main data-rhythm-multi data-rhythm-multi-step="matching" className={shell}>
+        {header(`🎮 マッチング${view ? ` / ${RHYTHM_MULTI_MODE_LABELS[view.mode]}ルーム` : ''}`, () => { leaveRoom(); if (!view) onBack(); })}
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+          {view && view.full
+            ? <section data-rhythm-multi-full className={card}>
+              <p className="text-sm font-black text-rose-300">この部屋はいっぱいです(最大{RHYTHM_MULTI_ROOM_MAX}人)</p>
+              <button type="button" className={`${btn} mt-2 w-full bg-slate-700`} onClick={leaveRoom}>ルームえらびへ戻る</button>
+            </section>
+            : <>
+              <section data-rhythm-multi-matching className={`${card} text-center`}>
+                <p className="animate-pulse text-base font-black text-amber-200">{!view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームをさがしています…` : 'メンバーをさがしています…'}</p>
+                <p className="mt-1 text-[11px] font-bold text-slate-400">2人そろうと、曲えらびへ進みます</p>
+                <ul className="mt-3 flex justify-center gap-2">
+                  {Array.from({ length: RHYTHM_MULTI_ROOM_MAX }).map((_, i) => {
+                    const m = slots[i];
+                    return (
+                      <li key={i} data-rhythm-multi-slot className={`flex h-16 w-14 flex-col items-center justify-center rounded-xl border px-1 text-[10px] font-black ${m ? 'border-cyan-300/60 bg-cyan-950/50 text-cyan-100' : 'border-white/10 bg-slate-950/50 text-slate-600'}`}>
+                        <span aria-hidden="true" className="text-xl">{m ? (m.id === view.hostId ? '👑' : '🎵') : '…'}</span>
+                        <span className="w-full truncate text-center">{m ? m.name : ''}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+              {view && <section className={`${card} flex items-center gap-3`}>
+                <div className="min-w-0 flex-1">
+                  <small className="block text-[10px] font-black text-slate-400">{RHYTHM_MULTI_MODE_LABELS[view.mode]}ルームの部屋コード</small>
+                  <b data-rhythm-multi-room-code className="block text-3xl font-black tracking-[0.35em] text-cyan-200">{view.code}</b>
+                  {view.status !== 'open' && <small className="block text-[10px] font-black text-amber-300">{view.status === 'connecting' ? '部屋へつないでいます…' : 'つなぎ直しています…'}</small>}
+                </div>
+                <button data-rhythm-multi-share type="button" className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black" onClick={shareCode}>{copied ? 'コピーした!' : '友だちに送る'}</button>
+              </section>}
+              {view && isHost && view.mode === 'private' && me && (
+                <button data-rhythm-multi-open type="button" onClick={() => RHYTHM_MULTI.setOpen(!me.open)}
+                  className={`min-h-[48px] w-full rounded-xl px-3 text-sm font-black ${me.open ? 'bg-amber-600' : 'bg-slate-700'}`}>
+                  {me.open ? 'ルーム解放中(タップでやめる)' : 'ルーム解放(知らない人も呼ぶ)'}
+                </button>
+              )}
+              {view && <RhythmMultiChatPanel view={view} />}
+              <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoom}>{view ? '部屋を出る' : 'やめる'}</button>
+            </>}
+          {message && <p className="text-[12px] font-black text-rose-300">{message}</p>}
+        </div>
+      </main>
+    );
+  }
+
+  // ③曲えらび(ソロと同じ画面。上に、いっしょに遊ぶ人の帯)
   const myDiffId = me && me.diff ? me.diff : defaultDiff;
   const drawnSong = start ? songById(start.songId) : null;
+  const onSongId = (id) => { setSelSongId(id); setOmakase(false); RHYTHM_MULTI.setWish(id); };
+  const onDifficultyId = (id) => { setSelDiffId(id); RHYTHM_MULTI.setDiff(id); };
+  const onPlay = (song, difficulty) => {
+    // 決定を押した時点の曲・難易度を、希望として確定させてから準備OK/スタートへ進む
+    RHYTHM_MULTI.setWish(omakase ? '' : song.songId);
+    RHYTHM_MULTI.setDiff(difficulty.id);
+    if (isHost) RHYTHM_MULTI.hostStart(songIds);
+    else RHYTHM_MULTI.setReady(!(me && me.ready));
+  };
+  const playLabel = isHost ? (everyoneReady ? 'スタート!(曲を抽選)' : 'みんなの準備待ち') : (me && me.ready ? '準備OK(取消)' : '準備OK!');
   return (
-    <main data-rhythm-multi className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
-      {header}
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-        {view.full ? (
-          <section data-rhythm-multi-full className={card}>
-            <p className="text-sm font-black text-rose-300">この部屋はいっぱいです(最大{RHYTHM_MULTI_ROOM_MAX}人)</p>
-            <button type="button" className={`${btn} mt-2 w-full bg-slate-700`} onClick={leaveRoom}>部屋をやめる</button>
-          </section>
-        ) : (<>
-          <section className={`${card} flex items-center gap-3`}>
-            <div className="min-w-0 flex-1">
-              <small className="block text-[10px] font-black text-slate-400">{RHYTHM_MULTI_MODE_LABELS[view.mode]}ルーム</small>
-              <b data-rhythm-multi-room-code className="block text-3xl font-black tracking-[0.35em] text-cyan-200">{view.code}</b>
-              {statusText && <small className="block text-[10px] font-black text-amber-300">{statusText}</small>}
-            </div>
-            <button data-rhythm-multi-share type="button" className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-3 text-xs font-black" onClick={shareCode}>{copied ? 'コピーした!' : '友だちに送る'}</button>
-          </section>
-
-          <section className={card}>
-            <h3 className="text-xs font-black text-slate-300">メンバー({view.members.length}/{RHYTHM_MULTI_ROOM_MAX})</h3>
-            <ul className="mt-1 space-y-1">
-              {view.members.map((m) => (
-                <li key={m.id} data-rhythm-multi-member className="rounded-lg bg-slate-950/60 px-2 py-1.5 text-sm font-black">
-                  <div className="flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate">{m.id === view.hostId ? '👑 ' : ''}{m.name}{m.id === view.selfId ? '(あなた)' : ''}</span>
-                    <small className="shrink-0 text-[10px] text-slate-400">Lv.{m.level}</small>
-                    <small className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${m.playing ? 'bg-amber-500/80 text-slate-950' : m.ready || m.id === view.hostId ? 'bg-emerald-500/80 text-slate-950' : 'bg-slate-700 text-slate-300'}`}>{m.playing ? '演奏中' : m.id === view.hostId ? '部屋主' : m.ready ? '準備OK' : '待機中'}</small>
-                  </div>
-                  <small data-rhythm-multi-member-wish className="mt-0.5 block truncate text-[10px] font-bold text-slate-400">希望: {songById(m.wish) ? rhythmSongFullName(songById(m.wish)) : 'おまかせ'} / {m.diff || defaultDiff}</small>
-                </li>
-              ))}
-            </ul>
-            {view.members.length < 2 && <p className="mt-1 text-[11px] font-bold text-amber-200">{view.mode === 'private' && !(me && me.open) ? '友だちが入るのを待っています' : 'メンバーをさがしています…'}</p>}
-          </section>
-
-          <section className={card}>
-            <h3 className="text-xs font-black text-slate-300">あなたの希望</h3>
-            <div className="mt-1 space-y-2">
-              <select data-rhythm-multi-song aria-label="曲の希望" className="min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-950 px-2 text-sm font-black"
-                value={me ? me.wish : ''} onChange={(e) => RHYTHM_MULTI.setWish(e.target.value)}>
-                <option value="">おまかせ(全員の希望から抽選)</option>
-                {songs.map((song) => <option key={song.songId} value={song.songId}>{rhythmSongFullName(song)}</option>)}
-              </select>
-              <div className="flex flex-wrap gap-1.5">
-                {difficultyIds.map((id) => (
-                  <button key={id} data-rhythm-multi-difficulty={id} type="button" onClick={() => RHYTHM_MULTI.setDiff(id)}
-                    className={`min-h-[40px] rounded-lg px-3 text-xs font-black ${myDiffId === id ? 'bg-fuchsia-600' : 'bg-slate-700'}`}>{id}</button>
-                ))}
-              </div>
-              <p className="text-[10px] font-bold text-slate-400">曲は全員の希望から抽選で決まります。難易度は人それぞれ。曲に希望の難易度が無いときは、近い易しいほうになります。</p>
-            </div>
-            {isHost && view.mode === 'private' && me && (
-              <button data-rhythm-multi-open type="button" onClick={() => RHYTHM_MULTI.setOpen(!me.open)}
-                className={`mt-2 min-h-[44px] w-full rounded-xl px-3 text-xs font-black ${me.open ? 'bg-amber-600' : 'bg-slate-700'}`}>
-                {me.open ? 'ルーム解放中(タップでやめる)' : 'ルーム解放(知らない人も呼ぶ)'}
-              </button>
-            )}
-          </section>
-
-          {team && team.rows.length > 0 && (
-            <section data-rhythm-multi-results className={card}>
-              <h3 className="text-xs font-black text-slate-300">チームの結果{drawnSong ? `(${rhythmSongFullName(drawnSong)})` : ''}</h3>
-              <div className="mt-1 flex items-center gap-3 rounded-xl bg-slate-950/60 px-3 py-2">
-                <b data-rhythm-multi-team-rank className="text-4xl font-black text-amber-300">{team.waiting ? '…' : team.rank}</b>
-                <div className="min-w-0 flex-1">
-                  <small className="block text-[10px] font-black text-slate-400">{team.waiting ? '全員の演奏が終わるのを待っています' : 'チームのランク(平均スコアで決まります)'}</small>
-                  <span className="block truncate text-sm font-black tabular-nums">平均 {team.average.toLocaleString()}</span>
-                </div>
-              </div>
-              <ol className="mt-2 space-y-1">
-                {team.rows.slice().sort((a, b) => (b.res && !b.res.quit ? b.res.score : -1) - (a.res && !a.res.quit ? a.res.score : -1)).map((r, i) => (
-                  <li key={r.m.id} data-rhythm-multi-result-row className="flex items-center gap-2 rounded-lg bg-slate-950/60 px-2 py-1.5 text-sm font-black">
-                    <span className="w-6 shrink-0 text-center text-amber-300">{r.res && !r.res.quit ? i + 1 : '-'}</span>
-                    <span className="min-w-0 flex-1 truncate">{r.m.id === team.mvpId ? <b data-rhythm-multi-mvp className="mr-1 rounded bg-amber-400 px-1 text-[10px] text-slate-950">MVP</b> : null}{r.m.name}{r.m.id === view.selfId ? '(あなた)' : ''}{r.res && r.res.diffId ? <small className="ml-1 text-[10px] text-slate-400">{r.res.diffId}</small> : null}</span>
-                    <span className="shrink-0 tabular-nums">{r.res ? (r.res.quit ? 'リタイア' : `${r.res.score.toLocaleString()}${r.res.cleared ? '' : '(失敗)'}`) : '演奏中…'}</span>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
-
-          <section data-rhythm-multi-chat className={card}>
-            <h3 className="text-xs font-black text-slate-300">チャット</h3>
-            <ul ref={chatListRef} data-rhythm-multi-chat-list className="mt-1 max-h-40 min-h-[3rem] space-y-1 overflow-y-auto rounded-lg bg-slate-950/60 p-2 text-sm font-bold">
-              {view.chat.length === 0 && <li className="text-[11px] text-slate-500">まだ発言はありません</li>}
-              {view.chat.map((c) => (
-                <li key={c.cid} data-rhythm-multi-chat-line className="break-words leading-snug">
-                  <b className={c.id === view.selfId ? 'text-cyan-300' : 'text-amber-200'}>{c.name}</b>
-                  <span className="text-slate-400">: </span>{c.text}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {RHYTHM_MULTI_CHAT_STAMPS.map((stamp) => (
-                <button key={stamp} data-rhythm-multi-chat-stamp type="button" onClick={() => RHYTHM_MULTI.sendChat(stamp)}
-                  className="min-h-[36px] rounded-full bg-slate-700 px-3 text-xs font-black">{stamp}</button>
-              ))}
-            </div>
-            <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); submitChat(); }}>
-              <input data-rhythm-multi-chat-input value={chatText} maxLength={RHYTHM_MULTI_CHAT_MAX_LENGTH} autoComplete="off" enterKeyHint="send"
-                onChange={(e) => setChatText(e.target.value)} placeholder={`ひとこと(${RHYTHM_MULTI_CHAT_MAX_LENGTH}文字まで)`}
-                className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white" />
-              <button data-rhythm-multi-chat-send type="submit" disabled={!chatText.trim()} className="min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-4 text-sm font-black disabled:opacity-40">送信</button>
-            </form>
-          </section>
-
-          <section className="space-y-2">
-            {isHost
-              ? <button data-rhythm-multi-start type="button" disabled={!canStart} className={`${btn} w-full bg-fuchsia-700`} onClick={() => RHYTHM_MULTI.hostStart(songIds)}>
-                {canStart ? 'スタート!(曲を抽選)' : view.members.length < 2 ? '仲間が入るのを待っています' : 'みんなの準備を待っています'}
-              </button>
-              : <button data-rhythm-multi-ready type="button" disabled={!!countdown} className={`${btn} w-full ${me && me.ready ? 'bg-emerald-700' : 'bg-indigo-700'}`} onClick={() => RHYTHM_MULTI.setReady(!(me && me.ready))}>
-                {me && me.ready ? '準備OK(タップで取り消し)' : '準備OK!'}
-              </button>}
-            <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoom}>部屋を出る</button>
-          </section>
+    <main data-rhythm-multi data-rhythm-multi-step="select" className={shell}>
+      {header(`🎮 ${RHYTHM_MULTI_MODE_LABELS[view.mode]}ルーム ${view.code}`, leaveRoom,
+        <>
+          {team && team.rows.some((r) => r.res) && <button data-rhythm-multi-results-open type="button" aria-label="チームの結果" onClick={() => setDismissedResult('')} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-lg">🏆</button>}
+          <button data-rhythm-multi-chat-open type="button" aria-label="チャット" onClick={() => setChatOpen((v) => !v)} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-lg">💬</button>
         </>)}
-      </div>
-      {countdown && (
-        <div data-rhythm-multi-countdown className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/90">
-          <small className="text-[11px] font-black text-slate-400">抽選の結果</small>
-          <p className="px-4 text-center text-base font-black text-cyan-200">{songById(countdown.info.songId) ? rhythmSongFullName(songById(countdown.info.songId)) : ''}</p>
-          <b className="text-8xl font-black text-white">{Math.max(1, countdown.left)}</b>
+      <ul data-rhythm-multi-strip className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-white/10 bg-slate-900/60 px-2 py-1.5">
+        {view.members.map((m) => {
+          const wished = songById(m.wish);
+          return (
+            <li key={m.id} data-rhythm-multi-member className="min-w-[108px] max-w-[150px] shrink-0 rounded-lg bg-slate-950/70 px-2 py-1 text-[11px] font-black leading-tight">
+              <div className="flex items-center gap-1">
+                <span className="min-w-0 flex-1 truncate">{m.id === view.hostId ? '👑' : ''}{m.name}{m.id === view.selfId ? '(あなた)' : ''}</span>
+              </div>
+              <div className="mt-0.5 flex items-center gap-1">
+                <small className={`shrink-0 rounded-full px-1.5 py-px text-[9px] ${rhythmMultiStatusClass(m, view.hostId)}`}>{rhythmMultiStatusLabel(m, view.hostId)}</small>
+                <small data-rhythm-multi-member-wish className="min-w-0 flex-1 truncate text-[9px] text-slate-400">{wished ? rhythmSongFullName(wished) : 'おまかせ'}</small>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <RhythmSongSelect
+        songs={songs}
+        difficulties={difficultyList}
+        bestRecords={bestRecords}
+        songId={selSongId}
+        difficultyId={selDiffId || myDiffId}
+        onSongId={onSongId}
+        onDifficultyId={onDifficultyId}
+        view={selectView}
+        onView={setSelectView}
+        onPlay={onPlay}
+        playLabel={playLabel}
+        playDisabled={isHost ? !canStart : !!countdown}
+        hideRandom
+        notice={<p className="rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300">曲は全員の希望から抽選で決まります。難易度はそれぞれえらべます。</p>}
+        footer={() => (
+          <div className="grid grid-cols-2 gap-1.5">
+            <button data-rhythm-multi-omakase type="button" aria-pressed={omakase}
+              onClick={() => { const next = !omakase; setOmakase(next); RHYTHM_MULTI.setWish(next ? '' : selSongId); }}
+              className={`flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${omakase ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>🎲 おまかせ{omakase ? ' ON' : ''}</button>
+            <button data-rhythm-multi-leave type="button" onClick={leaveRoom}
+              className="flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300">部屋を出る</button>
+          </div>
+        )} />
+      {chatOpen && (
+        <div data-rhythm-multi-chat-sheet className="absolute inset-x-0 bottom-0 z-[80000] max-h-[70%] overflow-y-auto border-t border-cyan-400/30 bg-slate-950/98 p-2" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
+          <RhythmMultiChatPanel view={view} />
+          <button type="button" className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 font-black" onClick={() => setChatOpen(false)}>閉じる</button>
         </div>
       )}
+      {resultVisible && (
+        <div data-rhythm-multi-result-sheet className="absolute inset-0 z-[85000] overflow-y-auto bg-slate-950/95 p-3" style={{ paddingTop: 'calc(.75rem + var(--mh-sa-top))' }}>
+          <RhythmMultiResultCard view={view} team={team} song={drawnSong} />
+          <button type="button" className="mt-3 min-h-[48px] w-full rounded-xl bg-indigo-700 font-black" onClick={() => setDismissedResult(start.startId)}>曲えらびへ戻る</button>
+        </div>
+      )}
+      {countdownLayer}
     </main>
   );
 }
@@ -47876,7 +47949,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setRhythmPlay(null);setGameState('RHYTHM_OPTIONS');
         }}/>}
 
-        {gameState==='RHYTHM_MULTI'&&<RhythmMultiScreen profile={{name:breederName,level:breederLevel.level}} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyIds={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES).map(d=>d.id)}
+        {gameState==='RHYTHM_MULTI'&&<RhythmMultiScreen profile={{name:breederName,level:breederLevel.level}} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords}
           onBack={()=>setGameState('RHYTHM_DEMO_HOME')}
           onStartPlay={(song,difficulty,startId)=>{if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();setRhythmPlay({song,difficulty,from:'multi',multiStartId:startId});setGameState('RHYTHM_PLAY');}}/>}
 
