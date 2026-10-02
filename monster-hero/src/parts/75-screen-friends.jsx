@@ -1,0 +1,315 @@
+// ==== 画面: フレンド(gameState === 'FRIENDS') ====
+//
+// フレンド一覧・申請・追加(フレンドコード)・ブロック・フレンドのプロフィール閲覧を1画面に収める。
+// 設計の正本: docs/spec/FRIENDS.md / 通信: 34-friends-api.jsx(Supabase の friend_codes / friend_links)。
+//
+// 【この画面の決めごと】
+// ・保存データ(mh_*)には一切触れない。新しい保存キーも作らない。フレンドの正本はサーバー
+// ・自分のブリーダーIDは ensureBreederId() で取る。IDが作れない端末(保存できない環境)は、
+//   「この端末ではフレンドを使えません」と出す
+// ・表がまだ無い環境(SQL未適用)は「準備中」。エラー扱いにしない
+// ・タイマーは持たない(結果の文は次の操作まで出したままにする)
+// ・フレンドを増やす入口は2つ。①フレンドコードの入力(この画面) ②ランキングの名前から(60-app 側のシート)
+//   どちらも sbSendFriendRequest を通る。申請の状態の判断はそこだけが持つ
+const FRIENDS_RESULT_TEXT = Object.freeze({
+  sent: ['フレンド申請を送りました。承認されるとフレンドになります', 'ok'],
+  accepted: ['フレンドになりました!', 'ok'],
+  already: ['この人とはもうフレンドです', 'info'],
+  pending: ['すでに申請しています。返事を待ちましょう', 'info'],
+  self: ['自分自身にはフレンド申請できません', 'warn'],
+  notfound: ['そのフレンドコードの人が見つかりません。コードを確かめてください', 'warn'],
+  'blocked-by-me': ['この人はブロック中です。申請するには、先にブロックを解除してください', 'warn'],
+  unavailable: ['この人には申請できませんでした', 'warn'],
+  full: [`フレンドがいっぱいです(${FRIENDS_MAX}人まで)。だれかを解除すると申請できます`, 'warn'],
+  'their-full': ['相手のフレンドがいっぱいで、いまは成立できませんでした', 'warn'],
+  limit: [`申請中の人が多すぎます(${FRIENDS_PENDING_MAX}人まで)。返事を待つか、取り消してください`, 'warn'],
+  gone: ['この申請はもう変わっていました。一覧を更新しました', 'info'],
+  declined: ['申請を断りました', 'info'],
+  blocked: ['ブロックしました', 'info'],
+  unblocked: ['ブロックを解除しました', 'info'],
+  cancelled: ['申請を取り消しました', 'info'],
+  removed: ['フレンドを解除しました', 'info'],
+  notready: ['フレンド機能はただいま準備中です', 'warn'],
+  error: ['通信がうまくいきませんでした。少し待ってからもう一度ためしてください', 'warn'],
+});
+const FRIENDS_TONE_CLASS = Object.freeze({
+  ok: 'border-emerald-400/60 bg-emerald-950/50 text-emerald-100',
+  info: 'border-sky-400/50 bg-sky-950/40 text-sky-100',
+  warn: 'border-amber-400/60 bg-amber-950/40 text-amber-100',
+});
+
+function FriendsScreen({ resolveIconUrl, target = null, onBack, onTargetHandled }) {
+  const [tab, setTab] = React.useState('friends');
+  const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
+  const [selfId, setSelfId] = React.useState('');
+  const [myCode, setMyCode] = React.useState('');
+  const [groups, setGroups] = React.useState({ friends: [], incoming: [], outgoing: [], blocked: [] });
+  const [profiles, setProfiles] = React.useState({});
+  const [codeInput, setCodeInput] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [notice, setNotice] = React.useState(null);      // { text, tone }
+  const [selected, setSelected] = React.useState(null);  // フレンドのプロフィールを開いているとき { otherId, ... }
+  const [summary, setSummary] = React.useState({ status: 'idle', entry: null });
+  const [confirm, setConfirm] = React.useState(null);    // { kind: 'remove'|'block', otherId }
+  const [targetAsk, setTargetAsk] = React.useState(target);
+  const aliveRef = React.useRef(true);
+  React.useEffect(() => () => { aliveRef.current = false; }, []);
+
+  const say = (key) => {
+    const pair = FRIENDS_RESULT_TEXT[key] || FRIENDS_RESULT_TEXT.error;
+    setNotice({ text: pair[0], tone: pair[1] });
+  };
+  // 一覧と相手の見た目を読み直す。送った・返した直後にも呼ぶ
+  const reload = React.useCallback(async (idOverride) => {
+    const id = idOverride || selfId;
+    if (!id) return;
+    try {
+      const rows = await sbFetchFriendLinks(id);
+      const next = friendsGroup(id, rows);
+      const ids = [...next.friends, ...next.incoming, ...next.outgoing, ...next.blocked].map((view) => view.otherId);
+      const found = await sbFetchFriendProfiles(ids);
+      if (!aliveRef.current) return;
+      setGroups(next);
+      setProfiles((prev) => ({ ...prev, ...found }));
+      setPhase('ready');
+    } catch (error) {
+      if (!aliveRef.current) return;
+      if (error && error.notReady) setPhase('notready');
+      else { console.error('[friends]', error && error.message ? error.message : error); setPhase('error'); }
+    }
+  }, [selfId]);
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const id = await ensureBreederId();
+      if (cancelled || !aliveRef.current) return;
+      if (!id) { setPhase('noid'); return; }
+      setSelfId(id);
+      try {
+        const code = await sbEnsureFriendCode(id);
+        if (!cancelled && aliveRef.current && code) setMyCode(code);
+      } catch (error) {
+        if (error && error.notReady) { if (!cancelled && aliveRef.current) setPhase('notready'); return; }
+        console.error('[friends]', error && error.message ? error.message : error);
+      }
+      if (!cancelled) await reload(id);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const lookOf = (id) => profiles[id] || { userName: '名無しのブリーダー', icon: null, profileFrame: PROFILE_FRAME_NONE_ID, lastSeenAt: 0 };
+  const avatar = (id, sizeClass, emojiClass = 'text-base') => {
+    const look = lookOf(id);
+    const url = resolveIconUrl ? resolveIconUrl(look.icon) : null;
+    return url
+      ? <ProfileAvatar src={url} id={look.icon} frameId={look.profileFrame} className={`${sizeClass} shrink-0`}/>
+      : <ProfileAvatar frameId={look.profileFrame} className={`${sizeClass} shrink-0`}
+          fallback={<span className={`flex h-full w-full items-center justify-center rounded-full bg-slate-800 ${emojiClass}`}>👤</span>}/>;
+  };
+  const run = async (task, { thenReload = true } = {}) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const result = await task();
+      if (!aliveRef.current) return;
+      say(result);
+      if (thenReload) await reload();
+    } finally {
+      if (aliveRef.current) setBusy(false);
+    }
+  };
+  const sendByCode = () => run(async () => {
+    const code = friendsNormalizeCode(codeInput);
+    if (!code) return 'notfound';
+    if (code === myCode) return 'self';
+    let found = null;
+    try { found = await sbFindBreederIdByCode(code); } catch (error) {
+      return error && error.notReady ? 'notready' : 'error';
+    }
+    if (!found) return 'notfound';
+    const result = await sbSendFriendRequest(selfId, found);
+    if (result === 'sent' || result === 'accepted') setCodeInput('');
+    return result;
+  });
+  const sendToTarget = () => run(async () => {
+    const id = targetAsk && targetAsk.breederId;
+    setTargetAsk(null);
+    if (typeof onTargetHandled === 'function') onTargetHandled();
+    return sbSendFriendRequest(selfId, id);
+  });
+  const respond = (otherId, action) => run(() => sbRespondFriendRequest(selfId, otherId, action));
+  const cancelRequest = (otherId) => run(() => sbCancelFriendRequest(selfId, otherId));
+  const unblock = (otherId) => run(() => sbUnblockFriendUser(selfId, otherId));
+  const doConfirmed = () => {
+    const ask = confirm;
+    setConfirm(null);
+    if (!ask) return;
+    setSelected(null);
+    run(() => (ask.kind === 'remove' ? sbRemoveFriend(selfId, ask.otherId) : sbBlockFriendUser(selfId, ask.otherId)));
+  };
+  const openProfile = async (view) => {
+    setSelected(view);
+    setSummary({ status: 'loading', entry: null });
+    const entry = await sbFetchFriendRhythmSummary(view.otherId);
+    if (aliveRef.current) setSummary({ status: 'done', entry });
+  };
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(myCode);
+      setNotice({ text: 'フレンドコードをコピーしました', tone: 'ok' });
+    } catch (error) {
+      setNotice({ text: 'コピーできませんでした。コードを見ながら伝えてください', tone: 'warn' });
+    }
+  };
+
+  const now = Date.now();
+  const tabs = [
+    { id: 'friends', label: `フレンド ${groups.friends.length}/${FRIENDS_MAX}` },
+    { id: 'requests', label: '申請', badge: groups.incoming.length },
+    { id: 'add', label: '追加' },
+  ];
+  const btn = 'min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 disabled:opacity-40';
+  const noticeBox = notice && (
+    <div role="status" className={`mb-2 shrink-0 rounded-xl border px-3 py-2 text-[11px] font-bold leading-relaxed ${FRIENDS_TONE_CLASS[notice.tone] || FRIENDS_TONE_CLASS.info}`}>{notice.text}</div>
+  );
+
+  // ---- 状態が整っていないとき ----
+  if (phase !== 'ready') {
+    const lines = phase === 'loading' ? ['フレンドを読み込んでいます…']
+      : phase === 'notready' ? ['フレンド機能はただいま準備中です', 'しばらくしてからもう一度ひらいてください']
+      : phase === 'noid' ? ['この端末ではフレンドを使えません', 'セーブデータを保存できる状態でひらいてください']
+      : ['フレンドを読み込めませんでした', '通信を確かめて、もう一度ひらいてください'];
+    return (
+      <div data-mh-screen data-friends-phase={phase} className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="フレンド" accent="text-pink-300" onBack={onBack} backLabel="プロフィールへ戻る"/>
+        <ScreenEmpty emoji={phase === 'loading' ? '⏳' : '🤝'} lines={lines}
+          action={phase === 'error' ? <button type="button" onClick={() => { setPhase('loading'); reload(); }} className={`${btn} w-full border-white/20 bg-slate-800 text-slate-200`}>もう一度読み込む</button> : null}/>
+      </div>
+    );
+  }
+
+  // ---- フレンドのプロフィール ----
+  if (selected) {
+    const look = lookOf(selected.otherId);
+    const entry = summary.entry;
+    return (
+      <div data-mh-screen data-friends-profile className={SCREEN_SHELL_CLASS}>
+        <ScreenHead title="フレンドのプロフィール" accent="text-pink-300" onBack={() => setSelected(null)} backLabel="フレンド一覧へ戻る"/>
+        <div className={`${SCREEN_LIST_CLASS} pb-4`}>
+          {noticeBox}
+          <div className={`${SCREEN_PANEL_CLASS} flex flex-col items-center gap-2 py-5 text-center`}>
+            {avatar(selected.otherId, 'h-20 w-20', 'text-4xl')}
+            <b className="max-w-full truncate text-lg font-black text-white">{look.userName}</b>
+            <span className="text-[10px] font-bold text-slate-400">{friendsLastSeenText(look.lastSeenAt, now)}</span>
+          </div>
+          <div className="mt-3"><ScreenSectionLabel>モンヒロビートの記録</ScreenSectionLabel></div>
+          <div className={`${SCREEN_PANEL_FLAT_CLASS} mt-1`}>
+            {summary.status === 'loading' && <p className="text-[11px] font-bold text-slate-400">読み込んでいます…</p>}
+            {summary.status === 'done' && !entry && <p className="text-[11px] font-bold text-slate-400">まだ記録がありません</p>}
+            {entry && (
+              <dl className="grid grid-cols-3 gap-2 text-center">
+                <div><dt className="text-[9px] font-bold text-slate-400">ブリーダーLv.</dt><dd className="text-sm font-black text-indigo-200">{entry.level > 0 ? entry.level : '—'}</dd></div>
+                <div><dt className="text-[9px] font-bold text-slate-400">合計スコア</dt><dd className="text-sm font-black text-amber-200">{Number(entry.totalScore).toLocaleString()}</dd></div>
+                <div><dt className="text-[9px] font-bold text-slate-400">遊んだ曲数</dt><dd className="text-sm font-black text-pink-200">{entry.songCount}曲</dd></div>
+              </dl>
+            )}
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button type="button" disabled={busy} onClick={() => setConfirm({ kind: 'remove', otherId: selected.otherId })} className={`${btn} border-white/20 bg-slate-800 text-slate-200`}>フレンドを解除</button>
+            <button type="button" disabled={busy} onClick={() => setConfirm({ kind: 'block', otherId: selected.otherId })} className={`${btn} border-rose-400/50 bg-rose-950/40 text-rose-200`}>ブロックする</button>
+          </div>
+        </div>
+        {confirm && (
+          <ConfirmSheet
+            title={confirm.kind === 'remove' ? `${look.userName}さんとのフレンドを解除しますか?` : `${look.userName}さんをブロックしますか?`}
+            message={confirm.kind === 'remove' ? '解除しても、あとからもう一度申請できます。' : 'ブロックすると、フレンドが解除され、相手からの申請も届かなくなります。申請の画面からいつでも解除できます。'}
+            confirmLabel={confirm.kind === 'remove' ? '解除する' : 'ブロックする'} danger
+            onConfirm={doConfirmed} onCancel={() => setConfirm(null)}/>
+        )}
+      </div>
+    );
+  }
+
+  // ---- 一覧(3つのタブ) ----
+  const person = (view, right) => {
+    const look = lookOf(view.otherId);
+    return (
+      <div key={view.otherId} className={`${SCREEN_PANEL_FLAT_CLASS} flex items-center gap-2`}>
+        {avatar(view.otherId, 'h-10 w-10')}
+        <div className="min-w-0 flex-1">
+          <b className="block truncate text-[12px] font-black text-white">{look.userName}</b>
+          <span className="block truncate text-[9px] font-bold text-slate-400">{friendsLastSeenText(look.lastSeenAt, now)}</span>
+        </div>
+        {right}
+      </div>
+    );
+  };
+  return (
+    <div data-mh-screen data-friends-phase="ready" className={SCREEN_SHELL_CLASS}>
+      <ScreenHead title="フレンド" accent="text-pink-300" onBack={onBack} backLabel="プロフィールへ戻る"/>
+      <div className="mb-2 shrink-0"><AssistantBubble scene="friends" compact/></div>
+      <ScreenTabs items={tabs} value={tab} onChange={(id) => { setTab(id); setNotice(null); }}/>
+      <div className={`${SCREEN_LIST_CLASS} pb-4`}>
+        {noticeBox}
+        {tab === 'friends' && (groups.friends.length === 0
+          ? <ScreenEmpty emoji="🤝" lines={['まだフレンドがいません', '「追加」から、フレンドコードで申請してみましょう']}
+              action={<button type="button" onClick={() => setTab('add')} className={`${btn} w-full border-pink-400/60 bg-pink-500/20 text-pink-100`}>フレンドを追加する</button>}/>
+          : <div className="flex flex-col gap-2">{groups.friends.map((view) => person(view,
+              <button type="button" onClick={() => openProfile(view)} className={`${btn} shrink-0 px-3 border-indigo-400/60 bg-indigo-500/20 text-indigo-100`}>プロフィール ›</button>))}</div>)}
+        {tab === 'requests' && (
+          <div className="flex flex-col gap-3">
+            <div>
+              <ScreenSectionLabel>届いている申請</ScreenSectionLabel>
+              {groups.incoming.length === 0
+                ? <p className="px-1 py-2 text-[11px] font-bold text-slate-500">届いている申請はありません</p>
+                : <div className="mt-1 flex flex-col gap-2">{groups.incoming.map((view) => person(view,
+                    <div className="flex shrink-0 gap-1">
+                      <button type="button" disabled={busy} onClick={() => respond(view.otherId, 'accept')} className={`${btn} px-3 border-emerald-400/60 bg-emerald-500/20 text-emerald-100`}>承認</button>
+                      <button type="button" disabled={busy} onClick={() => respond(view.otherId, 'decline')} className={`${btn} px-3 border-white/20 bg-slate-800 text-slate-200`}>断る</button>
+                      <button type="button" disabled={busy} onClick={() => respond(view.otherId, 'block')} className={`${btn} px-2 border-rose-400/50 bg-rose-950/40 text-rose-200`}>ブロック</button>
+                    </div>))}</div>}
+            </div>
+            <div>
+              <ScreenSectionLabel>送った申請</ScreenSectionLabel>
+              {groups.outgoing.length === 0
+                ? <p className="px-1 py-2 text-[11px] font-bold text-slate-500">返事を待っている申請はありません</p>
+                : <div className="mt-1 flex flex-col gap-2">{groups.outgoing.map((view) => person(view,
+                    <button type="button" disabled={busy} onClick={() => cancelRequest(view.otherId)} className={`${btn} shrink-0 px-3 border-white/20 bg-slate-800 text-slate-200`}>取り消す</button>))}</div>}
+            </div>
+            {groups.blocked.length > 0 && (
+              <div>
+                <ScreenSectionLabel>ブロック中</ScreenSectionLabel>
+                <div className="mt-1 flex flex-col gap-2">{groups.blocked.map((view) => person(view,
+                  <button type="button" disabled={busy} onClick={() => unblock(view.otherId)} className={`${btn} shrink-0 px-3 border-white/20 bg-slate-800 text-slate-200`}>解除する</button>))}</div>
+              </div>
+            )}
+          </div>
+        )}
+        {tab === 'add' && (
+          <div className="flex flex-col gap-3">
+            <div className={SCREEN_PANEL_CLASS}>
+              <ScreenSectionLabel>あなたのフレンドコード</ScreenSectionLabel>
+              <p data-friend-code className="my-2 text-center text-3xl font-black tracking-widest text-pink-200">{myCode ? friendsFormatCode(myCode) : '— — — —'}</p>
+              <button type="button" disabled={!myCode} onClick={copyCode} className={`${btn} w-full border-pink-400/60 bg-pink-500/20 text-pink-100`}>コードをコピー</button>
+              <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">このコードを友だちに伝えると、友だちから申請してもらえます。コードは変わりません。</p>
+            </div>
+            <div className={SCREEN_PANEL_CLASS}>
+              <ScreenSectionLabel>コードで申請する</ScreenSectionLabel>
+              <input type="text" value={codeInput} onChange={(event) => setCodeInput(event.target.value.slice(0, 16))}
+                inputMode="text" autoCapitalize="characters" autoComplete="off" autoCorrect="off" spellCheck={false}
+                placeholder="友だちのフレンドコード" aria-label="友だちのフレンドコード"
+                className="mt-2 w-full min-h-[44px] rounded-xl border border-white/15 bg-black/40 px-3 text-center text-base font-black tracking-widest text-white placeholder:text-slate-600"/>
+              <button type="button" disabled={busy || !friendsNormalizeCode(codeInput)} onClick={sendByCode} className={`${btn} mt-2 w-full border-emerald-400/60 bg-emerald-500/20 text-emerald-100`}>フレンド申請を送る</button>
+              <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">ランキングの名前をタップしても、その人に申請できます。</p>
+            </div>
+          </div>
+        )}
+      </div>
+      {targetAsk && (
+        <ConfirmSheet title={`${targetAsk.userName || '名無しのブリーダー'}さんにフレンド申請しますか?`}
+          message="相手が承認すると、フレンドになります。" confirmLabel="申請する"
+          onConfirm={sendToTarget} onCancel={() => { setTargetAsk(null); if (typeof onTargetHandled === 'function') onTargetHandled(); }}/>
+      )}
+    </div>
+  );
+}

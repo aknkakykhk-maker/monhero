@@ -788,6 +788,11 @@ const ASSISTANT_SCENES = {
     help: 'rhythm/rhythm-history',
     lines: [],
   },
+  // フレンド。プロフィールから入る画面の案内。本文は下の addAssistantLinePack から合流する。
+  friends: {
+    help: 'home/friends',
+    lines: [],
+  },
   // マスモン設定(モンスターノーツ)。本文は下の addAssistantLinePack から合流する。
   rhythmMonsters: {
     help: 'rhythm/rhythm-monster-note-display',
@@ -4170,6 +4175,67 @@ addAssistantLinePack({
       { e:'wink',    t:'「先週はどれくらいだったかな」と思ったときに、開いてみるといいでつよ♪' },
       { e:'happy',   t:'記録が並んでいると、続けてきたことがそのまま見えまつね。' },
       { e:'happy',   t:'{name}の積み重ねが残る場所でつ。たまに眺めるのも、いいものでつよ。' },
+    ],
+  },
+});
+
+// フレンド(2026-10-02)。プロフィールから入る画面の案内。公開フラグ(friends)が閉じているあいだは画面ごと出ない。
+addAssistantLinePack({
+  id: 'friends',
+  label: 'フレンド',
+  lines: {
+    friends: [
+      { e:'happy',   t:'フレンドコードを伝えあうと、友だちとつながれるよ♪' },
+      { e:'normal',  t:'「追加」のタブに、あなたのコードがあるよ。友だちに教えてあげてね。' },
+      { e:'wink',    t:'申請が来たら、「申請」のタブで承認してね。バッジが付いてるよ(´ー`*)' },
+      { e:'excited', t:'フレンドになると、プロフィールを見せ合えるんだよ！' },
+      { e:'happy',   t:'みんなで対戦の部屋にも、フレンドを誘えるよ。一緒に遊ぼうね♪' },
+      { e:'normal',  t:'ブロックもできるから、安心して使ってね。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'kikiFriends',
+  assistantId: 'kiki',
+  label: 'きき・フレンド',
+  lines: {
+    friends: [
+      { e:'happy',   t:'フレンドコードを伝えあうと、友だちとつながれまつよ。' },
+      { e:'normal',  t:'「追加」のタブに、{name}のコードがありまつ。友だちに教えてあげてほしいでつ。' },
+      { e:'normal',  t:'申請が届いたら、「申請」のタブで承認を押してほしいでつ。' },
+      { e:'wink',    t:'フレンドになると、プロフィールを見せ合えまつよ♪' },
+      { e:'happy',   t:'みんなで対戦の部屋にも、フレンドを誘えまつ。' },
+      { e:'normal',  t:'ブロックもできまつから、安心して使ってほしいでつ。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'momosukeFriends',
+  assistantId: 'momosuke',
+  label: 'ももすけ・フレンド',
+  lines: {
+    friends: [
+      { e:'happy',   t:'フレンドコード交換したら、友だちとつながれるよw' },
+      { e:'normal',  t:'「追加」のタブにコードがあるから、友だちに教えてあげて。' },
+      { e:'normal',  t:'申請が来たら、「申請」のタブで承認するだけ。簡単でしょ？' },
+      { e:'wink',    t:'フレンドになったら、プロフィールの見せ合いっこができるよ。' },
+      { e:'happy',   t:'対戦の部屋にも誘えるから、一緒にやろ(´ー`*)ｳﾝｳﾝ' },
+      { e:'normal',  t:'いやな相手はブロックできるからね。気にしないで使って。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'draFriends',
+  assistantId: 'dra',
+  label: 'ドラ・フレンド',
+  lines: {
+    friends: [
+      { e:'normal',  t:'フレンドコードを教えあえば、つながれるわ' },
+      { e:'normal',  t:'「追加」のタブに、{name}のコードがある。友だちに教えてやってな' },
+      { e:'happy',   t:'申請が来たら「申請」のタブから承認だ。すぐ終わるからな' },
+      { e:'normal',  t:'フレンドになれば、プロフィールを見せあえるわ' },
+      { e:'happy',   t:'対戦の部屋にも誘えるで。おでも一緒に遊びたいわ' },
+      { e:'normal',  t:'ブロックもできるから、気にせず使っていいからな' },
     ],
   },
 });
