@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 44591cb6edf7bc17
+// source-sha256: ba67e33f3ec2fafd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 01:49";
+const BUILD_DATE = "2026-10-03 01:59";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -26405,7 +26405,7 @@ const rhythmChartPlayable = (song, difficultyId) => {
   return !!chart && Array.isArray(chart.notes) && chart.notes.length > 0;
 };
 const RHYTHM_PREVIEW_DELAY_MS = 350;
-const RHYTHM_PREVIEW_SCREENS = Object.freeze(['RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING']);
+const RHYTHM_PREVIEW_SCREENS = Object.freeze(['RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING', 'RHYTHM_MULTI']);
 const RhythmSongSelect = ({
   songs,
   difficulties,
@@ -54013,6 +54013,7 @@ function RhythmMultiScreen({
   bestRecords,
   resolveIconUrl,
   quickRunInfo = null,
+  onPreviewSong = null,
   onBack,
   onStartPlay
 }) {
@@ -54152,6 +54153,15 @@ function RhythmMultiScreen({
       clearTimeout(done);
     };
   }, [shuffleRound]);
+  const previewPhase = room ? room.phase : '';
+  const selectPreviewId = selSongId || (songs[0] ? songs[0].songId : '');
+  const previewId = previewPhase === 'select' || previewPhase === 'ready' && shuffleRound ? selectPreviewId : previewPhase === 'ready' ? room.songId : '';
+  React.useEffect(() => {
+    if (onPreviewSong) onPreviewSong(previewId);
+  }, [previewId]);
+  React.useEffect(() => () => {
+    if (onPreviewSong) onPreviewSong('');
+  }, []);
   const myProfile = () => ({
     name: profile.name,
     level: profile.level,
@@ -54244,7 +54254,7 @@ function RhythmMultiScreen({
   }, quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`), opts.timer != null && React.createElement("b", {
     "data-rhythm-multi-timer": true,
     className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
-  }, "⏱ ", opts.timer), view && React.createElement("button", {
+  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && React.createElement("button", {
     "data-rhythm-multi-chat-open": true,
     type: "button",
     "aria-label": "チャット",
@@ -57418,7 +57428,9 @@ function MonsterHeroGame() {
     error: null,
     songId: null
   });
-  const rhythmPreviewSong = rhythmDemoSongs(RHYTHM_SONGS).find(song => song.songId === rhythmSelectedSongId) || null;
+  const [rhythmMultiPreviewSongId, setRhythmMultiPreviewSongId] = useState('');
+  const rhythmPreviewSongId = gameState === 'RHYTHM_MULTI' && rhythmMultiPreviewSongId ? rhythmMultiPreviewSongId : rhythmSelectedSongId;
+  const rhythmPreviewSong = rhythmDemoSongs(RHYTHM_SONGS).find(song => song.songId === rhythmPreviewSongId) || null;
   const rhythmPreviewTrackId = rhythmSettings.songPreviewEnabled && RHYTHM_PREVIEW_SCREENS.includes(gameState) && rhythmPreviewSong ? rhythmPreviewSong.bgmTrackId : '';
   useEffect(() => {
     if (!rhythmPreviewTrackId) return undefined;
@@ -75616,7 +75628,7 @@ function MonsterHeroGame() {
       song: rhythmPlay.song,
       difficulty: rhythmPlay.difficulty,
       settings: rhythmSettings,
-      monsterEntries: rhythmPlay.from === 'multi' ? [] : rhythmMonsterNoteEntries,
+      monsterEntries: rhythmMonsterNoteEntries,
       multi: rhythmPlay.from === 'multi',
       multiRewardScale: rhythmPlay.from === 'multi' ? rhythmMultiRewardScale(rhythmPlay.multiCount) : 1,
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
@@ -75716,6 +75728,7 @@ function MonsterHeroGame() {
       difficultiesOf: song => rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES),
       difficultyList: rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES),
       bestRecords: rhythmBestRecords,
+      onPreviewSong: setRhythmMultiPreviewSongId,
       quickRunInfo: quickRunProgress ? {
         wave,
         loops: quickRunProgress.loops,

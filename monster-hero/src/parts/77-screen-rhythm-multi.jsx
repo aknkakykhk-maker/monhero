@@ -708,7 +708,7 @@ const RHYTHM_MULTI_FC_LABELS = Object.freeze(['', 'FULL COMBO!', 'ALL EXCELLENT!
 
 // songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
 // onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onBack, onStartPlay }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onBack, onStartPlay }) {
   const view = useRhythmMultiView();
   const difficultyIds = difficultyList.map((d) => d.id);
   const songIds = songs.map((song) => song.songId);
@@ -822,6 +822,18 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
     return () => { clearInterval(tick); clearTimeout(stop); clearTimeout(done); };
   }, [shuffleRound]);
 
+  // 曲の試聴(本体が鳴らす)へ、いま鳴らしたい曲を知らせる。
+  //   選曲中 … 曲えらびで見ている曲(まだ触っていなければ一覧の先頭)
+  //   シャッフル・難易度選択・ライブの直前 … 決まった曲
+  //   それ以外 … '' (本体はソロで選んでいた曲を鳴らし続ける)
+  const previewPhase = room ? room.phase : '';
+  // シャッフルの演出中は、まだ答えを鳴らさない(選曲中の曲のまま)
+  const selectPreviewId = selSongId || (songs[0] ? songs[0].songId : '');
+  const previewId = previewPhase === 'select' || (previewPhase === 'ready' && shuffleRound) ? selectPreviewId
+    : previewPhase === 'ready' ? room.songId : '';
+  React.useEffect(() => { if (onPreviewSong) onPreviewSong(previewId); }, [previewId]);
+  React.useEffect(() => () => { if (onPreviewSong) onPreviewSong(''); }, []);
+
   const myProfile = () => ({ name: profile.name, level: profile.level, icon: profile.icon, frame: profile.frame, diff: defaultDiff });
   const createPrivate = () => { setMessage(''); RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private'); };
   const joinFromInvite = (invite) => {
@@ -880,6 +892,8 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         {quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`}
       </small>}
       {opts.timer != null && <b data-rhythm-multi-timer className={`shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`}>⏱ {opts.timer}</b>}
+      {/* 縦⇄横の切り替え(曲えらびと同じボタン。2026-10-03・ユーザー報告「縦横が変えられない」) */}
+      <RhythmOrientationButton/>
       {view && <button data-rhythm-multi-chat-open type="button" aria-label="チャット" onClick={() => setChatOpen((v) => !v)} className="min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-lg">💬</button>}
     </header>
   );
