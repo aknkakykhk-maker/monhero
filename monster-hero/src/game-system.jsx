@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 01549ca756e1f2b0
+// generated-sha256: ed51f39747de76e9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 03:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 04:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4553,7 +4553,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', tacticsIntroEvent:'close_to_your_heart_alt', tacticsBattle:'senjou_no_shippuu', tacticsMidBoss:'melo_the_city_beneath_the_comets', tacticsBoss:'makutsu_no_senritsu', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix', monbeatCupEvent:'kaze_ga_soyogu', symphonyEvent:'melo_mou_hitotsu_no_sekai_e', rhythmMultiEvent:'melo_haruka' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -4585,7 +4585,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 // 会話イベントのid → BGMの枠。枠を足したら DEFAULT_BGM_ARRANGEMENT にも既定曲を書く
 // (既存プレイヤーの保存値には新しい枠が無いので、normalizeBgmArrangement が既定で埋める)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'monbeatCupEvent' });
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro', monbeat_cup_2026_09:'monbeatCupEvent', monbeat_cup_2026_09_thanks:'monbeatCupEvent', symphony_2026_09_17:'symphonyEvent', symphony_2026_09_17_thanks:'symphonyEvent', tactics_intro:'tacticsIntroEvent', beat_point_always_2026_09_24:'monbeatCupEvent', rhythm_six_lane_2026_09_26:'monbeatCupEvent', beat_point_up_2026_09_28:'monbeatCupEvent', rhythm_multi_friends_2026_10_03:'rhythmMultiEvent' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -47681,7 +47681,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
         ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
-      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM']]},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM'],['momosukeIntro','ももすけ登場イベント BGM'],['monbeatCupEvent','モンヒロビート大会イベント BGM'],['rhythmMultiEvent','みんなで対戦のお話 BGM']]},
       {id:'other',label:'その他',items:[['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=BGM_BATTLE_MODE_TABS;const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className={`grid ${battleModes.length>=6?'grid-cols-3':battleModes.length>=5?'grid-cols-5':'grid-cols-4'} gap-1 mb-4`}>{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{selected.id==='other'&&[
       ['autoVictoryJingle','AUTO時 敵撃破ファンファーレ'],

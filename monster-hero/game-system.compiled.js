@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 56b04813435daa5c
+// source-sha256: 650cd3e98e4282b2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 03:43";
+const BUILD_DATE = "2026-10-03 04:05";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -5459,7 +5459,8 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   kikiIntro: 'original_event_01',
   momosukeIntro: 'six_eternel_remix',
   monbeatCupEvent: 'kaze_ga_soyogu',
-  symphonyEvent: 'melo_mou_hitotsu_no_sekai_e'
+  symphonyEvent: 'melo_mou_hitotsu_no_sekai_e',
+  rhythmMultiEvent: 'melo_haruka'
 });
 const BGM_BATTLE_MODE_TABS = Object.freeze([{
   id: 'challenge',
@@ -5507,7 +5508,7 @@ const EVENT_BGM_SCENES = Object.freeze({
   beat_point_always_2026_09_24: 'monbeatCupEvent',
   rhythm_six_lane_2026_09_26: 'monbeatCupEvent',
   beat_point_up_2026_09_28: 'monbeatCupEvent',
-  rhythm_multi_friends_2026_10_03: 'monbeatCupEvent'
+  rhythm_multi_friends_2026_10_03: 'rhythmMultiEvent'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -70975,7 +70976,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM']]
     }, {
       id: 'other',
       label: 'その他',
