@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 24f4c16bc3dcac10
+// generated-sha256: 9ea8616538e362f3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 19:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 19:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12244,13 +12244,15 @@ const SKILL_MOTION_SETS_BASE = {
       skm('cast', { c:'dark', line:'ray', over:'boom' }),
       skm('cast', { c:'dark', fx:skmFx('shot', 'heart', 3), burst:'heart' }),
       skm('warp', { c:'psy', fx:skmFx('orbit', 'heart', 6), over:'boom' })],
+    // 2026-10-02 ユーザー指示「パンドラも今回変えたもの(エクリプスノヴァ・ダイスキライライ)を除いて他の技も演出強化して」。
+    //   光と闇の2つの力を使い分ける子なので、光の技=聖なる羽根と光柱、闇の技=足元から湧く闇と雷、宇宙の技=星と流星
     unique:[SKM_SIG,
-      skm('cast', { c:'holy', line:'ray', over:'pillar' }),
-      skm('cast', { c:'dark', over:'thunder', burst:'spark' }),
-      skm('float', { c:'psy', over:'boom', hit2:true }),
-      skm('cast', { c:'dark', line:'bolt', over:'thunder' }),
-      skm('cast', { c:'cosmic', fx:skmFx('orbit', 'star', 10, { h:270 }), over:'boom' }),
-      skm('cast', { c:'holy', line:'ray', over:'cross' }),
+      skm('gather', { c:'holy', line:'ray', over:'pillar', fx:skmFx('orbit', 'feather', 10, { h:50, dur:420, start:40, step:16 }), burst:'star', hit:560 }),
+      skm('gather', { c:'dark', over:'thunder', fx:skmFx('rise', 'orb', 12, { h:275, w:130 }), burst:'spark', hit2:true, hit:560 }),
+      skm('float', { c:'psy', over:'boom', fx:skmFx('orbit', 'orb', 8, { h:[270, 48], dur:440, start:40, step:20 }), burst:'star', hit2:true, hit:600 }),
+      skm('warp', { c:'dark', line:'bolt', over:'thunder', fx:skmFx('fall', 'bolt', 8, { h:275, w:120 }), burst:'spark', hit2:true }),
+      skm('spin', { c:'cosmic', fx:skmFx('orbit', 'star', 14, { h:270, dur:460, start:40, step:14 }), over:'aurora', burst:'star', hit2:true }),
+      skm('gather', { c:'holy', line:'ray', over:'cross', fx:skmFx('orbit', 'cross', 8, { h:[50, 275], dur:420, start:40, step:18 }), burst:'star', hit2:true, hit:600 }),
       // 2026-10-02 設定資料(PAGE 3): エクリプスノヴァ=魔力集束(光と闇をまとって溜める)→相反爆発、
       //   ダイスキライライ=分裂(光と闇の2体)→手を取り合う→反発雷撃(docs/spec/PANDORA_SKILLS.md)
       skm('gather', { c:'cosmic', fx:skmFx('orbit', 'orb', 12, { h:[270, 48], dur:420, start:40, step:14 }), over:'eclipse', burst:'star', hit:600 }),
@@ -12460,7 +12462,20 @@ const skmArrival = (fx) => {
   const times = fx.items.map(at);
   return { first:Math.round(Math.min(...times)), last:Math.round(Math.max(...times)) };
 };
-const skmNormalize = (sp) => {
+// ==== 固有技の格上げ(2026-10-02 ユーザー指示「通常とモーションの使い回しも多いから固有技はもっとかっこよくしてほしい」) ====
+// 固有技(型の名前が '<id>-u<段階>')だけ、通常技と同じ部品の組み合わせでも次のように派手にする。
+//   飛ぶものを1.5倍に増やして大きく / 着弾は必ず二段(hit2) / 着弾の小片を増やして大きく(無ければ星) / 尺を100ms延ばして余韻を出す
+// さらに、使う子のオーラ・残像と敵の上の光柱・地割れを SkillFxMotion / ThemedAttackMotion が足す(UniqueFxExtras / UniqueFxImpact)。
+// 設定資料どおりに作り込んだ技(パンドラのエクリプスノヴァ・ダイスキライライ)は、そのままにする
+const UNIQUE_FX_EXCLUDE = Object.freeze(['Pandora-u7', 'Pandora-u8']);
+const skmBoostFx = (fx) => {
+  if (!fx || !fx.items || !fx.items.length) return fx;
+  const extra = fx.items.slice(0, 12).map((b, i) => ({ ...b, x:-(b.x || 0) * .7 + (i % 2 ? 9 : -9), y:-(b.y || 0) * .6 - 6, d:(b.d || 0) + 26 + (i % 3) * 8, s:(b.s || 1) * 1.2 }));
+  return { ...fx, items:fx.items.concat(extra) };
+};
+const SKM_UNIQUE_BITS = Object.freeze([{x:-34,y:-22,s:1.3},{x:32,y:-26,s:1.3},{x:-36,y:18,s:1.2},{x:34,y:16,s:1.2},{x:0,y:-40,s:1.4},{x:-16,y:26,s:1.1},{x:18,y:28,s:1.1},{x:-44,y:-2,s:1.1},{x:44,y:0,s:1.1},{x:0,y:-14,s:1.5}]);
+const skmNormalize = (sp0, isUnique = false) => {
+  const sp = isUnique ? { ...sp0, fx:skmBoostFx(sp0.fx), hit2:sp0.hit2 ?? true, bits:sp0.bits || SKM_UNIQUE_BITS, burst:sp0.burst || 'star' } : sp0;
   const [ratio, bodyMs] = SKM_BODY_TIMING[sp.body] || [.5, 700];
   const [c1, c2] = Array.isArray(sp.c) ? sp.c : (SKM_COLOR[sp.c] || SKM_COLOR.white);
   const tail = Math.max(sp.over ? (SKM_OVER_TAIL[sp.over] || 260) : 200, sp.hit2 ? 380 : 0);
@@ -12473,6 +12488,7 @@ const skmNormalize = (sp) => {
     ms = sp.ms ?? Math.max(bodyMs, Math.round((tail + 80) / (1 - ratio)), arrival ? arrival.last + 160 : 0);
     hit = Math.round(ratio * ms);
   }
+  if (isUnique) ms += 100;
   ms = Math.min(SKM_MAX_MS, Math.round(ms));
   const bits = sp.bits || [{x:-28,y:-20},{x:26,y:-24},{x:-30,y:16},{x:30,y:14},{x:0,y:-34}];
   return { body:sp.body, line:sp.line, fx:sp.fx, over:sp.over, burst:sp.burst, twin:sp.twin === true, bits, c1, c2, hit:Math.round(hit),
@@ -12487,7 +12503,7 @@ const skillFxSpecOf = (kind) => {
   const m = /^([A-Za-z]+)-([nu])(\d)$/.exec(String(kind));
   const sp = m && SKILL_MOTION_SETS[m[1]] && SKILL_MOTION_SETS[m[1]][m[2] === 'u' ? 'unique' : 'normal'][Number(m[3])];
   if (!sp || sp === SKM_SIG) return null;
-  SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp);
+  SKILL_FX_SPEC_CACHE[kind] = skmNormalize(sp, m[2] === 'u' && !UNIQUE_FX_EXCLUDE.includes(kind));
   return SKILL_FX_SPEC_CACHE[kind];
 };
 const SkillFxMotion = ({kind, image, lunge=false}) => {
@@ -12500,8 +12516,10 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
   const vars = { '--thm-ms':`${ms}ms`, '--hit-at':`${spec.hit}ms`, '--c1':spec.c1, '--c2':spec.c2, '--c3':c3 };
   if (spec.hit2) vars['--hit-at2'] = `${spec.hit2}ms`;
   const fx = spec.fx;
+  const uex = lunge && !UNIQUE_FX_EXCLUDE.includes(kind);
   return (
-    <span className={`thm-atk skfx skfx--${kind} skfx-body--${spec.body}${lunge?' thm-atk--lunge':''}`} style={vars} data-skill-fx={kind}>
+    <span className={`thm-atk skfx skfx--${kind} skfx-body--${spec.body}${lunge?' thm-atk--lunge':''}${uex?' uex':''}`} style={vars} data-skill-fx={kind}>
+      {uex&&<UniqueFxExtras image={image} ghost={!spec.twin}/>}
       {spec.twin&&['dark','light'].map(side=><span key={side} className={`skfx-twin skfx-twin--${side}`} aria-hidden="true">{React.cloneElement(image,{alt:''})}</span>)}
       <span className="thm-atk__monster">{image}</span>
       {spec.line&&<span className={`thm-atk__line skfx-line skfx-line--${spec.line}`} aria-hidden="true"><i/></span>}
@@ -12522,16 +12540,29 @@ const SkillFxMotion = ({kind, image, lunge=false}) => {
         <i className="thm-atk__core"/>
         <i className="thm-atk__ring"/>
       </span>}
+      {uex&&<UniqueFxImpact/>}
     </span>
   );
 };
+// 固有技だけに足す部品。使う子のオーラ(光の球と広がる輪)と、動きの残像2つ(同じ動きを少し遅れて追う)
+const UniqueFxExtras = ({ image, ghost = true }) => (
+  <>
+    <span className="uex-aura" aria-hidden="true"><i/><i/><i/></span>
+    {ghost && [1, 2].map(n => <span key={n} className={`uex-ghost uex-ghost--${n}`} aria-hidden="true">{React.cloneElement(image, { alt:'' })}</span>)}
+  </>
+);
+// 敵の上へ当たった瞬間の、固有技だけの重ね絵: 空から落ちる光柱・足元に走る地割れの輪・白い閃光
+const UniqueFxImpact = () => (
+  <span className="thm-atk__hit uex-impact" aria-hidden="true"><i className="uex-pillar"/><i className="uex-crack"/><i className="uex-flash"/></span>
+);
 const ThemedAttackMotion = ({kind, image, lunge=false}) => {
   if (skillFxSpecOf(kind)) return <SkillFxMotion kind={kind} image={image} lunge={lunge}/>;
   const bits = THEMED_ATTACK_BITS[kind] || {};
   const ms = THEMED_ATTACK_MS[kind];
   const px = (v) => `${v || 0}px`;
   return (
-    <span className={`thm-atk thm-atk--${kind}${lunge?' thm-atk--lunge':''}`} style={ms?{'--thm-ms':`${ms}ms`}:undefined}>
+    <span className={`thm-atk thm-atk--${kind}${lunge?' thm-atk--lunge uex':''}`} style={ms?{'--thm-ms':`${ms}ms`}:undefined}>
+      {lunge&&<UniqueFxExtras image={image} ghost={kind!=='claw'}/>}
       {kind==='magic'&&<span className="thm-atk__circle" aria-hidden="true"><i/><i/></span>}
       {/* ライガーの残像。本体と同じカクカクの動きを少し遅れて追いかける */}
       {kind==='claw'&&[1,2].map(n=>(
@@ -12552,6 +12583,7 @@ const ThemedAttackMotion = ({kind, image, lunge=false}) => {
         <i className="thm-atk__ring"/>
         <ThemedAttackBits list={bits.hit2}/>
       </span>}
+      {lunge&&<UniqueFxImpact/>}
     </span>
   );
 };
@@ -12643,6 +12675,70 @@ const specialMoveColorOf = (monId, skillName) => {
   const own = hit && hit.spec && hit.spec !== 'sig' ? pick(hit.spec.c) : null;
   return own || pick(SPECIAL_MOVE_MON_COLOR[monId]) || SKM_COLOR.gold;
 };
+// ==== 固有技のフィニッシュ(2026-10-02 ユーザー指示「みんな進めて」=通常技と使い回している見せ場の動きを、固有技だけ別物にする) ====
+// 見せ場の動き(専用モーション・体当たり型)は、通常技と固有技の両方で同じ動きが出ていた。固有技が放たれる瞬間に、
+// 動きの種類ごとの「フィニッシュ」を敵の上へ重ねる(巨大なX斬り・桜の嵐・音符の爆発・炎の柱…)。
+// 部品は data 駆動(blade 斬撃 / ring 輪 / bits 粒 / col 柱 / fall 落下物 / wave 大波)。形は 70-bootstrap.jsx の .fin-*。
+// d は放った瞬間からの遅れ(ms)。技ごとの動き(SKILL_MOTION_SETS)がある段階は、そちらが専用に作り込んであるので重ねない
+const SPECIAL_FINISH = Object.freeze({
+  zan:    [{t:'blade',a:-38,len:300,w:9,d:260},{t:'blade',a:38,len:300,w:9,d:350},{t:'blade',a:90,len:240,w:6,d:450},{t:'ring',d:450,r:3.4}],
+  sakura: [{t:'bits',n:16,shape:'petal',dist:130,d:300,spin:1},{t:'bits',n:10,shape:'petal',dist:80,d:380,spin:-1},{t:'ring',d:300,r:3}],
+  kenshi: [{t:'blade',a:-40,len:340,w:8,d:240},{t:'blade',a:40,len:340,w:8,d:320},{t:'col',w:34,h:420,d:420,sky:true},{t:'ring',d:420,r:3.6}],
+  mia:    [{t:'bits',n:10,shape:'note',dist:150,d:260},{t:'col',w:120,h:420,d:240,sky:true,soft:true},{t:'ring',d:300,r:3}],
+  ark:    [{t:'blade',a:0,len:320,w:10,d:280},{t:'col',w:26,h:460,d:280,sky:true},{t:'bits',n:10,shape:'feather',dist:120,d:340,fall:true}],
+  iblis:  [{t:'col',w:40,h:300,d:260,flame:true,x:-60},{t:'col',w:46,h:360,d:300,flame:true},{t:'col',w:40,h:300,d:340,flame:true,x:60},{t:'bits',n:10,shape:'spark',dist:110,d:360},{t:'ring',d:300,r:3.2}],
+  tide:   [{t:'wave',d:240},{t:'bits',n:12,shape:'drop',dist:140,d:340},{t:'ring',d:340,r:3.2,flat:.45}],
+  pandora:[{t:'blade',a:-62,len:380,w:9,d:240},{t:'blade',a:62,len:380,w:9,d:300},{t:'ring',d:360,r:3.8},{t:'bits',n:12,shape:'spark',dist:120,d:360}],
+  stomp:  [{t:'ring',d:300,r:4.2,flat:.38},{t:'bits',n:12,shape:'dust',dist:120,d:300},{t:'bits',n:8,shape:'star',dist:100,d:340}],
+  beam:   [{t:'blade',a:0,len:360,w:8,d:200},{t:'blade',a:90,len:360,w:8,d:200},{t:'blade',a:45,len:240,w:5,d:230},{t:'blade',a:-45,len:240,w:5,d:230},{t:'ring',d:200,r:3}],
+  rocks:  [{t:'fall',n:7,shape:'rock',d:200},{t:'ring',d:420,r:3.8,flat:.4},{t:'bits',n:10,shape:'dust',dist:110,d:420}],
+  claw:   [{t:'blade',a:-58,len:330,w:8,d:240,x:-30},{t:'blade',a:-58,len:330,w:8,d:300},{t:'blade',a:-58,len:330,w:8,d:360,x:30},{t:'ring',d:300,r:3}],
+  punch:  [{t:'bits',n:8,shape:'star',dist:130,d:300},{t:'ring',d:300,r:4},{t:'blade',a:0,len:260,w:7,d:300},{t:'blade',a:90,len:260,w:7,d:300}],
+  magic:  [{t:'ring',d:240,r:2.8,flat:.4,rune:true},{t:'col',w:70,h:420,d:300,soft:true},{t:'bits',n:10,shape:'spark',dist:90,d:360,rise:true}],
+  crush:  [{t:'fall',n:1,shape:'slab',d:180},{t:'ring',d:430,r:4.2,flat:.4},{t:'bits',n:12,shape:'dust',dist:130,d:430}],
+  petals: [{t:'bits',n:18,shape:'petal',dist:140,d:260,spin:1},{t:'bits',n:12,shape:'petal',dist:90,d:320,spin:-1}],
+  vine:   [{t:'blade',a:-20,len:300,w:12,d:220,vine:true},{t:'blade',a:200,len:300,w:12,d:260,vine:true},{t:'blade',a:75,len:300,w:12,d:300,vine:true},{t:'bits',n:10,shape:'leaf',dist:120,d:380}],
+  fire:   [{t:'col',w:70,h:440,d:240,flame:true},{t:'bits',n:12,shape:'flame',dist:110,d:300,rise:true},{t:'ring',d:260,r:3.2,flat:.45}],
+});
+// どのフィニッシュを重ねるか。技ごとの動き(SKILL_MOTION_SETS)を持つ段階は重ねず、見せ場の動き('sig')の段階だけ
+const specialFinishKindOf = (ownerId, skillName, anim) => {
+  if (!anim || anim.charge === true) return null;
+  if (anim.zanCombo) return anim.sakura ? 'sakura' : 'zan';
+  if (anim.twinBlade || anim.motion === 'kenshiTwinBlade') return 'kenshi';
+  switch (anim.motion) {
+    case 'miaSongNotes': return 'mia';
+    case 'arkHolyRain': return ownerId === 'Iblis' ? 'iblis' : 'ark';
+    case 'waterBurst': return 'tide';
+    case 'pandoraDualThunder': return 'pandora';
+    default: break;
+  }
+  let own = null;
+  try { own = typeof skillAttackThemeOf === 'function' ? skillAttackThemeOf(ownerId, skillName, true) : null; } catch (e) { own = null; }
+  if (own) return null;
+  const k = typeof DEFAULT_ATTACK_THEMES !== 'undefined' ? DEFAULT_ATTACK_THEMES[ownerId] : null;
+  return k && SPECIAL_FINISH[k] ? k : null;
+};
+const SpecialFinish = ({ kind }) => {
+  const parts = SPECIAL_FINISH[kind];
+  if (!parts) return null;
+  return (
+    <div data-special-finish={kind} className="spm__finish" aria-hidden="true">
+      {parts.map((p, pi) => {
+        const base = { '--d':`${p.d || 0}ms`, '--x':`${p.x || 0}px` };
+        if (p.t === 'blade') return <i key={pi} className={`fin-blade${p.vine ? ' fin-blade--vine' : ''}`} style={{ ...base, '--a':`${p.a || 0}deg`, '--len':`${p.len || 260}px`, '--w':`${p.w || 8}px` }}/>;
+        if (p.t === 'ring') return <i key={pi} className={`fin-ring${p.flat ? ' fin-ring--flat' : ''}${p.rune ? ' fin-ring--rune' : ''}`} style={{ ...base, '--r':p.r || 3, '--flat':p.flat || 1 }}/>;
+        if (p.t === 'col') return <i key={pi} className={`fin-col${p.flame ? ' fin-col--flame' : ''}${p.sky ? ' fin-col--sky' : ''}${p.soft ? ' fin-col--soft' : ''}`} style={{ ...base, '--w':`${p.w || 40}px`, '--h':`${p.h || 360}px` }}/>;
+        if (p.t === 'wave') return <i key={pi} className="fin-wave" style={base}/>;
+        if (p.t === 'fall') return <React.Fragment key={pi}>{Array.from({ length:p.n || 4 }, (_, i) => <i key={i} className={`fin-fall fin-shape--${p.shape || 'rock'}`} style={{ ...base, '--d':`${(p.d || 0) + i * 36}ms`, '--x':`${((i % 4) - 1.5) * 34}px`, '--s':1 + (i % 3) * .25 }}/>)}</React.Fragment>;
+        return <React.Fragment key={pi}>{Array.from({ length:p.n || 8 }, (_, i) => {
+          const ang = (360 / (p.n || 8)) * i + (pi % 2 ? 11 : 0);
+          return <i key={i} className={`fin-bit fin-shape--${p.shape || 'spark'}${p.rise ? ' fin-bit--rise' : ''}${p.fall ? ' fin-bit--fall' : ''}`}
+            style={{ '--d':`${(p.d || 0) + i * 14}ms`, '--a':`${ang}deg`, '--dist':`${p.dist || 110}px`, '--spin':p.spin || 0, '--i':i }}/>;
+        })}</React.Fragment>;
+      })}
+    </div>
+  );
+};
 const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, compact = false }) => {
   const [pos, setPos] = React.useState(null);
   const slotIndex = slotSkill ? slotSkill.slotIndex : null;
@@ -12654,14 +12750,19 @@ const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, comp
     setPos({ from: mid(slotEl), to: mid(enemyEl) });
   }, [slotIndex, compact]);
   if (!slotSkill || slotSkill.type !== 'unique') return null;
-  const [c1, c2] = specialMoveColorOf(ownerId || (mon && mon.id), slotSkill.name);
+  // sig=true は図鑑の「固有技」(技を選ばず、その子の見せ場の動きを見せる)。技名は表示だけで、色とフィニッシュは見せ場の動きで決める
+  const lookupName = slotSkill.sig ? null : slotSkill.name;
+  const [c1, c2] = specialMoveColorOf(ownerId || (mon && mon.id), lookupName);
   const phase = attackAnim && attackAnim.charge === true ? 'charge' : 'release';
   const name = String(slotSkill.name || '');
   const vw = typeof window !== 'undefined' ? window.innerWidth : 390;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
   const from = (pos && pos.from) || { x: vw / 2, y: vh * 0.72 };
   const to = (pos && pos.to) || { x: vw / 2, y: vh * 0.3 };
-  const style = { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':`${Math.round(from.x)}px`, '--spm-fy':`${Math.round(from.y)}px`, '--spm-tx':`${Math.round(to.x)}px`, '--spm-ty':`${Math.round(to.y)}px` };
+  // compact(図鑑の舞台の中)は、舞台の中の割合で置く(使う子は下寄り・敵の位置は上)。バトルは測った位置
+  const style = compact
+    ? { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':'50%', '--spm-fy':'72%', '--spm-tx':'50%', '--spm-ty':'24%' }
+    : { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':`${Math.round(from.x)}px`, '--spm-fy':`${Math.round(from.y)}px`, '--spm-tx':`${Math.round(to.x)}px`, '--spm-ty':`${Math.round(to.y)}px` };
   const body = (
     <div data-special-move-fx={phase} className={`spm spm--${phase}${compact ? ' spm--compact' : ''}`} style={style} aria-hidden="true">
       <div className="spm__shade"/>
@@ -12679,6 +12780,7 @@ const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, comp
       {phase === 'release' && <>
         <div className="spm__flash"/>
         <div className="spm__shock"><i/><i/><b/></div>
+        <SpecialFinish kind={specialFinishKindOf(ownerId || (mon && mon.id), lookupName, attackAnim)}/>
       </>}
     </div>
   );
@@ -12704,6 +12806,7 @@ const AttackTargetFx = ({anim, attackerId}) => {
     <span className={`atk-target-fx atk-target-fx--hit${anim.charge === false ? ' atk-target-fx--special' : ''}`} aria-hidden="true">
       <i className="atk-target-fx__core"/>
       <i className="atk-target-fx__ring"/>
+      {anim.charge === false && <><i className="uex-pillar"/><i className="uex-crack"/></>}
       {[0, 45, 90, 135, 180, 225, 270, 315].map(deg => (
         <i key={deg} className="atk-target-fx__ray" style={{ '--atk-ray-angle':`${deg}deg` }}/>
       ))}
@@ -23146,6 +23249,8 @@ function MonsterAttackPreviewScreen({ dexMonsterId, dexAttackPreview, unlockedMo
             {/* 待機アニメ(翼の羽ばたきなど)もバトルと同じ場面で重ねる。持たない子は今までどおり1枚の絵 */}
             <BattleAttackMotionPreview image={mon.imgUrl?withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, mon.name, false, dexSelectedColors(masuMons, mon.id, dexColorKey)), {enabled:idleMotion&&monsterIdleAllowedDuring(previewAnim), fill:true, own:true}):<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim} baseId={mon.id}/>
           </div>
+          {/* 固有技の再生には、バトルと同じ「必殺技の共通演出」(暗転・帯・閃光・フィニッシュ)も舞台の中へ重ねる */}
+          {playingKind==='unique'&&previewAnim&&<SpecialMoveFx compact slotSkill={{slotIndex:-1,name:playing.skillName||mon.unique?.names?.[0]||'必殺技',type:'unique',sig:!playing.skillName}} attackAnim={previewAnim} mon={mon} ownerId={mon.id}/>}
           <span className="absolute bottom-2 left-0 right-0 text-center text-[10px] font-bold text-slate-400">バトルと同じ演出です（ダメージや性能は変わりません）</span>
         </div>
         <div className={SCREEN_FOOTER_CLASS}>
@@ -52099,6 +52204,67 @@ const createAnimationStyle = () => {
       .thm-atk__flys, .thm-atk__line, .thm-atk__circle, .thm-atk__ghost, .thm-atk__bit, .skfx-over, .skfx-twin { display:none; }
       @keyframes thmReduced { 0% { filter:none; } 45% { filter:drop-shadow(0 0 18px var(--c2)); } 100% { filter:none; } }
     }
+    /* ==== 固有技の格上げ(24-battle-fx.jsx の UniqueFxExtras / UniqueFxImpact。2026-10-02 ユーザー指示「固有技はもっとかっこよくしてほしい」)====
+       固有技(thm-atk--lunge / .uex)だけに足す。使う子のオーラ・残像と、敵の上の光柱・地割れ・閃光。
+       色は --c1(明)/--c2(濃)。着弾の時刻は --hit-at。敵の位置は --atk-dx/dy(.thm-atk__hit が translate する) */
+    .uex-aura { position:absolute; inset:-14%; z-index:2; border-radius:50%; pointer-events:none; opacity:0;
+      background:radial-gradient(circle, color-mix(in srgb, var(--c1,#fff) 85%, transparent) 0 18%, color-mix(in srgb, var(--c2,#c026d3) 70%, transparent) 42%, transparent 70%);
+      animation:uexAura 640ms ease-out forwards; }
+    .uex-aura i { position:absolute; inset:8%; border-radius:50%; border:3px solid var(--c1,#fff); box-shadow:0 0 12px var(--c2,#c026d3); opacity:0;
+      animation:uexAuraRing 620ms ease-out forwards; animation-delay:calc(var(--n,0) * 140ms); }
+    .uex-aura i:nth-child(2) { --n:1; } .uex-aura i:nth-child(3) { --n:2; }
+    @keyframes uexAura { 0% { opacity:0; transform:scale(.5); } 25% { opacity:1; transform:scale(1.05); } 70% { opacity:.8; transform:scale(1.2); } 100% { opacity:0; transform:scale(1.5); } }
+    @keyframes uexAuraRing { 0% { opacity:0; transform:scale(.4); } 30% { opacity:1; } 100% { opacity:0; transform:scale(1.9); } }
+    .uex-ghost { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:3; opacity:.34; pointer-events:none;
+      transform-origin:50% 80%; animation-duration:var(--thm-ms,500ms); animation-fill-mode:both; animation-timing-function:ease-in-out; mix-blend-mode:screen; }
+    .uex-ghost--1 { animation-delay:45ms; }
+    .uex-ghost--2 { animation-delay:90ms; opacity:.2; }
+    .skfx-body--bash .uex-ghost { animation-name:skfxBash; }
+    .skfx-body--dive .uex-ghost { animation-name:skfxDive; }
+    .skfx-body--roll .uex-ghost { animation-name:skfxRoll; }
+    .skfx-body--flip .uex-ghost { animation-name:skfxFlip; }
+    .skfx-body--toss .uex-ghost { animation-name:skfxToss; }
+    .skfx-body--lick .uex-ghost { animation-name:skfxLick; }
+    .skfx-body--slash .uex-ghost { animation-name:skfxSlashBody; }
+    .skfx-body--cast .uex-ghost { animation-name:skfxCast; }
+    .skfx-body--kick .uex-ghost { animation-name:skfxKick; }
+    .skfx-body--spin .uex-ghost { animation-name:skfxSpin; }
+    .skfx-body--jump .uex-ghost { animation-name:skfxJump; }
+    .skfx-body--float .uex-ghost { animation-name:skfxFloat; }
+    .skfx-body--dash .uex-ghost { animation-name:skfxDash; }
+    .skfx-body--shake .uex-ghost { animation-name:skfxShake; }
+    .skfx-body--hop .uex-ghost { animation-name:skfxHop; }
+    .skfx-body--warp .uex-ghost { animation-name:skfxWarp; }
+    .skfx-body--jab .uex-ghost { animation-name:skfxJab; }
+    .skfx-body--gather .uex-ghost { animation-name:skfxGather; }
+    .skfx-body--split .uex-ghost { animation-name:skfxSplitBody; }
+    .thm-atk--stomp .uex-ghost { animation-name:thmStomp; }
+    .thm-atk--beam .uex-ghost { animation-name:thmBeamBody; }
+    .thm-atk--rocks .uex-ghost { animation-name:thmRocksBody; }
+    .thm-atk--punch .uex-ghost { animation-name:thmPunchBody; }
+    .thm-atk--magic .uex-ghost { animation-name:thmMagicBody; }
+    .thm-atk--crush .uex-ghost { animation-name:thmCrush; }
+    .thm-atk--petals .uex-ghost { animation-name:thmPetalsBody; }
+    .thm-atk--vine .uex-ghost { animation-name:thmVineBody; }
+    .thm-atk--fire .uex-ghost { animation-name:thmFireBody; }
+    .uex-impact { z-index:9; }
+    .uex-pillar { position:absolute; left:-30px; bottom:-6px; width:60px; height:78vh; opacity:0; transform-origin:50% 100%;
+      background:linear-gradient(0deg, #fff 0, var(--c1,#fff) 14%, color-mix(in srgb, var(--c2,#c026d3) 85%, transparent) 55%, transparent 100%);
+      -webkit-mask-image:linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent); mask-image:linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
+      filter:drop-shadow(0 0 10px var(--c2,#c026d3)); animation:uexPillar 420ms ease-out forwards; animation-delay:var(--hit-at,170ms); }
+    @keyframes uexPillar { 0% { opacity:0; transform:scaleX(.2) scaleY(.4); } 18% { opacity:1; transform:scaleX(1.2) scaleY(1); } 60% { opacity:.85; transform:scaleX(.8) scaleY(1); } 100% { opacity:0; transform:scaleX(.1) scaleY(1); } }
+    .uex-crack { position:absolute; left:-100px; top:-4px; width:200px; height:44px; border-radius:50%; opacity:0; z-index:-1;
+      border:4px solid var(--c1,#fff); box-shadow:0 0 14px var(--c2,#c026d3), inset 0 0 18px var(--c2,#c026d3);
+      animation:uexCrack 520ms ease-out forwards; animation-delay:var(--hit-at,170ms); }
+    @keyframes uexCrack { 0% { opacity:0; transform:scale(.2); } 20% { opacity:1; } 100% { opacity:0; transform:scale(1.9,1.5); } }
+    .uex-flash { position:absolute; left:-120px; top:-120px; width:240px; height:240px; border-radius:50%; opacity:0;
+      background:radial-gradient(circle, #fff 0 14%, color-mix(in srgb, var(--c1,#fff) 75%, transparent) 36%, transparent 70%);
+      animation:uexFlash 340ms ease-out forwards; animation-delay:var(--hit-at,170ms); }
+    @keyframes uexFlash { 0% { opacity:0; transform:scale(.3); } 22% { opacity:1; } 100% { opacity:0; transform:scale(1.5); } }
+    /* 専用モーション(ミーア・アーク・水など)の固有技は、敵の側の着弾へ光柱と地割れを足す */
+    .atk-target-fx .uex-pillar, .atk-target-fx .uex-crack { animation-delay:170ms; }
+    .atk-target-fx { --c1:#fff7d6; --c2:#c026d3; }
+    @media (prefers-reduced-motion: reduce) { .uex-ghost, .uex-crack, .uex-aura i { display:none; } }
     /* ==== 固有技(必殺技)に必ず乗る共通の演出(24-battle-fx.jsx の SpecialMoveFx)====
        タメ(650ms)=暗転+光が集まる+帯に「必殺技/技名」。放った瞬間=閃光+敵の上の衝撃の輪。色は --spm-c1(明)/--spm-c2(濃)。
        EXスキルのカットイン(.ex-cutin・z-index:9600)より下、押せる場所は塞がない */
@@ -52149,6 +52315,63 @@ const createAnimationStyle = () => {
       -webkit-mask-image:radial-gradient(circle, #000 0 20%, transparent 62%); mask-image:radial-gradient(circle, #000 0 20%, transparent 62%);
       animation:spmRays 460ms ease-out 200ms forwards; }
     @keyframes spmRays { 0% { opacity:0; transform:scale(.4) rotate(0deg); } 25% { opacity:.95; } 100% { opacity:0; transform:scale(1.6) rotate(24deg); } }
+    /* ==== 固有技のフィニッシュ(24-battle-fx.jsx の SpecialFinish / SPECIAL_FINISH)====
+       敵の上(--spm-tx/ty)を原点に、斬撃・輪・粒・柱・落下物・大波を重ねる。遅れは --d。色は --spm-c1(明)/--spm-c2(濃)。 */
+    .spm__finish { left:var(--spm-tx); top:var(--spm-ty); width:0; height:0; }
+    .spm__finish > i { position:absolute; opacity:0; pointer-events:none; }
+    .fin-blade { left:calc(var(--len) / -2 + var(--x)); top:calc(var(--w) / -2); width:var(--len); height:var(--w); border-radius:999px; rotate:var(--a); transform-origin:50% 50%;
+      background:linear-gradient(90deg, transparent, var(--spm-c1) 22%, #fff 50%, var(--spm-c1) 78%, transparent); box-shadow:0 0 12px var(--spm-c2), 0 0 28px var(--spm-c2);
+      animation:finBlade 460ms cubic-bezier(.2,.8,.2,1) var(--d) forwards; }
+    @keyframes finBlade { 0% { opacity:0; transform:scaleX(0); } 22% { opacity:1; transform:scaleX(1.06); } 70% { opacity:.9; transform:scaleX(1) scaleY(.7); } 100% { opacity:0; transform:scaleX(1) scaleY(.1); } }
+    .fin-blade--vine { background:linear-gradient(90deg, transparent, #14532d 14%, #22c55e 50%, #14532d 86%, transparent); box-shadow:0 0 10px #22c55e; animation-name:finVine; }
+    @keyframes finVine { 0% { opacity:0; transform:scaleX(0) scaleY(1.6); } 30% { opacity:1; transform:scaleX(1) scaleY(1.4); } 75% { opacity:1; transform:scaleX(1) scaleY(1); } 100% { opacity:0; transform:scaleX(1) scaleY(.3); } }
+    .fin-ring { left:-40px; top:calc(-40px * var(--flat)); width:80px; height:calc(80px * var(--flat)); border-radius:50%; border:4px solid var(--spm-c1);
+      box-shadow:0 0 16px var(--spm-c2), 0 0 34px var(--spm-c2), inset 0 0 14px var(--spm-c2); animation:finRing 560ms ease-out var(--d) forwards; }
+    @keyframes finRing { 0% { opacity:0; transform:scale(.3); } 18% { opacity:1; } 100% { opacity:0; transform:scale(var(--r)); } }
+    .fin-ring--flat { top:calc(10px - 40px * var(--flat)); }
+    .fin-ring--rune { border-style:dashed; border-width:3px; animation-name:finRune; }
+    @keyframes finRune { 0% { opacity:0; transform:scale(.3) rotate(0deg); } 22% { opacity:1; } 80% { opacity:.9; } 100% { opacity:0; transform:scale(var(--r)) rotate(200deg); } }
+    .fin-col { left:calc(var(--w) / -2 + var(--x)); bottom:-10px; width:var(--w); height:var(--h); border-radius:50% 50% 30% 30%; transform-origin:50% 100%;
+      background:linear-gradient(0deg, #fff 0, var(--spm-c1) 16%, color-mix(in srgb, var(--spm-c2) 80%, transparent) 58%, transparent 100%);
+      filter:drop-shadow(0 0 10px var(--spm-c2)); animation:finCol 560ms ease-out var(--d) forwards; }
+    @keyframes finCol { 0% { opacity:0; transform:scaleY(.2) scaleX(.5); } 22% { opacity:1; transform:scaleY(1) scaleX(1.1); } 70% { opacity:.8; transform:scaleY(1.06) scaleX(.85); } 100% { opacity:0; transform:scaleY(1.1) scaleX(.2); } }
+    .fin-col--sky { animation-name:finColSky; }
+    @keyframes finColSky { 0% { opacity:0; transform:translateY(-140%) scaleX(.6); } 25% { opacity:1; transform:translateY(0) scaleX(1.1); } 75% { opacity:.85; transform:translateY(0) scaleX(.8); } 100% { opacity:0; transform:translateY(0) scaleX(.2); } }
+    .fin-col--soft { filter:blur(3px) drop-shadow(0 0 10px var(--spm-c2)); opacity:0; }
+    .fin-col--flame { border-radius:50% 50% 40% 40%; background:radial-gradient(ellipse at 50% 88%, #fff9 0 8%, var(--spm-c1) 20%, var(--spm-c2) 48%, transparent 72%); filter:blur(1.5px) drop-shadow(0 0 10px var(--spm-c2)); }
+    .fin-wave { left:-150px; top:-26px; width:300px; height:52px; border-radius:50%; transform-origin:0 50%;
+      background:linear-gradient(90deg, transparent, var(--spm-c1) 20%, var(--spm-c2) 60%, transparent); box-shadow:0 0 16px var(--spm-c2); animation:finWave 600ms ease-out var(--d) forwards; }
+    @keyframes finWave { 0% { opacity:0; transform:translateX(-160px) scaleY(.4); } 30% { opacity:1; transform:translateX(-30px) scaleY(1.3); } 100% { opacity:0; transform:translateX(220px) scaleY(.6); } }
+    .fin-bit { left:-6px; top:-6px; width:12px; height:12px; opacity:0; position:absolute; pointer-events:none; rotate:var(--a);
+      background:radial-gradient(circle, #fff, var(--spm-c1) 55%, var(--spm-c2)); box-shadow:0 0 8px var(--spm-c2); border-radius:50%;
+      animation:finBit 620ms ease-out var(--d) forwards; }
+    @keyframes finBit {
+      0% { opacity:0; transform:translateX(0) rotate(0deg) scale(.5); }
+      20% { opacity:1; }
+      100% { opacity:0; transform:translateX(var(--dist)) rotate(calc(var(--spin) * 240deg)) scale(1.3); }
+    }
+    .fin-bit--rise { animation-name:finBitRise; rotate:0deg; left:calc(-6px + (var(--i) - 5) * 14px); }
+    @keyframes finBitRise { 0% { opacity:0; transform:translateY(20px) scale(.5); } 25% { opacity:1; } 100% { opacity:0; transform:translateY(calc(var(--dist) * -1.6)) scale(1.2); } }
+    .fin-bit--fall { animation-name:finBitFall; rotate:0deg; left:calc(-6px + (var(--i) - 5) * 14px); top:-200px; }
+    @keyframes finBitFall { 0% { opacity:0; transform:translateY(0) rotate(0deg); } 20% { opacity:1; } 100% { opacity:0; transform:translateY(240px) rotate(160deg); } }
+    .fin-shape--spark { border-radius:50%; } /* 既定の丸い光(.fin-bit) */
+    .fin-shape--petal { width:16px; height:10px; border-radius:80% 10% 80% 10%; background:linear-gradient(135deg, #fff, var(--spm-c1) 55%, var(--spm-c2)); }
+    .fin-shape--feather { width:8px; height:22px; border-radius:50% 50% 50% 50% / 80% 80% 20% 20%; background:linear-gradient(180deg, #fff, var(--spm-c1)); }
+    .fin-shape--star { width:20px; height:20px; border-radius:0; clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); background:radial-gradient(circle,#fff 0 30%,var(--spm-c1) 60%,var(--spm-c2)); box-shadow:none; }
+    .fin-shape--dust { width:14px; height:14px; background:radial-gradient(circle, #e7d7c1, #a8865f 60%, transparent 72%); box-shadow:none; }
+    .fin-shape--drop { width:10px; height:16px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:linear-gradient(180deg, #fff, var(--spm-c1) 50%, var(--spm-c2)); }
+    .fin-shape--leaf { width:18px; height:10px; border-radius:90% 0 90% 0; background:linear-gradient(135deg, #bbf7d0, #16a34a); box-shadow:0 0 6px #22c55e; }
+    .fin-shape--flame { width:16px; height:22px; border-radius:50% 50% 50% 50% / 70% 70% 30% 30%; background:radial-gradient(ellipse at 50% 80%, #fff 0 14%, #fde047 36%, #f97316 62%, rgba(220,38,38,0)); box-shadow:0 0 8px #f97316; }
+    .fin-shape--note { width:auto; height:auto; background:none; box-shadow:none; border-radius:0; font:900 22px/1 system-ui, sans-serif; color:var(--spm-c1); text-shadow:0 0 8px var(--spm-c2); }
+    .fin-shape--note::before { content:'♪'; }
+    .fin-bit.fin-shape--note:nth-child(3n+1)::before { content:'♫'; }
+    .fin-bit.fin-shape--note:nth-child(3n+2)::before { content:'♬'; }
+    .fin-fall { left:-14px; top:-420px; width:28px; height:28px; opacity:0; position:absolute; margin-left:var(--x); scale:var(--s);
+      animation:finFall 420ms ease-in var(--d) forwards; }
+    .fin-fall.fin-shape--rock { border-radius:25%; clip-path:polygon(20% 0,80% 8%,100% 55%,72% 100%,18% 92%,0 40%); background:linear-gradient(135deg,#efe2cf,#a8865f 55%,#5c4330); box-shadow:none; }
+    .fin-fall.fin-shape--slab { left:-46px; width:92px; height:150px; border-radius:6px; clip-path:none; background:linear-gradient(135deg,#312e81,#0f0a2a 70%); box-shadow:0 0 20px var(--spm-c2), inset 0 0 14px var(--spm-c2); }
+    @keyframes finFall { 0% { opacity:1; transform:translateY(0); } 78% { opacity:1; transform:translateY(410px); } 100% { opacity:0; transform:translateY(420px) scale(1.3); } }
+    @media (prefers-reduced-motion: reduce) { .spm__finish { display:none; } }
     @media (prefers-reduced-motion: reduce) {
       .spm__gather, .spm__shock, .spm__flash { display:none; }
     }
