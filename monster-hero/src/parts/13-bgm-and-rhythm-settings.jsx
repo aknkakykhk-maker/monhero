@@ -58,6 +58,7 @@ const BGM_TRACKS = [
   { id:'melo_only_my_railgun', name:'only my railgun', creator:'オリジナル', src:'audio/bgm-only-my-railgun.mp3', gain:1, loop:true },
   { id:'melo_big_bridge_no_shitou', name:'ビッグブリッヂの死闘', creator:'オリジナル', src:'audio/bgm-big-bridge-no-shitou.mp3', gain:1, loop:true },
   { id:'melo_rising_hope', name:'Rising Hope', creator:'オリジナル', src:'audio/bgm-rising-hope.mp3', gain:1, loop:true },
+  { id:'melo_haruka', name:'ハルカ', creator:'オリジナル', src:'audio/bgm-haruka.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },

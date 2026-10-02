@@ -389,6 +389,19 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "haruka": {
+   "audio": "monster-hero/audio/bgm-haruka.mp3",
+   "chartRevision": 25,
+   "audioSha256": "7a7164dbf152b4672d4c5c14ee277e999df1268861b95e9f4b10e56f6c14e144",
+   "durationMs": 97632,
+   "analyzedTiming": {
+    "bpm": 199.96,
+    "beatZeroMs": 104,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }
