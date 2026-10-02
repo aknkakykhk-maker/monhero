@@ -34,6 +34,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-10-02 22:42", type:'fix', title:'みんなで対戦の演奏中のカクつきを減らしました', status:'new', releaseFlag:'rhythmMulti',
+    items:[
+      'みんなで対戦の演奏中は、部屋との通信を最小限にして、画面がカクつきにくくなるようにしました。',
+    ],
+  },
+  {
     date: "2026-10-02 22:36", type:'update', title:'みんなで対戦が、協力プレイと部屋さがしになりました', status:'new', releaseFlag:'rhythmMulti',
     items:[
       '全員の平均スコアで「チームのランク」が決まるようになりました。個人スコア1位の人にはMVPが付きます。',

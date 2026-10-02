@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 61c1b823ff3288c4
+// generated-sha256: 25c6b5eac939878b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-02 22:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-02 22:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21775,8 +21775,19 @@ const RHYTHM_MULTI = (() => {
         open: roomMode !== 'private', res: null, seen: now,
       };
       connect();
-      hbTimer = setInterval(sendHb, RHYTHM_MULTI_HEARTBEAT_MS);
-      sweepTimer = setInterval(() => { syncLobby(); emit(); }, 1000);
+      // 演奏中は、演奏の判定と描画に余計な仕事を割り込ませないよう、裏の通信を減らす。
+      // 状態の知らせは4秒ごと(抜けた扱いになるのは7秒なので足りる)、1秒ごとの点検と画面更新は止める
+      let playTick = 0;
+      hbTimer = setInterval(() => {
+        const me = selfMember();
+        if (me && me.playing) { playTick += 1; if (playTick % 2 === 1) return; }
+        sendHb();
+      }, RHYTHM_MULTI_HEARTBEAT_MS);
+      sweepTimer = setInterval(() => {
+        const me = selfMember();
+        if (me && me.playing) return;
+        syncLobby(); emit();
+      }, 1000);
       emit();
     },
     leave() {
