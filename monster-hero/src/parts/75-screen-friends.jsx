@@ -45,7 +45,7 @@ const friendsDayText = (day) => {
 };
 // requestCount … 届いている申請の件数(あれば最初に「申請」のタブを開く)
 // onIncomingCount … 読み込み直したあと、届いている申請の数を知らせる(HOME・プロフィールのバッジを合わせるため)
-// onOpenMonsterDetail … 好きなマスモンの詳細を開く(ランキングの詳細と同じ画面)
+// onOpenMonsterDetail … 好きなモンスターの詳細を開く(ランキングの詳細と同じ画面)
 function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack, onTargetHandled, onIncomingCount, onOpenMonsterDetail }) {
   const [tab, setTab] = React.useState(Number(requestCount) > 0 ? 'requests' : 'friends');
   const [phase, setPhase] = React.useState('loading');   // loading / ready / notready / noid / error
@@ -252,7 +252,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                   </dl>
                 )}
               </div>
-              <div className="mt-3"><ScreenSectionLabel>好きなマスモン</ScreenSectionLabel></div>
+              <div className="mt-3"><ScreenSectionLabel>好きなモンスター</ScreenSectionLabel></div>
               <div data-friend-favorite className={`${SCREEN_PANEL_FLAT_CLASS} mt-1 flex items-center gap-3`}>
                 {!favBase && <p className="text-[11px] font-bold text-slate-400">まだ選んでいません</p>}
                 {favBase && (<>

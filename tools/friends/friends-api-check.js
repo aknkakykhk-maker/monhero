@@ -180,7 +180,7 @@ const statusOf = (a, b) => {
     masuMons: [{ id: 11, baseId: 'Mocchi', lv: 8, power: 1200 }, { id: 22, baseId: 'Pixie', lv: 15, power: 900 }, { id: 33, baseId: 'Unknown', lv: 99, power: 99999 }, null],
   });
   check('最高絆Lvと最高総合力を、別々の子から選べる(知らない種類は数えない)', summary.bestBond === 15 && summary.bestBondMon === 'Pixie' && summary.bestPower === 1200 && summary.bestPowerMon === 'Mocchi');
-  check('好きなマスモンの詳細が入る', summary.favorite && summary.favorite.monsterId === 'Pixie' && summary.favorite.bondLevel === 15 && summary.favorite.power === 900 && summary.favorite.detail.v === 6);
+  check('好きなモンスターの詳細が入る', summary.favorite && summary.favorite.monsterId === 'Pixie' && summary.favorite.bondLevel === 15 && summary.favorite.power === 900 && summary.favorite.detail.v === 6);
   check('遊びはじめとプレイ時間(秒)が入る', summary.startedOn === '2026-09-01' && summary.playSeconds === 7200 && summary.place === 'battle');
   const empty = api.friendsBuildSummary({ place: 'zzz', masuMons: [], favoriteMasuId: null, playtime: { totalMs: 'x', since: '昨日' } });
   check('壊れた値・空の持ち物でも落ちず、空欄へ倒れる', empty.place === 'other' && empty.startedOn === null && empty.playSeconds === null && empty.bestBond === null && empty.favorite === null);
