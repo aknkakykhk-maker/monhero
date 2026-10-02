@@ -817,19 +817,29 @@ const screenThemeCategory = (gameState, rhythmOpen = false) => {
 // タイトル画像アレンジ。設定の「タイトル画像アレンジ」から選ぶ(2026-09-30・ユーザー要望)。
 // 保存は新しいキー mh_title_art に id だけを持つ。無い・知らない id のときは既定(いちばん新しい絵)。
 // 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない。
-// wideSrc は横画面(画面の横幅が高さより広いとき)に出す絵。無い絵は縦の絵を切り抜いて出す
+// squareSrc は縦横比がほぼ正方形の画面、wideSrc は横長の画面に出す絵。無い絵は縦の絵を切り抜いて出す
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
 const TITLE_ART_OPTIONS = [
-  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg' },
+  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg', squareSrc: 'data/images/title-screen-halloween-square.jpg', wideSrc: 'data/images/title-screen-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
 ];
 // 'auto'(おまかせ)は季節に合わせる(SCREEN_THEME_HALLOWEEN_UNTIL まではハロウィン、そのあとはクラシック)
 const DEFAULT_TITLE_ART = 'auto';
 const normalizeTitleArt = value => value === 'auto' || TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
 const resolveTitleArt = (value, now = Date.now()) => { const v = normalizeTitleArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
-const titleArtSrc = (value, landscape = false) => {
+// 画面の縦横比から、出す絵の形を決める。縦長(941x1672 = 0.56)・ほぼ正方形(1354x1162 = 1.17)・横長(1672x941 = 1.78)の3枚のうち、
+// 比が近いほうを選ぶ(境目は、隣り合う2枚の比の相乗平均。0.81 と 1.44)。折りたたみの横開きの内側(約0.9)は「ほぼ正方形」になる
+// ★index.html の先読みも同じ境目を持っている。変えるときは両方そろえる
+const titleArtShapeOf = (width, height) => {
+  const ratio = Number(width) > 0 && Number(height) > 0 ? width / height : 0.5;
+  return ratio < 0.81 ? 'portrait' : ratio < 1.44 ? 'square' : 'wide';
+};
+const titleArtSrc = (value, shape = 'portrait') => {
   const option = TITLE_ART_OPTIONS.find(item => item.id === resolveTitleArt(value));
-  return landscape && option.wideSrc ? option.wideSrc : option.src;
+  const kind = shape === true ? 'wide' : shape;
+  if (kind === 'wide' && option.wideSrc) return option.wideSrc;
+  if (kind === 'square' && option.squareSrc) return option.squareSrc;
+  return option.src;
 };
 
 // ホーム画面の背景アレンジ(2026-09-30・ユーザー要望)。タイトル画像アレンジと同じ作り。

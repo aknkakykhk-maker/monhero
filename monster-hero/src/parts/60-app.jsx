@@ -47,6 +47,14 @@ function MonsterHeroGame() {
     if (query.addEventListener) query.addEventListener('change', onChange); else if (query.addListener) query.addListener(onChange);
     return () => { if (query.removeEventListener) query.removeEventListener('change', onChange); else if (query.removeListener) query.removeListener(onChange); };
   }, []);
+  // タイトルの絵の形(画面の縦横比で、縦長・ほぼ正方形・横長のどれを出すか。13-bgm-and-rhythm-settings の titleArtShapeOf)
+  const [titleShape, setTitleShape] = useState(() => { try { return titleArtShapeOf(window.innerWidth, window.innerHeight); } catch { return 'portrait'; } });
+  useEffect(() => {
+    const onResize = () => setTitleShape(titleArtShapeOf(window.innerWidth, window.innerHeight));
+    onResize();
+    window.addEventListener('resize', onResize); window.addEventListener('orientationchange', onResize);
+    return () => { window.removeEventListener('resize', onResize); window.removeEventListener('orientationchange', onResize); };
+  }, []);
   // ホーム画面の背景アレンジ。タイトル画像アレンジと同じく、最初の値は端末の保存をその場で読む
   const [showHomeArt, setShowHomeArt] = useState(false);
   const [homeArt, setHomeArtState] = useState(() => {
@@ -4670,7 +4678,7 @@ function MonsterHeroGame() {
         const image = new Image(); let settled = false;
         const finish = () => { if (!settled) { settled = true; resolve(); } };
         image.onload = async () => { try { if (image.decode) await image.decode(); finish(); } catch (error) { if (!settled) { settled = true; reject(error); } } };
-        image.onerror = () => { if (!settled) { settled = true; reject(new Error('title image unavailable')); } }; image.src = titleArtSrc(titleArt, titleLandscape);
+        image.onerror = () => { if (!settled) { settled = true; reject(new Error('title image unavailable')); } }; image.src = titleArtSrc(titleArt, titleShape);
         if (image.complete) image.onload();
       });
       say('タイトルBGMを準備中');
@@ -14127,12 +14135,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   );
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
-      <img className="mh-title-backdrop" src={titleArtSrc(titleArt, titleLandscape)} alt="" aria-hidden="true"/><img className="mh-title-visual" src={titleArtSrc(titleArt, titleLandscape)} alt="モンスターヒーロー タイトル画面"/>
+      <img className="mh-title-backdrop" src={titleArtSrc(titleArt, titleShape)} alt="" aria-hidden="true"/><img className="mh-title-visual" src={titleArtSrc(titleArt, titleShape)} alt="モンスターヒーロー タイトル画面"/>
       <header className="mh-title-header"><div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div><div className="mh-title-actions"><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openChangelog()}}><Sparkles size={19}/><span>お知らせ</span>{hasUnreadChangelog&&<em>NEW</em>}</button><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setShowTitleSettings(true)}}><Settings size={19}/><span>設定</span></button></div></header>
       <button type="button" className="mh-title-start" disabled={!!titleModal || titleStarting} onPointerDown={startGame} aria-label="トップ画面へ進む"></button>{titleModal}
     </main>{updateNotice}{storageTroubleNotice}</>
   );
-  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src={titleArtSrc(titleArt, titleLandscape)} alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}{storageTroubleNotice}</>;
+  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src={titleArtSrc(titleArt, titleShape)} alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}{storageTroubleNotice}</>;
 
   return (
     // みゅあとの仲良し度をここから配る。各画面は <AssistantBubble scene="…"/> を置くだけでよい

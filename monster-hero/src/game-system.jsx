@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 255752b6b7c46d11
+// generated-sha256: 15ff8cd4c493389a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 02:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 02:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4670,19 +4670,29 @@ const screenThemeCategory = (gameState, rhythmOpen = false) => {
 // タイトル画像アレンジ。設定の「タイトル画像アレンジ」から選ぶ(2026-09-30・ユーザー要望)。
 // 保存は新しいキー mh_title_art に id だけを持つ。無い・知らない id のときは既定(いちばん新しい絵)。
 // 起動直後の先読み(index.html)もこのキーを読むので、キー名と id は変えない。
-// wideSrc は横画面(画面の横幅が高さより広いとき)に出す絵。無い絵は縦の絵を切り抜いて出す
+// squareSrc は縦横比がほぼ正方形の画面、wideSrc は横長の画面に出す絵。無い絵は縦の絵を切り抜いて出す
 const TITLE_ART_STORAGE_KEY = 'mh_title_art';
 const TITLE_ART_OPTIONS = [
-  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg' },
+  { id: 'halloween', label: 'ハロウィン', desc: '月夜のお城とかぼちゃ。モッチーたちが仮装してお出迎え', src: 'data/images/title-screen-halloween.jpg', squareSrc: 'data/images/title-screen-halloween-square.jpg', wideSrc: 'data/images/title-screen-halloween-wide.jpg' },
   { id: 'classic', label: 'クラシック', desc: 'これまでのタイトル画面', src: 'data/images/title-screen-clean.jpg' },
 ];
 // 'auto'(おまかせ)は季節に合わせる(SCREEN_THEME_HALLOWEEN_UNTIL まではハロウィン、そのあとはクラシック)
 const DEFAULT_TITLE_ART = 'auto';
 const normalizeTitleArt = value => value === 'auto' || TITLE_ART_OPTIONS.some(option => option.id === value) ? value : DEFAULT_TITLE_ART;
 const resolveTitleArt = (value, now = Date.now()) => { const v = normalizeTitleArt(value); return v === 'auto' ? resolveScreenTheme('auto', now) : v; };
-const titleArtSrc = (value, landscape = false) => {
+// 画面の縦横比から、出す絵の形を決める。縦長(941x1672 = 0.56)・ほぼ正方形(1354x1162 = 1.17)・横長(1672x941 = 1.78)の3枚のうち、
+// 比が近いほうを選ぶ(境目は、隣り合う2枚の比の相乗平均。0.81 と 1.44)。折りたたみの横開きの内側(約0.9)は「ほぼ正方形」になる
+// ★index.html の先読みも同じ境目を持っている。変えるときは両方そろえる
+const titleArtShapeOf = (width, height) => {
+  const ratio = Number(width) > 0 && Number(height) > 0 ? width / height : 0.5;
+  return ratio < 0.81 ? 'portrait' : ratio < 1.44 ? 'square' : 'wide';
+};
+const titleArtSrc = (value, shape = 'portrait') => {
   const option = TITLE_ART_OPTIONS.find(item => item.id === resolveTitleArt(value));
-  return landscape && option.wideSrc ? option.wideSrc : option.src;
+  const kind = shape === true ? 'wide' : shape;
+  if (kind === 'wide' && option.wideSrc) return option.wideSrc;
+  if (kind === 'square' && option.squareSrc) return option.squareSrc;
+  return option.src;
 };
 
 // ホーム画面の背景アレンジ(2026-09-30・ユーザー要望)。タイトル画像アレンジと同じ作り。
@@ -33838,6 +33848,14 @@ function MonsterHeroGame() {
     if (query.addEventListener) query.addEventListener('change', onChange); else if (query.addListener) query.addListener(onChange);
     return () => { if (query.removeEventListener) query.removeEventListener('change', onChange); else if (query.removeListener) query.removeListener(onChange); };
   }, []);
+  // タイトルの絵の形(画面の縦横比で、縦長・ほぼ正方形・横長のどれを出すか。13-bgm-and-rhythm-settings の titleArtShapeOf)
+  const [titleShape, setTitleShape] = useState(() => { try { return titleArtShapeOf(window.innerWidth, window.innerHeight); } catch { return 'portrait'; } });
+  useEffect(() => {
+    const onResize = () => setTitleShape(titleArtShapeOf(window.innerWidth, window.innerHeight));
+    onResize();
+    window.addEventListener('resize', onResize); window.addEventListener('orientationchange', onResize);
+    return () => { window.removeEventListener('resize', onResize); window.removeEventListener('orientationchange', onResize); };
+  }, []);
   // ホーム画面の背景アレンジ。タイトル画像アレンジと同じく、最初の値は端末の保存をその場で読む
   const [showHomeArt, setShowHomeArt] = useState(false);
   const [homeArt, setHomeArtState] = useState(() => {
@@ -38461,7 +38479,7 @@ function MonsterHeroGame() {
         const image = new Image(); let settled = false;
         const finish = () => { if (!settled) { settled = true; resolve(); } };
         image.onload = async () => { try { if (image.decode) await image.decode(); finish(); } catch (error) { if (!settled) { settled = true; reject(error); } } };
-        image.onerror = () => { if (!settled) { settled = true; reject(new Error('title image unavailable')); } }; image.src = titleArtSrc(titleArt, titleLandscape);
+        image.onerror = () => { if (!settled) { settled = true; reject(new Error('title image unavailable')); } }; image.src = titleArtSrc(titleArt, titleShape);
         if (image.complete) image.onload();
       });
       say('タイトルBGMを準備中');
@@ -47918,12 +47936,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   );
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
-      <img className="mh-title-backdrop" src={titleArtSrc(titleArt, titleLandscape)} alt="" aria-hidden="true"/><img className="mh-title-visual" src={titleArtSrc(titleArt, titleLandscape)} alt="モンスターヒーロー タイトル画面"/>
+      <img className="mh-title-backdrop" src={titleArtSrc(titleArt, titleShape)} alt="" aria-hidden="true"/><img className="mh-title-visual" src={titleArtSrc(titleArt, titleShape)} alt="モンスターヒーロー タイトル画面"/>
       <header className="mh-title-header"><div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div><div className="mh-title-actions"><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openChangelog()}}><Sparkles size={19}/><span>お知らせ</span>{hasUnreadChangelog&&<em>NEW</em>}</button><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setShowTitleSettings(true)}}><Settings size={19}/><span>設定</span></button></div></header>
       <button type="button" className="mh-title-start" disabled={!!titleModal || titleStarting} onPointerDown={startGame} aria-label="トップ画面へ進む"></button>{titleModal}
     </main>{updateNotice}{storageTroubleNotice}</>
   );
-  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src={titleArtSrc(titleArt, titleLandscape)} alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}{storageTroubleNotice}</>;
+  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src={titleArtSrc(titleArt, titleShape)} alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}{storageTroubleNotice}</>;
 
   return (
     // みゅあとの仲良し度をここから配る。各画面は <AssistantBubble scene="…"/> を置くだけでよい
@@ -57401,13 +57419,13 @@ const createAnimationStyle = () => {
        ・HOME: 枠が絵より縦長なら画面いっぱい(cover)にして下の帯を消す。枠が絵より横に広いときは絵全体を出し、余りはぼかした絵で埋める */
     .mh-title-backdrop{position:absolute;z-index:0;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(16px) brightness(.5);transform:scale(1.08);pointer-events:none}.mh-title-visual{z-index:1}
     @media(min-aspect-ratio:3/4) and (max-aspect-ratio:7/5){.mh-title-visual,.mh-entering>img{object-fit:contain;object-position:50% 50%}}
-    /* ハロウィンのタイトルの絵は縦長の1枚だけ(横長の絵は持たない・2026-10-01)。横長の画面(縦横比 7:5 より横)では、
-       上下が大きく切れてロゴが見えなくなるので、絵全体を出し、左右はぼかした同じ絵で埋める。クラシックの絵の見え方は変えない */
-    @media(min-aspect-ratio:7/5){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:contain;object-position:50% 50%}}
-    /* 横開きの端末(縦横比 3:4〜1:1 の、縦長に近い画面)では、ハロウィンの絵を画面いっぱいに広げる(2026-10-03・ユーザー指示
-       「横開きの端末で縦長タイトルになっているから、ちゃんと画面全体に表示して」)。上が切れるので、ロゴと仲間が残る下寄りに合わせる。
-       1:1 より横に広い画面は、切れすぎてロゴが見えなくなるので、上の「全体を出して左右をぼかす」のまま */
-    @media(min-aspect-ratio:3/4) and (max-aspect-ratio:1/1){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:cover;object-position:50% 85%}}
+    /* ハロウィンのタイトルの絵は、縦長・ほぼ正方形・横長の3枚(2026-10-03)。ゲームが画面の縦横比に近い1枚を選ぶので、
+       どの画面でも画面いっぱい(cover)で出して、切れるのはわずかな端だけにする(帯も出さない)。
+       横向きの画面(1:1 以上)は、左上のロゴが切れないよう、少し上寄りに合わせる。クラシックの絵の見え方は変えない */
+    .mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-fit:cover;object-position:50% 50%}
+    @media(min-aspect-ratio:1/1){.mh-title-visual[src*="halloween"],.mh-entering>img[src*="halloween"]{object-position:50% 40%}}
+    /* ほぼ正方形の絵は、ロゴが下にあるので、縦に切れるとき(横向きの 4:3 など)は下寄りに合わせる */
+    @media(min-aspect-ratio:1/1){.mh-title-visual[src*="halloween-square"],.mh-entering>img[src*="halloween-square"]{object-position:50% 80%}}
     @container (max-aspect-ratio:941/1672){.mh-home-background img.mh-home-main{object-fit:cover}}
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
