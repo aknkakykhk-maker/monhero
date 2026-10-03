@@ -1,4 +1,4 @@
-// ビートP交換所の円盤石(ユグドラシル・メルホイップ)を、実ブラウザで交換まで確かめる(2026-09-29)。
+// ビートP交換所の円盤石(14体・全部1,500P)とアシストカード(4枚・全部1,500P)を、実ブラウザで交換まで確かめる(2026-09-29 初版・2026-10-03 に広げた)。
 //
 //   node tools/market/beat-point-disc-check.js
 //
@@ -54,9 +54,15 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     const intoEvent = await page.evaluate(() => { const b = document.querySelector('[data-market-section="event"]'); if (!b) return false; b.click(); return true; });
     await page.waitForTimeout(500);
     const cards = await page.$$eval('[data-event-point-disc]', els => els.map(e => e.getAttribute('data-event-point-disc')));
-    ok('ビートP交換所に円盤石が2枚ある(予告カードは残っていない)', intoEvent && cards.join() === 'disc_yggdrasil,disc_mel_whip'
+    // 2026-10-03 ユーザー指示「ビート交換所に実装されてる円盤石と全アシカも追加して。全部1500ビートポイント」
+    //   ダイヤショップに並ぶ実装済みの円盤石12体も加わり、14枚になった。全部1,500P
+    const DISC_IDS = ['disc_yggdrasil','disc_mel_whip','disc_zan','disc_mitarashi','disc_ark','disc_iblis','disc_snegurochka','disc_undine','disc_yaobikuni','disc_plant','disc_mia','disc_pandora','disc_eiki','disc_kenshi_mocchi'];
+    ok('ビートP交換所に円盤石が14枚ある(予告カードは残っていない)', intoEvent && cards.join() === DISC_IDS.join()
       && (await page.$$('[data-event-point-coming-soon]')).length === 0, cards.join('・'));
-    for (const id of cards) {
+    const costs = await page.$$eval('[data-event-point-disc] button[aria-label$="で交換"]', els => els.map(e => e.getAttribute('aria-label')));
+    ok('円盤石は全部1500ビートP', costs.length >= 1 && costs.every(l => /1500ビートPで交換$/.test(l)), costs.slice(0, 2).join(' / '));
+    // 見て回るのは代表の3枚(全部を開くと時間がかかる)
+    for (const id of ['disc_yggdrasil', 'disc_mel_whip', 'disc_zan']) {
       const zoomed = await page.evaluate(id => { const c = document.querySelector(`[data-event-point-disc="${id}"]`); const b = c && c.querySelector('button[aria-label$="を大きく見る"]'); if (!b) return null; b.click(); return b.getAttribute('aria-label'); }, id);
       await page.waitForTimeout(250);
       const zoomOpen = await page.evaluate(() => [...document.querySelectorAll('[role="dialog"]')].some(d => /の拡大|を大きく/.test(d.getAttribute('aria-label') || '')));
@@ -83,6 +89,45 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     const ownedLabel = await page.evaluate(() => (document.querySelector('[data-event-point-disc="disc_yggdrasil"]')?.innerText || '').includes('所持済み'));
     ok('交換したカードは「所持済み」になる(もう交換できない)', ownedLabel);
     ok('ビートPが足りない円盤石(メルホイップ)は交換ボタンが押せない', !(await buy('disc_mel_whip')));
+
+    // ②' アシストカード(2026-10-03)。残りは500Pなので、まず足りない状態を見てから、ビートPを足して1枚交換する
+    await page.evaluate(() => { const b = [...document.querySelectorAll('[role=tab]')].find(x => x.textContent.trim() === 'アシスト'); b && b.click(); });
+    await page.waitForTimeout(500);
+    const assistIds = await page.$$eval('[data-event-point-assist]', els => els.map(e => e.getAttribute('data-event-point-assist')));
+    ok('ビートP交換所のアシストタブに、アシストカード4枚が並ぶ', assistIds.join() === 'assist_kiki,assist_meloso,assist_momosuke,assist_poltz', assistIds.join('・'));
+    const assistLabels = await page.$$eval('[data-event-point-assist] button[aria-label$="で交換"]', els => els.map(e => e.getAttribute('aria-label')));
+    ok('アシストカードも全部1500ビートP', assistLabels.length === 4 && assistLabels.every(l => /1500ビートPで交換$/.test(l)), assistLabels.join(' / '));
+    const buyAssist = async (id) => {
+      const pressed = await page.evaluate(id => { const c = document.querySelector(`[data-event-point-assist="${id}"]`); const b = c && [...c.querySelectorAll('button')].find(b => /交換/.test(b.getAttribute('aria-label') || '')); if (!b || b.disabled) return false; b.click(); return true; }, id);
+      if (!pressed) return false;
+      await page.waitForTimeout(300);
+      const confirmed = await page.evaluate(() => { const b = [...document.querySelectorAll('[role="dialog"] button')].find(b => /交換する$/.test(b.innerText.trim())); if (!b || b.disabled) return false; b.click(); return true; });
+      await page.waitForTimeout(800);
+      return confirmed;
+    };
+    ok('ビートPが足りないとアシストカードは交換ボタンが押せない', !(await buyAssist('assist_kiki')));
+    await page.evaluate(() => localStorage.setItem('mh_rhythm_event_points_v1', JSON.stringify(2000)));
+    await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
+    await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout: 40000 });
+    await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
+    await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+    await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), { timeout: 40000 });
+    await dismiss();
+    await page.evaluate(() => { const b = [...document.querySelectorAll('.mh-home-facility')].find(b => (b.innerText || '').replace(/\s+/g, ' ').trim().startsWith('マーケット')); b && b.click(); });
+    await page.waitForTimeout(600); await dismiss();
+    await page.evaluate(() => { const b = document.querySelector('[data-market-section="event"]'); b && b.click(); });
+    await page.waitForTimeout(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('[role=tab]')].find(x => x.textContent.trim() === 'アシスト'); b && b.click(); });
+    await page.waitForTimeout(500);
+    const boughtAssist = await buyAssist('assist_kiki');
+    const store2 = await page.evaluate(() => ({ cards: JSON.parse(localStorage.getItem('mh_unlocked_teachings') || 'null'), points: JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || 'null') }));
+    ok('ききのアシストカードを1,500Pで交換すると解放され、ビートPが500になる', boughtAssist && Array.isArray(store2.cards) && store2.cards.includes('kiki') && store2.points === 500, JSON.stringify(store2));
+    const assistOwned = await page.evaluate(() => (document.querySelector('[data-event-point-assist="assist_kiki"]')?.innerText || '').includes('所持済み'));
+    ok('交換したアシストカードは「所持済み」になる(もう交換できない)', assistOwned);
+    ok('持っているアシストカードは交換ボタンが押せない', !(await buyAssist('assist_kiki')));
+    // ダイヤショップへ戻る確認(③)は、アシストの交換でビートP交換所を開き直しているので、いったん戻る
+    await page.evaluate(() => { const b = [...document.querySelectorAll('[role=tab]')].find(x => x.textContent.trim() === '円盤石'); b && b.click(); });
+    await page.waitForTimeout(300);
 
     // ③ ダイヤショップ(円盤石のタブ)
     const intoDiamond = await page.evaluate(() => { const b = document.querySelector('button[aria-label="戻る"]'); if (!b) return false; b.click(); return true; });

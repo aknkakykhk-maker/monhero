@@ -278,9 +278,9 @@ const statusOf = (a, b) => {
   const arrNotes = api.friendsArrangeList({ views: arrViews, looks: arrLooks, summaries: arrSums, favorites: [], query: 'ライバル', nowMs: tNow, notes: { c: 'ライバル' } }).map((r) => r.view.otherId).join('');
   check('一覧: メモでも絞り込める', arrNotes === 'c', arrNotes);
   const multiSrc = fs.readFileSync(path.join(TOOLS_DIR, '..', 'monster-hero/src/parts/77-screen-rhythm-multi.jsx'), 'utf8');
-  check('マルチ: ブリーダーIDを部屋の知らせに載せ、受け取り、覚えている(区切り文字の入ったIDは捨てる)', multiSrc.includes("out.bid = (typeof friendsSafeId === 'function') ? friendsSafeId(raw.bid) : '';")
-    && multiSrc.includes('bid: me.bid || undefined') && multiSrc.includes("bid: msg.bid || ''") && multiSrc.includes('friendsSafeId(profile && profile.bid)')
-    && multiSrc.includes("bid: friendsOn ? friendSelfId : ''") && multiSrc.includes('friendsRememberRecent(others)'));
+  check('マルチ: ブリーダーIDを部屋の知らせに載せ、受け取り、覚えている(英数字と記号だけ通す)', multiSrc.includes("out.bid = rhythmMultiText(raw.bid, 64).replace(/[^A-Za-z0-9_-]/g, '');")
+    && multiSrc.includes('bid: me.bid || undefined') && multiSrc.includes('bid: msg.bid,') && multiSrc.includes("bid: rhythmMultiText(profile && profile.bid, 64).replace(/[^A-Za-z0-9_-]/g, '')")
+    && multiSrc.includes('bid: friendSelfId') && multiSrc.includes('friendsRememberRecent(others)'));
 
   // ---- friend_profiles だけが無い環境(第2弾のSQLが未適用) ----
   delete db.friend_profiles;

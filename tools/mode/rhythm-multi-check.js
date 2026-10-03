@@ -94,7 +94,7 @@ const makeClient = (name) => {
     RHYTHM_LOOK_PRESETS: [{ id: 'LIGHT', values: { effectAmount: 'MINIMAL' } }],
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${storeSource}\n;globalThis.__api={M:RHYTHM_MULTI,team:rhythmMultiTeamResult,scale:rhythmMultiRewardScale,clean:rhythmMultiCleanMessage,stamps:rhythmMultiStampsFor,chatMax:RHYTHM_MULTI_CHAT_MAX_LENGTH,code:rhythmMultiNormalizeCode,K:{SELECT:RHYTHM_MULTI_SELECT_MS,READY:RHYTHM_MULTI_READY_MS,GRACE:RHYTHM_MULTI_PLAY_GRACE_MS,SHUFFLE:RHYTHM_MULTI_SHUFFLE_MS,PUBLIC:RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS,PENALTY:RHYTHM_MULTI_PENALTY_KEY,MAX:RHYTHM_MULTI_ROOM_MAX}};`, sandbox, { filename: '77-screen-rhythm-multi.jsx' });
+  vm.runInContext(`${storeSource}\n;globalThis.__api={M:RHYTHM_MULTI,team:rhythmMultiTeamResult,scale:rhythmMultiRewardScale,clean:rhythmMultiCleanMessage,streakBonus:rhythmMultiStreakBonus,total:rhythmMultiTotalScale,normRec:rhythmMultiNormalizeRecord,addRec:rhythmMultiAddRecord,stamps:rhythmMultiStampsFor,chatMax:RHYTHM_MULTI_CHAT_MAX_LENGTH,code:rhythmMultiNormalizeCode,K:{SELECT:RHYTHM_MULTI_SELECT_MS,READY:RHYTHM_MULTI_READY_MS,GRACE:RHYTHM_MULTI_PLAY_GRACE_MS,SHUFFLE:RHYTHM_MULTI_SHUFFLE_MS,PUBLIC:RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS,PENALTY:RHYTHM_MULTI_PENALTY_KEY,MAX:RHYTHM_MULTI_ROOM_MAX}};`, sandbox, { filename: '77-screen-rhythm-multi.jsx' });
   const api = sandbox.__api;
   const starts = [];
   api.M.onStart((info) => starts.push(info));
@@ -207,6 +207,54 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
     leaveAll([h, a]);
   }
   check('おまかせの人がいても、ほかの人が選んだ曲から抽選する', hits === 8, `${hits}/8`);
+}
+
+// ===== ⑤-3 連続ボーナス・対戦の記録・フレンド申請に使う id(2026-10-03・ユーザー指示) =====
+{
+  const c = makeClient('z');
+  check('連続ボーナスは1曲ごとに+10%(1曲目0%・2曲目10%・11曲目100%・それより後も100%)',
+    [1, 2, 3, 11, 12, 50].map(c.streakBonus).join(',') === '0,0.1,0.2,1,1,1', [1, 2, 3, 11, 12, 50].map(c.streakBonus).join(','));
+  check('連続ボーナスは壊れた値でも0〜100%', c.streakBonus(0) === 0 && c.streakBonus(-3) === 0 && c.streakBonus('x') === 0 && c.streakBonus(Infinity) === 0);
+  check('人数ボーナスと掛け合わせる(2人×3曲目=1.8倍・5人×11曲目=6倍)', c.total(2, 3) === 1.8 && c.total(5, 11) === 6 && c.total(1, 1) === 1, `${c.total(2, 3)} / ${c.total(5, 11)}`);
+  const empty = c.normRec(null);
+  check('記録は無い・壊れた値でも0から読める', empty.lives === 0 && empty.recent.length === 0 && c.normRec('壊れ').lives === 0 && c.normRec({ lives: -5, recent: 'x' }).lives === 0);
+  const one = c.addRec(null, { at: 1, round: 'r1', songId: 'songA', avg: 812345, score: 900000, n: 3, streak: 2, mvp: true, names: ['い', 'う'] });
+  const twice = c.addRec(one, { at: 2, round: 'r1', songId: 'songA', avg: 1, score: 1, n: 3, streak: 2, mvp: true });
+  const next = c.addRec(one, { at: 3, round: 'r2', songId: 'songB', avg: 500000, score: 400000, n: 2, streak: 3, mvp: false });
+  check('記録に1回ぶん足す(回数・MVP・最高の平均・最長連続)', one.lives === 1 && one.mvp === 1 && one.bestAvg === 812345 && one.bestStreak === 2 && one.recent[0].names.join(',') === 'い,う');
+  check('同じ回は2度数えない', twice.lives === 1 && twice.recent.length === 1);
+  check('新しい回は先頭に足し、最高と最長は大きいほうを残す', next.lives === 2 && next.recent[0].round === 'r2' && next.bestAvg === 812345 && next.bestStreak === 3 && next.mvp === 1);
+  let many = null;
+  for (let i = 0; i < 40; i += 1) many = c.addRec(many, { at: i, round: `m${i}`, songId: 's', avg: i, score: i, n: 2, streak: 1 });
+  check('最近の記録は30回ぶんだけ残す(回数は全部数える)', many.recent.length === 30 && many.lives === 40 && many.recent[0].round === 'm39');
+  const hb = c.clean({ t: 'hb', id: 'a', name: 'あ', bid: 'abc-123<script>', joinedAt: 1 });
+  check('ブリーダーidは英数字と記号だけ通す', hb && hb.bid === 'abc-123script', hb && hb.bid);
+}
+{
+  // 同じメンバーで続けると連続が増え、顔ぶれが変わると1曲目に戻る
+  const [h, a, b] = ['h', 'a', 'b'].map(makeClient);
+  joinRoom([h, a], 'ST9Z');
+  h.M.confirmMembers(); clock.advance(2500);
+  const playRound = (cs) => {
+    cs.forEach((c) => c.M.pick('songC')); clock.advance(3000);
+    clock.advance(h.K.SHUFFLE + 500); cs.forEach((c) => c.M.ready()); clock.advance(3000);
+    const round = view(h).room.round;
+    cs.forEach((c) => c.M.reportResult(round, { score: 800000, cleared: true, maxCombo: 10 }, false, { diffId: 'NORMAL' }));
+    clock.advance(3000);
+    h.M.nextFromResult(round); clock.advance(3000);
+  };
+  playRound([h, a]);
+  const s1 = view(h).streak;
+  playRound([h, a]);
+  const s2 = view(h).streak;
+  playRound([h, a]);
+  const s3 = view(a).streak;
+  b.M.join('ST9Z', { name: 'b', level: 40, icon: '', frame: '', diff: 'NORMAL' }, 'private'); clock.advance(3000);
+  playRound([h, a, b]);
+  const s4 = view(h).streak;
+  check('同じメンバーで続けると連続が1つずつ増える', s1 === 1 && s2 === 2 && s3 === 3, `${s1},${s2},${s3}`);
+  check('メンバーが変わると連続は1曲目に戻る', s4 === 1, `${s4}`);
+  leaveAll([h, a, b]);
 }
 
 // ===== ⑥ ホストの「待たずに進む」 =====
