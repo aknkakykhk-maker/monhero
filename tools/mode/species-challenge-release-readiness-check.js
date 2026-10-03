@@ -53,7 +53,7 @@ check('チャレンジ・極限の通算クリア数を書き換えない',
 // ===== ② 全国ランキングの識別(種族×難易度) =====
 const lineages = api.dexMainLineages();
 const difficulties = api.SPECIES_CHALLENGE_DIFFICULTY_IDS;
-check('主血統と14難易度が読める', lineages.length > 0 && difficulties.length === 14, `${lineages.length}種族 × ${difficulties.length}難易度`);
+check('主血統と17難易度が読める', lineages.length > 0 && difficulties.length === 17, `${lineages.length}種族 × ${difficulties.length}難易度`);
 const speciesKeys = [];
 for (const lineage of lineages) for (const difficultyId of difficulties) {
   const key = api.speciesChallengeRankingDifficulty(lineage.id, difficultyId);

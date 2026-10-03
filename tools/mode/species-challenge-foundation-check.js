@@ -19,15 +19,16 @@ const assert = (condition, message) => { if (!condition) throw new Error(message
 
 const expectedIds = [
   'Beginner','Easy','Normal','Hard','Expert','Master','GrandMaster','Hell','Legend',
-  'EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY',
+  'EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK','HELHEIM',
 ];
 const expectedRewards = {
   Beginner:1, Easy:2, Normal:3, Hard:4, Expert:5, Master:6, GrandMaster:8,
   Hell:10, Legend:12, EXTREME:15, NIGHTMARE:20, CHAOS:25, ULTIMATE:30, INFINITY:40,
+  GOD:60, RAGNAROK:80, HELHEIM:100,
 };
 const unlocked = foundation.isSpeciesChallengeDifficultyUnlocked;
 
-assert(foundation.SPECIES_CHALLENGE_DIFFICULTY_IDS.length === 14, '難易度は14個である');
+assert(foundation.SPECIES_CHALLENGE_DIFFICULTY_IDS.length === 17, '難易度は17個である');
 assert(JSON.stringify([...foundation.SPECIES_CHALLENGE_DIFFICULTY_IDS]) === JSON.stringify(expectedIds), '難易度順が仕様どおりである');
 for (const id of expectedIds.slice(0, 5)) assert(unlocked(id, []), `${id}は初期解放される`);
 for (let index = 5; index < expectedIds.length; index++) {
@@ -43,12 +44,12 @@ assert(!unlocked('UNKNOWN', expectedIds), '不正難易度IDはfalseになる');
 assert(!unlocked(null, expectedIds), '不正な型の難易度IDはfalseになる');
 assert(!unlocked('Master', null), '不正なクリア一覧は空として扱う');
 
-assert(JSON.stringify({...foundation.SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS}) === JSON.stringify(expectedRewards), '報酬14難易度が指定値と完全一致する');
+assert(JSON.stringify({...foundation.SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS}) === JSON.stringify(expectedRewards), '報酬17難易度が指定値と完全一致する');
 for (const [id, reward] of Object.entries(expectedRewards)) assert(foundation.speciesChallengeFirstClearReward(id) === reward, `${id}の報酬は${reward}個である`);
 assert(foundation.speciesChallengeFirstClearReward('UNKNOWN') === 0, '不正難易度IDの報酬は0個になる');
 
 assert(JSON.stringify(Object.keys(foundation.DIFFICULTY_SETTINGS)) === JSON.stringify(expectedIds.slice(0, 9)), '既存DIFFICULTY_SETTINGSのIDと順序を変更していない');
-assert(JSON.stringify(foundation.EXTREME_DIFFICULTIES.map(item => item.id)) === JSON.stringify(expectedIds.slice(9)), '既存EXTREME_DIFFICULTIESのIDと順序を変更していない');
+assert(JSON.stringify(foundation.EXTREME_DIFFICULTIES.map(item => item.id)) === JSON.stringify(expectedIds.slice(9, 14)), '既存EXTREME_DIFFICULTIESのIDと順序を変更していない');
 // ★見るのは BATTLE_MODES の配列だけ。うしろの「バトルの仕組み(BATTLE_SYSTEMS)」には
 //   種族チャレンジのidが入っている(公開フラグで出し入れする器)ので、そこまで含めない
 const battleModes = source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// ===== バトルの仕組み(モード選択の1つ上) ====='));

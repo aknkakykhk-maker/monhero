@@ -11414,6 +11414,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
     const halveCounter=makeHalveCounter(); // 何枚目かの数え方は cardHalveGroup が決める
     const pandoraCardNo={}; // パンドラの箱: 枠ごとに、このターン何枚目のカードか(アシストカードは数えない)
+    // 攻撃の演出はカードを全部処理したあとに順番に流れる。どのヒットがどの姿(悪魔/天使)のカードのものかを、ヒットへ印として付けておく
+    let pdTagFrom=0, pdTagForm=null;
+    const pdTag=()=>{ if(pdTagForm) for(let k=pdTagFrom;k<attackHits.length;k++) if(attackHits[k]&&attackHits[k].pandoraForm==null) attackHits[k].pandoraForm=pdTagForm; pdTagFrom=attackHits.length; };
     for (const entry of usedCardEntries) {
       const card=entry.card;
       popupSlotRef.current=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
@@ -11447,9 +11450,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(isTacticsMode(runMode)&&!isBreeder&&entry.slotIdx!=null){
         pandoraCardNo[entry.slotIdx]=(pandoraCardNo[entry.slotIdx]||0)+1;
         const boxNow=pandoraCardNo[entry.slotIdx]===2?tacticsExPandoraBoxOf(tacticsExStateRef.current,tacticsUnitsRef.current,entry.slotIdx,tacticsExLiveRef.current.now):null;
-        // 1枚目は悪魔、2枚目は天使の姿に変える(3枚目以降は天使のまま)
-        if(pandoraCardNo[entry.slotIdx]===1&&tacticsExPandoraBoxOf(tacticsExStateRef.current,tacticsUnitsRef.current,entry.slotIdx,tacticsExLiveRef.current.now)) setTacticsPandoraForms({[entry.slotIdx]:'devil'});
-        else if(boxNow||(pandoraCardNo[entry.slotIdx]>2&&tacticsExPandoraBoxOf(tacticsExStateRef.current,tacticsUnitsRef.current,entry.slotIdx,tacticsExLiveRef.current.now))) setTacticsPandoraForms({[entry.slotIdx]:'angel'});
+        // 1枚目は悪魔、2枚目は天使の姿に変える(3枚目以降は天使のまま)。前のカードのヒットへの印付けを済ませてから、このカードの姿を決める
+        pdTag(); pdTagForm=null;
+        if(pandoraCardNo[entry.slotIdx]===1&&tacticsExPandoraBoxOf(tacticsExStateRef.current,tacticsUnitsRef.current,entry.slotIdx,tacticsExLiveRef.current.now)){ pdTagForm='devil'; setTacticsPandoraForms({[entry.slotIdx]:'devil'}); }
+        else if(boxNow||(pandoraCardNo[entry.slotIdx]>2&&tacticsExPandoraBoxOf(tacticsExStateRef.current,tacticsUnitsRef.current,entry.slotIdx,tacticsExLiveRef.current.now))){ pdTagForm='angel'; setTacticsPandoraForms({[entry.slotIdx]:'angel'}); }
         if(boxNow&&boxNow.angelRate>0){
           const angel=tacticsRateHeal(boxNow.angelRate,boxNow.angelRate,false);
           if(angel) hpBeforeEnemyAttack=angel.total;
@@ -11695,6 +11699,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     popupSlotRef.current=null;
 
+    pdTag(); // 最後のカードのヒットにも、パンドラの姿の印を付ける
     if (totalDmg>0) {
       if(totalDmg>0){
         const fallbackSlot = lastActionSlot !== null ? lastActionSlot : slots.findIndex(s => s !== null);
@@ -11703,6 +11708,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         let hitIdx=0;
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
+          // パンドラの箱: このヒットを出したカードの姿(悪魔/天使)の1体だけを動かす
+          setTacticsPandoraForms(hit&&hit.pandoraForm&&hit.slotIdx!=null?{[hit.slotIdx]:hit.pandoraForm}:{});
           // 専用モーションはモンスターの atkMotion フィールドで判定する(勇者モン選択時のみ発生する
           // 連撃ヒットの有無に依存させると、供モン加入時に通常攻撃のモーションが変わってしまうため)。
           // 固有技(hit.isUnique)の場合は技の出自(hit.monId)側のatkMotionを優先する。合体で引き継いだ
@@ -14418,7 +14425,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const renderSpeciesChallengeRecordBody = (mode = BATTLE_MODE_SPECIES_CHALLENGE) => {
     const ranked = modeHasRanking(mode);
     const diffId = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(rankingViewDiff) ? rankingViewDiff : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
-    const settingOf = (id) => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
+    const settingOf = (id) => DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
     const lineages = speciesChallengeLineages();
     // タブは3種類。種族を選んでいなければ「全種族」(種族をまたいだ全国ランキング)にする
     //   allSpecies … その難易度の全国ランキング(種族を問わない)
@@ -15402,7 +15409,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           //   「通常/極限、種族とかはどっちのモードにもあるように」)。難易度の中身は
           //   種族チャレンジとまったく同じ引き方で、極限は極限チャレンジの設定をそのまま使う
           const tacticsDiff=isTacticsMode(battleMode);
-          const speciesSetting=id=>DIFFICULTY_SETTINGS[id]||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)||EXTREME_SETTING;
+          const speciesSetting=id=>DIFFICULTY_SETTINGS[id]||ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===id)||EXTREME_SETTING;
           const allDifficulties=species||tacticsDiff
             ?(species?SPECIES_CHALLENGE_DIFFICULTY_IDS:TACTICS_DIFFICULTY_IDS).map(id=>[id,speciesSetting(id)])
             :Object.entries(quick?QUICK_DIFFICULTY_SETTINGS:DIFFICULTY_SETTINGS);
@@ -16538,7 +16545,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const speciesId=speciesEntries.some(l=>l.id===speciesChallengeDebugSpeciesId)?speciesChallengeDebugSpeciesId:(speciesEntries[0]?.id||'');
           const clearedIds=speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesId);
           const saveProgress=async(next)=>{const normalized=normalizeSpeciesChallengeProgress(next);setSpeciesChallengeProgress(normalized,BATTLE_MODE_SPECIES_CHALLENGE);await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,normalized,false);};
-          const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
+          const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
           const resetSpecies=async()=>{if(!window.confirm(`${speciesChallengeSpeciesName(speciesId)}の種族チャレンジ進行だけをリセットしますか？`))return;const next=normalizeSpeciesChallengeProgress(speciesChallengeProgress);delete next.species[speciesId];await saveProgress(next);};
           const challengeEntries=buildUnifiedMonsterEntries(unlockedMonsterIds,masuMons,[]);
           const heroCandidates=challengeEntries.filter(entry=>monsterLineageOf(entry.baseId).main.id===speciesId);
@@ -16597,7 +16604,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const challengeEntries=buildUnifiedMonsterEntries(unlockedMonsterIds,masuMons,[]);
           const entryById=id=>challengeEntries.find(entry=>entry.entryId===id);
           const entryLabel=id=>{const entry=entryById(id);return entry?`${entry.name}（${entry.type==='masu'?'マスモン':'ベースモン'}／${entry.lineageName}）`:id;};
-          const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
+          const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
           const clearedIds=speciesChallengeClearedDifficultyIds(speciesChallengeProgress,selection.speciesId);
           const entryLineageId=entry=>monsterLineageOf(entry.baseId).main.id;
           const heroCandidates=challengeEntries.filter(entry=>entryLineageId(entry)===selection.speciesId);

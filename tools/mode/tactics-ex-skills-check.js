@@ -747,6 +747,7 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && (screen.match(/getAttackPredictedDmg\([^;]*,(halved|pendingHalved|isSecondOrLater)\)/g) || []).length === 4
     && /pandoraCardNo\[entry\.slotIdx\]===2\?tacticsExPandoraBoxOf\(/.test(app) && /tacticsRateHeal\(boxNow\.angelRate,boxNow\.angelRate,false\)/.test(app)
     && /setTacticsPandoraForms\(\{\[entry\.slotIdx\]:'devil'\}\)/.test(app) && /setTacticsPandoraForms\(\{\[entry\.slotIdx\]:'angel'\}\)/.test(app) && /setTacticsPandoraForms\(\{\}\);/.test(app)
+    && /attackHits\[k\]\.pandoraForm=pdTagForm/.test(app) && /setTacticsPandoraForms\(hit&&hit\.pandoraForm&&hit\.slotIdx!=null\?/.test(app)
     && /data-pandora-pair/.test(screen) && /\{pandoraArt\?pandoraArt:s\?\.imgUrl\?/.test(screen) && /tacticsPandoraForms=\{tacticsPandoraForms\}/.test(app)
     && /const boxStep=tacticsExPandoraTurnEnd\(tacticsExStateRef\.current,tacticsUnitsRef\.current,tacticsExLiveRef\.current\.now\);\s*if\(boxStep\) await settleTacticsExPandoraBox\(boxStep\);/.test(app)
     && /if\(timeStopSlot==null&&isTacticsMode\(runMode\)&&tacticsExEnabled\)\{\s*const boxStep/.test(app));
