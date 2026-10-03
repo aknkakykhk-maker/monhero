@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 661e82ea26df08c4
+// source-sha256: a5ec158cd625dc98
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 18:36";
+const BUILD_DATE = "2026-10-03 18:57";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33404,6 +33404,32 @@ const TACTICS_EX_SKILLS = Object.freeze({
     }),
     effect: 'present'
   }),
+  Undine: Object.freeze({
+    id: 'undine_spring_of_life',
+    name: '生命の泉',
+    desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%戻る。',
+    maxUses: 3,
+    unlimited: false,
+    withCards: true,
+    duration: 'turns',
+    turns: 3,
+    target: 'ally',
+    lifeSpring: Object.freeze({
+      maxUpRate: 0.3,
+      gutsRate: 0.3
+    }),
+    effect: 'lifeSpring'
+  }),
+  Yaobikuni: Object.freeze({
+    id: 'yaobikuni_eternal_moment',
+    name: '悠久の刻',
+    desc: '時間を止める。使ったターンは敵が行動せず、そのターンはWAVEの20ターンの数にも数えない。',
+    maxUses: 2,
+    unlimited: false,
+    withCards: true,
+    duration: 'turn',
+    effect: 'timeStop'
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -33471,7 +33497,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
 const TACTICS_EX_CONDITIONS = Object.freeze({
   notActive: ctx => ctx && ctx.active ? '効果が続いているあいだは使えない' : null
 });
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop']);
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
 const TACTICS_EX_DUAL_HIT_REPEAT = 2;
@@ -33526,6 +33552,11 @@ const normalizeTacticsExDef = raw => {
       guts: Math.max(0, Number(raw.voltage.guts) || 0)
     } : null,
     usesPerWave: raw.usesPerWave === true,
+    target: raw.target === 'ally' ? 'ally' : null,
+    lifeSpring: raw.lifeSpring && typeof raw.lifeSpring === 'object' ? {
+      maxUpRate: Math.max(0, Number(raw.lifeSpring.maxUpRate) || 0),
+      gutsRate: Math.max(0, Number(raw.lifeSpring.gutsRate) || 0)
+    } : null,
     present: raw.present && typeof raw.present === 'object' ? (() => {
       const n = v => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
       const c = raw.present.combo;
@@ -33694,7 +33725,8 @@ const applyTacticsExUse = (state, {
   monId,
   now,
   snapshot = null,
-  choice = null
+  choice = null,
+  target = null
 } = {}) => {
   const safe = normalizeTacticsExState(state);
   if (!def || !Number.isInteger(slot)) return safe;
@@ -33755,6 +33787,10 @@ const applyTacticsExUse = (state, {
           ...def.present
         } : null,
         present: null,
+        target: Number.isInteger(target) ? target : null,
+        lifeSpringCfg: def.lifeSpring ? {
+          ...def.lifeSpring
+        } : null,
         snapshot: snapshot && typeof snapshot === 'object' ? {
           ...snapshot
         } : null
@@ -34066,6 +34102,46 @@ const resetTacticsExWaveUses = state => {
     uses
   } : state;
 };
+const tacticsExTargetOptions = (def, units) => def && def.target === 'ally' ? (Array.isArray(units) ? units : []).map((unit, slot) => ({
+  unit: normalizeTacticsUnit(unit),
+  slot
+})).filter(e => e.unit).map(e => ({
+  slot: e.slot,
+  hp: e.unit.hp,
+  maxHp: e.unit.maxHp,
+  downed: e.unit.downed === true
+})) : null;
+const checkTacticsExTarget = (def, units, target) => {
+  if (!def || def.target !== 'ally') return null;
+  if (!Number.isInteger(target)) return 'どの味方に使うか選ぶ';
+  return Array.isArray(units) && units[target] ? null : 'そこには味方がいない';
+};
+const tacticsExTimeStopSlot = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  const hit = Object.keys(effects).map(Number).find(slot => {
+    const unit = Array.isArray(units) ? units[slot] : null;
+    return unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'timeStop';
+  });
+  return hit == null ? null : hit;
+};
+const spendTacticsExTimeStop = state => {
+  const safe = normalizeTacticsExState(state);
+  const keys = Object.keys(safe.effects).filter(k => safe.effects[k] && safe.effects[k].effect === 'timeStop');
+  if (!keys.length) return state;
+  const effects = {
+    ...safe.effects
+  };
+  keys.forEach(k => {
+    effects[k] = {
+      ...effects[k],
+      effect: 'timeStopSpent'
+    };
+  });
+  return {
+    ...safe,
+    effects
+  };
+};
 const recordTacticsExDodge = (state, units, slot, now) => {
   const safe = normalizeTacticsExState(state);
   const unit = Array.isArray(units) ? units[slot] : null;
@@ -34126,11 +34202,22 @@ const setTacticsExMaxRate = (units, slot, rate, gutsRate = rate) => (Array.isArr
   exMaxRate: Math.max(0, Number(rate) || 0),
   exMaxGutsRate: Math.max(0, Number(gutsRate) || 0)
 } : unit);
+const setTacticsExMaxHpRate = (units, slot, rate) => (Array.isArray(units) ? units : []).map((unit, i) => unit && i === slot ? {
+  ...unit,
+  exMaxGutsRate: tacticsExMaxRateOf(unit, 'guts'),
+  exMaxRate: Math.max(tacticsExMaxRateOf(unit), Math.max(0, Number(rate) || 0))
+} : unit);
 const expireTacticsExMaxRates = (units, state, now) => {
   let changed = false;
+  const springEffects = normalizeTacticsExState(state).effects;
+  const springTargets = new Set(Object.keys(springEffects).map(Number).filter(from => {
+    const caster = Array.isArray(units) ? units[from] : null;
+    return caster && tacticsExActiveEffect(state, from, caster.id, now) === 'lifeSpring' && Number.isInteger(springEffects[from].target);
+  }).map(from => springEffects[from].target));
   const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
     if (!unit || !(tacticsExMaxRateOf(unit) > 0 || tacticsExMaxRateOf(unit, 'guts') > 0)) return unit;
     if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
+    if (springTargets.has(slot)) return unit;
     changed = true;
     return {
       ...unit,
@@ -51568,7 +51655,31 @@ function BattleScreen({
   }, exPanel.stats.atk, "／", exPanel.stats.def, exPanel.stats.changed ? '（EXで変化中）' : ''))), !exPanel.check.ok && React.createElement("p", {
     "data-tactics-ex-why": true,
     className: "mt-2 text-[11px] font-bold leading-snug text-rose-200"
-  }, exPanel.check.reason), exChoosing && exPanel.styleOptions ? React.createElement("div", {
+  }, exPanel.check.reason), exChoosing && exPanel.targetOptions ? React.createElement("div", {
+    "data-tactics-ex-choices": true,
+    className: "mt-3 flex flex-col gap-1.5"
+  }, React.createElement("div", {
+    className: "text-[11px] font-black text-slate-300"
+  }, "だれに使う？"), exPanel.targetOptions.map(t => React.createElement("button", {
+    key: t.slot,
+    type: "button",
+    "data-tactics-ex-target": t.slot,
+    "data-tactics-ex-target-downed": t.downed ? 'yes' : 'no',
+    disabled: !exPanel.check.ok,
+    onClick: () => {
+      if (activateTacticsEx && activateTacticsEx(exPanel.slot, t.slot)) setExPanelSlot(null);
+    },
+    className: `min-h-[44px] rounded-xl border-2 px-3 py-1.5 text-left active:scale-95 ${t.downed ? 'border-rose-300 bg-rose-900/60 text-white' : 'border-fuchsia-300 bg-fuchsia-900/60 text-white'}`
+  }, React.createElement("span", {
+    className: "block text-[13px] font-black"
+  }, t.name, t.downed ? '（ダウン中）' : ''), React.createElement("span", {
+    className: "block text-[10px] font-bold leading-snug opacity-80"
+  }, "ライフ ", t.hp.toLocaleString(), " / ", t.maxHp.toLocaleString()))), React.createElement("button", {
+    type: "button",
+    "data-tactics-ex-choice-back": true,
+    onClick: () => setExChoosing(false),
+    className: "min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-95"
+  }, "戻る")) : exChoosing && exPanel.styleOptions ? React.createElement("div", {
     "data-tactics-ex-choices": true,
     className: "mt-3 flex flex-col gap-1.5"
   }, React.createElement("div", {
@@ -51603,7 +51714,7 @@ function BattleScreen({
     "data-tactics-ex-use": true,
     disabled: !exPanel.check.ok,
     onClick: () => {
-      if (exPanel.styleOptions) {
+      if (exPanel.styleOptions || exPanel.targetOptions) {
         setExChoosing(true);
         return;
       }
@@ -68526,6 +68637,7 @@ function MonsterHeroGame() {
     };
     const applyImmediateTakenReduction = (damage, slotIdx = null) => applyTurnDamageReduction(damage > 0 ? damage * immediateTakenMultAt(slotIdx) : damage, slotIdx);
     const intent = overrideIntent || enemyIntent;
+    const timeStopSlot = isTacticsMode(runMode) && tacticsExEnabled ? tacticsExTimeStopSlot(tacticsExStateRef.current, tacticsUnitsRef.current, tacticsExLiveRef.current.now) : null;
     setEnemySkillName({
       label: intent.label,
       icon: intent.icon
@@ -68534,7 +68646,11 @@ function MonsterHeroGame() {
     await battleWait(600);
     let currentHp = hpAtAttackStart;
     enemyActionPerformedRef.current = false;
-    if (getTurnBuff('invincible', false) || immediateEffects.invincible) {
+    if (timeStopSlot != null) {
+      addPopup('⏳ 時間停止！ 敵は動けない', 'enemy', 'text-sky-300 font-black text-xl drop-shadow-md');
+      pushBattleLog('⏳ 時間が止まっている。敵は行動しない', 'info');
+      await battleWait(1000);
+    } else if (getTurnBuff('invincible', false) || immediateEffects.invincible) {
       addPopup("無効化！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-md');
       setImmediateTurnBuff('invincible', false);
       await battleWait(1000);
@@ -69055,7 +69171,8 @@ function MonsterHeroGame() {
     if (Object.keys(carriedBySlot).length > 0) activeTurnBuffs.bySlot = carriedBySlot;else delete activeTurnBuffs.bySlot;
     setTurnBuffs(activeTurnBuffs);
     writeNextTurnBuffs({});
-    const nextTurn = turnCount + 1;
+    if (timeStopSlot != null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
+    const nextTurn = timeStopSlot != null ? turnCount : turnCount + 1;
     setTurnCount(nextTurn);
     if (nextTurn > 20) {
       if (tacticsWipe() === null) setHp(0);
@@ -69143,6 +69260,13 @@ function MonsterHeroGame() {
         current: tacticsExStyleOf(def, state, slotIdx, mon.id) === st.id
       })) : null,
       durationText: tacticsExDurationText(def),
+      targetOptions: (() => {
+        const opts = tacticsExTargetOptions(def, tacticsUnits);
+        return opts ? opts.map(o => ({
+          ...o,
+          name: slots[o.slot]?.masuName || slots[o.slot]?.name || ''
+        })) : null;
+      })(),
       implemented: isTacticsExEffectImplemented(def),
       badge: (() => {
         const styleLabel = tacticsExStyleLabel(def, state, slotIdx, mon.id);
@@ -69168,6 +69292,8 @@ function MonsterHeroGame() {
         const volt = def.effect === 'stage' ? tacticsExVoltageOf(state, tacticsUnits, tacticsExNow) : null;
         if (volt) out.push(`ボルテージ ${volt.voltage} / ${volt.max}（与ダメ×${volt.dmgMult.toFixed(2)}・回復×${volt.healMult.toFixed(2)}・ガッツ回復+${Math.round(volt.gutsAdd * 100)}%）`);
         const pres = def.effect === 'present' ? tacticsExPresentOf(state, tacticsUnits, tacticsExNow) : null;
+        const spring = def.effect === 'lifeSpring' && isTacticsExEffectActive(state, slotIdx, mon.id, tacticsExNow) ? state.effects?.[slotIdx] : null;
+        if (spring && Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName || slots[spring.target]?.name || '味方'}（あと${tacticsExTurnsLeft(state, slotIdx, mon.id, tacticsExNow)}ターン）`);
         if (pres && pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot ? '大当たり（全部）' : pres.kinds.map(k => TACTICS_EX_PRESENT_LABELS[k]).join('・')}`);
         return out;
       })(),
@@ -69231,6 +69357,7 @@ function MonsterHeroGame() {
     });
     if (!check.ok) return false;
     if (def.duration === 'style' && checkTacticsExChoice(def, state, slotIdx, mon.id, choice)) return false;
+    if (checkTacticsExTarget(def, tacticsUnitsRef.current, choice)) return false;
     const usedUnit = normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
     const next = applyTacticsExUse(state, {
       def,
@@ -69241,12 +69368,35 @@ function MonsterHeroGame() {
         atk: usedUnit.atk,
         def: usedUnit.def
       } : null,
-      choice
+      choice,
+      target: def.target === 'ally' ? choice : null
     });
     commitTacticsExState(next);
     Audio_.se.card();
     const toggled = def.duration === 'style' ? `（${tacticsExStyleLabel(def, next, slotIdx, mon.id)}）` : '';
     pushBattleLog(`EX ${mon.masuName || mon.name}「${def.name}」${toggled}`, 'ally');
+    if (def.lifeSpring && Number.isInteger(choice)) {
+      let units = tacticsUnitsRef.current;
+      const before = normalizeTacticsUnit(units[choice]);
+      if (before) {
+        const wasDown = before.downed === true;
+        if (!wasDown && def.lifeSpring.maxUpRate > 0) units = scaleTacticsUnits(setTacticsExMaxHpRate(units, choice, def.lifeSpring.maxUpRate), getPermaBuff('muaHpPct'), getPermaBuff('muaGutsPct'));
+        const u = normalizeTacticsUnit(units[choice]);
+        const hpGain = Math.max(0, u.maxHp - u.hp);
+        units = healTacticsAt(units, choice, hpGain);
+        const afterHeal = normalizeTacticsUnit(units[choice]);
+        const gutsGain = Math.max(0, Math.min(afterHeal.maxGuts - afterHeal.guts, Math.floor(afterHeal.maxGuts * def.lifeSpring.gutsRate)));
+        units = recoverTacticsGutsAt(units, choice, gutsGain);
+        commitTacticsUnits(units);
+        mergeTacticsSlotFx({
+          [choice]: hpGain
+        }, {
+          [choice]: gutsGain
+        });
+        const targetName = slots[choice]?.masuName || slots[choice]?.name || '味方';
+        pushBattleLog(wasDown ? `${targetName}が立ち上がった！ ライフ満タン` : `${targetName}のライフが満タン。上限が${Math.round(def.lifeSpring.maxUpRate * 100)}%上がった`, 'ally');
+      }
+    }
     if (def.lifeCostRate > 0 && lifeNow) {
       const cost = tacticsExLifeCost(def, lifeNow.maxHp);
       if (cost > 0) {

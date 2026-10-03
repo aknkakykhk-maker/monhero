@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 059cc223fbfc728e
+// generated-sha256: eb64575980e43ca4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 18:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 18:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20993,6 +20993,8 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   guaranteeUnique … true なら、効いているあいだ毎ターン、その子の固有技カードが手札に必ず出る(ピクシー)
 //   cardBonus … (stage) 効いているあいだ、1ターンに使えるカード枚数(盤面ぜんぶ・その子自身)を何枚増やすか
 //   voltage   … (stage) { max, dmg, heal, guts } 味方がカードを1枚使うたびに1たまる。1段階ごとに 与ダメ+dmg・回復量+heal・ガッツの自動回復+guts(全員)
+//   target    … 'ally' なら、使うとき味方1体(自分も含む)を選ぶ。選んだ枠は applyTacticsExUse の target に入る
+//   lifeSpring … (lifeSpring) { maxUpRate, gutsRate } 選んだ子が立っていればライフ上限を maxUpRate 上げて(効果のあいだ)満タンに、ダウン中なら立たせて満タンに。どちらもガッツを上限の gutsRate 戻す
 //   usesPerWave … true なら、回数がWAVEのはじめに戻る(maxUses は1WAVEぶん)
 //   present   … (present) スネグーラチカのプレゼントの数字。fixedGuts=必ず入る全員のガッツ(上限の割合) / jackpot=大当たりの確率 / dmg・taken・crit・heal・guts=ランダム1種の効き目 / combo={count,rate}
 //   lifeCostRate … 使うとき、その子の最大ライフのこの割合(0.3 なら30%)を払う。ライフがそれより多いときだけ使える(払って倒れることはない)
@@ -21127,6 +21129,25 @@ const TACTICS_EX_SKILLS = Object.freeze({
     present: Object.freeze({ fixedGuts: 0.2, jackpot: 0.1, dmg: 0.2, taken: 0.2, crit: 0.3, heal: 0.2, guts: 0.2, combo: Object.freeze({ count: 2, rate: 0.1 }) }),
     effect: 'present',
   }),
+  // ★2026-10-03 ウンディーネ「生命の泉」(ユーザーの案・数字は仮)。味方1体を選んで使う回復のEX。
+  //   ダウン中の子はすぐ立ち上がってライフ満タン、立っている子はライフ満タン＋3ターンのライフ上限アップ。どちらもガッツが戻る
+  Undine: Object.freeze({
+    id: 'undine_spring_of_life',
+    name: '生命の泉',
+    desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%戻る。',
+    maxUses: 3, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    target: 'ally', lifeSpring: Object.freeze({ maxUpRate: 0.3, gutsRate: 0.3 }),
+    effect: 'lifeSpring',
+  }),
+  // ★2026-10-03 ヤオビクニ「悠久の刻」(ユーザーの案・回数2回)。時間を止める。使ったターンは敵が行動せず、
+  //   そのターンはWAVEの20ターン制限にも数えない(ターン数が進まない)。止めたターンのあとの「同じターン」では、もう一度は使えない
+  Yaobikuni: Object.freeze({
+    id: 'yaobikuni_eternal_moment',
+    name: '悠久の刻',
+    desc: '時間を止める。使ったターンは敵が行動せず、そのターンはWAVEの20ターンの数にも数えない。',
+    maxUses: 2, unlimited: false, withCards: true, duration: 'turn',
+    effect: 'timeStop',
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -21187,7 +21208,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -21245,6 +21266,9 @@ const normalizeTacticsExDef = (raw) => {
       ? { max: Math.min(99, tacticsSafeInt(raw.voltage.max, 0)),
         dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
+    target: raw.target === 'ally' ? 'ally' : null,
+    lifeSpring: raw.lifeSpring && typeof raw.lifeSpring === 'object'
+      ? { maxUpRate: Math.max(0, Number(raw.lifeSpring.maxUpRate) || 0), gutsRate: Math.max(0, Number(raw.lifeSpring.gutsRate) || 0) } : null,
     present: raw.present && typeof raw.present === 'object' ? (() => {
       const n = (v) => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
       const c = raw.present.combo;
@@ -21365,7 +21389,8 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
 // ★回数を減らすのは無制限でないときだけ。無制限は数えるが、残りには効かない
 // snapshot … 使った瞬間の値(捨て身なら使ったときの丈夫さ)。効果の計算はこの値から出す
 // choice … スタイル式のとき、選んだスタイルの id(checkTacticsExChoice を通したもの)
-const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null } = {}) => {
+// target … 味方を選んで使うEX(生命の泉)で、選んだ味方の枠
+const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null, target = null } = {}) => {
   const safe = normalizeTacticsExState(state);
   if (!def || !Number.isInteger(slot)) return safe;
   // スタイル式は、選べないスタイル(いまのもの・知らないもの)なら何もしない(回数も減らさない)
@@ -21387,6 +21412,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       distMult: def.distMult || 0, guaranteeUnique: def.guaranteeUnique === true, cardBonus: def.cardBonus || 0,
       voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
       presentCfg: def.present ? { ...def.present } : null, present: null,
+      target: Number.isInteger(target) ? target : null, lifeSpringCfg: def.lifeSpring ? { ...def.lifeSpring } : null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -21595,6 +21621,36 @@ const resetTacticsExWaveUses = (state) => {
   });
   return changed ? { ...safe, uses } : state;
 };
+// ---- 味方を選んで使うEX(生命の泉) ----
+// 選べる味方の一覧(立っている子もダウン中の子も。自分も含む)。選ぶEXでなければ null
+const tacticsExTargetOptions = (def, units) => (def && def.target === 'ally'
+  ? (Array.isArray(units) ? units : []).map((unit, slot) => ({ unit: normalizeTacticsUnit(unit), slot })).filter(e => e.unit)
+    .map(e => ({ slot: e.slot, hp: e.unit.hp, maxHp: e.unit.maxHp, downed: e.unit.downed === true })) : null);
+// 選んだ味方が使えるか。使えれば null、使えなければ理由
+const checkTacticsExTarget = (def, units, target) => {
+  if (!def || def.target !== 'ally') return null;
+  if (!Number.isInteger(target)) return 'どの味方に使うか選ぶ';
+  return Array.isArray(units) && units[target] ? null : 'そこには味方がいない';
+};
+// ---- ヤオビクニ(timeStop): 使ったターンは敵が行動せず、ターン数も進まない ----
+// いま時間が止まっている枠(まだ敵の番を止めていないもの)。なければ null
+const tacticsExTimeStopSlot = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  const hit = Object.keys(effects).map(Number).find(slot => {
+    const unit = Array.isArray(units) ? units[slot] : null;
+    return unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'timeStop';
+  });
+  return hit == null ? null : hit;
+};
+// 敵の番を止めたあと、時間停止を「使い終わった」ことにする(同じターンの数字が続いても、止め続けない)。止まっていなければ同じ state を返す
+const spendTacticsExTimeStop = (state) => {
+  const safe = normalizeTacticsExState(state);
+  const keys = Object.keys(safe.effects).filter(k => safe.effects[k] && safe.effects[k].effect === 'timeStop');
+  if (!keys.length) return state;
+  const effects = { ...safe.effects };
+  keys.forEach(k => { effects[k] = { ...effects[k], effect: 'timeStopSpent' }; });
+  return { ...safe, effects };
+};
 // 血踊が効いている子が敵の攻撃を回避したことを数える(効いていなければ状態をそのまま返す)
 const recordTacticsExDodge = (state, units, slot, now) => {
   const safe = normalizeTacticsExState(state);
@@ -21640,12 +21696,24 @@ const applyTacticsExStats = (unit, state, slot, now) => {
 const setTacticsExMaxRate = (units, slot, rate, gutsRate = rate) => (Array.isArray(units) ? units : [])
   .map((unit, i) => (unit && i === slot
     ? { ...unit, exMaxRate: Math.max(0, Number(rate) || 0), exMaxGutsRate: Math.max(0, Number(gutsRate) || 0) } : unit));
+// ライフの上限だけを rate 上げる(すでに上がっていれば大きいほうを残す。ガッツの上限は触らない)
+const setTacticsExMaxHpRate = (units, slot, rate) => (Array.isArray(units) ? units : [])
+  .map((unit, i) => (unit && i === slot
+    // ★ガッツの上限の率は、いまの値のまま明示する(書かないと、ライフの率がガッツの上限にまで効いてしまう)
+    ? { ...unit, exMaxGutsRate: tacticsExMaxRateOf(unit, 'guts'), exMaxRate: Math.max(tacticsExMaxRateOf(unit), Math.max(0, Number(rate) || 0)) } : unit));
 // 効果が切れているのに上限が上がったままの枠を、0へ戻す。戻した枠があれば changed:true
 const expireTacticsExMaxRates = (units, state, now) => {
   let changed = false;
+  // ★生命の泉(lifeSpring)は、使った子ではなく選んだ味方のライフ上限を上げる。その子は泉が効いているあいだ戻さない
+  const springEffects = normalizeTacticsExState(state).effects;
+  const springTargets = new Set(Object.keys(springEffects).map(Number).filter(from => {
+    const caster = Array.isArray(units) ? units[from] : null;
+    return caster && tacticsExActiveEffect(state, from, caster.id, now) === 'lifeSpring' && Number.isInteger(springEffects[from].target);
+  }).map(from => springEffects[from].target));
   const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
     if (!unit || !(tacticsExMaxRateOf(unit) > 0 || tacticsExMaxRateOf(unit, 'guts') > 0)) return unit;
     if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
+    if (springTargets.has(slot)) return unit; // 生命の泉の対象(効いているあいだ)
     changed = true;
     return { ...unit, exMaxRate: 0, exMaxGutsRate: 0 };
   });
@@ -31394,7 +31462,21 @@ function BattleScreen({
                 {exPanel.stats&&<><dt className="font-bold text-slate-400">ちから／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
-              {exChoosing&&exPanel.styleOptions?(
+              {exChoosing&&exPanel.targetOptions?(
+                // ★味方を選んで使う(2026-10-03 ウンディーネの「生命の泉」)。自分も選べる。ダウン中の子は赤で出す
+                <div data-tactics-ex-choices className="mt-3 flex flex-col gap-1.5">
+                  <div className="text-[11px] font-black text-slate-300">だれに使う？</div>
+                  {exPanel.targetOptions.map(t=>(
+                    <button key={t.slot} type="button" data-tactics-ex-target={t.slot} data-tactics-ex-target-downed={t.downed?'yes':'no'} disabled={!exPanel.check.ok}
+                      onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot,t.slot)) setExPanelSlot(null); }}
+                      className={`min-h-[44px] rounded-xl border-2 px-3 py-1.5 text-left active:scale-95 ${t.downed?'border-rose-300 bg-rose-900/60 text-white':'border-fuchsia-300 bg-fuchsia-900/60 text-white'}`}>
+                      <span className="block text-[13px] font-black">{t.name}{t.downed?'（ダウン中）':''}</span>
+                      <span className="block text-[10px] font-bold leading-snug opacity-80">ライフ {t.hp.toLocaleString()} / {t.maxHp.toLocaleString()}</span>
+                    </button>
+                  ))}
+                  <button type="button" data-tactics-ex-choice-back onClick={()=>setExChoosing(false)} className="min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-95">戻る</button>
+                </div>
+              ):exChoosing&&exPanel.styleOptions?(
                 // ★スタイルを選ぶ(2026-09-25 ユーザー指示)。いまのスタイルは選べない
                 <div data-tactics-ex-choices className="mt-3 flex flex-col gap-1.5">
                   <div className="text-[11px] font-black text-slate-300">どのスタイルにする？</div>
@@ -31411,7 +31493,7 @@ function BattleScreen({
               ):(
               <div className="mt-3 flex gap-2">
                 <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
-                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(exPanel.styleOptions){ setExChoosing(true); return; } if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
+                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(exPanel.styleOptions||exPanel.targetOptions){ setExChoosing(true); return; } if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
               </div>
               )}
             </div>
@@ -45543,6 +45625,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     };
     const applyImmediateTakenReduction = (damage, slotIdx=null) => applyTurnDamageReduction(damage>0 ? damage*immediateTakenMultAt(slotIdx) : damage, slotIdx);
     const intent = overrideIntent||enemyIntent;
+    // ★ヤオビクニの「悠久の刻」: 使ったターンは敵が行動せず、ターン数も進めない(2026-10-03)
+    const timeStopSlot = isTacticsMode(runMode)&&tacticsExEnabled ? tacticsExTimeStopSlot(tacticsExStateRef.current,tacticsUnitsRef.current,tacticsExLiveRef.current.now) : null;
     setEnemySkillName({label:intent.label, icon:intent.icon});
     // 敵の番の見出し。このあとの吹き出し(ダメージ・回避・ガード)が、どの技の結果なのかを結ぶ
     pushBattleLog(`敵の行動：${intent.label}`, 'enemy');
@@ -45554,7 +45638,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 止められたターンは「何もしなかった」ことにする。ここをfalseのままにしておくと、
     // ためを止めたのに次のターンだけ必殺技が来る、という状態になる
     enemyActionPerformedRef.current = false;
-    if (getTurnBuff('invincible',false)||immediateEffects.invincible) {
+    if (timeStopSlot!=null) {
+      addPopup('⏳ 時間停止！ 敵は動けない','enemy','text-sky-300 font-black text-xl drop-shadow-md'); pushBattleLog('⏳ 時間が止まっている。敵は行動しない','info'); await battleWait(1000);
+    } else if (getTurnBuff('invincible',false)||immediateEffects.invincible) {
       addPopup("無効化！",'hero','text-blue-400 font-black text-xl drop-shadow-md');
       setImmediateTurnBuff('invincible',false); await battleWait(1000);
     } else if (getTurnBuff('stunEnemy',false)||immediateEffects.stun) {
@@ -46092,7 +46178,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else delete activeTurnBuffs.bySlot;
     setTurnBuffs(activeTurnBuffs);
     writeNextTurnBuffs({});
-    const nextTurn=turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); } setIsBusy(false);
+    // 時間を止めたターンは数えない(20ターン制限にも入れない)。止めた記録は使い終わったことにして、止め続けない
+    if(timeStopSlot!=null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
+    const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); } setIsBusy(false);
   };
 
   const useEmergency = async () => {
@@ -46163,6 +46251,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       styleOptions:def.duration==='style'?def.styles.map(st=>({ ...st,
         current:tacticsExStyleOf(def,state,slotIdx,mon.id)===st.id })):null,
       durationText:tacticsExDurationText(def),
+        // 味方を選んで使うEX(生命の泉)の、選べる味方の一覧(名前つき)
+        targetOptions:(()=>{ const opts=tacticsExTargetOptions(def,tacticsUnits); return opts?opts.map(o=>({ ...o, name:(slots[o.slot]?.masuName||slots[o.slot]?.name||'') })):null; })(),
       implemented:isTacticsExEffectImplemented(def),
       // いまの力・丈夫さ(EXが乗っていればそのぶんも)。捨て身・片手持ちの効き目を数字で確かめられるように
       // 距離枠に出す短い札。切り替え式はいまの状態(二刀流／片手持ち)、効いている間は「◯◯中」、ふだんは「EX」
@@ -46181,6 +46271,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const volt=def.effect==='stage'?tacticsExVoltageOf(state,tacticsUnits,tacticsExNow):null;
           if(volt) out.push(`ボルテージ ${volt.voltage} / ${volt.max}（与ダメ×${volt.dmgMult.toFixed(2)}・回復×${volt.healMult.toFixed(2)}・ガッツ回復+${Math.round(volt.gutsAdd*100)}%）`);
           const pres=def.effect==='present'?tacticsExPresentOf(state,tacticsUnits,tacticsExNow):null;
+          const spring=def.effect==='lifeSpring'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)?state.effects?.[slotIdx]:null;
+          if(spring&&Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName||slots[spring.target]?.name||'味方'}（あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン）`);
           if(pres&&pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot?'大当たり（全部）':pres.kinds.map(k=>TACTICS_EX_PRESENT_LABELS[k]).join('・')}`);
           return out;
         })(),
@@ -46221,14 +46313,35 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       now:tacticsExNow, busy:false, hp:lifeNow?lifeNow.hp:null, maxHp:lifeNow?lifeNow.maxHp:null });
     if(!check.ok) return false;
     if(def.duration==='style'&&checkTacticsExChoice(def,state,slotIdx,mon.id,choice)) return false;
+    // 味方を選んで使うEX(生命の泉)は、選んだ味方が要る
+    if(checkTacticsExTarget(def,tacticsUnitsRef.current,choice)) return false;
     // 使った瞬間の値を控える(捨て身は「使ったときの丈夫さ」から力へ移す量を決める)
     const usedUnit=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
     const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
-      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null, choice });
+      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null, choice, target:def.target==='ally'?choice:null });
     commitTacticsExState(next);
     Audio_.se.card();
     const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
+    // 生命の泉(ウンディーネ): 選んだ味方へ。ダウン中なら立たせて満タン、立っていればライフ上限を上げてから満タン。どちらもガッツが戻る
+    if(def.lifeSpring&&Number.isInteger(choice)){
+      let units=tacticsUnitsRef.current;
+      const before=normalizeTacticsUnit(units[choice]);
+      if(before){
+        const wasDown=before.downed===true;
+        if(!wasDown&&def.lifeSpring.maxUpRate>0) units=scaleTacticsUnits(setTacticsExMaxHpRate(units,choice,def.lifeSpring.maxUpRate),getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+        const u=normalizeTacticsUnit(units[choice]);
+        const hpGain=Math.max(0,u.maxHp-u.hp);
+        units=healTacticsAt(units,choice,hpGain);
+        const afterHeal=normalizeTacticsUnit(units[choice]);
+        const gutsGain=Math.max(0,Math.min(afterHeal.maxGuts-afterHeal.guts,Math.floor(afterHeal.maxGuts*def.lifeSpring.gutsRate)));
+        units=recoverTacticsGutsAt(units,choice,gutsGain);
+        commitTacticsUnits(units);
+        mergeTacticsSlotFx({[choice]:hpGain},{[choice]:gutsGain});
+        const targetName=slots[choice]?.masuName||slots[choice]?.name||'味方';
+        pushBattleLog(wasDown?`${targetName}が立ち上がった！ ライフ満タン`:`${targetName}のライフが満タン。上限が${Math.round(def.lifeSpring.maxUpRate*100)}%上がった`,'ally');
+      }
+    }
     // 最大ライフの一部を払う(堕天の烙印)。ライフが払う量より多いときだけ使えるので、ここで倒れることはない。枠へ減った量を出す
     if(def.lifeCostRate>0&&lifeNow){
       const cost=tacticsExLifeCost(def,lifeNow.maxHp);
