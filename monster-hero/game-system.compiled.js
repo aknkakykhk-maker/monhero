@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 176401db88ad21f1
+// source-sha256: 5c0b0bc569839d57
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 02:45";
+const BUILD_DATE = "2026-10-04 02:51";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -2192,7 +2192,7 @@ const buildMarketItemPurchase = ({
   const purchaseQuantity = Math.max(1, Math.floor(Number(quantity) || 1));
   const unitCost = Math.max(0, Math.floor(Number(item?.cost) || 0));
   const cost = unitCost * purchaseQuantity;
-  const currency = item?.currency === 'psyche' ? 'psyche' : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' ? 'diamond' : 'breederPoint';
+  const currency = item?.currency === 'psyche' ? 'psyche' : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' || item?.type === 'costume' ? 'diamond' : 'breederPoint';
   const balances = {
     diamond: Math.max(0, Math.floor(Number(gold) || 0)),
     breederPoint: Math.max(0, Math.floor(Number(breederPoints) || 0)),
@@ -14169,7 +14169,7 @@ const MARKET_CURRENCY_META = Object.freeze({
     max: 'bg-violet-800'
   })
 });
-const marketCurrencyOf = item => MARKET_CURRENCY_META[item?.currency] ? item.currency : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' ? 'diamond' : 'breederPoint';
+const marketCurrencyOf = item => MARKET_CURRENCY_META[item?.currency] ? item.currency : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' || item?.type === 'costume' ? 'diamond' : 'breederPoint';
 const marketPriceText = item => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost) || 0)).toLocaleString());
 const MarketBalanceBar = ({
   balances
@@ -37346,6 +37346,7 @@ function BreederMarketScreen({
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
   const marketItems = BREEDER_MARKET_ITEMS.filter(item => item.shop !== false);
+  const costumeItems = marketItems.filter(item => item.type === 'costume');
   const diamondTabs = [{
     key: 'disc',
     label: '円盤石'
@@ -37355,7 +37356,10 @@ function BreederMarketScreen({
   }, {
     key: 'item',
     label: 'アイテム'
-  }];
+  }, ...(costumeItems.length ? [{
+    key: 'costume',
+    label: '着替え'
+  }] : [])];
   const activeDiamondTab = diamondTabs.some(tab => tab.key === marketTab) ? marketTab : 'disc';
   const diamondItems = marketItems.filter(item => item.type === activeDiamondTab && item.type !== 'icon' && item.currency !== 'psyche');
   const breederPointItems = (() => {
@@ -37418,6 +37422,9 @@ function BreederMarketScreen({
       }, ...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length ? [{
         key: 'frame',
         label: 'フレーム'
+      }] : []), ...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.length ? [{
+        key: 'costume',
+        label: '着替え'
       }] : []), {
         key: 'item',
         label: 'アイテム'
@@ -37863,6 +37870,44 @@ function BreederMarketScreen({
       detail: teaching,
       onDetail: () => teaching && onOpenDetail(card || item, null, teaching)
     });
+  }), eventTab === 'costume' && RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.map(offer => {
+    const costume = assistantCostumeById(offer.costumeId);
+    const who = assistantById(offer.assistantId);
+    const item = {
+      id: offer.costumeId,
+      name: offer.name,
+      emoji: '👗',
+      icon: costume?.icon,
+      type: 'costume',
+      currency: 'beatPoint',
+      cost: offer.cost,
+      desc: `${who?.name || ''}の着替え。${costume?.desc || ''}`
+    };
+    const owned = isItemOwned({
+      id: offer.costumeId,
+      type: 'costume'
+    });
+    return React.createElement(MarketProductCard, {
+      key: offer.id,
+      dataAttrs: {
+        'data-event-point-costume': offer.id
+      },
+      previewIcon: previewIcon,
+      item: item,
+      owned: owned,
+      comingSoon: false,
+      canBuy: !owned && safeEventPoints >= offer.cost && !busy,
+      disabled: purchaseProcessing,
+      onZoom: () => onZoomIcon(item),
+      onBuy: () => openSheet({
+        item,
+        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
+      }),
+      middle: item.desc ? React.createElement(MarketDetailChip, {
+        label: `${offer.name}の説明を見る`,
+        onClick: () => onOpenItemDetail(item)
+      }) : null
+    });
   }), eventTab === 'frame' && RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.map(offer => {
     const frame = profileFrameById(offer.frameId);
     const item = {
@@ -37982,6 +38027,9 @@ function ProfileScreen({
   speciesChallengeProgress,
   tacticsRecordsOf,
   speciesChallengeProgressOf,
+  costumeEnabled = false,
+  wornCostume = null,
+  onOpenCostumePicker = null,
   onBack,
   onOpenNameEdit,
   onOpenIconPicker,
@@ -38142,7 +38190,21 @@ function ProfileScreen({
       className: "block text-[10px] font-black text-amber-300"
     }, "フレーム"), React.createElement("b", {
       className: "block break-words text-[11px] font-black leading-tight text-white"
-    }, "フレーム：", frameName))), showFriendTiles && React.createElement("button", {
+    }, "フレーム：", frameName))), costumeEnabled && onOpenCostumePicker && React.createElement("button", {
+      type: "button",
+      "data-profile-tile": "costume",
+      onClick: onOpenCostumePicker,
+      className: tile
+    }, React.createElement("span", {
+      className: "flex h-8 w-8 shrink-0 items-center justify-center text-xl",
+      "aria-hidden": "true"
+    }, "👗"), React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, React.createElement("small", {
+      className: "block text-[10px] font-black text-pink-300"
+    }, "着替え"), React.createElement("b", {
+      className: "block break-words text-[11px] font-black leading-tight text-white"
+    }, "着替え：", wornCostume ? wornCostume.name : '元の服'))), showFriendTiles && React.createElement("button", {
       type: "button",
       "data-profile-message": true,
       onClick: onOpenMessageEditor,
@@ -59014,6 +59076,13 @@ function MonsterHeroGame() {
   const [frameLockedInfo, setFrameLockedInfo] = useState(null);
   const [ownedProfileFrames, setOwnedProfileFrames] = useState([]);
   const ownedProfileFramesRef = useRef([]);
+  const [ownedAssistantCostumes, setOwnedAssistantCostumes] = useState([]);
+  const ownedAssistantCostumesRef = useRef([]);
+  const [wornAssistantCostumes, setWornAssistantCostumes] = useState({});
+  const [showCostumePicker, setShowCostumePicker] = useState(false);
+  const [costumeAssistantId, setCostumeAssistantId] = useState(null);
+  const [costumeLockedInfo, setCostumeLockedInfo] = useState(null);
+  setAssistantCostumeWornNow(wornAssistantCostumes);
   const PROFILE_FRAME_NOTICE_KEY = 'mh_profile_frame_notice_v1';
   const [profileFrameNoticed, setProfileFrameNoticed] = useState([]);
   const markProfileFrameNoticed = useCallback(frameId => {
@@ -59055,6 +59124,24 @@ function MonsterHeroGame() {
     setProfileFrameId(next);
     Promise.resolve(storeSet(PROFILE_FRAME_KEY, next, false)).catch(error => {
       console.error('[profile-frame] save failed:', error && error.message ? error.message : error);
+    });
+  }, []);
+  const wearAssistantCostume = useCallback((assistantId, costumeId) => {
+    const costume = costumeId ? assistantCostumeById(costumeId) : null;
+    if (costumeId && (!costume || costume.assistantId !== assistantId || !ownedAssistantCostumesRef.current.includes(costume.id))) return;
+    setWornAssistantCostumes(prev => {
+      const next = {
+        ...prev
+      };
+      if (costume) next[assistantId] = costume.id;else delete next[assistantId];
+      return next;
+    });
+    Promise.resolve(storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false)).then(stored => {
+      const base = normalizeWornAssistantCostumes(stored, ownedAssistantCostumesRef.current);
+      if (costume) base[assistantId] = costume.id;else delete base[assistantId];
+      return storeSet(ASSISTANT_COSTUME_WORN_KEY, base, false);
+    }).catch(error => {
+      console.error('[assistant-costume] save failed:', error && error.message ? error.message : error);
     });
   }, []);
   const lastPublishedProfileRef = useRef('');
@@ -62788,6 +62875,10 @@ function MonsterHeroGame() {
       ownedProfileFramesRef.current = catchUp;
       setOwnedProfileFrames(catchUp);
       setProfileFrameNoticed(normalizeOwnedProfileFrames(await storeGet(PROFILE_FRAME_NOTICE_KEY, [], false)));
+      const loadedCostumes = normalizeOwnedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false));
+      ownedAssistantCostumesRef.current = loadedCostumes;
+      setOwnedAssistantCostumes(loadedCostumes);
+      setWornAssistantCostumes(normalizeWornAssistantCostumes(await storeGet(ASSISTANT_COSTUME_WORN_KEY, {}, false), loadedCostumes));
       setRhythmClearTotal(await loadRhythmClearTotal());
       if (catchUp.length !== loadedFrames.length) {
         try {
@@ -64241,6 +64332,7 @@ function MonsterHeroGame() {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
     if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
     if (item.type === 'frame') return normalizeOwnedProfileFrames(ownedProfileFrames).includes(item.id);
+    if (item.type === 'costume') return normalizeOwnedAssistantCostumes(ownedAssistantCostumes).includes(item.id);
     if (item.type === 'item') return false;
     return expandOwnedMarketIcons(ownedMarketIcons).includes(item.id);
   };
@@ -64370,6 +64462,12 @@ function MonsterHeroGame() {
         setOwnedProfileFrames(nextFrames);
         storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
         markProfileFrameNoticed(item.id);
+      } else if (item.type === 'costume') {
+        const storedCostumes = normalizeOwnedAssistantCostumes(await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false));
+        const nextCostumes = normalizeOwnedAssistantCostumes([...storedCostumes, ...ownedAssistantCostumesRef.current, item.id]);
+        ownedAssistantCostumesRef.current = nextCostumes;
+        setOwnedAssistantCostumes(nextCostumes);
+        storeSet(ASSISTANT_COSTUME_OWNED_KEY, nextCostumes, false);
       } else if (item.type !== 'item') {
         setOwnedMarketIcons(prev => {
           const group = breederIconGroupOf(item.id);
@@ -64461,6 +64559,9 @@ function MonsterHeroGame() {
       const isFrame = offer?.kind === 'frame';
       const storedFrames = isFrame ? await storeGet(PROFILE_FRAME_OWNED_KEY, [], false) : null;
       const beforeFrames = normalizeOwnedProfileFrames(storedFrames);
+      const isCostume = offer?.kind === 'costume';
+      const storedCostumes = isCostume ? await storeGet(ASSISTANT_COSTUME_OWNED_KEY, [], false) : null;
+      const beforeCostumes = normalizeOwnedAssistantCostumes(storedCostumes);
       if (isFrame) {
         const frameStatus = profileFrameConditionStatus(profileFrameById(offer.frameId), await loadRhythmClearTotal(), 'beatPoint');
         if (frameStatus && !frameStatus.met) {
@@ -64479,10 +64580,11 @@ function MonsterHeroGame() {
         quantity,
         unlockedMonsterIds: beforeUnlocked,
         unlockedTeachingIds: beforeTeachings,
-        ownedProfileFrames: beforeFrames
+        ownedProfileFrames: beforeFrames,
+        ownedAssistantCostumes: beforeCostumes
       });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : isFrame ? 'このフレームはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : isFrame ? 'このフレームはもう持っています。' : isCostume ? 'この着替えはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([{
@@ -64509,6 +64611,10 @@ function MonsterHeroGame() {
         key: PROFILE_FRAME_OWNED_KEY,
         before: storedFrames,
         next: exchange.ownedProfileFrames
+      }] : []), ...(isCostume ? [{
+        key: ASSISTANT_COSTUME_OWNED_KEY,
+        before: storedCostumes,
+        next: exchange.ownedAssistantCostumes
       }] : [])], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -64535,6 +64641,10 @@ function MonsterHeroGame() {
         ownedProfileFramesRef.current = exchange.ownedProfileFrames;
         setOwnedProfileFrames(exchange.ownedProfileFrames);
         markProfileFrameNoticed(exchange.frameId);
+      }
+      if (isCostume) {
+        ownedAssistantCostumesRef.current = exchange.ownedAssistantCostumes;
+        setOwnedAssistantCostumes(exchange.ownedAssistantCostumes);
       }
       if (isAssist) {
         setUnlockedTeachingIds(exchange.unlockedTeachingIds);
@@ -80614,6 +80724,12 @@ function MonsterHeroGame() {
       },
       onOpenIconPicker: () => setShowIconPicker(true),
       onOpenFramePicker: () => setShowFramePicker(true),
+      costumeEnabled: assistantCostumeFeatureOn(),
+      wornCostume: assistantCostumeWornFor(selectedAssistantId),
+      onOpenCostumePicker: () => {
+        setCostumeAssistantId(selectedAssistantId);
+        setShowCostumePicker(true);
+      },
       onOpenItems: () => setGameState('ITEM_INVENTORY'),
       onOpenCallStylePicker: () => {
         setTempCallStyle(assistantCallStyle || '');
@@ -82808,6 +82924,102 @@ function MonsterHeroGame() {
       }, "助手の枠（仲良し度でもらえます）"), assistantFrames.map(cell), saleFrames.length > 0 && React.createElement(PickerGroupLabel, {
         count: saleFrames.length
       }, "モンスターの枠（条件を達成するとマーケットで買えます）"), saleFrames.map(cell)));
+    })(), showCostumePicker && (() => {
+      const closeCostume = () => {
+        setShowCostumePicker(false);
+        setCostumeLockedInfo(null);
+      };
+      const who = assistantById(costumeAssistantId) || assistantById(selectedAssistantId);
+      const chipList = ASSISTANT_LIST.map(a => ({
+        id: a.id,
+        label: a.name,
+        count: assistantCostumesFor(a.id).filter(c => ownedAssistantCostumes.includes(c.id)).length
+      }));
+      const costumes = assistantCostumesFor(who.id);
+      const worn = assistantCostumeById(wornAssistantCostumes[who.id]);
+      const faceOf = costume => costume && costume.icon ? costume.icon : null;
+      const cell = costume => {
+        const owned = !costume || ownedAssistantCostumes.includes(costume.id);
+        const selected = costume ? worn && worn.id === costume.id : !worn;
+        const src = costume ? faceOf(costume) : `${who.imageDir}/face/${who.imagePrefix}_normal.PNG`;
+        return React.createElement("button", {
+          key: costume ? costume.id : 'original',
+          "data-assistant-costume-option": costume ? costume.id : 'original',
+          "data-assistant-costume-locked": owned ? 'no' : 'yes',
+          onClick: () => {
+            if (owned) {
+              wearAssistantCostume(who.id, costume ? costume.id : null);
+              setCostumeLockedInfo(null);
+            } else setCostumeLockedInfo(costume.id);
+          },
+          "aria-pressed": !!selected,
+          "aria-disabled": !owned,
+          className: `relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2 active:scale-95 ${selected ? 'border-amber-400 bg-amber-950/30' : 'border-slate-700 bg-slate-950/40'}`
+        }, React.createElement("span", {
+          className: `relative block ${owned ? '' : 'opacity-45'}`
+        }, src ? React.createElement("img", {
+          src: src,
+          alt: costume ? costume.name : '元の服',
+          className: "h-14 w-14 rounded-full object-cover bg-black/30",
+          draggable: "false"
+        }) : React.createElement("span", {
+          className: "flex h-14 w-14 items-center justify-center text-3xl",
+          "aria-hidden": "true"
+        }, "👗"), !owned && React.createElement(Lock, {
+          size: 14,
+          className: "absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"
+        })), selected && React.createElement(PickerCheckMark, null), React.createElement("span", {
+          className: `text-[9px] font-black leading-tight text-center ${owned ? 'text-slate-200' : 'text-slate-500'}`
+        }, costume ? costume.name : '元の服'), !owned && React.createElement("span", {
+          className: "text-[8px] font-black leading-tight text-center text-amber-400"
+        }, "マーケットで購入"));
+      };
+      const lockedCostume = costumeLockedInfo ? assistantCostumeById(costumeLockedInfo) : null;
+      const lockedInfo = lockedCostume && React.createElement("div", {
+        "data-assistant-costume-locked-info": true,
+        className: "rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2"
+      }, React.createElement("p", {
+        className: "text-[10px] font-black text-amber-300 leading-tight text-center"
+      }, lockedCostume.name, "はマーケットで買えます"), React.createElement("p", {
+        className: "text-[9px] text-slate-300 leading-tight text-center mt-1"
+      }, assistantCostumeSales(lockedCostume).map(sale => `${ASSISTANT_COSTUME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}${sale.shop === 'diamond' ? 'ダイヤ' : 'ビートP'}`).join(' ／ ')), React.createElement("p", {
+        className: "text-[9px] text-slate-500 leading-tight text-center mt-1"
+      }, lockedCostume.desc || ''));
+      return React.createElement(PickerSheet, {
+        title: "助手の着替え",
+        note: "助手の顔と立ち絵が、えらんだ服に変わります。服はマーケットで買えます。",
+        onClose: closeCostume,
+        preview: React.createElement(React.Fragment, null, (() => {
+          const nowSrc = assistantFaceImage(who, 'happy');
+          return nowSrc ? React.createElement("img", {
+            src: nowSrc,
+            alt: who.name,
+            className: "h-14 w-14 shrink-0 rounded-full object-cover bg-black/30",
+            draggable: "false"
+          }) : React.createElement("span", {
+            className: "text-3xl",
+            "aria-hidden": "true"
+          }, who.emoji);
+        })(), React.createElement("span", {
+          className: "min-w-0"
+        }, React.createElement("b", {
+          className: "block truncate text-[12px] font-black text-white"
+        }, who.name, "：", worn ? worn.name : '元の服'), React.createElement("small", {
+          className: "block text-[10px] font-bold leading-tight text-slate-400"
+        }, "いま着ている服"))),
+        chips: chipList,
+        chip: who.id,
+        onChip: id => {
+          setCostumeAssistantId(id);
+          setCostumeLockedInfo(null);
+        },
+        footerExtra: lockedInfo,
+        dataPicker: "assistant-costume"
+      }, React.createElement("div", {
+        className: "grid grid-cols-3 gap-2.5"
+      }, cell(null), costumes.map(cell)), costumes.length === 0 && React.createElement("p", {
+        className: "py-6 text-center text-[11px] font-bold text-slate-500"
+      }, who.name, "の着替えは、まだありません"));
     })(), showBackup && React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-6",
       style: {

@@ -737,3 +737,93 @@ const nextProfileFrameForAssistant = (assistantId, bondLevel, owned) => {
   return profileFramesForAssistant(assistantId)
     .find(frame => !have.has(frame.id) && !(Number.isFinite(level) && profileFrameUnlock(frame).bondLevel <= level)) || null;
 };
+
+// ==================== 助手の着替え(2026-10-03 ユーザー指示「助手の着替え機能を作りたい。着替え自体はマーケットに販売する予定」) ====================
+//
+// 助手ごとに「着替え」を持てる。プロフィールの「着替え」から、持っている服へ着替える。
+// 着替えると、その助手の吹き出しの顔・立ち絵が服の絵に変わる(絵の出し口は data/assistants.js の
+// assistantFaceImage / assistantFullImage の1か所だけ)。
+//
+// ★まだ売り物は無い(絵が用意できていない)。ここは「ASSISTANT_COSTUMES に1件足せば、マーケットに並んで
+//   買えて、プロフィールで着替えられる」ための土台だけ。画面側のコードは1行も触らなくてよい。
+// ★足し方(1件):
+//     { id:'mua_summer_v1', assistantId:'mua', name:'夏のワンピース', desc:'…', released:true,
+//       icon:'<服のフォルダ>/face/<imagePrefix>_happy.PNG',   // 商品カードの小さな絵(顔アイコン)
+//       imageDir:'<服の絵を置くフォルダ>',   // 立ち絵 <imagePrefix>_<表情>.PNG と face/<imagePrefix>_<表情>.PNG を置く(置き場は images/assistant/ の下に作る)
+//       price:{ diamond:3000, beatPoint:1500 } }             // 売る交換所と値段。書いた交換所にだけ並ぶ(どちらか片方でもよい)
+//   絵は assistants.js の表情8種(normal/happy/wink/surprise/troubled/angry/crying/excited)をそろえる。
+//   足りない表情は、その服の normal ではなく**元の服の絵**へ落ちる(絵切れを起こさない)。
+// ★released:true にして price を書かないと、全員が無料で着られてしまう。price は必ず書く(検査が見張る)。
+// ★保存は新しいキー2つだけ。既存の mh_* は読みも書きも変えない(CLAUDE.md ⑦)。
+//     mh_assistant_costume_owned_v1 … 買った服のid(配列)。一度買ったら外さない
+//     mh_assistant_costume_worn_v1  … 助手ごとに今着ている服 { 助手id: 服id }。無い助手は元の服
+const ASSISTANT_COSTUME_OWNED_KEY = 'mh_assistant_costume_owned_v1';
+const ASSISTANT_COSTUME_WORN_KEY = 'mh_assistant_costume_worn_v1';
+// 公開フラグ。false のあいだは、売る服が1着も無ければ プロフィールの「着替え」もマーケットの「着替え」タブも出さない
+// (空の画面を見せない)。服を1着でも released:true にすると、フラグに関係なく出る。
+const ASSISTANT_COSTUME_PUBLIC_RELEASE = false;
+const ASSISTANT_COSTUMES = Object.freeze([]);
+const ASSISTANT_COSTUME_SHOPS = Object.freeze({
+  diamond:   Object.freeze({ label:'ダイヤショップ', currency:'diamond' }),
+  beatPoint: Object.freeze({ label:'ビートP交換所', currency:'beatPoint' }),
+});
+// 壊れた値・古い形が入っていても必ず文字列の配列へ落とす
+const normalizeOwnedAssistantCostumes = (value) => {
+  const list = Array.isArray(value) ? value : [];
+  return [...new Set(list.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
+};
+const releasedAssistantCostumes = () => ASSISTANT_COSTUMES.filter(costume => costume && costume.released === true);
+const assistantCostumeById = (id) => releasedAssistantCostumes().find(costume => costume.id === id) || null;
+// その助手の服(並びは ASSISTANT_COSTUMES のとおり)
+const assistantCostumesFor = (assistantId) => releasedAssistantCostumes().filter(costume => costume.assistantId === assistantId);
+// 着替えの入口を出すか(上のコメントのとおり)
+const assistantCostumeFeatureOn = () => ASSISTANT_COSTUME_PUBLIC_RELEASE === true || releasedAssistantCostumes().length > 0;
+// その服の売り値の一覧 [{ shop, cost, currency }]。値段が正しくないものは入れない
+const assistantCostumeSales = (costume) => {
+  const price = costume && costume.price;
+  if (!price || typeof price !== 'object') return [];
+  return Object.keys(ASSISTANT_COSTUME_SHOPS).map(shop => {
+    const cost = Math.floor(Number(price[shop]));
+    return (Number.isFinite(cost) && cost >= 1) ? { shop, cost, currency: ASSISTANT_COSTUME_SHOPS[shop].currency } : null;
+  }).filter(Boolean);
+};
+const assistantCostumeSaleIn = (costume, shop) => assistantCostumeSales(costume).find(sale => sale.shop === shop) || null;
+// 売る服として書かれているのに値段が1つも読めない服のid。検査用
+const assistantCostumesWithBrokenSale = () => releasedAssistantCostumes()
+  .filter(costume => assistantCostumeSales(costume).length === 0 || Object.keys(costume.price || {}).some(shop => !ASSISTANT_COSTUME_SHOPS[shop]))
+  .map(costume => costume.id);
+// 持っているか(持っている服のidの配列に入っているか)
+const assistantCostumeOwned = (id, owned) => normalizeOwnedAssistantCostumes(owned).includes(id) && !!assistantCostumeById(id);
+// 保存してある「今着ている服」を { 助手id: 服id } に直す。
+// 持っていない服・その助手の服ではないもの・消えた服は捨てて、元の服へ戻す(壊れた値でも落ちない)
+const normalizeWornAssistantCostumes = (value, owned) => {
+  const source = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+  const have = new Set(normalizeOwnedAssistantCostumes(owned));
+  const result = {};
+  Object.keys(source).forEach(assistantId => {
+    const costume = assistantCostumeById(source[assistantId]);
+    if (costume && costume.assistantId === assistantId && have.has(costume.id)) result[assistantId] = costume.id;
+  });
+  return result;
+};
+// 画面が描く瞬間に見る「いま着ている服」。アプリが読み込み・着替え・購入のたびに入れ直す
+// (assistants.js の画像の出し口が参照する。読み込み前は空 = どの助手も元の服)
+let ASSISTANT_COSTUME_WORN_NOW = {};
+const setAssistantCostumeWornNow = (worn) => { ASSISTANT_COSTUME_WORN_NOW = (worn && typeof worn === 'object') ? worn : {}; };
+const assistantCostumeWornFor = (assistantId) => assistantCostumeById(ASSISTANT_COSTUME_WORN_NOW[assistantId]);
+// 服の絵のパス。kind は 'face'(吹き出しの丸い顔)か 'full'(立ち絵)。服の絵が決まらないときは null(呼ぶ側が元の服へ落とす)
+const assistantCostumeImage = (who, expression, kind) => {
+  const costume = who && assistantCostumeWornFor(who.id);
+  if (!costume || !costume.imageDir || !who.imagePrefix) return null;
+  const list = Array.isArray(who.expressions) ? who.expressions : [];
+  if (!list.includes(expression)) return null;
+  return `${costume.imageDir}/${kind === 'face' ? 'face/' : ''}${who.imagePrefix}_${expression}.PNG`;
+};
+// ダイヤショップに並べる服は、ASSISTANT_COSTUMES の売り値(price.diamond)から**自動で**作る(手で書き写さない)。
+// type:'costume' が着替えの商品。買う処理(buyMarketItem)・所持の判定(isMarketItemOwned)・見た目はこの type を扱う。
+// ★ビートP交換所の分は data/rhythm-event.js が RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS を作る。
+releasedAssistantCostumes()
+  .filter(costume => assistantCostumeSaleIn(costume, 'diamond'))
+  .forEach(costume => {
+    BREEDER_MARKET_ITEMS.push({ id:costume.id, name:costume.name, type:'costume', currency:'diamond', cost:assistantCostumeSaleIn(costume, 'diamond').cost, desc:costume.desc || '', assistantId:costume.assistantId, emoji:'👗', icon:costume.icon });
+  });
