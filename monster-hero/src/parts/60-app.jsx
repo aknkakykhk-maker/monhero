@@ -2677,7 +2677,13 @@ function MonsterHeroGame() {
   const [rhythmMultiPreviewSongId,setRhythmMultiPreviewSongId]=useState('');
   // みんなで対戦のライブで使う設定(見た目だけ「軽さ優先」に重ねる)。演奏画面は設定の入れ物が変わるたびに作り直すので、
   // 描画のたびに新しく作らず、元の設定が変わったときだけ作る
-  const rhythmMultiPlaySettings=useMemo(()=>({...rhythmSettings,...RHYTHM_MULTI_LIGHT_LOOK}),[rhythmSettings]);
+  // 対戦の演出は、選んだ段階(multiLook)の見た目のおまかせを重ねる。OWN は自分の設定のまま(2026-10-03)
+  const rhythmMultiPlaySettings=useMemo(()=>{
+    const id=rhythmSettings.multiLook||'LIGHT';
+    if(id==='OWN')return rhythmSettings;
+    const preset=RHYTHM_LOOK_PRESETS.find(item=>item.id===id)||RHYTHM_LOOK_PRESETS.find(item=>item.id==='LIGHT');
+    return {...rhythmSettings,...(preset?preset.values:{})};
+  },[rhythmSettings]);
   const rhythmPreviewSongId=gameState==='RHYTHM_MULTI'&&rhythmMultiPreviewSongId?rhythmMultiPreviewSongId:rhythmSelectedSongId;
   const rhythmPreviewSong=rhythmDemoSongs(RHYTHM_SONGS).find(song=>song.songId===rhythmPreviewSongId)||null;
   const rhythmPreviewTrackId=rhythmSettings.songPreviewEnabled&&RHYTHM_PREVIEW_SCREENS.includes(gameState)&&rhythmPreviewSong
@@ -15776,7 +15782,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'&&rhythmSettings.multiLightLook!==false?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiRewardScale(rhythmPlay.multiCount):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiRewardScale(rhythmPlay.multiCount):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
           // みんなで対戦の演奏は、まずスコアをルームへ知らせる。そのうえで、ひとりで遊ぶときと同じく
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
           // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)
@@ -15850,8 +15856,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             key で分けて、画面が変わったら部品の中の状態を作り直す */}
         {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
-          multiLightLook={rhythmSettings.multiLightLook!==false}
-          onToggleLightLook={async()=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLightLook:rhythmSettings.multiLightLook===false});setRhythmSettings(saved);}}
+          multiLook={rhythmSettings.multiLook||'LIGHT'}
+          onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):''}:null}
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}

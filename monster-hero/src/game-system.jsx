@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2fdff4dbcde02080
+// generated-sha256: 2f773079c38d0321
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 15:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 15:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4234,6 +4234,8 @@ const rhythmCapEffects = (settings,level) => {let out=settings;for(let i=0;i<Mat
 const RHYTHM_AUTO_EFFECT_STEP_LABELS = Object.freeze(['にじむ光','ライブ→派手','道の演出・ノーツの動き・盛り上がりの光','判定の演出・コンボの節目','派手→控えめ','控えめ→シンプル']);
 // 次に下げる段(当てるものがある段)。もう下げるものが無ければ null
 const rhythmNextEffectCap = (settings,level) => {const now=rhythmCapEffects(settings,level);for(let i=Math.max(0,Number(level)||0);i<RHYTHM_AUTO_EFFECT_STEPS.length;i++){if(RHYTHM_AUTO_EFFECT_STEPS[i](now))return i+1;}return null;};
+// 対戦の演出の段階。見た目のおまかせの id と、自分の設定のまま(OWN)
+const RHYTHM_MULTI_LOOK_LEVELS = Object.freeze(['LIGHT', 'STANDARD', 'VIVID', 'OWN']);
 const rhythmLookPresetOf = settings => (RHYTHM_LOOK_PRESETS.find(preset=>Object.entries(preset.values).every(([key,value])=>settings&&settings[key]===value))||{id:''}).id;
 const RHYTHM_STAGE_EFFECT_LABELS = Object.freeze([['LIVE','ライブ'],['VIVID','派手'],['CALM','控えめ'],['SIMPLE','シンプル']]);
 // ===== 他の音ゲーから取り入れた表示(2026-09-24・ユーザー指示「他の音ゲーを学習して取り入れるとこを取り入れて / 設定でいじれるように」) =====
@@ -4365,6 +4367,10 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // みんなで対戦のライブでは、演出を「軽さ優先」にそろえる(2026-10-03・ユーザー指示「マルチは演出量をデフォで下げたほうがいい」)。
   // ふだんの見た目の設定は書き換えない。対戦のあいだだけ上から重ねる
   multiLightLook:true,
+  // 対戦の演出の段階(2026-10-03・ユーザー指示「マルチでの演出量を完全に軽くじゃないやつも切り替えられるようにして」)。
+  // LIGHT/STANDARD/VIVID は見た目のおまかせ(RHYTHM_LOOK_PRESETS)を対戦のあいだだけ重ねる。OWN は自分の設定のまま。
+  // 新しい項目なので、保存値に無い人は multiLightLook から決める(ON→LIGHT・OFF→OWN。これまでの見え方のまま)
+  multiLook:'LIGHT',
   // タップ音の種類(2026-09-26)。新しい項目なので、保存値に無い人は「標準」(これまでの音)で補う
   noteSeType:'STANDARD',
   // 2026-09-27(ユーザー指示「タップ音を他の音ゲーを見習って / 設定で色々変えれるように」)。どれも新しい項目で、
@@ -4467,6 +4473,7 @@ const normalizeRhythmSettings = value => {
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
     lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'),
+    multiLook:RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook)?source.multiLook:(source.multiLightLook===false?'OWN':'LIGHT'),
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight:bool('sideMonsterAbilityHighlight'),
@@ -32803,6 +32810,10 @@ const RHYTHM_MULTI_PHASES = Object.freeze(['matching', 'select', 'ready', 'playi
 // 「おまかせ」を選んだしるし(曲の id とぶつからない文字)
 const RHYTHM_MULTI_OMAKASE = '*';
 // 対戦のライブで重ねる見た目(オプションの見た目のおまかせ「軽さ優先」と同じ中身。保存してある設定は書き換えない)
+// 対戦の演出の段階の選択肢(難易度えらびの画面に並べる)。id は RHYTHM_MULTI_LOOK_LEVELS と同じ
+const RHYTHM_MULTI_LOOK_CHOICES = Object.freeze([
+  { id: 'LIGHT', label: '軽め' }, { id: 'STANDARD', label: '標準' }, { id: 'VIVID', label: '華やか' }, { id: 'OWN', label: 'いつもの' },
+]);
 const RHYTHM_MULTI_LIGHT_LOOK = Object.freeze({ ...((RHYTHM_LOOK_PRESETS.find((preset) => preset.id === 'LIGHT') || {}).values || {}) });
 // ライブの報酬(周回・ビートP)の人数ボーナス。参加した人が1人ふえるごとに+50%(2人1.5倍〜5人3倍。2026-10-02・ユーザー指示)
 const RHYTHM_MULTI_REWARD_STEP = 0.5;
@@ -33085,7 +33096,11 @@ const RHYTHM_MULTI = (() => {
     } else if (r.phase === 'select') {
       if (members.length < 2) { setRoom({ phase: 'matching', deadline: 0 }); return; }
       const allPicked = members.every((m) => m.pickRound === r.round && m.pick);
-      if (allPicked || now >= r.deadline) doDraw(members);
+      // ★締め切りのあと少しだけ(準備の猶予と同じ3秒)待つ。締め切り直前に選んだ人の選曲がまだ届いていないと、
+      //   その曲が抽選から漏れ、部屋主がおまかせなら全曲から引いてしまう(2026-10-03・ユーザー指示
+      //   「おまかせはみんなでの曲抽選のときは他の人のが優先されるように」)。時間切れの人は自分でおまかせを送ってくるので、
+      //   ふつうはそろった時点(allPicked)で引く
+      if (allPicked || now >= r.deadline + RHYTHM_MULTI_READY_GRACE_MS) doDraw(members);
     } else if (r.phase === 'ready') {
       const allReady = members.every((m) => m.readyRound === r.round);
       if (allReady || now >= r.deadline + RHYTHM_MULTI_READY_GRACE_MS) doStart(members);
@@ -33642,7 +33657,7 @@ function RhythmModeSelectStage() {
 
 // songs / difficultiesOf / difficultyList は曲えらびと同じ一覧(rhythmDemoSongs など)。
 // onStartPlay は演奏画面へ入る処理を親が持つ。bestRecords は難易度の鍵(解放)の判定に使う
-function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLightLook = true, onToggleLightLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null }) {
+function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null }) {
   const view = useRhythmMultiView();
   React.useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById('mh-rhythm-mode-select-css')) return;
@@ -34292,8 +34307,15 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
               <div className="min-w-0 flex-1">
                 <small className="block text-[9px] font-black text-slate-400">ライブする曲</small>
                 <b data-rhythm-multi-drawn className="block truncate text-sm font-black leading-tight">{rhythmSongFullName(drawnSong)}</b>
-                {onToggleLightLook && <button data-rhythm-multi-light-look type="button" aria-pressed={multiLightLook} onClick={onToggleLightLook}
-                  className={`mt-0.5 rounded-full border px-1.5 text-[9px] font-black ${multiLightLook ? 'border-emerald-300/60 text-emerald-200' : 'border-white/20 text-slate-400'}`}>演出を軽く(対戦) {multiLightLook ? 'ON' : 'OFF'}</button>}
+                {/* 演出の段階(2026-10-03・ユーザー指示「完全に軽くじゃないやつも切り替えられるように」)。
+                    軽め・標準・華やか は見た目のおまかせを対戦のあいだだけ重ねる。いつもの は自分の設定のまま */}
+                {onChangeMultiLook && <div data-rhythm-multi-light-look role="group" aria-label="対戦の演出" className="mt-1 flex items-center gap-0.5">
+                  <small className="mr-0.5 shrink-0 text-[9px] font-black text-slate-400">演出</small>
+                  {RHYTHM_MULTI_LOOK_CHOICES.map((c) => (
+                    <button key={c.id} type="button" data-rhythm-multi-look={c.id} aria-pressed={multiLook === c.id} onClick={() => onChangeMultiLook(c.id)}
+                      className={`min-h-[26px] rounded-full border px-1.5 text-[10px] font-black leading-none ${multiLook === c.id ? 'border-emerald-300 bg-emerald-600 text-white' : 'border-white/20 bg-slate-800 text-slate-300'}`}>{c.label}</button>
+                  ))}
+                </div>}
               </div>
             </div>
           )}
@@ -34348,7 +34370,7 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
         footer={() => (
           <div className="grid grid-cols-2 gap-1.5">
             <button data-rhythm-multi-omakase type="button" aria-pressed={myPick === RHYTHM_MULTI_OMAKASE} onClick={() => RHYTHM_MULTI.pick(RHYTHM_MULTI_OMAKASE)}
-              className={`flex min-h-[44px] items-center justify-center gap-1 rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>🔀 おまかせ{myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''}</button>
+              className={`flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>🔀 おまかせ{myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''}<small className="block text-[8px] font-bold opacity-80">ほかの人の曲が優先</small></button>
             <button data-rhythm-multi-leave type="button" onClick={leaveRoom}
               className="flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300">ルームを出る</button>
           </div>
@@ -37039,7 +37061,13 @@ function MonsterHeroGame() {
   const [rhythmMultiPreviewSongId,setRhythmMultiPreviewSongId]=useState('');
   // みんなで対戦のライブで使う設定(見た目だけ「軽さ優先」に重ねる)。演奏画面は設定の入れ物が変わるたびに作り直すので、
   // 描画のたびに新しく作らず、元の設定が変わったときだけ作る
-  const rhythmMultiPlaySettings=useMemo(()=>({...rhythmSettings,...RHYTHM_MULTI_LIGHT_LOOK}),[rhythmSettings]);
+  // 対戦の演出は、選んだ段階(multiLook)の見た目のおまかせを重ねる。OWN は自分の設定のまま(2026-10-03)
+  const rhythmMultiPlaySettings=useMemo(()=>{
+    const id=rhythmSettings.multiLook||'LIGHT';
+    if(id==='OWN')return rhythmSettings;
+    const preset=RHYTHM_LOOK_PRESETS.find(item=>item.id===id)||RHYTHM_LOOK_PRESETS.find(item=>item.id==='LIGHT');
+    return {...rhythmSettings,...(preset?preset.values:{})};
+  },[rhythmSettings]);
   const rhythmPreviewSongId=gameState==='RHYTHM_MULTI'&&rhythmMultiPreviewSongId?rhythmMultiPreviewSongId:rhythmSelectedSongId;
   const rhythmPreviewSong=rhythmDemoSongs(RHYTHM_SONGS).find(song=>song.songId===rhythmPreviewSongId)||null;
   const rhythmPreviewTrackId=rhythmSettings.songPreviewEnabled&&RHYTHM_PREVIEW_SCREENS.includes(gameState)&&rhythmPreviewSong
@@ -50138,7 +50166,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'&&rhythmSettings.multiLightLook!==false?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiRewardScale(rhythmPlay.multiCount):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmPlay.from==='multi'?rhythmMultiPlaySettings:rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} multi={rhythmPlay.from==='multi'} multiRewardScale={rhythmPlay.from==='multi'?rhythmMultiRewardScale(rhythmPlay.multiCount):1} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
           // みんなで対戦の演奏は、まずスコアをルームへ知らせる。そのうえで、ひとりで遊ぶときと同じく
           // 周回の報酬・自己ベスト・全国ランキングへも入れる(2026-10-02・ユーザー指示「ランキングにも反映」)。
           // 周回の報酬とビートPは、ライブに参加した人数ぶん多くなる(1人ふえるごとに+50%)
@@ -50212,8 +50240,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             key で分けて、画面が変わったら部品の中の状態を作り直す */}
         {(gameState==='RHYTHM_MULTI'||gameState==='RHYTHM_MODE_SELECT')&&<RhythmMultiScreen key={gameState} profile={{name:breederName,level:breederLevel.level,icon:breederIcon,frame:profileFrameId}} resolveIconUrl={resolveIconUrl} songs={rhythmDemoSongs(RHYTHM_SONGS)} difficultiesOf={song=>rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES)} difficultyList={rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES)} bestRecords={rhythmBestRecords} onPreviewSong={setRhythmMultiPreviewSongId}
           onUserGesture={()=>{/* 全画面と画面ロック防止は、指で押した直後しか許されない。準備完了を押したこの場で頼んでおく(ひとりのときの「決定」と同じ) */if(rhythmSettings.quietDuringPlay)RHYTHM_QUIET_MODE.enter();}}
-          multiLightLook={rhythmSettings.multiLightLook!==false}
-          onToggleLightLook={async()=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLightLook:rhythmSettings.multiLightLook===false});setRhythmSettings(saved);}}
+          multiLook={rhythmSettings.multiLook||'LIGHT'}
+          onChangeMultiLook={async(id)=>{const saved=await saveRhythmSettings({...rhythmSettings,multiLook:id,multiLightLook:id!=='OWN'});setRhythmSettings(saved);}}
           quickRunInfo={quickRunProgress?{wave,loops:quickRunProgress.loops,finished:!!quickRunProgress.finished,catchingUp,reason:quickRunProgress.finished?quickRunFinishReasonText(quickRunProgress.reason):''}:null}
           onBack={gameState==='RHYTHM_MODE_SELECT'?exitRhythmSongSelect:()=>setGameState('RHYTHM_MODE_SELECT')}
           onRoomEntered={()=>setGameState('RHYTHM_MULTI')}
