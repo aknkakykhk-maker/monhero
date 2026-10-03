@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d39f9283b4273172
+// generated-sha256: f385bc20f090da1e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 21:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 22:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12925,7 +12925,9 @@ const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, comp
   // compact(図鑑の舞台の中)は、舞台の中の割合で置く(使う子は下寄り・敵の位置は上)。バトルは測った位置
   const style = compact
     ? { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':'50%', '--spm-fy':'72%', '--spm-tx':'50%', '--spm-ty':'24%' }
-    : { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':`${Math.round(from.x)}px`, '--spm-fy':`${Math.round(from.y)}px`, '--spm-tx':`${Math.round(to.x)}px`, '--spm-ty':`${Math.round(to.y)}px` };
+    : { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':`${Math.round(from.x)}px`, '--spm-fy':`${Math.round(from.y)}px`, '--spm-tx':`${Math.round(to.x)}px`, '--spm-ty':`${Math.round(to.y)}px`,
+      // 技名の帯は、使う子と敵のあいだに置く(中央固定だと、使う子の動きと重なって見えなくなる)
+      '--spm-by':`${Math.round((from.y + to.y) / 2 - 32)}px` };
   const body = (
     <div data-special-move-fx={phase} data-special-form={form} className={`spm spm--${phase} spm--form-${form}${compact ? ' spm--compact' : ''}`} style={style} aria-hidden="true">
       <div className="spm__shade"/>
@@ -56992,7 +56994,7 @@ const createAnimationStyle = () => {
       rotate:var(--a); animation:spmSpark 600ms ease-in forwards; animation-delay:calc(var(--i) * 45ms); }
     @keyframes spmSpark { 0% { opacity:0; transform:translateX(130px) scale(.6); } 25% { opacity:1; } 100% { opacity:0; transform:translateX(0) scale(1.3); } }
     /* 斜めの帯 */
-    .spm__band { left:-10%; right:-10%; top:42%; height:64px; display:flex; align-items:center; gap:10px; padding:0 calc(10% + 14px);
+    .spm__band { left:-10%; right:-10%; top:var(--spm-by,42%); height:64px; display:flex; align-items:center; gap:10px; padding:0 calc(10% + 14px);
       background:linear-gradient(90deg, rgba(6,8,18,.2), rgba(8,10,24,.92) 16%, rgba(8,10,24,.92) 84%, rgba(6,8,18,.2));
       border-top:2px solid var(--spm-c1); border-bottom:2px solid var(--spm-c1);
       box-shadow:0 0 16px var(--spm-c2), inset 0 0 22px color-mix(in srgb, var(--spm-c2) 45%, transparent);

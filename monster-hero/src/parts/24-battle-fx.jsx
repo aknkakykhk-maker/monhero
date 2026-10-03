@@ -1004,7 +1004,9 @@ const SpecialMoveFx = ({ slotSkill, attackAnim, mon = null, ownerId = null, comp
   // compact(図鑑の舞台の中)は、舞台の中の割合で置く(使う子は下寄り・敵の位置は上)。バトルは測った位置
   const style = compact
     ? { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':'50%', '--spm-fy':'72%', '--spm-tx':'50%', '--spm-ty':'24%' }
-    : { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':`${Math.round(from.x)}px`, '--spm-fy':`${Math.round(from.y)}px`, '--spm-tx':`${Math.round(to.x)}px`, '--spm-ty':`${Math.round(to.y)}px` };
+    : { '--spm-c1':c1, '--spm-c2':c2, '--spm-fx':`${Math.round(from.x)}px`, '--spm-fy':`${Math.round(from.y)}px`, '--spm-tx':`${Math.round(to.x)}px`, '--spm-ty':`${Math.round(to.y)}px`,
+      // 技名の帯は、使う子と敵のあいだに置く(中央固定だと、使う子の動きと重なって見えなくなる)
+      '--spm-by':`${Math.round((from.y + to.y) / 2 - 32)}px` };
   const body = (
     <div data-special-move-fx={phase} data-special-form={form} className={`spm spm--${phase} spm--form-${form}${compact ? ' spm--compact' : ''}`} style={style} aria-hidden="true">
       <div className="spm__shade"/>
