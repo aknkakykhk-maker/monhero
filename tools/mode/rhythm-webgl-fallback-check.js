@@ -63,6 +63,8 @@ ok('取れなかったときは canvas を作り直して 2D へ戻す',
       await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
       for(let i=0;i<6;i++){if(!(await clickText('^(受け取る|閉じる|OK|閉じる|確認)$')))break;await page.waitForTimeout(250);}
       await clickText('モンヒロビート');await page.waitForTimeout(1200);
+      // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+      await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
       // タイミング合わせは、決まった譜面がすぐ流れはじめる(曲えらびを通らなくてよい)
       await clickText('⚙️');await page.waitForTimeout(600);
       const opened=await page.evaluate(()=>{const b=document.querySelector('[data-rhythm-calibrator-open]');if(!b)return false;b.click();return true;});

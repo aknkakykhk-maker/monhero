@@ -115,6 +115,8 @@ const seed = () => {
 
     // モンヒロビートへ移り、そのまま1周ぶん待つ
     await page.evaluate(() => document.querySelector('[data-quick-to-rhythm]')?.click());
+    // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForFunction(() => !!document.querySelector('[data-rhythm-demo-home]'), { timeout: 15000 }).catch(() => {});
     await dismissOverlays();
     check('モンヒロビートへ移れる', await page.evaluate(() => !!document.querySelector('[data-rhythm-demo-home]')));

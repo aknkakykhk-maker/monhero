@@ -248,12 +248,14 @@ ok('助手ごとに言い回しを変えられる',
 ok('チュートリアルは曲えらびの実際の場所を光らせる',(()=>{
   const start=assistants.indexOf('const ASSISTANT_RHYTHM_TUTORIAL =');
   const block=assistants.slice(start,assistants.indexOf('assistantRhythmTutorialPages'));
-  return ['songList','songLevel','achievement','difficulty','monsters','options','help']
-    .every(spot=>block.includes(`spot:'${spot}'`));
+  // マスモン設定と遊びかたは、2026-10-03にモードえらびの画面へ移した。曲えらびに無い場所は光らせない
+  return ['songList','songLevel','achievement','difficulty','options']
+    .every(spot=>block.includes(`spot:'${spot}'`))
+    &&!['monsters','help'].some(spot=>block.includes(`spot:'${spot}'`));
 })());
 ok('光らせる場所は画面側にも用意されている',
   ['songList','songLevel','achievement','difficulty'].every(spot=>game.includes(`spot('${spot}')`))
-  &&['monsters','options','help'].every(spot=>game.includes(`spotClass('${spot}')`)));
+  &&['options'].every(spot=>game.includes(`spotClass('${spot}')`)));
 ok('チュートリアルは吹き出しを使い回す（専用の画面を作らない）',
   game.includes("const rhythm=tutorialKind==='rhythm';")&&game.includes('const pages=(rhythm'));
 ok('初回だけ自動で始まり、専用の保存キーを使う',

@@ -1468,6 +1468,64 @@ addAssistantLinePack({
 
 // モンヒロビートの見た目の設定(2026-09-27)。「見た目を華やかにできる」「おまかせで1回で切り替わる」「重いときは自動で控えめ」だけを伝える。
 // 案内の下の「華やかにしてみる」ボタンで、その場で「華やか」を試せる
+// モンヒロビートのモードえらび(2026-10-03・ユーザー指示「モンビーを始めたときにまずモード選択画面」)。
+// 左の立ち絵の吹き出しに、開くたびに1本出す。ソロ・フリーマッチ・プライベートルーム・マスモン設定の案内
+addAssistantLinePack({
+  id: 'rhythmModeSelect',
+  label: 'モンヒロビート モードえらび',
+  lines: {
+    rhythmModeSelect: [
+      { e:'excited', t:'{name}、今日はどうする？ ひとりでじっくり？ みんなでわいわい？«٩(*´ ꒳ `*)۶»ﾜｸﾜｸ' },
+      { e:'happy',   t:'ソロライブなら、いつもの曲えらびに行けるよ〜' },
+      { e:'wink',    t:'フリーマッチは、だれとでも最大5人で協力ライブできるの！' },
+      { e:'normal',  t:'友だちと遊ぶなら「ルーム作成」して、コードを教えてあげてね👍' },
+      { e:'happy',   t:'マスモン設定もここからだよ。いっしょに演奏する子、えらんであげて〜' },
+      { e:'excited', t:'てかてか、みんなで遊ぶと周回のごほうびも増えるんだって！ まじおいしい✨' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmModeSelectKiki',
+  assistantId: 'kiki',
+  label: 'きき・モンヒロビート モードえらび',
+  lines: {
+    rhythmModeSelect: [
+      { e:'happy',   t:'{name}、今日はどちらで遊びまつか？' },
+      { e:'normal',  t:'ソロライブは、いつもの曲えらびへ進みまつ。' },
+      { e:'normal',  t:'フリーマッチでは、だれとでも最大5人で協力ライブができまつ。' },
+      { e:'wink',    t:'お友だちと遊ぶときは「ルーム作成」でコードを伝えてほしいでつ。' },
+      { e:'normal',  t:'マスモン設定もここからでつ。演奏にいっしょに出る子をえらべまつ。' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmModeSelectMomosuke',
+  assistantId: 'momosuke',
+  label: 'ももすけ・モンヒロビート モードえらび',
+  lines: {
+    rhythmModeSelect: [
+      { e:'wink',    t:'{name}、今日はどっち？ ひとりで練習？ それとも、ももとみんなで？♡' },
+      { e:'happy',   t:'ソロライブなら、いつもの曲えらびだよ♪' },
+      { e:'excited', t:'フリーマッチは最大5人！ MVPはももがもらうけどね♡' },
+      { e:'normal',  t:'友だちとなら「ルーム作成」して、コードを送ってあげて〜' },
+      { e:'wink',    t:'マスモン設定もここ。かわいい子、連れてってよね♡' },
+    ],
+  },
+});
+addAssistantLinePack({
+  id: 'rhythmModeSelectDra',
+  assistantId: 'dra',
+  label: 'ドラ・モンヒロビート モードえらび',
+  lines: {
+    rhythmModeSelect: [
+      { e:'happy',   t:'{name}、今日はどうする？ おではみんなで叩きたいな' },
+      { e:'normal',  t:'ソロライブなら、いつもの曲えらびに行けるぞ' },
+      { e:'excited', t:'フリーマッチは、だれとでも最大5人で協力ライブだ' },
+      { e:'normal',  t:'友だちと遊ぶなら「ルーム作成」して、コードを教えてやってくれ' },
+      { e:'wink',    t:'マスモン設定もここからだ。いっしょに演奏する子をえらんでくれよ' },
+    ],
+  },
+});
 addAssistantLinePack({
   id: 'rhythmLookGuide',
   label: 'モンヒロビート見た目の設定案内',
@@ -5994,7 +6052,7 @@ const ASSISTANT_BEAT_POINT_UP_CALLS = { mua: 'ドラケン', kiki: 'みゅあち
 // タクティクスのEXスキル追加 / この辺の内容のストーリーを作って / 少し長めに」。
 // 「みんなで対戦」の公開に合わせてHOMEで1度だけ流し、そのあとは回想から見返せる。
 // 伝えるのは4つ。
-//   ① みんなで対戦: ルーム(フリー/ベテラン/プライベート)・最大5人・全員の選曲からMUSIC SHUFFLE・
+//   ① みんなで対戦: ルーム(フリー/プライベート。ベテランは10-03に無くした)・最大5人・全員の選曲からMUSIC SHUFFLE・
 //      チームのランクとMVP・人数が多いほど周回報酬とビートPが増える・チャット
 //   ② フレンド: プロフィールの「フレンド」・フレンドコード・相手のプロフィール・プライベートルームへ誘う
 //   ③ ももすけのアシストカード: みゅあのガッツ回復版・ガッツ上限が大きく伸びる・マーケットの「アシスト」タブ
@@ -6008,9 +6066,9 @@ const ASSISTANT_RHYTHM_MULTI_FRIENDS = [
   { who:'dra',      e:'surprise', t:'どういうことだ？ おで、とうとう見捨てられるのか？' },
   { who:'mua',      e:'troubled', t:'ちがうちがうｗ 逆だよ逆！' },
   { who:'kiki',     e:'happy',    t:'モンヒロビートに「みんなで対戦」ができたんでつ。ほかのプレイヤーさんと、同じ曲をいっしょに演奏できまつよ。' },
-  { who:'momosuke', e:'wink',     t:'曲えらびの上にある「対戦」のボタンからだよ♡ ももはもう押してきた〜' },
+  { who:'momosuke', e:'wink',     t:'モードえらびの「フリーマッチ」からだよ♡ ももはもう押してきた〜' },
   // ① みんなで対戦: ルーム
-  { who:'kiki',     e:'normal',   t:'まずはルームをえらびまつ。だれでも入れる「フリー」と、育ててきた人向けの「ベテラン」がありまつ。' },
+  { who:'kiki',     e:'normal',   t:'ルームは2種類ありまつ。だれとでも遊べる「フリーマッチ」と……' },
   { who:'mua',      e:'happy',    t:'あと「プライベート」ね！ 4文字のコードを教えた人だけが入れるやつ👍' },
   { who:'dra',      e:'normal',   t:'ひとつのルームには何人まで入れるんだ？' },
   { who:'kiki',     e:'normal',   t:'5人まででつ。そろったら、みんなで曲えらびに進みまつ。' },
@@ -6232,10 +6290,10 @@ const ASSISTANT_RHYTHM_TUTORIAL = [
   { e:'normal',  t:'ノーツは4種類。TAPは押す、HOLDは押さえ続ける、FLICKは払う、SLIDEはなぞる。かんたんじゃん？', title:'ノーツは4種類', help:'rhythm/rhythm-note-types' },
   { e:'happy',   t:'タイミングが合うほど良い判定になるよ。MARVELOUS→EXCELLENT→GREAT→GOOD→BADの順ね。', title:'判定は5段階', help:'rhythm/rhythm-judgment' },
   { e:'excited', t:'続けて取るとコンボがのびて、全部つなぐと「フルコンボ」！ そこからさらに上の称号もあるんだ👍✨', title:'コンボをつなごう', help:'rhythm/rhythm-notes-and-effects' },
-  { e:'normal',  t:'設定したマスモンは、曲の途中で「モンスターノーツ」になって流れてくるよ。取ると血統ごとの力が働くの！', title:'マスモンも一緒に', spot:'monsters', help:'rhythm/rhythm-monster-note-display' },
+  { e:'normal',  t:'モードえらびの「マスモン設定」でえらんだ子は、曲の途中で「モンスターノーツ」になって流れてくるよ。取ると血統ごとの力が働くの！', title:'マスモンも一緒に', help:'rhythm/rhythm-monster-note-display' },
   { e:'happy',   t:'ノーツの速さや音量、判定のタイミング補正はオプションで変えられるよ。合わないなーって思ったらここ！', title:'オプション', spot:'options', help:'rhythm/rhythm-options' },
   { e:'excited', t:'スコアは全国ランキングに載るよ。難易度をまたいだ合算だから、上の難易度で挑むほど有利なんだ🔥', title:'全国ランキング', help:'rhythm/rhythm-ranking' },
-  { e:'wink',    t:'説明はいつでも「📖 遊びかた」から見られるよ。それじゃ、いってみよ〜！', title:'それでは、はじめよう', spot:'help' },
+  { e:'wink',    t:'説明はいつでも、モードえらびの「📖 遊びかた」から見られるよ。それじゃ、いってみよ〜！', title:'それでは、はじめよう' },
 ];
 // 助手ごとの言い回し。骨組み(spot・help・順番)は変えない。
 const ASSISTANT_RHYTHM_TUTORIAL_SETS = {
@@ -6250,10 +6308,10 @@ const ASSISTANT_RHYTHM_TUTORIAL_SETS = {
     { e:'normal',  t:'ノーツは4種類。TAPは押す、HOLDは押さえ続ける、FLICKは払う、SLIDEはなぞる、でつ。', title:'ノーツは4種類', help:'rhythm/rhythm-note-types' },
     { e:'happy',   t:'タイミングが合うほど良い判定になりまつ。MARVELOUS→EXCELLENT→GREAT→GOOD→BADの順ですね。', title:'判定は5段階', help:'rhythm/rhythm-judgment' },
     { e:'excited', t:'続けて取るとコンボがのびて、全部つなぐと「フルコンボ」でつ！ さらに上の称号もありまつよ♪', title:'コンボをつなごう', help:'rhythm/rhythm-notes-and-effects' },
-    { e:'normal',  t:'設定したマスモンは、曲の途中で「モンスターノーツ」になって流れてきまつ。取ると血統ごとの力が働きまつ。', title:'マスモンも一緒に', spot:'monsters', help:'rhythm/rhythm-monster-note-display' },
+    { e:'normal',  t:'モードえらびの「マスモン設定」でえらんだ子は、曲の途中で「モンスターノーツ」になって流れてきまつ。取ると血統ごとの力が働きまつ。', title:'マスモンも一緒に', help:'rhythm/rhythm-monster-note-display' },
     { e:'happy',   t:'ノーツの速さや音量、判定のタイミング補正はオプションで変えられまつ。合わないと感じたらこちらへ。', title:'オプション', spot:'options', help:'rhythm/rhythm-options' },
     { e:'excited', t:'スコアは全国ランキングに載りまつ。難易度をまたいだ合算なので、上の難易度ほど有利でつ♪', title:'全国ランキング', help:'rhythm/rhythm-ranking' },
-    { e:'wink',    t:'説明はいつでも「📖 遊びかた」から見られまつ。それでは、いってらっしゃい♪', title:'それでは、はじめましょ', spot:'help' },
+    { e:'wink',    t:'説明はいつでも、モードえらびの「📖 遊びかた」から見られまつ。それでは、いってらっしゃい♪', title:'それでは、はじめましょ' },
   ],
   momosuke: [
     { e:'excited', t:'{name}、ここが「モンヒロビート」！ 曲に合わせて叩けばいいの♪ ちゃんとできるよね〜？♡', title:'モンヒロビートへようこそ', help:'rhythm/rhythm-mode' },
@@ -6266,10 +6324,10 @@ const ASSISTANT_RHYTHM_TUTORIAL_SETS = {
     { e:'normal',  t:'ノーツは4種類。TAPは押す、HOLDは押さえ続ける、FLICKは払う、SLIDEはなぞる。かんたんでしょ？', title:'ノーツは4種類', help:'rhythm/rhythm-note-types' },
     { e:'happy',   t:'タイミングが合うほどいい判定になるよ。MARVELOUS→EXCELLENT→GREAT→GOOD→BADの順ね。', title:'判定は5段階', help:'rhythm/rhythm-judgment' },
     { e:'excited', t:'続けて取るとコンボ！ 全部つなげば「フルコンボ」だよ♪ そこから上の称号もあるんだから♡', title:'コンボをつなごう', help:'rhythm/rhythm-notes-and-effects' },
-    { e:'normal',  t:'設定したマスモンは「モンスターノーツ」になって流れてくるの。取ると血統ごとの力が働くよ。', title:'マスモンも一緒に', spot:'monsters', help:'rhythm/rhythm-monster-note-display' },
+    { e:'normal',  t:'モードえらびの「マスモン設定」でえらんだ子は「モンスターノーツ」になって流れてくるの。取ると血統ごとの力が働くよ。', title:'マスモンも一緒に', help:'rhythm/rhythm-monster-note-display' },
     { e:'happy',   t:'ノーツの速さや音量、判定のタイミング補正はオプションでいじれるよ。合わないなら早めにね。', title:'オプション', spot:'options', help:'rhythm/rhythm-options' },
     { e:'excited', t:'スコアは全国ランキングに載るよ！ 難易度をまたいだ合算だから、上でやるほど有利♪', title:'全国ランキング', help:'rhythm/rhythm-ranking' },
-    { e:'wink',    t:'説明はいつでも「📖 遊びかた」から見られるから。それじゃ……見せてもらうね♡', title:'それじゃ、はじめよっか', spot:'help' },
+    { e:'wink',    t:'説明はいつでも、モードえらびの「📖 遊びかた」から見られるから。それじゃ……見せてもらうね♡', title:'それじゃ、はじめよっか' },
   ],
 };
 const assistantRhythmTutorialPages = (assistantId) =>

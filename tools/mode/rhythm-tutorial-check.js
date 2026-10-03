@@ -83,6 +83,8 @@ const serve=()=>new Promise(resolve=>{
 
     // --- 本題① 曲えらびを初めて開いたら案内が出るか ---
     await clickText('モンヒロビート');
+    // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForTimeout(2500);
     const afterEnter=await bodyText();
     ok('モンビーの曲えらびへ入れる',afterEnter.includes('曲えらび')||afterEnter.includes('楽曲選択')||afterEnter.includes('モンビーへようこそ'));

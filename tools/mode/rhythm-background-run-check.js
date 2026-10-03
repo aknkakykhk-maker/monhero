@@ -147,6 +147,8 @@ const seed = () => {
     await clickSelector('[data-quick-to-rhythm]');
     // openRhythmDemo は設定・記録の読み込みを待ってから画面を切り替える。
     // 助手の告知などが重なることもあるので、出るまで待ってから確かめる
+    // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForFunction(() => !!document.querySelector('[data-rhythm-demo-home]'), { timeout: 15000 }).catch(() => {});
     await dismissOverlays();
     check('モンビーへ移れる（周回を止めずに）', await onRhythmHome());
@@ -190,6 +192,9 @@ const seed = () => {
     // 戻ってからもう一度モンビーへ入っても進み続けること。
     // 報告では「モンビーに戻ってもオートバトル進んでなかった」ので、往復でも見る
     await clickSelector('[data-quick-to-rhythm]');
+    // 入るとまずモードえらび(2026-10-03)。あとで周回の帯から「バトルへ戻る」を押すので、ソロライブで曲えらびまで進めておく
+    await page.waitForSelector('[data-rhythm-mode-solo]', { timeout: 15000 }).catch(() => {});
+    await clickSelector('[data-rhythm-mode-solo]');
     await page.waitForTimeout(600);
     const backInRhythm = await readProgress();
     await page.waitForTimeout(WATCH_MS);
@@ -224,6 +229,8 @@ const seed = () => {
     check('超省エネの画面にもモンビーへの入口が出る',
       await page.evaluate(() => !!document.querySelector('[data-ultra-battle-view] [data-quick-to-rhythm]')));
     await clickSelector('[data-quick-to-rhythm]');
+    // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForFunction(() => !!document.querySelector('[data-rhythm-demo-home]'), { timeout: 15000 }).catch(() => {});
     await dismissOverlays();
     check('超省エネからモンビーへ移れる', await onRhythmHome());
@@ -235,6 +242,9 @@ const seed = () => {
     //      「止めないでもホームに戻れて自動的に周回も終わるようにしたい」) ----
     // それまでは「⚔ バトルへ戻る」しかできず、バトルで∞を切ってからHOMEへ、という
     // 2工程だった。いまは曲えらびの「戻る」がそのままHOMEで、周回はその場で締まる。
+    // 周回を締めてHOMEへ戻るボタンは、2026-10-03にモードえらびの左上へ移った。曲えらびの「←」でモードえらびへ戻ってから押す
+    await clickSelector('[data-rhythm-song-select-back]');
+    await page.waitForFunction(() => !!document.querySelector('[data-rhythm-mode-select]'), { timeout: 10000 }).catch(() => {});
     check('周回中の戻るボタンが「終わる」と分かる見た目になっている',
       await page.evaluate(() => {
         const back = document.querySelector('[data-rhythm-back]');
@@ -249,13 +259,14 @@ const seed = () => {
     //   進んでいるターンの演出は returnToHome がランの世代を1つ進めて止めるので、待たない
     //   (2026-09-14・ユーザー指摘「待ち時間が長くてストレス / もっと良い方法ない？」。
     //    それまでは終わるのを待っていて、実測で3〜6秒かかっていた)。
-    await page.waitForFunction(() => !document.querySelector('[data-rhythm-demo-home]'), { timeout: 25000 }).catch(() => {});
+    await page.waitForFunction(() => !document.querySelector('[data-rhythm-mode-select]') && !document.querySelector('[data-rhythm-demo-home]'), { timeout: 25000 }).catch(() => {});
     const exitMs = Date.now() - exitStartedAt;
     check('押したらすぐHOMEへ抜ける(待たされない)', exitMs < 2000, `${exitMs}ms`);
     await page.waitForFunction(() => (document.body.innerText || '').includes('モンヒロビート'), { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(1200);
     check('周回中でもそのままHOMEへ戻れる',
       await page.evaluate(() => !document.querySelector('[data-rhythm-demo-home]')
+        && !document.querySelector('[data-rhythm-mode-select]')
         && (document.body.innerText || '').includes('モンヒロビート')),
       await page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 60)));
     // 戻ったあとに周回が残っていないこと(帯もバトルの段階も消えている)

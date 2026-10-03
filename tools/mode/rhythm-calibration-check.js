@@ -83,6 +83,8 @@ ok('測った値をその場で設定へ入れる口がある',
       await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
       for(let i=0;i<6;i++){if(!(await clickText('^(受け取る|閉じる|OK|閉じる|確認)$')))break;await page.waitForTimeout(250);}
       await clickText('モンヒロビート');await page.waitForTimeout(1200);
+      // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+      await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
       // 横持ちは端末を回さず、器のほうを回す(RHYTHM_VIEW_ROTATION)。CSSの landscape: は効かない
       if(mode==='landscape'){await clickText('🔄');await page.waitForTimeout(800);}
       const rotated=await page.evaluate(()=>!!document.querySelector('[data-rhythm-rotate-frame],[data-rhythm-rotated]')

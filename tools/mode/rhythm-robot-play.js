@@ -135,6 +135,10 @@ const playOne=async(browser,songIds,songId,difficulty)=>{
     await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),undefined,{timeout:40000});
     for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(250);}
     await clickText('モンヒロビート');
+    // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
+    // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
     for(let i=0;i<5;i++){if(!(await clickText('^確認$|受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(300);}
     const picked=await page.evaluate(id=>{const row=document.querySelector(`[data-rhythm-song-row="${id}"]`);if(!row)return false;row.scrollIntoView();row.click();return true;},songId);

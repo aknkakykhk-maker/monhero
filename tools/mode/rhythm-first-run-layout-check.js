@@ -73,10 +73,14 @@ html,body{height:100%;margin:0}
     await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
     for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|閉じる')))break;await page.waitForTimeout(250);}
     await clickText('モンヒロビート');
+    // 入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     // 曲えらびの「決定」は data-rhythm-demo-start が目印。
     // 文字で探していたころは、みゅあの吹き出し（「…決定！ それだけで始まるよ♪」）まで
     // 拾ってしまい、そのセリフが出た回だけ吹き出しが開いて演奏へ入れなかった。
     // セリフは毎回変わるので、日によって落ちる検査になっていた(2026-09-06)。
+    // モンヒロビートは入るとまずモードえらび(2026-10-03)。出ていたらソロライブを押して曲えらびへ
+    await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
     await page.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());
     // 「1秒待つ」で測っていたが、機械が混んでいるとまだ演奏画面へ入っていないことがあり、
