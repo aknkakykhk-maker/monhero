@@ -94,7 +94,7 @@ const makeClient = (name) => {
     RHYTHM_LOOK_PRESETS: [{ id: 'LIGHT', values: { effectAmount: 'MINIMAL' } }],
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${storeSource}\n;globalThis.__api={M:RHYTHM_MULTI,team:rhythmMultiTeamResult,scale:rhythmMultiRewardScale,clean:rhythmMultiCleanMessage,code:rhythmMultiNormalizeCode,K:{SELECT:RHYTHM_MULTI_SELECT_MS,READY:RHYTHM_MULTI_READY_MS,GRACE:RHYTHM_MULTI_PLAY_GRACE_MS,SHUFFLE:RHYTHM_MULTI_SHUFFLE_MS,PUBLIC:RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS,PENALTY:RHYTHM_MULTI_PENALTY_KEY,MAX:RHYTHM_MULTI_ROOM_MAX}};`, sandbox, { filename: '77-screen-rhythm-multi.jsx' });
+  vm.runInContext(`${storeSource}\n;globalThis.__api={M:RHYTHM_MULTI,team:rhythmMultiTeamResult,scale:rhythmMultiRewardScale,clean:rhythmMultiCleanMessage,stamps:rhythmMultiStampsFor,chatMax:RHYTHM_MULTI_CHAT_MAX_LENGTH,code:rhythmMultiNormalizeCode,K:{SELECT:RHYTHM_MULTI_SELECT_MS,READY:RHYTHM_MULTI_READY_MS,GRACE:RHYTHM_MULTI_PLAY_GRACE_MS,SHUFFLE:RHYTHM_MULTI_SHUFFLE_MS,PUBLIC:RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS,PENALTY:RHYTHM_MULTI_PENALTY_KEY,MAX:RHYTHM_MULTI_ROOM_MAX}};`, sandbox, { filename: '77-screen-rhythm-multi.jsx' });
   const api = sandbox.__api;
   const starts = [];
   api.M.onStart((info) => starts.push(info));
@@ -351,6 +351,22 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   check('届いたチャットは自分と相手の両方に1回ずつ出る', view(a).chat.length === 1 && view(h).chat.length === 1 && view(a).chat[0].text === 'よろしく!');
   for (let i = 0; i < 60; i += 1) { a.M.sendChat(`m${i}`); clock.advance(900); }
   check('チャットは直近50件だけ覚える', view(h).chat.length === 50);
+  leaveAll([h, a]);
+}
+{
+  // チャットの使いやすさ(2026-10-03・ユーザー指示「結果画面でもチャットできるように。もういっかいとかありがとうとか」)
+  const [h, a] = ['h', 'a'].map(makeClient);
+  const stamps = h.stamps('result');
+  check('結果画面の定型文は「もう一回!」「ありがとう!」が先頭', stamps[0] === 'もう一回!' && stamps[1] === 'ありがとう!', stamps.slice(0, 3).join(' / '));
+  check('定型文は重ならず、どれも送れる長さ', ['matching', 'select', 'ready', 'playing', 'result', ''].every((ph) => {
+    const list = h.stamps(ph);
+    return list.length >= 5 && new Set(list).size === list.length && list.every((t) => t.length <= h.chatMax);
+  }));
+  joinRoom([h, a], 'CH8Z');
+  h.M.sendChat('ありがとう!');
+  clock.advance(1000);
+  const line = view(a).chat[0];
+  check('届いた発言に受け取った時刻が付く(吹き出しと未読の数に使う)', !!line && Number.isFinite(line.at) && line.at > 0);
   leaveAll([h, a]);
 }
 
