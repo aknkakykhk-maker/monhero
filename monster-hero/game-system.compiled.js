@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ad26de2a5ea3005e
+// source-sha256: a6892bd19b3763c3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-04 02:09";
+const BUILD_DATE = "2026-10-04 02:12";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -12389,7 +12389,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
     })
   })
 }]);
-const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id)]);
+const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id), 'GOD', 'RAGNAROK', 'HELHEIM']);
 const TACTICS_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id)]);
 const TACTICS_EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
 const TACTICS_EXTREME_UNLOCK_TEXT = 'タクティクス Master以上クリアで解放';
@@ -12694,7 +12694,10 @@ const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS = Object.freeze({
   NIGHTMARE: 20,
   CHAOS: 25,
   ULTIMATE: 30,
-  INFINITY: 40
+  INFINITY: 40,
+  GOD: 60,
+  RAGNAROK: 80,
+  HELHEIM: 100
 });
 const speciesChallengeFirstClearReward = difficultyId => Object.prototype.hasOwnProperty.call(SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS, difficultyId) ? SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS[difficultyId] : 0;
 const speciesChallengeRewardPendingKey = (speciesId, difficultyId) => `${speciesId}:${difficultyId}`;
@@ -14562,7 +14565,7 @@ const helpDataRows = id => {
       });
     case 'speciesChallengeRewards':
       return SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
-        const setting = DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(s => s.id === id);
+        const setting = DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(s => s.id === id);
         return [setting?.label || id, `初回クリアで 超越の実 ×${speciesChallengeFirstClearReward(id)}`];
       });
     case 'levelUpPointMultipliers':
@@ -38335,7 +38338,7 @@ function ProfileScreen({
     const progressOf = mode => typeof speciesChallengeProgressOf === 'function' ? speciesChallengeProgressOf(mode) : speciesChallengeProgress;
     const speciesSummaryOf = mode => speciesChallengeProfileSummary(progressOf(mode));
     const speciesSummary = speciesSummaryOf(BATTLE_MODE_SPECIES_CHALLENGE);
-    const speciesDifficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
+    const speciesDifficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
     const tacticsHsOf = modeId => typeof tacticsRecordsOf === 'function' ? tacticsRecordsOf(modeId).hs : {};
     const scoreMapFor = mode => isTacticsMode(mode.id) ? tacticsHsOf(mode.id) : isProMode(mode.id) ? proHighScores : highScores;
     const representativeFor = mode => {
@@ -74495,7 +74498,7 @@ function MonsterHeroGame() {
   const renderSpeciesChallengeRecordBody = (mode = BATTLE_MODE_SPECIES_CHALLENGE) => {
     const ranked = modeHasRanking(mode);
     const diffId = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(rankingViewDiff) ? rankingViewDiff : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
-    const settingOf = id => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
+    const settingOf = id => DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
     const lineages = speciesChallengeLineages();
     const speciesFilter = lineages.some(l => l.id === speciesRankFilter) ? speciesRankFilter : speciesRankFilter === SPECIES_RANK_TAB_SELF_BEST ? SPECIES_RANK_TAB_SELF_BEST : SPECIES_RANK_TAB_ALL;
     const lineageIcon = lineage => {
@@ -76949,7 +76952,7 @@ function MonsterHeroGame() {
       const species = isSpeciesChallengeMode(battleMode),
         quick = isQuickMode(battleMode);
       const tacticsDiff = isTacticsMode(battleMode);
-      const speciesSetting = id => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
+      const speciesSetting = id => DIFFICULTY_SETTINGS[id] || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
       const allDifficulties = species || tacticsDiff ? (species ? SPECIES_CHALLENGE_DIFFICULTY_IDS : TACTICS_DIFFICULTY_IDS).map(id => [id, speciesSetting(id)]) : Object.entries(quick ? QUICK_DIFFICULTY_SETTINGS : DIFFICULTY_SETTINGS);
       const difficultyGroups = splitDifficultyEntries(allDifficulties);
       const challengeExtremeTab = !species && !quick && !tacticsDiff && !isProMode(battleMode);
@@ -79790,7 +79793,7 @@ function MonsterHeroGame() {
         setSpeciesChallengeProgress(normalized, BATTLE_MODE_SPECIES_CHALLENGE);
         await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, normalized, false);
       };
-      const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
+      const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
       const resetSpecies = async () => {
         if (!window.confirm(`${speciesChallengeSpeciesName(speciesId)}の種族チャレンジ進行だけをリセットしますか？`)) return;
         const next = normalizeSpeciesChallengeProgress(speciesChallengeProgress);
@@ -80134,7 +80137,7 @@ function MonsterHeroGame() {
         const entry = entryById(id);
         return entry ? `${entry.name}（${entry.type === 'masu' ? 'マスモン' : 'ベースモン'}／${entry.lineageName}）` : id;
       };
-      const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
+      const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
       const clearedIds = speciesChallengeClearedDifficultyIds(speciesChallengeProgress, selection.speciesId);
       const entryLineageId = entry => monsterLineageOf(entry.baseId).main.id;
       const heroCandidates = challengeEntries.filter(entry => entryLineageId(entry) === selection.speciesId);
