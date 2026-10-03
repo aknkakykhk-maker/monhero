@@ -200,6 +200,8 @@ const RELEASED_MARKERS=Object.freeze({
   big_bridge_no_shitou:'big-bridge-no-shitou-v3',
   rising_hope:'rising-hope-v3',
   haruka:'haruka-v3',
+  stay_with_me_short:'stay-with-me-short-v3',
+  kiki_issen_short:'kiki-issen-short-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -233,6 +235,8 @@ const RELEASED_TRACKS=Object.freeze({
   big_bridge_no_shitou:'big_bridge_no_shitou',
   rising_hope:'rising_hope',
   haruka:'haruka',
+  stay_with_me_short:'stay_with_me_short',
+  kiki_issen_short:'kiki_issen_short',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

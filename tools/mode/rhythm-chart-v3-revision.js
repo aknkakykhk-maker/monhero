@@ -103,7 +103,11 @@
 //        区切りの値より下げない。拾えなかった取り分は同じ区切りの次の小節へ2つまで回す。盛り上がる区切りの繰り返しの小節は上乗せを元の1/2まで。
 //        HARD 以上で HOLD・SLIDE の上限を上げ(MASTER は1.6倍・1.8倍)、EXPERT・MASTER はベースの伸びも HOLD・SLIDE の材料にする。
 //        曲全体のノーツ数の決め方は変えない(配り方と種類だけ)
-//   26〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
+//   26 … 曲のつなぎ目の段差(2026-10-03・rhythm-chart-tempo-warp.js の spliceWarp)。元の曲の録音を切り貼りした版
+//        (Stay With Me / 綺季一閃 の short ver.)は、つなぎ目から先の拍の位置が、つなぎ目の前の格子から一定の量だけずれる。
+//        音源の一覧の `splices`(つなぎ目の時刻 atMs と、そこから先のずれ shiftMs)を書いた曲だけ、つなぎ目から先の打点からずれを引いて
+//        格子に乗せ、書き出す時刻にずれを足す(テンポの揺れと同じ通り道)。書いていない曲は Rev.25 と同じ譜面
+//   27〜 … 作法の重みを遊んだ感想(譜面メモ)から学び直したリビジョン。rhythm-chart-learn.js --write が
 //        tools/mode/authoring/chart-knowledge-weights.json へ書き足すと、自動でここが最新リビジョンになる。
 //        遊んだ記録から学ぶ調整値(tools/mode/authoring/chart-play-tuning.json)も同じ番号の並びへ書き足す。
 //        学び直しは「作り方の最新(CHART_REVISION_CODE_LATEST)・重みの最新・調整値の最新のいちばん大きいもの＋1」を次の番号にする
@@ -114,7 +118,7 @@ const CHART_ENGINE_NAME='MHB CHART ENGINE';
 const chartRevisionLabel=revision=>`${CHART_ENGINE_NAME} Rev.${revision}`;
 const CHART_REVISION_LEGACY=1;
 // 作り方(コード)を改良した最新のリビジョン。改良を足したらここを上げる
-const CHART_REVISION_CODE_LATEST=25;
+const CHART_REVISION_CODE_LATEST=26;
 // 最新リビジョンは、作法の重みを書き足したリビジョンまで自動で上がる(学び直すたびに新しいリビジョンになる)
 const {latestKnowledgeRevision}=require('./rhythm-chart-knowledge.js');
 const {latestPlayTuningRevision}=require('./rhythm-chart-play-tuning.js');

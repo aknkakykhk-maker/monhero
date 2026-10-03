@@ -8179,3 +8179,24 @@ mp4（1分38秒）とジャケット1枚で受け取った。songId `haruka` / b
   `--bpm 199.96 --beats-per-bar 4 --beat-zero 104`。格子への乗りは ±30ms 62% → 89%、±43ms 74% → 100%
 - **歯ごたえはユーザーが「自動」と決めた**（`challengeFactor` は書かない）。EASY 9 / NORMAL 11 / HARD 17 / EXPERT 28 / MASTER 33、
   ノーツ 205 / 233 / 324 / 386 / 451。候補: 0.85 で MASTER 27 ／ 1.0 で 29 ／ 1.4 で 38
+
+## 「Stay With Me」「綺季一閃」の short ver. をモンヒロビートへ足した（2026-10-03）
+
+ユーザー指示（mp3 2本「2曲追加」）。ジャケットは無く、元の曲の絵を使い回す（既存の remix と同じ扱い）。
+どちらも元の曲の録音を途中で切ってつないだ版で、つなぎ目の段差は MHB CHART ENGINE Rev.26 で扱う（`docs/spec/RHYTHM_CHART_ENGINE_ROADMAP.md` 19章）。
+
+| | Stay With Me ～Locked Fate～ short ver. | 綺季一閃 ～花雪に舞う詠姫～ short ver. |
+| --- | --- | --- |
+| songId / bgmTrackId | `stay_with_me_short` / `melo_stay_with_me_short` | `kiki_issen_short` / `melo_kiki_issen_short` |
+| ファイル名 | `Stay_With_Me_Locked_Fate_shortver.mp3` | `______________shotver.mp3`（14文字＝「綺季一閃 ～花雪に舞う詠姫～」。テンポも元の曲と同じ） |
+| 長さ | 2分57秒 | 3分15秒 |
+| 音量 | -14.82 LUFS / -0.73 dBTP → 0.975倍で **-15.04 / -1.93**（mp3 にすると真のピークが -0.6〜-2.0 で揺れたので、上限の内側に収まる倍率） | -14.01 / -1.53 でそろっていたのでそのまま |
+| テンポ・拍の頭 | 元の曲の 169.99 BPM / 440ms を引き継ぎ、前半のずれ 34ms を足して **474ms** | 元の曲の 155.011 BPM / 188.4ms を引き継ぎ **234.4ms** |
+| つなぎ目 | 89.0秒から −278.7ms | 101.0秒から −225.6ms |
+| 歯ごたえ | **`chartIntensity:'strong'`**（ユーザー判断「自動と extreme の中間ぐらい」。`challengeFactor` は上げても MASTER が増えない） | **`challengeFactor` 1.2**（ユーザーが決めた。1.4 は EXPERT が MASTER を追い越して出荷できない） |
+| レベル | 7 / 10 / 16 / 22 / 26（自動は 6 / 7 / 11 / 18 / 20、extreme は 9 / 12 / 20 / 27 / 34） | 9 / 10 / 16 / 21 / 30（自動は 7 / 8 / 14 / 18 / 29） |
+| ノーツ | 242 / 291 / 397 / 531 / 536 | 318 / 364 / 498 / 595 / 631 |
+
+- 自動判定は Stay With Me short が 169.17 BPM（`tempo-unstable`）、綺季一閃 short が 155.04 BPM。どちらも元の曲の値に合わせた
+- BGM の一覧にある `pandora_boss_beat` / `eiki_boss_beat`（「（ショート）」）は長さが違う別の短縮版（171秒・153秒）で、今回の音源とは別
+- `kiki_issen_short` の `challengeFactor` 1.2 は、ユーザーが候補（自動 29 ／ 1.2 で 30 ／ 1.4 は出荷できない）を見て選んだ

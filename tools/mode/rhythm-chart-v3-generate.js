@@ -243,6 +243,7 @@ const DENSITY_TARGET=Object.freeze({
 // EASYで遊んでもその曲は難しいはずなので、**全部の難易度を上げて曲ごと持ち上げる**。
 // ただし難易度の「できること」(PROFILESのtypes・widths・maxRun)は動かさないので、
 // EASYがFLICKやSLIDEを持ち出すことはない。増えるのは量と、細さ・同時押しの厚み。
+const INTENSITY_STYLES_EXTRA={};
 const INTENSITY_STYLES=Object.freeze({
   // ボス曲向け。細いノーツと同時押し・交差を厚くして、1ノーツあたりの仕事量を上げる。
   extreme:Object.freeze({
@@ -281,16 +282,30 @@ const INTENSITY_STYLES=Object.freeze({
       tapDuringHold:true,minGapLanes:.8,maxLaneStep:1,density:3,ceiling:6.4}),
   }),
 });
+// strong … extreme の半分の強さ(2026-10-03・ユーザー判断「自動と extreme の中間ぐらい」)。
+//   Stay With Me の short ver. は音が格子に乗りにくく、challengeFactor を上げても MASTER が増えない(EXPERT が追い越して止まる)。
+//   extreme だと全難易度が大きく上がる(MASTER 20 → 34)ので、倍率を平方根にしてちょうど半分にする。
+//   拾う音の選び方(16分裏を捨てない・ベースの伸びも材料)は extreme と同じ。届く幅(maxLaneStep)と、
+//   EASY・NORMAL の16分(lattice)は広げない。天井(ceiling)は「ここまで許す」なので extreme と同じ
+INTENSITY_STYLES_STRONG:{
+  const half=(key,value)=>key==='ceiling'||key==='tapDuringHold'?value:key==='maxLaneStep'||key==='lattice'?0
+    :typeof value==='number'&&value>0?Math.round(Math.sqrt(value)*1000)/1000:value;
+  // 16分裏は「拍が立っていない曲」の既定(OFF_BEAT_KEEP .35)と extreme(1)の中間まで残す
+  const extreme=INTENSITY_STYLES.extreme,strong={offBeatKeep:.65,useBassSustains:extreme.useBassSustains};
+  for(const difficulty of ['EASY','NORMAL','HARD','EXPERT','MASTER'])
+    strong[difficulty]=Object.freeze(Object.fromEntries(Object.entries(extreme[difficulty]).map(([key,value])=>[key,half(key,value)])));
+  INTENSITY_STYLES_EXTRA.strong=Object.freeze(strong);
+}
 // 書いていない曲・知らない名前のときは「何も変えない」を返す。
 const NO_INTENSITY=Object.freeze({narrow:1,chord:1,chordRun:1,cross:1,hold:1,flick:1,
   tapDuringHold:null,minGapLanes:1,maxLaneStep:0,density:1,ceiling:0,lattice:0});
 const songIntensity=(audio,difficulty)=>{
-  const style=INTENSITY_STYLES[String(audio&&audio.chartIntensity||'')];
+  const style=INTENSITY_STYLES[String(audio&&audio.chartIntensity||'')]||INTENSITY_STYLES_EXTRA[String(audio&&audio.chartIntensity||'')];
   return (style&&style[difficulty])||NO_INTENSITY;
 };
 // 難易度によらない、曲まるごとの設定（拾う音の選び方は難易度で変えない。
 // 変えると「下の難易度は上の難易度の部分集合」という決めごとが崩れるため）。
-const songIntensityCommon=audio=>INTENSITY_STYLES[String(audio&&audio.chartIntensity||'')]||null;
+const songIntensityCommon=audio=>INTENSITY_STYLES[String(audio&&audio.chartIntensity||'')]||INTENSITY_STYLES_EXTRA[String(audio&&audio.chartIntensity||'')]||null;
 
 // --- 曲ごとの歯ごたえ（曲の性格を譜面の量に出す） ---
 // 【なぜ要るか】
@@ -581,7 +596,7 @@ const warpCorrected=onset=>{
   const grid=Math.round((timeMs-timing.beatZeroMs)/gridMs);
   return {...onset,grid,gridOffsetMs:Math.round((timeMs-(timing.beatZeroMs+grid*gridMs))*100)/100};
 };
-if(tempoWarpInfo&&tempoWarpInfo.active)console.log(`テンポの揺れに合わせる(${tempoWarpInfo.version===2?'Rev.23 の読み方':'Rev.21'}): ${tempoWarpInfo.reason}`);
+if(tempoWarpInfo&&tempoWarpInfo.active)console.log(`テンポの揺れに合わせる(${tempoWarpInfo.version==='splice'?'Rev.26 のつなぎ目':tempoWarpInfo.version===2?'Rev.23 の読み方':'Rev.21'}): ${tempoWarpInfo.reason}`);
 // 打点をグリッドごとに1つへまとめる（同じ位置に2つ以上あれば強いほうを残す）
 const onsetByGrid=new Map();
 for(const rawOnset of audio.onsets){
