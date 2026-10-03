@@ -57,7 +57,7 @@ function BreederMarketScreen({
   const SECTION_TABS = {
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},{key:'disc',label:'円盤石アイコン'}] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -234,7 +234,7 @@ function BreederMarketScreen({
         {renderSectionTabs('event')}
         <div className={SCREEN_LIST_CLASS}>
         <div data-event-point-shop data-event-point-tab={eventTab} className={MARKET_GRID_CLASS}>
-          {eventTab!=='disc'&&eventItemOffers.map(offer=>{
+          {(eventTab==='item'||eventTab==='material')&&eventItemOffers.map(offer=>{
             const item=beatPointItemOf(offer);
             const grantText=`${offer.grantAmount.toLocaleString()}${offer.unit}`;
             // ダイヤの品は受け取る数が名前(ダイヤ ×300)に入っていて、持ち数は所持ダイヤと同じなので中段は空ける
@@ -268,6 +268,24 @@ function BreederMarketScreen({
                 rebirth:{monsterId:offer.monsterId,discIcon:disc?.icon||item.icon} })}
               detail={mon}
               onDetail={()=>mon&&onOpenDetail(disc||item,mon,null)}
+            />;
+          })}
+          {/* 交換できるアシストカード(2026-10-03 ユーザー指示「ビート交換所に実装されてる円盤石と全アシカも追加して。全部1500ビートポイント」)。
+              1枚につき1回。持っていれば「所持済み」(ダイヤショップのアシストカードと同じ見え方)。
+              絵と効果は、cardId と同じidのアシストカード商品とアシストカードの教えから引く */}
+          {eventTab==='assist'&&RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS.map(offer=>{
+            const card=BREEDER_MARKET_ITEMS.find(item=>item.id===offer.cardId&&item.type==='assist');
+            const teaching=TEACHING_CARDS.find(t=>t.id===offer.cardId)||null;
+            const item={ id:offer.id, name:offer.name, emoji:'🃏', icon:card?.icon, type:'assist', currency:'beatPoint', cost:offer.cost };
+            const owned=isItemOwned({ id:offer.cardId, type:'assist' });
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-assist':offer.id}}
+              item={item} owned={owned} comingSoon={false}
+              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(card?{...card,name:offer.name}:item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              detail={teaching}
+              onDetail={()=>teaching&&onOpenDetail(card||item,null,teaching)}
             />;
           })}
           {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。

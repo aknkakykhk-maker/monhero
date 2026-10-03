@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 993f3e99ba7318db
+// source-sha256: 18a4995d52225d79
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 17:52";
+const BUILD_DATE = "2026-10-03 17:56";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -36557,6 +36557,9 @@ function BreederMarketScreen({
         key: 'disc',
         label: '円盤石'
       }, {
+        key: 'assist',
+        label: 'アシスト'
+      }, {
         key: 'item',
         label: 'アイテム'
       }, {
@@ -36882,7 +36885,7 @@ function BreederMarketScreen({
     "data-event-point-shop": true,
     "data-event-point-tab": eventTab,
     className: MARKET_GRID_CLASS
-  }, eventTab !== 'disc' && eventItemOffers.map(offer => {
+  }, (eventTab === 'item' || eventTab === 'material') && eventItemOffers.map(offer => {
     const item = beatPointItemOf(offer);
     const grantText = `${offer.grantAmount.toLocaleString()}${offer.unit}`;
     const middle = offer.kind === 'diamond' ? null : ownedMiddle(ownedItemCount(ownedItems, offer.itemId), item.base ? {
@@ -36950,6 +36953,43 @@ function BreederMarketScreen({
       }),
       detail: mon,
       onDetail: () => mon && onOpenDetail(disc || item, mon, null)
+    });
+  }), eventTab === 'assist' && RHYTHM_EVENT_POINT_SHOP_ASSIST_OFFERS.map(offer => {
+    const card = BREEDER_MARKET_ITEMS.find(item => item.id === offer.cardId && item.type === 'assist');
+    const teaching = TEACHING_CARDS.find(t => t.id === offer.cardId) || null;
+    const item = {
+      id: offer.id,
+      name: offer.name,
+      emoji: '🃏',
+      icon: card?.icon,
+      type: 'assist',
+      currency: 'beatPoint',
+      cost: offer.cost
+    };
+    const owned = isItemOwned({
+      id: offer.cardId,
+      type: 'assist'
+    });
+    return React.createElement(MarketProductCard, {
+      key: offer.id,
+      dataAttrs: {
+        'data-event-point-assist': offer.id
+      },
+      item: item,
+      owned: owned,
+      comingSoon: false,
+      canBuy: !owned && safeEventPoints >= offer.cost && !busy,
+      disabled: purchaseProcessing,
+      onZoom: () => onZoomIcon(card ? {
+        ...card,
+        name: offer.name
+      } : item),
+      onBuy: () => openSheet({
+        item,
+        confirm: () => onExchangeEventPoints ? onExchangeEventPoints(offer, 1) : false
+      }),
+      detail: teaching,
+      onDetail: () => teaching && onOpenDetail(card || item, null, teaching)
     });
   }), eventTab === 'disc' && RHYTHM_EVENT_POINT_SHOP_COMING_SOON.map(offer => {
     const disc = BREEDER_MARKET_ITEMS.find(item => item.id === offer.monsterId && item.type === 'disc');
@@ -63067,16 +63107,20 @@ function MonsterHeroGame() {
       const isDisc = offer?.kind === 'disc';
       const storedUnlocked = isDisc ? await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false) : null;
       const beforeUnlocked = Array.isArray(storedUnlocked) ? storedUnlocked : unlockedMonsterIds;
+      const isAssist = offer?.kind === 'assist';
+      const storedTeachings = isAssist ? await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false) : null;
+      const beforeTeachings = Array.isArray(storedTeachings) ? storedTeachings : unlockedTeachingIds;
       const exchange = rhythmEventPointExchangePreview({
         offer,
         eventPoints: beforePoints,
         gold: beforeGold,
         ownedItems: beforeItems,
         quantity,
-        unlockedMonsterIds: beforeUnlocked
+        unlockedMonsterIds: beforeUnlocked,
+        unlockedTeachingIds: beforeTeachings
       });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? 'このモンスターはもう持っています。' : 'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason === 'points' ? 'ビートPが足りません。' : exchange.reason === 'owned' ? isAssist ? 'このアシストカードはもう持っています。' : 'このモンスターはもう持っています。' : 'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([{
@@ -63095,6 +63139,10 @@ function MonsterHeroGame() {
         key: 'mh_unlocked_monsters',
         before: storedUnlocked,
         next: exchange.unlockedMonsterIds
+      }] : []), ...(isAssist ? [{
+        key: 'mh_unlocked_teachings',
+        before: storedTeachings,
+        next: exchange.unlockedTeachingIds
       }] : [])], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -63116,6 +63164,15 @@ function MonsterHeroGame() {
             rosters
           });
         }
+      }
+      if (isAssist) {
+        setUnlockedTeachingIds(exchange.unlockedTeachingIds);
+        setTeachingRosterIds(prev => {
+          if (prev.length >= TEACHING_ROSTER_SIZE) return prev;
+          const next = [...prev, exchange.cardId];
+          storeSet('mh_teaching_roster', next, false);
+          return next;
+        });
       }
       saveMissionProgress('market');
       return exchange;
