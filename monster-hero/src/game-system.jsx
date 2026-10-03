@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 247dda3d5706a48c
+// generated-sha256: c06e231cbf371b9e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 18:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 18:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9698,7 +9698,7 @@ const CHEAPEST_GOLD_ITEM_COST = ((typeof BREEDER_MARKET_ITEMS !== 'undefined' &&
 const MARKET_GRID_CLASS = 'grid grid-cols-3 gap-2.5 pb-4';
 // 商品アイコンの大きさ。円盤石は絵を見せたいのでいちばん大きく、
 // ブリーダーアイコンやカード・アイテムは名前のほうが大事なので小さくする
-const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };
+const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9', frame: 'w-10 h-10' };
 // 全身画像を使う一部のアイコンは、画像自体には手を加えず表示時だけ顔まわりへ寄せる。
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
@@ -9879,7 +9879,16 @@ const DexMonsterArt = ({ mon, alt, hidden=false, colors=null }) => mon.imgUrl
 const DexMonsterIdleArt = ({ mon, alt, motion = true, colors = null }) => (motion && mon.imgUrl && monsterIdleRigOf(mon.id))
   ? <span data-dex-idle-art className="relative block h-full aspect-square max-w-full">{withMonsterIdleArt(mon.id, dexMonsterArtImage(mon, alt, false, colors), {fill:true, own:true})}</span>
   : <DexMonsterArt mon={mon} alt={alt} colors={colors}/>;
-const MarketProductIcon = ({ item, onZoom, disabled=false }) => {
+const MarketProductIcon = ({ item, onZoom, disabled=false, previewIcon=null }) => {
+  // プロフィールフレームの商品(2026-10-03)。枠は円の外へはみ出すので、overflow-hidden の円には入れず、
+  // 中が空の円(薄い下地)に枠を重ねて見せる。枠の描き方は ProfileFrameLayer(全画面で同じ)
+  if(item.type==='frame'){
+    const frameCls=`${MARKET_ICON_SIZE.frame} shrink-0 ${disabled?'':'active:scale-90'}`;
+    // 商品の小さな絵は、自分のアイコンに付けた姿(買う前に自分に付けるとどう見えるか分かる)。
+    // previewIcon={src,id} は商品カード(MarketProductCard)の呼び出し側から渡す。無いときは下地の円
+    const inner=<ProfileAvatar src={previewIcon&&previewIcon.src} id={previewIcon&&previewIcon.id} frameId={item.id} className="w-full h-full" fallback={<span className="h-full w-full rounded-full bg-slate-800/80"/>}/>;
+    return onZoom?<button type="button" onClick={onZoom} aria-label={`${item.name}を大きく見る`} className={frameCls}>{inner}</button>:<div className={frameCls}>{inner}</div>;
+  }
   const content=item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>;
   const cls=`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${disabled?'':'active:scale-90'}`;
   return onZoom?<button type="button" onClick={onZoom} aria-label={`${item.name}を大きく見る`} className={cls}>{content}</button>:<div className={cls}>{content}</div>;
@@ -9914,7 +9923,7 @@ const marketNameNodes = (name) => marketNameForWrap(name).split('​')
 // comingSoonLabel: 買えない予告の札。ふつうは「近日追加」。ビートP交換所の円盤石だけ、
 // ダイヤショップより先に出す予定なので「先行公開予定」と書く(札の形は同じ)。
 // dataAttrs: 検査や画面の文字拾いが商品を見分けるための data-* をそのままカードへ付ける。
-const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabel='近日追加', detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false, dataAttrs=null }) => {
+const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabel='近日追加', detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false, dataAttrs=null, previewIcon=null }) => {
   const usesGold=item.type==='disc'||item.type==='assist'||item.type==='item';
   const usesPsyche=item.currency==='psyche';
   const usesHeroProof=item.currency==='heroProof';
@@ -9922,7 +9931,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, comingSoonLabe
   const usesBeatPoint=item.currency==='beatPoint';
   const priceLabel=usesBeatPoint?`${item.cost}ビートP`:usesHeroProofShard?`勇者の証片${item.cost}個`:usesHeroProof?`勇者の証${item.cost}個`:usesPsyche?`${item.cost}プシュケー`:usesGold?`${item.cost}ダイヤ`:`${item.cost}pt`;
   return <div {...(dataAttrs||{})} className={`rounded-2xl border p-2 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/60':comingSoon?'bg-slate-900/60 border-white/10':'bg-slate-900 border-white/10'}`}>
-    <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled}/>
+    <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled} previewIcon={previewIcon}/>
     {/* 商品名(2026-09-18・ユーザー指摘「商品名の行ズレがださい」)。
         ★縦は**上寄せ**にする。中央寄せだと、1行で収まる品(魂格再編の書・染色もどき)だけが
           枠の真ん中へ降りてきて、2行の品の1行目と高さがそろわなかった。
@@ -23617,7 +23626,7 @@ function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
 // ・窓はこの画面が1つだけ持つ(sheet)。保存の中身は本体のまま(onBuy などは成功したら true / {ok:true} を返す)
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
-  isItemOwned, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
+  isItemOwned, previewIcon=null, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
   onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
@@ -23645,12 +23654,14 @@ function BreederMarketScreen({
   const activeDiamondTab = diamondTabs.some(tab=>tab.key===marketTab)?marketTab:'disc';
   const diamondItems = marketItems.filter(item=>item.type===activeDiamondTab&&item.type!=='icon'&&item.currency!=='psyche');
   const breederPointItems = marketItems.filter(item=>item.type==='icon');
+  // フレーム(2026-10-03)。売る枠が1つも無いうちは「フレーム」タブごと出さない(空のタブを見せない)
+  const breederFrameItems = marketItems.filter(item=>item.type==='frame');
   const itemExchangeItems = marketItems.filter(item=>item.currency==='psyche');
   // どの売り場も「残高 → タブ → 商品」の同じ並びにする。タブの色は売り場の色
   const SECTION_TABS = {
-    breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},{key:'disc',label:'円盤石アイコン'}] },
+    breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},{key:'disc',label:'円盤石アイコン'},...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -23658,7 +23669,7 @@ function BreederMarketScreen({
   };
   const selectSectionTab = (section,key) => setSectionTabs(prev=>({...prev,[section]:key}));
   const breederTab = activeSectionTab('breeder');
-  const breederTabItems = breederPointItems.filter(item=>(breederTab==='disc')===/_disc_icon$/.test(item.id));
+  const breederTabItems = breederTab==='frame' ? breederFrameItems : breederPointItems.filter(item=>(breederTab==='disc')===/_disc_icon$/.test(item.id));
   const exchangeTab = activeSectionTab('exchange');
   const eventTab = activeSectionTab('event');
   // ビートP交換所のアイテムと強化素材の分け方。育成に使う素材(プシュケー・証片・虹の超越の実・勇者の証)を「強化素材」へ
@@ -23709,7 +23720,7 @@ function BreederMarketScreen({
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
     return (
       <React.Fragment key={item.id}>
-        {showBase&&<MarketProductCard
+        {showBase&&<MarketProductCard previewIcon={previewIcon}
           item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
@@ -23879,6 +23890,21 @@ function BreederMarketScreen({
               onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
               detail={teaching}
               onDetail={()=>teaching&&onOpenDetail(card||item,null,teaching)}
+            />;
+          })}
+          {/* 交換できるプロフィールフレーム(2026-10-03)。いまは売る枠が無いので何も並ばない(タブも出ない)。
+              枠に unlock:{shop:'beatPoint',cost} を書くと、ここへ自動で並ぶ。1枚につき1回、持っていれば「所持済み」 */}
+          {eventTab==='frame'&&RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.map(offer=>{
+            const frame=profileFrameById(offer.frameId);
+            const item={ id:offer.frameId, name:offer.name, emoji:'🖼️', type:'frame', currency:'beatPoint', cost:offer.cost, desc:frame?.desc||'' };
+            const owned=isItemOwned({ id:offer.frameId, type:'frame' });
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-frame':offer.id}} previewIcon={previewIcon}
+              item={item} owned={owned} comingSoon={false}
+              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              middle={item.desc?<MarketDetailChip label={`${offer.name}の説明を見る`} onClick={()=>onOpenItemDetail(item)}/>:null}
             />;
           })}
           {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。
@@ -41767,6 +41793,7 @@ function MonsterHeroGame() {
   const isMarketItemOwned = (item) => {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
     if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
+    if (item.type === 'frame') return normalizeOwnedProfileFrames(ownedProfileFrames).includes(item.id);
     if (item.type === 'item') return false;
     return ownedMarketIcons.includes(item.id);
   };
@@ -41849,6 +41876,12 @@ function MonsterHeroGame() {
       setUnlockedTeachingIds(prev => { const next = [...prev, item.id]; storeSet('mh_unlocked_teachings', next, false); return next; });
       // 編成はアシストカード6枚固定。既に6枚埋まっている場合は自動追加せず、編成画面で手動入れ替えしてもらう
       setTeachingRosterIds(prev => { if (prev.length >= TEACHING_ROSTER_SIZE) return prev; const next = [...prev, item.id]; storeSet('mh_teaching_roster', next, false); return next; });
+    } else if (item.type === 'frame') {
+      // 売っているプロフィールフレーム(2026-10-03)。助手の仲良し度でもらったときと同じ入れ物(mh_profile_frame_owned_v1)へ足す
+      const nextFrames = normalizeOwnedProfileFrames([...ownedProfileFramesRef.current, item.id]);
+      ownedProfileFramesRef.current = nextFrames;
+      setOwnedProfileFrames(nextFrames);
+      storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
     } else if (item.type !== 'item') {
       setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
     }
@@ -41922,9 +41955,13 @@ function MonsterHeroGame() {
       const isAssist = offer?.kind==='assist';
       const storedTeachings = isAssist ? await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false) : null;
       const beforeTeachings = Array.isArray(storedTeachings) ? storedTeachings : unlockedTeachingIds;
-      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings });
+      // フレームの交換(2026-10-03)も同じ。持っているフレームの保存(mh_profile_frame_owned_v1)を同じ取引に入れる
+      const isFrame = offer?.kind==='frame';
+      const storedFrames = isFrame ? await storeGet(PROFILE_FRAME_OWNED_KEY, [], false) : null;
+      const beforeFrames = normalizeOwnedProfileFrames(storedFrames);
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings, ownedProfileFrames:beforeFrames });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':isFrame?'このフレームはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([
@@ -41933,6 +41970,7 @@ function MonsterHeroGame() {
         { key:'mh_owned_items', before:beforeItems, next:exchange.ownedItems },
         ...(isDisc ? [{ key:'mh_unlocked_monsters', before:storedUnlocked, next:exchange.unlockedMonsterIds }] : []),
         ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
+        ...(isFrame ? [{ key:PROFILE_FRAME_OWNED_KEY, before:storedFrames, next:exchange.ownedProfileFrames }] : []),
       ], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -41949,6 +41987,10 @@ function MonsterHeroGame() {
           const rosters = monsterPartySets.rosters.map((roster,index)=>index===monsterPartySets.activeIndex?[...roster,exchange.monsterId]:roster);
           saveMonsterPartySets({ ...monsterPartySets, rosters });
         }
+      }
+      if (isFrame) {
+        ownedProfileFramesRef.current = exchange.ownedProfileFrames;
+        setOwnedProfileFrames(exchange.ownedProfileFrames);
       }
       if (isAssist) {
         setUnlockedTeachingIds(exchange.unlockedTeachingIds);
@@ -51622,6 +51664,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             marketExchangeError={marketExchangeError}
             purchaseProcessing={marketPurchaseProcessingRef.current}
             isItemOwned={isMarketItemOwned}
+            previewIcon={{ src:resolveIconUrl(breederIcon), id:breederIcon }}
             onBack={returnToHome}
             onSelectTab={(key)=>{setMarketTab(key);setMarketExchangeError('');}}
             onZoomIcon={setMarketIconZoom}
@@ -52869,11 +52912,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {marketIconZoom&&(()=>{const item=marketIconZoom;const round=item.type==='icon'||item.type==='assist';return(
         <MarketModal narrow label={`${item.name}の拡大表示`} onClose={()=>setMarketIconZoom(null)}>
           <div className="flex flex-col items-center gap-3">
+            {item.type==='frame'?(
+              /* プロフィールフレームの拡大(2026-10-03)。買う前に「自分のアイコンに付けるとどう見えるか」が分かるよう、自分のアイコンへ重ねて出す。
+                 枠は円の外へはみ出すので、overflow-hidden の箱には入れず、まわりに余白を取る */
+              <div data-market-frame-zoom={item.id} className="flex w-full items-center justify-center rounded-2xl border border-white/10 bg-black/40 p-8">
+                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={item.id} alt={item.name} className="h-40 w-40" fallback={<span className="h-full w-full rounded-full bg-slate-800/80"/>}/>
+              </div>
+            ):
             <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`}>
               {item.icon
                 ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
                 : <span style={{fontSize:'96px'}}>{item.emoji}</span>}
-            </div>
+            </div>}
             <div className="text-center text-sm font-black text-white leading-tight">{item.name}</div>
             <MarketModalClose onClick={()=>setMarketIconZoom(null)}/>
           </div>

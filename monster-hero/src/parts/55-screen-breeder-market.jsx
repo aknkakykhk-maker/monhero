@@ -24,7 +24,7 @@
 // ・窓はこの画面が1つだけ持つ(sheet)。保存の中身は本体のまま(onBuy などは成功したら true / {ok:true} を返す)
 function BreederMarketScreen({
   gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
-  isItemOwned, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
+  isItemOwned, previewIcon=null, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
   onExchangeHeroProof, eventPoints=0, onExchangeEventPoints, onOpenUpcomingDetail,
 }) {
   // 2026-09-14・マーケットのタブ乱立を避けるため、最初に用途別の入口を選ぶ。
@@ -52,12 +52,14 @@ function BreederMarketScreen({
   const activeDiamondTab = diamondTabs.some(tab=>tab.key===marketTab)?marketTab:'disc';
   const diamondItems = marketItems.filter(item=>item.type===activeDiamondTab&&item.type!=='icon'&&item.currency!=='psyche');
   const breederPointItems = marketItems.filter(item=>item.type==='icon');
+  // フレーム(2026-10-03)。売る枠が1つも無いうちは「フレーム」タブごと出さない(空のタブを見せない)
+  const breederFrameItems = marketItems.filter(item=>item.type==='frame');
   const itemExchangeItems = marketItems.filter(item=>item.currency==='psyche');
   // どの売り場も「残高 → タブ → 商品」の同じ並びにする。タブの色は売り場の色
   const SECTION_TABS = {
-    breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},{key:'disc',label:'円盤石アイコン'}] },
+    breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},{key:'disc',label:'円盤石アイコン'},...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),{key:'item',label:'アイテム'},{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -65,7 +67,7 @@ function BreederMarketScreen({
   };
   const selectSectionTab = (section,key) => setSectionTabs(prev=>({...prev,[section]:key}));
   const breederTab = activeSectionTab('breeder');
-  const breederTabItems = breederPointItems.filter(item=>(breederTab==='disc')===/_disc_icon$/.test(item.id));
+  const breederTabItems = breederTab==='frame' ? breederFrameItems : breederPointItems.filter(item=>(breederTab==='disc')===/_disc_icon$/.test(item.id));
   const exchangeTab = activeSectionTab('exchange');
   const eventTab = activeSectionTab('event');
   // ビートP交換所のアイテムと強化素材の分け方。育成に使う素材(プシュケー・証片・虹の超越の実・勇者の証)を「強化素材」へ
@@ -116,7 +118,7 @@ function BreederMarketScreen({
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
     return (
       <React.Fragment key={item.id}>
-        {showBase&&<MarketProductCard
+        {showBase&&<MarketProductCard previewIcon={previewIcon}
           item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
           onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
@@ -286,6 +288,21 @@ function BreederMarketScreen({
               onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
               detail={teaching}
               onDetail={()=>teaching&&onOpenDetail(card||item,null,teaching)}
+            />;
+          })}
+          {/* 交換できるプロフィールフレーム(2026-10-03)。いまは売る枠が無いので何も並ばない(タブも出ない)。
+              枠に unlock:{shop:'beatPoint',cost} を書くと、ここへ自動で並ぶ。1枚につき1回、持っていれば「所持済み」 */}
+          {eventTab==='frame'&&RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.map(offer=>{
+            const frame=profileFrameById(offer.frameId);
+            const item={ id:offer.frameId, name:offer.name, emoji:'🖼️', type:'frame', currency:'beatPoint', cost:offer.cost, desc:frame?.desc||'' };
+            const owned=isItemOwned({ id:offer.frameId, type:'frame' });
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-frame':offer.id}} previewIcon={previewIcon}
+              item={item} owned={owned} comingSoon={false}
+              canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
+              disabled={purchaseProcessing}
+              onZoom={()=>onZoomIcon(item)}
+              onBuy={()=>openSheet({ item, confirm:()=>onExchangeEventPoints?onExchangeEventPoints(offer,1):false })}
+              middle={item.desc?<MarketDetailChip label={`${offer.name}の説明を見る`} onClick={()=>onOpenItemDetail(item)}/>:null}
             />;
           })}
           {/* 近日公開予定の円盤石(2026-09-28)。予告だけで、交換ボタンは出さない。

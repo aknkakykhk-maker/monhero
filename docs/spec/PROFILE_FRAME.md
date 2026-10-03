@@ -211,6 +211,7 @@
 **出ない**
 
 - モンスター図鑑、マーケットの商品画像、円盤石、通常のモンスターアイコン
+  - **例外**: プロフィールフレームそのものを売る商品(`type:'frame'`。§8.2)の絵だけは、自分のアイコンへその枠を重ねて見せる
 
 > 絆Lv・総合力ランキングだけは `rankings` ではなく専用テーブル `bond_levels`（1人×1個体で1行）
 > から読む。2026-09-15 にそちらへも同じ `profile_frame` 列を足した（[`RHYTHM_RANKING.md`](RHYTHM_RANKING.md) §8.10）。
@@ -290,6 +291,36 @@ node tools/ranking/profile-frame-sql-check.js   # PostgreSQL があるときだ�
 - 決まったら `released:true` にして、`unlock` に条件を書く。
   いまの `unlock` は助手の仲良し度だけを見る形なので、別の条件を足すときは
   `profileFrameUnlock` と `profileFramesEarnedAt` を種類で分ける
+
+### 8.2 フレームを売る（準備だけ済み・2026-10-03）
+
+ユーザー指示「フレームも販売実装を予定してるから、ブリーダーポイントとビートポイントのとこに実装できる準備をしといて」。
+**売るフレームはまだ1つも無い**。枠に売り値を書けば交換所に並んで買える土台だけ入れてある。
+
+**売り方（2か所を書くだけ）**
+
+1. `PROFILE_FRAMES` の枠を `released:true` にして、`unlock` に売り値を書く。
+   ```js
+   unlock:{ shop:'breederPoint', cost:300 }   // ブリーダーP交換所で300P
+   unlock:{ shop:'beatPoint',    cost:1500 }  // ビートP交換所で1,500P
+   ```
+2. `node tools/market/frame-shop-check.js` を通す。
+
+商品は**自動で**並ぶ（手で書き写さない）。ブリーダーP交換所は `data/breeder.js` が `type:'frame'` の商品を作り、
+ビートP交換所は `data/rhythm-event.js` の `RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS` が `kind:'frame'` を作る。
+売るものが無い間は「フレーム」のタブごと出ない。
+
+| 決まり | 理由 |
+| --- | --- |
+| 売る枠は必ず `shop` と `cost` を書く | `unlock` が無い枠は**最初から全員が選べる**決まりなので、書き忘れると無料で全員に出る。`profileFramesWithBrokenSale()` が壊れた書き方を拾う |
+| 助手の仲良し度（`assistantId`/`bondLevel`）と売り値は同じ枠に書かない | もらい方が2つあると、どちらで持っているか分からなくなる |
+| 買うと `mh_profile_frame_owned_v1` にidが入る | 助手の仲良し度でもらったときと同じ入れ物。**新しい保存キーは作らない**。一度手に入れたら外さない |
+| 1枚につき1回。持っていれば「所持済み」・交換できない | 円盤石・アシストカードと同じ |
+| ビートPの交換は、ビートP・フレームの所持を**同じ取引**で保存する | どれか失敗したら全部元へ戻る（円盤石・アシストカードと同じ作り） |
+| 商品の絵は、**自分のアイコンに付けた姿**で出す（拡大も） | 買う前に「自分に付けるとどう見えるか」が分かる。枠は円の外へはみ出すので専用の出し方（`MarketProductIcon` の `type:'frame'`）。これだけが「マーケットの商品画像に枠を付けない」決まりの例外 |
+
+画像のフレーム（`kind:'image'`）を売るときは、画像を `images/profile-frames/` へ軽くして入れる（[`ASSETS.md`](../rules/ASSETS.md)）。
+値段と、どの枠をどちらで売るかは、ここに書いていない（これから決める）。
 
 ### 8.1 小さいアイコンでの大きさ（公開前に決める）
 

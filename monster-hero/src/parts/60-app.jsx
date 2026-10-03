@@ -6752,6 +6752,7 @@ function MonsterHeroGame() {
   const isMarketItemOwned = (item) => {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
     if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
+    if (item.type === 'frame') return normalizeOwnedProfileFrames(ownedProfileFrames).includes(item.id);
     if (item.type === 'item') return false;
     return ownedMarketIcons.includes(item.id);
   };
@@ -6834,6 +6835,12 @@ function MonsterHeroGame() {
       setUnlockedTeachingIds(prev => { const next = [...prev, item.id]; storeSet('mh_unlocked_teachings', next, false); return next; });
       // 編成はアシストカード6枚固定。既に6枚埋まっている場合は自動追加せず、編成画面で手動入れ替えしてもらう
       setTeachingRosterIds(prev => { if (prev.length >= TEACHING_ROSTER_SIZE) return prev; const next = [...prev, item.id]; storeSet('mh_teaching_roster', next, false); return next; });
+    } else if (item.type === 'frame') {
+      // 売っているプロフィールフレーム(2026-10-03)。助手の仲良し度でもらったときと同じ入れ物(mh_profile_frame_owned_v1)へ足す
+      const nextFrames = normalizeOwnedProfileFrames([...ownedProfileFramesRef.current, item.id]);
+      ownedProfileFramesRef.current = nextFrames;
+      setOwnedProfileFrames(nextFrames);
+      storeSet(PROFILE_FRAME_OWNED_KEY, nextFrames, false);
     } else if (item.type !== 'item') {
       setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
     }
@@ -6907,9 +6914,13 @@ function MonsterHeroGame() {
       const isAssist = offer?.kind==='assist';
       const storedTeachings = isAssist ? await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false) : null;
       const beforeTeachings = Array.isArray(storedTeachings) ? storedTeachings : unlockedTeachingIds;
-      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings });
+      // フレームの交換(2026-10-03)も同じ。持っているフレームの保存(mh_profile_frame_owned_v1)を同じ取引に入れる
+      const isFrame = offer?.kind==='frame';
+      const storedFrames = isFrame ? await storeGet(PROFILE_FRAME_OWNED_KEY, [], false) : null;
+      const beforeFrames = normalizeOwnedProfileFrames(storedFrames);
+      const exchange = rhythmEventPointExchangePreview({ offer, eventPoints:beforePoints, gold:beforeGold, ownedItems:beforeItems, quantity, unlockedMonsterIds:beforeUnlocked, unlockedTeachingIds:beforeTeachings, ownedProfileFrames:beforeFrames });
       if (!exchange.ok) {
-        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
+        setMarketExchangeError(exchange.reason==='points'?'ビートPが足りません。':exchange.reason==='owned'?(isAssist?'このアシストカードはもう持っています。':isFrame?'このフレームはもう持っています。':'このモンスターはもう持っています。'):'この商品は交換できません。');
         return exchange;
       }
       const saved = await saveStoredValuesOrRollback([
@@ -6918,6 +6929,7 @@ function MonsterHeroGame() {
         { key:'mh_owned_items', before:beforeItems, next:exchange.ownedItems },
         ...(isDisc ? [{ key:'mh_unlocked_monsters', before:storedUnlocked, next:exchange.unlockedMonsterIds }] : []),
         ...(isAssist ? [{ key:'mh_unlocked_teachings', before:storedTeachings, next:exchange.unlockedTeachingIds }] : []),
+        ...(isFrame ? [{ key:PROFILE_FRAME_OWNED_KEY, before:storedFrames, next:exchange.ownedProfileFrames }] : []),
       ], storeGet, storeSet);
       if (!saved) {
         setMarketExchangeError('交換を保存できませんでした。ビートPと所持品は変更していません。');
@@ -6934,6 +6946,10 @@ function MonsterHeroGame() {
           const rosters = monsterPartySets.rosters.map((roster,index)=>index===monsterPartySets.activeIndex?[...roster,exchange.monsterId]:roster);
           saveMonsterPartySets({ ...monsterPartySets, rosters });
         }
+      }
+      if (isFrame) {
+        ownedProfileFramesRef.current = exchange.ownedProfileFrames;
+        setOwnedProfileFrames(exchange.ownedProfileFrames);
       }
       if (isAssist) {
         setUnlockedTeachingIds(exchange.unlockedTeachingIds);
@@ -16607,6 +16623,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             marketExchangeError={marketExchangeError}
             purchaseProcessing={marketPurchaseProcessingRef.current}
             isItemOwned={isMarketItemOwned}
+            previewIcon={{ src:resolveIconUrl(breederIcon), id:breederIcon }}
             onBack={returnToHome}
             onSelectTab={(key)=>{setMarketTab(key);setMarketExchangeError('');}}
             onZoomIcon={setMarketIconZoom}
@@ -17854,11 +17871,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {marketIconZoom&&(()=>{const item=marketIconZoom;const round=item.type==='icon'||item.type==='assist';return(
         <MarketModal narrow label={`${item.name}の拡大表示`} onClose={()=>setMarketIconZoom(null)}>
           <div className="flex flex-col items-center gap-3">
+            {item.type==='frame'?(
+              /* プロフィールフレームの拡大(2026-10-03)。買う前に「自分のアイコンに付けるとどう見えるか」が分かるよう、自分のアイコンへ重ねて出す。
+                 枠は円の外へはみ出すので、overflow-hidden の箱には入れず、まわりに余白を取る */
+              <div data-market-frame-zoom={item.id} className="flex w-full items-center justify-center rounded-2xl border border-white/10 bg-black/40 p-8">
+                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={item.id} alt={item.name} className="h-40 w-40" fallback={<span className="h-full w-full rounded-full bg-slate-800/80"/>}/>
+              </div>
+            ):
             <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`}>
               {item.icon
                 ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
                 : <span style={{fontSize:'96px'}}>{item.emoji}</span>}
-            </div>
+            </div>}
             <div className="text-center text-sm font-black text-white leading-tight">{item.name}</div>
             <MarketModalClose onClick={()=>setMarketIconZoom(null)}/>
           </div>
