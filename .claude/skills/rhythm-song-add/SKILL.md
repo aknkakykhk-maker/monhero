@@ -180,6 +180,10 @@ done
 
 ジャケットは元の曲のものを使い回す（`artwork` に同じ絵）。`displayName` は元の曲と同じにして、`subtitle` に「～◯◯～ short ver.」と書く。
 
+**既存の曲の別の版（short ver.・remix・-Another- など）を足したら、`RHYTHM_SONG_VERSION_GROUPS`（`data/rhythm-mode.js`）のその曲の組の末尾へ `['<songId>','short ver.']` を1行足す**（2026-10-03）。
+曲えらびでは版がまとめて1行になり、難易度ボタンの上で切り替わる。組に入れ忘れると別の行に並び、`node tools/mode/rhythm-song-version-check.js`
+（表示名が同じ公開曲が同じ組に入っているか）が落ちる。`RHYTHM_DEMO_SONG_IDS` には今までどおり末尾へ足す（公開の範囲・ランキング送信はこちら）。
+
 ---
 
 ## 6. 入れ物を作って譜面を流し込む
