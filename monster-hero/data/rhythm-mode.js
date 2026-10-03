@@ -22393,6 +22393,25 @@ const RHYTHM_DEMO_SONG_IDS=Object.freeze([
   'stay_with_me_short',
   'kiki_issen_short',
 ]);
+// 同じ曲の別の版(2026-10-03・ユーザー指示「同じ曲でショートとかリミックスとか色々あるけど
+// これを同じとこにまとめて難易度とか選ぶあたりに切り替えられるように」)。
+// 曲えらびの一覧では版をまとめて1行にし、選んだあと難易度ボタンの上で切り替える。
+// ★見え方だけ。songId・自己ベスト・難易度の解放・全国ランキング・イベント・お気に入り、それに
+//   RHYTHM_DEMO_SONG_IDS(公開の範囲・ランキング送信・ビートP)は版ごとのまま変えない。
+// 1組の先頭が原曲(一覧の行を押したときは、いつも原曲を選ぶ・ユーザー判断)。2つめからは [songId, 切り替えボタンの名前]。
+// 版を足したら、その組の末尾に1行足す(新しい組は配列の末尾へ)
+const RHYTHM_SONG_VERSION_GROUPS=Object.freeze([
+  Object.freeze([['monster_hero','原曲'],['monster_hero_another','-Another-']]),
+  Object.freeze([['six_eternel_beat','原曲'],['six_eternel_remix','ドパガキリミックス']]),
+  Object.freeze([['stay_with_me','原曲'],['pandora_boss_remix','remix'],['stay_with_me_short','short ver.']]),
+  Object.freeze([['kiki_issen','原曲'],['eiki_boss_remix','battle remix'],['kiki_issen_short','short ver.']]),
+]);
+const rhythmSongVersionGroup=songId=>RHYTHM_SONG_VERSION_GROUPS.find(group=>group.some(([id])=>id===songId))||null;
+// その曲の組の原曲の songId(組に入っていない曲はその曲自身)
+const rhythmSongVersionHead=songId=>{const group=rhythmSongVersionGroup(songId);return group?group[0][0]:songId;};
+const rhythmSongVersionLabel=songId=>{const group=rhythmSongVersionGroup(songId);const row=group&&group.find(([id])=>id===songId);return row?row[1]:'';};
+// 組の中での並び(原曲が0)。組に入っていない曲は0
+const rhythmSongVersionIndex=songId=>{const group=rhythmSongVersionGroup(songId);return group?Math.max(0,group.findIndex(([id])=>id===songId)):0;};
 // 1曲だけを指す場面(全国ランキングの既定など)のために先頭を別名で持つ。
 const RHYTHM_DEMO_SONG_ID=RHYTHM_DEMO_SONG_IDS[0];
 const RHYTHM_DEMO_DIFFICULTY_IDS=Object.freeze(['EASY','NORMAL','HARD','EXPERT','MASTER']);

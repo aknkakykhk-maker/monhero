@@ -456,7 +456,8 @@ const serve=()=>new Promise(resolve=>{
       console.log('--  輪の動き: この環境では一覧をスクロールできないので測れません');
     }
     // 曲が1つしかないときは輪にしない(同じ行が3つ並ぶだけになるため)
-    ok('曲が1つのときは輪にしない',gameSource.includes('const loopEnabled=list.length>=2;'));
+    // 2026-10-03: 一覧は同じ曲の別の版をまとめた行(rows)で輪にする
+    ok('曲が1つのときは輪にしない',gameSource.includes('const loopEnabled=rows.length>=2;'));
     // 影の行は、数えて確かめる検査の邪魔をしない
     const rowMarks=await page.evaluate(()=>({
       rows:document.querySelectorAll('#song-select-probe [data-rhythm-song-row]').length,

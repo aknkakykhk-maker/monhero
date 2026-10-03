@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9084e574a7d19274
+// generated-sha256: 1b42eb58369c8e0f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 16:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 16:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16954,6 +16954,33 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   // 画面に並べる順。並び替えも絞り込みも**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
   const list=rhythmSortSongs(playable.filter(genreMatches),
     {sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties});
+  // ★同じ曲の別の版はまとめて1行にする(2026-10-03・RHYTHM_SONG_VERSION_GROUPS)。見え方だけで、遊べる曲も選んでいる曲も変えない。
+  //   絞り込みのあとで組ごとに1行へまとめ、行に出す版を決めてから、その版で並び替える
+  //   (Lv.や長さの順は、行に出ている数字どおりに並ぶ)。決着がつかないときと入手順は「組の最初の版の位置」なので、
+  //   入手順のまま版を切り替えても行は動かない。
+  //   行に出す版: 選んでいる曲がその組ならその版、そうでなければ原曲(絞り込みで原曲が外れていれば最初に当たった版)。
+  //   押したとき: その行が選んでいる組ならそのまま、ほかの組なら**いつも原曲**(ユーザー判断)
+  const versionsOf=entry=>{
+    const head=rhythmSongVersionHead(entry.songId);
+    return playable.filter(item=>rhythmSongVersionHead(item.songId)===head)
+      .sort((a,b)=>rhythmSongVersionIndex(a.songId)-rhythmSongVersionIndex(b.songId));
+  };
+  const rows=(()=>{
+    const out=[],at=new Map();
+    for(const entry of playable.filter(genreMatches)){
+      const head=rhythmSongVersionHead(entry.songId);
+      if(at.has(head)){out[at.get(head)].members.push(entry);continue;}
+      at.set(head,out.length);out.push({head,members:[entry]});
+    }
+    const built=out.map(row=>{
+      const current=song?row.members.find(item=>item.songId===song.songId):null;
+      const original=row.members.find(item=>item.songId===row.head)||row.members[0];
+      return {...row,entry:current||original,pick:original,versions:versionsOf(original).length};
+    });
+    const byEntry=new Map(built.map(row=>[row.entry.songId,row]));
+    return rhythmSortSongs(built.map(row=>row.entry),{sort:state.sort,desc:state.desc,levelOf:rowLevel,difficulties})
+      .map(entry=>byEntry.get(entry.songId));
+  })();
   const sortLabel=(RHYTHM_SORT_ORDERS.find(item=>item.id===state.sort)||RHYTHM_SORT_ORDERS[0]).label;
   // 選んでいる曲を鳴らすのは App本体(rhythmPreviewTrackId)。ここでは鳴らさない。
   // この画面の中で鳴らしていたころは、ランキングやマスモン設定を開いた瞬間に
@@ -16984,7 +17011,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   // 戻すのは指が離れてスクロールが止まってからにする。
   //
   // 曲が1曲しかないときは輪にしない(同じ行が3つ並ぶだけで、かえって分かりにくい)。
-  const loopEnabled=list.length>=2;
+  const loopEnabled=rows.length>=2;
   const listRef=React.useRef(null);
   const loopReadyRef=React.useRef(false);
   const settleRef=React.useRef(null);
@@ -17023,7 +17050,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       try{observer=new ResizeObserver(()=>put());observer.observe(el);}catch(e){observer=null;}
     }
     return ()=>{if(observer)observer.disconnect();loopReadyRef.current=false;};
-  },[loopEnabled,list.length,state.sort,state.desc]);
+  },[loopEnabled,rows.length,state.sort,state.desc]);
   const handleListScroll=()=>{
     const el=listRef.current;
     rememberTop();
@@ -17108,14 +17135,17 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       className={`min-h-0 min-w-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`}>
       {list.length===0
         ?<p data-rhythm-song-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">{genre&&genre.favorite?'お気に入りの曲はまだありません。曲を選んで「♡ お気に入り」を押すと、ここに並びます。':genre&&genre.id!=='all'?'このジャンルの曲はまだありません。':emptyText}</p>
-        :<ul className="space-y-0.5">{blocks.map(copy=>list.map(entry=>{
+        :<ul className="space-y-0.5">{blocks.map(copy=>rows.map(row=>{
+          const entry=row.entry;
           const main=copy===1;
           const selected=!!song&&entry.songId===song.songId;
-          const eventSong=eventSongIds.has(entry.songId);
-          return <li key={`${copy}-${entry.songId}`} aria-hidden={main?undefined:'true'}>
+          // イベントの印は、組のどれかが対象なら出す(切り替えた先の版にも分かるよう、版のボタンにも出す)
+          const eventSong=row.members.some(item=>eventSongIds.has(item.songId));
+          return <li key={`${copy}-${row.head}`} aria-hidden={main?undefined:'true'}>
             <button type="button" {...(main?{'data-rhythm-song-row':entry.songId}:{'data-rhythm-song-row-loop':entry.songId})}
               tabIndex={main?undefined:-1} aria-pressed={selected}
-              onClick={()=>setSongId(entry.songId)}
+              data-rhythm-song-row-versions={row.versions}
+              onClick={()=>setSongId(selected?entry.songId:row.pick.songId)}
               className={`flex w-full min-h-[58px] items-center gap-2.5 rounded-xl border px-2 py-1 text-left [container-type:inline-size] ${selected?'border-sky-200/90 bg-gradient-to-r from-sky-400/40 to-sky-400/5 shadow-[0_0_12px_rgba(56,189,248,.25)]':eventSong?'border-amber-300/50 bg-amber-500/[0.07]':'border-transparent border-b-white/10 bg-transparent'}`}>
               <RhythmSongArt song={entry} marked={main}/>
               {/* 曲名は**1行**で高さを固定する(はみ出すぶんは「…」)。行の高さがそろい、枠がずれない
@@ -17166,6 +17196,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                         :<span className="truncate">未プレイ</span>}
                     </small>;
                   })()}
+                  {/* 版がいくつあるか(押したあと難易度の上で切り替えられる) */}
+                  {row.versions>1&&<small {...(main?{'data-rhythm-song-row-version-count':row.versions}:{})}
+                    className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[9px] font-black leading-none text-sky-200">{row.versions}つの版</small>}
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black text-amber-200">🏆 イベント対象</small>}
@@ -17225,7 +17258,18 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           </div>
 
           {/* 難易度をえらぶ。高さは固定(ロック中だけ「◯◯で解放」が2行になって、その曲だけ高くならないように) */}
-          <div data-rhythm-difficulty-row className={`flex gap-1${spot('difficulty')}`} style={{gridArea:'diff'}}>
+          <div className="min-w-0" style={{gridArea:'diff'}}>
+          {/* 版の切り替え(2026-10-03)。版が2つ以上ある曲だけ出す。押すと選んでいる曲がその版に変わり、
+              難易度は同じものがあればそのまま(無ければ上の「選び直し」がいちばん下の難易度へ戻す) */}
+          {(()=>{const versions=versionsOf(song);if(versions.length<2)return null;
+            return <div data-rhythm-song-versions className="mb-1 flex gap-1">{versions.map(item=>{
+              const on=item.songId===song.songId,eventVersion=eventSongIds.has(item.songId);
+              return <button key={item.songId} type="button" data-rhythm-song-version={item.songId} aria-pressed={on}
+                onClick={()=>setSongId(item.songId)}
+                className={`flex min-h-[30px] min-w-0 flex-1 items-center justify-center gap-0.5 rounded-lg border px-1 text-[11px] font-black leading-none landscape:min-h-[26px] ${on?'border-sky-200 bg-sky-400/30 text-white shadow-[0_0_8px_rgba(56,189,248,.3)]':'border-white/15 bg-slate-900/70 text-slate-300'}`}>
+                <span className="truncate">{rhythmSongVersionLabel(item.songId)||'原曲'}</span>{eventVersion&&<span aria-label="イベント対象">🏆</span>}
+              </button>;})}</div>;})()}
+          <div data-rhythm-difficulty-row className={`flex gap-1${spot('difficulty')}`}>
           {available.map(item=>{
             const tone=rhythmDifficultyTone(item.id);
             const open=unlocked(item);
@@ -17250,6 +17294,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                   style={{fontSize:rhythmTitleFitSize(text,8,6,2)}}>{text}</span>;})()}
             </button>;
           })}
+          </div>
           </div>
           <div className="flex gap-2" style={{gridArea:'act'}}>
             {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom}
