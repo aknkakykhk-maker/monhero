@@ -13,7 +13,7 @@ const GEZUDERO_ICON = "images/breeder-icons/gezudero.png?v=d79a38ee0679";
 const MELOPANMAN_ICON = "images/breeder-icons/melopanman.png?v=1eba631f1832";
 const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
 // ももすけのカード用の顔アイコン。助手の表情画像(小さい)をそのまま使う
-const MOMOSUKE_FACE_ICON = "images/assistant/face/momosuke_happy.PNG?v=567b7baa59e9";
+const MOMOSUKE_FACE_ICON = "images/assistant/face/momosuke_happy.PNG?v=26508bc26c81";
 const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // マーケットのアイコン商品だけで使う立ち絵。
@@ -208,6 +208,29 @@ const DRA_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   cost: 1,
 }));
 
+// あつの顔アイコンも、助手と同じ仕様(8表情・各1pt)で並べる(2026-10-03)。
+// あつは助手ではないので、顔アイコン(256px)を images/breeder-icons/atsu_<表情>.png に直接置いている。
+// 既存の「あつのアイコン」(id:'atsu', images/breeder-icons/atsu.png)は別の絵で、購入済みの人がいるのでそのまま残す。
+// こちらは id を atsu_* に分けているので、既存の保存データには影響しない。
+// (使われていない画像の検査が見つけられるよう、パスは1枚ずつ文字で書いておく)
+const ATSU_EXPRESSION_ICONS = {
+  normal:   "images/breeder-icons/atsu_normal.png?v=f4d1376ca306",
+  happy:    "images/breeder-icons/atsu_happy.png?v=311560d5a472",
+  wink:     "images/breeder-icons/atsu_wink.png?v=702e6985867a",
+  excited:  "images/breeder-icons/atsu_excited.png?v=98eb2efc88fa",
+  surprise: "images/breeder-icons/atsu_surprise.png?v=5ea1fdd3873c",
+  troubled: "images/breeder-icons/atsu_troubled.png?v=e9ffa3a87f89",
+  angry:    "images/breeder-icons/atsu_angry.png?v=24449b0075a1",
+  crying:   "images/breeder-icons/atsu_crying.png?v=c8e7bc88c9c3",
+};
+const ATSU_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `atsu_${key}`,
+  name: `あつ（${label}）のアイコン`,
+  type: 'icon',
+  icon: ATSU_EXPRESSION_ICONS[key],
+  cost: 1,
+}));
+
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:KIKI_FACE_ICON, cost:1 },
@@ -320,7 +343,8 @@ const BREEDER_MARKET_ITEMS = [
   ...KIKI_MARKET_ICONS,
   ...MOMOSUKE_MARKET_ICONS,
   // 助手ドラの表情アイコン(8種)
-  ...DRA_MARKET_ICONS
+  ...DRA_MARKET_ICONS,
+  ...ATSU_MARKET_ICONS
 ];
 // 難易度キー → その難易度で使えるスキップチケットのid
 const SKIP_TICKET_BY_DIFFICULTY = Object.freeze(Object.fromEntries(
