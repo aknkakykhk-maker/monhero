@@ -110,7 +110,7 @@ function BreederMarketScreen({
     const comingSoon = item.available === false;
     const owned = !comingSoon && isItemOwned(item);
     // 買える条件つきのフレーム(2026-10-03)。条件を達成するまでは札を出して買えない。詳細で条件と進み具合が読める
-    const frameCondition = item.type==='frame' && frameConditionOf ? frameConditionOf(item.id) : null;
+    const frameCondition = item.type==='frame' && frameConditionOf ? frameConditionOf(item.id,'breederPoint') : null;
     const frameLocked = !!frameCondition && !frameCondition.met && !owned;
     const balance = balanceOf(marketCurrencyOf(item));
     const canBuy = !comingSoon && !frameLocked && !owned && balance>=item.cost && !busy;
@@ -300,7 +300,7 @@ function BreederMarketScreen({
             const item={ id:offer.frameId, name:offer.name, emoji:'🖼️', type:'frame', currency:'beatPoint', cost:offer.cost, desc:frame?.desc||'' };
             const owned=isItemOwned({ id:offer.frameId, type:'frame' });
             // 買える条件つきのフレーム(2026-10-03)。条件を達成するまでは札を出して買えない
-            const frameCondition=frameConditionOf?frameConditionOf(offer.frameId):null;
+            const frameCondition=frameConditionOf?frameConditionOf(offer.frameId,'beatPoint'):null;
             const frameLocked=!!frameCondition&&!frameCondition.met&&!owned;
             const detailItem=frameCondition?{...item,frameCondition}:item;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-frame':offer.id}} previewIcon={previewIcon}

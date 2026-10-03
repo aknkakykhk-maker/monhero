@@ -91,15 +91,14 @@ const seed = ({ conditions }) => {
     await clickText(page, entry, { exact: false });
     await clickText(page, 'フレーム');
   };
-  const frameCards = (page) => page.evaluate(() => {
-    const names = ['モッチー', 'ムー', 'スエゾービート'];
+  const frameCards = (page, names = ['モッチー', 'ムー', 'スエゾービート']) => page.evaluate((names) => {
     return names.map(n => {
       const card = [...document.querySelectorAll('div')].reverse().find(d => d.className.toString().includes('rounded-2xl') && d.className.toString().includes('border') && (d.innerText || '').replace(/\u200b/g, '').includes(`${n}のフレーム`) && !names.some(m => m !== n && m !== 'ムー' && (d.innerText || '').replace(/\u200b/g, '').includes(`${m}のフレーム`)));
       const text = card ? card.innerText.replace(/\s+/g, ' ').replace(/\u200b/g, '') : '';
       const buy = card ? [...card.querySelectorAll('button')].find(b => /購入|交換/.test(b.getAttribute('aria-label') || b.innerText || '')) : null;
       return { name: n, found: !!card, text, locked: text.includes('条件を達成すると買えます'), buyEnabled: !!buy && !buy.disabled, buyLabel: buy ? (buy.getAttribute('aria-label') || buy.innerText) : '' };
     });
-  });
+  }, names);
   const store = (page, key) => page.evaluate((k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, key);
 
   // ===== ① 条件を1つも満たしていない人 =====
@@ -112,6 +111,17 @@ const seed = ({ conditions }) => {
       check(`① ${label}: 条件が未達成の3枚は「条件を達成すると買えます」の札で、買えない`,
         cards.every(c => c.locked && !c.buyEnabled), cards.map(c => `${c.name}:${c.locked}/${c.buyEnabled}`).join(' '));
     }
+    // 新しい7枚(2026-10-03): 条件はブリーダーP交換所だけ。ビートP交換所は条件なし(スエゾー〜ミーア(ゴーレム含む)は100P・ラグナロクは1000P)
+    const NEW6 = ['スエゾー', 'ゴーレム', 'ライガー', 'ハム', 'ピクシー', 'ミーア', 'ラグナロク'];
+    await openShop(page, 'ブリーダーP');
+    const bpNew = await frameCards(page, NEW6);
+    check('① ブリーダーP交換所: 新しい7枚も並び、条件が未達成なので鍵つきで買えない',
+      bpNew.every(c => c.found && c.locked && !c.buyEnabled), bpNew.map(c => `${c.name}:${c.found}/${c.locked}/${c.buyEnabled}`).join(' '));
+    await openShop(page, 'ビートP');
+    const beatNew = await frameCards(page, NEW6);
+    check('① ビートP交換所: 新しい7枚は鍵が付かない(条件なし)', beatNew.every(c => c.found && !c.locked), beatNew.map(c => `${c.name}:${c.found}/${c.locked}`).join(' '));
+    check('① ビートP交換所: スエゾー〜ミーア(ゴーレム含む)は100P(所持500P)で買える', beatNew.slice(0, 6).every(c => c.buyEnabled), beatNew.map(c => `${c.name}:${c.buyEnabled}`).join(' '));
+    check('① ビートP交換所: ラグナロクは1000Pなので、500Pでは買えない', !beatNew[6].buyEnabled && /1000/.test(beatNew[6].text.replace(/,/g, '')), beatNew[6].text.slice(0, 40));
     check('① 未達成のあいだ、持ち物は何も増えない', ((await store(page, 'mh_profile_frame_owned_v1')) || []).length === 0);
     await ctx.close();
   }
