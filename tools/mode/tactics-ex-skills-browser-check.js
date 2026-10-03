@@ -66,7 +66,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
       localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
       localStorage.setItem('mh_tactics_intro_seen_v1', JSON.stringify(true));
       // 剣士モッチー(円盤石で解放するレア)も勇者モンに選べるようにする。検査のまっさらなデータだけの話
-      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi','Mia','Snegurochka']));
+      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro','KenshiMocchi','Mia','Snegurochka','Undine','Yaobikuni']));
     });
     // ★ランキングへは何も送らない(本番の入口でも途中で読み込み直すだけで、降参しない)
     await page.route(/supabase\.co/, (route) => route.abort());
@@ -545,6 +545,51 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await tapSlot(snSlot);
     p = await panel();
     check('使ったあとは 0 / 1(このWAVE)・詳細に「プレゼントの中身」が出る', !!p && /0 \/ 1/.test(p.uses) && /プレゼントの中身/.test(p.text), p && p.text.slice(0, 300));
+    await closePanel();
+
+    // --- ⑨⑩ ウンディーネ「生命の泉」・ヤオビクニ「悠久の刻」(2026-10-03 ユーザーの案) ---
+    const unSlot = await startWith('ウンディーネ');
+    const unBefore = await partyOf(unSlot);
+    await tapSlot(unSlot);
+    p = await panel();
+    check('「生命の泉」: 5/5・カードと併用できる・3ターン', !!p && p.name === '生命の泉' && /5 \/ 5/.test(p.uses) && p.withCards === 'yes' && /3ターン/.test(p.text), p && p.text.slice(0, 220));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(500);
+    const targets = await page.evaluate(() => [...document.querySelectorAll('[data-tactics-ex-target]')].map(b => ({ slot: b.getAttribute('data-tactics-ex-target'), downed: b.getAttribute('data-tactics-ex-target-downed'), text: b.textContent.trim().slice(0, 40) })));
+    check('「EXスキルを使用」で「だれに使う？」の一覧が出る(WAVE1は自分だけ)', targets.length === 1 && String(targets[0].slot) === String(unSlot) && targets[0].downed === 'no', JSON.stringify(targets));
+    await page.locator(`[data-tactics-ex-target="${unSlot}"]`).click();
+    await page.waitForTimeout(900);
+    const unAfter = await partyOf(unSlot);
+    const maxOf = (v) => { const m = /^(\d+)\/(\d+)$/.exec(v || ''); return m ? Number(m[2]) : -1; };
+    check('選んだ味方のライフが上限アップ(+30%)のうえ満タンになり、ガッツも戻る', !!unBefore && !!unAfter && maxOf(unAfter.hp) === Math.floor(maxOf(unBefore.hp) * 1.3)
+      && unAfter.hp === `${maxOf(unAfter.hp)}/${maxOf(unAfter.hp)}` && gutsNow(unAfter.guts) > gutsNow(unBefore.guts), `${JSON.stringify(unBefore)} → ${JSON.stringify(unAfter)}`);
+    await tapSlot(unSlot);
+    p = await panel();
+    check('使ったあとは 4 / 5・詳細に「生命の泉の対象」が出る', !!p && /4 \/ 5/.test(p.uses) && /生命の泉の対象/.test(p.text), p && p.text.slice(0, 300));
+    await closePanel();
+
+    const ybSlot = await startWith('ヤオビクニ');
+    await tapSlot(ybSlot);
+    p = await panel();
+    check('「悠久の刻」: 2/2・カードと併用できる', !!p && p.name === '悠久の刻' && /2 \/ 2/.test(p.uses) && p.withCards === 'yes', p && p.text.slice(0, 220));
+    check('使う前は TURN 1/20', /TURN 1\/20/.test(await text()), (await text()).slice(0, 80));
+    await page.locator('[data-tactics-ex-use]').click();
+    await page.waitForTimeout(900);
+    const ybPass = page.locator('[data-tactics-ex-pass]');
+    check('「ターンを進める」が出る', await ybPass.count() === 1);
+    await ybPass.click();
+    let sawStop = false;
+    for (let k = 0; k < 24; k += 1) {
+      if (/時間停止/.test(await text())) sawStop = true;
+      if (!(await page.locator('[data-tactics-ex-pass]').count()) === false && k > 4) break;
+      await page.waitForTimeout(500);
+    }
+    await page.waitForTimeout(2500);
+    const ybText = await text();
+    check('時間が止まったターンは数えない(使ったあとも TURN 1/20 のまま)', /TURN 1\/20/.test(ybText) && !/TURN 2\/20/.test(ybText), ybText.slice(0, 80));
+    await tapSlot(ybSlot);
+    p = await panel();
+    check('使ったあとは 1 / 2・同じターンの数字ではもう一度使えない', !!p && /1 \/ 2/.test(p.uses) && /このターンはもう使った/.test(p.text), p && p.text.slice(0, 300));
     await closePanel();
     check('実行時エラーが出ていない', errors.length === 0, errors.slice(0, 2).join(' / '));
   } catch (e) {

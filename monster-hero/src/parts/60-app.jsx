@@ -1629,6 +1629,13 @@ function MonsterHeroGame() {
   // 値が無い・壊れている・知らないid・未公開のidは、読み込み時に必ず 'none' へ倒れる
   const [profileFrameId, setProfileFrameId] = useState(PROFILE_FRAME_NONE_ID);
   const [showFramePicker, setShowFramePicker] = useState(false);
+  // 選択画面の検索・絞り込み(閉じるとき初期へ戻す。保存はしない)
+  const [iconQuery, setIconQuery] = useState('');
+  const [iconChip, setIconChip] = useState('all');
+  const [frameQuery, setFrameQuery] = useState('');
+  const [frameChip, setFrameChip] = useState('all');
+  const [favQuery, setFavQuery] = useState('');
+  const [favSort, setFavSort] = useState('bond');
   // 鍵つきの枠を押したとき、その条件を出すためのid(押していなければ null)
   const [frameLockedInfo, setFrameLockedInfo] = useState(null);
   // もらった飾り枠(2026-09-16)。助手との仲良し度が Lv2/5/7 になると1枚ずつ増える。
@@ -10457,6 +10464,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     };
     const applyImmediateTakenReduction = (damage, slotIdx=null) => applyTurnDamageReduction(damage>0 ? damage*immediateTakenMultAt(slotIdx) : damage, slotIdx);
     const intent = overrideIntent||enemyIntent;
+    // ★ヤオビクニの「悠久の刻」: 使ったターンは敵が行動せず、ターン数も進めない(2026-10-03)
+    const timeStopSlot = isTacticsMode(runMode)&&tacticsExEnabled ? tacticsExTimeStopSlot(tacticsExStateRef.current,tacticsUnitsRef.current,tacticsExLiveRef.current.now) : null;
     setEnemySkillName({label:intent.label, icon:intent.icon});
     // 敵の番の見出し。このあとの吹き出し(ダメージ・回避・ガード)が、どの技の結果なのかを結ぶ
     pushBattleLog(`敵の行動：${intent.label}`, 'enemy');
@@ -10468,7 +10477,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 止められたターンは「何もしなかった」ことにする。ここをfalseのままにしておくと、
     // ためを止めたのに次のターンだけ必殺技が来る、という状態になる
     enemyActionPerformedRef.current = false;
-    if (getTurnBuff('invincible',false)||immediateEffects.invincible) {
+    if (timeStopSlot!=null) {
+      addPopup('⏳ 時間停止！ 敵は動けない','enemy','text-sky-300 font-black text-xl drop-shadow-md'); pushBattleLog('⏳ 時間が止まっている。敵は行動しない','info'); await battleWait(1000);
+    } else if (getTurnBuff('invincible',false)||immediateEffects.invincible) {
       addPopup("無効化！",'hero','text-blue-400 font-black text-xl drop-shadow-md');
       setImmediateTurnBuff('invincible',false); await battleWait(1000);
     } else if (getTurnBuff('stunEnemy',false)||immediateEffects.stun) {
@@ -11006,7 +11017,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else delete activeTurnBuffs.bySlot;
     setTurnBuffs(activeTurnBuffs);
     writeNextTurnBuffs({});
-    const nextTurn=turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); } setIsBusy(false);
+    // 時間を止めたターンは数えない(20ターン制限にも入れない)。止めた記録は使い終わったことにして、止め続けない
+    if(timeStopSlot!=null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
+    const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); } setIsBusy(false);
   };
 
   const useEmergency = async () => {
@@ -11077,6 +11090,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       styleOptions:def.duration==='style'?def.styles.map(st=>({ ...st,
         current:tacticsExStyleOf(def,state,slotIdx,mon.id)===st.id })):null,
       durationText:tacticsExDurationText(def),
+        // 味方を選んで使うEX(生命の泉)の、選べる味方の一覧(名前つき)
+        targetOptions:(()=>{ const opts=tacticsExTargetOptions(def,tacticsUnits); return opts?opts.map(o=>({ ...o, name:(slots[o.slot]?.masuName||slots[o.slot]?.name||'') })):null; })(),
       implemented:isTacticsExEffectImplemented(def),
       // いまの力・丈夫さ(EXが乗っていればそのぶんも)。捨て身・片手持ちの効き目を数字で確かめられるように
       // 距離枠に出す短い札。切り替え式はいまの状態(二刀流／片手持ち)、効いている間は「◯◯中」、ふだんは「EX」
@@ -11095,6 +11110,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const volt=def.effect==='stage'?tacticsExVoltageOf(state,tacticsUnits,tacticsExNow):null;
           if(volt) out.push(`ボルテージ ${volt.voltage} / ${volt.max}（与ダメ×${volt.dmgMult.toFixed(2)}・回復×${volt.healMult.toFixed(2)}・ガッツ回復+${Math.round(volt.gutsAdd*100)}%）`);
           const pres=def.effect==='present'?tacticsExPresentOf(state,tacticsUnits,tacticsExNow):null;
+          const spring=def.effect==='lifeSpring'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)?state.effects?.[slotIdx]:null;
+          if(spring&&Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName||slots[spring.target]?.name||'味方'}（あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン）`);
           if(pres&&pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot?'大当たり（全部）':pres.kinds.map(k=>TACTICS_EX_PRESENT_LABELS[k]).join('・')}`);
           return out;
         })(),
@@ -11135,14 +11152,35 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       now:tacticsExNow, busy:false, hp:lifeNow?lifeNow.hp:null, maxHp:lifeNow?lifeNow.maxHp:null });
     if(!check.ok) return false;
     if(def.duration==='style'&&checkTacticsExChoice(def,state,slotIdx,mon.id,choice)) return false;
+    // 味方を選んで使うEX(生命の泉)は、選んだ味方が要る
+    if(checkTacticsExTarget(def,tacticsUnitsRef.current,choice)) return false;
     // 使った瞬間の値を控える(捨て身は「使ったときの丈夫さ」から力へ移す量を決める)
     const usedUnit=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
     const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
-      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null, choice });
+      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null, choice, target:def.target==='ally'?choice:null });
     commitTacticsExState(next);
     Audio_.se.card();
     const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
+    // 生命の泉(ウンディーネ): 選んだ味方へ。ダウン中なら立たせて満タン、立っていればライフ上限を上げてから満タン。どちらもガッツが戻る
+    if(def.lifeSpring&&Number.isInteger(choice)){
+      let units=tacticsUnitsRef.current;
+      const before=normalizeTacticsUnit(units[choice]);
+      if(before){
+        const wasDown=before.downed===true;
+        if(!wasDown&&def.lifeSpring.maxUpRate>0) units=scaleTacticsUnits(setTacticsExMaxHpRate(units,choice,def.lifeSpring.maxUpRate),getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+        const u=normalizeTacticsUnit(units[choice]);
+        const hpGain=Math.max(0,u.maxHp-u.hp);
+        units=healTacticsAt(units,choice,hpGain);
+        const afterHeal=normalizeTacticsUnit(units[choice]);
+        const gutsGain=Math.max(0,Math.min(afterHeal.maxGuts-afterHeal.guts,Math.floor(afterHeal.maxGuts*def.lifeSpring.gutsRate)));
+        units=recoverTacticsGutsAt(units,choice,gutsGain);
+        commitTacticsUnits(units);
+        mergeTacticsSlotFx({[choice]:hpGain},{[choice]:gutsGain});
+        const targetName=slots[choice]?.masuName||slots[choice]?.name||'味方';
+        pushBattleLog(wasDown?`${targetName}が立ち上がった！ ライフ満タン`:`${targetName}のライフが満タン。上限が${Math.round(def.lifeSpring.maxUpRate*100)}%上がった`,'ally');
+      }
+    }
     // 最大ライフの一部を払う(堕天の烙印)。ライフが払う量より多いときだけ使えるので、ここで倒れることはない。枠へ減った量を出す
     if(def.lifeCostRate>0&&lifeNow){
       const cost=tacticsExLifeCost(def,lifeNow.maxHp);
@@ -17656,36 +17694,48 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {showIconPicker&&(
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
-              <h3 className="text-lg font-black text-white mb-2 text-center">アイコンを選択</h3>
-              {/* いまの見た目。フレームはここでは変えられない(プロフィールの「フレーム」から変える) */}
-              <div className="flex flex-col items-center gap-1 mb-4">
-                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="いまの見た目" className="w-16 h-16" fallback={<User size={28} className="text-indigo-400"/>}/>
-                <span className="text-[9px] font-black text-slate-500">フレーム：{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし'}</span>
+        {showIconPicker&&(()=>{
+          // アイコンを選ぶ窓。数が増えても探せるよう、いまの選択を上に固定し、名前で探す・初期/購入済みで絞る・一覧だけスクロールする(PickerSheet)。
+          // フレームはここでは変えられない(プロフィールの「フレーム」から変える)
+          const closeIcon=()=>{ setShowIconPicker(false); setIconQuery(''); setIconChip('all'); };
+          const all=breederIconOptions({ownedMarketIconIds:ownedMarketIcons});
+          const label=(m)=>String(m.name||'').replace(/のアイコン$/,'');
+          const q=iconQuery.trim().toLowerCase();
+          const matches=all.filter(m=>(iconChip==='all'||m.source===iconChip)&&(!q||label(m).toLowerCase().includes(q)));
+          const starters=matches.filter(m=>m.source==='starter');
+          const markets=matches.filter(m=>m.source==='market');
+          const pick=(m)=>{ setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); closeIcon(); };
+          const cell=(m)=>{
+            const selected=breederIcon===m.id;
+            return (
+              <button key={m.id} type="button" data-icon-option={m.id} aria-pressed={selected} onClick={()=>pick(m)}
+                className={`relative flex flex-col items-center gap-1 rounded-2xl border-2 p-1.5 active:scale-95 ${selected?'border-amber-400 bg-amber-950/30':'border-slate-700 bg-slate-950/40'}`}>
+                <BreederIcon src={m.src} id={m.id} alt={m.name} roundedClass="rounded-xl" className="aspect-square w-full"/>
+                {selected&&<PickerCheckMark/>}
+                <span className="w-full truncate text-center text-[9px] font-black leading-tight text-slate-200">{label(m)}</span>
+              </button>
+            );
+          };
+          const ownedMarket=all.filter(m=>m.source==='market').length;
+          return (
+            <PickerSheet title="アイコンを選ぶ" note="タップで決まります。フレームは、プロフィールの「フレーム」から変えられます。" onClose={closeIcon}
+              preview={<>
+                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="いまの見た目" className="h-14 w-14 shrink-0" fallback={<User size={26} className="text-indigo-400"/>}/>
+                <span className="min-w-0"><b className="block text-[12px] font-black text-white">いまのアイコン</b><small className="block truncate text-[10px] font-bold text-slate-400">フレーム：{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).name||'フレームなし'}</small></span>
+              </>}
+              search={iconQuery} onSearch={all.length>8?setIconQuery:null} searchPlaceholder="アイコンを名前でさがす"
+              chips={ownedMarket>0?[{id:'all',label:'すべて',count:all.length},{id:'starter',label:'はじめから',count:all.length-ownedMarket},{id:'market',label:'購入ずみ',count:ownedMarket}]:null}
+              chip={iconChip} onChip={setIconChip} dataPicker="icon">
+              {matches.length===0&&<p className="py-8 text-center text-[11px] font-bold text-slate-500">当てはまるアイコンがありません</p>}
+              <div className="grid grid-cols-4 gap-2">
+                {starters.length>0&&iconChip==='all'&&ownedMarket>0&&<PickerGroupLabel count={starters.length}>はじめから</PickerGroupLabel>}
+                {starters.map(cell)}
+                {markets.length>0&&iconChip==='all'&&<PickerGroupLabel count={markets.length}>マーケットで買ったアイコン</PickerGroupLabel>}
+                {markets.map(cell)}
               </div>
-              <div className="grid grid-cols-4 gap-3 mb-4">
-                {breederIconOptions().filter(m=>m.source==='starter').map(m=>(
-                  <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
-                    <BreederIcon src={m.src} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
-                  </button>
-                ))}
-              </div>
-              {ownedMarketIcons.length>0&&(<>
-                <h4 className="text-[10px] font-black text-amber-400 mb-2 text-center uppercase tracking-widest flex items-center justify-center gap-1"><ShoppingBag size={10}/>マーケット購入アイコン</h4>
-                <div className="grid grid-cols-4 gap-3 mb-4">
-                  {breederIconOptions({ownedMarketIconIds:ownedMarketIcons}).filter(m=>m.source==='market').map(m=>(
-                    <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-amber-400 ring-2 ring-amber-400':'border-slate-700'}`}>
-                      <BreederIcon src={m.src} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
-                    </button>
-                  ))}
-                </div>
-              </>)}
-              <button onClick={()=>setShowIconPicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
-            </div>
-          </div>
-        )}
+            </PickerSheet>
+          );
+        })()}
 
         {/* プロフィールフレームを選ぶ(2026-09-15)。
             ・アイコンとは独立した設定。ここではアイコンを変えない
@@ -17709,99 +17759,139 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
           </div>
         )}
-        {showFavoritePicker&&(
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-pink-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full flex flex-col">
-              <h3 className="text-lg font-black text-white mb-1 text-center">好きなモンスター</h3>
-              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">フレンドがあなたのプロフィールを開いたとき、この子が見えます。</p>
-              <div className="min-h-0 flex-1 overflow-y-auto mh-scroll flex flex-col gap-1.5" data-favorite-picker>
-                <button type="button" data-favorite-option="none" onClick={()=>selectFavoriteMasu(null)} aria-pressed={favoriteMasuId==null}
+        {showFavoritePicker&&(()=>{
+          // 好きなモンスターを選ぶ窓(PickerSheet)。数が増えても探せるよう、名前で探す・絆Lv順/総合力順/名前順で並べ替える。
+          // 並べ替えの総合力は、その順に切り替えたときだけ計算する(多いと重いため)
+          const closeFav=()=>{ setShowFavoritePicker(false); setFavQuery(''); setFavSort('bond'); };
+          const q=favQuery.trim().toLowerCase();
+          const list=masuMons.filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]&&(!q||String(ALL_PLAYER_MONSTERS[m.baseId].name||'').toLowerCase().includes(q)))
+            .map(m=>({m,base:ALL_PLAYER_MONSTERS[m.baseId],bond:masuBondLevelInfo(m).level,power:favSort==='power'?Math.round(Number(masuPowerOf(m))||0):0}));
+          list.sort((a,b2)=>favSort==='name'?String(a.base.name).localeCompare(String(b2.base.name),'ja')||b2.bond-a.bond
+            :favSort==='power'?b2.power-a.power||b2.bond-a.bond:b2.bond-a.bond||String(a.base.name).localeCompare(String(b2.base.name),'ja'));
+          const shown=list.slice(0,200);
+          const cur=favoriteMasuId!=null?masuMons.find(m=>String(m.id)===String(favoriteMasuId)):null;
+          const curBase=cur?ALL_PLAYER_MONSTERS[cur.baseId]:null;
+          const curFace=curBase?friendsFaceIconOf(cur.baseId):null;
+          return (
+            <PickerSheet title="好きなモンスター" note="フレンドがあなたのプロフィールを開いたとき、この子が見えます。" onClose={closeFav} accent="border-pink-500"
+              preview={<>
+                {curFace?<ProfileAvatar src={curFace.src} id={curFace.id} className="h-14 w-14 shrink-0"/>:<span className="flex h-14 w-14 shrink-0 items-center justify-center text-3xl" aria-hidden="true">💗</span>}
+                <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{curBase?curBase.name:'まだ選んでいません'}</b><small className="block text-[10px] font-bold text-pink-300">{curBase?`絆Lv.${masuBondLevelInfo(cur).level}`:'下から選んでください'}</small></span>
+              </>}
+              search={favQuery} onSearch={masuMons.length>6?setFavQuery:null} searchPlaceholder="モンスターを名前でさがす"
+              chips={masuMons.length>1?[{id:'bond',label:'絆Lvが高い順'},{id:'power',label:'総合力が高い順'},{id:'name',label:'名前順'}]:null}
+              chip={favSort} onChip={setFavSort} dataPicker="favorite">
+              <div className="flex flex-col gap-1.5" data-favorite-picker>
+                <button type="button" data-favorite-option="none" onClick={()=>{selectFavoriteMasu(null);setFavQuery('');setFavSort('bond');}} aria-pressed={favoriteMasuId==null}
                   className={`min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${favoriteMasuId==null?'border-pink-400 bg-pink-950/60 text-pink-100':'border-slate-700 bg-slate-950/40 text-slate-300'}`}>設定しない</button>
-                {masuMons.filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]).slice().sort((a,b)=>masuBondLevelInfo(b).level-masuBondLevelInfo(a).level).slice(0,200).map(m=>{
-                  const base=ALL_PLAYER_MONSTERS[m.baseId]; const chosen=favoriteMasuId!=null&&String(m.id)===String(favoriteMasuId);
+                {shown.map(({m,base,bond,power})=>{
+                  const chosen=favoriteMasuId!=null&&String(m.id)===String(favoriteMasuId);
+                  const face=friendsFaceIconOf(m.baseId);
                   return (
-                    <button key={m.id} type="button" data-favorite-option={String(m.id)} onClick={()=>selectFavoriteMasu(m.id)} aria-pressed={chosen}
-                      className={`flex items-center gap-2 min-h-[48px] rounded-xl border px-2 text-left active:scale-95 ${chosen?'border-pink-400 bg-pink-950/60':'border-slate-700 bg-slate-950/40'}`}>
-                      {(()=>{ const face=friendsFaceIconOf(m.baseId); return face?<ProfileAvatar src={face.src} id={face.id} className="h-9 w-9 shrink-0"/>:<span className="h-9 w-9 shrink-0 text-center text-xl">❓</span>; })()}
+                    <button key={m.id} type="button" data-favorite-option={String(m.id)} onClick={()=>{selectFavoriteMasu(m.id);setFavQuery('');setFavSort('bond');}} aria-pressed={chosen}
+                      className={`relative flex items-center gap-2 min-h-[48px] rounded-xl border px-2 text-left active:scale-95 ${chosen?'border-pink-400 bg-pink-950/60':'border-slate-700 bg-slate-950/40'}`}>
+                      {face?<ProfileAvatar src={face.src} id={face.id} className="h-9 w-9 shrink-0"/>:<span className="h-9 w-9 shrink-0 text-center text-xl">❓</span>}
                       <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">{base.name}</span>
-                      <span className="shrink-0 text-[10px] font-black text-pink-300">絆Lv.{masuBondLevelInfo(m).level}</span>
+                      <span className="shrink-0 text-right text-[10px] font-black text-pink-300">絆Lv.{bond}{favSort==='power'&&power>0?<small className="block text-[9px] text-amber-300">総合力 {power.toLocaleString()}</small>:null}</span>
+                      {chosen&&<PickerCheckMark/>}
                     </button>
                   );
                 })}
                 {masuMons.length===0&&<p className="py-4 text-center text-[11px] font-bold text-slate-400">まだマスモンがいません</p>}
+                {masuMons.length>0&&shown.length===0&&<p className="py-6 text-center text-[11px] font-bold text-slate-500">当てはまるモンスターがいません</p>}
               </div>
-              <div className="mt-3"><ModalCloseButton onClick={()=>setShowFavoritePicker(false)}/></div>
-            </div>
-          </div>
-        )}
-        {showFramePicker&&(
-          <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
-              <h3 className="text-lg font-black text-white mb-1 text-center">プロフィールフレーム</h3>
-              <p className="text-[9px] text-slate-500 text-center mb-4 leading-tight">アイコンの外側に飾り枠を重ねます。アイコンそのものは変わりません。</p>
-              <div className="flex flex-col items-center gap-1 mb-4">
-                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="いまの見た目" className="w-20 h-20" fallback={<User size={36} className="text-indigo-400"/>}/>
-                <span className="text-[9px] font-black text-slate-500">いまの見た目</span>
+            </PickerSheet>
+          );
+        })()}
+        {showFramePicker&&(()=>{
+          // プロフィールフレームを選ぶ窓(PickerSheet)。いまの見た目を上に固定し、名前で探す・使える/ロック中で絞る・色の枠と助手の枠を見出しで分ける。
+          // 候補は「いまのブリーダーアイコン＋そのフレーム」を重ねて見せる。押したその場で反映して保存する(閉じるまで見比べられる)。
+          // まだもらっていない枠も並べる(絵は見せて、鍵と条件だけを重ねる。2026-09-16にユーザーが「絵を見せて鍵だけ付ける」を選択)。
+          // 並ぶのは公開済み(released:true)のフレームだけ。未公開の豪華フレームは出ない
+          const closeFrame=()=>{ setShowFramePicker(false); setFrameQuery(''); setFrameChip('all'); };
+          const frames=releasedProfileFrames();
+          const q=frameQuery.trim().toLowerCase();
+          const ownedOf=(frame)=>profileFrameOwned(frame.id, ownedProfileFrames);
+          const matches=frames.filter(frame=>(!q||String(frame.name||'').toLowerCase().includes(q))
+            &&(frameChip==='all'||(frameChip==='owned'?ownedOf(frame):!ownedOf(frame))));
+          const colorFrames=matches.filter(frame=>!profileFrameUnlock(frame)&&!profileFrameSale(frame));
+          const assistantFrames=matches.filter(frame=>!!profileFrameUnlock(frame));
+          // 条件を達成するとマーケットで買える枠(2026-10-03・モッチー・ムー・スエゾービート)
+          const saleFrames=matches.filter(frame=>!profileFrameUnlock(frame)&&!!profileFrameSale(frame));
+          const ownedCount=frames.filter(ownedOf).length;
+          const currentFrame=profileFrameById(normalizeProfileFrameId(profileFrameId))||{};
+          const cell=(frame)=>{
+            const owned=ownedOf(frame);
+            const unlock=profileFrameUnlock(frame);
+            const who=unlock?assistantById(unlock.assistantId):null;
+            const selected=normalizeProfileFrameId(profileFrameId)===frame.id;
+            return (
+              <button key={frame.id} data-profile-frame-option={frame.id} data-profile-frame-locked={owned?'no':'yes'}
+                onClick={()=>{ if(owned) selectProfileFrame(frame.id); else setFrameLockedInfo(frame.id); }}
+                aria-pressed={selected} aria-disabled={!owned}
+                className={`relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2 active:scale-95 ${selected?'border-amber-400 bg-amber-950/30':'border-slate-700 bg-slate-950/40'}`}>
+                <span className={`relative block ${owned?'':'opacity-45'}`}>
+                  <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={frame.id} alt={frame.name} className="w-12 h-12" fallback={<User size={22} className="text-indigo-400"/>}/>
+                  {!owned&&<Lock size={14} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
+                </span>
+                {selected&&<PickerCheckMark/>}
+                <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{frame.name}</span>
+                {!owned&&unlock&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{(who&&who.name)||''} Lv{unlock.bondLevel}</span>}
+                {!owned&&!unlock&&profileFrameSale(frame)&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">マーケットで購入</span>}
+              </button>
+            );
+          };
+          // 鍵を押したときだけ、条件といまの進み具合を一覧の下(閉じるの上)に出す。スクロールしなくても見える
+          const lockedInfo=frameLockedInfo&&(()=>{
+            const frame=profileFrameById(frameLockedInfo); const unlock=frame?profileFrameUnlock(frame):null;
+            // マーケットで買う枠(2026-10-03)。条件と進み具合、買える場所を出す。買うのはマーケット
+            if(frame&&!unlock&&profileFrameSale(frame)){
+              const status=profileFrameConditionStatus(frame);
+              const shops=profileFrameSales(frame).map(sale=>`${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`).join(' ／ ');
+              return (
+                <div data-profile-frame-locked-info data-profile-frame-sale className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
+                  {status&&<p className="text-[10px] font-black text-amber-300 leading-tight text-center">{status.text}</p>}
+                  {status&&<p className="text-[9px] text-slate-400 leading-tight text-center mt-1">{status.met?'条件を達成しています！':status.progress}</p>}
+                  <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">マーケットで買えます：{shops}</p>
+                  <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
+                </div>
+              );
+            }
+            if(!frame||!unlock) return null;
+            const who=assistantById(unlock.assistantId);
+            const points=normalizeAssistantBond(assistantBonds[unlock.assistantId]).points;
+            const level=assistantBondLevelOf(points);
+            const needPoints=(assistantBondLevelsOf(unlock.assistantId).find(st=>st.level===unlock.bondLevel)||{}).need;
+            const remain=Number.isFinite(needPoints)?Math.max(0, needPoints-points):null;
+            return (
+              <div data-profile-frame-locked-info className="rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
+                <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{(who&&who.name)||''}との仲良し度 Lv{unlock.bondLevel} でもらえます</p>
+                <p className="text-[9px] text-slate-400 leading-tight text-center mt-1">いまは Lv{level}{remain!=null&&remain>0?` ／ あと ${remain}`:''}</p>
+                <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
               </div>
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {releasedProfileFrames().map(frame=>{
-                  // まだもらっていない枠も並べる。絵は見せて、鍵と条件だけを重ねる
-                  // (2026-09-16にユーザーが「絵を見せて鍵だけ付ける」を選択)
-                  const owned=profileFrameOwned(frame.id, ownedProfileFrames);
-                  const unlock=profileFrameUnlock(frame);
-                  const who=unlock?assistantById(unlock.assistantId):null;
-                  const selected=normalizeProfileFrameId(profileFrameId)===frame.id;
-                  return (
-                    <button key={frame.id} data-profile-frame-option={frame.id} data-profile-frame-locked={owned?'no':'yes'}
-                      onClick={()=>{ if(owned) selectProfileFrame(frame.id); else setFrameLockedInfo(frame.id); }}
-                      aria-pressed={selected} aria-disabled={!owned}
-                      className={`relative flex flex-col items-center gap-2 rounded-2xl border-2 p-2 active:scale-95 ${selected?'border-indigo-400 bg-indigo-950/50':'border-slate-700 bg-slate-950/40'}`}>
-                      <span className={`relative block ${owned?'':'opacity-45'}`}>
-                        <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={frame.id} alt={frame.name} className="w-12 h-12" fallback={<User size={22} className="text-indigo-400"/>}/>
-                        {!owned&&<Lock size={14} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
-                      </span>
-                      <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{frame.name}</span>
-                      {!owned&&unlock&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{(who&&who.name)||''} Lv{unlock.bondLevel}</span>}
-                      {!owned&&!unlock&&profileFrameSale(frame)&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">交換所で購入</span>}
-                    </button>
-                  );
-                })}
+            );
+          })();
+          return (
+            <PickerSheet title="プロフィールフレーム" note="アイコンの外側に飾り枠を重ねます。アイコンそのものは変わりません。" onClose={closeFrame}
+              preview={<>
+                <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={profileFrameId} alt="いまの見た目" className="h-14 w-14 shrink-0" fallback={<User size={26} className="text-indigo-400"/>}/>
+                <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{currentFrame.name||'フレームなし'}</b><small className="block text-[10px] font-bold leading-tight text-slate-400">{currentFrame.desc||'いまの見た目'}</small></span>
+              </>}
+              search={frameQuery} onSearch={frames.length>9?setFrameQuery:null} searchPlaceholder="フレームを名前でさがす"
+              chips={ownedCount<frames.length?[{id:'all',label:'すべて',count:frames.length},{id:'owned',label:'使える',count:ownedCount},{id:'locked',label:'もらう前',count:frames.length-ownedCount}]:null}
+              chip={frameChip} onChip={setFrameChip} footerExtra={lockedInfo} dataPicker="frame">
+              {matches.length===0&&<p className="py-8 text-center text-[11px] font-bold text-slate-500">当てはまるフレームがありません</p>}
+              <div className="grid grid-cols-3 gap-2.5">
+                {colorFrames.length>0&&(assistantFrames.length>0||saleFrames.length>0)&&<PickerGroupLabel count={colorFrames.length}>色の枠</PickerGroupLabel>}
+                {colorFrames.map(cell)}
+                {assistantFrames.length>0&&<PickerGroupLabel count={assistantFrames.length}>助手の枠（仲良し度でもらえます）</PickerGroupLabel>}
+                {assistantFrames.map(cell)}
+                {saleFrames.length>0&&<PickerGroupLabel count={saleFrames.length}>モンスターの枠（条件を達成するとマーケットで買えます）</PickerGroupLabel>}
+                {saleFrames.map(cell)}
               </div>
-              {/* 鍵を押したときだけ、条件といまの進み具合をその場に出す */}
-              {frameLockedInfo&&(()=>{
-                const frame=profileFrameById(frameLockedInfo); const unlock=frame?profileFrameUnlock(frame):null;
-                // 交換所で買う枠(2026-10-03)。条件と進み具合、買える場所を出す。買うのは交換所(マーケット)
-                if(frame&&!unlock&&profileFrameSale(frame)){
-                  const status=profileFrameConditionStatus(frame);
-                  const shops=profileFrameSales(frame).map(sale=>`${PROFILE_FRAME_SHOPS[sale.shop].label} ${sale.cost.toLocaleString()}P`).join(' ／ ');
-                  return (
-                    <div data-profile-frame-locked-info data-profile-frame-sale className="mb-3 rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
-                      {status&&<p className="text-[10px] font-black text-amber-300 leading-tight text-center">{status.text}</p>}
-                      {status&&<p className="text-[9px] text-slate-400 leading-tight text-center mt-1">{status.met?'条件を達成しています！':status.progress}</p>}
-                      <p className="text-[9px] text-slate-300 leading-tight text-center mt-1">マーケットで買えます：{shops}</p>
-                      <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
-                    </div>
-                  );
-                }
-                if(!frame||!unlock) return null;
-                const who=assistantById(unlock.assistantId);
-                const points=normalizeAssistantBond(assistantBonds[unlock.assistantId]).points;
-                const level=assistantBondLevelOf(points);
-                const needPoints=(assistantBondLevelsOf(unlock.assistantId).find(st=>st.level===unlock.bondLevel)||{}).need;
-                const remain=Number.isFinite(needPoints)?Math.max(0, needPoints-points):null;
-                return (
-                  <div data-profile-frame-locked-info className="mb-3 rounded-2xl border border-amber-500/60 bg-amber-950/30 px-3 py-2">
-                    <p className="text-[10px] font-black text-amber-300 leading-tight text-center">{(who&&who.name)||''}との仲良し度 Lv{unlock.bondLevel} でもらえます</p>
-                    <p className="text-[9px] text-slate-400 leading-tight text-center mt-1">いまは Lv{level}{remain!=null&&remain>0?` ／ あと ${remain}`:''}</p>
-                    <p className="text-[9px] text-slate-500 leading-tight text-center mt-1">{frame.desc||''}</p>
-                  </div>
-                );
-              })()}
-              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">{(profileFrameById(normalizeProfileFrameId(profileFrameId))||{}).desc||''}</p>
-              <button onClick={()=>setShowFramePicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
-            </div>
-          </div>
-        )}
+            </PickerSheet>
+          );
+        })()}
 
         {showBackup&&(
           <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>

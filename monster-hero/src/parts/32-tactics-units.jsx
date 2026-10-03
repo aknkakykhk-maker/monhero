@@ -926,6 +926,8 @@ const clearTacticsSlotFlag = (bySlot, key) => {
 //   guaranteeUnique … true なら、効いているあいだ毎ターン、その子の固有技カードが手札に必ず出る(ピクシー)
 //   cardBonus … (stage) 効いているあいだ、1ターンに使えるカード枚数(盤面ぜんぶ・その子自身)を何枚増やすか
 //   voltage   … (stage) { max, dmg, heal, guts } 味方がカードを1枚使うたびに1たまる。1段階ごとに 与ダメ+dmg・回復量+heal・ガッツの自動回復+guts(全員)
+//   target    … 'ally' なら、使うとき味方1体(自分も含む)を選ぶ。選んだ枠は applyTacticsExUse の target に入る
+//   lifeSpring … (lifeSpring) { maxUpRate, gutsRate } 選んだ子が立っていればライフ上限を maxUpRate 上げて(効果のあいだ)満タンに、ダウン中なら立たせて満タンに。どちらもガッツを上限の gutsRate 戻す
 //   usesPerWave … true なら、回数がWAVEのはじめに戻る(maxUses は1WAVEぶん)
 //   present   … (present) スネグーラチカのプレゼントの数字。fixedGuts=必ず入る全員のガッツ(上限の割合) / jackpot=大当たりの確率 / dmg・taken・crit・heal・guts=ランダム1種の効き目 / combo={count,rate}
 //   lifeCostRate … 使うとき、その子の最大ライフのこの割合(0.3 なら30%)を払う。ライフがそれより多いときだけ使える(払って倒れることはない)
@@ -1060,6 +1062,26 @@ const TACTICS_EX_SKILLS = Object.freeze({
     present: Object.freeze({ fixedGuts: 0.2, jackpot: 0.1, dmg: 0.2, taken: 0.2, crit: 0.3, heal: 0.2, guts: 0.2, combo: Object.freeze({ count: 2, rate: 0.1 }) }),
     effect: 'present',
   }),
+  // ★2026-10-03 ウンディーネ「生命の泉」(ユーザーの案・数字は仮)。味方1体を選んで使う回復のEX。
+  //   ダウン中の子はすぐ立ち上がってライフ満タン、立っている子はライフ満タン＋3ターンのライフ上限アップ。どちらもガッツが戻る
+  Undine: Object.freeze({
+    id: 'undine_spring_of_life',
+    name: '生命の泉',
+    desc: '味方1体（自分でもよい）を選んで使う。ダウン中の子はすぐに立ち上がって、ライフが満タンになる。立っている子はライフが満タンになり、3ターンのあいだライフの上限が30%上がる。どちらもガッツが上限の30%戻る。',
+    // ★2026-10-03 ユーザー指示で 3回 → 5回
+    maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
+    target: 'ally', lifeSpring: Object.freeze({ maxUpRate: 0.3, gutsRate: 0.3 }),
+    effect: 'lifeSpring',
+  }),
+  // ★2026-10-03 ヤオビクニ「悠久の刻」(ユーザーの案・回数2回)。時間を止める。使ったターンは敵が行動せず、
+  //   そのターンはWAVEの20ターン制限にも数えない(ターン数が進まない)。止めたターンのあとの「同じターン」では、もう一度は使えない
+  Yaobikuni: Object.freeze({
+    id: 'yaobikuni_eternal_moment',
+    name: '悠久の刻',
+    desc: '時間を止める。使ったターンは敵が行動せず、そのターンはWAVEの20ターンの数にも数えない。',
+    maxUses: 2, unlimited: false, withCards: true, duration: 'turn',
+    effect: 'timeStop',
+  }),
   Golem: Object.freeze({
     id: 'golem_all_in',
     name: '捨て身',
@@ -1120,7 +1142,7 @@ const TACTICS_EX_CONDITIONS = Object.freeze({
 // 効果を実装済みの種類。★ここに無い effect は「回数と併用の決まりだけ動き、効果はまだ出ない」。
 //   画面は「開発中」と出す(使ったのに何も起きない、を黙って出さない)。
 //   STEP2 で効果を入れたら、ここへ名前を足す
-const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present']);
+const TACTICS_EX_IMPLEMENTED_EFFECTS = Object.freeze(['coverAll', 'allIn', 'weaponChange', 'statBoost', 'distMatch', 'partyGuard', 'comboBurst', 'dodgeCombo', 'multiBuff', 'stage', 'present', 'lifeSpring', 'timeStop']);
 // 捨て身で力へ移す割合(0にした丈夫さの50%)
 const TACTICS_EX_ALL_IN_ATK_RATE = 0.5;
 const TACTICS_EX_DURATIONS = Object.freeze(['turn', 'wave', 'style', 'turns']);
@@ -1178,6 +1200,9 @@ const normalizeTacticsExDef = (raw) => {
       ? { max: Math.min(99, tacticsSafeInt(raw.voltage.max, 0)),
         dmg: Math.max(0, Number(raw.voltage.dmg) || 0), heal: Math.max(0, Number(raw.voltage.heal) || 0), guts: Math.max(0, Number(raw.voltage.guts) || 0) } : null,
     usesPerWave: raw.usesPerWave === true,
+    target: raw.target === 'ally' ? 'ally' : null,
+    lifeSpring: raw.lifeSpring && typeof raw.lifeSpring === 'object'
+      ? { maxUpRate: Math.max(0, Number(raw.lifeSpring.maxUpRate) || 0), gutsRate: Math.max(0, Number(raw.lifeSpring.gutsRate) || 0) } : null,
     present: raw.present && typeof raw.present === 'object' ? (() => {
       const n = (v) => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
       const c = raw.present.combo;
@@ -1298,7 +1323,8 @@ const checkTacticsExUse = ({ def, state, slot, monId, alive, selectedCount = 0, 
 // ★回数を減らすのは無制限でないときだけ。無制限は数えるが、残りには効かない
 // snapshot … 使った瞬間の値(捨て身なら使ったときの丈夫さ)。効果の計算はこの値から出す
 // choice … スタイル式のとき、選んだスタイルの id(checkTacticsExChoice を通したもの)
-const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null } = {}) => {
+// target … 味方を選んで使うEX(生命の泉)で、選んだ味方の枠
+const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choice = null, target = null } = {}) => {
   const safe = normalizeTacticsExState(state);
   if (!def || !Number.isInteger(slot)) return safe;
   // スタイル式は、選べないスタイル(いまのもの・知らないもの)なら何もしない(回数も減らさない)
@@ -1320,6 +1346,7 @@ const applyTacticsExUse = (state, { def, slot, monId, now, snapshot = null, choi
       distMult: def.distMult || 0, guaranteeUnique: def.guaranteeUnique === true, cardBonus: def.cardBonus || 0,
       voltageCfg: def.voltage ? { ...def.voltage } : null, voltage: 0,
       presentCfg: def.present ? { ...def.present } : null, present: null,
+      target: Number.isInteger(target) ? target : null, lifeSpringCfg: def.lifeSpring ? { ...def.lifeSpring } : null,
       snapshot: snapshot && typeof snapshot === 'object' ? { ...snapshot } : null } },
     lastUse: { ...safe.lastUse, [slot]: stamp },
     turnUsed: stamp,
@@ -1528,6 +1555,36 @@ const resetTacticsExWaveUses = (state) => {
   });
   return changed ? { ...safe, uses } : state;
 };
+// ---- 味方を選んで使うEX(生命の泉) ----
+// 選べる味方の一覧(立っている子もダウン中の子も。自分も含む)。選ぶEXでなければ null
+const tacticsExTargetOptions = (def, units) => (def && def.target === 'ally'
+  ? (Array.isArray(units) ? units : []).map((unit, slot) => ({ unit: normalizeTacticsUnit(unit), slot })).filter(e => e.unit)
+    .map(e => ({ slot: e.slot, hp: e.unit.hp, maxHp: e.unit.maxHp, downed: e.unit.downed === true })) : null);
+// 選んだ味方が使えるか。使えれば null、使えなければ理由
+const checkTacticsExTarget = (def, units, target) => {
+  if (!def || def.target !== 'ally') return null;
+  if (!Number.isInteger(target)) return 'どの味方に使うか選ぶ';
+  return Array.isArray(units) && units[target] ? null : 'そこには味方がいない';
+};
+// ---- ヤオビクニ(timeStop): 使ったターンは敵が行動せず、ターン数も進まない ----
+// いま時間が止まっている枠(まだ敵の番を止めていないもの)。なければ null
+const tacticsExTimeStopSlot = (state, units, now) => {
+  const effects = normalizeTacticsExState(state).effects;
+  const hit = Object.keys(effects).map(Number).find(slot => {
+    const unit = Array.isArray(units) ? units[slot] : null;
+    return unit && tacticsExActiveEffect(state, slot, unit.id, now) === 'timeStop';
+  });
+  return hit == null ? null : hit;
+};
+// 敵の番を止めたあと、時間停止を「使い終わった」ことにする(同じターンの数字が続いても、止め続けない)。止まっていなければ同じ state を返す
+const spendTacticsExTimeStop = (state) => {
+  const safe = normalizeTacticsExState(state);
+  const keys = Object.keys(safe.effects).filter(k => safe.effects[k] && safe.effects[k].effect === 'timeStop');
+  if (!keys.length) return state;
+  const effects = { ...safe.effects };
+  keys.forEach(k => { effects[k] = { ...effects[k], effect: 'timeStopSpent' }; });
+  return { ...safe, effects };
+};
 // 血踊が効いている子が敵の攻撃を回避したことを数える(効いていなければ状態をそのまま返す)
 const recordTacticsExDodge = (state, units, slot, now) => {
   const safe = normalizeTacticsExState(state);
@@ -1573,12 +1630,24 @@ const applyTacticsExStats = (unit, state, slot, now) => {
 const setTacticsExMaxRate = (units, slot, rate, gutsRate = rate) => (Array.isArray(units) ? units : [])
   .map((unit, i) => (unit && i === slot
     ? { ...unit, exMaxRate: Math.max(0, Number(rate) || 0), exMaxGutsRate: Math.max(0, Number(gutsRate) || 0) } : unit));
+// ライフの上限だけを rate 上げる(すでに上がっていれば大きいほうを残す。ガッツの上限は触らない)
+const setTacticsExMaxHpRate = (units, slot, rate) => (Array.isArray(units) ? units : [])
+  .map((unit, i) => (unit && i === slot
+    // ★ガッツの上限の率は、いまの値のまま明示する(書かないと、ライフの率がガッツの上限にまで効いてしまう)
+    ? { ...unit, exMaxGutsRate: tacticsExMaxRateOf(unit, 'guts'), exMaxRate: Math.max(tacticsExMaxRateOf(unit), Math.max(0, Number(rate) || 0)) } : unit));
 // 効果が切れているのに上限が上がったままの枠を、0へ戻す。戻した枠があれば changed:true
 const expireTacticsExMaxRates = (units, state, now) => {
   let changed = false;
+  // ★生命の泉(lifeSpring)は、使った子ではなく選んだ味方のライフ上限を上げる。その子は泉が効いているあいだ戻さない
+  const springEffects = normalizeTacticsExState(state).effects;
+  const springTargets = new Set(Object.keys(springEffects).map(Number).filter(from => {
+    const caster = Array.isArray(units) ? units[from] : null;
+    return caster && tacticsExActiveEffect(state, from, caster.id, now) === 'lifeSpring' && Number.isInteger(springEffects[from].target);
+  }).map(from => springEffects[from].target));
   const next = (Array.isArray(units) ? units : []).map((unit, slot) => {
     if (!unit || !(tacticsExMaxRateOf(unit) > 0 || tacticsExMaxRateOf(unit, 'guts') > 0)) return unit;
     if (tacticsExActiveEffect(state, slot, unit.id, now) === 'statBoost') return unit;
+    if (springTargets.has(slot)) return unit; // 生命の泉の対象(効いているあいだ)
     changed = true;
     return { ...unit, exMaxRate: 0, exMaxGutsRate: 0 };
   });

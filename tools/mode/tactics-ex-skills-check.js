@@ -65,7 +65,7 @@ vm.runInContext([
   'globalThis.ex={TACTICS_EX_SKILLS,TACTICS_EX_DURATION_TEXT,TACTICS_EX_IMPLEMENTED_EFFECTS,normalizeTacticsExDef,'
     + 'tacticsExDefOf,isTacticsExEffectImplemented,createTacticsExState,normalizeTacticsExState,tacticsExUsesOf,'
     + 'tacticsExRemaining,isTacticsExEffectActive,isTacticsExCardLocked,tacticsExLockedSlots,isTacticsExTurnUsed,checkTacticsExUse,'
-    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
+    + 'applyTacticsExUse,scaleTacticsUnits,setTacticsExMaxRate,expireTacticsExMaxRates,tacticsExDurationText,tacticsExTurnsLeft,tacticsExStyleOf,tacticsExStyleLabel,checkTacticsExChoice,setTacticsExInitialStyle,tacticsExActiveStyle,TACTICS_EX_DUAL_HIT_REPEAT,tacticsExActiveEffect,tacticsExRegenRateAt,applyTacticsExStats,tacticsExCoverSlot,coverTacticsTargets,tacticsExPartyTakenMult,tacticsExPartyRegenRate,tacticsExExtraCombosAt,tacticsExMultiBuffOf,tacticsExLifeCost,tacticsExTargetOptions,checkTacticsExTarget,setTacticsExMaxHpRate,tacticsExTimeStopSlot,spendTacticsExTimeStop,tacticsExUniqueGuaranteeSlot,ensureTacticsExUniqueInHand,tacticsExCardBonusTotal,tacticsExCardBonusAt,tacticsExVoltageOf,addTacticsExVoltage,rollTacticsExPresent,setTacticsExPresent,tacticsExPresentOf,resetTacticsExWaveUses,TACTICS_EX_PRESENT_KINDS,recordTacticsExDodge,TACTICS_EX_DIST_MATCH_MULT,tacticsExDistMatchDodges};',
 ].join('\n'), sandbox);
 // ヒット列(二刀流で2回ぶん入るか)は本体の buildAttackHits をそのまま動かす
 vm.runInContext(slice('const HERO_CARD_BONUS_MONSTER_IDS', 'const attackAtonementDmg') + ';globalThis.hitsApi={buildAttackHits};', sandbox);
@@ -653,6 +653,56 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /statusLines:\(\(\)=>\{/.test(app) && /data-tactics-ex-status/.test(screen));
 }
 
+// ---------- ⑯ ウンディーネ「生命の泉」・ヤオビクニ「悠久の刻」(2026-10-03 ユーザーの案) ----------
+{
+  const un = ex.tacticsExDefOf('Undine'), yb = ex.tacticsExDefOf('Yaobikuni');
+  check('ウンディーネ「生命の泉」: 5回・併用できる・3ターン・味方を選ぶ・上限+30%・ガッツ30%', !!un && un.name === '生命の泉' && un.maxUses === 5 && un.withCards && un.duration === 'turns' && un.turns === 3
+    && un.target === 'ally' && un.lifeSpring && un.lifeSpring.maxUpRate === 0.3 && un.lifeSpring.gutsRate === 0.3 && un.effect === 'lifeSpring' && ex.isTacticsExEffectImplemented(un), JSON.stringify(un));
+  check('ヤオビクニ「悠久の刻」: 回数2回・併用できる・発動ターンだけ・時間停止', !!yb && yb.name === '悠久の刻' && yb.maxUses === 2 && !yb.unlimited && yb.withCards && yb.duration === 'turn'
+    && yb.effect === 'timeStop' && ex.isTacticsExEffectImplemented(yb), JSON.stringify(yb));
+  const A = (wave, turn) => ({ wave, turn });
+  const units = [
+    { id: 'Undine', hp: 100, maxHp: 350, baseMaxHp: 350, atk: 1, def: 1, guts: 10, maxGuts: 170, baseMaxGuts: 170, downed: false },
+    { id: 'Golem', hp: 40, maxHp: 600, baseMaxHp: 600, atk: 1, def: 1, guts: 10, maxGuts: 70, baseMaxGuts: 70, downed: true },
+    null,
+    { id: 'Yaobikuni', hp: 450, maxHp: 450, baseMaxHp: 450, atk: 1, def: 1, guts: 10, maxGuts: 125, baseMaxGuts: 125, downed: false },
+  ];
+  const opts = ex.tacticsExTargetOptions(un, units);
+  check('選べる味方は、立っている子もダウン中の子も(自分も)。選ばないEXは null', opts.length === 3 && opts.map(o => o.slot).join(',') === '0,1,3' && opts[1].downed && !opts[0].downed
+    && ex.tacticsExTargetOptions(yb, units) === null && ex.tacticsExTargetOptions(null, units) === null);
+  check('味方を選んでいなければ使えない・選んだ枠に味方がいなければ使えない・選ぶEXでなければ確認しない',
+    !!ex.checkTacticsExTarget(un, units, null) && !!ex.checkTacticsExTarget(un, units, 2) && ex.checkTacticsExTarget(un, units, 1) === null && ex.checkTacticsExTarget(un, units, 0) === null
+    && ex.checkTacticsExTarget(yb, units, null) === null);
+  const used = ex.applyTacticsExUse(ex.createTacticsExState(), { def: un, slot: 0, monId: 'Undine', now: A(1, 2), target: 3 });
+  check('使うと選んだ味方の枠を覚える(選ぶEXでなければ null)', used.effects[0].target === 3 && ex.applyTacticsExUse(ex.createTacticsExState(), { def: yb, slot: 3, monId: 'Yaobikuni', now: A(1, 2) }).effects[3].target === null);
+  // ライフ上限: 対象の子は泉が効いているあいだ戻さない
+  const withRate = ex.scaleTacticsUnits(ex.setTacticsExMaxHpRate(units, 3, 0.3), 0, 0);
+  check('ライフの上限だけが上がる(450 → 585・ガッツ125のまま)。すでに上がっていれば大きいほうを残す', withRate[3].maxHp === 585 && withRate[3].maxGuts === 125
+    && ex.setTacticsExMaxHpRate(ex.setTacticsExMaxHpRate(units, 3, 0.5), 3, 0.3)[3].exMaxRate === 0.5);
+  check('生命の泉の対象は、泉が効いているあいだ(2〜4ターン目)は上限を戻さない・5ターン目には戻す・WAVEが変わったら戻す',
+    !ex.expireTacticsExMaxRates(withRate, used, A(1, 2)).changed && !ex.expireTacticsExMaxRates(withRate, used, A(1, 4)).changed
+    && ex.expireTacticsExMaxRates(withRate, used, A(1, 5)).changed && ex.expireTacticsExMaxRates(withRate, used, A(2, 2)).changed);
+  check('泉の対象ではない子の上限アップは、これまでどおり(自分のガッツ全開っちーが効いていなければ戻す)',
+    ex.expireTacticsExMaxRates(ex.setTacticsExMaxHpRate(withRate, 0, 0.3), used, A(1, 2)).changed);
+  // 時間停止
+  const ts = ex.applyTacticsExUse(ex.createTacticsExState(), { def: yb, slot: 3, monId: 'Yaobikuni', now: A(1, 4) });
+  check('時間停止: 使ったターンだけ止まっている枠が見つかる(次のターン・別のWAVE・使う前は null)', ex.tacticsExTimeStopSlot(ts, units, A(1, 4)) === 3 && ex.tacticsExTimeStopSlot(ts, units, A(1, 5)) === null
+    && ex.tacticsExTimeStopSlot(ts, units, A(2, 4)) === null && ex.tacticsExTimeStopSlot(ex.createTacticsExState(), units, A(1, 4)) === null);
+  const spent = ex.spendTacticsExTimeStop(ts);
+  check('敵の番を止めたあとは「使い終わった」ことにする(同じターンの数字が続いても止まらない)・止まっていなければ同じ state', ex.tacticsExTimeStopSlot(spent, units, A(1, 4)) === null
+    && ex.isTacticsExEffectActive(spent, 3, 'Yaobikuni', A(1, 4)) && (() => { const st = ex.createTacticsExState(); return ex.spendTacticsExTimeStop(st) === st; })());
+  check('使ったターンは、もう一度使えない(止めたあとの同じターンの数字でも)', !ex.checkTacticsExUse({ def: yb, state: spent, slot: 3, monId: 'Yaobikuni', alive: true, now: A(1, 4) }).ok);
+  check('本体: 使う前の確認・選んだ味方の記録・生命の泉・選べる一覧・時間停止(敵の番・ターン数)へ結線してある',
+    /if\(checkTacticsExTarget\(def,tacticsUnitsRef\.current,choice\)\) return false;/.test(app)
+    && /choice, target:def\.target==='ally'\?choice:null \}\);/.test(app)
+    && /if\(def\.lifeSpring&&Number\.isInteger\(choice\)\)\{/.test(app) && /setTacticsExMaxHpRate\(units,choice,def\.lifeSpring\.maxUpRate\)/.test(app)
+    && /targetOptions:\(\(\)=>\{ const opts=tacticsExTargetOptions\(def,tacticsUnits\)/.test(app)
+    && /const timeStopSlot = isTacticsMode\(runMode\)&&tacticsExEnabled \? tacticsExTimeStopSlot\(/.test(app)
+    && /if \(timeStopSlot!=null\) \{\n\s*addPopup\('⏳ 時間停止！/.test(app)
+    && /const nextTurn=timeStopSlot!=null\?turnCount:turnCount\+1; setTurnCount\(nextTurn\);/.test(app)
+    && /data-tactics-ex-target=\{t\.slot\}/.test(screen));
+}
+
 // ---------- ⑧ 壊れた値 ----------
 {
   let fine = true;
@@ -730,9 +780,10 @@ const use = (state, def, slot, monId, now, extra = {}) => {
     && /const result = expireTacticsExMaxRates\(tacticsUnitsRef\.current, tacticsExStateRef\.current, \{ wave, turn:turnCount \}\);/.test(app));
   check('発動は詳細パネルの「EXスキルを使用」(スタイル式はその先の選択肢)からだけ',
     (screen.match(/activateTacticsEx\(/g) || []).length === (panelSrc.match(/activateTacticsEx\(/g) || []).length
-    && (panelSrc.match(/activateTacticsEx\(/g) || []).length === 2
+    && (panelSrc.match(/activateTacticsEx\(/g) || []).length === 3 // 使う・スタイルを選ぶ・味方を選ぶ(生命の泉。2026-10-03)
     && /data-tactics-ex-use disabled=\{!exPanel\.check\.ok\}/.test(screen)
-    && /data-tactics-ex-choice=\{st\.id\} disabled=\{st\.current\|\|!exPanel\.check\.ok\}/.test(screen));
+    && /data-tactics-ex-choice=\{st\.id\} disabled=\{st\.current\|\|!exPanel\.check\.ok\}/.test(screen)
+    && /data-tactics-ex-target=\{t\.slot\} data-tactics-ex-target-downed=\{t\.downed\?'yes':'no'\} disabled=\{!exPanel\.check\.ok\}/.test(screen));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

@@ -477,7 +477,7 @@ const serve = (flagOn) => new Promise(resolve => {
   ok('申請が届いていると、起動後のHOMEで助手が知らせる', badge.noticeShown === true && /とどいた子さんからフレンド申請/.test(badge.noticeText), `${badge.noticeText}`);
   ok('「あとで」で知らせを閉じられる', badge.noticeClosed === true);
   ok('HOME左上のプロフィールに、申請の件数の赤いバッジが出る', badge.homeBadge === '1', `${badge.homeBadge}`);
-  ok('プロフィールのフレンドのボタンにも赤いバッジと文言が出る', badge.profileBadge === '1' && /フレンド申請が1件届いています/.test(badge.profileText), `${badge.profileBadge} / ${badge.profileText}`);
+  ok('プロフィールのフレンドのボタンにも赤いバッジと文言が出る', badge.profileBadge === '1' && /申請が1件届いています/.test(badge.profileText), `${badge.profileBadge} / ${badge.profileText}`);
   ok('申請が届いているときは、最初から「申請」のタブが開く', badge.requestsFirst === true);
   ok('承認すると、プロフィールのバッジが消える', badge.badgeAfter === false);
   ok('バッジの画面が落ちていない', badge.crashed === false);

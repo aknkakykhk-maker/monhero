@@ -2438,7 +2438,21 @@ function BattleScreen({
                 {exPanel.stats&&<><dt className="font-bold text-slate-400">ちから／丈夫さ</dt><dd data-tactics-ex-stats className={`font-black ${exPanel.stats.changed?'text-fuchsia-200':'text-white'}`}>{exPanel.stats.atk}／{exPanel.stats.def}{exPanel.stats.changed?'（EXで変化中）':''}</dd></>}
               </dl>
               {!exPanel.check.ok&&<p data-tactics-ex-why className="mt-2 text-[11px] font-bold leading-snug text-rose-200">{exPanel.check.reason}</p>}
-              {exChoosing&&exPanel.styleOptions?(
+              {exChoosing&&exPanel.targetOptions?(
+                // ★味方を選んで使う(2026-10-03 ウンディーネの「生命の泉」)。自分も選べる。ダウン中の子は赤で出す
+                <div data-tactics-ex-choices className="mt-3 flex flex-col gap-1.5">
+                  <div className="text-[11px] font-black text-slate-300">だれに使う？</div>
+                  {exPanel.targetOptions.map(t=>(
+                    <button key={t.slot} type="button" data-tactics-ex-target={t.slot} data-tactics-ex-target-downed={t.downed?'yes':'no'} disabled={!exPanel.check.ok}
+                      onClick={()=>{ if(activateTacticsEx&&activateTacticsEx(exPanel.slot,t.slot)) setExPanelSlot(null); }}
+                      className={`min-h-[44px] rounded-xl border-2 px-3 py-1.5 text-left active:scale-95 ${t.downed?'border-rose-300 bg-rose-900/60 text-white':'border-fuchsia-300 bg-fuchsia-900/60 text-white'}`}>
+                      <span className="block text-[13px] font-black">{t.name}{t.downed?'（ダウン中）':''}</span>
+                      <span className="block text-[10px] font-bold leading-snug opacity-80">ライフ {t.hp.toLocaleString()} / {t.maxHp.toLocaleString()}</span>
+                    </button>
+                  ))}
+                  <button type="button" data-tactics-ex-choice-back onClick={()=>setExChoosing(false)} className="min-h-[40px] rounded-xl border border-white/20 bg-slate-800 text-[12px] font-black text-slate-200 active:scale-95">戻る</button>
+                </div>
+              ):exChoosing&&exPanel.styleOptions?(
                 // ★スタイルを選ぶ(2026-09-25 ユーザー指示)。いまのスタイルは選べない
                 <div data-tactics-ex-choices className="mt-3 flex flex-col gap-1.5">
                   <div className="text-[11px] font-black text-slate-300">どのスタイルにする？</div>
@@ -2455,7 +2469,7 @@ function BattleScreen({
               ):(
               <div className="mt-3 flex gap-2">
                 <button type="button" data-tactics-ex-close onClick={()=>setExPanelSlot(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[13px] font-black text-slate-200 active:scale-95">閉じる</button>
-                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(exPanel.styleOptions){ setExChoosing(true); return; } if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
+                <button type="button" data-tactics-ex-use disabled={!exPanel.check.ok} onClick={()=>{ if(exPanel.styleOptions||exPanel.targetOptions){ setExChoosing(true); return; } if(activateTacticsEx&&activateTacticsEx(exPanel.slot)) setExPanelSlot(null); }} className={`min-h-[44px] flex-[2] rounded-xl border-2 text-[14px] font-black active:scale-95 ${exPanel.check.ok?'border-fuchsia-300 bg-fuchsia-600 text-white shadow-[0_0_14px_rgba(217,70,239,.5)]':'border-slate-600 bg-slate-800 text-slate-500'}`}>EXスキルを使用</button>
               </div>
               )}
             </div>
