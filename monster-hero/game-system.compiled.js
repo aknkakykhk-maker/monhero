@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e26a2899c56f6ea7
+// source-sha256: 4be7dd7d7f55f8f2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 15:17";
+const BUILD_DATE = "2026-10-03 16:13";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -55010,7 +55010,7 @@ function RhythmMultiScreen({
       type: "button",
       onClick: () => setChatOpen(true),
       "aria-label": chatUnread ? `チャット(未読${chatUnread}件)` : 'チャット',
-      className: "relative flex min-h-[46px] w-[34%] max-w-[220px] shrink-0 items-center gap-1.5 rounded-2xl border border-cyan-400/50 bg-cyan-950/50 px-2 text-left"
+      className: "relative flex min-h-[42px] w-[30%] max-w-[200px] shrink-0 items-center gap-1.5 rounded-2xl border border-cyan-400/50 bg-cyan-950/50 px-2 text-left"
     }, React.createElement("span", {
       "aria-hidden": "true",
       className: "text-xl leading-none"
@@ -55454,9 +55454,9 @@ function RhythmMultiScreen({
       }
     }, "RESULT"), React.createElement("section", {
       "data-rhythm-multi-results": true,
-      className: "relative mx-2 mt-2 flex shrink-0 items-center gap-3 rounded-2xl border border-white/15 bg-slate-900/90 p-2",
+      className: "relative mx-2 mt-2 flex shrink-0 items-center gap-3 rounded-2xl border border-white/15 bg-slate-900/90 p-2 [@media(max-height:440px)]:py-1",
       style: {
-        marginTop: 'calc(.5rem + var(--mh-sa-top))'
+        marginTop: 'calc(.4rem + var(--mh-sa-top))'
       }
     }, drawnSong && React.createElement("span", {
       className: "h-12 w-12 shrink-0 landscape:h-14 landscape:w-14"
@@ -55512,7 +55512,7 @@ function RhythmMultiScreen({
     }, React.createElement("small", {
       className: "absolute -top-3.5 -translate-x-1/2 text-[9px] font-black text-slate-300"
     }, mk.id))))), React.createElement("ul", {
-      className: "grid max-h-[260px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3"
+      className: "grid max-h-[260px] min-h-0 flex-1 grid-cols-5 gap-1.5 px-2 pb-1 pt-4 landscape:max-h-none landscape:gap-2 landscape:px-3 [@media(max-height:440px)]:pt-2"
     }, Array.from({
       length: RHYTHM_MULTI_ROOM_MAX
     }).map((_, i) => {
@@ -55527,7 +55527,7 @@ function RhythmMultiScreen({
       return React.createElement("li", {
         key: r.m.id,
         "data-rhythm-multi-result-row": true,
-        className: `relative flex min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4' : 'border border-white/10 bg-slate-900/80 pt-3'}`
+        className: `relative flex min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 text-center ${isMvp ? 'mhmv-mvp z-10 border-2 border-amber-300 bg-gradient-to-b from-amber-500/35 via-pink-600/25 to-slate-900 pt-4 [@media(max-height:440px)]:pt-3.5' : 'border border-white/10 bg-slate-900/80 pt-3 [@media(max-height:440px)]:pt-1.5'}`
       }, React.createElement(RhythmMultiChatBubble, {
         text: chatBubbleOf(r.m.id)
       }), isMvp && React.createElement("b", {
@@ -55538,43 +55538,42 @@ function RhythmMultiScreen({
       }, React.createElement(RhythmMultiAvatar, {
         m: r.m,
         resolveIconUrl: resolveIconUrl,
-        sizeClass: "h-12 w-12 landscape:h-16 landscape:w-16"
+        sizeClass: "h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [@media(max-height:440px)]:w-11"
       })), React.createElement("span", {
         className: `relative z-20 mt-1 w-full shrink-0 truncate text-[10px] font-black landscape:text-xs ${isMvp ? 'text-amber-100' : ''}`
       }, r.m.name, r.m.id === view.selfId ? '(あなた)' : ''), React.createElement("small", {
-        className: "block h-3 text-[7px] font-black italic leading-3 text-pink-300 landscape:text-[9px]"
+        className: "block h-3 shrink-0 text-[7px] font-black italic leading-3 text-pink-300 landscape:text-[9px]"
       }, r.res && !r.res.quit && r.res.cleared && r.res.fc > 0 ? RHYTHM_MULTI_FC_LABELS[r.res.fc].replace('!', '') : ''), React.createElement("b", {
-        className: `block w-full text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal ${isMvp ? 'text-amber-200' : ''}`
+        className: `block w-full shrink-0 text-[10px] font-black leading-tight tracking-tighter tabular-nums landscape:text-base landscape:tracking-normal [@media(max-height:440px)]:text-sm ${isMvp ? 'text-amber-200' : ''}`
       }, r.res ? r.res.quit ? 'リタイア' : String(r.res.score).padStart(8, '0') : r.m.gone ? '—' : 'ライブ中…'), r.res && !r.res.quit && React.createElement(React.Fragment, null, React.createElement("small", {
-        className: "mt-1 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px]"
+        className: "mt-1 shrink-0 rounded bg-slate-800 px-1 text-[8px] font-black text-slate-300 landscape:text-[10px] [@media(max-height:440px)]:mt-0.5"
       }, r.res.diffId || '-', lv ? ` Lv.${lv}` : ''), !r.res.cleared && React.createElement("small", {
         className: "text-[8px] font-black text-rose-300"
       }, "失敗")));
     })), React.createElement("div", {
       "data-rhythm-multi-result-chat": true,
-      className: "flex shrink-0 items-center gap-2 px-2 pt-1.5 landscape:px-3"
+      className: "flex shrink-0 items-center gap-2 px-2 pt-1.5 landscape:px-3 [@media(max-height:440px)]:pt-1"
     }, React.createElement(RhythmMultiStampBar, {
       phase: "result",
       onSend: text => RHYTHM_MULTI.sendChat(text),
-      wrap: true,
       big: true,
       limit: 6,
-      className: "min-w-0 flex-1"
+      className: "min-w-0 flex-1 portrait:flex-wrap"
     }), chatLatestButton()), React.createElement("div", {
-      className: "mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent",
+      className: "mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent [@media(max-height:440px)]:pt-1",
       style: {
-        paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
+        paddingBottom: 'calc(.4rem + var(--mh-sa-bottom))'
       }
     }, React.createElement("button", {
       "data-rhythm-multi-member-stats": true,
       type: "button",
       onClick: () => setStatsOpen(true),
-      className: "min-h-[46px] flex-1 rounded-full border border-white/30 bg-slate-800 px-4 text-sm font-black landscape:w-48 landscape:flex-none"
+      className: "min-h-[46px] flex-1 rounded-full border border-white/30 bg-slate-800 px-4 text-sm font-black landscape:w-48 landscape:flex-none [@media(max-height:440px)]:min-h-[40px]"
     }, "メンバーの成績"), React.createElement("button", {
       "data-rhythm-multi-result-next": true,
       type: "button",
       onClick: () => RHYTHM_MULTI.nextFromResult(room.round),
-      className: "min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 landscape:w-56 landscape:flex-none"
+      className: "min-h-[46px] flex-1 rounded-full bg-gradient-to-r from-teal-300 to-cyan-400 px-4 font-black text-slate-950 landscape:w-56 landscape:flex-none [@media(max-height:440px)]:min-h-[40px]"
     }, team.waiting ? isHost ? '待たずに次の曲へ' : '次へ(ほかの人を待たない)' : '次へ')), statsOpen && React.createElement("div", {
       "data-rhythm-multi-stats": true,
       className: "absolute inset-0 z-[85000] flex flex-col bg-slate-950",
