@@ -6,12 +6,14 @@
 //   仮の売り物で確かめる(ゲームのデータには何も足さない)。
 //
 // 見るもの
-//   ① いまは売るフレームが1つも無い(ゲームに入っているデータでは、何も並ばない・タブも出ない)
-//   ② 売り値(unlock:{shop,cost})の読み方。壊れた書き方は「売り物ではない」になり、検査が拾う
+//   ① いま売っているのは、モンスターの3枚だけ(モッチー・ムー・スエゾービート)。ブリーダーP交換所にもビートP交換所にも並び、
+//      どれも買える条件が付いている(2026-10-03・ユーザー指示)。そのほかの枠は売らない
+//   ② 売り値(unlock:{shop,cost} と unlock:{shops:[…]})の読み方。壊れた書き方は「売り物ではない」になり、検査が拾う
 //   ③ ★売る枠を買うまで選べない(unlock が無い枠は最初から全員が選べる、という決まりを破らない)
 //   ④ ビートP交換所の計算(rhythmEventPointExchangePreview)が frame を扱う
 //   ⑤ 買ったあとの保存は mh_profile_frame_owned_v1 だけ(新しい保存キーを増やしていない)
 //   ⑥ 画面・処理のつなぎ
+//   ⑦ 買える条件(unlock.condition)。達成するまで買えず、買う処理でも保存値を読み直して確かめる
 const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
@@ -37,16 +39,26 @@ const load = (fake = '') => {
   vm.createContext(ctx);
   // 検査の中だけで仮の売り物を足す(PROFILE_FRAMES の最後に差し込む)。ゲームのデータそのものは書き換えない(別のコンテキストで動かす)
   const src = fake ? block.replace(/\n\];\nconst PROFILE_FRAME_MAP/, `\n${fake}];\nconst PROFILE_FRAME_MAP`) : block;
-  vm.runInContext(`${src}\nthis.out={PROFILE_FRAMES,PROFILE_FRAME_SHOPS,profileFrameSale,profileFramesForSale,profileFramesWithBrokenSale,profileFrameOwned,normalizeProfileFrameId,releasedProfileFrames,profileFrameUnlock,BREEDER_MARKET_ITEMS};`, ctx);
+  vm.runInContext(`${src}\nthis.out={PROFILE_FRAMES,PROFILE_FRAME_SHOPS,profileFrameSale,profileFrameSaleIn,profileFrameSales,profileFrameCondition,profileFramesForSale,profileFramesWithBrokenSale,profileFrameOwned,normalizeProfileFrameId,releasedProfileFrames,profileFrameUnlock,BREEDER_MARKET_ITEMS};`, ctx);
   return ctx.out;
 };
 
-// ① いまは売る枠が無い
+// ① いま売っているのはモンスターの3枚だけ
 const real = load();
-check('いまは売るフレームが1つも無い(ブリーダーP・ビートPとも)',
-  real.profileFramesForSale('breederPoint').length === 0 && real.profileFramesForSale('beatPoint').length === 0);
+const SOLD = ['frame_mocchi', 'frame_moo', 'frame_suezo_beat'];
+check('いま売っているフレームは、モンスターの3枚だけ(ブリーダーP・ビートPの両方)',
+  real.profileFramesForSale('breederPoint').map(f => f.id).join() === SOLD.join()
+  && real.profileFramesForSale('beatPoint').map(f => f.id).join() === SOLD.join(),
+  `${real.profileFramesForSale('breederPoint').map(f => f.id).join()} / ${real.profileFramesForSale('beatPoint').map(f => f.id).join()}`);
+check('値段は3枚ともブリーダーP 1 / ビートP 100',
+  SOLD.every(id => {
+    const f = real.PROFILE_FRAMES.find(x => x.id === id);
+    return real.profileFrameSaleIn(f, 'breederPoint').cost === 1 && real.profileFrameSaleIn(f, 'beatPoint').cost === 100;
+  }));
+check('3枚とも買える条件が付いている', SOLD.every(id => !!real.profileFrameCondition(real.PROFILE_FRAMES.find(x => x.id === id))));
 check('売る枠として書かれているのに売り値が壊れている枠も無い', real.profileFramesWithBrokenSale().length === 0, real.profileFramesWithBrokenSale().join(','));
-check('いまの商品の一覧にフレームは入っていない', real.BREEDER_MARKET_ITEMS.every(item => item.type !== 'frame'));
+check('いまの商品の一覧に入っているフレームは、売っている3枚だけ',
+  real.BREEDER_MARKET_ITEMS.filter(item => item.type === 'frame').map(item => item.id).join() === SOLD.join());
 check('もともとの枠(条件なし・助手の仲良し度)の選べる・選べないは変わらない',
   real.profileFrameOwned('gold', []) === true && real.profileFrameOwned('none', []) === true
   && real.profileFrameOwned('frame_mua_1', []) === false && real.profileFrameOwned('frame_mua_1', ['frame_mua_1']) === true);
@@ -61,14 +73,23 @@ const fakeBeat = load(FAKE("{ shop:'beatPoint', cost:1500 }"));
 check('売り値を読める(ブリーダーP・ビートP)',
   JSON.stringify(fakeBp.profileFrameSale(fakeBp.PROFILE_FRAMES.find(f => f.id === 'fake_sale'))) === '{"shop":"breederPoint","cost":300,"currency":"breederPoint"}'
   && JSON.stringify(fakeBeat.profileFrameSale(fakeBeat.PROFILE_FRAMES.find(f => f.id === 'fake_sale'))) === '{"shop":"beatPoint","cost":1500,"currency":"beatPoint"}');
+// 本物のモンスターの3枚も並ぶので、仮の枠だけを取り出して見る
+const fakeIn = (m, shop) => m.profileFramesForSale(shop).filter(f => f.id === 'fake_sale').length;
 check('その交換所の売り場にだけ並ぶ',
-  fakeBp.profileFramesForSale('breederPoint').map(f => f.id).join() === 'fake_sale' && fakeBp.profileFramesForSale('beatPoint').length === 0
-  && fakeBeat.profileFramesForSale('beatPoint').map(f => f.id).join() === 'fake_sale' && fakeBeat.profileFramesForSale('breederPoint').length === 0);
-check('未公開(released:false)の枠は売り場に並ばない', load(FAKE("{ shop:'beatPoint', cost:1500 }", 'false')).profileFramesForSale('beatPoint').length === 0);
+  fakeIn(fakeBp, 'breederPoint') === 1 && fakeIn(fakeBp, 'beatPoint') === 0
+  && fakeIn(fakeBeat, 'beatPoint') === 1 && fakeIn(fakeBeat, 'breederPoint') === 0);
+const fakeBoth = load(FAKE("{ shops:[{ shop:'breederPoint', cost:1 }, { shop:'beatPoint', cost:100 }] }"));
+check('1つの枠を2つの交換所で売れる(値段は交換所ごと)',
+  fakeIn(fakeBoth, 'breederPoint') === 1 && fakeIn(fakeBoth, 'beatPoint') === 1
+  && fakeBoth.profileFrameSaleIn(fakeBoth.PROFILE_FRAMES.find(f => f.id === 'fake_sale'), 'breederPoint').cost === 1
+  && fakeBoth.profileFrameSaleIn(fakeBoth.PROFILE_FRAMES.find(f => f.id === 'fake_sale'), 'beatPoint').cost === 100);
+check('2つの交換所の片方が壊れていたら、検査が拾う',
+  load(FAKE("{ shops:[{ shop:'breederPoint', cost:1 }, { shop:'beatPoint', cost:0 }] }")).profileFramesWithBrokenSale().join() === 'fake_sale');
+check('未公開(released:false)の枠は売り場に並ばない', fakeIn(load(FAKE("{ shop:'beatPoint', cost:1500 }", 'false')), 'beatPoint') === 0);
 for (const [label, unlock] of [['値段が0', "{ shop:'beatPoint', cost:0 }"], ['値段が無い', "{ shop:'beatPoint' }"], ['交換所の名前が違う', "{ shop:'dia', cost:100 }"], ['値段が文字', "{ shop:'beatPoint', cost:'abc' }"]]) {
   const broken = load(FAKE(unlock));
   check(`壊れた売り値(${label})は売り物にならず、検査が拾う`,
-    broken.profileFramesForSale('beatPoint').length === 0 && broken.profileFramesWithBrokenSale().join() === 'fake_sale');
+    fakeIn(broken, 'beatPoint') === 0 && broken.profileFramesWithBrokenSale().join() === 'fake_sale');
 }
 
 // ③ ★買うまで選べない
@@ -78,7 +99,7 @@ check('買ったら選べる(持っているidに入っている)', fakeBeat.pro
 check('売る枠は公開(released:true)なので、ランキングで他の人が付けていれば描かれる', fakeBeat.normalizeProfileFrameId('fake_sale') === 'fake_sale');
 check('未公開の枠は、売り値があっても描かれない', load(FAKE("{ shop:'beatPoint', cost:1500 }", 'false')).normalizeProfileFrameId('fake_sale') === 'none');
 check('ブリーダーP交換所の商品は、売り値の枠から自動で作る(type:\'frame\')',
-  /PROFILE_FRAMES\s*\n?\s*\.filter\(frame => frame\.released === true && \(frame\.unlock && frame\.unlock\.shop === 'breederPoint'\)\)/.test(breeder)
+  /PROFILE_FRAMES\s*\n?\s*\.filter\(frame => frame\.released === true && profileFrameSaleIn\(frame, 'breederPoint'\)\)/.test(breeder)
   && breeder.includes("BREEDER_MARKET_ITEMS.push({ id:frame.id, name:`${frame.name}のフレーム`, type:'frame', cost:sale.cost"));
 
 // ④ ビートP交換所の計算
@@ -108,13 +129,29 @@ check('新しい保存キーを増やしていない(SAVE_DATA.md の一覧は�
 check('所持の判定がフレームの商品を扱う', app.includes("if (item.type === 'frame') return normalizeOwnedProfileFrames(ownedProfileFrames).includes(item.id);"));
 
 // ⑥ 画面
-check('売る枠が無いうちは、ブリーダーP交換所に「フレーム」タブを出さない',
+check('売る枠が無いときは、ブリーダーP交換所に「フレーム」タブを出さない',
   market.includes("...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])"));
-check('売る枠が無いうちは、ビートP交換所にも「フレーム」タブを出さない',
+check('売る枠が無いときは、ビートP交換所にも「フレーム」タブを出さない',
   market.includes("...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[])"));
 check('ビートP交換所の売り場が、売る枠から自動で並ぶ', market.includes("{eventTab==='frame'&&RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.map(offer=>{"));
 check('商品の絵はフレームを自分のアイコンへ重ねて見せる(拡大も)',
   widgets.includes("if(item.type==='frame'){") && app.includes('data-market-frame-zoom={item.id}'));
+
+// ⑦ 買える条件
+const cond = (id) => real.profileFrameCondition(real.PROFILE_FRAMES.find(f => f.id === id));
+check('モッチーの条件は、モッチー種(主血統 mocchi)を1回以上限界突破', cond('frame_mocchi').kind === 'speciesRebirth' && cond('frame_mocchi').lineage === 'mocchi' && cond('frame_mocchi').count === 1);
+check('ムーの条件は、難易度マスター以上のクリア', cond('frame_moo').kind === 'difficultyCleared' && cond('frame_moo').difficulty === 'Master');
+check('スエゾービートの条件は、モンヒロビート10回クリア', cond('frame_suezo_beat').kind === 'rhythmClears' && cond('frame_suezo_beat').count === 10);
+check('壊れた条件(知らない種類)は「条件なし」でなく、売り値の壊れとして検査が拾う',
+  load(FAKE("{ shop:'beatPoint', cost:100, condition:{ kind:'nothing' } }")).profileFramesWithBrokenSale().join() === 'fake_sale');
+check('ブリーダーP交換所で買うとき、条件を保存値で読み直して確かめる',
+  /if \(item\.type === 'frame'\) \{\s*const status = profileFrameConditionStatus\(profileFrameById\(item\.id\), await loadRhythmClearTotal\(\)\);\s*if \(status && !status\.met\)/.test(app));
+check('ビートP交換所で交換するときも、条件を保存値で読み直して確かめる',
+  /if \(isFrame\) \{\s*const frameStatus = profileFrameConditionStatus\(profileFrameById\(offer\.frameId\), await loadRhythmClearTotal\(\)\);\s*if \(frameStatus && !frameStatus\.met\)/.test(app));
+check('条件が未達成のカードは買えない札が出る(ブリーダーP・ビートP)',
+  market.includes('canBuy = !comingSoon && !frameLocked && !owned') && market.includes("canBuy={!owned&&!frameLocked&&safeEventPoints>=offer.cost&&!busy}"));
+check('モンヒロビートの通算クリア回数は新しいキーで数え、既存の mh_rhythm_best_v1 は書き換えない',
+  breeder.includes("const RHYTHM_CLEAR_TOTAL_KEY = 'mh_rhythm_clear_total_v1'") && app.includes('addRhythmClearTotal()'));
 
 console.log(failed === 0 ? '\nすべてOK' : `\n${failed}件NG`);
 process.exit(failed === 0 ? 0 : 1);

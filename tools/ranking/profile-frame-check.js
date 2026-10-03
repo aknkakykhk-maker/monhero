@@ -100,15 +100,17 @@ const measureFramePng = (file) => {
 
 // ===== ① フレームの定義と正規化(data/breeder.js を実際に動かす) =====
 const frameStart = breeder.indexOf('const PROFILE_FRAME_NONE_ID');
-const frameEnd = frameStart >= 0
-  ? breeder.indexOf('\n', breeder.indexOf('const releasedProfileFrames')) + 1 : -1;
+// 売る枠(profileFrameSale / profileFrameOwned)は releasedProfileFrames より後ろにあるので、
+// 「もらえる枠」の最後の関数(nextProfileFrameForAssistant)の終わりまでを動かす
+const frameEndMatch = /const nextProfileFrameForAssistant[\s\S]*?\|\| null;\n\};\n/.exec(breeder);
+const frameEnd = frameStart >= 0 && frameEndMatch ? frameEndMatch.index + frameEndMatch[0].length : -1;
 const frameBlock = frameStart >= 0 && frameEnd > frameStart ? breeder.slice(frameStart, frameEnd) : '';
 check('フレームの定義を抽出できる', frameBlock.length > 0);
 if (!frameBlock) { console.log(`\n${failed}件のNGがあります`); process.exit(1); }
 
-const ctx = {};
+const ctx = { BREEDER_MARKET_ITEMS: [] };
 vm.createContext(ctx);
-vm.runInContext(`${frameBlock}\n this.out={PROFILE_FRAME_NONE_ID,PROFILE_FRAME_KEY,PROFILE_FRAMES,PROFILE_FRAME_HOLE_FIT,profileFrameById,profileFrameImageStyle,normalizeProfileFrameId,releasedProfileFrames,rankingProfileFrameValue};`, ctx);
+vm.runInContext(`${frameBlock}\n this.out={PROFILE_FRAME_NONE_ID,PROFILE_FRAME_KEY,PROFILE_FRAMES,PROFILE_FRAME_HOLE_FIT,profileFrameById,profileFrameImageStyle,normalizeProfileFrameId,releasedProfileFrames,rankingProfileFrameValue,profileFrameSale,profileFrameOwned};`, ctx);
 const F = ctx.out;
 
 check('保存キーは新設の mh_profile_frame_v1', F.PROFILE_FRAME_KEY === 'mh_profile_frame_v1', F.PROFILE_FRAME_KEY);
@@ -146,7 +148,7 @@ check('公開フレームはそのまま通る', F.normalizeProfileFrameId('gold
 // 未公開の扱い。定義が1件も無いときも、仕組みが効いていることを確かめる
 {
   const fake = { id: 'ornate_test', name: 'テスト', kind: 'image', released: false, src: 'x', desc: 'y' };
-  const c2 = {};
+  const c2 = { BREEDER_MARKET_ITEMS: [] };
   vm.createContext(c2);
   // 未公開のフレームを1件だけ足した状態を作って、仕組みが効いていることを確かめる
   // (実在する未公開フレームの有無に左右されないように、ここで差し込む)
@@ -177,10 +179,13 @@ check('画像フレームは base64 で埋め込んでいない',
 // ★released(描いてよいか) と unlock(自分が選べるか) は別物。一緒にすると
 //   「解放した人の枠が他人のランキングで消える」(2026-09-16)
 check('画像フレームは、公開するなら必ずもらう条件が付いている',
-  imageFrames.every(frame => frame.released !== true || (frame.unlock && frame.unlock.assistantId)),
+  imageFrames.every(frame => frame.released !== true || (frame.unlock && frame.unlock.assistantId) || F.profileFrameSale(frame)),
   imageFrames.filter(frame => frame.released === true && !frame.unlock).map(f => f.id).join(', ') || `${imageFrames.length}枚`);
 check('もらう条件つきの枠は、他人の記録なら描いてよい(選べるかとは別)',
   imageFrames.filter(frame => frame.unlock).every(frame => F.normalizeProfileFrameId(frame.id) === frame.id));
+// 売る枠(2026-10-03)は unlock に売り値が入っているので「条件なしで選べる枠」には入らない。買うまで選べない
+check('売る枠は、買うまで選べず、買ったら選べる',
+  imageFrames.filter(frame => F.profileFrameSale(frame)).every(frame => !F.profileFrameOwned(frame.id, []) && F.profileFrameOwned(frame.id, [frame.id])));
 for (const frame of imageFrames) {
   const file = path.join(ROOT, 'monster-hero', String(frame.src || '').split('?')[0]);
   const exists = fs.existsSync(file);

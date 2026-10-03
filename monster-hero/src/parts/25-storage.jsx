@@ -176,6 +176,24 @@ const addRhythmEventPoints=amount=>{
   return run;
 };
 
+// モンヒロビートの通算クリア回数(キーは data/breeder.js の RHYTHM_CLEAR_TOTAL_KEY)。
+// スエゾービートのフレームを買える条件に使う。読んでから足して書くので、順番待ちにして取りこぼさない
+const normalizeRhythmClearTotal=value=>{
+  const n=Number(value);
+  return Number.isFinite(n)?Math.min(Number.MAX_SAFE_INTEGER,Math.max(0,Math.floor(n))):0;
+};
+const loadRhythmClearTotal=async()=>normalizeRhythmClearTotal(await storeGet(RHYTHM_CLEAR_TOTAL_KEY,0,false));
+let rhythmClearTotalQueue=Promise.resolve();
+const addRhythmClearTotal=()=>{
+  const run=rhythmClearTotalQueue.then(async()=>{
+    const next=Math.min(Number.MAX_SAFE_INTEGER,(await loadRhythmClearTotal())+1);
+    await storeSet(RHYTHM_CLEAR_TOTAL_KEY,next,false);
+    return next;
+  });
+  rhythmClearTotalQueue=run.catch(()=>{});
+  return run;
+};
+
 const storeList = async (prefix, shared=false) => {
   try {
     if (hasWinStorage()) {

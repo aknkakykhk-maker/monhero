@@ -43,7 +43,7 @@ const BOND_ROWS = [
   { user_name:'枠なしさん', individual_id:'m-3', monster_id:'Golem', mon_name:'ゴーレム',
     bond_level:70, icon:'Golem', detail:bondDetail('わくなしゴレ', 9000), colors:[] },
   { user_name:'未公開さん', individual_id:'m-4', monster_id:'Tiger', mon_name:'ライガー',
-    bond_level:60, icon:'Mocchi', detail:bondDetail('みこうかいライ', 8000), colors:[], profile_frame:'frame_moo' },
+    bond_level:60, icon:'Mocchi', detail:bondDetail('みこうかいライ', 8000), colors:[], profile_frame:'frame_unreleased_test' },
 ];
 // ブリーダーLvランキング用の行。フレームを選んでいる人・いない人・知らないidの人を混ぜる
 const RANKING_ROWS = [
@@ -169,7 +169,8 @@ async function run() {
   check('名前がデータどおり', EXPECTED_FRAMES.every(n => options.some(o => o.includes(n))),
     EXPECTED_FRAMES.filter(n => !options.some(o => o.includes(n))).join(' / ') || `${options.length}件`);
   check('④ 未公開の豪華フレームは出ない',
-    HIDDEN_FRAMES.length > 0 && !options.some(n => HIDDEN_FRAMES.includes(n)),
+    // 未公開のフレームが1枚も無い時期(3枚とも売りはじめた2026-10-03以降)は、並ばないことだけ見る
+    !options.some(n => HIDDEN_FRAMES.includes(n)),
     `隠すべき ${HIDDEN_FRAMES.length}件: ${HIDDEN_FRAMES.join(' / ') || '(1件も無い)'}`);
 
   // ゴールドを押す
