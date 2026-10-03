@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 29b63844ed14649e
+// generated-sha256: 4ceb21be98e5ce51
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -187,7 +187,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([
   { id: 'MINI', label: '小さく', note: '端に小さく出す' },
   { id: 'OFF', label: '出さない', note: '設定から更新する' },
 ]);
-const BUILD_DATE = "2026-10-03 13:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-10-03 13:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -33813,28 +33813,28 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
             {ms.backgroundRun ? <span className="text-[10px] leading-tight">⏹<br />終了</span> : '←'}
           </button>
           <div className="min-w-0 flex-1 leading-none">
-            <small className="block text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
-            <b className="block truncate text-sm font-black tracking-widest text-cyan-200">SELECT MODE ・ モードえらび</b>
+            <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300">MONBEAT ・ SELECT MODE</small>
+            <b className="block truncate text-base font-black tracking-wider text-cyan-200">モードえらび</b>
             {ms.beatPointText && <small data-rhythm-beat-point-balance className="block truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
           </div>
-          {quickRunInfo && <small data-rhythm-multi-quick-run className={`max-w-[34%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`}>
+          {quickRunInfo && <small data-rhythm-multi-quick-run className={`max-w-[42%] shrink truncate rounded-full border px-2 py-1 text-[10px] font-black ${quickRunInfo.finished ? 'border-amber-300/50 text-amber-200' : 'border-fuchsia-400/40 text-fuchsia-100'}`}>
             {quickRunInfo.finished ? quickRunInfo.reason : `🔁 WAVE ${quickRunInfo.wave}/10・${quickRunInfo.loops}周目${quickRunInfo.catchingUp ? '・追いつき中' : ''}`}
           </small>}
           <RhythmOrientationButton/>
         </header>
         {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
-        <div className="flex min-h-0 flex-1 flex-col landscape:flex-row">
-          {/* 助手の立ち絵とひとこと。縦画面では顔と吹き出しを1段で */}
+        {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下にボタン。
+            横画面: 左に立ち絵、右にボタン(2026-10-03・ユーザー指摘「サイズ感悪い」で組み直し) */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden">
           {ms.assistant && (
-            <div data-rhythm-mode-assistant className="relative flex shrink-0 items-end gap-2 px-3 pt-2 landscape:w-[32%] landscape:flex-col landscape:items-center landscape:justify-end landscape:px-2 landscape:pt-0">
-              <img src={ms.assistant.image} alt="" draggable={false} className="pointer-events-none absolute inset-0 hidden h-full w-full object-cover object-[50%_30%] landscape:block" />
-              <img src={ms.assistant.face} alt="" draggable={false} className="h-14 w-14 shrink-0 rounded-2xl border-2 object-cover landscape:hidden" style={{ borderColor: ms.assistant.accent }} />
-              <p data-rhythm-mode-assistant-line className="min-w-0 flex-1 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[12px] font-bold leading-snug text-white landscape:absolute landscape:inset-x-2 landscape:bottom-3 landscape:flex-none" style={{ borderColor: ms.assistant.accent }}>
+            <div data-rhythm-mode-assistant className="relative mx-3 mt-3 min-h-[150px] flex-1 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-fuchsia-950/40 to-indigo-950/60 landscape:m-0 landscape:w-[32%] landscape:flex-none landscape:rounded-none landscape:border-0 landscape:bg-none">
+              <img src={ms.assistant.image} alt="" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[50%_22%] landscape:object-[50%_30%]" />
+              <p data-rhythm-mode-assistant-line className="absolute inset-x-2 bottom-2 rounded-2xl border-2 bg-slate-900/95 px-3 py-2 text-[13px] font-bold leading-snug text-white shadow-lg landscape:bottom-3 landscape:text-[12px]" style={{ borderColor: ms.assistant.accent }}>
                 <b className="mb-0.5 block text-[10px]" style={{ color: ms.assistant.accent }}>{ms.assistant.name}</b>{ms.assistant.text}
               </p>
             </div>
           )}
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 landscape:py-2">
+          <div className="shrink-0 space-y-2.5 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:space-y-2.5 landscape:overflow-y-auto landscape:py-2">
             {friendsOn && friendInvites.length > 0 && (
               <section data-rhythm-multi-friend-invites className={`${card} space-y-2 border-pink-400/60`}>
                 <h3 className="text-xs font-black text-pink-200">フレンドからの招待</h3>
@@ -33846,52 +33846,51 @@ function RhythmMultiScreen({ profile, songs, difficultiesOf, difficultyList, bes
                 ))}
               </section>
             )}
-            <div className={ms.multi ? 'grid gap-2 landscape:grid-cols-2' : ''}>
+            <div className={`grid gap-2 ${ms.multi ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {/* ソロ: いつもの曲えらびへ */}
               <button data-rhythm-mode-solo type="button" onClick={ms.onSolo}
-                className="flex min-h-[76px] w-full items-center gap-3 rounded-2xl border-2 border-amber-200/80 bg-gradient-to-r from-amber-300 to-yellow-400 px-4 text-left text-slate-950 shadow-lg active:scale-[.98]">
-                <span aria-hidden="true" className="text-3xl">🎵</span>
-                <span className="min-w-0 flex-1"><b className="block text-lg font-black leading-tight">ソロライブ</b><small className="block text-[11px] font-black text-slate-800/80">ひとりで好きな曲を演奏する</small></span>
+                className="flex min-h-[88px] min-w-0 flex-col items-start justify-center gap-1 rounded-2xl border-2 border-amber-200/80 bg-gradient-to-br from-amber-300 to-yellow-400 px-3 text-left text-slate-950 shadow-lg active:scale-[.98] landscape:min-h-[72px] landscape:flex-row landscape:items-center landscape:gap-2">
+                <span aria-hidden="true" className="text-2xl leading-none">🎵</span>
+                <span className="min-w-0"><b className="block text-[17px] font-black leading-tight">ソロライブ</b><small className="block text-[10px] font-black leading-tight text-slate-800/80">ひとりで好きな曲を演奏</small></span>
               </button>
               {/* マルチ: フリーマッチ(だれとでも)。ベテランは無くした(2026-10-03・ユーザー指示) */}
               {ms.multi && <button data-rhythm-multi-free type="button" onClick={() => searchRoom('free')}
-                className="flex min-h-[76px] w-full items-center gap-3 rounded-2xl border-2 border-orange-200/80 bg-gradient-to-r from-orange-400 to-amber-500 px-4 text-left text-slate-950 shadow-lg active:scale-[.98]">
-                <span aria-hidden="true" className="text-3xl">🎮</span>
-                <span className="min-w-0 flex-1"><b className="block text-lg font-black leading-tight">フリーマッチ</b><small className="block text-[11px] font-black text-slate-900/80">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力ライブ</small></span>
+                className="flex min-h-[88px] min-w-0 flex-col items-start justify-center gap-1 rounded-2xl border-2 border-orange-200/80 bg-gradient-to-br from-orange-400 to-amber-500 px-3 text-left text-slate-950 shadow-lg active:scale-[.98] landscape:min-h-[72px] landscape:flex-row landscape:items-center landscape:gap-2">
+                <span aria-hidden="true" className="text-2xl leading-none">🎮</span>
+                <span className="min-w-0"><b className="block text-[17px] font-black leading-tight">フリーマッチ</b><small className="block text-[10px] font-black leading-tight text-slate-900/80">だれとでも最大{RHYTHM_MULTI_ROOM_MAX}人で協力</small></span>
               </button>}
             </div>
             {ms.multi && (
-              <section data-rhythm-mode-private className={`${card} space-y-2`}>
-                <h3 className="text-xs font-black text-slate-300">プライベートルーム(友だちと遊ぶ)</h3>
-                <div className="grid gap-2">
-                  <button data-rhythm-multi-create type="button" className={`${btn} w-full bg-indigo-700`} onClick={createPrivate}>＋ ルーム作成</button>
-                  <div className="flex gap-2">
-                    <input id="rhythm-multi-code" data-rhythm-multi-code-input aria-label="ルームコード" value={codeInput} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false}
-                      onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                      className="min-h-[44px] min-w-[7rem] flex-1 rounded-xl border border-white/20 bg-slate-950 px-2 text-center text-lg font-black tracking-[0.3em] text-white" placeholder="ABCD" />
-                    <button data-rhythm-multi-join type="button" className={`${btn} shrink-0 bg-indigo-700`} onClick={joinPrivate}>ルーム入室</button>
-                  </div>
+              <section data-rhythm-mode-private className="min-w-0 rounded-2xl border border-white/15 bg-slate-900/85 p-2.5">
+                <h3 className="mb-1.5 text-[11px] font-black text-slate-300">プライベートルーム(友だちと遊ぶ)</h3>
+                <div className="flex min-w-0 gap-2">
+                  <button data-rhythm-multi-create type="button" className="min-h-[46px] shrink-0 rounded-xl bg-indigo-700 px-3 text-sm font-black" onClick={createPrivate}>＋ 作成</button>
+                  <input id="rhythm-multi-code" data-rhythm-multi-code-input aria-label="ルームコード" value={codeInput} maxLength={8} autoCapitalize="characters" autoComplete="off" spellCheck={false}
+                    onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                    className="min-h-[46px] w-0 min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-1 text-center text-base font-black tracking-[0.25em] text-white" placeholder="ABCD" />
+                  <button data-rhythm-multi-join type="button" className="min-h-[46px] shrink-0 rounded-xl bg-indigo-700 px-3 text-sm font-black" onClick={joinPrivate}>入室</button>
                 </div>
               </section>
             )}
             {message && <p data-rhythm-multi-message className="text-[12px] font-black text-rose-300">{message}</p>}
             {/* マスモン・遊びかた・オプション(曲えらびの上の帯から、マスモンと遊びかたをここへ移した) */}
-            <div className="flex gap-2">
-              <button data-rhythm-demo-monsters type="button" aria-label={`マスモン設定(${ms.monsterCount}/${ms.monsterMax}体)`} onClick={ms.onMonsters} className={`${tile} border-fuchsia-400/50 bg-fuchsia-950/50 text-fuchsia-100`}>
+            <div className="grid grid-cols-3 gap-2">
+              <button data-rhythm-demo-monsters type="button" aria-label={`マスモン設定(${ms.monsterCount}/${ms.monsterMax}体)`} onClick={ms.onMonsters} className={`${tile} min-w-0 border-fuchsia-400/50 bg-fuchsia-950/50 text-fuchsia-100`}>
                 <span data-rhythm-demo-monsters-faces aria-hidden="true" className="flex h-6 items-center">{ms.monsterFaces.length
-                  ? ms.monsterFaces.map((face, i) => <span key={face.id} className="h-6 w-6 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950" style={i ? { marginLeft: '-6px' } : undefined}>{face.src && <img src={face.src} alt="" draggable={false} className="h-full w-full object-cover" />}</span>)
+                  ? ms.monsterFaces.map((face, i) => <span key={face.id} className="h-6 w-6 shrink-0 overflow-hidden rounded-full border border-fuchsia-200/70 bg-slate-950" style={i ? { marginLeft: '-7px' } : undefined}>{face.src && <img src={face.src} alt="" draggable={false} className="h-full w-full object-cover" />}</span>)
                   : <span className="text-lg leading-none">👾</span>}</span>
-                <span className="text-[11px] font-black">マスモン設定 {ms.monsterCount}/{ms.monsterMax}</span>
+                <span className="text-[11px] font-black">マスモン {ms.monsterCount}/{ms.monsterMax}</span>
               </button>
-              <button data-rhythm-demo-help type="button" onClick={ms.onHelp} className={`${tile} border-amber-400/50 bg-amber-950/40 text-amber-100`}>
+              <button data-rhythm-demo-help type="button" onClick={ms.onHelp} className={`${tile} min-w-0 border-amber-400/50 bg-amber-950/40 text-amber-100`}>
                 <span aria-hidden="true" className="text-lg leading-none">📖</span><span className="text-[11px] font-black">遊びかた</span>
               </button>
-              <button data-rhythm-mode-options type="button" onClick={ms.onOptions} className={`${tile} border-cyan-400/50 bg-cyan-950/40 text-cyan-100`}>
+              <button data-rhythm-mode-options type="button" onClick={ms.onOptions} className={`${tile} min-w-0 border-cyan-400/50 bg-cyan-950/40 text-cyan-100`}>
                 <span aria-hidden="true" className="text-lg leading-none">⚙️</span><span className="text-[11px] font-black">オプション</span>
               </button>
             </div>
           </div>
         </div>
+        <div aria-hidden="true" className="shrink-0" style={{ height: 'var(--mh-sa-bottom)' }} />
       </main>
     );
   }
