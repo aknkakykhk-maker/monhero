@@ -54,7 +54,8 @@ const num = (re, label) => {
 const beginnerPower = num(/Beginner:\s*\{[^}]*power:\s*([\d.]+)/, 'Beginnerの敵強度');
 // 会心倍率はヒット列の共通の正本(buildAttackHits)が持つ
 const critMult = num(/const critMult = (\d+(?:\.\d+)?) \+ critDmgBonus;/, 'クリティカル倍率');
-const distMults = (source.match(/const distMult = \[([\d.,\s]+)\]/) || [])[1];
+// 距離補正の表は、EXの「距離をそろえる」効果を挟むため `([1.5,1.3,1.1,0.9][distDiff]||1.0)` の形になった(2026-10)
+const distMults = (source.match(/const distMult = \[([\d.,\s]+)\]/) || source.match(/\(\[([\d.,\s]+)\]\[distDiff\]\|\|1\.0\)/) || [])[1];
 const DIST_MULT = distMults ? distMults.split(',').map(Number) : null;
 
 check('検算に使う数値を実装から読めている',

@@ -1526,6 +1526,8 @@ check('固有技の効果も枠の印に出る',
         + 'const heroCardBonusOf=(id)=>(__cfg.owners.includes(id)?1:0);'
         + 'const kikiCardBonus=__cfg.kiki; const baseCardLimit=__cfg.baseLimit; const cardLimit=__cfg.cardLimit;'
         + 'const soulCoordinationSlots=__cfg.coordSlots; const soulCoordinationCardBonus=__cfg.coordBonus;'
+        // EXの「その子のカード枚数」への足し算(tacticsExCardBonusAt)が slotMaxUses へ加わった。ここでは効果なし(0)の代役を置く
+        + 'const tacticsExCardBonusAt=()=>0; const tacticsExState=null; const tacticsUnits=null; const wave=1; const turnCount=1;'
         + usesSrc.trim() + '\nglobalThis.f=slotMaxUses;', box);
     return box.f;
   };

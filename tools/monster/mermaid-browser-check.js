@@ -164,15 +164,17 @@ const MARKET_ITEMS = [
   await boot();
   await clickAria('プロフィールを開く');
   await page.evaluate(() => {
-    const b = [...document.querySelectorAll('button')].find(x => /アイコンを選ぶ|✓ アイコン/.test(x.textContent))
+    // プロフィールの顔の丸いボタン(aria-label付き)から、アイコン選びの窓(PickerSheet)が開く(2026-10に作り直し)
+    const b = document.querySelector('button[aria-label="ブリーダーアイコンを変える"]')
+      || [...document.querySelectorAll('button')].find(x => /アイコンを選ぶ|✓ アイコン/.test(x.textContent))
       || [...document.querySelectorAll('button')].find(x => x.className.includes('rounded-full') && x.querySelector('img'));
     if (b) b.click();
   });
   await page.waitForTimeout(1500);
   const picker = await page.evaluate(() => {
-    const modal = [...document.querySelectorAll('div')].find(d => d.textContent.includes('アイコンを選択') && d.querySelector('.grid'));
+    const modal = document.querySelector('[data-picker-sheet="icon"]');
     if (!modal) return null;
-    return [...modal.querySelectorAll('button')].map(b => b.querySelector('img')?.getAttribute('alt') || b.textContent.trim());
+    return [...modal.querySelectorAll('button[data-icon-option]')].map(b => b.querySelector('img')?.getAttribute('alt') || b.textContent.trim());
   });
   check('アイコン選択ダイアログが開く', Array.isArray(picker), String(picker));
   const hasIcon = (n) => Array.isArray(picker) && picker.includes(n);

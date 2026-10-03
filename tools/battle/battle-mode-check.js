@@ -257,7 +257,10 @@ check('タクティクスプロはプロ扱い・タクティクス種族は種�
     && !m.isSpeciesChallengeMode('tactics'));
 // 既存のランキングデータは1行も書き換えない(移行・変換・削除をしない)
 check('既存のランキング行を書き換える処理を足していない',
-  !/rankingDifficultyForMode\([^)]*\)\s*=>/.test(source) && !has('PATCH') && !has('DELETE FROM') && !has('migrateRanking'));
+  !/rankingDifficultyForMode\([^)]*\)\s*=>/.test(source)
+    // フレンド機能(friendsPatchLink)の PATCH は、フレンドの申請の表を書き換えるもの。ランキングの表ではない(2026-10)
+    && !/method:\s*'PATCH'/.test(source.replace(/const friendsPatchLink[\s\S]*?prefer: 'return=minimal' \}\);/, ''))
+    && !has('DELETE FROM') && !has('migrateRanking'));
 
 // --- ③ WAVEごとの自動成長 ---
 check('成長倍率は10%', m.QUICK_GROWTH_MULT === 1.10);
