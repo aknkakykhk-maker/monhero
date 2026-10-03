@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 650cd3e98e4282b2
+// source-sha256: 1fc1625ae727107c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 04:05";
+const BUILD_DATE = "2026-10-03 11:10";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -33805,14 +33805,27 @@ const friendsIdOfRankingEntry = entry => {
 };
 const friendsFaceIconOf = baseId => {
   const mon = ALL_PLAYER_MONSTERS[baseId];
-  const src = mon ? mon.faceIconUrl || mon.iconUrl : null;
-  if (!src) return null;
+  const faceSrc = mon ? mon.faceIconUrl || mon.iconUrl : null;
+  if (!faceSrc) return null;
+  const starters = typeof STARTER_MONSTER_IDS !== 'undefined' && Array.isArray(STARTER_MONSTER_IDS) ? STARTER_MONSTER_IDS : [];
+  if (starters.includes(baseId)) return {
+    src: faceSrc,
+    id: baseId
+  };
   const bare = url => String(url || '').split('?')[0];
-  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
-  const item = items.find(entry => entry && entry.type === 'icon' && bare(entry.icon) === bare(src));
-  return {
-    src,
-    id: item ? item.id : baseId
+  const items = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : []).filter(entry => entry && entry.type === 'icon');
+  const byName = items.find(entry => entry.name === `${mon.name}のアイコン`);
+  if (byName) return {
+    src: byName.icon,
+    id: byName.id
+  };
+  const byPath = items.find(entry => bare(entry.icon) === bare(faceSrc));
+  return byPath ? {
+    src: byPath.icon,
+    id: byPath.id
+  } : {
+    src: faceSrc,
+    id: baseId
   };
 };
 const friendsStatusOf = value => Object.values(FRIEND_STATUS).includes(value) ? value : FRIEND_STATUS.REMOVED;
