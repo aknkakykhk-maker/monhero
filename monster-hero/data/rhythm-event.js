@@ -213,6 +213,8 @@ const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
     name: 'ハロウィン・ナイト',
     startAt: HALLOWEEN_NIGHT_START_AT,
     endAt: HALLOWEEN_NIGHT_END_AT,
+    // 画面に出す終わりの時刻(案内は「3:59まで」。内部の endAt は 4:00 の前までと同じ意味)
+    displayEndAt: '2026-11-01T03:59:00+09:00',
     boost: 5,
     loopScale: 5,
   }),
