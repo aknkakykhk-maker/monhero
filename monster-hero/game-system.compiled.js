@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 650cd3e98e4282b2
+// source-sha256: cef8ea921a77570c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -344,7 +344,7 @@ const UPDATE_NOTICE_STYLE_LABELS = Object.freeze([{
   label: '出さない',
   note: '設定から更新する'
 }]);
-const BUILD_DATE = "2026-10-03 04:05";
+const BUILD_DATE = "2026-10-03 11:23";
 const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
 const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
 const xpForWavesCleared = (wavesCleared, mult) => {
@@ -52998,6 +52998,19 @@ const RHYTHM_MULTI_CHAT_MAX_LENGTH = 40;
 const RHYTHM_MULTI_CHAT_KEEP = 50;
 const RHYTHM_MULTI_CHAT_INTERVAL_MS = 800;
 const RHYTHM_MULTI_CHAT_STAMPS = Object.freeze(['よろしく!', 'ナイス!', '準備OK!', 'もう一回!', 'ありがとう!']);
+const RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE = Object.freeze({
+  matching: ['よろしく!', 'はじめまして!', 'ちょっと待って!'],
+  select: ['この曲やりたい!', 'おまかせで!', 'なんでもOK!'],
+  ready: ['準備OK!', 'ちょっと待って!', 'がんばろう!'],
+  playing: ['おつかれ!', 'ナイス!', '待ってるね!'],
+  result: ['もう一回!', 'ありがとう!', 'おつかれ!', 'ナイス!', 'GG!', '次いこう!', 'ドンマイ!', 'またね!']
+});
+const RHYTHM_MULTI_CHAT_COMMON_STAMPS = Object.freeze(['よろしく!', 'ありがとう!', 'ナイス!', 'もう一回!', 'おつかれ!', 'すごい!', 'ドンマイ!', 'またね!']);
+const rhythmMultiStampsFor = phase => {
+  const list = [...(RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE[phase] || []), ...RHYTHM_MULTI_CHAT_COMMON_STAMPS, ...RHYTHM_MULTI_CHAT_STAMPS];
+  return list.filter((text, i) => text.length <= RHYTHM_MULTI_CHAT_MAX_LENGTH && list.indexOf(text) === i);
+};
+const RHYTHM_MULTI_CHAT_BUBBLE_MS = 6000;
 const RHYTHM_MULTI_ROOM_TOPIC = 'realtime:mhb-room-';
 const RHYTHM_MULTI_LOBBY_TOPIC = 'realtime:mhb-lobby-';
 const RHYTHM_MULTI_LOBBY_ANNOUNCE_MS = 2000;
@@ -53553,7 +53566,8 @@ const RHYTHM_MULTI = (() => {
           cid: msg.cid,
           id: msg.id,
           name: msg.name,
-          text: msg.text
+          text: msg.text,
+          at: Date.now()
         });
         if (s.chat.length > RHYTHM_MULTI_CHAT_KEEP) s.chat.splice(0, s.chat.length - RHYTHM_MULTI_CHAT_KEEP);
       }
@@ -53954,46 +53968,68 @@ const rhythmMultiPickDifficulty = (available, wishId, orderIds) => {
   return available.slice().sort((a, b) => rank(a.id) - rank(b.id))[0];
 };
 function RhythmMultiChatPanel({
-  view
+  view,
+  phase = '',
+  members = [],
+  resolveIconUrl = null
 }) {
   const [chatText, setChatText] = React.useState('');
+  const [waitNote, setWaitNote] = React.useState(false);
   const listRef = React.useRef(null);
   const count = view && view.chat ? view.chat.length : 0;
   React.useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [count]);
-  const submit = () => {
-    if (RHYTHM_MULTI.sendChat(chatText)) setChatText('');
+  const send = text => {
+    const ok = RHYTHM_MULTI.sendChat(text);
+    setWaitNote(!ok && !!String(text || '').trim());
+    return ok;
   };
+  const submit = () => {
+    if (send(chatText)) setChatText('');
+  };
+  const memberOf = id => members.find(m => m.id === id) || null;
   return React.createElement("section", {
     "data-rhythm-multi-chat": true,
-    className: "rounded-2xl border border-white/15 bg-slate-900/95 p-3"
+    className: "flex min-h-0 flex-col rounded-2xl border border-white/15 bg-slate-900/95 p-3"
   }, React.createElement("h3", {
     className: "text-xs font-black text-slate-300"
   }, "チャット"), React.createElement("ul", {
     ref: listRef,
     "data-rhythm-multi-chat-list": true,
-    className: "mt-1 max-h-40 min-h-[3rem] space-y-1 overflow-y-auto rounded-lg bg-slate-950/60 p-2 text-sm font-bold"
+    className: "mt-1 max-h-60 min-h-[5rem] space-y-1.5 overflow-y-auto rounded-lg bg-slate-950/60 p-2 text-sm font-bold landscape:max-h-[45vh]"
   }, count === 0 && React.createElement("li", {
     className: "text-[11px] text-slate-500"
-  }, "まだ発言はありません"), view.chat.map(c => React.createElement("li", {
-    key: c.cid,
-    "data-rhythm-multi-chat-line": true,
-    className: "break-words leading-snug"
-  }, React.createElement("b", {
-    className: c.id === view.selfId ? 'text-cyan-300' : 'text-amber-200'
-  }, c.name), React.createElement("span", {
-    className: "text-slate-400"
-  }, ": "), c.text))), React.createElement("div", {
-    className: "mt-2 flex flex-wrap gap-1.5"
-  }, RHYTHM_MULTI_CHAT_STAMPS.map(stamp => React.createElement("button", {
-    key: stamp,
-    "data-rhythm-multi-chat-stamp": true,
-    type: "button",
-    onClick: () => RHYTHM_MULTI.sendChat(stamp),
-    className: "min-h-[36px] rounded-full bg-slate-700 px-3 text-xs font-black"
-  }, stamp))), React.createElement("form", {
+  }, "まだ発言はありません。下の定型文をタップすると、すぐに送れます"), view.chat.map(c => {
+    const mine = c.id === view.selfId;
+    const m = memberOf(c.id);
+    return React.createElement("li", {
+      key: c.cid,
+      "data-rhythm-multi-chat-line": true,
+      className: `flex items-end gap-1.5 ${mine ? 'justify-end' : ''}`
+    }, !mine && (m ? React.createElement(RhythmMultiAvatar, {
+      m: m,
+      resolveIconUrl: resolveIconUrl,
+      sizeClass: "h-7 w-7 shrink-0"
+    }) : React.createElement("span", {
+      "aria-hidden": "true",
+      className: "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs"
+    }, "🎵")), React.createElement("span", {
+      className: `flex min-w-0 max-w-[80%] flex-col ${mine ? 'items-end' : 'items-start'}`
+    }, !mine && React.createElement("b", {
+      className: "max-w-full truncate text-[10px] text-amber-200"
+    }, c.name), React.createElement("span", {
+      className: `break-words rounded-2xl px-2.5 py-1 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`
+    }, c.text)));
+  })), React.createElement(RhythmMultiStampBar, {
+    phase: phase,
+    onSend: send,
+    className: "mt-2"
+  }), waitNote && React.createElement("small", {
+    "data-rhythm-multi-chat-wait": true,
+    className: "mt-1 block text-[10px] font-black text-amber-300"
+  }, "続けて送るときは、少し待ってね"), React.createElement("form", {
     className: "mt-2 flex gap-2",
     onSubmit: e => {
       e.preventDefault();
@@ -54014,6 +54050,39 @@ function RhythmMultiChatPanel({
     disabled: !chatText.trim(),
     className: "min-h-[44px] shrink-0 rounded-xl bg-cyan-700 px-4 text-sm font-black disabled:opacity-40"
   }, "送信")));
+}
+function RhythmMultiStampBar({
+  phase,
+  onSend,
+  className = '',
+  limit = 0
+}) {
+  const stamps = rhythmMultiStampsFor(phase);
+  const shown = limit > 0 ? stamps.slice(0, limit) : stamps;
+  return React.createElement("div", {
+    "data-rhythm-multi-stamps": true,
+    className: `flex gap-1.5 overflow-x-auto pb-0.5 ${className}`,
+    style: {
+      scrollbarWidth: 'none'
+    }
+  }, shown.map(stamp => React.createElement("button", {
+    key: stamp,
+    "data-rhythm-multi-chat-stamp": true,
+    type: "button",
+    onClick: () => onSend(stamp),
+    className: "min-h-[38px] shrink-0 whitespace-nowrap rounded-full border border-white/15 bg-slate-700 px-3 text-xs font-black active:scale-95"
+  }, stamp)));
+}
+function RhythmMultiChatBubble({
+  text
+}) {
+  if (!text) return null;
+  return React.createElement("span", {
+    "data-rhythm-multi-chat-bubble": true,
+    className: "pointer-events-none absolute inset-x-0.5 top-3 z-20 flex justify-center"
+  }, React.createElement("span", {
+    className: "line-clamp-2 max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg landscape:text-xs"
+  }, text));
 }
 function RhythmMultiAvatar({
   m,
@@ -54039,7 +54108,8 @@ function RhythmMultiMemberCards({
   selfId,
   resolveIconUrl,
   badgeOf,
-  size = 'tall'
+  size = 'tall',
+  bubbleOf = null
 }) {
   const tall = size === 'tall';
   return React.createElement("ul", {
@@ -54059,7 +54129,9 @@ function RhythmMultiMemberCards({
       key: m.id,
       "data-rhythm-multi-member": true,
       className: `relative flex min-h-0 min-w-0 rounded-xl ${self ? 'border border-cyan-300/70 bg-cyan-950/50' : 'border border-white/10 bg-slate-950/70'} ${tall ? 'flex-col items-center justify-center px-1 pb-1.5 pt-3' : 'h-[60px] flex-col items-center px-0.5 pt-1.5 landscape:h-[38px] landscape:flex-row landscape:gap-1 landscape:px-1 landscape:pt-0'}`
-    }, React.createElement("small", {
+    }, React.createElement(RhythmMultiChatBubble, {
+      text: bubbleOf ? bubbleOf(m.id) : ''
+    }), React.createElement("small", {
       "data-rhythm-multi-member-badge": true,
       className: `absolute -top-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-black leading-tight ${badge.cls}`
     }, badge.text), React.createElement("span", {
@@ -54113,6 +54185,30 @@ function RhythmMultiScreen({
   const [countdown, setCountdown] = React.useState(null);
   const [copied, setCopied] = React.useState(false);
   const [chatOpen, setChatOpen] = React.useState(false);
+  const [chatSeenAt, setChatSeenAt] = React.useState(() => Date.now());
+  const chatList = view && view.chat ? view.chat : [];
+  const lastChatAt = chatList.length ? chatList[chatList.length - 1].at || 0 : 0;
+  React.useEffect(() => {
+    if (chatOpen) setChatSeenAt(Math.max(Date.now(), lastChatAt));
+  }, [chatOpen, lastChatAt]);
+  const chatUnread = chatOpen ? 0 : chatList.filter(c => c.id !== (view && view.selfId) && (c.at || 0) > chatSeenAt).length;
+  const [, setBubbleTick] = React.useState(0);
+  React.useEffect(() => {
+    if (!lastChatAt) return undefined;
+    const wait = lastChatAt + RHYTHM_MULTI_CHAT_BUBBLE_MS - Date.now();
+    if (wait <= 0) return undefined;
+    const timer = setTimeout(() => setBubbleTick(n => n + 1), wait + 50);
+    return () => clearTimeout(timer);
+  }, [lastChatAt]);
+  const chatBubbleOf = id => {
+    const now = Date.now();
+    for (let k = chatList.length - 1; k >= 0; k--) {
+      const c = chatList[k];
+      if (now - (c.at || 0) > RHYTHM_MULTI_CHAT_BUBBLE_MS) return '';
+      if (c.id === id) return c.text;
+    }
+    return '';
+  };
   const [statsOpen, setStatsOpen] = React.useState(false);
   const mine = view ? view.members.find(m => m.id === view.selfId) : null;
   const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
@@ -54343,13 +54439,17 @@ function RhythmMultiScreen({
   }, opts.advance), opts.timer != null && React.createElement("b", {
     "data-rhythm-multi-timer": true,
     className: `shrink-0 rounded-full px-2 py-1 text-sm font-black tabular-nums ${opts.timer <= 5 ? 'bg-rose-600 text-white' : 'bg-slate-800 text-amber-200'}`
-  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && React.createElement("button", {
+  }, "⏱ ", opts.timer), React.createElement(RhythmOrientationButton, null), view && chatButton());
+  const chatButton = (extra = '') => React.createElement("button", {
     "data-rhythm-multi-chat-open": true,
     type: "button",
-    "aria-label": "チャット",
+    "aria-label": chatUnread ? `チャット(未読${chatUnread}件)` : 'チャット',
     onClick: () => setChatOpen(v => !v),
-    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-lg"
-  }, "💬"));
+    className: `relative min-h-[44px] min-w-[44px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-lg ${extra}`
+  }, "💬", chatUnread > 0 && React.createElement("b", {
+    "data-rhythm-multi-chat-unread": true,
+    className: "absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-rose-500 px-1 text-[11px] font-black leading-5 text-white"
+  }, chatUnread > 9 ? '9+' : chatUnread));
   const chatSheet = chatOpen && view && React.createElement("div", {
     "data-rhythm-multi-chat-sheet": true,
     className: "absolute inset-x-0 bottom-0 z-[80000] max-h-[70%] overflow-y-auto border-t border-cyan-400/30 bg-slate-950 p-2 landscape:inset-y-0 landscape:left-auto landscape:right-0 landscape:max-h-none landscape:w-[46%] landscape:border-l landscape:border-t-0",
@@ -54357,7 +54457,10 @@ function RhythmMultiScreen({
       paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
     }
   }, React.createElement(RhythmMultiChatPanel, {
-    view: view
+    view: view,
+    phase: room ? room.phase : '',
+    members: view.members,
+    resolveIconUrl: resolveIconUrl
   }), React.createElement("button", {
     type: "button",
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 font-black",
@@ -54476,6 +54579,7 @@ function RhythmMultiScreen({
       className: `${btn} mt-2 w-full bg-slate-700`,
       onClick: leaveRoom
     }, "ルームえらびへ戻る"))) : React.createElement(React.Fragment, null, React.createElement(RhythmMultiMemberCards, {
+      bubbleOf: chatBubbleOf,
       members: members,
       hostId: view ? view.hostId : '',
       selfId: view ? view.selfId : '',
@@ -54678,7 +54782,9 @@ function RhythmMultiScreen({
         key: r.m.id,
         "data-rhythm-multi-result-row": true,
         className: `relative flex min-h-0 min-w-0 flex-col items-center justify-center overflow-hidden rounded-xl px-0.5 pb-1.5 pt-3 text-center ${isMvp ? 'border-2 border-pink-400 bg-pink-950/40 shadow-[0_0_14px_rgba(244,114,182,.5)]' : 'border border-white/10 bg-slate-900/80'}`
-      }, isMvp && React.createElement("b", {
+      }, React.createElement(RhythmMultiChatBubble, {
+        text: chatBubbleOf(r.m.id)
+      }), isMvp && React.createElement("b", {
         "data-rhythm-multi-mvp": true,
         className: "absolute left-1/2 top-0.5 -translate-x-1/2 whitespace-nowrap rounded-full bg-pink-500 px-1.5 py-px text-[9px] font-black text-white"
       }, "★MVP★"), React.createElement(RhythmMultiAvatar, {
@@ -54697,6 +54803,13 @@ function RhythmMultiScreen({
         className: "text-[8px] font-black text-rose-300"
       }, "失敗")));
     })), React.createElement("div", {
+      "data-rhythm-multi-result-chat": true,
+      className: "flex shrink-0 items-center gap-1.5 px-2 pt-1 landscape:px-3"
+    }, React.createElement(RhythmMultiStampBar, {
+      phase: "result",
+      onSend: text => RHYTHM_MULTI.sendChat(text),
+      className: "min-w-0 flex-1"
+    }), chatButton()), React.createElement("div", {
       className: "mt-auto flex shrink-0 gap-2 border-t border-white/10 bg-slate-950/90 px-3 pt-2 landscape:justify-end landscape:border-t-0 landscape:bg-transparent",
       style: {
         paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))'
@@ -54775,7 +54888,7 @@ function RhythmMultiScreen({
       className: "px-1 tabular-nums"
     }, r.res && !r.res.quit && r.res.j ? r.res.j[k] : '—')), React.createElement("td", {
       className: "rounded-r-lg px-1 tabular-nums"
-    }, r.res && !r.res.quit ? `${r.res.fs} / ${r.res.sl}` : '—'))))))));
+    }, r.res && !r.res.quit ? `${r.res.fs} / ${r.res.sl}` : '—'))))))), chatSheet);
   }
   if (phase === 'playing' || phase === 'result') {
     return React.createElement("main", {
@@ -54783,6 +54896,7 @@ function RhythmMultiScreen({
       "data-rhythm-multi-step": "waiting",
       className: shell
     }, header(phase === 'playing' ? 'ライブ中' : '次の選曲を待っています', leaveRoom), React.createElement(RhythmMultiMemberCards, {
+      bubbleOf: chatBubbleOf,
       members: members,
       hostId: view.hostId,
       selfId: view.selfId,
@@ -54795,6 +54909,10 @@ function RhythmMultiScreen({
         text: '待機中',
         cls: 'bg-slate-600 text-white'
       }
+    }), React.createElement(RhythmMultiStampBar, {
+      phase: phase,
+      onSend: text => RHYTHM_MULTI.sendChat(text),
+      className: "shrink-0 px-2 pt-1"
     }), React.createElement("div", {
       className: "mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/90 p-2 landscape:flex-row landscape:items-center",
       style: {
@@ -54875,6 +54993,7 @@ function RhythmMultiScreen({
       advance: 'すぐ開始',
       gesture: true
     }), React.createElement(RhythmMultiMemberCards, {
+      bubbleOf: chatBubbleOf,
       members: members,
       hostId: view.hostId,
       selfId: view.selfId,
@@ -54967,6 +55086,7 @@ function RhythmMultiScreen({
     timer: room.left,
     advance: '締め切る'
   }), React.createElement(RhythmMultiMemberCards, {
+    bubbleOf: chatBubbleOf,
     members: members,
     hostId: view.hostId,
     selfId: view.selfId,
