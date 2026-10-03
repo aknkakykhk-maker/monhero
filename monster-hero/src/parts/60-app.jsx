@@ -10425,6 +10425,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     };
     const applyImmediateTakenReduction = (damage, slotIdx=null) => applyTurnDamageReduction(damage>0 ? damage*immediateTakenMultAt(slotIdx) : damage, slotIdx);
     const intent = overrideIntent||enemyIntent;
+    // ★ヤオビクニの「悠久の刻」: 使ったターンは敵が行動せず、ターン数も進めない(2026-10-03)
+    const timeStopSlot = isTacticsMode(runMode)&&tacticsExEnabled ? tacticsExTimeStopSlot(tacticsExStateRef.current,tacticsUnitsRef.current,tacticsExLiveRef.current.now) : null;
     setEnemySkillName({label:intent.label, icon:intent.icon});
     // 敵の番の見出し。このあとの吹き出し(ダメージ・回避・ガード)が、どの技の結果なのかを結ぶ
     pushBattleLog(`敵の行動：${intent.label}`, 'enemy');
@@ -10436,7 +10438,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 止められたターンは「何もしなかった」ことにする。ここをfalseのままにしておくと、
     // ためを止めたのに次のターンだけ必殺技が来る、という状態になる
     enemyActionPerformedRef.current = false;
-    if (getTurnBuff('invincible',false)||immediateEffects.invincible) {
+    if (timeStopSlot!=null) {
+      addPopup('⏳ 時間停止！ 敵は動けない','enemy','text-sky-300 font-black text-xl drop-shadow-md'); pushBattleLog('⏳ 時間が止まっている。敵は行動しない','info'); await battleWait(1000);
+    } else if (getTurnBuff('invincible',false)||immediateEffects.invincible) {
       addPopup("無効化！",'hero','text-blue-400 font-black text-xl drop-shadow-md');
       setImmediateTurnBuff('invincible',false); await battleWait(1000);
     } else if (getTurnBuff('stunEnemy',false)||immediateEffects.stun) {
@@ -10974,7 +10978,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else delete activeTurnBuffs.bySlot;
     setTurnBuffs(activeTurnBuffs);
     writeNextTurnBuffs({});
-    const nextTurn=turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); } setIsBusy(false);
+    // 時間を止めたターンは数えない(20ターン制限にも入れない)。止めた記録は使い終わったことにして、止め続けない
+    if(timeStopSlot!=null) commitTacticsExState(spendTacticsExTimeStop(tacticsExStateRef.current));
+    const nextTurn=timeStopSlot!=null?turnCount:turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){ if(tacticsWipe()===null) setHp(0); } setIsBusy(false);
   };
 
   const useEmergency = async () => {
@@ -11045,6 +11051,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       styleOptions:def.duration==='style'?def.styles.map(st=>({ ...st,
         current:tacticsExStyleOf(def,state,slotIdx,mon.id)===st.id })):null,
       durationText:tacticsExDurationText(def),
+        // 味方を選んで使うEX(生命の泉)の、選べる味方の一覧(名前つき)
+        targetOptions:(()=>{ const opts=tacticsExTargetOptions(def,tacticsUnits); return opts?opts.map(o=>({ ...o, name:(slots[o.slot]?.masuName||slots[o.slot]?.name||'') })):null; })(),
       implemented:isTacticsExEffectImplemented(def),
       // いまの力・丈夫さ(EXが乗っていればそのぶんも)。捨て身・片手持ちの効き目を数字で確かめられるように
       // 距離枠に出す短い札。切り替え式はいまの状態(二刀流／片手持ち)、効いている間は「◯◯中」、ふだんは「EX」
@@ -11063,6 +11071,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const volt=def.effect==='stage'?tacticsExVoltageOf(state,tacticsUnits,tacticsExNow):null;
           if(volt) out.push(`ボルテージ ${volt.voltage} / ${volt.max}（与ダメ×${volt.dmgMult.toFixed(2)}・回復×${volt.healMult.toFixed(2)}・ガッツ回復+${Math.round(volt.gutsAdd*100)}%）`);
           const pres=def.effect==='present'?tacticsExPresentOf(state,tacticsUnits,tacticsExNow):null;
+          const spring=def.effect==='lifeSpring'&&isTacticsExEffectActive(state,slotIdx,mon.id,tacticsExNow)?state.effects?.[slotIdx]:null;
+          if(spring&&Number.isInteger(spring.target)) out.push(`生命の泉の対象: ${slots[spring.target]?.masuName||slots[spring.target]?.name||'味方'}（あと${tacticsExTurnsLeft(state,slotIdx,mon.id,tacticsExNow)}ターン）`);
           if(pres&&pres.kinds.length) out.push(`プレゼントの中身: ${pres.jackpot?'大当たり（全部）':pres.kinds.map(k=>TACTICS_EX_PRESENT_LABELS[k]).join('・')}`);
           return out;
         })(),
@@ -11103,14 +11113,35 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       now:tacticsExNow, busy:false, hp:lifeNow?lifeNow.hp:null, maxHp:lifeNow?lifeNow.maxHp:null });
     if(!check.ok) return false;
     if(def.duration==='style'&&checkTacticsExChoice(def,state,slotIdx,mon.id,choice)) return false;
+    // 味方を選んで使うEX(生命の泉)は、選んだ味方が要る
+    if(checkTacticsExTarget(def,tacticsUnitsRef.current,choice)) return false;
     // 使った瞬間の値を控える(捨て身は「使ったときの丈夫さ」から力へ移す量を決める)
     const usedUnit=normalizeTacticsUnit(tacticsUnitsRef.current[slotIdx]);
     const next=applyTacticsExUse(state,{ def, slot:slotIdx, monId:mon.id, now:tacticsExNow,
-      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null, choice });
+      snapshot:usedUnit?{ atk:usedUnit.atk, def:usedUnit.def }:null, choice, target:def.target==='ally'?choice:null });
     commitTacticsExState(next);
     Audio_.se.card();
     const toggled=def.duration==='style'?`（${tacticsExStyleLabel(def,next,slotIdx,mon.id)}）`:'';
     pushBattleLog(`EX ${mon.masuName||mon.name}「${def.name}」${toggled}`, 'ally');
+    // 生命の泉(ウンディーネ): 選んだ味方へ。ダウン中なら立たせて満タン、立っていればライフ上限を上げてから満タン。どちらもガッツが戻る
+    if(def.lifeSpring&&Number.isInteger(choice)){
+      let units=tacticsUnitsRef.current;
+      const before=normalizeTacticsUnit(units[choice]);
+      if(before){
+        const wasDown=before.downed===true;
+        if(!wasDown&&def.lifeSpring.maxUpRate>0) units=scaleTacticsUnits(setTacticsExMaxHpRate(units,choice,def.lifeSpring.maxUpRate),getPermaBuff('muaHpPct'),getPermaBuff('muaGutsPct'));
+        const u=normalizeTacticsUnit(units[choice]);
+        const hpGain=Math.max(0,u.maxHp-u.hp);
+        units=healTacticsAt(units,choice,hpGain);
+        const afterHeal=normalizeTacticsUnit(units[choice]);
+        const gutsGain=Math.max(0,Math.min(afterHeal.maxGuts-afterHeal.guts,Math.floor(afterHeal.maxGuts*def.lifeSpring.gutsRate)));
+        units=recoverTacticsGutsAt(units,choice,gutsGain);
+        commitTacticsUnits(units);
+        mergeTacticsSlotFx({[choice]:hpGain},{[choice]:gutsGain});
+        const targetName=slots[choice]?.masuName||slots[choice]?.name||'味方';
+        pushBattleLog(wasDown?`${targetName}が立ち上がった！ ライフ満タン`:`${targetName}のライフが満タン。上限が${Math.round(def.lifeSpring.maxUpRate*100)}%上がった`,'ally');
+      }
+    }
     // 最大ライフの一部を払う(堕天の烙印)。ライフが払う量より多いときだけ使えるので、ここで倒れることはない。枠へ減った量を出す
     if(def.lifeCostRate>0&&lifeNow){
       const cost=tacticsExLifeCost(def,lifeNow.maxHp);
